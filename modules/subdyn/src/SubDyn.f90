@@ -192,7 +192,7 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    CALL DispNVD( SD_ProgDesc )   
    InitOut%Ver = SD_ProgDesc
 
-   ! --- Test
+   ! --- Test TODO remove me in the future
    CALL SD_Tests(ErrStat2, ErrMsg2); if(Failed()) return
    
    ! transfer glue-code information to data structure for SubDyn initialization:
@@ -214,22 +214,25 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    
    ! Parse the SubDyn inputs 
    CALL SD_Input(InitInput%SDInputFile, Init, p, ErrStat2, ErrMsg2); if(Failed()) return
-   
+
+   ! --------------------------------------------------------------------------------
+   ! --- Manipulation of Init and parameters
+   ! --------------------------------------------------------------------------------
    ! Discretize the structure according to the division size 
    ! sets p%nNodes, Init%NElm
-   CALL SD_Discrt(Init,p, ErrStat2, ErrMsg2); if(Failed()) return
+   CALL SD_Discrt(Init, p, ErrStat2, ErrMsg2); if(Failed()) return
       
    ! Set element properties (p%ElemProps)
-   CALL SetElementProperties(Init,p, ErrStat2, ErrMsg2); if(Failed()) return
+   CALL SetElementProperties(Init, p, ErrStat2, ErrMsg2); if(Failed()) return
 
    !Store mapping between nodes and elements      
-   CALL NodeCon(Init,p,ErrStat2, ErrMsg2); if(Failed()) return
+   CALL NodeCon(Init, p, ErrStat2, ErrMsg2); if(Failed()) return
 
    ! --- Allocate DOF indices to joints and members 
-   call DistributeDOF(Init, p ,m ,ErrStat2, ErrMsg2); if(Failed()) return; 
+   call DistributeDOF(Init, p ,ErrStat2, ErrMsg2); if(Failed()) return; 
 
    ! Assemble Stiffness and mass matrix
-   CALL AssembleKM(Init, p, m, ErrStat2, ErrMsg2); if(Failed()) return
+   CALL AssembleKM(Init, p, ErrStat2, ErrMsg2); if(Failed()) return
 
    ! --- Eigen values of full system (for summary file output only)
    ! True below is to remove the constraints
@@ -240,11 +243,14 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    CALL EigenSolveWrap( Init%K, Init%M, p%nDOF, FEMparams%NOmega, .True., Init, p, FEMparams%Modes, FEMparams%Omega, ErrStat2, ErrMsg2 ); if(Failed()) return
 
    ! --- Elimination of constraints (reset M, K, D, and BCs IntFc )
-   CALL DirectElimination(Init, p, m, ErrStat2, ErrMsg2); if(Failed()) return
+   CALL DirectElimination(Init, p, ErrStat2, ErrMsg2); if(Failed()) return
 
    ! --- Additional Damping and stiffness at pin/ball/universal joints
-   CALL InsertJointStiffDamp(p, m, Init, ErrStat2, ErrMsg2); if(Failed()) return
+   CALL InsertJointStiffDamp(p, Init, ErrStat2, ErrMsg2); if(Failed()) return
 
+   ! --------------------------------------------------------------------------------
+   ! --- CB, Misc  
+   ! --------------------------------------------------------------------------------
    ! --- Craig-Bampton reduction (sets many parameters)
    CALL Craig_Bampton(Init, p, m, CBparams, ErrStat2, ErrMsg2); if(Failed()) return
 
@@ -275,20 +281,24 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    ! Allocate miscellaneous variables, used only to avoid temporary copies of variables allocated/deallocated and sometimes recomputed each time
    CALL AllocMiscVars(p, m, ErrStat2, ErrMsg2); if(Failed()) return
       
+   ! --------------------------------------------------------------------------------
    ! --- Initialize Inputs and Outputs
+   ! --------------------------------------------------------------------------------
    ! Create the input and output meshes associated with Transition Piece reference point       
    CALL CreateTPMeshes( InitInput%TP_RefPoint, u%TPMesh, y%Y1Mesh, ErrStat2, ErrMsg2 ); if(Failed()) return
    
    ! Construct the input mesh for the interior nodes which result from the Craig-Bampton reduction
    CALL CreateY2Meshes( p%nNodes, Init%Nodes, p%Nodes_I(:,1), p%Nodes_L(:,1), p%Nodes_C(:,1), u%LMesh, y%Y2Mesh, ErrStat2, ErrMsg2 ); if(Failed()) return
-   call Y2Mesh_SD_Mapping(p, m%INodes_Mesh_to_SD) ! Store mapping from y2/u mesh to Subdyn nodes indices
-   call SD_Y2Mesh_Mapping(p, m%INodes_SD_to_Mesh) ! Store mapping from Subdyn to y2/u-mesh nodes indices
+   call AllocAry( p%INodes_Mesh_to_SD, p%nNodes, 'INodes_Mesh_to_SD', ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
+   call AllocAry( p%INodes_SD_to_Mesh, p%nNodes, 'INodes_SD_to_Mesh', ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
+   call Y2Mesh_SD_Mapping(p, p%INodes_Mesh_to_SD) ! Store mapping from y2/u mesh to Subdyn nodes indices
+   call SD_Y2Mesh_Mapping(p, p%INodes_SD_to_Mesh) ! Store mapping from Subdyn to y2/u-mesh nodes indices
 
    ! --- Write the summary file
    IF ( Init%SSSum ) THEN 
       ! note p%KBB/MBB are KBBt/MBBt
       ! Write a summary of the SubDyn Initialization                     
-      CALL OutSummary(Init,p,m%INodes_SD_to_Mesh,FEMparams,CBparams,  ErrStat2, ErrMsg2); if(Failed()) return
+      CALL OutSummary(Init,p,FEMparams,CBparams,  ErrStat2, ErrMsg2); if(Failed()) return
       IF( ALLOCATED(Init%K) ) DEALLOCATE(Init%K)
       IF( ALLOCATED(Init%M) ) DEALLOCATE(Init%M)     
    ENDIF 
@@ -365,14 +375,14 @@ END SUBROUTINE SD_UpdateStates
 SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       REAL(DbKi),                   INTENT(IN   )  :: t           !< Current simulation time in seconds
       TYPE(SD_InputType),           INTENT(IN   )  :: u           !< Inputs at t
-      TYPE(SD_ParameterType),       INTENT(IN   )  :: p           !< Parameters
+      TYPE(SD_ParameterType),target,INTENT(IN   )  :: p           !< Parameters
       TYPE(SD_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at t
       TYPE(SD_DiscreteStateType),   INTENT(IN   )  :: xd          !< Discrete states at t
       TYPE(SD_ConstraintStateType), INTENT(IN   )  :: z           !< Constraint states at t
       TYPE(SD_OtherStateType),      INTENT(IN   )  :: OtherState  !< Other states at t
       TYPE(SD_OutputType),          INTENT(INOUT)  :: y           !< Outputs computed at t (Input only so that mesh con-
                                                                   !!   nectivity information does not have to be recalculated)
-      TYPE(SD_MiscVarType), target, INTENT(INOUT)  :: m           !< Misc/optimization variables
+      TYPE(SD_MiscVarType),         INTENT(INOUT)  :: m           !< Misc/optimization variables
       INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     !< Error status of the operation
       CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
       !locals
@@ -452,8 +462,8 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
                                                             
       ! --- Place displacement/velocity/acceleration into Y2 output mesh        
       DO iSDNode = 1,p%nNodes
-         iY2Node = m%INodes_SD_to_Mesh(iSDNode)
-         DOFList => m%NodesDOF(iSDNode)%List  ! Alias to shorten notations
+         iY2Node = p%INodes_SD_to_Mesh(iSDNode)
+         DOFList => p%NodesDOF(iSDNode)%List  ! Alias to shorten notations
          ! TODO TODO which orientation to give for joints with more than 6 dofs?
          ! Construct the direction cosine matrix given the output angles
          CALL SmllRotTrans( 'UR_bar input angles', m%U_full(DOFList(4)), m%U_full(DOFList(5)), m%U_full(DOFList(6)), DCM, '', ErrStat2, ErrMsg2)
@@ -1498,7 +1508,7 @@ SUBROUTINE Craig_Bampton(Init, p, m, CBparams, ErrStat, ErrMsg)
    CALL BreakSysMtrx(Init, p, MRR, MLL, MRL, KRR, KLL, KRL, FGR, FGL)   
       
    ! Set p%TI and CBparams%TI2
-   CALL TrnsfTI(Init, m, p%TI, p%nDOFI, p%IDI, CBparams%TI2, p%nDOFR, p%IDR, ErrStat2, ErrMsg2); if(Failed()) return
+   CALL TrnsfTI(Init, p, p%TI, p%nDOFI, p%IDI, CBparams%TI2, p%nDOFR, p%IDR, ErrStat2, ErrMsg2); if(Failed()) return
 
    !................................
    ! Sets the following values, as documented in the SubDyn Theory Guide:
@@ -1766,9 +1776,9 @@ END SUBROUTINE CBMatrix
 
 !------------------------------------------------------------------------------------------------------
 !>
-SUBROUTINE TrnsfTI(Init, m, TI, nDOFI, IDI, TI2, nDOFR, IDR, ErrStat, ErrMsg)
+SUBROUTINE TrnsfTI(Init, p, TI, nDOFI, IDI, TI2, nDOFR, IDR, ErrStat, ErrMsg)
    TYPE(SD_InitType),      INTENT(IN   )  :: Init         ! Input data for initialization routine
-   TYPE(SD_MiscVarType),   INTENT(IN   )  :: m        
+   TYPE(SD_ParameterType), INTENT(IN   )  :: p        
    INTEGER(IntKi),         INTENT(IN   )  :: nDOFI         ! # of DOFS of interface nodes
    INTEGER(IntKi),         INTENT(IN   )  :: nDOFR         ! # of DOFS of restrained nodes (restraints and interface)
    INTEGER(IntKi),         INTENT(IN   )  :: IDI(nDOFI)
@@ -1789,9 +1799,9 @@ SUBROUTINE TrnsfTI(Init, m, TI, nDOFI, IDI, TI2, nDOFR, IDR, ErrStat, ErrMsg)
    TI(:,:)=0
    DO I = 1, nDOFI
       iDOF = IDI(I) ! DOF index in constrained system
-      iNode       = m%DOFtilde2Nodes(iDOF,1) ! First column is node 
-      nDOFPerNode = m%DOFtilde2Nodes(iDOF,2) ! Second column is number of DOF per node
-      iiDOF       = m%DOFtilde2Nodes(iDOF,3) ! Third column is dof index for this joint (1-6 for cantilever)
+      iNode       = p%DOFtilde2Nodes(iDOF,1) ! First column is node 
+      nDOFPerNode = p%DOFtilde2Nodes(iDOF,2) ! Second column is number of DOF per node
+      iiDOF       = p%DOFtilde2Nodes(iDOF,3) ! Third column is dof index for this joint (1-6 for cantilever)
 
       if ((iiDOF<1) .or. (iiDOF>6)) then
          ErrMsg  = 'TransfTI, interface node DOF number is not valid. DOF:'//trim(Num2LStr(iDOF))//' Node:'//trim(Num2LStr(iNode))//' iiDOF:'//trim(Num2LStr(iiDOF)); ErrStat = ErrID_Fatal
@@ -1813,9 +1823,9 @@ SUBROUTINE TrnsfTI(Init, m, TI, nDOFI, IDI, TI2, nDOFR, IDR, ErrStat, ErrMsg)
    TI2(:,:) = 0. !Initialize 
    DO I = 1, nDOFR
       iDOF = IDR(I) ! DOF index in constrained system
-      iNode       = m%DOFtilde2Nodes(iDOF,1) ! First column is node
-      nDOFPerNode = m%DOFtilde2Nodes(iDOF,2) ! Second column is number of DOF per node
-      iiDOF       = m%DOFtilde2Nodes(iDOF,3) ! Third column is dof index for this joint (1-6 for cantilever)
+      iNode       = p%DOFtilde2Nodes(iDOF,1) ! First column is node
+      nDOFPerNode = p%DOFtilde2Nodes(iDOF,2) ! Second column is number of DOF per node
+      iiDOF       = p%DOFtilde2Nodes(iDOF,3) ! Third column is dof index for this joint (1-6 for cantilever)
 
       if ((iiDOF<1) .or. (iiDOF>6)) then
          ErrMsg  = 'TransfTI, reaction node DOF number is not valid. DOF:'//trim(Num2LStr(iDOF))//' Node:'//trim(Num2LStr(iNode))//' iiDOF:'//trim(Num2LStr(iiDOF)); ErrStat = ErrID_Fatal
@@ -2246,8 +2256,8 @@ SUBROUTINE AllocMiscVars(p, Misc, ErrStat, ErrMsg)
    CALL AllocAry( Misc%U_red_dot,    p%nDOF_red,'U_red_dot',     ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
    CALL AllocAry( Misc%U_red_dotdot, p%nDOF_red,'U_red_dotdot',  ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
 
-   call AllocAry( Misc%INodes_Mesh_to_SD, p%nNodes, 'INodes_Mesh_to_SD', ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
-   call AllocAry( Misc%INodes_SD_to_Mesh, p%nNodes, 'INodes_SD_to_Mesh', ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
+   CALL AllocAry( Misc%Fext,      p%nDOF     , 'm%Fext    ', ErrStat2, ErrMsg2 );CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')
+   CALL AllocAry( Misc%Fext_red,  p%nDOF_red , 'm%Fext_red', ErrStat2, ErrMsg2 );CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')
    
 END SUBROUTINE AllocMiscVars
 
@@ -2299,11 +2309,11 @@ SUBROUTINE PartitionDOFNodes_I_C_R_L(Init, m, p, ErrStat, ErrMsg)
    ! Interface DOFS
    p%nDOFI =0
    do iiNode= 1,p%nNodes_I
-      p%nDOFI = p%nDOFI + len(m%NodesDOFtilde( p%Nodes_I(iiNode,1) ))
+      p%nDOFI = p%nDOFI + len(p%NodesDOFtilde( p%Nodes_I(iiNode,1) ))
    enddo
    ! Reaction DOFs
    do iiNode= 1,p%nNodes_C
-      p%nDOFC = p%nDOFC + len(m%NodesDOFtilde( p%Nodes_C(iiNode,1) ))
+      p%nDOFC = p%nDOFC + len(p%NodesDOFtilde( p%Nodes_C(iiNode,1) ))
    enddo
    p%nDOFR = p%nDOFC + p%nDOFI
    p%nDOFL = p%nDOF_red - p%nDOFR ! TODO
@@ -2399,15 +2409,15 @@ SUBROUTINE ConstructUFL( u, p, m, UFL )
 
    ! --- Build vector of external force
    m%Fext= myNaN
-   DO iMeshNode = 1,size(m%INodes_Mesh_to_SD)
-      iSDNode = m%INodes_Mesh_to_SD(iMeshNode) 
-      nMembers = (size(m%NodesDOF(iSDNode)%List)-3)/3 ! Number of members deducted from Node's nDOFList
+   DO iMeshNode = 1,size(p%INodes_Mesh_to_SD)
+      iSDNode  = p%INodes_Mesh_to_SD(iMeshNode) 
+      nMembers = (size(p%NodesDOF(iSDNode)%List)-3)/3 ! Number of members deducted from Node's nDOFList
       ! Force - All nodes have only 3 translational DOFs 
-      m%Fext( m%NodesDOF(iSDNode)%List(1:3) ) =  u%LMesh%Force (:,iMeshNode)
+      m%Fext( p%NodesDOF(iSDNode)%List(1:3) ) =  u%LMesh%Force (:,iMeshNode)
       ! Moment is spread equally across all rotational DOFs if more than 3 rotational DOFs
-      m%Fext( m%NodesDOF(iSDNode)%List(4::3)) =  u%LMesh%Moment(1,iMeshNode)/nMembers
-      m%Fext( m%NodesDOF(iSDNode)%List(5::3)) =  u%LMesh%Moment(2,iMeshNode)/nMembers
-      m%Fext( m%NodesDOF(iSDNode)%List(6::3)) =  u%LMesh%Moment(3,iMeshNode)/nMembers
+      m%Fext( p%NodesDOF(iSDNode)%List(4::3)) =  u%LMesh%Moment(1,iMeshNode)/nMembers
+      m%Fext( p%NodesDOF(iSDNode)%List(5::3)) =  u%LMesh%Moment(2,iMeshNode)/nMembers
+      m%Fext( p%NodesDOF(iSDNode)%List(6::3)) =  u%LMesh%Moment(3,iMeshNode)/nMembers
    enddo
    ! TODO: remove test below in the future
    if (any(m%Fext == myNaN)) then
@@ -2423,10 +2433,9 @@ END SUBROUTINE ConstructUFL
 
 !------------------------------------------------------------------------------------------------------
 !> Output the summary file    
-SUBROUTINE OutSummary(Init, p, SDtoMeshIndx, FEMparams,CBparams, ErrStat,ErrMsg)
+SUBROUTINE OutSummary(Init, p, FEMparams,CBparams, ErrStat,ErrMsg)
    TYPE(SD_InitType),      INTENT(IN)     :: Init           ! Input data for initialization routine, this structure contains many variables needed for summary file
    TYPE(SD_ParameterType), INTENT(IN)     :: p              ! Parameters,this structure contains many variables needed for summary file
-   INTEGER(IntKi)        , INTENT(IN)     :: SDtoMeshIndx(:) ! SD to mesh mapping
    TYPE(CB_MatArrays),     INTENT(IN)     :: CBparams       ! CB parameters that will be passed in for summary file use
    TYPE(FEM_MatArrays),    INTENT(IN)     :: FEMparams      ! FEM parameters that will be passed in for summary file use
    INTEGER(IntKi),         INTENT(OUT)    :: ErrStat        ! Error status of the operation
@@ -2474,7 +2483,7 @@ SUBROUTINE OutSummary(Init, p, SDtoMeshIndx, FEMparams,CBparams, ErrStat,ErrMsg)
    WRITE(UnSum, '(A8,1x,A11,3(1x,A15))')  '--------', '-----------', '---------------', '---------------', '---------------'
 !   WRITE(UnSum, '(I8.0, E15.6,E15.6,E15.6)') (INT(Init%Nodes(i, 1)),(Init%Nodes(i, j), j = 2, JointsCol), i = 1, p%nNodes) !do not group the format or it won't work 3(E15.6) does not work !bjj???
    WRITE(UnSum, '('//Num2LStr(p%nNodes)//'(I8,3x,I9,'//Num2lstr(JointsCol-1)//'(1x,F15.4),:,/))') &
-                          (NINT(Init%Nodes(i, 1)), SDtoMeshIndx(i), (Init%Nodes(i, j), j = 2, JointsCol), i = 1, p%nNodes)
+                          (NINT(Init%Nodes(i, 1)), p%INodes_SD_to_Mesh(i), (Init%Nodes(i, j), j = 2, JointsCol), i = 1, p%nNodes)
 
    WRITE(UnSum, '()') 
    WRITE(UnSum, '(A,I6)')  'Number of elements (NElems):',Init%NElem

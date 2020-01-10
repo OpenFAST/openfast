@@ -254,7 +254,9 @@ SUBROUTINE ReactMatx(Init, p, WtrDpth, ErrStat, ErrMsg)
    INTEGER                             :: rmndr !type-column index
    INTEGER                             :: nodeID  !node ID
    INTEGER(IntKi)                      :: DOFC !  DOFC = Init%NReact*6
-   REAL(ReKi)                          :: x, y, z !coordinates
+   INTEGER(IntKi)                      :: iiDOF, iNode, nDOFPerNode ! 
+   REAL(ReKi)                          :: dx, dy, dz ! distances from reaction points to subdyn origin (mudline)
+   REAL(ReKi), dimension(6)            :: Line
    ErrStat=ErrID_None
    ErrMsg=""
    
@@ -273,15 +275,15 @@ SUBROUTINE ReactMatx(Init, p, WtrDpth, ErrStat, ErrMsg)
    DO I = 1, DOFC
       nodeID = p%Nodes_C(ceiling(I/6.0),1)  !Constrained Node ID (this works in the reordered/renumbered p%Nodes_C) 
       
-      x = Init%Nodes(nodeID, 2)
-      y = Init%Nodes(nodeID, 3)
-      z = Init%Nodes(nodeID, 4) + WtrDpth
+      dx = Init%Nodes(nodeID, 2)
+      dy = Init%Nodes(nodeID, 3)
+      dz = Init%Nodes(nodeID, 4) + WtrDpth
       
       rmndr = MOD(I, 6)  !It gives me the column index among the 6 different kinds
       SELECT CASE (rmndr)
-         CASE (1); p%TIreact(4:6, I) = (/0.0_ReKi , z        , -y/)
-         CASE (2); p%TIreact(4:6, I) = (/-z       , 0.0_ReKi , x/)
-         CASE (3); p%TIreact(4:6, I) = (/y        , -x       , 0.0_ReKi/)
+         CASE (1); p%TIreact(4:6, I) = (/0.0_ReKi  , dz        , -dy/)
+         CASE (2); p%TIreact(4:6, I) = (/-dz       , 0.0_ReKi , dx/)
+         CASE (3); p%TIreact(4:6, I) = (/dy        , -dx       , 0.0_ReKi/)
          CASE (4); p%TIreact(4:6, I) = (/1.0_ReKi , 0.0_ReKi , 0.0_ReKi/)
          CASE (5); p%TIreact(4:6, I) = (/0.0_ReKi , 1.0_ReKi , 0.0_ReKi/)
          CASE (0); p%TIreact(4:6, I) = (/0.0_ReKi , 0.0_ReKi , 1.0_ReKi/)
@@ -290,7 +292,9 @@ SUBROUTINE ReactMatx(Init, p, WtrDpth, ErrStat, ErrMsg)
             ErrMsg  = 'Error calculating transformation matrix TIreact, wrong column index '
             RETURN
          END SELECT
+         !print*,'TIr',p%TIreact(:, I)
    ENDDO
+
 END SUBROUTINE ReactMatx
 
 !====================================================================================================

@@ -748,11 +748,10 @@ END SUBROUTINE SetElementProperties
 !! For Cantilever Joint -> Condensation into 3 translational and 3 rotational DOFs
 !! For other joint type -> Condensation of the 3 translational DOF
 !!                      -> Keeping 3 rotational DOF for each memeber connected to the joint
-SUBROUTINE DistributeDOF(Init, p, m, ErrStat, ErrMsg)
+SUBROUTINE DistributeDOF(Init, p, ErrStat, ErrMsg)
    use IntegerList, only: init_list, len
    TYPE(SD_InitType),            INTENT(INOUT) :: Init
-   TYPE(SD_ParameterType),       INTENT(IN   ) :: p
-   TYPE(SD_MiscVarType),         INTENT(INOUT) :: m
+   TYPE(SD_ParameterType),       INTENT(INOUT) :: p
    INTEGER(IntKi),               INTENT(  OUT) :: ErrStat     ! Error status of the operation
    CHARACTER(*),                 INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
    integer(IntKi) :: iNode, k
@@ -767,12 +766,12 @@ SUBROUTINE DistributeDOF(Init, p, m, ErrStat, ErrMsg)
    ErrMsg  = ""
    ErrStat = ErrID_None
 
-   allocate(m%NodesDOF(1:p%nNodes), stat=ErrStat2)
+   allocate(p%NodesDOF(1:p%nNodes), stat=ErrStat2)
    ErrMsg2="Error allocating NodesDOF"
    if(Failed()) return
 
-   call AllocAry(m%ElemsDOF, 12, Init%NElem, 'ElemsDOF', ErrStat2, ErrMsg2); if(Failed()) return;
-   m%ElemsDOF=-9999
+   call AllocAry(p%ElemsDOF, 12, Init%NElem, 'ElemsDOF', ErrStat2, ErrMsg2); if(Failed()) return;
+   p%ElemsDOF=-9999
 
    iPrev =0
    do iNode = 1, p%nNodes
@@ -782,8 +781,8 @@ SUBROUTINE DistributeDOF(Init, p, m, ErrStat, ErrMsg)
       else
          nRot= 3*Init%NodesConnE(iNode,1) ! Col1: number of elements connected to this joint
       endif
-      call init_list(m%NodesDOF(iNode), 3+nRot, iPrev, ErrStat2, ErrMsg2)
-      m%NodesDOF(iNode)%List(1:(3+nRot)) = (/ ((iElem+iPrev), iElem=1,3+nRot) /)
+      call init_list(p%NodesDOF(iNode), 3+nRot, iPrev, ErrStat2, ErrMsg2)
+      p%NodesDOF(iNode)%List(1:(3+nRot)) = (/ ((iElem+iPrev), iElem=1,3+nRot) /)
 
       ! --- Distribute to members
       do iElem = 1, Init%NodesConnE(iNode,1) ! members connected to joint iJ
@@ -793,14 +792,14 @@ SUBROUTINE DistributeDOF(Init, p, m, ErrStat, ErrMsg)
          else                              ! Current joint is Elem node 2
             iOff = 6
          endif
-         m%ElemsDOF(iOff+1:iOff+3, idElem) =  m%NodesDOF(iNode)%List(1:3)
+         p%ElemsDOF(iOff+1:iOff+3, idElem) =  p%NodesDOF(iNode)%List(1:3)
          if (int(Init%Nodes(iNode,iJointType)) == idJointCantilever ) then
-            m%ElemsDOF(iOff+4:iOff+6, idElem) = m%NodesDOF(iNode)%List(4:6)
+            p%ElemsDOF(iOff+4:iOff+6, idElem) = p%NodesDOF(iNode)%List(4:6)
          else
-            m%ElemsDOF(iOff+4:iOff+6, idElem) = m%NodesDOF(iNode)%List(3*iElem+1:3*iElem+3)   
+            p%ElemsDOF(iOff+4:iOff+6, idElem) = p%NodesDOF(iNode)%List(3*iElem+1:3*iElem+3)   
          endif
       enddo ! iElem, loop on members connect to joint
-      iPrev = iPrev + len(m%NodesDOF(iNode))
+      iPrev = iPrev + len(p%NodesDOF(iNode))
    enddo ! iNode, loop on joints
 
    ! --- Initialize boundary constraint vector - NOTE: Needs Reindexing first
@@ -812,7 +811,7 @@ SUBROUTINE DistributeDOF(Init, p, m, ErrStat, ErrMsg)
    CALL InitIntFc(Init, p)
 
    ! --- Safety check
-   if (any(m%ElemsDOF<0)) then
+   if (any(p%ElemsDOF<0)) then
       ErrStat=ErrID_Fatal
       ErrMsg ="Implementation error in Distribute DOF, some member DOF were not allocated"
    endif
@@ -822,7 +821,7 @@ SUBROUTINE DistributeDOF(Init, p, m, ErrStat, ErrMsg)
       do idElem = 1, Init%NElem
          iNode = p%Elems(idElem, 2)
          DOFNode_Old= (/ ((iNode*6-5+k), k=0,5) /)
-         if ( any( (m%ElemsDOF(1:6, idElem) /= DOFNode_Old)) ) then
+         if ( any( (p%ElemsDOF(1:6, idElem) /= DOFNode_Old)) ) then
             ErrStat=ErrID_Fatal
             ErrMsg ="Implementation error in Distribute DOF, DOF indices have changed for iElem="//trim(Num2LStr(idElem))
             return
@@ -849,7 +848,7 @@ CONTAINS
       DO I = 1, p%nNodes_C
          iNode = p%Nodes_C(I,1) ! Node index
          DO J = 1, 6
-            Init%BCs( (I-1)*6+J, 1) = m%NodesDOF(iNode)%List(J) ! DOF number (unconstrained)
+            Init%BCs( (I-1)*6+J, 1) = p%NodesDOF(iNode)%List(J) ! DOF number (unconstrained)
             Init%BCs( (I-1)*6+J, 2) = p%Nodes_C(I, J+1);         ! 0 or 1 if fixed reaction or not
          ENDDO
       ENDDO
@@ -866,7 +865,7 @@ CONTAINS
       DO I = 1, p%nNodes_I
          iNode = p%Nodes_I(I,1) ! Node index
          DO J = 1, 6 ! ItfTDXss    ItfTDYss    ItfTDZss    ItfRDXss    ItfRDYss    ItfRDZss
-            Init%IntFc( (I-1)*6+J, 1) = m%NodesDOF(iNode)%List(J) ! DOF number (unconstrained)
+            Init%IntFc( (I-1)*6+J, 1) = p%NodesDOF(iNode)%List(J) ! DOF number (unconstrained)
             Init%IntFc( (I-1)*6+J, 2) = p%Nodes_I(I, J+1);      ! 0 or 1 if fixed to interface 
          ENDDO
       ENDDO
@@ -876,10 +875,9 @@ END SUBROUTINE DistributeDOF
 
 !------------------------------------------------------------------------------------------------------
 !> Assemble stiffness and mass matrix, and gravity force vector
-SUBROUTINE AssembleKM(Init, p, m, ErrStat, ErrMsg)
+SUBROUTINE AssembleKM(Init, p, ErrStat, ErrMsg)
    TYPE(SD_InitType),            INTENT(INOUT) :: Init
    TYPE(SD_ParameterType),       INTENT(INOUT) :: p
-   TYPE(SD_MiscVarType),         INTENT(INOUT) :: m
    INTEGER(IntKi),               INTENT(  OUT) :: ErrStat     ! Error status of the operation
    CHARACTER(*),                 INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
    ! Local variables
@@ -914,7 +912,7 @@ SUBROUTINE AssembleKM(Init, p, m, ErrStat, ErrMsg)
       CALL ElemF(p%ElemProps(i), Init%g, FGe, FCe)
 
       ! --- Assembly in global unconstrained system
-      IDOF = m%ElemsDOF(1:12, i)
+      IDOF = p%ElemsDOF(1:12, i)
       Init%FG( IDOF )    = Init%FG( IDOF )     + FGe(1:12)+ FCe(1:12) ! Note: gravity and pretension cable forces
       Init%K(IDOF, IDOF) = Init%K( IDOF, IDOF) + Ke(1:12,1:12)
       Init%M(IDOF, IDOF) = Init%M( IDOF, IDOF) + Me(1:12,1:12)
@@ -929,18 +927,18 @@ SUBROUTINE AssembleKM(Init, p, m, ErrStat, ErrMsg)
          if(Failed()) return
       endif
       DO J = 1, 3
-          iGlob = m%NodesDOF(iNode)%List(J) ! ux, uy, uz
+          iGlob = p%NodesDOF(iNode)%List(J) ! ux, uy, uz
           Init%M(iGlob, iGlob) = Init%M(iGlob, iGlob) + Init%CMass(I, 2)
       ENDDO
       DO J = 4, 6
-          iGlob = m%NodesDOF(iNode)%List(J) ! theta_x, theta_y, theta_z
+          iGlob = p%NodesDOF(iNode)%List(J) ! theta_x, theta_y, theta_z
           Init%M(iGlob, iGlob) = Init%M(iGlob, iGlob) + Init%CMass(I, J-1)
       ENDDO
    ENDDO ! Loop on concentrated mass
 
    ! add concentrated mass induced gravity force
    DO I = 1, Init%NCMass
-       iGlob = m%NodesDOF(i)%List(3) ! uz
+       iGlob = p%NodesDOF(i)%List(3) ! uz
        Init%FG(iGlob) = Init%FG(iGlob) - Init%CMass(I, 2)*Init%g 
    ENDDO ! I concentrated mass induced gravity
    
@@ -981,14 +979,13 @@ END SUBROUTINE AssembleKM
 
 !------------------------------------------------------------------------------------------------------
 !> Build transformation matrix T, such that x= T.x~ where x~ is the reduced vector of DOF
-SUBROUTINE BuildTMatrix(Init, p, RA, RAm1, m, Tred, ErrStat, ErrMsg)
+SUBROUTINE BuildTMatrix(Init, p, RA, RAm1, Tred, ErrStat, ErrMsg)
    use IntegerList, only: init_list, find, pop, destroy_list, len
    use IntegerList, only: print_list
    TYPE(SD_InitType),            INTENT(INOUT) :: Init
-   TYPE(SD_ParameterType),       INTENT(INOUT) :: p
+   TYPE(SD_ParameterType),target,INTENT(INOUT) :: p
    type(IList), dimension(:),    INTENT(IN   ) :: RA   !< RA(a) = [e1,..,en]  list of elements forming a rigid link assembly
    integer(IntKi), dimension(:), INTENT(IN   ) :: RAm1 !< RA^-1(e) = a , for a given element give the index of a rigid assembly
-   TYPE(SD_MiscVarType),target,  INTENT(INOUT) :: m
    INTEGER(IntKi),               INTENT(  OUT) :: ErrStat     ! Error status of the operation
    CHARACTER(*),                 INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
    real(ReKi), dimension(:,:), allocatable :: Tred !< Transformation matrix for DOF elimination
@@ -1015,7 +1012,7 @@ SUBROUTINE BuildTMatrix(Init, p, RA, RAm1, m, Tred, ErrStat, ErrMsg)
    ! --- Misc inits
    nullify(IDOFNew)
    I6(1:6,1:6)=0; do i = 1,6 ; I6(i,i)=1_ReKi; enddo ! I6 =  eye(6)
-   allocate(m%NodesDOFtilde(1:p%nNodes), stat=ErrStat2); if(Failed()) return; ! Indices of DOF for each joint, in reduced system
+   allocate(p%NodesDOFtilde(1:p%nNodes), stat=ErrStat2); if(Failed()) return; ! Indices of DOF for each joint, in reduced system
 
    p%nDOF_red = nDOF_ConstraintReduced()
    print*,'nDOF constraint elim', p%nDOF_red , '/' , p%nDOF
@@ -1049,7 +1046,7 @@ SUBROUTINE BuildTMatrix(Init, p, RA, RAm1, m, Tred, ErrStat, ErrMsg)
                nj = size(INodesID)
                allocate(IDOFOld(1:6*nj))
                do I=1, nj
-                  IDOFOld( (I-1)*6+1 : I*6 ) = m%NodesDOF(INodesID(I))%List(1:6)
+                  IDOFOld( (I-1)*6+1 : I*6 ) = p%NodesDOF(INodesID(I))%List(1:6)
                enddo
             endif
          else
@@ -1057,19 +1054,19 @@ SUBROUTINE BuildTMatrix(Init, p, RA, RAm1, m, Tred, ErrStat, ErrMsg)
             allocate(Tc(1:6,1:6))
             allocate(IDOFOld(1:6))
             Tc=I6
-            IDOFOld = m%NodesDOF(iNode)%List(1:6)
+            IDOFOld = p%NodesDOF(iNode)%List(1:6)
          endif
       else
          ! --- Ball/Pin/Universal joint
-         allocate(IDOFOld(1:len(m%NodesDOF(iNode))))
-         IDOFOld(:) = m%NodesDOF(iNode)%List(:)
+         allocate(IDOFOld(1:len(p%NodesDOF(iNode))))
+         IDOFOld(:) = p%NodesDOF(iNode)%List(:)
          phat = Init%Nodes(iNode, iJointDir:iJointDir+2)
          call JointElimination(Init%NodesConnE(iNode,:), JType, phat, Init, p, Tc, ErrStat2, ErrMsg2); if(Failed()) return
       endif
       nc=size(Tc,2) 
-      call init_list(m%NodesDOFtilde(iNode), nc, 0, ErrStat2, ErrMsg2)
-      m%NodesDOFtilde(iNode)%List(1:nc) = (/ (iprev + i, i=1,nc) /)
-      IDOFNew => m%NodesDOFtilde(iNode)%List(1:nc) ! alias to shorten notations
+      call init_list(p%NodesDOFtilde(iNode), nc, 0, ErrStat2, ErrMsg2)
+      p%NodesDOFtilde(iNode)%List(1:nc) = (/ (iprev + i, i=1,nc) /)
+      IDOFNew => p%NodesDOFtilde(iNode)%List(1:nc) ! alias to shorten notations
       print*,'N',iNode,'I ',IDOFOld
       print*,'N',iNode,'It',IDOFNew
       Tred(IDOFOld, IDOFNew) = Tc
@@ -1145,11 +1142,10 @@ contains
 END SUBROUTINE BuildTMatrix
 !------------------------------------------------------------------------------------------------------
 !> Assemble stiffness and mass matrix, and gravity force vector
-SUBROUTINE DirectElimination(Init, p, m, ErrStat, ErrMsg)
+SUBROUTINE DirectElimination(Init, p, ErrStat, ErrMsg)
    use IntegerList, only: len
    TYPE(SD_InitType),            INTENT(INOUT) :: Init
-   TYPE(SD_ParameterType),       INTENT(INOUT) :: p
-   TYPE(SD_MiscVarType),target,  INTENT(INOUT) :: m
+   TYPE(SD_ParameterType),target,INTENT(INOUT) :: p
    INTEGER(IntKi),               INTENT(  OUT) :: ErrStat     ! Error status of the operation
    CHARACTER(*),                 INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
    ! Local variables
@@ -1166,7 +1162,7 @@ SUBROUTINE DirectElimination(Init, p, m, ErrStat, ErrMsg)
 
    call RigidLinkAssemblies(Init, p, RA, RAm1, ErrStat2, ErrMsg2); if(Failed()) return
 
-   call BuildTMatrix(Init, p, RA, RAm1, m, p%T_red, ErrStat2, ErrMsg2); if (Failed()) return
+   call BuildTMatrix(Init, p, RA, RAm1, p%T_red, ErrStat2, ErrMsg2); if (Failed()) return
 
    ! --- DOF elimination for system matrices and RHS vector
    ! Temporary backup of M and K of full system
@@ -1179,8 +1175,6 @@ SUBROUTINE DirectElimination(Init, p, m, ErrStat, ErrMsg)
    CALL AllocAry( Init%K,      nDOF, nDOF,  'Init%K'   ,  ErrStat2, ErrMsg2); if(Failed()) return; ! system stiffness matrix 
    CALL AllocAry( Init%M,      nDOF, nDOF,  'Init%M'   ,  ErrStat2, ErrMsg2); if(Failed()) return; ! system mass matrix 
    CALL AllocAry( Init%FG     ,nDOF,        'Init%FG'  ,  ErrStat2, ErrMsg2); if(Failed()) return; ! system gravity force vector 
-   CALL AllocAry( m%Fext,      p%nDOF     , 'm%Fext    ', ErrStat2, ErrMsg2 ); if(Failed()) return ! external force
-   CALL AllocAry( m%Fext_red,  p%nDOF_red , 'm%Fext_red', ErrStat2, ErrMsg2 ); if(Failed()) return ! external force, reduced by Tred
    ! Elimination
    Init%M  = matmul(transpose(p%T_red), matmul(MM, p%T_red))
    Init%K  = matmul(transpose(p%T_red), matmul(KK, p%T_red))
@@ -1192,15 +1186,15 @@ SUBROUTINE DirectElimination(Init, p, m, ErrStat, ErrMsg)
    CALL ReInitIntFc(Init, p)
 
    ! --- Creating a convenient Map from DOF to Nodes
-   call AllocAry(m%DOFtilde2Nodes, p%nDOF_red, 3, 'DOFtilde2Nodes', ErrStat2, ErrMsg2); if(Failed()) return;
-   m%DOFtilde2Nodes=-999
+   call AllocAry(p%DOFtilde2Nodes, p%nDOF_red, 3, 'DOFtilde2Nodes', ErrStat2, ErrMsg2); if(Failed()) return;
+   p%DOFtilde2Nodes=-999
    do iNode=1,p%nNodes
-      nDOFPerNode = len(m%NodesDOFtilde(iNode))
+      nDOFPerNode = len(p%NodesDOFtilde(iNode))
       do iiDOF = 1, nDOFPerNode
-         iDOF = m%NodesDOFtilde(iNode)%List(iiDOF)
-         m%DOFtilde2Nodes(iDOF,1) = iNode       ! First column is Node index
-         m%DOFtilde2Nodes(iDOF,2) = nDOFPerNode ! Second column is number of DOF per node
-         m%DOFtilde2Nodes(iDOF,3) = iiDOF       ! Third column is number of DOF per node
+         iDOF = p%NodesDOFtilde(iNode)%List(iiDOF)
+         p%DOFtilde2Nodes(iDOF,1) = iNode       ! First column is Node index
+         p%DOFtilde2Nodes(iDOF,2) = nDOFPerNode ! Second column is number of DOF per node
+         p%DOFtilde2Nodes(iDOF,3) = iiDOF       ! Third column is number of DOF per node
       enddo
    enddo
 
@@ -1230,7 +1224,7 @@ CONTAINS
       DO I = 1, p%nNodes_C
          iNode = p%Nodes_C(I,1) ! Node index
          DO J = 1, 6
-            Init%BCs( (I-1)*6+J, 1) = m%NodesDOFtilde(iNode)%List(J) ! DOF number (constrained)
+            Init%BCs( (I-1)*6+J, 1) = p%NodesDOFtilde(iNode)%List(J) ! DOF number (constrained)
          ENDDO
       ENDDO
    END SUBROUTINE ReInitBCs
@@ -1243,7 +1237,7 @@ CONTAINS
       DO I = 1, p%nNodes_I
          iNode = p%Nodes_I(I,1) ! Node index
          DO J = 1, 6 ! ItfTDXss    ItfTDYss    ItfTDZss    ItfRDXss    ItfRDYss    ItfRDZss
-            Init%IntFc( (I-1)*6+J, 1) = m%NodesDOFtilde(iNode)%List(J) ! DOF number (unconstrained)
+            Init%IntFc( (I-1)*6+J, 1) = p%NodesDOFtilde(iNode)%List(J) ! DOF number (unconstrained)
          ENDDO
       ENDDO
    END SUBROUTINE ReInitIntFc
@@ -1539,9 +1533,8 @@ END SUBROUTINE RigidLinkAssemblies
 
 !------------------------------------------------------------------------------------------------------
 !> Add stiffness and damping to some joints
-SUBROUTINE InsertJointStiffDamp(p, m, Init, ErrStat, ErrMsg)
-   TYPE(SD_ParameterType),       INTENT(IN   ) :: p
-   TYPE(SD_MiscVarType),target,  INTENT(IN   ) :: m
+SUBROUTINE InsertJointStiffDamp(p, Init, ErrStat, ErrMsg)
+   TYPE(SD_ParameterType),target,INTENT(IN   ) :: p
    TYPE(SD_InitType),            INTENT(INOUT) :: Init
    INTEGER(IntKi),               INTENT(  OUT) :: ErrStat     ! Error status of the operation
    CHARACTER(*),                 INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
@@ -1571,7 +1564,7 @@ SUBROUTINE InsertJointStiffDamp(p, m, Init, ErrStat, ErrMsg)
          else if ( JType == idJointUniversal ) then; iStart=5;
          else if ( JType == idJointPin       ) then; iStart=6;
          endif
-         Ifreerot=>m%NodesDOFtilde(iNode)%List(iStart:)
+         Ifreerot=>p%NodesDOFtilde(iNode)%List(iStart:)
          ! Ball/Pin/Universal joints
          if(StifAdd>0) then 
             print*,'StiffAdd, Node',iNode,StifAdd, Ifreerot
