@@ -381,7 +381,7 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
    p%nNodes = p%nNodes + (NNE - 2)*Init%NElem  ! TODO TODO TODO Same as above. 
    
    ! check the number of interior modes
-   IF ( p%Nmodes > 6*(p%nNodes - p%nNodes_I - p%nNodes_C) ) THEN
+   IF ( p%nDOFM > 6*(p%nNodes - p%nNodes_I - p%nNodes_C) ) THEN
       CALL Fatal(' NModes must be less than or equal to '//TRIM(Num2LStr( 6*(p%nNodes - p%nNodes_I - p%nNodes_C) )))
       RETURN
    ENDIF

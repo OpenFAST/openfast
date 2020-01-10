@@ -38,8 +38,7 @@ typedef	^	MeshAuxDataType	ReKi   	Me      	{:}{:}{:}{:}	-	-	"Mass matrix connect
 typedef	^	MeshAuxDataType	ReKi   	Ke      	{:}{:}{:}{:}	-	-	"Mass matrix connected to each joint element for outAll output"
 typedef	^	MeshAuxDataType	ReKi   	Fg      	{:}{:}{:}	-	-	"Gravity load vector connected to each joint element for requested member output"
 # CB_MatArrays: Matrices and arrays for CB summary
-typedef	SubDyn/SD	CB_MatArrays	INTEGER	nDOFM	-	-	-	"retained degrees of freedom (modes)"
-typedef	^	CB_MatArrays	ReKi   	TI2	{:}{:}	-	-	"TI2 matrix to refer to total mass to (0,0,0)"
+typedef	SubDyn/SD	CB_MatArrays	ReKi   	TI2	{:}{:}	-	-	"TI2 matrix to refer to total mass to (0,0,0)"
 typedef	^	CB_MatArrays	ReKi   	MBB	{:}{:}	-	-	"FULL MBB ( no constraints applied)"
 typedef	^	CB_MatArrays	ReKi   	MBM	{:}{:}	-	-	"FULL MBM ( no constraints applied)"
 typedef	^	CB_MatArrays	ReKi   	KBB	{:}{:}	-	-	"FULL KBB ( no constraints applied)"
@@ -179,9 +178,8 @@ typedef ^             ^     IntKi   INodes_SD_to_Mesh {:}    -  -  "Nodes indice
 typedef ^             ^     IntKi   ElemsDOF          {:}{:} -  -  "12 DOF indices of node 1 and 2 of a given member in unconstrained assembled system "	"-"
 typedef ^             ^     IntKi   DOFtilde2Nodes    {:}{:} -  -  "nDOFRed x 3, for each constrained DOF, col1 node index, col2 number of DOF, col3 DOF starting from 1"	"-"
 # --- CB reduction
+typedef	^	ParameterType	IntKi	nDOFM	-	-	-	"retained degrees of freedom (modes)"
 typedef	^	ParameterType	Logical	SttcSolve	-	-	-	"Solve dynamics about static equilibrium point (flag)"
-typedef	^	ParameterType	IntKi	NModes	-	-	-	"Number of modes to retain in C-B method"
-typedef	^	ParameterType	IntKi	qmL	-	-	-	"Length of state array"
 typedef	^	ParameterType	ReKi	NOmegaM2	{:}	-	-	"Coefficient of x in X (negative omegaM squared)"
 typedef	^	ParameterType	ReKi	N2OmegaMJDamp	{:}	-	-	"Coefficient of x in X (negative 2 omegaM * JDamping)"
 typedef	^	ParameterType	ReKi	MMB	{:}{:}	-	-	"Matrix after C-B reduction (transpose of MBM"
@@ -224,7 +222,6 @@ typedef	^	ParameterType	IntKi	IDL	{:}	-	-	"Index array of the internal dofs"
 typedef	^	ParameterType	IntKi	IDC	{:}	-	-	"Index array of the contraint dofs"
 typedef	^	ParameterType	IntKi	IDR	{:}	-	-	"Index array of the interface and restraint dofs"
 typedef	^	ParameterType	IntKi	IDY	{:}	-	-	"Index array of the all dofs in Y2"
-typedef	^	ParameterType	IntKi	URbarL	-	-	-	"Length of URbar, subarray of y2 array (DOFRb)"
 typedef	^	ParameterType	ReKi	FGL	{:}	-	-	"Internal node nDOFL, gravity loads"
 # --- Outputs
 typedef	^	ParameterType	IntKi	NAvgEls	-	2	-	"Max number of elements that should be averaged when calculating outputs at nodes"

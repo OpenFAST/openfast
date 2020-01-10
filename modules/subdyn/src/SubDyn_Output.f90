@@ -286,13 +286,13 @@ SUBROUTINE ReactMatx(Init, WtrDpth, p, ErrStat, ErrMsg)
 END SUBROUTINE ReactMatx
 
 !====================================================================================================
-SUBROUTINE SDOut_MapOutputs( CurrentTime, u,p,x, y, m, AllOuts, ErrStat, ErrMsg )
-! This subroutine writes the data stored in the y variable to the correct indexed postions in WriteOutput
-! This is called by SD_CalcOutput() at each time step.
-! This routine does fill Allouts
-! note that this routine assumes m%u_TP and m%udotdot_TP have been set before calling 
-!     this routine (which is done in SD_CalcOutput() and SD CalcContStateDeriv)
+!> Writes the data stored in the y variable to the correct indexed postions in WriteOutput
+!! This is called by SD_CalcOutput() at each time step.
+!! This routine does fill Allouts
+!! note that this routine assumes m%u_TP and m%udotdot_TP have been set before calling 
+!!     this routine (which is done in SD_CalcOutput() and SD CalcContStateDeriv)
 !---------------------------------------------------------------------------------------------------- 
+SUBROUTINE SDOut_MapOutputs( CurrentTime, u,p,x, y, m, AllOuts, ErrStat, ErrMsg )
    REAL(DbKi),                    INTENT( IN    )  :: CurrentTime          ! Current simulation time in seconds
    TYPE(SD_InputType),            INTENT( IN )     :: u                    ! SubDyn module's input data
    TYPE(SD_ContinuousStateType),  INTENT( IN )     :: x                    ! SubDyn module's states data
@@ -302,19 +302,17 @@ SUBROUTINE SDOut_MapOutputs( CurrentTime, u,p,x, y, m, AllOuts, ErrStat, ErrMsg 
    REAL(ReKi),                    INTENT(   OUT )  :: AllOuts(0:MaxOutPts+p%OutAllInt*p%OutAllDims) ! Array of output data for all possible outputs
    INTEGER(IntKi),                INTENT(   OUT )  :: ErrStat              ! Error status of the operation
    CHARACTER(*),                  INTENT(   OUT )  :: ErrMsg               ! Error message if ErrStat /= ErrID_None
-
    !locals
-   INTEGER(IntKi)                           ::I,J,K,K2,L,L2      ! Counters
-   INTEGER(IntKi), DIMENSION(2)             ::K3    ! It stores Node IDs for element under consideration (may not be consecutive numbers)
-   INTEGER(IntKi)                           :: maxOutModes  ! maximum modes to output, the minimum of 99 or p%Nmodes
-   REAL(ReKi), DIMENSION (6)                :: FM_elm, FK_elm, junk  !output static and dynamic forces and moments
-   REAL(ReKi), DIMENSION (6)                :: FM_elm2, FK_elm2  !output static and dynamic forces and moments
-   Real(ReKi), DIMENSION (3,3)              :: DIRCOS    !direction cosice matrix (global to local) (3x3)
-   Real(ReKi), ALLOCATABLE                  :: ReactNs(:)    !6*Nreact reactions
-   REAL(ReKi)                               :: Tmp_Udotdot(12), Tmp_y2(12) !temporary storage for calls to CALC_LOCAL
-   
-   Real(ReKi), DIMENSION(p%URbarL+p%nDOFL+6*p%nNodes_C) :: yout            ! modifications to Y2 and Udotdot to include constrained node DOFs
-   Real(ReKi), DIMENSION(p%URbarL+p%nDOFL+6*p%nNodes_C) ::uddout           ! modifications to Y2 and Udotdot to include constrained node DOFs
+   INTEGER(IntKi)               :: I,J,K,K2,L,L2      ! Counters
+   INTEGER(IntKi), DIMENSION(2) :: K3    ! It stores Node IDs for element under consideration (may not be consecutive numbers)
+   INTEGER(IntKi)               :: maxOutModes  ! maximum modes to output, the minimum of 99 or p%nDOFM
+   REAL(ReKi), DIMENSION (6)    :: FM_elm, FK_elm, junk  !output static and dynamic forces and moments
+   REAL(ReKi), DIMENSION (6)    :: FM_elm2, FK_elm2  !output static and dynamic forces and moments
+   Real(ReKi), DIMENSION (3,3)  :: DIRCOS    !direction cosice matrix (global to local) (3x3)
+   Real(ReKi), ALLOCATABLE      :: ReactNs(:)    !6*Nreact reactions
+   REAL(ReKi)                   :: Tmp_Udotdot(12), Tmp_y2(12) !temporary storage for calls to CALC_LOCAL
+   Real(ReKi), DIMENSION(p%nDOFI+p%nDOFL+p%nDOFC) :: yout            ! modifications to Y2 and Udotdot to include constrained node DOFs
+   Real(ReKi), DIMENSION(p%nDOFI+p%nDOFL+p%nDOFC) ::uddout           ! modifications to Y2 and Udotdot to include constrained node DOFs
    Integer(IntKi)                              ::sgn !+1/-1 for node force calculations
    type(MeshAuxDataType), pointer :: pLst !< Alias to shorten notation and highlight code similarities
    ErrStat = ErrID_None   
@@ -324,26 +322,26 @@ SUBROUTINE SDOut_MapOutputs( CurrentTime, u,p,x, y, m, AllOuts, ErrStat, ErrMsg 
    
    !Create a variable that lists Y2 and adds removed constrained nodes' dofs; we will be using it to carry out other calculations with a special indexing array
    yout =0 !Initialize and populate with Y2 data  
-   yout(1:         p%UrbarL        ) = m%UR_bar ! TODO TODO TODO Look at U_full/U_red
-   yout(p%URbarL+1:p%URbarL+p%nDOFL) = m%UL
+   yout(1:         p%nDOFI        ) = m%UR_bar ! TODO TODO TODO Look at U_full/U_red
+   yout(p%nDOFI+1:p%nDOFI+p%nDOFL) = m%UL
   
    !Same for a variable that deals with Udotdot
    uddout =0 !Initialize and populate with Udotdot data
-   uddout(1          : p%URbarL          ) = m%UR_bar_dotdot ! TODO TODO TODO look at U_full_dotdot U_red_dotdot
-   uddout(p%URbarL+1 : p%URbarL+p%nDOFL  ) = m%UL_dotdot
+   uddout(1          : p%nDOFI          ) = m%UR_bar_dotdot ! TODO TODO TODO look at U_full_dotdot U_red_dotdot
+   uddout(p%nDOFI+1 : p%nDOFI+p%nDOFL  ) = m%UL_dotdot
 
-   ! TODO TODO TODO, there is a lot of similarity between the three outputs sections with some code redundency
+  ! TODO TODO TODO, there is a lot of similarity between the three outputs sections with some code redundency
          
-      ! Only generate member-based outputs for the number of user-requested member outputs
-      !Now store and identify needed output as requested by user
-      !p%MOutLst has the mapping for the member, node, elements per node, to be used
-      !MXNYZZZ   will need to connects to p%MOutLst(X)%ElmIDs(Y,1:2) if it is a force or accel; else to u%UFL(p%MOutLst(X)%NodeIDs(Y)) 
-      !Inertial Load for the elements that are needed
-  if (p%NumOuts > 0) then  !bjj: some of these fields aren't allocated when NumOuts==0
-     DO I=1,p%NMOutputs
-          !I know el # and whether it is 1st node or second node
-        pLst=>p%MOutLst(I)
-        DO J=1,pLst%NOutCnt !Iterate on requested nodes for that member 
+   ! Only generate member-based outputs for the number of user-requested member outputs
+   !Now store and identify needed output as requested by user
+   !p%MOutLst has the mapping for the member, node, elements per node, to be used
+   !MXNYZZZ   will need to connects to p%MOutLst(X)%ElmIDs(Y,1:2) if it is a force or accel; else to u%UFL(p%MOutLst(X)%NodeIDs(Y)) 
+   !Inertial Load for the elements that are needed
+   if (p%NumOuts > 0) then  !bjj: some of these fields aren't allocated when NumOuts==0
+      DO I=1,p%NMOutputs
+         !I know el # and whether it is 1st node or second node
+         pLst=>p%MOutLst(I)
+         DO J=1,pLst%NOutCnt !Iterate on requested nodes for that member 
              !I need to average across potentially up to 2 elements
              !Calculate forces on 1st stored element, and if 2nd exists do averaging with the second
              K = pLst%ElmIDs(J,1)  !element number
@@ -383,7 +381,6 @@ SUBROUTINE SDOut_MapOutputs( CurrentTime, u,p,x, y, m, AllOuts, ErrStat, ErrMsg 
                  FM_elm2=0.5*( FM_elm2 + sgn*FM_elm ) !Now Average
                  FK_elm2=0.5*( FK_elm2 + sgn*FK_elm) !Now Average
              ENDIF
-           
               ! Store in AllOuts
               !Forces and moments
               AllOuts(MNfmKe  (:,J,I))     = FK_elm2  !static forces and moments (6) Local Ref
@@ -396,9 +393,7 @@ SUBROUTINE SDOut_MapOutputs( CurrentTime, u,p,x, y, m, AllOuts, ErrStat, ErrMsg 
               !Accelerations- I need to get the direction cosine matrix to tranform displacement and rotations
               AllOuts(MNTRAe (1:3,J,I))     = matmul(DIRCOS,uddout(L:L+2)  )   !translational accel local ref
               AllOuts(MNTRAe (4:6,J,I))     = matmul(DIRCOS,uddout(L+3:L+5) )  !rotational accel  local ref
-              
         ENDDO  ! J, Loop on requested nodes for that member
-        
      ENDDO ! I, Loop on member outputs
    END IF
   
@@ -434,7 +429,7 @@ SUBROUTINE SDOut_MapOutputs( CurrentTime, u,p,x, y, m, AllOuts, ErrStat, ErrMsg 
 
   ! Assign all SSqm, SSqmdot, SSqmdotdot
   ! We only have space for the first 99 values
-  maxOutModes = min(p%Nmodes,99)
+  maxOutModes = min(p%nDOFM,99)
   IF ( maxOutModes > 0 ) THEN 
      !BJJ: TODO: is there a check to see if we requested these channels but didn't request the modes? (i.e., retain 2 modes but asked for 75th mode?)
      Allouts(SSqm01  :SSqm01  +maxOutModes-1) = x%qm      (1:maxOutModes)
@@ -736,7 +731,7 @@ SUBROUTINE SDOut_ChkOutLst( OutList, p, ErrStat, ErrMsg )
    InvalidOutput            = .FALSE.
 
       ! mark invalid output channels:
-   DO k=p%Nmodes+1,99
+   DO k=p%nDOFM+1,99
       InvalidOutput(SSqm01  +k-1) = .true.
       InvalidOutput(SSqmd01 +k-1) = .true.
       InvalidOutput(SSqmdd01+k-1) = .true.

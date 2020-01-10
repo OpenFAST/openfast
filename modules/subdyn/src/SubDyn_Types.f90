@@ -70,7 +70,6 @@ IMPLICIT NONE
 ! =======================
 ! =========  CB_MatArrays  =======
   TYPE, PUBLIC :: CB_MatArrays
-    INTEGER(IntKi)  :: nDOFM      !< retained degrees of freedom (modes) [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: TI2      !< TI2 matrix to refer to total mass to (0,0,0) [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: MBB      !< FULL MBB ( no constraints applied) [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: MBM      !< FULL MBM ( no constraints applied) [-]
@@ -219,9 +218,8 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: INodes_SD_to_Mesh      !< Nodes indices from subdyn nodes to U/Y2-Mesh iMeshNode = INodes_SD_to_Mesh(iSDNode)   [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: ElemsDOF      !< 12 DOF indices of node 1 and 2 of a given member in unconstrained assembled system  [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: DOFtilde2Nodes      !< nDOFRed x 3, for each constrained DOF, col1 node index, col2 number of DOF, col3 DOF starting from 1 [-]
+    INTEGER(IntKi)  :: nDOFM      !< retained degrees of freedom (modes) [-]
     LOGICAL  :: SttcSolve      !< Solve dynamics about static equilibrium point (flag) [-]
-    INTEGER(IntKi)  :: NModes      !< Number of modes to retain in C-B method [-]
-    INTEGER(IntKi)  :: qmL      !< Length of state array [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: NOmegaM2      !< Coefficient of x in X (negative omegaM squared) [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: N2OmegaMJDamp      !< Coefficient of x in X (negative 2 omegaM * JDamping) [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: MMB      !< Matrix after C-B reduction (transpose of MBM [-]
@@ -263,7 +261,6 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: IDC      !< Index array of the contraint dofs [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: IDR      !< Index array of the interface and restraint dofs [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: IDY      !< Index array of the all dofs in Y2 [-]
-    INTEGER(IntKi)  :: URbarL      !< Length of URbar, subarray of y2 array (DOFRb) [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: FGL      !< Internal node nDOFL, gravity loads [-]
     INTEGER(IntKi)  :: NAvgEls = 2      !< Max number of elements that should be averaged when calculating outputs at nodes [-]
     INTEGER(IntKi)  :: NMOutputs      !< Number of members whose output is written [-]
@@ -1645,7 +1642,6 @@ ENDIF
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
-    DstCB_MatArraysData%nDOFM = SrcCB_MatArraysData%nDOFM
 IF (ALLOCATED(SrcCB_MatArraysData%TI2)) THEN
   i1_l = LBOUND(SrcCB_MatArraysData%TI2,1)
   i1_u = UBOUND(SrcCB_MatArraysData%TI2,1)
@@ -1811,7 +1807,6 @@ ENDIF
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
-      Int_BufSz  = Int_BufSz  + 1  ! nDOFM
   Int_BufSz   = Int_BufSz   + 1     ! TI2 allocated yes/no
   IF ( ALLOCATED(InData%TI2) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! TI2 upper/lower bounds for each dimension
@@ -1874,8 +1869,6 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%nDOFM
-      Int_Xferred   = Int_Xferred   + 1
   IF ( .NOT. ALLOCATED(InData%TI2) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -2021,8 +2014,6 @@ ENDIF
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-      OutData%nDOFM = IntKiBuf( Int_Xferred ) 
-      Int_Xferred   = Int_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! TI2 not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
@@ -6589,9 +6580,8 @@ IF (ALLOCATED(SrcParamData%DOFtilde2Nodes)) THEN
   END IF
     DstParamData%DOFtilde2Nodes = SrcParamData%DOFtilde2Nodes
 ENDIF
+    DstParamData%nDOFM = SrcParamData%nDOFM
     DstParamData%SttcSolve = SrcParamData%SttcSolve
-    DstParamData%NModes = SrcParamData%NModes
-    DstParamData%qmL = SrcParamData%qmL
 IF (ALLOCATED(SrcParamData%NOmegaM2)) THEN
   i1_l = LBOUND(SrcParamData%NOmegaM2,1)
   i1_u = UBOUND(SrcParamData%NOmegaM2,1)
@@ -7040,7 +7030,6 @@ IF (ALLOCATED(SrcParamData%IDY)) THEN
   END IF
     DstParamData%IDY = SrcParamData%IDY
 ENDIF
-    DstParamData%URbarL = SrcParamData%URbarL
 IF (ALLOCATED(SrcParamData%FGL)) THEN
   i1_l = LBOUND(SrcParamData%FGL,1)
   i1_u = UBOUND(SrcParamData%FGL,1)
@@ -7445,9 +7434,8 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*2  ! DOFtilde2Nodes upper/lower bounds for each dimension
       Int_BufSz  = Int_BufSz  + SIZE(InData%DOFtilde2Nodes)  ! DOFtilde2Nodes
   END IF
+      Int_BufSz  = Int_BufSz  + 1  ! nDOFM
       Int_BufSz  = Int_BufSz  + 1  ! SttcSolve
-      Int_BufSz  = Int_BufSz  + 1  ! NModes
-      Int_BufSz  = Int_BufSz  + 1  ! qmL
   Int_BufSz   = Int_BufSz   + 1     ! NOmegaM2 allocated yes/no
   IF ( ALLOCATED(InData%NOmegaM2) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! NOmegaM2 upper/lower bounds for each dimension
@@ -7621,7 +7609,6 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*1  ! IDY upper/lower bounds for each dimension
       Int_BufSz  = Int_BufSz  + SIZE(InData%IDY)  ! IDY
   END IF
-      Int_BufSz  = Int_BufSz  + 1  ! URbarL
   Int_BufSz   = Int_BufSz   + 1     ! FGL allocated yes/no
   IF ( ALLOCATED(InData%FGL) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! FGL upper/lower bounds for each dimension
@@ -7982,11 +7969,9 @@ ENDIF
       IF (SIZE(InData%DOFtilde2Nodes)>0) IntKiBuf ( Int_Xferred:Int_Xferred+(SIZE(InData%DOFtilde2Nodes))-1 ) = PACK(InData%DOFtilde2Nodes,.TRUE.)
       Int_Xferred   = Int_Xferred   + SIZE(InData%DOFtilde2Nodes)
   END IF
+      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%nDOFM
+      Int_Xferred   = Int_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+1-1 ) = TRANSFER( InData%SttcSolve , IntKiBuf(1), 1)
-      Int_Xferred   = Int_Xferred   + 1
-      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%NModes
-      Int_Xferred   = Int_Xferred   + 1
-      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%qmL
       Int_Xferred   = Int_Xferred   + 1
   IF ( .NOT. ALLOCATED(InData%NOmegaM2) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -8499,8 +8484,6 @@ ENDIF
       IF (SIZE(InData%IDY)>0) IntKiBuf ( Int_Xferred:Int_Xferred+(SIZE(InData%IDY))-1 ) = PACK(InData%IDY,.TRUE.)
       Int_Xferred   = Int_Xferred   + SIZE(InData%IDY)
   END IF
-      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%URbarL
-      Int_Xferred   = Int_Xferred   + 1
   IF ( .NOT. ALLOCATED(InData%FGL) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -9074,11 +9057,9 @@ ENDIF
       Int_Xferred   = Int_Xferred   + SIZE(OutData%DOFtilde2Nodes)
     DEALLOCATE(mask2)
   END IF
+      OutData%nDOFM = IntKiBuf( Int_Xferred ) 
+      Int_Xferred   = Int_Xferred + 1
       OutData%SttcSolve = TRANSFER( IntKiBuf( Int_Xferred ), mask0 )
-      Int_Xferred   = Int_Xferred + 1
-      OutData%NModes = IntKiBuf( Int_Xferred ) 
-      Int_Xferred   = Int_Xferred + 1
-      OutData%qmL = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! NOmegaM2 not allocated
     Int_Xferred = Int_Xferred + 1
@@ -9921,8 +9902,6 @@ ENDIF
       Int_Xferred   = Int_Xferred   + SIZE(OutData%IDY)
     DEALLOCATE(mask1)
   END IF
-      OutData%URbarL = IntKiBuf( Int_Xferred ) 
-      Int_Xferred   = Int_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! FGL not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
