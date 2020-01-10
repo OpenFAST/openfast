@@ -219,7 +219,7 @@ SUBROUTINE SDOut_Init( Init, y,  p, misc, InitOut, WtrDpth, ErrStat, ErrMsg )
          ENDDO
       ENDDO
       !Store the matrix that will let me calculate single point reaction at the base of structure
-      CALL ReactMatx(Init, p, WtrDpth, ErrStat, ErrMsg)
+      CALL ReactMatx(Init, WtrDpth, p, ErrStat, ErrMsg)
    ENDIF
  
    ! These variables are to help follow the framework template, but the data in them is simply a copy of data
@@ -243,57 +243,45 @@ END SUBROUTINE SDOut_Init
 
 !------------------------------------------------------------------------------------------------------
 !>This subroutine allocates and calculated TIreact, Matrix to go from local reactions at constrained nodes to single point reactions
-SUBROUTINE ReactMatx(Init, p, WtrDpth, ErrStat, ErrMsg)
-   TYPE(SD_InitType),      INTENT(  IN)  :: Init         ! Input data for initialization routine
-   TYPE(SD_ParameterType), INTENT(  INOUT)  :: p         ! Parameter data
-   REAL(ReKi),                   INTENT(IN)     :: WtrDpth
-   INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-   CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+SUBROUTINE ReactMatx(Init, WtrDpth, p, ErrStat, ErrMsg)
+   TYPE(SD_InitType),      INTENT(IN   ) :: Init    !< Input data for initialization routine
+   REAL(ReKi),             INTENT(IN   ) :: WtrDpth !< Water depth
+   TYPE(SD_ParameterType), INTENT(INOUT) :: p       !< Parameter data
+   INTEGER(IntKi),         INTENT(  OUT) :: ErrStat !< Error status of the operation
+   CHARACTER(*),           INTENT(  OUT) :: ErrMsg  !< Error message if ErrStat /= ErrID_None
    ! local variables
-   INTEGER                             :: I !counter
-   INTEGER                             :: rmndr !type-column index
-   INTEGER                             :: nodeID  !node ID
-   INTEGER(IntKi)                      :: DOFC !  DOFC = Init%NReact*6
-   INTEGER(IntKi)                      :: iiDOF, iNode, nDOFPerNode ! 
-   REAL(ReKi)                          :: dx, dy, dz ! distances from reaction points to subdyn origin (mudline)
-   REAL(ReKi), dimension(6)            :: Line
+   INTEGER                  :: I !counter
+   INTEGER(IntKi)           :: iDOF, iiDOF, iNode, nDOFPerNode !
+   REAL(ReKi)               :: dx, dy, dz ! distances from reaction points to subdyn origin (mudline)
+   REAL(ReKi), dimension(6) :: Line
    ErrStat=ErrID_None
    ErrMsg=""
    
-   DOFC = p%nNodes_C*6 ! bjj, this is p%DOFC    !Total DOFs at the base of structure 
+   CALL AllocAry(p%TIreact, 6, p%nDOFC, 'TIReact', ErrStat, ErrMsg); if ( ErrStat /= ErrID_None ) return
    
-   CALL AllocAry(p%TIreact, 6, DOFC, 'p%TIReact', ErrStat, ErrMsg )
-   if ( ErrStat /= ErrID_None ) return
-   
-   p%TIreact=0 !Initialize
-   
-   DO I=1,3  !Take care of first three rows
-      p%TIreact(I,I:DOFC:6)=1
-   ENDDO 
+   ! --- TI: Transformation matrix from interface points to ref point
+   p%TIreact(1:6,:)=0 !Initialize
+   DO I = 1, p%nDOFC
+      iDOF = p%IDC(I) ! DOF index in constrained system
+      iNode       = p%DOFtilde2Nodes(iDOF,1) ! First column is node 
+      nDOFPerNode = p%DOFtilde2Nodes(iDOF,2) ! Second column is number of DOF per node
+      iiDOF       = p%DOFtilde2Nodes(iDOF,3) ! Third column is dof index for this joint (1-6 for cantilever)
+      if ((iiDOF<1) .or. (iiDOF>6)) then
+         ErrMsg  = 'ReactMatx, interface node DOF number is not valid. DOF:'//trim(Num2LStr(iDOF))//' Node:'//trim(Num2LStr(iNode))//' iiDOF:'//trim(Num2LStr(iiDOF)); ErrStat = ErrID_Fatal
+         return
+      endif
+      if (nDOFPerNode/=6) then
+         ErrMsg  = 'ReactMatx, interface node doesnt have 6 DOFs. DOF:'//trim(Num2LStr(iDOF))//' Node:'//trim(Num2LStr(iNode))//' nDOF:'//trim(Num2LStr(nDOFPerNode)); ErrStat = ErrID_Fatal
+         return
+      endif
+      
+      dx = Init%Nodes(iNode, 2)          
+      dy = Init%Nodes(iNode, 3)          
+      dz = Init%Nodes(iNode, 4) + WtrDpth
 
-    !Other rows done per column actually  
-   DO I = 1, DOFC
-      nodeID = p%Nodes_C(ceiling(I/6.0),1)  !Constrained Node ID (this works in the reordered/renumbered p%Nodes_C) 
-      
-      dx = Init%Nodes(nodeID, 2)
-      dy = Init%Nodes(nodeID, 3)
-      dz = Init%Nodes(nodeID, 4) + WtrDpth
-      
-      rmndr = MOD(I, 6)  !It gives me the column index among the 6 different kinds
-      SELECT CASE (rmndr)
-         CASE (1); p%TIreact(4:6, I) = (/0.0_ReKi  , dz        , -dy/)
-         CASE (2); p%TIreact(4:6, I) = (/-dz       , 0.0_ReKi , dx/)
-         CASE (3); p%TIreact(4:6, I) = (/dy        , -dx       , 0.0_ReKi/)
-         CASE (4); p%TIreact(4:6, I) = (/1.0_ReKi , 0.0_ReKi , 0.0_ReKi/)
-         CASE (5); p%TIreact(4:6, I) = (/0.0_ReKi , 1.0_ReKi , 0.0_ReKi/)
-         CASE (0); p%TIreact(4:6, I) = (/0.0_ReKi , 0.0_ReKi , 1.0_ReKi/)
-         CASE DEFAULT
-            ErrStat = ErrID_Fatal
-            ErrMsg  = 'Error calculating transformation matrix TIreact, wrong column index '
-            RETURN
-         END SELECT
-         !print*,'TIr',p%TIreact(:, I)
-   ENDDO
+      CALL RigidTransformationLine(dx,dy,dz,iiDOF,Line) !returns Line
+      p%TIreact(1:6, I) = Line
+   enddo
 
 END SUBROUTINE ReactMatx
 
@@ -336,12 +324,12 @@ SUBROUTINE SDOut_MapOutputs( CurrentTime, u,p,x, y, m, AllOuts, ErrStat, ErrMsg 
    
    !Create a variable that lists Y2 and adds removed constrained nodes' dofs; we will be using it to carry out other calculations with a special indexing array
    yout =0 !Initialize and populate with Y2 data  
-   yout(1:         p%UrbarL        ) = m%UR_bar
+   yout(1:         p%UrbarL        ) = m%UR_bar ! TODO TODO TODO Look at U_full/U_red
    yout(p%URbarL+1:p%URbarL+p%nDOFL) = m%UL
   
    !Same for a variable that deals with Udotdot
    uddout =0 !Initialize and populate with Udotdot data
-   uddout(1          : p%URbarL          ) = m%UR_bar_dotdot
+   uddout(1          : p%URbarL          ) = m%UR_bar_dotdot ! TODO TODO TODO look at U_full_dotdot U_red_dotdot
    uddout(p%URbarL+1 : p%URbarL+p%nDOFL  ) = m%UL_dotdot
 
    ! TODO TODO TODO, there is a lot of similarity between the three outputs sections with some code redundency
@@ -503,31 +491,31 @@ SUBROUTINE SDOut_MapOutputs( CurrentTime, u,p,x, y, m, AllOuts, ErrStat, ErrMsg 
 END SUBROUTINE SDOut_MapOutputs
 
 !====================================================================================================
-   SUBROUTINE CALC_NODE_FORCES(DIRCOS,Me,Ke,Udotdot,Y2 ,Fg, K2,FM_nod,FK_nod)
-   !This function calculates for the given element the static and dynamic forces, given K and M of the element, and 
-   !output quantities Udotdot and Y2 containing the 
-   !and K2 indicating wheter the 1st (1) or 2nd (2) node is to be picked
+!> Calculates static and dynamic forces for a given element, using K and M of the element, and 
+!output quantities Udotdot and Y2 containing the 
+!and K2 indicating wheter the 1st (1) or 2nd (2) node is to be picked
 !----------------------------------------------------------------------------------------------------
-        Real(ReKi), DIMENSION (3,3),   INTENT(IN)  :: DIRCOS    !direction cosice matrix (global to local) (3x3)
-        Real(ReKi), DIMENSION (12,12), INTENT(IN)  :: Me,Ke    !element M and K matrices (12x12) in GLOBAL REFERENCE (DIRCOS^T K DIRCOS)
-        Real(ReKi), DIMENSION (12),    INTENT(IN)  :: Udotdot, Y2, Fg     !acceleration and velocities, gravity forces
-        Integer(IntKi),                INTENT(IN)  :: K2   !1 or 2 depending on node of interest
-        REAL(ReKi), DIMENSION (6),    INTENT(OUT)  :: FM_nod, FK_nod  !output static and dynamic forces and moments
-        !Locals
-        INTEGER(IntKi) :: L !counter
-        REAL(DbKi), DIMENSION(12)                    :: FM_glb, FF_glb, FM_elm, FF_elm  ! temporary storage 
-           
-        FM_glb = matmul(Me,Udotdot)   ! GLOBAL REFERENCE
-        FF_glb = matmul(Ke,Y2)        ! GLOBAL REFERENCE
-        FF_glb = FF_glb - Fg          ! GLOBAL REFERENCE
-        DO L=1,4 ! Transforming coordinates 3 at a time
-            FM_elm((L-1)*3+1:L*3) =  matmul(DIRCOS, FM_glb( (L-1)*3+1:L*3 ) )
-            FF_elm((L-1)*3+1:L*3) =  matmul(DIRCOS, FF_glb( (L-1)*3+1:L*3 ) ) 
-        ENDDO
-        FM_nod=FM_elm(6*(k2-1)+1:k2*6) ! k2=1, 1:6,  k2=2  7:12 
-        FK_nod=FF_elm(6*(k2-1)+1:k2*6) 
-   
-   END SUBROUTINE CALC_NODE_FORCES 
+SUBROUTINE CALC_NODE_FORCES(DIRCOS,Me,Ke,Udotdot,Y2 ,Fg, K2,FM_nod,FK_nod)
+   Real(ReKi), DIMENSION (3,3),   INTENT(IN)  :: DIRCOS    !direction cosice matrix (global to local) (3x3)
+   Real(ReKi), DIMENSION (12,12), INTENT(IN)  :: Me,Ke    !element M and K matrices (12x12) in GLOBAL REFERENCE (DIRCOS^T K DIRCOS)
+   Real(ReKi), DIMENSION (12),    INTENT(IN)  :: Udotdot, Y2, Fg     !acceleration and velocities, gravity forces
+   Integer(IntKi),                INTENT(IN)  :: K2   !1 or 2 depending on node of interest
+   REAL(ReKi), DIMENSION (6),    INTENT(OUT)  :: FM_nod, FK_nod  !output static and dynamic forces and moments
+   !Locals
+   INTEGER(IntKi) :: L !counter
+   REAL(DbKi), DIMENSION(12)                    :: FM_glb, FF_glb, FM_elm, FF_elm  ! temporary storage 
+
+   FM_glb = matmul(Me,Udotdot)   ! GLOBAL REFERENCE
+   FF_glb = matmul(Ke,Y2)        ! GLOBAL REFERENCE
+   FF_glb = FF_glb - Fg          ! GLOBAL REFERENCE
+   DO L=1,4 ! Transforming coordinates 3 at a time
+      FM_elm((L-1)*3+1:L*3) =  matmul(DIRCOS, FM_glb( (L-1)*3+1:L*3 ) )
+      FF_elm((L-1)*3+1:L*3) =  matmul(DIRCOS, FF_glb( (L-1)*3+1:L*3 ) ) 
+   ENDDO
+   FM_nod=FM_elm(6*(k2-1)+1:k2*6) ! k2=1, 1:6,  k2=2  7:12 
+   FK_nod=FF_elm(6*(k2-1)+1:k2*6) 
+
+END SUBROUTINE CALC_NODE_FORCES 
 
 !====================================================================================================
 SUBROUTINE SDOut_CloseSum( UnSum, ErrStat, ErrMsg )
