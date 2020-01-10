@@ -2446,7 +2446,7 @@ SUBROUTINE OutSummary(Init, p, FEMparams,CBparams, ErrStat,ErrMsg)
    INTEGER(IntKi)         :: ErrStat2       ! Temporary storage for local errors
    CHARACTER(ErrMsgLen)   :: ErrMsg2       ! Temporary storage for local errors
    CHARACTER(1024)        :: SummaryName    ! name of the SubDyn summary file
-   INTEGER(IntKi)         :: i, j, k, propids(2)  !counter and temporary holders
+   INTEGER(IntKi)         :: i, j, k, propIDs(2), Iprop(2)  !counter and temporary holders
    INTEGER(IntKi)         :: mType ! Member Type
    Real(ReKi)             :: mMass, mLength ! Member mass and length
    REAL(ReKi)             :: MRB(6,6)    !REDUCED SYSTEM Kmatrix, equivalent mass matrix
@@ -2515,16 +2515,24 @@ SUBROUTINE OutSummary(Init, p, FEMparams,CBparams, ErrStat,ErrMsg)
    WRITE(UnSum, '(A,I6)')  'Number of members',p%NMembers
    WRITE(UnSum, '(A,I6)')  'Number of nodes per member:', Init%Ndiv+1
    WRITE(UnSum, '(A9,A10,A10,A10,A10,A15,A15,A16)')  'Member ID', 'Joint1_ID', 'Joint2_ID','Prop_I','Prop_J', 'Mass','Length', 'Node IDs...'
+   DO i=1,size(Init%PropSetsB,1)
+      print*,'psb',Init%PropSetsB(i,:)
+   enddo
+   DO i=1,size(Init%PropsB,1)
+      print*,'pb ',Init%PropsB(i,:)
+   enddo
    DO i=1,p%NMembers
        !Calculate member mass here; this should really be done somewhere else, yet it is not used anywhere else
        !IT WILL HAVE TO BE MODIFIED FOR OTHER THAN CIRCULAR PIPE ELEMENTS
-       propids=p%Elems(i,iMProp:iMProp+1) ! TODO use member
+       propIDs=Init%Members(i,iMProp:iMProp+1) 
        mLength=MemberLength(Init%Members(i,1),Init,ErrStat,ErrMsg) ! TODO double check mass and length
        IF (ErrStat .EQ. ErrID_None) THEN
         mType =  Init%Members(I, iMType) ! 
         if (mType==idMemberBeam) then
-           mMass= MemberMass(Init%PropSetsB(propids(1),4),Init%PropSetsB(propids(1),5),Init%PropSetsB(propids(1),6),   &
-                             Init%PropSetsB(propids(2),4),Init%PropSetsB(propids(2),5),Init%PropSetsB(propids(2),6), mLength, .TRUE.)
+           iProp(1) = FINDLOCI(Init%PropSetsB(:,1), propIDs(1))
+           iProp(2) = FINDLOCI(Init%PropSetsB(:,1), propIDs(2))
+           mMass= BeamMass(Init%PropSetsB(iProp(1),4),Init%PropSetsB(iProp(1),5),Init%PropSetsB(iProp(1),6),   &
+                             Init%PropSetsB(iProp(2),4),Init%PropSetsB(iProp(2),5),Init%PropSetsB(iProp(2),6), mLength, .TRUE.)
 
            WRITE(UnSum, '(I9,I10,I10,I10,I10,E15.6,E15.6, A3,'//Num2LStr(Init%NDiv + 1 )//'(I6))') Init%Members(i,1:3),propids(1),propids(2),&
                  mMass,mLength,' ',(Init%MemberNodes(i, j), j = 1, Init%NDiv+1)
@@ -2735,7 +2743,8 @@ SUBROUTINE Y2Mesh_SD_Mapping(p, MeshtoSD)
 END SUBROUTINE Y2Mesh_SD_Mapping
 
 !------------------------------------------------------------------------------------------------------
-!> This function calculates the length of a member 
+!> Calculate length of a member as given in input file
+!! Joints and Members ID have not been reindexed (Elems and Nodes have)
 FUNCTION MemberLength(MemberID,Init,ErrStat,ErrMsg)
     TYPE(SD_InitType), INTENT(IN)             :: Init         !< Input data for initialization routine, this structure contains many variables needed for summary file
     INTEGER(IntKi),    INTENT(IN)             :: MemberID     !< Member ID #
@@ -2743,87 +2752,57 @@ FUNCTION MemberLength(MemberID,Init,ErrStat,ErrMsg)
     INTEGER(IntKi),            INTENT(   OUT) :: ErrStat      !< Error status of the operation
     CHARACTER(*),              INTENT(   OUT) :: ErrMsg       !< Error message if ErrStat /= ErrID_None
     !Locals
-    REAL(Reki)                    :: xyz1(3),xyz2(3)  ! Coordinates of joints in GLOBAL REF SYS
-    INTEGER(IntKi)                :: i                ! Counter
-    INTEGER(IntKi)                :: Joint1,Joint2    ! JointID
-    CHARACTER(*), PARAMETER       :: RoutineName = 'MemberLength'
+    REAL(Reki)     :: xyz1(3),xyz2(3)  ! Coordinates of joints in GLOBAL REF SYS
+    integer(IntKi) :: iMember                                                    !< Member index in Init%Members list
+    INTEGER(IntKi) :: Joint1,Joint2    ! JointID
+    CHARACTER(*), PARAMETER :: RoutineName = 'MemberLength'
     ErrStat = ErrID_None
     ErrMsg  = ''
     MemberLength=0.0
     
     !Find the MemberID in the list
-    DO i=1,SIZE(Init%Members, DIM=1)
-        IF (Init%Members(i,1) .EQ. MemberID) THEN
-           ! Find joints ID for this member
-           Joint1 = FindNode(i,1); if (Joint1<0) return
-           Joint2 = FindNode(i,2); if (Joint2<0) return
-           xyz1= Init%Joints(Joint1,2:4)
-           xyz2= Init%Joints(Joint2,2:4)
-           MemberLength=SQRT( SUM((xyz2-xyz1)**2.) )
-           if ( EqualRealNos(MemberLength, 0.0_ReKi) ) then 
-               call SetErrStat(ErrID_Fatal,' Member with ID '//trim(Num2LStr(MemberID))//' has zero length!', ErrStat,ErrMsg,RoutineName);
-               return
-           endif
-           return
-       ENDIF
-   ENDDO       
-   call SetErrStat(ErrID_Fatal,' Member with ID '//trim(Num2LStr(MemberID))//' not found in member list!', ErrStat,ErrMsg,RoutineName);
-
-contains
-    !> Find JointID for node `iNode` (1 or 2) or member `iMember`
-    integer(IntKi) function FindNode(iMember,iNode) result(j)
-        integer(IntKi), intent(in) :: iMember !< Member index in Init%Members list
-        integer(IntKi), intent(in) :: iNode   !< Node index, 1 or 2 for the member iMember
-        logical  :: found
-        found = .false.      
-        j=1
-        do while ( .not. found .and. j <= Init%NJoints )
-            if (Init%Members(iMember, iNode+1) == nint(Init%Joints(j,1))) then ! Columns 2/3 for iNode 1/2
-                found = .true.
-                exit
-            endif
-            j = j + 1
-        enddo 
-        if (.not.found) then
-            j=-1
-            call SetErrStat(ErrID_Fatal,' Member '//trim(Num2LStr(iMember))//' has JointID'//trim(Num2LStr(iNode))//' = '//& 
-                trim(Num2LStr(Init%Members(iMember,iNode+1)))//' which is not in the node list !', ErrStat,ErrMsg,RoutineName)
-        endif
-    end function
-
+    iMember = FINDLOCI(Init%Members(:,1), MemberID)
+    if (iMember<=0) then
+       call SetErrStat(ErrID_Fatal,' Member with ID '//trim(Num2LStr(MemberID))//' not found in member list!', ErrStat,ErrMsg,RoutineName);
+       return
+    endif
+    ! Find joints ID for this member
+    Joint1 = FINDLOCI(Init%Joints(:,1), Init%Members(iMember,2))
+    Joint2 = FINDLOCI(Init%Joints(:,1), Init%Members(iMember,3))
+    xyz1= Init%Joints(Joint1,2:4)
+    xyz2= Init%Joints(Joint2,2:4)
+    MemberLength=SQRT( SUM((xyz2-xyz1)**2.) )
+    if ( EqualRealNos(MemberLength, 0.0_ReKi) ) then 
+        call SetErrStat(ErrID_Fatal,' Member with ID '//trim(Num2LStr(MemberID))//' has zero length!', ErrStat,ErrMsg,RoutineName);
+        return
+    endif
 END FUNCTION MemberLength
 
 !------------------------------------------------------------------------------------------------------
 !> Calculate member mass, given properties at the ends, keep units consistent
 !! For now it works only for circular pipes or for a linearly varying area
-FUNCTION MemberMass(rho1,D1,t1,rho2,D2,t2,L,ctube)
-    REAL(ReKi), INTENT(IN)                :: rho1,D1,t1,rho2,D2,t2 ,L       ! Density, OD and wall thickness for circular tube members at ends, Length of member
-    !                                                     IF ctube=.FALSE. then D1/2=Area at end1/2, t1 and t2 are ignored
-    REAL(ReKi)              :: MemberMass  !mass
-    LOGICAL, INTENT(IN)                :: ctube          ! =TRUE for circular pipes, false elseshape
-    !LOCALS
-    REAL(ReKi)                ::a0,a1,a2,b0,b1,dd,dt  !temporary coefficients
-    
-    !Density allowed to vary linearly only
-    b0=rho1
-    b1=(rho2-rho1)/L
-    !Here we will need to figure out what element it is for now circular pipes
-        IF (ctube) THEN !circular tube
-         a0=pi * (D1*t1-t1**2.)
-         dt=t2-t1 !thickness variation
-         dd=D2-D1 !OD variation
-         a1=pi * ( dd*t1 + D1*dt -2.*t1*dt)/L 
-         a2=pi * ( dd*dt-dt**2.)/L**2.
-    
-        ELSE  !linearly varying area
-         a0=D1  !This is an area
-         a1=(D2-D1)/L !Delta area
-         a2=0.
-    
-        ENDIF
-    MemberMass= b0*a0*L +(a0*b1+b0*a1)*L**2/2. + (b0*a2+b1*a1)*L**3/3 + a2*b1*L**4/4.!Integral of rho*A dz
-      
-END FUNCTION MemberMass
+FUNCTION BeamMass(rho1,D1,t1,rho2,D2,t2,L,ctube)
+   REAL(ReKi), INTENT(IN) :: rho1,D1,t1,rho2,D2,t2 ,L       ! Density, OD and wall thickness for circular tube members at ends, Length of member
+   LOGICAL, INTENT(IN)    :: ctube          ! =TRUE for circular pipes, false elseshape
+   REAL(ReKi)             :: BeamMass  !mass
+   REAL(ReKi)  :: a0,a1,a2,b0,b1,dd,dt  !temporary coefficients
+   !Density allowed to vary linearly only
+   b0=rho1
+   b1=(rho2-rho1)/L
+   !Here we will need to figure out what element it is for now circular pipes
+   IF (ctube) THEN !circular tube
+      a0=pi * (D1*t1-t1**2.)
+      dt=t2-t1 !thickness variation
+      dd=D2-D1 !OD variation
+      a1=pi * ( dd*t1 + D1*dt -2.*t1*dt)/L 
+      a2=pi * ( dd*dt-dt**2.)/L**2.
+   ELSE  !linearly varying area
+      a0=D1  !This is an area
+      a1=(D2-D1)/L !Delta area
+      a2=0.
+   ENDIF
+   BeamMass= b0*a0*L +(a0*b1+b0*a1)*L**2/2. + (b0*a2+b1*a1)*L**3/3 + a2*b1*L**4/4.!Integral of rho*A dz
+END FUNCTION BeamMass
 
 !------------------------------------------------------------------------------------------------------
 !> Check whether MAT IS SYMMETRIC AND RETURNS THE MAXIMUM RELATIVE ERROR    
