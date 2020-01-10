@@ -148,41 +148,6 @@ SUBROUTINE CreateY2Meshes( NNode, Nodes, INodes_I, INodes_L, INodes_C, inputMesh
     CALL Eye( outputMesh%Orientation, ErrStat, ErrMsg )         
         
 END SUBROUTINE CreateY2Meshes
-!------------------------------------------------------------------------------------------------------
-!> Set the index array that maps SD internal nodes to the Y2Mesh nodes.
-!! NOTE: SDtoMesh is not checked for size, nor are the index array values checked for validity, 
-!!       so this routine could easily have segmentation faults if any errors exist.
-SUBROUTINE SD_Y2Mesh_Mapping(p, SDtoMesh )
-   TYPE(SD_ParameterType),       INTENT(IN   )  :: p           !< Parameters
-   INTEGER(IntKi),               INTENT(  OUT)  :: SDtoMesh(:) !< index/mapping of mesh nodes with SD mesh
-   ! locals
-   INTEGER(IntKi)                               :: i
-   INTEGER(IntKi)                               :: SDnode
-   INTEGER(IntKi)                               :: y2Node
-
-   y2Node = 0
-   ! Interface nodes (IDI)
-   DO I = 1,SIZE(p%IDI,1)/6
-      y2Node = y2Node + 1      
-      SDnode = p%IDI(I*6) / 6     ! TODO TODO TODO integer division gives me the actual node index; it is not the nodeID
-      SDtoMesh( SDnode ) = y2Node ! TODO add safety check
-   END DO
-   
-   ! Interior nodes (IDL)
-   DO I = 1,SIZE(p%IDL,1)/6 
-      y2Node = y2Node + 1      
-      SDnode = p%IDL(I*6) / 6     ! TODO TODO TODO integer division gives me the actual node index; it is not the nodeID
-      SDtoMesh( SDnode ) = y2Node ! TODO add safety check
-   END DO
-
-   ! Base Reaction nodes (IDC)
-   DO I = 1,SIZE(p%IDC,1)/6 
-      y2Node = y2Node + 1      
-      SDnode = p%IDC(I*6) / 6     ! TODO TODO TODO integer division gives me the actual node index; it is not the nodeID
-      SDtoMesh( SDnode ) = y2Node ! TODO add safety check
-   END DO
-
-END SUBROUTINE SD_Y2Mesh_Mapping
 
 
 !---------------------------------------------------------------------------
@@ -2472,9 +2437,10 @@ SUBROUTINE OutSummary(Init, p, FEMparams,CBparams, ErrStat,ErrMsg)
    CHARACTER(1024)        :: SummaryName    ! name of the SubDyn summary file
    INTEGER(IntKi)         :: i, j, k, propids(2)  !counter and temporary holders
    INTEGER(IntKi)         :: mType ! Member Type
+   Real(ReKi)             :: mMass, mLength ! Member mass and length
    INTEGER(IntKi)         :: SDtoMeshIndx(Init%NNode)
    REAL(ReKi)             :: MRB(6,6)    !REDUCED SYSTEM Kmatrix, equivalent mass matrix
-   REAL(ReKi)             :: XYZ1(3),XYZ2(3), DirCos(3,3), mlength !temporary arrays, member i-th direction cosine matrix (global to local) and member length
+   REAL(ReKi)             :: XYZ1(3),XYZ2(3), DirCos(3,3) !temporary arrays, member i-th direction cosine matrix (global to local) and member length
    CHARACTER(*),PARAMETER                 :: SectionDivide = '____________________________________________________________________________________________________'
    CHARACTER(*),PARAMETER                 :: SubSectionDivide = '__________'
    CHARACTER(2),  DIMENSION(6), PARAMETER :: MatHds= (/'X ', 'Y ', 'Z ', 'XX', 'YY', 'ZZ'/)  !Headers for the columns and rows of 6x6 matrices
@@ -2515,7 +2481,7 @@ SUBROUTINE OutSummary(Init, p, FEMparams,CBparams, ErrStat,ErrMsg)
 
    WRITE(UnSum, '()') 
    WRITE(UnSum, '(A,I6)')  'Number of elements (NElems):',Init%NElem
-   WRITE(UnSum, '(A10,5(A10))')  'Elem No.',    'Node_I',     'Node_J',   'Type',    'Prop_I',      'Prop_J'
+   WRITE(UnSum, '(A10,5(A10))') 'Elem No.','Node_I','Node_J','Prop_I','Prop_J','Type'
    WRITE(UnSum, '(6(I10))') ((p%Elems(i, j), j = 1, MembersCol), i = 1, Init%NElem)
    
    WRITE(UnSum, '()') 
@@ -2541,20 +2507,20 @@ SUBROUTINE OutSummary(Init, p, FEMparams,CBparams, ErrStat,ErrMsg)
    WRITE(UnSum, '()') 
    WRITE(UnSum, '(A,I6)')  'Number of members',p%NMembers
    WRITE(UnSum, '(A,I6)')  'Number of nodes per member:', Init%Ndiv+1
-   WRITE(UnSum, '(A9,A10,A10,A15,A16)')  'Member ID', 'Joint1_ID', 'Joint2_ID', 'Mass', 'Node IDs...'
-   !WRITE(UnSum, '('//Num2LStr(Init%NDiv + 1 )//'(I6))') ((Init%MemberNodes(i, j), j = 1, Init%NDiv+1), i = 1, p%NMembers)
+   WRITE(UnSum, '(A9,A10,A10,A10,A10,A15,A15,A16)')  'Member ID', 'Joint1_ID', 'Joint2_ID','Prop_I','Prop_J', 'Mass','Length', 'Node IDs...'
    DO i=1,p%NMembers
        !Calculate member mass here; this should really be done somewhere else, yet it is not used anywhere else
        !IT WILL HAVE TO BE MODIFIED FOR OTHER THAN CIRCULAR PIPE ELEMENTS
-       propids=p%Elems(i,iMProp:iMProp+1)
-       mlength=MemberLength(Init%Members(i,1),Init,ErrStat,ErrMsg)
+       propids=p%Elems(i,iMProp:iMProp+1) ! TODO use member
+       mLength=MemberLength(Init%Members(i,1),Init,ErrStat,ErrMsg) ! TODO double check mass and length
        IF (ErrStat .EQ. ErrID_None) THEN
         mType =  Init%Members(I, iMType) ! 
         if (mType==idMemberBeam) then
-           WRITE(UnSum, '(I9,I10,I10, E15.6, A3,'//Num2LStr(Init%NDiv + 1 )//'(I6))')    Init%Members(i,1:3),                &
-           MemberMass(Init%PropSetsB(propids(1),4),Init%PropSetsB(propids(1),5),Init%PropSetsB(propids(1),6),   &
-                       Init%PropSetsB(propids(2),4),Init%PropSetsB(propids(2),5),Init%PropSetsB(propids(2),6), mlength, .TRUE.),  &
-                  ' ',(Init%MemberNodes(i, j), j = 1, Init%NDiv+1)
+           mMass= MemberMass(Init%PropSetsB(propids(1),4),Init%PropSetsB(propids(1),5),Init%PropSetsB(propids(1),6),   &
+                             Init%PropSetsB(propids(2),4),Init%PropSetsB(propids(2),5),Init%PropSetsB(propids(2),6), mLength, .TRUE.)
+
+           WRITE(UnSum, '(I9,I10,I10,I10,I10,E15.6,E15.6, A3,'//Num2LStr(Init%NDiv + 1 )//'(I6))') Init%Members(i,1:3),propids(1),propids(2),&
+                 mMass,mLength,' ',(Init%MemberNodes(i, j), j = 1, Init%NDiv+1)
         else
            WRITE(UnSum, '(A)') 'TODO, member mass for non-beam elements'
         endif
@@ -2580,7 +2546,7 @@ SUBROUTINE OutSummary(Init, p, FEMparams,CBparams, ErrStat,ErrMsg)
                 XYZ2=Init%Nodes(Init%Members(i,3),2:4)
            ENDIF
        ENDDO    
-       CALL GetDirCos(XYZ1(1:3), XYZ2(1:3), DirCos, mlength, ErrStat, ErrMsg)
+       CALL GetDirCos(XYZ1(1:3), XYZ2(1:3), DirCos, mLength, ErrStat, ErrMsg)
        DirCos=TRANSPOSE(DirCos) !This is now global to local
        WRITE(UnSum, '(I9,9(E15.6))') Init%Members(i,1), ((DirCos(k,j),j=1,3),k=1,3)
    ENDDO
@@ -2719,6 +2685,38 @@ SUBROUTINE OutSummary(Init, p, FEMparams,CBparams, ErrStat,ErrMsg)
 #endif   
    
    CALL SDOut_CloseSum( UnSum, ErrStat, ErrMsg )  
+contains
+   !------------------------------------------------------------------------------------------------------
+   !> Set the index array that maps SD internal nodes to the Y2Mesh nodes.
+   !! NOTE: SDtoMesh is not checked for size, nor are the index array values checked for validity, 
+   !!       so this routine could easily have segmentation faults if any errors exist.
+   SUBROUTINE SD_Y2Mesh_Mapping(p, SDtoMesh)
+      TYPE(SD_ParameterType), INTENT(IN   )  :: p           !< Parameters
+      INTEGER(IntKi),         INTENT(  OUT)  :: SDtoMesh(:) !< index/mapping of mesh nodes with SD mesh
+      ! locals
+      INTEGER(IntKi) :: i
+      INTEGER(IntKi) :: SDnode
+      INTEGER(IntKi) :: y2Node
+      y2Node = 0
+      ! Interface nodes (IDI)
+      DO I = 1,SIZE(p%Interf,1)
+         y2Node = y2Node + 1      
+         SDnode = p%Interf(I,1)
+         SDtoMesh( SDnode ) = y2Node ! TODO add safety check
+      END DO
+      ! Interior nodes (IDL)
+      DO I = 1,SIZE(p%Nodes_L,1)
+         y2Node = y2Node + 1      
+         SDnode = p%Nodes_L(I,1)
+         SDtoMesh( SDnode ) = y2Node ! TODO add safety check
+      END DO
+      ! Base Reaction nodes (IDC)
+      DO I = 1,SIZE(p%Reacts,1) 
+         y2Node = y2Node + 1      
+         SDnode = p%Reacts(I,1)
+         SDtoMesh( SDnode ) = y2Node ! TODO add safety check
+      END DO
+   END SUBROUTINE SD_Y2Mesh_Mapping
 
 END SUBROUTINE OutSummary
 
