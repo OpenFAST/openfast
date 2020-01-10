@@ -2312,6 +2312,7 @@ SUBROUTINE PartitionDOFNodes_I_C_R_L(Init, m, p, ErrStat, ErrMsg)
       p%nDOFI = p%nDOFI + len(p%NodesDOFtilde( p%Nodes_I(iiNode,1) ))
    enddo
    ! Reaction DOFs
+   p%nDOFC =0
    do iiNode= 1,p%nNodes_C
       p%nDOFC = p%nDOFC + len(p%NodesDOFtilde( p%Nodes_C(iiNode,1) ))
    enddo
