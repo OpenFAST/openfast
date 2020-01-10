@@ -258,6 +258,8 @@ PROGRAM HydroDynDriver
          STOP
       END IF 
       
+      PRINT *, 'NBody is '//trim(Num2LStr(NBody))//' and planning to read in  '//trim(Num2LStr(7+6*NBODY))//' columns from the input file'
+      
       DO n = 1,drvrInitInp%NSteps
          READ (UnWAMITInp,*,IOSTAT=ErrStat) (WAMITin (n,J), J=1,7+6*NBODY)
             
@@ -503,7 +505,7 @@ PROGRAM HydroDynDriver
             CALL SmllRotTrans( 'InputRotation', REAL(WAMITin(n,5),ReKi), REAL(WAMITin(n,6),ReKi), REAL(WAMITin(n,7),ReKi), dcm, 'PRP orientation', ErrStat, ErrMsg )            
             u(1)%PRPMesh%Orientation(:,:,1)     = dcm     
             DO I=1, NBody
-               CALL SmllRotTrans( 'InputRotation', REAL(WAMITin(n,6*I+5),ReKi), REAL(WAMITin(n,6*I+6),ReKi), REAL(WAMITin(n,6*I+7),ReKi), dcm, 'body '//I//' orientation', ErrStat, ErrMsg )            
+               CALL SmllRotTrans( 'InputRotation', REAL(WAMITin(n,6*I+5),ReKi), REAL(WAMITin(n,6*I+6),ReKi), REAL(WAMITin(n,6*I+7),ReKi), dcm, 'body orientation', ErrStat, ErrMsg )            
                u(1)%PRPMesh%Orientation(:,:,1)     = dcm     
             END DO
 
@@ -550,7 +552,7 @@ PROGRAM HydroDynDriver
                   u(1)%WAMITMesh%RotationAcc(   :,I) = (WAMITin(n+1, 6*I+5:6*I+7) - 2*WAMITin(n, 6*I+5:6*I+7) + WAMITin(n-1, 6*I+5:6*I+7))/(drvrInitInp%TimeInterval*drvrInitInp%TimeInterval)
                END DO
                
-            END
+            END IF
              
          END IF
         !@mhall: end of addition

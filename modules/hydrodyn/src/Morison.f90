@@ -2157,7 +2157,7 @@ SUBROUTINE SetSplitNodeProperties( numNodes, nodes, numElements, elements, ErrSt
             nodes(element%Node2Indx)%MGdensity = 0.0
          END IF
 		 
-         !@mhall: if this node is Node 1 of the element in question...  ? 
+         !@mhall: if this node is Node I of the element in question...  ? 
          IF ( element%Node1Indx == I ) THEN
             
             IF ( nodes(I)%tMG > 0 ) THEN
