@@ -447,14 +447,14 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       ENDIF    
       ! --- Build original DOF vectors (DOF before the CB reduction)
       m%U_red       (p%IDI) = m%UR_bar
-      m%U_red       (p%IDC) = 0           !!! TODO, might not be generic
       m%U_red       (p%IDL) = m%UL     
+      m%U_red       (p%IDC) = 0           !!! TODO, might not be generic
       m%U_red_dot   (p%IDI) = m%UR_bar_dot
-      m%U_red_dot   (p%IDC) = 0           !!! TODO, might not be generic
       m%U_red_dot   (p%IDL) = m%UL_dot     
+      m%U_red_dot   (p%IDC) = 0           !!! TODO, might not be generic
       m%U_red_dotdot(p%IDI) = m%UR_bar_dotdot
-      m%U_red_dotdot(p%IDC) = 0           !!! TODO, might not be generic
       m%U_red_dotdot(p%IDL) = m%UL_dotdot    
+      m%U_red_dotdot(p%IDC) = 0           !!! TODO, might not be generic
 
       m%U_full        = matmul(p%T_red, m%U_red)
       m%U_full_dot    = matmul(p%T_red, m%U_red_dot)
@@ -537,7 +537,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
          END IF        
          
          ! Map calculated results into the AllOuts Array + perform averaging and all necessary extra calculations
-         CALL SDOut_MapOutputs(t, u,p,x,y, m, AllOuts, ErrStat2, ErrMsg2); if(Failed()) return
+         CALL SDOut_MapOutputs(t, u, p, x, y, m, AllOuts, ErrStat2, ErrMsg2); if(Failed()) return
             
          ! Put the output data in the WriteOutput array
          DO I = 1,p%NumOuts+p%OutAllInt*p%OutAllDims
@@ -2280,7 +2280,7 @@ SUBROUTINE PartitionDOFNodes_I_C_R_L(Init, m, p, ErrStat, ErrMsg)
    ErrMsg  = ""
    ! --- Count nodes per types
    p%nNodes_I  = p%nNodes_I             ! Number of interface nodes
-   nNodes_R    = p%nNodes_C+p%nNodes_I    ! Number of retained nodes
+   nNodes_R    = p%nNodes_I+p%nNodes_C    ! Number of retained nodes
    p%nNodes_L  = p%nNodes - nNodes_R ! Number of Interior nodes =(TDOF-nDOFC-nDOFI)/6 =  (6*p%nNodes - (p%nNodes_C+p%nNodes_I)*6 ) / 6 = p%nNodes - p%nNodes_C -p%nNodes_I
    ! NOTE: some of the interior nodes may have no DOF if they are involved in a rigid assembly..
 
