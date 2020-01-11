@@ -2402,7 +2402,7 @@ SUBROUTINE ConstructUFL( u, p, m, UFL )
 
    ! --- Build vector of external force
    m%Fext= myNaN
-   DO iMeshNode = 1,size(p%INodes_Mesh_to_SD)
+   DO iMeshNode = 1,p%nNodes
       iSDNode  = p%INodes_Mesh_to_SD(iMeshNode) 
       nMembers = (size(p%NodesDOF(iSDNode)%List)-3)/3 ! Number of members deducted from Node's nDOFList
       ! Force - All nodes have only 3 translational DOFs 
@@ -2507,12 +2507,6 @@ SUBROUTINE OutSummary(Init, p, FEMparams,CBparams, ErrStat,ErrMsg)
    WRITE(UnSum, '(A,I6)')  'Number of members',p%NMembers
    WRITE(UnSum, '(A,I6)')  'Number of nodes per member:', Init%Ndiv+1
    WRITE(UnSum, '(A9,A10,A10,A10,A10,A15,A15,A16)')  'Member ID', 'Joint1_ID', 'Joint2_ID','Prop_I','Prop_J', 'Mass','Length', 'Node IDs...'
-   DO i=1,size(Init%PropSetsB,1)
-      print*,'psb',Init%PropSetsB(i,:)
-   enddo
-   DO i=1,size(Init%PropsB,1)
-      print*,'pb ',Init%PropsB(i,:)
-   enddo
    DO i=1,p%NMembers
        !Calculate member mass here; this should really be done somewhere else, yet it is not used anywhere else
        !IT WILL HAVE TO BE MODIFIED FOR OTHER THAN CIRCULAR PIPE ELEMENTS

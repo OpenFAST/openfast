@@ -219,7 +219,7 @@ SUBROUTINE SDOut_Init( Init, y,  p, misc, InitOut, WtrDpth, ErrStat, ErrMsg )
             pLst%Fg(:,1,K) = pLst%Fg(:,1,K) + FCe(1:12) ! Adding cable element force 
          ENDDO
       ENDDO
-      !Store the matrix that will let me calculate single point reaction at the base of structure
+      ! Compute p%TIreact, matrix to calculate single point reaction at the base of structure
       CALL ReactMatx(Init, WtrDpth, p, ErrStat, ErrMsg)
    ENDIF
  
@@ -304,210 +304,205 @@ SUBROUTINE SDOut_MapOutputs( CurrentTime, u,p,x, y, m, AllOuts, ErrStat, ErrMsg 
    integer(IntKi),                intent(   out )  :: ErrStat              ! Error status of the operation
    character(*),                  intent(   out )  :: ErrMsg               ! Error message if ErrStat /= ErrID_None
    !locals
-   integer(IntKi)               :: iMemberOutput, iiNode, iElem, FirstOrSecond, I, J, K2,L,L2      ! Counters
-   integer(IntKi), dimension(2) :: ElemNodes ! It stores Node IDs for element under consideration (may not be consecutive numbers)
-   integer(IntKi)               :: maxOutModes  ! maximum modes to output, the minimum of 99 or p%nDOFM
-   real(ReKi), dimension (6)    :: FM_elm, FK_elm, junk  !output static and dynamic forces and moments
-   real(ReKi), dimension (6)    :: FM_elm2, FK_elm2  !output static and dynamic forces and moments
-   real(ReKi), dimension (3,3)  :: DIRCOS    !direction cosice matrix (global to local) (3x3)
-   real(ReKi), allocatable      :: ReactNs(:)    !6*Nreact reactions
-   real(ReKi)                   :: Tmp_Udotdot(12), Tmp_y2(12) !temporary storage for calls to CALC_LOCAL
-   real(ReKi), dimension(p%nDOFI+p%nDOFL+p%nDOFC) :: yout            ! modifications to Y2 and Udotdot to include constrained node DOFs
-   real(ReKi), dimension(p%nDOFI+p%nDOFL+p%nDOFC) :: uddout           ! modifications to Y2 and Udotdot to include constrained node DOFs
-   integer(IntKi)                              ::sgn !+1/-1 for node force calculations
-   type(MeshAuxDataType), pointer :: pLst !< Alias to shorten notation and highlight code similarities
-   real(ReKi), dimension(2),parameter :: NodeNumber_To_Sign = (/-1, +1/)
+   integer(IntKi)                 :: iMemberOutput, iiNode, iSDNode, iMeshNode, I, J, L, L2      ! Counters
+   integer(IntKi)                 :: maxOutModes  ! maximum modes to output, the minimum of 99 or p%nDOFM
+   real(ReKi), dimension (6)      :: FM_elm, FK_elm, Fext  !output static and dynamic forces and moments
+   real(ReKi), dimension (6)      :: FM_elm2, FK_elm2      !output static and dynamic forces and moments
+   real(ReKi), dimension (3,3)    :: DIRCOS    !direction cosice matrix (global to local) (3x3)
+   real(ReKi), allocatable        :: ReactNs(:)    !6*Nreact reactions
+   integer(IntKi)                 :: sgn !+1/-1 for node force calculations
+   type(MeshAuxDataType), pointer :: pLst       !< Info for a given member-output (Alias to shorten notation)
+   integer(IntKi), pointer        :: DOFList(:) !< List of DOF indices for a given Nodes (Alias to shorten notation)
    ErrStat = ErrID_None   
    ErrMsg  = ""
    
    AllOuts = 0.0_ReKi  ! initialize for those outputs that aren't valid (and thus aren't set in this routine)
-   
-   !Create a variable that lists Y2 and adds removed constrained nodes' dofs; we will be using it to carry out other calculations with a special indexing array
-   yout(                1:p%nDOFI        )         = m%UR_bar ! TODO TODO TODO Look at U_full/U_red
-   yout(        p%nDOFI+1:p%nDOFI+p%nDOFL)         = m%UL
-   yout(p%NDOFL+p%nDOFI+1:p%nDOFI+p%nDOFL+p%nDOFC) = 0
-  
-   !Same for a variable that deals with Udotdot
-   uddout =0 !Initialize and populate with Udotdot data
-   uddout(1          : p%nDOFI          ) = m%UR_bar_dotdot ! TODO TODO TODO look at U_full_dotdot U_red_dotdot
-   uddout(p%nDOFI+1 : p%nDOFI+p%nDOFL  ) = m%UL_dotdot
-
-  ! TODO TODO TODO, there is a lot of similarity between the three outputs sections with some code redundency
          
-   ! Only generate member-based outputs for the number of user-requested member outputs
-   !Now store and identify needed output as requested by user
-   !p%MOutLst has the mapping for the member, node, elements per node, to be used
-   !MXNYZZZ   will need to connects to p%MOutLst(X)%ElmIDs(Y,1:2) if it is a force or accel; else to u%UFL(p%MOutLst(X)%NodeIDs(Y)) 
-   !Inertial Load for the elements that are needed
+   ! --------------------------------------------------------------------------------
+   ! --- Requested member-outputs (Node kinematics and loads)
+   ! --------------------------------------------------------------------------------
+   ! p%MOutLst has the mapping for the member, node, elements per node, to be used
+   ! MXNYZZZ   will need to connects to p%MOutLst(X)%ElmIDs(Y,1:2) if it is a force or accel; else to u%UFL(p%MOutLst(X)%NodeIDs(Y)) 
    if (p%NumOuts > 0) then  !bjj: some of these fields aren't allocated when NumOuts==0
       ! Loop over member-outputs requested
       DO iMemberOutput=1,p%NMOutputs
          pLst=>p%MOutLst(iMemberOutput) ! List for a given member-output 
          DO iiNode=1,pLst%NOutCnt !Iterate on requested nodes for that member 
-            !I need to average across potentially up to 2 elements
-            !Calculate forces on 1st stored element, and if 2nd exists do averaging with the second
-            iElem         = pLst%ElmIDs(iiNode,1)             ! element number
-            FirstOrSecond = pLst%ElmNds(iiNode,1)             ! first or second node of the element to be considered
-            sgn           = NodeNumber_To_Sign(FirstOrSecond) ! Assign sign depending if it's the 1st or second node
-            ElemNodes     = p%Elems(iElem,2:3)                ! first and second node ID associated with element K
-            L =p%IDY((ElemNodes(1)-1)*6+1)! starting index for node ElemNodes(1) within yout
-            L2=p%IDY((ElemNodes(2)-1)*6+1)! starting index for node ElemNodes(2) within yout
-            
-            DIRCOS=transpose(p%ElemProps(iElem)%DirCos)! global to local dir-cosine matrix
-            !I need to find the Udotdot() for the two nodes of the element of interest 
-            !I need to move the displacements to the local ref system
-            ! bjj: added these temporary storage variables so that the CALC_NODE_FORCES call doesn't created
-            !      new temporary *every time* it's called
-            Tmp_Udotdot(1: 6) = uddout( L : L+5  )
-            Tmp_Udotdot(7:12) = uddout( L2 : L2+5 )
-            Tmp_y2(1: 6)      = yout( L : L+5 )
-            Tmp_y2(7:12)      = yout( L2 : L2+5 )
-            !print*,'Tmp_y2',Tmp_y2(1:6)
-            !print*,'Tmp_y2',m%U_full( p%NodesDOF(ElemNodes(1)%List(1:6)) )
-            CALL CALC_NODE_FORCES( DIRCOS,pLst%Me(:,:,iiNode,1),pLst%Ke(:,:,iiNode,1),Tmp_Udotdot, Tmp_y2,pLst%Fg(:,iiNode,1), FirstOrSecond, FM_elm, FK_elm) 
-            
+            ! --- Forces (potentially averaged on 2 elements) 
+            call ElementForce(pLst, iiNode, 1, FM_elm, FK_elm, sgn, DIRCOS, .false.)
             FM_elm2=sgn*FM_elm
             FK_elm2=sgn*FK_elm
-            
-            IF (pLst%ElmIDs(iiNode,p%NavgEls) .NE. 0) THEN  !element number
-               iElem          = pLst%ElmIDs(iiNode,p%NavgEls)  !element index/number
-               FirstOrSecond  = pLst%ElmNds(iiNode,p%NavgEls)  !first or second node of the element to be considered
-               sgn=NodeNumber_To_Sign(FirstOrSecond) ! Assign sign depending if it's the 1st or second node
-               ElemNodes=p%Elems(iElem,2:3)  !first and second node ID associated with element K 
-               L  = p%IDY((ElemNodes(1)-1)*6+1)! starting index for node ElemNodes(1) within yout ! TODO different DOF order
-               L2 = p%IDY((ElemNodes(2)-1)*6+1)! starting index for node ElemNodes(2) within yout
-               CALL CALC_NODE_FORCES(DIRCOS,pLst%Me(:,:,iiNode,p%NavgEls),pLst%Ke(:,:,iiNode,p%NavgEls),(/uddout( L : L+5  ),uddout( L2 : L2+5 )/), &
-                               (/yout( L : L+5 ), yout( L2 : L2+5 )/), pLst%Fg(:,iiNode,p%NavgEls), FirstOrSecond, FM_elm, FK_elm ) 
-                                 
-               FM_elm2=0.5*( FM_elm2 + sgn*FM_elm ) !Now Average
-               FK_elm2=0.5*( FK_elm2 + sgn*FK_elm) !Now Average
+            IF (pLst%ElmIDs(iiNode,p%NavgEls) .NE. 0) THEN  ! Second element exist
+               ! NOTE: forces are computed in the coordinate system of the first element for averaging
+               call ElementForce(pLst, iiNode, p%NavgEls, FM_elm, FK_elm, sgn, DIRCOS, .true.) ! True= we use DIRCOS from element above
+               FM_elm2=0.5*( FM_elm2 + sgn*FM_elm ) ! Now Average
+               FK_elm2=0.5*( FK_elm2 + sgn*FK_elm)  ! Now Average
             ENDIF
-            ! Store in AllOuts
-            !Forces and moments
-            AllOuts(MNfmKe  (:,iiNode,iMemberOutput))     = FK_elm2  !static forces and moments (6) Local Ref
-            AllOuts(MNfmMe  (:,iiNode,iMemberOutput))     = FM_elm2  !dynamic forces and moments (6) Local Ref
-            !Displacement- Translational -no need for averaging since it is a node translation - In global reference SS
-            L=p%IDY( (pLst%NodeIDs(iiNode)-1)*6 +1 )! starting index for nodeID(iiNode) within yout
-            !print*,'NodeIDs',pLst%NodeIDs(iiNode), 'L',L
-            AllOuts(MNTDss (:,iiNode,iMemberOutput))      = yout(L:L+2)
-            !Displacement- Rotational - I need to get the direction cosine matrix to tranform rotations  - In Local reference Element Ref Sys
-            AllOuts(MNRDe (:,iiNode,iMemberOutput))        = matmul(DIRCOS,yout(L+3:L+5)  ) !local ref
-            !Accelerations- I need to get the direction cosine matrix to tranform displacement and rotations
-            AllOuts(MNTRAe (1:3,iiNode,iMemberOutput))     = matmul(DIRCOS,uddout(L:L+2)  )   !translational accel local ref
-            AllOuts(MNTRAe (4:6,iiNode,iMemberOutput))     = matmul(DIRCOS,uddout(L+3:L+5) )  !rotational accel  local ref
+            ! Static (elastic) component of reaction forces and moments at MαNβ along local member coordinate system
+            !    "MαNβFKxe, MαNβFKye, MαNβFKze, MαNβMKxe, MαNβMKye, MαNβMKze"
+            AllOuts(MNfmKe  (:,iiNode,iMemberOutput)) = FK_elm2  !static forces and moments (6) Local Ref
+            ! Dynamic (inertial) component of reaction forces and moments at MαNβ along local member coordinate system
+            !    "MαNβFMxe, MαNβFMye, MαNβFMze, MαNβMMxe, MαNβMMye, MαNβMMze"
+            AllOuts(MNfmMe  (:,iiNode,iMemberOutput)) = FM_elm2  !dynamic forces and moments (6) Local Ref
+
+            ! --- Displacements and acceleration
+            DOFList => p%NodesDOF(pLst%NodeIDs(iiNode))%List
+            ! Displacement- Translational -no need for averaging since it is a node translation - In global reference SS
+            !     "MαNβTDxss, MαNβTDyss, MαNβTDzss"
+            AllOuts(MNTDss (:,iiNode,iMemberOutput))       = m%U_full(DOFList(1:3))
+            ! Displacement- Rotational - need direction cosine matrix to tranform rotations  - In Local reference Element Ref Sys
+            !     "MαNβRDxss, MαNβRDye, MαNβRDze"
+            AllOuts(MNRDe (:,iiNode,iMemberOutput))        = matmul(DIRCOS,m%U_full(DOFList(4:6))) !local ref
+            ! Accelerations- I need to get the direction cosine matrix to tranform displacement and rotations
+            !     "MαNβTAxe, MαNβTAye, MαNβTAze"
+            !     "MαNβRAxe, MαNβRAye, MαNβRAze"
+            AllOuts(MNTRAe (1:3,iiNode,iMemberOutput))     = matmul(DIRCOS,m%U_full_dotdot(DOFList(1:3))) ! translational accel local ref
+            AllOuts(MNTRAe (4:6,iiNode,iMemberOutput))     = matmul(DIRCOS,m%U_full_dotdot(DOFList(4:6))) ! rotational accel  local ref
         ENDDO  ! iiNode, Loop on requested nodes for that member
      ENDDO ! iMemberOutput, Loop on member outputs
    END IF
   
-   IF (p%OutAll) THEN  !NEED TO CALCULATE TOTAL FORCES
+   ! --------------------------------------------------------------------------------
+   ! --- All nodal loads from stiffness and mass matrix 
+   ! --------------------------------------------------------------------------------
+   ! "MaaaJbFKxe, MaaaJbMKxe MaaaJbFMxe, MaaaJbMMxe for member aaa and node b."
+   IF (p%OutAll) THEN 
       DO iMemberOutput=1,p%NMembers    !Cycle on all members
          pLst=>p%MOutLst2(iMemberOutput)
          DO iiNode=1,2 !Iterate on requested nodes for that member (first and last)  
-            iElem         = pLst%ElmIDs(iiNode,1)  !element number
-            FirstOrSecond = pLst%ElmNds(iiNode,1)  !first or second node of the element to be considered
-            sgn=NodeNumber_To_Sign(FirstOrSecond) ! Assign sign depending if it's the 1st or second node
-            ElemNodes=p%Elems(iElem,2:3)  !first and second node ID associated with element iElem
-            L =p%IDY((ElemNodes(1)-1)*6+1)! starting index for node ElemNodes(1) within yout ! TODO different DOF order
-            L2=p%IDY((ElemNodes(2)-1)*6+1)! starting index for node ElemNodes(2) within yout
-            DIRCOS=transpose(p%ElemProps(iElem)%DirCos)! global to local
-            CALL CALC_NODE_FORCES( DIRCOS, pLst%Me(:,:,iiNode,1),pLst%Ke(:,:,iiNode,1),(/uddout( L : L+5  ),uddout( L2 : L2+5 )/), &
-                             (/yout( L : L+5 ), yout( L2 : L2+5 )/), pLst%Fg(:,iiNode,1), FirstOrSecond, FM_elm, FK_elm) 
+            call ElementForce(pLst, iiNode, 1, FM_elm, FK_elm, sgn, DIRCOS, .false.)
             ! Store in All Outs
-            L=MaxOutPts+(iMemberOutput-1)*24+(iiNode-1)*12+1!start index
-            L2=L+11
+            L  = MaxOutPts+(iMemberOutput-1)*24+(iiNode-1)*12+1
+            L2 = L+11
             AllOuts( L:L2 ) =sgn* (/FK_elm,FM_elm/)
          ENDDO !iiNode, nodes 1 and 2
       ENDDO ! iMemberOutput, Loop on members
    ENDIF
   
-  !Assign interface forces and moments 
-  AllOuts(IntfSS(1:nDOFL_TP))= - (/y%Y1Mesh%Force (:,1), y%Y1Mesh%Moment(:,1)/) !-y%Y1  !Note this is the force that the TP applies to the Jacket, opposite to what the GLue Code needs thus "-" sign
-  !Assign interface translations and rotations at the TP ref point  
-  AllOuts(IntfTRss(1:nDOFL_TP))=m%u_TP 
-  !Assign interface translations and rotations accelerations
-  AllOuts(IntfTRAss(1:nDOFL_TP))= m%udotdot_TP 
+   ! --------------------------------------------------------------------------------
+   ! --- Interface kinematics and loads (TP/platform reference point)
+   ! --------------------------------------------------------------------------------
+   ! Total interface reaction forces and moments in SS coordinate system
+   !    "IntfFXss, IntfFYss, IntfFZss, IntfMXss, IntfMYss, IntfMZss,"
+   AllOuts(IntfSS(1:nDOFL_TP))= - (/y%Y1Mesh%Force (:,1), y%Y1Mesh%Moment(:,1)/) !-y%Y1  !Note this is the force that the TP applies to the Jacket, opposite to what the GLue Code needs thus "-" sign
+   ! Interface translations and rotations in SS coordinate system 
+   !    "IntfTDXss, IntfTDYss, IntfTDZss, IntfRDXss, IntfRDYss IntfRDZss"
+   AllOuts(IntfTRss(1:nDOFL_TP))=m%u_TP 
+   ! Interface Translational and rotational accelerations in SS coordinate system
+   !    "IntfTAXss, IntfTAYss, IntfTAZss, IntfRAXss, IntfRAYss IntfRAZss"
+   AllOuts(IntfTRAss(1:nDOFL_TP))= m%udotdot_TP 
 
-  ! Assign all SSqm, SSqmdot, SSqmdotdot
-  ! We only have space for the first 99 values
-  maxOutModes = min(p%nDOFM,99)
-  IF ( maxOutModes > 0 ) THEN 
-     !BJJ: TODO: is there a check to see if we requested these channels but didn't request the modes? (i.e., retain 2 modes but asked for 75th mode?)
-     Allouts(SSqm01  :SSqm01  +maxOutModes-1) = x%qm      (1:maxOutModes)
-     Allouts(SSqmd01 :SSqmd01 +maxOutModes-1) = x%qmdot   (1:maxOutModes)
-     Allouts(SSqmdd01:SSqmdd01+maxOutModes-1) = m%qmdotdot(1:maxOutModes)
-  END IF
+   ! --------------------------------------------------------------------------------
+   ! --- Modal parameters "SSqmXX, SSqmdotXX, SSqmddXX" amplitude, speed and acceleration
+   ! --------------------------------------------------------------------------------
+   maxOutModes = min(p%nDOFM,99) ! We only have space for the first 99 values
+   IF ( maxOutModes > 0 ) THEN 
+      !BJJ: TODO: is there a check to see if we requested these channels but didn't request the modes? (i.e., retain 2 modes but asked for 75th mode?)
+      AllOuts(SSqm01  :SSqm01  +maxOutModes-1) = x%qm      (1:maxOutModes)
+      AllOuts(SSqmd01 :SSqmd01 +maxOutModes-1) = x%qmdot   (1:maxOutModes)
+      AllOuts(SSqmdd01:SSqmdd01+maxOutModes-1) = m%qmdotdot(1:maxOutModes)
+   END IF
    
-  !Need to Calculate Reaction Forces Now, but only if requested
-  IF (p%OutReact) THEN 
-     ALLOCATE ( ReactNs(6*p%nNodes_C), STAT = ErrStat )
-     IF ( ErrStat /= ErrID_None ) THEN
-        ErrMsg  = ' Error allocating space for ReactNs array.'
-        ErrStat = ErrID_Fatal
-        RETURN
-     END IF
-     ReactNs = 0.0 !Initialize
-     DO I=1,p%nNodes_C   !Do for each constrained node, they are ordered as given in the input file and so as in the order of y2mesh
-        FK_elm2=0. !Initialize for cumulative force
-        FM_elm2=0. !Initialize
-        pLst => p%MOutLst3(I)
-        !Find the joint forces
-        DO J=1,SIZE(pLst%ElmIDs(1,:))  !for all the elements connected (normally 1)
-           iElem         = pLst%ElmIDs(1,J) ! element number
-           FirstOrSecond = pLst%ElmNds(1,J) ! 1=first, 2=second node of the element to be considered
-           ElemNodes = p%Elems(iElem,2:3)  !first and second node ID associated with element iElem 
-           L  = p%IDY((ElemNodes(1)-1)*6+1)! starting index for node ElemNodes(1) within yout ! TODO different DOF order
-           L2 = p%IDY((ElemNodes(2)-1)*6+1)! starting index for node ElemNodes(2) within yout
-           DIRCOS=transpose(p%ElemProps(iElem)%DirCos)! global to local
-           CALL CALC_NODE_FORCES( DIRCOS,pLst%Me(:,:,1,J),pLst%Ke(:,:,1,J),(/uddout( L : L+5  ),uddout( L2 : L2+5 )/), &
-                            (/yout( L : L+5 ), yout( L2 : L2+5 )/), pLst%Fg(:,1,J), FirstOrSecond, FM_elm,FK_elm) 
-           !transform back to global, need to do 3 at a time since cosine matrix is 3x3
-           DO L=1,2  
-              FM_elm2((L-1)*3+1:L*3) = FM_elm2((L-1)*3+1:L*3) + matmul(p%ElemProps(iElem)%DirCos,FM_elm((L-1)*3+1:L*3))  !sum forces at joint in GLOBAL REF
-              FK_elm2((L-1)*3+1:L*3) = FK_elm2((L-1)*3+1:L*3) + matmul(p%ElemProps(iElem)%DirCos,FK_elm((L-1)*3+1:L*3))  !signs may be wrong, we will fix that later;  
-           ! I believe this is all fixed in terms of signs now ,RRD 5/20/13
-           ENDDO           
-        ENDDO
-        !junk= FK_elm2 ! + FM_elm2  !removed the inertial component 12/13 !Not sure why I need an intermediate step here, but the sum would not work otherwise
-        !NEED TO ADD HYDRODYNAMIC FORCES AT THE RESTRAINT NODES
-        !   The joind iD of the reaction, i.e. thre reaction node ID is within p%MOutLst3(I)%Noutcnt
-        !The index in Y2mesh is? 
-        !Since constrained nodes are ordered as given in the input file and so as in the order of y2mesh, i Can do:
-        junk =  (/u%LMesh%Force(:,p%NNodes_I+p%NNodes_L+I),u%LMesh%Moment(:,p%NNodes_I+p%NNodes_L+I)/)
-        ReactNs((I-1)*6+1:6*I)=FK_elm2 - junk  !Accumulate reactions from all nodes in GLOBAL COORDINATES ! TODO TODO TODO assumed DOF order maybe
-     ENDDO
-     ! Store into AllOuts
-     AllOuts( ReactSS(1:nDOFL_TP) ) = matmul(p%TIreact,ReactNs)
-  ENDIF
-  if (allocated(ReactNs)) deallocate(ReactNs)
+   ! --------------------------------------------------------------------------------}
+   ! --- Base reaction loads
+   ! --------------------------------------------------------------------------------{
+   ! Total base reaction forces and moments at the (0.,0.,-WtrDpth) location in SS coordinate system
+   !    "ReactFXss, ReactFYss, ReactFZss, ReactMXss, ReactMYss, ReactMZss"
+   IF (p%OutReact) THEN 
+      ALLOCATE ( ReactNs(6*p%nNodes_C), STAT = ErrStat )
+      IF ( ErrStat /= ErrID_None ) THEN
+         ErrMsg  = ' Error allocating space for ReactNs array.'
+         ErrStat = ErrID_Fatal
+         RETURN
+      END IF
+      ReactNs = 0.0 !Initialize
+      DO I=1,p%nNodes_C   !Do for each constrained node, they are ordered as given in the input file and so as in the order of y2mesh
+         FK_elm2=0. !Initialize for cumulative force
+         FM_elm2=0. !Initialize
+         pLst => p%MOutLst3(I)
+         !Find the joint forces
+         DO J=1,SIZE(pLst%ElmIDs(1,:))  !for all the elements connected (normally 1)
+            iiNode = 1
+            call ElementForce(pLst, iiNode, J, FM_elm, FK_elm, sgn, DIRCOS, .false.)
+            !transform back to global, need to do 3 at a time since cosine matrix is 3x3
+            DO L=1,2  
+               FM_elm2((L-1)*3+1:L*3) = FM_elm2((L-1)*3+1:L*3) + matmul(transpose(DIRCOS),FM_elm((L-1)*3+1:L*3))  !sum forces at joint in GLOBAL REF
+               FK_elm2((L-1)*3+1:L*3) = FK_elm2((L-1)*3+1:L*3) + matmul(transpose(DIRCOS),FK_elm((L-1)*3+1:L*3))  !signs may be wrong, we will fix that later;  
+               ! I believe this is all fixed in terms of signs now ,RRD 5/20/13
+            ENDDO           
+         ENDDO
+         !junk= FK_elm2 ! + FM_elm2  !removed the inertial component 12/13 !Not sure why I need an intermediate step here, but the sum would not work otherwise
+         !NEED TO ADD HYDRODYNAMIC FORCES AT THE RESTRAINT NODES
+         !   The joind iD of the reaction, i.e. thre reaction node ID is within p%MOutLst3(I)%Noutcnt
+         !Since constrained nodes are ordered as given in the input file and so as in the order of y2mesh, i Can do:
+         iSDNode   = p%Nodes_C(I,1)
+         iMeshNode = p%INodes_SD_to_Mesh(iSDNode)
+         Fext =  (/ u%LMesh%Force(:,iMeshNode), u%LMesh%Moment(:,iMeshNode) /)
+         ReactNs((I-1)*6+1:6*I) = FK_elm2 - Fext  !Accumulate reactions from all nodes in GLOBAL COORDINATES
+      ENDDO
+      ! Store into AllOuts
+      AllOuts( ReactSS(1:nDOFL_TP) ) = matmul(p%TIreact,ReactNs)
+   ENDIF
+   if (allocated(ReactNs)) deallocate(ReactNs)
+contains
 
+   subroutine ElementForce(pLst, iiNode, JJ, FM_elm, FK_elm, sgn, DIRCOS, bUseInputDirCos)
+      type(MeshAuxDataType), intent(in)          :: pLst   !< Info for one member output
+      integer(IntKi)       , intent(in)          :: iiNode !< Index over the nodes of a given number
+      integer(IntKi)       , intent(in)          :: JJ     !< TODO: interpretation: index over other member connected to the current member (for averaging)
+      real(ReKi), dimension (3,3), intent(inout) :: DIRCOS  !direction cosice matrix (global to local) (3x3)
+      real(ReKi), dimension (6), intent(out)     :: FM_elm, FK_elm  !output static and dynamic forces and moments
+      integer(IntKi), intent(out)                :: sgn !+1/-1 for node force calculations
+      logical, intent(in)                        :: bUseInputDirCos !< If True, use DIRCOS from input, otherwise, use element DirCos
+      ! Local
+      integer(IntKi)                          :: iElem !< Element index/number
+      integer(IntKi)                          :: FirstOrSecond !< 1 or 2  if first node or second node
+      integer(IntKi), dimension(2)            :: ElemNodes  ! Node IDs for element under consideration (may not be consecutive numbers)
+      real(ReKi)    , dimension(12)           :: X_e, Xdd_e ! Displacement and acceleration for an element
+      integer(IntKi), dimension(2), parameter :: NodeNumber_To_Sign = (/-1, +1/)
+
+      iElem         = pLst%ElmIDs(iiNode,JJ)             ! element number
+      FirstOrSecond = pLst%ElmNds(iiNode,JJ)             ! first or second node of the element to be considered
+      sgn           = NodeNumber_To_Sign(FirstOrSecond) ! Assign sign depending if it's the 1st or second node
+      ElemNodes     = p%Elems(iElem,2:3)                ! first and second node ID associated with element iElem
+      X_e(1:6)      = m%U_full       (p%NodesDOF(ElemNodes(1))%List(1:6)) 
+      X_e(7:12)     = m%U_full       (p%NodesDOF(ElemNodes(2))%List(1:6)) 
+      Xdd_e(1:6)    = m%U_full_dotdot(p%NodesDOF(ElemNodes(1))%List(1:6)) 
+      Xdd_e(7:12)   = m%U_full_dotdot(p%NodesDOF(ElemNodes(2))%List(1:6)) 
+      if (.not. bUseInputDirCos) then
+         DIRCOS=transpose(p%ElemProps(iElem)%DirCos)! global to local
+      endif
+      CALL CALC_NODE_FORCES( DIRCOS, pLst%Me(:,:,iiNode,JJ),pLst%Ke(:,:,iiNode,JJ), Xdd_e, X_e, pLst%Fg(:,iiNode,JJ), FirstOrSecond, FM_elm, FK_elm) 
+   end subroutine ElementForce
+
+   !====================================================================================================
+   !> Calculates static and dynamic forces for a given element, using K and M of the element, and 
+   !output quantities Udotdot and Y2 containing the 
+   !and K2 indicating wheter the 1st (1) or 2nd (2) node is to be picked
+   !----------------------------------------------------------------------------------------------------
+   SUBROUTINE CALC_NODE_FORCES(DIRCOS,Me,Ke,Udotdot,Y2 ,Fg, FirstOrSecond, FM_nod, FK_nod)
+      Real(ReKi), DIMENSION (3,3),   INTENT(IN)  :: DIRCOS    !direction cosice matrix (global to local) (3x3)
+      Real(ReKi), DIMENSION (12,12), INTENT(IN)  :: Me,Ke    !element M and K matrices (12x12) in GLOBAL REFERENCE (DIRCOS^T K DIRCOS)
+      Real(ReKi), DIMENSION (12),    INTENT(IN)  :: Udotdot, Y2, Fg     !acceleration and velocities, gravity forces
+      Integer(IntKi),                INTENT(IN)  :: FirstOrSecond !1 or 2 depending on node of interest
+      REAL(ReKi), DIMENSION (6),    INTENT(OUT)  :: FM_nod, FK_nod  !output static and dynamic forces and moments
+      !Locals
+      INTEGER(IntKi) :: L !counter
+      REAL(DbKi), DIMENSION(12)                    :: FM_glb, FF_glb, FM_elm, FF_elm  ! temporary storage 
+
+      FM_glb = matmul(Me,Udotdot)   ! GLOBAL REFERENCE
+      FF_glb = matmul(Ke,Y2)        ! GLOBAL REFERENCE
+      FF_glb = FF_glb - Fg          ! GLOBAL REFERENCE
+      DO L=1,4 ! Transforming coordinates 3 at a time
+         FM_elm((L-1)*3+1:L*3) =  matmul(DIRCOS, FM_glb( (L-1)*3+1:L*3 ) )
+         FF_elm((L-1)*3+1:L*3) =  matmul(DIRCOS, FF_glb( (L-1)*3+1:L*3 ) ) 
+      ENDDO
+      FM_nod = FM_elm(6*(FirstOrSecond-1)+1:FirstOrSecond*6) ! k2=1, 1:6,  k2=2  7:12 
+      FK_nod = FF_elm(6*(FirstOrSecond-1)+1:FirstOrSecond*6) 
+
+   END SUBROUTINE CALC_NODE_FORCES 
 END SUBROUTINE SDOut_MapOutputs
 
-!====================================================================================================
-!> Calculates static and dynamic forces for a given element, using K and M of the element, and 
-!output quantities Udotdot and Y2 containing the 
-!and K2 indicating wheter the 1st (1) or 2nd (2) node is to be picked
-!----------------------------------------------------------------------------------------------------
-SUBROUTINE CALC_NODE_FORCES(DIRCOS,Me,Ke,Udotdot,Y2 ,Fg, FirstOrSecond, FM_nod, FK_nod)
-   Real(ReKi), DIMENSION (3,3),   INTENT(IN)  :: DIRCOS    !direction cosice matrix (global to local) (3x3)
-   Real(ReKi), DIMENSION (12,12), INTENT(IN)  :: Me,Ke    !element M and K matrices (12x12) in GLOBAL REFERENCE (DIRCOS^T K DIRCOS)
-   Real(ReKi), DIMENSION (12),    INTENT(IN)  :: Udotdot, Y2, Fg     !acceleration and velocities, gravity forces
-   Integer(IntKi),                INTENT(IN)  :: FirstOrSecond !1 or 2 depending on node of interest
-   REAL(ReKi), DIMENSION (6),    INTENT(OUT)  :: FM_nod, FK_nod  !output static and dynamic forces and moments
-   !Locals
-   INTEGER(IntKi) :: L !counter
-   REAL(DbKi), DIMENSION(12)                    :: FM_glb, FF_glb, FM_elm, FF_elm  ! temporary storage 
-
-   FM_glb = matmul(Me,Udotdot)   ! GLOBAL REFERENCE
-   FF_glb = matmul(Ke,Y2)        ! GLOBAL REFERENCE
-   FF_glb = FF_glb - Fg          ! GLOBAL REFERENCE
-   DO L=1,4 ! Transforming coordinates 3 at a time
-      FM_elm((L-1)*3+1:L*3) =  matmul(DIRCOS, FM_glb( (L-1)*3+1:L*3 ) )
-      FF_elm((L-1)*3+1:L*3) =  matmul(DIRCOS, FF_glb( (L-1)*3+1:L*3 ) ) 
-   ENDDO
-   FM_nod = FM_elm(6*(FirstOrSecond-1)+1:FirstOrSecond*6) ! k2=1, 1:6,  k2=2  7:12 
-   FK_nod = FF_elm(6*(FirstOrSecond-1)+1:FirstOrSecond*6) 
-
-END SUBROUTINE CALC_NODE_FORCES 
 
 !====================================================================================================
 SUBROUTINE SDOut_CloseSum( UnSum, ErrStat, ErrMsg )
