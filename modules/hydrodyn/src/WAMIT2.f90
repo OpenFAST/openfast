@@ -1848,20 +1848,20 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
                ! Frequency
             Omega1 = J * InitInp%WaveDOmega
 
-            !> Phase shift due to offset in location
-            !! The phase shift due to an (x,y) offset is of the form
-            !! \f$  exp(-\imath k(\omega) ( X cos(\Beta(w)) + Y sin(\beta(w)) )) \f$
-            !  NOTE: the phase shift applies to the aWaveElevC of the incoming wave.  Including it here instead
-            !        of above is mathematically equivalent, but only because each frequency has only one wave
-            !        direction associated with it through the equal energy approach used in multidirectional waves.
-
-            WaveNmbr1   = WaveNumber ( REAL(Omega1,SiKi), InitInp%Gravity, InitInp%WtrDpth )    ! SiKi returned
-            TmpReal1    = WaveNmbr1 * ( InitInp%PtfmRefxt(1)*cos(InitInp%WaveDirArr(J)*D2R) + InitInp%PtfmRefyt(1)*sin(InitInp%WaveDirArr(J)*D2R) )
-            PhaseShiftXY = CMPLX( cos(TmpReal1), -sin(TmpReal1) )
-
-
-               ! Apply the phase shift, but only to the NBodyMod=2 case
+            !> Phase shift due to offset in location, only for NBodyMod==2
             if (p%NBodyMod == 2) then
+
+               !> The phase shift due to an (x,y) offset is of the form
+               !! \f$  exp(-\imath k(\omega) ( X cos(\Beta(w)) + Y sin(\beta(w)) )) \f$
+               !  NOTE: the phase shift applies to the aWaveElevC of the incoming wave.  Including it here instead
+               !        of above is mathematically equivalent, but only because each frequency has only one wave
+               !        direction associated with it through the equal energy approach used in multidirectional waves.
+
+               WaveNmbr1   = WaveNumber ( REAL(Omega1,SiKi), InitInp%Gravity, InitInp%WtrDpth )    ! SiKi returned
+               TmpReal1    = WaveNmbr1 * ( InitInp%PtfmRefxt(1)*cos(InitInp%WaveDirArr(J)*D2R) + InitInp%PtfmRefyt(1)*sin(InitInp%WaveDirArr(J)*D2R) )
+               PhaseShiftXY = CMPLX( cos(TmpReal1), -sin(TmpReal1) )
+
+               ! Apply the phase shift
                DO ThisDim=1,6
                   NewmanTerm1C(J,ThisDim) = NewmanTerm1C(J,ThisDim)*PhaseShiftXY       ! Newman term 1
                   NewmanTerm2C(J,ThisDim) = NewmanTerm2C(J,ThisDim)*PhaseShiftXY       ! Newman term 2
