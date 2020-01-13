@@ -262,7 +262,6 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: IDR      !< Index array of the interface and restraint dofs [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: IDY      !< Index array of the all dofs in Y2 [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: FGL      !< Internal node nDOFL, gravity loads [-]
-    INTEGER(IntKi)  :: NAvgEls = 2      !< Max number of elements that should be averaged when calculating outputs at nodes [-]
     INTEGER(IntKi)  :: NMOutputs      !< Number of members whose output is written [-]
     INTEGER(IntKi)  :: NumOuts      !< Number of output channels read from input file [-]
     INTEGER(IntKi)  :: OutSwtch      !< Output Requested Channels to local or global output file [1/2/3] [-]
@@ -7042,7 +7041,6 @@ IF (ALLOCATED(SrcParamData%FGL)) THEN
   END IF
     DstParamData%FGL = SrcParamData%FGL
 ENDIF
-    DstParamData%NAvgEls = SrcParamData%NAvgEls
     DstParamData%NMOutputs = SrcParamData%NMOutputs
     DstParamData%NumOuts = SrcParamData%NumOuts
     DstParamData%OutSwtch = SrcParamData%OutSwtch
@@ -7614,7 +7612,6 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*1  ! FGL upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%FGL)  ! FGL
   END IF
-      Int_BufSz  = Int_BufSz  + 1  ! NAvgEls
       Int_BufSz  = Int_BufSz  + 1  ! NMOutputs
       Int_BufSz  = Int_BufSz  + 1  ! NumOuts
       Int_BufSz  = Int_BufSz  + 1  ! OutSwtch
@@ -8497,8 +8494,6 @@ ENDIF
       IF (SIZE(InData%FGL)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%FGL))-1 ) = PACK(InData%FGL,.TRUE.)
       Re_Xferred   = Re_Xferred   + SIZE(InData%FGL)
   END IF
-      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%NAvgEls
-      Int_Xferred   = Int_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%NMOutputs
       Int_Xferred   = Int_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%NumOuts
@@ -9925,8 +9920,6 @@ ENDIF
       Re_Xferred   = Re_Xferred   + SIZE(OutData%FGL)
     DEALLOCATE(mask1)
   END IF
-      OutData%NAvgEls = IntKiBuf( Int_Xferred ) 
-      Int_Xferred   = Int_Xferred + 1
       OutData%NMOutputs = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
       OutData%NumOuts = IntKiBuf( Int_Xferred ) 

@@ -56,14 +56,15 @@ SUBROUTINE SDOut_Init( Init, y,  p, misc, InitOut, WtrDpth, ErrStat, ErrMsg )
    INTEGER,                         INTENT(   OUT ) :: ErrStat              ! a non-zero value indicates an error occurred
    CHARACTER(*),                    INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
    ! Local variables
-   INTEGER(IntKi)       :: ErrStat2      ! Error status of the operation
-   CHARACTER(ErrMsgLen) :: ErrMsg2       ! Error message if ErrStat /= ErrID_None
-   INTEGER(IntKi)                                   :: I,J,K,K2,L,NconEls   !Counters
-   INTEGER(IntKi)                                   :: Junk  !Temporary Holders
-   INTEGER(IntKi)                                   :: iMember  ! Member index (not member ID)
-   INTEGER(IntKi), Dimension(2)                     :: M   !counter for two nodes at a time
-   type(MeshAuxDataType), pointer :: pLst !< Alias to shorten notation and highlight code similarities
-   REAL(ReKi) :: FCe(12) ! Pretension force from cable element
+   INTEGER(IntKi)                 :: ErrStat2      ! Error status of the operation
+   CHARACTER(ErrMsgLen)           :: ErrMsg2       ! Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi)                 :: I,J,K2 !Counters
+   INTEGER(IntKi)                 :: iMember  ! Member index (not member ID)
+   INTEGER(IntKi)                 :: iElem  ! Index of element in Element List
+   INTEGER(IntKi)                 :: iNode  ! Index of node in Node list
+   INTEGER(IntKi)                 :: iiElem ! Loop counter on element index
+   INTEGER(IntKi)                 :: nElemPerNode ! Number of elements connecting to a node
+   type(MeshAuxDataType), pointer :: pLst                                                   !< Alias to shorten notation and highlight code similarities
    ErrStat = 0      
    ErrMsg=""
 
@@ -72,114 +73,90 @@ SUBROUTINE SDOut_Init( Init, y,  p, misc, InitOut, WtrDpth, ErrStat, ErrMsg )
    ! Check that the variables in OutList are valid      
    CALL SDOut_ChkOutLst( Init%SSOutList, p,  ErrStat2, ErrMsg2 ); if(Failed()) return
 
-   IF ( ALLOCATED( p%OutParam ) .AND. p%NumOuts > 0 ) THEN           ! Output has been requested           
+   ! --- Allocation (size 0 if not outputs)
+   !IF ( ALLOCATED( p%OutParam ) .AND. p%NumOuts > 0 ) THEN           ! Output has been requested           
    ! Allocate SDWrOuput which is used to store a time step's worth of output channels, prior to writing to a file.
-   CALL AllocAry(misc%SDWrOutput, p%NumOuts +p%OutAllInt*p%OutAllDims, 'SDWrOutupt', ErrStat2, ErrMsg2) ; if(Failed()) return
+   CALL AllocAry(misc%SDWrOutput       , p%NumOuts + p%OutAllInt*p%OutAllDims, 'SDWrOutupt' , ErrStat2, ErrMsg2) ; if(Failed()) return
+   ! Allocate WriteOuput  
+   CALL AllocAry(y%WriteOutput         , p%NumOuts + p%OutAllInt*p%OutAllDims, 'WriteOutput', ErrStat2, ErrMsg2); if(Failed()) return
+   ! Header, and Units, copy of data already available in the OutParam data structure ! TODO TODO TODO remove copy
+   CALL AllocAry(InitOut%WriteOutputHdr, p%NumOuts + p%OutAllint*p%OutAllDims, 'WriteOutputHdr', ErrStat2, ErrMsg2); if(Failed()) return
+   CALL AllocAry(InitOut%WriteOutputUnt, p%NumOuts + p%OutAllint*p%OutAllDims, 'WriteOutputUnt', ErrStat2, ErrMsg2); if(Failed()) return
    misc%SDWrOutput  = 0.0_ReKi
    misc%LastOutTime = 0.0_DbKi
    misc%Decimat     = 0
-   
-   !Allocate WriteOuput  
-   CALL AllocAry(y%WriteOutput, p%NumOuts +p%OutAllInt*p%OutAllDims, 'WriteOutput', ErrStat2, ErrMsg2); if(Failed()) return
    y%WriteOutput = 0
-
-  
-  DO I=1,p%NMOutputs
-   pLst => p%MOutLst(I)
-   CALL AllocAry(pLst%NodeIDs,    pLst%NoutCnt           , 'MOutLst(I)%NodeIDs', ErrStat2, ErrMsg2); if(Failed()) return
-   CALL AllocAry(pLst%ElmIDs,     pLst%NoutCnt, p%NAvgEls, 'MOutLst(I)%ElmIDs' , ErrStat2, ErrMsg2); if(Failed()) return
-   CALL AllocAry(pLst%ElmNds,     pLst%NoutCnt, p%NAvgEls, 'MOutLst(I)%ElmNds' , ErrStat2, ErrMsg2); if(Failed()) return
-   CALL AllocAry(pLst%Me, 12, 12, pLst%NoutCnt, p%NAvgEls, 'MOutLst(I)%Me'     , ErrStat2, ErrMsg2); if(Failed()) return
-   CALL AllocAry(pLst%Ke, 12, 12, pLst%NoutCnt, p%NAvgEls, 'MOutLst(I)%Ke'     , ErrStat2, ErrMsg2); if(Failed()) return
-   CALL AllocAry(pLst%Fg,     12, pLst%NoutCnt, p%NAvgEls, 'MOutLst(I)%Fg'     , ErrStat2, ErrMsg2); if(Failed()) return
-
-   ! NOTE: MemberNodes >2 if nDiv>1
-   iMember = FINDLOCI(Init%Members(:,1), pLst%MemberID) ! Reindexing from MemberID to 1:nMembers
-   pLst%NodeIDs=Init%MemberNodes(iMember,pLst%NodeCnt)  ! We are storing the actual node numbers corresponding to what the user ordinal number is requesting
-   pLst%ElmIDs=0  !Initialize to 0
-   pLst%ElmNds=0  !Initialize to 0
-
-   DO J=1,pLst%NoutCnt !Iterate on requested nodes for that member
-      !I need to get at most 2 elements that belong to the same MOutLst(I)%MemberID
-      !make use of MemberNodes and NodesConnE
-      NconEls=Init%NodesConnE(pLst%NodeIDs(J),1)!Number of elements connecting to the j-th node
-
-      K2=0    !Initialize counter
-      DO K=1, NconEls 
-         L=Init%NodesConnE(pLst%NodeIDs(J),k+1)  !k-th Element Number 
-         M     = p%Elems(L,2:3) !1st and 2nd node of the k-th element
-         !Select only the other node, not the one where elements connect to
-         IF (M(1) .EQ. pLst%NodeIDs(J)) then
-            Junk=M(2)
-         else
-            Junk=M(1)
-         endif
-         IF (ANY(Init%MemberNodes(iMember,:) .EQ. Junk)) THEN  !This means we are in the selected member
-            IF (K2 .EQ. 2) EXIT
-            K2=K2+1
-            pLst%ElmIDs(J,K2)=L        !This array has for each node requested NODEID(J), for each memberMOutLst(I)%MemberID, the 2 elements to average from, it may have 1 if one of the numbers is 0 
-            IF (M(2) .EQ. pLst%NodeIDs(J) )then 
-               pLst%ElmNds(J,K2)=2 !store whether first or second node of element  
-            else
-               pLst%ElmNds(J,K2)=1 !store whether first or second node of element  
-            endif
-            ! --- Element Me, Ke, Fg, Fce
-            CALL ElemM(p%ElemProps(L),         pLst%Me(:,:,J,K2))
-            CALL ElemK(p%ElemProps(L),         pLst%Ke(:,:,J,K2))
-            CALL ElemF(p%ElemProps(L), Init%g, pLst%Fg(:,J,K2), FCe)
-            pLst%Fg(:,J,K2) = pLst%Fg(:,J,K2) + FCe(1:12) ! Adding cable element force 
-         END IF    
-      ENDDO  ! K, NconEls
-     ENDDO !J, Noutcnt
-   ENDDO  !I, NMOutputs
-
-   END IF   ! there are any requested outputs   
- 
-   IF (p%OutAll) THEN  !I need to store all member end forces and moments 
+   DO I = 1,p%NumOuts+p%OutAllint*p%OutAllDims
+      InitOut%WriteOutputHdr(I) = TRIM( p%OutParam(I)%Name  )
+      InitOut%WriteOutputUnt(I) = TRIM( p%OutParam(I)%Units )      
+   END DO  
      
-    ALLOCATE ( p%MOutLst2(p%NMembers), STAT = ErrStat2 )     !this list contains different arrays for each of its elements
-    ErrMsg2 = 'Error allocating p%MOutLst2 array in SDOut_Init'
-     
-    DO I=1,p%NMembers
-      pLst => p%MOutLst2(I)
-      CALL AllocAry(pLst%NodeIDs, Init%Ndiv+1, 'MOutLst2(I)%NodeIDs', ErrStat2, ErrMsg2); if(Failed()) return
-      CALL AllocAry(pLst%ElmIDs,     2, 1, 'MOutLst2(I)%ElmIDs'     , ErrStat2, ErrMsg2); if(Failed()) return
-      CALL AllocAry(pLst%ElmNds,     2, 1, 'MOutLst2(I)%ElmNds'     , ErrStat2, ErrMsg2); if(Failed()) return
-      CALL AllocAry(pLst%Me, 12, 12, 2, 1, 'MOutLst2(I)%Me'         , ErrStat2, ErrMsg2); if(Failed()) return
-      CALL AllocAry(pLst%Ke, 12, 12, 2, 1, 'MOutLst2(I)%Ke'         , ErrStat2, ErrMsg2); if(Failed()) return
-      CALL AllocAry(pLst%Fg,     12, 2, 1, 'MOutLst2(I)%Fg'         , ErrStat2, ErrMsg2); if(Failed()) return
-      pLst%MemberID=Init%Members(I,1)
-      pLst%NodeIDs=Init%MemberNodes(I,1:Init%Ndiv+1)  !We are storing  the actual node numbers in the member
-      !Now I need to find out which elements are attached to those nodes and still belong to the member I
-      !ElmIDs could contain the same element twice if Ndiv=1
+   !_________________________________ OUTPUT FOR REQUESTED MEMBERS _______________________________
+   DO I=1,p%NMOutputs
+      pLst => p%MOutLst(I) ! Alias to shorten notations
+      CALL AllocAry(pLst%NodeIDs,    pLst%NoutCnt   , 'MOutLst(I)%NodeIDs', ErrStat2, ErrMsg2); if(Failed()) return
+      CALL AllocAry(pLst%ElmIDs,     pLst%NoutCnt, 2, 'MOutLst(I)%ElmIDs' , ErrStat2, ErrMsg2); if(Failed()) return
+      CALL AllocAry(pLst%ElmNds,     pLst%NoutCnt, 2, 'MOutLst(I)%ElmNds' , ErrStat2, ErrMsg2); if(Failed()) return
+      CALL AllocAry(pLst%Me, 12, 12, pLst%NoutCnt, 2, 'MOutLst(I)%Me'     , ErrStat2, ErrMsg2); if(Failed()) return
+      CALL AllocAry(pLst%Ke, 12, 12, pLst%NoutCnt, 2, 'MOutLst(I)%Ke'     , ErrStat2, ErrMsg2); if(Failed()) return
+      CALL AllocAry(pLst%Fg,     12, pLst%NoutCnt, 2, 'MOutLst(I)%Fg'     , ErrStat2, ErrMsg2); if(Failed()) return
+
+      ! NOTE: len(MemberNodes) >2 if nDiv>1
+      iMember = FINDLOCI(Init%Members(:,1), pLst%MemberID) ! Reindexing from MemberID to 1:nMembers
+      pLst%NodeIDs=Init%MemberNodes(iMember,pLst%NodeCnt)  ! We are storing the actual node numbers corresponding to what the user ordinal number is requesting
       pLst%ElmIDs=0  !Initialize to 0
-      DO J=1,Init%Ndiv+1,Init%Ndiv !Iterate on requested nodes for that member (first and last)
-          !I need to get at most 2 elements that belong to the same I Member
-          !make use of MemberNodes and NodesConnE
-          NconEls=Init%NodesConnE(pLst%NodeIDs(J),1) !Number of elements connecting to the 1st or last node of the member
-          K2= J/(Init%Ndiv+1)+1  !store this quantity used later, basically 1 or 2 depending on J
-          DO K=1, NconEls 
-             L=Init%NodesConnE(pLst%NodeIDs(J),k+1)  !k-th Element Number in the set of elements attached to the selected node 
-             M=p%Elems(L,2:3) !1st and 2nd node of the k-th element
-             !Select only the other node, not the one where elements connect to
-             Junk=M(1)
-             IF (M(1) .EQ. pLst%NodeIDs(J)) Junk=M(2)
-             IF (ANY(Init%MemberNodes(I,:) .EQ. Junk)) THEN  !This means we are in the selected member
-                  pLst%ElmIDs(K2,1)=L     !This array has for each node requested NODEID(J), for each member I, the element to get results for 
-                  pLst%ElmNds(K2,1)=1                        !store whether first or second node of element  
-                  IF (M(2) .EQ. pLst%NodeIDs(J) ) pLst%ElmNds(K2,1)=2 !store whether first or second node of element  
-                  ! --- Element Me, Ke, Fg, Fce
-                  CALL ElemM(p%ElemProps(L),         pLst%Me(:,:,K2, 1))
-                  CALL ElemK(p%ElemProps(L),         pLst%Ke(:,:,K2, 1))
-                  CALL ElemF(p%ElemProps(L), Init%g, pLst%Fg(:,K2,1), FCe)
-                  pLst%Fg(:,K2,1) = pLst%Fg(:,K2,1) + FCe(1:12) ! Adding cable element force 
+      pLst%ElmNds=0  !Initialize to 0
+
+      DO J=1,pLst%NoutCnt ! loop on requested nodes for that member
+         iNode        = pLst%NodeIDs(J)           ! Index of requested node in node list
+         nElemPerNode = Init%NodesConnE(iNode, 1) ! Number of elements connecting to the j-th node
+         ! Finding 1 or max 2 elements that belong to the member and connect to the node
+         K2=0 ! Counter so that max 2 elements are included: NOTE: I belive more than 2 should be an error
+         DO iiElem = 1, nElemPerNode
+            iElem = Init%NodesConnE(iNode, iiElem+1) ! iiElem-th Element Number
+            IF (ThisElementIsAlongMember(iElem, iNode, iMember)) THEN
+               IF (K2 == 2) EXIT ! we found both elements already, error...
+               K2=K2+1
+               call ConfigOutputNode_MKF_ID(pLst, iElem, iiNode=J, iStore=K2, NodeID2=iNode)
+            END IF    
+         ENDDO  ! iiElem, nElemPerNode
+      ENDDO !J, Noutcnt
+   ENDDO  !I, NMOutputs
+ 
+   !_________________________________ OUTPUT FOR ALL MEMBERS __________________________________
+   IF (p%OutAll) THEN  !I need to store all member end forces and moments 
+
+      ! MOutLst2: nodal output info by members, for all members, First and Last Node
+      ALLOCATE ( p%MOutLst2(p%NMembers), STAT = ErrStat2 ); ErrMsg2 = 'Error allocating p%MOutLst2 array in SDOut_Init'; if(Failed()) return
+
+      DO iMember=1,p%NMembers
+         pLst => p%MOutLst2(iMember) ! Alias
+         CALL AllocAry(pLst%NodeIDs, Init%Ndiv+1, 'MOutLst2(I)%NodeIDs', ErrStat2, ErrMsg2); if(Failed()) return
+         CALL AllocAry(pLst%ElmIDs,     2, 1, 'MOutLst2(I)%ElmIDs'     , ErrStat2, ErrMsg2); if(Failed()) return
+         CALL AllocAry(pLst%ElmNds,     2, 1, 'MOutLst2(I)%ElmNds'     , ErrStat2, ErrMsg2); if(Failed()) return
+         CALL AllocAry(pLst%Me, 12, 12, 2, 1, 'MOutLst2(I)%Me'         , ErrStat2, ErrMsg2); if(Failed()) return
+         CALL AllocAry(pLst%Ke, 12, 12, 2, 1, 'MOutLst2(I)%Ke'         , ErrStat2, ErrMsg2); if(Failed()) return
+         CALL AllocAry(pLst%Fg,     12, 2, 1, 'MOutLst2(I)%Fg'         , ErrStat2, ErrMsg2); if(Failed()) return
+         pLst%MemberID = Init%Members(iMember,1)
+         pLst%NodeIDs  = Init%MemberNodes(iMember,1:Init%Ndiv+1) ! We are storing  the actual node numbers in the member
+         !ElmIDs could contain the same element twice if Ndiv=1
+         pLst%ElmIDs=0  !Initialize to 0
+         DO J=1,Init%Ndiv+1,Init%Ndiv ! loop on first and last node of member
+            iNode        = pLst%NodeIDs(J)           ! Index of requested node in node list
+            nElemPerNode = Init%NodesConnE(iNode, 1) ! Number of elements connecting to the 1st or last node of the member
+            K2= J/(Init%Ndiv+1)+1  ! 1 (first node) or 2 (last node) depending on J
+            DO iiElem=1, nElemPerNode
+               iElem = Init%NodesConnE(iNode,iiElem+1) ! iiElem-th Element Number in the set of elements attached to the selected node
+               IF (ThisElementIsAlongMember(iElem, iNode, iMember)) THEN
+                  call ConfigOutputNode_MKF_ID(pLst, iElem, iiNode=K2, iStore=1, NodeID2=iNode)
                   EXIT   !We found the element for that node, exit loop on elements
-              ENDIF
-          ENDDO
-      ENDDO
-    ENDDO    
-   ENDIF
+               ENDIF
+            ENDDO
+         ENDDO ! Loop on divisions
+      ENDDO ! Loop on members
+   ENDIF ! OutAll
    !_____________________________________REACTIONS_____________________________________________
+   ! --- Check if reaction requested by user
    p%OutReact = .FALSE.
    DO I=1,p%NumOuts
       if ( ANY( p%OutParam(I)%Indx == ReactSS) ) THEN ! bjj: removed check of first 5 characters being "React" because (1) cases matter and (2) we can also ask for "-React*" or "mREACT"
@@ -187,61 +164,86 @@ SUBROUTINE SDOut_Init( Init, y,  p, misc, InitOut, WtrDpth, ErrStat, ErrMsg )
          EXIT
       ENDIF
    ENDDO
- 
    IF (p%OutReact) THEN  !I need to store all constrained forces and moments; WE do not allow more than one member to be connected at a constrained joint for the time being
-
-      ALLOCATE ( p%MOutLst3(p%nNodes_C), STAT = ErrStat2)     !this list contains different arrays for each of its elements
-      ErrMsg2 = 'Error allocating p%MOutLst3 array in SDOut_Init'
-      if(Failed()) return
+      ! MOutLst3: nodal output info by members, for the members involved in reaction
+      ALLOCATE(p%MOutLst3(p%nNodes_C), STAT = ErrStat2); ErrMsg2 = 'Error allocating p%MOutLst3 array in SDOut_Init'; if(Failed()) return
 
       DO I=1,p%nNodes_C  !For all constrained node
          pLst => p%MOutLst3(I)
-         pLst%Noutcnt=p%Nodes_C(I,1) !Assign nodeID for list I, I am using Noutcnt as a temporary holder for it, since nodeID is n array
-         NconEls=Init%NodesConnE(pLst%Noutcnt,1) !Number of elements connecting to the joint
-         ! ElmIDs: element IDs connecting to the joint; (1,NconEls) and not (NconEls) as the same meshauxtype is used with other MOutLst
-         ! Me: has for each selected joint, and for each element attached to that node, a 12x12 matrix (extra dimension redundant)
-         ! Ke: has for each selected joint, and for each element attached to that node  a 12x12 matrix
-         CALL AllocAry(pLst%ElmIDs,      1, NconEls, ' p%MOutLst3(I)%ElmIds', ErrStat2, ErrMsg2); if(Failed()) return
-         CALL AllocAry(pLst%ElmNds,      1, NconEls, ' p%MOutLst3(I)%ElmNds', ErrStat2, ErrMsg2); if(Failed()) return
-         CALL AllocAry(pLst%Me, 12, 12 , 1, NconEls, ' p%MOutLst3(I)%Me'    , ErrStat2, ErrMsg2); if(Failed()) return
-         CALL AllocAry(pLst%Ke, 12, 12 , 1, NconEls, ' p%MOutLst3(I)%Ke'    , ErrStat2, ErrMsg2); if(Failed()) return
-         CALL AllocAry(pLst%Fg,     12 , 1, NconEls, ' p%MOutLst3(I)%Fg'    , ErrStat2, ErrMsg2); if(Failed()) return
-
-         DO K=1, NconEls 
-            L=Init%NodesConnE(pLst%Noutcnt,k+1)  !k-th Element Number in the set of elements attached to the selected node 
-            pLst%ElmIDs(1,K)=L     !This array has for each joint requested  the elements' ID to get results for  
-            M=p%Elems(L,2:3) !1st and 2nd node of the k-th element
-            !Select whether the joint is the 1st or second node of the element
-            pLst%ElmNds(1,K)=1                        !store whether first or second node of element  
-            IF (M(2) .EQ. pLst%Noutcnt ) pLst%ElmNds(1,K)=2 !store whether first or second node of element  
-            ! --- Element Me, Ke, Fg, Fce
-            CALL ElemM(p%ElemProps(L),         pLst%Me(:,:,1,K))
-            CALL ElemK(p%ElemProps(L),         pLst%Ke(:,:,1,K))
-            CALL ElemF(p%ElemProps(L), Init%g, pLst%Fg(:,1,K), FCe)
-            pLst%Fg(:,1,K) = pLst%Fg(:,1,K) + FCe(1:12) ! Adding cable element force 
+         iNode        = p%Nodes_C(I,1)           ! Note: Nodes_C has been reindexed
+         nElemPerNode = Init%NodesConnE(iNode,1) ! Number of elements connecting to the joint
+         CALL AllocAry(pLst%ElmIDs,      1, nElemPerNode, ' p%MOutLst3(I)%ElmIds', ErrStat2, ErrMsg2); if(Failed()) return
+         CALL AllocAry(pLst%ElmNds,      1, nElemPerNode, ' p%MOutLst3(I)%ElmNds', ErrStat2, ErrMsg2); if(Failed()) return
+         CALL AllocAry(pLst%Me, 12, 12 , 1, nElemPerNode, ' p%MOutLst3(I)%Me'    , ErrStat2, ErrMsg2); if(Failed()) return
+         CALL AllocAry(pLst%Ke, 12, 12 , 1, nElemPerNode, ' p%MOutLst3(I)%Ke'    , ErrStat2, ErrMsg2); if(Failed()) return
+         CALL AllocAry(pLst%Fg,     12 , 1, nElemPerNode, ' p%MOutLst3(I)%Fg'    , ErrStat2, ErrMsg2); if(Failed()) return
+         DO iiElem = 1, nElemPerNode
+            iElem = Init%NodesConnE(iNode, iiElem+1) ! iiElem-th Element Number in the set of elements attached to the selected node 
+            call ConfigOutputNode_MKF_ID(pLst, iElem, iiNode=1, iStore=iiElem, NodeID2=iNode) 
          ENDDO
       ENDDO
       ! Compute p%TIreact, matrix to calculate single point reaction at the base of structure
       CALL ReactMatx(Init, WtrDpth, p, ErrStat, ErrMsg)
    ENDIF
- 
-   ! These variables are to help follow the framework template, but the data in them is simply a copy of data
-   ! already available in the OutParam data structure
-   CALL AllocAry(InitOut%WriteOutputHdr, p%NumOuts+p%OutAllint*p%OutAllDims, 'WriteOutputHdr', ErrStat2, ErrMsg2); if(Failed()) return
-   CALL AllocAry(InitOut%WriteOutputUnt, p%NumOuts+p%OutAllint*p%OutAllDims, 'WriteOutputUnt', ErrStat2, ErrMsg2); if(Failed()) return
-   DO I = 1,p%NumOuts+p%OutAllint*p%OutAllDims
-      InitOut%WriteOutputHdr(I) = TRIM( p%OutParam(I)%Name  )
-      InitOut%WriteOutputUnt(I) = TRIM( p%OutParam(I)%Units )      
-   END DO  
-   
    RETURN
 
 CONTAINS
    LOGICAL FUNCTION Failed()
         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SDOut_Init') 
         Failed =  ErrStat >= AbortErrLev
-!         if (Failed) call CleanUp()
    END FUNCTION Failed
+
+   !> Returns true if an element is connected to node iNode, and along member iMember
+   LOGICAL FUNCTION ThisElementIsAlongMember(iElem, iNode, iMember)
+      integer(IntKi), intent(in) :: iElem   !< Element index 
+      integer(IntKi), intent(in) :: iNode   !< Node index
+      integer(IntKi), intent(in) :: iMember !< Member index
+      integer(IntKi), dimension(2) :: ElemNodes  ! Node IDs for element under consideration (may not be consecutive numbers)
+      integer(IntKi)               :: iOtherNode ! Other node than iNode for element iElem
+      ElemNodes = p%Elems(iElem,2:3) ! 1st and 2nd node of the element
+      ! Check that the other node belongs to the member
+      IF      (ElemNodes(1) == iNode) then
+         iOtherNode=ElemNodes(2)
+      else if (ElemNodes(2) == iNode) then
+         iOtherNode=ElemNodes(1)
+      else
+         ThisElementIsAlongMember=.false. ! Not along member since nodes don't match
+         return 
+      endif
+      ! Being along the member means the second node of the element is in the node list of the member
+      ThisElementIsAlongMember= ANY(Init%MemberNodes(iMember,:) == iOtherNode)
+   END FUNCTION
+
+   !> Set different "data" for a given output node, and possibly store more than one "data" per node:
+   !! The "data" is:
+   !!   - Mass, stiffness matrices and constant element force (gravity and cable)
+   !!   - A flag whether the node is the 1st or second node of an element 
+   !! The "data" is stored at the index (iiNode,iStore):
+   !!   - iiNode: node index within the list of nodes that are to be used for output for this member
+   !!   - iStore: index over the number of "data" stored per node. E.g. Member1 and 2 connecting to a node  
+   SUBROUTINE ConfigOutputNode_MKF_ID(pLst, iElem, iiNode, iStore, NodeID2)
+      type(MeshAuxDataType), intent(inout)       :: pLst   !< Info for one member output
+      integer(IntKi)       , intent(in)          :: iElem  !< Element index to which the node belong
+      integer(IntKi)       , intent(in)          :: iiNode !< Index over the nodes of a given member (>2 if nDIV>1)
+      integer(IntKi)       , intent(in)          :: iStore !< Storage index, used several informations are stored per node
+      integer(IntKi)       , intent(in)          :: NodeID2 !< If ElemNode(2) == NodeID2, then it's the second node
+      integer(IntKi), dimension(2) :: ElemNodes  ! Node IDs for element under consideration (may not be consecutive numbers)
+      REAL(ReKi)                   :: FCe(12) ! Pretension force from cable element
+      pLst%ElmIDs(iiNode,iStore) = iElem              ! This array has for each joint requested  the elements' ID to get results for
+      ElemNodes = p%Elems(iElem,2:3) ! 1st and 2nd node of the k-th element
+      if (ElemNodes(2) == NodeID2) then 
+         pLst%ElmNds(iiNode,iStore) = 2 ! store whether first or second node of element  
+      else
+         pLst%ElmNds(iiNode,iStore) = 1 ! store whether first or second node of element
+      endif
+      ! --- Element Me, Ke, Fg, Fce
+      CALL ElemM(p%ElemProps(iElem),         pLst%Me(:,:,iiNode,iStore))
+      CALL ElemK(p%ElemProps(iElem),         pLst%Ke(:,:,iiNode,iStore))
+      CALL ElemF(p%ElemProps(iElem), Init%g, pLst%Fg(:,iiNode,iStore), FCe)
+      pLst%Fg(:,iiNode,iStore) = pLst%Fg(:,iiNode,iStore) + FCe(1:12) ! Adding cable element force 
+   END SUBROUTINE ConfigOutputNode_MKF_ID
+
+
 END SUBROUTINE SDOut_Init
 
 !------------------------------------------------------------------------------------------------------
@@ -334,9 +336,9 @@ SUBROUTINE SDOut_MapOutputs( CurrentTime, u,p,x, y, m, AllOuts, ErrStat, ErrMsg 
             call ElementForce(pLst, iiNode, 1, FM_elm, FK_elm, sgn, DIRCOS, .false.)
             FM_elm2=sgn*FM_elm
             FK_elm2=sgn*FK_elm
-            IF (pLst%ElmIDs(iiNode,p%NavgEls) .NE. 0) THEN  ! Second element exist
+            IF (pLst%ElmIDs(iiNode,2) .NE. 0) THEN  ! Second element exist
                ! NOTE: forces are computed in the coordinate system of the first element for averaging
-               call ElementForce(pLst, iiNode, p%NavgEls, FM_elm, FK_elm, sgn, DIRCOS, .true.) ! True= we use DIRCOS from element above
+               call ElementForce(pLst, iiNode, 2, FM_elm, FK_elm, sgn, DIRCOS, .true.) ! True= we use DIRCOS from element above
                FM_elm2=0.5*( FM_elm2 + sgn*FM_elm ) ! Now Average
                FK_elm2=0.5*( FK_elm2 + sgn*FK_elm)  ! Now Average
             ENDIF
@@ -433,7 +435,7 @@ SUBROUTINE SDOut_MapOutputs( CurrentTime, u,p,x, y, m, AllOuts, ErrStat, ErrMsg 
                ! I believe this is all fixed in terms of signs now ,RRD 5/20/13
             ENDDO           
          ENDDO
-         !junk= FK_elm2 ! + FM_elm2  !removed the inertial component 12/13 !Not sure why I need an intermediate step here, but the sum would not work otherwise
+         ! FK_elm2 ! + FM_elm2  !removed the inertial component 12/13 !Not sure why I need an intermediate step here, but the sum would not work otherwise
          !NEED TO ADD HYDRODYNAMIC FORCES AT THE RESTRAINT NODES
          !   The joind iD of the reaction, i.e. thre reaction node ID is within p%MOutLst3(I)%Noutcnt
          !Since constrained nodes are ordered as given in the input file and so as in the order of y2mesh, i Can do:
@@ -450,7 +452,7 @@ contains
 
    subroutine ElementForce(pLst, iiNode, JJ, FM_elm, FK_elm, sgn, DIRCOS, bUseInputDirCos)
       type(MeshAuxDataType), intent(in)          :: pLst   !< Info for one member output
-      integer(IntKi)       , intent(in)          :: iiNode !< Index over the nodes of a given number
+      integer(IntKi)       , intent(in)          :: iiNode !< Index over the nodes of a given member (>2 if nDIV>1)
       integer(IntKi)       , intent(in)          :: JJ     !< TODO: interpretation: index over other member connected to the current member (for averaging)
       real(ReKi), dimension (3,3), intent(inout) :: DIRCOS  !direction cosice matrix (global to local) (3x3)
       real(ReKi), dimension (6), intent(out)     :: FM_elm, FK_elm  !output static and dynamic forces and moments

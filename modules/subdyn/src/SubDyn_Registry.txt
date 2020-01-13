@@ -224,7 +224,6 @@ typedef	^	ParameterType	IntKi	IDR	{:}	-	-	"Index array of the interface and rest
 typedef	^	ParameterType	IntKi	IDY	{:}	-	-	"Index array of the all dofs in Y2"
 typedef	^	ParameterType	ReKi	FGL	{:}	-	-	"Internal node nDOFL, gravity loads"
 # --- Outputs
-typedef	^	ParameterType	IntKi	NAvgEls	-	2	-	"Max number of elements that should be averaged when calculating outputs at nodes"
 typedef	^	ParameterType	IntKi	NMOutputs	-	- 	-	"Number of members whose output is written"
 typedef	^	ParameterType	IntKi	NumOuts	-	-	-	"Number of output channels read from input file"
 typedef	^	ParameterType	IntKi	OutSwtch	-	-	-	"Output Requested Channels to local or global output file [1/2/3]"

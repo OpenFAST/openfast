@@ -199,7 +199,6 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    Init%g           = InitInput%g   
    Init%TP_RefPoint = InitInput%TP_RefPoint
    Init%SubRotateZ  = InitInput%SubRotateZ
-   p%NAvgEls        = 2
 
    !bjj added this ugly check (mostly for checking SubDyn driver). not sure if anyone would want to play with different values of gravity so I don't return an error.
    IF (Init%g < 0.0_ReKi ) CALL ProgWarn( ' SubDyn calculations use gravity assuming it is input as a positive number; the input value is negative.' ) 
@@ -1023,10 +1022,7 @@ CALL ReadCom( UnIn, SDInputFile, 'SSOutList',ErrStat2, ErrMsg2, UnEc ); if(Faile
 
 ALLOCATE(Init%SSOutList(MaxOutChs), STAT=ErrStat2)
 If (Check( ErrStat2 /= ErrID_None ,'Error allocating SSOutList arrays')) return
-
-CALL ReadOutputList ( UnIn, SDInputFile, Init%SSOutList, p%NumOuts, &
-                                              'SSOutList', 'List of outputs requested', ErrStat2, ErrMsg2, UnEc )
-if(Failed()) return
+CALL ReadOutputList ( UnIn, SDInputFile, Init%SSOutList, p%NumOuts, 'SSOutList', 'List of outputs requested', ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL CleanUp()
 
 CONTAINS
