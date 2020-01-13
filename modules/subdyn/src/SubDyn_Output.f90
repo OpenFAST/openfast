@@ -60,6 +60,7 @@ SUBROUTINE SDOut_Init( Init, y,  p, misc, InitOut, WtrDpth, ErrStat, ErrMsg )
    CHARACTER(ErrMsgLen) :: ErrMsg2       ! Error message if ErrStat /= ErrID_None
    INTEGER(IntKi)                                   :: I,J,K,K2,L,NconEls   !Counters
    INTEGER(IntKi)                                   :: Junk  !Temporary Holders
+   INTEGER(IntKi)                                   :: iMember  ! Member index (not member ID)
    INTEGER(IntKi), Dimension(2)                     :: M   !counter for two nodes at a time
    type(MeshAuxDataType), pointer :: pLst !< Alias to shorten notation and highlight code similarities
    REAL(ReKi) :: FCe(12) ! Pretension force from cable element
@@ -93,7 +94,8 @@ SUBROUTINE SDOut_Init( Init, y,  p, misc, InitOut, WtrDpth, ErrStat, ErrMsg )
    CALL AllocAry(pLst%Fg,     12, pLst%NoutCnt, p%NAvgEls, 'MOutLst(I)%Fg'     , ErrStat2, ErrMsg2); if(Failed()) return
 
    ! NOTE: MemberNodes >2 if nDiv>1
-   pLst%NodeIDs=Init%MemberNodes(pLst%MemberID,pLst%NodeCnt)  !We are storing the actual node numbers corresponding to what the user ordinal number is requesting
+   iMember = FINDLOCI(Init%Members(:,1), pLst%MemberID) ! Reindexing from MemberID to 1:nMembers
+   pLst%NodeIDs=Init%MemberNodes(iMember,pLst%NodeCnt)  ! We are storing the actual node numbers corresponding to what the user ordinal number is requesting
    pLst%ElmIDs=0  !Initialize to 0
    pLst%ElmNds=0  !Initialize to 0
 
@@ -112,7 +114,7 @@ SUBROUTINE SDOut_Init( Init, y,  p, misc, InitOut, WtrDpth, ErrStat, ErrMsg )
          else
             Junk=M(1)
          endif
-         IF (ANY(Init%MemberNodes(pLst%MemberID,:) .EQ. Junk)) THEN  !This means we are in the selected member
+         IF (ANY(Init%MemberNodes(iMember,:) .EQ. Junk)) THEN  !This means we are in the selected member
             IF (K2 .EQ. 2) EXIT
             K2=K2+1
             pLst%ElmIDs(J,K2)=L        !This array has for each node requested NODEID(J), for each memberMOutLst(I)%MemberID, the 2 elements to average from, it may have 1 if one of the numbers is 0 
@@ -146,7 +148,7 @@ SUBROUTINE SDOut_Init( Init, y,  p, misc, InitOut, WtrDpth, ErrStat, ErrMsg )
       CALL AllocAry(pLst%Me, 12, 12, 2, 1, 'MOutLst2(I)%Me'         , ErrStat2, ErrMsg2); if(Failed()) return
       CALL AllocAry(pLst%Ke, 12, 12, 2, 1, 'MOutLst2(I)%Ke'         , ErrStat2, ErrMsg2); if(Failed()) return
       CALL AllocAry(pLst%Fg,     12, 2, 1, 'MOutLst2(I)%Fg'         , ErrStat2, ErrMsg2); if(Failed()) return
-      pLst%MemberID=I !Assign memberID for all members
+      pLst%MemberID=Init%Members(I,1)
       pLst%NodeIDs=Init%MemberNodes(I,1:Init%Ndiv+1)  !We are storing  the actual node numbers in the member
       !Now I need to find out which elements are attached to those nodes and still belong to the member I
       !ElmIDs could contain the same element twice if Ndiv=1
@@ -162,7 +164,7 @@ SUBROUTINE SDOut_Init( Init, y,  p, misc, InitOut, WtrDpth, ErrStat, ErrMsg )
              !Select only the other node, not the one where elements connect to
              Junk=M(1)
              IF (M(1) .EQ. pLst%NodeIDs(J)) Junk=M(2)
-             IF (ANY(Init%MemberNodes(pLst%MemberID,:) .EQ. Junk)) THEN  !This means we are in the selected member
+             IF (ANY(Init%MemberNodes(I,:) .EQ. Junk)) THEN  !This means we are in the selected member
                   pLst%ElmIDs(K2,1)=L     !This array has for each node requested NODEID(J), for each member I, the element to get results for 
                   pLst%ElmNds(K2,1)=1                        !store whether first or second node of element  
                   IF (M(2) .EQ. pLst%NodeIDs(J) ) pLst%ElmNds(K2,1)=2 !store whether first or second node of element  
