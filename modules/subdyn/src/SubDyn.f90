@@ -820,7 +820,7 @@ DO I = 1, p%nNodes_C
    CALL ReadAry( UnIn, SDInputFile, Dummy_IntAry, ReactCol, 'Reacts', 'Joint number and dof', ErrStat2 ,ErrMsg2, UnEc); if(Failed()) return
    p%Nodes_C(I,:) = Dummy_IntAry(1:ReactCol)
 ENDDO
-IF (Check ( ( p%nNodes_C < 1 ) .OR. (p%nNodes_C > Init%NJoints) , 'NReact must be greater than 0 and less than number of joints')) return
+IF (Check ( p%nNodes_C > Init%NJoints , 'NReact must be less than number of joints')) return
 
 !------- INTERFACE JOINTS: T/F for Locked (to the TP)/Free DOF @each Interface Joint (only Locked-to-TP implemented thus far (=rigid TP)) ---------
 ! Joints with reaction forces, joint number and locked/free dof
@@ -1953,49 +1953,6 @@ SUBROUTINE SelectNonBCConstraintsDOF(Init, p, nDOF, bDOF, ErrStat, ErrMsg )
       end if    
    end do   
 END SUBROUTINE
-
-
-
-!------------------------------------------------------------------------------------------------------
-!> Augments VRred to VR for the constrained DOFs, somehow reversing what RemoveBCConstraints did for matrices
-!Note it works for constrained nodes, still to see how to make it work for interface nodes if needed
-SUBROUTINE UnReduceVRdofs(VRred,VR,rDOF,rModes, Init,p, ErrStat, ErrMsg )
-   TYPE(SD_InitType),      INTENT(in   ) :: Init  
-   TYPE(SD_ParameterType), INTENT(in   ) :: p  
-   INTEGER,                INTENT(IN   ) :: rDOF ,RModes  !retained DOFs after removing restrained DOFs and retained modes 
-   REAL(LAKi),             INTENT(IN   ) :: VRred(rDOF, rModes)  !eigenvector matrix with restrained DOFs removed
-   REAL(ReKi),             INTENT(INOUT) :: VR(:,:) !eigenvalues including the previously removed DOFs
-   INTEGER(IntKi),         INTENT(  OUT) :: ErrStat     ! Error status of the operation
-   CHARACTER(*),           INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
-   !locals
-   INTEGER,   ALLOCATABLE   :: idx(:)
-   INTEGER                  :: I, I2, L  !counters; I,I2 should be long, L short
-
-   ErrStat = ErrID_None
-   ErrMsg  = ''    
-  
-   ALLOCATE(idx(p%nNodes_C*6), STAT = ErrStat )  !it contains row/col index that was originally eliminated when applying restraints
-   idx=0 !initialize
-   L=0 !initialize
-   DO I = 1, p%nNodes_C*6  !Cycle on reaction DOFs
-       IF (Init%BCs(I, 2) == 1) THEN
-           idx(I)=Init%BCs(I, 1) !row/col index that was originally eliminated when applying restraints
-           L=L+1 !number of DOFs to eliminate
-       ENDIF    
-   ENDDO
-!  PRINT *, '    rDOF+L=',rDOF+L, 'SIZE(Phi2)=',SIZE(VR,1)
-!  ALLOCATE(VR(rDOF+L,rModes), STAT = ErrStat )  !Restored eigenvectors with restrained node DOFs included
-   VR=0.!Initialize
-
-   I2=1 !Initialize 
-   DO I=1,rDOF+L  !This loop inserts Vred in VR in all but the removed DOFs
-      IF (ALL((idx-I).NE.0)) THEN
-         VR(I,:)=REAL( VRred(I2,:), ReKi ) ! potentially change of precision
-         I2=I2+1  !Note this counter gets updated only if we insert Vred rows into VR
-      ENDIF   
-   ENDDO
-END SUBROUTINE UnReduceVRdofs
-
 !------------------------------------------------------------------------------------------------------
 SUBROUTINE CBApplyConstr(nDOFI, nDOFR, nDOFM,  nDOFL,  &
                          MBB , MBM , KBB , PHiR , FGR ,       &
