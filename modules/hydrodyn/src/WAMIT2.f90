@@ -966,7 +966,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
                      'found in the WAMIT data file '//TRIM(MnDriftData%Filename)//' for the first wave direction.', &
                      ErrStat, ErrMsg, RoutineName)
             ENDIF
-            IF ( InitInp%WaveDirMax < MAXVAL(MnDriftData%Data3D%WvDir1) ) THEN
+            IF ( InitInp%WaveDirMax > MAXVAL(MnDriftData%Data3D%WvDir1) ) THEN
                CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveDirMax))//' is not'//&
                      'found in the WAMIT data file '//TRIM(MnDriftData%Filename)//' for the first wave direction.', &
                      ErrStat, ErrMsg, RoutineName)
@@ -980,7 +980,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
                      'found in the WAMIT data file '//TRIM(MnDriftData%Filename)//' for the second wave direction.', &
                      ErrStat, ErrMsg, RoutineName)
             ENDIF
-            IF ( InitInp%WaveDirMax < MAXVAL(MnDriftData%Data3D%WvDir2) ) THEN
+            IF ( InitInp%WaveDirMax > MAXVAL(MnDriftData%Data3D%WvDir2) ) THEN
                CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveDirMax))//' is not'//&
                      'found in the WAMIT data file '//TRIM(MnDriftData%Filename)//' for the second wave direction.', &
                      ErrStat, ErrMsg, RoutineName)
@@ -1023,7 +1023,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
                      'found in the WAMIT data file '//TRIM(MnDriftData%Filename)//' for the first wave direction.', &
                      ErrStat, ErrMsg, RoutineName)
             ENDIF
-            IF ( InitInp%WaveDirMax < MAXVAL(MnDriftData%Data4D%WvDir1) ) THEN
+            IF ( InitInp%WaveDirMax > MAXVAL(MnDriftData%Data4D%WvDir1) ) THEN
                CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveDirMax))//' is not'//&
                      'found in the WAMIT data file '//TRIM(MnDriftData%Filename)//' for the first wave direction.', &
                      ErrStat, ErrMsg, RoutineName)
@@ -1037,7 +1037,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
                      'found in the WAMIT data file '//TRIM(MnDriftData%Filename)//' for the second wave direction.', &
                      ErrStat, ErrMsg, RoutineName)
             ENDIF
-            IF ( InitInp%WaveDirMax < MAXVAL(MnDriftData%Data4D%WvDir2) ) THEN
+            IF ( InitInp%WaveDirMax > MAXVAL(MnDriftData%Data4D%WvDir2) ) THEN
                CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveDirMax))//' is not'//&
                      'found in the WAMIT data file '//TRIM(MnDriftData%Filename)//' for the second wave direction.', &
                      ErrStat, ErrMsg, RoutineName)
@@ -1478,7 +1478,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
                      'found in the WAMIT data file '//TRIM(NewmanAppData%Filename)//' for the first wave direction.', &
                      ErrStat, ErrMsg, RoutineName)
             ENDIF
-            IF ( InitInp%WaveDirMax < MAXVAL(NewmanAppData%Data3D%WvDir1) ) THEN
+            IF ( InitInp%WaveDirMax > MAXVAL(NewmanAppData%Data3D%WvDir1) ) THEN
                CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveDirMax))//' is not'//&
                      'found in the WAMIT data file '//TRIM(NewmanAppData%Filename)//' for the first wave direction.', &
                      ErrStat, ErrMsg, RoutineName)
@@ -1492,7 +1492,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
                      'found in the WAMIT data file '//TRIM(NewmanAppData%Filename)//' for the second wave direction.', &
                      ErrStat, ErrMsg, RoutineName)
             ENDIF
-            IF ( InitInp%WaveDirMax < MAXVAL(NewmanAppData%Data3D%WvDir2) ) THEN
+            IF ( InitInp%WaveDirMax > MAXVAL(NewmanAppData%Data3D%WvDir2) ) THEN
                CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveDirMax))//' is not'//&
                      'found in the WAMIT data file '//TRIM(NewmanAppData%Filename)//' for the second wave direction.', &
                      ErrStat, ErrMsg, RoutineName)
@@ -1535,7 +1535,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
                      'found in the WAMIT data file '//TRIM(NewmanAppData%Filename)//' for the first wave direction.', &
                      ErrStat, ErrMsg, RoutineName)
             ENDIF
-            IF ( InitInp%WaveDirMax < MAXVAL(NewmanAppData%Data4D%WvDir1) ) THEN
+            IF ( InitInp%WaveDirMax > MAXVAL(NewmanAppData%Data4D%WvDir1) ) THEN
                CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveDirMax))//' is not'//&
                      'found in the WAMIT data file '//TRIM(NewmanAppData%Filename)//' for the first wave direction.', &
                      ErrStat, ErrMsg, RoutineName)
@@ -1549,7 +1549,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
                      'found in the WAMIT data file '//TRIM(NewmanAppData%Filename)//' for the second wave direction.', &
                      ErrStat, ErrMsg, RoutineName)
             ENDIF
-            IF ( InitInp%WaveDirMax < MAXVAL(NewmanAppData%Data4D%WvDir2) ) THEN
+            IF ( InitInp%WaveDirMax > MAXVAL(NewmanAppData%Data4D%WvDir2) ) THEN
                CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveDirMax))//' is not'//&
                      'found in the WAMIT data file '//TRIM(NewmanAppData%Filename)//' for the second wave direction.', &
                      ErrStat, ErrMsg, RoutineName)
@@ -2129,7 +2129,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
                   'found in the WAMIT data file '//TRIM(DiffQTFData%Filename)//' for the first wave direction.', &
                   ErrStat, ErrMsg, RoutineName)
          ENDIF
-         IF ( InitInp%WaveDirMax < MAXVAL(DiffQTFData%Data4D%WvDir1) ) THEN
+         IF ( InitInp%WaveDirMax > MAXVAL(DiffQTFData%Data4D%WvDir1) ) THEN
             CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveDirMax))//' is not'//&
                   'found in the WAMIT data file '//TRIM(DiffQTFData%Filename)//' for the first wave direction.', &
                   ErrStat, ErrMsg, RoutineName)
@@ -2143,7 +2143,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
                   'found in the WAMIT data file '//TRIM(DiffQTFData%Filename)//' for the second wave direction.', &
                   ErrStat, ErrMsg, RoutineName)
          ENDIF
-         IF ( InitInp%WaveDirMax < MAXVAL(DiffQTFData%Data4D%WvDir2) ) THEN
+         IF ( InitInp%WaveDirMax > MAXVAL(DiffQTFData%Data4D%WvDir2) ) THEN
             CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveDirMax))//' is not'//&
                   'found in the WAMIT data file '//TRIM(DiffQTFData%Filename)//' for the second wave direction.', &
                     ErrStat, ErrMsg, RoutineName)
@@ -2651,7 +2651,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
                   'found in the WAMIT data file '//TRIM(SumQTFData%Filename)//' for the first wave direction.', &
                   ErrStat, ErrMsg, RoutineName)
          ENDIF
-         IF ( InitInp%WaveDirMax < MAXVAL(SumQTFData%Data4D%WvDir1) ) THEN
+         IF ( InitInp%WaveDirMax > MAXVAL(SumQTFData%Data4D%WvDir1) ) THEN
             CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveDirMax))//' is not'//&
                   'found in the WAMIT data file '//TRIM(SumQTFData%Filename)//' for the first wave direction.', &
                   ErrStat, ErrMsg, RoutineName)
@@ -2665,7 +2665,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
                   'found in the WAMIT data file '//TRIM(SumQTFData%Filename)//' for the second wave direction.', &
                   ErrStat, ErrMsg, RoutineName)
          ENDIF
-         IF ( InitInp%WaveDirMax < MAXVAL(SumQTFData%Data4D%WvDir2) ) THEN
+         IF ( InitInp%WaveDirMax > MAXVAL(SumQTFData%Data4D%WvDir2) ) THEN
             CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveDirMax))//' is not'//&
                   'found in the WAMIT data file '//TRIM(SumQTFData%Filename)//' for the second wave direction.', &
                     ErrStat, ErrMsg, RoutineName)
