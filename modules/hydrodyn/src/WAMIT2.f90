@@ -2544,8 +2544,8 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
 
          ! Wave information and QTF temporary
       COMPLEX(SiKi)                                      :: QTF_Value           !< Temporary complex number for QTF
-      COMPLEX(SiKi), ALLOCATABLE                         :: Term1ArrayC(:)       !< Temporary complex array for frequency domain of one load component. For first  term.
-      COMPLEX(SiKi), ALLOCATABLE                         :: Term2ArrayC(:)       !< Temporary complex array for frequency domain of one load component. For second term.
+      COMPLEX(SiKi), ALLOCATABLE                         :: Term1ArrayC(:,:)     !< Temporary complex array for frequency domain of one load component. For first  term.
+      COMPLEX(SiKi), ALLOCATABLE                         :: Term2ArrayC(:,:)     !< Temporary complex array for frequency domain of one load component. For second term.
       REAL(SiKi),    ALLOCATABLE                         :: Term1Array(:)        !< Temporary complex array for time      domain of one load component. For first  term.
       REAL(SiKi),    ALLOCATABLE                         :: Term2Array(:)        !< Temporary complex array for time      domain of one load component. For second term.
       COMPLEX(SiKi)                                      :: TmpHPlusC            !< Temporary variable for holding the current value of \f$ H^+ \f$
@@ -2554,6 +2554,13 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       REAL(ReKi)                                         :: OmegaSum             !< Wave difference frequency
       REAL(ReKi)                                         :: Omega1               !< First  wave frequency
       REAL(ReKi)                                         :: Omega2               !< Second wave frequency
+      REAL(SiKi)                                         :: RotateZdegOffset     !< Offset to wave heading (NBodyMod==2 only)
+      REAL(SiKi)                                         :: RotateZMatrixT(2,2)  !< The transpose of rotation in matrix form for rotation about z (from global to local)
+      COMPLEX(SiKi)                                      :: PhaseShiftXY         !< The phase shift offset to apply to the body
+      REAL(SiKi)                                         :: WaveNmbr1            !< Wavenumber for this frequency
+      REAL(SiKi)                                         :: WaveNmbr2            !< Wavenumber for this frequency
+      REAL(SiKi)                                         :: TmpReal1             !< Temporary real
+      REAL(SiKi)                                         :: TmpReal2             !< Temporary real
 
          ! Interpolation routine indices and value to search for, and smaller array to pass
       INTEGER(IntKi)                                     :: LastIndex4(4)        !< Last used index for searching in the interpolation algorithms.  First  wave freq
@@ -2701,10 +2708,10 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
 
 
          ! Setup the arrays holding the SumQTF terms, both the complex frequency domain and real time domain pieces
-      ALLOCATE( Term1ArrayC( 0:InitInp%NStepWave2), STAT=ErrStatTmp )
+      ALLOCATE( Term1ArrayC( 0:InitInp%NStepWave2, 6), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,' Cannot allocate array for the first term of one load component of the full sum '// &
                                              'QTF 2nd order force in the frequency domain.',ErrStat, ErrMsg, RoutineName)
-      ALLOCATE( Term2ArrayC( 0:InitInp%NStepWave2), STAT=ErrStatTmp )
+      ALLOCATE( Term2ArrayC( 0:InitInp%NStepWave2, 6), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,' Cannot allocate array for the second term of one load component of the full sum '// &
                                              'QTF 2nd order force in the frequency domain.',ErrStat, ErrMsg, RoutineName)
       ALLOCATE( Term1Array( 0:InitInp%NStepWave), STAT=ErrStatTmp )
@@ -2745,8 +2752,24 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
 
          ! Now loop through all the dimensions and perform the calculation
       DO IBody=1,p%NBody
-         DO ThisDim=1,6
 
+            ! Initialize the temporary array to zero.
+         Term1ArrayC = CMPLX(0.0_SiKi,0.0_SiKi,SiKi)
+         Term2ArrayC = CMPLX(0.0_SiKi,0.0_SiKi,SiKi)
+
+            ! Heading correction, only applies to NBodyMod == 2
+         if (p%NBodyMod==2) then
+            RotateZdegOffset = InitInp%PtfmRefztRot(IBody)*R2D
+         else
+            RotateZdegOffset = 0.0_SiKi
+         endif
+
+         !----------------------------------------------------
+         ! Populate the frequency terms for this body
+         !     -- with phase shift for NBodyMod == 2
+         !----------------------------------------------------
+
+         DO ThisDim=1,6
             Idx = (IBody-1)*6+ThisDim
 
                ! Only on the dimensions we requested, and if it is present in the data
@@ -2755,8 +2778,6 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
 
                   ! To make things run slightly quicker, copy the data we will be interpolating over into the temporary arrays
                TmpData4D = SumQTFData%Data4D%DataSet(:,:,:,:,Idx)
-
-
 
                !---------------------------------------------------------------------------------
                ! Calculate the first term
@@ -2770,10 +2791,6 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
 
                   ! Set an initial search index for the 4D array interpolation
                LastIndex4 = (/0,0,0,0/)
-
-                  ! Initialize the array to zero
-               Term1ArrayC = CMPLX(0.0_SiKi,0.0_SiKi,SiKi)
-
 
                   ! The limits look a little funny.  But remember we are placing the value in the 2*J location,
                   ! so we cannot overun the end of the array, and the highest frequency must be zero.  The
@@ -2794,6 +2811,10 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
                         ! Set the (omega1,omega2,beta1,beta2) point we are looking for.
                      Coord4 = (/ REAL(Omega1,SiKi), REAL(Omega1,SiKi), InitInp%WaveDirArr(J), InitInp%WaveDirArr(J) /)
 
+                        ! Apply local Z rotation to heading angle (degrees) to put wave direction into the local (rotated) body frame
+                     Coord4(3) = Coord4(3) - RotateZdegOffset
+                     Coord4(4) = Coord4(4) - RotateZdegOffset
+
                         ! get the interpolated value for F(omega1,omega2,beta1,beta2)  --> QTF_Value
                      CALL WAMIT_Interp4D_Cplx( Coord4, TmpData4D, SumQTFData%Data4D%WvFreq1, SumQTFData%Data4D%WvFreq2, &
                                           SumQTFData%Data4D%WvDir1, SumQTFData%Data4D%WvDir2, LastIndex4, QTF_Value, ErrStatTmp, ErrMsgTmp )
@@ -2803,13 +2824,35 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
                         RETURN
                      ENDIF
 
+                     !--------------------------
+                     ! Phase shift due to offset
+                     !--------------------------
+                     if (p%NBodyMod == 2) then
+                        !> The phase shift due to an (x,y) offset for second order difference frequencies is of the form
+                        !! \f$  exp[-\imath ( k(\omega_1) ( X cos(\Beta(w_1)) + Y sin(\beta(w_1)) )
+                        !!                  1 k(\omega_2) ( X cos(\Beta(w_2)) + Y sin(\beta(w_2)) ) ) ]\f$.
+                        !! For the first term, \f$ \omega_1 = \omega_2 \$f.
+                        !  NOTE: the phase shift applies to the aWaveElevC of the incoming wave.  Including it here instead
+                        !        of above is mathematically equivalent, but only because each frequency has only one wave
+                        !        direction associated with it through the equal energy approach used in multidirectional waves.
+
+                        WaveNmbr1   = WaveNumber ( REAL(Omega1,SiKi), InitInp%Gravity, InitInp%WtrDpth )    ! SiKi returned
+                        TmpReal1    = WaveNmbr1 * ( InitInp%PtfmRefxt(1)*cos(InitInp%WaveDirArr(J)*D2R) + InitInp%PtfmRefyt(1)*sin(InitInp%WaveDirArr(J)*D2R) )
+
+                        ! Set the phase shift for the set of sum frequencies
+                        PhaseShiftXY = CMPLX( cos(TmpReal1 + TmpReal1), -sin(TmpReal1 + TmpReal1) )
+
+                        ! For similicity, apply to the QTF_Value (mathematically equivalent to applying to the wave elevations)
+                        QTF_Value = QTF_Value*PhaseShiftXY
+
+                     endif ! Phaseshift for NBodyMod==2
+
                         ! Set the value of the first term in the frequency domain
-                     Term1ArrayC(2*J) = aWaveElevC1 * aWaveElevC1 * QTF_Value
+                     Term1ArrayC(2*J,ThisDim) = aWaveElevC1 * aWaveElevC1 * QTF_Value
 
 
                   ENDIF    ! Check on the limits
                ENDDO       ! First term calculation
-
 
 
                !---------------------------------------------------------------------------------
@@ -2822,10 +2865,6 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
 
                   ! Set an initial search index for the 4D array interpolation
                LastIndex4 = (/0,0,0,0/)
-
-                  ! Initialize the temporary arrays for each term to zero.
-               Term2ArrayC = CMPLX(0.0_SiKi,0.0_SiKi,SiKi)
-
 
                   ! Check the limits for the high frequency cutoff. If WvHiCOffS is less than the
                   ! maximum frequency possible with the value of WaveDT (omega_max = pi/WaveDT = NStepWave2*WaveDOmega),
@@ -2886,6 +2925,10 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
                            ! Set the (omega1,omega2,beta1,beta2) point we are looking for.
                         Coord4 = (/ REAL(Omega1,SiKi), REAL(Omega2,SiKi), InitInp%WaveDirArr(K), InitInp%WaveDirArr(J-K) /)
 
+                           ! Apply local Z rotation to heading angle (degrees) to put wave direction into the local (rotated) body frame
+                        Coord4(3) = Coord4(3) - RotateZdegOffset
+                        Coord4(4) = Coord4(4) - RotateZdegOffset
+
                            ! get the interpolated value for F(omega1,omega2,beta1,beta2)  --> QTF_Value
                         CALL WAMIT_Interp4D_Cplx( Coord4, TmpData4D, SumQTFData%Data4D%WvFreq1, SumQTFData%Data4D%WvFreq2, &
                                              SumQTFData%Data4D%WvDir1, SumQTFData%Data4D%WvDir2, LastIndex4, QTF_Value, ErrStatTmp, ErrMsgTmp )
@@ -2895,48 +2938,101 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
                            RETURN
                         ENDIF
 
+                        !--------------------------
+                        ! Phase shift due to offset
+                        !--------------------------
+                        if (p%NBodyMod == 2) then
+                           !> The phase shift due to an (x,y) offset for second order difference frequencies is of the form
+                           !! \f$  exp[-\imath ( k(\omega_1) ( X cos(\Beta(w_1)) + Y sin(\beta(w_1)) )
+                           !!                  - k(\omega_2) ( X cos(\Beta(w_2)) + Y sin(\beta(w_2)) ) ) ]\f$
+                           !  NOTE: the phase shift applies to the aWaveElevC of the incoming wave.  Including it here instead
+                           !        of above is mathematically equivalent, but only because each frequency has only one wave
+                           !        direction associated with it through the equal energy approach used in multidirectional waves.
+
+                           WaveNmbr1   = WaveNumber ( REAL(Omega1,SiKi), InitInp%Gravity, InitInp%WtrDpth )    ! SiKi returned
+                           WaveNmbr2   = WaveNumber ( REAL(Omega2,SiKi), InitInp%Gravity, InitInp%WtrDpth )    ! SiKi returned
+                           TmpReal1    = WaveNmbr1 * ( InitInp%PtfmRefxt(1)*cos(InitInp%WaveDirArr(K)*D2R)   + InitInp%PtfmRefyt(1)*sin(InitInp%WaveDirArr(K)*D2R)   )
+                           TmpReal2    = WaveNmbr2 * ( InitInp%PtfmRefxt(1)*cos(InitInp%WaveDirArr(J-K)*D2R) + InitInp%PtfmRefyt(1)*sin(InitInp%WaveDirArr(J-K)*D2R) )
+
+                           ! Set the phase shift for the set of sum frequencies
+                           PhaseShiftXY = CMPLX( cos(TmpReal1 + TmpReal2), -sin(TmpReal1 + TmpReal2) )
+
+                           QTF_Value = QTF_Value*PhaseShiftXY
+
+                        endif ! Phaseshift for NBodyMod==2
+
                            ! Set the value of the first term in the frequency domain.
                         TmpHPlusC = TmpHPlusC + aWaveElevC1 * aWaveElevC2 * QTF_Value
 
                      ENDDO
 
                         ! Save the value from the summation.
-                     Term2ArrayC(J) = TmpHPlusC
-
+                     Term2ArrayC(J,ThisDim) = TmpHPlusC
 
                   ENDIF    ! Check on the limits
 
                ENDDO       ! Second term calculation -- frequency step on the sum frequency
-
-
-
-                  ! Now we apply the FFT to the result of the sum.
-               CALL ApplyFFT_cx(  Term1Array(:),  Term1ArrayC(:), FFT_Data, ErrStatTmp )
-               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to the first term of the Sum QTF.', &
-                              ErrStat,ErrMsg,RoutineName)
-               IF ( ErrStat >= AbortErrLev ) THEN
-                  IF (ALLOCATED(TmpData4D))        DEALLOCATE(TmpData4D,STAT=ErrStatTmp)
-                  RETURN
-               END IF
-
-                  ! Now we apply the FFT to the result of the sum.
-               CALL ApplyFFT_cx(  Term2Array(:), Term2ArrayC(:), FFT_Data, ErrStatTmp )
-               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to the second term of the Sum QTF.', &
-                              ErrStat,ErrMsg,RoutineName)
-               IF ( ErrStat >= AbortErrLev ) THEN
-                  IF (ALLOCATED(TmpData4D))        DEALLOCATE(TmpData4D,STAT=ErrStatTmp)
-                  RETURN
-               ENDIF
-
-                  ! Now we add the two terms together.  The 0.5 multiplier on is because the double sided FFT was used.
-               DO J=0,InitInp%NStepWave-1  !bjj: Term1Array and Term2Array don't set the last element, so we can get over-flow errors here. SumQTFForce(InitInp%NStepWave,Idx) gets overwritten later, so Idx'm setting the array bounds to be -1.
-                  SumQTFForce(J,Idx) = 0.5_SiKi*(REAL(Term1Array(J) + 2*Term2Array(J), SiKi))
-               ENDDO
-
-                  ! Copy the last first term to the first so that it is cyclic
-               SumQTFForce(InitInp%NStepWave,Idx) = SumQTFForce(0,Idx)
-
             ENDIF    ! Load component to calculate
+         ENDDO ! ThisDim -- current dimension
+
+
+         !----------------------------------------------------
+         ! Rotate back to global frame
+         !----------------------------------------------------
+
+            ! Set rotation
+            ! NOTE: RotateZMatrixT is the rotation from local to global.
+         RotateZMatrixT(:,1) = (/  cos(InitInp%PtfmRefztRot(IBody)), -sin(InitInp%PtfmRefztRot(IBody)) /)
+         RotateZMatrixT(:,2) = (/  sin(InitInp%PtfmRefztRot(IBody)),  cos(InitInp%PtfmRefztRot(IBody)) /)
+
+            ! Loop through all the frequencies
+         DO J=1,InitInp%NStepWave2
+
+               ! Apply the rotation to get back to global frame -- term 1
+            Term1ArrayC(J,1:2) = MATMUL(RotateZMatrixT, Term1ArrayC(J,1:2))
+            Term1ArrayC(J,4:5) = MATMUL(RotateZMatrixT, Term1ArrayC(J,4:5))
+
+               ! Apply the rotation to get back to global frame -- term 2
+            Term2ArrayC(J,1:2) = MATMUL(RotateZMatrixT, Term2ArrayC(J,1:2))
+            Term2ArrayC(J,4:5) = MATMUL(RotateZMatrixT, Term2ArrayC(J,4:5))
+
+         ENDDO    ! J=1,InitInp%NStepWave2
+
+
+
+         !----------------------------------------------------
+         ! Apply the FFT to get time domain results
+         !----------------------------------------------------
+
+         DO ThisDim=1,6
+            Idx = (IBody-1)*6+ThisDim
+
+               ! Now we apply the FFT to the result of the sum.
+            CALL ApplyFFT_cx(  Term1Array(:),  Term1ArrayC(:,ThisDim), FFT_Data, ErrStatTmp )
+            CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to the first term of the Sum QTF.', &
+                           ErrStat,ErrMsg,RoutineName)
+            IF ( ErrStat >= AbortErrLev ) THEN
+               IF (ALLOCATED(TmpData4D))        DEALLOCATE(TmpData4D,STAT=ErrStatTmp)
+               RETURN
+            END IF
+
+               ! Now we apply the FFT to the result of the sum.
+            CALL ApplyFFT_cx(  Term2Array(:), Term2ArrayC(:,ThisDim), FFT_Data, ErrStatTmp )
+            CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to the second term of the Sum QTF.', &
+                           ErrStat,ErrMsg,RoutineName)
+            IF ( ErrStat >= AbortErrLev ) THEN
+               IF (ALLOCATED(TmpData4D))        DEALLOCATE(TmpData4D,STAT=ErrStatTmp)
+               RETURN
+            ENDIF
+
+               ! Now we add the two terms together.  The 0.5 multiplier on is because the double sided FFT was used.
+            DO J=0,InitInp%NStepWave-1  !bjj: Term1Array and Term2Array don't set the last element, so we can get over-flow errors here. SumQTFForce(InitInp%NStepWave,Idx) gets overwritten later, so Idx'm setting the array bounds to be -1.
+               SumQTFForce(J,Idx) = 0.5_SiKi*(REAL(Term1Array(J) + 2*Term2Array(J), SiKi))
+            ENDDO
+
+               ! Copy the last first term to the first so that it is cyclic
+            SumQTFForce(InitInp%NStepWave,Idx) = SumQTFForce(0,Idx)
+
 
          ENDDO ! ThisDim -- current dimension
       ENDDO    ! IBody -- current WAMIT body
