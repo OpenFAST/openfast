@@ -3,6 +3,7 @@ module FVW_Wings
    use NWTC_Library
    use FVW_Types
    use FVW_Subs
+   use AirfoilInfo
 
    implicit none
 
@@ -199,7 +200,7 @@ contains
 
    !----------------------------------------------------------------------------------------------------------------------------------
    !>
-   subroutine Wings_ComputeCirculation(t, Gamma_LL, Gamma_LL_prev, u, p, x, m, ErrStat, ErrMsg, iLabel)
+   subroutine Wings_ComputeCirculation(t, Gamma_LL, Gamma_LL_prev, u, p, x, m, AFInfo, ErrStat, ErrMsg, iLabel)
       real(DbKi),                      intent(in   )  :: t           !< Current simulation time in seconds
       real(ReKi), dimension(:,:),      intent(inout)  :: Gamma_LL       !< Circulation on all the lifting lines
       real(ReKi), dimension(:,:),      intent(in   )  :: Gamma_LL_prev  !< Previous/Guessed circulation
@@ -207,6 +208,7 @@ contains
       type(FVW_ParameterType),         intent(in   )  :: p              !< Parameters
       type(FVW_ContinuousStateType),   intent(in   )  :: x              !< Parameters
       type(FVW_MiscVarType),           intent(inout)  :: m              !< Initial misc/optimization variables
+      type(AFI_ParameterType),         intent(in   )  :: AFInfo(:)      !< The airfoil parameter data
       integer(IntKi),                  intent(  out)  :: ErrStat        !< Error status of the operation
       character(*),                    intent(  out)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
       integer(IntKi), intent(in) :: iLabel
@@ -226,7 +228,7 @@ contains
       else if (p%CirculationMethod==idCircPolarData) then 
          ! ---  Solve for circulation using polar data
          !print*,'>>>>>>>>>>>>>>>>> Circulation solving with polar data >>>>>>>>>>>>>> CALL  ',iLabel
-         CALL Wings_ComputeCirculationPolarData(t, Gamma_LL, Gamma_LL_prev, u, p, x, m, ErrStat, ErrMsg, iLabel)
+         CALL Wings_ComputeCirculationPolarData(t, Gamma_LL, Gamma_LL_prev, u, p, x, m, AFInfo, ErrStat, ErrMsg, iLabel)
 
       else if (p%CirculationMethod==idCircNoFlowThrough) then 
          ! ---  Solve for circulation using the no-flow through condition
@@ -249,7 +251,7 @@ contains
 
    !----------------------------------------------------------------------------------------------------------------------------------
    !>
-   subroutine Wings_ComputeCirculationPolarData(t, Gamma_LL, Gamma_LL_prev, u, p, x, m, ErrStat, ErrMsg, iLabel)
+   subroutine Wings_ComputeCirculationPolarData(t, Gamma_LL, Gamma_LL_prev, u, p, x, m, AFInfo, ErrStat, ErrMsg, iLabel)
       real(DbKi),                      intent(in   )  :: t           !< Current simulation time in seconds
       real(ReKi), dimension(:,:),      intent(inout)  :: Gamma_LL       !< Circulation on all the lifting lines
       real(ReKi), dimension(:,:),      intent(in   )  :: Gamma_LL_prev  !< Previous/Guessed circulation
@@ -257,6 +259,7 @@ contains
       type(FVW_ParameterType),         intent(in   )  :: p              !< Parameters
       type(FVW_ContinuousStateType),   intent(in   )  :: x              !< Parameters
       type(FVW_MiscVarType),           intent(inout)  :: m              !< Initial misc/optimization variables
+      type(AFI_ParameterType),         intent(in   )  :: AFInfo(:)      !< The airfoil parameter data
       integer(IntKi),                  intent(  out)  :: ErrStat        !< Error status of the operation
       character(*),                    intent(  out)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
       integer(IntKi), intent(in) :: iLabel
@@ -271,6 +274,9 @@ contains
       integer(IntKi) :: iW, iSpan, iDepth, iWCP, nCPs
       real(ReKi), dimension(3) :: P1, P2, P3, P4
       real(ReKi) :: Gamm
+      ! Error handling
+      integer(IntKi)           :: ErrStat2
+      character(ErrMsgLen)     :: ErrMsg2
 
       ! Initialize ErrStat
       ErrStat = ErrID_None
@@ -285,7 +291,7 @@ contains
       if (m%FirstCall) then
          ! We find a guess by looking simply at the Wind and Elasticity velocity
          m%Vtot_ll = m%Vwnd_LL - m%Vstr_ll
-         call CirculationFromPolarData(GammaLastIter, p, m)
+         call CirculationFromPolarData(GammaLastIter, p, m, AFInfo,ErrStat2,ErrMsg2);  if(Failed()) return;
       else
          GammaLastIter(1:p%nSpan,1:p%nWings) = Gamma_LL_prev(1:p%nSpan,1:p%nWings)
       endif
@@ -298,11 +304,12 @@ contains
 
       ! --- Setting up Vcst: part of the velocity that is constant withing the iteration loop
       !   Vrel_ll_cst = U_u0 - U_body 
-      call AllocAry(Vvar,  3, p%nSpan, p%nWings, 'Vvar',  ErrStat, ErrMsg)
-      call AllocAry(Vcst,  3, p%nSpan, p%nWings, 'Vcst',  ErrStat, ErrMsg)
+      call AllocAry(Vvar,  3, p%nSpan, p%nWings, 'Vvar',  ErrStat2, ErrMsg2);  if(Failed()) return;
+      call AllocAry(Vcst,  3, p%nSpan, p%nWings, 'Vcst',  ErrStat2, ErrMsg2);  if(Failed()) return;
 
       ! Set m%Vind_LL Induced velocity from Known wake only (after iNWStart+1)
-      call LiftingLineInducedVelocities(p, x, iNWStart+1, m, ErrStat, ErrMsg)
+      call LiftingLineInducedVelocities(p, x, iNWStart+1, m, ErrStat2, ErrMsg2);  if(Failed()) return;
+
       Vcst = m%Vind_LL + m%Vwnd_LL - m%Vstr_ll
 
       if (any(m%Vind_LL(1:3,:,:)<-99)) then
@@ -342,7 +349,7 @@ contains
           !call print_mean_3d( Vvar(:,:,:), 'Mean induced vel. LL (var)')
           !call print_mean_3d( m%Vtot_LL(:,:,:), 'Mean relativevel. LL (tot)')
           ! --- Computing circulation based on Vtot_LL
-          call CirculationFromPolarData(Gamma_LL, p, m)
+          call CirculationFromPolarData(Gamma_LL, p, m, AFInfo,ErrStat2,ErrMsg2);  if(Failed()) return;
 
           ! --------------------------------------------- 
           ! Differences between iterations and relaxation
@@ -379,28 +386,49 @@ contains
       !print*,'m%Vcst_LL',Vcst(1,:,:)
       m%Vind_LL=-9999._ReKi !< Safety (the induction above was not the true one)
       m%Vtot_LL=-9999._ReKi !< Safety 
-      deallocate(DGamma       )
-      deallocate(GammaLastIter)
-      deallocate(Vcst)
-      deallocate(Vvar)
       !print*,'Gamm: ',Gamma_LL(1, 1), Gamma_LL(p%nSpan,1)
       !if (abs(Gamma_LL(1, 1)-Gamma_LL(p%nSpan,1))>0.01)  STOP
       !if (m%iStep==3) STOP
-   end subroutine
+      call CleanUp()
+   contains
+
+      logical function Failed()
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Wings_ComputeCirculationPolarData')
+         Failed =  ErrStat >= AbortErrLev
+         if (Failed) call CleanUp()
+      end function Failed
+      subroutine CleanUp()
+         if(allocated(DGamma       ))       deallocate(DGamma       )
+         if(allocated(GammaLastIter))       deallocate(GammaLastIter)
+         if(allocated(Vcst))                deallocate(Vcst)
+         if(allocated(Vvar))                deallocate(Vvar)
+      end subroutine
+   end subroutine Wings_ComputeCirculationPolarData
 
 
    !>  Compute circulation based on polar data
    !! Uses m%Vtot_ll to compute Gamma_ll
-   subroutine CirculationFromPolarData(Gamma_LL, p, m)
+   subroutine CirculationFromPolarData(Gamma_LL, p, m, AFInfo, ErrStat, ErrMsg)
       real(ReKi), dimension(:,:),      intent(inout)  :: Gamma_LL       !< Circulation on all the lifting lines
       type(FVW_ParameterType),         intent(in   )  :: p              !< Parameters
       type(FVW_MiscVarType),           intent(in   )  :: m              !< Initial misc/optimization variables
+      type(AFI_ParameterType),         intent(in   )  :: AFInfo(:)      !< The airfoil parameter data
+      integer(IntKi),                  intent(  out)  :: ErrStat        !< Error status of the operation
+      character(*),                    intent(  out)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
+
       ! Local
       integer(IntKi) :: iW, iCP  !< Index on wings and spanwise control points
       real(ReKi), dimension(3) :: N, Tc      !<  Normal and Tangent vector
       real(ReKi), dimension(3) :: Vrel, Vrel_orth, Vjouk, Vjouk_orth
       real(ReKi)               :: Vrel_orth_norm, Vjouk_orth_norm
-      real(ReKi)               :: alpha, Re, Cl
+      real(ReKi)               :: alpha, Re, Cl, Cd, Cm
+      type(AFI_OutputType)     :: AFI_interp
+      integer(IntKi)           :: ErrStat2
+      character(ErrMsgLen)     :: ErrMsg2
+
+      ! Initialize ErrStat
+      ErrStat = ErrID_None
+      ErrMsg  = ""
 
       do iW=1,p%nWings 
          do icp=1,p%nSpan
@@ -417,10 +445,16 @@ contains
 
             alpha = atan2(dot_product(Vrel,N) , dot_product(Vrel,Tc) ) ! [rad]  
             !Re    = LL%Vrel_orth_norm(icp)*LL%chord(icp)/KinVisc/(1.E6_MK) ! TODO TODO TODO KinVisc
+Re=1.0_ReKi
 
             if (p%CircSolvPolar==idPolarAeroDyn) then
-               print*,'TODO TODO TODO Get Cl, Cd, Cm from alpha, Re and AirfoilInfo'
-               STOP
+                  ! compute steady Airfoil Coefs      ! NOTE: UserProp set to 0.0_ReKi (no idea what it does).  Also, note this assumes airfoils at nodes.
+               call AFI_ComputeAirfoilCoefs( alpha, Re, 0.0_ReKi,  AFInfo(p%AFindx(icp,iW)), AFI_interp, ErrStat2, ErrMsg2 ); if(Failed()) return;
+               Cl = AFI_interp%Cl
+               Cd = AFI_interp%Cd
+               Cm = AFI_interp%Cm
+!              Cpmin = AFI_interp%Cpmin
+print*,'Manu: fix Re for AFI in CirculationFromPolarData'
             else if (p%CircSolvPolar==idPolar2PiAlpha) then
                Cl=TwoPi*alpha
             else if (p%CircSolvPolar==idPolar2PiSinAlpha) then
@@ -438,6 +472,15 @@ contains
             !endif
          enddo
       enddo
+   contains
+      logical function Failed()
+         character(25)              :: NodeText
+         if (ErrStat2 /= ErrID_None) then
+            NodeText = '(node '//trim(num2lstr(icp))//', blade '//trim(num2lstr(iW))//')'
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CirculationFromPolarData'//trim(NodeText))
+         end if
+         Failed =  ErrStat >= AbortErrLev
+      end function Failed
    end subroutine CirculationFromPolarData
 
 

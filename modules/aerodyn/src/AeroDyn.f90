@@ -1159,7 +1159,7 @@ subroutine AD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, errStat
       call SetInputsForFVW(p, u, m, errStat2, errMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          ! Note: the setup is handled above in the SetInputs routine
-      call FVW_UpdateStates( t, n, m%FVW_u, utimes, p%FVW, x%FVW, xd%FVW, z%FVW, OtherState%FVW, m%FVW, ErrStat2, ErrMsg2 )
+      call FVW_UpdateStates( t, n, m%FVW_u, utimes, p%FVW, x%FVW, xd%FVW, z%FVW, OtherState%FVW, p%AFI, m%FVW, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          ! The wind points are passed out as other states.  These really correspond to the propogation of the vortex to the next wind position.
       if (allocated(OtherState%WakeLocationPoints)) then
@@ -1229,7 +1229,7 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       call SetInputsForFVW(p, (/u/), m, errStat2, errMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          ! Calculate Outputs at time t
-      CALL FVW_CalcOutput( t, m%FVW_u(1), p%FVW, x%FVW, xd%FVW, z%FVW, OtherState%FVW, m%FVW_y, m%FVW, ErrStat2, ErrMsg2 )
+      CALL FVW_CalcOutput( t, m%FVW_u(1), p%FVW, x%FVW, xd%FVW, z%FVW, OtherState%FVW, p%AFI, m%FVW_y, m%FVW, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    endif
 
@@ -2173,7 +2173,7 @@ SUBROUTINE Init_FVWmodule( InputFileData, u_AD, u, p, x, xd, z, OtherState, y, m
       IF (ErrStat >= AbortErrLev) RETURN
    ENDDO
 
-!FIXME: Should we be passing any AFinfo?  Is that needed in FVW for anything?
+      ! NOTE: not passing p%AFI at present.  We are not storing it in FVW's parameters.
    call FVW_Init( InitInp, u, p%FVW, x, xd, z, OtherState, y, m, Interval, InitOut, ErrStat2, ErrMsg2 )
       CALL SetErrStat ( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 

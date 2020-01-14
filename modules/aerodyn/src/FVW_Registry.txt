@@ -4,12 +4,14 @@
 # keyword <modulename/modname> <TypeBeingDefined> <FieldType> <FieldName> <Dims> <InitialValue> <Ctrl> "<DESCRIP>" "<UNITS>"
 ##################################################################################################################################
 include Registry_NWTC_Library.txt
+usefrom	AirfoilInfo_Registry.txt
 
 #####################  Registry for FVW ###############
 # ..... PARAMETERS .............
 #FVW_ParameterType  
 typedef  FVW/FVW           ParameterType        IntKi                            nWings            -  -   - "Number of Wings"  -
 typedef     ^                   ^               IntKi                            nSpan             -  -  -  "TODO, should be defined per wing. Number of spanwise element"          -
+typedef     ^                   ^               IntKi                            AFindx            :: -  - "Index to the airfoils from AD15 [idx 1: BladeNode, idx2: Blade number]" - 
 typedef     ^                   ^               IntKi                            nNWMax            -  -  -  "Maximum number of nw panels, per wing"          -
 typedef     ^                   ^               IntKi                            nFWMax            -  -  -  "Maximum number of fw panels, per wing"          -
 typedef     ^                   ^               IntKi                            nFWFree           -  -  -  "Number of fw panels that are free, per wing"          -

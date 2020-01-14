@@ -15,11 +15,7 @@ MODULE FVW
    use FVW_Wings
    use FVW_BiotSavart
    use FVW_Tests
-
-      ! NOTE:  this is a rough format that AD14 stores airfoil info.  This will need
-      !        to be replaced by the AirFoilInfo module when we couple FVW into AD15
-!   USE AD14AeroConf_Types
-
+   use AirFoilInfo
 
    IMPLICIT NONE
 
@@ -49,6 +45,7 @@ subroutine FVW_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
    type(FVW_DiscreteStateType),     intent(  out)  :: xd             !< Initial discrete states
    type(FVW_ConstraintStateType),   intent(  out)  :: z              !< Initial guess of the constraint states
    type(FVW_OtherStateType),        intent(  out)  :: OtherState     !< Initial other states
+!   type(AFI_ParameterType),         intent(in   )  :: AFInfo(:)      ! The airfoil parameter data
    type(FVW_OutputType),            intent(  out)  :: y              !< Initial system outputs (outputs are not calculated;
                                                                      !!   only the output mesh is initialized)
    type(FVW_MiscVarType),           intent(  out)  :: m              !< Initial misc/optimization variables
@@ -100,6 +97,7 @@ subroutine FVW_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
    ! Move the InitInp%WingsMesh to u
    CALL MOVE_ALLOC( InitInp%WingsMesh, u%WingsMesh )     ! Move from InitInp to u
 
+!NOTE: We do not have the windspeed until after the FVW initialization (IfW is not initialized until after AD15)
    ! Wind Speed hack, TODO temporary
    m%Vwnd_LL(:,:,:)   = 0
    m%Vwnd_NW(:,:,:,:) = 0
@@ -296,6 +294,11 @@ SUBROUTINE FVW_SetParametersFromInputs( InitInp, p, m, ErrStat, ErrMsg )
    ! Set time step
    p%DT           =  InitInp%DT
 
+   ! Set indexing to AFI tables -- this is set from the AD15 calling code.
+   call AllocAry(p%AFindx,size(InitInp%AFindx,1),size(InitInp%AFindx,2),'AFindx',ErrStat,ErrMsg)
+   p%AFindx = InitInp%AFindx     ! Copying in case AD15 still needs these
+
+
 end subroutine FVW_SetParametersFromInputs
 ! ==============================================================================
 !>
@@ -393,7 +396,7 @@ end subroutine FVW_End
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Loose coupling routine for solving for constraint states, integrating continuous states, and updating discrete and other states.
 !! Continuous, constraint, discrete, and other states are updated for t + Interval
-subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, errStat, errMsg )
+subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m, errStat, errMsg )
 !..................................................................................................................................
    real(DbKi),                      intent(in   )  :: t           !< Current simulation time in seconds
    integer(IntKi),                  intent(in   )  :: n           !< Current simulation time step n = 0,1,...
@@ -404,6 +407,7 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, errSta
    type(FVW_DiscreteStateType),     intent(inout)  :: xd          !< Input: Discrete states at t;   Output: at t+dt
    type(FVW_ConstraintStateType),   intent(inout)  :: z           !< Input: Constraint states at t; Output: at t+dt
    type(FVW_OtherStateType),        intent(inout)  :: OtherState  !< Input: Other states at t;      Output: at t+dt
+   type(AFI_ParameterType),         intent(in   )  :: AFInfo(:)   !< The airfoil parameter data
    type(FVW_MiscVarType),           intent(inout)  :: m           !< Misc/optimization variables
    integer(IntKi),                  intent(  out)  :: errStat     !< Error status of the operation
    character(*),                    intent(  out)  :: errMsg      !< Error message if ErrStat /= ErrID_None
@@ -445,7 +449,7 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, errSta
    ! Returns: z%Gamma_LL (at t)
    call AllocAry( z_guess%Gamma_LL,  p%nSpan, p%nWings, 'Lifting line Circulation', ErrStat, ErrMsg );
    z_guess%Gamma_LL = m%Gamma_LL
-   call FVW_CalcConstrStateResidual(t, uInterp, p, x, xd, z_guess, OtherState, m, z, ErrStat2, ErrMsg2, 1); if(Failed()) return
+   call FVW_CalcConstrStateResidual(t, uInterp, p, x, xd, z_guess, OtherState, m, z, AFInfo, ErrStat2, ErrMsg2, 1); if(Failed()) return
 
    ! Map circulation and positions between LL and NW  and then NW and FW
    ! Changes: x only
@@ -488,7 +492,7 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, errSta
    ! --- Solve for circulation at t+dt
    ! Returns: z%Gamma_LL (at t+dt)
    z_guess%Gamma_LL = z%Gamma_LL ! We use as guess the circulation from the previous time step (see above)
-   call FVW_CalcConstrStateResidual(t+dt, uInterp, p, x, xd, z_guess, OtherState, m, z, ErrStat2, ErrMsg2, 2); if(Failed()) return
+   call FVW_CalcConstrStateResidual(t+dt, uInterp, p, x, xd, z_guess, OtherState, m, z, AFInfo, ErrStat2, ErrMsg2, 2); if(Failed()) return
 
    ! Updating circulation of near wake panel (and position but irrelevant)
    ! Changes: x only
@@ -622,7 +626,7 @@ end subroutine FVW_Euler1
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This is a tight coupling routine for solving for the residual of the constraint state functions.
-subroutine FVW_CalcConstrStateResidual( t, u, p, x, xd, z_guess, OtherState, m, z_out, ErrStat, ErrMsg, iLabel)
+subroutine FVW_CalcConstrStateResidual( t, u, p, x, xd, z_guess, OtherState, m, z_out, AFInfo, ErrStat, ErrMsg, iLabel)
    real(DbKi),                    intent(in   )  :: t           !< Current simulation time in seconds
    type(FVW_InputType),           intent(in   )  :: u           !< Inputs at t
    type(FVW_ParameterType),       intent(in   )  :: p           !< Parameters
@@ -631,7 +635,9 @@ subroutine FVW_CalcConstrStateResidual( t, u, p, x, xd, z_guess, OtherState, m, 
    type(FVW_ConstraintStateType), intent(in   )  :: z_guess     !< Constraint states at t (possibly a guess)
    type(FVW_OtherStateType),      intent(in   )  :: OtherState  !< Other states at t
    type(FVW_MiscVarType),         intent(inout)  :: m           !< Misc variables for optimization (not copied in glue code)
-   type(FVW_ConstraintStateType), intent(  out)  :: z_out            !< Residual of the constraint state functions using
+   type(FVW_ConstraintStateType), intent(  out)  :: z_out       !< Residual of the constraint state functions using
+   type(AFI_ParameterType),       intent(in   )  :: AFInfo(:)   !< The airfoil parameter data
+
    integer(IntKi), intent(in) :: iLabel
                                                                     !!     the input values described above
    integer(IntKi),                    intent(  OUT)  :: ErrStat     !< Error status of the operation
@@ -645,7 +651,7 @@ subroutine FVW_CalcConstrStateResidual( t, u, p, x, xd, z_guess, OtherState, m, 
    call AllocAry( z_out%Gamma_LL,  p%nSpan, p%nWings, 'Lifting line Circulation', ErrStat, ErrMsg );
    z_out%Gamma_LL = -999999_ReKi;
 
-   CALL Wings_ComputeCirculation(t, z_out%Gamma_LL, z_guess%Gamma_LL, u, p, x, m, ErrStat, ErrMsg, iLabel)
+   CALL Wings_ComputeCirculation(t, z_out%Gamma_LL, z_guess%Gamma_LL, u, p, x, m, AFInfo, ErrStat, ErrMsg, iLabel)
 
 end subroutine FVW_CalcConstrStateResidual
 
@@ -654,7 +660,7 @@ end subroutine FVW_CalcConstrStateResidual
 !! This subroutine is used to compute the output channels (motions and loads) and place them in the WriteOutput() array.
 !! The descriptions of the output channels are not given here. Please see the included OutListParameters.xlsx sheet for
 !! for a complete description of each output parameter.
-subroutine FVW_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
+subroutine FVW_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, ErrStat, ErrMsg )
 ! NOTE: no matter how many channels are selected for output, all of the outputs are calculated
 ! All of the calculated output channels are placed into the m%AllOuts(:), while the channels selected for outputs are
 ! placed in the y%WriteOutput(:) array.
@@ -667,6 +673,7 @@ subroutine FVW_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg 
 !FIXME:TODO: AD15_CalcOutput has constraint states as intent(in) only. This is forcing me to store z in the AD15 miscvars for now.
    type(FVW_ConstraintStateType),   intent(in   )  :: z           !< Constraint states at t
    type(FVW_OtherStateType),        intent(in   )  :: OtherState  !< Other states at t
+   type(AFI_ParameterType),         intent(in   )  :: AFInfo(:)   !< The airfoil parameter data
    type(FVW_OutputType),            intent(inout)  :: y           !< Outputs computed at t (Input only so that mesh con-
                                                                   !!   nectivity information does not have to be recalculated)
    type(FVW_MiscVarType),           intent(inout)  :: m           !< Misc/optimization variables
@@ -684,7 +691,7 @@ subroutine FVW_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg 
    print'(A,F10.3,A,L1,A,I0,A,I0)','CalcOutput     t:',t,'   ',m%FirstCall,'                                nNW:',m%nNW,' nFW:',m%nFW
 
    ! if we are on a correction step, CalcOutput may be called again with different inputs
-      CALL Wings_ComputeCirculation(t, m%Gamma_LL, z%Gamma_LL, u, p, x, m, ErrStat2, ErrMsg2, 0); if(Failed()) return ! For plotting only
+      CALL Wings_ComputeCirculation(t, m%Gamma_LL, z%Gamma_LL, u, p, x, m, AFInfo, ErrStat2, ErrMsg2, 0); if(Failed()) return ! For plotting only
 
    ! Set the wind velocity at vortex
    CALL DistributeRequestedWind(u%V_wind, x, p, m, ErrStat2, ErrMsg2);  if(Failed()) return
