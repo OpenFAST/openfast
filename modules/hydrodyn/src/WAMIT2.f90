@@ -1853,7 +1853,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
             if (p%NBodyMod == 2) then
 
                !> The phase shift due to an (x,y) offset is of the form
-               !! \f$  exp(-\imath k(\omega) ( X cos(\Beta(w)) + Y sin(\beta(w)) )) \f$
+               !! \f$  exp[-\imath k(\omega) ( X cos(\beta(w)) + Y sin(\beta(w)) )] \f$
                !  NOTE: the phase shift applies to the aWaveElevC of the incoming wave.  Including it here instead
                !        of above is mathematically equivalent, but only because each frequency has only one wave
                !        direction associated with it through the equal energy approach used in multidirectional waves.
@@ -2336,8 +2336,8 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
                         !--------------------------
                         if (p%NBodyMod == 2) then
                            !> The phase shift due to an (x,y) offset for second order difference frequencies is of the form
-                           !! \f$  exp[-\imath ( k(\omega_1) ( X cos(\Beta(w_1)) + Y sin(\beta(w_1)) )
-                           !!                  - k(\omega_2) ( X cos(\Beta(w_2)) + Y sin(\beta(w_2)) ) ) ]\f$
+                           !! \f$  exp[-\imath ( k(\omega_1) ( X cos(\beta(w_1)) + Y sin(\beta(w_1)) )
+                           !!                  - k(\omega_2) ( X cos(\beta(w_2)) + Y sin(\beta(w_2)) ) ) ]\f$
                            !  NOTE: the phase shift applies to the aWaveElevC of the incoming wave.  Including it here instead
                            !        of above is mathematically equivalent, but only because each frequency has only one wave
                            !        direction associated with it through the equal energy approach used in multidirectional waves.
@@ -2830,8 +2830,8 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
                      !--------------------------
                      if (p%NBodyMod == 2) then
                         !> The phase shift due to an (x,y) offset for second order difference frequencies is of the form
-                        !! \f$  exp[-\imath ( k(\omega_1) ( X cos(\Beta(w_1)) + Y sin(\beta(w_1)) )
-                        !!                  1 k(\omega_2) ( X cos(\Beta(w_2)) + Y sin(\beta(w_2)) ) ) ]\f$.
+                        !! \f$  exp[-\imath ( k(\omega_1) ( X cos(\beta(w_1)) + Y sin(\beta(w_1)) )
+                        !!                  1 k(\omega_2) ( X cos(\beta(w_2)) + Y sin(\beta(w_2)) ) ) ]\f$.
                         !! For the first term, \f$ \omega_1 = \omega_2 \$f.
                         !  NOTE: the phase shift applies to the aWaveElevC of the incoming wave.  Including it here instead
                         !        of above is mathematically equivalent, but only because each frequency has only one wave
@@ -2944,8 +2944,8 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
                         !--------------------------
                         if (p%NBodyMod == 2) then
                            !> The phase shift due to an (x,y) offset for second order difference frequencies is of the form
-                           !! \f$  exp[-\imath ( k(\omega_1) ( X cos(\Beta(w_1)) + Y sin(\beta(w_1)) )
-                           !!                  - k(\omega_2) ( X cos(\Beta(w_2)) + Y sin(\beta(w_2)) ) ) ]\f$
+                           !! \f$  exp[-\imath ( k(\omega_1) ( X cos(\beta(w_1)) + Y sin(\beta(w_1)) )
+                           !!                  - k(\omega_2) ( X cos(\beta(w_2)) + Y sin(\beta(w_2)) ) ) ]\f$
                            !  NOTE: the phase shift applies to the aWaveElevC of the incoming wave.  Including it here instead
                            !        of above is mathematically equivalent, but only because each frequency has only one wave
                            !        direction associated with it through the equal energy approach used in multidirectional waves.
