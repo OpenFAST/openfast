@@ -45,11 +45,6 @@ typedef	^	CB_MatArrays	ReKi   	KBB	{:}{:}	-	-	"FULL KBB ( no constraints applied
 typedef	^	CB_MatArrays	ReKi   	PhiL	{:}{:}	-	-	"Retained CB modes, possibly allPhiL(nDOFL,nDOFL), or PhiL(nDOFL,nDOFM)"
 typedef	^	CB_MatArrays	ReKi   	PhiR	{:}{:}	-	-	"FULL PhiR ( no constraints applied)"
 typedef	^	CB_MatArrays	ReKi   	OmegaL	{:}	-	-	"Eigenvalues of retained CB modes, possibly all (nDOFL or nDOFM)"
-# FEM_MatArrays: Matrices and arrays for FEM summary
-typedef	SubDyn/SD	FEM_MatArrays	ReKi   	Omega	{:}	-	-	"Eigenvalues of full FEM model,  we calculate them all"
-typedef	^	FEM_MatArrays	INTEGER	NOmega	-	-	-	"Number of full FEM Eigenvalues (for now TDOF-6*Nreact)"
-typedef	^	FEM_MatArrays	ReKi   	Modes	{:}{:}	-	-	"Eigenmodes of full FEM model,  we calculate them all"
-
 #
 typedef ^   ElemPropType IntKi   eType	 -	-	-	"Element Type"
 typedef ^        ^       ReKi    Length	 -	-	-	"Length of an element"

@@ -177,7 +177,6 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    ! local variables
    TYPE(SD_InitType)    :: Init
    TYPE(CB_MatArrays)   :: CBparams      ! CB parameters to be stored and written to summary file
-   TYPE(FEM_MatArrays)  :: FEMparams     ! FEM parameters to be stored and written to summary file
    INTEGER(IntKi)       :: ErrStat2      ! Error status of the operation
    CHARACTER(ErrMsgLen) :: ErrMsg2       ! Error message if ErrStat /= ErrID_None
    
@@ -233,16 +232,9 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    ! Assemble Stiffness and mass matrix
    CALL AssembleKM(Init, p, ErrStat2, ErrMsg2); if(Failed()) return
 
-   ! --- Eigen values of full system (for summary file output only)
-   ! True below is to remove the constraints
-   ! We call the EigenSolver here only so that we get a print-out the eigenvalues from the full system (minus Reaction DOF)
-   FEMparams%NOmega = p%nDOF - p%nNodes_C*6 !removed an extra "-6"  !Note if fixity changes at the reaction points, this will need to change
-   CALL AllocAry(FEMparams%Omega,            FEMparams%NOmega, 'FEMparams%Omega', ErrStat2, ErrMsg2 ); if(Failed()) return
-   CALL AllocAry(FEMparams%Modes, p%nDOF, FEMparams%NOmega, 'FEMparams%Modes', ErrStat2, ErrMsg2 ); if(Failed()) return
-   CALL EigenSolveWrap( Init%K, Init%M, p%nDOF, FEMparams%NOmega, .True., Init, p, FEMparams%Modes, FEMparams%Omega, ErrStat2, ErrMsg2 ); if(Failed()) return
-
    ! --- Elimination of constraints (reset M, K, D, and BCs IntFc )
    CALL DirectElimination(Init, p, ErrStat2, ErrMsg2); if(Failed()) return
+
 
    ! --- Additional Damping and stiffness at pin/ball/universal joints
    CALL InsertJointStiffDamp(p, Init, ErrStat2, ErrMsg2); if(Failed()) return
@@ -297,9 +289,7 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    IF ( Init%SSSum ) THEN 
       ! note p%KBB/MBB are KBBt/MBBt
       ! Write a summary of the SubDyn Initialization                     
-      CALL OutSummary(Init,p,FEMparams,CBparams,  ErrStat2, ErrMsg2); if(Failed()) return
-      IF( ALLOCATED(Init%K) ) DEALLOCATE(Init%K)
-      IF( ALLOCATED(Init%M) ) DEALLOCATE(Init%M)     
+      CALL OutSummary(Init, p, InitInput, CBparams,  ErrStat2, ErrMsg2); if(Failed()) return
    ENDIF 
    
    ! Initialize the outputs & Store mapping between nodes and elements  
@@ -325,7 +315,6 @@ CONTAINS
    SUBROUTINE CleanUp()   
       CALL SD_DestroyInitType(Init,   ErrStat2, ErrMsg2)
       CALL SD_DestroyCB_MatArrays(  CBparams,  ErrStat2, ErrMsg2 )  ! local variables
-      CALL SD_DestroyFEM_MatArrays( FEMparams, ErrStat2, ErrMsg2 )  ! local variables
    END SUBROUTINE CleanUp
 
 END SUBROUTINE SD_Init
@@ -2378,11 +2367,11 @@ END SUBROUTINE ConstructUFL
 
 !------------------------------------------------------------------------------------------------------
 !> Output the summary file    
-SUBROUTINE OutSummary(Init, p, FEMparams,CBparams, ErrStat,ErrMsg)
+SUBROUTINE OutSummary(Init, p, InitInput, CBparams, ErrStat,ErrMsg)
    TYPE(SD_InitType),      INTENT(IN)     :: Init           ! Input data for initialization routine, this structure contains many variables needed for summary file
    TYPE(SD_ParameterType), INTENT(IN)     :: p              ! Parameters,this structure contains many variables needed for summary file
+   TYPE(SD_InitInputType), INTENT(IN)     :: InitInput   !< Input data for initialization routine         
    TYPE(CB_MatArrays),     INTENT(IN)     :: CBparams       ! CB parameters that will be passed in for summary file use
-   TYPE(FEM_MatArrays),    INTENT(IN)     :: FEMparams      ! FEM parameters that will be passed in for summary file use
    INTEGER(IntKi),         INTENT(OUT)    :: ErrStat        ! Error status of the operation
    CHARACTER(*),           INTENT(OUT)    :: ErrMsg         ! Error message if ErrStat /= ErrID_None
    !LOCALS
@@ -2391,6 +2380,7 @@ SUBROUTINE OutSummary(Init, p, FEMparams,CBparams, ErrStat,ErrMsg)
    CHARACTER(ErrMsgLen)   :: ErrMsg2       ! Temporary storage for local errors
    CHARACTER(1024)        :: SummaryName    ! name of the SubDyn summary file
    INTEGER(IntKi)         :: i, j, k, propIDs(2), Iprop(2)  !counter and temporary holders
+   INTEGER(IntKi)         :: iNode1, iNode2 ! Node indices
    INTEGER(IntKi)         :: mType ! Member Type
    Real(ReKi)             :: mMass, mLength ! Member mass and length
    REAL(ReKi)             :: MRB(6,6)    !REDUCED SYSTEM Kmatrix, equivalent mass matrix
@@ -2398,8 +2388,21 @@ SUBROUTINE OutSummary(Init, p, FEMparams,CBparams, ErrStat,ErrMsg)
    CHARACTER(*),PARAMETER                 :: SectionDivide = '____________________________________________________________________________________________________'
    CHARACTER(*),PARAMETER                 :: SubSectionDivide = '__________'
    CHARACTER(2),  DIMENSION(6), PARAMETER :: MatHds= (/'X ', 'Y ', 'Z ', 'XX', 'YY', 'ZZ'/)  !Headers for the columns and rows of 6x6 matrices
+   ! Variables for Eigenvalue analysis 
+   integer(IntKi) :: nOmega
+   real(ReKi), dimension(:,:), allocatable :: Modes
+   real(ReKi), dimension(:)  , allocatable :: Omega
+   !
    ErrStat = ErrID_None
    ErrMsg  = ""
+
+   ! --- Eigen values of full system (for summary file output only)
+   ! True below is to remove the constraints
+   ! We call the EigenSolver here only so that we get a print-out the eigenvalues from the full system (minus Reaction DOF)
+   nOmega = p%nDOF_red - p%nNodes_C*6 !removed an extra "-6"  !Note if fixity changes at the reaction points, this will need to change
+   CALL AllocAry(Omega,             nOmega, 'Omega', ErrStat2, ErrMsg2 ); if(Failed()) return
+   CALL AllocAry(Modes, p%nDOF_red, nOmega, 'Modes', ErrStat2, ErrMsg2 ); if(Failed()) return
+   CALL EigenSolveWrap( Init%K, Init%M, p%nDOF_red, nOmega, .True., Init, p, Modes, Omega, ErrStat2, ErrMsg2 ); if(Failed()) return
 
    !-------------------------------------------------------------------------------------------------------------
    ! open txt file
@@ -2407,12 +2410,7 @@ SUBROUTINE OutSummary(Init, p, FEMparams,CBparams, ErrStat,ErrMsg)
    SummaryName = TRIM(Init%RootName)//'.sum'
    UnSum = -1            ! we haven't opened the summary file, yet.   
 
-   CALL SDOut_OpenSum( UnSum, SummaryName, SD_ProgDesc, ErrStat2, ErrMsg2 )   
-      CALL SetErrStat ( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SD_Init' )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CLOSE(UnSum)
-         RETURN
-      END IF
+   CALL SDOut_OpenSum( UnSum, SummaryName, SD_ProgDesc, ErrStat2, ErrMsg2 ); if(Failed()) return
       
    !-------------------------------------------------------------------------------------------------------------
    ! write discretized data to a txt file
@@ -2434,6 +2432,8 @@ SUBROUTINE OutSummary(Init, p, FEMparams,CBparams, ErrStat,ErrMsg)
    write(UnSum,'(A,I0)')'Number of Nodes: "reactions" (C): ',p%nNodes_C
    write(UnSum,'(A,I0)')'Number of Nodes: internal    (L): ',p%nNodes_L
    write(UnSum,'(A,I0)')'Number of Nodes: total     (R+L): ',p%nNodes
+   write(UnSum,'(A,3(E15.6))')'TP reference point:',InitInput%TP_RefPoint(1:3)
+
 
    WRITE(UnSum, '(A)') SectionDivide
    WRITE(UnSum, '()')    
@@ -2502,20 +2502,13 @@ SUBROUTINE OutSummary(Init, p, FEMparams,CBparams, ErrStat,ErrMsg)
    WRITE(UnSum, '(A, I6)') 'Direction Cosine Matrices for all Members: GLOBAL-2-LOCAL. No. of 3x3 matrices=', p%NMembers 
    WRITE(UnSum, '(A9,9(A15))')  'Member ID', 'DC(1,1)', 'DC(1,2)', 'DC(1,3)', 'DC(2,1)','DC(2,2)','DC(2,3)','DC(3,1)','DC(3,2)','DC(3,3)'
    DO i=1,p%NMembers
-       !Find the right index in the Nodes array for the selected JointID. This is horrible, but I do not know how to implement this search in a more efficient way
-       !The alternative would be to get an element that belongs to the member and use it with dircos
-       
-!BJJ:TODO:  DIDN'T we already calculate DirCos for each element? can't we use that here?       
-       DO j=1,p%nNodes
-           IF    ( NINT(Init%Nodes(j,1)) .EQ. Init%Members(i,2) )THEN 
-                XYZ1=Init%Nodes(Init%Members(i,2),2:4)
-           ELSEIF ( NINT(Init%Nodes(j,1)) .EQ. Init%Members(i,3) ) THEN 
-                XYZ2=Init%Nodes(Init%Members(i,3),2:4)
-           ENDIF
-       ENDDO    
-       CALL GetDirCos(XYZ1(1:3), XYZ2(1:3), DirCos, mLength, ErrStat, ErrMsg)
-       DirCos=TRANSPOSE(DirCos) !This is now global to local
-       WRITE(UnSum, '(I9,9(E15.6))') Init%Members(i,1), ((DirCos(k,j),j=1,3),k=1,3)
+      iNode1 = FINDLOCI(Init%Joints(:,1), Init%Members(i,2)) ! index of joint 1 of member i
+      iNode2 = FINDLOCI(Init%Joints(:,1), Init%Members(i,3)) ! index of joint 2 of member i
+      XYZ1   = Init%Joints(iNode1,2:4)
+      XYZ2   = Init%Joints(iNode2,2:4)
+      CALL GetDirCos(XYZ1(1:3), XYZ2(1:3), DirCos, mLength, ErrStat, ErrMsg)
+      DirCos=TRANSPOSE(DirCos) !This is now global to local
+      WRITE(UnSum, '(I9,9(E15.6))') Init%Members(i,1), ((DirCos(k,j),j=1,3),k=1,3)
    ENDDO
 
    !-------------------------------------------------------------------------------------------------------------
@@ -2524,21 +2517,21 @@ SUBROUTINE OutSummary(Init, p, FEMparams,CBparams, ErrStat,ErrMsg)
    WRITE(UnSum, '(A)') SectionDivide
    WRITE(UnSum, '(A)') 'Eigenvalues'
    WRITE(UnSum, '(A)') SubSectionDivide
-   WRITE(UnSum, '(A, I6)') "FEM Eigenvalues [Hz]. Number of shown eigenvalues (total # of DOFs minus restrained nodes' DOFs):", FEMparams%NOmega 
-   WRITE(UnSum, '(I6, e15.6)') ( i, FEMparams%Omega(i)/2.0/pi, i = 1, FEMparams%NOmega )
+   WRITE(UnSum, '(A, I6)') "FEM Eigenvalues [Hz]. Number of shown eigenvalues (total # of DOFs minus restrained nodes' DOFs):", NOmega 
+   WRITE(UnSum, '(I6, e15.6)') ( i, Omega(i)/2.0/pi, i = 1, nOmega )
 
    WRITE(UnSum, '(A)') SubSectionDivide
    WRITE(UnSum, '(A, I6)') "CB Reduced Eigenvalues [Hz].  Number of retained modes' eigenvalues:", p%nDOFM 
    WRITE(UnSum, '(I6, e15.6)') ( i, CBparams%OmegaL(i)/2.0/pi, i = 1, p%nDOFM )  
     
    !-------------------------------------------------------------------------------------------------------------
-   ! write Eigenvectors of full SYstem 
+   ! write Eigenvectors of full System 
    !-------------------------------------------------------------------------------------------------------------
    WRITE(UnSum, '(A)') SectionDivide
-   WRITE(UnSum, '(A, I6)') ('FEM Eigenvectors ('//TRIM(Num2LStr(p%nDOF))//' x '//TRIM(Num2LStr(FEMparams%NOmega))//&
-                              ') [m or rad]. Number of shown eigenvectors (total # of DOFs minus restrained nodes'' DOFs):'), FEMparams%NOmega 
-   WRITE(UnSum, '(6x,'//Num2LStr(FEMparams%NOmega)//'(I15))') (i, i = 1, FEMparams%NOmega  )!HEADERS
-   WRITE(UnSum, '(I6,'//Num2LStr(FEMparams%NOmega)//'e15.6)') ( i, (FEMparams%Modes(i,j), j = 1, FEMparams%NOmega ),i = 1, p%nDOF)
+   WRITE(UnSum, '(A, I6)') ('FEM Eigenvectors ('//TRIM(Num2LStr(p%nDOF_red))//' x '//TRIM(Num2LStr(nOmega))//&
+                              ') [m or rad]. Number of shown eigenvectors (total # of DOFs minus restrained nodes'' DOFs):'), nOmega 
+   WRITE(UnSum, '(6x,'//Num2LStr(nOmega)//'(I15))') (i, i = 1, nOmega  )!HEADERS
+   WRITE(UnSum, '(I6,'//Num2LStr(nOmega)//'e15.6)') ( i, (Modes(i,j), j = 1, nOmega ),i = 1, p%nDOF_red)
     
    !-------------------------------------------------------------------------------------------------------------
    ! write CB system matrices
@@ -2650,8 +2643,19 @@ SUBROUTINE OutSummary(Init, p, FEMparams,CBparams, ErrStat,ErrMsg)
    CALL WrMatrix( p%TI, UnSum, 'e15.6', 'TI' ) 
       
 #endif   
+   call CleanUp()
    
-   CALL SDOut_CloseSum( UnSum, ErrStat, ErrMsg )  
+contains
+   LOGICAL FUNCTION Failed()
+        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'OutSummary') 
+        Failed =  ErrStat >= AbortErrLev
+        if (Failed) call CleanUp()
+   END FUNCTION Failed
+   SUBROUTINE CleanUp()
+      if(allocated(Omega)) deallocate(Omega)
+      if(allocated(Modes)) deallocate(Modes)
+      CALL SDOut_CloseSum( UnSum, ErrStat, ErrMsg )  
+   END SUBROUTINE CleanUp
 END SUBROUTINE OutSummary
 
 !------------------------------------------------------------------------------------------------------

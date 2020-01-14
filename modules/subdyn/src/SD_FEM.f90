@@ -1236,7 +1236,6 @@ CONTAINS
       INTEGER(IntKi) :: I, J, iNode
       DO I = 1, p%nNodes_I
          iNode = p%Nodes_I(I,1) ! Node index
-         print*,'iNode',iNode
          DO J = 1, 6 ! ItfTDXss    ItfTDYss    ItfTDZss    ItfRDXss    ItfRDYss    ItfRDZss
             Init%IntFc( (I-1)*6+J, 1) = p%NodesDOFtilde(iNode)%List(J) ! DOF number (unconstrained)
          ENDDO
