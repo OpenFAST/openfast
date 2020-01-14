@@ -1144,6 +1144,10 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
             RotateZdegOffset = 0.0_SiKi
          endif
 
+            ! NOTE: RotateZMatrixT is the rotation from local to global.
+         RotateZMatrixT(:,1) = (/  cos(InitInp%PtfmRefztRot(IBody)), -sin(InitInp%PtfmRefztRot(IBody)) /)
+         RotateZMatrixT(:,2) = (/  sin(InitInp%PtfmRefztRot(IBody)),  cos(InitInp%PtfmRefztRot(IBody)) /)
+
 
          DO ThisDim=1,6
 
@@ -1251,16 +1255,13 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
             ENDIF    ! Load component to calculate
 
 
-               ! Now rotate the force components with platform orientation
-               ! NOTE: RotateZMatrixT is the rotation from local to global.
-            RotateZMatrixT(:,1) = (/  cos(InitInp%PtfmRefztRot(IBody)), -sin(InitInp%PtfmRefztRot(IBody)) /)
-            RotateZMatrixT(:,2) = (/  sin(InitInp%PtfmRefztRot(IBody)),  cos(InitInp%PtfmRefztRot(IBody)) /)
-
-
-            MnDriftForce(1:2) = MATMUL( RotateZMatrixT, MnDriftForce(1:2) )       ! Fx and Fy, rotation about z
-            MnDriftForce(4:5) = MATMUL( RotateZMatrixT, MnDriftForce(4:5) )       ! Mx and My, rotation about z
-
          ENDDO ! ThisDim   -- Load Component on body
+
+
+            ! Now rotate the force components with platform orientation
+         MnDriftForce(1:2) = MATMUL( RotateZMatrixT, MnDriftForce(1:2) )       ! Fx and Fy, rotation about z
+         MnDriftForce(4:5) = MATMUL( RotateZMatrixT, MnDriftForce(4:5) )       ! Mx and My, rotation about z
+
       ENDDO    ! IBody
 
 
