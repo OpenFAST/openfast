@@ -27,7 +27,12 @@ module IntegerList
    end interface
    interface find
       module procedure find_list
-      module procedure find_raw
+      module procedure find_intarray
+   end interface
+   interface unique
+      module procedure unique_list
+      module procedure unique_intarray
+      module procedure unique_intarray_in_place
    end interface
 contains
 
@@ -233,23 +238,17 @@ contains
       endif
    end function find_list
 
-   !> Returns index of val in Array (val is an integer!)
-   ! NOTE: in the future use intrinsinc function findloc
-   function find_raw(Array, Val) result(i)
-      integer(IntKi), dimension(:), intent(in) :: Array !< Array to search in
-      integer(IntKi), intent(in)               :: val   !< Val
-      integer(IntKi)                           :: i     !< Index of joint in joint table
-      logical :: found
-      i = 1
-      do while ( i <= size(Array) )
-         if ( Val == Array(i) ) THEN
-            return ! Exit when found
-         else
-            i = i + 1
-         endif
-      enddo
-      i=-1
-   end function
+   !> Unique, in place
+   subroutine unique_list(L, ErrStat, ErrMsg)
+      type(IList),     intent(inout) :: L  
+      integer(IntKi),  intent(  out) :: ErrStat !< Error status of the operation
+      character(*),    intent(  out) :: ErrMsg  !< Error message if ErrStat /    = ErrID_None
+      ErrStat = ErrID_None
+      ErrMsg  = ""
+      if (len(L)>0) then
+         call unique_intarray_in_place(L%List)
+      endif
+   end subroutine
 
    !> Print
    subroutine print_list(L, varname, u_opt)
@@ -328,6 +327,78 @@ contains
             end if 
         end do 
     end function binary_search 
+
+   !> Returns index of val in Array (val is an integer!)
+   ! NOTE: in the future use intrinsinc function findloc
+   function find_intarray(Array, Val) result(i)
+      integer(IntKi), dimension(:), intent(in) :: Array !< Array to search in
+      integer(IntKi), intent(in)               :: val   !< Val
+      integer(IntKi)                           :: i     !< Index of joint in joint table
+      logical :: found
+      i = 1
+      do while ( i <= size(Array) )
+         if ( Val == Array(i) ) THEN
+            return ! Exit when found
+         else
+            i = i + 1
+         endif
+      enddo
+      i=-1
+   end function
+
+    !> return in res the unique values of v
+    subroutine unique_intarray(v,res) 
+       ! Arguments
+       integer(IntKi),dimension(:),intent(in) :: v
+       integer(IntKi),dimension(:),allocatable::res
+       !
+       integer(IntKi),dimension(:),pointer::tmp
+       integer :: k    !< number of unique elements
+       integer :: i, j
+       if (allocated(res)) deallocate(res)
+       allocate(tmp(1:size(v)))
+       k = 1
+       tmp(1) = v(1)
+       outer: do i=2,size(v)
+          do j=1,k
+             if (tmp(j) == v(i)) then
+                ! Found a match so start looking again
+                cycle outer
+             end if
+          end do
+          ! No match found so add it to the output
+          k = k + 1
+          tmp(k) = v(i)
+       end do outer
+       allocate(res(1:k))
+       res(1:k)=tmp(1:k)
+       deallocate(tmp)
+    end subroutine
+
+    subroutine unique_intarray_in_place(v) 
+        integer(IntKi),dimension(:),allocatable :: v
+        integer(IntKi),dimension(:),allocatable::res
+        integer :: k    !< number of unique elements
+        integer :: i, j
+        allocate(res(1:size(v)))
+        k = 1
+        res(1) = v(1)
+        outer: do i=2,size(v)
+            do j=1,k
+                if (res(j) == v(i)) then
+                    ! Found a match so start looking again
+                    cycle outer
+                end if
+            end do
+            ! No match found so add it to the output
+            k = k + 1
+            res(k) = v(i)
+        end do outer
+        deallocate(v)
+        allocate(v(1:k))
+        v(1:k)=res(1:k)
+        deallocate(res)
+    end subroutine
 
    !> Resize integer array of dimension 1
    subroutine resize_array(array,nNewSize,default_val)

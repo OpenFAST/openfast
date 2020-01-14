@@ -1830,7 +1830,6 @@ SUBROUTINE TrnsfTI(Init, p, TI, nDOFI, IDI, TI2, nDOFR, IDR, ErrStat, ErrMsg)
       CALL RigidTransformationLine(dx,dy,dz,iiDOF,Line) ! returns Line
       TI2(I, 1:6) = Line
    ENDDO
-   
 END SUBROUTINE TrnsfTI
 
 !------------------------------------------------------------------------------------------------------
@@ -2423,6 +2422,20 @@ SUBROUTINE OutSummary(Init, p, FEMparams,CBparams, ErrStat,ErrMsg)
    WRITE(UnSum, '(A)')  'Unless specified, units are consistent with Input units, [SI] system is advised.'
    WRITE(UnSum, '(A)') SectionDivide
       
+   !write(UnSum,'(A)')'Nodes_I',p%Nodes_I(:,1)
+   !write(UnSum,'(A)')'Nodes_C',p%Nodes_C(:,1)
+   !write(UnSum,'(A)')'Nodes_L',p%Nodes_L
+   write(UnSum,'(A,I0)')'Number of DOFs: "interface" (I): ',p%nDOFI
+   write(UnSum,'(A,I0)')'Number of DOFs: "reactions" (C): ',p%nDOFC
+   write(UnSum,'(A,I0)')'Number of DOFs: interface   (R): ',p%nDOFR
+   write(UnSum,'(A,I0)')'Number of DOFs: internal    (L): ',p%nDOFL
+   write(UnSum,'(A,I0)')'Number of DOFs: total     (R+L): ',p%nDOF_red
+   write(UnSum,'(A,I0)')'Number of Nodes: "interface" (I): ',p%nNodes_I
+   write(UnSum,'(A,I0)')'Number of Nodes: "reactions" (C): ',p%nNodes_C
+   write(UnSum,'(A,I0)')'Number of Nodes: internal    (L): ',p%nNodes_L
+   write(UnSum,'(A,I0)')'Number of Nodes: total     (R+L): ',p%nNodes
+
+   WRITE(UnSum, '(A)') SectionDivide
    WRITE(UnSum, '()')    
    WRITE(UnSum, '(A,I6)')  'Number of nodes (nNodes):',p%nNodes
    WRITE(UnSum, '(A8,1x,A11,3(1x,A15))')  'Node No.', 'Y2Mesh Node',          'X (m)',           'Y (m)',           'Z (m)'         

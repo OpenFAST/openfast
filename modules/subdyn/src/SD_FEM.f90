@@ -75,21 +75,20 @@ CONTAINS
 !> Maps nodes to elements 
 !! allocate NodesConnE and NodesConnN                                                                               
 SUBROUTINE NodeCon(Init,p, ErrStat, ErrMsg)
-  USE qsort_c_module ,only: QsortC
-  TYPE(SD_InitType),              INTENT( INOUT ) :: Init
-  TYPE(SD_ParameterType),         INTENT( IN    ) :: p
-  INTEGER(IntKi),                 INTENT(   OUT ) :: ErrStat     ! Error status of the operation
-  CHARACTER(*),                   INTENT(   OUT ) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
-  ! Local variables
-  INTEGER(IntKi) :: SortA(MaxMemJnt,1)  !To sort nodes and elements
-  INTEGER(IntKi) :: I,J,K  !counter
-  
-  ! The row index is the number of the real node, i.e. ID, 1st col has number of elements attached to node, and 2nd col has element numbers (up to 10)                                    
-  CALL AllocAry(Init%NodesConnE, p%nNodes, MaxMemJnt+1,'NodesConnE', ErrStat, ErrMsg); if (ErrStat/=0) return;
-  CALL AllocAry(Init%NodesConnN, p%nNodes, MaxMemJnt+2,'NodesConnN', ErrStat, ErrMsg); if (ErrStat/=0) return;
-  Init%NodesConnE = 0                                                                                                    
-  Init%NodesConnN = -99999 ! Not Used
-                                                                                                                          
+   TYPE(SD_InitType),              INTENT( INOUT ) :: Init
+   TYPE(SD_ParameterType),         INTENT( IN    ) :: p
+   INTEGER(IntKi),                 INTENT(   OUT ) :: ErrStat     ! Error status of the operation
+   CHARACTER(*),                   INTENT(   OUT ) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   ! Local variables
+   INTEGER(IntKi) :: SortA(MaxMemJnt,1)  !To sort nodes and elements
+   INTEGER(IntKi) :: I,J,K  !counter
+
+   ! The row index is the number of the real node, i.e. ID, 1st col has number of elements attached to node, and 2nd col has element numbers (up to 10)                                    
+   CALL AllocAry(Init%NodesConnE, p%nNodes, MaxMemJnt+1,'NodesConnE', ErrStat, ErrMsg); if (ErrStat/=0) return;
+   CALL AllocAry(Init%NodesConnN, p%nNodes, MaxMemJnt+2,'NodesConnN', ErrStat, ErrMsg); if (ErrStat/=0) return;
+   Init%NodesConnE = 0                                                                                                    
+   Init%NodesConnN = -99999 ! Not Used
+
    ! find the node connectivity, nodes/elements that connect to a common node                                             
    DO I = 1, p%nNodes                                                                                                   
       !Init%NodesConnN(I, 1) = NINT( Init%Nodes(I, 1) )      !This should not be needed, could remove the extra 1st column like for the other array                                                                      
@@ -101,23 +100,9 @@ SUBROUTINE NodeCon(Init,p, ErrStat, ErrMsg)
                CALL SetErrStat(ErrID_Fatal, 'Maximum number of members reached on node'//trim(Num2LStr(NINT(Init%Nodes(I,1)))), ErrStat, ErrMsg, 'NodeCon');
             endif
             Init%NodesConnE(I, k + 1) = p%Elems(J, 1)                                                                  
-            !if ( NINT(Init%Nodes(I, 1))==p%Elems(J, 3) ) then
-            !   Init%NodesConnN(I, k + 1) = p%Elems(J, 2)     !If nodeID matches 2nd node of element                                                                
-            !else
-            !   Init%NodesConnN(I, k + 1) = p%Elems(J, 3)                                                                  
-            !endif
          ENDIF                                                                                                            
       ENDDO                                                                                                               
-                                                                                                                          
-      !IF( k>1 )THEN ! sort the nodes ascendingly                                                                          
-      !   SortA(1:k, 1) = Init%NodesConnN(I, 3:(k+2))  
-      !   CALL QsortC( SortA(1:k, 1:1) )                                                                                   
-      !   Init%NodesConnN(I, 3:(k+2)) = SortA(1:k, 1)                                                                      
-      !ENDIF                                                                                                               
-                                                                                                                          
       Init%NodesConnE(I, 1) = k    !Store how many elements connect i-th node in 2nd column                                                                                       
-      !Init%NodesConnN(I, 2) = k                                                                                           
-      !print*,'ConnE',I,'val',Init%NodesConnE(I, 1:5)
    ENDDO                            
 
 END SUBROUTINE NodeCon
@@ -201,17 +186,16 @@ END FUNCTION RigidLinkElements
 
 !------------------------------------------------------------------------------------------------------
 !> Returns true if one of the element connected to the node is a rigid link
-LOGICAL FUNCTION NodeHasRigidElem(iJoint, Init, p)
-   INTEGER(IntKi),               INTENT(IN) :: iJoint  
-   TYPE(SD_InitType),            INTENT(IN) :: Init
-   TYPE(SD_ParameterType),       INTENT(IN) :: p
+LOGICAL FUNCTION NodeHasRigidElem(iJoint, Init, p, ei)
+   integer(IntKi),               intent(in)    :: iJoint
+   type(SD_InitType),            intent(in)    :: Init
+   type(SD_ParameterType),       intent(in)    :: p
+   integer(IntKi),               intent(  out) :: ei !< Element index that connects do iJoint rigidly
    ! Local variables
    integer(IntKi) :: ie       !< Loop index on elements
-   integer(IntKi) :: ei       !< Element index
    integer(IntKi) :: m  ! Number of elements connected to a joint
 
    NodeHasRigidElem = .False. ! default return value
-
    ! Loop through elements connected to node J 
    do ie = 1, Init%NodesConnE(iJoint, 1)
       ei = Init%NodesConnE(iJoint, ie+1)
@@ -220,6 +204,7 @@ LOGICAL FUNCTION NodeHasRigidElem(iJoint, Init, p)
          return  ! we exit as soon as one rigid member is found
       endif
    enddo
+   ei=-1
 END FUNCTION NodeHasRigidElem
 
 !------------------------------------------------------------------------------------------------------
@@ -370,20 +355,18 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
    IF( ( Init%FEMMod >= 0 ) .and. (Init%FEMMod <= 3) ) THEN
       NNE = 2 
    ELSE
-      CALL Fatal('FEMMod '//TRIM(Num2LStr(Init%FEMMod))//' not implemented.')
-      RETURN
+      CALL Fatal('FEMMod '//TRIM(Num2LStr(Init%FEMMod))//' not implemented.'); return
    ENDIF
    
    ! Total number of element   
-   Init%NElem = p%NMembers*Init%NDiv  ! TODO TODO TODO: THIS IS A MAX SINCE CABLE AND RIGID CANNOT BE SUBDIVIDED
+   Init%NElem = p%NMembers*Init%NDiv  ! Note: This is a max since cable and rigid cannot be subdivided
    ! Total number of nodes - Depends on division and number of nodes per element
    p%nNodes = Init%NJoints + ( Init%NDiv - 1 )*p%NMembers 
-   p%nNodes = p%nNodes + (NNE - 2)*Init%NElem  ! TODO TODO TODO Same as above. 
+   p%nNodes = p%nNodes + (NNE - 2)*Init%NElem  ! Note: Same as above. Can be improved by counting R&C
    
    ! check the number of interior modes
    IF ( p%nDOFM > 6*(p%nNodes - p%nNodes_I - p%nNodes_C) ) THEN
-      CALL Fatal(' NModes must be less than or equal to '//TRIM(Num2LStr( 6*(p%nNodes - p%nNodes_I - p%nNodes_C) )))
-      RETURN
+      CALL Fatal(' NModes must be less than or equal to '//TRIM(Num2LStr( 6*(p%nNodes - p%nNodes_I - p%nNodes_C) ))); return
    ENDIF
    
    CALL AllocAry(Init%MemberNodes,p%NMembers,    Init%NDiv+1,'Init%MemberNodes',ErrStat2, ErrMsg2); if(Failed()) return ! for two-node element only, otherwise the number of nodes in one element is different
@@ -435,13 +418,11 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
           if (eType/=idMemberBeam) then
              ! --- Cables and rigid links are not subdivided
              ! No need to create new properties or new nodes
-             print*,'Member',I, 'not subdivided since it is not a beam. Looping through.'
              Init%MemberNodes(I, 1) = Node1
              Init%MemberNodes(I, 2) = Node2
              kelem = kelem + 1
              CALL SetNewElem(kelem, Node1, Node2, eType, Prop1, Prop1, p)                
-
-             continue
+             cycle
           endif
 
           ! --- Subdivision of beams
@@ -999,11 +980,13 @@ SUBROUTINE BuildTMatrix(Init, p, RA, RAm1, Tred, ErrStat, ErrMsg)
    type(IList) :: IRA !< list of rigid assembly indices to process
    integer(IntKi) :: aID, ia ! assembly ID, and index in IRA
    integer(IntKi) :: iNode
+   integer(IntKi) :: er !< Index of one rigid element belong to a rigid assembly
    integer(IntKi) :: JType
    integer(IntKi) :: I
    integer(IntKi) :: nc !< Number of DOF after constraints applied
    integer(IntKi) :: nj
    real(ReKi)  :: phat(3) !< Directional vector of the joint
+   type(IList), dimension(:), allocatable :: RA_DOFtilde ! DOF indices for each rigid assembly, in reduced system
    INTEGER(IntKi)       :: ErrStat2
    CHARACTER(ErrMsgLen) :: ErrMsg2
    ErrStat = ErrID_None
@@ -1013,6 +996,7 @@ SUBROUTINE BuildTMatrix(Init, p, RA, RAm1, Tred, ErrStat, ErrMsg)
    nullify(IDOFNew)
    I6(1:6,1:6)=0; do i = 1,6 ; I6(i,i)=1_ReKi; enddo ! I6 =  eye(6)
    allocate(p%NodesDOFtilde(1:p%nNodes), stat=ErrStat2); if(Failed()) return; ! Indices of DOF for each joint, in reduced system
+   allocate(RA_DOFtilde(1:size(RA)), stat=ErrStat2); if(Failed()) return; ! Indices of DOF for each rigid assmbly, in reduced system
 
    p%nDOF_red = nDOF_ConstraintReduced()
    print*,'nDOF constraint elim', p%nDOF_red , '/' , p%nDOF
@@ -1032,14 +1016,22 @@ SUBROUTINE BuildTMatrix(Init, p, RA, RAm1, Tred, ErrStat, ErrMsg)
       if (allocated(IDOFOld)) deallocate(IDOFOld)
       JType = int(Init%Nodes(iNode,iJointType))
       if(JType == idJointCantilever ) then
-         if ( NodeHasRigidElem(iNode, Init, p)) then
+         if ( NodeHasRigidElem(iNode, Init, p, er)) then
             ! --- Joint involved in a rigid link assembly
-            aID = RAm1(iNode)
-            ia  = find(IRA, aID, ErrStat2, ErrMsg2) 
+            aID = RAm1(er)
+            if (aID<0) then
+               call Fatal('No rigid assembly attributed to node'//trim(Num2LStr(iNode))//'. RAm1 wrong'); return
+            endif
+            ia  = find(IRA, aID, ErrStat2, ErrMsg2); if(Failed()) return
             print*,'Node',iNode, 'is involved in RA', aID, ia
             if ( ia <= 0) then
-               ! This rigid assembly has already been processed, pass to next node
-               cycle
+               ! This rigid assembly has already been processed
+               ! The DOF list is taken from the stored RA DOF list
+               call init_list(p%NodesDOFtilde(iNode), RA_DOFtilde(aID)%List, ErrStat2, ErrMsg2)
+               print*,'The RA',aID,', has already been processed!'
+               print*,'N',iNode,'I ',p%NodesDOF(iNode)%List(1:6)
+               print*,'N',iNode,'It',p%NodesDOFtilde(iNode)%List
+               cycle ! We pass to the next joint
             else
                call RAElimination( RA(aID)%List, Tc, INodesID, Init, p, ErrStat2, ErrMsg2); if(Failed()) return;
                aID = pop(IRA, ia, ErrStat2, ErrMsg2) ! this assembly has been processed 
@@ -1048,6 +1040,11 @@ SUBROUTINE BuildTMatrix(Init, p, RA, RAm1, Tred, ErrStat, ErrMsg)
                do I=1, nj
                   IDOFOld( (I-1)*6+1 : I*6 ) = p%NodesDOF(INodesID(I))%List(1:6)
                enddo
+
+               ! Storing DOF list for this RA (Note: same as NodesDOFtilde below)
+               nc=size(Tc,2) 
+               call init_list(RA_DOFtilde(aID), (/ (iprev + i, i=1,nc) /), ErrStat2, ErrMsg2);
+
             endif
          else
             ! --- Regular cantilever joint
@@ -1074,12 +1071,10 @@ SUBROUTINE BuildTMatrix(Init, p, RA, RAm1, Tred, ErrStat, ErrMsg)
    enddo
    ! --- Safety checks
    if (len(IRA)>0) then 
-      ErrMsg2='Not all rigid assemblies were processed'; ErrStat2=ErrID_Fatal
-      if(Failed()) return
+      call Fatal('Not all rigid assemblies were processed'); return
    endif
    if (iPrev /= p%nDOF_red) then 
-      ErrMsg2='Inconsistency in number of reduced DOF'; ErrStat2=ErrID_Fatal
-      if(Failed()) return
+      call Fatal('Inconsistency in number of reduced DOF'); return
    endif
    call CleanUp_BuildTMatrix()
 contains
@@ -1088,6 +1083,11 @@ contains
       Failed =  ErrStat >= AbortErrLev
       if (Failed) call CleanUp_BuildTMatrix()
    END FUNCTION Failed
+
+   SUBROUTINE Fatal(ErrMsg_in)
+      CHARACTER(len=*), intent(in) :: ErrMsg_in
+      CALL SetErrStat(ErrID_Fatal, ErrMsg_in, ErrStat, ErrMsg, 'BuildTMatrix');
+   END SUBROUTINE Fatal
 
    SUBROUTINE CleanUp_BuildTMatrix()
       nullify(IDOFNew)
@@ -1126,7 +1126,7 @@ contains
             print*,'Node',iNode, 'is a ball joint, number of members involved: ', m
 
          elseif(NodeType == idJointCantilever ) then
-            if ( NodeHasRigidElem(iNode, Init, p)) then
+            if ( NodeHasRigidElem(iNode, Init, p, er)) then
                ! This joint is involved in a rigid link assembly, we skip it (accounted for above)
                print*,'Node',iNode, 'is involved in a RA'
             else
@@ -1236,6 +1236,7 @@ CONTAINS
       INTEGER(IntKi) :: I, J, iNode
       DO I = 1, p%nNodes_I
          iNode = p%Nodes_I(I,1) ! Node index
+         print*,'iNode',iNode
          DO J = 1, 6 ! ItfTDXss    ItfTDYss    ItfTDZss    ItfRDXss    ItfRDYss    ItfRDZss
             Init%IntFc( (I-1)*6+J, 1) = p%NodesDOFtilde(iNode)%List(J) ! DOF number (unconstrained)
          ENDDO
@@ -1248,7 +1249,7 @@ END SUBROUTINE DirectElimination
 !!   x_c = Tc.x_c_tilde  
 !! where x_c are all the DOF of the rigid assembly, and x_c_tilde are the 6 reduced DOF (leader DOF)
 SUBROUTINE RAElimination(Elements, Tc, INodesID, Init, p, ErrStat, ErrMsg)
-   use IntegerList, only: init_list, len, append, print_list, pop, destroy_list, get
+   use IntegerList, only: init_list, len, append, print_list, pop, destroy_list, get, unique, find
    integer(IntKi), dimension(:), INTENT(IN   ) :: Elements !< List of elements
    real(ReKi), dimension(:,:), allocatable     :: Tc
    integer(IntKi), dimension(:), allocatable   :: INodesID !< List of unique nodes involved in Elements
@@ -1258,11 +1259,12 @@ SUBROUTINE RAElimination(Elements, Tc, INodesID, Init, p, ErrStat, ErrMsg)
    CHARACTER(*),                 INTENT(  OUT) :: ErrMsg   !< Error message if ErrStat /= ErrID_None
    ! Local variables
    type(IList)          :: LNodesID     !< List of nodes id involved in element
-   type(IList)          :: INodesInterf !< List of indices for Nodes involved in interface
+   type(IList)          :: LNodesInterf !< List of nodes id involved in interface
    integer(IntKi)       :: NodeID   !< NodeID
    integer(IntKi)       :: iTmp     !< Temporary index
    integer(IntKi)       :: iNodeID  !< Loop index on node ID list
-   integer(IntKi)       :: iMainNode !< Index of main node selected for rigid assembly within INodesID list
+   integer(IntKi)       :: iiMainNode !< Index of main node selected for rigid assembly within INodesID list
+   integer(IntKi)       :: iMainNode !< Main node index
    integer(IntKi)       :: nNodes  !< Number of Nodes involved in RA
    integer(IntKi)       :: iFound  !< Loop index on node ID list
    integer(IntKi)       :: i       !< Loop index 
@@ -1275,39 +1277,45 @@ SUBROUTINE RAElimination(Elements, Tc, INodesID, Init, p, ErrStat, ErrMsg)
 
    ! --- List of nodes stored first in LINodes than moved to INodes
    LNodesID = NodesList(p, Elements)
-   if (allocated(INodesID)) deallocate(INodesID)
-   call move_alloc(LNodesID%List, INodesID)
-   call destroy_list(LNodesID, ErrStat2, ErrMsg2)
-   print*,'Nodes involved in assembly (befr) ',INodesID
+   print*,'Nodes involved in assembly (bfr1) ',LNodesID%List
+   call unique(LNodesID, ErrStat2, ErrMsg2);
+   print*,'Nodes involved in assembly (bfr2) ',LNodesID%List
 
    !--- Look for potential interface node
-   call init_list(INodesInterf, 0, 0, ErrStat2, ErrMsg2);
-   do iNodeID = 1, size(INodesID)
-      NodeID = INodesID(iNodeID)
+   call init_list(LNodesInterf, 0, 0, ErrStat2, ErrMsg2);
+   do iNodeID = 1, len(LNodesID)
+      NodeID = LNodesID%List(iNodeID)
       iFound =  FINDLOCI( p%Nodes_I(:,1), NodeID)
       if (iFound>0) then
-         call append(INodesInterf, iNodeID, ErrStat2, ErrMsg2)
+         call append(LNodesInterf, NodeID, ErrStat2, ErrMsg2)
          ! This node is an interface node
          print*,'Node',NodeID, 'is an interface node, selecting it for the rigid assembly'
       endif
    enddo
 
    ! --- Decide which node will be the main node of the rigid assembly
-   if      (len(INodesInterf)==0) then
-      iMainNode = 1 ! By default we select the first node
-   else if (len(INodesInterf)==1) then
-      iMainNode = pop(INodesInterf, ErrStat2, ErrMsg2)
+   if      (len(LNodesInterf)==0) then
+      iiMainNode = 1 ! By default we select the first node
+   else if (len(LNodesInterf)==1) then
+      ! Finding the index of the interface node
+      iMainNode  = pop(LNodesInterf, ErrStat2, ErrMsg2)
+      iiMainNode = find(LNodesID, iMainNode, ErrStat2, ErrMsg2);
    else
       ErrStat=ErrID_Fatal
       ErrMsg='Cannot have several interface nodes linked within a same rigid assembly'
       return
    endif
-   call destroy_list(INodesInterf, ErrStat2, ErrMsg2)
+   call destroy_list(LNodesInterf, ErrStat2, ErrMsg2)
+
+   ! --- Extracting index array from list
+   if (allocated(INodesID)) deallocate(INodesID)
+   call move_alloc(LNodesID%List, INodesID)
+   call destroy_list(LNodesID, ErrStat2, ErrMsg2)
 
    ! --- Order list of joints with main node first (swapping iMainNode with INodes(1))
-   iTmp                = INodesID(1)
-   INodesID(1)         = iMainNode
-   INodesID(iMainNode) = iTmp
+   iTmp                 = INodesID(1)
+   INodesID(1)          = INodesID(iiMainNode)
+   INodesID(iiMainNode) = iTmp
    print*,'Nodes involved in assembly (after)',INodesID
 
    ! --- Building Transformation matrix
@@ -1435,6 +1443,7 @@ END SUBROUTINE JointElimination
 
 !------------------------------------------------------------------------------------------------------
 !> Setup a list of rigid link assemblies (RA)
+!! RA(a) = [e1,..,en] : list of elements that form the rigid assembly of index "a"
 SUBROUTINE RigidLinkAssemblies(Init, p, RA, RAm1, ErrStat, ErrMsg)
    use IntegerList, only: init_list, len, append, print_list, pop, destroy_list, get
    TYPE(SD_InitType),            INTENT(INOUT) :: Init
@@ -1467,7 +1476,7 @@ SUBROUTINE RigidLinkAssemblies(Init, p, RA, RAm1, ErrStat, ErrMsg)
       e0 = pop(Er, ErrStat2, ErrMsg2);
       call append(Ea, e0, ErrStat2, ErrMsg2);
       call AddNeighbors(e0, Er, Ea)
-      call print_list(Ea,'Rigid assembly')
+      call print_list(Ea,'Rigid assembly (loop 1)')
       do ie = 1, len(Ea)
          e0 = get(Ea, ie, ErrStat2, ErrMsg2)
          RAm1(e0) = nRA ! Index of rigid assembly that this element belongs to
@@ -1489,10 +1498,10 @@ SUBROUTINE RigidLinkAssemblies(Init, p, RA, RAm1, ErrStat, ErrMsg)
       endif
    enddo
    do ia = 1, nRA
-      call print_list(RA(ia),'Rigid assembly')
+      call print_list(RA(ia),'Rigid assembly (loop 2)')
    enddo
 CONTAINS
-   !> The neighbors of e0 (that are found within the list Er) are added to the list Ea  
+   !> The neighbor-elements of element e0 (that are found within the list Er) are added to the list Ea  
    RECURSIVE SUBROUTINE AddNeighbors(e0, Er, Ea) 
       integer(IntKi), intent(in) :: e0  !< Index of an element
       type(IList), intent(inout) :: Er  !< List of rigid elements
@@ -1508,12 +1517,13 @@ CONTAINS
          ik=ik+1
          ek = Er%List(ik)
          if (ElementsConnected(p, e0, ek, iWhichNode_e0, iWhichNode_ek)) then
-            print*,'Element ',ek,'is connected to ',e0,'via its node',iWhichNode_ek
+            print*,'Element ',ek,'is connected to element',e0,'via its node',iWhichNode_ek
             ! Remove element from Er (a rigid element can belong to only one assembly)
             ek2 =  pop(Er, ik,  ErrStat2, ErrMsg2) ! same as ek before
             ik=ik-1
             if (ek/=ek2) then
                print*,'Problem in popping',ek,ek2
+               STOP
             endif
             call append(En, ek, ErrStat2, ErrMsg2)
             call append(Ea, ek, ErrStat2, ErrMsg2)
@@ -1526,7 +1536,6 @@ CONTAINS
       enddo
       call destroy_list(En, ErrStat2, ErrMsg2)
    END SUBROUTINE AddNeighbors
-
 
 END SUBROUTINE RigidLinkAssemblies
 

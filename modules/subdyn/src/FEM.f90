@@ -728,7 +728,6 @@ SUBROUTINE PseudoInverse(A, Ainv, ErrStat, ErrMsg)
    integer :: L !< 
    integer :: LWORK !< 
    integer :: INFO 
-   integer :: rank
    real(ReKi) :: tol
    M = size(A,1)
    N = size(A,2)
@@ -757,14 +756,14 @@ SUBROUTINE PseudoInverse(A, Ainv, ErrStat, ErrMsg)
    !call DGEMM( 'T', 'T', N, M, K, 1.0, V, K, U, M, 0.0, Ainv, N)
    call LAPACK_GEMM( 'T', 'T', 1.0_Laki, Vt, U, 0.0_LaKi, Ainv, ErrStat, ErrMsg)
    ! --- Compute rank
-   tol=maxval(shape(A))*epsilon(maxval(S))
-   rank=0
-   do i=1,K
-      if(S(i) .gt. tol)then
-         rank=rank+1
-      end if
-   end do
-   print*,'Rank',rank
+   !tol=maxval(shape(A))*epsilon(maxval(S))
+   !rank=0
+   !do i=1,K
+   !   if(S(i) .gt. tol)then
+   !      rank=rank+1
+   !   end if
+   !end do
+   !print*,'Rank',rank
    !   Ainv=transpose(matmul(matmul(U(:,1:r),S_inv(1:r,1:r)),Vt(1:r,:)))
    END SUBROUTINE PseudoInverse
 

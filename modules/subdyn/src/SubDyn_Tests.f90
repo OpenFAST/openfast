@@ -1,9 +1,11 @@
 module SubDyn_Tests
    use NWTC_Library
-   USE SubDyn_Types
-   USE SD_FEM
+   use SubDyn_Types
+   use SD_FEM
    use IntegerList
    
+   implicit none
+
    public :: SD_Tests
    private
 
@@ -126,6 +128,7 @@ contains
         ! Variables
         character(len=255) :: InfoAbs
         real(ReKi) :: delta
+        integer :: cpt
         ! 
         cpt=0
         delta=abs(Ref-Try)
@@ -264,6 +267,7 @@ contains
       real(ReKi), dimension(6,6) :: T, Tref
       real(ReKi) :: L
       integer(IntKi) :: I
+      testname='Transf'
 
       ! --- DirCos
       P1=(/0,0,0/)
@@ -305,6 +309,7 @@ contains
       character(ErrMsgLen), intent(out) :: ErrMsg
       real(LaKi), dimension(:,:), allocatable :: A, Ainv, Aref
       integer(IntKi) :: I, J
+      testname='Linalg'
 
       ! --- Inverse of a 3x3 matrix
       allocate(A(3,3)); allocate(Aref(3,3))
@@ -390,8 +395,16 @@ contains
       call test_equal('pop  ',e , 3)
       e = pop(L1, ErrStat, ErrMsg)
       call test_equal('pop  ',e , 5)
+      call destroy_list(L1, ErrStat, ErrMsg)
 
-   end subroutine
+      ! test unique
+      call init_list(L1,(/5,3,2,3,8/),ErrStat, ErrMsg)
+      call unique(L1, ErrStat, ErrMsg)
+      call test_equal('uniq ',L1%List, (/5,3,2,8/) , .true. , .false.)
+
+      call destroy_list(L1, ErrStat, ErrMsg)
+      call destroy_list(L2, ErrStat, ErrMsg)
+   end subroutine Test_lists
 
    subroutine SD_Tests(ErrStat,ErrMsg)
       integer(IntKi)      , intent(out) :: ErrStat !< Error status of the operation
