@@ -64,6 +64,9 @@ typedef	^	InputType	ReKi	pzVel	{:}	-	-	"z position of velocity interface (Aerody
 typedef	^	InputType	ReKi	pxForce	{:}	-	-	"x position of actuator force nodes"	"m"
 typedef	^	InputType	ReKi	pyForce	{:}	-	-	"y position of actuator force nodes"	"m"
 typedef	^	InputType	ReKi	pzForce	{:}	-	-	"z position of actuator force nodes"	"m"
+typedef	^	InputType	ReKi	xdotForce	{:}	-	-	"x velocity of actuator force nodes"	"m/s"
+typedef	^	InputType	ReKi	ydotForce	{:}	-	-	"y velocity of actuator force nodes"	"m/s"
+typedef	^	InputType	ReKi	zdotForce	{:}	-	-	"z velocity of actuator force nodes"	"m/s"
 typedef	^	InputType	ReKi	pOrientation	{:}	-	-	"Direction cosine matrix to transform vectors from global frame of reference to actuator force node frame of reference" -
 typedef	^	InputType	ReKi	fx	{:}	-	-	"normalized x force at actuator force nodes"	"N/kg/m^3"
 typedef	^	InputType	ReKi	fy	{:}	-	-	"normalized y force at actuator force nodes"	"N/kg/m^3"

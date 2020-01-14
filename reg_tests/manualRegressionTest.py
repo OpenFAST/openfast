@@ -60,7 +60,7 @@ case = args.case
 outstd = sys.stdout if verbose else open(os.devnull, 'w') 
 pythonCommand = sys.executable
 
-if case is not "":
+if case != "":
     caselist = [case]
 else:
     with open(os.path.join("r-test", "glue-codes", "openfast", "CaseList.md")) as listfile:
