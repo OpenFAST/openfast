@@ -466,6 +466,7 @@
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File></Filter>
 		<File RelativePath="..\..\modules\elastodyn\src\ED_UserSubs.f90"/>
 		<File RelativePath="..\..\modules\elastodyn\src\ElastoDyn.f90"/>
+		<File RelativePath="..\..\modules\elastodyn\src\ElastoDyn_AllBldNdOuts_IO.f90"/>
 		<File RelativePath="..\..\modules\elastodyn\src\ElastoDyn_IO.f90"/></Filter>
 		<Filter Name="External Platform">
 		<Filter Name="RegistryFiles">
