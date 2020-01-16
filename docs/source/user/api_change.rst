@@ -10,10 +10,41 @@ The changes are tabulated according to the module input file, line number, and f
 The line number corresponds to the resulting line number after all changes are implemented.
 Thus, be sure to implement each in order so that subsequent line numbers are correct.
 
-OpenFAST v2.0.0 to OpenFAST v2.1.0
+OpenFAST v2.2.0 to OpenFAST vTBD
+----------------------------------
+
+============== ==== ================== =============================================================================================================================================================================
+ Added in OpenFAST vTBD
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Module        Line  Flag Name          Example Value
+============== ==== ================== =============================================================================================================================================================================
+AeroDyn        37   AFTabMod                1   AFTabMod   - Interpolation method for multiple airfoil tables {1=1D interp on AoA (first table only); 2=2D interp on AoA and Re; 3=2D interp on AoA and UserProp} (-)
+HydroDyn       53   ExctnMod                0   ExctnMod   - Wave Excitation model {0: None, 1: DFT, 2: state-space} (-) 
+OpenFAST       44   CalcSteady         true     CalcSteady - Calculate a steady-state periodic operating point before linearization? [unused if Linearize=False] (flag)
+OpenFAST       45   TrimCase                3   TrimCase   - Controller parameter to be trimmed {1:yaw; 2:torque; 3:pitch} [used only if CalcSteady=True] (-)
+OpenFAST       46   TrimTol            0.0001   TrimTol    - Tolerance for the rotational speed convergence [used only if CalcSteady=True] (-)
+OpenFAST       47   TrimGain            0.001   TrimGain   - Proportional gain for the rotational speed error (>0) [used only if CalcSteady=True] (rad/(rad/s) for yaw or pitch; Nm/(rad/s) for torque)
+OpenFAST       48   Twr_Kdmp                0   Twr_Kdmp   - Damping factor for the tower [used only if CalcSteady=True] (N/(m/s))
+OpenFAST       49   Bld_Kdmp                0   Bld_Kdmp   - Damping factor for the blades [used only if CalcSteady=True] (N/(m/s))
+============== ==== ================== =============================================================================================================================================================================
+
+
+OpenFAST v2.1.0 to OpenFAST v2.2.0
 ----------------------------------
 
 No changes required.
+
+
+OpenFAST v2.0.0 to OpenFAST v2.1.0
+----------------------------------
+
+============== ==== ================== =====================================================================================================================================================================
+ Added in OpenFAST v2.1.0
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Module        Line  Flag Name          Example Value
+============== ==== ================== =====================================================================================================================================================================
+BeamDyn driver 21   GlbRotBladeT0      True   GlbRotBladeT0 - Reference orientation for BeamDyn calculations is aligned with initial blade root?
+============== ==== ================== =====================================================================================================================================================================
 
 OpenFAST v1.0.0 to OpenFAST v2.0.0
 ----------------------------------
