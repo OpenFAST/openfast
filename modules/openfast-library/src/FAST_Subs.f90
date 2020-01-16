@@ -1218,7 +1218,12 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       IF (ErrStat >= AbortErrLev) THEN
          CALL Cleanup()
          RETURN
-      END IF      
+      ELSEIF (ErrStat /= ErrID_None) THEN
+         ! a little work-around in case the mesh mapping info messages get too long
+         CALL WrScr( NewLine//TRIM(ErrMsg)//NewLine )
+         ErrStat = ErrID_None
+         ErrMsg = ""
+      END IF
       
    ! -------------------------------------------------------------------------
    ! Initialize for linearization:
