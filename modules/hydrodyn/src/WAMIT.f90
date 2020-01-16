@@ -1151,6 +1151,7 @@ end if
                SS_Exctn_InitInp%InputFile    = InitInp%WAMITFile    
                SS_Exctn_InitInp%WaveDir      = InitInp%WaveDir
                SS_Exctn_InitInp%NStepWave    = p%NStepWave
+               SS_Exctn_InitInp%NBody        = InitInp%NBody
                
                   ! No other modules need this WaveElev0 array so we will simply move the allocation over to the SS_Exctn module
                IF (ALLOCATED(InitInp%WaveElev0)) CALL MOVE_ALLOC(InitInp%WaveElev0, SS_Exctn_InitInp%WaveElev0) 
@@ -1223,8 +1224,21 @@ end if
          ELSE IF ( InitInp%RdtnMod == 2 ) THEN
             
             SS_Rdtn_InitInp%InputFile    = InitInp%WAMITFile    
-            SS_Rdtn_InitInp%DOFs         = 1
+
+            call AllocAry(SS_Rdtn_InitInp%enabledDOFs, 6*p%NBody, 'SS_Rdtn_InitInp%enabledDOFs', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'WAMIT_Init')
+               IF ( ErrStat >= AbortErrLev ) THEN
+                  CALL Cleanup()
+                  RETURN
+               END IF
+            SS_Rdtn_InitInp%enabledDOFs  = 1                        !  Set to 1 (True) for all DOFs, meaning each DOF is to be used in the analysis.   
             Interval_Sub                 = InitInp%Conv_Rdtn%RdtnDT
+            SS_Rdtn_InitInp%NBody        = InitInp%NBody
+            call AllocAry(SS_Rdtn_InitInp%PtfmRefztRot, p%NBody, 'SS_Rdtn_InitInp%PtfmRefztRot', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'WAMIT_Init')
+               IF ( ErrStat >= AbortErrLev ) THEN
+                  CALL Cleanup()
+                  RETURN
+               END IF
+            SS_Rdtn_InitInp%PtfmRefztRot = InitInp%PtfmRefztRot
             CALL SS_Rad_Init(SS_Rdtn_InitInp, m%SS_Rdtn_u, p%SS_Rdtn, x%SS_Rdtn, xd%SS_Rdtn, z%SS_Rdtn, OtherState%SS_Rdtn, &
                                    m%SS_Rdtn_y, m%SS_Rdtn, Interval_Sub, SS_Rdtn_InitOut, ErrStat2, ErrMsg2)
             
@@ -1751,7 +1765,8 @@ SUBROUTINE WAMIT_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, 
          m%SS_Rdtn_u%dq(indxStart:indxStart+2)   = u%Mesh%TranslationVel(:,iBody) 
          m%SS_Rdtn_u%dq(indxStart+3:indxStart+5) = u%Mesh%RotationVel(:,iBody) 
       end do
-   CALL SS_Rad_CalcContStateDeriv( Time, m%SS_Rdtn_u, p%SS_Rdtn, x%SS_Rdtn, xd%SS_Rdtn, z%SS_Rdtn, OtherState%SS_Rdtn, m%SS_Rdtn, dxdt%SS_Rdtn, ErrStat, ErrMsg )      
+      
+      CALL SS_Rad_CalcContStateDeriv( Time, m%SS_Rdtn_u, p%SS_Rdtn, x%SS_Rdtn, xd%SS_Rdtn, z%SS_Rdtn, OtherState%SS_Rdtn, m%SS_Rdtn, dxdt%SS_Rdtn, ErrStat, ErrMsg )      
          
          ! NOTE: The input below (0.0) will only work as part of a linearization Get_OP call! If this routine (WAMIT_CalcContStateDeriv) is called in another context, then the following
          ! input needs to be implemented generically.
