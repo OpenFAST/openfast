@@ -1753,7 +1753,7 @@ SUBROUTINE Linear_ED_InputSolve_du( p_FAST, y_FAST, u_ED, y_ED, y_AD, u_AD, BD, 
            
             ! we're just going to assume u_ED%PlatformPtMesh is committed
                
-         if ( HD%y%AllHdroOrigin%Committed  ) then ! meshes for floating
+         if ( HD%y%WAMITMesh%Committed  ) then ! meshes for floating
             ED_Start_mt = Indx_u_ED_Platform_Start(u_ED, y_FAST) &
                           + u_ED%PlatformPtMesh%NNodes * 3         ! 3 forces at each node (we're going to start at the moments)
             
@@ -1761,7 +1761,7 @@ SUBROUTINE Linear_ED_InputSolve_du( p_FAST, y_FAST, u_ED, y_ED, y_AD, u_AD, BD, 
                ! we're mapping loads, so we also need the sibling meshes' displacements:
             HD_Start = Indx_u_HD_PlatformRef_Start(HD%Input(1), y_FAST)
             
-            call Linearize_Point_to_Point( HD%y%AllHdroOrigin, u_ED%PlatformPtMesh, MeshMapData%HD_W_P_2_ED_P, ErrStat2, ErrMsg2, HD%Input(1)%WAMITMesh, y_ED%PlatformPtMesh) !HD%Input(1)%Mesh and y_ED%PlatformPtMesh contain the displaced positions for load calculations
+            call Linearize_Point_to_Point( HD%y%WAMITMesh, u_ED%PlatformPtMesh, MeshMapData%HD_W_P_2_ED_P, ErrStat2, ErrMsg2, HD%Input(1)%WAMITMesh, y_ED%PlatformPtMesh) !HD%Input(1)%Mesh and y_ED%PlatformPtMesh contain the displaced positions for load calculations
                call SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
                
                ! HD is source in the mapping, so we want M_{uSm}
@@ -2177,13 +2177,13 @@ SUBROUTINE Linear_ED_InputSolve_dy( p_FAST, y_FAST, u_ED, y_ED, y_AD, u_AD, BD, 
             
             ! we're just going to assume u_ED%PlatformPtMesh is committed
                
-         if ( HD%y%AllHdroOrigin%Committed  ) then ! meshes for floating
+         if ( HD%y%WAMITMesh%Committed  ) then ! meshes for floating
             !!! ! This linearization was done in forming dUdu (see Linear_ED_InputSolve_du()), so we don't need to re-calculate these matrices 
             !!! ! while forming dUdy, too.
-            ! call Linearize_Point_to_Point( HD%y%AllHdroOrigin, u_ED%PlatformPtMesh, MeshMapData%HD_W_P_2_ED_P, ErrStat2, ErrMsg2, HD%Input(1)%Mesh, y_ED%PlatformPtMesh) !HD%Input(1)%Mesh and y_ED%PlatformPtMesh contain the displaced positions for load calculations
+            ! call Linearize_Point_to_Point( HD%y%WAMITMesh, u_ED%PlatformPtMesh, MeshMapData%HD_W_P_2_ED_P, ErrStat2, ErrMsg2, HD%Input(1)%Mesh, y_ED%PlatformPtMesh) !HD%Input(1)%Mesh and y_ED%PlatformPtMesh contain the displaced positions for load calculations
             HD_Out_Start = Indx_y_HD_AllHdro_Start(HD%y, y_FAST)
             ED_Start     = Indx_u_ED_Platform_Start(u_ED, y_FAST) ! start of u_ED%PlatformPtMesh%TranslationDisp field
-            call Assemble_dUdy_Loads(HD%y%AllHdroOrigin, u_ED%PlatformPtMesh, MeshMapData%HD_W_P_2_ED_P, ED_Start, HD_Out_Start, dUdy)
+            call Assemble_dUdy_Loads(HD%y%WAMITMesh, u_ED%PlatformPtMesh, MeshMapData%HD_W_P_2_ED_P, ED_Start, HD_Out_Start, dUdy)
          
                ! ED translation displacement-to-ED moment transfer (dU^{ED}/dy^{ED}):
             ED_Start = Indx_u_ED_Platform_Start(u_ED, y_FAST) + u_ED%PlatformPtMesh%NNodes*3   ! start of u_ED%PlatformPtMesh%Moment field (skip the ED forces)
@@ -3745,7 +3745,7 @@ FUNCTION Indx_y_HD_PlatformRef_Start(y_HD, y_FAST) RESULT(HD_Start)
 
    END FUNCTION Indx_y_HD_PlatformRef_Start
 !----------------------------------------------------------------------------------------------------------------------------------
-!> This routine returns the starting index for the y_HD%AllHdroOrigin mesh in the FAST linearization outputs.
+!> This routine returns the starting index for the y_HD%WAMITMesh mesh in the FAST linearization outputs.
 FUNCTION Indx_y_HD_AllHdro_Start(y_HD, y_FAST) RESULT(HD_Start)
    TYPE(FAST_OutputFileType),      INTENT(IN )  :: y_FAST           !< FAST output file data (for linearization)
    TYPE(HydroDyn_OutputType),      INTENT(IN )  :: y_HD             !< HD Outputs at t

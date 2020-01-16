@@ -29,11 +29,9 @@ set(NWTCLIBS_SOURCES
   src/ranlux/RANLUX.f90
   
   # NetLib sources
-  src/NetLib/Dierckx_FitPack/dierckx_fitpack.f
   src/NetLib/fftpack/fftpack4.1.f
   src/NetLib/scalapack/dlasrt2.f
   src/NetLib/scalapack/slasrt2.f
-  src/NetLib/Dierckx_FitPack/NWTC_FitPack.f90
   src/NetLib/fftpack/NWTC_FFTPACK.f90
   src/NetLib/lapack/NWTC_LAPACK.f90
   src/NetLib/scalapack/NWTC_ScaLAPACK.f90

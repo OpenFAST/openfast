@@ -43,7 +43,7 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             INTEGER                  NStepWave                       -          -        -         ""    -
 typedef   ^                            ^                             INTEGER                  NStepWave2                      -          -        -         ""    -
 typedef   ^                            ^                             ReKi                     WaveDOmega                      -          -        -         ""    -
-typedef   ^                 	         ^                             SiKi	                   WaveElev0                      {:}         -        -         "Wave elevation time history at origin (needed for SS_Excitation module)" m
+typedef   ^                             ^                             SiKi                      WaveElev0                      {:}         -        -         "Wave elevation time history at origin (needed for SS_Excitation module)" m
 typedef   ^                            ^                             SiKi                     WaveElevC0                      {:}{:}     -        -         "Discrete Fourier transform of the instantaneous elevation of incident waves at the platform reference point.  First column is real part, second column is imaginary part"   (meters)
 typedef   ^                            ^                             SiKi                     WaveTime                        {:}        -        -         ""    -
 typedef   ^                            ^                             INTEGER                  WaveMod                         -          -        -         ""    -
@@ -57,10 +57,7 @@ typedef   ^                            ^                             INTEGER    
 #
 #
 # Define outputs from the initialization routine here:
-#
-#typedef   ^                            InitOutputType                MeshType                 OutputMesh                      -          -        -         ""  -
-typedef   ^                            InitOutputType                CHARACTER(10)            WriteOutputHdr                   {:}        -        -         ""    -
-typedef   ^                            ^                             CHARACTER(10)            WriteOutputUnt                   {:}        -        -         ""    -
+typedef   ^                            InitOutputType                ReKi                      NULLVAL                        -          -        -         ""  -
 #
 #
 # ..... States ....................................................................................................................
@@ -145,4 +142,3 @@ typedef   ^                            InputType                     MeshType   
 # ..... Outputs ...................................................................................................................
 # Define outputs that are contained on the mesh here:
 typedef   ^                            OutputType                   MeshType                 Mesh                     -           -         -         "Loads at the WAMIT reference point in the inertial frame" -
-typedef   ^                            ^                            ReKi                     WriteOutput              {:}         -         -         ""  -

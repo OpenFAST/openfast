@@ -1725,7 +1725,7 @@ CONTAINS
   
          
          ! we're mapping loads, so we also need the sibling meshes' displacements:
-      CALL Transfer_Point_to_Point( y_HD2%AllHdroOrigin, MeshMapData%u_ED_PlatformPtMesh, MeshMapData%HD_W_P_2_ED_P, ErrStat2, ErrMsg2, MeshMapData%u_HD_Mesh, y_ED2%PlatformPtMesh) !u_HD and u_mapped_positions contain the displaced positions for load calculations
+      CALL Transfer_Point_to_Point( y_HD2%WAMITMesh, MeshMapData%u_ED_PlatformPtMesh, MeshMapData%HD_W_P_2_ED_P, ErrStat2, ErrMsg2, MeshMapData%u_HD_Mesh, y_ED2%PlatformPtMesh) !u_HD and u_mapped_positions contain the displaced positions for load calculations
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
       MeshMapData%u_ED_PlatformPtMesh%Force  = MeshMapData%u_ED_PlatformPtMesh%Force  + MeshMapData%u_ED_PlatformPtMesh_2%Force
@@ -2807,7 +2807,7 @@ CONTAINS
       !..................
             
             ! we're mapping loads, so we also need the sibling meshes' displacements:
-         CALL Transfer_Point_to_Point( y_HD2%AllHdroOrigin, MeshMapData%u_ED_PlatformPtMesh, MeshMapData%HD_W_P_2_ED_P, ErrStat2, ErrMsg2, MeshMapData%u_HD_Mesh, y_ED2%PlatformPtMesh) !u_HD and u_mapped_positions contain the displaced positions for load calculations
+         CALL Transfer_Point_to_Point( y_HD2%WAMITMesh, MeshMapData%u_ED_PlatformPtMesh, MeshMapData%HD_W_P_2_ED_P, ErrStat2, ErrMsg2, MeshMapData%u_HD_Mesh, y_ED2%PlatformPtMesh) !u_HD and u_mapped_positions contain the displaced positions for load calculations
             CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
                                       
       ELSE
@@ -3746,7 +3746,7 @@ SUBROUTINE ResetRemapFlags(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, MAPp
       IF (HD%Input(1)%WAMITMesh%Committed) THEN
          HD%Input(1)%WAMITMesh%RemapFlag               = .FALSE.
                 HD%y%WAMITMesh%RemapFlag               = .FALSE.  
-                HD%y%AllHdroOrigin%RemapFlag      = .FALSE.
+                HD%y%WAMITMesh%RemapFlag      = .FALSE.
       END IF
       IF (HD%Input(1)%Morison%LumpedMesh%Committed) THEN
          HD%Input(1)%Morison%LumpedMesh%RemapFlag  = .FALSE.
@@ -4067,9 +4067,9 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, M
             
             ! we're just going to assume ED%Input(1)%PlatformPtMesh is committed
                
-         IF ( HD%y%AllHdroOrigin%Committed  ) THEN ! meshes for floating
+         IF ( HD%y%WAMITMesh%Committed  ) THEN ! meshes for floating
                ! HydroDyn WAMIT point mesh to/from ElastoDyn point mesh
-            CALL MeshMapCreate( HD%y%AllHdroOrigin, ED%Input(1)%PlatformPtMesh, MeshMapData%HD_W_P_2_ED_P, ErrStat2, ErrMsg2 )
+            CALL MeshMapCreate( HD%y%WAMITMesh, ED%Input(1)%PlatformPtMesh, MeshMapData%HD_W_P_2_ED_P, ErrStat2, ErrMsg2 )
                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':HD_W_P_2_ED_P' )
             CALL MeshMapCreate( ED%Output(1)%PlatformPtMesh, HD%Input(1)%PRPMesh, MeshMapData%ED_P_2_HD_PRP_P, ErrStat2, ErrMsg2 )
                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':ED_P_2_HD_PRP_P' )
@@ -4077,13 +4077,13 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, M
                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':ED_P_2_HD_W_P' )
          END IF            
             
-            ! ElastoDyn point mesh HydroDyn Morison point mesh (ED sets inputs, but gets outputs from HD%y%AllHdroOrigin in floating case)
+            ! ElastoDyn point mesh HydroDyn Morison point mesh (ED sets inputs, but gets outputs from HD%y%WAMITMesh in floating case)
          IF ( HD%Input(1)%Morison%LumpedMesh%Committed  ) THEN            
             CALL MeshMapCreate( ED%Output(1)%PlatformPtMesh,  HD%Input(1)%Morison%LumpedMesh, MeshMapData%ED_P_2_HD_M_P, ErrStat2, ErrMsg2 )
                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':ED_P_2_HD_M_P' )                  
          END IF
             
-            ! ElastoDyn point mesh to HydroDyn Morison line mesh (ED sets inputs, but gets outputs from  HD%y%AllHdroOrigin in floating case)
+            ! ElastoDyn point mesh to HydroDyn Morison line mesh (ED sets inputs, but gets outputs from  HD%y%WAMITMesh in floating case)
          IF ( HD%Input(1)%Morison%DistribMesh%Committed ) THEN
             CALL MeshMapCreate( ED%Output(1)%PlatformPtMesh,  HD%Input(1)%Morison%DistribMesh, MeshMapData%ED_P_2_HD_M_L, ErrStat2, ErrMsg2 )
                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':ED_P_2_HD_M_L' )                  

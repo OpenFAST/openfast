@@ -203,6 +203,7 @@ class OpenFAST {
   void getForceNodeCoordinates(std::vector<double> & currentCoords, int iNode, int iTurbGlob);
   void getForceNodeOrientation(std::vector<double> & currentOrientation, int iNode, int iTurbGlob);
   void getForce(std::vector<double> & force, int iNode, int iTurbGlob);
+  void getRelativeVelForceNode(std::vector<double> & vel, int iNode, int iTurbGlob);
   double getChord(int iNode, int iTurbGlob);
 
   int get_ntStart() { return ntStart; }

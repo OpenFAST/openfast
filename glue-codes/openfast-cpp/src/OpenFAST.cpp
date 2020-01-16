@@ -502,6 +502,17 @@ void fast::OpenFAST::getForceNodeOrientation(std::vector<double> & currentOrient
 
 }
 
+void fast::OpenFAST::getRelativeVelForceNode(std::vector<double> & currentVelocity, int iNode, int iTurbGlob) {
+
+    // Get relative velocity at current node of current turbine
+    int iTurbLoc = get_localTurbNo(iTurbGlob);
+    for(int j=0; j < iTurbLoc; j++) iNode = iNode - get_numForcePtsLoc(iTurbLoc);
+    currentVelocity[0] = forceNodeVel[iTurbLoc][iNode][0] - cDriver_Input_from_FAST[iTurbLoc].xdotForce[iNode];
+    currentVelocity[1] = forceNodeVel[iTurbLoc][iNode][1] - cDriver_Input_from_FAST[iTurbLoc].ydotForce[iNode];
+    currentVelocity[2] = forceNodeVel[iTurbLoc][iNode][2] - cDriver_Input_from_FAST[iTurbLoc].zdotForce[iNode];
+}
+
+
 void fast::OpenFAST::getForce(std::vector<double> & currentForce, int iNode, int iTurbGlob) {
 
   // Set forces at current node of current turbine 

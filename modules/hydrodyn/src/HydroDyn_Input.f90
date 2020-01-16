@@ -26,7 +26,6 @@ MODULE HydroDyn_Input
    USE                              HydroDyn_Output
    USE                              Waves
    USE                              Morison
-   USE                              WAMIT2_Output
    USE                              Waves2_Output
    USE                              Morison_Output
    IMPLICIT                         NONE
@@ -1128,100 +1127,6 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, ErrStat, ErrMsg )
          CALL CleanUp()
          RETURN
       END IF
-
-
-
-!   !-------------------------------------------------------------------------------------------------
-!   ! Data section for Floating platform force flags
-!   !-------------------------------------------------------------------------------------------------
-!
-!      ! Header
-!
-!   CALL ReadCom( UnIn, FileName, 'Floating platform force flags header', ErrStat2, ErrMsg2, UnEchoLocal )
-!
-!      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-!      IF (ErrStat >= AbortErrLev) THEN
-!         CALL CleanUp()
-!         RETURN
-!      END IF
-!
-!
-!       ! PtfmSgFChr - Platform horizontal surge translation force flag
-!
-!   CALL ReadVar ( UnIn, FileName, InitInp%PtfmSgFChr, 'PtfmSgFChr', 'Platform horizontal surge translation force flag', ErrStat2, ErrMsg2, UnEchoLocal )
-!
-!      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-!      IF (ErrStat >= AbortErrLev) THEN
-!         CALL CleanUp()
-!         RETURN
-!      END IF
-!
-!   CALL Conv2UC( InitInp%PtfmSgFChr )    ! Convert Line to upper case.
-!
-!
-!      ! PtfmSwFChr - Platform horizontal sway translation force flag
-!
-!   CALL ReadVar ( UnIn, FileName, InitInp%PtfmSwFChr, 'PtfmSwFChr', 'Platform horizontal sway translation force flag', ErrStat2, ErrMsg2, UnEchoLocal )
-!
-!      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-!      IF (ErrStat >= AbortErrLev) THEN
-!         CALL CleanUp()
-!         RETURN
-!      END IF
-!
-!   CALL Conv2UC( InitInp%PtfmSwFChr )    ! Convert Line to upper case.
-!
-!
-!       ! PtfmHvFChr - Platform vertical heave translation force flag
-!
-!   CALL ReadVar ( UnIn, FileName, InitInp%PtfmHvFChr, 'PtfmHvFChr', 'Platform vertical heave translation force flag', ErrStat2, ErrMsg2, UnEchoLocal )
-!
-!      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-!      IF (ErrStat >= AbortErrLev) THEN
-!         CALL CleanUp()
-!         RETURN
-!      END IF
-!
-!   CALL Conv2UC( InitInp%PtfmHvFChr )    ! Convert Line to upper case.
-!
-!
-!        ! PtfmRFChr - Platform roll tilt rotation force flag
-!
-!   CALL ReadVar ( UnIn, FileName, InitInp%PtfmRFChr, 'PtfmRFChr', 'Platform roll tilt rotation force flag', ErrStat2, ErrMsg2, UnEchoLocal )
-!
-!      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-!      IF (ErrStat >= AbortErrLev) THEN
-!         CALL CleanUp()
-!         RETURN
-!      END IF
-!
-!   CALL Conv2UC( InitInp%PtfmRFChr )    ! Convert Line to upper case.
-!
-!
-!        ! PtfmPFChr - Platform pitch tilt rotation force flag
-!
-!   CALL ReadVar ( UnIn, FileName, InitInp%PtfmPFChr, 'PtfmPFChr', 'Platform pitch tilt rotation force flag', ErrStat2, ErrMsg2, UnEchoLocal )
-!
-!      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-!      IF (ErrStat >= AbortErrLev) THEN
-!         CALL CleanUp()
-!         RETURN
-!      END IF
-!
-!   CALL Conv2UC( InitInp%PtfmPFChr )    ! Convert Line to upper case.
-!
-!
-!        ! PtfmYFChr - Platform yaw rotation force flag
-!
-!   CALL ReadVar ( UnIn, FileName, InitInp%PtfmYFChr, 'PtfmYFChr', 'Platform yaw rotation force flag', ErrStat2, ErrMsg2, UnEchoLocal )
-!
-!      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-!      IF (ErrStat >= AbortErrLev) THEN
-!         CALL CleanUp()
-!         RETURN
-!      END IF
-!
-!   CALL Conv2UC( InitInp%PtfmYFChr )    ! Convert Line to upper case.
 
 
 
@@ -2370,7 +2275,7 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, ErrStat, ErrMsg )
       
          ! OutList - list of requested parameters to output to a file
 
-   ALLOCATE( InitInp%UserOutputs(4526), Stat=ErrStat2)  ! Total possible number of output channels:  Waves2 = 18 + SS_Excitation = 7 + SS_Radiation = 7 + WAMIT2 = 6 + Morison= 4032 + HydroDyn=456   =  4526
+   ALLOCATE( InitInp%UserOutputs(4583), Stat=ErrStat2)  ! Total possible number of output channels:  Waves2 = 18 + SS_Excitation = 7 + SS_Radiation = 7 + Morison= 4032 + HydroDyn=519   =  4583
       IF (ErrStat2 /= 0) THEN
          CALL SetErrStat( ErrID_Fatal, 'Error allocating UserOutputs.', ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
          CALL CleanUp()
@@ -4190,9 +4095,9 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
          ! Extract Waves2 list
       InitInp%Waves2%NumOuts  = GetWaves2Channels   ( InitInp%NUserOutputs, InitInp%UserOutputs, InitInp%Waves2%OutList, foundMask, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    
-         ! Extract WAMIT2 list
-      InitInp%WAMIT2%NumOuts  = GetWAMIT2Channels   ( InitInp%NUserOutputs, InitInp%UserOutputs, InitInp%WAMIT2%OutList, foundMask, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-
+!         ! Extract WAMIT2 list
+!      InitInp%WAMIT2%NumOuts  = GetWAMIT2Channels   ( InitInp%NUserOutputs, InitInp%UserOutputs, InitInp%WAMIT2%OutList, foundMask, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+!
          ! Extract Morison list
          !foundMask = .FALSE.
       InitInp%Morison%NumOuts = GetMorisonChannels  ( InitInp%NUserOutputs, InitInp%UserOutputs, InitInp%Morison%OutList, foundMask, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -4275,7 +4180,6 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
       ! WAMIT2
       InitInp%WAMIT2%WtrDens     = InitInp%Waves%WtrDens
       InitInp%WAMIT2%WaveMod     = InitInp%Waves%WaveMod
-      InitInp%WAMIT2%OutAll      = InitInp%OutAll
       InitInp%WAMIT2%HasWAMIT    = InitInp%PotMod == 1
       ! Morison
       InitInp%Morison%UnSum      = InitInp%UnSum

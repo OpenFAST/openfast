@@ -1,16 +1,21 @@
 --------- BEAMDYN with OpenFAST INPUT FILE -------------------------------------------
 NREL 5MW blade primary input file
 ---------------------- SIMULATION CONTROL --------------------------------------
-TRUE          Echo            - Echo input data to "<RootName>.ech" (flag)
-False         QuasiStaticInit - Use quasistatic pre-conditioning with centripetal accelerations in initialization (flag) [dynamic solve only]
-          0   rhoinf          - Numerical damping parameter for generalized-alpha integrator
-          2   quadrature      - Quadrature method: 1=Gaussian; 2=Trapezoidal (switch)
-"DEFAULT"     refine          - Refinement factor for trapezoidal quadrature (-). DEFAULT = 1 [used only when quadrature=2]
-"DEFAULT"     n_fact          - Factorization frequency for the Jacobian in N-R iteration(-). DEFAULT = 5
-"DEFAULT"     DTBeam          - Time step size (s).
-"DEFAULT"     NRMax           - Max number of iterations in Newton-Raphson algorithm (-). DEFAULT = 10
-"DEFAULT"     stop_tol        - Tolerance for stopping criterion (-)
-True          RotStates       - Orient states in the rotating frame during linearization? (flag) [used only when linearizing] 
+TRUE          Echo             - Echo input data to "<RootName>.ech"? (flag)
+False         QuasiStaticInit  - Use quasistatic pre-conditioning with centripetal accelerations in initialization? (flag) [dynamic solve only]
+          0   rhoinf           - Numerical damping parameter for generalized-alpha integrator
+          2   quadrature       - Quadrature method: 1=Gaussian; 2=Trapezoidal (switch)
+"DEFAULT"     refine           - Refinement factor for trapezoidal quadrature (-) [DEFAULT = 1; used only when quadrature=2]
+"DEFAULT"     n_fact           - Factorization frequency for the Jacobian in N-R iteration(-) [DEFAULT = 5]
+"DEFAULT"     DTBeam           - Time step size (s)
+"DEFAULT"     load_retries     - Number of factored load retries before quitting the aimulation [DEFAULT = 20]
+"DEFAULT"     NRMax            - Max number of iterations in Newton-Raphson algorithm (-) [DEFAULT = 10]
+"DEFAULT"     stop_tol         - Tolerance for stopping criterion (-) [DEFAULT = 1E-5]
+FALSE         tngt_stf_fd      - Use finite differenced tangent stiffness matrix? (flag)
+FALSE         tngt_stf_comp    - Compare analytical finite differenced tangent stiffness matrix? (flag)
+"DEFAULT"     tngt_stf_pert    - Perturbation size for finite differencing (-) [DEFAULT = 1E-6]
+"DEFAULT"     tngt_stf_difftol - Maximum allowable relative difference between analytical and fd tangent stiffness (-); [DEFAULT = 0.1]
+True          RotStates        - Orient states in the rotating frame during linearization? (flag) [used only when linearizing] 
 ---------------------- GEOMETRY PARAMETER --------------------------------------
           1   member_total    - Total number of members (-)
          49   kp_total        - Total number of key points (-) [must be at least 3]

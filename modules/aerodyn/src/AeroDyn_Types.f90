@@ -118,6 +118,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: InCol_Cd      !< The column in the airfoil tables that contains the drag coefficient [-]
     REAL(ReKi)  :: InCol_Cm      !< The column in the airfoil tables that contains the pitching-moment coefficient; use zero if there is no Cm column [-]
     REAL(ReKi)  :: InCol_Cpmin      !< The column in the airfoil tables that contains the drag coefficient; use zero if there is no Cpmin column [-]
+    INTEGER(IntKi)  :: AFTabMod      !< Interpolation method for multiple airfoil tables {1 = 1D on AoA (only first table is used); 2 = 2D on AoA and Re; 3 = 2D on AoA and UserProp} [-]
     INTEGER(IntKi)  :: NumAFfiles      !< Number of airfoil files used [-]
     CHARACTER(1024) , DIMENSION(:), ALLOCATABLE  :: AFNames      !< Airfoil file names (NumAF lines) [quoted strings]
     LOGICAL  :: UseBlCm      !< Include aerodynamic pitching moment in calculations? [flag]
@@ -204,7 +205,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: Patm      !< Atmospheric pressure [Pa]
     REAL(ReKi)  :: Pvap      !< Vapour pressure [Pa]
     REAL(ReKi)  :: FluidDepth      !< Submerged hub height [m]
-    TYPE(AFI_ParameterType)  :: AFI      !< AirfoilInfo parameters [-]
+    TYPE(AFI_ParameterType) , DIMENSION(:), ALLOCATABLE  :: AFI      !< AirfoilInfo parameters [-]
     TYPE(BEMT_ParameterType)  :: BEMT      !< Parameters for BEMT module [-]
     INTEGER(IntKi)  :: NumOuts      !< Number of parameters in the output list (number of outputs requested) [-]
     CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
@@ -226,6 +227,7 @@ IMPLICIT NONE
     TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: BladeMotion      !< motion on each blade [-]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: InflowOnBlade      !< U,V,W at nodes on each blade (note if we change the requirement that NumNodes is the same for each blade, this will need to change) [m/s]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: InflowOnTower      !< U,V,W at nodes on the tower [m/s]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: UserProp      !< Optional user property for interpolating airfoils (per element per blade) [-]
   END TYPE AD_InputType
 ! =======================
 ! =========  AD_OutputType  =======
@@ -2511,6 +2513,7 @@ ENDIF
     DstInputFileData%InCol_Cd = SrcInputFileData%InCol_Cd
     DstInputFileData%InCol_Cm = SrcInputFileData%InCol_Cm
     DstInputFileData%InCol_Cpmin = SrcInputFileData%InCol_Cpmin
+    DstInputFileData%AFTabMod = SrcInputFileData%AFTabMod
     DstInputFileData%NumAFfiles = SrcInputFileData%NumAFfiles
 IF (ALLOCATED(SrcInputFileData%AFNames)) THEN
   i1_l = LBOUND(SrcInputFileData%AFNames,1)
@@ -2697,6 +2700,7 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! InCol_Cd
       Re_BufSz   = Re_BufSz   + 1  ! InCol_Cm
       Re_BufSz   = Re_BufSz   + 1  ! InCol_Cpmin
+      Int_BufSz  = Int_BufSz  + 1  ! AFTabMod
       Int_BufSz  = Int_BufSz  + 1  ! NumAFfiles
   Int_BufSz   = Int_BufSz   + 1     ! AFNames allocated yes/no
   IF ( ALLOCATED(InData%AFNames) ) THEN
@@ -2844,6 +2848,8 @@ ENDIF
       Re_Xferred   = Re_Xferred   + 1
       ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%InCol_Cpmin
       Re_Xferred   = Re_Xferred   + 1
+      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%AFTabMod
+      Int_Xferred   = Int_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%NumAFfiles
       Int_Xferred   = Int_Xferred   + 1
   IF ( .NOT. ALLOCATED(InData%AFNames) ) THEN
@@ -3075,6 +3081,8 @@ ENDIF
       Re_Xferred   = Re_Xferred + 1
       OutData%InCol_Cpmin = ReKiBuf( Re_Xferred )
       Re_Xferred   = Re_Xferred + 1
+      OutData%AFTabMod = IntKiBuf( Int_Xferred ) 
+      Int_Xferred   = Int_Xferred + 1
       OutData%NumAFfiles = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! AFNames not allocated
@@ -5781,9 +5789,22 @@ ENDIF
     DstParamData%Patm = SrcParamData%Patm
     DstParamData%Pvap = SrcParamData%Pvap
     DstParamData%FluidDepth = SrcParamData%FluidDepth
-      CALL AFI_CopyParam( SrcParamData%AFI, DstParamData%AFI, CtrlCode, ErrStat2, ErrMsg2 )
+IF (ALLOCATED(SrcParamData%AFI)) THEN
+  i1_l = LBOUND(SrcParamData%AFI,1)
+  i1_u = UBOUND(SrcParamData%AFI,1)
+  IF (.NOT. ALLOCATED(DstParamData%AFI)) THEN 
+    ALLOCATE(DstParamData%AFI(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%AFI.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DO i1 = LBOUND(SrcParamData%AFI,1), UBOUND(SrcParamData%AFI,1)
+      CALL AFI_CopyParam( SrcParamData%AFI(i1), DstParamData%AFI(i1), CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
+    ENDDO
+ENDIF
       CALL BEMT_CopyParam( SrcParamData%BEMT, DstParamData%BEMT, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
@@ -5853,7 +5874,12 @@ ENDIF
 IF (ALLOCATED(ParamData%TwrCd)) THEN
   DEALLOCATE(ParamData%TwrCd)
 ENDIF
-  CALL AFI_DestroyParam( ParamData%AFI, ErrStat, ErrMsg )
+IF (ALLOCATED(ParamData%AFI)) THEN
+DO i1 = LBOUND(ParamData%AFI,1), UBOUND(ParamData%AFI,1)
+  CALL AFI_DestroyParam( ParamData%AFI(i1), ErrStat, ErrMsg )
+ENDDO
+  DEALLOCATE(ParamData%AFI)
+ENDIF
   CALL BEMT_DestroyParam( ParamData%BEMT, ErrStat, ErrMsg )
 IF (ALLOCATED(ParamData%OutParam)) THEN
 DO i1 = LBOUND(ParamData%OutParam,1), UBOUND(ParamData%OutParam,1)
@@ -5931,9 +5957,13 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! Patm
       Re_BufSz   = Re_BufSz   + 1  ! Pvap
       Re_BufSz   = Re_BufSz   + 1  ! FluidDepth
+  Int_BufSz   = Int_BufSz   + 1     ! AFI allocated yes/no
+  IF ( ALLOCATED(InData%AFI) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! AFI upper/lower bounds for each dimension
    ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
+    DO i1 = LBOUND(InData%AFI,1), UBOUND(InData%AFI,1)
       Int_BufSz   = Int_BufSz + 3  ! AFI: size of buffers for each call to pack subtype
-      CALL AFI_PackParam( Re_Buf, Db_Buf, Int_Buf, InData%AFI, ErrStat2, ErrMsg2, .TRUE. ) ! AFI 
+      CALL AFI_PackParam( Re_Buf, Db_Buf, Int_Buf, InData%AFI(i1), ErrStat2, ErrMsg2, .TRUE. ) ! AFI 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -5949,6 +5979,8 @@ ENDIF
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
+    END DO
+  END IF
       Int_BufSz   = Int_BufSz + 3  ! BEMT: size of buffers for each call to pack subtype
       CALL BEMT_PackParam( Re_Buf, Db_Buf, Int_Buf, InData%BEMT, ErrStat2, ErrMsg2, .TRUE. ) ! BEMT 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -6093,7 +6125,18 @@ ENDIF
       Re_Xferred   = Re_Xferred   + 1
       ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%FluidDepth
       Re_Xferred   = Re_Xferred   + 1
-      CALL AFI_PackParam( Re_Buf, Db_Buf, Int_Buf, InData%AFI, ErrStat2, ErrMsg2, OnlySize ) ! AFI 
+  IF ( .NOT. ALLOCATED(InData%AFI) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%AFI,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%AFI,1)
+    Int_Xferred = Int_Xferred + 2
+
+    DO i1 = LBOUND(InData%AFI,1), UBOUND(InData%AFI,1)
+      CALL AFI_PackParam( Re_Buf, Db_Buf, Int_Buf, InData%AFI(i1), ErrStat2, ErrMsg2, OnlySize ) ! AFI 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -6121,6 +6164,8 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
+    END DO
+  END IF
       CALL BEMT_PackParam( Re_Buf, Db_Buf, Int_Buf, InData%BEMT, ErrStat2, ErrMsg2, OnlySize ) ! BEMT 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
@@ -6351,6 +6396,20 @@ ENDIF
       Re_Xferred   = Re_Xferred + 1
       OutData%FluidDepth = ReKiBuf( Re_Xferred )
       Re_Xferred   = Re_Xferred + 1
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! AFI not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%AFI)) DEALLOCATE(OutData%AFI)
+    ALLOCATE(OutData%AFI(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%AFI.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    DO i1 = LBOUND(OutData%AFI,1), UBOUND(OutData%AFI,1)
       Buf_size=IntKiBuf( Int_Xferred )
       Int_Xferred = Int_Xferred + 1
       IF(Buf_size > 0) THEN
@@ -6384,13 +6443,15 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL AFI_UnpackParam( Re_Buf, Db_Buf, Int_Buf, OutData%AFI, ErrStat2, ErrMsg2 ) ! AFI 
+      CALL AFI_UnpackParam( Re_Buf, Db_Buf, Int_Buf, OutData%AFI(i1), ErrStat2, ErrMsg2 ) ! AFI 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
       IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
+    END DO
+  END IF
       Buf_size=IntKiBuf( Int_Xferred )
       Int_Xferred = Int_Xferred + 1
       IF(Buf_size > 0) THEN
@@ -6657,6 +6718,20 @@ IF (ALLOCATED(SrcInputData%InflowOnTower)) THEN
   END IF
     DstInputData%InflowOnTower = SrcInputData%InflowOnTower
 ENDIF
+IF (ALLOCATED(SrcInputData%UserProp)) THEN
+  i1_l = LBOUND(SrcInputData%UserProp,1)
+  i1_u = UBOUND(SrcInputData%UserProp,1)
+  i2_l = LBOUND(SrcInputData%UserProp,2)
+  i2_u = UBOUND(SrcInputData%UserProp,2)
+  IF (.NOT. ALLOCATED(DstInputData%UserProp)) THEN 
+    ALLOCATE(DstInputData%UserProp(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%UserProp.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInputData%UserProp = SrcInputData%UserProp
+ENDIF
  END SUBROUTINE AD_CopyInput
 
  SUBROUTINE AD_DestroyInput( InputData, ErrStat, ErrMsg )
@@ -6687,6 +6762,9 @@ IF (ALLOCATED(InputData%InflowOnBlade)) THEN
 ENDIF
 IF (ALLOCATED(InputData%InflowOnTower)) THEN
   DEALLOCATE(InputData%InflowOnTower)
+ENDIF
+IF (ALLOCATED(InputData%UserProp)) THEN
+  DEALLOCATE(InputData%UserProp)
 ENDIF
  END SUBROUTINE AD_DestroyInput
 
@@ -6815,6 +6893,11 @@ ENDIF
   IF ( ALLOCATED(InData%InflowOnTower) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! InflowOnTower upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%InflowOnTower)  ! InflowOnTower
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! UserProp allocated yes/no
+  IF ( ALLOCATED(InData%UserProp) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! UserProp upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%UserProp)  ! UserProp
   END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -7015,6 +7098,22 @@ ENDIF
 
       IF (SIZE(InData%InflowOnTower)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%InflowOnTower))-1 ) = PACK(InData%InflowOnTower,.TRUE.)
       Re_Xferred   = Re_Xferred   + SIZE(InData%InflowOnTower)
+  END IF
+  IF ( .NOT. ALLOCATED(InData%UserProp) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%UserProp,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%UserProp,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%UserProp,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%UserProp,2)
+    Int_Xferred = Int_Xferred + 2
+
+      IF (SIZE(InData%UserProp)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%UserProp))-1 ) = PACK(InData%UserProp,.TRUE.)
+      Re_Xferred   = Re_Xferred   + SIZE(InData%UserProp)
   END IF
  END SUBROUTINE AD_PackInput
 
@@ -7298,6 +7397,32 @@ ENDIF
     mask2 = .TRUE. 
       IF (SIZE(OutData%InflowOnTower)>0) OutData%InflowOnTower = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%InflowOnTower))-1 ), mask2, 0.0_ReKi )
       Re_Xferred   = Re_Xferred   + SIZE(OutData%InflowOnTower)
+    DEALLOCATE(mask2)
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! UserProp not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%UserProp)) DEALLOCATE(OutData%UserProp)
+    ALLOCATE(OutData%UserProp(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%UserProp.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask2.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask2 = .TRUE. 
+      IF (SIZE(OutData%UserProp)>0) OutData%UserProp = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%UserProp))-1 ), mask2, 0.0_ReKi )
+      Re_Xferred   = Re_Xferred   + SIZE(OutData%UserProp)
     DEALLOCATE(mask2)
   END IF
  END SUBROUTINE AD_UnPackInput
@@ -7849,6 +7974,14 @@ IF (ALLOCATED(u_out%InflowOnTower) .AND. ALLOCATED(u1%InflowOnTower)) THEN
   DEALLOCATE(b2)
   DEALLOCATE(c2)
 END IF ! check if allocated
+IF (ALLOCATED(u_out%UserProp) .AND. ALLOCATED(u1%UserProp)) THEN
+  ALLOCATE(b2(SIZE(u_out%UserProp,1),SIZE(u_out%UserProp,2) ))
+  ALLOCATE(c2(SIZE(u_out%UserProp,1),SIZE(u_out%UserProp,2) ))
+  b2 = -(u1%UserProp - u2%UserProp)/t(2)
+  u_out%UserProp = u1%UserProp + b2 * t_out
+  DEALLOCATE(b2)
+  DEALLOCATE(c2)
+END IF ! check if allocated
  END SUBROUTINE AD_Input_ExtrapInterp1
 
 
@@ -7941,6 +8074,15 @@ IF (ALLOCATED(u_out%InflowOnTower) .AND. ALLOCATED(u1%InflowOnTower)) THEN
   b2 = (t(3)**2*(u1%InflowOnTower - u2%InflowOnTower) + t(2)**2*(-u1%InflowOnTower + u3%InflowOnTower))/(t(2)*t(3)*(t(2) - t(3)))
   c2 = ( (t(2)-t(3))*u1%InflowOnTower + t(3)*u2%InflowOnTower - t(2)*u3%InflowOnTower ) / (t(2)*t(3)*(t(2) - t(3)))
   u_out%InflowOnTower = u1%InflowOnTower + b2 * t_out + c2 * t_out**2
+  DEALLOCATE(b2)
+  DEALLOCATE(c2)
+END IF ! check if allocated
+IF (ALLOCATED(u_out%UserProp) .AND. ALLOCATED(u1%UserProp)) THEN
+  ALLOCATE(b2(SIZE(u_out%UserProp,1),SIZE(u_out%UserProp,2) ))
+  ALLOCATE(c2(SIZE(u_out%UserProp,1),SIZE(u_out%UserProp,2) ))
+  b2 = (t(3)**2*(u1%UserProp - u2%UserProp) + t(2)**2*(-u1%UserProp + u3%UserProp))/(t(2)*t(3)*(t(2) - t(3)))
+  c2 = ( (t(2)-t(3))*u1%UserProp + t(3)*u2%UserProp - t(2)*u3%UserProp ) / (t(2)*t(3)*(t(2) - t(3)))
+  u_out%UserProp = u1%UserProp + b2 * t_out + c2 * t_out**2
   DEALLOCATE(b2)
   DEALLOCATE(c2)
 END IF ! check if allocated
