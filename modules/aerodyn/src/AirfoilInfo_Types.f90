@@ -132,6 +132,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: Cm = 0.      !< Dimensionless coefficient of pitching moment [-]
     REAL(ReKi)  :: Cpmin = 0.      !< Dimensionless coefficient of minimum pressure [-]
     REAL(ReKi)  :: Cd0 = 0.      !< Minimum Cd value (used for Beddoes-Leishman unsteady aero) [-]
+    REAL(ReKi)  :: Cm0 = 0.      !< 2D pitching moment coefficient at zero lift, positive if nose is up [-]
   END TYPE AFI_OutputType
 ! =======================
 CONTAINS
@@ -1941,6 +1942,7 @@ ENDIF
     DstOutputData%Cm = SrcOutputData%Cm
     DstOutputData%Cpmin = SrcOutputData%Cpmin
     DstOutputData%Cd0 = SrcOutputData%Cd0
+    DstOutputData%Cm0 = SrcOutputData%Cm0
  END SUBROUTINE AFI_CopyOutput
 
  SUBROUTINE AFI_DestroyOutput( OutputData, ErrStat, ErrMsg )
@@ -1994,6 +1996,7 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! Cm
       Re_BufSz   = Re_BufSz   + 1  ! Cpmin
       Re_BufSz   = Re_BufSz   + 1  ! Cd0
+      Re_BufSz   = Re_BufSz   + 1  ! Cm0
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -2030,6 +2033,8 @@ ENDIF
       ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%Cpmin
       Re_Xferred   = Re_Xferred   + 1
       ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%Cd0
+      Re_Xferred   = Re_Xferred   + 1
+      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%Cm0
       Re_Xferred   = Re_Xferred   + 1
  END SUBROUTINE AFI_PackOutput
 
@@ -2074,6 +2079,8 @@ ENDIF
       OutData%Cpmin = ReKiBuf( Re_Xferred )
       Re_Xferred   = Re_Xferred + 1
       OutData%Cd0 = ReKiBuf( Re_Xferred )
+      Re_Xferred   = Re_Xferred + 1
+      OutData%Cm0 = ReKiBuf( Re_Xferred )
       Re_Xferred   = Re_Xferred + 1
  END SUBROUTINE AFI_UnPackOutput
 
@@ -2178,6 +2185,8 @@ ENDIF
   y_out%Cpmin = y1%Cpmin + b0 * t_out
   b0 = -(y1%Cd0 - y2%Cd0)/t(2)
   y_out%Cd0 = y1%Cd0 + b0 * t_out
+  b0 = -(y1%Cm0 - y2%Cm0)/t(2)
+  y_out%Cm0 = y1%Cm0 + b0 * t_out
  END SUBROUTINE AFI_Output_ExtrapInterp1
 
 
@@ -2245,6 +2254,9 @@ ENDIF
   b0 = (t(3)**2*(y1%Cd0 - y2%Cd0) + t(2)**2*(-y1%Cd0 + y3%Cd0))/(t(2)*t(3)*(t(2) - t(3)))
   c0 = ( (t(2)-t(3))*y1%Cd0 + t(3)*y2%Cd0 - t(2)*y3%Cd0 ) / (t(2)*t(3)*(t(2) - t(3)))
   y_out%Cd0 = y1%Cd0 + b0 * t_out + c0 * t_out**2
+  b0 = (t(3)**2*(y1%Cm0 - y2%Cm0) + t(2)**2*(-y1%Cm0 + y3%Cm0))/(t(2)*t(3)*(t(2) - t(3)))
+  c0 = ( (t(2)-t(3))*y1%Cm0 + t(3)*y2%Cm0 - t(2)*y3%Cm0 ) / (t(2)*t(3)*(t(2) - t(3)))
+  y_out%Cm0 = y1%Cm0 + b0 * t_out + c0 * t_out**2
  END SUBROUTINE AFI_Output_ExtrapInterp2
 
 
