@@ -533,9 +533,7 @@ SUBROUTINE IfW_HAWCWind_CalcOutput(Time, PositionXYZ, p, Velocity, DiskVel, Misc
    DO PointNum = 1, NumPoints
 
          ! If the position is (0,0,0), assume it was never set and skip calculating
-      if (  PositionXYZ(1,PointNum) /= 0.0_ReKi .and. &
-            PositionXYZ(2,PointNum) /= 0.0_ReKi .and. &
-            PositionXYZ(3,PointNum) /= 0.0_ReKi ) then
+      if (  TwoNorm(PositionXYZ(1:3,PointNum)) > 0.0_ReKi ) then
 
             ! Calculate the velocity for the position
          Velocity(:,PointNum) = FF_Interp(Time,PositionXYZ(:,PointNum),p,MiscVars,TmpErrStat,TmpErrMsg)
