@@ -1392,15 +1392,13 @@ subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
    ! local variables
    real(ReKi)                              :: x_hat(3)
    real(ReKi)                              :: y_hat(3)
-   real(ReKi)                              :: z_hat(3)
    real(ReKi)                              :: x_hat_disk(3)
    real(ReKi)                              :: y_hat_disk(3)
    real(ReKi)                              :: z_hat_disk(3)
    real(ReKi)                              :: tmp(3)
-   real(R8Ki)                              :: theta(3)
-   real(R8Ki)                              :: orientation(3,3)
-   real(R8Ki)                              :: orientation_nopitch(3,3)
    real(ReKi)                              :: tmp_sz, tmp_sz_y
+   real(R8Ki)                              :: thetaBladeNds(p%NumBlNds,p%NumBlades)
+   real(ReKi)                              :: Azimuth(p%NumBlNds)
    
    integer(intKi)                          :: j                      ! loop counter for nodes
    integer(intKi)                          :: k                      ! loop counter for blades
@@ -1409,34 +1407,13 @@ subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
    character(*), parameter                 :: RoutineName = 'SetInputsForBEMT'
    
    
-   ErrStat = ErrID_None
-   ErrMsg  = ""
-   
-   
-      ! calculate disk-averaged relative wind speed, V_DiskAvg
-   m%V_diskAvg = 0.0_ReKi
-   do k=1,p%NumBlades
-      do j=1,p%NumBlNds
-         tmp = m%DisturbedInflow(:,j,k) - u%BladeMotion(k)%TranslationVel(:,j)
-         m%V_diskAvg = m%V_diskAvg + tmp         
-      end do
-   end do
-   m%V_diskAvg = m%V_diskAvg / real( p%NumBlades * p%NumBlNds, ReKi ) 
-   
-      ! orientation vectors:
-   x_hat_disk = u%HubMotion%Orientation(1,:,1) !actually also x_hat_hub      
-   
-   m%V_dot_x  = dot_product( m%V_diskAvg, x_hat_disk )
+      ! Get disk average values and orientations
+   call DiskAvgValues(p, u, m, x_hat_disk, y_hat_disk, z_hat_disk, Azimuth)
+   call GeomWithoutSweepPitchTwist(p,u,m,thetaBladeNds,ErrStat,ErrMsg)
+   if (ErrStat >= AbortErrLev) return
+
+      ! Velocity in disk normal
    m%BEMT_u(indx)%Un_disk  = m%V_dot_x
-   tmp    = m%V_dot_x * x_hat_disk - m%V_diskAvg
-   tmp_sz = TwoNorm(tmp)
-   if ( EqualRealNos( tmp_sz, 0.0_ReKi ) ) then
-      y_hat_disk = u%HubMotion%Orientation(2,:,1)
-      z_hat_disk = u%HubMotion%Orientation(3,:,1)
-   else
-     y_hat_disk = tmp / tmp_sz
-     z_hat_disk = cross_product( m%V_diskAvg, x_hat_disk ) / tmp_sz
-  end if
      
       ! "Angular velocity of rotor" rad/s
    m%BEMT_u(indx)%omega   = dot_product( u%HubMotion%RotationVel(:,1), x_hat_disk )    
@@ -1455,54 +1432,15 @@ subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
    end if
    
       ! "Azimuth angle" rad
-   do k=1,p%NumBlades
-      z_hat = u%BladeRootMotion(k)%Orientation(3,:,1)      
-      tmp_sz_y = -1.0*dot_product(z_hat,y_hat_disk)
-      tmp_sz   =      dot_product(z_hat,z_hat_disk)
-      if ( EqualRealNos(tmp_sz_y,0.0_ReKi) .and. EqualRealNos(tmp_sz,0.0_ReKi) ) then
-         m%BEMT_u(indx)%psi(k) = 0.0_ReKi
-      else
-         m%BEMT_u(indx)%psi(k) = atan2( tmp_sz_y, tmp_sz )
-      end if      
-   end do
-   
+   m%bemt_u(indx)%psi = Azimuth
+
       ! theta, "Twist angle (includes all sources of twist)" rad
       ! Vx, "Local axial velocity at node" m/s
       ! Vy, "Local tangential velocity at node" m/s
    do k=1,p%NumBlades
-      
-         ! construct system equivalent to u%BladeRootMotion(k)%Orientation, but without the blade-pitch angle:
-      
-      !orientation = matmul( u%BladeRootMotion(k)%Orientation(:,:,1), transpose(u%HubMotion%Orientation(:,:,1)) )
-      call LAPACK_gemm( 'n', 't', 1.0_R8Ki, u%BladeRootMotion(k)%Orientation(:,:,1), u%HubMotion%Orientation(:,:,1), 0.0_R8Ki, orientation, errStat2, errMsg2)
-         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      theta = EulerExtract( orientation ) !hub_theta_root(k)
-#ifndef DBG_OUTS
-      m%AllOuts( BPitch(  k) ) = -theta(3)*R2D ! save this value of pitch for potential output
-#endif
-      theta(3) = 0.0_ReKi  
-      m%hub_theta_x_root(k) = theta(1)   ! save this value for FAST.Farm
-      
-      orientation = EulerConstruct( theta )
-      orientation_nopitch = matmul( orientation, u%HubMotion%Orientation(:,:,1) ) ! withoutPitch_theta_Root(k)
-            
       do j=1,p%NumBlNds         
          
-            ! form coordinate system equivalent to u%BladeMotion(k)%Orientation(:,:,j) but without live sweep (due to in-plane
-            ! deflection), blade-pitch and twist (aerodynamic + elastic) angles:
-         
-         ! orientation = matmul( u%BladeMotion(k)%Orientation(:,:,j), transpose(orientation_nopitch) )
-         call LAPACK_gemm( 'n', 't', 1.0_R8Ki, u%BladeMotion(k)%Orientation(:,:,j), orientation_nopitch, 0.0_R8Ki, orientation, errStat2, errMsg2)
-            call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         theta = EulerExtract( orientation ) !root(k)WithoutPitch_theta(j)_blade(k)
-         
-         m%BEMT_u(indx)%theta(j,k) = -theta(3) ! local pitch + twist (aerodyanmic + elastic) angle of the jth node in the kth blade
-         
-         
-         theta(1) = 0.0_ReKi
-         theta(3) = 0.0_ReKi
-         m%Curve(j,k) = theta(2)  ! save value for possible output later
-         m%WithoutSweepPitchTwist(:,:,j,k) = matmul( EulerConstruct( theta ), orientation_nopitch ) ! WithoutSweepPitch+Twist_theta(j)_Blade(k)
+         m%BEMT_u(indx)%theta(j,k) = thetaBladeNds(j,k) ! local pitch + twist (aerodyanmic + elastic) angle of the jth node in the kth blade
                            
          x_hat = m%WithoutSweepPitchTwist(1,:,j,k)
          y_hat = m%WithoutSweepPitchTwist(2,:,j,k)
@@ -1536,6 +1474,116 @@ subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
    
 end subroutine SetInputsForBEMT
 
+subroutine DiskAvgValues(p, u, m, x_hat_disk, y_hat_disk, z_hat_disk, Azimuth)
+   type(AD_ParameterType),  intent(in   )  :: p                               !< AD parameters
+   type(AD_InputType),      intent(in   )  :: u                               !< AD Inputs at Time
+   type(AD_MiscVarType),    intent(inout)  :: m                               !< Misc/optimization variables
+   real(ReKi),              intent(  out)  :: x_hat_disk(3)
+   real(ReKi),              intent(  out)  :: y_hat_disk(3)
+   real(ReKi),              intent(  out)  :: z_hat_disk(3)
+   real(R8Ki),              intent(  out)  :: Azimuth(p%NumBlNds)
+   real(ReKi)                              :: z_hat(3)
+   real(ReKi)                              :: tmp(3)
+   real(ReKi)                              :: tmp_sz, tmp_sz_y
+   integer(intKi)                          :: j                      ! loop counter for nodes
+   integer(intKi)                          :: k                      ! loop counter for blades
+
+      ! calculate disk-averaged relative wind speed, V_DiskAvg
+   m%V_diskAvg = 0.0_ReKi
+   do k=1,p%NumBlades
+      do j=1,p%NumBlNds
+         tmp = m%DisturbedInflow(:,j,k) - u%BladeMotion(k)%TranslationVel(:,j)
+         m%V_diskAvg = m%V_diskAvg + tmp
+      end do
+   end do
+   m%V_diskAvg = m%V_diskAvg / real( p%NumBlades * p%NumBlNds, ReKi )
+
+      ! orientation vectors:
+   x_hat_disk = u%HubMotion%Orientation(1,:,1) !actually also x_hat_hub
+
+   m%V_dot_x  = dot_product( m%V_diskAvg, x_hat_disk )
+   tmp    = m%V_dot_x * x_hat_disk - m%V_diskAvg
+   tmp_sz = TwoNorm(tmp)
+   if ( EqualRealNos( tmp_sz, 0.0_ReKi ) ) then
+      y_hat_disk = u%HubMotion%Orientation(2,:,1)
+      z_hat_disk = u%HubMotion%Orientation(3,:,1)
+   else
+     y_hat_disk = tmp / tmp_sz
+     z_hat_disk = cross_product( m%V_diskAvg, x_hat_disk ) / tmp_sz
+  end if
+
+      ! "Azimuth angle" rad
+   do k=1,p%NumBlades
+      z_hat = u%BladeRootMotion(k)%Orientation(3,:,1)
+      tmp_sz_y = -1.0*dot_product(z_hat,y_hat_disk)
+      tmp_sz   =      dot_product(z_hat,z_hat_disk)
+      if ( EqualRealNos(tmp_sz_y,0.0_ReKi) .and. EqualRealNos(tmp_sz,0.0_ReKi) ) then
+         Azimuth(k) = 0.0_ReKi
+      else
+         Azimuth(k) = atan2( tmp_sz_y, tmp_sz )
+      end if
+   end do
+end subroutine DiskAvgValues
+subroutine GeomWithoutSweepPitchTwist(p,u,m,thetaBladeNds,ErrStat,ErrMsg)
+   type(AD_ParameterType),  intent(in   )  :: p                               !< AD parameters
+   type(AD_InputType),      intent(in   )  :: u                               !< AD Inputs at Time
+   type(AD_MiscVarType),    intent(inout)  :: m                               !< Misc/optimization variables
+   real(R8Ki),              intent(  out)  :: thetaBladeNds(p%NumBlNds,p%NumBlades)
+   integer(IntKi),          intent(  out)  :: ErrStat                         !< Error status of the operation
+   character(*),            intent(  out)  :: ErrMsg                          !< Error message if ErrStat /= ErrID_None
+   real(R8Ki)                              :: theta(3)
+   real(R8Ki)                              :: orientation(3,3)
+   real(R8Ki)                              :: orientation_nopitch(3,3)
+
+   integer(intKi)                          :: j                      ! loop counter for nodes
+   integer(intKi)                          :: k                      ! loop counter for blades
+   integer(intKi)                          :: ErrStat2
+   character(ErrMsgLen)                    :: ErrMsg2
+   character(*), parameter                 :: RoutineName = 'GeomWithoutSweepPitchTwist'
+
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+      ! theta, "Twist angle (includes all sources of twist)" rad
+      ! Vx, "Local axial velocity at node" m/s
+      ! Vy, "Local tangential velocity at node" m/s
+   do k=1,p%NumBlades
+
+         ! construct system equivalent to u%BladeRootMotion(k)%Orientation, but without the blade-pitch angle:
+
+      call LAPACK_gemm( 'n', 't', 1.0_R8Ki, u%BladeRootMotion(k)%Orientation(:,:,1), u%HubMotion%Orientation(:,:,1), 0.0_R8Ki, orientation, errStat2, errMsg2)
+         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      theta = EulerExtract( orientation ) !hub_theta_root(k)
+#ifndef DBG_OUTS
+      m%AllOuts( BPitch(  k) ) = -theta(3)*R2D ! save this value of pitch for potential output
+#endif
+      theta(3) = 0.0_ReKi
+      m%hub_theta_x_root(k) = theta(1)   ! save this value for FAST.Farm
+
+      orientation = EulerConstruct( theta )
+      orientation_nopitch = matmul( orientation, u%HubMotion%Orientation(:,:,1) ) ! withoutPitch_theta_Root(k)
+
+      do j=1,p%NumBlNds
+
+            ! form coordinate system equivalent to u%BladeMotion(k)%Orientation(:,:,j) but without live sweep (due to in-plane
+            ! deflection), blade-pitch and twist (aerodynamic + elastic) angles:
+
+         ! orientation = matmul( u%BladeMotion(k)%Orientation(:,:,j), transpose(orientation_nopitch) )
+         call LAPACK_gemm( 'n', 't', 1.0_R8Ki, u%BladeMotion(k)%Orientation(:,:,j), orientation_nopitch, 0.0_R8Ki, orientation, errStat2, errMsg2)
+            call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         theta = EulerExtract( orientation ) !root(k)WithoutPitch_theta(j)_blade(k)
+
+         thetaBladeNds(j,k) = -theta(3) ! local pitch + twist (aerodyanmic + elastic) angle of the jth node in the kth blade
+
+
+         theta(1) = 0.0_ReKi
+         theta(3) = 0.0_ReKi
+         m%Curve(j,k) = theta(2)  ! save value for possible output later
+         m%WithoutSweepPitchTwist(:,:,j,k) = matmul( EulerConstruct( theta ), orientation_nopitch ) ! WithoutSweepPitch+Twist_theta(j)_Blade(k)
+
+      end do !j=nodes
+   end do !k=blades
+end subroutine GeomWithoutSweepPitchTwist
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine sets m%FVW_u(indx).
 subroutine SetInputsForFVW(p, u, m, errStat, errMsg)
@@ -1546,6 +1594,9 @@ subroutine SetInputsForFVW(p, u, m, errStat, errMsg)
    integer(IntKi),          intent(  out)  :: ErrStat                         !< Error status of the operation
    character(*),            intent(  out)  :: ErrMsg                          !< Error message if ErrStat /= ErrID_None
 
+!   real(ReKi)                              :: x_hat_disk(3)
+!   real(ReKi)                              :: y_hat_disk(3)
+!   real(ReKi)                              :: z_hat_disk(3)
    integer(intKi)                          :: tIndx
    integer(intKi)                          :: k                      ! loop counter for blades
    integer(intKi)                          :: ErrStat2
