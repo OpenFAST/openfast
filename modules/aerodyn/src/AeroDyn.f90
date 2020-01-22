@@ -370,17 +370,18 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       ! initialize BEMT after setting parameters and inputs because we are going to use the already-
       ! calculated node positions from the input meshes
       
-   call Init_BEMTmodule( InputFileData, u, m%BEMT_u(1), p, x%BEMT, xd%BEMT, z%BEMT, &
-                           OtherState%BEMT, m%BEMT_y, m%BEMT, ErrStat2, ErrMsg2 )
-      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
-      if (ErrStat >= AbortErrLev) then
-         call Cleanup()
-         return
-      end if
-         
-   call BEMT_CopyInput( m%BEMT_u(1), m%BEMT_u(2), MESH_NEWCOPY, ErrStat2, ErrMsg2 )
-      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
+   if (p%WakeMod /= WakeMod_FVW) then
+      call Init_BEMTmodule( InputFileData, u, m%BEMT_u(1), p, x%BEMT, xd%BEMT, z%BEMT, &
+                              OtherState%BEMT, m%BEMT_y, m%BEMT, ErrStat2, ErrMsg2 )
+         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         if (ErrStat >= AbortErrLev) then
+            call Cleanup()
+            return
+         end if
 
+      call BEMT_CopyInput( m%BEMT_u(1), m%BEMT_u(2), MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   endif
 
       !-------------------------------------------------------------------------------------------------
       ! Initialize FVW module if it is used
@@ -507,9 +508,10 @@ subroutine AD_ReInit(p, x, xd, z, OtherState, m, Interval, ErrStat, ErrMsg )
       ! we could get around this by figuring out what needs to change when we modify the dt parameter... probably just some unused-parameters
       ! and the UA filter
    end if
-      
-   call BEMT_ReInit(p%BEMT,x%BEMT,xd%BEMT,z%BEMT,OtherState%BEMT,m%BEMT,p%AFI)
-      
+
+   if (p%WakeMod /= WakeMod_FVW) &
+      call BEMT_ReInit(p%BEMT,x%BEMT,xd%BEMT,z%BEMT,OtherState%BEMT,m%BEMT,p%AFI)
+
 end subroutine AD_ReInit
 !----------------------------------------------------------------------------------------------------------------------------------   
 !> This routine initializes (allocates) the misc variables for use during the simulation.
@@ -1147,14 +1149,14 @@ subroutine AD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, errStat
    call SetInputs(p, uInterp, m, 1, errStat2, errMsg2)      
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          
-                        
-      ! Call into the BEMT update states    NOTE:  This is a non-standard framework interface!!!!!  GJH
-      ! Also note BEMT_u(1) and BEMT_u(2) are not following the framework convention for t+dt, t
-   call BEMT_UpdateStates(t, n, m%BEMT_u(1), m%BEMT_u(2),  p%BEMT, x%BEMT, xd%BEMT, z%BEMT, OtherState%BEMT, p%AFI, m%BEMT, errStat2, errMsg2)
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         
-      ! Call the FVW sub module
-   if (p%WakeMod == WakeMod_FVW) then
+
+   if (p%WakeMod /= WakeMod_FVW) then
+         ! Call into the BEMT update states    NOTE:  This is a non-standard framework interface!!!!!  GJH
+         ! Also note BEMT_u(1) and BEMT_u(2) are not following the framework convention for t+dt, t
+      call BEMT_UpdateStates(t, n, m%BEMT_u(1), m%BEMT_u(2),  p%BEMT, x%BEMT, xd%BEMT, z%BEMT, OtherState%BEMT, p%AFI, m%BEMT, errStat2, errMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
+   else  ! Call the FVW sub module
          ! This needs to extract the inputs from the AD data types (mesh) and copy pieces for the FVW module
       call SetInputsForFVW(p, u, m, errStat2, errMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1212,25 +1214,28 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-   
-   call SetInputs(p, u, m, indx, errStat2, errMsg2)      
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-            
-   ! Call the BEMT module CalcOutput.  Notice that the BEMT outputs are purposely attached to AeroDyn's MiscVar structure to
-   ! avoid issues with the coupling code
-   
-   call BEMT_CalcOutput(t, m%BEMT_u(indx), p%BEMT, x%BEMT, xd%BEMT, z%BEMT, OtherState%BEMT, p%AFI, m%BEMT_y, m%BEMT, ErrStat2, ErrMsg2 )
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-                  
-   call SetOutputsFromBEMT(p, m, y )
 
-   if (p%WakeMod == WakeMod_FVW) then
+   call SetInputs(p, u, m, indx, errStat2, errMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
+   if (p%WakeMod /= WakeMod_FVW) then
+      ! Call the BEMT module CalcOutput.  Notice that the BEMT outputs are purposely attached to AeroDyn's MiscVar structure to
+      ! avoid issues with the coupling code
+
+      call BEMT_CalcOutput(t, m%BEMT_u(indx), p%BEMT, x%BEMT, xd%BEMT, z%BEMT, OtherState%BEMT, p%AFI, m%BEMT_y, m%BEMT, ErrStat2, ErrMsg2 )
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
+      call SetOutputsFromBEMT(p, m, y )
+
+   else  !(p%WakeMod == WakeMod_FVW)
          ! This needs to extract the inputs from the AD data types (mesh) and copy pieces for the FVW module
       call SetInputsForFVW(p, (/u/), m, errStat2, errMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          ! Calculate Outputs at time t
       CALL FVW_CalcOutput( t, m%FVW_u(1), p%FVW, x%FVW, xd%FVW, z%FVW, OtherState%FVW, p%AFI, m%FVW_y, m%FVW, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
+      call SetOutputsFromFVW(p, m, y )
    endif
 
    if ( p%TwrAero ) then
@@ -1364,10 +1369,12 @@ subroutine SetInputs(p, u, m, indx, errStat, errMsg)
    else
       m%DisturbedInflow = u%InflowOnBlade
    end if
-               
-      ! This needs to extract the inputs from the AD data types (mesh) and massage them for the BEMT module
-   call SetInputsForBEMT(p, u, m, indx, errStat2, errMsg2)  
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
+   if (p%WakeMod /= WakeMod_FVW) then
+         ! This needs to extract the inputs from the AD data types (mesh) and massage them for the BEMT module
+      call SetInputsForBEMT(p, u, m, indx, errStat2, errMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   endif
 
 
 end subroutine SetInputs
@@ -1607,6 +1614,53 @@ subroutine SetOutputsFromBEMT(p, m, y )
    
    
 end subroutine SetOutputsFromBEMT
+
+
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine converts outputs from FVW (stored in m%FVW_y) into values on the AeroDyn BladeLoad output mesh.
+subroutine SetOutputsFromFVW(p, m, y)
+   type(AD_ParameterType),  intent(in   )  :: p                               !< AD parameters
+   type(AD_OutputType),     intent(inout)  :: y                               !< AD outputs
+   type(AD_MiscVarType),    intent(inout)  :: m                               !< Misc/optimization variables
+
+   integer(intKi)                          :: j                      ! loop counter for nodes
+   integer(intKi)                          :: k                      ! loop counter for blades
+   real(reki)                              :: force(3)
+   real(reki)                              :: moment(3)
+   real(reki)                              :: q
+
+   force(3)    =  0.0_ReKi
+   moment(1:2) =  0.0_ReKi
+   do k=1,p%NumBlades
+      do j=1,p%NumBlNds
+!         q = 0.5 * p%airDens * m%BEMT_y%Vrel(j,k)**2              ! dynamic pressure of the jth node in the kth blade
+!         force(1) =  m%BEMT_y%cx(j,k) * q * p%BEMT%chord(j,k)     ! X = normal force per unit length (normal to the plane, not chord) of the jth node in the kth blade
+!         force(2) = -m%BEMT_y%cy(j,k) * q * p%BEMT%chord(j,k)     ! Y = tangential force per unit length (tangential to the plane, not chord) of the jth node in the kth blade
+!         moment(3)=  m%BEMT_y%cm(j,k) * q * p%BEMT%chord(j,k)**2  ! M = pitching moment per unit length of the jth node in the kth blade
+      end do !j=nodes
+   end do !k=blades
+
+   do k=1,p%NumBlades
+      do j=1,p%NumBlNds
+!            ! save these values for possible output later:
+!         m%X(j,k) = force(1)
+!         m%Y(j,k) = force(2)
+!         m%M(j,k) = moment(3)
+      end do !j=nodes
+   end do !k=blades
+
+   do k=1,p%NumBlades
+      do j=1,p%NumBlNds
+            ! note: because force and moment are 1-d arrays, I'm calculating the transpose of the force and moment outputs
+            !       so that I don't have to take the transpose of WithoutSweepPitchTwist(:,:,j,k)
+!         y%BladeLoad(k)%Force(:,j)  = matmul( force,  m%WithoutSweepPitchTwist(:,:,j,k) )  ! force per unit length of the jth node in the kth blade
+!         y%BladeLoad(k)%Moment(:,j) = matmul( moment, m%WithoutSweepPitchTwist(:,:,j,k) )  ! moment per unit length of the jth node in the kth blade
+
+      end do !j=nodes
+   end do !k=blades
+
+
+end subroutine SetOutputsFromFVW
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine validates the inputs from the AeroDyn input files.
 SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
@@ -1656,7 +1710,7 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
    
       ! BEMT/DBEMT inputs
       ! bjj: these checks should probably go into BEMT where they are used...
-   if (InputFileData%WakeMod /= WakeMod_none) then
+   if (InputFileData%WakeMod /= WakeMod_none .and. InputFileData%WakeMod /= WakeMod_FVW) then
       if ( InputFileData%MaxIter < 1 ) call SetErrStat( ErrID_Fatal, 'MaxIter must be greater than 0.', ErrStat, ErrMsg, RoutineName )
       
       if ( InputFileData%IndToler < 0.0 .or. EqualRealNos(InputFileData%IndToler, 0.0_ReKi) ) &
