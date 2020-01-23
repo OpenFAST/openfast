@@ -42,7 +42,7 @@ private
 
    integer(intki), parameter :: UA_Baseline      = 1   ! UAMod = 1 [Baseline model (Original)]
    integer(intki), parameter :: UA_Gonzalez      = 2   ! UAMod = 2 [Gonzalez's variant (changes in Cn,Cc,Cm)]
-   integer(intki), parameter :: UA_MinemmaPierce = 3   ! UAMod = 3 [Minemma/Pierce variant (changes in Cc and Cm)]
+   integer(intki), parameter :: UA_MinnemaPierce = 3   ! UAMod = 3 [Minnema/Pierce variant (changes in Cc and Cm)]
    
    real(ReKi),     parameter :: Gonzalez_factor = 0.2_ReKi   ! this factor, proposed by Gonzalez (for "all" models) is used to modify Cc to account for negative values seen at f=0 (see Eqn 1.40)
    
@@ -522,7 +522,7 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, KC, BL_
    Kprimeprime_q   = Get_ExpEqn( real(p%dt,ReKi), k_mq**2*T_I , xd%Kprimeprime_q_minus1(i,j) ,  KC%Kq_f , Kq_f_minus1  )      ! Eqn 1.29 [3]
    
       ! Compute Cm_q_nc 
-   if ( p%UAMod == UA_MinemmaPierce ) then
+   if ( p%UAMod == UA_MinnemaPierce ) then
       KC%Cm_q_nc =  -1.0_ReKi * KC%Cn_q_nc / 4.0_ReKi - (KC%k_alpha**2) * T_I * (KC%Kq_f - Kprimeprime_q) / (3.0_ReKi*M)      ! Eqn 1.31
    else  
       KC%Cm_q_nc = -7.0_ReKi * (k_mq**2) * T_I * (KC%Kq_f - Kprimeprime_q) / (12.0_ReKi*M)                                    ! Eqn 1.29 [1]       
@@ -643,7 +643,7 @@ ENDIF
    end if
    
       
-   if ( p%UAMod == UA_MinemmaPierce ) then
+   if ( p%UAMod == UA_MinnemaPierce ) then
       if (OtherState%FirstPass(i,j)) then     
          KC%Dalphaf    = 0.0_ReKi
       else
@@ -1059,8 +1059,8 @@ subroutine UA_ValidateInput(InitInp, ErrStat, ErrMsg)
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-   if (InitInp%UAMod < UA_Gonzalez .or. InitInp%UAMod > UA_MinemmaPierce ) call SetErrStat( ErrID_Fatal, &
-      "In this version, UAMod must be 2 (Gonzalez's variant) or 3 (Minemma/Pierce variant).", ErrStat, ErrMsg, RoutineName )  ! NOTE: for later-  1 (baseline/original) 
+   if (InitInp%UAMod < UA_Gonzalez .or. InitInp%UAMod > UA_MinnemaPierce ) call SetErrStat( ErrID_Fatal, &
+      "In this version, UAMod must be 2 (Gonzalez's variant) or 3 (Minnema/Pierce variant).", ErrStat, ErrMsg, RoutineName )  ! NOTE: for later-  1 (baseline/original) 
       
    if (.not. InitInp%FLookUp ) call SetErrStat( ErrID_Fatal, 'FLookUp must be TRUE for this version.', ErrStat, ErrMsg, RoutineName )
    
@@ -1625,7 +1625,7 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, misc, ErrStat, ErrMsg
       end if
       
             
-      if ( p%UAMod == UA_MinemmaPierce ) then
+      if ( p%UAMod == UA_MinnemaPierce ) then
 #ifdef TEST_THEORY
             y%Cc = Cc_FS + KC%Cn_v*tan(KC%alpha_e)*(1-xd%tau_v(misc%iBladeNode, misc%iBlade)/(BL_p%T_VL))                                          ! Eqn 1.55 with Eqn. 1.40
 #else            
@@ -1711,7 +1711,7 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, misc, ErrStat, ErrMsg
             x_cp_hat = BL_p%k0 + BL_p%k1*(1.0_ReKi-KC%fprimeprime) + BL_p%k2*sin(pi*KC%fprimeprime**BL_p%k3)                                       ! Eqn 1.42
             Cm_FS  = BL_p%Cm0 - KC%Cn_alpha_q_circ*(x_cp_hat - 0.25_ReKi) + Cm_common                                                              ! Eqn 1.41
 
-         elseif ( p%UAMod == UA_MinemmaPierce ) then
+         elseif ( p%UAMod == UA_MinnemaPierce ) then
       
                ! Look up Cm using alpha_prime_f
             alpha_prime_f = KC%alpha_f - KC%Dalphaf                                                                                                ! Eqn 1.43a

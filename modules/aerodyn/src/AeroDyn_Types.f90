@@ -111,7 +111,7 @@ IMPLICIT NONE
     LOGICAL  :: TIDrag      !< Include the drag term in the tangential-induction calculation? [unused when WakeMod=0 or TanInd=FALSE] [flag]
     REAL(ReKi)  :: IndToler      !< Convergence tolerance for BEM induction factors [unused when WakeMod=0] [-]
     REAL(ReKi)  :: MaxIter      !< Maximum number of iteration steps [unused when WakeMod=0] [-]
-    INTEGER(IntKi)  :: UAMod      !< Unsteady Aero Model Switch (switch) {1=Baseline model (Original), 2=Gonzalez's variant (changes in Cn,Cc,Cm), 3=Minemma/Pierce variant (changes in Cc and Cm)} [used only when AFAeroMod=2] [-]
+    INTEGER(IntKi)  :: UAMod      !< Unsteady Aero Model Switch (switch) {1=Baseline model (Original), 2=Gonzalez's variant (changes in Cn,Cc,Cm), 3=Minnema/Pierce variant (changes in Cc and Cm)} [used only when AFAeroMod=2] [-]
     LOGICAL  :: FLookup      !< Flag to indicate whether a lookup for f' will be calculated (TRUE) or whether best-fit exponential equations will be used (FALSE); if FALSE S1-S4 must be provided in airfoil input files [used only when AFAeroMod=2] [flag]
     REAL(ReKi)  :: InCol_Alfa      !< The column in the airfoil tables that contains the angle of attack [-]
     REAL(ReKi)  :: InCol_Cl      !< The column in the airfoil tables that contains the lift coefficient [-]

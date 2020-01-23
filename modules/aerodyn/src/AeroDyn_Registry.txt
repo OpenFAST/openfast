@@ -83,7 +83,7 @@ typedef	^	AD_InputFile	LOGICAL	AIDrag	-	-	-	"Include the drag term in the axial-
 typedef	^	AD_InputFile	LOGICAL	TIDrag	-	-	-	"Include the drag term in the tangential-induction calculation? [unused when WakeMod=0 or TanInd=FALSE]"	flag
 typedef	^	AD_InputFile	ReKi	IndToler	-	-	-	"Convergence tolerance for BEM induction factors [unused when WakeMod=0]"	-
 typedef	^	AD_InputFile	ReKi	MaxIter	-	-	-	"Maximum number of iteration steps [unused when WakeMod=0]"	-
-typedef	^	AD_InputFile	IntKi	UAMod	-	-	-	"Unsteady Aero Model Switch (switch) {1=Baseline model (Original), 2=Gonzalez's variant (changes in Cn,Cc,Cm), 3=Minemma/Pierce variant (changes in Cc and Cm)} [used only when AFAeroMod=2]"	-
+typedef	^	AD_InputFile	IntKi	UAMod	-	-	-	"Unsteady Aero Model Switch (switch) {1=Baseline model (Original), 2=Gonzalez's variant (changes in Cn,Cc,Cm), 3=Minnema/Pierce variant (changes in Cc and Cm)} [used only when AFAeroMod=2]"	-
 typedef	^	AD_InputFile	LOGICAL	FLookup	-	-	-	"Flag to indicate whether a lookup for f' will be calculated (TRUE) or whether best-fit exponential equations will be used (FALSE); if FALSE S1-S4 must be provided in airfoil input files [used only when AFAeroMod=2]"	flag
 typedef	^	AD_InputFile	ReKi	InCol_Alfa	-	-	-	"The column in the airfoil tables that contains the angle of attack"	-
 typedef	^	AD_InputFile	ReKi	InCol_Cl	-	-	-	"The column in the airfoil tables that contains the lift coefficient"	-
