@@ -225,7 +225,7 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
     p%FreqList = (/10.,12.5,16.,20.,25.,31.5,40.,50.,63.,80., &
         100.,125.,160.,200.,250.,315.,400.,500.,630.,800., & 
         1000.,1250.,1600.,2000.,2500.,3150.,4000.,5000.,6300.,8000., &
-        10000.,12500.,16000.,20000./) 
+        10000.,12500.,16000.,20000./)  ! TODO this should be fortran parameter
 		
 	
     CALL AllocAry(p%Aweight, size(p%Freqlist), 'Aweight', ErrStat2, ErrMsg2); if(Failed()) return
@@ -245,25 +245,34 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
     p%ObsX = InputFileData%ObsX
     p%ObsY = InputFileData%ObsY
     p%ObsZ = InputFileData%ObsZ
+    ! 
+    call AllocAry(p%BlAFID,      p%NumBlNds, p%numBlades, 'p%BlAFID' , ErrStat2, ErrMsg2); if(Failed()) return
+    p%BlAFID=InitInp%BlAFID
     
     ! Blade Characteristics chord,span,trailing edge angle and thickness,airfoil ID for each segment
     call AllocAry(p%TEThick   ,p%NumBlNds,p%NumBlades,'p%TEThick'   ,ErrStat2,ErrMsg2); if(Failed()) return
     call AllocAry(p%TEAngle   ,p%NumBlNds,p%NumBlades,'p%TEAngle'   ,ErrStat2,ErrMsg2); if(Failed()) return
     call AllocAry(p%StallStart,p%NumBlNds,p%NumBlades,'p%StallStart',ErrStat2,ErrMsg2); if(Failed()) return
+    p%StallStart(:,:) = 0.0_ReKi
 
     do i=1,p%NumBlades
-        p%TEThick(:,i) = InputFileData%BladeProps(i)%TEThick(:) !
-        p%TEAngle(:,i) = InputFileData%BladeProps(i)%TEAngle(:) !
-        p%StallStart(:,i) = InputFileData%BladeProps(i)%StallStart(:) !
+        p%TEThick(:,i) = InputFileData%BladeProps(i)%TEThick(:)    ! 
+        p%TEAngle(:,i) = InputFileData%BladeProps(i)%TEAngle(:)    ! 
+        do j=1,p%NumBlNds
+           whichairfoil       = p%BlAFID(j,i)
+           if(p%AFInfo(whichairfoil)%NumTabs /=1 ) then
+              call SetErrStat(ErrID_Fatal, 'Number of airfoil tables within airfoil file different than 1, which is not supported.', ErrStat2, ErrMsg2, RoutineName )
+              if(Failed()) return
+           endif
+           p%StallStart(j,i)  = p%AFInfo(whichairfoil)%Table(1)%UA_BL%alpha1*180/PI ! approximate stall angle of attack [deg] (alpha1 in [rad])
+        enddo
     end do
+
     call AllocAry(p%BlSpn,       p%NumBlNds, p%NumBlades, 'p%BlSpn'  , ErrStat2, ErrMsg2); if(Failed()) return
     call AllocAry(p%BlChord,     p%NumBlNds, p%NumBlades, 'p%BlChord', ErrStat2, ErrMsg2); if(Failed()) return
-    call AllocAry(p%BlAFID,      p%NumBlNds, p%numBlades, 'p%BlAFID' , ErrStat2, ErrMsg2); if(Failed()) return
     call AllocAry(p%AerCent,  2, p%NumBlNds, p%NumBlades, 'p%AerCent', ErrStat2, ErrMsg2); if(Failed()) return
-
-    p%BlSpn = InitInp%BlSpn
+    p%BlSpn   = InitInp%BlSpn
     p%BlChord = InitInp%BlChord
-    p%BlAFID=InitInp%BlAFID
 
     do j=p%NumBlNds,2,-1
         IF ( p%BlSpn(j,1) .lt. p%BlSpn(p%NumBlNds,1)*(100-p%AA_Bl_Prcntge)/100 )THEN ! assuming 

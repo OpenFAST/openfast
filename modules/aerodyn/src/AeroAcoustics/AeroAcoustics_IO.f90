@@ -375,10 +375,10 @@ SUBROUTINE ReadBladeInputs ( AABlFile, BladeKInputFileData, UnEc, ErrStat, ErrMs
     CALL AllocAry(BladeKInputFileData%TEThick   ,BladeKInputFileData%NumBlNds,'TEThick'   ,ErrStat2,ErrMsg2); if(Failed()) return
     CALL AllocAry(BladeKInputFileData%StallStart,BladeKInputFileData%NumBlNds,'StallStart',ErrStat2,ErrMsg2); if(Failed()) return
     DO I=1,BladeKInputFileData%NumBlNds
-        READ( UnIn, *, IOStat=IOS )  BladeKInputFileData%TEAngle(I), BladeKInputFileData%TEThick(I) , BladeKInputFileData%StallStart(I)
+        READ( UnIn, *, IOStat=IOS )  BladeKInputFileData%TEAngle(I), BladeKInputFileData%TEThick(I)
         CALL CheckIOS( IOS, AABlFile, 'Blade properties row '//TRIM(Num2LStr(I)), NumType, ErrStat2, ErrMsg2); if(Failed()) return
         IF (UnEc > 0) THEN
-            WRITE( UnEc, "(6(F9.4,1x),I9)", IOStat=IOS)  BladeKInputFileData%TEAngle(I), BladeKInputFileData%TEThick(I), BladeKInputFileData%StallStart(I)
+            WRITE( UnEc, "(6(F9.4,1x),I9)", IOStat=IOS)  BladeKInputFileData%TEAngle(I), BladeKInputFileData%TEThick(I)
         END IF         
     END DO
     !  -------------- END OF FILE --------------------------------------------
