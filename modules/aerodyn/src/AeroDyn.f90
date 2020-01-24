@@ -1236,7 +1236,8 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       CALL FVW_CalcOutput( t, m%FVW_u(1), p%FVW, x%FVW, xd%FVW, z%FVW, OtherState%FVW, p%AFI, m%FVW_y, m%FVW, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
-      call SetOutputsFromFVW(p, m, y )
+      call SetOutputsFromFVW( u, p, m, y, ErrStat2, ErrMsg2 )
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    endif
 
    if ( p%TwrAero ) then
@@ -1682,16 +1683,35 @@ end subroutine SetOutputsFromBEMT
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine converts outputs from FVW (stored in m%FVW_y) into values on the AeroDyn BladeLoad output mesh.
-subroutine SetOutputsFromFVW(p, m, y)
-   type(AD_ParameterType),  intent(in   )  :: p                               !< AD parameters
-   type(AD_OutputType),     intent(inout)  :: y                               !< AD outputs
-   type(AD_MiscVarType),    intent(inout)  :: m                               !< Misc/optimization variables
+subroutine SetOutputsFromFVW(u, p, m, y, ErrStat, ErrMsg)
+   TYPE(AD_InputType),      intent(in   ) :: u           !< Inputs at Time t
+   type(AD_ParameterType),  intent(in   ) :: p           !< AD parameters
+   type(AD_OutputType),     intent(inout) :: y           !< AD outputs
+   type(AD_MiscVarType),    intent(inout) :: m           !< Misc/optimization variables
+   integer(IntKi),          intent(  out) :: ErrStat     !< Error status of the operation
+   character(*),            intent(  out) :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
-   integer(intKi)                          :: j                      ! loop counter for nodes
-   integer(intKi)                          :: k                      ! loop counter for blades
-   real(reki)                              :: force(3)
-   real(reki)                              :: moment(3)
-   real(reki)                              :: q
+   integer(intKi)                         :: j           ! loop counter for nodes
+   integer(intKi)                         :: k           ! loop counter for blades
+   real(reki)                             :: force(3)
+   real(reki)                             :: moment(3)
+   real(reki)                             :: q
+   REAL(ReKi)                             :: ct, st      ! cosine, sine of theta
+   REAL(ReKi)                             :: cp, sp      ! cosine, sine of phi
+   real(ReKi)                             :: AxInd, TanInd, Vrel, phi, alpha, Re, theta
+   type(AFI_OutputType)                   :: AFI_interp             ! Resulting values from lookup table
+   real(ReKi)                             :: CldAirfoil(3)          ! Cl and Cd in airfoil coords
+   real(ReKi)                             :: CxySection(3)          ! Cx and Cy in section coords
+!   real(ReKi)                             :: CntDisk(3)             ! Cn and Ct in hub/Disk coords
+   real(ReKi)                             :: U0Wind(3)              ! Wind in section coords
+
+   integer(intKi)                         :: ErrStat2
+   character(ErrMsgLen)                   :: ErrMsg2
+
+   ErrStat2 = 0
+   ErrMsg2 = ""
+!TODO: we need to map the Vind from the lifting line control points to the blade nodes!!!!!
+
 
 !TODO: Manu!!!!
 !TODO: how are we setting the loads at the nodes for coupling to OpenFAST????
@@ -1701,25 +1721,22 @@ subroutine SetOutputsFromFVW(p, m, y)
 !TODO:  Our outputs are on the lifting line! Not at blade nodes!
    do k=1,p%NumBlades
       do j=2,p%NumBlNds
+         call FVW_AeroOuts( m%WithoutSweepPitchTwist(:,:,j,k), u%BladeMotion(k)%Orientation(1:3,1:3,j), u%BladeMotion(k)%TranslationVel(1:3,j), &
+                     m%FVW_y%Vind(1:3,j,k), u%BladeMotion(k)%Orientation(1:3,1:3,j), p%KinVisc, p%FVW%Chord(j,k), &
+                     AxInd, TanInd, Vrel, phi, alpha, Re, U0Wind, ErrStat, ErrMsg )
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SetOutputsFromFVW')
+         call AFI_ComputeAirfoilCoefs( alpha, Re, 0.0_ReKi,  p%AFI(p%FVW%AFindx(j,k)), AFI_interp, ErrStat, ErrMsg )
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SetOutputsFromFVW')
+         CldAirfoil = (/ AFI_interp%Cl, AFI_interp%Cd, 0.0_ReKi /) ! Airfoil coord Cl and Cd
+         CxySection = matmul( m%WithoutSweepPitchTwist(:,:,j,k), matmul( CldAirfoil, u%BladeMotion(k)%Orientation(1:3,1:3,j) ) )
 
-!TODO: populate this with what we need.
-!            call FVW_AeroOuts( MGlobalToSection, NodeOrient, StructVel, Vind_Glob, DisturbedInflow, KinVisc, Chord, &
-!                         AxInd, TanInd, Vrel, phi, alpha, Re, ErrStat, ErrMsg )
-!
-! call  AirFoilInfo here
-! with Cl Cd etc, calculate the values for the Cn Ct Cx Cy etc.  Then get forces.
-
-!FIXME: calculate Cx Cy Cm here.  So put Airfoil Coeff calcs here. 
-!         q = 0.5 * p%airDens * Vrel(j-1,k)**2             ! dynamic pressure of the jth node in the kth blade
-!         force(1) =  cx(j-1,k) * q * p%FVW%chord(j,k)     ! X = normal force per unit length (normal to the plane, not chord) of the jth node in the kth blade
-!         force(2) = -cy(j-1,k) * q * p%FVW%chord(j,k)     ! Y = tangential force per unit length (tangential to the plane, not chord) of the jth node in the kth blade
-!         moment(3)=  cm(j-1,k) * q * p%FVW%chord(j,k)**2  ! M = pitching moment per unit length of the jth node in the kth blade
+         q = 0.5 * p%airDens * Vrel**2                         ! dynamic pressure of the jth node in the kth blade
+         force(1) =  CxySection(1) * q * p%FVW%Chord(j,k)      ! X = normal force per unit length (normal to the plane, not chord) of the jth node in the kth blade
+         force(2) = -CxySection(2) * q * p%FVW%Chord(j,k)      ! Y = tangential force per unit length (tangential to the plane, not chord) of the jth node in the kth blade
+         moment(3)=  AFI_interp%Cm * q * p%FVW%Chord(j,k)**2   ! M = pitching moment per unit length of the jth node in the kth blade
       end do !j=nodes
    end do !k=blades
 
-!Keep this part V
-
-!TODO:  Our outputs are on the lifting line! Not at blade nodes!
    do k=1,p%NumBlades
       do j=2,p%NumBlNds
             ! save these values for possible output later:
@@ -1729,8 +1746,6 @@ subroutine SetOutputsFromFVW(p, m, y)
       end do !j=nodes
    end do !k=blades
 
-!TODO: Manu!!!!
-!TODO:  Our outputs are on the lifting line! Not at blade nodes! The following is not really correct! Some kind of mapping should be done.
    do k=1,p%NumBlades
       do j=2,p%NumBlNds
             ! note: because force and moment are 1-d arrays, I'm calculating the transpose of the force and moment outputs

@@ -645,7 +645,7 @@ end subroutine
 
 
 subroutine FVW_AeroOuts( MGlobalToSection, NodeOrient, StructVel, Vind_Glob, DisturbedInflow, KinVisc, Chord, &
-                         AxInd, TanInd, Vrel, phi, alpha, Re, ErrStat, ErrMsg )
+                         AxInd, TanInd, Vrel, phi, alpha, Re, U0, ErrStat, ErrMsg )
    real(ReKi),             intent(in   )  :: MGlobalToSection(3,3)   ! m%WithoutSweepPitchTwist(:,:,j,k)                      global  coord
    real(ReKi),             intent(in   )  :: NodeOrient(3,3)         ! u%BladeMotion(k)%Orientation(1:3,1:3,j)                global  coord
    real(ReKi),             intent(in   )  :: StructVel(3)            ! Structural velocity                                    global  coord
@@ -659,6 +659,7 @@ subroutine FVW_AeroOuts( MGlobalToSection, NodeOrient, StructVel, Vind_Glob, Dis
    real(Reki),             intent(  out)  :: phi                     ! Flow angle
    real(Reki),             intent(  out)  :: alpha                   ! angle of attack
    real(ReKi),             intent(  out)  :: Re                      ! Reynolds number
+   real(ReKi),             intent(  out)  :: U0(3)                   ! Vector of UWidn - VStruct                              section coord
    integer(IntKi),         intent(  out)  :: ErrStat
    character(ErrMsgLen),   intent(  out)  :: ErrMsg
 
@@ -668,7 +669,6 @@ subroutine FVW_AeroOuts( MGlobalToSection, NodeOrient, StructVel, Vind_Glob, Dis
    real(ReKi)                             :: VStruct(3)              ! Struct Velocity,                                       section coord
    real(ReKi)                             :: VInd(3)                 ! Induced Velocity,                                      section coord
    real(ReKi)                             :: UWind(3)                ! Disturbed wind velocity,                               section coord
-   real(ReKi)                             :: U0(3)                   ! Vector of UWidn - VStruct                              section coord
    real(ReKi)                             :: UTotLocal(3)            ! Vector of total relative velocity                      section coord
    real(ReKi)                             :: UTotGlobal(3)           ! Vector of total relative velocity                      global  coord
    real(ReKi)                             :: UTotAirfoil(3)          ! Vector of total relative velocity                      airfoil coord

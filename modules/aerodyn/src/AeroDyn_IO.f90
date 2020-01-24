@@ -1605,60 +1605,66 @@ contains
       CHARACTER(*), PARAMETER                   :: RoutineName = 'Calc_WriteOutput'
    
       INTEGER(IntKi)                            :: j,k,i
-!      REAL(ReKi)                                :: ct, st ! cosine, sine of theta
-!      REAL(ReKi)                                :: cp, sp ! cosine, sine of phi
-      real(ReKi)                                :: AxInd, TanInd, Vrel, phi, alpha, Re
-      type(AFI_OutputType)                      :: AFI_interp              ! Resulting values from lookup table
+      REAL(ReKi)                                :: ct, st ! cosine, sine of theta
+      REAL(ReKi)                                :: cp, sp ! cosine, sine of phi
+      real(ReKi)                                :: AxInd, TanInd, Vrel, phi, alpha, Re, theta
+      real(ReKi)                                :: GammaVal                   ! Vorticity
+      type(AFI_OutputType)                      :: AFI_interp                 ! Resulting values from lookup table
+      real(ReKi)                                :: CldAirfoil(3)              ! Cl and Cd in airfoil coords
+      real(ReKi)                                :: CxySection(3)              ! Cx and Cy in section coords
+      real(ReKi)                                :: CntDisk(3)                 ! Cn and Ct in hub/Disk coords
+      real(ReKi)                                :: U0Wind(3)                  ! Wind in section coords
 
          ! blade outputs
       do k=1,p%numBlades
          do j=2,p%NumBlNds       ! NOTE: the LL spans are NumBldNds-1 long
-!TODO: FVW -- put all the ugly mappings here?
+!TODO: FVW -- put all the ugly mappings here????
 
             i = (k-1)*p%NumBlNds*23 + (j-1)*23 + 1
-!FVW_AeroOuts(MGlobalToSection, HubOrient, NodeOrient, StructVel, Vind_Glob, DisturbedInflow, &
-!                  Node, Blade, KinVisc, Chord, AFInfo, &
-!                  CldAirfoil, Cm, CpMin, &         ! CxySection, CntDisk, &
-!                  AxInd, TanInd, Vrel, phi, alpha, Re, &
-!                  ErrStat, ErrMsg )
+
             call FVW_AeroOuts( m%WithoutSweepPitchTwist(:,:,j,k), u%BladeMotion(k)%Orientation(1:3,1:3,j), u%BladeMotion(k)%TranslationVel(1:3,j), &
                         m%FVW_y%Vind(1:3,j,k), u%BladeMotion(k)%Orientation(1:3,1:3,j), p%KinVisc, p%FVW%Chord(j,k), &
-                        AxInd, TanInd, Vrel, phi, alpha, Re, ErrStat, ErrMsg )
+                        AxInd, TanInd, Vrel, phi, alpha, Re, U0Wind, ErrStat, ErrMsg )
             call AFI_ComputeAirfoilCoefs( alpha, Re, 0.0_ReKi,  p%AFI(p%FVW%AFindx(j,k)), AFI_interp, ErrStat, ErrMsg )
 
-!            m%AllOuts( i    ) =  m%FVW_u(indx)%theta(j-1,k)*R2D
-!            m%AllOuts( i+1  ) =  m%FVW_u(indx)%psi(k)*R2D
-!            m%AllOuts( i+2  ) = -m%FVW_u(indx)%Vx(j-1,k)
-!            m%AllOuts( i+3  ) =  m%FVW_u(indx)%Vy(j-1,k)
+            CldAirfoil = (/ AFI_interp%Cl, AFI_interp%Cd, 0.0_ReKi /) ! Airfoil coord Cl and Cd
+            CxySection = matmul( m%WithoutSweepPitchTwist(:,:,j,k), matmul( CldAirfoil, u%BladeMotion(k)%Orientation(1:3,1:3,j) ) )
+            CntDisk    = matmul( m%WithoutSweepPitchTwist(:,:,j,k), matmul( CldAirfoil, u%HubMotion%Orientation(:,:,1) ) )
+            theta = phi - alpha
+!TODO: add this to the output list
+!            GammaVal = 0.5 * p%FVW%Chord(j,k) * Vrel * CldAirfoil(1)
 
-!            m%AllOuts( i+4  ) =  m%FVW_y%axInd(j-1,k)
-!            m%AllOuts( i+5  ) =  m%FVW_y%tanInd(j-1,k)
-!            m%AllOuts( i+6  ) =  m%FVW_y%Vrel(j-1,k)
-!            m%AllOuts( i+7  ) =  m%FVW_y%phi(j-1,k)*R2D
-!            m%AllOuts( i+8  ) =  (m%FVW_y%phi(j-1,k) - m%BEMT_u(indx)%theta(j-1,k))*R2D
-!            m%AllOuts( i+8  ) =  m%FVW_y%alpha(j-1,k)*R2D
-!
-!            m%AllOuts( i+9  ) =  m%FVW_y%Cl(j-1,k)
-!            m%AllOuts( i+10 ) =  m%FVW_y%Cd(j-1,k)
-!            m%AllOuts( i+11 ) =  m%FVW_y%Cm(j-1,k)
-!            m%AllOuts( i+12 ) =  m%FVW_y%Cx(j-1,k)
-!            m%AllOuts( i+13 ) =  m%FVW_y%Cy(j-1,k)
+            m%AllOuts( i    ) =  theta*R2D                        ! "Twst"
+!            m%AllOuts( i+1  ) =  m%FVW_u(indx)%psi(k)*R2D        ! "Psi"
+            m%AllOuts( i+2  ) = -U0Wind(1)                        ! "Vx"
+            m%AllOuts( i+3  ) =  U0Wind(2)                        ! "Vy"
 
-!            ct=cos(m%FVW_u(indx)%theta(j,k))
-!            st=sin(m%FVW_u(indx)%theta(j,k))
-!            m%AllOuts( i+14 ) =  m%FVW_y%Cx(j,k)*ct + m%BEMT_y%Cy(j,k)*st
-!            m%AllOuts( i+15 ) = -m%FVW_y%Cx(j,k)*st + m%BEMT_y%Cy(j,k)*ct
+            m%AllOuts( i+4  ) =  AxInd                            ! "AIn"
+            m%AllOuts( i+5  ) =  TanInd                           ! "ApIn"
+            m%AllOuts( i+6  ) =  Vrel                             ! "Vrel"
+            m%AllOuts( i+7  ) =  phi*R2D                          ! "Phi"
+            m%AllOuts( i+8  ) =  alpha*R2D                        ! "AOA"
 
-!            cp=cos(m%FVW_y%phi(j,k))
-!            sp=sin(m%FVW_y%phi(j,k))
-!            m%AllOuts( i+16 ) =  m%X(j,k)*cp - m%Y(j,k)*sp
-!            m%AllOuts( i+17 ) =  m%X(j,k)*sp + m%Y(j,k)*cp
-!            m%AllOuts( i+18 ) =  m%M(j,k)
-!            m%AllOuts( i+19 ) =  m%X(j,k)
-!            m%AllOuts( i+20 ) = -m%Y(j,k)
-!            m%AllOuts( i+21 ) =  m%X(j,k)*ct - m%Y(j,k)*st
-!            m%AllOuts( i+22 ) = -m%X(j,k)*st - m%Y(j,k)*ct
+            m%AllOuts( i+9  ) =  AFI_interp%Cl                    ! "Cl"
+            m%AllOuts( i+10 ) =  AFI_interp%Cd                    ! "Cd"
+            m%AllOuts( i+11 ) =  AFI_interp%Cm                    ! "Cm"
+            m%AllOuts( i+12 ) =  CxySection(1)                    ! "Cx"
+            m%AllOuts( i+13 ) =  CxySection(2)                    ! "Cy"
 
+            ct=cos(theta)
+            st=sin(theta)
+            m%AllOuts( i+14 ) =  CxySection(1)*ct + CxySection(2)*st    ! "Cn"
+            m%AllOuts( i+15 ) = -CxySection(1)*st + CxySection(2)*ct    ! "Ct"
+
+            cp=cos(phi)
+            sp=sin(phi)
+            m%AllOuts( i+16 ) =  m%X(j,k)*cp - m%Y(j,k)*sp    ! "Fl"
+            m%AllOuts( i+17 ) =  m%X(j,k)*sp + m%Y(j,k)*cp    ! "Fd"
+            m%AllOuts( i+18 ) =  m%M(j,k)                     ! "M"
+            m%AllOuts( i+19 ) =  m%X(j,k)                     ! "Fx"
+            m%AllOuts( i+20 ) = -m%Y(j,k)                     ! "Fy"
+            m%AllOuts( i+21 ) =  m%X(j,k)*ct - m%Y(j,k)*st    ! "Fn"
+            m%AllOuts( i+22 ) = -m%X(j,k)*st - m%Y(j,k)*ct    ! "Ft"
          end do ! nodes
       end do ! blades
    end subroutine Calc_WriteDbgOutputFVW
@@ -1863,6 +1869,7 @@ CONTAINS
    subroutine Calc_WriteOutput_FVW
       real(ReKi)           :: AxInd, TanInd, Vrel, phi, alpha, Re
       type(AFI_OutputType) :: AFI_interp              ! Resulting values from lookup table
+      real(ReKi)           :: U0Wind(3)               ! Wind in section coords
 
          ! blade outputs
       do k=1,p%numBlades
@@ -1873,7 +1880,7 @@ CONTAINS
 !                         AxInd, TanInd, Vrel, phi, alpha, Re, ErrStat, ErrMsg )
             call FVW_AeroOuts( m%WithoutSweepPitchTwist(:,:,j,k), u%BladeMotion(k)%Orientation(1:3,1:3,j), u%BladeMotion(k)%TranslationVel(1:3,j), &
                         m%FVW_y%Vind(1:3,j,k), u%BladeMotion(k)%Orientation(1:3,1:3,j), p%KinVisc, p%FVW%Chord(j,k), &
-                        AxInd, TanInd, Vrel, phi, alpha, Re, ErrStat, ErrMsg )
+                        AxInd, TanInd, Vrel, phi, alpha, Re, U0Wind, ErrStat, ErrMsg )
             call AFI_ComputeAirfoilCoefs( alpha, Re, 0.0_ReKi,  p%AFI(p%FVW%AFindx(j,k)), AFI_interp, ErrStat, ErrMsg )
 ! with Cl Cd etc, calculate the values for the Cn Ct Cx Cy etc.  Then get forces.
 
