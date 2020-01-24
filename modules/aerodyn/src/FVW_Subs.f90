@@ -708,34 +708,6 @@ subroutine FVW_AeroOuts( MGlobalToSection, NodeOrient, StructVel, Vind_Glob, Dis
    alpha = atan2( UTotAirfoil(1), UTotAirfoil(2) )
 
    Re = Chord * Vrel / KinVisc / 1.0E6
-
-
-!TODO: move the rest of this someplace else.  We don't always need these values out, so we will calculate them separately.
-!   real(ReKi),                intent(in   )  :: HubOrient(3,3)             ! u%HubMotion%Orientation(:,:,1)                         global  coord
-!   integer(IntKi),            intent(in   )  :: Node                       ! Node number
-!   integer(IntKi),            intent(in   )  :: Blade                      ! Blade number
-!   type(AFI_ParameterType),   intent(in   )  :: AFInfo                     !< The airfoil parameter data for this node
-!   real(ReKi),                intent(  out)  :: CldAirfoil(3)              ! Cl and Cd in airfoil coords
-!   real(ReKi),                intent(  out)  :: Cm                         ! Cm in airfoil coords
-!   real(ReKi),                intent(  out)  :: CpMin                      ! CpMin in airfoil coords
-!   real(ReKi),                intent(  out)  :: CxySection(3)              ! Cx and Cy in section coords
-!   real(ReKi),                intent(  out)  :: CntDisk(3)                 ! Cn and Ct in hub/Disk coords
-!   type(AFI_OutputType)                   :: AFI_interp              ! Resulting values from lookup table
-!   ! compute steady Airfoil Coefs      ! NOTE: UserProp set to 0.0_ReKi (no idea what it does).  Also, note this assumes airfoils at nodes.
-!!TODO: AFinfo is usually expecting values at the node.
-!   call AFI_ComputeAirfoilCoefs( alpha, Re, 0.0_ReKi,  AFInfo, AFI_interp, ErrStat, ErrMsg )
-!   CldAirfoil = (/ AFI_interp%Cl, AFI_interp%Cd, 0.0_ReKi /) ! Airfoil coord Cl and Cd
-!   Cm = AFI_interp%Cm
-!   CpMin = AFI_interp%CpMin
-
-!TODO: move these elsewhere
-            ! Simple method:
-            !    Gamma_LL=(0.5 * Cl * Vrel_orth_norm*chord)
-            ! VanGarrel's method:
-!FIXME: add to BEM also
-!   GammaVal = 0.5 * Chord * Vrel * CldAirfoil(1)
-!   CxySection = matmul( MGlobalToSection, matmul( CldAirfoil, NodeOrientation ) )
-!   CntDisk = matmul( MGlobalToSection, matmul( CldAirfoil, HubOrient ) )
 end subroutine FVW_AeroOuts
 
 

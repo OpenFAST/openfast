@@ -444,16 +444,7 @@ contains
             Vjouk_orth_norm = norm2(Vjouk_orth)
 
             alpha = atan2(dot_product(Vrel,N) , dot_product(Vrel,Tc) ) ! [rad]  
-            !Re    = LL%Vrel_orth_norm(icp)*LL%chord(icp)/KinVisc/(1.E6_MK) ! TODO TODO TODO KinVisc
-!FIXME: Pass p%KinVisc into here from AD
-Re=1.0_ReKi
-
-!FIXME: do I need this here anymore??? or can I call
-!FVW_AeroOuts(MGlobalToSection, HubOrient, NodeOrient, StructVel, Vind_Glob, DisturbedInflow, &
-!                  Node, Blade, KinVisc, Chord, AFInfo, &
-!                  CldAirfoil, Cm, CpMin, &         ! CxySection, CntDisk, &
-!                  AxInd, TanInd, Vrel, phi, alpha, Re, &
-!                  ErrStat, ErrMsg )
+            Re = p%Chord(icp,iW) * norm2(Vrel) / p%KinVisc / 1.0E6
 
             if (p%CircSolvPolar==idPolarAeroDyn) then
                   ! compute steady Airfoil Coefs      ! NOTE: UserProp set to 0.0_ReKi (no idea what it does).  Also, note this assumes airfoils at nodes.
@@ -462,7 +453,6 @@ Re=1.0_ReKi
                Cl = AFI_interp%Cl
                Cd = AFI_interp%Cd
                Cm = AFI_interp%Cm
-!              Cpmin = AFI_interp%Cpmin
             else if (p%CircSolvPolar==idPolar2PiAlpha) then
                Cl=TwoPi*alpha
             else if (p%CircSolvPolar==idPolar2PiSinAlpha) then
