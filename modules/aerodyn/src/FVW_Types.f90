@@ -39,6 +39,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: nWings      !< Number of Wings [-]
     INTEGER(IntKi)  :: nSpan      !< TODO, should be defined per wing. Number of spanwise element [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: AFindx      !< Index to the airfoils from AD15 [idx 1: BladeNode, idx2: Blade number] [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Chord      !< Chord of each blade element from input file [idx 1: BladeNode, idx2: Blade number] [-]
     INTEGER(IntKi)  :: nNWMax      !< Maximum number of nw panels, per wing [-]
     INTEGER(IntKi)  :: nFWMax      !< Maximum number of fw panels, per wing [-]
     INTEGER(IntKi)  :: nFWFree      !< Number of fw panels that are free, per wing [-]
@@ -59,6 +60,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: VTKBlades      !< Outputs VTk for each blade 0=no blade, 1=Bld 1 [-]
     INTEGER(IntKi)  :: HACK      !< HACK ID [-]
     REAL(DbKi)  :: DT      !< Time interval for calls calculations [s]
+    REAL(ReKi)  :: KinVisc      !< Kinematic air viscosity [m^2/s]
   END TYPE FVW_ParameterType
 ! =======================
 ! =========  FVW_OtherStateType  =======
@@ -143,6 +145,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NumBlades      !< Number of blades [-]
     INTEGER(IntKi)  :: NumBladeNodes      !< Number of nodes on each blade [-]
     REAL(DbKi)  :: DT      !< Time interval for calls (from AD15) [s]
+    REAL(ReKi)  :: KinVisc      !< Kinematic air viscosity [m^2/s]
   END TYPE FVW_InitInputType
 ! =======================
 ! =========  FVW_InputFile  =======
@@ -210,6 +213,20 @@ IF (ALLOCATED(SrcParamData%AFindx)) THEN
   END IF
     DstParamData%AFindx = SrcParamData%AFindx
 ENDIF
+IF (ALLOCATED(SrcParamData%Chord)) THEN
+  i1_l = LBOUND(SrcParamData%Chord,1)
+  i1_u = UBOUND(SrcParamData%Chord,1)
+  i2_l = LBOUND(SrcParamData%Chord,2)
+  i2_u = UBOUND(SrcParamData%Chord,2)
+  IF (.NOT. ALLOCATED(DstParamData%Chord)) THEN 
+    ALLOCATE(DstParamData%Chord(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%Chord.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstParamData%Chord = SrcParamData%Chord
+ENDIF
     DstParamData%nNWMax = SrcParamData%nNWMax
     DstParamData%nFWMax = SrcParamData%nFWMax
     DstParamData%nFWFree = SrcParamData%nFWFree
@@ -241,6 +258,7 @@ ENDIF
     DstParamData%VTKBlades = SrcParamData%VTKBlades
     DstParamData%HACK = SrcParamData%HACK
     DstParamData%DT = SrcParamData%DT
+    DstParamData%KinVisc = SrcParamData%KinVisc
  END SUBROUTINE FVW_CopyParam
 
  SUBROUTINE FVW_DestroyParam( ParamData, ErrStat, ErrMsg )
@@ -254,6 +272,9 @@ ENDIF
   ErrMsg  = ""
 IF (ALLOCATED(ParamData%AFindx)) THEN
   DEALLOCATE(ParamData%AFindx)
+ENDIF
+IF (ALLOCATED(ParamData%Chord)) THEN
+  DEALLOCATE(ParamData%Chord)
 ENDIF
 IF (ALLOCATED(ParamData%PrescribedCirculation)) THEN
   DEALLOCATE(ParamData%PrescribedCirculation)
@@ -302,6 +323,11 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*2  ! AFindx upper/lower bounds for each dimension
       Int_BufSz  = Int_BufSz  + SIZE(InData%AFindx)  ! AFindx
   END IF
+  Int_BufSz   = Int_BufSz   + 1     ! Chord allocated yes/no
+  IF ( ALLOCATED(InData%Chord) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! Chord upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%Chord)  ! Chord
+  END IF
       Int_BufSz  = Int_BufSz  + 1  ! nNWMax
       Int_BufSz  = Int_BufSz  + 1  ! nFWMax
       Int_BufSz  = Int_BufSz  + 1  ! nFWFree
@@ -326,6 +352,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! VTKBlades
       Int_BufSz  = Int_BufSz  + 1  ! HACK
       Db_BufSz   = Db_BufSz   + 1  ! DT
+      Re_BufSz   = Re_BufSz   + 1  ! KinVisc
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -372,6 +399,22 @@ ENDIF
 
       IF (SIZE(InData%AFindx)>0) IntKiBuf ( Int_Xferred:Int_Xferred+(SIZE(InData%AFindx))-1 ) = PACK(InData%AFindx,.TRUE.)
       Int_Xferred   = Int_Xferred   + SIZE(InData%AFindx)
+  END IF
+  IF ( .NOT. ALLOCATED(InData%Chord) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Chord,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Chord,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Chord,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Chord,2)
+    Int_Xferred = Int_Xferred + 2
+
+      IF (SIZE(InData%Chord)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%Chord))-1 ) = PACK(InData%Chord,.TRUE.)
+      Re_Xferred   = Re_Xferred   + SIZE(InData%Chord)
   END IF
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%nNWMax
       Int_Xferred   = Int_Xferred   + 1
@@ -424,6 +467,8 @@ ENDIF
       Int_Xferred   = Int_Xferred   + 1
       DbKiBuf ( Db_Xferred:Db_Xferred+(1)-1 ) = InData%DT
       Db_Xferred   = Db_Xferred   + 1
+      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%KinVisc
+      Re_Xferred   = Re_Xferred   + 1
  END SUBROUTINE FVW_PackParam
 
  SUBROUTINE FVW_UnPackParam( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -492,6 +537,32 @@ ENDIF
       Int_Xferred   = Int_Xferred   + SIZE(OutData%AFindx)
     DEALLOCATE(mask2)
   END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Chord not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%Chord)) DEALLOCATE(OutData%Chord)
+    ALLOCATE(OutData%Chord(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%Chord.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask2.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask2 = .TRUE. 
+      IF (SIZE(OutData%Chord)>0) OutData%Chord = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%Chord))-1 ), mask2, 0.0_ReKi )
+      Re_Xferred   = Re_Xferred   + SIZE(OutData%Chord)
+    DEALLOCATE(mask2)
+  END IF
       OutData%nNWMax = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
       OutData%nFWMax = IntKiBuf( Int_Xferred ) 
@@ -553,6 +624,8 @@ ENDIF
       Int_Xferred   = Int_Xferred + 1
       OutData%DT = DbKiBuf( Db_Xferred ) 
       Db_Xferred   = Db_Xferred + 1
+      OutData%KinVisc = ReKiBuf( Re_Xferred )
+      Re_Xferred   = Re_Xferred + 1
  END SUBROUTINE FVW_UnPackParam
 
  SUBROUTINE FVW_CopyOtherState( SrcOtherStateData, DstOtherStateData, CtrlCode, ErrStat, ErrMsg )
@@ -3987,6 +4060,7 @@ ENDIF
     DstInitInputData%NumBlades = SrcInitInputData%NumBlades
     DstInitInputData%NumBladeNodes = SrcInitInputData%NumBladeNodes
     DstInitInputData%DT = SrcInitInputData%DT
+    DstInitInputData%KinVisc = SrcInitInputData%KinVisc
  END SUBROUTINE FVW_CopyInitInput
 
  SUBROUTINE FVW_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
@@ -4125,6 +4199,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! NumBlades
       Int_BufSz  = Int_BufSz  + 1  ! NumBladeNodes
       Db_BufSz   = Db_BufSz   + 1  ! DT
+      Re_BufSz   = Re_BufSz   + 1  ! KinVisc
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -4306,6 +4381,8 @@ ENDIF
       Int_Xferred   = Int_Xferred   + 1
       DbKiBuf ( Db_Xferred:Db_Xferred+(1)-1 ) = InData%DT
       Db_Xferred   = Db_Xferred   + 1
+      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%KinVisc
+      Re_Xferred   = Re_Xferred   + 1
  END SUBROUTINE FVW_PackInitInput
 
  SUBROUTINE FVW_UnPackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -4581,6 +4658,8 @@ ENDIF
       Int_Xferred   = Int_Xferred + 1
       OutData%DT = DbKiBuf( Db_Xferred ) 
       Db_Xferred   = Db_Xferred + 1
+      OutData%KinVisc = ReKiBuf( Re_Xferred )
+      Re_Xferred   = Re_Xferred + 1
  END SUBROUTINE FVW_UnPackInitInput
 
  SUBROUTINE FVW_CopyInputFile( SrcInputFileData, DstInputFileData, CtrlCode, ErrStat, ErrMsg )

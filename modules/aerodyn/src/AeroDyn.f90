@@ -29,6 +29,7 @@ module AeroDyn
    use NWTC_LAPACK
    use UnsteadyAero
    use FVW
+   use FVW_Subs, only: FVW_AeroOuts
    
    
    implicit none
@@ -1594,9 +1595,16 @@ subroutine SetInputsForFVW(p, u, m, errStat, errMsg)
    integer(IntKi),          intent(  out)  :: ErrStat                         !< Error status of the operation
    character(*),            intent(  out)  :: ErrMsg                          !< Error message if ErrStat /= ErrID_None
 
-!   real(ReKi)                              :: x_hat_disk(3)
-!   real(ReKi)                              :: y_hat_disk(3)
-!   real(ReKi)                              :: z_hat_disk(3)
+!   real(ReKi)                              :: x_hat(3)
+!   real(ReKi)                              :: y_hat(3)
+   real(ReKi)                              :: x_hat_disk(3)
+   real(ReKi)                              :: y_hat_disk(3)
+   real(ReKi)                              :: z_hat_disk(3)
+!   real(ReKi)                              :: tmp(3)
+!   real(ReKi)                              :: tmp_sz, tmp_sz_y
+   real(R8Ki)                              :: thetaBladeNds(p%NumBlNds,p%NumBlades)
+   real(ReKi)                              :: Azimuth(p%NumBlNds)
+   
    integer(intKi)                          :: tIndx
    integer(intKi)                          :: k                      ! loop counter for blades
    integer(intKi)                          :: ErrStat2
@@ -1604,6 +1612,11 @@ subroutine SetInputsForFVW(p, u, m, errStat, errMsg)
    character(*), parameter                 :: RoutineName = 'SetInputsForFVW'
 
    do tIndx=1,size(u)
+         ! Get disk average values and orientations
+      call DiskAvgValues(p, u(tIndx), m, x_hat_disk, y_hat_disk, z_hat_disk, Azimuth)
+      call GeomWithoutSweepPitchTwist(p,u(tIndx),m,thetaBladeNds,ErrStat,ErrMsg)
+      if (ErrStat >= AbortErrLev) return
+
          ! Rather than use a meshcopy, we will just copy what we need to the WingsMesh
          ! NOTE:  MeshCopy requires the source mesh to be INOUT intent
          ! NOTE2: If we change the WingsMesh to not be identical to the BladeMotion mesh, add the mapping stuff here.
@@ -1680,32 +1693,50 @@ subroutine SetOutputsFromFVW(p, m, y)
    real(reki)                              :: moment(3)
    real(reki)                              :: q
 
+!TODO: Manu!!!!
+!TODO: how are we setting the loads at the nodes for coupling to OpenFAST????
+!NOTE: size of _y%c[xym] is 1:p%NumBldNds-1
    force(3)    =  0.0_ReKi
    moment(1:2) =  0.0_ReKi
+!TODO:  Our outputs are on the lifting line! Not at blade nodes!
    do k=1,p%NumBlades
-      do j=1,p%NumBlNds
-!         q = 0.5 * p%airDens * m%BEMT_y%Vrel(j,k)**2              ! dynamic pressure of the jth node in the kth blade
-!         force(1) =  m%BEMT_y%cx(j,k) * q * p%BEMT%chord(j,k)     ! X = normal force per unit length (normal to the plane, not chord) of the jth node in the kth blade
-!         force(2) = -m%BEMT_y%cy(j,k) * q * p%BEMT%chord(j,k)     ! Y = tangential force per unit length (tangential to the plane, not chord) of the jth node in the kth blade
-!         moment(3)=  m%BEMT_y%cm(j,k) * q * p%BEMT%chord(j,k)**2  ! M = pitching moment per unit length of the jth node in the kth blade
+      do j=2,p%NumBlNds
+
+!TODO: populate this with what we need.
+!            call FVW_AeroOuts( MGlobalToSection, NodeOrient, StructVel, Vind_Glob, DisturbedInflow, KinVisc, Chord, &
+!                         AxInd, TanInd, Vrel, phi, alpha, Re, ErrStat, ErrMsg )
+!
+! call  AirFoilInfo here
+! with Cl Cd etc, calculate the values for the Cn Ct Cx Cy etc.  Then get forces.
+
+!FIXME: calculate Cx Cy Cm here.  So put Airfoil Coeff calcs here. 
+!         q = 0.5 * p%airDens * Vrel(j-1,k)**2             ! dynamic pressure of the jth node in the kth blade
+!         force(1) =  cx(j-1,k) * q * p%FVW%chord(j,k)     ! X = normal force per unit length (normal to the plane, not chord) of the jth node in the kth blade
+!         force(2) = -cy(j-1,k) * q * p%FVW%chord(j,k)     ! Y = tangential force per unit length (tangential to the plane, not chord) of the jth node in the kth blade
+!         moment(3)=  cm(j-1,k) * q * p%FVW%chord(j,k)**2  ! M = pitching moment per unit length of the jth node in the kth blade
       end do !j=nodes
    end do !k=blades
 
+!Keep this part V
+
+!TODO:  Our outputs are on the lifting line! Not at blade nodes!
    do k=1,p%NumBlades
-      do j=1,p%NumBlNds
-!            ! save these values for possible output later:
-!         m%X(j,k) = force(1)
-!         m%Y(j,k) = force(2)
-!         m%M(j,k) = moment(3)
+      do j=2,p%NumBlNds
+            ! save these values for possible output later:
+         m%X(j,k) = force(1)
+         m%Y(j,k) = force(2)
+         m%M(j,k) = moment(3)
       end do !j=nodes
    end do !k=blades
 
+!TODO: Manu!!!!
+!TODO:  Our outputs are on the lifting line! Not at blade nodes! The following is not really correct! Some kind of mapping should be done.
    do k=1,p%NumBlades
-      do j=1,p%NumBlNds
+      do j=2,p%NumBlNds
             ! note: because force and moment are 1-d arrays, I'm calculating the transpose of the force and moment outputs
             !       so that I don't have to take the transpose of WithoutSweepPitchTwist(:,:,j,k)
-!         y%BladeLoad(k)%Force(:,j)  = matmul( force,  m%WithoutSweepPitchTwist(:,:,j,k) )  ! force per unit length of the jth node in the kth blade
-!         y%BladeLoad(k)%Moment(:,j) = matmul( moment, m%WithoutSweepPitchTwist(:,:,j,k) )  ! moment per unit length of the jth node in the kth blade
+         y%BladeLoad(k)%Force(:,j)  = matmul( force,  m%WithoutSweepPitchTwist(:,:,j,k) )  ! force per unit length of the jth node in the kth blade
+         y%BladeLoad(k)%Moment(:,j) = matmul( moment, m%WithoutSweepPitchTwist(:,:,j,k) )  ! moment per unit length of the jth node in the kth blade
 
       end do !j=nodes
    end do !k=blades
@@ -2192,6 +2223,7 @@ SUBROUTINE Init_FVWmodule( InputFileData, u_AD, u, p, x, xd, z, OtherState, y, m
    InitInp%numBlades      = p%numBlades
    InitInp%numBladeNodes  = p%numBlNds
    InitInp%DT             = p%DT       ! NOTE: if we subcycle FVW, this will need modification
+   InitInp%KinVisc        = p%KinVisc
 
       ! NOTE: The following are not meshes
       !       It's just the spanwise location.

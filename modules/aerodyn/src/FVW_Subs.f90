@@ -4,6 +4,7 @@ module FVW_SUBS
    use FVW_TYPES
    use FVW_VortexTools
    use FVW_BiotSavart
+   use AirFoilInfo, only: AFI_ComputeAirfoilCoefs
 
    implicit none
 
@@ -643,6 +644,102 @@ contains
    end subroutine
 end subroutine
 
+
+subroutine FVW_AeroOuts( MGlobalToSection, NodeOrient, StructVel, Vind_Glob, DisturbedInflow, KinVisc, Chord, &
+                         AxInd, TanInd, Vrel, phi, alpha, Re, ErrStat, ErrMsg )
+   real(ReKi),             intent(in   )  :: MGlobalToSection(3,3)   ! m%WithoutSweepPitchTwist(:,:,j,k)                      global  coord
+   real(ReKi),             intent(in   )  :: NodeOrient(3,3)         ! u%BladeMotion(k)%Orientation(1:3,1:3,j)                global  coord
+   real(ReKi),             intent(in   )  :: StructVel(3)            ! Structural velocity                                    global  coord
+   real(ReKi),             intent(in   )  :: Vind_Glob(3)            ! Induced wind velocity                                  global  coord
+   real(ReKi),             intent(in   )  :: DisturbedInflow(3)      ! Disturbed inflow                                       global  coord
+
+   real(ReKi),             intent(in   )  :: KinVisc                 ! Viscosity
+   real(ReKi),             intent(in   )  :: Chord                   ! chord length
+   real(ReKi),             intent(  out)  :: AxInd                   ! axial induction
+   real(ReKi),             intent(  out)  :: TanInd                  ! Tangential induction
+   real(ReKi),             intent(  out)  :: Vrel                    ! Relative velocity (scalar)
+   real(Reki),             intent(  out)  :: phi                     ! Flow angle
+   real(Reki),             intent(  out)  :: alpha                   ! angle of attack
+   real(ReKi),             intent(  out)  :: Re                      ! Reynolds number
+
+   integer(IntKi),         intent(  out)  :: ErrStat
+   character(ErrMsgLen),   intent(  out)  :: ErrMsg
+
+   ! Local vars
+   real(ReKi)                             :: x_hat(3)                ! Vector in airfoil cross section, flapwise  direction   global  coord
+   real(ReKi)                             :: y_hat(3)                ! Vector in airfoil cross section, chordwise direction   global  coord
+   real(ReKi)                             :: VStruct(3)              ! Struct Velocity,                                       section coord
+   real(ReKi)                             :: VInd(3)                 ! Induced Velocity,                                      section coord
+   real(ReKi)                             :: UWind(3)                ! Disturbed wind velocity,                               section coord
+   real(ReKi)                             :: U0(3)                   ! Vector of UWidn - VStruct                              section coord
+   real(ReKi)                             :: UTotLocal(3)            ! Vector of total relative velocity                      section coord
+   real(ReKi)                             :: UTotGlobal(3)           ! Vector of total relative velocity                      global  coord
+   real(ReKi)                             :: UTotAirfoil(3)          ! Vector of total relative velocity                      airfoil coord
+   type(AFI_OutputType)                   :: AFI_interp              ! Resulting values from lookup table
+
+   x_hat = MGlobalToSection(1,:)   ! ADP: We want this Airfoil cross section flapwise. Is this it???
+   y_hat = MGlobalToSection(2,:)   ! ADP: We want this Airfoil cross section chordwise
+
+   ! Section coordinates
+   VStruct(1)=dot_product(x_hat, StructVel)
+   VStruct(2)=dot_product(y_hat, StructVel)
+   VStruct(3)=0.0_ReKi
+
+   ! Section coordinates
+   VInd(1)=dot_product(Vind_Glob(1:3),x_hat)
+   VInd(2)=dot_product(Vind_Glob(1:3),y_hat)
+   Vind(3)=0.0_ReKi
+
+   ! disturbed wind in section coords
+   UWind(1) =dot_product( DisturbedInflow(:), x_hat)
+   UWind(2) =dot_product( DisturbedInflow(:), y_hat)
+   UWind(3) = 0.0_ReKi
+
+   U0 = UWind - VStruct
+!FIXME: are these calcs correct?  Expect scalar output.
+   AxInd  = norm2(VInd) /U0(1)       ! What is the sign here????
+   TanInd = norm2(VInd) /U0(2)
+
+   ! Section coordinates
+   UTotLocal = UWind - VStruct + Vind
+   Vrel = norm2(UTotLocal)
+
+   phi = atan2( UTotLocal(1), UTotLocal(2) )        ! flow angle
+
+   UTotGlobal  = DisturbedInflow(:) - StructVel + Vind(1:3)
+   UTotAirfoil = matmul(UTotGlobal, NodeOrient )    ! Airfoil coord
+!TODO: is there a +/- error here?
+   alpha = atan2( UTotAirfoil(1), UTotAirfoil(2) )
+
+   Re = Chord * Vrel / KinVisc / 1.0E6
+
+
+!TODO: move the rest of this someplace else.  We don't always need these values out, so we will calculate them separately.
+!   real(ReKi),                intent(in   )  :: HubOrient(3,3)             ! u%HubMotion%Orientation(:,:,1)                         global  coord
+!   integer(IntKi),            intent(in   )  :: Node                       ! Node number
+!   integer(IntKi),            intent(in   )  :: Blade                      ! Blade number
+!   type(AFI_ParameterType),   intent(in   )  :: AFInfo                     !< The airfoil parameter data for this node
+!   real(ReKi),                intent(  out)  :: CldAirfoil(3)              ! Cl and Cd in airfoil coords
+!   real(ReKi),                intent(  out)  :: Cm                         ! Cm in airfoil coords
+!   real(ReKi),                intent(  out)  :: CpMin                      ! CpMin in airfoil coords
+!   real(ReKi),                intent(  out)  :: CxySection(3)              ! Cx and Cy in section coords
+!   real(ReKi),                intent(  out)  :: CntDisk(3)                 ! Cn and Ct in hub/Disk coords
+!   ! compute steady Airfoil Coefs      ! NOTE: UserProp set to 0.0_ReKi (no idea what it does).  Also, note this assumes airfoils at nodes.
+!!TODO: AFinfo is usually expecting values at the node.
+!   call AFI_ComputeAirfoilCoefs( alpha, Re, 0.0_ReKi,  AFInfo, AFI_interp, ErrStat, ErrMsg )
+!   CldAirfoil = (/ AFI_interp%Cl, AFI_interp%Cd, 0.0_ReKi /) ! Airfoil coord Cl and Cd
+!   Cm = AFI_interp%Cm
+!   CpMin = AFI_interp%CpMin
+
+!TODO: move these elsewhere
+            ! Simple method:
+            !    Gamma_LL=(0.5 * Cl * Vrel_orth_norm*chord)
+            ! VanGarrel's method:
+!FIXME: add to BEM also
+!   GammaVal = 0.5 * Chord * Vrel * CldAirfoil(1)
+!   CxySection = matmul( MGlobalToSection, matmul( CldAirfoil, NodeOrientation ) )
+!   CntDisk = matmul( MGlobalToSection, matmul( CldAirfoil, HubOrient ) )
+end subroutine FVW_AeroOuts
 
 
 end module FVW_Subs

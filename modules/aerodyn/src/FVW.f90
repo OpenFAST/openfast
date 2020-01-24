@@ -45,7 +45,6 @@ subroutine FVW_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
    type(FVW_DiscreteStateType),     intent(  out)  :: xd             !< Initial discrete states
    type(FVW_ConstraintStateType),   intent(  out)  :: z              !< Initial guess of the constraint states
    type(FVW_OtherStateType),        intent(  out)  :: OtherState     !< Initial other states
-!   type(AFI_ParameterType),         intent(in   )  :: AFInfo(:)      ! The airfoil parameter data
    type(FVW_OutputType),            intent(  out)  :: y              !< Initial system outputs (outputs are not calculated;
                                                                      !!   only the output mesh is initialized)
    type(FVW_MiscVarType),           intent(  out)  :: m              !< Initial misc/optimization variables
@@ -112,7 +111,7 @@ subroutine FVW_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
    endif
 
    ! This mesh is passed in as a cousin of the BladeMotion mesh.
-   CALL Wings_Panelling_Init(u%WingsMesh, InitInp%zLocal, InitInp%chord, p, m, ErrStat2, ErrMsg2); if(Failed()) return
+   CALL Wings_Panelling_Init(u%WingsMesh, InitInp%zLocal, p, m, ErrStat2, ErrMsg2); if(Failed()) return
 
    ! Set parameters from InputFileData (need Misc allocated)
    CALL FVW_SetParametersFromInputFile(InputFileData, p, m, ErrStat2, ErrMsg2); if(Failed()) return
@@ -248,7 +247,7 @@ subroutine FVW_Init_Y( p, u, y, ErrStat, ErrMsg )
    integer(IntKi)          :: nMax           ! Total number of wind points possible
    integer(IntKi)          :: ErrStat2       ! temporary error status of the operation
    character(ErrMsgLen)    :: ErrMsg2        ! temporary error message
-   character(*), parameter :: RoutineName = 'FVW_InitMiscVars'
+   character(*), parameter :: RoutineName = 'FVW_Init_Y'
    ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -258,11 +257,11 @@ subroutine FVW_Init_Y( p, u, y, ErrStat, ErrMsg )
    nMax = nMax + (p%nSpan+1) * (p%nNWMax+1) * p%nWings   ! Nearwake points
    nMax = nMax + (FWnSpan+1) * (p%nFWMax+1) * p%nWings   ! Far wake points
 
-   call AllocAry( u%V_wind, 3, nMax, 'Wind Velocity at points', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_Init_Y' )
+   call AllocAry( u%V_wind, 3, nMax, 'Wind Velocity at points', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName )
    !call AllocAry( y%Vind ,  3, p%nSpan+1, p%nWings, 'Induced velocity vector',  ErrStat2, ErrMsg2 ); ! TODO potentially nSpan+1 for AD15
-   call AllocAry( y%Vind ,  3, p%nSpan+1, 3, 'Induced velocity vector',  ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_Init_Y' ) ! NOTE: temporary hack 3 blades
+   call AllocAry( y%Vind ,  3, p%nSpan+1, 3, 'Induced velocity vector',  ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ) ! NOTE: temporary hack 3 blades
 !FIXME: TODO: allocate y%Cl_KJ   (2d).  Placeholder for now
-   call AllocAry(y%Cl_KJ, 1, 1, 'Lift coefficient from circulation (Kutta-Joukowski)', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_Init_Y' )
+   call AllocAry(y%Cl_KJ , 1, 1, 'Lift coefficient from circulation (Kutta-Joukowski)', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName )
    if (ErrStat >= AbortErrLev) return
    y%Vind   = 0.0_ReKi
    return
@@ -294,10 +293,15 @@ SUBROUTINE FVW_SetParametersFromInputs( InitInp, p, m, ErrStat, ErrMsg )
    ! Set time step
    p%DT           =  InitInp%DT
 
+   ! Kinematic air viscosity
+   p%KinVisc      =  InitInp%KinVisc
+
    ! Set indexing to AFI tables -- this is set from the AD15 calling code.
    call AllocAry(p%AFindx,size(InitInp%AFindx,1),size(InitInp%AFindx,2),'AFindx',ErrStat,ErrMsg)
    p%AFindx = InitInp%AFindx     ! Copying in case AD15 still needs these
 
+   ! Set the Chord values
+   call move_alloc(InitInp%Chord, p%Chord)
 
 end subroutine FVW_SetParametersFromInputs
 ! ==============================================================================
@@ -637,11 +641,10 @@ subroutine FVW_CalcConstrStateResidual( t, u, p, x, xd, z_guess, OtherState, m, 
    type(FVW_MiscVarType),         intent(inout)  :: m           !< Misc variables for optimization (not copied in glue code)
    type(FVW_ConstraintStateType), intent(  out)  :: z_out       !< Residual of the constraint state functions using
    type(AFI_ParameterType),       intent(in   )  :: AFInfo(:)   !< The airfoil parameter data
+   integer(IntKi),                intent(in   )  :: iLabel
+   integer(IntKi),                intent(  OUT)  :: ErrStat     !< Error status of the operation
+   character(*),                  intent(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
-   integer(IntKi), intent(in) :: iLabel
-                                                                    !!     the input values described above
-   integer(IntKi),                    intent(  OUT)  :: ErrStat     !< Error status of the operation
-   character(*),                      intent(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
    ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -690,11 +693,11 @@ subroutine FVW_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, ErrStat,
 
    print'(A,F10.3,A,L1,A,I0,A,I0)','CalcOutput     t:',t,'   ',m%FirstCall,'                                nNW:',m%nNW,' nFW:',m%nFW
 
-   ! if we are on a correction step, CalcOutput may be called again with different inputs
-      CALL Wings_ComputeCirculation(t, m%Gamma_LL, z%Gamma_LL, u, p, x, m, AFInfo, ErrStat2, ErrMsg2, 0); if(Failed()) return ! For plotting only
-
    ! Set the wind velocity at vortex
    CALL DistributeRequestedWind(u%V_wind, x, p, m, ErrStat2, ErrMsg2);  if(Failed()) return
+
+   ! if we are on a correction step, CalcOutput may be called again with different inputs
+   CALL Wings_ComputeCirculation(t, m%Gamma_LL, z%Gamma_LL, u, p, x, m, AFInfo, ErrStat2, ErrMsg2, 0); if(Failed()) return ! For plotting only
 
 
    ! Induction on the lifting line control point
@@ -703,9 +706,12 @@ subroutine FVW_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, ErrStat,
    call LiftingLineInducedVelocities(p, x, 1, m, ErrStat2, ErrMsg2); if(Failed()) return
 
    ! Interpolation to AeroDyn radial station TODO TODO TODO
+!TODO: interpolate Vind to AD discretization
+!     Cl, Cd, Cm
    y%Vind(1:3,:,:) = 0.0_ReKi
    do iW=1,p%nWings
       do iSpan=1,p%nSpan
+!Interpolate here
          y%Vind(1:3,iSpan,iW) = m%Vind_LL(1:3,iSpan,iW)
       enddo
    enddo

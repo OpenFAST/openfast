@@ -1586,7 +1586,53 @@ SUBROUTINE Calc_WriteDbgOutput( p, u, m, y, ErrStat, ErrMsg )
          end do ! nodes
       end do ! blades
    else  !  (p%WakeMod == WakeMod_FVW)
-      m%AllOuts = 0.0_ReKi
+         ! blade outputs
+      do k=1,p%numBlades
+         do j=2,p%NumBlNds       ! NOTE: the LL spans are NumBldNds-1 long
+!TODO: FVW -- put all the ugly mappings here?
+
+            i = (k-1)*p%NumBlNds*23 + (j-1)*23 + 1
+!FVW_AeroOuts(MGlobalToSection, HubOrient, NodeOrient, StructVel, Vind_Glob, DisturbedInflow, &
+!                  Node, Blade, KinVisc, Chord, AFInfo, &
+!                  CldAirfoil, Cm, CpMin, &         ! CxySection, CntDisk, &
+!                  AxInd, TanInd, Vrel, phi, alpha, Re, &
+!                  ErrStat, ErrMsg )
+
+!            m%AllOuts( i    ) =  m%FVW_u(indx)%theta(j-1,k)*R2D
+!            m%AllOuts( i+1  ) =  m%FVW_u(indx)%psi(k)*R2D
+!            m%AllOuts( i+2  ) = -m%FVW_u(indx)%Vx(j-1,k)
+!            m%AllOuts( i+3  ) =  m%FVW_u(indx)%Vy(j-1,k)
+
+!            m%AllOuts( i+4  ) =  m%FVW_y%axInd(j-1,k)
+!            m%AllOuts( i+5  ) =  m%FVW_y%tanInd(j-1,k)
+!            m%AllOuts( i+6  ) =  m%FVW_y%Vrel(j-1,k)
+!            m%AllOuts( i+7  ) =  m%FVW_y%phi(j-1,k)*R2D
+!            m%AllOuts( i+8  ) =  (m%FVW_y%phi(j-1,k) - m%BEMT_u(indx)%theta(j-1,k))*R2D
+!            m%AllOuts( i+8  ) =  m%FVW_y%alpha(j-1,k)*R2D
+!
+!            m%AllOuts( i+9  ) =  m%FVW_y%Cl(j-1,k)
+!            m%AllOuts( i+10 ) =  m%FVW_y%Cd(j-1,k)
+!            m%AllOuts( i+11 ) =  m%FVW_y%Cm(j-1,k)
+!            m%AllOuts( i+12 ) =  m%FVW_y%Cx(j-1,k)
+!            m%AllOuts( i+13 ) =  m%FVW_y%Cy(j-1,k)
+
+!            ct=cos(m%FVW_u(indx)%theta(j,k))
+!            st=sin(m%FVW_u(indx)%theta(j,k))
+!            m%AllOuts( i+14 ) =  m%FVW_y%Cx(j,k)*ct + m%BEMT_y%Cy(j,k)*st
+!            m%AllOuts( i+15 ) = -m%FVW_y%Cx(j,k)*st + m%BEMT_y%Cy(j,k)*ct
+
+!            cp=cos(m%FVW_y%phi(j,k))
+!            sp=sin(m%FVW_y%phi(j,k))
+!            m%AllOuts( i+16 ) =  m%X(j,k)*cp - m%Y(j,k)*sp
+!            m%AllOuts( i+17 ) =  m%X(j,k)*sp + m%Y(j,k)*cp
+!            m%AllOuts( i+18 ) =  m%M(j,k)
+!            m%AllOuts( i+19 ) =  m%X(j,k)
+!            m%AllOuts( i+20 ) = -m%Y(j,k)
+!            m%AllOuts( i+21 ) =  m%X(j,k)*ct - m%Y(j,k)*st
+!            m%AllOuts( i+22 ) = -m%X(j,k)*st - m%Y(j,k)*ct
+
+         end do ! nodes
+      end do ! blades
    endif
 
 END SUBROUTINE Calc_WriteDbgOutput
@@ -1790,72 +1836,15 @@ CONTAINS
    subroutine Calc_WriteOutput_FVW
          ! blade outputs
       do k=1,p%numBlades
-!         m%AllOuts( BAzimuth(k) ) = m%BEMT_u(indx)%psi(k)*R2D
-!       ! m%AllOuts( BPitch(  k) ) = calculated in SetInputsForBEMT
-!
          do beta=1,p%NBlOuts
+            j=p%BlOutNd(beta)
+!TODO: populate this with what we need.
+!            call FVW_AeroOuts( MGlobalToSection, NodeOrient, StructVel, Vind_Glob, DisturbedInflow, KinVisc, Chord, &
+!                         AxInd, TanInd, Vrel, phi, alpha, Re, ErrStat, ErrMsg )
 !
-!            j=p%BlOutNd(beta)
-!
-!            tmp = matmul( m%WithoutSweepPitchTwist(:,:,j,k), u%InflowOnBlade(:,j,k) )
-!            m%AllOuts( BNVUndx(beta,k) ) = tmp(1)
-!            m%AllOuts( BNVUndy(beta,k) ) = tmp(2)
-!            m%AllOuts( BNVUndz(beta,k) ) = tmp(3)
-!
-!            tmp = matmul( m%WithoutSweepPitchTwist(:,:,j,k), m%DisturbedInflow(:,j,k) )
-!            m%AllOuts( BNVDisx(beta,k) ) = tmp(1)
-!            m%AllOuts( BNVDisy(beta,k) ) = tmp(2)
-!            m%AllOuts( BNVDisz(beta,k) ) = tmp(3)
-!
-!            tmp = matmul( m%WithoutSweepPitchTwist(:,:,j,k), u%BladeMotion(k)%TranslationVel(:,j) )
-!            m%AllOuts( BNSTVx( beta,k) ) = tmp(1)
-!            m%AllOuts( BNSTVy( beta,k) ) = tmp(2)
-!            m%AllOuts( BNSTVz( beta,k) ) = tmp(3)
-!
-!            m%AllOuts( BNVrel( beta,k) ) = m%BEMT_y%Vrel(j,k)
-!            m%AllOuts( BNDynP( beta,k) ) = 0.5 * p%airDens * m%BEMT_y%Vrel(j,k)**2
-!            m%AllOuts( BNRe(   beta,k) ) = p%BEMT%chord(j,k) * m%BEMT_y%Vrel(j,k) / p%KinVisc / 1.0E6
-!            m%AllOuts( BNM(    beta,k) ) = m%BEMT_y%Vrel(j,k) / p%SpdSound
-!
-!            m%AllOuts( BNVIndx(beta,k) ) = - m%BEMT_u(indx)%Vx(j,k) * m%BEMT_y%axInduction( j,k)
-!            m%AllOuts( BNVIndy(beta,k) ) =   m%BEMT_u(indx)%Vy(j,k) * m%BEMT_y%tanInduction(j,k)
-!
-!            m%AllOuts( BNAxInd(beta,k) ) = m%BEMT_y%axInduction(j,k)
-!            m%AllOuts( BNTnInd(beta,k) ) = m%BEMT_y%tanInduction(j,k)
-!
-!            m%AllOuts( BNAlpha(beta,k) ) = Rad2M180to180Deg( m%BEMT_y%phi(j,k) - m%BEMT_u(indx)%theta(j,k) )
-!            m%AllOuts( BNTheta(beta,k) ) = m%BEMT_u(indx)%theta(j,k)*R2D
-!            m%AllOuts( BNPhi(  beta,k) ) = m%BEMT_y%phi(j,k)*R2D
-!            m%AllOuts( BNCurve(beta,k) ) = m%Curve(j,k)*R2D
-!
-!            !m%AllOuts( BNCl(   beta,k) ) = m%BEMT_y%Cl(j,k)
-!            !m%AllOuts( BNCd(   beta,k) ) = m%BEMT_y%Cd(j,k)
-!
-!            m%AllOuts( BNCpmin(   beta,k) ) = m%BEMT_y%Cpmin(j,k)
-!            m%AllOuts( BNSigCr(   beta,k) ) = m%SigmaCavitCrit(j,k)
-!            m%AllOuts( BNSgCav(   beta,k) ) = m%SigmaCavit(j,k)
-!
-!            cp=cos(m%BEMT_y%phi(j,k))
-!            sp=sin(m%BEMT_y%phi(j,k))
-!            m%AllOuts( BNCl(   beta,k) ) = m%BEMT_y%Cx(j,k)*cp + m%BEMT_y%Cy(j,k)*sp
-!            m%AllOuts( BNCd(   beta,k) ) = m%BEMT_y%Cx(j,k)*sp - m%BEMT_y%Cy(j,k)*cp
-!            m%AllOuts( BNCm(   beta,k) ) = m%BEMT_y%Cm(j,k)
-!            m%AllOuts( BNCx(   beta,k) ) = m%BEMT_y%Cx(j,k)
-!            m%AllOuts( BNCy(   beta,k) ) = m%BEMT_y%Cy(j,k)
-!
-!            ct=cos(m%BEMT_u(indx)%theta(j,k))
-!            st=sin(m%BEMT_u(indx)%theta(j,k))
-!            m%AllOuts( BNCn(   beta,k) ) = m%BEMT_y%Cx(j,k)*ct + m%BEMT_y%Cy(j,k)*st
-!            m%AllOuts( BNCt(   beta,k) ) =-m%BEMT_y%Cx(j,k)*st + m%BEMT_y%Cy(j,k)*ct
-!
-!            m%AllOuts( BNFl(   beta,k) ) =  m%X(j,k)*cp - m%Y(j,k)*sp
-!            m%AllOuts( BNFd(   beta,k) ) =  m%X(j,k)*sp + m%Y(j,k)*cp
-!            m%AllOuts( BNMm(   beta,k) ) =  m%M(j,k)
-!            m%AllOuts( BNFx(   beta,k) ) =  m%X(j,k)
-!            m%AllOuts( BNFy(   beta,k) ) = -m%Y(j,k)
-!            m%AllOuts( BNFn(   beta,k) ) =  m%X(j,k)*ct - m%Y(j,k)*st
-!            m%AllOuts( BNFt(   beta,k) ) = -m%X(j,k)*st - m%Y(j,k)*ct
-!
+! call  AirFoilInfo here
+! with Cl Cd etc, calculate the values for the Cn Ct Cx Cy etc.  Then get forces.
+
          end do ! nodes
       end do ! blades
 !
@@ -1876,20 +1865,20 @@ CONTAINS
 !      m%AllOuts( RtVAvgzh ) = tmp(3)
 !
 !      m%AllOuts( RtSkew  ) = m%BEMT_u(indx)%chi0*R2D
-!
-!         ! integrate force/moments over blades by performing mesh transfer to hub point:
-!      force  = 0.0_ReKi
-!      moment = 0.0_ReKi
-!      do k=1,p%NumBlades
-!         call Transfer_Line2_to_Point( y%BladeLoad(k), m%HubLoad, m%B_L_2_H_P(k), ErrStat2, ErrMsg2, u%BladeMotion(k), u%HubMotion )
-!         force  = force  + m%HubLoad%force( :,1)
-!         moment = moment + m%HubLoad%moment(:,1)
-!      end do
-!      tmp = matmul( u%HubMotion%Orientation(:,:,1), force )
-!      m%AllOuts( RtAeroFxh ) = tmp(1)
-!      m%AllOuts( RtAeroFyh ) = tmp(2)
-!      m%AllOuts( RtAeroFzh ) = tmp(3)
-!
+
+         ! integrate force/moments over blades by performing mesh transfer to hub point:
+      force  = 0.0_ReKi
+      moment = 0.0_ReKi
+      do k=1,p%NumBlades
+         call Transfer_Line2_to_Point( y%BladeLoad(k), m%HubLoad, m%B_L_2_H_P(k), ErrStat2, ErrMsg2, u%BladeMotion(k), u%HubMotion )
+         force  = force  + m%HubLoad%force( :,1)
+         moment = moment + m%HubLoad%moment(:,1)
+      end do
+      tmp = matmul( u%HubMotion%Orientation(:,:,1), force )
+      m%AllOuts( RtAeroFxh ) = tmp(1)
+      m%AllOuts( RtAeroFyh ) = tmp(2)
+      m%AllOuts( RtAeroFzh ) = tmp(3)
+
 !      tmp = matmul( u%HubMotion%Orientation(:,:,1), moment )
 !      m%AllOuts( RtAeroMxh ) = tmp(1)
 !      m%AllOuts( RtAeroMyh ) = tmp(2)

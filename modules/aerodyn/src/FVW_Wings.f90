@@ -3,7 +3,6 @@ module FVW_Wings
    use NWTC_Library
    use FVW_Types
    use FVW_Subs
-   use AirfoilInfo
 
    implicit none
 
@@ -15,10 +14,9 @@ contains
    !!  - s_CP_LL    : Dimensionless spanwise coordinate of LL CP 
    !!  - chord_LL   : chord on LL 
    !!  - chord_LL_CP: chord on LL cp  
-   subroutine Wings_Panelling_Init(Meshes, r, chord, p, m, ErrStat, ErrMsg )
+   subroutine Wings_Panelling_Init(Meshes, r, p, m, ErrStat, ErrMsg )
       type(MeshType), dimension(:),    intent(in   )  :: Meshes         !< Wings mesh
       real(ReKi), dimension(:,:),      intent(in   )  :: r              !< 
-      real(ReKi), dimension(:,:),      intent(in   )  :: chord          !< 
       type(FVW_ParameterType),         intent(in   )  :: p              !< Parameters
       type(FVW_MiscVarType),           intent(inout)  :: m              !< Initial misc/optimization variables
       integer(IntKi),                  intent(  out)  :: ErrStat        !< Error status of the operation
@@ -57,13 +55,14 @@ contains
          ! --- Setting up Lifting line variables based on input  and a "meshing" method (TODO)
          if (Meshes(iW)%nNodes /= p%nSpan+1) then
             ! TODO Possibly interpolate based on FVW meshing
+            ! NOTE: p%chord is copied from the InitInput
             print*,'TODO different discretization InputMesh / vortex code'
             STOP
          endif
          print*,'Input mesh size',Meshes(iW)%nNodes,' Number of vortex element', p%nSpan
          do iSpan = 1, p%nSpan+1
             m%s_LL    (iSpan, iW) = s_in(iSpan)
-            m%chord_LL(iSpan, iW) = chord(iSpan,iW)
+            m%chord_LL(iSpan, iW) = p%chord(iSpan,iW)
          enddo
          ! --- Control points
 !TODO: does it make sense to keep the global position info here?  It might make it simpler to keep track of the nodes for requesting wind velocity info.
@@ -445,10 +444,19 @@ contains
 
             alpha = atan2(dot_product(Vrel,N) , dot_product(Vrel,Tc) ) ! [rad]  
             !Re    = LL%Vrel_orth_norm(icp)*LL%chord(icp)/KinVisc/(1.E6_MK) ! TODO TODO TODO KinVisc
+!FIXME: Pass p%KinVisc into here from AD
 Re=1.0_ReKi
+
+!FIXME: do I need this here anymore??? or can I call
+!FVW_AeroOuts(MGlobalToSection, HubOrient, NodeOrient, StructVel, Vind_Glob, DisturbedInflow, &
+!                  Node, Blade, KinVisc, Chord, AFInfo, &
+!                  CldAirfoil, Cm, CpMin, &         ! CxySection, CntDisk, &
+!                  AxInd, TanInd, Vrel, phi, alpha, Re, &
+!                  ErrStat, ErrMsg )
 
             if (p%CircSolvPolar==idPolarAeroDyn) then
                   ! compute steady Airfoil Coefs      ! NOTE: UserProp set to 0.0_ReKi (no idea what it does).  Also, note this assumes airfoils at nodes.
+!TODO: AFindx is on the nodes, not control points.
                call AFI_ComputeAirfoilCoefs( alpha, Re, 0.0_ReKi,  AFInfo(p%AFindx(icp,iW)), AFI_interp, ErrStat2, ErrMsg2 ); if(Failed()) return;
                Cl = AFI_interp%Cl
                Cd = AFI_interp%Cd
@@ -470,6 +478,7 @@ print*,'Manu: fix Re for AFI in CirculationFromPolarData'
             !if ((iW==1).and.icp==3) then
             !   print*,'CL',Cl,alpha,Vrel_orth_norm,m%Area(icp,iW)
             !endif
+
          enddo
       enddo
    contains
