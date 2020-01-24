@@ -23,6 +23,8 @@ MODULE AeroDyn_IO
    use NWTC_Library
    use AeroDyn_Types
    use BEMTUncoupled, only : SkewMod_Uncoupled, SkewMod_PittPeters, VelocityIsZero
+   use AirFoilInfo,   only : AFI_ComputeAirfoilCoefs
+   use FVW_Subs,      only : FVW_AeroOuts
 
    
    implicit none
@@ -1586,6 +1588,28 @@ SUBROUTINE Calc_WriteDbgOutput( p, u, m, y, ErrStat, ErrMsg )
          end do ! nodes
       end do ! blades
    else  !  (p%WakeMod == WakeMod_FVW)
+      call calc_WriteDbgOutputFVW( p, u, m, y, ErrStat, ErrMsg )
+   endif
+
+contains
+   subroutine  Calc_WriteDbgOutputFVW( p, u, m, y, ErrStat, ErrMsg )
+      TYPE(AD_ParameterType),    INTENT(IN   )  :: p                                 ! The module parameters
+      TYPE(AD_InputType),        INTENT(IN   )  :: u                                 ! inputs
+      TYPE(AD_MiscVarType),      INTENT(INOUT)  :: m                                 ! misc variables
+      TYPE(AD_OutputType),       INTENT(IN   )  :: y                                 ! outputs
+      INTEGER(IntKi),            INTENT(  OUT)  :: ErrStat                           ! The error status code
+      CHARACTER(*),              INTENT(  OUT)  :: ErrMsg                            ! The error message, if an error occurred
+
+         ! local variables
+      integer, parameter                        :: indx = 1  ! m%BEMT_u(1) is at t; m%BEMT_u(2) is t+dt
+      CHARACTER(*), PARAMETER                   :: RoutineName = 'Calc_WriteOutput'
+   
+      INTEGER(IntKi)                            :: j,k,i
+!      REAL(ReKi)                                :: ct, st ! cosine, sine of theta
+!      REAL(ReKi)                                :: cp, sp ! cosine, sine of phi
+      real(ReKi)                                :: AxInd, TanInd, Vrel, phi, alpha, Re
+      type(AFI_OutputType)                      :: AFI_interp              ! Resulting values from lookup table
+
          ! blade outputs
       do k=1,p%numBlades
          do j=2,p%NumBlNds       ! NOTE: the LL spans are NumBldNds-1 long
@@ -1597,6 +1621,10 @@ SUBROUTINE Calc_WriteDbgOutput( p, u, m, y, ErrStat, ErrMsg )
 !                  CldAirfoil, Cm, CpMin, &         ! CxySection, CntDisk, &
 !                  AxInd, TanInd, Vrel, phi, alpha, Re, &
 !                  ErrStat, ErrMsg )
+            call FVW_AeroOuts( m%WithoutSweepPitchTwist(:,:,j,k), u%BladeMotion(k)%Orientation(1:3,1:3,j), u%BladeMotion(k)%TranslationVel(1:3,j), &
+                        m%FVW_y%Vind(1:3,j,k), u%BladeMotion(k)%Orientation(1:3,1:3,j), p%KinVisc, p%FVW%Chord(j,k), &
+                        AxInd, TanInd, Vrel, phi, alpha, Re, ErrStat, ErrMsg )
+            call AFI_ComputeAirfoilCoefs( alpha, Re, 0.0_ReKi,  p%AFI(p%FVW%AFindx(j,k)), AFI_interp, ErrStat, ErrMsg )
 
 !            m%AllOuts( i    ) =  m%FVW_u(indx)%theta(j-1,k)*R2D
 !            m%AllOuts( i+1  ) =  m%FVW_u(indx)%psi(k)*R2D
@@ -1633,8 +1661,7 @@ SUBROUTINE Calc_WriteDbgOutput( p, u, m, y, ErrStat, ErrMsg )
 
          end do ! nodes
       end do ! blades
-   endif
-
+   end subroutine Calc_WriteDbgOutputFVW
 END SUBROUTINE Calc_WriteDbgOutput
 
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -1834,6 +1861,9 @@ CONTAINS
    end subroutine Calc_WriteOutput_BEMT
 
    subroutine Calc_WriteOutput_FVW
+      real(ReKi)           :: AxInd, TanInd, Vrel, phi, alpha, Re
+      type(AFI_OutputType) :: AFI_interp              ! Resulting values from lookup table
+
          ! blade outputs
       do k=1,p%numBlades
          do beta=1,p%NBlOuts
@@ -1841,8 +1871,10 @@ CONTAINS
 !TODO: populate this with what we need.
 !            call FVW_AeroOuts( MGlobalToSection, NodeOrient, StructVel, Vind_Glob, DisturbedInflow, KinVisc, Chord, &
 !                         AxInd, TanInd, Vrel, phi, alpha, Re, ErrStat, ErrMsg )
-!
-! call  AirFoilInfo here
+            call FVW_AeroOuts( m%WithoutSweepPitchTwist(:,:,j,k), u%BladeMotion(k)%Orientation(1:3,1:3,j), u%BladeMotion(k)%TranslationVel(1:3,j), &
+                        m%FVW_y%Vind(1:3,j,k), u%BladeMotion(k)%Orientation(1:3,1:3,j), p%KinVisc, p%FVW%Chord(j,k), &
+                        AxInd, TanInd, Vrel, phi, alpha, Re, ErrStat, ErrMsg )
+            call AFI_ComputeAirfoilCoefs( alpha, Re, 0.0_ReKi,  p%AFI(p%FVW%AFindx(j,k)), AFI_interp, ErrStat, ErrMsg )
 ! with Cl Cd etc, calculate the values for the Cn Ct Cx Cy etc.  Then get forces.
 
          end do ! nodes

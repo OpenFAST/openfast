@@ -4,7 +4,6 @@ module FVW_SUBS
    use FVW_TYPES
    use FVW_VortexTools
    use FVW_BiotSavart
-   use AirFoilInfo, only: AFI_ComputeAirfoilCoefs
 
    implicit none
 
@@ -652,7 +651,6 @@ subroutine FVW_AeroOuts( MGlobalToSection, NodeOrient, StructVel, Vind_Glob, Dis
    real(ReKi),             intent(in   )  :: StructVel(3)            ! Structural velocity                                    global  coord
    real(ReKi),             intent(in   )  :: Vind_Glob(3)            ! Induced wind velocity                                  global  coord
    real(ReKi),             intent(in   )  :: DisturbedInflow(3)      ! Disturbed inflow                                       global  coord
-
    real(ReKi),             intent(in   )  :: KinVisc                 ! Viscosity
    real(ReKi),             intent(in   )  :: Chord                   ! chord length
    real(ReKi),             intent(  out)  :: AxInd                   ! axial induction
@@ -661,7 +659,6 @@ subroutine FVW_AeroOuts( MGlobalToSection, NodeOrient, StructVel, Vind_Glob, Dis
    real(Reki),             intent(  out)  :: phi                     ! Flow angle
    real(Reki),             intent(  out)  :: alpha                   ! angle of attack
    real(ReKi),             intent(  out)  :: Re                      ! Reynolds number
-
    integer(IntKi),         intent(  out)  :: ErrStat
    character(ErrMsgLen),   intent(  out)  :: ErrMsg
 
@@ -675,7 +672,6 @@ subroutine FVW_AeroOuts( MGlobalToSection, NodeOrient, StructVel, Vind_Glob, Dis
    real(ReKi)                             :: UTotLocal(3)            ! Vector of total relative velocity                      section coord
    real(ReKi)                             :: UTotGlobal(3)           ! Vector of total relative velocity                      global  coord
    real(ReKi)                             :: UTotAirfoil(3)          ! Vector of total relative velocity                      airfoil coord
-   type(AFI_OutputType)                   :: AFI_interp              ! Resulting values from lookup table
 
    x_hat = MGlobalToSection(1,:)   ! ADP: We want this Airfoil cross section flapwise. Is this it???
    y_hat = MGlobalToSection(2,:)   ! ADP: We want this Airfoil cross section chordwise
@@ -724,6 +720,7 @@ subroutine FVW_AeroOuts( MGlobalToSection, NodeOrient, StructVel, Vind_Glob, Dis
 !   real(ReKi),                intent(  out)  :: CpMin                      ! CpMin in airfoil coords
 !   real(ReKi),                intent(  out)  :: CxySection(3)              ! Cx and Cy in section coords
 !   real(ReKi),                intent(  out)  :: CntDisk(3)                 ! Cn and Ct in hub/Disk coords
+!   type(AFI_OutputType)                   :: AFI_interp              ! Resulting values from lookup table
 !   ! compute steady Airfoil Coefs      ! NOTE: UserProp set to 0.0_ReKi (no idea what it does).  Also, note this assumes airfoils at nodes.
 !!TODO: AFinfo is usually expecting values at the node.
 !   call AFI_ComputeAirfoilCoefs( alpha, Re, 0.0_ReKi,  AFInfo, AFI_interp, ErrStat, ErrMsg )

@@ -3,7 +3,8 @@ module FVW_Wings
    use NWTC_Library
    use FVW_Types
    use FVW_Subs
-
+   use AirFoilInfo,   only : AFI_ComputeAirfoilCoefs
+ 
    implicit none
 
 contains
@@ -462,7 +463,6 @@ Re=1.0_ReKi
                Cd = AFI_interp%Cd
                Cm = AFI_interp%Cm
 !              Cpmin = AFI_interp%Cpmin
-print*,'Manu: fix Re for AFI in CirculationFromPolarData'
             else if (p%CircSolvPolar==idPolar2PiAlpha) then
                Cl=TwoPi*alpha
             else if (p%CircSolvPolar==idPolar2PiSinAlpha) then
