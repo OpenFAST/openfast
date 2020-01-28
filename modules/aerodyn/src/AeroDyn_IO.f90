@@ -1611,34 +1611,31 @@ contains
       real(ReKi)                                :: AxInd, TanInd, Vrel, phi, alpha, Re, theta
       real(ReKi)                                :: GammaVal                   ! Vorticity
       type(AFI_OutputType)                      :: AFI_interp                 ! Resulting values from lookup table
-      real(ReKi)                                :: CldAirfoil(3)              ! Cl and Cd in airfoil coords
-      real(ReKi)                                :: CxySection(3)              ! Cx and Cy in section coords
-      real(ReKi)                                :: CntDisk(3)                 ! Cn and Ct in hub/Disk coords
-      real(ReKi)                                :: U0Wind(3)                  ! Wind in section coords
+      real(ReKi)                                :: UrelWind_s(3)                  ! Wind in section coords
+      real(ReKi)                                :: Vwnd(3) 
+      real(ReKi)                                :: Cx, Cy
 
          ! blade outputs
       do k=1,p%numBlades
-         do j=2,p%NumBlNds       ! NOTE: the LL spans are NumBldNds-1 long
-!TODO: FVW -- put all the ugly mappings here????
+         do j=2,p%NumBlNds ! TODO TODO TODO start at 1
+!TODO: Merge with BEM to avoid all code redundancy (discuss with Bonnie)
 
-            i = (k-1)*p%NumBlNds*23 + (j-1)*23 + 1
+            i = (k-1)*p%NumBlNds*24 + (j-1)*24 + 1
 
-            call FVW_AeroOuts( m%WithoutSweepPitchTwist(:,:,j,k), u%BladeMotion(k)%Orientation(1:3,1:3,j), u%BladeMotion(k)%TranslationVel(1:3,j), &
-                        m%FVW_y%Vind(1:3,j,k), u%BladeMotion(k)%Orientation(1:3,1:3,j), p%KinVisc, p%FVW%Chord(j,k), &
-                        AxInd, TanInd, Vrel, phi, alpha, Re, U0Wind, ErrStat, ErrMsg )
+            ! --- Computing main aero variables from induction - setting local variables
+            Vwnd  = m%DisturbedInflow(:,j,k) 
+            call FVW_AeroOuts( m%WithoutSweepPitchTwist(:,:,j,k), u%BladeMotion(k)%Orientation(1:3,1:3,j), m%FVW%PitchAndTwist(j,k), u%BladeMotion(k)%TranslationVel(1:3,j), &
+                        m%FVW_y%Vind(1:3,j,k), Vwnd, p%KinVisc, p%FVW%Chord(j,k), &
+                        AxInd, TanInd, Vrel, phi, alpha, Re, UrelWind_s, ErrStat, ErrMsg )
             call AFI_ComputeAirfoilCoefs( alpha, Re, 0.0_ReKi,  p%AFI(p%FVW%AFindx(j,k)), AFI_interp, ErrStat, ErrMsg )
 
-            CldAirfoil = (/ AFI_interp%Cl, AFI_interp%Cd, 0.0_ReKi /) ! Airfoil coord Cl and Cd
-            CxySection = matmul( m%WithoutSweepPitchTwist(:,:,j,k), matmul( CldAirfoil, u%BladeMotion(k)%Orientation(1:3,1:3,j) ) )
-            CntDisk    = matmul( m%WithoutSweepPitchTwist(:,:,j,k), matmul( CldAirfoil, u%HubMotion%Orientation(:,:,1) ) )
-            theta = phi - alpha
-!TODO: add this to the output list
-!            GammaVal = 0.5 * p%FVW%Chord(j,k) * Vrel * CldAirfoil(1)
+            theta = m%FVW%PitchAndTwist(j,k)
 
-            m%AllOuts( i    ) =  theta*R2D                        ! "Twst"
+            ! --- Setting aerodyn outputs (more or less generic code) 
+            m%AllOuts( i    ) =  theta*R2D                        ! "Twst" = phi-alpha
 !            m%AllOuts( i+1  ) =  m%FVW_u(indx)%psi(k)*R2D        ! "Psi"
-            m%AllOuts( i+2  ) = -U0Wind(1)                        ! "Vx"
-            m%AllOuts( i+3  ) =  U0Wind(2)                        ! "Vy"
+            m%AllOuts( i+2  ) = -UrelWind_s(1)                    ! "Vx"
+            m%AllOuts( i+3  ) =  UrelWind_s(2)                    ! "Vy"
 
             m%AllOuts( i+4  ) =  AxInd                            ! "AIn"
             m%AllOuts( i+5  ) =  TanInd                           ! "ApIn"
@@ -1646,16 +1643,20 @@ contains
             m%AllOuts( i+7  ) =  phi*R2D                          ! "Phi"
             m%AllOuts( i+8  ) =  alpha*R2D                        ! "AOA"
 
+            cp = cos(phi)
+            sp = sin(phi)
+            Cx = AFI_interp%Cl*cp + AFI_interp%Cd*sp
+            Cy = AFI_interp%Cl*sp - AFI_interp%Cd*cp
             m%AllOuts( i+9  ) =  AFI_interp%Cl                    ! "Cl"
             m%AllOuts( i+10 ) =  AFI_interp%Cd                    ! "Cd"
             m%AllOuts( i+11 ) =  AFI_interp%Cm                    ! "Cm"
-            m%AllOuts( i+12 ) =  CxySection(1)                    ! "Cx"
-            m%AllOuts( i+13 ) =  CxySection(2)                    ! "Cy"
+            m%AllOuts( i+12 ) =  Cx                               ! "Cx"
+            m%AllOuts( i+13 ) =  Cy                               ! "Cy"
 
             ct=cos(theta)
             st=sin(theta)
-            m%AllOuts( i+14 ) =  CxySection(1)*ct + CxySection(2)*st    ! "Cn"
-            m%AllOuts( i+15 ) = -CxySection(1)*st + CxySection(2)*ct    ! "Ct"
+            m%AllOuts( i+14 ) =  Cx*ct + Cy*st                    ! "Cn"
+            m%AllOuts( i+15 ) = -Cx*st + Cy*ct                    ! "Ct"
 
             cp=cos(phi)
             sp=sin(phi)
@@ -1871,20 +1872,85 @@ CONTAINS
    subroutine Calc_WriteOutput_FVW
       real(ReKi)           :: AxInd, TanInd, Vrel, phi, alpha, Re
       type(AFI_OutputType) :: AFI_interp              ! Resulting values from lookup table
-      real(ReKi)           :: U0Wind(3)               ! Wind in section coords
+      real(ReKi)           :: UrelWind_s(3)           ! Relative Wind in section coords
+      real(ReKi)           :: Vind(3)               ! 
+      real(ReKi)           :: Vstr(3)               ! 
+      real(ReKi)           :: Vwnd(3)               ! 
+      real(ReKi)           :: Cx, Cy, cphi, sphi, theta
 
          ! blade outputs
       do k=1,p%numBlades
          do beta=1,p%NBlOuts
             j=p%BlOutNd(beta)
-!TODO: populate this with what we need.
-!            call FVW_AeroOuts( MGlobalToSection, NodeOrient, StructVel, Vind_Glob, DisturbedInflow, KinVisc, Chord, &
-!                         AxInd, TanInd, Vrel, phi, alpha, Re, ErrStat, ErrMsg )
-            call FVW_AeroOuts( m%WithoutSweepPitchTwist(:,:,j,k), u%BladeMotion(k)%Orientation(1:3,1:3,j), u%BladeMotion(k)%TranslationVel(1:3,j), &
-                        m%FVW_y%Vind(1:3,j,k), u%BladeMotion(k)%Orientation(1:3,1:3,j), p%KinVisc, p%FVW%Chord(j,k), &
-                        AxInd, TanInd, Vrel, phi, alpha, Re, U0Wind, ErrStat, ErrMsg )
+            ! --- Computing main aero variables from induction - setting local variables
+            Vind = m%FVW_y%Vind(1:3,j,k)
+            Vstr = u%BladeMotion(k)%TranslationVel(1:3,j)
+            Vwnd = m%DisturbedInflow(:,j,k) 
+            call FVW_AeroOuts( m%WithoutSweepPitchTwist(:,:,j,k), u%BladeMotion(k)%Orientation(1:3,1:3,j), m%FVW%PitchAndTwist(j,k), Vstr , &
+                        Vind(1:3), Vwnd , p%KinVisc, p%FVW%Chord(j,k), &
+                        AxInd, TanInd, Vrel, phi, alpha, Re, UrelWind_s, ErrStat, ErrMsg )
+
             call AFI_ComputeAirfoilCoefs( alpha, Re, 0.0_ReKi,  p%AFI(p%FVW%AFindx(j,k)), AFI_interp, ErrStat, ErrMsg )
-! with Cl Cd etc, calculate the values for the Cn Ct Cx Cy etc.  Then get forces.
+            theta = m%FVW%PitchAndTwist(j,k)
+
+            ! --- Setting AD outputs 
+            tmp = matmul( m%WithoutSweepPitchTwist(:,:,j,k), u%InflowOnBlade(:,j,k) )
+            m%AllOuts( BNVUndx(beta,k) ) = tmp(1)
+            m%AllOuts( BNVUndy(beta,k) ) = tmp(2)
+            m%AllOuts( BNVUndz(beta,k) ) = tmp(3)
+
+            tmp = matmul( m%WithoutSweepPitchTwist(:,:,j,k), m%DisturbedInflow(:,j,k) )
+            m%AllOuts( BNVDisx(beta,k) ) = tmp(1)
+            m%AllOuts( BNVDisy(beta,k) ) = tmp(2)
+            m%AllOuts( BNVDisz(beta,k) ) = tmp(3)
+
+            tmp = matmul( m%WithoutSweepPitchTwist(:,:,j,k), u%BladeMotion(k)%TranslationVel(:,j) )
+            m%AllOuts( BNSTVx( beta,k) ) = tmp(1)
+            m%AllOuts( BNSTVy( beta,k) ) = tmp(2)
+            m%AllOuts( BNSTVz( beta,k) ) = tmp(3)
+
+            m%AllOuts( BNVrel( beta,k) ) = Vrel
+            m%AllOuts( BNDynP( beta,k) ) = 0.5 * p%airDens * Vrel**2
+            m%AllOuts( BNRe(   beta,k) ) = Re
+            m%AllOuts( BNM(    beta,k) ) = Vrel / p%SpdSound
+
+            m%AllOuts( BNVIndx(beta,k) ) = -UrelWind_s(1) * AxInd
+            m%AllOuts( BNVIndy(beta,k) ) =  UrelWind_s(2) * TanInd
+
+            m%AllOuts( BNAxInd(beta,k) ) = AxInd
+            m%AllOuts( BNTnInd(beta,k) ) = TanInd
+
+            m%AllOuts( BNAlpha(beta,k) ) = alpha*R2D
+            m%AllOuts( BNTheta(beta,k) ) = theta*R2D
+            m%AllOuts( BNPhi(  beta,k) ) = phi*R2D
+!             m%AllOuts( BNCurve(beta,k) ) = m%Curve(j,k)*R2D
+
+!             m%AllOuts( BNCpmin(   beta,k) ) = m%BEMT_y%Cpmin(j,k)
+            m%AllOuts( BNSigCr(   beta,k) ) = m%SigmaCavitCrit(j,k)
+            m%AllOuts( BNSgCav(   beta,k) ) = m%SigmaCavit(j,k)
+
+            cp = cos(phi)
+            sp = sin(phi)
+            Cx = AFI_interp%Cl*cp + AFI_interp%Cd*sp 
+            Cy = AFI_interp%Cl*sp - AFI_interp%Cd*cp
+            m%AllOuts( BNCl(   beta,k) ) = AFI_interp%Cl
+            m%AllOuts( BNCd(   beta,k) ) = AFI_interp%Cd
+            m%AllOuts( BNCm(   beta,k) ) = AFI_interp%Cm
+            m%AllOuts( BNCx(   beta,k) ) = Cx
+            m%AllOuts( BNCy(   beta,k) ) = Cy
+! 
+            ct=cos(theta)
+            st=sin(theta)
+            m%AllOuts( BNCn(   beta,k) ) = Cx*ct + Cy*st
+            m%AllOuts( BNCt(   beta,k) ) =-Cx*st + Cy*ct
+! 
+            m%AllOuts( BNFl(   beta,k) ) =  m%X(j,k)*cp - m%Y(j,k)*sp
+            m%AllOuts( BNFd(   beta,k) ) =  m%X(j,k)*sp + m%Y(j,k)*cp
+            m%AllOuts( BNMm(   beta,k) ) =  m%M(j,k)
+            m%AllOuts( BNFx(   beta,k) ) =  m%X(j,k)
+            m%AllOuts( BNFy(   beta,k) ) = -m%Y(j,k)
+            m%AllOuts( BNFn(   beta,k) ) =  m%X(j,k)*ct - m%Y(j,k)*st
+            m%AllOuts( BNFt(   beta,k) ) = -m%X(j,k)*st - m%Y(j,k)*ct
 
          end do ! nodes
       end do ! blades
@@ -1893,19 +1959,19 @@ CONTAINS
 !      rmax = 0.0_ReKi
 !      do k=1,p%NumBlades
 !         do j=1,p%NumBlNds
-!            rmax = max(rmax, m%BEMT_u(indx)%rLocal(j,k) )
+!            rmax = max(rmax, m%BEMT_u(indx)%rLocal(j,k) ) ! TODO TODO TODO
 !         end do !j=nodes
 !      end do !k=blades
 !
 !      m%AllOuts( RtSpeed ) = m%BEMT_u(indx)%omega*RPS2RPM
-!      m%AllOuts( RtArea  ) = pi*rmax**2
+!      m%AllOuts( RtArea  ) = pi*rmax**2 ! TODO TODO TODO
 !
-!      tmp = matmul( u%HubMotion%Orientation(:,:,1), m%V_DiskAvg )
-!      m%AllOuts( RtVAvgxh ) = tmp(1)
-!      m%AllOuts( RtVAvgyh ) = tmp(2)
-!      m%AllOuts( RtVAvgzh ) = tmp(3)
+     tmp = matmul( u%HubMotion%Orientation(:,:,1), m%V_DiskAvg )
+     m%AllOuts( RtVAvgxh ) = tmp(1)
+     m%AllOuts( RtVAvgyh ) = tmp(2)
+     m%AllOuts( RtVAvgzh ) = tmp(3)
 !
-!      m%AllOuts( RtSkew  ) = m%BEMT_u(indx)%chi0*R2D
+!      m%AllOuts( RtSkew  ) = m%BEMT_u(indx)%chi0*R2D ! TODO TODO TODO Not applicable
 
          ! integrate force/moments over blades by performing mesh transfer to hub point:
       force  = 0.0_ReKi
@@ -1920,27 +1986,27 @@ CONTAINS
       m%AllOuts( RtAeroFyh ) = tmp(2)
       m%AllOuts( RtAeroFzh ) = tmp(3)
 
-!      tmp = matmul( u%HubMotion%Orientation(:,:,1), moment )
-!      m%AllOuts( RtAeroMxh ) = tmp(1)
-!      m%AllOuts( RtAeroMyh ) = tmp(2)
-!      m%AllOuts( RtAeroMzh ) = tmp(3)
+     tmp = matmul( u%HubMotion%Orientation(:,:,1), moment )
+     m%AllOuts( RtAeroMxh ) = tmp(1)
+     m%AllOuts( RtAeroMyh ) = tmp(2)
+     m%AllOuts( RtAeroMzh ) = tmp(3)
 !
-!      m%AllOuts( RtAeroPwr ) = m%BEMT_u(indx)%omega * m%AllOuts( RtAeroMxh )
+!      m%AllOuts( RtAeroPwr ) = m%BEMT_u(indx)%omega * m%AllOuts( RtAeroMxh )! TODO TODO TODO
 !
 !
-!      if ( EqualRealNos( m%V_dot_x, 0.0_ReKi ) ) then
-!         m%AllOuts( RtTSR    ) = 0.0_ReKi
-!         m%AllOuts( RtAeroCp ) = 0.0_ReKi
-!         m%AllOuts( RtAeroCq ) = 0.0_ReKi
-!         m%AllOuts( RtAeroCt ) = 0.0_ReKi
-!      else
-!         denom = 0.5*p%AirDens*m%AllOuts( RtArea )*m%V_dot_x**2
-!         m%AllOuts( RtTSR )    = m%BEMT_u(indx)%omega * rmax / m%V_dot_x
-!
-!         m%AllOuts( RtAeroCp ) = m%AllOuts( RtAeroPwr ) / (denom * m%V_dot_x)
-!         m%AllOuts( RtAeroCq ) = m%AllOuts( RtAeroMxh ) / (denom * rmax)
-!         m%AllOuts( RtAeroCt ) = m%AllOuts( RtAeroFxh ) /  denom
-!      end if
+     if ( EqualRealNos( m%V_dot_x, 0.0_ReKi ) ) then
+        m%AllOuts( RtTSR    ) = 0.0_ReKi
+        m%AllOuts( RtAeroCp ) = 0.0_ReKi
+        m%AllOuts( RtAeroCq ) = 0.0_ReKi
+        m%AllOuts( RtAeroCt ) = 0.0_ReKi
+     else
+        ! TODO TODO TODO (need rotor area)
+!        denom = 0.5*p%AirDens*m%AllOuts( RtArea )*m%V_dot_x**2
+!        m%AllOuts( RtTSR )    = m%BEMT_u(indx)%omega * rmax / m%V_dot_x
+!        m%AllOuts( RtAeroCp ) = m%AllOuts( RtAeroPwr ) / (denom * m%V_dot_x)
+!        m%AllOuts( RtAeroCq ) = m%AllOuts( RtAeroMxh ) / (denom * rmax)
+!        m%AllOuts( RtAeroCt ) = m%AllOuts( RtAeroFxh ) /  denom
+     end if
 
    end subroutine Calc_WriteOutput_FVW
 

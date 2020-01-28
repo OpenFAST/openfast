@@ -1402,7 +1402,7 @@ subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
    real(ReKi)                              :: tmp(3)
    real(ReKi)                              :: tmp_sz, tmp_sz_y
    real(R8Ki)                              :: thetaBladeNds(p%NumBlNds,p%NumBlades)
-   real(ReKi)                              :: Azimuth(p%NumBlNds)
+   real(R8Ki)                              :: Azimuth(p%NumBlNds)
    
    integer(intKi)                          :: j                      ! loop counter for nodes
    integer(intKi)                          :: k                      ! loop counter for blades
@@ -1606,7 +1606,7 @@ subroutine SetInputsForFVW(p, u, m, errStat, errMsg)
 !   real(ReKi)                              :: tmp(3)
 !   real(ReKi)                              :: tmp_sz, tmp_sz_y
    real(R8Ki)                              :: thetaBladeNds(p%NumBlNds,p%NumBlades)
-   real(ReKi)                              :: Azimuth(p%NumBlNds)
+   real(R8Ki)                              :: Azimuth(p%NumBlNds)
    
    integer(intKi)                          :: tIndx
    integer(intKi)                          :: k                      ! loop counter for blades
@@ -1703,54 +1703,41 @@ subroutine SetOutputsFromFVW(u, p, m, y, ErrStat, ErrMsg)
    REAL(ReKi)                             :: cp, sp      ! cosine, sine of phi
    real(ReKi)                             :: AxInd, TanInd, Vrel, phi, alpha, Re, theta
    type(AFI_OutputType)                   :: AFI_interp             ! Resulting values from lookup table
-   real(ReKi)                             :: CldAirfoil(3)          ! Cl and Cd in airfoil coords
-   real(ReKi)                             :: CxySection(3)          ! Cx and Cy in section coords
-!   real(ReKi)                             :: CntDisk(3)             ! Cn and Ct in hub/Disk coords
-   real(ReKi)                             :: U0Wind(3)              ! Wind in section coords
+   real(ReKi)                             :: UrelWind_s(3)          ! Relative wind (wind+str) in section coords
+   real(ReKi)                             :: Cx, Cy
 
    integer(intKi)                         :: ErrStat2
    character(ErrMsgLen)                   :: ErrMsg2
 
    ErrStat2 = 0
    ErrMsg2 = ""
-!TODO: we need to map the Vind from the lifting line control points to the blade nodes!!!!!
 
 
-!TODO: Manu!!!!
-!TODO: how are we setting the loads at the nodes for coupling to OpenFAST????
-!NOTE: size of _y%c[xym] is 1:p%NumBldNds-1
    force(3)    =  0.0_ReKi
    moment(1:2) =  0.0_ReKi
-!TODO:  Our outputs are on the lifting line! Not at blade nodes!
    do k=1,p%NumBlades
-      do j=2,p%NumBlNds
-         call FVW_AeroOuts( m%WithoutSweepPitchTwist(:,:,j,k), u%BladeMotion(k)%Orientation(1:3,1:3,j), u%BladeMotion(k)%TranslationVel(1:3,j), &
-                     m%FVW_y%Vind(1:3,j,k), u%BladeMotion(k)%Orientation(1:3,1:3,j), p%KinVisc, p%FVW%Chord(j,k), &
-                     AxInd, TanInd, Vrel, phi, alpha, Re, U0Wind, ErrStat, ErrMsg )
+      do j=2,p%NumBlNds !TODO:  Our outputs are on the lifting line! Not at blade nodes!
+         call FVW_AeroOuts( m%WithoutSweepPitchTwist(:,:,j,k), u%BladeMotion(k)%Orientation(1:3,1:3,j), m%FVW%PitchAndTwist(j,k), u%BladeMotion(k)%TranslationVel(1:3,j), &
+                     m%FVW_y%Vind(1:3,j,k), m%DisturbedInflow(:,j,k) , p%KinVisc, p%FVW%Chord(j,k), &
+                     AxInd, TanInd, Vrel, phi, alpha, Re, UrelWind_s, ErrStat, ErrMsg )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SetOutputsFromFVW')
          call AFI_ComputeAirfoilCoefs( alpha, Re, 0.0_ReKi,  p%AFI(p%FVW%AFindx(j,k)), AFI_interp, ErrStat, ErrMsg )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SetOutputsFromFVW')
-         CldAirfoil = (/ AFI_interp%Cl, AFI_interp%Cd, 0.0_ReKi /) ! Airfoil coord Cl and Cd
-         CxySection = matmul( m%WithoutSweepPitchTwist(:,:,j,k), matmul( CldAirfoil, u%BladeMotion(k)%Orientation(1:3,1:3,j) ) )
+         cp = cos(phi)
+         sp = sin(phi)
+         Cx = AFI_interp%Cl*cp + AFI_interp%Cd*sp
+         Cy = AFI_interp%Cl*sp - AFI_interp%Cd*cp
 
          q = 0.5 * p%airDens * Vrel**2                         ! dynamic pressure of the jth node in the kth blade
-         force(1) =  CxySection(1) * q * p%FVW%Chord(j,k)      ! X = normal force per unit length (normal to the plane, not chord) of the jth node in the kth blade
-         force(2) = -CxySection(2) * q * p%FVW%Chord(j,k)      ! Y = tangential force per unit length (tangential to the plane, not chord) of the jth node in the kth blade
+         force(1) =  Cx * q * p%FVW%Chord(j,k)      ! X = normal force per unit length (normal to the plane, not chord) of the jth node in the kth blade
+         force(2) = -Cy * q * p%FVW%Chord(j,k)      ! Y = tangential force per unit length (tangential to the plane, not chord) of the jth node in the kth blade
          moment(3)=  AFI_interp%Cm * q * p%FVW%Chord(j,k)**2   ! M = pitching moment per unit length of the jth node in the kth blade
-      end do !j=nodes
-   end do !k=blades
 
-   do k=1,p%NumBlades
-      do j=2,p%NumBlNds
             ! save these values for possible output later:
          m%X(j,k) = force(1)
          m%Y(j,k) = force(2)
          m%M(j,k) = moment(3)
-      end do !j=nodes
-   end do !k=blades
 
-   do k=1,p%NumBlades
-      do j=2,p%NumBlNds
             ! note: because force and moment are 1-d arrays, I'm calculating the transpose of the force and moment outputs
             !       so that I don't have to take the transpose of WithoutSweepPitchTwist(:,:,j,k)
          y%BladeLoad(k)%Force(:,j)  = matmul( force,  m%WithoutSweepPitchTwist(:,:,j,k) )  ! force per unit length of the jth node in the kth blade

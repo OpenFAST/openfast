@@ -156,7 +156,6 @@ endsubroutine ReadAndInterpGamma
 !!  - Same position of points
 !!  - Same circulation 
 subroutine Map_LL_NW(p, m, z, x, ErrStat, ErrMsg )
-   use Interpolation, only: interp_lin
    type(FVW_ParameterType),         intent(in   )  :: p              !< Parameters
    type(FVW_MiscVarType),           intent(in   )  :: m              !< Initial misc/optimization variables
    type(FVW_ConstraintStateType),   intent(in   )  :: z              !< Constraints states
@@ -644,70 +643,63 @@ contains
 end subroutine
 
 
-subroutine FVW_AeroOuts( MGlobalToSection, NodeOrient, StructVel, Vind_Glob, DisturbedInflow, KinVisc, Chord, &
-                         AxInd, TanInd, Vrel, phi, alpha, Re, U0, ErrStat, ErrMsg )
-   real(ReKi),             intent(in   )  :: MGlobalToSection(3,3)   ! m%WithoutSweepPitchTwist(:,:,j,k)                      global  coord
-   real(ReKi),             intent(in   )  :: NodeOrient(3,3)         ! u%BladeMotion(k)%Orientation(1:3,1:3,j)                global  coord
-   real(ReKi),             intent(in   )  :: StructVel(3)            ! Structural velocity                                    global  coord
-   real(ReKi),             intent(in   )  :: Vind_Glob(3)            ! Induced wind velocity                                  global  coord
-   real(ReKi),             intent(in   )  :: DisturbedInflow(3)      ! Disturbed inflow                                       global  coord
+!> Compute typical aerodynamic outputs based on:
+!! - the lifting line velocities in global coordinates
+!! - some transformation matrices
+!!      - M_ag : from global to airfoil (this is well defined, also called "n-t" system in AeroDyn)
+!!      - M_sg : from global to section (this is ill-defined), this coordinate is used to define the "axial" and "tangential" inductions
+subroutine FVW_AeroOuts( M_sg, M_ag, PitchAndTwist, Vstr_g,  Vind_g, Vwnd_g, KinVisc, Chord, &
+                         AxInd, TanInd, Vrel_norm, phi, alpha, Re, Urel_s, ErrStat, ErrMsg )
+   real(ReKi),             intent(in   )  :: M_sg(3,3)               ! m%WithoutSweepPitchTwist                               global  coord to "section" coord
+   real(DbKi),             intent(in   )  :: M_ag(3,3)               ! u%BladeMotion(k)%Orientation(1:3,1:3,j)                global  coord to airfoil coord
+   real(ReKi),             intent(in   )  :: PitchAndTwist           ! Pitch and twist of section
+   real(ReKi),             intent(in   )  :: Vstr_g(3)               ! Structural velocity                                    global  coord
+   real(ReKi),             intent(in   )  :: Vind_g(3)               ! Induced wind velocity                                  global  coord
+   real(ReKi),             intent(in   )  :: Vwnd_g(3)               ! Disturbed inflow                                       global  coord
    real(ReKi),             intent(in   )  :: KinVisc                 ! Viscosity
    real(ReKi),             intent(in   )  :: Chord                   ! chord length
    real(ReKi),             intent(  out)  :: AxInd                   ! axial induction
    real(ReKi),             intent(  out)  :: TanInd                  ! Tangential induction
-   real(ReKi),             intent(  out)  :: Vrel                    ! Relative velocity (scalar)
+   real(ReKi),             intent(  out)  :: Vrel_norm               ! Relative velocity norm
    real(Reki),             intent(  out)  :: phi                     ! Flow angle
    real(Reki),             intent(  out)  :: alpha                   ! angle of attack
    real(ReKi),             intent(  out)  :: Re                      ! Reynolds number
-   real(ReKi),             intent(  out)  :: U0(3)                   ! Vector of UWidn - VStruct                              section coord
+   real(ReKi),             intent(  out)  :: Urel_s(3)               ! Relative wind of the airfoil (Vwnd - Vstr)             section coord
    integer(IntKi),         intent(  out)  :: ErrStat
    character(ErrMsgLen),   intent(  out)  :: ErrMsg
 
    ! Local vars
-   real(ReKi)                             :: x_hat(3)                ! Vector in airfoil cross section, flapwise  direction   global  coord
-   real(ReKi)                             :: y_hat(3)                ! Vector in airfoil cross section, chordwise direction   global  coord
-   real(ReKi)                             :: VStruct(3)              ! Struct Velocity,                                       section coord
-   real(ReKi)                             :: VInd(3)                 ! Induced Velocity,                                      section coord
-   real(ReKi)                             :: UWind(3)                ! Disturbed wind velocity,                               section coord
-   real(ReKi)                             :: UTotLocal(3)            ! Vector of total relative velocity                      section coord
-   real(ReKi)                             :: UTotGlobal(3)           ! Vector of total relative velocity                      global  coord
-   real(ReKi)                             :: UTotAirfoil(3)          ! Vector of total relative velocity                      airfoil coord
+   real(ReKi)                             :: Vstr_s(3)               ! Struct Velocity,                                       section coord
+   real(ReKi)                             :: Vind_s(3)               ! Induced Velocity,                                      section coord
+   real(ReKi)                             :: Vwnd_s(3)               ! Disturbed wind velocity,                               section coord
+   real(ReKi)                             :: Vtot_g(3)               ! Vector of total relative velocity                      section coord
+   real(ReKi)                             :: Vtot_a(3)               ! Vector of total relative velocity                      global  coord
+   real(ReKi)                             :: Vtot_s(3)               ! Vector of total relative velocity                      global  coord
+   !real(DbKi), dimension(3,3)             :: M_sa                    !< Transformation matrix from airfoil to section  coord
+   !real(DbKi), dimension(3,3)             :: M_sg2                   !< Transformation matrix from global  to section  coord
+   ! --- Transformation from airfoil to section (KEEP ME)
+   !M_sa(1,1:3) = (/  cos(PitchAndTwist*1._DbKi), sin(PitchAndTwist*1._DbKi), 0.0_DbKi /)
+   !M_sa(2,1:3) = (/ -sin(PitchAndTwist*1._DbKi), cos(PitchAndTwist*1._DbKi), 0.0_DbKi /)
+   !M_sa(3,1:3) = (/                   0.0_DbKi,                  0.0_DbKi, 1.0_DbKi /)
+   !M_sg= matmul(M_sa, M_ag ) 
 
-   x_hat = MGlobalToSection(1,:)   ! ADP: We want this Airfoil cross section flapwise. Is this it???
-   y_hat = MGlobalToSection(2,:)   ! ADP: We want this Airfoil cross section chordwise
+   ! --- Airfoil coordinates: used to define alpha, and Vrel, alos called "n-t" system
+   Vtot_g    = Vwnd_g - Vstr_g + Vind_g
+   Vtot_a    = matmul(M_ag, Vtot_g)
+   alpha     = atan2( Vtot_a(1), Vtot_a(2) )
+   Vrel_norm = sqrt(Vtot_a(1)**2 + Vtot_a(2)**2) ! NOTE: z component shoudn't be used
+   Re        = Chord * Vrel_norm / KinVisc / 1.0E6
 
-   ! Section coordinates
-   VStruct(1)=dot_product(x_hat, StructVel)
-   VStruct(2)=dot_product(y_hat, StructVel)
-   VStruct(3)=0.0_ReKi
+   ! Section coordinates: used to define axial induction andflow angle
+   Vstr_s = matmul(M_sg, Vstr_g)
+   Vind_s = matmul(M_sg, Vind_g)
+   Vwnd_s = matmul(M_sg, Vwnd_g)
+   Urel_s = Vwnd_s - Vstr_s          ! relative wind 
+   Vtot_s = Vwnd_s - Vstr_s + Vind_s
+   AxInd  = -Vind_s(1)/Urel_s(1) 
+   TanInd =  Vind_s(2)/Urel_s(2)
+   phi    = atan2( Vtot_s(1), Vtot_s(2) )        ! flow angle
 
-   ! Section coordinates
-   VInd(1)=dot_product(Vind_Glob(1:3),x_hat)
-   VInd(2)=dot_product(Vind_Glob(1:3),y_hat)
-   Vind(3)=0.0_ReKi
-
-   ! disturbed wind in section coords
-   UWind(1) =dot_product( DisturbedInflow(:), x_hat)
-   UWind(2) =dot_product( DisturbedInflow(:), y_hat)
-   UWind(3) = 0.0_ReKi
-
-   U0 = UWind - VStruct
-!FIXME: are these calcs correct?  Expect scalar output.
-   AxInd  = norm2(VInd) /U0(1)       ! What is the sign here????
-   TanInd = norm2(VInd) /U0(2)
-
-   ! Section coordinates
-   UTotLocal = UWind - VStruct + Vind
-   Vrel = norm2(UTotLocal)
-
-   phi = atan2( UTotLocal(1), UTotLocal(2) )        ! flow angle
-
-   UTotGlobal  = DisturbedInflow(:) - StructVel + Vind(1:3)
-   UTotAirfoil = matmul(UTotGlobal, NodeOrient )    ! Airfoil coord
-!TODO: is there a +/- error here?
-   alpha = atan2( UTotAirfoil(1), UTotAirfoil(2) )
-
-   Re = Chord * Vrel / KinVisc / 1.0E6
 end subroutine FVW_AeroOuts
 
 
