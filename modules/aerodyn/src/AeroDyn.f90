@@ -124,9 +124,9 @@ subroutine AD_SetInitOut(p, InputFileData, InitOut, errStat, errMsg)
          InitOut%WriteOutputHdr( m + 4 ) = trim(chanPrefix)//"Vy"
          InitOut%WriteOutputUnt( m + 4 ) = '  (m/s)  '
          InitOut%WriteOutputHdr( m + 5 ) = ' '//trim(chanPrefix)//"AIn"
-         InitOut%WriteOutputUnt( m + 5 ) = '  (deg)  '
+         InitOut%WriteOutputUnt( m + 5 ) = '  (-)  '
          InitOut%WriteOutputHdr( m + 6 ) = ' '//trim(chanPrefix)//"ApIn"
-         InitOut%WriteOutputUnt( m + 6 ) = '  (deg)  '
+         InitOut%WriteOutputUnt( m + 6 ) = '  (-)  '
          InitOut%WriteOutputHdr( m + 7 ) = trim(chanPrefix)//"Vrel"
          InitOut%WriteOutputUnt( m + 7 ) = '  (m/s)  '
          InitOut%WriteOutputHdr( m + 8 ) = ' '//trim(chanPrefix)//"Phi"
