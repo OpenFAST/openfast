@@ -1550,7 +1550,7 @@ SUBROUTINE Calc_WriteDbgOutput( p, u, m, y, ErrStat, ErrMsg )
 
          do j=1,p%NumBlNds
 
-            i = (k-1)*p%NumBlNds*23 + (j-1)*23 + 1
+            i = (k-1)*p%NumBlNds*24 + (j-1)*24 + 1
 
             m%AllOuts( i    ) =  m%BEMT_u(indx)%theta(j,k)*R2D
             m%AllOuts( i+1  ) =  m%BEMT_u(indx)%psi(k)*R2D
@@ -1584,6 +1584,7 @@ SUBROUTINE Calc_WriteDbgOutput( p, u, m, y, ErrStat, ErrMsg )
             m%AllOuts( i+20 ) = -m%Y(j,k)
             m%AllOuts( i+21 ) =  m%X(j,k)*ct - m%Y(j,k)*st
             m%AllOuts( i+22 ) = -m%X(j,k)*st - m%Y(j,k)*ct
+            m%AllOuts( i+23 ) = 0.5_ReKi * p%BEMT%chord(j,k) * m%BEMT_y%Vrel(j,k) * m%BEMT_y%Cl(j,k) ! "Gam" [m^2/s]
 
          end do ! nodes
       end do ! blades
@@ -1665,6 +1666,7 @@ contains
             m%AllOuts( i+20 ) = -m%Y(j,k)                     ! "Fy"
             m%AllOuts( i+21 ) =  m%X(j,k)*ct - m%Y(j,k)*st    ! "Fn"
             m%AllOuts( i+22 ) = -m%X(j,k)*st - m%Y(j,k)*ct    ! "Ft"
+            m%AllOuts( i+23 ) = 0.5_ReKi * p%FVW%Chord(j,k) * Vrel * AFI_interp%Cl ! "Gam" [m^2/s]
          end do ! nodes
       end do ! blades
    end subroutine Calc_WriteDbgOutputFVW

@@ -111,7 +111,7 @@ subroutine AD_SetInitOut(p, InputFileData, InitOut, errStat, errMsg)
    do k=1,p%numBlades
       do j=1, p%NumBlNds
          
-         m = (k-1)*p%NumBlNds*23 + (j-1)*23 
+         m = (k-1)*p%NumBlNds*24 + (j-1)*24 
          
          WRITE (TmpChar,'(I3.3)') j
          chanPrefix = "B"//trim(num2lstr(k))//"N"//TmpChar
@@ -161,6 +161,8 @@ subroutine AD_SetInitOut(p, InputFileData, InitOut, errStat, errMsg)
          InitOut%WriteOutputUnt( m + 22 ) = '  (N/m)  '
          InitOut%WriteOutputHdr( m + 23 ) = ' '//trim(chanPrefix)//"Ft"
          InitOut%WriteOutputUnt( m + 23 ) = '  (N/m)  '
+         InitOut%WriteOutputHdr( m + 24 ) = ' '//trim(chanPrefix)//"Gam"
+         InitOut%WriteOutputUnt( m + 24 ) = '  (m^2/s)  '
          
       end do
    end do
@@ -1011,7 +1013,7 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
   !p%RootName       = TRIM(InitInp%RootName)//'.AD'   ! set earlier to it could be used   
    
 #ifdef DBG_OUTS
-   p%NBlOuts          = 23  
+   p%NBlOuts          = 24  
    p%numOuts          = p%NumBlNds*p%NumBlades*p%NBlOuts
    p%NTwOuts          = 0
       
