@@ -306,11 +306,11 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
     ! Normalized Trailing edge coordinates  (1,0,0) -- > changed to 0,1,0 
     DO i=1,p%numBlades 
         DO j=1,p%NumBlNds
-            p%AFLeCo(1,j,i) = ( 0.0_Reki -  p%AerCent(1,J,I)  ) * p%BlChord(j,i) ! (x_LE - x_AC) *Chord
-            p%AFLeCo(2,j,i) = ( 0.0_Reki -  p%AerCent(2,J,I)  ) * p%BlChord(j,i) ! (y_LE - y_AC) *Chord
+            p%AFLeCo(1,j,i) = ( 0.0_Reki -  p%AerCent(2,J,I)  ) * p%BlChord(j,i) ! (y_LE - y_AC) *Chord
+            p%AFLeCo(2,j,i) = ( 0.0_Reki -  p%AerCent(1,J,I)  ) * p%BlChord(j,i) ! (x_LE - x_AC) *Chord
             p%AFLeCo(3,j,i) = ( 0.0_Reki -       0.0_Reki     ) * p%BlChord(j,i) ! this is always zero at the moment ( kept for 3d consistency )
-            p%AFTeCo(1,j,i) = ( 0.0_Reki -  p%AerCent(1,J,I)  ) * p%BlChord(j,i) ! (x_TE - x_AC) *Chord
-            p%AFTeCo(2,j,i) = ( 1.0_Reki -  p%AerCent(2,J,I)  ) * p%BlChord(j,i) ! (y_TE - y_AC) *Chord
+            p%AFTeCo(1,j,i) = ( 0.0_Reki -  p%AerCent(2,J,I)  ) * p%BlChord(j,i) ! (y_TE - y_AC) *Chord
+            p%AFTeCo(2,j,i) = ( 1.0_Reki -  p%AerCent(1,J,I)  ) * p%BlChord(j,i) ! (x_TE - x_AC) *Chord
             p%AFTeCo(3,j,i) = ( 0.0_Reki -       0.0_Reki     ) * p%BlChord(j,i) ! this is always zero at the moment  ( kept for 3d consistency )
         ENDDO
     ENDDO
@@ -1137,6 +1137,10 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,y,errStat,errMsg)
 			
 					! If flag for LBL is ON and Boundary Layer Trip is OFF, then compute LBL
                     IF ( (p%ILAM .EQ. 1) .AND. (p%ITRIP .EQ. 0) )  THEN
+                        IF (p%AweightFlag .eqv. .TRUE.) THEN
+                            m%SPLLBL(III) = m%SPLLBL(III) + p%Aweight(III)              ! A-weighting
+                        ENDIF
+                        
                         PLBL = 10.0_ReKi**(m%SPLLBL(III)/10.0_ReKi)						! SPL to Sound Pressure (P) Conversion for III Frequency
                         
 						PtotalLBL = PtotalLBL + PLBL									! Sum of Current LBL with LBL Running Total
@@ -1148,6 +1152,12 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,y,errStat,errMsg)
 
 					! If flag for TBL is ON, compute Pressure, Suction, and AoA contributions
                     IF ( p%ITURB .GT. 0 )  THEN
+                        IF (p%AweightFlag .eqv. .TRUE.) THEN
+                            m%SPLP(III) = m%SPLP(III) + p%Aweight(III)                      ! A-weighting
+                            m%SPLS(III) = m%SPLS(III) + p%Aweight(III)                      ! A-weighting
+                            m%SPLALPH(III) = m%SPLALPH(III) + p%Aweight(III)                ! A-weighting
+                        ENDIF
+
                         PTBLP = 10.0_ReKi**(m%SPLP(III)/10.0_ReKi)							! SPL to P Conversion for III Frequency
                         PTBLS = 10.0_ReKi**(m%SPLS(III)/10.0_ReKi)							! SPL to P Conversion for III Frequency
                         PTBLALH = 10.0_ReKi**(m%SPLALPH(III)/10.0_ReKi)						! SPL to P Conversion for III Frequency
@@ -1167,6 +1177,10 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,y,errStat,errMsg)
 
 					! If flag for Blunt TE is ON, compute Blunt contribution
                     IF ( p%IBLUNT .GT. 0 )  THEN											! NOTE: .EQ. 1 would be more accurate since only options are 0 and 1
+                        IF (p%AweightFlag .eqv. .TRUE.) THEN
+                            m%SPLBLUNT(III) = m%SPLBLUNT(III) + p%Aweight(III)              ! A-weighting
+                        ENDIF
+                        
                         PBLNT = 10.0_ReKi**(m%SPLBLUNT(III)/10.0_ReKi)						! SPL to P Conversion for III Frequency
                         
 						PtotalBlunt = PtotalBlunt + PBLNT									! Sum of Current Blunt with Blunt Running Total
@@ -1178,6 +1192,10 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,y,errStat,errMsg)
 
 					! If flag for Tip is ON and the current blade node (J) is the last node (tip), compute Tip contribution
                     IF ( (p%ITIP .GT. 0) .AND. (J .EQ. p%NumBlNds) )  THEN					! NOTE: .EQ. 1 would again be more accurate
+                        IF (p%AweightFlag .eqv. .TRUE.) THEN
+                            m%SPLTIP(III) = m%SPLTIP(III) + p%Aweight(III)                  ! A-weighting
+                        ENDIF
+                        
                         PTip = 10.0_ReKi**(m%SPLTIP(III)/10.0_ReKi)							! SPL to P Conversion for III Frequency
                         
 						PtotalTip = PtotalTip + PTip										! Sum of Current Tip with Tip Running Total
@@ -1189,6 +1207,10 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,y,errStat,errMsg)
 
 					! If flag for TI is ON, compute Turbulent Inflow contribution
                     IF ( (p%IInflow .GT. 0)  )  THEN
+                        IF (p%AweightFlag .eqv. .TRUE.) THEN
+                            m%SPLti(III) = m%SPLti(III) + p%Aweight(III)                    ! A-weighting
+                        ENDIF
+                        
                         PTI = 10.0_ReKi**(m%SPLti(III)/10.0_ReKi)							! SPL to P Conversion for III Frequency
                         
 						PtotalInflow = PtotalInflow + PTI									! Sum of Current TI with TI Running Total
@@ -1216,12 +1238,7 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,y,errStat,errMsg)
 		DO K = 1,p%NrObsLoc
 			DO III=1,size(p%FreqList)
 				IF (y%PtotalFreq(K,III) .EQ. 0.)	    y%PtotalFreq(K,III) = 1
-				! If A-weighting flag is ON, combine PtotalFreq with Aweight
-				IF (p%AweightFlag .eqv. .TRUE.) THEN
-					y%PtotalFreq(K,III)    = 10.*LOG10(y%PtotalFreq(K,III))+p%Aweight(III)	! P to SPL conversion
-				ELSE
-					y%PtotalFreq(K,III)    = 10.*LOG10(y%PtotalFreq(K,III))					! P to SPL conversion
-				ENDIF
+                y%PtotalFreq(K,III)    = 10.*LOG10(y%PtotalFreq(K,III))					! P to SPL conversion
 			ENDDO
 		ENDDO
     ENDIF
@@ -1230,7 +1247,7 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,y,errStat,errMsg)
 	DO K = 1,p%NrObsLoc
 		DO III = 1,size(p%FreqList)
 			DO oi = 1,7
-				IF (y%SumSpecNoiseSep(oi,K,III)  .EQ. 0.) y%SumSpecNoiseSep(oi,K,III) =1 
+				IF (y%SumSpecNoiseSep(oi,K,III)  .EQ. 0.) y%SumSpecNoiseSep(oi,K,III) = 1 
 			ENDDO
 		ENDDO
 	ENDDO
@@ -1453,7 +1470,7 @@ SUBROUTINE TBLTE(ALPSTAR,C,U,THETA,PHI,L,R,p,jj,ii,kk,d99Var2,dstarVar1,dstarVar
     RDSTRP = DSTRP * U  / p%KinVisc
     ! Determine peak strouhal numbers to be used for 'a' and 'b' curve calculations
     ST1    = .02 * M ** (-.6)																							! Eq 32 from BPM Airfoil Self-noise and Prediction paper
-    ! corrected with respect to the Suzlon document Contact Pat Moriarty for further. added 4 lines below.(EB_DTU)		! Eq 34 from BPM Airfoil Self-noise and Prediction paper
+  	! Eq 34 from BPM Airfoil Self-noise and Prediction paper
     IF  (ALPSTAR .LE. 1.333)                          ST2 = ST1
     IF ((ALPSTAR .GT. 1.333).AND.(ALPSTAR .LE. 12.5)) ST2 = ST1*10.**(.0054*(ALPSTAR-1.333)**2.)
     IF (ALPSTAR .GT. 12.5)                           ST2 = 4.72 * ST1
@@ -1970,18 +1987,8 @@ SUBROUTINE BLUNT(ALPSTAR,C,U ,THETA,PHI,L,R,H,PSI,p,d99Var2,dstarVar1,dstarVar2,
         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
         G5(I) = G50 + .0714 * PSI * (G514-G50)													! interpolate G5 from G50 and G514
         IF (G5(I) .GT. 0.) G5(I) = 0.
-        !!!        SCALE = 10. * LOG10(M**5.5*H*DBARH*L/R**2.) ! moved out of frequency loop, nothing frequency dependent (EB_DTU) 
-        ! This part is changed with respect to Suzlon document. contact Pat Moriarty for futher info.(EB_DTU) 
-        ! OLD VERSION START (if desired uncomment everything within old version and comment new version two lines)
-        !        CALL G5COMP(0.250d0,ETA,F4TEMP,errStat2,errMsg2 )
-        !        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
-        !       IF (G5(I) .GT. F4TEMP) G5 = F4TEMP
-        !       SPLBLUNT(I) = G4 + G5(I) + SCALE 
-        ! OLD VERSION END
-        ! NEW VERSION START
         G5Sum = 10**(G5(I)/10)+G5Sum     ! to be subtracted
         SPLBLUNT(I) = G4 + G5(I) + SCALE - 10*log10(1/G5Sum) ! equation mentioned there is plus but it is stated subtract, thus ''- 10*log10(1/G5Sum)'' 
-        ! NEW VERSION END
     end do
 END SUBROUTINE Blunt
 !====================================================================================================
@@ -2118,7 +2125,6 @@ SUBROUTINE THICK(C,M,RC,ALPSTAR,p,DELTAP,DSTRS,DSTRP,errStat,errMsg)
     ErrMsg  = ""
     !
     DELTA0   = 10.**(1.6569-.9045*LOG10(RC)+.0596*LOG10(RC)**2.)*C
-    !      IF (p%ITRIP .EQ. 2) DELTA0 = .6 * DELTA0  ! corrected with respect to the Suzlon document Contact Pat Moriarty for further. added 2 lines below.(EB_DTU)
     IF (p%ITRIP .GT. 0) DELTA0 = 10.**(1.892-0.9045*LOG(RC)+0.0596*LOG(RC)**2.)*C
     IF (p%ITRIP .EQ. 2) DELTA0=.6*DELTA0
     ! Pressure side boundary layer thickness
@@ -2354,14 +2360,17 @@ SUBROUTINE BL_Param_Interp(p,m,U,AlphaNoise,C,whichairfoil, errStat, errMsg)
   character(*), parameter :: RoutineName = 'BL_Param_Interp'
   REAL(ReKi)              :: redif1,redif2,aoadif1,aoadif2,xx1,xx2,RC
   INTEGER(intKi)          :: loop1,loop2
+  logical                 :: re_flag
   ErrStat = ErrID_None
   ErrMsg  = ""
 
   !!!! this if is not used but if necessary two sets of tables can be populated for tripped and untripped cases
   RC = U  * C/p%KinVisc       ! REYNOLDS NUMBER BASED ON  CHORD
 
+  re_flag = .FALSE.
   DO loop1=1,size(p%ReListBL)-1
       IF (   (RC.le.p%ReListBL(loop1+1)) .and. (RC.gt.p%ReListBL(loop1))  ) then
+          re_flag = .TRUE.
           redif1=abs(RC-p%ReListBL(loop1+1))
           redif2=abs(RC-p%ReListBL(loop1))
           DO loop2=1,size(p%AOAListBL)-1
@@ -2435,6 +2444,10 @@ SUBROUTINE BL_Param_Interp(p,m,U,AlphaNoise,C,whichairfoil, errStat, errMsg)
           enddo
       endif    
   enddo 
+  if (re_flag .eqv. .FALSE.) then  
+    call SetErrStat( ErrID_Fatal, 'Warning AeroAcoustics Module - the Reynolds number is not in the range provided by the user. Code stopping.', ErrSTat, ErrMsg, RoutineName )
+  stop
+  endif 
 END SUBROUTINE BL_Param_Interp
 
 
