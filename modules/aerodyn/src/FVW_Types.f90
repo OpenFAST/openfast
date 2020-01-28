@@ -98,6 +98,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: iStep      !< Current step number [-]
     INTEGER(IntKi)  :: iStepPrev      !< Previous step number [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: r_wind      !< List of points where wind is requested for next time step [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PitchAndTwist      !< Twist angle (includes all sources of twist)  [Array of size (NumBlNds,numBlades)] [rad]
   END TYPE FVW_MiscVarType
 ! =======================
 ! =========  FVW_InputType  =======
@@ -1146,6 +1147,20 @@ IF (ALLOCATED(SrcMiscData%r_wind)) THEN
   END IF
     DstMiscData%r_wind = SrcMiscData%r_wind
 ENDIF
+IF (ALLOCATED(SrcMiscData%PitchAndTwist)) THEN
+  i1_l = LBOUND(SrcMiscData%PitchAndTwist,1)
+  i1_u = UBOUND(SrcMiscData%PitchAndTwist,1)
+  i2_l = LBOUND(SrcMiscData%PitchAndTwist,2)
+  i2_u = UBOUND(SrcMiscData%PitchAndTwist,2)
+  IF (.NOT. ALLOCATED(DstMiscData%PitchAndTwist)) THEN 
+    ALLOCATE(DstMiscData%PitchAndTwist(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%PitchAndTwist.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstMiscData%PitchAndTwist = SrcMiscData%PitchAndTwist
+ENDIF
  END SUBROUTINE FVW_CopyMisc
 
  SUBROUTINE FVW_DestroyMisc( MiscData, ErrStat, ErrMsg )
@@ -1225,6 +1240,9 @@ IF (ALLOCATED(MiscData%Vind_FW)) THEN
 ENDIF
 IF (ALLOCATED(MiscData%r_wind)) THEN
   DEALLOCATE(MiscData%r_wind)
+ENDIF
+IF (ALLOCATED(MiscData%PitchAndTwist)) THEN
+  DEALLOCATE(MiscData%PitchAndTwist)
 ENDIF
  END SUBROUTINE FVW_DestroyMisc
 
@@ -1382,6 +1400,11 @@ ENDIF
   IF ( ALLOCATED(InData%r_wind) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! r_wind upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%r_wind)  ! r_wind
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! PitchAndTwist allocated yes/no
+  IF ( ALLOCATED(InData%PitchAndTwist) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! PitchAndTwist upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%PitchAndTwist)  ! PitchAndTwist
   END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -1850,6 +1873,22 @@ ENDIF
 
       IF (SIZE(InData%r_wind)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%r_wind))-1 ) = PACK(InData%r_wind,.TRUE.)
       Re_Xferred   = Re_Xferred   + SIZE(InData%r_wind)
+  END IF
+  IF ( .NOT. ALLOCATED(InData%PitchAndTwist) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%PitchAndTwist,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%PitchAndTwist,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%PitchAndTwist,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%PitchAndTwist,2)
+    Int_Xferred = Int_Xferred + 2
+
+      IF (SIZE(InData%PitchAndTwist)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%PitchAndTwist))-1 ) = PACK(InData%PitchAndTwist,.TRUE.)
+      Re_Xferred   = Re_Xferred   + SIZE(InData%PitchAndTwist)
   END IF
  END SUBROUTINE FVW_PackMisc
 
@@ -2558,6 +2597,32 @@ ENDIF
     mask2 = .TRUE. 
       IF (SIZE(OutData%r_wind)>0) OutData%r_wind = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%r_wind))-1 ), mask2, 0.0_ReKi )
       Re_Xferred   = Re_Xferred   + SIZE(OutData%r_wind)
+    DEALLOCATE(mask2)
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! PitchAndTwist not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%PitchAndTwist)) DEALLOCATE(OutData%PitchAndTwist)
+    ALLOCATE(OutData%PitchAndTwist(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%PitchAndTwist.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask2.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask2 = .TRUE. 
+      IF (SIZE(OutData%PitchAndTwist)>0) OutData%PitchAndTwist = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%PitchAndTwist))-1 ), mask2, 0.0_ReKi )
+      Re_Xferred   = Re_Xferred   + SIZE(OutData%PitchAndTwist)
     DEALLOCATE(mask2)
   END IF
  END SUBROUTINE FVW_UnPackMisc

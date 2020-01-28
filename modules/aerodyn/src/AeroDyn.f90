@@ -1629,6 +1629,7 @@ subroutine SetInputsForFVW(p, u, m, errStat, errMsg)
             ErrMsg  = RoutineName//": WingsMesh contains different number of nodes than the BladeMotion mesh"
             return
          endif
+         m%FVW%PitchAndTwist(:,k) = thetaBladeNds(:,k) ! local pitch + twist (aerodyanmic + elastic) angle of the jth node in the kth blade
          m%FVW_u(tIndx)%WingsMesh(k)%TranslationDisp   = u(tIndx)%BladeMotion(k)%TranslationDisp
          m%FVW_u(tIndx)%WingsMesh(k)%Orientation       = u(tIndx)%BladeMotion(k)%Orientation
          m%FVW_u(tIndx)%WingsMesh(k)%TranslationVel    = u(tIndx)%BladeMotion(k)%TranslationVel

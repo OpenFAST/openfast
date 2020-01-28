@@ -70,7 +70,8 @@ typedef     ^                   ^               IntKi                           
 typedef     ^                   ^               IntKi                            nFW           -   -  -  "Number of active far  wake panels"      -
 typedef     ^                   ^               IntKi                            iStep         -   -  -  "Current step number"      -
 typedef     ^                   ^               IntKi                            iStepPrev     -   -  -  "Previous step number"     -
-typedef     ^                   ^               ReKi                             r_wind       ::   -  -  "List of points where wind is requested for next time step"  -
+typedef     ^                   ^               ReKi                             r_wind        ::   -  -  "List of points where wind is requested for next time step"  -
+typedef     ^                   ^               ReKi                             PitchAndTwist ::   -  -  "Twist angle (includes all sources of twist)  [Array of size (NumBlNds,numBlades)]" rad
 
 # ........ Input ............
 # FVW_InputType
