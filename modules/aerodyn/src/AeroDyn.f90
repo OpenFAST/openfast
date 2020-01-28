@@ -1716,11 +1716,12 @@ subroutine SetOutputsFromFVW(u, p, m, y, ErrStat, ErrMsg)
    force(3)    =  0.0_ReKi
    moment(1:2) =  0.0_ReKi
    do k=1,p%NumBlades
-      do j=2,p%NumBlNds !TODO:  Our outputs are on the lifting line! Not at blade nodes!
+      do j=1,p%NumBlNds 
          call FVW_AeroOuts( m%WithoutSweepPitchTwist(:,:,j,k), u%BladeMotion(k)%Orientation(1:3,1:3,j), m%FVW%PitchAndTwist(j,k), u%BladeMotion(k)%TranslationVel(1:3,j), &
                      m%FVW_y%Vind(1:3,j,k), m%DisturbedInflow(:,j,k) , p%KinVisc, p%FVW%Chord(j,k), &
                      AxInd, TanInd, Vrel, phi, alpha, Re, UrelWind_s, ErrStat, ErrMsg )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SetOutputsFromFVW')
+         !  NOTE: using airfoil coeffs at nodes
          call AFI_ComputeAirfoilCoefs( alpha, Re, 0.0_ReKi,  p%AFI(p%FVW%AFindx(j,k)), AFI_interp, ErrStat, ErrMsg )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SetOutputsFromFVW')
          cp = cos(phi)

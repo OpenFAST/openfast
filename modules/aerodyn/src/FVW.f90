@@ -259,10 +259,8 @@ subroutine FVW_Init_Y( p, u, y, ErrStat, ErrMsg )
    nMax = nMax + (FWnSpan+1) * (p%nFWMax+1) * p%nWings   ! Far wake points
 
    call AllocAry( u%V_wind, 3, nMax, 'Wind Velocity at points', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName )
-   !call AllocAry( y%Vind ,  3, p%nSpan+1, p%nWings, 'Induced velocity vector',  ErrStat2, ErrMsg2 ); ! TODO potentially nSpan+1 for AD15
-   call AllocAry( y%Vind ,  3, p%nSpan+1, 3, 'Induced velocity vector',  ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ) ! NOTE: temporary hack 3 blades
-!FIXME: TODO: allocate y%Cl_KJ   (2d).  Placeholder for now
-   call AllocAry(y%Cl_KJ , 1, 1, 'Lift coefficient from circulation (Kutta-Joukowski)', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName )
+   call AllocAry( y%Vind ,  3, p%nSpan+1, p%nWings, 'Induced velocity vector',  ErrStat2, ErrMsg2 ); ! TODO potentially nSpan+1 for AD15
+   !call AllocAry( y%Cl_KJ , 1, 1, 'Lift coefficient from circulation (Kutta-Joukowski)', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName )
    if (ErrStat >= AbortErrLev) return
    y%Vind   = 0.0_ReKi
    return
@@ -684,7 +682,7 @@ subroutine FVW_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, ErrStat,
    integer(IntKi),                  intent(  out)  :: ErrStat     !< Error status of the operation
    character(*),                    intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
    ! Local variables
-   integer(IntKi)                :: iSpan, iW
+   integer(IntKi)                :: iSpan, iW, n
    integer(IntKi)                :: ErrStat2
    character(ErrMsgLen)          :: ErrMsg2
    character(*), parameter       :: RoutineName = 'FVW_CalcOutput'
@@ -706,15 +704,20 @@ subroutine FVW_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, ErrStat,
    m%Vind_LL=-9999.0_ReKi
    call LiftingLineInducedVelocities(p, x, 1, m, ErrStat2, ErrMsg2); if(Failed()) return
 
-   ! Interpolation to AeroDyn radial station TODO TODO TODO
-!TODO: interpolate Vind to AD discretization
-!     Cl, Cd, Cm
+   !  Induction on the mesh points (AeroDyn nodes)
+   n=p%nSpan
    y%Vind(1:3,:,:) = 0.0_ReKi
    do iW=1,p%nWings
-      do iSpan=1,p%nSpan
-!Interpolate here
-         y%Vind(1:3,iSpan,iW) = m%Vind_LL(1:3,iSpan,iW)
-      enddo
+      ! Linear interpolation for msot points (2:n)
+      call InterpArray(m%s_CP_LL(:,iW), m%Vind_LL(1,:,iW), m%s_LL(2:n,iW), y%Vind(1,2:n,iW))
+      call InterpArray(m%s_CP_LL(:,iW), m%Vind_LL(2,:,iW), m%s_LL(2:n,iW), y%Vind(2,2:n,iW))
+      call InterpArray(m%s_CP_LL(:,iW), m%Vind_LL(3,:,iW), m%s_LL(2:n,iW), y%Vind(3,2:n,iW))
+      ! Special case for end points (1 and n+1)
+      y%Vind(1:3, 1  , iW) = 0.0_ReKi ! TODO backward interpolation?
+      y%Vind(1:3, n+1, iW) = 0.0_ReKi ! TODO forward interpolation?
+      !do iSpan=1,p%nSpan+1q
+         !y%Vind(1:3,iSpan,iW) = m%Vind_LL(1:3,iSpan,iW)
+      !enddo
    enddo
 
    ! For plotting only

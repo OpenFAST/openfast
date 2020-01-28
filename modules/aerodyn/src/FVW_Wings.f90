@@ -447,7 +447,7 @@ contains
             Re = p%Chord(icp,iW) * norm2(Vrel) / p%KinVisc / 1.0E6
 
             if (p%CircSolvPolar==idPolarAeroDyn) then
-                  ! compute steady Airfoil Coefs      ! NOTE: UserProp set to 0.0_ReKi (no idea what it does).  Also, note this assumes airfoils at nodes.
+               ! compute steady Airfoil Coefs      ! NOTE: UserProp set to 0.0_ReKi (no idea what it does).  Also, note this assumes airfoils at nodes.
 !TODO: AFindx is on the nodes, not control points.
                call AFI_ComputeAirfoilCoefs( alpha, Re, 0.0_ReKi,  AFInfo(p%AFindx(icp,iW)), AFI_interp, ErrStat2, ErrMsg2 ); if(Failed()) return;
                Cl = AFI_interp%Cl

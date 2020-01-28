@@ -1617,7 +1617,7 @@ contains
 
          ! blade outputs
       do k=1,p%numBlades
-         do j=2,p%NumBlNds ! TODO TODO TODO start at 1
+         do j=1,p%NumBlNds
 !TODO: Merge with BEM to avoid all code redundancy (discuss with Bonnie)
 
             i = (k-1)*p%NumBlNds*24 + (j-1)*24 + 1
@@ -1627,6 +1627,7 @@ contains
             call FVW_AeroOuts( m%WithoutSweepPitchTwist(:,:,j,k), u%BladeMotion(k)%Orientation(1:3,1:3,j), m%FVW%PitchAndTwist(j,k), u%BladeMotion(k)%TranslationVel(1:3,j), &
                         m%FVW_y%Vind(1:3,j,k), Vwnd, p%KinVisc, p%FVW%Chord(j,k), &
                         AxInd, TanInd, Vrel, phi, alpha, Re, UrelWind_s, ErrStat, ErrMsg )
+            !  NOTE: using airfoil coeffs at nodes
             call AFI_ComputeAirfoilCoefs( alpha, Re, 0.0_ReKi,  p%AFI(p%FVW%AFindx(j,k)), AFI_interp, ErrStat, ErrMsg )
 
             theta = m%FVW%PitchAndTwist(j,k)
@@ -1890,6 +1891,7 @@ CONTAINS
                         Vind(1:3), Vwnd , p%KinVisc, p%FVW%Chord(j,k), &
                         AxInd, TanInd, Vrel, phi, alpha, Re, UrelWind_s, ErrStat, ErrMsg )
 
+            !  NOTE: using airfoil coeffs at nodes
             call AFI_ComputeAirfoilCoefs( alpha, Re, 0.0_ReKi,  p%AFI(p%FVW%AFindx(j,k)), AFI_interp, ErrStat, ErrMsg )
             theta = m%FVW%PitchAndTwist(j,k)
 
