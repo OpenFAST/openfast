@@ -9,22 +9,23 @@ module FVW_SUBS
 
    ! --- Module parameters
    ! Circulation solving methods
-   integer(IntKi), parameter :: idCircPolarData     = 0
-   integer(IntKi), parameter :: idCircNoFlowThrough = 1
-   integer(IntKi), parameter :: idCircPrescribed    = 2
+   integer(IntKi), parameter :: idCircPolarData     = 1
+   integer(IntKi), parameter :: idCircNoFlowThrough = 2
+   integer(IntKi), parameter :: idCircPrescribed    = 3
    ! Polar data
-   integer(IntKi), parameter :: idPolarAeroDyn      = 0
-   integer(IntKi), parameter :: idPolar2PiAlpha     = 1
-   integer(IntKi), parameter :: idPolar2PiSinAlpha  = 2
+   !integer(IntKi), parameter :: idPolarAeroDyn      = 0
+   !integer(IntKi), parameter :: idPolar2PiAlpha     = 1
+   !integer(IntKi), parameter :: idPolar2PiSinAlpha  = 2
    ! Integration method
    integer(IntKi), parameter :: idRK4      = 1 
    integer(IntKi), parameter :: idAB4      = 2
    integer(IntKi), parameter :: idABM4     = 3
+   integer(IntKi), parameter :: idPredictor= 4
    integer(IntKi), parameter :: idEuler1   = 5
    ! Regularization Method
-   integer(IntKi), parameter :: idRegConstant   = 0
-   integer(IntKi), parameter :: idRegStretching = 1
-   integer(IntKi), parameter :: idRegAge        = 2
+   integer(IntKi), parameter :: idRegConstant   = 1
+   integer(IntKi), parameter :: idRegStretching = 2
+   integer(IntKi), parameter :: idRegAge        = 3
    integer(IntKi), parameter, dimension(3) :: idRegMethodVALID      = (/idRegConstant,idRegStretching,idRegAge/)
 
    ! Implementation 
