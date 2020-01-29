@@ -1,0 +1,106 @@
+###################################################################################################################################
+# Registry for DirtDyn in the FAST Modularization Framework
+# This Registry file is used to create MODULE DirtDyn_Types, which contains all of the user-defined types needed in DirtDyn.
+# It also contains copy, destroy, pack, and unpack routines associated with each defined data types.
+#
+# Entries are of the form
+# keyword <DirtDyn/DirtD> <TypeName>    <FieldType>    <FieldName>  <Dims>  <IO> <DNAME> <DESCRIP> <UNITS>
+#
+# Use ^ as a shortcut for the value from the previous line.
+# See NWTC Programmer's Handbook for further information on the format/contents of this file.
+###################################################################################################################################
+
+# ...... Include files (definitions from NWTC Library) ............................................................................
+include Registry_NWTC_Library.txt
+
+
+# REDWIN interface DLL type
+# ..... Data for using REDWIN DLLs .......................................................................................................
+# Values set to type R8Ki are defined in the REDWIN fortran code as kind=selected_real_kind(p=15)
+typedef DirtDyn/DirtD   REDWINdllType   character(45) PROPSFILE      -           - - "" -
+typedef DirtDyn/DirtD   REDWINdllType   character(45) LDISPFILE      -           - - "" -
+typedef DirtDyn/DirtD   REDWINdllType   IntKi         IDtask         -           - - "Task identifier for what DLL should do: IDTask = 1: Read input properties, initialize and calibrate model IDTask = 2: Calculate forces based on displacement at end of step IDTask = 3: Calculate elastic macro-element stiffness matrix" -
+typedef   ^             REDWINdllType   IntKi         nErrorCode     -           - - "number of returned error codes" -
+typedef   ^             REDWINdllType   IntKi         ErrorCode      100         - - "Array containing one or more error codes. These are specific to each model." -
+typedef   ^             REDWINdllType   R8Ki          Props          {100}{200}  - - "Array containing foundation model properties (used internally by the REDWIN models). Specific to each model." -
+typedef   ^             REDWINdllType   R8Ki          StVar          {12}{100}   - - "Array containing the state variables at the end of the step (used internally by the REDWIN models). Specific to each model." -
+typedef   ^             REDWINdllType   IntKi         StVarPrint     {12}{100}   - - "Array indicating which state variables should be printed to the screen. This feature is currently not supported." -
+typedef   ^             REDWINdllType   R8Ki          Disp           6           - - "Displacements.  Follows convention of REDWIN orientation." -
+typedef   ^             REDWINdllType   R8Ki          Force          6           - - "Forces.  Follows convention of REDWIN orientations." -
+typedef   ^             REDWINdllType   R8Ki          D              {6}{6}      - - "The 6 x 6 elastic macro-element stiffness matrix at the SFI." -
+
+
+
+# DirtDyn input file
+typedef   ^   DirtD_InputFile   CHARACTER(1024)   DLL_FileName   -   -   -   "Name of the DLL file including the full path"   -
+typedef   ^   DirtD_InputFile   CHARACTER(1024)   DLL_ProcName   -   -   -   "Name of the procedure in the DLL that will be called"   -
+typedef   ^   DirtD_InputFile   CHARACTER(1024)   DLL_InFile     -   -   -   "Name of input file used in DLL"   -
+
+
+# ..... Initialization data .......................................................................................................
+# Define inputs that the initialization routine may need here:
+#   e.g., the name of the input file, the file root name, etc.
+typedef DirtDyn/DirtD InitInputType CHARACTER(1024) InputFile  - - -   "Name of the input file; remove if there is no file" -
+typedef   ^                ^             LOGICAL         Linearize  - .FALSE. -  "Flag that tells this module if the glue code wants to linearize." -
+
+# Define outputs from the initialization routine here:
+typedef   ^               InitOutputType CHARACTER(ChanLen)    WriteOutputHdr  {:} - -   "Names of the output-to-file channels" -
+typedef   ^               InitOutputType CHARACTER(ChanLen)    WriteOutputUnt  {:} - -   "Units of the output-to-file channels" -
+# if this module has implemented linearization, return the names of the rows/columns of the Jacobian matrices:
+#typedef   ^               InitOutputType CHARACTER(LinChanLen) LinNames_y      {:} - -   "Names of the outputs used in linearization" -
+#typedef   ^               InitOutputType CHARACTER(LinChanLen) LinNames_x      {:} - -   "Names of the continuous states used in linearization" -
+#typedef   ^               InitOutputType CHARACTER(LinChanLen) LinNames_xd     {:} - -   "Names of the discrete states used in linearization" -
+#typedef   ^               InitOutputType CHARACTER(LinChanLen) LinNames_z      {:} - -   "Names of the constraint states used in linearization" -
+#typedef   ^               InitOutputType CHARACTER(LinChanLen) LinNames_u      {:} - -   "Names of the inputs used in linearization" -
+#typedef   ^               InitOutputType LOGICAL               RotFrame_y      {:} - -   "Flag that tells FAST/MBC3 if the outputs used in linearization are in the rotating frame" -
+#typedef   ^               InitOutputType LOGICAL               RotFrame_x      {:} - -   "Flag that tells FAST/MBC3 if the continuous states used in linearization are in the rotating frame" -
+#typedef   ^               InitOutputType LOGICAL               RotFrame_xd     {:} - -   "Flag that tells FAST if the discrete states used in linearization are in the rotating frame" -
+#typedef   ^               InitOutputType LOGICAL               RotFrame_z      {:} - -   "Flag that tells FAST if the constraint states used in linearization are in the rotating frame" -
+#typedef   ^               InitOutputType LOGICAL               RotFrame_u      {:} - -   "Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame" -
+
+
+# ..... States ....................................................................................................................
+# Define continuous (differentiable) states here:
+typedef    ^              ContinuousStateType ReKi     DummyContState - - -  "Remove this variable if you have continuous states" -
+
+# Define discrete (nondifferentiable) states here:
+typedef   ^               DiscreteStateType   ReKi     DummyDiscState - - -  "Remove this variable if you have discrete states" -
+
+# Define constraint states here:
+typedef   ^               ConstraintStateType ReKi     DummyConstrState - - - "Remove this variable if you have constraint states" -
+
+# Define any other states, including integer or logical states here:
+typedef   ^               OtherStateType      IntKi    DummyOtherState - - - "Remove this variable if you have other states" -
+
+
+# ..... Misc/Optimization variables.................................................................................................
+# Define any data that are used only for efficiency purposes (these variables are not associated with time):
+#   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
+typedef   ^             MiscVarType       REDWINdllType     dll_data             - - - "data used for REDWIN DLL"   -
+
+
+# ..... Parameters ................................................................................................................
+# Define parameters here:
+# Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
+typedef   ^             ParameterType     DbKi              DT                   - - - "Time step for cont. state integration & disc. state update" seconds
+typedef   ^             ParameterType     CHARACTER(1024)   DLL_InFile           - - - "Name of input file used in DLL"   -
+typedef   ^             ParameterType     DLL_Type          DLL_Trgt             - - - "The addresses and names of the Bladed DLL and its procedure"   -
+typedef   ^             ParameterType     DbKi              DLL_DT               - - - "Time step for DLL" seconds
+typedef   ^             ParameterType     CHARACTER(1024)   RootName             - - - "RootName for writing output files"   -
+typedef   ^             ParameterType     LOGICAL           UseREDWINinterface   - - - "True if interface successfully initialized" -
+
+
+# ..... Inputs ....................................................................................................................
+# Define inputs that are contained on the mesh here:
+#typedef   ^               InputType          MeshType  MeshedInput - - -     "Meshed data" -
+# Define inputs that are not on this mesh here:
+typedef   ^               InputType           ReKi     DummyInput  - - -     "Remove this variable if you have input data" -
+
+
+# ..... Outputs ...................................................................................................................
+# Define outputs that are contained on the mesh here:
+#typedef DirtDyn DirtD_OutputType         MeshType MeshedOutput - - -    "Meshed data" -
+# Define outputs that are not on this mesh here:
+typedef   ^               OutputType          ReKi     DummyOutput  -  - -   "Remove this variable if you have output data" -
+typedef   ^                 ^                 ReKi     WriteOutput {:} - -   "Example of data to be written to an output file" "s,-"
+
