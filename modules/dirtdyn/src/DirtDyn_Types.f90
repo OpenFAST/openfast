@@ -39,7 +39,7 @@ IMPLICIT NONE
     character(45)  :: LDISPFILE      !<  [-]
     INTEGER(IntKi)  :: IDtask      !< Task identifier for what DLL should do: IDTask = 1: Read input properties, initialize and calibrate model IDTask = 2: Calculate forces based on displacement at end of step IDTask = 3: Calculate elastic macro-element stiffness matrix [-]
     INTEGER(IntKi)  :: nErrorCode      !< number of returned error codes [-]
-    INTEGER(IntKi) , DIMENSION(1:1,1:0,1:0)  :: ErrorCode      !< Array containing one or more error codes. These are specific to each model. [-]
+    INTEGER(IntKi) , DIMENSION(1:100)  :: ErrorCode      !< Array containing one or more error codes. These are specific to each model. [-]
     REAL(R8Ki) , DIMENSION(1:100,1:200)  :: Props      !< Array containing foundation model properties (used internally by the REDWIN models). Specific to each model. [-]
     REAL(R8Ki) , DIMENSION(1:12,1:100)  :: StVar      !< Array containing the state variables at the end of the step (used internally by the REDWIN models). Specific to each model. [-]
     INTEGER(IntKi) , DIMENSION(1:12,1:100)  :: StVarPrint      !< Array indicating which state variables should be printed to the screen. This feature is currently not supported. [-]
@@ -124,7 +124,6 @@ CONTAINS
    INTEGER(IntKi)                 :: i,j,k
    INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
    INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-   INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'DirtD_CopyREDWINdllType'
@@ -277,7 +276,6 @@ CONTAINS
   LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-  INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'DirtD_UnPackREDWINdllType'
@@ -305,19 +303,15 @@ CONTAINS
       Int_Xferred   = Int_Xferred + 1
     i1_l = LBOUND(OutData%ErrorCode,1)
     i1_u = UBOUND(OutData%ErrorCode,1)
-    i2_l = LBOUND(OutData%ErrorCode,2)
-    i2_u = UBOUND(OutData%ErrorCode,2)
-    i3_l = LBOUND(OutData%ErrorCode,3)
-    i3_u = UBOUND(OutData%ErrorCode,3)
-    ALLOCATE(mask3(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
+    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask3.', ErrStat, ErrMsg,RoutineName)
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-    mask3 = .TRUE. 
-      OutData%ErrorCode = UNPACK( IntKiBuf ( Int_Xferred:Int_Xferred+(SIZE(OutData%ErrorCode))-1 ), mask3, 0_IntKi )
+    mask1 = .TRUE. 
+      OutData%ErrorCode = UNPACK( IntKiBuf ( Int_Xferred:Int_Xferred+(SIZE(OutData%ErrorCode))-1 ), mask1, 0_IntKi )
       Int_Xferred   = Int_Xferred   + SIZE(OutData%ErrorCode)
-    DEALLOCATE(mask3)
+    DEALLOCATE(mask1)
     i1_l = LBOUND(OutData%Props,1)
     i1_u = UBOUND(OutData%Props,1)
     i2_l = LBOUND(OutData%Props,2)

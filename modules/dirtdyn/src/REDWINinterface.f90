@@ -40,10 +40,10 @@ MODULE REDWINinterface
          real(c_double),         intent(inout)  :: Props(1:100, 1:200)
          real(c_double),         intent(inout)  :: StVar(1:12, 1:100)
          integer(c_int),         intent(inout)  :: StVarPrint(1:12, 1:100)
-         real(c_double),         intent(inout)  :: Disp(6)
-         real(c_double),         intent(inout)  :: Force(6)
-         real(c_double),         intent(inout)  :: D(6,6)
-         integer(c_int),         intent(inout)  :: ErrorCode(100)
+         real(c_double),         intent(inout)  :: Disp(1:6)
+         real(c_double),         intent(inout)  :: Force(1:6)
+         real(c_double),         intent(inout)  :: D(1:6,1:6)
+         integer(c_int),         intent(inout)  :: ErrorCode(1:100)
       end subroutine REDWINdll_interface
    end interface
 
@@ -58,10 +58,10 @@ MODULE REDWINinterface
          real(c_double),         intent(inout)  :: Props(1:100, 1:200)
          real(c_double),         intent(inout)  :: StVar(1:12, 1:100)
          integer(c_int),         intent(inout)  :: StVarPrint(1:12, 1:100)
-         real(c_double),         intent(inout)  :: Disp(6)
-         real(c_double),         intent(inout)  :: Force(6)
-         real(c_double),         intent(inout)  :: D(6,6)
-         integer(c_int),         intent(inout)  :: ErrorCode(100)
+         real(c_double),         intent(inout)  :: Disp(1:6)
+         real(c_double),         intent(inout)  :: Force(1:6)
+         real(c_double),         intent(inout)  :: D(1:6,1:6)
+         integer(c_int),         intent(inout)  :: ErrorCode(1:100)
       end subroutine INTERFACEFOUNDATION
    end interface
 #endif
