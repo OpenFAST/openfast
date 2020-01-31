@@ -139,8 +139,6 @@ subroutine REDWINinterface_Init(u,p,m,y,InputFileData, ErrStat, ErrMsg)
    character(ErrMsgLen)                            :: ErrMsg2        ! The error message, if an error occurred
       
 
-   ! Define all the parameters for the REDWIN Interface   
-   InputFileData%DLL_ProcName      = 'INTERFACEFOUNDATION'//C_NULL_CHAR          ! The name of the procedure in the DLL that will be called.
    
    ErrStat = ErrID_None
    ErrMsg= ''
@@ -149,6 +147,9 @@ subroutine REDWINinterface_Init(u,p,m,y,InputFileData, ErrStat, ErrMsg)
    
 !   p%Ptch_Cntrl        = InputFileData%Ptch_Cntrl
    p%DLL_InFile        = InputFileData%DLL_InFile
+   
+
+
 
 !FIXME: do we need to set one?
 !   p%DLL_DT            = InputFileData%DLL_DT
@@ -176,8 +177,10 @@ subroutine REDWINinterface_Init(u,p,m,y,InputFileData, ErrStat, ErrMsg)
       IF ( ErrStat >= AbortErrLev ) RETURN
 #endif
       
-    ! Set status flag:
-      
+   ! Set status flag:
+   p%UseREDWINinterface = .TRUE.
+
+!FIXME: do I need to call it once to get it to actually initialize?  And when?
    !CALL CallREDWINdll(p%DLL_Trgt,  m%dll_data, ErrStat2, ErrMsg2)
    !   CALL CheckError(ErrStat2,ErrMsg2)
    !   IF ( ErrStat >= AbortErrLev ) RETURN
@@ -221,8 +224,8 @@ subroutine REDWINinterface_End(u, p, m, ErrStat, ErrMsg)
    TYPE(DirtD_InputType),           INTENT(IN   )  :: u               !< System inputs
    TYPE(DirtD_ParameterType),       INTENT(INOUT)  :: p               !< Parameters
    TYPE(DirtD_MiscVarType),         INTENT(INOUT)  :: m               !< misc (optimization) variables
-   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat         !< Error status of the operation
-   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg          !< Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat         !< Error status of the operation
+   CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg          !< Error message if ErrStat /= ErrID_None
 
       ! local variables:
    INTEGER(IntKi)                                 :: ErrStat2    ! The error status code

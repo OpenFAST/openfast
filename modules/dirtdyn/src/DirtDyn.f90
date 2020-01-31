@@ -30,6 +30,7 @@ MODULE DirtDyn
 
    USE DirtDyn_Types
    USE NWTC_Library
+   USE REDWINinterface
 
    IMPLICIT NONE
 
@@ -73,6 +74,8 @@ contains
 !! The initial states and initial guess for the input are defined.
 subroutine DirtDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut, ErrStat, ErrMsg )
 !..................................................................................................................................
+!FIXME: do I really want this here? Compare to ServoDyn.
+   USE, INTRINSIC :: ISO_C_Binding
 
    type(DirtD_InitInputType),         intent(in   )  :: InitInp     !< Input data for initialization routine
    type(DirtD_InputType),             intent(  out)  :: u           !< An initial guess for the input; input mesh must be defined
@@ -99,6 +102,7 @@ subroutine DirtDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    integer(IntKi)                                    :: ErrStat2    ! local error status
    character(ErrMsgLen)                              :: ErrMsg2     ! local error message
    character(*), parameter                           :: RoutineName = 'DirtDyn_Init'
+   type(DirtD_InputFile)                             :: InputFileData   !< Data stored in the module's input file
 
       ! Initialize variables
    ErrStat = ErrID_None
@@ -115,6 +119,11 @@ subroutine DirtDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
 
       ! Define parameters here:
    p%DT  = Interval
+
+!FIXME: add input file parsing
+   InputFileData%DLL_ProcName = 'INTERFACEFOUNDATION'//C_NULL_CHAR          ! The name of the procedure in the DLL that will be called.
+   InputFileData%DLL_FileName = './REDWINmodel1-2.0_x86.dll'//C_NULL_CHAR    ! 32 bit version for model 1
+   !InputFileData%DLL_inFile   = './REDWINmodel1-2.0_x86.dll'//C_NULL_CHAR    ! 32 bit version for model 1
 
 
       ! Define initial system states here:
@@ -169,6 +178,18 @@ subroutine DirtDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
       
    end if
    
+   
+
+   ! Initialize the DLL
+   call REDWINinterface_Init(u,p,m,y,InputFileData, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+
+!FIXME: quick hack for setup call
+!m%dll_data
+   !CALL CallREDWINdll(p%DLL_Trgt,  m%dll_data, ErrStat2, ErrMsg2)
+   !   CALL CheckError(ErrStat2,ErrMsg2)
+   !   IF ( ErrStat >= AbortErrLev ) RETURN
       
 end subroutine DirtDyn_Init
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -199,7 +220,10 @@ subroutine DirtDyn_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 
 
       !! Place any last minute operations or calculations here:
-
+   if (p%UseREDWINinterface) then
+print*,'Closing the REDWIN interface'
+      call REDWINinterface_End( u, p, m, ErrStat, ErrMsg )
+   endif
 
       !! Close files here (but because of checkpoint-restart capability, it is not recommended to have files open during the simulation):
 
