@@ -38,44 +38,29 @@ MODULE DirtDyn
 
    TYPE(ProgDesc), PARAMETER :: DirtDyn_Ver = ProgDesc( 'DirtDyn', 'v0.01.00', '99-Feb-2020' ) !< module date/version information
 
-
       ! ..... Public Subroutines ...................................................................................................
-
    PUBLIC :: DirtDyn_Init                           !  Initialization routine
    PUBLIC :: DirtDyn_End                            !  Ending routine (includes clean up)
-
    PUBLIC :: DirtDyn_UpdateStates                   !  Loose coupling routine for solving for constraint states, integrating
-                                                    !    continuous states, and updating discrete states
    PUBLIC :: DirtDyn_CalcOutput                     !  Routine for computing outputs
 
+!NOTE: these are placeholders for now.
 !!!   PUBLIC :: DirtDyn_CalcConstrStateResidual        !  Tight coupling routine for returning the constraint state residual
 !!!   PUBLIC :: DirtDyn_CalcContStateDeriv             !  Tight coupling routine for computing derivatives of continuous states
 !!!   PUBLIC :: DirtDyn_UpdateDiscState                !  Tight coupling routine for updating discrete states
-!!!
-!!!   PUBLIC :: DirtDyn_JacobianPInput                 !  Routine to compute the Jacobians of the output (Y), continuous- (X), discrete-
-!!!                                                    !    (Xd), and constraint-state (Z) functions all with respect to the inputs (u)
-!!!   PUBLIC :: DirtDyn_JacobianPContState             !  Routine to compute the Jacobians of the output (Y), continuous- (X), discrete-
-!!!                                                    !    (Xd), and constraint-state (Z) functions all with respect to the continuous
-!!!                                                    !    states (x)
-!!!   PUBLIC :: DirtDyn_JacobianPDiscState             !  Routine to compute the Jacobians of the output (Y), continuous- (X), discrete-
-!!!                                                    !    (Xd), and constraint-state (Z) functions all with respect to the discrete
-!!!                                                    !    states (xd)
-!!!   PUBLIC :: DirtDyn_JacobianPConstrState           !  Routine to compute the Jacobians of the output (Y), continuous- (X), discrete-
-!!!                                                    !    (Xd), and constraint-state (Z) functions all with respect to the constraint
-!!!                                                    !    states (z)
-!!!   
+!!!   PUBLIC :: DirtDyn_JacobianPInput                 !  Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions all with respect to the inputs (u)
+!!!   PUBLIC :: DirtDyn_JacobianPContState             !  Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions all with respect to the continuous states (x)
+!!!   PUBLIC :: DirtDyn_JacobianPDiscState             !  Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions all with respect to the discrete states (xd)
+!!!   PUBLIC :: DirtDyn_JacobianPConstrState           !  Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions all with respect to the constraint states (z)
 !!!   PUBLIC :: DirtDyn_GetOP                          !  Routine to get the operating-point values for linearization (from data structures to arrays)
 
 contains
-   
+
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 !> This routine is called at the start of the simulation to perform initialization steps.
 !! The parameters are set here and not changed during the simulation.
 !! The initial states and initial guess for the input are defined.
 subroutine DirtDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut, ErrStat, ErrMsg )
-!..................................................................................................................................
-!FIXME: do I really want this here? Compare to ServoDyn.
-   USE, INTRINSIC :: ISO_C_Binding
 
    type(DirtD_InitInputType),         intent(in   )  :: InitInp     !< Input data for initialization routine
    type(DirtD_InputType),             intent(  out)  :: u           !< An initial guess for the input; input mesh must be defined
@@ -84,15 +69,9 @@ subroutine DirtDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    type(DirtD_DiscreteStateType),     intent(  out)  :: xd          !< Initial discrete states
    type(DirtD_ConstraintStateType),   intent(  out)  :: z           !< Initial guess of the constraint states
    type(DirtD_OtherStateType),        intent(  out)  :: OtherState  !< Initial other states (logical, etc)
-   type(DirtD_OutputType),            intent(  out)  :: y           !< Initial system outputs (outputs are not calculated;
-                                                                    !!   only the output mesh is initialized)
+   type(DirtD_OutputType),            intent(  out)  :: y           !< Initial system outputs
    type(DirtD_MiscVarType),           intent(  out)  :: m           !< Misc variables for optimization (not copied in glue code)
-   real(DbKi),                        intent(inout)  :: Interval    !< Coupling interval in seconds: the rate that
-                                                                     !!   (1) DirtDyn_UpdateStates() is called in loose coupling &
-                                                                     !!   (2) DirtDyn_UpdateDiscState() is called in tight coupling.
-                                                                     !!   Input is the suggested time from the glue code;
-                                                                     !!   Output is the actual coupling interval that will be used
-                                                                     !!   by the glue code.
+   real(DbKi),                        intent(inout)  :: Interval    !< Coupling interval in seconds
    type(DirtD_InitOutputType),        intent(  out)  :: InitOut     !< Output for initialization routine
    integer(IntKi),                    intent(  out)  :: ErrStat     !< Error status of the operation
    character(*),                      intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
@@ -109,7 +88,6 @@ subroutine DirtDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    ErrMsg  = ""
    NumOuts = 2
 
-
       ! Initialize the NWTC Subroutine Library
    call NWTC_Init( )
 
@@ -120,27 +98,16 @@ subroutine DirtDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
       ! Define parameters here:
    p%DT  = Interval
 
-!FIXME: add input file parsing
-   InputFileData%DLL_ProcName = 'INTERFACEFOUNDATION'//C_NULL_CHAR          ! The name of the procedure in the DLL that will be called.
-   InputFileData%DLL_FileName = './REDWINmodel1-2.0_x86.dll'//C_NULL_CHAR    ! 32 bit version for model 1
-   !InputFileData%DLL_inFile   = './REDWINmodel1-2.0_x86.dll'//C_NULL_CHAR    ! 32 bit version for model 1
-
-
       ! Define initial system states here:
    x%DummyContState           = 0.0_ReKi
    xd%DummyDiscState          = 0.0_ReKi
    z%DummyConstrState         = 0.0_ReKi
    OtherState%DummyOtherState = 0.0_ReKi
 
-      
-      ! Define optimization variables here:      
-!   m%DummyMiscVar          = 0.0_ReKi
-
-      
       ! Define initial guess for the system inputs here:
    u%DummyInput = 0.0_ReKi
 
-
+!FIXME: Develop a list of outputs, and set that up somewhere.
       ! Define system output initializations (set up mesh) here:
    call AllocAry( y%WriteOutput, NumOuts, 'WriteOutput', ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! set return error status based on local (concatenate errors)
@@ -148,7 +115,6 @@ subroutine DirtDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
 
    y%DummyOutput = 0
    y%WriteOutput = 0
-
 
       ! Define initialization-routine output here:
    call AllocAry(InitOut%WriteOutputHdr,NumOuts,'WriteOutputHdr',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -159,43 +125,37 @@ subroutine DirtDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    InitOut%WriteOutputUnt = (/ '(s)',     '(-)'     /)
 
 
-      ! If you want to choose your own rate instead of using what the glue code suggests, tell the glue code the rate at which
-      !   this module must be called here:
-
-      !Interval = p%DT
-
-      
    if (InitInp%Linearize) then
-      
+
       ! If the module does not implement the four Jacobian routines at the end of this template, or the module cannot
       ! linearize with the features that are enabled, stop the simulation if InitInp%Linearize is true.
-      
+
       CALL SetErrStat( ErrID_Fatal, 'DirtDyn cannot perform linearization analysis.', ErrStat, ErrMsg, RoutineName)
-      
-      ! Otherwise, if the module does allow linearization, return the appropriate Jacobian row/column names and rotating-frame flags here:   
-      ! Allocate and set these variables: InitOut%LinNames_y, InitOut%LinNames_x, InitOut%LinNames_xd, InitOut%LinNames_z, InitOut%LinNames_u 
-      ! Allocate and set these variables: InitOut%RotFrame_y, InitOut%RotFrame_x, InitOut%RotFrame_xd, InitOut%RotFrame_z, InitOut%RotFrame_u 
-      
+
+      ! Otherwise, if the module does allow linearization, return the appropriate Jacobian row/column names and rotating-frame flags here:
+      ! Allocate and set these variables: InitOut%LinNames_y, InitOut%LinNames_x, InitOut%LinNames_xd, InitOut%LinNames_z, InitOut%LinNames_u
+      ! Allocate and set these variables: InitOut%RotFrame_y, InitOut%RotFrame_x, InitOut%RotFrame_xd, InitOut%RotFrame_z, InitOut%RotFrame_u
+
    end if
-   
-   
+
+!FIXME: quick hack for setup call
+!FIXME: add input file parsing
+InputFileData%DLL_ProcName = 'INTERFACEFOUNDATION'          ! The name of the procedure in the DLL that will be called.
+InputFileData%DLL_FileName = 'REDWINmodel1-2.0_x86.dll'     ! 32 bit version for model 1
+m%dll_data%PROPSfile = 'Props.txt'
+m%dll_data%LDISPfile = 'LoadDisplacement.txt'
+m%dll_data%IDtask = 1
 
    ! Initialize the DLL
    call REDWINinterface_Init(u,p,m,y,InputFileData, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
-
-!FIXME: quick hack for setup call
-!m%dll_data
-   !CALL CallREDWINdll(p%DLL_Trgt,  m%dll_data, ErrStat2, ErrMsg2)
-   !   CALL CheckError(ErrStat2,ErrMsg2)
-   !   IF ( ErrStat >= AbortErrLev ) RETURN
-      
 end subroutine DirtDyn_Init
+
+
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine is called at the end of the simulation.
 subroutine DirtDyn_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
-!..................................................................................................................................
 
    type(DirtD_InputType),             intent(inout)  :: u           !< System inputs
    type(DirtD_ParameterType),         intent(inout)  :: p           !< Parameters
@@ -214,56 +174,41 @@ subroutine DirtDyn_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
    character(*), parameter                           :: RoutineName = 'DirtDyn_End'
 
       ! Initialize ErrStat
-
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-
       !! Place any last minute operations or calculations here:
    if (p%UseREDWINinterface) then
-print*,'Closing the REDWIN interface'
       call REDWINinterface_End( u, p, m, ErrStat, ErrMsg )
    endif
 
       !! Close files here (but because of checkpoint-restart capability, it is not recommended to have files open during the simulation):
 
-
       !! Destroy the input data:
-
-   call DirtD_DestroyInput( u, ErrStat2, ErrMsg2 )
-      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-
+   call DirtD_DestroyInput(      u,          ErrStat2,ErrMsg2);   call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
       !! Destroy the parameter data:
-
-   call DirtD_DestroyParam( p, ErrStat2, ErrMsg2 )
-      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call DirtD_DestroyParam(      p,          ErrStat2,ErrMsg2);   call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
       !! Destroy the state data:
-
-   call DirtD_DestroyContState(   x,          ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-   call DirtD_DestroyDiscState(   xd,         ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-   call DirtD_DestroyConstrState( z,          ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-   call DirtD_DestroyOtherState(  OtherState, ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-
+   call DirtD_DestroyContState(  x,          ErrStat2,ErrMsg2);   call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call DirtD_DestroyDiscState(  xd,         ErrStat2,ErrMsg2);   call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call DirtD_DestroyConstrState(z,          ErrStat2,ErrMsg2);   call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call DirtD_DestroyOtherState( OtherState, ErrStat2,ErrMsg2);   call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
       !! Destroy the output data:
-
    call DirtD_DestroyOutput( y, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
-
       !! Destroy the misc data:
-
    call DirtD_DestroyMisc( m, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
-
 end subroutine DirtDyn_End
+
+
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This is a loose coupling routine for solving constraint states, integrating continuous states, and updating discrete and other
 !! states. Continuous, constraint, discrete, and other states are updated to values at t + Interval.
 subroutine DirtDyn_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
-!..................................................................................................................................
-
    real(DbKi),                         intent(in   ) :: t               !< Current simulation time in seconds
    integer(IntKi),                     intent(in   ) :: n               !< Current step of the simulation: t = n*Interval
    type(DirtD_InputType),              intent(inout) :: Inputs(:)       !< Inputs at InputTimes (output from this routine only
@@ -287,24 +232,18 @@ subroutine DirtDyn_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherSta
    type(DirtD_DiscreteStateType)                     :: xd_t            ! Discrete states at t (copy)
    type(DirtD_ConstraintStateType)                   :: z_Residual      ! Residual of the constraint state functions (Z)
    type(DirtD_InputType)                             :: u               ! Instantaneous inputs
-
    integer(IntKi)                                    :: ErrStat2        ! local error status
    character(ErrMsgLen)                              :: ErrMsg2         ! local error message
    character(*), parameter                           :: RoutineName = 'DirtDyn_UpdateStates'
-
 
       ! Initialize variables
    ErrStat   = ErrID_None           ! no error has occurred
    ErrMsg    = ""
 
-
    ! This subroutine contains an example of how the states could be updated. Developers will
    ! want to adjust the logic as necessary for their own situations.
 
-
-
       ! Get the inputs at time t, based on the array of values sent by the glue code:
-
    ! before calling ExtrapInterp routine, memory in u must be allocated; we can do that with a copy:
    call DirtD_CopyInput( Inputs(1), u, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -320,80 +259,22 @@ subroutine DirtDyn_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherSta
          return
       end if
 
-
-
-!      ! Get first time derivatives of continuous states (dxdt):
-!
-!   call DirtDyn_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrStat2, ErrMsg2 )
-!      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-!      if ( ErrStat >= AbortErrLev ) then
-!         call cleanup()
-!         return
-!      end if
-!
-!
-!      ! Update discrete states:
-!      !   Note that xd [discrete state] is changed in DirtDyn_UpdateDiscState() so xd will now contain values at t+Interval
-!      !   We'll first make a copy that contains xd at time t, which will be used in computing the constraint states
-!   call DirtDyn_CopyDiscState( xd, xd_t, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
-!      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-!      if ( ErrStat >= AbortErrLev ) then
-!         call cleanup()
-!         return
-!      end if
-!
-!   call DirtDyn_UpdateDiscState( t, n, u, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2 )
-!      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-!      if ( ErrStat >= AbortErrLev ) then
-!         call cleanup()
-!         return
-!      end if
-!
-!
-!      ! Solve for the constraint states (z) here:
-!
-!      ! Iterate until the value is within a given tolerance.
-!
-!   ! DO
-!
-!      call DirtDyn_CalcConstrStateResidual( t, u, p, x, xd_t, z, OtherState, m, Z_Residual, ErrStat2, ErrMsg2 )
-!         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-!         if ( ErrStat >= AbortErrLev ) then
-!            call cleanup()
-!            return
-!         end if
-!
-!      !  z =
-!
-!   ! END DO
-
-
-
-      ! Integrate (update) continuous states (x) here:
-
-   !x = function of dxdt and x
-
-
       ! Destroy local variables before returning
    call cleanup()
 
-
 contains
    subroutine cleanup()
-      ! note that this routine inherits all of the data in DirtDyn_UpdateStates
-
-
       call DirtD_DestroyInput(       u,          ErrStat2, ErrMsg2)
       call DirtD_DestroyConstrState( Z_Residual, ErrStat2, ErrMsg2)
       call DirtD_DestroyContState(   dxdt,       ErrStat2, ErrMsg2)
       call DirtD_DestroyDiscState(   xd_t,       ErrStat2, ErrMsg2)
-
    end subroutine cleanup
 end subroutine DirtDyn_UpdateStates
+
+
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This is a routine for computing outputs, used in both loose and tight coupling.
 subroutine DirtDyn_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
-!..................................................................................................................................
 
    real(DbKi),                        intent(in   )  :: t           !< Current simulation time in seconds
    type(DirtD_InputType),             intent(in   )  :: u           !< Inputs at t
@@ -410,463 +291,27 @@ subroutine DirtDyn_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
 
 
       ! Initialize ErrStat
-
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-
       ! Compute outputs here:
    y%DummyOutput    = 2.0_ReKi
-
    y%WriteOutput(1) = REAL(t,ReKi)
    y%WriteOutput(2) = 1.0_ReKi
 
-
 end subroutine DirtDyn_CalcOutput
-!----------------------------------------------------------------------------------------------------------------------------------
 
-
-!!!!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-!!!!> This is a tight coupling routine for computing derivatives of continuous states.
-!!!SUBROUTINE DirtDyn_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrStat, ErrMsg )
-!!!!..................................................................................................................................
-!!!
-!!!   REAL(DbKi),                        INTENT(IN   )  :: t           !< Current simulation time in seconds
-!!!   TYPE(DirtD_InputType),           INTENT(IN   )  :: u           !< Inputs at t
-!!!   TYPE(DirtD_ParameterType),       INTENT(IN   )  :: p           !< Parameters
-!!!   TYPE(DirtD_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at t
-!!!   TYPE(DirtD_DiscreteStateType),   INTENT(IN   )  :: xd          !< Discrete states at t
-!!!   TYPE(DirtD_ConstraintStateType), INTENT(IN   )  :: z           !< Constraint states at t
-!!!   TYPE(DirtD_OtherStateType),      INTENT(IN   )  :: OtherState  !< Other states at t
-!!!   TYPE(DirtD_MiscVarType),         INTENT(INOUT)  :: m           !< Misc variables for optimization (not copied in glue code)
-!!!   TYPE(DirtD_ContinuousStateType), INTENT(  OUT)  :: dxdt        !< Continuous state derivatives at t
-!!!   INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     !< Error status of the operation
-!!!   CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
-!!!
-!!!
-!!!      ! Initialize ErrStat
-!!!
-!!!   ErrStat = ErrID_None
-!!!   ErrMsg  = ""
-!!!
-!!!
-!!!      ! Compute the first time derivatives of the continuous states here:
-!!!
-!!!   dxdt%DummyContState = 0.0_ReKi
-!!!
-!!!END SUBROUTINE DirtDyn_CalcContStateDeriv
-!!!!----------------------------------------------------------------------------------------------------------------------------------
-!!!!> This is a tight coupling routine for updating discrete states.
-!!!SUBROUTINE DirtDyn_UpdateDiscState( t, n, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
-!!!!..................................................................................................................................
-!!!
-!!!   REAL(DbKi),                        INTENT(IN   )  :: t           !< Current simulation time in seconds
-!!!   INTEGER(IntKi),                    INTENT(IN   )  :: n           !< Current step of the simulation: t = n*Interval
-!!!   TYPE(DirtD_InputType),           INTENT(IN   )  :: u           !< Inputs at t
-!!!   TYPE(DirtD_ParameterType),       INTENT(IN   )  :: p           !< Parameters
-!!!   TYPE(DirtD_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at t
-!!!   TYPE(DirtD_DiscreteStateType),   INTENT(INOUT)  :: xd          !< Input: Discrete states at t;
-!!!                                                                     !!   Output: Discrete states at t + Interval
-!!!   TYPE(DirtD_ConstraintStateType), INTENT(IN   )  :: z           !< Constraint states at t
-!!!   TYPE(DirtD_OtherStateType),      INTENT(IN   )  :: OtherState  !< Other states at t
-!!!   TYPE(DirtD_MiscVarType),         INTENT(INOUT)  :: m           !< Misc variables for optimization (not copied in glue code)
-!!!   INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     !< Error status of the operation
-!!!   CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
-!!!
-!!!
-!!!      ! Initialize ErrStat
-!!!
-!!!   ErrStat = ErrID_None
-!!!   ErrMsg  = ""
-!!!
-!!!
-!!!      ! Update discrete states here:
-!!!
-!!!   xd%DummyDiscState = 0.0_Reki
-!!!
-!!!END SUBROUTINE DirtDyn_UpdateDiscState
-!!!!----------------------------------------------------------------------------------------------------------------------------------
-!!!!> This is a tight coupling routine for solving for the residual of the constraint state functions.
-!!!SUBROUTINE DirtDyn_CalcConstrStateResidual( t, u, p, x, xd, z, OtherState, m, Z_residual, ErrStat, ErrMsg )
-!!!!..................................................................................................................................
-!!!
-!!!   REAL(DbKi),                        INTENT(IN   )  :: t           !< Current simulation time in seconds
-!!!   TYPE(DirtD_InputType),           INTENT(IN   )  :: u           !< Inputs at t
-!!!   TYPE(DirtD_ParameterType),       INTENT(IN   )  :: p           !< Parameters
-!!!   TYPE(DirtD_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at t
-!!!   TYPE(DirtD_DiscreteStateType),   INTENT(IN   )  :: xd          !< Discrete states at t
-!!!   TYPE(DirtD_ConstraintStateType), INTENT(IN   )  :: z           !< Constraint states at t (possibly a guess)
-!!!   TYPE(DirtD_OtherStateType),      INTENT(IN   )  :: OtherState  !< Other states at t
-!!!   TYPE(DirtD_MiscVarType),         INTENT(INOUT)  :: m           !< Misc variables for optimization (not copied in glue code)
-!!!   TYPE(DirtD_ConstraintStateType), INTENT(  OUT)  :: Z_residual  !< Residual of the constraint state functions using
-!!!                                                                    !!     the input values described above
-!!!   INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     !< Error status of the operation
-!!!   CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
-!!!
-!!!
-!!!      ! Initialize ErrStat
-!!!
-!!!   ErrStat = ErrID_None
-!!!   ErrMsg  = ""
-!!!
-!!!
-!!!      ! Solve for the residual of the constraint state functions here:
-!!!
-!!!   Z_residual%DummyConstrState = 0.0_ReKi
-!!!
-!!!END SUBROUTINE DirtDyn_CalcConstrStateResidual
-!!!!----------------------------------------------------------------------------------------------------------------------------------
-!!!
-!!!
-!!!!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-!!!! ###### The following four routines are Jacobian routines for linearization capabilities #######
-!!!! If the module does not implement them, set ErrStat = ErrID_Fatal in DirtDyn_Init() when InitInp%Linearize is .true.
-!!!!----------------------------------------------------------------------------------------------------------------------------------
-!!!!> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
-!!!!! with respect to the inputs (u). The partial derivatives dY/du, dX/du, dXd/du, and DZ/du are returned.
-!!!SUBROUTINE DirtDyn_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu)
-!!!!..................................................................................................................................
-!!!
-!!!   REAL(DbKi),                                INTENT(IN   )           :: t          !< Time in seconds at operating point
-!!!   TYPE(DirtD_InputType),                   INTENT(IN   )           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
-!!!   TYPE(DirtD_ParameterType),               INTENT(IN   )           :: p          !< Parameters
-!!!   TYPE(DirtD_ContinuousStateType),         INTENT(IN   )           :: x          !< Continuous states at operating point
-!!!   TYPE(DirtD_DiscreteStateType),           INTENT(IN   )           :: xd         !< Discrete states at operating point
-!!!   TYPE(DirtD_ConstraintStateType),         INTENT(IN   )           :: z          !< Constraint states at operating point
-!!!   TYPE(DirtD_OtherStateType),              INTENT(IN   )           :: OtherState !< Other states at operating point
-!!!   TYPE(DirtD_OutputType),                  INTENT(IN   )           :: y          !< Output (change to inout if a mesh copy is required); 
-!!!                                                                                    !!   Output fields are not used by this routine, but type is   
-!!!                                                                                    !!   available here so that mesh parameter information (i.e.,  
-!!!                                                                                    !!   connectivity) does not have to be recalculated for dYdu.
-!!!   TYPE(DirtD_MiscVarType),                 INTENT(INOUT)           :: m          !< Misc/optimization variables
-!!!   INTEGER(IntKi),                            INTENT(  OUT)           :: ErrStat    !< Error status of the operation
-!!!   CHARACTER(*),                              INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-!!!   REAL(ReKi), ALLOCATABLE, OPTIONAL,         INTENT(INOUT)           :: dYdu(:,:)  !< Partial derivatives of output functions (Y) with respect 
-!!!                                                                                    !!   to the inputs (u) [intent in to avoid deallocation]
-!!!   REAL(ReKi), ALLOCATABLE, OPTIONAL,         INTENT(INOUT)           :: dXdu(:,:)  !< Partial derivatives of continuous state functions (X) with 
-!!!                                                                                    !!   respect to the inputs (u) [intent in to avoid deallocation]
-!!!   REAL(ReKi), ALLOCATABLE, OPTIONAL,         INTENT(INOUT)           :: dXddu(:,:) !< Partial derivatives of discrete state functions (Xd) with 
-!!!                                                                                    !!   respect to the inputs (u) [intent in to avoid deallocation]
-!!!   REAL(ReKi), ALLOCATABLE, OPTIONAL,         INTENT(INOUT)           :: dZdu(:,:)  !< Partial derivatives of constraint state functions (Z) with 
-!!!                                                                                    !!   respect to the inputs (u) [intent in to avoid deallocation]
-!!!
-!!!
-!!!      ! Initialize ErrStat
-!!!
-!!!   ErrStat = ErrID_None
-!!!   ErrMsg  = ''
-!!!
-!!!
-!!!   IF ( PRESENT( dYdu ) ) THEN
-!!!
-!!!      ! Calculate the partial derivative of the output functions (Y) with respect to the inputs (u) here:
-!!!
-!!!      ! allocate and set dYdu
-!!!
-!!!   END IF
-!!!
-!!!   IF ( PRESENT( dXdu ) ) THEN
-!!!
-!!!      ! Calculate the partial derivative of the continuous state functions (X) with respect to the inputs (u) here:
-!!!
-!!!      ! allocate and set dXdu
-!!!
-!!!   END IF
-!!!
-!!!   IF ( PRESENT( dXddu ) ) THEN
-!!!
-!!!      ! Calculate the partial derivative of the discrete state functions (Xd) with respect to the inputs (u) here:
-!!!
-!!!      ! allocate and set dXddu
-!!!
-!!!   END IF
-!!!
-!!!   IF ( PRESENT( dZdu ) ) THEN
-!!!
-!!!      ! Calculate the partial derivative of the constraint state functions (Z) with respect to the inputs (u) here:
-!!!
-!!!      ! allocate and set dZdu
-!!!
-!!!   END IF
-!!!
-!!!
-!!!END SUBROUTINE DirtDyn_JacobianPInput
-!!!!----------------------------------------------------------------------------------------------------------------------------------
-!!!!> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
-!!!!! with respect to the continuous states (x). The partial derivatives dY/dx, dX/dx, dXd/dx, and DZ/dx are returned.
-!!!SUBROUTINE DirtDyn_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdx, dXdx, dXddx, dZdx )
-!!!!..................................................................................................................................
-!!!
-!!!   REAL(DbKi),                                INTENT(IN   )           :: t          !< Time in seconds at operating point
-!!!   TYPE(DirtD_InputType),                   INTENT(IN   )           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
-!!!   TYPE(DirtD_ParameterType),               INTENT(IN   )           :: p          !< Parameters
-!!!   TYPE(DirtD_ContinuousStateType),         INTENT(IN   )           :: x          !< Continuous states at operating point
-!!!   TYPE(DirtD_DiscreteStateType),           INTENT(IN   )           :: xd         !< Discrete states at operating point
-!!!   TYPE(DirtD_ConstraintStateType),         INTENT(IN   )           :: z          !< Constraint states at operating point
-!!!   TYPE(DirtD_OtherStateType),              INTENT(IN   )           :: OtherState !< Other states at operating point
-!!!   TYPE(DirtD_OutputType),                  INTENT(IN   )           :: y          !< Output (change to inout if a mesh copy is required); 
-!!!                                                                                    !!   Output fields are not used by this routine, but type is   
-!!!                                                                                    !!   available here so that mesh parameter information (i.e.,  
-!!!                                                                                    !!   connectivity) does not have to be recalculated for dYdx.
-!!!   TYPE(DirtD_MiscVarType),                 INTENT(INOUT)           :: m          !< Misc/optimization variables
-!!!   INTEGER(IntKi),                            INTENT(  OUT)           :: ErrStat    !< Error status of the operation
-!!!   CHARACTER(*),                              INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-!!!   REAL(ReKi), ALLOCATABLE, OPTIONAL,         INTENT(INOUT)           :: dYdx(:,:)  !< Partial derivatives of output functions
-!!!                                                                                    !!   (Y) with respect to the continuous
-!!!                                                                                    !!   states (x) [intent in to avoid deallocation]
-!!!   REAL(ReKi), ALLOCATABLE, OPTIONAL,         INTENT(INOUT)           :: dXdx(:,:)  !< Partial derivatives of continuous state
-!!!                                                                                    !!   functions (X) with respect to
-!!!                                                                                    !!   the continuous states (x) [intent in to avoid deallocation]
-!!!   REAL(ReKi), ALLOCATABLE, OPTIONAL,         INTENT(INOUT)           :: dXddx(:,:) !< Partial derivatives of discrete state
-!!!                                                                                    !!   functions (Xd) with respect to
-!!!                                                                                    !!   the continuous states (x) [intent in to avoid deallocation]
-!!!   REAL(ReKi), ALLOCATABLE, OPTIONAL,         INTENT(INOUT)           :: dZdx(:,:)  !< Partial derivatives of constraint state
-!!!                                                                                    !!   functions (Z) with respect to
-!!!                                                                                    !!   the continuous states (x) [intent in to avoid deallocation]
-!!!
-!!!
-!!!      ! Initialize ErrStat
-!!!
-!!!   ErrStat = ErrID_None
-!!!   ErrMsg  = ''
-!!!
-!!!
-!!!
-!!!   IF ( PRESENT( dYdx ) ) THEN
-!!!
-!!!      ! Calculate the partial derivative of the output functions (Y) with respect to the continuous states (x) here:
-!!!
-!!!      ! allocate and set dYdx
-!!!
-!!!   END IF
-!!!
-!!!   IF ( PRESENT( dXdx ) ) THEN
-!!!
-!!!      ! Calculate the partial derivative of the continuous state functions (X) with respect to the continuous states (x) here:
-!!!
-!!!      ! allocate and set dXdx
-!!!
-!!!   END IF
-!!!
-!!!   IF ( PRESENT( dXddx ) ) THEN
-!!!
-!!!      ! Calculate the partial derivative of the discrete state functions (Xd) with respect to the continuous states (x) here:
-!!!
-!!!      ! allocate and set dXddx
-!!!
-!!!   END IF
-!!!
-!!!   IF ( PRESENT( dZdx ) ) THEN
-!!!
-!!!
-!!!      ! Calculate the partial derivative of the constraint state functions (Z) with respect to the continuous states (x) here:
-!!!
-!!!      ! allocate and set dZdx
-!!!
-!!!   END IF
-!!!
-!!!
-!!!END SUBROUTINE DirtDyn_JacobianPContState
-!!!!----------------------------------------------------------------------------------------------------------------------------------
-!!!!> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
-!!!!! with respect to the discrete states (xd). The partial derivatives dY/dxd, dX/dxd, dXd/dxd, and DZ/dxd are returned.
-!!!SUBROUTINE DirtDyn_JacobianPDiscState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdxd, dXdxd, dXddxd, dZdxd )
-!!!!..................................................................................................................................
-!!!
-!!!   REAL(DbKi),                                INTENT(IN   )           :: t          !< Time in seconds at operating point
-!!!   TYPE(DirtD_InputType),                   INTENT(IN   )           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
-!!!   TYPE(DirtD_ParameterType),               INTENT(IN   )           :: p          !< Parameters
-!!!   TYPE(DirtD_ContinuousStateType),         INTENT(IN   )           :: x          !< Continuous states at operating point
-!!!   TYPE(DirtD_DiscreteStateType),           INTENT(IN   )           :: xd         !< Discrete states at operating point
-!!!   TYPE(DirtD_ConstraintStateType),         INTENT(IN   )           :: z          !< Constraint states at operating point
-!!!   TYPE(DirtD_OtherStateType),              INTENT(IN   )           :: OtherState !< Other states at operating point
-!!!   TYPE(DirtD_OutputType),                  INTENT(IN   )           :: y          !< Output (change to inout if a mesh copy is required); 
-!!!                                                                                    !!   Output fields are not used by this routine, but type is   
-!!!                                                                                    !!   available here so that mesh parameter information (i.e.,  
-!!!                                                                                    !!   connectivity) does not have to be recalculated for dYdxd.
-!!!   TYPE(DirtD_MiscVarType),                 INTENT(INOUT)           :: m          !< Misc/optimization variables
-!!!   INTEGER(IntKi),                            INTENT(  OUT)           :: ErrStat    !< Error status of the operation
-!!!   CHARACTER(*),                              INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-!!!   REAL(ReKi), ALLOCATABLE, OPTIONAL,         INTENT(INOUT)           :: dYdxd(:,:) !< Partial derivatives of output functions
-!!!                                                                                    !!  (Y) with respect to the discrete
-!!!                                                                                    !!  states (xd) [intent in to avoid deallocation]
-!!!   REAL(ReKi), ALLOCATABLE, OPTIONAL,         INTENT(INOUT)           :: dXdxd(:,:) !< Partial derivatives of continuous state
-!!!                                                                                    !!   functions (X) with respect to the
-!!!                                                                                    !!   discrete states (xd) [intent in to avoid deallocation]
-!!!   REAL(ReKi), ALLOCATABLE, OPTIONAL,         INTENT(INOUT)           :: dXddxd(:,:)!< Partial derivatives of discrete state
-!!!                                                                                    !!   functions (Xd) with respect to the
-!!!                                                                                    !!   discrete states (xd) [intent in to avoid deallocation]
-!!!   REAL(ReKi), ALLOCATABLE, OPTIONAL,         INTENT(INOUT)           :: dZdxd(:,:) !< Partial derivatives of constraint state
-!!!                                                                                    !!   functions (Z) with respect to the
-!!!                                                                                    !!   discrete states (xd) [intent in to avoid deallocation]
-!!!
-!!!
-!!!      ! Initialize ErrStat
-!!!
-!!!   ErrStat = ErrID_None
-!!!   ErrMsg  = ''
-!!!
-!!!
-!!!   IF ( PRESENT( dYdxd ) ) THEN
-!!!
-!!!      ! Calculate the partial derivative of the output functions (Y) with respect to the discrete states (xd) here:
-!!!
-!!!      ! allocate and set dYdxd
-!!!
-!!!   END IF
-!!!
-!!!   IF ( PRESENT( dXdxd ) ) THEN
-!!!
-!!!      ! Calculate the partial derivative of the continuous state functions (X) with respect to the discrete states (xd) here:
-!!!
-!!!      ! allocate and set dXdxd
-!!!
-!!!   END IF
-!!!
-!!!   IF ( PRESENT( dXddxd ) ) THEN
-!!!
-!!!      ! Calculate the partial derivative of the discrete state functions (Xd) with respect to the discrete states (xd) here:
-!!!
-!!!      ! allocate and set dXddxd
-!!!
-!!!   END IF
-!!!
-!!!   IF ( PRESENT( dZdxd ) ) THEN
-!!!
-!!!      ! Calculate the partial derivative of the constraint state functions (Z) with respect to the discrete states (xd) here:
-!!!
-!!!      ! allocate and set dZdxd
-!!!
-!!!   END IF
-!!!
-!!!
-!!!END SUBROUTINE DirtDyn_JacobianPDiscState
-!!!!----------------------------------------------------------------------------------------------------------------------------------
-!!!!> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
-!!!!! with respect to the constraint states (z). The partial derivatives dY/dz, dX/dz, dXd/dz, and DZ/dz are returned.
-!!!SUBROUTINE DirtDyn_JacobianPConstrState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdz, dXdz, dXddz, dZdz )
-!!!!..................................................................................................................................
-!!!
-!!!   REAL(DbKi),                                INTENT(IN   )           :: t          !< Time in seconds at operating point
-!!!   TYPE(DirtD_InputType),                   INTENT(IN   )           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
-!!!   TYPE(DirtD_ParameterType),               INTENT(IN   )           :: p          !< Parameters
-!!!   TYPE(DirtD_ContinuousStateType),         INTENT(IN   )           :: x          !< Continuous states at operating point
-!!!   TYPE(DirtD_DiscreteStateType),           INTENT(IN   )           :: xd         !< Discrete states at operating point
-!!!   TYPE(DirtD_ConstraintStateType),         INTENT(IN   )           :: z          !< Constraint states at operating point
-!!!   TYPE(DirtD_OtherStateType),              INTENT(IN   )           :: OtherState !< Other states at operating point
-!!!   TYPE(DirtD_OutputType),                  INTENT(IN   )           :: y          !< Output (change to inout if a mesh copy is required); 
-!!!                                                                                    !!   Output fields are not used by this routine, but type is   
-!!!                                                                                    !!   available here so that mesh parameter information (i.e.,  
-!!!                                                                                    !!   connectivity) does not have to be recalculated for dYdz.
-!!!   TYPE(DirtD_MiscVarType),                 INTENT(INOUT)           :: m          !< Misc/optimization variables
-!!!   INTEGER(IntKi),                            INTENT(  OUT)           :: ErrStat    !< Error status of the operation
-!!!   CHARACTER(*),                              INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-!!!   REAL(ReKi), ALLOCATABLE, OPTIONAL,         INTENT(INOUT)           :: dYdz(:,:)  !< Partial derivatives of output
-!!!                                                                                    !!  functions (Y) with respect to the
-!!!                                                                                    !!  constraint states (z) [intent in to avoid deallocation]
-!!!   REAL(ReKi), ALLOCATABLE, OPTIONAL,         INTENT(INOUT)           :: dXdz(:,:)  !< Partial derivatives of continuous
-!!!                                                                                    !!  state functions (X) with respect to
-!!!                                                                                    !!  the constraint states (z) [intent in to avoid deallocation]
-!!!   REAL(ReKi), ALLOCATABLE, OPTIONAL,         INTENT(INOUT)           :: dXddz(:,:) !< Partial derivatives of discrete state
-!!!                                                                                    !!  functions (Xd) with respect to the
-!!!                                                                                    !!  constraint states (z) [intent in to avoid deallocation]
-!!!   REAL(ReKi), ALLOCATABLE, OPTIONAL,         INTENT(INOUT)           :: dZdz(:,:)  !< Partial derivatives of constraint
-!!!                                                                                    !! state functions (Z) with respect to
-!!!                                                                                    !!  the constraint states (z) [intent in to avoid deallocation]
-!!!
-!!!
-!!!      ! Initialize ErrStat
-!!!
-!!!   ErrStat = ErrID_None
-!!!   ErrMsg  = ''
-!!!
-!!!   IF ( PRESENT( dYdz ) ) THEN
-!!!
-!!!         ! Calculate the partial derivative of the output functions (Y) with respect to the constraint states (z) here:
-!!!
-!!!      ! allocate and set dYdz
-!!!
-!!!   END IF
-!!!
-!!!   IF ( PRESENT( dXdz ) ) THEN
-!!!
-!!!         ! Calculate the partial derivative of the continuous state functions (X) with respect to the constraint states (z) here:
-!!!
-!!!      ! allocate and set dXdz
-!!!
-!!!   END IF
-!!!
-!!!   IF ( PRESENT( dXddz ) ) THEN
-!!!
-!!!         ! Calculate the partial derivative of the discrete state functions (Xd) with respect to the constraint states (z) here:
-!!!
-!!!      ! allocate and set dXddz
-!!!
-!!!   END IF
-!!!
-!!!   IF ( PRESENT( dZdz ) ) THEN
-!!!
-!!!         ! Calculate the partial derivative of the constraint state functions (Z) with respect to the constraint states (z) here:
-!!!
-!!!      ! allocate and set dZdz
-!!!
-!!!   END IF
-!!!
-!!!
-!!!END SUBROUTINE DirtDyn_JacobianPConstrState
-!!!!----------------------------------------------------------------------------------------------------------------------------------
-!!!!> Routine to pack the data structures representing the operating points into arrays for linearization.
-!!!SUBROUTINE DirtDyn_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op, y_op, x_op, dx_op, xd_op, z_op )
-!!!
-!!!   REAL(DbKi),                           intent(in   )           :: t          !< Time in seconds at operating point
-!!!   TYPE(DirtD_InputType),                intent(in   )           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
-!!!   TYPE(DirtD_ParameterType),            intent(in   )           :: p          !< Parameters
-!!!   TYPE(DirtD_ContinuousStateType),      intent(in   )           :: x          !< Continuous states at operating point
-!!!   TYPE(DirtD_DiscreteStateType),        intent(in   )           :: xd         !< Discrete states at operating point
-!!!   TYPE(DirtD_ConstraintStateType),      intent(in   )           :: z          !< Constraint states at operating point
-!!!   TYPE(DirtD_OtherStateType),           intent(in   )           :: OtherState !< Other states at operating point
-!!!   TYPE(DirtD_OutputType),               intent(in   )           :: y          !< Output at operating point
-!!!   TYPE(DirtD_MiscVarType),              intent(inout)           :: m          !< Misc/optimization variables
-!!!   INTEGER(IntKi),                       intent(  out)           :: ErrStat    !< Error status of the operation
-!!!   CHARACTER(*),                         intent(  out)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-!!!   REAL(ReKi), ALLOCATABLE, OPTIONAL,    intent(inout)           :: u_op(:)    !< values of linearized inputs
-!!!   REAL(ReKi), ALLOCATABLE, OPTIONAL,    intent(inout)           :: y_op(:)    !< values of linearized outputs
-!!!   REAL(ReKi), ALLOCATABLE, OPTIONAL,    intent(inout)           :: x_op(:)    !< values of linearized continuous states
-!!!   REAL(ReKi), ALLOCATABLE, OPTIONAL,    intent(inout)           :: dx_op(:)   !< values of first time derivatives of linearized continuous states
-!!!   REAL(ReKi), ALLOCATABLE, OPTIONAL,    intent(inout)           :: xd_op(:)   !< values of linearized discrete states
-!!!   REAL(ReKi), ALLOCATABLE, OPTIONAL,    intent(inout)           :: z_op(:)    !< values of linearized constraint states
-!!!
-!!!
-!!!      ! Initialize ErrStat
-!!!
-!!!   ErrStat = ErrID_None
-!!!   ErrMsg  = ''
-!!!
-!!!   IF ( PRESENT( u_op ) ) THEN
-!!!
-!!!   END IF
-!!!
-!!!   IF ( PRESENT( y_op ) ) THEN
-!!!   END IF
-!!!
-!!!   IF ( PRESENT( x_op ) ) THEN
-!!!
-!!!   END IF
-!!!
-!!!   IF ( PRESENT( dx_op ) ) THEN
-!!!
-!!!   END IF
-!!!
-!!!   IF ( PRESENT( xd_op ) ) THEN
-!!!
-!!!   END IF
-!!!   
-!!!   IF ( PRESENT( z_op ) ) THEN
-!!!
-!!!   END IF
-!!!
-!!!END SUBROUTINE DirtDyn_GetOP
-!!!!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 END MODULE DirtDyn
+
 !**********************************************************************************************************************************
+!NOTE: the following have been omitted.  When we add the other methods for calculating (6x6 Stiffness/Damping) and the P-Y curve, then
+!      some of these will need to be added.  Leaving this as a placeholder for the moment.
+!SUBROUTINE DirtDyn_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrStat, ErrMsg )
+!SUBROUTINE DirtDyn_UpdateDiscState( t, n, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
+!SUBROUTINE DirtDyn_CalcConstrStateResidual( t, u, p, x, xd, z, OtherState, m, Z_residual, ErrStat, ErrMsg )
+!SUBROUTINE DirtDyn_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu)
+!SUBROUTINE DirtDyn_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdx, dXdx, dXddx, dZdx )
+!SUBROUTINE DirtDyn_JacobianPDiscState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdxd, dXdxd, dXddxd, dZdxd )
+!SUBROUTINE DirtDyn_JacobianPConstrState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdz, dXdz, dXddz, dZdz )
+!SUBROUTINE DirtDyn_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op, y_op, x_op, dx_op, xd_op, z_op )
