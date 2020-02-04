@@ -1160,7 +1160,7 @@ void gen_extint_order(FILE *fp, const node_t *ModName, char * typnm, char * uy, 
    node_t *q, *r1;
    int i, j;
    int mesh = 0;
-   char derefrecurse[NAMELEN], indent[NAMELEN];
+   char derefrecurse[NAMELEN], indent[NAMELEN], tmp[NAMELEN];
    if (recurselevel > MAXRECURSE) {
       fprintf(stderr, "REGISTRY ERROR: too many levels of array subtypes\n");
       exit(9);
@@ -1178,11 +1178,24 @@ void gen_extint_order(FILE *fp, const node_t *ModName, char * typnm, char * uy, 
             for (r1 = q->fields; r1; r1 = r1->next)
             {
                sprintf(derefrecurse, "%s%%%s", deref, r->name);
-               for (j = r->ndims; j > 0; j--) {
 
+               for (j = r->ndims; j > 0; j--) {
                   fprintf(fp, "  DO i%d%d = LBOUND(%s_out%s,%d),UBOUND(%s_out%s,%d)\n", recurselevel, j, uy, derefrecurse, j, uy, derefrecurse, j);
-                  sprintf(derefrecurse, "%s%%%s(i%d%d)", deref, r->name, recurselevel, j);
                }
+
+
+               if (r->ndims > 0) {
+                   strcat(derefrecurse, "(");
+                   for (j = 1; j <= r->ndims; j++) {
+                       sprintf(tmp, "i%d%d", recurselevel, j);
+                       strcat(derefrecurse, tmp);
+                       if (j < r->ndims) {
+                           strcat(derefrecurse, ",");
+                       }
+                   }
+                   strcat(derefrecurse, ")");
+               }
+
                gen_extint_order(fp, ModName, typnm, uy, order, r1, derefrecurse, recurselevel + 1);
                for (j = r->ndims; j > 0; j--) {
                   fprintf(fp, "  ENDDO\n");
