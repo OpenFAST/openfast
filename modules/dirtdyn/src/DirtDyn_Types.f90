@@ -52,7 +52,8 @@ IMPLICIT NONE
   TYPE, PUBLIC :: DirtD_InputFile
     CHARACTER(1024)  :: DLL_FileName      !< Name of the DLL file including the full path [-]
     CHARACTER(1024)  :: DLL_ProcName      !< Name of the procedure in the DLL that will be called [-]
-    CHARACTER(1024)  :: DLL_InFile      !< Name of input file used in DLL [-]
+    CHARACTER(1024)  :: DLL_PROPSFILE      !< Name of PROPSFILE input file used in DLL [-]
+    CHARACTER(1024)  :: DLL_LDISPFILE      !< Name of LDISPFILE input file used in DLL [-]
   END TYPE DirtD_InputFile
 ! =======================
 ! =========  DirtD_InitInputType  =======
@@ -404,7 +405,8 @@ CONTAINS
    ErrMsg  = ""
     DstInputFileData%DLL_FileName = SrcInputFileData%DLL_FileName
     DstInputFileData%DLL_ProcName = SrcInputFileData%DLL_ProcName
-    DstInputFileData%DLL_InFile = SrcInputFileData%DLL_InFile
+    DstInputFileData%DLL_PROPSFILE = SrcInputFileData%DLL_PROPSFILE
+    DstInputFileData%DLL_LDISPFILE = SrcInputFileData%DLL_LDISPFILE
  END SUBROUTINE DirtD_CopyInputFile
 
  SUBROUTINE DirtD_DestroyInputFile( InputFileData, ErrStat, ErrMsg )
@@ -455,7 +457,8 @@ CONTAINS
   Int_BufSz  = 0
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%DLL_FileName)  ! DLL_FileName
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%DLL_ProcName)  ! DLL_ProcName
-      Int_BufSz  = Int_BufSz  + 1*LEN(InData%DLL_InFile)  ! DLL_InFile
+      Int_BufSz  = Int_BufSz  + 1*LEN(InData%DLL_PROPSFILE)  ! DLL_PROPSFILE
+      Int_BufSz  = Int_BufSz  + 1*LEN(InData%DLL_LDISPFILE)  ! DLL_LDISPFILE
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -491,8 +494,12 @@ CONTAINS
           IntKiBuf(Int_Xferred) = ICHAR(InData%DLL_ProcName(I:I), IntKi)
           Int_Xferred = Int_Xferred   + 1
         END DO ! I
-        DO I = 1, LEN(InData%DLL_InFile)
-          IntKiBuf(Int_Xferred) = ICHAR(InData%DLL_InFile(I:I), IntKi)
+        DO I = 1, LEN(InData%DLL_PROPSFILE)
+          IntKiBuf(Int_Xferred) = ICHAR(InData%DLL_PROPSFILE(I:I), IntKi)
+          Int_Xferred = Int_Xferred   + 1
+        END DO ! I
+        DO I = 1, LEN(InData%DLL_LDISPFILE)
+          IntKiBuf(Int_Xferred) = ICHAR(InData%DLL_LDISPFILE(I:I), IntKi)
           Int_Xferred = Int_Xferred   + 1
         END DO ! I
  END SUBROUTINE DirtD_PackInputFile
@@ -537,8 +544,12 @@ CONTAINS
         OutData%DLL_ProcName(I:I) = CHAR(IntKiBuf(Int_Xferred))
         Int_Xferred = Int_Xferred   + 1
       END DO ! I
-      DO I = 1, LEN(OutData%DLL_InFile)
-        OutData%DLL_InFile(I:I) = CHAR(IntKiBuf(Int_Xferred))
+      DO I = 1, LEN(OutData%DLL_PROPSFILE)
+        OutData%DLL_PROPSFILE(I:I) = CHAR(IntKiBuf(Int_Xferred))
+        Int_Xferred = Int_Xferred   + 1
+      END DO ! I
+      DO I = 1, LEN(OutData%DLL_LDISPFILE)
+        OutData%DLL_LDISPFILE(I:I) = CHAR(IntKiBuf(Int_Xferred))
         Int_Xferred = Int_Xferred   + 1
       END DO ! I
  END SUBROUTINE DirtD_UnPackInputFile

@@ -34,7 +34,8 @@ typedef   ^             REDWINdllType   R8Ki          D              {6}{6}     
 # DirtDyn input file
 typedef   ^   DirtD_InputFile   CHARACTER(1024)   DLL_FileName   -   -   -   "Name of the DLL file including the full path"   -
 typedef   ^   DirtD_InputFile   CHARACTER(1024)   DLL_ProcName   -   -   -   "Name of the procedure in the DLL that will be called"   -
-typedef   ^   DirtD_InputFile   CHARACTER(1024)   DLL_InFile     -   -   -   "Name of input file used in DLL"   -
+typedef   ^   DirtD_InputFile   CHARACTER(1024)   DLL_PROPSFILE  -   -   -   "Name of PROPSFILE input file used in DLL"   -
+typedef   ^   DirtD_InputFile   CHARACTER(1024)   DLL_LDISPFILE  -   -   -   "Name of LDISPFILE input file used in DLL"   -
 
 
 # ..... Initialization data .......................................................................................................
@@ -88,6 +89,8 @@ typedef   ^             ParameterType     DLL_Type          DLL_Trgt            
 typedef   ^             ParameterType     DbKi              DLL_DT               - - - "Time step for DLL" seconds
 typedef   ^             ParameterType     CHARACTER(1024)   RootName             - - - "RootName for writing output files"   -
 typedef   ^             ParameterType     LOGICAL           UseREDWINinterface   - - - "True if interface successfully initialized" -
+#typedef   ^             ParameterType     character(45)     PROPSFILE            - - - "" -
+#typedef   ^             ParameterType     character(45)     LDISPFILE            - - - "" -
 
 
 # ..... Inputs ....................................................................................................................
