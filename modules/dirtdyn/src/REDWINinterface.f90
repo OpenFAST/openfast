@@ -44,7 +44,12 @@ MODULE REDWINinterface
 
 #ifdef STATIC_DLL_LOAD
    interface
-      subroutine INTERFACEFOUNDATION ( PROPSFILE, LDISPFILE, IDTask, nErrorCode, ErrorCode, Props, StVar, StVarPrint, Disp, Force, D )  BIND(C, NAME='INTERFACEFOUNDATION')
+         ! DO NOT REMOVE or MODIFY LINES starting with "!DEC$" or "!GCC$"
+         ! !DEC$ specifies attributes for IVF and !GCC$ specifies attributes for gfortran
+         ! NOTE: BIND(C... does not appear to be built into the DLL from REDWIN.
+      subroutine INTERFACEFOUNDATION ( PROPSFILE, LDISPFILE, IDTask, nErrorCode, ErrorCode, Props, StVar, StVarPrint, Disp, Force, D )  !BIND(C, NAME='INTERFACEFOUNDATION')
+         !DEC$ ATTRIBUTES DLLIMPORT :: INTERFACEFOUNDATION
+         !GCC$ ATTRIBUTES DLLIMPORT :: INTERFACEFOUNDATION
          USE, INTRINSIC :: ISO_C_Binding, only : C_INT, C_CHAR, C_DOUBLE
          character(kind=c_char), intent(in   )  :: PROPSFILE(45)
          character(kind=c_char), intent(in   )  :: LDISPFILE(45)
