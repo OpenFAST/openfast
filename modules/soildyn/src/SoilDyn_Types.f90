@@ -50,10 +50,12 @@ IMPLICIT NONE
 ! =======================
 ! =========  SlD_InputFile  =======
   TYPE, PUBLIC :: SlD_InputFile
+    LOGICAL  :: EchoFlag      !< Echo the input file [-]
     CHARACTER(1024)  :: DLL_FileName      !< Name of the DLL file including the full path [-]
     CHARACTER(1024)  :: DLL_ProcName      !< Name of the procedure in the DLL that will be called [-]
     CHARACTER(1024)  :: DLL_PROPSFILE      !< Name of PROPSFILE input file used in DLL [-]
     CHARACTER(1024)  :: DLL_LDISPFILE      !< Name of LDISPFILE input file used in DLL [-]
+    CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: OutList      !< List of user-requested output channels [-]
   END TYPE SlD_InputFile
 ! =======================
 ! =========  SlD_InitInputType  =======
@@ -397,16 +399,30 @@ CONTAINS
    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
 ! Local 
    INTEGER(IntKi)                 :: i,j,k
+   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'SlD_CopyInputFile'
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
+    DstInputFileData%EchoFlag = SrcInputFileData%EchoFlag
     DstInputFileData%DLL_FileName = SrcInputFileData%DLL_FileName
     DstInputFileData%DLL_ProcName = SrcInputFileData%DLL_ProcName
     DstInputFileData%DLL_PROPSFILE = SrcInputFileData%DLL_PROPSFILE
     DstInputFileData%DLL_LDISPFILE = SrcInputFileData%DLL_LDISPFILE
+IF (ALLOCATED(SrcInputFileData%OutList)) THEN
+  i1_l = LBOUND(SrcInputFileData%OutList,1)
+  i1_u = UBOUND(SrcInputFileData%OutList,1)
+  IF (.NOT. ALLOCATED(DstInputFileData%OutList)) THEN 
+    ALLOCATE(DstInputFileData%OutList(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%OutList.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInputFileData%OutList = SrcInputFileData%OutList
+ENDIF
  END SUBROUTINE SlD_CopyInputFile
 
  SUBROUTINE SlD_DestroyInputFile( InputFileData, ErrStat, ErrMsg )
@@ -418,6 +434,9 @@ CONTAINS
 ! 
   ErrStat = ErrID_None
   ErrMsg  = ""
+IF (ALLOCATED(InputFileData%OutList)) THEN
+  DEALLOCATE(InputFileData%OutList)
+ENDIF
  END SUBROUTINE SlD_DestroyInputFile
 
  SUBROUTINE SlD_PackInputFile( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -455,10 +474,16 @@ CONTAINS
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
+      Int_BufSz  = Int_BufSz  + 1  ! EchoFlag
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%DLL_FileName)  ! DLL_FileName
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%DLL_ProcName)  ! DLL_ProcName
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%DLL_PROPSFILE)  ! DLL_PROPSFILE
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%DLL_LDISPFILE)  ! DLL_LDISPFILE
+  Int_BufSz   = Int_BufSz   + 1     ! OutList allocated yes/no
+  IF ( ALLOCATED(InData%OutList) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! OutList upper/lower bounds for each dimension
+      Int_BufSz  = Int_BufSz  + SIZE(InData%OutList)*LEN(InData%OutList)  ! OutList
+  END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -486,6 +511,8 @@ CONTAINS
   Db_Xferred  = 1
   Int_Xferred = 1
 
+      IntKiBuf ( Int_Xferred:Int_Xferred+1-1 ) = TRANSFER( InData%EchoFlag , IntKiBuf(1), 1)
+      Int_Xferred   = Int_Xferred   + 1
         DO I = 1, LEN(InData%DLL_FileName)
           IntKiBuf(Int_Xferred) = ICHAR(InData%DLL_FileName(I:I), IntKi)
           Int_Xferred = Int_Xferred   + 1
@@ -502,6 +529,23 @@ CONTAINS
           IntKiBuf(Int_Xferred) = ICHAR(InData%DLL_LDISPFILE(I:I), IntKi)
           Int_Xferred = Int_Xferred   + 1
         END DO ! I
+  IF ( .NOT. ALLOCATED(InData%OutList) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%OutList,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%OutList,1)
+    Int_Xferred = Int_Xferred + 2
+
+    DO i1 = LBOUND(InData%OutList,1), UBOUND(InData%OutList,1)
+        DO I = 1, LEN(InData%OutList)
+          IntKiBuf(Int_Xferred) = ICHAR(InData%OutList(i1)(I:I), IntKi)
+          Int_Xferred = Int_Xferred   + 1
+        END DO ! I
+    END DO !i1
+  END IF
  END SUBROUTINE SlD_PackInputFile
 
  SUBROUTINE SlD_UnPackInputFile( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -523,6 +567,7 @@ CONTAINS
   LOGICAL, ALLOCATABLE           :: mask3(:,:,:)
   LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
   LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
+  INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'SlD_UnPackInputFile'
@@ -536,6 +581,8 @@ CONTAINS
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
+      OutData%EchoFlag = TRANSFER( IntKiBuf( Int_Xferred ), mask0 )
+      Int_Xferred   = Int_Xferred + 1
       DO I = 1, LEN(OutData%DLL_FileName)
         OutData%DLL_FileName(I:I) = CHAR(IntKiBuf(Int_Xferred))
         Int_Xferred = Int_Xferred   + 1
@@ -552,6 +599,33 @@ CONTAINS
         OutData%DLL_LDISPFILE(I:I) = CHAR(IntKiBuf(Int_Xferred))
         Int_Xferred = Int_Xferred   + 1
       END DO ! I
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! OutList not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%OutList)) DEALLOCATE(OutData%OutList)
+    ALLOCATE(OutData%OutList(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%OutList.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask1 = .TRUE. 
+    DO i1 = LBOUND(OutData%OutList,1), UBOUND(OutData%OutList,1)
+        DO I = 1, LEN(OutData%OutList)
+          OutData%OutList(i1)(I:I) = CHAR(IntKiBuf(Int_Xferred))
+          Int_Xferred = Int_Xferred   + 1
+        END DO ! I
+    END DO !i1
+    DEALLOCATE(mask1)
+  END IF
  END SUBROUTINE SlD_UnPackInputFile
 
  SUBROUTINE SlD_CopyInitInput( SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg )

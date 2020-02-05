@@ -29,6 +29,7 @@
 MODULE SoilDyn
 
    USE SoilDyn_Types
+   USE SoilDyn_IO
    USE NWTC_Library
    USE REDWINinterface
 

@@ -21,6 +21,7 @@ endif()
 set(SlD_SOURCES
   src/REDWINinterface.f90
   src/SoilDyn.f90
+  src/SoilDyn_IO.f90
   src/SoilDyn_Types.f90
 )
 

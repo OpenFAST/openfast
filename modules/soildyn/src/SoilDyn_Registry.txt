@@ -32,10 +32,13 @@ typedef   ^             REDWINdllType   R8Ki          D              {6}{6}     
 
 
 # SoilDyn input file
-typedef   ^   SlD_InputFile   CHARACTER(1024)   DLL_FileName   -   -   -   "Name of the DLL file including the full path"   -
-typedef   ^   SlD_InputFile   CHARACTER(1024)   DLL_ProcName   -   -   -   "Name of the procedure in the DLL that will be called"   -
-typedef   ^   SlD_InputFile   CHARACTER(1024)   DLL_PROPSFILE  -   -   -   "Name of PROPSFILE input file used in DLL"   -
-typedef   ^   SlD_InputFile   CHARACTER(1024)   DLL_LDISPFILE  -   -   -   "Name of LDISPFILE input file used in DLL"   -
+typedef   ^   SlD_InputFile   LOGICAL              EchoFlag       -   -   -   "Echo the input file"                                    -
+typedef   ^   SlD_InputFile   CHARACTER(1024)      DLL_FileName   -   -   -   "Name of the DLL file including the full path"           -
+typedef   ^   SlD_InputFile   CHARACTER(1024)      DLL_ProcName   -   -   -   "Name of the procedure in the DLL that will be called"   -
+typedef   ^   SlD_InputFile   CHARACTER(1024)      DLL_PROPSFILE  -   -   -   "Name of PROPSFILE input file used in DLL"               -
+typedef   ^   SlD_InputFile   CHARACTER(1024)      DLL_LDISPFILE  -   -   -   "Name of LDISPFILE input file used in DLL"               -
+typedef   ^   ^               CHARACTER(ChanLen)   OutList        :   -   -   "List of user-requested output channels"                 -
+
 
 
 # ..... Initialization data .......................................................................................................
