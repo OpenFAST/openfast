@@ -88,7 +88,7 @@ set(OPENFAST_MODULES
   aerodyn
   aerodyn14
   servodyn
-  dirtdyn
+  soildyn
   elastodyn
   beamdyn
   subdyn

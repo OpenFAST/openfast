@@ -88,33 +88,33 @@
 		<Filter Name="Header Files" Filter="fi;fd"/>
 		<Filter Name="Resource Files" Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe"/>
 		<Filter Name="Source Files" Filter="f90;for;f;fpp;ftn;def;odl;idl">
-		<Filter Name="DirtDyn">
+		<Filter Name="SoilDyn">
 		<Filter Name="RegistryFiles">
-		<File RelativePath="..\..\modules\dirtdyn\src\DirtDyn_Types.f90">
+		<File RelativePath="..\..\modules\soildyn\src\SoilDyn_Types.f90">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" DisableSpecificDiagnostics="5268" WarnUnusedVariables="false"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFFortranCompilerTool" DisableSpecificDiagnostics="5268" WarnUnusedVariables="false"/></FileConfiguration></File>
-		<File RelativePath="..\..\modules\dirtdyn\src\DirtDyn_Registry.txt">
+		<File RelativePath="..\..\modules\soildyn\src\SoilDyn_Registry.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat DirtDyn" Description="Running Registry for DirtDyn" Outputs="..\..\modules\dirtdyn\src\DirtDyn_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SoilDyn" Description="Running Registry for SoilDyn" Outputs="..\..\modules\soildyn\src\SoilDyn_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat DirtDyn" Description="Running Registry for DirtDyn" Outputs="..\..\modules\dirtdyn\src\DirtDyn_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SoilDyn" Description="Running Registry for SoilDyn" Outputs="..\..\modules\soildyn\src\SoilDyn_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat DirtDyn" Description="Running Registry for DirtDyn" Outputs="..\..\modules\dirtdyn\src\DirtDyn_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SoilDyn" Description="Running Registry for SoilDyn" Outputs="..\..\modules\soildyn\src\SoilDyn_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat DirtDyn" Description="Running Registry for DirtDyn" Outputs="..\..\modules\dirtdyn\src\DirtDyn_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SoilDyn" Description="Running Registry for SoilDyn" Outputs="..\..\modules\soildyn\src\SoilDyn_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat DirtDyn" Description="Running Registry for DirtDyn" Outputs="..\..\modules\dirtdyn\src\DirtDyn_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SoilDyn" Description="Running Registry for SoilDyn" Outputs="..\..\modules\soildyn\src\SoilDyn_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat DirtDyn" Description="Running Registry for DirtDyn" Outputs="..\..\modules\dirtdyn\src\DirtDyn_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SoilDyn" Description="Running Registry for SoilDyn" Outputs="..\..\modules\soildyn\src\SoilDyn_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat DirtDyn" Description="Running Registry for DirtDyn" Outputs="..\..\modules\dirtdyn\src\DirtDyn_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SoilDyn" Description="Running Registry for SoilDyn" Outputs="..\..\modules\soildyn\src\SoilDyn_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat DirtDyn" Description="Running Registry for DirtDyn" Outputs="..\..\modules\dirtdyn\src\DirtDyn_Types.f90"/></FileConfiguration></File></Filter>
-		<File RelativePath="..\..\modules\dirtdyn\src\DirtDyn.f90"/>
-		<File RelativePath="..\..\modules\dirtdyn\src\driver\DirtDyn_Driver.f90"/>
-		<File RelativePath="..\..\modules\dirtdyn\src\REDWINinterface.f90"/></Filter>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SoilDyn" Description="Running Registry for SoilDyn" Outputs="..\..\modules\soildyn\src\SoilDyn_Types.f90"/></FileConfiguration></File></Filter>
+		<File RelativePath="..\..\modules\soildyn\src\SoilDyn.f90"/>
+		<File RelativePath="..\..\modules\soildyn\src\driver\SoilDyn_Driver.f90"/>
+		<File RelativePath="..\..\modules\soildyn\src\REDWINinterface.f90"/></Filter>
 		<Filter Name="NetLib">
 		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\lapack\NWTC_LAPACK.f90"/></Filter>
 		<Filter Name="NWTC_Library">

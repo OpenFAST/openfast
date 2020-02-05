@@ -20,7 +20,7 @@
 MODULE REDWINinterface
 
    USE NWTC_Library  
-   USE DirtDyn_Types
+   USE SoilDyn_Types
 
    IMPLICIT NONE
 
@@ -66,7 +66,7 @@ MODULE REDWINinterface
    end interface
 #endif
 
-   type(ProgDesc), parameter    :: REDWINinterface_Ver = ProgDesc( 'DirtDyn Interface for REDWIN soil interaction DLLs', 'using '//TRIM(OS_Desc), '99-Feb-2020' )
+   type(ProgDesc), parameter    :: REDWINinterface_Ver = ProgDesc( 'SoilDyn Interface for REDWIN soil interaction DLLs', 'using '//TRIM(OS_Desc), '99-Feb-2020' )
    
       ! Interface version (in case we end up with multiple different versions supported at some later date)
    INTEGER(IntKi), PARAMETER    :: RW_v00 = 0         ! Version number
@@ -79,10 +79,10 @@ CONTAINS
 subroutine CallREDWINdll ( u, DLL, dll_data, p, ErrStat, ErrMsg )
 
       ! Passed Variables:
-   type(DirtD_InputType),     intent(in   )  :: u              ! System inputs
+   type(SlD_InputType),       intent(in   )  :: u              ! System inputs
    type(DLL_Type),            intent(in   )  :: DLL            ! The DLL to be called.
    type(REDWINdllType),       intent(inout)  :: dll_data       ! data type containing the avrSWAP, accINFILE, and avcOUTNAME arrays 
-   type(DirtD_ParameterType), intent(in   )  :: p              ! Parameters
+   type(SlD_ParameterType),   intent(in   )  :: p              ! Parameters
 
    integer(IntKi),            intent(  out)  :: ErrStat        ! Error status of the operation
    character(*),              intent(  out)  :: ErrMsg         ! Error message if ErrStat /= ErrID_None
@@ -127,12 +127,12 @@ end subroutine CallREDWINdll
 !> This routine initializes variables used in the REDWIN DLL interface.
 subroutine REDWINinterface_Init(u,p,m,y,InputFileData, ErrStat, ErrMsg)
    
-   type(DirtD_InputType),          intent(inout)  :: u               !< An initial guess for the input; input mesh must be defined
-   type(DirtD_ParameterType),      intent(inout)  :: p               !< Parameters
-   type(DirtD_MiscVarType),        intent(inout)  :: m               !< Initial misc (optimization) variables
-   type(DirtD_OutputType),         intent(inout)  :: y               !< Initial system outputs (outputs are not calculated;
-                                                                    !!   only the output mesh is initialized)
-   type(DirtD_InputFile),          intent(inout)  :: InputFileData   !< Data stored in the module's input file
+   type(SlD_InputType),            intent(inout)  :: u               !< An initial guess for the input; input mesh must be defined
+   type(SlD_ParameterType),        intent(inout)  :: p               !< Parameters
+   type(SlD_MiscVarType),          intent(inout)  :: m               !< Initial misc (optimization) variables
+   type(SlD_OutputType),           intent(inout)  :: y               !< Initial system outputs (outputs are not calculated;
+                                                                     !!   only the output mesh is initialized)
+   type(SlD_InputFile),            intent(inout)  :: InputFileData   !< Data stored in the module's input file
    integer(IntKi),                 intent(  out)  :: ErrStat         !< Error status of the operation
    character(*),                   intent(  out)  :: ErrMsg          !< Error message if ErrStat /= ErrID_None
 
@@ -214,9 +214,9 @@ end subroutine REDWINinterface_Init
 !! static linked).
 subroutine REDWINinterface_End(u, p, m, ErrStat, ErrMsg)
    
-   TYPE(DirtD_InputType),           INTENT(IN   )  :: u               !< System inputs
-   TYPE(DirtD_ParameterType),       INTENT(INOUT)  :: p               !< Parameters
-   TYPE(DirtD_MiscVarType),         INTENT(INOUT)  :: m               !< misc (optimization) variables
+   TYPE(SlD_InputType),             INTENT(IN   )  :: u               !< System inputs
+   TYPE(SlD_ParameterType),         INTENT(INOUT)  :: p               !< Parameters
+   TYPE(SlD_MiscVarType),           INTENT(INOUT)  :: m               !< misc (optimization) variables
    INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat         !< Error status of the operation
    CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg          !< Error message if ErrStat /= ErrID_None
 
@@ -247,9 +247,9 @@ end subroutine REDWINinterface_End
 subroutine REDWINinterface_CalcOutput(t, u, p, m, ErrStat, ErrMsg)
 
    real(DbKi),                     intent(in   )  :: t           !< Current simulation time in seconds
-   type(DirtD_InputType),          intent(in   )  :: u           !< Inputs at t
-   type(DirtD_ParameterType),      intent(in   )  :: p           !< Parameters
-   type(DirtD_MiscVarType),        intent(inout)  :: m           !< misc (optimization) variables
+   type(SlD_InputType),            intent(in   )  :: u           !< Inputs at t
+   type(SlD_ParameterType),        intent(in   )  :: p           !< Parameters
+   type(SlD_MiscVarType),          intent(inout)  :: m           !< misc (optimization) variables
    integer(IntKi),                 intent(  out)  :: ErrStat     !< Error status of the operation
    character(*),                   intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
       

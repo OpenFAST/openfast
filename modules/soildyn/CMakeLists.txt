@@ -15,23 +15,23 @@
 #
 
 if (GENERATE_TYPES)
-  generate_f90_types(src/DirtDyn_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/DirtDyn_Types.f90)
+  generate_f90_types(src/SoilDyn_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/SoilDyn_Types.f90)
 endif()
 
-set(DD_SOURCES
+set(SlD_SOURCES
   src/REDWINinterface.f90
-  src/DirtDyn.f90
-  src/DirtDyn_Types.f90
+  src/SoilDyn.f90
+  src/SoilDyn_Types.f90
 )
 
-add_library(dirtdynlib ${DD_SOURCES})
-target_link_libraries(dirtdynlib nwtclibs)
+add_library(soildynlib ${SlD_SOURCES})
+target_link_libraries(soildynlib nwtclibs)
 
-add_executable(dirtdyn_driver src/driver/DirtDyn_Driver.f90)
-target_link_libraries(dirtdyn_driver dirtdynlib nwtclibs ${CMAKE_DL_LIBS})
+add_executable(soildyn_driver src/driver/SoilDyn_Driver.f90)
+target_link_libraries(soildyn_driver soildynlib nwtclibs ${CMAKE_DL_LIBS})
 
 
-install(TARGETS dirtdynlib dirtdyn_driver
+install(TARGETS soildynlib soildyn_driver
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib

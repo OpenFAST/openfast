@@ -1,10 +1,10 @@
 !**********************************************************************************************************************************
-!> ## DirtDyn_DriverCode: This code tests the DirtDyn module
+!> ## SoilDyn_DriverCode: This code tests the SoilDyn module
 !!..................................................................................................................................
 !! LICENSING
 !! Copyright (C) 2012, 2015  National Renewable Energy Laboratory
 !!
-!!    This file is part of DirtDyn.
+!!    This file is part of SoilDyn.
 !!
 !! Licensed under the Apache License, Version 2.0 (the "License");
 !! you may not use this file except in compliance with the License.
@@ -18,34 +18,34 @@
 !! See the License for the specific language governing permissions and
 !! limitations under the License.
 !**********************************************************************************************************************************
-PROGRAM DirtDyn_Driver
+PROGRAM SoilDyn_Driver
 
    USE NWTC_Library
-   USE DirtDyn
-   USE DirtDyn_Types
+   USE SoilDyn
+   USE SoilDyn_Types
 
    IMPLICIT NONE
 
-   integer(IntKi), parameter                          :: NumInp = 1           !< Number of inputs sent to DirtDyn_UpdateStates
+   integer(IntKi), parameter                          :: NumInp = 1           !< Number of inputs sent to SoilDyn_UpdateStates
 
       ! Program variables
    real(DbKi)                                         :: Time                 !< Variable for storing time, in seconds
    real(DbKi)                                         :: TimeInterval         !< Interval between time steps, in seconds
    real(DbKi)                                         :: InputTime(NumInp)    !< Variable for storing time associated with inputs, in seconds
 
-   type(DirtD_InitInputType)                          :: InitInData           !< Input data for initialization
-   type(DirtD_InitOutputType)                         :: InitOutData          !< Output data from initialization
-
-   type(DirtD_ContinuousStateType)                    :: x                    !< Continuous states
-   type(DirtD_DiscreteStateType)                      :: xd                   !< Discrete states
-   type(DirtD_ConstraintStateType)                    :: z                    !< Constraint states
-   type(DirtD_ConstraintStateType)                    :: Z_residual           !< Residual of the constraint state functions (Z)
-   type(DirtD_OtherStateType)                         :: OtherState           !< Other states
-   type(DirtD_MiscVarType)                            :: misc                 !< Optimization variables
-
-   type(DirtD_ParameterType)                          :: p                    !< Parameters
-   type(DirtD_InputType)                              :: u(NumInp)            !< System inputs
-   type(DirtD_OutputType)                             :: y                    !< System outputs
+   type(SlD_InitInputType)                            :: InitInData           !< Input data for initialization
+   type(SlD_InitOutputType)                           :: InitOutData          !< Output data from initialization
+                                                      
+   type(SlD_ContinuousStateType)                      :: x                    !< Continuous states
+   type(SlD_DiscreteStateType)                        :: xd                   !< Discrete states
+   type(SlD_ConstraintStateType)                      :: z                    !< Constraint states
+   type(SlD_ConstraintStateType)                      :: Z_residual           !< Residual of the constraint state functions (Z)
+   type(SlD_OtherStateType)                           :: OtherState           !< Other states
+   type(SlD_MiscVarType)                              :: misc                 !< Optimization variables
+                                                      
+   type(SlD_ParameterType)                            :: p                    !< Parameters
+   type(SlD_InputType)                                :: u(NumInp)            !< System inputs
+   type(SlD_OutputType)                               :: y                    !< System outputs
 
 
 
@@ -69,7 +69,7 @@ PROGRAM DirtDyn_Driver
 
 
          ! Initialize the module
-   CALL DirtDyn_Init( InitInData, u(1), p,  x, xd, z, OtherState, y, misc, TimeInterval, InitOutData, ErrStat, ErrMsg )
+   CALL SoilDyn_Init( InitInData, u(1), p,  x, xd, z, OtherState, y, misc, TimeInterval, InitOutData, ErrStat, ErrMsg )
    IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
       CALL WrScr( 'After Init: '//ErrMsg )
       if ( ErrStat >= AbortErrLev ) call ProgEnd()
@@ -77,8 +77,8 @@ PROGRAM DirtDyn_Driver
 
 
          ! Destroy initialization data
-   CALL DirtD_DestroyInitInput(  InitInData,  ErrStat, ErrMsg )
-   CALL DirtD_DestroyInitOutput( InitOutData, ErrStat, ErrMsg )
+   CALL SlD_DestroyInitInput(  InitInData,  ErrStat, ErrMsg )
+   CALL SlD_DestroyInitOutput( InitOutData, ErrStat, ErrMsg )
 
 
    !...............................................................................................................................
@@ -94,7 +94,7 @@ PROGRAM DirtDyn_Driver
 
 
          ! Calculate outputs at n
-      CALL DirtDyn_CalcOutput( Time, u(1), p, x, xd, z, OtherState, y, misc, ErrStat, ErrMsg )
+      CALL SoilDyn_CalcOutput( Time, u(1), p, x, xd, z, OtherState, y, misc, ErrStat, ErrMsg )
       IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
          CALL WrScr( 'After CalcOutput: '//ErrMsg )
          if ( ErrStat >= AbortErrLev ) call ProgEnd()
@@ -102,7 +102,7 @@ PROGRAM DirtDyn_Driver
 
 
          ! Get state variables at next step: INPUT at step n, OUTPUT at step n + 1
-      CALL DirtDyn_UpdateStates( Time, n, u, InputTime, p, x, xd, z, OtherState, misc, ErrStat, ErrMsg )
+      CALL SoilDyn_UpdateStates( Time, n, u, InputTime, p, x, xd, z, OtherState, misc, ErrStat, ErrMsg )
       IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
          CALL WrScr( ErrMsg )
          if ( ErrStat >= AbortErrLev ) call ProgEnd()
@@ -113,7 +113,7 @@ PROGRAM DirtDyn_Driver
    !...............................................................................................................................
    ! Routine to terminate program execution
    !...............................................................................................................................
-   CALL DirtDyn_End( u(1), p, x, xd, z, OtherState, y, misc, ErrStat, ErrMsg )
+   CALL SoilDyn_End( u(1), p, x, xd, z, OtherState, y, misc, ErrStat, ErrMsg )
 
    IF ( ErrStat /= ErrID_None ) THEN
       CALL WrScr( 'After End: '//ErrMsg )
@@ -124,4 +124,4 @@ CONTAINS
       ! Placeholder for moment
       Call ProgAbort('Fatal error encountered.  Ending.')
    end subroutine ProgEnd
-END PROGRAM DirtDyn_Driver
+END PROGRAM SoilDyn_Driver

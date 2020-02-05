@@ -1,10 +1,10 @@
 ###################################################################################################################################
-# Registry for DirtDyn in the FAST Modularization Framework
-# This Registry file is used to create MODULE DirtDyn_Types, which contains all of the user-defined types needed in DirtDyn.
+# Registry for SoilDyn in the FAST Modularization Framework
+# This Registry file is used to create MODULE SoilDyn_Types, which contains all of the user-defined types needed in SoilDyn.
 # It also contains copy, destroy, pack, and unpack routines associated with each defined data types.
 #
 # Entries are of the form
-# keyword <DirtDyn/DirtD> <TypeName>    <FieldType>    <FieldName>  <Dims>  <IO> <DNAME> <DESCRIP> <UNITS>
+# keyword <SoilDyn/SlD> <TypeName>    <FieldType>    <FieldName>  <Dims>  <IO> <DNAME> <DESCRIP> <UNITS>
 #
 # Use ^ as a shortcut for the value from the previous line.
 # See NWTC Programmer's Handbook for further information on the format/contents of this file.
@@ -17,9 +17,9 @@ include Registry_NWTC_Library.txt
 # REDWIN interface DLL type
 # ..... Data for using REDWIN DLLs .......................................................................................................
 # Values set to type R8Ki are defined in the REDWIN fortran code as kind=selected_real_kind(p=15)
-typedef DirtDyn/DirtD   REDWINdllType   character(45) PROPSFILE      -           - - "" -
-typedef DirtDyn/DirtD   REDWINdllType   character(45) LDISPFILE      -           - - "" -
-typedef DirtDyn/DirtD   REDWINdllType   IntKi         IDtask         -           - - "Task identifier for what DLL should do: IDTask = 1: Read input properties, initialize and calibrate model IDTask = 2: Calculate forces based on displacement at end of step IDTask = 3: Calculate elastic macro-element stiffness matrix" -
+typedef SoilDyn/SlD     REDWINdllType   character(45) PROPSFILE      -           - - "" -
+typedef SoilDyn/SlD     REDWINdllType   character(45) LDISPFILE      -           - - "" -
+typedef SoilDyn/SlD     REDWINdllType   IntKi         IDtask         -           - - "Task identifier for what DLL should do: IDTask = 1: Read input properties, initialize and calibrate model IDTask = 2: Calculate forces based on displacement at end of step IDTask = 3: Calculate elastic macro-element stiffness matrix" -
 typedef   ^             REDWINdllType   IntKi         nErrorCode     -           - - "number of returned error codes" -
 typedef   ^             REDWINdllType   IntKi         ErrorCode      {100}       - - "Array containing one or more error codes. These are specific to each model." -
 typedef   ^             REDWINdllType   R8Ki          Props          {100}{200}  - - "Array containing foundation model properties (used internally by the REDWIN models). Specific to each model." -
@@ -31,17 +31,17 @@ typedef   ^             REDWINdllType   R8Ki          D              {6}{6}     
 
 
 
-# DirtDyn input file
-typedef   ^   DirtD_InputFile   CHARACTER(1024)   DLL_FileName   -   -   -   "Name of the DLL file including the full path"   -
-typedef   ^   DirtD_InputFile   CHARACTER(1024)   DLL_ProcName   -   -   -   "Name of the procedure in the DLL that will be called"   -
-typedef   ^   DirtD_InputFile   CHARACTER(1024)   DLL_PROPSFILE  -   -   -   "Name of PROPSFILE input file used in DLL"   -
-typedef   ^   DirtD_InputFile   CHARACTER(1024)   DLL_LDISPFILE  -   -   -   "Name of LDISPFILE input file used in DLL"   -
+# SoilDyn input file
+typedef   ^   SlD_InputFile   CHARACTER(1024)   DLL_FileName   -   -   -   "Name of the DLL file including the full path"   -
+typedef   ^   SlD_InputFile   CHARACTER(1024)   DLL_ProcName   -   -   -   "Name of the procedure in the DLL that will be called"   -
+typedef   ^   SlD_InputFile   CHARACTER(1024)   DLL_PROPSFILE  -   -   -   "Name of PROPSFILE input file used in DLL"   -
+typedef   ^   SlD_InputFile   CHARACTER(1024)   DLL_LDISPFILE  -   -   -   "Name of LDISPFILE input file used in DLL"   -
 
 
 # ..... Initialization data .......................................................................................................
 # Define inputs that the initialization routine may need here:
 #   e.g., the name of the input file, the file root name, etc.
-typedef DirtDyn/DirtD InitInputType CHARACTER(1024) InputFile  - - -   "Name of the input file; remove if there is no file" -
+typedef SoilDyn/SlD InitInputType CHARACTER(1024) InputFile  - - -   "Name of the input file; remove if there is no file" -
 typedef   ^                ^             LOGICAL         Linearize  - .FALSE. -  "Flag that tells this module if the glue code wants to linearize." -
 
 # Define outputs from the initialization routine here:
@@ -102,7 +102,7 @@ typedef   ^               InputType           ReKi     DummyInput  - - -     "Re
 
 # ..... Outputs ...................................................................................................................
 # Define outputs that are contained on the mesh here:
-#typedef DirtDyn DirtD_OutputType         MeshType MeshedOutput - - -    "Meshed data" -
+#typedef SoilDyn SlD_OutputType         MeshType MeshedOutput - - -    "Meshed data" -
 # Define outputs that are not on this mesh here:
 typedef   ^               OutputType          ReKi     DummyOutput  -  - -   "Remove this variable if you have output data" -
 typedef   ^                 ^                 ReKi     WriteOutput {:} - -   "Example of data to be written to an output file" "s,-"
