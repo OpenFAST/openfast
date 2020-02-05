@@ -71,7 +71,8 @@ PROGRAM DirtDyn_Driver
          ! Initialize the module
    CALL DirtDyn_Init( InitInData, u(1), p,  x, xd, z, OtherState, y, misc, TimeInterval, InitOutData, ErrStat, ErrMsg )
    IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
-      CALL WrScr( ErrMsg )
+      CALL WrScr( 'After Init: '//ErrMsg )
+      if ( ErrStat >= AbortErrLev ) call ProgEnd()
    END IF
 
 
@@ -95,7 +96,8 @@ PROGRAM DirtDyn_Driver
          ! Calculate outputs at n
       CALL DirtDyn_CalcOutput( Time, u(1), p, x, xd, z, OtherState, y, misc, ErrStat, ErrMsg )
       IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
-         CALL WrScr( ErrMsg )
+         CALL WrScr( 'After CalcOutput: '//ErrMsg )
+         if ( ErrStat >= AbortErrLev ) call ProgEnd()
       END IF
 
 
@@ -103,6 +105,7 @@ PROGRAM DirtDyn_Driver
       CALL DirtDyn_UpdateStates( Time, n, u, InputTime, p, x, xd, z, OtherState, misc, ErrStat, ErrMsg )
       IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
          CALL WrScr( ErrMsg )
+         if ( ErrStat >= AbortErrLev ) call ProgEnd()
       END IF
    END DO
 
@@ -113,7 +116,12 @@ PROGRAM DirtDyn_Driver
    CALL DirtDyn_End( u(1), p, x, xd, z, OtherState, y, misc, ErrStat, ErrMsg )
 
    IF ( ErrStat /= ErrID_None ) THEN
-      CALL WrScr( ErrMsg )
+      CALL WrScr( 'After End: '//ErrMsg )
    END IF
 
+CONTAINS
+   subroutine ProgEnd()
+      ! Placeholder for moment
+      Call ProgAbort('Fatal error encountered.  Ending.')
+   end subroutine ProgEnd
 END PROGRAM DirtDyn_Driver

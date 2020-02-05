@@ -137,8 +137,9 @@ subroutine REDWINinterface_Init(u,p,m,y,InputFileData, ErrStat, ErrMsg)
    character(*),                   intent(  out)  :: ErrMsg          !< Error message if ErrStat /= ErrID_None
 
       ! local variables
-   integer(IntKi)                                  :: ErrStat2       ! The error status code
-   character(ErrMsgLen)                            :: ErrMsg2        ! The error message, if an error occurred
+   integer(IntKi)                                 :: ErrStat2       ! The error status code
+   character(ErrMsgLen)                           :: ErrMsg2        ! The error message, if an error occurred
+   character(*), parameter                        :: RoutineName = 'REDWINinterface_Init'
       
    
    ErrStat = ErrID_None
@@ -155,18 +156,27 @@ subroutine REDWINinterface_Init(u,p,m,y,InputFileData, ErrStat, ErrMsg)
    p%DLL_Trgt%FileName = InputFileData%DLL_FileName
    p%DLL_Trgt%ProcName = "" ! initialize all procedures to empty so we try to load only one
    p%DLL_Trgt%ProcName(1) = InputFileData%DLL_ProcName
+#ifdef NO_LibLoad
+   CALL SetErrStat( ErrID_Warn,'   -->  Skipping LoadDynamicLib call for '//TRIM(InputFileData%DLL_FileName),ErrStat,ErrMsg,RoutineName )
+#else
    CALL LoadDynamicLib ( p%DLL_Trgt, ErrStat2, ErrMsg2 )
       CALL CheckError(ErrStat2,ErrMsg2)
       IF ( ErrStat >= AbortErrLev ) RETURN
+#endif
 #endif
       
    ! Set status flag:
    p%UseREDWINinterface = .TRUE.
 
 !FIXME: do I need to call it once to get it to actually initialize?  And when?
+#ifdef NO_LibLoad
+   CALL SetErrStat( ErrID_Warn,'   -->  Skipping DynamicLib call for '//TRIM(p%DLL_Trgt%FileName),ErrStat,ErrMsg,RoutineName )
+#else
+      ! Initialize DLL 
    CALL CallREDWINdll(u, p%DLL_Trgt, m%dll_data, p, ErrStat2, ErrMsg2)
       CALL CheckError(ErrStat2,ErrMsg2)
       IF ( ErrStat >= AbortErrLev ) RETURN
+#endif
 
 CONTAINS   
    ! Sets the error message and level and cleans up if the error is >= AbortErrLev
@@ -213,13 +223,20 @@ subroutine REDWINinterface_End(u, p, m, ErrStat, ErrMsg)
       ! local variables:
    INTEGER(IntKi)                                 :: ErrStat2    ! The error status code
    CHARACTER(ErrMsgLen)                           :: ErrMsg2     ! The error message, if an error occurred
+   character(*), parameter                        :: RoutineName = 'REDWINinterface_End'
    
+#ifdef NO_LibLoad
+   ErrStat = ErrID_None
+   ErrMsg= ''
+   CALL SetErrStat( ErrID_Warn,'   -->  Skipping DynamicLib call for '//TRIM(p%DLL_Trgt%FileName),ErrStat,ErrMsg,RoutineName )
+#else
       ! Free the library (note: this doesn't do anything #ifdef STATIC_DLL_LOAD  because p%DLL_Trgt is 0 (NULL))
    CALL FreeDynamicLib( p%DLL_Trgt, ErrStat2, ErrMsg2 )
    IF (ErrStat2 /= ErrID_None) THEN  
       ErrStat = MAX(ErrStat, ErrStat2)      
       ErrMsg = TRIM(ErrMsg)//NewLine//TRIM(ErrMsg2)
    END IF
+#endif
    
 end subroutine REDWINinterface_End
 
@@ -239,6 +256,7 @@ subroutine REDWINinterface_CalcOutput(t, u, p, m, ErrStat, ErrMsg)
       ! local variables:
    integer(IntKi)                                 :: ErrStat2    ! The error status code
    character(ErrMsgLen)                           :: ErrMsg2     ! The error message, if an error occurred
+   character(*), parameter                        :: RoutineName = 'REDWINinterface_CalcOutput'
    
       ! Initialize error values:   
    ErrStat = ErrID_None
@@ -250,9 +268,13 @@ subroutine REDWINinterface_CalcOutput(t, u, p, m, ErrStat, ErrMsg)
 !write(58,'()')
 #endif
    
+#ifdef NO_LibLoad
+   CALL SetErrStat( ErrID_Warn,'   -->  Skipping DynamicLib call for '//TRIM(p%DLL_Trgt%FileName),ErrStat,ErrMsg,RoutineName )
+#else
       ! Call the REDWIN-style DLL:
    CALL CallREDWINdll(u, p%DLL_Trgt,  m%dll_data, p, ErrStat, ErrMsg)
       IF ( ErrStat >= AbortErrLev ) RETURN
+#endif
 
 #ifdef DEBUG_REDWIN_INTERFACE
 !CALL WrNumAryFileNR ( 59, m%dll_data%avrSWAP,'1x,ES15.6E2', ErrStat, ErrMsg )
