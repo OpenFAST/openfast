@@ -207,6 +207,12 @@ subroutine SoilDyn_ReadInput( InputFileName, EchoFileName, InputFileData, ErrSta
 
          ! Check for relative paths in the file names
       if ( PathIsRelative( InputFileData%PY_inputFile(i) ) ) InputFileData%PY_inputFile(i) = TRIM(PriPath)//TRIM(InputFileData%PY_inputFile(i))
+
+         ! Add stuff to echo file if it is used
+      if ( InputFileData%EchoFlag ) then
+         write(UnitEcho,*) '              Location ('//trim(Num2LStr(i))//')'
+         write(UnitEcho,*) InputFileData%PY_locations(i,1:3), trim(InputFileData%PY_inputFile(i))
+      endif
    enddo
 
 
@@ -261,6 +267,12 @@ subroutine SoilDyn_ReadInput( InputFileName, EchoFileName, InputFileData, ErrSta
          ! Check for relative paths in the file names
       if ( PathIsRelative( InputFileData%DLL_PropsFile(i) ) ) InputFileData%DLL_PropsFile(i) = TRIM(PriPath)//TRIM(InputFileData%DLL_PropsFile(i))
       if ( PathIsRelative( InputFileData%DLL_LDispFile(i) ) ) InputFileData%DLL_LDispFile(i) = TRIM(PriPath)//TRIM(InputFileData%DLL_LDispFile(i))
+
+         ! Add stuff to echo file if it is used
+      if ( InputFileData%EchoFlag ) then
+         write(UnitEcho,*) '              Location ('//trim(Num2LStr(i))//')'
+         write(UnitEcho,*) InputFileData%DLL_locations(i,1:3), trim(InputFileData%DLL_PropsFile(i)), '               ',trim(InputFileData%DLL_LDispFile(i))
+      endif
    enddo
 
    !---------------------- OUTPUT --------------------------------------------------
