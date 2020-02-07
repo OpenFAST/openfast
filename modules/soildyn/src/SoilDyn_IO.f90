@@ -65,24 +65,25 @@ CONTAINS
 !!     input parameter.
 subroutine SoilDyn_ReadInput( InputFileName, EchoFileName, InputFileData, ErrStat, ErrMsg )
 
-   CHARACTER(*),                       INTENT(IN   )  :: InputFileName        !< name of the input file
-   CHARACTER(*),                       INTENT(IN   )  :: EchoFileName         !< name of the echo file 
-   TYPE(SlD_InputFile),                INTENT(INOUT)  :: InputFileData        !< The data for initialization
-   INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat              !< Returned error status  from this subroutine
-   CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg               !< Returned error message from this subroutine
+   character(*),                       intent(in   )  :: InputFileName        !< name of the input file
+   character(*),                       intent(in   )  :: EchoFileName         !< name of the echo file 
+   type(SlD_InputFile),                intent(inout)  :: InputFileData        !< The data for initialization
+   integer(IntKi),                     intent(  out)  :: ErrStat              !< Returned error status  from this subroutine
+   character(*),                       intent(  out)  :: ErrMsg               !< Returned error message from this subroutine
 
-   INTEGER(IntKi)                                     :: UnitInput            !< Unit number for the input file
-   INTEGER(IntKi)                                     :: UnitEcho             !< The local unit number for this module's echo file
-   CHARACTER(1024)                                    :: TmpPath              !< Temporary storage for relative path name
-   CHARACTER(1024)                                    :: TmpFmt               !< Temporary storage for format statement
-   CHARACTER(35)                                      :: Frmt                 !< Output format for logical parameters. (matches NWTC Subroutine Library format)
+   integer(IntKi)                                     :: UnitInput            !< Unit number for the input file
+   integer(IntKi)                                     :: UnitEcho             !< The local unit number for this module's echo file
+   character(1024)                                    :: TmpPath              !< Temporary storage for relative path name
+   character(1024)                                    :: TmpFmt               !< Temporary storage for format statement
+   character(35)                                      :: Frmt                 !< Output format for logical parameters. (matches NWTC Subroutine Library format)
    character(200)                                     :: Line                 !< Temporary storage of a line from the input file (to compare with "default")
+   integer(IntKi)                                     :: i                    !< Generic counter
  
-   INTEGER(IntKi)                                     :: TmpErrStat           !< Temporary error status
-   INTEGER(IntKi)                                     :: IOS                  !< Temporary error status
-   CHARACTER(ErrMsgLen)                               :: TmpErrMsg            !< Temporary error message
-   CHARACTER(1024)                                    :: PriPath              !< Path name of the primary file
-   CHARACTER(*),                       PARAMETER      :: RoutineName="SoilDyn_ReadInput"
+   integer(IntKi)                                     :: TmpErrStat           !< Temporary error status
+   integer(IntKi)                                     :: IOS                  !< Temporary error status
+   character(ErrMsgLen)                               :: TmpErrMsg            !< Temporary error message
+   character(1024)                                    :: PriPath              !< Path name of the primary file
+   character(*),                       PARAMETER      :: RoutineName="SoilDyn_ReadInput"
 
 
       ! Initialize local data
@@ -151,38 +152,23 @@ subroutine SoilDyn_ReadInput( InputFileName, EchoFileName, InputFileData, ErrSta
 
    call ReadCom( UnitInput, InputFileName, 'SoilDyn input file separator line',  TmpErrStat, TmpErrMsg, UnitEcho );   if (Failed()) return;
 
+      ! In general, the stiffness and damping matrices will have the following symetries:
+   !  K11 = K22  
+   !  K15 = -K24 
+   !  K51 = -K42 
+   !  K55 = K44  
+
       ! Stiffness
-   call ReadVar( UnitInput, InputFileName, InputFileData%Stiffness(1,1), 'K11 =  K22', 'Elastic horizontal stiffness at seabed (N/m)',                   TmpErrStat, TmpErrMsg, UnitEcho); if (Failed()) return;
-            InputFileData%Stiffness(2,2) = InputFileData%Stiffness(1,1)
-
-   call ReadVar( UnitInput, InputFileName, InputFileData%Stiffness(1,5), 'K15 = -K24', 'Elastic horizontal-rotational cross stiffness at seabed (N/m)',  TmpErrStat, TmpErrMsg, UnitEcho); if (Failed()) return;
-            InputFileData%Stiffness(2,4) =-InputFileData%Stiffness(1,5)
-
-   call ReadVar( UnitInput, InputFileName, InputFileData%Stiffness(5,1), 'K51 = -K42', 'Elastic rotational-horizontal cross stiffness at seabed (N/m)',  TmpErrStat, TmpErrMsg, UnitEcho); if (Failed()) return;
-            InputFileData%Stiffness(4,2) =-InputFileData%Stiffness(5,1)
-
-   call ReadVar( UnitInput, InputFileName, InputFileData%Stiffness(5,5), 'K55 =  K44', 'Elastic rotational stiffness at seabed (N-m/m)',                 TmpErrStat, TmpErrMsg, UnitEcho); if (Failed()) return;
-            InputFileData%Stiffness(4,4) = InputFileData%Stiffness(5,5)
-
-   call ReadVar( UnitInput, InputFileName, InputFileData%Stiffness(3,3), 'K33'       , 'Elastic vertical   stiffness at seabed (N-m/m)',                 TmpErrStat, TmpErrMsg, UnitEcho); if (Failed()) return;
-   call ReadVar( UnitInput, InputFileName, InputFileData%Stiffness(6,6), 'K66'       , 'Elastic torsional  stiffness at seabed (N-m/m)',                 TmpErrStat, TmpErrMsg, UnitEcho); if (Failed()) return;
+   call ReadCom( UnitInput, InputFileName, 'SoilDyn input file separator line',  TmpErrStat, TmpErrMsg, UnitEcho );   if (Failed()) return;
+   do i=1,6
+      call ReadAry( UnitInput, InputFileName, InputFileData%Stiffness(i,:), 6, 'Stiffness', 'Elastic stiffness matrix', TmpErrStat, TmpErrMsg, UnitEcho); if (Failed()) return;
+   enddo
 
       ! Damping
-   call ReadVar( UnitInput, InputFileName, InputFileData%Damping(1,1), 'D11 =  D22', 'Elastic horizontal damping ratio at seabed (-)',                   TmpErrStat, TmpErrMsg, UnitEcho); if (Failed()) return;
-            InputFileData%Damping(2,2) =   InputFileData%Damping(1,1)
-
-   call ReadVar( UnitInput, InputFileName, InputFileData%Damping(1,5), 'D15 = -D24', 'Elastic horizontal-rotational cross damping ratio at seabed (-)',  TmpErrStat, TmpErrMsg, UnitEcho); if (Failed()) return;
-            InputFileData%Damping(2,4) =  -InputFileData%Damping(1,5)
-
-   call ReadVar( UnitInput, InputFileName, InputFileData%Damping(5,1), 'D51 = -D42', 'Elastic rotational-horizontal cross damping ratio at seabed (-)',  TmpErrStat, TmpErrMsg, UnitEcho); if (Failed()) return;
-            InputFileData%Damping(4,2) =  -InputFileData%Damping(5,1)
-
-   call ReadVar( UnitInput, InputFileName, InputFileData%Damping(5,5), 'D55 =  D44', 'Elastic rotational damping ratio at seabed (-)',                   TmpErrStat, TmpErrMsg, UnitEcho); if (Failed()) return;
-            InputFileData%Damping(4,4) =   InputFileData%Damping(5,5)
-
-   call ReadVar( UnitInput, InputFileName, InputFileData%Damping(3,3), 'D33'       , 'Elastic vertical   damping ratio at seabed (-)',                   TmpErrStat, TmpErrMsg, UnitEcho); if (Failed()) return;
-   call ReadVar( UnitInput, InputFileName, InputFileData%Damping(6,6), 'D66'       , 'Elastic torsional  damping ratio at seabed (-)',                   TmpErrStat, TmpErrMsg, UnitEcho); if (Failed()) return;
-
+   call ReadCom( UnitInput, InputFileName, 'SoilDyn input file separator line',  TmpErrStat, TmpErrMsg, UnitEcho );   if (Failed()) return;
+   do i=1,6
+      call ReadAry( UnitInput, InputFileName, InputFileData%Damping(i,:), 6, 'Damping', 'Elastic damping ratio (-)',    TmpErrStat, TmpErrMsg, UnitEcho); if (Failed()) return;
+   enddo
 
    !-------------------------------------------------------------------------------------------------
    !> Read P-Y curve section  [ CalcOption == 2 only ]
