@@ -31,18 +31,23 @@ typedef   ^             REDWINdllType   R8Ki          D              {6}{6}     
 
 # SoilDyn input file
 typedef  ^    SlD_InputFile   LOGICAL              EchoFlag       -   -   -   "Echo the input file"                                    -
+typedef  ^    SlD_InputFile   CHARACTER(ChanLen)   OutList        :   -   -   "List of user-requested output channels"                 -
+typedef  ^    SlD_InputFile   R8Ki                 DT             -   -   -   "Timestep requested"                                     '(s)'
+typedef  ^    SlD_InputFile   IntKi                CalcOption     -   -   -   "Calculation methodology to use"                         -
+typedef  ^    SlD_InputFile   ReKi                 Stiffness      {6}{6} - -  "Stiffness matrix 6x6"                                   '(N/m, N-m/m)'
+typedef  ^    SlD_InputFile   ReKi                 Damping        {6}{6} - -  "Damping ratio matrix 6x6"                               -
+typedef  ^    SlD_InputFile   IntKi                PY_numpoints   -   -   -   "Number of P-Y curve mesh points"                        -
+typedef  ^    SlD_InputFile   ReKi                 PY_locations   ::  -   -   "P-Y curve location points for mesh"                     '(m)'
+typedef  ^    SlD_InputFile   character(1024)      PY_inputFile   :   -   -   "Input file with P-Y curve data"                         - 
+typedef  ^    SlD_InputFile   IntKi                DLL_model      -   -   -   "REDWIN DLL model type to use"                           -
 typedef  ^    SlD_InputFile   CHARACTER(1024)      DLL_FileName   -   -   -   "Name of the DLL file including the full path"           -
 typedef  ^    SlD_InputFile   CHARACTER(1024)      DLL_ProcName   -   -   -   "Name of the procedure in the DLL that will be called"   -
-typedef  ^    SlD_InputFile   CHARACTER(1024)      DLL_PROPSFILE  -   -   -   "Name of PROPSFILE input file used in DLL"               -
-typedef  ^    SlD_InputFile   CHARACTER(1024)      DLL_LDISPFILE  -   -   -   "Name of LDISPFILE input file used in DLL"               -
-typedef  ^     ^              CHARACTER(ChanLen)   OutList        :   -   -   "List of user-requested output channels"                 -
-typedef  ^     ^              R8Ki                 DT             -   -   -   "Timestep requested"                                     '(s)'
-typedef  ^     ^              IntKi                CalcOption     -   -   -   "Calculation methodology to use"                         -
-typedef  ^     ^              ReKi                 Stiffness      {6}{6} - -  "Stiffness matrix 6x6"                                   '(N/m, N-m/m)'
-typedef  ^     ^              ReKi                 Damping        {6}{6} - -  "Damping ratio matrix 6x6"                               -
-typedef  ^     ^              character(1024)      PY_inputFile   -   -   -   "Input file with P-Y curve data"                         - 
-typedef  ^     ^              IntKi                PY_numpoints   -   -   -   "Number of P-Y curve mesh points"                        -
-typedef  ^     ^              ReKi                 PY_locations   ::  -   -   "P-Y curve location points for mesh"                     '(m)'
+typedef  ^    SlD_InputFile   IntKi                DLL_numpoints  -   -   -   "Number of points to interface to DLL"                   -
+typedef  ^    SlD_InputFile   ReKi                 DLL_locations  ::  -   -   "DLL location points for mesh"                           '(m)'
+typedef  ^    SlD_InputFile   CHARACTER(1024)      DLL_PROPSFILE  :   -   -   "Name of PROPSFILE input file used in DLL"               -
+typedef  ^    SlD_InputFile   CHARACTER(1024)      DLL_LDISPFILE  :   -   -   "Name of LDISPFILE input file used in DLL"               -
+typedef  ^    SlD_InputFile   LOGICAL              SumPrint       -   -   -   "Print summary information to file (.SlD.sum)"           -
+typedef  ^    SlD_InputFile   IntKi                NumOuts        -   -   -   "Number of outputs requested"                            -
 
 # ..... Initialization data .......................................................................................................
 # Define inputs that the initialization routine may need here:

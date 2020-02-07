@@ -51,18 +51,23 @@ IMPLICIT NONE
 ! =========  SlD_InputFile  =======
   TYPE, PUBLIC :: SlD_InputFile
     LOGICAL  :: EchoFlag      !< Echo the input file [-]
-    CHARACTER(1024)  :: DLL_FileName      !< Name of the DLL file including the full path [-]
-    CHARACTER(1024)  :: DLL_ProcName      !< Name of the procedure in the DLL that will be called [-]
-    CHARACTER(1024)  :: DLL_PROPSFILE      !< Name of PROPSFILE input file used in DLL [-]
-    CHARACTER(1024)  :: DLL_LDISPFILE      !< Name of LDISPFILE input file used in DLL [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: OutList      !< List of user-requested output channels [-]
     REAL(R8Ki)  :: DT      !< Timestep requested ['(s)']
     INTEGER(IntKi)  :: CalcOption      !< Calculation methodology to use [-]
     REAL(ReKi) , DIMENSION(1:6,1:6)  :: Stiffness      !< Stiffness matrix 6x6 ['(N/m,]
     REAL(ReKi) , DIMENSION(1:6,1:6)  :: Damping      !< Damping ratio matrix 6x6 [-]
-    character(1024)  :: PY_inputFile      !< Input file with P-Y curve data [-]
     INTEGER(IntKi)  :: PY_numpoints      !< Number of P-Y curve mesh points [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PY_locations      !< P-Y curve location points for mesh ['(m)']
+    character(1024) , DIMENSION(:), ALLOCATABLE  :: PY_inputFile      !< Input file with P-Y curve data [-]
+    INTEGER(IntKi)  :: DLL_model      !< REDWIN DLL model type to use [-]
+    CHARACTER(1024)  :: DLL_FileName      !< Name of the DLL file including the full path [-]
+    CHARACTER(1024)  :: DLL_ProcName      !< Name of the procedure in the DLL that will be called [-]
+    INTEGER(IntKi)  :: DLL_numpoints      !< Number of points to interface to DLL [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: DLL_locations      !< DLL location points for mesh ['(m)']
+    CHARACTER(1024) , DIMENSION(:), ALLOCATABLE  :: DLL_PROPSFILE      !< Name of PROPSFILE input file used in DLL [-]
+    CHARACTER(1024) , DIMENSION(:), ALLOCATABLE  :: DLL_LDISPFILE      !< Name of LDISPFILE input file used in DLL [-]
+    LOGICAL  :: SumPrint      !< Print summary information to file (.SlD.sum) [-]
+    INTEGER(IntKi)  :: NumOuts      !< Number of outputs requested [-]
   END TYPE SlD_InputFile
 ! =======================
 ! =========  SlD_InitInputType  =======
@@ -415,10 +420,6 @@ CONTAINS
    ErrStat = ErrID_None
    ErrMsg  = ""
     DstInputFileData%EchoFlag = SrcInputFileData%EchoFlag
-    DstInputFileData%DLL_FileName = SrcInputFileData%DLL_FileName
-    DstInputFileData%DLL_ProcName = SrcInputFileData%DLL_ProcName
-    DstInputFileData%DLL_PROPSFILE = SrcInputFileData%DLL_PROPSFILE
-    DstInputFileData%DLL_LDISPFILE = SrcInputFileData%DLL_LDISPFILE
 IF (ALLOCATED(SrcInputFileData%OutList)) THEN
   i1_l = LBOUND(SrcInputFileData%OutList,1)
   i1_u = UBOUND(SrcInputFileData%OutList,1)
@@ -435,7 +436,6 @@ ENDIF
     DstInputFileData%CalcOption = SrcInputFileData%CalcOption
     DstInputFileData%Stiffness = SrcInputFileData%Stiffness
     DstInputFileData%Damping = SrcInputFileData%Damping
-    DstInputFileData%PY_inputFile = SrcInputFileData%PY_inputFile
     DstInputFileData%PY_numpoints = SrcInputFileData%PY_numpoints
 IF (ALLOCATED(SrcInputFileData%PY_locations)) THEN
   i1_l = LBOUND(SrcInputFileData%PY_locations,1)
@@ -451,6 +451,62 @@ IF (ALLOCATED(SrcInputFileData%PY_locations)) THEN
   END IF
     DstInputFileData%PY_locations = SrcInputFileData%PY_locations
 ENDIF
+IF (ALLOCATED(SrcInputFileData%PY_inputFile)) THEN
+  i1_l = LBOUND(SrcInputFileData%PY_inputFile,1)
+  i1_u = UBOUND(SrcInputFileData%PY_inputFile,1)
+  IF (.NOT. ALLOCATED(DstInputFileData%PY_inputFile)) THEN 
+    ALLOCATE(DstInputFileData%PY_inputFile(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%PY_inputFile.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInputFileData%PY_inputFile = SrcInputFileData%PY_inputFile
+ENDIF
+    DstInputFileData%DLL_model = SrcInputFileData%DLL_model
+    DstInputFileData%DLL_FileName = SrcInputFileData%DLL_FileName
+    DstInputFileData%DLL_ProcName = SrcInputFileData%DLL_ProcName
+    DstInputFileData%DLL_numpoints = SrcInputFileData%DLL_numpoints
+IF (ALLOCATED(SrcInputFileData%DLL_locations)) THEN
+  i1_l = LBOUND(SrcInputFileData%DLL_locations,1)
+  i1_u = UBOUND(SrcInputFileData%DLL_locations,1)
+  i2_l = LBOUND(SrcInputFileData%DLL_locations,2)
+  i2_u = UBOUND(SrcInputFileData%DLL_locations,2)
+  IF (.NOT. ALLOCATED(DstInputFileData%DLL_locations)) THEN 
+    ALLOCATE(DstInputFileData%DLL_locations(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%DLL_locations.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInputFileData%DLL_locations = SrcInputFileData%DLL_locations
+ENDIF
+IF (ALLOCATED(SrcInputFileData%DLL_PROPSFILE)) THEN
+  i1_l = LBOUND(SrcInputFileData%DLL_PROPSFILE,1)
+  i1_u = UBOUND(SrcInputFileData%DLL_PROPSFILE,1)
+  IF (.NOT. ALLOCATED(DstInputFileData%DLL_PROPSFILE)) THEN 
+    ALLOCATE(DstInputFileData%DLL_PROPSFILE(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%DLL_PROPSFILE.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInputFileData%DLL_PROPSFILE = SrcInputFileData%DLL_PROPSFILE
+ENDIF
+IF (ALLOCATED(SrcInputFileData%DLL_LDISPFILE)) THEN
+  i1_l = LBOUND(SrcInputFileData%DLL_LDISPFILE,1)
+  i1_u = UBOUND(SrcInputFileData%DLL_LDISPFILE,1)
+  IF (.NOT. ALLOCATED(DstInputFileData%DLL_LDISPFILE)) THEN 
+    ALLOCATE(DstInputFileData%DLL_LDISPFILE(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%DLL_LDISPFILE.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInputFileData%DLL_LDISPFILE = SrcInputFileData%DLL_LDISPFILE
+ENDIF
+    DstInputFileData%SumPrint = SrcInputFileData%SumPrint
+    DstInputFileData%NumOuts = SrcInputFileData%NumOuts
  END SUBROUTINE SlD_CopyInputFile
 
  SUBROUTINE SlD_DestroyInputFile( InputFileData, ErrStat, ErrMsg )
@@ -467,6 +523,18 @@ IF (ALLOCATED(InputFileData%OutList)) THEN
 ENDIF
 IF (ALLOCATED(InputFileData%PY_locations)) THEN
   DEALLOCATE(InputFileData%PY_locations)
+ENDIF
+IF (ALLOCATED(InputFileData%PY_inputFile)) THEN
+  DEALLOCATE(InputFileData%PY_inputFile)
+ENDIF
+IF (ALLOCATED(InputFileData%DLL_locations)) THEN
+  DEALLOCATE(InputFileData%DLL_locations)
+ENDIF
+IF (ALLOCATED(InputFileData%DLL_PROPSFILE)) THEN
+  DEALLOCATE(InputFileData%DLL_PROPSFILE)
+ENDIF
+IF (ALLOCATED(InputFileData%DLL_LDISPFILE)) THEN
+  DEALLOCATE(InputFileData%DLL_LDISPFILE)
 ENDIF
  END SUBROUTINE SlD_DestroyInputFile
 
@@ -506,10 +574,6 @@ ENDIF
   Db_BufSz  = 0
   Int_BufSz  = 0
       Int_BufSz  = Int_BufSz  + 1  ! EchoFlag
-      Int_BufSz  = Int_BufSz  + 1*LEN(InData%DLL_FileName)  ! DLL_FileName
-      Int_BufSz  = Int_BufSz  + 1*LEN(InData%DLL_ProcName)  ! DLL_ProcName
-      Int_BufSz  = Int_BufSz  + 1*LEN(InData%DLL_PROPSFILE)  ! DLL_PROPSFILE
-      Int_BufSz  = Int_BufSz  + 1*LEN(InData%DLL_LDISPFILE)  ! DLL_LDISPFILE
   Int_BufSz   = Int_BufSz   + 1     ! OutList allocated yes/no
   IF ( ALLOCATED(InData%OutList) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! OutList upper/lower bounds for each dimension
@@ -519,13 +583,38 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! CalcOption
       Re_BufSz   = Re_BufSz   + SIZE(InData%Stiffness)  ! Stiffness
       Re_BufSz   = Re_BufSz   + SIZE(InData%Damping)  ! Damping
-      Int_BufSz  = Int_BufSz  + 1*LEN(InData%PY_inputFile)  ! PY_inputFile
       Int_BufSz  = Int_BufSz  + 1  ! PY_numpoints
   Int_BufSz   = Int_BufSz   + 1     ! PY_locations allocated yes/no
   IF ( ALLOCATED(InData%PY_locations) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! PY_locations upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%PY_locations)  ! PY_locations
   END IF
+  Int_BufSz   = Int_BufSz   + 1     ! PY_inputFile allocated yes/no
+  IF ( ALLOCATED(InData%PY_inputFile) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! PY_inputFile upper/lower bounds for each dimension
+      Int_BufSz  = Int_BufSz  + SIZE(InData%PY_inputFile)*LEN(InData%PY_inputFile)  ! PY_inputFile
+  END IF
+      Int_BufSz  = Int_BufSz  + 1  ! DLL_model
+      Int_BufSz  = Int_BufSz  + 1*LEN(InData%DLL_FileName)  ! DLL_FileName
+      Int_BufSz  = Int_BufSz  + 1*LEN(InData%DLL_ProcName)  ! DLL_ProcName
+      Int_BufSz  = Int_BufSz  + 1  ! DLL_numpoints
+  Int_BufSz   = Int_BufSz   + 1     ! DLL_locations allocated yes/no
+  IF ( ALLOCATED(InData%DLL_locations) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! DLL_locations upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%DLL_locations)  ! DLL_locations
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! DLL_PROPSFILE allocated yes/no
+  IF ( ALLOCATED(InData%DLL_PROPSFILE) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! DLL_PROPSFILE upper/lower bounds for each dimension
+      Int_BufSz  = Int_BufSz  + SIZE(InData%DLL_PROPSFILE)*LEN(InData%DLL_PROPSFILE)  ! DLL_PROPSFILE
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! DLL_LDISPFILE allocated yes/no
+  IF ( ALLOCATED(InData%DLL_LDISPFILE) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! DLL_LDISPFILE upper/lower bounds for each dimension
+      Int_BufSz  = Int_BufSz  + SIZE(InData%DLL_LDISPFILE)*LEN(InData%DLL_LDISPFILE)  ! DLL_LDISPFILE
+  END IF
+      Int_BufSz  = Int_BufSz  + 1  ! SumPrint
+      Int_BufSz  = Int_BufSz  + 1  ! NumOuts
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -555,22 +644,6 @@ ENDIF
 
       IntKiBuf ( Int_Xferred:Int_Xferred+1-1 ) = TRANSFER( InData%EchoFlag , IntKiBuf(1), 1)
       Int_Xferred   = Int_Xferred   + 1
-        DO I = 1, LEN(InData%DLL_FileName)
-          IntKiBuf(Int_Xferred) = ICHAR(InData%DLL_FileName(I:I), IntKi)
-          Int_Xferred = Int_Xferred   + 1
-        END DO ! I
-        DO I = 1, LEN(InData%DLL_ProcName)
-          IntKiBuf(Int_Xferred) = ICHAR(InData%DLL_ProcName(I:I), IntKi)
-          Int_Xferred = Int_Xferred   + 1
-        END DO ! I
-        DO I = 1, LEN(InData%DLL_PROPSFILE)
-          IntKiBuf(Int_Xferred) = ICHAR(InData%DLL_PROPSFILE(I:I), IntKi)
-          Int_Xferred = Int_Xferred   + 1
-        END DO ! I
-        DO I = 1, LEN(InData%DLL_LDISPFILE)
-          IntKiBuf(Int_Xferred) = ICHAR(InData%DLL_LDISPFILE(I:I), IntKi)
-          Int_Xferred = Int_Xferred   + 1
-        END DO ! I
   IF ( .NOT. ALLOCATED(InData%OutList) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -596,10 +669,6 @@ ENDIF
       Re_Xferred   = Re_Xferred   + SIZE(InData%Stiffness)
       ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%Damping))-1 ) = PACK(InData%Damping,.TRUE.)
       Re_Xferred   = Re_Xferred   + SIZE(InData%Damping)
-        DO I = 1, LEN(InData%PY_inputFile)
-          IntKiBuf(Int_Xferred) = ICHAR(InData%PY_inputFile(I:I), IntKi)
-          Int_Xferred = Int_Xferred   + 1
-        END DO ! I
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%PY_numpoints
       Int_Xferred   = Int_Xferred   + 1
   IF ( .NOT. ALLOCATED(InData%PY_locations) ) THEN
@@ -618,6 +687,89 @@ ENDIF
       IF (SIZE(InData%PY_locations)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%PY_locations))-1 ) = PACK(InData%PY_locations,.TRUE.)
       Re_Xferred   = Re_Xferred   + SIZE(InData%PY_locations)
   END IF
+  IF ( .NOT. ALLOCATED(InData%PY_inputFile) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%PY_inputFile,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%PY_inputFile,1)
+    Int_Xferred = Int_Xferred + 2
+
+    DO i1 = LBOUND(InData%PY_inputFile,1), UBOUND(InData%PY_inputFile,1)
+        DO I = 1, LEN(InData%PY_inputFile)
+          IntKiBuf(Int_Xferred) = ICHAR(InData%PY_inputFile(i1)(I:I), IntKi)
+          Int_Xferred = Int_Xferred   + 1
+        END DO ! I
+    END DO !i1
+  END IF
+      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%DLL_model
+      Int_Xferred   = Int_Xferred   + 1
+        DO I = 1, LEN(InData%DLL_FileName)
+          IntKiBuf(Int_Xferred) = ICHAR(InData%DLL_FileName(I:I), IntKi)
+          Int_Xferred = Int_Xferred   + 1
+        END DO ! I
+        DO I = 1, LEN(InData%DLL_ProcName)
+          IntKiBuf(Int_Xferred) = ICHAR(InData%DLL_ProcName(I:I), IntKi)
+          Int_Xferred = Int_Xferred   + 1
+        END DO ! I
+      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%DLL_numpoints
+      Int_Xferred   = Int_Xferred   + 1
+  IF ( .NOT. ALLOCATED(InData%DLL_locations) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%DLL_locations,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%DLL_locations,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%DLL_locations,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%DLL_locations,2)
+    Int_Xferred = Int_Xferred + 2
+
+      IF (SIZE(InData%DLL_locations)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%DLL_locations))-1 ) = PACK(InData%DLL_locations,.TRUE.)
+      Re_Xferred   = Re_Xferred   + SIZE(InData%DLL_locations)
+  END IF
+  IF ( .NOT. ALLOCATED(InData%DLL_PROPSFILE) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%DLL_PROPSFILE,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%DLL_PROPSFILE,1)
+    Int_Xferred = Int_Xferred + 2
+
+    DO i1 = LBOUND(InData%DLL_PROPSFILE,1), UBOUND(InData%DLL_PROPSFILE,1)
+        DO I = 1, LEN(InData%DLL_PROPSFILE)
+          IntKiBuf(Int_Xferred) = ICHAR(InData%DLL_PROPSFILE(i1)(I:I), IntKi)
+          Int_Xferred = Int_Xferred   + 1
+        END DO ! I
+    END DO !i1
+  END IF
+  IF ( .NOT. ALLOCATED(InData%DLL_LDISPFILE) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%DLL_LDISPFILE,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%DLL_LDISPFILE,1)
+    Int_Xferred = Int_Xferred + 2
+
+    DO i1 = LBOUND(InData%DLL_LDISPFILE,1), UBOUND(InData%DLL_LDISPFILE,1)
+        DO I = 1, LEN(InData%DLL_LDISPFILE)
+          IntKiBuf(Int_Xferred) = ICHAR(InData%DLL_LDISPFILE(i1)(I:I), IntKi)
+          Int_Xferred = Int_Xferred   + 1
+        END DO ! I
+    END DO !i1
+  END IF
+      IntKiBuf ( Int_Xferred:Int_Xferred+1-1 ) = TRANSFER( InData%SumPrint , IntKiBuf(1), 1)
+      Int_Xferred   = Int_Xferred   + 1
+      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%NumOuts
+      Int_Xferred   = Int_Xferred   + 1
  END SUBROUTINE SlD_PackInputFile
 
  SUBROUTINE SlD_UnPackInputFile( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -656,22 +808,6 @@ ENDIF
   Int_Xferred  = 1
       OutData%EchoFlag = TRANSFER( IntKiBuf( Int_Xferred ), mask0 )
       Int_Xferred   = Int_Xferred + 1
-      DO I = 1, LEN(OutData%DLL_FileName)
-        OutData%DLL_FileName(I:I) = CHAR(IntKiBuf(Int_Xferred))
-        Int_Xferred = Int_Xferred   + 1
-      END DO ! I
-      DO I = 1, LEN(OutData%DLL_ProcName)
-        OutData%DLL_ProcName(I:I) = CHAR(IntKiBuf(Int_Xferred))
-        Int_Xferred = Int_Xferred   + 1
-      END DO ! I
-      DO I = 1, LEN(OutData%DLL_PROPSFILE)
-        OutData%DLL_PROPSFILE(I:I) = CHAR(IntKiBuf(Int_Xferred))
-        Int_Xferred = Int_Xferred   + 1
-      END DO ! I
-      DO I = 1, LEN(OutData%DLL_LDISPFILE)
-        OutData%DLL_LDISPFILE(I:I) = CHAR(IntKiBuf(Int_Xferred))
-        Int_Xferred = Int_Xferred   + 1
-      END DO ! I
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! OutList not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
@@ -729,10 +865,6 @@ ENDIF
       OutData%Damping = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%Damping))-1 ), mask2, 0.0_ReKi )
       Re_Xferred   = Re_Xferred   + SIZE(OutData%Damping)
     DEALLOCATE(mask2)
-      DO I = 1, LEN(OutData%PY_inputFile)
-        OutData%PY_inputFile(I:I) = CHAR(IntKiBuf(Int_Xferred))
-        Int_Xferred = Int_Xferred   + 1
-      END DO ! I
       OutData%PY_numpoints = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! PY_locations not allocated
@@ -761,6 +893,129 @@ ENDIF
       Re_Xferred   = Re_Xferred   + SIZE(OutData%PY_locations)
     DEALLOCATE(mask2)
   END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! PY_inputFile not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%PY_inputFile)) DEALLOCATE(OutData%PY_inputFile)
+    ALLOCATE(OutData%PY_inputFile(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%PY_inputFile.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask1 = .TRUE. 
+    DO i1 = LBOUND(OutData%PY_inputFile,1), UBOUND(OutData%PY_inputFile,1)
+        DO I = 1, LEN(OutData%PY_inputFile)
+          OutData%PY_inputFile(i1)(I:I) = CHAR(IntKiBuf(Int_Xferred))
+          Int_Xferred = Int_Xferred   + 1
+        END DO ! I
+    END DO !i1
+    DEALLOCATE(mask1)
+  END IF
+      OutData%DLL_model = IntKiBuf( Int_Xferred ) 
+      Int_Xferred   = Int_Xferred + 1
+      DO I = 1, LEN(OutData%DLL_FileName)
+        OutData%DLL_FileName(I:I) = CHAR(IntKiBuf(Int_Xferred))
+        Int_Xferred = Int_Xferred   + 1
+      END DO ! I
+      DO I = 1, LEN(OutData%DLL_ProcName)
+        OutData%DLL_ProcName(I:I) = CHAR(IntKiBuf(Int_Xferred))
+        Int_Xferred = Int_Xferred   + 1
+      END DO ! I
+      OutData%DLL_numpoints = IntKiBuf( Int_Xferred ) 
+      Int_Xferred   = Int_Xferred + 1
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! DLL_locations not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%DLL_locations)) DEALLOCATE(OutData%DLL_locations)
+    ALLOCATE(OutData%DLL_locations(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%DLL_locations.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask2.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask2 = .TRUE. 
+      IF (SIZE(OutData%DLL_locations)>0) OutData%DLL_locations = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%DLL_locations))-1 ), mask2, 0.0_ReKi )
+      Re_Xferred   = Re_Xferred   + SIZE(OutData%DLL_locations)
+    DEALLOCATE(mask2)
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! DLL_PROPSFILE not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%DLL_PROPSFILE)) DEALLOCATE(OutData%DLL_PROPSFILE)
+    ALLOCATE(OutData%DLL_PROPSFILE(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%DLL_PROPSFILE.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask1 = .TRUE. 
+    DO i1 = LBOUND(OutData%DLL_PROPSFILE,1), UBOUND(OutData%DLL_PROPSFILE,1)
+        DO I = 1, LEN(OutData%DLL_PROPSFILE)
+          OutData%DLL_PROPSFILE(i1)(I:I) = CHAR(IntKiBuf(Int_Xferred))
+          Int_Xferred = Int_Xferred   + 1
+        END DO ! I
+    END DO !i1
+    DEALLOCATE(mask1)
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! DLL_LDISPFILE not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%DLL_LDISPFILE)) DEALLOCATE(OutData%DLL_LDISPFILE)
+    ALLOCATE(OutData%DLL_LDISPFILE(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%DLL_LDISPFILE.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask1 = .TRUE. 
+    DO i1 = LBOUND(OutData%DLL_LDISPFILE,1), UBOUND(OutData%DLL_LDISPFILE,1)
+        DO I = 1, LEN(OutData%DLL_LDISPFILE)
+          OutData%DLL_LDISPFILE(i1)(I:I) = CHAR(IntKiBuf(Int_Xferred))
+          Int_Xferred = Int_Xferred   + 1
+        END DO ! I
+    END DO !i1
+    DEALLOCATE(mask1)
+  END IF
+      OutData%SumPrint = TRANSFER( IntKiBuf( Int_Xferred ), mask0 )
+      Int_Xferred   = Int_Xferred + 1
+      OutData%NumOuts = IntKiBuf( Int_Xferred ) 
+      Int_Xferred   = Int_Xferred + 1
  END SUBROUTINE SlD_UnPackInputFile
 
  SUBROUTINE SlD_CopyInitInput( SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg )

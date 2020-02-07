@@ -99,6 +99,7 @@ subroutine SoilDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
 !FIXME: #EchoFileName
 EchoFileName='TempFile.ech'
    call SoilDyn_ReadInput( InitInp%InputFile, EchoFileName, InputFileData, ErrStat2, ErrMsg2 );  if (Failed()) return;
+
       ! Define parameters here:
    p%DT  = Interval
 
@@ -144,12 +145,17 @@ EchoFileName='TempFile.ech'
 !FIXME: add input file parsing
 InputFileData%DLL_ProcName = 'INTERFACEFOUNDATION'          ! The name of the procedure in the DLL that will be called.
 InputFileData%DLL_FileName = 'REDWINmodel1-2.0_x86.dll'     ! 32 bit version for model 1
-m%dll_data%PROPSfile = 'Props.txt'
-m%dll_data%LDISPfile = 'LoadDisplacement.txt'
-m%dll_data%IDtask = 1
 
    ! Initialize the DLL for each interface point
    allocate( m%dll_data(1), STAT=ErrStat2 )
+   if (ErrStat2 /= 0) then
+      call SetErrStat(ErrID_Fatal, 'Could not allocate m%dll_data', ErrStat, ErrMsg, RoutineName)
+      return
+   endif
+
+m%dll_data(1)%PROPSfile = 'Props.txt'
+m%dll_data(1)%LDISPfile = 'LoadDisplacement.txt'
+m%dll_data(1)%IDtask = 1
 
    call REDWINinterface_Init(u,p,m%dll_data(1),y,InputFileData, ErrStat2, ErrMsg2); if (Failed()) return;
 
