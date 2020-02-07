@@ -44,7 +44,7 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(1:12,1:100)  :: StVar      !< Array containing the state variables at the end of the step (used internally by the REDWIN models). Specific to each model. [-]
     INTEGER(IntKi) , DIMENSION(1:12,1:100)  :: StVarPrint      !< Array indicating which state variables should be printed to the screen. This feature is currently not supported. [-]
     REAL(R8Ki) , DIMENSION(1:6)  :: Disp      !< Displacements.  Follows convention of REDWIN orientation. [-]
-    REAL(R8Ki) , DIMENSION(1:6)  :: Force      !< Forces.  Follows convention of REDWIN orientations. [-]
+    REAL(R8Ki) , DIMENSION(1:6)  :: Force      !< Forces.  Follows convention of REDWIN orientations. ['(N)']
     REAL(R8Ki) , DIMENSION(1:6,1:6)  :: D      !< The 6 x 6 elastic macro-element stiffness matrix at the SFI. [-]
   END TYPE REDWINdllType
 ! =======================
@@ -56,6 +56,13 @@ IMPLICIT NONE
     CHARACTER(1024)  :: DLL_PROPSFILE      !< Name of PROPSFILE input file used in DLL [-]
     CHARACTER(1024)  :: DLL_LDISPFILE      !< Name of LDISPFILE input file used in DLL [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: OutList      !< List of user-requested output channels [-]
+    REAL(R8Ki)  :: DT      !< Timestep requested ['(s)']
+    INTEGER(IntKi)  :: CalcOption      !< Calculation methodology to use [-]
+    REAL(ReKi) , DIMENSION(1:6,1:6)  :: Stiffness      !< Stiffness matrix 6x6 ['(N/m,]
+    REAL(ReKi) , DIMENSION(1:6,1:6)  :: Damping      !< Damping ratio matrix 6x6 [-]
+    character(1024)  :: PY_inputFile      !< Input file with P-Y curve data [-]
+    INTEGER(IntKi)  :: PY_numpoints      !< Number of P-Y curve mesh points [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PY_locations      !< P-Y curve location points for mesh ['(m)']
   END TYPE SlD_InputFile
 ! =======================
 ! =========  SlD_InitInputType  =======
@@ -400,6 +407,7 @@ CONTAINS
 ! Local 
    INTEGER(IntKi)                 :: i,j,k
    INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'SlD_CopyInputFile'
@@ -423,6 +431,26 @@ IF (ALLOCATED(SrcInputFileData%OutList)) THEN
   END IF
     DstInputFileData%OutList = SrcInputFileData%OutList
 ENDIF
+    DstInputFileData%DT = SrcInputFileData%DT
+    DstInputFileData%CalcOption = SrcInputFileData%CalcOption
+    DstInputFileData%Stiffness = SrcInputFileData%Stiffness
+    DstInputFileData%Damping = SrcInputFileData%Damping
+    DstInputFileData%PY_inputFile = SrcInputFileData%PY_inputFile
+    DstInputFileData%PY_numpoints = SrcInputFileData%PY_numpoints
+IF (ALLOCATED(SrcInputFileData%PY_locations)) THEN
+  i1_l = LBOUND(SrcInputFileData%PY_locations,1)
+  i1_u = UBOUND(SrcInputFileData%PY_locations,1)
+  i2_l = LBOUND(SrcInputFileData%PY_locations,2)
+  i2_u = UBOUND(SrcInputFileData%PY_locations,2)
+  IF (.NOT. ALLOCATED(DstInputFileData%PY_locations)) THEN 
+    ALLOCATE(DstInputFileData%PY_locations(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%PY_locations.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInputFileData%PY_locations = SrcInputFileData%PY_locations
+ENDIF
  END SUBROUTINE SlD_CopyInputFile
 
  SUBROUTINE SlD_DestroyInputFile( InputFileData, ErrStat, ErrMsg )
@@ -436,6 +464,9 @@ ENDIF
   ErrMsg  = ""
 IF (ALLOCATED(InputFileData%OutList)) THEN
   DEALLOCATE(InputFileData%OutList)
+ENDIF
+IF (ALLOCATED(InputFileData%PY_locations)) THEN
+  DEALLOCATE(InputFileData%PY_locations)
 ENDIF
  END SUBROUTINE SlD_DestroyInputFile
 
@@ -483,6 +514,17 @@ ENDIF
   IF ( ALLOCATED(InData%OutList) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! OutList upper/lower bounds for each dimension
       Int_BufSz  = Int_BufSz  + SIZE(InData%OutList)*LEN(InData%OutList)  ! OutList
+  END IF
+      Db_BufSz   = Db_BufSz   + 1  ! DT
+      Int_BufSz  = Int_BufSz  + 1  ! CalcOption
+      Re_BufSz   = Re_BufSz   + SIZE(InData%Stiffness)  ! Stiffness
+      Re_BufSz   = Re_BufSz   + SIZE(InData%Damping)  ! Damping
+      Int_BufSz  = Int_BufSz  + 1*LEN(InData%PY_inputFile)  ! PY_inputFile
+      Int_BufSz  = Int_BufSz  + 1  ! PY_numpoints
+  Int_BufSz   = Int_BufSz   + 1     ! PY_locations allocated yes/no
+  IF ( ALLOCATED(InData%PY_locations) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! PY_locations upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%PY_locations)  ! PY_locations
   END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -546,6 +588,36 @@ ENDIF
         END DO ! I
     END DO !i1
   END IF
+      DbKiBuf ( Db_Xferred:Db_Xferred+(1)-1 ) = InData%DT
+      Db_Xferred   = Db_Xferred   + 1
+      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%CalcOption
+      Int_Xferred   = Int_Xferred   + 1
+      ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%Stiffness))-1 ) = PACK(InData%Stiffness,.TRUE.)
+      Re_Xferred   = Re_Xferred   + SIZE(InData%Stiffness)
+      ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%Damping))-1 ) = PACK(InData%Damping,.TRUE.)
+      Re_Xferred   = Re_Xferred   + SIZE(InData%Damping)
+        DO I = 1, LEN(InData%PY_inputFile)
+          IntKiBuf(Int_Xferred) = ICHAR(InData%PY_inputFile(I:I), IntKi)
+          Int_Xferred = Int_Xferred   + 1
+        END DO ! I
+      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%PY_numpoints
+      Int_Xferred   = Int_Xferred   + 1
+  IF ( .NOT. ALLOCATED(InData%PY_locations) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%PY_locations,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%PY_locations,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%PY_locations,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%PY_locations,2)
+    Int_Xferred = Int_Xferred + 2
+
+      IF (SIZE(InData%PY_locations)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%PY_locations))-1 ) = PACK(InData%PY_locations,.TRUE.)
+      Re_Xferred   = Re_Xferred   + SIZE(InData%PY_locations)
+  END IF
  END SUBROUTINE SlD_PackInputFile
 
  SUBROUTINE SlD_UnPackInputFile( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -568,6 +640,7 @@ ENDIF
   LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
   LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+  INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'SlD_UnPackInputFile'
@@ -625,6 +698,68 @@ ENDIF
         END DO ! I
     END DO !i1
     DEALLOCATE(mask1)
+  END IF
+      OutData%DT = REAL( DbKiBuf( Db_Xferred ), R8Ki) 
+      Db_Xferred   = Db_Xferred + 1
+      OutData%CalcOption = IntKiBuf( Int_Xferred ) 
+      Int_Xferred   = Int_Xferred + 1
+    i1_l = LBOUND(OutData%Stiffness,1)
+    i1_u = UBOUND(OutData%Stiffness,1)
+    i2_l = LBOUND(OutData%Stiffness,2)
+    i2_u = UBOUND(OutData%Stiffness,2)
+    ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask2.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask2 = .TRUE. 
+      OutData%Stiffness = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%Stiffness))-1 ), mask2, 0.0_ReKi )
+      Re_Xferred   = Re_Xferred   + SIZE(OutData%Stiffness)
+    DEALLOCATE(mask2)
+    i1_l = LBOUND(OutData%Damping,1)
+    i1_u = UBOUND(OutData%Damping,1)
+    i2_l = LBOUND(OutData%Damping,2)
+    i2_u = UBOUND(OutData%Damping,2)
+    ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask2.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask2 = .TRUE. 
+      OutData%Damping = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%Damping))-1 ), mask2, 0.0_ReKi )
+      Re_Xferred   = Re_Xferred   + SIZE(OutData%Damping)
+    DEALLOCATE(mask2)
+      DO I = 1, LEN(OutData%PY_inputFile)
+        OutData%PY_inputFile(I:I) = CHAR(IntKiBuf(Int_Xferred))
+        Int_Xferred = Int_Xferred   + 1
+      END DO ! I
+      OutData%PY_numpoints = IntKiBuf( Int_Xferred ) 
+      Int_Xferred   = Int_Xferred + 1
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! PY_locations not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%PY_locations)) DEALLOCATE(OutData%PY_locations)
+    ALLOCATE(OutData%PY_locations(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%PY_locations.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask2.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask2 = .TRUE. 
+      IF (SIZE(OutData%PY_locations)>0) OutData%PY_locations = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%PY_locations))-1 ), mask2, 0.0_ReKi )
+      Re_Xferred   = Re_Xferred   + SIZE(OutData%PY_locations)
+    DEALLOCATE(mask2)
   END IF
  END SUBROUTINE SlD_UnPackInputFile
 
@@ -1556,6 +1691,7 @@ ENDIF
    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
 ! Local 
    INTEGER(IntKi)                 :: i,j,k
+   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'SlD_CopyMisc'

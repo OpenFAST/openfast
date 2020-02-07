@@ -19,8 +19,8 @@
 !**********************************************************************************************************************************
 MODULE SoilDyn_IO
 
-   USE                              SoilDyn_Types
-   USE                              NWTC_Library
+   USE   SoilDyn_Types
+   USE   NWTC_Library
 
    IMPLICIT NONE
 
@@ -35,9 +35,7 @@ MODULE SoilDyn_IO
 
 
      ! Parameters related to output length (number of characters allowed in the output data headers):
-
    INTEGER(IntKi), PARAMETER      :: OutStrLenM1 = ChanLen - 1
-
 
      ! Indices for computing output channels:
      ! NOTES: 
@@ -50,8 +48,6 @@ MODULE SoilDyn_IO
 
      ! The maximum number of output channels which can be output by the code.
    INTEGER(IntKi), PARAMETER      :: MaxOutPts = 1
-
-
    
 !   INTEGER(IntKi), PARAMETER      :: WindMeas(5) = (/ WindMeas1, WindMeas2, WindMeas3, WindMeas4, WindMeas5 /)                                               ! Array of output constants
 !   INTEGER(IntKi), PARAMETER      :: WindVelX(9) = (/ Wind1VelX, Wind2VelX, Wind3VelX, Wind4VelX, Wind5VelX, Wind6VelX, Wind7VelX, Wind8VelX, Wind9VelX /)   ! Array of output constants
@@ -67,34 +63,26 @@ CONTAINS
 !====================================================================================================
 !>  This public subroutine reads the input required for SoilDyn from the file whose name is an
 !!     input parameter.
-SUBROUTINE SoilDyn_ReadInput( InputFileName, EchoFileName, InputFileData, ErrStat, ErrMsg )
-!----------------------------------------------------------------------------------------------------
+subroutine SoilDyn_ReadInput( InputFileName, EchoFileName, InputFileData, ErrStat, ErrMsg )
 
-      IMPLICIT                                           NONE
-
-      CHARACTER(*),              PARAMETER            :: RoutineName="SoilDyn_ReadInput"
-
-
-      ! Passed variables
    CHARACTER(*),                       INTENT(IN   )  :: InputFileName        !< name of the input file
    CHARACTER(*),                       INTENT(IN   )  :: EchoFileName         !< name of the echo file 
    TYPE(SlD_InputFile),                INTENT(INOUT)  :: InputFileData        !< The data for initialization
    INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat              !< Returned error status  from this subroutine
    CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg               !< Returned error message from this subroutine
 
-
-      ! Local variables
    INTEGER(IntKi)                                     :: UnitInput            !< Unit number for the input file
    INTEGER(IntKi)                                     :: UnitEcho             !< The local unit number for this module's echo file
    CHARACTER(1024)                                    :: TmpPath              !< Temporary storage for relative path name
    CHARACTER(1024)                                    :: TmpFmt               !< Temporary storage for format statement
    CHARACTER(35)                                      :: Frmt                 !< Output format for logical parameters. (matches NWTC Subroutine Library format)
-
-
-      ! Temoporary messages
-   INTEGER(IntKi)                                     :: TmpErrStat
-   CHARACTER(ErrMsgLen)                               :: TmpErrMsg
-   CHARACTER(1024)                                    :: PriPath                                   ! Path name of the primary file
+   character(200)                                     :: Line                 !< Temporary storage of a line from the input file (to compare with "default")
+ 
+   INTEGER(IntKi)                                     :: TmpErrStat           !< Temporary error status
+   INTEGER(IntKi)                                     :: IOS                  !< Temporary error status
+   CHARACTER(ErrMsgLen)                               :: TmpErrMsg            !< Temporary error message
+   CHARACTER(1024)                                    :: PriPath              !< Path name of the primary file
+   CHARACTER(*),                       PARAMETER      :: RoutineName="SoilDyn_ReadInput"
 
 
       ! Initialize local data
@@ -108,107 +96,101 @@ SUBROUTINE SoilDyn_ReadInput( InputFileName, EchoFileName, InputFileData, ErrSta
 
 
       ! allocate the array for the OutList
-   CALL AllocAry( InputFileData%OutList, MaxOutPts, "SoilDyn Input File's OutList", TmpErrStat, TmpErrMsg )
-   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-   IF (ErrStat >= AbortErrLev) THEN
-      CALL Cleanup()
-      RETURN
-   END IF
- 
+   CALL AllocAry( InputFileData%OutList, MaxOutPts, "SoilDyn Input File's OutList", TmpErrStat, TmpErrMsg ); if (Failed()) return;
 
    !-------------------------------------------------------------------------------------------------
    ! Open the file
    !-------------------------------------------------------------------------------------------------
 
-   CALL GetNewUnit( UnitInput, TmpErrStat, TmpErrMsg )
-   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-
-   CALL OpenFInpFile( UnitInput, TRIM(InputFileName), TmpErrStat, TmpErrMsg )
-   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-   IF (ErrStat >= AbortErrLev) THEN
-      CALL Cleanup()
-      RETURN
-   END IF
-
+   CALL GetNewUnit( UnitInput, TmpErrStat, TmpErrMsg ); if (Failed()) return;
+   CALL OpenFInpFile( UnitInput, TRIM(InputFileName), TmpErrStat, TmpErrMsg ); if (Failed()) return;
 
 
    !-------------------------------------------------------------------------------------------------
    ! File header
    !-------------------------------------------------------------------------------------------------
 
-   CALL ReadCom( UnitInput, InputFileName, 'SoilDyn input file header line 1', TmpErrStat, TmpErrMsg )
-   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-   IF (ErrStat >= AbortErrLev) THEN
-      CALL Cleanup()
-      RETURN
-   END IF
-
-   CALL ReadCom( UnitInput, InputFileName, 'SoilDyn input file header line 2', TmpErrStat, TmpErrMsg )
-   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-   IF (ErrStat >= AbortErrLev) THEN
-      CALL Cleanup()
-      RETURN
-   END IF
-
-   CALL ReadCom( UnitInput, InputFileName, 'SoilDyn input file separator line', TmpErrStat, TmpErrMsg )
-   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-   IF (ErrStat >= AbortErrLev) THEN
-      CALL Cleanup()
-      RETURN
-   END IF
-
+   call ReadCom( UnitInput, InputFileName, 'SoilDyn input file header line 1',   TmpErrStat, TmpErrMsg );   if (Failed()) return;
+   call ReadCom( UnitInput, InputFileName, 'SoilDyn input file header line 2',   TmpErrStat, TmpErrMsg );   if (Failed()) return;
+   call ReadCom( UnitInput, InputFileName, 'SoilDyn input file separator line',  TmpErrStat, TmpErrMsg );   if (Failed()) return;
 
      ! Echo Input Files.
-
-   CALL ReadVar ( UnitInput, InputFileName, InputFileData%EchoFlag, 'Echo', 'Echo Input', TmpErrStat, TmpErrMsg )
-   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-   IF (ErrStat >= AbortErrLev) THEN
-      CALL Cleanup()
-      RETURN
-   END IF
+   call ReadVar ( UnitInput, InputFileName, InputFileData%EchoFlag, 'Echo', 'Echo Input', TmpErrStat, TmpErrMsg ); if (Failed()) return;
 
       ! If we are Echoing the input then we should re-read the first three lines so that we can echo them
       ! using the NWTC_Library routines.  The echoing is done inside those routines via a global variable
       ! which we must store, set, and then replace on error or completion.
-
    IF ( InputFileData%EchoFlag ) THEN
+      call OpenEcho ( UnitEcho, TRIM(EchoFileName), TmpErrStat, TmpErrMsg ); if (Failed()) return;
+      rewind(UnitInput)
 
-      CALL OpenEcho ( UnitEcho, TRIM(EchoFileName), TmpErrStat, TmpErrMsg )
-      CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-
-      REWIND(UnitInput)
-
-
-         ! The input file was already successfully read through up to this point, so we shouldn't have any read
-         ! errors in the first four lines.  So, we won't worry about checking the error status here.
-
-      CALL ReadCom( UnitInput, InputFileName, 'SoilDyn input file header line 1', TmpErrStat, TmpErrMsg, UnitEcho )
-      CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-
-      CALL ReadCom( UnitInput, InputFileName, 'SoilDyn input file header line 2', TmpErrStat, TmpErrMsg, UnitEcho )
-      CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-
-      CALL ReadCom( UnitInput, InputFileName, 'SoilDyn input file separator line', TmpErrStat, TmpErrMsg, UnitEcho )
-      CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
+      call ReadCom( UnitInput, InputFileName, 'SoilDyn input file header line 1',   TmpErrStat, TmpErrMsg, UnitEcho );  if (Failed()) return;
+      call ReadCom( UnitInput, InputFileName, 'SoilDyn input file header line 2',   TmpErrStat, TmpErrMsg, UnitEcho );  if (Failed()) return;
+      call ReadCom( UnitInput, InputFileName, 'SoilDyn input file separator line',  TmpErrStat, TmpErrMsg, UnitEcho );  if (Failed()) return;
 
          ! Echo Input Files.
+      call ReadVar ( UnitInput, InputFileName, InputFileData%EchoFlag, 'Echo', 'Echo the input file data', TmpErrStat, TmpErrMsg, UnitEcho ); if (Failed()) return;
+   end if
 
-      CALL ReadVar ( UnitInput, InputFileName, InputFileData%EchoFlag, 'Echo', 'Echo the input file data', TmpErrStat, TmpErrMsg, UnitEcho )
-      CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
+      ! DT - Time interval for aerodynamic calculations {or default} (s):
+   Line = ""
+   CALL ReadVar( UnitInput, InputFileName, Line, "DT", "Time interval for soil calculations {or default} (s)", TmpErrStat, TmpErrMsg, UnitEcho); if (Failed()) return;
+      CALL Conv2UC( Line )
+      IF ( INDEX(Line, "DEFAULT" ) /= 1 ) THEN ! If it's not "default", read this variable; otherwise use the value already stored in InputFileData%DTAero
+         READ( Line, *, IOSTAT=IOS) InputFileData%DT
+            CALL CheckIOS ( IOS, InputFileName, 'DT', NumType, TmpErrStat, TmpErrMsg ); if (Failed()) return;
+      END IF   
 
-   END IF
+      ! CalcOption -- option on which calculation methodology to use {1: Stiffness / Damping matrices [unavailable], 2: P-Y curves [unavailable], 3: coupled REDWIN DLL}
+   call ReadVar( UnitInput, InputFileName, InputFileData%CalcOption, "CalcOption", "Calculation methodology to use", TmpErrStat, TmpErrMsg, UnitEcho); if (Failed()) return;
+ 
+
+   !-------------------------------------------------------------------------------------------------
+   !> Read Stiffness / Damping section [ CalcOption == 1 only ]
+   !-------------------------------------------------------------------------------------------------
+
+   call ReadCom( UnitInput, InputFileName, 'SoilDyn input file separator line',  TmpErrStat, TmpErrMsg, UnitEcho );   if (Failed()) return;
+
+      ! Stiffness
+   call ReadVar( UnitInput, InputFileName, InputFileData%Stiffness(1,1), 'K11 =  K22', 'Elastic horizontal stiffness at seabed (N/m)',                   TmpErrStat, TmpErrMsg, UnitEcho); if (Failed()) return;
+            InputFileData%Stiffness(2,2) = InputFileData%Stiffness(1,1)
+
+   call ReadVar( UnitInput, InputFileName, InputFileData%Stiffness(1,5), 'K15 = -K24', 'Elastic horizontal-rotational cross stiffness at seabed (N/m)',  TmpErrStat, TmpErrMsg, UnitEcho); if (Failed()) return;
+            InputFileData%Stiffness(2,4) =-InputFileData%Stiffness(1,5)
+
+   call ReadVar( UnitInput, InputFileName, InputFileData%Stiffness(5,1), 'K51 = -K42', 'Elastic rotational-horizontal cross stiffness at seabed (N/m)',  TmpErrStat, TmpErrMsg, UnitEcho); if (Failed()) return;
+            InputFileData%Stiffness(4,2) =-InputFileData%Stiffness(5,1)
+
+   call ReadVar( UnitInput, InputFileName, InputFileData%Stiffness(5,5), 'K55 =  K44', 'Elastic rotational stiffness at seabed (N-m/m)',                 TmpErrStat, TmpErrMsg, UnitEcho); if (Failed()) return;
+            InputFileData%Stiffness(4,4) = InputFileData%Stiffness(5,5)
+
+   call ReadVar( UnitInput, InputFileName, InputFileData%Stiffness(3,3), 'K33'       , 'Elastic vertical   stiffness at seabed (N-m/m)',                 TmpErrStat, TmpErrMsg, UnitEcho); if (Failed()) return;
+   call ReadVar( UnitInput, InputFileName, InputFileData%Stiffness(6,6), 'K66'       , 'Elastic torsional  stiffness at seabed (N-m/m)',                 TmpErrStat, TmpErrMsg, UnitEcho); if (Failed()) return;
+
+      ! Damping
+   call ReadVar( UnitInput, InputFileName, InputFileData%Damping(1,1), 'D11 =  D22', 'Elastic horizontal damping ratio at seabed (-)',                   TmpErrStat, TmpErrMsg, UnitEcho); if (Failed()) return;
+            InputFileData%Damping(2,2) =   InputFileData%Damping(1,1)
+
+   call ReadVar( UnitInput, InputFileName, InputFileData%Damping(1,5), 'D15 = -D24', 'Elastic horizontal-rotational cross damping ratio at seabed (-)',  TmpErrStat, TmpErrMsg, UnitEcho); if (Failed()) return;
+            InputFileData%Damping(2,4) =  -InputFileData%Damping(1,5)
+
+   call ReadVar( UnitInput, InputFileName, InputFileData%Damping(5,1), 'D51 = -D42', 'Elastic rotational-horizontal cross damping ratio at seabed (-)',  TmpErrStat, TmpErrMsg, UnitEcho); if (Failed()) return;
+            InputFileData%Damping(4,2) =  -InputFileData%Damping(5,1)
+
+   call ReadVar( UnitInput, InputFileName, InputFileData%Damping(5,5), 'D55 =  D44', 'Elastic rotational damping ratio at seabed (-)',                   TmpErrStat, TmpErrMsg, UnitEcho); if (Failed()) return;
+            InputFileData%Damping(4,4) =   InputFileData%Damping(5,5)
+
+   call ReadVar( UnitInput, InputFileName, InputFileData%Damping(3,3), 'D33'       , 'Elastic vertical   damping ratio at seabed (-)',                   TmpErrStat, TmpErrMsg, UnitEcho); if (Failed()) return;
+   call ReadVar( UnitInput, InputFileName, InputFileData%Damping(6,6), 'D66'       , 'Elastic torsional  damping ratio at seabed (-)',                   TmpErrStat, TmpErrMsg, UnitEcho); if (Failed()) return;
 
 
+   !-------------------------------------------------------------------------------------------------
+   !> Read P-Y curve section  [ CalcOption == 2 only ]
+   !-------------------------------------------------------------------------------------------------
 
-!!!   !-------------------------------------------------------------------------------------------------
-!!!   !> Read general section with wind type, direction, and output point list (applies to all wind types)
-!!!   !-------------------------------------------------------------------------------------------------
-!!!
-!!!
+   call ReadCom( UnitInput, InputFileName, 'SoilDyn input file separator line',  TmpErrStat, TmpErrMsg, UnitEcho );   if (Failed()) return;
+ 
+
 !!!      ! Read WindType
 !!!   CALL ReadVar( UnitInput, InputFileName, InputFileData%WindType, 'WindType', &
 !!!               'switch for wind file type (1=steady; 2=uniform; 3=binary TurbSim FF; '//&
@@ -771,19 +753,23 @@ SUBROUTINE SoilDyn_ReadInput( InputFileName, EchoFileName, InputFileData, ErrSta
    ! This is the end of the input file
    !-------------------------------------------------------------------------------------------------
 
-   CALL Cleanup()
-   RETURN
+   call Cleanup()
+   return
 
       CONTAINS
-         !..............................
-         SUBROUTINE Cleanup()
+         logical function Failed()
+            call SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
+            Failed =  ErrStat >= AbortErrLev
+            if (Failed) call CleanUp()
+         end function Failed
+         subroutine Cleanup()
                ! Close input file
-            CLOSE ( UnitInput )
+            close ( UnitInput )
                ! Cleanup the Echo file and global variables
-            IF ( InputFileData%EchoFlag ) THEN
-               CLOSE(UnitEcho)
-            END IF
-         END SUBROUTINE Cleanup
+            if ( InputFileData%EchoFlag ) then
+               close(UnitEcho)
+            end if
+         end subroutine Cleanup
 
 END SUBROUTINE SoilDyn_ReadInput
 
@@ -867,24 +853,20 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
 
    IMPLICIT                        NONE
 
-      ! Passed variables
+   CHARACTER(ChanLen),              INTENT(IN)     :: OutList(:)                 !< The list out user-requested outputs
+   TYPE(Sld_ParameterType),         INTENT(INOUT)  :: p                          !< The module parameters
+   INTEGER(IntKi),                  INTENT(OUT)    :: ErrStat                    !< The error status code
+   CHARACTER(*),                    INTENT(OUT)    :: ErrMsg                     !< The error message, if an error occurred
 
-   CHARACTER(ChanLen),              INTENT(IN)     :: OutList(:)         !< The list out user-requested outputs
-   TYPE(Sld_ParameterType),         INTENT(INOUT)  :: p                  !< The module parameters
-   INTEGER(IntKi),                  INTENT(OUT)    :: ErrStat            !< The error status code
-   CHARACTER(*),                    INTENT(OUT)    :: ErrMsg             !< The error message, if an error occurred
-
-      ! Local variables
-
-   INTEGER                      :: ErrStat2                                        ! temporary (local) error status
-   INTEGER                      :: I                                               ! Generic loop-counting index
-   INTEGER                      :: J                                               ! Generic loop-counting index
-   INTEGER                      :: INDX                                            ! Index for valid arrays
-
-   LOGICAL                      :: CheckOutListAgain                               ! Flag used to determine if output parameter starting with "M" is valid (or the negative of another parameter)
-   LOGICAL                      :: InvalidOutput(0:MaxOutPts)                      ! This array determines if the output channel is valid for this configuration
-   CHARACTER(ChanLen)           :: OutListTmp                                      ! A string to temporarily hold OutList(I)
-   CHARACTER(*), PARAMETER      :: RoutineName = "SetOutParam"
+   INTEGER                                         :: ErrStat2                   ! temporary (local) error status
+   INTEGER                                         :: I                          ! Generic loop-counting index
+   INTEGER                                         :: J                          ! Generic loop-counting index
+   INTEGER                                         :: INDX                       ! Index for valid arrays
+                                                   
+   LOGICAL                                         :: CheckOutListAgain          ! Flag used to determine if output parameter starting with "M" is valid (or the negative of another parameter)
+   LOGICAL                                         :: InvalidOutput(0:MaxOutPts) ! This array determines if the output channel is valid for this configuration
+   CHARACTER(ChanLen)                              :: OutListTmp                 ! A string to temporarily hold OutList(I)
+   CHARACTER(*),                    PARAMETER      :: RoutineName = "SetOutParam"
 
 !!!   CHARACTER(OutStrLenM1), PARAMETER  :: ValidParamAry(32) =  (/ &                  ! This lists the names of the allowed parameters, which must be sorted alphabetically
 !!!                               "WIND1VELX","WIND1VELY","WIND1VELZ","WIND2VELX","WIND2VELY","WIND2VELZ","WIND3VELX", &

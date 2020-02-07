@@ -63,26 +63,27 @@ contains
 !! The initial states and initial guess for the input are defined.
 subroutine SoilDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut, ErrStat, ErrMsg )
 
-   type(SlD_InitInputType),           intent(in   )  :: InitInp     !< Input data for initialization routine
-   type(SlD_InputType),               intent(  out)  :: u           !< An initial guess for the input; input mesh must be defined
-   type(SlD_ParameterType),           intent(  out)  :: p           !< Parameters
-   type(SlD_ContinuousStateType),     intent(  out)  :: x           !< Initial continuous states
-   type(SlD_DiscreteStateType),       intent(  out)  :: xd          !< Initial discrete states
-   type(SlD_ConstraintStateType),     intent(  out)  :: z           !< Initial guess of the constraint states
-   type(SlD_OtherStateType),          intent(  out)  :: OtherState  !< Initial other states (logical, etc)
-   type(SlD_OutputType),              intent(  out)  :: y           !< Initial system outputs
-   type(SlD_MiscVarType),             intent(  out)  :: m           !< Misc variables for optimization (not copied in glue code)
-   real(DbKi),                        intent(inout)  :: Interval    !< Coupling interval in seconds
-   type(SlD_InitOutputType),          intent(  out)  :: InitOut     !< Output for initialization routine
-   integer(IntKi),                    intent(  out)  :: ErrStat     !< Error status of the operation
-   character(*),                      intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+   type(SlD_InitInputType),            intent(in   )  :: InitInp     !< Input data for initialization routine
+   type(SlD_InputType),                intent(  out)  :: u           !< An initial guess for the input; input mesh must be defined
+   type(SlD_ParameterType),            intent(  out)  :: p           !< Parameters
+   type(SlD_ContinuousStateType),      intent(  out)  :: x           !< Initial continuous states
+   type(SlD_DiscreteStateType),        intent(  out)  :: xd          !< Initial discrete states
+   type(SlD_ConstraintStateType),      intent(  out)  :: z           !< Initial guess of the constraint states
+   type(SlD_OtherStateType),           intent(  out)  :: OtherState  !< Initial other states (logical, etc)
+   type(SlD_OutputType),               intent(  out)  :: y           !< Initial system outputs
+   type(SlD_MiscVarType),              intent(  out)  :: m           !< Misc variables for optimization (not copied in glue code)
+   real(DbKi),                         intent(inout)  :: Interval    !< Coupling interval in seconds
+   type(SlD_InitOutputType),           intent(  out)  :: InitOut     !< Output for initialization routine
+   integer(IntKi),                     intent(  out)  :: ErrStat     !< Error status of the operation
+   character(*),                       intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
       ! local variables
-   integer(IntKi)                                    :: NumOuts     ! number of outputs; would probably be in the parameter type
-   integer(IntKi)                                    :: ErrStat2    ! local error status
-   character(ErrMsgLen)                              :: ErrMsg2     ! local error message
-   character(*), parameter                           :: RoutineName = 'SoilDyn_Init'
-   type(SlD_InputFile)                               :: InputFileData   !< Data stored in the module's input file
+   integer(IntKi)                                     :: NumOuts     ! number of outputs; would probably be in the parameter type
+   integer(IntKi)                                     :: ErrStat2    ! local error status
+   character(ErrMsgLen)                               :: ErrMsg2     ! local error message
+   character(*), parameter                            :: RoutineName = 'SoilDyn_Init'
+   type(SlD_InputFile)                                :: InputFileData   !< Data stored in the module's input file
+   character(1024)                                    :: EchoFileName
 
       ! Initialize variables
    ErrStat = ErrID_None
@@ -95,7 +96,9 @@ subroutine SoilDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
       ! Display the module information
    call DispNVD( SoilDyn_Ver )
 
-
+!FIXME: #EchoFileName
+EchoFileName='TempFile.ech'
+   call SoilDyn_ReadInput( InitInp%InputFile, EchoFileName, InputFileData, ErrStat2, ErrMsg2 );  if (Failed()) return;
       ! Define parameters here:
    p%DT  = Interval
 
@@ -110,17 +113,14 @@ subroutine SoilDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
 
 !FIXME: Develop a list of outputs, and set that up somewhere.
       ! Define system output initializations (set up mesh) here:
-   call AllocAry( y%WriteOutput, NumOuts, 'WriteOutput', ErrStat2, ErrMsg2 )
-      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! set return error status based on local (concatenate errors)
-      if (ErrStat >= AbortErrLev) return        ! if there are local variables that need to be deallocated, do so before early return
+   call AllocAry( y%WriteOutput, NumOuts, 'WriteOutput', ErrStat2, ErrMsg2 ); if (Failed()) return;
 
    y%DummyOutput = 0
    y%WriteOutput = 0
 
       ! Define initialization-routine output here:
-   call AllocAry(InitOut%WriteOutputHdr,NumOuts,'WriteOutputHdr',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-   call AllocAry(InitOut%WriteOutputUnt,NumOuts,'WriteOutputUnt',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      if (ErrStat >= AbortErrLev) return        ! if there are local variables that need to be deallocated, do so before early return
+   call AllocAry(InitOut%WriteOutputHdr,NumOuts,'WriteOutputHdr',ErrStat2,ErrMsg2); if (Failed()) return;
+   call AllocAry(InitOut%WriteOutputUnt,NumOuts,'WriteOutputUnt',ErrStat2,ErrMsg2); if (Failed()) return;
 
    InitOut%WriteOutputHdr = (/ 'Time   ', 'Column2' /)
    InitOut%WriteOutputUnt = (/ '(s)',     '(-)'     /)
@@ -132,6 +132,7 @@ subroutine SoilDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
       ! linearize with the features that are enabled, stop the simulation if InitInp%Linearize is true.
 
       CALL SetErrStat( ErrID_Fatal, 'SoilDyn cannot perform linearization analysis.', ErrStat, ErrMsg, RoutineName)
+      return
 
       ! Otherwise, if the module does allow linearization, return the appropriate Jacobian row/column names and rotating-frame flags here:
       ! Allocate and set these variables: InitOut%LinNames_y, InitOut%LinNames_x, InitOut%LinNames_xd, InitOut%LinNames_z, InitOut%LinNames_u

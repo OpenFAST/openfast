@@ -61,7 +61,7 @@ PROGRAM SoilDyn_Driver
 
          ! Populate the InitInData data structure here:
 
-   InitInData%InputFile = 'MyInputFileName.inp'
+   InitInData%InputFile = 'RedWin1_Win32.ipt'
 
          ! Set the driver's request for time interval here:
 
