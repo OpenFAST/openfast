@@ -92,7 +92,7 @@ IMPLICIT NONE
 ! =======================
 ! =========  SlD_MiscVarType  =======
   TYPE, PUBLIC :: SlD_MiscVarType
-    TYPE(REDWINdllType)  :: dll_data      !< data used for REDWIN DLL [-]
+    TYPE(REDWINdllType) , DIMENSION(:), ALLOCATABLE  :: dll_data      !< data used for REDWIN DLL [-]
   END TYPE SlD_MiscVarType
 ! =======================
 ! =========  SlD_ParameterType  =======
@@ -1562,9 +1562,22 @@ ENDIF
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
-      CALL SlD_Copyredwindlltype( SrcMiscData%dll_data, DstMiscData%dll_data, CtrlCode, ErrStat2, ErrMsg2 )
+IF (ALLOCATED(SrcMiscData%dll_data)) THEN
+  i1_l = LBOUND(SrcMiscData%dll_data,1)
+  i1_u = UBOUND(SrcMiscData%dll_data,1)
+  IF (.NOT. ALLOCATED(DstMiscData%dll_data)) THEN 
+    ALLOCATE(DstMiscData%dll_data(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%dll_data.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DO i1 = LBOUND(SrcMiscData%dll_data,1), UBOUND(SrcMiscData%dll_data,1)
+      CALL SlD_Copyredwindlltype( SrcMiscData%dll_data(i1), DstMiscData%dll_data(i1), CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
+    ENDDO
+ENDIF
  END SUBROUTINE SlD_CopyMisc
 
  SUBROUTINE SlD_DestroyMisc( MiscData, ErrStat, ErrMsg )
@@ -1576,7 +1589,12 @@ ENDIF
 ! 
   ErrStat = ErrID_None
   ErrMsg  = ""
-  CALL SlD_Destroyredwindlltype( MiscData%dll_data, ErrStat, ErrMsg )
+IF (ALLOCATED(MiscData%dll_data)) THEN
+DO i1 = LBOUND(MiscData%dll_data,1), UBOUND(MiscData%dll_data,1)
+  CALL SlD_Destroyredwindlltype( MiscData%dll_data(i1), ErrStat, ErrMsg )
+ENDDO
+  DEALLOCATE(MiscData%dll_data)
+ENDIF
  END SUBROUTINE SlD_DestroyMisc
 
  SUBROUTINE SlD_PackMisc( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -1614,9 +1632,13 @@ ENDIF
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
+  Int_BufSz   = Int_BufSz   + 1     ! dll_data allocated yes/no
+  IF ( ALLOCATED(InData%dll_data) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! dll_data upper/lower bounds for each dimension
    ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
+    DO i1 = LBOUND(InData%dll_data,1), UBOUND(InData%dll_data,1)
       Int_BufSz   = Int_BufSz + 3  ! dll_data: size of buffers for each call to pack subtype
-      CALL SlD_Packredwindlltype( Re_Buf, Db_Buf, Int_Buf, InData%dll_data, ErrStat2, ErrMsg2, .TRUE. ) ! dll_data 
+      CALL SlD_Packredwindlltype( Re_Buf, Db_Buf, Int_Buf, InData%dll_data(i1), ErrStat2, ErrMsg2, .TRUE. ) ! dll_data 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -1632,6 +1654,8 @@ ENDIF
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
+    END DO
+  END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -1659,7 +1683,18 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-      CALL SlD_Packredwindlltype( Re_Buf, Db_Buf, Int_Buf, InData%dll_data, ErrStat2, ErrMsg2, OnlySize ) ! dll_data 
+  IF ( .NOT. ALLOCATED(InData%dll_data) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%dll_data,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%dll_data,1)
+    Int_Xferred = Int_Xferred + 2
+
+    DO i1 = LBOUND(InData%dll_data,1), UBOUND(InData%dll_data,1)
+      CALL SlD_Packredwindlltype( Re_Buf, Db_Buf, Int_Buf, InData%dll_data(i1), ErrStat2, ErrMsg2, OnlySize ) ! dll_data 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -1687,6 +1722,8 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
+    END DO
+  END IF
  END SUBROUTINE SlD_PackMisc
 
  SUBROUTINE SlD_UnPackMisc( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -1708,6 +1745,7 @@ ENDIF
   LOGICAL, ALLOCATABLE           :: mask3(:,:,:)
   LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
   LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
+  INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'SlD_UnPackMisc'
@@ -1721,6 +1759,20 @@ ENDIF
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! dll_data not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%dll_data)) DEALLOCATE(OutData%dll_data)
+    ALLOCATE(OutData%dll_data(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%dll_data.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    DO i1 = LBOUND(OutData%dll_data,1), UBOUND(OutData%dll_data,1)
       Buf_size=IntKiBuf( Int_Xferred )
       Int_Xferred = Int_Xferred + 1
       IF(Buf_size > 0) THEN
@@ -1754,13 +1806,15 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL SlD_Unpackredwindlltype( Re_Buf, Db_Buf, Int_Buf, OutData%dll_data, ErrStat2, ErrMsg2 ) ! dll_data 
+      CALL SlD_Unpackredwindlltype( Re_Buf, Db_Buf, Int_Buf, OutData%dll_data(i1), ErrStat2, ErrMsg2 ) ! dll_data 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
       IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
+    END DO
+  END IF
  END SUBROUTINE SlD_UnPackMisc
 
  SUBROUTINE SlD_CopyParam( SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg )

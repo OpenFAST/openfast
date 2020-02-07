@@ -125,11 +125,11 @@ end subroutine CallREDWINdll
 
 !==================================================================================================================================
 !> This routine initializes variables used in the REDWIN DLL interface.
-subroutine REDWINinterface_Init(u,p,m,y,InputFileData, ErrStat, ErrMsg)
+subroutine REDWINinterface_Init(u,p,dll_data,y,InputFileData, ErrStat, ErrMsg)
    
    type(SlD_InputType),            intent(inout)  :: u               !< An initial guess for the input; input mesh must be defined
    type(SlD_ParameterType),        intent(inout)  :: p               !< Parameters
-   type(SlD_MiscVarType),          intent(inout)  :: m               !< Initial misc (optimization) variables
+   type(REDWINdllType),            intent(inout)  :: dll_data
    type(SlD_OutputType),           intent(inout)  :: y               !< Initial system outputs (outputs are not calculated;
                                                                      !!   only the output mesh is initialized)
    type(SlD_InputFile),            intent(inout)  :: InputFileData   !< Data stored in the module's input file
@@ -173,7 +173,7 @@ subroutine REDWINinterface_Init(u,p,m,y,InputFileData, ErrStat, ErrMsg)
    CALL SetErrStat( ErrID_Warn,'   -->  Skipping DynamicLib call for '//TRIM(p%DLL_Trgt%FileName),ErrStat,ErrMsg,RoutineName )
 #else
       ! Initialize DLL 
-   CALL CallREDWINdll(u, p%DLL_Trgt, m%dll_data, p, ErrStat2, ErrMsg2)
+   CALL CallREDWINdll(u, p%DLL_Trgt, dll_data, p, ErrStat2, ErrMsg2)
       CALL CheckError(ErrStat2,ErrMsg2)
       IF ( ErrStat >= AbortErrLev ) RETURN
 #endif
@@ -212,11 +212,10 @@ end subroutine REDWINinterface_Init
 !> This routine would call the DLL a final time, but there appears to be no end routine for the DLL,
 !! so we don't need to make a last call.  It also frees the dynamic library (doesn't do anything on
 !! static linked).
-subroutine REDWINinterface_End(u, p, m, ErrStat, ErrMsg)
+subroutine REDWINinterface_End(u, p, ErrStat, ErrMsg)
    
    TYPE(SlD_InputType),             INTENT(IN   )  :: u               !< System inputs
    TYPE(SlD_ParameterType),         INTENT(INOUT)  :: p               !< Parameters
-   TYPE(SlD_MiscVarType),           INTENT(INOUT)  :: m               !< misc (optimization) variables
    INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat         !< Error status of the operation
    CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg          !< Error message if ErrStat /= ErrID_None
 
@@ -244,12 +243,12 @@ end subroutine REDWINinterface_End
 !==================================================================================================================================
 !> This routine sets the AVRswap array, calls the routine from the REDWIN DLL, and sets the outputs from the call to be used as
 !! necessary in the main ServoDyn CalcOutput routine.
-subroutine REDWINinterface_CalcOutput(t, u, p, m, ErrStat, ErrMsg)
+subroutine REDWINinterface_CalcOutput(t, u, p, dll_data, ErrStat, ErrMsg)
 
    real(DbKi),                     intent(in   )  :: t           !< Current simulation time in seconds
    type(SlD_InputType),            intent(in   )  :: u           !< Inputs at t
    type(SlD_ParameterType),        intent(in   )  :: p           !< Parameters
-   type(SlD_MiscVarType),          intent(inout)  :: m           !< misc (optimization) variables
+   type(REDWINdllType),            intent(inout)  :: dll_data
    integer(IntKi),                 intent(  out)  :: ErrStat     !< Error status of the operation
    character(*),                   intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
       
@@ -272,7 +271,7 @@ subroutine REDWINinterface_CalcOutput(t, u, p, m, ErrStat, ErrMsg)
    CALL SetErrStat( ErrID_Warn,'   -->  Skipping DynamicLib call for '//TRIM(p%DLL_Trgt%FileName),ErrStat,ErrMsg,RoutineName )
 #else
       ! Call the REDWIN-style DLL:
-   CALL CallREDWINdll(u, p%DLL_Trgt,  m%dll_data, p, ErrStat, ErrMsg)
+   CALL CallREDWINdll(u, p%DLL_Trgt,  dll_data, p, ErrStat, ErrMsg)
       IF ( ErrStat >= AbortErrLev ) RETURN
 #endif
 

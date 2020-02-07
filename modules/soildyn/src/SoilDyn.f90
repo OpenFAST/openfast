@@ -147,9 +147,17 @@ m%dll_data%PROPSfile = 'Props.txt'
 m%dll_data%LDISPfile = 'LoadDisplacement.txt'
 m%dll_data%IDtask = 1
 
-   ! Initialize the DLL
-   call REDWINinterface_Init(u,p,m,y,InputFileData, ErrStat2, ErrMsg2)
+   ! Initialize the DLL for each interface point
+   allocate( m%dll_data(1), STAT=ErrStat2 )
+
+   call REDWINinterface_Init(u,p,m%dll_data(1),y,InputFileData, ErrStat2, ErrMsg2); if (Failed()) return;
+
+contains
+   logical function Failed()
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      Failed =    ErrStat >= AbortErrLev
+   end function Failed
+
 
 end subroutine SoilDyn_Init
 
@@ -180,7 +188,7 @@ subroutine SoilDyn_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 
       !! Place any last minute operations or calculations here:
    if (p%UseREDWINinterface) then
-      call REDWINinterface_End( u, p, m, ErrStat, ErrMsg )
+      call REDWINinterface_End( u, p, ErrStat, ErrMsg )
    endif
 
       !! Close files here (but because of checkpoint-restart capability, it is not recommended to have files open during the simulation):
