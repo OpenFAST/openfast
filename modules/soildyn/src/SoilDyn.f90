@@ -78,9 +78,10 @@ subroutine SoilDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    character(*),                       intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
       ! local variables
-   integer(IntKi)                                     :: NumOuts     ! number of outputs; would probably be in the parameter type
-   integer(IntKi)                                     :: ErrStat2    ! local error status
-   character(ErrMsgLen)                               :: ErrMsg2     ! local error message
+   integer(IntKi)                                     :: i           !< generic counter
+   integer(IntKi)                                     :: NumOuts     !< number of outputs; would probably be in the parameter type
+   integer(IntKi)                                     :: ErrStat2    !< local error status
+   character(ErrMsgLen)                               :: ErrMsg2     !< local error message
    character(*), parameter                            :: RoutineName = 'SoilDyn_Init'
    type(SlD_InputFile)                                :: InputFileData   !< Data stored in the module's input file
    character(1024)                                    :: EchoFileName
@@ -141,22 +142,31 @@ EchoFileName='TempFile.ech'
 
    end if
 
-!FIXME: quick hack for setup call
-!FIXME: add input file parsing
-InputFileData%DLL_ProcName = 'INTERFACEFOUNDATION'          ! The name of the procedure in the DLL that will be called.
-InputFileData%DLL_FileName = 'REDWINmodel1-2.0_x86.dll'     ! 32 bit version for model 1
 
-   ! Initialize the DLL for each interface point
-   allocate( m%dll_data(1), STAT=ErrStat2 )
+   ! Set DLL parameters
+
+      ! Initialize the DLL for each interface point
+   allocate( m%dll_data(InputFileData%DLL_NumPoints), STAT=ErrStat2 )
    if (ErrStat2 /= 0) then
       call SetErrStat(ErrID_Fatal, 'Could not allocate m%dll_data', ErrStat, ErrMsg, RoutineName)
       return
    endif
 
-m%dll_data(1)%PROPSfile = 'Props.txt'
-m%dll_data(1)%LDISPfile = 'LoadDisplacement.txt'
-m%dll_data(1)%IDtask = 1
+   do i=1,InputFileData%DLL_NumPoints
+      m%dll_data(i)%PROPSfile = trim(InputFileData%DLL_PropsFile(i))
+      if ( len(m%dll_data(i)%PROPSfile) < len_trim(InputFileData%DLL_PropsFile(i)) ) then
+         call SetErrStat(ErrID_Fatal, 'PropsFile #'//trim(Num2LStr(i))//' name is longer than '//trim(Num2LStr(len(m%dll_data(i)%PROPSfile)))// &
+                     ' characters (DLL limititation)', ErrStat, ErrMsg, RoutineName)
+      endif
+      m%dll_data(i)%LDISPfile = trim(InputFileData%DLL_LDispFile(i))
+      if ( len(m%dll_data(i)%LDISPfile) < len_trim(InputFileData%DLL_LDispFile(i)) ) then
+         call SetErrStat(ErrID_Fatal, 'LDispFile #'//trim(Num2LStr(i))//' name is longer than '//trim(Num2LStr(len(m%dll_data(i)%LDISPfile)))// &
+                     ' characters (DLL limititation)', ErrStat, ErrMsg, RoutineName)
+      endif
+   enddo
+   if (ErrStat >= AbortErrLev) return;
 
+      ! Initialize the dll
    call REDWINinterface_Init(u,p,m%dll_data(1),y,InputFileData, ErrStat2, ErrMsg2); if (Failed()) return;
 
 contains

@@ -24,6 +24,11 @@ MODULE REDWINinterface
 
    IMPLICIT NONE
 
+   INTEGER(IntKi),   PARAMETER   :: IDtask_unkown  = 0_IntKi      ! Unknown task (placeholder for error checking)
+   INTEGER(IntKi),   PARAMETER   :: IDtask_init    = 1_IntKi      ! Initialize DLL
+   INTEGER(IntKi),   PARAMETER   :: IDtask_calc    = 2_IntKi      ! Calculate resultant force
+   INTEGER(IntKi),   PARAMETER   :: IDtask_stiff   = 3_IntKi      ! Return stiffness 6x6
+
       !> Definition of the DLL Interface (from REDWIN):
    abstract interface
       subroutine REDWINdll_interface_v00(PROPSFILE, LDISPFILE, IDTask, nErrorCode, ErrorCode, Props, StVar, StVarPrint, Disp, Force, D)
@@ -172,7 +177,8 @@ subroutine REDWINinterface_Init(u,p,dll_data,y,InputFileData, ErrStat, ErrMsg)
 #ifdef NO_LibLoad
    CALL SetErrStat( ErrID_Warn,'   -->  Skipping DynamicLib call for '//TRIM(p%DLL_Trgt%FileName),ErrStat,ErrMsg,RoutineName )
 #else
-      ! Initialize DLL 
+      ! Initialize DLL
+   dll_data%IDtask = IDtask_init
    CALL CallREDWINdll(u, p%DLL_Trgt, dll_data, p, ErrStat2, ErrMsg2)
       CALL CheckError(ErrStat2,ErrMsg2)
       IF ( ErrStat >= AbortErrLev ) RETURN
