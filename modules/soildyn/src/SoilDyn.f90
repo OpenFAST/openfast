@@ -97,9 +97,13 @@ NumOuts = 2
       ! Display the module information
    call DispNVD( SoilDyn_Ver )
 
-!FIXME: #EchoFileName
-EchoFileName='TempFile.ech'
-   call SoilDyn_ReadInput( InitInp%InputFile, EchoFileName, InputFileData, ErrStat2, ErrMsg2 );  if (Failed()) return;
+      ! Set some names
+   call GetRoot( InitInp%InputFile, p%RootFileName )
+   p%EchoFileName  = TRIM(p%RootFileName)//".ech"
+   p%SumFileName   = TRIM(p%RootFileName)//"SlD.sum"
+
+
+   call SoilDyn_ReadInput( InitInp%InputFile, p%EchoFileName, InputFileData, ErrStat2, ErrMsg2 );  if (Failed()) return;
 
       ! Define parameters here:
    p%DT  = Interval

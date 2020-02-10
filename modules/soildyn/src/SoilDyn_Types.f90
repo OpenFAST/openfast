@@ -115,6 +115,9 @@ IMPLICIT NONE
     REAL(DbKi)  :: DLL_DT      !< Time step for DLL [seconds]
     CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
     LOGICAL  :: UseREDWINinterface      !< True if interface successfully initialized [-]
+    CHARACTER(1024)  :: RootFileName      !< Root file name [-]
+    CHARACTER(1024)  :: EchoFileName      !< Name of echo file [-]
+    CHARACTER(1024)  :: SumFileName      !< Name of summary file [-]
   END TYPE SlD_ParameterType
 ! =======================
 ! =========  SlD_InputType  =======
@@ -2228,6 +2231,9 @@ ENDIF
     DstParamData%DLL_DT = SrcParamData%DLL_DT
     DstParamData%RootName = SrcParamData%RootName
     DstParamData%UseREDWINinterface = SrcParamData%UseREDWINinterface
+    DstParamData%RootFileName = SrcParamData%RootFileName
+    DstParamData%EchoFileName = SrcParamData%EchoFileName
+    DstParamData%SumFileName = SrcParamData%SumFileName
  END SUBROUTINE SlD_CopyParam
 
  SUBROUTINE SlD_DestroyParam( ParamData, ErrStat, ErrMsg )
@@ -2300,6 +2306,9 @@ ENDIF
       Db_BufSz   = Db_BufSz   + 1  ! DLL_DT
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%RootName)  ! RootName
       Int_BufSz  = Int_BufSz  + 1  ! UseREDWINinterface
+      Int_BufSz  = Int_BufSz  + 1*LEN(InData%RootFileName)  ! RootFileName
+      Int_BufSz  = Int_BufSz  + 1*LEN(InData%EchoFileName)  ! EchoFileName
+      Int_BufSz  = Int_BufSz  + 1*LEN(InData%SumFileName)  ! SumFileName
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -2369,6 +2378,18 @@ ENDIF
         END DO ! I
       IntKiBuf ( Int_Xferred:Int_Xferred+1-1 ) = TRANSFER( InData%UseREDWINinterface , IntKiBuf(1), 1)
       Int_Xferred   = Int_Xferred   + 1
+        DO I = 1, LEN(InData%RootFileName)
+          IntKiBuf(Int_Xferred) = ICHAR(InData%RootFileName(I:I), IntKi)
+          Int_Xferred = Int_Xferred   + 1
+        END DO ! I
+        DO I = 1, LEN(InData%EchoFileName)
+          IntKiBuf(Int_Xferred) = ICHAR(InData%EchoFileName(I:I), IntKi)
+          Int_Xferred = Int_Xferred   + 1
+        END DO ! I
+        DO I = 1, LEN(InData%SumFileName)
+          IntKiBuf(Int_Xferred) = ICHAR(InData%SumFileName(I:I), IntKi)
+          Int_Xferred = Int_Xferred   + 1
+        END DO ! I
  END SUBROUTINE SlD_PackParam
 
  SUBROUTINE SlD_UnPackParam( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -2457,6 +2478,18 @@ ENDIF
       END DO ! I
       OutData%UseREDWINinterface = TRANSFER( IntKiBuf( Int_Xferred ), mask0 )
       Int_Xferred   = Int_Xferred + 1
+      DO I = 1, LEN(OutData%RootFileName)
+        OutData%RootFileName(I:I) = CHAR(IntKiBuf(Int_Xferred))
+        Int_Xferred = Int_Xferred   + 1
+      END DO ! I
+      DO I = 1, LEN(OutData%EchoFileName)
+        OutData%EchoFileName(I:I) = CHAR(IntKiBuf(Int_Xferred))
+        Int_Xferred = Int_Xferred   + 1
+      END DO ! I
+      DO I = 1, LEN(OutData%SumFileName)
+        OutData%SumFileName(I:I) = CHAR(IntKiBuf(Int_Xferred))
+        Int_Xferred = Int_Xferred   + 1
+      END DO ! I
  END SUBROUTINE SlD_UnPackParam
 
  SUBROUTINE SlD_CopyInput( SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg )
