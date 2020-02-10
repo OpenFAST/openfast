@@ -28,7 +28,12 @@ set(SlD_SOURCES
 add_library(soildynlib ${SlD_SOURCES})
 target_link_libraries(soildynlib nwtclibs)
 
-add_executable(soildyn_driver src/driver/SoilDyn_Driver.f90)
+set(SOILDYN_DRIVER_SOURCES
+  src/driver/SoilDyn_Driver_Types.f90
+  src/driver/SoilDyn_Driver_Subs.f90
+  src/driver/SoilDyn_Driver.f90
+)
+add_executable(soildyn_driver ${SOILDYN_DRIVER_SOURCES})
 target_link_libraries(soildyn_driver soildynlib nwtclibs ${CMAKE_DL_LIBS})
 
 

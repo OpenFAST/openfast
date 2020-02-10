@@ -23,6 +23,8 @@ PROGRAM SoilDyn_Driver
    USE NWTC_Library
    USE SoilDyn
    USE SoilDyn_Types
+   USE SoilDyn_Driver_Subs
+   USE SoilDyn_Driver_Types
 
    IMPLICIT NONE
 
