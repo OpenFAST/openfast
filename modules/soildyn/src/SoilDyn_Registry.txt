@@ -100,9 +100,9 @@ typedef   ^             ParameterType     DLL_Type          DLL_Trgt            
 typedef   ^             ParameterType     DbKi              DLL_DT               - - - "Time step for DLL" seconds
 typedef   ^             ParameterType     CHARACTER(1024)   RootName             - - - "RootName for writing output files"   -
 typedef   ^             ParameterType     LOGICAL           UseREDWINinterface   - - - "True if interface successfully initialized" -
-#typedef   ^             ParameterType     character(45)     PROPSFILE            - - - "" -
-#typedef   ^             ParameterType     character(45)     LDISPFILE            - - - "" -
-
+typedef   ^             ParameterType     CHARACTER(1024)   RootFileName         - - - "Root file name" -
+typedef   ^             ParameterType     CHARACTER(1024)   EchoFileName         - - - "Name of echo file" -
+typedef   ^             ParameterType     CHARACTER(1024)   SumFileName          - - - "Name of summary file" -
 
 # ..... Inputs ....................................................................................................................
 # Define inputs that are contained on the mesh here:
