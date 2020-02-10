@@ -78,7 +78,7 @@ subroutine SoilDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    character(*),                       intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
       ! local variables
-   integer(IntKi)                                     :: i           !< generic counter
+   integer(IntKi)                                     :: j           !< generic counter
    integer(IntKi)                                     :: NumOuts     !< number of outputs; would probably be in the parameter type
    integer(IntKi)                                     :: ErrStat2    !< local error status
    character(ErrMsgLen)                               :: ErrMsg2     !< local error message
@@ -89,7 +89,7 @@ subroutine SoilDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
       ! Initialize variables
    ErrStat = ErrID_None
    ErrMsg  = ""
-   NumOuts = 2
+NumOuts = 2
 
       ! Initialize the NWTC Subroutine Library
    call NWTC_Init( )
@@ -142,32 +142,14 @@ EchoFileName='TempFile.ech'
 
    end if
 
+   call SoilDyn_InitMisc( InputFileData, m, ErrStat2,ErrMsg2)
 
    ! Set DLL parameters
 
-      ! Initialize the DLL for each interface point
-   allocate( m%dll_data(InputFileData%DLL_NumPoints), STAT=ErrStat2 )
-   if (ErrStat2 /= 0) then
-      call SetErrStat(ErrID_Fatal, 'Could not allocate m%dll_data', ErrStat, ErrMsg, RoutineName)
-      return
-   endif
-
-   do i=1,InputFileData%DLL_NumPoints
-      m%dll_data(i)%PROPSfile = trim(InputFileData%DLL_PropsFile(i))
-      if ( len(m%dll_data(i)%PROPSfile) < len_trim(InputFileData%DLL_PropsFile(i)) ) then
-         call SetErrStat(ErrID_Fatal, 'PropsFile #'//trim(Num2LStr(i))//' name is longer than '//trim(Num2LStr(len(m%dll_data(i)%PROPSfile)))// &
-                     ' characters (DLL limititation)', ErrStat, ErrMsg, RoutineName)
-      endif
-      m%dll_data(i)%LDISPfile = trim(InputFileData%DLL_LDispFile(i))
-      if ( len(m%dll_data(i)%LDISPfile) < len_trim(InputFileData%DLL_LDispFile(i)) ) then
-         call SetErrStat(ErrID_Fatal, 'LDispFile #'//trim(Num2LStr(i))//' name is longer than '//trim(Num2LStr(len(m%dll_data(i)%LDISPfile)))// &
-                     ' characters (DLL limititation)', ErrStat, ErrMsg, RoutineName)
-      endif
-   enddo
-   if (ErrStat >= AbortErrLev) return;
-
       ! Initialize the dll
-   call REDWINinterface_Init(u,p,m%dll_data(1),y,InputFileData, ErrStat2, ErrMsg2); if (Failed()) return;
+   do j=1,size(m%dll_data)
+      call REDWINinterface_Init(u,p,m%dll_data(j),y,InputFileData, ErrStat2, ErrMsg2); if (Failed()) return;
+   enddo
 
 contains
    logical function Failed()
@@ -175,6 +157,53 @@ contains
       Failed =    ErrStat >= AbortErrLev
    end function Failed
 
+   subroutine SoilDyn_InitMisc( InputFileData, m, ErrStat, ErrMsg )
+      type(SlD_InputFile),    intent(in   )  :: InputFileData   !< Data stored in the module's input file
+      type(SlD_MiscVarType),  intent(inout)  :: m           !< Misc variables for optimization (not copied in glue code)
+      integer(IntKi),         intent(  out)  :: ErrStat
+      character(*),           intent(  out)  :: ErrMsg
+      integer(IntKi)                         :: i           ! Generic counter
+      integer(IntKi)                         :: ErrStat2    !< local error status
+      character(ErrMsgLen)                   :: ErrMsg2     !< local error message
+      logical                                :: FileExist
+      character(1024)                        :: PriPath     !< Path name of the primary file
+      character(1024)                        :: PropsLoc    !< Full path to PropsFile location
+      character(1024)                        :: LDispLoc    !< Full path to LDispFile location
+
+      ErrStat = ErrID_None
+      ErrMsg  = ''
+
+      ! Get path to DLL (this is already set as absolute path)
+      call GetPath( InputFileData%DLL_FileName, PriPath)
+
+      ! Set DLL data
+      allocate( m%dll_data(InputFileData%DLL_NumPoints), STAT=ErrStat2 )
+      if (ErrStat2 /= 0) then
+         call SetErrStat(ErrID_Fatal, 'Could not allocate m%dll_data', ErrStat, ErrMsg, RoutineName)
+         return
+      endif
+
+      do i=1,InputFileData%DLL_NumPoints
+         m%dll_data(i)%PROPSfile = trim(InputFileData%DLL_PropsFile(i))
+         if ( len(m%dll_data(i)%PROPSfile) < len_trim(InputFileData%DLL_PropsFile(i)) ) then
+            call SetErrStat(ErrID_Fatal, 'PropsFile #'//trim(Num2LStr(i))//' name is longer than '//trim(Num2LStr(len(m%dll_data(i)%PROPSfile)))// &
+                        ' characters (DLL limititation)', ErrStat, ErrMsg, '')
+         endif
+         m%dll_data(i)%LDISPfile = trim(InputFileData%DLL_LDispFile(i))
+         if ( len(m%dll_data(i)%LDISPfile) < len_trim(InputFileData%DLL_LDispFile(i)) ) then
+            call SetErrStat(ErrID_Fatal, 'LDispFile #'//trim(Num2LStr(i))//' name is longer than '//trim(Num2LStr(len(m%dll_data(i)%LDISPfile)))// &
+                        ' characters (DLL limititation)', ErrStat, ErrMsg, '')
+         endif
+
+         ! Check the file exists relative to the DLL location (DLL location is absolute)
+         if ( PathIsRelative( m%dll_data(i)%PROPSfile ) )   PropsLoc = trim(PriPath)//trim(m%dll_data(i)%PROPSfile)
+         if ( PathIsRelative( m%dll_data(i)%LDISPfile ) )   LDispLoc = trim(PriPath)//trim(m%dll_data(i)%LDISPfile)
+         inquire( file=trim(PropsLoc), exist=FileExist )
+         if ( .not. FileExist ) call SetErrStat(ErrID_Fatal, 'PropsFile #'//trim(Num2LStr(i))//' not found (path must be relative to DLL location, or absolute)', ErrStat, ErrMsg, '')
+         inquire( file=trim(LDispLoc), exist=FileExist )
+         if ( .not. FileExist ) call SetErrStat(ErrID_Fatal, 'LDispFile #'//trim(Num2LStr(i))//' not found (path must be relative to DLL location, or absolute)', ErrStat, ErrMsg, '')
+      enddo
+   end subroutine SoilDyn_InitMisc
 
 end subroutine SoilDyn_Init
 
