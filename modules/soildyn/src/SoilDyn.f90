@@ -146,7 +146,7 @@ NumOuts = 2
 
    end if
 
-   call SoilDyn_InitMisc( InputFileData, m, ErrStat2,ErrMsg2)
+   call SoilDyn_InitMisc( InputFileData, m, ErrStat2,ErrMsg2); if (Failed()) return;
 
    ! Set DLL parameters
 
@@ -198,10 +198,21 @@ contains
             call SetErrStat(ErrID_Fatal, 'LDispFile #'//trim(Num2LStr(i))//' name is longer than '//trim(Num2LStr(len(m%dll_data(i)%LDISPfile)))// &
                         ' characters (DLL limititation)', ErrStat, ErrMsg, '')
          endif
+         ! Check if errors above
+         if (ErrStat >= AbortErrLev) return
+
 
          ! Check the file exists relative to the DLL location (DLL location is absolute)
-         if ( PathIsRelative( m%dll_data(i)%PROPSfile ) )   PropsLoc = trim(PriPath)//trim(m%dll_data(i)%PROPSfile)
-         if ( PathIsRelative( m%dll_data(i)%LDISPfile ) )   LDispLoc = trim(PriPath)//trim(m%dll_data(i)%LDISPfile)
+         if ( PathIsRelative( m%dll_data(i)%PROPSfile ) ) then
+            PropsLoc = trim(PriPath)//trim(m%dll_data(i)%PROPSfile)
+         else
+            PropsLoc = trim(m%dll_data(i)%PROPSfile)
+         endif
+         if ( PathIsRelative( m%dll_data(i)%LDISPfile ) ) then
+            LDispLoc = trim(PriPath)//trim(m%dll_data(i)%LDISPfile)
+         else
+            LDispLoc = trim(m%dll_data(i)%LDISPfile)
+         endif
          inquire( file=trim(PropsLoc), exist=FileExist )
          if ( .not. FileExist ) call SetErrStat(ErrID_Fatal, 'PropsFile #'//trim(Num2LStr(i))//' not found (path must be relative to DLL location, or absolute)', ErrStat, ErrMsg, '')
          inquire( file=trim(LDispLoc), exist=FileExist )
