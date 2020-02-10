@@ -146,9 +146,8 @@ NumOuts = 2
 
    end if
 
-   call SoilDyn_InitMisc( InputFileData, m, ErrStat2,ErrMsg2)
-
-   ! Set DLL parameters
+      ! Set miscvars: including dll_data arrays and checking for input files.
+   call SoilDyn_InitMisc( InputFileData, m, ErrStat2,ErrMsg2); if (Failed()) return;
 
       ! Initialize the dll
    do j=1,size(m%dll_data)
@@ -161,18 +160,20 @@ contains
       Failed =    ErrStat >= AbortErrLev
    end function Failed
 
+   !> Allocate arrays for storing the DLL input file names, and check that they exist. The DLL has no error checking (as of 2020.02.10)
+   !! and will create empty input files before segfaulting.
    subroutine SoilDyn_InitMisc( InputFileData, m, ErrStat, ErrMsg )
-      type(SlD_InputFile),    intent(in   )  :: InputFileData   !< Data stored in the module's input file
-      type(SlD_MiscVarType),  intent(inout)  :: m           !< Misc variables for optimization (not copied in glue code)
+      type(SlD_InputFile),    intent(in   )  :: InputFileData  !< Data stored in the module's input file
+      type(SlD_MiscVarType),  intent(inout)  :: m              !< Misc variables for optimization (not copied in glue code)
       integer(IntKi),         intent(  out)  :: ErrStat
       character(*),           intent(  out)  :: ErrMsg
-      integer(IntKi)                         :: i           ! Generic counter
-      integer(IntKi)                         :: ErrStat2    !< local error status
-      character(ErrMsgLen)                   :: ErrMsg2     !< local error message
+      integer(IntKi)                         :: i              ! Generic counter
+      integer(IntKi)                         :: ErrStat2       !< local error status
+      character(ErrMsgLen)                   :: ErrMsg2        !< local error message
       logical                                :: FileExist
-      character(1024)                        :: PriPath     !< Path name of the primary file
-      character(1024)                        :: PropsLoc    !< Full path to PropsFile location
-      character(1024)                        :: LDispLoc    !< Full path to LDispFile location
+      character(1024)                        :: PriPath        !< Path name of the primary file
+      character(1024)                        :: PropsLoc       !< Full path to PropsFile location
+      character(1024)                        :: LDispLoc       !< Full path to LDispFile location
 
       ErrStat = ErrID_None
       ErrMsg  = ''
