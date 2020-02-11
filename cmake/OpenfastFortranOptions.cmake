@@ -83,7 +83,7 @@ macro(set_fast_gfortran)
   endif(NOT WIN32)
 
   # Fix free-form compilation for OpenFAST
-  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -ffree-line-length-none -cpp")
+  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -ffree-line-length-none -cpp -fopenmp")
 
   # Deal with Double/Single precision
   if (DOUBLE_PRECISION)
@@ -93,7 +93,7 @@ macro(set_fast_gfortran)
 
   # debug flags
   if(CMAKE_BUILD_TYPE MATCHES Debug)
-    set( CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -fcheck=all -pedantic -fbacktrace" )
+    set( CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -fcheck=all -pedantic -fbacktrace -fopenmp" )
   endif()
 
   if(CYGWIN)

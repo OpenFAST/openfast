@@ -60,6 +60,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: VTKBlades      !< Outputs VTk for each blade 0=no blade, 1=Bld 1 [-]
     INTEGER(IntKi)  :: HACK      !< HACK ID [-]
     REAL(DbKi)  :: DT      !< Time interval for calls calculations [s]
+    REAL(DbKi)  :: DTfvw      !< Time interval for calculating wake induced velocities [s]
     REAL(ReKi)  :: KinVisc      !< Kinematic air viscosity [m^2/s]
   END TYPE FVW_ParameterType
 ! =======================
@@ -99,6 +100,8 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: iStepPrev      !< Previous step number [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: r_wind      !< List of points where wind is requested for next time step [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PitchAndTwist      !< Twist angle (includes all sources of twist)  [Array of size (NumBlNds,numBlades)] [rad]
+    LOGICAL  :: ComputeWakeInduced      !< Compute induced velocities on this timestep [-]
+    REAL(DbKi)  :: OldTime      !< Time the wake induction velocities were last calculated [s]
   END TYPE FVW_MiscVarType
 ! =======================
 ! =========  FVW_InputType  =======
@@ -160,6 +163,7 @@ IMPLICIT NONE
     LOGICAL  :: FreeWake      !< Disable roll up, wake convects with wind only (flag) [-]
     REAL(ReKi)  :: FreeWakeStart      !< Time when wake starts convecting (rolling up) [s]
     REAL(ReKi)  :: FullCirculationStart      !< Time when the circulation is full [s]
+    REAL(DbKi)  :: DTfvw      !< Time interval for calculating wake induced velocities [s]
     INTEGER(IntKi)  :: CircSolvPolar      !< (0=Use AD polars, 1=2PiAlpha, 2=sin(2pialpha) [-]
     INTEGER(IntKi)  :: nNWPanels      !< Number of nw panels [-]
     INTEGER(IntKi)  :: nFWPanels      !< Number of fw panels [-]
@@ -259,6 +263,7 @@ ENDIF
     DstParamData%VTKBlades = SrcParamData%VTKBlades
     DstParamData%HACK = SrcParamData%HACK
     DstParamData%DT = SrcParamData%DT
+    DstParamData%DTfvw = SrcParamData%DTfvw
     DstParamData%KinVisc = SrcParamData%KinVisc
  END SUBROUTINE FVW_CopyParam
 
@@ -353,6 +358,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! VTKBlades
       Int_BufSz  = Int_BufSz  + 1  ! HACK
       Db_BufSz   = Db_BufSz   + 1  ! DT
+      Db_BufSz   = Db_BufSz   + 1  ! DTfvw
       Re_BufSz   = Re_BufSz   + 1  ! KinVisc
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -467,6 +473,8 @@ ENDIF
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%HACK
       Int_Xferred   = Int_Xferred   + 1
       DbKiBuf ( Db_Xferred:Db_Xferred+(1)-1 ) = InData%DT
+      Db_Xferred   = Db_Xferred   + 1
+      DbKiBuf ( Db_Xferred:Db_Xferred+(1)-1 ) = InData%DTfvw
       Db_Xferred   = Db_Xferred   + 1
       ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%KinVisc
       Re_Xferred   = Re_Xferred   + 1
@@ -624,6 +632,8 @@ ENDIF
       OutData%HACK = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
       OutData%DT = DbKiBuf( Db_Xferred ) 
+      Db_Xferred   = Db_Xferred + 1
+      OutData%DTfvw = DbKiBuf( Db_Xferred ) 
       Db_Xferred   = Db_Xferred + 1
       OutData%KinVisc = ReKiBuf( Re_Xferred )
       Re_Xferred   = Re_Xferred + 1
@@ -1161,6 +1171,8 @@ IF (ALLOCATED(SrcMiscData%PitchAndTwist)) THEN
   END IF
     DstMiscData%PitchAndTwist = SrcMiscData%PitchAndTwist
 ENDIF
+    DstMiscData%ComputeWakeInduced = SrcMiscData%ComputeWakeInduced
+    DstMiscData%OldTime = SrcMiscData%OldTime
  END SUBROUTINE FVW_CopyMisc
 
  SUBROUTINE FVW_DestroyMisc( MiscData, ErrStat, ErrMsg )
@@ -1406,6 +1418,8 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*2  ! PitchAndTwist upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%PitchAndTwist)  ! PitchAndTwist
   END IF
+      Int_BufSz  = Int_BufSz  + 1  ! ComputeWakeInduced
+      Db_BufSz   = Db_BufSz   + 1  ! OldTime
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -1890,6 +1904,10 @@ ENDIF
       IF (SIZE(InData%PitchAndTwist)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%PitchAndTwist))-1 ) = PACK(InData%PitchAndTwist,.TRUE.)
       Re_Xferred   = Re_Xferred   + SIZE(InData%PitchAndTwist)
   END IF
+      IntKiBuf ( Int_Xferred:Int_Xferred+1-1 ) = TRANSFER( InData%ComputeWakeInduced , IntKiBuf(1), 1)
+      Int_Xferred   = Int_Xferred   + 1
+      DbKiBuf ( Db_Xferred:Db_Xferred+(1)-1 ) = InData%OldTime
+      Db_Xferred   = Db_Xferred   + 1
  END SUBROUTINE FVW_PackMisc
 
  SUBROUTINE FVW_UnPackMisc( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -2625,6 +2643,10 @@ ENDIF
       Re_Xferred   = Re_Xferred   + SIZE(OutData%PitchAndTwist)
     DEALLOCATE(mask2)
   END IF
+      OutData%ComputeWakeInduced = TRANSFER( IntKiBuf( Int_Xferred ), mask0 )
+      Int_Xferred   = Int_Xferred + 1
+      OutData%OldTime = DbKiBuf( Db_Xferred ) 
+      Db_Xferred   = Db_Xferred + 1
  END SUBROUTINE FVW_UnPackMisc
 
  SUBROUTINE FVW_CopyInput( SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg )
@@ -4750,6 +4772,7 @@ ENDIF
     DstInputFileData%FreeWake = SrcInputFileData%FreeWake
     DstInputFileData%FreeWakeStart = SrcInputFileData%FreeWakeStart
     DstInputFileData%FullCirculationStart = SrcInputFileData%FullCirculationStart
+    DstInputFileData%DTfvw = SrcInputFileData%DTfvw
     DstInputFileData%CircSolvPolar = SrcInputFileData%CircSolvPolar
     DstInputFileData%nNWPanels = SrcInputFileData%nNWPanels
     DstInputFileData%nFWPanels = SrcInputFileData%nFWPanels
@@ -4819,6 +4842,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! FreeWake
       Re_BufSz   = Re_BufSz   + 1  ! FreeWakeStart
       Re_BufSz   = Re_BufSz   + 1  ! FullCirculationStart
+      Db_BufSz   = Db_BufSz   + 1  ! DTfvw
       Int_BufSz  = Int_BufSz  + 1  ! CircSolvPolar
       Int_BufSz  = Int_BufSz  + 1  ! nNWPanels
       Int_BufSz  = Int_BufSz  + 1  ! nFWPanels
@@ -4878,6 +4902,8 @@ ENDIF
       Re_Xferred   = Re_Xferred   + 1
       ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%FullCirculationStart
       Re_Xferred   = Re_Xferred   + 1
+      DbKiBuf ( Db_Xferred:Db_Xferred+(1)-1 ) = InData%DTfvw
+      Db_Xferred   = Db_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%CircSolvPolar
       Int_Xferred   = Int_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%nNWPanels
@@ -4956,6 +4982,8 @@ ENDIF
       Re_Xferred   = Re_Xferred + 1
       OutData%FullCirculationStart = ReKiBuf( Re_Xferred )
       Re_Xferred   = Re_Xferred + 1
+      OutData%DTfvw = DbKiBuf( Db_Xferred ) 
+      Db_Xferred   = Db_Xferred + 1
       OutData%CircSolvPolar = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
       OutData%nNWPanels = IntKiBuf( Int_Xferred ) 

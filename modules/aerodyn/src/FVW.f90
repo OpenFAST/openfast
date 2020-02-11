@@ -85,6 +85,7 @@ subroutine FVW_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
    p%nNWMax  = max(InputFileData%nNWPanels,0)+1          ! +1 since LL panel included in NW
    p%nFWMax  = max(InputFileData%nFWPanels,0)
    p%nFWFree = max(InputFileData%nFWPanelsFree,0)
+   p%DTfvw   = InputFileData%DTfvw
 
    if (InputFileData%HACK==1) then
       p%nWings=1 ! Elliptical wing temporary hack
@@ -406,10 +407,10 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    type(FVW_InputType),             intent(inout)  :: u(:)        !< Inputs at utimes (out only for mesh record-keeping in ExtrapInterp routine)
    real(DbKi),                      intent(in   )  :: utimes(:)   !< Times associated with u(:), in seconds
    type(FVW_ParameterType),         intent(in   )  :: p           !< Parameters
-   type(FVW_ContinuousStateType),   intent(inout)  :: x           !< Input: Continuous states at t; Output: at t+dt
-   type(FVW_DiscreteStateType),     intent(inout)  :: xd          !< Input: Discrete states at t;   Output: at t+dt
-   type(FVW_ConstraintStateType),   intent(inout)  :: z           !< Input: Constraint states at t; Output: at t+dt
-   type(FVW_OtherStateType),        intent(inout)  :: OtherState  !< Input: Other states at t;      Output: at t+dt
+   type(FVW_ContinuousStateType),   intent(inout)  :: x           !< Input: Continuous states at t; Output: at t+dtaero
+   type(FVW_DiscreteStateType),     intent(inout)  :: xd          !< Input: Discrete states at t;   Output: at t+dtaero
+   type(FVW_ConstraintStateType),   intent(inout)  :: z           !< Input: Constraint states at t; Output: at t+dtaero
+   type(FVW_OtherStateType),        intent(inout)  :: OtherState  !< Input: Other states at t;      Output: at t+dtaero
    type(AFI_ParameterType),         intent(in   )  :: AFInfo(:)   !< The airfoil parameter data
    type(FVW_MiscVarType),           intent(inout)  :: m           !< Misc/optimization variables
    integer(IntKi),                  intent(  out)  :: errStat     !< Error status of the operation
@@ -420,17 +421,26 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    character(ErrMsgLen)          :: ErrMsg2                                                            ! temporary Error message
    type(FVW_ConstraintStateType) :: z_guess                                                                              ! <
    integer(IntKi) :: iW, iSpan, iAge
-   real(ReKi) :: dt
+   real(ReKi) :: dtaero
+   real(DbKi), parameter      :: OnePlusEpsilon = 1 + EPSILON(t)
 
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-!FIXME: why not use p%DT?  DT from AD15 does not change.
-   dt=utimes(1)-t ! TODO TODO TODO
+      ! dtaero is the timestep that FVW is called at (DTaero of AD15)
+   dtaero=utimes(1)-t ! TODO TODO TODO
    m%iStepPrev = m%iStep
    m%iStep = n
 
-   print'(A,F10.3,A,F10.3,A,F10.3,A,I0,A,I0,A,I0)','Update states, t:',t,'  t_u:', utimes(1),' dt: ',dt,'   ',n,' nNW:',m%nNW,' nFW:',m%nFW
+   if ( ( t*OnePlusEpsilon - m%OldTime ) >= p%DTfvw )  then
+      m%OldTime = t
+      m%ComputeWakeInduced = .TRUE.    ! It's time to update the induced velocities from wake
+   else
+      m%ComputeWakeInduced = .FALSE.
+   endif
+
+
+   print'(A,F10.3,A,F10.3,A,F10.3,A,I0,A,I0,A,I0)','Update states, t:',t,'  t_u:', utimes(1),' dtaero: ',dtaero,'   ',n,' nNW:',m%nNW,' nFW:',m%nFW
 
    ! We don't propagate the "Old"-> "New" if we we are not taking another timestep (such as during a correction step) 
    if (m%iStep /= m%iStepPrev) then 
@@ -460,9 +470,9 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    call Map_NW_FW(p, m, z, x, ErrStat2, ErrMsg2)
    !call print_x_NW_FW(p, m, z, x,'Map_')
 
-   ! --- Integration between t and t+dt
+   ! --- Integration between t and t+dtaero
    if (p%IntMethod .eq. idEuler1) then 
-     call FVW_Euler1( t, dt, uInterp, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2); if(Failed()) return
+     call FVW_Euler1( t, dtaero, uInterp, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2); if(Failed()) return
    !elseif (p%IntMethod .eq. idRK4) then 
    !   call FVW_RK4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
    !elseif (p%IntMethod .eq. idAB4) then
@@ -475,15 +485,15 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    !call print_x_NW_FW(p, m, z, x,'Conv')
 
 
-   ! --- t+dt
+   ! --- t+dtaero
    ! Propagation/creation of new layer of panels
    call PropagateWake(p, m, z, x, ErrStat2, ErrMsg2)
    !call print_x_NW_FW(p, m, z, x,'Prop_')
 
-   ! Inputs at t+dt
-   call FVW_Input_ExtrapInterp(u(1:size(utimes)),utimes,uInterp,t+dt, ErrStat2, ErrMsg2); if(Failed()) return
+   ! Inputs at t+dtaero
+   call FVW_Input_ExtrapInterp(u(1:size(utimes)),utimes,uInterp,t+dtaero, ErrStat2, ErrMsg2); if(Failed()) return
 
-   ! Panelling wings based on input mesh at t+dt
+   ! Panelling wings based on input mesh at t+dtaero
    call Wings_Panelling(uInterp%WingsMesh, p, m, ErrStat2, ErrMsg2); if(Failed()) return
 
    ! Updating positions of first NW and FW panels (Circulation also updated but irrelevant)
@@ -492,10 +502,10 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    call Map_NW_FW(p, m, z, x, ErrStat2, ErrMsg2)
    !call print_x_NW_FW(p, m, z, x,'Map2')
 
-   ! --- Solve for circulation at t+dt
-   ! Returns: z%Gamma_LL (at t+dt)
+   ! --- Solve for circulation at t+dtaero
+   ! Returns: z%Gamma_LL (at t+dtaero)
    z_guess%Gamma_LL = z%Gamma_LL ! We use as guess the circulation from the previous time step (see above)
-   call FVW_CalcConstrStateResidual(t+dt, uInterp, p, x, xd, z_guess, OtherState, m, z, AFInfo, ErrStat2, ErrMsg2, 2); if(Failed()) return
+   call FVW_CalcConstrStateResidual(t+dtaero, uInterp, p, x, xd, z_guess, OtherState, m, z, AFInfo, ErrStat2, ErrMsg2, 2); if(Failed()) return
 
    ! Updating circulation of near wake panel (and position but irrelevant)
    ! Changes: x only
@@ -503,7 +513,7 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    call Map_NW_FW(p, m, z, x, ErrStat2, ErrMsg2)
    !call print_x_NW_FW(p, m, z, x,'Map3')
 
-   ! set the wind points required for t+dt timestep
+   ! set the wind points required for t+dtaero timestep
    CALL SetRequestedWindPoints(m%r_wind, x, p, m, ErrStat2, ErrMsg2 ); if(Failed()) return
 
    if (m%FirstCall) then
@@ -555,13 +565,14 @@ subroutine FVW_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSt
    call AllocAry( dxdt%r_NW , 3   ,  p%nSpan+1  ,p%nNWMax+1,  p%nWings, 'Wind on NW ', ErrStat, ErrMsg ); dxdt%r_NW= -999999_ReKi;
    call AllocAry( dxdt%r_FW , 3   ,  FWnSpan+1  ,p%nFWMax+1,  p%nWings, 'Wind on FW ', ErrStat, ErrMsg ); dxdt%r_FW= -999999_ReKi;
 
-   if (t> p%FreeWakeStart) then
+   ! Only calculate freewake after start time and if on a timestep when it should be calculated.
+   if (t> p%FreeWakeStart .and. m%ComputeWakeInduced) then
       nFWEff = min(m%nFW, p%nFWFree)
       
       ! --- Compute Induced velocities on the Near wake and far wake based on the marker postions:
       ! (expensive N^2 call)
       ! In  : x%r_NW,    r%r_FW 
-      ! Out:  m%Vind_NW, m%Vind_FW
+      ! Out:  m%Vind_NW, m%Vind_FW 
       call WakeInducedVelocities(p, x, m, ErrStat2, ErrMsg2)
       m%Vind_FW(1:3, 1:FWnSpan+1, p%nFWFree+1:p%nFWMax, 1:p%nWings) =0 ! Ensuring no convection velocity for panels that user doesnt want free
 

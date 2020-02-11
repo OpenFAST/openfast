@@ -33,6 +33,7 @@ typedef     ^                   ^               IntKi                           
 typedef     ^                   ^               IntKi                            VTKBlades     -  - -   "Outputs VTk for each blade 0=no blade, 1=Bld 1"  - 
 typedef     ^                   ^               IntKi                            HACK          -    -  - "HACK ID"      -
 typedef     ^                   ^               DbKi                             DT            -  - -   "Time interval for calls calculations"   s
+typedef     ^                   ^               DbKi                             DTfvw         -  - -   "Time interval for calculating wake induced velocities"   s
 typedef     ^                   ^               ReKi                             KinVisc       -  - -   "Kinematic air viscosity"	m^2/s
 
 # ....... OtherStateType ............
@@ -72,6 +73,8 @@ typedef     ^                   ^               IntKi                           
 typedef     ^                   ^               IntKi                            iStepPrev     -   -  -  "Previous step number"     -
 typedef     ^                   ^               ReKi                             r_wind        ::   -  -  "List of points where wind is requested for next time step"  -
 typedef     ^                   ^               ReKi                             PitchAndTwist ::   -  -  "Twist angle (includes all sources of twist)  [Array of size (NumBlNds,numBlades)]" rad
+typedef     ^                   ^               Logical                          ComputeWakeInduced - - - "Compute induced velocities on this timestep" -
+typedef     ^                   ^               DbKi                             OldTime       -   -   -  "Time the wake induction velocities were last calculated" s
 
 # ........ Input ............
 # FVW_InputType
@@ -129,6 +132,7 @@ typedef     ^                   ^               IntKi                           
 typedef     ^                   ^               LOGICAL                          FreeWake            -     - -  "Disable roll up, wake convects with wind only (flag)"  -
 typedef     ^                   ^               ReKi                             FreeWakeStart     -  - -   "Time when wake starts convecting (rolling up)"  s
 typedef     ^                   ^               ReKi                             FullCirculationStart    -  - -   "Time when the circulation is full"  s
+typedef     ^                   ^               DbKi                             DTfvw         -  - -   "Time interval for calculating wake induced velocities"   s
 typedef     ^                   ^               IntKi                            CircSolvPolar   -  -  -  "(0=Use AD polars, 1=2PiAlpha, 2=sin(2pialpha)" -
 typedef     ^                   ^               IntKi                            nNWPanels            -  -  -  "Number of nw panels"          -
 typedef     ^                   ^               IntKi                            nFWPanels            -  -  -  "Number of fw panels"          -
