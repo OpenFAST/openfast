@@ -109,10 +109,6 @@ contains
       do iW = 1,p%nWings
          do iSpan = 1,p%nSpan+1
             P_ref = Meshes(iW)%Position(1:3, iSpan )+Meshes(iW)%TranslationDisp(1:3, iSpan)
-            if (p%HACK==1) then
-               P_ref(3)=100
-               P_ref(1)=0
-            endif
             DP_LE(1:3) =  0.0
             DP_LE(1)   = -m%chord_LL(iSpan,iW)/4.  ! TODO TODO TODO Use orientation and might not be c/2
             DP_TE(1:3) =  0.0
@@ -446,21 +442,21 @@ contains
             alpha = atan2(dot_product(Vrel,N) , dot_product(Vrel,Tc) ) ! [rad]  
             Re = p%Chord(icp,iW) * norm2(Vrel) / p%KinVisc / 1.0E6
 
-            if (p%CircSolvPolar==idPolarAeroDyn) then
+            !if (p%CircSolvPolar==idPolarAeroDyn) then
                ! compute steady Airfoil Coefs      ! NOTE: UserProp set to 0.0_ReKi (no idea what it does).  Also, note this assumes airfoils at nodes.
 !TODO: AFindx is on the nodes, not control points.
-               call AFI_ComputeAirfoilCoefs( alpha, Re, 0.0_ReKi,  AFInfo(p%AFindx(icp,iW)), AFI_interp, ErrStat2, ErrMsg2 ); if(Failed()) return;
-               Cl = AFI_interp%Cl
-               Cd = AFI_interp%Cd
-               Cm = AFI_interp%Cm
-            else if (p%CircSolvPolar==idPolar2PiAlpha) then
-               Cl=TwoPi*alpha
-            else if (p%CircSolvPolar==idPolar2PiSinAlpha) then
-               Cl=TwoPi*sin(alpha)
-            else
-               print*,'Unknown CircSolvPolar value'
-               STOP
-            endif
+            call AFI_ComputeAirfoilCoefs( alpha, Re, 0.0_ReKi,  AFInfo(p%AFindx(icp,iW)), AFI_interp, ErrStat2, ErrMsg2 ); if(Failed()) return;
+            Cl = AFI_interp%Cl
+            Cd = AFI_interp%Cd
+            Cm = AFI_interp%Cm
+            !else if (p%CircSolvPolar==idPolar2PiAlpha) then
+            !   Cl=TwoPi*alpha
+            !else if (p%CircSolvPolar==idPolar2PiSinAlpha) then
+            !   Cl=TwoPi*sin(alpha)
+            !else
+            !   print*,'Unknown CircSolvPolar value'
+            !   STOP
+            !endif
             ! Simple method:
             !    Gamma_LL=(0.5 * Cl * Vrel_orth_norm*chord)
             ! VanGarrel's method:

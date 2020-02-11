@@ -87,10 +87,6 @@ subroutine FVW_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
    p%nFWFree = max(InputFileData%nFWPanelsFree,0)
    p%DTfvw   = InputFileData%DTfvw
 
-   if (InputFileData%HACK==1) then
-      p%nWings=1 ! Elliptical wing temporary hack
-   endif
-
    ! Initialize Misc Vars (may depend on input file)
    CALL FVW_InitMiscVars( p, m, ErrStat2, ErrMsg2 ); if(Failed()) return
 
@@ -98,18 +94,10 @@ subroutine FVW_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
    CALL MOVE_ALLOC( InitInp%WingsMesh, u%WingsMesh )     ! Move from InitInp to u
 
 !NOTE: We do not have the windspeed until after the FVW initialization (IfW is not initialized until after AD15)
-   ! Wind Speed hack, TODO temporary
+   ! Wind Speed hack, TODO temporary NOTE: it is still needed?
    m%Vwnd_LL(:,:,:)   = 0
    m%Vwnd_NW(:,:,:,:) = 0
    m%Vwnd_FW(:,:,:,:) = 0
-   m%Vwnd_LL(1,:,:)   = InputFileData%Uinf
-   m%Vwnd_NW(1,:,:,:) = InputFileData%Uinf
-   m%Vwnd_FW(1,:,:,:) = InputFileData%Uinf
-   if (InputFileData%HACK==1) then
-      m%Vwnd_LL(3,:,:)   =0.1
-      m%Vwnd_NW(3,:,:,:) =0.1
-      m%Vwnd_FW(3,:,:,:) =0.1
-   endif
 
    ! This mesh is passed in as a cousin of the BladeMotion mesh.
    CALL Wings_Panelling_Init(u%WingsMesh, InitInp%zLocal, p, m, ErrStat2, ErrMsg2); if(Failed()) return
@@ -333,7 +321,6 @@ SUBROUTINE FVW_SetParametersFromInputFile( InputFileData, p, m, ErrStat, ErrMsg 
    p%WingRegFactor        = InputFileData%WingRegFactor
    p%WrVTK                = InputFileData%WrVTK
    p%VTKBlades            = min(max(InputFileData%VTKBlades,0),p%nWings)
-   p%HACK                 = InputFileData%HACK
 
    if (allocated(p%PrescribedCirculation)) deallocate(p%PrescribedCirculation)
    if (InputFileData%CirculationMethod==idCircPrescribed) then 

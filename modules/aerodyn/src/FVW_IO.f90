@@ -34,43 +34,40 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, Inp, ErrStat, ErrMsg )
    CALL ReadCom(UnIn, FileName, 'FVW input file header line 1', ErrStat2, ErrMsg2 ); if(Failed()) return
    CALL ReadCom(UnIn, FileName, 'FVW input file header line 2', ErrStat2, ErrMsg2 ); if(Failed()) return
    !------------------------ GENERAL OPTIONS  -------------------------------------------
-   CALL ReadCom(UnIn,FileName,                         'General option header', ErrStat2, ErrMsg2 ); if(Failed()) return
-   CALL ReadVar(UnIn,FileName,Inp%IntMethod           ,'Integration method' ,'',ErrStat2,ErrMsg2); if(Failed())return
-   CALL ReadVar(UnIn,FileName,Inp%FreeWakeStart       ,'FreeWakeStart'      ,'',ErrStat2,ErrMsg2); if(Failed())return
-   CALL ReadVar(UnIn,FileName,Inp%FullCirculationStart,'FullCirculationStart'  ,'',ErrStat2,ErrMsg2); if(Failed())return
-   CALL ReadVar(UnIn,FileName,Inp%DTfvw               ,'DTfvw'              ,'',ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadCom        (UnIn,FileName,                         'General option header',            ErrStat2,ErrMsg2); if(Failed()) return
+   CALL ReadVarWDefault(UnIn,FileName,Inp%IntMethod           ,'Integration method' ,'', idEuler1, ErrStat2,ErrMsg2); if(Failed())return
+
+   CALL ReadVarWDefault(UnIn,FileName,Inp%FreeWakeStart       ,'FreeWakeStart'       ,'', 0.0_ReKi, ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVarWDefault(UnIn,FileName,Inp%FullCirculationStart,'FullCirculationStart','', 0.0_ReKi, ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVarWDefault(UnIn,FileName,Inp%DTfvw               ,'DTfvw'              ,'',  0.2_DbKi, ErrStat2,ErrMsg2); if(Failed())return
    !------------------------ CIRCULATION SPECIFICATIONS  -------------------------------------------
    CALL ReadCom(UnIn,FileName,                  'Circulation specification header', ErrStat2, ErrMsg2 ); if(Failed()) return
-   CALL ReadVar(UnIn,FileName,Inp%CirculationMethod ,'CirculationMethod' ,'',ErrStat2,ErrMsg2); if(Failed())return
-   CALL ReadVar(UnIn,FileName,Inp%CircSolvConvCrit  ,'CircSolvConvCrit ' ,'',ErrStat2,ErrMsg2); if(Failed())return
-   CALL ReadVar(UnIn,FileName,Inp%CircSolvRelaxation,'CircSolvRelaxation','',ErrStat2,ErrMsg2); if(Failed())return
-   CALL ReadVar(UnIn,FileName,Inp%CircSolvMaxIter   ,'CircSolvMaxIter'   ,'',ErrStat2,ErrMsg2); if(Failed())return
-   CALL ReadVar(UnIn,FileName,Inp%CircSolvPolar     ,'CircSolvPolar'   ,'',ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVarWDefault(UnIn,FileName,Inp%CirculationMethod ,'CirculationMethod' ,'', idCircPolarData, ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVarWDefault(UnIn,FileName,Inp%CircSolvConvCrit  ,'CircSolvConvCrit ' ,'', 0.01           , ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVarWDefault(UnIn,FileName,Inp%CircSolvRelaxation,'CircSolvRelaxation','', 0.1            , ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVarWDefault(UnIn,FileName,Inp%CircSolvMaxIter   ,'CircSolvMaxIter'   ,'', 30             , ErrStat2,ErrMsg2); if(Failed())return
+   !CALL ReadVar(UnIn,FileName,Inp%CircSolvPolar     ,'CircSolvPolar'   ,'',ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVar(UnIn,FileName,Inp%CirculationFile   ,'CirculationFile'   ,'',ErrStat2,ErrMsg2); if(Failed())return
    !------------------------ WAKE OPTIONS -------------------------------------------
-   CALL ReadCom(UnIn,FileName,                  'Wake options header', ErrStat2, ErrMsg2 ); if(Failed()) return
-   CALL ReadVar(UnIn,FileName,Inp%nNWPanels     ,'nNWPanels'       ,'',ErrStat2,ErrMsg2); if(Failed())return
-   CALL ReadVar(UnIn,FileName,Inp%nFWPanels     ,'nFWPanels'       ,'',ErrStat2,ErrMsg2); if(Failed())return
-   CALL ReadVar(UnIn,FileName,Inp%nFWPanelsFree ,'nFWPanelsFree'   ,'',ErrStat2,ErrMsg2); if(Failed())return
-   CALL ReadVar(UnIn,FileName,Inp%RegFunction   ,'RegFunction'     ,'',ErrStat2,ErrMsg2); if(Failed())return
-   CALL ReadVar(UnIn,FileName,Inp%WakeRegMethod ,'WakeRegMethod'   ,'',ErrStat2,ErrMsg2); if(Failed())return
-   CALL ReadVar(UnIn,FileName,Inp%WakeRegFactor ,'WakeRegFactor'   ,'',ErrStat2,ErrMsg2); if(Failed())return
-   CALL ReadVar(UnIn,FileName,Inp%WingRegFactor ,'WingRegFactor'   ,'',ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadCom        (UnIn,FileName,                  'Wake options header'               , ErrStat2,ErrMsg2); if(Failed()) return
+   CALL ReadVar        (UnIn,FileName,Inp%nNWPanels     ,'nNWPanels'       ,''              , ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVar        (UnIn,FileName,Inp%nFWPanels     ,'nFWPanels'       ,''              , ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVar        (UnIn,FileName,Inp%nFWPanelsFree ,'nFWPanelsFree'   ,''              , ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVarWDefault(UnIn,FileName,Inp%RegFunction   ,'RegFunction'     ,'',idRegCompact , ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVarWDefault(UnIn,FileName,Inp%WakeRegMethod ,'WakeRegMethod'   ,'',idRegConstant, ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVar        (UnIn,FileName,Inp%WakeRegFactor ,'WakeRegFactor'   ,''              , ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVar        (UnIn,FileName,Inp%WingRegFactor ,'WingRegFactor'   ,''              , ErrStat2,ErrMsg2); if(Failed())return
    !------------------------ OUTPUT OPTIONS -----------------------------------------
    CALL ReadCom(UnIn,FileName,                  'Output options header', ErrStat2, ErrMsg2 ); if(Failed()) return
    CALL ReadVar(UnIn,FileName,Inp%WrVTK       , 'WrVTK'              ,'',ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVar(UnIn,FileName,Inp%VTKBlades   , 'VTKBlades'          ,'',ErrStat2,ErrMsg2); if(Failed())return
-   !------------------------ HACK OPTIONS -----------------------------------------
-   CALL ReadCom(UnIn,FileName,                  'Hack options header', ErrStat2, ErrMsg2 ); if(Failed()) return
-   CALL ReadVar(UnIn,FileName,Inp%Uinf        , 'Uinf'   ,'',ErrStat2,ErrMsg2); if(Failed())return
-   CALL ReadVar(UnIn,FileName,Inp%HACK        , 'HACK'   ,'',ErrStat2,ErrMsg2); if(Failed())return
 
    ! --- Validation of inputs
    if (PathIsRelative(Inp%CirculationFile)) Inp%CirculationFile = TRIM(PriPath)//TRIM(Inp%CirculationFile)
 
    if (Check(.not.(ANY((/idCircPrescribed,idCircPolarData/)==Inp%CirculationMethod)), 'Circulation method not implemented')) return
 
-   if (Check( Inp%IntMethod/=idEuler1 , 'Time integration method not implemented')) return
+   if (Check( Inp%IntMethod/=idEuler1 , 'Time integration method not yet implemented. Use Euler 1st order method for now.')) return
 
    if (Check( Inp%nNWPanels<0     , 'Number of near wake panels must be >=0')) return
    if (Check( Inp%nFWPanels<0     , 'Number of far wake panels must be >=0')) return
