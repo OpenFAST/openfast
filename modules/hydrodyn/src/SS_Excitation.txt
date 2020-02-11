@@ -19,11 +19,12 @@ typedef SS_Excitation/SS_Exc   InitInputType       CHARACTER(1024)              
 typedef ^                      ^                   IntKi                        NBody            -  - -   "Number of WAMIT bodies for this State Space model" -
 typedef ^                      ^                   ReKi                         WaveDir          -  - -   "Wave direction" rad
 typedef ^                      ^                   INTEGER                      NStepWave        -  - -   "Number of timesteps in the WaveTime array" -
+typedef ^                      ^                   R8Ki                         PtfmRefztRot    {:} - -   "The rotation about zt of the body reference frame(s) from xt/yt" radians 
 typedef ^                      ^                   SiKi                         WaveElev0       {:} - -   "Wave elevation time history at origin" m
 typedef ^                      ^                   SiKi                         WaveTime        {:} - -   "Times where wave elevation is known" s
 																                
-typedef ^                      InitOutputType      CHARACTER(10)                WriteOutputHdr  {7} - -   "Header of the output" -
-typedef ^                      InitOutputType      CHARACTER(10)                WriteOutputUnt  {7} - -   "Units of the output" -
+typedef ^                      InitOutputType      CHARACTER(10)                WriteOutputHdr  {:} - -   "Header of the output" -
+typedef ^                      InitOutputType      CHARACTER(10)                WriteOutputUnt  {:} - -   "Units of the output" -
 																                
 typedef ^                      ContinuousStateType ReKi                         x               {:} - -   "Continuous States" -
 																                
@@ -54,7 +55,7 @@ typedef ^                      ^                   IntKi                        
 typedef ^                      ^                   ReKi                         A               {:}{:} - -   "A matrix" -
 typedef ^                      ^                   ReKi                         B               {:}    - -   "B matrix" -
 typedef ^                      ^                   ReKi                         C               {:}{:} - -   "C matrix" -
-typedef ^                      ^                   INTEGER                      N                -     - -   "Number of states" -
+typedef ^                      ^                   INTEGER                      numStates        -     - -   "Number of states" -
 typedef ^                      ^                   DbKi                         Tc               -     - -   "Time shift" s
 typedef ^                      ^                   SiKi                         WaveElev0       {:}    - -   "Wave elevation time history at origin" m
 typedef ^                      ^                   SiKi                         WaveTime        {:}    - -   "Times where wave elevation is known" s
@@ -65,8 +66,8 @@ typedef ^                      InputType           ReKi                         
 
 
 # ..... Outputs ............................
-typedef ^                      OutputType          ReKi                         y  {6} - -   "Force/Moments" -
-typedef ^                      ^                   ReKi                         WriteOutput {7} - -   "output Data" "kN" -
+typedef ^                      OutputType          ReKi                         y  {:} - -   "Force/Moments" -
+typedef ^                      ^                   ReKi                         WriteOutput {:} - -   "output Data" "kN" -
 
 
 
