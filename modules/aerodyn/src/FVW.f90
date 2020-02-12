@@ -185,6 +185,7 @@ subroutine FVW_InitMiscVars( p, m, ErrStat, ErrMsg )
    nMax = nMax + (FWnSpan+1) * (p%nFWMax+1) * p%nWings   ! Far wake points
    call AllocAry( m%r_wind, 3, nMax, 'Requested wind points', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitMisc' )
    m%r_wind = 0.0_ReKi     ! set to zero so InflowWind can shortcut calculations
+   m%OldTime = 0.0_DbKi-p%DTfvw    ! First time for wake interaction calculations
 end subroutine FVW_InitMiscVars
 ! ==============================================================================
 subroutine FVW_InitStates( x, p, m, ErrStat, ErrMsg )
@@ -228,7 +229,6 @@ subroutine FVW_InitConstraint( z, p, m, ErrStat, ErrMsg )
 end subroutine FVW_InitConstraint
 ! ==============================================================================
 subroutine FVW_Init_Y( p, u, y, ErrStat, ErrMsg )
-!TODO: move the r_wind to Miscvars
    type(FVW_ParameterType),         intent(in   )  :: p              !< Parameters
    type(FVW_InputType),             intent(inout)  :: u              !< An initial guess for the input; input mesh must be defined
    type(FVW_OutputType),            intent(  out)  :: y              !< Constraints
@@ -409,17 +409,21 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    type(FVW_ConstraintStateType) :: z_guess                                                                              ! <
    integer(IntKi) :: iW, iSpan, iAge
    real(ReKi) :: dtaero
-   real(DbKi), parameter      :: OnePlusEpsilon = 1 + EPSILON(t)
+   real(DbKi), parameter      :: OneMinusEpsilon = 1 - 10000*EPSILON(t)
 
    ErrStat = ErrID_None
    ErrMsg  = ""
 
       ! dtaero is the timestep that FVW is called at (DTaero of AD15)
-   dtaero=utimes(1)-t ! TODO TODO TODO
-   m%iStepPrev = m%iStep
-   m%iStep = n
+   dtaero=utimes(1)-t
+      ! Increment step if we are not on a correction step (n also wouldn't change)
+   if (t > m%OldTime) then
+      m%iStepPrev = m%iStep
+      m%iStep = n
+   endif
 
-   if ( ( t*OnePlusEpsilon - m%OldTime ) >= p%DTfvw )  then
+      ! Compute Inuced wake effects only if time since last compute is > DTfvw
+   if ( ( t - m%OldTime ) >= p%DTfvw*OneMinusEpsilon )  then
       m%OldTime = t
       m%ComputeWakeInduced = .TRUE.    ! It's time to update the induced velocities from wake
    else
@@ -430,7 +434,7 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    print'(A,F10.3,A,F10.3,A,F10.3,A,I0,A,I0,A,I0)','Update states, t:',t,'  t_u:', utimes(1),' dtaero: ',dtaero,'   ',n,' nNW:',m%nNW,' nFW:',m%nFW
 
    ! We don't propagate the "Old"-> "New" if we we are not taking another timestep (such as during a correction step) 
-   if (m%iStep /= m%iStepPrev) then 
+   if ((m%iStep /= m%iStepPrev) .and. m%ComputeWakeInduced) then
        call PrepareNextTimeStep()
    endif
 
@@ -472,10 +476,12 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    !call print_x_NW_FW(p, m, z, x,'Conv')
 
 
-   ! --- t+dtaero
-   ! Propagation/creation of new layer of panels
-   call PropagateWake(p, m, z, x, ErrStat2, ErrMsg2)
-   !call print_x_NW_FW(p, m, z, x,'Prop_')
+   if (m%ComputeWakeInduced) then
+      ! --- t+dtaero
+      ! Propagation/creation of new layer of panels
+      call PropagateWake(p, m, z, x, ErrStat2, ErrMsg2)
+      !call print_x_NW_FW(p, m, z, x,'Prop_')
+   endif
 
    ! Inputs at t+dtaero
    call FVW_Input_ExtrapInterp(u(1:size(utimes)),utimes,uInterp,t+dtaero, ErrStat2, ErrMsg2); if(Failed()) return
@@ -553,9 +559,9 @@ subroutine FVW_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSt
    call AllocAry( dxdt%r_FW , 3   ,  FWnSpan+1  ,p%nFWMax+1,  p%nWings, 'Wind on FW ', ErrStat, ErrMsg ); dxdt%r_FW= -999999_ReKi;
 
    ! Only calculate freewake after start time and if on a timestep when it should be calculated.
-   if (t> p%FreeWakeStart .and. m%ComputeWakeInduced) then
+   if ((t> p%FreeWakeStart) .and. m%ComputeWakeInduced) then
       nFWEff = min(m%nFW, p%nFWFree)
-      
+
       ! --- Compute Induced velocities on the Near wake and far wake based on the marker postions:
       ! (expensive N^2 call)
       ! In  : x%r_NW,    r%r_FW 
