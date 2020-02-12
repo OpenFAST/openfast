@@ -18,8 +18,9 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, Inp, ErrStat, ErrMsg )
    ! Local variables
    integer :: iLine
    real(ReKi) :: TODO_Re
-   character(1024)      :: PriPath                                         ! the path to the primary input file
-   character(1024)      :: line                                            ! string to temporarially hold value of read line
+   character(1024)      :: PriPath                         ! the path to the primary input file
+   character(1024)      :: VTK_fps_line                    ! string to temporarially hold value of read line for VTK_fps
+   integer(IntKi)       :: LineLen
    integer(IntKi)       :: UnIn
    integer(IntKi)       :: ErrStat2
    character(ErrMsgLen) :: ErrMsg2
@@ -58,9 +59,10 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, Inp, ErrStat, ErrMsg )
    CALL ReadVar        (UnIn,FileName,Inp%WakeRegFactor ,'WakeRegFactor'   ,''              , ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVar        (UnIn,FileName,Inp%WingRegFactor ,'WingRegFactor'   ,''              , ErrStat2,ErrMsg2); if(Failed())return
    !------------------------ OUTPUT OPTIONS -----------------------------------------
-   CALL ReadCom(UnIn,FileName,                  'Output options header', ErrStat2, ErrMsg2 ); if(Failed()) return
+   CALL ReadCom(UnIn,FileName,                  'Output options header', ErrStat2,ErrMsg2); if(Failed()) return
    CALL ReadVar(UnIn,FileName,Inp%WrVTK       , 'WrVTK'              ,'',ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVar(UnIn,FileName,Inp%VTKBlades   , 'VTKBlades'          ,'',ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVar(UnIn,FileName,VTK_fps_line    , 'VTK_fps'            ,'',ErrStat2,ErrMsg2); if(Failed())return
 
    ! --- Validation of inputs
    if (PathIsRelative(Inp%CirculationFile)) Inp%CirculationFile = TRIM(PriPath)//TRIM(Inp%CirculationFile)
@@ -68,6 +70,8 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, Inp, ErrStat, ErrMsg )
    if (Check(.not.(ANY((/idCircPrescribed,idCircPolarData/)==Inp%CirculationMethod)), 'Circulation method not implemented')) return
 
    if (Check( Inp%IntMethod/=idEuler1 , 'Time integration method not yet implemented. Use Euler 1st order method for now.')) return
+
+   if (Check( Inp%DTfvw < p%DTaero, 'DTfvw must be >= DTaero from AD15.')) return
 
    if (Check( Inp%nNWPanels<0     , 'Number of near wake panels must be >=0')) return
    if (Check( Inp%nFWPanels<0     , 'Number of far wake panels must be >=0')) return
@@ -78,6 +82,8 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, Inp, ErrStat, ErrMsg )
    if (Check(.not.(ANY(idRegMethodVALID==Inp%WakeRegMethod)), 'Wake regularization method not implemented')) return
    if (Check(Inp%WakeRegFactor<0                            , 'Wake regularization factor should be positive')) return
    if (Check(Inp%WingRegFactor<0                            , 'Wing regularization factor should be positive')) return
+
+   Inp%DTvtk = Get_DTvtk( VTK_fps_line, p%DTaero, Inp%DTfvw )
 
    ! At least one NW panel if FW, this shoudln't be a problem since the LL is in NW, but safety for now
    !if (Check( (Inp%nNWPanels<=0).and.(Inp%nFWPanels>0)      , 'At least one near wake panel is required if the number of far wake panel is >0')) return
@@ -103,6 +109,41 @@ CONTAINS
    subroutine CleanUp()
       close( UnIn )
    end subroutine
+
+   real(DbKi) function Get_DTvtk( VTK_fps_line, DTaero, DTfvw )
+      character(len=*), intent(inout)  :: VTK_fps_line
+      real(DbKi),       intent(in   )  :: DTaero
+      real(DbKi),       intent(in   )  :: DTfvw
+      real(DbKi)                       :: VTK_fps
+      integer(IntKi)                   :: IOS
+      integer(IntKi)                   :: TmpRate
+      real(DbKi)                       :: TmpTime
+
+      call Conv2UC( VTK_fps_line )
+      if ( index(VTK_fps_line, "DEFAULT" ) == 1 ) then   ! at DTfvw frequency
+         Get_DTvtk = DTfvw
+      elseif ( index(VTK_fps_line, "ALL" ) == 1 ) then   ! at DTaero frequency
+         Get_DTvtk = DTaero
+      else  ! read a number.  Calculate this later. {will use closest integer multiple of DT}
+         read( VTK_fps_line, *, IOSTAT=IOS) VTK_fps
+            CALL CheckIOS ( IOS, FileName, 'VTK_fps', NumType, ErrStat2, ErrMsg2 ); if (Failed()) return;
+
+         ! convert frames-per-second to seconds per sample:
+         if ( EqualRealNos(VTK_fps, 0.0_DbKi) ) then
+            Get_DTvtk = HUGE(1.0_DbKi)
+         else
+            TmpTime = 1.0_DbKi / VTK_fps
+            TmpRate = max( NINT( TmpTime / DTaero ),1_IntKi )      ! Can't be smaller that DTaero
+            Get_DTvtk = TmpRate * DTaero
+            ! warn if DTvtk is not TmpTime
+            if (.not. EqualRealNos(Get_DTvtk, TmpTime)) then
+               call SetErrStat(ErrID_Info, '1/VTK_fps is not an integer multiple of DT. FVW will output VTK information at '//&
+                              trim(num2lstr(1.0_DbKi/(TmpRate*DTaero)))//' fps, the closest rate possible.',ErrStat,ErrMsg,'FVW_ReadInputFile')
+            end if
+         end if
+      end if
+   end function Get_DTvtk
+
 
 END SUBROUTINE FVW_ReadInputFile
 

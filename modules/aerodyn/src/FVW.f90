@@ -29,6 +29,7 @@ MODULE FVW
    PUBLIC   :: FVW_CalcOutput
    PUBLIC   :: FVW_UpdateStates
 
+   real(DbKi), parameter      :: OneMinusEpsilon = 1 - 10000*EPSILON(1.0_DbKi)
 
 CONTAINS
 
@@ -86,6 +87,7 @@ subroutine FVW_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
    p%nFWMax  = max(InputFileData%nFWPanels,0)
    p%nFWFree = max(InputFileData%nFWPanelsFree,0)
    p%DTfvw   = InputFileData%DTfvw
+   p%DTvtk   = InputFileData%DTvtk
 
    ! Initialize Misc Vars (may depend on input file)
    CALL FVW_InitMiscVars( p, m, ErrStat2, ErrMsg2 ); if(Failed()) return
@@ -150,8 +152,8 @@ subroutine FVW_InitMiscVars( p, m, ErrStat, ErrMsg )
    m%FirstCall = .True.
    m%nNW       = iNWStart-1    ! Number of active nearwake panels
    m%nFW       = 0             ! Number of active farwake  panels
-   m%iStep     = 0             ! Current step number
-   m%iStepPrev = 0             ! Previous step number (used to check if a correction step is calculated)
+   m%VTKstep   = 0             ! Current step number for vtk output
+   m%VTKlastTime = 0.0_DbKi - p%DTvtk  ! set negative so we ouput first vtk files
 
    call AllocAry( m%LE      ,  3  ,  p%nSpan+1  , p%nWings, 'Leading Edge Points', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitMisc' ); m%LE = -999999_ReKi;
    call AllocAry( m%TE      ,  3  ,  p%nSpan+1  , p%nWings, 'TrailingEdge Points', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitMisc' ); m%TE = -999999_ReKi;
@@ -185,7 +187,7 @@ subroutine FVW_InitMiscVars( p, m, ErrStat, ErrMsg )
    nMax = nMax + (FWnSpan+1) * (p%nFWMax+1) * p%nWings   ! Far wake points
    call AllocAry( m%r_wind, 3, nMax, 'Requested wind points', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitMisc' )
    m%r_wind = 0.0_ReKi     ! set to zero so InflowWind can shortcut calculations
-   m%OldTime = 0.0_DbKi-p%DTfvw    ! First time for wake interaction calculations
+   m%OldWakeTime = 0.0_DbKi-p%DTfvw    ! First time for wake interaction calculations.  Set negative so calculate at T=0
 end subroutine FVW_InitMiscVars
 ! ==============================================================================
 subroutine FVW_InitStates( x, p, m, ErrStat, ErrMsg )
@@ -279,7 +281,7 @@ SUBROUTINE FVW_SetParametersFromInputs( InitInp, p, m, ErrStat, ErrMsg )
    p%nSpan        =  InitInp%numBladeNodes-1
 
    ! Set time step
-   p%DT           =  InitInp%DT
+   p%DTaero       =  InitInp%DTaero
 
    ! Kinematic air viscosity
    p%KinVisc      =  InitInp%KinVisc
@@ -394,10 +396,10 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    type(FVW_InputType),             intent(inout)  :: u(:)        !< Inputs at utimes (out only for mesh record-keeping in ExtrapInterp routine)
    real(DbKi),                      intent(in   )  :: utimes(:)   !< Times associated with u(:), in seconds
    type(FVW_ParameterType),         intent(in   )  :: p           !< Parameters
-   type(FVW_ContinuousStateType),   intent(inout)  :: x           !< Input: Continuous states at t; Output: at t+dtaero
-   type(FVW_DiscreteStateType),     intent(inout)  :: xd          !< Input: Discrete states at t;   Output: at t+dtaero
-   type(FVW_ConstraintStateType),   intent(inout)  :: z           !< Input: Constraint states at t; Output: at t+dtaero
-   type(FVW_OtherStateType),        intent(inout)  :: OtherState  !< Input: Other states at t;      Output: at t+dtaero
+   type(FVW_ContinuousStateType),   intent(inout)  :: x           !< Input: Continuous states at t; Output: at t+DTaero
+   type(FVW_DiscreteStateType),     intent(inout)  :: xd          !< Input: Discrete states at t;   Output: at t+DTaero
+   type(FVW_ConstraintStateType),   intent(inout)  :: z           !< Input: Constraint states at t; Output: at t+DTaero
+   type(FVW_OtherStateType),        intent(inout)  :: OtherState  !< Input: Other states at t;      Output: at t+DTaero
    type(AFI_ParameterType),         intent(in   )  :: AFInfo(:)   !< The airfoil parameter data
    type(FVW_MiscVarType),           intent(inout)  :: m           !< Misc/optimization variables
    integer(IntKi),                  intent(  out)  :: errStat     !< Error status of the operation
@@ -408,33 +410,24 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    character(ErrMsgLen)          :: ErrMsg2                                                            ! temporary Error message
    type(FVW_ConstraintStateType) :: z_guess                                                                              ! <
    integer(IntKi) :: iW, iSpan, iAge
-   real(ReKi) :: dtaero
-   real(DbKi), parameter      :: OneMinusEpsilon = 1 - 10000*EPSILON(t)
 
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-      ! dtaero is the timestep that FVW is called at (DTaero of AD15)
-   dtaero=utimes(1)-t
-      ! Increment step if we are not on a correction step (n also wouldn't change)
-   if (t > m%OldTime) then
-      m%iStepPrev = m%iStep
-      m%iStep = n
-   endif
 
       ! Compute Inuced wake effects only if time since last compute is > DTfvw
-   if ( ( t - m%OldTime ) >= p%DTfvw*OneMinusEpsilon )  then
-      m%OldTime = t
+   if ( ( t - m%OldWakeTime ) >= p%DTfvw*OneMinusEpsilon )  then
+      m%OldWakeTime = t
       m%ComputeWakeInduced = .TRUE.    ! It's time to update the induced velocities from wake
    else
       m%ComputeWakeInduced = .FALSE.
    endif
 
 
-   print'(A,F10.3,A,F10.3,A,F10.3,A,I0,A,I0,A,I0)','Update states, t:',t,'  t_u:', utimes(1),' dtaero: ',dtaero,'   ',n,' nNW:',m%nNW,' nFW:',m%nFW
+   print'(A,F10.3,A,F10.3,A,F10.3,A,I0,A,I0,A,I0)','Update states, t:',t,'  t_u:', utimes(1),' p%DTaero: ',p%DTaero,'   ',n,' nNW:',m%nNW,' nFW:',m%nFW
 
-   ! We don't propagate the "Old"-> "New" if we we are not taking another timestep (such as during a correction step) 
-   if ((m%iStep /= m%iStepPrev) .and. m%ComputeWakeInduced) then
+   ! We don't propagate the "Old"-> "New" if we we are not calculating wake interaction
+   if (m%ComputeWakeInduced) then
        call PrepareNextTimeStep()
    endif
 
@@ -461,9 +454,9 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    call Map_NW_FW(p, m, z, x, ErrStat2, ErrMsg2)
    !call print_x_NW_FW(p, m, z, x,'Map_')
 
-   ! --- Integration between t and t+dtaero
+   ! --- Integration between t and t+DTaero
    if (p%IntMethod .eq. idEuler1) then 
-     call FVW_Euler1( t, dtaero, uInterp, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2); if(Failed()) return
+     call FVW_Euler1( t, uInterp, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2); if(Failed()) return
    !elseif (p%IntMethod .eq. idRK4) then 
    !   call FVW_RK4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
    !elseif (p%IntMethod .eq. idAB4) then
@@ -477,16 +470,16 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
 
 
    if (m%ComputeWakeInduced) then
-      ! --- t+dtaero
+      ! --- t+DTaero
       ! Propagation/creation of new layer of panels
       call PropagateWake(p, m, z, x, ErrStat2, ErrMsg2)
       !call print_x_NW_FW(p, m, z, x,'Prop_')
    endif
 
-   ! Inputs at t+dtaero
-   call FVW_Input_ExtrapInterp(u(1:size(utimes)),utimes,uInterp,t+dtaero, ErrStat2, ErrMsg2); if(Failed()) return
+   ! Inputs at t+DTaero
+   call FVW_Input_ExtrapInterp(u(1:size(utimes)),utimes,uInterp,t+p%DTaero, ErrStat2, ErrMsg2); if(Failed()) return
 
-   ! Panelling wings based on input mesh at t+dtaero
+   ! Panelling wings based on input mesh at t+p%DTaero
    call Wings_Panelling(uInterp%WingsMesh, p, m, ErrStat2, ErrMsg2); if(Failed()) return
 
    ! Updating positions of first NW and FW panels (Circulation also updated but irrelevant)
@@ -495,10 +488,10 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    call Map_NW_FW(p, m, z, x, ErrStat2, ErrMsg2)
    !call print_x_NW_FW(p, m, z, x,'Map2')
 
-   ! --- Solve for circulation at t+dtaero
-   ! Returns: z%Gamma_LL (at t+dtaero)
+   ! --- Solve for circulation at t+p%DTaero
+   ! Returns: z%Gamma_LL (at t+p%DTaero)
    z_guess%Gamma_LL = z%Gamma_LL ! We use as guess the circulation from the previous time step (see above)
-   call FVW_CalcConstrStateResidual(t+dtaero, uInterp, p, x, xd, z_guess, OtherState, m, z, AFInfo, ErrStat2, ErrMsg2, 2); if(Failed()) return
+   call FVW_CalcConstrStateResidual(t+p%DTaero, uInterp, p, x, xd, z_guess, OtherState, m, z, AFInfo, ErrStat2, ErrMsg2, 2); if(Failed()) return
 
    ! Updating circulation of near wake panel (and position but irrelevant)
    ! Changes: x only
@@ -506,7 +499,7 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    call Map_NW_FW(p, m, z, x, ErrStat2, ErrMsg2)
    !call print_x_NW_FW(p, m, z, x,'Map3')
 
-   ! set the wind points required for t+dtaero timestep
+   ! set the wind points required for t+p%DTaero timestep
    CALL SetRequestedWindPoints(m%r_wind, x, p, m, ErrStat2, ErrMsg2 ); if(Failed()) return
 
    if (m%FirstCall) then
@@ -595,9 +588,8 @@ subroutine FVW_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSt
 end subroutine FVW_CalcContStateDeriv
 
 !----------------------------------------------------------------------------------------------------------------------------------
-subroutine FVW_Euler1( t, dt, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
+subroutine FVW_Euler1( t, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
    real(DbKi),                    intent(in   ) :: t          !< Current simulation time in seconds
-   real(ReKi),                    intent(in   ) :: dt         !< Time step
    type(FVW_InputType),           intent(in   ) :: u          !< Input at t
    type(FVW_ParameterType),       intent(in   ) :: p          !< Parameters
    type(FVW_ContinuousStateType), intent(inout) :: x          !< Continuous states at t on input at t + dt on output
@@ -610,10 +602,12 @@ subroutine FVW_Euler1( t, dt, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
    ! local variables
    type(FVW_ContinuousStateType) :: dxdt        ! time derivatives of continuous states      
    integer(IntKi) :: iAge
+   real(ReKi)     :: dt
    ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = "" 
 
+   dt = real(p%DTaero,ReKi)
    ! Compute "right hand side"
    CALL FVW_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrStat, ErrMsg )
 
@@ -729,13 +723,16 @@ subroutine FVW_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, ErrStat,
    call print_mean_3d(m%Vind_LL,'Mean induced vel. LL')
    call print_mean_3d(m%Vtot_LL,'Mean relativevel. LL')
 
-   ! --- Write to VTK
-!FIXME: This should be glue code level (all VTK output writing is done there) 
+   ! --- Write to local VTK at fps requested
    if (p%WrVTK==1) then
       if (m%FirstCall) then
          call MKDIR('vtk_out')
       endif
-      call WrVTK_FVW(p, x, z, m, 'vtk_out/FVW', m%iStep, 9)
+      if ( ( t - m%VTKlastTime ) >= p%DTvtk*OneMinusEpsilon )  then
+         m%VTKlastTime = t
+         call WrVTK_FVW(p, x, z, m, 'vtk_out/FVW', m%VTKstep, 9)
+         m%VTKstep = m%VTKstep + 1  ! Increment VTK counter
+      endif
    endif
 
 

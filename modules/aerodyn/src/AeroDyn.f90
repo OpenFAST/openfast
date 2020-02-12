@@ -2228,7 +2228,7 @@ SUBROUTINE Init_FVWmodule( InputFileData, u_AD, u, p, x, xd, z, OtherState, y, m
    InitInp%FVWFileName    = InputFileData%FVWFileName
    InitInp%numBlades      = p%numBlades
    InitInp%numBladeNodes  = p%numBlNds
-   InitInp%DT             = p%DT       ! NOTE: if we subcycle FVW, this will need modification
+   InitInp%DTaero         = p%DT       ! NOTE: FVW can run a lower timestep internally
    InitInp%KinVisc        = p%KinVisc
 
       ! NOTE: The following are not meshes

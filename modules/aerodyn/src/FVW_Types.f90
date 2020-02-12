@@ -59,9 +59,10 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: WrVTK      !< Outputs VTK at each calcoutput call, even if main fst doesnt do it [-]
     INTEGER(IntKi)  :: VTKBlades      !< Outputs VTk for each blade 0=no blade, 1=Bld 1 [-]
     INTEGER(IntKi)  :: HACK      !< HACK ID [-]
-    REAL(DbKi)  :: DT      !< Time interval for calls calculations [s]
+    REAL(DbKi)  :: DTaero      !< Time interval for calls calculations [s]
     REAL(DbKi)  :: DTfvw      !< Time interval for calculating wake induced velocities [s]
     REAL(ReKi)  :: KinVisc      !< Kinematic air viscosity [m^2/s]
+    REAL(DbKi)  :: DTvtk      !< DT between vtk writes [s]
   END TYPE FVW_ParameterType
 ! =======================
 ! =========  FVW_OtherStateType  =======
@@ -96,12 +97,12 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: Vind_FW      !< Induced velocity on far  wake panels [m/s]
     INTEGER(IntKi)  :: nNW      !< Number of active near wake panels [-]
     INTEGER(IntKi)  :: nFW      !< Number of active far  wake panels [-]
-    INTEGER(IntKi)  :: iStep      !< Current step number [-]
-    INTEGER(IntKi)  :: iStepPrev      !< Previous step number [-]
+    INTEGER(IntKi)  :: VTKstep      !< Current vtk output step number [-]
+    REAL(DbKi)  :: VTKlastTime      !< Time the last VTK file set was written out [s]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: r_wind      !< List of points where wind is requested for next time step [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PitchAndTwist      !< Twist angle (includes all sources of twist)  [Array of size (NumBlNds,numBlades)] [rad]
     LOGICAL  :: ComputeWakeInduced      !< Compute induced velocities on this timestep [-]
-    REAL(DbKi)  :: OldTime      !< Time the wake induction velocities were last calculated [s]
+    REAL(DbKi)  :: OldWakeTime      !< Time the wake induction velocities were last calculated [s]
   END TYPE FVW_MiscVarType
 ! =======================
 ! =========  FVW_InputType  =======
@@ -148,7 +149,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: rLocal      !< Radial distance to blade node from the center of rotation, measured in the rotor plane, needed for DBEMT [m]
     INTEGER(IntKi)  :: NumBlades      !< Number of blades [-]
     INTEGER(IntKi)  :: NumBladeNodes      !< Number of nodes on each blade [-]
-    REAL(DbKi)  :: DT      !< Time interval for calls (from AD15) [s]
+    REAL(DbKi)  :: DTaero      !< Time interval for calls (from AD15) [s]
     REAL(ReKi)  :: KinVisc      !< Kinematic air viscosity [m^2/s]
   END TYPE FVW_InitInputType
 ! =======================
@@ -174,6 +175,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: WingRegFactor      !< Factor used in the regularization  [-]
     INTEGER(IntKi)  :: WrVTK      !< Outputs VTK at each calcoutput call, even if main fst doesnt do it [-]
     INTEGER(IntKi)  :: VTKBlades      !< Outputs VTk for each blade 0=no blade, 1=Bld 1 [-]
+    REAL(DbKi)  :: DTvtk      !< Requested timestep between VTK outputs (calculated from the VTK_fps read in) [s]
   END TYPE FVW_InputFile
 ! =======================
 ! =========  FVW_InitOutputType  =======
@@ -260,9 +262,10 @@ ENDIF
     DstParamData%WrVTK = SrcParamData%WrVTK
     DstParamData%VTKBlades = SrcParamData%VTKBlades
     DstParamData%HACK = SrcParamData%HACK
-    DstParamData%DT = SrcParamData%DT
+    DstParamData%DTaero = SrcParamData%DTaero
     DstParamData%DTfvw = SrcParamData%DTfvw
     DstParamData%KinVisc = SrcParamData%KinVisc
+    DstParamData%DTvtk = SrcParamData%DTvtk
  END SUBROUTINE FVW_CopyParam
 
  SUBROUTINE FVW_DestroyParam( ParamData, ErrStat, ErrMsg )
@@ -355,9 +358,10 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! WrVTK
       Int_BufSz  = Int_BufSz  + 1  ! VTKBlades
       Int_BufSz  = Int_BufSz  + 1  ! HACK
-      Db_BufSz   = Db_BufSz   + 1  ! DT
+      Db_BufSz   = Db_BufSz   + 1  ! DTaero
       Db_BufSz   = Db_BufSz   + 1  ! DTfvw
       Re_BufSz   = Re_BufSz   + 1  ! KinVisc
+      Db_BufSz   = Db_BufSz   + 1  ! DTvtk
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -470,12 +474,14 @@ ENDIF
       Int_Xferred   = Int_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%HACK
       Int_Xferred   = Int_Xferred   + 1
-      DbKiBuf ( Db_Xferred:Db_Xferred+(1)-1 ) = InData%DT
+      DbKiBuf ( Db_Xferred:Db_Xferred+(1)-1 ) = InData%DTaero
       Db_Xferred   = Db_Xferred   + 1
       DbKiBuf ( Db_Xferred:Db_Xferred+(1)-1 ) = InData%DTfvw
       Db_Xferred   = Db_Xferred   + 1
       ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%KinVisc
       Re_Xferred   = Re_Xferred   + 1
+      DbKiBuf ( Db_Xferred:Db_Xferred+(1)-1 ) = InData%DTvtk
+      Db_Xferred   = Db_Xferred   + 1
  END SUBROUTINE FVW_PackParam
 
  SUBROUTINE FVW_UnPackParam( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -629,12 +635,14 @@ ENDIF
       Int_Xferred   = Int_Xferred + 1
       OutData%HACK = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
-      OutData%DT = DbKiBuf( Db_Xferred ) 
+      OutData%DTaero = DbKiBuf( Db_Xferred ) 
       Db_Xferred   = Db_Xferred + 1
       OutData%DTfvw = DbKiBuf( Db_Xferred ) 
       Db_Xferred   = Db_Xferred + 1
       OutData%KinVisc = ReKiBuf( Re_Xferred )
       Re_Xferred   = Re_Xferred + 1
+      OutData%DTvtk = DbKiBuf( Db_Xferred ) 
+      Db_Xferred   = Db_Xferred + 1
  END SUBROUTINE FVW_UnPackParam
 
  SUBROUTINE FVW_CopyOtherState( SrcOtherStateData, DstOtherStateData, CtrlCode, ErrStat, ErrMsg )
@@ -1139,8 +1147,8 @@ IF (ALLOCATED(SrcMiscData%Vind_FW)) THEN
 ENDIF
     DstMiscData%nNW = SrcMiscData%nNW
     DstMiscData%nFW = SrcMiscData%nFW
-    DstMiscData%iStep = SrcMiscData%iStep
-    DstMiscData%iStepPrev = SrcMiscData%iStepPrev
+    DstMiscData%VTKstep = SrcMiscData%VTKstep
+    DstMiscData%VTKlastTime = SrcMiscData%VTKlastTime
 IF (ALLOCATED(SrcMiscData%r_wind)) THEN
   i1_l = LBOUND(SrcMiscData%r_wind,1)
   i1_u = UBOUND(SrcMiscData%r_wind,1)
@@ -1170,7 +1178,7 @@ IF (ALLOCATED(SrcMiscData%PitchAndTwist)) THEN
     DstMiscData%PitchAndTwist = SrcMiscData%PitchAndTwist
 ENDIF
     DstMiscData%ComputeWakeInduced = SrcMiscData%ComputeWakeInduced
-    DstMiscData%OldTime = SrcMiscData%OldTime
+    DstMiscData%OldWakeTime = SrcMiscData%OldWakeTime
  END SUBROUTINE FVW_CopyMisc
 
  SUBROUTINE FVW_DestroyMisc( MiscData, ErrStat, ErrMsg )
@@ -1404,8 +1412,8 @@ ENDIF
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! nNW
       Int_BufSz  = Int_BufSz  + 1  ! nFW
-      Int_BufSz  = Int_BufSz  + 1  ! iStep
-      Int_BufSz  = Int_BufSz  + 1  ! iStepPrev
+      Int_BufSz  = Int_BufSz  + 1  ! VTKstep
+      Db_BufSz   = Db_BufSz   + 1  ! VTKlastTime
   Int_BufSz   = Int_BufSz   + 1     ! r_wind allocated yes/no
   IF ( ALLOCATED(InData%r_wind) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! r_wind upper/lower bounds for each dimension
@@ -1417,7 +1425,7 @@ ENDIF
       Re_BufSz   = Re_BufSz   + SIZE(InData%PitchAndTwist)  ! PitchAndTwist
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! ComputeWakeInduced
-      Db_BufSz   = Db_BufSz   + 1  ! OldTime
+      Db_BufSz   = Db_BufSz   + 1  ! OldWakeTime
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -1866,10 +1874,10 @@ ENDIF
       Int_Xferred   = Int_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%nFW
       Int_Xferred   = Int_Xferred   + 1
-      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%iStep
+      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%VTKstep
       Int_Xferred   = Int_Xferred   + 1
-      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%iStepPrev
-      Int_Xferred   = Int_Xferred   + 1
+      DbKiBuf ( Db_Xferred:Db_Xferred+(1)-1 ) = InData%VTKlastTime
+      Db_Xferred   = Db_Xferred   + 1
   IF ( .NOT. ALLOCATED(InData%r_wind) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -1904,7 +1912,7 @@ ENDIF
   END IF
       IntKiBuf ( Int_Xferred:Int_Xferred+1-1 ) = TRANSFER( InData%ComputeWakeInduced , IntKiBuf(1), 1)
       Int_Xferred   = Int_Xferred   + 1
-      DbKiBuf ( Db_Xferred:Db_Xferred+(1)-1 ) = InData%OldTime
+      DbKiBuf ( Db_Xferred:Db_Xferred+(1)-1 ) = InData%OldWakeTime
       Db_Xferred   = Db_Xferred   + 1
  END SUBROUTINE FVW_PackMisc
 
@@ -2585,10 +2593,10 @@ ENDIF
       Int_Xferred   = Int_Xferred + 1
       OutData%nFW = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
-      OutData%iStep = IntKiBuf( Int_Xferred ) 
+      OutData%VTKstep = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
-      OutData%iStepPrev = IntKiBuf( Int_Xferred ) 
-      Int_Xferred   = Int_Xferred + 1
+      OutData%VTKlastTime = DbKiBuf( Db_Xferred ) 
+      Db_Xferred   = Db_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! r_wind not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
@@ -2643,7 +2651,7 @@ ENDIF
   END IF
       OutData%ComputeWakeInduced = TRANSFER( IntKiBuf( Int_Xferred ), mask0 )
       Int_Xferred   = Int_Xferred + 1
-      OutData%OldTime = DbKiBuf( Db_Xferred ) 
+      OutData%OldWakeTime = DbKiBuf( Db_Xferred ) 
       Db_Xferred   = Db_Xferred + 1
  END SUBROUTINE FVW_UnPackMisc
 
@@ -4144,7 +4152,7 @@ IF (ALLOCATED(SrcInitInputData%rLocal)) THEN
 ENDIF
     DstInitInputData%NumBlades = SrcInitInputData%NumBlades
     DstInitInputData%NumBladeNodes = SrcInitInputData%NumBladeNodes
-    DstInitInputData%DT = SrcInitInputData%DT
+    DstInitInputData%DTaero = SrcInitInputData%DTaero
     DstInitInputData%KinVisc = SrcInitInputData%KinVisc
  END SUBROUTINE FVW_CopyInitInput
 
@@ -4283,7 +4291,7 @@ ENDIF
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! NumBlades
       Int_BufSz  = Int_BufSz  + 1  ! NumBladeNodes
-      Db_BufSz   = Db_BufSz   + 1  ! DT
+      Db_BufSz   = Db_BufSz   + 1  ! DTaero
       Re_BufSz   = Re_BufSz   + 1  ! KinVisc
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -4464,7 +4472,7 @@ ENDIF
       Int_Xferred   = Int_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%NumBladeNodes
       Int_Xferred   = Int_Xferred   + 1
-      DbKiBuf ( Db_Xferred:Db_Xferred+(1)-1 ) = InData%DT
+      DbKiBuf ( Db_Xferred:Db_Xferred+(1)-1 ) = InData%DTaero
       Db_Xferred   = Db_Xferred   + 1
       ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%KinVisc
       Re_Xferred   = Re_Xferred   + 1
@@ -4741,7 +4749,7 @@ ENDIF
       Int_Xferred   = Int_Xferred + 1
       OutData%NumBladeNodes = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
-      OutData%DT = DbKiBuf( Db_Xferred ) 
+      OutData%DTaero = DbKiBuf( Db_Xferred ) 
       Db_Xferred   = Db_Xferred + 1
       OutData%KinVisc = ReKiBuf( Re_Xferred )
       Re_Xferred   = Re_Xferred + 1
@@ -4781,6 +4789,7 @@ ENDIF
     DstInputFileData%WingRegFactor = SrcInputFileData%WingRegFactor
     DstInputFileData%WrVTK = SrcInputFileData%WrVTK
     DstInputFileData%VTKBlades = SrcInputFileData%VTKBlades
+    DstInputFileData%DTvtk = SrcInputFileData%DTvtk
  END SUBROUTINE FVW_CopyInputFile
 
  SUBROUTINE FVW_DestroyInputFile( InputFileData, ErrStat, ErrMsg )
@@ -4849,6 +4858,7 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! WingRegFactor
       Int_BufSz  = Int_BufSz  + 1  ! WrVTK
       Int_BufSz  = Int_BufSz  + 1  ! VTKBlades
+      Db_BufSz   = Db_BufSz   + 1  ! DTvtk
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -4918,6 +4928,8 @@ ENDIF
       Int_Xferred   = Int_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%VTKBlades
       Int_Xferred   = Int_Xferred   + 1
+      DbKiBuf ( Db_Xferred:Db_Xferred+(1)-1 ) = InData%DTvtk
+      Db_Xferred   = Db_Xferred   + 1
  END SUBROUTINE FVW_PackInputFile
 
  SUBROUTINE FVW_UnPackInputFile( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -4994,6 +5006,8 @@ ENDIF
       Int_Xferred   = Int_Xferred + 1
       OutData%VTKBlades = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
+      OutData%DTvtk = DbKiBuf( Db_Xferred ) 
+      Db_Xferred   = Db_Xferred + 1
  END SUBROUTINE FVW_UnPackInputFile
 
  SUBROUTINE FVW_CopyInitOutput( SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg )

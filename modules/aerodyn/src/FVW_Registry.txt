@@ -32,9 +32,10 @@ typedef     ^                   ^               ReKi                            
 typedef     ^                   ^               IntKi                            WrVTK         -  - -   "Outputs VTK at each calcoutput call, even if main fst doesnt do it"  - 
 typedef     ^                   ^               IntKi                            VTKBlades     -  - -   "Outputs VTk for each blade 0=no blade, 1=Bld 1"  - 
 typedef     ^                   ^               IntKi                            HACK          -    -  - "HACK ID"      -
-typedef     ^                   ^               DbKi                             DT            -  - -   "Time interval for calls calculations"   s
+typedef     ^                   ^               DbKi                             DTaero        -  - -   "Time interval for calls calculations"   s
 typedef     ^                   ^               DbKi                             DTfvw         -  - -   "Time interval for calculating wake induced velocities"   s
-typedef     ^                   ^               ReKi                             KinVisc       -  - -   "Kinematic air viscosity"	m^2/s
+typedef     ^                   ^               ReKi                             KinVisc       -  - -   "Kinematic air viscosity"   m^2/s
+typedef     ^                   ^               DbKi                             DTvtk         -  - -   "DT between vtk writes" s
 
 # ....... OtherStateType ............
 # FVW_OtherStateType
@@ -69,12 +70,12 @@ typedef     ^                   ^               ReKi                            
 typedef     ^                   ^               ReKi                             Vind_FW      :::: -  -  "Induced velocity on far  wake panels" m/s 
 typedef     ^                   ^               IntKi                            nNW           -   -  -  "Number of active near wake panels"      -
 typedef     ^                   ^               IntKi                            nFW           -   -  -  "Number of active far  wake panels"      -
-typedef     ^                   ^               IntKi                            iStep         -   -  -  "Current step number"      -
-typedef     ^                   ^               IntKi                            iStepPrev     -   -  -  "Previous step number"     -
+typedef     ^                   ^               IntKi                            VTKstep       -   -  -  "Current vtk output step number"      -
+typedef     ^                   ^               DbKi                             VTKlastTime   -   -   -  "Time the last VTK file set was written out" s
 typedef     ^                   ^               ReKi                             r_wind        ::   -  -  "List of points where wind is requested for next time step"  -
 typedef     ^                   ^               ReKi                             PitchAndTwist ::   -  -  "Twist angle (includes all sources of twist)  [Array of size (NumBlNds,numBlades)]" rad
 typedef     ^                   ^               Logical                          ComputeWakeInduced - - - "Compute induced velocities on this timestep" -
-typedef     ^                   ^               DbKi                             OldTime       -   -   -  "Time the wake induction velocities were last calculated" s
+typedef     ^                   ^               DbKi                             OldWakeTime   -   -   -  "Time the wake induction velocities were last calculated" s
 
 # ........ Input ............
 # FVW_InputType
@@ -117,8 +118,8 @@ typedef     ^                   ^               ReKi                            
 typedef     ^                   ^               ReKi                             rLocal            :: -  - "Radial distance to blade node from the center of rotation, measured in the rotor plane, needed for DBEMT" m
 typedef     ^                   ^               IntKi                            NumBlades         -  -  - "Number of blades"          -
 typedef     ^                   ^               IntKi                            NumBladeNodes     -  -  - "Number of nodes on each blade"          -
-typedef     ^                   ^               DbKi                             DT                -  -  - "Time interval for calls (from AD15)"   s
-typedef     ^                   ^               ReKi                             KinVisc       -  - -   "Kinematic air viscosity"	m^2/s
+typedef     ^                   ^               DbKi                             DTaero            -  -  - "Time interval for calls (from AD15)"   s
+typedef     ^                   ^               ReKi                             KinVisc       -  - -   "Kinematic air viscosity"   m^2/s
 
 #.......... InputFileType ......
 # FVW_InputFile
@@ -143,6 +144,7 @@ typedef     ^                   ^               ReKi                            
 typedef     ^                   ^               ReKi                             WingRegFactor -  - -   "Factor used in the regularization " 
 typedef     ^                   ^               IntKi                            WrVTK         -  - -   "Outputs VTK at each calcoutput call, even if main fst doesnt do it"  - 
 typedef     ^                   ^               IntKi                            VTKBlades     -  - -   "Outputs VTk for each blade 0=no blade, 1=Bld 1"  - 
+typedef     ^                   ^               DbKi                             DTvtk         -  - -   "Requested timestep between VTK outputs (calculated from the VTK_fps read in)" s
 
 #.......... InitOutputType ......
 # FVW_InitOutputType

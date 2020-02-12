@@ -367,7 +367,7 @@ contains
          ! We return Gamma_LL
       endif
 
-      ! KEEP ME:
+      ! KEEP ME: --- ADP: removed m%iStep in favor of m%VTKstep
       !iW=1
       !call Output_Gamma(m%CP_ll(1:3,:,iW), Gamma_LL(:,iW), iW, m%iStep, iLabel, iIter)
 
