@@ -2455,7 +2455,7 @@ SUBROUTINE HD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
    m%IgnoreMod = .true. ! to compute perturbations, we need to ignore the modulo function
    
    ! LIN_TODO: We need to deal with the case where either RdtnMod=0, and/or ExtcnMod=0 and hence %SS_Rdtn data or %SS_Exctn data is not valid
-   NN = p%WAMIT(1)%SS_Rdtn%N + p%WAMIT(1)%SS_Exctn%N
+   NN = p%WAMIT(1)%SS_Rdtn%numStates + p%WAMIT(1)%SS_Exctn%numStates
    
       ! make a copy of the inputs to perturb
    call HydroDyn_CopyInput( u, u_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2)
@@ -2551,15 +2551,15 @@ SUBROUTINE HD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
       dXdu = 0.0_R8Ki
       
    
-      do i = 1,p%WAMIT(1)%SS_Exctn%N
+      do i = 1,p%WAMIT(1)%SS_Exctn%numStates
          dXdu(offsetI+i,size(p%Jac_u_indx,1)+1) = p%WAMIT(1)%SS_Exctn%B(i)
       end do
 
 
-      offsetI = NN - p%WAMIT(1)%SS_Rdtn%N
+      offsetI = NN - p%WAMIT(1)%SS_Rdtn%numStates
       offsetJ = size(p%Jac_u_indx,1)+1 - 13
       do j = 1, 6
-         do i = 1,p%WAMIT(1)%SS_Rdtn%N
+         do i = 1,p%WAMIT(1)%SS_Rdtn%numStates
             dXdu(offsetI+i,offsetJ+j) = p%WAMIT(1)%SS_Rdtn%B(i,j)
          end do
       end do
@@ -2643,7 +2643,7 @@ SUBROUTINE HD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
 
    
    ! Calculate the partial derivative of the output functions (Y) with respect to the continuous states (x) here:
-   NN = p%WAMIT(1)%SS_Exctn%N+p%WAMIT(1)%SS_Rdtn%N
+   NN = p%WAMIT(1)%SS_Exctn%numStates+p%WAMIT(1)%SS_Rdtn%numStates
       
       ! make a copy of the continuous states to perturb
    call HydroDyn_CopyContState( x, x_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2)
@@ -2729,17 +2729,17 @@ SUBROUTINE HD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
       dXdx = 0.0_R8Ki
       
       ! Analytical Jacobians from State-space models
-      if ( p%WAMIT(1)%SS_Exctn%N > 0 ) then
-         do j=1,p%WAMIT(1)%SS_Exctn%N   
-            do i=1,p%WAMIT(1)%SS_Exctn%N ! Loop through all active (enabled) DOFs
+      if ( p%WAMIT(1)%SS_Exctn%numStates > 0 ) then
+         do j=1,p%WAMIT(1)%SS_Exctn%numStates   
+            do i=1,p%WAMIT(1)%SS_Exctn%numStates ! Loop through all active (enabled) DOFs
                dXdx(i, j) = p%WAMIT(1)%SS_Exctn%A(i,j)
             end do
          end do
       end if
-      if ( p%WAMIT(1)%SS_Rdtn%N > 0 ) then
-         do j=1,p%WAMIT(1)%SS_Rdtn%N   
-            do i=1,p%WAMIT(1)%SS_Rdtn%N ! Loop through all active (enabled) DOFs
-               dXdx(i+p%WAMIT(1)%SS_Exctn%N, j+p%WAMIT(1)%SS_Exctn%N) = p%WAMIT(1)%SS_Rdtn%A(i,j)
+      if ( p%WAMIT(1)%SS_Rdtn%numStates > 0 ) then
+         do j=1,p%WAMIT(1)%SS_Rdtn%numStates   
+            do i=1,p%WAMIT(1)%SS_Rdtn%numStates ! Loop through all active (enabled) DOFs
+               dXdx(i+p%WAMIT(1)%SS_Exctn%numStates, j+p%WAMIT(1)%SS_Exctn%numStates) = p%WAMIT(1)%SS_Rdtn%A(i,j)
             end do
          end do
       end if
@@ -3007,7 +3007,7 @@ SUBROUTINE HD_Init_Jacobian_x( p, InitOut, ErrStat, ErrMsg)
    ErrStat = ErrID_None
    ErrMsg  = ""
    indx = 1
-   NN = p%WAMIT(1)%SS_Rdtn%N + p%WAMIT(1)%SS_Exctn%N
+   NN = p%WAMIT(1)%SS_Rdtn%numStates + p%WAMIT(1)%SS_Exctn%numStates
    if ( NN == 0 ) return
       ! allocate space for the row/column names and for perturbation sizes
    call allocAry(p%dx,               NN, 'p%dx',       ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -3020,12 +3020,12 @@ SUBROUTINE HD_Init_Jacobian_x( p, InitOut, ErrStat, ErrMsg)
    
    ! set perturbation sizes: p%dx
    
-   do i = 1, p%WAMIT(1)%SS_Exctn%N    
+   do i = 1, p%WAMIT(1)%SS_Exctn%numStates    
       p%dx(i)  = 20000.0_R8Ki * D2R_D 
    end do
    
-   do i = 1, p%WAMIT(1)%SS_Rdtn%N
-      p%dx(i+p%WAMIT(1)%SS_Exctn%N)  = 2.0_R8Ki * D2R_D 
+   do i = 1, p%WAMIT(1)%SS_Rdtn%numStates
+      p%dx(i+p%WAMIT(1)%SS_Exctn%numStates)  = 2.0_R8Ki * D2R_D 
    end do
    
    modLabels = (/'Exctn     ','Rdtn      '/)
@@ -3375,8 +3375,8 @@ SUBROUTINE HD_Perturb_x( p, n, perturb_sign, x, dx )
    
    dx = p%dx(n)
       
-   if (n > p%WAMIT(1)%SS_Exctn%N) then
-      indx = n - p%WAMIT(1)%SS_Exctn%N
+   if (n > p%WAMIT(1)%SS_Exctn%numStates) then
+      indx = n - p%WAMIT(1)%SS_Exctn%numStates
       x%WAMIT(1)%SS_Rdtn%x( indx ) = x%WAMIT(1)%SS_Rdtn%x( indx ) + dx * perturb_sign 
    else
       indx = n
@@ -3539,16 +3539,16 @@ SUBROUTINE HD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
    IF ( PRESENT( x_op ) ) THEN
 
       if (.not. allocated(x_op)) then                           
-         call AllocAry(x_op, p%WAMIT(1)%SS_Exctn%N+p%WAMIT(1)%SS_Rdtn%N,'x_op',ErrStat2,ErrMsg2)
+         call AllocAry(x_op, p%WAMIT(1)%SS_Exctn%numStates+p%WAMIT(1)%SS_Rdtn%numStates,'x_op',ErrStat2,ErrMsg2)
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          if (ErrStat>=AbortErrLev) return
       end if
       
-      do i=1,p%WAMIT(1)%SS_Exctn%N ! Loop through all DOFs
+      do i=1,p%WAMIT(1)%SS_Exctn%numStates ! Loop through all DOFs
          x_op(i) = x%WAMIT(1)%SS_Exctn%x(i)
       end do
-      do i=1,p%WAMIT(1)%SS_Rdtn%N ! Loop through all DOFs
-         x_op(i+p%WAMIT(1)%SS_Exctn%N) = x%WAMIT(1)%SS_Rdtn%x(i)
+      do i=1,p%WAMIT(1)%SS_Rdtn%numStates ! Loop through all DOFs
+         x_op(i+p%WAMIT(1)%SS_Exctn%numStates) = x%WAMIT(1)%SS_Rdtn%x(i)
       end do                               
       
    END IF
@@ -3557,7 +3557,7 @@ SUBROUTINE HD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
    IF ( PRESENT( dx_op ) ) THEN
 
       if (.not. allocated(dx_op)) then                           
-         call AllocAry(dx_op, p%WAMIT(1)%SS_Exctn%N+p%WAMIT(1)%SS_Rdtn%N,'dx_op',ErrStat2,ErrMsg2)
+         call AllocAry(dx_op, p%WAMIT(1)%SS_Exctn%numStates+p%WAMIT(1)%SS_Rdtn%numStates,'dx_op',ErrStat2,ErrMsg2)
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          if (ErrStat>=AbortErrLev) return
       end if
@@ -3569,11 +3569,11 @@ SUBROUTINE HD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
             return
          end if
                      
-      do i=1,p%WAMIT(1)%SS_Exctn%N ! Loop through all DOFs
+      do i=1,p%WAMIT(1)%SS_Exctn%numStates ! Loop through all DOFs
          dx_op(i) = dx%WAMIT(1)%SS_Exctn%x(i)
       end do
-      do i=1,p%WAMIT(1)%SS_Rdtn%N ! Loop through all DOFs
-         dx_op(i+p%WAMIT(1)%SS_Exctn%N) = dx%WAMIT(1)%SS_Rdtn%x(i)
+      do i=1,p%WAMIT(1)%SS_Rdtn%numStates ! Loop through all DOFs
+         dx_op(i+p%WAMIT(1)%SS_Exctn%numStates) = dx%WAMIT(1)%SS_Rdtn%x(i)
       end do                                 
       
       call HydroDyn_DestroyContState( dx, ErrStat2, ErrMsg2)
