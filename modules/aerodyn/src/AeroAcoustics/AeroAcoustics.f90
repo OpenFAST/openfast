@@ -1,24 +1,5 @@
 !**********************************************************************************************************************************
-! LICENSING
-! Copyright (C) 2015-2016  National Renewable Energy Laboratory
-!
-!    This file is part of AeroAcoustics.
-!
-! Licensed under the Apache License, Version 2.0 (the "License");
-! you may not use this file except in compliance with the License.
-! You may obtain a copy of the License at
-!
-!     http://www.apache.org/licenses/LICENSE-2.0
-!
-! Unless required by applicable law or agreed to in writing, software
-! distributed under the License is distributed on an "AS IS" BASIS,
-! WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-! See the License for the specific language governing permissions and
-! limitations under the License.
-!
-!**********************************************************************************************************************************
-! File last committed: $Date: 2016-04-07 10:43:27 -0600 (Thu, 07 Apr 2016) $
-! (File) Revision #: $Rev: 211 $
+! File last committed: 2020-02-12
 !**********************************************************************************************************************************
 module AeroAcoustics
     
@@ -1061,7 +1042,7 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,y,errStat,errMsg)
                 IF ( (p%ILAM .EQ. 1) .AND. (p%ITRIP .EQ. 0) )    THEN
                     CALL LBLVS(AlphaNoise,p%BlChord(J,I),UNoise,m%ChordAngleTE(K,J,I),m%SpanAngleTE(K,J,I), &
                         elementspan,m%rTEtoObserve(K,J,I), &
-                        p,m%d99Var(2),m%dstarVar(1),m%dstarVar(2),m%SPLLBL,errStat2,errMsg2)
+                        p,m%d99Var(2),m%dstarVar(1),m%dstarVar(2),m%SPLLBL,p%StallStart(J,I),errStat2,errMsg2)
                     CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
                 ENDIF
                 !--------Turbulent Boundary Layer Trailing Edge Noise----------------------------!
@@ -1083,7 +1064,7 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,y,errStat,errMsg)
                 IF ( p%IBLUNT .EQ. 1 )   THEN                                          
                     CALL BLUNT(AlphaNoise,p%BlChord(J,I),UNoise,m%ChordAngleTE(K,J,I),m%SpanAngleTE(K,J,I), &
                         elementspan,m%rTEtoObserve(K,J,I),p%TEThick(J,I),p%TEAngle(J,I), &
-                        p, m%d99Var(2),m%dstarVar(1),m%dstarVar(2),m%SPLBLUNT,errStat2,errMsg2 )
+                        p, m%d99Var(2),m%dstarVar(1),m%dstarVar(2),m%SPLBLUNT,p%StallStart(J,I),errStat2,errMsg2 )
                     CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
                 ENDIF
                 !--------Tip Noise--------------------------------------------------------------!
@@ -1105,7 +1086,7 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,y,errStat,errMsg)
                         CALL Simple_Guidati(UNoise,p%BlChord(J,I),p%AFThickGuida(2,p%BlAFID(J,I)), &
                             p%AFThickGuida(1,p%BlAFID(J,I)),p,m%SPLTIGui,errStat2,errMsg2 )
                         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
-                        m%SPLti=m%SPLti+m%SPLTIGui+10 ! +10 is fudge factor to match NLR data
+                        m%SPLti=m%SPLti+m%SPLTIGui!+10 ! +10 is fudge factor to match NLR data
                     ELSEIF ( p%IInflow .EQ. 3 )   THEN                                     
                        print*,'Full Guidati removed'
                        STOP
@@ -1259,7 +1240,7 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,y,errStat,errMsg)
 	
 END SUBROUTINE CalcAeroAcousticsOutput
 !==================================================================================================================================!
-SUBROUTINE LBLVS(ALPSTAR,C,U,THETA,PHI,L,R,p,d99Var2,dstarVar1,dstarVar2,SPLLAM,errStat,errMsg)
+SUBROUTINE LBLVS(ALPSTAR,C,U,THETA,PHI,L,R,p,d99Var2,dstarVar1,dstarVar2,SPLLAM,StallVal,errStat,errMsg)
     REAL(ReKi),                                 INTENT(IN   ) :: ALPSTAR        ! AOA
     REAL(ReKi),                                 INTENT(IN   ) :: C              ! Chord Length
     REAL(ReKi),                                 INTENT(IN   ) :: U              ! Unoise FREESTREAM VELOCITY                METERS/SEC
@@ -1270,6 +1251,7 @@ SUBROUTINE LBLVS(ALPSTAR,C,U,THETA,PHI,L,R,p,d99Var2,dstarVar1,dstarVar2,SPLLAM,
     REAL(ReKi),                                 INTENT(IN   ) :: d99Var2        !
     REAL(ReKi),                                 INTENT(IN   ) :: dstarVar1              !
     REAL(ReKi),                                 INTENT(IN   ) :: dstarVar2              !
+    REAL(ReKi),                                 INTENT(IN   ) :: StallVal               !  
     TYPE(AA_ParameterType),                     INTENT(IN   ) :: p          ! Noise module Parameters
     REAL(ReKi),DIMENSION(size(p%FreqList)),     INTENT(  OUT) :: SPLLAM         !
     INTEGER(IntKi),                             INTENT(  OUT) :: errStat        ! Error status of the operation
@@ -1306,7 +1288,7 @@ SUBROUTINE LBLVS(ALPSTAR,C,U,THETA,PHI,L,R,p,d99Var2,dstarVar1,dstarVar2,SPLLAM,
         DSTRS  = dstarVar1
         DSTRP  = dstarVar2
     ELSE
-        CALL THICK(C,M,RC,ALPSTAR,p,DELTAP,DSTRS,DSTRP,errStat2,errMsg2)
+        CALL THICK(C,M,RC,ALPSTAR,p,DELTAP,DSTRS,DSTRP,StallVal,errStat2,errMsg2)
         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
     ENDIF
     ! compute directivity function
@@ -1451,7 +1433,7 @@ SUBROUTINE TBLTE(ALPSTAR,C,U,THETA,PHI,L,R,p,jj,ii,kk,d99Var2,dstarVar1,dstarVar
         DSTRS  = dstarVar1
         DSTRP  = dstarVar2
     ELSE
-        CALL THICK(C,M,RC,ALPSTAR,p,DELTAP,DSTRS,DSTRP,errStat2,errMsg2)
+        CALL THICK(C,M,RC,ALPSTAR,p,DELTAP,DSTRS,DSTRP,StallVal,errStat2,errMsg2)
         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
     ENDIF
     ! Compute directivity function
@@ -1472,8 +1454,8 @@ SUBROUTINE TBLTE(ALPSTAR,C,U,THETA,PHI,L,R,p,jj,ii,kk,d99Var2,dstarVar1,dstarVar
     ST1    = .02 * M ** (-.6)																							! Eq 32 from BPM Airfoil Self-noise and Prediction paper
   	! Eq 34 from BPM Airfoil Self-noise and Prediction paper
     IF  (ALPSTAR .LE. 1.333)                          ST2 = ST1
-    IF ((ALPSTAR .GT. 1.333).AND.(ALPSTAR .LE. 12.5)) ST2 = ST1*10.**(.0054*(ALPSTAR-1.333)**2.)
-    IF (ALPSTAR .GT. 12.5)                           ST2 = 4.72 * ST1
+    IF ((ALPSTAR .GT. 1.333).AND.(ALPSTAR .LE. StallVal)) ST2 = ST1*10.**(.0054*(ALPSTAR-1.333)**2.)
+    IF (ALPSTAR .GT. StallVal)                           ST2 = 4.72 * ST1
     ST1PRIM = (ST1+ST2)/2.																								! Eq 33 from BPM Airfoil Self-noise and Prediction paper
     CALL A0COMP(RC,A0)		! compute -20 dB dropout	(returns A0)
     CALL A0COMP(3.*RC,A02)	! compute -20 dB dropout for AoA > AoA_0	(returns A02)
@@ -1891,7 +1873,7 @@ Lturb=25.d0*LE_Location**(0.35)*p%z0_aa**(-0.063)               !% Gives smaller
 
 END SUBROUTINE InflowNoise
 !====================================================================================================
-SUBROUTINE BLUNT(ALPSTAR,C,U ,THETA,PHI,L,R,H,PSI,p,d99Var2,dstarVar1,dstarVar2,SPLBLUNT,errStat,errMsg)
+SUBROUTINE BLUNT(ALPSTAR,C,U ,THETA,PHI,L,R,H,PSI,p,d99Var2,dstarVar1,dstarVar2,SPLBLUNT,StallVal,errStat,errMsg)
   REAL(ReKi),                             INTENT(IN   )  :: ALPSTAR        ! AOA
   REAL(ReKi),                             INTENT(IN   )  :: C              ! Chord Length
   REAL(ReKi),                             INTENT(IN   )  :: U              ! Unoise
@@ -1903,7 +1885,8 @@ SUBROUTINE BLUNT(ALPSTAR,C,U ,THETA,PHI,L,R,H,PSI,p,d99Var2,dstarVar1,dstarVar2,
   REAL(ReKi),                             INTENT(IN   )  :: PSI            ! TRAILING EDGE ANGLE                  DEGREES 
   REAL(ReKi),                             INTENT(IN   )  :: d99Var2        !  
   REAL(ReKi),                             INTENT(IN   )  :: dstarVar1              !  
-  REAL(ReKi),                             INTENT(IN   )  :: dstarVar2              !  
+  REAL(ReKi),                             INTENT(IN   )  :: dstarVar2              !
+  REAL(ReKi),                             INTENT(IN   )  :: StallVal       !< Stall angle at station i
   TYPE(AA_ParameterType),                 INTENT(IN   )  :: p              ! Parameters
   REAL(ReKi),DIMENSION(size(p%FreqList)), INTENT(  OUT)  :: SPLBLUNT       !
   INTEGER(IntKi),                         INTENT(  OUT)  :: errStat        ! Error status of the operation
@@ -1949,7 +1932,7 @@ SUBROUTINE BLUNT(ALPSTAR,C,U ,THETA,PHI,L,R,H,PSI,p,d99Var2,dstarVar1,dstarVar2,
         DSTRS  = dstarVar1
         DSTRP  = dstarVar2
     ELSE
-        CALL THICK(C,M,RC,ALPSTAR,p,DELTAP,DSTRS,DSTRP,errStat2,errMsg2)
+        CALL THICK(C,M,RC,ALPSTAR,p,DELTAP,DSTRS,DSTRP,StallVal,errStat2,errMsg2)
         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
     ENDIF
     ! Compute average displacement thickness
@@ -2084,7 +2067,7 @@ SUBROUTINE A0COMP(RC,A0)
 END SUBROUTINE A0COMP
 !====================================================================================================
 !> Compute zero angle of attack boundary layer thickness (meters) and reynolds number
-SUBROUTINE THICK(C,M,RC,ALPSTAR,p,DELTAP,DSTRS,DSTRP,errStat,errMsg)
+SUBROUTINE THICK(C,M,RC,ALPSTAR,p,DELTAP,DSTRS,DSTRP,StallVal,errStat,errMsg)
 !!       VARIABLE NAME               DEFINITION                  UNITS
 !!       -------------               ----------                  -----
 !!       ALPSTAR            ANGLE OF ATTACK                    DEGREES
@@ -2113,6 +2096,7 @@ SUBROUTINE THICK(C,M,RC,ALPSTAR,p,DELTAP,DSTRS,DSTRP,errStat,errMsg)
     REAL(ReKi),                INTENT(  OUT)  :: DELTAP         !<
     REAL(ReKi),                INTENT(  OUT)  :: DSTRS          !<
     REAL(ReKi),                INTENT(  OUT)  :: DSTRP          !<
+    REAL(ReKi),                INTENT(IN   )  :: StallVal       !< Stall angle at station i
     INTEGER(IntKi),            INTENT(  OUT)  :: errStat        !< Error status of the operation
     character(*),              INTENT(  OUT)  :: errMsg         !< Error message if ErrStat /= ErrID_None
     ! Local variables
@@ -2144,14 +2128,14 @@ SUBROUTINE THICK(C,M,RC,ALPSTAR,p,DELTAP,DSTRS,DSTRP,errStat,errMsg)
     ! Suction side displacement thickness
     IF (p%ITRIP .EQ. 1) THEN
         IF (ALPSTAR .LE. 5.) DSTRS=10.**(.0679*ALPSTAR)*DSTR0
-        IF((ALPSTAR .GT. 5.).AND.(ALPSTAR .LE. 12.5)) &
+        IF((ALPSTAR .GT. 5.).AND.(ALPSTAR .LE. StallVal)) &
             DSTRS = .381*10.**(.1516*ALPSTAR)*DSTR0
-        IF (ALPSTAR .GT. 12.5)DSTRS=14.296*10.**(.0258*ALPSTAR)*DSTR0
+        IF (ALPSTAR .GT. StallVal)DSTRS=14.296*10.**(.0258*ALPSTAR)*DSTR0
     ELSE
         IF (ALPSTAR .LE. 7.5)DSTRS =10.**(.0679*ALPSTAR)*DSTR0
-        IF((ALPSTAR .GT. 7.5).AND.(ALPSTAR .LE. 12.5)) &
+        IF((ALPSTAR .GT. 7.5).AND.(ALPSTAR .LE. StallVal)) &
             DSTRS = .0162*10.**(.3066*ALPSTAR)*DSTR0
-        IF (ALPSTAR .GT. 12.5) DSTRS = 52.42*10.**(.0258*ALPSTAR)*DSTR0
+        IF (ALPSTAR .GT. StallVal) DSTRS = 52.42*10.**(.0258*ALPSTAR)*DSTR0
     ENDIF
 END SUBROUTINE Thick
 !====================================================================================================
@@ -2312,27 +2296,21 @@ SUBROUTINE TBLTE_TNO(ALPSTAR,C,U,THETA,PHI,D,R,Cfall,d99all,EdgeVelAll,p,SPLP,SP
         a = 0.0e0
         b = 10*omega/(Mach*co)
         ! Convert to third octave
-        band_width = freq(i_omega)*(sqrt(band_ratio)-1./sqrt(band_ratio))
+        band_width = freq(i_omega)*(sqrt(band_ratio)-1./sqrt(band_ratio)) * 4. * pi
         ISSUCTION = .TRUE.
-        IF (Cf(1) .LT. 0.) THEN
-            write(*,*) 'Suction Cf is less than zero, Cf = ',Cf(1)
-            write(*,*) 'Using BPM'
-        ELSE
+        IF (Cf(1) .GT. 0.) THEN
             CALL qk61(int2,a,b,answer,abserr,resabs,resasc) ! TODO add omega as argument
             Spectrum = D/(4.*pi*R**2.)*answer
-            SPL_suction = 10*log10(Spectrum*DBARH/2.e-5/2.e-5)
-            SPLS(i_omega) = SPL_suction + 10*log10(band_width)
+            SPL_suction = 10.*log10(Spectrum*DBARH/2.e-5/2.e-5)
+            SPLS(i_omega) = SPL_suction + 10.*log10(band_width)
         ENDIF
 
         ISSUCTION = .FALSE.
-        IF (Cf(2) .LT. 0.) THEN
-            write(*,*) 'Pressure Cf is less than zero, Cf = ',Cf(1)
-            write(*,*) 'Using BPM'
-        ELSE
+        IF (Cf(2) .GT. 0.) THEN
             CALL qk61(int2,a,b,answer,abserr,resabs,resasc)
             Spectrum = D/(4.*pi*R**2.)*answer
-            SPL_press = 10*log10(Spectrum*DBARH/2.e-5/2.e-5)
-            SPLP(i_omega) = SPL_press + 10*log10(band_width)
+            SPL_press = 10.*log10(Spectrum*DBARH/2.e-5/2.e-5)
+            SPLP(i_omega) = SPL_press + 10.*log10(band_width)
         ENDIF
 
         ! Sum the noise sources SPLALPH is BPM value

@@ -54,7 +54,7 @@ if (Cfin .le. 0.) then
 endif
 u_star = Uo*sqrt(Cfin/2.)
 
-L = 0.085*delta/kappa*tanh(kappa*x2/(0.085*delta))
+L = 0.085*delta*tanh(kappa*x2/(0.085*delta))
 
 if (x2 .gt. delta)then
      U = Uo
