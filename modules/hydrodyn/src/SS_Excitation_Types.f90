@@ -39,8 +39,6 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NBody      !< Number of WAMIT bodies for this State Space model [-]
     REAL(ReKi)  :: WaveDir      !< Wave direction [rad]
     INTEGER(IntKi)  :: NStepWave      !< Number of timesteps in the WaveTime array [-]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: PtfmRefxt      !< The xt offset of the body reference point(s) from (0,0,0)  [1 to NBody; only used when PotMod=1 ] [(m)]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: PtfmRefyt      !< The yt offset of the body reference point(s) from (0,0,0)  [1 to NBody; only used when PotMod=1 ] [(m)]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: PtfmRefztRot      !< The rotation about zt of the body reference frame(s) from xt/yt [radians]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveElev0      !< Wave elevation time history at origin [m]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveTime      !< Times where wave elevation is known [s]
@@ -125,30 +123,6 @@ CONTAINS
     DstInitInputData%NBody = SrcInitInputData%NBody
     DstInitInputData%WaveDir = SrcInitInputData%WaveDir
     DstInitInputData%NStepWave = SrcInitInputData%NStepWave
-IF (ALLOCATED(SrcInitInputData%PtfmRefxt)) THEN
-  i1_l = LBOUND(SrcInitInputData%PtfmRefxt,1)
-  i1_u = UBOUND(SrcInitInputData%PtfmRefxt,1)
-  IF (.NOT. ALLOCATED(DstInitInputData%PtfmRefxt)) THEN 
-    ALLOCATE(DstInitInputData%PtfmRefxt(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%PtfmRefxt.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInitInputData%PtfmRefxt = SrcInitInputData%PtfmRefxt
-ENDIF
-IF (ALLOCATED(SrcInitInputData%PtfmRefyt)) THEN
-  i1_l = LBOUND(SrcInitInputData%PtfmRefyt,1)
-  i1_u = UBOUND(SrcInitInputData%PtfmRefyt,1)
-  IF (.NOT. ALLOCATED(DstInitInputData%PtfmRefyt)) THEN 
-    ALLOCATE(DstInitInputData%PtfmRefyt(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%PtfmRefyt.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInitInputData%PtfmRefyt = SrcInitInputData%PtfmRefyt
-ENDIF
 IF (ALLOCATED(SrcInitInputData%PtfmRefztRot)) THEN
   i1_l = LBOUND(SrcInitInputData%PtfmRefztRot,1)
   i1_u = UBOUND(SrcInitInputData%PtfmRefztRot,1)
@@ -196,12 +170,6 @@ ENDIF
 ! 
   ErrStat = ErrID_None
   ErrMsg  = ""
-IF (ALLOCATED(InitInputData%PtfmRefxt)) THEN
-  DEALLOCATE(InitInputData%PtfmRefxt)
-ENDIF
-IF (ALLOCATED(InitInputData%PtfmRefyt)) THEN
-  DEALLOCATE(InitInputData%PtfmRefyt)
-ENDIF
 IF (ALLOCATED(InitInputData%PtfmRefztRot)) THEN
   DEALLOCATE(InitInputData%PtfmRefztRot)
 ENDIF
@@ -252,16 +220,6 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! NBody
       Re_BufSz   = Re_BufSz   + 1  ! WaveDir
       Int_BufSz  = Int_BufSz  + 1  ! NStepWave
-  Int_BufSz   = Int_BufSz   + 1     ! PtfmRefxt allocated yes/no
-  IF ( ALLOCATED(InData%PtfmRefxt) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! PtfmRefxt upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%PtfmRefxt)  ! PtfmRefxt
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! PtfmRefyt allocated yes/no
-  IF ( ALLOCATED(InData%PtfmRefyt) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! PtfmRefyt upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%PtfmRefyt)  ! PtfmRefyt
-  END IF
   Int_BufSz   = Int_BufSz   + 1     ! PtfmRefztRot allocated yes/no
   IF ( ALLOCATED(InData%PtfmRefztRot) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! PtfmRefztRot upper/lower bounds for each dimension
@@ -314,32 +272,6 @@ ENDIF
       Re_Xferred   = Re_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%NStepWave
       Int_Xferred   = Int_Xferred   + 1
-  IF ( .NOT. ALLOCATED(InData%PtfmRefxt) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%PtfmRefxt,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%PtfmRefxt,1)
-    Int_Xferred = Int_Xferred + 2
-
-      IF (SIZE(InData%PtfmRefxt)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%PtfmRefxt))-1 ) = PACK(InData%PtfmRefxt,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%PtfmRefxt)
-  END IF
-  IF ( .NOT. ALLOCATED(InData%PtfmRefyt) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%PtfmRefyt,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%PtfmRefyt,1)
-    Int_Xferred = Int_Xferred + 2
-
-      IF (SIZE(InData%PtfmRefyt)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%PtfmRefyt))-1 ) = PACK(InData%PtfmRefyt,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%PtfmRefyt)
-  END IF
   IF ( .NOT. ALLOCATED(InData%PtfmRefztRot) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -425,52 +357,6 @@ ENDIF
       Re_Xferred   = Re_Xferred + 1
       OutData%NStepWave = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! PtfmRefxt not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%PtfmRefxt)) DEALLOCATE(OutData%PtfmRefxt)
-    ALLOCATE(OutData%PtfmRefxt(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%PtfmRefxt.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask1 = .TRUE. 
-      IF (SIZE(OutData%PtfmRefxt)>0) OutData%PtfmRefxt = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%PtfmRefxt))-1 ), mask1, 0.0_ReKi )
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%PtfmRefxt)
-    DEALLOCATE(mask1)
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! PtfmRefyt not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%PtfmRefyt)) DEALLOCATE(OutData%PtfmRefyt)
-    ALLOCATE(OutData%PtfmRefyt(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%PtfmRefyt.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask1 = .TRUE. 
-      IF (SIZE(OutData%PtfmRefyt)>0) OutData%PtfmRefyt = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%PtfmRefyt))-1 ), mask1, 0.0_ReKi )
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%PtfmRefyt)
-    DEALLOCATE(mask1)
-  END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! PtfmRefztRot not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
