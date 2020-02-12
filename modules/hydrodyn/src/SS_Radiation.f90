@@ -82,7 +82,7 @@ subroutine TransformStateSpaceMatrices( NBody, RotZ, B, C )
       end do
 
   ! end do
-end subroutine TransformWAMITMatrices
+end subroutine TransformStateSpaceMatrices
    
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine is called at the start of the simulation to perform initialization steps. 
@@ -121,7 +121,7 @@ SUBROUTINE SS_Rad_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
     INTEGER, allocatable                   :: xx (:)                               ! Active DOF's on the input file .ss
     INTEGER                                :: numDOFs                              ! Number of DOFS  
     INTEGER                                :: numStates                            ! Number of states
-    int(IntKi)                             :: N                                    ! Counter
+    integer(IntKi)                         :: N                                    ! Counter
     INTEGER                                :: Nlines                               ! Number of lines in the input file, used to determine N
     INTEGER                                :: UnSS                                 ! I/O unit number for the WAMIT output file with the .ss extension; this file contains the state-space matrices.
     INTEGER                                :: Sttus                                ! Error in reading .ss file
@@ -195,7 +195,7 @@ SUBROUTINE SS_Rad_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
         END IF
     END DO
     
-    DOFs = SUM (xx) !Number of DOFS in the input file
+    numDOFs = SUM (xx) !Number of DOFS in the input file
     
       IF (ErrStat >= AbortErrLev) THEN
          CALL CleanUp()
@@ -205,8 +205,8 @@ SUBROUTINE SS_Rad_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
     ! Now we can allocate the temporary matrices A, B and C
     
     CALL AllocAry( Rad_A, numStates,    numStates,    'Rad_A', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')
-    CALL AllocAry( Rad_B, numStates,    DOFs, 'Rad_B', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')
-    CALL AllocAry( Rad_C, DOFs, numStates,    'Rad_C', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')
+    CALL AllocAry( Rad_B, numStates,    numDOFs, 'Rad_B', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')
+    CALL AllocAry( Rad_C, numDOFs, numStates,    'Rad_C', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')
     
       IF (ErrStat >= AbortErrLev) THEN
          CALL CleanUp()
