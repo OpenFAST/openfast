@@ -154,6 +154,7 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       REAL(ReKi)                             :: TmpPer                               ! A temporary period           read in from a WAMIT file (sec    )
       REAL(ReKi)                             :: TmpRe                                ! A temporary real      value  read in from a WAMIT file (-      )
       REAL(SiKi)                             :: TmpCoord(2)                          ! A temporary real array to hold the (Omega,WaveDir) pair for interpolation
+      COMPLEX(SiKi),ALLOCATABLE              :: tmpComplexArr(:)                     ! A temporary array (0:NStepWave2-1) for FFT use. 
       REAL(ReKi), ALLOCATABLE                :: WAMITFreq (:)                        ! Frequency      components as ordered in the WAMIT output files (rad/s  )
       REAL(ReKi), ALLOCATABLE                :: WAMITPer  (:)                        ! Period         components as ordered in the WAMIT output files (sec    )
       REAL(ReKi), ALLOCATABLE                :: WAMITWvDir(:)                        ! Wave direction components as ordered in the WAMIT output files (degrees)
@@ -909,7 +910,7 @@ end if
            ! Initialize the variables associated with the incident wave:
 
          SELECT CASE ( InitInp%WaveMod ) ! Which incident wave kinematics model are we using?
-         CASE ( 0 )
+         CASE ( 0 )  ! No waves
             if ( p%ExctnMod == 1 ) then
 
                   ! Initialize everything to zero:
@@ -928,9 +929,14 @@ end if
                SS_Exctn_InitInp%InputFile    = InitInp%WAMITFile    
                SS_Exctn_InitInp%WaveDir      = InitInp%WaveDir
                SS_Exctn_InitInp%NStepWave    = p%NStepWave
+               SS_Exctn_InitInp%NBody        = InitInp%NBody
+               SS_Exctn_InitInp%PtfmRefztRot = InitInp%PtfmRefztRot 
+               
                
                   ! No other modules need this WaveElev0 array so we will simply move the allocation over to the SS_Exctn module
                IF (ALLOCATED(InitInp%WaveElev0)) CALL MOVE_ALLOC(InitInp%WaveElev0, SS_Exctn_InitInp%WaveElev0) 
+               
+!TODO: Verify what happens within SS_Exctn when we have no waves. 
                
                   ! We need the WaveTime array to stay intact for use in other modules, so we will make a copy instead of moving the allocation
                ALLOCATE ( SS_Exctn_InitInp%WaveTime (0:InitInp%NStepWave) , STAT=ErrStat2 )
@@ -1152,18 +1158,79 @@ end if
                SS_Exctn_InitInp%WaveDir      = InitInp%WaveDir
                SS_Exctn_InitInp%NStepWave    = p%NStepWave
                SS_Exctn_InitInp%NBody        = InitInp%NBody
+               SS_Exctn_InitInp%PtfmRefztRot = InitInp%PtfmRefztRot
                
+               
+               
+                  
+               if (allocated(InitInp%WaveElev0)) then
+                  
                   ! No other modules need this WaveElev0 array so we will simply move the allocation over to the SS_Exctn module
-               IF (ALLOCATED(InitInp%WaveElev0)) CALL MOVE_ALLOC(InitInp%WaveElev0, SS_Exctn_InitInp%WaveElev0) 
+                  call MOVE_ALLOC(InitInp%WaveElev0, SS_Exctn_InitInp%WaveElev0) 
                
-                  ! We need the WaveTime array to stay intact for use in other modules, so we will make a copy instead of moving the allocation
-               ALLOCATE ( SS_Exctn_InitInp%WaveTime (0:InitInp%NStepWave) , STAT=ErrStat2 )
-               IF ( ErrStat2 /= 0 )  THEN
-                  CALL SetErrStat( ErrID_Fatal, 'Error allocating memory for the SS_Exctn_InitInp%WaveTime array.', ErrStat, ErrMsg, 'WAMIT_Init')
-                  CALL Cleanup()
-                  RETURN            
-               END IF
-               SS_Exctn_InitInp%WaveTime = InitInp%WaveTime 
+               
+                  ! Handle special case when NBodyMod=2 and (PtfmRefxt /= 0 or PtfmRefyt /= 0)  : Need to phase shift the wave elevation data for the offset body
+                  if ( p%NBodyMod==2 .and. (InitInp%PtfmRefxt(1) /= 0 .or. InitInp%PtfmRefyt(1) /= 0) ) then
+                  
+                     ! Need to start with the DFT of the Wave Elevation data at the Platform reference point: InitInp%WaveElevC0
+               
+                     ! Now apply the phase shift in the frequency space
+
+                     do J = 1, NInpWvDir  
+                        do I = 0,InitInp%NStepWave2  ! Loop through the positive frequency components (including zero) of the discrete Fourier transform
+
+                     ! Compute the frequency of this component:
+
+                           Omega = I*InitInp%WaveDOmega
+                              ! Fxy = exp(-j * k(w) * ( X*cos(Beta(w)) + Y*sin(Beta(w)) )
+                           WaveNmbr   = WaveNumber ( Omega, InitInp%Gravity, InitInp%WtrDpth )
+                           tmpAngle   = WaveNmbr * ( InitInp%PtfmRefxt(1)*cos(HdroWvDir(J)*D2R) + InitInp%PtfmRefyt(1)*sin(HdroWvDir(J)*D2R) )
+                           TmpRe =  cos(tmpAngle)
+                           TmpIm = -sin(tmpAngle)
+                           Fxy   = CMPLX( TmpRe, TmpIm )
+
+                           tmpComplexArr(I) = Fxy*CMPLX(InitInp%WaveElevC0(1,I), InitInp%WaveElevC0(2,I))
+                          
+
+                        end do
+                     end do  
+                     
+                     ! Compute the inverse discrete Fourier transforms to find the time-domain
+                     !   representations of the wave kinematics without stretcing:
+
+                     CALL InitFFT ( InitInp%NStepWave, FFT_Data, .TRUE., ErrStat2 )
+                     CALL SetErrStat(ErrStat2,'Error occured while initializing the FFT.',ErrStat,ErrMsg,'WAMIT_Init')
+                     IF ( ErrStat >= AbortErrLev ) THEN
+                        CALL CleanUp()
+                        RETURN
+                     END IF
+      
+                        ! We'll need the following for wave stretching once we implement it.
+                     CALL ApplyFFT_cx (  SS_Exctn_InitInp%WaveElev0(0:InitInp%NStepWave-1),  tmpComplexArr(:  ), FFT_Data, ErrStat2 )
+                     CALL SetErrStat(ErrStat2,'Error occured while applying the FFT to WaveElev0.',ErrStat,ErrMsg,'WAMIT_Init')
+                     IF ( ErrStat >= AbortErrLev ) THEN
+                        CALL CleanUp()
+                        RETURN
+                     END IF
+                  
+                     CALL ExitFFT(FFT_Data, ErrStat2)
+                        CALL SetErrStat( ErrStat2, 'Error in call to ExitFFT.', ErrStat, ErrMsg, 'WAMIT_Init')
+                        IF ( ErrStat >= AbortErrLev) THEN
+                           CALL Cleanup()
+                           RETURN
+                        END IF
+                     
+                  end if 
+                     ! We need the WaveTime array to stay intact for use in other modules, so we will make a copy instead of moving the allocation
+                  ALLOCATE ( SS_Exctn_InitInp%WaveTime (0:InitInp%NStepWave) , STAT=ErrStat2 )
+                  IF ( ErrStat2 /= 0 )  THEN
+                     CALL SetErrStat( ErrID_Fatal, 'Error allocating memory for the SS_Exctn_InitInp%WaveTime array.', ErrStat, ErrMsg, 'WAMIT_Init')
+                     CALL Cleanup()
+                     RETURN            
+                  END IF
+                  SS_Exctn_InitInp%WaveTime = InitInp%WaveTime 
+                  
+               end if
                
                call SS_Exc_Init(SS_Exctn_InitInp, m%SS_Exctn_u, p%SS_Exctn, x%SS_Exctn, xd%SS_Exctn, z%SS_Exctn, OtherState%SS_Exctn, &
                                       m%SS_Exctn_y, m%SS_Exctn, Interval_Sub, SS_Exctn_InitOut, ErrStat2, ErrMsg2)
