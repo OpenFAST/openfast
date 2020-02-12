@@ -98,6 +98,8 @@ PROGRAM HydroDynDriver
    REAL(ReKi), ALLOCATABLE                            :: WAMITin(:,:)          ! Variable for storing time, forces, and body velocities, in m/s or rad/s for WAMIT
    REAL(ReKi), ALLOCATABLE                            :: Morisonin(:,:)        ! Variable for storing time, forces, and body velocities, in m/s or rad/s for Morison elements
    
+   INTEGER(IntKi)                                     :: NBody                 ! Number of WAMIT bodies to work with if prescribing kinematics on each body (WAMITInputsMod<0)
+   
    INTEGER(IntKi)                                     :: I                    ! Generic loop counter
    INTEGER(IntKi)                                     :: J                    ! Generic loop counter
    INTEGER(IntKi)                                     :: n                    ! Loop counter (for time step)
@@ -238,6 +240,42 @@ PROGRAM HydroDynDriver
       CLOSE ( UnWAMITInp ) 
    END IF
    
+   ! multi-body kinematics driver option (time, PRP DOFs 1-6, body1 DOFs 1-6, body2 DOFs 1-6...)
+   IF ( drvrInitInp%WAMITInputsMod < 0 ) THEN
+      
+      NBODY = -drvrInitInp%WAMITInputsMod
+         ! Open the WAMIT inputs data file
+      CALL GetNewUnit( UnWAMITInp ) 
+      CALL OpenFInpFile ( UnWAMITInp, drvrInitInp%WAMITInputsFile, ErrStat, ErrMsg ) 
+         IF (ErrStat >=AbortErrLev) STOP
+      
+      
+      ALLOCATE ( WAMITin(drvrInitInp%NSteps, 7+6*NBODY), STAT = ErrStat )
+      IF ( ErrStat /= ErrID_None ) THEN
+         ErrMsg  = '  Error allocating space for WAMITin array.'
+         CALL WrScr( ErrMsg )
+         CLOSE( UnWAMITInp )
+         STOP
+      END IF 
+      
+      PRINT *, 'NBody is '//trim(Num2LStr(NBody))//' and planning to read in  '//trim(Num2LStr(7+6*NBODY))//' columns from the input file'
+      
+      DO n = 1,drvrInitInp%NSteps
+         READ (UnWAMITInp,*,IOSTAT=ErrStat) (WAMITin (n,J), J=1,7+6*NBODY)
+            
+            IF ( ErrStat /= 0 ) THEN
+               ErrMsg = '  Error reading the WAMIT input time-series file (for multiple bodies). '
+               CALL WrScr( ErrMsg )
+               STOP
+            END IF 
+      END DO  
+      
+         ! Close the inputs file 
+      CLOSE ( UnWAMITInp ) 
+   ELSE
+      NBody = 0
+   END IF
+   
     IF ( drvrInitInp%MorisonInputsMod == 2 ) THEN
       
          ! Open the Morison inputs data file
@@ -340,7 +378,7 @@ PROGRAM HydroDynDriver
          
       ! Set any steady-state inputs, once before the time-stepping loop   
          
-      IF ( drvrInitInp%WAMITInputsMod /= 2 ) THEN
+      IF (( drvrInitInp%WAMITInputsMod /= 2 ) .AND. ( drvrInitInp%WAMITInputsMod >= 0 )) THEN
                 
          u(1)%PRPMesh%TranslationDisp(:,1)   = drvrInitInp%uWAMITInSteady(1:3) 
 
@@ -414,6 +452,7 @@ PROGRAM HydroDynDriver
    Time = 0.0
    CALL SimStatus_FirstTime( TiLstPrn, PrevClockTime, SimStrtTime, UsrTime2, time, InitInData%TMax )
 
+   ! loop through time steps
    DO n = 1, drvrInitInp%NSteps
 
       Time = (n-1) * drvrInitInp%TimeInterval
@@ -422,7 +461,8 @@ PROGRAM HydroDynDriver
          ! Modify u (likely from the outputs of another module or a set of test conditions) here:
          
       IF ( u(1)%WAMITMesh%Initialized ) THEN 
-         
+	  
+         ! WAMITInputsMod 2: Reads time series of positions, velocities, and accelerations for the platform reference point
          IF ( drvrInitInp%WAMITInputsMod == 2 ) THEN
                                   
             u(1)%PRPMesh%TranslationDisp(:,1)   = WAMITin(n,2:4) 
@@ -448,8 +488,77 @@ PROGRAM HydroDynDriver
             end if
    
          END IF
+		 
+		 
+          !@mhall: new kinematics input for moving bodies individually
+          ! WAMITInputsMod < 0: Reads time series of positions for each body individually, and uses finite differences to also get velocities and accelerations.
+          ! The number of bodies is the negative of WAMITInputsMod.
+         IF ( drvrInitInp%WAMITInputsMod < 0 ) THEN
+               
+            ! platform reference point (PRP), and body 1-NBody displacements
+            u(1)%PRPMesh%TranslationDisp(:,1)   = WAMITin(n,2:4) 
+            DO I=1,NBody
+               u(1)%WAMITMesh%TranslationDisp(:,I)   = WAMITin(n, 6*I+2:6*I+4) 
+            END DO
+               
+            ! PRP and body 1-NBody orientations (skipping the maxAngle stuff)
+            CALL SmllRotTrans( 'InputRotation', REAL(WAMITin(n,5),ReKi), REAL(WAMITin(n,6),ReKi), REAL(WAMITin(n,7),ReKi), dcm, 'PRP orientation', ErrStat, ErrMsg )            
+            u(1)%PRPMesh%Orientation(:,:,1)     = dcm     
+            DO I=1, NBody
+               CALL SmllRotTrans( 'InputRotation', REAL(WAMITin(n,6*I+5),ReKi), REAL(WAMITin(n,6*I+6),ReKi), REAL(WAMITin(n,6*I+7),ReKi), dcm, 'body orientation', ErrStat, ErrMsg )            
+               u(1)%PRPMesh%Orientation(:,:,1)     = dcm     
+            END DO
+
+            ! use finite differences for velocities and accelerations
+            IF (n == 1) THEN   ! use forward differences for first time step
+            
+               u(1)%PRPMesh%TranslationVel(:,1) = (WAMITin(n+1, 2:4) -   WAMITin(n  , 2:4))/drvrInitInp%TimeInterval
+               u(1)%PRPMesh%RotationVel(   :,1) = (WAMITin(n+1, 5:7) -   WAMITin(n  , 5:7))/drvrInitInp%TimeInterval
+               u(1)%PRPMesh%TranslationAcc(:,1) = (WAMITin(n+2, 2:4) - 2*WAMITin(n+1, 2:4) + WAMITin(n, 2:4))/(drvrInitInp%TimeInterval*drvrInitInp%TimeInterval)
+               u(1)%PRPMesh%RotationAcc(   :,1) = (WAMITin(n+2, 5:7) - 2*WAMITin(n+1, 5:7) + WAMITin(n, 5:7))/(drvrInitInp%TimeInterval*drvrInitInp%TimeInterval)
+               
+               DO I=1,NBody
+                  u(1)%WAMITMesh%TranslationVel(:,I) = (WAMITin(n+1, 6*I+2:6*I+4) -   WAMITin(n  , 6*I+2:6*I+4))/drvrInitInp%TimeInterval
+                  u(1)%WAMITMesh%RotationVel(   :,I) = (WAMITin(n+1, 6*I+5:6*I+7) -   WAMITin(n  , 6*I+5:6*I+7))/drvrInitInp%TimeInterval
+                  u(1)%WAMITMesh%TranslationAcc(:,I) = (WAMITin(n+2, 6*I+2:6*I+4) - 2*WAMITin(n+1, 6*I+2:6*I+4) + WAMITin(n, 6*I+2:6*I+4))/(drvrInitInp%TimeInterval*drvrInitInp%TimeInterval)
+                  u(1)%WAMITMesh%RotationAcc(   :,I) = (WAMITin(n+2, 6*I+5:6*I+7) - 2*WAMITin(n+1, 6*I+5:6*I+7) + WAMITin(n, 6*I+5:6*I+7))/(drvrInitInp%TimeInterval*drvrInitInp%TimeInterval)
+               END DO
+
+            ELSE IF (n == drvrInitInp%NSteps) THEN  ! use backward differences for last time step
+            
+               u(1)%PRPMesh%TranslationVel(:,1) = (WAMITin(n, 2:4) -   WAMITin(n-1, 2:4))/drvrInitInp%TimeInterval
+               u(1)%PRPMesh%RotationVel(   :,1) = (WAMITin(n, 5:7) -   WAMITin(n-1, 5:7))/drvrInitInp%TimeInterval
+               u(1)%PRPMesh%TranslationAcc(:,1) = (WAMITin(n, 2:4) - 2*WAMITin(n-1, 2:4) + WAMITin(n-2, 2:4))/(drvrInitInp%TimeInterval*drvrInitInp%TimeInterval)
+               u(1)%PRPMesh%RotationAcc(   :,1) = (WAMITin(n, 5:7) - 2*WAMITin(n-1, 5:7) + WAMITin(n-2, 5:7))/(drvrInitInp%TimeInterval*drvrInitInp%TimeInterval)
+               
+               DO I=1,NBody
+                  u(1)%WAMITMesh%TranslationVel(:,I) = (WAMITin(n, 6*I+2:6*I+4) -   WAMITin(n-1, 6*I+2:6*I+4))/drvrInitInp%TimeInterval
+                  u(1)%WAMITMesh%RotationVel(   :,I) = (WAMITin(n, 6*I+5:6*I+7) -   WAMITin(n-1, 6*I+5:6*I+7))/drvrInitInp%TimeInterval
+                  u(1)%WAMITMesh%TranslationAcc(:,I) = (WAMITin(n, 6*I+2:6*I+4) - 2*WAMITin(n-1, 6*I+2:6*I+4) + WAMITin(n-2, 6*I+2:6*I+4))/(drvrInitInp%TimeInterval*drvrInitInp%TimeInterval)
+                  u(1)%WAMITMesh%RotationAcc(   :,I) = (WAMITin(n, 6*I+5:6*I+7) - 2*WAMITin(n-1, 6*I+5:6*I+7) + WAMITin(n-2, 6*I+5:6*I+7))/(drvrInitInp%TimeInterval*drvrInitInp%TimeInterval)
+               END DO
+            
+            ELSE   ! otherwise use central differences for intermediate time steps
+                     
+               u(1)%PRPMesh%TranslationVel(:,1) = (WAMITin(n+1, 2:4) - WAMITin(n-1, 2:4))*0.5/drvrInitInp%TimeInterval
+               u(1)%PRPMesh%RotationVel(   :,1) = (WAMITin(n+1, 5:7) - WAMITin(n-1, 5:7))*0.5/drvrInitInp%TimeInterval
+               u(1)%PRPMesh%TranslationAcc(:,1) = (WAMITin(n+1, 2:4) - 2*WAMITin(n, 2:4) + WAMITin(n-1, 2:4))/(drvrInitInp%TimeInterval*drvrInitInp%TimeInterval)
+               u(1)%PRPMesh%RotationAcc(   :,1) = (WAMITin(n+1, 5:7) - 2*WAMITin(n, 5:7) + WAMITin(n-1, 5:7))/(drvrInitInp%TimeInterval*drvrInitInp%TimeInterval)
+               
+               DO I=1,NBody
+                  u(1)%WAMITMesh%TranslationVel(:,I) = (WAMITin(n+1, 6*I+2:6*I+4) - WAMITin(n-1, 6*I+2:6*I+4))*0.5/drvrInitInp%TimeInterval
+                  u(1)%WAMITMesh%RotationVel(   :,I) = (WAMITin(n+1, 6*I+5:6*I+7) - WAMITin(n-1, 6*I+5:6*I+7))*0.5/drvrInitInp%TimeInterval
+                  u(1)%WAMITMesh%TranslationAcc(:,I) = (WAMITin(n+1, 6*I+2:6*I+4) - 2*WAMITin(n, 6*I+2:6*I+4) + WAMITin(n-1, 6*I+2:6*I+4))/(drvrInitInp%TimeInterval*drvrInitInp%TimeInterval)
+                  u(1)%WAMITMesh%RotationAcc(   :,I) = (WAMITin(n+1, 6*I+5:6*I+7) - 2*WAMITin(n, 6*I+5:6*I+7) + WAMITin(n-1, 6*I+5:6*I+7))/(drvrInitInp%TimeInterval*drvrInitInp%TimeInterval)
+               END DO
+               
+            END IF
+             
+         END IF
+        !@mhall: end of addition
+		 
          
-      END IF
+      END IF  ! ( u(1)%WAMITMesh%Initialized )
       
       IF ( u(1)%Morison%DistribMesh%Initialized ) THEN
          IF ( drvrInitInp%MorisonInputsMod == 2 ) THEN
