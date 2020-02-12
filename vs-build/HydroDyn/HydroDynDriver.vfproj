@@ -53,11 +53,11 @@
 		<File RelativePath="..\..\modules\HydroDyn\src\Conv_Radiation.txt">
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Conv_Radiation" Description="Running Registry for Conv_Radiation" Outputs="..\..\modules\HydroDyn\src\Conv_Radiation_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Conv_Radiation" Description="Running Registry for Conv_Radiation" Outputs="..\..\modules\HydroDyn\src\Conv_Radiation_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Conv_Radiation" Description="Running Registry for Conv_Radiation" Outputs="..\..\modules\HydroDyn\src\Conv_Radiation_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Conv_Radiation" Description="Running Registry for Conv_Radiation" Outputs="..\..\modules\HydroDyn\src\Conv_Radiation_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Conv_Radiation" Description="Running Registry for Conv_Radiation" Outputs="..\..\modules\HydroDyn\src\Conv_Radiation_Types.f90"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\HydroDyn\src\Conv_Radiation_Types.f90">
 			<FileConfiguration Name="Debug|Win32">
@@ -65,11 +65,11 @@
 		<File RelativePath="..\..\modules\HydroDyn\src\Current.txt">
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Current" Description="Running Registry for Current" Outputs="..\..\modules\HydroDyn\src\Current_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release|Win32">
+			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Current" Description="Running Registry for Current" Outputs="..\..\modules\HydroDyn\src\Current_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Current" Description="Running Registry for Current" Outputs="..\..\modules\HydroDyn\src\Current_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release|x64">
+			<FileConfiguration Name="Release|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Current" Description="Running Registry for Current" Outputs="..\..\modules\HydroDyn\src\Current_Types.f90"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\HydroDyn\src\Current_Types.f90">
 			<FileConfiguration Name="Debug|Win32">
@@ -77,11 +77,11 @@
 		<File RelativePath="..\..\modules\HydroDyn\src\HydroDyn.txt">
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat HydroDyn" Description="Running Registry for HydroDyn" Outputs="..\..\modules\HydroDyn\src\HydroDyn_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release|Win32">
+			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat HydroDyn" Description="Running Registry for HydroDyn" Outputs="..\..\modules\HydroDyn\src\HydroDyn_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat HydroDyn" Description="Running Registry for HydroDyn" Outputs="..\..\modules\HydroDyn\src\HydroDyn_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release|x64">
+			<FileConfiguration Name="Release|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat HydroDyn" Description="Running Registry for HydroDyn" Outputs="..\..\modules\HydroDyn\src\HydroDyn_Types.f90"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\HydroDyn\src\HydroDyn_Types.f90">
 			<FileConfiguration Name="Debug|Win32">
@@ -89,11 +89,11 @@
 		<File RelativePath="..\..\modules\HydroDyn\src\Morison.txt">
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Morison" Description="Running Registry for Morison" Outputs="..\..\modules\HydroDyn\src\Morison_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release|Win32">
+			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Morison" Description="Running Registry for Morison" Outputs="..\..\modules\HydroDyn\src\Morison_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Morison" Description="Running Registry for Morison" Outputs="..\..\modules\HydroDyn\src\Morison_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release|x64">
+			<FileConfiguration Name="Release|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Morison" Description="Running Registry for Morison" Outputs="..\..\modules\HydroDyn\src\Morison_Types.f90"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\HydroDyn\src\Morison_Types.f90">
 			<FileConfiguration Name="Debug|Win32">
@@ -111,11 +111,11 @@
 		<File RelativePath="..\..\modules\HydroDyn\src\SS_Radiation.txt">
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SS_Radiation" Description="Running Registry for SS_Radiation" Outputs="..\..\modules\HydroDyn\src\SS_Radiation_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release|Win32">
+			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SS_Radiation" Description="Running Registry for SS_Radiation" Outputs="..\..\modules\HydroDyn\src\SS_Radiation_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SS_Radiation" Description="Running Registry for SS_Radiation" Outputs="..\..\modules\HydroDyn\src\SS_Radiation_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release|x64">
+			<FileConfiguration Name="Release|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SS_Radiation" Description="Running Registry for SS_Radiation" Outputs="..\..\modules\HydroDyn\src\SS_Radiation_Types.f90"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\HydroDyn\src\SS_Radiation_Types.f90">
 			<FileConfiguration Name="Debug|Win32">
@@ -123,20 +123,20 @@
 		<File RelativePath="..\..\modules\HydroDyn\src\WAMIT.txt">
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat WAMIT" Description="Running Registry for WAMIT" Outputs="..\..\modules\HydroDyn\src\WAMIT_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release|Win32">
+			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat WAMIT" Description="Running Registry for WAMIT" Outputs="..\..\modules\HydroDyn\src\WAMIT_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat WAMIT" Description="Running Registry for WAMIT" Outputs="..\..\modules\HydroDyn\src\WAMIT_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release|x64">
+			<FileConfiguration Name="Release|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat WAMIT" Description="Running Registry for WAMIT" Outputs="..\..\modules\HydroDyn\src\WAMIT_Types.f90"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\HydroDyn\src\WAMIT2.txt">
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat WAMIT2" Description="Running Registry for WAMIT2" Outputs="..\..\modules\HydroDyn\src\WAMIT2_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release|Win32">
+			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat WAMIT2" Description="Running Registry for WAMIT2" Outputs="..\..\modules\HydroDyn\src\WAMIT2_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat WAMIT2" Description="Running Registry for WAMIT2" Outputs="..\..\modules\HydroDyn\src\WAMIT2_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release|x64">
+			<FileConfiguration Name="Release|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat WAMIT2" Description="Running Registry for WAMIT2" Outputs="..\..\modules\HydroDyn\src\WAMIT2_Types.f90"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\HydroDyn\src\WAMIT2_Types.f90">
 			<FileConfiguration Name="Debug|Win32">
@@ -147,20 +147,20 @@
 		<File RelativePath="..\..\modules\HydroDyn\src\Waves.txt">
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves" Description="Running Registry for Waves" Outputs="..\..\modules\HydroDyn\src\Waves_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release|Win32">
+			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves" Description="Running Registry for Waves" Outputs="..\..\modules\HydroDyn\src\Waves_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves" Description="Running Registry for Waves" Outputs="..\..\modules\HydroDyn\src\Waves_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release|x64">
+			<FileConfiguration Name="Release|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves" Description="Running Registry for Waves" Outputs="..\..\modules\HydroDyn\src\Waves_Types.f90"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\HydroDyn\src\Waves2.txt">
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves2" Description="Running Registry for Waves2" Outputs="..\..\modules\HydroDyn\src\Waves2_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release|Win32">
+			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves2" Description="Running Registry for Waves2" Outputs="..\..\modules\HydroDyn\src\Waves2_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves2" Description="Running Registry for Waves2" Outputs="..\..\modules\HydroDyn\src\Waves2_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release|x64">
+			<FileConfiguration Name="Release|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves2" Description="Running Registry for Waves2" Outputs="..\..\modules\HydroDyn\src\Waves2_Types.f90"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\HydroDyn\src\Waves2_Types.f90">
 			<FileConfiguration Name="Debug|Win32">
@@ -181,7 +181,6 @@
 		<File RelativePath="..\..\modules\HydroDyn\src\UserWaves.f90"/>
 		<File RelativePath="..\..\modules\HydroDyn\src\WAMIT.f90"/>
 		<File RelativePath="..\..\modules\HydroDyn\src\WAMIT2.f90"/>
-		<File RelativePath="..\..\modules\HydroDyn\src\WAMIT2_Output.f90"/>
 		<File RelativePath="..\..\modules\HydroDyn\src\WAMIT_Interp.f90"/>
 		<File RelativePath="..\..\modules\HydroDyn\src\Waves.f90"/>
 		<File RelativePath="..\..\modules\HydroDyn\src\Waves2.f90"/>
