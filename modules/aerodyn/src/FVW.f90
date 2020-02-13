@@ -425,13 +425,7 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    endif
 
 
-   print'(A,F10.3,A,F10.3,A,F10.3,A,I0,A,I0,A,I0)','Update states, t:',t,'  t_u:', utimes(1),' p%DTaero: ',p%DTaero,'   ',n,' nNW:',m%nNW,' nFW:',m%nFW
-
-   ! We don't propagate the "Old"-> "New" if we we are not calculating wake interaction
-   if (m%ComputeWakeInduced) then
-       call PrepareNextTimeStep()
-   endif
-
+   print'(A,F10.3,A,F10.3,A,L1,A,I0,A,I0,A,I0)','Update states, t:',t,'  t_u:', utimes(1),' ComputeWakeInduced: ',m%ComputeWakeInduced,' Step:',n,' nNW:',m%nNW,' nFW:',m%nFW
 
 
    ! --- Evaluation at t
@@ -470,7 +464,12 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    !call print_x_NW_FW(p, m, z, x,'Conv')
 
 
-   if (m%ComputeWakeInduced) then
+  if (m%ComputeWakeInduced) then
+!FIXME:  Manu: check my relocation of the PrepareNextTimeStep call.  I moved it because the above routines use m%nNW+1,
+!        in their calculations, which shifted everything one extra age.  That caused odd results with the requested
+!        wind positions if the first call to ui_seg occured before the near wake was fully populated.
+!        This may also have been your array bounds issue (with m%nFW+1 +1 occuring).
+      call PrepareNextTimeStep()
       ! --- t+DTaero
       ! Propagation/creation of new layer of panels
       call PropagateWake(p, m, z, x, ErrStat2, ErrMsg2)
@@ -553,7 +552,7 @@ subroutine FVW_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSt
    call AllocAry( dxdt%r_FW , 3   ,  FWnSpan+1  ,p%nFWMax+1,  p%nWings, 'Wind on FW ', ErrStat, ErrMsg ); dxdt%r_FW= -999999_ReKi;
 
    ! Only calculate freewake after start time and if on a timestep when it should be calculated.
-   if ((t> p%FreeWakeStart) .and. m%ComputeWakeInduced) then
+   if ((t>= p%FreeWakeStart) .and. m%ComputeWakeInduced) then
       nFWEff = min(m%nFW, p%nFWFree)
 
       ! --- Compute Induced velocities on the Near wake and far wake based on the marker postions:
