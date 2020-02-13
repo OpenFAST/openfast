@@ -1822,7 +1822,7 @@ SUBROUTINE TrnsfTI(Init, p, TI, nDOFI, IDI, TI2, nDOFR, IDR, ErrStat, ErrMsg)
 END SUBROUTINE TrnsfTI
 
 !------------------------------------------------------------------------------------------------------
-!> Warpper funciton for eigen value analyses, for two cases:
+!> Wrapper function for eigen value analyses, for two cases:
 !! Case1: K and M are taken "as is" (bRemoveConstraints=false), This is used for the "LL" part of the matrix
 !! Case2: K and M constain some constraints lines, and they need to be removed from the Mass/Stiffness matrix. Used for full system
 SUBROUTINE EigenSolveWrap(K, M, nDOF, NOmega, bRemoveConstraints, Init, p, Phi, Omega, ErrStat, ErrMsg )
@@ -2399,6 +2399,8 @@ SUBROUTINE OutSummary(Init, p, InitInput, CBparams, ErrStat,ErrMsg)
    ! --- Eigen values of full system (for summary file output only)
    ! True below is to remove the constraints
    ! We call the EigenSolver here only so that we get a print-out the eigenvalues from the full system (minus Reaction DOF)
+   CALL WrScr('   Calculating Full System Modes (for summary file output)')
+
    nOmega = p%nDOF_red - p%nNodes_C*6 !removed an extra "-6"  !Note if fixity changes at the reaction points, this will need to change
    CALL AllocAry(Omega,             nOmega, 'Omega', ErrStat2, ErrMsg2 ); if(Failed()) return
    CALL AllocAry(Modes, p%nDOF_red, nOmega, 'Modes', ErrStat2, ErrMsg2 ); if(Failed()) return
@@ -2796,12 +2798,12 @@ END SUBROUTINE SymMatDebug
 FUNCTION is_numeric(string, x)
    IMPLICIT NONE
    CHARACTER(len=*), INTENT(IN) :: string
-   REAL(SiKi), INTENT(OUT) :: x
+   REAL(ReKi), INTENT(OUT) :: x
    LOGICAL :: is_numeric
    
    INTEGER :: e,n
    CHARACTER(len=12) :: fmt
-   x = 0.0_SiKi
+   x = 0.0_ReKi
    n=LEN_TRIM(string)
    WRITE(fmt,'("(F",I0,".0)")') n
    READ(string,fmt,IOSTAT=e) x

@@ -72,8 +72,25 @@ SUBROUTINE EigenSolve(K, M, N, EigVect, Omega2, ErrStat, ErrMsg )
    ! --- Determinign and sorting eigen frequencies 
    DO I=1,N !Initialize the key and calculate Omega
       KEY(I)=I
-      IF ( EqualRealNos(Beta(I),0.0_LAKi) ) THEN
-         Omega2(I) = HUGE(Omega2)  ! bjj: should this be an error?
+      IF ( AlphaR(I)<0.0_LAKi ) THEN
+         !print*,'I', I, AlphaR(I), AlphaI(I), Beta(I), real(AlphaR(I)/Beta(I))
+         ErrStat2=ErrID_Fatal
+         ErrMsg2= 'Negative eigenvalue found, system may be singular (may contain rigid body modes)'
+         if(Failed()) return
+      !ELSE IF ( .not.EqualRealNos(AlphaI(I),0.0_LAKi )) THEN
+      !   print*,'I', I, AlphaR(I), AlphaI(I), Beta(I), real(AlphaR(I)/Beta(I))
+      !   ErrStat2=ErrID_Fatal
+      !   ErrMsg2= 'Complex eigenvalue found, system may be singular (may contain rigid body modes)'
+      !   if(Failed()) return
+      ELSE IF ( EqualRealNos(Beta(I),0.0_LAKi) ) THEN
+!          Omega2(I) = HUGE(Omega2)  ! bjj: should this be an error?
+         ErrStat2=ErrID_Fatal
+         ErrMsg2= 'Large eigenvalue found, system may be singular (may contain rigid body modes)'
+         if(Failed()) return
+      ELSE IF ( EqualRealNos(ALPHAR(I),0.0_LAKi) ) THEN
+         ErrStat2=ErrID_Fatal
+         ErrMsg2= 'Eigenvalue zero found, system is singular (may contain rigid body modes)'
+         if(Failed()) return
       ELSE
          Omega2(I) = REAL( ALPHAR(I)/BETA(I), ReKi )
       END IF           
@@ -115,6 +132,54 @@ CONTAINS
   
 END SUBROUTINE EigenSolve
 
+!> Compute the determinant of a real matrix using an LU factorization
+FUNCTION Determinant(A, ErrStat, ErrMsg) result(det)
+   use NWTC_LAPACK, only: LAPACK_GETRF
+   REAL(LaKi),      INTENT(IN   ) :: A(:, :) !< Input matrix, no side effect
+   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat !< Error status of the operation
+   CHARACTER(*),    INTENT(  OUT) :: ErrMsg  !< Error message if ErrStat /= ErrID_None
+   real(DbKi)              :: det !< May easily overflow
+   integer(IntKi)          :: i
+   integer                 :: n
+   integer, allocatable    :: ipiv(:)
+   real(LaKi), allocatable :: PLU(:,:)
+   real(LaKi) :: ScaleVal
+
+   n = size(A(1,:))
+   allocate(PLU(n,n))
+   allocate(ipiv(n))
+   ScaleVal= 1.0_LaKi
+   PLU = A/ScaleVal
+   ! general matrix factorization: Factor matrix into A=PLU.
+   call LAPACK_GETRF( n, n, PLU, ipiv, ErrStat, ErrMsg ) !call dgetrf(n, n, PLU, n, ipiv, info)
+   if (ErrStat==ErrID_Fatal) then
+      print*,'Error in getrf'
+      det = 0
+      deallocate(PLU)
+      deallocate(ipiv)
+      return
+   endif
+   ! PLU now contains the LU of the factorization A = PLU
+   ! As L has unit diagonal entries, the determinant can be computed
+   ! from the product of U's diagonal entries. Additional sign changes
+   ! stemming from the permutations P have to be taken into account as well.
+   det = 1.0_LaKi
+   do i = 1,n
+      if(ipiv(i) /= i) then  ! additional sign change
+         det = -det*PLU(i,i)
+      else
+         det =  det*PLU(i,i)
+      endif
+   end do
+   deallocate(PLU)
+   deallocate(ipiv)
+   IF ( EqualRealNos(det, 0.0_LaKi) ) THEN
+      print*,'Det is zero'
+      return 
+   else
+      det = det*(ScaleVal**n)
+   endif
+END FUNCTION Determinant
 !------------------------------------------------------------------------------------------------------
 !> Remove degrees of freedom from a matrix (lines and rows)
 SUBROUTINE RemoveDOF(A, bDOF, Ared, ErrStat, ErrMsg )

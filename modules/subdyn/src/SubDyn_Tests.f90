@@ -308,10 +308,20 @@ contains
       integer(IntKi)      , intent(out) :: ErrStat
       character(ErrMsgLen), intent(out) :: ErrMsg
       real(LaKi), dimension(:,:), allocatable :: A, Ainv, Aref
+      real(DbKi) :: det
       integer(IntKi) :: I, J
       testname='Linalg'
 
-      ! --- Inverse of a 3x3 matrix
+      ! --- Determinant of a singular matrix
+      allocate(A(3,3));
+      A(1,1) = 0 ; A(1,2) = 0 ; A(1,3) =  1 ;
+      A(2,1) = 0 ; A(2,2) = 0 ; A(2,3) = -1 ;
+      A(3,1) =-3 ; A(3,2) = 4 ; A(3,3) = -2 ;
+      det = Determinant(A,ErrStat, ErrMsg)
+      call test_almost_equal('Det of singular 3x3 matrix', real(det,ReKi), 0.0, 1e-8, .true. , .true.)
+      deallocate(A   )
+
+      ! --- Inverse and determinant of a 3x3 matrix
       allocate(A(3,3)); allocate(Aref(3,3))
       A(1,1) = 7 ; A(1,2) = 2 ; A(1,3) =  1 ;
       A(2,1) = 0 ; A(2,2) = 3 ; A(2,3) = -1 ;
@@ -320,6 +330,12 @@ contains
       Aref(2,1) = 3 ; Aref(2,2) =-11; Aref(2,3) =  7 ;
       Aref(3,1) = 9 ; Aref(3,2) =-34; Aref(3,3) =  21;
       call PseudoInverse(A, Ainv, ErrStat, ErrMsg)
+      ! Determinant test
+      det = Determinant(A,ErrStat, ErrMsg)
+      call test_almost_equal('Det of 3x3 matrix', real(det,ReKi), 1.0, 1e-8, .true. , .true.)
+      det = Determinant(Ainv,ErrStat, ErrMsg)
+      call test_almost_equal('Det of 3x3 matrix', real(det,ReKi), 1.0, 1e-8, .true. , .true.)
+      ! Inverse test
       call test_almost_equal('Inverse of 3x3 matrix', real(Aref,ReKi), real(Ainv,ReKi), 1e-8, .true., .true.)
       deallocate(A   )
       deallocate(Ainv)
