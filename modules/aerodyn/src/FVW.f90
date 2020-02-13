@@ -154,7 +154,7 @@ subroutine FVW_InitMiscVars( p, m, ErrStat, ErrMsg )
    m%nNW       = iNWStart-1    ! Number of active nearwake panels
    m%nFW       = 0             ! Number of active farwake  panels
    m%VTKstep   = 0             ! Current step number for vtk output
-   m%VTKlastTime = 0.0_DbKi - p%DTvtk  ! set negative so we ouput first vtk files
+   m%VTKlastTime = -HUGE(1.0_DbKi)
 
    call AllocAry( m%LE      ,  3  ,  p%nSpan+1  , p%nWings, 'Leading Edge Points', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitMisc' ); m%LE = -999999_ReKi;
    call AllocAry( m%TE      ,  3  ,  p%nSpan+1  , p%nWings, 'TrailingEdge Points', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitMisc' ); m%TE = -999999_ReKi;
@@ -188,7 +188,7 @@ subroutine FVW_InitMiscVars( p, m, ErrStat, ErrMsg )
    nMax = nMax + (FWnSpan+1) * (p%nFWMax+1) * p%nWings   ! Far wake points
    call AllocAry( m%r_wind, 3, nMax, 'Requested wind points', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitMisc' )
    m%r_wind = 0.0_ReKi     ! set to zero so InflowWind can shortcut calculations
-   m%OldWakeTime = 0.0_DbKi-p%DTfvw    ! First time for wake interaction calculations.  Set negative so calculate at T=0
+   m%OldWakeTime = -HUGE(1.0_DbKi)
 end subroutine FVW_InitMiscVars
 ! ==============================================================================
 subroutine FVW_InitStates( x, p, m, ErrStat, ErrMsg )
