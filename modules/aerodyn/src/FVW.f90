@@ -29,6 +29,7 @@ MODULE FVW
    PUBLIC   :: FVW_CalcOutput
    PUBLIC   :: FVW_UpdateStates
 
+   ! parameter for deciding if enough time has elapsed (Wake calculation, and vtk output)
    real(DbKi), parameter      :: OneMinusEpsilon = 1 - 10000*EPSILON(1.0_DbKi)
 
 CONTAINS
@@ -122,7 +123,7 @@ subroutine FVW_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
    CALL FVW_Init_Y( p, u, y, ErrStat2, ErrMsg2); if(Failed()) return
 
    ! Returned guessed locations where wind will be required
-   CALL SetRequestedWindPoints(m%r_wind, x, p, m, ErrStat2, ErrMsg2 ); if(Failed()) return
+   CALL SetRequestedWindPoints(m%r_wind, x, p, m )
    ! Return anything in FVW_InitOutput that should be passed back to the calling code here
 
 CONTAINS
@@ -440,7 +441,7 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    call Wings_Panelling(uInterp%WingsMesh, p, m, ErrStat2, ErrMsg2); if(Failed()) return
    
    ! Distribute the Wind we requested to Inflow wind to storage Misc arrays
-   CALL DistributeRequestedWind(u(1)%V_wind, x, p, m, ErrStat2, ErrMsg2);  if(Failed()) return
+   CALL DistributeRequestedWind(u(1)%V_wind, x, p, m)
 
    ! --- Solve for circulation at t
    ! Returns: z%Gamma_LL (at t)
@@ -500,7 +501,7 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    !call print_x_NW_FW(p, m, z, x,'Map3')
 
    ! set the wind points required for t+p%DTaero timestep
-   CALL SetRequestedWindPoints(m%r_wind, x, p, m, ErrStat2, ErrMsg2 ); if(Failed()) return
+   CALL SetRequestedWindPoints(m%r_wind, x, p, m)
 
    if (m%FirstCall) then
       m%FirstCall=.False.
@@ -691,7 +692,7 @@ subroutine FVW_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, ErrStat,
    print'(A,F10.3,A,L1,A,I0,A,I0)','CalcOutput     t:',t,'   ',m%FirstCall,'                                nNW:',m%nNW,' nFW:',m%nFW
 
    ! Set the wind velocity at vortex
-   CALL DistributeRequestedWind(u%V_wind, x, p, m, ErrStat2, ErrMsg2);  if(Failed()) return
+   CALL DistributeRequestedWind(u%V_wind, x, p, m)
 
    ! if we are on a correction step, CalcOutput may be called again with different inputs
    CALL Wings_ComputeCirculation(t, m%Gamma_LL, z%Gamma_LL, u, p, x, m, AFInfo, ErrStat2, ErrMsg2, 0); if(Failed()) return ! For plotting only

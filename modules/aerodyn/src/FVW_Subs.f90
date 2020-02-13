@@ -314,28 +314,14 @@ endsubroutine
 !! The r_wind array is allocated at initialization to the largest size possible.  This is to
 !! ensure that we do not violate requirements in the framework later for changing the size
 !! of input and output arrays.
-subroutine SetRequestedWindPoints(r_wind, x, p, m, ErrStat, ErrMsg )
+subroutine SetRequestedWindPoints(r_wind, x, p, m)
    real(ReKi), dimension(:,:), allocatable,      intent(inout) :: r_wind  !< Position where wind is requested
    type(FVW_ContinuousStateType),   intent(in   )              :: x       !< States
    type(FVW_ParameterType),         intent(in   )              :: p       !< Parameters
    type(FVW_MiscVarType),           intent(in   )              :: m       !< Initial misc/optimization variables
-   integer(IntKi),                  intent(  out)              :: ErrStat !< Error status of the operation
-   character(*),                    intent(  out)              :: ErrMsg  !< Error message if ErrStat /= ErrID_None
-   integer(IntKi)          :: ErrStat2             ! temporary error status of the operation
-   character(ErrMsgLen)    :: ErrMsg2              ! temporary error message
-   integer(IntKi)          :: nTot                 ! Total number of points requested
-   integer(IntKi)          :: iSpan, iW, iAge      ! Index on span, wings, panels
-   integer(IntKi)          :: iP,iP_start,iP_end   ! Current index of point, start and end of range
-   ErrStat = ErrID_None
-   ErrMsg  = ""
-
-   nTot = 0
-   nTot = nTot + p%nWings *  p%nSpan                ! Lifting line Control Points
-   nTot = nTot + p%nWings * (p%nSpan+1) * (m%nNW+1) ! Nearwake points
-   nTot = nTot + p%nWings * (FWnSpan+1) * (m%nFW+1) ! Far wake points
+   integer(IntKi)          :: iP_start,iP_end   ! Current index of point, start and end of range
 
       ! Using array reshaping to ensure a given near or far wake point is always at the same location in the array.
-
    ! --- LL CP
    iP_start=1
    iP_end=p%nWings*p%nSpan
@@ -353,21 +339,12 @@ end subroutine SetRequestedWindPoints
 
 
 !> Set the requested wind into the correponding misc variables
-subroutine DistributeRequestedWind(V_wind, x, p, m, ErrStat, ErrMsg )
+subroutine DistributeRequestedWind(V_wind, x, p, m)
    real(ReKi), dimension(:,:),      intent(in   ) :: V_wind  !< Position where wind is requested
    type(FVW_ContinuousStateType),   intent(in   ) :: x       !< States
    type(FVW_ParameterType),         intent(in   ) :: p       !< Parameters
    type(FVW_MiscVarType),           intent(inout) :: m       !< Initial misc/optimization variables
-   integer(IntKi),                  intent(  out) :: ErrStat !< Error status of the operation
-   character(*),                    intent(  out) :: ErrMsg  !< Error message if ErrStat /= ErrID_None
-   integer(IntKi)          :: ErrStat2       ! temporary error status of the operation
-   character(ErrMsgLen)    :: ErrMsg2        ! temporary error message
-   integer(IntKi)          :: nTot              ! Total number of points
-   integer(IntKi)          :: iSpan, iW, iAge   ! Index on span, wings, panels
-   integer(IntKi)          :: iP,iP_start,iP_end   ! Current index of point, start and end of range
-   ! Initialize ErrStat
-   ErrStat = ErrID_None
-   ErrMsg  = ""
+   integer(IntKi)          :: iP_start,iP_end   ! Current index of point, start and end of range
 
       ! Using array reshaping to ensure a given near or far wake point is always at the same location in the array.
    ! --- LL CP
