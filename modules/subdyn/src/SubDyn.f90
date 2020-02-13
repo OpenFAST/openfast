@@ -616,7 +616,7 @@ INTEGER(IntKi)               :: UnEc   !Echo file ID
 
 REAL(ReKi),PARAMETER        :: WrongNo=-9999.   ! Placeholder value for bad(old) values in JDampings
 
-INTEGER(IntKi)               :: I, J, flg, K
+INTEGER(IntKi)               :: I, J, flg, K, nColsReactInterf
 REAL(ReKi)                   :: Dummy_ReAry(SDMaxInpCols) 
 INTEGER(IntKi)               :: Dummy_IntAry(SDMaxInpCols)
 INTEGER(IntKi)       :: ErrStat2
@@ -779,9 +779,11 @@ if (ErrStat2/=0) then
    Init%Joints(:,iJointType) = idJointCantilever ! All joints assumed cantilever
    Init%Joints(:,iJointType+1:JointsCol) = 0.0 ! remaining columns set to 0
    LegacyFormat=.True.  ! Legacy format - Delete me in 2024
+   nColsReactInterf=InterfCol
 else
    ! New format
    LegacyFormat=.False.
+   nColsReactInterf=1
 endif
 ! Extract fields from first line
 DO I = 1, nColumns
@@ -803,10 +805,10 @@ CALL ReadCom  ( UnIn, SDInputFile,           'BASE REACTION JOINTS'             
 CALL ReadIVar ( UnIn, SDInputFile, p%nNodes_C, 'NReact', 'Number of joints with reaction forces',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL ReadCom  ( UnIn, SDInputFile,           'Base reaction joints headers '                  ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL ReadCom  ( UnIn, SDInputFile,           'Base reaction joints units   '                  ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
-CALL AllocAry(p%Nodes_C, p%nNodes_C, ReactCol, 'Reacts', ErrStat2, ErrMsg2 ); if(Failed()) return
+CALL AllocAry(p%Nodes_C, p%nNodes_C, nColsReactInterf, 'Reacts', ErrStat2, ErrMsg2 ); if(Failed()) return
 DO I = 1, p%nNodes_C
-   CALL ReadAry( UnIn, SDInputFile, Dummy_IntAry, ReactCol, 'Reacts', 'Joint number and dof', ErrStat2 ,ErrMsg2, UnEc); if(Failed()) return
-   p%Nodes_C(I,:) = Dummy_IntAry(1:ReactCol)
+   CALL ReadAry( UnIn, SDInputFile, Dummy_IntAry, nColsReactInterf, 'Reacts', 'Joint number and dof', ErrStat2 ,ErrMsg2, UnEc); if(Failed()) return
+   p%Nodes_C(I,:) = Dummy_IntAry(1:nColsReactInterf)
 ENDDO
 IF (Check ( p%nNodes_C > Init%NJoints , 'NReact must be less than number of joints')) return
 
@@ -816,10 +818,10 @@ CALL ReadCom  ( UnIn, SDInputFile,              'INTERFACE JOINTS'              
 CALL ReadIVar ( UnIn, SDInputFile, p%nNodes_I, 'NInterf', 'Number of joints fixed to TP',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL ReadCom  ( UnIn, SDInputFile,            'Interface joints headers',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL ReadCom  ( UnIn, SDInputFile,            'Interface joints units  ',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
-CALL AllocAry(p%Nodes_I, p%nNodes_I, InterfCol, 'Interf', ErrStat2, ErrMsg2); if(Failed()) return
+CALL AllocAry(p%Nodes_I, p%nNodes_I, nColsReactInterf, 'Interf', ErrStat2, ErrMsg2); if(Failed()) return
 DO I = 1, p%nNodes_I
-   CALL ReadIAry( UnIn, SDInputFile, Dummy_IntAry, InterfCol, 'Interf', 'Interface joint number and dof', ErrStat2,ErrMsg2, UnEc); if(Failed()) return
-   p%Nodes_I(I,:) = Dummy_IntAry(1:InterfCol)
+   CALL ReadIAry( UnIn, SDInputFile, Dummy_IntAry, nColsReactInterf, 'Interf', 'Interface joint number and dof', ErrStat2,ErrMsg2, UnEc); if(Failed()) return
+   p%Nodes_I(I,:) = Dummy_IntAry(1:nColsReactInterf)
 ENDDO
 IF (Check( ( p%nNodes_I < 0 ) .OR. (p%nNodes_I > Init%NJoints), 'NInterf must be non-negative and less than number of joints.')) RETURN
 

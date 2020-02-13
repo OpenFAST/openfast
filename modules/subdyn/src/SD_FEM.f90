@@ -29,7 +29,6 @@ MODULE SD_FEM
    
   ! values of these parameters are ordered by their place in SubDyn input file:
   INTEGER(IntKi),   PARAMETER  :: JointsCol       = 10                    ! Number of columns in Joints (JointID, JointXss, JointYss, JointZss)
-  INTEGER(IntKi),   PARAMETER  :: ReactCol        = 7                     ! Number of columns in reaction dof array (JointID,RctTDxss,RctTDYss,RctTDZss,RctRDXss,RctRDYss,RctRDZss)
   INTEGER(IntKi),   PARAMETER  :: InterfCol       = 7                     ! Number of columns in interf matrix (JointID,ItfTDxss,ItfTDYss,ItfTDZss,ItfRDXss,ItfRDYss,ItfRDZss)
   INTEGER(IntKi),   PARAMETER  :: MaxNodesPerElem = 2                     ! Maximum number of nodes per element (currently 2)
   INTEGER(IntKi),   PARAMETER  :: MembersCol      = MaxNodesPerElem + 3+1 ! Number of columns in Members (MemberID,MJointID1,MJointID2,MPropSetID1,MPropSetID2,COSMID) 
@@ -60,7 +59,7 @@ MODULE SD_FEM
   INTEGER(IntKi),   PARAMETER  :: idMemberCable      = 2
   INTEGER(IntKi),   PARAMETER  :: idMemberRigid      = 3
   
-  INTEGER(IntKi),   PARAMETER  :: SDMaxInpCols    = MAX(JointsCol,ReactCol,InterfCol,MembersCol,PropSetsBCol,PropSetsXCol,COSMsCol,CMassCol)
+  INTEGER(IntKi),   PARAMETER  :: SDMaxInpCols    = MAX(JointsCol,InterfCol,MembersCol,PropSetsBCol,PropSetsXCol,COSMsCol,CMassCol)
 
   INTERFACE FINDLOCI ! In the future, use FINDLOC from intrinsic
      MODULE PROCEDURE FINDLOCI_ReKi
@@ -830,7 +829,7 @@ CONTAINS
          iNode = p%Nodes_C(I,1) ! Node index
          DO J = 1, 6
             Init%BCs( (I-1)*6+J, 1) = p%NodesDOF(iNode)%List(J) ! DOF number (unconstrained)
-            Init%BCs( (I-1)*6+J, 2) = p%Nodes_C(I, J+1);         ! 0 or 1 if fixed reaction or not
+            Init%BCs( (I-1)*6+J, 2) = 1 ! NOTE: Always selected now  p%Nodes_C(I, J+1);         ! 0 or 1 if fixed reaction or not
          ENDDO
       ENDDO
    END SUBROUTINE InitBCs
@@ -847,7 +846,7 @@ CONTAINS
          iNode = p%Nodes_I(I,1) ! Node index
          DO J = 1, 6 ! ItfTDXss    ItfTDYss    ItfTDZss    ItfRDXss    ItfRDYss    ItfRDZss
             Init%IntFc( (I-1)*6+J, 1) = p%NodesDOF(iNode)%List(J) ! DOF number (unconstrained)
-            Init%IntFc( (I-1)*6+J, 2) = p%Nodes_I(I, J+1);      ! 0 or 1 if fixed to interface 
+            Init%IntFc( (I-1)*6+J, 2) = 1 ! NOTE: Always selected now p%Nodes_I(I, J+1);      ! 0 or 1 if fixed to interface 
          ENDDO
       ENDDO
    END SUBROUTINE InitIntFc
