@@ -28,6 +28,11 @@
 !**********************************************************************************************************************************
 MODULE SoilDyn
 
+!FIXME: stuff we need to do
+!     -  cannot allow checkpoints.  The DLL starts at T=0 always, and builds the history for histerysis loops
+!     -  Is the stiffness matrix returned about a given operating point, or is it just what is read in?  Can it be used in linearization?
+!     -
+
    USE SoilDyn_Types
    USE SoilDyn_IO
    USE NWTC_Library
@@ -106,7 +111,8 @@ NumOuts = 2
    call SoilDyn_ReadInput( InitInp%InputFile, p%EchoFileName, InputFileData, ErrStat2, ErrMsg2 );  if (Failed()) return;
 
       ! Define parameters here:
-   p%DT  = Interval
+   p%DT        =  Interval
+   p%DLL_Model =  InputFileData%DLL_Model
 
       ! Define initial system states here:
    x%DummyContState           = 0.0_ReKi

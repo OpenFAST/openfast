@@ -134,8 +134,7 @@ subroutine SoilDyn_ReadInput( InputFileName, EchoFileName, InputFileData, ErrSta
       call ReadVar ( UnitInput, InputFileName, InputFileData%EchoFlag, 'Echo', 'Echo the input file data', TmpErrStat, TmpErrMsg, UnitEcho ); if (Failed()) return;
    end if
 
-      ! DT - Time interval for aerodynamic calculations {or default} (s):
-   Line = ""
+      ! DT - Time interval for SoilDyn calculations {or default} (s):
    CALL ReadVar( UnitInput, InputFileName, Line, "DT", "Time interval for soil calculations {or default} (s)", TmpErrStat, TmpErrMsg, UnitEcho); if (Failed()) return;
       CALL Conv2UC( Line )
       IF ( INDEX(Line, "DEFAULT" ) /= 1 ) THEN ! If it's not "default", read this variable; otherwise use the value already stored in InputFileData%DTAero
@@ -176,18 +175,15 @@ subroutine SoilDyn_ReadInput( InputFileName, EchoFileName, InputFileData, ErrSta
    !-------------------------------------------------------------------------------------------------
 
    call ReadCom( UnitInput, InputFileName, 'SoilDyn input file separator line',  TmpErrStat, TmpErrMsg, UnitEcho );   if (Failed()) return;
-
    call ReadVar( UnitInput, InputFileName, InputFileData%PY_NumPoints, "PY_NumPoints", "Number of PY curve points", TmpErrStat, TmpErrMsg, UnitEcho );  if (Failed()) return;
 
       ! Allocate arrays to hold the information that will be read in next
    allocate( InputFileData%PY_locations(InputFileData%PY_NumPoints,3), STAT=TmpErrStat )
-   if (TmpErrStat /= 0) then
-      call SetErrStat(ErrID_Fatal, 'Could not allocate PY_locations', ErrStat, ErrMsg, RoutineName)
-      return
-   endif
+   if (TmpErrStat /= 0)    call SetErrStat(ErrID_Fatal, 'Could not allocate PY_locations', ErrStat, ErrMsg, RoutineName)
    allocate( InputFileData%PY_inputFile(InputFileData%PY_NumPoints), STAT=TmpErrStat )
-   if (TmpErrStat /= 0) then
-      call SetErrStat(ErrID_Fatal, 'Could not allocate PY_inputFile', ErrStat, ErrMsg, RoutineName)
+   if (TmpErrStat /= 0)    call SetErrStat(ErrID_Fatal, 'Could not allocate PY_inputFile', ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) then
+      call CleanUp()
       return
    endif
 
@@ -196,7 +192,6 @@ subroutine SoilDyn_ReadInput( InputFileName, EchoFileName, InputFileData, ErrSta
 
       ! Read in each line of location and input file ( ---- Location (x,y,z) ------- Point InputFile ------------- )
    do i=1,InputFileData%PY_NumPoints
-      Line = ""
       call ReadLine( UnitInput, '', Line, LineLen, TmpErrStat )
       if (TmpErrStat /= 0) then
          call SetErrStat( ErrID_Fatal, 'Error reading PY_curve line '//trim(Num2LStr(i))//' from '//InputFileName//'.', ErrStat, ErrMsg, RoutineName)
@@ -221,32 +216,25 @@ subroutine SoilDyn_ReadInput( InputFileName, EchoFileName, InputFileData, ErrSta
    !-------------------------------------------------------------------------------------------------
 
    call ReadCom( UnitInput, InputFileName, 'SoilDyn input file separator line',  TmpErrStat, TmpErrMsg, UnitEcho );   if (Failed()) return;
-
    call ReadVar( UnitInput, InputFileName, InputFileData%DLL_model, "DLL_model", "REDWIN DLL model used", TmpErrStat, TmpErrMsg, UnitEcho );  if (Failed()) return;
 
       ! DLL_FileName - Name of the Bladed DLL [used only with DLL Interface] (-):
-   call ReadVar( UnitInput, InputFileName, InputFileData%DLL_FileName, "DLL_FileName", "Name/location of the external library {.dll [Windows]} in the REDWIN-DLL format [used only with CalcOption==3] (-)", TmpErrStat, TmpErrMsg, UnitEcho )
+   call ReadVar( UnitInput, InputFileName, InputFileData%DLL_FileName, "DLL_FileName", "Name/location of the external library {.dll [Windows]} in the REDWIN-DLL format [used only with CalcOption==3] (-)", TmpErrStat, TmpErrMsg, UnitEcho );  if (Failed()) return;
    if ( PathIsRelative( InputFileData%DLL_FileName ) ) InputFileData%DLL_FileName = TRIM(PriPath)//TRIM(InputFileData%DLL_FileName)
 
       ! DLL_ProcName - Name of procedure to be called in DLL [used only with DLL Interface] (-):
-   call ReadVar( UnitInput, InputFileName, InputFileData%DLL_ProcName, "DLL_ProcName", "Name of procedure to be called in DLL [used only with DLL Interface] (-)", TmpErrStat, TmpErrMsg, UnitEcho)
-
+   call ReadVar( UnitInput, InputFileName, InputFileData%DLL_ProcName, "DLL_ProcName", "Name of procedure to be called in DLL [used only with DLL Interface] (-)", TmpErrStat, TmpErrMsg, UnitEcho);  if (Failed()) return;
    call ReadVar( UnitInput, InputFileName, InputFileData%DLL_NumPoints, "DLL_NumPoints", "Number of DLL interfaces", TmpErrStat, TmpErrMsg, UnitEcho );  if (Failed()) return;
 
       ! Allocate arrays to hold the information that will be read in next
    allocate( InputFileData%DLL_locations(InputFileData%DLL_NumPoints,3), STAT=TmpErrStat )
-   if (TmpErrStat /= 0) then
-      call SetErrStat(ErrID_Fatal, 'Could not allocate DLL_locations', ErrStat, ErrMsg, RoutineName)
-      return
-   endif
+   if (TmpErrStat /= 0)    call SetErrStat(ErrID_Fatal, 'Could not allocate DLL_locations', ErrStat, ErrMsg, RoutineName)
    allocate( InputFileData%DLL_PropsFile(InputFileData%DLL_NumPoints), STAT=TmpErrStat )
-   if (TmpErrStat /= 0) then
-      call SetErrStat(ErrID_Fatal, 'Could not allocate DLL_PropsFile', ErrStat, ErrMsg, RoutineName)
-      return
-   endif
+   if (TmpErrStat /= 0)    call SetErrStat(ErrID_Fatal, 'Could not allocate DLL_PropsFile', ErrStat, ErrMsg, RoutineName)
    allocate( InputFileData%DLL_LDispFile(InputFileData%DLL_NumPoints), STAT=TmpErrStat )
-   if (TmpErrStat /= 0) then
-      call SetErrStat(ErrID_Fatal, 'Could not allocate DLL_LDispFile', ErrStat, ErrMsg, RoutineName)
+   if (TmpErrStat /= 0)    call SetErrStat(ErrID_Fatal, 'Could not allocate DLL_LDispFile', ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) then
+      call CleanUp()
       return
    endif
 
@@ -255,7 +243,6 @@ subroutine SoilDyn_ReadInput( InputFileName, EchoFileName, InputFileData, ErrSta
 
       ! Read in each line of location and input file ( ---- Location (x,y,z) ------- Point InputFile ------------- )
    do i=1,InputFileData%DLL_NumPoints
-      Line = ""
       call ReadLine( UnitInput, '', Line, LineLen, TmpErrStat )
       if (TmpErrStat /= 0) then
          call SetErrStat( ErrID_Fatal, 'Error reading DLL_curve line '//trim(Num2LStr(i))//' from '//InputFileName//'.', ErrStat, ErrMsg, RoutineName)
@@ -276,39 +263,21 @@ subroutine SoilDyn_ReadInput( InputFileName, EchoFileName, InputFileData, ErrSta
    enddo
 
    !---------------------- OUTPUT --------------------------------------------------
-   CALL ReadCom( UnitInput, InputFileName, 'Section Header: Output', TmpErrStat, TmpErrMsg, UnitEcho )
+   CALL ReadCom( UnitInput, InputFileName, 'Section Header: Output', TmpErrStat, TmpErrMsg, UnitEcho );   if (Failed()) return;
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-   IF (ErrStat >= AbortErrLev) THEN
-      CALL Cleanup()
-      RETURN
-   END IF
 
       ! SumPrint - Print summary data to <RootName>.IfW.sum (flag):
-   CALL ReadVar( UnitInput, InputFileName, InputFileData%SumPrint, "SumPrint", "Print summary data to <RootName>.SlD.sum (flag)", TmpErrStat, TmpErrMsg, UnitEcho )
+   CALL ReadVar( UnitInput, InputFileName, InputFileData%SumPrint, "SumPrint", "Print summary data to <RootName>.SlD.sum (flag)", TmpErrStat, TmpErrMsg, UnitEcho );   if (Failed()) return;
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-   IF (ErrStat >= AbortErrLev) THEN
-      CALL Cleanup()
-      RETURN
-   END IF
 
 
    !---------------------- OUTLIST  --------------------------------------------
-   CALL ReadCom( UnitInput, InputFileName, 'Section Header: OutList', TmpErrStat, TmpErrMsg, UnitEcho )
+   CALL ReadCom( UnitInput, InputFileName, 'Section Header: OutList', TmpErrStat, TmpErrMsg, UnitEcho );   if (Failed()) return;
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-   IF (ErrStat >= AbortErrLev) THEN
-      CALL Cleanup()
-      RETURN
-   END IF
 
       ! OutList - List of user-requested output channels (-):     -- uses routine from the NWTC_Library
    CALL ReadOutputList ( UnitInput, InputFileName, InputFileData%OutList, InputFileData%NumOuts, 'OutList',    &
-               "List of user-requested output channels", TmpErrStat, TmpErrMsg, UnitEcho  )
-   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-   IF (ErrStat >= AbortErrLev) THEN
-      CALL Cleanup()
-      RETURN
-   END IF
-
+               "List of user-requested output channels", TmpErrStat, TmpErrMsg, UnitEcho  );   if (Failed()) return;
 
 
 
@@ -323,7 +292,7 @@ subroutine SoilDyn_ReadInput( InputFileName, EchoFileName, InputFileData, ErrSta
          logical function Failed()
             call SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
             Failed =  ErrStat >= AbortErrLev
-            if (Failed) call CleanUp()
+            if (ErrStat >= AbortErrLev) call CleanUp()
          end function Failed
          subroutine Cleanup()
                ! Close input file

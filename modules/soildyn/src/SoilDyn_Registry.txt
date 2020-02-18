@@ -103,6 +103,7 @@ typedef   ^             ParameterType     LOGICAL           UseREDWINinterface  
 typedef   ^             ParameterType     CHARACTER(1024)   RootFileName         - - - "Root file name" -
 typedef   ^             ParameterType     CHARACTER(1024)   EchoFileName         - - - "Name of echo file" -
 typedef   ^             ParameterType     CHARACTER(1024)   SumFileName          - - - "Name of summary file" -
+typedef   ^             ParameterType     IntKi             DLL_model            - - - "REDWIN DLL model type to use" -
 
 # ..... Inputs ....................................................................................................................
 # Define inputs that are contained on the mesh here:
