@@ -116,7 +116,7 @@ subroutine WriteDisWindFiles( n, WrDisSkp1, p, y, m, errStat, errMsg )
       call WrVTK_SP_header( FileName, "High resolution disturbed wind for time = "//trim(num2lstr(t_out))//" seconds.", Un, errStat2, errMsg2 )
          call SetErrStat(errStat2, errMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
-      call WrVTK_SP_vectors3D( Un, "HighDis", (/p%nX_high,p%nY_high,p%nZ_high/), (/p%X0_high,p%Y0_high,p%Z0_high/), (/p%dX_high,p%dY_high,p%dZ_high/), y%Vdist_high(nt)%data(:,:,:,:,0), errStat2, errMsg2 )
+      call WrVTK_SP_vectors3D( Un, "HighDis", (/p%nX_high,p%nY_high,p%nZ_high/), (/p%X0_high(nt),p%Y0_high(nt),p%Z0_high(nt)/), (/p%dX_high(nt),p%dY_high(nt),p%dZ_high(nt)/), y%Vdist_high(nt)%data(:,:,:,:,0), errStat2, errMsg2 )
          call SetErrStat(ErrStat2, errMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
        
