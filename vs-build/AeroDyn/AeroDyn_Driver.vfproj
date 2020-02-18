@@ -117,6 +117,7 @@
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File></Filter>
 		<File RelativePath="..\..\modules\AeroDyn\src\AeroDyn.f90"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroDyn_AllBldNdOuts_IO.f90"/>
 		<File RelativePath="..\..\modules\AeroDyn\src\AeroDyn_IO.f90"/></Filter>
 		<Filter Name="AeroDyn_Driver">
 		<Filter Name="RegistryFiles">
