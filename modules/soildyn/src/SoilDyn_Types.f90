@@ -46,6 +46,7 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(1:6)  :: Disp      !< Displacements.  Follows convention of REDWIN orientation. [-]
     REAL(R8Ki) , DIMENSION(1:6)  :: Force      !< Forces.  Follows convention of REDWIN orientations. ['(N)']
     REAL(R8Ki) , DIMENSION(1:6,1:6)  :: D      !< The 6 x 6 elastic macro-element stiffness matrix at the SFI. [-]
+    LOGICAL  :: SuppressWarn = .FALSE.      !< Supress further warnings. [-]
   END TYPE REDWINdllType
 ! =======================
 ! =========  SlD_InputFile  =======
@@ -160,6 +161,7 @@ CONTAINS
     DstREDWINdllTypeData%Disp = SrcREDWINdllTypeData%Disp
     DstREDWINdllTypeData%Force = SrcREDWINdllTypeData%Force
     DstREDWINdllTypeData%D = SrcREDWINdllTypeData%D
+    DstREDWINdllTypeData%SuppressWarn = SrcREDWINdllTypeData%SuppressWarn
  END SUBROUTINE SlD_CopyREDWINdllType
 
  SUBROUTINE SlD_DestroyREDWINdllType( REDWINdllTypeData, ErrStat, ErrMsg )
@@ -219,6 +221,7 @@ CONTAINS
       Db_BufSz   = Db_BufSz   + SIZE(InData%Disp)  ! Disp
       Db_BufSz   = Db_BufSz   + SIZE(InData%Force)  ! Force
       Db_BufSz   = Db_BufSz   + SIZE(InData%D)  ! D
+      Int_BufSz  = Int_BufSz  + 1  ! SuppressWarn
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -272,6 +275,8 @@ CONTAINS
       Db_Xferred   = Db_Xferred   + SIZE(InData%Force)
       DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%D))-1 ) = PACK(InData%D,.TRUE.)
       Db_Xferred   = Db_Xferred   + SIZE(InData%D)
+      IntKiBuf ( Int_Xferred:Int_Xferred+1-1 ) = TRANSFER( InData%SuppressWarn , IntKiBuf(1), 1)
+      Int_Xferred   = Int_Xferred   + 1
  END SUBROUTINE SlD_PackREDWINdllType
 
  SUBROUTINE SlD_UnPackREDWINdllType( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -405,6 +410,8 @@ CONTAINS
       OutData%D = REAL( UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(SIZE(OutData%D))-1 ), mask2, 0.0_DbKi ), R8Ki)
       Db_Xferred   = Db_Xferred   + SIZE(OutData%D)
     DEALLOCATE(mask2)
+      OutData%SuppressWarn = TRANSFER( IntKiBuf( Int_Xferred ), mask0 )
+      Int_Xferred   = Int_Xferred + 1
  END SUBROUTINE SlD_UnPackREDWINdllType
 
  SUBROUTINE SlD_CopyInputFile( SrcInputFileData, DstInputFileData, CtrlCode, ErrStat, ErrMsg )

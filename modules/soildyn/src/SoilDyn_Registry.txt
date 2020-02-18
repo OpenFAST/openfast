@@ -17,17 +17,18 @@ include Registry_NWTC_Library.txt
 # REDWIN interface DLL type
 # ..... Data for using REDWIN DLLs .......................................................................................................
 # Values set to type R8Ki are defined in the REDWIN fortran code as kind=selected_real_kind(p=15)
-typedef SoilDyn/SlD     REDWINdllType   character(45) PROPSFILE      -           - - "" -
-typedef SoilDyn/SlD     REDWINdllType   character(45) LDISPFILE      -           - - "" -
-typedef SoilDyn/SlD     REDWINdllType   IntKi         IDtask         -           - - "Task identifier for what DLL should do: IDTask = 1: Read input properties, initialize and calibrate model IDTask = 2: Calculate forces based on displacement at end of step IDTask = 3: Calculate elastic macro-element stiffness matrix" -
-typedef   ^             REDWINdllType   IntKi         nErrorCode     -           - - "number of returned error codes" -
-typedef   ^             REDWINdllType   IntKi         ErrorCode      {100}       - - "Array containing one or more error codes. These are specific to each model." -
-typedef   ^             REDWINdllType   R8Ki          Props          {100}{200}  - - "Array containing foundation model properties (used internally by the REDWIN models). Specific to each model." -
-typedef   ^             REDWINdllType   R8Ki          StVar          {12}{100}   - - "Array containing the state variables at the end of the step (used internally by the REDWIN models). Specific to each model." -
-typedef   ^             REDWINdllType   IntKi         StVarPrint     {12}{100}   - - "Array indicating which state variables should be printed to the screen. This feature is currently not supported." -
-typedef   ^             REDWINdllType   R8Ki          Disp           {6}         - - "Displacements.  Follows convention of REDWIN orientation." -
-typedef   ^             REDWINdllType   R8Ki          Force          {6}         - - "Forces.  Follows convention of REDWIN orientations." '(N)'
-typedef   ^             REDWINdllType   R8Ki          D              {6}{6}      - - "The 6 x 6 elastic macro-element stiffness matrix at the SFI." -
+typedef SoilDyn/SlD    REDWINdllType   character(45)  PROPSFILE      -          - - "" -
+typedef SoilDyn/SlD    REDWINdllType   character(45)  LDISPFILE      -          - - "" -
+typedef SoilDyn/SlD    REDWINdllType   IntKi          IDtask         -          - - "Task identifier for what DLL should do: IDTask = 1: Read input properties, initialize and calibrate model IDTask = 2: Calculate forces based on displacement at end of step IDTask = 3: Calculate elastic macro-element stiffness matrix" -
+typedef  ^             REDWINdllType   IntKi          nErrorCode     -          - - "number of returned error codes" -
+typedef  ^             REDWINdllType   IntKi          ErrorCode      {100}      - - "Array containing one or more error codes. These are specific to each model." -
+typedef  ^             REDWINdllType   R8Ki           Props          {100}{200} - - "Array containing foundation model properties (used internally by the REDWIN models). Specific to each model." -
+typedef  ^             REDWINdllType   R8Ki           StVar          {12}{100}  - - "Array containing the state variables at the end of the step (used internally by the REDWIN models). Specific to each model." -
+typedef  ^             REDWINdllType   IntKi          StVarPrint     {12}{100}  - - "Array indicating which state variables should be printed to the screen. This feature is currently not supported." -
+typedef  ^             REDWINdllType   R8Ki           Disp           {6}        - - "Displacements.  Follows convention of REDWIN orientation." -
+typedef  ^             REDWINdllType   R8Ki           Force          {6}        - - "Forces.  Follows convention of REDWIN orientations." '(N)'
+typedef  ^             REDWINdllType   R8Ki           D              {6}{6}     - - "The 6 x 6 elastic macro-element stiffness matrix at the SFI." -
+typedef  ^             REDWINdllType   LOGICAL        SuppressWarn   - .FALSE. -    "Supress further warnings." -
 
 # SoilDyn input file
 typedef  ^    SlD_InputFile   LOGICAL              EchoFlag       -   -   -   "Echo the input file"                                    -
