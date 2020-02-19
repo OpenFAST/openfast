@@ -94,21 +94,13 @@ PROGRAM SoilDyn_Driver
 
          ! Modify u (likely from the outputs of another module or a set of test conditions) here:
 
-
          ! Calculate outputs at n
-      CALL SoilDyn_CalcOutput( Time, u(1), p, x, xd, z, OtherState, y, misc, ErrStat, ErrMsg )
-      IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
-         CALL WrScr( 'After CalcOutput: '//ErrMsg )
-         if ( ErrStat >= AbortErrLev ) call ProgEnd()
-      END IF
-
+      CALL SoilDyn_CalcOutput( Time, u(1), p, x, xd, z, OtherState, y, misc, ErrStat, ErrMsg );
+      call CheckErr('After CalcOutput: ');
 
          ! Get state variables at next step: INPUT at step n, OUTPUT at step n + 1
-      CALL SoilDyn_UpdateStates( Time, n, u, InputTime, p, x, xd, z, OtherState, misc, ErrStat, ErrMsg )
-      IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
-         CALL WrScr( ErrMsg )
-         if ( ErrStat >= AbortErrLev ) call ProgEnd()
-      END IF
+      CALL SoilDyn_UpdateStates( Time, n, u, InputTime, p, x, xd, z, OtherState, misc, ErrStat, ErrMsg );
+      call CheckErr('');
    END DO
 
 
@@ -122,6 +114,13 @@ PROGRAM SoilDyn_Driver
    END IF
 
 CONTAINS
+   subroutine CheckErr(Text)
+      character(*), intent(in) :: Text
+       IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
+         CALL WrScr( Text//ErrMsg )
+         if ( ErrStat >= AbortErrLev ) call ProgEnd()
+      END IF
+   end subroutine CheckErr
    subroutine ProgEnd()
       ! Placeholder for moment
       Call ProgAbort('Fatal error encountered.  Ending.')
