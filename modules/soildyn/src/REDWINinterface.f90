@@ -21,7 +21,7 @@ MODULE REDWINinterface
 
 !FIXME: when done, remove the ifdef NO_LibLoad checks.
    USE NWTC_Library
-   USE SoilDyn_Types
+   USE SoilDyn_Types, only: REDWINdllType
 
    IMPLICIT NONE
 
@@ -82,13 +82,12 @@ MODULE REDWINinterface
 CONTAINS
 !==================================================================================================================================
 !> This SUBROUTINE is used to call the REDWIN-style DLL.
-subroutine CallREDWINdll ( u, DLL, dll_data, p, ErrStat, ErrMsg )
+subroutine CallREDWINdll ( DLL_Trgt, DLL_Model, dll_data, ErrStat, ErrMsg )
 
       ! Passed Variables:
-   type(SlD_InputType),       intent(in   )  :: u              ! System inputs
-   type(DLL_Type),            intent(in   )  :: DLL            ! The DLL to be called.
-   type(REDWINdllType),       intent(inout)  :: dll_data       ! data type containing the avrSWAP, accINFILE, and avcOUTNAME arrays
-   type(SlD_ParameterType),   intent(in   )  :: p              ! Parameters
+   type(DLL_Type),            intent(in   )  :: DLL_Trgt       ! The DLL to be called.
+   integer(IntKi),            intent(in   )  :: DLL_Model      ! The DLL model type
+   type(REDWINdllType),       intent(inout)  :: dll_data       ! data type containing the dll required arrays in DLL coordinate frame
 
    integer(IntKi),            intent(  out)  :: ErrStat        ! Error status of the operation
    character(*),              intent(  out)  :: ErrMsg         ! Error message if ErrStat /= ErrID_None
@@ -103,6 +102,7 @@ subroutine CallREDWINdll ( u, DLL, dll_data, p, ErrStat, ErrMsg )
    PROPSFILE = TRIM(dll_data%PROPSfile)
    LDISPFILE = TRIM(dll_data%LDISPfile)
 
+#ifndef NO_LibLoad
 #ifdef STATIC_DLL_LOAD
       ! if we're statically loading the library (i.e., OpenFOAM), we can just call INTERFACEFOUNDATION();
    CALL INTERFACEFOUNDATION( PROPSFILE, LDISPFILE, &
@@ -112,41 +112,42 @@ subroutine CallREDWINdll ( u, DLL, dll_data, p, ErrStat, ErrMsg )
 #else
       ! Call the DLL (first associate the address from the procedure in the DLL with the subroutine):
    if (RW_Ver == RW_v00) then
-      CALL C_F_PROCPOINTER( transfer(DLL%ProcAddr(1),C_NULL_FUNPTR), REDWIN_Subroutine_v00)
+      CALL C_F_PROCPOINTER( transfer(DLL_Trgt%ProcAddr(1),C_NULL_FUNPTR), REDWIN_Subroutine_v00)
       CALL REDWIN_Subroutine_v00 ( PROPSFILE, LDISPFILE, &
             dll_data%IDTask, dll_data%nErrorCode, dll_data%ErrorCode, &
             dll_data%Props, dll_data%StVar, dll_data%StVarPrint, &
             dll_data%Disp, dll_data%Force, dll_data%D )
    endif
 #endif
+#endif
 
       ! Call routine for error trapping the returned ErrorCodes
-   call CheckREDWINerrors( dll_data, p%DLL_Model, dll_data%SuppressWarn, ErrStat, ErrMsg )
+   call CheckREDWINerrors( dll_data, DLL_Model, dll_data%SuppressWarn, ErrStat, ErrMsg )
    return
 end subroutine CallREDWINdll
 
 
 !==================================================================================================================================
 !> This routine initializes variables used in the REDWIN DLL interface.
-subroutine REDWINinterface_Init(u,p,dll_data,y,InputFileData, ErrStat, ErrMsg)
+subroutine REDWINinterface_Init( DLL_FileName, DLL_ProcName, DLL_Trgt, DLL_Model, dll_data, UseREDWINinterface, ErrStat, ErrMsg )
 
-   type(SlD_InputType),            intent(inout)  :: u               !< An initial guess for the input; input mesh must be defined
-   type(SlD_ParameterType),        intent(inout)  :: p               !< Parameters
-   type(REDWINdllType),            intent(inout)  :: dll_data
-   type(SlD_OutputType),           intent(inout)  :: y               !< Initial system outputs (outputs are not calculated;
-                                                                     !!   only the output mesh is initialized)
-   type(SlD_InputFile),            intent(in   )  :: InputFileData   !< Data stored in the module's input file
-   integer(IntKi),                 intent(  out)  :: ErrStat         !< Error status of the operation
-   character(*),                   intent(  out)  :: ErrMsg          !< Error message if ErrStat /= ErrID_None
+   character(1024),                 intent(in   )  :: DLL_FileName         !< DLL   filename from input file
+   character(1024),                 intent(in   )  :: DLL_ProcName         !< Procedure name from input file
+   type(DLL_Type),                  intent(inout)  :: DLL_Trgt             !< The DLL to be called.
+   integer(IntKi),                  intent(in   )  :: DLL_Model            !< Model type of the DLL
+   type(REDWINdllType),             intent(inout)  :: dll_data             !< DLL coordinate frame arrays in here
+   logical,                         intent(  out)  :: UseREDWINinterface   !< Can use the interface
+   integer(IntKi),                  intent(  out)  :: ErrStat              !< Error status of the operation
+   character(*),                    intent(  out)  :: ErrMsg               !< Error message if ErrStat /= ErrID_None
 
       ! local variables
-   integer(IntKi)                                 :: ErrStat2       ! The error status code
-   character(ErrMsgLen)                           :: ErrMsg2        ! The error message, if an error occurred
-   character(*), parameter                        :: RoutineName = 'REDWINinterface_Init'
-   logical                                        :: FileExist
-   character(1024)                                :: PriPath        !< Path name of the primary file
-   character(1024)                                :: PropsLoc       !< Full path to PropsFile location
-   character(1024)                                :: LDispLoc       !< Full path to LDispFile location
+   integer(IntKi)                                  :: ErrStat2             ! The error status code
+   character(ErrMsgLen)                            :: ErrMsg2              ! The error message, if an error occurred
+   character(*), parameter                         :: RoutineName = 'REDWINinterface_Init'
+   logical                                         :: FileExist
+   character(1024)                                 :: PriPath              !< Path name of the primary file
+   character(1024)                                 :: PropsLoc             !< Full path to PropsFile location
+   character(1024)                                 :: LDispLoc             !< Full path to LDispFile location
 
 
 
@@ -154,39 +155,36 @@ subroutine REDWINinterface_Init(u,p,dll_data,y,InputFileData, ErrStat, ErrMsg)
    ErrMsg= ''
 
    CALL DispNVD( REDWINinterface_Ver )  ! Display the version of this interface
-#ifdef NO_Libload
-   CALL SetErrStat( ErrID_Warn,'   -->  Skipping LoadDynamicLib call for '//TRIM(InputFileData%DLL_FileName),ErrStat,ErrMsg,RoutineName )
-#endif
 
-   call GetPath( InputFileData%DLL_FileName, PriPath )
+   call GetPath( DLL_FileName, PriPath )
    call CheckPaths()
    if (ErrStat >= AbortErrLev) return
 
    ! Load the DLL
+#ifdef NO_LibLoad
+   CALL SetErrStat( ErrID_Warn,'   -->  Skipping LoadDynamicLib call for '//TRIM(DLL_FileName),ErrStat,ErrMsg,RoutineName )
+#else
 #ifdef STATIC_DLL_LOAD
       ! because OpenFOAM needs the MPI task to copy the library, we're not going to dynamically load it; it needs to be loaded at runtime.
-   p%DLL_Trgt%FileName = ''
-   p%DLL_Trgt%ProcName = ''
+   DLL_Trgt%FileName = ''
+   DLL_Trgt%ProcName = ''
 #else
    ! Define and load the DLL:
-   p%DLL_Trgt%FileName = InputFileData%DLL_FileName
-   p%DLL_Trgt%ProcName = "" ! initialize all procedures to empty so we try to load only one
-   p%DLL_Trgt%ProcName(1) = InputFileData%DLL_ProcName
-#ifndef NO_LibLoad
-   CALL LoadDynamicLib ( p%DLL_Trgt, ErrStat2, ErrMsg2 );   if(Failed()) return;
+   DLL_Trgt%FileName = DLL_FileName
+   DLL_Trgt%ProcName = "" ! initialize all procedures to empty so we try to load only one
+   DLL_Trgt%ProcName(1) = DLL_ProcName
+   CALL LoadDynamicLib ( DLL_Trgt, ErrStat2, ErrMsg2 );   if(Failed()) return;
 #endif
 #endif
 
       ! Initialize DLL
    dll_data%IDtask = IDtask_init
-#ifndef NO_LibLoad
-   CALL CallREDWINdll(u, p%DLL_Trgt, dll_data, p, ErrStat2, ErrMsg2);   if(Failed()) return;
-#endif
+   CALL CallREDWINdll(DLL_Trgt, DLL_Model, dll_data, ErrStat2, ErrMsg2);   if(Failed()) return;
 
 
 !TODO: can we add a check on which type of library we actually loaded and compare to the model we set????
    ! Set status flag:
-   p%UseREDWINinterface = .TRUE.
+   UseREDWINinterface = .TRUE.
 
 CONTAINS
    subroutine CheckPaths()
@@ -204,16 +202,17 @@ CONTAINS
       endif
       inquire( file=trim(PropsLoc), exist=FileExist )
       if ( .not. FileExist ) call SetErrStat(ErrID_Fatal, 'PropsFile '//trim(dll_data%PROPSfile)// &
-            ' not found (path must be relative to DLL location, or absolute)', ErrStat, ErrMsg, 'REDWINinterface_Init')
+            ' not found (path must be relative to DLL location, or absolute)', ErrStat, ErrMsg, RoutineName)
       inquire( file=trim(LDispLoc), exist=FileExist )
       if ( .not. FileExist ) call SetErrStat(ErrID_Fatal, 'LDispFile '//trim(dll_data%LDISPFile)// &
-            ' not found (path must be relative to DLL location, or absolute)', ErrStat, ErrMsg, 'REDWINinterface_Init')
+            ' not found (path must be relative to DLL location, or absolute)', ErrStat, ErrMsg, RoutineName)
+      if ( ErrStat >= AbortErrLev )    UseREDWINinterface = .FALSE.
    end subroutine CheckPaths
 
    logical function Failed()
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       Failed =    ErrStat >= AbortErrLev
-      if ( ErrStat >= AbortErrLev )    p%UseREDWINinterface = .FALSE.
+      if ( ErrStat >= AbortErrLev )    UseREDWINinterface = .FALSE.
    end function Failed
 end subroutine REDWINinterface_Init
 
@@ -222,25 +221,23 @@ end subroutine REDWINinterface_Init
 !> This routine would call the DLL a final time, but there appears to be no end routine for the DLL,
 !! so we don't need to make a last call.  It also frees the dynamic library (doesn't do anything on
 !! static linked).
-subroutine REDWINinterface_End(u, p, ErrStat, ErrMsg)
+subroutine REDWINinterface_End( DLL_Trgt, ErrStat, ErrMsg )
 
-   TYPE(SlD_InputType),             INTENT(IN   )  :: u               !< System inputs
-   TYPE(SlD_ParameterType),         INTENT(INOUT)  :: p               !< Parameters
-   INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat         !< Error status of the operation
-   CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg          !< Error message if ErrStat /= ErrID_None
+   type(DLL_Type),                  intent(inout)  :: DLL_Trgt       ! The DLL to be called.
+   INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat        !< Error status of the operation
+   CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
 
       ! local variables:
-   INTEGER(IntKi)                                 :: ErrStat2    ! The error status code
-   CHARACTER(ErrMsgLen)                           :: ErrMsg2     ! The error message, if an error occurred
+   INTEGER(IntKi)                                 :: ErrStat2        ! The error status code
+   CHARACTER(ErrMsgLen)                           :: ErrMsg2         ! The error message, if an error occurred
    character(*), parameter                        :: RoutineName = 'REDWINinterface_End'
 
-#ifdef NO_LibLoad
    ErrStat = ErrID_None
    ErrMsg= ''
-   CALL SetErrStat( ErrID_Warn,'   -->  Skipping DynamicLib call for '//TRIM(p%DLL_Trgt%FileName),ErrStat,ErrMsg,RoutineName )
-#else
-      ! Free the library (note: this doesn't do anything #ifdef STATIC_DLL_LOAD  because p%DLL_Trgt is 0 (NULL))
-   CALL FreeDynamicLib( p%DLL_Trgt, ErrStat, ErrMsg )
+
+#ifndef NO_LibLoad
+      ! Free the library (note: this doesn't do anything #ifdef STATIC_DLL_LOAD  because DLL_Trgt is 0 (NULL))
+   CALL FreeDynamicLib( DLL_Trgt, ErrStat, ErrMsg )
 #endif
 end subroutine REDWINinterface_End
 
@@ -248,14 +245,15 @@ end subroutine REDWINinterface_End
 !==================================================================================================================================
 !> This routine sets the AVRswap array, calls the routine from the REDWIN DLL, and sets the outputs from the call to be used as
 !! necessary in the main ServoDyn CalcOutput routine.
-subroutine REDWINinterface_CalcOutput(t, u, p, dll_data, ErrStat, ErrMsg)
+subroutine REDWINinterface_CalcOutput( DLL_Trgt, DLL_Model, Displacement, Force, dll_data, ErrStat, ErrMsg )
 
-   real(DbKi),                     intent(in   )  :: t           !< Current simulation time in seconds
-   type(SlD_InputType),            intent(in   )  :: u           !< Inputs at t
-   type(SlD_ParameterType),        intent(in   )  :: p           !< Parameters
-   type(REDWINdllType),            intent(inout)  :: dll_data
-   integer(IntKi),                 intent(  out)  :: ErrStat     !< Error status of the operation
-   character(*),                   intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+   type(DLL_Type),                  intent(in   )  :: DLL_Trgt          !< The DLL to be called.
+   integer(IntKi),                  intent(in   )  :: DLL_Model         !< Model type of the DLL
+   real(ReKi),                      intent(in   )  :: Displacement(6)   !< OpenFAST global coordinate frame
+   real(ReKi),                      intent(  out)  :: Force(6)          !< OpenFAST global coordinate frame
+   type(REDWINdllType),             intent(inout)  :: dll_data          !< DLL coordinate frame arrays in here
+   integer(IntKi),                  intent(  out)  :: ErrStat           !< Error status of the operation
+   character(*),                    intent(  out)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
 
       ! local variables:
    integer(IntKi)                                 :: ErrStat2    ! The error status code
@@ -266,7 +264,7 @@ subroutine REDWINinterface_CalcOutput(t, u, p, dll_data, ErrStat, ErrMsg)
    ErrStat = ErrID_None
    ErrMsg= ''
 
-!FIXME: coordinate transform and copy over u information here!
+!FIXME: coordinate transform and copy over Diplacement information here!
 
 
 !FIXME: add some debugging options
@@ -275,13 +273,9 @@ subroutine REDWINinterface_CalcOutput(t, u, p, dll_data, ErrStat, ErrMsg)
 !write(58,'()')
 #endif
 
-#ifdef NO_LibLoad
-   CALL SetErrStat( ErrID_Warn,'   -->  Skipping DynamicLib call for '//TRIM(p%DLL_Trgt%FileName),ErrStat,ErrMsg,RoutineName )
-#else
       ! Call the REDWIN-style DLL:
    dll_data%IDtask = IDtask_calc
-   CALL CallREDWINdll(u, p%DLL_Trgt,  dll_data, p, ErrStat, ErrMsg); if(Failed()) return;
-#endif
+   CALL CallREDWINdll( DLL_Trgt, DLL_Model, dll_data, ErrStat, ErrMsg); if(Failed()) return;
 
 
 !FIXME: coordinate transform here!!!!
@@ -302,15 +296,16 @@ end subroutine REDWINinterface_CalcOutput
 !==================================================================================================================================
 !> This routine sets the AVRswap array, calls the routine from the REDWIN DLL, and sets the outputs from the call to be used as
 !! necessary in the main ServoDyn CalcOutput routine.
-subroutine REDWINinterface_GetStiffMatrix(t, u, p, dll_data, StiffMatrix, ErrStat, ErrMsg)
+subroutine REDWINinterface_GetStiffMatrix( DLL_Trgt, DLL_Model, Displacement, Force, StiffMatrix, dll_data, ErrStat, ErrMsg )
 
-   real(DbKi),                   intent(in   )  :: t           !< Current simulation time in seconds
-   type(SlD_InputType),          intent(in   )  :: u           !< Inputs at t
-   type(SlD_ParameterType),      intent(in   )  :: p           !< Parameters
+   type(DLL_Type),               intent(in   )  :: DLL_Trgt          !< The DLL to be called.
+   integer(IntKi),               intent(in   )  :: DLL_Model         !< Model type of the DLL
+   real(ReKi),                   intent(in   )  :: Displacement(6)   !< Displacement         (OpenFAST global coords)
+   real(ReKi),                   intent(  out)  :: Force(6)          !< Resulting force      (OpenFAST global coords)
+   real(ReKi),                   intent(  out)  :: StiffMatrix(6,6)  !< Returned stiffness   (OpenFAST global coords)
    type(REDWINdllType),          intent(inout)  :: dll_data
-   real(ReKi),                   intent(  out)  :: StiffMatrix(6,6)
-   integer(IntKi),               intent(  out)  :: ErrStat     !< Error status of the operation
-   character(*),                 intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+   integer(IntKi),               intent(  out)  :: ErrStat           !< Error status of the operation
+   character(*),                 intent(  out)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
 
       ! local variables:
    integer(IntKi)                               :: ErrStat2    ! The error status code
@@ -323,15 +318,10 @@ subroutine REDWINinterface_GetStiffMatrix(t, u, p, dll_data, StiffMatrix, ErrSta
 
 !FIXME: coordinate transform and copy over u information here!
 
-#ifdef NO_LibLoad
-   CALL SetErrStat( ErrID_Warn,'   -->  Skipping DynamicLib call for '//TRIM(p%DLL_Trgt%FileName),ErrStat,ErrMsg,RoutineName )
-   StiffMatrix = 0.0_ReKi
-#else
       ! Call the REDWIN-style DLL:
    dll_data%IDtask = IDtask_stiff
-   CALL CallREDWINdll(u, p%DLL_Trgt,  dll_data, p, ErrStat, ErrMsg); if(Failed()) return;
+   CALL CallREDWINdll( DLL_Trgt, DLL_Model, dll_data, ErrStat, ErrMsg); if(Failed()) return;
    StiffMatrix = real(dll_data%D,ReKi)    ! NOTE: converting types here
-#endif
 
 !FIXME: coordinate transform here!!!!
 

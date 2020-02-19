@@ -157,7 +157,8 @@ NumOuts = 2
 
       ! Initialize the dll
    do j=1,size(m%dll_data)
-      call REDWINinterface_Init(u,p,m%dll_data(j),y,InputFileData, ErrStat2, ErrMsg2); if (Failed()) return;
+      call REDWINinterface_Init( InputFileData%DLL_FileName, InputFileData%DLL_ProcName, p%DLL_Trgt, p%DLL_Model, &
+            m%dll_data(j), p%UseREDWINinterface, ErrStat2, ErrMsg2); if (Failed()) return;
    enddo
 
 contains
@@ -239,7 +240,7 @@ subroutine SoilDyn_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 
       !! Place any last minute operations or calculations here:
    if (p%UseREDWINinterface) then
-      call REDWINinterface_End( u, p, ErrStat, ErrMsg )
+      call REDWINinterface_End( p%DLL_Trgt, ErrStat, ErrMsg )
    endif
 
       !! Close files here (but because of checkpoint-restart capability, it is not recommended to have files open during the simulation):
@@ -247,8 +248,8 @@ subroutine SoilDyn_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       !! Destroy the input data:
    call SlD_DestroyInput(        u,          ErrStat2,ErrMsg2);   call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
-      !! Destroy the parameter data:
-   call SlD_DestroyParam(        p,          ErrStat2,ErrMsg2);   call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      !! Destroy the parameter data: We won't keep warnings from p since it will complain about FreeDynamicLib when not compiled with it
+   call SlD_DestroyParam(        p,          ErrStat2,ErrMsg2) !;   call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
       !! Destroy the state data:
    call SlD_DestroyContState(    x,          ErrStat2,ErrMsg2);   call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
