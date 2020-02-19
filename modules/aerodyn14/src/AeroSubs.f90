@@ -4693,13 +4693,8 @@ DO i = P%DynInflow%MaxInflo+1, maxInfl
    RHScos(i) = 0.
    RHSsin(i) = 0.
  ! First, calculate {rhs} = V[L]^-1*{alpha}
-   DO k = 1, maxInfl
-!   DO 260 k = MaxInflo+1, maxInfl
-      RHScos(i) = RHScos(i) + m%DynInflow%xLcos(i,k) * m%DynInflow%old_Alph(k)
-   END DO !k
-   DO k = P%DynInflow%MaxInflo+1, maxInfl
-      RHSsin(i) = RHSsin(i) + m%DynInflow%xLsin(i,k) * m%DynInflow%old_Beta(k)
-   END DO !k
+   RHScos(i) = sum(m%DynInflow%xLcos(i,1:maxInfl) * m%DynInflow%old_Alph(1:maxInfl))
+   RHSsin(i) = sum(m%DynInflow%xLsin(i,P%DynInflow%MaxInflo+1:maxInfl) * m%DynInflow%old_Beta(P%DynInflow%MaxInflo+1:maxInfl))
  ! Second, calculate {rhs} = 0.5*{tau} - [V]{rhs}
  !                         = 0.5*{tau} - [V][L]^-1*{alpha}
  !  USE "VPARAM" for m>0

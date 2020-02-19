@@ -4,8 +4,7 @@ Building OpenFAST on Windows with Visual Studio
 ===============================================
 
 These instructions are specifically for the standalone Visual Studio project at `openfast/vs-build`.
-Separate CMake documentation is provided for Windows users at :numref:`install_cmake_windows` and 
-Cygwin users at :numref:`install_cmake_cygwin`.
+Separate CMake documentation is provided for Windows users at :numref:`cmake_windows`.
 
 Prerequisites
 ------------------------
@@ -76,12 +75,5 @@ format.  Go ahead and accept the upgrade on those files.
    located below the menubar.
    
 6. Build the solution using the ``Build->Build Solution`` menu option.
-
-   NOTE: If this is the first time building OpenFAST, you will encounter many error 
-   messages.  This is due to a known issue with Visual Studio's ability to understand 
-   the OpenFAST dependency structure, which includes Registry-generated Fortran files. 
-   You can resolve this issue by simply closing Visual Studio and then reopening the 
-   ``FAST.sln`` solution file.  After you have reopened Visual Studio, build the 
-   solution again via the ``Build->Build Solution`` menu option.
 
 7. If the solution built without errors, the executable will be located under the ``openfast\build\bin`` folder.

@@ -393,7 +393,7 @@ SUBROUTINE getDirectionProfile( p, Ht, DirectionProfile, VAngleProfile, ErrStat,
                ! Calculate the wind direction at this height
 
             IF ( Ht(J) <= p%met%USR_Z(1) ) THEN
-               DirectionProfile(IZ) = p%met%USR_WindDir(1)
+               DirectionProfile(J) = p%met%USR_WindDir(1)
             ELSEIF ( Ht(J) >= p%met%USR_Z(p%met%NumUSRz) ) THEN
                DirectionProfile(J) = p%met%USR_WindDir(p%met%NumUSRz)
             ELSE

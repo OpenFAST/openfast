@@ -90,6 +90,7 @@ typedef	^	AD_InputFile	ReKi	InCol_Cl	-	-	-	"The column in the airfoil tables tha
 typedef	^	AD_InputFile	ReKi	InCol_Cd	-	-	-	"The column in the airfoil tables that contains the drag coefficient"	-
 typedef	^	AD_InputFile	ReKi	InCol_Cm	-	-	-	"The column in the airfoil tables that contains the pitching-moment coefficient; use zero if there is no Cm column"	-
 typedef	^	AD_InputFile	ReKi	InCol_Cpmin	-	-	-	"The column in the airfoil tables that contains the drag coefficient; use zero if there is no Cpmin column"	-
+typedef	^	AD_InputFile	INTEGER	AFTabMod	-	-	-	"Interpolation method for multiple airfoil tables {1 = 1D on AoA (only first table is used); 2 = 2D on AoA and Re; 3 = 2D on AoA and UserProp}" -
 typedef	^	AD_InputFile	IntKi	NumAFfiles	-	-	-	"Number of airfoil files used"	-
 typedef	^	AD_InputFile	CHARACTER(1024)	AFNames	{:}	-	-	"Airfoil file names (NumAF lines)"	"quoted strings"
 typedef	^	AD_InputFile	LOGICAL	UseBlCm	-	-	-	"Include aerodynamic pitching moment in calculations?"	flag
@@ -168,7 +169,7 @@ typedef	^	ParameterType	ReKi	Gravity	-	-	-	"Gravitational acceleration"	m/s^2
 typedef   ^  ParameterType  ReKi    Patm     -   -   -   "Atmospheric pressure" Pa
 typedef   ^  ParameterType  ReKi    Pvap      -   -   -  "Vapour pressure" Pa
 typedef   ^  ParameterType  ReKi    FluidDepth -  -   -    "Submerged hub height" m
-typedef	^	ParameterType	AFI_ParameterType	AFI	-	-	-	"AirfoilInfo parameters"
+typedef	^	ParameterType	AFI_ParameterType	AFI	{:}	-	-	"AirfoilInfo parameters"
 typedef	^	ParameterType	BEMT_ParameterType	BEMT	-	-	-	"Parameters for BEMT module"
 # parameters for output
 typedef	^	ParameterType	IntKi	NumOuts	-	-	-	"Number of parameters in the output list (number of outputs requested)"	-
@@ -191,6 +192,7 @@ typedef	^	InputType	MeshType	BladeMotion	{:}	-	-	"motion on each blade"	-
 # Define inputs that are not on this mesh here:
 typedef	^	InputType	ReKi	InflowOnBlade	{:}{:}{:}	-	-	"U,V,W at nodes on each blade (note if we change the requirement that NumNodes is the same for each blade, this will need to change)"	m/s
 typedef	^	InputType	ReKi	InflowOnTower	{:}{:}	-	-	"U,V,W at nodes on the tower"	m/s
+typedef	^	InputType	ReKi	UserProp	{:}{:}	-	-	"Optional user property for interpolating airfoils (per element per blade)" -
 
 # ..... Outputs ...................................................................................................................
 # Define outputs that are contained on the mesh here:

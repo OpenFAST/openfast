@@ -2179,6 +2179,10 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, ADBlFile, OutFileRoot, UnE
    CALL ReadCom( UnIn, InputFile, 'Section Header: Airfoil Information', ErrStat2, ErrMsg2, UnEc )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
+      ! AFTabMod - Interpolation method for multiple airfoil tables (-):
+   CALL ReadVar( UnIn, InputFile, InputFileData%AFTabMod, "AFTabMod", "Interpolation method for multiple airfoil tables (-)", ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      IF ( ErrStat >= AbortErrLev ) RETURN
 
       ! InCol_Alfa - The column in the airfoil tables that contains the angle of attack (-):
    CALL ReadVar( UnIn, InputFile, InputFileData%InCol_Alfa, "InCol_Alfa", "The column in the airfoil tables that contains the angle of attack (-)", ErrStat2, ErrMsg2, UnEc)
@@ -2721,7 +2725,7 @@ SUBROUTINE AD_PrintSum( InputFileData, p, u, y, ErrStat, ErrMsg )
       
       WRITE (UnSu,"(15x,A)")  'Blade nodes selected for output:  Output node  Analysis node'
       WRITE (UnSu,"(15x,A)")  '                                  -----------  -------------'
-      DO I = 1,p%NBlOuts
+      DO I = 1,size(p%BlOutNd)
          WRITE (UnSu,OutPFmt)  I, p%BlOutNd(I)
       END DO  
    end if
