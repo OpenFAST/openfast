@@ -396,7 +396,7 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
        Init%Props(1:Init%NProp, 1:PropSetsCol) = TempProps(1:Init%NProp, 1:PropSetsCol)
     endif
     !Init%Props(1:kprop, 1:Init%PropSetsCol) = TempProps
-    Init%Props = TempProps(1:Init%NProp, :)  !!RRD fixed it on 1/23/14 to account for NDIV=1
+    !Init%Props = TempProps(1:Init%NProp, :)  !!RRD fixed it on 1/23/14 to account for NDIV=1
 
     CALL CleanUp_Discrt()
 
