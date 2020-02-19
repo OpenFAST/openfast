@@ -103,9 +103,6 @@ subroutine CallREDWINdll ( u, DLL, dll_data, p, ErrStat, ErrMsg )
    PROPSFILE = TRIM(dll_data%PROPSfile)
    LDISPFILE = TRIM(dll_data%LDISPfile)
 
-      ! Check existance of DLL input files.  The DLL does not check this, and will
-      ! catastrophically fail if they are not found.
-
 #ifdef STATIC_DLL_LOAD
       ! if we're statically loading the library (i.e., OpenFOAM), we can just call INTERFACEFOUNDATION();
    CALL INTERFACEFOUNDATION( PROPSFILE, LDISPFILE, &
@@ -138,7 +135,7 @@ subroutine REDWINinterface_Init(u,p,dll_data,y,InputFileData, ErrStat, ErrMsg)
    type(REDWINdllType),            intent(inout)  :: dll_data
    type(SlD_OutputType),           intent(inout)  :: y               !< Initial system outputs (outputs are not calculated;
                                                                      !!   only the output mesh is initialized)
-   type(SlD_InputFile),            intent(inout)  :: InputFileData   !< Data stored in the module's input file
+   type(SlD_InputFile),            intent(in   )  :: InputFileData   !< Data stored in the module's input file
    integer(IntKi),                 intent(  out)  :: ErrStat         !< Error status of the operation
    character(*),                   intent(  out)  :: ErrMsg          !< Error message if ErrStat /= ErrID_None
 
@@ -146,6 +143,11 @@ subroutine REDWINinterface_Init(u,p,dll_data,y,InputFileData, ErrStat, ErrMsg)
    integer(IntKi)                                 :: ErrStat2       ! The error status code
    character(ErrMsgLen)                           :: ErrMsg2        ! The error message, if an error occurred
    character(*), parameter                        :: RoutineName = 'REDWINinterface_Init'
+   logical                                        :: FileExist
+   character(1024)                                :: PriPath        !< Path name of the primary file
+   character(1024)                                :: PropsLoc       !< Full path to PropsFile location
+   character(1024)                                :: LDispLoc       !< Full path to LDispFile location
+
 
 
    ErrStat = ErrID_None
@@ -156,6 +158,9 @@ subroutine REDWINinterface_Init(u,p,dll_data,y,InputFileData, ErrStat, ErrMsg)
    CALL SetErrStat( ErrID_Warn,'   -->  Skipping LoadDynamicLib call for '//TRIM(InputFileData%DLL_FileName),ErrStat,ErrMsg,RoutineName )
 #endif
 
+   call GetPath( InputFileData%DLL_FileName, PriPath )
+   call CheckPaths()
+   if (ErrStat >= AbortErrLev) return
 
    ! Load the DLL
 #ifdef STATIC_DLL_LOAD
@@ -184,6 +189,27 @@ subroutine REDWINinterface_Init(u,p,dll_data,y,InputFileData, ErrStat, ErrMsg)
    p%UseREDWINinterface = .TRUE.
 
 CONTAINS
+   subroutine CheckPaths()
+      ! Check existance of DLL input files.  The DLL does not check this, and will
+      ! catastrophically fail if they are not found.
+      if ( PathIsRelative( dll_data%PROPSfile ) ) then
+         PropsLoc = trim(PriPath)//trim(dll_data%PROPSfile)
+      else
+         PropsLoc = trim(dll_data%PROPSfile)
+      endif
+      if ( PathIsRelative( dll_data%LDISPfile ) ) then
+         LDispLoc = trim(PriPath)//trim(dll_data%LDISPfile)
+      else
+         LDispLoc = trim(dll_data%LDISPfile)
+      endif
+      inquire( file=trim(PropsLoc), exist=FileExist )
+      if ( .not. FileExist ) call SetErrStat(ErrID_Fatal, 'PropsFile '//trim(dll_data%PROPSfile)// &
+            ' not found (path must be relative to DLL location, or absolute)', ErrStat, ErrMsg, 'REDWINinterface_Init')
+      inquire( file=trim(LDispLoc), exist=FileExist )
+      if ( .not. FileExist ) call SetErrStat(ErrID_Fatal, 'LDispFile '//trim(dll_data%LDISPFile)// &
+            ' not found (path must be relative to DLL location, or absolute)', ErrStat, ErrMsg, 'REDWINinterface_Init')
+   end subroutine CheckPaths
+
    logical function Failed()
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       Failed =    ErrStat >= AbortErrLev
