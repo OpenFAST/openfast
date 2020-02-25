@@ -41,6 +41,7 @@ MODULE SoilDyn_Driver_Types
    TYPE     :: SlDDriver_Flags
       LOGICAL                 :: DvrIptFile           = .FALSE.      !< Was an input file name given on the command line?
       LOGICAL                 :: SlDIptFile           = .FALSE.      !< Was an SoilDyn input file requested?
+      LOGICAL                 :: InputDispFile        = .FALSE.      !< Input displacement time series
       LOGICAL                 :: TStart               = .FALSE.      !< specified a start time
       LOGICAL                 :: StiffMatOut          = .FALSE.      !< output stiffness matrices at start and finish
       LOGICAL                 :: NumTimeSteps         = .FALSE.      !< specified a number of timesteps to process
@@ -56,7 +57,7 @@ MODULE SoilDyn_Driver_Types
    TYPE     :: SlDDriver_Settings
       CHARACTER(1024)         :: DvrIptFileName                !< Driver input file name
       CHARACTER(1024)         :: SlDIptFileName                !< Filename of SoilDyn input file to read (if no driver input file)
-      CHARACTER(1024)         :: SummaryFileName               !< Filename for the summary information output
+      CHARACTER(1024)         :: InputDispFile                 !< Filename of SoilDyn time series displacements
 
       INTEGER(IntKi)          :: NumTimeSteps                  !< Number of timesteps
       REAL(DbKi)              :: DT                            !< resolution of time

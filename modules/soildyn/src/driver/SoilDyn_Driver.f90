@@ -39,17 +39,18 @@ PROGRAM SoilDyn_Driver
    real(DbKi)                                         :: Time                 !< Variable for storing time, in seconds
    real(DbKi)                                         :: TimeInterval         !< Interval between time steps, in seconds
    real(DbKi)                                         :: InputTime(NumInp)    !< Variable for storing time associated with inputs, in seconds
+   real(ReKi),                            allocatable :: DisplacementList(:,:)   !< List of displacements and times to apply
 
    type(SlD_InitInputType)                            :: InitInData           !< Input data for initialization
    type(SlD_InitOutputType)                           :: InitOutData          !< Output data from initialization
-                                                      
+
    type(SlD_ContinuousStateType)                      :: x                    !< Continuous states
    type(SlD_DiscreteStateType)                        :: xd                   !< Discrete states
    type(SlD_ConstraintStateType)                      :: z                    !< Constraint states
    type(SlD_ConstraintStateType)                      :: Z_residual           !< Residual of the constraint state functions (Z)
    type(SlD_OtherStateType)                           :: OtherState           !< Other states
    type(SlD_MiscVarType)                              :: misc                 !< Optimization variables
-                                                      
+
    type(SlD_ParameterType)                            :: p                    !< Parameters
    type(SlD_InputType)                                :: u(NumInp)            !< System inputs
    type(SlD_OutputType)                               :: y                    !< System outputs
@@ -127,13 +128,7 @@ PROGRAM SoilDyn_Driver
 
          ! Read the driver input file
       CALL ReadDvrIptFile( CLSettings%DvrIptFileName, SettingsFlags, Settings, ProgInfo, ErrStat, ErrMsg )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL ProgAbort( ErrMsg )
-      ELSEIF ( ErrStat /= 0 ) THEN
-         CALL WrScr( NewLine//ErrMsg )
-         ErrStat  =  ErrID_None
-      ENDIF
-
+      call CheckErr('')
 
          ! VVerbose error reporting
       IF ( SlDDriver_Verbose >= 10_IntKi ) THEN
@@ -142,59 +137,41 @@ PROGRAM SoilDyn_Driver
          CALL WrScr(NewLine)
       ENDIF
 
-
          ! VVerbose error reporting
       IF ( SlDDriver_Verbose >= 10_IntKi ) CALL WrScr('Updating driver settings with command line arguments')
 
-
-         ! Now that we have read in the driver input settings, we need to override these with any
-         ! values from the command line arguments.  The .TRUE. indicates that a driver input file
-         ! was read.
-      CALL UpdateSettingsWithCL( SettingsFlags, Settings, CLSettingsFlags, CLSettings, .TRUE., ErrStat, ErrMsg )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL ProgAbort( ErrMsg )
-      ELSEIF ( ErrStat /= ErrID_None ) THEN
-         CALL WrScr( NewLine//ErrMsg )
-         ErrStat  =  ErrID_None
-      ENDIF
-
-         ! Verbose error reporting
-      IF ( SlDDriver_Verbose >= 10_IntKi ) THEN
-         CALL WrSCr(NewLine//'--- Driver settings after copying over CL settings: ---')
-         CALL printSettings( SettingsFlags, Settings )
-         CALL WrScr(NewLine)
-      ENDIF
-
-
    ELSE
-
 
          ! VVerbose error reporting
       IF ( SlDDriver_Verbose >= 10_IntKi ) CALL WrScr('No driver input file used. Updating driver settings with command line arguments')
 
+   ENDIF
 
-         ! Since there were no settings picked up from the driver input file, we need to copy over all
-         ! the CLSettings into the regular Settings.  The .FALSE. is a flag indicating that the driver
-         ! input file was not read.
-      CALL UpdateSettingsWithCL( SettingsFlags, Settings, CLSettingsFlags, CLSettings, .FALSE., ErrStat, ErrMsg )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL ProgAbort( ErrMsg )
-      ELSEIF ( ErrStat /= ErrID_None ) THEN
-         CALL WrScr( NewLine//ErrMsg )
-         ErrStat  =  ErrID_None
-      ENDIF
+      ! Since there were no settings picked up from the driver input file, we need to copy over all
+      ! the CLSettings into the regular Settings.  The SettingsFlags%DvrIptFile is a flag indicating
+      ! if the driver input file read.
+   CALL UpdateSettingsWithCL( SettingsFlags, Settings, CLSettingsFlags, CLSettings, SettingsFlags%DvrIptFile, ErrStat, ErrMsg )
+   call CheckErr('')
 
-         ! Verbose error reporting
-      IF ( SlDDriver_Verbose >= 10_IntKi ) THEN
-         CALL WrScr(NewLine//'--- Driver settings after copying over CL settings: ---')
-         CALL printSettings( SettingsFlags, Settings )
-         CALL WrScr(NewLine)
-      ENDIF
-
+      ! Verbose error reporting
+   IF ( SlDDriver_Verbose >= 10_IntKi ) THEN
+      CALL WrScr(NewLine//'--- Driver settings after copying over CL settings: ---')
+      CALL printSettings( SettingsFlags, Settings )
+      CALL WrScr(NewLine)
    ENDIF
 
 
+   !------------------------------------------
+   ! Read DisplacementList from InputDispFile
+   !------------------------------------------
+   if ( SettingsFlags%InputDispFile ) then
+      call ReadInputDispFile( Settings%InputDispFile, DisplacementList, ErrStat, ErrMsg )
+      call CheckErr('')
+!FIXME: check default timestep based on DisplacementList
 
+      if ( SlDDriver_Verbose >= 10_IntKi )   call WrScr('Input Displacements given for '//trim(Num2LStr(size(DisplacementList,2)))// &
+         ' from T = '//trim(Num2LStr(DisplacementList(1,1)))//' to '//trim(Num2LStr(DisplacementList(1,size(DisplacementList,2))))//' seconds.')
+   endif
 
 
    !...............................................................................................................................
