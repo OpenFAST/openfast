@@ -194,6 +194,8 @@ subroutine REDWINinterface_Init( DLL_FileName, DLL_ProcName, DLL_Trgt, DLL_Model
    dll_data%IDtask = IDtask_init
    CALL CallREDWINdll(DLL_Trgt, DLL_Model, dll_data, ErrStat2, ErrMsg2);   if(Failed()) return;
 
+!FIXME: For Model 1, the Props(1,1) will indicate which runmode we are using.  Test that here
+
 
 !TODO: can we add a check on which type of library we actually loaded and compare to the model we set????
    ! Set status flag:
@@ -277,6 +279,8 @@ subroutine REDWINinterface_CalcOutput( DLL_Trgt, DLL_Model, Displacement, Force,
    ErrStat = ErrID_None
    ErrMsg= ''
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!FIXME: should this be split out into multiple, one for each model?
       ! Coordinate transform to REDWIN frame
    dll_data%Disp = ToREDWINcoords( Displacement )
 
@@ -292,6 +296,8 @@ subroutine REDWINinterface_CalcOutput( DLL_Trgt, DLL_Model, Displacement, Force,
 
       ! Coordinate transform from REDWIN frame
    Force = real(FromREDWINcoords( dll_data%Force ), ReKi)
+!FIXME: check the runmode info for model 1.  Not sure it applies to the other models.
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 #ifdef DEBUG_REDWIN_INTERFACE
 !CALL WrNumAryFileNR ( 59, m%dll_data%avrSWAP,'1x,ES15.6E2', ErrStat, ErrMsg )

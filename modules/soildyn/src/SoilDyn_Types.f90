@@ -47,6 +47,7 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(1:6)  :: Force      !< Forces.  Follows convention of REDWIN orientations. ['(N)']
     REAL(R8Ki) , DIMENSION(1:6,1:6)  :: D      !< The 6 x 6 elastic macro-element stiffness matrix at the SFI. [-]
     LOGICAL  :: SuppressWarn = .FALSE.      !< Supress further warnings. [-]
+    INTEGER(IntKi)  :: RunMode = 0      !< RunMode of DLL (read from Props(1,1) in Model 1 during initialization [-]
   END TYPE REDWINdllType
 ! =======================
 ! =========  SlD_InputFile  =======
@@ -162,6 +163,7 @@ CONTAINS
     DstREDWINdllTypeData%Force = SrcREDWINdllTypeData%Force
     DstREDWINdllTypeData%D = SrcREDWINdllTypeData%D
     DstREDWINdllTypeData%SuppressWarn = SrcREDWINdllTypeData%SuppressWarn
+    DstREDWINdllTypeData%RunMode = SrcREDWINdllTypeData%RunMode
  END SUBROUTINE SlD_CopyREDWINdllType
 
  SUBROUTINE SlD_DestroyREDWINdllType( REDWINdllTypeData, ErrStat, ErrMsg )
@@ -222,6 +224,7 @@ CONTAINS
       Db_BufSz   = Db_BufSz   + SIZE(InData%Force)  ! Force
       Db_BufSz   = Db_BufSz   + SIZE(InData%D)  ! D
       Int_BufSz  = Int_BufSz  + 1  ! SuppressWarn
+      Int_BufSz  = Int_BufSz  + 1  ! RunMode
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -276,6 +279,8 @@ CONTAINS
       DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%D))-1 ) = PACK(InData%D,.TRUE.)
       Db_Xferred   = Db_Xferred   + SIZE(InData%D)
       IntKiBuf ( Int_Xferred:Int_Xferred+1-1 ) = TRANSFER( InData%SuppressWarn , IntKiBuf(1), 1)
+      Int_Xferred   = Int_Xferred   + 1
+      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%RunMode
       Int_Xferred   = Int_Xferred   + 1
  END SUBROUTINE SlD_PackREDWINdllType
 
@@ -411,6 +416,8 @@ CONTAINS
       Db_Xferred   = Db_Xferred   + SIZE(OutData%D)
     DEALLOCATE(mask2)
       OutData%SuppressWarn = TRANSFER( IntKiBuf( Int_Xferred ), mask0 )
+      Int_Xferred   = Int_Xferred + 1
+      OutData%RunMode = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
  END SUBROUTINE SlD_UnPackREDWINdllType
 

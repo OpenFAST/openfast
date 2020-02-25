@@ -29,6 +29,7 @@ typedef  ^             REDWINdllType   R8Ki           Disp           {6}        
 typedef  ^             REDWINdllType   R8Ki           Force          {6}        - - "Forces.  Follows convention of REDWIN orientations." '(N)'
 typedef  ^             REDWINdllType   R8Ki           D              {6}{6}     - - "The 6 x 6 elastic macro-element stiffness matrix at the SFI." -
 typedef  ^             REDWINdllType   LOGICAL        SuppressWarn   - .FALSE. -    "Supress further warnings." -
+typedef  ^             REDWINdllType   IntKi          RunMode        -          0 - "RunMode of DLL (read from Props(1,1) in Model 1 during initialization" -
 
 # SoilDyn input file
 typedef  ^    SlD_InputFile   LOGICAL              EchoFlag       -   -   -   "Echo the input file"                                    -
