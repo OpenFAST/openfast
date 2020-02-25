@@ -28,6 +28,11 @@ PROGRAM SoilDyn_Driver
 
    IMPLICIT NONE
 
+   TYPE( ProgDesc ), PARAMETER                        :: ProgInfo = ProgDesc("SoilDyn_Driver","","")
+   INTEGER(IntKi)                                     :: SlDDriver_Verbose =  5  ! Verbose level.  0 = none, 5 = some, 10 = lots
+
+
+
    integer(IntKi), parameter                          :: NumInp = 1           !< Number of inputs sent to SoilDyn_UpdateStates
 
       ! Program variables
@@ -49,11 +54,146 @@ PROGRAM SoilDyn_Driver
    type(SlD_InputType)                                :: u(NumInp)            !< System inputs
    type(SlD_OutputType)                               :: y                    !< System outputs
 
+      ! Local variables for this code
+   TYPE(SlDDriver_Flags)                              :: CLSettingsFlags      ! Flags indicating which command line arguments were specified
+   TYPE(SlDDriver_Settings)                           :: CLSettings           ! Command line arguments passed in
+   TYPE(SlDDriver_Flags)                              :: SettingsFlags        ! Flags indicating which settings were specified (includes CL and ipt file)
+   TYPE(SlDDriver_Settings)                           :: Settings             ! Driver settings
+   REAL(DbKi)                                         :: Timer(1:2)           ! Keep track of how long this takes to run
+   REAL(DbKi)                                         :: TimeNow              ! The current time
+
 
 
    INTEGER(IntKi)                                     :: n                    !< Loop counter (for time step)
    INTEGER(IntKi)                                     :: ErrStat              !< Status of error message
    CHARACTER(ErrMsgLen)                               :: ErrMsg               !< Error message if ErrStat /= ErrID_None
+
+
+      ! initialize library
+   call NWTC_Init
+   call DispNVD(ProgInfo)
+
+      ! Start the timer
+   call CPU_TIME( Timer(1) )
+
+      ! Initialize the driver settings to their default values (same as the CL -- command line -- values)
+   call InitSettingsFlags( ProgInfo, CLSettings, CLSettingsFlags )
+   Settings       =  CLSettings
+   SettingsFlags  =  CLSettingsFlags
+
+      ! Parse the input line
+   call RetrieveArgs( CLSettings, CLSettingsFlags, ErrStat, ErrMsg )
+   IF ( ErrStat >= AbortErrLev ) THEN
+      CALL ProgAbort( ErrMsg )
+   ELSEIF ( ErrStat /= 0 ) THEN
+      CALL WrScr( NewLine//ErrMsg )
+      ErrStat  =  ErrID_None
+   ENDIF
+
+      ! Check if we are doing verbose error reporting
+   IF ( CLSettingsFlags%VVerbose )     SlDDriver_Verbose =  10_IntKi
+   IF ( CLSettingsFlags%Verbose )      SlDDriver_Verbose =  7_IntKi
+
+      ! Verbose error reporting
+   IF ( SlDDriver_Verbose >= 10_IntKi ) THEN
+      CALL WrScr('--- Settings from the command line: ---')
+      CALL printSettings( CLSettingsFlags, CLSettings )
+      CALL WrSCr(NewLine)
+   ENDIF
+
+      ! Verbose error reporting
+   IF ( SlDDriver_Verbose >= 10_IntKi ) THEN
+      CALL WrScr('--- Driver settings (before reading driver ipt file): ---')
+      CALL printSettings( SettingsFlags, Settings )
+      CALL WrScr(NewLine)
+   ENDIF
+
+
+      ! Copy the input file information from the CLSettings to the Settings.
+      ! At this point only one input file type can be set.
+   IF ( CLSettingsFlags%DvrIptFile ) THEN
+      SettingsFlags%DvrIptFile   =  CLSettingsFlags%DvrIptFile
+      Settings%DvrIptFileName    =  CLSettings%DvrIptFileName
+   ELSE
+      SettingsFlags%SlDIptFile   =  CLSettingsFlags%SlDIptFile
+      Settings%SlDIptFileName    =  CLSettings%SlDIptFileName
+   ENDIF
+
+
+      ! If the filename given was not the SlD input file (-ifw option), then it is treated
+      ! as the driver input file (flag should be set correctly by RetrieveArgs).  So, we must
+      ! open this.
+   IF ( SettingsFlags%DvrIptFile ) THEN
+
+         ! Read the driver input file
+      CALL ReadDvrIptFile( CLSettings%DvrIptFileName, SettingsFlags, Settings, ProgInfo, ErrStat, ErrMsg )
+      IF ( ErrStat >= AbortErrLev ) THEN
+         CALL ProgAbort( ErrMsg )
+      ELSEIF ( ErrStat /= 0 ) THEN
+         CALL WrScr( NewLine//ErrMsg )
+         ErrStat  =  ErrID_None
+      ENDIF
+
+
+         ! VVerbose error reporting
+      IF ( SlDDriver_Verbose >= 10_IntKi ) THEN
+         CALL WrScr(NewLine//'--- Driver settings after reading the driver ipt file: ---')
+         CALL printSettings( SettingsFlags, Settings )
+         CALL WrScr(NewLine)
+      ENDIF
+
+
+         ! VVerbose error reporting
+      IF ( SlDDriver_Verbose >= 10_IntKi ) CALL WrScr('Updating driver settings with command line arguments')
+
+
+         ! Now that we have read in the driver input settings, we need to override these with any
+         ! values from the command line arguments.  The .TRUE. indicates that a driver input file
+         ! was read.
+      CALL UpdateSettingsWithCL( SettingsFlags, Settings, CLSettingsFlags, CLSettings, .TRUE., ErrStat, ErrMsg )
+      IF ( ErrStat >= AbortErrLev ) THEN
+         CALL ProgAbort( ErrMsg )
+      ELSEIF ( ErrStat /= ErrID_None ) THEN
+         CALL WrScr( NewLine//ErrMsg )
+         ErrStat  =  ErrID_None
+      ENDIF
+
+         ! Verbose error reporting
+      IF ( SlDDriver_Verbose >= 10_IntKi ) THEN
+         CALL WrSCr(NewLine//'--- Driver settings after copying over CL settings: ---')
+         CALL printSettings( SettingsFlags, Settings )
+         CALL WrScr(NewLine)
+      ENDIF
+
+
+   ELSE
+
+
+         ! VVerbose error reporting
+      IF ( SlDDriver_Verbose >= 10_IntKi ) CALL WrScr('No driver input file used. Updating driver settings with command line arguments')
+
+
+         ! Since there were no settings picked up from the driver input file, we need to copy over all
+         ! the CLSettings into the regular Settings.  The .FALSE. is a flag indicating that the driver
+         ! input file was not read.
+      CALL UpdateSettingsWithCL( SettingsFlags, Settings, CLSettingsFlags, CLSettings, .FALSE., ErrStat, ErrMsg )
+      IF ( ErrStat >= AbortErrLev ) THEN
+         CALL ProgAbort( ErrMsg )
+      ELSEIF ( ErrStat /= ErrID_None ) THEN
+         CALL WrScr( NewLine//ErrMsg )
+         ErrStat  =  ErrID_None
+      ENDIF
+
+         ! Verbose error reporting
+      IF ( SlDDriver_Verbose >= 10_IntKi ) THEN
+         CALL WrScr(NewLine//'--- Driver settings after copying over CL settings: ---')
+         CALL printSettings( SettingsFlags, Settings )
+         CALL WrScr(NewLine)
+      ENDIF
+
+   ENDIF
+
+
 
 
 
