@@ -1139,7 +1139,12 @@ CONTAINS
          RETURN
       ELSE
          ErrStat = ErrID_None
+         ErrMsg  = ''
       END IF
+
+      ! Return if there are no outputs
+      if ( p%NumOuts < 1_IntKi ) return
+
 
       ! gather the required output quantities (INCOMPLETE!)
       DO I = 1,p%NumOuts
@@ -1208,7 +1213,6 @@ CONTAINS
       Frmt = '(F10.4,'//TRIM(Int2LStr(p%NumOuts))//'(A1,e10.4))'   ! should evenutally use user specified format?
 
       WRITE(p%MDUnOut,Frmt)  Time, ( p%Delim, y%WriteOutput(I), I=1,p%NumOuts )
-
 
 
 
