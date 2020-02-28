@@ -119,11 +119,11 @@ MODULE ServoDyn
    INTEGER(IntKi), PARAMETER      :: TTMD_YQ   = 14
    INTEGER(IntKi), PARAMETER      :: TTMD_YQD  = 15
 
-     ! Flap Control:
+     ! Airfoil Control (might be used for flap actuation):
    
-   INTEGER(IntKi), PARAMETER      :: BlFlap1  = 16
-   INTEGER(IntKi), PARAMETER      :: BlFlap2  = 17
-   INTEGER(IntKi), PARAMETER      :: BlFlap3  = 18
+   INTEGER(IntKi), PARAMETER      :: BlAirFlC1  = 16
+   INTEGER(IntKi), PARAMETER      :: BlAirFlC2  = 17
+   INTEGER(IntKi), PARAMETER      :: BlAirFlC3  = 18
    
      ! The maximum number of output channels which can be output by the code.
    INTEGER(IntKi), PARAMETER      :: MaxOutPts = 18
@@ -132,7 +132,7 @@ MODULE ServoDyn
 ! ===================================================================================================
 
    INTEGER(IntKi), PARAMETER      :: BlPitchC (3) = (/ BlPitchC1, BlPitchC2, BlPitchC3 /) 
-   INTEGER(IntKi), PARAMETER      :: BlFlapC (3) = (/ BlFlap1, BlFlap2, BlFlap3 /) 
+   INTEGER(IntKi), PARAMETER      :: BlAirfoilC (3) = (/ BlAirFlC1, BlAirFlC2, BlAirFlC3 /) 
    
 !bjj: added parameters here (after the "(/ /)" above) so VS2010 doesn't get so confused with the previous statement.
 
@@ -395,11 +395,13 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    CALL AllocAry( y%BlPitchCom, p%NumBl, 'BlPitchCom', ErrStat2, ErrMsg2 )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN
-      
-   CALL AllocAry( y%BlFlapCom, p%NumBl, 'BlFlapCom', ErrStat2, ErrMsg2 )
+
+      ! Commanded Airfoil UserProp for blade.  Must be same units as given in AD15 airfoil tables
+      !  This is passed to AD15 to be interpolated with the airfoil table userprop column
+   CALL AllocAry( y%BlAirfoilCom, p%NumBl, 'BlAirfoilCom', ErrStat2, ErrMsg2 )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN
-      y%BlFlapCom = 0.0
+      y%BlAirfoilCom = 0.0_ReKi
 
       ! tip brakes - this may be added back, later, so we'll keep these here for now
    CALL AllocAry( y%TBDrCon, p%NumBl, 'TBDrCon', ErrStat2, ErrMsg2 )
@@ -950,8 +952,10 @@ SUBROUTINE SrvD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END IF
       
-      ! Set ServoDyn output for flap deflection angle
-      y%BlFlapCom(1:p%NumBl) = m%dll_data%BlFlapCom
+      !  Commanded Airfoil UserProp for blade (must be same units as given in AD15 airfoil tables)
+      !  This is passed to AD15 to be interpolated with the airfoil table userprop column
+      !  (might be used for airfoil flap angles for example)
+      y%BlAirfoilCom(1:p%NumBl) = m%dll_data%BlAirfoilCom(1:p%NumBl)
       
       IF (ALLOCATED(y%SuperController)) THEN
          y%SuperController = m%dll_data%SCoutput
@@ -993,8 +997,8 @@ SUBROUTINE SrvD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
    AllOuts(HSSBrTqC)= 0.001*y%HSSBrTrqC
 
    DO K=1,p%NumBl
-      AllOuts( BlPitchC(K) ) = y%BlPitchCom(K)*R2D
-      AllOuts( BlFlapC(K) ) = y%BlFlapCom(K)
+      AllOuts( BlPitchC(K) )     = y%BlPitchCom(K)*R2D
+      AllOuts( BlAirfoilC(K) )   = y%BlAirfoilCom(K)
    END DO        
    
    AllOuts(YawMomCom) = -0.001*y%YawMom
@@ -3171,15 +3175,15 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
    CHARACTER(*), PARAMETER      :: RoutineName = "SetOutParam"
 
    CHARACTER(OutStrLenM1), PARAMETER  :: ValidParamAry(19) =  (/ &                  ! This lists the names of the allowed parameters, which must be sorted alphabetically
-                               "BLFLAP1  ","BLFLAP2  ","BLFLAP3  ","BLPITCHC1","BLPITCHC2","BLPITCHC3","GENPWR   ", &
+                               "BLAIRFLC1","BLAIRFLC2","BLAIRFLC3","BLPITCHC1","BLPITCHC2","BLPITCHC3","GENPWR   ", &
                                "GENTQ    ","HSSBRTQC ","NTMD_XQ  ","NTMD_XQD ","NTMD_YQ  ","NTMD_YQD ","TTMD_XQ  ", &
                                "TTMD_XQD ","TTMD_YQ  ","TTMD_YQD ","YAWMOM   ","YAWMOMCOM"/)
    INTEGER(IntKi), PARAMETER :: ParamIndxAry(19) =  (/ &                            ! This lists the index into AllOuts(:) of the allowed parameters ValidParamAry(:)
-                                BlFlap1 , BlFlap2 , BlFlap3 , BlPitchC1 , BlPitchC2 , BlPitchC3 ,    GenPwr , &
+                                BlAirFlC1 , BlAirFlC2 , BlAirFlC3 , BlPitchC1 , BlPitchC2 , BlPitchC3 ,    GenPwr , &
                                 GenTq ,  HSSBrTqC ,   NTMD_XQ , NTMD_XQD ,   NTMD_YQ ,  NTMD_YQD ,   TTMD_XQ , &
                                 TTMD_XQD ,   TTMD_YQ ,  TTMD_YQD , YawMomCom , YawMomCom/)
    CHARACTER(ChanLen), PARAMETER :: ParamUnitsAry(19) =  (/ &                     ! This lists the units corresponding to the allowed parameters
-                               "(deg)     ","(deg)     ","(deg)     ","(deg)     ","(deg)     ","(deg)     ","(kW)      ", &
+                               "(-)       ","(-)       ","(-)       ","(deg)     ","(deg)     ","(deg)     ","(kW)      ", &
                                "(kN-m)    ","(kN-m)    ","(m)       ","(m/s)     ","(m)       ","(m/s)     ","(m)       ", &
                                "(m/s)     ","(m)       ","(m/s)     ","(kN-m)    ","(kN-m)    "/)
 
