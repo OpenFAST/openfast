@@ -44,7 +44,7 @@ PROGRAM SoilDyn_Driver
    integer(IntKi)                                     :: NumTSteps            !< number of timesteps
    logical                                            :: TimeIntervalFound    !< Interval between time steps, in seconds
    real(DbKi)                                         :: InputTime(NumInp)    !< Variable for storing time associated with inputs, in seconds
-   real(ReKi),                            allocatable :: DisplacementList(:,:)   !< List of displacements and times to apply
+   real(R8Ki),                            allocatable :: DisplacementList(:,:)   !< List of displacements and times to apply {idx 1 =  time step, idx 2 =  [T, dX, dY, dZ, dTheta_X, dTheta_Y, dTheta_Z]}
 
    type(SlD_InitInputType)                            :: InitInData           !< Input data for initialization
    type(SlD_InitOutputType)                           :: InitOutData          !< Output data from initialization
@@ -70,12 +70,14 @@ PROGRAM SoilDyn_Driver
 
       ! Data transfer
    real(ReKi)                                         :: Force(6)
-   real(ReKi)                                         :: Displacement(6)
+   real(R8Ki)                                         :: Displacement(6)
    real(ReKi)                                         :: StiffMatrix(6,6)
-
+   real(R8Ki)                                         :: Theta(3)
 
    INTEGER(IntKi)                                     :: n                    !< Loop counter (for time step)
    integer(IntKi)                                     :: i                    !< generic loop counter
+   integer(IntKi)                                     :: DimIdx               !< Index of current dimension
+   integer(IntKi)                                     :: TmpIdx(6)            !< Index of last point accessed by dimension
    INTEGER(IntKi)                                     :: ErrStat              !< Status of error message
    CHARACTER(ErrMsgLen)                               :: ErrMsg               !< Error message if ErrStat /= ErrID_None
 
@@ -173,16 +175,16 @@ PROGRAM SoilDyn_Driver
 
    !------------------------------------------
    ! Read DisplacementList from InputDispFile
-   !  NOTE: DiplacementList
-   !        -- index 1 =  [T, dX, dY, dZ, dTheta_X, dTheta_Y, dTheta_Z]
-   !        -- index 2 =  time step
+   !  NOTE: DiplacementList is arranged for speed in interpolation
+   !        -- index 1 =  time step
+   !        -- index 2 =  [T, dX, dY, dZ, dTheta_X, dTheta_Y, dTheta_Z]
    !------------------------------------------
    if ( SettingsFlags%InputDispFile ) then
       call ReadInputDispFile( Settings%InputDispFile, DisplacementList, ErrStat, ErrMsg )
       call CheckErr('')
 
-      if ( SlDDriver_Verbose >= 10_IntKi )   call WrScr('Input Displacements given for '//trim(Num2LStr(size(DisplacementList,2)))// &
-         ' time steps from T = '//trim(Num2LStr(DisplacementList(1,1)))//' to '//trim(Num2LStr(DisplacementList(1,size(DisplacementList,2))))//' seconds.')
+      if ( SlDDriver_Verbose >= 10_IntKi )   call WrScr('Input Displacements given for '//trim(Num2LStr(size(DisplacementList,1)))// &
+         ' time steps from T = '//trim(Num2LStr(DisplacementList(1,1)))//' to '//trim(Num2LStr(DisplacementList(size(DisplacementList,1),1)))//' seconds.')
    endif
 
 
@@ -206,8 +208,8 @@ PROGRAM SoilDyn_Driver
          TimeIntervalFound=.false.
          TimeInterval=1000.0_DbKi
          ! Step through all lines to get smallest DT
-         do n=min(2,size(DisplacementList,2)),size(DisplacementList,2)     ! Start at 2nd point (min to avoid stepping over end for single line files)
-            TimeInterval=min(TimeInterval, real(DisplacementList(1,n)-DisplacementList(1,n-1), DbKi))
+         do n=min(2,size(DisplacementList,1)),size(DisplacementList,1)     ! Start at 2nd point (min to avoid stepping over end for single line files)
+            TimeInterval=min(TimeInterval, real(DisplacementList(n,1)-DisplacementList(n-1,1), DbKi))
             TimeIntervalFound=.true.
          enddo
          if (TimeIntervalFound) then
@@ -226,7 +228,7 @@ PROGRAM SoilDyn_Driver
    ! TMax and NumTSteps from input file or from the value specified (specified overrides)
    if ( SettingsFlags%NumTimeStepsDefault ) then
       if ( SettingsFlags%InputDispFile ) then
-         TMax = real(DisplacementList(1,size(DisplacementList,2)), DbKi)
+         TMax = real(DisplacementList(size(DisplacementList,1),1), DbKi)
          NumTSteps = ceiling( TMax / TimeInterval )
       else  ! Do one timestep
          NumTSteps = 1_IntKi
@@ -260,9 +262,9 @@ PROGRAM SoilDyn_Driver
 
 
       ! If requested, get the stiffness matrix
-   if ( SettingsFlags%StiffMatOut ) then
+   if ( SettingsFlags%StiffMatOut .and. p%CalcOption==Calc_REDWIN ) then
       do i=1,size(misc%dll_data)
-         Displacement = 0.0_ReKi
+         Displacement = 0.0_R8Ki
          call REDWINinterface_GetStiffMatrix( p%DLL_Trgt, p%DLL_Model, Displacement, Force, StiffMatrix, misc%dll_data(i), ErrStat, ErrMsg )
          IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
             CALL WrScr( 'Get stiffness: '//ErrMsg )
@@ -279,11 +281,25 @@ PROGRAM SoilDyn_Driver
    !...............................................................................................................................
 
 
+   TmpIdx(1:6) = 0_IntKi
+
    DO n = 0,NumTSteps
-      Time = n*TimeInterval
+      Time = n*TimeInterval+TStart
       InputTime(1) = Time
 
-
+         ! interpolate into the input data to get the displacement.  Set this as u then run
+      if ( SettingsFlags%InputDispFile ) then
+         do i=1,u(1)%SoilMotion%NNodes
+            ! InterpStpReal( X, Xary, Yary, indx, size)
+            do DimIdx=1,3
+               u(1)%SoilMotion%TranslationDisp(DimIdx,i) =  InterpStpReal8( real(Time,R8Ki), DisplacementList(:,1), DisplacementList(:,DimIdx+1), TmpIdx(DimIdx), size(DisplacementList,1) )
+            enddo
+            do DimIdx=1,3
+               Theta(DimIdx) =  InterpStpReal8( real(Time,R8Ki), DisplacementList(:,1), DisplacementList(:,DimIdx+4), TmpIdx(DimIdx), size(DisplacementList,1) )
+            enddo
+            u(1)%SoilMotion%Orientation(1:3,1:3,i) = EulerConstruct(Theta)
+         enddo
+      endif
 
          ! Calculate outputs at n
       CALL SoilDyn_CalcOutput( Time, u(1), p, x, xd, z, OtherState, y, misc, ErrStat, ErrMsg );

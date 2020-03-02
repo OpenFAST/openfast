@@ -123,6 +123,7 @@ IMPLICIT NONE
     CHARACTER(1024)  :: EchoFileName      !< Name of echo file [-]
     CHARACTER(1024)  :: SumFileName      !< Name of summary file [-]
     INTEGER(IntKi)  :: DLL_model      !< REDWIN DLL model type to use [-]
+    INTEGER(IntKi)  :: CalcOption      !< Calculation methodology to use [-]
   END TYPE SlD_ParameterType
 ! =======================
 ! =========  SlD_InputType  =======
@@ -2252,6 +2253,7 @@ ENDIF
     DstParamData%EchoFileName = SrcParamData%EchoFileName
     DstParamData%SumFileName = SrcParamData%SumFileName
     DstParamData%DLL_model = SrcParamData%DLL_model
+    DstParamData%CalcOption = SrcParamData%CalcOption
  END SUBROUTINE SlD_CopyParam
 
  SUBROUTINE SlD_DestroyParam( ParamData, ErrStat, ErrMsg )
@@ -2327,6 +2329,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%EchoFileName)  ! EchoFileName
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%SumFileName)  ! SumFileName
       Int_BufSz  = Int_BufSz  + 1  ! DLL_model
+      Int_BufSz  = Int_BufSz  + 1  ! CalcOption
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -2405,6 +2408,8 @@ ENDIF
           Int_Xferred = Int_Xferred   + 1
         END DO ! I
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%DLL_model
+      Int_Xferred   = Int_Xferred   + 1
+      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%CalcOption
       Int_Xferred   = Int_Xferred   + 1
  END SUBROUTINE SlD_PackParam
 
@@ -2503,6 +2508,8 @@ ENDIF
         Int_Xferred = Int_Xferred   + 1
       END DO ! I
       OutData%DLL_model = IntKiBuf( Int_Xferred ) 
+      Int_Xferred   = Int_Xferred + 1
+      OutData%CalcOption = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
  END SUBROUTINE SlD_UnPackParam
 

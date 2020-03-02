@@ -114,6 +114,7 @@ typedef   ^             ParameterType     CHARACTER(1024)   RootFileName        
 typedef   ^             ParameterType     CHARACTER(1024)   EchoFileName         - - - "Name of echo file" -
 typedef   ^             ParameterType     CHARACTER(1024)   SumFileName          - - - "Name of summary file" -
 typedef   ^             ParameterType     IntKi             DLL_model            - - - "REDWIN DLL model type to use" -
+typedef   ^             ParameterType     IntKi             CalcOption           - - - "Calculation methodology to use" -
 
 # ..... Inputs ....................................................................................................................
 typedef  ^              InputType         MeshType          SoilMotion           - - - "Mesh of soil contact points" -

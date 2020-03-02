@@ -701,7 +701,7 @@ END SUBROUTINE UpdateSettingsWithCL
 
 SUBROUTINE ReadInputDispFile( InputDispFile, DisplacementList, ErrStat, ErrMsg )
    CHARACTER(1024),                    INTENT(IN   )  :: InputDispFile       !< Name of the points file to read
-   REAL(ReKi), ALLOCATABLE,            INTENT(  OUT)  :: DisplacementList(:,:)       !< The coordinates we read in: idx 1 = values, idx 2 = timestep
+   REAL(R8Ki), ALLOCATABLE,            INTENT(  OUT)  :: DisplacementList(:,:)       !< The coordinates we read in: idx 1 = timestep, idx 2 = values
    INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat              !< The error status
    CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg               !< The message for the status
 
@@ -741,7 +741,7 @@ SUBROUTINE ReadInputDispFile( InputDispFile, DisplacementList, ErrStat, ErrMsg )
 
 
       ! Allocate the storage for the data
-   CALL AllocAry( DisplacementList, 7, NumDataPoints, "Array of Points data", ErrStatTmp, ErrMsgTmp )
+   CALL AllocAry( DisplacementList, NumDataPoints, 7, "Array of Points data", ErrStatTmp, ErrMsgTmp )
       if (Failed()) return
 
 
@@ -751,9 +751,9 @@ SUBROUTINE ReadInputDispFile( InputDispFile, DisplacementList, ErrStat, ErrMsg )
       if (Failed()) return
    ENDDO
 
-      ! Read in the datapoints
+      ! Read in the datapoints   -- This is arranged with time in first index for speed in later interpolation operations
    DO I=1,NumDataPoints
-      CALL ReadAry ( FiUnitPoints, InputDispFile, DisplacementList(:,I), 7, 'DisplacementList', &
+      CALL ReadAry ( FiUnitPoints, InputDispFile, DisplacementList(I,:), 7, 'DisplacementList', &
          'Coordinate point from Points file', ErrStatTmp, ErrMsgTmp)
       if (Failed()) return
    ENDDO
@@ -804,7 +804,7 @@ CONTAINS
       CHARACTER(1024)                                    :: TextLine          !< One line of text read from the file
       INTEGER(IntKi)                                     :: LineLen           !< The length of the line read in
       CHARACTER(1024)                                    :: StrRead           !< String containing the first word read in
-      REAL(ReKi)                                         :: RealRead          !< Returns value of the number (if there was one), or NaN (as set by NWTC_Num) if there wasn't
+      REAL(R8Ki)                                         :: RealRead          !< Returns value of the number (if there was one), or NaN (as set by NWTC_Num) if there wasn't
       CHARACTER(1024)                                    :: VarName           !< Name of the variable we are trying to read from the file
       CHARACTER(24)                                      :: Words(20)         !< Array of words we extract from a line.  We shouldn't have more than 20.
       INTEGER(IntKi)                                     :: i,j,k             !< simple integer counters
@@ -867,7 +867,7 @@ CONTAINS
 
             !> Now cycle through the first 'NumWords' of non-empty values stored in 'Words'.  Words should contain
             !! everything that is one the line.  The subroutine ReadRealNumberFromString will set a flag 'IsRealNum'
-            !! when the value in Words(i) can be read as a real(ReKi).  'StrRead' will contain the string equivalent.
+            !! when the value in Words(i) can be read as a real(R8Ki).  'StrRead' will contain the string equivalent.
          DO i=1,NumWords
             CALL ReadRealNumberFromString( Words(i), RealRead, StrRead, IsRealNum, ErrStatTmp, ErrMsgTmp, TmpIOErrStat )
             IF ( .NOT. IsRealNum)   LineHasText = .TRUE.
@@ -933,7 +933,7 @@ CONTAINS
    !-------------------------------------------------------------------------------
    SUBROUTINE ReadRealNumberFromString(StringToParse, ValueRead, StrRead, IsRealNum, ErrStat, ErrMsg, IOErrStat)
       CHARACTER(*),        INTENT(IN   )           :: StringToParse  !< The string we were handed.
-      REAL(ReKi),          INTENT(  OUT)           :: ValueRead      !< The variable being read.  Returns as NaN (library defined) if not a Real.
+      REAL(R8Ki),          INTENT(  OUT)           :: ValueRead      !< The variable being read.  Returns as NaN (library defined) if not a Real.
       CHARACTER(*),        INTENT(  OUT)           :: StrRead        !< A string containing what was read from the ReadNum routine.
       LOGICAL,             INTENT(  OUT)           :: IsRealNum      !< Flag indicating if we successfully read a Real
       INTEGER(IntKi),      INTENT(  OUT)           :: ErrStat        !< ErrID level returned from ReadNum
@@ -981,7 +981,7 @@ CONTAINS
       INTEGER(IntKi),      INTENT(IN   )           :: UnitNum        !< The unit number of the file being read
       CHARACTER(*),        INTENT(IN   )           :: FileName       !< The name of the file being read.  Used in the ErrMsg from ReadNum (Library routine).
       CHARACTER(*),        INTENT(IN   )           :: VarName        !< The variable we are reading.  Used in the ErrMsg from ReadNum (Library routine)'.
-      REAL(ReKi),          INTENT(  OUT)           :: VarRead        !< The variable being read.  Returns as NaN (library defined) if not a Real.
+      REAL(R8Ki),          INTENT(  OUT)           :: VarRead        !< The variable being read.  Returns as NaN (library defined) if not a Real.
       CHARACTER(*),        INTENT(  OUT)           :: StrRead        !< A string containing what was read from the ReadNum routine.
       LOGICAL,             INTENT(  OUT)           :: IsRealNum      !< Flag indicating if we successfully read a Real
       INTEGER(IntKi),      INTENT(  OUT)           :: ErrStat        !< ErrID level returned from ReadNum
