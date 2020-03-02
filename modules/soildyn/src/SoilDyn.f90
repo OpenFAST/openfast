@@ -120,14 +120,13 @@ NumOuts = 2
    z%DummyConstrState         = 0.0_ReKi
    OtherState%DummyOtherState = 0.0_ReKi
 
-      ! Define initial guess for the system inputs here:
-   u%DummyInput = 0.0_ReKi
+
+!FIXME: set some initial values of y and u here)
 
 !FIXME: Develop a list of outputs, and set that up somewhere.
       ! Define system output initializations (set up mesh) here:
    call AllocAry( y%WriteOutput, NumOuts, 'WriteOutput', ErrStat2, ErrMsg2 ); if (Failed()) return;
 
-   y%DummyOutput = 0
    y%WriteOutput = 0
 
       ! Define initialization-routine output here:
@@ -155,11 +154,21 @@ NumOuts = 2
       ! Set miscvars: including dll_data arrays and checking for input files.
    call SoilDyn_InitMisc( InputFileData, m, ErrStat2,ErrMsg2); if (Failed()) return;
 
+
+   call SoilDyn_InitMeshes( InputFileData, InitInp, u, y, p, m, ErrStat2,ErrMsg2);  if (Failed()) return;
+
+
+!FIXME: wrap logic around this for option 3 only.
       ! Initialize the dll
    do j=1,size(m%dll_data)
       call REDWINinterface_Init( InputFileData%DLL_FileName, InputFileData%DLL_ProcName, p%DLL_Trgt, p%DLL_Model, &
             m%dll_data(j), p%UseREDWINinterface, ErrStat2, ErrMsg2); if (Failed()) return;
    enddo
+
+
+!FIXME: create all the meshes that are needed and check against points handed in
+
+
 
 contains
    logical function Failed()
@@ -211,6 +220,108 @@ contains
       if (ErrStat >= AbortErrLev) return
    end subroutine SoilDyn_InitMisc
 
+   subroutine SoilDyn_InitMeshes( InputFileData, InitInp, u, y, p, m, ErrStat, ErrMsg )
+      type(SlD_InputFile),       intent(in   )  :: InputFileData  !< Data stored in the module's input file
+      type(SlD_InitInputType),   intent(in   )  :: InitInp        !< Input data for initialization routine
+      type(SlD_InputType),       intent(inout)  :: u              !< An initial guess for the input; input mesh must be defined
+      type(SlD_OutputType),      intent(inout)  :: y              !< Initial system outputs
+      type(SlD_ParameterType),   intent(inout)  :: p              !< Parameters
+      type(SlD_MiscVarType),     intent(inout)  :: m              !< Misc variables for optimization (not copied in glue code)
+      integer(IntKi),            intent(  out)  :: ErrStat
+      character(*),              intent(  out)  :: ErrMsg
+      integer(IntKi)                            :: i              ! Generic counter
+      integer(IntKi)                            :: ErrStat2       !< local error status
+      character(ErrMsgLen)                      :: ErrMsg2        !< local error message
+
+      real(R8Ki)                                :: DCM(3,3)
+      real(ReKi)                                :: Pos(3)
+      integer(IntKi)                            :: NumPoints      ! Number of points from input file
+      real(ReKi),                allocatable    :: MeshLocations(:,:)
+
+      select case(InputFileData%CalcOption)
+         case (Calc_StiffDamp)
+            NumPoints   =  1_IntKi
+!FIXME: update to allow more than one set of points
+!            NumPoints   =  InputFileData%StiffDamp_NumPoints
+!            call AllocAry(MeshLocations,3,NumPoints,'Mesh locations',ErrStat2,ErrMsg2);
+!            do i=1,size(MeshLocations,2)
+!               MeshLocations(1:3,i)  =  InputFileData%StiffDamp_locations(1:3,i)
+!            enddo
+         case (Calc_PYcurve)
+            NumPoints   =  InputFileData%PY_NumPoints
+            call AllocAry(MeshLocations,3,NumPoints,'Mesh locations',ErrStat2,ErrMsg2);
+            do i=1,size(MeshLocations,2)
+               MeshLocations(1:3,i)  =  InputFileData%PY_locations(1:3,i)
+            enddo
+         case (Calc_REDWIN)
+            NumPoints   =  InputFileData%DLL_NumPoints
+            call AllocAry(MeshLocations,3,NumPoints,'Mesh locations',ErrStat2,ErrMsg2);
+            do i=1,size(MeshLocations,2)
+               MeshLocations(1:3,i)  =  InputFileData%DLL_locations(1:3,i)
+            enddo
+      end select
+
+      !.................................
+      ! u%SoilMotion (for coupling with external codes)
+      !.................................
+
+      CALL MeshCreate(  BlankMesh         = u%SoilMotion          &
+                     ,  IOS               = COMPONENT_INPUT       &
+                     ,  NNodes            = NumPoints             &
+                     ,  TranslationDisp   = .TRUE.                &
+                     ,  TranslationVel    = .TRUE.                &
+                     ,  TranslationAcc    = .TRUE.                &
+                     ,  Orientation       = .TRUE.                &
+                     ,  RotationVel       = .TRUE.                &
+                     ,  RotationAcc       = .TRUE.                &
+                     ,  ErrStat           = ErrStat2              &
+                     ,  ErrMess           = ErrMsg2               )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         if (ErrStat>=AbortErrLev) return
+
+      ! Assuming zero orientation displacement for start
+      DCM = 0.0_DbKi
+
+      do i=1,NumPoints
+         CALL MeshPositionNode( Mesh    = u%SoilMotion            &
+                              , INode   = i                       &
+                              , Pos     = MeshLocations(1:3,i)    &
+                              , ErrStat = ErrStat2                &
+                              , ErrMess = ErrMsg2                 &
+                              , Orient  = DCM                     )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+         CALL MeshConstructElement  ( Mesh     = u%SoilMotion       &
+                                    , Xelement = ELEMENT_POINT      &
+                                    , P1       = i                  &
+                                    , ErrStat  = ErrStat2           &
+                                    , ErrMess  = ErrMsg2            )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      enddo
+
+      CALL MeshCommit ( Mesh = u%SoilMotion, ErrStat = ErrStat2,  ErrMess = ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         if (ErrStat>=AbortErrLev) return
+
+
+   !.................................
+   ! y%ReactionForce (for coupling with external codes)
+   !.................................
+
+   CALL MeshCopy( SrcMesh   = u%SoilMotion     &
+                 , DestMesh = y%ReactionForce  &
+                 , CtrlCode = MESH_SIBLING     &
+                 , IOS      = COMPONENT_OUTPUT &
+                 , Force    = .TRUE.           &
+                 , Moment   = .TRUE.           &
+                 , ErrStat  = ErrStat2         &
+                 , ErrMess  = ErrMsg2          )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      if (ErrStat>=AbortErrLev) RETURN
+
+
+
+   end subroutine SoilDyn_InitMeshes
 end subroutine SoilDyn_Init
 
 
@@ -301,6 +412,7 @@ subroutine SoilDyn_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherSta
    ErrStat   = ErrID_None           ! no error has occurred
    ErrMsg    = ""
 
+!FIXME: is this even needed?  We don't have states that we have access to when using the REDWIN dll
    ! This subroutine contains an example of how the states could be updated. Developers will
    ! want to adjust the logic as necessary for their own situations.
 
@@ -337,29 +449,55 @@ end subroutine SoilDyn_UpdateStates
 !> This is a routine for computing outputs, used in both loose and tight coupling.
 subroutine SoilDyn_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 
-   real(DbKi),                        intent(in   )  :: t           !< Current simulation time in seconds
-   type(SlD_InputType),               intent(in   )  :: u           !< Inputs at t
-   type(SlD_ParameterType),           intent(in   )  :: p           !< Parameters
-   type(SlD_ContinuousStateType),     intent(in   )  :: x           !< Continuous states at t
-   type(SlD_DiscreteStateType),       intent(in   )  :: xd          !< Discrete states at t
-   type(SlD_ConstraintStateType),     intent(in   )  :: z           !< Constraint states at t
-   type(SlD_OtherStateType),          intent(in   )  :: OtherState  !< Other states at t
-   type(SlD_MiscVarType),             intent(inout)  :: m           !< Misc variables for optimization (not copied in glue code)
-   type(SlD_OutputType),              intent(inout)  :: y           !< Outputs computed at t (Input only so that mesh con-
+   real(DbKi),                         intent(in   )  :: t           !< Current simulation time in seconds
+   type(SlD_InputType),                intent(in   )  :: u           !< Inputs at t
+   type(SlD_ParameterType),            intent(in   )  :: p           !< Parameters
+   type(SlD_ContinuousStateType),      intent(in   )  :: x           !< Continuous states at t
+   type(SlD_DiscreteStateType),        intent(in   )  :: xd          !< Discrete states at t
+   type(SlD_ConstraintStateType),      intent(in   )  :: z           !< Constraint states at t
+   type(SlD_OtherStateType),           intent(in   )  :: OtherState  !< Other states at t
+   type(SlD_MiscVarType),              intent(inout)  :: m           !< Misc variables for optimization (not copied in glue code)
+   type(SlD_OutputType),               intent(inout)  :: y           !< Outputs computed at t (Input only so that mesh con-
                                                                      !!   nectivity information does not have to be recalculated)
-   integer(IntKi),                    intent(  out)  :: ErrStat     !< Error status of the operation
-   character(*),                      intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+   integer(IntKi),                     intent(  out)  :: ErrStat     !< Error status of the operation
+   character(*),                       intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
+   integer(IntKi)                                     :: ErrStat2    ! local error status
+   character(ErrMsgLen)                               :: ErrMsg2     ! local error message
+   character(*), parameter                            :: RoutineName = 'SoilDyn_CalcOutput'
+
+   real(R8Ki)                                         :: Displacement(6)
+   real(ReKi)                                         :: Force(6)
+   integer(IntKi)                                     :: i           !< generic counter
 
       ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ""
 
+!FIXME: wrap logic around this for option 3 only
+      ! Initialize the dll
+   do i=1,size(m%dll_data)
+
+      ! Copy displacement from point mesh
+      Displacement(1:3) = u%SoilMotion%TranslationDisp(1:3,i)                    ! Translations -- This is R8Ki in the mesh
+      Displacement(4:6) = EulerExtract(u%SoilMotion%Orientation(1:3,1:3,i))      ! Small angle assumption should be valid here -- Note we are assuming reforientation is 0
+      call    REDWINinterface_CalcOutput( p%DLL_Trgt, p%DLL_Model, Displacement, Force, m%dll_data(i), ErrStat2, ErrMsg2 ); if (Failed()) return;
+
+      ! Return force onto the resulting point mesh
+      y%ReactionForce%Force (1:3,i)    = Force(1:3)
+      y%ReactionForce%Moment(1:3,i)    = Force(4:6)
+write(*,'(f12.5,6(2x,ES12.5E2))') t,Force(1:6)
+   enddo
+
       ! Compute outputs here:
-   y%DummyOutput    = 2.0_ReKi
    y%WriteOutput(1) = REAL(t,ReKi)
    y%WriteOutput(2) = 1.0_ReKi
 
+contains
+   logical function Failed()
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      Failed =    ErrStat >= AbortErrLev
+   end function Failed
 end subroutine SoilDyn_CalcOutput
 
 

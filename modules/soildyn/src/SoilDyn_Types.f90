@@ -33,6 +33,9 @@ MODULE SoilDyn_Types
 !---------------------------------------------------------------------------------------------------------------------------------
 USE NWTC_Library
 IMPLICIT NONE
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Calc_StiffDamp = 1      ! Stiffness / Damping calculations (currently unavailable) [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Calc_PYcurve = 2      ! P-Y curve calculations (currently unavailable) [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Calc_REDWIN = 3      ! Coupled to REDWIN dll for soil reaction forces [-]
 ! =========  REDWINdllType  =======
   TYPE, PUBLIC :: REDWINdllType
     character(45)  :: PROPSFILE      !<  [-]
@@ -47,6 +50,7 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(1:6)  :: Force      !< Forces.  Follows convention of REDWIN orientations. ['(N)']
     REAL(R8Ki) , DIMENSION(1:6,1:6)  :: D      !< The 6 x 6 elastic macro-element stiffness matrix at the SFI. [-]
     LOGICAL  :: SuppressWarn = .FALSE.      !< Supress further warnings. [-]
+    INTEGER(IntKi)  :: RunMode = 0      !< RunMode of DLL (read from Props(1,1) in Model 1 during initialization [-]
   END TYPE REDWINdllType
 ! =======================
 ! =========  SlD_InputFile  =======
@@ -111,7 +115,6 @@ IMPLICIT NONE
 ! =========  SlD_ParameterType  =======
   TYPE, PUBLIC :: SlD_ParameterType
     REAL(DbKi)  :: DT      !< Time step for cont. state integration & disc. state update [seconds]
-    CHARACTER(1024)  :: DLL_InFile      !< Name of input file used in DLL [-]
     TYPE(DLL_Type)  :: DLL_Trgt      !< The addresses and names of the Bladed DLL and its procedure [-]
     REAL(DbKi)  :: DLL_DT      !< Time step for DLL [seconds]
     CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
@@ -124,13 +127,14 @@ IMPLICIT NONE
 ! =======================
 ! =========  SlD_InputType  =======
   TYPE, PUBLIC :: SlD_InputType
-    REAL(ReKi)  :: DummyInput      !< Remove this variable if you have input data [-]
+    TYPE(MeshType)  :: SoilMotion      !< Mesh of soil contact points [-]
   END TYPE SlD_InputType
 ! =======================
 ! =========  SlD_OutputType  =======
   TYPE, PUBLIC :: SlD_OutputType
     REAL(ReKi)  :: DummyOutput      !< Remove this variable if you have output data [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: WriteOutput      !< Example of data to be written to an output file [s,-]
+    TYPE(MeshType)  :: ReactionForce      !< reaction forces and moments point mesh (may be multiple points) [-]
   END TYPE SlD_OutputType
 ! =======================
 CONTAINS
@@ -162,6 +166,7 @@ CONTAINS
     DstREDWINdllTypeData%Force = SrcREDWINdllTypeData%Force
     DstREDWINdllTypeData%D = SrcREDWINdllTypeData%D
     DstREDWINdllTypeData%SuppressWarn = SrcREDWINdllTypeData%SuppressWarn
+    DstREDWINdllTypeData%RunMode = SrcREDWINdllTypeData%RunMode
  END SUBROUTINE SlD_CopyREDWINdllType
 
  SUBROUTINE SlD_DestroyREDWINdllType( REDWINdllTypeData, ErrStat, ErrMsg )
@@ -222,6 +227,7 @@ CONTAINS
       Db_BufSz   = Db_BufSz   + SIZE(InData%Force)  ! Force
       Db_BufSz   = Db_BufSz   + SIZE(InData%D)  ! D
       Int_BufSz  = Int_BufSz  + 1  ! SuppressWarn
+      Int_BufSz  = Int_BufSz  + 1  ! RunMode
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -276,6 +282,8 @@ CONTAINS
       DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%D))-1 ) = PACK(InData%D,.TRUE.)
       Db_Xferred   = Db_Xferred   + SIZE(InData%D)
       IntKiBuf ( Int_Xferred:Int_Xferred+1-1 ) = TRANSFER( InData%SuppressWarn , IntKiBuf(1), 1)
+      Int_Xferred   = Int_Xferred   + 1
+      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%RunMode
       Int_Xferred   = Int_Xferred   + 1
  END SUBROUTINE SlD_PackREDWINdllType
 
@@ -411,6 +419,8 @@ CONTAINS
       Db_Xferred   = Db_Xferred   + SIZE(OutData%D)
     DEALLOCATE(mask2)
       OutData%SuppressWarn = TRANSFER( IntKiBuf( Int_Xferred ), mask0 )
+      Int_Xferred   = Int_Xferred + 1
+      OutData%RunMode = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
  END SUBROUTINE SlD_UnPackREDWINdllType
 
@@ -2234,7 +2244,6 @@ ENDIF
    ErrStat = ErrID_None
    ErrMsg  = ""
     DstParamData%DT = SrcParamData%DT
-    DstParamData%DLL_InFile = SrcParamData%DLL_InFile
       DstParamData%DLL_Trgt = SrcParamData%DLL_Trgt
     DstParamData%DLL_DT = SrcParamData%DLL_DT
     DstParamData%RootName = SrcParamData%RootName
@@ -2293,7 +2302,6 @@ ENDIF
   Db_BufSz  = 0
   Int_BufSz  = 0
       Db_BufSz   = Db_BufSz   + 1  ! DT
-      Int_BufSz  = Int_BufSz  + 1*LEN(InData%DLL_InFile)  ! DLL_InFile
    ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
       Int_BufSz   = Int_BufSz + 3  ! DLL_Trgt: size of buffers for each call to pack subtype
       CALL DLLTypePack( InData%DLL_Trgt, Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2, .TRUE. ) ! DLL_Trgt 
@@ -2348,10 +2356,6 @@ ENDIF
 
       DbKiBuf ( Db_Xferred:Db_Xferred+(1)-1 ) = InData%DT
       Db_Xferred   = Db_Xferred   + 1
-        DO I = 1, LEN(InData%DLL_InFile)
-          IntKiBuf(Int_Xferred) = ICHAR(InData%DLL_InFile(I:I), IntKi)
-          Int_Xferred = Int_Xferred   + 1
-        END DO ! I
       CALL DLLTypePack( InData%DLL_Trgt, Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2, OnlySize ) ! DLL_Trgt 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
@@ -2438,10 +2442,6 @@ ENDIF
   Int_Xferred  = 1
       OutData%DT = DbKiBuf( Db_Xferred ) 
       Db_Xferred   = Db_Xferred + 1
-      DO I = 1, LEN(OutData%DLL_InFile)
-        OutData%DLL_InFile(I:I) = CHAR(IntKiBuf(Int_Xferred))
-        Int_Xferred = Int_Xferred   + 1
-      END DO ! I
       Buf_size=IntKiBuf( Int_Xferred )
       Int_Xferred = Int_Xferred + 1
       IF(Buf_size > 0) THEN
@@ -2507,7 +2507,7 @@ ENDIF
  END SUBROUTINE SlD_UnPackParam
 
  SUBROUTINE SlD_CopyInput( SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(SlD_InputType), INTENT(IN) :: SrcInputData
+   TYPE(SlD_InputType), INTENT(INOUT) :: SrcInputData
    TYPE(SlD_InputType), INTENT(INOUT) :: DstInputData
    INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
@@ -2520,7 +2520,9 @@ ENDIF
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
-    DstInputData%DummyInput = SrcInputData%DummyInput
+      CALL MeshCopy( SrcInputData%SoilMotion, DstInputData%SoilMotion, CtrlCode, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         IF (ErrStat>=AbortErrLev) RETURN
  END SUBROUTINE SlD_CopyInput
 
  SUBROUTINE SlD_DestroyInput( InputData, ErrStat, ErrMsg )
@@ -2532,6 +2534,7 @@ ENDIF
 ! 
   ErrStat = ErrID_None
   ErrMsg  = ""
+  CALL MeshDestroy( InputData%SoilMotion, ErrStat, ErrMsg )
  END SUBROUTINE SlD_DestroyInput
 
  SUBROUTINE SlD_PackInput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -2569,7 +2572,24 @@ ENDIF
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
-      Re_BufSz   = Re_BufSz   + 1  ! DummyInput
+   ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
+      Int_BufSz   = Int_BufSz + 3  ! SoilMotion: size of buffers for each call to pack subtype
+      CALL MeshPack( InData%SoilMotion, Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2, .TRUE. ) ! SoilMotion 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf)) THEN ! SoilMotion
+         Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
+         DEALLOCATE(Re_Buf)
+      END IF
+      IF(ALLOCATED(Db_Buf)) THEN ! SoilMotion
+         Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
+         DEALLOCATE(Db_Buf)
+      END IF
+      IF(ALLOCATED(Int_Buf)) THEN ! SoilMotion
+         Int_BufSz = Int_BufSz + SIZE( Int_Buf )
+         DEALLOCATE(Int_Buf)
+      END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -2597,8 +2617,34 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%DummyInput
-      Re_Xferred   = Re_Xferred   + 1
+      CALL MeshPack( InData%SoilMotion, Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2, OnlySize ) ! SoilMotion 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Re_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Re_Buf) > 0) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_Buf)-1 ) = Re_Buf
+        Re_Xferred = Re_Xferred + SIZE(Re_Buf)
+        DEALLOCATE(Re_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+      IF(ALLOCATED(Db_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Db_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Db_Buf) > 0) DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_Buf)-1 ) = Db_Buf
+        Db_Xferred = Db_Xferred + SIZE(Db_Buf)
+        DEALLOCATE(Db_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+      IF(ALLOCATED(Int_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Int_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Int_Buf) > 0) IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_Buf)-1 ) = Int_Buf
+        Int_Xferred = Int_Xferred + SIZE(Int_Buf)
+        DEALLOCATE(Int_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
  END SUBROUTINE SlD_PackInput
 
  SUBROUTINE SlD_UnPackInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -2633,12 +2679,50 @@ ENDIF
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-      OutData%DummyInput = ReKiBuf( Re_Xferred )
-      Re_Xferred   = Re_Xferred + 1
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Re_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Re_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Re_Buf = ReKiBuf( Re_Xferred:Re_Xferred+Buf_size-1 )
+        Re_Xferred = Re_Xferred + Buf_size
+      END IF
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Db_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Db_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Db_Buf = DbKiBuf( Db_Xferred:Db_Xferred+Buf_size-1 )
+        Db_Xferred = Db_Xferred + Buf_size
+      END IF
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Int_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Int_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
+        Int_Xferred = Int_Xferred + Buf_size
+      END IF
+      CALL MeshUnpack( OutData%SoilMotion, Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2 ) ! SoilMotion 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
+      IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
+      IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
  END SUBROUTINE SlD_UnPackInput
 
  SUBROUTINE SlD_CopyOutput( SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(SlD_OutputType), INTENT(IN) :: SrcOutputData
+   TYPE(SlD_OutputType), INTENT(INOUT) :: SrcOutputData
    TYPE(SlD_OutputType), INTENT(INOUT) :: DstOutputData
    INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
@@ -2665,6 +2749,9 @@ IF (ALLOCATED(SrcOutputData%WriteOutput)) THEN
   END IF
     DstOutputData%WriteOutput = SrcOutputData%WriteOutput
 ENDIF
+      CALL MeshCopy( SrcOutputData%ReactionForce, DstOutputData%ReactionForce, CtrlCode, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         IF (ErrStat>=AbortErrLev) RETURN
  END SUBROUTINE SlD_CopyOutput
 
  SUBROUTINE SlD_DestroyOutput( OutputData, ErrStat, ErrMsg )
@@ -2679,6 +2766,7 @@ ENDIF
 IF (ALLOCATED(OutputData%WriteOutput)) THEN
   DEALLOCATE(OutputData%WriteOutput)
 ENDIF
+  CALL MeshDestroy( OutputData%ReactionForce, ErrStat, ErrMsg )
  END SUBROUTINE SlD_DestroyOutput
 
  SUBROUTINE SlD_PackOutput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -2722,6 +2810,24 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*1  ! WriteOutput upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%WriteOutput)  ! WriteOutput
   END IF
+   ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
+      Int_BufSz   = Int_BufSz + 3  ! ReactionForce: size of buffers for each call to pack subtype
+      CALL MeshPack( InData%ReactionForce, Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2, .TRUE. ) ! ReactionForce 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf)) THEN ! ReactionForce
+         Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
+         DEALLOCATE(Re_Buf)
+      END IF
+      IF(ALLOCATED(Db_Buf)) THEN ! ReactionForce
+         Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
+         DEALLOCATE(Db_Buf)
+      END IF
+      IF(ALLOCATED(Int_Buf)) THEN ! ReactionForce
+         Int_BufSz = Int_BufSz + SIZE( Int_Buf )
+         DEALLOCATE(Int_Buf)
+      END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -2764,6 +2870,34 @@ ENDIF
       IF (SIZE(InData%WriteOutput)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%WriteOutput))-1 ) = PACK(InData%WriteOutput,.TRUE.)
       Re_Xferred   = Re_Xferred   + SIZE(InData%WriteOutput)
   END IF
+      CALL MeshPack( InData%ReactionForce, Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2, OnlySize ) ! ReactionForce 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Re_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Re_Buf) > 0) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_Buf)-1 ) = Re_Buf
+        Re_Xferred = Re_Xferred + SIZE(Re_Buf)
+        DEALLOCATE(Re_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+      IF(ALLOCATED(Db_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Db_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Db_Buf) > 0) DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_Buf)-1 ) = Db_Buf
+        Db_Xferred = Db_Xferred + SIZE(Db_Buf)
+        DEALLOCATE(Db_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+      IF(ALLOCATED(Int_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Int_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Int_Buf) > 0) IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_Buf)-1 ) = Int_Buf
+        Int_Xferred = Int_Xferred + SIZE(Int_Buf)
+        DEALLOCATE(Int_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
  END SUBROUTINE SlD_PackOutput
 
  SUBROUTINE SlD_UnPackOutput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -2824,6 +2958,46 @@ ENDIF
       Re_Xferred   = Re_Xferred   + SIZE(OutData%WriteOutput)
     DEALLOCATE(mask1)
   END IF
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Re_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Re_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Re_Buf = ReKiBuf( Re_Xferred:Re_Xferred+Buf_size-1 )
+        Re_Xferred = Re_Xferred + Buf_size
+      END IF
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Db_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Db_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Db_Buf = DbKiBuf( Db_Xferred:Db_Xferred+Buf_size-1 )
+        Db_Xferred = Db_Xferred + Buf_size
+      END IF
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Int_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Int_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
+        Int_Xferred = Int_Xferred + Buf_size
+      END IF
+      CALL MeshUnpack( OutData%ReactionForce, Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2 ) ! ReactionForce 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
+      IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
+      IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
  END SUBROUTINE SlD_UnPackOutput
 
 
@@ -2843,7 +3017,7 @@ ENDIF
 !
 !..................................................................................................................................
 
- TYPE(SlD_InputType), INTENT(IN)  :: u(:) ! Input at t1 > t2 > t3
+ TYPE(SlD_InputType), INTENT(INOUT)  :: u(:) ! Input at t1 > t2 > t3
  REAL(DbKi),                 INTENT(IN   )  :: t(:)           ! Times associated with the Inputs
  TYPE(SlD_InputType), INTENT(INOUT)  :: u_out ! Input at tin_out
  REAL(DbKi),                 INTENT(IN   )  :: t_out           ! time to be extrap/interp'd to
@@ -2890,8 +3064,8 @@ ENDIF
 !
 !..................................................................................................................................
 
- TYPE(SlD_InputType), INTENT(IN)  :: u1    ! Input at t1 > t2
- TYPE(SlD_InputType), INTENT(IN)  :: u2    ! Input at t2 
+ TYPE(SlD_InputType), INTENT(INOUT)  :: u1    ! Input at t1 > t2
+ TYPE(SlD_InputType), INTENT(INOUT)  :: u2    ! Input at t2 
  REAL(DbKi),         INTENT(IN   )          :: tin(2)   ! Times associated with the Inputs
  TYPE(SlD_InputType), INTENT(INOUT)  :: u_out ! Input at tin_out
  REAL(DbKi),         INTENT(IN   )          :: tin_out  ! time to be extrap/interp'd to
@@ -2917,8 +3091,8 @@ ENDIF
      CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
      RETURN
    END IF
-  b0 = -(u1%DummyInput - u2%DummyInput)/t(2)
-  u_out%DummyInput = u1%DummyInput + b0 * t_out
+      CALL MeshExtrapInterp1(u1%SoilMotion, u2%SoilMotion, tin, u_out%SoilMotion, tin_out, ErrStat2, ErrMsg2 )
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
  END SUBROUTINE SlD_Input_ExtrapInterp1
 
 
@@ -2936,9 +3110,9 @@ ENDIF
 !
 !..................................................................................................................................
 
- TYPE(SlD_InputType), INTENT(IN)  :: u1      ! Input at t1 > t2 > t3
- TYPE(SlD_InputType), INTENT(IN)  :: u2      ! Input at t2 > t3
- TYPE(SlD_InputType), INTENT(IN)  :: u3      ! Input at t3
+ TYPE(SlD_InputType), INTENT(INOUT)  :: u1      ! Input at t1 > t2 > t3
+ TYPE(SlD_InputType), INTENT(INOUT)  :: u2      ! Input at t2 > t3
+ TYPE(SlD_InputType), INTENT(INOUT)  :: u3      ! Input at t3
  REAL(DbKi),                 INTENT(IN   )  :: tin(3)    ! Times associated with the Inputs
  TYPE(SlD_InputType), INTENT(INOUT)  :: u_out     ! Input at tin_out
  REAL(DbKi),                 INTENT(IN   )  :: tin_out   ! time to be extrap/interp'd to
@@ -2971,9 +3145,8 @@ ENDIF
      CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
      RETURN
    END IF
-  b0 = (t(3)**2*(u1%DummyInput - u2%DummyInput) + t(2)**2*(-u1%DummyInput + u3%DummyInput))/(t(2)*t(3)*(t(2) - t(3)))
-  c0 = ( (t(2)-t(3))*u1%DummyInput + t(3)*u2%DummyInput - t(2)*u3%DummyInput ) / (t(2)*t(3)*(t(2) - t(3)))
-  u_out%DummyInput = u1%DummyInput + b0 * t_out + c0 * t_out**2
+      CALL MeshExtrapInterp2(u1%SoilMotion, u2%SoilMotion, u3%SoilMotion, tin, u_out%SoilMotion, tin_out, ErrStat2, ErrMsg2 )
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
  END SUBROUTINE SlD_Input_ExtrapInterp2
 
 
@@ -2993,7 +3166,7 @@ ENDIF
 !
 !..................................................................................................................................
 
- TYPE(SlD_OutputType), INTENT(IN)  :: y(:) ! Output at t1 > t2 > t3
+ TYPE(SlD_OutputType), INTENT(INOUT)  :: y(:) ! Output at t1 > t2 > t3
  REAL(DbKi),                 INTENT(IN   )  :: t(:)           ! Times associated with the Outputs
  TYPE(SlD_OutputType), INTENT(INOUT)  :: y_out ! Output at tin_out
  REAL(DbKi),                 INTENT(IN   )  :: t_out           ! time to be extrap/interp'd to
@@ -3040,8 +3213,8 @@ ENDIF
 !
 !..................................................................................................................................
 
- TYPE(SlD_OutputType), INTENT(IN)  :: y1    ! Output at t1 > t2
- TYPE(SlD_OutputType), INTENT(IN)  :: y2    ! Output at t2 
+ TYPE(SlD_OutputType), INTENT(INOUT)  :: y1    ! Output at t1 > t2
+ TYPE(SlD_OutputType), INTENT(INOUT)  :: y2    ! Output at t2 
  REAL(DbKi),         INTENT(IN   )          :: tin(2)   ! Times associated with the Outputs
  TYPE(SlD_OutputType), INTENT(INOUT)  :: y_out ! Output at tin_out
  REAL(DbKi),         INTENT(IN   )          :: tin_out  ! time to be extrap/interp'd to
@@ -3079,6 +3252,8 @@ IF (ALLOCATED(y_out%WriteOutput) .AND. ALLOCATED(y1%WriteOutput)) THEN
   DEALLOCATE(b1)
   DEALLOCATE(c1)
 END IF ! check if allocated
+      CALL MeshExtrapInterp1(y1%ReactionForce, y2%ReactionForce, tin, y_out%ReactionForce, tin_out, ErrStat2, ErrMsg2 )
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
  END SUBROUTINE SlD_Output_ExtrapInterp1
 
 
@@ -3096,9 +3271,9 @@ END IF ! check if allocated
 !
 !..................................................................................................................................
 
- TYPE(SlD_OutputType), INTENT(IN)  :: y1      ! Output at t1 > t2 > t3
- TYPE(SlD_OutputType), INTENT(IN)  :: y2      ! Output at t2 > t3
- TYPE(SlD_OutputType), INTENT(IN)  :: y3      ! Output at t3
+ TYPE(SlD_OutputType), INTENT(INOUT)  :: y1      ! Output at t1 > t2 > t3
+ TYPE(SlD_OutputType), INTENT(INOUT)  :: y2      ! Output at t2 > t3
+ TYPE(SlD_OutputType), INTENT(INOUT)  :: y3      ! Output at t3
  REAL(DbKi),                 INTENT(IN   )  :: tin(3)    ! Times associated with the Outputs
  TYPE(SlD_OutputType), INTENT(INOUT)  :: y_out     ! Output at tin_out
  REAL(DbKi),                 INTENT(IN   )  :: tin_out   ! time to be extrap/interp'd to
@@ -3145,6 +3320,8 @@ IF (ALLOCATED(y_out%WriteOutput) .AND. ALLOCATED(y1%WriteOutput)) THEN
   DEALLOCATE(b1)
   DEALLOCATE(c1)
 END IF ! check if allocated
+      CALL MeshExtrapInterp2(y1%ReactionForce, y2%ReactionForce, y3%ReactionForce, tin, y_out%ReactionForce, tin_out, ErrStat2, ErrMsg2 )
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
  END SUBROUTINE SlD_Output_ExtrapInterp2
 
 END MODULE SoilDyn_Types

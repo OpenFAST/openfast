@@ -194,6 +194,8 @@ subroutine REDWINinterface_Init( DLL_FileName, DLL_ProcName, DLL_Trgt, DLL_Model
    dll_data%IDtask = IDtask_init
    CALL CallREDWINdll(DLL_Trgt, DLL_Model, dll_data, ErrStat2, ErrMsg2);   if(Failed()) return;
 
+!FIXME: For Model 1, the Props(1,1) will indicate which runmode we are using.  Test that here
+
 
 !TODO: can we add a check on which type of library we actually loaded and compare to the model we set????
    ! Set status flag:
@@ -262,7 +264,7 @@ subroutine REDWINinterface_CalcOutput( DLL_Trgt, DLL_Model, Displacement, Force,
 
    type(DLL_Type),                  intent(in   )  :: DLL_Trgt          !< The DLL to be called.
    integer(IntKi),                  intent(in   )  :: DLL_Model         !< Model type of the DLL
-   real(ReKi),                      intent(in   )  :: Displacement(6)   !< OpenFAST global coordinate frame
+   real(R8Ki),                      intent(in   )  :: Displacement(6)   !< OpenFAST global coordinate frame
    real(ReKi),                      intent(  out)  :: Force(6)          !< OpenFAST global coordinate frame
    type(REDWINdllType),             intent(inout)  :: dll_data          !< DLL coordinate frame arrays in here
    integer(IntKi),                  intent(  out)  :: ErrStat           !< Error status of the operation
@@ -277,6 +279,8 @@ subroutine REDWINinterface_CalcOutput( DLL_Trgt, DLL_Model, Displacement, Force,
    ErrStat = ErrID_None
    ErrMsg= ''
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!FIXME: should this be split out into multiple, one for each model?
       ! Coordinate transform to REDWIN frame
    dll_data%Disp = ToREDWINcoords( Displacement )
 
@@ -288,10 +292,12 @@ subroutine REDWINinterface_CalcOutput( DLL_Trgt, DLL_Model, Displacement, Force,
 
       ! Call the REDWIN-style DLL:
    dll_data%IDtask = IDtask_calc
-   CALL CallREDWINdll( DLL_Trgt, DLL_Model, dll_data, ErrStat, ErrMsg); if(Failed()) return;
+   CALL CallREDWINdll( DLL_Trgt, DLL_Model, dll_data, ErrStat2, ErrMsg2); if(Failed()) return;
 
       ! Coordinate transform from REDWIN frame
    Force = real(FromREDWINcoords( dll_data%Force ), ReKi)
+!FIXME: check the runmode info for model 1.  Not sure it applies to the other models.
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 #ifdef DEBUG_REDWIN_INTERFACE
 !CALL WrNumAryFileNR ( 59, m%dll_data%avrSWAP,'1x,ES15.6E2', ErrStat, ErrMsg )
@@ -313,7 +319,7 @@ subroutine REDWINinterface_GetStiffMatrix( DLL_Trgt, DLL_Model, Displacement, Fo
 
    type(DLL_Type),               intent(in   )  :: DLL_Trgt          !< The DLL to be called.
    integer(IntKi),               intent(in   )  :: DLL_Model         !< Model type of the DLL
-   real(ReKi),                   intent(in   )  :: Displacement(6)   !< Displacement         (OpenFAST global coords)
+   real(R8Ki),                   intent(in   )  :: Displacement(6)   !< Displacement         (OpenFAST global coords)
    real(ReKi),                   intent(  out)  :: Force(6)          !< Resulting force      (OpenFAST global coords)
    real(ReKi),                   intent(  out)  :: StiffMatrix(6,6)  !< Returned stiffness   (OpenFAST global coords)
    type(REDWINdllType),          intent(inout)  :: dll_data
@@ -323,7 +329,7 @@ subroutine REDWINinterface_GetStiffMatrix( DLL_Trgt, DLL_Model, Displacement, Fo
       ! local variables:
    integer(IntKi)                               :: ErrStat2    ! The error status code
    character(ErrMsgLen)                         :: ErrMsg2     ! The error message, if an error occurred
-   character(*), parameter                      :: RoutineName = 'REDWINinterface_CalcOutput'
+   character(*), parameter                      :: RoutineName = 'REDWINinterface_GetStiffMatrix'
 
       ! Initialize error values:
    ErrStat = ErrID_None
@@ -334,7 +340,7 @@ subroutine REDWINinterface_GetStiffMatrix( DLL_Trgt, DLL_Model, Displacement, Fo
 
       ! Call the REDWIN-style DLL:
    dll_data%IDtask = IDtask_stiff
-   CALL CallREDWINdll( DLL_Trgt, DLL_Model, dll_data, ErrStat, ErrMsg); if(Failed()) return;
+   CALL CallREDWINdll( DLL_Trgt, DLL_Model, dll_data, ErrStat2, ErrMsg2); if(Failed()) return;
 
       ! Coordinate transformation
    Force       = real(FromREDWINcoords( dll_data%Force ), ReKi)

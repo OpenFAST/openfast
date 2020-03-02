@@ -13,6 +13,12 @@
 # ...... Include files (definitions from NWTC Library) ............................................................................
 include Registry_NWTC_Library.txt
 
+#Parameters    CalcOptions: {1: Stiffness / Damping matrices [unavailable], 2: P-Y curves [unavailable], 3: coupled REDWIN DLL}
+param    SoilDyn/SlD    -              IntKi             Calc_StiffDamp - 1 -     "Stiffness / Damping calculations (currently unavailable)"  -
+param    SoilDyn/SlD    -              IntKi             Calc_PYcurve   - 2 -     "P-Y curve calculations (currently unavailable)"  -
+param    SoilDyn/SlD    -              IntKi             Calc_REDWIN    - 3 -     "Coupled to REDWIN dll for soil reaction forces" -
+
+
 
 # REDWIN interface DLL type
 # ..... Data for using REDWIN DLLs .......................................................................................................
@@ -29,6 +35,7 @@ typedef  ^             REDWINdllType   R8Ki           Disp           {6}        
 typedef  ^             REDWINdllType   R8Ki           Force          {6}        - - "Forces.  Follows convention of REDWIN orientations." '(N)'
 typedef  ^             REDWINdllType   R8Ki           D              {6}{6}     - - "The 6 x 6 elastic macro-element stiffness matrix at the SFI." -
 typedef  ^             REDWINdllType   LOGICAL        SuppressWarn   - .FALSE. -    "Supress further warnings." -
+typedef  ^             REDWINdllType   IntKi          RunMode        -          0 - "RunMode of DLL (read from Props(1,1) in Model 1 during initialization" -
 
 # SoilDyn input file
 typedef  ^    SlD_InputFile   LOGICAL              EchoFlag       -   -   -   "Echo the input file"                                    -
@@ -53,8 +60,10 @@ typedef  ^    SlD_InputFile   IntKi                NumOuts        -   -   -   "N
 # ..... Initialization data .......................................................................................................
 # Define inputs that the initialization routine may need here:
 #   e.g., the name of the input file, the file root name, etc.
-typedef SoilDyn/SlD InitInputType CHARACTER(1024) InputFile  - - -   "Name of the input file; remove if there is no file" -
-typedef   ^                ^             LOGICAL         Linearize  - .FALSE. -  "Flag that tells this module if the glue code wants to linearize." -
+typedef  ^     InitInputType  CHARACTER(1024)      InputFile      - - -          "Name of the input file; remove if there is no file" -
+typedef  ^     InitInputType  LOGICAL              Linearize      - .FALSE. -    "Flag that tells this module if the glue code wants to linearize." -
+#FIXME: does the glue code need to inform us of the number of points? or do we do that in SoilDyn?
+#typedef  ^     InitInputType  IntKi                NumNodes       - - -          "Number of nodes we are using" -
 
 # Define outputs from the initialization routine here:
 typedef   ^               InitOutputType CHARACTER(ChanLen)    WriteOutputHdr  {:} - -   "Names of the output-to-file channels" -
@@ -96,7 +105,7 @@ typedef   ^             MiscVarType       REDWINdllType     dll_data            
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
 typedef   ^             ParameterType     DbKi              DT                   - - - "Time step for cont. state integration & disc. state update" seconds
-typedef   ^             ParameterType     CHARACTER(1024)   DLL_InFile           - - - "Name of input file used in DLL"   -
+#typedef   ^             ParameterType     CHARACTER(1024)   DLL_InFile           - - - "Name of input file used in DLL"   -
 typedef   ^             ParameterType     DLL_Type          DLL_Trgt             - - - "The addresses and names of the Bladed DLL and its procedure"   -
 typedef   ^             ParameterType     DbKi              DLL_DT               - - - "Time step for DLL" seconds
 typedef   ^             ParameterType     CHARACTER(1024)   RootName             - - - "RootName for writing output files"   -
@@ -107,16 +116,10 @@ typedef   ^             ParameterType     CHARACTER(1024)   SumFileName         
 typedef   ^             ParameterType     IntKi             DLL_model            - - - "REDWIN DLL model type to use" -
 
 # ..... Inputs ....................................................................................................................
-# Define inputs that are contained on the mesh here:
-#typedef   ^               InputType          MeshType  MeshedInput - - -     "Meshed data" -
-# Define inputs that are not on this mesh here:
-typedef   ^               InputType           ReKi     DummyInput  - - -     "Remove this variable if you have input data" -
-
+typedef  ^              InputType         MeshType          SoilMotion           - - - "Mesh of soil contact points" -
 
 # ..... Outputs ...................................................................................................................
-# Define outputs that are contained on the mesh here:
-#typedef SoilDyn SlD_OutputType         MeshType MeshedOutput - - -    "Meshed data" -
-# Define outputs that are not on this mesh here:
-typedef   ^               OutputType          ReKi     DummyOutput  -  - -   "Remove this variable if you have output data" -
-typedef   ^                 ^                 ReKi     WriteOutput {:} - -   "Example of data to be written to an output file" "s,-"
+typedef  ^              OutputType        ReKi              DummyOutput          -  - -   "Remove this variable if you have output data" -
+typedef  ^              OutputType        ReKi              WriteOutput          {:} - -   "Example of data to be written to an output file" "s,-"
+typedef  ^              OutputType        MeshType          ReactionForce        - - - "reaction forces and moments point mesh (may be multiple points)" -
 

@@ -41,29 +41,13 @@ MODULE SoilDyn_Driver_Types
    TYPE     :: SlDDriver_Flags
       LOGICAL                 :: DvrIptFile           = .FALSE.      !< Was an input file name given on the command line?
       LOGICAL                 :: SlDIptFile           = .FALSE.      !< Was an SoilDyn input file requested?
-!      LOGICAL                 :: Summary              = .FALSE.      !< create a summary at command line? (data extents in the wind file)
-!      LOGICAL                 :: SummaryFile          = .FALSE.      !< create a summary file of the output?
+      LOGICAL                 :: InputDispFile        = .FALSE.      !< Input displacement time series
       LOGICAL                 :: TStart               = .FALSE.      !< specified a start time
+      LOGICAL                 :: StiffMatOut          = .FALSE.      !< output stiffness matrices at start and finish
       LOGICAL                 :: NumTimeSteps         = .FALSE.      !< specified a number of timesteps to process
       LOGICAL                 :: NumTimeStepsDefault  = .FALSE.      !< specified a 'DEFAULT' for number of timesteps to process
       LOGICAL                 :: DT                   = .FALSE.      !< specified a resolution in time
       LOGICAL                 :: DTDefault            = .FALSE.      !< specified a 'DEFAULT' for the time resolution
-
-!      LOGICAL                 :: FFTcalc              = .FALSE.      !< do an FFT
-
-!      LOGICAL                 :: WindGrid             = .FALSE.      !< Requested output of wind data on a grid -- input file option only
-!      LOGICAL                 :: XRange               = .FALSE.      !< specified a range of x      -- command line option only -- stored as GridCtrCoord and GridDelta
-!      LOGICAL                 :: YRange               = .FALSE.      !< specified a range of y      -- command line option only -- stored as GridCtrCoord and GridDelta
-!      LOGICAL                 :: ZRange               = .FALSE.      !< specified a range of z      -- command line option only -- stored as GridCtrCoord and GridDelta
-!      LOGICAL                 :: Dx                   = .FALSE.      !< specified a resolution in x -- command line option only, 0.0 otherwise
-!      LOGICAL                 :: Dy                   = .FALSE.      !< speficied a resolution in y
-!      LOGICAL                 :: Dz                   = .FALSE.      !< specified a resolution in z
-
-!      LOGICAL                 :: PointsFile           = .FALSE.      !< points filename to read in  -- command line option only
-
-!      LOGICAL                 :: WindGridOutputInit   = .FALSE.      !< Is the WindGridOut file initialized
-!      LOGICAL                 :: PointsOutputInit     = .FALSE.      !< Is the Points output file initialized
-!      LOGICAL                 :: FFTOutputInit        = .FALSE.      !< Is the FFT output file initialized
       LOGICAL                 :: Verbose              = .FALSE.      !< Verbose error reporting
       LOGICAL                 :: VVerbose             = .FALSE.      !< Very Verbose error reporting
    END TYPE    SlDDriver_Flags
@@ -73,30 +57,11 @@ MODULE SoilDyn_Driver_Types
    TYPE     :: SlDDriver_Settings
       CHARACTER(1024)         :: DvrIptFileName                !< Driver input file name
       CHARACTER(1024)         :: SlDIptFileName                !< Filename of SoilDyn input file to read (if no driver input file)
-      CHARACTER(1024)         :: SummaryFileName               !< Filename for the summary information output
-
-!      CHARACTER(1024)         :: PointsFileName                !< Filename of points file to read in
-!      CHARACTER(1024)         :: PointsOutputName              !< Filename for output from points read in from points file
-!      CHARACTER(1024)         :: FFTOutputName                 !< Filename for output from points read in from points file
-!      CHARACTER(1024)         :: WindGridOutputName            !< Filename for output from points read in from points file
-
-!      INTEGER(IntKi)          :: WindGridOutputUnit            !< Unit number for the output file for the wind grid data
-!      INTEGER(IntKi)          :: PointsOutputUnit              !< Unit number for the output file for the Points file output
-!      INTEGER(IntKi)          :: FFTOutputUnit                 !< Unit number for the output file for the FFT results
+      CHARACTER(1024)         :: InputDispFile                 !< Filename of SoilDyn time series displacements
 
       INTEGER(IntKi)          :: NumTimeSteps                  !< Number of timesteps
       REAL(DbKi)              :: DT                            !< resolution of time
-      REAL(DbKi)              :: TStart                        !< range of time -- end time converted from TRange (command line option only)
-
-
-!      REAL(ReKi)              :: FFTcoord(1:3)                 !< (x,y,z) coordinate to do an FFT at
-!
-!      REAL(ReKi)              :: GridDelta(1:3)                !< (GridDx,GridDy,GridDz) -- grid point spacing
-!      INTEGER(IntKi)          :: GridN(1:3)                    !< (GridNx,GridNy,GridNz) -- number of grid points
-!
-!      REAL(ReKi)              :: XRange(1:2)                   !< Range in the x-direction for the gridded data
-!      REAL(ReKi)              :: YRange(1:2)                   !< Range in the y-direction for the gridded data
-!      REAL(ReKi)              :: ZRange(1:2)                   !< Range in the z-direction for the gridded data
+      REAL(DbKi)              :: TStart                        !< Start time
 
       TYPE(ProgDesc)          :: ProgInfo                      !< Program info
       TYPE(ProgDesc)          :: SlDProgInfo                   !< Program info for SoilDyn
