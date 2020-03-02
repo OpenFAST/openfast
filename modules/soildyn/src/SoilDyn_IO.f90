@@ -147,7 +147,7 @@ subroutine SoilDyn_ReadInput( InputFileName, EchoFileName, InputFileData, ErrSta
 
 
    !-------------------------------------------------------------------------------------------------
-   !> Read Stiffness / Damping section [ CalcOption == 1 only ]
+   !> Read Stiffness / Damping section [ CalcOption == 1 only ]      Calc_StiffDamp
    !-------------------------------------------------------------------------------------------------
 
    call ReadCom( UnitInput, InputFileName, 'SoilDyn input file separator line',  TmpErrStat, TmpErrMsg, UnitEcho );   if (Failed()) return;
@@ -171,14 +171,14 @@ subroutine SoilDyn_ReadInput( InputFileName, EchoFileName, InputFileData, ErrSta
    enddo
 
    !-------------------------------------------------------------------------------------------------
-   !> Read P-Y curve section  [ CalcOption == 2 only ]
+   !> Read P-Y curve section  [ CalcOption == 2 only ]               Calc_PYcurve  
    !-------------------------------------------------------------------------------------------------
 
    call ReadCom( UnitInput, InputFileName, 'SoilDyn input file separator line',  TmpErrStat, TmpErrMsg, UnitEcho );   if (Failed()) return;
    call ReadVar( UnitInput, InputFileName, InputFileData%PY_NumPoints, "PY_NumPoints", "Number of PY curve points", TmpErrStat, TmpErrMsg, UnitEcho );  if (Failed()) return;
 
       ! Allocate arrays to hold the information that will be read in next
-   allocate( InputFileData%PY_locations(InputFileData%PY_NumPoints,3), STAT=TmpErrStat )
+   allocate( InputFileData%PY_locations(3,InputFileData%PY_NumPoints), STAT=TmpErrStat )
    if (TmpErrStat /= 0)    call SetErrStat(ErrID_Fatal, 'Could not allocate PY_locations', ErrStat, ErrMsg, RoutineName)
    allocate( InputFileData%PY_inputFile(InputFileData%PY_NumPoints), STAT=TmpErrStat )
    if (TmpErrStat /= 0)    call SetErrStat(ErrID_Fatal, 'Could not allocate PY_inputFile', ErrStat, ErrMsg, RoutineName)
@@ -197,7 +197,7 @@ subroutine SoilDyn_ReadInput( InputFileName, EchoFileName, InputFileData, ErrSta
          call SetErrStat( ErrID_Fatal, 'Error reading PY_curve line '//trim(Num2LStr(i))//' from '//InputFileName//'.', ErrStat, ErrMsg, RoutineName)
          return
       endif
-      READ( Line, *, IOSTAT=IOS) InputFileData%PY_locations(i,1:3), InputFileData%PY_inputFile(i)
+      READ( Line, *, IOSTAT=IOS) InputFileData%PY_locations(1:3,i), InputFileData%PY_inputFile(i)
       CALL CheckIOS ( IOS, InputFileName, 'DT', NumType, TmpErrStat, TmpErrMsg ); if (Failed()) return;        ! NOTE: unclear if the message returned will match what was misread.
 
          ! Check for relative paths in the file names
@@ -206,14 +206,15 @@ subroutine SoilDyn_ReadInput( InputFileName, EchoFileName, InputFileData, ErrSta
          ! Add stuff to echo file if it is used
       if ( InputFileData%EchoFlag ) then
          write(UnitEcho,*) '              Location ('//trim(Num2LStr(i))//')'
-         write(UnitEcho,*) InputFileData%PY_locations(i,1:3), trim(InputFileData%PY_inputFile(i))
+         write(UnitEcho,*) InputFileData%PY_locations(1:3,i), trim(InputFileData%PY_inputFile(i))
       endif
    enddo
 
 
    !-------------------------------------------------------------------------------------------------
-   !> Read REDWIN interface for DLL  section  [ CalcOption == 3 only ]
+   !> Read REDWIN interface for DLL  section  [ CalcOption == 3 only ]     Calc_REDWIN   
    !-------------------------------------------------------------------------------------------------
+
 
    call ReadCom( UnitInput, InputFileName, 'SoilDyn input file separator line',  TmpErrStat, TmpErrMsg, UnitEcho );   if (Failed()) return;
    call ReadVar( UnitInput, InputFileName, InputFileData%DLL_model, "DLL_model", "REDWIN DLL model used", TmpErrStat, TmpErrMsg, UnitEcho );  if (Failed()) return;
@@ -227,7 +228,7 @@ subroutine SoilDyn_ReadInput( InputFileName, EchoFileName, InputFileData, ErrSta
    call ReadVar( UnitInput, InputFileName, InputFileData%DLL_NumPoints, "DLL_NumPoints", "Number of DLL interfaces", TmpErrStat, TmpErrMsg, UnitEcho );  if (Failed()) return;
 
       ! Allocate arrays to hold the information that will be read in next
-   allocate( InputFileData%DLL_locations(InputFileData%DLL_NumPoints,3), STAT=TmpErrStat )
+   allocate( InputFileData%DLL_locations(3,InputFileData%DLL_NumPoints), STAT=TmpErrStat )
    if (TmpErrStat /= 0)    call SetErrStat(ErrID_Fatal, 'Could not allocate DLL_locations', ErrStat, ErrMsg, RoutineName)
    allocate( InputFileData%DLL_PropsFile(InputFileData%DLL_NumPoints), STAT=TmpErrStat )
    if (TmpErrStat /= 0)    call SetErrStat(ErrID_Fatal, 'Could not allocate DLL_PropsFile', ErrStat, ErrMsg, RoutineName)
@@ -248,7 +249,7 @@ subroutine SoilDyn_ReadInput( InputFileName, EchoFileName, InputFileData, ErrSta
          call SetErrStat( ErrID_Fatal, 'Error reading DLL_curve line '//trim(Num2LStr(i))//' from '//InputFileName//'.', ErrStat, ErrMsg, RoutineName)
          return
       endif
-      READ( Line, *, IOSTAT=IOS) InputFileData%DLL_locations(i,1:3), InputFileData%DLL_PropsFile(i), InputFileData%DLL_LDispFile(i)
+      READ( Line, *, IOSTAT=IOS) InputFileData%DLL_locations(1:3,i), InputFileData%DLL_PropsFile(i), InputFileData%DLL_LDispFile(i)
       CALL CheckIOS ( IOS, InputFileName, 'DLL info', NumType, TmpErrStat, TmpErrMsg ); if (Failed()) return;        ! NOTE: unclear if the message returned will match what was misread.
 
          ! Check for relative paths in the file names
@@ -258,7 +259,7 @@ subroutine SoilDyn_ReadInput( InputFileName, EchoFileName, InputFileData, ErrSta
          ! Add stuff to echo file if it is used
       if ( InputFileData%EchoFlag ) then
          write(UnitEcho,*) '              Location ('//trim(Num2LStr(i))//')'
-         write(UnitEcho,*) InputFileData%DLL_locations(i,1:3), trim(InputFileData%DLL_PropsFile(i)), '               ',trim(InputFileData%DLL_LDispFile(i))
+         write(UnitEcho,*) InputFileData%DLL_locations(1:3,i), trim(InputFileData%DLL_PropsFile(i)), '               ',trim(InputFileData%DLL_LDispFile(i))
       endif
    enddo
 
@@ -331,6 +332,7 @@ SUBROUTINE SoilDyn_ValidateInput( InitInp, InputFileData, ErrStat, ErrMsg )
    ErrStat = ErrID_None
    ErrMsg  = ""
 
+!FIXME: add validation routines
 CONTAINS
    subroutine ValidateStiffnessMatrix()
       ! Placeholder
