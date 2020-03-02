@@ -111,8 +111,9 @@ NumOuts = 2
    call SoilDyn_ReadInput( InitInp%InputFile, p%EchoFileName, InputFileData, ErrStat2, ErrMsg2 );  if (Failed()) return;
 
       ! Define parameters here:
-   p%DT        =  Interval
-   p%DLL_Model =  InputFileData%DLL_Model
+   p%DT           =  Interval
+   p%DLL_Model    =  InputFileData%DLL_Model
+   p%CalcOption   =  InputFileData%CalcOption
 
       ! Define initial system states here:
    x%DummyContState           = 0.0_ReKi
@@ -238,7 +239,7 @@ contains
       integer(IntKi)                            :: NumPoints      ! Number of points from input file
       real(ReKi),                allocatable    :: MeshLocations(:,:)
 
-      select case(InputFileData%CalcOption)
+      select case(p%CalcOption)
          case (Calc_StiffDamp)
             NumPoints   =  1_IntKi
 !FIXME: update to allow more than one set of points
