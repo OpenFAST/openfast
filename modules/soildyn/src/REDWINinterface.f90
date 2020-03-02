@@ -264,7 +264,7 @@ subroutine REDWINinterface_CalcOutput( DLL_Trgt, DLL_Model, Displacement, Force,
 
    type(DLL_Type),                  intent(in   )  :: DLL_Trgt          !< The DLL to be called.
    integer(IntKi),                  intent(in   )  :: DLL_Model         !< Model type of the DLL
-   real(ReKi),                      intent(in   )  :: Displacement(6)   !< OpenFAST global coordinate frame
+   real(R8Ki),                      intent(in   )  :: Displacement(6)   !< OpenFAST global coordinate frame
    real(ReKi),                      intent(  out)  :: Force(6)          !< OpenFAST global coordinate frame
    type(REDWINdllType),             intent(inout)  :: dll_data          !< DLL coordinate frame arrays in here
    integer(IntKi),                  intent(  out)  :: ErrStat           !< Error status of the operation
@@ -292,7 +292,7 @@ subroutine REDWINinterface_CalcOutput( DLL_Trgt, DLL_Model, Displacement, Force,
 
       ! Call the REDWIN-style DLL:
    dll_data%IDtask = IDtask_calc
-   CALL CallREDWINdll( DLL_Trgt, DLL_Model, dll_data, ErrStat, ErrMsg); if(Failed()) return;
+   CALL CallREDWINdll( DLL_Trgt, DLL_Model, dll_data, ErrStat2, ErrMsg2); if(Failed()) return;
 
       ! Coordinate transform from REDWIN frame
    Force = real(FromREDWINcoords( dll_data%Force ), ReKi)
@@ -319,7 +319,7 @@ subroutine REDWINinterface_GetStiffMatrix( DLL_Trgt, DLL_Model, Displacement, Fo
 
    type(DLL_Type),               intent(in   )  :: DLL_Trgt          !< The DLL to be called.
    integer(IntKi),               intent(in   )  :: DLL_Model         !< Model type of the DLL
-   real(ReKi),                   intent(in   )  :: Displacement(6)   !< Displacement         (OpenFAST global coords)
+   real(R8Ki),                   intent(in   )  :: Displacement(6)   !< Displacement         (OpenFAST global coords)
    real(ReKi),                   intent(  out)  :: Force(6)          !< Resulting force      (OpenFAST global coords)
    real(ReKi),                   intent(  out)  :: StiffMatrix(6,6)  !< Returned stiffness   (OpenFAST global coords)
    type(REDWINdllType),          intent(inout)  :: dll_data
@@ -329,7 +329,7 @@ subroutine REDWINinterface_GetStiffMatrix( DLL_Trgt, DLL_Model, Displacement, Fo
       ! local variables:
    integer(IntKi)                               :: ErrStat2    ! The error status code
    character(ErrMsgLen)                         :: ErrMsg2     ! The error message, if an error occurred
-   character(*), parameter                      :: RoutineName = 'REDWINinterface_CalcOutput'
+   character(*), parameter                      :: RoutineName = 'REDWINinterface_GetStiffMatrix'
 
       ! Initialize error values:
    ErrStat = ErrID_None
@@ -340,7 +340,7 @@ subroutine REDWINinterface_GetStiffMatrix( DLL_Trgt, DLL_Model, Displacement, Fo
 
       ! Call the REDWIN-style DLL:
    dll_data%IDtask = IDtask_stiff
-   CALL CallREDWINdll( DLL_Trgt, DLL_Model, dll_data, ErrStat, ErrMsg); if(Failed()) return;
+   CALL CallREDWINdll( DLL_Trgt, DLL_Model, dll_data, ErrStat2, ErrMsg2); if(Failed()) return;
 
       ! Coordinate transformation
    Force       = real(FromREDWINcoords( dll_data%Force ), ReKi)
