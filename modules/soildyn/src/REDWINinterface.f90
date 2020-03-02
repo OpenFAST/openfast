@@ -296,7 +296,13 @@ subroutine REDWINinterface_CalcOutput( DLL_Trgt, DLL_Model, Displacement, Force,
 
       ! Coordinate transform from REDWIN frame
    Force = real(FromREDWINcoords( dll_data%Force ), ReKi)
+
 !FIXME: check the runmode info for model 1.  Not sure it applies to the other models.
+
+      ! Call routine for error trapping the returned ErrorCodes
+   call CheckREDWINerrors( dll_data, DLL_Model, dll_data%SuppressWarn, ErrStat2, ErrMsg2 ); if(Failed()) return;
+
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 #ifdef DEBUG_REDWIN_INTERFACE
