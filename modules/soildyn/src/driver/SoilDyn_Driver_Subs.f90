@@ -528,7 +528,7 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
       ! Check if we asked for the DEFAULT (use what is in the file)
    CALL Conv2UC( InputChr )
    IF ( TRIM(InputChr) == 'DEFAULT' ) THEN     ! we asked for the default value
-      DvrFlags%NumTimeSteps         =  .TRUE.
+      DvrFlags%NumTimeSteps         =  .FALSE.
       DvrFlags%NumTimeStepsDefault  =  .TRUE.         ! This flag tells us to use the inflow wind file values
    ELSE
          !  We probably have a number if it isn't 'DEFAULT', so do an internal read and check to
@@ -701,7 +701,7 @@ END SUBROUTINE UpdateSettingsWithCL
 
 SUBROUTINE ReadInputDispFile( InputDispFile, DisplacementList, ErrStat, ErrMsg )
    CHARACTER(1024),                    INTENT(IN   )  :: InputDispFile       !< Name of the points file to read
-   REAL(ReKi), ALLOCATABLE,            INTENT(  OUT)  :: DisplacementList(:,:)       !< The coordinates we read in
+   REAL(ReKi), ALLOCATABLE,            INTENT(  OUT)  :: DisplacementList(:,:)       !< The coordinates we read in: idx 1 = values, idx 2 = timestep
    INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat              !< The error status
    CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg               !< The message for the status
 
@@ -735,7 +735,7 @@ SUBROUTINE ReadInputDispFile( InputDispFile, DisplacementList, ErrStat, ErrMsg )
    IF ( NumDataColumns /= 7 ) THEN
       ErrStatTmp  = ErrID_Fatal
       ErrMsgTmp   = ' Expecting seven columns in '//TRIM(InputDispFile)//' corresponding to '//   &
-         'time, X, Y, Z, Rx, Ry, Rz  coordinates.  Instead found '//TRIM(Num2LStr(NumDataColumns))//'.'
+         'time, dX, dY, dZ, dTheta_X, dTheta_Y, dTheta_Z  coordinates.  Instead found '//TRIM(Num2LStr(NumDataColumns))//' columns.'
       if (Failed()) return
    ENDIF
 
@@ -753,7 +753,7 @@ SUBROUTINE ReadInputDispFile( InputDispFile, DisplacementList, ErrStat, ErrMsg )
 
       ! Read in the datapoints
    DO I=1,NumDataPoints
-      CALL ReadAry ( FiUnitPoints, InputDispFile, DisplacementList(:,I), 3, 'DisplacementList', &
+      CALL ReadAry ( FiUnitPoints, InputDispFile, DisplacementList(:,I), 7, 'DisplacementList', &
          'Coordinate point from Points file', ErrStatTmp, ErrMsgTmp)
       if (Failed()) return
    ENDDO

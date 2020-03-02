@@ -61,7 +61,7 @@ MODULE SoilDyn_Driver_Types
 
       INTEGER(IntKi)          :: NumTimeSteps                  !< Number of timesteps
       REAL(DbKi)              :: DT                            !< resolution of time
-      REAL(DbKi)              :: TStart                        !< range of time -- end time converted from TRange (command line option only)
+      REAL(DbKi)              :: TStart                        !< Start time
 
       TYPE(ProgDesc)          :: ProgInfo                      !< Program info
       TYPE(ProgDesc)          :: SlDProgInfo                   !< Program info for SoilDyn
