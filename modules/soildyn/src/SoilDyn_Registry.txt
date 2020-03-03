@@ -48,7 +48,7 @@ typedef  ^    SlD_InputFile   IntKi                PY_numpoints   -   -   -   "N
 typedef  ^    SlD_InputFile   ReKi                 PY_locations   ::  -   -   "P-Y curve location points for mesh"                     '(m)'
 typedef  ^    SlD_InputFile   character(1024)      PY_inputFile   :   -   -   "Input file with P-Y curve data"                         - 
 typedef  ^    SlD_InputFile   IntKi                DLL_model      -   -   -   "REDWIN DLL model type to use"                           -
-typedef  ^    SlD_InputFile   CHARACTER(1024)      DLL_FileName   -   -   -   "Name of the DLL file including the full path"           -
+typedef  ^    SlD_InputFile   CHARACTER(1024)      DLL_FileName   :   -   -   "Name of the DLL file including the full path"           -
 typedef  ^    SlD_InputFile   CHARACTER(1024)      DLL_ProcName   -   -   -   "Name of the procedure in the DLL that will be called"   -
 typedef  ^    SlD_InputFile   IntKi                DLL_numpoints  -   -   -   "Number of points to interface to DLL"                   -
 typedef  ^    SlD_InputFile   ReKi                 DLL_locations  ::  -   -   "DLL location points for mesh"                           '(m)'

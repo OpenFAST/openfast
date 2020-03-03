@@ -218,16 +218,11 @@ subroutine SoilDyn_ReadInput( InputFileName, EchoFileName, InputFileData, ErrSta
 
    call ReadCom( UnitInput, InputFileName, 'SoilDyn input file separator line',  TmpErrStat, TmpErrMsg, UnitEcho );   if (Failed()) return;
    call ReadVar( UnitInput, InputFileName, InputFileData%DLL_model, "DLL_model", "REDWIN DLL model used", TmpErrStat, TmpErrMsg, UnitEcho );  if (Failed()) return;
-
-      ! DLL_FileName - Name of the Bladed DLL [used only with DLL Interface] (-):
-   call ReadVar( UnitInput, InputFileName, InputFileData%DLL_FileName, "DLL_FileName", "Name/location of the external library {.dll [Windows]} in the REDWIN-DLL format [used only with CalcOption==3] (-)", TmpErrStat, TmpErrMsg, UnitEcho );  if (Failed()) return;
-   if ( PathIsRelative( InputFileData%DLL_FileName ) ) InputFileData%DLL_FileName = TRIM(PriPath)//TRIM(InputFileData%DLL_FileName)
-
-      ! DLL_ProcName - Name of procedure to be called in DLL [used only with DLL Interface] (-):
-   call ReadVar( UnitInput, InputFileName, InputFileData%DLL_ProcName, "DLL_ProcName", "Name of procedure to be called in DLL [used only with DLL Interface] (-)", TmpErrStat, TmpErrMsg, UnitEcho);  if (Failed()) return;
    call ReadVar( UnitInput, InputFileName, InputFileData%DLL_NumPoints, "DLL_NumPoints", "Number of DLL interfaces", TmpErrStat, TmpErrMsg, UnitEcho );  if (Failed()) return;
 
       ! Allocate arrays to hold the information that will be read in next
+   allocate( InputFileData%DLL_FileName(InputFileData%DLL_NumPoints), STAT=TmpErrStat )
+   if (TmpErrStat /= 0)    call SetErrStat(ErrID_Fatal, 'Could not allocate DLL_FileName', ErrStat, ErrMsg, RoutineName)
    allocate( InputFileData%DLL_locations(3,InputFileData%DLL_NumPoints), STAT=TmpErrStat )
    if (TmpErrStat /= 0)    call SetErrStat(ErrID_Fatal, 'Could not allocate DLL_locations', ErrStat, ErrMsg, RoutineName)
    allocate( InputFileData%DLL_PropsFile(InputFileData%DLL_NumPoints), STAT=TmpErrStat )
@@ -249,19 +244,22 @@ subroutine SoilDyn_ReadInput( InputFileName, EchoFileName, InputFileData, ErrSta
          call SetErrStat( ErrID_Fatal, 'Error reading DLL_curve line '//trim(Num2LStr(i))//' from '//InputFileName//'.', ErrStat, ErrMsg, RoutineName)
          return
       endif
-      READ( Line, *, IOSTAT=IOS) InputFileData%DLL_locations(1:3,i), InputFileData%DLL_PropsFile(i), InputFileData%DLL_LDispFile(i)
+      READ( Line, *, IOSTAT=IOS) InputFileData%DLL_locations(1:3,i), InputFileData%DLL_PropsFile(i), InputFileData%DLL_LDispFile(i), InputFileData%DLL_FileName(i)
       CALL CheckIOS ( IOS, InputFileName, 'DLL info', NumType, TmpErrStat, TmpErrMsg ); if (Failed()) return;        ! NOTE: unclear if the message returned will match what was misread.
 
          ! Check for relative paths in the file names
+      if ( PathIsRelative( InputFileData%DLL_FileName(i)  ) ) InputFileData%DLL_FileName(i)  = TRIM(PriPath)//TRIM(InputFileData%DLL_FileName(i))
       if ( PathIsRelative( InputFileData%DLL_PropsFile(i) ) ) InputFileData%DLL_PropsFile(i) = TRIM(PriPath)//TRIM(InputFileData%DLL_PropsFile(i))
       if ( PathIsRelative( InputFileData%DLL_LDispFile(i) ) ) InputFileData%DLL_LDispFile(i) = TRIM(PriPath)//TRIM(InputFileData%DLL_LDispFile(i))
 
          ! Add stuff to echo file if it is used
       if ( InputFileData%EchoFlag ) then
          write(UnitEcho,*) '              Location ('//trim(Num2LStr(i))//')'
-         write(UnitEcho,*) InputFileData%DLL_locations(1:3,i), trim(InputFileData%DLL_PropsFile(i)), '               ',trim(InputFileData%DLL_LDispFile(i))
+         write(UnitEcho,*) InputFileData%DLL_locations(1:3,i), trim(InputFileData%DLL_PropsFile(i)), '               ',trim(InputFileData%DLL_LDispFile(i)), '               ',trim(InputFileData%DLL_FileName(i))
       endif
    enddo
+
+   InputFileData%DLL_ProcName = 'INTERFACEFOUNDATION'       ! This is hard coded for now
 
    !---------------------- OUTPUT --------------------------------------------------
    CALL ReadCom( UnitInput, InputFileName, 'Section Header: Output', TmpErrStat, TmpErrMsg, UnitEcho );   if (Failed()) return;
