@@ -271,7 +271,7 @@ PROGRAM SoilDyn_Driver
             if ( ErrStat >= AbortErrLev ) call ProgEnd()
          END IF
 
-         call WrScr('Stiffness matrix for point '//trim(Num2LStr(i))//' at T=0:')
+         call WrScr('Stiffness matrix for point '//trim(Num2LStr(i))//' at T = 0')
          call WrMatrix( StiffMatrix, CU, '(ES12.4)', 'StiffMatrix' )
       enddo
    endif
@@ -305,10 +305,30 @@ PROGRAM SoilDyn_Driver
       CALL SoilDyn_CalcOutput( Time, u(1), p, x, xd, z, OtherState, y, misc, ErrStat, ErrMsg );
       call CheckErr('After CalcOutput: ');
 
+         ! There are no states to update in SoilDyn, but for completeness we add this.
          ! Get state variables at next step: INPUT at step n, OUTPUT at step n + 1
       CALL SoilDyn_UpdateStates( Time, n, u, InputTime, p, x, xd, z, OtherState, misc, ErrStat, ErrMsg );
       call CheckErr('');
    END DO
+
+
+
+      ! If requested, get the stiffness matrix using whatever the last value of displacement was
+   if ( SettingsFlags%StiffMatOut .and. p%CalcOption==Calc_REDWIN ) then
+      do i=1,size(misc%dll_data)
+            ! Copy displacement from point mesh
+         Displacement(1:3) = u(1)%SoilMotion%TranslationDisp(1:3,i)                    ! Translations -- This is R8Ki in the mesh
+         Displacement(4:6) = EulerExtract(u(1)%SoilMotion%Orientation(1:3,1:3,i))      ! Small angle assumption should be valid here -- Note we are assuming reforientation is 0
+         call REDWINinterface_GetStiffMatrix( p%DLL_Trgt, p%DLL_Model, Displacement, Force, StiffMatrix, misc%dll_data(i), ErrStat, ErrMsg )
+         IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
+            CALL WrScr( 'Get stiffness: '//ErrMsg )
+            if ( ErrStat >= AbortErrLev ) call ProgEnd()
+         END IF
+
+         call WrScr('Stiffness matrix for point '//trim(Num2LStr(i))//' at T = '//trim(Num2LStr(TMax)))
+         call WrMatrix( StiffMatrix, CU, '(ES12.4)', 'StiffMatrix' )
+      enddo
+   endif
 
 
    !...............................................................................................................................

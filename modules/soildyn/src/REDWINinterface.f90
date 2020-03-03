@@ -552,6 +552,8 @@ CONTAINS
 end subroutine CheckREDWINerrors
 
 
+
+!FIXME: check if we input Radians or Degrees in the angular displacements
 !> coordinate transform to REDWIN coordinates
 !!    -> signs flip on y,z
 !!        | 1  0  0 |
@@ -563,9 +565,9 @@ function ToREDWINcoordsR4toR8(InArray) result(REDWIN)
    REDWIN(1) =  real( InArray(1), R8Ki )
    REDWIN(2) = -real( InArray(2), R8Ki )
    REDWIN(3) = -real( InArray(3), R8Ki )
-   REDWIN(4) =  real( InArray(4), R8Ki )
-   REDWIN(5) = -real( InArray(5), R8Ki )
-   REDWIN(6) = -real( InArray(6), R8Ki )
+   REDWIN(4) =  real( InArray(4), R8Ki ) * real(R2D_D, R8Ki)
+   REDWIN(5) = -real( InArray(5), R8Ki ) * real(R2D_D, R8Ki)
+   REDWIN(6) = -real( InArray(6), R8Ki ) * real(R2D_D, R8Ki)
 end function ToREDWINcoordsR4toR8
 
 !> \copydoc redwininterface::ToREDWINcoordsR4toR8
@@ -575,9 +577,9 @@ function ToREDWINcoordsR8toR8(InArray) result(REDWIN)
    REDWIN(1) =  InArray(1)
    REDWIN(2) = -InArray(2)
    REDWIN(3) = -InArray(3)
-   REDWIN(4) =  InArray(4)
-   REDWIN(5) = -InArray(5)
-   REDWIN(6) = -InArray(6)
+   REDWIN(4) =  InArray(4) * real(R2D_D, R8Ki)
+   REDWIN(5) = -InArray(5) * real(R2D_D, R8Ki)
+   REDWIN(6) = -InArray(6) * real(R2D_D, R8Ki)
 end function ToREDWINcoordsR8toR8
 
 !> \copydoc redwininterface::ToREDWINcoordsR4toR8
@@ -587,9 +589,9 @@ function ToREDWINcoordsR4toR8Mat(InArray) result(REDWIN)
    REDWIN(:,1)  =  real( InArray(:,1), R8Ki )
    REDWIN(:,2)  = -real( InArray(:,2), R8Ki )
    REDWIN(:,3)  = -real( InArray(:,3), R8Ki )
-   REDWIN(:,4)  =  real( InArray(:,4), R8Ki )
-   REDWIN(:,5)  = -real( InArray(:,5), R8Ki )
-   REDWIN(:,6)  = -real( InArray(:,6), R8Ki )
+   REDWIN(:,4)  =  real( InArray(:,4), R8Ki ) * real(R2D_D, R8Ki)
+   REDWIN(:,5)  = -real( InArray(:,5), R8Ki ) * real(R2D_D, R8Ki)
+   REDWIN(:,6)  = -real( InArray(:,6), R8Ki ) * real(R2D_D, R8Ki)
 end function ToREDWINcoordsR4toR8Mat
 
 !> \copydoc redwininterface::ToREDWINcoordsR4toR8
@@ -599,9 +601,9 @@ function ToREDWINcoordsR8toR8Mat(InArray) result(REDWIN)
    REDWIN(:,1)  =  InArray(:,1)
    REDWIN(:,2)  = -InArray(:,2)
    REDWIN(:,3)  = -InArray(:,3)
-   REDWIN(:,4)  =  InArray(:,4)
-   REDWIN(:,5)  = -InArray(:,5)
-   REDWIN(:,6)  = -InArray(:,6)
+   REDWIN(:,4)  =  InArray(:,4) * real(R2D_D, R8Ki)
+   REDWIN(:,5)  = -InArray(:,5) * real(R2D_D, R8Ki)
+   REDWIN(:,6)  = -InArray(:,6) * real(R2D_D, R8Ki)
 end function ToREDWINcoordsR8toR8Mat
 
 
@@ -617,9 +619,9 @@ function FromREDWINcoordsR8toR8(InArray) result(FAST)
    FAST(1) =  InArray(1)
    FAST(2) = -InArray(2)
    FAST(3) = -InArray(3)
-   FAST(4) =  InArray(4)
-   FAST(5) = -InArray(5)
-   FAST(6) = -InArray(6)
+   FAST(4) =  InArray(4) * real(D2R_D, R8Ki)
+   FAST(5) = -InArray(5) * real(D2R_D, R8Ki)
+   FAST(6) = -InArray(6) * real(D2R_D, R8Ki)
 end function FromREDWINcoordsR8toR8
 
 !> \copydoc redwininterface::FromREDWINcoordsR8toR8
@@ -629,9 +631,9 @@ function FromREDWINcoordsR8toR8Mat(InArray) result(FAST)
    FAST(:,1) =  InArray(:,1)
    FAST(:,2) = -InArray(:,2)
    FAST(:,3) = -InArray(:,3)
-   FAST(:,4) =  InArray(:,4)
-   FAST(:,5) = -InArray(:,5)
-   FAST(:,6) = -InArray(:,6)
+   FAST(:,4) =  InArray(:,4) * real(D2R_D, R8Ki)
+   FAST(:,5) = -InArray(:,5) * real(D2R_D, R8Ki)
+   FAST(:,6) = -InArray(:,6) * real(D2R_D, R8Ki)
 end function FromREDWINcoordsR8toR8Mat
 
 
