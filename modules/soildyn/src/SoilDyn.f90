@@ -479,7 +479,7 @@ subroutine SoilDyn_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
       ! Initialize the dll
    do i=1,size(m%dll_data)
 
-      ! Copy displacement from point mesh (angles in radians -- converted in REDWIN interface)
+      ! Copy displacement from point mesh (angles in radians -- REDWIN dll also uses rad)
       Displacement(1:3) = u%SoilMotion%TranslationDisp(1:3,i)                 ! Translations -- This is R8Ki in the mesh
       Displacement(4:6) = EulerExtract(u%SoilMotion%Orientation(1:3,1:3,i))   ! Small angle assumption should be valid here -- Note we are assuming reforientation is 0
       call    REDWINinterface_CalcOutput( p%DLL_Trgt, p%DLL_Model, Displacement, Force, m%dll_data(i), ErrStat2, ErrMsg2 ); if (Failed()) return;
