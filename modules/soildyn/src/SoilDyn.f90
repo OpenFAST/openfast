@@ -162,7 +162,7 @@ NumOuts = 2
 !FIXME: wrap logic around this for option 3 only.
       ! Initialize the dll
    do j=1,size(m%dll_data)
-      call REDWINinterface_Init( InputFileData%DLL_FileName(j), InputFileData%DLL_ProcName, p%DLL_Trgt, p%DLL_Model, &
+      call REDWINinterface_Init( InputFileData%DLL_FileName, InputFileData%DLL_ProcName, p%DLL_Trgt, p%DLL_Model, &
             m%dll_data(j), p%UseREDWINinterface, ErrStat2, ErrMsg2); if (Failed()) return;
    enddo
 
@@ -188,7 +188,6 @@ contains
       integer(IntKi)                         :: ErrStat2       !< local error status
       character(ErrMsgLen)                   :: ErrMsg2        !< local error message
       logical                                :: FileExist
-!      character(1024)                        :: PriPath        !< Path name of the primary file
       character(1024)                        :: PropsLoc       !< Full path to PropsFile location
       character(1024)                        :: LDispLoc       !< Full path to LDispFile location
 
@@ -204,9 +203,6 @@ contains
 
       ! Set the input file names and check they are not too long.  Existance checks done in the interface routine.
       do i=1,InputFileData%DLL_NumPoints
-!         ! Get path to DLL (this is already set as absolute path)
-!         call GetPath( InputFileData%DLL_FileName(i), PriPath)
-
          m%dll_data(i)%PROPSfile = trim(InputFileData%DLL_PropsFile(i))
          if ( len(m%dll_data(i)%PROPSfile) < len_trim(InputFileData%DLL_PropsFile(i)) ) then
             call SetErrStat(ErrID_Fatal, 'PropsFile #'//trim(Num2LStr(i))//' name is longer than '//trim(Num2LStr(len(m%dll_data(i)%PROPSfile)))// &

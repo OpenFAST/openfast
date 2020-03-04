@@ -46,7 +46,7 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(1:100,1:200)  :: Props      !< Array containing foundation model properties (used internally by the REDWIN models). Specific to each model. [-]
     REAL(R8Ki) , DIMENSION(1:12,1:100)  :: StVar      !< Array containing the state variables at the end of the step (used internally by the REDWIN models). Specific to each model. [-]
     INTEGER(IntKi) , DIMENSION(1:12,1:100)  :: StVarPrint      !< Array indicating which state variables should be printed to the screen. This feature is currently not supported. [-]
-    REAL(R8Ki) , DIMENSION(1:6)  :: Disp      !< Displacements.  Follows convention of REDWIN orientation. [-]
+    REAL(R8Ki) , DIMENSION(1:6)  :: Disp      !< Displacements.  Follows convention of REDWIN orientation. ['(m,]
     REAL(R8Ki) , DIMENSION(1:6)  :: Force      !< Forces.  Follows convention of REDWIN orientations. ['(N)']
     REAL(R8Ki) , DIMENSION(1:6,1:6)  :: D      !< The 6 x 6 elastic macro-element stiffness matrix at the SFI. [-]
     LOGICAL  :: SuppressWarn = .FALSE.      !< Supress further warnings. [-]
@@ -65,7 +65,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PY_locations      !< P-Y curve location points for mesh ['(m)']
     character(1024) , DIMENSION(:), ALLOCATABLE  :: PY_inputFile      !< Input file with P-Y curve data [-]
     INTEGER(IntKi)  :: DLL_model      !< REDWIN DLL model type to use [-]
-    CHARACTER(1024) , DIMENSION(:), ALLOCATABLE  :: DLL_FileName      !< Name of the DLL file including the full path [-]
+    CHARACTER(1024)  :: DLL_FileName      !< Name of the DLL file including the full path [-]
     CHARACTER(1024)  :: DLL_ProcName      !< Name of the procedure in the DLL that will be called [-]
     INTEGER(IntKi)  :: DLL_numpoints      !< Number of points to interface to DLL [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: DLL_locations      !< DLL location points for mesh ['(m)']
@@ -486,18 +486,7 @@ IF (ALLOCATED(SrcInputFileData%PY_inputFile)) THEN
     DstInputFileData%PY_inputFile = SrcInputFileData%PY_inputFile
 ENDIF
     DstInputFileData%DLL_model = SrcInputFileData%DLL_model
-IF (ALLOCATED(SrcInputFileData%DLL_FileName)) THEN
-  i1_l = LBOUND(SrcInputFileData%DLL_FileName,1)
-  i1_u = UBOUND(SrcInputFileData%DLL_FileName,1)
-  IF (.NOT. ALLOCATED(DstInputFileData%DLL_FileName)) THEN 
-    ALLOCATE(DstInputFileData%DLL_FileName(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%DLL_FileName.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
     DstInputFileData%DLL_FileName = SrcInputFileData%DLL_FileName
-ENDIF
     DstInputFileData%DLL_ProcName = SrcInputFileData%DLL_ProcName
     DstInputFileData%DLL_numpoints = SrcInputFileData%DLL_numpoints
 IF (ALLOCATED(SrcInputFileData%DLL_locations)) THEN
@@ -559,9 +548,6 @@ IF (ALLOCATED(InputFileData%PY_locations)) THEN
 ENDIF
 IF (ALLOCATED(InputFileData%PY_inputFile)) THEN
   DEALLOCATE(InputFileData%PY_inputFile)
-ENDIF
-IF (ALLOCATED(InputFileData%DLL_FileName)) THEN
-  DEALLOCATE(InputFileData%DLL_FileName)
 ENDIF
 IF (ALLOCATED(InputFileData%DLL_locations)) THEN
   DEALLOCATE(InputFileData%DLL_locations)
@@ -631,11 +617,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + SIZE(InData%PY_inputFile)*LEN(InData%PY_inputFile)  ! PY_inputFile
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! DLL_model
-  Int_BufSz   = Int_BufSz   + 1     ! DLL_FileName allocated yes/no
-  IF ( ALLOCATED(InData%DLL_FileName) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! DLL_FileName upper/lower bounds for each dimension
-      Int_BufSz  = Int_BufSz  + SIZE(InData%DLL_FileName)*LEN(InData%DLL_FileName)  ! DLL_FileName
-  END IF
+      Int_BufSz  = Int_BufSz  + 1*LEN(InData%DLL_FileName)  ! DLL_FileName
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%DLL_ProcName)  ! DLL_ProcName
       Int_BufSz  = Int_BufSz  + 1  ! DLL_numpoints
   Int_BufSz   = Int_BufSz   + 1     ! DLL_locations allocated yes/no
@@ -746,23 +728,10 @@ ENDIF
   END IF
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%DLL_model
       Int_Xferred   = Int_Xferred   + 1
-  IF ( .NOT. ALLOCATED(InData%DLL_FileName) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%DLL_FileName,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%DLL_FileName,1)
-    Int_Xferred = Int_Xferred + 2
-
-    DO i1 = LBOUND(InData%DLL_FileName,1), UBOUND(InData%DLL_FileName,1)
         DO I = 1, LEN(InData%DLL_FileName)
-          IntKiBuf(Int_Xferred) = ICHAR(InData%DLL_FileName(i1)(I:I), IntKi)
+          IntKiBuf(Int_Xferred) = ICHAR(InData%DLL_FileName(I:I), IntKi)
           Int_Xferred = Int_Xferred   + 1
         END DO ! I
-    END DO !i1
-  END IF
         DO I = 1, LEN(InData%DLL_ProcName)
           IntKiBuf(Int_Xferred) = ICHAR(InData%DLL_ProcName(I:I), IntKi)
           Int_Xferred = Int_Xferred   + 1
@@ -975,33 +944,10 @@ ENDIF
   END IF
       OutData%DLL_model = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! DLL_FileName not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%DLL_FileName)) DEALLOCATE(OutData%DLL_FileName)
-    ALLOCATE(OutData%DLL_FileName(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%DLL_FileName.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask1 = .TRUE. 
-    DO i1 = LBOUND(OutData%DLL_FileName,1), UBOUND(OutData%DLL_FileName,1)
-        DO I = 1, LEN(OutData%DLL_FileName)
-          OutData%DLL_FileName(i1)(I:I) = CHAR(IntKiBuf(Int_Xferred))
-          Int_Xferred = Int_Xferred   + 1
-        END DO ! I
-    END DO !i1
-    DEALLOCATE(mask1)
-  END IF
+      DO I = 1, LEN(OutData%DLL_FileName)
+        OutData%DLL_FileName(I:I) = CHAR(IntKiBuf(Int_Xferred))
+        Int_Xferred = Int_Xferred   + 1
+      END DO ! I
       DO I = 1, LEN(OutData%DLL_ProcName)
         OutData%DLL_ProcName(I:I) = CHAR(IntKiBuf(Int_Xferred))
         Int_Xferred = Int_Xferred   + 1

@@ -158,7 +158,7 @@ subroutine REDWINinterface_Init( DLL_FileName, DLL_ProcName, DLL_Trgt, DLL_Model
    character(ErrMsgLen)                            :: ErrMsg2              ! The error message, if an error occurred
    character(*), parameter                         :: RoutineName = 'REDWINinterface_Init'
    logical                                         :: FileExist
-   character(1024)                                 :: PriPath              !< Path name of the primary file
+   character(1024)                                 :: CwdPath              !< Path of current working directory
    character(1024)                                 :: PropsLoc             !< Full path to PropsFile location
    character(1024)                                 :: LDispLoc             !< Full path to LDispFile location
 
@@ -169,7 +169,14 @@ subroutine REDWINinterface_Init( DLL_FileName, DLL_ProcName, DLL_Trgt, DLL_Model
 
    CALL DispNVD( REDWINinterface_Ver )  ! Display the version of this interface
 
-   call GetPath( DLL_FileName, PriPath )
+      ! Get current working directory for checking DLL input files.
+   call getcwd( CwdPath, ErrStat2 )
+      if (ErrStat2 /= 0) then
+         call SetErrStat( ErrID_Fatal,' Cannot get current working directory to check DLL input files.',ErrStat,ErrMsg,RoutineName )
+         return
+      endif
+   CwdPath=trim(CwdPath)//PathSep
+
    call CheckPaths()
    if (ErrStat >= AbortErrLev) return
 
@@ -206,21 +213,21 @@ CONTAINS
       ! Check existance of DLL input files.  The DLL does not check this, and will
       ! catastrophically fail if they are not found.
       if ( PathIsRelative( dll_data%PROPSfile ) ) then
-         PropsLoc = trim(PriPath)//trim(dll_data%PROPSfile)
+         PropsLoc = trim(CwdPath)//trim(dll_data%PROPSfile(3:len_trim(dll_data%PROPSfile)))   ! remove the leading ./
       else
          PropsLoc = trim(dll_data%PROPSfile)
       endif
       if ( PathIsRelative( dll_data%LDISPfile ) ) then
-         LDispLoc = trim(PriPath)//trim(dll_data%LDISPfile)
+         LDispLoc = trim(CwdPath)//trim(dll_data%LDISPfile(3:len_trim(dll_data%LDISPfile)))   ! remove the leading ./
       else
          LDispLoc = trim(dll_data%LDISPfile)
       endif
       inquire( file=trim(PropsLoc), exist=FileExist )
       if ( .not. FileExist ) call SetErrStat(ErrID_Fatal, 'PropsFile '//trim(dll_data%PROPSfile)// &
-            ' not found (path must be relative to DLL location, or absolute)', ErrStat, ErrMsg, RoutineName)
+            ' not found (path must be relative to the working directory, or absolute)', ErrStat, ErrMsg, RoutineName)
       inquire( file=trim(LDispLoc), exist=FileExist )
       if ( .not. FileExist ) call SetErrStat(ErrID_Fatal, 'LDispFile '//trim(dll_data%LDISPFile)// &
-            ' not found (path must be relative to DLL location, or absolute)', ErrStat, ErrMsg, RoutineName)
+            ' not found (path must be relative to the working direcotry, or absolute)', ErrStat, ErrMsg, RoutineName)
       if ( ErrStat >= AbortErrLev )    UseREDWINinterface = .FALSE.
    end subroutine CheckPaths
 
