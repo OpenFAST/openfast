@@ -170,7 +170,7 @@ subroutine REDWINinterface_Init( DLL_FileName, DLL_ProcName, DLL_Trgt, DLL_Model
    CALL DispNVD( REDWINinterface_Ver )  ! Display the version of this interface
 
       ! Get current working directory for checking DLL input files.
-   call getcwd( CwdPath, ErrStat2 )
+   call Get_CWD( CwdPath, ErrStat2 )
       if (ErrStat2 /= 0) then
          call SetErrStat( ErrID_Fatal,' Cannot get current working directory to check DLL input files.',ErrStat,ErrMsg,RoutineName )
          return
