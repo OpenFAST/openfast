@@ -2658,7 +2658,7 @@ contains
    SUBROUTINE CleanUp()
       if(allocated(Omega)) deallocate(Omega)
       if(allocated(Modes)) deallocate(Modes)
-      CALL SDOut_CloseSum( UnSum, ErrStat, ErrMsg )  
+      CALL SDOut_CloseSum( UnSum, ErrStat2, ErrMsg2 )  
    END SUBROUTINE CleanUp
 END SUBROUTINE OutSummary
 
