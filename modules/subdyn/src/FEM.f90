@@ -27,12 +27,13 @@ MODULE FEM
 CONTAINS
 !------------------------------------------------------------------------------------------------------
 !> Return eigenvalues, Omega, and eigenvectors
-SUBROUTINE EigenSolve(K, M, N, EigVect, Omega2, ErrStat, ErrMsg )
+SUBROUTINE EigenSolve(K, M, N, bCheckSingularity, EigVect, Omega2, ErrStat, ErrMsg )
    USE NWTC_LAPACK, only: LAPACK_ggev
    USE NWTC_ScaLAPACK, only : ScaLAPACK_LASRT
    INTEGER       ,          INTENT(IN   )    :: N             !< Number of degrees of freedom, size of M and K
    REAL(LaKi),              INTENT(INOUT)    :: K(N, N)       !< Stiffness matrix 
    REAL(LaKi),              INTENT(INOUT)    :: M(N, N)       !< Mass matrix 
+   LOGICAL,                 INTENT(IN   )    :: bCheckSingularity !< If True, check for singularities
    REAL(LaKi),              INTENT(INOUT)    :: EigVect(N, N) !< Returned Eigenvectors
    REAL(LaKi),              INTENT(INOUT)    :: Omega2(N)      !< Returned Eigenvalues
    INTEGER(IntKi),          INTENT(  OUT)    :: ErrStat       !< Error status of the operation
@@ -74,23 +75,29 @@ SUBROUTINE EigenSolve(K, M, N, EigVect, Omega2, ErrStat, ErrMsg )
       KEY(I)=I
       IF ( AlphaR(I)<0.0_LAKi ) THEN
          !print*,'I', I, AlphaR(I), AlphaI(I), Beta(I), real(AlphaR(I)/Beta(I))
-         ErrStat2=ErrID_Fatal
-         ErrMsg2= 'Negative eigenvalue found, system may be singular (may contain rigid body modes)'
-         if(Failed()) return
+         if (bCheckSingularity) then
+            ErrStat2=ErrID_Fatal
+            ErrMsg2= 'Negative eigenvalue found, system may be singular (may contain rigid body modes)'
+            if(Failed()) return
+         endif
       !ELSE IF ( .not.EqualRealNos(AlphaI(I),0.0_LAKi )) THEN
       !   print*,'I', I, AlphaR(I), AlphaI(I), Beta(I), real(AlphaR(I)/Beta(I))
       !   ErrStat2=ErrID_Fatal
       !   ErrMsg2= 'Complex eigenvalue found, system may be singular (may contain rigid body modes)'
       !   if(Failed()) return
       ELSE IF ( EqualRealNos(Beta(I),0.0_LAKi) ) THEN
-!          Omega2(I) = HUGE(Omega2)  ! bjj: should this be an error?
-         ErrStat2=ErrID_Fatal
-         ErrMsg2= 'Large eigenvalue found, system may be singular (may contain rigid body modes)'
-         if(Failed()) return
+         Omega2(I) = HUGE(Omega2)  ! bjj: should this be an error?
+         if (bCheckSingularity) then
+            ErrStat2=ErrID_Fatal
+            ErrMsg2= 'Large eigenvalue found, system may be singular (may contain rigid body modes)'
+            if(Failed()) return
+         endif
       ELSE IF ( EqualRealNos(ALPHAR(I),0.0_LAKi) ) THEN
-         ErrStat2=ErrID_Fatal
-         ErrMsg2= 'Eigenvalue zero found, system is singular (may contain rigid body modes)'
-         if(Failed()) return
+         if (bCheckSingularity) then
+            ErrStat2=ErrID_Fatal
+            ErrMsg2= 'Eigenvalue zero found, system is singular (may contain rigid body modes)'
+            if(Failed()) return
+         endif
       ELSE
          Omega2(I) = REAL( ALPHAR(I)/BETA(I), ReKi )
       END IF           

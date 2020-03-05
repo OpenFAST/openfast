@@ -1671,7 +1671,7 @@ SUBROUTINE CBMatrix( MRR, MLL, MRL, KRR, KLL, KRL, nDOFM, Init, &
    ! Set OmegaL and PhiL from Eq. 2
    !....................................................
    IF ( DOFvar > 0 ) THEN ! Only time this wouldn't happen is if no modes retained and no static improvement...
-      CALL EigenSolveWrap(KLL, MLL, p%nDOFL, DOFvar, .False.,Init,p, PhiL(:,1:DOFvar), OmegaL(1:DOFvar),  ErrStat2, ErrMsg2); if(Failed()) return
+      CALL EigenSolveWrap(KLL, MLL, p%nDOFL, DOFvar, .False.,Init,p, .True., PhiL(:,1:DOFvar), OmegaL(1:DOFvar),  ErrStat2, ErrMsg2); if(Failed()) return
 
       ! --- Normalize PhiL
       ! bjj: break up this equation to avoid as many tenporary variables on the stack
@@ -1827,17 +1827,18 @@ END SUBROUTINE TrnsfTI
 !> Wrapper function for eigen value analyses, for two cases:
 !! Case1: K and M are taken "as is" (bRemoveConstraints=false), This is used for the "LL" part of the matrix
 !! Case2: K and M constain some constraints lines, and they need to be removed from the Mass/Stiffness matrix. Used for full system
-SUBROUTINE EigenSolveWrap(K, M, nDOF, NOmega, bRemoveConstraints, Init, p, Phi, Omega, ErrStat, ErrMsg )
+SUBROUTINE EigenSolveWrap(K, M, nDOF, NOmega, bRemoveConstraints, Init, p, bCheckSingularity, Phi, Omega, ErrStat, ErrMsg )
    USE NWTC_ScaLAPACK, only: ScaLAPACK_LASRT
    INTEGER,                INTENT(IN   )    :: nDOF                               ! Total degrees of freedom of the incoming system
    REAL(ReKi),             INTENT(IN   )    :: K(nDOF, nDOF)                      ! stiffness matrix 
    REAL(ReKi),             INTENT(IN   )    :: M(nDOF, nDOF)                      ! mass matrix 
-   INTEGER,                INTENT(IN   )    :: NOmega                             ! RRD: no. of requested eigenvalues
+   INTEGER,                INTENT(IN   )    :: NOmega                             ! No. of requested eigenvalues
    LOGICAL,                INTENT(IN   )    :: bRemoveConstraints                 ! Whether or not to reduce matrices, this will be removed altogether later, when reduction will be done apriori
    TYPE(SD_InitType),      INTENT(IN   )    :: Init  
    TYPE(SD_ParameterType), INTENT(IN   )    :: p  
-   REAL(ReKi),             INTENT(  OUT)    :: Phi(nDOF, NOmega)                  ! RRD: Returned Eigenvectors
-   REAL(ReKi),             INTENT(  OUT)    :: Omega(NOmega)                      ! RRD: Returned Eigenvalues
+   LOGICAL,                INTENT(IN   )    :: bCheckSingularity                  ! If True, the solver will fail if rigid modes are present 
+   REAL(ReKi),             INTENT(  OUT)    :: Phi(nDOF, NOmega)                  ! Returned Eigenvectors
+   REAL(ReKi),             INTENT(  OUT)    :: Omega(NOmega)                      ! Returned Eigenvalues
    INTEGER(IntKi),         INTENT(  OUT)    :: ErrStat                            ! Error status of the operation
    CHARACTER(*),           INTENT(  OUT)    :: ErrMsg                             ! Error message if ErrStat /= ErrID_None
    ! LOCALS         
@@ -1877,7 +1878,7 @@ SUBROUTINE EigenSolveWrap(K, M, nDOF, NOmega, bRemoveConstraints, Init, p, Phi, 
    ! --- Eigenvalue analysis
    CALL AllocAry( Omega2_LaKi, N,     'Omega',    ErrStat2, ErrMsg2 ); if (Failed()) return;
    CALL AllocAry( EigVect    , N,  N, 'EigVect',  ErrStat2, ErrMsg2 ); if (Failed()) return;
-   CALL EigenSolve(Kred, Mred, N, EigVect, Omega2_LaKi, ErrStat2, ErrMsg2 ); if (Failed()) return;
+   CALL EigenSolve(Kred, Mred, N, bCheckSingularity, EigVect, Omega2_LaKi, ErrStat2, ErrMsg2 ); if (Failed()) return;
 
    ! --- Setting up Phi, and type conversion
    Omega=sqrt(Omega2_LaKi(1:NOmega) )
@@ -2401,12 +2402,13 @@ SUBROUTINE OutSummary(Init, p, InitInput, CBparams, ErrStat,ErrMsg)
    ! --- Eigen values of full system (for summary file output only)
    ! True below is to remove the constraints
    ! We call the EigenSolver here only so that we get a print-out the eigenvalues from the full system (minus Reaction DOF)
+   ! NOTE: we don't check for singularities/rigig body modes here
    CALL WrScr('   Calculating Full System Modes (for summary file output)')
 
    nOmega = p%nDOF_red - p%nNodes_C*6 !removed an extra "-6"  !Note if fixity changes at the reaction points, this will need to change
    CALL AllocAry(Omega,             nOmega, 'Omega', ErrStat2, ErrMsg2 ); if(Failed()) return
    CALL AllocAry(Modes, p%nDOF_red, nOmega, 'Modes', ErrStat2, ErrMsg2 ); if(Failed()) return
-   CALL EigenSolveWrap( Init%K, Init%M, p%nDOF_red, nOmega, .True., Init, p, Modes, Omega, ErrStat2, ErrMsg2 ); if(Failed()) return
+   CALL EigenSolveWrap( Init%K, Init%M, p%nDOF_red, nOmega, .True., Init, p, .False., Modes, Omega, ErrStat2, ErrMsg2 ); if(Failed()) return
 
    !-------------------------------------------------------------------------------------------------------------
    ! open txt file
