@@ -969,8 +969,10 @@ subroutine AFI_ComputeAirfoilCoefs1D( AOA, p, AFI_interp, errStat, errMsg, Table
       ! needed if using UnsteadyAero:
    if (p%Table(iTab)%InclUAdata) then
       AFI_interp%Cd0 = p%Table(iTab)%UA_BL%Cd0
+      AFI_interp%Cm0 = p%Table(iTab)%UA_BL%Cm0
    else
       AFI_interp%Cd0 = 0.0_ReKi
+      AFI_interp%Cm0 = 0.0_ReKi
    end if
    
 end subroutine AFI_ComputeAirfoilCoefs1D
