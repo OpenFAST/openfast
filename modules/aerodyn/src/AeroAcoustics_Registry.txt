@@ -173,7 +173,7 @@ typedef     ^                   ParameterType        ReKi                rotorre
 typedef     ^                   ParameterType        ReKi                rotorregionlimitsrad      {:}     -     -     ""     
 typedef     ^                   ParameterType        IntKi               NrObsLoc                -      -     -     "Number of observer locations "     -
 typedef     ^                   ParameterType        Logical             aweightflag             -      -     -     " "     -
-typedef		^					ParameterType		 Logical			 TxtFileOutput			-		-		-	" "		-
+typedef     ^                   ParameterType        Logical             TxtFileOutput           -      -     -     " "     -
 typedef     ^                   ParameterType        IntKi               Comp_AA_After             -      -     -     " "     -
 typedef     ^                   ParameterType        ReKi                ObsX                   {:}     -     -     "Observer location in tower-base coordinate X horizontal"     m
 typedef     ^                   ParameterType        ReKi                ObsY                   {:}     -     -     "Observer location in tower-base coordinate Y lateral"          m
@@ -242,7 +242,7 @@ typedef     ^                   OutputType           ReKi                OASPL  
 typedef     ^                   OutputType           ReKi                OASPL_Mech     {:}{:}{:}{:}     -     -     "5 different mechanism noise level for each blade and blade nodes and receiver "     SPL
 typedef     ^                   OutputType           ReKi                DirectiviOutput     {:}     -     -     " "     SPL
 typedef     ^                   OutputType           ReKi                OutLECoords     {:}{:}{:}{:}     -     -     " "     m
-typedef		^					OutputType			 ReKi				 PtotalFreq		{:}{:}	-		-		"SPL for each observer and frequency"
+typedef     ^                   OutputType           ReKi                PtotalFreq      {:}{:}   -      -      "SPL for each observer and frequency"
 
 # Define outputs that are not on this mesh here:
 typedef     ^                   OutputType           ReKi                WriteOutputForPE       {:}        -     -     "Data to be written to an output file: see WriteOutputHdr for names of each variable"     "see WriteOutputUnt"
