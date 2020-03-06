@@ -3174,18 +3174,21 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
    CHARACTER(ChanLen)           :: OutListTmp                                      ! A string to temporarily hold OutList(I)
    CHARACTER(*), PARAMETER      :: RoutineName = "SetOutParam"
 
-   CHARACTER(OutStrLenM1), PARAMETER  :: ValidParamAry(19) =  (/ &                  ! This lists the names of the allowed parameters, which must be sorted alphabetically
-                               "BLAIRFLC1","BLAIRFLC2","BLAIRFLC3","BLPITCHC1","BLPITCHC2","BLPITCHC3","GENPWR   ", &
-                               "GENTQ    ","HSSBRTQC ","NTMD_XQ  ","NTMD_XQD ","NTMD_YQ  ","NTMD_YQD ","TTMD_XQ  ", &
-                               "TTMD_XQD ","TTMD_YQ  ","TTMD_YQD ","YAWMOM   ","YAWMOMCOM"/)
-   INTEGER(IntKi), PARAMETER :: ParamIndxAry(19) =  (/ &                            ! This lists the index into AllOuts(:) of the allowed parameters ValidParamAry(:)
-                                BlAirFlC1 , BlAirFlC2 , BlAirFlC3 , BlPitchC1 , BlPitchC2 , BlPitchC3 ,    GenPwr , &
-                                GenTq ,  HSSBrTqC ,   NTMD_XQ , NTMD_XQD ,   NTMD_YQ ,  NTMD_YQD ,   TTMD_XQ , &
-                                TTMD_XQD ,   TTMD_YQ ,  TTMD_YQD , YawMomCom , YawMomCom/)
-   CHARACTER(ChanLen), PARAMETER :: ParamUnitsAry(19) =  (/ &                     ! This lists the units corresponding to the allowed parameters
-                               "(-)       ","(-)       ","(-)       ","(deg)     ","(deg)     ","(deg)     ","(kW)      ", &
-                               "(kN-m)    ","(kN-m)    ","(m)       ","(m/s)     ","(m)       ","(m/s)     ","(m)       ", &
-                               "(m/s)     ","(m)       ","(m/s)     ","(kN-m)    ","(kN-m)    "/)
+   CHARACTER(OutStrLenM1), PARAMETER  :: ValidParamAry(22) =  (/ &                  ! This lists the names of the allowed parameters, which must be sorted alphabetically
+                               "BLAIRFLC1","BLAIRFLC2","BLAIRFLC3","BLFLAP1  ","BLFLAP2  ","BLFLAP3  ","BLPITCHC1", &
+                               "BLPITCHC2","BLPITCHC3","GENPWR   ","GENTQ    ","HSSBRTQC ","NTMD_XQ  ","NTMD_XQD ", &
+                               "NTMD_YQ  ","NTMD_YQD ","TTMD_XQ  ","TTMD_XQD ","TTMD_YQ  ","TTMD_YQD ","YAWMOM   ", &
+                               "YAWMOMCOM"/)
+   INTEGER(IntKi), PARAMETER :: ParamIndxAry(22) =  (/ &                            ! This lists the index into AllOuts(:) of the allowed parameters ValidParamAry(:)
+                                BlAirFlC1 , BlAirFlC2 , BlAirFlC3 , BlAirFlC1 , BlAirFlC2 , BlAirFlC3 , BlPitchC1 , &
+                                BlPitchC2 , BlPitchC3 ,    GenPwr ,     GenTq ,  HSSBrTqC ,   NTMD_XQ ,  NTMD_XQD , &
+                                  NTMD_YQ ,  NTMD_YQD ,   TTMD_XQ ,  TTMD_XQD ,   TTMD_YQ ,  TTMD_YQD , YawMomCom , &
+                                YawMomCom /)
+   CHARACTER(ChanLen), PARAMETER :: ParamUnitsAry(22) =  (/ &                     ! This lists the units corresponding to the allowed parameters
+                               "(-)       ","(-)       ","(-)       ","(-)       ","(-)       ","(-)       ","(deg)     ", &
+                               "(deg)     ","(deg)     ","(kW)      ","(kN-m)    ","(kN-m)    ","(m)       ","(m/s)     ", &
+                               "(m)       ","(m/s)     ","(m)       ","(m/s)     ","(m)       ","(m/s)     ","(kN-m)    ", &
+                               "(kN-m)    "/)
 
 
       ! Initialize values
@@ -3196,6 +3199,7 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
 
       ! Determine which inputs are not valid
 
+   InvalidOutput(BlAirFlC3) = ( p%NumBl < 3 )
    InvalidOutput(BlPitchC3) = ( p%NumBl < 3 )
    InvalidOutput(  NTMD_XQ) = ( .not. p%CompNTMD )
    InvalidOutput( NTMD_XQD) = ( .not. p%CompNTMD )
