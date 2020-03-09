@@ -1045,19 +1045,25 @@ SUBROUTINE Transfer_ED_to_HD_SD_BD_Mooring( p_FAST, y_ED, u_HD, u_SD, u_ExtPtfm,
       CALL Transfer_Point_to_Point( y_ED%PlatformPtMesh, u_SD%TPMesh, MeshMapData%ED_P_2_SD_TP, ErrStat2, ErrMsg2 ) 
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//':u_SD%TPMesh' )
 
+      IF ( p_FAST%CompHydro == Module_HD ) call TransferFixedBottomToHD()
+      
    ELSEIF ( p_FAST%CompSub == Module_ExtPtfm ) THEN
       
          ! Map ED (motion) outputs to ExtPtfm inputs:                     
       CALL Transfer_Point_to_Point( y_ED%PlatformPtMesh, u_ExtPtfm%PtfmMesh, MeshMapData%ED_P_2_SD_TP, ErrStat2, ErrMsg2 ) 
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//':u_ExtPtfm%PtfmMesh' )
             
+      IF ( p_FAST%CompHydro == Module_HD ) call TransferFixedBottomToHD()
                   
    ELSEIF ( p_FAST%CompHydro == Module_HD ) THEN
          ! Map ED outputs to HD inputs:
       CALL Transfer_PlatformMotion_to_HD( y_ED%PlatformPtMesh, u_HD, MeshMapData, ErrStat2, ErrMsg2 )                        
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName )
             
-   END IF      
+   END IF
+   
+   
+
    
    IF ( p_FAST%CompElast == Module_BD .and. BD_Solve_Option1) THEN
       ! map ED root and hub motion outputs to BeamDyn:
@@ -1089,7 +1095,19 @@ SUBROUTINE Transfer_ED_to_HD_SD_BD_Mooring( p_FAST, y_ED, u_HD, u_SD, u_ExtPtfm,
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//'u_Orca%PtfmMesh' )
    END IF
    
-            
+contains
+   subroutine TransferFixedBottomToHD()
+      IF ( u_HD%Mesh%Committed ) THEN
+
+         ! These are the motions for the lumped point loads associated the WAMIT body and include: hydrostatics, radiation memory effect,
+         !    wave kinematics, additional preload, additional stiffness, additional linear damping, additional quadratic damping,
+         !    hydrodynamic added mass
+
+         CALL Transfer_Point_to_Point( y_ED%PlatformPtMesh, u_HD%Mesh, MeshMapData%ED_P_2_HD_W_P, ErrStat2, ErrMsg2 )
+            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg, RoutineName//' (u_HD%Mesh)' )
+
+      END IF !WAMIT
+   end subroutine
 END SUBROUTINE Transfer_ED_to_HD_SD_BD_Mooring
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine sets the inputs required for MAP.
@@ -1283,11 +1301,11 @@ END SUBROUTINE Transfer_ED_to_BD_tmp
 SUBROUTINE Transfer_HD_to_SD( u_mapped, u_SD_LMesh, u_mapped_positions, y_HD, u_HD_M_LumpedMesh, u_HD_M_DistribMesh, MeshMapData, ErrStat, ErrMsg )
 !..................................................................................................................................
    TYPE(MeshType),                 INTENT(INOUT)  :: u_mapped                 !< temporary copy of SD mesh (an argument to avoid another temporary mesh copy)
-   TYPE(MeshType),                 INTENT(INOUT)  :: u_SD_LMesh               !< SD Inputs on LMesh at t (separate so we can call from ED_SD_HD_InputOutput solve with temp meshes)
+   TYPE(MeshType),                 INTENT(INOUT)  :: u_SD_LMesh               !< SD Inputs on LMesh at t (separate so we can call from FullOpt1_InputOutputSolve with temp meshes)
    TYPE(MeshType),                 INTENT(IN   )  :: u_mapped_positions       !< Mesh sibling of u_mapped, with displaced positions
    TYPE(HydroDyn_OutputType),      INTENT(IN   )  :: y_HD                     !< HydroDyn outputs
-   TYPE(MeshType),                 INTENT(IN   )  :: u_HD_M_LumpedMesh        !< HydroDyn input mesh (separate so we can call from ED_SD_HD_InputOutput solve with temp meshes)
-   TYPE(MeshType),                 INTENT(IN   )  :: u_HD_M_DistribMesh       !< HydroDyn input mesh (separate so we can call from ED_SD_HD_InputOutput solve with temp meshes)
+   TYPE(MeshType),                 INTENT(IN   )  :: u_HD_M_LumpedMesh        !< HydroDyn input mesh (separate so we can call from FullOpt1_InputOutputSolve with temp meshes)
+   TYPE(MeshType),                 INTENT(IN   )  :: u_HD_M_DistribMesh       !< HydroDyn input mesh (separate so we can call from FullOpt1_InputOutputSolve with temp meshes)
    
    TYPE(FAST_ModuleMapType),       INTENT(INOUT)  :: MeshMapData              !< Data for mapping between modules
    INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat                  !< Error status
@@ -4322,7 +4340,7 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, M
    !............................................................................................................................
    ! Initialize the Jacobian structures:
    !............................................................................................................................
-   !IF ( p_FAST%TurbineType == Type_Offshore_Fixed ) THEN ! p_FAST%CompSub == Module_SD .AND. p_FAST%CompHydro == Module_HD 
+   !IF ( p_FAST%TurbineType == Type_Offshore_Fixed ) THEN 
    IF ( p_FAST%CompSub /= Module_None .OR. (p_FAST%CompElast == Module_BD .and. BD_Solve_Option1) .or. p_FAST%CompMooring == Module_Orca) THEN  !.OR. p_FAST%CompHydro == Module_HD ) THEN         
       CALL Init_FullOpt1_Jacobian( p_FAST, MeshMapData, ED%Input(1)%PlatformPtMesh, SD%Input(1)%TPMesh, SD%Input(1)%LMesh, &
                                     HD%Input(1)%Morison%LumpedMesh, HD%Input(1)%Morison%DistribMesh, HD%Input(1)%Mesh, &
