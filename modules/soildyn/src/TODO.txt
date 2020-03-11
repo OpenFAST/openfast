@@ -1,0 +1,66 @@
+2020.02.25
+
+To Do
+=====
+
+DRIVER
+------
+
+Output file
+
+
+MODULE
+------
+
+Outputs
+
+Change over all use of Force to R8Ki from REDWIN dll.  Convert at final output from module only.
+
+Input file changes
+handling of the runmode (RW Model 1)
+
+Mesh nodes connection to the glue code / SubDyn
+Stiffness matrix to summary file (and notes)
+
+pass in mudline depth
+
+
+OUTSTANDING QUESTIONS
+---------------------
+Since we have StVar, can we do correction steps by saving the old copy, and replacing it on corrections?
+
+
+GLUE CODE
+---------
+
+everything
+
+
+
+
+NOTES:
+--------
+- confirmed that stiffmatrix does not take into account the displacement
+- confirmed we need different copies of dll's if multiple used
+
+
+
+==========================================================================
+FROM the Email/meetings
+
+-	Input file
+   -	Remove “DLL_ProcName” line
+   -	Reference system – define relative to global – but do some error checking on this
+   -	Should pass in water depth – to create warning if the points are not defined below the mudline (-z value)
+   -	Change to capital (X,Y,Z)
+   -	Include DLL name for each point, and ensure they are unique.
+   -	Comments on “Model used in DLL”
+   -	Include units of stiffness and damping matrix.
+   -	Include ability to enter multiple stiffness/damping matrices for a jacket.  
+-	Error handling for the input files vs model being used.
+-	Is there cross-talk between DLL calls at multiple points?  Need to create a different DLL for each call. 
+-	Verification approach – ideas?
+   -	Connect with Erin to do some spot checking.
+-	Implement the ability to input a time-varying force at the tower top
+ 
+

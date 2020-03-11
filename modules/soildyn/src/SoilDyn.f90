@@ -464,7 +464,7 @@ subroutine SoilDyn_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
    character(*), parameter                            :: RoutineName = 'SoilDyn_CalcOutput'
 
    real(R8Ki)                                         :: Displacement(6)
-   real(ReKi)                                         :: Force(6)
+   real(R8Ki)                                         :: Force(6)
    integer(IntKi)                                     :: i           !< generic counter
 
       ! Initialize ErrStat
@@ -481,8 +481,8 @@ subroutine SoilDyn_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
       call    REDWINinterface_CalcOutput( p%DLL_Trgt, p%DLL_Model, Displacement, Force, m%dll_data(i), ErrStat2, ErrMsg2 ); if (Failed()) return;
 
       ! Return force onto the resulting point mesh
-      y%ReactionForce%Force (1:3,i)    = Force(1:3)
-      y%ReactionForce%Moment(1:3,i)    = Force(4:6)
+      y%ReactionForce%Force (1:3,i)    = real(Force(1:3),ReKi)
+      y%ReactionForce%Moment(1:3,i)    = real(Force(4:6),ReKi)
 write(*,'(f12.5,6(2x,ES12.5E2))') t,Force(1:6)
    enddo
 

@@ -83,9 +83,7 @@ MODULE REDWINinterface
 
    ! Coordinate transforms
    interface ToREDWINcoords
-      module procedure ToREDWINcoordsR4toR8
       module procedure ToREDWINcoordsR8toR8
-      module procedure ToREDWINcoordsR4toR8Mat
       module procedure ToREDWINcoordsR8toR8Mat
    end interface
 
@@ -266,7 +264,7 @@ subroutine REDWINinterface_CalcOutput( DLL_Trgt, DLL_Model, Displacement, Force,
    type(DLL_Type),                  intent(in   )  :: DLL_Trgt          !< The DLL to be called.
    integer(IntKi),                  intent(in   )  :: DLL_Model         !< Model type of the DLL
    real(R8Ki),                      intent(in   )  :: Displacement(6)   !< OpenFAST global coordinate frame
-   real(ReKi),                      intent(  out)  :: Force(6)          !< OpenFAST global coordinate frame
+   real(R8Ki),                      intent(  out)  :: Force(6)          !< OpenFAST global coordinate frame
    type(REDWINdllType),             intent(inout)  :: dll_data          !< DLL coordinate frame arrays in here
    integer(IntKi),                  intent(  out)  :: ErrStat           !< Error status of the operation
    character(*),                    intent(  out)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
@@ -296,7 +294,7 @@ subroutine REDWINinterface_CalcOutput( DLL_Trgt, DLL_Model, Displacement, Force,
    CALL CallREDWINdll( DLL_Trgt, DLL_Model, dll_data, ErrStat2, ErrMsg2); if(Failed()) return;
 
       ! Coordinate transform from REDWIN frame
-   Force = real(FromREDWINcoords( dll_data%Force ), ReKi)
+   Force = FromREDWINcoords( dll_data%Force )
 
 !FIXME: check the runmode info for model 1.  Not sure it applies to the other models.
 
@@ -327,8 +325,8 @@ subroutine REDWINinterface_GetStiffMatrix( DLL_Trgt, DLL_Model, Displacement, Fo
    type(DLL_Type),               intent(in   )  :: DLL_Trgt          !< The DLL to be called.
    integer(IntKi),               intent(in   )  :: DLL_Model         !< Model type of the DLL
    real(R8Ki),                   intent(in   )  :: Displacement(6)   !< Displacement         (OpenFAST global coords)
-   real(ReKi),                   intent(  out)  :: Force(6)          !< Resulting force      (OpenFAST global coords)
-   real(ReKi),                   intent(  out)  :: StiffMatrix(6,6)  !< Returned stiffness   (OpenFAST global coords)
+   real(R8Ki),                   intent(  out)  :: Force(6)          !< Resulting force      (OpenFAST global coords)
+   real(R8Ki),                   intent(  out)  :: StiffMatrix(6,6)  !< Returned stiffness   (OpenFAST global coords)
    type(REDWINdllType),          intent(inout)  :: dll_data
    integer(IntKi),               intent(  out)  :: ErrStat           !< Error status of the operation
    character(*),                 intent(  out)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
@@ -350,8 +348,8 @@ subroutine REDWINinterface_GetStiffMatrix( DLL_Trgt, DLL_Model, Displacement, Fo
    CALL CallREDWINdll( DLL_Trgt, DLL_Model, dll_data, ErrStat2, ErrMsg2); if(Failed()) return;
 
       ! Coordinate transformation
-   Force       = real(FromREDWINcoords( dll_data%Force ), ReKi)
-   StiffMatrix = real(FromREDWINcoords( dll_data%D     ), ReKi)
+   Force       = FromREDWINcoords( dll_data%Force )
+   StiffMatrix = FromREDWINcoords( dll_data%D     )
 
 #ifdef DEBUG_REDWIN_INTERFACE
 !CALL WrNumAryFileNR ( 59, m%dll_data%avrSWAP,'1x,ES15.6E2', ErrStat, ErrMsg )
@@ -560,18 +558,6 @@ end subroutine CheckREDWINerrors
 !!        | 1  0  0 |
 !!    R = | 0 -1  0 |
 !!        | 0  0 -1 |
-function ToREDWINcoordsR4toR8(InArray) result(REDWIN)
-   real(SiKi), intent(in)  :: InArray(6)
-   real(R8Ki)              :: REDWIN(6)
-   REDWIN(1) =  real( InArray(1), R8Ki )
-   REDWIN(2) = -real( InArray(2), R8Ki )
-   REDWIN(3) = -real( InArray(3), R8Ki )
-   REDWIN(4) =  real( InArray(4), R8Ki )
-   REDWIN(5) = -real( InArray(5), R8Ki )
-   REDWIN(6) = -real( InArray(6), R8Ki )
-end function ToREDWINcoordsR4toR8
-
-!> \copydoc redwininterface::ToREDWINcoordsR4toR8
 function ToREDWINcoordsR8toR8(InArray) result(REDWIN)
    real(R8Ki), intent(in)  :: InArray(6)
    real(R8Ki)              :: REDWIN(6)
@@ -583,19 +569,7 @@ function ToREDWINcoordsR8toR8(InArray) result(REDWIN)
    REDWIN(6) = -InArray(6)
 end function ToREDWINcoordsR8toR8
 
-!> \copydoc redwininterface::ToREDWINcoordsR4toR8
-function ToREDWINcoordsR4toR8Mat(InArray) result(REDWIN)
-   real(SiKi), intent(in)  :: InArray(6,6)
-   real(R8Ki)              :: REDWIN(6,6)
-   REDWIN(:,1)  =  real( InArray(:,1), R8Ki )
-   REDWIN(:,2)  = -real( InArray(:,2), R8Ki )
-   REDWIN(:,3)  = -real( InArray(:,3), R8Ki )
-   REDWIN(:,4)  =  real( InArray(:,4), R8Ki )
-   REDWIN(:,5)  = -real( InArray(:,5), R8Ki )
-   REDWIN(:,6)  = -real( InArray(:,6), R8Ki )
-end function ToREDWINcoordsR4toR8Mat
-
-!> \copydoc redwininterface::ToREDWINcoordsR4toR8
+!> \copydoc redwininterface::ToREDWINcoordsR8toR8
 function ToREDWINcoordsR8toR8Mat(InArray) result(REDWIN)
    real(R8Ki), intent(in)  :: InArray(6,6)
    real(R8Ki)              :: REDWIN(6,6)

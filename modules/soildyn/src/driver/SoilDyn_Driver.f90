@@ -69,9 +69,9 @@ PROGRAM SoilDyn_Driver
    REAL(DbKi)                                         :: TimeNow              ! The current time
 
       ! Data transfer
-   real(ReKi)                                         :: Force(6)
+   real(R8Ki)                                         :: Force(6)
    real(R8Ki)                                         :: Displacement(6)
-   real(ReKi)                                         :: StiffMatrix(6,6)
+   real(R8Ki)                                         :: StiffMatrix(6,6)
    real(R8Ki)                                         :: Theta(3)
 
    INTEGER(IntKi)                                     :: n                    !< Loop counter (for time step)
@@ -272,7 +272,7 @@ PROGRAM SoilDyn_Driver
          END IF
 
          call WrScr('Stiffness matrix for point '//trim(Num2LStr(i))//' at T = 0')
-         call WrMatrix( StiffMatrix, CU, '(ES12.4)', 'StiffMatrix' )
+         call WrMatrix( StiffMatrix, CU, '(ES12.4)', ' StiffMatrix' )
       enddo
    endif
 
@@ -326,7 +326,7 @@ PROGRAM SoilDyn_Driver
          END IF
 
          call WrScr('Stiffness matrix for point '//trim(Num2LStr(i))//' at T = '//trim(Num2LStr(TMax)))
-         call WrMatrix( StiffMatrix, CU, '(ES12.4)', 'StiffMatrix' )
+         call WrMatrix( StiffMatrix, CU, '(ES12.4)', ' StiffMatrix' )
       enddo
    endif
 
