@@ -194,7 +194,7 @@ void fast::OpenFAST::init() {
       if(positionChange){
         std::vector<double> temp(globTurbineData[i].TurbineHubPos);
         MPI_Bcast(globTurbineData[i].TurbineHubPos.data(), 3, MPI_DOUBLE, get_procNo(i), mpiComm);
-        if(isDebug()){
+        if(isDebug() && worldMPIRank==0){
           std::cout << "WARNING::Hub position for turbine "<< i <<
             " changed from "<<
             temp[0] << " " <<
