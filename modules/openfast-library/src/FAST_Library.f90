@@ -60,6 +60,23 @@ subroutine FAST_AllocateTurbines(nTurbines, ErrStat_c, ErrMsg_c) BIND (C, NAME='
    
 end subroutine FAST_AllocateTurbines
 
+subroutine FAST_DeallocateTurbines(ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_DeallocateTurbines')
+   IMPLICIT NONE
+#ifndef IMPLICIT_DLLEXPORT
+!DEC$ ATTRIBUTES DLLEXPORT :: FAST_DeallocateTurbines
+!GCC$ ATTRIBUTES DLLEXPORT :: FAST_DeallocateTurbines
+#endif
+   INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_c
+   CHARACTER(KIND=C_CHAR), INTENT(  OUT) :: ErrMsg_c(IntfStrLen)
+
+   if (Allocated(Turbine)) then
+      deallocate(Turbine)
+   end if
+
+   ErrStat_c = ErrID_None
+   ErrMsg_c = ''
+end subroutine
+
 subroutine FAST_Sizes(iTurb, TMax, InitInpAry, InputFileName_c, AbortErrLev_c, NumOuts_c, dt_c, ErrStat_c, ErrMsg_c, ChannelNames_c) BIND (C, NAME='FAST_Sizes')
    IMPLICIT NONE 
 #ifndef IMPLICIT_DLLEXPORT

@@ -341,6 +341,9 @@ void fast::OpenFAST::stepNoWrite() {
   
 }
 
+fast::OpenFAST::~OpenFAST(){
+}
+
 void fast::OpenFAST::calc_nacelle_force(
         const float & u, 
         const float & v, 
@@ -847,6 +850,7 @@ void fast::OpenFAST::end() {
     for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
       FAST_End(&iTurb, &stopTheProgram);
     }
+    FAST_DeallocateTurbines(&ErrStat, ErrMsg);
   }
   
   MPI_Group_free(&fastMPIGroup);
