@@ -177,6 +177,19 @@ void fast::OpenFAST::init() {
      
     }
 
+    //UPDATE HUB POSITION
+    for (int i=0; i<nTurbinesGlob; ++i){
+      if(worldMPIRank == get_procNo(i)){
+        std::vector<double> hubCalc(3);
+        getVelNodeCoordinates(hubCalc, 0, i);
+        for(int j=0; j<3; j++){
+          // TODO send message notifying if hub position is changing
+          globTurbineData[i].TurbineHubPos[j] = hubCalc[j];
+        }
+      }
+      MPI_Bcast(globTurbineData[i].TurbineHubPos.data(), 3, MPI_DOUBLE, get_procNo(i), mpiComm);
+    }
+
   }
 }
 
