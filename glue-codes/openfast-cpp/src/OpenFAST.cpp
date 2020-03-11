@@ -180,6 +180,7 @@ void fast::OpenFAST::init() {
     //UPDATE HUB POSITION
     for (int i=0; i<nTurbinesGlob; ++i){
       bool positionChange = false;
+      std::vector<double> temp(globTurbineData[i].TurbineHubPos);
       if(worldMPIRank == get_procNo(i)){
         std::vector<double> hubCalc(3);
         getVelNodeCoordinates(hubCalc, 0, i);
@@ -192,7 +193,6 @@ void fast::OpenFAST::init() {
       }
       MPI_Bcast(&positionChange, 1, MPI_C_BOOL, get_procNo(i), mpiComm);
       if(positionChange){
-        std::vector<double> temp(globTurbineData[i].TurbineHubPos);
         MPI_Bcast(globTurbineData[i].TurbineHubPos.data(), 3, MPI_DOUBLE, get_procNo(i), mpiComm);
         if(isDebug() && worldMPIRank==0){
           std::cout << "WARNING::Hub position for turbine "<< i <<
