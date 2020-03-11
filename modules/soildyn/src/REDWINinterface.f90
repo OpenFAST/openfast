@@ -20,7 +20,9 @@
 MODULE REDWINinterface
 
 !FIXME: when done, remove the ifdef NO_LibLoad checks.
-   USE NWTC_Library
+   USE NWTC_Library,  only: IntKi, ReKi, SiKi, DbKi, R8Ki, ProgDesc, DLL_Type, ErrMsgLen, PathIsRelative, &
+                              OS_DESC, ErrID_None, ErrID_Info, ErrID_Warn, ErrID_Fatal, AbortErrLev, PathSep, &
+                              NewLine, Num2LStr, Get_CWD, LoadDynamicLib, FreeDynamicLib, SetErrStat, DispNVD
    USE SoilDyn_Types, only: REDWINdllType
 
    IMPLICIT NONE
@@ -34,17 +36,17 @@ MODULE REDWINinterface
    abstract interface
       subroutine REDWINdll_interface_v00(PROPSFILE, LDISPFILE, IDTask, nErrorCode, ErrorCode, Props, StVar, StVarPrint, Disp, Force, D)
          USE, INTRINSIC :: ISO_C_Binding, only : C_INT, C_CHAR, C_DOUBLE
-         character(kind=c_char), intent(in   )  :: PROPSFILE(45)
-         character(kind=c_char), intent(in   )  :: LDISPFILE(45)
-         integer(c_int),         intent(in   )  :: IDTask
-         integer(c_int),         intent(  out)  :: nErrorCode
+         character(kind=c_char), intent(inout)  :: PROPSFILE(45)
+         character(kind=c_char), intent(inout)  :: LDISPFILE(45)
+         integer(c_int),         intent(inout)  :: IDTask
+         integer(c_int),         intent(inout)  :: nErrorCode
          real(c_double),         intent(inout)  :: Props(1:100, 1:200)
          real(c_double),         intent(inout)  :: StVar(1:12, 1:100)
          integer(c_int),         intent(inout)  :: StVarPrint(1:12, 1:100)
-         real(c_double),         intent(in   )  :: Disp(1:6)               ! meters and radians
-         real(c_double),         intent(  out)  :: Force(1:6)
-         real(c_double),         intent(  out)  :: D(1:6,1:6)
-         integer(c_int),         intent(  out)  :: ErrorCode(1:100)
+         real(c_double),         intent(inout)  :: Disp(1:6)               ! meters and radians
+         real(c_double),         intent(inout)  :: Force(1:6)
+         real(c_double),         intent(inout)  :: D(1:6,1:6)
+         integer(c_int),         intent(inout)  :: ErrorCode(1:100)
       end subroutine REDWINdll_interface_v00
    end interface
 
@@ -57,10 +59,10 @@ MODULE REDWINinterface
          !DEC$ ATTRIBUTES DLLIMPORT :: INTERFACEFOUNDATION
          !GCC$ ATTRIBUTES DLLIMPORT :: INTERFACEFOUNDATION
          USE, INTRINSIC :: ISO_C_Binding, only : C_INT, C_CHAR, C_DOUBLE
-         character(kind=c_char), intent(in   )  :: PROPSFILE(45)
-         character(kind=c_char), intent(in   )  :: LDISPFILE(45)
-         integer(c_int),         intent(in   )  :: IDTask
-         integer(c_int),         intent(  out)  :: nErrorCode
+         character(kind=c_char), intent(inout)  :: PROPSFILE(45)
+         character(kind=c_char), intent(inout)  :: LDISPFILE(45)
+         integer(c_int),         intent(inout)  :: IDTask
+         integer(c_int),         intent(inout)  :: nErrorCode
          real(c_double),         intent(inout)  :: Props(1:100, 1:200)
          real(c_double),         intent(inout)  :: StVar(1:12, 1:100)
          integer(c_int),         intent(inout)  :: StVarPrint(1:12, 1:100)
@@ -96,7 +98,7 @@ CONTAINS
 !==================================================================================================================================
 !> This SUBROUTINE is used to call the REDWIN-style DLL.
 subroutine CallREDWINdll ( DLL_Trgt, DLL_Model, dll_data, ErrStat, ErrMsg )
-
+   USE, INTRINSIC :: ISO_C_Binding, only : C_F_PROCPOINTER
       ! Passed Variables:
    type(DLL_Type),            intent(in   )  :: DLL_Trgt       ! The DLL to be called.
    integer(IntKi),            intent(in   )  :: DLL_Model      ! The DLL model type
@@ -105,15 +107,7 @@ subroutine CallREDWINdll ( DLL_Trgt, DLL_Model, dll_data, ErrStat, ErrMsg )
    integer(IntKi),            intent(  out)  :: ErrStat        ! Error status of the operation
    character(*),              intent(  out)  :: ErrMsg         ! Error message if ErrStat /= ErrID_None
 
-      ! Local Variables:
-   character(len=45)                    :: PROPSFILE  ! properties input file
-   character(len=45)                    :: LDISPFILE  ! displacement input file
-
    PROCEDURE(REDWINdll_interface_V00),POINTER:: REDWIN_Subroutine_v00                 ! The address of the procedure in the RedWin DLL
-
-      ! Set names of DLL input files to pass
-   PROPSFILE = TRIM(dll_data%PROPSfile)
-   LDISPFILE = TRIM(dll_data%LDISPfile)
 
 #ifndef NO_LibLoad
 #ifdef STATIC_DLL_LOAD
@@ -125,8 +119,8 @@ subroutine CallREDWINdll ( DLL_Trgt, DLL_Model, dll_data, ErrStat, ErrMsg )
 #else
       ! Call the DLL (first associate the address from the procedure in the DLL with the subroutine):
    if (RW_Ver == RW_v00) then
-      CALL C_F_PROCPOINTER( transfer(DLL_Trgt%ProcAddr(1),C_NULL_FUNPTR), REDWIN_Subroutine_v00)
-      CALL REDWIN_Subroutine_v00 ( PROPSFILE, LDISPFILE, &
+      CALL C_F_PROCPOINTER( DLL_Trgt%ProcAddr(1), REDWIN_Subroutine_v00)
+      CALL REDWIN_Subroutine_v00 ( dll_data%PROPSfile, dll_data%LDISPfile, &
             dll_data%IDTask, dll_data%nErrorCode, dll_data%ErrorCode, &
             dll_data%Props, dll_data%StVar, dll_data%StVarPrint, &
             dll_data%Disp, dll_data%Force, dll_data%D )
