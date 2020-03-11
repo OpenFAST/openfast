@@ -191,12 +191,20 @@ void fast::OpenFAST::init() {
         }
       }
       MPI_Bcast(&positionChange, 1, MPI_C_BOOL, get_procNo(i), mpiComm);
-      if(positionChange && isDebug()){
+      if(positionChange){
+        std::vector<double> temp(globTurbineData[i].TurbineHubPos);
         MPI_Bcast(globTurbineData[i].TurbineHubPos.data(), 3, MPI_DOUBLE, get_procNo(i), mpiComm);
-        std::cout << "WARNING::Hub position changed from value specified in C++ API to: "<<
+        if(isDebug()){
+          std::cout << "WARNING::Hub position for turbine "<< i <<
+            " changed from "<<
+            temp[0] << " " <<
+            temp[1] << " " <<
+            temp[2] << " " <<
+            " to: "<<
             globTurbineData[i].TurbineHubPos[0] <<" "<<
             globTurbineData[i].TurbineHubPos[1] <<" "<<
             globTurbineData[i].TurbineHubPos[2] << std::endl;
+        }
       }
     }
 
