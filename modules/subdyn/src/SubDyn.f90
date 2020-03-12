@@ -1538,7 +1538,7 @@ contains
    SUBROUTINE Fatal(ErrMsg_in)
       character(len=*), intent(in) :: ErrMsg_in
       CALL SetErrStat(ErrID_Fatal, ErrMsg_in, ErrStat, ErrMsg, 'Craig_Bampton');
-      CALL CleanUp()
+      CALL CleanUpCB()
    END SUBROUTINE Fatal
 
    logical function Failed()

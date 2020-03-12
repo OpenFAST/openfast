@@ -85,14 +85,14 @@ SUBROUTINE EigenSolve(K, M, N, bCheckSingularity, EigVect, Omega2, ErrStat, ErrM
       !   ErrStat2=ErrID_Fatal
       !   ErrMsg2= 'Complex eigenvalue found, system may be singular (may contain rigid body modes)'
       !   if(Failed()) return
-      ELSE IF ( EqualRealNos(Beta(I),0.0_LAKi) ) THEN
+      ELSE IF ( EqualRealNos(real(Beta(I),ReKi),0.0_ReKi) ) THEN
          Omega2(I) = HUGE(Omega2)  ! bjj: should this be an error?
          if (bCheckSingularity) then
             ErrStat2=ErrID_Fatal
             ErrMsg2= 'Large eigenvalue found, system may be singular (may contain rigid body modes)'
             if(Failed()) return
          endif
-      ELSE IF ( EqualRealNos(ALPHAR(I),0.0_LAKi) ) THEN
+      ELSE IF ( EqualRealNos(real(ALPHAR(I),ReKi),0.0_Ki) ) THEN
          if (bCheckSingularity) then
             ErrStat2=ErrID_Fatal
             ErrMsg2= 'Eigenvalue zero found, system is singular (may contain rigid body modes)'
@@ -180,7 +180,7 @@ FUNCTION Determinant(A, ErrStat, ErrMsg) result(det)
    end do
    deallocate(PLU)
    deallocate(ipiv)
-   IF ( EqualRealNos(det, 0.0_LaKi) ) THEN
+   IF ( EqualRealNos(real(det, ReKi), 0.0_ReKi) ) THEN
       print*,'Det is zero'
       return 
    else
