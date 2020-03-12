@@ -92,7 +92,7 @@ SUBROUTINE EigenSolve(K, M, N, bCheckSingularity, EigVect, Omega2, ErrStat, ErrM
             ErrMsg2= 'Large eigenvalue found, system may be singular (may contain rigid body modes)'
             if(Failed()) return
          endif
-      ELSE IF ( EqualRealNos(real(ALPHAR(I),ReKi),0.0_Ki) ) THEN
+      ELSE IF ( EqualRealNos(real(ALPHAR(I),ReKi),0.0_ReKi) ) THEN
          if (bCheckSingularity) then
             ErrStat2=ErrID_Fatal
             ErrMsg2= 'Eigenvalue zero found, system is singular (may contain rigid body modes)'
