@@ -731,8 +731,8 @@ subroutine FVW_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, ErrStat,
       if ( ( t - m%VTKlastTime ) >= p%DTvtk*OneMinusEpsilon )  then
          m%VTKlastTime = t
          call WrVTK_FVW(p, x, z, m, 'vtk_out/FVW', m%VTKstep, 9)
-         m%VTKstep = m%VTKstep + 1  ! Increment VTK counter
       endif
+      m%VTKstep = m%VTKstep + 1  ! Increment VTK counter no matter what
    endif
 
 
