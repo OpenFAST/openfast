@@ -40,7 +40,7 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, Inp, ErrStat, ErrMsg )
 
    CALL ReadVarWDefault(UnIn,FileName,Inp%FreeWakeStart       ,'FreeWakeStart'       ,'', 0.0_ReKi, ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVarWDefault(UnIn,FileName,Inp%FullCirculationStart,'FullCirculationStart','', 0.0_ReKi, ErrStat2,ErrMsg2); if(Failed())return
-   CALL ReadVarWDefault(UnIn,FileName,Inp%DTfvw               ,'DTfvw'              ,'',  0.2_DbKi, ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVarWDefault(UnIn,FileName,Inp%DTfvw               ,'DTfvw'              ,'',  p%DTaero, ErrStat2,ErrMsg2); if(Failed())return
    !------------------------ CIRCULATION SPECIFICATIONS  -------------------------------------------
    CALL ReadCom(UnIn,FileName,                  'Circulation specification header', ErrStat2, ErrMsg2 ); if(Failed()) return
    CALL ReadVarWDefault(UnIn,FileName,Inp%CirculationMethod ,'CirculationMethod' ,'', idCircPolarData, ErrStat2,ErrMsg2); if(Failed())return
