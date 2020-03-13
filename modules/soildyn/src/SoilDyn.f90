@@ -456,6 +456,7 @@ subroutine SoilDyn_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
    character(ErrMsgLen)                               :: ErrMsg2     ! local error message
    character(*), parameter                            :: RoutineName = 'SoilDyn_CalcOutput'
 
+   real(ReKi)                                         :: AllOuts(0:MaxOutPts)
    real(R8Ki)                                         :: Displacement(6)
    real(R8Ki)                                         :: Force(6)
    integer(IntKi)                                     :: i           !< generic counter
@@ -479,9 +480,13 @@ subroutine SoilDyn_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
 write(*,'(f12.5,6(2x,ES12.5E2))') t,Force(1:6)
    enddo
 
-      ! Compute outputs here:
-   y%WriteOutput(1) = REAL(t,ReKi)
-   y%WriteOutput(2) = 1.0_ReKi
+      ! Outputs
+   call SlD_WriteOutput( p, AllOuts, u, y, m, ErrStat2, ErrMsg2 );     if (Failed()) return;
+   do i=1,p%NumOuts
+      y%WriteOutput(i) = p%OutParam(i)%SignM * Allouts( p%OutParam(i)%Indx )
+   enddo
+
+   return
 
 contains
    logical function Failed()
