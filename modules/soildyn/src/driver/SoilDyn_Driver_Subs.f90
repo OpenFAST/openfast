@@ -618,7 +618,7 @@ SUBROUTINE UpdateSettingsWithCL( DvrFlags, DvrSettings, CLFlags, CLSettings, DVR
    CHARACTER(1024)                                    :: ErrMsgTmp         !< Temporary error status for calls
    LOGICAL                                            :: WindGridModify    !< Did we modify any of the WindGrid related settings?
    character(*), parameter                            :: RoutineName = 'UpdateSettingsWithCL'
- 
+
       ! Initialization
    WindGridModify =  .FALSE.
 
@@ -1057,5 +1057,84 @@ FUNCTION FLAG(flagval)
    ENDIF
    RETURN
 END FUNCTION FLAG
+
+
+SUBROUTINE Dvr_InitializeOutputFile(OutUnit,IntOutput,RootName,ErrStat,ErrMsg)
+   integer(IntKi),              intent(  out):: OutUnit
+   type(SlD_InitOutputType),    intent(in   ):: IntOutput     ! Output for initialization routine
+   integer(IntKi),              intent(  out):: ErrStat     ! Error status of the operation
+   character(*),                intent(  out):: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   character(*),                intent(in   ):: RootName
+   integer(IntKi)                            :: i
+   integer(IntKi)                            :: numOuts
+   integer(IntKi)                            :: ErrStat2                     ! Temporary Error status
+   character(ErrMsgLen)                      :: ErrMsg2                      ! Temporary Error message
+   character(*), parameter                   :: RoutineName = 'Dvr_InitializeOutputFile'
+
+   ErrStat = ErrID_none
+   ErrMsg  = ""
+
+   CALL GetNewUnit(OutUnit,ErrStat2,ErrMsg2)
+   CALL OpenFOutFile ( OutUnit, trim(RootName)//'.out', ErrStat2, ErrMsg2 )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      if (ErrStat >= AbortErrLev) return
+
+   write (OutUnit,'(/,A)')  'Predictions were generated on '//CurDate()//' at '//CurTime()//' using '//trim(GetNVD(IntOutput%Ver))
+   write (OutUnit,'()' )    !print a blank line
+
+   numOuts = size(IntOutput%WriteOutputHdr)
+   !......................................................
+   ! Write the names of the output parameters on one line:
+   !......................................................
+
+   write (OutUnit,'()')
+   write (OutUnit,'()')
+   write (OutUnit,'()')
+
+   call WrFileNR ( OutUnit, 'Time' )
+
+   do i=1,NumOuts
+      call WrFileNR ( OutUnit, tab//IntOutput%WriteOutputHdr(i) )
+   end do ! i
+
+   write (OutUnit,'()')
+
+      !......................................................
+      ! Write the units of the output parameters on one line:
+      !......................................................
+
+   call WrFileNR ( OutUnit, '(s)' )
+
+   do i=1,NumOuts
+      call WrFileNR ( Outunit, tab//trim(IntOutput%WriteOutputUnt(i)) )
+   end do ! i
+
+   write (OutUnit,'()')
+
+
+END SUBROUTINE Dvr_InitializeOutputFile
+
+!----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE Dvr_WriteOutputLine(t,OutUnit, OutFmt, Output)
+   real(DbKi)             ,  intent(in   )   :: t                    ! simulation time (s)
+   integer(IntKi)         ,  intent(in   )   :: OutUnit              ! Status of error message
+   character(*)           ,  intent(in   )   :: OutFmt
+   type(SlD_OutputType),     intent(in   )   :: Output
+   integer(IntKi)                            :: errStat              ! Status of error message (we're going to ignore errors in writing to the file)
+   character(ErrMsgLen)                      :: errMsg               ! Error message if ErrStat /= ErrID_None
+   character(200)                            :: frmt                 ! A string to hold a format specifier
+   character(15)                             :: tmpStr               ! temporary string to print the time output as text
+
+   frmt = '"'//tab//'"'//trim(OutFmt)      ! format for array elements from individual modules
+
+      ! time
+   write( tmpStr, '(F15.6)' ) t
+   call WrFileNR( OutUnit, tmpStr )
+   call WrNumAryFileNR ( OutUnit, Output%WriteOutput,  frmt, errStat, errMsg )
+
+     ! write a new line (advance to the next line)
+   write (OutUnit,'()')
+end subroutine Dvr_WriteOutputLine
+
 
 END MODULE SoilDyn_Driver_Subs

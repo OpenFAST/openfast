@@ -12,12 +12,23 @@ Output file
 MODULE
 ------
 
-Outputs
+Outputs  (number as standard 1-9 numbers for now...) -- should these be 'g' for global???
+   -  Sld#TD{xyz} (m)
+   -  Sld#RD{xyz} (deg)
+   -  Sld#F{xyz}  (kN)
+   -  Sld#M{xyz}  (kN-m)
 
-Change over all use of Force to R8Ki from REDWIN dll.  Convert at final output from module only.
+summary file 
+   -  outputs, and what points they correspond to
+   -  which mesh point the point links to
+   -  stiffness matrix at each point
+   -  mudline passed in (based on water depth from HD?)
 
 Input file changes
-handling of the runmode (RW Model 1)
+runmode
+   -  model 1 includes this (given in Props(1,1) at init)
+   -  model 2 does not include this????
+   -  model 3 does not include this????
 
 Mesh nodes connection to the glue code / SubDyn
 Stiffness matrix to summary file (and notes)
@@ -53,11 +64,12 @@ FROM the Email/meetings
    -	Reference system – define relative to global – but do some error checking on this
    -	Should pass in water depth – to create warning if the points are not defined below the mudline (-z value)
    -	Change to capital (X,Y,Z)
-   -	Include DLL name for each point, and ensure they are unique.
+   x	Include DLL name for each point, and ensure they are unique.
    -	Comments on “Model used in DLL”
    -	Include units of stiffness and damping matrix.
    -	Include ability to enter multiple stiffness/damping matrices for a jacket.  
 -	Error handling for the input files vs model being used.
+   --> no good method known as yet.
 -	Is there cross-talk between DLL calls at multiple points?  Need to create a different DLL for each call. 
 -	Verification approach – ideas?
    -	Connect with Erin to do some spot checking.

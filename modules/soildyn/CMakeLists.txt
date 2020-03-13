@@ -34,7 +34,7 @@ set(SOILDYN_DRIVER_SOURCES
   src/driver/SoilDyn_Driver.f90
 )
 add_executable(soildyn_driver ${SOILDYN_DRIVER_SOURCES})
-target_link_libraries(soildyn_driver soildynlib nwtclibs ${CMAKE_DL_LIBS})
+target_link_libraries(soildyn_driver soildynlib nwtclibs versioninfolib ${CMAKE_DL_LIBS})
 
 
 install(TARGETS soildynlib soildyn_driver

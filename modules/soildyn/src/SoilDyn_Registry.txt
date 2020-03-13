@@ -60,7 +60,8 @@ typedef  ^    SlD_InputFile   IntKi                NumOuts        -   -   -   "N
 # ..... Initialization data .......................................................................................................
 # Define inputs that the initialization routine may need here:
 #   e.g., the name of the input file, the file root name, etc.
-typedef  ^     InitInputType  CHARACTER(1024)      InputFile      - - -          "Name of the input file; remove if there is no file" -
+typedef  ^     InitInputType  CHARACTER(1024)      InputFile      - - -          "Name of the input file" -
+typedef  ^     InitInputType  CHARACTER(1024)      RootName       - - -          "Root name of the input file" -
 typedef  ^     InitInputType  LOGICAL              Linearize      - .FALSE. -    "Flag that tells this module if the glue code wants to linearize." -
 #FIXME: does the glue code need to inform us of the number of points? or do we do that in SoilDyn?
 #typedef  ^     InitInputType  IntKi                NumNodes       - - -          "Number of nodes we are using" -
@@ -68,6 +69,7 @@ typedef  ^     InitInputType  LOGICAL              Linearize      - .FALSE. -   
 # Define outputs from the initialization routine here:
 typedef   ^               InitOutputType CHARACTER(ChanLen)    WriteOutputHdr  {:} - -   "Names of the output-to-file channels" -
 typedef   ^               InitOutputType CHARACTER(ChanLen)    WriteOutputUnt  {:} - -   "Units of the output-to-file channels" -
+typedef   ^               InitOutputType ProgDesc              Ver             -   - -   "This module's name, version, and date"  -
 # if this module has implemented linearization, return the names of the rows/columns of the Jacobian matrices:
 #typedef   ^               InitOutputType CHARACTER(LinChanLen) LinNames_y      {:} - -   "Names of the outputs used in linearization" -
 #typedef   ^               InitOutputType CHARACTER(LinChanLen) LinNames_x      {:} - -   "Names of the continuous states used in linearization" -
@@ -115,6 +117,9 @@ typedef   ^             ParameterType     CHARACTER(1024)   EchoFileName        
 typedef   ^             ParameterType     CHARACTER(1024)   SumFileName          - - - "Name of summary file" -
 typedef   ^             ParameterType     IntKi             DLL_model            - - - "REDWIN DLL model type to use" -
 typedef   ^             ParameterType     IntKi             CalcOption           - - - "Calculation methodology to use" -
+typedef   ^             ParameterType     OutParmType       OutParam           {:} - - "Names and units (and other characteristics) of all requested output parameters" -
+typedef   ^             ParameterType     IntKi             NumOuts              - - - "Number of parameters in the output list (number of outputs requested)" -
+typedef   ^             ParameterType     IntKi             NumPoints            - - - "Number of points interfacing soil with" -
 
 # ..... Inputs ....................................................................................................................
 typedef  ^              InputType         MeshType          SoilMotion           - - - "Mesh of soil contact points" -

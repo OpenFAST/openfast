@@ -84,7 +84,6 @@ subroutine SoilDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
 
       ! local variables
    integer(IntKi)                                     :: j           !< generic counter
-   integer(IntKi)                                     :: NumOuts     !< number of outputs; would probably be in the parameter type
    integer(IntKi)                                     :: ErrStat2    !< local error status
    character(ErrMsgLen)                               :: ErrMsg2     !< local error message
    character(*), parameter                            :: RoutineName = 'SoilDyn_Init'
@@ -94,7 +93,6 @@ subroutine SoilDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
       ! Initialize variables
    ErrStat = ErrID_None
    ErrMsg  = ""
-NumOuts = 2
 
       ! Initialize the NWTC Subroutine Library
    call NWTC_Init( )
@@ -123,20 +121,6 @@ NumOuts = 2
 
 
 !FIXME: set some initial values of y and u here)
-
-!FIXME: Develop a list of outputs, and set that up somewhere.
-      ! Define system output initializations (set up mesh) here:
-   call AllocAry( y%WriteOutput, NumOuts, 'WriteOutput', ErrStat2, ErrMsg2 ); if (Failed()) return;
-
-   y%WriteOutput = 0
-
-      ! Define initialization-routine output here:
-   call AllocAry(InitOut%WriteOutputHdr,NumOuts,'WriteOutputHdr',ErrStat2,ErrMsg2); if (Failed()) return;
-   call AllocAry(InitOut%WriteOutputUnt,NumOuts,'WriteOutputUnt',ErrStat2,ErrMsg2); if (Failed()) return;
-
-   InitOut%WriteOutputHdr = (/ 'Time   ', 'Column2' /)
-   InitOut%WriteOutputUnt = (/ '(s)',     '(-)'     /)
-
 
    if (InitInp%Linearize) then
 
@@ -167,9 +151,19 @@ NumOuts = 2
    enddo
 
 
-!FIXME: create all the meshes that are needed and check against points handed in
+      ! set paramaters for I/O data
+   InitOut%Ver = SoilDyn_Ver
+   p%NumOuts   =  InputFileData%NumOuts
+   call AllocAry( InitOut%WriteOutputHdr, p%NumOuts, 'WriteOutputHdr', errStat2, errMsg2 );  if (Failed()) return;
+   call AllocAry( InitOut%WriteOutputUnt, p%NumOuts, 'WriteOutputUnt', errStat2, errMsg2 );  if (Failed()) return;
+   call AllocAry( y%WriteOutput, p%NumOuts, 'WriteOutput', ErrStat2, ErrMsg2 ); if (Failed()) return;
+   y%WriteOutput = 0
 
-
+   call SetOutParam(InputFileData%OutList, p, ErrStat2, ErrMsg2);    if (Failed()) return;
+   do j=1,p%NumOuts
+      InitOut%WriteOutputHdr(j) = p%OutParam(j)%Name
+      InitOut%WriteOutputUnt(j) = p%OutParam(j)%Units
+   end do
 
 contains
    logical function Failed()
@@ -232,27 +226,26 @@ contains
 
       real(R8Ki)                                :: DCM(3,3)
       real(ReKi)                                :: Pos(3)
-      integer(IntKi)                            :: NumPoints      ! Number of points from input file
       real(ReKi),                allocatable    :: MeshLocations(:,:)
 
       select case(p%CalcOption)
          case (Calc_StiffDamp)
-            NumPoints   =  1_IntKi
+            p%NumPoints =  1_IntKi
 !FIXME: update to allow more than one set of points
 !            NumPoints   =  InputFileData%StiffDamp_NumPoints
-!            call AllocAry(MeshLocations,3,NumPoints,'Mesh locations',ErrStat2,ErrMsg2);
+!            call AllocAry(MeshLocations,3,p%NumPoints,'Mesh locations',ErrStat2,ErrMsg2);
 !            do i=1,size(MeshLocations,2)
 !               MeshLocations(1:3,i)  =  InputFileData%StiffDamp_locations(1:3,i)
 !            enddo
          case (Calc_PYcurve)
-            NumPoints   =  InputFileData%PY_NumPoints
-            call AllocAry(MeshLocations,3,NumPoints,'Mesh locations',ErrStat2,ErrMsg2);
+            p%NumPoints =  InputFileData%PY_NumPoints
+            call AllocAry(MeshLocations,3,p%NumPoints,'Mesh locations',ErrStat2,ErrMsg2);
             do i=1,size(MeshLocations,2)
                MeshLocations(1:3,i)  =  InputFileData%PY_locations(1:3,i)
             enddo
          case (Calc_REDWIN)
-            NumPoints   =  InputFileData%DLL_NumPoints
-            call AllocAry(MeshLocations,3,NumPoints,'Mesh locations',ErrStat2,ErrMsg2);
+            p%NumPoints =  InputFileData%DLL_NumPoints
+            call AllocAry(MeshLocations,3,p%NumPoints,'Mesh locations',ErrStat2,ErrMsg2);
             do i=1,size(MeshLocations,2)
                MeshLocations(1:3,i)  =  InputFileData%DLL_locations(1:3,i)
             enddo
@@ -264,7 +257,7 @@ contains
 
       CALL MeshCreate(  BlankMesh         = u%SoilMotion          &
                      ,  IOS               = COMPONENT_INPUT       &
-                     ,  NNodes            = NumPoints             &
+                     ,  NNodes            = p%NumPoints             &
                      ,  TranslationDisp   = .TRUE.                &
                      ,  TranslationVel    = .TRUE.                &
                      ,  TranslationAcc    = .TRUE.                &
@@ -279,7 +272,7 @@ contains
       ! Assuming zero orientation displacement for start
       DCM = 0.0_DbKi
 
-      do i=1,NumPoints
+      do i=1,p%NumPoints
          CALL MeshPositionNode( Mesh    = u%SoilMotion            &
                               , INode   = i                       &
                               , Pos     = MeshLocations(1:3,i)    &

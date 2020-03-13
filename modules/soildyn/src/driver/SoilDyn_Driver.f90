@@ -21,6 +21,7 @@
 PROGRAM SoilDyn_Driver
 
    USE NWTC_Library
+   USE VersionInfo
    USE SoilDyn
    USE SoilDyn_Types
    USE SoilDyn_Driver_Subs
@@ -81,10 +82,23 @@ PROGRAM SoilDyn_Driver
    INTEGER(IntKi)                                     :: ErrStat              !< Status of error message
    CHARACTER(ErrMsgLen)                               :: ErrMsg               !< Error message if ErrStat /= ErrID_None
 
+   CHARACTER(200)                                     :: git_commit    ! String containing the current git commit hash
+   TYPE(ProgDesc), PARAMETER                          :: version   = ProgDesc( 'SoilDyn Driver', '', '' )  ! The version number of this program.
+   integer(IntKi)                                     :: DvrOut
+   character(1024)                                    :: OutputFileRootName
+
 
       ! initialize library
    call NWTC_Init
    call DispNVD(ProgInfo)
+   DvrOut=-1      ! Set output unit to negative
+
+      ! Display the copyright notice
+   CALL DispCopyrightLicense( version )
+      ! Obtain OpenFAST git commit hash
+   git_commit = QueryGitVersion()
+      ! Tell our users what they're running
+   CALL WrScr( ' Running '//GetNVD( version )//' a part of OpenFAST - '//TRIM(git_Commit)//NewLine//' linked with '//TRIM( GetNVD( NWTC_Ver ))//NewLine )
 
       ! Start the timer
    call CPU_TIME( Timer(1) )
@@ -131,7 +145,6 @@ PROGRAM SoilDyn_Driver
       SettingsFlags%SlDIptFile   =  CLSettingsFlags%SlDIptFile
       Settings%SlDIptFileName    =  CLSettings%SlDIptFileName
    ENDIF
-
 
       ! If the filename given was not the SlD input file (-ifw option), then it is treated
       ! as the driver input file (flag should be set correctly by RetrieveArgs).  So, we must
@@ -256,6 +269,11 @@ PROGRAM SoilDyn_Driver
       if ( ErrStat >= AbortErrLev ) call ProgEnd()
    END IF
 
+      ! Set the output file
+   call GetRoot(Settings%SlDIptFileName,OutputFileRootName)
+   call Dvr_InitializeOutputFile(DvrOut, InitOutData, OutputFileRootName, ErrStat, ErrMsg)
+   call CheckErr('Setting output file');
+
       ! Destroy initialization data
    CALL SlD_DestroyInitInput(  InitInData,  ErrStat, ErrMsg )
    CALL SlD_DestroyInitOutput( InitOutData, ErrStat, ErrMsg )
@@ -309,6 +327,9 @@ PROGRAM SoilDyn_Driver
          ! Get state variables at next step: INPUT at step n, OUTPUT at step n + 1
       CALL SoilDyn_UpdateStates( Time, n, u, InputTime, p, x, xd, z, OtherState, misc, ErrStat, ErrMsg );
       call CheckErr('');
+
+      !call Dvr_WriteOutputLine(Time,DvrOut,p%OutFmt,y)
+      call Dvr_WriteOutputLine(Time,DvrOut,"ES10.3E2",y)
    END DO
 
 
@@ -334,6 +355,7 @@ PROGRAM SoilDyn_Driver
    !...............................................................................................................................
    ! Routine to terminate program execution
    !...............................................................................................................................
+   if (DvrOut>0)  close(DvrOut)
    CALL SoilDyn_End( u(1), p, x, xd, z, OtherState, y, misc, ErrStat, ErrMsg )
 
    IF ( ErrStat /= ErrID_None ) THEN
