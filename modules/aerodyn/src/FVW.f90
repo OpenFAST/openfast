@@ -126,6 +126,9 @@ subroutine FVW_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
    CALL SetRequestedWindPoints(m%r_wind, x, p, m )
    ! Return anything in FVW_InitOutput that should be passed back to the calling code here
 
+   ! TODO remove me for developement (and when OpenFAST has a framework for tests)
+   CALL FVW_RunTests(ErrStat2, ErrMsg2); if (Failed()) return
+
 CONTAINS
 
    logical function Failed()
