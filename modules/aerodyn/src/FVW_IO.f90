@@ -54,7 +54,7 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, Inp, ErrStat, ErrMsg )
    CALL ReadVar        (UnIn,FileName,Inp%nNWPanels     ,'nNWPanels'       ,''              , ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVar        (UnIn,FileName,Inp%nFWPanels     ,'nFWPanels'       ,''              , ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVar        (UnIn,FileName,Inp%nFWPanelsFree ,'nFWPanelsFree'   ,''              , ErrStat2,ErrMsg2); if(Failed())return
-   CALL ReadVarWDefault(UnIn,FileName,Inp%RegFunction   ,'RegFunction'     ,'',idRegCompact , ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVarWDefault(UnIn,FileName,Inp%RegFunction   ,'RegFunction'     ,'',idRegVatistas, ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVarWDefault(UnIn,FileName,Inp%WakeRegMethod ,'WakeRegMethod'   ,'',idRegConstant, ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVar        (UnIn,FileName,Inp%WakeRegFactor ,'WakeRegFactor'   ,''              , ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVar        (UnIn,FileName,Inp%WingRegFactor ,'WingRegFactor'   ,''              , ErrStat2,ErrMsg2); if(Failed())return
