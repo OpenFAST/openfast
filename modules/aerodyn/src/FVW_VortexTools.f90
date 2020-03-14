@@ -109,17 +109,23 @@ CONTAINS
             ! Segment 1-2
             SegConnct(1,iHeadC) = iseg1
             SegConnct(2,iHeadC) = iseg2
+            SegConnct(3,iHeadC) = iDepth
+            SegConnct(4,iHeadC) = iSpan
             SegGamma (iHeadC  ) = Gamma12
             iHeadC=iHeadC+1
             ! Segment 1-4
             SegConnct(1,iHeadC) = iseg1
             SegConnct(2,iHeadC) = iseg4
+            SegConnct(3,iHeadC) = iDepth
+            SegConnct(4,iHeadC) = iSpan
             SegGamma (iHeadC  ) = -Gamma41
             iHeadC=iHeadC+1
             ! Segment 4-3
             if (iDepth==nDepth-1) then
                SegConnct(1,iHeadC) = iseg4
                SegConnct(2,iHeadC) = iseg3
+               SegConnct(3,iHeadC) = iDepth
+               SegConnct(4,iHeadC) = iSpan
                SegGamma (iHeadC  ) = - LatticeGamma(iSpan,iDepth)
                iHeadC=iHeadC+1
             endif
@@ -127,6 +133,8 @@ CONTAINS
             if (iSpan==nSpan-1) then
                SegConnct(1,iHeadC) = iseg2
                SegConnct(2,iHeadC) = iseg3
+               SegConnct(3,iHeadC) = iDepth
+               SegConnct(4,iHeadC) = iSpan
                SegGamma (iHeadC  ) = LatticeGamma(iSpan,iDepth)
                iHeadC=iHeadC+1
             endif

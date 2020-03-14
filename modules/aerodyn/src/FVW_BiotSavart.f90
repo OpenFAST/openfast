@@ -105,7 +105,7 @@ subroutine ui_seg(iCPStart, iCPEnd, nCPsTot, CPs, &
    integer(IntKi), intent(in)                       :: iCPEnd         !< Index where we end in Control points array
    integer(IntKi), intent(in)                       :: nCPsTot        !< Total number of control points
    real(ReKi), dimension(3,nSegPTot), intent(in)    :: SegPoints      !< Segment points
-   integer(IntKi), dimension(2,nSegTot), intent(in) :: SegConnct      !< Connectivity, indices of segments points iSeg1, iSeg2
+   integer(IntKi), dimension(:,:), intent(in) :: SegConnct            !< Connectivity, indices of segments points iSeg1, iSeg2, iDepth, iSpan
    real(ReKi), dimension(nSegTot), intent(in)       :: SegGamma       !< Segment circulation
    integer(IntKi),intent(in)                        :: iSegStart      !< Index in SegConnct, and SegGamma where we start
    integer(IntKi),intent(in)                        :: iSegEnd        !< Index in SegConnct, and SegGamma where we end

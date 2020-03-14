@@ -377,7 +377,7 @@ subroutine PackPanelsToSegments(p, m, x, iDepthStart, SegConnct, SegPoints, SegG
    integer(IntKi), intent(out)                :: nSeg      !< Total number of segments after packing
    integer(IntKi), intent(out)                :: nSegP     !< Total number of segments points after packing
    ! Local
-   integer(IntKi) :: iHeadC, iHeadP, nC, nP, iW
+   integer(IntKi) :: iHeadC, iHeadP, nC, nP, iW, iHeadC_bkp
    real(ReKi), dimension(:,:), allocatable :: Buffer2d
    !real(ReKi),    dimension(:),   allocatable :: SegSmooth !< 
 
@@ -398,7 +398,7 @@ subroutine PackPanelsToSegments(p, m, x, iDepthStart, SegConnct, SegPoints, SegG
       if (allocated(SegPoints)) deallocate(SegPoints)
       if (allocated(SegGamma))  deallocate(SegGamma)
       if (allocated(Buffer2d)) deallocate(Buffer2d)
-      allocate(SegConnct(1:2,1:nC)); SegConnct=-1
+      allocate(SegConnct(1:4,1:nC)); SegConnct=-1
       allocate(SegPoints(1:3,1:nP)); SegPoints=-1
       allocate(SegGamma (1:nC));     SegGamma =-1
       allocate(Buffer2d(1,p%nSpan))
@@ -409,9 +409,11 @@ subroutine PackPanelsToSegments(p, m, x, iDepthStart, SegConnct, SegPoints, SegG
          CALL LatticeToSegments(x%r_NW(1:3,:,1:m%nNW+1,iW), x%Gamma_NW(:,1:m%nNW,iW), iDepthStart, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC )
       enddo
       if (m%nFW>0) then
+         iHeadC_bkp = iHeadC
          do iW=1,p%nWings
             CALL LatticeToSegments(x%r_FW(1:3,:,1:m%nFW+1,iW), x%Gamma_FW(:,1:m%nFW,iW), 1, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC )
          enddo
+         SegConnct(3,iHeadC_bkp:) = SegConnct(3,iHeadC_bkp:) + m%nNW
       endif
       if ((iHeadP-1)/=nP) then
          print*,'PackPanelsToSegments: Number of points wrongly estimated',nP, iHeadP-1

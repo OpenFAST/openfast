@@ -173,7 +173,7 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth)
    integer(IntKi),dimension(:,:), allocatable :: SegConnct !< Segment connectivity
    real(ReKi),    dimension(:,:), allocatable :: SegPoints !< Segment Points
    real(ReKi),    dimension(:)  , allocatable :: SegGamma  !< Segment Circulation
-   integer(IntKi) :: iHeadC, iHeadP, nC, nP
+   integer(IntKi) :: iHeadC, iHeadP, nSeg, nSegP, iHeadC_bkp
    !real(ReKi),    dimension(:),   allocatable :: SegSmooth !< 
 
    print*,'------------------------------------------------------------------------------'
@@ -236,40 +236,17 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth)
    ! --------------------------------------------------------------------------------}
    ! --- All Segments
    ! --------------------------------------------------------------------------------{
-   nP =      p%nWings * (  (p%nSpan+1)*(m%nNW+1)            )
-   nC =      p%nWings * (2*(p%nSpan+1)*(m%nNW+1)-(p%nSpan+1)-(m%nNW+1))
-   if (m%nFW>0) then
-      nP = nP + p%nWings * (  (FWnSpan+1)*(m%nFW+1) )
-      nC = nC + p%nWings * (2*(FWnSpan+1)*(m%nFW+1)-(FWnSpan+1)-(m%nFW+1))  
-   endif
-   allocate(SegConnct(1:2,1:nC)); SegConnct=-1
-   allocate(SegPoints(1:3,1:nP)); SegPoints=-1
-   allocate(SegGamma (1:nC)); SegGamma =-1
-   iHeadP=1
-   iHeadC=1
-   do iW=1,p%nWings
-      if (m%nNW==1) then ! Small Hack - At t=0, NW not set, but first NW panel is the LL panel
-         CALL LatticeToSegments(m%r_LL(1:3,:,1:2,iW), m%Gamma_LL(:,iW:iW), 1, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC )
-      else
-         CALL LatticeToSegments(x%r_NW(1:3,:,1:m%nNW+1,iW), x%Gamma_NW(:,1:m%nNW,iW), 1, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC )
-      endif
-   enddo
-   if (m%nFW>0) then !TODO TODO TODO
+   call PackPanelsToSegments(p, m, x, 1, SegConnct, SegPoints, SegGamma, nSeg, nSegP)
+   if (m%nNW==1) then ! Small Hack - At t=0, NW not set, but first NW panel is the LL panel
+      iHeadP=1
+      iHeadC=1
       do iW=1,p%nWings
-         CALL LatticeToSegments(x%r_FW(1:3,:,1:m%nFW+1,iW), x%Gamma_FW(:,1:m%nFW,iW), 1, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC )
+         CALL LatticeToSegments(m%r_LL(1:3,:,1:2,iW), m%Gamma_LL(:,iW:iW), 1, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC )
       enddo
    endif
+
    Filename = TRIM(FileRootName)//'.AllSeg.'//Tstr//'.vtk'
    CALL WrVTK_Segments(Filename, SegPoints, SegConnct, SegGamma) 
-
-   if ((iHeadP-1)/=nP) then
-      print*,'IO: Number of points wrongly estimated',nP, iHeadP-1
-      STOP
-   endif
-   if ((iHeadC-1)/=nC) then
-      print*,'IO: Number of segments wrongly estimated',nC, iHeadC-1
-      STOP
-   endif
 
 end subroutine WrVTK_FVW
 
@@ -285,6 +262,8 @@ subroutine WrVTK_Segments(filename, SegPoints, SegConnct, SegGamma)
       call vtk_lines(SegConnct(1:2,:)-1) ! NOTE: VTK indexing at 0
       call vtk_cell_data_init()
       call vtk_cell_data_scalar(SegGamma,'Gamma')
+      call vtk_cell_data_scalar(real(SegConnct(3,:), ReKi),'Age')
+      !call vtk_cell_data_scalar(real(SegConnct(4,:), ReKi),'Span')
       !call vtk_point_data_init()
       !call vtk_point_data_vector(Sgmt%UconvP(1:3,1:Sgmt%nP_Storage),'Uconv')
       call vtk_close_file()
