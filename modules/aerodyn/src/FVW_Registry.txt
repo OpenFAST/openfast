@@ -25,10 +25,13 @@ typedef     ^                   ^               IntKi                           
 typedef     ^                   ^               ReKi                             CircSolvConvCrit     -     - - "Convergence criterion for circulation solving"  -
 typedef     ^                   ^               ReKi                             CircSolvRelaxation   -     - - "Relaxation factor for circulation solving"  -
 typedef     ^                   ^               IntKi                            CircSolvPolar   -  -  -  "(0=Use AD polars, 1=2PiAlpha, 2=sin(2pialpha)" -
+typedef     ^                   ^               IntKi                            DiffusionMethod   -  -  -  "Diffusion method (None, CoreSpreading, PSE)"          -
+typedef     ^                   ^               ReKi                             CoreSpreadEddyVisc -  - -   "Eddy viscosity used in the core spreading method" 
+typedef     ^                   ^               IntKi                            RegDeterMethod   -  -  -  "Regularization determinatino method (manual, automatic)"          -
 typedef     ^                   ^               IntKi                            RegFunction   -  -  -  "Type of regularizaion function (LambOseen, Vatistas, see FVW_BiotSavart)"          -
 typedef     ^                   ^               IntKi                            WakeRegMethod -  - -   "Method for regularization (constant, stretching, age, etc.)"  - 
-typedef     ^                   ^               ReKi                             WakeRegFactor -  - -   "Factor used in the regularization " 
-typedef     ^                   ^               ReKi                             WingRegFactor -  - -   "Factor used in the regularization " 
+typedef     ^                   ^               ReKi                             WakeRegParam -  - -   "Initial value of the regularization parameter" 
+typedef     ^                   ^               ReKi                             WingRegParam -  - -   "Regularization parameter of the wing" 
 typedef     ^                   ^               IntKi                            WrVTK         -  - -   "Outputs VTK at each calcoutput call, even if main fst doesnt do it"  - 
 typedef     ^                   ^               IntKi                            VTKBlades     -  - -   "Outputs VTk for each blade 0=no blade, 1=Bld 1"  - 
 typedef     ^                   ^               IntKi                            HACK          -    -  - "HACK ID"      -
@@ -138,10 +141,13 @@ typedef     ^                   ^               IntKi                           
 typedef     ^                   ^               IntKi                            nNWPanels            -  -  -  "Number of nw panels"          -
 typedef     ^                   ^               IntKi                            nFWPanels            -  -  -  "Number of fw panels"          -
 typedef     ^                   ^               IntKi                            nFWPanelsFree        -  -  -  "Number of fw panels that are free"          -
+typedef     ^                   ^               IntKi                            DiffusionMethod   -  -  -  "Diffusion method (None, CoreSpreading, PSE)"          -
+typedef     ^                   ^               ReKi                             CoreSpreadEddyVisc -  - -   "Eddy viscosity used in the core spreading method" 
+typedef     ^                   ^               IntKi                            RegDeterMethod   -  -  -  "Regularization determinatino method (manual, automatic)"          -
 typedef     ^                   ^               IntKi                            RegFunction   -  -  -  "Type of regularizaion function (LambOseen, Vatistas, see FVW_BiotSavart)"          -
 typedef     ^                   ^               IntKi                            WakeRegMethod -  - -   "Method for regularization (constant, stretching, age, etc.)"  - 
-typedef     ^                   ^               ReKi                             WakeRegFactor -  - -   "Factor used in the regularization " 
-typedef     ^                   ^               ReKi                             WingRegFactor -  - -   "Factor used in the regularization " 
+typedef     ^                   ^               ReKi                             WakeRegParam  -  - -   "Factor used in the regularization " 
+typedef     ^                   ^               ReKi                             WingRegParam  -  - -   "Factor used in the regularization " 
 typedef     ^                   ^               IntKi                            WrVTK         -  - -   "Outputs VTK at each calcoutput call, even if main fst doesnt do it"  - 
 typedef     ^                   ^               IntKi                            VTKBlades     -  - -   "Outputs VTk for each blade 0=no blade, 1=Bld 1"  - 
 typedef     ^                   ^               DbKi                             DTvtk         -  - -   "Requested timestep between VTK outputs (calculated from the VTK_fps read in)" s

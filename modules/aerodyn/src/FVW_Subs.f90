@@ -12,21 +12,30 @@ module FVW_SUBS
    integer(IntKi), parameter :: idCircPolarData     = 1
    integer(IntKi), parameter :: idCircNoFlowThrough = 2
    integer(IntKi), parameter :: idCircPrescribed    = 3
-   ! Polar data
-   !integer(IntKi), parameter :: idPolarAeroDyn      = 0
-   !integer(IntKi), parameter :: idPolar2PiAlpha     = 1
-   !integer(IntKi), parameter :: idPolar2PiSinAlpha  = 2
+   integer(IntKi), parameter, dimension(2) :: idCircVALID = (/idCircPolarData, idCircPrescribed /)
    ! Integration method
    integer(IntKi), parameter :: idRK4      = 1 
    integer(IntKi), parameter :: idAB4      = 2
    integer(IntKi), parameter :: idABM4     = 3
    integer(IntKi), parameter :: idPredictor= 4
    integer(IntKi), parameter :: idEuler1   = 5
+   integer(IntKi), parameter, dimension(1) :: idIntMethodVALID      = (/idEuler1 /)
+   ! Diffusion method
+   integer(IntKi), parameter :: idDiffusionNone       = 0
+   integer(IntKi), parameter :: idDiffusionCoreSpread = 1
+   integer(IntKi), parameter :: idDiffusionPSE        = 2
+   integer(IntKi), parameter, dimension(1) :: idDiffusionVALID      = (/idDiffusionNone /)
    ! Regularization Method
    integer(IntKi), parameter :: idRegConstant   = 1
    integer(IntKi), parameter :: idRegStretching = 2
    integer(IntKi), parameter :: idRegAge        = 3
-   integer(IntKi), parameter, dimension(3) :: idRegMethodVALID      = (/idRegConstant,idRegStretching,idRegAge/)
+   integer(IntKi), parameter, dimension(2) :: idRegMethodVALID      = (/idRegConstant,idRegAge/)
+   ! Regularization determination method
+   integer(IntKi), parameter :: idRegDeterManual  = 0
+   integer(IntKi), parameter :: idRegDeterAuto    = 1
+   integer(IntKi), parameter, dimension(1) :: idRegDeterVALID      = (/idRegDeterManual /)
+
+   real(ReKi), parameter :: CoreSpreadAlpha = 1.25643 
 
    ! Implementation 
    integer(IntKi), parameter :: iNWStart=2 !< Index in r%NW where the near wake start (if >1 then the Wing panels are included in r_NW)
@@ -432,6 +441,47 @@ subroutine PackPanelsToSegments(p, m, x, iDepthStart, SegConnct, SegPoints, SegG
    endif
 end subroutine PackPanelsToSegments
 
+!> Set up regularization parameter based on diffusion method and regularization method
+!! NOTE: this should preferably be done at the "panel"/vortex sheet level
+subroutine WakeRegularization(p, x, m, SegConnct, SegPoints, SegGamma, SegEpsilon, ErrStat, ErrMsg)
+   type(FVW_ParameterType),         intent(in   ) :: p       !< Parameters
+   type(FVW_ContinuousStateType),   intent(in   ) :: x       !< States
+   type(FVW_MiscVarType),           intent(in   ) :: m       !< Initial misc/optimization variables
+   integer(IntKi),dimension(:,:)  , intent(in   ) :: SegConnct  !< Segment connectivity
+   real(ReKi),    dimension(:,:)  , intent(in   ) :: SegPoints  !< Segment Points
+   real(ReKi),    dimension(:)    , intent(in   ) :: SegGamma   !< Segment Circulation
+   real(ReKi),    dimension(:)    , intent(  out) :: SegEpsilon !< Segment regularization parameter
+   integer(IntKi),                  intent(  out) :: ErrStat    !< Error status of the operation
+   character(*),                    intent(  out) :: ErrMsg     !< Error message if ErrStat /= ErrID_None
+   ! Local variables
+   integer(IntKi) :: iSeg
+   real(ReKi) :: time
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+   ! 
+   if (p%WakeRegMethod==idRegConstant) then
+      SegEpsilon=p%WakeRegParam 
+
+   else if (p%WakeRegMethod==idRegStretching) then
+      ! TODO
+      ErrStat = ErrID_Fatal
+      ErrMsg ='Regularization method not implemented'
+
+   else if (p%WakeRegMethod==idRegAge) then
+      do iSeg=1,size(SegEpsilon,1) ! loop on segments
+         time = (SegConnct(3, iSeg)-1) * p%DTfvw ! column 3 contains "iDepth", or "iAge", from 1 to nSteps
+         SegEpsilon(iSeg) = sqrt( 4._ReKi * CoreSpreadAlpha * p%CoreSpreadEddyVisc * p%KinVisc* time  + p%WakeRegParam**2 )
+      enddo
+
+   else
+      ErrStat = ErrID_Fatal
+      ErrMsg ='Regularization method not implemented'
+   endif
+
+end subroutine WakeRegularization
+
+
 !> Compute induced velocities from all vortex elements onto all the vortex elements
 !! In : x%r_NW, x%r_FW, x%Gamma_NW, x%Gamma_FW
 !! Out: m%Vind_NW, m%Vind_FW
@@ -439,6 +489,8 @@ subroutine WakeInducedVelocities(p, x, m, ErrStat, ErrMsg)
    type(FVW_ParameterType),         intent(in   ) :: p       !< Parameters
    type(FVW_ContinuousStateType),   intent(in   ) :: x       !< States
    type(FVW_MiscVarType),           intent(inout) :: m       !< Initial misc/optimization variables
+   integer(IntKi),                  intent(  out) :: ErrStat !< Error status of the operation
+   character(*),                    intent(  out) :: ErrMsg  !< Error message if ErrStat /= ErrID_None
    ! Local variables
    integer(IntKi) :: iSpan,iAge, iW, nSeg, nSegP, nCPs, iHeadP
    integer(IntKi),dimension(:,:), allocatable :: SegConnct  !< Segment connectivity
@@ -447,8 +499,6 @@ subroutine WakeInducedVelocities(p, x, m, ErrStat, ErrMsg)
    real(ReKi),    dimension(:)  , allocatable :: SegEpsilon !< Segment regularization parameter
    real(ReKi),    dimension(:,:), allocatable :: CPs   !< ControlPoints
    real(ReKi),    dimension(:,:), allocatable :: Uind  !< Induced velocity
-   integer(IntKi),              intent(  out) :: ErrStat    !< Error status of the operation
-   character(*),                intent(  out) :: ErrMsg     !< Error message if ErrStat /= ErrID_None
    integer(IntKi) :: nFWEff ! Number of farwake panels that are free at current tmie step
    nFWEff = min(m%nFW, p%nFWFree)
 
@@ -456,16 +506,12 @@ subroutine WakeInducedVelocities(p, x, m, ErrStat, ErrMsg)
    m%Vind_FW = -9999._ReKi !< Safety
 
    ! --- Packing all vortex elements into a list of segments
+   ! NOTE: allocates SegConnct, SegPoints, SegGamma..
    call PackPanelsToSegments(p, m, x, 1, SegConnct, SegPoints, SegGamma, nSeg, nSegP)
 
    ! --- Setting up regularization
    allocate(SegEpsilon(1:nSeg));
-   if (p%WakeRegMethod==idRegConstant) then
-      SegEpsilon=p%WakeRegFactor ! TODO
-   else
-      print*,'Regularization method not implemented',p%WakeRegMethod
-      STOP
-   endif
+   call WakeRegularization(p, x, m, SegConnct, SegPoints, SegGamma, SegEpsilon, ErrStat, ErrMsg)
 
    ! --- Computing induced velocity
    call PackConvectingPoints()
@@ -557,6 +603,8 @@ subroutine LiftingLineInducedVelocities(p, x, iDepthStart, m, ErrStat, ErrMsg)
    integer(IntKi),              intent(  out) :: ErrStat    !< Error status of the operation
    character(*),                intent(  out) :: ErrMsg     !< Error message if ErrStat /= ErrID_None
    integer(IntKi) :: i
+   ErrStat = ErrID_None
+   ErrMsg  = ""
    m%Vind_LL = -9999._ReKi !< Safety
 
    ! --- Packing all vortex elements into a list of segments
@@ -570,12 +618,7 @@ subroutine LiftingLineInducedVelocities(p, x, iDepthStart, m, ErrStat, ErrMsg)
    else
       ! --- Setting up regularization
       allocate(SegEpsilon(1:nSeg));
-      if (p%WakeRegMethod==idRegConstant) then
-         SegEpsilon=p%WakeRegFactor ! TODO
-      else
-         print*,'Regularization method not implemented',p%WakeRegMethod
-         STOP
-      endif
+      call WakeRegularization(p, x, m, SegConnct, SegPoints, SegGamma, SegEpsilon, ErrStat, ErrMsg)
 
       nCPs=p%nWings * p%nSpan
       allocate(CPs (1:3,1:nCPs))
@@ -655,6 +698,8 @@ subroutine FVW_AeroOuts( M_sg, M_ag, PitchAndTwist, Vstr_g,  Vind_g, Vwnd_g, Kin
    real(ReKi)                             :: Vtot_g(3)               ! Vector of total relative velocity                      section coord
    real(ReKi)                             :: Vtot_a(3)               ! Vector of total relative velocity                      global  coord
    real(ReKi)                             :: Vtot_s(3)               ! Vector of total relative velocity                      global  coord
+   ErrStat = ErrID_None
+   ErrMsg  = ""
    !real(DbKi), dimension(3,3)             :: M_sa                    !< Transformation matrix from airfoil to section  coord
    !real(DbKi), dimension(3,3)             :: M_sg2                   !< Transformation matrix from global  to section  coord
    ! --- Transformation from airfoil to section (KEEP ME)

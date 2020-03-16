@@ -321,10 +321,13 @@ SUBROUTINE FVW_SetParametersFromInputFile( InputFileData, p, m, ErrStat, ErrMsg 
    p%FreeWakeStart        = InputFileData%FreeWakeStart
    p%CircSolvPolar        = InputFileData%CircSolvPolar
    p%FullCirculationStart = InputFileData%FullCirculationStart
+   p%DiffusionMethod      = InputFileData%DiffusionMethod
    p%RegFunction          = InputFileData%RegFunction
+   p%RegDeterMethod       = InputFileData%RegDeterMethod
    p%WakeRegMethod        = InputFileData%WakeRegMethod
-   p%WakeRegFactor        = InputFileData%WakeRegFactor
-   p%WingRegFactor        = InputFileData%WingRegFactor
+   p%WakeRegParam         = InputFileData%WakeRegParam
+   p%WingRegParam         = InputFileData%WingRegParam
+   p%CoreSpreadEddyVisc   = InputFileData%CoreSpreadEddyVisc
    p%WrVTK                = InputFileData%WrVTK
    p%VTKBlades            = min(max(InputFileData%VTKBlades,0),p%nWings)
 

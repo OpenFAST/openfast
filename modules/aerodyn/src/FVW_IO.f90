@@ -50,14 +50,17 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, Inp, ErrStat, ErrMsg )
    !CALL ReadVar(UnIn,FileName,Inp%CircSolvPolar     ,'CircSolvPolar'   ,'',ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVar(UnIn,FileName,Inp%CirculationFile   ,'CirculationFile'   ,'',ErrStat2,ErrMsg2); if(Failed())return
    !------------------------ WAKE OPTIONS -------------------------------------------
-   CALL ReadCom        (UnIn,FileName,                  'Wake options header'               , ErrStat2,ErrMsg2); if(Failed()) return
-   CALL ReadVar        (UnIn,FileName,Inp%nNWPanels     ,'nNWPanels'       ,''              , ErrStat2,ErrMsg2); if(Failed())return
-   CALL ReadVar        (UnIn,FileName,Inp%nFWPanels     ,'nFWPanels'       ,''              , ErrStat2,ErrMsg2); if(Failed())return
-   CALL ReadVar        (UnIn,FileName,Inp%nFWPanelsFree ,'nFWPanelsFree'   ,''              , ErrStat2,ErrMsg2); if(Failed())return
-   CALL ReadVarWDefault(UnIn,FileName,Inp%RegFunction   ,'RegFunction'     ,'',idRegVatistas, ErrStat2,ErrMsg2); if(Failed())return
-   CALL ReadVarWDefault(UnIn,FileName,Inp%WakeRegMethod ,'WakeRegMethod'   ,'',idRegConstant, ErrStat2,ErrMsg2); if(Failed())return
-   CALL ReadVar        (UnIn,FileName,Inp%WakeRegFactor ,'WakeRegFactor'   ,''              , ErrStat2,ErrMsg2); if(Failed())return
-   CALL ReadVar        (UnIn,FileName,Inp%WingRegFactor ,'WingRegFactor'   ,''              , ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadCom        (UnIn,FileName,                  'Wake options header'                         , ErrStat2,ErrMsg2); if(Failed()) return
+   CALL ReadVar        (UnIn,FileName,Inp%nNWPanels          ,'nNWPanels'         ,''                 , ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVar        (UnIn,FileName,Inp%nFWPanels          ,'nFWPanels'         ,''                 , ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVar        (UnIn,FileName,Inp%nFWPanelsFree      ,'nFWPanelsFree'     ,''                 , ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVarWDefault(UnIn,FileName,Inp%DiffusionMethod    ,'DiffusionMethod'   ,'',idDiffusionNone , ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVarWDefault(UnIn,FileName,Inp%RegDeterMethod     ,'RegDeterMethod'    ,'',idRegDeterManual, ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVarWDefault(UnIn,FileName,Inp%RegFunction        ,'RegFunction'       ,'',idRegVatistas   , ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVarWDefault(UnIn,FileName,Inp%WakeRegMethod      ,'WakeRegMethod'     ,'',idRegConstant   , ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVar        (UnIn,FileName,Inp%WakeRegParam       ,'WakeRegParam'      ,''                 , ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVar        (UnIn,FileName,Inp%WingRegParam       ,'WingRegParam'      ,''                 , ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVarWDefault(UnIn,FileName,Inp%CoreSpreadEddyVisc ,'CoreSpreadEddyVisc','',10.0_ReKi       , ErrStat2,ErrMsg2); if(Failed())return
    !------------------------ OUTPUT OPTIONS -----------------------------------------
    CALL ReadCom(UnIn,FileName,                  'Output options header', ErrStat2,ErrMsg2); if(Failed()) return
    CALL ReadVar(UnIn,FileName,Inp%WrVTK       , 'WrVTK'              ,'',ErrStat2,ErrMsg2); if(Failed())return
@@ -67,9 +70,12 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, Inp, ErrStat, ErrMsg )
    ! --- Validation of inputs
    if (PathIsRelative(Inp%CirculationFile)) Inp%CirculationFile = TRIM(PriPath)//TRIM(Inp%CirculationFile)
 
-   if (Check(.not.(ANY((/idCircPrescribed,idCircPolarData/)==Inp%CirculationMethod)), 'Circulation method not implemented')) return
-
-   if (Check( Inp%IntMethod/=idEuler1 , 'Time integration method not yet implemented. Use Euler 1st order method for now.')) return
+   if (Check(.not.(ANY(idCircVALID ==Inp%CirculationMethod)), 'Circulation method (CircSolvingMethod) not implemented')) return
+   if (Check(.not.(ANY(idIntMethodVALID==Inp%IntMethod    )) , 'Time integration method (IntMethod) not yet implemented. Use Euler 1st order method for now.')) return
+   if (Check(.not.(ANY(idDiffusionVALID==Inp%DiffusionMethod)) , 'Diffusion method (DiffusionMethod) not yet implemented. Use None for now.')) return
+   if (Check(.not.(ANY(idRegDeterVALID ==Inp%RegDeterMethod))  , 'Regularization determination method (RegDeterMethod) not yet implemented. Use Manual method for now.')) return
+   if (Check(.not.(ANY(idRegVALID      ==Inp%RegFunction  )), 'Regularization function (RegFunction) not implemented')) return
+   if (Check(.not.(ANY(idRegMethodVALID==Inp%WakeRegMethod)), 'Wake regularization method (WakeRegMethod) not implemented')) return
 
    if (Check( Inp%DTfvw < p%DTaero, 'DTfvw must be >= DTaero from AD15.')) return
 
@@ -78,10 +84,9 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, Inp, ErrStat, ErrMsg )
    if (Check( Inp%nFWPanelsFree<0 , 'Number of free far wake panels must be >=0')) return
    if (Check( Inp%nFWPanelsFree>Inp%nFWPanels , 'Number of free far wake panels must be <=Number of far wake panels')) return
 
-   if (Check(.not.(ANY(idRegVALID      ==Inp%RegFunction  )), 'Regularization function not implemented')) return
-   if (Check(.not.(ANY(idRegMethodVALID==Inp%WakeRegMethod)), 'Wake regularization method not implemented')) return
-   if (Check(Inp%WakeRegFactor<0                            , 'Wake regularization factor should be positive')) return
-   if (Check(Inp%WingRegFactor<0                            , 'Wing regularization factor should be positive')) return
+   if (Check(Inp%WakeRegParam<0             , 'Wake regularization parameter (WakeRegParam) should be positive')) return
+   if (Check(Inp%WingRegParam<0             , 'Wing regularization parameter (WakeRegParam) should be positive')) return
+   if (Check(Inp%CoreSpreadEddyVisc<0       , 'Core spreading eddy viscosity (CoreSpreadEddyVisc) should be positive')) return
 
    Inp%DTvtk = Get_DTvtk( VTK_fps_line, p%DTaero, Inp%DTfvw )
 
@@ -173,8 +178,10 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth)
    integer(IntKi),dimension(:,:), allocatable :: SegConnct !< Segment connectivity
    real(ReKi),    dimension(:,:), allocatable :: SegPoints !< Segment Points
    real(ReKi),    dimension(:)  , allocatable :: SegGamma  !< Segment Circulation
+   real(ReKi),    dimension(:),   allocatable  :: SegEpsilon !< 
    integer(IntKi) :: iHeadC, iHeadP, nSeg, nSegP, iHeadC_bkp
-   !real(ReKi),    dimension(:),   allocatable :: SegSmooth !< 
+   integer(IntKi)       :: ErrStat2
+   character(ErrMsgLen) :: ErrMsg2
 
    print*,'------------------------------------------------------------------------------'
    print'(A,L1,A,I0,A,I0,A,I0)','VTK Output  -      First call ',m%FirstCall, '                                nNW:',m%nNW,' nFW:',m%nFW,'  i:',VTKCount
@@ -245,23 +252,29 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth)
       enddo
    endif
 
+   allocate(SegEpsilon(1:size(SegConnct,2)))
+   call WakeRegularization(p, x, m, SegConnct, SegPoints, SegGamma, SegEpsilon, ErrStat2, ErrMsg2)
+
    Filename = TRIM(FileRootName)//'.AllSeg.'//Tstr//'.vtk'
-   CALL WrVTK_Segments(Filename, SegPoints, SegConnct, SegGamma) 
+   CALL WrVTK_Segments(Filename, SegPoints, SegConnct, SegGamma, SegEpsilon) 
+   deallocate(SegEpsilon)
 
 end subroutine WrVTK_FVW
 
 
-subroutine WrVTK_Segments(filename, SegPoints, SegConnct, SegGamma) 
+subroutine WrVTK_Segments(filename, SegPoints, SegConnct, SegGamma, SegEpsilon) 
    use VTK
    character(len=*),intent(in)                 :: filename
-   real(ReKi), dimension(:,:),      intent(in) :: SegPoints !< 
-   integer(IntKi), dimension(:,:),  intent(in) :: SegConnct !< 
-   real(ReKi),     dimension(:)  ,  intent(in) :: SegGamma !< 
+   real(ReKi), dimension(:,:),      intent(in) :: SegPoints  !< 
+   integer(IntKi), dimension(:,:),  intent(in) :: SegConnct  !< 
+   real(ReKi),     dimension(:)  ,  intent(in) :: SegGamma   !< 
+   real(ReKi),     dimension(:)  ,  intent(in) :: SegEpsilon !< 
    if ( vtk_new_ascii_file(filename,'Sgmt') ) then
       call vtk_dataset_polydata(SegPoints(1:3,:))
       call vtk_lines(SegConnct(1:2,:)-1) ! NOTE: VTK indexing at 0
       call vtk_cell_data_init()
-      call vtk_cell_data_scalar(SegGamma,'Gamma')
+      call vtk_cell_data_scalar(SegGamma  ,'Gamma')
+      call vtk_cell_data_scalar(SegEpsilon,'Epsilon')
       call vtk_cell_data_scalar(real(SegConnct(3,:), ReKi),'Age')
       !call vtk_cell_data_scalar(real(SegConnct(4,:), ReKi),'Span')
       !call vtk_point_data_init()
