@@ -362,7 +362,7 @@ contains
 
       end do ! convergence loop
       if (iIter==p%CircSolvMaxIter) then
-         print*,'Maximum number of iterations reached: ',iIter
+         print'(A,I0,A,I0,A)','Circulation solve, call ',iLabel,', done after ........................ nIter: ', iIter, ' <<< Max reached'
          Gamma_LL=GammaLastIter ! returning relaxed value if not converged
       else
          print'(A,I0,A,I0)','Circulation solve, call ',iLabel,', done after ........................ nIter: ', iIter
@@ -377,8 +377,8 @@ contains
       !call print_mean_3d( m%Vstr_LL(:,:,:), 'Mean struct  vel. LL (cst)')
       !call print_mean_3d( m%Vind_LL(:,:,:), 'Mean induced vel. LL (cst)')
       !call print_mean_3d( Vvar(:,:,:)     , 'Mean induced vel. LL (var)')
-      call print_mean_3d( Vvar+m%Vind_LL(:,:,:), 'Mean induced vel. LL (tot)')
-      call print_mean_3d( m%Vtot_LL(:,:,:), 'Mean relativevel. LL (tot)')
+      !call print_mean_3d( Vvar+m%Vind_LL(:,:,:), 'Mean induced vel. LL (tot)')
+      !call print_mean_3d( m%Vtot_LL(:,:,:), 'Mean relativevel. LL (tot)')
       !print*,'m%Vind_LL',m%Vind_LL(1,:,:)
       !print*,'m%Vwnd_LL',m%Vwnd_LL(1,:,:)
       !print*,'m%Vcst_LL',Vcst(1,:,:)

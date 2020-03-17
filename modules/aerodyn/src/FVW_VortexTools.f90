@@ -169,7 +169,8 @@ CONTAINS
          U(1:3)= U(1:3)+ M(1:3, j, i)
       enddo; enddo;
       U(1:3)=U(1:3)/ (size(M,3)*size(M,2))
-      print'(A26,3F12.4)',trim(Label)//'         ',U
+      !print'(A26,3F12.4)',trim(Label)//'         ',U
+      print'(A24,3F12.4)',trim(Label),U
    end subroutine
 
 

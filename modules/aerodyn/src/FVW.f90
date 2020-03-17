@@ -434,7 +434,7 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    endif
 
 
-   print'(A,F10.3,A,F10.3,A,L1,A,I0,A,I0,A,I0)','Update states, t:',t,'  t_u:', utimes(1),' ComputeWakeInduced: ',m%ComputeWakeInduced,' Step:',n,' nNW:',m%nNW,' nFW:',m%nFW
+   print'(A,F10.3,A,F10.3,A,I0,A,I0,A,I0,A,L1)','Update states, t:',t,'  t_u:', utimes(1),'            Step:',n,' nNW:',m%nNW,' nFW:',m%nFW,' ComputeWake: ',m%ComputeWakeInduced
 
 
    ! --- Evaluation at t

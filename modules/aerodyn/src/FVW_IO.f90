@@ -53,7 +53,7 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, Inp, ErrStat, ErrMsg )
    CALL ReadCom        (UnIn,FileName,                  'Wake options header'                         , ErrStat2,ErrMsg2); if(Failed()) return
    CALL ReadVar        (UnIn,FileName,Inp%nNWPanels          ,'nNWPanels'         ,''                 , ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVar        (UnIn,FileName,Inp%nFWPanels          ,'nFWPanels'         ,''                 , ErrStat2,ErrMsg2); if(Failed())return
-   CALL ReadVar        (UnIn,FileName,Inp%nFWPanelsFree      ,'nFWPanelsFree'     ,''                 , ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVarWDefault(UnIn,FileName,Inp%nFWPanelsFree      ,'nFWPanelsFree'     ,'', Inp%nFWPanels  , ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVarWDefault(UnIn,FileName,Inp%DiffusionMethod    ,'DiffusionMethod'   ,'',idDiffusionNone , ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVarWDefault(UnIn,FileName,Inp%RegDeterMethod     ,'RegDeterMethod'    ,'',idRegDeterManual, ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVarWDefault(UnIn,FileName,Inp%RegFunction        ,'RegFunction'       ,'',idRegVatistas   , ErrStat2,ErrMsg2); if(Failed())return
@@ -276,7 +276,7 @@ subroutine WrVTK_Segments(filename, SegPoints, SegConnct, SegGamma, SegEpsilon)
       call vtk_cell_data_init()
       call vtk_cell_data_scalar(SegGamma  ,'Gamma')
       call vtk_cell_data_scalar(SegEpsilon,'Epsilon')
-      call vtk_cell_data_scalar(real(SegConnct(3,:), ReKi),'Age')
+!       call vtk_cell_data_scalar(real(SegConnct(3,:), ReKi),'Age')
       !call vtk_cell_data_scalar(real(SegConnct(4,:), ReKi),'Span')
       !call vtk_point_data_init()
       !call vtk_point_data_vector(Sgmt%UconvP(1:3,1:Sgmt%nP_Storage),'Uconv')
