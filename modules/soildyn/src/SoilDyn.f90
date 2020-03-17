@@ -477,7 +477,6 @@ subroutine SoilDyn_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
       ! Return force onto the resulting point mesh
       y%ReactionForce%Force (1:3,i)    = real(Force(1:3),ReKi)
       y%ReactionForce%Moment(1:3,i)    = real(Force(4:6),ReKi)
-write(*,'(f12.5,6(2x,ES12.5E2))') t,Force(1:6)
    enddo
 
       ! Outputs
