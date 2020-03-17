@@ -98,7 +98,6 @@ contains
       ErrMsg  = ""
       ! --- Position of leading edge and trailing edge
       ! TODO, this assumes one to one between InputMesh and FVW Mesh
-      !
       do iW = 1,p%nWings
          do iSpan = 1,p%nSpan+1
             P_ref = Meshes(iW)%Position(1:3, iSpan )+Meshes(iW)%TranslationDisp(1:3, iSpan)

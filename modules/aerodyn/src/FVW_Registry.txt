@@ -11,8 +11,8 @@ usefrom AirfoilInfo_Registry.txt
 #FVW_ParameterType  
 typedef  FVW/FVW           ParameterType        IntKi                            nWings            -  -   - "Number of Wings"  -
 typedef     ^                   ^               IntKi                            nSpan             -  -  -  "TODO, should be defined per wing. Number of spanwise element"          -
-typedef     ^                   ^               IntKi                            AFindx            :: -  - "Index to the airfoils from AD15 [idx 1: BladeNode, idx2: Blade number]" - 
-typedef     ^                   ^               ReKi                             Chord             :: -  - "Chord of each blade element from input file [idx 1: BladeNode, idx2: Blade number]" - 
+typedef     ^                   ^               IntKi                            AFindx            :: -  - "Index to the airfoils from AD15 [idx1= BladeNode, idx2=Blade number]" - 
+typedef     ^                   ^               ReKi                             Chord             :: -  - "Chord of each blade element from input file [idx1=BladeNode, idx2=Blade number]" - 
 typedef     ^                   ^               IntKi                            nNWMax            -  -  -  "Maximum number of nw panels, per wing"          -
 typedef     ^                   ^               IntKi                            nFWMax            -  -  -  "Maximum number of fw panels, per wing"          -
 typedef     ^                   ^               IntKi                            nFWFree           -  -  -  "Number of fw panels that are free, per wing"          -
@@ -32,13 +32,14 @@ typedef     ^                   ^               IntKi                           
 typedef     ^                   ^               IntKi                            WakeRegMethod -  - -   "Method for regularization (constant, stretching, age, etc.)"  - 
 typedef     ^                   ^               ReKi                             WakeRegParam -  - -   "Initial value of the regularization parameter" 
 typedef     ^                   ^               ReKi                             WingRegParam -  - -   "Regularization parameter of the wing" 
-typedef     ^                   ^               IntKi                            WrVTK         -  - -   "Outputs VTK at each calcoutput call, even if main fst doesnt do it"  - 
-typedef     ^                   ^               IntKi                            VTKBlades     -  - -   "Outputs VTk for each blade 0=no blade, 1=Bld 1"  - 
-typedef     ^                   ^               IntKi                            HACK          -    -  - "HACK ID"      -
 typedef     ^                   ^               DbKi                             DTaero        -  - -   "Time interval for calls calculations"   s
 typedef     ^                   ^               DbKi                             DTfvw         -  - -   "Time interval for calculating wake induced velocities"   s
 typedef     ^                   ^               ReKi                             KinVisc       -  - -   "Kinematic air viscosity"   m^2/s
+# Parametesr output options
+typedef     ^                   ^               IntKi                            WrVTK         -  - -   "Outputs VTK at each calcoutput call, even if main fst doesnt do it"  - 
+typedef     ^                   ^               IntKi                            VTKBlades     -  - -   "Outputs VTk for each blade 0=no blade, 1=Bld 1"  - 
 typedef     ^                   ^               DbKi                             DTvtk         -  - -   "DT between vtk writes" s
+typedef     ^                   ^               IntKi                            VTKCoord      -  - -    "Switch for VTK outputs coordinate  system" -
 
 # ....... OtherStateType ............
 # FVW_OtherStateType
@@ -85,6 +86,8 @@ typedef     ^                   ^               DbKi                            
 # FVW_InputType
 typedef  FVW/FVW           InputType            MeshType                         WingsMesh      :   -  - "Input Mesh defining position and orientation of wings"
 typedef     ^                   ^               ReKi                             V_wind        ::   -  - "Wind at requested points (r_wind)"  -
+typedef     ^                   ^               ReKi                             HubOrientation {3}{3} -  -  "Orientation of hub coordinate system (for output only)" -
+typedef     ^                   ^               ReKi                             HubPosition    {3}    -  -  "Origin of hub (for output only)" -
 
 # ........ Output ............
 # FVW_OutputType
@@ -113,8 +116,8 @@ typedef    ^                    ^               Reki                            
 # FVW_InitInputType
 typedef  FVW/FVW           InitInputType        CHARACTER(1024)                  FVWFileName       -  -  - "Main FVW input file name"  -
 typedef     ^                   ^               MeshType                         WingsMesh         :  -  - "Input Mesh defining position and orientation of wings (nSpan+1) " -
-typedef     ^                   ^               IntKi                            AFindx            :: -  - "Index to the airfoils from AD15 [idx 1: BladeNode, idx2: Blade number]" - 
-typedef     ^                   ^               ReKi                             Chord             :: -  - "Chord of each blade element from input file [idx 1: BladeNode, idx2: Blade number]" - 
+typedef     ^                   ^               IntKi                            AFindx            :: -  - "Index to the airfoils from AD15 [idx1=BladeNode, idx2=Blade number]" - 
+typedef     ^                   ^               ReKi                             Chord             :: -  - "Chord of each blade element from input file [idx1=BladeNode, idx2=Blade number]" - 
 typedef     ^                   ^               ReKi                             RElm              :  -  - "radius of center of each element"  - 
 typedef     ^                   ^               ReKi                             zHub              :  -  - "Distance to hub for each blade" m
 typedef     ^                   ^               ReKi                             zLocal            :: -  - "Distance to blade node, measured along the blade" m
@@ -152,6 +155,7 @@ typedef     ^                   ^               ReKi                            
 typedef     ^                   ^               IntKi                            WrVTK         -  - -   "Outputs VTK at each calcoutput call, even if main fst doesnt do it"  - 
 typedef     ^                   ^               IntKi                            VTKBlades     -  - -   "Outputs VTk for each blade 0=no blade, 1=Bld 1"  - 
 typedef     ^                   ^               DbKi                             DTvtk         -  - -   "Requested timestep between VTK outputs (calculated from the VTK_fps read in)" s
+typedef     ^                   ^               IntKi                            VTKCoord      -  - -    "Switch for VTK outputs coordinate  system" -
 
 #.......... InitOutputType ......
 # FVW_InitOutputType

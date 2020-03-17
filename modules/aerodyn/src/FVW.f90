@@ -332,6 +332,7 @@ SUBROUTINE FVW_SetParametersFromInputFile( InputFileData, p, m, ErrStat, ErrMsg 
    p%CoreSpreadEddyVisc   = InputFileData%CoreSpreadEddyVisc
    p%WrVTK                = InputFileData%WrVTK
    p%VTKBlades            = min(max(InputFileData%VTKBlades,0),p%nWings)
+   p%VTKCoord             = InputFileData%VTKCoord
 
    if (allocated(p%PrescribedCirculation)) deallocate(p%PrescribedCirculation)
    if (InputFileData%CirculationMethod==idCircPrescribed) then 
@@ -673,6 +674,7 @@ subroutine FVW_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, ErrStat,
 ! All of the calculated output channels are placed into the m%AllOuts(:), while the channels selected for outputs are
 ! placed in the y%WriteOutput(:) array.
 !..................................................................................................................................
+   use VTK, only: set_vtk_coordinate_transform
    real(DbKi),                      intent(in   )  :: t           !< Current simulation time in seconds
    type(FVW_InputType),             intent(in   )  :: u           !< Inputs at Time t
    type(FVW_ParameterType),         intent(in   )  :: p           !< Parameters
@@ -738,6 +740,11 @@ subroutine FVW_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, ErrStat,
       endif
       if ( ( t - m%VTKlastTime ) >= p%DTvtk*OneMinusEpsilon )  then
          m%VTKlastTime = t
+         if (p%VTKCoord==2) then
+            ! Hub reference coordinates, for export only
+            ! ALL VTK Will be exported in this coordinate system!
+            call set_vtk_coordinate_transform(u%HubOrientation,u%HubPosition)
+         endif
          call WrVTK_FVW(p, x, z, m, 'vtk_out/FVW', m%VTKstep, 9)
       endif
       m%VTKstep = m%VTKstep + 1  ! Increment VTK counter no matter what

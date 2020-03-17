@@ -38,8 +38,8 @@ IMPLICIT NONE
   TYPE, PUBLIC :: FVW_ParameterType
     INTEGER(IntKi)  :: nWings      !< Number of Wings [-]
     INTEGER(IntKi)  :: nSpan      !< TODO, should be defined per wing. Number of spanwise element [-]
-    INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: AFindx      !< Index to the airfoils from AD15 [idx 1: BladeNode, idx2: Blade number] [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Chord      !< Chord of each blade element from input file [idx 1: BladeNode, idx2: Blade number] [-]
+    INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: AFindx      !< Index to the airfoils from AD15 [idx1= BladeNode, idx2=Blade number] [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Chord      !< Chord of each blade element from input file [idx1=BladeNode, idx2=Blade number] [-]
     INTEGER(IntKi)  :: nNWMax      !< Maximum number of nw panels, per wing [-]
     INTEGER(IntKi)  :: nFWMax      !< Maximum number of fw panels, per wing [-]
     INTEGER(IntKi)  :: nFWFree      !< Number of fw panels that are free, per wing [-]
@@ -59,13 +59,13 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: WakeRegMethod      !< Method for regularization (constant, stretching, age, etc.) [-]
     REAL(ReKi)  :: WakeRegParam      !< Initial value of the regularization parameter [-]
     REAL(ReKi)  :: WingRegParam      !< Regularization parameter of the wing [-]
-    INTEGER(IntKi)  :: WrVTK      !< Outputs VTK at each calcoutput call, even if main fst doesnt do it [-]
-    INTEGER(IntKi)  :: VTKBlades      !< Outputs VTk for each blade 0=no blade, 1=Bld 1 [-]
-    INTEGER(IntKi)  :: HACK      !< HACK ID [-]
     REAL(DbKi)  :: DTaero      !< Time interval for calls calculations [s]
     REAL(DbKi)  :: DTfvw      !< Time interval for calculating wake induced velocities [s]
     REAL(ReKi)  :: KinVisc      !< Kinematic air viscosity [m^2/s]
+    INTEGER(IntKi)  :: WrVTK      !< Outputs VTK at each calcoutput call, even if main fst doesnt do it [-]
+    INTEGER(IntKi)  :: VTKBlades      !< Outputs VTk for each blade 0=no blade, 1=Bld 1 [-]
     REAL(DbKi)  :: DTvtk      !< DT between vtk writes [s]
+    INTEGER(IntKi)  :: VTKCoord      !< Switch for VTK outputs coordinate  system [-]
   END TYPE FVW_ParameterType
 ! =======================
 ! =========  FVW_OtherStateType  =======
@@ -113,6 +113,8 @@ IMPLICIT NONE
   TYPE, PUBLIC :: FVW_InputType
     TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: WingsMesh      !< Input Mesh defining position and orientation of wings [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: V_wind      !< Wind at requested points (r_wind) [-]
+    REAL(ReKi) , DIMENSION(1:3,1:3)  :: HubOrientation      !< Orientation of hub coordinate system (for output only) [-]
+    REAL(ReKi) , DIMENSION(1:3)  :: HubPosition      !< Origin of hub (for output only) [-]
   END TYPE FVW_InputType
 ! =======================
 ! =========  FVW_OutputType  =======
@@ -144,8 +146,8 @@ IMPLICIT NONE
   TYPE, PUBLIC :: FVW_InitInputType
     CHARACTER(1024)  :: FVWFileName      !< Main FVW input file name [-]
     TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: WingsMesh      !< Input Mesh defining position and orientation of wings (nSpan+1)  [-]
-    INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: AFindx      !< Index to the airfoils from AD15 [idx 1: BladeNode, idx2: Blade number] [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Chord      !< Chord of each blade element from input file [idx 1: BladeNode, idx2: Blade number] [-]
+    INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: AFindx      !< Index to the airfoils from AD15 [idx1=BladeNode, idx2=Blade number] [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Chord      !< Chord of each blade element from input file [idx1=BladeNode, idx2=Blade number] [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: RElm      !< radius of center of each element [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: zHub      !< Distance to hub for each blade [m]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: zLocal      !< Distance to blade node, measured along the blade [m]
@@ -183,6 +185,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: WrVTK      !< Outputs VTK at each calcoutput call, even if main fst doesnt do it [-]
     INTEGER(IntKi)  :: VTKBlades      !< Outputs VTk for each blade 0=no blade, 1=Bld 1 [-]
     REAL(DbKi)  :: DTvtk      !< Requested timestep between VTK outputs (calculated from the VTK_fps read in) [s]
+    INTEGER(IntKi)  :: VTKCoord      !< Switch for VTK outputs coordinate  system [-]
   END TYPE FVW_InputFile
 ! =======================
 ! =========  FVW_InitOutputType  =======
@@ -269,13 +272,13 @@ ENDIF
     DstParamData%WakeRegMethod = SrcParamData%WakeRegMethod
     DstParamData%WakeRegParam = SrcParamData%WakeRegParam
     DstParamData%WingRegParam = SrcParamData%WingRegParam
-    DstParamData%WrVTK = SrcParamData%WrVTK
-    DstParamData%VTKBlades = SrcParamData%VTKBlades
-    DstParamData%HACK = SrcParamData%HACK
     DstParamData%DTaero = SrcParamData%DTaero
     DstParamData%DTfvw = SrcParamData%DTfvw
     DstParamData%KinVisc = SrcParamData%KinVisc
+    DstParamData%WrVTK = SrcParamData%WrVTK
+    DstParamData%VTKBlades = SrcParamData%VTKBlades
     DstParamData%DTvtk = SrcParamData%DTvtk
+    DstParamData%VTKCoord = SrcParamData%VTKCoord
  END SUBROUTINE FVW_CopyParam
 
  SUBROUTINE FVW_DestroyParam( ParamData, ErrStat, ErrMsg )
@@ -368,13 +371,13 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! WakeRegMethod
       Re_BufSz   = Re_BufSz   + 1  ! WakeRegParam
       Re_BufSz   = Re_BufSz   + 1  ! WingRegParam
-      Int_BufSz  = Int_BufSz  + 1  ! WrVTK
-      Int_BufSz  = Int_BufSz  + 1  ! VTKBlades
-      Int_BufSz  = Int_BufSz  + 1  ! HACK
       Db_BufSz   = Db_BufSz   + 1  ! DTaero
       Db_BufSz   = Db_BufSz   + 1  ! DTfvw
       Re_BufSz   = Re_BufSz   + 1  ! KinVisc
+      Int_BufSz  = Int_BufSz  + 1  ! WrVTK
+      Int_BufSz  = Int_BufSz  + 1  ! VTKBlades
       Db_BufSz   = Db_BufSz   + 1  ! DTvtk
+      Int_BufSz  = Int_BufSz  + 1  ! VTKCoord
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -487,20 +490,20 @@ ENDIF
       Re_Xferred   = Re_Xferred   + 1
       ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%WingRegParam
       Re_Xferred   = Re_Xferred   + 1
-      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%WrVTK
-      Int_Xferred   = Int_Xferred   + 1
-      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%VTKBlades
-      Int_Xferred   = Int_Xferred   + 1
-      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%HACK
-      Int_Xferred   = Int_Xferred   + 1
       DbKiBuf ( Db_Xferred:Db_Xferred+(1)-1 ) = InData%DTaero
       Db_Xferred   = Db_Xferred   + 1
       DbKiBuf ( Db_Xferred:Db_Xferred+(1)-1 ) = InData%DTfvw
       Db_Xferred   = Db_Xferred   + 1
       ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%KinVisc
       Re_Xferred   = Re_Xferred   + 1
+      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%WrVTK
+      Int_Xferred   = Int_Xferred   + 1
+      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%VTKBlades
+      Int_Xferred   = Int_Xferred   + 1
       DbKiBuf ( Db_Xferred:Db_Xferred+(1)-1 ) = InData%DTvtk
       Db_Xferred   = Db_Xferred   + 1
+      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%VTKCoord
+      Int_Xferred   = Int_Xferred   + 1
  END SUBROUTINE FVW_PackParam
 
  SUBROUTINE FVW_UnPackParam( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -654,20 +657,20 @@ ENDIF
       Re_Xferred   = Re_Xferred + 1
       OutData%WingRegParam = ReKiBuf( Re_Xferred )
       Re_Xferred   = Re_Xferred + 1
-      OutData%WrVTK = IntKiBuf( Int_Xferred ) 
-      Int_Xferred   = Int_Xferred + 1
-      OutData%VTKBlades = IntKiBuf( Int_Xferred ) 
-      Int_Xferred   = Int_Xferred + 1
-      OutData%HACK = IntKiBuf( Int_Xferred ) 
-      Int_Xferred   = Int_Xferred + 1
       OutData%DTaero = DbKiBuf( Db_Xferred ) 
       Db_Xferred   = Db_Xferred + 1
       OutData%DTfvw = DbKiBuf( Db_Xferred ) 
       Db_Xferred   = Db_Xferred + 1
       OutData%KinVisc = ReKiBuf( Re_Xferred )
       Re_Xferred   = Re_Xferred + 1
+      OutData%WrVTK = IntKiBuf( Int_Xferred ) 
+      Int_Xferred   = Int_Xferred + 1
+      OutData%VTKBlades = IntKiBuf( Int_Xferred ) 
+      Int_Xferred   = Int_Xferred + 1
       OutData%DTvtk = DbKiBuf( Db_Xferred ) 
       Db_Xferred   = Db_Xferred + 1
+      OutData%VTKCoord = IntKiBuf( Int_Xferred ) 
+      Int_Xferred   = Int_Xferred + 1
  END SUBROUTINE FVW_UnPackParam
 
  SUBROUTINE FVW_CopyOtherState( SrcOtherStateData, DstOtherStateData, CtrlCode, ErrStat, ErrMsg )
@@ -2790,6 +2793,8 @@ IF (ALLOCATED(SrcInputData%V_wind)) THEN
   END IF
     DstInputData%V_wind = SrcInputData%V_wind
 ENDIF
+    DstInputData%HubOrientation = SrcInputData%HubOrientation
+    DstInputData%HubPosition = SrcInputData%HubPosition
  END SUBROUTINE FVW_CopyInput
 
  SUBROUTINE FVW_DestroyInput( InputData, ErrStat, ErrMsg )
@@ -2876,6 +2881,8 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*2  ! V_wind upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%V_wind)  ! V_wind
   END IF
+      Re_BufSz   = Re_BufSz   + SIZE(InData%HubOrientation)  ! HubOrientation
+      Re_BufSz   = Re_BufSz   + SIZE(InData%HubPosition)  ! HubPosition
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -2960,6 +2967,10 @@ ENDIF
       IF (SIZE(InData%V_wind)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%V_wind))-1 ) = PACK(InData%V_wind,.TRUE.)
       Re_Xferred   = Re_Xferred   + SIZE(InData%V_wind)
   END IF
+      ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%HubOrientation))-1 ) = PACK(InData%HubOrientation,.TRUE.)
+      Re_Xferred   = Re_Xferred   + SIZE(InData%HubOrientation)
+      ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%HubPosition))-1 ) = PACK(InData%HubPosition,.TRUE.)
+      Re_Xferred   = Re_Xferred   + SIZE(InData%HubPosition)
  END SUBROUTINE FVW_PackInput
 
  SUBROUTINE FVW_UnPackInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -3078,6 +3089,30 @@ ENDIF
       Re_Xferred   = Re_Xferred   + SIZE(OutData%V_wind)
     DEALLOCATE(mask2)
   END IF
+    i1_l = LBOUND(OutData%HubOrientation,1)
+    i1_u = UBOUND(OutData%HubOrientation,1)
+    i2_l = LBOUND(OutData%HubOrientation,2)
+    i2_u = UBOUND(OutData%HubOrientation,2)
+    ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask2.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask2 = .TRUE. 
+      OutData%HubOrientation = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%HubOrientation))-1 ), mask2, 0.0_ReKi )
+      Re_Xferred   = Re_Xferred   + SIZE(OutData%HubOrientation)
+    DEALLOCATE(mask2)
+    i1_l = LBOUND(OutData%HubPosition,1)
+    i1_u = UBOUND(OutData%HubPosition,1)
+    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask1 = .TRUE. 
+      OutData%HubPosition = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%HubPosition))-1 ), mask1, 0.0_ReKi )
+      Re_Xferred   = Re_Xferred   + SIZE(OutData%HubPosition)
+    DEALLOCATE(mask1)
  END SUBROUTINE FVW_UnPackInput
 
  SUBROUTINE FVW_CopyOutput( SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg )
@@ -4882,6 +4917,7 @@ ENDIF
     DstInputFileData%WrVTK = SrcInputFileData%WrVTK
     DstInputFileData%VTKBlades = SrcInputFileData%VTKBlades
     DstInputFileData%DTvtk = SrcInputFileData%DTvtk
+    DstInputFileData%VTKCoord = SrcInputFileData%VTKCoord
  END SUBROUTINE FVW_CopyInputFile
 
  SUBROUTINE FVW_DestroyInputFile( InputFileData, ErrStat, ErrMsg )
@@ -4954,6 +4990,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! WrVTK
       Int_BufSz  = Int_BufSz  + 1  ! VTKBlades
       Db_BufSz   = Db_BufSz   + 1  ! DTvtk
+      Int_BufSz  = Int_BufSz  + 1  ! VTKCoord
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -5031,6 +5068,8 @@ ENDIF
       Int_Xferred   = Int_Xferred   + 1
       DbKiBuf ( Db_Xferred:Db_Xferred+(1)-1 ) = InData%DTvtk
       Db_Xferred   = Db_Xferred   + 1
+      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%VTKCoord
+      Int_Xferred   = Int_Xferred   + 1
  END SUBROUTINE FVW_PackInputFile
 
  SUBROUTINE FVW_UnPackInputFile( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -5115,6 +5154,8 @@ ENDIF
       Int_Xferred   = Int_Xferred + 1
       OutData%DTvtk = DbKiBuf( Db_Xferred ) 
       Db_Xferred   = Db_Xferred + 1
+      OutData%VTKCoord = IntKiBuf( Int_Xferred ) 
+      Int_Xferred   = Int_Xferred + 1
  END SUBROUTINE FVW_UnPackInputFile
 
  SUBROUTINE FVW_CopyInitOutput( SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg )
@@ -5358,6 +5399,18 @@ IF (ALLOCATED(u_out%V_wind) .AND. ALLOCATED(u1%V_wind)) THEN
   DEALLOCATE(b2)
   DEALLOCATE(c2)
 END IF ! check if allocated
+  ALLOCATE(b2(SIZE(u_out%HubOrientation,1),SIZE(u_out%HubOrientation,2) ))
+  ALLOCATE(c2(SIZE(u_out%HubOrientation,1),SIZE(u_out%HubOrientation,2) ))
+  b2 = -(u1%HubOrientation - u2%HubOrientation)/t(2)
+  u_out%HubOrientation = u1%HubOrientation + b2 * t_out
+  DEALLOCATE(b2)
+  DEALLOCATE(c2)
+  ALLOCATE(b1(SIZE(u_out%HubPosition,1)))
+  ALLOCATE(c1(SIZE(u_out%HubPosition,1)))
+  b1 = -(u1%HubPosition - u2%HubPosition)/t(2)
+  u_out%HubPosition = u1%HubPosition + b1 * t_out
+  DEALLOCATE(b1)
+  DEALLOCATE(c1)
  END SUBROUTINE FVW_Input_ExtrapInterp1
 
 
@@ -5430,6 +5483,20 @@ IF (ALLOCATED(u_out%V_wind) .AND. ALLOCATED(u1%V_wind)) THEN
   DEALLOCATE(b2)
   DEALLOCATE(c2)
 END IF ! check if allocated
+  ALLOCATE(b2(SIZE(u_out%HubOrientation,1),SIZE(u_out%HubOrientation,2) ))
+  ALLOCATE(c2(SIZE(u_out%HubOrientation,1),SIZE(u_out%HubOrientation,2) ))
+  b2 = (t(3)**2*(u1%HubOrientation - u2%HubOrientation) + t(2)**2*(-u1%HubOrientation + u3%HubOrientation))/(t(2)*t(3)*(t(2) - t(3)))
+  c2 = ( (t(2)-t(3))*u1%HubOrientation + t(3)*u2%HubOrientation - t(2)*u3%HubOrientation ) / (t(2)*t(3)*(t(2) - t(3)))
+  u_out%HubOrientation = u1%HubOrientation + b2 * t_out + c2 * t_out**2
+  DEALLOCATE(b2)
+  DEALLOCATE(c2)
+  ALLOCATE(b1(SIZE(u_out%HubPosition,1)))
+  ALLOCATE(c1(SIZE(u_out%HubPosition,1)))
+  b1 = (t(3)**2*(u1%HubPosition - u2%HubPosition) + t(2)**2*(-u1%HubPosition + u3%HubPosition))/(t(2)*t(3)*(t(2) - t(3)))
+  c1 = ( (t(2)-t(3))*u1%HubPosition + t(3)*u2%HubPosition - t(2)*u3%HubPosition ) / (t(2)*t(3)*(t(2) - t(3)))
+  u_out%HubPosition = u1%HubPosition + b1 * t_out + c1 * t_out**2
+  DEALLOCATE(b1)
+  DEALLOCATE(c1)
  END SUBROUTINE FVW_Input_ExtrapInterp2
 
 

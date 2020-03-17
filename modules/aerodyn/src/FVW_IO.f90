@@ -62,10 +62,11 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, Inp, ErrStat, ErrMsg )
    CALL ReadVar        (UnIn,FileName,Inp%WingRegParam       ,'WingRegParam'      ,''                 , ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVarWDefault(UnIn,FileName,Inp%CoreSpreadEddyVisc ,'CoreSpreadEddyVisc','',10.0_ReKi       , ErrStat2,ErrMsg2); if(Failed())return
    !------------------------ OUTPUT OPTIONS -----------------------------------------
-   CALL ReadCom(UnIn,FileName,                  'Output options header', ErrStat2,ErrMsg2); if(Failed()) return
-   CALL ReadVar(UnIn,FileName,Inp%WrVTK       , 'WrVTK'              ,'',ErrStat2,ErrMsg2); if(Failed())return
-   CALL ReadVar(UnIn,FileName,Inp%VTKBlades   , 'VTKBlades'          ,'',ErrStat2,ErrMsg2); if(Failed())return
-   CALL ReadVar(UnIn,FileName,VTK_fps_line    , 'VTK_fps'            ,'',ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadCom        (UnIn,FileName,                  'Output options header'              ,ErrStat2,ErrMsg2); if(Failed()) return
+   CALL ReadVarWDefault(UnIn,FileName,Inp%WrVTK       , 'WrVTK'              ,'',     0      ,ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVarWDefault(UnIn,FileName,Inp%VTKBlades   , 'VTKBlades'          ,'',     1      ,ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVarWDefault(UnIn,FileName,Inp%VTKCoord    , 'VTKCoord'           ,'',     1      ,ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVar        (UnIn,FileName,VTK_fps_line    , 'VTK_fps'            ,''             ,ErrStat2,ErrMsg2); if(Failed())return
 
    ! --- Validation of inputs
    if (PathIsRelative(Inp%CirculationFile)) Inp%CirculationFile = TRIM(PriPath)//TRIM(Inp%CirculationFile)
@@ -186,7 +187,7 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth)
    print*,'------------------------------------------------------------------------------'
    print'(A,L1,A,I0,A,I0,A,I0)','VTK Output  -      First call ',m%FirstCall, '                                nNW:',m%nNW,' nFW:',m%nFW,'  i:',VTKCount
    !
-   call set_vtk_binary_format(.false.)
+   call set_vtk_binary_format(.false.) ! TODO binary fails
 
    ! TimeStamp
    write(Tstr, '(i' // trim(Num2LStr(Twidth)) //'.'// trim(Num2LStr(Twidth)) // ')') VTKcount
