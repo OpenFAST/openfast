@@ -340,9 +340,11 @@ subroutine SetRequestedWindPoints(r_wind, x, p, m)
    iP_end=iP_start-1+(p%nSpan+1)*(p%nNWMax+1)*p%nWings
    r_wind(1:3,iP_start:iP_end) = reshape( x%r_NW(1:3,1:p%nSpan+1,1:p%nNWMax+1,1:p%nWings), (/ 3, (p%nSpan+1)*(p%nNWMax+1)*p%nWings /))
    ! --- FW points
-   iP_start=iP_end+1
-   iP_end=iP_start-1+(FWnSpan+1)*(p%nFWMax+1)*p%nWings
-   r_wind(1:3,iP_start:iP_end) = reshape( x%r_FW(1:3,1:FWnSpan+1,1:p%nFWMax+1,1:p%nWings), (/ 3, (FWnSpan+1)*(p%nFWMax+1)*p%nWings /))
+   if (p%nFWMax>0) then
+      iP_start=iP_end+1
+      iP_end=iP_start-1+(FWnSpan+1)*(p%nFWMax+1)*p%nWings
+      r_wind(1:3,iP_start:iP_end) = reshape( x%r_FW(1:3,1:FWnSpan+1,1:p%nFWMax+1,1:p%nWings), (/ 3, (FWnSpan+1)*(p%nFWMax+1)*p%nWings /))
+   endif
 
 end subroutine SetRequestedWindPoints
 
@@ -365,9 +367,11 @@ subroutine DistributeRequestedWind(V_wind, x, p, m)
    iP_end=iP_start-1+(p%nSpan+1)*(p%nNWMax+1)*p%nWings
    m%Vwnd_NW(1:3,1:p%nSpan+1,1:p%nNWMax+1,1:p%nWings) = reshape( V_wind(1:3,iP_start:iP_end), (/ 3, p%nSpan+1, p%nNWMax+1, p%nWings/))
    ! --- FW points
-   iP_start=iP_end+1
-   iP_end=iP_start-1+(FWnSpan+1)*(p%nFWMax+1)*p%nWings
-   m%Vwnd_FW(1:3,1:p%nSpan+1,1:FWnSpan+1,1:p%nWings) = reshape( V_wind(1:3,iP_start:iP_end), (/ 3, FWnSpan+1, p%nFWMax+1, p%nWings /))
+   if (p%nFWMax>0) then
+      iP_start=iP_end+1
+      iP_end=iP_start-1+(FWnSpan+1)*(p%nFWMax+1)*p%nWings
+      m%Vwnd_FW(1:3,1:p%nSpan+1,1:FWnSpan+1,1:p%nWings) = reshape( V_wind(1:3,iP_start:iP_end), (/ 3, FWnSpan+1, p%nFWMax+1, p%nWings /))
+   endif
 
 end subroutine DistributeRequestedWind
 
