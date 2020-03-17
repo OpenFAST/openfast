@@ -26,9 +26,7 @@ contains
       integer(IntKi)          :: ErrStat2       ! temporary error status of the operation
       character(ErrMsgLen)    :: ErrMsg2        ! temporary error message
       integer(IntKi) :: iW, iSpan
-      real(ReKi), dimension(3) :: First, Last, P1, P2, Pmid, DP
-      real(ReKi) :: ds, length
-      real(ReKi) :: c1,c2
+      real(ReKi), dimension(3) :: DP
       real(ReKi), dimension(:),allocatable :: s_in !< Dimensionless spanwise coordinate of input
 
       ! Initialize ErrStat
@@ -40,18 +38,12 @@ contains
          if (allocated(s_in)) deallocate(s_in)
          allocate(s_in(1:Meshes(iW)%nNodes))
          ! --- Computing spanwise coordinate of input mesh normalized from 0 to 1
-!FIXME: does this work for a highly curved blade?
-!also note: this info also exists in InitInp%zLocal or InitInp%rLocal
-!TODO: Implement better curvilinear coordinate
+!Note: this info also exists in InitInp%zLocal or InitInp%rLocal
          s_in(:) = -999
-         First  = Meshes(iW)%Position(1:3,1        )
-         Last   = Meshes(iW)%Position(1:3,p%nSpan+1)
-         DP     = Last - First
-         length = TwoNorm(DP)
-         do iSpan = 1, Meshes(iW)%nNodes
-            P1          = Meshes(iW)%Position(1:3, iSpan  )
-            DP          = P1-First
-            s_in(iSpan) = TwoNorm(DP) / length
+         s_in(1) = 0
+         do iSpan = 2, Meshes(iW)%nNodes
+            DP          = Meshes(iW)%Position(1:3, iSpan) - Meshes(iW)%Position(1:3, iSpan-1)
+            s_in(iSpan) = s_in(iSpan-1) + norm2(DP)
          enddo
 
          ! --- Setting up Lifting line variables based on input  and a "meshing" method (TODO)

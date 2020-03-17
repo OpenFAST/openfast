@@ -470,13 +470,13 @@ subroutine FVW_InitRegularization(p, m, ErrStat, ErrMsg)
    d_max  = maxval(m%diag_LL(:,iW))
    d_mean = sum   (m%diag_LL(:,iW))/(p%nSpan+1)
    Span    = m%s_ll(p%nSpan+1,iW)-m%s_ll(1,iW)
-   RegParam = ds_mean*10
+   RegParam = ds_mean*2
    write(*,'(A)')'-----------------------------------------------------------------------------------------'
    write(*,'(A)')'Regularization Info'
    write(*,'(A,1F8.4,A)') 'Span                   : ',Span
    write(*,'(A,3F8.4,A)') 'Chord                  : ',c_min,c_mean,c_max,' (min, mean, max)'
-   write(*,'(A,3F8.4,A)') 'Spanwise distretization: ',ds_min,ds_mean,ds_max,' (min, mean, max)'
-   write(*,'(A,3F8.4,A)') 'Diagonal distretization: ',d_min,d_mean,d_max,' (min, mean, max)'
+   write(*,'(A,3F8.4,A)') 'Spanwise discretization: ',ds_min,ds_mean,ds_max,' (min, mean, max)'
+   write(*,'(A,3F8.4,A)') 'Diagonal discretization: ',d_min,d_mean,d_max,' (min, mean, max)'
    write(*,'(A,1F8.4)')   'RegParam (Recommended) : ',RegParam
    write(*,'(A,1F8.4)')   'RegParam (Input      ) : ',p%WakeRegParam
    if (p%RegDeterMethod==idRegDeterAuto) then
