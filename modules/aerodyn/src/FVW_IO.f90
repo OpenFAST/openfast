@@ -54,6 +54,8 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, Inp, ErrStat, ErrMsg )
    CALL ReadVar        (UnIn,FileName,Inp%nNWPanels          ,'nNWPanels'         ,''                 , ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVar        (UnIn,FileName,Inp%nFWPanels          ,'nFWPanels'         ,''                 , ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVarWDefault(UnIn,FileName,Inp%nFWPanelsFree      ,'nFWPanelsFree'     ,'', Inp%nFWPanels  , ErrStat2,ErrMsg2); if(Failed())return
+
+   CALL ReadVarWDefault(UnIn,FileName,Inp%FWShedVorticity    ,'FWShedVorticity'   ,'', .False.        , ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVarWDefault(UnIn,FileName,Inp%DiffusionMethod    ,'DiffusionMethod'   ,'',idDiffusionNone , ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVarWDefault(UnIn,FileName,Inp%RegDeterMethod     ,'RegDeterMethod'    ,'',idRegDeterManual, ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVarWDefault(UnIn,FileName,Inp%RegFunction        ,'RegFunction'       ,'',idRegVatistas   , ErrStat2,ErrMsg2); if(Failed())return
@@ -249,7 +251,7 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth)
       iHeadP=1
       iHeadC=1
       do iW=1,p%nWings
-         CALL LatticeToSegments(m%r_LL(1:3,:,1:2,iW), m%Gamma_LL(:,iW:iW), 1, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC )
+         CALL LatticeToSegments(m%r_LL(1:3,:,1:2,iW), m%Gamma_LL(:,iW:iW), 1, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC, .True. )
       enddo
    endif
 

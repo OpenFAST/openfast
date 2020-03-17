@@ -388,7 +388,6 @@ subroutine PackPanelsToSegments(p, m, x, iDepthStart, SegConnct, SegPoints, SegG
    ! Local
    integer(IntKi) :: iHeadC, iHeadP, nC, nP, iW, iHeadC_bkp
    real(ReKi), dimension(:,:), allocatable :: Buffer2d
-   !real(ReKi),    dimension(:),   allocatable :: SegSmooth !< 
 
    ! Counting total number of segments
    nP=0
@@ -399,7 +398,11 @@ subroutine PackPanelsToSegments(p, m, x, iDepthStart, SegConnct, SegPoints, SegG
    endif
    if (m%nFW>0) then
       nP = nP + p%nWings * (  (FWnSpan+1)*(m%nFW+1) )
-      nC = nC + p%nWings * (2*(FWnSpan+1)*(m%nFW+1)-(FWnSpan+1)-(m%nFW+1))  
+      if (p%FWShedVorticity) then
+         nC = nC + p%nWings * (2*(FWnSpan+1)*(m%nFW+1)-(FWnSpan+1)-(m%nFW+1))  
+      else
+         nC = nC + p%nWings * (  (FWnSpan+1)*(m%nFW)                    )   ! No Shed vorticity
+      endif
    endif
 
    if (nP>0) then
@@ -415,12 +418,12 @@ subroutine PackPanelsToSegments(p, m, x, iDepthStart, SegConnct, SegPoints, SegG
       iHeadP=1
       iHeadC=1
       do iW=1,p%nWings
-         CALL LatticeToSegments(x%r_NW(1:3,:,1:m%nNW+1,iW), x%Gamma_NW(:,1:m%nNW,iW), iDepthStart, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC )
+         CALL LatticeToSegments(x%r_NW(1:3,:,1:m%nNW+1,iW), x%Gamma_NW(:,1:m%nNW,iW), iDepthStart, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC, .True. )
       enddo
       if (m%nFW>0) then
          iHeadC_bkp = iHeadC
          do iW=1,p%nWings
-            CALL LatticeToSegments(x%r_FW(1:3,:,1:m%nFW+1,iW), x%Gamma_FW(:,1:m%nFW,iW), 1, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC )
+            CALL LatticeToSegments(x%r_FW(1:3,:,1:m%nFW+1,iW), x%Gamma_FW(:,1:m%nFW,iW), 1, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC , p%FWShedVorticity)
          enddo
          SegConnct(3,iHeadC_bkp:) = SegConnct(3,iHeadC_bkp:) + m%nNW
       endif

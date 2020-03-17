@@ -16,6 +16,7 @@ typedef     ^                   ^               ReKi                            
 typedef     ^                   ^               IntKi                            nNWMax            -  -  -  "Maximum number of nw panels, per wing"          -
 typedef     ^                   ^               IntKi                            nFWMax            -  -  -  "Maximum number of fw panels, per wing"          -
 typedef     ^                   ^               IntKi                            nFWFree           -  -  -  "Number of fw panels that are free, per wing"          -
+typedef     ^                   ^               Logical                          FWShedVorticity   -  -  -  "Include shed vorticity in the far wake"          -
 typedef     ^                   ^               IntKi                            IntMethod         -  -  -  "Integration Method (1=RK4, 2=AB4, 3=ABM4, 5=Euler1)" -
 typedef     ^                   ^               ReKi                             FreeWakeStart     -  - -   "Time when wake starts convecting (rolling up)"  s
 typedef     ^                   ^               ReKi                             FullCirculationStart    -  - -   "Time when the circulation is full"  s
@@ -145,6 +146,7 @@ typedef     ^                   ^               IntKi                           
 typedef     ^                   ^               IntKi                            nNWPanels            -  -  -  "Number of nw panels"          -
 typedef     ^                   ^               IntKi                            nFWPanels            -  -  -  "Number of fw panels"          -
 typedef     ^                   ^               IntKi                            nFWPanelsFree        -  -  -  "Number of fw panels that are free"          -
+typedef     ^                   ^               Logical                          FWShedVorticity   -  -  -  "Include shed vorticity in the far wake"          -
 typedef     ^                   ^               IntKi                            DiffusionMethod   -  -  -  "Diffusion method (None, CoreSpreading, PSE)"          -
 typedef     ^                   ^               ReKi                             CoreSpreadEddyVisc -  - -   "Eddy viscosity used in the core spreading method" 
 typedef     ^                   ^               IntKi                            RegDeterMethod   -  -  -  "Regularization determinatino method (manual, automatic)"          -

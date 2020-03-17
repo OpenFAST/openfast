@@ -323,6 +323,7 @@ SUBROUTINE FVW_SetParametersFromInputFile( InputFileData, p, m, ErrStat, ErrMsg 
    p%FreeWakeStart        = InputFileData%FreeWakeStart
    p%CircSolvPolar        = InputFileData%CircSolvPolar
    p%FullCirculationStart = InputFileData%FullCirculationStart
+   p%FWShedVorticity      = InputFileData%FWShedVorticity
    p%DiffusionMethod      = InputFileData%DiffusionMethod
    p%RegFunction          = InputFileData%RegFunction
    p%RegDeterMethod       = InputFileData%RegDeterMethod

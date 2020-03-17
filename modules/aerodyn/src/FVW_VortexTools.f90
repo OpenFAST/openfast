@@ -49,7 +49,7 @@ CONTAINS
 
    endsubroutine LatticeToPoints
 
-   subroutine LatticeToSegments(LatticePoints, LatticeGamma, iDepthStart, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC )
+   subroutine LatticeToSegments(LatticePoints, LatticeGamma, iDepthStart, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC, bShedVorticity )
       real(Reki), dimension(:,:,:),    intent(in   )  :: LatticePoints  !< Points 3 x nSpan x nDepth
       real(Reki), dimension(:,:),      intent(in   )  :: LatticeGamma   !< GammaPanl  nSpan x nDepth
       integer(IntKi),                  intent(in   )  :: iDepthStart    !< Start index for depth dimension
@@ -58,6 +58,7 @@ CONTAINS
       real(ReKi),     dimension(:),    intent(inout)  :: SegGamma       !< 
       integer(IntKi),                  intent(inout)  :: iHeadP         !< Index indicating where to start in SegPoints
       integer(IntKi),                  intent(inout)  :: iHeadC         !< Index indicating where to start in SegConnct
+      logical       ,                  intent(in   )  :: bShedVorticity !< Shed vorticity is included if true
       ! Local
       integer(IntKi) :: nSpan, nDepth
       integer(IntKi) :: iSpan, iDepth
@@ -107,12 +108,14 @@ CONTAINS
             endif
             !print*,iseg1,iseg2,iseg3,iseg4
             ! Segment 1-2
-            SegConnct(1,iHeadC) = iseg1
-            SegConnct(2,iHeadC) = iseg2
-            SegConnct(3,iHeadC) = iDepth
-            SegConnct(4,iHeadC) = iSpan
-            SegGamma (iHeadC  ) = Gamma12
-            iHeadC=iHeadC+1
+            if (bShedVorticity) then
+               SegConnct(1,iHeadC) = iseg1
+               SegConnct(2,iHeadC) = iseg2
+               SegConnct(3,iHeadC) = iDepth
+               SegConnct(4,iHeadC) = iSpan
+               SegGamma (iHeadC  ) = Gamma12
+               iHeadC=iHeadC+1
+            endif
             ! Segment 1-4
             SegConnct(1,iHeadC) = iseg1
             SegConnct(2,iHeadC) = iseg4
@@ -122,12 +125,14 @@ CONTAINS
             iHeadC=iHeadC+1
             ! Segment 4-3
             if (iDepth==nDepth-1) then
-               SegConnct(1,iHeadC) = iseg4
-               SegConnct(2,iHeadC) = iseg3
-               SegConnct(3,iHeadC) = iDepth
-               SegConnct(4,iHeadC) = iSpan
-               SegGamma (iHeadC  ) = - LatticeGamma(iSpan,iDepth)
-               iHeadC=iHeadC+1
+               if (bShedVorticity) then
+                  SegConnct(1,iHeadC) = iseg4
+                  SegConnct(2,iHeadC) = iseg3
+                  SegConnct(3,iHeadC) = iDepth
+                  SegConnct(4,iHeadC) = iSpan
+                  SegGamma (iHeadC  ) = - LatticeGamma(iSpan,iDepth)
+                  iHeadC=iHeadC+1
+               endif
             endif
             ! Segment 2-3
             if (iSpan==nSpan-1) then

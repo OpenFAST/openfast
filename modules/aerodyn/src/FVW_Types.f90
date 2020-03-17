@@ -43,6 +43,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: nNWMax      !< Maximum number of nw panels, per wing [-]
     INTEGER(IntKi)  :: nFWMax      !< Maximum number of fw panels, per wing [-]
     INTEGER(IntKi)  :: nFWFree      !< Number of fw panels that are free, per wing [-]
+    LOGICAL  :: FWShedVorticity      !< Include shed vorticity in the far wake [-]
     INTEGER(IntKi)  :: IntMethod      !< Integration Method (1=RK4, 2=AB4, 3=ABM4, 5=Euler1) [-]
     REAL(ReKi)  :: FreeWakeStart      !< Time when wake starts convecting (rolling up) [s]
     REAL(ReKi)  :: FullCirculationStart      !< Time when the circulation is full [s]
@@ -175,6 +176,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: nNWPanels      !< Number of nw panels [-]
     INTEGER(IntKi)  :: nFWPanels      !< Number of fw panels [-]
     INTEGER(IntKi)  :: nFWPanelsFree      !< Number of fw panels that are free [-]
+    LOGICAL  :: FWShedVorticity      !< Include shed vorticity in the far wake [-]
     INTEGER(IntKi)  :: DiffusionMethod      !< Diffusion method (None, CoreSpreading, PSE) [-]
     REAL(ReKi)  :: CoreSpreadEddyVisc      !< Eddy viscosity used in the core spreading method [-]
     INTEGER(IntKi)  :: RegDeterMethod      !< Regularization determinatino method (manual, automatic) [-]
@@ -245,6 +247,7 @@ ENDIF
     DstParamData%nNWMax = SrcParamData%nNWMax
     DstParamData%nFWMax = SrcParamData%nFWMax
     DstParamData%nFWFree = SrcParamData%nFWFree
+    DstParamData%FWShedVorticity = SrcParamData%FWShedVorticity
     DstParamData%IntMethod = SrcParamData%IntMethod
     DstParamData%FreeWakeStart = SrcParamData%FreeWakeStart
     DstParamData%FullCirculationStart = SrcParamData%FullCirculationStart
@@ -351,6 +354,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! nNWMax
       Int_BufSz  = Int_BufSz  + 1  ! nFWMax
       Int_BufSz  = Int_BufSz  + 1  ! nFWFree
+      Int_BufSz  = Int_BufSz  + 1  ! FWShedVorticity
       Int_BufSz  = Int_BufSz  + 1  ! IntMethod
       Re_BufSz   = Re_BufSz   + 1  ! FreeWakeStart
       Re_BufSz   = Re_BufSz   + 1  ! FullCirculationStart
@@ -446,6 +450,8 @@ ENDIF
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%nFWMax
       Int_Xferred   = Int_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%nFWFree
+      Int_Xferred   = Int_Xferred   + 1
+      IntKiBuf ( Int_Xferred:Int_Xferred+1-1 ) = TRANSFER( InData%FWShedVorticity , IntKiBuf(1), 1)
       Int_Xferred   = Int_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%IntMethod
       Int_Xferred   = Int_Xferred   + 1
@@ -603,6 +609,8 @@ ENDIF
       OutData%nFWMax = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
       OutData%nFWFree = IntKiBuf( Int_Xferred ) 
+      Int_Xferred   = Int_Xferred + 1
+      OutData%FWShedVorticity = TRANSFER( IntKiBuf( Int_Xferred ), mask0 )
       Int_Xferred   = Int_Xferred + 1
       OutData%IntMethod = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
@@ -4907,6 +4915,7 @@ ENDIF
     DstInputFileData%nNWPanels = SrcInputFileData%nNWPanels
     DstInputFileData%nFWPanels = SrcInputFileData%nFWPanels
     DstInputFileData%nFWPanelsFree = SrcInputFileData%nFWPanelsFree
+    DstInputFileData%FWShedVorticity = SrcInputFileData%FWShedVorticity
     DstInputFileData%DiffusionMethod = SrcInputFileData%DiffusionMethod
     DstInputFileData%CoreSpreadEddyVisc = SrcInputFileData%CoreSpreadEddyVisc
     DstInputFileData%RegDeterMethod = SrcInputFileData%RegDeterMethod
@@ -4980,6 +4989,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! nNWPanels
       Int_BufSz  = Int_BufSz  + 1  ! nFWPanels
       Int_BufSz  = Int_BufSz  + 1  ! nFWPanelsFree
+      Int_BufSz  = Int_BufSz  + 1  ! FWShedVorticity
       Int_BufSz  = Int_BufSz  + 1  ! DiffusionMethod
       Re_BufSz   = Re_BufSz   + 1  ! CoreSpreadEddyVisc
       Int_BufSz  = Int_BufSz  + 1  ! RegDeterMethod
@@ -5047,6 +5057,8 @@ ENDIF
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%nFWPanels
       Int_Xferred   = Int_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%nFWPanelsFree
+      Int_Xferred   = Int_Xferred   + 1
+      IntKiBuf ( Int_Xferred:Int_Xferred+1-1 ) = TRANSFER( InData%FWShedVorticity , IntKiBuf(1), 1)
       Int_Xferred   = Int_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%DiffusionMethod
       Int_Xferred   = Int_Xferred   + 1
@@ -5133,6 +5145,8 @@ ENDIF
       OutData%nFWPanels = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
       OutData%nFWPanelsFree = IntKiBuf( Int_Xferred ) 
+      Int_Xferred   = Int_Xferred + 1
+      OutData%FWShedVorticity = TRANSFER( IntKiBuf( Int_Xferred ), mask0 )
       Int_Xferred   = Int_Xferred + 1
       OutData%DiffusionMethod = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
