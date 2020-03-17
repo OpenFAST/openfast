@@ -42,6 +42,7 @@ contains
          ! --- Computing spanwise coordinate of input mesh normalized from 0 to 1
 !FIXME: does this work for a highly curved blade?
 !also note: this info also exists in InitInp%zLocal or InitInp%rLocal
+!TODO: Implement better curvilinear coordinate
          s_in(:) = -999
          First  = Meshes(iW)%Position(1:3,1        )
          Last   = Meshes(iW)%Position(1:3,p%nSpan+1)
@@ -122,6 +123,14 @@ contains
       enddo
       ! --- Generic code below to compute normal/tangential vectors of a lifting line panel
       ! Notations follow vanGarrel [TODO REF]
+      !
+      !
+      !   P4 -P10---P7------ P3
+      !   |
+      !   P8                 P6
+      !   |        
+      !   P1 -P9----P5------ P2
+      !
       do iW = 1,p%nWings
          do iSpan = 1,p%nSpan
             P1                    = m%LE(:,iSpan  , iw)
@@ -143,7 +152,9 @@ contains
             ! m%Tscoord(1:3,iSpan) = (DP3)/norm2(DP3)                      ! tangential unit vector, along span, follows ref line
             m%dl  (1:3,iSpan,iW)  = DP2
             m%Orth(1:3,iSpan,iW)  = cross_product(m%Norm(1:3,iSpan,iW),m%Tang(1:3,iSpan,iW)) ! orthogonal vector to N and T
-            m%Area(iSpan, iW) = norm2(cross_product(DP1,DP3));
+            m%Area(iSpan, iW) = norm2(cross_product(DP1,DP3))
+            DP3 = P1-P3
+            m%diag_LL(iSpan, iW) = norm2(DP3)
          end do
       enddo
 !FIXME: does it make sense to use the position mesh for this info?

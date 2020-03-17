@@ -89,6 +89,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: Orth      !< Unit Orthogonal vector on LL CP [-]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: dl      !< Vector of elementary length along the LL [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Area      !< Area of each LL panel [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: diag_LL      !< Diagonal length of each LL panel [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Gamma_LL      !< Circulation on the wing lifting line (COPY of Constraint State) [-]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: Vind_LL      !< Induced velocity on lifting line control points [m/s]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: Vtot_LL      !< Total velocity on lifting line control points [m/s]
@@ -1019,6 +1020,20 @@ IF (ALLOCATED(SrcMiscData%Area)) THEN
   END IF
     DstMiscData%Area = SrcMiscData%Area
 ENDIF
+IF (ALLOCATED(SrcMiscData%diag_LL)) THEN
+  i1_l = LBOUND(SrcMiscData%diag_LL,1)
+  i1_u = UBOUND(SrcMiscData%diag_LL,1)
+  i2_l = LBOUND(SrcMiscData%diag_LL,2)
+  i2_u = UBOUND(SrcMiscData%diag_LL,2)
+  IF (.NOT. ALLOCATED(DstMiscData%diag_LL)) THEN 
+    ALLOCATE(DstMiscData%diag_LL(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%diag_LL.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstMiscData%diag_LL = SrcMiscData%diag_LL
+ENDIF
 IF (ALLOCATED(SrcMiscData%Gamma_LL)) THEN
   i1_l = LBOUND(SrcMiscData%Gamma_LL,1)
   i1_u = UBOUND(SrcMiscData%Gamma_LL,1)
@@ -1253,6 +1268,9 @@ ENDIF
 IF (ALLOCATED(MiscData%Area)) THEN
   DEALLOCATE(MiscData%Area)
 ENDIF
+IF (ALLOCATED(MiscData%diag_LL)) THEN
+  DEALLOCATE(MiscData%diag_LL)
+ENDIF
 IF (ALLOCATED(MiscData%Gamma_LL)) THEN
   DEALLOCATE(MiscData%Gamma_LL)
 ENDIF
@@ -1388,6 +1406,11 @@ ENDIF
   IF ( ALLOCATED(InData%Area) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! Area upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%Area)  ! Area
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! diag_LL allocated yes/no
+  IF ( ALLOCATED(InData%diag_LL) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! diag_LL upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%diag_LL)  ! diag_LL
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! Gamma_LL allocated yes/no
   IF ( ALLOCATED(InData%Gamma_LL) ) THEN
@@ -1713,6 +1736,22 @@ ENDIF
 
       IF (SIZE(InData%Area)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%Area))-1 ) = PACK(InData%Area,.TRUE.)
       Re_Xferred   = Re_Xferred   + SIZE(InData%Area)
+  END IF
+  IF ( .NOT. ALLOCATED(InData%diag_LL) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%diag_LL,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%diag_LL,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%diag_LL,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%diag_LL,2)
+    Int_Xferred = Int_Xferred + 2
+
+      IF (SIZE(InData%diag_LL)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%diag_LL))-1 ) = PACK(InData%diag_LL,.TRUE.)
+      Re_Xferred   = Re_Xferred   + SIZE(InData%diag_LL)
   END IF
   IF ( .NOT. ALLOCATED(InData%Gamma_LL) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -2341,6 +2380,32 @@ ENDIF
     mask2 = .TRUE. 
       IF (SIZE(OutData%Area)>0) OutData%Area = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%Area))-1 ), mask2, 0.0_ReKi )
       Re_Xferred   = Re_Xferred   + SIZE(OutData%Area)
+    DEALLOCATE(mask2)
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! diag_LL not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%diag_LL)) DEALLOCATE(OutData%diag_LL)
+    ALLOCATE(OutData%diag_LL(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%diag_LL.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask2.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask2 = .TRUE. 
+      IF (SIZE(OutData%diag_LL)>0) OutData%diag_LL = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%diag_LL))-1 ), mask2, 0.0_ReKi )
+      Re_Xferred   = Re_Xferred   + SIZE(OutData%diag_LL)
     DEALLOCATE(mask2)
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Gamma_LL not allocated

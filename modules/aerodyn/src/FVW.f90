@@ -107,7 +107,6 @@ subroutine FVW_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
 
    ! Set parameters from InputFileData (need Misc allocated)
    CALL FVW_SetParametersFromInputFile(InputFileData, p, m, ErrStat2, ErrMsg2); if(Failed()) return
-   CALL FVW_ToString(p, m) ! Print to screen
 
    ! Initialize States Vars
    CALL FVW_InitStates( x, p, m, ErrStat2, ErrMsg2 ); if(Failed()) return
@@ -118,6 +117,8 @@ subroutine FVW_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
    ! Panelling wings based on initial input mesh provided
    ! This mesh is now a cousin of the BladeMotion mesh from AD.
    CALL Wings_Panelling     (u%WingsMesh, p, m, ErrStat2, ErrMsg2); if(Failed()) return
+   CALL FVW_InitRegularization(p, m, ErrStat2, ErrMsg2); if(Failed()) return
+   CALL FVW_ToString(p, m) ! Print to screen
 
    ! Initialize output
    CALL FVW_Init_Y( p, u, y, ErrStat2, ErrMsg2); if(Failed()) return
@@ -174,6 +175,7 @@ subroutine FVW_InitMiscVars( p, m, ErrStat, ErrMsg )
    call AllocAry( m%Orth    , 3   ,  p%nSpan    , p%nWings, 'Orthogonal vector  ', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitMisc' ); m%Orth= -999999_ReKi;
    call AllocAry( m%dl      , 3   ,  p%nSpan    , p%nWings, 'Orthogonal vector  ', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitMisc' ); m%dl= -999999_ReKi;
    call AllocAry( m%Area    ,        p%nSpan    , p%nWings, 'LL Panel area      ', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitMisc' ); m%Area = -999999_ReKi;
+   call AllocAry( m%diag_LL ,        p%nSpan    , p%nWings, 'LL Panel diagonals ', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitMisc' ); m%diag_LL = -999999_ReKi;
    call AllocAry( m%Vind_LL , 3   ,  p%nSpan    , p%nWings, 'Vind on CP ll      ', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitMisc' ); m%Vind_LL= -999999_ReKi;
    call AllocAry( m%Vtot_LL , 3   ,  p%nSpan    , p%nWings, 'Vtot on CP ll      ', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitMisc' ); m%Vtot_LL= -999999_ReKi;
    call AllocAry( m%Vstr_LL , 3   ,  p%nSpan    , p%nWings, 'Vstr on CP ll      ', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitMisc' ); m%Vstr_LL= -999999_ReKi;
@@ -346,7 +348,7 @@ end subroutine FVW_SetParametersFromInputFile
 subroutine FVW_ToString(p,m)
    type(FVW_ParameterType), intent(in)       :: p !< Parameters
    type(FVW_MiscVarType),      intent(inout) :: m !< Misc
-   print*,'------------------------------------'
+   print*,'-----------------------------------------------------------------------------------------'
 end subroutine FVW_ToString
 
 !----------------------------------------------------------------------------------------------------------------------------------

@@ -62,6 +62,7 @@ typedef     ^                   ^               ReKi                            
 typedef     ^                   ^               ReKi                             Orth         :::  -  -  "Unit Orthogonal vector on LL CP" -
 typedef     ^                   ^               ReKi                             dl           :::  -  -  "Vector of elementary length along the LL" -
 typedef     ^                   ^               ReKi                             Area         ::   -  -  "Area of each LL panel" -
+typedef     ^                   ^               ReKi                             diag_LL      ::   -  -  "Diagonal length of each LL panel" -
 typedef     ^                   ^               Reki                             Gamma_LL     ::   -  -  "Circulation on the wing lifting line (COPY of Constraint State)" -
 typedef     ^                   ^               ReKi                             Vind_LL      :::  -  -  "Induced velocity on lifting line control points" m/s
 typedef     ^                   ^               ReKi                             Vtot_LL      :::  -  -  "Total velocity on lifting line control points" m/s

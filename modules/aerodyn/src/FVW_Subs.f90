@@ -33,7 +33,7 @@ module FVW_SUBS
    ! Regularization determination method
    integer(IntKi), parameter :: idRegDeterManual  = 0
    integer(IntKi), parameter :: idRegDeterAuto    = 1
-   integer(IntKi), parameter, dimension(1) :: idRegDeterVALID      = (/idRegDeterManual /)
+   integer(IntKi), parameter, dimension(2) :: idRegDeterVALID      = (/idRegDeterManual, idRegDeterAuto /)
 
    real(ReKi), parameter :: CoreSpreadAlpha = 1.25643 
 
@@ -440,6 +440,65 @@ subroutine PackPanelsToSegments(p, m, x, iDepthStart, SegConnct, SegPoints, SegG
       nSegP = 0
    endif
 end subroutine PackPanelsToSegments
+
+!> Set up regularization parameter based on diffusion method and regularization method
+!! NOTE: this should preferably be done at the "panel"/vortex sheet level
+subroutine FVW_InitRegularization(p, m, ErrStat, ErrMsg)
+   type(FVW_ParameterType),         intent(inout) :: p       !< Parameters
+   type(FVW_MiscVarType),           intent(inout) :: m       !< Initial misc/optimization variables
+   integer(IntKi),                  intent(  out) :: ErrStat    !< Error status of the operation
+   character(*),                    intent(  out) :: ErrMsg     !< Error message if ErrStat /= ErrID_None
+   ! Local variables
+   integer(IntKi) :: iSeg
+   real(ReKi) :: ds_min, ds_max, ds_mean !< min,max and mean of spanwise sections
+   real(ReKi) :: c_min, c_max, c_mean !< min,max and mean of chord
+   real(ReKi) :: d_min, d_max, d_mean !< min,max and mean of panel diagonal
+   real(ReKi) :: RegParam
+   real(ReKi) :: Span !< "Blade span"
+   integer :: iSpan, iW
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   ! --- Compute min max and mean spanwise section lengths
+   iW =1
+   ds_min  = minval(m%s_ll(2:p%nSpan+1,iW)-m%s_ll(1:p%nSpan,iW))
+   ds_max  = maxval(m%s_ll(2:p%nSpan+1,iW)-m%s_ll(1:p%nSpan,iW))
+   ds_mean = sum(m%s_ll(2:p%nSpan+1,iW)-m%s_ll(1:p%nSpan,iW))/(p%nSpan+1)
+   c_min  = minval(m%chord_LL(:,iW))
+   c_max  = maxval(m%chord_LL(:,iW))
+   c_mean = sum   (m%chord_LL(:,iW))/(p%nSpan+1)
+   d_min  = minval(m%diag_LL(:,iW))
+   d_max  = maxval(m%diag_LL(:,iW))
+   d_mean = sum   (m%diag_LL(:,iW))/(p%nSpan+1)
+   Span    = m%s_ll(p%nSpan+1,iW)-m%s_ll(1,iW)
+   RegParam = ds_mean*10
+   write(*,'(A)')'-----------------------------------------------------------------------------------------'
+   write(*,'(A)')'Regularization Info'
+   write(*,'(A,1F8.4,A)') 'Span                   : ',Span
+   write(*,'(A,3F8.4,A)') 'Chord                  : ',c_min,c_mean,c_max,' (min, mean, max)'
+   write(*,'(A,3F8.4,A)') 'Spanwise distretization: ',ds_min,ds_mean,ds_max,' (min, mean, max)'
+   write(*,'(A,3F8.4,A)') 'Diagonal distretization: ',d_min,d_mean,d_max,' (min, mean, max)'
+   write(*,'(A,1F8.4)')   'RegParam (Recommended) : ',RegParam
+   write(*,'(A,1F8.4)')   'RegParam (Input      ) : ',p%WakeRegParam
+   if (p%RegDeterMethod==idRegDeterAuto) then
+      ! TODO this is beta
+      print*,'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
+      print*,'!!! NOTE: using optmized wake regularization parameters is still a beta feature!'
+      print*,'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
+      p%WakeRegParam = RegParam
+      p%WingRegParam = RegParam
+      p%CoreSpreadEddyVisc = 100 
+      p%RegFunction = idRegVatistas
+   endif
+   ! KEEP ME: potentially perform pre-computation here
+   !if (p%WakeRegMethod==idRegConstant) then
+   !else if (p%WakeRegMethod==idRegStretching) then
+   !else if (p%WakeRegMethod==idRegAge) then
+   !else
+   !   ErrStat = ErrID_Fatal
+   !   ErrMsg ='Regularization method not implemented'
+   !endif
+end subroutine FVW_InitRegularization
+
 
 !> Set up regularization parameter based on diffusion method and regularization method
 !! NOTE: this should preferably be done at the "panel"/vortex sheet level
