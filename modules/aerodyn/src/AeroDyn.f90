@@ -1633,7 +1633,7 @@ subroutine SetInputsForFVW(p, u, m, errStat, errMsg)
          m%FVW_u(tIndx)%WingsMesh(k)%TranslationDisp   = u(tIndx)%BladeMotion(k)%TranslationDisp
          m%FVW_u(tIndx)%WingsMesh(k)%Orientation       = u(tIndx)%BladeMotion(k)%Orientation
          m%FVW_u(tIndx)%WingsMesh(k)%TranslationVel    = u(tIndx)%BladeMotion(k)%TranslationVel
-         m%FVW_u(tIndx)%HubPosition    = u(tIndx)%HubMotion%Position(:,1)
+         m%FVW_u(tIndx)%HubPosition    = u(tIndx)%HubMotion%Position(:,1) + u(tIndx)%HubMotion%TranslationDisp(:,1)
          m%FVW_u(tIndx)%HubOrientation = u(tIndx)%HubMotion%Orientation(:,:,1)
       enddo
       if (ALLOCATED(m%FVW_u(tIndx)%V_wind)) then
