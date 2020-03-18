@@ -424,7 +424,7 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    integer(IntKi)                :: ErrStat2                                                           ! temporary Error status
    character(ErrMsgLen)          :: ErrMsg2                                                            ! temporary Error message
    type(FVW_ConstraintStateType) :: z_guess                                                                              ! <
-   integer(IntKi) :: iW, iSpan, iAge
+   integer(IntKi) :: iW, iSpan, nP, nFWEff
 
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -438,6 +438,10 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    endif
 
 
+   nP = p%nWings * (  (p%nSpan+1)*(m%nNW-1+2) +(FWnSpan+1)*(m%nFW+1) )
+   nFWEff = min(m%nFW, p%nFWFree)
+   ! --- Display some status to screen
+   if (mod(n,10)==0) print'(A,F10.3,A,I0,A,I0,A,I0,A,I0,A,I0,A,I0,A,I0,A,I0,A,I0)','FVW status - t:',t,'  Step:',n,'  nNW:',m%nNW-1,'/',p%nNWMax-1,'  nFW:',nFWEff, '+',m%nFW-nFWEff,'=',m%nFW,'/',p%nFWMax,'  nP:',nP
    if (DEV_VERSION) print'(A,F10.3,A,F10.3,A,I0,A,I0,A,I0,A,L1)','Update states, t:',t,'  t_u:', utimes(1),'            Step:',n,' nNW:',m%nNW,' nFW:',m%nFW,' ComputeWake: ',m%ComputeWakeInduced
 
 
@@ -638,7 +642,6 @@ subroutine FVW_Euler1( t, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
    character(*),                  intent(  out) :: ErrMsg     !< Error message if ErrStat /= ErrID_None
    ! local variables
    type(FVW_ContinuousStateType) :: dxdt ! time derivatives of continuous states
-   integer(IntKi) :: iAge
    real(ReKi)     :: dt
    integer(IntKi)       :: ErrStat2      ! temporary error status of the operation
    character(ErrMsgLen) :: ErrMsg2       ! temporary error message
@@ -646,7 +649,7 @@ subroutine FVW_Euler1( t, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
    ErrStat = ErrID_None
    ErrMsg  = "" 
 
-   dt = real(p%DTaero,ReKi)
+   dt = real(p%DTaero,ReKi) ! NOTE: this is DTaero not DTfvw since we integrate at each sub time step
    ! Compute "right hand side"
    CALL FVW_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrStat2, ErrMsg2); if (Failed()) return
 
@@ -785,8 +788,8 @@ subroutine FVW_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, ErrStat,
          endif
          call WrVTK_FVW(p, x, z, m, 'vtk_out/FVW', m%VTKstep, 9)
       endif
-      m%VTKstep = m%VTKstep + 1  ! Increment VTK counter no matter what
    endif
+   m%VTKstep = m%VTKstep + 1  ! Increment VTK counter no matter what
 
 
 contains
