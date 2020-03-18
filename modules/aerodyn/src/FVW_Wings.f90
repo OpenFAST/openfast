@@ -38,7 +38,7 @@ contains
          if (allocated(s_in)) deallocate(s_in)
          allocate(s_in(1:Meshes(iW)%nNodes))
          ! --- Computing spanwise coordinate of input mesh normalized from 0 to 1
-!Note: this info also exists in InitInp%zLocal or InitInp%rLocal
+!Note: this info also exists in InitInp%zLocal 
          s_in(:) = -999
          s_in(1) = 0
          do iSpan = 2, Meshes(iW)%nNodes
@@ -50,8 +50,7 @@ contains
          if (Meshes(iW)%nNodes /= p%nSpan+1) then
             ! TODO Possibly interpolate based on FVW meshing
             ! NOTE: p%chord is copied from the InitInput
-            print*,'TODO different discretization InputMesh / vortex code'
-            STOP
+            ErrMsg ='TODO different discretization InputMesh / vortex code'; ErrStat=ErrID_Fatal; return
          endif
          print*,'Input mesh size',Meshes(iW)%nNodes,' Number of vortex element', p%nSpan
          do iSpan = 1, p%nSpan+1
@@ -92,29 +91,24 @@ contains
       real(ReKi), dimension(3) :: DP_TE ! Distance between reference point and trailing edge
       real(ReKi), dimension(3) :: P1,P2,P3,P4,P5,P7,P8,P6,P9,P10
       real(ReKi), dimension(3) :: DP1, DP2, DP3
-      !real(ReKi), dimension(3,3) :: MRot
       ! Initialize ErrStat
       ErrStat = ErrID_None
       ErrMsg  = ""
-      ! --- Position of leading edge and trailing edge
-      ! TODO, this assumes one to one between InputMesh and FVW Mesh
+      ! --- Position of leading edge (LE) and trailing edge (TE)
+      ! NOTE, this assumes one to one between InputMesh and FVW Mesh
       do iW = 1,p%nWings
          do iSpan = 1,p%nSpan+1
             P_ref = Meshes(iW)%Position(1:3, iSpan )+Meshes(iW)%TranslationDisp(1:3, iSpan)
             DP_LE(1:3) =  0.0
-            DP_LE(1)   = -m%chord_LL(iSpan,iW)/4.  ! TODO TODO TODO Use orientation and might not be c/2
+            DP_LE(1)   = -m%chord_LL(iSpan,iW)/4.
             DP_TE(1:3) =  0.0
-            DP_TE(1)   = +3.*m%chord_LL(iSpan,iW)/4. ! TODO TODO TODO Use orientation and might not be c/2
-            !MRot=Meshes(iW)%Orientation(1:3,1:3,iSpan) ! NOTE: this wont work
-            !DP_LE = matmul(MRot,DP_LE)
-            !DP_TE = matmul(MRot,DP_TE)
+            DP_TE(1)   = +3.*m%chord_LL(iSpan,iW)/4. 
             m%LE(1:3, iSpan, iW) = P_ref + DP_LE(1)*Meshes(iW)%Orientation(2,1:3,iSpan)
             m%TE(1:3, iSpan, iW) = P_ref + DP_TE(1)*Meshes(iW)%Orientation(2,1:3,iSpan)
          enddo         
       enddo
       ! --- Generic code below to compute normal/tangential vectors of a lifting line panel
-      ! Notations follow vanGarrel [TODO REF]
-      !
+      ! Notations follow vanGarrel [ECN-C--03-079, Development of a wind turbine aerodynamics simulation module,2003]
       !
       !   P4 -P10---P7------ P3
       !   |
@@ -175,26 +169,7 @@ contains
          call InterpArray(m%s_LL(:,iW), Meshes(iW)%TranslationVel(2,:) ,m%s_CP_LL(:,iW), m%Vstr_LL(2,:,iW))
          call InterpArray(m%s_LL(:,iW), Meshes(iW)%TranslationVel(3,:) ,m%s_CP_LL(:,iW), m%Vstr_LL(3,:,iW))
       enddo
-
    end subroutine Wings_Panelling
-
-!       print*,'  Norm Tang '
-!       print*, m%Norm(1:3,5,1)
-!       print*, m%Tang(1:3,5,1)
-!       print*,'       '
-!       print*,'LE1',m%LE(1,:,1)
-!       print*,'LE2',m%LE(2,:,1)
-!       print*,'LE3',m%LE(3,:,1)
-!       print*,''
-!       print*,'TE1',m%LE(1,:,1)
-!       print*,'TE2',m%LE(2,:,1)
-!       print*,'TE3',m%LE(3,:,1)
-!       print*,''
-!       print*,'CP1',m%CP_LL(1,:,1)
-!       print*,'CP2',m%CP_LL(2,:,1)
-!       print*,'CP3',m%CP_LL(3,:,1)
-! 
-
 
    !----------------------------------------------------------------------------------------------------------------------------------
    !>
@@ -212,7 +187,8 @@ contains
       integer(IntKi), intent(in) :: iLabel
       ! Local
       integer(IntKi) :: iW
-      ! Initialize ErrStat
+      real(ReKi) :: s
+      real(ReKi) :: GammaScale
       ErrStat = ErrID_None
       ErrMsg  = ""
 
@@ -316,12 +292,10 @@ contains
       Vcst = m%Vind_LL + m%Vwnd_LL - m%Vstr_ll
 
       if (any(m%Vind_LL(1:3,:,:)<-99)) then
-         print*,'Wings_ComputeCirculationPolarData: Problem in induced velocity on LL points'
-         STOP
+         ErrMsg='Wings_ComputeCirculationPolarData: Problem in induced velocity on LL points'; ErrStat=ErrID_Fatal; return
       endif
       if (any(m%Vwnd_LL(1:3,:,:)<-99)) then
-         print*,'Wings_ComputeCirculationPolarData: Problem in wind velocity on LL points'
-         STOP
+         ErrMsg='Wings_ComputeCirculationPolarData: Problem in wind velocity on LL points'; ErrStat=ErrID_Fatal; return
       endif
 
       ! --- Convergence loop until near wake gives induction coherent with circulation
@@ -329,7 +303,6 @@ contains
       iIter=0
       do while (.not.(bConverged) .and. iIter<p%CircSolvMaxIter) 
           !print*,'------- ITERATION',iIter
-          !print*,'Gamm: ',GammaLastIter(1:3, 1)
           ! --- The induced velocity from the profiles is different at each iteration:
           Vvar=0 
           nCPs=p%nSpan
@@ -349,8 +322,6 @@ contains
           enddo
           ! Total velocity on the lifting line
           m%Vtot_ll = Vcst + Vvar
-          !call print_mean_3d( Vvar(:,:,:), 'Mean induced vel. LL (var)')
-          !call print_mean_3d( m%Vtot_LL(:,:,:), 'Mean relativevel. LL (tot)')
           ! --- Computing circulation based on Vtot_LL
           call CirculationFromPolarData(Gamma_LL, p, m, AFInfo,ErrStat2,ErrMsg2);  if(Failed()) return;
 
@@ -358,26 +329,26 @@ contains
           ! Differences between iterations and relaxation
           DGamma=Gamma_LL-GammaLastIter 
           GammaLastIter=GammaLastIter+p%CircSolvRelaxation*DGamma
-          !print*,'DGamm:',DGamma(1:3, 1)
 
           iIter=iIter+1
           MeanGamma  = sum(abs(GammaLastIter))/(p%nWings*p%nSpan)
-          !print*,'Crit',maxval(abs(DGamma))/(MeanGamma)
           bConverged = maxval(abs(DGamma))/(MeanGamma)<p%CircSolvConvCrit
 
       end do ! convergence loop
       if (iIter==p%CircSolvMaxIter) then
-         print'(A,I0,A,I0,A)','Circulation solve, call ',iLabel,', done after ........................ nIter: ', iIter, ' <<< Max reached'
+         if (DEV_VERSION) then
+            print'(A,I0,A,I0,A)','Circulation solve, call ',iLabel,', done after ........................ nIter: ', iIter, ' <<< Max reached'
+         endif
          Gamma_LL=GammaLastIter ! returning relaxed value if not converged
       else
-         print'(A,I0,A,I0)','Circulation solve, call ',iLabel,', done after ........................ nIter: ', iIter
+         if (DEV_VERSION) then
+            print'(A,I0,A,I0)','Circulation solve, call ',iLabel,', done after ........................ nIter: ', iIter
+         endif
          ! We return Gamma_LL
       endif
-
       ! KEEP ME: --- ADP: removed m%iStep in favor of m%VTKstep
       !iW=1
       !call Output_Gamma(m%CP_ll(1:3,:,iW), Gamma_LL(:,iW), iW, m%iStep, iLabel, iIter)
-
       !call print_mean_3d( m%Vwnd_LL(:,:,:), 'Mean wind    vel. LL (cst)')
       !call print_mean_3d( m%Vstr_LL(:,:,:), 'Mean struct  vel. LL (cst)')
       !call print_mean_3d( m%Vind_LL(:,:,:), 'Mean induced vel. LL (cst)')
@@ -387,11 +358,9 @@ contains
       !print*,'m%Vind_LL',m%Vind_LL(1,:,:)
       !print*,'m%Vwnd_LL',m%Vwnd_LL(1,:,:)
       !print*,'m%Vcst_LL',Vcst(1,:,:)
+      !print*,'Gamm: ',Gamma_LL(1, 1), Gamma_LL(p%nSpan,1)
       m%Vind_LL=-9999._ReKi !< Safety (the induction above was not the true one)
       m%Vtot_LL=-9999._ReKi !< Safety 
-      !print*,'Gamm: ',Gamma_LL(1, 1), Gamma_LL(p%nSpan,1)
-      !if (abs(Gamma_LL(1, 1)-Gamma_LL(p%nSpan,1))>0.01)  STOP
-      !if (m%iStep==3) STOP
       call CleanUp()
    contains
 
@@ -456,22 +425,10 @@ contains
             Cl = AFI_interp%Cl
             Cd = AFI_interp%Cd
             Cm = AFI_interp%Cm
-            !else if (p%CircSolvPolar==idPolar2PiAlpha) then
-            !   Cl=TwoPi*alpha
-            !else if (p%CircSolvPolar==idPolar2PiSinAlpha) then
-            !   Cl=TwoPi*sin(alpha)
-            !else
-            !   print*,'Unknown CircSolvPolar value'
-            !   STOP
-            !endif
             ! Simple method:
             !    Gamma_LL=(0.5 * Cl * Vrel_orth_norm*chord)
             ! VanGarrel's method:
             Gamma_LL(icp,iW) =(0.5_ReKi * Cl * Vrel_orth_norm**2*m%Area(icp,iW)/(Vjouk_orth_norm))
-            !if ((iW==1).and.icp==3) then
-            !   print*,'CL',Cl,alpha,Vrel_orth_norm,m%Area(icp,iW)
-            !endif
-
          enddo
       enddo
    contains
@@ -484,7 +441,5 @@ contains
          Failed =  ErrStat >= AbortErrLev
       end function Failed
    end subroutine CirculationFromPolarData
-
-
 
 end module FVW_Wings

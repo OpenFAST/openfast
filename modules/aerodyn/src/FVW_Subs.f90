@@ -40,6 +40,7 @@ module FVW_SUBS
    ! Implementation 
    integer(IntKi), parameter :: iNWStart=2 !< Index in r%NW where the near wake start (if >1 then the Wing panels are included in r_NW)
    integer(IntKi), parameter :: FWnSpan=1  !< Number of spanwise far wake panels ! TODO make it an input later
+   logical       , parameter :: DEV_VERSION=.FALSE.
 contains
 
 !==========================================================================
@@ -126,7 +127,6 @@ subroutine ReadAndInterpGamma(CirculationFileName, s_CP_LL, L, Gamma_CP_LL)
    close(iUnit)
    if (istat/=0) then
       print*,'Error occured while reading Circulation file'
-      STOP
    endif
    ! NOTE: TODO TODO TODO THIS ROUTINE PERFORMS NASTY EXTRAPOLATION, SHOULD BE PLATEAUED
    Gamma_CP_LL =  interpolation_array( sPrescr, GammaPrescr, s_CP_LL, size(s_CP_LL), nLines )
@@ -146,8 +146,7 @@ contains
          line_count=line_count+1
       enddo
       if (line_count==nline_max) then
-         print*,'Error: MainIO: maximum number of line exceeded'
-         STOP
+         print*,'Error: maximum number of line exceeded'
       endif
       100 if(len(trim(line))>0) then
          line_count=line_count+1
@@ -223,8 +222,9 @@ subroutine Map_NW_FW(p, m, z, x, ErrStat, ErrMsg)
             ! in between point
             x%r_FW(1:3,2,iAgeFW,iW) =  x%r_NW(1:3,int(p%nSpan+1)/4 ,p%nNWMax+1,iW) ! Point (mid)
          else if ((FWnSpan>2)) then
-            print*,'Error: FWnSpan>2 not implemented.'
-            STOP
+            ErrMsg='Error: FWnSpan>2 not implemented.'
+            ErrStat=ErrID_Fatal
+            return
          endif
       enddo
       if (m%nNW==p%nNWMax) then
@@ -436,16 +436,15 @@ subroutine PackPanelsToSegments(p, m, x, iDepthStart, SegConnct, SegPoints, SegG
       endif
       if ((iHeadP-1)/=nP) then
          print*,'PackPanelsToSegments: Number of points wrongly estimated',nP, iHeadP-1
-         STOP
+         STOP ! Keep me. The check will be removed once the code is well established
       endif
       if ((iHeadC-1)/=nC) then
          print*,'PackPanelsToSegments: Number of segments wrongly estimated',nC, iHeadC-1
-         STOP
+         STOP ! Keep me. The check will be removed once the code is well established
       endif
       nSeg  = iHeadC-1
       nSegP = iHeadP-1
    else
-      print*,'PackPanelsToSegments: nP=',nP
       nSeg  = 0
       nSegP = 0
    endif
@@ -569,6 +568,9 @@ subroutine WakeInducedVelocities(p, x, m, ErrStat, ErrMsg)
    real(ReKi),    dimension(:,:), allocatable :: CPs   !< ControlPoints
    real(ReKi),    dimension(:,:), allocatable :: Uind  !< Induced velocity
    integer(IntKi) :: nFWEff ! Number of farwake panels that are free at current tmie step
+   ErrStat= ErrID_None
+   ErrMsg =''
+
    nFWEff = min(m%nFW, p%nFWFree)
 
    m%Vind_NW = -9999._ReKi !< Safety
@@ -584,7 +586,9 @@ subroutine WakeInducedVelocities(p, x, m, ErrStat, ErrMsg)
 
    ! --- Computing induced velocity
    call PackConvectingPoints()
-   print'(A,I0,A,I0,A,I0)','Convection - nSeg:',nSeg,' - nSegP:',nSegP, ' - nCPs:',nCPs
+   if (DEV_VERSION) then
+      print'(A,I0,A,I0,A,I0)','Convection - nSeg:',nSeg,' - nSegP:',nSegP, ' - nCPs:',nCPs
+   endif
    call ui_seg( 1, nCPs, nCPs, CPs, 1, nSeg, nSeg, nSegP, SegPoints, SegConnct, SegGamma, p%RegFunction, SegEpsilon, Uind)
    call UnPackInducedVelocity()
 
@@ -620,13 +624,12 @@ contains
       endif
 
       if (any(CPs(1,:)<=-99)) then
-         print*,'WakeInducedVelocities: Problem in Control points'
-         STOP
+         ErrMsg='PackConvectingPoints: Problem in Control points'; ErrStat=ErrID_Fatal; return
       endif
-
       if ((iHeadP-1)/=size(CPs,2)) then
          print*,'PackConvectingPoints: Number of points wrongly estimated',size(CPs,2), iHeadP-1
-         STOP
+         STOP ! Keep me. The check will be removed once the code is well established
+         ErrMsg='PackConvectingPoints: Number of points wrongly estimated '; ErrStat=ErrID_Fatal; return
       endif
    end subroutine
    !> Distribute the induced velocity to the proper location 
@@ -641,13 +644,13 @@ contains
             CALL VecToLattice(Uind, 1, m%Vind_FW(1:3,1:FWnSpan+1,1:nFWEff+1,iW), iHeadP)
          enddo
          if (any(m%Vind_FW(1:3,1:FWnSpan+1,1:nFWEff+1,:)<-99)) then
-            print*,'UnPackInducedVelocity: Problem in FW induced velocity on FW points'
-            STOP
+            ErrMsg='UnPackInducedVelocity: Problem in FW induced velocity on FW points'; ErrStat=ErrID_Fatal; return
          endif
       endif
       if ((iHeadP-1)/=size(Uind,2)) then
          print*,'UnPackInducedVelocity: Number of points wrongly estimated',size(Uind,2), iHeadP-1
-         STOP
+         STOP ! Keep me. The check will be removed once the code is well established
+         ErrMsg='UnPackInducedVelocity: Number of points wrongly estimated'; ErrStat=ErrID_Fatal; return
       endif
    end subroutine
 
@@ -683,7 +686,9 @@ subroutine LiftingLineInducedVelocities(p, x, iDepthStart, m, ErrStat, ErrMsg)
    if (nSegP==0) then
       nCPs=0
       m%Vind_LL = 0.0_ReKi
-      print'(A,I0,A,I0,A,I0,A)','Induction -  nSeg:',nSeg,' - nSegP:',nSegP, ' - nCPs:',nCPs, ' -> No induction'
+      if (DEV_VERSION) then
+         print'(A,I0,A,I0,A,I0,A)','Induction -  nSeg:',nSeg,' - nSegP:',nSegP, ' - nCPs:',nCPs, ' -> No induction'
+      endif
    else
       ! --- Setting up regularization
       allocate(SegEpsilon(1:nSeg));
@@ -695,7 +700,9 @@ subroutine LiftingLineInducedVelocities(p, x, iDepthStart, m, ErrStat, ErrMsg)
       Uind=0.0_ReKi !< important due to side effects of ui_seg
       ! ---
       call PackLiftingLinePoints()
-      print'(A,I0,A,I0,A,I0)','Induction -  nSeg:',nSeg,' - nSegP:',nSegP, ' - nCPs:',nCPs
+      if (DEV_VERSION) then
+         print'(A,I0,A,I0,A,I0)','Induction -  nSeg:',nSeg,' - nSegP:',nSegP, ' - nCPs:',nCPs
+      endif
       call ui_seg( 1, nCPs, nCPs, CPs, 1, nSeg, nSeg, nSegP, SegPoints, SegConnct, SegGamma, p%RegFunction, SegEpsilon, Uind)
       call UnPackLiftingLineVelocities()
 
@@ -715,7 +722,7 @@ contains
       enddo
       if ((iHeadP-1)/=size(CPs,2)) then
          print*,'PackLLPoints: Number of points wrongly estimated',size(CPs,2), iHeadP-1
-         STOP
+         STOP ! Keep me. The check will be removed once the code is well established
       endif
       nCPs=iHeadP-1
       !print*,'Number of points packed for LL:',nCPs, nSegP
@@ -729,7 +736,7 @@ contains
       enddo
       if ((iHeadP-1)/=size(Uind,2)) then
          print*,'UnPackLiftingLineVelocities: Number of points wrongly estimated',size(Uind,2), iHeadP-1
-         STOP
+         STOP ! Keep me. The check will be removed once the code is well established
       endif
    end subroutine
 end subroutine

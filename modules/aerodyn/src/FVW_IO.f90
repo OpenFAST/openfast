@@ -186,8 +186,10 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth)
    integer(IntKi)       :: ErrStat2
    character(ErrMsgLen) :: ErrMsg2
 
-   print*,'------------------------------------------------------------------------------'
-   print'(A,L1,A,I0,A,I0,A,I0)','VTK Output  -      First call ',m%FirstCall, '                                nNW:',m%nNW,' nFW:',m%nFW,'  i:',VTKCount
+   if (DEV_VERSION) then
+      print*,'------------------------------------------------------------------------------'
+      print'(A,L1,A,I0,A,I0,A,I0)','VTK Output  -      First call ',m%FirstCall, '                                nNW:',m%nNW,' nFW:',m%nFW,'  i:',VTKCount
+   endif
    !
    call set_vtk_binary_format(.false.) ! TODO binary fails
 

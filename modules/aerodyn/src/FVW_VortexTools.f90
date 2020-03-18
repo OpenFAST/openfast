@@ -160,7 +160,6 @@ CONTAINS
       enddo; enddo; enddo; 
       U(1:3)=U(1:3)/ (size(M,4)*size(M,3)*size(M,2))
       print'(A25,3F12.4)',trim(Label),U
-      if(U(1)<-99) STOP
    end subroutine
 
    subroutine print_mean_3d(M, Label)
@@ -174,7 +173,6 @@ CONTAINS
          U(1:3)= U(1:3)+ M(1:3, j, i)
       enddo; enddo;
       U(1:3)=U(1:3)/ (size(M,3)*size(M,2))
-      !print'(A26,3F12.4)',trim(Label)//'         ',U
       print'(A24,3F12.4)',trim(Label),U
    end subroutine
 
