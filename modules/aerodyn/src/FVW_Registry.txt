@@ -82,6 +82,7 @@ typedef     ^                   ^               ReKi                            
 typedef     ^                   ^               ReKi                             PitchAndTwist ::   -  -  "Twist angle (includes all sources of twist)  [Array of size (NumBlNds,numBlades)]" rad
 typedef     ^                   ^               Logical                          ComputeWakeInduced - - - "Compute induced velocities on this timestep" -
 typedef     ^                   ^               DbKi                             OldWakeTime   -   -   -  "Time the wake induction velocities were last calculated" s
+typedef     ^                   ^               ReKi                             tSpent        -   -  -  "Time spent in expensive Biot-Savart computation" s
 
 # ........ Input ............
 # FVW_InputType

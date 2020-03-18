@@ -160,6 +160,7 @@ subroutine FVW_InitMiscVars( p, m, ErrStat, ErrMsg )
    m%nFW       = 0             ! Number of active farwake  panels
    m%VTKstep   = 0             ! Current step number for vtk output
    m%VTKlastTime = -HUGE(1.0_DbKi)
+   m%tSpent    = 0
 
    call AllocAry( m%LE      ,  3  ,  p%nSpan+1  , p%nWings, 'Leading Edge Points', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitMisc' ); m%LE = -999999_ReKi;
    call AllocAry( m%TE      ,  3  ,  p%nSpan+1  , p%nWings, 'TrailingEdge Points', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitMisc' ); m%TE = -999999_ReKi;
@@ -425,6 +426,7 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    character(ErrMsgLen)          :: ErrMsg2                                                            ! temporary Error message
    type(FVW_ConstraintStateType) :: z_guess                                                                              ! <
    integer(IntKi) :: iW, iSpan, nP, nFWEff
+   integer, dimension(8) :: time1, time2, time_diff
 
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -433,6 +435,7 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    if ( ( t - m%OldWakeTime ) >= p%DTfvw*OneMinusEpsilon )  then
       m%OldWakeTime = t
       m%ComputeWakeInduced = .TRUE.    ! It's time to update the induced velocities from wake
+      call date_and_time(values=time1)
    else
       m%ComputeWakeInduced = .FALSE.
    endif
@@ -441,7 +444,7 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    nP = p%nWings * (  (p%nSpan+1)*(m%nNW-1+2) +(FWnSpan+1)*(m%nFW+1) )
    nFWEff = min(m%nFW, p%nFWFree)
    ! --- Display some status to screen
-   if (mod(n,10)==0) print'(A,F10.3,A,I0,A,I0,A,I0,A,I0,A,I0,A,I0,A,I0,A,I0,A,I0)','FVW status - t:',t,'  Step:',n,'  nNW:',m%nNW-1,'/',p%nNWMax-1,'  nFW:',nFWEff, '+',m%nFW-nFWEff,'=',m%nFW,'/',p%nFWMax,'  nP:',nP
+   if (mod(n,10)==0) print'(A,F10.3,A,I0,A,I0,A,I0,A,I0,A,I0,A,I0,A,I0,A,I0,A,F6.1,A)','FVW status - t:',t,'  n:',n,'  nNW:',m%nNW-1,'/',p%nNWMax-1,'  nFW:',nFWEff, '+',m%nFW-nFWEff,'=',m%nFW,'/',p%nFWMax,'  nP:',nP,'  spent:', m%tSpent, 's'
    if (DEV_VERSION) print'(A,F10.3,A,F10.3,A,I0,A,I0,A,I0,A,L1)','Update states, t:',t,'  t_u:', utimes(1),'            Step:',n,' nNW:',m%nNW,' nFW:',m%nFW,' ComputeWake: ',m%ComputeWakeInduced
 
 
@@ -523,7 +526,12 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    if (m%FirstCall) then
       m%FirstCall=.False.
    endif
-
+   if (m%ComputeWakeInduced) then
+      ! Profiling of expensive time step
+      call date_and_time(values=time2)
+      time_diff=time2-time1
+      m%tSpent = time_diff(5)*3600+time_diff(6)*60 +time_diff(7)+0.001*time_diff(8)
+   endif
    call FVW_DestroyConstrState(z_guess, ErrStat2, ErrMsg2); if(Failed()) return
 
 contains

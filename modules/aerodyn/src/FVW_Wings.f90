@@ -52,7 +52,6 @@ contains
             ! NOTE: p%chord is copied from the InitInput
             ErrMsg ='TODO different discretization InputMesh / vortex code'; ErrStat=ErrID_Fatal; return
          endif
-         print*,'Input mesh size',Meshes(iW)%nNodes,' Number of vortex element', p%nSpan
          do iSpan = 1, p%nSpan+1
             m%s_LL    (iSpan, iW) = s_in(iSpan)
             m%chord_LL(iSpan, iW) = p%chord(iSpan,iW)

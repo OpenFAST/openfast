@@ -108,6 +108,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PitchAndTwist      !< Twist angle (includes all sources of twist)  [Array of size (NumBlNds,numBlades)] [rad]
     LOGICAL  :: ComputeWakeInduced      !< Compute induced velocities on this timestep [-]
     REAL(DbKi)  :: OldWakeTime      !< Time the wake induction velocities were last calculated [s]
+    REAL(ReKi)  :: tSpent      !< Time spent in expensive Biot-Savart computation [s]
   END TYPE FVW_MiscVarType
 ! =======================
 ! =========  FVW_InputType  =======
@@ -1229,6 +1230,7 @@ IF (ALLOCATED(SrcMiscData%PitchAndTwist)) THEN
 ENDIF
     DstMiscData%ComputeWakeInduced = SrcMiscData%ComputeWakeInduced
     DstMiscData%OldWakeTime = SrcMiscData%OldWakeTime
+    DstMiscData%tSpent = SrcMiscData%tSpent
  END SUBROUTINE FVW_CopyMisc
 
  SUBROUTINE FVW_DestroyMisc( MiscData, ErrStat, ErrMsg )
@@ -1484,6 +1486,7 @@ ENDIF
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! ComputeWakeInduced
       Db_BufSz   = Db_BufSz   + 1  ! OldWakeTime
+      Re_BufSz   = Re_BufSz   + 1  ! tSpent
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -1988,6 +1991,8 @@ ENDIF
       Int_Xferred   = Int_Xferred   + 1
       DbKiBuf ( Db_Xferred:Db_Xferred+(1)-1 ) = InData%OldWakeTime
       Db_Xferred   = Db_Xferred   + 1
+      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%tSpent
+      Re_Xferred   = Re_Xferred   + 1
  END SUBROUTINE FVW_PackMisc
 
  SUBROUTINE FVW_UnPackMisc( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -2753,6 +2758,8 @@ ENDIF
       Int_Xferred   = Int_Xferred + 1
       OutData%OldWakeTime = DbKiBuf( Db_Xferred ) 
       Db_Xferred   = Db_Xferred + 1
+      OutData%tSpent = ReKiBuf( Re_Xferred )
+      Re_Xferred   = Re_Xferred + 1
  END SUBROUTINE FVW_UnPackMisc
 
  SUBROUTINE FVW_CopyInput( SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg )
