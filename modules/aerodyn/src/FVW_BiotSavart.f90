@@ -81,7 +81,7 @@ subroutine ui_seg_11(DeltaPa, DeltaPb, SegGamma, RegFunction, RegParam1, Uind)
                Kv     = r_bar2/sqrt(1.0_ReKi+r_bar2**2)
             case ( idRegOffset )      ! Cut-off radius 
                Kv        = 1.0_ReKi
-               denominator=denominator+RegParam1**2
+               denominator=denominator+RegParam1**2*norm2_r0
             case default
                Kv=1.0_ReKi !< Should be an error
             end select 
@@ -301,7 +301,7 @@ subroutine ui_seg(iCPStart, iCPEnd, nCPsTot, CPs, &
                   if (norm2_r0>PRECISION_UI) then
                      ! --- Far field TODO
                      ! --- Regularization (close field) -- Offset
-                     denominator = denominator+RegParam(is)**2
+                     denominator = denominator+RegParam(is)**2*norm2_r0
                      Kv          = SegGamma(is)*fourpi_inv*(norm_a+norm_b)/(denominator + MINDENOM)
                      Uind(1:3)   = Kv*crossprod(1:3)
                   end if
