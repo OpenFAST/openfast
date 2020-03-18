@@ -216,40 +216,44 @@ contains
       ErrStat = ErrID_None
       ErrMsg  = ""
 
-!FIXME: Gamma_LL is currently stored as a constraint state.  This routine is called from places where constraint states are considered intent(in) only.
+      if (t<p%FullCirculationStart) then
+         ! The circulation is ramped up progressively, starting from 0 
+         if (t<=0) then
+            GammaScale=0.0_ReKi
+         else
+            s=(t/p%FullCirculationStart)
+            !GammaScale = 1._ReKi- 1._ReKi/(1._ReKi+exp((1-2*s)/(s*(s-1._ReKi)))) ! Using a smooth approsimation of HeavySide function
+            GammaScale = s  ! Using a linear scaling
+         endif
+      else
+         GammaScale=1.0_ReKi
+      endif
+
       if (p%CirculationMethod==idCircPrescribed) then 
-         !print*,'>>>Prescribing circulation'
          do iW = 1, p%nWings !Loop over lifting lines
             Gamma_LL(1:p%nSpan,iW) = p%PrescribedCirculation(1:p%nSpan)
          enddo
 
       else if (p%CirculationMethod==idCircPolarData) then 
          ! ---  Solve for circulation using polar data
-         !print*,'>>>>>>>>>>>>>>>>> Circulation solving with polar data >>>>>>>>>>>>>> CALL  ',iLabel
-         CALL Wings_ComputeCirculationPolarData(t, Gamma_LL, Gamma_LL_prev, u, p, x, m, AFInfo, ErrStat, ErrMsg, iLabel)
+         CALL Wings_ComputeCirculationPolarData(t, Gamma_LL, Gamma_LL_prev, u, p, x, m, AFInfo, GammaScale, ErrStat, ErrMsg, iLabel)
 
       else if (p%CirculationMethod==idCircNoFlowThrough) then 
          ! ---  Solve for circulation using the no-flow through condition
-         ! TODO
-         print*,'Circulation method nor implemented', p%CirculationMethod
-         STOP
+         ErrMsg='Circulation method nor implemented'; ErrStat=ErrID_Fatal; return ! should never happen
       else
-         print*,'Circulation method nor implemented', p%CirculationMethod ! Will never happen
-         STOP
+         ErrMsg='Circulation method nor implemented'; ErrStat=ErrID_Fatal; return ! should never happen
       endif
 
-      if (t<p%FullCirculationStart) then
-         ! The circulation is ramped up progressively, starting from 0 
-         ! TODO use a smooth approximation of HeavySide function instead of linear
-         print*,'Slow start'
-         Gamma_LL = (t/p%FullCirculationStart)*Gamma_LL
-      endif
+      ! Scale circulation (for initial transient)
+      Gamma_LL = Gamma_LL * GammaScale
+
 
    endsubroutine Wings_ComputeCirculation
 
    !----------------------------------------------------------------------------------------------------------------------------------
    !>
-   subroutine Wings_ComputeCirculationPolarData(t, Gamma_LL, Gamma_LL_prev, u, p, x, m, AFInfo, ErrStat, ErrMsg, iLabel)
+   subroutine Wings_ComputeCirculationPolarData(t, Gamma_LL, Gamma_LL_prev, u, p, x, m, AFInfo, GammaScale, ErrStat, ErrMsg, iLabel)
       real(DbKi),                      intent(in   )  :: t           !< Current simulation time in seconds
       real(ReKi), dimension(:,:),      intent(inout)  :: Gamma_LL       !< Circulation on all the lifting lines
       real(ReKi), dimension(:,:),      intent(in   )  :: Gamma_LL_prev  !< Previous/Guessed circulation
@@ -257,6 +261,7 @@ contains
       type(FVW_ParameterType),         intent(in   )  :: p              !< Parameters
       type(FVW_ContinuousStateType),   intent(in   )  :: x              !< Parameters
       type(FVW_MiscVarType),           intent(inout)  :: m              !< Initial misc/optimization variables
+      real(ReKi),                      intent(in   )  :: GammaScale     !< Scaling factor used at init
       type(AFI_ParameterType),         intent(in   )  :: AFInfo(:)      !< The airfoil parameter data
       integer(IntKi),                  intent(  out)  :: ErrStat        !< Error status of the operation
       character(*),                    intent(  out)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
@@ -291,12 +296,12 @@ contains
          m%Vtot_ll = m%Vwnd_LL - m%Vstr_ll
          call CirculationFromPolarData(GammaLastIter, p, m, AFInfo,ErrStat2,ErrMsg2);  if(Failed()) return;
       else
-         GammaLastIter(1:p%nSpan,1:p%nWings) = Gamma_LL_prev(1:p%nSpan,1:p%nWings)
+         ! NOTE: we need to inverse the scaling to speed up the convergence
+         GammaLastIter(1:p%nSpan,1:p%nWings) = Gamma_LL_prev(1:p%nSpan,1:p%nWings) / GammaScale 
       endif
 
       if (any(x%r_NW(1,:,1:m%nNW+1,:)<-999)) then
-         print*,'Wings_ComputeCirculationPolarData: Problem in input NW points'
-         STOP
+         ErrMsg='Wings_ComputeCirculationPolarData: Problem in input NW points'; ErrStat=ErrID_Fatal; return
       endif
 
 
