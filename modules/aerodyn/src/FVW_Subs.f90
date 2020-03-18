@@ -330,7 +330,9 @@ subroutine SetRequestedWindPoints(r_wind, x, p, m)
    type(FVW_MiscVarType),           intent(in   )              :: m       !< Initial misc/optimization variables
    integer(IntKi)          :: iP_start,iP_end   ! Current index of point, start and end of range
 
-      ! Using array reshaping to ensure a given near or far wake point is always at the same location in the array.
+   ! Using array reshaping to ensure a given near or far wake point is always at the same location in the array.
+   ! NOTE: Maximum number of points are passed, whether they "exist" or not. 
+   ! NOTE: InflowWind ignores points at (0,0,0)
    ! --- LL CP
    iP_start=1
    iP_end=p%nWings*p%nSpan
@@ -357,7 +359,8 @@ subroutine DistributeRequestedWind(V_wind, x, p, m)
    type(FVW_MiscVarType),           intent(inout) :: m       !< Initial misc/optimization variables
    integer(IntKi)          :: iP_start,iP_end   ! Current index of point, start and end of range
 
-      ! Using array reshaping to ensure a given near or far wake point is always at the same location in the array.
+   ! Using array reshaping to ensure a given near or far wake point is always at the same location in the array.
+   ! NOTE: Maximum number of points are passed, whether they "exist" or not. 
    ! --- LL CP
    iP_start=1
    iP_end=p%nWings*p%nSpan
@@ -370,7 +373,7 @@ subroutine DistributeRequestedWind(V_wind, x, p, m)
    if (p%nFWMax>0) then
       iP_start=iP_end+1
       iP_end=iP_start-1+(FWnSpan+1)*(p%nFWMax+1)*p%nWings
-      m%Vwnd_FW(1:3,1:p%nSpan+1,1:FWnSpan+1,1:p%nWings) = reshape( V_wind(1:3,iP_start:iP_end), (/ 3, FWnSpan+1, p%nFWMax+1, p%nWings /))
+      m%Vwnd_FW(1:3,1:FWnSpan+1,1:p%nFWMax+1,1:p%nWings) = reshape( V_wind(1:3,iP_start:iP_end), (/ 3, FWnSpan+1, p%nFWMax+1, p%nWings /))
    endif
 
 end subroutine DistributeRequestedWind
