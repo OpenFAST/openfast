@@ -207,16 +207,34 @@ subroutine Map_NW_FW(p, m, z, x, ErrStat, ErrMsg)
    type(FVW_ContinuousStateType),   intent(inout)  :: x              !< Continuous states
    integer(IntKi),                  intent(  out)  :: ErrStat        !< Error status of the operation
    character(*),                    intent(  out)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
-   integer(IntKi)            :: iSpan , iW
-   real(ReKi)                :: FWGamma
+   integer(IntKi)            :: iSpan , iW, iRoot
+   real(ReKi), dimension(p%nWings) :: FWGamma
    integer(IntKi), parameter :: iAgeFW=1   !< we update the first FW panel
    ErrStat = ErrID_None
    ErrMsg  = ""
    
    ! First Panel of Farwake has coordinates of last panel of near wake always
    if (p%nFWMax>0) then
+      FWGamma(:)=0.0_ReKi
+      if (m%nNW==p%nNWMax) then
+         ! First circulation of Farwake is taken as the max circulation of last NW column
+         do iW=1,p%nWings
+            !FWGamma = sum(x%Gamma_NW(:,p%nNWMax,iW))/p%nSpan
+            FWGamma(iW) = maxval(x%Gamma_NW(:,p%nNWMax,iW))
+            x%Gamma_FW(1:FWnSpan,iAgeFW,iW) = FWGamma(iW)
+         enddo
+      endif
+
       do iW=1,p%nWings
-         x%r_FW(1:3,1        ,iAgeFW,iW) =  x%r_NW(1:3,1         ,p%nNWMax+1,iW) ! Point 1 (root)
+         ! Find first point (in half span) where circulation is more than 0.1% of MaxGamma, call it the root
+         iRoot=1
+         ! NOTE: this below won't work for a wing
+         ! Need to go from maxgamma location, and integrate spanwise position on both side to find location of tip and root vortex
+         !do while ((iRoot<int(p%nSpan/2)) .and. (x%Gamma_NW(iRoot, p%nNWMax,iW)< 0.001*FWGamma(iW) ))
+         !   iRoot=iRoot+1
+         !enddo
+
+         x%r_FW(1:3,1        ,iAgeFW,iW) =  x%r_NW(1:3,iRoot     ,p%nNWMax+1,iW) ! Point 1 (root)
          x%r_FW(1:3,FWnSpan+1,iAgeFW,iW) =  x%r_NW(1:3,p%nSpan+1 ,p%nNWMax+1,iW) ! Point FWnSpan (tip)
          if ((FWnSpan==2)) then
             ! in between point
@@ -227,14 +245,6 @@ subroutine Map_NW_FW(p, m, z, x, ErrStat, ErrMsg)
             return
          endif
       enddo
-      if (m%nNW==p%nNWMax) then
-         ! First circulation of Farwake is taken as the max circulation of last NW column
-         do iW=1,p%nWings
-            !FWGamma = sum(x%Gamma_NW(:,p%nNWMax,iW))/p%nSpan
-            FWGamma = maxval(x%Gamma_NW(:,p%nNWMax,iW))
-            x%Gamma_FW(1:FWnSpan,iAgeFW,iW) = FWGamma
-         enddo
-      endif
    endif
 endsubroutine Map_NW_FW
 
