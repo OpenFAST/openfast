@@ -329,7 +329,7 @@ PROGRAM SoilDyn_Driver
       call CheckErr('');
 
       !call Dvr_WriteOutputLine(Time,DvrOut,p%OutFmt,y)
-      call Dvr_WriteOutputLine(Time,DvrOut,"ES10.3E2",y)
+      call Dvr_WriteOutputLine(Time,DvrOut,"ES20.12E2",y)
    END DO
 
 
