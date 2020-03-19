@@ -30,16 +30,18 @@ contains
       case ('fullcosineapprox') !
          ! x is assumed to be of size n+1
          if (n==1) then
-            y=(x(1)+x(2))/2._ReKi ! middle
+            y(1)=(x(1)+x(2))/2._ReKi ! middle
+            return
+         else
+            allocate(dx(1:n))
+            dx=diff(x) ! dx is the width of each panel 
+            y(1) = x(1)+(dx(1)  /(dx(1)  +dx(2)))*dx(1)
+            y(n) = x(n)+(dx(n-1)/(dx(n-1)+dx(n)))*dx(n)
+            do jr=2,n-1 
+               y(jr)=x(jr)+0.25_ReKi*(dx(jr-1)/(dx(jr-1)+dx(jr)) + dx(jr)/(dx(jr)+dx(jr+1))+1 )*dx(jr)
+            end do 
+            deallocate(dx)
          endif
-         allocate(dx(1:n))
-         dx=diff(x) ! dx is the width of each panel 
-         y(1) = x(1)+(dx(1)  /(dx(1)  +dx(2)))*dx(1)
-         y(n) = x(n)+(dx(n-1)/(dx(n-1)+dx(n)))*dx(n)
-         do jr=2,n-1 
-            y(jr)=x(jr)+0.25_ReKi*(dx(jr-1)/(dx(jr-1)+dx(jr)) + dx(jr)/(dx(jr)+dx(jr+1))+1 )*dx(jr)
-         end do 
-         deallocate(dx)
       end select 
 
    contains
