@@ -936,7 +936,7 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,y,errStat,errMsg)
     REAL(kind=4),DIMENSION(p%total_sample)                     :: spect_signal
     REAL(kind=4),DIMENSION(p%total_sample/2)                   :: spectra
     real(ReKi),ALLOCATABLE     ::  fft_freq(:)  
-    integer(intKi)                                      :: ErrStat2
+    integer(intKi)                                             :: ErrStat2
     character(ErrMsgLen)                                       :: ErrMsg2
     character(*), parameter                                    :: RoutineName = 'CalcAeroAcousticsOutput'
     logical :: exist
@@ -1028,6 +1028,7 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,y,errStat,errMsg)
             !--------Read in Boundary Layer Data-------------------------!
             IF (p%X_BLMethod .EQ. 2) THEN
                 call BL_Param_Interp(p,m,Unoise,AlphaNoise,p%BlChord(J,I),p%BlAFID(J,I), errStat2, errMsg2)
+                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                 temp_dispthick(J,I) = m%d99Var(1)
                 m%d99Var            = m%d99Var*p%BlChord(J,I)
                 m%dstarVar          = m%dstarVar*p%BlChord(J,I)
@@ -2422,8 +2423,8 @@ SUBROUTINE BL_Param_Interp(p,m,U,AlphaNoise,C,whichairfoil, errStat, errMsg)
           enddo
       endif    
   enddo 
-  if (re_flag .eqv. .FALSE.) then  
-    call SetErrStat( ErrID_Fatal, 'Warning AeroAcoustics Module - the Reynolds number is not in the range provided by the user. Code stopping.', ErrSTat, ErrMsg, RoutineName )
+  if (.not. re_flag) then
+    call SetErrStat( ErrID_Fatal, 'Warning AeroAcoustics Module - the Reynolds number is not in the range provided by the user. Code stopping.', ErrStat, ErrMsg, RoutineName )
   stop
   endif 
 END SUBROUTINE BL_Param_Interp
