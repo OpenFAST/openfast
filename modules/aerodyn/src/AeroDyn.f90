@@ -1485,7 +1485,7 @@ subroutine DiskAvgValues(p, u, m, x_hat_disk, y_hat_disk, z_hat_disk, Azimuth)
    real(ReKi),              intent(  out)  :: x_hat_disk(3)
    real(ReKi),              intent(  out)  :: y_hat_disk(3)
    real(ReKi),              intent(  out)  :: z_hat_disk(3)
-   real(R8Ki),              intent(  out)  :: Azimuth(p%NumBlNds)
+   real(R8Ki),              intent(  out)  :: Azimuth(p%NumBlades)
    real(ReKi)                              :: z_hat(3)
    real(ReKi)                              :: tmp(3)
    real(ReKi)                              :: tmp_sz, tmp_sz_y
