@@ -8,6 +8,52 @@ module FVW_Wings
    implicit none
 
 contains
+  
+   !> Meshing function. Create a 1D mesh of size `n`, based on a `method` and an input vector `x`
+   subroutine Meshing(method, x, n, y)
+      ! Arguments declarations 
+      character(len=*), intent(in)          :: method !< String defining the method used
+      integer(IntKi), intent(in)            :: n      !< size of vector y
+      real(ReKi), dimension(:),intent(in)   :: x      !< input vector of nodes or (/ min, max/)
+      real(ReKi), dimension(:), intent(out) :: y      !< output vector with meshing values
+      ! Variable declarations 
+      real(ReKi), dimension(:),allocatable :: dx  !<  
+      integer::jr
+      y = 0.0_ReKi
+      select case (method) !
+      case ('middle') !
+         allocate(dx(1:n))
+         dx=diff(x) ! dx is the width of each panel 
+         y(1:n)=x(1:n)+dx(1:n)/2._ReKi
+         deallocate(dx)
+
+      case ('fullcosineapprox') !
+         ! x is assumed to be of size n+1
+         if (n==1) then
+            y=(x(1)+x(2))/2._ReKi ! middle
+         endif
+         allocate(dx(1:n))
+         dx=diff(x) ! dx is the width of each panel 
+         y(1) = x(1)+(dx(1)  /(dx(1)  +dx(2)))*dx(1)
+         y(n) = x(n)+(dx(n-1)/(dx(n-1)+dx(n)))*dx(n)
+         do jr=2,n-1 
+            y(jr)=x(jr)+0.25_ReKi*(dx(jr-1)/(dx(jr-1)+dx(jr)) + dx(jr)/(dx(jr)+dx(jr+1))+1 )*dx(jr)
+         end do 
+         deallocate(dx)
+      end select 
+
+   contains
+      !> Compute: x(2:n)-x(1:n-1)
+      function diff(d)
+         real(ReKi),dimension(:),intent(in) ::d
+         real(ReKi),dimension(size(d)-1) ::diff
+         integer::i
+         do i=1,size(d)-1
+            diff(i)=d(i+1)-d(i)
+         enddo
+      end function
+   end subroutine Meshing
+
 
    !----------------------------------------------------------------------------------------------------------------------------------
    !> Based on an input mesh, sets the following:
@@ -56,16 +102,14 @@ contains
             m%s_LL    (iSpan, iW) = s_in(iSpan)
             m%chord_LL(iSpan, iW) = p%chord(iSpan,iW)
          enddo
-         ! --- Control points
-!TODO: does it make sense to keep the global position info here?  It might make it simpler to keep track of the nodes for requesting wind velocity info.
-         ! TODO possibly Control points are not exactly at the middle depending on "meshing" method
-         do iSpan = 1, p%nSpan
-            m%s_CP_LL    (iSpan, iW) = (m%s_LL    (iSpan,iW)+ m%s_LL    (iSpan+1,iW))/2
-            m%chord_CP_LL(iSpan, iW) = (m%chord_LL(iSpan,iW)+ m%chord_LL(iSpan+1,iW))/2
-         enddo
+         ! --- Control points spanwise location
+         ! NOTE: we use the cos approximation of VanGarrel. For equispacing, it returns mid point
+         !       otehrwise, points are slightly closer to panels that are shorter
+         !call Meshing('middle'           , m%s_LL(:,iW), p%nSpan, m%s_CP_LL(:,iW))
+         call Meshing('fullcosineapprox' , m%s_LL(:,iW), p%nSpan, m%s_CP_LL(:,iW))
+         call InterpArray(m%s_LL(:,iW), m%chord_LL(:,iW), m%s_CP_LL(:,iW), m%chord_CP_LL(:,iW))
       enddo
    end subroutine Wings_Panelling_Init
-
    !----------------------------------------------------------------------------------------------------------------------------------
    !> Based on an input mesh, sets the following:
    !!  - LE      : Leading edge points                 (3 x nSpan+1 x nWings)
