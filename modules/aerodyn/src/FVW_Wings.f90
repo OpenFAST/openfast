@@ -241,8 +241,12 @@ contains
             GammaScale=0.0_ReKi
          else
             s=(t/p%FullCirculationStart)
-            !GammaScale = 1._ReKi- 1._ReKi/(1._ReKi+exp((1-2*s)/(s*(s-1._ReKi)))) ! Using a smooth approsimation of HeavySide function
-            GammaScale = s  ! Using a linear scaling
+            ! If we have at least 10 points we use a smooth Heavyside, otehrwise we use a simple linear scaling
+            if (p%FullCirculationStart/p%DTfvw >= 9) then
+               GammaScale = 1._ReKi- 1._ReKi/(1._ReKi+exp((1-2*s)/(s*(s-1._ReKi)))) ! Using a smooth approsimation of HeavySide function
+            else
+               GammaScale = s  ! Using a linear scaling
+            endif
          endif
       else
          GammaScale=1.0_ReKi
@@ -316,7 +320,11 @@ contains
          call CirculationFromPolarData(GammaLastIter, p, m, AFInfo,ErrStat2,ErrMsg2);  if(Failed()) return;
       else
          ! NOTE: we need to inverse the scaling to speed up the convergence
-         GammaLastIter(1:p%nSpan,1:p%nWings) = Gamma_LL_prev(1:p%nSpan,1:p%nWings) / GammaScale 
+         if (.not. EqualRealNos(GammaScale, 0.0_ReKi)) then
+            GammaLastIter(1:p%nSpan,1:p%nWings) = Gamma_LL_prev(1:p%nSpan,1:p%nWings) / GammaScale 
+         else
+            GammaLastIter(1:p%nSpan,1:p%nWings) = Gamma_LL_prev(1:p%nSpan,1:p%nWings)
+         endif
       endif
 
       if (any(x%r_NW(1,:,1:m%nNW+1,:)<-999)) then

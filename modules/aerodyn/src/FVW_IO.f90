@@ -35,12 +35,11 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, Inp, ErrStat, ErrMsg )
    CALL ReadCom(UnIn, FileName, 'FVW input file header line 1', ErrStat2, ErrMsg2 ); if(Failed()) return
    CALL ReadCom(UnIn, FileName, 'FVW input file header line 2', ErrStat2, ErrMsg2 ); if(Failed()) return
    !------------------------ GENERAL OPTIONS  -------------------------------------------
-   CALL ReadCom        (UnIn,FileName,                         'General option header',            ErrStat2,ErrMsg2); if(Failed()) return
-   CALL ReadVarWDefault(UnIn,FileName,Inp%IntMethod           ,'Integration method' ,'', idEuler1, ErrStat2,ErrMsg2); if(Failed())return
-
-   CALL ReadVarWDefault(UnIn,FileName,Inp%FreeWakeStart       ,'FreeWakeStart'       ,'', 0.0_ReKi, ErrStat2,ErrMsg2); if(Failed())return
-   CALL ReadVarWDefault(UnIn,FileName,Inp%FullCirculationStart,'FullCirculationStart','', 0.0_ReKi, ErrStat2,ErrMsg2); if(Failed())return
-   CALL ReadVarWDefault(UnIn,FileName,Inp%DTfvw               ,'DTfvw'              ,'',  p%DTaero, ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadCom        (UnIn,FileName,                         'General option header'                                  , ErrStat2,ErrMsg2); if(Failed()) return
+   CALL ReadVarWDefault(UnIn,FileName,Inp%IntMethod           ,'Integration method' ,'', idEuler1                       , ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVarWDefault(UnIn,FileName,Inp%DTfvw               ,'DTfvw'              ,'',  p%DTaero                      , ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVarWDefault(UnIn,FileName,Inp%FreeWakeStart       ,'FreeWakeStart'       ,'', 0.0_ReKi                      , ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVarWDefault(UnIn,FileName,Inp%FullCirculationStart,'FullCirculationStart','', real(20.0_ReKi*Inp%DTfvw,ReKi), ErrStat2,ErrMsg2); if(Failed())return
    !------------------------ CIRCULATION SPECIFICATIONS  -------------------------------------------
    CALL ReadCom(UnIn,FileName,                  'Circulation specification header', ErrStat2, ErrMsg2 ); if(Failed()) return
    CALL ReadVarWDefault(UnIn,FileName,Inp%CirculationMethod ,'CirculationMethod' ,'', idCircPolarData, ErrStat2,ErrMsg2); if(Failed())return

@@ -511,10 +511,17 @@ subroutine FVW_InitRegularization(p, m, ErrStat, ErrMsg)
       print*,'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
       print*,'!!! NOTE: using optmized wake regularization parameters is still a beta feature!'
       print*,'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
-      p%WakeRegParam = RegParam
-      p%WingRegParam = RegParam
-      p%CoreSpreadEddyVisc = 100 
-      p%RegFunction = idRegVatistas
+      p%WakeRegMethod      = idRegConstant
+      p%RegFunction        = idRegVatistas
+      p%WakeRegParam       = RegParam
+      p%WingRegParam       = RegParam
+      p%CoreSpreadEddyVisc = 100
+      write(*,'(A)'   )   'The following regularization parameters will be used:'
+      write(*,'(A,I0)'   )   'WakeRegMethod     : ', p%WakeRegMethod
+      write(*,'(A,I0)'   )   'RegFunction       : ', p%RegFunction
+      write(*,'(A,1F8.4)')   'WakeRegParam      : ', p%WakeRegParam
+      write(*,'(A,1F8.4)')   'WingRegParam      : ', p%WingRegParam
+      write(*,'(A,1F8.4)')   'CoreSpreadEddyVisc: ', p%CoreSpreadEddyVisc
    endif
    ! KEEP ME: potentially perform pre-computation here
    !if (p%WakeRegMethod==idRegConstant) then
