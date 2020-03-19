@@ -49,7 +49,7 @@ CONTAINS
 
    endsubroutine LatticeToPoints
 
-   subroutine LatticeToSegments(LatticePoints, LatticeGamma, iDepthStart, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC, bShedVorticity )
+   subroutine LatticeToSegments(LatticePoints, LatticeGamma, iDepthStart, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC, bShedVorticity, bShedLastVorticity )
       real(Reki), dimension(:,:,:),    intent(in   )  :: LatticePoints  !< Points 3 x nSpan x nDepth
       real(Reki), dimension(:,:),      intent(in   )  :: LatticeGamma   !< GammaPanl  nSpan x nDepth
       integer(IntKi),                  intent(in   )  :: iDepthStart    !< Start index for depth dimension
@@ -59,6 +59,7 @@ CONTAINS
       integer(IntKi),                  intent(inout)  :: iHeadP         !< Index indicating where to start in SegPoints
       integer(IntKi),                  intent(inout)  :: iHeadC         !< Index indicating where to start in SegConnct
       logical       ,                  intent(in   )  :: bShedVorticity !< Shed vorticity is included if true
+      logical       ,                  intent(in   )  :: bShedLastVorticity !< Shed the last vorticity segment if true
       ! Local
       integer(IntKi) :: nSpan, nDepth
       integer(IntKi) :: iSpan, iDepth
@@ -126,12 +127,15 @@ CONTAINS
             ! Segment 4-3
             if (iDepth==nDepth-1) then
                if (bShedVorticity) then
-                  SegConnct(1,iHeadC) = iseg4
-                  SegConnct(2,iHeadC) = iseg3
-                  SegConnct(3,iHeadC) = iDepth
-                  SegConnct(4,iHeadC) = iSpan
-                  SegGamma (iHeadC  ) = - LatticeGamma(iSpan,iDepth)
-                  iHeadC=iHeadC+1
+                  ! We shed vorticity, but if it's the last panel, and bShedLastVorticity is false, we don't
+                  if ((iDepth<nDepth-1) .or. ((iDepth==nDepth-1) .and. bShedLastVorticity)) then
+                     SegConnct(1,iHeadC) = iseg4
+                     SegConnct(2,iHeadC) = iseg3
+                     SegConnct(3,iHeadC) = iDepth
+                     SegConnct(4,iHeadC) = iSpan
+                     SegGamma (iHeadC  ) = - LatticeGamma(iSpan,iDepth)
+                     iHeadC=iHeadC+1
+                  endif
                endif
             endif
             ! Segment 2-3

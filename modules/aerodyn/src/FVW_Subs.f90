@@ -404,7 +404,11 @@ subroutine PackPanelsToSegments(p, m, x, iDepthStart, SegConnct, SegPoints, SegG
    integer(IntKi), intent(out)                :: nSegP     !< Total number of segments points after packing
    ! Local
    integer(IntKi) :: iHeadC, iHeadP, nC, nP, iW, iHeadC_bkp
-   real(ReKi), dimension(:,:), allocatable :: Buffer2d
+   logical        :: LastNWShed
+
+   ! If the FW contains Shed vorticity, we include the last shed vorticity form the NW, orhtwerise, we don't!
+   ! It's important not to include it, otherwise a strong vortex will be present there with no compensating vorticity from the FW
+   LastNWShed = (p%FWShedVorticity ) .or. (m%nNW<p%nNWMax)
 
    ! Counting total number of segments
    nP=0
@@ -412,6 +416,9 @@ subroutine PackPanelsToSegments(p, m, x, iDepthStart, SegConnct, SegPoints, SegG
    if ((m%nNW-iDepthStart)>=0) then
       nP =      p%nWings * (  (p%nSpan+1)*(m%nNW-iDepthStart+2)            )
       nC =      p%nWings * (2*(p%nSpan+1)*(m%nNW-iDepthStart+2)-(p%nSpan+1)-(m%nNW-iDepthStart+1+1))  
+      if (.not.LastNWShed) then
+         nC =   nC - p%nWings * (p%nSpan) ! Removing last set of sehd segments
+      endif
    endif
    if (m%nFW>0) then
       nP = nP + p%nWings * (  (FWnSpan+1)*(m%nFW+1) )
@@ -426,21 +433,20 @@ subroutine PackPanelsToSegments(p, m, x, iDepthStart, SegConnct, SegPoints, SegG
       if (allocated(SegConnct)) deallocate(SegConnct)
       if (allocated(SegPoints)) deallocate(SegPoints)
       if (allocated(SegGamma))  deallocate(SegGamma)
-      if (allocated(Buffer2d)) deallocate(Buffer2d)
       allocate(SegConnct(1:4,1:nC)); SegConnct=-1
       allocate(SegPoints(1:3,1:nP)); SegPoints=-1
       allocate(SegGamma (1:nC));     SegGamma =-1
-      allocate(Buffer2d(1,p%nSpan))
+
       !
       iHeadP=1
       iHeadC=1
       do iW=1,p%nWings
-         CALL LatticeToSegments(x%r_NW(1:3,:,1:m%nNW+1,iW), x%Gamma_NW(:,1:m%nNW,iW), iDepthStart, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC, .True. )
+         CALL LatticeToSegments(x%r_NW(1:3,:,1:m%nNW+1,iW), x%Gamma_NW(:,1:m%nNW,iW), iDepthStart, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC, .True., LastNWShed )
       enddo
       if (m%nFW>0) then
          iHeadC_bkp = iHeadC
          do iW=1,p%nWings
-            CALL LatticeToSegments(x%r_FW(1:3,:,1:m%nFW+1,iW), x%Gamma_FW(:,1:m%nFW,iW), 1, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC , p%FWShedVorticity)
+            CALL LatticeToSegments(x%r_FW(1:3,:,1:m%nFW+1,iW), x%Gamma_FW(:,1:m%nFW,iW), 1, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC , p%FWShedVorticity, .False.)
          enddo
          SegConnct(3,iHeadC_bkp:) = SegConnct(3,iHeadC_bkp:) + m%nNW
       endif

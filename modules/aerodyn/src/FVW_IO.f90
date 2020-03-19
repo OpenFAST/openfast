@@ -91,6 +91,11 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, Inp, ErrStat, ErrMsg )
    if (Check(Inp%WingRegParam<0             , 'Wing regularization parameter (WakeRegParam) should be positive')) return
    if (Check(Inp%CoreSpreadEddyVisc<0       , 'Core spreading eddy viscosity (CoreSpreadEddyVisc) should be positive')) return
 
+   ! Removing the shed vorticity is a dangerous option if this is done too close to the blades. 
+   ! To be safe, we will no matter what ensure that the last segments of NW are 0 if FWShedVorticity is False (see PackPanelsToSegments)
+   ! Still we force the user to be responsible.
+   if (Check((.not.(Inp%FWShedVorticity)) .and. Inp%nNWPanels<50, '`FWShedVorticity` should be true if `nNWPanels`<50. Alternatively, use a larger number of NWPanels  ')) return
+
    Inp%DTvtk = Get_DTvtk( VTK_fps_line, p%DTaero, Inp%DTfvw )
 
    ! At least one NW panel if FW, this shoudln't be a problem since the LL is in NW, but safety for now
@@ -253,7 +258,7 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth)
       iHeadP=1
       iHeadC=1
       do iW=1,p%nWings
-         CALL LatticeToSegments(m%r_LL(1:3,:,1:2,iW), m%Gamma_LL(:,iW:iW), 1, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC, .True. )
+         CALL LatticeToSegments(m%r_LL(1:3,:,1:2,iW), m%Gamma_LL(:,iW:iW), 1, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC, .True. , .True.)
       enddo
    endif
 
