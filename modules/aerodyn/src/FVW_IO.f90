@@ -44,7 +44,7 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, Inp, ErrStat, ErrMsg )
    !------------------------ CIRCULATION SPECIFICATIONS  -------------------------------------------
    CALL ReadCom(UnIn,FileName,                  'Circulation specification header', ErrStat2, ErrMsg2 ); if(Failed()) return
    CALL ReadVarWDefault(UnIn,FileName,Inp%CirculationMethod ,'CirculationMethod' ,'', idCircPolarData, ErrStat2,ErrMsg2); if(Failed())return
-   CALL ReadVarWDefault(UnIn,FileName,Inp%CircSolvConvCrit  ,'CircSolvConvCrit ' ,'', 0.01           , ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVarWDefault(UnIn,FileName,Inp%CircSolvConvCrit  ,'CircSolvConvCrit ' ,'', 0.001          , ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVarWDefault(UnIn,FileName,Inp%CircSolvRelaxation,'CircSolvRelaxation','', 0.1            , ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVarWDefault(UnIn,FileName,Inp%CircSolvMaxIter   ,'CircSolvMaxIter'   ,'', 30             , ErrStat2,ErrMsg2); if(Failed())return
    !CALL ReadVar(UnIn,FileName,Inp%CircSolvPolar     ,'CircSolvPolar'   ,'',ErrStat2,ErrMsg2); if(Failed())return
@@ -62,7 +62,7 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, Inp, ErrStat, ErrMsg )
    CALL ReadVarWDefault(UnIn,FileName,Inp%WakeRegMethod      ,'WakeRegMethod'     ,'',idRegConstant   , ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVar        (UnIn,FileName,Inp%WakeRegParam       ,'WakeRegParam'      ,''                 , ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVar        (UnIn,FileName,Inp%WingRegParam       ,'WingRegParam'      ,''                 , ErrStat2,ErrMsg2); if(Failed())return
-   CALL ReadVarWDefault(UnIn,FileName,Inp%CoreSpreadEddyVisc ,'CoreSpreadEddyVisc','',10.0_ReKi       , ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVarWDefault(UnIn,FileName,Inp%CoreSpreadEddyVisc ,'CoreSpreadEddyVisc','',100.0_ReKi      , ErrStat2,ErrMsg2); if(Failed())return
    !------------------------ OUTPUT OPTIONS -----------------------------------------
    CALL ReadCom        (UnIn,FileName,                  'Output options header'              ,ErrStat2,ErrMsg2); if(Failed()) return
    CALL ReadVarWDefault(UnIn,FileName,Inp%WrVTK       , 'WrVTK'              ,'',     0      ,ErrStat2,ErrMsg2); if(Failed())return
