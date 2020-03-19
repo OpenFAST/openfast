@@ -420,7 +420,6 @@ subroutine PackPanelsToSegments(p, m, x, iDepthStart, SegConnct, SegPoints, SegG
          nC =   nC - p%nWings * (p%nSpan) ! Removing last set of sehd segments
       endif
    endif
-   nC1=nC
    if (m%nFW>0) then
       nP = nP + p%nWings * (  (FWnSpan+1)*(m%nFW+1) )
       if (p%FWShedVorticity) then

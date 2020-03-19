@@ -93,7 +93,7 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, Inp, ErrStat, ErrMsg )
    ! Removing the shed vorticity is a dangerous option if this is done too close to the blades. 
    ! To be safe, we will no matter what ensure that the last segments of NW are 0 if FWShedVorticity is False (see PackPanelsToSegments)
    ! Still we force the user to be responsible.
-   if (Check((.not.(Inp%FWShedVorticity)) .and. Inp%nNWPanels<50, '`FWShedVorticity` should be true if `nNWPanels`<50. Alternatively, use a larger number of NWPanels  ')) return
+   if (Check((.not.(Inp%FWShedVorticity)) .and. Inp%nNWPanels<30, '`FWShedVorticity` should be true if `nNWPanels`<30. Alternatively, use a larger number of NWPanels  ')) return
 
    Inp%DTvtk = Get_DTvtk( VTK_fps_line, p%DTaero, Inp%DTfvw )
 
