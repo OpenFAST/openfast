@@ -138,7 +138,7 @@ FUNCTION Determinant(A, ErrStat, ErrMsg) result(det)
    REAL(LaKi),      INTENT(IN   ) :: A(:, :) !< Input matrix, no side effect
    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat !< Error status of the operation
    CHARACTER(*),    INTENT(  OUT) :: ErrMsg  !< Error message if ErrStat /= ErrID_None
-   real(DbKi)              :: det !< May easily overflow
+   real(LaKi)              :: det !< May easily overflow
    integer(IntKi)          :: i
    integer                 :: n
    integer, allocatable    :: ipiv(:)
