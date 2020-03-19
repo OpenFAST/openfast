@@ -729,7 +729,7 @@ subroutine FVW_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, ErrStat,
    integer(IntKi),                  intent(  out)  :: ErrStat     !< Error status of the operation
    character(*),                    intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
    ! Local variables
-   integer(IntKi)                :: iSpan, iW, n
+   integer(IntKi)                :: iSpan, iW, n, i0, i1, i2
    integer(IntKi)                :: ErrStat2
    character(ErrMsgLen)          :: ErrMsg2
    character(*), parameter       :: RoutineName = 'FVW_CalcOutput'
@@ -757,16 +757,28 @@ subroutine FVW_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, ErrStat,
    n=p%nSpan
    y%Vind(1:3,:,:) = 0.0_ReKi
    do iW=1,p%nWings
-      ! Linear interpolation for msot points (2:n)
+      ! --- Linear interpolation for most points (2:n)
       call InterpArray(m%s_CP_LL(:,iW), m%Vind_LL(1,:,iW), m%s_LL(2:n,iW), y%Vind(1,2:n,iW))
       call InterpArray(m%s_CP_LL(:,iW), m%Vind_LL(2,:,iW), m%s_LL(2:n,iW), y%Vind(2,2:n,iW))
       call InterpArray(m%s_CP_LL(:,iW), m%Vind_LL(3,:,iW), m%s_LL(2:n,iW), y%Vind(3,2:n,iW))
-      ! Special case for end points (1 and n+1)
-      y%Vind(1:3, 1  , iW) = 0.0_ReKi ! TODO backward interpolation?
-      y%Vind(1:3, n+1, iW) = 0.0_ReKi ! TODO forward interpolation?
-      !do iSpan=1,p%nSpan+1q
-         !y%Vind(1:3,iSpan,iW) = m%Vind_LL(1:3,iSpan,iW)
-      !enddo
+      ! --- Special case for end points (1 and n+1)
+      y%Vind(1:3, 1  , iW) = 0.0_ReKi
+      y%Vind(1:3, n+1, iW) = 0.0_ReKi
+      if (p%nSpan>1) then
+         ! If more than 2 panels, use extrapolation
+         i0=1; i1=1; i2=2; ! Using CP 1 and 2 to find point 1
+         y%Vind(1, i0  , iW) = lin_extrap(m%s_LL(i0,iW), m%s_CP_LL(i1,iW), m%Vind_LL(1,i1,iW), m%s_CP_LL(i2,iW), m%Vind_LL(1,i2,iW)) 
+         y%Vind(2, i0  , iW) = lin_extrap(m%s_LL(i0,iW), m%s_CP_LL(i1,iW), m%Vind_LL(2,i1,iW), m%s_CP_LL(i2,iW), m%Vind_LL(2,i2,iW)) 
+         y%Vind(3, i0  , iW) = lin_extrap(m%s_LL(i0,iW), m%s_CP_LL(i1,iW), m%Vind_LL(3,i1,iW), m%s_CP_LL(i2,iW), m%Vind_LL(3,i2,iW)) 
+         i0=n+1; i1=n; i2=n-1; ! Using CP n and n-2 to find point n+1
+         y%Vind(1, i0  , iW) = lin_extrap(m%s_LL(i0,iW), m%s_CP_LL(i1,iW), m%Vind_LL(1,i1,iW), m%s_CP_LL(i2,iW), m%Vind_LL(1,i2,iW)) 
+         y%Vind(2, i0  , iW) = lin_extrap(m%s_LL(i0,iW), m%s_CP_LL(i1,iW), m%Vind_LL(2,i1,iW), m%s_CP_LL(i2,iW), m%Vind_LL(2,i2,iW)) 
+         y%Vind(3, i0  , iW) = lin_extrap(m%s_LL(i0,iW), m%s_CP_LL(i1,iW), m%Vind_LL(3,i1,iW), m%s_CP_LL(i2,iW), m%Vind_LL(3,i2,iW)) 
+      else
+         ! If one panel, duplicate the unique point on both side
+         y%Vind(1:3, 1, iW) = m%Vind_LL(1:3, 1, iW)
+         y%Vind(1:3, 2, iW) = m%Vind_LL(1:3, 1, iW)
+      endif
    enddo
 
    ! For plotting only
@@ -799,10 +811,16 @@ contains
    logical function Failed()
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'FVW_CalcOutput') 
       Failed =  ErrStat >= AbortErrLev
-      !if (Failed) call CleanUp()
    end function Failed
-   !==========================================================================
-end subroutine FVW_CalcOutput
 
+   !> Perform linear extrapolation to get value of y(x0), using y(x1) and y(x2)
+   real(ReKi) function lin_extrap(x0, x1, y1, x2, y2) result(y0)
+      real(ReKi), intent(in)   :: x0, x1, y1, x2, y2
+      real(ReKi) :: a
+      a = (x0-x1)/(x0-x2)
+      y0 = 1._ReKi/(1._ReKi-a) * (y1-a*y2)
+   end function lin_extrap
+
+end subroutine FVW_CalcOutput
 
 END MODULE FVW
