@@ -161,7 +161,7 @@ class OpenFAST {
   OpenFAST() ;
   
   // Destructor
-  ~OpenFAST() {} ;
+  ~OpenFAST() ;
 
   void setInputs(const fastInputs &);  
 
