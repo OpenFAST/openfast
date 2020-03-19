@@ -40,6 +40,7 @@ MODULE FAST_Solver
    USE IceDyn
    USE IceFloe
    USE ServoDyn
+   USE SoilDyn
    USE SubDyn
    USE OpenFOAM
    USE SuperController

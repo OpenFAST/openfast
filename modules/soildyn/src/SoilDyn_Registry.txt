@@ -65,6 +65,7 @@ typedef  ^     InitInputType  CHARACTER(1024)      RootName       - - -         
 typedef  ^     InitInputType  LOGICAL              Linearize      - .FALSE. -    "Flag that tells this module if the glue code wants to linearize." -
 #FIXME: does the glue code need to inform us of the number of points? or do we do that in SoilDyn?
 #typedef  ^     InitInputType  IntKi                NumNodes       - - -          "Number of nodes we are using" -
+typedef  ^     InitInputType  ReKi                 WtrDepth       - - -          "Water depth to mudline (global coordinates)" '(m)'
 
 # Define outputs from the initialization routine here:
 typedef   ^               InitOutputType CHARACTER(ChanLen)    WriteOutputHdr  {:} - -   "Names of the output-to-file channels" -

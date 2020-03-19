@@ -12,28 +12,25 @@ Output file
 MODULE
 ------
 
-Outputs  (number as standard 1-9 numbers for now...) -- should these be 'g' for global???
-   -  Sld#TD{xyz} (m)
-   -  Sld#RD{xyz} (deg)
-   -  Sld#F{xyz}  (kN)
-   -  Sld#M{xyz}  (kN-m)
-
 summary file 
    -  outputs, and what points they correspond to
    -  which mesh point the point links to
    -  stiffness matrix at each point
    -  mudline passed in (based on water depth from HD?)
+   -  Stiffness matrix (and notes)
 
 Input file changes
+
 runmode
    -  model 1 includes this (given in Props(1,1) at init)
    -  model 2 does not include this????
    -  model 3 does not include this????
 
 Mesh nodes connection to the glue code / SubDyn
-Stiffness matrix to summary file (and notes)
 
 pass in mudline depth
+
+Check against the SubDyn mesh.  Can I pass that in???
 
 
 OUTSTANDING QUESTIONS

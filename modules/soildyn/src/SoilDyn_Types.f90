@@ -80,6 +80,7 @@ IMPLICIT NONE
     CHARACTER(1024)  :: InputFile      !< Name of the input file [-]
     CHARACTER(1024)  :: RootName      !< Root name of the input file [-]
     LOGICAL  :: Linearize = .FALSE.      !< Flag that tells this module if the glue code wants to linearize. [-]
+    REAL(ReKi)  :: WtrDepth      !< Water depth to mudline (global coordinates) ['(m)']
   END TYPE SlD_InitInputType
 ! =======================
 ! =========  SlD_InitOutputType  =======
@@ -1062,6 +1063,7 @@ ENDIF
     DstInitInputData%InputFile = SrcInitInputData%InputFile
     DstInitInputData%RootName = SrcInitInputData%RootName
     DstInitInputData%Linearize = SrcInitInputData%Linearize
+    DstInitInputData%WtrDepth = SrcInitInputData%WtrDepth
  END SUBROUTINE SlD_CopyInitInput
 
  SUBROUTINE SlD_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
@@ -1113,6 +1115,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%InputFile)  ! InputFile
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%RootName)  ! RootName
       Int_BufSz  = Int_BufSz  + 1  ! Linearize
+      Re_BufSz   = Re_BufSz   + 1  ! WtrDepth
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -1150,6 +1153,8 @@ ENDIF
         END DO ! I
       IntKiBuf ( Int_Xferred:Int_Xferred+1-1 ) = TRANSFER( InData%Linearize , IntKiBuf(1), 1)
       Int_Xferred   = Int_Xferred   + 1
+      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%WtrDepth
+      Re_Xferred   = Re_Xferred   + 1
  END SUBROUTINE SlD_PackInitInput
 
  SUBROUTINE SlD_UnPackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -1194,6 +1199,8 @@ ENDIF
       END DO ! I
       OutData%Linearize = TRANSFER( IntKiBuf( Int_Xferred ), mask0 )
       Int_Xferred   = Int_Xferred + 1
+      OutData%WtrDepth = ReKiBuf( Re_Xferred )
+      Re_Xferred   = Re_Xferred + 1
  END SUBROUTINE SlD_UnPackInitInput
 
  SUBROUTINE SlD_CopyInitOutput( SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg )
