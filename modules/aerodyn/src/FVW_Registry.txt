@@ -41,6 +41,7 @@ typedef     ^                   ^               IntKi                           
 typedef     ^                   ^               IntKi                            VTKBlades     -  - -   "Outputs VTk for each blade 0=no blade, 1=Bld 1"  - 
 typedef     ^                   ^               DbKi                             DTvtk         -  - -   "DT between vtk writes" s
 typedef     ^                   ^               IntKi                            VTKCoord      -  - -    "Switch for VTK outputs coordinate  system" -
+typedef     ^                   ^               CHARACTER(1024)                  RootName      -  -  - "RootName for writing output files"	-
 
 # ....... OtherStateType ............
 # FVW_OtherStateType
@@ -117,6 +118,7 @@ typedef    ^                    ^               Reki                            
 #.......... InitInputType ......
 # FVW_InitInputType
 typedef  FVW/FVW           InitInputType        CHARACTER(1024)                  FVWFileName       -  -  - "Main FVW input file name"  -
+typedef     ^                   ^               CHARACTER(1024)                  RootName          -  -  - "RootName for writing output files"	-
 typedef     ^                   ^               MeshType                         WingsMesh         :  -  - "Input Mesh defining position and orientation of wings (nSpan+1) " -
 typedef     ^                   ^               IntKi                            AFindx            :: -  - "Index to the airfoils from AD15 [idx1=BladeNode, idx2=Blade number]" - 
 typedef     ^                   ^               ReKi                             Chord             :: -  - "Chord of each blade element from input file [idx1=BladeNode, idx2=Blade number]" - 

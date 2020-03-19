@@ -2232,6 +2232,7 @@ SUBROUTINE Init_FVWmodule( InputFileData, u_AD, u, p, x, xd, z, OtherState, y, m
    InitInp%numBladeNodes  = p%numBlNds
    InitInp%DTaero         = p%DT       ! NOTE: FVW can run a lower timestep internally
    InitInp%KinVisc        = p%KinVisc
+   InitInp%RootName       = p%RootName(1:len_trim(p%RootName)-2) ! Removing "AD"
 
       ! NOTE: The following are not meshes
       !       It's just the spanwise location.

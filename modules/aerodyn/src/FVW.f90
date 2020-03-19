@@ -283,17 +283,11 @@ SUBROUTINE FVW_SetParametersFromInputs( InitInp, p, m, ErrStat, ErrMsg )
    ErrStat = ErrID_None
    ErrMsg  = ""
    ! 
-   p%nWings       =  InitInp%NumBlades
-   
-   ! NOTE: temporary limitation, all wings have the same nspan
-   p%nSpan        =  InitInp%numBladeNodes-1
-
-   ! Set time step
-   p%DTaero       =  InitInp%DTaero
-
-   ! Kinematic air viscosity
-   p%KinVisc      =  InitInp%KinVisc
-
+   p%nWings       = InitInp%NumBlades
+   p%nSpan        = InitInp%numBladeNodes-1 ! NOTE: temporary limitation, all wings have the same nspan
+   p%DTaero       = InitInp%DTaero          ! AeroDyn Time step
+   p%KinVisc      = InitInp%KinVisc         ! Kinematic air viscosity
+   p%RootName     = InitInp%RootName        ! Rootname for outputs
    ! Set indexing to AFI tables -- this is set from the AD15 calling code.
    call AllocAry(p%AFindx,size(InitInp%AFindx,1),size(InitInp%AFindx,2),'AFindx',ErrStat,ErrMsg)
    p%AFindx = InitInp%AFindx     ! Copying in case AD15 still needs these
@@ -785,7 +779,7 @@ subroutine FVW_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, ErrStat,
    ! --- Write to local VTK at fps requested
    if (p%WrVTK==1) then
       if (m%FirstCall) then
-         call MKDIR('vtk_out')
+         call MKDIR('vtk_fvw')
       endif
       if ( ( t - m%VTKlastTime ) >= p%DTvtk*OneMinusEpsilon )  then
          m%VTKlastTime = t
@@ -794,7 +788,7 @@ subroutine FVW_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, ErrStat,
             ! ALL VTK Will be exported in this coordinate system!
             call set_vtk_coordinate_transform(u%HubOrientation,u%HubPosition)
          endif
-         call WrVTK_FVW(p, x, z, m, 'vtk_out/FVW', m%VTKstep, 9)
+         call WrVTK_FVW(p, x, z, m, 'vtk_fvw/'//trim(p%RootName)//'FVW', m%VTKstep, 9)
       endif
    endif
    m%VTKstep = m%VTKstep + 1  ! Increment VTK counter no matter what

@@ -67,6 +67,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: VTKBlades      !< Outputs VTk for each blade 0=no blade, 1=Bld 1 [-]
     REAL(DbKi)  :: DTvtk      !< DT between vtk writes [s]
     INTEGER(IntKi)  :: VTKCoord      !< Switch for VTK outputs coordinate  system [-]
+    CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
   END TYPE FVW_ParameterType
 ! =======================
 ! =========  FVW_OtherStateType  =======
@@ -147,6 +148,7 @@ IMPLICIT NONE
 ! =========  FVW_InitInputType  =======
   TYPE, PUBLIC :: FVW_InitInputType
     CHARACTER(1024)  :: FVWFileName      !< Main FVW input file name [-]
+    CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
     TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: WingsMesh      !< Input Mesh defining position and orientation of wings (nSpan+1)  [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: AFindx      !< Index to the airfoils from AD15 [idx1=BladeNode, idx2=Blade number] [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Chord      !< Chord of each blade element from input file [idx1=BladeNode, idx2=Blade number] [-]
@@ -283,6 +285,7 @@ ENDIF
     DstParamData%VTKBlades = SrcParamData%VTKBlades
     DstParamData%DTvtk = SrcParamData%DTvtk
     DstParamData%VTKCoord = SrcParamData%VTKCoord
+    DstParamData%RootName = SrcParamData%RootName
  END SUBROUTINE FVW_CopyParam
 
  SUBROUTINE FVW_DestroyParam( ParamData, ErrStat, ErrMsg )
@@ -383,6 +386,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! VTKBlades
       Db_BufSz   = Db_BufSz   + 1  ! DTvtk
       Int_BufSz  = Int_BufSz  + 1  ! VTKCoord
+      Int_BufSz  = Int_BufSz  + 1*LEN(InData%RootName)  ! RootName
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -511,6 +515,10 @@ ENDIF
       Db_Xferred   = Db_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%VTKCoord
       Int_Xferred   = Int_Xferred   + 1
+        DO I = 1, LEN(InData%RootName)
+          IntKiBuf(Int_Xferred) = ICHAR(InData%RootName(I:I), IntKi)
+          Int_Xferred = Int_Xferred   + 1
+        END DO ! I
  END SUBROUTINE FVW_PackParam
 
  SUBROUTINE FVW_UnPackParam( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -680,6 +688,10 @@ ENDIF
       Db_Xferred   = Db_Xferred + 1
       OutData%VTKCoord = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
+      DO I = 1, LEN(OutData%RootName)
+        OutData%RootName(I:I) = CHAR(IntKiBuf(Int_Xferred))
+        Int_Xferred = Int_Xferred   + 1
+      END DO ! I
  END SUBROUTINE FVW_UnPackParam
 
  SUBROUTINE FVW_CopyOtherState( SrcOtherStateData, DstOtherStateData, CtrlCode, ErrStat, ErrMsg )
@@ -4181,6 +4193,7 @@ ENDIF
    ErrStat = ErrID_None
    ErrMsg  = ""
     DstInitInputData%FVWFileName = SrcInitInputData%FVWFileName
+    DstInitInputData%RootName = SrcInitInputData%RootName
 IF (ALLOCATED(SrcInitInputData%WingsMesh)) THEN
   i1_l = LBOUND(SrcInitInputData%WingsMesh,1)
   i1_u = UBOUND(SrcInitInputData%WingsMesh,1)
@@ -4369,6 +4382,7 @@ ENDIF
   Db_BufSz  = 0
   Int_BufSz  = 0
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%FVWFileName)  ! FVWFileName
+      Int_BufSz  = Int_BufSz  + 1*LEN(InData%RootName)  ! RootName
   Int_BufSz   = Int_BufSz   + 1     ! WingsMesh allocated yes/no
   IF ( ALLOCATED(InData%WingsMesh) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! WingsMesh upper/lower bounds for each dimension
@@ -4461,6 +4475,10 @@ ENDIF
 
         DO I = 1, LEN(InData%FVWFileName)
           IntKiBuf(Int_Xferred) = ICHAR(InData%FVWFileName(I:I), IntKi)
+          Int_Xferred = Int_Xferred   + 1
+        END DO ! I
+        DO I = 1, LEN(InData%RootName)
+          IntKiBuf(Int_Xferred) = ICHAR(InData%RootName(I:I), IntKi)
           Int_Xferred = Int_Xferred   + 1
         END DO ! I
   IF ( .NOT. ALLOCATED(InData%WingsMesh) ) THEN
@@ -4653,6 +4671,10 @@ ENDIF
   Int_Xferred  = 1
       DO I = 1, LEN(OutData%FVWFileName)
         OutData%FVWFileName(I:I) = CHAR(IntKiBuf(Int_Xferred))
+        Int_Xferred = Int_Xferred   + 1
+      END DO ! I
+      DO I = 1, LEN(OutData%RootName)
+        OutData%RootName(I:I) = CHAR(IntKiBuf(Int_Xferred))
         Int_Xferred = Int_Xferred   + 1
       END DO ! I
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WingsMesh not allocated
