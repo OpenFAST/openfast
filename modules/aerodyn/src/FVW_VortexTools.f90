@@ -126,16 +126,13 @@ CONTAINS
             iHeadC=iHeadC+1
             ! Segment 4-3
             if (iDepth==nDepth-1) then
-               if (bShedVorticity) then
-                  ! We shed vorticity, but if it's the last panel, and bShedLastVorticity is false, we don't
-                  if ((iDepth<nDepth-1) .or. ((iDepth==nDepth-1) .and. bShedLastVorticity)) then
-                     SegConnct(1,iHeadC) = iseg4
-                     SegConnct(2,iHeadC) = iseg3
-                     SegConnct(3,iHeadC) = iDepth
-                     SegConnct(4,iHeadC) = iSpan
-                     SegGamma (iHeadC  ) = - LatticeGamma(iSpan,iDepth)
-                     iHeadC=iHeadC+1
-                  endif
+               if ((bShedVorticity) .and. (bShedLastVorticity)) then
+                  SegConnct(1,iHeadC) = iseg4
+                  SegConnct(2,iHeadC) = iseg3
+                  SegConnct(3,iHeadC) = iDepth
+                  SegConnct(4,iHeadC) = iSpan
+                  SegGamma (iHeadC  ) = - LatticeGamma(iSpan,iDepth)
+                  iHeadC=iHeadC+1
                endif
             endif
             ! Segment 2-3

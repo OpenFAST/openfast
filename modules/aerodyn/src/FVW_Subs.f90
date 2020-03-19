@@ -408,7 +408,7 @@ subroutine PackPanelsToSegments(p, m, x, iDepthStart, SegConnct, SegPoints, SegG
 
    ! If the FW contains Shed vorticity, we include the last shed vorticity form the NW, orhtwerise, we don't!
    ! It's important not to include it, otherwise a strong vortex will be present there with no compensating vorticity from the FW
-   LastNWShed = (p%FWShedVorticity ) .or. (m%nNW<p%nNWMax)
+   LastNWShed = (p%FWShedVorticity ) .or. ((.not.p%FWShedVorticity) .and. (m%nNW<p%nNWMax))
 
    ! Counting total number of segments
    nP=0
@@ -420,6 +420,7 @@ subroutine PackPanelsToSegments(p, m, x, iDepthStart, SegConnct, SegPoints, SegG
          nC =   nC - p%nWings * (p%nSpan) ! Removing last set of sehd segments
       endif
    endif
+   nC1=nC
    if (m%nFW>0) then
       nP = nP + p%nWings * (  (FWnSpan+1)*(m%nFW+1) )
       if (p%FWShedVorticity) then
@@ -446,7 +447,7 @@ subroutine PackPanelsToSegments(p, m, x, iDepthStart, SegConnct, SegPoints, SegG
       if (m%nFW>0) then
          iHeadC_bkp = iHeadC
          do iW=1,p%nWings
-            CALL LatticeToSegments(x%r_FW(1:3,:,1:m%nFW+1,iW), x%Gamma_FW(:,1:m%nFW,iW), 1, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC , p%FWShedVorticity, .False.)
+            CALL LatticeToSegments(x%r_FW(1:3,:,1:m%nFW+1,iW), x%Gamma_FW(:,1:m%nFW,iW), 1, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC , p%FWShedVorticity, p%FWShedVorticity)
          enddo
          SegConnct(3,iHeadC_bkp:) = SegConnct(3,iHeadC_bkp:) + m%nNW
       endif
