@@ -565,7 +565,7 @@ subroutine FVW_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSt
    character(ErrMsgLen) :: ErrMsg2        ! temporary error message
    integer(IntKi)       :: nFWEff ! Number of farwake panels that are free at current time step
    integer(IntKi)       :: i,j,k
-   real(ReKi), dimension(3) :: VmeanFW ! Mean velocity of the far wake
+   real(ReKi), dimension(3) :: VmeanFW, VmeanNW ! Mean velocity of the near wake and far wake
 
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -584,12 +584,26 @@ subroutine FVW_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSt
       ! Out:  m%Vind_NW, m%Vind_FW 
       call WakeInducedVelocities(p, x, m, ErrStat2, ErrMsg2); if(Failed()) return
 
-      ! --- Induced velocity of the non-free far wake is taken as the mean velocity in the free far-wake
+      ! --- Mean induced velocity over the near wake (NW)
+      VmeanNW(1:3)=0
+      if (m%nNW >1) then
+         do i=1,size(m%Vind_NW,4); do j=2,m%nNW+1; do k=1,size(m%Vind_NW,2); 
+            VmeanNW(1:3) = VmeanNW(1:3) + m%Vind_NW(1:3, k, j, i)
+         enddo; enddo; enddo; 
+         VmeanNW(1:3) = VmeanNW(1:3) / (size(m%Vind_NW,4)*m%nNW*size(m%Vind_NW,2))
+      endif
+      ! --- Induced velocity over the free far wake (FWEff)
       VmeanFW(1:3)=0
-      do i=1,size(m%Vind_FW,4); do j=1,nFWEff; do k=1,size(m%Vind_FW,2); 
-         VmeanFW(1:3) = VmeanFW(1:3) + m%Vind_FW(1:3, k, j, i)
-      enddo; enddo; enddo; 
-      VmeanFW(1:3) = VmeanFW(1:3) / (size(m%Vind_FW,4)*nFWEff*size(m%Vind_FW,2))
+      if (nFWEff >0) then
+         do i=1,size(m%Vind_FW,4); do j=1,nFWEff; do k=1,size(m%Vind_FW,2); 
+            VmeanFW(1:3) = VmeanFW(1:3) + m%Vind_FW(1:3, k, j, i)
+         enddo; enddo; enddo; 
+         VmeanFW(1:3) = VmeanFW(1:3) / (size(m%Vind_FW,4)*nFWEff*size(m%Vind_FW,2))
+      else
+         VmeanFW=VmeanNW
+      endif
+
+      ! --- Convecting non-free FW with a constant induced velocity (and free stream)
       m%Vind_FW(1, 1:FWnSpan+1, p%nFWFree+1:p%nFWMax, 1:p%nWings) = VmeanFW(1) !
       m%Vind_FW(2, 1:FWnSpan+1, p%nFWFree+1:p%nFWMax, 1:p%nWings) = VmeanFW(2) !
       m%Vind_FW(3, 1:FWnSpan+1, p%nFWFree+1:p%nFWMax, 1:p%nWings) = VmeanFW(3) !
