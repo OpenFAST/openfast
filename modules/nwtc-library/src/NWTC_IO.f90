@@ -20,8 +20,9 @@
 !> This module contains I/O-related variables and routines with non-system-specific logic.
 MODULE NWTC_IO
 
-   USE                             SysSubs
-   USE                             NWTC_Library_Types  ! ProgDesc and other types with copy and other routines for those types
+   USE SysSubs
+   USE NWTC_Library_Types  ! ProgDesc and other types with copy and other routines for those types
+   USE VersionInfo
 
    IMPLICIT  NONE
 
@@ -2171,7 +2172,44 @@ CONTAINS
       END IF
       
    END SUBROUTINE DLLTypeUnPack   
+!=======================================================================
+!>
+   SUBROUTINE DispCompileRuntimeInfo()
 
+      USE iso_fortran_env, ONLY: compiler_options, compiler_version
+
+      CHARACTER(200) :: name
+      CHARACTER(200) :: git_commit, architecture, compiled_precision
+      CHARACTER(200) :: execution_date, execution_time, execution_zone
+
+      name = ProgName
+      git_commit = QueryGitVersion()
+      architecture = TRIM(Num2LStr(BITS_IN_ADDR))//' bit'
+      IF (ReKi == SiKi) THEN
+         compiled_precision = 'single'
+      ELSE IF (ReKi == R8Ki) THEN
+         compiled_precision = 'double'
+      ELSE
+         compiled_precision = 'unknown'
+      END IF
+
+      CALL WrScr(trim(name)//'-'//trim(git_commit))
+      CALL WrScr('Compile Info:')
+      call wrscr(' - Compiler: '//trim(compiler_version()))
+      CALL WrScr(' - Architecture: '//trim(architecture))
+      CALL WrScr(' - Precision: '//trim(compiled_precision))
+      CALL WrScr(' - Date: '//__DATE__)
+      CALL WrScr(' - Time: '//__TIME__)
+      ! call wrscr(' - Options: '//trim(compiler_options()))
+
+      CALL DATE_AND_TIME(execution_date, execution_time, execution_zone)
+
+      CALL WrScr('Execution Info:')
+      CALL WrScr(' - Date: '//TRIM(execution_date(5:6)//'/'//execution_date(7:8)//'/'//execution_date(1:4)))
+      CALL WrScr(' - Time: '//TRIM(execution_time(1:2)//':'//execution_time(3:4)//':'//execution_time(5:6))//TRIM(execution_zone))
+      CALL WrScr('')
+
+   END SUBROUTINE
 !=======================================================================
 !> This routine displays the name of the program, its version, and its release date.
 !! Use DispNVD (nwtc_io::dispnvd) instead of directly calling a specific routine in the generic interface.
