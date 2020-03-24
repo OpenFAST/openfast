@@ -190,19 +190,29 @@ class OpenFAST {
 
   void setTurbineProcNo(int iTurbGlob, int procNo) { turbineMapGlobToProc[iTurbGlob] = procNo; }
   void allocateTurbinesToProcsSimple();
+  void getApproxHubPos(double* currentCoords, int iTurbGlob, int nSize=3);
   void getApproxHubPos(std::vector<double> & currentCoords, int iTurbGlob);
+  void getHubPos(double* currentCoords, int iTurbGlob, int nSize=3);
   void getHubPos(std::vector<double> & currentCoords, int iTurbGlob);
+  void getHubShftDir(double* hubShftVec, int iTurbGlob, int nSize=3);
   void getHubShftDir(std::vector<double> & hubShftVec, int iTurbGlob);
 
   ActuatorNodeType getVelNodeType(int iTurbGlob, int iNode);
+  void getVelNodeCoordinates(double* currentCoords, int iNode, int iTurbGlob, int nSize=3);
   void getVelNodeCoordinates(std::vector<double> & currentCoords, int iNode, int iTurbGlob);
+  void setVelocity(double* velocity, int iNode, int iTurbGlob, int nSize=3);
   void setVelocity(std::vector<double> & velocity, int iNode, int iTurbGlob);
+  void setVelocityForceNode(double* velocity, int iNode, int iTurbGlob, int nSize=3);
   void setVelocityForceNode(std::vector<double> & velocity, int iNode, int iTurbGlob);
   void interpolateVel_ForceToVelNodes();
   ActuatorNodeType getForceNodeType(int iTurbGlob, int iNode);
+  void getForceNodeCoordinates(double* currentCoords, int iNode, int iTurbGlob, int nSize=3);
   void getForceNodeCoordinates(std::vector<double> & currentCoords, int iNode, int iTurbGlob);
+  void getForceNodeOrientation(double* currentOrientation, int iNode, int iTurbGlob, int nSize=9);
   void getForceNodeOrientation(std::vector<double> & currentOrientation, int iNode, int iTurbGlob);
+  void getForce(double* force, int iNode, int iTurbGlob, int nSize=3);
   void getForce(std::vector<double> & force, int iNode, int iTurbGlob);
+  void getRelativeVelForceNode(double* vel, int iNode, int iTurbGlob, int nSize=3);
   void getRelativeVelForceNode(std::vector<double> & vel, int iNode, int iTurbGlob);
   double getChord(int iNode, int iTurbGlob);
 
