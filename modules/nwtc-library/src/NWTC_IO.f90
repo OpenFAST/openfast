@@ -1550,7 +1550,15 @@ CONTAINS
       SELECT CASE ( TRIM(Flag) )
 
       CASE ('H')
+         CALL DispCopyrightLicense( ProgName )
+         CALL DispCompileRuntimeInfo
          CALL NWTC_DisplaySyntax( Arg1, ProgName )
+         CALL CLEANUP()
+         RETURN
+
+      CASE ('V', 'VERSION')
+         CALL DispCopyrightLicense( ProgName )
+         CALL DispCompileRuntimeInfo
          CALL CLEANUP()
          RETURN
 
