@@ -30,6 +30,9 @@ RUN make -j4 install
 
 # Run the tests
 
+# NWTC Library tests
+RUN ctest -VV -R nwtc_library_utest
+
 # BeamDyn-specific tests
 RUN ctest -VV -j7 -R bd_
 RUN ctest -VV -R beamdyn_utest

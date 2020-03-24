@@ -48,6 +48,7 @@ INTEGER(IntKi)                        :: ErrStat                                
 CHARACTER(1024)                       :: ErrMsg                                  ! Error message
 
    ! data for restart:
+CHARACTER(1000)                       :: InputFile                               ! String to hold the intput file name
 CHARACTER(1024)                       :: CheckpointRoot                          ! Rootname of the checkpoint file
 CHARACTER(20)                         :: FlagArg                                 ! flag argument from command line
 INTEGER(IntKi)                        :: Restart_step                            ! step to start on (for restart) 
@@ -57,11 +58,15 @@ INTEGER(IntKi)                        :: Restart_step                           
       !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
    CALL NWTC_Init() ! open console for writing
    ProgName = 'OpenFAST'
+   InputFile = ""
    CheckpointRoot = ""
-     
-   CALL CheckArgs( CheckpointRoot, ErrStat, Flag=FlagArg )  ! if ErrStat /= ErrID_None, we'll ignore and deal with the problem when we try to read the input file
-      
-   IF ( TRIM(FlagArg) == 'RESTART' ) THEN ! Restart from checkpoint file
+
+   CALL CheckArgs( InputFile, Flag=FlagArg, Arg2=CheckpointRoot )
+
+   IF ( TRIM(FlagArg) == 'H' ) THEN ! Exit after help prompt
+      CALL NormStop()
+
+   ELSE IF ( TRIM(FlagArg) == 'RESTART' ) THEN ! Restart from checkpoint file
       CALL FAST_RestoreFromCheckpoint_Tary(t_initial, Restart_step, Turbine, CheckpointRoot, ErrStat, ErrMsg  )
          CALL CheckError( ErrStat, ErrMsg, 'during restore from checkpoint'  )            
    ELSE
