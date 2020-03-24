@@ -63,7 +63,10 @@ INTEGER(IntKi)                        :: Restart_step                           
 
    CALL CheckArgs( InputFile, Flag=FlagArg, Arg2=CheckpointRoot )
 
-   IF ( TRIM(FlagArg) == 'RESTART' ) THEN ! Restart from checkpoint file
+   IF ( TRIM(FlagArg) == 'H' ) THEN ! Exit after help prompt
+      CALL NormStop()
+
+   ELSE IF ( TRIM(FlagArg) == 'RESTART' ) THEN ! Restart from checkpoint file
       CALL FAST_RestoreFromCheckpoint_Tary(t_initial, Restart_step, Turbine, CheckpointRoot, ErrStat, ErrMsg  )
          CALL CheckError( ErrStat, ErrMsg, 'during restore from checkpoint'  )            
    ELSE
