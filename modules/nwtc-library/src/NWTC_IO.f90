@@ -2390,9 +2390,8 @@ CONTAINS
    END FUNCTION GetErrStr
    
 !=======================================================================
-!> This function converts the three strings contained in the ProgDesc
-!! data type into a single string listing the program name,
-!! version, and release date.
+!> This function extracts the Name field from the ProgDesc data type
+!  and return it.
    FUNCTION GetNVD ( ProgInfo )
 
       ! Argument declarations.

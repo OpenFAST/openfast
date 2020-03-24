@@ -99,13 +99,11 @@ CALL NWTC_Init( ProgNameIN=TurbSim_Ver%Name, EchoLibVer=.FALSE. )
    ! Print out program name, version, and date.
 
    ! Display the copyright notice
-   CALL DispCopyrightLicense( TurbSim_Ver )   
+   CALL DispCopyrightLicense( TurbSim_Ver%Name )
       ! Obtain OpenFAST git commit hash
    git_commit = QueryGitVersion()
       ! Tell our users what they're running
-   CALL WrScr( ' Running '//GetNVD( TurbSim_Ver )//' a part of OpenFAST - '//TRIM(git_Commit)//NewLine//' linked with '//TRIM( GetNVD( NWTC_Ver ))//NewLine )
-   
-
+   CALL WrScr( ' Running '//TRIM( TurbSim_Ver%Name )//' a part of OpenFAST - '//TRIM(git_Commit)//NewLine//' linked with '//TRIM( NWTC_Ver%Name )//NewLine )
 
    ! Check for command line arguments.
 InFile = 'TurbSim.inp'  ! default name for input file

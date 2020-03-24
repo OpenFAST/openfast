@@ -46,8 +46,6 @@ MODULE Waves2
 !   INTEGER(IntKi), PARAMETER                             :: DataFormatID = 1  !< Update this value if the data types change (used in Waves2_Pack)
    TYPE(ProgDesc), PARAMETER                             :: Waves2_ProgDesc = ProgDesc( 'Waves2', '', '' )
                                                                               !< This holds the name of the program, version info, and date.
-                                                                              !! It is used by the DispNVD routine in the library and as header
-                                                                              !! information in output files.
 
    REAL(DbKi), PARAMETER, PRIVATE                        :: OnePlusEps  = 1.0 + EPSILON(OnePlusEps)   ! The number slighty greater than unity in the precision of DbKi.
 
@@ -223,9 +221,6 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval, 
          ! Initialize the NWTC Subroutine Library and display the information about this module.
 
       CALL NWTC_Init( )
-      !CALL DispNVD( Waves2_ProgDesc )
-
-
 
 
       !-----------------------------------------------------------------------------
