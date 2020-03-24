@@ -1376,7 +1376,7 @@ SUBROUTINE FAST_ProgStart(ThisProgVer)
    CALL NWTC_Init( ProgNameIN=ThisProgVer%Name, EchoLibVer=.FALSE. )
    
    ! Display the copyright notice
-   CALL DispCopyrightLicense( ThisProgVer )
+   CALL DispCopyrightLicense( ThisProgVer%Name )
    
    CALL DispCompileRuntimeInfo
 

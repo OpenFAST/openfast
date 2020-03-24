@@ -2025,38 +2025,28 @@ CONTAINS
    END FUNCTION CurTime
 !=======================================================================
 !> This routine displays some text about copyright and license.
-   SUBROUTINE DispCopyrightLicense( ProgInfo, AdditionalComment )
+   SUBROUTINE DispCopyrightLicense( ProgramName, AdditionalComment )
 
-
-   TYPE( ProgDesc ), INTENT(IN)           :: ProgInfo             !< Contains the name and version info of the program being run
+   CHARACTER(*),     INTENT(IN)           :: ProgramName          !< The name of the program being run
    CHARACTER(*),     INTENT(IN), OPTIONAL :: AdditionalComment    !< An additional comment displayed in the copyright notice. Typically used to describe alpha versions or one-off versions.
 
       ! local variable
-   INTEGER(IntKi)         :: DateLen   ! the trim length of the ProgInfo date field
    INTEGER(IntKi)         :: I         ! generic loop/index
-   CHARACTER(4)           :: year      ! the year, determined from ProgInfo's date field
+   CHARACTER(4)           :: Year      ! the year, determined from the FPP __DATE__ variable
    CHARACTER(MaxWrScrLen) :: Stars     ! a line of '*******' characters
 
    DO I=1,MaxWrScrLen
       Stars(I:I)='*'
    END DO
 
-
-   DateLen = LEN_TRIM(ProgInfo%date)
-   IF (  DateLen > 3 ) THEN
-      I = DateLen-4+1
-      year = ProgInfo%date(I:)
-   ELSE
-      year = ''
-   END IF
-
+   Year = __DATE__(8:11)
 
    CALL WrScr('')
    CALL WrScr(Stars)
-   CALL WrScr( TRIM(GetNVD(ProgInfo)) )
+   CALL WrScr( TRIM(ProgramName) )
    CALL WrScr('')
-   CALL WrScr( 'Copyright (C) '//TRIM(year)//' National Renewable Energy Laboratory' )
-   CALL WrScr( 'Copyright (C) '//TRIM(year)//' Envision Energy USA LTD' )
+   CALL WrScr( 'Copyright (C) '//TRIM(Year)//' National Renewable Energy Laboratory' )
+   CALL WrScr( 'Copyright (C) '//TRIM(Year)//' Envision Energy USA LTD' )
    CALL WrScr('')
    CALL WrScr( 'This program is licensed under Apache License Version 2.0 and comes with ABSOLUTELY NO WARRANTY. '//&
                'See the "LICENSE" file distributed with this software for details.')   
