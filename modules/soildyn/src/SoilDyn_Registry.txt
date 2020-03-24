@@ -63,9 +63,11 @@ typedef  ^    SlD_InputFile   IntKi                NumOuts        -   -   -   "N
 typedef  ^     InitInputType  CHARACTER(1024)      InputFile      - - -          "Name of the input file" -
 typedef  ^     InitInputType  CHARACTER(1024)      RootName       - - -          "Root name of the input file" -
 typedef  ^     InitInputType  LOGICAL              Linearize      - .FALSE. -    "Flag that tells this module if the glue code wants to linearize." -
-#FIXME: does the glue code need to inform us of the number of points? or do we do that in SoilDyn?
-#typedef  ^     InitInputType  IntKi                NumNodes       - - -          "Number of nodes we are using" -
 typedef  ^     InitInputType  ReKi                 WtrDepth       - - -          "Water depth to mudline (global coordinates)" '(m)'
+#typedef  ^     InitInputType  ReKi                 SubRotateZ     - - -          "Substructure rotation angle, in case we change orientations" '(rad)'
+typedef  ^     InitInputType  IntKi                nNodes_R       - - -          "Number of nodes subdyn thinks are reaction nodes (from SubDyn nNodes_C)" -
+typedef  ^     InitInputType  IntKi                Nodes_R        {:} - -        "Nodes in input mesh that reaction force may be applied to (note: p%Nodes_C in SD has 2 dimensions in the old format, but only 1 in new)" '(-)'
+typedef  ^     InitInputType  MeshType             StructMesh     - - -          "Interior+Interface nodes outputs on a point mesh (from SD) -- only some are used!" '(-)'
 
 # Define outputs from the initialization routine here:
 typedef   ^               InitOutputType CHARACTER(ChanLen)    WriteOutputHdr  {:} - -   "Names of the output-to-file channels" -
@@ -108,19 +110,20 @@ typedef   ^             MiscVarType       REDWINdllType     dll_data            
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
 typedef   ^             ParameterType     DbKi              DT                   - - - "Time step for cont. state integration & disc. state update" seconds
-#typedef   ^             ParameterType     CHARACTER(1024)   DLL_InFile           - - - "Name of input file used in DLL"   -
-typedef   ^             ParameterType     DLL_Type          DLL_Trgt             - - - "The addresses and names of the Bladed DLL and its procedure"   -
-typedef   ^             ParameterType     DbKi              DLL_DT               - - - "Time step for DLL" seconds
-typedef   ^             ParameterType     CHARACTER(1024)   RootName             - - - "RootName for writing output files"   -
-typedef   ^             ParameterType     LOGICAL           UseREDWINinterface   - - - "True if interface successfully initialized" -
-typedef   ^             ParameterType     CHARACTER(1024)   RootFileName         - - - "Root file name" -
-typedef   ^             ParameterType     CHARACTER(1024)   EchoFileName         - - - "Name of echo file" -
-typedef   ^             ParameterType     CHARACTER(1024)   SumFileName          - - - "Name of summary file" -
-typedef   ^             ParameterType     IntKi             DLL_model            - - - "REDWIN DLL model type to use" -
-typedef   ^             ParameterType     IntKi             CalcOption           - - - "Calculation methodology to use" -
-typedef   ^             ParameterType     OutParmType       OutParam           {:} - - "Names and units (and other characteristics) of all requested output parameters" -
-typedef   ^             ParameterType     IntKi             NumOuts              - - - "Number of parameters in the output list (number of outputs requested)" -
-typedef   ^             ParameterType     IntKi             NumPoints            - - - "Number of points interfacing soil with" -
+typedef  ^              ParameterType     DLL_Type          DLL_Trgt             - - - "The addresses and names of the Bladed DLL and its procedure"   -
+typedef  ^              ParameterType     DbKi              DLL_DT               - - - "Time step for DLL" seconds
+typedef  ^              ParameterType     CHARACTER(1024)   RootName             - - - "RootName for writing output files"   -
+typedef  ^              ParameterType     LOGICAL           UseREDWINinterface   - - - "True if interface successfully initialized" -
+typedef  ^              ParameterType     CHARACTER(1024)   RootFileName         - - - "Root file name" -
+typedef  ^              ParameterType     CHARACTER(1024)   EchoFileName         - - - "Name of echo file" -
+typedef  ^              ParameterType     CHARACTER(1024)   SumFileName          - - - "Name of summary file" -
+typedef  ^              ParameterType     IntKi             DLL_model            - - - "REDWIN DLL model type to use" -
+typedef  ^              ParameterType     IntKi             CalcOption           - - - "Calculation methodology to use" -
+typedef  ^              ParameterType     OutParmType       OutParam           {:} - - "Names and units (and other characteristics) of all requested output parameters" -
+typedef  ^              ParameterType     IntKi             NumOuts              - - - "Number of parameters in the output list (number of outputs requested)" -
+typedef  ^              ParameterType     IntKi             NumPoints            - - - "Number of points interfacing soil with" -
+typedef  ^              ParameterType     ReKi              WtrDepth             - - - "Water depth to mudline (global coordinates)" '(m)'
+typedef  ^              ParameterType     IntKi             Nodes_C         {:}{:} - - "Nodes in input mesh that reaction force may be applied to" '(-)'
 
 # ..... Inputs ....................................................................................................................
 typedef  ^              InputType         MeshType          SoilMotion           - - - "Mesh of soil contact points" -

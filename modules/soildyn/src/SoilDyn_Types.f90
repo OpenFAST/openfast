@@ -81,6 +81,9 @@ IMPLICIT NONE
     CHARACTER(1024)  :: RootName      !< Root name of the input file [-]
     LOGICAL  :: Linearize = .FALSE.      !< Flag that tells this module if the glue code wants to linearize. [-]
     REAL(ReKi)  :: WtrDepth      !< Water depth to mudline (global coordinates) ['(m)']
+    INTEGER(IntKi)  :: nNodes_R      !< Number of nodes subdyn thinks are reaction nodes (from SubDyn nNodes_C) [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: Nodes_R      !< Nodes in input mesh that reaction force may be applied to (note: p%Nodes_C in SD has 2 dimensions in the old format, but only 1 in new) ['(-)']
+    TYPE(MeshType)  :: StructMesh      !< Interior+Interface nodes outputs on a point mesh (from SD) -- only some are used! ['(-)']
   END TYPE SlD_InitInputType
 ! =======================
 ! =========  SlD_InitOutputType  =======
@@ -130,6 +133,8 @@ IMPLICIT NONE
     TYPE(OutParmType) , DIMENSION(:), ALLOCATABLE  :: OutParam      !< Names and units (and other characteristics) of all requested output parameters [-]
     INTEGER(IntKi)  :: NumOuts      !< Number of parameters in the output list (number of outputs requested) [-]
     INTEGER(IntKi)  :: NumPoints      !< Number of points interfacing soil with [-]
+    REAL(ReKi)  :: WtrDepth      !< Water depth to mudline (global coordinates) ['(m)']
+    INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: Nodes_C      !< Nodes in input mesh that reaction force may be applied to ['(-)']
   END TYPE SlD_ParameterType
 ! =======================
 ! =========  SlD_InputType  =======
@@ -1047,13 +1052,14 @@ ENDIF
  END SUBROUTINE SlD_UnPackInputFile
 
  SUBROUTINE SlD_CopyInitInput( SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(SlD_InitInputType), INTENT(IN) :: SrcInitInputData
+   TYPE(SlD_InitInputType), INTENT(INOUT) :: SrcInitInputData
    TYPE(SlD_InitInputType), INTENT(INOUT) :: DstInitInputData
    INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
 ! Local 
    INTEGER(IntKi)                 :: i,j,k
+   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'SlD_CopyInitInput'
@@ -1064,6 +1070,22 @@ ENDIF
     DstInitInputData%RootName = SrcInitInputData%RootName
     DstInitInputData%Linearize = SrcInitInputData%Linearize
     DstInitInputData%WtrDepth = SrcInitInputData%WtrDepth
+    DstInitInputData%nNodes_R = SrcInitInputData%nNodes_R
+IF (ALLOCATED(SrcInitInputData%Nodes_R)) THEN
+  i1_l = LBOUND(SrcInitInputData%Nodes_R,1)
+  i1_u = UBOUND(SrcInitInputData%Nodes_R,1)
+  IF (.NOT. ALLOCATED(DstInitInputData%Nodes_R)) THEN 
+    ALLOCATE(DstInitInputData%Nodes_R(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%Nodes_R.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInitInputData%Nodes_R = SrcInitInputData%Nodes_R
+ENDIF
+      CALL MeshCopy( SrcInitInputData%StructMesh, DstInitInputData%StructMesh, CtrlCode, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         IF (ErrStat>=AbortErrLev) RETURN
  END SUBROUTINE SlD_CopyInitInput
 
  SUBROUTINE SlD_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
@@ -1075,6 +1097,10 @@ ENDIF
 ! 
   ErrStat = ErrID_None
   ErrMsg  = ""
+IF (ALLOCATED(InitInputData%Nodes_R)) THEN
+  DEALLOCATE(InitInputData%Nodes_R)
+ENDIF
+  CALL MeshDestroy( InitInputData%StructMesh, ErrStat, ErrMsg )
  END SUBROUTINE SlD_DestroyInitInput
 
  SUBROUTINE SlD_PackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -1116,6 +1142,30 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%RootName)  ! RootName
       Int_BufSz  = Int_BufSz  + 1  ! Linearize
       Re_BufSz   = Re_BufSz   + 1  ! WtrDepth
+      Int_BufSz  = Int_BufSz  + 1  ! nNodes_R
+  Int_BufSz   = Int_BufSz   + 1     ! Nodes_R allocated yes/no
+  IF ( ALLOCATED(InData%Nodes_R) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! Nodes_R upper/lower bounds for each dimension
+      Int_BufSz  = Int_BufSz  + SIZE(InData%Nodes_R)  ! Nodes_R
+  END IF
+   ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
+      Int_BufSz   = Int_BufSz + 3  ! StructMesh: size of buffers for each call to pack subtype
+      CALL MeshPack( InData%StructMesh, Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2, .TRUE. ) ! StructMesh 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf)) THEN ! StructMesh
+         Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
+         DEALLOCATE(Re_Buf)
+      END IF
+      IF(ALLOCATED(Db_Buf)) THEN ! StructMesh
+         Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
+         DEALLOCATE(Db_Buf)
+      END IF
+      IF(ALLOCATED(Int_Buf)) THEN ! StructMesh
+         Int_BufSz = Int_BufSz + SIZE( Int_Buf )
+         DEALLOCATE(Int_Buf)
+      END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -1155,6 +1205,49 @@ ENDIF
       Int_Xferred   = Int_Xferred   + 1
       ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%WtrDepth
       Re_Xferred   = Re_Xferred   + 1
+      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%nNodes_R
+      Int_Xferred   = Int_Xferred   + 1
+  IF ( .NOT. ALLOCATED(InData%Nodes_R) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Nodes_R,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Nodes_R,1)
+    Int_Xferred = Int_Xferred + 2
+
+      IF (SIZE(InData%Nodes_R)>0) IntKiBuf ( Int_Xferred:Int_Xferred+(SIZE(InData%Nodes_R))-1 ) = PACK(InData%Nodes_R,.TRUE.)
+      Int_Xferred   = Int_Xferred   + SIZE(InData%Nodes_R)
+  END IF
+      CALL MeshPack( InData%StructMesh, Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2, OnlySize ) ! StructMesh 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Re_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Re_Buf) > 0) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_Buf)-1 ) = Re_Buf
+        Re_Xferred = Re_Xferred + SIZE(Re_Buf)
+        DEALLOCATE(Re_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+      IF(ALLOCATED(Db_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Db_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Db_Buf) > 0) DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_Buf)-1 ) = Db_Buf
+        Db_Xferred = Db_Xferred + SIZE(Db_Buf)
+        DEALLOCATE(Db_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+      IF(ALLOCATED(Int_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Int_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Int_Buf) > 0) IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_Buf)-1 ) = Int_Buf
+        Int_Xferred = Int_Xferred + SIZE(Int_Buf)
+        DEALLOCATE(Int_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
  END SUBROUTINE SlD_PackInitInput
 
  SUBROUTINE SlD_UnPackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -1176,6 +1269,7 @@ ENDIF
   LOGICAL, ALLOCATABLE           :: mask3(:,:,:)
   LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
   LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
+  INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'SlD_UnPackInitInput'
@@ -1201,6 +1295,71 @@ ENDIF
       Int_Xferred   = Int_Xferred + 1
       OutData%WtrDepth = ReKiBuf( Re_Xferred )
       Re_Xferred   = Re_Xferred + 1
+      OutData%nNodes_R = IntKiBuf( Int_Xferred ) 
+      Int_Xferred   = Int_Xferred + 1
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Nodes_R not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%Nodes_R)) DEALLOCATE(OutData%Nodes_R)
+    ALLOCATE(OutData%Nodes_R(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%Nodes_R.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask1 = .TRUE. 
+      IF (SIZE(OutData%Nodes_R)>0) OutData%Nodes_R = UNPACK( IntKiBuf ( Int_Xferred:Int_Xferred+(SIZE(OutData%Nodes_R))-1 ), mask1, 0_IntKi )
+      Int_Xferred   = Int_Xferred   + SIZE(OutData%Nodes_R)
+    DEALLOCATE(mask1)
+  END IF
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Re_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Re_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Re_Buf = ReKiBuf( Re_Xferred:Re_Xferred+Buf_size-1 )
+        Re_Xferred = Re_Xferred + Buf_size
+      END IF
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Db_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Db_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Db_Buf = DbKiBuf( Db_Xferred:Db_Xferred+Buf_size-1 )
+        Db_Xferred = Db_Xferred + Buf_size
+      END IF
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Int_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Int_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
+        Int_Xferred = Int_Xferred + Buf_size
+      END IF
+      CALL MeshUnpack( OutData%StructMesh, Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2 ) ! StructMesh 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
+      IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
+      IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
  END SUBROUTINE SlD_UnPackInitInput
 
  SUBROUTINE SlD_CopyInitOutput( SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg )
@@ -2351,6 +2510,7 @@ ENDIF
 ! Local 
    INTEGER(IntKi)                 :: i,j,k
    INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'SlD_CopyParam'
@@ -2385,6 +2545,21 @@ IF (ALLOCATED(SrcParamData%OutParam)) THEN
 ENDIF
     DstParamData%NumOuts = SrcParamData%NumOuts
     DstParamData%NumPoints = SrcParamData%NumPoints
+    DstParamData%WtrDepth = SrcParamData%WtrDepth
+IF (ALLOCATED(SrcParamData%Nodes_C)) THEN
+  i1_l = LBOUND(SrcParamData%Nodes_C,1)
+  i1_u = UBOUND(SrcParamData%Nodes_C,1)
+  i2_l = LBOUND(SrcParamData%Nodes_C,2)
+  i2_u = UBOUND(SrcParamData%Nodes_C,2)
+  IF (.NOT. ALLOCATED(DstParamData%Nodes_C)) THEN 
+    ALLOCATE(DstParamData%Nodes_C(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%Nodes_C.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstParamData%Nodes_C = SrcParamData%Nodes_C
+ENDIF
  END SUBROUTINE SlD_CopyParam
 
  SUBROUTINE SlD_DestroyParam( ParamData, ErrStat, ErrMsg )
@@ -2402,6 +2577,9 @@ DO i1 = LBOUND(ParamData%OutParam,1), UBOUND(ParamData%OutParam,1)
   CALL NWTC_Library_Destroyoutparmtype( ParamData%OutParam(i1), ErrStat, ErrMsg )
 ENDDO
   DEALLOCATE(ParamData%OutParam)
+ENDIF
+IF (ALLOCATED(ParamData%Nodes_C)) THEN
+  DEALLOCATE(ParamData%Nodes_C)
 ENDIF
  END SUBROUTINE SlD_DestroyParam
 
@@ -2492,6 +2670,12 @@ ENDIF
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! NumOuts
       Int_BufSz  = Int_BufSz  + 1  ! NumPoints
+      Re_BufSz   = Re_BufSz   + 1  ! WtrDepth
+  Int_BufSz   = Int_BufSz   + 1     ! Nodes_C allocated yes/no
+  IF ( ALLOCATED(InData%Nodes_C) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! Nodes_C upper/lower bounds for each dimension
+      Int_BufSz  = Int_BufSz  + SIZE(InData%Nodes_C)  ! Nodes_C
+  END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -2618,6 +2802,24 @@ ENDIF
       Int_Xferred   = Int_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%NumPoints
       Int_Xferred   = Int_Xferred   + 1
+      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%WtrDepth
+      Re_Xferred   = Re_Xferred   + 1
+  IF ( .NOT. ALLOCATED(InData%Nodes_C) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Nodes_C,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Nodes_C,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Nodes_C,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Nodes_C,2)
+    Int_Xferred = Int_Xferred + 2
+
+      IF (SIZE(InData%Nodes_C)>0) IntKiBuf ( Int_Xferred:Int_Xferred+(SIZE(InData%Nodes_C))-1 ) = PACK(InData%Nodes_C,.TRUE.)
+      Int_Xferred   = Int_Xferred   + SIZE(InData%Nodes_C)
+  END IF
  END SUBROUTINE SlD_PackParam
 
  SUBROUTINE SlD_UnPackParam( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -2640,6 +2842,7 @@ ENDIF
   LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
   LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+  INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'SlD_UnPackParam'
@@ -2779,6 +2982,34 @@ ENDIF
       Int_Xferred   = Int_Xferred + 1
       OutData%NumPoints = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
+      OutData%WtrDepth = ReKiBuf( Re_Xferred )
+      Re_Xferred   = Re_Xferred + 1
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Nodes_C not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%Nodes_C)) DEALLOCATE(OutData%Nodes_C)
+    ALLOCATE(OutData%Nodes_C(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%Nodes_C.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask2.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask2 = .TRUE. 
+      IF (SIZE(OutData%Nodes_C)>0) OutData%Nodes_C = UNPACK( IntKiBuf ( Int_Xferred:Int_Xferred+(SIZE(OutData%Nodes_C))-1 ), mask2, 0_IntKi )
+      Int_Xferred   = Int_Xferred   + SIZE(OutData%Nodes_C)
+    DEALLOCATE(mask2)
+  END IF
  END SUBROUTINE SlD_UnPackParam
 
  SUBROUTINE SlD_CopyInput( SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg )

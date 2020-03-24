@@ -228,6 +228,10 @@ contains
       real(ReKi)                                :: Pos(3)
       real(ReKi),                allocatable    :: MeshLocations(:,:)
 
+!FIXME: change u%SoilMotion to be a sibling of the passed in mesh.  Not all points on passed in mesh will be used
+!  nNodes_C should match NumPoints read in
+!  step through to find all the points we are using and make sure they match something on the available reaction nodes.
+!  create mapping index of nodes (set order as needed)
       select case(p%CalcOption)
          case (Calc_StiffDamp)
             p%NumPoints =  1_IntKi
