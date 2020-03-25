@@ -80,7 +80,8 @@ IMPLICIT NONE
     CHARACTER(1024)  :: InputFile      !< Name of the input file [-]
     CHARACTER(1024)  :: RootName      !< Root name of the input file [-]
     LOGICAL  :: Linearize = .FALSE.      !< Flag that tells this module if the glue code wants to linearize. [-]
-    REAL(ReKi)  :: WtrDepth      !< Water depth to mudline (global coordinates) ['(m)']
+    REAL(ReKi)  :: WtrDpth      !< Water depth to mudline (global coordinates) ['(m)']
+    REAL(ReKi)  :: SubRotateZ      !< Substructure rotation angle, in case we change orientations ['(rad)']
     INTEGER(IntKi)  :: nNodes_R      !< Number of nodes subdyn thinks are reaction nodes (from SubDyn nNodes_C) [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: Nodes_R      !< Nodes in input mesh that reaction force may be applied to (note: p%Nodes_C in SD has 2 dimensions in the old format, but only 1 in new) ['(-)']
     TYPE(MeshType)  :: StructMesh      !< Interior+Interface nodes outputs on a point mesh (from SD) -- only some are used! ['(-)']
@@ -1069,7 +1070,8 @@ ENDIF
     DstInitInputData%InputFile = SrcInitInputData%InputFile
     DstInitInputData%RootName = SrcInitInputData%RootName
     DstInitInputData%Linearize = SrcInitInputData%Linearize
-    DstInitInputData%WtrDepth = SrcInitInputData%WtrDepth
+    DstInitInputData%WtrDpth = SrcInitInputData%WtrDpth
+    DstInitInputData%SubRotateZ = SrcInitInputData%SubRotateZ
     DstInitInputData%nNodes_R = SrcInitInputData%nNodes_R
 IF (ALLOCATED(SrcInitInputData%Nodes_R)) THEN
   i1_l = LBOUND(SrcInitInputData%Nodes_R,1)
@@ -1141,7 +1143,8 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%InputFile)  ! InputFile
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%RootName)  ! RootName
       Int_BufSz  = Int_BufSz  + 1  ! Linearize
-      Re_BufSz   = Re_BufSz   + 1  ! WtrDepth
+      Re_BufSz   = Re_BufSz   + 1  ! WtrDpth
+      Re_BufSz   = Re_BufSz   + 1  ! SubRotateZ
       Int_BufSz  = Int_BufSz  + 1  ! nNodes_R
   Int_BufSz   = Int_BufSz   + 1     ! Nodes_R allocated yes/no
   IF ( ALLOCATED(InData%Nodes_R) ) THEN
@@ -1203,7 +1206,9 @@ ENDIF
         END DO ! I
       IntKiBuf ( Int_Xferred:Int_Xferred+1-1 ) = TRANSFER( InData%Linearize , IntKiBuf(1), 1)
       Int_Xferred   = Int_Xferred   + 1
-      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%WtrDepth
+      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%WtrDpth
+      Re_Xferred   = Re_Xferred   + 1
+      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%SubRotateZ
       Re_Xferred   = Re_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%nNodes_R
       Int_Xferred   = Int_Xferred   + 1
@@ -1293,7 +1298,9 @@ ENDIF
       END DO ! I
       OutData%Linearize = TRANSFER( IntKiBuf( Int_Xferred ), mask0 )
       Int_Xferred   = Int_Xferred + 1
-      OutData%WtrDepth = ReKiBuf( Re_Xferred )
+      OutData%WtrDpth = ReKiBuf( Re_Xferred )
+      Re_Xferred   = Re_Xferred + 1
+      OutData%SubRotateZ = ReKiBuf( Re_Xferred )
       Re_Xferred   = Re_Xferred + 1
       OutData%nNodes_R = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1

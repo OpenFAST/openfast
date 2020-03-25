@@ -63,8 +63,8 @@ typedef  ^    SlD_InputFile   IntKi                NumOuts        -   -   -   "N
 typedef  ^     InitInputType  CHARACTER(1024)      InputFile      - - -          "Name of the input file" -
 typedef  ^     InitInputType  CHARACTER(1024)      RootName       - - -          "Root name of the input file" -
 typedef  ^     InitInputType  LOGICAL              Linearize      - .FALSE. -    "Flag that tells this module if the glue code wants to linearize." -
-typedef  ^     InitInputType  ReKi                 WtrDepth       - - -          "Water depth to mudline (global coordinates)" '(m)'
-#typedef  ^     InitInputType  ReKi                 SubRotateZ     - - -          "Substructure rotation angle, in case we change orientations" '(rad)'
+typedef  ^     InitInputType  ReKi                 WtrDpth        - - -          "Water depth to mudline (global coordinates)" '(m)'
+typedef  ^     InitInputType  ReKi                 SubRotateZ     - - -          "Substructure rotation angle, in case we change orientations" '(rad)'
 typedef  ^     InitInputType  IntKi                nNodes_R       - - -          "Number of nodes subdyn thinks are reaction nodes (from SubDyn nNodes_C)" -
 typedef  ^     InitInputType  IntKi                Nodes_R        {:} - -        "Nodes in input mesh that reaction force may be applied to (note: p%Nodes_C in SD has 2 dimensions in the old format, but only 1 in new)" '(-)'
 typedef  ^     InitInputType  MeshType             StructMesh     - - -          "Interior+Interface nodes outputs on a point mesh (from SD) -- only some are used!" '(-)'

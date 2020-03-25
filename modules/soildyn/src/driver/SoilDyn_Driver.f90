@@ -30,7 +30,7 @@ PROGRAM SoilDyn_Driver
 
    IMPLICIT NONE
 
-   TYPE( ProgDesc ), PARAMETER                        :: ProgInfo = ProgDesc("SoilDyn_Driver","","")
+   TYPE( ProgDesc ), PARAMETER                        :: ProgInfo = ProgDesc("SlD_Driver","","")
    INTEGER(IntKi)                                     :: SlDDriver_Verbose =  5  ! Verbose level.  0 = none, 5 = some, 10 = lots
 
 
@@ -263,7 +263,7 @@ PROGRAM SoilDyn_Driver
    InitInData%InputFile = Settings%SldIptFileName
 
       ! Initialize the module
-   CALL SoilDyn_Init( InitInData, u(1), p,  x, xd, z, OtherState, y, misc, TimeInterval, InitOutData, ErrStat, ErrMsg )
+   CALL SlD_Init( InitInData, u(1), p,  x, xd, z, OtherState, y, misc, TimeInterval, InitOutData, ErrStat, ErrMsg )
    IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
       CALL WrScr( 'After Init: '//ErrMsg )
       if ( ErrStat >= AbortErrLev ) call ProgEnd()
@@ -320,12 +320,12 @@ PROGRAM SoilDyn_Driver
       endif
 
          ! Calculate outputs at n
-      CALL SoilDyn_CalcOutput( Time, u(1), p, x, xd, z, OtherState, y, misc, ErrStat, ErrMsg );
+      CALL SlD_CalcOutput( Time, u(1), p, x, xd, z, OtherState, y, misc, ErrStat, ErrMsg );
       call CheckErr('After CalcOutput: ');
 
          ! There are no states to update in SoilDyn, but for completeness we add this.
          ! Get state variables at next step: INPUT at step n, OUTPUT at step n + 1
-      CALL SoilDyn_UpdateStates( Time, n, u, InputTime, p, x, xd, z, OtherState, misc, ErrStat, ErrMsg );
+      CALL SlD_UpdateStates( Time, n, u, InputTime, p, x, xd, z, OtherState, misc, ErrStat, ErrMsg );
       call CheckErr('');
 
       !call Dvr_WriteOutputLine(Time,DvrOut,p%OutFmt,y)
@@ -356,7 +356,7 @@ PROGRAM SoilDyn_Driver
    ! Routine to terminate program execution
    !...............................................................................................................................
    if (DvrOut>0)  close(DvrOut)
-   CALL SoilDyn_End( u(1), p, x, xd, z, OtherState, y, misc, ErrStat, ErrMsg )
+   CALL SlD_End( u(1), p, x, xd, z, OtherState, y, misc, ErrStat, ErrMsg )
 
    IF ( ErrStat /= ErrID_None ) THEN
       CALL WrScr( 'After End: '//ErrMsg )

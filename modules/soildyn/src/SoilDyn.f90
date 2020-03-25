@@ -42,23 +42,23 @@ MODULE SoilDyn
 
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER :: SoilDyn_Ver = ProgDesc( 'SoilDyn', 'v0.01.00', '99-Feb-2020' ) !< module date/version information
+   TYPE(ProgDesc), PARAMETER :: SlD_Ver = ProgDesc( 'SoilDyn', 'v0.01.00', '99-Feb-2020' ) !< module date/version information
 
       ! ..... Public Subroutines ...................................................................................................
-   PUBLIC :: SoilDyn_Init                          !  Initialization routine
-   PUBLIC :: SoilDyn_End                           !  Ending routine (includes clean up)
-   PUBLIC :: SoilDyn_UpdateStates                  !  Loose coupling routine for solving for constraint states, integrating
-   PUBLIC :: SoilDyn_CalcOutput                    !  Routine for computing outputs
+   PUBLIC :: SlD_Init                          !  Initialization routine
+   PUBLIC :: SlD_End                           !  Ending routine (includes clean up)
+   PUBLIC :: SlD_UpdateStates                  !  Loose coupling routine for solving for constraint states, integrating
+   PUBLIC :: SlD_CalcOutput                    !  Routine for computing outputs
 
 !NOTE: these are placeholders for now.
-!!!   PUBLIC :: SoilDyn_CalcConstrStateResidual        !  Tight coupling routine for returning the constraint state residual
-!!!   PUBLIC :: SoilDyn_CalcContStateDeriv             !  Tight coupling routine for computing derivatives of continuous states
-!!!   PUBLIC :: SoilDyn_UpdateDiscState                !  Tight coupling routine for updating discrete states
-!!!   PUBLIC :: SoilDyn_JacobianPInput                 !  Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions all with respect to the inputs (u)
-!!!   PUBLIC :: SoilDyn_JacobianPContState             !  Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions all with respect to the continuous states (x)
-!!!   PUBLIC :: SoilDyn_JacobianPDiscState             !  Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions all with respect to the discrete states (xd)
-!!!   PUBLIC :: SoilDyn_JacobianPConstrState           !  Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions all with respect to the constraint states (z)
-!!!   PUBLIC :: SoilDyn_GetOP                          !  Routine to get the operating-point values for linearization (from data structures to arrays)
+!!!   PUBLIC :: SlD_CalcConstrStateResidual        !  Tight coupling routine for returning the constraint state residual
+!!!   PUBLIC :: SlD_CalcContStateDeriv             !  Tight coupling routine for computing derivatives of continuous states
+!!!   PUBLIC :: SlD_UpdateDiscState                !  Tight coupling routine for updating discrete states
+!!!   PUBLIC :: SlD_JacobianPInput                 !  Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions all with respect to the inputs (u)
+!!!   PUBLIC :: SlD_JacobianPContState             !  Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions all with respect to the continuous states (x)
+!!!   PUBLIC :: SlD_JacobianPDiscState             !  Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions all with respect to the discrete states (xd)
+!!!   PUBLIC :: SlD_JacobianPConstrState           !  Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions all with respect to the constraint states (z)
+!!!   PUBLIC :: SlD_GetOP                          !  Routine to get the operating-point values for linearization (from data structures to arrays)
 
 contains
 
@@ -66,7 +66,7 @@ contains
 !> This routine is called at the start of the simulation to perform initialization steps.
 !! The parameters are set here and not changed during the simulation.
 !! The initial states and initial guess for the input are defined.
-subroutine SoilDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut, ErrStat, ErrMsg )
+subroutine SlD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut, ErrStat, ErrMsg )
 
    type(SlD_InitInputType),            intent(in   )  :: InitInp     !< Input data for initialization routine
    type(SlD_InputType),                intent(  out)  :: u           !< An initial guess for the input; input mesh must be defined
@@ -86,7 +86,7 @@ subroutine SoilDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    integer(IntKi)                                     :: j           !< generic counter
    integer(IntKi)                                     :: ErrStat2    !< local error status
    character(ErrMsgLen)                               :: ErrMsg2     !< local error message
-   character(*), parameter                            :: RoutineName = 'SoilDyn_Init'
+   character(*), parameter                            :: RoutineName = 'SlD_Init'
    type(SlD_InputFile)                                :: InputFileData   !< Data stored in the module's input file
    character(1024)                                    :: EchoFileName
 
@@ -98,7 +98,7 @@ subroutine SoilDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    call NWTC_Init( )
 
       ! Display the module information
-   call DispNVD( SoilDyn_Ver )
+   call DispNVD( SlD_Ver )
 
       ! Set some names
    call GetRoot( InitInp%InputFile, p%RootFileName )
@@ -106,7 +106,7 @@ subroutine SoilDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    p%SumFileName   = TRIM(p%RootFileName)//"SlD.sum"
 
 
-   call SoilDyn_ReadInput( InitInp%InputFile, p%EchoFileName, InputFileData, ErrStat2, ErrMsg2 );  if (Failed()) return;
+   call SlD_ReadInput( InitInp%InputFile, p%EchoFileName, InputFileData, ErrStat2, ErrMsg2 );  if (Failed()) return;
 
       ! Define parameters here:
    p%DT           =  Interval
@@ -137,10 +137,10 @@ subroutine SoilDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    end if
 
       ! Set miscvars: including dll_data arrays and checking for input files.
-   call SoilDyn_InitMisc( InputFileData, m, ErrStat2,ErrMsg2); if (Failed()) return;
+   call SlD_InitMisc( InputFileData, m, ErrStat2,ErrMsg2); if (Failed()) return;
 
 
-   call SoilDyn_InitMeshes( InputFileData, InitInp, u, y, p, m, ErrStat2,ErrMsg2);  if (Failed()) return;
+   call SlD_InitMeshes( InputFileData, InitInp, u, y, p, m, ErrStat2,ErrMsg2);  if (Failed()) return;
 
 
 !FIXME: wrap logic around this for option 3 only.
@@ -152,7 +152,7 @@ subroutine SoilDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
 
 
       ! set paramaters for I/O data
-   InitOut%Ver = SoilDyn_Ver
+   InitOut%Ver = SlD_Ver
    p%NumOuts   =  InputFileData%NumOuts
    call AllocAry( InitOut%WriteOutputHdr, p%NumOuts, 'WriteOutputHdr', errStat2, errMsg2 );  if (Failed()) return;
    call AllocAry( InitOut%WriteOutputUnt, p%NumOuts, 'WriteOutputUnt', errStat2, errMsg2 );  if (Failed()) return;
@@ -173,7 +173,7 @@ contains
 
    !> Allocate arrays for storing the DLL input file names, and check that they exist. The DLL has no error checking (as of 2020.02.10)
    !! and will create empty input files before segfaulting.
-   subroutine SoilDyn_InitMisc( InputFileData, m, ErrStat, ErrMsg )
+   subroutine SlD_InitMisc( InputFileData, m, ErrStat, ErrMsg )
       type(SlD_InputFile),    intent(in   )  :: InputFileData  !< Data stored in the module's input file
       type(SlD_MiscVarType),  intent(inout)  :: m              !< Misc variables for optimization (not copied in glue code)
       integer(IntKi),         intent(  out)  :: ErrStat
@@ -209,9 +209,9 @@ contains
          endif
       enddo
       if (ErrStat >= AbortErrLev) return
-   end subroutine SoilDyn_InitMisc
+   end subroutine SlD_InitMisc
 
-   subroutine SoilDyn_InitMeshes( InputFileData, InitInp, u, y, p, m, ErrStat, ErrMsg )
+   subroutine SlD_InitMeshes( InputFileData, InitInp, u, y, p, m, ErrStat, ErrMsg )
       type(SlD_InputFile),       intent(in   )  :: InputFileData  !< Data stored in the module's input file
       type(SlD_InitInputType),   intent(in   )  :: InitInp        !< Input data for initialization routine
       type(SlD_InputType),       intent(inout)  :: u              !< An initial guess for the input; input mesh must be defined
@@ -315,13 +315,13 @@ contains
 
 
 
-   end subroutine SoilDyn_InitMeshes
-end subroutine SoilDyn_Init
+   end subroutine SlD_InitMeshes
+end subroutine SlD_Init
 
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine is called at the end of the simulation.
-subroutine SoilDyn_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
+subroutine SlD_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 
    type(SlD_InputType),               intent(inout)  :: u           !< System inputs
    type(SlD_ParameterType),           intent(inout)  :: p           !< Parameters
@@ -337,7 +337,7 @@ subroutine SoilDyn_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       ! local variables
    integer(IntKi)                                    :: ErrStat2    ! local error status
    character(ErrMsgLen)                              :: ErrMsg2     ! local error message
-   character(*), parameter                           :: RoutineName = 'SoilDyn_End'
+   character(*), parameter                           :: RoutineName = 'SlD_End'
 
       ! Initialize ErrStat
    ErrStat = ErrID_None
@@ -368,13 +368,13 @@ subroutine SoilDyn_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       !! Destroy the misc data:
    call SlD_DestroyMisc(         m,          ErrStat2,ErrMsg2);   call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
-end subroutine SoilDyn_End
+end subroutine SlD_End
 
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This is a loose coupling routine for solving constraint states, integrating continuous states, and updating discrete and other
 !! states. Continuous, constraint, discrete, and other states are updated to values at t + Interval.
-subroutine SoilDyn_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
+subroutine SlD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
    real(DbKi),                         intent(in   ) :: t               !< Current simulation time in seconds
    integer(IntKi),                     intent(in   ) :: n               !< Current step of the simulation: t = n*Interval
    type(SlD_InputType),                intent(inout) :: Inputs(:)       !< Inputs at InputTimes (output from this routine only
@@ -400,7 +400,7 @@ subroutine SoilDyn_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherSta
    type(SlD_InputType)                               :: u               ! Instantaneous inputs
    integer(IntKi)                                    :: ErrStat2        ! local error status
    character(ErrMsgLen)                              :: ErrMsg2         ! local error message
-   character(*), parameter                           :: RoutineName = 'SoilDyn_UpdateStates'
+   character(*), parameter                           :: RoutineName = 'SlD_UpdateStates'
 
       ! Initialize variables
    ErrStat   = ErrID_None           ! no error has occurred
@@ -436,12 +436,12 @@ contains
       call SlD_DestroyContState(   dxdt,       ErrStat2, ErrMsg2)
       call SlD_DestroyDiscState(   xd_t,       ErrStat2, ErrMsg2)
    end subroutine cleanup
-end subroutine SoilDyn_UpdateStates
+end subroutine SlD_UpdateStates
 
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This is a routine for computing outputs, used in both loose and tight coupling.
-subroutine SoilDyn_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
+subroutine SlD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 
    real(DbKi),                         intent(in   )  :: t           !< Current simulation time in seconds
    type(SlD_InputType),                intent(in   )  :: u           !< Inputs at t
@@ -458,7 +458,7 @@ subroutine SoilDyn_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
 
    integer(IntKi)                                     :: ErrStat2    ! local error status
    character(ErrMsgLen)                               :: ErrMsg2     ! local error message
-   character(*), parameter                            :: RoutineName = 'SoilDyn_CalcOutput'
+   character(*), parameter                            :: RoutineName = 'SlD_CalcOutput'
 
    real(ReKi)                                         :: AllOuts(0:MaxOutPts)
    real(R8Ki)                                         :: Displacement(6)
@@ -496,7 +496,7 @@ contains
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       Failed =    ErrStat >= AbortErrLev
    end function Failed
-end subroutine SoilDyn_CalcOutput
+end subroutine SlD_CalcOutput
 
 
 END MODULE SoilDyn
@@ -504,11 +504,11 @@ END MODULE SoilDyn
 !**********************************************************************************************************************************
 !NOTE: the following have been omitted.  When we add the other methods for calculating (6x6 Stiffness/Damping) and the P-Y curve, then
 !      some of these will need to be added.  Leaving this as a placeholder for the moment.
-!SUBROUTINE SoilDyn_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrStat, ErrMsg )
-!SUBROUTINE SoilDyn_UpdateDiscState( t, n, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
-!SUBROUTINE SoilDyn_CalcConstrStateResidual( t, u, p, x, xd, z, OtherState, m, Z_residual, ErrStat, ErrMsg )
-!SUBROUTINE SoilDyn_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu)
-!SUBROUTINE SoilDyn_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdx, dXdx, dXddx, dZdx )
-!SUBROUTINE SoilDyn_JacobianPDiscState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdxd, dXdxd, dXddxd, dZdxd )
-!SUBROUTINE SoilDyn_JacobianPConstrState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdz, dXdz, dXddz, dZdz )
-!SUBROUTINE SoilDyn_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op, y_op, x_op, dx_op, xd_op, z_op )
+!SUBROUTINE SlD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrStat, ErrMsg )
+!SUBROUTINE SlD_UpdateDiscState( t, n, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
+!SUBROUTINE SlD_CalcConstrStateResidual( t, u, p, x, xd, z, OtherState, m, Z_residual, ErrStat, ErrMsg )
+!SUBROUTINE SlD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu)
+!SUBROUTINE SlD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdx, dXdx, dXddx, dZdx )
+!SUBROUTINE SlD_JacobianPDiscState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdxd, dXdxd, dXddxd, dZdxd )
+!SUBROUTINE SlD_JacobianPConstrState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdz, dXdz, dXddz, dZdz )
+!SUBROUTINE SlD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op, y_op, x_op, dx_op, xd_op, z_op )

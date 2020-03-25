@@ -202,7 +202,7 @@ CONTAINS
 !====================================================================================================
 !>  This public subroutine reads the input required for SoilDyn from the file whose name is an
 !!     input parameter.
-subroutine SoilDyn_ReadInput( InputFileName, EchoFileName, InputFileData, ErrStat, ErrMsg )
+subroutine SlD_ReadInput( InputFileName, EchoFileName, InputFileData, ErrStat, ErrMsg )
 
    character(*),                       intent(in   )  :: InputFileName        !< name of the input file
    character(*),                       intent(in   )  :: EchoFileName         !< name of the echo file
@@ -223,7 +223,7 @@ subroutine SoilDyn_ReadInput( InputFileName, EchoFileName, InputFileData, ErrSta
    integer(IntKi)                                     :: IOS                  !< Temporary error status
    character(ErrMsgLen)                               :: TmpErrMsg            !< Temporary error message
    character(1024)                                    :: PriPath              !< Path name of the primary file
-   character(*),                       PARAMETER      :: RoutineName="SoilDyn_ReadInput"
+   character(*),                       PARAMETER      :: RoutineName="SlD_ReadInput"
 
 
       ! Initialize local data
@@ -439,7 +439,7 @@ subroutine SoilDyn_ReadInput( InputFileName, EchoFileName, InputFileData, ErrSta
             end if
          end subroutine Cleanup
 
-END SUBROUTINE SoilDyn_ReadInput
+END SUBROUTINE SlD_ReadInput
 
 
 !====================================================================================================
@@ -453,7 +453,7 @@ END SUBROUTINE SoilDyn_ReadInput
 !  The reason for structuring it this way is to allow for relocating the validation routines for the
 !  wind type into their respective modules. It might also prove useful later if we change languages
 !  but retain the fortran wind modules.
-SUBROUTINE SoilDyn_ValidateInput( InitInp, InputFileData, ErrStat, ErrMsg )
+SUBROUTINE SlD_ValidateInput( InitInp, InputFileData, ErrStat, ErrMsg )
    TYPE(SlD_InitInputType),            INTENT(IN   )  :: InitInp              !< Input data for initialization
    TYPE(SlD_InputFile),                INTENT(INOUT)  :: InputFileData        !< The data for initialization
    INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat              !< Error status  from this subroutine
@@ -461,7 +461,7 @@ SUBROUTINE SoilDyn_ValidateInput( InitInp, InputFileData, ErrStat, ErrMsg )
    INTEGER(IntKi)                                     :: TmpErrStat           !< Temporary error status  for subroutine and function calls
    CHARACTER(ErrMsgLen)                               :: TmpErrMsg            !< Temporary error message for subroutine and function calls
    INTEGER(IntKi)                                     :: I                    !< Generic counter
-   CHARACTER(*),                       PARAMETER      :: RoutineName="SoilDyn_ValidateInput"
+   CHARACTER(*),                       PARAMETER      :: RoutineName="SlD_ValidateInput"
 
       ! Initialize ErrStat
    ErrStat = ErrID_None
@@ -481,12 +481,12 @@ CONTAINS
       ! Placeholder
    end subroutine ValidateDLL
 
-END SUBROUTINE SoilDyn_ValidateInput
+END SUBROUTINE SlD_ValidateInput
 
 
 !====================================================================================================
 !> This private subroutine copies the info from the input file over to the parameters for SoilDyn.
-SUBROUTINE SoilDyn_SetParameters( InitInp, InputFileData, p, m, ErrStat, ErrMsg )
+SUBROUTINE SlD_SetParameters( InitInp, InputFileData, p, m, ErrStat, ErrMsg )
    TYPE(Sld_InitInputType),            INTENT(IN   )  :: InitInp              !< Input data for initialization
    TYPE(Sld_InputFile),                INTENT(INOUT)  :: InputFileData        !< The data for initialization
    TYPE(Sld_ParameterType),            INTENT(INOUT)  :: p                    !< The parameters for SoilDyn
@@ -496,13 +496,13 @@ SUBROUTINE SoilDyn_SetParameters( InitInp, InputFileData, p, m, ErrStat, ErrMsg 
    INTEGER(IntKi)                                     :: TmpErrStat           !< Temporary error status  for subroutine and function calls
    CHARACTER(ErrMsgLen)                               :: TmpErrMsg            !< Temporary error message for subroutine and function calls
    INTEGER(IntKi)                                     :: I                    !< Generic counter
-   CHARACTER(*),                       PARAMETER      :: RoutineName="SoilDyn_SetParameters"
+   CHARACTER(*),                       PARAMETER      :: RoutineName="SlD_SetParameters"
 
       ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-END SUBROUTINE SoilDyn_SetParameters
+END SUBROUTINE SlD_SetParameters
 
 
 
@@ -701,7 +701,7 @@ END SUBROUTINE SetOutParam
 
 
 !====================================================================================================
-SUBROUTINE SoilDyn_OpenSumFile( SumFileUnit, SummaryName, IfW_Prog, WindType, ErrStat, ErrMsg )
+SUBROUTINE SlD_OpenSumFile( SumFileUnit, SummaryName, IfW_Prog, WindType, ErrStat, ErrMsg )
    INTEGER(IntKi),                  INTENT(  OUT)  :: SumFileUnit    !< the unit number for the SoilDynsummary file
    CHARACTER(*),                    INTENT(IN   )  :: SummaryName    !< the name of the SoilDyn summary file
    TYPE(ProgDesc),                  INTENT(IN   )  :: IfW_Prog       !< the name/version/date of the SoilDyn program
@@ -727,9 +727,9 @@ SUBROUTINE SoilDyn_OpenSumFile( SumFileUnit, SummaryName, IfW_Prog, WindType, Er
       CALL SetErrStat(ErrID_Fatal,'Error writing to summary file.',ErrStat,ErrMsg,'')
       RETURN
    END IF
-END SUBROUTINE SoilDyn_OpenSumFile
+END SUBROUTINE SlD_OpenSumFile
 !====================================================================================================
-SUBROUTINE SoilDyn_CloseSumFile( SumFileUnit, ErrStat, ErrMsg )
+SUBROUTINE SlD_CloseSumFile( SumFileUnit, ErrStat, ErrMsg )
    INTEGER(IntKi),                  INTENT(INOUT)  :: SumFileUnit    !< the unit number for the SoilDynsummary file
    INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat        !< returns a non-zero value when an error occurs
    CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
@@ -751,7 +751,7 @@ SUBROUTINE SoilDyn_CloseSumFile( SumFileUnit, ErrStat, ErrMsg )
       CLOSE( SumFileUnit, IOSTAT=TmpErrStat )
       IF (TmpErrStat /= 0_IntKi)    CALL SetErrStat( ErrID_Fatal, 'Problem closing the SoilDyn summary file.', ErrStat, ErrMsg, '' )
    END IF
-END SUBROUTINE SoilDyn_CloseSumFile
+END SUBROUTINE SlD_CloseSumFile
 !====================================================================================================
 
 !> Set the output channels
