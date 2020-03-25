@@ -900,10 +900,38 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
    ! ........................
    ALLOCATE( SlD%Input( p_FAST%InterpOrder+1 ), SlD%InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat2 )
       IF (ErrStat2 /= 0) THEN
-         CALL SetErrStat(ErrID_Fatal,"Error allocating SD%Input and SD%InputTimes.",ErrStat,ErrMsg,RoutineName)
+         CALL SetErrStat(ErrID_Fatal,"Error allocating SlD%Input and SlD%InputTimes.",ErrStat,ErrMsg,RoutineName)
          CALL Cleanup()
          RETURN
       END IF
+
+  IF ( p_FAST%CompSoil == Module_SlD .and. p_FAST%CompSub == Module_SD ) THEN
+
+      IF ( p_FAST%CompHydro == Module_HD ) THEN
+         InitInData_SlD%WtrDpth = InitOutData_HD%WtrDpth
+      ELSE
+         InitInData_SlD%WtrDpth = 0.0_ReKi
+      END IF
+
+      !InitInData_SlD%UseInputFile   = .TRUE.
+      InitInData_SlD%InputFile      = p_FAST%SoilFile
+      InitInData_SlD%RootName       = p_FAST%OutFileRoot
+      InitInData_SlD%SubRotateZ     = InitInData_SD%SubRotateZ    ! rotation angle of subdyn.  Since we link to SD nodes, rotate SlD accordingly
+
+      CALL SlD_Init( InitInData_SlD, SlD%Input(1), SlD%p,  SlD%x(STATE_CURR), SlD%xd(STATE_CURR), SlD%z(STATE_CURR),  &
+                    SlD%OtherSt(STATE_CURR), SlD%y, SlD%m, p_FAST%dt_module( MODULE_SlD ), InitOutData_SlD, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+      p_FAST%ModuleInitialized(Module_SlD) = .TRUE.
+      CALL SetModuleSubstepTime(Module_SlD, p_FAST, y_FAST, ErrStat2, ErrMsg2)
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+      IF (ErrStat >= AbortErrLev) THEN
+         CALL Cleanup()
+         RETURN
+      END IF
+      ! Add interfaces as we develop them.
+   END IF
 
    ! ------------------------------
    ! initialize CompMooring modules 
@@ -1715,6 +1743,7 @@ SUBROUTINE ValidateInputData(p, ErrStat, ErrMsg)
    IF (p%CompSub     == Module_Unknown) CALL SetErrStat( ErrID_Fatal, 'CompSub must be 0 (None), 1 (SubDyn), or 2 (ExtPtfm_MCKF).', ErrStat, ErrMsg, RoutineName )
    IF (p%CompMooring == Module_Unknown) CALL SetErrStat( ErrID_Fatal, 'CompMooring must be 0 (None), 1 (MAP), 2 (FEAMooring), 3 (MoorDyn), or 4 (OrcaFlex).', ErrStat, ErrMsg, RoutineName )
    IF (p%CompIce     == Module_Unknown) CALL SetErrStat( ErrID_Fatal, 'CompIce must be 0 (None) or 1 (IceFloe).', ErrStat, ErrMsg, RoutineName )
+   IF (p%CompSoil    == Module_Unknown) CALL SetErrStat( ErrID_Fatal, 'CompSoil must be 0 (None) or 1 (coupled to SubDyn).', ErrStat, ErrMsg, RoutineName )
    IF (p%CompHydro /= Module_HD) THEN
       IF (p%CompMooring == Module_MAP) THEN
          CALL SetErrStat( ErrID_Fatal, 'HydroDyn must be used when MAP is used. Set CompHydro > 0 or CompMooring = 0 in the FAST input file.', ErrStat, ErrMsg, RoutineName )
@@ -1735,7 +1764,8 @@ SUBROUTINE ValidateInputData(p, ErrStat, ErrMsg)
       IF (p%CompHydro /= Module_HD) CALL SetErrStat( ErrID_Fatal, 'HydroDyn must be used when IceDyn is used. Set CompHydro > 0 or CompIce = 0 in the FAST input file.', ErrStat, ErrMsg, RoutineName )
    END IF
    
-   IF (p%CompElast == Module_BD .and. p%CompAero == Module_AD14 ) CALL SetErrStat( ErrID_Fatal, 'AeroDyn14 cannot be used when BeamDyn is used. Change CompAero or CompElast in the FAST input file.', ErrStat, ErrMsg, RoutineName )
+   IF (p%CompElast == Module_BD .and.       p%CompAero == Module_AD14 ) CALL SetErrStat( ErrID_Fatal, 'AeroDyn14 cannot be used when BeamDyn is used. Change CompAero or CompElast in the FAST input file.', ErrStat, ErrMsg, RoutineName )
+   IF (p%CompSoil == Module_SlD .and. .not. p%CompSub  == Module_SD   ) CALL SetErrStat( ErrID_Fatal, 'SoilDyn cannot be used without SubDyn.  Change CompSub or CompSoil in the FAST input file.', ErrStat, ErrMsg, RoutineName )
    
 !   IF ( p%InterpOrder < 0 .OR. p%InterpOrder > 2 ) THEN
    IF ( p%InterpOrder < 1 .OR. p%InterpOrder > 2 ) THEN
