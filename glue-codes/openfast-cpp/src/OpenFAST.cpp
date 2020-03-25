@@ -3,7 +3,7 @@
 #include <fstream>
 #include <cmath>
 #include <algorithm>
-#include <assert.h>
+#include <cassert>
 
 int fast::OpenFAST::AbortErrLev = ErrID_Fatal; // abort error level; compare with NWTC Library
 
