@@ -453,9 +453,6 @@ void fast::OpenFAST::getApproxHubPos(double* currentCoords, int iTurbGlob, int n
   }
 }
 
-void fast::OpenFAST::getApproxHubPos(std::vector<double>& currentCoords, int iTurbGlob) {
-  fast::OpenFAST::getApproxHubPos(currentCoords.data(), iTurbGlob, currentCoords.size());
-}
 
 void fast::OpenFAST::getHubPos(double* currentCoords, int iTurbGlob, int nSize) {
 
@@ -468,10 +465,6 @@ void fast::OpenFAST::getHubPos(double* currentCoords, int iTurbGlob, int nSize) 
   
 }
 
-void fast::OpenFAST::getHubPos(std::vector<double> & currentCoords, int iTurbGlob) {
-  fast::OpenFAST::getHubPos(currentCoords.data(), iTurbGlob, currentCoords.size());
-}
-
 void fast::OpenFAST::getHubShftDir(double* hubShftVec, int iTurbGlob, int nSize) {
 
   assert(nSize==3);
@@ -480,10 +473,6 @@ void fast::OpenFAST::getHubShftDir(double* hubShftVec, int iTurbGlob, int nSize)
   for(int i=0; i<nSize; i++){
     hubShftVec[i] = cDriver_Input_from_FAST[iTurbLoc].pOrientation[i*3] ;
   }
-}
-
-void fast::OpenFAST::getHubShftDir(std::vector<double> & hubShftVec, int iTurbGlob) {
-  fast::OpenFAST::getHubShftDir(hubShftVec.data(), iTurbGlob, hubShftVec.size());
 }
 
 
@@ -499,10 +488,6 @@ void fast::OpenFAST::getVelNodeCoordinates(double* currentCoords, int iNode, int
   
 }
 
-void fast::OpenFAST::getVelNodeCoordinates(std::vector<double> & currentCoords, int iNode, int iTurbGlob) {
-  fast::OpenFAST::getVelNodeCoordinates(currentCoords.data(), iNode, iTurbGlob, currentCoords.size());
-}
-
 void fast::OpenFAST::getForceNodeCoordinates(double* currentCoords, int iNode, int iTurbGlob, int nSize) {
 
   assert(nSize==3);
@@ -512,10 +497,6 @@ void fast::OpenFAST::getForceNodeCoordinates(double* currentCoords, int iNode, i
   currentCoords[1] = cDriver_Input_from_FAST[iTurbLoc].pyForce[iNode] + TurbineBasePos[iTurbLoc][1] ;
   currentCoords[2] = cDriver_Input_from_FAST[iTurbLoc].pzForce[iNode] + TurbineBasePos[iTurbLoc][2] ;
 
-}
-
-void fast::OpenFAST::getForceNodeCoordinates(std::vector<double> & currentCoords, int iNode, int iTurbGlob) {
-  fast::OpenFAST::getForceNodeCoordinates(currentCoords.data(), iNode, iTurbGlob, currentCoords.size());
 }
 
 void fast::OpenFAST::getForceNodeOrientation(double* currentOrientation, int iNode, int iTurbGlob, int nSize) {
@@ -530,10 +511,6 @@ void fast::OpenFAST::getForceNodeOrientation(double* currentOrientation, int iNo
 
 }
 
-void fast::OpenFAST::getForceNodeOrientation(std::vector<double> & currentOrientation, int iNode, int iTurbGlob) {
-  fast::OpenFAST::getForceNodeOrientation(currentOrientation.data(), iNode, iTurbGlob, currentOrientation.size());
-}
-
 void fast::OpenFAST::getRelativeVelForceNode(double* currentVelocity, int iNode, int iTurbGlob, int nSize) {
 
   assert(nSize==3);
@@ -544,10 +521,6 @@ void fast::OpenFAST::getRelativeVelForceNode(double* currentVelocity, int iNode,
   currentVelocity[0] = forceNodeVel[iTurbLoc][iNode][0] - cDriver_Input_from_FAST[iTurbLoc].xdotForce[iNode];
   currentVelocity[1] = forceNodeVel[iTurbLoc][iNode][1] - cDriver_Input_from_FAST[iTurbLoc].ydotForce[iNode];
   currentVelocity[2] = forceNodeVel[iTurbLoc][iNode][2] - cDriver_Input_from_FAST[iTurbLoc].zdotForce[iNode];
-}
-
-void fast::OpenFAST::getRelativeVelForceNode(std::vector<double> & currentVelocity, int iNode, int iTurbGlob) {
-  fast::OpenFAST::getRelativeVelForceNode(currentVelocity.data(), iNode, iTurbGlob, currentVelocity.size());
 }
 
 
@@ -561,10 +534,6 @@ void fast::OpenFAST::getForce(double* currentForce, int iNode, int iTurbGlob, in
   currentForce[1] = -cDriver_Input_from_FAST[iTurbLoc].fy[iNode] ;
   currentForce[2] = -cDriver_Input_from_FAST[iTurbLoc].fz[iNode] ;
 
-}
-
-void fast::OpenFAST::getForce(std::vector<double> & currentForce, int iNode, int iTurbGlob) {
-  fast::OpenFAST::getForce(currentForce.data(), iNode, iTurbGlob, currentForce.size());
 }
 
 double fast::OpenFAST::getChord(int iNode, int iTurbGlob) {
@@ -587,10 +556,6 @@ void fast::OpenFAST::setVelocity(double* currentVelocity, int iNode, int iTurbGl
   cDriver_Output_to_FAST[iTurbLoc].w[iNode] = currentVelocity[2];
 }
 
-void fast::OpenFAST::setVelocity(std::vector<double> & currentVelocity, int iNode, int iTurbGlob) {
-  fast::OpenFAST::setVelocity(currentVelocity.data(), iNode, iTurbGlob, currentVelocity.size());
-}
-
 void fast::OpenFAST::setVelocityForceNode(double* currentVelocity, int iNode, int iTurbGlob, int nSize) {
 
   assert(nSize==3);
@@ -601,10 +566,6 @@ void fast::OpenFAST::setVelocityForceNode(double* currentVelocity, int iNode, in
   for(int i=0; i<nSize; ++i){
     forceNodeVel[iTurbLoc][iNode][i] = currentVelocity[i];
   }
-}
-
-void fast::OpenFAST::setVelocityForceNode(std::vector<double> & currentVelocity, int iNode, int iTurbGlob) {
-  fast::OpenFAST::setVelocityForceNode(currentVelocity.data(), iNode, iTurbGlob, currentVelocity.size());
 }
 
 void fast::OpenFAST::interpolateVel_ForceToVelNodes() {
