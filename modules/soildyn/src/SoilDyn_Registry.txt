@@ -65,9 +65,9 @@ typedef  ^     InitInputType  CHARACTER(1024)      RootName       - - -         
 typedef  ^     InitInputType  LOGICAL              Linearize      - .FALSE. -    "Flag that tells this module if the glue code wants to linearize." -
 typedef  ^     InitInputType  ReKi                 WtrDpth        - - -          "Water depth to mudline (global coordinates)" '(m)'
 typedef  ^     InitInputType  ReKi                 SubRotateZ     - - -          "Substructure rotation angle, in case we change orientations" '(rad)'
-typedef  ^     InitInputType  IntKi                nNodes_R       - - -          "Number of nodes subdyn thinks are reaction nodes (from SubDyn nNodes_C)" -
-typedef  ^     InitInputType  IntKi                Nodes_R        {:} - -        "Nodes in input mesh that reaction force may be applied to (note: p%Nodes_C in SD has 2 dimensions in the old format, but only 1 in new)" '(-)'
-typedef  ^     InitInputType  MeshType             StructMesh     - - -          "Interior+Interface nodes outputs on a point mesh (from SD) -- only some are used!" '(-)'
+#typedef  ^     InitInputType  IntKi                nNodes_R       - - -          "Number of nodes subdyn thinks are reaction nodes (from SubDyn nNodes_C)" -
+#typedef  ^     InitInputType  IntKi                Nodes_R        {:} - -        "Nodes in input mesh that reaction force may be applied to (note: p%Nodes_C in SD has 2 dimensions in the old format, but only 1 in new)" '(-)'
+#typedef  ^     InitInputType  MeshType             SoilMesh       - - -          "Interior+Interface nodes outputs on a point mesh (from SD) -- only some are used!" '(-)'
 
 # Define outputs from the initialization routine here:
 typedef   ^               InitOutputType CHARACTER(ChanLen)    WriteOutputHdr  {:} - -   "Names of the output-to-file channels" -
@@ -126,10 +126,10 @@ typedef  ^              ParameterType     ReKi              WtrDepth            
 typedef  ^              ParameterType     IntKi             Nodes_C         {:}{:} - - "Nodes in input mesh that reaction force may be applied to" '(-)'
 
 # ..... Inputs ....................................................................................................................
-typedef  ^              InputType         MeshType          SoilMotion           - - - "Mesh of soil contact points" -
+typedef  ^              InputType         MeshType          SoilMesh             - - - "Mesh of soil contact points" -
 
 # ..... Outputs ...................................................................................................................
 typedef  ^              OutputType        ReKi              DummyOutput          -  - -   "Remove this variable if you have output data" -
-typedef  ^              OutputType        ReKi              WriteOutput          {:} - -   "Example of data to be written to an output file" "s,-"
-typedef  ^              OutputType        MeshType          ReactionForce        - - - "reaction forces and moments point mesh (may be multiple points)" -
+typedef  ^              OutputType        ReKi              WriteOutput          {:} - -  "Example of data to be written to an output file" "s,-"
+typedef  ^              OutputType        MeshType          SoilMesh             - - -    "reaction forces and moments point mesh (may be multiple points)" -
 

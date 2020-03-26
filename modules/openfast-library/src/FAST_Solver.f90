@@ -4302,9 +4302,24 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, M
       END DO
                         
    END IF   ! SubDyn-IceFloe
-      
-   IF (ErrStat >= AbortErrLev ) RETURN   
-      
+
+!-------------------------
+!  SubDyn <-> SoilDyn
+!-------------------------
+
+   IF ( p_FAST%CompSoil == Module_SlD ) THEN
+
+         ! SoilDyn output SoilMesh point mesh to SubDyn input LMesh point mesh
+      CALL MeshMapCreate( SlD%y%SoilMesh, SD%Input(1)%LMesh,  MeshMapData%SlD_P_2_SD_P, ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':SlD_P_2_SD_P' )
+         ! SubDyn output y2Mesh point mesh to SoilDyn input SoilMesh point mesh
+      CALL MeshMapCreate( SD%y%y2Mesh, SlD%Input(1)%SoilMesh,  MeshMapData%SD_P_2_SlD_P, ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':SD_P_2_SlD_P' )
+
+   END IF   ! SubDyn-SoilDyn
+
+   IF (ErrStat >= AbortErrLev ) RETURN
+
    !............................................................................................................................
    ! Initialize the Jacobian structures:
    !............................................................................................................................

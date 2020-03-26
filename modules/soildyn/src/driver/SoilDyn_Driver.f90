@@ -307,15 +307,15 @@ PROGRAM SoilDyn_Driver
 
          ! interpolate into the input data to get the displacement.  Set this as u then run
       if ( SettingsFlags%InputDispFile ) then
-         do i=1,u(1)%SoilMotion%NNodes
+         do i=1,u(1)%SoilMesh%NNodes
             ! InterpStpReal( X, Xary, Yary, indx, size)
             do DimIdx=1,3
-               u(1)%SoilMotion%TranslationDisp(DimIdx,i) =  InterpStpReal8( real(Time,R8Ki), DisplacementList(:,1), DisplacementList(:,DimIdx+1), TmpIdx(DimIdx), size(DisplacementList,1) )
+               u(1)%SoilMesh%TranslationDisp(DimIdx,i) =  InterpStpReal8( real(Time,R8Ki), DisplacementList(:,1), DisplacementList(:,DimIdx+1), TmpIdx(DimIdx), size(DisplacementList,1) )
             enddo
             do DimIdx=1,3
                Theta(DimIdx) =  InterpStpReal8( real(Time,R8Ki), DisplacementList(:,1), DisplacementList(:,DimIdx+4), TmpIdx(DimIdx), size(DisplacementList,1) )
             enddo
-            u(1)%SoilMotion%Orientation(1:3,1:3,i) = EulerConstruct(Theta)
+            u(1)%SoilMesh%Orientation(1:3,1:3,i) = EulerConstruct(Theta)
          enddo
       endif
 
@@ -338,8 +338,8 @@ PROGRAM SoilDyn_Driver
    if ( SettingsFlags%StiffMatOut .and. p%CalcOption==Calc_REDWIN ) then
       do i=1,size(misc%dll_data)
             ! Copy displacement from point mesh
-         Displacement(1:3) = u(1)%SoilMotion%TranslationDisp(1:3,i)                    ! Translations -- This is R8Ki in the mesh
-         Displacement(4:6) = EulerExtract(u(1)%SoilMotion%Orientation(1:3,1:3,i))      ! Small angle assumption should be valid here -- Note we are assuming reforientation is 0
+         Displacement(1:3) = u(1)%SoilMesh%TranslationDisp(1:3,i)                    ! Translations -- This is R8Ki in the mesh
+         Displacement(4:6) = EulerExtract(u(1)%SoilMesh%Orientation(1:3,1:3,i))      ! Small angle assumption should be valid here -- Note we are assuming reforientation is 0
          call REDWINinterface_GetStiffMatrix( p%DLL_Trgt, p%DLL_Model, Displacement, Force, StiffMatrix, misc%dll_data(i), ErrStat, ErrMsg )
          IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
             CALL WrScr( 'Get stiffness: '//ErrMsg )

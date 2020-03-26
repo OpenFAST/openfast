@@ -228,10 +228,6 @@ contains
       real(ReKi)                                :: Pos(3)
       real(ReKi),                allocatable    :: MeshLocations(:,:)
 
-!FIXME: change u%SoilMotion to be a sibling of the passed in mesh.  Not all points on passed in mesh will be used
-!  nNodes_C should match NumPoints read in
-!  step through to find all the points we are using and make sure they match something on the available reaction nodes.
-!  create mapping index of nodes (set order as needed)
       select case(p%CalcOption)
          case (Calc_StiffDamp)
             p%NumPoints =  1_IntKi
@@ -256,10 +252,10 @@ contains
       end select
 
       !.................................
-      ! u%SoilMotion (for coupling with external codes)
+      ! u%SoilMesh (for coupling with external codes)
       !.................................
 
-      CALL MeshCreate(  BlankMesh         = u%SoilMotion          &
+      CALL MeshCreate(  BlankMesh         = u%SoilMesh          &
                      ,  IOS               = COMPONENT_INPUT       &
                      ,  NNodes            = p%NumPoints             &
                      ,  TranslationDisp   = .TRUE.                &
@@ -277,7 +273,7 @@ contains
       DCM = 0.0_DbKi
 
       do i=1,p%NumPoints
-         CALL MeshPositionNode( Mesh    = u%SoilMotion            &
+         CALL MeshPositionNode( Mesh    = u%SoilMesh            &
                               , INode   = i                       &
                               , Pos     = MeshLocations(1:3,i)    &
                               , ErrStat = ErrStat2                &
@@ -285,7 +281,7 @@ contains
                               , Orient  = DCM                     )
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-         CALL MeshConstructElement  ( Mesh     = u%SoilMotion       &
+         CALL MeshConstructElement  ( Mesh     = u%SoilMesh       &
                                     , Xelement = ELEMENT_POINT      &
                                     , P1       = i                  &
                                     , ErrStat  = ErrStat2           &
@@ -293,17 +289,17 @@ contains
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       enddo
 
-      CALL MeshCommit ( Mesh = u%SoilMotion, ErrStat = ErrStat2,  ErrMess = ErrMsg2 )
+      CALL MeshCommit ( Mesh = u%SoilMesh, ErrStat = ErrStat2,  ErrMess = ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          if (ErrStat>=AbortErrLev) return
 
 
    !.................................
-   ! y%ReactionForce (for coupling with external codes)
+   ! y%SoilMesh (for coupling with external codes)
    !.................................
 
-   CALL MeshCopy( SrcMesh   = u%SoilMotion     &
-                 , DestMesh = y%ReactionForce  &
+   CALL MeshCopy( SrcMesh   = u%SoilMesh     &
+                 , DestMesh = y%SoilMesh  &
                  , CtrlCode = MESH_SIBLING     &
                  , IOS      = COMPONENT_OUTPUT &
                  , Force    = .TRUE.           &
@@ -474,13 +470,13 @@ subroutine SlD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg 
    do i=1,size(m%dll_data)
 
       ! Copy displacement from point mesh (angles in radians -- REDWIN dll also uses rad)
-      Displacement(1:3) = u%SoilMotion%TranslationDisp(1:3,i)                 ! Translations -- This is R8Ki in the mesh
-      Displacement(4:6) = EulerExtract(u%SoilMotion%Orientation(1:3,1:3,i))   ! Small angle assumption should be valid here -- Note we are assuming reforientation is 0
+      Displacement(1:3) = u%SoilMesh%TranslationDisp(1:3,i)                 ! Translations -- This is R8Ki in the mesh
+      Displacement(4:6) = EulerExtract(u%SoilMesh%Orientation(1:3,1:3,i))   ! Small angle assumption should be valid here -- Note we are assuming reforientation is 0
       call    REDWINinterface_CalcOutput( p%DLL_Trgt, p%DLL_Model, Displacement, Force, m%dll_data(i), ErrStat2, ErrMsg2 ); if (Failed()) return;
 
       ! Return force onto the resulting point mesh
-      y%ReactionForce%Force (1:3,i)    = real(Force(1:3),ReKi)
-      y%ReactionForce%Moment(1:3,i)    = real(Force(4:6),ReKi)
+      y%SoilMesh%Force (1:3,i)    = real(Force(1:3),ReKi)
+      y%SoilMesh%Moment(1:3,i)    = real(Force(4:6),ReKi)
    enddo
 
       ! Outputs

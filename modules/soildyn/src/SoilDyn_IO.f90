@@ -782,22 +782,22 @@ subroutine SlD_WriteOutput(p, AllOuts, u, y, m, ErrStat, ErrMsg )
    do i=1,p%NumPoints
          ! Forces
       do j=1,3
-         AllOuts( SoilPtF(j  ,i) )  =  y%ReactionForce%Force(j,i)
+         AllOuts( SoilPtF(j  ,i) )  =  y%SoilMesh%Force(j,i)
       enddo
 
          ! Moments
       do j=1,3
-         AllOuts( SoilPtF(j+3,i) )  =  y%ReactionForce%Moment(j,i)
+         AllOuts( SoilPtF(j+3,i) )  =  y%SoilMesh%Moment(j,i)
       enddo
 
          ! Translation displacement
       do j=1,3
-         AllOuts( SoilPtD(j  ,i) )  =  u%SoilMotion%TranslationDisp(j,i)
+         AllOuts( SoilPtD(j  ,i) )  =  u%SoilMesh%TranslationDisp(j,i)
       enddo
 
          ! We have defined the referene orientatation aligned with XYZ, so we don't need as much math here.
-         ! Small angle assumption must be valid for computations in this module, so Euler extract is sufficient
-      Theta =  real( EulerExtract(u%SoilMotion%Orientation(1:3,1:3,i)), ReKi)       ! orientations are double
+         ! Small angle assumption must be valid for computations in this module, so GetSmllRotAngs extract is sufficient
+      Theta =  real( GetSmllRotAngs(u%SoilMesh%Orientation(1:3,1:3,i)), ReKi)       ! orientations are double
       do j=1,3
          AllOuts( SoilPtD(j+3,i) )  =  Theta(j)
       enddo
