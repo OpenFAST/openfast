@@ -1555,12 +1555,14 @@ CONTAINS
          CALL DispCopyrightLicense( ProgName )
          CALL DispCompileRuntimeInfo
          CALL NWTC_DisplaySyntax( Arg1, ProgName )
+         IF ( PRESENT( ErrStat ) ) ErrStat = ErrID_None
          CALL CLEANUP()
          RETURN
 
       CASE ('V', 'VERSION')
          CALL DispCopyrightLicense( ProgName )
          CALL DispCompileRuntimeInfo
+         IF ( PRESENT( ErrStat ) ) ErrStat = ErrID_None
          CALL CLEANUP()
          RETURN
 
@@ -1600,12 +1602,11 @@ CONTAINS
 
          CHARACTER(*), INTENT(IN) :: ErrorMessage
 
+         CALL DispCopyrightLicense( ProgName )
+         CALL DispCompileRuntimeInfo
          CALL NWTC_DisplaySyntax( Arg1, ProgName )
          CALL ProgAbort( ' Invalid syntax: '//TRIM(ErrorMessage), PRESENT(ErrStat) )
-         IF ( PRESENT(ErrStat) ) THEN
-            ErrStat = ErrID_Fatal
-            RETURN
-         END IF
+         IF ( PRESENT(ErrStat) ) ErrStat = ErrID_Fatal
 
       END SUBROUTINE
 
