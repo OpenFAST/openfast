@@ -84,6 +84,7 @@ INTEGER(IntKi)                   :: ErrStat                 ! allocation status
 CHARACTER(MaxMsgLen)             :: ErrMsg                  ! error message
 CHARACTER(200)                   :: InFile                  ! Name of the TurbSim input file.
 CHARACTER(200)                   :: git_commit              ! String containing the current git commit hash
+CHARACTER(20)                    :: FlagArg                 ! flag argument from command line
 
 
 !BONNIE:*****************************
@@ -95,6 +96,10 @@ p%US = -1
    ! ... Initialize NWTC Library (open console, set pi constants) ...
 CALL NWTC_Init( ProgNameIN=TurbSim_Ver%Name, EchoLibVer=.FALSE. )       
 
+   ! Check for command line arguments.
+InFile = 'TurbSim.inp'  ! default name for input file
+CALL CheckArgs( InFile, Flag=FlagArg )
+IF ( LEN( TRIM(FlagArg) ) > 0 ) CALL NormStop()
 
    ! Print out program name, version, and date.
 
@@ -104,10 +109,6 @@ CALL NWTC_Init( ProgNameIN=TurbSim_Ver%Name, EchoLibVer=.FALSE. )
    git_commit = QueryGitVersion()
       ! Tell our users what they're running
    CALL WrScr( ' Running '//TRIM( TurbSim_Ver%Name )//' a part of OpenFAST - '//TRIM(git_Commit)//NewLine//' linked with '//TRIM( NWTC_Ver%Name )//NewLine )
-
-   ! Check for command line arguments.
-InFile = 'TurbSim.inp'  ! default name for input file
-CALL CheckArgs( InFile )
 
 CALL GetRoot( InFile, p%RootName )
 
