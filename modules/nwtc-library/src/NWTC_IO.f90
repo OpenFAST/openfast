@@ -1488,7 +1488,7 @@ CONTAINS
 
       ! Local declarations:
    INTEGER                                    :: I, J          ! Iterator variables
-   CHARACTER(1024)                            :: Arg
+   CHARACTER(1024)                            :: Arg, FlagIter
    CHARACTER(1024), DIMENSION(:), ALLOCATABLE :: ArgArray, TempArray, Flags
    LOGICAL :: FirstArgumentSet, SecondArgumentSet
 
@@ -1545,10 +1545,11 @@ CONTAINS
 
    DO I = 1, SIZE(Flags)
 
-      Flag = Flags(I)(2:) ! This results in the flag without the switch character
-      CALL Conv2UC( Flag )
+      FlagIter = Flags(I)(2:) ! This results in the flag without the switch character
+      CALL Conv2UC( FlagIter )
+      IF ( PRESENT(Flag) ) Flag = FlagIter
 
-      SELECT CASE ( TRIM(Flag) )
+      SELECT CASE ( TRIM(FlagIter) )
 
       CASE ('H')
          CALL DispCopyrightLicense( ProgName )
@@ -1575,7 +1576,7 @@ CONTAINS
          END IF
 
       CASE DEFAULT
-         CALL INVALID_SYNTAX( 'unknown command-line argument given: '//TRIM(Flag) )
+         CALL INVALID_SYNTAX( 'unknown command-line argument given: '//TRIM(FlagIter) )
          CALL CLEANUP()
          RETURN
 
