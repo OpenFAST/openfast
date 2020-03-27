@@ -921,37 +921,6 @@ SUBROUTINE Transfer_SD_to_HD( y_SD, u_HD_M_LumpedMesh, u_HD_M_DistribMesh, MeshM
    
 END SUBROUTINE Transfer_SD_to_HD
 !----------------------------------------------------------------------------------------------------------------------------------
-!TODO:SlD check this routine
-!> This routine transfers the SD outputs into inputs required for SlD (SoilDyn)
-SUBROUTINE Transfer_SD_to_SlD( y_SD, u_SlD_SoilMotion, MeshMapData, ErrStat, ErrMsg )
-!..................................................................................................................................
-   TYPE(SD_OutputType),         INTENT(IN   ) :: y_SD                         !< The outputs of the structural dynamics module
-   TYPE(MeshType),              INTENT(INOUT) :: u_SlD_SoilMotion             !< HydroDyn input mesh (separated here so that we can use temp meshes in ED_SD_HD_InputSolve)
-   TYPE(FAST_ModuleMapType),    INTENT(INOUT) :: MeshMapData                  !< data for mapping meshes
-
-   INTEGER(IntKi),              INTENT(  OUT) :: ErrStat                      !< Error status of the operation
-   CHARACTER(*),                INTENT(  OUT) :: ErrMsg                       !< Error message if ErrStat /= ErrID_None
-
-      ! local variables
-   INTEGER(IntKi)                             :: ErrStat2                     ! temporary Error status of the operation
-   CHARACTER(ErrMsgLen)                       :: ErrMsg2                      ! temporary Error message if ErrStat /= ErrID_None
-
-
-   ErrStat = ErrID_None
-   ErrMsg = ""
-
-
-   ! Transfer point to point only for the SD%y2Mesh  (p%Nodes_C ones)
-!   IF ( u_SlD_SoiMotion%Committed ) THEN
-!
-!      ! These are the motions for the lumped point loads associated viscous drag on the WAMIT body and/or filled/flooded lumped forces of the WAMIT body
-!      CALL Transfer_Point_to_Point( y_SD%y2Mesh, u_HD_M_LumpedMesh, MeshMapData%SD_P_2_HD_M_P, ErrStat2, ErrMsg2 )
-!         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,'Transfer_SD_to_HD (u_HD%Morison%LumpedMesh)' )
-!
-!   END IF
-
-END SUBROUTINE Transfer_SD_to_SlD
-!----------------------------------------------------------------------------------------------------------------------------------
 !> This routine transfers the ED outputs into inputs required for HD
 SUBROUTINE Transfer_ED_to_HD( y_ED, u_HD, MeshMapData, ErrStat, ErrMsg )
 !..................................................................................................................................
@@ -1357,7 +1326,7 @@ END FUNCTION GetPerturb
 SUBROUTINE ED_HD_InputOutputSolve(  this_time, p_FAST, calcJacobian &
                                   , u_ED, p_ED, x_ED, xd_ED, z_ED, OtherSt_ED, y_ED, m_ED &
                                   , u_HD, p_HD, x_HD, xd_HD, z_HD, OtherSt_HD, y_HD, m_HD & 
-                                  , u_MAP, y_MAP, u_FEAM, y_FEAM, u_MD, y_MD & 
+                                  , u_MAP, y_MAP, u_FEAM, y_FEAM, u_MD, y_MD, u_SlD, y_SlD &
                                   , MeshMapData , ErrStat, ErrMsg )
 !..................................................................................................................................
 
@@ -1398,6 +1367,10 @@ SUBROUTINE ED_HD_InputOutputSolve(  this_time, p_FAST, calcJacobian &
    TYPE(MD_OutputType),               INTENT(IN   )  :: y_MD                      !< MoorDyn outputs
    TYPE(MD_InputType),                INTENT(INOUT)  :: u_MD                      !< MoorDyn inputs (INOUT just because I don't want to use another tempoarary mesh and we'll overwrite this later)
       
+      !SoilDyn:
+   TYPE(SlD_InputType)               , INTENT(INOUT) :: u_SlD                     !< System inputs
+   TYPE(SlD_OutputType)              , INTENT(INOUT) :: y_SlD                     !< System outputs
+
    TYPE(FAST_ModuleMapType)          , INTENT(INOUT) :: MeshMapData               !< data for mapping meshes between modules
    INTEGER(IntKi)                    , INTENT(  OUT) :: ErrStat                   !< Error status of the operation
    CHARACTER(*)                      , INTENT(  OUT) :: ErrMsg                    !< Error message if ErrStat /= ErrID_None
@@ -1825,7 +1798,7 @@ SUBROUTINE FullOpt1_InputOutputSolve( this_time, p_FAST, calcJacobian &
                                      , u_MD,   y_MD   & 
                                      , u_IceF, y_IceF & 
                                      , u_IceD, y_IceD & 
-                                     , u_SlD,    p_SlD,    x_SlD,    xd_SlD,    z_SlD,    OtherSt_SlD,    y_SlD,    m_SlD      & 
+                                     , u_SlD,  y_SlD  & 
                                      , MeshMapData , ErrStat, ErrMsg )
 !..................................................................................................................................
 
@@ -1872,16 +1845,6 @@ SUBROUTINE FullOpt1_InputOutputSolve( this_time, p_FAST, calcJacobian &
    TYPE(SD_OutputType)               , INTENT(INOUT) :: y_SD                      !< System outputs
    TYPE(SD_MiscVarType)              , INTENT(INOUT) :: m_SD                      !< misc/optimization variables
 
-      !SoilDyn:
-   TYPE(SlD_ContinuousStateType)     , INTENT(IN   ) :: x_SlD                     !< Continuous states
-   TYPE(SlD_DiscreteStateType)       , INTENT(IN   ) :: xd_SlD                    !< Discrete states
-   TYPE(SlD_ConstraintStateType)     , INTENT(IN   ) :: z_SlD                     !< Constraint states
-   TYPE(SlD_OtherStateType)          , INTENT(IN   ) :: OtherSt_SlD               !< Other states
-   TYPE(SlD_ParameterType)           , INTENT(IN   ) :: p_SlD                     !< Parameters
-   TYPE(SlD_InputType)               , INTENT(INOUT) :: u_SlD                     !< System inputs
-   TYPE(SlD_OutputType)              , INTENT(INOUT) :: y_SlD                     !< System outputs
-   TYPE(SlD_MiscVarType)             , INTENT(INOUT) :: m_SlD                     !< misc/optimization variables
-
       !ExtPtfm:
    TYPE(ExtPtfm_ContinuousStateType) , INTENT(IN   ) :: x_ExtPtfm                 !< Continuous states
    TYPE(ExtPtfm_DiscreteStateType)   , INTENT(IN   ) :: xd_ExtPtfm                !< Discrete states
@@ -1924,6 +1887,10 @@ SUBROUTINE FullOpt1_InputOutputSolve( this_time, p_FAST, calcJacobian &
    TYPE(IceFloe_InputType),           INTENT(INOUT)  :: u_IceF                    !< IceFloe inputs (INOUT just because I don't want to use another tempoarary mesh and we'll overwrite this later)
    TYPE(IceD_OutputType),             INTENT(IN   )  :: y_IceD(:)                 !< IceDyn outputs  
    TYPE(IceD_InputType),              INTENT(INOUT)  :: u_IceD(:)                 !< IceDyn inputs (INOUT just because I don't want to use another tempoarary mesh and we'll overwrite this later)
+
+      !SoilDyn:
+   TYPE(SlD_InputType)               , INTENT(INOUT) :: u_SlD                     !< System inputs
+   TYPE(SlD_OutputType)              , INTENT(INOUT) :: y_SlD                     !< System outputs
       
    TYPE(FAST_ModuleMapType)          , INTENT(INOUT) :: MeshMapData               !< data for mapping meshes between modules
    INTEGER(IntKi)                    , INTENT(  OUT) :: ErrStat                   !< Error status of the operation
@@ -2731,6 +2698,23 @@ CONTAINS
                CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)               
          
 
+      !..................
+      ! SoilDyn
+      !..................
+
+            if (p_FAST%CompSoil == Module_SlD .and. u_SlD%SoilMesh%Committed ) THEN
+               ! SD motions to SlD
+               CALL Transfer_Point_to_Point( y_SD%y2Mesh, u_SlD%SoilMesh, MeshMapData%SD_P_2_SlD_P, ErrStat2, ErrMsg2 )
+                  CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//'Transfer_SD_to_SlD (y_SD%y2Mesh -> u_SlD%SoilMesh)' )
+               ! SlD loads to SD
+               CALL Transfer_Point_to_Point( y_SlD%SoilMesh, MeshMapData%u_SD_LMesh_2, MeshMapData%SlD_P_2_SD_P, ErrStat2, ErrMsg2, u_SlD%SoilMesh, y_SD2%Y2Mesh )
+                  CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//'Transfer_SlD_to_SD (y_SlD%SoilMesh -> y_SD2%Y2Mesh)' )
+            endif !  SoilDyn
+
+
+      !..................
+      ! Ice
+      !..................
             IF ( p_FAST%CompIce == Module_IceF ) THEN
                
                ! SD loads from IceFloe:
@@ -4700,7 +4684,7 @@ SUBROUTINE SolveOption1(this_time, this_state, calcJacobian, p_FAST, ED, BD, HD,
           ,      MD%Input(1),     MD%y &   
           ,    IceF%Input(1),   IceF%y &
           ,    IceD%Input(1,:), IceD%y &    ! bjj: I don't really want to make temp copies of input types. perhaps we should pass the whole Input() structure? (likewise for BD)...
-          ,     SlD%Input(1),    SlD%p,    SlD%x(  this_state),    SlD%xd(  this_state),    SlD%z(  this_state),    SlD%OtherSt(  this_state),    SlD%y    ,SlD%m & 
+          ,     SlD%Input(1),    SlD%y &
           , MeshMapData , ErrStat2, ErrMsg2 )         
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                         
@@ -4709,8 +4693,8 @@ SUBROUTINE SolveOption1(this_time, this_state, calcJacobian, p_FAST, ED, BD, HD,
                                                     
       CALL ED_HD_InputOutputSolve(  this_time, p_FAST, calcJacobian &
                                     , ED%Input(1), ED%p, ED%x(this_state), ED%xd(this_state), ED%z(this_state), ED%OtherSt(this_state), ED%Output(1), ED%m &
-                                    , HD%Input(1), HD%p, HD%x(this_state), HD%xd(this_state), HD%z(this_state), HD%OtherSt(this_state), HD%y,         HD%m & 
-                                    , MAPp%Input(1), MAPp%y, FEAM%Input(1), FEAM%y, MD%Input(1), MD%y &          
+                                    , HD%Input(1), HD%p, HD%x(this_state), HD%xd(this_state), HD%z(this_state), HD%OtherSt(this_state), HD%y,         HD%m &
+                                    , MAPp%Input(1), MAPp%y, FEAM%Input(1), FEAM%y, MD%Input(1), MD%y, SlD%Input(1), SlD%y &
                                     , MeshMapData , ErrStat2, ErrMsg2 )         
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                                                                   
