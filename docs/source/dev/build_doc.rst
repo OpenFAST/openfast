@@ -27,6 +27,12 @@ file:
 Doxygen and Graphviz can be installed directly from their website or with a
 package manager like ``brew``, ``yum``, or ``apt``.
 
+The result of building the documentation locally will be a set of
+HTML files and their accompanying required files. The main HTML file
+will exist ``openfast/build/docs/html/index.html``. This file can
+be opened with any browser to view and navigate the locally-generated
+documentation as if it were any other web site.
+
 Pure python build
 ~~~~~~~~~~~~~~~~~
 If CMake and Make are not available on your system, the documentation can
