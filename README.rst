@@ -112,7 +112,7 @@ Details for compiling
 `compiling <http://openfast.readthedocs.io/en/latest/source/install/index.html>`_,
 `using <http://openfast.readthedocs.io/en/latest/source/user/index.html>`_, and
 `developing <http://openfast.readthedocs.io/en/latest/source/dev/index.html>`_
-OpenFAST on Unux-based and Windows machines are available at `readthedocs <http://openfast.readthedocs.io>`_.
+OpenFAST on Unix-based and Windows machines are available at `readthedocs <http://openfast.readthedocs.io>`_.
 
 Nightly Testing
 ---------------

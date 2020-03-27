@@ -18,8 +18,8 @@ FROM rafmudaf/openfast-ubuntu:dev
 
 # Move into the openfast directory and update
 WORKDIR /openfast
-RUN git fetch
-RUN git pull
+RUN git fetch origin ${GITHUB_REF}:CI
+RUN git checkout CI
 RUN git submodule update
 
 # Move into the "build" directory, remove the old reg tests, and compile
@@ -29,6 +29,9 @@ RUN cmake ..
 RUN make -j4 install
 
 # Run the tests
+
+# NWTC Library tests
+RUN ctest -VV -R nwtc_library_utest
 
 # BeamDyn-specific tests
 RUN ctest -VV -j7 -R bd_
