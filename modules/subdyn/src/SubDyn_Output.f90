@@ -103,7 +103,7 @@ SUBROUTINE SDOut_Init( Init, y,  p, misc, InitOut, WtrDpth, ErrStat, ErrMsg )
 
       ! NOTE: len(MemberNodes) >2 if nDiv>1
       iMember = FINDLOCI(Init%Members(:,1), pLst%MemberID) ! Reindexing from MemberID to 1:nMembers
-      pLst%NodeIDs=Init%MemberNodes(iMember,pLst%NodeCnt)  ! We are storing the actual node numbers corresponding to what the user ordinal number is requesting
+      pLst%NodeIDs(1:pLst%NoutCnt)=Init%MemberNodes(iMember, pLst%NodeCnt)  ! We are storing the actual node numbers corresponding to what the user ordinal number is requesting
       pLst%ElmIDs=0  !Initialize to 0
       pLst%ElmNds=0  !Initialize to 0
 
