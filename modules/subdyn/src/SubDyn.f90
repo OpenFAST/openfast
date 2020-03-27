@@ -1844,7 +1844,8 @@ SUBROUTINE EigenSolveWrap(K, M, nDOF, NOmega, bRemoveConstraints, Init, p, bChec
    ! LOCALS         
    REAL(LAKi), ALLOCATABLE                   :: Kred(:,:), Mred(:,:) 
    REAL(LAKi), ALLOCATABLE                   :: EigVect(:,:), Omega2_LaKi(:) 
-   INTEGER                                   :: N
+   REAL(ReKi)                                :: Om2
+   INTEGER(IntKi)                            :: N, i
    INTEGER(IntKi)                            :: ErrStat2
    CHARACTER(ErrMsgLen)                      :: ErrMsg2
    logical, allocatable                      :: bDOF(:)        ! Mask for DOF to keep (True), or reduce (False)
@@ -1881,7 +1882,15 @@ SUBROUTINE EigenSolveWrap(K, M, nDOF, NOmega, bRemoveConstraints, Init, p, bChec
    CALL EigenSolve(Kred, Mred, N, bCheckSingularity, EigVect, Omega2_LaKi, ErrStat2, ErrMsg2 ); if (Failed()) return;
 
    ! --- Setting up Phi, and type conversion
-   Omega=sqrt(Omega2_LaKi(1:NOmega) )
+   do i = 1, NOmega
+      Om2 = real(Omega2_LaKi(i), ReKi)  
+      if (Om2>0) then 
+         Omega(i)=sqrt(Om2) ! was getting floating invalid
+      else
+         print*,'>>> Wrong eigenfrequency, Omega^2=',Om2
+         Omega(i)= 0.0_ReKi 
+      endif
+   enddo
    IF ( bRemoveConstraints ) THEN ! this is called for the full system Eigenvalues:
       !Need to expand eigenvectors for removed DOFs, setting Phi 
       CALL InsertDOFRows(EigVect(:,1:NOmega), bDOF, 0.0_ReKi, Phi, ErrStat2, ErrMsg2 ); if(Failed()) return
