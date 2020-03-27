@@ -797,7 +797,7 @@ subroutine SlD_WriteOutput(p, AllOuts, u, y, m, ErrStat, ErrMsg )
 
          ! We have defined the referene orientatation aligned with XYZ, so we don't need as much math here.
          ! Small angle assumption must be valid for computations in this module, so GetSmllRotAngs extract is sufficient
-      Theta =  real( GetSmllRotAngs(u%SoilMesh%Orientation(1:3,1:3,i)), ReKi)       ! orientations are double
+      Theta =  real( GetSmllRotAngs(u%SoilMesh%Orientation(1:3,1:3,i), ErrStat, ErrMsg), ReKi)       ! orientations are double
       do j=1,3
          AllOuts( SoilPtD(j+3,i) )  =  Theta(j)
       enddo
