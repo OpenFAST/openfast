@@ -42,6 +42,8 @@ contains
       integer(intki), intent(out)   :: i3(:)
       integer(IntKi), intent(  out) :: ErrStat   !< Error status of the operation
       character(*),   intent(  out) :: ErrMsg    !< Error message if ErrStat /    = ErrID_None
+      ErrStat=ErrID_None
+      ErrMsg=''
       I3(1:size(I1)) = I1 
       I3(size(I1)+1:size(I1)+size(I2)) = I2
    endsubroutine
@@ -213,7 +215,7 @@ contains
             tmp=L%List(i)
             L%List(i) = L%List(j)
             L%List(j) = tmp
-         end 
+         end subroutine
    end subroutine reverse
 
 
