@@ -799,7 +799,7 @@ subroutine SlD_WriteOutput(p, AllOuts, u, y, m, ErrStat, ErrMsg )
          ! Small angle assumption must be valid for computations in this module, so GetSmllRotAngs extract is sufficient
       Theta =  real( GetSmllRotAngs(u%SoilMesh%Orientation(1:3,1:3,i), ErrStat, ErrMsg), ReKi)       ! orientations are double
       do j=1,3
-         AllOuts( SoilPtD(j+3,i) )  =  Theta(j)
+         AllOuts( SoilPtD(j+3,i) )  =  Theta(j)*R2D
       enddo
    enddo
 
