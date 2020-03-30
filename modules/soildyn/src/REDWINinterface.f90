@@ -124,6 +124,9 @@ subroutine CallREDWINdll ( DLL_Trgt, DLL_Model, dll_data, ErrStat, ErrMsg )
             dll_data%Disp, dll_data%Force, dll_data%D )
    endif
 #endif
+#else
+dll_data%Force(:)=0.0_ReKi
+dll_data%Force(3)=-9.0e6_R8Ki
 #endif
 
       ! Call routine for error trapping the returned ErrorCodes

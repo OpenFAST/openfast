@@ -2702,13 +2702,19 @@ CONTAINS
       ! SoilDyn
       !..................
 
-            if (p_FAST%CompSoil == Module_SlD .and. u_SlD%SoilMesh%Committed ) THEN
-               ! SD motions to SlD
-               CALL Transfer_Point_to_Point( y_SD%y2Mesh, u_SlD%SoilMesh, MeshMapData%SD_P_2_SlD_P, ErrStat2, ErrMsg2 )
-                  CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//'Transfer_SD_to_SlD (y_SD%y2Mesh -> u_SlD%SoilMesh)' )
-               ! SlD loads to SD
-               CALL Transfer_Point_to_Point( y_SlD%SoilMesh, MeshMapData%u_SD_LMesh_2, MeshMapData%SlD_P_2_SD_P, ErrStat2, ErrMsg2, u_SlD%SoilMesh, y_SD2%Y2Mesh )
-                  CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//'Transfer_SlD_to_SD (y_SlD%SoilMesh -> y_SD2%Y2Mesh)' )
+            if (p_FAST%CompSoil == Module_SlD) then
+               if ( u_SlD%SoilMesh%Committed ) THEN
+                  ! SD motions to SlD
+                  CALL Transfer_Point_to_Point( y_SD%y2Mesh, u_SlD%SoilMesh, MeshMapData%SD_P_2_SlD_P, ErrStat2, ErrMsg2 )
+                     CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//'Transfer_SD_to_SlD (y_SD%y2Mesh -> u_SlD%SoilMesh)' )
+               endif
+               if ( y_SlD%SoilMesh%Committed ) THEN
+                  ! SlD loads to SD
+                  CALL Transfer_Point_to_Point( y_SlD%SoilMesh, MeshMapData%u_SD_LMesh_2, MeshMapData%SlD_P_2_SD_P, ErrStat2, ErrMsg2, u_SlD%SoilMesh, y_SD2%Y2Mesh )
+                     CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//'Transfer_SlD_to_SD (y_SlD%SoilMesh -> y_SD2%Y2Mesh)' )
+                  MeshMapData%u_SD_LMesh%Force  = MeshMapData%u_SD_LMesh%Force  + MeshMapData%u_SD_LMesh_2%Force
+                  MeshMapData%u_SD_LMesh%Moment = MeshMapData%u_SD_LMesh%Moment + MeshMapData%u_SD_LMesh_2%Moment
+               endif
             endif !  SoilDyn
 
 
@@ -4667,7 +4673,16 @@ SUBROUTINE SolveOption1(this_time, this_state, calcJacobian, p_FAST, ED, BD, HD,
       END DO
          
    END IF
-            
+
+      ! SoilDyn
+   IF ( p_FAST%CompSoil == Module_SlD ) THEN
+
+      CALL SlD_CalcOutput( this_time, SlD%Input(1), SlD%p, SlD%x(this_state), SlD%xd(this_state), SlD%z(this_state), &
+                            SlD%OtherSt(this_state), SlD%y, SlD%m, ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+   END IF
+
    IF (ErrStat >= AbortErrLev) RETURN      
    
    IF ( p_FAST%CompSub /= Module_None .OR. (p_FAST%CompElast == Module_BD .and. BD_Solve_Option1) .OR. p_FAST%CompMooring == Module_Orca ) THEN !.OR. p_FAST%CompHydro == Module_HD ) THEN
@@ -5456,7 +5471,29 @@ SUBROUTINE FAST_AdvanceStates( t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED
       END DO
          
    END IF
-         
+
+   ! SoilDyn: get predicted states
+   IF (p_FAST%CompSoil == Module_SlD) THEN
+      CALL SlD_CopyContState   (SlD%x( STATE_CURR), SlD%x( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      CALL SlD_CopyDiscState   (SlD%xd(STATE_CURR), SlD%xd(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      CALL SlD_CopyConstrState (SlD%z( STATE_CURR), SlD%z( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      CALL SlD_CopyOtherState( SlD%OtherSt(STATE_CURR), SlD%OtherSt(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+      DO j_ss = 1, p_FAST%n_substeps( Module_SlD )
+         n_t_module = n_t_global*p_FAST%n_substeps( Module_SlD ) + j_ss - 1
+         t_module   = n_t_module*p_FAST%dt_module( Module_SlD ) + t_initial
+
+         CALL SlD_UpdateStates( t_module, n_t_module, SlD%Input, SlD%InputTimes, SlD%p, SlD%x(STATE_PRED), SlD%xd(STATE_PRED), &
+                               SlD%z(STATE_PRED), SlD%OtherSt(STATE_PRED), SlD%m, ErrStat2, ErrMsg2 )
+            CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      END DO !j_ss
+   END IF
+
+
 END SUBROUTINE FAST_AdvanceStates
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine extrapolates inputs to modules to give predicted values at t+dt.

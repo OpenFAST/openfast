@@ -4794,7 +4794,7 @@ SUBROUTINE WriteOutputToFile(n_t_global, t_global, p_FAST, y_FAST, ED, BD, AD14,
 
             CALL WrOutputLine( t_global, p_FAST, y_FAST, IfW%y%WriteOutput, OpFM%y%WriteOutput, ED%Output(1)%WriteOutput, &
                   AD%y%WriteOutput, SrvD%y%WriteOutput, HD%y%WriteOutput, SD%y%WriteOutput, ExtPtfm%y%WriteOutput, MAPp%y%WriteOutput, &
-                  FEAM%y%WriteOutput, MD%y%WriteOutput, Orca%y%WriteOutput, IceF%y%WriteOutput, IceD%y, BD%y, ErrStat, ErrMsg )
+                  FEAM%y%WriteOutput, MD%y%WriteOutput, Orca%y%WriteOutput, IceF%y%WriteOutput, SlD%y%WriteOutput, IceD%y, BD%y, ErrStat, ErrMsg )
                                                                       
       END IF
 
@@ -4823,7 +4823,7 @@ END SUBROUTINE WriteOutputToFile
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine writes the module output to the primary output file(s).
 SUBROUTINE WrOutputLine( t, p_FAST, y_FAST, IfWOutput, OpFMOutput, EDOutput, ADOutput, SrvDOutput, HDOutput, SDOutput, ExtPtfmOutput,&
-                        MAPOutput, FEAMOutput, MDOutput, OrcaOutput, IceFOutput, y_IceD, y_BD, ErrStat, ErrMsg)
+                        MAPOutput, FEAMOutput, MDOutput, OrcaOutput, IceFOutput, SlDOutput, y_IceD, y_BD, ErrStat, ErrMsg)
 
    IMPLICIT                        NONE
    
@@ -4846,6 +4846,7 @@ SUBROUTINE WrOutputLine( t, p_FAST, y_FAST, IfWOutput, OpFMOutput, EDOutput, ADO
    REAL(ReKi),               INTENT(IN)    :: MDOutput (:)                       !< MoorDyn WriteOutput values
    REAL(ReKi),               INTENT(IN)    :: OrcaOutput (:)                     !< OrcaFlex interface WriteOutput values
    REAL(ReKi),               INTENT(IN)    :: IceFOutput (:)                     !< IceFloe WriteOutput values
+   REAL(ReKi),               INTENT(IN)    :: SlDOutput (:)                      !< SoilDyn WriteOutput values
    TYPE(IceD_OutputType),    INTENT(IN)    :: y_IceD (:)                         !< IceDyn outputs (WriteOutput values are subset)
    TYPE(BD_OutputType),      INTENT(IN)    :: y_BD (:)                           !< BeamDyn outputs (WriteOutput values are subset)
 
@@ -4863,7 +4864,7 @@ SUBROUTINE WrOutputLine( t, p_FAST, y_FAST, IfWOutput, OpFMOutput, EDOutput, ADO
    ErrMsg  = ''
    
    CALL FillOutputAry(p_FAST, y_FAST, IfWOutput, OpFMOutput, EDOutput, ADOutput, SrvDOutput, HDOutput, SDOutput, ExtPtfmOutput, &
-                      MAPOutput, FEAMOutput, MDOutput, OrcaOutput, IceFOutput, y_IceD, y_BD, OutputAry)   
+                      MAPOutput, FEAMOutput, MDOutput, OrcaOutput, IceFOutput, SlDOutput, y_IceD, y_BD, OutputAry)   
 
    IF (p_FAST%WrTxtOutFile) THEN
 
@@ -4925,14 +4926,14 @@ SUBROUTINE FillOutputAry_T(Turbine, Outputs)
                 Turbine%ED%Output(1)%WriteOutput, Turbine%AD%y%WriteOutput, Turbine%SrvD%y%WriteOutput, &
                 Turbine%HD%y%WriteOutput, Turbine%SD%y%WriteOutput, Turbine%ExtPtfm%y%WriteOutput, Turbine%MAP%y%WriteOutput, &
                 Turbine%FEAM%y%WriteOutput, Turbine%MD%y%WriteOutput, Turbine%Orca%y%WriteOutput, &
-                Turbine%IceF%y%WriteOutput, Turbine%IceD%y, Turbine%BD%y, Outputs)   
+                Turbine%IceF%y%WriteOutput, Turbine%SlD%y%WriteOutput, Turbine%IceD%y, Turbine%BD%y, Outputs)   
                         
 END SUBROUTINE FillOutputAry_T                        
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine concatenates all of the WriteOutput values from the module Output into one array to be written to the FAST 
 !! output file.
 SUBROUTINE FillOutputAry(p_FAST, y_FAST, IfWOutput, OpFMOutput, EDOutput, ADOutput, SrvDOutput, HDOutput, SDOutput, ExtPtfmOutput, &
-                        MAPOutput, FEAMOutput, MDOutput, OrcaOutput, IceFOutput, y_IceD, y_BD, OutputAry)
+                        MAPOutput, FEAMOutput, MDOutput, OrcaOutput, IceFOutput, SlDOutput, y_IceD, y_BD, OutputAry)
 
    TYPE(FAST_ParameterType), INTENT(IN)    :: p_FAST                             !< Glue-code simulation parameters
    TYPE(FAST_OutputFileType),INTENT(IN)    :: y_FAST                             !< Glue-code simulation outputs
@@ -4950,6 +4951,7 @@ SUBROUTINE FillOutputAry(p_FAST, y_FAST, IfWOutput, OpFMOutput, EDOutput, ADOutp
    REAL(ReKi),               INTENT(IN)    :: MDOutput (:)                       !< MoorDyn WriteOutput values
    REAL(ReKi),               INTENT(IN)    :: OrcaOutput (:)                     !< OrcaFlex interface WriteOutput values
    REAL(ReKi),               INTENT(IN)    :: IceFOutput (:)                     !< IceFloe WriteOutput values
+   REAL(ReKi),               INTENT(IN)    :: SlDOutput (:)                      !< SoilDyn WriteOutput values
    TYPE(IceD_OutputType),    INTENT(IN)    :: y_IceD (:)                         !< IceDyn outputs (WriteOutput values are subset)
    TYPE(BD_OutputType),      INTENT(IN)    :: y_BD (:)                           !< BeamDyn outputs (WriteOutput values are subset)
 
@@ -5046,7 +5048,13 @@ SUBROUTINE FillOutputAry(p_FAST, y_FAST, IfWOutput, OpFMOutput, EDOutput, ADOutp
             indxNext = IndxLast + 1
          END DO            
       END IF     
-         
+
+      IF ( y_FAST%numOuts(Module_SlD) > 0 ) THEN
+         indxLast = indxNext + SIZE(SlDOutput) - 1
+         OutputAry(indxNext:indxLast) = SlDOutput
+         indxNext = IndxLast + 1
+      END IF
+                  
 END SUBROUTINE FillOutputAry
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine writes all the committed meshes to VTK-formatted files. It doesn't bother with returning an error code.
@@ -5281,7 +5289,14 @@ SUBROUTINE WrVTK_AllMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, O
       
    END IF
    
-   
+! SoilDyn
+   IF ( p_FAST%CompSoil == Module_SlD .and. allocated(SlD%Input)) THEN
+      call MeshWrVTK(p_FAST%TurbinePos, SlD%Input(1)%SoilMesh, trim(VTK_path)//'.SlD_u_SoilMesh', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, Twidth, SlD%y%SoilMesh )
+
+      call MeshWrVTK(p_FAST%TurbinePos, SlD%y%SoilMesh, trim(VTK_path)//'.SlD_y_SoilMesh', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, Twidth, SlD%Input(1)%SoilMesh )
+   END IF
+
+
 END SUBROUTINE WrVTK_AllMeshes 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine writes a minimal subset of meshes (enough to visualize the turbine) to VTK-formatted files. It doesn't bother with 
@@ -5392,8 +5407,14 @@ SUBROUTINE WrVTK_BasicMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW,
 !   ELSEIF ( p_FAST%CompMooring == Module_FEAM ) THEN
 !      call MeshWrVTK(p_FAST%TurbinePos, FEAM%Input(1)%PtFairleadDisplacement, trim(p_FAST%OutFileRoot)//'FEAM_PtFair_motion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2 )        
 !   END IF
-         
-   
+
+! SoilDyn
+!   IF ( p_FAST%CompSub == Module_SlD ) THEN
+!     call MeshWrVTK(p_FAST%TurbinePos, SlD%Input(1)%SoilMesh, trim(p_FAST%OutFileRoot)//'.SlD_uSoilMesh_motion', y_FAST%VTK_count, OutputFields, ErrStat2, ErrMsg2 )
+!      call MeshWrVTK(p_FAST%TurbinePos, SlD%y%SoilMesh, trim(p_FAST%OutFileRoot)//'.SlD_ySoilMesh_motion', y_FAST%VTK_count, OutputFields, ErrStat2, ErrMsg2 )
+!   END IF
+
+
 END SUBROUTINE WrVTK_BasicMeshes 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine writes a minimal subset of meshes with surfaces to VTK-formatted files. It doesn't bother with 
@@ -5517,8 +5538,13 @@ SUBROUTINE WrVTK_Surfaces(t_global, p_FAST, y_FAST, MeshMapData, ED, BD, AD14, A
 !   ELSEIF ( p_FAST%CompMooring == Module_FEAM ) THEN
 !      call MeshWrVTK(p_FAST%TurbinePos, FEAM%Input(1)%PtFairleadDisplacement, trim(p_FAST%OutFileRoot)//'FEAM_PtFair_motion', y_FAST%VTK_count, OutputFields, ErrStat2, ErrMsg2   )        
 !   END IF
-         
-   
+
+! SoilDyn
+!   IF ( p_FAST%CompSub == Module_SlD ) THEN
+!     call MeshWrVTK(p_FAST%TurbinePos, SlD%Input(1)%SoilMesh, trim(p_FAST%OutFileRoot)//'.SlD_uSoilMesh_motion', y_FAST%VTK_count, OutputFields, ErrStat2, ErrMsg2 )
+!      call MeshWrVTK(p_FAST%TurbinePos, SlD%y%SoilMesh, trim(p_FAST%OutFileRoot)//'.SlD_ySoilMesh_motion', y_FAST%VTK_count, OutputFields, ErrStat2, ErrMsg2 )
+!   END IF
+
    if (p_FAST%VTK_fields) then
       call WrVTK_BasicMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, OpFM, HD, SD, SrvD, MAPp, FEAM, MD, Orca, IceF, IceD, SlD)
    end if

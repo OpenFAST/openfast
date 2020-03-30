@@ -367,7 +367,9 @@ subroutine SlD_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 end subroutine SlD_End
 
 
-!----------------------------------------------------------------------------------------------------------------------------------
+!====================================================================================================
+! The following routines were added to satisfy the framework, but do nothing useful.
+!====================================================================================================
 !> This is a loose coupling routine for solving constraint states, integrating continuous states, and updating discrete and other
 !! states. Continuous, constraint, discrete, and other states are updated to values at t + Interval.
 subroutine SlD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
@@ -406,21 +408,21 @@ subroutine SlD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, 
    ! This subroutine contains an example of how the states could be updated. Developers will
    ! want to adjust the logic as necessary for their own situations.
 
-      ! Get the inputs at time t, based on the array of values sent by the glue code:
-   ! before calling ExtrapInterp routine, memory in u must be allocated; we can do that with a copy:
-   call SlD_CopyInput( Inputs(1), u, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
-      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()       ! to avoid memory leaks, we have to destroy the local variables that may have allocatable arrays or meshes
-         return
-      end if
-
-   call SlD_Input_ExtrapInterp( Inputs, InputTimes, u, t, ErrStat2, ErrMsg2 )
-      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         return
-      end if
+!      ! Get the inputs at time t, based on the array of values sent by the glue code:
+!   ! before calling ExtrapInterp routine, memory in u must be allocated; we can do that with a copy:
+!   call SlD_CopyInput( Inputs(1), u, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+!      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+!      if ( ErrStat >= AbortErrLev ) then
+!         call cleanup()       ! to avoid memory leaks, we have to destroy the local variables that may have allocatable arrays or meshes
+!         return
+!      end if
+!
+!   call SlD_Input_ExtrapInterp( Inputs, InputTimes, u, t, ErrStat2, ErrMsg2 )
+!      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+!      if ( ErrStat >= AbortErrLev ) then
+!         call cleanup()
+!         return
+!      end if
 
       ! Destroy local variables before returning
    call cleanup()
