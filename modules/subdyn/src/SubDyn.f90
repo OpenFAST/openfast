@@ -1535,11 +1535,11 @@ SUBROUTINE Craig_Bampton(Init, p, m, CBparams, ErrStat, ErrMsg)
 
 contains
 
-   SUBROUTINE Fatal(ErrMsg_in)
-      character(len=*), intent(in) :: ErrMsg_in
-      CALL SetErrStat(ErrID_Fatal, ErrMsg_in, ErrStat, ErrMsg, 'Craig_Bampton');
-      CALL CleanUp()
-   END SUBROUTINE Fatal
+   !SUBROUTINE Fatal(ErrMsg_in)
+   !   character(len=*), intent(in) :: ErrMsg_in
+   !   CALL SetErrStat(ErrID_Fatal, ErrMsg_in, ErrStat, ErrMsg, 'Craig_Bampton');
+   !   CALL CleanUp()
+   !END SUBROUTINE Fatal
 
    logical function Failed()
         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton') 
