@@ -468,15 +468,12 @@ SUBROUTINE ReadPrimaryFile(InputFile, p, OutFileRoot, InputFileData, ErrStat, Er
            p%ActiveCBDOF(I) = InputFileData%ActiveCBDOF(I);
        enddo
        call ReduceNumberOfDOF(p, ErrStat, ErrMsg);
-       print*,'>>> ActiveCBDOF',InputFileData%ActiveCBDOF
    else
        call allocAry(p%ActiveCBDOF, p%nCBFull, 'ActiveCBDOF',  ErrStat, ErrMsg); if(Failed()) return
        do I=1,p%nCBFull
            p%ActiveCBDOF(I) = I
        enddo
    endif
-   print*,'>>> nCB (active/full):',p%nCB,p%nCBFull
-
 
    return
 

@@ -219,7 +219,7 @@ SUBROUTINE ExtPtfm_Init( InitInp, u, p, x, xd, z, OtherState, y, m, dt_gluecode,
 
    ! Initialize Misc Variables:
    !m%EquilStart = InputFileData%EquilStart
-   m%EquilStart = .False.
+   m%EquilStart = .False. ! Feature not yet implemented
 
    m%Indx = 1 ! used to optimize interpolation of loads in time
    call AllocAry( m%F_at_t, p%nTot,'Loads at t', ErrStat,ErrMsg); if(Failed()) return
@@ -243,7 +243,7 @@ SUBROUTINE ExtPtfm_Init( InitInp, u, p, x, xd, z, OtherState, y, m, dt_gluecode,
    InitOut%Ver = ExtPtfm_Ver
       
    if (InitInp%Linearize) then
-      ! TODO TODO TODO
+      ! TODO The linearization features are in place but waiting for glue-code changes, and testing.
       CALL SetErrStat( ErrID_Fatal, 'ExtPtfm_MCKF linearization analysis is currently not supported by the glue code.', ErrStat, ErrMsg, 'ExtPtfm_Init');
       if(Failed())return
       !Appropriate Jacobian row/column names and rotating-frame flags here:   
@@ -701,10 +701,6 @@ SUBROUTINE ExtPtfm_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherSta
    ! Initialize variables
    ErrStat   = ErrID_None           ! no error has occurred
    ErrMsg    = ""
-   if (m%EquilStart) then
-       write(*,*)'>>>UPDATE STATE, EquilStart',t
-       STOP
-   endif
    if ( p%nCB == 0) return ! no modes = no states
    if (p%IntMethod .eq. 1) then 
       call ExtPtfm_RK4( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
@@ -820,10 +816,6 @@ SUBROUTINE ExtPtfm_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, E
    CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
    ! Local variables
    INTEGER(IntKi)                                    :: I
-   if (m%EquilStart) then
-       write(*,*)'>>>CONT STATE DERIV',t
-       STOP
-   endif
    ! Allocation of output dxdt (since intent(out))
    call AllocAry(dxdt%qm,    p%nCB, 'dxdt%qm',    ErrStat, ErrMsg); if(Failed()) return
    call AllocAry(dxdt%qmdot, p%nCB, 'dxdt%qmdot', ErrStat, ErrMsg); if(Failed()) return
@@ -1185,10 +1177,6 @@ SUBROUTINE ExtPtfm_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
    ErrStat = ErrID_None
    ErrMsg  = ''
 
-   if (m%EquilStart) then
-       write(*,*)'>>>GETOP, EquilStart',t
-       STOP
-   endif
    if ( present( u_op ) ) then
        if (.not. allocated(u_op)) then
            call AllocAry(u_op, N_INPUTS, 'u_op', ErrStat, ErrMsg); if(Failed())return
