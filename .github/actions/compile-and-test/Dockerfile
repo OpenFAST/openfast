@@ -16,30 +16,9 @@
 
 FROM rafmudaf/openfast-ubuntu:dev
 
-# Move into the openfast directory and update
+# Move into the openfast directory
 WORKDIR /openfast
-RUN git fetch
-RUN git pull
-RUN git submodule update
 
-# Move into the "build" directory, remove the old reg tests, and compile
-WORKDIR /openfast/build
-RUN rm -rf reg_tests
-RUN cmake ..
-RUN make -j4 install
+COPY entrypoint.sh /entrypoint.sh
 
-# Run the tests
-
-# BeamDyn-specific tests
-RUN ctest -VV -j7 -R bd_
-RUN ctest -VV -R beamdyn_utest
-
-# OpenFAST linearization tests
-# Dont run these in parallel, copying the case files can fail in a race condition
-RUN ctest -VV -L linear
-
-# Subset of OpenFAST regression tests; do not run
-## - 9, 16 because they're very sensitive
-## - 19, 20 because theyre too long
-## - 17, 22, 23 becuase we dont know why they fail :(
-RUN ctest -VV -j8 -I 1,1,1,2,3,4,5,6,7,8,10,11,12,13,14,15,18,21,24,25
+ENTRYPOINT ["/entrypoint.sh"]

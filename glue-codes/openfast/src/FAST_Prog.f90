@@ -48,6 +48,7 @@ INTEGER(IntKi)                        :: ErrStat                                
 CHARACTER(ErrMsgLen)                  :: ErrMsg                                  ! Error message
 
    ! data for restart:
+CHARACTER(1000)                       :: InputFile                               ! String to hold the intput file name
 CHARACTER(1024)                       :: CheckpointRoot                          ! Rootname of the checkpoint file
 CHARACTER(20)                         :: FlagArg                                 ! flag argument from command line
 INTEGER(IntKi)                        :: Restart_step                            ! step to start on (for restart) 
@@ -58,16 +59,21 @@ INTEGER(IntKi)                        :: Restart_step                           
       !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
    CALL NWTC_Init() ! open console for writing
    ProgName = 'OpenFAST'
+   InputFile = ""
    CheckpointRoot = ""
-   CALL CheckArgs( CheckpointRoot, ErrStat, Flag=FlagArg )  ! if ErrStat /= ErrID_None, we'll ignore and deal with the problem when we try to read the input file
 
-   IF ( TRIM(FlagArg) == 'RESTART' ) THEN ! Restart from checkpoint file
+   CALL CheckArgs( InputFile, Flag=FlagArg, Arg2=CheckpointRoot )
+
+   IF ( TRIM(FlagArg) == 'H' ) THEN ! Exit after help prompt
+      CALL NormStop()
+
+   ELSE IF ( TRIM(FlagArg) == 'RESTART' ) THEN ! Restart from checkpoint file
       CALL FAST_RestoreFromCheckpoint_Tary(t_initial, Restart_step, Turbine, CheckpointRoot, ErrStat, ErrMsg  )
          CALL CheckError( ErrStat, ErrMsg, 'during restore from checkpoint'  )
          
    ELSE IF ( TRIM(FlagArg) == 'VTKLIN' ) THEN ! Read checkpoint file to output linearization analysis, but don't continue time-marching
       CALL FAST_RestoreForVTKModeShape_Tary(t_initial, Turbine, CheckpointRoot, ErrStat, ErrMsg  )
-         CALL CheckError( ErrStat, ErrMsg, 'during restore from checkpoint'  )
+         CALL CheckError( ErrStat, ErrMsg, 'during restore from checkpoint for mode shapes'  )
 
       ! Note that this works only when NumTurbines==1 (we don't have files for each of the turbines...)
       Restart_step = Turbine(1)%p_FAST%n_TMax_m1 + 1

@@ -1139,7 +1139,12 @@ CONTAINS
          RETURN
       ELSE
          ErrStat = ErrID_None
+         ErrMsg  = ''
       END IF
+
+      ! Return if there are no outputs
+      if ( p%NumOuts < 1_IntKi ) return
+
 
       ! gather the required output quantities (INCOMPLETE!)
       DO I = 1,p%NumOuts
