@@ -700,7 +700,7 @@ CONTAINS
                   allocate(TmpAry(1:p%nTot+1))
                   do i=1,p%nTimeSteps
                      iLine=iLine+1
-                     TmpAry(1:p%nTot+1)=-999999E-99
+                     TmpAry(1:p%nTot+1)=-999.9E-09
                      read(UnIn, fmt='(A)', iostat=ErrStat) Line
                      if (ErrStat/=0) then
                         ErrStat = ErrID_Fatal
