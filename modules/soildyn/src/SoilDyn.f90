@@ -143,13 +143,16 @@ subroutine SlD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
    call SlD_InitMeshes( InputFileData, InitInp, u, y, p, m, ErrStat2,ErrMsg2);  if (Failed()) return;
 
 
-!FIXME: wrap logic around this for option 3 only.
-      ! Initialize the dll
-   do j=1,size(m%dll_data)
-      call REDWINinterface_Init( InputFileData%DLL_FileName, InputFileData%DLL_ProcName, p%DLL_Trgt, p%DLL_Model, &
-            m%dll_data(j), p%UseREDWINinterface, ErrStat2, ErrMsg2); if (Failed()) return;
-   enddo
-
+   select case(p%CalcOption)
+      case (Calc_StiffDamp)
+      case (Calc_PYcurve)
+      case (Calc_REDWIN)
+         ! Initialize the dll
+         do j=1,size(m%dll_data)
+            call REDWINinterface_Init( InputFileData%DLL_FileName, InputFileData%DLL_ProcName, p%DLL_Trgt, p%DLL_Model, &
+                  m%dll_data(j), p%UseREDWINinterface, ErrStat2, ErrMsg2); if (Failed()) return;
+         enddo
+   end select
 
       ! set paramaters for I/O data
    InitOut%Ver = SlD_Ver
@@ -188,26 +191,32 @@ contains
       ErrStat = ErrID_None
       ErrMsg  = ''
 
-      ! Set DLL data
-      allocate( m%dll_data(InputFileData%DLL_NumPoints), STAT=ErrStat2 )
-      if (ErrStat2 /= 0) then
-         call SetErrStat(ErrID_Fatal, 'Could not allocate m%dll_data', ErrStat, ErrMsg, RoutineName)
-         return
-      endif
+      select case(p%CalcOption)
+         case (Calc_StiffDamp)
+         case (Calc_PYcurve)
+         case (Calc_REDWIN)
+            !-------------------
+            ! Set DLL data
+            allocate( m%dll_data(InputFileData%DLL_NumPoints), STAT=ErrStat2 )
+            if (ErrStat2 /= 0) then
+               call SetErrStat(ErrID_Fatal, 'Could not allocate m%dll_data', ErrStat, ErrMsg, RoutineName)
+               return
+            endif
 
-      ! Set the input file names and check they are not too long.  Existance checks done in the interface routine.
-      do i=1,InputFileData%DLL_NumPoints
-         m%dll_data(i)%PROPSfile = trim(InputFileData%DLL_PropsFile(i))
-         if ( len(m%dll_data(i)%PROPSfile) < len_trim(InputFileData%DLL_PropsFile(i)) ) then
-            call SetErrStat(ErrID_Fatal, 'PropsFile #'//trim(Num2LStr(i))//' name is longer than '//trim(Num2LStr(len(m%dll_data(i)%PROPSfile)))// &
-                        ' characters (DLL limititation)', ErrStat, ErrMsg, '')
-         endif
-         m%dll_data(i)%LDISPfile = trim(InputFileData%DLL_LDispFile(i))
-         if ( len(m%dll_data(i)%LDISPfile) < len_trim(InputFileData%DLL_LDispFile(i)) ) then
-            call SetErrStat(ErrID_Fatal, 'LDispFile #'//trim(Num2LStr(i))//' name is longer than '//trim(Num2LStr(len(m%dll_data(i)%LDISPfile)))// &
-                        ' characters (DLL limititation)', ErrStat, ErrMsg, '')
-         endif
-      enddo
+            ! Set the input file names and check they are not too long.  Existance checks done in the interface routine.
+            do i=1,InputFileData%DLL_NumPoints
+               m%dll_data(i)%PROPSfile = trim(InputFileData%DLL_PropsFile(i))
+               if ( len(m%dll_data(i)%PROPSfile) < len_trim(InputFileData%DLL_PropsFile(i)) ) then
+                  call SetErrStat(ErrID_Fatal, 'PropsFile #'//trim(Num2LStr(i))//' name is longer than '//trim(Num2LStr(len(m%dll_data(i)%PROPSfile)))// &
+                              ' characters (DLL limititation)', ErrStat, ErrMsg, '')
+               endif
+               m%dll_data(i)%LDISPfile = trim(InputFileData%DLL_LDispFile(i))
+               if ( len(m%dll_data(i)%LDISPfile) < len_trim(InputFileData%DLL_LDispFile(i)) ) then
+                  call SetErrStat(ErrID_Fatal, 'LDispFile #'//trim(Num2LStr(i))//' name is longer than '//trim(Num2LStr(len(m%dll_data(i)%LDISPfile)))// &
+                              ' characters (DLL limititation)', ErrStat, ErrMsg, '')
+               endif
+            enddo
+      end select
       if (ErrStat >= AbortErrLev) return
    end subroutine SlD_InitMisc
 
@@ -473,7 +482,8 @@ subroutine SlD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg 
 
       ! Copy displacement from point mesh (angles in radians -- REDWIN dll also uses rad)
       Displacement(1:3) = u%SoilMesh%TranslationDisp(1:3,i)                 ! Translations -- This is R8Ki in the mesh
-      Displacement(4:6) = EulerExtract(u%SoilMesh%Orientation(1:3,1:3,i))   ! Small angle assumption should be valid here -- Note we are assuming reforientation is 0
+      Displacement(4:6) = GetSmllRotAngs(u%SoilMesh%Orientation(1:3,1:3,i), ErrStat, ErrMsg)   ! Small angle assumption should be valid here -- Note we are assuming reforientation is 0
+
       call    REDWINinterface_CalcOutput( p%DLL_Trgt, p%DLL_Model, Displacement, Force, m%dll_data(i), ErrStat2, ErrMsg2 ); if (Failed()) return;
 
       ! Return force onto the resulting point mesh
