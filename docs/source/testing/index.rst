@@ -3,35 +3,35 @@
 Testing OpenFAST
 ================
 
-The OpenFAST test suite consists of system and module level regression tests and
-unit tests. The regression test compares locally generated solutions to a set of
-baseline solutions. The unit tests ensure that individual subroutines are
-functioning as intended.
+The OpenFAST test suite consists of glue code and module level regression tests
+and unit tests. The regression tests compare locally generated solutions to
+a set of baseline solutions. The unit tests ensure that individual subroutines
+are functioning as intended.
 
-All of the necessary files corresponding to the regression test are contained in
-the ``reg_tests`` directory. The unit test framework is housed in ``unit_tests``
-while the actual tests are contained in the directory corresponding to the tested
-module.
+All of the necessary files corresponding to the regression tests are contained
+in the ``reg_tests`` directory. The unit test framework is housed in
+``unit_tests`` while the actual tests are contained in the directory
+corresponding to the tested module.
 
 Configuring the test suite
 --------------------------
-Portions of the test suite are linked to the OpenFAST repository through
-``git submodule``. Specifically,
+Portions of the test suite are linked to the OpenFAST repository through a
+`git submodule`. Specifically,
 
 - `r-test <https://github.com/openfast/r-test>`__
-- `pFUnit <http://github.com/openfast/pfunit>`__
+- `pFUnit <https://github.com/Goddard-Fortran-Ecosystem/pFUnit>`__
 
-Be sure to clone the repo with the ``--recursive`` flag or execute
-``git submodule update --init --recursive`` after cloning.
+.. tip::
 
-The test suite can be built with `CMake <https://cmake.org/>`__ similar to
-OpenFAST. The default CMake configuration is useful, but may need customization
-for particular build environments. See the installation documentation at :numref:`installation`
-for more details on configuring the CMake targets.
+    Be sure to clone the repo with the ``--recursive`` flag or execute
+    ``git submodule update --init --recursive`` after cloning.
 
-While the unit tests must be built with CMake due to its external dependencies,
-the regression test may be executed without building with CMake. :numref:`unit_test` and :numref:`regression_test`
-have more information on unit testing and regression testing, respectively.
+The test suite can be configured with CMake similar to OpenFAST. The default
+CMake configuration is suitable for most systems, but may need customization
+for particular build environments. See the :ref:`understanding_cmake` section
+for more details on configuring the CMake targets. While the unit tests must
+be built with CMake due to its external dependencies, the regression test
+may be executed without CMake.
 
 Test specific documentation
 ---------------------------
@@ -40,20 +40,17 @@ Test specific documentation
 
    unit_test.rst
    regression_test.rst
-   regression_test_windows.rst
 
-Continuous Integration
+Continuous integration
 ----------------------
 A TravisCI configuration file is included with the OpenFAST source code at ``openfast/.travis.yml``.
-The continuous integration infrastructure is still under development, but the status for all branches
-and pull requests can be found on the `TravisCI OpenFAST page <https://travis-ci.org/OpenFAST>`_.
+The continuous integration infrastructure is still under development, but the
+status for all branches and pull requests can be found on the
+`TravisCI OpenFAST page <https://travis-ci.org/OpenFAST>`_.
 
-Note that if you use the included TravisCI configuration, you will need to add your own Intel compiler
-license serial number to your TravisCI project. Otherwise, simply remove the ``ifort`` line from the
-environment list.
-
-For development and testing purposes, a version of the TravisCI test can be run locally with Docker.
-Below is a guide which should be modified depending on the particular build being replicated
+For development and testing purposes, a version of the TravisCI test can be run
+locally with Docker. The code snippet below outlines starting a TravisCI image
+on Docker.
 
 .. code-block:: bash
 
@@ -78,8 +75,7 @@ Below is a guide which should be modified depending on the particular build bein
     git checkout -qf FETCH_HEAD
     git submodule update --init --recursive
 
-    export INTEL_SERIAL_NUMBER=VFGH-65656FTH
-    export FC=ifort
+    export FC=/usr/bin/gfortran-7
     export DOUBLE_PRECISION=ON
     export TRAVIS_BUILD_INTEL=YES
     export TRAVIS_COMPILER=gcc
@@ -87,9 +83,6 @@ Below is a guide which should be modified depending on the particular build bein
     gcc --version
     pyenv shell 3.6.3
 
-    wget 'https://raw.githubusercontent.com/nemequ/icc-travis/master/install-icc.sh' # installs from http://registrationcenter-download.intel.com/akdlm/irc_nas/9061/parallel_studio_xe_2016_update3_online.sh
-    chmod 755 install-icc.sh
-    ./install-icc.sh --components ifort,icc,mkl
     source ~/.bashrc
     pip3 install numpy
     mkdir build && cd build

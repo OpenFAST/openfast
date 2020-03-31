@@ -4,8 +4,7 @@ Building OpenFAST on Windows with Visual Studio
 ===============================================
 
 These instructions are specifically for the standalone Visual Studio project at `openfast/vs-build`.
-Separate CMake documentation is provided for Windows users at :numref:`install_cmake_windows` and 
-Cygwin users at :numref:`install_cmake_cygwin`.
+Separate CMake documentation is provided for Windows users at :numref:`cmake_windows`.
 
 Prerequisites
 ------------------------
