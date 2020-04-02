@@ -16,28 +16,9 @@
 
 FROM rafmudaf/openfast-ubuntu:dev
 
-# Move into the openfast directory and update
+# Move into the openfast directory
 WORKDIR /openfast
-RUN git fetch
-RUN git pull
-RUN git submodule update
 
-# Move into the "build" directory and compile
-WORKDIR /openfast/build
-RUN cmake ..
-RUN make -j4 install
+COPY entrypoint.sh /entrypoint.sh
 
-# Run the tests
-
-# BeamDyn-specific tests
-RUN ctest -VV -j7 -R bd_
-RUN ctest -VV -R beamdyn_utest
-
-# OpenFAST linearization tests
-RUN ctest -VV -j4 -L linear
-
-# Subset of OpenFAST regression tests; do not run
-## - 3, 4, 7, 14, 15, 16, since the free yaw is not well trusted
-## - 9 because its super sensitive
-## - 19, 20 because theyre too long
-RUN ctest -VV -j8 -I 1,1,1,2,5,6,8,10,11,12,13,17,18,21,22,23,24,25
+ENTRYPOINT ["/entrypoint.sh"]

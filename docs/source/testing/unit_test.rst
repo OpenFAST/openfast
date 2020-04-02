@@ -110,18 +110,15 @@ structured as
 Each unit test must be contained in a unique file called
 ``test_[SUBROUTINE].F90`` where ``[SUBROUTINE]`` is the code block being
 tested. Finally, update the CMake configuration for building a module's unit
-test executable with the appropriate list of test subroutines
-in ``openfast/unit_tests/CMakeLists.txt`` using the following format:
+test executable by copying the BeamDyn CMake configuration into a new module
+directory:
 
-.. code-block:: cmake
+.. code-block:: bash
 
-  set(testlist
-     test_SUBROUTINE1
-     test_SUBROUTINE2
-     test_SUBROUTINE3
-  )
-  # it is important to keep the quotes around "${testlist}" in the call below
-  build_utest("module_name" "${testlist}")
+    cp -r openfast/unit_tests/beamdyn openfast/unit_tests/[module]
+
+Then, modify the new ``CMakeLists.txt`` with the appropriate list of test
+subroutines and module name variables.
 
 For reference, a template unit test file is included at
 ``openfast/unit_tests/test_SUBROUTINE.F90``. Each unit test should fully test

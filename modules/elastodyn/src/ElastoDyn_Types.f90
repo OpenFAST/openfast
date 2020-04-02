@@ -412,6 +412,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: PAngVelEH      !< Partial angular velocity (and its 1st time derivative) of the hub (body H) in the inertia frame (body E for earth) [-]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: PAngVelEL      !< Partial angular velocity (and its 1st time derivative) of the low-speed shaft (body L) in the inertia frame (body E for earth) [-]
     REAL(ReKi) , DIMENSION(:,:,:,:,:), ALLOCATABLE  :: PAngVelEM      !< Partial angular velocity (and its 1st time derivative) of eleMent J of blade K (body M) in the inertia frame (body E for earth) [-]
+    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: AngVelEM      !< Angular velocity of of eleMent J of blade K (body M) in the inertia frame (body E for earth) [-]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: PAngVelEN      !< Partial angular velocity (and its 1st time derivative) of the nacelle (body N) in the inertia frame (body E for earth) [-]
     REAL(ReKi) , DIMENSION(1:3)  :: AngVelEA      !< Angular velocity of the tail (body A) in the inertia frame (body E for earth) [-]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: PAngVelEB      !< Partial angular velocity (and its 1st time derivative) of the base plate (body B) in the inertia frame (body E for earth) [-]
@@ -9276,6 +9277,22 @@ IF (ALLOCATED(SrcRtHndSideData%PAngVelEM)) THEN
   END IF
     DstRtHndSideData%PAngVelEM = SrcRtHndSideData%PAngVelEM
 ENDIF
+IF (ALLOCATED(SrcRtHndSideData%AngVelEM)) THEN
+  i1_l = LBOUND(SrcRtHndSideData%AngVelEM,1)
+  i1_u = UBOUND(SrcRtHndSideData%AngVelEM,1)
+  i2_l = LBOUND(SrcRtHndSideData%AngVelEM,2)
+  i2_u = UBOUND(SrcRtHndSideData%AngVelEM,2)
+  i3_l = LBOUND(SrcRtHndSideData%AngVelEM,3)
+  i3_u = UBOUND(SrcRtHndSideData%AngVelEM,3)
+  IF (.NOT. ALLOCATED(DstRtHndSideData%AngVelEM)) THEN 
+    ALLOCATE(DstRtHndSideData%AngVelEM(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstRtHndSideData%AngVelEM.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstRtHndSideData%AngVelEM = SrcRtHndSideData%AngVelEM
+ENDIF
 IF (ALLOCATED(SrcRtHndSideData%PAngVelEN)) THEN
   i1_l = LBOUND(SrcRtHndSideData%PAngVelEN,1)
   i1_u = UBOUND(SrcRtHndSideData%PAngVelEN,1)
@@ -10161,6 +10178,9 @@ ENDIF
 IF (ALLOCATED(RtHndSideData%PAngVelEM)) THEN
   DEALLOCATE(RtHndSideData%PAngVelEM)
 ENDIF
+IF (ALLOCATED(RtHndSideData%AngVelEM)) THEN
+  DEALLOCATE(RtHndSideData%AngVelEM)
+ENDIF
 IF (ALLOCATED(RtHndSideData%PAngVelEN)) THEN
   DEALLOCATE(RtHndSideData%PAngVelEN)
 ENDIF
@@ -10453,6 +10473,11 @@ ENDIF
   IF ( ALLOCATED(InData%PAngVelEM) ) THEN
     Int_BufSz   = Int_BufSz   + 2*5  ! PAngVelEM upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%PAngVelEM)  ! PAngVelEM
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! AngVelEM allocated yes/no
+  IF ( ALLOCATED(InData%AngVelEM) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*3  ! AngVelEM upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%AngVelEM)  ! AngVelEM
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! PAngVelEN allocated yes/no
   IF ( ALLOCATED(InData%PAngVelEN) ) THEN
@@ -11126,6 +11151,31 @@ ENDIF
 
       IF (SIZE(InData%PAngVelEM)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%PAngVelEM))-1 ) = PACK(InData%PAngVelEM,.TRUE.)
       Re_Xferred   = Re_Xferred   + SIZE(InData%PAngVelEM)
+  END IF
+  IF ( .NOT. ALLOCATED(InData%AngVelEM) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%AngVelEM,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%AngVelEM,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%AngVelEM,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%AngVelEM,2)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%AngVelEM,3)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%AngVelEM,3)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i3 = LBOUND(InData%AngVelEM,3), UBOUND(InData%AngVelEM,3)
+        DO i2 = LBOUND(InData%AngVelEM,2), UBOUND(InData%AngVelEM,2)
+          DO i1 = LBOUND(InData%AngVelEM,1), UBOUND(InData%AngVelEM,1)
+            ReKiBuf(Re_Xferred) = InData%AngVelEM(i1,i2,i3)
+            Re_Xferred = Re_Xferred + 1
+          END DO
+        END DO
+      END DO
   END IF
   IF ( .NOT. ALLOCATED(InData%PAngVelEN) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -12882,6 +12932,34 @@ ENDIF
       IF (SIZE(OutData%PAngVelEM)>0) OutData%PAngVelEM = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%PAngVelEM))-1 ), mask5, 0.0_ReKi )
       Re_Xferred   = Re_Xferred   + SIZE(OutData%PAngVelEM)
     DEALLOCATE(mask5)
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! AngVelEM not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i3_l = IntKiBuf( Int_Xferred    )
+    i3_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%AngVelEM)) DEALLOCATE(OutData%AngVelEM)
+    ALLOCATE(OutData%AngVelEM(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%AngVelEM.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i3 = LBOUND(OutData%AngVelEM,3), UBOUND(OutData%AngVelEM,3)
+        DO i2 = LBOUND(OutData%AngVelEM,2), UBOUND(OutData%AngVelEM,2)
+          DO i1 = LBOUND(OutData%AngVelEM,1), UBOUND(OutData%AngVelEM,1)
+            OutData%AngVelEM(i1,i2,i3) = ReKiBuf(Re_Xferred)
+            Re_Xferred = Re_Xferred + 1
+          END DO
+        END DO
+      END DO
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! PAngVelEN not allocated
     Int_Xferred = Int_Xferred + 1

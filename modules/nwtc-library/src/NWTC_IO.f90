@@ -1475,94 +1475,159 @@ CONTAINS
    RETURN
    END SUBROUTINE AllR16Ary5
 !=======================================================================
-!> This subroutine is used to check for command-line arguments.
-!! InputFile is the first non-flag argument from the command line. Arg2 is the last non-flag argument after 
-!! InputFile, and Flag is the contents of the last flag argument (without the leading switch character).
-   SUBROUTINE CheckArgs ( InputFile, ErrStat, Arg2, Flag )
-
+!> This subroutine checks for command-line arguments.
+   SUBROUTINE CheckArgs ( Arg1, ErrStat, Arg2, Flag, InputArgArray )
 
       ! Argument declarations:
-   INTEGER,      INTENT(  OUT),OPTIONAL :: ErrStat                                      !< Error status; if present, program does not abort on error
-
-   CHARACTER(*), INTENT(INOUT)          :: InputFile                                    !< The name of the input file specified on the command line. (first non-flag argument)
-   CHARACTER(*), INTENT(  OUT),OPTIONAL :: Arg2                                         !< an optional 2nd non-flag argument from command line
-   CHARACTER(*), INTENT(  OUT),OPTIONAL :: Flag                                         !< an optional flag argument (e.g., restart); the last argument starting with a switch character. 
+   CHARACTER(*), INTENT(INOUT)           :: Arg1               !< The first non-flag argument; generally, the name of the input file.
+   INTEGER,      INTENT(  OUT), OPTIONAL :: ErrStat            !< An optional argument for catching errors; if present, program does not abort on error.
+   CHARACTER(*), INTENT(  OUT), OPTIONAL :: Arg2               !< An optional 2nd non-flag argument.
+   CHARACTER(*), INTENT(  OUT), OPTIONAL :: Flag               !< An optional flag argument; the first argument starting with a switch character. 
+   CHARACTER(*), INTENT(IN   ), DIMENSION(:), OPTIONAL :: InputArgArray  !< An optional argument containing the arguments to parse; primarily used for unit testing.
 
       ! Local declarations:
+   INTEGER                                    :: I, J          ! Iterator variables
+   CHARACTER(1024)                            :: Arg
+   CHARACTER(1024), DIMENSION(:), ALLOCATABLE :: ArgArray, TempArray, Flags
+   LOGICAL :: FirstArgumentSet, SecondArgumentSet
 
-   INTEGER                              :: IArg                                         ! The argument number.
-   INTEGER                              :: NumArg                                       ! The number of arguments on the command line.
-                                        
-   INTEGER                              :: Error                                        ! Error Status: indicates if there was an error getting an argument.
-   LOGICAL                              :: FirstArg                                     ! flag to determine if it's the first non-switch argument
-   CHARACTER(LEN(InputFile))            :: Arg                                          ! A command-line argument.
-   
-
-      ! Find out how many arguments were entered on the command line.
-   NumArg   = COMMAND_ARGUMENT_COUNT()
-   FirstArg = .TRUE.
+   FirstArgumentSet = .FALSE.
+   SecondArgumentSet = .FALSE.
 
    IF ( PRESENT(Arg2) ) Arg2 = ""
-   IF ( PRESENT(flag) ) flag = ""
+   IF ( PRESENT(Flag) ) Flag = ""
 
-      ! Parse them.
+      ! Save all arguments in a single argument array; this is primarily used to enable unit testing
+   IF ( PRESENT(InputArgArray) ) THEN
+      ALLOCATE( ArgArray( SIZE(InputArgArray) ) )
+      ArgArray = InputArgArray
+   ELSE
+      ALLOCATE( ArgArray( COMMAND_ARGUMENT_COUNT() ) )
+      DO I = 1, SIZE(ArgArray)
+         CALL GET_COMMAND_LINE_ARG( I, ArgArray(I) )
+      END DO
+   END IF
 
-   IF ( NumArg .GT. 0 ) THEN
+      ! Early return if no arguments and no default input file given
+   IF ( SIZE(ArgArray) == 0 .AND. LEN( TRIM(Arg1) ) == 0 ) THEN
+      CALL INVALID_SYNTAX( 'no command-line arguments given.' )
+      CALL CLEANUP()
+      RETURN
+   END IF
 
-      DO IArg=1,NumArg
+      ! Split arguments into flags and non-flags
+   ALLOCATE( Flags(0) )
+   DO I = 1, SIZE(ArgArray)
+      Arg = TRIM(ArgArray(I))
+      IF ( IsFlag(Arg) ) THEN
+            ! This is how we can dynamically resize an array in Fortran...
+            ! Dont do this where performance matters.
+         ALLOCATE( TempArray( SIZE(Flags) + 1 ) )
+         DO J = 1, SIZE(Flags)
+            TempArray(J) = Flags(J)
+         END DO
+         TempArray(SIZE(Flags) + 1) = TRIM(Arg)
+         DEALLOCATE(Flags)
+         CALL MOVE_ALLOC(TempArray, Flags)
+      ELSE IF ( .NOT. FirstArgumentSet ) THEN
+         Arg1 = TRIM(Arg)
+         FirstArgumentSet = .TRUE.
+      ELSE IF ( .NOT. SecondArgumentSet ) THEN
+         Arg2 = TRIM(Arg)
+         SecondArgumentSet = .True.
+      ELSE
+         CALL INVALID_SYNTAX( 'too many command-line arguments given.' )
+         CALL CLEANUP()
+         RETURN
+      END IF
+   END DO
 
-         CALL GET_COMMAND_ARGUMENT( IArg, Arg, STATUS=Error )
+   DO I = 1, SIZE(Flags)
 
-         IF ( Error /= 0 )  THEN
-            CALL ProgAbort ( ' Error getting command-line argument #'//TRIM( Int2LStr( IArg ) )//'.', PRESENT(ErrStat) )
-            IF ( PRESENT(ErrStat) ) THEN
-               ErrStat = ErrID_Fatal
-               RETURN
-            END IF
+      Flag = Flags(I)(2:) ! This results in the flag without the switch character
+      CALL Conv2UC( Flag )
+
+      SELECT CASE ( TRIM(Flag) )
+
+      CASE ('H')
+         CALL NWTC_DisplaySyntax( Arg1, ProgName )
+         CALL CLEANUP()
+         RETURN
+
+      CASE ('RESTART')
+         IF ( FirstArgumentSet .AND. .NOT. SecondArgumentSet ) THEN
+            Arg2 = Arg1
+            Arg1 = ""
+         END IF
+         IF ( .NOT. FirstArgumentSet .AND. .NOT. SecondArgumentSet ) THEN
+            CALL INVALID_SYNTAX( 'the restart capability requires at least one argument: <input_file (OPTIONAL)> -restart <checkpoint_file>' )
+            CALL CLEANUP()
+            RETURN
          END IF
 
-         IF ( Arg(1:1) == SwChar .OR. Arg(1:1) == '-' ) THEN
-            IF (PRESENT(flag)) THEN
-               CALL Conv2UC( Arg )
-               Flag = Arg(2:) !this results in only the last flag
-               IF ( TRIM(Flag) == 'RESTART' ) CYCLE         ! Get next argument (which will be input [checkpoint] file name)
-            END IF
-                                                
-            CALL NWTC_DisplaySyntax( InputFile, ProgName )
+      CASE DEFAULT
+         CALL INVALID_SYNTAX( 'unknown command-line argument given: '//TRIM(Flag) )
+         CALL CLEANUP()
+         RETURN
 
-            IF ( INDEX( 'Hh?', Arg(2:2) ) > 0 ) THEN
-               IF ( PRESENT(ErrStat) ) THEN
-                  ErrStat = ErrID_Info !bjj? do we want to check if an input file was specified later?
-                  RETURN
-               ELSE
-                  CALL ProgExit ( 1 )
-               END IF
-            ELSE
-               CALL ProgAbort ( ' Invalid command-line switch "'//SwChar//TRIM( Arg(2:) )//'".', PRESENT(ErrStat) )
-               IF ( PRESENT(ErrStat) ) THEN
-                  ErrStat = ErrID_Fatal
-                  RETURN
-               END IF
-            END IF ! ( INDEX( 'Hh?', Arg(2:2)  ) > 0 )
+      END SELECT
 
-         ELSEIF ( FirstArg ) THEN
-            InputFile = Arg
-            FirstArg = .FALSE.
-         ELSE   
-            IF ( PRESENT(Arg2) ) THEN
-               Arg2 = Arg
-            END IF
-         END IF ! ( Arg(1:1) == SwChar )
-
-      END DO ! IArg
-
-   END IF ! ( NumArg .GT. 0 )
+   END DO
 
    IF ( PRESENT( ErrStat ) ) ErrStat = ErrID_None
+   CALL CLEANUP()
 
    RETURN
 
-   END SUBROUTINE CheckArgs ! ( InputFile [, ErrStat] )
+   CONTAINS
+      SUBROUTINE CLEANUP()
+         IF ( ALLOCATED(ArgArray) ) DEALLOCATE(ArgArray)
+         IF ( ALLOCATED(Flags) ) DEALLOCATE(Flags)
+         IF ( ALLOCATED(TempArray) ) DEALLOCATE(TempArray)
+      END SUBROUTINE
+
+      SUBROUTINE INVALID_SYNTAX(ErrorMessage)
+
+         CHARACTER(*), INTENT(IN) :: ErrorMessage
+
+         CALL NWTC_DisplaySyntax( Arg1, ProgName )
+         CALL ProgAbort( ' Invalid syntax: '//TRIM(ErrorMessage), PRESENT(ErrStat) )
+         IF ( PRESENT(ErrStat) ) THEN
+            ErrStat = ErrID_Fatal
+            RETURN
+         END IF
+
+      END SUBROUTINE
+
+      SUBROUTINE GET_COMMAND_LINE_ARG(ArgIndex, ArgGiven)
+
+         INTEGER, INTENT(IN) :: ArgIndex           !< Index location of the argument to get.
+         CHARACTER(1024), INTENT(OUT) :: ArgGiven  !< The gotten command-line argument.
+         INTEGER :: Error                          !< Indicates if there was an error getting an argument.
+
+         CALL GET_COMMAND_ARGUMENT( ArgIndex, ArgGiven, STATUS=Error )
+         ArgGiven = TRIM(ArgGiven)
+         IF ( Error /= 0 )  THEN
+            CALL ProgAbort ( ' Error getting command-line argument #'//TRIM( Int2LStr( ArgIndex ) )//'.', PRESENT(ErrStat) )
+            IF ( PRESENT(ErrStat) ) ErrStat = ErrID_Fatal
+         END IF
+
+      END SUBROUTINE
+
+      FUNCTION IsFlag(ArgString)
+
+         CHARACTER(*), INTENT(IN) :: ArgString
+         LOGICAL :: IsFlag
+
+         IF ( ArgString(1:1) == SwChar .OR. ArgString(1:1) == '-' ) THEN
+            IsFlag = .TRUE.
+         ELSE
+            IsFlag = .FALSE.
+         END IF
+
+      END FUNCTION
+
+   END SUBROUTINE CheckArgs
 !=======================================================================
 !> This subroutine checks the data to be parsed to make sure it finds
 !! the expected variable name and an associated value.
@@ -7957,10 +8022,7 @@ CONTAINS
    
       INTEGER(IntKi)                         :: ErrStat2             ! local error level/status of OpenFOutFile operation
       CHARACTER(ErrMsgLen)                   :: ErrMsg2                   ! local message when error occurs   
-      CHARACTER(1024)                        :: Line, Line2              ! one line of the file
-      CHARACTER(1024)                        :: formatLbl
       CHARACTER(*), PARAMETER                :: RoutineName = 'ReadVTK_SP_vectors'
-      INTEGER(IntKi)                         :: sz, nPts,i,j,k
       
       ErrStat = ErrID_None
       ErrMsg  = ''
