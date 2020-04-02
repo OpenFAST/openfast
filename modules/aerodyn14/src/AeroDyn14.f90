@@ -461,7 +461,7 @@ SUBROUTINE AD14_Init( InitInp, u, p, x, xd, z, O, y, m, Interval, InitOut, ErrSt
    ! u%TurbineComponents
    !..........
 
-   CALL AD14AeroConf_CopyInput( InitInp%TurbineComponents, u%TurbineComponents, MESH_NEWCOPY, ErrStatLcl, ErrMessLcl )
+   CALL AD14_CopyAeroConfig( InitInp%TurbineComponents, u%TurbineComponents, MESH_NEWCOPY, ErrStatLcl, ErrMessLcl )
       CALL SetErrStat ( ErrStatLcl, ErrMessLcl, ErrStat,ErrMess,RoutineName )
       IF (ErrStat >= AbortErrLev) RETURN
    
@@ -587,8 +587,6 @@ SUBROUTINE AD14_Init( InitInp, u, p, x, xd, z, O, y, m, Interval, InitOut, ErrSt
          CALL SetErrStat ( ErrStatLcl, ErrMessLcl, ErrStat,ErrMess,RoutineName )
          IF (ErrStat >= AbortErrLev) RETURN
    ENDDO
- 
-
    
    
    !..........
@@ -742,8 +740,6 @@ SUBROUTINE AD14_CalcOutput( Time, u, p, x, xd, z, O, y, m, ErrStat, ErrMess )
       USE               AeroGenSubs,   ONLY: ElemOut
       USE               DWM_Types
       USE               DWM
-!FIXME: remove InflowWind from here...
-      USE InflowWind !! KS
 
       REAL(DbKi),                     INTENT(IN   )  :: Time        ! Current simulation time in seconds
       TYPE(AD14_InputType),           INTENT(INOUT)  :: u           ! Inputs at Time
@@ -1101,7 +1097,7 @@ SUBROUTINE AD14_CalcOutput( Time, u, p, x, xd, z, O, y, m, ErrStat, ErrMess )
                CALL CleanUp()
                RETURN
             END IF
-
+            
          !-------------------------------------------------------------------------------------------
          ! Set up dynamic inflow parameters
          !-------------------------------------------------------------------------------------------

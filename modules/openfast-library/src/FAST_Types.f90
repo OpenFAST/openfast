@@ -44,7 +44,6 @@ USE IfW_4Dext_Types
 USE Lidar_Types
 USE InflowWind_Types
 USE DWM_Types
-USE AD14AeroConf_Types
 USE AeroDyn14_Types
 USE AirfoilInfo_Types
 USE UnsteadyAero_Types

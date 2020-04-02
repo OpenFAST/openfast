@@ -11,11 +11,49 @@
 ###################################################################################################################################
 include	Registry_NWTC_Library.txt
 usefrom	Registry-DWM.txt
-usefrom  Registry-AD14AeroConf.txt
 
+# AeroDyn Subtypes
+typedef	AeroDyn14/AD14	Marker	Reki	Position	3	0.0	-		-
+typedef	^	Marker	^	Orientation	{3}{3}	0.0	-		-
+typedef	^	Marker	^	TranslationVel	3	0.0	-		-
+typedef	^	Marker	^	RotationVel	3	0.0	-		-
+
+#ADOptions
+#typedef	AeroDyn14/AD14	ADOptions	CHARACTER(1024)	ADFile
+#typedef	^	ADOptions	CHARACTER(1024)	RootName
+#typedef	^	ADOptions	CHARACTER(1024)	SumFile
+#typedef	^	ADOptions	LOGICAL	WrSumFile
+
+#AeroConfig
+typedef	AeroDyn14/AD14	AeroConfig	Marker	Blade	{:}	-	-		-
+typedef	^	AeroConfig	^	Hub	-	-	-		-
+typedef	^	AeroConfig	^	RotorFurl	-	-	-		-
+typedef	^	AeroConfig	^	Nacelle	-	-	-		-
+typedef	^	AeroConfig	^	TailFin	-	-	-		-
+typedef	^	AeroConfig	^	Tower	-	-	-		-
+typedef	^	AeroConfig	^	SubStructure	-	-	-		-
+typedef	^	AeroConfig	^	Foundation	-	-	-		-
+typedef	^	AeroConfig	ReKi	BladeLength	-	-	-		-
+
+
+#Airfoil
+typedef	AeroDyn14/AD14	AirFoil	ReKi	AL	{:}{:}	-	-		-
+typedef	^	AirFoil	ReKi	CD	{:}{:}{:}	-	-		-
+typedef	^	AirFoil	ReKi	CL	{:}{:}{:}	-	-		-
+typedef	^	AirFoil	ReKi	CM	{:}{:}{:}	-	-		-
+typedef	^	AirFoil	ReKi	PMC	-	-	-		-
+typedef	^	AirFoil	ReKi	MulTabLoc	-
+typedef	^	AirFoilParms	IntKi	MaxTable	-	20	-
+typedef	^	AirFoilParms	IntKi	NTables	{:}	-	-		-
+typedef	^	AirFoilParms	IntKi	NLift	{:}	-	-		-
+typedef	^	AirFoilParms	IntKi	NumCL	-	-	-		-
+typedef	^	AirFoilParms	IntKi	NumFoil	-	-	-
+typedef	^	AirFoilParms	IntKi	NFoil	{:}	-	-		-
+typedef	^	AirFoilParms	ReKi	MulTabMet	{:}{:}	-	-		-
+typedef	^	AirFoilParms	CHARACTER(1024)	FoilNm	{:}			"Number of airfoil data sets"
 
 #Beddoes
-typedef	AeroDyn14/AD14	Beddoes	ReKi	ADOT	{:}{:}	-	-		-
+typedef	^	Beddoes	ReKi	ADOT	{:}{:}	-	-		-
 typedef	^	Beddoes	ReKi	ADOT1	{:}{:}	-	-		-
 typedef	^	Beddoes	ReKi	AFE	{:}{:}	-	-		-
 typedef	^	Beddoes	ReKi	AFE1	{:}{:}	-	-		-
@@ -249,15 +287,15 @@ typedef	^	InitInputType	ReKi	BladeLength	-	-	-	"Blade Length"
 #typedef	^	InitInputType	OrientationType	InitBladeOrient	{:}{:}	-	-	"Positions of the blades, initially, from FAST"
 typedef	^	InitInputType	LOGICAL	LinearizeFlag
 typedef	^	InitInputType	LOGICAL	UseDWM	-	.FALSE.	-	"flag to determine if DWM module should be used"	-
-typedef	^	InitInputType	AD14AeroConf_InputType	TurbineComponents	-	-	-		-
+typedef	^	InitInputType	AeroConfig	TurbineComponents	-	-	-		-
 typedef	^	InitInputType	INTEGER	NumTwrNodes	-	-	-	"Number of ElastoDyn tower nodes.  Tower drag will be computed at those points."
 typedef	^	InitInputType	ReKi	TwrNodeLocs	{:}{:}	-	-	"Location of ElastoDyn tower nodes with respect to the inertial origin."	-
 typedef	^	InitInputType	ReKi	HubHt	-	-	-	"hub height wrt inertial origin"	m
 typedef	^	InitInputType	DWM_InitInputType	DWM	-	-	-		-
 
 # Define outputs from the initialization routine here:
-typedef	AeroDyn14/AD14	InitOutputType	ProgDesc	Ver	-	-	-	"version information" -
-typedef	^	InitOutputType	DWM_InitOutputType	DWM	-	-	-		- -
+typedef	AeroDyn14/AD14	InitOutputType	ProgDesc	Ver	-	-	-	"version information"
+typedef	^	InitOutputType	DWM_InitOutputType	DWM	-	-	-		-
 typedef	^	InitOutputType	ReKi	AirDens	-	-	-	"Air density"	kg/m^3
 
 # ..... States ....................................................................................................................
@@ -299,7 +337,7 @@ typedef	^	MiscVarType	LOGICAL	AFLAGTwrInflu	-	.FALSE.	-	# was saved latch in Get
 typedef	^	MiscVarType	LOGICAL	OnePassDynDbg	-	.TRUE.	-	#
 typedef	^	MiscVarType	LOGICAL	NoLoadsCalculated	-	.TRUE.	-		-
 typedef	^	MiscVarType	IntKi	NERRORS	-	0	-	# was saved variable in vinderr
-typedef	^	MiscVarType	AD14AeroConf_MiscVarType	AirFoil
+typedef	^	MiscVarType	AirFoil	AirFoil
 typedef	^	MiscVarType	Beddoes	Beddoes
 typedef	^	MiscVarType	DynInflow	DynInflow
 typedef	^	MiscVarType	Element	Element
@@ -344,7 +382,7 @@ typedef	^	ParameterType	INTEGER	UnWndOut	-	-1		# note, these are not minus signs
 typedef	^	ParameterType	INTEGER	MAXICOUNT	-	1000	-	# used in VIND
 typedef	^	ParameterType	LOGICAL	WrOptFile	-	.TRUE.	-	"T/F: Write an AeroDyn summary"
 typedef	^	ParameterType	IntKi	DEFAULT_Wind	-	-1	-
-typedef	^	ParameterType	AD14AeroConf_ParameterType	AirFoil
+typedef	^	ParameterType	AirFoilParms	AirFoil
 typedef	^	ParameterType	BladeParms	Blade
 typedef	^	ParameterType	BeddoesParms	Beddoes
 typedef	^	ParameterType	DynInflowParms	DynInflow
@@ -355,16 +393,13 @@ typedef	^	ParameterType	WindParms	Wind
 typedef	^	ParameterType	RotorParms	Rotor
 typedef	^	ParameterType	DWM_ParameterType	DWM	-	-	-		-
 
-##FIXME: Remove these!!!!
-typedef  ^  ParameterType  DbKi       IfW_DT     -       -       -               -
-
 # ..... Inputs ....................................................................................................................
 # Define inputs that are contained on the mesh here:
 #typedef	^	InputType	MeshType	MeshedInput	-	-	-	"Meshed input data"	-
 # Define inputs that are not on this mesh here:
 typedef	^	InputType	MeshType	InputMarkers	{:}	-	-	"Input Forces and positions for the blades (mesh) for each blade"	-
 typedef	^	InputType	MeshType	Twr_InputMarkers	-	-	-	"Input Forces and positions for the tower (mesh)"	-
-typedef	^	InputType	AD14AeroConf_InputType	TurbineComponents	-	-	-	"Current locations of components"
+typedef	^	InputType	AeroConfig	TurbineComponents	-	-	-	"Current locations of components"
 typedef	^	InputType	ReKi	MulTabLoc	{:}{:}
 typedef	^	InputType	ReKi	InflowVelocity	{:}{:}	-	-	"U,V,W wind inflow speeds at all locations on the Inputmarker and Twr_InputMarker meshes"	"m/s"
 typedef	^	InputType	ReKi	AvgInfVel	{3}	-	-	"an average disk velocity (depends on wind type and should be removed)"	"m/s"
