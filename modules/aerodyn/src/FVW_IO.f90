@@ -16,11 +16,8 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, Inp, ErrStat, ErrMsg )
    integer(IntKi),               intent(  out) :: ErrStat  !< Error status of the operation
    character(*),                 intent(  out) :: ErrMsg   !< Error message if ErrStat /= ErrID_None
    ! Local variables
-   integer :: iLine
-   real(ReKi) :: TODO_Re
    character(1024)      :: PriPath                         ! the path to the primary input file
    character(1024)      :: VTK_fps_line                    ! string to temporarially hold value of read line for VTK_fps
-   integer(IntKi)       :: LineLen
    integer(IntKi)       :: UnIn
    integer(IntKi)       :: ErrStat2
    character(ErrMsgLen) :: ErrMsg2
@@ -176,17 +173,13 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth)
    character(1024)                       :: FileName
    character(255)                        :: Label
    character(Twidth)                     :: Tstr          ! string for current VTK write-out step (padded with zeros)
-   integer :: iSeg
-   integer :: iSpan, iNW, iFW
-   integer :: k
-   real(ReKi), dimension(:,:), allocatable :: Buffer2d
    character(1), dimension(3) :: I2ABC =(/'A','B','C'/)
    !
    integer(IntKi),dimension(:,:), allocatable :: SegConnct !< Segment connectivity
    real(ReKi),    dimension(:,:), allocatable :: SegPoints !< Segment Points
    real(ReKi),    dimension(:)  , allocatable :: SegGamma  !< Segment Circulation
    real(ReKi),    dimension(:),   allocatable  :: SegEpsilon !< 
-   integer(IntKi) :: iHeadC, iHeadP, nSeg, nSegP, iHeadC_bkp
+   integer(IntKi) :: iHeadC, iHeadP, nSeg, nSegP
    integer(IntKi)       :: ErrStat2
    character(ErrMsgLen) :: ErrMsg2
 
@@ -268,6 +261,7 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth)
    CALL WrVTK_Segments(Filename, SegPoints, SegConnct, SegGamma, SegEpsilon) 
    deallocate(SegEpsilon)
 
+   if(.false.) print*,z%Gamma_LL(1,1) ! unused var for now
 end subroutine WrVTK_FVW
 
 
@@ -292,12 +286,12 @@ subroutine WrVTK_Segments(filename, SegPoints, SegConnct, SegGamma, SegEpsilon)
    endif
 end subroutine
 
-subroutine WrVTK_Lattice(filename, LatticePoints, LatticeGamma, LatticeData3d)
+subroutine WrVTK_Lattice(filename, LatticePoints, LatticeGamma)
    use VTK ! for all the vtk_* functions
    character(len=*), intent(in)                         :: filename
    real(Reki), dimension(:,:,:), intent(in  )           :: LatticePoints !< Array of points 3 x nSpan x nDepth
    real(Reki), dimension(:,:), intent(in  )             :: LatticeGamma  !< Array of            nSpan x nDepth
-   real(Reki), dimension(:,:,:), intent(in  ), optional :: LatticeData3d !< Array of n x nSpan x nDepth
+   !real(Reki), dimension(:,:,:), intent(in  ), optional :: LatticeData3d !< Array of n x nSpan x nDepth KEEP ME
    !
    integer(IntKi), dimension(:,:), allocatable :: Connectivity
    real(ReKi), dimension(:,:), allocatable     :: Points

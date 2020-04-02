@@ -107,7 +107,6 @@ subroutine ReadAndInterpGamma(CirculationFileName, s_CP_LL, L, Gamma_CP_LL)
    integer(IntKi)      :: nLines
    integer(IntKi)      :: i
    integer(IntKi)      :: iStat
-   integer(IntKi)      :: nr
    integer(IntKi)      :: iUnit
    character(len=1054) :: line
    real(ReKi), dimension(:), allocatable :: sPrescr, GammaPrescr !< Radius
@@ -207,7 +206,7 @@ subroutine Map_NW_FW(p, m, z, x, ErrStat, ErrMsg)
    type(FVW_ContinuousStateType),   intent(inout)  :: x              !< Continuous states
    integer(IntKi),                  intent(  out)  :: ErrStat        !< Error status of the operation
    character(*),                    intent(  out)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
-   integer(IntKi)            :: iSpan , iW, iRoot
+   integer(IntKi)            :: iW, iRoot
    real(ReKi), dimension(p%nWings) :: FWGamma
    integer(IntKi), parameter :: iAgeFW=1   !< we update the first FW panel
    ErrStat = ErrID_None
@@ -246,6 +245,7 @@ subroutine Map_NW_FW(p, m, z, x, ErrStat, ErrMsg)
          endif
       enddo
    endif
+   if (.false.) print*,z%Gamma_LL(1,1) ! Just to avoid unused var warning
 endsubroutine Map_NW_FW
 
 !> Propage the postions and circulation one index forward (loop from end to start) 
@@ -298,13 +298,12 @@ subroutine PropagateWake(p, m, z, x, ErrStat, ErrMsg)
          x%Gamma_NW(:,1:iNWStart,iW) = -999.9_ReKi ! Nullified
       enddo
    endif
+   if (.false.) print*,m%nNW,z%Gamma_LL(1,1) ! Just to avoid unused var warning
 end subroutine PropagateWake
 
 
-subroutine print_x_NW_FW(p, m, z, x, label)
+subroutine print_x_NW_FW(p, x, label)
    type(FVW_ParameterType),         intent(in   )  :: p              !< Parameters
-   type(FVW_MiscVarType),           intent(in   )  :: m              !< Initial misc/optimization variables
-   type(FVW_ConstraintStateType),   intent(in   )  :: z              !< Constraints states
    type(FVW_ContinuousStateType),   intent(inout)  :: x              !< Continuous states
    character(len=*),intent(in) :: label
    integer(IntKi) :: iAge
@@ -362,9 +361,8 @@ end subroutine SetRequestedWindPoints
 
 
 !> Set the requested wind into the correponding misc variables
-subroutine DistributeRequestedWind(V_wind, x, p, m)
+subroutine DistributeRequestedWind(V_wind, p, m)
    real(ReKi), dimension(:,:),      intent(in   ) :: V_wind  !< Position where wind is requested
-   type(FVW_ContinuousStateType),   intent(in   ) :: x       !< States
    type(FVW_ParameterType),         intent(in   ) :: p       !< Parameters
    type(FVW_MiscVarType),           intent(inout) :: m       !< Initial misc/optimization variables
    integer(IntKi)          :: iP_start,iP_end   ! Current index of point, start and end of range
@@ -474,13 +472,12 @@ subroutine FVW_InitRegularization(p, m, ErrStat, ErrMsg)
    integer(IntKi),                  intent(  out) :: ErrStat    !< Error status of the operation
    character(*),                    intent(  out) :: ErrMsg     !< Error message if ErrStat /= ErrID_None
    ! Local variables
-   integer(IntKi) :: iSeg
    real(ReKi) :: ds_min, ds_max, ds_mean !< min,max and mean of spanwise sections
    real(ReKi) :: c_min, c_max, c_mean !< min,max and mean of chord
    real(ReKi) :: d_min, d_max, d_mean !< min,max and mean of panel diagonal
    real(ReKi) :: RegParam
    real(ReKi) :: Span !< "Blade span"
-   integer :: iSpan, iW
+   integer :: iW
    ErrStat = ErrID_None
    ErrMsg  = ""
    ! --- Compute min max and mean spanwise section lengths
@@ -560,6 +557,7 @@ subroutine WakeRegularization(p, x, m, SegConnct, SegPoints, SegGamma, SegEpsilo
       ! TODO
       ErrStat = ErrID_Fatal
       ErrMsg ='Regularization method not implemented'
+      if (.false.) print*,m%nNW,x%r_NW(1,1,1,1),SegPoints(1,1),SegGamma(1) ! Needed in the future, Just to avoid unused var warning
 
    else if (p%WakeRegMethod==idRegAge) then
       do iSeg=1,size(SegEpsilon,1) ! loop on segments
@@ -585,7 +583,7 @@ subroutine WakeInducedVelocities(p, x, m, ErrStat, ErrMsg)
    integer(IntKi),                  intent(  out) :: ErrStat !< Error status of the operation
    character(*),                    intent(  out) :: ErrMsg  !< Error message if ErrStat /= ErrID_None
    ! Local variables
-   integer(IntKi) :: iSpan,iAge, iW, nSeg, nSegP, nCPs, iHeadP
+   integer(IntKi) :: iW, nSeg, nSegP, nCPs, iHeadP
    integer(IntKi),dimension(:,:), allocatable :: SegConnct  !< Segment connectivity
    real(ReKi),    dimension(:,:), allocatable :: SegPoints  !< Segment Points
    real(ReKi),    dimension(:)  , allocatable :: SegGamma   !< Segment Circulation
@@ -690,7 +688,7 @@ subroutine LiftingLineInducedVelocities(p, x, iDepthStart, m, ErrStat, ErrMsg)
    integer(IntKi),                  intent(in   ) :: iDepthStart !< Index where we start packing for NW panels
    type(FVW_MiscVarType),           intent(inout) :: m       !< Initial misc/optimization variables
    ! Local variables
-   integer(IntKi) :: iSpan,iAge, iW, nSeg, nSegP, nCPs, iHeadP
+   integer(IntKi) :: iW, nSeg, nSegP, nCPs, iHeadP
    integer(IntKi),dimension(:,:), allocatable :: SegConnct !< Segment connectivity
    real(ReKi),    dimension(:,:), allocatable :: SegPoints !< Segment Points
    real(ReKi),    dimension(:)  , allocatable :: SegGamma  !< Segment Circulation
@@ -699,7 +697,6 @@ subroutine LiftingLineInducedVelocities(p, x, iDepthStart, m, ErrStat, ErrMsg)
    real(ReKi),    dimension(:,:), allocatable :: Uind  !< Induced velocity
    integer(IntKi),              intent(  out) :: ErrStat    !< Error status of the operation
    character(*),                intent(  out) :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-   integer(IntKi) :: i
    ErrStat = ErrID_None
    ErrMsg  = ""
    m%Vind_LL = -9999._ReKi !< Safety
@@ -826,6 +823,7 @@ subroutine FVW_AeroOuts( M_sg, M_ag, PitchAndTwist, Vstr_g,  Vind_g, Vwnd_g, Kin
    TanInd =  Vind_s(2)/Urel_s(2)
    phi    = atan2( Vtot_s(1), Vtot_s(2) )        ! flow angle
 
+   if(.false.) print*,PitchAndTwist ! just to avoid unused var for now
 end subroutine FVW_AeroOuts
 
 

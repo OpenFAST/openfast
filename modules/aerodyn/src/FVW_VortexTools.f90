@@ -63,7 +63,6 @@ CONTAINS
       ! Local
       integer(IntKi) :: nSpan, nDepth
       integer(IntKi) :: iSpan, iDepth
-      real(ReKi) :: c1,c2
       integer(IntKi) :: iHeadP0, iseg1, iseg2, iseg3 ,iseg4  !< Index indicating where to start in SegPoints
       real(ReKi) :: Gamma12
       real(ReKi) :: Gamma41

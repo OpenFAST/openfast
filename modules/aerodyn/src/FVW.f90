@@ -78,7 +78,7 @@ subroutine FVW_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
    call DispNVD( FVW_Ver )
 
    ! Set Parameters and *Misc* from inputs
-   CALL FVW_SetParametersFromInputs(InitInp, p, m, ErrStat2, ErrMsg2); if(Failed()) return
+   CALL FVW_SetParametersFromInputs(InitInp, p, ErrStat2, ErrMsg2); if(Failed()) return
 
    ! Read and parse the input file here to get other parameters and info
    CALL FVW_ReadInputFile(InitInp%FVWFileName, p, InputFileData, ErrStat2, ErrMsg2); if(Failed()) return
@@ -103,13 +103,13 @@ subroutine FVW_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
    m%Vwnd_FW(:,:,:,:) = 0
 
    ! This mesh is passed in as a cousin of the BladeMotion mesh.
-   CALL Wings_Panelling_Init(u%WingsMesh, InitInp%zLocal, p, m, ErrStat2, ErrMsg2); if(Failed()) return
+   CALL Wings_Panelling_Init(u%WingsMesh, p, m, ErrStat2, ErrMsg2); if(Failed()) return
 
    ! Set parameters from InputFileData (need Misc allocated)
    CALL FVW_SetParametersFromInputFile(InputFileData, p, m, ErrStat2, ErrMsg2); if(Failed()) return
 
    ! Initialize States Vars
-   CALL FVW_InitStates( x, p, m, ErrStat2, ErrMsg2 ); if(Failed()) return
+   CALL FVW_InitStates( x, p, ErrStat2, ErrMsg2 ); if(Failed()) return
 
    ! Initialize Constraints Vars
    CALL FVW_InitConstraint( z, p, m, ErrStat2, ErrMsg2 ); if(Failed()) return
@@ -131,6 +131,11 @@ subroutine FVW_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
       CALL FVW_RunTests(ErrStat2, ErrMsg2); if (Failed()) return
    endif
 
+   ! Framework types unused
+   Interval = InitInp%DTAero
+   OtherState%NULL = 0
+   xd%NULL         = 0
+   InitOut%NULL    = 0
 CONTAINS
 
    logical function Failed()
@@ -198,10 +203,9 @@ subroutine FVW_InitMiscVars( p, m, ErrStat, ErrMsg )
    m%OldWakeTime = -HUGE(1.0_DbKi)
 end subroutine FVW_InitMiscVars
 ! ==============================================================================
-subroutine FVW_InitStates( x, p, m, ErrStat, ErrMsg )
+subroutine FVW_InitStates( x, p, ErrStat, ErrMsg )
    type(FVW_ContinuousStateType),   intent(  out)  :: x              !< States
    type(FVW_ParameterType),         intent(in   )  :: p              !< Parameters
-   type(FVW_MiscVarType),           intent(in   )  :: m              !< Initial misc/optimization variables
    integer(IntKi),                  intent(  out)  :: ErrStat        !< Error status of the operation
    character(*),                    intent(  out)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
    integer(IntKi)          :: ErrStat2       ! temporary error status of the operation
@@ -236,6 +240,7 @@ subroutine FVW_InitConstraint( z, p, m, ErrStat, ErrMsg )
    call AllocAry( z%Gamma_LL,  p%nSpan, p%nWings, 'Lifting line Circulation', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitConstraint' ); z%Gamma_LL = -999999_ReKi;
 
    if (ErrStat >= AbortErrLev) return
+   if(.false.) print*,m%nNW ! unused var for now
 end subroutine FVW_InitConstraint
 ! ==============================================================================
 subroutine FVW_Init_Y( p, u, y, ErrStat, ErrMsg )
@@ -268,17 +273,14 @@ end subroutine FVW_Init_Y
 
 ! ==============================================================================
 !> Setting parameters *and misc* from module inputs
-SUBROUTINE FVW_SetParametersFromInputs( InitInp, p, m, ErrStat, ErrMsg )
+SUBROUTINE FVW_SetParametersFromInputs( InitInp, p, ErrStat, ErrMsg )
    type(FVW_InitInputType),    intent(inout)  :: InitInp       !< Input data for initialization routine  (inout so we can use MOVE_ALLOC)
    type(FVW_ParameterType),    intent(inout) :: p             !< Parameters
-   type(FVW_MiscVarType),      intent(inout) :: m             !< Misc
    integer(IntKi),             intent(  out) :: ErrStat       !< Error status of the operation
    character(*),               intent(  out) :: ErrMsg        !< Error message if ErrStat /= ErrID_None
    ! Local variables
-   integer(IntKi)          :: iW             ! Index on wings
-   integer(IntKi)          :: iSpan
-   integer(IntKi)          :: ErrStat2
-   character(ErrMsgLen)    :: ErrMsg2
+   !integer(IntKi)          :: ErrStat2
+   !character(ErrMsgLen)    :: ErrMsg2
    character(*), parameter :: RoutineName = 'FVW_SetParametersFromInputs'
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -349,6 +351,7 @@ subroutine FVW_ToString(p,m)
    type(FVW_MiscVarType),      intent(inout) :: m !< Misc
    if (DEV_VERSION) then
       print*,'-----------------------------------------------------------------------------------------'
+      if(.false.) print*,m%nNW ! unused var for now
    endif
 end subroutine FVW_ToString
 
@@ -419,7 +422,7 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    integer(IntKi)                :: ErrStat2                                                           ! temporary Error status
    character(ErrMsgLen)          :: ErrMsg2                                                            ! temporary Error message
    type(FVW_ConstraintStateType) :: z_guess                                                                              ! <
-   integer(IntKi) :: iW, iSpan, nP, nFWEff
+   integer(IntKi) :: nP, nFWEff
    integer, dimension(8) :: time1, time2, time_diff
 
    ErrStat = ErrID_None
@@ -449,7 +452,7 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    call Wings_Panelling(uInterp%WingsMesh, p, m, ErrStat2, ErrMsg2); if(Failed()) return
    
    ! Distribute the Wind we requested to Inflow wind to storage Misc arrays
-   CALL DistributeRequestedWind(u(1)%V_wind, x, p, m)
+   CALL DistributeRequestedWind(u(1)%V_wind, p, m)
 
    ! --- Solve for circulation at t
    ! Returns: z%Gamma_LL (at t)
@@ -743,7 +746,7 @@ subroutine FVW_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, ErrStat,
    integer(IntKi),                  intent(  out)  :: ErrStat     !< Error status of the operation
    character(*),                    intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
    ! Local variables
-   integer(IntKi)                :: iSpan, iW, n, i0, i1, i2
+   integer(IntKi)                :: iW, n, i0, i1, i2
    integer(IntKi)                :: ErrStat2
    character(ErrMsgLen)          :: ErrMsg2
    character(*), parameter       :: RoutineName = 'FVW_CalcOutput'
@@ -756,7 +759,7 @@ subroutine FVW_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, ErrStat,
    endif
 
    ! Set the wind velocity at vortex
-   CALL DistributeRequestedWind(u%V_wind, x, p, m)
+   CALL DistributeRequestedWind(u%V_wind, p, m)
 
    ! if we are on a correction step, CalcOutput may be called again with different inputs
    CALL Wings_ComputeCirculation(t, m%Gamma_LL, z%Gamma_LL, u, p, x, m, AFInfo, ErrStat2, ErrMsg2, 0); if(Failed()) return ! For plotting only

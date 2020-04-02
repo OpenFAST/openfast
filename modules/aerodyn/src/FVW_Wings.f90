@@ -63,16 +63,15 @@ contains
    !!  - s_CP_LL    : Dimensionless spanwise coordinate of LL CP 
    !!  - chord_LL   : chord on LL 
    !!  - chord_LL_CP: chord on LL cp  
-   subroutine Wings_Panelling_Init(Meshes, r, p, m, ErrStat, ErrMsg )
+   subroutine Wings_Panelling_Init(Meshes, p, m, ErrStat, ErrMsg )
       type(MeshType), dimension(:),    intent(in   )  :: Meshes         !< Wings mesh
-      real(ReKi), dimension(:,:),      intent(in   )  :: r              !< 
       type(FVW_ParameterType),         intent(in   )  :: p              !< Parameters
       type(FVW_MiscVarType),           intent(inout)  :: m              !< Initial misc/optimization variables
       integer(IntKi),                  intent(  out)  :: ErrStat        !< Error status of the operation
       character(*),                    intent(  out)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
       ! Local
-      integer(IntKi)          :: ErrStat2       ! temporary error status of the operation
-      character(ErrMsgLen)    :: ErrMsg2        ! temporary error message
+      !integer(IntKi)          :: ErrStat2       ! temporary error status of the operation
+      !character(ErrMsgLen)    :: ErrMsg2        ! temporary error message
       integer(IntKi) :: iW, iSpan
       real(ReKi), dimension(3) :: DP
       real(ReKi), dimension(:),allocatable :: s_in !< Dimensionless spanwise coordinate of input
@@ -128,8 +127,8 @@ contains
       integer(IntKi),                  intent(  out)  :: ErrStat        !< Error status of the operation
       character(*),                    intent(  out)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
       ! Local
-      integer(IntKi)          :: ErrStat2       ! temporary error status of the operation
-      character(ErrMsgLen)    :: ErrMsg2        ! temporary error message
+      !integer(IntKi)          :: ErrStat2       ! temporary error status of the operation
+      !character(ErrMsgLen)    :: ErrMsg2        ! temporary error message
       integer(IntKi) ::iSpan , iW
       real(ReKi), dimension(3) :: P_ref         ! Reference point of Input Mesh (e.g. AeroDynamic Center?)
       real(ReKi), dimension(3) :: DP_LE ! Distance between reference point and Leading edge
@@ -232,7 +231,7 @@ contains
       integer(IntKi), intent(in) :: iLabel
       ! Local
       integer(IntKi) :: iW
-      real(ReKi) :: s
+      real(DbKi) :: s, ExpTerm
       real(ReKi) :: GammaScale
       ErrStat = ErrID_None
       ErrMsg  = ""
@@ -242,10 +241,11 @@ contains
          if (t<=0) then
             GammaScale=0.0_ReKi
          else
-            s=(t/p%FullCirculationStart)
-            ! If we have at least 10 points we use a smooth Heavyside, otehrwise we use a simple linear scaling
+            s=t/p%FullCirculationStart
+            ! If we have at least 10 points we use a smooth Heavyside, otherwise we use a simple linear scaling
             if (p%FullCirculationStart/p%DTfvw >= 9) then
-               GammaScale = 1._ReKi- 1._ReKi/(1._ReKi+exp((1-2*s)/(s*(s-1._ReKi)))) ! Using a smooth approsimation of HeavySide function
+               ExpTerm=max( (1-2*s)/(s*(s-1._DbKi)+1.0e-04_DbKi),10.0_DbKi) ! Bounding exponential to avoid overflow
+               GammaScale = 1._ReKi- 1._ReKi/(1._ReKi+exp(real(ExpTerm,ReKi))) ! Using a smooth approximation of HeavySide function
             else
                GammaScale = s  ! Using a linear scaling
             endif
@@ -261,7 +261,7 @@ contains
 
       else if (p%CirculationMethod==idCircPolarData) then 
          ! ---  Solve for circulation using polar data
-         CALL Wings_ComputeCirculationPolarData(t, Gamma_LL, Gamma_LL_prev, u, p, x, m, AFInfo, GammaScale, ErrStat, ErrMsg, iLabel)
+         CALL Wings_ComputeCirculationPolarData(Gamma_LL, Gamma_LL_prev, p, x, m, AFInfo, GammaScale, ErrStat, ErrMsg, iLabel)
 
       else if (p%CirculationMethod==idCircNoFlowThrough) then 
          ! ---  Solve for circulation using the no-flow through condition
@@ -278,11 +278,9 @@ contains
 
    !----------------------------------------------------------------------------------------------------------------------------------
    !>
-   subroutine Wings_ComputeCirculationPolarData(t, Gamma_LL, Gamma_LL_prev, u, p, x, m, AFInfo, GammaScale, ErrStat, ErrMsg, iLabel)
-      real(DbKi),                      intent(in   )  :: t           !< Current simulation time in seconds
+   subroutine Wings_ComputeCirculationPolarData(Gamma_LL, Gamma_LL_prev, p, x, m, AFInfo, GammaScale, ErrStat, ErrMsg, iLabel)
       real(ReKi), dimension(:,:),      intent(inout)  :: Gamma_LL       !< Circulation on all the lifting lines
       real(ReKi), dimension(:,:),      intent(in   )  :: Gamma_LL_prev  !< Previous/Guessed circulation
-      type(FVW_InputType),             intent(in   )  :: u              !< Parameters
       type(FVW_ParameterType),         intent(in   )  :: p              !< Parameters
       type(FVW_ContinuousStateType),   intent(in   )  :: x              !< Parameters
       type(FVW_MiscVarType),           intent(inout)  :: m              !< Initial misc/optimization variables

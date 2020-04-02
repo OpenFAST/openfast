@@ -70,8 +70,7 @@ contains
         if(iRef/=iTry) then
             write(InfoAbs,'(A,I0,A,I0)') trim(Var),iRef,'/',iTry
             call test_fail(InfoAbs)
-            STOP -1 !OTHER-COMPILER
-            STOP ! COMPAQ-COMPILER
+            STOP 
         else
             write(InfoAbs,'(A,A,I0)') trim(Var),' ok ',iRef
             call test_success(InfoAbs)
@@ -216,11 +215,11 @@ contains
    subroutine Test_BiotSavart_Sgmt(ErrStat, ErrMsg)
       integer(IntKi)      , intent(out) :: ErrStat !< Error status of the operation
       character(ErrMsgLen), intent(out) :: ErrMsg  !< Error message if ErrStat /= ErrID_None
-      integer(IntKi)       :: ErrStat2
-      character(ErrMsgLen) :: ErrMsg2
+      !integer(IntKi)       :: ErrStat2
+      !character(ErrMsgLen) :: ErrMsg2
       ! 
       real(ReKi), dimension(3) :: P1,P2,P3,CP
-      real(ReKi), dimension(3) :: U1,U2
+      real(ReKi), dimension(3) :: U1
       real(ReKi) :: SegGamma1 !< Circulation  [m^2/s]
       real(ReKi) :: RegParam1 !< 
       integer(IntKi) :: i1,i2
@@ -270,7 +269,7 @@ contains
             print*,'Reg function', RegFunction, 'CP',CP
             print*,'Uind_out',Uind_out
             print*,'U1      ',U1
-            call test_almost_equal('Uind method1/2', U1, Uind_out(:,1), 1e-4, .true.,.true.)
+            call test_almost_equal('Uind method1/2', U1, Uind_out(:,1), 1e-4_ReKi, .true.,.true.)
             !call test_almost_equal('Uind method1/2', U1, Uind_out(:,1), 1e-4, .false.,.true.)
          enddo
       enddo
@@ -309,7 +308,7 @@ contains
             !print*,'Reg function', RegFunction, 'CP',CP
             !print*,'Uind_out',Uind_out
             !print*,'U1      ',U1
-            call test_almost_equal('Uind 1seg/2seg', U1, Uind_out(:,1), 1e-4, .true.,.true.)
+            call test_almost_equal('Uind 1seg/2seg', U1, Uind_out(:,1), 1e-4_ReKi, .true.,.true.)
          enddo
       enddo
    end subroutine
@@ -331,13 +330,14 @@ contains
       real(ReKi),    dimension(:,:),   allocatable :: Uind  !< Induced velocity
       integer(IntKi) :: iHeadC
       integer(IntKi) :: iHeadP
-      integer(IntKi) :: i,j,k
+      integer(IntKi) :: i,j
       integer(IntKi) :: nP
       integer(IntKi) :: nC
       integer(IntKi) :: nP1, nP2
       integer(IntKi) :: nC1, nC2
       integer(IntKi) :: nDepth, nSpan
       integer(IntKi) :: SmoothModel
+      iStat=0
 
       ! --- Creating two lattice
       allocate(LatticePoints1(3,2,2)) 

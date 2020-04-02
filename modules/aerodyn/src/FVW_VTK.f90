@@ -1,6 +1,6 @@
 module VTK
     !use PrecisionMod, only: ReKi
-    use NWTC_Library, only: ReKi
+    use NWTC_Library, only: ReKi, GetNewUnit
     implicit none
 !     character(8), parameter :: RFMT='F14.5'
     !character(8), parameter :: RFMT='E24.15E3'
@@ -74,7 +74,7 @@ contains
 
 
 
-    logical function vtk_new_ascii_file(filename,label,bDEBUG)
+    logical function vtk_new_ascii_file(filename,label)
         !use MainIO,     only: get_free_unit ,check_io
         !use MainIOData, only: bSTOP_ALLOWED
         !use FileSystem, only: file_exists
@@ -82,25 +82,12 @@ contains
         !
         character(len=*),intent(in) :: filename
         character(len=*),intent(in) :: label
-        logical, intent(in),optional ::bDEBUG
         !
         integer :: iostatvar
-        character(len=255) :: iomessage
         logical :: b
 
         if (.not.bFileOpen) then
-            !if (present(bDEBUG)) then
-            !    if (bDEBUG) call log_info('Opening VTK file:'//filename)
-            !endif
-
-            !if (file_exists(filename) .and. .not.bOverWritWarned) then 
-                !call log_warning('Overwritting vtk file '//filename)
-                !call log_warning('Further overwritting warnings will not be displayed')
-            !    bOverWritWarned=.true.
-            !endif
-
-            !vtk_unit=get_free_unit();
-            vtk_unit=123455
+            CALL GetNewUnit( vtk_unit )   
             if (bBinary) then
                 ! Fortran 2003 stream, otherwise intel fortran !
                 !form='UNFORMATTED',access='SEQUENTIAL',action='WRITE',convert='BIG_ENDIAN',recordtype='STREAM',buffered='YES',
@@ -111,11 +98,6 @@ contains
             else
                 open(vtk_unit,file=trim(adjustl(filename)),iostat=iostatvar,action="write",status='replace')
             endif
-            !b=check_io(iostatvar,iomessage);
-            !if(.not.b .and. bSTOP_ALLOWED) then
-            !    STOP ! io errors are fatal
-            !endif
-
             if (iostatvar == 0) then
                 if (bBinary) then
                     write(vtk_unit)'# vtk DataFile Version 3.0'//NL
@@ -521,7 +503,7 @@ contains
         integer :: nD
 
         ! Writting
-        if ( vtk_new_ascii_file(trim(fname),'plane', .false.)) then
+        if ( vtk_new_ascii_file(trim(fname),'grid')) then
             nD=size(Values,1)
             call vtk_dataset_rectilinear(v1,v2,v3)
             ! Output as a structured grid, No need to reorder
@@ -544,7 +526,7 @@ contains
         integer :: nD
 
         ! Writting
-        if ( vtk_new_ascii_file(trim(fname),'plane', .false.)) then
+        if ( vtk_new_ascii_file(trim(fname),'plane') ) then
             nD=size(Values,1)
             call vtk_dataset_rectilinear(v1,v2,v3)
             ! Output as a structured grid, No need to reorder
