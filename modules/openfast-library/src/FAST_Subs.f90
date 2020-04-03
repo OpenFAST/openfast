@@ -4959,6 +4959,7 @@ END SUBROUTINE FillOutputAry
 !> This routine writes all the committed meshes to VTK-formatted files. It doesn't bother with returning an error code.
 SUBROUTINE WrVTK_AllMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, OpFM, HD, SD, ExtPtfm, SrvD, MAPp, FEAM, MD, Orca, IceF, IceD)
    use FVW_IO, only: WrVTK_FVW
+   use VTK, only: set_vtk_no_coordinate_transform
 
    TYPE(FAST_ParameterType), INTENT(IN   ) :: p_FAST              !< Parameters for the glue code
    TYPE(FAST_OutputFileType),INTENT(IN   ) :: y_FAST              !< Output variables for the glue code
@@ -5122,7 +5123,10 @@ SUBROUTINE WrVTK_AllMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, O
          ! Free wake
 !FIXME: Should the wake info be in a different routine?
       if (allocated(AD%m%FVW_u)) then
-         if (allocated(AD%m%FVW_u(1)%WingsMesh))   call WrVTK_FVW(AD%p%FVW, AD%x(1)%FVW, AD%z(1)%FVW, AD%m%FVW, trim(VTK_path)//'.FVW', y_FAST%VTK_count, Twidth)
+         if (allocated(AD%m%FVW_u(1)%WingsMesh)) then
+             call set_vtk_no_coordinate_transform() ! Output in global coords
+             call WrVTK_FVW(AD%p%FVW, AD%x(1)%FVW, AD%z(1)%FVW, AD%m%FVW, trim(VTK_path)//'.FVW', y_FAST%VTK_count, Twidth)
+          endif
       end if   
    END IF
    
@@ -5323,6 +5327,7 @@ END SUBROUTINE WrVTK_BasicMeshes
 !! returning an error code.
 SUBROUTINE WrVTK_Surfaces(t_global, p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, OpFM, HD, SD, SrvD, MAPp, FEAM, MD, Orca, IceF, IceD)
    use FVW_IO, only: WrVTK_FVW
+   use VTK, only: set_vtk_no_coordinate_transform
 
    REAL(DbKi),               INTENT(IN   ) :: t_global            !< Current global time
    TYPE(FAST_ParameterType), INTENT(IN   ) :: p_FAST              !< Parameters for the glue code
@@ -5406,8 +5411,11 @@ SUBROUTINE WrVTK_Surfaces(t_global, p_FAST, y_FAST, MeshMapData, ED, BD, AD14, A
 
 ! Free wake
 !FIXME: is there a better way of checking?
-   if (allocated(AD%m%FVW_u(1)%WingsMesh)) then
-      call WrVTK_FVW(AD%p%FVW, AD%x(1)%FVW, AD%z(1)%FVW, AD%m%FVW, trim(VTK_path)//'.FVW', y_FAST%VTK_count, Twidth)
+   if (allocated(AD%m%FVW_u)) then
+      if (allocated(AD%m%FVW_u(1)%WingsMesh)) then
+         call set_vtk_no_coordinate_transform() ! Output in global coords
+         call WrVTK_FVW(AD%p%FVW, AD%x(1)%FVW, AD%z(1)%FVW, AD%m%FVW, trim(VTK_path)//'.FVW', y_FAST%VTK_count, Twidth)
+      end if   
    end if   
 
 ! Tower motions

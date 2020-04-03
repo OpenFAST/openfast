@@ -730,7 +730,7 @@ subroutine FVW_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, ErrStat,
 ! All of the calculated output channels are placed into the m%AllOuts(:), while the channels selected for outputs are
 ! placed in the y%WriteOutput(:) array.
 !..................................................................................................................................
-   use VTK, only: set_vtk_coordinate_transform
+   use VTK, only: set_vtk_coordinate_transform, set_vtk_no_coordinate_transform
    real(DbKi),                      intent(in   )  :: t           !< Current simulation time in seconds
    type(FVW_InputType),             intent(in   )  :: u           !< Inputs at Time t
    type(FVW_ParameterType),         intent(in   )  :: p           !< Parameters
@@ -812,12 +812,16 @@ subroutine FVW_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, ErrStat,
       endif
       if ( ( t - m%VTKlastTime ) >= p%DTvtk*OneMinusEpsilon )  then
          m%VTKlastTime = t
-         if (p%VTKCoord==2) then
-            ! Hub reference coordinates, for export only
-            ! ALL VTK Will be exported in this coordinate system!
+         if ((p%VTKCoord==2).or.(p%VTKCoord==3)) then
+            ! Hub reference coordinates, for export only, ALL VTK Will be exported in this coordinate system!
             call set_vtk_coordinate_transform(u%HubOrientation,u%HubPosition)
+            call WrVTK_FVW(p, x, z, m, 'vtk_fvw/'//trim(p%RootName)//'FVW_Hub', m%VTKstep, 9)
          endif
-         call WrVTK_FVW(p, x, z, m, 'vtk_fvw/'//trim(p%RootName)//'FVW', m%VTKstep, 9)
+         if ((p%VTKCoord==1).or.(p%VTKCoord==3)) then
+            ! Global coordinate system, ALL VTK will be exported in global
+            call set_vtk_no_coordinate_transform()
+            call WrVTK_FVW(p, x, z, m, 'vtk_fvw/'//trim(p%RootName)//'FVW_Glb', m%VTKstep, 9)
+         endif
       endif
    endif
    m%VTKstep = m%VTKstep + 1  ! Increment VTK counter no matter what
