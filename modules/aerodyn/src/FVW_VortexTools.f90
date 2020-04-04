@@ -155,10 +155,12 @@ CONTAINS
       real(ReKi), dimension(3) :: U
       !
       U(1:3)=0
-      do i=1,size(M,4); do j=1,size(M,3); do k=1,size(M,2); 
-         U(1:3)= U(1:3)+ M(1:3, k, j, i)
-      enddo; enddo; enddo; 
-      U(1:3)=U(1:3)/ (size(M,4)*size(M,3)*size(M,2))
+      if ((size(M,4)*size(M,3)*size(M,2) )>0) then
+         do i=1,size(M,4); do j=1,size(M,3); do k=1,size(M,2); 
+            U(1:3)= U(1:3)+ M(1:3, k, j, i)
+         enddo; enddo; enddo; 
+         U(1:3)=U(1:3)/ (size(M,4)*size(M,3)*size(M,2))
+      endif
       print'(A25,3F12.4)',trim(Label),U
    end subroutine
 
@@ -169,10 +171,12 @@ CONTAINS
       real(ReKi), dimension(3) :: U
       !
       U(1:3)=0
-      do i=1,size(M,3); do j=1,size(M,2)
-         U(1:3)= U(1:3)+ M(1:3, j, i)
-      enddo; enddo;
-      U(1:3)=U(1:3)/ (size(M,3)*size(M,2))
+      if ((size(M,3)*size(M,2))>0) then
+         do i=1,size(M,3); do j=1,size(M,2)
+            U(1:3)= U(1:3)+ M(1:3, j, i)
+         enddo; enddo;
+         U(1:3)=U(1:3)/ (size(M,3)*size(M,2))
+      endif
       print'(A24,3F12.4)',trim(Label),U
    end subroutine
 
