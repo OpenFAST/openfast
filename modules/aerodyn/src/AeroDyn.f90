@@ -309,6 +309,9 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       ! Display the module information
 
    call DispNVD( AD_Ver )
+#ifdef DBG_OUTS
+   call WrScr(' - Compiled with DBG_OUTS')
+#endif
    
    
    p%NumBlades = InitInp%NumBlades ! need this before reading the AD input file so that we know how many blade files to read
