@@ -120,6 +120,10 @@ subroutine FVW_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
    CALL FVW_InitRegularization(p, m, ErrStat2, ErrMsg2); if(Failed()) return
    CALL FVW_ToString(p, m) ! Print to screen
 
+   ! Mapping NW and FW (purely for esthetics, and maybe wind)
+   call Map_LL_NW(p, m, z, x, ErrStat2, ErrMsg2); if(Failed()) return
+   call Map_NW_FW(p, m, z, x, ErrStat2, ErrMsg2); if(Failed()) return
+
    ! Initialize output
    CALL FVW_Init_Y( p, u, y, ErrStat2, ErrMsg2); if(Failed()) return
 
@@ -220,9 +224,15 @@ subroutine FVW_InitStates( x, p, ErrStat, ErrMsg )
    call AllocAry( x%Gamma_NW,    p%nSpan   , p%nNWMax  , p%nWings, 'NW Panels Circulation', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitStates' ); x%Gamma_NW = -999999_ReKi;
    call AllocAry( x%Gamma_FW,    FWnSpan   , p%nFWMax  , p%nWings, 'FW Panels Circulation', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitStates' ); x%Gamma_FW = -999999_ReKi;
    ! set x%r_NW and x%r_FW to (0,0,0) so that InflowWind can shortcut the calculations
-   call AllocAry( x%r_NW    , 3, p%nSpan+1 , p%nNWMax+1, p%nWings, 'NW Panels Points'     , ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitStates' ); x%r_NW     = 0.0_ReKi;
-   call AllocAry( x%r_FW    , 3, FWnSpan+1 , p%nFWMax+1, p%nWings, 'FW Panels Points'     , ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitStates' ); x%r_FW     = 0.0_ReKi;
-
+   call AllocAry( x%r_NW    , 3, p%nSpan+1 , p%nNWMax+1, p%nWings, 'NW Panels Points'     , ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitStates' );
+   call AllocAry( x%r_FW    , 3, FWnSpan+1 , p%nFWMax+1, p%nWings, 'FW Panels Points'     , ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitStates' );
+   !if (DEV_VERSION) then
+   !   x%r_NW     = -9999999_ReKi;
+   !   x%r_FW     = -9999999_ReKi;
+   !else
+   x%r_NW     = 0.0_ReKi;
+   x%r_FW     = 0.0_ReKi;
+   !endif
    if (ErrStat >= AbortErrLev) return
 end subroutine FVW_InitStates
 ! ==============================================================================
@@ -647,8 +657,8 @@ subroutine FVW_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSt
    endif
    ! First NW point does not convect (bound to LL)
    dxdt%r_NW(1:3, :, 1:iNWStart-1, :)=0
-   ! First FW point always convect (even if bound to NW)
-   ! This is done in case there is no NW panel
+   ! First FW point always convects (even if bound to NW)
+   ! This is done for subcycling
    !dxdt%r_FW(1:3, :, 1, :)=0
 contains
    logical function Failed()

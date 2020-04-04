@@ -248,7 +248,7 @@ subroutine Map_NW_FW(p, m, z, x, ErrStat, ErrMsg)
    if (.false.) print*,z%Gamma_LL(1,1) ! Just to avoid unused var warning
 endsubroutine Map_NW_FW
 
-!> Propage the positions and circulation one index forward (loop from end to start) 
+!> Propagate the positions and circulation one index forward (loop from end to start) 
 subroutine PropagateWake(p, m, z, x, ErrStat, ErrMsg)
    type(FVW_ParameterType),         intent(in   )  :: p              !< Parameters
    type(FVW_MiscVarType),           intent(inout)  :: m              !< Initial misc/optimization variables
@@ -323,14 +323,14 @@ end subroutine PropagateWake
 
 
 subroutine print_x_NW_FW(p, m, x, label)
-   type(FVW_ParameterType),         intent(in   )  :: p              !< Parameters
-   type(FVW_MiscVarType),           intent(in   )  :: m              !< Initial misc/optimization variables
-   type(FVW_ContinuousStateType),   intent(inout)  :: x              !< Continuous states
+   type(FVW_ParameterType),         intent(in)  :: p              !< Parameters
+   type(FVW_MiscVarType),           intent(in)  :: m              !< Initial misc/optimization variables
+   type(FVW_ContinuousStateType),   intent(in)  :: x              !< Continuous states
    character(len=*),intent(in) :: label
    integer(IntKi) :: iAge
    character(len=1):: flag
    print*,'------------------------------------------------------------------'
-   print'(A,I0,A,I0)',' NW .....................iNWStart:',iNWStart,' nNW',m%nNW
+   print'(A,I0,A,I0)',' NW .....................iNWStart:',iNWStart,' nNW:',m%nNW
    do iAge=1,p%nNWMax+1
       flag='X'
       if ((iAge)<= m%nNW+1) flag='.'
@@ -348,24 +348,24 @@ subroutine print_x_NW_FW(p, m, x, label)
       print*,trim(label)//'y', x%r_FW(2, 1, iAge,1), x%r_FW(2, FWnSpan+1, iAge,1)
       print*,trim(label)//'z', x%r_FW(3, 1, iAge,1), x%r_FW(3, FWnSpan+1, iAge,1)
    enddo
-   print'(A,I0,A,I0)','dxdt NW .....................iNWStart:',iNWStart,' nNW',m%nNW
-   do iAge=1,p%nNWMax+1
-      flag='X'
-      if ((iAge)<= m%nNW+1) flag='.'
-      print'(A,A,I0,A)',flag,'iAge ',iAge,'      Root              Tip'
-      print*,trim(label)//'x', m%dxdt_NW(1, 1, iAge,1), m%dxdt_NW(1, p%nSpan+1, iAge,1)
-      print*,trim(label)//'y', m%dxdt_NW(2, 1, iAge,1), m%dxdt_NW(2, p%nSpan+1, iAge,1)
-      print*,trim(label)//'z', m%dxdt_NW(3, 1, iAge,1), m%dxdt_NW(3, p%nSpan+1, iAge,1)
-   enddo
-   print'(A,I0)','dxdt FW <<<<<<<<<<<<<<<<<<<< nFW:',m%nFW
-   do iAge=1,p%nFWMax+1
-      flag='X'
-      if ((iAge)<= m%nFW+1) flag='.'
-      print'(A,A,I0,A)',flag,'iAge ',iAge,'      Root              Tip'
-      print*,trim(label)//'x', m%dxdt_FW(1, 1, iAge,1), m%dxdt_FW(1, FWnSpan+1, iAge,1)
-      print*,trim(label)//'y', m%dxdt_FW(2, 1, iAge,1), m%dxdt_FW(2, FWnSpan+1, iAge,1)
-      print*,trim(label)//'z', m%dxdt_FW(3, 1, iAge,1), m%dxdt_FW(3, FWnSpan+1, iAge,1)
-   enddo
+   !print'(A,I0,A,I0)','dxdt NW .....................iNWStart:',iNWStart,' nNW:',m%nNW
+   !do iAge=1,p%nNWMax+1
+   !   flag='X'
+   !   if ((iAge)<= m%nNW+1) flag='.'
+   !   print'(A,A,I0,A)',flag,'iAge ',iAge,'      Root              Tip'
+   !   print*,trim(label)//'x', m%dxdt_NW(1, 1, iAge,1), m%dxdt_NW(1, p%nSpan+1, iAge,1)
+   !   print*,trim(label)//'y', m%dxdt_NW(2, 1, iAge,1), m%dxdt_NW(2, p%nSpan+1, iAge,1)
+   !   print*,trim(label)//'z', m%dxdt_NW(3, 1, iAge,1), m%dxdt_NW(3, p%nSpan+1, iAge,1)
+   !enddo
+   !print'(A,I0)','dxdt FW <<<<<<<<<<<<<<<<<<<< nFW:',m%nFW
+   !do iAge=1,p%nFWMax+1
+   !   flag='X'
+   !   if ((iAge)<= m%nFW+1) flag='.'
+   !   print'(A,A,I0,A)',flag,'iAge ',iAge,'      Root              Tip'
+   !   print*,trim(label)//'x', m%dxdt_FW(1, 1, iAge,1), m%dxdt_FW(1, FWnSpan+1, iAge,1)
+   !   print*,trim(label)//'y', m%dxdt_FW(2, 1, iAge,1), m%dxdt_FW(2, FWnSpan+1, iAge,1)
+   !   print*,trim(label)//'z', m%dxdt_FW(3, 1, iAge,1), m%dxdt_FW(3, FWnSpan+1, iAge,1)
+   !enddo
 endsubroutine
 
 
@@ -378,7 +378,7 @@ endsubroutine
 !! of input and output arrays.
 subroutine SetRequestedWindPoints(r_wind, x, p, m)
    real(ReKi), dimension(:,:), allocatable,      intent(inout) :: r_wind  !< Position where wind is requested
-   type(FVW_ContinuousStateType),   intent(in   )              :: x       !< States
+   type(FVW_ContinuousStateType),   intent(inout)              :: x       !< States
    type(FVW_ParameterType),         intent(in   )              :: p       !< Parameters
    type(FVW_MiscVarType),           intent(in   )              :: m       !< Initial misc/optimization variables
    integer(IntKi)          :: iP_start,iP_end   ! Current index of point, start and end of range
@@ -386,6 +386,20 @@ subroutine SetRequestedWindPoints(r_wind, x, p, m)
    ! Using array reshaping to ensure a given near or far wake point is always at the same location in the array.
    ! NOTE: Maximum number of points are passed, whether they "exist" or not. 
    ! NOTE: InflowWind ignores points at (0,0,0)
+   !if (DEV_VERSION) then
+   !   ! Removing points that don't exist
+   !   !call print_x_NW_FW(p,m,x,'wind befr')
+   !   if (m%nNW<=p%nNWMax) then
+   !      x%r_NW(1:3, 1:p%nSpan+1, m%nNW+2:p%nNWMax+1, 1:p%nWings) = 0.0_ReKi
+   !   endif
+   !   if ( ((p%nNWMax<=1) .and. (m%nFW==0)) .or. ((m%nFW>0) .and. (m%nFW<=p%nFWMax))) then
+   !      x%r_FW(1:3, 1:FWnSpan+1, m%nFW+2:p%nFWMax+1, 1:p%nWings) = 0.0_ReKi
+   !   else 
+   !      x%r_FW(1:3, 1:FWnSpan+1, m%nFW+1:p%nFWMax+1, 1:p%nWings) = 0.0_ReKi
+   !   endif
+   !   !call print_x_NW_FW(p,m,x,'wind after')
+   !endif
+
    ! --- LL CP
    iP_start=1
    iP_end=p%nWings*p%nSpan
@@ -400,6 +414,24 @@ subroutine SetRequestedWindPoints(r_wind, x, p, m)
       iP_end=iP_start-1+(FWnSpan+1)*(p%nFWMax+1)*p%nWings
       r_wind(1:3,iP_start:iP_end) = reshape( x%r_FW(1:3,1:FWnSpan+1,1:p%nFWMax+1,1:p%nWings), (/ 3, (FWnSpan+1)*(p%nFWMax+1)*p%nWings /))
    endif
+
+   !if (DEV_VERSION) then
+   !   ! Additional checks
+   !   if (any(r_wind(3,:)<=-99999_ReKi)) then
+   !      call print_x_NW_FW(p,m,x,'wind after')
+   !      print*,'Error in wind'
+   !      STOP
+   !   endif
+   !   ! Removing points that don't exist
+   !   if (m%nNW<=p%nNWMax) then
+   !      x%r_NW(1:3, 1:p%nSpan+1, m%nNW+2:p%nNWMax+1, 1:p%nWings) = -999999.0_ReKi
+   !   endif
+   !   if ( ((p%nNWMax<=1) .and. (m%nFW==0)) .or. ((m%nFW>0) .and. (m%nFW<=p%nFWMax))) then
+   !      x%r_FW(1:3, 1:FWnSpan+1, m%nFW+2:p%nFWMax+1, 1:p%nWings) =-999999.0_ReKi
+   !   else 
+   !      x%r_FW(1:3, 1:FWnSpan+1, m%nFW+1:p%nFWMax+1, 1:p%nWings) =-999999.0_ReKi
+   !   endif
+   !endif
 
 end subroutine SetRequestedWindPoints
 
@@ -699,6 +731,7 @@ contains
       if (DEV_VERSION) then
          ! Additional checks
          if (any(CPs(1,:)<=-99)) then
+            call print_x_NW_FW(p,m,x,'pack')
             ErrMsg='PackConvectingPoints: Problem in Control points'; ErrStat=ErrID_Fatal; return
          endif
          if ((iHeadP-1)/=size(CPs,2)) then
