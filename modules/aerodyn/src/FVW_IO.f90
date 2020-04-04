@@ -81,6 +81,9 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, Inp, ErrStat, ErrMsg )
       ! subcycling
       if (Check(Inp%IntMethod/=idEuler1 , 'Sub-cycling (DTfvw>DTaro) is only possible with Forward Euler `IntMethod`')) return
    endif
+   if (Inp%CirculationMethod == idCircPolarData) then
+      if (Check( Inp%nNWPanels<1 , 'Number of near wake panels (`nNWPanels`) must be >=1 when using circulation solving with polar data (`CircSolvingMethod=1`)')) return
+   endif
 
    if (Check( Inp%nNWPanels<0     , 'Number of near wake panels must be >=0')) return
    if (Check( Inp%nFWPanels<0     , 'Number of far wake panels must be >=0')) return

@@ -445,7 +445,7 @@ subroutine PackPanelsToSegments(p, m, x, iDepthStart, SegConnct, SegPoints, SegG
    integer(IntKi), intent(out)                :: nSeg      !< Total number of segments after packing
    integer(IntKi), intent(out)                :: nSegP     !< Total number of segments points after packing
    ! Local
-   integer(IntKi) :: iHeadC, iHeadP, nC, nP, iW, iHeadC_bkp
+   integer(IntKi) :: iHeadC, iHeadP, nC, nCNW, nP, iW, iHeadC_bkp
    logical        :: LastNWShed
 
    ! If the FW contains Shed vorticity, we include the last shed vorticity form the NW, orhtwerise, we don't!
@@ -455,13 +455,15 @@ subroutine PackPanelsToSegments(p, m, x, iDepthStart, SegConnct, SegPoints, SegG
    ! Counting total number of segments
    nP=0
    nC=0
+   nCNW=0
    if ((m%nNW-iDepthStart)>=0) then
       nP =      p%nWings * (  (p%nSpan+1)*(m%nNW-iDepthStart+2)            )
-      nC =      p%nWings * (2*(p%nSpan+1)*(m%nNW-iDepthStart+2)-(p%nSpan+1)-(m%nNW-iDepthStart+1+1))  
+      nCNW =      p%nWings * (2*(p%nSpan+1)*(m%nNW-iDepthStart+2)-(p%nSpan+1)-(m%nNW-iDepthStart+1+1))  
       if (.not.LastNWShed) then
-         nC =   nC - p%nWings * (p%nSpan) ! Removing last set of sehd segments
+         nCNW =   nCNW - p%nWings * (p%nSpan) ! Removing last set of shed segments
       endif
    endif
+   nC=nCNW
    if (m%nFW>0) then
       nP = nP + p%nWings * (  (FWnSpan+1)*(m%nFW+1) )
       if (p%FWShedVorticity) then
@@ -482,9 +484,11 @@ subroutine PackPanelsToSegments(p, m, x, iDepthStart, SegConnct, SegPoints, SegG
       !
       iHeadP=1
       iHeadC=1
-      do iW=1,p%nWings
-         CALL LatticeToSegments(x%r_NW(1:3,:,1:m%nNW+1,iW), x%Gamma_NW(:,1:m%nNW,iW), iDepthStart, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC, .True., LastNWShed )
-      enddo
+      if (nCNW>0) then
+         do iW=1,p%nWings
+            CALL LatticeToSegments(x%r_NW(1:3,:,1:m%nNW+1,iW), x%Gamma_NW(:,1:m%nNW,iW), iDepthStart, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC, .True., LastNWShed )
+         enddo
+      endif
       if (m%nFW>0) then
          iHeadC_bkp = iHeadC
          do iW=1,p%nWings
