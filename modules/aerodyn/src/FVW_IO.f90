@@ -77,6 +77,10 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, Inp, ErrStat, ErrMsg )
    if (Check(.not.(ANY(idRegMethodVALID==Inp%WakeRegMethod)), 'Wake regularization method (WakeRegMethod) not implemented')) return
 
    if (Check( Inp%DTfvw < p%DTaero, 'DTfvw must be >= DTaero from AD15.')) return
+   if (abs(Inp%DTfvw-p%DTaero)>epsilon(1.0_ReKi)) then
+      ! subcycling
+      if (Check(Inp%IntMethod/=idEuler1 , 'Sub-cycling (DTfvw>DTaro) is only possible with Forward Euler `IntMethod`')) return
+   endif
 
    if (Check( Inp%nNWPanels<0     , 'Number of near wake panels must be >=0')) return
    if (Check( Inp%nFWPanels<0     , 'Number of far wake panels must be >=0')) return

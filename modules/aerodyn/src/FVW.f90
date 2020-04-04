@@ -193,6 +193,8 @@ subroutine FVW_InitMiscVars( p, m, ErrStat, ErrMsg )
    call AllocAry( m%Vwnd_FW , 3   ,  FWnSpan+1  ,p%nFWMax+1,  p%nWings, 'Wind on FW ', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitMisc' ); m%Vwnd_FW= -999_ReKi;
    call AllocAry( m%Vind_NW , 3   ,  p%nSpan+1  ,p%nNWMax+1,  p%nWings, 'Vind on NW ', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitMisc' ); m%Vind_NW= -999_ReKi;
    call AllocAry( m%Vind_FW , 3   ,  FWnSpan+1  ,p%nFWMax+1,  p%nWings, 'Vind on FW ', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitMisc' ); m%Vind_FW= -999_ReKi;
+   call AllocAry( m%dxdt_NW , 3   ,  p%nSpan+1 , p%nNWMax+1,  p%nWings, 'NW dxdt'    , ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitStates' ); m%dxdt_NW = -999999_ReKi;
+   call AllocAry( m%dxdt_FW , 3   ,  FWnSpan+1 , p%nFWMax+1,  p%nWings, 'FW dxdt'    , ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitStates' ); m%dxdt_FW = -999999_ReKi;
    ! Wind request points
    nMax = 0
    nMax = nMax +  p%nSpan                   * p%nWings   ! Lifting line Control Points
@@ -442,7 +444,7 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    nFWEff = min(m%nFW, p%nFWFree)
    ! --- Display some status to screen
    if (mod(n,10)==0) print'(A,F10.3,A,I0,A,I0,A,I0,A,I0,A,I0,A,I0,A,I0,A,I0,A,F7.2,A)','FVW status - t:',t,'  n:',n,'  nNW:',m%nNW-1,'/',p%nNWMax-1,'  nFW:',nFWEff, '+',m%nFW-nFWEff,'=',m%nFW,'/',p%nFWMax,'  nP:',nP,'  spent:', m%tSpent, 's'
-   if (DEV_VERSION) print'(A,F10.3,A,F10.3,A,I0,A,I0,A,I0,A,L1)','Update states, t:',t,'  t_u:', utimes(1),'            Step:',n,' nNW:',m%nNW,' nFW:',m%nFW,' ComputeWake: ',m%ComputeWakeInduced
+   if (DEV_VERSION) print'(A,F10.3,A,I0,A,I0,A,I0,A,I0,A,I0,A,I0,A,I0,A,I0,A,F7.2,A,L1)','FVW status - t:',t,'  n:',n,'  nNW:',m%nNW-1,'/',p%nNWMax-1,'  nFW:',nFWEff, '+',m%nFW-nFWEff,'=',m%nFW,'/',p%nFWMax,'  nP:',nP,'  spent:', m%tSpent, 's Comp:',m%ComputeWakeInduced
 
 
    ! --- Evaluation at t
@@ -464,9 +466,11 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    ! Changes: x only
    call Map_LL_NW(p, m, z, x, ErrStat2, ErrMsg2); if(Failed()) return
    call Map_NW_FW(p, m, z, x, ErrStat2, ErrMsg2); if(Failed()) return
-   !call print_x_NW_FW(p, m, z, x,'Map_')
+   !call print_x_NW_FW(p, m, x,'Map_')
 
    ! --- Integration between t and t+DTaero
+   ! NOTE: when sub-cycling, the previous convection velocity is used
+   ! If dtfvw = n dtaero, we assume xdot_local dtaero = xdot_stored * dtfvw/n
    if (p%IntMethod .eq. idEuler1) then 
      call FVW_Euler1( t, uInterp, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2); if(Failed()) return
    !elseif (p%IntMethod .eq. idRK4) then 
@@ -478,7 +482,7 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    else  
       call SetErrStat(ErrID_Fatal,'Invalid time integration method:'//Num2LStr(p%IntMethod),ErrStat,ErrMsg,'FVW_UpdateState') 
    end IF
-   !call print_x_NW_FW(p, m, z, x,'Conv')
+   !call print_x_NW_FW(p, m, x,'Conv')
 
 
   if (m%ComputeWakeInduced) then
@@ -490,7 +494,7 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
       ! --- t+DTaero
       ! Propagation/creation of new layer of panels
       call PropagateWake(p, m, z, x, ErrStat2, ErrMsg2); if(Failed()) return
-      !call print_x_NW_FW(p, m, z, x,'Prop_')
+      !call print_x_NW_FW(p, m, x,'Prop_')
    endif
 
    ! Inputs at t+DTaero
@@ -504,7 +508,7 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    call Map_LL_NW(p, m, z, x, ErrStat2, ErrMsg2); if(Failed()) return
    call Map_NW_FW(p, m, z, x, ErrStat2, ErrMsg2); if(Failed()) return
 
-   !call print_x_NW_FW(p, m, z, x,'Map2')
+   !call print_x_NW_FW(p, m, x,'Map2')
 
    ! --- Solve for circulation at t+p%DTaero
    ! Returns: z%Gamma_LL (at t+p%DTaero)
@@ -515,7 +519,7 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    ! Changes: x only
    call Map_LL_NW(p, m, z, x, ErrStat2, ErrMsg2); if(Failed()) return
    call Map_NW_FW(p, m, z, x, ErrStat2, ErrMsg2); if(Failed()) return
-   !call print_x_NW_FW(p, m, z, x,'Map3')
+   !call print_x_NW_FW(p, m, x,'Map3')
 
    ! set the wind points required for t+p%DTaero timestep
    CALL SetRequestedWindPoints(m%r_wind, x, p, m)
@@ -578,7 +582,7 @@ subroutine FVW_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSt
    if(Failed()) return
 
    ! Only calculate freewake after start time and if on a timestep when it should be calculated.
-   if ((t>= p%FreeWakeStart) .and. m%ComputeWakeInduced) then
+   if ((t>= p%FreeWakeStart)) then
       nFWEff = min(m%nFW, p%nFWFree)
 
       ! --- Compute Induced velocities on the Near wake and far wake based on the marker postions:
@@ -604,12 +608,17 @@ subroutine FVW_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSt
          VmeanFW(1:3) = VmeanFW(1:3) / (size(m%Vind_FW,4)*nFWEff*size(m%Vind_FW,2))
       else
          VmeanFW=VmeanNW
+         ! Since we convect the first FW point, we need a reasonable velocity there 
+         ! NOTE: mostly needed for sub-cycling and when no NW
+         m%Vind_FW(1, 1:FWnSpan+1, 1, 1:p%nWings) = VmeanFW(1)
+         m%Vind_FW(2, 1:FWnSpan+1, 1, 1:p%nWings) = VmeanFW(2)
+         m%Vind_FW(3, 1:FWnSpan+1, 1, 1:p%nWings) = VmeanFW(3)
       endif
 
       ! --- Convecting non-free FW with a constant induced velocity (and free stream)
-      m%Vind_FW(1, 1:FWnSpan+1, p%nFWFree+1:p%nFWMax, 1:p%nWings) = VmeanFW(1) !
-      m%Vind_FW(2, 1:FWnSpan+1, p%nFWFree+1:p%nFWMax, 1:p%nWings) = VmeanFW(2) !
-      m%Vind_FW(3, 1:FWnSpan+1, p%nFWFree+1:p%nFWMax, 1:p%nWings) = VmeanFW(3) !
+      m%Vind_FW(1, 1:FWnSpan+1, p%nFWFree+1:p%nFWMax+1, 1:p%nWings) = VmeanFW(1) !
+      m%Vind_FW(2, 1:FWnSpan+1, p%nFWFree+1:p%nFWMax+1, 1:p%nWings) = VmeanFW(2) !
+      m%Vind_FW(3, 1:FWnSpan+1, p%nFWFree+1:p%nFWMax+1, 1:p%nWings) = VmeanFW(3) !
 
       if (DEV_VERSION) then
          call print_mean_4d( m%Vind_NW(:,:, 1:m%nNW+1,:), 'Mean induced vel. NW')
@@ -619,8 +628,8 @@ subroutine FVW_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSt
          print'(A25,3F12.4)','MeanFW (non free)',VmeanFW
          call print_mean_4d( m%Vwnd_NW(:,:, 1:m%nNW+1,:), 'Mean wind vel.    NW')
          call print_mean_4d( m%Vwnd_FW(:,:, 1:nFWEff+1,:), 'Mean wind vel. FWEff')
-         call print_mean_4d( m%Vwnd_FW(:,:, p%nFWFree:m%nFW+1,:), 'Mean wind vel.    FWNF')
-         call print_mean_4d( m%Vwnd_FW(:,:, 1:m%nFW,:), 'Mean wind vel.    FW')
+         call print_mean_4d( m%Vwnd_FW(:,:, (p%nFWFree+1):m%nFW+1,:), 'Mean wind vel.    FWNF')
+         call print_mean_4d( m%Vwnd_FW(:,:, 1:m%nFW+1,:), 'Mean wind vel.    FW')
       endif
 
       ! --- Vortex points are convected with the free stream and induced velocity
@@ -638,7 +647,8 @@ subroutine FVW_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSt
    endif
    ! First NW point does not convect (bound to LL)
    dxdt%r_NW(1:3, :, 1:iNWStart-1, :)=0
-   ! First FW point does not convect (bound to NW)
+   ! First FW point always convect (even if bound to NW)
+   ! This is done in case there is no NW panel
    !dxdt%r_FW(1:3, :, 1, :)=0
 contains
    logical function Failed()
@@ -670,12 +680,33 @@ subroutine FVW_Euler1( t, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
 
    dt = real(p%DTaero,ReKi) ! NOTE: this is DTaero not DTfvw since we integrate at each sub time step
    ! Compute "right hand side"
-   CALL FVW_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrStat2, ErrMsg2); if (Failed()) return
+   if (m%ComputeWakeInduced) then
+      CALL FVW_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrStat2, ErrMsg2); if (Failed()) return
+      ! Storage of convection velocity, purely for sub-cycling for now
+      ! Since Euler1 is linear we use partial increments of dtaero<dtfvw
+      m%dxdt_NW = dxdt%r_NW
+      m%dxdt_FW = dxdt%r_FW
+   endif
+
+   if (DEV_VERSION) then
+      ! Additional checks
+      if (any(m%dxdt_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)<-999)) then
+         print*,'FVW_Euler1: Attempting to convect NW with a wrong velocity'
+         STOP
+      endif
+      if ( m%nFW>0) then
+         if (any(m%dxdt_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)<-999)) then
+            call print_x_NW_FW(p, m, x, 'STP')
+            print*,'FVW_Euler1: Attempting to convect FW with a wrong velocity'
+            STOP
+         endif
+      endif
+   endif
 
    ! Update of positions
-   x%r_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) = x%r_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) +  dt * dxdt%r_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)
+   x%r_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) = x%r_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) +  dt * m%dxdt_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)
    if ( m%nFW>0) then
-      x%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings) = x%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings) +  dt * dxdt%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)
+      x%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings) = x%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings) +  dt * m%dxdt_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)
    endif
    ! Update of Gamma
    ! TODO, viscous diffusion, stretching

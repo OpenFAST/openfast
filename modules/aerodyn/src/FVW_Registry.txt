@@ -84,6 +84,8 @@ typedef     ^                   ^               ReKi                            
 typedef     ^                   ^               Logical                          ComputeWakeInduced - - - "Compute induced velocities on this timestep" -
 typedef     ^                   ^               DbKi                             OldWakeTime   -   -   -  "Time the wake induction velocities were last calculated" s
 typedef     ^                   ^               ReKi                             tSpent        -   -  -  "Time spent in expensive Biot-Savart computation" s
+typedef     ^                   ^               ReKi                             dxdt_NW        ::::    -  -  "State time derivatie, stored for subcylcing" - 
+typedef     ^                   ^               ReKi                             dxdt_FW        ::::    -  -  "State time derivatie, stored for subcylcing" - 
 
 # ........ Input ............
 # FVW_InputType

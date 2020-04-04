@@ -248,10 +248,10 @@ subroutine Map_NW_FW(p, m, z, x, ErrStat, ErrMsg)
    if (.false.) print*,z%Gamma_LL(1,1) ! Just to avoid unused var warning
 endsubroutine Map_NW_FW
 
-!> Propage the postions and circulation one index forward (loop from end to start) 
+!> Propage the positions and circulation one index forward (loop from end to start) 
 subroutine PropagateWake(p, m, z, x, ErrStat, ErrMsg)
    type(FVW_ParameterType),         intent(in   )  :: p              !< Parameters
-   type(FVW_MiscVarType),           intent(in   )  :: m              !< Initial misc/optimization variables
+   type(FVW_MiscVarType),           intent(inout)  :: m              !< Initial misc/optimization variables
    type(FVW_ConstraintStateType),   intent(in   )  :: z              !< Constraints states
    type(FVW_ContinuousStateType),   intent(inout)  :: x              !< Continuous states
    integer(IntKi),                  intent(  out)  :: ErrStat        !< Error status of the operation
@@ -267,7 +267,7 @@ subroutine PropagateWake(p, m, z, x, ErrStat, ErrMsg)
                x%r_FW(1:3,iSpan,iAge,iW) = x%r_FW(1:3,iSpan,iAge-1,iW)
             enddo
          enddo
-         x%r_FW(1:3,1:FWnSpan,1,iW) = -999.9_ReKi ! Nullified
+         x%r_FW(1:3,1:FWnSpan+1,1,iW) = -999.9_ReKi ! Nullified
       enddo
    if (p%nFWMax>0) then
       do iW=1,p%nWings
@@ -281,7 +281,7 @@ subroutine PropagateWake(p, m, z, x, ErrStat, ErrMsg)
    endif
    ! --- Propagate near wake
    do iW=1,p%nWings
-      do iAge=p%nNWMax+1,iNWStart+1,-1 ! TODO TODO TODO Might need update
+      do iAge=p%nNWMax+1,iNWStart+1,-1
          do iSpan=1,p%nSpan+1
             x%r_NW(1:3,iSpan,iAge,iW) = x%r_NW(1:3,iSpan,iAge-1,iW)
          enddo
@@ -298,29 +298,73 @@ subroutine PropagateWake(p, m, z, x, ErrStat, ErrMsg)
          x%Gamma_NW(:,1:iNWStart,iW) = -999.9_ReKi ! Nullified
       enddo
    endif
+
+   ! Temporary hack for sub-cycling since straight after wkae computation, the wake size will increase
+   ! So we do a "fake" propagation here
+   do iW=1,p%nWings
+      do iAge=p%nFWMax+1,2,-1 ! 
+         do iSpan=1,FWnSpan+1
+            m%dxdt_FW(1:3,iSpan,iAge,iW) = m%dxdt_FW(1:3,iSpan,iAge-1,iW)
+         enddo
+      enddo
+      !m%dxdt_FW(1:3,1:FWnSpan+1,1,iW) = -999999_ReKi ! Important not nullified. The best would be to map the last NW convection velocity for this first row.
+   enddo
+   do iW=1,p%nWings
+      do iAge=p%nNWMax+1,iNWStart+1,-1 
+         do iSpan=1,p%nSpan+1
+            m%dxdt_NW(1:3,iSpan,iAge,iW) = m%dxdt_NW(1:3,iSpan,iAge-1,iW)
+         enddo
+      enddo
+      m%dxdt_NW(1:3,:,1:iNWStart,iW) = 0.0_ReKi ! Nullified, wing do no convect, handled by LL,NW mapping
+   enddo
+
    if (.false.) print*,m%nNW,z%Gamma_LL(1,1) ! Just to avoid unused var warning
 end subroutine PropagateWake
 
 
-subroutine print_x_NW_FW(p, x, label)
+subroutine print_x_NW_FW(p, m, x, label)
    type(FVW_ParameterType),         intent(in   )  :: p              !< Parameters
+   type(FVW_MiscVarType),           intent(in   )  :: m              !< Initial misc/optimization variables
    type(FVW_ContinuousStateType),   intent(inout)  :: x              !< Continuous states
    character(len=*),intent(in) :: label
    integer(IntKi) :: iAge
-   print*,'-------------------------'
-   print*,' NW .....................'
+   character(len=1):: flag
+   print*,'------------------------------------------------------------------'
+   print'(A,I0,A,I0)',' NW .....................iNWStart:',iNWStart,' nNW',m%nNW
    do iAge=1,p%nNWMax+1
-      print*,'iAge',iAge
-      print*,trim(label), x%r_NW(1, 1, iAge,1), x%r_NW(1, p%nSpan+1, iAge,1)
-      print*,trim(label), x%r_NW(2, 1, iAge,1), x%r_NW(2, p%nSpan+1, iAge,1)
-      print*,trim(label), x%r_NW(3, 1, iAge,1), x%r_NW(3, p%nSpan+1, iAge,1)
+      flag='X'
+      if ((iAge)<= m%nNW+1) flag='.'
+      print'(A,A,I0,A)',flag,'iAge ',iAge,'      Root              Tip'
+      print*,trim(label)//'x', x%r_NW(1, 1, iAge,1), x%r_NW(1, p%nSpan+1, iAge,1)
+      print*,trim(label)//'y', x%r_NW(2, 1, iAge,1), x%r_NW(2, p%nSpan+1, iAge,1)
+      print*,trim(label)//'z', x%r_NW(3, 1, iAge,1), x%r_NW(3, p%nSpan+1, iAge,1)
    enddo
-   print*,'FW <<<<<<<<<<<<<<<<<<<<'
+   print'(A,I0)','FW <<<<<<<<<<<<<<<<<<<< nFW:',m%nFW
    do iAge=1,p%nFWMax+1
-      print*,'iAge',iAge
-      print*,trim(label), x%r_FW(1, 1, iAge,1), x%r_FW(1, FWnSpan+1, iAge,1)
-      print*,trim(label), x%r_FW(2, 1, iAge,1), x%r_FW(2, FWnSpan+1, iAge,1)
-      print*,trim(label), x%r_FW(3, 1, iAge,1), x%r_FW(3, FWnSpan+1, iAge,1)
+      flag='X'
+      if ((iAge)<= m%nFW+1) flag='.'
+      print'(A,A,I0,A)',flag,'iAge ',iAge,'      Root              Tip'
+      print*,trim(label)//'x', x%r_FW(1, 1, iAge,1), x%r_FW(1, FWnSpan+1, iAge,1)
+      print*,trim(label)//'y', x%r_FW(2, 1, iAge,1), x%r_FW(2, FWnSpan+1, iAge,1)
+      print*,trim(label)//'z', x%r_FW(3, 1, iAge,1), x%r_FW(3, FWnSpan+1, iAge,1)
+   enddo
+   print'(A,I0,A,I0)','dxdt NW .....................iNWStart:',iNWStart,' nNW',m%nNW
+   do iAge=1,p%nNWMax+1
+      flag='X'
+      if ((iAge)<= m%nNW+1) flag='.'
+      print'(A,A,I0,A)',flag,'iAge ',iAge,'      Root              Tip'
+      print*,trim(label)//'x', m%dxdt_NW(1, 1, iAge,1), m%dxdt_NW(1, p%nSpan+1, iAge,1)
+      print*,trim(label)//'y', m%dxdt_NW(2, 1, iAge,1), m%dxdt_NW(2, p%nSpan+1, iAge,1)
+      print*,trim(label)//'z', m%dxdt_NW(3, 1, iAge,1), m%dxdt_NW(3, p%nSpan+1, iAge,1)
+   enddo
+   print'(A,I0)','dxdt FW <<<<<<<<<<<<<<<<<<<< nFW:',m%nFW
+   do iAge=1,p%nFWMax+1
+      flag='X'
+      if ((iAge)<= m%nFW+1) flag='.'
+      print'(A,A,I0,A)',flag,'iAge ',iAge,'      Root              Tip'
+      print*,trim(label)//'x', m%dxdt_FW(1, 1, iAge,1), m%dxdt_FW(1, FWnSpan+1, iAge,1)
+      print*,trim(label)//'y', m%dxdt_FW(2, 1, iAge,1), m%dxdt_FW(2, FWnSpan+1, iAge,1)
+      print*,trim(label)//'z', m%dxdt_FW(3, 1, iAge,1), m%dxdt_FW(3, FWnSpan+1, iAge,1)
    enddo
 endsubroutine
 
@@ -448,13 +492,16 @@ subroutine PackPanelsToSegments(p, m, x, iDepthStart, SegConnct, SegPoints, SegG
          enddo
          SegConnct(3,iHeadC_bkp:) = SegConnct(3,iHeadC_bkp:) + m%nNW
       endif
-      if ((iHeadP-1)/=nP) then
-         print*,'PackPanelsToSegments: Number of points wrongly estimated',nP, iHeadP-1
-         STOP ! Keep me. The check will be removed once the code is well established
-      endif
-      if ((iHeadC-1)/=nC) then
-         print*,'PackPanelsToSegments: Number of segments wrongly estimated',nC, iHeadC-1
-         STOP ! Keep me. The check will be removed once the code is well established
+      if (DEV_VERSION) then
+         ! Safety checks
+         if ((iHeadP-1)/=nP) then
+            print*,'PackPanelsToSegments: Number of points wrongly estimated',nP, iHeadP-1
+            STOP ! Keep me. The check will be removed once the code is well established
+         endif
+         if ((iHeadC-1)/=nC) then
+            print*,'PackPanelsToSegments: Number of segments wrongly estimated',nC, iHeadC-1
+            STOP ! Keep me. The check will be removed once the code is well established
+         endif
       endif
       nSeg  = iHeadC-1
       nSegP = iHeadP-1
@@ -645,14 +692,16 @@ contains
             CALL LatticeToPoints(x%r_FW(1:3,:,1:nFWEff+1,iW), 1, CPs, iHeadP)
          enddo
       endif
-
-      if (any(CPs(1,:)<=-99)) then
-         ErrMsg='PackConvectingPoints: Problem in Control points'; ErrStat=ErrID_Fatal; return
-      endif
-      if ((iHeadP-1)/=size(CPs,2)) then
-         print*,'PackConvectingPoints: Number of points wrongly estimated',size(CPs,2), iHeadP-1
-         STOP ! Keep me. The check will be removed once the code is well established
-         ErrMsg='PackConvectingPoints: Number of points wrongly estimated '; ErrStat=ErrID_Fatal; return
+      if (DEV_VERSION) then
+         ! Additional checks
+         if (any(CPs(1,:)<=-99)) then
+            ErrMsg='PackConvectingPoints: Problem in Control points'; ErrStat=ErrID_Fatal; return
+         endif
+         if ((iHeadP-1)/=size(CPs,2)) then
+            print*,'PackConvectingPoints: Number of points wrongly estimated',size(CPs,2), iHeadP-1
+            STOP ! Keep me. The check will be removed once the code is well established
+            ErrMsg='PackConvectingPoints: Number of points wrongly estimated '; ErrStat=ErrID_Fatal; return
+         endif
       endif
    end subroutine
    !> Distribute the induced velocity to the proper location 
@@ -666,14 +715,18 @@ contains
          do iW=1,p%nWings
             CALL VecToLattice(Uind, 1, m%Vind_FW(1:3,1:FWnSpan+1,1:nFWEff+1,iW), iHeadP)
          enddo
-         if (any(m%Vind_FW(1:3,1:FWnSpan+1,1:nFWEff+1,:)<-99)) then
-            ErrMsg='UnPackInducedVelocity: Problem in FW induced velocity on FW points'; ErrStat=ErrID_Fatal; return
+         if (DEV_VERSION) then
+            if (any(m%Vind_FW(1:3,1:FWnSpan+1,1:nFWEff+1,:)<-99)) then
+               ErrMsg='UnPackInducedVelocity: Problem in FW induced velocity on FW points'; ErrStat=ErrID_Fatal; return
+            endif
          endif
       endif
-      if ((iHeadP-1)/=size(Uind,2)) then
-         print*,'UnPackInducedVelocity: Number of points wrongly estimated',size(Uind,2), iHeadP-1
-         STOP ! Keep me. The check will be removed once the code is well established
-         ErrMsg='UnPackInducedVelocity: Number of points wrongly estimated'; ErrStat=ErrID_Fatal; return
+      if (DEV_VERSION) then
+         if ((iHeadP-1)/=size(Uind,2)) then
+            print*,'UnPackInducedVelocity: Number of points wrongly estimated',size(Uind,2), iHeadP-1
+            STOP ! Keep me. The check will be removed once the code is well established
+            ErrMsg='UnPackInducedVelocity: Number of points wrongly estimated'; ErrStat=ErrID_Fatal; return
+         endif
       endif
    end subroutine
 
@@ -742,12 +795,13 @@ contains
       do iW=1,p%nWings
          CALL LatticeToPoints(m%CP_LL(1:3,:,iW:iW), 1, CPs, iHeadP)
       enddo
-      if ((iHeadP-1)/=size(CPs,2)) then
-         print*,'PackLLPoints: Number of points wrongly estimated',size(CPs,2), iHeadP-1
-         STOP ! Keep me. The check will be removed once the code is well established
+      if (DEV_VERSION) then
+         if ((iHeadP-1)/=size(CPs,2)) then
+            print*,'PackLLPoints: Number of points wrongly estimated',size(CPs,2), iHeadP-1
+            STOP ! Keep me. The check will be removed once the code is well established
+         endif
       endif
       nCPs=iHeadP-1
-      !print*,'Number of points packed for LL:',nCPs, nSegP
    end subroutine
 
    !> Distribute the induced velocity to the proper location 
@@ -756,9 +810,11 @@ contains
       do iW=1,p%nWings
          CALL VecToLattice(Uind, 1, m%Vind_LL(1:3,:,iW:iW), iHeadP)
       enddo
-      if ((iHeadP-1)/=size(Uind,2)) then
-         print*,'UnPackLiftingLineVelocities: Number of points wrongly estimated',size(Uind,2), iHeadP-1
-         STOP ! Keep me. The check will be removed once the code is well established
+      if (DEV_VERSION) then
+         if ((iHeadP-1)/=size(Uind,2)) then
+            print*,'UnPackLiftingLineVelocities: Number of points wrongly estimated',size(Uind,2), iHeadP-1
+            STOP ! Keep me. The check will be removed once the code is well established
+         endif
       endif
    end subroutine
 end subroutine
