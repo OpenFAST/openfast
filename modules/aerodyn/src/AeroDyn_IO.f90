@@ -2395,7 +2395,7 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, ADBlFile, OutFileRoot, UnE
    CALL ReadCom( UnIn, InputFile, 'Section Header: Free Vortex Wake (FVW) Theory Options', ErrStat2, ErrMsg2, UnEc )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-   CALL ReadVar ( UnIn, InputFile, InputFileData%FVWFileName, 'FVWFileName', 'FVW input file name', ErrStat2, ErrMsg2, UnEc )
+   CALL ReadVar ( UnIn, InputFile, InputFileData%FVWFileName, 'FVWFile', 'FVW input file name', ErrStat2, ErrMsg2, UnEc )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    IF ( PathIsRelative( InputFileData%FVWFileName ) ) InputFileData%FVWFileName = TRIM(PriPath)//TRIM(InputFileData%FVWFileName)
 
