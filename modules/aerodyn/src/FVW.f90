@@ -167,7 +167,8 @@ subroutine FVW_InitMiscVars( p, m, ErrStat, ErrMsg )
    m%FirstCall = .True.
    m%nNW       = iNWStart-1    ! Number of active nearwake panels
    m%nFW       = 0             ! Number of active farwake  panels
-   m%VTKstep   = 0             ! Current step number for vtk output
+   m%iStep     = 0             ! Current step number
+   m%VTKStep   = -1            ! Counter of VTK outputs
    m%VTKlastTime = -HUGE(1.0_DbKi)
    m%tSpent    = 0
 
@@ -442,17 +443,33 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    type(FVW_ConstraintStateType) :: z_guess                                                                              ! <
    integer(IntKi) :: nP, nFWEff
    integer, dimension(8) :: time1, time2, time_diff
+   logical :: bReevaluation
 
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-      ! Compute Induced wake effects only if time since last compute is > DTfvw
-   if ( ( t - m%OldWakeTime ) >= p%DTfvw*OneMinusEpsilon )  then
+      
+   ! --- Handling of time step, and time compared to previous call
+   m%iStep = n
+   ! Reevaluation: two repetitive calls starting from the same time, we will roll back the wake emission
+   bReevaluation=.False.
+   if (abs(t-m%OldWakeTime)<0.25_ReKi* p%DTaero) then
+      bReevaluation=.True.
+   endif
+   ! Compute Induced wake effects only if time since last compute is > DTfvw
+   if ( (( t - m%OldWakeTime ) >= p%DTfvw*OneMinusEpsilon) )  then
       m%OldWakeTime = t
       m%ComputeWakeInduced = .TRUE.    ! It's time to update the induced velocities from wake
-      call date_and_time(values=time1)
    else
       m%ComputeWakeInduced = .FALSE.
+   endif
+   if (bReevaluation) then
+      print*,'[INFO] FVW: Update States: reevaluation at the same starting time'
+      call RollBackPreviousTimeStep() ! Cancel wake emission done in previous call
+      m%ComputeWakeInduced = .TRUE.
+   endif
+   if (m%ComputeWakeInduced) then
+      call date_and_time(values=time1)
    endif
 
 
@@ -460,8 +477,7 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    nFWEff = min(m%nFW, p%nFWFree)
    ! --- Display some status to screen
    if (mod(n,10)==0) print'(A,F10.3,A,I0,A,I0,A,I0,A,I0,A,I0,A,I0,A,I0,A,I0,A,F7.2,A)','FVW status - t:',t,'  n:',n,'  nNW:',m%nNW-1,'/',p%nNWMax-1,'  nFW:',nFWEff, '+',m%nFW-nFWEff,'=',m%nFW,'/',p%nFWMax,'  nP:',nP,'  spent:', m%tSpent, 's'
-   if (DEV_VERSION) print'(A,F10.3,A,I0,A,I0,A,I0,A,I0,A,I0,A,I0,A,I0,A,I0,A,F7.2,A,L1)','FVW status - t:',t,'  n:',n,'  nNW:',m%nNW-1,'/',p%nNWMax-1,'  nFW:',nFWEff, '+',m%nFW-nFWEff,'=',m%nFW,'/',p%nFWMax,'  nP:',nP,'  spent:', m%tSpent, 's Comp:',m%ComputeWakeInduced
-
+   if (DEV_VERSION)  print'(A,F10.3,A,I0,A,I0,A,I0,A,I0,A,I0,A,I0,A,I0,A,I0,A,F7.2,A,L1)','FVW status - t:',t,'  n:',n,'  nNW:',m%nNW-1,'/',p%nNWMax-1,'  nFW:',nFWEff, '+',m%nFW-nFWEff,'=',m%nFW,'/',p%nFWMax,'  nP:',nP,'  spent:', m%tSpent, 's Comp:',m%ComputeWakeInduced
 
    ! --- Evaluation at t
    ! Inputs at t
@@ -500,12 +516,9 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    end IF
    !call print_x_NW_FW(p, m, x,'Conv')
 
-
-  if (m%ComputeWakeInduced) then
-!FIXME:  Manu: check my relocation of the PrepareNextTimeStep call.  I moved it because the above routines use m%nNW+1,
-!        in their calculations, which shifted everything one extra age.  That caused odd results with the requested
-!        wind positions if the first call to ui_seg occured before the near wake was fully populated.
-!        This may also have been your array bounds issue (with m%nFW+1 +1 occuring).
+   if (m%ComputeWakeInduced) then
+      ! We extend the wake length, i.e. we emit a new panel of vorticity at the TE
+      ! NOTE: this will be rolled back if UpdateState is called at the same starting time again
       call PrepareNextTimeStep()
       ! --- t+DTaero
       ! Propagation/creation of new layer of panels
@@ -559,6 +572,14 @@ contains
       endif
       m%nNW=min(m%nNW+1, p%nNWMax)
    end subroutine PrepareNextTimeStep
+
+   subroutine RollBackPreviousTimeStep()
+      ! --- Decrease wake length if maximum not reached
+      if (m%nNW==p%nNWMax) then ! a far wake exist
+         m%nFW=max(m%nFW-1, 0)
+      endif
+      m%nNW=max(m%nNW-1, 0)
+   end subroutine RollBackPreviousTimeStep
 
    logical function Failed()
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'FVW_UpdateStates') 
@@ -855,6 +876,11 @@ subroutine FVW_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, ErrStat,
 
    ! --- Write to local VTK at fps requested
    if (p%WrVTK==1) then
+      if (m%VTKStep==-1) then 
+         m%VTKStep = 0 ! Has never been called, special handling for init
+      else
+         m%VTKStep = m%iStep+1 ! We use glue code step number for outputs
+      endif
       if (m%FirstCall) then
          call MKDIR('vtk_fvw')
       endif
@@ -863,16 +889,15 @@ subroutine FVW_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, ErrStat,
          if ((p%VTKCoord==2).or.(p%VTKCoord==3)) then
             ! Hub reference coordinates, for export only, ALL VTK Will be exported in this coordinate system!
             call set_vtk_coordinate_transform(u%HubOrientation,u%HubPosition)
-            call WrVTK_FVW(p, x, z, m, 'vtk_fvw/'//trim(p%RootName)//'FVW_Hub', m%VTKstep, 9)
+            call WrVTK_FVW(p, x, z, m, 'vtk_fvw/'//trim(p%RootName)//'FVW_Hub', m%VTKStep, 9)
          endif
          if ((p%VTKCoord==1).or.(p%VTKCoord==3)) then
             ! Global coordinate system, ALL VTK will be exported in global
             call set_vtk_no_coordinate_transform()
-            call WrVTK_FVW(p, x, z, m, 'vtk_fvw/'//trim(p%RootName)//'FVW_Glb', m%VTKstep, 9)
+            call WrVTK_FVW(p, x, z, m, 'vtk_fvw/'//trim(p%RootName)//'FVW_Glb', m%VTKStep, 9)
          endif
       endif
    endif
-   m%VTKstep = m%VTKstep + 1  ! Increment VTK counter no matter what
 
 
 contains

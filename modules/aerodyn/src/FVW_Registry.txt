@@ -77,6 +77,7 @@ typedef     ^                   ^               ReKi                            
 typedef     ^                   ^               ReKi                             Vind_FW      :::: -  -  "Induced velocity on far  wake panels" m/s 
 typedef     ^                   ^               IntKi                            nNW           -   -  -  "Number of active near wake panels"      -
 typedef     ^                   ^               IntKi                            nFW           -   -  -  "Number of active far  wake panels"      -
+typedef     ^                   ^               IntKi                            iStep         -   -  -  "Current step number used for update state"      -
 typedef     ^                   ^               IntKi                            VTKstep       -   -  -  "Current vtk output step number"      -
 typedef     ^                   ^               DbKi                             VTKlastTime   -   -   -  "Time the last VTK file set was written out" s
 typedef     ^                   ^               ReKi                             r_wind        ::   -  -  "List of points where wind is requested for next time step"  -

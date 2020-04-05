@@ -103,6 +103,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: Vind_FW      !< Induced velocity on far  wake panels [m/s]
     INTEGER(IntKi)  :: nNW      !< Number of active near wake panels [-]
     INTEGER(IntKi)  :: nFW      !< Number of active far  wake panels [-]
+    INTEGER(IntKi)  :: iStep      !< Current step number used for update state [-]
     INTEGER(IntKi)  :: VTKstep      !< Current vtk output step number [-]
     REAL(DbKi)  :: VTKlastTime      !< Time the last VTK file set was written out [s]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: r_wind      !< List of points where wind is requested for next time step [-]
@@ -1212,6 +1213,7 @@ IF (ALLOCATED(SrcMiscData%Vind_FW)) THEN
 ENDIF
     DstMiscData%nNW = SrcMiscData%nNW
     DstMiscData%nFW = SrcMiscData%nFW
+    DstMiscData%iStep = SrcMiscData%iStep
     DstMiscData%VTKstep = SrcMiscData%VTKstep
     DstMiscData%VTKlastTime = SrcMiscData%VTKlastTime
 IF (ALLOCATED(SrcMiscData%r_wind)) THEN
@@ -1528,6 +1530,7 @@ ENDIF
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! nNW
       Int_BufSz  = Int_BufSz  + 1  ! nFW
+      Int_BufSz  = Int_BufSz  + 1  ! iStep
       Int_BufSz  = Int_BufSz  + 1  ! VTKstep
       Db_BufSz   = Db_BufSz   + 1  ! VTKlastTime
   Int_BufSz   = Int_BufSz   + 1     ! r_wind allocated yes/no
@@ -2016,6 +2019,8 @@ ENDIF
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%nNW
       Int_Xferred   = Int_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%nFW
+      Int_Xferred   = Int_Xferred   + 1
+      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%iStep
       Int_Xferred   = Int_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%VTKstep
       Int_Xferred   = Int_Xferred   + 1
@@ -2807,6 +2812,8 @@ ENDIF
       OutData%nNW = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
       OutData%nFW = IntKiBuf( Int_Xferred ) 
+      Int_Xferred   = Int_Xferred + 1
+      OutData%iStep = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
       OutData%VTKstep = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
