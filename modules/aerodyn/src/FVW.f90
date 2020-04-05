@@ -120,7 +120,7 @@ subroutine FVW_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
    CALL FVW_InitRegularization(p, m, ErrStat2, ErrMsg2); if(Failed()) return
    CALL FVW_ToString(p, m) ! Print to screen
 
-   ! Mapping NW and FW (purely for esthetics, and maybe wind)
+   ! Mapping NW and FW (purely for esthetics, and maybe wind) ! TODO, just points
    call Map_LL_NW(p, m, z, x, ErrStat2, ErrMsg2); if(Failed()) return
    call Map_NW_FW(p, m, z, x, ErrStat2, ErrMsg2); if(Failed()) return
 
@@ -221,17 +221,21 @@ subroutine FVW_InitStates( x, p, ErrStat, ErrMsg )
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-   call AllocAry( x%Gamma_NW,    p%nSpan   , p%nNWMax  , p%nWings, 'NW Panels Circulation', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitStates' ); x%Gamma_NW = -999999_ReKi;
-   call AllocAry( x%Gamma_FW,    FWnSpan   , p%nFWMax  , p%nWings, 'FW Panels Circulation', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitStates' ); x%Gamma_FW = -999999_ReKi;
+   call AllocAry( x%Gamma_NW,    p%nSpan   , p%nNWMax  , p%nWings, 'NW Panels Circulation', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitStates' ); 
+   call AllocAry( x%Gamma_FW,    FWnSpan   , p%nFWMax  , p%nWings, 'FW Panels Circulation', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitStates' ); 
    ! set x%r_NW and x%r_FW to (0,0,0) so that InflowWind can shortcut the calculations
    call AllocAry( x%r_NW    , 3, p%nSpan+1 , p%nNWMax+1, p%nWings, 'NW Panels Points'     , ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitStates' );
    call AllocAry( x%r_FW    , 3, FWnSpan+1 , p%nFWMax+1, p%nWings, 'FW Panels Points'     , ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitStates' );
    !if (DEV_VERSION) then
    !   x%r_NW     = -9999999_ReKi;
    !   x%r_FW     = -9999999_ReKi;
+   !   x%Gamma_NW = -999999_ReKi;
+   !   x%Gamma_FW = -999999_ReKi;
    !else
-   x%r_NW     = 0.0_ReKi;
-   x%r_FW     = 0.0_ReKi;
+   x%r_NW     = 0.0_ReKi
+   x%r_FW     = 0.0_ReKi
+   x%Gamma_NW = 0.0_ReKi ! First call of calcoutput, states might not be set 
+   x%Gamma_FW = 0.0_ReKi ! NOTE, these values might be mapped from z%Gamma_LL at init
    !endif
    if (ErrStat >= AbortErrLev) return
 end subroutine FVW_InitStates
@@ -249,7 +253,9 @@ subroutine FVW_InitConstraint( z, p, m, ErrStat, ErrMsg )
    ErrStat = ErrID_None
    ErrMsg  = ""
    !
-   call AllocAry( z%Gamma_LL,  p%nSpan, p%nWings, 'Lifting line Circulation', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitConstraint' ); z%Gamma_LL = -999999_ReKi;
+   call AllocAry( z%Gamma_LL,  p%nSpan, p%nWings, 'Lifting line Circulation', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitConstraint' );
+   !z%Gamma_LL = -999999_ReKi
+   z%Gamma_LL = 0.0_ReKi
 
    if (ErrStat >= AbortErrLev) return
    if(.false.) print*,m%nNW ! unused var for now
@@ -803,6 +809,7 @@ subroutine FVW_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, ErrStat,
    CALL DistributeRequestedWind(u%V_wind, p, m)
 
    ! if we are on a correction step, CalcOutput may be called again with different inputs
+   ! Compute m%Gamma_LL
    CALL Wings_ComputeCirculation(t, m%Gamma_LL, z%Gamma_LL, u, p, x, m, AFInfo, ErrStat2, ErrMsg2, 0); if(Failed()) return ! For plotting only
 
 
