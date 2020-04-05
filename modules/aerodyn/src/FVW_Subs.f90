@@ -538,6 +538,11 @@ subroutine PackPanelsToSegments(p, m, x, iDepthStart, SegConnct, SegPoints, SegG
             print*,'PackPanelsToSegments: Number of segments wrongly estimated',nC, iHeadC-1
             STOP ! Keep me. The check will be removed once the code is well established
          endif
+         if (any(SegPoints(3,:)<-99._ReKi)) then
+            call print_x_NW_FW(p,m,x,'pack')
+            print*,'PackPanelsToSegments: some segments are NAN'
+            STOP ! Keep me. The check will be removed once the code is well established
+         endif
       endif
       nSeg  = iHeadC-1
       nSegP = iHeadP-1
@@ -856,6 +861,50 @@ contains
    end subroutine
 end subroutine
 
+!> Fake ground effect handling to prevents vortices to enter the ground
+!! For now a crude bounding is done, engineering models may follow
+!! True account of the ground effect (using mirroring or panels) should be done elsewhere
+!! This assumes that the ground is at z=0, in harmony with inflow wind
+subroutine FakeGroundEffect(p, x, m, ErrStat, ErrMsg)
+   type(FVW_ParameterType),         intent(in   ) :: p       !< Parameters
+   type(FVW_ContinuousStateType),   intent(inout) :: x       !< States
+   type(FVW_MiscVarType),           intent(in   ) :: m       !< Initial misc/optimization variables
+   integer(IntKi),                  intent(  out) :: ErrStat !< Error status of the operation
+   character(*),                    intent(  out) :: ErrMsg  !< Error message if ErrStat /= ErrID_None
+   integer(IntKi) :: iAge, iWing, iSpan
+   integer(IntKi) :: nBelow
+   real(ReKi), parameter:: GROUND         = 1.e-4_ReKi
+   real(ReKi), parameter:: ABOVE_GROUND   = 0.1_ReKi
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+   nBelow=0
+   do iWing = 1,p%nWings
+      do iAge = 1,m%nNW+1
+         do iSpan = 1,p%nSpan+1
+            if (x%r_NW(3, iSpan, iAge, iWing) < GROUND) then
+               x%r_NW(3, iSpan, iAge, iWing) = ABOVE_GROUND ! could use m%dxdt
+               nBelow=nBelow+1
+            endif
+         enddo
+      enddo
+   enddo
+   if (m%nFW>0) then
+      do iWing = 1,p%nWings
+         do iAge = 1,m%nFW+1
+            do iSpan = 1,FWnSpan
+               if (x%r_FW(3, iSpan, iAge, iWing) < GROUND) then
+                  x%r_FW(3, iSpan, iAge, iWing) = ABOVE_GROUND ! could use m%dxdt
+                  nBelow=nBelow+1
+               endif
+            enddo
+         enddo
+      enddo
+   endif
+   if (nBelow>0) then
+      print*,'[WARN] Check the simulation, some vortices were found below the ground: ',nBelow
+   endif
+end subroutine FakeGroundEffect
 
 !> Compute typical aerodynamic outputs based on:
 !! - the lifting line velocities in global coordinates

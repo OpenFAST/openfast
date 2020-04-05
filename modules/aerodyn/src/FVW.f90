@@ -516,6 +516,9 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    end IF
    !call print_x_NW_FW(p, m, x,'Conv')
 
+   ! --- Fake handling of ground effect
+   call FakeGroundEffect(p, x, m, ErrStat, ErrMsg)
+
    if (m%ComputeWakeInduced) then
       ! We extend the wake length, i.e. we emit a new panel of vorticity at the TE
       ! NOTE: this will be rolled back if UpdateState is called at the same starting time again
