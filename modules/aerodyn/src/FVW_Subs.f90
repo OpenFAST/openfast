@@ -98,11 +98,13 @@ endsubroutine Output_Gamma
 !> Read a delimited file  containing a circulation and interpolate it on the requested Control Points
 !! The input file is a delimited file with one line of header. 
 !! Each following line consists of two columns: r/R_[-] and Gamma_[m^2/s]
-subroutine ReadAndInterpGamma(CirculationFileName, s_CP_LL, L, Gamma_CP_LL)
+subroutine ReadAndInterpGamma(CirculationFileName, s_CP_LL, L, Gamma_CP_LL, ErrStat, ErrMsg)
    character(len=*),           intent(in   ) :: CirculationFileName !< Input file to read
    real(ReKi), dimension(:),   intent(in   ) :: s_CP_LL             !< Spanwise location of the lifting CP [m]
    real(ReKi),                 intent(in   ) :: L                   !< Full span of lifting line
    real(ReKi), dimension(:),   intent(out  ) :: Gamma_CP_LL         !< Interpolated circulation of the LL CP
+   integer(IntKi),             intent(  out) :: ErrStat             !< Error status of the operation
+   character(*),               intent(  out) :: ErrMsg              !< Error message if ErrStat /= ErrID_None
    ! Local
    integer(IntKi)      :: nLines
    integer(IntKi)      :: i
@@ -110,6 +112,8 @@ subroutine ReadAndInterpGamma(CirculationFileName, s_CP_LL, L, Gamma_CP_LL)
    integer(IntKi)      :: iUnit
    character(len=1054) :: line
    real(ReKi), dimension(:), allocatable :: sPrescr, GammaPrescr !< Radius
+   ErrStat = ErrID_None
+   ErrMsg  = ''
    ! --- 
    call GetNewUnit(iUnit)
    open(unit = iUnit, file = CirculationFileName)
@@ -125,7 +129,9 @@ subroutine ReadAndInterpGamma(CirculationFileName, s_CP_LL, L, Gamma_CP_LL)
    enddo
    close(iUnit)
    if (istat/=0) then
-      print*,'Error occured while reading Circulation file'
+      ErrStat=ErrID_Fatal
+      ErrMsg='Error occured while reading Circulation file: '//trim(CirculationFileName)
+      return
    endif
    ! NOTE: TODO TODO TODO THIS ROUTINE PERFORMS NASTY EXTRAPOLATION, SHOULD BE PLATEAUED
    Gamma_CP_LL =  interpolation_array( sPrescr, GammaPrescr, s_CP_LL, size(s_CP_LL), nLines )
