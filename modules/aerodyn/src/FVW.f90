@@ -7,10 +7,10 @@
 !!   - NW : Near Wake
 !!   - FW : Far Wake
 !!
-MODULE FVW
-   USE NWTC_Library
-   USE FVW_Types
-   USE FVW_Subs
+module FVW
+   use NWTC_Library
+   use FVW_Types
+   use FVW_Subs
    use FVW_IO
    use FVW_Wings
    use FVW_BiotSavart
@@ -21,18 +21,18 @@ MODULE FVW
 
    PRIVATE
 
-   type(ProgDesc), PARAMETER  :: FVW_Ver = ProgDesc( 'FVW', '', '' )
+   type(ProgDesc), parameter  :: FVW_Ver = ProgDesc( 'FVW', '', '' )
 
-   PUBLIC   :: FVW_Init             ! Initialization routine
-   PUBLIC   :: FVW_End
+   public   :: FVW_Init             ! Initialization routine
+   public   :: FVW_End
 
-   PUBLIC   :: FVW_CalcOutput
-   PUBLIC   :: FVW_UpdateStates
+   public   :: FVW_CalcOutput
+   public   :: FVW_UpdateStates
 
    ! parameter for deciding if enough time has elapsed (Wake calculation, and vtk output)
    real(DbKi), parameter      :: OneMinusEpsilon = 1 - 10000*EPSILON(1.0_DbKi)
 
-CONTAINS
+contains
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine is called at the start of the simulation to perform initialization steps.
@@ -40,6 +40,7 @@ CONTAINS
 !! The initial states and initial guess for the input are defined.
 subroutine FVW_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut, ErrStat, ErrMsg )
 !..................................................................................................................................
+   use OMP_LIB ! wrap with #ifdef _OPENMP if this causes an issue
    type(FVW_InitInputType),         intent(inout)  :: InitInp        !< Input data for initialization routine  (inout so we can use MOVE_ALLOC)
    type(FVW_InputType),             intent(  out)  :: u              !< An initial guess for the input; input mesh must be defined
    type(FVW_ParameterType),         intent(  out)  :: p              !< Parameters
@@ -76,6 +77,16 @@ subroutine FVW_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
 
    ! Display the module information
    call DispNVD( FVW_Ver )
+#ifdef _OPENMP   
+   call WrScr(' - Compiled with OpenMP')
+   !$OMP PARALLEL default(shared)
+   if (omp_get_thread_num()==0) then
+        call WrScr('   Number of threads: '//trim(Num2LStr(omp_get_num_threads()))//'/'//trim(Num2LStr(omp_get_max_threads())))
+   endif
+   !$OMP END PARALLEL 
+#else
+   call WrScr(' - No OpenMP support')
+#endif
 
    ! Set Parameters and *Misc* from inputs
    CALL FVW_SetParametersFromInputs(InitInp, p, ErrStat2, ErrMsg2); if(Failed()) return
@@ -926,4 +937,4 @@ contains
 
 end subroutine FVW_CalcOutput
 
-END MODULE FVW
+end module FVW
