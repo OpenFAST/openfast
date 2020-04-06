@@ -169,13 +169,15 @@ endsubroutine ReadAndInterpGamma
 !> Make sure the First panel of the NW match the last panel of the Trailing edge
 !!  - Same position of points
 !!  - Same circulation 
-subroutine Map_LL_NW(p, m, z, x, ErrStat, ErrMsg )
+subroutine Map_LL_NW(p, m, z, x, ShedScale, ErrStat, ErrMsg )
    type(FVW_ParameterType),         intent(in   )  :: p              !< Parameters
    type(FVW_MiscVarType),           intent(in   )  :: m              !< Initial misc/optimization variables
    type(FVW_ConstraintStateType),   intent(in   )  :: z              !< Constraints states
    type(FVW_ContinuousStateType),   intent(inout)  :: x              !< Continuous states
+   real(ReKi),                      intent(in)     :: ShedScale      !< Time scaling of shed vorticity
    integer(IntKi),                  intent(  out)  :: ErrStat        !< Error status of the operation
    character(*),                    intent(  out)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
+   real(ReKi) :: Gamma_Prev, Gamma_new
    ! Local
    integer(IntKi) :: iSpan , iW
    ErrStat = ErrID_None
@@ -201,6 +203,24 @@ subroutine Map_LL_NW(p, m, z, x, ErrStat, ErrMsg )
             x%Gamma_NW(iSpan, iNWStart  , iW) = z%Gamma_LL(iSpan,iW)  ! iAge=2
          enddo
       enddo
+   endif
+   ! When subcycling, we make sure the new circulation progressively ramps up from the old one
+   ! NOTE: subcycling needs improvement. 
+   !       Frequencies are introduced, even for prescribed circulation, when wake roll up is included
+   !       If the wake is not free, the convection velocity is constant and there is no issue.
+   !       As a test case, the elliptical wing with constant circulation can be used, with roll up
+   !       The error seems to be bigger near the tip/root for this case.
+   if(.false.) then
+      if ((ShedScale<1.0_ReKi) .and. (m%nNW>=3)) then
+         print*,'Scaling'
+         do iW = 1,p%nWings
+            do iSpan = 1,p%nSpan
+               Gamma_Prev =  x%Gamma_NW(iSpan, iNWStart+1, iW) ! Previous circulation
+               Gamma_New  =  x%Gamma_NW(iSpan, iNWStart  , iW)
+               x%Gamma_NW(iSpan, iNWStart  , iW)  = Gamma_New*ShedScale + (1.0_ReKi-ShedScale) * Gamma_Prev
+            enddo
+         enddo
+      endif
    endif
 end subroutine Map_LL_NW
 

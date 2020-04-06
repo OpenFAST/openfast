@@ -121,7 +121,7 @@ subroutine FVW_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
    CALL FVW_ToString(p, m) ! Print to screen
 
    ! Mapping NW and FW (purely for esthetics, and maybe wind) ! TODO, just points
-   call Map_LL_NW(p, m, z, x, ErrStat2, ErrMsg2); if(Failed()) return
+   call Map_LL_NW(p, m, z, x, 1.0_ReKi, ErrStat2, ErrMsg2); if(Failed()) return
    call Map_NW_FW(p, m, z, x, ErrStat2, ErrMsg2); if(Failed()) return
 
    ! Initialize output
@@ -354,13 +354,14 @@ SUBROUTINE FVW_SetParametersFromInputFile( InputFileData, p, m, ErrStat, ErrMsg 
 
    if (allocated(p%PrescribedCirculation)) deallocate(p%PrescribedCirculation)
    if (InputFileData%CirculationMethod==idCircPrescribed) then 
-      call AllocAry( p%PrescribedCirculation,  p%nSpan, 'Prescribed Circulation', ErrStat2, ErrMsg2 );    call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_SetParameters' );    p%PrescribedCirculation = -999999_ReKi;
+      call AllocAry( p%PrescribedCirculation,  p%nSpan, 'Prescribed Circulation', ErrStat2, ErrMsg2 ); call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_SetParameters' );    p%PrescribedCirculation = -999999_ReKi;
       if (.not. allocated(m%s_CP_LL)) then
          ErrMsg  = 'Spanwise coordinate not allocated.'
          ErrStat = ErrID_Fatal
          return
       endif
-      call ReadAndInterpGamma(trim(InputFileData%CirculationFile), m%s_CP_LL(1:p%nSpan,1), m%s_LL(p%nSpan+1,1), p%PrescribedCirculation)
+      call ReadAndInterpGamma(trim(InputFileData%CirculationFile), m%s_CP_LL(1:p%nSpan,1), m%s_LL(p%nSpan+1,1), p%PrescribedCirculation, ErrStat2, ErrMsg2)
+      call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_SetParameters' ); 
    endif
 
 end subroutine FVW_SetParametersFromInputFile
@@ -443,6 +444,7 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    type(FVW_ConstraintStateType) :: z_guess                                                                              ! <
    integer(IntKi) :: nP, nFWEff
    integer, dimension(8) :: time1, time2, time_diff
+   real(ReKi) :: ShedScale !< Scaling factor for shed vorticity (for sub-cycling), 1 if no subcycling
    logical :: bReevaluation
 
    ErrStat = ErrID_None
@@ -496,7 +498,8 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
 
    ! Map circulation and positions between LL and NW  and then NW and FW
    ! Changes: x only
-   call Map_LL_NW(p, m, z, x, ErrStat2, ErrMsg2); if(Failed()) return
+   ShedScale = 1.0_ReKi
+   call Map_LL_NW(p, m, z, x, ShedScale, ErrStat2, ErrMsg2); if(Failed()) return
    call Map_NW_FW(p, m, z, x, ErrStat2, ErrMsg2); if(Failed()) return
    !call print_x_NW_FW(p, m, x,'Map_')
 
@@ -537,7 +540,8 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
 
    ! Updating positions of first NW and FW panels (Circulation also updated but irrelevant)
    ! Changes: x only
-   call Map_LL_NW(p, m, z, x, ErrStat2, ErrMsg2); if(Failed()) return
+   ShedScale = (t+p%DTaero - m%OldWakeTime)/p%DTfvw
+   call Map_LL_NW(p, m, z, x, ShedScale, ErrStat2, ErrMsg2); if(Failed()) return
    call Map_NW_FW(p, m, z, x, ErrStat2, ErrMsg2); if(Failed()) return
 
    !call print_x_NW_FW(p, m, x,'Map2')
@@ -546,10 +550,12 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    ! Returns: z%Gamma_LL (at t+p%DTaero)
    z_guess%Gamma_LL = z%Gamma_LL ! We use as guess the circulation from the previous time step (see above)
    call FVW_CalcConstrStateResidual(t+p%DTaero, uInterp, p, x, xd, z_guess, OtherState, m, z, AFInfo, ErrStat2, ErrMsg2, 2); if(Failed()) return
+!    print*,'US: z_Gamma',x%Gamma_NW(1,1,1)
+!    print*,'US: x_Gamma',z%Gamma_LL(1,1)
 
    ! Updating circulation of near wake panel (and position but irrelevant)
    ! Changes: x only
-   call Map_LL_NW(p, m, z, x, ErrStat2, ErrMsg2); if(Failed()) return
+   call Map_LL_NW(p, m, z, x, ShedScale, ErrStat2, ErrMsg2); if(Failed()) return
    call Map_NW_FW(p, m, z, x, ErrStat2, ErrMsg2); if(Failed()) return
    !call print_x_NW_FW(p, m, x,'Map3')
 
