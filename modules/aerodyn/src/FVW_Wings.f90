@@ -105,7 +105,7 @@ contains
          enddo
          ! --- Control points spanwise location
          ! NOTE: we use the cos approximation of VanGarrel. For equispacing, it returns mid point
-         !       otehrwise, points are slightly closer to panels that are shorter
+         !       otherwise, points are slightly closer to panels that are shorter
          !call Meshing('middle'           , m%s_LL(:,iW), p%nSpan, m%s_CP_LL(:,iW))
          call Meshing('fullcosineapprox' , m%s_LL(:,iW), p%nSpan, m%s_CP_LL(:,iW))
          call InterpArray(m%s_LL(:,iW), m%chord_LL(:,iW), m%s_CP_LL(:,iW), m%chord_CP_LL(:,iW))
@@ -231,21 +231,25 @@ contains
       integer(IntKi), intent(in) :: iLabel
       ! Local
       integer(IntKi) :: iW
-      real(DbKi) :: s, ExpTerm
+      real(DbKi) :: s, RealAxis
       real(ReKi) :: GammaScale
       ErrStat = ErrID_None
       ErrMsg  = ""
 
       if (t<p%FullCirculationStart) then
          ! The circulation is ramped up progressively, starting from 0 
-         if (t<=0) then
+         if (t<=0.0_DbKi) then
             GammaScale=0.0_ReKi
          else
             s=t/p%FullCirculationStart
             ! If we have at least 10 points we use a smooth Heavyside, otherwise we use a simple linear scaling
             if (p%FullCirculationStart/p%DTfvw >= 9) then
-               ExpTerm=max( (1-2*s)/(s*(s-1._DbKi)+1.0e-04_DbKi),10.0_DbKi) ! Bounding exponential to avoid overflow
-               GammaScale = 1._ReKi- 1._ReKi/(1._ReKi+exp(real(ExpTerm,ReKi))) ! Using a smooth approximation of HeavySide function
+               ! Smooth approximations of the Heavyside function
+               ! Example 1: 1/2 (1+2/pi arctan(k x) )  x \in ]-infty,+infty [
+               ! Example 2: 1/(1+exp(k x) )            x \in ]-infty,+infty [
+               ! Example 3: sin(pi/2*s)**2             s \in [0,1]
+               RealAxis = (1-2*s)/(s*(s-1._DbKi)-1.0e-02_DbKi) ! Scaling from 0-1 to real axis
+               GammaScale = 1._ReKi- 1._ReKi/(1._ReKi+exp(real(RealAxis,ReKi)))
             else
                GammaScale = s  ! Using a linear scaling
             endif
