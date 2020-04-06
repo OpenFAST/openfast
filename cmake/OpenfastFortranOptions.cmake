@@ -102,6 +102,12 @@ macro(set_fast_gfortran)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS},--stack,${stack_size}")
   endif()
 
+  # OPENMP
+  if (OPENMP)
+     set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fopenmp")
+     set(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -fopenmp" )
+  endif()
+
 endmacro(set_fast_gfortran)
 
 #
@@ -131,6 +137,12 @@ macro(set_fast_intel_fortran_posix)
   if(CMAKE_BUILD_TYPE MATCHES Debug)
     set( CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -check all -traceback" )
   endif()
+
+  # OPENMP
+  if (OPENMP)
+     set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -qopenmp")
+     set(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -qopenmp" )
+  endif()
 endmacro(set_fast_intel_fortran_posix)
 
 #
@@ -157,4 +169,11 @@ macro(set_fast_intel_fortran_windows)
   if(CMAKE_BUILD_TYPE MATCHES Debug)
     set( CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} /check:all /traceback" )
   endif()
+
+  # OPENMP
+  if (OPENMP)
+     set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} /qopenmp")
+     set(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} /qopenmp" )
+  endif()
+
 endmacro(set_fast_intel_fortran_windows)
