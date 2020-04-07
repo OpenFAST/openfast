@@ -486,9 +486,13 @@ subroutine SlD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg 
 
       call    REDWINinterface_CalcOutput( p%DLL_Trgt, p%DLL_Model, Displacement, Force, m%dll_data(i), ErrStat2, ErrMsg2 ); if (Failed()) return;
 
-      ! Return force onto the resulting point mesh
-      y%SoilMesh%Force (1:3,i)    = real(Force(1:3),ReKi)
-      y%SoilMesh%Moment(1:3,i)    = real(Force(4:6),ReKi)
+      ! Return reaction force onto the resulting point mesh
+      y%SoilMesh%Force (1,i)  =  -real(Force(1),ReKi)
+      y%SoilMesh%Force (2,i)  =  -real(Force(2),ReKi)
+      y%SoilMesh%Force (3,i)  =  -real(Force(3),ReKi)
+      y%SoilMesh%Moment(1,i)  =  -real(Force(4),ReKi)
+      y%SoilMesh%Moment(2,i)  =  -real(Force(5),ReKi)
+      y%SoilMesh%Moment(3,i)  =  -real(Force(6),ReKi)
    enddo
 
       ! Outputs
