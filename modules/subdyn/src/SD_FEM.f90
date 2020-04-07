@@ -918,7 +918,8 @@ SUBROUTINE AssembleKM(Init, p, ErrStat, ErrMsg)
 
    ! add concentrated mass induced gravity force
    DO I = 1, Init%NCMass
-       iGlob = p%NodesDOF(i)%List(3) ! uz
+       iNode = NINT(Init%CMass(I, 1)) ! Note index where concentrated mass is to be added
+       iGlob = p%NodesDOF(iNode)%List(3) ! uz
        Init%FG(iGlob) = Init%FG(iGlob) - Init%CMass(I, 2)*Init%g 
    ENDDO ! I concentrated mass induced gravity
    

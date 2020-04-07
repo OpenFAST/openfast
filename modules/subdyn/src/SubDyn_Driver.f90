@@ -90,7 +90,7 @@ PROGRAM TestSubDyn
    REAL(DbKi)                      :: TMax
    REAL(DbKi)                      :: OutTime              ! Used to determine if output should be generated at this simulation time
    REAL(ReKi)                      :: PrevClockTime        ! Clock time at start of simulation in seconds
-   REAL                            :: UsrTime1             ! User CPU time for simulation initialization
+   REAL(ReKi)                      :: UsrTime1             ! User CPU time for simulation initialization
    INTEGER                         :: StrtTime (8)         ! Start time of simulation
    CHARACTER(200)                  :: git_commit           ! String containing the current git commit hash
    TYPE(ProgDesc), PARAMETER       :: version   = ProgDesc( 'SubDyn Driver', '', '' )  ! The version number of this program.
