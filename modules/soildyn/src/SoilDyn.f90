@@ -280,6 +280,9 @@ contains
 
       ! Assuming zero orientation displacement for start
       DCM = 0.0_DbKi
+      DCM(1,1) = 1.0_DbKi
+      DCM(2,2) = 1.0_DbKi
+      DCM(3,3) = 1.0_DbKi
 
       do i=1,p%NumPoints
          CALL MeshPositionNode( Mesh    = u%SoilMesh            &
