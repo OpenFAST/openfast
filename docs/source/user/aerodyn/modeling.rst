@@ -80,7 +80,7 @@ Model Options Under Operational and Parked/Idling Conditions
 ------------------------------------------------------------
 
 To model an operational rotor, we recommend to include induction
-(``WakeMod = 1``) and UA (``AFAeroMod = 2``). Normally, the Pitt and
+(``WakeMod = 2``) and UA (``AFAeroMod = 2``). Normally, the Pitt and
 Peters skewed-wake (``SkewMod = 2``), Prandtl tip-loss (``TipLoss
 = TRUE``), Prandtl hub-loss (``HubLoss = TRUE``), and tangential
 induction (``TanInd = TRUE``) models should all be enabled, but
