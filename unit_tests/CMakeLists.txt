@@ -54,9 +54,6 @@ set(pfunit_directory ${PFUNIT_INSTALL})
 set(source_modulesdirectory ${PROJECT_SOURCE_DIR}/../modules)
 set(build_testdirectory ${PROJECT_BINARY_DIR}/tests)
 
-file(MAKE_DIRECTORY ${build_testdirectory})
-file(WRITE ${build_testdirectory}/testSuites.inc "")
-
 include_directories(
   ${PROJECT_SOURCE_DIR}
   ${build_testdirectory}
@@ -70,61 +67,6 @@ else() # Windows
   set(pfunit_lib "/lib/pfunit.lib")
 endif()
 
-function(build_utest module testlist)
-  foreach(test ${testlist})
-    set(test_dependency pfunit ${source_modulesdirectory}/${module}/tests/${test}.F90)
-    add_custom_command(
-      OUTPUT ${build_testdirectory}/${test}.F90
-      COMMAND ${PYTHON_EXECUTABLE} ${pfunit_directory}/bin/pFUnitParser.py ${source_modulesdirectory}/${module}/tests/${test}.F90 ${build_testdirectory}/${test}.F90 
-      DEPENDS ${test_dependency}
-    )
-    set(test_sources ${test_sources} ${build_testdirectory}/${test}.F90)
-    file(APPEND ${build_testdirectory}/testSuites.inc "ADD_TEST_SUITE(${test}_suite)\n")
-  endforeach()
-  
-  add_executable(
-    ${module}_utest
-    ${pfunit_directory}/include/driver.F90
-    ${test_sources}
-  )
-  
-  target_link_libraries(
-    ${module}_utest
-    ${pfunit_directory}${pfunit_lib}
-    ${module}lib
-  )
-
-  add_test(${module}_utest ${PROJECT_BINARY_DIR}/${module}_utest)
-  
-endfunction(build_utest)
-
-### beamdyn unit tests
-set(testlist
-    test_tools
-    test_BD_CrvCompose
-    test_BD_CheckRotMat
-    test_BD_CrvExtractCrv
-    test_BD_CrvMatrixR
-    test_BD_CrvMatrixH
-    test_ExtractRelativeRotation
-    test_BD_InputGlobalLocal
-    test_BD_DistrLoadCopy
-    test_BD_GravityForce
-    test_BD_QPData_mEta_rho
-    test_BD_GenerateGLL
-    test_BD_GaussPointWeight
-    test_BD_diffmtc
-    test_BD_InitShpDerJaco
-)
-# it is important to keep the quotes around "${testlist}" in the call below
-build_utest("beamdyn" "${testlist}")
-
-
-### other module unit tests
-# set(testlist
-#     test_SUBROUTINE1
-#     test_SUBROUTINE2
-#     test_SUBROUTINE3
-# )
-# it is important to keep the quotes around "${testlist}" in the call below
-# build_utest("module_name" "${testlist}")
+### Add the unit tests here
+add_subdirectory("beamdyn")
+add_subdirectory("nwtc-library")
