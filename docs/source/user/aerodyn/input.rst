@@ -152,8 +152,9 @@ time step prescribed by the driver code (OpenFAST or the standalone driver
 program).
 
 Set ``WakeMod`` to 0 if you want to disable rotor wake/induction
-effects or 1 to include these effects using the BEM theory model. When
-``WakeMod`` is set to 2, a dynamic BEM theory model (DBEMT) is used.
+effects or 1 to include these effects using the (quasi-steady) BEM theory model. When
+``WakeMod`` is set to 2, a dynamic BEM theory model (DBEMT) is used (also referred to
+  as dynamic inflow or dynamic wake model). 
 ``WakeMod`` cannot be set to 2 during linearization analyses.
 
 Set ``AFAeroMod`` to 1 to include steady blade airfoil aerodynamics or 2
