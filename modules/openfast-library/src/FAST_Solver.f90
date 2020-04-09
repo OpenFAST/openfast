@@ -2699,26 +2699,6 @@ CONTAINS
          
 
       !..................
-      ! SoilDyn
-      !..................
-
-            if (p_FAST%CompSoil == Module_SlD) then
-               if ( u_SlD%SoilMesh%Committed ) THEN
-                  ! SD motions to SlD
-                  CALL Transfer_Point_to_Point( y_SD%y2Mesh, u_SlD%SoilMesh, MeshMapData%SD_P_2_SlD_P, ErrStat2, ErrMsg2 )
-                     CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//'Transfer_SD_to_SlD (y_SD%y2Mesh -> u_SlD%SoilMesh)' )
-               endif
-               if ( y_SlD%SoilMesh%Committed ) THEN
-                  ! SlD loads to SD
-                  CALL Transfer_Point_to_Point( y_SlD%SoilMesh, MeshMapData%u_SD_LMesh_2, MeshMapData%SlD_P_2_SD_P, ErrStat2, ErrMsg2, u_SlD%SoilMesh, y_SD2%Y2Mesh )
-                     CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//'Transfer_SlD_to_SD (y_SlD%SoilMesh -> y_SD2%Y2Mesh)' )
-                  MeshMapData%u_SD_LMesh%Force  = MeshMapData%u_SD_LMesh%Force  + MeshMapData%u_SD_LMesh_2%Force
-                  MeshMapData%u_SD_LMesh%Moment = MeshMapData%u_SD_LMesh%Moment + MeshMapData%u_SD_LMesh_2%Moment
-               endif
-            endif !  SoilDyn
-
-
-      !..................
       ! Ice
       !..................
             IF ( p_FAST%CompIce == Module_IceF ) THEN
@@ -2770,7 +2750,26 @@ CONTAINS
          END IF ! HD is used (IceFloe/IceDyn can't be used unless HydroDyn is used)
 
 
-         
+      !..................
+      ! SoilDyn
+      !..................
+
+         if (p_FAST%CompSoil == Module_SlD) then
+            if ( u_SlD%SoilMesh%Committed ) THEN
+               ! SD motions to SlD
+               CALL Transfer_Point_to_Point( y_SD%y2Mesh, u_SlD%SoilMesh, MeshMapData%SD_P_2_SlD_P, ErrStat2, ErrMsg2 )
+                  CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//'Transfer_SD_to_SlD (y_SD%y2Mesh -> u_SlD%SoilMesh)' )
+            endif
+            if ( y_SlD%SoilMesh%Committed ) THEN
+               ! SlD loads to SD
+               CALL Transfer_Point_to_Point( y_SlD%SoilMesh, MeshMapData%u_SD_LMesh_2, MeshMapData%SlD_P_2_SD_P, ErrStat2, ErrMsg2, u_SlD%SoilMesh, y_SD2%Y2Mesh )
+                  CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//'Transfer_SlD_to_SD (y_SlD%SoilMesh -> y_SD2%Y2Mesh)' )
+               MeshMapData%u_SD_LMesh%Force  = MeshMapData%u_SD_LMesh%Force  + MeshMapData%u_SD_LMesh_2%Force
+               MeshMapData%u_SD_LMesh%Moment = MeshMapData%u_SD_LMesh%Moment + MeshMapData%u_SD_LMesh_2%Moment
+            endif
+         endif !  SoilDyn
+
+
       !..................
       ! Get SD motions input
       !..................
