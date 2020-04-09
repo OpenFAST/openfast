@@ -1162,6 +1162,27 @@ SUBROUTINE IceD_InputSolve( u_IceD, y_SD, MeshMapData, legNum, ErrStat, ErrMsg )
 END SUBROUTINE IceD_InputSolve
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine sets the inputs required for IceFloe.
+SUBROUTINE SlD_InputSolve( u_SlD, y_SD, MeshMapData, ErrStat, ErrMsg )
+!..................................................................................................................................
+
+      ! Passed variables
+   TYPE(SlD_InputType),         INTENT(INOUT) :: u_SlD                        !< SoilDyn input
+   TYPE(SD_OutputType),         INTENT(IN   ) :: y_SD                         !< SubDyn outputs
+   TYPE(FAST_ModuleMapType),    INTENT(INOUT) :: MeshMapData                  !< data for mapping meshes between modules
+
+   INTEGER(IntKi),              INTENT(  OUT) :: ErrStat                      !< Error status of the operation
+   CHARACTER(*)  ,              INTENT(  OUT) :: ErrMsg                       !< Error message if ErrStat /= ErrID_None
+
+
+      !----------------------------------------------------------------------------------------------------
+      ! Map SD outputs to SoilDyn inputs
+      !----------------------------------------------------------------------------------------------------
+      ! motions:
+   CALL Transfer_Point_to_Point( y_SD%y2Mesh, u_SlD%SoilMesh, MeshMapData%SD_P_2_SlD_P, ErrStat, ErrMsg )
+
+END SUBROUTINE SlD_InputSolve
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine sets the inputs required for BeamDyn. 
 SUBROUTINE Transfer_ED_to_BD( y_ED, u_BD, MeshMapData, ErrStat, ErrMsg )
 !..................................................................................................................................
 
@@ -1326,7 +1347,7 @@ END FUNCTION GetPerturb
 SUBROUTINE ED_HD_InputOutputSolve(  this_time, p_FAST, calcJacobian &
                                   , u_ED, p_ED, x_ED, xd_ED, z_ED, OtherSt_ED, y_ED, m_ED &
                                   , u_HD, p_HD, x_HD, xd_HD, z_HD, OtherSt_HD, y_HD, m_HD & 
-                                  , u_MAP, y_MAP, u_FEAM, y_FEAM, u_MD, y_MD, u_SlD, y_SlD &
+                                  , u_MAP, y_MAP, u_FEAM, y_FEAM, u_MD, y_MD &
                                   , MeshMapData , ErrStat, ErrMsg )
 !..................................................................................................................................
 
@@ -1367,10 +1388,6 @@ SUBROUTINE ED_HD_InputOutputSolve(  this_time, p_FAST, calcJacobian &
    TYPE(MD_OutputType),               INTENT(IN   )  :: y_MD                      !< MoorDyn outputs
    TYPE(MD_InputType),                INTENT(INOUT)  :: u_MD                      !< MoorDyn inputs (INOUT just because I don't want to use another tempoarary mesh and we'll overwrite this later)
       
-      !SoilDyn:
-   TYPE(SlD_InputType)               , INTENT(INOUT) :: u_SlD                     !< System inputs
-   TYPE(SlD_OutputType)              , INTENT(INOUT) :: y_SlD                     !< System outputs
-
    TYPE(FAST_ModuleMapType)          , INTENT(INOUT) :: MeshMapData               !< data for mapping meshes between modules
    INTEGER(IntKi)                    , INTENT(  OUT) :: ErrStat                   !< Error status of the operation
    CHARACTER(*)                      , INTENT(  OUT) :: ErrMsg                    !< Error message if ErrStat /= ErrID_None
@@ -1913,7 +1930,6 @@ SUBROUTINE FullOpt1_InputOutputSolve( this_time, p_FAST, calcJacobian &
    TYPE(ED_OutputType)                               :: y_ED_perturb              ! Perturbed system outputs
    TYPE(SD_InputType)                                :: u_SD_perturb              ! Perturbed system inputs
    TYPE(SD_OutputType)                               :: y_SD_perturb              ! Perturbed system outputs
-!FIXME:SlD  do we need to ad SlD here?
    TYPE(HydroDyn_InputType)                          :: u_HD_perturb              ! Perturbed system inputs
    TYPE(HydroDyn_OutputType)                         :: y_HD_perturb              ! Perturbed system outputs
    TYPE(BD_InputType)                                :: u_BD_perturb              ! Perturbed system inputs
@@ -2321,6 +2337,7 @@ END IF
       CALL WrFileNR(UnJac, ' SD_TPMesh_RotationAcc_Z_'//TRIM(Num2LStr(TmpIndx))) 
    END DO
             
+
    IF ( p_FAST%CompHydro == Module_HD ) THEN   ! this SD mesh linked only when HD is enabled
       DO TmpIndx=1,u_SD%LMesh%NNodes
          CALL WrFileNR(UnJac, ' SD_LMesh_Force_X_'//TRIM(Num2LStr(TmpIndx))) 
@@ -2526,6 +2543,7 @@ END IF
                           
       END IF
       
+
       IF ( p_FAST%CompSub == Module_SD ) THEN       
          !...............
          ! SD motion inputs: (from ED)
@@ -2645,7 +2663,15 @@ CONTAINS
          END DO
          
       END IF  
-      
+
+
+      IF (p_FAST%CompSoil == Module_SlD) THEN
+            ! Map Subdyn motion to SoilDyn
+         CALL SlD_InputSolve(  u_SlD, y_SD2, MeshMapData, ErrStat2, ErrMsg2 )
+            CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)  
+      END IF
+
+
       IF ( p_FAST%CompElast == Module_BD .and. BD_Solve_Option1) THEN
          
          ! Transfer ED motions to BD inputs:
@@ -2755,11 +2781,6 @@ CONTAINS
       !..................
 
          if (p_FAST%CompSoil == Module_SlD) then
-            if ( u_SlD%SoilMesh%Committed ) THEN
-               ! SD motions to SlD
-               CALL Transfer_Point_to_Point( y_SD%y2Mesh, u_SlD%SoilMesh, MeshMapData%SD_P_2_SlD_P, ErrStat2, ErrMsg2 )
-                  CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//'Transfer_SD_to_SlD (y_SD%y2Mesh -> u_SlD%SoilMesh)' )
-            endif
             if ( y_SlD%SoilMesh%Committed ) THEN
                ! SlD loads to SD
                CALL Transfer_Point_to_Point( y_SlD%SoilMesh, MeshMapData%u_SD_LMesh_2, MeshMapData%SlD_P_2_SD_P, ErrStat2, ErrMsg2, u_SlD%SoilMesh, y_SD2%Y2Mesh )
@@ -4697,8 +4718,8 @@ SUBROUTINE SolveOption1(this_time, this_state, calcJacobian, p_FAST, ED, BD, HD,
           ,    FEAM%Input(1),   FEAM%y &   
           ,      MD%Input(1),     MD%y &   
           ,    IceF%Input(1),   IceF%y &
-          ,    IceD%Input(1,:), IceD%y &    ! bjj: I don't really want to make temp copies of input types. perhaps we should pass the whole Input() structure? (likewise for BD)...
-          ,     SlD%Input(1),    SlD%y &
+          ,    IceD%Input(1,:), IceD%y &     ! bjj: I don't really want to make temp copies of input types. perhaps we should pass the whole Input() structure? (likewise for BD)...
+          ,     SlD%Input(1),    SlD%y &     ! adp: this is only coupled to SD at present
           , MeshMapData , ErrStat2, ErrMsg2 )         
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                         
@@ -4708,7 +4729,7 @@ SUBROUTINE SolveOption1(this_time, this_state, calcJacobian, p_FAST, ED, BD, HD,
       CALL ED_HD_InputOutputSolve(  this_time, p_FAST, calcJacobian &
                                     , ED%Input(1), ED%p, ED%x(this_state), ED%xd(this_state), ED%z(this_state), ED%OtherSt(this_state), ED%Output(1), ED%m &
                                     , HD%Input(1), HD%p, HD%x(this_state), HD%xd(this_state), HD%z(this_state), HD%OtherSt(this_state), HD%y,         HD%m &
-                                    , MAPp%Input(1), MAPp%y, FEAM%Input(1), FEAM%y, MD%Input(1), MD%y, SlD%Input(1), SlD%y &
+                                    , MAPp%Input(1), MAPp%y, FEAM%Input(1), FEAM%y, MD%Input(1), MD%y &
                                     , MeshMapData , ErrStat2, ErrMsg2 )         
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                                                                   
@@ -4754,6 +4775,12 @@ SUBROUTINE SolveOption1(this_time, this_state, calcJacobian, p_FAST, ED, BD, HD,
          
    END IF        
       
+   IF (p_FAST%CompSoil == Module_SlD) THEN
+         ! Map Subdyn motion to SoilDyn
+      CALL SlD_InputSolve(  SlD%Input(1), SD%y, MeshMapData, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)  
+   END IF
+
 #ifdef DEBUG_MESH_TRANSFER_ICE
       CALL WrScr('********************************************************')
       CALL WrScr('****   IceF to SD point-to-point                   *****')
