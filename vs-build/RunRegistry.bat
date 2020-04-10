@@ -279,11 +279,6 @@ SET Output_Loc=%CURR_LOC%
 %REGISTRY% "%CURR_LOC%\AWAE_Registry.txt" -I %NWTC_Lib_Loc% -I %IfW_Loc% -noextrap -O "%Output_Loc%"
 GOTO checkError
 
-:WakeDynamics_Driver
-SET CURR_LOC=%Wake_Loc%
-SET Output_Loc=%CURR_LOC%
-%REGISTRY% "%CURR_LOC%\WakeDynamics_Driver_Registry.txt" -I %NWTC_Lib_Loc% -I %Wake_Loc% -noextrap -O %Output_Loc% 
-
 :checkError
 ECHO.
 IF %ERRORLEVEL% NEQ 0 (
