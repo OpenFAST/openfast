@@ -47,8 +47,11 @@ IMPLICIT NONE
     REAL(DbKi)  :: Tmax      !< max time from glue code [s]
     REAL(ReKi)  :: AvgWindSpeed      !< average wind speed for the simulation [m/s]
     REAL(ReKi)  :: AirDens      !< air density [kg/m^3]
-    INTEGER(IntKi)  :: NumSC2Ctrl      !< number of controller inputs [from supercontroller] [-]
+    INTEGER(IntKi)  :: NumSC2CtrlGlob      !< number of global controller inputs [from supercontroller] [-]
+    INTEGER(IntKi)  :: NumSC2Ctrl      !< number of turbine specific controller inputs [from supercontroller] [-]
     INTEGER(IntKi)  :: NumCtrl2SC      !< number of controller outputs [to supercontroller] [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: InitScOutputsGlob      !< Initial global inputs to the controller [from the supercontroller] [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: InitScOutputsTurbine      !< Initial turbine specific inputs to the controller [from the supercontroller] [-]
   END TYPE SrvD_InitInputType
 ! =======================
 ! =========  SrvD_InitOutputType  =======
@@ -142,6 +145,7 @@ IMPLICIT NONE
     CHARACTER(1024)  :: NTMDfile      !< File for nacelle tuned mass damper (quoted string) [-]
     LOGICAL  :: CompTTMD      !< Compute tower tuned mass damper {true/false} [-]
     CHARACTER(1024)  :: TTMDfile      !< File for tower tuned mass damper (quoted string) [-]
+    REAL(SiKi)  :: ScInCutOff      !< Cuttoff frequency for low-pass filter on Supercontroller inputs [Hz]
   END TYPE SrvD_InputFile
 ! =======================
 ! =========  BladedDLLType  =======
@@ -169,6 +173,8 @@ IMPLICIT NONE
   TYPE, PUBLIC :: SrvD_DiscreteStateType
     TYPE(TMD_DiscreteStateType)  :: NTMD      !< TMD module states - nacelle [-]
     TYPE(TMD_DiscreteStateType)  :: TTMD      !< TMD module states - tower [-]
+    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: ScInFilter      !< Filtered turbine specific inputs from supercontroller [-]
+    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: ScInGlobFilter      !< Filtered global inputs from supercontroller [-]
   END TYPE SrvD_DiscreteStateType
 ! =======================
 ! =========  SrvD_ConstraintStateType  =======
@@ -302,6 +308,8 @@ IMPLICIT NONE
     TYPE(TMD_ParameterType)  :: TTMD      !< TMD module parameters - tower [-]
     REAL(ReKi)  :: AvgWindSpeed      !< average wind speed for the simulation [m/s]
     REAL(ReKi)  :: AirDens      !< air density [kg/m^3]
+    LOGICAL  :: ScOn      !< Supercontroller on/off flag [-]
+    REAL(SiKi)  :: ScInAlpha      !< Low pass filter cutoff parameter for Supercontroller inputs to ServoDyn [-]
   END TYPE SrvD_ParameterType
 ! =======================
 ! =========  SrvD_InputType  =======
@@ -343,7 +351,8 @@ IMPLICIT NONE
     REAL(ReKi)  :: GenTrq_prev      !< Electrical generator torque (from previous step), sent to Bladed DLL [N-m]
     TYPE(TMD_InputType)  :: NTMD      !< TMD module inputs - nacelle [-]
     TYPE(TMD_InputType)  :: TTMD      !< TMD module inputs - tower [-]
-    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: SuperController      !< A swap array: used to pass input data to the DLL controller from the supercontroller [-]
+    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: SuperControllerTurbine      !< A swap array: used to pass turbine specific input data to the DLL controller from the supercontroller [-]
+    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: SuperControllerGlob      !< A swap array: used to pass global input data to the DLL controller from the supercontroller [-]
   END TYPE SrvD_InputType
 ! =======================
 ! =========  SrvD_OutputType  =======
@@ -399,8 +408,33 @@ ENDIF
     DstInitInputData%Tmax = SrcInitInputData%Tmax
     DstInitInputData%AvgWindSpeed = SrcInitInputData%AvgWindSpeed
     DstInitInputData%AirDens = SrcInitInputData%AirDens
+    DstInitInputData%NumSC2CtrlGlob = SrcInitInputData%NumSC2CtrlGlob
     DstInitInputData%NumSC2Ctrl = SrcInitInputData%NumSC2Ctrl
     DstInitInputData%NumCtrl2SC = SrcInitInputData%NumCtrl2SC
+IF (ALLOCATED(SrcInitInputData%InitScOutputsGlob)) THEN
+  i1_l = LBOUND(SrcInitInputData%InitScOutputsGlob,1)
+  i1_u = UBOUND(SrcInitInputData%InitScOutputsGlob,1)
+  IF (.NOT. ALLOCATED(DstInitInputData%InitScOutputsGlob)) THEN 
+    ALLOCATE(DstInitInputData%InitScOutputsGlob(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%InitScOutputsGlob.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInitInputData%InitScOutputsGlob = SrcInitInputData%InitScOutputsGlob
+ENDIF
+IF (ALLOCATED(SrcInitInputData%InitScOutputsTurbine)) THEN
+  i1_l = LBOUND(SrcInitInputData%InitScOutputsTurbine,1)
+  i1_u = UBOUND(SrcInitInputData%InitScOutputsTurbine,1)
+  IF (.NOT. ALLOCATED(DstInitInputData%InitScOutputsTurbine)) THEN 
+    ALLOCATE(DstInitInputData%InitScOutputsTurbine(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%InitScOutputsTurbine.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInitInputData%InitScOutputsTurbine = SrcInitInputData%InitScOutputsTurbine
+ENDIF
  END SUBROUTINE SrvD_CopyInitInput
 
  SUBROUTINE SrvD_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
@@ -414,6 +448,12 @@ ENDIF
   ErrMsg  = ""
 IF (ALLOCATED(InitInputData%BlPitchInit)) THEN
   DEALLOCATE(InitInputData%BlPitchInit)
+ENDIF
+IF (ALLOCATED(InitInputData%InitScOutputsGlob)) THEN
+  DEALLOCATE(InitInputData%InitScOutputsGlob)
+ENDIF
+IF (ALLOCATED(InitInputData%InitScOutputsTurbine)) THEN
+  DEALLOCATE(InitInputData%InitScOutputsTurbine)
 ENDIF
  END SUBROUTINE SrvD_DestroyInitInput
 
@@ -467,8 +507,19 @@ ENDIF
       Db_BufSz   = Db_BufSz   + 1  ! Tmax
       Re_BufSz   = Re_BufSz   + 1  ! AvgWindSpeed
       Re_BufSz   = Re_BufSz   + 1  ! AirDens
+      Int_BufSz  = Int_BufSz  + 1  ! NumSC2CtrlGlob
       Int_BufSz  = Int_BufSz  + 1  ! NumSC2Ctrl
       Int_BufSz  = Int_BufSz  + 1  ! NumCtrl2SC
+  Int_BufSz   = Int_BufSz   + 1     ! InitScOutputsGlob allocated yes/no
+  IF ( ALLOCATED(InData%InitScOutputsGlob) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! InitScOutputsGlob upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%InitScOutputsGlob)  ! InitScOutputsGlob
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! InitScOutputsTurbine allocated yes/no
+  IF ( ALLOCATED(InData%InitScOutputsTurbine) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! InitScOutputsTurbine upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%InitScOutputsTurbine)  ! InitScOutputsTurbine
+  END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -533,10 +584,38 @@ ENDIF
       Re_Xferred   = Re_Xferred   + 1
       ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%AirDens
       Re_Xferred   = Re_Xferred   + 1
+      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%NumSC2CtrlGlob
+      Int_Xferred   = Int_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%NumSC2Ctrl
       Int_Xferred   = Int_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%NumCtrl2SC
       Int_Xferred   = Int_Xferred   + 1
+  IF ( .NOT. ALLOCATED(InData%InitScOutputsGlob) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%InitScOutputsGlob,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%InitScOutputsGlob,1)
+    Int_Xferred = Int_Xferred + 2
+
+      IF (SIZE(InData%InitScOutputsGlob)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%InitScOutputsGlob))-1 ) = PACK(InData%InitScOutputsGlob,.TRUE.)
+      Re_Xferred   = Re_Xferred   + SIZE(InData%InitScOutputsGlob)
+  END IF
+  IF ( .NOT. ALLOCATED(InData%InitScOutputsTurbine) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%InitScOutputsTurbine,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%InitScOutputsTurbine,1)
+    Int_Xferred = Int_Xferred + 2
+
+      IF (SIZE(InData%InitScOutputsTurbine)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%InitScOutputsTurbine))-1 ) = PACK(InData%InitScOutputsTurbine,.TRUE.)
+      Re_Xferred   = Re_Xferred   + SIZE(InData%InitScOutputsTurbine)
+  END IF
  END SUBROUTINE SrvD_PackInitInput
 
  SUBROUTINE SrvD_UnPackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -637,10 +716,58 @@ ENDIF
       Re_Xferred   = Re_Xferred + 1
       OutData%AirDens = ReKiBuf( Re_Xferred )
       Re_Xferred   = Re_Xferred + 1
+      OutData%NumSC2CtrlGlob = IntKiBuf( Int_Xferred ) 
+      Int_Xferred   = Int_Xferred + 1
       OutData%NumSC2Ctrl = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
       OutData%NumCtrl2SC = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! InitScOutputsGlob not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%InitScOutputsGlob)) DEALLOCATE(OutData%InitScOutputsGlob)
+    ALLOCATE(OutData%InitScOutputsGlob(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%InitScOutputsGlob.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask1 = .TRUE. 
+      IF (SIZE(OutData%InitScOutputsGlob)>0) OutData%InitScOutputsGlob = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%InitScOutputsGlob))-1 ), mask1, 0.0_ReKi )
+      Re_Xferred   = Re_Xferred   + SIZE(OutData%InitScOutputsGlob)
+    DEALLOCATE(mask1)
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! InitScOutputsTurbine not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%InitScOutputsTurbine)) DEALLOCATE(OutData%InitScOutputsTurbine)
+    ALLOCATE(OutData%InitScOutputsTurbine(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%InitScOutputsTurbine.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask1 = .TRUE. 
+      IF (SIZE(OutData%InitScOutputsTurbine)>0) OutData%InitScOutputsTurbine = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%InitScOutputsTurbine))-1 ), mask1, 0.0_ReKi )
+      Re_Xferred   = Re_Xferred   + SIZE(OutData%InitScOutputsTurbine)
+    DEALLOCATE(mask1)
+  END IF
  END SUBROUTINE SrvD_UnPackInitInput
 
  SUBROUTINE SrvD_CopyInitOutput( SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg )
@@ -1419,6 +1546,7 @@ ENDIF
     DstInputFileData%NTMDfile = SrcInputFileData%NTMDfile
     DstInputFileData%CompTTMD = SrcInputFileData%CompTTMD
     DstInputFileData%TTMDfile = SrcInputFileData%TTMDfile
+    DstInputFileData%ScInCutOff = SrcInputFileData%ScInCutOff
  END SUBROUTINE SrvD_CopyInputFile
 
  SUBROUTINE SrvD_DestroyInputFile( InputFileData, ErrStat, ErrMsg )
@@ -1563,6 +1691,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%NTMDfile)  ! NTMDfile
       Int_BufSz  = Int_BufSz  + 1  ! CompTTMD
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%TTMDfile)  ! TTMDfile
+      Re_BufSz   = Re_BufSz   + 1  ! ScInCutOff
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -1789,6 +1918,8 @@ ENDIF
           IntKiBuf(Int_Xferred) = ICHAR(InData%TTMDfile(I:I), IntKi)
           Int_Xferred = Int_Xferred   + 1
         END DO ! I
+      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%ScInCutOff
+      Re_Xferred   = Re_Xferred   + 1
  END SUBROUTINE SrvD_PackInputFile
 
  SUBROUTINE SrvD_UnPackInputFile( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -2080,6 +2211,8 @@ ENDIF
         OutData%TTMDfile(I:I) = CHAR(IntKiBuf(Int_Xferred))
         Int_Xferred = Int_Xferred   + 1
       END DO ! I
+      OutData%ScInCutOff = REAL( ReKiBuf( Re_Xferred ), SiKi) 
+      Re_Xferred   = Re_Xferred + 1
  END SUBROUTINE SrvD_UnPackInputFile
 
  SUBROUTINE SrvD_CopyBladedDLLType( SrcBladedDLLTypeData, DstBladedDLLTypeData, CtrlCode, ErrStat, ErrMsg )
@@ -2714,6 +2847,7 @@ ENDIF
    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
 ! Local 
    INTEGER(IntKi)                 :: i,j,k
+   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'SrvD_CopyDiscState'
@@ -2726,6 +2860,30 @@ ENDIF
       CALL TMD_CopyDiscState( SrcDiscStateData%TTMD, DstDiscStateData%TTMD, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
+IF (ALLOCATED(SrcDiscStateData%ScInFilter)) THEN
+  i1_l = LBOUND(SrcDiscStateData%ScInFilter,1)
+  i1_u = UBOUND(SrcDiscStateData%ScInFilter,1)
+  IF (.NOT. ALLOCATED(DstDiscStateData%ScInFilter)) THEN 
+    ALLOCATE(DstDiscStateData%ScInFilter(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstDiscStateData%ScInFilter.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstDiscStateData%ScInFilter = SrcDiscStateData%ScInFilter
+ENDIF
+IF (ALLOCATED(SrcDiscStateData%ScInGlobFilter)) THEN
+  i1_l = LBOUND(SrcDiscStateData%ScInGlobFilter,1)
+  i1_u = UBOUND(SrcDiscStateData%ScInGlobFilter,1)
+  IF (.NOT. ALLOCATED(DstDiscStateData%ScInGlobFilter)) THEN 
+    ALLOCATE(DstDiscStateData%ScInGlobFilter(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstDiscStateData%ScInGlobFilter.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstDiscStateData%ScInGlobFilter = SrcDiscStateData%ScInGlobFilter
+ENDIF
  END SUBROUTINE SrvD_CopyDiscState
 
  SUBROUTINE SrvD_DestroyDiscState( DiscStateData, ErrStat, ErrMsg )
@@ -2739,6 +2897,12 @@ ENDIF
   ErrMsg  = ""
   CALL TMD_DestroyDiscState( DiscStateData%NTMD, ErrStat, ErrMsg )
   CALL TMD_DestroyDiscState( DiscStateData%TTMD, ErrStat, ErrMsg )
+IF (ALLOCATED(DiscStateData%ScInFilter)) THEN
+  DEALLOCATE(DiscStateData%ScInFilter)
+ENDIF
+IF (ALLOCATED(DiscStateData%ScInGlobFilter)) THEN
+  DEALLOCATE(DiscStateData%ScInGlobFilter)
+ENDIF
  END SUBROUTINE SrvD_DestroyDiscState
 
  SUBROUTINE SrvD_PackDiscState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -2811,6 +2975,16 @@ ENDIF
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
+  Int_BufSz   = Int_BufSz   + 1     ! ScInFilter allocated yes/no
+  IF ( ALLOCATED(InData%ScInFilter) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! ScInFilter upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%ScInFilter)  ! ScInFilter
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! ScInGlobFilter allocated yes/no
+  IF ( ALLOCATED(InData%ScInGlobFilter) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! ScInGlobFilter upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%ScInGlobFilter)  ! ScInGlobFilter
+  END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -2894,6 +3068,32 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
+  IF ( .NOT. ALLOCATED(InData%ScInFilter) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%ScInFilter,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%ScInFilter,1)
+    Int_Xferred = Int_Xferred + 2
+
+      IF (SIZE(InData%ScInFilter)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%ScInFilter))-1 ) = PACK(InData%ScInFilter,.TRUE.)
+      Re_Xferred   = Re_Xferred   + SIZE(InData%ScInFilter)
+  END IF
+  IF ( .NOT. ALLOCATED(InData%ScInGlobFilter) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%ScInGlobFilter,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%ScInGlobFilter,1)
+    Int_Xferred = Int_Xferred + 2
+
+      IF (SIZE(InData%ScInGlobFilter)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%ScInGlobFilter))-1 ) = PACK(InData%ScInGlobFilter,.TRUE.)
+      Re_Xferred   = Re_Xferred   + SIZE(InData%ScInGlobFilter)
+  END IF
  END SUBROUTINE SrvD_PackDiscState
 
  SUBROUTINE SrvD_UnPackDiscState( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -2915,6 +3115,7 @@ ENDIF
   LOGICAL, ALLOCATABLE           :: mask3(:,:,:)
   LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
   LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
+  INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'SrvD_UnPackDiscState'
@@ -3008,6 +3209,52 @@ ENDIF
       IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! ScInFilter not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%ScInFilter)) DEALLOCATE(OutData%ScInFilter)
+    ALLOCATE(OutData%ScInFilter(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%ScInFilter.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask1 = .TRUE. 
+      IF (SIZE(OutData%ScInFilter)>0) OutData%ScInFilter = REAL( UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%ScInFilter))-1 ), mask1, 0.0_ReKi ), SiKi)
+      Re_Xferred   = Re_Xferred   + SIZE(OutData%ScInFilter)
+    DEALLOCATE(mask1)
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! ScInGlobFilter not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%ScInGlobFilter)) DEALLOCATE(OutData%ScInGlobFilter)
+    ALLOCATE(OutData%ScInGlobFilter(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%ScInGlobFilter.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask1 = .TRUE. 
+      IF (SIZE(OutData%ScInGlobFilter)>0) OutData%ScInGlobFilter = REAL( UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%ScInGlobFilter))-1 ), mask1, 0.0_ReKi ), SiKi)
+      Re_Xferred   = Re_Xferred   + SIZE(OutData%ScInGlobFilter)
+    DEALLOCATE(mask1)
+  END IF
  END SUBROUTINE SrvD_UnPackDiscState
 
  SUBROUTINE SrvD_CopyConstrState( SrcConstrStateData, DstConstrStateData, CtrlCode, ErrStat, ErrMsg )
@@ -4666,6 +4913,8 @@ ENDIF
          IF (ErrStat>=AbortErrLev) RETURN
     DstParamData%AvgWindSpeed = SrcParamData%AvgWindSpeed
     DstParamData%AirDens = SrcParamData%AirDens
+    DstParamData%ScOn = SrcParamData%ScOn
+    DstParamData%ScInAlpha = SrcParamData%ScInAlpha
  END SUBROUTINE SrvD_CopyParam
 
  SUBROUTINE SrvD_DestroyParam( ParamData, ErrStat, ErrMsg )
@@ -4937,6 +5186,8 @@ ENDIF
       END IF
       Re_BufSz   = Re_BufSz   + 1  ! AvgWindSpeed
       Re_BufSz   = Re_BufSz   + 1  ! AirDens
+      Int_BufSz  = Int_BufSz  + 1  ! ScOn
+      Re_BufSz   = Re_BufSz   + 1  ! ScInAlpha
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -5351,6 +5602,10 @@ ENDIF
       ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%AvgWindSpeed
       Re_Xferred   = Re_Xferred   + 1
       ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%AirDens
+      Re_Xferred   = Re_Xferred   + 1
+      IntKiBuf ( Int_Xferred:Int_Xferred+1-1 ) = TRANSFER( InData%ScOn , IntKiBuf(1), 1)
+      Int_Xferred   = Int_Xferred   + 1
+      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%ScInAlpha
       Re_Xferred   = Re_Xferred   + 1
  END SUBROUTINE SrvD_PackParam
 
@@ -5896,6 +6151,10 @@ ENDIF
       Re_Xferred   = Re_Xferred + 1
       OutData%AirDens = ReKiBuf( Re_Xferred )
       Re_Xferred   = Re_Xferred + 1
+      OutData%ScOn = TRANSFER( IntKiBuf( Int_Xferred ), mask0 )
+      Int_Xferred   = Int_Xferred + 1
+      OutData%ScInAlpha = REAL( ReKiBuf( Re_Xferred ), SiKi) 
+      Re_Xferred   = Re_Xferred + 1
  END SUBROUTINE SrvD_UnPackParam
 
  SUBROUTINE SrvD_CopyInput( SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg )
@@ -5976,17 +6235,29 @@ ENDIF
       CALL TMD_CopyInput( SrcInputData%TTMD, DstInputData%TTMD, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
-IF (ALLOCATED(SrcInputData%SuperController)) THEN
-  i1_l = LBOUND(SrcInputData%SuperController,1)
-  i1_u = UBOUND(SrcInputData%SuperController,1)
-  IF (.NOT. ALLOCATED(DstInputData%SuperController)) THEN 
-    ALLOCATE(DstInputData%SuperController(i1_l:i1_u),STAT=ErrStat2)
+IF (ALLOCATED(SrcInputData%SuperControllerTurbine)) THEN
+  i1_l = LBOUND(SrcInputData%SuperControllerTurbine,1)
+  i1_u = UBOUND(SrcInputData%SuperControllerTurbine,1)
+  IF (.NOT. ALLOCATED(DstInputData%SuperControllerTurbine)) THEN 
+    ALLOCATE(DstInputData%SuperControllerTurbine(i1_l:i1_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%SuperController.', ErrStat, ErrMsg,RoutineName)
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%SuperControllerTurbine.', ErrStat, ErrMsg,RoutineName)
       RETURN
     END IF
   END IF
-    DstInputData%SuperController = SrcInputData%SuperController
+    DstInputData%SuperControllerTurbine = SrcInputData%SuperControllerTurbine
+ENDIF
+IF (ALLOCATED(SrcInputData%SuperControllerGlob)) THEN
+  i1_l = LBOUND(SrcInputData%SuperControllerGlob,1)
+  i1_u = UBOUND(SrcInputData%SuperControllerGlob,1)
+  IF (.NOT. ALLOCATED(DstInputData%SuperControllerGlob)) THEN 
+    ALLOCATE(DstInputData%SuperControllerGlob(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%SuperControllerGlob.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInputData%SuperControllerGlob = SrcInputData%SuperControllerGlob
 ENDIF
  END SUBROUTINE SrvD_CopyInput
 
@@ -6007,8 +6278,11 @@ IF (ALLOCATED(InputData%ExternalBlPitchCom)) THEN
 ENDIF
   CALL TMD_DestroyInput( InputData%NTMD, ErrStat, ErrMsg )
   CALL TMD_DestroyInput( InputData%TTMD, ErrStat, ErrMsg )
-IF (ALLOCATED(InputData%SuperController)) THEN
-  DEALLOCATE(InputData%SuperController)
+IF (ALLOCATED(InputData%SuperControllerTurbine)) THEN
+  DEALLOCATE(InputData%SuperControllerTurbine)
+ENDIF
+IF (ALLOCATED(InputData%SuperControllerGlob)) THEN
+  DEALLOCATE(InputData%SuperControllerGlob)
 ENDIF
  END SUBROUTINE SrvD_DestroyInput
 
@@ -6125,10 +6399,15 @@ ENDIF
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
-  Int_BufSz   = Int_BufSz   + 1     ! SuperController allocated yes/no
-  IF ( ALLOCATED(InData%SuperController) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! SuperController upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%SuperController)  ! SuperController
+  Int_BufSz   = Int_BufSz   + 1     ! SuperControllerTurbine allocated yes/no
+  IF ( ALLOCATED(InData%SuperControllerTurbine) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! SuperControllerTurbine upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%SuperControllerTurbine)  ! SuperControllerTurbine
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! SuperControllerGlob allocated yes/no
+  IF ( ALLOCATED(InData%SuperControllerGlob) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! SuperControllerGlob upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%SuperControllerGlob)  ! SuperControllerGlob
   END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -6305,18 +6584,31 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
-  IF ( .NOT. ALLOCATED(InData%SuperController) ) THEN
+  IF ( .NOT. ALLOCATED(InData%SuperControllerTurbine) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
   ELSE
     IntKiBuf( Int_Xferred ) = 1
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%SuperController,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%SuperController,1)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%SuperControllerTurbine,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%SuperControllerTurbine,1)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%SuperController)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%SuperController))-1 ) = PACK(InData%SuperController,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%SuperController)
+      IF (SIZE(InData%SuperControllerTurbine)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%SuperControllerTurbine))-1 ) = PACK(InData%SuperControllerTurbine,.TRUE.)
+      Re_Xferred   = Re_Xferred   + SIZE(InData%SuperControllerTurbine)
+  END IF
+  IF ( .NOT. ALLOCATED(InData%SuperControllerGlob) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%SuperControllerGlob,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%SuperControllerGlob,1)
+    Int_Xferred = Int_Xferred + 2
+
+      IF (SIZE(InData%SuperControllerGlob)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%SuperControllerGlob))-1 ) = PACK(InData%SuperControllerGlob,.TRUE.)
+      Re_Xferred   = Re_Xferred   + SIZE(InData%SuperControllerGlob)
   END IF
  END SUBROUTINE SrvD_PackInput
 
@@ -6563,17 +6855,17 @@ ENDIF
       IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! SuperController not allocated
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! SuperControllerTurbine not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
     Int_Xferred = Int_Xferred + 1
     i1_l = IntKiBuf( Int_Xferred    )
     i1_u = IntKiBuf( Int_Xferred + 1)
     Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%SuperController)) DEALLOCATE(OutData%SuperController)
-    ALLOCATE(OutData%SuperController(i1_l:i1_u),STAT=ErrStat2)
+    IF (ALLOCATED(OutData%SuperControllerTurbine)) DEALLOCATE(OutData%SuperControllerTurbine)
+    ALLOCATE(OutData%SuperControllerTurbine(i1_l:i1_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%SuperController.', ErrStat, ErrMsg,RoutineName)
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%SuperControllerTurbine.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
     ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
@@ -6582,8 +6874,31 @@ ENDIF
        RETURN
     END IF
     mask1 = .TRUE. 
-      IF (SIZE(OutData%SuperController)>0) OutData%SuperController = REAL( UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%SuperController))-1 ), mask1, 0.0_ReKi ), SiKi)
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%SuperController)
+      IF (SIZE(OutData%SuperControllerTurbine)>0) OutData%SuperControllerTurbine = REAL( UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%SuperControllerTurbine))-1 ), mask1, 0.0_ReKi ), SiKi)
+      Re_Xferred   = Re_Xferred   + SIZE(OutData%SuperControllerTurbine)
+    DEALLOCATE(mask1)
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! SuperControllerGlob not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%SuperControllerGlob)) DEALLOCATE(OutData%SuperControllerGlob)
+    ALLOCATE(OutData%SuperControllerGlob(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%SuperControllerGlob.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask1 = .TRUE. 
+      IF (SIZE(OutData%SuperControllerGlob)>0) OutData%SuperControllerGlob = REAL( UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%SuperControllerGlob))-1 ), mask1, 0.0_ReKi ), SiKi)
+      Re_Xferred   = Re_Xferred   + SIZE(OutData%SuperControllerGlob)
     DEALLOCATE(mask1)
   END IF
  END SUBROUTINE SrvD_UnPackInput
@@ -7385,11 +7700,19 @@ END IF ! check if allocated
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
       CALL TMD_Input_ExtrapInterp1( u1%TTMD, u2%TTMD, tin, u_out%TTMD, tin_out, ErrStat2, ErrMsg2 )
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-IF (ALLOCATED(u_out%SuperController) .AND. ALLOCATED(u1%SuperController)) THEN
-  ALLOCATE(b1(SIZE(u_out%SuperController,1)))
-  ALLOCATE(c1(SIZE(u_out%SuperController,1)))
-  b1 = -(u1%SuperController - u2%SuperController)/t(2)
-  u_out%SuperController = u1%SuperController + b1 * t_out
+IF (ALLOCATED(u_out%SuperControllerTurbine) .AND. ALLOCATED(u1%SuperControllerTurbine)) THEN
+  ALLOCATE(b1(SIZE(u_out%SuperControllerTurbine,1)))
+  ALLOCATE(c1(SIZE(u_out%SuperControllerTurbine,1)))
+  b1 = -(u1%SuperControllerTurbine - u2%SuperControllerTurbine)/t(2)
+  u_out%SuperControllerTurbine = u1%SuperControllerTurbine + b1 * t_out
+  DEALLOCATE(b1)
+  DEALLOCATE(c1)
+END IF ! check if allocated
+IF (ALLOCATED(u_out%SuperControllerGlob) .AND. ALLOCATED(u1%SuperControllerGlob)) THEN
+  ALLOCATE(b1(SIZE(u_out%SuperControllerGlob,1)))
+  ALLOCATE(c1(SIZE(u_out%SuperControllerGlob,1)))
+  b1 = -(u1%SuperControllerGlob - u2%SuperControllerGlob)/t(2)
+  u_out%SuperControllerGlob = u1%SuperControllerGlob + b1 * t_out
   DEALLOCATE(b1)
   DEALLOCATE(c1)
 END IF ! check if allocated
@@ -7576,12 +7899,21 @@ END IF ! check if allocated
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
       CALL TMD_Input_ExtrapInterp2( u1%TTMD, u2%TTMD, u3%TTMD, tin, u_out%TTMD, tin_out, ErrStat2, ErrMsg2 )
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-IF (ALLOCATED(u_out%SuperController) .AND. ALLOCATED(u1%SuperController)) THEN
-  ALLOCATE(b1(SIZE(u_out%SuperController,1)))
-  ALLOCATE(c1(SIZE(u_out%SuperController,1)))
-  b1 = (t(3)**2*(u1%SuperController - u2%SuperController) + t(2)**2*(-u1%SuperController + u3%SuperController))/(t(2)*t(3)*(t(2) - t(3)))
-  c1 = ( (t(2)-t(3))*u1%SuperController + t(3)*u2%SuperController - t(2)*u3%SuperController ) / (t(2)*t(3)*(t(2) - t(3)))
-  u_out%SuperController = u1%SuperController + b1 * t_out + c1 * t_out**2
+IF (ALLOCATED(u_out%SuperControllerTurbine) .AND. ALLOCATED(u1%SuperControllerTurbine)) THEN
+  ALLOCATE(b1(SIZE(u_out%SuperControllerTurbine,1)))
+  ALLOCATE(c1(SIZE(u_out%SuperControllerTurbine,1)))
+  b1 = (t(3)**2*(u1%SuperControllerTurbine - u2%SuperControllerTurbine) + t(2)**2*(-u1%SuperControllerTurbine + u3%SuperControllerTurbine))/(t(2)*t(3)*(t(2) - t(3)))
+  c1 = ( (t(2)-t(3))*u1%SuperControllerTurbine + t(3)*u2%SuperControllerTurbine - t(2)*u3%SuperControllerTurbine ) / (t(2)*t(3)*(t(2) - t(3)))
+  u_out%SuperControllerTurbine = u1%SuperControllerTurbine + b1 * t_out + c1 * t_out**2
+  DEALLOCATE(b1)
+  DEALLOCATE(c1)
+END IF ! check if allocated
+IF (ALLOCATED(u_out%SuperControllerGlob) .AND. ALLOCATED(u1%SuperControllerGlob)) THEN
+  ALLOCATE(b1(SIZE(u_out%SuperControllerGlob,1)))
+  ALLOCATE(c1(SIZE(u_out%SuperControllerGlob,1)))
+  b1 = (t(3)**2*(u1%SuperControllerGlob - u2%SuperControllerGlob) + t(2)**2*(-u1%SuperControllerGlob + u3%SuperControllerGlob))/(t(2)*t(3)*(t(2) - t(3)))
+  c1 = ( (t(2)-t(3))*u1%SuperControllerGlob + t(3)*u2%SuperControllerGlob - t(2)*u3%SuperControllerGlob ) / (t(2)*t(3)*(t(2) - t(3)))
+  u_out%SuperControllerGlob = u1%SuperControllerGlob + b1 * t_out + c1 * t_out**2
   DEALLOCATE(b1)
   DEALLOCATE(c1)
 END IF ! check if allocated

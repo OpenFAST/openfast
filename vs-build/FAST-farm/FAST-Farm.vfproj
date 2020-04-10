@@ -73,36 +73,36 @@
 		<Filter Name="RegistryFiles">
 		<File RelativePath="..\..\modules\AWAE\src\AWAE_Registry.txt">
 			<FileConfiguration Name="Release_OpenMP|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AWAE" Description="Running Registry for AWAE" Outputs="..\..\build\types-files\AWAE_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AWAE" Description="Running Registry for AWAE" Outputs="..\..\modules\AWAE\src\AWAE_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AWAE" Description="Running Registry for AWAE" Outputs="..\..\build\types-files\AWAE_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AWAE" Description="Running Registry for AWAE" Outputs="..\..\modules\AWAE\src\AWAE_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AWAE" Description="Running Registry for AWAE" Outputs="..\..\build\types-files\AWAE_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AWAE" Description="Running Registry for AWAE" Outputs="..\..\modules\AWAE\src\AWAE_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AWAE" Description="Running Registry for AWAE" Outputs="..\..\build\types-files\AWAE_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AWAE" Description="Running Registry for AWAE" Outputs="..\..\modules\AWAE\src\AWAE_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_OpenMP|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AWAE" Description="Running Registry for AWAE" Outputs="..\..\build\types-files\AWAE_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AWAE" Description="Running Registry for AWAE" Outputs="..\..\modules\AWAE\src\AWAE_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AWAE" Description="Running Registry for AWAE" Outputs="..\..\build\types-files\AWAE_Types.f90"/></FileConfiguration></File>
-		<File RelativePath="..\..\build\types-files\AWAE_Types.f90"/></Filter>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AWAE" Description="Running Registry for AWAE" Outputs="..\..\modules\AWAE\src\AWAE_Types.f90"/></FileConfiguration></File>
+		<File RelativePath="..\..\modules\AWAE\src\AWAE_Types.f90"/></Filter>
 		<File RelativePath="..\..\modules\AWAE\src\AWAE.f90"/>
 		<File RelativePath="..\..\modules\AWAE\src\AWAE_IO.f90"/></Filter>
 		<Filter Name="Driver">
 		<Filter Name="RegistryFiles">
 		<File RelativePath="..\..\glue-codes\fast-farm\src\FAST_Farm_Registry.txt">
 			<FileConfiguration Name="Release_OpenMP|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat FarmDriver" Description="Running Registry for FAST.Farm Driver" Outputs="..\..\build\types-files\FAST_Farm_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat FarmDriver" Description="Running Registry for FAST.Farm Driver" Outputs="..\..\glue-codes\fast-farm\src\FAST_Farm_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat FarmDriver" Description="Running Registry for FAST.Farm Driver" Outputs="..\..\build\types-files\FAST_Farm_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat FarmDriver" Description="Running Registry for FAST.Farm Driver" Outputs="..\..\glue-codes\fast-farm\src\FAST_Farm_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat FarmDriver" Description="Running Registry for FAST.Farm Driver" Outputs="..\..\build\types-files\FAST_Farm_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat FarmDriver" Description="Running Registry for FAST.Farm Driver" Outputs="..\..\glue-codes\fast-farm\src\FAST_Farm_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat FarmDriver" Description="Running Registry for FAST.Farm Driver" Outputs="..\..\build\types-files\FAST_Farm_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat FarmDriver" Description="Running Registry for FAST.Farm Driver" Outputs="..\..\glue-codes\fast-farm\src\FAST_Farm_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_OpenMP|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat FarmDriver" Description="Running Registry for FAST.Farm Driver" Outputs="..\..\build\types-files\FAST_Farm_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat FarmDriver" Description="Running Registry for FAST.Farm Driver" Outputs="..\..\glue-codes\fast-farm\src\FAST_Farm_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat FarmDriver" Description="Running Registry for FAST.Farm Driver" Outputs="..\..\build\types-files\FAST_Farm_Types.f90"/></FileConfiguration></File>
-		<File RelativePath="..\..\build\types-files\FAST_Farm_Types.f90"/></Filter>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat FarmDriver" Description="Running Registry for FAST.Farm Driver" Outputs="..\..\glue-codes\fast-farm\src\FAST_Farm_Types.f90"/></FileConfiguration></File>
+		<File RelativePath="..\..\glue-codes\fast-farm\src\FAST_Farm_Types.f90"/></Filter>
 		<Filter Name="SuperController"/>
 		<File RelativePath="..\..\glue-codes\fast-farm\src\FAST_Farm.f90"/>
 		<File RelativePath="..\..\glue-codes\fast-farm\src\FAST_Farm_IO.f90"/>
@@ -111,34 +111,34 @@
 		<Filter Name="RegistryFiles">
 		<File RelativePath="..\..\glue-codes\fast-farm\src\FASTWrapper_Registry.txt">
 			<FileConfiguration Name="Release_OpenMP|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat FASTWrapper" Description="Running Registry for FASTWrapper" Outputs="..\..\build\types-files\FASTWrapper_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat FASTWrapper" Description="Running Registry for FASTWrapper" Outputs="..\..\glue-codes\fast-farm\src\FASTWrapper_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat FASTWrapper" Description="Running Registry for FASTWrapper" Outputs="..\..\build\types-files\FASTWrapper_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat FASTWrapper" Description="Running Registry for FASTWrapper" Outputs="..\..\glue-codes\fast-farm\src\FASTWrapper_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat FASTWrapper" Description="Running Registry for FASTWrapper" Outputs="..\..\build\types-files\FASTWrapper_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat FASTWrapper" Description="Running Registry for FASTWrapper" Outputs="..\..\glue-codes\fast-farm\src\FASTWrapper_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat FASTWrapper" Description="Running Registry for FASTWrapper" Outputs="..\..\build\types-files\FASTWrapper_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat FASTWrapper" Description="Running Registry for FASTWrapper" Outputs="..\..\glue-codes\fast-farm\src\FASTWrapper_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_OpenMP|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat FASTWrapper" Description="Running Registry for FASTWrapper" Outputs="..\..\build\types-files\FASTWrapper_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat FASTWrapper" Description="Running Registry for FASTWrapper" Outputs="..\..\glue-codes\fast-farm\src\FASTWrapper_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat FASTWrapper" Description="Running Registry for FASTWrapper" Outputs="..\..\build\types-files\FASTWrapper_Types.f90"/></FileConfiguration></File>
-		<File RelativePath="..\..\build\types-files\FASTWrapper_Types.f90"/></Filter>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat FASTWrapper" Description="Running Registry for FASTWrapper" Outputs="..\..\glue-codes\fast-farm\src\FASTWrapper_Types.f90"/></FileConfiguration></File>
+		<File RelativePath="..\..\glue-codes\fast-farm\src\FASTWrapper_Types.f90"/></Filter>
 		<File RelativePath="..\..\glue-codes\fast-farm\src\FASTWrapper.f90"/></Filter>
 		<Filter Name="WakeDynamics">
 		<Filter Name="RegistryFiles">
 		<File RelativePath="..\..\modules\WakeDynamics\src\WakeDynamics_Registry.txt">
 			<FileConfiguration Name="Release_OpenMP|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat WakeDynamics" Description="Running Registry for WakeDynamics" Outputs="..\..\build\types-files\WakeDynamics_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat WakeDynamics" Description="Running Registry for WakeDynamics" Outputs="..\..\modules\WakeDynamics\src\WakeDynamics_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat WakeDynamics" Description="Running Registry for WakeDynamics" Outputs="..\..\build\types-files\WakeDynamics_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat WakeDynamics" Description="Running Registry for WakeDynamics" Outputs="..\..\modules\WakeDynamics\src\WakeDynamics_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat WakeDynamics" Description="Running Registry for WakeDynamics" Outputs="..\..\build\types-files\WakeDynamics_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat WakeDynamics" Description="Running Registry for WakeDynamics" Outputs="..\..\modules\WakeDynamics\src\WakeDynamics_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat WakeDynamics" Description="Running Registry for WakeDynamics" Outputs="..\..\build\types-files\WakeDynamics_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat WakeDynamics" Description="Running Registry for WakeDynamics" Outputs="..\..\modules\WakeDynamics\src\WakeDynamics_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_OpenMP|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat WakeDynamics" Description="Running Registry for WakeDynamics" Outputs="..\..\build\types-files\WakeDynamics_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat WakeDynamics" Description="Running Registry for WakeDynamics" Outputs="..\..\modules\WakeDynamics\src\WakeDynamics_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat WakeDynamics" Description="Running Registry for WakeDynamics" Outputs="..\..\build\types-files\WakeDynamics_Types.f90"/></FileConfiguration></File>
-		<File RelativePath="..\..\build\types-files\WakeDynamics_Types.f90"/></Filter>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat WakeDynamics" Description="Running Registry for WakeDynamics" Outputs="..\..\modules\WakeDynamics\src\WakeDynamics_Types.f90"/></FileConfiguration></File>
+		<File RelativePath="..\..\modules\WakeDynamics\src\WakeDynamics_Types.f90"/></Filter>
 		<File RelativePath="..\..\modules\WakeDynamics\src\WakeDynamics.f90"/></Filter></Filter></Files>
 	<Globals/></VisualStudioProject>

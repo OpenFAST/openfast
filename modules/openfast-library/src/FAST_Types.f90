@@ -89,7 +89,8 @@ IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_Orca = 14      ! OrcaFlex integration (HD/Mooring) [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_IceF = 15      ! IceFloe [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_IceD = 16      ! IceDyn [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: NumModules = 16      ! The number of modules available in FAST [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_SC = 17      ! Supercontroller [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: NumModules = 17      ! The number of modules available in FAST [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: MaxNBlades = 3      ! Maximum number of blades allowed on a turbine [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: IceD_MaxLegs = 4      ! because I don't know how many legs there are before calling IceD_Init and I don't want to copy the data because of sibling mesh issues, I'm going to allocate IceD based on this number [-]
 ! =========  FAST_VTK_BLSurfaceType  =======
@@ -136,6 +137,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: CompSub      !< Compute sub-structural dynamics (switch) {Module_None; Module_HD} [-]
     INTEGER(IntKi)  :: CompMooring      !< Compute mooring system (switch) {Module_None; Module_MAP; Module_FEAM; Module_MD; Module_Orca} [-]
     INTEGER(IntKi)  :: CompIce      !< Compute ice loading (switch) {Module_None; Module_IceF, Module_IceD} [-]
+    INTEGER(IntKi)  :: CompSC      !< Use supercontroller (switch) {Module_None; Module_SC} [-]
     LOGICAL  :: UseDWM      !< Use the DWM module in AeroDyn [-]
     LOGICAL  :: Linearize      !< Linearization analysis (flag) [-]
     CHARACTER(1024)  :: EDFile      !< The name of the ElastoDyn input file [-]
@@ -175,6 +177,9 @@ IMPLICIT NONE
     LOGICAL  :: LinOutMod      !< Write module-level linearization output files in addition to output for full system? (flag) [unused if Linearize=False] [-]
     TYPE(FAST_VTK_SurfaceType)  :: VTK_surface      !< Data for VTK surface visualization [-]
     REAL(SiKi) , DIMENSION(1:3)  :: TurbinePos      !< Initial position of turbine base (origin used for graphics) [m]
+    LOGICAL  :: UseSupercontroller      !< Use Supercontroller [-]
+    INTEGER(IntKi) , DIMENSION(NumModules+1,1:3)  :: SizeLin      !< dimension 1 is the module (numModules+1 is glue): dimension 2 is the size of (1) the module's inputs,  (2) the module's linearized outputs, and (3) the module's continuous states [-]
+    INTEGER(IntKi) , DIMENSION(NumModules,1:3)  :: LinStartIndx      !< dimension 1 is the module ID: dimension 2 is the starting index in combined matrices of (1) the module's inputs, (2) the module's linearized outputs, and (3) the module's continuous states [-]
     INTEGER(IntKi)  :: Lin_NumMods      !< number of modules in the linearization [-]
     INTEGER(IntKi) , DIMENSION(NumModules)  :: Lin_ModOrder      !< indices that determine which order the modules are in the glue-code linearization matrix [-]
     CHARACTER(4)  :: Tdesc      !< description of turbine ID (for FAST.Farm) screen printing [-]
@@ -557,8 +562,11 @@ IMPLICIT NONE
     LOGICAL  :: LidRadialVel      !< TRUE => return radial component, FALSE => return 'x' direction estimate [-]
     INTEGER(IntKi)  :: TurbineID = 0      !< ID number for turbine (used to create output file naming convention) [-]
     REAL(ReKi) , DIMENSION(1:3)  :: TurbinePos      !< Initial position of turbine base (origin used in future for graphics) [m]
-    INTEGER(IntKi)  :: NumSC2Ctrl      !< number of controller inputs [from supercontroller] [-]
+    INTEGER(IntKi)  :: NumSC2CtrlGlob      !< number of global controller inputs [from supercontroller] [-]
+    INTEGER(IntKi)  :: NumSC2Ctrl      !< number of turbine specific controller inputs [from supercontroller] [-]
     INTEGER(IntKi)  :: NumCtrl2SC      !< number of controller outputs [to supercontroller] [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: InitScOutputsGlob      !< Initial global inputs to the controller [from the supercontroller] [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: InitScOutputsTurbine      !< Initial turbine specific inputs to the controller [from the supercontroller] [-]
     LOGICAL  :: FarmIntegration = .false.      !< whether this is called from FAST.Farm (or another program that doesn't want FAST to call all of the init stuff first) [-]
     INTEGER(IntKi) , DIMENSION(1:4)  :: windGrid_n      !< number of grid points in the x, y, z, and t directions for IfW [-]
     REAL(ReKi) , DIMENSION(1:4)  :: windGrid_delta      !< size between 2 consecutive grid points in each grid direction for IfW [m,m,m,s]
@@ -1369,6 +1377,7 @@ ENDIF
 ! Local 
    INTEGER(IntKi)                 :: i,j,k
    INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'FAST_CopyParam'
@@ -1398,6 +1407,7 @@ ENDIF
     DstParamData%CompSub = SrcParamData%CompSub
     DstParamData%CompMooring = SrcParamData%CompMooring
     DstParamData%CompIce = SrcParamData%CompIce
+    DstParamData%CompSC = SrcParamData%CompSC
     DstParamData%UseDWM = SrcParamData%UseDWM
     DstParamData%Linearize = SrcParamData%Linearize
     DstParamData%EDFile = SrcParamData%EDFile
@@ -1450,6 +1460,9 @@ ENDIF
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
     DstParamData%TurbinePos = SrcParamData%TurbinePos
+    DstParamData%UseSupercontroller = SrcParamData%UseSupercontroller
+    DstParamData%SizeLin = SrcParamData%SizeLin
+    DstParamData%LinStartIndx = SrcParamData%LinStartIndx
     DstParamData%Lin_NumMods = SrcParamData%Lin_NumMods
     DstParamData%Lin_ModOrder = SrcParamData%Lin_ModOrder
     DstParamData%Tdesc = SrcParamData%Tdesc
@@ -1528,6 +1541,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! CompSub
       Int_BufSz  = Int_BufSz  + 1  ! CompMooring
       Int_BufSz  = Int_BufSz  + 1  ! CompIce
+      Int_BufSz  = Int_BufSz  + 1  ! CompSC
       Int_BufSz  = Int_BufSz  + 1  ! UseDWM
       Int_BufSz  = Int_BufSz  + 1  ! Linearize
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%EDFile)  ! EDFile
@@ -1588,6 +1602,9 @@ ENDIF
          DEALLOCATE(Int_Buf)
       END IF
       Re_BufSz   = Re_BufSz   + SIZE(InData%TurbinePos)  ! TurbinePos
+      Int_BufSz  = Int_BufSz  + 1  ! UseSupercontroller
+      Int_BufSz  = Int_BufSz  + SIZE(InData%SizeLin)  ! SizeLin
+      Int_BufSz  = Int_BufSz  + SIZE(InData%LinStartIndx)  ! LinStartIndx
       Int_BufSz  = Int_BufSz  + 1  ! Lin_NumMods
       Int_BufSz  = Int_BufSz  + SIZE(InData%Lin_ModOrder)  ! Lin_ModOrder
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%Tdesc)  ! Tdesc
@@ -1663,6 +1680,8 @@ ENDIF
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%CompMooring
       Int_Xferred   = Int_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%CompIce
+      Int_Xferred   = Int_Xferred   + 1
+      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%CompSC
       Int_Xferred   = Int_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+1-1 ) = TRANSFER( InData%UseDWM , IntKiBuf(1), 1)
       Int_Xferred   = Int_Xferred   + 1
@@ -1809,6 +1828,12 @@ ENDIF
       ENDIF
       ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%TurbinePos))-1 ) = PACK(InData%TurbinePos,.TRUE.)
       Re_Xferred   = Re_Xferred   + SIZE(InData%TurbinePos)
+      IntKiBuf ( Int_Xferred:Int_Xferred+1-1 ) = TRANSFER( InData%UseSupercontroller , IntKiBuf(1), 1)
+      Int_Xferred   = Int_Xferred   + 1
+      IntKiBuf ( Int_Xferred:Int_Xferred+(SIZE(InData%SizeLin))-1 ) = PACK(InData%SizeLin,.TRUE.)
+      Int_Xferred   = Int_Xferred   + SIZE(InData%SizeLin)
+      IntKiBuf ( Int_Xferred:Int_Xferred+(SIZE(InData%LinStartIndx))-1 ) = PACK(InData%LinStartIndx,.TRUE.)
+      Int_Xferred   = Int_Xferred   + SIZE(InData%LinStartIndx)
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%Lin_NumMods
       Int_Xferred   = Int_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(SIZE(InData%Lin_ModOrder))-1 ) = PACK(InData%Lin_ModOrder,.TRUE.)
@@ -1839,6 +1864,7 @@ ENDIF
   LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
   LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+  INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'FAST_UnPackParam'
@@ -1933,6 +1959,8 @@ ENDIF
       OutData%CompMooring = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
       OutData%CompIce = IntKiBuf( Int_Xferred ) 
+      Int_Xferred   = Int_Xferred + 1
+      OutData%CompSC = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
       OutData%UseDWM = TRANSFER( IntKiBuf( Int_Xferred ), mask0 )
       Int_Xferred   = Int_Xferred + 1
@@ -2119,6 +2147,34 @@ ENDIF
       OutData%TurbinePos = REAL( UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%TurbinePos))-1 ), mask1, 0.0_ReKi ), SiKi)
       Re_Xferred   = Re_Xferred   + SIZE(OutData%TurbinePos)
     DEALLOCATE(mask1)
+      OutData%UseSupercontroller = TRANSFER( IntKiBuf( Int_Xferred ), mask0 )
+      Int_Xferred   = Int_Xferred + 1
+    i1_l = LBOUND(OutData%SizeLin,1)
+    i1_u = UBOUND(OutData%SizeLin,1)
+    i2_l = LBOUND(OutData%SizeLin,2)
+    i2_u = UBOUND(OutData%SizeLin,2)
+    ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask2.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask2 = .TRUE. 
+      OutData%SizeLin = UNPACK( IntKiBuf ( Int_Xferred:Int_Xferred+(SIZE(OutData%SizeLin))-1 ), mask2, 0_IntKi )
+      Int_Xferred   = Int_Xferred   + SIZE(OutData%SizeLin)
+    DEALLOCATE(mask2)
+    i1_l = LBOUND(OutData%LinStartIndx,1)
+    i1_u = UBOUND(OutData%LinStartIndx,1)
+    i2_l = LBOUND(OutData%LinStartIndx,2)
+    i2_u = UBOUND(OutData%LinStartIndx,2)
+    ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask2.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask2 = .TRUE. 
+      OutData%LinStartIndx = UNPACK( IntKiBuf ( Int_Xferred:Int_Xferred+(SIZE(OutData%LinStartIndx))-1 ), mask2, 0_IntKi )
+      Int_Xferred   = Int_Xferred   + SIZE(OutData%LinStartIndx)
+    DEALLOCATE(mask2)
       OutData%Lin_NumMods = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
     i1_l = LBOUND(OutData%Lin_ModOrder,1)
@@ -28810,8 +28866,33 @@ ENDIF
     DstExternInitTypeData%LidRadialVel = SrcExternInitTypeData%LidRadialVel
     DstExternInitTypeData%TurbineID = SrcExternInitTypeData%TurbineID
     DstExternInitTypeData%TurbinePos = SrcExternInitTypeData%TurbinePos
+    DstExternInitTypeData%NumSC2CtrlGlob = SrcExternInitTypeData%NumSC2CtrlGlob
     DstExternInitTypeData%NumSC2Ctrl = SrcExternInitTypeData%NumSC2Ctrl
     DstExternInitTypeData%NumCtrl2SC = SrcExternInitTypeData%NumCtrl2SC
+IF (ALLOCATED(SrcExternInitTypeData%InitScOutputsGlob)) THEN
+  i1_l = LBOUND(SrcExternInitTypeData%InitScOutputsGlob,1)
+  i1_u = UBOUND(SrcExternInitTypeData%InitScOutputsGlob,1)
+  IF (.NOT. ALLOCATED(DstExternInitTypeData%InitScOutputsGlob)) THEN 
+    ALLOCATE(DstExternInitTypeData%InitScOutputsGlob(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstExternInitTypeData%InitScOutputsGlob.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstExternInitTypeData%InitScOutputsGlob = SrcExternInitTypeData%InitScOutputsGlob
+ENDIF
+IF (ALLOCATED(SrcExternInitTypeData%InitScOutputsTurbine)) THEN
+  i1_l = LBOUND(SrcExternInitTypeData%InitScOutputsTurbine,1)
+  i1_u = UBOUND(SrcExternInitTypeData%InitScOutputsTurbine,1)
+  IF (.NOT. ALLOCATED(DstExternInitTypeData%InitScOutputsTurbine)) THEN 
+    ALLOCATE(DstExternInitTypeData%InitScOutputsTurbine(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstExternInitTypeData%InitScOutputsTurbine.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstExternInitTypeData%InitScOutputsTurbine = SrcExternInitTypeData%InitScOutputsTurbine
+ENDIF
     DstExternInitTypeData%FarmIntegration = SrcExternInitTypeData%FarmIntegration
     DstExternInitTypeData%windGrid_n = SrcExternInitTypeData%windGrid_n
     DstExternInitTypeData%windGrid_delta = SrcExternInitTypeData%windGrid_delta
@@ -28830,6 +28911,12 @@ ENDIF
 ! 
   ErrStat = ErrID_None
   ErrMsg  = ""
+IF (ALLOCATED(ExternInitTypeData%InitScOutputsGlob)) THEN
+  DEALLOCATE(ExternInitTypeData%InitScOutputsGlob)
+ENDIF
+IF (ALLOCATED(ExternInitTypeData%InitScOutputsTurbine)) THEN
+  DEALLOCATE(ExternInitTypeData%InitScOutputsTurbine)
+ENDIF
  END SUBROUTINE FAST_DestroyExternInitType
 
  SUBROUTINE FAST_PackExternInitType( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -28872,8 +28959,19 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! LidRadialVel
       Int_BufSz  = Int_BufSz  + 1  ! TurbineID
       Re_BufSz   = Re_BufSz   + SIZE(InData%TurbinePos)  ! TurbinePos
+      Int_BufSz  = Int_BufSz  + 1  ! NumSC2CtrlGlob
       Int_BufSz  = Int_BufSz  + 1  ! NumSC2Ctrl
       Int_BufSz  = Int_BufSz  + 1  ! NumCtrl2SC
+  Int_BufSz   = Int_BufSz   + 1     ! InitScOutputsGlob allocated yes/no
+  IF ( ALLOCATED(InData%InitScOutputsGlob) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! InitScOutputsGlob upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%InitScOutputsGlob)  ! InitScOutputsGlob
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! InitScOutputsTurbine allocated yes/no
+  IF ( ALLOCATED(InData%InitScOutputsTurbine) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! InitScOutputsTurbine upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%InitScOutputsTurbine)  ! InitScOutputsTurbine
+  END IF
       Int_BufSz  = Int_BufSz  + 1  ! FarmIntegration
       Int_BufSz  = Int_BufSz  + SIZE(InData%windGrid_n)  ! windGrid_n
       Re_BufSz   = Re_BufSz   + SIZE(InData%windGrid_delta)  ! windGrid_delta
@@ -28918,10 +29016,38 @@ ENDIF
       Int_Xferred   = Int_Xferred   + 1
       ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%TurbinePos))-1 ) = PACK(InData%TurbinePos,.TRUE.)
       Re_Xferred   = Re_Xferred   + SIZE(InData%TurbinePos)
+      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%NumSC2CtrlGlob
+      Int_Xferred   = Int_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%NumSC2Ctrl
       Int_Xferred   = Int_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%NumCtrl2SC
       Int_Xferred   = Int_Xferred   + 1
+  IF ( .NOT. ALLOCATED(InData%InitScOutputsGlob) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%InitScOutputsGlob,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%InitScOutputsGlob,1)
+    Int_Xferred = Int_Xferred + 2
+
+      IF (SIZE(InData%InitScOutputsGlob)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%InitScOutputsGlob))-1 ) = PACK(InData%InitScOutputsGlob,.TRUE.)
+      Re_Xferred   = Re_Xferred   + SIZE(InData%InitScOutputsGlob)
+  END IF
+  IF ( .NOT. ALLOCATED(InData%InitScOutputsTurbine) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%InitScOutputsTurbine,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%InitScOutputsTurbine,1)
+    Int_Xferred = Int_Xferred + 2
+
+      IF (SIZE(InData%InitScOutputsTurbine)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%InitScOutputsTurbine))-1 ) = PACK(InData%InitScOutputsTurbine,.TRUE.)
+      Re_Xferred   = Re_Xferred   + SIZE(InData%InitScOutputsTurbine)
+  END IF
       IntKiBuf ( Int_Xferred:Int_Xferred+1-1 ) = TRANSFER( InData%FarmIntegration , IntKiBuf(1), 1)
       Int_Xferred   = Int_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(SIZE(InData%windGrid_n))-1 ) = PACK(InData%windGrid_n,.TRUE.)
@@ -28992,10 +29118,58 @@ ENDIF
       OutData%TurbinePos = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%TurbinePos))-1 ), mask1, 0.0_ReKi )
       Re_Xferred   = Re_Xferred   + SIZE(OutData%TurbinePos)
     DEALLOCATE(mask1)
+      OutData%NumSC2CtrlGlob = IntKiBuf( Int_Xferred ) 
+      Int_Xferred   = Int_Xferred + 1
       OutData%NumSC2Ctrl = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
       OutData%NumCtrl2SC = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! InitScOutputsGlob not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%InitScOutputsGlob)) DEALLOCATE(OutData%InitScOutputsGlob)
+    ALLOCATE(OutData%InitScOutputsGlob(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%InitScOutputsGlob.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask1 = .TRUE. 
+      IF (SIZE(OutData%InitScOutputsGlob)>0) OutData%InitScOutputsGlob = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%InitScOutputsGlob))-1 ), mask1, 0.0_ReKi )
+      Re_Xferred   = Re_Xferred   + SIZE(OutData%InitScOutputsGlob)
+    DEALLOCATE(mask1)
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! InitScOutputsTurbine not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%InitScOutputsTurbine)) DEALLOCATE(OutData%InitScOutputsTurbine)
+    ALLOCATE(OutData%InitScOutputsTurbine(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%InitScOutputsTurbine.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask1 = .TRUE. 
+      IF (SIZE(OutData%InitScOutputsTurbine)>0) OutData%InitScOutputsTurbine = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%InitScOutputsTurbine))-1 ), mask1, 0.0_ReKi )
+      Re_Xferred   = Re_Xferred   + SIZE(OutData%InitScOutputsTurbine)
+    DEALLOCATE(mask1)
+  END IF
       OutData%FarmIntegration = TRANSFER( IntKiBuf( Int_Xferred ), mask0 )
       Int_Xferred   = Int_Xferred + 1
     i1_l = LBOUND(OutData%windGrid_n,1)

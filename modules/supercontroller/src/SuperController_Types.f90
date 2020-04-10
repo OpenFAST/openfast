@@ -38,11 +38,13 @@ IMPLICIT NONE
   TYPE, BIND(C) :: SC_InitInputType_C
    TYPE(C_PTR) :: object = C_NULL_PTR
     INTEGER(KIND=C_INT) :: NumSC2Ctrl 
+    INTEGER(KIND=C_INT) :: NumSC2CtrlGlob 
     INTEGER(KIND=C_INT) :: NumCtrl2SC 
   END TYPE SC_InitInputType_C
   TYPE, PUBLIC :: SC_InitInputType
     TYPE( SC_InitInputType_C ) :: C_obj
-    INTEGER(IntKi)  :: NumSC2Ctrl      !< number of controller inputs [from supercontroller] [-]
+    INTEGER(IntKi)  :: NumSC2Ctrl      !< number of turbine specific controller inputs [from supercontroller] [-]
+    INTEGER(IntKi)  :: NumSC2CtrlGlob      !< number of global controller inputs [from supercontroller] [-]
     INTEGER(IntKi)  :: NumCtrl2SC      !< number of controller outputs [to supercontroller] [-]
   END TYPE SC_InitInputType
 ! =======================
@@ -81,10 +83,13 @@ IMPLICIT NONE
    TYPE(C_PTR) :: object = C_NULL_PTR
     TYPE(C_ptr) :: fromSC = C_NULL_PTR 
     INTEGER(C_int) :: fromSC_Len = 0 
+    TYPE(C_ptr) :: fromSCglob = C_NULL_PTR 
+    INTEGER(C_int) :: fromSCglob_Len = 0 
   END TYPE SC_OutputType_C
   TYPE, PUBLIC :: SC_OutputType
     TYPE( SC_OutputType_C ) :: C_obj
-    REAL(KIND=C_FLOAT) , DIMENSION(:), POINTER  :: fromSC => NULL()      !< outputs of the super controller (to the turbine controller) [-]
+    REAL(KIND=C_FLOAT) , DIMENSION(:), POINTER  :: fromSC => NULL()      !< global outputs of the super controller (to the turbine controller) [-]
+    REAL(KIND=C_FLOAT) , DIMENSION(:), POINTER  :: fromSCglob => NULL()      !< turbine specific outputs of the super controller (to the turbine controller) [-]
   END TYPE SC_OutputType
 ! =======================
 CONTAINS
@@ -105,6 +110,8 @@ CONTAINS
    ErrMsg  = ""
     DstInitInputData%NumSC2Ctrl = SrcInitInputData%NumSC2Ctrl
     DstInitInputData%C_obj%NumSC2Ctrl = SrcInitInputData%C_obj%NumSC2Ctrl
+    DstInitInputData%NumSC2CtrlGlob = SrcInitInputData%NumSC2CtrlGlob
+    DstInitInputData%C_obj%NumSC2CtrlGlob = SrcInitInputData%C_obj%NumSC2CtrlGlob
     DstInitInputData%NumCtrl2SC = SrcInitInputData%NumCtrl2SC
     DstInitInputData%C_obj%NumCtrl2SC = SrcInitInputData%C_obj%NumCtrl2SC
  END SUBROUTINE SC_CopyInitInput
@@ -156,6 +163,7 @@ CONTAINS
   Db_BufSz  = 0
   Int_BufSz  = 0
       Int_BufSz  = Int_BufSz  + 1  ! NumSC2Ctrl
+      Int_BufSz  = Int_BufSz  + 1  ! NumSC2CtrlGlob
       Int_BufSz  = Int_BufSz  + 1  ! NumCtrl2SC
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -187,6 +195,8 @@ CONTAINS
   Int_Xferred = 1
 
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%NumSC2Ctrl
+      Int_Xferred   = Int_Xferred   + 1
+      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%NumSC2CtrlGlob
       Int_Xferred   = Int_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%NumCtrl2SC
       Int_Xferred   = Int_Xferred   + 1
@@ -228,6 +238,9 @@ CONTAINS
       OutData%NumSC2Ctrl = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
       OutData%C_obj%NumSC2Ctrl = OutData%NumSC2Ctrl
+      OutData%NumSC2CtrlGlob = IntKiBuf( Int_Xferred ) 
+      Int_Xferred   = Int_Xferred + 1
+      OutData%C_obj%NumSC2CtrlGlob = OutData%NumSC2CtrlGlob
       OutData%NumCtrl2SC = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
       OutData%C_obj%NumCtrl2SC = OutData%NumCtrl2SC
@@ -241,6 +254,7 @@ CONTAINS
     ErrStat = ErrID_None
     ErrMsg  = ""
     InitInputData%NumSC2Ctrl = InitInputData%C_obj%NumSC2Ctrl
+    InitInputData%NumSC2CtrlGlob = InitInputData%C_obj%NumSC2CtrlGlob
     InitInputData%NumCtrl2SC = InitInputData%C_obj%NumCtrl2SC
  END SUBROUTINE SC_C2Fary_CopyInitInput
 
@@ -855,6 +869,21 @@ IF (ASSOCIATED(SrcOutputData%fromSC)) THEN
   END IF
     DstOutputData%fromSC = SrcOutputData%fromSC
 ENDIF
+IF (ASSOCIATED(SrcOutputData%fromSCglob)) THEN
+  i1_l = LBOUND(SrcOutputData%fromSCglob,1)
+  i1_u = UBOUND(SrcOutputData%fromSCglob,1)
+  IF (.NOT. ASSOCIATED(DstOutputData%fromSCglob)) THEN 
+    ALLOCATE(DstOutputData%fromSCglob(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%fromSCglob.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+    DstOutputData%c_obj%fromSCglob_Len = SIZE(DstOutputData%fromSCglob)
+    IF (DstOutputData%c_obj%fromSCglob_Len > 0) &
+      DstOutputData%c_obj%fromSCglob = C_LOC( DstOutputData%fromSCglob(i1_l) ) 
+  END IF
+    DstOutputData%fromSCglob = SrcOutputData%fromSCglob
+ENDIF
  END SUBROUTINE SC_CopyOutput
 
  SUBROUTINE SC_DestroyOutput( OutputData, ErrStat, ErrMsg )
@@ -871,6 +900,12 @@ IF (ASSOCIATED(OutputData%fromSC)) THEN
   OutputData%fromSC => NULL()
   OutputData%C_obj%fromSC = C_NULL_PTR
   OutputData%C_obj%fromSC_Len = 0
+ENDIF
+IF (ASSOCIATED(OutputData%fromSCglob)) THEN
+  DEALLOCATE(OutputData%fromSCglob)
+  OutputData%fromSCglob => NULL()
+  OutputData%C_obj%fromSCglob = C_NULL_PTR
+  OutputData%C_obj%fromSCglob_Len = 0
 ENDIF
  END SUBROUTINE SC_DestroyOutput
 
@@ -914,6 +949,11 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*1  ! fromSC upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%fromSC)  ! fromSC
   END IF
+  Int_BufSz   = Int_BufSz   + 1     ! fromSCglob allocated yes/no
+  IF ( ASSOCIATED(InData%fromSCglob) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! fromSCglob upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%fromSCglob)  ! fromSCglob
+  END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -955,6 +995,19 @@ ENDIF
 
       IF (SIZE(InData%fromSC)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%fromSC))-1 ) = PACK(InData%fromSC,.TRUE.)
       Re_Xferred   = Re_Xferred   + SIZE(InData%fromSC)
+  END IF
+  IF ( .NOT. ASSOCIATED(InData%fromSCglob) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%fromSCglob,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%fromSCglob,1)
+    Int_Xferred = Int_Xferred + 2
+
+      IF (SIZE(InData%fromSCglob)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%fromSCglob))-1 ) = PACK(InData%fromSCglob,.TRUE.)
+      Re_Xferred   = Re_Xferred   + SIZE(InData%fromSCglob)
   END IF
  END SUBROUTINE SC_PackOutput
 
@@ -1017,6 +1070,32 @@ ENDIF
       Re_Xferred   = Re_Xferred   + SIZE(OutData%fromSC)
     DEALLOCATE(mask1)
   END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! fromSCglob not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ASSOCIATED(OutData%fromSCglob)) DEALLOCATE(OutData%fromSCglob)
+    ALLOCATE(OutData%fromSCglob(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%fromSCglob.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    OutData%c_obj%fromSCglob_Len = SIZE(OutData%fromSCglob)
+    IF (OutData%c_obj%fromSCglob_Len > 0) &
+       OutData%c_obj%fromSCglob = C_LOC( OutData%fromSCglob(i1_l) ) 
+    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask1 = .TRUE. 
+      IF (SIZE(OutData%fromSCglob)>0) OutData%fromSCglob = REAL( UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%fromSCglob))-1 ), mask1, 0.0_ReKi ), C_FLOAT)
+      Re_Xferred   = Re_Xferred   + SIZE(OutData%fromSCglob)
+    DEALLOCATE(mask1)
+  END IF
  END SUBROUTINE SC_UnPackOutput
 
  SUBROUTINE SC_C2Fary_CopyOutput( OutputData, ErrStat, ErrMsg )
@@ -1032,6 +1111,13 @@ ENDIF
        NULLIFY( OutputData%fromSC )
     ELSE
        CALL C_F_POINTER(OutputData%C_obj%fromSC, OutputData%fromSC, (/OutputData%C_obj%fromSC_Len/))
+    END IF
+
+    ! -- fromSCglob Output Data fields
+    IF ( .NOT. C_ASSOCIATED( OutputData%C_obj%fromSCglob ) ) THEN
+       NULLIFY( OutputData%fromSCglob )
+    ELSE
+       CALL C_F_POINTER(OutputData%C_obj%fromSCglob, OutputData%fromSCglob, (/OutputData%C_obj%fromSCglob_Len/))
     END IF
  END SUBROUTINE SC_C2Fary_CopyOutput
 
@@ -1302,6 +1388,14 @@ IF (ASSOCIATED(y_out%fromSC) .AND. ASSOCIATED(y1%fromSC)) THEN
   DEALLOCATE(b1)
   DEALLOCATE(c1)
 END IF ! check if allocated
+IF (ASSOCIATED(y_out%fromSCglob) .AND. ASSOCIATED(y1%fromSCglob)) THEN
+  ALLOCATE(b1(SIZE(y_out%fromSCglob,1)))
+  ALLOCATE(c1(SIZE(y_out%fromSCglob,1)))
+  b1 = -(y1%fromSCglob - y2%fromSCglob)/t(2)
+  y_out%fromSCglob = y1%fromSCglob + b1 * t_out
+  DEALLOCATE(b1)
+  DEALLOCATE(c1)
+END IF ! check if allocated
  END SUBROUTINE SC_Output_ExtrapInterp1
 
 
@@ -1362,6 +1456,15 @@ IF (ASSOCIATED(y_out%fromSC) .AND. ASSOCIATED(y1%fromSC)) THEN
   b1 = (t(3)**2*(y1%fromSC - y2%fromSC) + t(2)**2*(-y1%fromSC + y3%fromSC))/(t(2)*t(3)*(t(2) - t(3)))
   c1 = ( (t(2)-t(3))*y1%fromSC + t(3)*y2%fromSC - t(2)*y3%fromSC ) / (t(2)*t(3)*(t(2) - t(3)))
   y_out%fromSC = y1%fromSC + b1 * t_out + c1 * t_out**2
+  DEALLOCATE(b1)
+  DEALLOCATE(c1)
+END IF ! check if allocated
+IF (ASSOCIATED(y_out%fromSCglob) .AND. ASSOCIATED(y1%fromSCglob)) THEN
+  ALLOCATE(b1(SIZE(y_out%fromSCglob,1)))
+  ALLOCATE(c1(SIZE(y_out%fromSCglob,1)))
+  b1 = (t(3)**2*(y1%fromSCglob - y2%fromSCglob) + t(2)**2*(-y1%fromSCglob + y3%fromSCglob))/(t(2)*t(3)*(t(2) - t(3)))
+  c1 = ( (t(2)-t(3))*y1%fromSCglob + t(3)*y2%fromSCglob - t(2)*y3%fromSCglob ) / (t(2)*t(3)*(t(2) - t(3)))
+  y_out%fromSCglob = y1%fromSCglob + b1 * t_out + c1 * t_out**2
   DEALLOCATE(b1)
   DEALLOCATE(c1)
 END IF ! check if allocated

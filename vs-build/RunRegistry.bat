@@ -43,8 +43,8 @@ SET SrvD_Loc=%Modules_Loc%\servodyn\src
 SET BD_Loc=%Modules_Loc%\beamdyn\src
 SET SC_Loc=%Modules_Loc%\supercontroller\src
 
-SET AWAE_Loc=%Local_Modules_Loc%\awae\src
-SET WD_Loc=%Local_Modules_Loc%\wakedynamics\src
+SET AWAE_Loc=%Modules_Loc%\awae\src
+SET WD_Loc=%Modules_Loc%\wakedynamics\src
 SET Farm_Loc=%Root_Loc%\glue-codes\fast-farm\src
 
 SET ALL_FAST_Includes=-I "%FAST_Loc%" -I "%NWTC_Lib_Loc%" -I "%ED_Loc%" -I "%SrvD_Loc%" -I "%AD14_Loc%" -I^

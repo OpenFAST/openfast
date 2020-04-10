@@ -23,6 +23,7 @@
   typedef struct SC_InitInputType {
     void * object ;
     int NumSC2Ctrl ;
+    int NumSC2CtrlGlob ;
     int NumCtrl2SC ;
   } SC_InitInputType_t ;
   typedef struct SC_InitOutputType {
@@ -40,6 +41,7 @@
   typedef struct SC_OutputType {
     void * object ;
     float * fromSC ;     int fromSC_Len ;
+    float * fromSCglob ;     int fromSCglob_Len ;
   } SC_OutputType_t ;
   typedef struct SC_UserData {
     SC_InitInputType_t             SC_InitInput ;
