@@ -351,22 +351,23 @@ FUNCTION InterpWrappedStpLogical( XValIn, XAry, YAry, Ind, AryLen )
 END FUNCTION InterpWrappedStpLogical ! ( XVal, XAry, YAry, Ind, AryLen )
 
 SUBROUTINE DistrBuoyancy( densWater, R, tMG, dRdz, Z, C, g, F_B  ) 
+   ! This calculates the distributed buoyancy forces and moments on a given node
 
    REAL(ReKi),         INTENT ( IN    )  :: densWater
-   REAL(ReKi),         INTENT ( IN    )  :: R
-   REAL(ReKi),         INTENT ( IN    )  :: tMG
-   REAL(ReKi),         INTENT ( IN    )  :: dRdz
-   REAL(ReKi),         INTENT ( IN    )  :: Z
+   REAL(ReKi),         INTENT ( IN    )  :: R                      ! Radius of node [m]
+   REAL(ReKi),         INTENT ( IN    )  :: tMG                    ! Thickness of marine growth (adds to radius) [m]
+   REAL(ReKi),         INTENT ( IN    )  :: dRdz                   ! Rate of change in radius with length at node [-]
+   REAL(ReKi),         INTENT ( IN    )  :: Z                      ! z elevation of node [m] (not currently used)
    REAL(ReKi),         INTENT ( IN    )  :: C(3,3)
    REAL(ReKi),         INTENT ( IN    )  :: g
-   REAL(ReKi),         INTENT (   OUT )  :: F_B(6)
+   REAL(ReKi),         INTENT (   OUT )  :: F_B(6)                 ! Distributed force and moment vector [N/m and N-m/m]
    
    REAL(DbKi)                           :: Reff,ReffSq,ReffCub,f1,f2,f3
    
    REAL(DbKi) :: CC(3,3)
    
    CC    = REAL(C,DbKi)
-   Reff  = REAL(R + tMG,DbKi)
+   Reff  = REAL(R + tMG,DbKi)                                      ! Effective radius after adding marine growth
   
    
    
@@ -582,27 +583,28 @@ SUBROUTINE DistrFloodedBuoyancy( densFluid, Z_f, R, t, dRdz, Z, C, g, F_B  )
 END SUBROUTINE DistrFloodedBuoyancy
 
 SUBROUTINE DistrAddedMass( densWater, Ca, AxCa, C, R, tMG, dRdZ, AM_M)
+   ! This calculates the distributed hydrodynamic added mass matrix for a given node.
 
    REAL(ReKi),         INTENT ( IN    )  :: densWater
-   REAL(ReKi),         INTENT ( IN    )  :: Ca
-   REAL(ReKi),         INTENT ( IN    )  :: AxCa
-   REAL(ReKi),         INTENT ( IN    )  :: C(3,3)
-   REAL(ReKi),         INTENT ( IN    )  :: R
-   REAL(ReKi),         INTENT ( IN    )  :: tMG
-   REAL(ReKi),         INTENT ( IN    )  :: dRdZ
-   REAL(ReKi),         INTENT (   OUT )  :: AM_M(3,3)
+   REAL(ReKi),         INTENT ( IN    )  :: Ca                         ! Transverse added mass coefficient
+   REAL(ReKi),         INTENT ( IN    )  :: AxCa                       ! Axial added mass coefficient (applied to tapered portions)
+   REAL(ReKi),         INTENT ( IN    )  :: C(3,3)                     
+   REAL(ReKi),         INTENT ( IN    )  :: R                          ! Radius at node [m]
+   REAL(ReKi),         INTENT ( IN    )  :: tMG                        ! Thickness of marine growth (adds to radius) [m]
+   REAL(ReKi),         INTENT ( IN    )  :: dRdZ                       ! Rate of change in radius with length at node [-]
+   REAL(ReKi),         INTENT (   OUT )  :: AM_M(3,3)                  ! Distributed added mass matrix to be calculated [kg/m]
    
    REAL(ReKi)                            :: f,f2
    
-   f         = Ca*densWater*Pi*(R+tMG)*(R+tMG)
-   f2        = AxCa*2.0*densWater*Pi*abs(dRdZ)*(R+tMG)*(R+tMG)
+   f         = Ca*densWater*Pi*(R+tMG)*(R+tMG)                         ! Transverse added mass scaler, applied to I - k*k^T
+   f2        = AxCa*2.0*densWater*Pi*abs(dRdZ)*(R+tMG)*(R+tMG)         ! Axial added mass scaler, applied to k k^T 
    !AM_M      = 0.0
-   AM_M(1,1) = f*(  C(2,3)*C(2,3) + C(3,3)*C(3,3) ) -f2*C(1,3)*C(1,3)
+   AM_M(1,1) = f*(  C(2,3)*C(2,3) + C(3,3)*C(3,3) ) -f2*C(1,3)*C(1,3)  !<----@mhall: why is the f2 term being subtracted rather than added?
    AM_M(1,2) = f*( -C(1,3)*C(2,3)                 ) -f2*C(1,3)*C(2,3)
    AM_M(1,3) = f*( -C(1,3)*C(3,3)                 ) -f2*C(1,3)*C(3,3)
    
    AM_M(2,1) = f*( -C(1,3)*C(2,3)                 ) -f2*C(2,3)*C(1,3)
-   AM_M(2,2) = f*(  C(1,3)*C(1,3) + C(3,3)*C(3,3) ) -f2*C(2,3)*C(2,3)
+   AM_M(2,2) = f*(  C(1,3)*C(1,3) + C(3,3)*C(3,3) ) -f2*C(2,3)*C(2,3)  !<----@mhall: would it be cleaner to just use the k unit vector?  (also, diagonal terms can be shortened (1-k*kT))
    AM_M(2,3) = f*( -C(2,3)*C(3,3)                 ) -f2*C(2,3)*C(3,3)
    
    AM_M(3,1) = f*( -C(1,3)*C(3,3)                 ) -f2*C(3,3)*C(1,3)
@@ -701,15 +703,17 @@ END SUBROUTINE LumpDynPressure
 
 
 SUBROUTINE LumpBuoyancy( sgn, densWater, R, tMG, Z, C, g, F_B  ) 
+   ! This calculates lumped buoyancy forces/moments on a member end.
 
-   REAL(ReKi),         INTENT ( IN    )  :: sgn
+   REAL(ReKi),         INTENT ( IN    )  :: sgn                  ! @mhall: this indicates if this is the start or end node so that direction is correct?
    REAL(ReKi),         INTENT ( IN    )  :: densWater
-   REAL(ReKi),         INTENT ( IN    )  :: R
-   REAL(ReKi),         INTENT ( IN    )  :: tMG
-   REAL(ReKi),         INTENT ( IN    )  :: Z
+   REAL(ReKi),         INTENT ( IN    )  :: R                    ! Radius of end [m]
+   REAL(ReKi),         INTENT ( IN    )  :: tMG                  ! Thickness of marine growth (adds to radius) [m]
+   REAL(ReKi),         INTENT ( IN    )  :: Z                    ! z elevation of end [m] 
+
    REAL(ReKi),         INTENT ( IN    )  :: C(3,3)
    REAL(ReKi),         INTENT ( IN    )  :: g
-   REAL(ReKi),         INTENT (   OUT )  :: F_B(6)
+   REAL(ReKi),         INTENT (   OUT )  :: F_B(6)               ! Lumped force and moment vector [N and N-m]
 
 
    REAL(DbKi)                            :: f, f1, f2, f3, Reff, Rsq,R_4
@@ -845,11 +849,12 @@ SUBROUTINE GetMaxSimQuantities( numMGDepths, MGTop, MGBottom, MSL2SWL, Zseabed, 
          ! For this member, determine possible split conditions due to crossing through:
          ! MSL, seabed, marine growth boundaries, filled free surface location.
          !
-         
+      
+      ! Start with no splits.	  
       nSplits = 0  
       possibleSplits = -9999999.0  ! Initialize possibleSplit values to a number that never appears in the geometry.
       
-         ! Is the member filled?
+      ! If the member is filled, add a possible split location at the global Z location of the filled free surface.
       IF ( members(I)%MmbrFilledIDIndx /= -1 ) THEN
          nSplits =  1
             ! The free surface is specified relative to the MSL.
@@ -857,16 +862,13 @@ SUBROUTINE GetMaxSimQuantities( numMGDepths, MGTop, MGBottom, MSL2SWL, Zseabed, 
       END IF
       
       
-         ! Check if MSL is equal to Zfs, if it is, then don't add MSL2SWL as an additional possible split, otherwise do add it.
-     
-         IF ( .NOT. IsThisSplitValueUsed(nSplits, possibleSplits, MSL2SWL )) THEN
+      ! If the filled fluid hasn't already caused a split in the member at the still water line, then add a possible split there (at the water free surface, MSL2SWL).
+      IF ( .NOT. IsThisSplitValueUsed(nSplits, possibleSplits, MSL2SWL )) THEN
             nSplits = nSplits + 1
             possibleSplits(nSplits) = MSL2SWL
-         END IF  
+      END IF  
       
-      
-        ! Is there a marine growth region?
-        
+      ! If there are one more depth-defined marine growth regions, add a possible split at each boundary if one doesn't already exist.        
       IF ( numMGDepths > 0 ) THEN   
          
             ! Recursively check to see if this
@@ -881,15 +883,15 @@ SUBROUTINE GetMaxSimQuantities( numMGDepths, MGTop, MGBottom, MSL2SWL, Zseabed, 
          
       END IF
       
-        ! Check if seabed is equal to other possibleSplits
-      
-         IF ( .NOT. IsThisSplitValueUsed(nSplits, possibleSplits, Zseabed) ) THEN
+      ! Add a possible split a the seabed if there isn't already one there.
+       ! Check if seabed is equal to other possibleSplits      
+      IF ( .NOT. IsThisSplitValueUsed(nSplits, possibleSplits, Zseabed) ) THEN
             nSplits = nSplits + 1
             possibleSplits(nSplits) = Zseabed
-         END IF  
+      END IF  
      
          
-       ! Now determine which possible splits this member actually crosses
+       ! Now determine which possible splits this member actually crosses and record them in the member's data structure.
        
       DO J=1,nSplits
          
@@ -1580,12 +1582,13 @@ END SUBROUTINE WriteSummaryFile
 
 !====================================================================================================
 SUBROUTINE SplitElementOnZBoundary( axis, boundary, iCurrentElement, numNodes, numElements, node1, node2, originalElement, newNode, newElement, ErrStat, ErrMsg )
+   !@mhall: This splits an element at a given global x, y, or z location?
 
-   INTEGER,                  INTENT ( IN    )  :: axis
-   REAL(ReKi),               INTENT ( IN    )  :: boundary
+   INTEGER,                  INTENT ( IN    )  :: axis                 !@mhall: which axis to work with in calculating positions along element (global x,y, or z)?
+   REAL(ReKi),               INTENT ( IN    )  :: boundary             !@mhall: [axis] coordinate of boundary?
    INTEGER,                  INTENT ( IN    )  :: iCurrentElement
    INTEGER,                  INTENT ( INOUT )  :: numNodes
-   TYPE(Morison_NodeType),   INTENT ( INOUT )  :: node1, node2   
+   TYPE(Morison_NodeType),   INTENT ( INOUT )  :: node1, node2         !@mhall: element end nodes?
    INTEGER,                  INTENT ( INOUT )  :: numElements
    TYPE(Morison_MemberType), INTENT ( INOUT )  :: originalElement
    TYPE(Morison_NodeType),   INTENT (   OUT )  :: newNode
@@ -1607,11 +1610,15 @@ SUBROUTINE SplitElementOnZBoundary( axis, boundary, iCurrentElement, numNodes, n
       ! find normalized distance from 1nd node to the boundary
    CALL FindInterpFactor( boundary, node1%JointPos(axis), node2%JointPos(axis), s )
    newNode = node1 ! copy all base node properties
+   
+   newNode%JointPos(axis) =  boundary                    !@mhall: set [axis] coordinate of new node based on provided input [boundary]
+   
+   !@mthall: set other two coordinates of new node based on interpolation of original end node coordinates
    DO I=axis,axis+1
       J = MOD(I,3) + 1
       newNode%JointPos(J) =  node1%JointPos(J)*(1-s) + node2%JointPos(J)*s
    END DO
-   newNode%JointPos(axis) =  boundary
+   
    newNode%R_LToG         =  node1%R_LToG   
       ! Create the new  node information.  
       ! Note that the caller will determine if this is an interior node (subdivide) or an endnode (split due to MG, MSL, seabed, filled free surface)
@@ -1728,7 +1735,8 @@ END SUBROUTINE SplitElementOnZBoundary
 !END SUBROUTINE SplitElementsForMG
 
 SUBROUTINE SplitElements(numNodes, nodes, numElements, elements, ErrStat, ErrMsg)   
-
+   ! This splits all of the Morison elements according to already defined split locations, 
+   ! adding resuling new nodes and elements to the respective master arrays.
    
    INTEGER,                  INTENT ( INOUT )  :: numNodes
    TYPE(Morison_NodeType),   INTENT ( INOUT )  :: nodes(:)   
@@ -1883,7 +1891,9 @@ END SUBROUTINE SplitElements
 !END SUBROUTINE SplitElementsForWtr
 !====================================================================================================
 SUBROUTINE SubdivideMembers( numNodes, nodes, numElements, elements, ErrStat, ErrMsg )
-
+   ! This subdivides all of the (already-split) Morison elements according to each element's maximum desired 
+   ! element length (MDivSize), adding resuling new nodes and elements to the respective master arrays.
+   
    INTEGER,                  INTENT ( INOUT )  :: numNodes
    TYPE(Morison_NodeType),   INTENT ( INOUT )  :: nodes(:)   
    INTEGER,                  INTENT ( INOUT )  :: numElements
@@ -1896,7 +1906,7 @@ SUBROUTINE SubdivideMembers( numNodes, nodes, numElements, elements, ErrStat, Er
    INTEGER                                     :: numDiv
    REAL(ReKi)                                  :: divSize(3)
    INTEGER                                     :: I, J, K
-   REAL(ReKi)                                  :: memLen
+   REAL(ReKi)                                  :: memLen                ! Length of member [m]
    INTEGER                                     :: origNumElements
    INTEGER                                     :: node1Indx, node2Indx, elementIndx, axis
    REAL(ReKi)                                  :: start, Loc
@@ -1924,12 +1934,14 @@ SUBROUTINE SubdivideMembers( numNodes, nodes, numElements, elements, ErrStat, Er
       elementIndx = I
             
       
-      CALL GetDistance(node1%JointPos, node2%JointPos, memLen)
+      CALL GetDistance(node1%JointPos, node2%JointPos, memLen)                              ! Calculate member length.
       
       
          ! If the requested division size is less then the member length, we will subdivide the member
          
       IF ( element%MDivSize < memLen ) THEN
+
+         ! Ensure a safe choice of x/y/z axis to use for splitting.
          IF ( .NOT. ( EqualRealNos( node2%JointPos(3) , node1%JointPos(3) ) ) ) THEN
             axis  = 3
          ELSE IF ( .NOT. ( EqualRealNos( node2%JointPos(2) , node1%JointPos(2)  ) ) ) THEN       
@@ -2141,6 +2153,8 @@ SUBROUTINE SetSplitNodeProperties( numNodes, nodes, numElements, elements, ErrSt
             nodes(element%Node1Indx)%MGdensity = 0.0
             nodes(element%Node2Indx)%MGdensity = 0.0
          END IF
+
+         !@mhall: if this node is Node 1 of the element in question...  ? 
          IF ( element%Node1Indx == I ) THEN
             
             IF ( nodes(I)%tMG > 0 ) THEN
@@ -2160,6 +2174,8 @@ SUBROUTINE SetSplitNodeProperties( numNodes, nodes, numElements, elements, ErrSt
             nodes(I)%R    = element%R1
             nodes(I)%t    = element%t1
             nodes(I)%InpMbrDist = element%InpMbrDist1
+
+         !@mhall: otherwise this must be Node 2 of the element in question?
          ELSE
             
             IF ( nodes(I)%tMG > 0 ) THEN
@@ -3484,11 +3500,11 @@ SUBROUTINE CreateDistributedMesh( densWater, gravity, MSL2SWL, wtrDpth, NStepWav
    END IF
    D_dragConst = 0.0
    
-   ! Loop over nodes to create all loads on the resulting markers except for the buoyancy loads
+   ! Loop over nodes to create all loads on the resulting markers except for the buoyancy loads  <---@mhall: what does "create all loads" mean?
    ! For the buoyancy loads, loop over the elements and then apply one half of the resulting value
    ! to each of the interior element nodes but the full value to an end node.  This means that an internal member node will receive 1/2 of its
    ! load from element A and 1/2 from element B.  If it is the end of a member it will simply receive
-   ! the element A load.
+   ! the element A load.                                                                         <---@mhall: shouldn't end nodes only receive half too?
    
    count = 1 
    
@@ -3534,7 +3550,7 @@ SUBROUTINE CreateDistributedMesh( densWater, gravity, MSL2SWL, wtrDpth, NStepWav
             
           !  IF ( nodes(I)%JointPos(3) <= MSL2SWL .AND. nodes(I)%JointPos(3) >= z0 ) THEN
                
-               
+                
                CALL DistrAddedMass( densWater, nodes(I)%Ca, nodes(I)%AxCa, nodes(I)%R_LToG, nodes(I)%R, nodes(I)%tMG, nodes(I)%dRdZ, D_AM_M(:,:,count) )  
              !  IF ( secondNodeWaterState == 0 ) THEN
                      ! Element is in the water
@@ -3581,7 +3597,7 @@ SUBROUTINE CreateDistributedMesh( densWater, gravity, MSL2SWL, wtrDpth, NStepWav
             
           END IF      ! IF ( .NOT. nodes(I)%PropPot )
             
-          ! This is always computed, but may be zereod out for any given timestep during the CalcOutput work
+          ! This is always computed, but may be zereod out for any given timestep during the CalcOutput work   <---@mhall: what is this?
          CALL DistrDragConst( densWater, nodes(I)%Cd, nodes(I)%R, nodes(I)%tMG, D_dragConst(count) ) 
          
          IF ( nodes(I)%FillFlag ) THEN
@@ -3964,7 +3980,7 @@ SUBROUTINE Morison_ProcessMorisonGeometry( InitInp, ErrStat, ErrMsg )
          
       CALL SetElementFillProps( InitInp%NFillGroups, InitInp%FilledGroups, InitInp%NElements, InitInp%Elements )
     
-         ! Split elements
+      ! Split the elements at certain depths according to still water line, internal filled free surface, marine growth transition depths, seabed dpeth, etc. as applicable.
       CALL SplitElements(InitInp%NNodes, InitInp%Nodes, InitInp%NElements, InitInp%Elements, ErrStat, ErrMsg)
       
          ! Split element due to MSL2SWL location and seabed location
@@ -4189,7 +4205,7 @@ IF (ALLOCATED(InitInp%JOutLst) ) &
                                   InitOut%Morison_Rad,  ErrStat, ErrMsg )
                                     
                                  
-
+     !@mhall: D_F_BF must become a variable rather than a parameter! <<<<
       
                                  
      IF ( ErrStat > ErrID_None ) RETURN

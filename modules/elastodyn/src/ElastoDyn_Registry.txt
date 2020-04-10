@@ -399,6 +399,7 @@ typedef	^	ED_RtHndSide	ReKi	PAngVelEG	{:}{:}{:}	-	-	"Partial angular velocity (a
 typedef	^	ED_RtHndSide	ReKi	PAngVelEH	{:}{:}{:}	-	-	"Partial angular velocity (and its 1st time derivative) of the hub (body H) in the inertia frame (body E for earth)"
 typedef	^	ED_RtHndSide	ReKi	PAngVelEL	{:}{:}{:}	-	-	"Partial angular velocity (and its 1st time derivative) of the low-speed shaft (body L) in the inertia frame (body E for earth)"
 typedef	^	ED_RtHndSide	ReKi	PAngVelEM	{:}{:}{:}{:}{:}	-	-	"Partial angular velocity (and its 1st time derivative) of eleMent J of blade K (body M) in the inertia frame (body E for earth)"
+typedef	^	ED_RtHndSide	ReKi	AngVelEM	{:}{:}{:}	-	-	"Angular velocity of of eleMent J of blade K (body M) in the inertia frame (body E for earth)"
 typedef	^	ED_RtHndSide	ReKi	PAngVelEN	{:}{:}{:}	-	-	"Partial angular velocity (and its 1st time derivative) of the nacelle (body N) in the inertia frame (body E for earth)"
 typedef	^	ED_RtHndSide	ReKi	AngVelEA	3	-	-	"Angular velocity of the tail (body A) in the inertia frame (body E for earth)"
 typedef	^	ED_RtHndSide	ReKi	PAngVelEB	{:}{:}{:}	-	-	"Partial angular velocity (and its 1st time derivative) of the base plate (body B) in the inertia frame (body E for earth)"
