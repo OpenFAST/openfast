@@ -112,6 +112,8 @@ subroutine SlD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
    p%DT           =  Interval
    p%DLL_Model    =  InputFileData%DLL_Model
    p%CalcOption   =  InputFileData%CalcOption
+   p%Stiffness    =  InputFileData%Stiffness
+!   p%Damping      =  InputFileData%Damping
 
       ! Define initial system states here:
    x%DummyContState           = 0.0_ReKi
@@ -242,10 +244,10 @@ contains
             p%NumPoints =  1_IntKi
 !FIXME: update to allow more than one set of points
 !            NumPoints   =  InputFileData%StiffDamp_NumPoints
-!            call AllocAry(MeshLocations,3,p%NumPoints,'Mesh locations',ErrStat2,ErrMsg2);
-!            do i=1,size(MeshLocations,2)
-!               MeshLocations(1:3,i)  =  InputFileData%StiffDamp_locations(1:3,i)
-!            enddo
+            call AllocAry(MeshLocations,3,1,'Mesh locations',ErrStat2,ErrMsg2);
+            do i=1,size(MeshLocations,2)
+               MeshLocations(1:3,i)  =  InputFileData%SD_locations(1:3)
+            enddo
          case (Calc_PYcurve)
             p%NumPoints =  InputFileData%PY_NumPoints
             call AllocAry(MeshLocations,3,p%NumPoints,'Mesh locations',ErrStat2,ErrMsg2);
@@ -479,24 +481,44 @@ subroutine SlD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg 
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-!FIXME: wrap logic around this for option 3 only
-      ! Initialize the dll
-   do i=1,size(m%dll_data)
+   select case(p%CalcOption)
+      case (Calc_StiffDamp)
+  
+            ! Copy displacement from point mesh (angles in radians -- REDWIN dll also uses rad)
+         Displacement(1:3) = u%SoilMesh%TranslationDisp(1:3,1)                 ! Translations -- This is R8Ki in the mesh
+         Displacement(4:6) = GetSmllRotAngs(u%SoilMesh%Orientation(1:3,1:3,1), ErrStat, ErrMsg)   ! Small angle assumption should be valid here -- Note we are assuming reforientation is 0
 
-      ! Copy displacement from point mesh (angles in radians -- REDWIN dll also uses rad)
-      Displacement(1:3) = u%SoilMesh%TranslationDisp(1:3,i)                 ! Translations -- This is R8Ki in the mesh
-      Displacement(4:6) = GetSmllRotAngs(u%SoilMesh%Orientation(1:3,1:3,i), ErrStat, ErrMsg)   ! Small angle assumption should be valid here -- Note we are assuming reforientation is 0
+            ! Calculate reaction with F = k*dX
+         Force = matmul(p%Stiffness, Displacement)
 
-      call    REDWINinterface_CalcOutput( p%DLL_Trgt, p%DLL_Model, Displacement, Force, m%dll_data(i), ErrStat2, ErrMsg2 ); if (Failed()) return;
+         ! Return reaction force onto the resulting point mesh
+         y%SoilMesh%Force (1,1)  =  -real(Force(1),ReKi)
+         y%SoilMesh%Force (2,1)  =  -real(Force(2),ReKi)
+         y%SoilMesh%Force (3,1)  =  -real(Force(3),ReKi)
+         y%SoilMesh%Moment(1,1)  =  -real(Force(4),ReKi)
+         y%SoilMesh%Moment(2,1)  =  -real(Force(5),ReKi)
+         y%SoilMesh%Moment(3,1)  =  -real(Force(6),ReKi)
 
-      ! Return reaction force onto the resulting point mesh
-      y%SoilMesh%Force (1,i)  =  -real(Force(1),ReKi)
-      y%SoilMesh%Force (2,i)  =  -real(Force(2),ReKi)
-      y%SoilMesh%Force (3,i)  =  -real(Force(3),ReKi)
-      y%SoilMesh%Moment(1,i)  =  -real(Force(4),ReKi)
-      y%SoilMesh%Moment(2,i)  =  -real(Force(5),ReKi)
-      y%SoilMesh%Moment(3,i)  =  -real(Force(6),ReKi)
-   enddo
+      case (Calc_PYcurve)
+      case (Calc_REDWIN)
+            ! call the dll
+         do i=1,size(m%dll_data)
+  
+            ! Copy displacement from point mesh (angles in radians -- REDWIN dll also uses rad)
+            Displacement(1:3) = u%SoilMesh%TranslationDisp(1:3,i)                 ! Translations -- This is R8Ki in the mesh
+            Displacement(4:6) = GetSmllRotAngs(u%SoilMesh%Orientation(1:3,1:3,i), ErrStat, ErrMsg)   ! Small angle assumption should be valid here -- Note we are assuming reforientation is 0
+  
+            call    REDWINinterface_CalcOutput( p%DLL_Trgt, p%DLL_Model, Displacement, Force, m%dll_data(i), ErrStat2, ErrMsg2 ); if (Failed()) return;
+
+            ! Return reaction force onto the resulting point mesh
+            y%SoilMesh%Force (1,i)  =  -real(Force(1),ReKi)
+            y%SoilMesh%Force (2,i)  =  -real(Force(2),ReKi)
+            y%SoilMesh%Force (3,i)  =  -real(Force(3),ReKi)
+            y%SoilMesh%Moment(1,i)  =  -real(Force(4),ReKi)
+            y%SoilMesh%Moment(2,i)  =  -real(Force(5),ReKi)
+            y%SoilMesh%Moment(3,i)  =  -real(Force(6),ReKi)
+         enddo
+   end select
 
       ! Outputs
    call SlD_WriteOutput( p, AllOuts, u, y, m, ErrStat2, ErrMsg2 );     if (Failed()) return;

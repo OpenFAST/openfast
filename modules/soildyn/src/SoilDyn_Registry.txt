@@ -42,8 +42,9 @@ typedef  ^    SlD_InputFile   LOGICAL              EchoFlag       -   -   -   "E
 typedef  ^    SlD_InputFile   CHARACTER(ChanLen)   OutList        :   -   -   "List of user-requested output channels"                 -
 typedef  ^    SlD_InputFile   R8Ki                 DT             -   -   -   "Timestep requested"                                     '(s)'
 typedef  ^    SlD_InputFile   IntKi                CalcOption     -   -   -   "Calculation methodology to use"                         -
-typedef  ^    SlD_InputFile   ReKi                 Stiffness      {6}{6} - -  "Stiffness matrix 6x6"                                   '(N/m, N-m/rad)'
-typedef  ^    SlD_InputFile   ReKi                 Damping        {6}{6} - -  "Damping ratio matrix 6x6"                               -
+typedef  ^    SlD_InputFile   ReKi                 SD_locations   3   -   -   "Location of the Stiffness damping point"                '(m)'
+typedef  ^    SlD_InputFile   R8Ki                 Stiffness      {6}{6} - -  "Stiffness matrix 6x6"                                   '(N/m, N-m/rad)'
+typedef  ^    SlD_InputFile   R8Ki                 Damping        {6}{6} - -  "Damping ratio matrix 6x6"                               -
 typedef  ^    SlD_InputFile   IntKi                PY_numpoints   -   -   -   "Number of P-Y curve mesh points"                        -
 typedef  ^    SlD_InputFile   ReKi                 PY_locations   ::  -   -   "P-Y curve location points for mesh"                     '(m)'
 typedef  ^    SlD_InputFile   character(1024)      PY_inputFile   :   -   -   "Input file with P-Y curve data"                         - 
@@ -124,6 +125,8 @@ typedef  ^              ParameterType     IntKi             NumOuts             
 typedef  ^              ParameterType     IntKi             NumPoints            - - - "Number of points interfacing soil with" -
 typedef  ^              ParameterType     ReKi              WtrDepth             - - - "Water depth to mudline (global coordinates)" '(m)'
 typedef  ^              ParameterType     IntKi             Nodes_C         {:}{:} - - "Nodes in input mesh that reaction force may be applied to" '(-)'
+typedef  ^              ParameterType     R8Ki              Stiffness       {6}{6} - - "Stiffness matrix" '(N/m, N-m/rad)'
+#typedef  ^              ParameterType     R8Ki              Damping         {6}{6} - - "Damping matrix" '(N/m, N-m/rad)'
 
 # ..... Inputs ....................................................................................................................
 typedef  ^              InputType         MeshType          SoilMesh             - - - "Mesh of soil contact points" -

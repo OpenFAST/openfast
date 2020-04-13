@@ -59,8 +59,9 @@ IMPLICIT NONE
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: OutList      !< List of user-requested output channels [-]
     REAL(R8Ki)  :: DT      !< Timestep requested ['(s)']
     INTEGER(IntKi)  :: CalcOption      !< Calculation methodology to use [-]
-    REAL(ReKi) , DIMENSION(1:6,1:6)  :: Stiffness      !< Stiffness matrix 6x6 ['(N/m,]
-    REAL(ReKi) , DIMENSION(1:6,1:6)  :: Damping      !< Damping ratio matrix 6x6 [-]
+    REAL(ReKi) , DIMENSION(1:3)  :: SD_locations      !< Location of the Stiffness damping point ['(m)']
+    REAL(R8Ki) , DIMENSION(1:6,1:6)  :: Stiffness      !< Stiffness matrix 6x6 ['(N/m,]
+    REAL(R8Ki) , DIMENSION(1:6,1:6)  :: Damping      !< Damping ratio matrix 6x6 [-]
     INTEGER(IntKi)  :: PY_numpoints      !< Number of P-Y curve mesh points [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PY_locations      !< P-Y curve location points for mesh ['(m)']
     character(1024) , DIMENSION(:), ALLOCATABLE  :: PY_inputFile      !< Input file with P-Y curve data [-]
@@ -133,6 +134,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NumPoints      !< Number of points interfacing soil with [-]
     REAL(ReKi)  :: WtrDepth      !< Water depth to mudline (global coordinates) ['(m)']
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: Nodes_C      !< Nodes in input mesh that reaction force may be applied to ['(-)']
+    REAL(R8Ki) , DIMENSION(1:6,1:6)  :: Stiffness      !< Stiffness matrix ['(N/m,]
   END TYPE SlD_ParameterType
 ! =======================
 ! =========  SlD_InputType  =======
@@ -465,6 +467,7 @@ IF (ALLOCATED(SrcInputFileData%OutList)) THEN
 ENDIF
     DstInputFileData%DT = SrcInputFileData%DT
     DstInputFileData%CalcOption = SrcInputFileData%CalcOption
+    DstInputFileData%SD_locations = SrcInputFileData%SD_locations
     DstInputFileData%Stiffness = SrcInputFileData%Stiffness
     DstInputFileData%Damping = SrcInputFileData%Damping
     DstInputFileData%PY_numpoints = SrcInputFileData%PY_numpoints
@@ -612,8 +615,9 @@ ENDIF
   END IF
       Db_BufSz   = Db_BufSz   + 1  ! DT
       Int_BufSz  = Int_BufSz  + 1  ! CalcOption
-      Re_BufSz   = Re_BufSz   + SIZE(InData%Stiffness)  ! Stiffness
-      Re_BufSz   = Re_BufSz   + SIZE(InData%Damping)  ! Damping
+      Re_BufSz   = Re_BufSz   + SIZE(InData%SD_locations)  ! SD_locations
+      Db_BufSz   = Db_BufSz   + SIZE(InData%Stiffness)  ! Stiffness
+      Db_BufSz   = Db_BufSz   + SIZE(InData%Damping)  ! Damping
       Int_BufSz  = Int_BufSz  + 1  ! PY_numpoints
   Int_BufSz   = Int_BufSz   + 1     ! PY_locations allocated yes/no
   IF ( ALLOCATED(InData%PY_locations) ) THEN
@@ -696,10 +700,12 @@ ENDIF
       Db_Xferred   = Db_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%CalcOption
       Int_Xferred   = Int_Xferred   + 1
-      ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%Stiffness))-1 ) = PACK(InData%Stiffness,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%Stiffness)
-      ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%Damping))-1 ) = PACK(InData%Damping,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%Damping)
+      ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%SD_locations))-1 ) = PACK(InData%SD_locations,.TRUE.)
+      Re_Xferred   = Re_Xferred   + SIZE(InData%SD_locations)
+      DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%Stiffness))-1 ) = PACK(InData%Stiffness,.TRUE.)
+      Db_Xferred   = Db_Xferred   + SIZE(InData%Stiffness)
+      DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%Damping))-1 ) = PACK(InData%Damping,.TRUE.)
+      Db_Xferred   = Db_Xferred   + SIZE(InData%Damping)
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%PY_numpoints
       Int_Xferred   = Int_Xferred   + 1
   IF ( .NOT. ALLOCATED(InData%PY_locations) ) THEN
@@ -870,6 +876,17 @@ ENDIF
       Db_Xferred   = Db_Xferred + 1
       OutData%CalcOption = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
+    i1_l = LBOUND(OutData%SD_locations,1)
+    i1_u = UBOUND(OutData%SD_locations,1)
+    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask1 = .TRUE. 
+      OutData%SD_locations = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%SD_locations))-1 ), mask1, 0.0_ReKi )
+      Re_Xferred   = Re_Xferred   + SIZE(OutData%SD_locations)
+    DEALLOCATE(mask1)
     i1_l = LBOUND(OutData%Stiffness,1)
     i1_u = UBOUND(OutData%Stiffness,1)
     i2_l = LBOUND(OutData%Stiffness,2)
@@ -880,8 +897,8 @@ ENDIF
        RETURN
     END IF
     mask2 = .TRUE. 
-      OutData%Stiffness = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%Stiffness))-1 ), mask2, 0.0_ReKi )
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%Stiffness)
+      OutData%Stiffness = REAL( UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(SIZE(OutData%Stiffness))-1 ), mask2, 0.0_DbKi ), R8Ki)
+      Db_Xferred   = Db_Xferred   + SIZE(OutData%Stiffness)
     DEALLOCATE(mask2)
     i1_l = LBOUND(OutData%Damping,1)
     i1_u = UBOUND(OutData%Damping,1)
@@ -893,8 +910,8 @@ ENDIF
        RETURN
     END IF
     mask2 = .TRUE. 
-      OutData%Damping = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%Damping))-1 ), mask2, 0.0_ReKi )
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%Damping)
+      OutData%Damping = REAL( UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(SIZE(OutData%Damping))-1 ), mask2, 0.0_DbKi ), R8Ki)
+      Db_Xferred   = Db_Xferred   + SIZE(OutData%Damping)
     DEALLOCATE(mask2)
       OutData%PY_numpoints = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
@@ -2410,6 +2427,7 @@ IF (ALLOCATED(SrcParamData%Nodes_C)) THEN
   END IF
     DstParamData%Nodes_C = SrcParamData%Nodes_C
 ENDIF
+    DstParamData%Stiffness = SrcParamData%Stiffness
  END SUBROUTINE SlD_CopyParam
 
  SUBROUTINE SlD_DestroyParam( ParamData, ErrStat, ErrMsg )
@@ -2526,6 +2544,7 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*2  ! Nodes_C upper/lower bounds for each dimension
       Int_BufSz  = Int_BufSz  + SIZE(InData%Nodes_C)  ! Nodes_C
   END IF
+      Db_BufSz   = Db_BufSz   + SIZE(InData%Stiffness)  ! Stiffness
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -2670,6 +2689,8 @@ ENDIF
       IF (SIZE(InData%Nodes_C)>0) IntKiBuf ( Int_Xferred:Int_Xferred+(SIZE(InData%Nodes_C))-1 ) = PACK(InData%Nodes_C,.TRUE.)
       Int_Xferred   = Int_Xferred   + SIZE(InData%Nodes_C)
   END IF
+      DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%Stiffness))-1 ) = PACK(InData%Stiffness,.TRUE.)
+      Db_Xferred   = Db_Xferred   + SIZE(InData%Stiffness)
  END SUBROUTINE SlD_PackParam
 
  SUBROUTINE SlD_UnPackParam( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -2860,6 +2881,19 @@ ENDIF
       Int_Xferred   = Int_Xferred   + SIZE(OutData%Nodes_C)
     DEALLOCATE(mask2)
   END IF
+    i1_l = LBOUND(OutData%Stiffness,1)
+    i1_u = UBOUND(OutData%Stiffness,1)
+    i2_l = LBOUND(OutData%Stiffness,2)
+    i2_u = UBOUND(OutData%Stiffness,2)
+    ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask2.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask2 = .TRUE. 
+      OutData%Stiffness = REAL( UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(SIZE(OutData%Stiffness))-1 ), mask2, 0.0_DbKi ), R8Ki)
+      Db_Xferred   = Db_Xferred   + SIZE(OutData%Stiffness)
+    DEALLOCATE(mask2)
  END SUBROUTINE SlD_UnPackParam
 
  SUBROUTINE SlD_CopyInput( SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg )

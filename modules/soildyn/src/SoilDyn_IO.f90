@@ -297,6 +297,9 @@ subroutine SlD_ReadInput( InputFileName, EchoFileName, InputFileData, ErrStat, E
    !  K51 = -K42
    !  K55 = K44
 
+      ! Location
+   call ReadAry( UnitInput, InputFileName, InputFileData%SD_locations(1:3), 3, 'SD_locations', 'Stiffness Damping location', TmpErrStat, TmpErrMsg, UnitEcho); if (Failed()) return;
+
       ! Stiffness
    call ReadCom( UnitInput, InputFileName, 'SoilDyn input file separator line',  TmpErrStat, TmpErrMsg, UnitEcho );   if (Failed()) return;
    do i=1,6
