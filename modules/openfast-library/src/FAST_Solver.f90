@@ -2095,7 +2095,10 @@ SUBROUTINE FullOpt1_InputOutputSolve( this_time, p_FAST, calcJacobian &
                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName  )
          END IF
          
-         IF ( p_FAST%CompSoil == Module_SlD ) THEN            
+         IF ( p_FAST%CompSoil == Module_SlD ) THEN
+               ! Overwrite the SlD inputs with the newly calculated values from SD (we don't need a correction step this way)
+            CALL SlD_InputSolve(  u_SlD, y_SD, MeshMapData, ErrStat2, ErrMsg2 )
+               CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
             CALL SlD_CalcOutput( this_time, u_SlD, p_SlD, x_SlD, xd_SlD, z_SlD, OtherSt_SlD, y_SlD, m_SlD, ErrStat2, ErrMsg2 )
                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName  )
          END IF
@@ -2322,10 +2325,7 @@ SUBROUTINE FullOpt1_InputOutputSolve( this_time, p_FAST, calcJacobian &
                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName  )
                  
               CALL U_FullOpt1_Residual(y_ED, y_SD, y_HD, y_BD, y_Orca, y_ExtPtfm, y_SlD_perturb, u_perturb, Fn_U_perturb) ! get this perturbation    
-!print*,'y_SlD_perturb:              ',y_SlD_perturb%SoilMesh%Force(1:3,1)
-!print*,'u_perturb:                  ',u_perturb
-!print*,'Fn_U_perturb:               ',Fn_U_perturb
-!print*,'Fn_U_perturb - Fn_U_Resid:  ',Fn_U_perturb - Fn_U_Resid
+
               IF ( ErrStat >= AbortErrLev ) THEN
                  CALL CleanUp()
                  RETURN      
@@ -2649,7 +2649,7 @@ END IF
       END IF
 
 
-      IF ( p_FAST%CompSoil == Module_SlD ) THEN       
+      IF ( p_FAST%CompSoil == Module_SlD ) THEN    ! Only true if p_FAST%CompSub == Module_SD
          !...............
          ! SlD motion inputs: (from SD)
                 
@@ -2768,12 +2768,14 @@ CONTAINS
       
       IF ( p_FAST%CompSub == Module_SD ) THEN
       
-         IF ( p_FAST%CompHydro == Module_HD ) THEN
-            
-            ! initialize these SD loads inputs here in case HD is used  (note from initialiazation that these meshes don't exist if HD isn't used)       
+         IF ( p_FAST%CompHydro == Module_HD .or. p_FAST%CompSoil == Module_SlD ) THEN
+            ! initialize these SD loads inputs here in case HD is used  (note from initialiazation that these meshes don't exist if HD or SlD aren't used)       
             MeshMapData%u_SD_LMesh%Force  = 0.0_ReKi
             MeshMapData%u_SD_LMesh%Moment = 0.0_ReKi
+         END IF
       
+
+         IF ( p_FAST%CompHydro == Module_HD ) THEN
             
       !..................
       ! Get HD inputs on Morison%LumpedMesh and Morison%DistribMesh
@@ -2851,7 +2853,7 @@ CONTAINS
 
 
       !..................
-      ! SoilDyn
+      ! SoilDyn force to SD
       !..................
 
          if (p_FAST%CompSoil == Module_SlD) then
@@ -2859,9 +2861,6 @@ CONTAINS
                ! SlD loads to SD
                CALL Transfer_Point_to_Point( y_SlD2%SoilMesh, MeshMapData%u_SD_LMesh_2, MeshMapData%SlD_P_2_SD_P, ErrStat2, ErrMsg2, u_SlD%SoilMesh, y_SD2%Y2Mesh )
                   CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//'Transfer_SlD_to_SD (y_SlD2%SoilMesh -> y_SD2%Y2Mesh)' )
-!print*,'y_SlD%SoilMesh%Force(1:3,1):  ',y_SlD2%SoilMesh%Force(1:3,1)
-!print*,'SlD load on SD:               ',MeshMapData%u_SD_LMesh_2%Force
-!print*,'^^^^^^^^^^^^^^^^^^^^^  WHY IS THIS EMPTY ON THE perturb steps?????????'
                MeshMapData%u_SD_LMesh%Force  = MeshMapData%u_SD_LMesh%Force  + MeshMapData%u_SD_LMesh_2%Force
                MeshMapData%u_SD_LMesh%Moment = MeshMapData%u_SD_LMesh%Moment + MeshMapData%u_SD_LMesh_2%Moment
             endif
@@ -3104,9 +3103,9 @@ SUBROUTINE Init_FullOpt1_Jacobian( p_FAST, MeshMapData, ED_PlatformPtMesh, SD_TP
    
                   
    p_FAST%SizeJac_Opt1(3) = SD_TPMesh%NNodes*6                ! SD inputs: 6 accelerations per node (size of SD input from ED) 
-   IF ( p_FAST%CompHydro == Module_HD ) THEN   
+   IF ( p_FAST%CompHydro == Module_HD .or. p_FAST%CompSoil == Module_SlD ) THEN   
       p_FAST%SizeJac_Opt1(3) = p_FAST%SizeJac_Opt1(3) &   
-                                    + SD_LMesh%NNodes *6             ! SD inputs: 6 loads per node (size of SD input from HD)       
+                                    + SD_LMesh%NNodes *6             ! SD inputs: 6 loads per node (size of SD input from HD or SlD)
    END IF
                
    p_FAST%SizeJac_Opt1(4) = HD_M_LumpedMesh%NNodes *6 &    ! HD inputs: 6 accelerations per node (on each Morison mesh) 
@@ -3486,7 +3485,7 @@ SUBROUTINE Create_FullOpt1_UVector(u, ED_PlatformPtMesh, SD_TPMesh, SD_LMesh, HD
       indx_first = indx_last + 1
    end do
          
-   if ( p_FAST%CompHydro == Module_HD .or. p_FAST%CompSoil == Module_SlD ) then   ! this SD mesh linked only when HD is enabled
+   if ( p_FAST%CompHydro == Module_HD .or. p_FAST%CompSoil == Module_SlD ) then   ! this SD mesh linked only when HD or SlD are enabled
       ! SD inputs (SD_LMesh):        
       do i=1,SD_LMesh%NNodes
          indx_last  = indx_first + 2 
@@ -4527,7 +4526,7 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, M
          CALL MeshCopy ( SD%Input(1)%TPMesh, MeshMapData%u_SD_TPMesh, MESH_NEWCOPY, ErrStat2, ErrMsg2 )      
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':u_SD_TPMesh' )                 
                
-         IF ( p_FAST%CompHydro == Module_HD ) THEN
+         IF ( p_FAST%CompHydro == Module_HD .or. p_FAST%CompSoil == Module_SlD ) THEN
                
             CALL MeshCopy ( SD%Input(1)%LMesh, MeshMapData%u_SD_LMesh, MESH_NEWCOPY, ErrStat2, ErrMsg2 )      
                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':u_SD_LMesh' )                 
@@ -4831,17 +4830,19 @@ SUBROUTINE SolveOption1(this_time, this_state, calcJacobian, p_FAST, ED, BD, HD,
 
       ! SoilDyn
    IF ( p_FAST%CompSoil == Module_SlD ) THEN
-
+            ! Overwrite the SlD inputs with the newly calculated values from SD (we don't need correction steps this way)
+      CALL SlD_InputSolve(  SlD%Input(1), SD%y, MeshMapData, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)  
       CALL SlD_CalcOutput( this_time, SlD%Input(1), SlD%p, SlD%x(this_state), SlD%xd(this_state), SlD%z(this_state), &
                             SlD%OtherSt(this_state), SlD%y, SlD%m, ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
    END IF
 
    IF (ErrStat >= AbortErrLev) RETURN      
    
    IF ( p_FAST%CompSub /= Module_None .OR. (p_FAST%CompElast == Module_BD .and. BD_Solve_Option1) .OR. p_FAST%CompMooring == Module_Orca ) THEN !.OR. p_FAST%CompHydro == Module_HD ) THEN
-                                 
+      ! .or. p_FAST%CompSoil == Module_SlD  NOTE: this is only if CompSub /= Module_None
+
       CALL FullOpt1_InputOutputSolve(  this_time, p_FAST, calcJacobian &
           ,      ED%Input(1),     ED%p,     ED%x(  this_state),     ED%xd(  this_state),     ED%z(  this_state),     ED%OtherSt(  this_state), ED%Output(1), ED%m &
           ,      SD%Input(1),     SD%p,     SD%x(  this_state),     SD%xd(  this_state),     SD%z(  this_state),     SD%OtherSt(  this_state),     SD%y    , SD%m & 

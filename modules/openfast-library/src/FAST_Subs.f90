@@ -1955,7 +1955,7 @@ SUBROUTINE FAST_InitOutput( p_FAST, y_FAST, InitOutData_ED, InitOutData_BD, Init
       y_FAST%Module_Ver( Module_IceD )   = InitOutData_IceD%Ver
       y_FAST%FileDescLines(2)  = TRIM(y_FAST%FileDescLines(2) ) //'; '//TRIM(GetNVD(y_FAST%Module_Ver( Module_IceD )))   
    END IF      
-   
+
    IF ( p_FAST%CompSoil == Module_SlD ) THEN
       y_FAST%Module_Ver( Module_SlD )   = InitOutData_SlD%Ver
       y_FAST%FileDescLines(2)  = TRIM(y_FAST%FileDescLines(2) ) //'; '//TRIM(GetNVD(y_FAST%Module_Ver( Module_SlD )))
@@ -3671,7 +3671,11 @@ SUBROUTINE FAST_WrSum( p_FAST, y_FAST, MeshMapData, ErrStat, ErrMsg )
    DescStr = GetNVD( y_FAST%Module_Ver( Module_IceD ) )
    IF ( p_FAST%CompIce /= Module_IceD ) DescStr = TRIM(DescStr)//NotUsedTxt
    WRITE (y_FAST%UnSum,Fmt)  TRIM( DescStr )
-   
+
+   DescStr = GetNVD( y_FAST%Module_Ver( Module_SlD ) )
+   IF ( p_FAST%CompSoil /= Module_SlD ) DescStr = TRIM(DescStr)//NotUsedTxt
+   WRITE (y_FAST%UnSum,Fmt)  TRIM( DescStr )
+
    
    !.......................... Information from FAST input File ......................................
 ! OTHER information we could print here:   
