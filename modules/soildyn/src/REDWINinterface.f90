@@ -197,6 +197,7 @@ subroutine REDWINinterface_Init( DLL_FileName, DLL_ProcName, DLL_Trgt, DLL_Model
    CALL CallREDWINdll(DLL_Trgt, DLL_Model, dll_data, ErrStat2, ErrMsg2);   if(Failed()) return;
 
 !FIXME: For Model 1, the Props(1,1) will indicate which runmode we are using.  Test that here
+!!!!!! IDEA: check the stiffness matrix returned!!!!
 
 
 !TODO: can we add a check on which type of library we actually loaded and compare to the model we set????

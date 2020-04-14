@@ -154,6 +154,7 @@ subroutine SlD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
             call REDWINinterface_Init( InputFileData%DLL_FileName, InputFileData%DLL_ProcName, p%DLL_Trgt, p%DLL_Model, &
                   m%dll_data(j), p%UseREDWINinterface, ErrStat2, ErrMsg2); if (Failed()) return;
          enddo
+!FIXME: add a call here to get the stiffness matrix from REDWIN!!!!
    end select
 
       ! set paramaters for I/O data
@@ -418,7 +419,7 @@ end subroutine SlD_UpdateStates
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This is a routine for computing outputs, used in both loose and tight coupling.
-subroutine SlD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
+subroutine SlD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, PerturbLoads )
 
    real(DbKi),                         intent(in   )  :: t           !< Current simulation time in seconds
    type(SlD_InputType),                intent(in   )  :: u           !< Inputs at t
@@ -430,6 +431,7 @@ subroutine SlD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg 
    type(SlD_MiscVarType),              intent(inout)  :: m           !< Misc variables for optimization (not copied in glue code)
    type(SlD_OutputType),               intent(inout)  :: y           !< Outputs computed at t (Input only so that mesh con-
                                                                      !!   nectivity information does not have to be recalculated)
+   logical,       optional,            intent(in   )  :: PerturbLoads   !< is this call for a jacobian?  If so may have huge inputs
    integer(IntKi),                     intent(  out)  :: ErrStat     !< Error status of the operation
    character(*),                       intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
@@ -452,7 +454,7 @@ subroutine SlD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg 
             ! Copy displacement from point mesh (angles in radians -- REDWIN dll also uses rad)
          Displacement(1:3) = u%SoilMesh%TranslationDisp(1:3,1)                 ! Translations -- This is R8Ki in the mesh
          Displacement(4:6) = GetSmllRotAngs(u%SoilMesh%Orientation(1:3,1:3,1), ErrStat, ErrMsg)   ! Small angle assumption should be valid here -- Note we are assuming reforientation is 0
-
+!print*,'SlD disp: ',t,u%SoilMesh%TranslationDisp(1:3,1)
             ! Calculate reaction with F = k*dX
          Force = matmul(p%Stiffness, Displacement)
 
@@ -472,7 +474,8 @@ subroutine SlD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg 
             ! Copy displacement from point mesh (angles in radians -- REDWIN dll also uses rad)
             Displacement(1:3) = u%SoilMesh%TranslationDisp(1:3,i)                 ! Translations -- This is R8Ki in the mesh
             Displacement(4:6) = GetSmllRotAngs(u%SoilMesh%Orientation(1:3,1:3,i), ErrStat, ErrMsg)   ! Small angle assumption should be valid here -- Note we are assuming reforientation is 0
-  
+ 
+!FIXME: if perturbation loads, we need to use the stiffness matrix instead!!!! 
             call    REDWINinterface_CalcOutput( p%DLL_Trgt, p%DLL_Model, Displacement, Force, m%dll_data(i), ErrStat2, ErrMsg2 ); if (Failed()) return;
 
             ! Return reaction force onto the resulting point mesh
