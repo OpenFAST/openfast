@@ -442,19 +442,33 @@ subroutine SlD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg,
    real(ReKi)                                         :: AllOuts(0:MaxOutPts)
    real(R8Ki)                                         :: Displacement(6)
    real(R8Ki)                                         :: Force(6)
+   real(R8Ki)                                         :: StiffMatrix(6,6)
    integer(IntKi)                                     :: i           !< generic counter
+   logical                                            :: LargeAnglePossible
 
       ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ""
+
+   if (present(PerturbLoads)) then
+      LargeAnglePossible = .true.
+   else
+      LargeAnglePossible = .false.
+   endif
 
    select case(p%CalcOption)
       case (Calc_StiffDamp)
   
             ! Copy displacement from point mesh (angles in radians -- REDWIN dll also uses rad)
          Displacement(1:3) = u%SoilMesh%TranslationDisp(1:3,1)                 ! Translations -- This is R8Ki in the mesh
-         Displacement(4:6) = GetSmllRotAngs(u%SoilMesh%Orientation(1:3,1:3,1), ErrStat, ErrMsg)   ! Small angle assumption should be valid here -- Note we are assuming reforientation is 0
-!print*,'SlD disp: ',t,u%SoilMesh%TranslationDisp(1:3,1)
+
+            ! If we are doing a perturbation, we will only be doing one angle at a time, and the angle may be large.
+         if (LargeAnglePossible) then
+            Displacement(4:6) = EulerExtract(u%SoilMesh%Orientation(1:3,1:3,1))                    ! Perturbations only use one angle at a time.
+         else
+            Displacement(4:6) = GetSmllRotAngs(u%SoilMesh%Orientation(1:3,1:3,1), ErrStat2, ErrMsg2); if (Failed()) return;
+         endif
+
             ! Calculate reaction with F = k*dX
          Force = matmul(p%Stiffness, Displacement)
 
@@ -473,10 +487,21 @@ subroutine SlD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg,
   
             ! Copy displacement from point mesh (angles in radians -- REDWIN dll also uses rad)
             Displacement(1:3) = u%SoilMesh%TranslationDisp(1:3,i)                 ! Translations -- This is R8Ki in the mesh
-            Displacement(4:6) = GetSmllRotAngs(u%SoilMesh%Orientation(1:3,1:3,i), ErrStat, ErrMsg)   ! Small angle assumption should be valid here -- Note we are assuming reforientation is 0
+
+            ! If we are doing a perturbation, we will only be doing one angle at a time, and the angle may be large.
+            ! If the angle is too large, the REDWIN DLL will fail, so we will instead calculate using the stored stiffness matrix.
+            if (LargeAnglePossible) then
+               Displacement(4:6) = EulerExtract(u%SoilMesh%Orientation(1:3,1:3,i))                    ! Perturbations only use one angle at a time.
+
+               call REDWINinterface_GetStiffMatrix( p%DLL_Trgt, p%DLL_Model, Displacement, Force, StiffMatrix, m%dll_data(i), ErrStat2, ErrMsg2 ); if (Failed()) return;
+                  ! Calculate reaction with F = k*dX for large displacements.
+               Force = matmul(StiffMatrix, Displacement)
+            else
+!               Displacement(4:6) = EulerExtract(u%SoilMesh%Orientation(1:3,1:3,i))                    ! Perturbations only use one angle at a time.
+               Displacement(4:6) = GetSmllRotAngs(u%SoilMesh%Orientation(1:3,1:3,i), ErrStat, ErrMsg)   ! Small angle assumption should be valid here -- Note we are assuming reforientation is identity
  
-!FIXME: if perturbation loads, we need to use the stiffness matrix instead!!!! 
-            call    REDWINinterface_CalcOutput( p%DLL_Trgt, p%DLL_Model, Displacement, Force, m%dll_data(i), ErrStat2, ErrMsg2 ); if (Failed()) return;
+               call    REDWINinterface_CalcOutput( p%DLL_Trgt, p%DLL_Model, Displacement, Force, m%dll_data(i), ErrStat2, ErrMsg2 ); if (Failed()) return;
+            endif
 
             ! Return reaction force onto the resulting point mesh
             y%SoilMesh%Force (1,i)  =  -real(Force(1),ReKi)
@@ -489,7 +514,8 @@ subroutine SlD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg,
    end select
 
       ! Outputs
-   call SlD_WriteOutput( p, AllOuts, u, y, m, ErrStat2, ErrMsg2 );     if (Failed()) return;
+   call SlD_WriteOutput( p, AllOuts, u, y, m, ErrStat2, ErrMsg2 ); if (Failed()) return;
+
    do i=1,p%NumOuts
       y%WriteOutput(i) = p%OutParam(i)%SignM * Allouts( p%OutParam(i)%Indx )
    enddo
@@ -498,8 +524,10 @@ subroutine SlD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg,
 
 contains
    logical function Failed()
-      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      Failed =    ErrStat >= AbortErrLev
+      if (.not. LargeAnglePossible ) then
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         Failed =    ErrStat >= AbortErrLev
+      endif
    end function Failed
 end subroutine SlD_CalcOutput
 
