@@ -405,49 +405,14 @@ subroutine SlD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, 
    integer(IntKi),                     intent(  out) :: ErrStat         !< Error status of the operation
    character(*),                       intent(  out) :: ErrMsg          !< Error message if ErrStat /= ErrID_None
 
-      ! Local variables
-   type(SlD_ContinuousStateType)                     :: dxdt            ! Continuous state derivatives at t
-   type(SlD_DiscreteStateType)                       :: xd_t            ! Discrete states at t (copy)
-   type(SlD_ConstraintStateType)                     :: z_Residual      ! Residual of the constraint state functions (Z)
-   type(SlD_InputType)                               :: u               ! Instantaneous inputs
-   integer(IntKi)                                    :: ErrStat2        ! local error status
-   character(ErrMsgLen)                              :: ErrMsg2         ! local error message
-   character(*), parameter                           :: RoutineName = 'SlD_UpdateStates'
-
       ! Initialize variables
    ErrStat   = ErrID_None           ! no error has occurred
    ErrMsg    = ""
 
-!FIXME: is this even needed?  We don't have states that we have access to when using the REDWIN dll
-   ! This subroutine contains an example of how the states could be updated. Developers will
-   ! want to adjust the logic as necessary for their own situations.
-
-!      ! Get the inputs at time t, based on the array of values sent by the glue code:
-!   ! before calling ExtrapInterp routine, memory in u must be allocated; we can do that with a copy:
-!   call SlD_CopyInput( Inputs(1), u, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
-!      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-!      if ( ErrStat >= AbortErrLev ) then
-!         call cleanup()       ! to avoid memory leaks, we have to destroy the local variables that may have allocatable arrays or meshes
-!         return
-!      end if
-!
-!   call SlD_Input_ExtrapInterp( Inputs, InputTimes, u, t, ErrStat2, ErrMsg2 )
-!      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-!      if ( ErrStat >= AbortErrLev ) then
-!         call cleanup()
-!         return
-!      end if
-
-      ! Destroy local variables before returning
-   call cleanup()
-
-contains
-   subroutine cleanup()
-      call SlD_DestroyInput(       u,          ErrStat2, ErrMsg2)
-      call SlD_DestroyConstrState( Z_Residual, ErrStat2, ErrMsg2)
-      call SlD_DestroyContState(   dxdt,       ErrStat2, ErrMsg2)
-      call SlD_DestroyDiscState(   xd_t,       ErrStat2, ErrMsg2)
-   end subroutine cleanup
+   x%DummyContState     = 0.0_ReKi
+   xd%DummyDiscState    = 0.0_ReKi
+   z%DummyConstrState   = 0.0_ReKi
+ 
 end subroutine SlD_UpdateStates
 
 

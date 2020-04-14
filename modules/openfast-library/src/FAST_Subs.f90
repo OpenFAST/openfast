@@ -3925,7 +3925,7 @@ SUBROUTINE FAST_Solution0(p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, O
    ! Initialize Input-Output arrays for interpolation/extrapolation:
 
    CALL FAST_InitIOarrays( m_FAST%t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, HD, SD, ExtPtfm, &
-                           MAPp, FEAM, MD, Orca, IceF, IceD, ErrStat2, ErrMsg2 )
+                           MAPp, FEAM, MD, Orca, IceF, IceD, SlD, ErrStat2, ErrMsg2 )
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          
 
@@ -3935,7 +3935,7 @@ END SUBROUTINE FAST_Solution0
 !! extrapolations are used with values from the solution, not just initial guesses. It also creates new copies of the state variables, which need to 
 !! be stored for the predictor-corrector loop.
 SUBROUTINE FAST_InitIOarrays( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, HD, SD, ExtPtfm, &
-                              MAPp, FEAM, MD, Orca, IceF, IceD, ErrStat, ErrMsg )
+                              MAPp, FEAM, MD, Orca, IceF, IceD, SlD, ErrStat, ErrMsg )
 
    REAL(DbKi),               INTENT(IN   ) :: t_initial           !< start time of the simulation 
    TYPE(FAST_ParameterType), INTENT(IN   ) :: p_FAST              !< Parameters for the glue code
@@ -3957,6 +3957,7 @@ SUBROUTINE FAST_InitIOarrays( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, A
    TYPE(OrcaFlex_Data),      INTENT(INOUT) :: Orca                !< OrcaFlex interface data
    TYPE(IceFloe_Data),       INTENT(INOUT) :: IceF                !< IceFloe data
    TYPE(IceDyn_Data),        INTENT(INOUT) :: IceD                !< All the IceDyn data used in time-step loop
+   TYPE(SoilDyn_Data),       INTENT(INOUT) :: SlD                 !< SoilDyn data
       
    INTEGER(IntKi),           INTENT(  OUT) :: ErrStat             !< Error status of the operation
    CHARACTER(*),             INTENT(  OUT) :: ErrMsg              !< Error message if ErrStat /= ErrID_None
@@ -4389,7 +4390,36 @@ SUBROUTINE FAST_InitIOarrays( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, A
       END DO ! numIceLegs
       
    END IF ! CompIce            
-   
+
+
+      ! SoilDyn
+   IF  (p_FAST%CompSoil == Module_SlD ) THEN      
+
+         ! Copy values for interpolation/extrapolation:
+      DO j = 1, p_FAST%InterpOrder + 1
+         SlD%InputTimes(j) = t_initial - (j - 1) * p_FAST%dt
+         !SlD_OutputTimes(i) = t_initial - (j - 1) * dt
+      END DO
+
+      DO j = 2, p_FAST%InterpOrder + 1
+         CALL SlD_CopyInput (SlD%Input(1),  SlD%Input(j),  MESH_NEWCOPY, Errstat2, ErrMsg2)
+            CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      END DO
+      CALL SlD_CopyInput (SlD%Input(1),  SlD%u,  MESH_NEWCOPY, Errstat2, ErrMsg2) ! do this to initialize meshes/allocatable arrays for output of ExtrapInterp routine
+         CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )      
+                               
+         
+         ! Initialize predicted states for j_pc loop:
+      CALL SlD_CopyContState   (SlD%x( STATE_CURR), SlD%x( STATE_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
+         CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      CALL SlD_CopyDiscState   (SlD%xd(STATE_CURR), SlD%xd(STATE_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)  
+         CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      CALL SlD_CopyConstrState (SlD%z( STATE_CURR), SlD%z( STATE_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
+         CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      CALL SlD_CopyOtherState( SlD%OtherSt(STATE_CURR), SlD%OtherSt(STATE_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
+         CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )   
+
+   END IF   ! SoilDyn 
    
 END SUBROUTINE FAST_InitIOarrays
 !----------------------------------------------------------------------------------------------------------------------------------
