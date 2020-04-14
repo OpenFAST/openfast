@@ -18,6 +18,12 @@ if (GENERATE_TYPES)
   generate_f90_types(src/SoilDyn_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/SoilDyn_Types.f90)
 endif()
 
+if (WIN_DLL_LOAD)
+  add_definitions(-DLibLoad)
+else (WIN_DLL_LOAD)
+  add_definitions(-DNO_LibLoad)
+endif (WIN_DLL_LOAD)
+
 set(SlD_SOURCES
   src/REDWINinterface.f90
   src/SoilDyn.f90
