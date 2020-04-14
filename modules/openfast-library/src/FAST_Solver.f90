@@ -2096,9 +2096,9 @@ SUBROUTINE FullOpt1_InputOutputSolve( this_time, p_FAST, calcJacobian &
          END IF
          
          IF ( p_FAST%CompSoil == Module_SlD ) THEN
-               ! Overwrite the SlD inputs with the newly calculated values from SD (we don't need a correction step this way)
-            CALL SlD_InputSolve(  u_SlD, y_SD, MeshMapData, ErrStat2, ErrMsg2 )
-               CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
+!               ! Overwrite the SlD inputs with the newly calculated values from SD (we don't need a correction step this way)
+!            CALL SlD_InputSolve(  u_SlD, y_SD, MeshMapData, ErrStat2, ErrMsg2 )
+!               CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
             CALL SlD_CalcOutput( this_time, u_SlD, p_SlD, x_SlD, xd_SlD, z_SlD, OtherSt_SlD, y_SlD, m_SlD, ErrStat2, ErrMsg2 )
                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName  )
          END IF
@@ -2460,12 +2460,19 @@ END IF
       CALL WrFileNR(UnJac, ' ExtPtfm_PtfmMesh_RotationAcc_Y_'//TRIM(Num2LStr(TmpIndx))) 
       CALL WrFileNR(UnJac, ' ExtPtfm_PtfmMesh_RotationAcc_Z_'//TRIM(Num2LStr(TmpIndx))) 
    END DO
-   
+
    DO TmpIndx=1,u_SlD%SoilMesh%NNodes
-      CALL WrFileNR(UnJac, ' SlD_SoilMesh_TranslationDisp_X_'//TRIM(Num2LStr(TmpIndx))) 
-      CALL WrFileNR(UnJac, ' SlD_SoilMesh_TranslationDisp_Y_'//TRIM(Num2LStr(TmpIndx))) 
-      CALL WrFileNR(UnJac, ' SlD_SoilMesh_TranslationDisp_Z_'//TRIM(Num2LStr(TmpIndx))) 
+      CALL WrFileNR(UnJac, ' SlD_SoilMesh_TranslationDisp_X_'//TRIM(Num2LStr(TmpIndx)))
+      CALL WrFileNR(UnJac, ' SlD_SoilMesh_TranslationDisp_Y_'//TRIM(Num2LStr(TmpIndx)))
+      CALL WrFileNR(UnJac, ' SlD_SoilMesh_TranslationDisp_Z_'//TRIM(Num2LStr(TmpIndx)))
    END DO
+
+   DO TmpIndx=1,u_SlD%SoilMesh%NNodes
+      CALL WrFileNR(UnJac, ' SlD_SoilMesh_Orientation_X_'//TRIM(Num2LStr(TmpIndx)))
+      CALL WrFileNR(UnJac, ' SlD_SoilMesh_Orientation_Y_'//TRIM(Num2LStr(TmpIndx)))
+      CALL WrFileNR(UnJac, ' SlD_SoilMesh_Orientation_Z_'//TRIM(Num2LStr(TmpIndx)))
+   END DO
+
 
    WRITE(UnJac,'()')    
       
@@ -2743,6 +2750,10 @@ CONTAINS
             ! Map Subdyn motion to SoilDyn
          CALL SlD_InputSolve(  u_SlD, y_SD2, MeshMapData, ErrStat2, ErrMsg2 )
             CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)  
+!FIXME: should I have this here????
+            ! Because SD directly affects the outputs of SlD, we calculate here
+         CALL SlD_CalcOutput( this_time, u_SlD, p_SlD, x_SlD, xd_SlD, z_SlD, OtherSt_SlD, y_SlD, m_SlD, ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName  )
       END IF
 
 
@@ -2857,13 +2868,11 @@ CONTAINS
       !..................
 
          if (p_FAST%CompSoil == Module_SlD) then
-            if ( y_SlD2%SoilMesh%Committed ) THEN
-               ! SlD loads to SD
-               CALL Transfer_Point_to_Point( y_SlD2%SoilMesh, MeshMapData%u_SD_LMesh_2, MeshMapData%SlD_P_2_SD_P, ErrStat2, ErrMsg2, u_SlD%SoilMesh, y_SD2%Y2Mesh )
-                  CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//'Transfer_SlD_to_SD (y_SlD2%SoilMesh -> y_SD2%Y2Mesh)' )
-               MeshMapData%u_SD_LMesh%Force  = MeshMapData%u_SD_LMesh%Force  + MeshMapData%u_SD_LMesh_2%Force
-               MeshMapData%u_SD_LMesh%Moment = MeshMapData%u_SD_LMesh%Moment + MeshMapData%u_SD_LMesh_2%Moment
-            endif
+            ! SlD loads to SD
+            CALL Transfer_Point_to_Point( y_SlD2%SoilMesh, MeshMapData%u_SD_LMesh_2, MeshMapData%SlD_P_2_SD_P, ErrStat2, ErrMsg2, u_SlD%SoilMesh, y_SD2%Y2Mesh )
+               CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//'Transfer_SlD_to_SD (y_SlD2%SoilMesh -> y_SD2%Y2Mesh)' )
+            MeshMapData%u_SD_LMesh%Force  = MeshMapData%u_SD_LMesh%Force  + MeshMapData%u_SD_LMesh_2%Force
+            MeshMapData%u_SD_LMesh%Moment = MeshMapData%u_SD_LMesh%Moment + MeshMapData%u_SD_LMesh_2%Moment
          endif !  SoilDyn
 
 
@@ -3136,7 +3145,7 @@ SUBROUTINE Init_FullOpt1_Jacobian( p_FAST, MeshMapData, ED_PlatformPtMesh, SD_TP
    end if
    
    if ( p_FAST%CompSoil == Module_SlD ) then
-      p_FAST%SizeJac_Opt1(10) = SlD_SoilMesh%NNodes*3    ! Only translation displacements considered
+      p_FAST%SizeJac_Opt1(10) = SlD_SoilMesh%NNodes*6    ! Only translation displacements and small angle changes 
    end if
                        
                               
@@ -3398,20 +3407,29 @@ SUBROUTINE Init_FullOpt1_Jacobian( p_FAST, MeshMapData, ED_PlatformPtMesh, SD_TP
    end do !i
    
    !...............
-   ! SoilDyn inputs:   
+   ! SoilDyn inputs:
    !...............
 
-      ! SlD_SoilMesh
-      do i=1,SlD_SoilMesh%NNodes
-         do j=1,3
-            MeshMapData%Jac_u_indx(index,1) =  25 !Module/Mesh/Field: u_SlD%SoilMesh%TranslationDisp = 25
-            MeshMapData%Jac_u_indx(index,2) =  j !index:  j
-            MeshMapData%Jac_u_indx(index,3) =  i !Node:   i
-            index = index + 1                  
-         end do !j                             
-      end do !i                                
+   ! SlD_SoilMesh
+   do i=1,SlD_SoilMesh%NNodes
+      do j=1,3
+         MeshMapData%Jac_u_indx(index,1) =  25 !Module/Mesh/Field: u_SlD%SoilMesh%TranslationDisp = 25
+         MeshMapData%Jac_u_indx(index,2) =  j !index:  j
+         MeshMapData%Jac_u_indx(index,3) =  i !Node:   i
+         index = index + 1
+      end do !j
+   end do !i
+      ! Small angle perturbations only.  By defenition, SoilMesh Orientation is very close to the identity
+   do i=1,SlD_SoilMesh%NNodes
+      do j=1,3
+         MeshMapData%Jac_u_indx(index,1) =  26 !Module/Mesh/Field: u_SlD%SoilMesh%Orientation = 26
+         MeshMapData%Jac_u_indx(index,2) =  j !index:  j
+         MeshMapData%Jac_u_indx(index,3) =  i !Node:   i
+         index = index + 1
+      end do !j
+   end do !i
  
-   
+
 END SUBROUTINE Init_FullOpt1_Jacobian
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine basically packs the relevant parts of the modules' input meshes for use in this InputOutput solve.
@@ -3440,6 +3458,8 @@ SUBROUTINE Create_FullOpt1_UVector(u, ED_PlatformPtMesh, SD_TPMesh, SD_LMesh, HD
    
       ! local variables:
    INTEGER(IntKi)                :: i, k, indx_first, indx_last
+   integer(IntKi)                :: ErrStat2    ! error status  from get small rot angles (we are completely ignoring it)
+   character(ErrMsgLen)          :: ErrMsg2     ! error message from get small rot angles (we are completely ignoring it)
    
    !...............
    ! ED inputs:   
@@ -3602,6 +3622,15 @@ SUBROUTINE Create_FullOpt1_UVector(u, ED_PlatformPtMesh, SD_TPMesh, SD_LMesh, HD
       u(indx_first:indx_last) = SlD_SoilMesh%TranslationDisp(:,i)
       indx_first = indx_last + 1
    end do
+   ! Small angle changes only!!!!
+   ! We use the EulerExtract instead of GetSmllRotAngs since we expect the angles to be on the order of 1e-5, where the order is unimportant
+   ! However, during the initial Jacobian calculation, we may use a large angle to set it, in which ase GetSmllRotAngs fails, and our Jacobian
+   ! ends up wrong.
+   do i=1,SlD_SoilMesh%NNodes 
+      indx_last  = indx_first + 2
+      u(indx_first:indx_last) = real(EulerExtract(SlD_SoilMesh%Orientation(1:3,1:3,i)), ReKi)  ! We are ignoring any errors here...
+      indx_first = indx_last + 1
+   end do
    
 END SUBROUTINE Create_FullOpt1_UVector
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -3689,11 +3718,30 @@ SUBROUTINE Add_FullOpt1_u_delta( p_FAST, Jac_u_indx, u_delta, u_ED, u_SD, u_HD, 
          
       CASE (25) !Module/Mesh/Field: u_SlD%SoilMesh%TranslationDisp = 25
          u_SlD%SoilMesh%TranslationDisp(      fieldIndx,node) = u_SlD%SoilMesh%TranslationDisp(      fieldIndx,node) + real(u_delta(n), R8Ki)
+      CASE (26) !Module/Mesh/Field: u_SlD%SoilMesh%Orientation = 26
+         ! NOTE: the SoilMesh must be close to the identity at all times
+         !FIXME:  This is not very rigorous since we are just sequentially applying them....!!!!!
+         u_SlD%SoilMesh%Orientation(1:3,1:3,node) = PerturbOrient(u_SlD%SoilMesh%Orientation(1:3,1:3,node),fieldIndx,u_delta(n))
          
       END SELECT
                                    
    END DO
-   
+
+CONTAINS
+   function PerturbOrient(Orientation,Indx,perturb)
+      real(R8Ki)              :: PerturbOrient(3,3)
+      real(R8Ki), intent(in)  :: Orientation(3,3)
+      integer,    intent(in)  :: Indx
+      real(ReKi), intent(in)  :: perturb
+      real(R8Ki)              :: Tmp3(3)
+      real(R8Ki)              :: Tmp33(3,3)
+      character(ErrMsgLen)    :: ErrMsg2  ! we will ignore
+      integer                 :: ErrStat2 ! we will ignore
+      Tmp3 = 0.0_R8Ki
+      Tmp3(Indx) = real(perturb,R8Ki)
+      call SmllRotTrans( 'Perturb Orientation',Tmp3(1), Tmp3(2), Tmp3(3), Tmp33, '', ErrStat2, ErrMsg2 )
+      PerturbOrient = Orientation*Tmp33
+   end function PerturbOrient
 END SUBROUTINE Add_FullOpt1_u_delta
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine perturbs the nth element of the u array (and mesh/field it corresponds to)
@@ -3716,7 +3764,9 @@ SUBROUTINE Perturb_u_FullOpt1( p_FAST, Jac_u_indx, n, u_perturb, u_ED_perturb, u
    ! local variables
    INTEGER                                             :: fieldIndx
    INTEGER                                             :: node
-   
+   REAL( R8Ki )                                        :: Diag(3,3) = reshape( (/ 1.0_R8Ki, 0.0_R8Ki, 0.0_R8Ki, &
+                                                                                  0.0_R8Ki, 1.0_R8Ki, 0.0_R8Ki, &
+                                                                                  0.0_R8Ki, 0.0_R8Ki, 1.0_R8Ki /),(/3,3/))
       
    fieldIndx = Jac_u_indx(n,2) 
    node      = Jac_u_indx(n,3) 
@@ -3803,15 +3853,31 @@ SUBROUTINE Perturb_u_FullOpt1( p_FAST, Jac_u_indx, n, u_perturb, u_ED_perturb, u
       u_ExtPtfm_perturb%PtfmMesh%RotationAcc(   fieldIndx,node) = u_ExtPtfm_perturb%PtfmMesh%RotationAcc(   fieldIndx,node) + perturb      
       
    CASE (25) !Module/Mesh/Field: u_SlD%SoilMesh%TranslationDisp = 25
-!      perturb = GetPerturb( u_SlD_perturb%SoilMesh%TranslationDisp(fieldIndx , node) )
-      perturb = 1.0_ReKi
+      perturb = GetPerturb( real(u_SlD_perturb%SoilMesh%TranslationDisp(fieldIndx , node),ReKi) )
       u_SlD_perturb%SoilMesh%TranslationDisp(   fieldIndx,node) = u_SlD_perturb%SoilMesh%TranslationDisp(   fieldIndx,node) + real(perturb,R8Ki)
+   CASE (26) !Module/Mesh/Field: u_SlD%SoilMesh%Orientation = 26
+      perturb = GetPerturb( real(u_SlD_perturb%SoilMesh%TranslationDisp(fieldIndx , node),ReKi) )
+      u_SlD_perturb%SoilMesh%Orientation(1:3,1:3,node) = PerturbOrient(u_SlD_perturb%SoilMesh%Orientation(1:3,1:3,node),fieldIndx,perturb)
    
    END SELECT
                                    
    u_perturb(n) = u_perturb(n) + perturb
    
-        
+CONTAINS
+   function PerturbOrient(Orientation,Indx,perturb)
+      real(R8Ki)              :: PerturbOrient(3,3)
+      real(R8Ki), intent(in)  :: Orientation(3,3)
+      integer,    intent(in)  :: Indx
+      real(ReKi), intent(in)  :: perturb
+      real(R8Ki)              :: Tmp3(3)
+      real(R8Ki)              :: Tmp33(3,3)
+      character(ErrMsgLen)    :: ErrMsg2  ! we will ignore
+      integer                 :: ErrStat2 ! we will ignore
+      Tmp3 = 0.0_R8Ki
+      Tmp3(Indx) = real(perturb,R8Ki) !/ p_FAST%UJacSclFact
+      call SmllRotTrans( 'Perturb Orientation',Tmp3(1), Tmp3(2), Tmp3(3), Tmp33, '', ErrStat2, ErrMsg2 )
+      PerturbOrient = Tmp33
+   end function PerturbOrient
 END SUBROUTINE Perturb_u_FullOpt1
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine resets the remap flags on all of the meshes
@@ -4911,11 +4977,11 @@ SUBROUTINE SolveOption1(this_time, this_state, calcJacobian, p_FAST, ED, BD, HD,
          
    END IF        
       
-   IF (p_FAST%CompSoil == Module_SlD) THEN
-         ! Map Subdyn motion to SoilDyn
-      CALL SlD_InputSolve(  SlD%Input(1), SD%y, MeshMapData, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)  
-   END IF
+!   IF (p_FAST%CompSoil == Module_SlD) THEN
+!         ! Map Subdyn motion to SoilDyn
+!      CALL SlD_InputSolve(  SlD%Input(1), SD%y, MeshMapData, ErrStat2, ErrMsg2 )
+!         CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)  
+!   END IF
 
 #ifdef DEBUG_MESH_TRANSFER_ICE
       CALL WrScr('********************************************************')
