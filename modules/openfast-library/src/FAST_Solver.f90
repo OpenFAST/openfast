@@ -2096,9 +2096,6 @@ SUBROUTINE FullOpt1_InputOutputSolve( this_time, p_FAST, calcJacobian &
          END IF
          
          IF ( p_FAST%CompSoil == Module_SlD ) THEN
-!               ! Overwrite the SlD inputs with the newly calculated values from SD (we don't need a correction step this way)
-!            CALL SlD_InputSolve(  u_SlD, y_SD, MeshMapData, ErrStat2, ErrMsg2 )
-!               CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
             CALL SlD_CalcOutput( this_time, u_SlD, p_SlD, x_SlD, xd_SlD, z_SlD, OtherSt_SlD, y_SlD, m_SlD, ErrStat2, ErrMsg2 )
                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName  )
          END IF
@@ -4977,11 +4974,6 @@ SUBROUTINE SolveOption1(this_time, this_state, calcJacobian, p_FAST, ED, BD, HD,
          
    END IF        
       
-!   IF (p_FAST%CompSoil == Module_SlD) THEN
-!         ! Map Subdyn motion to SoilDyn
-!      CALL SlD_InputSolve(  SlD%Input(1), SD%y, MeshMapData, ErrStat2, ErrMsg2 )
-!         CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)  
-!   END IF
 
 #ifdef DEBUG_MESH_TRANSFER_ICE
       CALL WrScr('********************************************************')
