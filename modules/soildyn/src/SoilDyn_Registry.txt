@@ -105,6 +105,8 @@ typedef   ^               OtherStateType      IntKi    DummyOtherState - - - "Re
 # Define any data that are used only for efficiency purposes (these variables are not associated with time):
 #   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
 typedef   ^             MiscVarType       REDWINdllType     dll_data             : - - "data used for REDWIN DLL"   -
+typedef   ^             MiscVarType       REDWINdllType     dll_dataPREV         : - - "data used for REDWIN DLL -- previous call"   -
+typedef   ^             MiscVarType       DbKi              PrevTime             - - - "previous call time"   -
 
 
 # ..... Parameters ................................................................................................................

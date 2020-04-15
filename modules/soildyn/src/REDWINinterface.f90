@@ -566,11 +566,11 @@ function ToREDWINcoordsR8toR8(InArray) result(REDWIN)
    real(R8Ki), intent(in)  :: InArray(6)
    real(R8Ki)              :: REDWIN(6)
    REDWIN(1) =  InArray(1)
-   REDWIN(2) = -InArray(2)
-   REDWIN(3) = -InArray(3)
+   REDWIN(2) =  InArray(2)
+   REDWIN(3) =  InArray(3)
    REDWIN(4) =  InArray(4)
-   REDWIN(5) = -InArray(5)
-   REDWIN(6) = -InArray(6)
+   REDWIN(5) =  InArray(5)
+   REDWIN(6) =  InArray(6)
 end function ToREDWINcoordsR8toR8
 
 !> \copydoc redwininterface::ToREDWINcoordsR8toR8
@@ -578,11 +578,11 @@ function ToREDWINcoordsR8toR8Mat(InArray) result(REDWIN)
    real(R8Ki), intent(in)  :: InArray(6,6)
    real(R8Ki)              :: REDWIN(6,6)
    REDWIN(:,1)  =  InArray(:,1)
-   REDWIN(:,2)  = -InArray(:,2)
-   REDWIN(:,3)  = -InArray(:,3)
+   REDWIN(:,2)  =  InArray(:,2)
+   REDWIN(:,3)  =  InArray(:,3)
    REDWIN(:,4)  =  InArray(:,4)
-   REDWIN(:,5)  = -InArray(:,5)
-   REDWIN(:,6)  = -InArray(:,6)
+   REDWIN(:,5)  =  InArray(:,5)
+   REDWIN(:,6)  =  InArray(:,6)
 end function ToREDWINcoordsR8toR8Mat
 
 
@@ -596,11 +596,11 @@ function FromREDWINcoordsR8toR8(InArray) result(FAST)
    real(R8Ki), intent(in)  :: InArray(6)
    real(R8Ki)              :: FAST(6)
    FAST(1) =  InArray(1)
-   FAST(2) = -InArray(2)
-   FAST(3) = -InArray(3)
+   FAST(2) =  InArray(2)
+   FAST(3) =  InArray(3)
    FAST(4) =  InArray(4)
-   FAST(5) = -InArray(5)
-   FAST(6) = -InArray(6)
+   FAST(5) =  InArray(5)
+   FAST(6) =  InArray(6)
 end function FromREDWINcoordsR8toR8
 
 !> \copydoc redwininterface::FromREDWINcoordsR8toR8
@@ -608,11 +608,11 @@ function FromREDWINcoordsR8toR8Mat(InArray) result(FAST)
    real(R8Ki), intent(in)  :: InArray(6,6)
    real(R8Ki)              :: FAST(6,6)
    FAST(:,1) =  InArray(:,1)
-   FAST(:,2) = -InArray(:,2)
-   FAST(:,3) = -InArray(:,3)
+   FAST(:,2) =  InArray(:,2)
+   FAST(:,3) =  InArray(:,3)
    FAST(:,4) =  InArray(:,4)
-   FAST(:,5) = -InArray(:,5)
-   FAST(:,6) = -InArray(:,6)
+   FAST(:,5) =  InArray(:,5)
+   FAST(:,6) =  InArray(:,6)
 end function FromREDWINcoordsR8toR8Mat
 
 
