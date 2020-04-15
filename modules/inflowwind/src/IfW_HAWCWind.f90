@@ -146,7 +146,7 @@ SUBROUTINE IfW_HAWCWind_Init(InitInp, p, MiscVars, Interval, InitOut, ErrStat, E
       WRITE(InitInp%SumFileUnit,'(A)', IOSTAT=TmpErrStat)    'HAWC wind type.  Read by InflowWind sub-module '//TRIM(GetNVD(IfW_HAWCWind_Ver))      
       
       WRITE(InitInp%SumFileUnit,'(A34,G12.4)',IOSTAT=TmpErrStat)    '     Reference height (m):        ',p%RefHt
-      WRITE(InitInp%SumFileUnit,'(A34,G12.4)',IOSTAT=TmpErrStat)    '     Timestep (s):                ',p%deltaXInv / p%URef
+      WRITE(InitInp%SumFileUnit,'(A34,G12.4)',IOSTAT=TmpErrStat)    '     Timestep (s):                ',1.0_ReKi / (p%deltaXInv * p%URef)
       WRITE(InitInp%SumFileUnit,'(A34,I12)',  IOSTAT=TmpErrStat)    '     Number of timesteps:         ',p%nx
       WRITE(InitInp%SumFileUnit,'(A34,G12.4)',IOSTAT=TmpErrStat)    '     Mean windspeed (m/s):        ',p%URef
       WRITE(InitInp%SumFileUnit,'(A)',        IOSTAT=TmpErrStat)    '     Time range (s):              [ '// &
