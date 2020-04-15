@@ -206,6 +206,12 @@ contains
                return
             endif
 
+            allocate( m%dll_dataPREV(InputFileData%DLL_NumPoints), STAT=ErrStat2 )
+            if (ErrStat2 /= 0) then
+               call SetErrStat(ErrID_Fatal, 'Could not allocate m%dll_data', ErrStat, ErrMsg, RoutineName)
+               return
+            endif
+
             ! Set the input file names and check they are not too long.  Existance checks done in the interface routine.
             do i=1,InputFileData%DLL_NumPoints
                m%dll_data(i)%PROPSfile = trim(InputFileData%DLL_PropsFile(i))
@@ -219,6 +225,9 @@ contains
                               ' characters (DLL limititation)', ErrStat, ErrMsg, '')
                endif
             enddo
+
+            m%dll_dataPrev = m%dll_data
+            m%PrevTime = -1.0_DbKi
       end select
       if (ErrStat >= AbortErrLev) return
    end subroutine SlD_InitMisc
@@ -445,6 +454,8 @@ subroutine SlD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg,
    real(R8Ki)                                         :: StiffMatrix(6,6)
    integer(IntKi)                                     :: i           !< generic counter
    logical                                            :: LargeAnglePossible
+   logical                                            :: TimeStepRecalc
+   logical                                            :: firstcall
 
       ! Initialize ErrStat
    ErrStat = ErrID_None
@@ -454,6 +465,15 @@ subroutine SlD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg,
       LargeAnglePossible = .true.
    else
       LargeAnglePossible = .false.
+   endif
+
+firstcall=.false.
+if(m%PrevTime < 0.0_DbKi) firstcall=.true.
+      ! Are we recalculating a previous timestep (like correction step?)
+   if (T > m%PrevTime) then
+      TimeStepRecalc = .FALSE.
+   else
+      TimeStepRecalc = .TRUE.
    endif
 
    select case(p%CalcOption)
@@ -484,23 +504,42 @@ subroutine SlD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg,
       case (Calc_REDWIN)
             ! call the dll
          do i=1,size(m%dll_data)
+if(firstcall)  m%dll_dataPREV(i) = m%dll_data(i)
+               ! reset old states if recalc
+            if (TimeStepRecalc) then
+               m%dll_data(i) = m%dll_dataPREV(i)
+            endif
+Displacement = 0.0_R8Ki
+               call REDWINinterface_GetStiffMatrix( p%DLL_Trgt, p%DLL_Model, Displacement, Force, StiffMatrix, m%dll_data(i), ErrStat2, ErrMsg2 ); if (Failed()) return;
   
             ! Copy displacement from point mesh (angles in radians -- REDWIN dll also uses rad)
             Displacement(1:3) = u%SoilMesh%TranslationDisp(1:3,i)                 ! Translations -- This is R8Ki in the mesh
+            if (p%DLL_Model == 2)   Displacement(3) = 0.0_R8Ki
 
-            ! If we are doing a perturbation, we will only be doing one angle at a time, and the angle may be large.
-            ! If the angle is too large, the REDWIN DLL will fail, so we will instead calculate using the stored stiffness matrix.
             if (LargeAnglePossible) then
-               Displacement(4:6) = EulerExtract(u%SoilMesh%Orientation(1:3,1:3,i))                    ! Perturbations only use one angle at a time.
 
-               call REDWINinterface_GetStiffMatrix( p%DLL_Trgt, p%DLL_Model, Displacement, Force, StiffMatrix, m%dll_data(i), ErrStat2, ErrMsg2 ); if (Failed()) return;
+               Displacement(4:6) = EulerExtract(u%SoilMesh%Orientation(1:3,1:3,i))                    ! Perturbations only use one angle at a time.
+               if (p%DLL_Model == 2)   Displacement(6) = 0.0_R8Ki
+
                   ! Calculate reaction with F = k*dX for large displacements.
                Force = matmul(StiffMatrix, Displacement)
             else
-!               Displacement(4:6) = EulerExtract(u%SoilMesh%Orientation(1:3,1:3,i))                    ! Perturbations only use one angle at a time.
-               Displacement(4:6) = GetSmllRotAngs(u%SoilMesh%Orientation(1:3,1:3,i), ErrStat, ErrMsg)   ! Small angle assumption should be valid here -- Note we are assuming reforientation is identity
+               Displacement(4:6) = GetSmllRotAngs(u%SoilMesh%Orientation(1:3,1:3,i), ErrStat2, ErrMsg2); if (Failed()) return;   ! Small angle assumption should be valid here -- Note we are assuming reforientation is identity
+
+               if (p%DLL_Model == 2)   Displacement(6) = 0.0_R8Ki
  
                call    REDWINinterface_CalcOutput( p%DLL_Trgt, p%DLL_Model, Displacement, Force, m%dll_data(i), ErrStat2, ErrMsg2 ); if (Failed()) return;
+
+                  ! store new states if not recalc
+               if (.not. TimeStepRecalc) then
+                  m%dll_dataPREV(i) = m%dll_data(i)
+               endif
+
+            endif
+
+            if (p%DLL_Model == 2) then
+               Force(3) = 0.0_R8Ki
+               Force(6) = 0.0_R8Ki
             endif
 
             ! Return reaction force onto the resulting point mesh
