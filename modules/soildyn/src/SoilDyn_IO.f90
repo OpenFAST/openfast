@@ -477,7 +477,14 @@ SUBROUTINE SlD_ValidateInput( InitInp, InputFileData, ErrStat, ErrMsg )
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-!FIXME: add validation routines
+    select case(InputFileData%CalcOption)
+      case (Calc_StiffDamp)
+      case (Calc_PYcurve)
+      case (Calc_REDWIN)
+         call ValidateDLL()
+   end select
+
+
 CONTAINS
    subroutine ValidateStiffnessMatrix()
       ! Placeholder

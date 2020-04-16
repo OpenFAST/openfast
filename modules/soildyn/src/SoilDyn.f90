@@ -107,13 +107,15 @@ subroutine SlD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
 
 
    call SlD_ReadInput( InitInp%InputFile, p%EchoFileName, InputFileData, ErrStat2, ErrMsg2 );  if (Failed()) return;
+   call SlD_ValidateInput( InitInp, InputFileData, ErrStat2, ErrMsg2 );  if (Failed()) return;
 
       ! Define parameters here:
-   p%DT           =  Interval
-   p%DLL_Model    =  InputFileData%DLL_Model
-   p%CalcOption   =  InputFileData%CalcOption
-   p%Stiffness    =  InputFileData%Stiffness
-!   p%Damping      =  InputFileData%Damping
+   p%DT              =  Interval
+   p%DLL_Model       =  InputFileData%DLL_Model
+   p%DLL_OnlyStiff   =  InputFileData%DLL_OnlyStiff
+   p%CalcOption      =  InputFileData%CalcOption
+   p%Stiffness       =  InputFileData%Stiffness
+!   p%Damping         =  InputFileData%Damping
 
       ! Define initial system states here:
    x%DummyContState           = 0.0_ReKi
