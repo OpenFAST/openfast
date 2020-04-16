@@ -224,7 +224,6 @@ subroutine SlD_ReadInput( InputFileName, EchoFileName, InputFileData, ErrStat, E
    character(ErrMsgLen)                               :: TmpErrMsg            !< Temporary error message
    character(1024)                                    :: PriPath              !< Path name of the primary file
    character(*),                       PARAMETER      :: RoutineName="SlD_ReadInput"
-   character(2)                                       :: TmpChar2             !< temporary character string length 2
 
 
       ! Initialize local data
@@ -364,7 +363,7 @@ subroutine SlD_ReadInput( InputFileName, EchoFileName, InputFileData, ErrStat, E
 !FIXME: parse out the 's' option.
       ! DLL model, and optionally only use stiffness matrix in response calcs
    call ReadVar( UnitInput, InputFileName, InputFileData%DLL_modelChr,  "DLL_Model",      "REDWIN DLL model to use",    TmpErrStat, TmpErrMsg, UnitEcho );  if (Failed()) return;
-   call Conv2UC( TmpChar2 )    ! Convert Line to upper case.
+   call Conv2UC( InputFileData%DLL_modelChr )    ! Convert Line to upper case.
 
    call ReadVar( UnitInput, InputFileName, InputFileData%DLL_FileName,  "DLL_FileName",   "REDWIN DLL model used",      TmpErrStat, TmpErrMsg, UnitEcho );  if (Failed()) return;
    call ReadVar( UnitInput, InputFileName, InputFileData%DLL_NumPoints, "DLL_NumPoints",  "Number of DLL interfaces",   TmpErrStat, TmpErrMsg, UnitEcho );  if (Failed()) return;

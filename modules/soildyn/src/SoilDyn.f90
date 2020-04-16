@@ -474,7 +474,6 @@ subroutine SlD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg,
    real(ReKi)                                         :: AllOuts(0:MaxOutPts)
    real(R8Ki)                                         :: Displacement(6)
    real(R8Ki)                                         :: Force(6)
-   real(R8Ki)                                         :: StiffMatrix(6,6)
    integer(IntKi)                                     :: i           !< generic counter
    logical                                            :: LargeAnglePossible
    logical                                            :: TimeStepRecalc
@@ -541,7 +540,7 @@ subroutine SlD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg,
                if (p%DLL_Model == 2)   Displacement(6) = 0.0_R8Ki
 
                   ! Calculate reaction with F = k*dX for large displacements.
-               Force = matmul(StiffMatrix, Displacement)
+               Force = matmul(p%DLL_StiffNess(1:6,1:6,i), Displacement)
             else
                Displacement(4:6) = GetSmllRotAngs(u%SoilMesh%Orientation(1:3,1:3,i), ErrStat2, ErrMsg2); if (Failed()) return;   ! Small angle assumption should be valid here -- Note we are assuming reforientation is identity
 
