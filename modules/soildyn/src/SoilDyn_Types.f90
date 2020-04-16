@@ -66,6 +66,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PY_locations      !< P-Y curve location points for mesh ['(m)']
     character(1024) , DIMENSION(:), ALLOCATABLE  :: PY_inputFile      !< Input file with P-Y curve data [-]
     INTEGER(IntKi)  :: DLL_model      !< REDWIN DLL model type to use [-]
+    CHARACTER(2)  :: DLL_modelChr      !< REDWIN DLL model type to use - character string [-]
     CHARACTER(1024)  :: DLL_FileName      !< Name of the DLL file including the full path [-]
     CHARACTER(1024)  :: DLL_ProcName      !< Name of the procedure in the DLL that will be called [-]
     INTEGER(IntKi)  :: DLL_numpoints      !< Number of points to interface to DLL [-]
@@ -74,6 +75,7 @@ IMPLICIT NONE
     CHARACTER(1024) , DIMENSION(:), ALLOCATABLE  :: DLL_LDISPFILE      !< Name of LDISPFILE input file used in DLL [-]
     LOGICAL  :: SumPrint      !< Print summary information to file (.SlD.sum) [-]
     INTEGER(IntKi)  :: NumOuts      !< Number of outputs requested [-]
+    LOGICAL  :: DLL_OnlyStiff      !< use only the DLL stiffness matrices in calculating response [-]
   END TYPE SlD_InputFile
 ! =======================
 ! =========  SlD_InitInputType  =======
@@ -137,6 +139,8 @@ IMPLICIT NONE
     REAL(ReKi)  :: WtrDepth      !< Water depth to mudline (global coordinates) ['(m)']
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: Nodes_C      !< Nodes in input mesh that reaction force may be applied to ['(-)']
     REAL(R8Ki) , DIMENSION(1:6,1:6)  :: Stiffness      !< Stiffness matrix ['(N/m,]
+    REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: DLL_Stiffness      !< Stiffness matrices from REDWIN DLL ['(N/m,]
+    LOGICAL  :: DLL_OnlyStiff      !< Use only the stiffness matrix in calculating the restoring forces [-]
   END TYPE SlD_ParameterType
 ! =======================
 ! =========  SlD_InputType  =======
@@ -162,6 +166,7 @@ CONTAINS
    INTEGER(IntKi)                 :: i,j,k
    INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
    INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
+   INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'SlD_CopyREDWINdllType'
@@ -322,6 +327,7 @@ CONTAINS
   LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
+  INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'SlD_UnPackREDWINdllType'
@@ -500,6 +506,7 @@ IF (ALLOCATED(SrcInputFileData%PY_inputFile)) THEN
     DstInputFileData%PY_inputFile = SrcInputFileData%PY_inputFile
 ENDIF
     DstInputFileData%DLL_model = SrcInputFileData%DLL_model
+    DstInputFileData%DLL_modelChr = SrcInputFileData%DLL_modelChr
     DstInputFileData%DLL_FileName = SrcInputFileData%DLL_FileName
     DstInputFileData%DLL_ProcName = SrcInputFileData%DLL_ProcName
     DstInputFileData%DLL_numpoints = SrcInputFileData%DLL_numpoints
@@ -543,6 +550,7 @@ IF (ALLOCATED(SrcInputFileData%DLL_LDISPFILE)) THEN
 ENDIF
     DstInputFileData%SumPrint = SrcInputFileData%SumPrint
     DstInputFileData%NumOuts = SrcInputFileData%NumOuts
+    DstInputFileData%DLL_OnlyStiff = SrcInputFileData%DLL_OnlyStiff
  END SUBROUTINE SlD_CopyInputFile
 
  SUBROUTINE SlD_DestroyInputFile( InputFileData, ErrStat, ErrMsg )
@@ -632,6 +640,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + SIZE(InData%PY_inputFile)*LEN(InData%PY_inputFile)  ! PY_inputFile
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! DLL_model
+      Int_BufSz  = Int_BufSz  + 1*LEN(InData%DLL_modelChr)  ! DLL_modelChr
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%DLL_FileName)  ! DLL_FileName
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%DLL_ProcName)  ! DLL_ProcName
       Int_BufSz  = Int_BufSz  + 1  ! DLL_numpoints
@@ -652,6 +661,7 @@ ENDIF
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! SumPrint
       Int_BufSz  = Int_BufSz  + 1  ! NumOuts
+      Int_BufSz  = Int_BufSz  + 1  ! DLL_OnlyStiff
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -745,6 +755,10 @@ ENDIF
   END IF
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%DLL_model
       Int_Xferred   = Int_Xferred   + 1
+        DO I = 1, LEN(InData%DLL_modelChr)
+          IntKiBuf(Int_Xferred) = ICHAR(InData%DLL_modelChr(I:I), IntKi)
+          Int_Xferred = Int_Xferred   + 1
+        END DO ! I
         DO I = 1, LEN(InData%DLL_FileName)
           IntKiBuf(Int_Xferred) = ICHAR(InData%DLL_FileName(I:I), IntKi)
           Int_Xferred = Int_Xferred   + 1
@@ -808,6 +822,8 @@ ENDIF
       IntKiBuf ( Int_Xferred:Int_Xferred+1-1 ) = TRANSFER( InData%SumPrint , IntKiBuf(1), 1)
       Int_Xferred   = Int_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%NumOuts
+      Int_Xferred   = Int_Xferred   + 1
+      IntKiBuf ( Int_Xferred:Int_Xferred+1-1 ) = TRANSFER( InData%DLL_OnlyStiff , IntKiBuf(1), 1)
       Int_Xferred   = Int_Xferred   + 1
  END SUBROUTINE SlD_PackInputFile
 
@@ -972,6 +988,10 @@ ENDIF
   END IF
       OutData%DLL_model = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
+      DO I = 1, LEN(OutData%DLL_modelChr)
+        OutData%DLL_modelChr(I:I) = CHAR(IntKiBuf(Int_Xferred))
+        Int_Xferred = Int_Xferred   + 1
+      END DO ! I
       DO I = 1, LEN(OutData%DLL_FileName)
         OutData%DLL_FileName(I:I) = CHAR(IntKiBuf(Int_Xferred))
         Int_Xferred = Int_Xferred   + 1
@@ -1065,6 +1085,8 @@ ENDIF
       OutData%SumPrint = TRANSFER( IntKiBuf( Int_Xferred ), mask0 )
       Int_Xferred   = Int_Xferred + 1
       OutData%NumOuts = IntKiBuf( Int_Xferred ) 
+      Int_Xferred   = Int_Xferred + 1
+      OutData%DLL_OnlyStiff = TRANSFER( IntKiBuf( Int_Xferred ), mask0 )
       Int_Xferred   = Int_Xferred + 1
  END SUBROUTINE SlD_UnPackInputFile
 
@@ -2528,6 +2550,7 @@ ENDIF
    INTEGER(IntKi)                 :: i,j,k
    INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
    INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
+   INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'SlD_CopyParam'
@@ -2578,6 +2601,23 @@ IF (ALLOCATED(SrcParamData%Nodes_C)) THEN
     DstParamData%Nodes_C = SrcParamData%Nodes_C
 ENDIF
     DstParamData%Stiffness = SrcParamData%Stiffness
+IF (ALLOCATED(SrcParamData%DLL_Stiffness)) THEN
+  i1_l = LBOUND(SrcParamData%DLL_Stiffness,1)
+  i1_u = UBOUND(SrcParamData%DLL_Stiffness,1)
+  i2_l = LBOUND(SrcParamData%DLL_Stiffness,2)
+  i2_u = UBOUND(SrcParamData%DLL_Stiffness,2)
+  i3_l = LBOUND(SrcParamData%DLL_Stiffness,3)
+  i3_u = UBOUND(SrcParamData%DLL_Stiffness,3)
+  IF (.NOT. ALLOCATED(DstParamData%DLL_Stiffness)) THEN 
+    ALLOCATE(DstParamData%DLL_Stiffness(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%DLL_Stiffness.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstParamData%DLL_Stiffness = SrcParamData%DLL_Stiffness
+ENDIF
+    DstParamData%DLL_OnlyStiff = SrcParamData%DLL_OnlyStiff
  END SUBROUTINE SlD_CopyParam
 
  SUBROUTINE SlD_DestroyParam( ParamData, ErrStat, ErrMsg )
@@ -2598,6 +2638,9 @@ ENDDO
 ENDIF
 IF (ALLOCATED(ParamData%Nodes_C)) THEN
   DEALLOCATE(ParamData%Nodes_C)
+ENDIF
+IF (ALLOCATED(ParamData%DLL_Stiffness)) THEN
+  DEALLOCATE(ParamData%DLL_Stiffness)
 ENDIF
  END SUBROUTINE SlD_DestroyParam
 
@@ -2695,6 +2738,12 @@ ENDIF
       Int_BufSz  = Int_BufSz  + SIZE(InData%Nodes_C)  ! Nodes_C
   END IF
       Db_BufSz   = Db_BufSz   + SIZE(InData%Stiffness)  ! Stiffness
+  Int_BufSz   = Int_BufSz   + 1     ! DLL_Stiffness allocated yes/no
+  IF ( ALLOCATED(InData%DLL_Stiffness) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*3  ! DLL_Stiffness upper/lower bounds for each dimension
+      Db_BufSz   = Db_BufSz   + SIZE(InData%DLL_Stiffness)  ! DLL_Stiffness
+  END IF
+      Int_BufSz  = Int_BufSz  + 1  ! DLL_OnlyStiff
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -2841,6 +2890,27 @@ ENDIF
   END IF
       DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%Stiffness))-1 ) = PACK(InData%Stiffness,.TRUE.)
       Db_Xferred   = Db_Xferred   + SIZE(InData%Stiffness)
+  IF ( .NOT. ALLOCATED(InData%DLL_Stiffness) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%DLL_Stiffness,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%DLL_Stiffness,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%DLL_Stiffness,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%DLL_Stiffness,2)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%DLL_Stiffness,3)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%DLL_Stiffness,3)
+    Int_Xferred = Int_Xferred + 2
+
+      IF (SIZE(InData%DLL_Stiffness)>0) DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%DLL_Stiffness))-1 ) = PACK(InData%DLL_Stiffness,.TRUE.)
+      Db_Xferred   = Db_Xferred   + SIZE(InData%DLL_Stiffness)
+  END IF
+      IntKiBuf ( Int_Xferred:Int_Xferred+1-1 ) = TRANSFER( InData%DLL_OnlyStiff , IntKiBuf(1), 1)
+      Int_Xferred   = Int_Xferred   + 1
  END SUBROUTINE SlD_PackParam
 
  SUBROUTINE SlD_UnPackParam( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -2864,6 +2934,7 @@ ENDIF
   LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
+  INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'SlD_UnPackParam'
@@ -3044,6 +3115,37 @@ ENDIF
       OutData%Stiffness = REAL( UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(SIZE(OutData%Stiffness))-1 ), mask2, 0.0_DbKi ), R8Ki)
       Db_Xferred   = Db_Xferred   + SIZE(OutData%Stiffness)
     DEALLOCATE(mask2)
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! DLL_Stiffness not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i3_l = IntKiBuf( Int_Xferred    )
+    i3_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%DLL_Stiffness)) DEALLOCATE(OutData%DLL_Stiffness)
+    ALLOCATE(OutData%DLL_Stiffness(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%DLL_Stiffness.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    ALLOCATE(mask3(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask3.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask3 = .TRUE. 
+      IF (SIZE(OutData%DLL_Stiffness)>0) OutData%DLL_Stiffness = REAL( UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(SIZE(OutData%DLL_Stiffness))-1 ), mask3, 0.0_DbKi ), R8Ki)
+      Db_Xferred   = Db_Xferred   + SIZE(OutData%DLL_Stiffness)
+    DEALLOCATE(mask3)
+  END IF
+      OutData%DLL_OnlyStiff = TRANSFER( IntKiBuf( Int_Xferred ), mask0 )
+      Int_Xferred   = Int_Xferred + 1
  END SUBROUTINE SlD_UnPackParam
 
  SUBROUTINE SlD_CopyInput( SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg )

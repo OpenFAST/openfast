@@ -145,16 +145,12 @@ subroutine SlD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
    call SlD_InitMeshes( InputFileData, InitInp, u, y, p, m, ErrStat2,ErrMsg2);  if (Failed()) return;
 
 
+      ! Setup and initialize the Calc Options
    select case(p%CalcOption)
       case (Calc_StiffDamp)
       case (Calc_PYcurve)
       case (Calc_REDWIN)
-         ! Initialize the dll
-         do j=1,size(m%dll_data)
-            call REDWINinterface_Init( InputFileData%DLL_FileName, InputFileData%DLL_ProcName, p%DLL_Trgt, p%DLL_Model, &
-                  m%dll_data(j), p%UseREDWINinterface, ErrStat2, ErrMsg2); if (Failed()) return;
-         enddo
-!FIXME: add a call here to get the stiffness matrix from REDWIN!!!!
+         call SlD_REDWINsetup( InputFileData,p, m, ErrStat, ErrMsg )
    end select
 
       ! set paramaters for I/O data
@@ -176,6 +172,31 @@ contains
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       Failed =    ErrStat >= AbortErrLev
    end function Failed
+
+   subroutine SlD_REDWINsetup( InputFileData,p, m, ErrStat, ErrMsg )
+      type(SlD_InputFile),    intent(in   )  :: InputFileData  !< Data stored in the module's input file
+      type(SlD_ParameterType),intent(inout)  :: p              !< Parameters 
+      type(SlD_MiscVarType),  intent(inout)  :: m              !< Misc variables for optimization (not copied in glue code)
+      integer(IntKi),         intent(  out)  :: ErrStat
+      character(*),           intent(  out)  :: ErrMsg
+      integer(IntKi)                         :: i              ! Generic counter
+      integer(IntKi)                         :: ErrStat2       !< local error status
+      character(ErrMsgLen)                   :: ErrMsg2        !< local error message
+      real(R8Ki)                             :: NullDispl(6)   !< ignored
+      real(R8Ki)                             :: NullForce(6)   !< ignored
+
+         ! set placeholder for DLL stifness matrices
+      call AllocAry( p%DLL_Stiffness, 6, 6, size(m%dll_data), 'DLL stiffness matrices', ErrStat2, ErrMsg2 ); if (Failed()) return;
+
+         ! Initialize the dll
+      do i=1,size(m%dll_data)
+         call REDWINinterface_Init( InputFileData%DLL_FileName, InputFileData%DLL_ProcName, p%DLL_Trgt, p%DLL_Model, &
+               m%dll_data(i), p%UseREDWINinterface, ErrStat2, ErrMsg2); if (Failed()) return;
+         NullDispl = 0.0_R8Ki
+         NullForce = 0.0_ReKi
+         call REDWINinterface_GetStiffMatrix( p%DLL_Trgt, p%DLL_Model, NullDispl, NullForce, p%DLL_StiffNess(1:6,1:6,i), m%dll_data(i), ErrStat2, ErrMsg2 ); if (Failed()) return;
+      enddo
+   end subroutine SlD_REDWINsetup
 
    !> Allocate arrays for storing the DLL input file names, and check that they exist. The DLL has no error checking (as of 2020.02.10)
    !! and will create empty input files before segfaulting.
@@ -455,7 +476,6 @@ subroutine SlD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg,
    integer(IntKi)                                     :: i           !< generic counter
    logical                                            :: LargeAnglePossible
    logical                                            :: TimeStepRecalc
-   logical                                            :: firstcall
 
       ! Initialize ErrStat
    ErrStat = ErrID_None
@@ -467,8 +487,7 @@ subroutine SlD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg,
       LargeAnglePossible = .false.
    endif
 
-firstcall=.false.
-if(m%PrevTime < 0.0_DbKi) firstcall=.true.
+
       ! Are we recalculating a previous timestep (like correction step?)
    if (T > m%PrevTime) then
       TimeStepRecalc = .FALSE.
@@ -504,19 +523,17 @@ if(m%PrevTime < 0.0_DbKi) firstcall=.true.
       case (Calc_REDWIN)
             ! call the dll
          do i=1,size(m%dll_data)
-if(firstcall)  m%dll_dataPREV(i) = m%dll_data(i)
                ! reset old states if recalc
             if (TimeStepRecalc) then
                m%dll_data(i) = m%dll_dataPREV(i)
             endif
-Displacement = 0.0_R8Ki
-               call REDWINinterface_GetStiffMatrix( p%DLL_Trgt, p%DLL_Model, Displacement, Force, StiffMatrix, m%dll_data(i), ErrStat2, ErrMsg2 ); if (Failed()) return;
   
             ! Copy displacement from point mesh (angles in radians -- REDWIN dll also uses rad)
             Displacement(1:3) = u%SoilMesh%TranslationDisp(1:3,i)                 ! Translations -- This is R8Ki in the mesh
             if (p%DLL_Model == 2)   Displacement(3) = 0.0_R8Ki
 
-            if (LargeAnglePossible) then
+               ! If we are have a large input angle, or requested only using stiffness matrices in the calculation
+            if (LargeAnglePossible .or. p%DLL_OnlyStiff) then
 
                Displacement(4:6) = EulerExtract(u%SoilMesh%Orientation(1:3,1:3,i))                    ! Perturbations only use one angle at a time.
                if (p%DLL_Model == 2)   Displacement(6) = 0.0_R8Ki
@@ -543,12 +560,8 @@ Displacement = 0.0_R8Ki
             endif
 
             ! Return reaction force onto the resulting point mesh
-            y%SoilMesh%Force (1,i)  =  -real(Force(1),ReKi)
-            y%SoilMesh%Force (2,i)  =  -real(Force(2),ReKi)
-            y%SoilMesh%Force (3,i)  =  -real(Force(3),ReKi)
-            y%SoilMesh%Moment(1,i)  =  -real(Force(4),ReKi)
-            y%SoilMesh%Moment(2,i)  =  -real(Force(5),ReKi)
-            y%SoilMesh%Moment(3,i)  =  -real(Force(6),ReKi)
+            y%SoilMesh%Force (1:3,i)  =  -real(Force(1:3),ReKi)
+            y%SoilMesh%Moment(1:3,i)  =  -real(Force(4:6),ReKi)
          enddo
    end select
 

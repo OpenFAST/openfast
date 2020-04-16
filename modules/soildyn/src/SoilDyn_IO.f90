@@ -224,6 +224,7 @@ subroutine SlD_ReadInput( InputFileName, EchoFileName, InputFileData, ErrStat, E
    character(ErrMsgLen)                               :: TmpErrMsg            !< Temporary error message
    character(1024)                                    :: PriPath              !< Path name of the primary file
    character(*),                       PARAMETER      :: RoutineName="SlD_ReadInput"
+   character(2)                                       :: TmpChar2             !< temporary character string length 2
 
 
       ! Initialize local data
@@ -359,9 +360,14 @@ subroutine SlD_ReadInput( InputFileName, EchoFileName, InputFileData, ErrStat, E
 
 
    call ReadCom( UnitInput, InputFileName, 'SoilDyn input file separator line',  TmpErrStat, TmpErrMsg, UnitEcho );   if (Failed()) return;
-   call ReadVar( UnitInput, InputFileName, InputFileData%DLL_model,     "DLL_model",     "REDWIN DLL to use",        TmpErrStat, TmpErrMsg, UnitEcho );  if (Failed()) return;
-   call ReadVar( UnitInput, InputFileName, InputFileData%DLL_FileName,  "DLL_FileName",  "REDWIN DLL model used",    TmpErrStat, TmpErrMsg, UnitEcho );  if (Failed()) return;
-   call ReadVar( UnitInput, InputFileName, InputFileData%DLL_NumPoints, "DLL_NumPoints", "Number of DLL interfaces", TmpErrStat, TmpErrMsg, UnitEcho );  if (Failed()) return;
+
+!FIXME: parse out the 's' option.
+      ! DLL model, and optionally only use stiffness matrix in response calcs
+   call ReadVar( UnitInput, InputFileName, InputFileData%DLL_modelChr,  "DLL_Model",      "REDWIN DLL model to use",    TmpErrStat, TmpErrMsg, UnitEcho );  if (Failed()) return;
+   call Conv2UC( TmpChar2 )    ! Convert Line to upper case.
+
+   call ReadVar( UnitInput, InputFileName, InputFileData%DLL_FileName,  "DLL_FileName",   "REDWIN DLL model used",      TmpErrStat, TmpErrMsg, UnitEcho );  if (Failed()) return;
+   call ReadVar( UnitInput, InputFileName, InputFileData%DLL_NumPoints, "DLL_NumPoints",  "Number of DLL interfaces",   TmpErrStat, TmpErrMsg, UnitEcho );  if (Failed()) return;
 
       ! Allocate arrays to hold the information that will be read in next
    allocate( InputFileData%DLL_locations(3,InputFileData%DLL_NumPoints), STAT=TmpErrStat )
@@ -461,10 +467,11 @@ SUBROUTINE SlD_ValidateInput( InitInp, InputFileData, ErrStat, ErrMsg )
    TYPE(SlD_InputFile),                INTENT(INOUT)  :: InputFileData        !< The data for initialization
    INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat              !< Error status  from this subroutine
    CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg               !< Error message from this subroutine
-   INTEGER(IntKi)                                     :: TmpErrStat           !< Temporary error status  for subroutine and function calls
-   CHARACTER(ErrMsgLen)                               :: TmpErrMsg            !< Temporary error message for subroutine and function calls
+   INTEGER(IntKi)                                     :: ErrStat2             !< Temporary error status  for subroutine and function calls
+   CHARACTER(ErrMsgLen)                               :: ErrMsg2              !< Temporary error message for subroutine and function calls
    INTEGER(IntKi)                                     :: I                    !< Generic counter
    CHARACTER(*),                       PARAMETER      :: RoutineName="SlD_ValidateInput"
+   integer(IntKi)                                     :: IOS                  !< Temporary error status
 
       ! Initialize ErrStat
    ErrStat = ErrID_None
@@ -481,7 +488,25 @@ CONTAINS
    end subroutine ValidatePYcurves
 
    subroutine ValidateDLL()
-      ! Placeholder
+      ! Check the model
+      read( InputFileData%DLL_modelChr(1:1), *, IOSTAT=IOS ) InputFileData%DLL_model
+         call CheckIOS ( IOS, "", 'DLL_model', NumType, ErrStat2, ErrMsg2 )
+         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+         if ( ErrStat >= AbortErrLev ) return
+      if ( InputFileData%DLL_model > 3 .or. InputFileData%DLL_model < 1 ) then
+         call SetErrStat( ErrID_Fatal,' DLL_Model must be 1, 2, or 3', ErrStat,ErrMsg,RoutineName)
+         if ( ErrStat >= AbortErrLev ) return
+      endif
+      InputFileData%DLL_OnlyStiff = .false.
+      if (LEN_TRIM(InputFileData%DLL_modelChr) > 1 ) then
+         if ( InputFileData%DLL_modelChr(2:2) == 'S' ) then
+            InputFileData%DLL_OnlyStiff = .true.
+            call SetErrStat( ErrID_Info, ' Using only the stiffness matrices from the REDWIN DLL', ErrStat,ErrMsg,RoutineName )
+         else
+            call SetErrStat( ErrID_Fatal, ' Unknown option '''//InputFileData%DLL_modelChr(2:2)//''' on the DLL_model', ErrStat,ErrMsg,RoutineName)
+         endif
+      endif
+
    end subroutine ValidateDLL
 
 END SUBROUTINE SlD_ValidateInput

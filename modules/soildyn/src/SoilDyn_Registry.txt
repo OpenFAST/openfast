@@ -49,6 +49,7 @@ typedef  ^    SlD_InputFile   IntKi                PY_numpoints   -   -   -   "N
 typedef  ^    SlD_InputFile   ReKi                 PY_locations   ::  -   -   "P-Y curve location points for mesh"                     '(m)'
 typedef  ^    SlD_InputFile   character(1024)      PY_inputFile   :   -   -   "Input file with P-Y curve data"                         - 
 typedef  ^    SlD_InputFile   IntKi                DLL_model      -   -   -   "REDWIN DLL model type to use"                           -
+typedef  ^    SlD_InputFile   CHARACTER(2)         DLL_modelChr   -   -   -   "REDWIN DLL model type to use - character string"        -
 typedef  ^    SlD_InputFile   CHARACTER(1024)      DLL_FileName   -   -   -   "Name of the DLL file including the full path"           -
 typedef  ^    SlD_InputFile   CHARACTER(1024)      DLL_ProcName   -   -   -   "Name of the procedure in the DLL that will be called"   -
 typedef  ^    SlD_InputFile   IntKi                DLL_numpoints  -   -   -   "Number of points to interface to DLL"                   -
@@ -57,6 +58,7 @@ typedef  ^    SlD_InputFile   CHARACTER(1024)      DLL_PROPSFILE  :   -   -   "N
 typedef  ^    SlD_InputFile   CHARACTER(1024)      DLL_LDISPFILE  :   -   -   "Name of LDISPFILE input file used in DLL"               -
 typedef  ^    SlD_InputFile   LOGICAL              SumPrint       -   -   -   "Print summary information to file (.SlD.sum)"           -
 typedef  ^    SlD_InputFile   IntKi                NumOuts        -   -   -   "Number of outputs requested"                            -
+typedef  ^    SlD_InputFile   logical              DLL_OnlyStiff  -   -   -   "use only the DLL stiffness matrices in calculating response" -
 
 # ..... Initialization data .......................................................................................................
 # Define inputs that the initialization routine may need here:
@@ -129,6 +131,8 @@ typedef  ^              ParameterType     ReKi              WtrDepth            
 typedef  ^              ParameterType     IntKi             Nodes_C         {:}{:} - - "Nodes in input mesh that reaction force may be applied to" '(-)'
 typedef  ^              ParameterType     R8Ki              Stiffness       {6}{6} - - "Stiffness matrix" '(N/m, N-m/rad)'
 #typedef  ^              ParameterType     R8Ki              Damping         {6}{6} - - "Damping matrix" '(N/m, N-m/rad)'
+typedef  ^              ParameterType     R8Ki              DLL_Stiffness {:}{:}{:} - - "Stiffness matrices from REDWIN DLL" '(N/m, N-m/rad)'
+typedef  ^              ParameterType     logical           DLL_OnlyStiff        - - - "Use only the stiffness matrix in calculating the restoring forces" -
 
 # ..... Inputs ....................................................................................................................
 typedef  ^              InputType         MeshType          SoilMesh             - - - "Mesh of soil contact points" -
