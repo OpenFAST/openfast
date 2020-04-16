@@ -25,8 +25,8 @@ MODULE HydroDyn_Input
    USE                              HydroDyn_Types
    USE                              HydroDyn_Output
    USE                              Waves
-   USE                              Morison
    USE                              Waves2_Output
+   USE                              Morison
    USE                              Morison_Output
    IMPLICIT                         NONE
 
@@ -1374,7 +1374,7 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, ErrStat, ErrMsg )
          READ(UnIn,'(A)',IOSTAT=ErrStat2) Line      !read into a line
 
          IF (ErrStat2 == 0) THEN
-            READ(Line,*,IOSTAT=ErrStat2) InitInp%Morison%InpJoints(I)%JointID, InitInp%Morison%InpJoints(I)%JointPos(1), InitInp%Morison%InpJoints(I)%JointPos(2), InitInp%Morison%InpJoints(I)%JointPos(3), InitInp%Morison%InpJoints(I)%JointAxID, InitInp%Morison%InpJoints(I)%JointOvrlp
+            READ(Line,*,IOSTAT=ErrStat2) InitInp%Morison%InpJoints(I)%JointID, InitInp%Morison%InpJoints(I)%Position(1), InitInp%Morison%InpJoints(I)%Position(2), InitInp%Morison%InpJoints(I)%Position(3), InitInp%Morison%InpJoints(I)%JointAxID, InitInp%Morison%InpJoints(I)%JointOvrlp
          END IF
 
          IF ( ErrStat2 /= 0 ) THEN
@@ -1515,7 +1515,7 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, ErrStat, ErrMsg )
    READ(UnIn,'(A)',IOSTAT=ErrStat2) Line      !read into a line
 
    IF (ErrStat2 == 0) THEN
-      READ(Line,*,IOSTAT=ErrStat2) InitInp%Morison%SimplCd, InitInp%Morison%SimplCdMG, InitInp%Morison%SimplCa, InitInp%Morison%SimplCaMG, InitInp%Morison%SimplCp, InitInp%Morison%SimplCpMG, InitInp%Morison%SimplAxCa, InitInp%Morison%SimplAxCaMG, InitInp%Morison%SimplAxCp, InitInp%Morison%SimplAxCpMG
+      READ(Line,*,IOSTAT=ErrStat2) InitInp%Morison%SimplCd, InitInp%Morison%SimplCdMG, InitInp%Morison%SimplCa, InitInp%Morison%SimplCaMG, InitInp%Morison%SimplCp, InitInp%Morison%SimplCpMG, InitInp%Morison%SimplAxCd, InitInp%Morison%SimplAxCdMG, InitInp%Morison%SimplAxCa, InitInp%Morison%SimplAxCaMG, InitInp%Morison%SimplAxCp, InitInp%Morison%SimplAxCpMG
    END IF
 
    IF ( ErrStat2 /= 0 ) THEN
@@ -1597,7 +1597,8 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, ErrStat, ErrMsg )
          IF (ErrStat2 == 0) THEN
             READ(Line,*,IOSTAT=ErrStat2) InitInp%Morison%CoefDpths(I)%Dpth, InitInp%Morison%CoefDpths(I)%DpthCd, InitInp%Morison%CoefDpths(I)%DpthCdMG, &
                                          InitInp%Morison%CoefDpths(I)%DpthCa, InitInp%Morison%CoefDpths(I)%DpthCaMG, InitInp%Morison%CoefDpths(I)%DpthCp, InitInp%Morison%CoefDpths(I)%DpthCpMG, &
-                                         InitInp%Morison%CoefDpths(I)%DpthAxCa, InitInp%Morison%CoefDpths(I)%DpthAxCaMG, InitInp%Morison%CoefDpths(I)%DpthAxCp, InitInp%Morison%CoefDpths(I)%DpthAxCpMG
+                                         InitInp%Morison%CoefDpths(I)%DpthAxCd, InitInp%Morison%CoefDpths(I)%DpthAxCdMG, InitInp%Morison%CoefDpths(I)%DpthAxCa, &
+                                         InitInp%Morison%CoefDpths(I)%DpthAxCaMG, InitInp%Morison%CoefDpths(I)%DpthAxCp, InitInp%Morison%CoefDpths(I)%DpthAxCpMG
          END IF
 
          IF (ErrStat2 /= 0) THEN
@@ -1687,6 +1688,8 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, ErrStat, ErrMsg )
                                          InitInp%Morison%CoefMembers(I)%MemberCaMG1,   InitInp%Morison%CoefMembers(I)%MemberCaMG2,   &
                                          InitInp%Morison%CoefMembers(I)%MemberCp1,     InitInp%Morison%CoefMembers(I)%MemberCp2,     &
                                          InitInp%Morison%CoefMembers(I)%MemberCpMG1,   InitInp%Morison%CoefMembers(I)%MemberCpMG2,   &
+                                         InitInp%Morison%CoefMembers(I)%MemberAxCd1,   InitInp%Morison%CoefMembers(I)%MemberAxCd2,   &
+                                         InitInp%Morison%CoefMembers(I)%MemberAxCdMG1, InitInp%Morison%CoefMembers(I)%MemberAxCdMG2, &
                                          InitInp%Morison%CoefMembers(I)%MemberAxCa1,   InitInp%Morison%CoefMembers(I)%MemberAxCa2,   &
                                          InitInp%Morison%CoefMembers(I)%MemberAxCaMG1, InitInp%Morison%CoefMembers(I)%MemberAxCaMG2, &
                                          InitInp%Morison%CoefMembers(I)%MemberAxCp1,   InitInp%Morison%CoefMembers(I)%MemberAxCp2,   &
@@ -2379,7 +2382,10 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
 
 
       ! WtrDpth - Water depth
-
+   
+   ! First adjust water depth based on MSL2SWL values
+   InitInp%Morison%WtrDpth = InitInp%Morison%WtrDpth + InitInp%Morison%MSL2SWL
+   
    IF ( InitInp%Morison%WtrDpth <= 0.0 )  THEN
       CALL SetErrStat( ErrID_Fatal,'WtrDpth must be greater than zero.',ErrStat,ErrMsg,RoutineName)
       RETURN
@@ -3415,7 +3421,8 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
 
 
       ! Check JointOvrlp values
-   InitInp%Morison%TotalPossibleSuperMembers = 0
+  !NOTE: This is ignored in the current version of Morison.  3/15/2020 GJH
+  ! InitInp%Morison%TotalPossibleSuperMembers = 0
    
    IF ( InitInp%Morison%NJoints > 1 ) THEN
 
@@ -3438,9 +3445,9 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
          END DO
 
             ! Add up total number of joints flagged with JoinOvrlp = 1 option
-         IF ( InitInp%Morison%InpJoints(I)%JointOvrlp == 1 ) THEN
-            InitInp%Morison%TotalPossibleSuperMembers = InitInp%Morison%TotalPossibleSuperMembers + 1
-         END IF
+         !IF ( InitInp%Morison%InpJoints(I)%JointOvrlp == 1 ) THEN
+         !   InitInp%Morison%TotalPossibleSuperMembers = InitInp%Morison%TotalPossibleSuperMembers + 1
+         !END IF
 
             ! Check that every joint id is used at least once in the members table
          JointUsed = .FALSE.
@@ -3541,15 +3548,23 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
       CALL SetErrStat( ErrID_Fatal,'SimplCaMG must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
       RETURN
    END IF
+   IF ( InitInp%Morison%SimplAxCd < 0 ) THEN
+      CALL SetErrStat( ErrID_Fatal,'SimplAxCd must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
+      RETURN
+   END IF
+   IF ( InitInp%Morison%SimplAxCdMG < 0 ) THEN
+      CALL SetErrStat( ErrID_Fatal,'SimplAxCdMG must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
+      RETURN
+   END IF
    IF ( InitInp%Morison%SimplAxCa < 0 ) THEN
-      CALL SetErrStat( ErrID_Fatal,'SimplCa must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
+      CALL SetErrStat( ErrID_Fatal,'SimplAxCa must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
       RETURN
    END IF
    IF ( InitInp%Morison%SimplAxCaMG < 0 ) THEN
-      CALL SetErrStat( ErrID_Fatal,'SimplCaMG must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
+      CALL SetErrStat( ErrID_Fatal,'SimplAxCaMG must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
       RETURN
    END IF
-
+   !TODO: Do we need a test for AxCp
 
    !-------------------------------------------------------------------------------------------------
    ! Depth-based Hydrodynamic Coefficients Section
@@ -3600,6 +3615,14 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
          END IF
          IF ( InitInp%Morison%CoefDpths(I)%DpthCaMG < 0 ) THEN
             CALL SetErrStat( ErrID_Fatal,'In the Depth-based hydrodynamic coefficients table, DpthCaMG must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
+            RETURN
+         END IF
+         IF ( InitInp%Morison%CoefDpths(I)%DpthAxCd < 0 ) THEN 
+            CALL SetErrStat( ErrID_Fatal,'In the Depth-based hydrodynamic coefficients table, DpthAxCd must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
+            RETURN
+         END IF
+         IF ( InitInp%Morison%CoefDpths(I)%DpthAxCdMG < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the Depth-based hydrodynamic coefficients table, DpthAxCdMG must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
             RETURN
          END IF
          IF ( InitInp%Morison%CoefDpths(I)%DpthAxCa < 0 ) THEN 
@@ -3720,8 +3743,6 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
          InitInp%Morison%InpMembers(I)%MPropSetID2Indx  = -1
          InitInp%Morison%InpMembers(I)%MmbrFilledIDIndx = -1
          InitInp%Morison%InpMembers(I)%MmbrCoefIDIndx   = -1
-         InitInp%Morison%InpMembers(I)%NumSplits        = 0
-         InitInp%Morison%InpMembers(I)%Splits           = 0.0_ReKi
       END DO
 
       DO I = 1,InitInp%Morison%NMembers
@@ -3744,7 +3765,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
             IF ( InitInp%Morison%InpMembers(I)%MJointID2 == InitInp%Morison%InpJoints(J)%JointID ) THEN
                InitInp%Morison%InpMembers(I)%MJointID2Indx = J
                InitInp%Morison%InpJoints(J)%NConnections = InitInp%Morison%InpJoints(J)%NConnections + 1
-               InitInp%Morison%InpJoints(J)%ConnectionList(InitInp%Morison%InpJoints(J)%NConnections) = I
+               InitInp%Morison%InpJoints(J)%ConnectionList(InitInp%Morison%InpJoints(J)%NConnections) = -I !TODO: Come up with a better method for this work GJH 4/6/20
             END IF
          END DO
          
@@ -3759,7 +3780,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
          END IF
 
             ! Make sure we do not have any zero length members
-         lvec = InitInp%Morison%InpJoints(InitInp%Morison%InpMembers(I)%MJointID1Indx)%JointPos - InitInp%Morison%InpJoints(InitInp%Morison%InpMembers(I)%MJointID2Indx)%JointPos
+         lvec = InitInp%Morison%InpJoints(InitInp%Morison%InpMembers(I)%MJointID1Indx)%Position - InitInp%Morison%InpJoints(InitInp%Morison%InpMembers(I)%MJointID2Indx)%Position
          l = sqrt( lvec(1)*lvec(1) + lvec(2)*lvec(2) + lvec(3)*lvec(3) )
          IF ( EqualRealNos(0.0_ReKi, l) ) THEN
             CALL SetErrStat( ErrID_Fatal,'A member cannot have zero length.',ErrStat,ErrMsg,RoutineName)
@@ -3810,8 +3831,8 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
             END IF
                ! We will not extrapolate depth-based coefficient values, so make sure that the depth-based table has values that are outside the depth range of this member
                ! NOTE: This is actually potentially overly conservative because the final member may be shorter due to joint overlap handling.
-            z1 = InitInp%Morison%InpJoints( InitInp%Morison%InpMembers(I)%MJointID1Indx )%JointPos(3)
-            z2 = InitInp%Morison%InpJoints( InitInp%Morison%InpMembers(I)%MJointID2Indx )%JointPos(3)
+            z1 = InitInp%Morison%InpJoints( InitInp%Morison%InpMembers(I)%MJointID1Indx )%Position(3)
+            z2 = InitInp%Morison%InpJoints( InitInp%Morison%InpMembers(I)%MJointID2Indx )%Position(3)
             MinMembrDpth = min( z1, z2 )
             MaxMembrDpth = max( z1, z2 )
             IF ( ( MinMembrDpth < MinDepth ) .OR. ( MaxMembrDpth > MaxDepth ) ) THEN
@@ -4043,7 +4064,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
             END IF 
          END DO
          
-            ! Make sure that a PropSetID entry in the Member cross-section properties table was found
+            ! Make sure that a Joint Output ID found in the JOutLst is in the Joints table
          IF ( InitInp%Morison%JOutLst(I)%JointIDIndx == -1 ) THEN
             CALL SetErrStat( ErrID_Fatal,'JointID in the Joint output list table does not appear in the Joints table.',ErrStat,ErrMsg,RoutineName)
             RETURN
@@ -4146,14 +4167,14 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
 
       ! Current
          ! For wave kinematic calculations, the effective water depth is the user input water depth (positive valued) + MSL2SWL (positive when SWL is above MSL).
-      InitInp%Current%WtrDpth    = InitInp%Morison%WtrDpth + InitInp%Morison%MSL2SWL ! Adjust for the MSL2SWL.  
+      InitInp%Current%WtrDpth    = InitInp%Morison%WtrDpth ! already adjusted for the MSL2SWL.  
                                                        
       
       ! Waves
       InitInp%Waves%Gravity      = InitInp%Gravity
       InitInp%Waves%UnSum        = InitInp%UnSum
          ! For wave kinematic calculations, the effective water depth is the user input water depth (positive valued) + MSL2SWL (positive when SWL is above MSL).
-      InitInp%Waves%WtrDpth      = InitInp%Morison%WtrDpth + InitInp%Morison%MSL2SWL ! Adjust for the MSL2SWL
+      InitInp%Waves%WtrDpth      = InitInp%Morison%WtrDpth ! already adjusted for the MSL2SWL.
       
       ! Waves2
       IF (InitInp%Waves2%WvDiffQTFF .OR. InitInp%Waves2%WvSumQTFF ) THEN
@@ -4188,7 +4209,8 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
       InitInp%Morison%OutAll     = InitInp%OutAll
 
          ! Process the input geometry and generate the simulation mesh representation
-      CALL Morison_ProcessMorisonGeometry( InitInp%Morison, ErrStat2, ErrMsg2 )
+      call Morison_GenerateSimulationNodes( InitInp%Morison%MSL2SWL, InitInp%Morison%NJoints, InitInp%Morison%InpJoints, InitInp%Morison%NMembers, InitInp%Morison%InpMembers, InitInp%Morison%NNodes, InitInp%Morison%Nodes, errStat2, errMsg2 )
+      !CALL Morison_ProcessMorisonGeometry( InitInp%Morison, ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
@@ -4222,9 +4244,9 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
          RETURN
       END IF
       DO I=1,InitInp%Morison%NNodes
-         InitInp%Waves%WaveKinxi(I)      = InitInp%Morison%Nodes(I)%JointPos(1)                          ! xi-coordinates for points where the incident wave kinematics will be computed;
-         InitInp%Waves%WaveKinyi(I)      = InitInp%Morison%Nodes(I)%JointPos(2)                          ! yi-coordinates for points where the incident wave kinematics will be computed;
-         InitInp%Waves%WaveKinzi(I)      = InitInp%Morison%Nodes(I)%JointPos(3) - InitInp%Morison%MSL2SWL   ! zi-coordinates for points where the incident wave kinematics will be computed, adjusted to the still water level(meters)     
+         InitInp%Waves%WaveKinxi(I)      = InitInp%Morison%Nodes(I)%Position(1)   ! xi-coordinates for points where the incident wave kinematics will be computed;
+         InitInp%Waves%WaveKinyi(I)      = InitInp%Morison%Nodes(I)%Position(2)   ! yi-coordinates for points where the incident wave kinematics will be computed;
+         InitInp%Waves%WaveKinzi(I)      = InitInp%Morison%Nodes(I)%Position(3)   ! zi-coordinates for points where the incident wave kinematics will be computed; 
          InitInp%Current%MorisonNodezi(I) = InitInp%Waves%WaveKinzi(I)
       END DO
 

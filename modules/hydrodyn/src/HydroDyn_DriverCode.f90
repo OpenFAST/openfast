@@ -401,47 +401,29 @@ PROGRAM HydroDynDriver
    END IF
      
    IF ( drvrInitInp%MorisonInputsMod /= 2 ) THEN
-      IF ( u(1)%Morison%DistribMesh%Initialized ) THEN
-         u(1)%Morison%DistribMesh%TranslationDisp(1,:)   = drvrInitInp%uMorisonInSteady(1) 
-         u(1)%Morison%DistribMesh%TranslationDisp(2,:)   = drvrInitInp%uMorisonInSteady(2) 
-         u(1)%Morison%DistribMesh%TranslationDisp(3,:)   = drvrInitInp%uMorisonInSteady(3) 
+      IF ( u(1)%Morison%Mesh%Initialized ) THEN
+         u(1)%Morison%Mesh%TranslationDisp(1,:)   = drvrInitInp%uMorisonInSteady(1) 
+         u(1)%Morison%Mesh%TranslationDisp(2,:)   = drvrInitInp%uMorisonInSteady(2) 
+         u(1)%Morison%Mesh%TranslationDisp(3,:)   = drvrInitInp%uMorisonInSteady(3) 
                       
             ! Compute direction cosine matrix from the rotation angles
          CALL SmllRotTrans( 'InputRotation', REAL(drvrInitInp%uMorisonInSteady(4),ReKi), REAL(drvrInitInp%uMorisonInSteady(5),ReKi), REAL(drvrInitInp%uMorisonInSteady(6),ReKi), dcm, 'Junk', ErrStat, ErrMsg )            
-         DO I = 1, u(1)%Morison%DistribMesh%nNodes
-            u(1)%Morison%DistribMesh%Orientation(:,:,I)  = dcm 
+         DO I = 1, u(1)%Morison%Mesh%nNodes
+            u(1)%Morison%Mesh%Orientation(:,:,I)  = dcm 
          END DO
          
-         u(1)%Morison%DistribMesh%TranslationVel(1,:)    = drvrInitInp%uDotMorisonInSteady(1)
-         u(1)%Morison%DistribMesh%TranslationVel(2,:)    = drvrInitInp%uDotMorisonInSteady(2)
-         u(1)%Morison%DistribMesh%TranslationVel(3,:)    = drvrInitInp%uDotMorisonInSteady(3)
-         u(1)%Morison%DistribMesh%RotationVel(1,:)       = drvrInitInp%uDotMorisonInSteady(4) 
-         u(1)%Morison%DistribMesh%RotationVel(2,:)       = drvrInitInp%uDotMorisonInSteady(5) 
-         u(1)%Morison%DistribMesh%RotationVel(3,:)       = drvrInitInp%uDotMorisonInSteady(6) 
-         u(1)%Morison%DistribMesh%TranslationAcc(1,:)    = drvrInitInp%uDotDotMorisonInSteady(1)
-         u(1)%Morison%DistribMesh%TranslationAcc(2,:)    = drvrInitInp%uDotDotMorisonInSteady(2)
-         u(1)%Morison%DistribMesh%TranslationAcc(3,:)    = drvrInitInp%uDotDotMorisonInSteady(3)
-         u(1)%Morison%DistribMesh%RotationAcc(1,:)       = drvrInitInp%uDotDotMorisonInSteady(4) 
-         u(1)%Morison%DistribMesh%RotationAcc(2,:)       = drvrInitInp%uDotDotMorisonInSteady(5) 
-         u(1)%Morison%DistribMesh%RotationAcc(3,:)       = drvrInitInp%uDotDotMorisonInSteady(6) 
-      END IF
-      IF ( u(1)%Morison%LumpedMesh%Initialized ) THEN
-         DO I = 1, u(1)%Morison%LumpedMesh%nNodes
-            u(1)%Morison%LumpedMesh%Orientation(:,:,I)   = dcm 
-         END DO
-         u(1)%Morison%LumpedMesh%TranslationVel(1,:)    = drvrInitInp%uDotMorisonInSteady(1)
-         u(1)%Morison%LumpedMesh%TranslationVel(2,:)    = drvrInitInp%uDotMorisonInSteady(2)
-         u(1)%Morison%LumpedMesh%TranslationVel(3,:)    = drvrInitInp%uDotMorisonInSteady(3)
-         u(1)%Morison%LumpedMesh%RotationVel(1,:)       = drvrInitInp%uDotMorisonInSteady(4) 
-         u(1)%Morison%LumpedMesh%RotationVel(2,:)       = drvrInitInp%uDotMorisonInSteady(5) 
-         u(1)%Morison%LumpedMesh%RotationVel(3,:)       = drvrInitInp%uDotMorisonInSteady(6) 
-         u(1)%Morison%LumpedMesh%TranslationAcc(1,:)    = drvrInitInp%uDotDotMorisonInSteady(1)
-         u(1)%Morison%LumpedMesh%TranslationAcc(2,:)    = drvrInitInp%uDotDotMorisonInSteady(2)
-         u(1)%Morison%LumpedMesh%TranslationAcc(3,:)    = drvrInitInp%uDotDotMorisonInSteady(3)
-         u(1)%Morison%LumpedMesh%RotationAcc(1,:)       = drvrInitInp%uDotDotMorisonInSteady(4) 
-         u(1)%Morison%LumpedMesh%RotationAcc(2,:)       = drvrInitInp%uDotDotMorisonInSteady(5) 
-         u(1)%Morison%LumpedMesh%RotationAcc(3,:)       = drvrInitInp%uDotDotMorisonInSteady(6) 
-         
+         u(1)%Morison%Mesh%TranslationVel(1,:)    = drvrInitInp%uDotMorisonInSteady(1)
+         u(1)%Morison%Mesh%TranslationVel(2,:)    = drvrInitInp%uDotMorisonInSteady(2)
+         u(1)%Morison%Mesh%TranslationVel(3,:)    = drvrInitInp%uDotMorisonInSteady(3)
+         u(1)%Morison%Mesh%RotationVel(1,:)       = drvrInitInp%uDotMorisonInSteady(4) 
+         u(1)%Morison%Mesh%RotationVel(2,:)       = drvrInitInp%uDotMorisonInSteady(5) 
+         u(1)%Morison%Mesh%RotationVel(3,:)       = drvrInitInp%uDotMorisonInSteady(6) 
+         u(1)%Morison%Mesh%TranslationAcc(1,:)    = drvrInitInp%uDotDotMorisonInSteady(1)
+         u(1)%Morison%Mesh%TranslationAcc(2,:)    = drvrInitInp%uDotDotMorisonInSteady(2)
+         u(1)%Morison%Mesh%TranslationAcc(3,:)    = drvrInitInp%uDotDotMorisonInSteady(3)
+         u(1)%Morison%Mesh%RotationAcc(1,:)       = drvrInitInp%uDotDotMorisonInSteady(4) 
+         u(1)%Morison%Mesh%RotationAcc(2,:)       = drvrInitInp%uDotDotMorisonInSteady(5) 
+         u(1)%Morison%Mesh%RotationAcc(3,:)       = drvrInitInp%uDotDotMorisonInSteady(6) 
       END IF
    END IF
    
@@ -460,8 +442,8 @@ PROGRAM HydroDynDriver
       
          ! Modify u (likely from the outputs of another module or a set of test conditions) here:
          
-      IF ( u(1)%WAMITMesh%Initialized ) THEN 
-	  
+      IF ( u(1)%WAMITMesh%Initialized ) THEN
+
          ! WAMITInputsMod 2: Reads time series of positions, velocities, and accelerations for the platform reference point
          IF ( drvrInitInp%WAMITInputsMod == 2 ) THEN
                                   
@@ -488,8 +470,7 @@ PROGRAM HydroDynDriver
             end if
    
          END IF
-		 
-		 
+         
           !@mhall: new kinematics input for moving bodies individually
           ! WAMITInputsMod < 0: Reads time series of positions for each body individually, and uses finite differences to also get velocities and accelerations.
           ! The number of bodies is the negative of WAMITInputsMod.
@@ -555,12 +536,11 @@ PROGRAM HydroDynDriver
             END IF
              
          END IF
-        !@mhall: end of addition
-		 
+        !@mhall: end of addition		 
          
       END IF  ! ( u(1)%WAMITMesh%Initialized )
       
-      IF ( u(1)%Morison%DistribMesh%Initialized ) THEN
+      IF ( u(1)%Morison%Mesh%Initialized ) THEN
          IF ( drvrInitInp%MorisonInputsMod == 2 ) THEN
                ! Set the Morison Inputs from a time series input file
          END IF

@@ -112,6 +112,7 @@ SUBROUTINE SS_Exc_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
     INTEGER                                :: UnSS                                 ! I/O unit number for the WAMIT output file with the .ss extension; this file contains the state-space matrices.
     INTEGER                                :: Sttus                                ! Error in reading .ssexctn file
     real(ReKi)                             :: WaveDir                              ! Temp wave direction angle (deg)
+    character(3)                           :: bodystr
     integer                                :: ErrStat2
     character(1024)                        :: ErrMsg2
     
@@ -232,8 +233,14 @@ SUBROUTINE SS_Exc_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          ! Allocate Wave-elevation related arrays
       p%NStepWave = InitInp%NStepWave
       allocate ( p%WaveElev0(0:p%NStepWave) , STAT=ErrStat2 )
+      IF (ErrStat2 /= 0) THEN
+         CALL SetErrStat(ErrID_Fatal,'Error allocating p%WaveElev0 array',ErrStat,ErrMsg,'SS_Exc_Init')
+      end if
       allocate ( p%WaveTime (0:p%NStepWave) , STAT=ErrStat2 )
-!TODO: Error Handling
+      IF (ErrStat2 /= 0) THEN
+         CALL SetErrStat(ErrID_Fatal,'Error allocating p%WaveTime array',ErrStat,ErrMsg,'SS_Exc_Init')
+      end if
+      
       IF (ErrStat >= AbortErrLev) THEN
          CALL CleanUp()
          RETURN
@@ -268,20 +275,24 @@ SUBROUTINE SS_Exc_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
    ! no inputs
 
    ! Define system output initializations (set up mesh) here:
-   call AllocAry( y%y, p%NBody*6+1,  'y%y', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Exc_Init')        
-   y%y = 0         
+   call AllocAry( y%y, p%NBody*6,  'y%y', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Exc_Init')        
+   y%y = 0  
+   call AllocAry( y%WriteOutput, 6*p%NBody+1, 'y%WriteOutput', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')
    y%WriteOutput = 0
       
          
    ! Define initialization-routine output here:
+   
    !  For OpenFAST, these outputs are attached (via HydroDyn) to the Radiation Force/Moment channels within HydroDyn
    call AllocAry( InitOut%WriteOutputHdr, 6*p%NBody+1, 'InitOut%WriteOutputHdr', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')
-   call AllocAry( InitOut%WriteOutputUnt, 6*p%NBody+1, 'InitOut%WriteOutputUnt', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')
- !TODO: Create actual NBody ouput headers               
-      !InitOut%WriteOutputHdr = (/ 'Time', 'FX  ' , 'FY  ' , 'FZ  ' , 'MX  ' , 'MY  ' , 'MZ  ' /)
-      !InitOut%WriteOutputUnt = (/ '(s) ', '(N) ' , '(N) ' , '(N) ' , '(Nm)' , '(Nm)' , '(Nm)' /)     
-      
-       
+   call AllocAry( InitOut%WriteOutputUnt, 6*p%NBody+1, 'InitOut%WriteOutputUnt', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')   
+   InitOut%WriteOutputHdr(1) = 'Time'
+   InitOut%WriteOutputUnt(1) = '(s) '
+   do i = 1, p%NBody
+      bodystr = 'B'//trim(num2lstr(i))
+      InitOut%WriteOutputHdr( (i-1)*6+2: (i-1)*6+7 ) = (/ trim(bodystr)//'FX  ' , trim(bodystr)//'FY  ' , trim(bodystr)//'FZ  ' , trim(bodystr)//'MX  ' , trim(bodystr)//'MY  ' , trim(bodystr)//'MZ  ' /)
+      InitOut%WriteOutputUnt( (i-1)*6+2: (i-1)*6+7 ) = (/ '(N) ' , '(N) ' , '(N) ' , '(Nm)' , '(Nm)' , '(Nm)' /)     
+   end do         
    CALL CleanUp() ! deallocate local arrays
 
 CONTAINS

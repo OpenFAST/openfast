@@ -125,7 +125,7 @@ SUBROUTINE SS_Rad_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
     INTEGER                                :: Nlines                               ! Number of lines in the input file, used to determine N
     INTEGER                                :: UnSS                                 ! I/O unit number for the WAMIT output file with the .ss extension; this file contains the state-space matrices.
     INTEGER                                :: Sttus                                ! Error in reading .ss file
-    
+    character(3)                           :: bodystr
     integer                                :: ErrStat2
     character(1024)                        :: ErrMsg2
     
@@ -331,16 +331,21 @@ SUBROUTINE SS_Rad_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
    y%WriteOutput = 0
       
          
-      ! Define initialization-routine output here:
+   ! Define initialization-routine output here:
+   
    ! This output channels are only used by the stand-alone driver program and not by the OpenFAST coupled version.  
    !  For OpenFAST, these outputs are attached (via HydroDyn) to the Radiation Force/Moment channels within HydroDyn
-         ! Define system output initializations (set up mesh) here:
+   
    call AllocAry( InitOut%WriteOutputHdr, 6*p%NBody+1, 'InitOut%WriteOutputHdr', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')
    call AllocAry( InitOut%WriteOutputUnt, 6*p%NBody+1, 'InitOut%WriteOutputUnt', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')
-!TODO: Create actual NBody ouput headers        
-!      InitOut%WriteOutputHdr = (/ 'Time', 'F1  ' , 'F2  ' , 'F3  ' , 'F4  ' , 'F5  ' , 'F6  ' /)
-!      InitOut%WriteOutputUnt = (/ '(s) ', '(N) ' , '(N) ' , '(N) ' , '(Nm)' , '(Nm)' , '(Nm)' /)     
-      
+
+   InitOut%WriteOutputHdr(1) = 'Time'
+   InitOut%WriteOutputUnt(1) = '(s) '
+   do i = 1, p%NBody
+      bodystr = 'B'//trim(num2lstr(i))
+      InitOut%WriteOutputHdr( (i-1)*6+2: (i-1)*6+7 ) = (/ trim(bodystr)//'FX  ' , trim(bodystr)//'FY  ' , trim(bodystr)//'FZ  ' , trim(bodystr)//'MX  ' , trim(bodystr)//'MY  ' , trim(bodystr)//'MZ  ' /)
+      InitOut%WriteOutputUnt( (i-1)*6+2: (i-1)*6+7 ) = (/ '(N) ' , '(N) ' , '(N) ' , '(Nm)' , '(Nm)' , '(Nm)' /)     
+   end do   
       ! If you want to choose your own rate instead of using what the glue code suggests, tell the glue code the rate at which
       !   this module must be called here:
          

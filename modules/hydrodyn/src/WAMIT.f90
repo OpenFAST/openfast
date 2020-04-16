@@ -558,7 +558,6 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
                 !  Indx = 6*( I - 1 ) + J - ( I*( I - 1 ) )/2                                             ! Convert from row/column indices to an index in the format used to save only the upper-triangular portion of the matrix.  NOTE: ( I*( I - 1 ) )/2 = SUM(I,START=1,END=I-1).
                   iSub = mod(I-1,6)+1                                                                    ! Finds the 6x6 sub-matrix indexing for the SttcDim multiplier matrix
                   jSub = mod(J-1,6)+1  
-!TODO need to transform these when PtfmRefztRot is nonzero per plan
                   HdroAddMs(SortFreqInd(K),I,J) = TmpData1*RdtnDim(iSub,jSub)                           ! Redimensionalize the data and place it at the appropriate location within the array
                   HdroDmpng(SortFreqInd(K),I,J) = TmpData2*RdtnDim(iSub,jSub)*HdroFreq(SortFreqInd(K))  ! Redimensionalize the data and place it at the appropriate location within the array
               ! END IF
@@ -998,7 +997,6 @@ end if
                ! Transform the wave excitation coefs
                !====================================
                
- ! TODO: Need to create rotation corrrection for NBODYMOD = 1,3, but do not use Fxy and do not adjust beta (tmpAngle)              
                if ( p%NBodyMod == 2 ) then
                   
                   ! Since NBodyMod = 2, then NBody = 1 for this WAMIT object (this requirement is encoded at the HydroDyn module level)
@@ -1616,6 +1614,11 @@ SUBROUTINE WAMIT_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState
          END IF
          
          DO I=1,nTime
+            ALLOCATE( SS_Rdtn_u(I)%dq(size(m%SS_Rdtn_u%dq)), STAT = ErrStat  )
+            IF (ErrStat /=0) THEN
+               ErrMsg = ' Failed to allocate array SS_Rdtn_u(I)%dq.'
+               RETURN
+            END IF
             do iBody=1,p%NBody
                indxStart = (iBody-1)*6+1 
                SS_Rdtn_u(I)%dq(indxStart:indxStart+2)   = Inputs(I)%Mesh%TranslationVel(:,iBody)

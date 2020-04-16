@@ -27,6 +27,7 @@ MODULE HydroDyn
 
    USE HydroDyn_Types   
    USE NWTC_Library
+   use Morison
    USE WAMIT
    USE WAMIT2
    USE HydroDyn_Input
@@ -1375,43 +1376,25 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
          CALL MOVE_ALLOC( InitLocal%Morison%WaveTime, p%WaveTime  )
          
          
-         IF ( u%Morison%DistribMesh%Committed ) THEN
+         IF ( u%Morison%Mesh%Committed ) THEN
                   ! we need the translation displacement mesh for loads transfer:
-            CALL MeshCopy ( SrcMesh  = u%Morison%DistribMesh            &
-                    , DestMesh = m%MrsnDistribMesh_position   &
+            CALL MeshCopy ( SrcMesh  = u%Morison%Mesh            &
+                    , DestMesh = m%MrsnMesh_position   &
                     , CtrlCode = MESH_NEWCOPY        &
                     , IOS      = COMPONENT_INPUT     &
                     , TranslationDisp = .TRUE.       &
                     , ErrStat  = ErrStat2            &
                     , ErrMess  = ErrMsg2              )  ! automatically sets    DestMesh%RemapFlag = .TRUE.
                     
-               CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDyn_Init:m%MrsnDistribMesh_position')
+               CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDyn_Init:m%MrsnMesh_position')
                IF ( ErrStat >= AbortErrLev ) THEN
                   CALL CleanUp()
                   RETURN
                END IF
-            m%MrsnDistribMesh_position%TranslationDisp = 0.0  ! bjj: this is actually initialized in the ModMesh module, but I'll do it here anyway.
+            m%MrsnMesh_position%TranslationDisp = 0.0  ! bjj: this is actually initialized in the ModMesh module, but I'll do it here anyway.
             
          END IF
          
-         IF ( u%Morison%LumpedMesh%Committed ) THEN
-                  ! we need the translation displacement mesh for loads transfer:
-            CALL MeshCopy ( SrcMesh  = u%Morison%LumpedMesh           &
-                    , DestMesh = m%MrsnLumpedMesh_position   &
-                    , CtrlCode = MESH_NEWCOPY        &
-                    , IOS      = COMPONENT_INPUT     &
-                    , TranslationDisp = .TRUE.       &
-                    , ErrStat  = ErrStat2            &
-                    , ErrMess  = ErrMsg2             )  ! automatically sets    DestMesh%RemapFlag = .TRUE.
-                    
-            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDyn_Init:m%MrsnLumpedMesh_position')
-            IF ( ErrStat >= AbortErrLev ) THEN
-               CALL CleanUp()
-               RETURN
-            END IF
-            m%MrsnLumpedMesh_position%TranslationDisp = 0.0  ! bjj: this is actually initialized in the ModMesh module, but I'll do it here anyway.
-            
-         END IF
             ! Verify that Morison_Init() did not request a different Interval!
       
          IF ( p%DT /= Interval ) THEN
@@ -1642,13 +1625,11 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
          END IF
 
       if ( y%WAMITMesh%Committed ) then 
-         call MeshMapCreate( y%WAMITMesh,           m%AllHdroOrigin, m%HD_MeshMap%W_P_2_PRP_P, ErrStat2, ErrMsg2  );CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         call MeshMapCreate( y%WAMITMesh,    m%AllHdroOrigin, m%HD_MeshMap%W_P_2_PRP_P, ErrStat2, ErrMsg2  );CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       end if
-      IF ( y%Morison%LumpedMesh%Committed ) THEN 
-         CALL MeshMapCreate( y%Morison%LumpedMesh,  m%AllHdroOrigin, m%HD_MeshMap%M_P_2_PRP_P,  ErrStat2, ErrMsg2  );CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      ENDIF
-      IF ( y%Morison%DistribMesh%Committed ) THEN 
-         CALL MeshMapCreate( y%Morison%DistribMesh, m%AllHdroOrigin, m%HD_MeshMap%M_L_2_PRP_P,  ErrStat2, ErrMsg2  );CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      
+      IF ( y%Morison%Mesh%Committed ) THEN 
+         CALL MeshMapCreate( y%Morison%Mesh, m%AllHdroOrigin, m%HD_MeshMap%M_P_2_PRP_P,  ErrStat2, ErrMsg2  );CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       ENDIF
       
       IF ( ErrStat >= AbortErrLev ) THEN
@@ -2172,7 +2153,7 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat,
       
 
 
-      IF ( u%Morison%LumpedMesh%Committed ) THEN  ! Make sure we are using Morison / there is a valid mesh
+      IF ( u%Morison%Mesh%Committed ) THEN  ! Make sure we are using Morison / there is a valid mesh
          CALL Morison_CalcOutput( Time, u%Morison, p%Morison, x%Morison, xd%Morison,  &
                                 z%Morison, OtherState%Morison, y%Morison, m%Morison, ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDyn_CalcOutput' )                  
@@ -2180,7 +2161,7 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat,
       
       
          ! Integrate all the mesh loads onto the platfrom reference Point (PRP) at (0,0,0)
-      m%F_Hydro = CalcLoadsAtWRP( y, u, m%AllHdroOrigin, u%PRPMesh, m%MrsnLumpedMesh_position, m%MrsnDistribMesh_position, m%HD_MeshMap, ErrStat2, ErrMsg2 )
+      m%F_Hydro = CalcLoadsAtWRP( y, u, m%AllHdroOrigin, u%PRPMesh, m%MrsnMesh_position, m%HD_MeshMap, ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDyn_CalcOutput' )                  
       
       
@@ -2344,14 +2325,13 @@ END SUBROUTINE HydroDyn_CalcConstrStateResidual
 
 
 !----------------------------------------------------------------------------------------------------------------------------------
-function CalcLoadsAtWRP( y, u, AllHdroOrigin, PRP_Position, MrsnLumpedMesh_Postion, MrsnDistribMesh_Position, MeshMapData, ErrStat, ErrMsg )
+function CalcLoadsAtWRP( y, u, AllHdroOrigin, PRP_Position,  MrsnMesh_Position, MeshMapData, ErrStat, ErrMsg )
 
    type(HydroDyn_OutputType),  intent(inout)  :: y                        ! Hydrodyn outputs
    type(HydroDyn_InputType),   intent(in   )  :: u                        ! Hydrodyn inputs
    type(MeshType),             intent(inout)  :: AllHdroOrigin            ! This is the mesh which data is mapped onto.  We pass it in to avoid allocating it at each call
    type(MeshType),             intent(inout)  :: PRP_Position             ! These are the kinematics associated the PRP at (0,0,0).  We pass it in to avoid allocating it at each call
-   type(MeshType),             intent(in   )  :: MrsnLumpedMesh_Postion   ! These are the kinematics associated with the Morison lumped loads mesh.  We pass it in to avoid allocating it at each call 
-   type(MeshType),             intent(in   )  :: MrsnDistribMesh_Position ! These are the kinematics associated with the Morison distributed loads mesh.  We pass it in to avoid allocating it at each call
+   type(MeshType),             intent(in   )  :: MrsnMesh_Position        ! These are the kinematics associated with the Morison loads mesh.  We pass it in to avoid allocating it at each call
    type(HD_ModuleMapType),     intent(inout)  :: MeshMapData              ! Mesh mapping data structures 
    integer(IntKi),             intent(  out)  :: ErrStat                  ! Error status of the operation
    character(*),               intent(  out)  :: ErrMsg                   ! Error message if ErrStat /= ErrID_None                                                         
@@ -2375,22 +2355,10 @@ function CalcLoadsAtWRP( y, u, AllHdroOrigin, PRP_Position, MrsnLumpedMesh_Posti
 
    end if      
       
-   if ( y%Morison%LumpedMesh%Committed ) then 
-
-         ! This is viscous drag associate with the WAMIT body and/or filled/flooded forces of the WAMIT body
-
-      call Transfer_Point_to_Point( y%Morison%LumpedMesh, AllHdroOrigin, MeshMapData%M_P_2_PRP_P, ErrStat2, ErrMsg2, MrsnLumpedMesh_Postion, PRP_Position )
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CalcLoadsAtWRP')
-            if (ErrStat >= AbortErrLev) return
-            
-      CalcLoadsAtWRP(1:3)  = CalcLoadsAtWRP(1:3)  + AllHdroOrigin%Force(:,1)
-      CalcLoadsAtWRP(4:6)  = CalcLoadsAtWRP(4:6)  + AllHdroOrigin%Moment(:,1)
-
-   end if
    
-   if ( y%Morison%DistribMesh%Committed ) then 
+   if ( y%Morison%Mesh%Committed ) then 
 
-      call Transfer_Line2_to_Point( y%Morison%DistribMesh, AllHdroOrigin, MeshMapData%M_L_2_PRP_P, ErrStat2, ErrMsg2,  MrsnDistribMesh_Position, PRP_Position )
+      call Transfer_Point_to_Point( y%Morison%Mesh, AllHdroOrigin, MeshMapData%M_P_2_PRP_P, ErrStat2, ErrMsg2,  MrsnMesh_Position, PRP_Position )
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CalcLoadsAtWRP')
             if (ErrStat >= AbortErrLev) return
  
@@ -2939,9 +2907,8 @@ SUBROUTINE HD_Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
    
       ! determine how many outputs there are in the Jacobians      
    p%Jac_ny = 0         
-   if ( y%Morison%DistribMesh%Committed ) then
-      p%Jac_ny = p%Jac_ny + y%Morison%DistribMesh%NNodes * 6    ! 3 Force, Moment, at each node on the distributed loads mesh     
-      p%Jac_ny = p%Jac_ny + y%Morison%LumpedMesh%NNodes * 6     ! 3 Force, Moment, at each node on the lumped loads mesh      
+   if ( y%Morison%Mesh%Committed ) then
+      p%Jac_ny = p%Jac_ny + y%Morison%Mesh%NNodes * 6    ! 3 Force, Moment, at each node on the distributed loads mesh       
    end if
 
    p%Jac_ny = p%Jac_ny + y%WAMITMesh%NNodes * 6                   ! 3 Force, Moment, at the WAMIT reference Point 
@@ -2962,11 +2929,9 @@ SUBROUTINE HD_Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
       
    
    index_next = 1
-   if ( y%Morison%DistribMesh%Committed ) then
+   if ( y%Morison%Mesh%Committed ) then
       index_last = index_next
-      call PackLoadMesh_Names(y%Morison%DistribMesh, 'DistribLoads', InitOut%LinNames_y, index_next)
-      index_last = index_next
-      call PackLoadMesh_Names(y%Morison%LumpedMesh, 'LumpedLoads', InitOut%LinNames_y, index_next)
+      call PackLoadMesh_Names(y%Morison%Mesh, 'MorisonLoads', InitOut%LinNames_y, index_next)
    end if
 
 
@@ -3089,9 +3054,8 @@ SUBROUTINE HD_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
       
       ! determine how many inputs there are in the Jacobians
    nu = 0;
-   if ( u%Morison%DistribMesh%Committed ) then
-      nu = nu + u%Morison%DistribMesh%NNodes   * 18   ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, and RotationAcc at each node     
-      nu = nu + u%Morison%LumpedMesh%NNodes    * 18   ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, and RotationAcc at each node     
+   if ( u%Morison%Mesh%Committed ) then
+      nu = nu + u%Morison%Mesh%NNodes   * 18   ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, and RotationAcc at each node     
    end if
    
    nu = nu + u%WAMITMesh%NNodes * 18   ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, and RotationAcc at each node     
@@ -3118,18 +3082,18 @@ SUBROUTINE HD_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
      
    index = 1
    meshFieldCount = 0
-   if ( u%Morison%DistribMesh%Committed ) then
-      !Module/Mesh/Field: u%Morison%DistribMesh%TranslationDisp  = 1;
-      !Module/Mesh/Field: u%Morison%DistribMesh%Orientation      = 2;
-      !Module/Mesh/Field: u%Morison%DistribMesh%TranslationVel   = 3;
-      !Module/Mesh/Field: u%Morison%DistribMesh%RotationVel      = 4;
-      !Module/Mesh/Field: u%Morison%DistribMesh%TranslationAcc   = 5;
-      !Module/Mesh/Field: u%Morison%DistribMesh%RotationAcc      = 6;
+   if ( u%Morison%Mesh%Committed ) then
+      !Module/Mesh/Field: u%Morison%Mesh%TranslationDisp  = 1;
+      !Module/Mesh/Field: u%Morison%Mesh%Orientation      = 2;
+      !Module/Mesh/Field: u%Morison%Mesh%TranslationVel   = 3;
+      !Module/Mesh/Field: u%Morison%Mesh%RotationVel      = 4;
+      !Module/Mesh/Field: u%Morison%Mesh%TranslationAcc   = 5;
+      !Module/Mesh/Field: u%Morison%Mesh%RotationAcc      = 6;
          
          do i_meshField = 1,6
-            do i=1,u%Morison%DistribMesh%NNodes
+            do i=1,u%Morison%Mesh%NNodes
                do j=1,3
-                  p%Jac_u_indx(index,1) =  i_meshField  !Module/Mesh/Field: u%Morison%DistribMesh%{TranslationDisp/Orientation/TranslationVel/RotationVel/TranslationAcc/RotationAcc} = m
+                  p%Jac_u_indx(index,1) =  i_meshField  !Module/Mesh/Field: u%Morison%Mesh%{TranslationDisp/Orientation/TranslationVel/RotationVel/TranslationAcc/RotationAcc} = m
                   p%Jac_u_indx(index,2) =  j !index:  j
                   p%Jac_u_indx(index,3) =  i !Node:   i
                   index = index + 1
@@ -3145,18 +3109,6 @@ SUBROUTINE HD_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
       !Module/Mesh/Field: u%Morison%LumpedMesh%TranslationAcc   = 11;
       !Module/Mesh/Field: u%Morison%LumpedMesh%RotationAcc      = 12;
          
-         do i_meshField = 1,6
-            do i=1,u%Morison%LumpedMesh%NNodes
-               do j=1,3
-                  p%Jac_u_indx(index,1) =  meshFieldCount + i_meshField  !if this mesh is allocated, then the previous DistribMesh would have been allocated
-                  p%Jac_u_indx(index,2) =  j !index:  j
-                  p%Jac_u_indx(index,3) =  i !Node:   i
-                  index = index + 1
-               end do !j      
-            end do !i     
-           
-         end do !i_meshField 
-          meshFieldCount = meshFieldCount + 6
    end if
    
    !Module/Mesh/Field: u%WAMITMesh%TranslationDisp  = 13  or 1;
@@ -3181,8 +3133,8 @@ SUBROUTINE HD_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
    !................
    ! input perturbations, du:
    !................
-   if ( u%Morison%DistribMesh%Committed ) then
-      call AllocAry(p%du, 18, 'p%du', ErrStat2, ErrMsg2) ! number of unique values in p%Jac_u_indx(:,1)
+   if ( u%Morison%Mesh%Committed ) then
+      call AllocAry(p%du, 12, 'p%du', ErrStat2, ErrMsg2) ! number of unique values in p%Jac_u_indx(:,1)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)      
       if (ErrStat >= AbortErrLev) return
    else
@@ -3196,21 +3148,14 @@ SUBROUTINE HD_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
    perturb   = 2*D2R                 ! rotational input scaling
    
    index = 0
-   if ( u%Morison%DistribMesh%Committed ) then     
-      p%du(1) = perturb_t                    ! u%Morison%DistribMesh%TranslationDisp 
-      p%du(2) = perturb                      ! u%Morison%DistribMesh%Orientation     
-      p%du(3) = perturb_t                    ! u%Morison%DistribMesh%TranslationVel  
-      p%du(4) = perturb                      ! u%Morison%DistribMesh%RotationVel
-      p%du(5) = perturb_t                    ! u%Morison%DistribMesh%TranslationAcc      
-      p%du(6) = perturb                      ! u%Morison%DistribMesh%RotationAcc    
+   if ( u%Morison%Mesh%Committed ) then     
+      p%du(1) = perturb_t                    ! u%Morison%Mesh%TranslationDisp 
+      p%du(2) = perturb                      ! u%Morison%Mesh%Orientation     
+      p%du(3) = perturb_t                    ! u%Morison%Mesh%TranslationVel  
+      p%du(4) = perturb                      ! u%Morison%Mesh%RotationVel
+      p%du(5) = perturb_t                    ! u%Morison%Mesh%TranslationAcc      
+      p%du(6) = perturb                      ! u%Morison%Mesh%RotationAcc    
       index = 6     
-      p%du(index + 1) = perturb_t                    ! u%Morison%LumpedMesh%TranslationDisp 
-      p%du(index + 2) = perturb                      ! u%Morison%LumpedMesh%Orientation     
-      p%du(index + 3) = perturb_t                    ! u%Morison%LumpedMesh%TranslationVel  
-      p%du(index + 4) = perturb                      ! u%Morison%LumpedMesh%RotationVel
-      p%du(index + 5) = perturb_t                    ! u%Morison%LumpedMesh%TranslationAcc      
-      p%du(index + 6) = perturb                      ! u%Morison%LumpedMesh%RotationAcc    
-      index = index + 6
    end if
    
       
@@ -3237,7 +3182,7 @@ SUBROUTINE HD_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
    InitOut%IsLoad_u   = .false.  ! HD's inputs are NOT loads
 
    index = 1
-   if ( u%Morison%DistribMesh%Committed ) then
+   if ( u%Morison%Mesh%Committed ) then
       FieldMask = .false.
       FieldMask(MASKID_TRANSLATIONDISP) = .true.
       FieldMask(MASKID_Orientation) = .true.
@@ -3245,16 +3190,8 @@ SUBROUTINE HD_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
       FieldMask(MASKID_ROTATIONVEL) = .true.
       FieldMask(MASKID_TRANSLATIONACC) = .true.
       FieldMask(MASKID_ROTATIONACC) = .true.
-      call PackMotionMesh_Names(u%Morison%DistribMesh, 'Morison-Distrib', InitOut%LinNames_u, index, FieldMask=FieldMask)
+      call PackMotionMesh_Names(u%Morison%Mesh, 'Morison', InitOut%LinNames_u, index, FieldMask=FieldMask)
    
-      FieldMask = .false.
-      FieldMask(MASKID_TRANSLATIONDISP) = .true.
-      FieldMask(MASKID_Orientation) = .true.
-      FieldMask(MASKID_TRANSLATIONVel) = .true.
-      FieldMask(MASKID_ROTATIONVel) = .true.
-      FieldMask(MASKID_TRANSLATIONACC) = .true.
-      FieldMask(MASKID_ROTATIONACC) = .true.
-      call PackMotionMesh_Names(u%Morison%LumpedMesh, 'Morison-Lumped', InitOut%LinNames_u, index, FieldMask=FieldMask)
    end if
 
    FieldMask = .false.
@@ -3294,46 +3231,33 @@ SUBROUTINE HD_Perturb_u( p, n, perturb_sign, u, du )
       ! determine which mesh we're trying to perturb and perturb the input:
    
       ! If we do not have Morison meshes, then the following select cases will vary
-   if ( u%Morison%DistribMesh%Committed ) then
+   if ( u%Morison%Mesh%Committed ) then
       
       SELECT CASE( p%Jac_u_indx(n,1) )
-         CASE ( 1) !Module/Mesh/Field: u%Morison%DistribMesh%TranslationDisp = 1      
-            u%Morison%DistribMesh%TranslationDisp (fieldIndx,node) = u%Morison%DistribMesh%TranslationDisp (fieldIndx,node) + du * perturb_sign       
-         CASE ( 2) !Module/Mesh/Field: u%Morison%DistribMesh%Orientation = 2
-            CALL PerturbOrientationMatrix( u%Morison%DistribMesh%Orientation(:,:,node), du * perturb_sign, fieldIndx )
-         CASE ( 3) !Module/Mesh/Field: u%Morison%DistribMesh%TranslationVel = 3
-            u%Morison%DistribMesh%TranslationVel( fieldIndx,node) = u%Morison%DistribMesh%TranslationVel( fieldIndx,node) + du * perturb_sign         
-         CASE ( 4) !Module/Mesh/Field: u%Morison%DistribMesh%RotationVel = 4
-            u%Morison%DistribMesh%RotationVel (fieldIndx,node) = u%Morison%DistribMesh%RotationVel (fieldIndx,node) + du * perturb_sign               
-         CASE ( 5) !Module/Mesh/Field: u%Morison%DistribMesh%TranslationAcc = 5
-            u%Morison%DistribMesh%TranslationAcc( fieldIndx,node) = u%Morison%DistribMesh%TranslationAcc( fieldIndx,node) + du * perturb_sign       
-         CASE ( 6) !Module/Mesh/Field: u%Morison%DistribMesh%RotationAcc = 6
-            u%Morison%DistribMesh%RotationAcc(fieldIndx,node) = u%Morison%DistribMesh%RotationAcc(fieldIndx,node) + du * perturb_sign            
-               
-         CASE ( 7) !Module/Mesh/Field: u%Morison%LumpedMesh%TranslationDisp = 7      
-            u%Morison%LumpedMesh%TranslationDisp (fieldIndx,node) = u%Morison%LumpedMesh%TranslationDisp (fieldIndx,node) + du * perturb_sign       
-         CASE ( 8) !Module/Mesh/Field: u%Morison%LumpedMesh%Orientation = 8
-            CALL PerturbOrientationMatrix( u%Morison%LumpedMesh%Orientation(:,:,node), du * perturb_sign, fieldIndx )
-         CASE ( 9) !Module/Mesh/Field: u%Morison%LumpedMesh%TranslationVel = 9
-            u%Morison%LumpedMesh%TranslationVel( fieldIndx,node) = u%Morison%LumpedMesh%TranslationVel( fieldIndx,node) + du * perturb_sign         
-         CASE (10) !Module/Mesh/Field: u%Morison%LumpedMesh%RotationVel = 10
-            u%Morison%LumpedMesh%RotationVel (fieldIndx,node) = u%Morison%LumpedMesh%RotationVel (fieldIndx,node) + du * perturb_sign               
-         CASE (11) !Module/Mesh/Field: u%Morison%LumpedMesh%TranslationAcc = 11
-            u%Morison%LumpedMesh%TranslationAcc( fieldIndx,node) = u%Morison%LumpedMesh%TranslationAcc( fieldIndx,node) + du * perturb_sign       
-         CASE (12) !Module/Mesh/Field: u%Morison%LumpedMesh%RotationAcc = 12
-            u%Morison%LumpedMesh%RotationAcc(fieldIndx,node) = u%Morison%LumpedMesh%RotationAcc(fieldIndx,node) + du * perturb_sign            
+         CASE ( 1) !Module/Mesh/Field: u%Morison%Mesh%TranslationDisp = 1      
+            u%Morison%Mesh%TranslationDisp (fieldIndx,node) = u%Morison%Mesh%TranslationDisp (fieldIndx,node) + du * perturb_sign       
+         CASE ( 2) !Module/Mesh/Field: u%Morison%Mesh%Orientation = 2
+            CALL PerturbOrientationMatrix( u%Morison%Mesh%Orientation(:,:,node), du * perturb_sign, fieldIndx )
+         CASE ( 3) !Module/Mesh/Field: u%Morison%Mesh%TranslationVel = 3
+            u%Morison%Mesh%TranslationVel( fieldIndx,node) = u%Morison%Mesh%TranslationVel( fieldIndx,node) + du * perturb_sign         
+         CASE ( 4) !Module/Mesh/Field: u%Morison%Mesh%RotationVel = 4
+            u%Morison%Mesh%RotationVel (fieldIndx,node) = u%Morison%Mesh%RotationVel (fieldIndx,node) + du * perturb_sign               
+         CASE ( 5) !Module/Mesh/Field: u%Morison%Mesh%TranslationAcc = 5
+            u%Morison%Mesh%TranslationAcc( fieldIndx,node) = u%Morison%Mesh%TranslationAcc( fieldIndx,node) + du * perturb_sign       
+         CASE ( 6) !Module/Mesh/Field: u%Morison%Mesh%RotationAcc = 6
+            u%Morison%Mesh%RotationAcc(fieldIndx,node) = u%Morison%Mesh%RotationAcc(fieldIndx,node) + du * perturb_sign    
 
-         CASE (13) !Module/Mesh/Field: u%WAMITMesh%TranslationDisp = 13     
+         CASE ( 7) !Module/Mesh/Field: u%WAMITMesh%TranslationDisp = 13     
             u%WAMITMesh%TranslationDisp (fieldIndx,node) = u%WAMITMesh%TranslationDisp (fieldIndx,node) + du * perturb_sign       
-         CASE (14) !Module/Mesh/Field: u%WAMITMesh%Orientation = 14
+         CASE ( 8) !Module/Mesh/Field: u%WAMITMesh%Orientation = 14
             CALL PerturbOrientationMatrix( u%WAMITMesh%Orientation(:,:,node), du * perturb_sign, fieldIndx )
-         CASE (15) !Module/Mesh/Field: u%WAMITMesh%TranslationVel = 15
+         CASE ( 9) !Module/Mesh/Field: u%WAMITMesh%TranslationVel = 15
             u%WAMITMesh%TranslationVel( fieldIndx,node) = u%WAMITMesh%TranslationVel( fieldIndx,node) + du * perturb_sign         
-         CASE (16) !Module/Mesh/Field: u%WAMITMesh%RotationVel = 16
+         CASE (10) !Module/Mesh/Field: u%WAMITMesh%RotationVel = 16
             u%WAMITMesh%RotationVel (fieldIndx,node) = u%WAMITMesh%RotationVel (fieldIndx,node) + du * perturb_sign               
-         CASE (17) !Module/Mesh/Field: u%WAMITMesh%TranslationAcc = 17
+         CASE (11) !Module/Mesh/Field: u%WAMITMesh%TranslationAcc = 17
             u%WAMITMesh%TranslationAcc( fieldIndx,node) = u%WAMITMesh%TranslationAcc( fieldIndx,node) + du * perturb_sign       
-         CASE (18) !Module/Mesh/Field: u%WAMITMesh%RotationAcc = 18
+         CASE (12) !Module/Mesh/Field: u%WAMITMesh%RotationAcc = 18
             u%WAMITMesh%RotationAcc(fieldIndx,node) = u%WAMITMesh%RotationAcc(fieldIndx,node) + du * perturb_sign            
          
       
@@ -3406,9 +3330,8 @@ SUBROUTINE Compute_dY(p, y_p, y_m, delta, dY)
    
    
    indx_first = 1     
-   if ( y_p%Morison%DistribMesh%Committed ) then
-      call PackLoadMesh_dY(y_p%Morison%DistribMesh, y_m%Morison%DistribMesh, dY, indx_first)   
-      call PackLoadMesh_dY(y_p%Morison%LumpedMesh , y_m%Morison%LumpedMesh , dY, indx_first)   
+   if ( y_p%Morison%Mesh%Committed ) then
+      call PackLoadMesh_dY(y_p%Morison%Mesh, y_m%Morison%Mesh, dY, indx_first)   
    end if
 
    call PackLoadMesh_dY(y_p%WAMITMesh, y_m%WAMITMesh, dY, indx_first)   
@@ -3471,9 +3394,8 @@ SUBROUTINE HD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
          nu = size(p%Jac_u_indx,1)
          
              ! our operating point includes DCM (orientation) matrices, not just small angles like the perturbation matrices do
-         if ( u%Morison%DistribMesh%Committed ) then          
-            nu = nu + u%Morison%DistribMesh%NNodes * 6 & ! p%Jac_u_indx has 3 for Orientation, but we need 9 at each node
-                    + u%Morison%LumpedMesh%NNodes  * 6 & ! p%Jac_u_indx has 3 for Orientation, but we need 9 at each node 
+         if ( u%Morison%Mesh%Committed ) then          
+            nu = nu + u%Morison%Mesh%NNodes * 6 & ! p%Jac_u_indx has 3 for Orientation, but we need 9 at each node
                     + u%WAMITMesh%NNodes                * 6   ! p%Jac_u_indx has 3 for Orientation, but we need 9 at each node
             nu = nu + 1   ! Extended input
          else
@@ -3496,9 +3418,8 @@ SUBROUTINE HD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
       Mask(MASKID_ROTATIONACC)     = .true.
       
       index = 1
-      if ( u%Morison%DistribMesh%Committed ) then
-         call PackMotionMesh(u%Morison%DistribMesh, u_op, index, FieldMask=Mask)   
-         call PackMotionMesh(u%Morison%LumpedMesh , u_op, index, FieldMask=Mask)   
+      if ( u%Morison%Mesh%Committed ) then
+         call PackMotionMesh(u%Morison%Mesh, u_op, index, FieldMask=Mask)    
       end if
 
       call PackMotionMesh(u%WAMITMesh, u_op, index, FieldMask=Mask)   
@@ -3519,9 +3440,8 @@ SUBROUTINE HD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
       end if
          
       index = 1               
-      if ( y%Morison%DistribMesh%Committed ) then
-         call PackLoadMesh(y%Morison%DistribMesh, y_op, index)   
-         call PackLoadMesh(y%Morison%LumpedMesh , y_op, index)   
+      if ( y%Morison%Mesh%Committed ) then
+         call PackLoadMesh(y%Morison%Mesh, y_op, index)   
       end if
 
       call PackLoadMesh(y%WAMITMesh, y_op, index) 
