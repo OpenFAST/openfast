@@ -1616,8 +1616,9 @@ subroutine SetInputsForFVW(p, u, m, errStat, errMsg)
    character(*), parameter                 :: RoutineName = 'SetInputsForFVW'
 
    do tIndx=1,size(u)
-         ! Get disk average values and orientations
-      call DiskAvgValues(p, u(tIndx), m, x_hat_disk, y_hat_disk, z_hat_disk, Azimuth)
+      ! Get disk average values and orientations
+      ! NOTE: needed because it sets m%V_diskAvg and m%V_dot_x, needed by CalcOutput..
+      call DiskAvgValues(p, u(tIndx), m, x_hat_disk, y_hat_disk, z_hat_disk, Azimuth) 
       call GeomWithoutSweepPitchTwist(p,u(tIndx),m,thetaBladeNds,ErrStat,ErrMsg)
       if (ErrStat >= AbortErrLev) return
 
@@ -1640,6 +1641,7 @@ subroutine SetInputsForFVW(p, u, m, errStat, errMsg)
       if (ALLOCATED(m%FVW_u(tIndx)%V_wind)) then
          m%FVW_u(tIndx)%V_wind   = u(tIndx)%InflowWakeVel
          ! Applying tower shadow to V_wind based on r_wind positions
+         ! NOTE: m%DisturbedInflow also contains tower shadow and we need it for CalcOutput
          if (p%TwrPotent /= TwrPotent_none .or. p%TwrShadow) then
             call TwrInflArray( p, u(tIndx), m, m%FVW%r_wind, m%FVW_u(tIndx)%V_wind, ErrStat, ErrMsg )
             if (ErrStat >= AbortErrLev) return

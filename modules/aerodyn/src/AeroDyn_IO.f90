@@ -1513,6 +1513,50 @@ MODULE AeroDyn_IO
       
 contains
    
+!> Compute maximum radius over all blades (contains hub radius), in "projected rotor plane"
+!! Solely based on AD inputs,  needed for FVW since rLocal is not stored
+PURE REAL(ReKi) FUNCTION Calc_MaxRadius(p, u) result(rmax)
+   implicit none
+   TYPE(AD_ParameterType),    INTENT(IN   ) :: p    !< The module parameters
+   TYPE(AD_InputType),        INTENT(IN   ) :: u    !< Inputs
+   real(ReKi)     :: y_hat_disk(3), z_hat_disk(3), dr_gl(3), rLocal
+   integer(IntKi) :: iB, j
+   y_hat_disk = u%HubMotion%Orientation(2,:,1)
+   z_hat_disk = u%HubMotion%Orientation(3,:,1)
+   rmax = 0.0_ReKi
+   do iB=1,p%numBlades
+      do j=1,p%NumBlNds
+         dr_gl =  u%BladeMotion(iB)%Position(:,j) - u%HubMotion%Position(:,1) ! vector hub center to node j in global coord
+         rLocal = sqrt( dot_product(dr_gl, y_hat_disk)**2 + dot_product(dr_gl, z_hat_disk)**2 )
+         rmax   = max(rmax, rLocal)
+      end do !j=nodes
+   end do !iB=blades
+END FUNCTION Calc_MaxRadius
+
+!> Rotor speed
+PURE REAL(ReKi) FUNCTION Calc_Omega(u)
+   TYPE(AD_InputType),        INTENT(IN   ) :: u    !< Inputs
+   Calc_Omega = dot_product(u%HubMotion%RotationVel(:,1), u%HubMotion%Orientation(1,:,1))
+END FUNCTION Calc_Omega
+
+!> Mean skew angle
+REAL(ReKi) FUNCTION Calc_Chi0(V_diskAvg, V_dot_x)
+   implicit none
+   REAL(ReKi), INTENT(IN  ) :: V_diskAvg(3)
+   REAL(ReKi), INTENT(IN  ) :: V_dot_x
+   REAL(ReKi) :: V_norm, sy 
+   V_norm = TwoNorm( V_diskAvg )
+   if ( EqualRealNos( V_norm, 0.0_ReKi ) ) then
+      Calc_Chi0 = 0.0_ReKi
+   else
+      ! make sure we don't have numerical issues that make the ratio outside +/-1
+      sy = min(  1.0_ReKi, V_dot_x / V_norm )
+      sy = max( -1.0_ReKi, sy )
+      Calc_Chi0 = acos( sy )
+   end if
+END FUNCTION Calc_Chi0
+
+
    
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE Calc_WriteDbgOutput( p, u, m, y, ErrStat, ErrMsg )
@@ -1623,7 +1667,7 @@ contains
             i = (k-1)*p%NumBlNds*24 + (j-1)*24 + 1
 
             ! --- Computing main aero variables from induction - setting local variables
-            Vwnd  = m%DisturbedInflow(:,j,k) 
+            Vwnd  = m%DisturbedInflow(:,j,k)  ! NOTE: contains tower shadow
             call FVW_AeroOuts( m%WithoutSweepPitchTwist(:,:,j,k), u%BladeMotion(k)%Orientation(1:3,1:3,j), m%FVW%PitchAndTwist(j,k), u%BladeMotion(k)%TranslationVel(1:3,j), &
                         m%FVW_y%Vind(1:3,j,k), Vwnd, p%KinVisc, p%FVW%Chord(j,k), &
                         AxInd, TanInd, Vrel, phi, alpha, Re, UrelWind_s, ErrStat, ErrMsg )
@@ -1870,6 +1914,10 @@ CONTAINS
       end if
    end subroutine Calc_WriteOutput_BEMT
 
+   !> Similar to Calc_WriteOutput_BEMT. TODO Merge me
+   !! NOTE: relies on the prior calculation of m%V_dot_x, and m%V_diskAvg (done in DiskAvgValues)
+   !!                                          m%DisturbedInflow (done in SetInputs)
+   !!       Make sure these are set!
    subroutine Calc_WriteOutput_FVW
       real(ReKi)           :: AxInd, TanInd, Vrel, phi, alpha, Re
       type(AFI_OutputType) :: AFI_interp              ! Resulting values from lookup table
@@ -1878,6 +1926,7 @@ CONTAINS
       real(ReKi)           :: Vstr(3)               ! 
       real(ReKi)           :: Vwnd(3)               ! 
       real(ReKi)           :: Cx, Cy, cphi, sphi, theta
+      real(ReKi)           :: rmax, omega
 
          ! blade outputs
       do k=1,p%numBlades
@@ -1886,7 +1935,7 @@ CONTAINS
             ! --- Computing main aero variables from induction - setting local variables
             Vind = m%FVW_y%Vind(1:3,j,k)
             Vstr = u%BladeMotion(k)%TranslationVel(1:3,j)
-            Vwnd = m%DisturbedInflow(:,j,k) 
+            Vwnd = m%DisturbedInflow(:,j,k)   ! NOTE: contains tower shadow
             call FVW_AeroOuts( m%WithoutSweepPitchTwist(:,:,j,k), u%BladeMotion(k)%Orientation(1:3,1:3,j), m%FVW%PitchAndTwist(j,k), Vstr , &
                         Vind(1:3), Vwnd , p%KinVisc, p%FVW%Chord(j,k), &
                         AxInd, TanInd, Vrel, phi, alpha, Re, UrelWind_s, ErrStat, ErrMsg )
@@ -1925,9 +1974,9 @@ CONTAINS
             m%AllOuts( BNAlpha(beta,k) ) = alpha*R2D
             m%AllOuts( BNTheta(beta,k) ) = theta*R2D
             m%AllOuts( BNPhi(  beta,k) ) = phi*R2D
-!             m%AllOuts( BNCurve(beta,k) ) = m%Curve(j,k)*R2D
+!             m%AllOuts( BNCurve(beta,k) ) = m%Curve(j,k)*R2D ! TODO
 
-!             m%AllOuts( BNCpmin(   beta,k) ) = m%BEMT_y%Cpmin(j,k)
+!             m%AllOuts( BNCpmin(   beta,k) ) = m%BEMT_y%Cpmin(j,k) ! TODO
             m%AllOuts( BNSigCr(   beta,k) ) = m%SigmaCavitCrit(j,k)
             m%AllOuts( BNSgCav(   beta,k) ) = m%SigmaCavit(j,k)
 
@@ -1956,24 +2005,20 @@ CONTAINS
 
          end do ! nodes
       end do ! blades
-!
-!      ! rotor outputs:
-!      rmax = 0.0_ReKi
-!      do k=1,p%NumBlades
-!         do j=1,p%NumBlNds
-!            rmax = max(rmax, m%BEMT_u(indx)%rLocal(j,k) ) ! TODO TODO TODO
-!         end do !j=nodes
-!      end do !k=blades
-!
-!      m%AllOuts( RtSpeed ) = m%BEMT_u(indx)%omega*RPS2RPM
-!      m%AllOuts( RtArea  ) = pi*rmax**2 ! TODO TODO TODO
-!
-     tmp = matmul( u%HubMotion%Orientation(:,:,1), m%V_DiskAvg )
-     m%AllOuts( RtVAvgxh ) = tmp(1)
-     m%AllOuts( RtVAvgyh ) = tmp(2)
-     m%AllOuts( RtVAvgzh ) = tmp(3)
-!
-!      m%AllOuts( RtSkew  ) = m%BEMT_u(indx)%chi0*R2D ! TODO TODO TODO Not applicable
+
+      ! Compute max radius and rotor speed
+      rmax  = Calc_MaxRadius(p, u)
+      omega = Calc_Omega(u)
+
+      m%AllOuts( RtSpeed ) = omega*RPS2RPM
+      m%AllOuts( RtArea  ) = pi*rmax**2 
+
+      tmp = matmul( u%HubMotion%Orientation(:,:,1), m%V_DiskAvg )
+      m%AllOuts( RtVAvgxh ) = tmp(1)
+      m%AllOuts( RtVAvgyh ) = tmp(2)
+      m%AllOuts( RtVAvgzh ) = tmp(3)
+
+      m%AllOuts( RtSkew  ) = Calc_Chi0(m%V_diskAvg, m%V_dot_x) * R2D 
 
          ! integrate force/moments over blades by performing mesh transfer to hub point:
       force  = 0.0_ReKi
@@ -1988,27 +2033,25 @@ CONTAINS
       m%AllOuts( RtAeroFyh ) = tmp(2)
       m%AllOuts( RtAeroFzh ) = tmp(3)
 
-     tmp = matmul( u%HubMotion%Orientation(:,:,1), moment )
-     m%AllOuts( RtAeroMxh ) = tmp(1)
-     m%AllOuts( RtAeroMyh ) = tmp(2)
-     m%AllOuts( RtAeroMzh ) = tmp(3)
-!
-!      m%AllOuts( RtAeroPwr ) = m%BEMT_u(indx)%omega * m%AllOuts( RtAeroMxh )! TODO TODO TODO
-!
-!
-     if ( EqualRealNos( m%V_dot_x, 0.0_ReKi ) ) then
-        m%AllOuts( RtTSR    ) = 0.0_ReKi
-        m%AllOuts( RtAeroCp ) = 0.0_ReKi
-        m%AllOuts( RtAeroCq ) = 0.0_ReKi
-        m%AllOuts( RtAeroCt ) = 0.0_ReKi
-     else
-        ! TODO TODO TODO (need rotor area)
-!        denom = 0.5*p%AirDens*m%AllOuts( RtArea )*m%V_dot_x**2
-!        m%AllOuts( RtTSR )    = m%BEMT_u(indx)%omega * rmax / m%V_dot_x
-!        m%AllOuts( RtAeroCp ) = m%AllOuts( RtAeroPwr ) / (denom * m%V_dot_x)
-!        m%AllOuts( RtAeroCq ) = m%AllOuts( RtAeroMxh ) / (denom * rmax)
-!        m%AllOuts( RtAeroCt ) = m%AllOuts( RtAeroFxh ) /  denom
-     end if
+      tmp = matmul( u%HubMotion%Orientation(:,:,1), moment )
+      m%AllOuts( RtAeroMxh ) = tmp(1)
+      m%AllOuts( RtAeroMyh ) = tmp(2)
+      m%AllOuts( RtAeroMzh ) = tmp(3)
+
+      m%AllOuts( RtAeroPwr ) = omega * m%AllOuts( RtAeroMxh )
+
+      if ( EqualRealNos( m%V_dot_x, 0.0_ReKi ) ) then
+         m%AllOuts( RtTSR    ) = 0.0_ReKi
+         m%AllOuts( RtAeroCp ) = 0.0_ReKi
+         m%AllOuts( RtAeroCq ) = 0.0_ReKi
+         m%AllOuts( RtAeroCt ) = 0.0_ReKi
+      else
+        denom = 0.5*p%AirDens*m%AllOuts( RtArea )*m%V_dot_x**2
+        m%AllOuts( RtTSR )    = omega * rmax / m%V_dot_x
+        m%AllOuts( RtAeroCp ) = m%AllOuts( RtAeroPwr ) / (denom * m%V_dot_x)
+        m%AllOuts( RtAeroCq ) = m%AllOuts( RtAeroMxh ) / (denom * rmax)
+        m%AllOuts( RtAeroCt ) = m%AllOuts( RtAeroFxh ) /  denom
+      end if
 
    end subroutine Calc_WriteOutput_FVW
 
