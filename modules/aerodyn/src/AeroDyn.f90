@@ -61,7 +61,6 @@ module AeroDyn
                                                !   states(z)
    PUBLIC :: AD_GetOP                          !< Routine to pack the operating point values (for linearization) into arrays
    
-  
 contains    
 !----------------------------------------------------------------------------------------------------------------------------------   
 !> This subroutine sets the initialization output data structure, which contains data to be returned to the calling program (e.g.,
@@ -111,7 +110,7 @@ subroutine AD_SetInitOut(p, InputFileData, InitOut, errStat, errMsg)
    do k=1,p%numBlades
       do j=1, p%NumBlNds
          
-         m = (k-1)*p%NumBlNds*24 + (j-1)*24 
+         m = (k-1)*p%NumBlNds*p%NBlOuts + (j-1)*p%NBlOuts
          
          WRITE (TmpChar,'(I3.3)') j
          chanPrefix = "B"//trim(num2lstr(k))//"N"//TmpChar
@@ -163,6 +162,12 @@ subroutine AD_SetInitOut(p, InputFileData, InitOut, errStat, errMsg)
          InitOut%WriteOutputUnt( m + 23 ) = '  (N/m)  '
          InitOut%WriteOutputHdr( m + 24 ) = ' '//trim(chanPrefix)//"Gam"
          InitOut%WriteOutputUnt( m + 24 ) = '  (m^2/s)  '
+         InitOut%WriteOutputHdr( m + 25 ) = ' '//trim(chanPrefix)//"Uin"
+         InitOut%WriteOutputUnt( m + 25 ) = '  (m/s)  '
+         InitOut%WriteOutputHdr( m + 26 ) = ' '//trim(chanPrefix)//"Uit"
+         InitOut%WriteOutputUnt( m + 26 ) = '  (m/s)  '
+         InitOut%WriteOutputHdr( m + 27 ) = ' '//trim(chanPrefix)//"Uir"
+         InitOut%WriteOutputUnt( m + 27 ) = '  (m/s)  '
          
       end do
    end do
@@ -1016,7 +1021,7 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
   !p%RootName       = TRIM(InitInp%RootName)//'.AD'   ! set earlier to it could be used   
    
 #ifdef DBG_OUTS
-   p%NBlOuts          = 24  
+   p%NBlOuts          = 27
    p%numOuts          = p%NumBlNds*p%NumBlades*p%NBlOuts
    p%NTwOuts          = 0
       
@@ -1405,7 +1410,7 @@ subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
    real(ReKi)                              :: tmp(3)
    real(ReKi)                              :: tmp_sz, tmp_sz_y
    real(R8Ki)                              :: thetaBladeNds(p%NumBlNds,p%NumBlades)
-   real(R8Ki)                              :: Azimuth(p%NumBlNds)
+   real(R8Ki)                              :: Azimuth(p%NumBlades)
    
    integer(intKi)                          :: j                      ! loop counter for nodes
    integer(intKi)                          :: k                      ! loop counter for blades
@@ -1609,7 +1614,7 @@ subroutine SetInputsForFVW(p, u, m, errStat, errMsg)
 !   real(ReKi)                              :: tmp(3)
 !   real(ReKi)                              :: tmp_sz, tmp_sz_y
    real(R8Ki)                              :: thetaBladeNds(p%NumBlNds,p%NumBlades)
-   real(R8Ki)                              :: Azimuth(p%NumBlNds)
+   real(R8Ki)                              :: Azimuth(p%NumBlades)
    
    integer(intKi)                          :: tIndx
    integer(intKi)                          :: k                      ! loop counter for blades

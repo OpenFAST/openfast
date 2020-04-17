@@ -1577,7 +1577,14 @@ SUBROUTINE Calc_WriteDbgOutput( p, u, m, y, ErrStat, ErrMsg )
    INTEGER(IntKi)                            :: j,k,i
    REAL(ReKi)                                :: ct, st ! cosine, sine of theta
    REAL(ReKi)                                :: cp, sp ! cosine, sine of phi
-   
+   ! Transformation matrices
+   !real(R8Ki), dimension(3,3)                :: M_cg ! from global to airfoil-chord (this is well defined, also called "n-t" system in AeroDyn)
+   real(ReKi), dimension(3,3)                :: M_sg ! from global to section  (this is ill-defined, also called "x-y" system in AeroDyn), this coordinate is used to define the "axial" and "tangential" inductions
+   real(ReKi), dimension(3,3)                :: M_ph ! Transformation from hub to "blade-rotor-plane": n,t,r (not the same as AeroDyn)
+   real(ReKi), dimension(3,3)                :: M_pg ! Transformation from global to "blade-rotor-plane" (n,t,r), with same x at hub coordinate system
+   real(ReKi)                                :: psi_hub ! Azimuth wrt hub
+   real(ReKi), dimension(3)                  :: Vind_g  ! Induced velocity vector in global coordinates
+   real(ReKi), dimension(3)                  :: Vind_s  ! Induced velocity vector in section coordinates (AeroDyn "x-y")
    
    
       ! start routine:
@@ -1585,16 +1592,23 @@ SUBROUTINE Calc_WriteDbgOutput( p, u, m, y, ErrStat, ErrMsg )
    ErrMsg  = ""
 
 
-
    if (p%WakeMod /= WakeMod_FVW) then
          ! blade outputs
       do k=1,p%numBlades
+
+         ! Rotor plane, polar coordinate system
+         psi_hub = TwoPi*(k-1)/p%NumBlades
+         M_ph(1,1:3) = (/ 1.0_ReKi, 0.0_ReKi    , 0.0_ReKi     /)
+         M_ph(2,1:3) = (/ 0.0_ReKi, cos(psi_hub), sin(psi_hub) /)
+         M_ph(3,1:3) = (/ 0.0_ReKi,-sin(psi_hub), cos(psi_hub) /)
+         M_pg = matmul(M_ph, u%HubMotion%Orientation(1:3,1:3,1) ) 
+
 
        ! m%AllOuts( BPitch(  k) ) = calculated in SetInputsForBEMT
 
          do j=1,p%NumBlNds
 
-            i = (k-1)*p%NumBlNds*24 + (j-1)*24 + 1
+            i = (k-1)*p%NumBlNds*p%NBlOuts + (j-1)*p%NBlOuts +1
 
             m%AllOuts( i    ) =  m%BEMT_u(indx)%theta(j,k)*R2D
             m%AllOuts( i+1  ) =  m%BEMT_u(indx)%psi(k)*R2D
@@ -1630,6 +1644,16 @@ SUBROUTINE Calc_WriteDbgOutput( p, u, m, y, ErrStat, ErrMsg )
             m%AllOuts( i+22 ) = -m%X(j,k)*st - m%Y(j,k)*ct
             m%AllOuts( i+23 ) = 0.5_ReKi * p%BEMT%chord(j,k) * m%BEMT_y%Vrel(j,k) * m%BEMT_y%Cl(j,k) ! "Gam" [m^2/s]
 
+            M_sg = m%WithoutSweepPitchTwist(:,:,j,k)       ! global to "section"
+            !M_cg = u%BladeMotion(k)%Orientation(1:3,1:3,j) ! global to chord
+
+            Vind_s = (/ -m%BEMT_u(indx)%Vx(j,k)*m%BEMT_y%axInduction(j,k), m%BEMT_u(indx)%Vy(j,k)*m%BEMT_y%tanInduction(j,k), 0.0_ReKi /)
+            Vind_g = matmul(Vind_s, M_sg)
+
+            m%AllOuts( i+24 ) =  dot_product(M_pg(1,:), Vind_g(1:3) ) ! Uihn, hub normal
+            m%AllOuts( i+25 ) =  dot_product(M_pg(2,:), Vind_g(1:3) ) ! Uiht, hub tangential
+            m%AllOuts( i+26 ) =  dot_product(M_pg(3,:), Vind_g(1:3) ) ! Uihr, hub radial
+
          end do ! nodes
       end do ! blades
    else  !  (p%WakeMod == WakeMod_FVW)
@@ -1658,17 +1682,33 @@ contains
       real(ReKi)                                :: UrelWind_s(3)                  ! Wind in section coords
       real(ReKi)                                :: Vwnd(3) 
       real(ReKi)                                :: Cx, Cy
+      ! Transformation matrices
+      real(R8Ki), dimension(3,3)                :: M_cg ! from global to airfoil-chord (this is well defined, also called "n-t" system in AeroDyn)
+      real(ReKi), dimension(3,3)                :: M_sg ! from global to section  (this is ill-defined, also called "x-y" system in AeroDyn), this coordinate is used to define the "axial" and "tangential" inductions
+      real(ReKi), dimension(3,3)                :: M_ph ! Transformation from hub to "blade-rotor-plane": n,t,r (not the same as AeroDyn)
+      real(ReKi), dimension(3,3)                :: M_pg ! Transformation from global to "blade-rotor-plane" (n,t,r), with same x at hub coordinate system
+      real(ReKi)                                :: psi_hub ! Azimuth wrt hub
 
          ! blade outputs
-      do k=1,p%numBlades
+      do k=1,p%NumBlades
+
+         ! Rotor plane, polar coordinate system
+         psi_hub = TwoPi*(k-1)/p%NumBlades
+         M_ph(1,1:3) = (/ 1.0_ReKi, 0.0_ReKi    , 0.0_ReKi     /)
+         M_ph(2,1:3) = (/ 0.0_ReKi, cos(psi_hub), sin(psi_hub) /)
+         M_ph(3,1:3) = (/ 0.0_ReKi,-sin(psi_hub), cos(psi_hub) /)
+         M_pg = matmul(M_ph, u%HubMotion%Orientation(1:3,1:3,1) ) 
+
          do j=1,p%NumBlNds
 !TODO: Merge with BEM to avoid all code redundancy (discuss with Bonnie)
 
-            i = (k-1)*p%NumBlNds*24 + (j-1)*24 + 1
+            i = (k-1)*p%NumBlNds*p%NBlOuts + (j-1)*p%NBlOuts +1
 
             ! --- Computing main aero variables from induction - setting local variables
             Vwnd  = m%DisturbedInflow(:,j,k)  ! NOTE: contains tower shadow
-            call FVW_AeroOuts( m%WithoutSweepPitchTwist(:,:,j,k), u%BladeMotion(k)%Orientation(1:3,1:3,j), m%FVW%PitchAndTwist(j,k), u%BladeMotion(k)%TranslationVel(1:3,j), &
+            M_sg = m%WithoutSweepPitchTwist(:,:,j,k)       ! global to "section"
+            M_cg = u%BladeMotion(k)%Orientation(1:3,1:3,j) ! global to chord
+            call FVW_AeroOuts(M_sg, M_cg, m%FVW%PitchAndTwist(j,k), u%BladeMotion(k)%TranslationVel(1:3,j), &
                         m%FVW_y%Vind(1:3,j,k), Vwnd, p%KinVisc, p%FVW%Chord(j,k), &
                         AxInd, TanInd, Vrel, phi, alpha, Re, UrelWind_s, ErrStat, ErrMsg )
             !  NOTE: using airfoil coeffs at nodes
@@ -1713,6 +1753,11 @@ contains
             m%AllOuts( i+21 ) =  m%X(j,k)*ct - m%Y(j,k)*st    ! "Fn"
             m%AllOuts( i+22 ) = -m%X(j,k)*st - m%Y(j,k)*ct    ! "Ft"
             m%AllOuts( i+23 ) = 0.5_ReKi * p%FVW%Chord(j,k) * Vrel * AFI_interp%Cl ! "Gam" [m^2/s]
+
+            m%AllOuts( i+24 ) =  dot_product(M_pg(1,:), m%FVW_y%Vind(1:3,j,k) ) ! Uihn, hub normal
+            m%AllOuts( i+25 ) =  dot_product(M_pg(2,:), m%FVW_y%Vind(1:3,j,k) ) ! Uiht, hub tangential
+            m%AllOuts( i+26 ) =  dot_product(M_pg(3,:), m%FVW_y%Vind(1:3,j,k) ) ! Uihr, hub radial
+
          end do ! nodes
       end do ! blades
    end subroutine Calc_WriteDbgOutputFVW
