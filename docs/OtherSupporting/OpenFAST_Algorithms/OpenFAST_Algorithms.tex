@@ -124,6 +124,8 @@ inputs and outputs are neither set nor used.
    \State $\mathit{u\_FEAM} \gets \Call{TransferMeshMotions}{\mathit{y\_ED}}$
    \State $\mathit{u\_MD}   \gets \Call{TransferMeshMotions}{\mathit{y\_ED}}$
    \State $\mathit{u\_Orca} \gets \Call{TransferMeshMotions}{\mathit{y\_ED}}$
+\State
+   \State $\mathit{u\_SlD}  \gets \Call{TransferMeshPosition}{\mathit{y\_SD}}$
 % \end Transfer_ED_to_HD_SD_BD_Mooring
 %%%%
 
@@ -138,10 +140,10 @@ inputs and outputs are neither set nor used.
 \end{algorithmic}
 %\end{algorithm}
 
-Note that inputs to $ElastoDyn$ before calling CalcOutput() in the first step are not set in CalcOutputs\_And\_SolveForInputs(). 
-Instead, the $ElastoDyn$ inputs are set depending on where CalcOutputs\_And\_SolveForInputs() is called:
+Note that inputs to \emph{ElastoDyn} before calling CalcOutput() in the first step are not set in CalcOutputs\_And\_SolveForInputs(). 
+Instead, the \emph{ElastoDyn} inputs are set depending on where CalcOutputs\_And\_SolveForInputs() is called:
 \begin{itemize}[noitemsep] %i don't like the double spaces between bulleted items.
-   \item At time 0, the inputs are the initial guess from $ElastoDyn$;
+   \item At time 0, the inputs are the initial guess from \emph{ElastoDyn};
    \item On the prediction step, the inputs are extrapolated values from the time history of ElastoDyn inputs;
    \item On the first correction step, the inputs are the values calculated in the prediction step;
    \item On subsequent correction steps, the inputs are the values calculated in the previous correction step.
@@ -149,13 +151,11 @@ Instead, the $ElastoDyn$ inputs are set depending on where CalcOutputs\_And\_Sol
 
 
 %\pagebreak %break here for now so that it doesn't look so strange
-%\subsection {Input-Output Solve for $HydroDyn$, $SubDyn$, $MAP$, \\ 
-%       $FEAMooring$, $IceFloe$, and the Platform Reference Point Mesh in $ElastoDyn$}
 \subsection {Input-Output Solve for \textit{HydroDyn}, \textit{SubDyn}, \textit{MAP}, 
        \textit{FEAMooring}, \textit{IceFloe}, and the Platform Reference Point Mesh in \textit{ElastoDyn}}
 
 This procedure implements Solve Option 1 for the accelerations and loads in
-$HydroDyn$, $SubDyn$, $MAP$, $FEAMooring$, and $ElastoDyn$ (at its platform reference point mesh). 
+\emph{HydroDyn},\emph{SubDyn},\emph{MAP},\emph{FEAMooring},\emph{OrcaFlexInterface},\emph{MoorDyn},\emph{SoilDyn}, and\emph{ElastoDyn} (at its platform reference point mesh). 
 The other input-output relationships for these modules are solved using Solve Option 2.
 
 %\begin{algorithm}[ht]
@@ -170,6 +170,7 @@ The other input-output relationships for these modules are solved using Solve Op
    \State $\mathit{y\_FEAM}    \gets \Call{CalcOutput}{\mathit{p\_FEAM},\mathit{u\_FEAM},\mathit{x\_FEAM},\mathit{xd\_FEAM},\mathit{z\_FEAM}}$
    \State $\mathit{y\_IceF}    \gets \Call{CalcOutput}{\mathit{p\_IceF},\mathit{u\_IceF},\mathit{x\_IceF},\mathit{xd\_IceF},\mathit{z\_IceF}}$
    \State $\mathit{y\_IceD(:)} \gets \Call{CalcOutput}{\mathit{p\_IceD(:)},\mathit{u\_IceD(:)},\mathit{x\_IceD(:)},\mathit{xd\_IceD(:)},\mathit{z\_IceD(:)}}$
+   \State $\mathit{y\_SlD}     \gets \Call{CalcOutput}{\mathit{p\_SlD},\mathit{u\_SlD},\mathit{x\_SlD},\mathit{xd\_SlD},\mathit{z\_SlD}}$ 
    \State
    \State\Comment{Form $u$ vector using loads and accelerations from $\mathit{u\_HD}$, $\mathit{u\_BD}$ $\mathit{u\_SD}$, and platform reference input from $\mathit{u\_ED}$}
    \State
@@ -181,6 +182,7 @@ The other input-output relationships for these modules are solved using Solve Op
       \State $y\_HD   \gets \Call{HD\_CalcOutput}{\mathit{p\_HD},\mathit{u\_HD},\mathit{x\_HD},\mathit{xd\_HD},\mathit{z\_HD}}$
       \State $y\_BD   \gets \Call{BD\_CalcOutput}{\mathit{p\_BD},\mathit{u\_BD},\mathit{x\_BD},\mathit{xd\_BD},\mathit{z\_BD}}$
       \State $y\_Orca \gets \Call{Orca\_CalcOutput}{\mathit{p\_Orca},\mathit{u\_Orca},\mathit{x\_Orca},\mathit{xd\_Orca},\mathit{z\_Orca}}$
+      \State $y\_SlD  \gets \Call{SlD\_CalcOutput}{\mathit{p\_SlD},\mathit{u\_SlD},\mathit{x\_SlD},\mathit{xd\_SlD},\mathit{z\_SlD}}$
    
       \If{ $k \geq k\_max$}
          \State exit loop
@@ -191,16 +193,18 @@ The other input-output relationships for these modules are solved using Solve Op
       \State$\mathit{u\_FEAM\_tmp}    \gets \Call{TransferMeshMotions}{y\_ED}$
       \State$\mathit{u\_IceF\_tmp}    \gets \Call{TransferMeshMotions}{y\_SD}$
       \State$\mathit{u\_IceD\_tmp(:)} \gets \Call{TransferMeshMotions}{y\_SD}$
+      \State$\mathit{u\_SlD\_tmp}     \gets \Call{TransferMeshMotions}{y\_SD}$
       \State$\mathit{u\_HD\_tmp}      \gets \Call{TransferMeshMotions}{y\_ED,y\_SD}$
       \State$\mathit{u\_SD\_tmp}      \gets \!
             \begin{aligned}[t]
            & \Call{TransferMeshMotions}{\mathit{y\_ED}}  \\
                 & \cup \Call{TransferMeshLoads}{}(\!
                    \begin{aligned}[t] 
-                        & \mathit{y\_SD}, \\
-                        & \mathit{y\_HD},\mathit{u\_HD\_tmp}, \\
-                        & \mathit{y\_IceF},\mathit{u\_IceF\_tmp}) \\
-                        & \mathit{y\_IceD(:)},\mathit{u\_IceD\_tmp(:)}) \\
+                        & \mathit{y\_SD},                                  \\
+                        & \mathit{y\_HD},       \mathit{u\_HD\_tmp},       \\
+                        & \mathit{y\_IceF},     \mathit{u\_IceF\_tmp},     \\
+                        & \mathit{y\_IceD(:)},  \mathit{u\_IceD\_tmp(:)},  \\
+                        & \mathit{y\_SlD},      \mathit{u\_SlD\_tmp})      \\
                      \end{aligned}
          \end{aligned}$
       \State$\mathit{u\_ED\_tmp} \gets \Call{TransferMeshLoads}{}( \!
@@ -212,7 +216,7 @@ The other input-output relationships for these modules are solved using Solve Op
                      \end{aligned}$
 
       \State
-      \State$\mathit{U\_Residual} \gets u - \Call{u\_vec}{\mathit{u\_HD\_tmp},\mathit{u\_SD\_tmp},\mathit{u\_ED\_tmp}}$
+      \State$\mathit{U\_Residual} \gets u - \Call{u\_vec}{\mathit{u\_HD\_tmp},\mathit{u\_SD\_tmp},\mathit{u\_ED\_tmp},\mathit{u\_SlD\_tmp}}$
       \State
       
       \If{ last Jacobian was calculated at least $\mathit{DT\_UJac}$ seconds ago }
@@ -251,11 +255,18 @@ The other input-output relationships for these modules are solved using Solve Op
    \State $\mathit{u\_FEAM}    \gets \Call{TransferMeshMotions}{\mathit{y\_ED}}$
    \State $\mathit{u\_IceF}    \gets \Call{TransferMeshMotions}{\mathit{y\_SD}}$
    \State $\mathit{u\_IceD(:)} \gets \Call{TransferMeshMotions}{\mathit{y\_SD}}$
+   \State $\mathit{u\_SlD}     \gets \Call{TransferMeshPosition}{\mathit{y\_SD}}$
          
 \EndProcedure
-
 \end{algorithmic}
-%\end{algorithm}
+
+\paragraph{SoilDyn}
+The motion inputs to \emph{SoilDyn} are the position and orientation of the mesh points.  The \emph{SoilDyn} module expects changes in position to be in the order of $10^{-3}$~m, or angular changes of $10^{-4}$~radians or less throughout the duration of the simulation with response terms on the order of $10^{12}$~N/m (or N-m/radians).
+To simplify the mathematics in the Jacobian, an Euler angle extraction is performed to get rotations about the $x$, $y$, and $z$ axis (the angles are small enough that order does not matter in this context).  So the $u$ input vector for \emph{SoilDyn} is a 6-vector for each mesh point.
+The resulting reaction forces from \emph{SoilDyn} are roughly characterized as $F_{\mathrm{react}} \approx k x$ where $k$ is a stiffness matrix and $x$ is the 6-vector of translational and rotational displacements (note that there may be some damping or drift terms, but of much lower magnitude).
+This creates a situation where $\mathit{u_SD} \gets \mathit{y_SlD} \gets \mathit{y_SD}$ is a feed back loop of \emph{SubDyn} node displacements (stored in states) of a given mesh point directly through \emph{SoilDyn} to the input force on that node point. Without including this calculation in the Jacobian, the accelerations of the \emph{SubDyn} nodes will be missing the reaction force and likely cause non-convergence or large oscillations.  For this reason we include the \emph{SoilDyn} input / output into the Jacobian. However this does cause some of the Jacobian to differ by as many as six orders of magnitude, which is numerically non-ideal for the solve.
+
+
 
 \subsection {Implementation of line2-to-line2 loads mapping}
 The inverse-lumping of loads is computed by a block matrix solve for the distributed forces and moments, 
