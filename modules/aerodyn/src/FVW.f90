@@ -66,6 +66,7 @@ subroutine FVW_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
    integer(IntKi)          :: UnEcho         ! Unit number for the echo file
    character(*), parameter :: RoutineName = 'FVW_Init'
    type(FVW_InputFile)     :: InputFileData                                            !< Data stored in the module's input file
+   character(len=1054) :: DirName
 
    ! Initialize variables for this routine
    ErrStat = ErrID_None
@@ -77,6 +78,10 @@ subroutine FVW_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
 
    ! Display the module information
    call DispNVD( FVW_Ver )
+   ! Display convenient info to screen, until this is one day displayed by OpenFAST
+   call getcwd(DirName)
+   call WrScr(' - Directory:         '//trim(DirName))
+   call WrScr(' - RootName:          '//trim(InitInp%RootName))
 #ifdef _OPENMP   
    call WrScr(' - Compiled with OpenMP')
    !$OMP PARALLEL default(shared)
