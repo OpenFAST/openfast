@@ -1613,8 +1613,6 @@ subroutine SetInputsForFVW(p, u, m, errStat, errMsg)
    
    integer(intKi)                          :: tIndx
    integer(intKi)                          :: k                      ! loop counter for blades
-   integer(intKi)                          :: ErrStat2
-   character(ErrMsgLen)                    :: ErrMsg2
    character(*), parameter                 :: RoutineName = 'SetInputsForFVW'
 
    do tIndx=1,size(u)
@@ -1641,6 +1639,11 @@ subroutine SetInputsForFVW(p, u, m, errStat, errMsg)
       enddo
       if (ALLOCATED(m%FVW_u(tIndx)%V_wind)) then
          m%FVW_u(tIndx)%V_wind   = u(tIndx)%InflowWakeVel
+         ! Applying tower shadow to V_wind based on r_wind positions
+         if (p%TwrPotent /= TwrPotent_none .or. p%TwrShadow) then
+            call TwrInflArray( p, u(tIndx), m, m%FVW%r_wind, m%FVW_u(tIndx)%V_wind, ErrStat, ErrMsg )
+            if (ErrStat >= AbortErrLev) return
+         end if
       endif
    enddo
 end subroutine SetInputsForFVW
@@ -2538,6 +2541,131 @@ SUBROUTINE TwrInfl( p, u, m, ErrStat, ErrMsg )
    
    
 END SUBROUTINE TwrInfl 
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Calculate the tower influence on a array of points `Positions` (3xn)
+!! The subroutine has side effecs and modifies the inflow 
+!! Relies heavily (i.e. unfortunate copy pasting), on TwrInfl 
+SUBROUTINE TwrInflArray( p, u, m, Positions, Inflow, ErrStat, ErrMsg )
+   TYPE(AD_InputType),           INTENT(IN   )  :: u                       !< Inputs at Time t
+   TYPE(AD_ParameterType),       INTENT(IN   )  :: p                       !< Parameters
+   type(AD_MiscVarType),         intent(inout)  :: m                       !< Misc/optimization variables
+   real(ReKi), dimension(:,:),   INTENT(IN   )  :: Positions               !< Positions where tower influence is to be computed
+   real(ReKi), dimension(:,:),   INTENT(INOUT)  :: Inflow                  !< Undisturbed inflow (in) -> disturbed inflow (out)
+   INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat                 !< Error status of the operation
+   CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg                  !< Error message if ErrStat /= ErrID_None
+   ! local variables
+   real(ReKi)                                   :: xbar                    ! local x^ component of r_TowerBlade (distance from tower to blade) normalized by tower radius
+   real(ReKi)                                   :: ybar                    ! local y^ component of r_TowerBlade (distance from tower to blade) normalized by tower radius
+   real(ReKi)                                   :: zbar                    ! local z^ component of r_TowerBlade (distance from tower to blade) normalized by tower radius
+   real(ReKi)                                   :: theta_tower_trans(3,3)  ! transpose of local tower orientation expressed as a DCM
+   real(ReKi)                                   :: TwrCd                   ! local tower drag coefficient
+   real(ReKi)                                   :: W_tower                 ! local relative wind speed normal to the tower
+   real(ReKi)                                   :: Pos(3)                  ! current point
+   real(ReKi)                                   :: u_TwrShadow             ! axial velocity deficit fraction from tower shadow
+   real(ReKi)                                   :: u_TwrPotent             ! axial velocity deficit fraction from tower potential flow
+   real(ReKi)                                   :: v_TwrPotent             ! transverse velocity deficit fraction from tower potential flow
+   real(ReKi)                                   :: denom                   ! denominator
+   real(ReKi)                                   :: v(3)                    ! temp vector
+   integer(IntKi)                               :: i                       ! loop counters for points
+   real(ReKi)                                   :: MaxDiam                 ! Maximum tower diameter
+   real(ReKi)                                   :: TwrClrnc                ! local tower clearance
+   integer(intKi)                               :: ErrStat2
+   character(ErrMsgLen)                         :: ErrMsg2
+   character(*), parameter                      :: RoutineName = 'TwrInflArray'
+   ErrStat = ErrID_None
+   ErrMsg  = ""   
+   
+   ! these models are valid for only small tower deflections; check for potential division-by-zero errors:   
+   call CheckTwrInfl( u, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ); if (ErrStat >= AbortErrLev) return
+
+   MaxDiam = maxval(p%TwrDiam(:))
+
+   !$OMP PARALLEL default(shared)
+   !$OMP do private(i,Pos,theta_tower_trans,W_tower,xbar,ybar,zbar,TwrCd,TwrClrnc,denom,u_TwrPotent,v_TwrPotent,u_TwrShadow,v) schedule(runtime)
+   do i = 1, size(Positions,2)
+      Pos=Positions(1:3,i)
+         
+      ! Find nearest line2 element or node of the tower 
+      ! values are found for the deflected tower, returning theta_tower, W_tower, xbar, ybar, zbar, and TowerCd:
+      call getLocalTowerPropsNoCheck(p, u, Pos, theta_tower_trans, W_tower, xbar, ybar, zbar, TwrCd, TwrClrnc)
+
+      if ( TwrClrnc>20*MaxDiam) then
+         ! Far away, we skip the computation and keep undisturbed inflow 
+      elseif ( TwrClrnc<=0.0_ReKi) then
+         ! Inside the tower, will happen for vortex elements, we keep undisturbed inflow
+      else
+         ! calculate tower influence:
+         if ( abs(zbar) < 1.0_ReKi .and. p%TwrPotent /= TwrPotent_none ) then
+
+            if ( p%TwrPotent == TwrPotent_baseline ) then
+               denom = (xbar**2 + ybar**2)**2
+               u_TwrPotent = ( -1.0*xbar**2 + ybar**2 ) / denom
+               v_TwrPotent = ( -2.0*xbar    * ybar    ) / denom      
+
+            elseif (p%TwrPotent == TwrPotent_Bak) then
+               xbar = xbar + 0.1
+               denom = (xbar**2 + ybar**2)**2               
+               u_TwrPotent = ( -1.0*xbar**2 + ybar**2 ) / denom
+               v_TwrPotent = ( -2.0*xbar    * ybar    ) / denom        
+               denom = TwoPi*(xbar**2 + ybar**2)               
+               u_TwrPotent = u_TwrPotent + TwrCd*xbar / denom
+               v_TwrPotent = v_TwrPotent + TwrCd*ybar / denom                       
+               
+            end if
+         else
+            u_TwrPotent = 0.0_ReKi
+            v_TwrPotent = 0.0_ReKi
+         end if
+         
+         if ( p%TwrShadow .and. xbar > 0.0_ReKi .and. abs(zbar) < 1.0_ReKi) then
+            denom = sqrt( sqrt( xbar**2 + ybar**2 ) )
+            if ( abs(ybar) < denom ) then
+               u_TwrShadow = -TwrCd / denom * cos( PiBy2*ybar / denom )**2
+            else
+               u_TwrShadow = 0.0_ReKi
+            end if
+         else            
+            u_TwrShadow = 0.0_ReKi
+         end if
+                     
+         ! NOTE: we should introduce a safety check to avoid zero or negative velocities, have a minimal velocity
+         v(1) = (u_TwrPotent + u_TwrShadow)*W_tower
+         v(2) = v_TwrPotent*W_tower
+         v(3) = 0.0_ReKi
+
+         
+         Inflow(1:3,i) = Inflow(1:3,i) + matmul( theta_tower_trans, v ) 
+      endif ! Check if point far away or in tower
+   enddo ! loop on points
+   !$OMP END DO 
+   !$OMP END PARALLEL
+contains 
+   !> This is a simpler version of getLocalTowerProps
+   SUBROUTINE getLocalTowerPropsNoCheck(p, u, BladeNodePosition, theta_tower_trans, W_tower, xbar, ybar, zbar, TwrCd, TwrClrnc)
+      TYPE(AD_InputType),           INTENT(IN   )  :: u                       !< Inputs at Time t
+      TYPE(AD_ParameterType),       INTENT(IN   )  :: p                       !< Parameters
+      REAL(ReKi)                   ,INTENT(IN   )  :: BladeNodePosition(3)    !< local blade node position
+      REAL(ReKi)                   ,INTENT(  OUT)  :: theta_tower_trans(3,3)  !< transpose of local tower orientation expressed as a DCM
+      REAL(ReKi)                   ,INTENT(  OUT)  :: W_tower                 !< local relative wind speed normal to the tower
+      REAL(ReKi)                   ,INTENT(  OUT)  :: xbar                    !< local x^ component of r_TowerBlade normalized by tower radius
+      REAL(ReKi)                   ,INTENT(  OUT)  :: ybar                    !< local y^ component of r_TowerBlade normalized by tower radius
+      REAL(ReKi)                   ,INTENT(  OUT)  :: zbar                    !< local z^ component of r_TowerBlade normalized by tower radius
+      REAL(ReKi)                   ,INTENT(  OUT)  :: TwrCd                   !< local tower drag coefficient
+      REAL(ReKi)                   ,INTENT(  OUT)  :: TwrClrnc                !< tower clearance for potential output 
+      ! local variables
+      real(ReKi)                                   :: r_TowerBlade(3)         ! distance vector from tower to blade
+      real(ReKi)                                   :: TwrDiam                 ! local tower diameter  
+      logical                                      :: found   
+      character(*), parameter                      :: RoutineName = 'getLocalTowerPropsNoCheck'
+      ! option 1: nearest line2 element
+      call TwrInfl_NearestLine2Element(p, u, BladeNodePosition, r_TowerBlade, theta_tower_trans, W_tower, xbar, ybar, zbar, TwrCd, TwrDiam, found)
+      if ( .not. found) then 
+         ! option 2: nearest node
+         call TwrInfl_NearestPoint(p, u, BladeNodePosition, r_TowerBlade, theta_tower_trans, W_tower, xbar, ybar, zbar, TwrCd, TwrDiam)
+      end if
+      TwrClrnc = TwoNorm(r_TowerBlade) - 0.5_ReKi*TwrDiam
+   END SUBROUTINE getLocalTowerPropsNoCheck
+END SUBROUTINE TwrInflArray
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine returns the tower constants necessary to compute the tower influence. 
 !! if u%TowerMotion does not have any nodes there will be serious problems. I assume that has been checked earlier.
