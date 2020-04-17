@@ -364,8 +364,9 @@ SUBROUTINE FVW_SetParametersFromInputFile( InputFileData, p, m, ErrStat, ErrMsg 
    p%WakeRegParam         = InputFileData%WakeRegParam
    p%WingRegParam         = InputFileData%WingRegParam
    p%CoreSpreadEddyVisc   = InputFileData%CoreSpreadEddyVisc
+   p%ShearModel           = InputFileData%ShearModel
    p%WrVTK                = InputFileData%WrVTK
-   p%VTKBlades            = min(max(InputFileData%VTKBlades,0),p%nWings)
+   p%VTKBlades            = min(InputFileData%VTKBlades,p%nWings) ! Note: allowing it to be negative for tempoarry hack
    p%VTKCoord             = InputFileData%VTKCoord
 
    if (allocated(p%PrescribedCirculation)) deallocate(p%PrescribedCirculation)
@@ -535,9 +536,6 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    end IF
    !call print_x_NW_FW(p, m, x,'Conv')
 
-   ! --- Fake handling of ground effect
-   call FakeGroundEffect(p, x, m, ErrStat, ErrMsg)
-
    if (m%ComputeWakeInduced) then
       ! We extend the wake length, i.e. we emit a new panel of vorticity at the TE
       ! NOTE: this will be rolled back if UpdateState is called at the same starting time again
@@ -574,6 +572,9 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    call Map_LL_NW(p, m, z, x, ShedScale, ErrStat2, ErrMsg2); if(Failed()) return
    call Map_NW_FW(p, m, z, x, ErrStat2, ErrMsg2); if(Failed()) return
    !call print_x_NW_FW(p, m, x,'Map3')
+
+   ! --- Fake handling of ground effect
+   call FakeGroundEffect(p, x, m, ErrStat, ErrMsg)
 
    ! set the wind points required for t+p%DTaero timestep
    CALL SetRequestedWindPoints(m%r_wind, x, p, m)

@@ -33,6 +33,7 @@ typedef     ^                   ^               IntKi                           
 typedef     ^                   ^               IntKi                            WakeRegMethod -  - -   "Method for regularization (constant, stretching, age, etc.)"  - 
 typedef     ^                   ^               ReKi                             WakeRegParam -  - -   "Initial value of the regularization parameter" 
 typedef     ^                   ^               ReKi                             WingRegParam -  - -   "Regularization parameter of the wing" 
+typedef     ^                   ^               IntKi                            ShearModel   -  - -   "Option for shear modelling" 
 typedef     ^                   ^               DbKi                             DTaero        -  - -   "Time interval for calls calculations"   s
 typedef     ^                   ^               DbKi                             DTfvw         -  - -   "Time interval for calculating wake induced velocities"   s
 typedef     ^                   ^               ReKi                             KinVisc       -  - -   "Kinematic air viscosity"   m^2/s
@@ -160,6 +161,7 @@ typedef     ^                   ^               IntKi                           
 typedef     ^                   ^               IntKi                            WakeRegMethod -  - -   "Method for regularization (constant, stretching, age, etc.)"  - 
 typedef     ^                   ^               ReKi                             WakeRegParam  -  - -   "Factor used in the regularization " 
 typedef     ^                   ^               ReKi                             WingRegParam  -  - -   "Factor used in the regularization " 
+typedef     ^                   ^               IntKi                            ShearModel   -  - -   "Option for shear modelling" 
 typedef     ^                   ^               IntKi                            WrVTK         -  - -   "Outputs VTK at each calcoutput call, even if main fst doesnt do it"  - 
 typedef     ^                   ^               IntKi                            VTKBlades     -  - -   "Outputs VTk for each blade 0=no blade, 1=Bld 1"  - 
 typedef     ^                   ^               DbKi                             DTvtk         -  - -   "Requested timestep between VTK outputs (calculated from the VTK_fps read in)" s

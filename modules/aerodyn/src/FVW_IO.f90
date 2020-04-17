@@ -59,6 +59,7 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, Inp, ErrStat, ErrMsg )
    CALL ReadVar        (UnIn,FileName,Inp%WakeRegParam       ,'WakeRegParam'      ,''                 , ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVar        (UnIn,FileName,Inp%WingRegParam       ,'WingRegParam'      ,''                 , ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVarWDefault(UnIn,FileName,Inp%CoreSpreadEddyVisc ,'CoreSpreadEddyVisc','',100.0_ReKi      , ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVarWDefault(UnIn,FileName,Inp%ShearModel         ,'ShearModel'        ,'',idShearNone     , ErrStat2,ErrMsg2); if(Failed())return
    !------------------------ OUTPUT OPTIONS -----------------------------------------
    CALL ReadCom        (UnIn,FileName,                  'Output options header'              ,ErrStat2,ErrMsg2); if(Failed()) return
    CALL ReadVarWDefault(UnIn,FileName,Inp%WrVTK       , 'WrVTK'              ,'',     0      ,ErrStat2,ErrMsg2); if(Failed())return
@@ -75,6 +76,7 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, Inp, ErrStat, ErrMsg )
    if (Check(.not.(ANY(idRegDeterVALID ==Inp%RegDeterMethod))  , 'Regularization determination method (RegDeterMethod) not yet implemented. Use Manual method for now.')) return
    if (Check(.not.(ANY(idRegVALID      ==Inp%RegFunction  )), 'Regularization function (RegFunction) not implemented')) return
    if (Check(.not.(ANY(idRegMethodVALID==Inp%WakeRegMethod)), 'Wake regularization method (WakeRegMethod) not implemented')) return
+   if (Check(.not.(ANY(idShearVALID    ==Inp%ShearModel   )), 'Shear model (`ShearModel`) not valid')) return
 
    if (Check( Inp%DTfvw < p%DTaero, 'DTfvw must be >= DTaero from AD15.')) return
    if (abs(Inp%DTfvw-p%DTaero)>epsilon(1.0_ReKi)) then
@@ -186,7 +188,8 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth)
    real(ReKi),    dimension(:,:), allocatable :: SegPoints !< Segment Points
    real(ReKi),    dimension(:)  , allocatable :: SegGamma  !< Segment Circulation
    real(ReKi),    dimension(:),   allocatable  :: SegEpsilon !< 
-   integer(IntKi) :: iHeadC, iHeadP, nSeg, nSegP
+   integer(IntKi)       :: iHeadC, iHeadP, nSeg, nSegP
+   logical              :: bMirror
    integer(IntKi)       :: ErrStat2
    character(ErrMsgLen) :: ErrMsg2
 
@@ -252,7 +255,9 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth)
    ! --------------------------------------------------------------------------------}
    ! --- All Segments
    ! --------------------------------------------------------------------------------{
-   call PackPanelsToSegments(p, m, x, 1, SegConnct, SegPoints, SegGamma, nSeg, nSegP)
+   ! False below is to avoid writing the mirrored vorticity, this could be an option though
+   bMirror= (p%ShearModel==idShearMirror) .and. (p%VTKBlades<0) ! NOTE: temporary hack to output mirrored vorticity
+   call PackPanelsToSegments(p, m, x, 1, bMirror, SegConnct, SegPoints, SegGamma, nSeg, nSegP)
    if (m%nNW==1) then ! Small Hack - At t=0, NW not set, but first NW panel is the LL panel
       iHeadP=1
       iHeadC=1

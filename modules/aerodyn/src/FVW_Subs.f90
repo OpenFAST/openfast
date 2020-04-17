@@ -34,6 +34,10 @@ module FVW_SUBS
    integer(IntKi), parameter :: idRegDeterManual  = 0
    integer(IntKi), parameter :: idRegDeterAuto    = 1
    integer(IntKi), parameter, dimension(2) :: idRegDeterVALID      = (/idRegDeterManual, idRegDeterAuto /)
+   ! Shear model
+   integer(IntKi), parameter :: idShearNone   = 0
+   integer(IntKi), parameter :: idShearMirror = 1
+   integer(IntKi), parameter, dimension(2) :: idShearVALID         = (/idShearNone, idShearMirror /)
 
    real(ReKi), parameter :: CoreSpreadAlpha = 1.25643 
 
@@ -492,18 +496,19 @@ end subroutine DistributeRequestedWind
 
 
 
-subroutine PackPanelsToSegments(p, m, x, iDepthStart, SegConnct, SegPoints, SegGamma, nSeg, nSegP)
+subroutine PackPanelsToSegments(p, m, x, iDepthStart, bMirror, SegConnct, SegPoints, SegGamma, nSeg, nSegP)
    type(FVW_ParameterType),         intent(in   ) :: p       !< Parameters
    type(FVW_MiscVarType),           intent(in   ) :: m       !< Initial misc/optimization variables
    type(FVW_ContinuousStateType),   intent(in   ) :: x       !< States
    integer(IntKi),                  intent(in   ) :: iDepthStart !< Index where we start packing for NW panels
+   logical,                         intent(in   ) :: bMirror !< Mirror the vorticity wrt the ground
    integer(IntKi),dimension(:,:), allocatable :: SegConnct !< Segment connectivity
    real(ReKi),    dimension(:,:), allocatable :: SegPoints !< Segment Points
    real(ReKi),    dimension(:)  , allocatable :: SegGamma  !< Segment Circulation
    integer(IntKi), intent(out)                :: nSeg      !< Total number of segments after packing
    integer(IntKi), intent(out)                :: nSegP     !< Total number of segments points after packing
    ! Local
-   integer(IntKi) :: iHeadC, iHeadP, nC, nCNW, nP, iW, iHeadC_bkp
+   integer(IntKi) :: iHeadC, iHeadP, nC, nCNW, nP, iW, iHeadC_bkp, i, iMirror
    logical        :: LastNWShed
 
    ! If the FW contains Shed vorticity, we include the last shed vorticity form the NW, orhtwerise, we don't!
@@ -535,9 +540,16 @@ subroutine PackPanelsToSegments(p, m, x, iDepthStart, SegConnct, SegPoints, SegG
       if (allocated(SegConnct)) deallocate(SegConnct)
       if (allocated(SegPoints)) deallocate(SegPoints)
       if (allocated(SegGamma))  deallocate(SegGamma)
-      allocate(SegConnct(1:4,1:nC)); SegConnct=-1
-      allocate(SegPoints(1:3,1:nP)); SegPoints=-1
-      allocate(SegGamma (1:nC));     SegGamma =-1
+      if (bMirror) then
+         ! we double the storage dimension when we mirror the vorticity
+         allocate(SegConnct(1:4,1:2*nC)); SegConnct=-1 ! 4 values per segmnt: iP1, iP2, iDepth, iSpan
+         allocate(SegPoints(1:3,1:2*nP)); SegPoints=-1
+         allocate(SegGamma (1:2*nC));     SegGamma =-1
+      else
+         allocate(SegConnct(1:4,1:nC)); SegConnct=-1
+         allocate(SegPoints(1:3,1:nP)); SegPoints=-1
+         allocate(SegGamma (1:nC));     SegGamma =-1
+      endif
 
       !
       iHeadP=1
@@ -552,7 +564,7 @@ subroutine PackPanelsToSegments(p, m, x, iDepthStart, SegConnct, SegPoints, SegG
          do iW=1,p%nWings
             CALL LatticeToSegments(x%r_FW(1:3,:,1:m%nFW+1,iW), x%Gamma_FW(:,1:m%nFW,iW), 1, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC , p%FWShedVorticity, p%FWShedVorticity)
          enddo
-         SegConnct(3,iHeadC_bkp:) = SegConnct(3,iHeadC_bkp:) + m%nNW
+         SegConnct(3,iHeadC_bkp:) = SegConnct(3,iHeadC_bkp:) + m%nNW ! Increasing iDepth (or age) to account for NW
       endif
       if (DEV_VERSION) then
          ! Safety checks
@@ -572,6 +584,27 @@ subroutine PackPanelsToSegments(p, m, x, iDepthStart, SegConnct, SegPoints, SegG
       endif
       nSeg  = iHeadC-1
       nSegP = iHeadP-1
+
+      if (bMirror) then
+         ! Mirroring the segments directly
+         ! NOTE: an alternative is to handle this in the Biot-Savart law directly...
+         do i=1,nSeg
+            iMirror = i + nSeg
+            SegConnct(1:2, iMirror) =  SegConnct(1:2, i) + nSegP ! Increased point indices
+            SegConnct(3:4, iMirror) =  SegConnct(3:4, i) ! Span and age is copied
+            SegGamma(iMirror)       = -SegGamma(i)       ! Vorticity needs mirroring
+         enddo
+         do i=1,nSegP
+            iMirror = i + nSegP
+            SegPoints(1:2, iMirror) =   SegPoints(1:2, i) ! Same x and y
+            SegPoints(3  , iMirror) = - SegPoints(3  , i) ! Mirror with respect to z=0
+         enddo
+         ! We now have double the amount of segments and points
+         nSeg  = nSeg*2
+         nSegP = nSegP*2
+      endif
+
+
    else
       nSeg  = 0
       nSegP = 0
@@ -704,18 +737,20 @@ subroutine WakeInducedVelocities(p, x, m, ErrStat, ErrMsg)
    real(ReKi),    dimension(:)  , allocatable :: SegEpsilon !< Segment regularization parameter
    real(ReKi),    dimension(:,:), allocatable :: CPs   !< ControlPoints
    real(ReKi),    dimension(:,:), allocatable :: Uind  !< Induced velocity
-   integer(IntKi) :: nFWEff ! Number of farwake panels that are free at current tmie step
+   integer(IntKi) :: nFWEff  ! Number of farwake panels that are free at current tmie step
+   logical        :: bMirror ! True if we mirror the vorticity wrt ground
    ErrStat= ErrID_None
    ErrMsg =''
 
    nFWEff = min(m%nFW, p%nFWFree)
+   bMirror = p%ShearModel==idShearMirror ! Whether or not we mirror the vorticity wrt ground
 
    m%Vind_NW = -9999._ReKi !< Safety
    m%Vind_FW = -9999._ReKi !< Safety
 
    ! --- Packing all vortex elements into a list of segments
    ! NOTE: allocates SegConnct, SegPoints, SegGamma..
-   call PackPanelsToSegments(p, m, x, 1, SegConnct, SegPoints, SegGamma, nSeg, nSegP)
+   call PackPanelsToSegments(p, m, x, 1, bMirror, SegConnct, SegPoints, SegGamma, nSeg, nSegP)
 
    ! --- Setting up regularization
    allocate(SegEpsilon(1:nSeg));
@@ -818,12 +853,14 @@ subroutine LiftingLineInducedVelocities(p, x, iDepthStart, m, ErrStat, ErrMsg)
    real(ReKi),    dimension(:,:), allocatable :: Uind  !< Induced velocity
    integer(IntKi),              intent(  out) :: ErrStat    !< Error status of the operation
    character(*),                intent(  out) :: ErrMsg     !< Error message if ErrStat /= ErrID_None
+   logical ::  bMirror 
    ErrStat = ErrID_None
    ErrMsg  = ""
    m%Vind_LL = -9999._ReKi !< Safety
+   bMirror = p%ShearModel==idShearMirror ! Whether or not we mirror the vorticity wrt ground
 
    ! --- Packing all vortex elements into a list of segments
-   call PackPanelsToSegments(p, m, x, iDepthStart, SegConnct, SegPoints, SegGamma, nSeg, nSegP)
+   call PackPanelsToSegments(p, m, x, iDepthStart, bMirror, SegConnct, SegPoints, SegGamma, nSeg, nSegP)
 
    ! --- Computing induced velocity
    if (nSegP==0) then
