@@ -4743,7 +4743,14 @@ end if
                                          MAPp%Input(1), FEAM%Input(1), MD%Input(1), &
                                          Orca%Input(1), BD%Input(1,:), MeshMapData, ErrStat2, ErrMsg2 )         
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )                                     
-      
+   
+    
+      ! Transfer SubDyn outputs to SoilDyn   -- adp: maybe this should be included above, or when the TCF branch is merged in, put it into that part of SD transfer
+   IF ( p_FAST%CompSoil == Module_SlD ) THEN
+      CALL SlD_InputSolve(  SlD%Input(1), SD%y, MeshMapData, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   END IF
+
       !> Solve option 1 (rigorous solve on loads/accelerations)
    CALL SolveOption1(this_time, this_state, calcJacobian, p_FAST, ED, BD, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, IceF, IceD, SlD, MeshMapData, ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
@@ -4893,9 +4900,6 @@ SUBROUTINE SolveOption1(this_time, this_state, calcJacobian, p_FAST, ED, BD, HD,
 
       ! SoilDyn
    IF ( p_FAST%CompSoil == Module_SlD ) THEN
-            ! Overwrite the SlD inputs with the newly calculated values from SD (we don't need correction steps this way)
-      CALL SlD_InputSolve(  SlD%Input(1), SD%y, MeshMapData, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)  
       CALL SlD_CalcOutput( this_time, SlD%Input(1), SlD%p, SlD%x(this_state), SlD%xd(this_state), SlD%z(this_state), &
                             SlD%OtherSt(this_state), SlD%y, SlD%m, ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
