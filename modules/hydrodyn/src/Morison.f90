@@ -1509,7 +1509,7 @@ subroutine SetMemberProperties( gravity, member, MCoefMod, MmbrCoefIDIndx, MmbrF
    member%MmbrFilledIDIndx = MmbrFilledIDIndx ! Set this to the parameter version of this member data
    if ( MmbrFilledIDIndx > 0 ) then    
       member%FillDens     =  InitInp%FilledGroups(MmbrFilledIDIndx)%FillDens
-      member%FillFSLoc    =  InitInp%FilledGroups(MmbrFilledIDIndx)%FillFSLoc
+      member%FillFSLoc    =  InitInp%FilledGroups(MmbrFilledIDIndx)%FillFSLoc - InitInp%MSL2SWL
        if (member%FillFSLoc >= Zb) then
          member%z_overfill = member%FillFSLoc - Zb
          member%l_fill = member%RefLength
@@ -2817,8 +2817,9 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
 
        
       ! External Hydrodynamic Side Loads
-      DO i =1,N+1    ! loop through member elements     
+      DO i =1,N+1    ! loop through member elements    
          h_c = 0.0_ReKi !TODO: Determine actual h_c based on water level, etc. GJH 3/23/20 see table in Section 7.1.1
+ !TODO:        call GetExtHydroForceMomentMultipliers( i, N+1, Za, Zb, Zi, h_c, deltal )
          if (i == 1) then
             dRdl_p  = abs(mem%dRdl_mg(i))
             dRdl_pp = mem%dRdl_mg(i)   

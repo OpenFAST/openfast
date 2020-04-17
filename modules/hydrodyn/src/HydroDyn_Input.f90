@@ -3952,9 +3952,11 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
 
       InitInp%Morison%MGTop    = -999999.0
       InitInp%Morison%MGBottom =  999999.0
-
+      do I = 1,InitInp%Morison%NMGDepths
+            ! Adjust the depth values based on MSL2SWL
+         InitInp%Morison%MGDepths(I)%MGDpth = InitInp%Morison%MGDepths(I)%MGDpth - InitInp%MSL2SWL
+      end do
       DO I = 1,InitInp%Morison%NMGDepths
-
             ! Store the boundaries of the marine growth zone
          IF ( InitInp%Morison%MGDepths(I)%MGDpth > InitInp%Morison%MGTop ) THEN
             InitInp%Morison%MGTop    = InitInp%Morison%MGDepths(I)%MGDpth
