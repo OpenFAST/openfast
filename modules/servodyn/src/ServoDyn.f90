@@ -762,8 +762,6 @@ SUBROUTINE SrvD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState,
    INTEGER(IntKi)                                 :: order
    TYPE(SrvD_InputType)                           :: u_interp        ! interpolated input
       ! Local variables:
-   REAL(ReKi)                                     :: GenTrq      !< generator torque
-   REAL(ReKi)                                     :: ElecPwr     !< electrical power
       
       
    INTEGER(IntKi)                                 :: ErrStat2        ! Error status of the operation (occurs after initial error)
@@ -1312,7 +1310,6 @@ SUBROUTINE SrvD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
    REAL(R8Ki)                                                      :: AllOuts(3,1:MaxOutPts) ! All the the available output channels
    REAL(R8Ki)                                                      :: GenTrq_du, ElecPwr_du  ! derivatives of generator torque and electrical power w.r.t. u%HSS_SPD
    INTEGER(IntKi)                                                  :: I                      ! Generic loop index
-   INTEGER(IntKi)                                                  :: K                      ! Blade index
    INTEGER(IntKi)                                                  :: ErrStat2               ! Error status of the operation
    CHARACTER(ErrMsgLen)                                            :: ErrMsg2                ! Error message if ErrStat /= ErrID_None
    CHARACTER(*), PARAMETER                                         :: RoutineName = 'SrvD_JacobianPInput'
@@ -4040,7 +4037,6 @@ SUBROUTINE CalculateTorqueJacobian( t, u, p, m, GenTrq_du, ElecPwr_du, ErrStat, 
    REAL(R8Ki)                                     :: Current2_i, Current2_i_du  ! Current passing through the rotor (amps) and its derivative w.r.t. u%HSS_Spd
                                                   
    REAL(R8Ki)                                     :: GenTrq      ! generator torque
-   REAL(R8Ki)                                     :: PwrMech     ! Mechanical power in generator 
    
    REAL(R8Ki)                                     :: ComDenom, ComDenom_du  ! temporary variable (common denominator)
    REAL(R8Ki)                                     :: PwrLossS_du ! Power loss in the stator (watts) and its derivative w.r.t. u%HSS_Spd 

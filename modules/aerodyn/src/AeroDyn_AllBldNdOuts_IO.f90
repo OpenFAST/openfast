@@ -166,22 +166,9 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, u, m, y, OtherState, Indx, ErrStat, ErrM
    INTEGER(IntKi)                               :: IdxBlade                         ! Counter to which blade we are on
    INTEGER(IntKi)                               :: IdxNode                          ! Counter to the blade node we ae on
    INTEGER(IntKi)                               :: IdxChan                          ! Counter to the channel we are outputting.
-   INTEGER(IntKi)                               :: compIndx                         ! index for array component (x,y,z)
    CHARACTER(*), PARAMETER                      :: RoutineName = 'Calc_WriteAllBldNdOutput'
    REAL(ReKi)                                   :: ct, st ! cosine, sine of theta
    REAL(ReKi)                                   :: cp, sp ! cosine, sine of phi
-   REAL(ReKi)                                   :: Tmp33a(3,3)
-   REAL(ReKi)                                   :: Tmp33b(3,3)
-   REAL(R8Ki)                                   :: Tmp33aR8Ki(3,3)
-   REAL(R8Ki)                                   :: Tmp33bR8Ki(3,3)
-   REAL(ReKi)                                   :: ThetaYXZ(3)
-   REAL(ReKi)                                   :: ThetaYXZ_RD(3)
-   REAL(ReKi)                                   :: BladeLocalOrient(3,3)
-
-         ! Error handling
-   INTEGER(IntKi)          :: ErrStat2                     ! Temporary Error status
-   CHARACTER(ErrMsgLen)    :: ErrMsg2                      ! Temporary Error message 
-
 
          ! Initialize some things
       ErrMsg = ''
