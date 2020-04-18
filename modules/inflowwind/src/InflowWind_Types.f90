@@ -115,6 +115,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: HAWC_ProfileType      !< HAWC -- Wind profile type (0=constant;1=logarithmic;2=power law) [-]
     REAL(ReKi)  :: HAWC_PLExp      !< HAWC -- Power law exponent (used for PL wind profile type only) [-]
     REAL(ReKi)  :: HAWC_Z0      !< HAWC -- Surface roughness length (used for LOG wind profile type only) [-]
+    REAL(ReKi) , DIMENSION(1:3)  :: HAWC_InitPosition      !< HAWC -- initial position (offset for wind file box) [meters]
     LOGICAL  :: SumPrint      !< Write summary info to a file <ROOTNAME>.IfW.Sum [-]
     INTEGER(IntKi)  :: NumOuts      !< Number of parameters in the output list (number of outputs requested) [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: OutList      !< List of user-requested output channels [-]
@@ -572,6 +573,7 @@ ENDIF
     DstInputFileData%HAWC_ProfileType = SrcInputFileData%HAWC_ProfileType
     DstInputFileData%HAWC_PLExp = SrcInputFileData%HAWC_PLExp
     DstInputFileData%HAWC_Z0 = SrcInputFileData%HAWC_Z0
+    DstInputFileData%HAWC_InitPosition = SrcInputFileData%HAWC_InitPosition
     DstInputFileData%SumPrint = SrcInputFileData%SumPrint
     DstInputFileData%NumOuts = SrcInputFileData%NumOuts
 IF (ALLOCATED(SrcInputFileData%OutList)) THEN
@@ -704,6 +706,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! HAWC_ProfileType
       Re_BufSz   = Re_BufSz   + 1  ! HAWC_PLExp
       Re_BufSz   = Re_BufSz   + 1  ! HAWC_Z0
+      Re_BufSz   = Re_BufSz   + SIZE(InData%HAWC_InitPosition)  ! HAWC_InitPosition
       Int_BufSz  = Int_BufSz  + 1  ! SumPrint
       Int_BufSz  = Int_BufSz  + 1  ! NumOuts
   Int_BufSz   = Int_BufSz   + 1     ! OutList allocated yes/no
@@ -881,6 +884,10 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%HAWC_Z0
     Re_Xferred = Re_Xferred + 1
+    DO i1 = LBOUND(InData%HAWC_InitPosition,1), UBOUND(InData%HAWC_InitPosition,1)
+      ReKiBuf(Re_Xferred) = InData%HAWC_InitPosition(i1)
+      Re_Xferred = Re_Xferred + 1
+    END DO
     IntKiBuf(Int_Xferred) = TRANSFER(InData%SumPrint, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%NumOuts
@@ -1089,6 +1096,12 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%HAWC_Z0 = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
+    i1_l = LBOUND(OutData%HAWC_InitPosition,1)
+    i1_u = UBOUND(OutData%HAWC_InitPosition,1)
+    DO i1 = LBOUND(OutData%HAWC_InitPosition,1), UBOUND(OutData%HAWC_InitPosition,1)
+      OutData%HAWC_InitPosition(i1) = ReKiBuf(Re_Xferred)
+      Re_Xferred = Re_Xferred + 1
+    END DO
     OutData%SumPrint = TRANSFER(IntKiBuf(Int_Xferred), OutData%SumPrint)
     Int_Xferred = Int_Xferred + 1
     OutData%NumOuts = IntKiBuf(Int_Xferred)

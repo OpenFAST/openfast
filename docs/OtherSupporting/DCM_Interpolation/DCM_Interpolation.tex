@@ -1,0 +1,238 @@
+%----------------------------------------------------------
+%
+
+\documentclass[10pt,letterpaper,oneside,notitlepage]{article}
+%\documentclass{report}%
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{enumitem}
+\usepackage{nomencl}
+\usepackage{amsmath}%
+%\usepackage{amsfonts}%
+%\usepackage{amssymb}%
+%\usepackage{graphicx}
+%----------------------------------------------------------
+\makenomenclature
+%\theoremstyle{plain}
+%\newtheorem{acknowledgement}{Acknowledgement}
+%\newtheorem{definition}{Definition}
+%\newtheorem{remark}{Remark}
+%\numberwithin{equation}{section}
+%-----------------------------------------------------------
+\begin{document}
+\title{Interpolation of DCMs}
+\author{Bonnie Jonkman}
+\maketitle
+
+
+\section{Logarithmic maps for DCMs}
+
+For any direction cosine matrix (DCM), $\Lambda$, 
+the logarithmic map for the matrix is a skew-symmetric matrix, $\lambda$:
+
+
+\begin{equation}
+\label{EqLog}
+\lambda 
+= \log( \Lambda )
+= \begin{bmatrix}
+		0          &  \lambda_3 & -\lambda_2 \\
+		-\lambda_3 &  0         &  \lambda_1 \\	
+		 \lambda_2 & -\lambda_1 &  0          
+	\end{bmatrix}
+\end{equation}
+
+\section{Matrix exponentials}
+
+The angle of rotation for the skew-symmetric matrix, $\lambda$ is
+\begin{equation}
+\label{EqRotationAng}
+\theta = \left\|\lambda\right\| = \sqrt{{\lambda_1}^2+{\lambda_2}^2+{\lambda_3}^2} 
+\end{equation}
+
+The matrix exponential is 
+\begin{equation}
+\label{EqExp}
+ \Lambda = \exp(\lambda) =
+ \left\{ 
+ \begin{matrix}
+	I                                                                              &  \theta = 0 \\
+	I + \frac{\sin\theta}{\theta}\lambda + \frac{1-\cos\theta}{\theta^2}\lambda^2  &  \theta > 0 \\
+ \end{matrix} 
+ \right.
+\end{equation}
+
+
+\section{Solving for $\lambda$}
+
+If the logarithmic map and matrix exponential are truly inverses, we need 
+\begin{equation}
+\exp(\log(\Lambda)) = \Lambda. 
+\end{equation}
+Using the expression for $\lambda$ from Equation \ref{EqLog}, we get
+\begin{equation}
+\label{EqExpMatrix}
+	\exp\left(
+ \begin{bmatrix}
+		0          &  \lambda_3 & -\lambda_2 \\
+		-\lambda_3 &  0         &  \lambda_1 \\	
+		 \lambda_2 & -\lambda_1 &  0          
+	\end{bmatrix}
+\right)	= \Lambda =
+ \begin{bmatrix}
+  \Lambda_{11} & \Lambda_{12} & \Lambda_{13} \\
+  \Lambda_{21} & \Lambda_{22} & \Lambda_{23} \\
+  \Lambda_{31} & \Lambda_{32} & \Lambda_{33} \\
+ \end{bmatrix}
+\end{equation}
+
+Doing a little algebra for $\theta > 0$, Equation \ref{EqExpMatrix} becomes
+\begin{equation}
+\label{EqMatrixAlgebra}
+\Lambda =
+ \begin{bmatrix}
+  1-\frac{1-\cos\theta}{\theta^2}\left( \lambda_3^2 + \lambda_2^2\right) 
+&   \frac{\sin\theta}{\theta}\lambda_3+\frac{1-\cos\theta}{\theta^2}\lambda_1\lambda_2  
+&  -\frac{\sin\theta}{\theta}\lambda_2+\frac{1-\cos\theta}{\theta^2}\lambda_1\lambda_3 \\
+   -\frac{\sin\theta}{\theta}\lambda_3+\frac{1-\cos\theta}{\theta^2}\lambda_1\lambda_2
+&  1-\frac{1-\cos\theta}{\theta^2}\left( \lambda_3^2 + \lambda_1^2\right) 
+&  \frac{\sin\theta}{\theta}\lambda_1+\frac{1-\cos\theta}{\theta^2}\lambda_2\lambda_3  \\
+   \frac{\sin\theta}{\theta}\lambda_2+\frac{1-\cos\theta}{\theta^2}\lambda_1\lambda_3 
+& -\frac{\sin\theta}{\theta}\lambda_1+\frac{1-\cos\theta}{\theta^2}\lambda_2\lambda_3 
+&  1-\frac{1-\cos\theta}{\theta^2}\left( \lambda_2^2 + \lambda_1^2\right)                    \\
+ \end{bmatrix}
+\end{equation}
+It follows that the trace is 
+\begin{eqnarray*}
+\mathrm{Tr}(\Lambda) &=& 3 - 2\frac{1-\cos\theta}{\theta^2}(\lambda_1^2 + \lambda_2^2 + \lambda_3^2) \\
+               &=& 3 - 2\left(1-\cos\theta\right) \\
+               &=& 1 + 2\cos\theta
+\end{eqnarray*} or
+\begin{equation}
+\theta= \begin{matrix} \cos^{-1}\left(\frac{1}{2}\left(\mathrm{Tr}(\Lambda)-1\right)\right) & \theta \in \left[0,\pi\right]\end{matrix}
+\end{equation}
+It also follows that  
+\begin{equation}
+\Lambda - \Lambda^T=\frac{2\sin\theta}{\theta}
+ \begin{bmatrix}
+  0  &   \lambda_3  &  -\lambda_2 \\
+   -\lambda_3 &  0 &  \lambda_1  \\
+   \lambda_2 & -\lambda_1 &  0 \\
+ \end{bmatrix}
+\end{equation} or, when $\sin\theta \neq 0$
+\begin{equation}
+\label{EqLambdaSinNot0}
+\lambda = \frac{\theta}{2\sin\theta} \left( \Lambda - \Lambda^T\right)
+\end{equation}
+We need an equation that works when $\sin\theta$ approaches 0, that is, when $\theta$ approaches 0 or $\theta$ approaches $\pi$. When $\theta$ approaches 0, Equation \ref{EqLambdaSinNot0} actually behaves well: 
+\begin{equation}
+\lim_{\theta \to 0}\frac{\theta}{2\sin\theta} = \frac{1}{2}
+\end{equation}
+and since $\theta$ is the $l_2$ norm of the individual components of $\lambda$, it follows that they approach zero, and we get
+\begin{equation}
+\label{EqLambdaTheta0}
+\lambda = 0
+\end{equation}
+However, when $\theta$ approaches $\pi$, $\Lambda - \Lambda^T$ approaches 0, and 
+\begin{equation}
+\lim_{\theta \to \pi}\frac{\theta}{2\sin\theta} = \infty
+\end{equation}
+We need a different method to find $\lambda$. Going back to Equations \ref{EqExpMatrix} and \ref{EqMatrixAlgebra}, we can compute the following:
+\begin{equation}
+\Lambda_{11}+\Lambda_{22}-\Lambda_{33} = 1 - \frac{2\lambda_3^2(1-\cos\theta)}{\theta^2} 
+\end{equation}
+%\begin{equation}
+%\Lambda_{11}-\Lambda_{22}+\Lambda{33} = 1 - \frac{1-\cos\theta}{\theta^2}\left( 2\lambda_2^2\right)
+%\end{equation}
+%\begin{equation}
+%-\Lambda_{11}+\Lambda_{22}+\Lambda{33} = 1 - \frac{1-\cos\theta}{\theta^2}\left( 2\lambda_1^2\right)
+%\end{equation}
+or
+\begin{equation}
+\label{EqLambda3}
+\lambda_3 = \pm \theta\sqrt{ \frac{\left(1 + \Lambda_{33} - \Lambda_{11} - \Lambda_{22}\right)}{2\left(1-\cos\theta\right)}   }
+\end{equation}
+Equations for the other two components of $\lambda$ are similar:
+\begin{equation}
+\label{EqLambda1}
+\lambda_1 = \pm \theta\sqrt{ \frac{\left(1 + \Lambda_{11} - \Lambda_{22} - \Lambda_{33}\right)}{2\left(1-\cos\theta\right)}   }
+\end{equation}
+\begin{equation}
+\label{EqLambda2}
+\lambda_2 = \pm \theta\sqrt{ \frac{\left(1 + \Lambda_{22} - \Lambda_{11} - \Lambda_{33}\right)}{2\left(1-\cos\theta\right)}   }
+\end{equation}
+Equations \ref{EqLambda3}-\ref{EqLambda2} give us the magnitude, not the sign of the vector we are looking for. Here is one possibility for choosing the sign:
+If $(\lambda_1) \neq 0$, choose $\mathrm{sign}(\lambda_1)$ positive. 
+\begin{equation}
+\Lambda_{12}+\Lambda_{21} = \frac{2\left(1-\cos\theta\right)}{\theta^2}\lambda_1\lambda_2   
+\end{equation}
+so 
+\begin{equation}
+\mathrm{sign}(\lambda_2) = \mathrm{sign}(\Lambda_{12}+\Lambda_{21}) 
+\end{equation}
+and similarly,
+\begin{equation}
+\mathrm{sign}(\lambda_3) = \mathrm{sign}(\Lambda_{13}+\Lambda_{31}) 
+\end{equation}
+If $(\lambda_1) = 0$, similar arguments can be used to choose $\mathrm{sign}(\lambda_2)$ positive, and 
+\begin{equation}
+\mathrm{sign}(\lambda_3) = \mathrm{sign}(\Lambda_{23}+\Lambda_{32}) 
+\end{equation}
+At this point, the relationships between the components of $\lambda$ are set, so we have computed $\pm\lambda$. If $\theta=\pi$, both values are a solution, so this good enough.
+
+If $\theta$ is close to $\pi$, we will need to determine if we have the negative of the solution. This is required for numerical stability of the solution.
+In this case, $\Lambda-\Lambda^T$ is not exactly zero, so we can look at the sign of the solution we would have computed if we had used Equation \ref{EqLambdaSinNot0}:
+\begin{equation}
+\Lambda_{23}-\Lambda_{32} = \left|\frac{2\sin\theta}{\theta}\right|\lambda_1
+\end{equation}
+\begin{equation}
+\Lambda_{31}-\Lambda_{13} = \left|\frac{2\sin\theta}{\theta}\right|\lambda_2
+\end{equation}
+\begin{equation}
+\Lambda_{12}-\Lambda_{21} = \left|\frac{2\sin\theta}{\theta}\right|\lambda_3
+\end{equation}
+For numerical reasons, we don't want to use these equations to get the magnitude of the components of $\lambda$, but we can look at the sign of the element with largest magnitude and ensure our $\lambda$ has the same sign.
+
+\section{Interpolation}
+\subsection{Periodicity of solutions} 
+
+Given $\lambda_k = \lambda \left( 1 + \frac{2k\pi}{\left\| \lambda \right\|}\right)$ for any integer $k$, it follows that 
+\begin{equation}
+\theta_k = \left| 1 + \frac{2k\pi}{\left\|\lambda\right\|}\right| \theta
+\end{equation}
+or
+\begin{equation}
+\theta_k =  \left|\theta + 2k\pi\right|
+\end{equation}
+
+\begin{eqnarray*}
+\Lambda_k
+&=&  \exp(\lambda_k) \\
+&=&  I + \frac{\sin\theta_k}{\theta_k}\lambda_k + \frac{1-\cos\theta_k}{\theta_k^2}\lambda_k^2  \\
+&=&  I + \frac{\sin\left|\theta + 2k\pi\right|}{\left|\theta + 2k\pi\right|}\left( \frac{\theta+2k\pi}{\theta}\right)\lambda + \frac{1-\cos\left|\theta + 2k\pi\right|}{\left|\theta + 2k\pi\right|^2}\left(\frac{\theta+2k\pi}{\theta}\right)^2\lambda^2  \\
+&=&  I + \frac{\sin\left|\theta + 2k\pi\right|}{\theta} 
+         \frac{\theta + 2k\pi}{\left|\theta + 2k\pi\right|}\lambda + \frac{1-\cos\left|\theta + 2k\pi\right|}{\theta^2}\lambda^2\\
+&=&  I + \frac{\sin\theta}{\theta} \lambda + \frac{1-\cos\theta}{\theta^2}\lambda^2\\
+&=& \exp(\lambda) \\
+&=& \Lambda \\
+\end{eqnarray*}
+
+Thus, if $\lambda$ is one solution to $\log(\Lambda)$, then so is 
+$\lambda_k = \lambda \left( 1 + \frac{2k\pi}{\left\| \lambda \right\|}\right)$ for any integer k.
+
+\subsection{Finding values of $\lambda$ for interpolation} 
+Given a set of $\lambda^j$ to be interpolated, find equivalent $\tilde{\lambda}^j$ for integers $j=1,2,...n$:
+Set $\tilde{\lambda}^1 = \lambda^1$.
+For each $j\in\left[2,n\right]$, 
+check to see if $\tilde{\lambda}^{j-1}$ is closer (in the $l_2$-norm sense) to 
+$\lambda^j$ or $\lambda^j \left( 1 + \frac{2\pi}{\left\| \lambda^j \right\|}\right)$. 
+If the latter, set $\tilde{\lambda}^{j}=\lambda^j \left( 1 + \frac{2\pi}{\left\| \lambda^j \right\|}\right)$ and continue checking if we need to add more $2\pi$ periods.
+Otherwise, check to see if $\tilde{\lambda}^{j-1}$ is closer to 
+$\lambda^j$ or $\lambda^j \left( 1 - \frac{2\pi}{\left\| \lambda^j \right\|}\right)$. 
+If the latter, set $\tilde{\lambda}^{j}=\lambda^j \left( 1 - \frac{2\pi}{\left\| \lambda^j \right\|}\right)$ and continue checking if we need to subtract more $2\pi$ periods.
+Otherwise set $\tilde{\lambda}^{j} = \lambda^j$.
+
+
+Interpolation must occur on the $\tilde{\lambda}^{j}$ and not the $\lambda^j$.
+
+\end{document}

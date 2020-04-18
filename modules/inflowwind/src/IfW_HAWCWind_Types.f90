@@ -51,6 +51,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: URef = 0      !< Mean u-component wind speed at the reference height [meters]
     REAL(ReKi)  :: PLExp = 0      !< Power law exponent (used for PL wind profile type only) [-]
     REAL(ReKi)  :: Z0 = 0      !< Surface roughness length (used for LOG wind profile type only) [-]
+    REAL(ReKi) , DIMENSION(1:3)  :: InitPosition      !< the initial position of grid (distance in FF is offset) [meters]
   END TYPE IfW_HAWCWind_InitInputType
 ! =======================
 ! =========  IfW_HAWCWind_InitOutputType  =======
@@ -141,6 +142,7 @@ CONTAINS
     DstInitInputData%URef = SrcInitInputData%URef
     DstInitInputData%PLExp = SrcInitInputData%PLExp
     DstInitInputData%Z0 = SrcInitInputData%Z0
+    DstInitInputData%InitPosition = SrcInitInputData%InitPosition
  END SUBROUTINE IfW_HAWCWind_CopyInitInput
 
  SUBROUTINE IfW_HAWCWind_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
@@ -205,6 +207,7 @@ CONTAINS
       Re_BufSz   = Re_BufSz   + 1  ! URef
       Re_BufSz   = Re_BufSz   + 1  ! PLExp
       Re_BufSz   = Re_BufSz   + 1  ! Z0
+      Re_BufSz   = Re_BufSz   + SIZE(InData%InitPosition)  ! InitPosition
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -272,6 +275,10 @@ CONTAINS
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%Z0
     Re_Xferred = Re_Xferred + 1
+    DO i1 = LBOUND(InData%InitPosition,1), UBOUND(InData%InitPosition,1)
+      ReKiBuf(Re_Xferred) = InData%InitPosition(i1)
+      Re_Xferred = Re_Xferred + 1
+    END DO
  END SUBROUTINE IfW_HAWCWind_PackInitInput
 
  SUBROUTINE IfW_HAWCWind_UnPackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -350,6 +357,12 @@ CONTAINS
     Re_Xferred = Re_Xferred + 1
     OutData%Z0 = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
+    i1_l = LBOUND(OutData%InitPosition,1)
+    i1_u = UBOUND(OutData%InitPosition,1)
+    DO i1 = LBOUND(OutData%InitPosition,1), UBOUND(OutData%InitPosition,1)
+      OutData%InitPosition(i1) = ReKiBuf(Re_Xferred)
+      Re_Xferred = Re_Xferred + 1
+    END DO
  END SUBROUTINE IfW_HAWCWind_UnPackInitInput
 
  SUBROUTINE IfW_HAWCWind_CopyInitOutput( SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg )
