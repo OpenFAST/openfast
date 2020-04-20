@@ -187,6 +187,7 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth)
    logical              :: bMirror
    integer(IntKi)       :: ErrStat2
    character(ErrMsgLen) :: ErrMsg2
+   real(Reki), dimension(:,:,:), allocatable :: dxdt_0 !<
 
    if (DEV_VERSION) then
       print*,'------------------------------------------------------------------------------'
@@ -233,9 +234,11 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth)
       write(Label,'(A,A)') 'NW.Bld', i2ABC(iW)
       Filename = TRIM(FileRootName)//'.'//trim(Label)//'.'//Tstr//'.vtk'
       if (m%FirstCall) then ! Small Hack - At t=0, NW not set, but first NW panel is the LL panel
-         call WrVTK_Lattice(FileName, m%r_LL(1:3,:,1:2,iW), m%Gamma_LL(:,iW:iW))
+         allocate(dxdt_0(3, size(m%dxdt_NW,2) , m%nNW+1)); dxdt_0=0.0_ReKi
+         call WrVTK_Lattice(FileName, m%r_LL(1:3,:,1:2,iW), m%Gamma_LL(:,iW:iW),dxdt_0)
+         deallocate(dxdt_0)
       else
-         call WrVTK_Lattice(FileName, x%r_NW(1:3,:,1:m%nNW+1,iW), x%Gamma_NW(:,1:m%nNW,iW))
+         call WrVTK_Lattice(FileName, x%r_NW(1:3,:,1:m%nNW+1,iW), x%Gamma_NW(:,1:m%nNW,iW), m%dxdt_NW(:,:,1:m%nNW+1,iW))
       endif
    enddo
    ! --------------------------------------------------------------------------------}
@@ -245,7 +248,7 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth)
    do iW=1,p%VTKBlades
       write(Label,'(A,A)') 'FW.Bld', i2ABC(iW)
       Filename = TRIM(FileRootName)//'.'//trim(Label)//'.'//Tstr//'.vtk'
-      call WrVTK_Lattice(FileName, x%r_FW(1:3,1:FWnSpan+1,1:m%nFW+1,iW), x%Gamma_FW(1:FWnSpan,1:m%nFW,iW))
+      call WrVTK_Lattice(FileName, x%r_FW(1:3,1:FWnSpan+1,1:m%nFW+1,iW), x%Gamma_FW(1:FWnSpan,1:m%nFW,iW),m%dxdt_FW(:,:,1:m%nFW+1,iW))
    enddo
    ! --------------------------------------------------------------------------------}
    ! --- All Segments
@@ -279,18 +282,16 @@ subroutine WrVTK_Segments(filename, SegPoints, SegConnct, SegGamma, SegEpsilon)
       call vtk_cell_data_scalar(SegEpsilon,'Epsilon')
 !       call vtk_cell_data_scalar(real(SegConnct(3,:), ReKi),'Age')
       !call vtk_cell_data_scalar(real(SegConnct(4,:), ReKi),'Span')
-      !call vtk_point_data_init()
-      !call vtk_point_data_vector(Sgmt%UconvP(1:3,1:Sgmt%nP_Storage),'Uconv')
       call vtk_close_file()
    endif
 end subroutine
 
-subroutine WrVTK_Lattice(filename, LatticePoints, LatticeGamma)
+subroutine WrVTK_Lattice(filename, LatticePoints, LatticeGamma, LatticeData3d)
    use VTK ! for all the vtk_* functions
    character(len=*), intent(in)                         :: filename
    real(Reki), dimension(:,:,:), intent(in  )           :: LatticePoints !< Array of points 3 x nSpan x nDepth
    real(Reki), dimension(:,:), intent(in  )             :: LatticeGamma  !< Array of            nSpan x nDepth
-   !real(Reki), dimension(:,:,:), intent(in  ), optional :: LatticeData3d !< Array of n x nSpan x nDepth KEEP ME
+   real(Reki), dimension(:,:,:), intent(in  ), optional :: LatticeData3d !< Array of n x nSpan x nDepth KEEP ME
    !
    integer(IntKi), dimension(:,:), allocatable :: Connectivity
    real(ReKi), dimension(:,:), allocatable     :: Points
@@ -302,6 +303,10 @@ subroutine WrVTK_Lattice(filename, LatticePoints, LatticeGamma)
       call vtk_quad(Connectivity)
       call vtk_cell_data_init()
       call vtk_cell_data_scalar(LatticeGamma,'Gamma')
+      if (present(LatticeData3d)) then
+         call vtk_point_data_init()
+         call vtk_point_data_vector(LatticeData3d,'Uconv')
+      endif
       call vtk_close_file()
    endif
 
