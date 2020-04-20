@@ -183,12 +183,7 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth)
    character(255)                        :: Label
    character(Twidth)                     :: Tstr          ! string for current VTK write-out step (padded with zeros)
    character(1), dimension(3) :: I2ABC =(/'A','B','C'/)
-   !
-   integer(IntKi),dimension(:,:), allocatable :: SegConnct !< Segment connectivity
-   real(ReKi),    dimension(:,:), allocatable :: SegPoints !< Segment Points
-   real(ReKi),    dimension(:)  , allocatable :: SegGamma  !< Segment Circulation
-   real(ReKi),    dimension(:),   allocatable  :: SegEpsilon !< 
-   integer(IntKi)       :: iHeadC, iHeadP, nSeg, nSegP
+   integer(IntKi)       :: nSeg, nSegP, nSegNW
    logical              :: bMirror
    integer(IntKi)       :: ErrStat2
    character(ErrMsgLen) :: ErrMsg2
@@ -255,23 +250,15 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth)
    ! --------------------------------------------------------------------------------}
    ! --- All Segments
    ! --------------------------------------------------------------------------------{
+   ! NOTE: now we rely on the fact that the segments in Misc are well set
+   !       These segments are correct after a call to CalcOutput
+   !       The alternative is to call PackPanelsToSegments as was done before
+   !       This would require to allocate some local SegPoints,SegConnct here.
    ! False below is to avoid writing the mirrored vorticity, this could be an option though
    bMirror= (p%ShearModel==idShearMirror) .and. (p%VTKBlades<0) ! NOTE: temporary hack to output mirrored vorticity
-   call PackPanelsToSegments(p, m, x, 1, bMirror, SegConnct, SegPoints, SegGamma, nSeg, nSegP)
-   if (m%nNW==1) then ! Small Hack - At t=0, NW not set, but first NW panel is the LL panel
-      iHeadP=1
-      iHeadC=1
-      do iW=1,p%nWings
-         CALL LatticeToSegments(m%r_LL(1:3,:,1:2,iW), m%Gamma_LL(:,iW:iW), 1, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC, .True. , .True.)
-      enddo
-   endif
-
-   allocate(SegEpsilon(1:size(SegConnct,2)))
-   call WakeRegularization(p, x, m, SegConnct, SegPoints, SegGamma, SegEpsilon, ErrStat2, ErrMsg2)
-
+   call CountSegments(p, m%nNW, m%nFW, 1, nSeg, nSegP, nSegNW)
    Filename = TRIM(FileRootName)//'.AllSeg.'//Tstr//'.vtk'
-   CALL WrVTK_Segments(Filename, SegPoints, SegConnct, SegGamma, SegEpsilon) 
-   deallocate(SegEpsilon)
+   CALL WrVTK_Segments(Filename, m%SegPoints(:,1:nSegP), m%SegConnct(:,1:nSeg), m%SegGamma(1:nSeg), m%SegEpsilon(1:nSeg)) 
 
    if(.false.) print*,z%Gamma_LL(1,1) ! unused var for now
 end subroutine WrVTK_FVW

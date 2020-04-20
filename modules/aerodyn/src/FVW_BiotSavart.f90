@@ -97,13 +97,12 @@ end subroutine ui_seg_11
 !! NOTE: this function has side effects and expects Uind_out to be initialized!
 !! The function can compute the velocity on part of the segments and part of the control points.
 !! This feature is useful if some parallelization is used, while common storage vectors are used.
-subroutine ui_seg(iCPStart, iCPEnd, nCPsTot, CPs, &
+subroutine ui_seg(iCPStart, iCPEnd, CPs, &
       iSegStart, iSegEnd, nSegTot, nSegPTot, SegPoints, SegConnct, SegGamma,  &
       RegFunction, RegParam, Uind_out)
-   real(ReKi), dimension(3,nCPsTot), intent(in)     :: CPs            !< Control points
+   real(ReKi), dimension(:,:), intent(in)           :: CPs            !< Control points (3 x nCPs++)
    integer(IntKi), intent(in)                       :: iCPStart       !< Index where we start in Control points array
    integer(IntKi), intent(in)                       :: iCPEnd         !< Index where we end in Control points array
-   integer(IntKi), intent(in)                       :: nCPsTot        !< Total number of control points
    real(ReKi), dimension(3,nSegPTot), intent(in)    :: SegPoints      !< Segment points
    integer(IntKi), dimension(:,:), intent(in) :: SegConnct            !< Connectivity, indices of segments points iSeg1, iSeg2, iDepth, iSpan
    real(ReKi), dimension(nSegTot), intent(in)       :: SegGamma       !< Segment circulation
@@ -113,7 +112,7 @@ subroutine ui_seg(iCPStart, iCPEnd, nCPsTot, CPs, &
    integer(IntKi), intent(in)                       :: nSegPTot       !< Total number of segment points
    integer(IntKi), intent(in)                       :: RegFunction    !< Regularization model 
    real(ReKi), dimension(nSegTot), intent(in)       :: RegParam       !< Regularization parameter
-   real(ReKi), dimension(3,nCPsTot), intent(inout)  :: Uind_out       !< Induced velocity vector - Side effects!!!
+   real(ReKi), dimension(:,:), intent(inout)        :: Uind_out       !< Induced velocity vector - Side effects!!! (3 x nCPs++)
    ! Variables
    integer(IntKi) :: icp, is
    real(ReKi), dimension(3) :: Uind           !< 
@@ -323,13 +322,13 @@ end subroutine
 !> Velocity induced by one vortex quad on nCPs Control Points
 subroutine ui_quad_n1(CPs, nCPs, P1, P2, P3, P4, Gamm, RegFunction, RegParam, Uind)
    ! Arguments declarations 
-   integer, intent(in)                        :: nCPs        !< 
-   real(ReKi), dimension(3,nCPs), intent(in)  :: CPs         !< 
+   integer, intent(in)                     :: nCPs        !< 
+   real(ReKi), dimension(:,:), intent(in)  :: CPs         !< 3 x "nCPs"++
    real(ReKi), dimension(3), intent(in)       :: P1,P2,P3,P4 !< Coordinates of vortex quadrilateral
    real(ReKi),                    intent(in)  :: Gamm
    integer(IntKi) , intent(in)                :: RegFunction !< Regularization model (e.g. LambOseen)
    real(ReKi),                    intent(in)  :: RegParam    !< Regularization parameter [m]
-   real(ReKi), dimension(3,nCPs), intent(inout) :: Uind      !< side effects!!!
+   real(ReKi), dimension(:,:), intent(inout) :: Uind      !< side effects!!! 3 x "nCPs++"
    ! Variable declarations 
    real(ReKi), dimension(3) :: CP           !< 
    real(ReKi), dimension(3) :: Uindtmp        !< 

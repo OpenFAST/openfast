@@ -260,7 +260,7 @@ contains
             RegFunction = idRegVALID(i1)
             ! Method 1
             Uind_out =0.0_ReKi
-            call ui_seg(1, 1, nCPsTot, CPs, &
+            call ui_seg(1, 1, CPs, &
                   1, 1, nSegTot, nSegPTot, SegPoints, SegConnct, SegGamma,  &
                   RegFunction, RegParam, Uind_out)
             ! Method 2
@@ -300,7 +300,7 @@ contains
             RegFunction = idRegVALID(i1)
             ! Method 1
             Uind_out =0.0_ReKi
-            call ui_seg(1, 1, nCPsTot, CPs, &
+            call ui_seg(1, 1, CPs, &
                   1, 2, nSegTot, nSegPTot, SegPoints, SegConnct, SegGamma,  &
                   RegFunction, RegParam, Uind_out)
             ! Method 2
@@ -379,7 +379,7 @@ contains
       CPs(1:3,1)=(/1.5,1.5,0./)
       SegEpsilon=100.0_ReKi
       SmoothModel=0 ! No smooth
-      CALL ui_seg(1, 1, 1, CPs, &
+      CALL ui_seg(1, 1, CPs, &
       1, nC1, nC1, nP1, SegPoints, SegConnct, SegGamma,   &
       SmoothModel, SegEpsilon, Uind)
       print*,'Uind',Uind

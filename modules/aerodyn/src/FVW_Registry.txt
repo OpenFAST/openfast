@@ -88,6 +88,14 @@ typedef     ^                   ^               DbKi                            
 typedef     ^                   ^               ReKi                             tSpent        -   -  -  "Time spent in expensive Biot-Savart computation" s
 typedef     ^                   ^               ReKi                             dxdt_NW        ::::    -  -  "State time derivatie, stored for subcylcing" - 
 typedef     ^                   ^               ReKi                             dxdt_FW        ::::    -  -  "State time derivatie, stored for subcylcing" - 
+# Segment storage (buffer)
+typedef     ^                   ^               IntKi                            SegConnct     ::    -  -  "Connectivity of segments" - 
+typedef     ^                   ^               ReKi                             SegPoints     ::    -  -  "Points delimiting the segments" - 
+typedef     ^                   ^               ReKi                             SegGamma      :     -  -  "Segment circulations" - 
+typedef     ^                   ^               ReKi                             SegEpsilon    :     -  -  "Segment regularization parameter" - 
+# Wake rollup storage (buffer)
+typedef     ^                   ^               ReKi                             CPs           ::    -  -  "Control points used for wake rollup computation" - 
+typedef     ^                   ^               ReKi                             Uind          ::    -  -  "Induced velocities obtained at control points" - 
 
 # ........ Input ............
 # FVW_InputType

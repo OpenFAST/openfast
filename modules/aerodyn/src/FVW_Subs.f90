@@ -493,7 +493,49 @@ subroutine DistributeRequestedWind(V_wind, p, m)
 end subroutine DistributeRequestedWind
 
 
+!> Count how many segments are needed to represent the Near wake and far wakes, starting at a given depth
+subroutine CountSegments(p, nNW, nFW, iDepthStart, nSeg, nSegP, nSegNW)
+   type(FVW_ParameterType), intent(in   ) :: p    !< Parameters
+   integer(IntKi),          intent(in   ) :: nNW  !< Number of NW panels
+   integer(IntKi),          intent(in   ) :: nFW  !< Number of FW panels
+   integer(IntKi),          intent(in   ) :: iDepthStart !< Index where we start packing for NW panels
+   integer(IntKi),          intent(  out) :: nSeg   !< Total number of segments after packing
+   integer(IntKi),          intent(  out) :: nSegP  !< Total number of segments points after packing
+   integer(IntKi),          intent(  out) :: nSegNW !< Total number of segments points for the near wake only
+   logical        :: LastNWShed
+   ! If the FW contains Shed vorticity, we include the last shed vorticity from the NW, otherwise, we don't!
+   ! It's important not to include it, otherwise a strong vortex will be present there with no compensating vorticity from the FW
+   LastNWShed = (p%FWShedVorticity ) .or. ((.not.p%FWShedVorticity) .and. (nNW<p%nNWMax))
+   ! --- Counting total number of segments
+   nSegP=0; nSeg=0; nSegNW=0
+   ! NW segments
+   if ((nNW-iDepthStart)>=0) then
+      nSegP  =      p%nWings * (  (p%nSpan+1)*(nNW-iDepthStart+2)            )
+      nSegNW =      p%nWings * (2*(p%nSpan+1)*(nNW-iDepthStart+2)-(p%nSpan+1)-(nNW-iDepthStart+1+1))  
+      if (.not.LastNWShed) then
+         nSegNW =   nSegNW - p%nWings * (p%nSpan) ! Removing last set of shed segments
+      endif
+   endif
+   nSeg=nSegNW
+   ! FW segments
+   if (nFW>0) then
+      nSegP  = nSegP + p%nWings * (  (FWnSpan+1)*(nFW+1) )
+      if (p%FWShedVorticity) then
+         nSeg = nSeg + p%nWings * (2*(FWnSpan+1)*(nFW+1)-(FWnSpan+1)-(nFW+1))  
+      else
+         nSeg = nSeg + p%nWings * (  (FWnSpan+1)*(nFW)                    )   ! No Shed vorticity
+      endif
+   endif
+end subroutine CountSegments
 
+!> Count how many control points are convecting (needed to compute the wake convection)
+pure integer(IntKi) function CountCPs(p, nNW, nFWEff) result(nCPs)
+   type(FVW_ParameterType), intent(in   ) :: p       !< Parameters
+   integer(IntKi),          intent(in   ) :: nNW     !< Number of NW panels
+   integer(IntKi),          intent(in   ) :: nFWEff  !< Number of effective (ie. convecting) FW panels
+   nCPs =  p%nWings * (  (p%nSpan+1)*(nNW+1) )
+   if (nFWEff>0)  nCPs = nCPs + p%nWings * ((FWnSpan+1)*(nFWEff+1) )
+end function CountCPs
 
 
 subroutine PackPanelsToSegments(p, m, x, iDepthStart, bMirror, SegConnct, SegPoints, SegGamma, nSeg, nSegP)
@@ -502,9 +544,9 @@ subroutine PackPanelsToSegments(p, m, x, iDepthStart, bMirror, SegConnct, SegPoi
    type(FVW_ContinuousStateType),   intent(in   ) :: x       !< States
    integer(IntKi),                  intent(in   ) :: iDepthStart !< Index where we start packing for NW panels
    logical,                         intent(in   ) :: bMirror !< Mirror the vorticity wrt the ground
-   integer(IntKi),dimension(:,:), allocatable :: SegConnct !< Segment connectivity
-   real(ReKi),    dimension(:,:), allocatable :: SegPoints !< Segment Points
-   real(ReKi),    dimension(:)  , allocatable :: SegGamma  !< Segment Circulation
+   integer(IntKi),dimension(:,:), intent(inout) :: SegConnct !< Segment connectivity
+   real(ReKi),    dimension(:,:), intent(inout) :: SegPoints !< Segment Points
+   real(ReKi),    dimension(:)  , intent(inout) :: SegGamma  !< Segment Circulation
    integer(IntKi), intent(out)                :: nSeg      !< Total number of segments after packing
    integer(IntKi), intent(out)                :: nSegP     !< Total number of segments points after packing
    ! Local
@@ -516,41 +558,14 @@ subroutine PackPanelsToSegments(p, m, x, iDepthStart, bMirror, SegConnct, SegPoi
    LastNWShed = (p%FWShedVorticity ) .or. ((.not.p%FWShedVorticity) .and. (m%nNW<p%nNWMax))
 
    ! Counting total number of segments
-   nP=0
-   nC=0
-   nCNW=0
-   if ((m%nNW-iDepthStart)>=0) then
-      nP =      p%nWings * (  (p%nSpan+1)*(m%nNW-iDepthStart+2)            )
-      nCNW =      p%nWings * (2*(p%nSpan+1)*(m%nNW-iDepthStart+2)-(p%nSpan+1)-(m%nNW-iDepthStart+1+1))  
-      if (.not.LastNWShed) then
-         nCNW =   nCNW - p%nWings * (p%nSpan) ! Removing last set of shed segments
-      endif
-   endif
-   nC=nCNW
-   if (m%nFW>0) then
-      nP = nP + p%nWings * (  (FWnSpan+1)*(m%nFW+1) )
-      if (p%FWShedVorticity) then
-         nC = nC + p%nWings * (2*(FWnSpan+1)*(m%nFW+1)-(FWnSpan+1)-(m%nFW+1))  
-      else
-         nC = nC + p%nWings * (  (FWnSpan+1)*(m%nFW)                    )   ! No Shed vorticity
-      endif
-   endif
+   ! Returns nC, nP, nCNW, number of segments (without accounting for mirroring)
+   call CountSegments(p, m%nNW, m%nFW, iDepthStart, nC, nP, nCNW)
 
    if (nP>0) then
-      if (allocated(SegConnct)) deallocate(SegConnct)
-      if (allocated(SegPoints)) deallocate(SegPoints)
-      if (allocated(SegGamma))  deallocate(SegGamma)
-      if (bMirror) then
-         ! we double the storage dimension when we mirror the vorticity
-         allocate(SegConnct(1:4,1:2*nC)); SegConnct=-1 ! 4 values per segmnt: iP1, iP2, iDepth, iSpan
-         allocate(SegPoints(1:3,1:2*nP)); SegPoints=-1
-         allocate(SegGamma (1:2*nC));     SegGamma =-1
-      else
-         allocate(SegConnct(1:4,1:nC)); SegConnct=-1
-         allocate(SegPoints(1:3,1:nP)); SegPoints=-1
-         allocate(SegGamma (1:nC));     SegGamma =-1
-      endif
-
+      ! Nullifying for safety
+      SegConnct=-1
+      SegPoints=-1
+      SegGamma =-1
       !
       iHeadP=1
       iHeadC=1
@@ -603,8 +618,6 @@ subroutine PackPanelsToSegments(p, m, x, iDepthStart, bMirror, SegConnct, SegPoi
          nSeg  = nSeg*2
          nSegP = nSegP*2
       endif
-
-
    else
       nSeg  = 0
       nSegP = 0
@@ -731,12 +744,6 @@ subroutine WakeInducedVelocities(p, x, m, ErrStat, ErrMsg)
    character(*),                    intent(  out) :: ErrMsg  !< Error message if ErrStat /= ErrID_None
    ! Local variables
    integer(IntKi) :: iW, nSeg, nSegP, nCPs, iHeadP
-   integer(IntKi),dimension(:,:), allocatable :: SegConnct  !< Segment connectivity
-   real(ReKi),    dimension(:,:), allocatable :: SegPoints  !< Segment Points
-   real(ReKi),    dimension(:)  , allocatable :: SegGamma   !< Segment Circulation
-   real(ReKi),    dimension(:)  , allocatable :: SegEpsilon !< Segment regularization parameter
-   real(ReKi),    dimension(:,:), allocatable :: CPs   !< ControlPoints
-   real(ReKi),    dimension(:,:), allocatable :: Uind  !< Induced velocity
    integer(IntKi) :: nFWEff  ! Number of farwake panels that are free at current tmie step
    logical        :: bMirror ! True if we mirror the vorticity wrt ground
    ErrStat= ErrID_None
@@ -749,59 +756,45 @@ subroutine WakeInducedVelocities(p, x, m, ErrStat, ErrMsg)
    m%Vind_FW = -9999._ReKi !< Safety
 
    ! --- Packing all vortex elements into a list of segments
-   ! NOTE: allocates SegConnct, SegPoints, SegGamma..
-   call PackPanelsToSegments(p, m, x, 1, bMirror, SegConnct, SegPoints, SegGamma, nSeg, nSegP)
+   ! NOTE: modifies m%Seg* 
+   call PackPanelsToSegments(p, m, x, 1, bMirror, m%SegConnct, m%SegPoints, m%SegGamma, nSeg, nSegP)
 
-   ! --- Setting up regularization
-   allocate(SegEpsilon(1:nSeg));
-   call WakeRegularization(p, x, m, SegConnct, SegPoints, SegGamma, SegEpsilon, ErrStat, ErrMsg)
+   ! --- Setting up regularization SegEpsilon
+   call WakeRegularization(p, x, m, m%SegConnct, m%SegPoints, m%SegGamma, m%SegEpsilon(1:nSeg), ErrStat, ErrMsg)
 
    ! --- Computing induced velocity
    call PackConvectingPoints()
    if (DEV_VERSION) then
       print'(A,I0,A,I0,A,I0)','Convection - nSeg:',nSeg,' - nSegP:',nSegP, ' - nCPs:',nCPs
    endif
-   call ui_seg( 1, nCPs, nCPs, CPs, 1, nSeg, nSeg, nSegP, SegPoints, SegConnct, SegGamma, p%RegFunction, SegEpsilon, Uind)
+   call ui_seg( 1, nCPs, m%CPs, 1, nSeg, nSeg, nSegP, m%SegPoints, m%SegConnct, m%SegGamma, p%RegFunction, m%SegEpsilon, m%Uind)
    call UnPackInducedVelocity()
 
-   deallocate(Uind)
-   deallocate(CPs)
-   deallocate(SegConnct)
-   deallocate(SegGamma)
-   deallocate(SegPoints)
-   deallocate(SegEpsilon)
 contains
    !> Pack all the points that convect 
    subroutine PackConvectingPoints()
       ! Counting total number of control points that convects
-      nCPs =      p%nWings * (  (p%nSpan+1)*(m%nNW+1) )
-      if (nFWEff>0) then
-         nCPs = nCPs + p%nWings * ((FWnSpan+1)*(nFWEff+1) )
-      endif
-
-      ! Allocation
-      allocate(CPs (1:3,1:nCPs))
-      allocate(Uind(1:3,1:nCPs))
-      Uind=0.0_ReKi !< important due to side effects of ui_seg
-
+      nCPs = CountCPs(p, m%nNW, nFWEff)
+      m%Uind=0.0_ReKi ! very important due to side effects of ui_seg
+      m%CPs=-999.9_ReKi
       ! Packing
       iHeadP=1
       do iW=1,p%nWings
-         CALL LatticeToPoints(x%r_NW(1:3,:,1:m%nNW+1,iW), 1, CPs, iHeadP)
+         CALL LatticeToPoints(x%r_NW(1:3,:,1:m%nNW+1,iW), 1, m%CPs, iHeadP)
       enddo
       if (nFWEff>0) then
          do iW=1,p%nWings
-            CALL LatticeToPoints(x%r_FW(1:3,:,1:nFWEff+1,iW), 1, CPs, iHeadP)
+            CALL LatticeToPoints(x%r_FW(1:3,:,1:nFWEff+1,iW), 1, m%CPs, iHeadP)
          enddo
       endif
       if (DEV_VERSION) then
          ! Additional checks
-         if (any(CPs(1,:)<=-99)) then
+         if (any(m%CPs(1,1:nCPs)<=-99)) then
             call print_x_NW_FW(p,m,x,'pack')
             ErrMsg='PackConvectingPoints: Problem in Control points'; ErrStat=ErrID_Fatal; return
          endif
-         if ((iHeadP-1)/=size(CPs,2)) then
-            print*,'PackConvectingPoints: Number of points wrongly estimated',size(CPs,2), iHeadP-1
+         if ((iHeadP-1)/=nCPs) then
+            print*,'PackConvectingPoints: Number of points wrongly estimated',nCPs, iHeadP-1
             STOP ! Keep me. The check will be removed once the code is well established
             ErrMsg='PackConvectingPoints: Number of points wrongly estimated '; ErrStat=ErrID_Fatal; return
          endif
@@ -811,12 +804,11 @@ contains
    subroutine UnPackInducedVelocity()
       iHeadP=1
       do iW=1,p%nWings
-         CALL VecToLattice(Uind, 1, m%Vind_NW(:,:,1:m%nNW+1,iW), iHeadP)
+         CALL VecToLattice(m%Uind, 1, m%Vind_NW(:,:,1:m%nNW+1,iW), iHeadP)
       enddo
-      ! TODO 
       if (nFWEff>0) then 
          do iW=1,p%nWings
-            CALL VecToLattice(Uind, 1, m%Vind_FW(1:3,1:FWnSpan+1,1:nFWEff+1,iW), iHeadP)
+            CALL VecToLattice(m%Uind, 1, m%Vind_FW(1:3,1:FWnSpan+1,1:nFWEff+1,iW), iHeadP)
          enddo
          if (DEV_VERSION) then
             if (any(m%Vind_FW(1:3,1:FWnSpan+1,1:nFWEff+1,:)<-99)) then
@@ -825,8 +817,8 @@ contains
          endif
       endif
       if (DEV_VERSION) then
-         if ((iHeadP-1)/=size(Uind,2)) then
-            print*,'UnPackInducedVelocity: Number of points wrongly estimated',size(Uind,2), iHeadP-1
+         if ((iHeadP-1)/=nCPs) then
+            print*,'UnPackInducedVelocity: Number of points wrongly estimated',nCPs, iHeadP-1
             STOP ! Keep me. The check will be removed once the code is well established
             ErrMsg='UnPackInducedVelocity: Number of points wrongly estimated'; ErrStat=ErrID_Fatal; return
          endif
@@ -845,10 +837,6 @@ subroutine LiftingLineInducedVelocities(p, x, iDepthStart, m, ErrStat, ErrMsg)
    type(FVW_MiscVarType),           intent(inout) :: m       !< Initial misc/optimization variables
    ! Local variables
    integer(IntKi) :: iW, nSeg, nSegP, nCPs, iHeadP
-   integer(IntKi),dimension(:,:), allocatable :: SegConnct !< Segment connectivity
-   real(ReKi),    dimension(:,:), allocatable :: SegPoints !< Segment Points
-   real(ReKi),    dimension(:)  , allocatable :: SegGamma  !< Segment Circulation
-   real(ReKi),    dimension(:)  , allocatable :: SegEpsilon !< Segment smooth parameter
    real(ReKi),    dimension(:,:), allocatable :: CPs   !< ControlPoints
    real(ReKi),    dimension(:,:), allocatable :: Uind  !< Induced velocity
    integer(IntKi),              intent(  out) :: ErrStat    !< Error status of the operation
@@ -860,7 +848,7 @@ subroutine LiftingLineInducedVelocities(p, x, iDepthStart, m, ErrStat, ErrMsg)
    bMirror = p%ShearModel==idShearMirror ! Whether or not we mirror the vorticity wrt ground
 
    ! --- Packing all vortex elements into a list of segments
-   call PackPanelsToSegments(p, m, x, iDepthStart, bMirror, SegConnct, SegPoints, SegGamma, nSeg, nSegP)
+   call PackPanelsToSegments(p, m, x, iDepthStart, bMirror, m%SegConnct, m%SegPoints, m%SegGamma, nSeg, nSegP)
 
    ! --- Computing induced velocity
    if (nSegP==0) then
@@ -871,27 +859,22 @@ subroutine LiftingLineInducedVelocities(p, x, iDepthStart, m, ErrStat, ErrMsg)
       endif
    else
       ! --- Setting up regularization
-      allocate(SegEpsilon(1:nSeg));
-      call WakeRegularization(p, x, m, SegConnct, SegPoints, SegGamma, SegEpsilon, ErrStat, ErrMsg)
+      call WakeRegularization(p, x, m, m%SegConnct(:,1:nSeg), m%SegPoints(:,1:nSegP), m%SegGamma(1:nSeg), m%SegEpsilon(1:nSeg), ErrStat, ErrMsg)
 
       nCPs=p%nWings * p%nSpan
-      allocate(CPs (1:3,1:nCPs))
-      allocate(Uind(1:3,1:nCPs))
+      allocate(CPs (1:3,1:nCPs)) ! NOTE: here we do allocate CPs and Uind insteadof using Misc 
+      allocate(Uind(1:3,1:nCPs)) !       The size is reasonably small, and m%Uind then stay filled with "rollup velocities" (for export)
       Uind=0.0_ReKi !< important due to side effects of ui_seg
       ! ---
       call PackLiftingLinePoints()
       if (DEV_VERSION) then
          print'(A,I0,A,I0,A,I0)','Induction -  nSeg:',nSeg,' - nSegP:',nSegP, ' - nCPs:',nCPs
       endif
-      call ui_seg( 1, nCPs, nCPs, CPs, 1, nSeg, nSeg, nSegP, SegPoints, SegConnct, SegGamma, p%RegFunction, SegEpsilon, Uind)
+      call ui_seg( 1, nCPs, CPs, 1, nSeg, nSeg, nSegP, m%SegPoints, m%SegConnct, m%SegGamma, p%RegFunction, m%SegEpsilon, Uind)
       call UnPackLiftingLineVelocities()
 
       deallocate(Uind)
       deallocate(CPs)
-      deallocate(SegConnct)
-      deallocate(SegGamma)
-      deallocate(SegPoints)
-      deallocate(SegEpsilon)
    endif
 contains
    !> Pack all the control points
