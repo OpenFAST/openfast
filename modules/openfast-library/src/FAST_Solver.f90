@@ -5088,7 +5088,7 @@ SUBROUTINE SolveOption2b_Inp2IfW(this_time, this_state, p_FAST, m_FAST, ED, BD, 
    ErrMsg  = ""
       
 
-      IF ( p_FAST%CompElast == Module_BD .AND. .NOT. BD_Solve_Option1 ) THEN
+      IF ( p_FAST%CompElast == Module_BD ) THEN
          DO k=1,p_FAST%nBeams
             CALL BD_CalcOutput( this_time, BD%Input(1,k), BD%p(k), BD%x(k,this_state), BD%xd(k,this_state),&
                                  BD%z(k,this_state), BD%OtherSt(k,this_state), BD%y(k), BD%m(k), ErrStat2, ErrMsg2 )
