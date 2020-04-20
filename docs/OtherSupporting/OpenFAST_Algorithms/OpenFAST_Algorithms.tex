@@ -176,7 +176,7 @@ The other input-output relationships for these modules are solved using Solve Op
    \State $\mathit{y\_IceD(:)} \gets \Call{CalcOutput}{\mathit{p\_IceD(:)},\mathit{u\_IceD(:)},\mathit{x\_IceD(:)},\mathit{xd\_IceD(:)},\mathit{z\_IceD(:)}}$
    \State $\mathit{y\_SlD}     \gets \Call{CalcOutput}{\mathit{p\_SlD},\mathit{u\_SlD},\mathit{x\_SlD},\mathit{xd\_SlD},\mathit{z\_SlD}}$ 
    \State
-   \State\Comment{Form $u$ vector using loads and accelerations from $\mathit{u\_HD}$, $\mathit{u\_BD}$,  $\mathit{u\_SD}$, \mathit{u\_Orca}, \mathit{u\_ExtPtfm}, and platform reference input from $\mathit{u\_ED}$}
+   \State\Comment{Form $u$ vector using loads and accelerations from $\mathit{u\_HD}$, $\mathit{u\_BD}$,  $\mathit{u\_SD}$, $\mathit{u\_Orca}$, $\mathit{u\_ExtPtfm}$, and platform reference input from $\mathit{u\_ED}$}
    \State
    \State $u \gets \Call{u\_vec}{\mathit{u\_HD},\mathit{u\_SD},\mathit{u\_ED},\mathit{u\_BD},\mathit{u\_Orca},\mathit{u\_ExtPtfm}}$
    \State $k \gets 0$
