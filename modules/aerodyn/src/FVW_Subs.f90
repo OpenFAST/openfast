@@ -38,6 +38,10 @@ module FVW_SUBS
    integer(IntKi), parameter :: idShearNone   = 0
    integer(IntKi), parameter :: idShearMirror = 1
    integer(IntKi), parameter, dimension(2) :: idShearVALID         = (/idShearNone, idShearMirror /)
+   ! Tree Model
+   integer(IntKi), parameter :: idTreeNone   = 0
+   integer(IntKi), parameter :: idTreeBasic  = 1
+   integer(IntKi), parameter, dimension(2) :: idTreeVALID         = (/idTreeNone, idTreeBasic /)
 
    real(ReKi), parameter :: CoreSpreadAlpha = 1.25643 
 

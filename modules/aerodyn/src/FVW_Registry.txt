@@ -34,6 +34,10 @@ typedef     ^                   ^               IntKi                           
 typedef     ^                   ^               ReKi                             WakeRegParam -  - -   "Initial value of the regularization parameter" 
 typedef     ^                   ^               ReKi                             WingRegParam -  - -   "Regularization parameter of the wing" 
 typedef     ^                   ^               IntKi                            ShearModel   -  - -   "Option for shear modelling" 
+typedef     ^                   ^               Logical                          TwrShadowOnWake - - -  "Include tower shadow effects on wake" 
+typedef     ^                   ^               IntKi                            TreeModel       - - -  "Tree calculation method" 
+typedef     ^                   ^               ReKi                             TreeBranchFactor - - - "Factor used to determine if a point is far enough" 
+typedef     ^                   ^               ReKi                             TreeBranchSmall - - -  "Distance below which a branch is consisdered small enough" 
 typedef     ^                   ^               DbKi                             DTaero        -  - -   "Time interval for calls calculations"   s
 typedef     ^                   ^               DbKi                             DTfvw         -  - -   "Time interval for calculating wake induced velocities"   s
 typedef     ^                   ^               ReKi                             KinVisc       -  - -   "Kinematic air viscosity"   m^2/s
@@ -170,6 +174,10 @@ typedef     ^                   ^               IntKi                           
 typedef     ^                   ^               ReKi                             WakeRegParam  -  - -   "Factor used in the regularization " 
 typedef     ^                   ^               ReKi                             WingRegParam  -  - -   "Factor used in the regularization " 
 typedef     ^                   ^               IntKi                            ShearModel   -  - -   "Option for shear modelling" 
+typedef     ^                   ^               Logical                          TwrShadowOnWake -  - -   "Include tower shadow effects on wake" 
+typedef     ^                   ^               IntKi                            TreeModel       -  - -   "Tree calculation method" 
+typedef     ^                   ^               ReKi                             TreeBranchFactor - - -   "Factor used to determine if a point is far enough" 
+typedef     ^                   ^               ReKi                             TreeBranchSmall - - -   "Distance below which a branch is consisdered small enough" 
 typedef     ^                   ^               IntKi                            WrVTK         -  - -   "Outputs VTK at each calcoutput call, even if main fst doesnt do it"  - 
 typedef     ^                   ^               IntKi                            VTKBlades     -  - -   "Outputs VTk for each blade 0=no blade, 1=Bld 1"  - 
 typedef     ^                   ^               DbKi                             DTvtk         -  - -   "Requested timestep between VTK outputs (calculated from the VTK_fps read in)" s

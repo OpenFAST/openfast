@@ -60,6 +60,14 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, Inp, ErrStat, ErrMsg )
    CALL ReadVar        (UnIn,FileName,Inp%WingRegParam       ,'WingRegParam'      ,''                 , ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVarWDefault(UnIn,FileName,Inp%CoreSpreadEddyVisc ,'CoreSpreadEddyVisc','',100.0_ReKi      , ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVarWDefault(UnIn,FileName,Inp%ShearModel         ,'ShearModel'        ,'',idShearNone     , ErrStat2,ErrMsg2); if(Failed())return
+   !CALL ReadVarWDefault(UnIn,FileName,Inp%TwrShadowOnWake    ,'TwrShadowOnWake'   ,'',.false.     , ErrStat2,ErrMsg2); if(Failed())return
+   !CALL ReadVarWDefault(UnIn,FileName,Inp%TreeModel          ,'TreeModel'         ,'',idTreeNone  , ErrStat2,ErrMsg2); if(Failed())return
+   !CALL ReadVarWDefault(UnIn,FileName,Inp%TreeBranchFactor   ,'TreeBranchFactor'  ,'',3.0_ReKi    , ErrStat2,ErrMsg2); if(Failed())return
+   !CALL ReadVarWDefault(UnIn,FileName,Inp%TreeBranchSmall    ,'TreeBranchSmall'   ,'',0.1_ReKi    , ErrStat2,ErrMsg2); if(Failed())return
+   Inp%TwrShadowOnWake  = .False.
+   Inp%TreeModel        = idTreeNone
+   Inp%TreeBranchFactor = 3.0_ReKi
+   Inp%TreeBranchSmall  = 0.1_ReKi
    !------------------------ OUTPUT OPTIONS -----------------------------------------
    CALL ReadCom        (UnIn,FileName,                  'Output options header'              ,ErrStat2,ErrMsg2); if(Failed()) return
    CALL ReadVarWDefault(UnIn,FileName,Inp%WrVTK       , 'WrVTK'              ,'',     0      ,ErrStat2,ErrMsg2); if(Failed())return
@@ -77,6 +85,7 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, Inp, ErrStat, ErrMsg )
    if (Check(.not.(ANY(idRegVALID      ==Inp%RegFunction  )), 'Regularization function (RegFunction) not implemented')) return
    if (Check(.not.(ANY(idRegMethodVALID==Inp%WakeRegMethod)), 'Wake regularization method (WakeRegMethod) not implemented')) return
    if (Check(.not.(ANY(idShearVALID    ==Inp%ShearModel   )), 'Shear model (`ShearModel`) not valid')) return
+   if (Check(.not.(ANY(idTreeVALID     ==Inp%TreeModel    )), 'Shear model (`ShearModel`) not valid')) return
 
    if (Check( Inp%DTfvw < p%DTaero, 'DTfvw must be >= DTaero from AD15.')) return
    if (abs(Inp%DTfvw-p%DTaero)>epsilon(1.0_ReKi)) then
@@ -260,6 +269,10 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth)
    ! False below is to avoid writing the mirrored vorticity, this could be an option though
    bMirror= (p%ShearModel==idShearMirror) .and. (p%VTKBlades<0) ! NOTE: temporary hack to output mirrored vorticity
    call CountSegments(p, m%nNW, m%nFW, 1, nSeg, nSegP, nSegNW)
+   if (bMirror) then
+      nSeg  = 2*nSeg
+      nSegP = 2*nSegP
+   endif
    Filename = TRIM(FileRootName)//'.AllSeg.'//Tstr//'.vtk'
    CALL WrVTK_Segments(Filename, m%SegPoints(:,1:nSegP), m%SegConnct(:,1:nSeg), m%SegGamma(1:nSeg), m%SegEpsilon(1:nSeg)) 
 

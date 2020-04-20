@@ -400,8 +400,11 @@ SUBROUTINE FVW_SetParametersFromInputFile( InputFileData, p, m, ErrStat, ErrMsg 
    p%WingRegParam         = InputFileData%WingRegParam
    p%CoreSpreadEddyVisc   = InputFileData%CoreSpreadEddyVisc
    p%ShearModel           = InputFileData%ShearModel
+   p%TreeModel            = InputFileData%TreeModel
+   p%TreeBranchFactor     = InputFileData%TreeBranchFactor
+   p%TreeBranchSmall      = InputFileData%TreeBranchSmall
    p%WrVTK                = InputFileData%WrVTK
-   p%VTKBlades            = min(InputFileData%VTKBlades,p%nWings) ! Note: allowing it to be negative for tempoarry hack
+   p%VTKBlades            = min(InputFileData%VTKBlades,p%nWings) ! Note: allowing it to be negative for temporary hack
    p%VTKCoord             = InputFileData%VTKCoord
 
    if (allocated(p%PrescribedCirculation)) deallocate(p%PrescribedCirculation)

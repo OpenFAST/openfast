@@ -1648,8 +1648,10 @@ subroutine SetInputsForFVW(p, u, m, errStat, errMsg)
          ! Applying tower shadow to V_wind based on r_wind positions
          ! NOTE: m%DisturbedInflow also contains tower shadow and we need it for CalcOutput
          if (p%TwrPotent /= TwrPotent_none .or. p%TwrShadow) then
-            call TwrInflArray( p, u(tIndx), m, m%FVW%r_wind, m%FVW_u(tIndx)%V_wind, ErrStat, ErrMsg )
-            if (ErrStat >= AbortErrLev) return
+            if (p%FVW%TwrShadowOnWake) then
+               call TwrInflArray( p, u(tIndx), m, m%FVW%r_wind, m%FVW_u(tIndx)%V_wind, ErrStat, ErrMsg )
+               if (ErrStat >= AbortErrLev) return
+            endif
          end if
       endif
    enddo
