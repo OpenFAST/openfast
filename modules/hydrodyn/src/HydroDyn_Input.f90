@@ -2398,12 +2398,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
       CALL SetErrStat( ErrID_Fatal,'MSL2SWL must be 0 when PotMod = 1 (WAMIT).',ErrStat,ErrMsg,RoutineName)        
       RETURN
    END IF
-   
-   !IF ( .NOT. EqualRealNos(InitInp%Morison%MSL2SWL, 0.0_ReKi) ) THEN  !TODO  Alter this check when we support MSL2SWL
-   !   CALL SetErrStat( ErrID_Fatal,'MSL2SWL must be 0. Future versions of HydroDyn will once again support any value of MSL2SWL.'
-   !   RETURN
-   !END IF
-      
+     
    
       ! WaveMod - Wave kinematics model switch.
 
@@ -3385,19 +3380,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
    IF ( InitInp%Morison%NAxCoefs > 0 ) THEN
    
       DO I = 1,InitInp%Morison%NAxCoefs 
-         
-         !IF (  .NOT. EqualRealNos(InitInp%Morison%AxialCoefs(I)%AxCd, 0.0) ) THEN
-         !   ErrMsg  = ' AxCd must be equal to zero.  Future versions will allow for non-zero axial coefficients.'
-         !   ErrStat = ErrID_Fatal
-         !   RETURN
-         !END IF   
-         !IF (  .NOT. EqualRealNos(InitInp%Morison%AxialCoefs(I)%AxCa, 0.0) ) THEN
-         !   ErrMsg  = ' AxCa must be equal to zero.  Future versions will allow for non-zero axial coefficients.'
-         !   ErrStat = ErrID_Fatal
-         !   RETURN
-         !END IF   
-         
-         ! TODO: Once Axial Coefs are working remove the above checks and uncomment the checks below.  GJH 9/29/2013
+
          IF (  InitInp%Morison%AxialCoefs(I)%AxCd < 0 ) THEN
             CALL SetErrStat( ErrID_Fatal,'AxCd must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
             RETURN
@@ -3422,7 +3405,6 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
 
       ! Check JointOvrlp values
   !NOTE: This is ignored in the current version of Morison.  3/15/2020 GJH
-  ! InitInp%Morison%TotalPossibleSuperMembers = 0
    
    IF ( InitInp%Morison%NJoints > 1 ) THEN
 
@@ -3954,7 +3936,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
       InitInp%Morison%MGBottom =  999999.0
       do I = 1,InitInp%Morison%NMGDepths
             ! Adjust the depth values based on MSL2SWL
-         InitInp%Morison%MGDepths(I)%MGDpth = InitInp%Morison%MGDepths(I)%MGDpth - InitInp%MSL2SWL
+         InitInp%Morison%MGDepths(I)%MGDpth = InitInp%Morison%MGDepths(I)%MGDpth - InitInp%Morison%MSL2SWL
       end do
       DO I = 1,InitInp%Morison%NMGDepths
             ! Store the boundaries of the marine growth zone
@@ -4040,13 +4022,6 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
    ! Joint Output List Section
    !-------------------------------------------------------------------------------------------------
 
-   !IF ( InitInp%Morison%NJOutputs /= 0 ) THEN  ! TODO Remove this check and add back the other checks once Joint Outputs are supported
-   !CALL SetErrStat( ErrID_Fatal,'NJOutputs in the Joint output list must be equal to zero.  Future versions of HydroDyn will support values greater or equal to zero and less than 10.'
-   !   ErrStat = ErrID_Fatal
-   !   RETURN
-   !END IF   
-   
-   
    IF ( ( InitInp%Morison%NJOutputs < 0 ) .OR. ( InitInp%Morison%NMOutputs > 9 ) ) THEN
       CALL SetErrStat( ErrID_Fatal,'NJOutputs in the Joint output list must be greater or equal to zero and less than 10.',ErrStat,ErrMsg,RoutineName)
       RETURN
