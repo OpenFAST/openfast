@@ -111,11 +111,10 @@ SUBROUTINE Conv_Rdtn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, 
          
       ErrStat = ErrID_None         
       ErrMsg  = ""      
-!TODO      
-!BJJ: This was uninitialized; not sure how it should be set >>>      
-!PRINT *, 'Greg, please initialize this variable:RdtnFrmA' 
-RdtnFrmAM = .FALSE.      
-!<<<      
+      
+      ! For now, this is the only model we have implemented
+      RdtnFrmAM = .FALSE.      
+      
          ! Initialize the NWTC Subroutine Library
          
       CALL NWTC_Init(  )
