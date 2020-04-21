@@ -6456,9 +6456,7 @@ SUBROUTINE MrsnOut_MapOutputs( CurrentTime, y, p, u, m, AllOuts, ErrStat, ErrMsg
       DO J=1,p%NMOutputs     
          DO I=1,p%MOutLst(J)%NOutLoc   
          
-            ! These indices are in the DistribMesh index system, not the overall nodes index system, so distribToNodeIndx() mapping needs to be performed if you want to index into the nodes array or wave kinematics arrays
-            ! But, all of the D_* arrays are already using the DistribMesh index system, so we are OK for those
-            
+             
             m1 = p%MOutLst(J)%Marker1(I)
             m2 = p%MOutLst(J)%Marker2(I)
             s  = p%MOutLst(J)%s      (I)
@@ -6782,16 +6780,18 @@ SUBROUTINE GetNeighboringNodes(member, d, m1, m2, s, ErrStat, ErrMsg)
    ErrMsg  = ''
    
    ! This only works because the member nodes are equally spaced
+   ! d is in the range [0,1] and is from the member starting node to the member ending node
+   ! s is in the range [0,1] but is the normalized distance between any two adjacent member nodes.
    
    i1 = floor(member%NElements*d)  ! 0<= d <= 1.0
    
    if ( i1 == member%NElements ) then
       ! special case when d = 1.0_ReKi
-      i2 = i1 + 1            
+      i2 = i1 + 1            ! In this case, i1 = N and i2 = N+1 (one-based indexing which is what is needed to index into the NodeIndx arrays, below.
       s  = 1.0_ReKi
    else 
-      s  = member%NElements*d - i1  ! here i1 is zero-based
-      i1 = i1 + 1                   ! Shift to one-based indices
+      s  = member%NElements*d - i1  ! here i1 is zero-based, s is fractional amount of between adjacent nodes, s = [0,1]
+      i1 = i1 + 1                   ! Shift to one-based indices for work to follow, below
       i2 = i1 + 1
    end if
    
@@ -6877,12 +6877,9 @@ END IF
             ! Need to search mesh for the two markers which surround the requested output location and then store those marker indices and compute the
             ! scale factor based on how far they are from the requested output location.
             ! Since this is being done on markers and not nodes, the subroutine must be called after the Morison_Init() subroutine is called
-   !TODO: Need to reimplement the following
+
             CALL GetNeighboringNodes(p%Members(memberIndx), p%MOutLst(I)%NodeLocs(J),  m1, m2, s, ErrStat, ErrMsg)
-           ! CALL GetNeighboringNodes(memberIndx, p%MOutLst(I)%NodeLocs(J), p%NDistribMarkers,  p%Nodes, p%distribToNodeIndx,  m1, m2, s, ErrStat, ErrMsg)  
-                 
-            ! These indices are in the DistribMesh index system, not the overal nodes index system, so distribToNodeIndx() mapping needs to be performed if you 
-            !   want to index into the nodes array or wave kinematics arrays
+                  
             p%MOutLst(I)%Marker1(J) = m1
             p%MOutLst(I)%Marker2(J) = m2 ! The 2nd marker indx which is used to
             p%MOutLst(I)%s(J)       = s ! linear interpolation factor     
