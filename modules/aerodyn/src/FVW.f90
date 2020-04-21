@@ -38,9 +38,9 @@ contains
 !> This routine is called at the start of the simulation to perform initialization steps.
 !! The parameters are set here and not changed during the simulation.
 !! The initial states and initial guess for the input are defined.
-subroutine FVW_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut, ErrStat, ErrMsg )
-!..................................................................................................................................
+subroutine FVW_Init(AFInfo, InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut, ErrStat, ErrMsg )
    use OMP_LIB ! wrap with #ifdef _OPENMP if this causes an issue
+   type(AFI_ParameterType),         intent(in   )  :: AFInfo(:)      !< The airfoil parameter data, temporary, for UA..
    type(FVW_InitInputType),         intent(inout)  :: InitInp        !< Input data for initialization routine  (inout so we can use MOVE_ALLOC)
    type(FVW_InputType),             intent(  out)  :: u              !< An initial guess for the input; input mesh must be defined
    type(FVW_ParameterType),         intent(  out)  :: p              !< Parameters
@@ -149,6 +149,11 @@ subroutine FVW_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
    ! Returned guessed locations where wind will be required
    CALL SetRequestedWindPoints(m%r_wind, x, p, m )
    ! Return anything in FVW_InitOutput that should be passed back to the calling code here
+
+
+   ! --- UA 
+   ! NOTE: quick and dirty since this should belong to AD
+   call UA_Init_Wrapper(AFInfo, InitInp, interval, p, x, xd, OtherState, m, ErrStat2, ErrMsg2); if (Failed()) return
 
    if (DEV_VERSION) then
       CALL FVW_RunTests(ErrStat2, ErrMsg2); if (Failed()) return
@@ -604,6 +609,8 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    call FVW_CalcConstrStateResidual(t+p%DTaero, uInterp, p, x, xd, z_guess, OtherState, m, z, AFInfo, ErrStat2, ErrMsg2, 2); if(Failed()) return
 !    print*,'US: z_Gamma',x%Gamma_NW(1,1,1)
 !    print*,'US: x_Gamma',z%Gamma_LL(1,1)
+   ! TODO UA
+   call UA_UpdateState_Wrapper(AFInfo, n, p, x, xd, OtherState, m, ErrStat2, ErrMsg2)
 
    ! Updating circulation of near wake panel (and position but irrelevant)
    ! Changes: x only
@@ -980,5 +987,132 @@ contains
    end function lin_extrap
 
 end subroutine FVW_CalcOutput
+
+
+!----------------------------------------------------------------------------------------------------------------------------------   
+! --- UA related, should be merged with AeroDyn 
+!----------------------------------------------------------------------------------------------------------------------------------   
+subroutine UA_Init_Wrapper(AFInfo, InitInp, interval, p, x, xd, OtherState, m, ErrStat, ErrMsg )
+   use UnsteadyAero, only: UA_Init, UA_TurnOff_param
+   type(AFI_ParameterType),         intent(in   )  :: AFInfo(:)      !< The airfoil parameter data, temporary, for UA..
+   type(FVW_InitInputType),         intent(inout)  :: InitInp     !< Input data for initialization routine  (inout so we can use MOVE_ALLOC)
+   real(DbKi),                      intent(inout)  :: interval    !< time interval  
+   type(FVW_ParameterType),         intent(inout)  :: p           !< Parameters
+   type(FVW_ContinuousStateType),   intent(inout)  :: x           !< Initial continuous states
+   type(FVW_DiscreteStateType),     intent(inout)  :: xd          !< Initial discrete states
+   type(FVW_OtherStateType),        intent(inout)  :: OtherState  !< Initial other states
+   type(FVW_MiscVarType),           intent(inout)  :: m           !< Initial misc/optimization variables
+   integer(IntKi),                  intent(  out)  :: ErrStat     !< Error status of the operation
+   character(*),                    intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+   !
+   type(UA_InitInputType) :: Init_UA_Data
+   type(UA_InputType)     :: u_UA
+   type(UA_InitOutputType):: InitOutData_UA
+   integer                :: i,j
+   integer(intKi)         :: ErrStat2           ! temporary Error status
+   character(ErrMsgLen)   :: ErrMsg2
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+   m%UA_Flag=InitInp%UA_Flag
+   if ( m%UA_Flag ) then
+      ! ---Condensed version of "BEMT_Set_UA_InitData"
+      allocate(Init_UA_Data%c(InitInp%numBladeNodes,InitInp%numBlades), STAT = errStat2)
+      do j = 1,InitInp%NumBlades; do i = 1,InitInp%numBladeNodes;
+            Init_UA_Data%c(i,j)      = p%chord(i,j) ! NOTE: InitInp chord move-allocd to p
+      end do; end do
+      Init_UA_Data%dt              = interval          
+      Init_UA_Data%OutRootName     = ''
+      Init_UA_Data%numBlades       = InitInp%NumBlades 
+      Init_UA_Data%nNodesPerBlade  = InitInp%numBladeNodes
+      Init_UA_Data%NumOuts         = 0
+      Init_UA_Data%UAMod           = InitInp%UAMod  
+      Init_UA_Data%Flookup         = InitInp%Flookup
+      Init_UA_Data%a_s             = InitInp%a_s ! m/s  
+      ! --- UA init
+      call UA_Init( Init_UA_Data, u_UA, m%p_UA, xd%UA, OtherState%UA, m%y_UA, m%m_UA, interval, InitOutData_UA, ErrStat2, ErrMsg2); if(Failed())return
+      ! --- BEMT Init other state
+      allocate ( OtherState%UA_Flag( InitInp%numBladeNodes, InitInp%NumBlades ), STAT = ErrStat2 )
+      ! --- Condensed version of "BEMT_CheckInitUA"
+      do j = 1,InitInp%numBlades; do i = 1,InitInp%numBladeNodes; ! Loop over blades and nodes
+         call UA_TurnOff_param(AFInfo(p%AFindx(i,j)), ErrStat2, ErrMsg2)
+         if (ErrStat2 /= ErrID_None) then
+            call WrScr( 'Warning: Turning off Unsteady Aerodynamics because '//trim(ErrMsg2)//' BladeNode = '//trim(num2lstr(i))//', Blade = '//trim(num2lstr(j)) )
+            OtherState%UA_Flag(i,j) = .false.
+         end if
+      end do; end do;
+      call UA_DestroyInput( u_UA, ErrStat2, ErrMsg2 ); if(Failed())return
+      call UA_DestroyInitInput( Init_UA_Data, ErrStat2, ErrMsg2 ); if(Failed())return
+      call UA_DestroyInitOutput( InitOutData_UA, ErrStat2, ErrMsg2 ); if(Failed())return
+   endif
+contains
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'UA_Init_Wrapper') 
+      Failed =  ErrStat >= AbortErrLev
+   end function Failed
+end subroutine  UA_Init_Wrapper
+
+subroutine UA_UpdateState_Wrapper(AFInfo, n, p, x, xd, OtherState, m, ErrStat, ErrMsg )
+   use UnsteadyAero, only: UA_UpdateStates, UA_TurnOff_input
+   type(AFI_ParameterType),         intent(in   )  :: AFInfo(:)      !< The airfoil parameter data, temporary, for UA..
+   integer(IntKi),                  intent(in   )  :: n           !< time step  
+   type(FVW_ParameterType),         intent(in   )  :: p           !< Parameters
+   type(FVW_ContinuousStateType),   intent(inout)  :: x           !< Initial continuous states
+   type(FVW_DiscreteStateType),     intent(inout)  :: xd          !< Initial discrete states
+   type(FVW_OtherStateType),        intent(inout)  :: OtherState  !< Initial other states
+   type(FVW_MiscVarType),           intent(inout)  :: m           !< Initial misc/optimization variables
+   integer(IntKi),                  intent(  out)  :: ErrStat     !< Error status of the operation
+   character(*),                    intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+   ! Local
+   type(UA_InputType)     :: u_UA
+   integer                :: i,j
+   integer(intKi)         :: ErrStat2           ! temporary Error status
+   character(ErrMsgLen)   :: ErrMsg2
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   ! --- Condensed version of BEMT_Update States
+   if (m%UA_Flag) then
+      do j = 1,p%nWings  
+         do i = 1,p%nSpan+1 
+            ! We only update the UnsteadyAero states if we have unsteady aero turned on for this node      
+            if (OtherState%UA_Flag(i,j) .and. n > 0) then
+               !! ....... compute inputs to UA ...........
+               m%m_UA%iBladeNode = i
+               m%m_UA%iBlade     = j
+               !phitemp             = z%phi(i,j)
+               !u_UA%alpha   =  phitemp - u1%theta(i,j)  ! angle of attack
+               !u_UA%UserProp = u1%UserProp(i,j)
+               !u_UA%Re = ...
+               !u_UA%U  = ...
+               ! Need to compute local velocity including both axial and tangential induction
+               ! COMPUTE: u_UA%U, u_UA%Re
+               !call BEMTU_Wind( m%axInduction(i,j), m%tanInduction(i,j), u1%Vx(i,j), u1%Vy(i,j), p%chord(i,j), p%kinVisc, u_UA%Re, u_UA%U)
+               !! ....... check inputs to UA ...........
+               call UA_TurnOff_input(AFInfo(p%AFIndx(i,j)), u_UA, ErrStat2, ErrMsg2)
+               if (ErrStat2 /= ErrID_None) then
+                  OtherState%UA_Flag(i,j) = .FALSE.
+                  call WrScr( 'Warning: Turning off Unsteady Aerodynamics due to '//trim(ErrMsg2)//' BladeNode = '//trim(num2lstr(i))//', Blade = '//trim(num2lstr(j)) )
+               else
+                 ! COMPUTE: xd%UA, OtherState%UA
+                 call UA_UpdateStates( i, j, u_UA, m%p_UA, xd%UA, OtherState%UA, AFInfo(p%AFIndx(i,j)), m%m_UA, ErrStat2, ErrMsg2 )
+                 if (ErrStat2 /= ErrID_None) then
+                     call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'UA_UpdateState_Wrapper'//trim(NodeText(i,j)))
+                    if (ErrStat >= AbortErrLev) return
+                 end if
+               end if
+            end if      ! if (OtherState%UA_Flag(i,j)) then
+         end do
+      end do
+      call UA_DestroyInput( u_UA, ErrStat2, ErrMsg2 ); 
+   endif
+   call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'UA_UpdateState_Wrapper')
+contains 
+   function NodeText(i,j)
+      integer(IntKi), intent(in) :: i ! node number
+      integer(IntKi), intent(in) :: j ! blade number
+      character(25)              :: NodeText
+      NodeText = '(node '//trim(num2lstr(i))//', blade '//trim(num2lstr(j))//')'
+   end function NodeText
+end subroutine UA_UpdateState_Wrapper
 
 end module FVW

@@ -1178,6 +1178,9 @@ subroutine AD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, errStat
       if (allocated(OtherState%WakeLocationPoints)) then
          OtherState%WakeLocationPoints = m%FVW%r_wind
       endif
+      ! UA TODO
+      !call UA_UpdateState_Wrapper(p%AFI, n, p%FVW, x%FVW, xd%FVW, OtherState%FVW, m%FVW, ErrStat2, ErrMsg2)
+      !   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    endif
            
    call Cleanup()
@@ -2313,6 +2316,11 @@ SUBROUTINE Init_FVWmodule( InputFileData, u_AD, u, p, x, xd, z, OtherState, y, m
       end do
    end do
 
+   ! Unsteady Aero Data
+   InitInp%UA_Flag    = InputFileData%AFAeroMod == AFAeroMod_BL_unsteady
+   InitInp%UAMod      = InputFileData%UAMod
+   InitInp%Flookup    = InputFileData%Flookup
+   InitInp%a_s        = InputFileData%SpdSound
 
       ! Copy the mesh over for InitInp to FVW.  We would not need to copy this if we decided to break the Framework
       !  by passing u_AD%BladeMotion directly into FVW_Init, but nothing is really gained by doing that.
@@ -2335,7 +2343,7 @@ SUBROUTINE Init_FVWmodule( InputFileData, u_AD, u, p, x, xd, z, OtherState, y, m
    ENDDO
 
       ! NOTE: not passing p%AFI at present.  We are not storing it in FVW's parameters.
-   call FVW_Init( InitInp, u, p%FVW, x, xd, z, OtherState, y, m, Interval, InitOut, ErrStat2, ErrMsg2 )
+   call FVW_Init(p%AFI, InitInp, u, p%FVW, x, xd, z, OtherState, y, m, Interval, InitOut, ErrStat2, ErrMsg2 )
       CALL SetErrStat ( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
       ! set the size of the input and xd arrays for passing wind info to FVW.

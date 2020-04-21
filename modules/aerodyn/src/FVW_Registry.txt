@@ -5,6 +5,7 @@
 ##################################################################################################################################
 include Registry_NWTC_Library.txt
 usefrom AirfoilInfo_Registry.txt
+usefrom UnsteadyAero_Registry.txt
 
 #####################  Registry for FVW ###############
 # ..... PARAMETERS .............
@@ -51,6 +52,9 @@ typedef     ^                   ^               CHARACTER(1024)                 
 # ....... OtherStateType ............
 # FVW_OtherStateType
 typedef  FVW/FVW           OtherStateType       IntKi                            NULL              -  -  - "Number of active near wake panels"      -
+# TODO UA
+typedef   ^                       ^             UA_OtherStateType                UA                -  -  -  "other states for UnsteadyAero"        -
+typedef   ^                       ^             Logical                          UA_Flag       {:}{:}  - -  "logical flag indicating whether to use UnsteadyAero"        -
 
 # ....... MiscVars ............
 # FVW_MiscVarType
@@ -100,6 +104,11 @@ typedef     ^                   ^               ReKi                            
 # Wake rollup storage (buffer)
 typedef     ^                   ^               ReKi                             CPs           ::    -  -  "Control points used for wake rollup computation" - 
 typedef     ^                   ^               ReKi                             Uind          ::    -  -  "Induced velocities obtained at control points" - 
+# TODO UA - Should be part of AeroDyn
+typedef     ^                   ^               UA_MiscVarType                   m_UA          -  -  -  "misc vars for UnsteadyAero"        -
+typedef     ^                   ^               UA_OutputType                    y_UA          -  -  -  "outputs from UnsteadyAero"        -
+typedef     ^                   ^               UA_ParameterType                 p_UA          -  -  -  "parameters for UnsteadyAero"        -
+typedef     ^                   ^               LOGICAL                          UA_Flag       -  -  -  "logical flag indicating whether to use UnsteadyAero"        -
 
 # ........ Input ............
 # FVW_InputType
@@ -124,6 +133,8 @@ typedef     ^                   ^               ReKi                            
 #.......... DiscreteStateType ......
 # FVW_DiscreteStateType
 typedef FVW/FVW            DiscreteStateType    ReKi                             NULL         -  -  - "Empty to satisfy framework"           -
+# TODO UA
+typedef   ^                      ^              UA_DiscreteStateType              UA          -  -  - "states for UnsteadyAero"        -
 
 #.......... ConstraintStateType ......
 # FVW_ConstraintStateType
@@ -147,6 +158,11 @@ typedef     ^                   ^               IntKi                           
 typedef     ^                   ^               IntKi                            NumBladeNodes     -  -  - "Number of nodes on each blade"          -
 typedef     ^                   ^               DbKi                             DTaero            -  -  - "Time interval for calls (from AD15)"   s
 typedef     ^                   ^               ReKi                             KinVisc       -  - -   "Kinematic air viscosity"   m^2/s
+# TODO UA - Should be part of AeroDyn
+typedef     ^                   ^              IntKi                             UAMod             - - -   "Model for the dynamic stall equations [1 = Leishman/Beddoes, 2 = Gonzalez, 3 = Minnema]"    -
+typedef     ^                   ^              LOGICAL                           UA_Flag           - - -   "logical flag indicating whether to use UnsteadyAero"        -
+typedef     ^                   ^              LOGICAL                           Flookup           - - -   "Use table lookup for f' and f'' "    -
+typedef     ^                   ^              ReKi                              a_s               - - -   "speed of sound"        m/s
 
 #.......... InputFileType ......
 # FVW_InputFile
