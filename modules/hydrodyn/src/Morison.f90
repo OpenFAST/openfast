@@ -935,9 +935,7 @@ SUBROUTINE WriteSummaryFile( UnSum, g, MSL2SWL, WtrDpth, numJoints, numNodes, no
             read (tmpName(2:2),*) mbrIndx
             read (tmpName(4:4),*) nodeIndx
             
-            ! These indices are in the DistribMesh index system, not the overal nodes index system, so distribToNodeIndx() mapping needs to be performed if you want 
-            !   to index into the nodes array or wave kinematics arrays
-            
+             
            
             s  = MOutLst(mbrIndx)%NodeLocs(nodeIndx)
             ! Find the member starting and ending node locations
@@ -1475,7 +1473,7 @@ subroutine SetMemberProperties( gravity, member, MCoefMod, MmbrCoefIDIndx, MmbrF
    phi = acos(vec(3)/memLength)  ! incline angle   
    sinPhi = sin(phi)
    cosPhi = cos(phi)  
-
+   member%cosPhi_ref = cosPhi
    
    ! These are all per node and not done here, yet
    
@@ -2019,6 +2017,8 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
       I_n       = 0.0
       MGdens    = 0.0
       tMG       = -999.0
+      An_drag   = 0.0
+      
       IF ( InitInp%InpJoints(i)%Position(3) >= -p%WtrDpth ) THEN
    
          ! loop through each member attached to the joint, getting the radius of its appropriate end
@@ -2106,7 +2106,7 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
          p%I_MG_End(:,:,i) = MatMul( MatMul(R_I, Irl_mat), Transpose(R_I) ) ! final moment of inertia matrix for node
          
 
-      END IF  ! nodes(I)%Position(3) >= z0
+      END IF  ! InitInp%InpJoints(i)%Position(3) >= -p%WtrDpth
    
    END DO ! looping through nodes that are joints, i
           
@@ -2307,13 +2307,6 @@ SUBROUTINE AllocateNodeLoadVariables(InitInp, p, m, NNodes, errStat, errMsg )
    END IF     
    p%WaveTime     = InitInp%WaveTime   
    
-   allocate( p%F_I_End( 0:p%NStepWave, 3, p%NJoints ), STAT = errStat )
-   IF ( errStat /= ErrID_None ) THEN
-      errMsg  = ' Error allocating space for the inertial forces/moments array.'
-      errStat = ErrID_Fatal
-      RETURN
-   END IF
-   p%F_I_End = 0.0
    
 END SUBROUTINE AllocateNodeLoadVariables
 
@@ -2446,7 +2439,6 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       
    REAL(ReKi)                                        :: F_D(6), F_DP(6), D_F_I(3), kvec(3), v(3),  vf(3), vrel(3), vmag
    INTEGER                                           :: I, J, K, nodeIndx
-   REAL(ReKi)                                        :: elementWaterState
    REAL(ReKi)                                        :: AllOuts(MaxMrsnOutputs)
    REAL(ReKi)                                        :: qdotdot(6) ,qdotdot2(3)     ! The structural acceleration of a mesh node
    !REAL(ReKi)                                        :: accel_fluid(6) ! Acceleration of fluid at the mesh node
@@ -2512,8 +2504,8 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    real(ReKi)               :: omega_s2(3)
    real(ReKi)               :: pos1(3), pos2(3)   
    real(ReKi)               :: Imat(3,3)
-   real(ReKi)               :: iArm(3), iTerm(3), Ioffset, h_c, dRdl_p, dRdl_pp, f_hydro(3), am(3,3), lstar
-   real(ReKi)               :: C_1, C_2, a0b0, z1d, z2d
+   real(ReKi)               :: iArm(3), iTerm(3), Ioffset, h_c, dRdl_p, dRdl_pp, f_hydro(3), am(3,3), lstar, deltal
+   real(ReKi)               :: C_1, C_2, a0b0, z1d, z2d, h
       ! Initialize errStat
          
    errStat = ErrID_None         
@@ -2817,9 +2809,36 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
 
        
       ! External Hydrodynamic Side Loads
-      DO i =1,N+1    ! loop through member elements    
-         h_c = 0.0_ReKi !TODO: Determine actual h_c based on water level, etc. GJH 3/23/20 see table in Section 7.1.1
- !TODO:        call GetExtHydroForceMomentMultipliers( i, N+1, Za, Zb, Zi, h_c, deltal )
+      DO i =1,N+1    ! loop through member nodes
+         ! TODO: Note that for computational efficiency, we could precompute h_c and deltal for each element when we are NOT using wave stretching
+         ! We would still need to test at time marching for nodes just below the free surface because that uses the current locations not the reference locations
+         ! see table in Section 7.1.1
+         if ( i == 1 ) then
+            deltal = mem%dl/2.0_ReKi
+            h_c    = mem%dl/4.0_ReKi
+         elseif (i == N+1) then
+            deltal =  mem%dl/2.0_ReKi
+            h_c    = -mem%dl/4.0_ReKi
+         elseif ( mem%i_floor == i ) then ! This node is the upper node of an element which crosses the seabed
+            deltal = mem%dl/2.0_ReKi - mem%h_floor  ! TODO: h_floor is negative valued, should we be subrtracting it from dl/2? GJH
+            h_c    = 0.5_ReKi*(mem%dl/2.0_ReKi + mem%h_floor)
+         else
+            pos1 =  u%Mesh%TranslationDisp(:, mem%NodeIndx(i))   + u%Mesh%Position(:, mem%NodeIndx(i))
+            pos2 =  u%Mesh%TranslationDisp(:, mem%NodeIndx(i+1)) + u%Mesh%Position(:, mem%NodeIndx(i+1))
+            if (pos1(3) <= 0.0 .and. 0.0 < pos2(3) ) then ! This node is just below the free surface !TODO: Needs to be augmented for wave stretching
+               !TODO: Fix this one
+               pos1 =  u%Mesh%Position(:, mem%NodeIndx(i)) ! use reference position for following equation
+               h = (  pos1(3) ) / mem%cosPhi_ref !TODO: Needs to be augmented for wave stretching
+               deltal = mem%dl/2.0 + h
+               h_c    = 0.5*(h-mem%dl/2.0)
+            else
+               ! This node is a fully submerged interior node
+               deltal = mem%dl
+               h_c    = 0.0_ReKi
+            end if
+            
+         end if
+
          if (i == 1) then
             dRdl_p  = abs(mem%dRdl_mg(i))
             dRdl_pp = mem%dRdl_mg(i)   
@@ -2849,7 +2868,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                          2.0*m%FDynP(mem%NodeIndx(i))*mem%AxCp(i)*pi*mem%RMG(i)*dRdl_pp*mem%k 
             call LumpDistrHydroLoads( f_hydro, mem%k, mem%dl, h_c, m%F_I(:, mem%NodeIndx(i)) )
          end if
-      END DO ! i =1,N+1    ! loop through member elements       
+      END DO ! i =1,N+1    ! loop through member nodes       
       
       
       ! Any end plate loads that are modeled on a per-member basis
@@ -2878,9 +2897,9 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
 ! TODO: Do the equations below still work if z1 > z2 ?
  !TODO, should not have to test seabed crossing in time-marching loop
 
-      ! Water ballast buoyancy 
-      if (z1 >= -p%WtrDpth) then   ! end load only if end is above seabed
-         
+      
+      if ( mem%i_floor == 0 ) then   ! both ends are above seabed
+         !--- Water ballast buoyancy ---
          ! if member is fully flooded
          if (mem%z_overfill > 0) then 
             Fl      = -mem%FillDens * g * pi *mem%Rin(  1)**2* (mem%z_overfill + max(z2-z1, 0.0_ReKi))
@@ -2896,19 +2915,27 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
             Fl      = -mem%FillDens * g * pi *mem%Rin(1)**2*mem%l_fill*cosPhi
             Moment  =  mem%FillDens * g * pi *0.25*mem%Rin(1)**4*sinPhi
             call AddEndLoad(Fl, Moment, sinPhi1, cosPhi1, sinBeta1, cosBeta1, m%F_BF_End(:, mem%NodeIndx(1)))
-
-         ! no load if member is not flooded at all
+         else
+            ! no load if member is not flooded at all
          end if
-      ! no load if end is below seabed
+         
+      elseif ( mem%i_floor < mem%NElements ) then ! upper node is still above the seabed
+         if (mem%z_overfill > 0) then 
+            Fl      =   mem%FillDens * g * pi *mem%Rin(N+1)**2* (mem%z_overfill + max(z1-z2, 0.0_ReKi))
+            Moment  =  -mem%FillDens * g * pi *0.25*mem%Rin(N+1)**4*sinPhi            
+            call AddEndLoad(Fl, Moment, sinPhi2, cosPhi2, sinBeta2, cosBeta2, m%F_BF_End(:, mem%NodeIndx(N+1)))
+         end if
+         
+      else    
+         ! no loads because both end nodes are below seabed
       end if
 
       ! --- no inertia loads from water ballast modeled on ends
 
       ! --- external buoyancy loads: ends ---
 
-!TODO, should not have to test seabed crossing in time-marching loop
       if ( .not. mem%PropPot ) then
-         if (z1 >= -p%WtrDpth) then   ! NOTE: We could roll this into the section for Water ballast buoyancy to save the if-test
+         if (mem%i_floor == 0) then  ! both ends above or at seabed
             if (z2<= 0.0_ReKi) then
                ! Compute loads on both ends
                Fl      = -p%WtrDens * g * pi *mem%RMG(1)**2*z1
@@ -2925,16 +2952,14 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
             else
                ! Entire member is above the still water line
             end if
-   !TODO, should not have to test seabed crossing in time-marching loop
          
-         elseif (z2 >-p%WtrDpth) then ! The member crosses the seabed line
+         elseif ( mem%i_floor < mem%NElements) then ! The member crosses the seabed line
             ! Only compute the buoyancy contribution from the upper end
             Fl      = p%WtrDens * g * pi *mem%RMG(N+1)**2*z2
             Moment  = p%WtrDens * g * pi *0.25*mem%RMG(N+1)**4*sinPhi
             call AddEndLoad(Fl, Moment, sinPhi2, cosPhi2, sinBeta2, cosBeta2, m%F_B_End(:, mem%NodeIndx(N+1)))
          else
-            ! entire member is buried below the seabed
-         
+            ! entire member is buried below the seabed         
          end if
          
       end if   ! PropPot
@@ -2972,16 +2997,13 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          
             ! Lumped added mass loads
          qdotdot                 = reshape((/u%Mesh%TranslationAcc(:,J),u%Mesh%RotationAcc(:,J)/),(/6/)) 
-         m%F_A_End(:,J)          = matmul( p%AM_End(:,:,J) , ( - qdotdot) )
-         DO I=1,3
-            m%F_A_End(I,J) = m%nodeInWater(j) * m%F_A_End(I,J)  ! Note that the rotational components are zero
-         END DO
+         m%F_A_End(:,J)          = m%nodeInWater(j) * matmul( p%AM_End(:,:,J) , ( - qdotdot) )
          
-         m%F_I_End(:,J) =  p%DP_Const_End(:,j) * m%FDynP(j) + matmul(p%AM_End(:,:,j),m%FA(:,j))
+         m%F_I_End(:,J) =  m%nodeInWater(j) * (p%DP_Const_End(:,j) * m%FDynP(j) + matmul(p%AM_End(:,:,j),m%FA(:,j)))
          
          ! Marine growth inertia: ends: Section 4.2.2  
-         m%F_IMG_End(1:3,j) = -p%Mass_MG_End(j)*qdotdot(1:3)
-         m%F_IMG_End(4:6,j) = -matmul(p%I_MG_End(:,:,j),qdotdot(4:6)) - cross_product(u%Mesh%RotationVel(:,J),matmul(p%I_MG_End(:,:,j),u%Mesh%RotationVel(:,J)))
+         m%F_IMG_End(1:3,j) = -m%nodeInWater(j) * p%Mass_MG_End(j)*qdotdot(1:3)
+         m%F_IMG_End(4:6,j) = -m%nodeInWater(j) * (matmul(p%I_MG_End(:,:,j),qdotdot(4:6)) - cross_product(u%Mesh%RotationVel(:,J),matmul(p%I_MG_End(:,:,j),u%Mesh%RotationVel(:,J))))
          
          DO I=1,6
                         
@@ -2991,15 +3013,13 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
             IF (I < 4 ) THEN
               
               
-               m%F_D_End(i,j) =  p%An_End(i,j)*p%DragConst_End(j)*abs(vmag)*vmag
+               m%F_D_End(i,j) =  p%An_End(i,j)*p%DragConst_End(j)*abs(vmag)*vmag  ! Note: vmag is zero if node is not in the water
                !TODO: This needs to be reworked with new equations
                !m%F_B_End(I,J) =  m%nodeInWater(j)*p%F_B_End(I,J)
-               !y%Mesh%Force(I,J) = m%F_A_End(I,J) + m%F_D_End(I,J) +  m%F_B_End(I,J) + m%F_I_End(I,J)  !+  m%F_BF_End(I,J)
                y%Mesh%Force(i,j) = m%F_D_End(i,j) + m%F_I_End(i,j) + p%F_WMG_End(i,j) + m%F_B_End(i,j) + m%F_BF_End(i,j) + m%F_A_End(i,j) + m%F_IMG_End(i,j)
             ELSE
                !m%F_B_End(I,J) =  m%nodeInWater(j)*p%F_B_End(I,J)
-               !y%Mesh%Moment(I-3,J) =   m%F_A_End(I,J) + m%F_B_End(I,J) ! +   m%F_BF_End(I,J)
-                y%Mesh%Moment(i-3,j) = m%F_B_End(i,j) + m%F_BF_End(i,j)  + m%F_IMG_End(i,j)
+               y%Mesh%Moment(i-3,j) = m%F_B_End(i,j) + m%F_BF_End(i,j)  + m%F_IMG_End(i,j)
             END IF
          END DO      ! I=1,6
       ENDDO          ! J = 1, p%NJoints
