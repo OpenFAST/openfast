@@ -1559,12 +1559,14 @@ END FUNCTION Calc_Chi0
 
    
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE Calc_WriteDbgOutput( p, u, m, y, ErrStat, ErrMsg )
+SUBROUTINE Calc_WriteDbgOutput( p, u, m, y, OtherState, xd, ErrStat, ErrMsg )
    
    TYPE(AD_ParameterType),    INTENT(IN   )  :: p                                 ! The module parameters
    TYPE(AD_InputType),        INTENT(IN   )  :: u                                 ! inputs
    TYPE(AD_MiscVarType),      INTENT(INOUT)  :: m                                 ! misc variables
    TYPE(AD_OutputType),       INTENT(IN   )  :: y                                 ! outputs
+   TYPE(AD_OtherStateType),   INTENT(IN   )  :: OtherState                        ! OtherState
+   TYPE(AD_DiscreteStateType),INTENT(IN   )  :: xd                                ! Discrete states
    INTEGER(IntKi),            INTENT(  OUT)  :: ErrStat                           ! The error status code
    CHARACTER(*),              INTENT(  OUT)  :: ErrMsg                            ! The error message, if an error occurred
 
@@ -1657,18 +1659,12 @@ SUBROUTINE Calc_WriteDbgOutput( p, u, m, y, ErrStat, ErrMsg )
          end do ! nodes
       end do ! blades
    else  !  (p%WakeMod == WakeMod_FVW)
-      call calc_WriteDbgOutputFVW( p, u, m, y, ErrStat, ErrMsg )
+      call calc_WriteDbgOutputFVW()
    endif
 
 contains
-   subroutine  Calc_WriteDbgOutputFVW( p, u, m, y, ErrStat, ErrMsg )
-      TYPE(AD_ParameterType),    INTENT(IN   )  :: p                                 ! The module parameters
-      TYPE(AD_InputType),        INTENT(IN   )  :: u                                 ! inputs
-      TYPE(AD_MiscVarType),      INTENT(INOUT)  :: m                                 ! misc variables
-      TYPE(AD_OutputType),       INTENT(IN   )  :: y                                 ! outputs
-      INTEGER(IntKi),            INTENT(  OUT)  :: ErrStat                           ! The error status code
-      CHARACTER(*),              INTENT(  OUT)  :: ErrMsg                            ! The error message, if an error occurred
-
+   subroutine  Calc_WriteDbgOutputFVW()
+      use BEMTUnCoupled, only: Compute_UA_AirfoilCoefs
          ! local variables
       integer, parameter                        :: indx = 1  ! m%BEMT_u(1) is at t; m%BEMT_u(2) is t+dt
       CHARACTER(*), PARAMETER                   :: RoutineName = 'Calc_WriteOutput'
@@ -1681,7 +1677,7 @@ contains
       type(AFI_OutputType)                      :: AFI_interp                 ! Resulting values from lookup table
       real(ReKi)                                :: UrelWind_s(3)                  ! Wind in section coords
       real(ReKi)                                :: Vwnd(3) 
-      real(ReKi)                                :: Cx, Cy
+      real(ReKi)                                :: Cx, Cy, Cl_dyn, Cd_dyn, Cm_dyn
       ! Transformation matrices
       real(R8Ki), dimension(3,3)                :: M_cg ! from global to airfoil-chord (this is well defined, also called "n-t" system in AeroDyn)
       real(ReKi), dimension(3,3)                :: M_sg ! from global to section  (this is ill-defined, also called "x-y" system in AeroDyn), this coordinate is used to define the "axial" and "tangential" inductions
@@ -1711,8 +1707,21 @@ contains
             call FVW_AeroOuts(M_sg, M_cg, m%FVW%PitchAndTwist(j,k), u%BladeMotion(k)%TranslationVel(1:3,j), &
                         m%FVW_y%Vind(1:3,j,k), Vwnd, p%KinVisc, p%FVW%Chord(j,k), &
                         AxInd, TanInd, Vrel, phi, alpha, Re, UrelWind_s, ErrStat, ErrMsg )
-            !  NOTE: using airfoil coeffs at nodes
+
+            ! NOTE: using airfoil coeffs at nodes
+            ! Compute steady Airfoil Coefs first 
             call AFI_ComputeAirfoilCoefs( alpha, Re, 0.0_ReKi,  p%AFI(p%FVW%AFindx(j,k)), AFI_interp, ErrStat, ErrMsg )
+            Cl_dyn = AFI_interp%Cl
+            Cd_dyn = AFI_interp%Cd
+            Cm_dyn = AFI_interp%Cm
+
+            if ( m%FVW%UA_Flag) then ! Unsteady coeffs
+               if ((OtherState%FVW%UA_Flag(j,k)) .and. ( .not. EqualRealNos(Vrel,0.0_ReKi) ) ) then
+                  m%FVW%m_UA%iBladeNode = j
+                  m%FVW%m_UA%iBlade     = k
+                  call Compute_UA_AirfoilCoefs( alpha, Vrel, Re,  0.0_ReKi, p%AFI(p%FVW%AFindx(j,k)), m%FVW%p_UA, xd%FVW%UA, OtherState%FVW%UA, m%FVW%y_UA, m%FVW%m_UA, Cl_dyn, Cd_dyn, Cm_dyn, ErrStat, ErrMsg) 
+               end if
+            end if
 
             theta = m%FVW%PitchAndTwist(j,k)
 
@@ -1730,11 +1739,11 @@ contains
 
             cp = cos(phi)
             sp = sin(phi)
-            Cx = AFI_interp%Cl*cp + AFI_interp%Cd*sp
-            Cy = AFI_interp%Cl*sp - AFI_interp%Cd*cp
-            m%AllOuts( i+9  ) =  AFI_interp%Cl                    ! "Cl"
-            m%AllOuts( i+10 ) =  AFI_interp%Cd                    ! "Cd"
-            m%AllOuts( i+11 ) =  AFI_interp%Cm                    ! "Cm"
+            Cx = Cl_dyn*cp + Cd_dyn*sp
+            Cy = Cl_dyn*sp - Cd_dyn*cp
+            m%AllOuts( i+9  ) =  Cl_dyn                           ! "Cl"
+            m%AllOuts( i+10 ) =  Cd_dyn                           ! "Cd"
+            m%AllOuts( i+11 ) =  Cm_dyn                           ! "Cm"
             m%AllOuts( i+12 ) =  Cx                               ! "Cx"
             m%AllOuts( i+13 ) =  Cy                               ! "Cy"
 
@@ -1752,11 +1761,15 @@ contains
             m%AllOuts( i+20 ) = -m%Y(j,k)                     ! "Fy"
             m%AllOuts( i+21 ) =  m%X(j,k)*ct - m%Y(j,k)*st    ! "Fn"
             m%AllOuts( i+22 ) = -m%X(j,k)*st - m%Y(j,k)*ct    ! "Ft"
-            m%AllOuts( i+23 ) = 0.5_ReKi * p%FVW%Chord(j,k) * Vrel * AFI_interp%Cl ! "Gam" [m^2/s]
+            m%AllOuts( i+23 ) = 0.5_ReKi * p%FVW%Chord(j,k) * Vrel * Cl_dyn ! "Gam" [m^2/s]
 
             m%AllOuts( i+24 ) =  dot_product(M_pg(1,:), m%FVW_y%Vind(1:3,j,k) ) ! Uihn, hub normal
             m%AllOuts( i+25 ) =  dot_product(M_pg(2,:), m%FVW_y%Vind(1:3,j,k) ) ! Uiht, hub tangential
             m%AllOuts( i+26 ) =  dot_product(M_pg(3,:), m%FVW_y%Vind(1:3,j,k) ) ! Uihr, hub radial
+
+            m%AllOuts( i+27 ) =  AFI_interp%Cl                  ! "Cl" static
+            m%AllOuts( i+28 ) =  AFI_interp%Cd                  ! "Cd" static
+            m%AllOuts( i+29 ) =  AFI_interp%Cm                  ! "Cm" static
 
          end do ! nodes
       end do ! blades
@@ -1764,13 +1777,14 @@ contains
 END SUBROUTINE Calc_WriteDbgOutput
 
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE Calc_WriteOutput( p, u, m, y, OtherState, indx, ErrStat, ErrMsg )
+SUBROUTINE Calc_WriteOutput( p, u, m, y, OtherState, xd, indx, ErrStat, ErrMsg )
    
    TYPE(AD_ParameterType),    INTENT(IN   )  :: p                                 ! The module parameters
    TYPE(AD_InputType),        INTENT(IN   )  :: u                                 ! inputs
    TYPE(AD_MiscVarType),      INTENT(INOUT)  :: m                                 ! misc variables
    TYPE(AD_OutputType),       INTENT(IN   )  :: y                                 ! outputs
-   TYPE(AD_OtherStateType),   INTENT(IN   )  :: OtherState                        ! other states at t (for DBEMT debugging)
+   TYPE(AD_OtherStateType),   INTENT(IN   )  :: OtherState                        ! other states at t (for DBEMT and UA)
+   TYPE(AD_DiscreteStateType),INTENT(IN   )  :: xd                                ! Discrete states
    integer,                   intent(in   )  :: indx                              ! index into m%BEMT_u(indx) array; 1=t and 2=t+dt (but not checked here)
    INTEGER(IntKi),            INTENT(  OUT)  :: ErrStat                           ! The error status code
    CHARACTER(*),              INTENT(  OUT)  :: ErrMsg                            ! The error message, if an error occurred
@@ -1987,6 +2001,7 @@ CONTAINS
 
             !  NOTE: using airfoil coeffs at nodes
             call AFI_ComputeAirfoilCoefs( alpha, Re, 0.0_ReKi,  p%AFI(p%FVW%AFindx(j,k)), AFI_interp, ErrStat, ErrMsg )
+            STOP
             theta = m%FVW%PitchAndTwist(j,k)
 
             ! --- Setting AD outputs 

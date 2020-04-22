@@ -998,7 +998,7 @@ subroutine FVW_AeroOuts( M_sg, M_ag, PitchAndTwist, Vstr_g,  Vind_g, Vwnd_g, Kin
    !M_sa(3,1:3) = (/                   0.0_DbKi,                  0.0_DbKi, 1.0_DbKi /)
    !M_sg= matmul(M_sa, M_ag ) 
 
-   ! --- Airfoil coordinates: used to define alpha, and Vrel, alos called "n-t" system
+   ! --- Airfoil coordinates: used to define alpha, and Vrel, also called "n-t" system
    Vtot_g    = Vwnd_g - Vstr_g + Vind_g
    Vtot_a    = matmul(M_ag, Vtot_g)
    alpha     = atan2( Vtot_a(1), Vtot_a(2) )
@@ -1017,6 +1017,28 @@ subroutine FVW_AeroOuts( M_sg, M_ag, PitchAndTwist, Vstr_g,  Vind_g, Vwnd_g, Kin
 
    if(.false.) print*,PitchAndTwist ! just to avoid unused var for now
 end subroutine FVW_AeroOuts
+
+!> Generic function to compute alpha, Vrel and Re based on global data
+subroutine AlphaVrel_Generic(M_ag, Vstr_g,  Vind_g, Vwnd_g, KinVisc, Chord, Vrel_norm, alpha, Re)
+   real(R8Ki),             intent(in   )  :: M_ag(3,3)               ! u%BladeMotion(k)%Orientation(1:3,1:3,j)                global  coord to airfoil coord
+   real(ReKi),             intent(in   )  :: Vstr_g(3)               ! Structural velocity                                    global  coord
+   real(ReKi),             intent(in   )  :: Vind_g(3)               ! Induced wind velocity                                  global  coord
+   real(ReKi),             intent(in   )  :: Vwnd_g(3)               ! Disturbed inflow                                       global  coord
+   real(ReKi),             intent(in   )  :: KinVisc                 ! Viscosity
+   real(ReKi),             intent(in   )  :: Chord                   ! chord length
+   real(ReKi),             intent(  out)  :: Vrel_norm               ! Relative velocity norm
+   real(Reki),             intent(  out)  :: alpha                   ! angle of attack
+   real(ReKi),             intent(  out)  :: Re                      ! Reynolds number
+   ! Local vars
+   real(ReKi)                             :: Vtot_g(3)               ! Vector of total relative velocity                      section coord
+   real(ReKi)                             :: Vtot_a(3)               ! Vector of total relative velocity                      global  coord
+   ! --- Airfoil coordinates: used to define alpha, and Vrel, also called "n-t" system
+   Vtot_g    = Vwnd_g - Vstr_g + Vind_g
+   Vtot_a    = matmul(M_ag, Vtot_g)
+   alpha     = atan2( Vtot_a(1), Vtot_a(2) )
+   Vrel_norm = sqrt(Vtot_a(1)**2 + Vtot_a(2)**2) ! NOTE: z component shoudn't be used
+   Re        = Chord * Vrel_norm / KinVisc / 1.0E6
+end subroutine AlphaVrel_Generic
 
 
 end module FVW_Subs

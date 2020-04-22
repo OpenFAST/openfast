@@ -64,7 +64,7 @@ typedef     ^                   ^               ReKi                            
 typedef     ^                   ^               ReKi                             TE           :::  -  -  "Trailing edge points" -
 typedef     ^                   ^               ReKi                             r_LL         :::: - -   "Position    of the Lifting line panels" -
 typedef     ^                   ^               ReKi                             s_LL         ::   -  -  "Spanwise coordinate of LL elements" m
-typedef     ^                   ^               ReKi                             chord_LL     ::  -  -   "chord on LL cp " m
+typedef     ^                   ^               ReKi                             chord_LL     ::  -  -   "chord on LL nodes " m
 # Variables at control point - Dimensions nSpan 
 typedef     ^                   ^               ReKi                             s_CP_LL      ::   -  -  "Spanwise coordinate of LL CP" m
 typedef     ^                   ^               ReKi                             chord_CP_LL  ::   -  -  "chord on LL cp " m
@@ -96,6 +96,9 @@ typedef     ^                   ^               DbKi                            
 typedef     ^                   ^               ReKi                             tSpent        -   -  -  "Time spent in expensive Biot-Savart computation" s
 typedef     ^                   ^               ReKi                             dxdt_NW        ::::    -  -  "State time derivatie, stored for subcylcing" - 
 typedef     ^                   ^               ReKi                             dxdt_FW        ::::    -  -  "State time derivatie, stored for subcylcing" - 
+# Convenient storage
+typedef     ^                   ^               Reki                             alpha_LL     ::   -  -  "Angle of attack at lifting line CP, only computed with CircPolarData method" -
+typedef     ^                   ^               Reki                             Vreln_LL        ::   -  -  "Norm of Vrel on the lifting line" -
 # Segment storage (buffer)
 typedef     ^                   ^               IntKi                            SegConnct     ::    -  -  "Connectivity of segments" - 
 typedef     ^                   ^               ReKi                             SegPoints     ::    -  -  "Points delimiting the segments" - 
@@ -109,6 +112,7 @@ typedef     ^                   ^               UA_MiscVarType                  
 typedef     ^                   ^               UA_OutputType                    y_UA          -  -  -  "outputs from UnsteadyAero"        -
 typedef     ^                   ^               UA_ParameterType                 p_UA          -  -  -  "parameters for UnsteadyAero"        -
 typedef     ^                   ^               LOGICAL                          UA_Flag       -  -  -  "logical flag indicating whether to use UnsteadyAero"        -
+typedef     ^                   ^               ReKi                             Vwnd_ND       ::: - -  "InflowOnBlade (at nodes) values modified by tower influence. ONLY for UA" m/s
 
 # ........ Input ............
 # FVW_InputType

@@ -168,6 +168,12 @@ subroutine AD_SetInitOut(p, InputFileData, InitOut, errStat, errMsg)
          InitOut%WriteOutputUnt( m + 26 ) = '  (m/s)  '
          InitOut%WriteOutputHdr( m + 27 ) = ' '//trim(chanPrefix)//"Uir"
          InitOut%WriteOutputUnt( m + 27 ) = '  (m/s)  '
+         InitOut%WriteOutputHdr( m + 28 ) = ' '//trim(chanPrefix)//"Clst"
+         InitOut%WriteOutputUnt( m + 28 ) = '   (-)   '
+         InitOut%WriteOutputHdr( m + 29 ) = ' '//trim(chanPrefix)//"Cdst"
+         InitOut%WriteOutputUnt( m + 29 ) = '   (-)   '
+         InitOut%WriteOutputHdr( m + 30 ) = ' '//trim(chanPrefix)//"Cmst"
+         InitOut%WriteOutputUnt( m + 30 ) = '   (-)   '
          
       end do
    end do
@@ -1021,7 +1027,7 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
   !p%RootName       = TRIM(InitInp%RootName)//'.AD'   ! set earlier to it could be used   
    
 #ifdef DBG_OUTS
-   p%NBlOuts          = 27
+   p%NBlOuts          = 30
    p%numOuts          = p%NumBlNds*p%NumBlades*p%NBlOuts
    p%NTwOuts          = 0
       
@@ -1228,6 +1234,11 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
    ErrStat = ErrID_None
    ErrMsg  = ""
 
+#ifdef UA_OUTS
+  ! if ( mod(REAL(t,ReKi),.1) < p%dt) then
+   if (allocated(m%FVW%y_UA%WriteOutput)) m%FVW%y_UA%WriteOutput = 0.0 !reset to zero in case UA shuts off mid-simulation
+#endif            
+
 
    call SetInputs(p, u, m, indx, errStat2, errMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1249,7 +1260,7 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       CALL FVW_CalcOutput( t, m%FVW_u(1), p%FVW, x%FVW, xd%FVW, z%FVW, OtherState%FVW, p%AFI, m%FVW_y, m%FVW, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
-      call SetOutputsFromFVW( u, p, m, y, ErrStat2, ErrMsg2 )
+      call SetOutputsFromFVW( u, p, OtherState, xd, m, y, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    endif
 
@@ -1286,9 +1297,9 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
    !-------------------------------------------------------   
    if (p%NumOuts > 0) then
 #ifdef DBG_OUTS
-      call Calc_WriteDbgOutput( p, u, m, y, ErrStat2, ErrMsg2 ) 
+      call Calc_WriteDbgOutput( p, u, m, y, OtherState, xd, ErrStat2, ErrMsg2 ) 
 #else
-      call Calc_WriteOutput( p, u, m, y, OtherState, indx, ErrStat2, ErrMsg2 )   
+      call Calc_WriteOutput( p, u, m, y, OtherState, xd, indx, ErrStat2, ErrMsg2 )   
 #endif   
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)      
    
@@ -1307,6 +1318,12 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       
    end if
    
+#ifdef UA_OUTS
+  ! if ( mod(REAL(t,ReKi),.1) < p%dt) then
+   if (allocated(m%FVW%y_UA%WriteOutput)) &
+            WRITE (69, '(F20.6,'//trim(num2lstr(size(m%FVW%y_UA%WriteOutput)))//'(:,1x,ES19.5E3))') t, ( m%FVW%y_UA%WriteOutput(i), i=1,size(m%FVW%y_UA%WriteOutput))
+  ! end if              
+#endif 
    
    
 end subroutine AD_CalcOutput
@@ -1658,6 +1675,7 @@ subroutine SetInputsForFVW(p, u, m, errStat, errMsg)
          end if
       endif
    enddo
+   m%FVW%Vwnd_ND = m%DisturbedInflow ! Nasty transfer for UA, but this is temporary, waiting for AeroDyn to handle UA
 end subroutine SetInputsForFVW
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine converts outputs from BEMT (stored in m%BEMT_y) into values on the AeroDyn BladeLoad output mesh.
@@ -1706,13 +1724,16 @@ end subroutine SetOutputsFromBEMT
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine converts outputs from FVW (stored in m%FVW_y) into values on the AeroDyn BladeLoad output mesh.
-subroutine SetOutputsFromFVW(u, p, m, y, ErrStat, ErrMsg)
-   TYPE(AD_InputType),      intent(in   ) :: u           !< Inputs at Time t
-   type(AD_ParameterType),  intent(in   ) :: p           !< AD parameters
-   type(AD_OutputType),     intent(inout) :: y           !< AD outputs
-   type(AD_MiscVarType),    intent(inout) :: m           !< Misc/optimization variables
-   integer(IntKi),          intent(  out) :: ErrStat     !< Error status of the operation
-   character(*),            intent(  out) :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+subroutine SetOutputsFromFVW(u, p, OtherState, xd, m, y, ErrStat, ErrMsg)
+   use BEMTUnCoupled, only: Compute_UA_AirfoilCoefs
+   TYPE(AD_InputType),        intent(in   ) :: u           !< Inputs at Time t
+   type(AD_ParameterType),    intent(in   ) :: p           !< AD parameters
+   type(AD_OtherStateType),   intent(in   ) :: OtherState  !< OtherState
+   type(AD_DiscreteStateType),intent(in   ) :: xd          !< Discrete states
+   type(AD_OutputType),       intent(inout) :: y           !< AD outputs
+   type(AD_MiscVarType),      intent(inout) :: m           !< Misc/optimization variables
+   integer(IntKi),            intent(  out) :: ErrStat     !< Error status of the operation
+   character(*),              intent(  out) :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
    integer(intKi)                         :: j           ! loop counter for nodes
    integer(intKi)                         :: k           ! loop counter for blades
@@ -1724,7 +1745,7 @@ subroutine SetOutputsFromFVW(u, p, m, y, ErrStat, ErrMsg)
    real(ReKi)                             :: AxInd, TanInd, Vrel, phi, alpha, Re, theta
    type(AFI_OutputType)                   :: AFI_interp             ! Resulting values from lookup table
    real(ReKi)                             :: UrelWind_s(3)          ! Relative wind (wind+str) in section coords
-   real(ReKi)                             :: Cx, Cy
+   real(ReKi)                             :: Cx, Cy, Cl_dyn, Cd_dyn, Cm_dyn
 
    integer(intKi)                         :: ErrStat2
    character(ErrMsgLen)                   :: ErrMsg2
@@ -1742,17 +1763,33 @@ subroutine SetOutputsFromFVW(u, p, m, y, ErrStat, ErrMsg)
                      AxInd, TanInd, Vrel, phi, alpha, Re, UrelWind_s, ErrStat, ErrMsg )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SetOutputsFromFVW')
          !  NOTE: using airfoil coeffs at nodes
+
+         ! Compute steady Airfoil Coefs no matter what..
          call AFI_ComputeAirfoilCoefs( alpha, Re, 0.0_ReKi,  p%AFI(p%FVW%AFindx(j,k)), AFI_interp, ErrStat, ErrMsg )
+         Cl_dyn = AFI_interp%Cl
+         Cd_dyn = AFI_interp%Cd
+         Cm_dyn = AFI_interp%Cm
+         if (m%FVW%UA_Flag) then
+            if ((OtherState%FVW%UA_Flag(j,k)) .and. ( .not. EqualRealNos(Vrel,0.0_ReKi) ) ) then
+               m%FVW%m_UA%iBladeNode = j
+               m%FVW%m_UA%iBlade     = k
+               call Compute_UA_AirfoilCoefs( alpha, Vrel, Re,  0.0_ReKi, p%AFI(p%FVW%AFindx(j,k)), m%FVW%p_UA, xd%FVW%UA, OtherState%FVW%UA, m%FVW%y_UA, m%FVW%m_UA, Cl_dyn, Cd_dyn, Cm_dyn, ErrStat, ErrMsg) 
+               if(ErrStat/=ErrID_None) print*,'UA CalcOutput:', trim(ErrMsg)
+            end if
+         end if
+
+
+
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SetOutputsFromFVW')
          cp = cos(phi)
          sp = sin(phi)
-         Cx = AFI_interp%Cl*cp + AFI_interp%Cd*sp
-         Cy = AFI_interp%Cl*sp - AFI_interp%Cd*cp
+         Cx = Cl_dyn*cp + Cd_dyn*sp
+         Cy = Cl_dyn*sp - Cd_dyn*cp
 
          q = 0.5 * p%airDens * Vrel**2                         ! dynamic pressure of the jth node in the kth blade
          force(1) =  Cx * q * p%FVW%Chord(j,k)      ! X = normal force per unit length (normal to the plane, not chord) of the jth node in the kth blade
          force(2) = -Cy * q * p%FVW%Chord(j,k)      ! Y = tangential force per unit length (tangential to the plane, not chord) of the jth node in the kth blade
-         moment(3)=  AFI_interp%Cm * q * p%FVW%Chord(j,k)**2   ! M = pitching moment per unit length of the jth node in the kth blade
+         moment(3)=  Cm_dyn * q * p%FVW%Chord(j,k)**2   ! M = pitching moment per unit length of the jth node in the kth blade
 
             ! save these values for possible output later:
          m%X(j,k) = force(1)

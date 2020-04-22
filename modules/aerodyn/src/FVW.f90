@@ -153,6 +153,7 @@ subroutine FVW_Init(AFInfo, InitInp, u, p, x, xd, z, OtherState, y, m, Interval,
 
    ! --- UA 
    ! NOTE: quick and dirty since this should belong to AD
+   interval = InitInp%DTAero ! important, UA, needs proper interval
    call UA_Init_Wrapper(AFInfo, InitInp, interval, p, x, xd, OtherState, m, ErrStat2, ErrMsg2); if (Failed()) return
 
    if (DEV_VERSION) then
@@ -201,6 +202,8 @@ subroutine FVW_InitMiscVars( p, m, ErrStat, ErrMsg )
    call AllocAry( m%s_LL          ,  p%nSpan+1  , p%nWings, 'Spanwise coord LL  ', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%s_LL= -999999_ReKi;
    call AllocAry( m%chord_LL      ,  p%nSpan+1  , p%nWings, 'Chord on LL        ', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%chord_LL= -999999_ReKi;
    call AllocAry( m%PitchAndTwist ,  p%nSpan+1  , p%nWings, 'Pitch and twist    ', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%PitchAndTwist= -999999_ReKi;
+   call AllocAry( m%alpha_LL,        p%nSpan    , p%nWings, 'Wind on CP ll      ', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%alpha_LL= -999999_ReKi;
+   call AllocAry( m%Vreln_LL,        p%nSpan    , p%nWings, 'Wind on CP ll      ', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%Vreln_LL = -999999_ReKi;
    ! Variables at control points/elements
    call AllocAry( m%Gamma_LL,        p%nSpan    , p%nWings, 'Lifting line Circulation', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%Gamma_LL = -999999_ReKi;
    call AllocAry( m%chord_CP_LL   ,  p%nSpan    , p%nWings, 'Chord on CP LL     ', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%chord_CP_LL= -999999_ReKi;
@@ -232,6 +235,8 @@ subroutine FVW_InitMiscVars( p, m, ErrStat, ErrMsg )
    call AllocAry( m%r_wind, 3, nMax, 'Requested wind points', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName )
    m%r_wind = 0.0_ReKi     ! set to zero so InflowWind can shortcut calculations
    m%OldWakeTime = -HUGE(1.0_DbKi)
+   ! Temporary UA
+   call AllocAry( m%Vwnd_ND, 3, p%nSpan+1, p%nWings, 'Vwnd_ND', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%TE = -999999_ReKi;
 end subroutine FVW_InitMiscVars
 ! ==============================================================================
 subroutine FVW_InitMiscVarsPostParam( p, m, ErrStat, ErrMsg )
@@ -475,6 +480,9 @@ subroutine FVW_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
    ! Destroy the output data:
    call FVW_DestroyOutput( y, ErrStat, ErrMsg )
 
+#ifdef UA_OUTS
+   CLOSE(69)
+#endif
 end subroutine FVW_End
 
 
@@ -556,6 +564,8 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    z_guess%Gamma_LL = m%Gamma_LL
    call FVW_CalcConstrStateResidual(t, uInterp, p, x, xd, z_guess, OtherState, m, z, AFInfo, ErrStat2, ErrMsg2, 1); if(Failed()) return
 
+   call UA_UpdateState_Wrapper(AFInfo, n, uInterp, p, x, xd, OtherState, m, ErrStat2, ErrMsg2); if(Failed()) return
+
    ! Map circulation and positions between LL and NW  and then NW and FW
    ! Changes: x only
    ShedScale = 1.0_ReKi
@@ -609,8 +619,6 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    call FVW_CalcConstrStateResidual(t+p%DTaero, uInterp, p, x, xd, z_guess, OtherState, m, z, AFInfo, ErrStat2, ErrMsg2, 2); if(Failed()) return
 !    print*,'US: z_Gamma',x%Gamma_NW(1,1,1)
 !    print*,'US: x_Gamma',z%Gamma_LL(1,1)
-   ! TODO UA
-   call UA_UpdateState_Wrapper(AFInfo, n, p, x, xd, OtherState, m, ErrStat2, ErrMsg2)
 
    ! Updating circulation of near wake panel (and position but irrelevant)
    ! Changes: x only
@@ -864,12 +872,12 @@ end subroutine FVW_CalcConstrStateResidual
 !! This subroutine is used to compute the output channels (motions and loads) and place them in the WriteOutput() array.
 !! The descriptions of the output channels are not given here. Please see the included OutListParameters.xlsx sheet for
 !! for a complete description of each output parameter.
-subroutine FVW_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, ErrStat, ErrMsg )
 ! NOTE: no matter how many channels are selected for output, all of the outputs are calculated
 ! All of the calculated output channels are placed into the m%AllOuts(:), while the channels selected for outputs are
 ! placed in the y%WriteOutput(:) array.
-!..................................................................................................................................
+subroutine FVW_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, ErrStat, ErrMsg )
    use VTK, only: set_vtk_coordinate_transform, set_vtk_no_coordinate_transform
+   use FVW_VortexTools, only: interpextrap_cp2node
    real(DbKi),                      intent(in   )  :: t           !< Current simulation time in seconds
    type(FVW_InputType),             intent(in   )  :: u           !< Inputs at Time t
    type(FVW_ParameterType),         intent(in   )  :: p           !< Parameters
@@ -914,28 +922,10 @@ subroutine FVW_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, ErrStat,
    n=p%nSpan
    y%Vind(1:3,:,:) = 0.0_ReKi
    do iW=1,p%nWings
-      ! --- Linear interpolation for most points (2:n)
-      call InterpArray(m%s_CP_LL(:,iW), m%Vind_LL(1,:,iW), m%s_LL(2:n,iW), y%Vind(1,2:n,iW))
-      call InterpArray(m%s_CP_LL(:,iW), m%Vind_LL(2,:,iW), m%s_LL(2:n,iW), y%Vind(2,2:n,iW))
-      call InterpArray(m%s_CP_LL(:,iW), m%Vind_LL(3,:,iW), m%s_LL(2:n,iW), y%Vind(3,2:n,iW))
-      ! --- Special case for end points (1 and n+1)
-      y%Vind(1:3, 1  , iW) = 0.0_ReKi
-      y%Vind(1:3, n+1, iW) = 0.0_ReKi
-      if (p%nSpan>1) then
-         ! If more than 2 panels, use extrapolation
-         i0=1; i1=1; i2=2; ! Using CP 1 and 2 to find point 1
-         y%Vind(1, i0  , iW) = lin_extrap(m%s_LL(i0,iW), m%s_CP_LL(i1,iW), m%Vind_LL(1,i1,iW), m%s_CP_LL(i2,iW), m%Vind_LL(1,i2,iW)) 
-         y%Vind(2, i0  , iW) = lin_extrap(m%s_LL(i0,iW), m%s_CP_LL(i1,iW), m%Vind_LL(2,i1,iW), m%s_CP_LL(i2,iW), m%Vind_LL(2,i2,iW)) 
-         y%Vind(3, i0  , iW) = lin_extrap(m%s_LL(i0,iW), m%s_CP_LL(i1,iW), m%Vind_LL(3,i1,iW), m%s_CP_LL(i2,iW), m%Vind_LL(3,i2,iW)) 
-         i0=n+1; i1=n; i2=n-1; ! Using CP n and n-2 to find point n+1
-         y%Vind(1, i0  , iW) = lin_extrap(m%s_LL(i0,iW), m%s_CP_LL(i1,iW), m%Vind_LL(1,i1,iW), m%s_CP_LL(i2,iW), m%Vind_LL(1,i2,iW)) 
-         y%Vind(2, i0  , iW) = lin_extrap(m%s_LL(i0,iW), m%s_CP_LL(i1,iW), m%Vind_LL(2,i1,iW), m%s_CP_LL(i2,iW), m%Vind_LL(2,i2,iW)) 
-         y%Vind(3, i0  , iW) = lin_extrap(m%s_LL(i0,iW), m%s_CP_LL(i1,iW), m%Vind_LL(3,i1,iW), m%s_CP_LL(i2,iW), m%Vind_LL(3,i2,iW)) 
-      else
-         ! If one panel, duplicate the unique point on both side
-         y%Vind(1:3, 1, iW) = m%Vind_LL(1:3, 1, iW)
-         y%Vind(1:3, 2, iW) = m%Vind_LL(1:3, 1, iW)
-      endif
+      ! --- Linear interpolation for interior points and extrapolations at boundaries
+      call interpextrap_cp2node(m%s_CP_LL(:,iW), m%Vind_LL(1,:,iW), m%s_LL(:,iW), y%Vind(1,:,iW))
+      call interpextrap_cp2node(m%s_CP_LL(:,iW), m%Vind_LL(2,:,iW), m%s_LL(:,iW), y%Vind(2,:,iW))
+      call interpextrap_cp2node(m%s_CP_LL(:,iW), m%Vind_LL(3,:,iW), m%s_LL(:,iW), y%Vind(3,:,iW))
    enddo
 
    ! For plotting only
@@ -978,17 +968,7 @@ contains
       Failed =  ErrStat >= AbortErrLev
    end function Failed
 
-   !> Perform linear extrapolation to get value of y(x0), using y(x1) and y(x2)
-   real(ReKi) function lin_extrap(x0, x1, y1, x2, y2) result(y0)
-      real(ReKi), intent(in)   :: x0, x1, y1, x2, y2
-      real(ReKi) :: a
-      a = (x0-x1)/(x0-x2)
-      y0 = 1._ReKi/(1._ReKi-a) * (y1-a*y2)
-   end function lin_extrap
-
 end subroutine FVW_CalcOutput
-
-
 !----------------------------------------------------------------------------------------------------------------------------------   
 ! --- UA related, should be merged with AeroDyn 
 !----------------------------------------------------------------------------------------------------------------------------------   
@@ -1033,6 +1013,7 @@ subroutine UA_Init_Wrapper(AFInfo, InitInp, interval, p, x, xd, OtherState, m, E
       call UA_Init( Init_UA_Data, u_UA, m%p_UA, xd%UA, OtherState%UA, m%y_UA, m%m_UA, interval, InitOutData_UA, ErrStat2, ErrMsg2); if(Failed())return
       ! --- BEMT Init other state
       allocate ( OtherState%UA_Flag( InitInp%numBladeNodes, InitInp%NumBlades ), STAT = ErrStat2 )
+      OtherState%UA_Flag=.true.
       ! --- Condensed version of "BEMT_CheckInitUA"
       do j = 1,InitInp%numBlades; do i = 1,InitInp%numBladeNodes; ! Loop over blades and nodes
          call UA_TurnOff_param(AFInfo(p%AFindx(i,j)), ErrStat2, ErrMsg2)
@@ -1041,9 +1022,29 @@ subroutine UA_Init_Wrapper(AFInfo, InitInp, interval, p, x, xd, OtherState, m, E
             OtherState%UA_Flag(i,j) = .false.
          end if
       end do; end do;
+#ifdef UA_OUTS   
+      CALL OpenFOutFile ( 69, 'Debug.UA.out', errStat, errMsg ); IF (ErrStat >= AbortErrLev) RETURN
+      WRITE (69,'(/,A)')  'This output information was generated by FVW'// ' on '//CurDate()//' at '//CurTime()//'.'
+      WRITE (69,'(:,A20)', ADVANCE='no' ) 'Time'
+      do i=1,size(InitOutData_UA%WriteOutputHdr)
+         WRITE (69,'(:,A20)', ADVANCE='no' )  trim(InitOutData_UA%WriteOutputHdr(i))
+      end do  
+      write (69,'(A)')    ' '
+      WRITE (69,'(:,A20)', ADVANCE='no' ) '(s)'
+      do i=1,size(InitOutData_UA%WriteOutputUnt)
+         WRITE (69,'(:,A20)', ADVANCE='no' )  trim(InitOutData_UA%WriteOutputUnt(i))
+      end do  
+      write (69,'(A)')    ' '   
+#endif
       call UA_DestroyInput( u_UA, ErrStat2, ErrMsg2 ); if(Failed())return
       call UA_DestroyInitInput( Init_UA_Data, ErrStat2, ErrMsg2 ); if(Failed())return
       call UA_DestroyInitOutput( InitOutData_UA, ErrStat2, ErrMsg2 ); if(Failed())return
+
+      ! --- FVW specific
+      if (p%CirculationMethod/=idCircPolarData) then 
+         ErrMsg2='Unsteady aerodynamic (`AFAeroMod>1`) is only available with a circulation solving using profile data (`CircSolvingMethod=1`)'; ErrStat2=ErrID_Fatal;
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'UA_Init_Wrapper'); return
+      endif
    endif
 contains
    logical function Failed()
@@ -1052,11 +1053,13 @@ contains
    end function Failed
 end subroutine  UA_Init_Wrapper
 
-subroutine UA_UpdateState_Wrapper(AFInfo, n, p, x, xd, OtherState, m, ErrStat, ErrMsg )
+subroutine UA_UpdateState_Wrapper(AFInfo, n, u, p, x, xd, OtherState, m, ErrStat, ErrMsg )
+   use FVW_VortexTools, only: interpextrap_cp2node
    use UnsteadyAero, only: UA_UpdateStates, UA_TurnOff_input
    type(AFI_ParameterType),         intent(in   )  :: AFInfo(:)      !< The airfoil parameter data, temporary, for UA..
    integer(IntKi),                  intent(in   )  :: n           !< time step  
    type(FVW_ParameterType),         intent(in   )  :: p           !< Parameters
+   type(FVW_InputType),             intent(in   )  :: u           !< Inputs
    type(FVW_ContinuousStateType),   intent(inout)  :: x           !< Initial continuous states
    type(FVW_DiscreteStateType),     intent(inout)  :: xd          !< Initial discrete states
    type(FVW_OtherStateType),        intent(inout)  :: OtherState  !< Initial other states
@@ -1068,42 +1071,59 @@ subroutine UA_UpdateState_Wrapper(AFInfo, n, p, x, xd, OtherState, m, ErrStat, E
    integer                :: i,j
    integer(intKi)         :: ErrStat2           ! temporary Error status
    character(ErrMsgLen)   :: ErrMsg2
+   real(ReKi), dimension(:,:), allocatable :: Vind_node
    ErrStat = ErrID_None
    ErrMsg  = ""
-   ! --- Condensed version of BEMT_Update States
    if (m%UA_Flag) then
+
+      ! --- Induction on the lifting line control point
+      ! NOTE: this is expensive since it's an output for FVW but here we have to use it for UA
+      ! Set m%Vind_LL
+      m%Vind_LL=-9999.0_ReKi
+      call LiftingLineInducedVelocities(p, x, 1, m, ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'UA_UpdateState_Wrapper'); if (ErrStat >= AbortErrLev) return
+
+      allocate(Vind_node(3,1:p%nSpan+1))
+
+      ! --- Condensed version of BEMT_Update States
       do j = 1,p%nWings  
+         ! Induced velocity at Nodes (NOTE: we rely on storage done when computing Circulation)
+         if (m%nNW>1) then
+            call interpextrap_cp2node(m%s_CP_LL(:,j), m%Vind_LL(1,:,j), m%s_LL(:,j), Vind_node(1,:))
+            call interpextrap_cp2node(m%s_CP_LL(:,j), m%Vind_LL(2,:,j), m%s_LL(:,j), Vind_node(2,:))
+            call interpextrap_cp2node(m%s_CP_LL(:,j), m%Vind_LL(3,:,j), m%s_LL(:,j), Vind_node(3,:))
+         else
+            Vind_node=0.0_ReKi
+         endif
+
          do i = 1,p%nSpan+1 
             ! We only update the UnsteadyAero states if we have unsteady aero turned on for this node      
             if (OtherState%UA_Flag(i,j) .and. n > 0) then
                !! ....... compute inputs to UA ...........
+               ! NOTE: To be consistent with CalcOutput we take Vwind_ND that was set using m%DisturbedInflow from AeroDyn.. 
+               ! This is not clean, but done to be consistent, waiting for AeroDyn to handle UA
+               call AlphaVrel_Generic(u%WingsMesh(j)%Orientation(1:3,1:3,i), u%WingsMesh(j)%TranslationVel(1:3,i),  Vind_node(:,i), m%Vwnd_ND(:,i,j), p%KinVisc, p%Chord(i,j), u_UA%U, u_UA%alpha, u_UA%Re)
                m%m_UA%iBladeNode = i
                m%m_UA%iBlade     = j
-               !phitemp             = z%phi(i,j)
-               !u_UA%alpha   =  phitemp - u1%theta(i,j)  ! angle of attack
-               !u_UA%UserProp = u1%UserProp(i,j)
-               !u_UA%Re = ...
-               !u_UA%U  = ...
-               ! Need to compute local velocity including both axial and tangential induction
-               ! COMPUTE: u_UA%U, u_UA%Re
-               !call BEMTU_Wind( m%axInduction(i,j), m%tanInduction(i,j), u1%Vx(i,j), u1%Vy(i,j), p%chord(i,j), p%kinVisc, u_UA%Re, u_UA%U)
+               u_UA%UserProp = 0 ! u1%UserProp(i,j) ! TODO
                !! ....... check inputs to UA ...........
                call UA_TurnOff_input(AFInfo(p%AFIndx(i,j)), u_UA, ErrStat2, ErrMsg2)
                if (ErrStat2 /= ErrID_None) then
                   OtherState%UA_Flag(i,j) = .FALSE.
-                  call WrScr( 'Warning: Turning off Unsteady Aerodynamics due to '//trim(ErrMsg2)//' BladeNode = '//trim(num2lstr(i))//', Blade = '//trim(num2lstr(j)) )
+                  call WrScr( 'Warning: Turning off dynamic stall due to '//trim(ErrMsg2)//' '//trim(NodeText(i,j)))
                else
                  ! COMPUTE: xd%UA, OtherState%UA
                  call UA_UpdateStates( i, j, u_UA, m%p_UA, xd%UA, OtherState%UA, AFInfo(p%AFIndx(i,j)), m%m_UA, ErrStat2, ErrMsg2 )
                  if (ErrStat2 /= ErrID_None) then
                      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'UA_UpdateState_Wrapper'//trim(NodeText(i,j)))
+                     call WrScr(trim(ErrMsg))
                     if (ErrStat >= AbortErrLev) return
                  end if
                end if
-            end if      ! if (OtherState%UA_Flag(i,j)) then
+            end if
          end do
       end do
       call UA_DestroyInput( u_UA, ErrStat2, ErrMsg2 ); 
+      deallocate(Vind_node)
    endif
    call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'UA_UpdateState_Wrapper')
 contains 
@@ -1111,7 +1131,7 @@ contains
       integer(IntKi), intent(in) :: i ! node number
       integer(IntKi), intent(in) :: j ! blade number
       character(25)              :: NodeText
-      NodeText = '(node '//trim(num2lstr(i))//', blade '//trim(num2lstr(j))//')'
+      NodeText = '(nd:'//trim(num2lstr(i))//' bld:'//trim(num2lstr(j))//')'
    end function NodeText
 end subroutine UA_UpdateState_Wrapper
 

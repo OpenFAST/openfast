@@ -1,4 +1,4 @@
-MODULE FVW_VortexTools
+module FVW_VortexTools
    ! Contains Typical Tools  for vortex methods
 
    ! Should be *independent* of the Framework and any derived type 
@@ -7,9 +7,9 @@ MODULE FVW_VortexTools
 
    use NWTC_LIBRARY
 
-   IMPLICIT NONE
+   implicit none
 
-CONTAINS
+contains
 
    subroutine VecToLattice(PointVectors, iDepthStart, LatticeVectors, iHeadP)
       real(Reki), dimension(:,:),        intent(in   )  :: PointVectors   !< nVal x n
@@ -180,5 +180,31 @@ CONTAINS
       print'(A24,3F12.4)',trim(Label),U
    end subroutine
 
+   !> Perform interpolation from control points to nodes assuming CP are between nodes
+   subroutine interpextrap_cp2node(xin, yin, xnew, ynew)
+      real(ReKi), intent(in   ) :: xin(:)
+      real(ReKi), intent(in   ) :: yin(:)
+      real(ReKi), intent(in   ) :: xnew(:)
+      real(ReKi), intent(  out) :: ynew(:)
+      integer(IntKi) :: n
+      n=size(xin)
+      call InterpArray(xin, yin, xnew(2:n), ynew(2:n))
+      ! Boundaries
+      if (n>1) then ! If more than 2 panels, use extrapolation
+         ynew(1)   = lin_extrap(xnew(1)  , xin(1), yin(1), xin(2)  , yin(2))
+         ynew(n+1) = lin_extrap(xnew(n+1), xin(n), yin(n), xin(n-1), yin(n-1))
+      else ! If one panel, duplicate the unique point on both side
+         ynew(1)   = yin(1)
+         ynew(n+1) = yin(n) !n=1
+      endif
+   contains
+      !> Perform linear extrapolation to get value of y(x0), using y(x1) and y(x2)
+      real(ReKi) function lin_extrap(x0, x1, y1, x2, y2) result(y0)
+         real(ReKi), intent(in)   :: x0, x1, y1, x2, y2
+         real(ReKi) :: a
+         a = (x0-x1)/(x0-x2)
+         y0 = 1._ReKi/(1._ReKi-a) * (y1-a*y2)
+      end function lin_extrap
+   end subroutine interpextrap_cp2node
 
-END MODULE FVW_VortexTools
+end module FVW_VortexTools
