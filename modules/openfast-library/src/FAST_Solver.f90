@@ -3381,7 +3381,7 @@ SUBROUTINE Create_FullOpt1_UVector(u, ED_PlatformPtMesh, SD_TPMesh, SD_LMesh, HD
       indx_first = indx_last + 1
    end do
          
-   if ( p_FAST%CompHydro == Module_HD ) then   ! this SD mesh linked only when HD is enabled
+   if ( p_FAST%CompHydro == Module_HD .or. p_FAST%CompSoil == Module_SlD ) then   ! this SD mesh linked only when HD or SoilDyn is enabled
       ! SD inputs (SD_LMesh):        
       do i=1,SD_LMesh%NNodes
          indx_last  = indx_first + 2 
