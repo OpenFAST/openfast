@@ -1893,8 +1893,8 @@ SUBROUTINE FullOpt1_InputOutputSolve( this_time, p_FAST, calcJacobian &
    TYPE(Orca_MiscVarType)        ,     INTENT(INOUT) :: m_Orca                    !< misc/optimization variables
 
       !SoilDyn:
-   TYPE(SlD_InputType),                INTENT(IN   ) :: u_SlD                     !< System inputs
-   TYPE(SlD_OutputType),               INTENT(INOUT) :: y_SlD                     !< System outputs
+   TYPE(SlD_InputType),                INTENT(INOUT) :: u_SlD                     !< System inputs
+   TYPE(SlD_OutputType),               INTENT(IN   ) :: y_SlD                     !< System outputs
    
    
       ! MAP/FEAM/MoorDyn/IceFloe/IceDyn:
@@ -2665,6 +2665,11 @@ CONTAINS
          END DO
          
       END IF  
+
+      IF ( p_FAST%CompSoil == Module_SlD ) THEN
+         CALL SlD_InputSolve(  u_SlD, y_SD2, MeshMapData, ErrStat2, ErrMsg2 )
+            CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      END IF
 
 
       IF ( p_FAST%CompElast == Module_BD .and. BD_Solve_Option1) THEN
@@ -4354,14 +4359,12 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, M
 !-------------------------
 
    IF ( p_FAST%CompSoil == Module_SlD ) THEN
-
          ! SoilDyn output SoilMesh point mesh to SubDyn input LMesh point mesh
       CALL MeshMapCreate( SlD%y%SoilMesh, SD%Input(1)%LMesh,  MeshMapData%SlD_P_2_SD_P, ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':SlD_P_2_SD_P' )
          ! SubDyn output y2Mesh point mesh to SoilDyn input SoilMesh point mesh
       CALL MeshMapCreate( SD%y%y2Mesh, SlD%Input(1)%SoilMesh,  MeshMapData%SD_P_2_SlD_P, ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':SD_P_2_SlD_P' )
-
    END IF   ! SubDyn-SoilDyn
 
    IF (ErrStat >= AbortErrLev ) RETURN
@@ -4472,13 +4475,6 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, M
                               
       END IF
       
-      IF ( p_FAST%CompSoil == Module_SlD ) THEN
-         
-         CALL MeshCopy ( SlD%Input(1)%SoilMesh, MeshMapData%u_SlD_SoilMesh, MESH_NEWCOPY, ErrStat2, ErrMsg2 )      
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':u_SlD_SoilMesh' )                 
-               
-      END IF
-
       
    END IF
    
@@ -5363,6 +5359,18 @@ SUBROUTINE FAST_AdvanceStates( t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED
    END IF            
             
 
+! FIXME: the copy to BD is redundant with above.
+      ! Transfer the outputs of ED to other modules.
+!   CALL Transfer_ED_to_HD_SD_BD_Mooring( p_FAST, ED%Output(1), HD%Input(STATE_PRED), SD%Input(1), ExtPtfm%Input(STATE_PRED), &
+!                                         MAPp%Input(STATE_PRED), FEAM%Input(STATE_PRED), MD%Input(STATE_PRED), &
+!                                         Orca%Input(STATE_PRED), BD%Input(STATE_PRED,:), MeshMapData, ErrStat2, ErrMsg2 )
+   IF ( p_FAST%CompSub == Module_SD  ) THEN
+         ! Map ED (motion) outputs to SD inputs:
+      CALL Transfer_Point_to_Point( ED%Output(1)%PlatformPtMesh, SD%Input(1)%TPMesh, MeshMapData%ED_P_2_SD_TP, ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   END IF
+
+
    ! HydroDyn: get predicted states
    IF ( p_FAST%CompHydro == Module_HD ) THEN
       CALL HydroDyn_CopyContState   (HD%x( STATE_CURR), HD%x( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
@@ -5427,6 +5435,37 @@ SUBROUTINE FAST_AdvanceStates( t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED
    END IF
             
             
+   ! SoilDyn: get predicted states
+   IF (p_FAST%CompSoil == Module_SlD) THEN
+         ! Get SD output
+      CALL SD_CalcOutput( t_global_next, SD%Input(1), SD%p, SD%x(STATE_PRED), SD%xd(STATE_PRED), SD%z(STATE_PRED), SD%OtherSt(STATE_PRED), SD%y, SD%m, ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName  )
+
+         ! Copy over SD outputs
+      CALL SlD_InputSolve(  SlD%Input(1), SD%y, MeshMapData, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
+
+      CALL SlD_CopyContState   (SlD%x( STATE_CURR), SlD%x( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      CALL SlD_CopyDiscState   (SlD%xd(STATE_CURR), SlD%xd(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      CALL SlD_CopyConstrState (SlD%z( STATE_CURR), SlD%z( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      CALL SlD_CopyOtherState( SlD%OtherSt(STATE_CURR), SlD%OtherSt(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+      DO j_ss = 1, p_FAST%n_substeps( Module_SlD )
+         n_t_module = n_t_global*p_FAST%n_substeps( Module_SlD ) + j_ss - 1
+         t_module   = n_t_module*p_FAST%dt_module( Module_SlD ) + t_initial
+
+         CALL SlD_UpdateStates( t_module, n_t_module, SlD%Input, SlD%InputTimes, SlD%p, SlD%x(STATE_PRED), SlD%xd(STATE_PRED), &
+                               SlD%z(STATE_PRED), SlD%OtherSt(STATE_PRED), SlD%m, ErrStat2, ErrMsg2 )
+            CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      END DO !j_ss
+   END IF
+
+
    ! Mooring: MAP/FEAM/MD/Orca: get predicted states
    IF (p_FAST%CompMooring == Module_MAP) THEN
       CALL MAP_CopyContState   (MAPp%x( STATE_CURR), MAPp%x( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
@@ -5550,27 +5589,6 @@ SUBROUTINE FAST_AdvanceStates( t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED
          END DO !j_ss
       END DO
          
-   END IF
-
-   ! SoilDyn: get predicted states
-   IF (p_FAST%CompSoil == Module_SlD) THEN
-      CALL SlD_CopyContState   (SlD%x( STATE_CURR), SlD%x( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
-         CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL SlD_CopyDiscState   (SlD%xd(STATE_CURR), SlD%xd(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
-         CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL SlD_CopyConstrState (SlD%z( STATE_CURR), SlD%z( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
-         CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL SlD_CopyOtherState( SlD%OtherSt(STATE_CURR), SlD%OtherSt(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
-         CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
-      DO j_ss = 1, p_FAST%n_substeps( Module_SlD )
-         n_t_module = n_t_global*p_FAST%n_substeps( Module_SlD ) + j_ss - 1
-         t_module   = n_t_module*p_FAST%dt_module( Module_SlD ) + t_initial
-
-         CALL SlD_UpdateStates( t_module, n_t_module, SlD%Input, SlD%InputTimes, SlD%p, SlD%x(STATE_PRED), SlD%xd(STATE_PRED), &
-                               SlD%z(STATE_PRED), SlD%OtherSt(STATE_PRED), SlD%m, ErrStat2, ErrMsg2 )
-            CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      END DO !j_ss
    END IF
 
 
