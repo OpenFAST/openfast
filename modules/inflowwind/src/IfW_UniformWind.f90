@@ -68,6 +68,8 @@ MODULE IfW_UniformWind
    PUBLIC                                    :: IfW_UniformWind_JacobianPInput
    PUBLIC                                    :: IfW_UniformWind_GetOP
    
+   PUBLIC                                    :: Uniform_to_FF
+
 CONTAINS
 
 !====================================================================================================
@@ -82,7 +84,7 @@ CONTAINS
 !!          the PositionXYZ array.
 !! @date    16-Apr-2013 - A. Platt, NREL.  Converted to modular framework. Modified for NWTC_Library 2.0
 !----------------------------------------------------------------------------------------------------
-SUBROUTINE IfW_UniformWind_Init(InitData, ParamData, MiscVars, Interval, InitOutData, ErrStat, ErrMsg)
+SUBROUTINE IfW_UniformWind_Init(InitData, ParamData, MiscVars, InitOutData, ErrStat, ErrMsg)
 
 
    IMPLICIT                                                       NONE
@@ -95,8 +97,6 @@ SUBROUTINE IfW_UniformWind_Init(InitData, ParamData, MiscVars, Interval, InitOut
    TYPE(IfW_UniformWind_ParameterType),         INTENT(  OUT)  :: ParamData         !< Parameters
    TYPE(IfW_UniformWind_MiscVarType),           INTENT(  OUT)  :: MiscVars          !< Misc variables for optimization (not copied in glue code)
    TYPE(IfW_UniformWind_InitOutputType),        INTENT(  OUT)  :: InitOutData       !< Initial output
-
-   REAL(DbKi),                                  INTENT(IN   )  :: Interval          !< We don't change this.
 
 
 
@@ -538,7 +538,7 @@ SUBROUTINE IfW_UniformWind_CalcOutput(Time, PositionXYZ, p, Velocity, DiskVel, m
    DO PointNum = 1, NumPoints
 
          ! Calculate the velocity for the position
-      call GetWindSpeed(PositionXYZ(:,PointNum), p, m, op, Velocity(:,PointNum), TmpErrStat, TmpErrMsg)
+      call GetWindSpeed(PositionXYZ(:,PointNum), p, op, Velocity(:,PointNum), TmpErrStat, TmpErrMsg)
 
          ! Error handling
       CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
@@ -645,12 +645,11 @@ END SUBROUTINE InterpParams
 !! in space represented by InputPosition.
 !!
 !!  16-Apr-2013 - A. Platt, NREL.  Converted to modular framework. Modified for NWTC_Library 2.0
-SUBROUTINE GetWindSpeed(InputPosition, p, m, op, WindSpeed, ErrStat, ErrMsg)
+SUBROUTINE GetWindSpeed(InputPosition, p, op, WindSpeed, ErrStat, ErrMsg)
 
       ! Passed Variables
    REAL(ReKi),                            INTENT(IN   )  :: InputPosition(3)  !< input information: positions X,Y,Z
    TYPE(IfW_UniformWind_ParameterType),   INTENT(IN   )  :: p                 !< Parameters
-   TYPE(IfW_UniformWind_MiscVarType),     INTENT(INOUT)  :: m                 !< Misc variables (stores last index into array time for efficiency)
    TYPE(IfW_UniformWind_Intrp),           INTENT(IN   )  :: op                !< operating point values; interpolated UniformWind parameters for this time (for glue-code linearization operating point)
 
    INTEGER(IntKi),                        INTENT(  OUT)  :: ErrStat           !< error status
@@ -675,8 +674,10 @@ SUBROUTINE GetWindSpeed(InputPosition, p, m, op, WindSpeed, ErrStat, ErrMsg)
    !> 2. Calculate the wind speed at this time (if z<0, return an error):
    !-------------------------------------------------------------------------------------------------
 
-   if ( InputPosition(3) < 0.0_ReKi ) then
-      call SetErrStat(ErrID_Fatal,'Height must not be negative.',ErrStat,ErrMsg,'GetWindSpeed')
+   if ( InputPosition(3) <= 0.0_ReKi ) then
+      if (.not. EqualRealNos(InputPosition(3), 0.0_ReKi) ) call SetErrStat(ErrID_Severe,'Height must not be negative.',ErrStat,ErrMsg,'GetWindSpeed')
+      WindSpeed = 0.0
+      return
    end if
       
    !> Let \f{eqnarray}{ V_h & = & V \, \left( \frac{Z}{Z_{ref}} \right) ^ {V_{shr}}                                   & \mbox{power-law wind shear} \\
@@ -977,6 +978,144 @@ SUBROUTINE IfW_UniformWind_GetOP( t, p, m, OP_out )
 
 END SUBROUTINE IfW_UniformWind_GetOP
 
+
+!====================================================================================================
+SUBROUTINE Uniform_to_FF(p, m, p_ff, ErrStat, ErrMsg)
+
+   USE IfW_FFWind_Base
+
+   TYPE(IfW_UniformWind_ParameterType),      INTENT(IN   ) :: p                    !< UniformWind Parameters
+   TYPE(IfW_UniformWind_MiscVarType),        INTENT(INOUT) :: m                    !< Misc variables for optimization (not copied in glue code)
+   TYPE(IfW_FFWind_ParameterType),           INTENT(  OUT) :: p_ff                 !< FF Parameters
+   INTEGER(IntKi),                           INTENT(  OUT) :: ErrStat              !< error status
+   CHARACTER(*),                             INTENT(  OUT) :: ErrMsg               !< error message
+
+      ! local variables
+   REAL(DbKi)                           :: Time              !< time from the start of the simulation
+   REAL(ReKi)                           :: PositionXYZ(3,1)  !< Array of XYZ coordinates, 3xN
+   REAL(ReKi)                           :: Velocity(3,1)     !< Velocity output at Time    (Set to INOUT so that array does not get deallocated)
+   REAL(ReKi)                           :: DiskVel(3)        !< HACK for AD14: disk velocity output at Time
+   REAL(ReKi)                           :: n
+   
+   INTEGER(ReKi) ,            parameter :: dz = 5.0
+   INTEGER(ReKi) ,            parameter :: dy = 5.0
+   INTEGER(ReKi)                        :: i
+   INTEGER(ReKi)                        :: it
+   INTEGER(ReKi)                        :: iy
+   INTEGER(ReKi)                        :: iz
+   INTEGER(IntKi)                       :: ErrStat2
+   CHARACTER(ErrMsgLen)                 :: ErrMsg2
+   CHARACTER(*),              parameter :: RoutineName = 'Uniform_to_FF'
+   
+   ErrStat = ErrID_None
+   ErrMsg = ""
+   
+   p_ff%WindFileFormat        = -1                             ! "Binary file format description number"                        -
+   p_ff%NFFComp               = 3                              ! "Number of wind components"                                    -
+   p_ff%Periodic              = .false.
+   p_ff%InterpTower           = .true.
+   p_ff%RefHt                 = p%RefHt
+   p_ff%NTGrids               = 0
+   p_ff%InvFFYD               = 1.0_ReKi / dy                  ! "reciprocal of delta y"                                        1/meters
+   p_ff%InvFFZD               = 1.0_ReKi / dz                  ! "reciprocal of delta z"                                        1/meters
+   
+      ! add roughly 10% to the width
+   n            = NINT( p%RefLength*1.1_ReKi*0.5_ReKi / dy )
+   p_ff%NYGrids = n*2+1                                        ! "Number of points in the lateral (y) direction of the grids"   -
+   p_ff%FFYHWid = 0.5_ReKi * dy * (p_ff%NYGrids-1)             ! "Half the grid width"                                          meters
+   
+   n            = NINT( p%RefLength*1.1_ReKi*0.5_ReKi / dz )
+   p_ff%NZGrids =  INT( p_ff%RefHt / dy ) + n + 1              ! "Number of points in the vertical (z) direction of the grids"  -
+   
+   p_ff%FFZHWid  =  0.5_ReKi * dz * (p_ff%NZGrids -1)          ! "Half the grid height"                                         meters
+   p_ff%GridBase =  p_ff%RefHt + n*dz - p_ff%FFZHWid*2.0_ReKi  ! "the height of the bottom of the grid"                         meters
+   
+   p_ff%InitXPosition  = 0.0_ReKi                              ! "the initial x position of grid (distance in FF is offset)"    meters
+   
+
+   ! time will be the smallest delta t in this Uniform wind file
+   if (p%NumDataLines < 2) then
+      p_ff%FFDTime = 600.0_ReKi ! doesn't matter what the time step is
+   else
+      p_ff%FFDTime = HUGE(p_ff%FFDTime)                        ! "Delta time"                                                   seconds
+      do i=2,p%NumDataLines
+         p_ff%FFDTime = min(p_ff%FFDTime, p%TData(i) - p%TData(i-1))
+      end do
+
+      if (p_ff%FFDTime < 0.0001) then
+         call SetErrStat( ErrID_Fatal, "Smallest time step in uniform wind file is less that 0.0001 seconds. Increase the time step "//&
+                          " to convert to a FF file.", ErrStat, ErrMsg, RoutineName )
+         return
+      end if
+      
+   end if
+      
+   p_ff%FFRate = 1.0_ReKi / p_ff%FFDTime                       ! "Data rate (1/FFDTime)"                                         Hertz
+   
+   
+   p_ff%AddMeanAfterInterp  =  .FALSE.                         ! "Add the mean wind speed after interpolating at a given height?" -
+   p_ff%WindProfileType = WindProfileType_PL                   ! "Wind profile type (0=constant;1=logarithmic;2=power law)"       -
+   p_ff%PLExp = GetAverageVal(p%VSHR)                          ! "Power law exponent (used for PL wind profile type only)"        -
+   p_ff%Z0 = 0.0_ReKi                                          ! "Surface roughness length (used for LOG wind profile type only)" -
+   
+   if (p%NumDataLines < 2) then
+      p_ff%NFFSteps = 2                                        ! "Number of time steps in the FF array"                         -
+   else
+      p_ff%NFFSteps = NINT(p%TData(p%NumDataLines) / p_ff%FFDTime) + 1
+   end if
+   
+   p_ff%TotalTime = (p_ff%NFFSteps-1) * p_ff%FFDTime           ! "The total time of the simulation"                             seconds
+
+   
+   call AllocAry( p_ff%FFData, p_ff%NZGrids,p_ff%NYGrids,p_ff%NFFComp, p_ff%NFFSteps, 'p%FF%FFData', ErrStat2, ErrMsg2 )   
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      if (ErrStat >= AbortErrLev) return
+      
+   PositionXYZ = 0.0_ReKi
+   do it = 1,p_ff%NFFSteps
+      Time = (it-1)*p_ff%FFDTime
+      
+      do iy = 1,p_ff%NYGrids
+         PositionXYZ(2,1) = (iy-1)*dy - p_ff%FFYHWid
+         
+         do iz=1,p_ff%NZGrids
+            PositionXYZ(3,1) = (iz-1)*dz + p_ff%GridBase
+            
+            call IfW_UniformWind_CalcOutput(Time, PositionXYZ, p, Velocity, DiskVel, m, ErrStat2, ErrMsg2)
+               call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+            
+            p_ff%FFData(iz,iy,:,it) = Velocity(:,1)
+            
+         end do ! iz
+      end do ! iy
+   end do ! it
+   
+   ! compute some averages for this simulation
+   p_ff%MeanFFWS = GetAverageVal(p%V)                          ! "Mean wind speed (advection speed)"
+   p_ff%InvMFFWS = 1.0_ReKi / p_ff%MeanFFWS
+   
+   RETURN
+
+CONTAINS
+
+   FUNCTION GetAverageVal(Ary) RESULT(Avg)
+      REAL(ReKi), intent(in)  :: Ary(:)
+      REAL(ReKi)              :: Avg
+
+      if (p%NumDataLines < 2) then
+         Avg = Ary(1)
+      else
+         Avg = p%TData(1) * Ary(1) ! in case tData(1)/=0
+         do i=2,p%NumDataLines
+            Avg = Avg + (p%TData(i)-p%TData(i-1)) * (Ary(i)+Ary(i-1))/2.0_ReKi
+         end do
+         Avg = Avg / (p%TData(p%NumDataLines)-p%TData(1))
+      end if
+
+   END FUNCTION GetAverageVal
+   
+END SUBROUTINE Uniform_to_FF
+!====================================================================================================
 
 !====================================================================================================
 END MODULE IfW_UniformWind

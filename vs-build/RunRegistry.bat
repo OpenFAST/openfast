@@ -106,6 +106,7 @@ GOTO checkError
 :IfW_BladedFFWind
 :IfW_UserWind
 :IfW_4Dext
+:IfW_FFWind_Base
 :IfW_UniformWind
 SET CURR_LOC=%IfW_Loc%
 SET Output_Loc=%CURR_LOC%

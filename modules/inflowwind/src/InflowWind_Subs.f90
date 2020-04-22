@@ -143,8 +143,6 @@ SUBROUTINE InflowWind_ReadInput( InputFileName, EchoFileName, InputFileData, Err
       ! Local variables
    INTEGER(IntKi)                                     :: UnitInput            !< Unit number for the input file
    INTEGER(IntKi)                                     :: UnitEcho             !< The local unit number for this module's echo file
-   CHARACTER(1024)                                    :: TmpPath              !< Temporary storage for relative path name
-   CHARACTER(1024)                                    :: TmpFmt               !< Temporary storage for format statement
    CHARACTER(35)                                      :: Frmt                 !< Output format for logical parameters. (matches NWTC Subroutine Library format)
 
 
@@ -154,6 +152,8 @@ SUBROUTINE InflowWind_ReadInput( InputFileName, EchoFileName, InputFileData, Err
    CHARACTER(1024)                                    :: PriPath                                   ! Path name of the primary file
 
 
+   InputFileData%VFlowAngle = 0.0 ! default vertical flow angle
+   
       ! Initialize local data
 
    UnitEcho                = -1
@@ -272,7 +272,7 @@ SUBROUTINE InflowWind_ReadInput( InputFileName, EchoFileName, InputFileData, Err
       ! Read WindType
    CALL ReadVar( UnitInput, InputFileName, InputFileData%WindType, 'WindType', &
                'switch for wind file type (1=steady; 2=uniform; 3=binary TurbSim FF; '//&
-               '4=binary Bladed-style FF; 5=HAWC format; 6=User defined)', &
+               '4=binary Bladed-style FF; 5=HAWC format; 6=User defined; 7=native Bladed FF)', &
                TmpErrStat, TmpErrMsg, UnitEcho )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
    IF (ErrStat >= AbortErrLev) THEN
@@ -476,7 +476,6 @@ SUBROUTINE InflowWind_ReadInput( InputFileName, EchoFileName, InputFileData, Err
       RETURN
    ENDIF
    IF ( PathIsRelative( InputFileData%BladedFF_FileName ) ) InputFileData%BladedFF_FileName = TRIM(PriPath)//TRIM(InputFileData%BladedFF_FileName)
-   InputFileData%BladedFF_FileName = TRIM(InputFileData%BladedFF_FileName)//'.wnd'
    
       ! Read TowerFileFlag
    CALL ReadVar( UnitInput, InputFileName, InputFileData%BladedFF_TowerFile, 'TowerFileFlag', &
@@ -631,7 +630,7 @@ SUBROUTINE InflowWind_ReadInput( InputFileName, EchoFileName, InputFileData, Err
    END IF
 
       ! Read HAWC_RefHt
-   CALL ReadVar( UnitInput, InputFileName, InputFileData%HAWC_RefHt, 'HAWC_RefHt', &
+   CALL ReadVar( UnitInput, InputFileName, InputFileData%FF%RefHt, 'HAWC_RefHt', &
                'Reference (hub) height of the grid', TmpErrStat, TmpErrMsg, UnitEcho )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
    IF (ErrStat >= AbortErrLev) THEN
@@ -654,7 +653,7 @@ SUBROUTINE InflowWind_ReadInput( InputFileName, EchoFileName, InputFileData, Err
    END IF
 
       ! Read HAWC_ScaleMethod
-   CALL ReadVar( UnitInput, InputFileName, InputFileData%HAWC_ScaleMethod, 'HAWC_ScaleMethod', &
+   CALL ReadVar( UnitInput, InputFileName, InputFileData%FF%ScaleMethod, 'HAWC_ScaleMethod', &
                'Turbulence scaling method [0=none, 1=direct scaling, 2= calculate scaling '// &
                'factor based on a desired standard deviation]', TmpErrStat, TmpErrMsg, UnitEcho )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
@@ -664,7 +663,7 @@ SUBROUTINE InflowWind_ReadInput( InputFileName, EchoFileName, InputFileData, Err
    END IF
 
       ! Read HAWC_SFx
-   CALL ReadVar( UnitInput, InputFileName, InputFileData%HAWC_SFx, 'HAWC_SFx', &
+   CALL ReadVar( UnitInput, InputFileName, InputFileData%FF%SF(1), 'HAWC_SFx', &
                'Turbulence scaling factor for the x direction [ScaleMethod=1]', TmpErrStat, TmpErrMsg, UnitEcho )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
    IF (ErrStat >= AbortErrLev) THEN
@@ -673,7 +672,7 @@ SUBROUTINE InflowWind_ReadInput( InputFileName, EchoFileName, InputFileData, Err
    END IF
 
       ! Read HAWC_SFy
-   CALL ReadVar( UnitInput, InputFileName, InputFileData%HAWC_SFy, 'HAWC_SFy', &
+   CALL ReadVar( UnitInput, InputFileName, InputFileData%FF%SF(2), 'HAWC_SFy', &
                'Turbulence scaling factor for the y direction [ScaleMethod=1]', TmpErrStat, TmpErrMsg, UnitEcho )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
    IF (ErrStat >= AbortErrLev) THEN
@@ -682,7 +681,7 @@ SUBROUTINE InflowWind_ReadInput( InputFileName, EchoFileName, InputFileData, Err
    END IF
 
       ! Read HAWC_SFz
-   CALL ReadVar( UnitInput, InputFileName, InputFileData%HAWC_SFz, 'HAWC_SFz', &
+   CALL ReadVar( UnitInput, InputFileName, InputFileData%FF%SF(3), 'HAWC_SFz', &
                'Turbulence scaling factor for the z direction [ScaleMethod=1]', TmpErrStat, TmpErrMsg, UnitEcho )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
    IF (ErrStat >= AbortErrLev) THEN
@@ -691,7 +690,7 @@ SUBROUTINE InflowWind_ReadInput( InputFileName, EchoFileName, InputFileData, Err
    END IF
 
       ! Read HAWC_SigmaFx
-   CALL ReadVar( UnitInput, InputFileName, InputFileData%HAWC_SigmaFx, 'HAWC_SigmaFx', &
+   CALL ReadVar( UnitInput, InputFileName, InputFileData%FF%SigmaF(1), 'HAWC_SigmaFx', &
                'Turbulence standard deviation to calculate scaling from in x direction [ScaleMethod=2]', TmpErrStat, TmpErrMsg, UnitEcho )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
    IF (ErrStat >= AbortErrLev) THEN
@@ -700,7 +699,7 @@ SUBROUTINE InflowWind_ReadInput( InputFileName, EchoFileName, InputFileData, Err
    END IF
 
       ! Read HAWC_SigmaFy
-   CALL ReadVar( UnitInput, InputFileName, InputFileData%HAWC_SigmaFy, 'HAWC_SigmaFy', &
+   CALL ReadVar( UnitInput, InputFileName, InputFileData%FF%SigmaF(2), 'HAWC_SigmaFy', &
                'Turbulence standard deviation to calculate scaling from in y direction [ScaleMethod=2]', TmpErrStat, TmpErrMsg, UnitEcho )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
    IF (ErrStat >= AbortErrLev) THEN
@@ -709,7 +708,7 @@ SUBROUTINE InflowWind_ReadInput( InputFileName, EchoFileName, InputFileData, Err
    END IF
 
       ! Read HAWC_SigmaFz
-   CALL ReadVar( UnitInput, InputFileName, InputFileData%HAWC_SigmaFz, 'HAWC_SigmaFz', &
+   CALL ReadVar( UnitInput, InputFileName, InputFileData%FF%SigmaF(3), 'HAWC_SigmaFz', &
                'Turbulence standard deviation to calculate scaling from in z direction [ScaleMethod=2]', TmpErrStat, TmpErrMsg, UnitEcho )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
    IF (ErrStat >= AbortErrLev) THEN
@@ -721,7 +720,7 @@ SUBROUTINE InflowWind_ReadInput( InputFileName, EchoFileName, InputFileData, Err
 
 !FIXME:  TStart has no comment
       ! Read HAWC_TStart
-   CALL ReadVar( UnitInput, InputFileName, InputFileData%HAWC_TStart, 'HAWC_TStart', &
+   CALL ReadVar( UnitInput, InputFileName, InputFileData%FF%TStart, 'HAWC_TStart', &
                '', TmpErrStat, TmpErrMsg, UnitEcho )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
    IF (ErrStat >= AbortErrLev) THEN
@@ -731,7 +730,7 @@ SUBROUTINE InflowWind_ReadInput( InputFileName, EchoFileName, InputFileData, Err
 
 !FIXME:  TEnd has no comment
       ! Read HAWC_TEnd
-   CALL ReadVar( UnitInput, InputFileName, InputFileData%HAWC_TEnd, 'HAWC_TEnd', &
+   CALL ReadVar( UnitInput, InputFileName, InputFileData%FF%TEnd, 'HAWC_TEnd', &
                '', TmpErrStat, TmpErrMsg, UnitEcho )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
    IF (ErrStat >= AbortErrLev) THEN
@@ -754,7 +753,7 @@ SUBROUTINE InflowWind_ReadInput( InputFileName, EchoFileName, InputFileData, Err
    END IF
 
       ! Read HAWC_URef
-   CALL ReadVar( UnitInput, InputFileName, InputFileData%HAWC_URef, 'HAWC_URef', &
+   CALL ReadVar( UnitInput, InputFileName, InputFileData%FF%URef, 'HAWC_URef', &
                'Mean u-component wind speed at the reference height', TmpErrStat, TmpErrMsg, UnitEcho )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
    IF (ErrStat >= AbortErrLev) THEN
@@ -763,7 +762,7 @@ SUBROUTINE InflowWind_ReadInput( InputFileName, EchoFileName, InputFileData, Err
    END IF
 
       ! Read HAWC_ProfileType
-   CALL ReadVar( UnitInput, InputFileName, InputFileData%HAWC_ProfileType, 'HAWC_ProfileType', &
+   CALL ReadVar( UnitInput, InputFileName, InputFileData%FF%WindProfileType, 'HAWC_ProfileType', &
                'Wind profile type (0=constant;1=logarithmic;2=power law)', TmpErrStat, TmpErrMsg, UnitEcho )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
    IF (ErrStat >= AbortErrLev) THEN
@@ -772,7 +771,7 @@ SUBROUTINE InflowWind_ReadInput( InputFileName, EchoFileName, InputFileData, Err
    END IF
 
       ! Read HAWC_PLExp
-   CALL ReadVar( UnitInput, InputFileName, InputFileData%HAWC_PLExp, 'HAWC_PLExp', &
+   CALL ReadVar( UnitInput, InputFileName, InputFileData%FF%PLExp, 'HAWC_PLExp', &
                'Power law exponent (used for PL wind profile type only)', TmpErrStat, TmpErrMsg, UnitEcho )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
    IF (ErrStat >= AbortErrLev) THEN
@@ -781,7 +780,7 @@ SUBROUTINE InflowWind_ReadInput( InputFileName, EchoFileName, InputFileData, Err
    END IF
 
       ! Read HAWC_Z0
-   CALL ReadVar( UnitInput, InputFileName, InputFileData%HAWC_Z0, 'HAWC_Z0', &
+   CALL ReadVar( UnitInput, InputFileName, InputFileData%FF%Z0, 'HAWC_Z0', &
                'Surface roughness length (used for LOG wind profile type only)', TmpErrStat, TmpErrMsg, UnitEcho )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
    IF (ErrStat >= AbortErrLev) THEN
@@ -790,9 +789,8 @@ SUBROUTINE InflowWind_ReadInput( InputFileName, EchoFileName, InputFileData, Err
    END IF
 
       ! Read HAWC_InitPosition   (Shift of wind box)  NOTE: This an optional input!!!!
-   InputFileData%HAWC_InitPosition(2:3) = 0.0_ReKi    ! We are only using X, so only read in one.  The data can handle 3 coords
-   CALL ReadVar( UnitInput, InputFileName, InputFileData%HAWC_InitPosition(1), 'HAWC_Position', &
-               'Initial position of the HAWC wind file (shift along X usually)', TmpErrStat, TmpErrMsg, UnitEcho )
+   CALL ReadVar( UnitInput, InputFileName, InputFileData%FF%XOffset, 'HAWC_Position', &
+               'Initial position of the wind file (shift along X)', TmpErrStat, TmpErrMsg, UnitEcho )
    if (TmpErrStat == ErrID_None) then
       !---------------------- OUTPUT --------------------------------------------------         
       CALL ReadCom( UnitInput, InputFileName, 'Section Header: Output', TmpErrStat, TmpErrMsg, UnitEcho )
@@ -802,7 +800,7 @@ SUBROUTINE InflowWind_ReadInput( InputFileName, EchoFileName, InputFileData, Err
          RETURN
       END IF
    else
-      InputFileData%HAWC_InitPosition = 0.0_ReKi
+      InputFileData%FF%XOffset = 0.0_ReKi
       TmpErrStat  =  ErrID_None  ! reset
       TmpErrMsg   =  ""
       ! NOTE: since we read in a line that wasn't a number, what we actually read was the header.
@@ -890,10 +888,6 @@ SUBROUTINE InflowWind_ValidateInput( InitInp, InputFileData, ErrStat, ErrMsg )
    CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg               !< Error message from this subroutine
 
 
-      ! Temporary variables
-   INTEGER(IntKi)                                     :: TmpErrStat           !< Temporary error status  for subroutine and function calls
-   CHARACTER(ErrMsgLen)                               :: TmpErrMsg            !< Temporary error message for subroutine and function calls
-
       ! Local variables
    INTEGER(IntKi)                                     :: I                    !< Generic counter
 
@@ -911,12 +905,13 @@ SUBROUTINE InflowWind_ValidateInput( InitInp, InputFileData, ErrStat, ErrMsg )
       ! WindType
    IF ( InputFileData%WindType <= Undef_WindNumber .OR. InputFileData%WindType > Highest_WindNumber ) THEN
       CALL SetErrStat(ErrID_Fatal,' Invalid WindType specified.  Only values of '//   &
-            TRIM(Num2LStr( Steady_WindNumber    ))//','// &
-            TRIM(Num2LStr( Uniform_WindNumber   ))//','// &
-            TRIM(Num2LStr( TSFF_WindNumber      ))//','// &
-            TRIM(Num2LStr( BladedFF_WindNumber  ))//','// &
-            TRIM(Num2LStr( HAWC_WindNumber      ))//', or '// &
-            TRIM(Num2LStr( User_WindNumber      ))//' are supported.', &
+            TRIM(Num2LStr( Steady_WindNumber        ))//','// &
+            TRIM(Num2LStr( Uniform_WindNumber       ))//','// &
+            TRIM(Num2LStr( TSFF_WindNumber          ))//','// &
+            TRIM(Num2LStr( BladedFF_WindNumber      ))//','// &
+            TRIM(Num2LStr( BladedFF_Shr_WindNumber  ))//','// &
+            TRIM(Num2LStr( HAWC_WindNumber          ))//', or '// &
+            TRIM(Num2LStr( User_WindNumber          ))//' are supported.', &
             ErrStat,ErrMsg,RoutineName)
       RETURN
    ENDIF
@@ -967,7 +962,7 @@ SUBROUTINE InflowWind_ValidateInput( InitInp, InputFileData, ErrStat, ErrMsg )
       CASE ( TSFF_WindNumber )
          CALL TSFF_ValidateInput()
 
-      CASE ( BladedFF_WindNumber )
+      CASE ( BladedFF_WindNumber, BladedFF_Shr_WindNumber )
          CALL BladedFF_ValidateInput()
 
       CASE ( HAWC_WindNumber )
@@ -976,7 +971,7 @@ SUBROUTINE InflowWind_ValidateInput( InitInp, InputFileData, ErrStat, ErrMsg )
       CASE ( User_WindNumber )
          CALL User_ValidateInput()
          
-      CASE (FDext_WindNumber)
+      CASE ( FDext_WindNumber )
          IF ( .not. InitInp%Use4Dext) call SetErrStat(ErrID_Fatal,'4D external wind file is valid only with FAST.Farm',ErrStat,ErrMsg,RoutineName)
       CASE DEFAULT  ! keep this check to make sure that all new wind types have been accounted for
          CALL SetErrStat(ErrID_Fatal,' Undefined wind type.',ErrStat,ErrMsg,RoutineName)
@@ -1089,12 +1084,12 @@ CONTAINS
          ! Local variables
       LOGICAL                                         :: TmpFileExist
 
-         ! Check that the filename requested actually exists
-      INQUIRE( file=InputFileData%BladedFF_FileName, exist=TmpFileExist )
-      IF ( .NOT. TmpFileExist ) THEN
-         CALL SetErrStat( ErrID_Fatal," Cannot find Bladed-style full-field wind input file: '"//TRIM(InputFileData%BladedFF_FileName)//"'", &
-               ErrStat,ErrMsg,RoutineName)
-      ENDIF
+      !   ! Check that the filename requested actually exists (this happens in the BladedFF submodule...)
+      !INQUIRE( file=InputFileData%BladedFF_FileName, exist=TmpFileExist )
+      !IF ( .NOT. TmpFileExist ) THEN
+      !   CALL SetErrStat( ErrID_Fatal," Cannot find Bladed-style full-field wind input file: '"//TRIM(InputFileData%BladedFF_FileName)//"'", &
+      !         ErrStat,ErrMsg,RoutineName)
+      !ENDIF
 
       RETURN
    END SUBROUTINE BladedFF_ValidateInput
@@ -1167,122 +1162,7 @@ CONTAINS
       ENDIF
 
 
-         ! Check that the number of grids make some sense
-      IF ( InputFileData%HAWC_nx <= 0_IntKi ) THEN
-         CALL SetErrStat( ErrID_Fatal,' Number of grids in the x-direction of HAWC wind files (nx) must be greater than zero.',  &
-               ErrStat,ErrMsg,RoutineName)
-      ENDIF
-
-      IF ( InputFileData%HAWC_ny <= 0_IntKi ) THEN
-         CALL SetErrStat( ErrID_Fatal,' Number of grids in the y-direction of HAWC wind files (ny) must be greater than zero.',  &
-               ErrStat,ErrMsg,RoutineName)
-      ENDIF
-
-      IF ( InputFileData%HAWC_nz <= 0_IntKi ) THEN
-         CALL SetErrStat( ErrID_Fatal,' Number of grids in the z-direction of HAWC wind files (nz) must be greater than zero.',  &
-               ErrStat,ErrMsg,RoutineName)
-      ENDIF
-
-
-         ! Check that the distance between points is positive
-      IF ( InputFileData%HAWC_dx <= 0.0_ReKi ) THEN
-         CALL SetErrStat( ErrID_Fatal,' Distance between points in the x-direction of HAWC wind files (dx) must be greater than zero.',  &
-               ErrStat,ErrMsg,RoutineName)
-      ENDIF
-
-      IF ( InputFileData%HAWC_dy <= 0.0_ReKi ) THEN
-         CALL SetErrStat( ErrID_Fatal,' Distance between points in the y-direction of HAWC wind files (dy) must be greater than zero.',  &
-               ErrStat,ErrMsg,RoutineName)
-      ENDIF
-
-      IF ( InputFileData%HAWC_dz <= 0.0_ReKi ) THEN
-         CALL SetErrStat( ErrID_Fatal,' Distance between points in the z-direction of HAWC wind files (dz) must be greater than zero.',  &
-               ErrStat,ErrMsg,RoutineName)
-      ENDIF
-
-
-         ! Check that RefHt is positive
-      IF ( InputFileData%HAWC_RefHt <= 0.0_ReKi ) THEN
-         CALL SetErrStat( ErrID_Fatal,' Reference height (RefHt) for HAWC winds must be greater than zero.',  &
-               ErrStat,ErrMsg,RoutineName)
-      ENDIF
-
-
-         !----------------------
-         ! Scaling method info
-         !----------------------
-
-      IF ( ( InputFileData%HAWC_ScaleMethod < 0_IntKi ) .OR. ( InputFileData%HAWC_ScaleMethod > 3_IntKi ) ) THEN
-         CALL SetErrStat( ErrID_Fatal,' The scaling method (ScaleMethod) for HAWC winds can only be 0, 1, or 2.', &
-               ErrStat,ErrMsg,RoutineName)
-      ENDIF
-
-         ! Check the other scaling parameters
-      SELECT CASE( InputFileData%HAWC_ScaleMethod )
-
-      CASE ( 1 )
-
-         IF ( InputFileData%HAWC_SFx <= 0.0_ReKi ) THEN
-            CALL SetErrStat( ErrID_Fatal,' HAWC wind scaling paramter SFx must be greater than zero.', &
-                  ErrStat,ErrMsg,RoutineName)
-         ENDIF
-
-         IF ( InputFileData%HAWC_SFy <= 0.0_ReKi ) THEN
-            CALL SetErrStat( ErrID_Fatal,' HAWC wind scaling paramter SFy must be greater than zero.', &
-                  ErrStat,ErrMsg,RoutineName)
-         ENDIF
-
-         IF ( InputFileData%HAWC_SFz <= 0.0_ReKi ) THEN
-            CALL SetErrStat( ErrID_Fatal,' HAWC wind scaling paramter SFz must be greater than zero.', &
-                  ErrStat,ErrMsg,RoutineName)
-         ENDIF
-
-      CASE ( 2 )
-
-         IF ( InputFileData%HAWC_SigmaFx <= 0.0_ReKi ) THEN
-            CALL SetErrStat( ErrID_Fatal,' HAWC wind scaling paramter SigmaFx must be greater than zero.', &
-                  ErrStat,ErrMsg,RoutineName)
-         ENDIF
-
-         IF ( InputFileData%HAWC_SigmaFy <= 0.0_ReKi ) THEN
-            CALL SetErrStat( ErrID_Fatal,' HAWC wind scaling paramter SigmaFy must be greater than zero.', &
-                  ErrStat,ErrMsg,RoutineName)
-         ENDIF
-
-         IF ( InputFileData%HAWC_SigmaFz <= 0.0_ReKi ) THEN
-            CALL SetErrStat( ErrID_Fatal,' HAWC wind scaling paramter SigmaFz must be greater than zero.', &
-                  ErrStat,ErrMsg,RoutineName)
-         ENDIF
-
-      END SELECT
-
-
-         ! Start and end times of the scaling, but only if ScaleMethod is set.
-      IF ( ( InputFileData%HAWC_ScaleMethod == 1_IntKi ) .OR. (InputFileData%HAWC_ScaleMethod == 2_IntKi ) ) THEN
-            ! Check that the start time is >= 0.  NOTE: this may be an invalid test.
-         !IF ( InputFileData%HAWC_TStart < 0.0_ReKi ) THEN
-         !   CALL SetErrStat( ErrID_Fatal,' HAWC wind scaling TStart must be zero or positive.',  &
-         !         ErrStat,ErrMsg,RoutineName)
-         !ENDIF
-
-         !IF ( InputFileData%HAWC_TStart < 0.0_ReKi ) THEN
-         !   CALL SetErrStat( ErrID_Fatal,' HAWC wind scaling TStart must be zero or positive.',  &
-         !         ErrStat,ErrMsg,RoutineName)
-         !ENDIF
-
-         !IF ( InputFileData%HAWC_TStart > InputFileData%HAWC_TEnd ) THEN
-         !   CALL SetErrStat( ErrID_Fatal,' HAWC wind scaling start time must occur before the end time.',   &
-         !         ErrStat,ErrMsg,RoutineName)
-         !ENDIF
-
-!FIXME:  How do we want to handle having the start and end times both being exactly zero?  Is that a do not apply, or apply for all time?
-!FIXME:  What about TStart == TEnd ?
-         !IF ( EqualRealNos( InputFileData%HAWC_TStart, InputFileData%HAWC_TEnd ) ) THEN
-         !   CALL SetErrStat( ErrID_Severe,' Start and end time for HAWC wind scaling are identical.  No time elapses.', &
-         !         ErrStat,ErrMsg,RoutineName)
-         !ENDIF
-
-      ENDIF
+      ! we'll check the rest of these in the HAWC_Init() routine
 
       RETURN
 
@@ -1345,7 +1225,8 @@ SUBROUTINE InflowWind_SetParameters( InitInp, InputFileData, p, m, ErrStat, ErrM
    !-----------------------------------------------------------------
    ! Copy over the general information that applies to everything
    !-----------------------------------------------------------------
-
+   p%CTTS_Flag     = .FALSE.
+   
       ! Copy the WindType over.
 
    p%WindType   =  InputFileData%WindType
@@ -1356,6 +1237,7 @@ SUBROUTINE InflowWind_SetParameters( InitInp, InputFileData, p, m, ErrStat, ErrM
    p%PropagationDir   = D2R * InputFileData%PropagationDir
    CALL MPi2Pi( p%PropagationDir )         ! Shift if necessary so that the value is between -pi and pi
 
+   p%VFlowAngle = D2R * InputFileData%VFlowAngle  
 
       ! Copy over the list of wind coordinates.  Move the arrays to the new one.
    p%NWindVel   =  InputFileData%NWindVel
@@ -1411,11 +1293,58 @@ SUBROUTINE InflowWind_SetParameters( InitInp, InputFileData, p, m, ErrStat, ErrM
       !! was converted from degrees to radians already).
       !! @note    The PropagationDir is given in Meteorological \f$\Delta\phi\f$, so this is the negative of the \f$\Delta\phi\f$
       !!          for polar coordinates
+      !!
+      !! An upflow angle rotation is also included in the direction cosine matrix.
+      !!
+      !! The rotation matrix _RotToWind_, (\f$ M \f$), rotates the spatial points (\f$ [ X~ Y~ Z ] \f$) into the coordinate system 
+      !! the wind (\f$ [ X'~ Y'~ Z' ] \f$).  This is a rotation about the point \f$ [ 0~ 0~ H ] \f$ (H = hub reference height), first
+      !! about the \f$ Y\f$-axis (in the negative direction), followed by a rotation about \f$Z\f$-axis (also in the negative direction
+      !! due to the meteorological convention used).  In the implimentation, the rotation is about the coordinate \f$ [ 0~ 0~ H ] \f$
+      !! where \f$ H \f$ is the reference height of the turbine (hub height).
+      !!
+      !! \f$  [X'~ Y'~ Z'] = M \left( [X~ Y~ Z] - [ 0~ 0~ H] \right) + [ 0~ 0~ H ] \f$
+      !!
+      !! where
+      !!
+      !! \f{eqnarray*}{   
+      !! M & = & R(-\theta_y) R(-\theta_z)
+      !!   & = & \begin{bmatrix}    \cos(-\theta_y)    & 0                  & -\sin(-\theta_y)    \\
+      !!                            0                 & 1                  & 0                  \\
+      !!                            \sin(-\theta_y)    & 0                  & \cos(-\theta_y)     \end{bmatrix}
+      !!         \begin{bmatrix}    \cos(-\theta_z)    & \sin(-\theta_z)     & 0                  \\
+      !!                            -\sin(-\theta_z)   & \cos(-\theta_z)     & 0                  \\
+      !!                            0                 &  0                 & 1                  \end{bmatrix}
+      !!   & = & \begin{bmatrix}    C_y               & 0                  & -S_y               \\
+      !!                            0                 & 1                  & 0                  \\
+      !!                            S_y               & 0                  & C_y                \end{bmatrix}
+      !!         \begin{bmatrix}    C_z               & S_z                & 0                  \\
+      !!                            -S_z              & C_z                & 0                  \\
+      !!                            0                 & 0                  & 1                  \end{bmatrix} \\
+      !!   & &
+      !!   & = & \begin{bmatrix}  
+      !!            \cos(-\theta_y) \cos(-\theta_z)     &  \cos(-\theta_y) \sin(-\theta_z)    &   - \sin(-\theta_y)    \\
+      !!          - \sin(-\theta_z)                    &  \cos(-\theta_z)                   &     0                 \\
+      !!            \sin(-\theta_y) \cos(-\theta_z)     &  \sin(-\theta_y) \sin(-\theta_z)    &     \cos(-\theta_y)    \\
+      !!         \end{bmatrix}   
+      !!   & = & \begin{bmatrix}  
+      !!             C_y C_z     &  C_y S_z     &   - S_y      \\
+      !!               - S_z     &      C_z     &     0        \\
+      !!             S_y C_z     &  S_y S_z     &     C_y      \\
+      !!         \end{bmatrix}   \\
+      !! \f}
+      !!
+      !! where \f$ \theta_z \f$ is the rotation about the Z direction (_PropagationDir_) and \f$ \theta_y \f$ is
+      !! the upflow angle (_VFlowAngle_).
+
+
+
+
 
       ! Create the rotation matrices -- rotate from XYZ to X'Y'Z' (wind aligned along X) coordinates
-   p%RotToWind(1,:) = (/    COS(-p%PropagationDir),   SIN(-p%PropagationDir),     0.0_ReKi  /)  
-   p%RotToWind(2,:) = (/   -SIN(-p%PropagationDir),   COS(-p%PropagationDir),     0.0_ReKi  /)  
-   p%RotToWind(3,:) = (/                  0.0_ReKi,                 0.0_ReKi,     1.0_ReKi  /)  
+      ! Included in this rotation is the wind upflow (inclination) angle (rotation about Y axis)
+   p%RotToWind(1,:) = (/   COS(-p%VFlowAngle) * COS(-p%PropagationDir),   COS(-p%VFlowAngle) * SIN(-p%PropagationDir),  -SIN(-p%VFlowAngle)  /)  
+   p%RotToWind(2,:) = (/                       -SIN(-p%PropagationDir),                        COS(-p%PropagationDir),   0.0_ReKi            /)  
+   p%RotToWind(3,:) = (/   SIN(-p%VFlowAngle) * COS(-p%PropagationDir),   SIN(-p%VFlowAngle) * SIN(-p%PropagationDir),   COS(-p%VFlowAngle)  /)  
 
       ! Create the rotation matrices -- rotate from X'Y'Z' (wind aligned along X) to global XYZ coordinates
    p%RotFromWind =  TRANSPOSE(p%RotToWind)
@@ -1428,8 +1357,9 @@ SUBROUTINE InflowWind_SetParameters( InitInp, InputFileData, p, m, ErrStat, ErrM
    IF ( ErrStat>= AbortErrLev ) RETURN 
 
    p%WindViXYZprime   =  0.0_ReKi
+      ! set the output points. Note rotation is about the hub height at [0 0 H].  See InflowWind_SetParameters for details.
    DO I = 1,p%NWindVel
-      p%WindViXYZprime(:,I) =  MATMUL( p%RotToWind, p%WindViXYZ(:,I) )
+      p%WindViXYZprime(:,I) =  MATMUL( p%RotToWind, (p%WindViXYZ(:,I) - (/ 0.0_ReKi, 0.0_ReKi, p%ReferenceHeight /) )) + (/ 0.0_ReKi, 0.0_ReKi, p%ReferenceHeight /)
    ENDDO
 
 END SUBROUTINE InflowWind_SetParameters
@@ -1579,15 +1509,16 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
 
 
       IF ( Indx > 0 ) THEN ! we found the channel name
-         p%OutParam(I)%Indx     = ParamIndxAry(Indx)
          IF ( InvalidOutput( ParamIndxAry(Indx) ) ) THEN  ! but, it isn't valid for these settings
+            p%OutParam(I)%Indx  = 0                 ! pick any valid channel (I just picked "Time=0" here because it's universal)
             p%OutParam(I)%Units = "INVALID"
             p%OutParam(I)%SignM = 0
          ELSE
+            p%OutParam(I)%Indx  = ParamIndxAry(Indx)
             p%OutParam(I)%Units = ParamUnitsAry(Indx) ! it's a valid output
          END IF
       ELSE ! this channel isn't valid
-         p%OutParam(I)%Indx  = Time                 ! pick any valid channel (I just picked "Time" here because it's universal)
+         p%OutParam(I)%Indx  = 0                    ! pick any valid channel (I just picked "Time=0" here because it's universal)
          p%OutParam(I)%Units = "INVALID"
          p%OutParam(I)%SignM = 0                    ! multiply all results by zero
 
@@ -1629,8 +1560,8 @@ SUBROUTINE SetOutParamLin( p, ErrStat, ErrMsg )
    call AllocAry(p%OutParamLinIndx, 2, p%NumOuts, 'OutParamLinIndx', ErrStat2, ErrMsg2)
    call setErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    if (ErrStat >= AbortErrLev) return
-   
-   p%OutParamLinIndx = 0
+      
+   p%OutParamLinIndx = 0 ! initialize to 0
    do i = 1,p%NumOuts
       if (p%OutParam(i)%SignM /= 0 ) then
          
@@ -1684,7 +1615,7 @@ SUBROUTINE SetAllOuts( p, y, m, ErrStat, ErrMsg )
       
       m%AllOuts( WindVelX(I) ) =  m%WindViUVW(1,I)
       m%AllOuts( WindVelY(I) ) =  m%WindViUVW(2,I)
-      m%AllOuts( WindVelZ(I) ) =  m%WindViUVW(3,I)      
+      m%AllOuts( WindVelZ(I) ) =  m%WindViUVW(3,I)
       
    END DO
    
@@ -1842,11 +1773,12 @@ SUBROUTINE CalculateOutput( Time, InputData, p, x, xd, z, OtherStates, y, m, Fil
 
          ! Apply the coordinate transformation to the PositionXYZ coordinates to get the PositionXYZprime coordinate list
          ! If the PropagationDir is zero, we don't need to apply this and will simply copy the data.  Repeat for the WindViXYZ.
-      IF ( EqualRealNos (p%PropagationDir, 0.0_ReKi) ) THEN
+      IF ( EqualRealNos (p%PropagationDir, 0.0_ReKi) .AND. EqualRealNos (p%VFlowAngle, 0.0_ReKi) ) THEN
          PositionXYZprime  =  InputData%PositionXYZ
       ELSE
+            ! NOTE: rotations are about the hub at [ 0 0 H ].  See InflowWind_SetParameters for details.
          DO I  = 1,SIZE(InputData%PositionXYZ,DIM=2)
-            PositionXYZprime(:,I)   =  MATMUL( p%RotToWind, InputData%PositionXYZ(:,I) )
+            PositionXYZprime(:,I)   =  MATMUL( p%RotToWind, (InputData%PositionXYZ(:,I) - (/ 0.0_ReKi, 0.0_ReKi, p%ReferenceHeight /)) ) + (/ 0.0_ReKi, 0.0_ReKi, p%ReferenceHeight /)
          ENDDO
       ENDIF
 
@@ -1971,7 +1903,7 @@ SUBROUTINE CalculateOutput( Time, InputData, p, x, xd, z, OtherStates, y, m, Fil
             ENDIF
             
 
-         CASE (FDext_WindNumber)
+         CASE ( FDext_WindNumber )
             
             CALL IfW_4Dext_CalcOutput(Time, PositionXYZprime, p%FDext, y%VelocityUVW,  m%FDext, TmpErrStat, TmpErrMsg) 
             DiskVel = 0.0_ReKi ! this is only for AD14, which we frankly don't care about in 4Dext wind
@@ -2046,16 +1978,18 @@ SUBROUTINE CalculateOutput( Time, InputData, p, x, xd, z, OtherStates, y, m, Fil
          ! coordinate frame, but only if PropagationDir is not zero.  This is only a rotation of the returned wind field, so
          ! UVW contains the direction components of the wind at XYZ after translation from the U'V'W' wind velocity components
          ! in the X'Y'Z' (wind file) coordinate frame.
-      IF ( .NOT. EqualRealNos (p%PropagationDir, 0.0_ReKi) ) THEN
+         ! NOTE: rotations are about the hub at [ 0 0 H ].  See InflowWind_SetParameters for details.
+      IF ( .NOT. (EqualRealNos (p%PropagationDir, 0.0_ReKi) .AND. EqualRealNos (p%VFlowAngle, 0.0_ReKi) )) THEN
          DO I  = 1,SIZE(y%VelocityUVW,DIM=2)
-            y%VelocityUVW(:,I)   =  MATMUL( p%RotFromWind, y%VelocityUVW(:,I) )
+            y%VelocityUVW(:,I)   =  MATMUL( p%RotFromWind, (y%VelocityUVW(:,I) - (/ 0.0_ReKi, 0.0_ReKi, p%ReferenceHeight /)) ) + (/ 0.0_ReKi, 0.0_ReKi, p%ReferenceHeight /)
          ENDDO
       ENDIF
 
          ! We also need to rotate the reference frame for the WindViUVW array
-      IF ( .NOT. EqualRealNos (p%PropagationDir, 0.0_ReKi)  .AND. FillWrOut ) THEN
+         ! NOTE: rotations are about the hub at [ 0 0 H ].  See InflowWind_SetParameters for details.
+      IF ( .NOT. (EqualRealNos (p%PropagationDir, 0.0_ReKi)  .AND. EqualRealNos (p%VFlowAngle, 0.0_ReKi) ) .AND. FillWrOut ) THEN
          DO I  = 1,SIZE(m%WindViUVW,DIM=2)
-            m%WindViUVW(:,I)   =  MATMUL( p%RotFromWind, m%WindViUVW(:,I) )
+            m%WindViUVW(:,I)   =  MATMUL( p%RotFromWind, (m%WindViUVW(:,I) - (/ 0.0_ReKi, 0.0_ReKi, p%ReferenceHeight /)) ) + (/ 0.0_ReKi, 0.0_ReKi, p%ReferenceHeight /)
          ENDDO
       ENDIF
 
