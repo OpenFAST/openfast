@@ -552,10 +552,8 @@ subroutine SlD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg 
 
 contains
    logical function Failed()
-      if (.not. LargeAnglePossible ) then
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         Failed =    ErrStat >= AbortErrLev
-      endif
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      Failed =    ErrStat >= AbortErrLev
    end function Failed
 end subroutine SlD_CalcOutput
 
