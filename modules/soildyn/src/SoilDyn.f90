@@ -303,11 +303,11 @@ contains
                      ,  IOS               = COMPONENT_INPUT       &
                      ,  NNodes            = p%NumPoints             &
                      ,  TranslationDisp   = .TRUE.                &
-                     ,  TranslationVel    = .TRUE.                &
-                     ,  TranslationAcc    = .TRUE.                &
+                     ,  TranslationVel    = .FALSE.               &
+                     ,  TranslationAcc    = .FALSE.               &
                      ,  Orientation       = .TRUE.                &
-                     ,  RotationVel       = .TRUE.                &
-                     ,  RotationAcc       = .TRUE.                &
+                     ,  RotationVel       = .FALSE.               &
+                     ,  RotationAcc       = .FALSE.               &
                      ,  ErrStat           = ErrStat2              &
                      ,  ErrMess           = ErrMsg2               )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -451,7 +451,7 @@ end subroutine SlD_UpdateStates
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This is a routine for computing outputs, used in both loose and tight coupling.
-subroutine SlD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, PerturbLoads )
+subroutine SlD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 
    real(DbKi),                         intent(in   )  :: t           !< Current simulation time in seconds
    type(SlD_InputType),                intent(in   )  :: u           !< Inputs at t
@@ -463,7 +463,6 @@ subroutine SlD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg,
    type(SlD_MiscVarType),              intent(inout)  :: m           !< Misc variables for optimization (not copied in glue code)
    type(SlD_OutputType),               intent(inout)  :: y           !< Outputs computed at t (Input only so that mesh con-
                                                                      !!   nectivity information does not have to be recalculated)
-   logical,       optional,            intent(in   )  :: PerturbLoads   !< is this call for a jacobian?  If so may have huge inputs
    integer(IntKi),                     intent(  out)  :: ErrStat     !< Error status of the operation
    character(*),                       intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
@@ -475,19 +474,11 @@ subroutine SlD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg,
    real(R8Ki)                                         :: Displacement(6)
    real(R8Ki)                                         :: Force(6)
    integer(IntKi)                                     :: i           !< generic counter
-   logical                                            :: LargeAnglePossible
    logical                                            :: TimeStepRecalc
 
       ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ""
-
-   if (present(PerturbLoads)) then
-      LargeAnglePossible = .true.
-   else
-      LargeAnglePossible = .false.
-   endif
-
 
       ! Are we recalculating a previous timestep (like correction step?)
    if (T > m%PrevTime) then
@@ -501,13 +492,7 @@ subroutine SlD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg,
   
             ! Copy displacement from point mesh (angles in radians -- REDWIN dll also uses rad)
          Displacement(1:3) = u%SoilMesh%TranslationDisp(1:3,1)                 ! Translations -- This is R8Ki in the mesh
-
-            ! If we are doing a perturbation, we will only be doing one angle at a time, and the angle may be large.
-         if (LargeAnglePossible) then
-            Displacement(4:6) = EulerExtract(u%SoilMesh%Orientation(1:3,1:3,1))                    ! Perturbations only use one angle at a time.
-         else
-            Displacement(4:6) = GetSmllRotAngs(u%SoilMesh%Orientation(1:3,1:3,1), ErrStat2, ErrMsg2); if (Failed()) return;
-         endif
+         Displacement(4:6) = GetSmllRotAngs(u%SoilMesh%Orientation(1:3,1:3,1), ErrStat2, ErrMsg2); if (Failed()) return;
 
             ! Calculate reaction with F = k*dX
          Force = matmul(p%Stiffness, Displacement)
@@ -531,28 +516,18 @@ subroutine SlD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg,
   
             ! Copy displacement from point mesh (angles in radians -- REDWIN dll also uses rad)
             Displacement(1:3) = u%SoilMesh%TranslationDisp(1:3,i)                 ! Translations -- This is R8Ki in the mesh
-            if (p%DLL_Model == 2)   Displacement(3) = 0.0_R8Ki
+            Displacement(4:6) = GetSmllRotAngs(u%SoilMesh%Orientation(1:3,1:3,i), ErrStat2, ErrMsg2); if (Failed()) return;   ! Small angle assumption should be valid here -- Note we are assuming reforientation is identity
 
-               ! If we are have a large input angle, or requested only using stiffness matrices in the calculation
-            if (LargeAnglePossible .or. p%DLL_OnlyStiff) then
-
-               Displacement(4:6) = EulerExtract(u%SoilMesh%Orientation(1:3,1:3,i))                    ! Perturbations only use one angle at a time.
-               if (p%DLL_Model == 2)   Displacement(6) = 0.0_R8Ki
-
-                  ! Calculate reaction with F = k*dX for large displacements.
-               Force = matmul(p%DLL_StiffNess(1:6,1:6,i), Displacement)
-            else
-               Displacement(4:6) = GetSmllRotAngs(u%SoilMesh%Orientation(1:3,1:3,i), ErrStat2, ErrMsg2); if (Failed()) return;   ! Small angle assumption should be valid here -- Note we are assuming reforientation is identity
-
-               if (p%DLL_Model == 2)   Displacement(6) = 0.0_R8Ki
+            if (p%DLL_Model == 2) then
+               Displacement(3) = 0.0_R8Ki
+               Displacement(6) = 0.0_R8Ki
+            end if
  
-               call    REDWINinterface_CalcOutput( p%DLL_Trgt, p%DLL_Model, Displacement, Force, m%dll_data(i), ErrStat2, ErrMsg2 ); if (Failed()) return;
+            call    REDWINinterface_CalcOutput( p%DLL_Trgt, p%DLL_Model, Displacement, Force, m%dll_data(i), ErrStat2, ErrMsg2 ); if (Failed()) return;
 
-                  ! store new states if not recalc
-               if (.not. TimeStepRecalc) then
-                  m%dll_dataPREV(i) = m%dll_data(i)
-               endif
-
+               ! store new states if not recalc
+            if (.not. TimeStepRecalc) then
+               m%dll_dataPREV(i) = m%dll_data(i)
             endif
 
             if (p%DLL_Model == 2) then
