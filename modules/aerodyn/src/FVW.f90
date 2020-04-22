@@ -995,6 +995,9 @@ subroutine UA_Init_Wrapper(AFInfo, InitInp, interval, p, x, xd, OtherState, m, E
    ErrMsg  = ""
 
    m%UA_Flag=InitInp%UA_Flag
+   ! --- Condensed version of BEMT_Init_Otherstate
+   allocate ( OtherState%UA_Flag( InitInp%numBladeNodes, InitInp%NumBlades ), STAT = ErrStat2 )
+   OtherState%UA_Flag=m%UA_Flag
    if ( m%UA_Flag ) then
       ! ---Condensed version of "BEMT_Set_UA_InitData"
       allocate(Init_UA_Data%c(InitInp%numBladeNodes,InitInp%numBlades), STAT = errStat2)
@@ -1011,9 +1014,6 @@ subroutine UA_Init_Wrapper(AFInfo, InitInp, interval, p, x, xd, OtherState, m, E
       Init_UA_Data%a_s             = InitInp%a_s ! m/s  
       ! --- UA init
       call UA_Init( Init_UA_Data, u_UA, m%p_UA, xd%UA, OtherState%UA, m%y_UA, m%m_UA, interval, InitOutData_UA, ErrStat2, ErrMsg2); if(Failed())return
-      ! --- BEMT Init other state
-      allocate ( OtherState%UA_Flag( InitInp%numBladeNodes, InitInp%NumBlades ), STAT = ErrStat2 )
-      OtherState%UA_Flag=.true.
       ! --- Condensed version of "BEMT_CheckInitUA"
       do j = 1,InitInp%numBlades; do i = 1,InitInp%numBladeNodes; ! Loop over blades and nodes
          call UA_TurnOff_param(AFInfo(p%AFindx(i,j)), ErrStat2, ErrMsg2)
