@@ -481,7 +481,6 @@ typedef	^	FAST_ModuleMapType	MeshType	u_BD_RootMotion	{:}	-	-	"copy of  BD input
 typedef	^	FAST_ModuleMapType	MeshType	y_BD_BldMotion_4Loads	{:}	-	-	"BD blade motion output at locations on DistrLoad input meshes"
 typedef	^	FAST_ModuleMapType	MeshType	u_Orca_PtfmMesh	-	-	-	"copy of Orca PtfmMesh input mesh"
 typedef	^	FAST_ModuleMapType	MeshType	u_ExtPtfm_PtfmMesh	-	-	-	"copy of ExtPtfm_MCKF PtfmMesh input mesh"
-typedef	^	FAST_ModuleMapType	MeshType	u_SlD_SoilMesh	-	-	-	"copy of SlD input mesh"
 # ..... FAST_ExternalInput data .......................................................................................................
 typedef	FAST	FAST_ExternInputType	ReKi	GenTrq	-	-	-	"generator torque input from Simulink/Labview"
 typedef	^	FAST_ExternInputType	ReKi	ElecPwr	-	-	-	"electric power input from Simulink/Labview"
