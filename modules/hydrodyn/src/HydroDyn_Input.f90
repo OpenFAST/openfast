@@ -100,7 +100,7 @@ FUNCTION CheckMeshOutput( output, numMemberOut, MOutLst, numJointOut )
 !     The routine
 !----------------------------------------------------------------------------------------------------
 !
-   CHARACTER(10),             INTENT ( IN    )  :: output
+   CHARACTER(ChanLen),        INTENT ( IN    )  :: output
    INTEGER,                   INTENT ( IN    )  :: numMemberOut
    TYPE(Morison_MOutput),     INTENT ( IN    )  :: MOutLst(:)
    INTEGER,                   INTENT ( IN    )  :: numJointOut
@@ -110,7 +110,7 @@ FUNCTION CheckMeshOutput( output, numMemberOut, MOutLst, numJointOut )
    LOGICAL                                      :: CheckMeshOutput
 
    INTEGER                                      :: ErrStat
-   CHARACTER(10)                                :: outputTmp
+   CHARACTER(ChanLen)                           :: outputTmp
    INTEGER                                      :: indx1, indx2
    CHARACTER(4)                                 :: testStr
    outputTmp         = TRIM(output)
@@ -198,7 +198,7 @@ SUBROUTINE PrintBadChannelWarning(NUserOutputs, UserOutputs , foundMask, ErrStat
 !     The errstat is set to ErrID_Warning if any element in foundMask is .FALSE.
 !----------------------------------------------------------------------------------------------------  
    INTEGER,                       INTENT( IN    ) :: NUserOutputs         ! Number of user-specified output channels
-   CHARACTER(10),                 INTENT( IN    ) :: UserOutputs (:)      ! An array holding the names of the requested output channels. 
+   CHARACTER(ChanLen),            INTENT( IN    ) :: UserOutputs (:)      ! An array holding the names of the requested output channels. 
    LOGICAL,                       INTENT( IN    ) :: foundMask (:)        ! A mask indicating whether a user requested channel belongs to a module's output channels.
    INTEGER,                       INTENT(   OUT ) :: ErrStat              ! returns a non-zero value when an error occurs  
    CHARACTER(*),                  INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
@@ -2348,7 +2348,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
    REAL(ReKi)                                       :: z2
    REAL(ReKi)                                       :: MinMembrDpth
    REAL(ReKi)                                       :: MaxMembrDpth
-!   CHARACTER(10), ALLOCATABLE                       :: tmpOutLst(:)         !
+!   CHARACTER(ChanLen), ALLOCATABLE                       :: tmpOutLst(:)         !
    CHARACTER(3)                                     :: TmpExtension         ! Temporary variable for holding the file extension for 10d, 11d, 12d, 10s, 11s, 12s WAMIT files
    LOGICAL                                          :: TmpFileExist         ! Temporary variable in checking the existance of an input file.
    LOGICAL                                          :: JointUsed
@@ -2358,7 +2358,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
    INTEGER                                          :: WaveModIn
    
    INTEGER(IntKi)                                   :: ErrStat2, IOS
-   CHARACTER(1024)                                  :: ErrMsg2
+   CHARACTER(ErrMsgLen)                             :: ErrMsg2
    CHARACTER(*), PARAMETER                          :: RoutineName = 'HydroDynInput_ProcessInitData'
       ! Initialize ErrStat
          

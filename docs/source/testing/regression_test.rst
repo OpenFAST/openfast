@@ -68,7 +68,7 @@ The following packages are required for regression testing:
 - Python 3+
 - Numpy
 - CMake and CTest (Optional)
-- matplotlib (Optional)
+- Bokeh 1.4 (Optional)
 
 .. _python_driver:
 
@@ -100,7 +100,7 @@ executing with the help option:
     optional arguments:
     -h, --help            show this help message and exit
     -p [Plotting-Flag], -plot [Plotting-Flag]
-                            bool to include matplotlib plots in failed cases
+                            bool to include plots in failed cases
     -n [No-Execution], -no-exec [No-Execution]
                             bool to prevent execution of the test cases
     -v [Verbose-Flag], -verbose [Verbose-Flag]
@@ -366,7 +366,7 @@ included Python driver.
     # optional arguments:
     #   -h, --help            show this help message and exit
     #   -p [Plotting-Flag], -plot [Plotting-Flag]
-    #                         bool to include matplotlib plots in failed cases
+    #                         bool to include plots in failed cases
     #   -n [No-Execution], -no-exec [No-Execution]
     #                         bool to prevent execution of the test cases
     #   -v [Verbose-Flag], -verbose [Verbose-Flag]

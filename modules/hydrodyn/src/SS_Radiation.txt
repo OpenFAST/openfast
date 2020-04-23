@@ -19,7 +19,7 @@ typedef ^                     ^                   R8Ki            PtfmRefztRot  
 typedef ^                     InitOutputType      CHARACTER(10)   WriteOutputHdr  {:}    - -  "Header of the output" -
 typedef ^                     InitOutputType      CHARACTER(10)   WriteOutputUnt  {:}    - -  "Units of the output" -
 
-typedef ^                     ContinuousStateType ReKi            x               {:}    - -  "Continuous States" -
+typedef   ^              ContinuousStateType R8Ki     x             {:} - -  "Continuous States" -
 
 typedef ^                     DiscreteStateType   SiKi            DummyDiscState   -     - -  "" -
 

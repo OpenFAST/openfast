@@ -110,5 +110,6 @@ typedef   ^                     ^                ReKi                Cd         
 typedef   ^                     ^                ReKi                Cm           -        0.  -   "Dimensionless coefficient of pitching moment" -
 typedef   ^                     ^                ReKi                Cpmin        -        0.  -   "Dimensionless coefficient of minimum pressure" -
 typedef   ^                     ^                ReKi                Cd0          -        0.  -   "Minimum Cd value (used for Beddoes-Leishman unsteady aero)"   -
+typedef   ^                     ^                ReKi                Cm0          -        0.  -   "2D pitching moment coefficient at zero lift, positive if nose is up"   -
 
 

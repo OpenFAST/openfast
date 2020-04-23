@@ -21,6 +21,7 @@ endif()
 set(ED_SOURCES
   src/ElastoDyn.f90
   src/ElastoDyn_IO.f90
+  src/ElastoDyn_AllBldNdOuts_IO.f90
   src/ED_UserSubs.f90
   src/ElastoDyn_Types.f90
   )

@@ -28,6 +28,7 @@ MODULE SubDyn_Output
 
         ! The maximum number of output channels which can be output by the code.
    INTEGER(IntKi),PUBLIC, PARAMETER      :: MaxOutPts = 2265
+   INTEGER(IntKi), PARAMETER             :: OutStrLenM1 = ChanLen - 1
    
    PRIVATE
 
@@ -2771,7 +2772,7 @@ INTEGER, PARAMETER             :: MNRDe (3,9,9) = reshape((/M1N1RDxe,M1N1RDye,M1
   
 
  
-   CHARACTER(10), PARAMETER  :: ValidParamAry(2265) =  (/ &                  ! This lists the names of the allowed parameters, which must be sorted alphabetically
+   CHARACTER(OutStrLenM1), PARAMETER  :: ValidParamAry(2265) =  (/ &                  ! This lists the names of the allowed parameters, which must be sorted alphabetically
                                "INTFFXSS ","INTFFYSS ","INTFFZSS ","INTFMXSS ","INTFMYSS ","INTFMZSS ","INTFRAXSS", &
                                "INTFRAYSS","INTFRAZSS","INTFRDXSS","INTFRDYSS","INTFRDZSS","INTFTAXSS","INTFTAYSS", &
                                "INTFTAZSS","INTFTDXSS","INTFTDYSS","INTFTDZSS","M1N1FKXE ","M1N1FKYE ","M1N1FKZE ", &
@@ -3787,6 +3788,7 @@ SUBROUTINE SDOut_Init( Init, y,  p, misc, InitOut, WtrDpth, ErrStat, ErrMsg )
 
  INTEGER(IntKi)                                   :: I,J,K,K2,L,NconEls   !Counters
  INTEGER(IntKi)                                   :: Junk  !Temporary Holders
+ INTEGER(IntKi)                                   :: iMember  ! Member index (not member ID)
  INTEGER(IntKi), Dimension(2)                     :: M   !counter for two nodes at a time
 !-------------------------------------------------------------------------------------------------      
 ! Initialize local variables
@@ -3855,7 +3857,8 @@ p%OutAllDims=12*p%Nmembers*2    !size of AllOut Member Joint forces
       ErrMsg  = 'Error allocating p%MOutLst(I)%NodeIDs arrays in SDOut_Init'
       RETURN
    END IF
-   p%MOutLst(I)%NodeIDs=Init%MemberNodes(p%MoutLst(I)%MemberID,p%MOutLst(I)%NodeCnt)  !We are storing the actual node numbers corresponding to what the user ordinal number is requesting
+   iMember = FINDLOCI(Init%Members(:,1), p%MoutLst(I)%MemberID) ! Reindexing from MemberID to 1:nMembers
+   p%MOutLst(I)%NodeIDs=Init%MemberNodes(iMember ,p%MOutLst(I)%NodeCnt)  !We are storing the actual node numbers corresponding to what the user ordinal number is requesting
 
    ALLOCATE( p%MOutLst(I)%ElmIDs(p%MoutLst(I)%NoutCnt,p%NAvgEls), STAT = ErrStat ) !ElmIDs has for each selected node within the member, several element numbers to refer to for averaging (max 2 elements)
    IF ( ErrStat/= 0 ) THEN
@@ -3907,7 +3910,7 @@ p%OutAllDims=12*p%Nmembers*2    !size of AllOut Member Joint forces
             Junk=M(1)
             IF (M(1) .EQ. p%MoutLst(I)%NodeIDs(J)) Junk=M(2)
                         
-         IF (ANY(Init%MemberNodes(p%MoutLst(I)%MemberID,:) .EQ. Junk)) THEN  !This means we are in the selected member
+         IF (ANY(Init%MemberNodes(iMember,:) .EQ. Junk)) THEN  !This means we are in the selected member
             IF (K2 .EQ. 2) EXIT
             K2=K2+1
             p%MoutLst(I)%ElmIDs(J,K2)=L        !This array has for each node requested NODEID(J), for each memberMOutLst(I)%MemberID, the 2 elements to average from, it may have 1 if one of the numbers is 0 
@@ -3945,7 +3948,7 @@ p%OutAllDims=12*p%Nmembers*2    !size of AllOut Member Joint forces
     
      
     DO I=1,p%NMembers
-      p%MOutLst2(I)%MemberID=I !Assign memberID for all members
+      p%MOutLst2(I)%MemberID=Init%Members(I,1) 
       
       ALLOCATE( p%MOutLst2(I)%NodeIDs(Init%Ndiv+1), STAT = ErrStat )  !1st and last node of member
       IF ( ErrStat/= 0 ) THEN
@@ -3975,7 +3978,7 @@ p%OutAllDims=12*p%Nmembers*2    !size of AllOut Member Joint forces
              Junk=M(1)
              IF (M(1) .EQ. p%MoutLst2(I)%NodeIDs(J)) Junk=M(2)
              
-             IF (ANY(Init%MemberNodes(p%MoutLst2(I)%MemberID,:) .EQ. Junk)) THEN  !This means we are in the selected member
+             IF (ANY(Init%MemberNodes(I,:) .EQ. Junk)) THEN  !This means we are in the selected member
                  
                   p%MoutLst2(I)%ElmID2s(K2)=L     !This array has for each node requested NODEID(J), for each member I, the element to get results for 
                   

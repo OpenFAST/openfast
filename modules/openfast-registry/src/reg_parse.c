@@ -95,7 +95,7 @@ pre_parse( char * dir, FILE * infile, FILE * outfile, int usefrom_sw )
        // See if it might be in the current directory
         sprintf( include_file_name , "%s", p ) ;            // first name in line from registry file, without the include or usefrom
         for ( p2 = include_file_name ; !( *p2 == ' ' || *p2 == '\t' || *p2 == '\n' ) && *p2 != '\0' ; p2++ ) {} 
-        *p2 = '\0' ; // drop tailing white space
+        *p2 = '\0' ;     // drop tailing white space
         if ( (q=index(include_file_name,'\n')) != NULL ) *q = '\0' ;
         if (( include_fp = fopen( include_file_name , "r" )) != NULL )   { foundit = 1 ; goto gotit ; }
 
@@ -269,7 +269,7 @@ gotit:
 
 
 
-normal:
+//normal:
     /* otherwise output the line as is */
     fprintf(outfile,"%s\n",parseline_save) ;
     parseline[0] = '\0' ;  /* reset parseline */
@@ -284,8 +284,8 @@ reg_parse( FILE * infile )
   /* Had to increase size for SOA from 4096 to 7000, Manish Shrivastava 2010 */
   char inln[INLN_SIZE], parseline[PARSELINE_SIZE] ;
   char *p ;
-  char *tokens[MAXTOKENS], *ditto[MAXTOKENS] ;
-  int i ;
+  char *tokens[MAXTOKENS],*ditto[MAXTOKENS] ;
+  int i  ;
   int defining_state_field, defining_rconfig_field, defining_i1_field ;
 
   parseline[0] = '\0' ;
@@ -449,7 +449,6 @@ reg_parse( FILE * infile )
         strcpy(field_struct->units,"-") ;
         if ( strcmp( tokens[FIELD_UNITS], "-" ) ) /* that is, if not equal "-" */
           { strcpy( field_struct->units , tokens[FIELD_UNITS] ) ; }
-
 #ifdef OVERSTRICT
         if ( field_struct->type != NULL )
           if ( field_struct->type->type_type == DERIVED && field_struct->ndims > 0 )
@@ -615,27 +614,19 @@ set_dim_len ( char * dimspec , node_t * dim_entry )
 
 int
 set_ctrl( char *ctrl , node_t * field_struct )
-// process CTRL keys -- only 'h' (hidden) and 'e' (exposed).  Default is not to generate a wrapper,
-// so something must be specified, either h or e
+// process CTRL keys -- only '2pi' (interpolation of values with 2pi period).  Default is no special interpolation.
 {
-  char prev = '\0' ;
-  char x ;
   char tmp[NAMELEN] ;
   char *p ;
-  int i ;
   strcpy(tmp,ctrl) ;
   if (( p = index(tmp,'=') ) != NULL ) { *p = '\0' ; }
-  for ( i = 0 ; i < strlen(tmp) ; i++ )
-  {
-    x = tolower(tmp[i]) ;
-    if        ( x == 'h' ) {
-      field_struct->gen_wrapper = WRAP_HIDDEN_FIELD ;
-    } else if ( x == 'e' ) {
-      field_struct->gen_wrapper = WRAP_EXPOSED_FIELD ;
-    } else {
-      field_struct->gen_wrapper = WRAP_NONE ;  /* default */
-    }
+  if (!strcmp(make_lower_temp(tmp), "2pi")) {
+      field_struct->gen_periodic = PERIOD_2PI;
   }
+  else {
+     field_struct->gen_periodic = PERIOD_NONE;
+  }
+
   return(0) ;
 }
 

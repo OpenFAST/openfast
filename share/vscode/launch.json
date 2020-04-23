@@ -1,0 +1,43 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "5MW_OC3Trpd_DLL_WSt_WavesReg",
+            "type": "gdb",
+            "request": "launch",
+            "printCalls": false,
+            "showDevDebugOutput": true,
+            "valuesFormatting": "prettyPrinters",
+            "gdbpath": "gdb",
+            "target": "${workspaceRoot}/build/glue-codes/openfast/openfast",
+            "cwd": "${workspaceRoot}/build/reg_tests/glue-codes/openfast/5MW_OC3Trpd_DLL_WSt_WavesReg/",
+            "arguments": "5MW_OC3Trpd_DLL_WSt_WavesReg.fst"
+        },
+        {
+            "name": "bd_curved_beam",
+            "type": "gdb",
+            "request": "launch",
+            "printCalls": false,
+            "showDevDebugOutput": false,
+            "valuesFormatting": "prettyPrinters",
+            "gdbpath": "gdb-ia",
+            "target": "${workspaceRoot}/build/modules-local/beamdyn/beamdyn_driver",
+            "cwd": "${workspaceRoot}/build/reg_tests/modules-local/beamdyn/bd_curved_beam/",
+            "arguments": "${workspaceRoot}/build/reg_tests/modules-local/beamdyn/bd_curved_beam/bd_driver.inp"
+        },
+        {
+            "name": "beamdyn_utest",
+            "type": "gdb",
+            "request": "launch",
+            "printCalls": false,
+            "showDevDebugOutput": false,
+            "valuesFormatting": "prettyPrinters",
+            "gdbpath": "gdb-ia",
+            "target": "${workspaceRoot}/build/unit_tests/beamdyn_utest",
+            "cwd": "${workspaceRoot}/build/unit_tests"
+        }
+    ]
+}

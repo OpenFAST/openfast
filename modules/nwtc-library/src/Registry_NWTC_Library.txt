@@ -24,11 +24,6 @@ usefrom     ^             ^                 CHARACTER(ChanLen)       Name
 usefrom     ^             ^                 CHARACTER(ChanLen)       Units
 usefrom     ^             ^                 IntKi                    SignM
 
-usefrom   NWTC_Library  OutParmFFType       IntKi                    Indx
-usefrom     ^             ^                 CHARACTER(ChanLenFF)     Name
-usefrom     ^             ^                 CHARACTER(ChanLenFF)     Units
-usefrom     ^             ^                 IntKi                    SignM
-
 usefrom   NWTC_Library  FileInfoType        IntKi                    NumLines
 usefrom     ^             ^                 IntKi                    NumFiles
 usefrom     ^             ^                 IntKi                    FileLine  {:}
@@ -64,8 +59,8 @@ usefrom     ^             ^                 MeshType                 Augmented_L
 usefrom     ^             ^                 MeshType                 Lumped_Points_Src  -
 usefrom     ^             ^                 INTEGER                  LoadLn2_A_Mat_Piv {:}
 usefrom     ^             ^                 R8Ki                     DisplacedPosition {:}{:}{:}
-usefrom     ^             ^                 R8Ki                     LoadLn2_F         {:}{:}
 usefrom     ^             ^                 R8Ki                     LoadLn2_A_Mat     {:}{:}
+usefrom     ^             ^                 R8Ki                     LoadLn2_F         {:}{:}
 usefrom     ^             ^                 R8Ki                     LoadLn2_M         {:}{:}
 usefrom     ^             ^                 MeshMapLinearizationType dM
 

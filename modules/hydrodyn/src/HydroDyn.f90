@@ -318,7 +318,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                                        
                                                   
       INTEGER(IntKi)                         :: ErrStat2                            ! local error status
-      CHARACTER(1024)                        :: ErrMsg2                             ! local error message
+      CHARACTER(ErrMsgLen)                   :: ErrMsg2                             ! local error message
       CHARACTER(*), PARAMETER                :: RoutineName = 'HydroDyn_Init'
    
 
@@ -392,10 +392,10 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
         ! Since the Convolution Radiation module is currently the only module which requires knowledge of the time step size, 
         !  we will set Hydrodyn's time step to be that of the Convolution radiation module if it is being used.  Otherwise, we
         !  will set it to be equal to the glue-codes
-         IF ((Initlocal%PotMod == 1) .AND. (Initlocal%WAMIT%RdtnMod == 1) ) THEN
+      IF ((Initlocal%PotMod == 1) .AND. (Initlocal%WAMIT%RdtnMod == 1) ) THEN
          
          
-            p%DT = InitLocal%WAMIT%Conv_Rdtn%RdtnDT
+         p%DT = InitLocal%WAMIT%Conv_Rdtn%RdtnDT
  
 #ifdef USE_FIT
       ELSE IF (Initlocal%PotMod == 2) THEN
@@ -2420,7 +2420,6 @@ SUBROUTINE HD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
 
    ErrStat = ErrID_None
    ErrMsg  = ''
-   m%IgnoreMod = .true. ! to compute perturbations, we need to ignore the modulo function
    
    ! LIN_TODO: We need to deal with the case where either RdtnMod=0, and/or ExtcnMod=0 and hence %SS_Rdtn data or %SS_Exctn data is not valid
    NN = p%WAMIT(1)%SS_Rdtn%numStates + p%WAMIT(1)%SS_Exctn%numStates
@@ -2556,7 +2555,6 @@ contains
       call HydroDyn_DestroyContState(    x_p, ErrStat2, ErrMsg2 )
       call HydroDyn_DestroyContState(    x_m, ErrStat2, ErrMsg2 )
       call HydroDyn_DestroyInput(  u_perturb, ErrStat2, ErrMsg2 )
-      m%IgnoreMod = .false.
    end subroutine cleanup
    
 END SUBROUTINE HD_JacobianPInput
@@ -2607,7 +2605,6 @@ SUBROUTINE HD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
 
    ErrStat = ErrID_None
    ErrMsg  = ''
-   m%IgnoreMod = .true. ! to get true perturbations, we can't use the modulo function
 
    
    ! Calculate the partial derivative of the output functions (Y) with respect to the continuous states (x) here:
@@ -2731,7 +2728,6 @@ contains
       call HydroDyn_DestroyContState(      x_p, ErrStat2, ErrMsg2 )
       call HydroDyn_DestroyContState(      x_m, ErrStat2, ErrMsg2 )
       call HydroDyn_DestroyContState(x_perturb, ErrStat2, ErrMsg2 )
-      m%IgnoreMod = .false.
    end subroutine cleanup
 
 END SUBROUTINE HD_JacobianPContState
@@ -3307,7 +3303,7 @@ SUBROUTINE HD_Perturb_x( p, n, perturb_sign, x, dx )
       x%WAMIT(1)%SS_Exctn%x( indx ) = x%WAMIT(1)%SS_Exctn%x( indx ) + dx * perturb_sign 
    end if
                                                 
-   END SUBROUTINE HD_Perturb_x
+END SUBROUTINE HD_Perturb_x
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine uses values of two output types to compute an array of differences.

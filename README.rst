@@ -1,10 +1,10 @@
 OpenFAST
 ========
 
-|travisci| |nbsp| |rtfd|
+|actions| |nbsp| |rtfd|
 
-.. |travisci| image:: https://travis-ci.org/OpenFAST/openfast.svg?branch=dev
-   :target: https://travis-ci.org/OpenFAST/openfast
+.. |actions| image:: https://github.com/openfast/openfast/workflows/OpenFAST%20Build%20and%20Test/badge.svg?branch=dev
+   :target: https://github.com/OpenFAST/openfast/actions?query=workflow%3A%22OpenFAST+Build+and+Test%22
    :alt: Build Status
 .. |rtfd| image:: https://readthedocs.org/projects/openfast/badge/?version=dev
    :target: https://openfast.readthedocs.io/en/dev
@@ -29,7 +29,7 @@ FAST v8 - OpenFAST v0.1.0
 The transition from FAST v8 to OpenFAST v0.1.0 represents the effort to better
 support an open-source developer community around FAST-based aero-hydro-servo-
 elastic engineering models of wind-turbines and wind-plants. OpenFAST is the
-next generation of FAST analysis tools. More inforation is available in the
+next generation of FAST analysis tools. More information is available in the
 `transition notes <http://openfast.readthedocs.io/en/latest/source/user/fast_to_openfast.html>`_.
 
 FAST v8 is a computer-aided engineering tool for simulating the coupled dynamic
@@ -112,7 +112,7 @@ Details for compiling
 `compiling <http://openfast.readthedocs.io/en/latest/source/install/index.html>`_,
 `using <http://openfast.readthedocs.io/en/latest/source/user/index.html>`_, and
 `developing <http://openfast.readthedocs.io/en/latest/source/dev/index.html>`_
-OpenFAST on Unux-based and Windows machines are available at `readthedocs <http://openfast.readthedocs.io>`_.
+OpenFAST on Unix-based and Windows machines are available at `readthedocs <http://openfast.readthedocs.io>`_.
 
 Nightly Testing
 ---------------
@@ -122,7 +122,7 @@ nightly. The results are publicly available through the
 
 Help
 ----
-Please use `github issues <https://github.com/OpenFAST/OpenFAST/issues>`_ to:
+Please use `GitHub Issues <https://github.com/OpenFAST/OpenFAST/issues>`_ to:
 
 * ask usage questions
 * report bugs

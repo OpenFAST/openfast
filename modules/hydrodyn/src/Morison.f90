@@ -602,7 +602,7 @@ SUBROUTINE WriteSummaryFile( UnSum, g, MSL2SWL, WtrDpth, numJoints, numNodes, no
    REAL(ReKi)                                  :: l                   ! length of an element
    LOGICAL                                     :: filledFlag          ! flag indicating if element is filled/flooded
    CHARACTER(2)                                :: strFmt
-   CHARACTER(10)                               :: strNodeType         ! string indicating type of node: End, Interior, Super
+   CHARACTER(ChanLen)                          :: strNodeType         ! string indicating type of node: End, Interior, Super
    REAL(ReKi)                                  :: ident(3,3)          ! identity matrix
    REAL(ReKi)                                  :: ExtBuoyancy(6)      ! sum of all external buoyancy forces lumped at (0,0,0)
    REAL(ReKi)                                  :: IntBuoyancy(6)      ! sum of all internal buoyancy forces lumped at (0,0,0)
@@ -623,7 +623,7 @@ SUBROUTINE WriteSummaryFile( UnSum, g, MSL2SWL, WtrDpth, numJoints, numNodes, no
    REAL(ReKi)                                  :: s                   ! The linear interpolation factor for the requested location
    REAL(ReKi)                                  :: outloc(3)           ! Position of the requested member output
    INTEGER                                     :: mbrIndx, nodeIndx, c, N
-   CHARACTER(10)                               :: tmpName
+   CHARACTER(ChanLen)                          :: tmpName
    REAL(ReKi)                                  :: totalFillMass, mass_fill, fillVol, memberVol
    REAL(ReKi)                                  :: totalMGMass, mass_MG
    TYPE(Morison_NodeType)                      ::  node1, node2

@@ -231,7 +231,7 @@ SUBROUTINE Wvs2OUT_Init( InitInp, y,  p, InitOut, ErrStat, ErrMsg )
 !   CHARACTER(1024)                                ::  OutFileName         ! The name of the output file  including the full path.
 !   CHARACTER(200)                                 :: Frmt                 ! a string to hold a format statement
    
-   CHARACTER(1024)                                 :: ErrMsgTmp           ! Temporary Error status
+   CHARACTER(ErrMsgLen)                            :: ErrMsgTmp           ! Temporary Error status
    INTEGER(IntKi)                                  :: ErrStatTmp          ! Temporary Error message
 
  
@@ -301,8 +301,8 @@ FUNCTION   GetWaves2Channels    ( NUserOutputs, UserOutputs, OutList, foundMask,
 
 !----------------------------------------------------------------------------------------------------    
    INTEGER,                       INTENT( IN    ) :: NUserOutputs         ! Number of user-specified output channels
-   CHARACTER(10),                 INTENT( IN    ) :: UserOutputs (:)      ! An array holding the names of the requested output channels.
-   CHARACTER(10),                 INTENT(   OUT ) :: OutList (:)          ! An array holding the names of the matched Waves2 output channels. 
+   CHARACTER(ChanLen),            INTENT( IN    ) :: UserOutputs (:)      ! An array holding the names of the requested output channels.
+   CHARACTER(ChanLen),            INTENT(   OUT ) :: OutList (:)          ! An array holding the names of the matched Waves2 output channels. 
    LOGICAL,                       INTENT( INOUT ) :: foundMask (:)        ! A mask indicating whether a user requested channel belongs to a module's output channels.
    INTEGER,                       INTENT(   OUT ) :: ErrStat              ! a non-zero value indicates an error occurred           
    CHARACTER(*),                  INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
@@ -315,7 +315,7 @@ FUNCTION   GetWaves2Channels    ( NUserOutputs, UserOutputs, OutList, foundMask,
    INTEGER                                :: count                                     ! Generic loop-counting index.
    INTEGER                                :: INDX                                      ! Index for valid arrays
    
-   CHARACTER(10)                          :: OutListTmp                                ! A string to temporarily hold OutList(I).
+   CHARACTER(ChanLen)                     :: OutListTmp                                ! A string to temporarily hold OutList(I).
    CHARACTER(28), PARAMETER               :: OutPFmt   = "( I4, 3X,A 10,1 X, A10 )"    ! Output format parameter output list.
 !   LOGICAL                                :: InvalidOutput(MaxWaves2Outputs)           ! This array determines if the output channel is valid for this configuration
    LOGICAL                                :: CheckOutListAgain
@@ -416,20 +416,20 @@ SUBROUTINE Wvs2OUT_ChkOutLst( OutList, y, p, ErrStat, ErrMsg )
       
    TYPE(Waves2_OutputType),        INTENT( INOUT ) :: y                                ! This module's internal data
    TYPE(Waves2_ParameterType),     INTENT( INOUT ) :: p                                   ! parameter data for this instance of the Waves2 platform module   
-   CHARACTER(10),                 INTENT( IN    ) :: OutList (:)                               ! An array holding the names of the requested output channels.         
+   CHARACTER(ChanLen),             INTENT( IN    ) :: OutList (:)                               ! An array holding the names of the requested output channels.         
    INTEGER,                       INTENT(   OUT ) :: ErrStat              ! a non-zero value indicates an error occurred           
    CHARACTER(*),                  INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
    
       ! Local variables.
    
-   CHARACTER(1024)                        :: ErrMsgTmp                                 ! Temporary error message
+   CHARACTER(ErrMsgLen)                   :: ErrMsgTmp                                 ! Temporary error message
    INTEGER(IntKi)                         :: ErrStatTmp                                ! Temporary error status
  
    INTEGER                                :: I                                         ! Generic loop-counting index.
 !   INTEGER                                :: J                                         ! Generic loop-counting index.
    INTEGER                                :: INDX                                      ! Index for valid arrays
    
-   CHARACTER(10)                          :: OutListTmp                                ! A string to temporarily hold OutList(I).
+   CHARACTER(ChanLen)                     :: OutListTmp                                ! A string to temporarily hold OutList(I).
    CHARACTER(28), PARAMETER               :: OutPFmt   = "( I4, 3X,A 10,1 X, A10 )"    ! Output format parameter output list.
    
    

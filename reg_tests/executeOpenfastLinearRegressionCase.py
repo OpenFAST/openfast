@@ -67,7 +67,7 @@ parser.add_argument("buildDirectory", metavar="path/to/openfast_repo/build", typ
 parser.add_argument("tolerance", metavar="Test-Tolerance", type=float, nargs=1, help="Tolerance defining pass or failure in the regression test.")
 parser.add_argument("systemName", metavar="System-Name", type=str, nargs=1, help="The current system\'s name: [Darwin,Linux,Windows]")
 parser.add_argument("compilerId", metavar="Compiler-Id", type=str, nargs=1, help="The compiler\'s id: [Intel,GNU]")
-parser.add_argument("-p", "-plot", dest="plot", default=False, metavar="Plotting-Flag", type=bool, nargs="?", help="bool to include matplotlib plots in failed cases")
+parser.add_argument("-p", "-plot", dest="plot", default=False, metavar="Plotting-Flag", type=bool, nargs="?", help="bool to include plots in failed cases")
 parser.add_argument("-n", "-no-exec", dest="noExec", default=False, metavar="No-Execution", type=bool, nargs="?", help="bool to prevent execution of the test cases")
 parser.add_argument("-v", "-verbose", dest="verbose", default=False, metavar="Verbose-Flag", type=bool, nargs="?", help="bool to include verbose system output")
 
@@ -237,6 +237,7 @@ for i, f in enumerate(localOutFiles):
             l_float = float(l_element)
             b_float = float(b_elements[j])
             if not isclose(l_float, b_float, tolerance, tolerance):
+                print("Failed in Jacobian matrix comparison: {l_float} and {b_float}")
                 sys.exit(1)
 
     # skip 2 empty/header lines
@@ -258,6 +259,7 @@ for i, f in enumerate(localOutFiles):
             l_float = float(l_element)
             b_float = float(b_elements[j])
             if not isclose(l_float, b_float, tolerance, tolerance):
+                print("Failed in state matrix comparison: {l_float} and {b_float}")
                 sys.exit(1)
 
     local_handle.close()

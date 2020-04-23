@@ -24,6 +24,7 @@ MODULE AeroDyn_IO
    use AeroDyn_Types
    use BEMTUncoupled, only : SkewMod_Uncoupled, SkewMod_PittPeters, VelocityIsZero
 
+   USE AeroDyn_AllBldNdOuts_IO
    
    implicit none
 
@@ -1884,6 +1885,7 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, ADBlFile, OutFileRoot, UnE
    integer(IntKi)                :: ErrStat2, IOS                             ! Temporary Error status
    logical                       :: Echo                                      ! Determines if an echo file should be written
    character(ErrMsgLen)          :: ErrMsg2                                   ! Temporary Error message
+   character(ErrMsgLen)          :: ErrMsg_NoAllBldNdOuts                     ! Temporary Error message
    character(1024)               :: PriPath                                   ! Path name of the primary file
    character(1024)               :: FTitle                                    ! "File Title": the 2nd line of the input file, which contains a description of its contents
    character(200)                :: Line                                      ! Temporary storage of a line from the input file (to compare with "default")
@@ -1901,7 +1903,11 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, ADBlFile, OutFileRoot, UnE
 
    CALL AllocAry( InputFileData%OutList, MaxOutPts, "Outlist", ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-        
+   
+      ! Allocate array for holding the list of node outputs
+   CALL AllocAry( InputFileData%BldNd_OutList, BldNd_MaxOutPts, "BldNd_Outlist", ErrStat2, ErrMsg2 )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+     
       ! Get an available unit number for the file.
 
    CALL GetNewUnit( UnIn, ErrStat2, ErrMsg2 )
@@ -2157,8 +2163,8 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, ADBlFile, OutFileRoot, UnE
    CALL ReadCom( UnIn, InputFile, 'Section Header: Beddoes-Leishman Unsteady Airfoil Aerodynamics Options', ErrStat2, ErrMsg2, UnEc )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       
-      ! UAMod - Unsteady Aero Model Switch (switch) {1=Baseline model (Original), 2=Gonzalez's variant (changes in Cn,Cc,Cm), 3=Minemma/Pierce variant (changes in Cc and Cm)} [used only when AFAreoMod=2] (-):
-   CALL ReadVar( UnIn, InputFile, InputFileData%UAMod, "UAMod", "Unsteady Aero Model Switch (switch) {1=Baseline model (Original), 2=Gonzalez's variant (changes in Cn,Cc,Cm), 3=Minemma/Pierce variant (changes in Cc and Cm)} [used only when AFAreoMod=2] (-)", ErrStat2, ErrMsg2, UnEc)
+      ! UAMod - Unsteady Aero Model Switch (switch) {1=Baseline model (Original), 2=Gonzalez's variant (changes in Cn,Cc,Cm), 3=Minnema/Pierce variant (changes in Cc and Cm)} [used only when AFAreoMod=2] (-):
+   CALL ReadVar( UnIn, InputFile, InputFileData%UAMod, "UAMod", "Unsteady Aero Model Switch (switch) {1=Baseline model (Original), 2=Gonzalez's variant (changes in Cn,Cc,Cm), 3=Minnema/Pierce variant (changes in Cc and Cm)} [used only when AFAreoMod=2] (-)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
       ! FLookup - Flag to indicate whether a lookup for f' will be calculated (TRUE) or whether best-fit exponential equations will be used (FALSE); if FALSE S1-S4 must be provided in airfoil input files [used only when AFAreoMod=2] (flag):
@@ -2359,6 +2365,75 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, ADBlFile, OutFileRoot, UnE
    CALL ReadOutputList ( UnIn, InputFile, InputFileData%OutList, InputFileData%NumOuts, 'OutList', "List of user-requested output channels", ErrStat2, ErrMsg2, UnEc  )     ! Routine in NWTC Subroutine Library
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       
+
+      ! Return on error at end of section
+   IF ( ErrStat >= AbortErrLev ) THEN
+      CALL Cleanup()
+      RETURN
+   END IF
+                  
+   !---------------------- END OF FILE -----------------------------------------
+
+
+
+   !----------- OUTLIST  -----------------------------------------------------------
+      ! In case there is something ill-formed in the additional nodal outputs section, we will simply ignore it.
+   ErrMsg_NoAllBldNdOuts='AllBldNd section of AeroDyn input file not found or improperly formatted. Therefore assuming no nodal outputs.'
+
+   !----------- OUTLIST for BldNd -----------------------------------------------------------
+   CALL ReadCom( UnIn, InputFile, 'Section Header: OutList for Blade node channels', ErrStat2, ErrMsg2, UnEc )
+   IF ( ErrStat2 >= AbortErrLev ) THEN
+      InputFileData%BldNd_NumOuts = 0
+      call wrscr( trim(ErrMsg_NoAllBldNdOuts)//' --> '//trim(ErrMsg2) )
+      CALL Cleanup()
+      RETURN  
+   ENDIF 
+
+
+      ! Number of blade nodes to output:  will modify this at some point for arrays
+      ! TODO:  In a future release, allow this to be an array of N blade numbers (change BldNd_BladesOut to an array if we do that).
+      !        Will likely require reading this line in as a string (BldNd_BladesOut_Str) and parsing it
+   CALL ReadVar(  UnIn, InputFile, InputFileData%BldNd_BladesOut, 'BldNd_BladesOut', 'Which blades to output node data on.'//TRIM(Num2Lstr(I)), ErrStat2, ErrMsg2, UnEc )
+   IF ( ErrStat2 >= AbortErrLev ) THEN
+      InputFileData%BldNd_NumOuts = 0
+      call wrscr( trim(ErrMsg_NoAllBldNdOuts)//' --> '//trim(ErrMsg2) )
+      CALL Cleanup()
+      RETURN  
+   ENDIF 
+
+
+      ! Which blades to output for:  will add this at some point
+      ! TODO: Parse this string into an array of nodes to output at (one idea is to set an array of boolean to T/F for which nodes to output).  At present, we ignore it entirely.
+   CALL ReadVar(  UnIn, InputFile, InputFileData%BldNd_BlOutNd_Str, 'BldNd_BlOutNd_Str', 'Which nodes to output node data on.'//TRIM(Num2Lstr(I)), ErrStat2, ErrMsg2, UnEc )
+   IF ( ErrStat2 >= AbortErrLev ) THEN
+      InputFileData%BldNd_NumOuts = 0
+      call wrscr( trim(ErrMsg_NoAllBldNdOuts)//' --> '//trim(ErrMsg2) )
+      CALL Cleanup()
+      RETURN  
+   ENDIF 
+
+
+      ! Section header for outlist
+   CALL ReadCom( UnIn, InputFile, 'Section Header: OutList', ErrStat2, ErrMsg2, UnEc )
+   IF ( ErrStat2 >= AbortErrLev ) THEN
+      InputFileData%BldNd_NumOuts = 0
+      call wrscr( trim(ErrMsg_NoAllBldNdOuts)//' --> '//trim(ErrMsg2) )
+      CALL Cleanup()
+      RETURN  
+   ENDIF 
+     
+ 
+      ! OutList - List of user-requested output channels at each node(-):
+   CALL ReadOutputList ( UnIn, InputFile, InputFileData%BldNd_OutList, InputFileData%BldNd_NumOuts, 'OutList', "List of user-requested output channels", ErrStat2, ErrMsg2, UnEc  )     ! Routine in NWTC Subroutine Library
+   IF ( ErrStat2 >= AbortErrLev ) THEN
+      InputFileData%BldNd_NumOuts = 0
+      call wrscr( trim(ErrMsg_NoAllBldNdOuts)//' --> '//trim(ErrMsg2) )
+      CALL Cleanup()
+      RETURN  
+   ENDIF 
+
+
+ 
    !---------------------- END OF FILE -----------------------------------------
       
    CALL Cleanup( )
@@ -2696,7 +2771,7 @@ SUBROUTINE AD_PrintSum( InputFileData, p, u, y, ErrStat, ErrMsg )
          case (2)
             Msg = "Gonzalez's variant (changes in Cn, Cc, and Cm)"
          case (3)
-            Msg = 'Minemma/Pierce variant (changes in Cc and Cm)'      
+            Msg = 'Minnema/Pierce variant (changes in Cc and Cm)'      
          !case (4)
          !   Msg = 'DYSTOOL'      
          case default      
@@ -2751,6 +2826,15 @@ SUBROUTINE AD_PrintSum( InputFileData, p, u, y, ErrStat, ErrMsg )
 
    DO I = 0,p%NumOuts
       WRITE (UnSu,OutPFmt)  I, p%OutParam(I)%Name, p%OutParam(I)%Units
+   END DO             
+
+   WRITE (UnSu,'(15x,A)')
+   WRITE (UnSu,'(15x,A)')
+   WRITE (UnSu,'(15x,A)')  'Requested Output Channels at each blade station:'
+   WRITE (UnSu,'(15x,A)')  'Col   Parameter       Units'
+   WRITE (UnSu,'(15x,A)')  '----  --------------  -----'
+   DO I = 1,p%BldNd_NumOuts
+      WRITE (UnSu,OutPFmt)  I, p%BldNd_OutParam(I)%Name, p%BldNd_OutParam(I)%Units
    END DO             
 #endif
 
