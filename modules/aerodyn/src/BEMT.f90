@@ -952,6 +952,9 @@ subroutine BEMT_UpdateStates( t, n, u1, u2,  p, x, xd, z, OtherState, AFInfo, m,
             call ApplySkewedWakeCorrection_AllNodes(p, u2, m, m%axInduction, m%chi)
 
             !............................................
+            ! If TSR is too low, (start to) turn off induction
+            !............................................
+            call check_turnOffBEMT(p, u2, m%axInduction, m%tanInduction)
             
       end if
    
