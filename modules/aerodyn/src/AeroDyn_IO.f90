@@ -45,7 +45,7 @@ MODULE AeroDyn_IO
 
 
      ! Indices for computing output channels:
-     ! NOTES: 
+     ! NOTES:
      !    (1) These parameters are in the order stored in "OutListParameters.xlsx"
      !    (2) Array AllOuts() must be dimensioned to the value of the largest output parameter
 
@@ -1639,7 +1639,7 @@ SUBROUTINE Calc_WriteOutput( p, u, m, y, OtherState, indx, ErrStat, ErrMsg )
    
       ! blade outputs
    do k=1,p%numBlades
-      m%AllOuts( BAzimuth(k) ) = m%BEMT_u(indx)%psi(k)*R2D 
+      m%AllOuts( BAzimuth(k) ) = MODULO( m%BEMT_u(indx)%psi(k)*R2D, 360.0_ReKi )
     ! m%AllOuts( BPitch(  k) ) = calculated in SetInputsForBEMT
       
       do beta=1,p%NBlOuts
@@ -1758,18 +1758,19 @@ SUBROUTINE Calc_WriteOutput( p, u, m, y, OtherState, indx, ErrStat, ErrMsg )
    m%AllOuts( RtAeroPwr ) = m%BEMT_u(indx)%omega * m%AllOuts( RtAeroMxh )
 
    
+
+   m%AllOuts( RtTSR ) = m%BEMT_u(indx)%TSR
+   
    if ( EqualRealNos( m%V_dot_x, 0.0_ReKi ) ) then
-      m%AllOuts( RtTSR    ) = 0.0_ReKi
       m%AllOuts( RtAeroCp ) = 0.0_ReKi
       m%AllOuts( RtAeroCq ) = 0.0_ReKi
       m%AllOuts( RtAeroCt ) = 0.0_ReKi
    else
       denom = 0.5*p%AirDens*m%AllOuts( RtArea )*m%V_dot_x**2
-      m%AllOuts( RtTSR )    = m%BEMT_u(indx)%omega * rmax / m%V_dot_x
       
       m%AllOuts( RtAeroCp ) = m%AllOuts( RtAeroPwr ) / (denom * m%V_dot_x)
       m%AllOuts( RtAeroCq ) = m%AllOuts( RtAeroMxh ) / (denom * rmax)
-      m%AllOuts( RtAeroCt ) = m%AllOuts( RtAeroFxh ) /  denom            
+      m%AllOuts( RtAeroCt ) = m%AllOuts( RtAeroFxh ) /  denom
    end if              
    
    
@@ -2171,8 +2172,8 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, ADBlFile, OutFileRoot, UnE
    CALL ReadVar( UnIn, InputFile, InputFileData%FLookup, "FLookup", "Flag to indicate whether a lookup for f' will be calculated (TRUE) or whether best-fit exponential equations will be used (FALSE); if FALSE S1-S4 must be provided in airfoil input files [used only when AFAreoMod=2] (flag)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
    
-      ! UACutout - Angle-of-attach beyond which unsteady aerodynamics are disabled (deg)
-!   CALL ReadVar( UnIn, InputFile, InputFileData%UACutout, "FLookup", "Angle-of-attach beyond which unsteady aerodynamics are disabled (deg)", ErrStat2, ErrMsg2, UnEc)
+      ! UACutout - Angle-of-attack beyond which unsteady aerodynamics are disabled (deg)
+!   CALL ReadVar( UnIn, InputFile, InputFileData%UACutout, "UACutout", "Angle-of-attack beyond which unsteady aerodynamics are disabled (deg)", ErrStat2, ErrMsg2, UnEc)
 !      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
       
       ! Return on error at end of section
@@ -2257,7 +2258,7 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, ADBlFile, OutFileRoot, UnE
    !   IF ( ErrStat >= AbortErrLev ) RETURN
       
       ! ADBlFile - Names of files containing distributed aerodynamic properties for each blade (see AD_BladeInputFile type):
-   DO I = 1,MaxBl            
+   DO I = 1,size(ADBlFile)
       CALL ReadVar ( UnIn, InputFile, ADBlFile(I), 'ADBlFile('//TRIM(Num2Lstr(I))//')', 'Name of file containing distributed aerodynamic properties for blade '//TRIM(Num2Lstr(I)), ErrStat2, ErrMsg2, UnEc )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF ( PathIsRelative( ADBlFile(I) ) ) ADBlFile(I) = TRIM(PriPath)//TRIM(ADBlFile(I))
@@ -2679,7 +2680,7 @@ SUBROUTINE AD_PrintSum( InputFileData, p, u, y, ErrStat, ErrMsg )
    WRITE (UnSu,Ec_LgFrmt) p%TwrAero, 'TwrAero', 'Calculate tower aerodynamic loads? '//TRIM(Msg)
 
 
-   if (p%WakeMod==WakeMod_BEMT .or. p%WakeMod==WakeMod_DBEMT) then
+   if (p%WakeMod/=WakeMod_none) then
       WRITE (UnSu,'(A)') '======  Blade-Element/Momentum Theory Options  ======================================================'
       
       ! SkewMod 
@@ -2743,15 +2744,18 @@ SUBROUTINE AD_PrintSum( InputFileData, p, u, y, ErrStat, ErrMsg )
       ! MaxIter 
       
       
-      if (p%WakeMod==WakeMod_DBEMT) then
+      if (p%WakeMod == WakeMod_DBEMT) then
          select case (InputFileData%DBEMT_Mod)
             case (DBEMT_tauConst)
                Msg = 'constant tau1'
             case (DBEMT_tauVaries)
                Msg = 'time-dependent tau1'
-            case default      
-               Msg = 'unknown'      
+            case (DBEMT_cont_tauConst)
+               Msg = 'continuous formulation with constant tau1'
+            case default
+               Msg = 'unknown'
          end select   
+         
          WRITE (UnSu,Ec_IntFrmt) InputFileData%DBEMT_Mod, 'DBEMT_Mod', 'Type of dynamic BEMT (DBEMT) model: '//TRIM(Msg)
          
          if (InputFileData%DBEMT_Mod==DBEMT_tauConst) &
@@ -2800,7 +2804,7 @@ SUBROUTINE AD_PrintSum( InputFileData, p, u, y, ErrStat, ErrMsg )
       
       WRITE (UnSu,"(15x,A)")  'Blade nodes selected for output:  Output node  Analysis node'
       WRITE (UnSu,"(15x,A)")  '                                  -----------  -------------'
-      DO I = 1,size(p%BlOutNd)
+      DO I = 1,p%NBlOuts
          WRITE (UnSu,OutPFmt)  I, p%BlOutNd(I)
       END DO  
    end if
@@ -2821,8 +2825,8 @@ SUBROUTINE AD_PrintSum( InputFileData, p, u, y, ErrStat, ErrMsg )
 
    OutPFmt =  '( 15x, I4, 2X, A '//TRIM(Num2LStr(ChanLen))//',1 X, A'//TRIM(Num2LStr(ChanLen))//' )'
    WRITE (UnSu,'(15x,A)')  'Requested Output Channels:'
-   WRITE (UnSu,'(15x,A)')  'Col   Parameter  Units'
-   WRITE (UnSu,'(15x,A)')  '----  ---------  -----'
+   WRITE (UnSu,'(15x,A)')  'Col   Parameter       Units'
+   WRITE (UnSu,'(15x,A)')  '----  --------------  -----'
 
    DO I = 0,p%NumOuts
       WRITE (UnSu,OutPFmt)  I, p%OutParam(I)%Name, p%OutParam(I)%Units
@@ -3408,7 +3412,7 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
    if ( p%TwrPotent == TwrPotent_none .and. .not. p%TwrShadow ) then
       
          ! BNClrnc is set only when we're computing the tower influence
-      do I = 1,MaxBl  ! all blades (need to do this in a loop because we need the index of InvalidOutput to be an array of rank one)
+      do i = 1,size(BNClrnc,2)  ! all blades (need to do this in a loop because we need the index of InvalidOutput to be an array of rank one)
          InvalidOutput( BNClrnc(:,i) ) = .true.  
       end do
       
@@ -3431,7 +3435,7 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
       
    END DO
    
-   DO I = p%NumBlades+1,MaxBl  ! Invalid blades
+   DO I = p%NumBlades+1,size(BAzimuth,1)  ! Invalid blades
       
       InvalidOutput( BAzimuth( i) ) = .true.
       InvalidOutput( BPitch(   i) ) = .true.
