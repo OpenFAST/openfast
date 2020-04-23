@@ -1209,7 +1209,7 @@ SUBROUTINE SetExternalHydroCoefs(  MCoefMod, MmbrCoefIDIndx, SimplCd, SimplCdMG,
    CASE (3) ! Member-based model: coefficients set using member-specific coefficient tables
        do i = 1, member%NElements + 1
          ! Pull member  end-node data from the tables and then linearly interpolate it onto the interior member nodes    
-         s = (i-1) / member%NElements
+         s = (real(i,ReKi)-1.0) / real(member%NElements,ReKi)
          if ( member%tMG(i) > 0.0_ReKi ) then
             member%Cd    (i) = CoefMembers(MmbrCoefIDIndx)%MemberCdMG1*(1-s) + CoefMembers(MmbrCoefIDIndx)%MemberCdMG2*s
             member%Ca    (i) = CoefMembers(MmbrCoefIDIndx)%MemberCaMG1*(1-s) + CoefMembers(MmbrCoefIDIndx)%MemberCaMG2*s
@@ -1488,7 +1488,7 @@ subroutine SetMemberProperties( gravity, member, MCoefMod, MmbrCoefIDIndx, MmbrF
    member%RMG(N+1) = propSet2%PropD / 2.0 + member%tMG(N+1)
    member%Rin(N+1) = propSet2%PropD / 2.0 - propSet2%PropThck 
    do i = 2,  member%NElements
-      s = (i-1) / member%NElements
+      s = (real(i,ReKi)-1.0) / real(member%NElements,ReKi)
       member%R(  i) =  member%R(  1)*(1-s) + member%R(  N+1)*s
       member%Rin(i) =  member%Rin(1)*(1-s) + member%Rin(N+1)*s
       member%RMG(i) =  member%R(i) + member%tMG(i)
@@ -1555,7 +1555,7 @@ subroutine SetMemberProperties( gravity, member, MCoefMod, MmbrCoefIDIndx, MmbrF
 
    ! calculate h_floor if seabed-piercing
    member%h_floor = 0.0_ReKi
-   member%i_floor = 0
+   member%i_floor = member%NElements+1  ! Default to entire member is below the seabed
    if (Za < -WtrDepth) then
       do i= 2, member%NElements+1
          Za = InitInp%Nodes(member%NodeIndx(i))%Position(3)
@@ -1570,6 +1570,8 @@ subroutine SetMemberProperties( gravity, member, MCoefMod, MmbrCoefIDIndx, MmbrF
             exit
          end if
       end do
+   else
+      member%i_floor = 0 ! lower end is at or above the seabed
    end if
 
 
@@ -2810,64 +2812,68 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
        
       ! External Hydrodynamic Side Loads
       DO i =1,N+1    ! loop through member nodes
-         ! TODO: Note that for computational efficiency, we could precompute h_c and deltal for each element when we are NOT using wave stretching
-         ! We would still need to test at time marching for nodes just below the free surface because that uses the current locations not the reference locations
-         ! see table in Section 7.1.1
-         if ( i == 1 ) then
-            deltal = mem%dl/2.0_ReKi
-            h_c    = mem%dl/4.0_ReKi
-         elseif (i == N+1) then
-            deltal =  mem%dl/2.0_ReKi
-            h_c    = -mem%dl/4.0_ReKi
-         elseif ( mem%i_floor == i ) then ! This node is the upper node of an element which crosses the seabed
-            deltal = mem%dl/2.0_ReKi - mem%h_floor  ! TODO: h_floor is negative valued, should we be subrtracting it from dl/2? GJH
-            h_c    = 0.5_ReKi*(mem%dl/2.0_ReKi + mem%h_floor)
-         else
-            pos1 =  u%Mesh%TranslationDisp(:, mem%NodeIndx(i))   + u%Mesh%Position(:, mem%NodeIndx(i))
-            pos2 =  u%Mesh%TranslationDisp(:, mem%NodeIndx(i+1)) + u%Mesh%Position(:, mem%NodeIndx(i+1))
-            if (pos1(3) <= 0.0 .and. 0.0 < pos2(3) ) then ! This node is just below the free surface !TODO: Needs to be augmented for wave stretching
-               !TODO: Fix this one
-               pos1 =  u%Mesh%Position(:, mem%NodeIndx(i)) ! use reference position for following equation
-               h = (  pos1(3) ) / mem%cosPhi_ref !TODO: Needs to be augmented for wave stretching
-               deltal = mem%dl/2.0 + h
-               h_c    = 0.5*(h-mem%dl/2.0)
+         z1 = u%Mesh%TranslationDisp(3, mem%NodeIndx(i))   + u%Mesh%Position(3, mem%NodeIndx(i))
+         if ( i > mem%i_floor .and. z1 <= 0.0 ) then  ! node is above (or at? TODO: check) seabed and below or at free-surface)
+            ! TODO: Note that for computational efficiency, we could precompute h_c and deltal for each element when we are NOT using wave stretching
+            ! We would still need to test at time marching for nodes just below the free surface because that uses the current locations not the reference locations
+            ! see table in Section 7.1.1
+            if ( i == 1 ) then
+               deltal = mem%dl/2.0_ReKi
+               h_c    = mem%dl/4.0_ReKi
+            elseif (i == N+1) then
+               deltal =  mem%dl/2.0_ReKi
+               h_c    = -mem%dl/4.0_ReKi
+            elseif ( mem%i_floor == i+1 ) then ! This node is the upper node of an element which crosses the seabed
+               deltal = mem%dl/2.0_ReKi - mem%h_floor  ! TODO: h_floor is negative valued, should we be subrtracting it from dl/2? GJH
+               h_c    = 0.5_ReKi*(mem%dl/2.0_ReKi + mem%h_floor)
             else
-               ! This node is a fully submerged interior node
-               deltal = mem%dl
-               h_c    = 0.0_ReKi
-            end if
+               pos1 =  u%Mesh%TranslationDisp(:, mem%NodeIndx(i))   + u%Mesh%Position(:, mem%NodeIndx(i))
+               pos2 =  u%Mesh%TranslationDisp(:, mem%NodeIndx(i+1)) + u%Mesh%Position(:, mem%NodeIndx(i+1))
+               if (pos1(3) <= 0.0 .and. 0.0 < pos2(3) ) then ! This node is just below the free surface !TODO: Needs to be augmented for wave stretching
+                  !TODO: Fix this one
+                  pos1 =  u%Mesh%Position(:, mem%NodeIndx(i)) ! use reference position for following equation
+                  h = (  pos1(3) ) / mem%cosPhi_ref !TODO: Needs to be augmented for wave stretching
+                  deltal = mem%dl/2.0 + h
+                  h_c    = 0.5*(h-mem%dl/2.0)
+               else
+                  ! This node is a fully submerged interior node
+                  deltal = mem%dl
+                  h_c    = 0.0_ReKi
+               end if
             
-         end if
+            end if
 
-         if (i == 1) then
-            dRdl_p  = abs(mem%dRdl_mg(i))
-            dRdl_pp = mem%dRdl_mg(i)   
-         elseif ( i > 1 .and. i < (N+1)) then
-            dRdl_p  = 0.5*( abs(mem%dRdl_mg(i-1)) + abs(mem%dRdl_mg(i)) )
-            dRdl_pp = 0.5*( mem%dRdl_mg(i-1) + mem%dRdl_mg(i) )
-         else 
-            dRdl_p  = abs(mem%dRdl_mg(N))
-            dRdl_pp = mem%dRdl_mg(N)
-         end if
+            if (i == 1) then
+               dRdl_p  = abs(mem%dRdl_mg(i))
+               dRdl_pp = mem%dRdl_mg(i)   
+            elseif ( i > 1 .and. i < (N+1)) then
+               dRdl_p  = 0.5*( abs(mem%dRdl_mg(i-1)) + abs(mem%dRdl_mg(i)) )
+               dRdl_pp = 0.5*( mem%dRdl_mg(i-1) + mem%dRdl_mg(i) )
+            else 
+               dRdl_p  = abs(mem%dRdl_mg(N))
+               dRdl_pp = mem%dRdl_mg(N)
+            end if
          
-         ! ------------------- hydrodynamic drag loads: sides: Section 7.1.2 ------------------------ 
-         vec = matmul( mem%Ak,m%vrel(:,mem%NodeIndx(i)) )
-         f_hydro = mem%Cd(i)*p%WtrDens*mem%RMG(i)*TwoNorm(vec)*vec  +  &
-                   0.5*mem%AxCd(i)*p%WtrDens*pi*mem%RMG(i)*dRdl_p * matmul( dot_product( mem%k, m%vrel(:,mem%NodeIndx(i)) )*mem%kkt, m%vrel(:,mem%NodeIndx(i)) )
-         call LumpDistrHydroLoads( f_hydro, mem%k, mem%dl, h_c, m%F_D(:, mem%NodeIndx(i)) )
+            ! ------------------- hydrodynamic drag loads: sides: Section 7.1.2 ------------------------ 
+            vec = matmul( mem%Ak,m%vrel(:,mem%NodeIndx(i)) )
+            f_hydro = mem%Cd(i)*p%WtrDens*mem%RMG(i)*TwoNorm(vec)*vec  +  &
+                      0.5*mem%AxCd(i)*p%WtrDens*pi*mem%RMG(i)*dRdl_p * matmul( dot_product( mem%k, m%vrel(:,mem%NodeIndx(i)) )*mem%kkt, m%vrel(:,mem%NodeIndx(i)) )
+            call LumpDistrHydroLoads( f_hydro, mem%k, mem%dl, h_c, m%F_D(:, mem%NodeIndx(i)) )
          
-         if ( .not. mem%PropPot ) then
-            ! ------------------- hydrodynamic added mass loads: sides: Section 7.1.3 ------------------------
-            Am = mem%Ca(i)*p%WtrDens*pi*mem%RMG(i)*mem%RMG(i)*mem%Ak + 2.0*mem%AxCa(i)*p%WtrDens*pi*mem%RMG(i)*mem%RMG(i)*dRdl_p*mem%kkt
-            f_hydro = -matmul( Am, u%Mesh%TranslationAcc(:,mem%NodeIndx(i)) )
-            call LumpDistrHydroLoads( f_hydro, mem%k, mem%dl, h_c, m%F_A(:, mem%NodeIndx(i)) )
+            if ( .not. mem%PropPot ) then
+               ! ------------------- hydrodynamic added mass loads: sides: Section 7.1.3 ------------------------
+               Am = mem%Ca(i)*p%WtrDens*pi*mem%RMG(i)*mem%RMG(i)*mem%Ak + 2.0*mem%AxCa(i)*p%WtrDens*pi*mem%RMG(i)*mem%RMG(i)*dRdl_p*mem%kkt
+               f_hydro = -matmul( Am, u%Mesh%TranslationAcc(:,mem%NodeIndx(i)) )
+               call LumpDistrHydroLoads( f_hydro, mem%k, mem%dl, h_c, m%F_A(:, mem%NodeIndx(i)) )
          
-            ! ------------------- hydrodynamic inertia loads: sides: Section 7.1.4 ------------------------
-            f_hydro=mem%Ca(i)*mem%Cp(i)*p%WtrDens*pi*mem%RMG(i)*mem%RMG(i)        * matmul( mem%Ak,  m%FA(:,mem%NodeIndx(i)) ) + &
-                         2.0*mem%AxCa(i)*p%WtrDens*pi*mem%RMG(i)*mem%RMG(i)*dRdl_p * matmul( mem%kkt, m%FA(:,mem%NodeIndx(i)) ) + &
-                         2.0*m%FDynP(mem%NodeIndx(i))*mem%AxCp(i)*pi*mem%RMG(i)*dRdl_pp*mem%k 
-            call LumpDistrHydroLoads( f_hydro, mem%k, mem%dl, h_c, m%F_I(:, mem%NodeIndx(i)) )
-         end if
+               ! ------------------- hydrodynamic inertia loads: sides: Section 7.1.4 ------------------------
+               f_hydro=mem%Ca(i)*mem%Cp(i)*p%WtrDens*pi*mem%RMG(i)*mem%RMG(i)        * matmul( mem%Ak,  m%FA(:,mem%NodeIndx(i)) ) + &
+                            2.0*mem%AxCa(i)*p%WtrDens*pi*mem%RMG(i)*mem%RMG(i)*dRdl_p * matmul( mem%kkt, m%FA(:,mem%NodeIndx(i)) ) + &
+                            2.0*m%FDynP(mem%NodeIndx(i))*mem%AxCp(i)*pi*mem%RMG(i)*dRdl_pp*mem%k 
+               call LumpDistrHydroLoads( f_hydro, mem%k, mem%dl, h_c, m%F_I(:, mem%NodeIndx(i)) )
+            end if
+         end if ! ( i > mem%i_floor .and. Zi <= 0.0 )
+         
       END DO ! i =1,N+1    ! loop through member nodes       
       
       
@@ -2935,6 +2941,10 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       ! --- external buoyancy loads: ends ---
 
       if ( .not. mem%PropPot ) then
+         pos1    = u%Mesh%TranslationDisp(:, mem%NodeIndx(1))   + u%Mesh%Position(:, mem%NodeIndx(1))
+         pos2    = u%Mesh%TranslationDisp(:, mem%NodeIndx(N+1)) + u%Mesh%Position(:, mem%NodeIndx(N+1))
+         z1 = pos1(3)
+         z2 = pos2(3)
          if (mem%i_floor == 0) then  ! both ends above or at seabed
             if (z2<= 0.0_ReKi) then
                ! Compute loads on both ends
