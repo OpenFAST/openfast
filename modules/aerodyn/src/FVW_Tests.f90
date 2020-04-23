@@ -266,9 +266,9 @@ contains
             ! Method 2
             call ui_seg_11(CP-P1, CP-P2, SegGamma1, RegFunction, RegParam1, U1)
             ! Test
-            print*,'Reg function', RegFunction, 'CP',CP
-            print*,'Uind_out',Uind_out
-            print*,'U1      ',U1
+            !print*,'Reg function', RegFunction, 'CP',CP
+            !print*,'Uind_out',Uind_out
+            !print*,'U1      ',U1
             call test_almost_equal('Uind method1/2', U1, Uind_out(:,1), 1e-4_ReKi, .true.,.true.)
             !call test_almost_equal('Uind method1/2', U1, Uind_out(:,1), 1e-4, .false.,.true.)
          enddo
@@ -312,6 +312,63 @@ contains
          enddo
       enddo
    end subroutine
+
+   !>
+   subroutine Test_BiotSavart_Part(ErrStat, ErrMsg)
+      integer(IntKi)      , intent(out) :: ErrStat !< Error status of the operation
+      character(ErrMsgLen), intent(out) :: ErrMsg  !< Error message if ErrStat /= ErrID_None
+      real(ReKi), dimension(3) :: P1,CP
+      real(ReKi), dimension(3) :: U1
+      real(ReKi), dimension(3) :: PartAlpha1 !< Particle intensity alpha=om.dV [m^3/s]
+      real(ReKi) :: RegParam1 !< 
+      integer(IntKi) :: i1,i2
+      integer(IntKi) :: RegFunction 
+      integer(IntKi), parameter :: nPart  = 1
+      integer(IntKi), parameter :: nCPs  = 1
+      real(ReKi),     dimension(3,nCPs) :: CPs             !< Control points
+      real(ReKi),     dimension(3,nPart):: PartPoints     !< Particle points
+      real(ReKi),     dimension(3,nPart):: PartAlpha    !< Particle circulation
+      real(ReKi),     dimension(nPart)  :: RegParam    !< Regularization parameter
+      real(ReKi),     dimension(3,nCPs) :: Uind_out     !< Induced velocity vector - Side effects!!!
+      real(ReKi),     dimension(3,4) :: CPs_test   !< 
+      ! Initialize ErrStat
+      ErrStat = ErrID_None
+      ErrMsg  = ""
+      ! --- Test that the two functions return the same values 
+      P1=(/0.0, 0.0, -1.0 /)
+      CPs_test(:,1) = (/ 0.0,  0., 0.0  /) ! Middle
+      CPs_test(:,2) = P1    ! Extremity
+      CPs_test(:,3) = (/ 0.01, 0.01, -0.9 /) ! Close
+      CPs_test(:,4) = (/ 10.,  0., 0.0  /) ! Far
+      do i1=1,3
+         do i2 = 1, size(CPs_test,2)
+            ! Segment param
+            CP                = CPs_test(:,i2)
+            PartAlpha1(1:2) = 0
+            PartAlpha1(3  ) = 2
+            RegParam1         = 0.5
+            ! One segment param
+            PartPoints(:,1) = P1
+            PartAlpha(:,1)  = PartAlpha1
+            RegParam(:)     = RegParam1
+            CPs (:,1)       = CP
+            RegFunction = idRegPartVALID(i1)
+            ! Method 1
+            Uind_out =0.0_ReKi
+            call ui_part_nograd(CPs,PartPoints, PartAlpha, RegFunction, RegParam, Uind_out, nCPs, nPart)
+            ! Method 2
+            call ui_part_nograd_11(CP-P1, PartAlpha1, RegFunction, RegParam1, U1)
+            ! Test
+            !print*,'Reg function', RegFunction, 'CP',CP
+            !print*,'Uind_out',Uind_out
+            !print*,'U1      ',U1
+            call test_almost_equal('Uind part method1/2', U1, Uind_out(:,1), 1e-4_ReKi, .true.,.true.)
+         enddo
+      enddo
+   end subroutine Test_BiotSavart_Part
+
+
+
 
    !>
    subroutine Test_LatticeToSegment(iStat)
@@ -382,7 +439,7 @@ contains
       CALL ui_seg(1, 1, CPs, &
       1, nC1, nC1, nP1, SegPoints, SegConnct, SegGamma,   &
       SmoothModel, SegEpsilon, Uind)
-      print*,'Uind',Uind
+      !print*,'Uind',Uind
 
       ! --- Convert lattice 2 to segments
       nSpan  = size(LatticePoints2,2)
@@ -454,6 +511,7 @@ contains
       ErrStat = ErrID_None
       ErrMsg  = ""
       call Test_BiotSavart_Sgmt(ErrStat2, ErrMsg2)
+      call Test_BiotSavart_Part(ErrStat2, ErrMsg2)
    end subroutine FVW_RunTests
 
 end module FVW_Tests
