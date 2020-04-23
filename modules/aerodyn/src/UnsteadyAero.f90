@@ -388,6 +388,7 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, KC, BL_
    real(ReKi)                :: K3prime_q                                     !
    real(ReKi)                :: k_mq                                          !
    real(ReKi)                :: Kprimeprime_q                                 !
+   real(ReKi)                :: dynamicFilterCutoffHz                         ! find frequency based on reduced frequency of k = BL_p%filtCutOff
    real(ReKi)                :: LowPassConst
    
 
@@ -437,8 +438,11 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, KC, BL_
    
    ! Low Pass filtering of alpha, q, and Kq in order to deal with numerical issues that arise for very small values of dt
    ! See equations 1.7 and 1.8 of the manual
+   ! This filter is a Simple Infinite Impulse Response Filter
+   ! See https://en.wikipedia.org/wiki/Low-pass_filter#Simple_infinite_impulse_response_filter
    
-   LowPassConst  =  exp(-2.0_ReKi*PI*p%dt*BL_p%filtCutOff) ! from Eqn 1.8 [7]
+   dynamicFilterCutoffHz = max( 1.0_ReKi, u%U ) * BL_p%filtCutOff / PI / p%C(i,j)
+   LowPassConst  =  exp(-2.0_ReKi*PI*p%dt*dynamicFilterCutoffHz) ! from Eqn 1.8 [7]
    
    KC%alpha_filt_cur = LowPassConst*alpha_filt_minus1 + (1.0_ReKi-LowPassConst)*u%alpha ! from eq 1.8 [1: typo in documentation, though]
    
