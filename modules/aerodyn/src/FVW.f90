@@ -92,6 +92,9 @@ subroutine FVW_Init(AFInfo, InitInp, u, p, x, xd, z, OtherState, y, m, Interval,
 #else
    call WrScr(' - No OpenMP support')
 #endif
+   if (DEV_VERSION) then
+      CALL FVW_RunTests(ErrStat2, ErrMsg2); if (Failed()) return
+   endif
 
    ! Set Parameters and *Misc* from inputs
    CALL FVW_SetParametersFromInputs(InitInp, p, ErrStat2, ErrMsg2); if(Failed()) return
@@ -155,10 +158,6 @@ subroutine FVW_Init(AFInfo, InitInp, u, p, x, xd, z, OtherState, y, m, Interval,
    ! NOTE: quick and dirty since this should belong to AD
    interval = InitInp%DTAero ! important, UA, needs proper interval
    call UA_Init_Wrapper(AFInfo, InitInp, interval, p, x, xd, OtherState, m, ErrStat2, ErrMsg2); if (Failed()) return
-
-   if (DEV_VERSION) then
-      CALL FVW_RunTests(ErrStat2, ErrMsg2); if (Failed()) return
-   endif
 
    ! Framework types unused
    Interval = InitInp%DTAero

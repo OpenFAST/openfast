@@ -367,6 +367,121 @@ contains
       enddo
    end subroutine Test_BiotSavart_Part
 
+   !> This test compares calls using the tree algorithm and the direct N^2 evaluation
+   subroutine Test_BiotSavart_PartTree(ErrStat, ErrMsg)
+      integer(IntKi)      , intent(out) :: ErrStat !< Error status of the operation
+      character(ErrMsgLen), intent(out) :: ErrMsg  !< Error message if ErrStat /= ErrID_None
+      type(T_Tree) :: Tree
+      real(ReKi), dimension(3) :: P1,CP
+      real(ReKi), dimension(3) :: U_ref
+      real(ReKi), dimension(3) :: PartAlpha1 !< Particle intensity alpha=om.dV [m^3/s]
+      real(ReKi)     :: RegParam1   !< 
+      integer(IntKi) :: i1,i2,i3,k, iCP
+      integer(IntKi) :: RegFunction
+      integer(IntKi) :: nPart  = 1
+      integer(IntKi) :: nCPs  = 1
+      real(ReKi), dimension(:,:), allocatable :: CPs        !< Control points
+      real(ReKi), dimension(:,:), allocatable :: PartPoints !< Particle points
+      real(ReKi), dimension(:,:), allocatable :: PartAlpha  !< Particle circulation
+      real(ReKi), dimension(:)  , allocatable :: RegParam   !< Regularization parameter
+      real(ReKi), dimension(:,:), allocatable :: Uind1      !< Induced velocity vector - Side effects!!!
+      real(ReKi), dimension(:,:), allocatable :: Uind2      !< Induced velocity vector - Side effects!!!
+      real(ReKi) :: BranchFactor, BranchSmall
+      real(ReKi),     dimension(3,5) :: CPs_test   !< 
+      ! Initialize ErrStat
+      ErrStat = ErrID_None
+      ErrMsg  = ""
+      BranchFactor = 2.0_ReKi !< Should be above1
+      BranchSmall  = 0.0_ReKi
+      RegFunction = 1
+
+      ! --- Test with 0 particle
+      nPart=0; nCPs= 1
+      call alloc(nPart,nCPs)
+      CPs(:,1) = (/0.0,0.0,0.0/)
+      Uind1 =0.0_ReKi
+      Uind2 =0.0_ReKi
+      U_ref =0.0_ReKi
+      call grow_tree(Tree, PartPoints, PartAlpha, RegFunction, RegParam, 0)
+      !call print_tree(Tree)
+      call ui_tree(Tree, CPs, 0, 1, nCPs, nCPs, BranchFactor, BranchSmall,  Uind2, ErrStat, ErrMsg)
+      call ui_part_nograd(CPs,PartPoints, PartAlpha, RegFunction, RegParam, Uind1, nCPs, nPart)
+      ! Test
+      call test_almost_equal('Uind tree 0 part', U_ref, Uind2(:,1), 1e-4_ReKi, .true.,.true.)
+      call cut_tree(Tree)
+      call dealloc()
+
+
+      ! --- Test with 1 particle
+      nPart=1; nCPs= 1
+      call alloc(nPart,nCPs)
+      CPs(:,1) = (/0.0,0.0,0.0/)
+      PartPoints(1:3,1) = (/1.0,0.0,0.0/)
+      U_ref =0.0_ReKi
+      call grow_tree(Tree, PartPoints, PartAlpha, RegFunction, RegParam, 0)
+      !call print_tree(Tree)
+      call ui_tree(Tree, CPs, 0, 1, nCPs, nCPs, BranchFactor, BranchSmall,  Uind2, ErrStat, ErrMsg)
+      call ui_part_nograd(CPs,PartPoints, PartAlpha, RegFunction, RegParam, Uind1, nCPs, nPart)
+      ! Test
+      call test_almost_equal('Uind tree 1 part', Uind1, Uind2, 1e-4_ReKi, .true.,.true.)
+      call cut_tree(Tree)
+      !call print_tree(Tree)
+      call dealloc()
+
+      ! --- Test with 81 particles on different CPs, inside and outside the distribution of particles
+      nPart=3*3**3; nCPs= 1
+      call alloc(nPart,nCPs)
+	  k=0
+	  do i1 = -1,1,1
+		 do i2 = -1,1,1
+			do i3 = -1,1,1
+			   ! NOTE: here we purposely duplicate a point, since since is a challenging case
+			   k=k+1; PartPoints(1:3,k) = (/ i1, i2, i3  /)
+			   k=k+1; PartPoints(1:3,k) = (/ i1, i2, i3  /)
+			   k=k+1; PartPoints(1:3,k) = (/ i1*1.2, i2*1.3, i3*1.1  /)
+			enddo
+		 enddo
+	  enddo
+      CPs_test(:,1) = (/ 0.0,  0., 0.0  /) ! Middle
+      CPs_test(:,2) = (/ 1.0, 1.0, 1.0  /) ! Close to a cell center
+      CPs_test(:,3) = PartPoints(:,5)      ! On a particle point
+      CPs_test(:,4) = (/ 2.0, 2.0, 2.0 /)  ! Starts to be far from most points
+      CPs_test(:,5) = (/ 10., 10., 10.0  /) ! Far from all
+
+      call grow_tree(Tree, PartPoints, PartAlpha, RegFunction, RegParam, 0)
+      !call print_tree(Tree)
+	  do iCP=1,4
+		 CPs(:,1) = CPs_test(:,icp)
+		 Uind2=0.0_ReKi; Uind1=0.0_ReKi
+		 call ui_tree(Tree, CPs, 0, 1, nCPs, nCPs, BranchFactor, BranchSmall,  Uind2, ErrStat, ErrMsg)
+		 call ui_part_nograd(CPs,PartPoints, PartAlpha, RegFunction, RegParam, Uind1, nCPs, nPart)
+		 !print*,'Uind',Uind1, Uind2
+		 ! Test
+		 call test_almost_equal('Uind tree 81 part', Uind1, Uind2, 1e-2_ReKi, .true.,.true.)
+	  enddo
+      call cut_tree(Tree)
+      ! --- Test that tree ui cannot be called after tree has been cut
+      call ui_tree(Tree, CPs, 0, 1, nCPs, nCPs, BranchFactor, BranchSmall, Uind2, ErrStat, ErrMsg)
+      call test_equal('Err. stat tree cut',ErrStat,ErrID_Fatal)
+      call dealloc()
+
+   contains
+      subroutine alloc(nPart, nCPs)
+         integer(IntKi) :: nPart, nCPs
+         allocate(PartPoints(3,nPart), PartAlpha(3,nPart), RegParam(nPart))
+         allocate(CPs(3,nCPs), Uind1(3,nCPs), Uind2(3,nCPs))
+         RegParam(:)=0.01
+         PartAlpha(1,:)  = 0.0
+         PartAlpha(2,:)  = 0.0
+         PartAlpha(3,:)  = 1.0
+         Uind1 =0.0_ReKi
+         Uind2 =0.0_ReKi
+      end subroutine 
+      subroutine dealloc()
+         deallocate(PartPoints, PartAlpha, RegParam)
+         deallocate(CPs, Uind1, Uind2)
+      end subroutine 
+   end subroutine Test_BiotSavart_PartTree
 
 
 
@@ -512,6 +627,7 @@ contains
       ErrMsg  = ""
       call Test_BiotSavart_Sgmt(ErrStat2, ErrMsg2)
       call Test_BiotSavart_Part(ErrStat2, ErrMsg2)
+      call Test_BiotSavart_PartTree(ErrStat2, ErrMsg2)
    end subroutine FVW_RunTests
 
 end module FVW_Tests
