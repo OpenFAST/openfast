@@ -49,13 +49,6 @@ typedef     ^                   ^               DbKi                            
 typedef     ^                   ^               IntKi                            VTKCoord      -  - -    "Switch for VTK outputs coordinate  system" -
 typedef     ^                   ^               CHARACTER(1024)                  RootName      -  -  - "RootName for writing output files"	-
 
-# ....... OtherStateType ............
-# FVW_OtherStateType
-typedef  FVW/FVW           OtherStateType       IntKi                            NULL              -  -  - "Number of active near wake panels"      -
-# TODO UA
-typedef   ^                       ^             UA_OtherStateType                UA                -  -  -  "other states for UnsteadyAero"        -
-typedef   ^                       ^             Logical                          UA_Flag       {:}{:}  - -  "logical flag indicating whether to use UnsteadyAero"        -
-
 # ....... MiscVars ............
 # FVW_MiscVarType
 typedef  FVW/FVW           MiscVarType          Logical                          FirstCall      -  - - "True if this is the first call to update state (used in CalcOutput)" -
@@ -138,12 +131,19 @@ typedef     ^                   ^               ReKi                            
 # FVW_DiscreteStateType
 typedef FVW/FVW            DiscreteStateType    ReKi                             NULL         -  -  - "Empty to satisfy framework"           -
 # TODO UA
-typedef   ^                      ^              UA_DiscreteStateType              UA          -  -  - "states for UnsteadyAero"        -
+typedef   ^                      ^              UA_DiscreteStateType             UA           -  -  - "states for UnsteadyAero"        -
 
 #.......... ConstraintStateType ......
 # FVW_ConstraintStateType
 typedef FVW/FVW            ConstraintStateType  Reki                             residual         -  -  "Residual" -
 typedef    ^                    ^               Reki                             Gamma_LL     ::  -  -  "Circulation on the wing lifting line" -
+
+# ....... OtherStateType ............
+# FVW_OtherStateType
+typedef  FVW/FVW           OtherStateType       IntKi                            NULL              -  -  - "Number of active near wake panels"      -
+# TODO UA
+typedef   ^                       ^             UA_OtherStateType                UA                -  -  -  "other states for UnsteadyAero"        -
+typedef   ^                       ^             Logical                          UA_Flag       {:}{:}  - -  "logical flag indicating whether to use UnsteadyAero"        -
 
 
 #.......... InitInputType ......

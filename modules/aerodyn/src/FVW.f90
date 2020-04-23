@@ -999,6 +999,9 @@ subroutine UA_Init_Wrapper(AFInfo, InitInp, interval, p, x, xd, OtherState, m, E
    allocate ( OtherState%UA_Flag( InitInp%numBladeNodes, InitInp%NumBlades ), STAT = ErrStat2 )
    OtherState%UA_Flag=m%UA_Flag
    if ( m%UA_Flag ) then
+      ErrMsg2='Unsteady aerodynamic (`AFAeroMod>1`) cannot be used with the free wake code (`WakeMod=3`) for now.'; ErrStat2=ErrID_Fatal;
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'UA_Init_Wrapper'); return
+
       ! ---Condensed version of "BEMT_Set_UA_InitData"
       allocate(Init_UA_Data%c(InitInp%numBladeNodes,InitInp%numBlades), STAT = errStat2)
       do j = 1,InitInp%NumBlades; do i = 1,InitInp%numBladeNodes;
@@ -1014,6 +1017,7 @@ subroutine UA_Init_Wrapper(AFInfo, InitInp, interval, p, x, xd, OtherState, m, E
       Init_UA_Data%a_s             = InitInp%a_s ! m/s  
       ! --- UA init
       call UA_Init( Init_UA_Data, u_UA, m%p_UA, xd%UA, OtherState%UA, m%y_UA, m%m_UA, interval, InitOutData_UA, ErrStat2, ErrMsg2); if(Failed())return
+      m%p_UA%ShedEffect=.False. !< Important, when coupling UA wih vortex code, shed vorticity is inherently accounted for
       ! --- Condensed version of "BEMT_CheckInitUA"
       do j = 1,InitInp%numBlades; do i = 1,InitInp%numBladeNodes; ! Loop over blades and nodes
          call UA_TurnOff_param(AFInfo(p%AFindx(i,j)), ErrStat2, ErrMsg2)
