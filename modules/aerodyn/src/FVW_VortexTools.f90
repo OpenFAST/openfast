@@ -184,8 +184,47 @@ contains
             endif
          enddo
       enddo
-
    end subroutine LatticeToSegments
+
+    !> Convert segments between index iSegStart and iSegEnd to particles. 
+    subroutine SegmentsToPart(SegPoints, SegConnct, SegGamma, SegEpsilon, iSegStart, iSegEnd, nPartPerSeg, PartPoints, PartAlpha, PartEpsilon, iHeadPart)
+       real(ReKi),     dimension(:,:), intent(in   ) :: SegPoints     !< 
+       integer(IntKi), dimension(:,:), intent(in   ) :: SegConnct     !< 
+       real(ReKi),     dimension(:),   intent(in   ) :: SegGamma      !< 
+       real(ReKi),     dimension(:),   intent(in   ) :: SegEpsilon    !< 
+       integer,                        intent(in   ) :: iSegStart     !< Index where to start in Seg* vectors
+       integer,                        intent(in   ) :: iSegEnd       !<
+       integer,                        intent(in   ) :: nPartPerSeg   !< Segments will be dividied into nPartPerSeg particles
+       real(ReKi),     dimension(:,:), intent(inout) :: PartPoints    !< Particle points (3 x nPart) 
+       real(ReKi),     dimension(:,:), intent(inout) :: PartAlpha     !< Particle intensities (3 x nPart)
+       real(ReKi),     dimension(:),   intent(inout) :: PartEpsilon   !< Particle regularization parameter (nPart)
+       integer,                        intent(inout) :: iHeadPart     !< Index where to start in Part* vectors
+       real(ReKi), dimension(3) :: P1, P2, DP  !< Segment extremities
+       real(ReKi), dimension(3) :: SegDir  !< direction vector
+       real(ReKi), dimension(3) :: PartInt
+       real(ReKi)     :: PartLen         !< Initial "length" of the blob
+       real(ReKi)     :: PartEps         !< Regularization of the blob
+       real(ReKi)     :: SegLen
+       integer(IntKi) :: ip1, ip2        !< index of points to be converted
+       integer(IntKi) :: iSeg, iSubPart
+       ! loop on selected segments
+       do iSeg=iSegStart,iSegEnd
+          P1 = SegPoints(1:3,SegConnct(1,iSeg)) ! Segment extremities
+          P2 = SegPoints(1:3,SegConnct(2,iSeg))
+          DP = P2-P1
+          SegLen  = norm2(DP)
+          SegDir  = DP/SegLen                     ! Unit vector along segment direction
+          PartInt = DP*SegGamma(iSeg)/nPartPerSeg ! alpha = Gamma.L/n = omega.dV [m^3/s]
+          PartEps = SegEpsilon(iSeg)                   ! TODO this might need tuning depending on RegFunction and n_new
+          PartLen = SegLen/nPartPerSeg
+          do iSubPart=0,nPartPerSeg-1
+             PartPoints(1:3, iHeadPart) = P1(1:3) + (0.5_ReKi+iSubPart)*PartLen*SegDir(1:3) ! ds/2:ds:L 
+             PartAlpha (1:3, iHeadPart) = PartInt(1:3)
+             PartEpsilon(    iHeadPart) = PartEps
+             iHeadPart = iHeadPart +1 
+          enddo
+       enddo 
+    end subroutine SegmentsToPart
 
    subroutine print_mean_4d(M, Label)
       real(ReKi), dimension(:,:,:,:), intent(in) :: M

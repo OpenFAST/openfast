@@ -215,9 +215,6 @@ contains
    subroutine Test_BiotSavart_Sgmt(ErrStat, ErrMsg)
       integer(IntKi)      , intent(out) :: ErrStat !< Error status of the operation
       character(ErrMsgLen), intent(out) :: ErrMsg  !< Error message if ErrStat /= ErrID_None
-      !integer(IntKi)       :: ErrStat2
-      !character(ErrMsgLen) :: ErrMsg2
-      ! 
       real(ReKi), dimension(3) :: P1,P2,P3,CP
       real(ReKi), dimension(3) :: U1
       real(ReKi) :: SegGamma1 !< Circulation  [m^2/s]
@@ -431,17 +428,17 @@ contains
       ! --- Test with 81 particles on different CPs, inside and outside the distribution of particles
       nPart=3*3**3; nCPs= 1
       call alloc(nPart,nCPs)
-	  k=0
-	  do i1 = -1,1,1
-		 do i2 = -1,1,1
-			do i3 = -1,1,1
-			   ! NOTE: here we purposely duplicate a point, since since is a challenging case
-			   k=k+1; PartPoints(1:3,k) = (/ i1, i2, i3  /)
-			   k=k+1; PartPoints(1:3,k) = (/ i1, i2, i3  /)
-			   k=k+1; PartPoints(1:3,k) = (/ i1*1.2, i2*1.3, i3*1.1  /)
-			enddo
-		 enddo
-	  enddo
+      k=0
+      do i1 = -1,1,1
+         do i2 = -1,1,1
+            do i3 = -1,1,1
+               ! NOTE: here we purposely duplicate a point, since since is a challenging case
+               k=k+1; PartPoints(1:3,k) = (/ i1, i2, i3  /)
+               k=k+1; PartPoints(1:3,k) = (/ i1, i2, i3  /)
+               k=k+1; PartPoints(1:3,k) = (/ i1*1.2, i2*1.3, i3*1.1  /)
+            enddo
+         enddo
+      enddo
       CPs_test(:,1) = (/ 0.0,  0., 0.0  /) ! Middle
       CPs_test(:,2) = (/ 1.0, 1.0, 1.0  /) ! Close to a cell center
       CPs_test(:,3) = PartPoints(:,5)      ! On a particle point
@@ -450,15 +447,15 @@ contains
 
       call grow_tree(Tree, PartPoints, PartAlpha, RegFunction, RegParam, 0)
       !call print_tree(Tree)
-	  do iCP=1,4
-		 CPs(:,1) = CPs_test(:,icp)
-		 Uind2=0.0_ReKi; Uind1=0.0_ReKi
-		 call ui_tree(Tree, CPs, 0, 1, nCPs, nCPs, BranchFactor, BranchSmall,  Uind2, ErrStat, ErrMsg)
-		 call ui_part_nograd(CPs,PartPoints, PartAlpha, RegFunction, RegParam, Uind1, nCPs, nPart)
-		 !print*,'Uind',Uind1, Uind2
-		 ! Test
-		 call test_almost_equal('Uind tree 81 part', Uind1, Uind2, 1e-2_ReKi, .true.,.true.)
-	  enddo
+      do iCP=1,4
+         CPs(:,1) = CPs_test(:,icp)
+         Uind2=0.0_ReKi; Uind1=0.0_ReKi
+         call ui_tree(Tree, CPs, 0, 1, nCPs, nCPs, BranchFactor, BranchSmall,  Uind2, ErrStat, ErrMsg)
+         call ui_part_nograd(CPs,PartPoints, PartAlpha, RegFunction, RegParam, Uind1, nCPs, nPart)
+         !print*,'Uind',Uind1, Uind2
+         ! Test
+         call test_almost_equal('Uind tree 81 part', Uind1, Uind2, 1e-2_ReKi, .true.,.true.)
+      enddo
       call cut_tree(Tree)
       ! --- Test that tree ui cannot be called after tree has been cut
       call ui_tree(Tree, CPs, 0, 1, nCPs, nCPs, BranchFactor, BranchSmall, Uind2, ErrStat, ErrMsg)
@@ -483,7 +480,117 @@ contains
       end subroutine 
    end subroutine Test_BiotSavart_PartTree
 
+   !> Compares the velocity field obtained from a segment and its convert to particle version
+   subroutine Test_SegmentsToPart(ErrStat, ErrMsg)
+      integer(IntKi)      , intent(out) :: ErrStat !< Error status of the operation
+      character(ErrMsgLen), intent(out) :: ErrMsg  !< Error message if ErrStat /= ErrID_None
+      real(ReKi),     dimension(:,:), allocatable :: PartPoints   !< Particle points
+      real(ReKi),     dimension(:,:), allocatable :: PartAlpha    !< Particle circulation
+      real(ReKi),     dimension(:)  , allocatable :: PartEpsilon  !< Regularization parameter
+      integer(IntKi), parameter :: nSegTot  = 2
+      integer(IntKi), parameter :: nSegPTot = 3
+      integer(IntKi), parameter :: nCPsTot  = 10
+      real(ReKi),     dimension(3,nSegPTot) :: SegPoints     !< Segment points
+      integer(IntKi), dimension(2,nSegTot) :: SegConnct      !< Connectivity, indices of segments points iSeg1, iSeg2
+      real(ReKi),     dimension(nSegTot)   :: SegGamma       !< Segment circulation
+      real(ReKi),     dimension(nSegTot)   :: SegEpsilon     !< Regularization parameter
+      real(ReKi),     dimension(3,nCPsTot) :: CPs            !< Control points
+      real(ReKi),     dimension(3,nCPsTot) :: Uind1          !< Induced velocity vector - Side effects!!!
+      real(ReKi),     dimension(3,nCPsTot) :: Uind2          !< Induced velocity vector - Side effects!!!
+      real(ReKi) :: RegParam1 !< 
+      integer(IntKi) :: i1,i2, nPartPerSeg, nPart, iHeadP
+      integer(IntKi) :: RegFunctionPart, RegFunctionSeg
+      ErrStat = ErrID_None
+      ErrMsg  = ""
+      RegParam1=1.0
+      ! Creating two aligned segments
+      SegConnct(:,1)=(/1,2/)
+      SegConnct(:,2)=(/2,3/)
+      SegPoints(:,1) = (/0.  ,0.,-1./)
+      SegPoints(:,2) = (/0.  ,0., 0./)
+      SegPoints(:,3) = (/0.  ,0., 1./)
+      SegGamma(:)    =4
+      SegEpsilon = RegParam1
+      ! Points where velocity will be evaluated
+      CPs(:,1) = SegPoints(:,1)
+      CPs(:,2) = SegPoints(:,2)
+      CPs(:,3) = SegPoints(:,3)
+      CPs(:,4) = (/ 0.2, 0.2,   0.0/)
+      CPs(:,6) = (/ 0.5, 0.5,   0. /)
+      CPs(:,8) = (/ 1.0, 1.0,   0./)
+      CPs(:,9) = (/ 10.0, 10.0, 0./)
+      CPs(:,5) = (/ 0.2, 0.2,   0.5/)
+      CPs(:,7) = (/ 0.5, 0.5,   0.5/)
+      CPs(:,10) = (/ 1.0, 1.0,   1./)
 
+      ! --- Test 1 - 10 particles, no regularization
+      RegFunctionSeg  = idRegNone
+      RegFunctionPart = idRegNone
+      nPartPerSeg = 10
+
+      nPart = nPartPerSeg * nSegTot
+      call alloc(nPart)
+      iHeadP=1
+      call SegmentsToPart(SegPoints, SegConnct, SegGamma, SegEpsilon, 1, nSegTot, nPartPerSeg, PartPoints, PartAlpha, PartEpsilon, iHeadP)
+
+      Uind1 =0.0_ReKi; Uind2 =0.0_ReKi;
+      call ui_seg(1, nCPsTot, CPs, 1, nSegTot, nSegTot, nSegPTot, SegPoints, SegConnct, SegGamma, RegFunctionSeg, SegEpsilon, Uind1)
+      call ui_part_nograd(CPs,PartPoints, PartAlpha, RegFunctionPart, PartEpsilon, Uind2, nCPsTot, nPart)
+      call test_almost_equal('Uind 10 part/sgmt no reg', Uind1, Uind2, 1e-3_ReKi, .true.,.true.)
+      call dealloc()
+
+      ! --- Test 1 - 2 particles, no regularization
+      RegFunctionSeg  = idRegNone
+      RegFunctionPart = idRegNone
+      nPartPerSeg = 2
+
+      nPart = nPartPerSeg * nSegTot
+      call alloc(nPart)
+      iHeadP=1
+      call SegmentsToPart(SegPoints, SegConnct, SegGamma, SegEpsilon, 1, nSegTot, nPartPerSeg, PartPoints, PartAlpha, PartEpsilon, iHeadP)
+
+      Uind1 =0.0_ReKi; Uind2 =0.0_ReKi;
+      call ui_seg(1, nCPsTot, CPs, 1, nSegTot, nSegTot, nSegPTot, SegPoints, SegConnct, SegGamma, RegFunctionSeg, SegEpsilon, Uind1)
+      call ui_part_nograd(CPs,PartPoints, PartAlpha, RegFunctionPart, PartEpsilon, Uind2, nCPsTot, nPart)
+      call test_almost_equal('Uind 2 part/sgmt noreg', Uind1, Uind2, 3e-1_ReKi, .true.,.true.)
+      call dealloc()
+
+
+      ! --- Test 3 - 10 particles, regularization 
+      ! NOTE: more work needed to match the regularization functions and parameters optimally
+      RegFunctionSeg = idRegLambOseen
+      RegFunctionPart = idRegExp
+      nPartPerSeg = 10
+
+      nPart = nPartPerSeg * nSegTot
+      call alloc(nPart)
+      iHeadP=1
+      call SegmentsToPart(SegPoints, SegConnct, SegGamma, SegEpsilon, 1, nSegTot, nPartPerSeg, PartPoints, PartAlpha, PartEpsilon, iHeadP)
+
+      Uind1 =0.0_ReKi; Uind2 =0.0_ReKi;
+      call ui_seg(1, nCPsTot, CPs, 1, nSegTot, nSegTot, nSegPTot, SegPoints, SegConnct, SegGamma, RegFunctionSeg, SegEpsilon, Uind1)
+      call ui_part_nograd(CPs,PartPoints, PartAlpha, RegFunctionPart, PartEpsilon, Uind2, nCPsTot, nPart)
+      !print'(A,10F7.3)','Uind1',Uind1(1,:)
+      !print'(A,10F7.3)','Uind2',Uind2(1,:)
+      !print'(A,10F7.3)','Uind1',Uind1(2,:)
+      !print'(A,10F7.3)','Uind2',Uind2(2,:)
+      !print'(A,10F7.3)','Uind1',Uind1(3,:)
+      !print'(A,10F7.3)','Uind2',Uind2(3,:)
+      call test_almost_equal('Uind 10 part/sgmt w.reg', Uind1, Uind2, 5e-2_ReKi, .true.,.true.)
+      call dealloc()
+
+   contains 
+      subroutine alloc(n)
+         integer(IntKi) :: n
+         allocate(PartPoints(3,n), PartAlpha(3,n), PartEpsilon(n))
+         PartAlpha(:,:)  = -99999.99_ReKi
+         PartPoints(:,:) = -99999.99_ReKi
+         PartEpsilon(:)  = -99999.99_ReKi
+      end subroutine 
+      subroutine dealloc()
+         deallocate(PartPoints, PartAlpha, PartEpsilon)
+      end subroutine 
+   end subroutine Test_SegmentsToPart
 
    !>
    subroutine Test_LatticeToSegment(iStat)
@@ -628,6 +735,7 @@ contains
       call Test_BiotSavart_Sgmt(ErrStat2, ErrMsg2)
       call Test_BiotSavart_Part(ErrStat2, ErrMsg2)
       call Test_BiotSavart_PartTree(ErrStat2, ErrMsg2)
+      call Test_SegmentsToPart(ErrStat2, ErrMsg2)
    end subroutine FVW_RunTests
 
 end module FVW_Tests
