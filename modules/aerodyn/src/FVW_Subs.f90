@@ -48,7 +48,7 @@ module FVW_SUBS
    ! Implementation 
    integer(IntKi), parameter :: iNWStart=2 !< Index in r%NW where the near wake start (if >1 then the Wing panels are included in r_NW)
    integer(IntKi), parameter :: FWnSpan=1  !< Number of spanwise far wake panels ! TODO make it an input later
-   logical       , parameter :: DEV_VERSION=.FALSE.
+   logical       , parameter :: DEV_VERSION=.False.
 contains
 
 !==========================================================================
@@ -750,6 +750,16 @@ subroutine WakeInducedVelocities(p, x, m, ErrStat, ErrMsg)
    integer(IntKi) :: iW, nSeg, nSegP, nCPs, iHeadP
    integer(IntKi) :: nFWEff  ! Number of farwake panels that are free at current tmie step
    logical        :: bMirror ! True if we mirror the vorticity wrt ground
+   ! TODO new options
+   integer(IntKi) :: nPart
+   integer(IntKi) :: nPartPerSeg
+   integer(IntKi) :: UIMethod
+   integer(IntKi) :: RegFunctionPart
+   real(ReKi) :: BranchFactor, BranchSmall
+   type(T_Tree)   :: Tree
+   real(ReKi), dimension(:,:), allocatable :: PartPoints !< Particle points
+   real(ReKi), dimension(:,:), allocatable :: PartAlpha  !< Particle circulation
+   real(ReKi), dimension(:)  , allocatable :: PartEpsilon !< Regularization parameter
    ErrStat= ErrID_None
    ErrMsg =''
 
@@ -771,7 +781,42 @@ subroutine WakeInducedVelocities(p, x, m, ErrStat, ErrMsg)
    if (DEV_VERSION) then
       print'(A,I0,A,I0,A,I0)','Convection - nSeg:',nSeg,' - nSegP:',nSegP, ' - nCPs:',nCPs
    endif
-   call ui_seg( 1, nCPs, m%CPs, 1, nSeg, nSeg, nSegP, m%SegPoints, m%SegConnct, m%SegGamma, p%RegFunction, m%SegEpsilon, m%Uind)
+
+   ! --- Converting to particles
+   ! TODO new parameters
+   UIMethod = 1 ! 1=Seg, 2=PartTree,  3=Part, 
+   BranchFactor = 2.0_ReKi !< Should be above1
+   BranchSmall  = 0.0_ReKi
+   if (UIMethod>1) then
+      iHeadP=1
+      nPartPerSeg = 1
+      nPart = nPartPerSeg * nSeg 
+      allocate(PartPoints(3,nPart), PartAlpha(3,nPart), PartEpsilon(nPart))
+      PartAlpha(:,:)  = -99999.99_ReKi
+      PartPoints(:,:) = -99999.99_ReKi
+      PartEpsilon(:)  = -99999.99_ReKi
+      call SegmentsToPart(m%SegPoints, m%SegConnct, m%SegGamma, m%SegEpsilon, 1, nSeg, nPartPerSeg, PartPoints, PartAlpha, PartEpsilon, iHeadP)
+      if (p%RegFunction/=idRegNone) then
+         RegFunctionPart = idRegExp
+      endif
+   endif
+
+   ! --- Getting induced velocity
+   m%Uind=0.0_ReKi ! very important due to side effects of ui_* methods
+   if (UIMethod==1) then
+      call ui_seg( 1, nCPs, m%CPs, 1, nSeg, nSeg, nSegP, m%SegPoints, m%SegConnct, m%SegGamma, p%RegFunction, m%SegEpsilon, m%Uind)
+
+   elseif (UIMethod==2) then
+      call grow_tree(Tree, PartPoints, PartAlpha, RegFunctionPart, PartEpsilon, 0)
+      !call print_tree(Tree)
+      call ui_tree(Tree, m%CPs, 0, 1, nCPs, nCPs, BranchFactor, BranchSmall, m%Uind, ErrStat, ErrMsg)
+      call cut_tree(Tree)
+      deallocate(PartPoints, PartAlpha, PartEpsilon)
+
+   elseif (UIMethod==3) then
+      call ui_part_nograd(m%CPs ,PartPoints, PartAlpha, RegFunctionPart, PartEpsilon, m%Uind, nCPs, nPart)
+      deallocate(PartPoints, PartAlpha, PartEpsilon)
+   endif
    call UnPackInducedVelocity()
 
 contains
@@ -779,7 +824,6 @@ contains
    subroutine PackConvectingPoints()
       ! Counting total number of control points that convects
       nCPs = CountCPs(p, m%nNW, nFWEff)
-      m%Uind=0.0_ReKi ! very important due to side effects of ui_seg
       m%CPs=-999.9_ReKi
       ! Packing
       iHeadP=1
