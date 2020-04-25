@@ -63,9 +63,9 @@ IMPLICIT NONE
     REAL(ReKi)  :: WingRegParam      !< Regularization parameter of the wing [-]
     INTEGER(IntKi)  :: ShearModel      !< Option for shear modelling [-]
     LOGICAL  :: TwrShadowOnWake      !< Include tower shadow effects on wake [-]
-    INTEGER(IntKi)  :: TreeModel      !< Tree calculation method [-]
+    INTEGER(IntKi)  :: VelocityMethod      !< Velocity calculation method [-]
     REAL(ReKi)  :: TreeBranchFactor      !< Factor used to determine if a point is far enough [-]
-    REAL(ReKi)  :: TreeBranchSmall      !< Distance below which a branch is consisdered small enough [-]
+    INTEGER(IntKi)  :: PartPerSegment      !< Number of particles per segment, e.g. for tree method [-]
     REAL(DbKi)  :: DTaero      !< Time interval for calls calculations [s]
     REAL(DbKi)  :: DTfvw      !< Time interval for calculating wake induced velocities [s]
     REAL(ReKi)  :: KinVisc      !< Kinematic air viscosity [m^2/s]
@@ -218,9 +218,9 @@ IMPLICIT NONE
     REAL(ReKi)  :: WingRegParam      !< Factor used in the regularization  [-]
     INTEGER(IntKi)  :: ShearModel      !< Option for shear modelling [-]
     LOGICAL  :: TwrShadowOnWake      !< Include tower shadow effects on wake [-]
-    INTEGER(IntKi)  :: TreeModel      !< Tree calculation method [-]
+    INTEGER(IntKi)  :: VelocityMethod      !< Velocity calculation method [-]
     REAL(ReKi)  :: TreeBranchFactor      !< Factor used to determine if a point is far enough [-]
-    REAL(ReKi)  :: TreeBranchSmall      !< Distance below which a branch is consisdered small enough [-]
+    INTEGER(IntKi)  :: PartPerSegment      !< Number of particles per segment, e.g. for tree method [-]
     INTEGER(IntKi)  :: WrVTK      !< Outputs VTK at each calcoutput call, even if main fst doesnt do it [-]
     INTEGER(IntKi)  :: VTKBlades      !< Outputs VTk for each blade 0=no blade, 1=Bld 1 [-]
     REAL(DbKi)  :: DTvtk      !< Requested timestep between VTK outputs (calculated from the VTK_fps read in) [s]
@@ -314,9 +314,9 @@ ENDIF
     DstParamData%WingRegParam = SrcParamData%WingRegParam
     DstParamData%ShearModel = SrcParamData%ShearModel
     DstParamData%TwrShadowOnWake = SrcParamData%TwrShadowOnWake
-    DstParamData%TreeModel = SrcParamData%TreeModel
+    DstParamData%VelocityMethod = SrcParamData%VelocityMethod
     DstParamData%TreeBranchFactor = SrcParamData%TreeBranchFactor
-    DstParamData%TreeBranchSmall = SrcParamData%TreeBranchSmall
+    DstParamData%PartPerSegment = SrcParamData%PartPerSegment
     DstParamData%DTaero = SrcParamData%DTaero
     DstParamData%DTfvw = SrcParamData%DTfvw
     DstParamData%KinVisc = SrcParamData%KinVisc
@@ -420,9 +420,9 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! WingRegParam
       Int_BufSz  = Int_BufSz  + 1  ! ShearModel
       Int_BufSz  = Int_BufSz  + 1  ! TwrShadowOnWake
-      Int_BufSz  = Int_BufSz  + 1  ! TreeModel
+      Int_BufSz  = Int_BufSz  + 1  ! VelocityMethod
       Re_BufSz   = Re_BufSz   + 1  ! TreeBranchFactor
-      Re_BufSz   = Re_BufSz   + 1  ! TreeBranchSmall
+      Int_BufSz  = Int_BufSz  + 1  ! PartPerSegment
       Db_BufSz   = Db_BufSz   + 1  ! DTaero
       Db_BufSz   = Db_BufSz   + 1  ! DTfvw
       Re_BufSz   = Re_BufSz   + 1  ! KinVisc
@@ -549,12 +549,12 @@ ENDIF
       Int_Xferred   = Int_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+1-1 ) = TRANSFER( InData%TwrShadowOnWake , IntKiBuf(1), 1)
       Int_Xferred   = Int_Xferred   + 1
-      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%TreeModel
+      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%VelocityMethod
       Int_Xferred   = Int_Xferred   + 1
       ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%TreeBranchFactor
       Re_Xferred   = Re_Xferred   + 1
-      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%TreeBranchSmall
-      Re_Xferred   = Re_Xferred   + 1
+      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%PartPerSegment
+      Int_Xferred   = Int_Xferred   + 1
       DbKiBuf ( Db_Xferred:Db_Xferred+(1)-1 ) = InData%DTaero
       Db_Xferred   = Db_Xferred   + 1
       DbKiBuf ( Db_Xferred:Db_Xferred+(1)-1 ) = InData%DTfvw
@@ -732,12 +732,12 @@ ENDIF
       Int_Xferred   = Int_Xferred + 1
       OutData%TwrShadowOnWake = TRANSFER( IntKiBuf( Int_Xferred ), mask0 )
       Int_Xferred   = Int_Xferred + 1
-      OutData%TreeModel = IntKiBuf( Int_Xferred ) 
+      OutData%VelocityMethod = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
       OutData%TreeBranchFactor = ReKiBuf( Re_Xferred )
       Re_Xferred   = Re_Xferred + 1
-      OutData%TreeBranchSmall = ReKiBuf( Re_Xferred )
-      Re_Xferred   = Re_Xferred + 1
+      OutData%PartPerSegment = IntKiBuf( Int_Xferred ) 
+      Int_Xferred   = Int_Xferred + 1
       OutData%DTaero = DbKiBuf( Db_Xferred ) 
       Db_Xferred   = Db_Xferred + 1
       OutData%DTfvw = DbKiBuf( Db_Xferred ) 
@@ -6298,9 +6298,9 @@ ENDIF
     DstInputFileData%WingRegParam = SrcInputFileData%WingRegParam
     DstInputFileData%ShearModel = SrcInputFileData%ShearModel
     DstInputFileData%TwrShadowOnWake = SrcInputFileData%TwrShadowOnWake
-    DstInputFileData%TreeModel = SrcInputFileData%TreeModel
+    DstInputFileData%VelocityMethod = SrcInputFileData%VelocityMethod
     DstInputFileData%TreeBranchFactor = SrcInputFileData%TreeBranchFactor
-    DstInputFileData%TreeBranchSmall = SrcInputFileData%TreeBranchSmall
+    DstInputFileData%PartPerSegment = SrcInputFileData%PartPerSegment
     DstInputFileData%WrVTK = SrcInputFileData%WrVTK
     DstInputFileData%VTKBlades = SrcInputFileData%VTKBlades
     DstInputFileData%DTvtk = SrcInputFileData%DTvtk
@@ -6377,9 +6377,9 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! WingRegParam
       Int_BufSz  = Int_BufSz  + 1  ! ShearModel
       Int_BufSz  = Int_BufSz  + 1  ! TwrShadowOnWake
-      Int_BufSz  = Int_BufSz  + 1  ! TreeModel
+      Int_BufSz  = Int_BufSz  + 1  ! VelocityMethod
       Re_BufSz   = Re_BufSz   + 1  ! TreeBranchFactor
-      Re_BufSz   = Re_BufSz   + 1  ! TreeBranchSmall
+      Int_BufSz  = Int_BufSz  + 1  ! PartPerSegment
       Int_BufSz  = Int_BufSz  + 1  ! WrVTK
       Int_BufSz  = Int_BufSz  + 1  ! VTKBlades
       Db_BufSz   = Db_BufSz   + 1  ! DTvtk
@@ -6461,12 +6461,12 @@ ENDIF
       Int_Xferred   = Int_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+1-1 ) = TRANSFER( InData%TwrShadowOnWake , IntKiBuf(1), 1)
       Int_Xferred   = Int_Xferred   + 1
-      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%TreeModel
+      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%VelocityMethod
       Int_Xferred   = Int_Xferred   + 1
       ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%TreeBranchFactor
       Re_Xferred   = Re_Xferred   + 1
-      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%TreeBranchSmall
-      Re_Xferred   = Re_Xferred   + 1
+      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%PartPerSegment
+      Int_Xferred   = Int_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%WrVTK
       Int_Xferred   = Int_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%VTKBlades
@@ -6559,12 +6559,12 @@ ENDIF
       Int_Xferred   = Int_Xferred + 1
       OutData%TwrShadowOnWake = TRANSFER( IntKiBuf( Int_Xferred ), mask0 )
       Int_Xferred   = Int_Xferred + 1
-      OutData%TreeModel = IntKiBuf( Int_Xferred ) 
+      OutData%VelocityMethod = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
       OutData%TreeBranchFactor = ReKiBuf( Re_Xferred )
       Re_Xferred   = Re_Xferred + 1
-      OutData%TreeBranchSmall = ReKiBuf( Re_Xferred )
-      Re_Xferred   = Re_Xferred + 1
+      OutData%PartPerSegment = IntKiBuf( Int_Xferred ) 
+      Int_Xferred   = Int_Xferred + 1
       OutData%WrVTK = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
       OutData%VTKBlades = IntKiBuf( Int_Xferred ) 

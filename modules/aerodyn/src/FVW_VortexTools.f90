@@ -198,32 +198,40 @@ contains
        real(ReKi),     dimension(:,:), intent(inout) :: PartPoints    !< Particle points (3 x nPart) 
        real(ReKi),     dimension(:,:), intent(inout) :: PartAlpha     !< Particle intensities (3 x nPart)
        real(ReKi),     dimension(:),   intent(inout) :: PartEpsilon   !< Particle regularization parameter (nPart)
-       integer,                        intent(inout) :: iHeadPart     !< Index where to start in Part* vectors
+       integer,    optional,           intent(inout) :: iHeadPart     !< Index where to start in Part* vectors
        real(ReKi), dimension(3) :: P1, P2, DP  !< Segment extremities
        real(ReKi), dimension(3) :: SegDir  !< direction vector
        real(ReKi), dimension(3) :: PartInt
        real(ReKi)     :: PartLen         !< Initial "length" of the blob
        real(ReKi)     :: PartEps         !< Regularization of the blob
        real(ReKi)     :: SegLen
-       integer(IntKi) :: ip1, ip2        !< index of points to be converted
+       integer(IntKi) :: iPart           !< index in particle vectors
        integer(IntKi) :: iSeg, iSubPart
+       if (present(iHeadPart)) then
+          iPart = iHeadPart
+       else
+          iPart = 1
+       endif
        ! loop on selected segments
        do iSeg=iSegStart,iSegEnd
           P1 = SegPoints(1:3,SegConnct(1,iSeg)) ! Segment extremities
           P2 = SegPoints(1:3,SegConnct(2,iSeg))
           DP = P2-P1
-          SegLen  = norm2(DP)
+          SegLen  = sqrt(DP(1)**2 + DP(2)**2 + DP(3)**2)
           SegDir  = DP/SegLen                     ! Unit vector along segment direction
           PartInt = DP*SegGamma(iSeg)/nPartPerSeg ! alpha = Gamma.L/n = omega.dV [m^3/s]
           PartEps = SegEpsilon(iSeg)                   ! TODO this might need tuning depending on RegFunction and n_new
           PartLen = SegLen/nPartPerSeg
           do iSubPart=0,nPartPerSeg-1
-             PartPoints(1:3, iHeadPart) = P1(1:3) + (0.5_ReKi+iSubPart)*PartLen*SegDir(1:3) ! ds/2:ds:L 
-             PartAlpha (1:3, iHeadPart) = PartInt(1:3)
-             PartEpsilon(    iHeadPart) = PartEps
-             iHeadPart = iHeadPart +1 
+             PartPoints(1:3, iPart) = P1(1:3) + (0.5_ReKi+iSubPart)*PartLen*SegDir(1:3) ! ds/2:ds:L 
+             PartAlpha (1:3, iPart) = PartInt(1:3)
+             PartEpsilon(    iPart) = PartEps
+             iPart = iPart +1 
           enddo
        enddo 
+       if (present(iHeadPart)) then
+          iHeadPart=iPart
+       endif
     end subroutine SegmentsToPart
 
    subroutine print_mean_4d(M, Label)
@@ -334,12 +342,8 @@ contains
          node%nPart    = 1
       else
          ! Domain dimensions
-         max_x=maxval(Part%P(1,1:Part%n))
-         max_y=maxval(Part%P(2,1:Part%n))
-         max_z=maxval(Part%P(3,1:Part%n))
-         min_x=minval(Part%P(1,1:Part%n))
-         min_y=minval(Part%P(2,1:Part%n))
-         min_z=minval(Part%P(3,1:Part%n))
+         max_x=maxval(Part%P(1,1:Part%n)); max_y=maxval(Part%P(2,1:Part%n)); max_z=maxval(Part%P(3,1:Part%n))
+         min_x=minval(Part%P(1,1:Part%n)); min_y=minval(Part%P(2,1:Part%n)); min_z=minval(Part%P(3,1:Part%n))
 
          ! Init of trunc
          ! Radius taken slightly bigger than domain extent. This radius will be divided by 2 successively
@@ -369,27 +373,22 @@ contains
       Tree%bGrown = .true.
    end subroutine grow_tree
 
+   !> Recursive function to grow/setup a tree. 
+   !! Note, needed preliminary calc are done by grow_tree before
    recursive subroutine grow_tree_rec(node, Part)
       type(T_Node), target     :: node !<
       type(T_Part), intent(in) :: Part !<
       integer :: i
-      ! Test if there are enough particles on the node to build new branchess
-      ! The case of only one particle should be handled upstream by allocating one leaf to the parent node
-!       if(node%nPart>1) then
-         !  Sub Step:
-         !   -  compute moments and center for the current node
-         !   -  allocate branches and leaves
-         call grow_tree_substep(node, Part)
-         ! Call grow_tree on branches
-         if(associated(node%branches)) then
-            do i = 1,size(node%branches)
-               call grow_tree_rec(node%branches(i), Part)
-            end do
-         endif
-!       else
-!          print*,'nPart',node%nPart, "Build tree rec called with npart<=1"
-!          STOP
-!       endif
+      !  Sub Step:
+      !   -  compute moments and center for the current node
+      !   -  allocate branches and leaves
+      call grow_tree_substep(node, Part)
+      ! Call grow_tree on branches
+      if(associated(node%branches)) then
+         do i = 1,size(node%branches)
+            call grow_tree_rec(node%branches(i), Part)
+         end do
+      endif
    end subroutine  grow_tree_rec
 
    !> Perform a substep of tree growth, growing sub branches from a given node/cell
@@ -398,7 +397,7 @@ contains
    !!   - Compute node center (barycenter of vorticity)
    !!   - Compute node moments
    !!   - Distribute particles in each 8 octants. Branches are not created for empty octant
-   !!   - Allocate branches and distribute particles to them
+   !!   - Allocate branches and leaves and distribute particles to them
    subroutine grow_tree_substep(node, Part)
       type(T_Node), intent(inout) :: node !< Current node we are growing from
       type(T_Part), intent(in)    :: Part !< All particles info
@@ -435,8 +434,8 @@ contains
          if (associated(node%iPart)) deallocate(node%iPart)
          return ! NOTE: we exit 
       endif
-      nodeBaryCenter  = nodeBaryCenter/wTot ! barycenter of vorticity
-      node%center = nodeBaryCenter  ! updating
+      nodeBaryCenter = nodeBaryCenter/wTot ! barycenter of vorticity
+      node%center   = nodeBaryCenter  ! updating
 
       ! --- Calculation of moments about nodeBaryCenter
       do i = 1,node%nPart
@@ -457,7 +456,7 @@ contains
          end do
       end do
 
-      ! --- Distributing particles to the 8 octants, based on the geometric center!
+      ! --- Distributing particles to the 8 octants (based on the geometric center!)
       allocate (PartOctant(1:node%nPart))
       npart_per_octant(1:8)=0
       do i = 1,node%nPart
@@ -467,12 +466,13 @@ contains
          if (PartPos(1) > nodeGeomCenter(1)) iPartOctant = iPartOctant + int(1,IK1)
          if (PartPos(2) > nodeGeomCenter(2)) iPartOctant = iPartOctant + int(2,IK1)
          if (PartPos(3) > nodeGeomCenter(3)) iPartOctant = iPartOctant + int(4,IK1)
-         npart_per_octant(iPartOctant) = npart_per_octant(iPartOctant) + 1 ! Counter of particles per branch
+         npart_per_octant(iPartOctant) = npart_per_octant(iPartOctant) + 1 ! Counter of particles per octant
          PartOctant(i)=iPartOctant ! Store in which octant particle i is
       end do
 
       ! --- Leaves and branches
       ! A node contains a combination of child nodes and leaves (single particles)
+      ! TODO: introduce a "minimum cell size", (e.g. cell radius is less than the Distance for direct evaluation, then all should be leaves)
       nLeaves          = 0
       nBranches        = 0
       octant2branches  = 0
@@ -484,6 +484,7 @@ contains
          else if(npart_per_octant(iOctant)>1) then
             if (npart_per_octant(iOctant)==node%nPart) then
                ! All particle falls into the same octant, if they all have the same location, we would divide forever.
+               ! Quick fix below
                max_x=maxval(Part%P(1,node%iPart(:))); max_y=maxval(Part%P(2,node%iPart(:))); max_z=maxval(Part%P(3,node%iPart(:)))
                min_x=minval(Part%P(1,node%iPart(:))); min_y=minval(Part%P(2,node%iPart(:))); min_z=minval(Part%P(3,node%iPart(:)))
                if (max(abs(max_x-min_x),abs(max_y-min_y),abs(max_z-min_z))< 1.0e-5) then
@@ -524,9 +525,9 @@ contains
             ! NOTE: this is geometric center not barycenter
             locCenter = nodeGeomCenter + 0.5*halfSize*(/ (-1)**(iOctant), (-1)**floor(0.5*real(iOctant-1)+1), (-1)**floor(0.25*real(iOctant-1)+1) /)
             ! Init of branches
-            node%branches(iBranch)%radius  = halfSize  !< TODO NAN
-            node%branches(iBranch)%center  = locCenter !< TODO NAN
-            node%branches(iBranch)%Moments = 0.0_ReKi  !< TODO NAN
+            node%branches(iBranch)%radius  = halfSize  ! 
+            node%branches(iBranch)%center  = locCenter ! NOTE: this is the geometric center
+            node%branches(iBranch)%Moments = 0.0_ReKi  ! 
             node%branches(iBranch)%branches=>null()
             node%branches(iBranch)%leaves=>null()
          endif
@@ -536,7 +537,7 @@ contains
       ! Store indices of the particles the sub-branch contains
       i1=0; i2=0; i3=0; i4=0; i5=0; i6=0; i7=0; i8=0;
       do i = 1,node%nPart
-         iBranch     = octant2branches(PartOctant(i))
+         iBranch = octant2branches(PartOctant(i))
          if(iBranch>0) then
             select case(iBranch)
             case(1);i1=i1+1; node%branches(1)%iPart(i1) = node%iPart(i)
@@ -562,6 +563,8 @@ contains
       if (allocated(PartOctant)) deallocate(PartOctant)
    end subroutine grow_tree_substep
 
+   !> Grow a tree in "parallel", since recursive calls cannot be parallized easily, we unroll the different layer calls
+   !! Note, needed preliminary calc are done by grow_tree before!
    subroutine grow_tree_parallel(Root, Part)
       type(T_Node), intent(inout) :: Root
       type(T_Part), intent(in) :: Part
@@ -569,7 +572,7 @@ contains
       integer :: i1
       integer :: i2
 
-      ! ---  Unrolled version of the grow_tree for the first node
+      ! ---  Unrolled version of grow_tree for the first node
       !  Sub Step:
       !   -  compute moments and center for the current node
       !   -  allocate branches and leaves
@@ -580,14 +583,14 @@ contains
       else
          nBranches=size(Root%branches)
          if (nBranches==0) then
-            print*,'No branches'
+            print*,'No branches' ! This should not happen
             STOP
          else
-            ! Call "buildTree" on branches
+            ! Call "grow_tree" on branches
 
             !$OMP PARALLEL default(shared)
 
-            ! ---  Unrolled version of the grow_tree for the second levels
+            ! ---  Unrolled version of grow_tree for the second levels
             !$OMP do private(i) schedule(runtime)
             do i = 1,nBranches ! maximum 8 branches
                if(Root%branches(i)%nPart>1) then ! I dont think this test is needed
@@ -596,7 +599,7 @@ contains
             end do
             !$OMP end do
             !$OMP barrier ! we need to be sure that all the branches were built
-            ! ---  Unrolled version of the grow_tree for third node levels
+            ! ---  Unrolled version of grow_tree for third node levels
             !$OMP do private(i,i1,i2) schedule(runtime)
             do i = 1,nBranches*8 ! maximum 64 sub branches
                i1=(i-1)/8+1;
@@ -606,9 +609,9 @@ contains
                      call grow_tree_rec(Root%branches(i1)%branches(i2), Part)
                   endif
                endif
-
             enddo
             !$OMP end do 
+            !Note: We could add more levels 
             !$OMP END PARALLEL
          endif
       endif
@@ -737,15 +740,14 @@ contains
    ! --------------------------------------------------------------------------------
    ! --- Velocity computation 
    ! --------------------------------------------------------------------------------
-   subroutine ui_tree(Tree, CPs, ioff, icp_beg, icp_end, nCPs, BranchFactor, BranchSmall, Uind, ErrStat, ErrMsg)
+   subroutine ui_tree(Tree, CPs, ioff, icp_beg, icp_end, BranchFactor, DistanceDirect, Uind, ErrStat, ErrMsg)
       use FVW_BiotSavart, only: fourpi_inv, ui_part_nograd_11
       type(T_Tree), target,          intent(inout) :: Tree            !< 
-      integer,                       intent(in   ) :: nCPs            !< 
       integer,                       intent(in   ) :: ioff            !< 
       integer,                       intent(in   ) :: icp_beg         !< 
       integer,                       intent(in   ) :: icp_end         !< 
       real(ReKi),                    intent(in   ) :: BranchFactor    !<
-      real(ReKi),                    intent(in   ) :: BranchSmall     !<
+      real(ReKi),                    intent(in   ) :: DistanceDirect  !< Distance under which direct evaluation should be done no matter what the tree cell size is
       real(ReKi), dimension(:,:),    intent(in   ) :: CPs             !< Control Points  (3 x nCPs)
       real(ReKi), dimension(:,:),    intent(inout) :: Uind            !< Induced velocity at CPs, with side effects (3 x nCPs)
       integer(IntKi),                intent(  out) :: ErrStat         !< Error status of the operation
@@ -777,9 +779,8 @@ contains
          real(ReKi),dimension(3),intent(inout) :: CP, Uind  !< Velocity at control point, with side effect
          integer, intent(inout) :: nDirect,nQuad
          type(T_Node), intent(inout) :: node
-         real(ReKi) :: distMin, coeff
-         real(ReKi),dimension(3) :: DeltaP, phi, quad, Uind_B
-         real(ReKi),dimension(3) :: Uind_T
+         real(ReKi) :: distDirect, coeff
+         real(ReKi),dimension(3) :: DeltaP, phi, Uloc
          real(ReKi) :: x,y,z,mx,my,mz,r
          integer :: i,j,ieqj
          integer :: iPart
@@ -791,29 +792,30 @@ contains
                do i =1,size(node%leaves) 
                   iPart=node%leaves(i)
                   DeltaP = CP(1:3) - Part%P(1:3,iPart)
-                  call  ui_part_nograd_11(DeltaP, Part%Alpha(1:3,iPart), Part%RegFunction, Part%RegParam(iPart), Uind_B)
+                  call  ui_part_nograd_11(DeltaP, Part%Alpha(1:3,iPart), Part%RegFunction, Part%RegParam(iPart), Uloc)
                   nDirect=nDirect+1
-                  Uind(1:3) = Uind(1:3) + Uind_B
+                  Uind(1:3) = Uind(1:3) + Uloc
                enddo
             endif
          else
-            distMin = BranchFactor*node%radius                             ! Minimum distance for quadrupole calculation
-            DeltaP  = - node%center + CP(1:3)                              ! Vector between the control point and the center of the branch
-            r       = ( DeltaP(1)**2 + DeltaP(2)**2 + DeltaP(3)**2) ** 0.5 ! Norm
-            ! Test if the control point is far enough from the branch node
-            if ((r<distMin .or. r<BranchSmall)) then
+            distDirect = max(BranchFactor*node%radius, DistanceDirect) ! Under this distance-> Direct eval., Above it -> quadrupole calculation
+            DeltaP  = - node%center + CP(1:3)                          ! Vector between the control point and the center of the branch
+            r       = sqrt( DeltaP(1)**2 + DeltaP(2)**2 + DeltaP(3)**2)
+            ! Test if the control point is too close from the branch node so that a direct evaluation is needed 
+            if (r<distDirect) then
                ! We are too close, perform direct evaluation using children (leaves and branches)
                if(associated(node%leaves)) then
                   do i =1,size(node%leaves) 
                      iPart=node%leaves(i)
                      DeltaP = CP(1:3) - Part%P(1:3,iPart)
-                     call  ui_part_nograd_11(DeltaP, Part%Alpha(1:3,iPart), Part%RegFunction, Part%RegParam(iPart), Uind_B)
+                     call  ui_part_nograd_11(DeltaP, Part%Alpha(1:3,iPart), Part%RegFunction, Part%RegParam(iPart), Uloc)
                      nDirect=nDirect+1
-                     Uind(1:3) = Uind(1:3) + Uind_B
+                     Uind(1:3) = Uind(1:3) + Uloc
                   enddo
                endif
                if(associated(node%branches)) then
-                  do i =1,size(node%branches) 
+                  ! TODO: consider implementing a recursive method for that: direct call on all children
+                  do i =1,size(node%branches)
                      call ui_tree_11(node%branches(i), CP, Uind, nDirect, nQuad)
                   end do
                endif
@@ -826,39 +828,39 @@ contains
                phi = node%Moments(1:3,M0)/r**3*fourpi_inv
 
                ! Speed, order 0
-               Uind_T(1) = phi(2)*z - phi(3)*y
-               Uind_T(2) = phi(3)*x - phi(1)*z
-               Uind_T(3) = phi(1)*y - phi(2)*x
-               Uind = Uind+Uind_T
+               Uloc(1) = phi(2)*z - phi(3)*y
+               Uloc(2) = phi(3)*x - phi(1)*z
+               Uloc(3) = phi(1)*y - phi(2)*x
+               Uind = Uind+Uloc
 
                ! Speed, order 1
-               Uind_T=0.0_ReKi
+               Uloc=0.0_ReKi
                coeff = 3.0_ReKi*x*fourpi_inv/r**5
-               Uind_T(1) = Uind_T(1)- coeff*(node%Moments(3,M1_1)*y-node%Moments(2,M1_1)*z)
-               Uind_T(2) = Uind_T(2)- coeff*(node%Moments(1,M1_1)*z-node%Moments(3,M1_1)*x)
-               Uind_T(3) = Uind_T(3)- coeff*(node%Moments(2,M1_1)*x-node%Moments(1,M1_1)*y)
+               Uloc(1) = Uloc(1)- coeff*(node%Moments(3,M1_1)*y-node%Moments(2,M1_1)*z)
+               Uloc(2) = Uloc(2)- coeff*(node%Moments(1,M1_1)*z-node%Moments(3,M1_1)*x)
+               Uloc(3) = Uloc(3)- coeff*(node%Moments(2,M1_1)*x-node%Moments(1,M1_1)*y)
 
                coeff = 3.0_ReKi*y*fourpi_inv/r**5
-               Uind_T(1) = Uind_T(1) - coeff*(node%Moments(3,M1_2)*y-node%Moments(2,M1_2)*z)
-               Uind_T(2) = Uind_T(2) - coeff*(node%Moments(1,M1_2)*z-node%Moments(3,M1_2)*x)
-               Uind_T(3) = Uind_T(3) - coeff*(node%Moments(2,M1_2)*x-node%Moments(1,M1_2)*y)
+               Uloc(1) = Uloc(1) - coeff*(node%Moments(3,M1_2)*y-node%Moments(2,M1_2)*z)
+               Uloc(2) = Uloc(2) - coeff*(node%Moments(1,M1_2)*z-node%Moments(3,M1_2)*x)
+               Uloc(3) = Uloc(3) - coeff*(node%Moments(2,M1_2)*x-node%Moments(1,M1_2)*y)
 
                coeff = 3.0_ReKi*z*fourpi_inv/r**5
-               Uind_T(1) = Uind_T(1) - coeff*(node%Moments(3,M1_3)*y-node%Moments(2,M1_3)*z)
-               Uind_T(2) = Uind_T(2) - coeff*(node%Moments(1,M1_3)*z-node%Moments(3,M1_3)*x)
-               Uind_T(3) = Uind_T(3) - coeff*(node%Moments(2,M1_3)*x-node%Moments(1,M1_3)*y)
+               Uloc(1) = Uloc(1) - coeff*(node%Moments(3,M1_3)*y-node%Moments(2,M1_3)*z)
+               Uloc(2) = Uloc(2) - coeff*(node%Moments(1,M1_3)*z-node%Moments(3,M1_3)*x)
+               Uloc(3) = Uloc(3) - coeff*(node%Moments(2,M1_3)*x-node%Moments(1,M1_3)*y)
 
                coeff =   fourpi_inv/r**3
-               Uind_T(1) = Uind_T(1) + coeff*node%Moments(3,M1_2) - coeff*node%Moments(2,M1_3)
-               Uind_T(2) = Uind_T(2) + coeff*node%Moments(1,M1_3) - coeff*node%Moments(3,M1_1)
-               Uind_T(3) = Uind_T(3) + coeff*node%Moments(2,M1_1) - coeff*node%Moments(1,M1_2)
-               Uind=Uind+Uind_T
-               quad =0.0_ReKi
+               Uloc(1) = Uloc(1) + coeff*node%Moments(3,M1_2) - coeff*node%Moments(2,M1_3)
+               Uloc(2) = Uloc(2) + coeff*node%Moments(1,M1_3) - coeff*node%Moments(3,M1_1)
+               Uloc(3) = Uloc(3) + coeff*node%Moments(2,M1_1) - coeff*node%Moments(1,M1_2)
+               Uind=Uind+Uloc
+               Uloc =0.0_ReKi
                do i =1,3
                   coeff = 1.5_ReKi*fourpi_inv/r**5
-                  quad(1) = quad(1) + coeff * (y*node%Moments(3,5+2*(i/2)+3*(i/3)) - z*node%Moments(2,5+2*(i/2)+3*(i/3)))
-                  quad(2) = quad(2) + coeff * (z*node%Moments(1,5+2*(i/2)+3*(i/3)) - x*node%Moments(3,5+2*(i/2)+3*(i/3)))
-                  quad(3) = quad(3) + coeff * (x*node%Moments(2,5+2*(i/2)+3*(i/3)) - y*node%Moments(1,5+2*(i/2)+3*(i/3)))
+                  Uloc(1) = Uloc(1) + coeff * (y*node%Moments(3,5+2*(i/2)+3*(i/3)) - z*node%Moments(2,5+2*(i/2)+3*(i/3)))
+                  Uloc(2) = Uloc(2) + coeff * (z*node%Moments(1,5+2*(i/2)+3*(i/3)) - x*node%Moments(3,5+2*(i/2)+3*(i/3)))
+                  Uloc(3) = Uloc(3) + coeff * (x*node%Moments(2,5+2*(i/2)+3*(i/3)) - y*node%Moments(1,5+2*(i/2)+3*(i/3)))
                   do j=1,i
                      if (i==j) then
                         ieqj = 1
@@ -866,21 +868,21 @@ contains
                         ieqj = 2 
                      end if
                      coeff = -7.5_ReKi*DeltaP(i)*DeltaP(j)*fourpi_inv/r**7
-                     quad(1) = quad(1) + ieqj * coeff * ( y*node%Moments(3,3+i+j+i/3) - z*node%Moments(2,3+i+j+i/3))
-                     quad(2) = quad(2) + ieqj * coeff * ( z*node%Moments(1,3+i+j+i/3) - x*node%Moments(3,3+i+j+i/3))
-                     quad(3) = quad(3) + ieqj * coeff * ( x*node%Moments(2,3+i+j+i/3) - y*node%Moments(1,3+i+j+i/3))
+                     Uloc(1) = Uloc(1) + ieqj * coeff * ( y*node%Moments(3,3+i+j+i/3) - z*node%Moments(2,3+i+j+i/3))
+                     Uloc(2) = Uloc(2) + ieqj * coeff * ( z*node%Moments(1,3+i+j+i/3) - x*node%Moments(3,3+i+j+i/3))
+                     Uloc(3) = Uloc(3) + ieqj * coeff * ( x*node%Moments(2,3+i+j+i/3) - y*node%Moments(1,3+i+j+i/3))
                   end do
                end do
                coeff = 3.0_ReKi*fourpi_inv/r**5
-               quad(1) = quad(1) + coeff * ( y*node%Moments(3,M2_22) - z*node%Moments(2,M2_33) )
-               quad(2) = quad(2) + coeff * ( z*node%Moments(1,M2_33) - x*node%Moments(3,M2_11) )
-               quad(3) = quad(3) + coeff * ( x*node%Moments(2,M2_11) - y*node%Moments(1,M2_22) )
+               Uloc(1) = Uloc(1) + coeff * ( y*node%Moments(3,M2_22) - z*node%Moments(2,M2_33) )
+               Uloc(2) = Uloc(2) + coeff * ( z*node%Moments(1,M2_33) - x*node%Moments(3,M2_11) )
+               Uloc(3) = Uloc(3) + coeff * ( x*node%Moments(2,M2_11) - y*node%Moments(1,M2_22) )
 
                coeff = 3.0_ReKi*fourpi_inv/r**5 
-               quad(1) = quad(1) + coeff * (z*node%Moments(3,M2_32) + x*node%Moments(3,M2_21) - x*node%Moments(2,M2_31) - y*node%Moments(2,M2_32))
-               quad(2) = quad(2) + coeff * (x*node%Moments(1,M2_31) + y*node%Moments(1,M2_32) - y*node%Moments(3,M2_21) - z*node%Moments(3,M2_31))
-               quad(3) = quad(3) + coeff * (y*node%Moments(2,M2_21) + z*node%Moments(2,M2_31) - z*node%Moments(1,M2_32) - x*node%Moments(1,M2_21))
-               Uind(1:3) = Uind(1:3) + quad
+               Uloc(1) = Uloc(1) + coeff * (z*node%Moments(3,M2_32) + x*node%Moments(3,M2_21) - x*node%Moments(2,M2_31) - y*node%Moments(2,M2_32))
+               Uloc(2) = Uloc(2) + coeff * (x*node%Moments(1,M2_31) + y*node%Moments(1,M2_32) - y*node%Moments(3,M2_21) - z*node%Moments(3,M2_31))
+               Uloc(3) = Uloc(3) + coeff * (y*node%Moments(2,M2_21) + z*node%Moments(2,M2_31) - z*node%Moments(1,M2_32) - x*node%Moments(1,M2_21))
+               Uind(1:3) = Uind(1:3) + Uloc
                nQuad=nQuad+1
             end if ! Far enough
          end if ! had more than 1 particles

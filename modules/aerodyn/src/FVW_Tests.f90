@@ -369,10 +369,7 @@ contains
       integer(IntKi)      , intent(out) :: ErrStat !< Error status of the operation
       character(ErrMsgLen), intent(out) :: ErrMsg  !< Error message if ErrStat /= ErrID_None
       type(T_Tree) :: Tree
-      real(ReKi), dimension(3) :: P1,CP
       real(ReKi), dimension(3) :: U_ref
-      real(ReKi), dimension(3) :: PartAlpha1 !< Particle intensity alpha=om.dV [m^3/s]
-      real(ReKi)     :: RegParam1   !< 
       integer(IntKi) :: i1,i2,i3,k, iCP
       integer(IntKi) :: RegFunction
       integer(IntKi) :: nPart  = 1
@@ -401,7 +398,7 @@ contains
       U_ref =0.0_ReKi
       call grow_tree(Tree, PartPoints, PartAlpha, RegFunction, RegParam, 0)
       !call print_tree(Tree)
-      call ui_tree(Tree, CPs, 0, 1, nCPs, nCPs, BranchFactor, BranchSmall,  Uind2, ErrStat, ErrMsg)
+      call ui_tree(Tree, CPs, 0, 1, nCPs, BranchFactor, BranchSmall,  Uind2, ErrStat, ErrMsg)
       call ui_part_nograd(CPs,PartPoints, PartAlpha, RegFunction, RegParam, Uind1, nCPs, nPart)
       ! Test
       call test_almost_equal('Uind tree 0 part', U_ref, Uind2(:,1), 1e-4_ReKi, .true.,.true.)
@@ -417,7 +414,7 @@ contains
       U_ref =0.0_ReKi
       call grow_tree(Tree, PartPoints, PartAlpha, RegFunction, RegParam, 0)
       !call print_tree(Tree)
-      call ui_tree(Tree, CPs, 0, 1, nCPs, nCPs, BranchFactor, BranchSmall,  Uind2, ErrStat, ErrMsg)
+      call ui_tree(Tree, CPs, 0, 1, nCPs, BranchFactor, BranchSmall,  Uind2, ErrStat, ErrMsg)
       call ui_part_nograd(CPs,PartPoints, PartAlpha, RegFunction, RegParam, Uind1, nCPs, nPart)
       ! Test
       call test_almost_equal('Uind tree 1 part', Uind1, Uind2, 1e-4_ReKi, .true.,.true.)
@@ -450,7 +447,7 @@ contains
       do iCP=1,4
          CPs(:,1) = CPs_test(:,icp)
          Uind2=0.0_ReKi; Uind1=0.0_ReKi
-         call ui_tree(Tree, CPs, 0, 1, nCPs, nCPs, BranchFactor, BranchSmall,  Uind2, ErrStat, ErrMsg)
+         call ui_tree(Tree, CPs, 0, 1, nCPs, BranchFactor, BranchSmall, Uind2, ErrStat, ErrMsg)
          call ui_part_nograd(CPs,PartPoints, PartAlpha, RegFunction, RegParam, Uind1, nCPs, nPart)
          !print*,'Uind',Uind1, Uind2
          ! Test
@@ -458,7 +455,7 @@ contains
       enddo
       call cut_tree(Tree)
       ! --- Test that tree ui cannot be called after tree has been cut
-      call ui_tree(Tree, CPs, 0, 1, nCPs, nCPs, BranchFactor, BranchSmall, Uind2, ErrStat, ErrMsg)
+      call ui_tree(Tree, CPs, 0, 1, nCPs, BranchFactor, BranchSmall, Uind2, ErrStat, ErrMsg)
       call test_equal('Err. stat tree cut',ErrStat,ErrID_Fatal)
       call dealloc()
 
@@ -498,7 +495,7 @@ contains
       real(ReKi),     dimension(3,nCPsTot) :: Uind1          !< Induced velocity vector - Side effects!!!
       real(ReKi),     dimension(3,nCPsTot) :: Uind2          !< Induced velocity vector - Side effects!!!
       real(ReKi) :: RegParam1 !< 
-      integer(IntKi) :: i1,i2, nPartPerSeg, nPart, iHeadP
+      integer(IntKi) :: nPartPerSeg, nPart, iHeadP
       integer(IntKi) :: RegFunctionPart, RegFunctionSeg
       ErrStat = ErrID_None
       ErrMsg  = ""
@@ -732,6 +729,7 @@ contains
       ! Initialize ErrStat
       ErrStat = ErrID_None
       ErrMsg  = ""
+      testname='FVW'
       call Test_BiotSavart_Sgmt(ErrStat2, ErrMsg2)
       call Test_BiotSavart_Part(ErrStat2, ErrMsg2)
       call Test_BiotSavart_PartTree(ErrStat2, ErrMsg2)

@@ -262,8 +262,8 @@ subroutine FVW_InitMiscVarsPostParam( p, m, ErrStat, ErrMsg )
    endif
    call AllocAry( m%SegConnct, 4, nSeg , 'SegConnct' , ErrStat2, ErrMsg2 );call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); m%SegConnct = -999;
    call AllocAry( m%SegPoints, 3, nSegP, 'SegPoints' , ErrStat2, ErrMsg2 );call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); m%SegPoints = -999999_ReKi;
-   call AllocAry( m%SegGamma ,    nSeg, 'SegGamma'  , ErrStat2, ErrMsg2 );call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); m%SegGamma  = -999999_ReKi;
-   call AllocAry( m%SegEpsilon,   nSeg, 'SegEpsilon', ErrStat2, ErrMsg2 );call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); m%SegEpsilon= -999999_ReKi;
+   call AllocAry( m%SegGamma ,    nSeg,  'SegGamma'  , ErrStat2, ErrMsg2 );call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); m%SegGamma  = -999999_ReKi;
+   call AllocAry( m%SegEpsilon,   nSeg,  'SegEpsilon', ErrStat2, ErrMsg2 );call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); m%SegEpsilon= -999999_ReKi;
 
    call AllocAry( m%CPs      , 3,  nCPs, 'CPs'       , ErrStat2, ErrMsg2 );call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); m%CPs= -999999_ReKi;
    call AllocAry( m%Uind     , 3,  nCPs, 'Uind'      , ErrStat2, ErrMsg2 );call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); m%Uind= -999999_ReKi;
@@ -409,9 +409,10 @@ SUBROUTINE FVW_SetParametersFromInputFile( InputFileData, p, m, ErrStat, ErrMsg 
    p%WingRegParam         = InputFileData%WingRegParam
    p%CoreSpreadEddyVisc   = InputFileData%CoreSpreadEddyVisc
    p%ShearModel           = InputFileData%ShearModel
-   p%TreeModel            = InputFileData%TreeModel
+   p%TwrShadowOnWake      = InputFileData%TwrShadowOnWake
+   p%VelocityMethod       = InputFileData%VelocityMethod
    p%TreeBranchFactor     = InputFileData%TreeBranchFactor
-   p%TreeBranchSmall      = InputFileData%TreeBranchSmall
+   p%PartPerSegment       = InputFileData%PartPerSegment
    p%WrVTK                = InputFileData%WrVTK
    p%VTKBlades            = min(InputFileData%VTKBlades,p%nWings) ! Note: allowing it to be negative for temporary hack
    p%VTKCoord             = InputFileData%VTKCoord

@@ -473,12 +473,11 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, KC, BL_
    
    
    !bjj: todo: should we check the denominator to make sure it doesn't go to 0?
-!TODO:MANU:Needed for Phi_alpha_nc and Phi_q_nc
+
    KC%k_alpha = 1.0_ReKi / ( (1.0_ReKi - M) + (BL_p%C_nalpha/2.0_ReKi) * M**2 * beta_M * (BL_p%A1*BL_p%b1 + BL_p%A2*BL_p%b2) )  ! Eqn 1.11a
    KC%k_q     = 1.0_ReKi / ( (1.0_ReKi - M) +  BL_p%C_nalpha           * M**2 * beta_M * (BL_p%A1*BL_p%b1 + BL_p%A2*BL_p%b2) )  ! Eqn 1.11b   
    T_I        = p%c(i,j) / p%a_s                                                                                                ! Eqn 1.11c
    
-!TODO:MANU:Needed Phi_alpha_nc and Phi_q_nc
    KC%T_alpha  = T_I * KC%k_alpha * 0.75                                                                                      ! Eqn 1.10a
    KC%T_q      = T_I * KC%k_q * 0.75                                                                                          ! Eqn 1.10b
       

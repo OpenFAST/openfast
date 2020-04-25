@@ -38,10 +38,11 @@ module FVW_SUBS
    integer(IntKi), parameter :: idShearNone   = 0
    integer(IntKi), parameter :: idShearMirror = 1
    integer(IntKi), parameter, dimension(2) :: idShearVALID         = (/idShearNone, idShearMirror /)
-   ! Tree Model
-   integer(IntKi), parameter :: idTreeNone   = 0
-   integer(IntKi), parameter :: idTreeBasic  = 1
-   integer(IntKi), parameter, dimension(2) :: idTreeVALID         = (/idTreeNone, idTreeBasic /)
+   ! Velocity calculation method
+   integer(IntKi), parameter :: idVelocityBasic = 1
+   integer(IntKi), parameter :: idVelocityTree  = 2
+   integer(IntKi), parameter :: idVelocityPart  = 3
+   integer(IntKi), parameter, dimension(3) :: idVelocityVALID      = (/idVelocityBasic, idVelocityTree, idVelocityPart /)
 
    real(ReKi), parameter :: CoreSpreadAlpha = 1.25643 
 
@@ -751,11 +752,9 @@ subroutine WakeInducedVelocities(p, x, m, ErrStat, ErrMsg)
    integer(IntKi) :: nFWEff  ! Number of farwake panels that are free at current tmie step
    logical        :: bMirror ! True if we mirror the vorticity wrt ground
    ! TODO new options
-   integer(IntKi) :: nPart
-   integer(IntKi) :: nPartPerSeg
-   integer(IntKi) :: UIMethod
    integer(IntKi) :: RegFunctionPart
-   real(ReKi) :: BranchFactor, BranchSmall
+   integer(IntKi) :: nPart
+   real(ReKi)     :: DistanceDirect ! Distance under which direct evaluation of the Biot-Savart should be done for tree
    type(T_Tree)   :: Tree
    real(ReKi), dimension(:,:), allocatable :: PartPoints !< Particle points
    real(ReKi), dimension(:,:), allocatable :: PartAlpha  !< Particle circulation
@@ -783,37 +782,38 @@ subroutine WakeInducedVelocities(p, x, m, ErrStat, ErrMsg)
    endif
 
    ! --- Converting to particles
-   ! TODO new parameters
-   UIMethod = 1 ! 1=Seg, 2=PartTree,  3=Part, 
-   BranchFactor = 2.0_ReKi !< Should be above1
-   BranchSmall  = 0.0_ReKi
-   if (UIMethod>1) then
+   if ((p%VelocityMethod==idVelocityTree) .or. (p%VelocityMethod==idVelocityPart)) then
       iHeadP=1
-      nPartPerSeg = 1
-      nPart = nPartPerSeg * nSeg 
+      nPart = p%PartPerSegment * nSeg 
       allocate(PartPoints(3,nPart), PartAlpha(3,nPart), PartEpsilon(nPart))
       PartAlpha(:,:)  = -99999.99_ReKi
       PartPoints(:,:) = -99999.99_ReKi
       PartEpsilon(:)  = -99999.99_ReKi
-      call SegmentsToPart(m%SegPoints, m%SegConnct, m%SegGamma, m%SegEpsilon, 1, nSeg, nPartPerSeg, PartPoints, PartAlpha, PartEpsilon, iHeadP)
+      call SegmentsToPart(m%SegPoints, m%SegConnct, m%SegGamma, m%SegEpsilon, 1, nSeg, p%PartPerSegment, PartPoints, PartAlpha, PartEpsilon, iHeadP)
       if (p%RegFunction/=idRegNone) then
-         RegFunctionPart = idRegExp
+         RegFunctionPart = idRegExp ! TODO need to find a good equivalence and potentially adapt Epsilon in SegmentsToPart
+      endif
+      if (any(PartEpsilon(:)<-9999.99_ReKi)) then
+         print*,'Error in Segment to part conversion'
+         STOP
       endif
    endif
 
    ! --- Getting induced velocity
    m%Uind=0.0_ReKi ! very important due to side effects of ui_* methods
-   if (UIMethod==1) then
+   if (p%VelocityMethod==idVelocityBasic) then
       call ui_seg( 1, nCPs, m%CPs, 1, nSeg, nSeg, nSegP, m%SegPoints, m%SegConnct, m%SegGamma, p%RegFunction, m%SegEpsilon, m%Uind)
 
-   elseif (UIMethod==2) then
+   elseif (p%VelocityMethod==idVelocityTree) then
+
+      DistanceDirect = 2*sum(PartEpsilon)/size(PartEpsilon) ! 2*mean(eps), below that distance eps has a strong effect
       call grow_tree(Tree, PartPoints, PartAlpha, RegFunctionPart, PartEpsilon, 0)
       !call print_tree(Tree)
-      call ui_tree(Tree, m%CPs, 0, 1, nCPs, nCPs, BranchFactor, BranchSmall, m%Uind, ErrStat, ErrMsg)
+      call ui_tree(Tree, m%CPs, 0, 1, nCPs, p%TreeBranchFactor, DistanceDirect, m%Uind, ErrStat, ErrMsg)
       call cut_tree(Tree)
       deallocate(PartPoints, PartAlpha, PartEpsilon)
 
-   elseif (UIMethod==3) then
+   elseif (p%VelocityMethod==idVelocityPart) then
       call ui_part_nograd(m%CPs ,PartPoints, PartAlpha, RegFunctionPart, PartEpsilon, m%Uind, nCPs, nPart)
       deallocate(PartPoints, PartAlpha, PartEpsilon)
    endif

@@ -2143,8 +2143,7 @@ SUBROUTINE Init_BEMTmodule( InputFileData, u_AD, u, p, x, xd, z, OtherState, y, 
    InitInp%aTol             = InputFileData%IndToler
    InitInp%useTipLoss       = InputFileData%TipLoss
    InitInp%useHubLoss       = InputFileData%HubLoss
-!FIXME: check the next flag.  Not sure if FVW can be used with it or not.
-   InitInp%useInduction     = (InputFileData%WakeMod /= WakeMod_none .and. InputFileData%WakeMod /= WakeMod_FVW)
+   InitInp%useInduction     = InputFileData%WakeMod /= WakeMod_none
    InitInp%useTanInd        = InputFileData%TanInd
    InitInp%useAIDrag        = InputFileData%AIDrag        
    InitInp%useTIDrag        = InputFileData%TIDrag  
