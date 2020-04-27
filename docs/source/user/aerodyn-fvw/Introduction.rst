@@ -11,13 +11,32 @@ the National Renewable Energy Laboratory physics-based engineering tool,
 OpenFAST, which solves the aero-hydro-servo-elastic dynamics of
 individual wind turbines. OLAF is incorporated into the OpenFAST module,
 *AeroDyn15*, as an alternative to the traditional blade-element momentum
-(BEM) option, as shown in Figure `[OpenFAST] <#OpenFAST>`__.
+(BEM) option, as shown in Figures :numref:`figOpenFAST_a` and
+:numref:`figOpenFAST_b`.
+
+..   _figOpenFAST_a:
+
+.. figure:: Schematics/OpenFAST.png
+   :alt: OpenFAST schematic
+   :width: 100%
+   :align: center
+
+   OpenFAST schematic
+
+..   _figOpenFAST_b:
+
+.. figure:: Schematics/FVWwithOpenFAST.png
+   :alt: OpenFAST overview schematic and OLAF integration
+   :width: 100%
+   :align: center
+
+   OLAF and BEM integration with AeroDyn
 
 Incorporating the FVW module within OpenFAST allows for the modeling of
 highly flexible turbines along with the aero-hydro-servo-elastic
 response capabilities of OpenFAST. The OLAF module follows the
 requirements of the OpenFAST modularization framework 
-(:cite:`Sprague15-1, Jonkman13-1`).
+(:cite:`Sprague15_1,Jonkman13_1`).
 
 The OLAF module uses a lifting-line representation of the blades, which
 is characterized by a distribution of bound circulation. The spatial and
@@ -27,14 +46,15 @@ manner, which allows the vortices to convect, stretch, and diffuse. The
 FVW model is based on a Lagrangian approach, in which the turbine wake
 is discretized into Lagrangian markers. There are many methods of
 representing the wake with Lagrangian
-markers (:cite:`Branlard17-1`). In this work, a hybrid
+markers (:cite:`Branlard17_1`). In this work, a hybrid
 lattice/filament method is used, as depicted in
-Figure `1.1 <#Lagrangian>`__.
+Figure :numref:`Lagrangian`.
 
-.. figure:: Schematics/LagrangianMarkers.pdf
-   :alt: Evolution of near-wake lattice, blade-tip vortex, and
-   Lagrangian markers
+.. figure:: Schematics/LagrangianMarkers.png
+   :alt: Evolution of near-wake lattice, blade-tip vortex, and Lagrangian markers
    :name: Lagrangian
+   :width: 100%
+   :align: center
 
    Evolution of near-wake lattice, blade-tip vortex, and Lagrangian
    markers
@@ -44,15 +64,15 @@ age, :math:`\zeta`, and azimuthal position, :math:`\psi`. A lattice
 method is used in the near wake of the blade. The near wake spans over a
 user-specified angle or distance for nonrotating cases. Though past
 research has indicated that a near-wake region of :math:`30^\circ` is
-sufficient (:cite:`Leishman-book, Ananthan02-1`), it has
+sufficient (:cite:`Leishman_book,Ananthan02_1`), it has
 been shown that a larger near wake is required for high thrust and other
 challenging conditions. After this period, the wake is assumed to
 instantaneously roll up into a tip vortex and, optionally, a root
 vortex, which are assumed to be the most dominant features for the
-remainder of the wake (:cite:`Leishman02-1`). Each
+remainder of the wake (:cite:`Leishman02_1`). Each
 Lagrangian marker is connected to adjacent markers by straight-line
 vortex filaments, approximated to second-order
-accuracy (:cite:`Gupta05-1`). The wake is discretized based
+accuracy (:cite:`Gupta05_1`). The wake is discretized based
 on the spanwise location of the blade sections and a specified time step
 (:math:`dt`), which may be different from the time step of AeroDyn.
 After an optional initialization period, the wake is allowed to move and
@@ -65,7 +85,7 @@ is "frozen" in a buffer zone between a distance,
 :math:`d_\text{buffer}`, and the distance, :math:`d_\text{trunc}`. In
 this buffer zone, the markers convect at the average ambient velocity.
 In this way, truncation error is
-minimized (:cite:`Leishman02-1`). The buffer zone is
+minimized (:cite:`Leishman02_1`). The buffer zone is
 typically chosen as the convected distance over one rotor revolution.
 
 As part of OpenFAST, induced velocities at the lifting line/blade are

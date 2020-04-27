@@ -1,7 +1,7 @@
 .. _OLAF-List-of-Output-Channels:
 
 Appendix C: OLAF List of Output Channels
-============================
+========================================
 
 This is a list of all possible output parameters from the OLAF module.
 The names are grouped by meaning, but can be ordered in the OUTPUTS
