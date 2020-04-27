@@ -257,3 +257,6 @@ def setup(app):
         objname="CMake configuration value",
         indextemplate="pair: %s; CMake configuration"
     )
+
+def setup(app):
+    app.add_stylesheet('css/math_eq.css')
