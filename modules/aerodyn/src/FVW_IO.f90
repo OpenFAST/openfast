@@ -32,26 +32,28 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, Inp, ErrStat, ErrMsg )
    CALL ReadCom(UnIn, FileName, 'FVW input file header line 1', ErrStat2, ErrMsg2 ); if(Failed()) return
    CALL ReadCom(UnIn, FileName, 'FVW input file header line 2', ErrStat2, ErrMsg2 ); if(Failed()) return
    !------------------------ GENERAL OPTIONS  -------------------------------------------
-   CALL ReadCom        (UnIn,FileName,                         'General option header'                                  , ErrStat2,ErrMsg2); if(Failed()) return
+   CALL ReadCom        (UnIn,FileName,                        '--- General option header'                                  , ErrStat2,ErrMsg2); if(Failed()) return
    CALL ReadVarWDefault(UnIn,FileName,Inp%IntMethod           ,'Integration method' ,'', idEuler1                       , ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVarWDefault(UnIn,FileName,Inp%DTfvw               ,'DTfvw'              ,'',  p%DTaero                      , ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVarWDefault(UnIn,FileName,Inp%FreeWakeStart       ,'FreeWakeStart'       ,'', 0.0_ReKi                      , ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVarWDefault(UnIn,FileName,Inp%FullCirculationStart,'FullCirculationStart','', real(20.0_ReKi*Inp%DTfvw,ReKi), ErrStat2,ErrMsg2); if(Failed())return
    !------------------------ CIRCULATION SPECIFICATIONS  -------------------------------------------
-   CALL ReadCom(UnIn,FileName,                  'Circulation specification header', ErrStat2, ErrMsg2 ); if(Failed()) return
+   CALL ReadCom(UnIn,FileName,                               '--- Circulation specification header'  , ErrStat2, ErrMsg2 ); if(Failed()) return
    CALL ReadVarWDefault(UnIn,FileName,Inp%CirculationMethod ,'CirculationMethod' ,'', idCircPolarData, ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVarWDefault(UnIn,FileName,Inp%CircSolvConvCrit  ,'CircSolvConvCrit ' ,'', 0.001          , ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVarWDefault(UnIn,FileName,Inp%CircSolvRelaxation,'CircSolvRelaxation','', 0.1            , ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVarWDefault(UnIn,FileName,Inp%CircSolvMaxIter   ,'CircSolvMaxIter'   ,'', 30             , ErrStat2,ErrMsg2); if(Failed())return
-   !CALL ReadVar(UnIn,FileName,Inp%CircSolvPolar     ,'CircSolvPolar'   ,'',ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVar(UnIn,FileName,Inp%CirculationFile   ,'CirculationFile'   ,'',ErrStat2,ErrMsg2); if(Failed())return
    !------------------------ WAKE OPTIONS -------------------------------------------
-   CALL ReadCom        (UnIn,FileName,                  'Wake options header'                         , ErrStat2,ErrMsg2); if(Failed()) return
+   CALL ReadCom        (UnIn,FileName,                        '=== Separator'                         , ErrStat2,ErrMsg2); if(Failed()) return
+   CALL ReadCom        (UnIn,FileName,                        '--- Wake options header'               , ErrStat2,ErrMsg2); if(Failed()) return
+   CALL ReadCom        (UnIn,FileName,                        '--- Wake extent header'                , ErrStat2,ErrMsg2); if(Failed()) return
    CALL ReadVar        (UnIn,FileName,Inp%nNWPanels          ,'nNWPanels'         ,''                 , ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVar        (UnIn,FileName,Inp%nFWPanels          ,'nFWPanels'         ,''                 , ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVarWDefault(UnIn,FileName,Inp%nFWPanelsFree      ,'nFWPanelsFree'     ,'', Inp%nFWPanels  , ErrStat2,ErrMsg2); if(Failed())return
-
    CALL ReadVarWDefault(UnIn,FileName,Inp%FWShedVorticity    ,'FWShedVorticity'   ,'', .False.        , ErrStat2,ErrMsg2); if(Failed())return
+
+   CALL ReadCom        (UnIn,FileName,                        '--- Wake regularization header'        , ErrStat2,ErrMsg2); if(Failed()) return
    CALL ReadVarWDefault(UnIn,FileName,Inp%DiffusionMethod    ,'DiffusionMethod'   ,'',idDiffusionNone , ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVarWDefault(UnIn,FileName,Inp%RegDeterMethod     ,'RegDeterMethod'    ,'',idRegDeterManual, ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVarWDefault(UnIn,FileName,Inp%RegFunction        ,'RegFunction'       ,'',idRegVatistas   , ErrStat2,ErrMsg2); if(Failed())return
@@ -59,8 +61,12 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, Inp, ErrStat, ErrMsg )
    CALL ReadVar        (UnIn,FileName,Inp%WakeRegParam       ,'WakeRegParam'      ,''                 , ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVar        (UnIn,FileName,Inp%WingRegParam       ,'WingRegParam'      ,''                 , ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVarWDefault(UnIn,FileName,Inp%CoreSpreadEddyVisc ,'CoreSpreadEddyVisc','',100.0_ReKi      , ErrStat2,ErrMsg2); if(Failed())return
-   CALL ReadVarWDefault(UnIn,FileName,Inp%ShearModel         ,'ShearModel'        ,'',idShearNone     , ErrStat2,ErrMsg2); if(Failed())return
+
+   CALL ReadCom        (UnIn,FileName,                        '--- Wake treatment header'             , ErrStat2,ErrMsg2); if(Failed()) return
    CALL ReadVarWDefault(UnIn,FileName,Inp%TwrShadowOnWake    ,'TwrShadowOnWake'   ,'',.false.         , ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVarWDefault(UnIn,FileName,Inp%ShearModel         ,'ShearModel'        ,'',idShearNone     , ErrStat2,ErrMsg2); if(Failed())return
+
+   CALL ReadCom        (UnIn,FileName,                        '--- Speed up header      '             , ErrStat2,ErrMsg2); if(Failed()) return
    CALL ReadVarWDefault(UnIn,FileName,Inp%VelocityMethod     ,'VelocityMethod'    ,'',idVelocityBasic , ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVarWDefault(UnIn,FileName,Inp%TreeBranchFactor   ,'TreeBranchFactor'  ,'',2.0_ReKi        , ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVarWDefault(UnIn,FileName,Inp%PartPerSegment     ,'PartPerSegment'    ,'',  1             , ErrStat2,ErrMsg2); if(Failed())return
@@ -69,7 +75,8 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, Inp, ErrStat, ErrMsg )
 !    Inp%TreeBranchFactor = 3.0_ReKi
 !    Inp%PartPerSegment   = 1
    !------------------------ OUTPUT OPTIONS -----------------------------------------
-   CALL ReadCom        (UnIn,FileName,                  'Output options header'              ,ErrStat2,ErrMsg2); if(Failed()) return
+   CALL ReadCom        (UnIn,FileName,                  '=== Separator'                      ,ErrStat2,ErrMsg2); if(Failed()) return
+   CALL ReadCom        (UnIn,FileName,                  '--- Output options header'          ,ErrStat2,ErrMsg2); if(Failed()) return
    CALL ReadVarWDefault(UnIn,FileName,Inp%WrVTK       , 'WrVTK'              ,'',     0      ,ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVarWDefault(UnIn,FileName,Inp%VTKBlades   , 'VTKBlades'          ,'',     1      ,ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVarWDefault(UnIn,FileName,Inp%VTKCoord    , 'VTKCoord'           ,'',     1      ,ErrStat2,ErrMsg2); if(Failed())return
