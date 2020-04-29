@@ -491,11 +491,12 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
                  - matmul( HydroForces, p%TI )  + p%FY )                                             !    + D1(1,5)*u(5) + Fy(1) )
       END IF
       ! Computing extra moments due to lever arm introduced by interface displacement
-      !               MExtra = -u_TP x f_TP0
-      ! Y1_MExtra = - MExtra = u_TP x f_TP0 !<<
-      Y1_ExtraMoment(1) = m%u_TP(2) * Y1(3) - m%u_TP(3) * Y1(2)
-      Y1_ExtraMoment(2) = m%u_TP(3) * Y1(1) - m%u_TP(1) * Y1(3)
-      Y1_ExtraMoment(3) = m%u_TP(1) * Y1(2) - m%u_TP(2) * Y1(1)
+      !               Y1(:3) = -f_TP
+      !               MExtra = -u_TP x f_TP
+      ! Y1_MExtra = - MExtra = -u_TP x Y1(1:3) ! NOTE: double cancelling of signs 
+      Y1_ExtraMoment(1) = - m%u_TP(2) * Y1(3) + m%u_TP(3) * Y1(2)
+      Y1_ExtraMoment(2) = - m%u_TP(3) * Y1(1) + m%u_TP(1) * Y1(3)
+      Y1_ExtraMoment(3) = - m%u_TP(1) * Y1(2) + m%u_TP(2) * Y1(1)
       
       ! values on the interface mesh are Y1 (SubDyn forces) + Hydrodynamic forces
       y%Y1Mesh%Force (:,1) = Y1(1:3) 
