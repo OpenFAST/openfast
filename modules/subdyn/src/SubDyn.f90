@@ -381,6 +381,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       REAL(ReKi)                   :: rotations(3)
       REAL(ReKi)                   :: ULS(p%nDOFL),  UL0m(p%nDOFL),  FLt(p%nDOFL)  ! Temporary values in static improvement method
       REAL(ReKi)                   :: Y1(6)
+      REAL(ReKi)                   :: Y1_ExtraMoment(3) ! Lever arm moment contributions due to interface displacement
       INTEGER(IntKi), pointer      :: DOFList(:)
       INTEGER(IntKi)               :: startDOF
       REAL(ReKi)                   :: DCM(3,3),junk(6,p%nNodes_L)
@@ -489,10 +490,16 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
          Y1 = -( matmul(p%KBB,   m%u_TP) + matmul(p%MBB, m%udotdot_TP) + matmul(p%D1_14, m%UFL)   &  ! -(  0*x + D1(1,1)*u(1) + 0*u(2) + D1(1,3)*u(3) + D1(1,4)*u(4)
                  - matmul( HydroForces, p%TI )  + p%FY )                                             !    + D1(1,5)*u(5) + Fy(1) )
       END IF
+      ! Computing extra moments due to lever arm introduced by interface displacement
+      !               MExtra = -u_TP x f_TP0
+      ! Y1_MExtra = - MExtra = u_TP x f_TP0 !<<
+      Y1_ExtraMoment(1) = m%u_TP(2) * Y1(3) - m%u_TP(3) * Y1(2)
+      Y1_ExtraMoment(2) = m%u_TP(3) * Y1(1) - m%u_TP(1) * Y1(3)
+      Y1_ExtraMoment(3) = m%u_TP(1) * Y1(2) - m%u_TP(2) * Y1(1)
       
       ! values on the interface mesh are Y1 (SubDyn forces) + Hydrodynamic forces
       y%Y1Mesh%Force (:,1) = Y1(1:3) 
-      y%Y1Mesh%Moment(:,1) = Y1(4:6) 
+      y%Y1Mesh%Moment(:,1) = Y1(4:6) + Y1_ExtraMoment 
             
      !________________________________________
      ! CALCULATE OUTPUT TO BE WRITTEN TO FILE 
@@ -1319,7 +1326,7 @@ CONTAINS
 
    SUBROUTINE CleanUp()
       INTEGER(IntKi)             :: ErrStat3    ! The error identifier (ErrStat)
-      CHARACTER(1024)            :: ErrMsg3     ! The error message (ErrMsg)
+      CHARACTER(ErrMsgLen)       :: ErrMsg3     ! The error message (ErrMsg)
       CALL SD_DestroyContState( xdot,     ErrStat3, ErrMsg3 )
       CALL SD_DestroyContState( k1,       ErrStat3, ErrMsg3 )
       CALL SD_DestroyContState( k2,       ErrStat3, ErrMsg3 )
