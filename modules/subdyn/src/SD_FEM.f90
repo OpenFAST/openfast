@@ -38,7 +38,7 @@ MODULE SD_FEM
   INTEGER(IntKi),   PARAMETER  :: PropSetsCCol    = 4                     ! Number of columns in CablePropSet (PropSetID, EA, MatDens, T0)
   INTEGER(IntKi),   PARAMETER  :: PropSetsRCol    = 2                     ! Number of columns in RigidPropSet (PropSetID, MatDens)
   INTEGER(IntKi),   PARAMETER  :: COSMsCol        = 10                    ! Number of columns in (cosine matrices) COSMs (COSMID,COSM11,COSM12,COSM13,COSM21,COSM22,COSM23,COSM31,COSM32,COSM33)
-  INTEGER(IntKi),   PARAMETER  :: CMassCol        = 5                     ! Number of columns in Concentrated Mass (CMJointID,JMass,JMXX,JMYY,JMZZ)
+  INTEGER(IntKi),   PARAMETER  :: CMassCol        = 11                    ! Number of columns in Concentrated Mass (CMJointID,JMass,JMXX,JMYY,JMZZ, Optional:JMXY,JMXZ,JMYZ,CGX,CGY,CGZ)
   ! Indices in Members table
   INTEGER(IntKi),   PARAMETER  :: iMType= 6 ! Index in Members table where the type is stored
   INTEGER(IntKi),   PARAMETER  :: iMProp= 4 ! Index in Members table where the PropSet1 and 2 are stored

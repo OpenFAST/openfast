@@ -832,7 +832,7 @@ Init%SSIK       = 0.0_ReKi ! Important init TODO: read these matrices on the fly
 Init%SSIM       = 0.0_ReKi ! Important init
 ! Reading reaction lines one by one, allowing for 1, 7 or 8 columns, with col8 being a string for the SSIfile
 DO I = 1, p%nNodes_C
-   READ(UnIn, FMT='(A)', IOSTAT=ErrStat2) Line  ; ErrMsg2='First line of joints array'; if (Failed()) return
+   READ(UnIn, FMT='(A)', IOSTAT=ErrStat2) Line; ErrMsg2='Error reading reaction line'; if (Failed()) return
    call ReadIAryFromStr(Line, p%Nodes_C(I,:), 8, nColValid, nColNumeric, Init%SSIfile(I:I));
    if (nColValid==1 .and. nColNumeric==1) then
       ! Temporary allowing this
@@ -873,7 +873,7 @@ p%Nodes_I(:,:) = 1  ! Important: By default all DOFs are contrained
 p%Nodes_I(:,1) = -1 ! First column is node, initalize to wrong value for safety
 ! Reading interface lines one by one, allowing for 1 or 7 columns (cannot use ReadIAry)
 DO I = 1, p%nNodes_I
-   READ(UnIn, FMT='(A)', IOSTAT=ErrStat2) Line  ; ErrMsg2='Reading interface line'; if (Failed()) return
+   READ(UnIn, FMT='(A)', IOSTAT=ErrStat2) Line  ; ErrMsg2='Error reading interface line'; if (Failed()) return
    call ReadIAryFromStr(Line, p%Nodes_I(I,:), 7, nColValid, nColNumeric);
    if ((nColValid/=nColNumeric).or.((nColNumeric/=1).and.(nColNumeric/=7)) ) then
       CALL Fatal(' Error in file "'//TRIM(SDInputFile)//'": Interface line must consist of 1 or 7 numerical values. Problematic line: "'//trim(Line)//'"')
@@ -970,15 +970,25 @@ IF (Check( Init%NCOSMs < 0     ,'NCOSMs must be >=0')) return
 
 !------------------------ JOINT ADDITIONAL CONCENTRATED MASSES--------------------------
 CALL ReadCom  ( UnIn, SDInputFile,              'Additional concentrated masses at joints '               ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
-CALL ReadIVar ( UnIn, SDInputFile, Init%NCMass, 'NCMass', 'Number of joints that have concentrated masses',ErrStat2, ErrMsg2, UnEc); if(Failed()) return
+CALL ReadIVar ( UnIn, SDInputFile, Init%nCMass, 'nCMass', 'Number of joints that have concentrated masses',ErrStat2, ErrMsg2, UnEc); if(Failed()) return
 CALL ReadCom  ( UnIn, SDInputFile,              'Concentrated Mass Headers'                               ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL ReadCom  ( UnIn, SDInputFile,              'Concentrated Mass Units'                                 ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
-CALL AllocAry(Init%CMass, Init%NCMass, CMassCol, 'CMass', ErrStat2, ErrMsg2); if(Failed()) return
-Init%CMass = 0.0
-DO I = 1, Init%NCMass
-   CALL ReadAry( UnIn, SDInputFile, Init%CMass(I,:), CMassCol, 'CMass', 'Joint number and mass values ', ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+CALL AllocAry(Init%CMass, Init%nCMass, CMassCol, 'CMass', ErrStat2, ErrMsg2); if(Failed()) return
+Init%CMass = 0.0 ! Important init since we allow user to only provide diagonal terms
+DO I = 1, Init%nCMass
+   !   CALL ReadAry( UnIn, SDInputFile, Init%CMass(I,:), CMassCol, 'CMass', 'Joint number and mass values ', ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+   READ(UnIn, FMT='(A)', IOSTAT=ErrStat2) Line; ErrMsg2='Error reading concentrated mass line'; if (Failed()) return
+   call ReadFAryFromStr(Line, Init%CMass(I,:), CMassCol, nColValid, nColNumeric);
+   if ((nColValid/=nColNumeric).or.((nColNumeric/=5).and.(nColNumeric/=11)) ) then
+      CALL Fatal(' Error in file "'//TRIM(SDInputFile)//'": Interface line must consist of 5 or 11 numerical values. Problematic line: "'//trim(Line)//'"')
+      return
+   endif
+   if (any(p%Nodes_I(I,:)<=0)) then
+      CALL Fatal(' Error in file "'//TRIM(SDInputFile)//'": For now, all DOF must be activated for interface lines. Problematic line: "'//trim(Line)//'"')
+      return
+   endif
 ENDDO   
-IF (Check( Init%NCMass < 0     , 'NCMass must be >=0')) return
+IF (Check( Init%nCMass < 0     , 'NCMass must be >=0')) return
 
 !---------------------------- OUTPUT: SUMMARY & OUTFILE ------------------------------
 CALL ReadCom (UnIn, SDInputFile,               'OUTPUT'                                            ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
@@ -1152,6 +1162,52 @@ SUBROUTINE ReadIAryFromStr(Str, IntArray, nColMax, nColValid, nColNumeric, StrAr
    enddo
    if(allocated(StrArray)) deallocate(StrArray)
 END SUBROUTINE ReadIAryFromStr
+
+!> See ReadIAryFromStr, same but for floats
+SUBROUTINE ReadFAryFromStr(Str, FloatArray, nColMax, nColValid, nColNumeric, StrArrayOut)
+   character(len=*),               intent(in)            :: Str                    !< 
+   real(ReKi),     dimension(:),   intent(inout)         :: FloatArray             !< NOTE: inout, to allow for init values
+   integer(IntKi),                 intent(in)            :: nColMax
+   integer(IntKi),                 intent(out)           :: nColValid, nColNumeric !< 
+   character(len=*), dimension(:), intent(out), optional :: StrArrayOut(:)         !< Array of strings that are non numeric
+   character(255), allocatable :: StrArray(:) ! Array of strings extracted from line
+   real(ReKi)                 :: DummyFloat
+   integer(IntKi)             :: J, nColStr
+   integer(IntKi)             :: ErrStat2
+   character(ErrMsgLen)       :: ErrMsg2
+   nColValid   = 0             ;
+   nColNumeric = 0             ;
+   nColStr     = 0             ;
+   ! --- First extract the different sub strings
+   CALL AllocAry(StrArray, nColMax, 'StrArray', ErrStat2, ErrMsg2); 
+   if (ErrStat2/=ErrID_None) then
+      return ! User should notice that there is 0 valid columns
+   endif
+   StrArray(:)='';
+   CALL ReadCAryFromStr(Str, StrArray, nColMax, 'StrArray', 'StrArray', ErrStat2, ErrMsg2)! NOTE:No Error handling!
+   ! --- Then look for numerical values
+   do J = 1, nColMax
+      if (len(trim(StrArray(J)))>0) then
+         nColValid=nColValid+1
+         if (is_numeric(StrArray(J), DummyFloat) ) then !< TODO we should check for int here!
+            nColNumeric=nColNumeric+1
+            if (nColNumeric<=size(FloatArray)) then 
+               FloatArray(nColNumeric) = DummyFloat
+            endif
+         else
+            nColStr = nColStr+1
+            if (present(StrArrayOut)) then
+               if (nColStr <=size(StrArrayOut) )then
+                  StrArrayOut(nColStr) = StrArray(J)
+               endif
+            endif
+         endif
+      endif
+   enddo
+   if(allocated(StrArray)) deallocate(StrArray)
+END SUBROUTINE ReadFAryFromStr
+
+
 
 
 !----------------------------------------------------------------------------------------------------------------------------------
