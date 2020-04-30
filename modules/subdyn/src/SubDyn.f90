@@ -232,9 +232,16 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    ! Assemble Stiffness and mass matrix
    CALL AssembleKM(Init, p, ErrStat2, ErrMsg2); if(Failed()) return
 
+   ! Insert soil stiffness and mass matrix
+   ! TODO, let's see if we can go without storing the "noSSI" matrices
+   ! Init%MorignoSSI=Init%M  !original M, full and no SSI m
+   ! Init%KorignoSSI=Init%K  !original K, full and no SSI k
+   CALL InsertSoilMatrices(Init%M, Init%K, Init, p, ErrStat2, ErrMsg2); if(Failed()) return
+   ! Init%Morig=Init%M  !original M, full and WITH SSI-k effects
+   ! Init%Korig=Init%K  !original K, full and WITH SSI-k effects
+
    ! --- Elimination of constraints (reset M, K, D, and BCs IntFc )
    CALL DirectElimination(Init, p, ErrStat2, ErrMsg2); if(Failed()) return
-
 
    ! --- Additional Damping and stiffness at pin/ball/universal joints
    CALL InsertJointStiffDamp(p, Init, ErrStat2, ErrMsg2); if(Failed()) return
@@ -821,8 +828,8 @@ call AllocAry(Init%SSIfile, p%nNodes_C,      'SSIFile', ErrStat2, ErrMsg2); if(F
 call AllocAry(Init%SSIK   , p%nNodes_C, 21 , 'SSIK',    ErrStat2, ErrMsg2); if(Failed()) return
 call AllocAry(Init%SSIM   , p%nNodes_C, 21 , 'SSIM',    ErrStat2, ErrMsg2); if(Failed()) return
 Init%SSIfile(:) = ''
-Init%SSIK       = HUGE(Init%SSIK) ! NOTE: huge used later. TODO: read these matrices on the fly in SD_FEM maybe?
-Init%SSIM       = 0.0_ReKi
+Init%SSIK       = 0.0_ReKi ! Important init TODO: read these matrices on the fly in SD_FEM maybe?
+Init%SSIM       = 0.0_ReKi ! Important init
 ! Reading reaction lines one by one, allowing for 1, 7 or 8 columns, with col8 being a string for the SSIfile
 DO I = 1, p%nNodes_C
    READ(UnIn, FMT='(A)', IOSTAT=ErrStat2) Line  ; ErrMsg2='First line of joints array'; if (Failed()) return

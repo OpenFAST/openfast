@@ -866,6 +866,7 @@ SUBROUTINE AssembleKM(Init, p, ErrStat, ErrMsg)
    INTEGER                  :: iGlob
    REAL(ReKi)               :: Ke(12,12), Me(12, 12), FGe(12) ! element stiffness and mass matrices gravity force vector
    REAL(ReKi)               :: FCe(12) ! Pretension force from cable element
+   REAL(ReKi), DIMENSION(6,6):: K_soil, M_soil ! Auxiliary matrices for soil
    INTEGER(IntKi)           :: ErrStat2
    CHARACTER(ErrMsgLen)     :: ErrMsg2
    INTEGER(IntKi)           :: iNode !< Node index
@@ -917,7 +918,7 @@ SUBROUTINE AssembleKM(Init, p, ErrStat, ErrMsg)
       ENDDO
    ENDDO ! Loop on concentrated mass
 
-   ! add concentrated mass induced gravity force
+   ! Add concentrated mass induced gravity force
    DO I = 1, Init%NCMass
        iNode = NINT(Init%CMass(I, 1)) ! Note index where concentrated mass is to be added
        iGlob = p%NodesDOF(iNode)%List(3) ! uz
@@ -958,6 +959,59 @@ CONTAINS
    END FUNCTION
    
 END SUBROUTINE AssembleKM
+
+!> Add soil stiffness and mass to global system matrices
+SUBROUTINE InsertSoilMatrices(M, K, Init, p, ErrStat, ErrMsg, Substract)
+   real(ReKi), dimension(:,:),   intent(inout) :: M
+   real(ReKi), dimension(:,:),   intent(inout) :: K
+   type(SD_InitType),            intent(in   ) :: Init
+   type(SD_ParameterType),       intent(in   ) :: p
+   integer(IntKi),               intent(  out) :: ErrStat     ! Error status of the operation
+   character(*),                 intent(  out) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   logical, optional,            intent(in   ) :: SubStract   ! If present, and if true, substract instead of adding
+   integer                    :: I, J
+   integer                    :: iDOF, iNode  !< DOF and node indices
+   real(ReKi), dimension(6,6) :: K_soil, M_soil ! Auxiliary matrices for soil
+   ErrMsg  = ""
+   ErrStat = ErrID_None
+   ! TODO consider doing the 21 -> 6x6 conversion while reading
+   ! 6x6 matrix goes to one node of one element only
+   do I = 1, p%nNodes_C ! loop on constrained nodes
+      iNode = p%Nodes_C(I,1)
+      call Array21_to_6by6(Init%SSIK(I,:), K_soil)
+      call Array21_to_6by6(Init%SSIM(I,:), M_soil)
+      if (present(Substract)) then
+         if (Substract) then
+            K_soil = - K_soil
+            M_soil = - M_soil
+         endif
+      endif
+      do J = 1, 6
+         iDOF          = p%NodesDOF(iNode)%List(J)   ! DOF index
+         K(iDOF, iDOF) = K(iDOF, iDOF) + K_soil(J,J)
+         M(iDOF, iDOF) = M(iDOF, iDOF) + M_soil(J,J)
+      enddo
+   enddo
+contains
+   !> Convert a flatten array of 21 values into a symmetric  6x6 matrix
+   SUBROUTINE Array21_to_6by6(A21, M66)
+      use NWTC_LAPACK, only: LAPACK_TPTTR 
+      real(ReKi), dimension(21) , intent(in)  :: A21
+      real(ReKi), dimension(6,6), intent(out) :: M66
+      integer :: j
+      M66 = 0.0_ReKi
+      ! Reconstruct from sparse elements
+      CALL LAPACK_TPTTR('U',6,A21,M66,6, ErrStat, ErrMsg)
+      ! Ensuring symmetry
+      do j=1,6
+         M66(j,j) = M66(j,j)/2
+      enddo  
+      M66=M66+TRANSPOSE(M66) 
+   END SUBROUTINE Array21_to_6by6
+END SUBROUTINE InsertSoilMatrices
+
+
+
 
 !------------------------------------------------------------------------------------------------------
 !> Build transformation matrix T, such that x= T.x~ where x~ is the reduced vector of DOF
