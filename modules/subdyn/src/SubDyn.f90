@@ -618,14 +618,14 @@ LOGICAL                      :: Echo
 LOGICAL                      :: LegacyFormat
 LOGICAL                      :: bNumeric
 INTEGER(IntKi)               :: UnIn
-INTEGER(IntKi)               :: nColumns
+INTEGER(IntKi)               :: nColumns, nColValid, nColNumeric
 INTEGER(IntKi)               :: IOS
 INTEGER(IntKi)               :: UnEc   !Echo file ID
 
 REAL(ReKi),PARAMETER        :: WrongNo=-9999.   ! Placeholder value for bad(old) values in JDampings
 
 INTEGER(IntKi)               :: I, J, flg, K, nColsReactInterf
-REAL(ReKi)                   :: Dummy_ReAry(SDMaxInpCols) 
+REAL(ReKi)                   :: Dummy_ReAry(SDMaxInpCols) , DummyFloat
 INTEGER(IntKi)               :: Dummy_IntAry(SDMaxInpCols)
 INTEGER(IntKi)       :: ErrStat2
 CHARACTER(ErrMsgLen) :: ErrMsg2
@@ -772,7 +772,7 @@ nColumns=JointsCol
 CALL AllocAry(StrArray, nColumns, 'StrArray',ErrStat2,ErrMsg2); if (Failed()) return 
 CALL ReadCAryFromStr ( Line, StrArray, nColumns, 'Joints', 'First line of joints array', ErrStat2, ErrMsg2 )
 if (ErrStat2/=0) then
-   ! We try we 4 columns (legacy format)
+   ! We try with 4 columns (legacy format)
    nColumns = 4
    deallocate(StrArray)
    CALL AllocAry(StrArray, nColumns, 'StrArray',ErrStat2,ErrMsg2); if (Failed()) return 
@@ -787,16 +787,15 @@ if (ErrStat2/=0) then
    Init%Joints(:,iJointType) = idJointCantilever ! All joints assumed cantilever
    Init%Joints(:,iJointType+1:JointsCol) = 0.0 ! remaining columns set to 0
    LegacyFormat=.True.  ! Legacy format - Delete me in 2024
-   nColsReactInterf=InterfCol
 else
    ! New format
    LegacyFormat=.False.
-   nColsReactInterf=1
 endif
 ! Extract fields from first line
 DO I = 1, nColumns
    bNumeric = is_numeric(StrArray(I), Init%Joints(1,I)) ! Convert from string to float
 ENDDO
+deallocate(StrArray)
 ! Read remaining lines
 DO I = 2, Init%NJoints
    CALL ReadAry( UnIn, SDInputFile, Dummy_ReAry, nColumns, 'Joints', 'Joint number and coordinates', ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
@@ -813,10 +812,30 @@ CALL ReadCom  ( UnIn, SDInputFile,           'BASE REACTION JOINTS'             
 CALL ReadIVar ( UnIn, SDInputFile, p%nNodes_C, 'NReact', 'Number of joints with reaction forces',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL ReadCom  ( UnIn, SDInputFile,           'Base reaction joints headers '                  ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL ReadCom  ( UnIn, SDInputFile,           'Base reaction joints units   '                  ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
-CALL AllocAry(p%Nodes_C, p%nNodes_C, nColsReactInterf, 'Reacts', ErrStat2, ErrMsg2 ); if(Failed()) return
+
+CALL AllocAry(p%Nodes_C, p%nNodes_C, ReactCol , 'Reacts', ErrStat2, ErrMsg2 ); if(Failed()) return
+p%Nodes_C(:,:) = 1  ! Important: By default all DOFs are contrained
+p%Nodes_C(:,1) = -1 ! First column is node, initalize to wrong value for safety
+
+ALLOCATE(Init%SSIfile(p%nNodes_C)) ! Soil Structure Interaction (SSI) files to associated with each reaction node 
+Init%SSIfile(:) = ''
+! Reading reaction lines one by one, allowing for 1, 7 or 8 columns, with col8 being a string for the SSIfile
 DO I = 1, p%nNodes_C
-   CALL ReadAry( UnIn, SDInputFile, Dummy_IntAry, nColsReactInterf, 'Reacts', 'Joint number and dof', ErrStat2 ,ErrMsg2, UnEc); if(Failed()) return
-   p%Nodes_C(I,:) = Dummy_IntAry(1:nColsReactInterf)
+   READ(UnIn, FMT='(A)', IOSTAT=ErrStat2) Line  ; ErrMsg2='First line of joints array'; if (Failed()) return
+   call ReadIAryFromStr(Line, p%Nodes_C(I,:), 8, nColValid, nColNumeric, Init%SSIfile(I:I));
+   if (nColValid==1 .and. nColNumeric==1) then
+      ! Temporary allowing this
+      print*,'Warning: SubDyn reaction line has only 1 column. Please use 7 or 8 values'
+   else if (nColNumeric==7 .and.(nColValid==7.or.nColValid==8)) then
+      ! This is fine.
+   else
+      CALL Fatal(' Error in file "'//TRIM(SDInputFile)//'": Reaction lines must consist of 7 numerical values, followed by an optional string. Problematic line: "'//trim(Line)//'"')
+      return
+   endif
+   if (any(p%Nodes_C(I,:)<=0)) then
+      CALL Fatal(' Error in file "'//TRIM(SDInputFile)//'": For now, all DOF must be activated for reactions. Problematic line: "'//trim(Line)//'"')
+      return
+   endif
 ENDDO
 IF (Check ( p%nNodes_C > Init%NJoints , 'NReact must be less than number of joints')) return
 
@@ -826,10 +845,22 @@ CALL ReadCom  ( UnIn, SDInputFile,              'INTERFACE JOINTS'              
 CALL ReadIVar ( UnIn, SDInputFile, p%nNodes_I, 'NInterf', 'Number of joints fixed to TP',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL ReadCom  ( UnIn, SDInputFile,            'Interface joints headers',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL ReadCom  ( UnIn, SDInputFile,            'Interface joints units  ',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
-CALL AllocAry(p%Nodes_I, p%nNodes_I, nColsReactInterf, 'Interf', ErrStat2, ErrMsg2); if(Failed()) return
+
+CALL AllocAry(p%Nodes_I, p%nNodes_I, InterfCol, 'Interf', ErrStat2, ErrMsg2); if(Failed()) return
+p%Nodes_I(:,:) = 1  ! Important: By default all DOFs are contrained
+p%Nodes_I(:,1) = -1 ! First column is node, initalize to wrong value for safety
+! Reading interface lines one by one, allowing for 1 or 7 columns (cannot use ReadIAry)
 DO I = 1, p%nNodes_I
-   CALL ReadIAry( UnIn, SDInputFile, Dummy_IntAry, nColsReactInterf, 'Interf', 'Interface joint number and dof', ErrStat2,ErrMsg2, UnEc); if(Failed()) return
-   p%Nodes_I(I,:) = Dummy_IntAry(1:nColsReactInterf)
+   READ(UnIn, FMT='(A)', IOSTAT=ErrStat2) Line  ; ErrMsg2='Reading interface line'; if (Failed()) return
+   call ReadIAryFromStr(Line, p%Nodes_I(I,:), 7, nColValid, nColNumeric);
+   if ((nColValid/=nColNumeric).or.((nColNumeric/=1).and.(nColNumeric/=7)) ) then
+      CALL Fatal(' Error in file "'//TRIM(SDInputFile)//'": Interface line must consist of 1 or 7 numerical values. Problematic line: "'//trim(Line)//'"')
+      return
+   endif
+   if (any(p%Nodes_I(I,:)<=0)) then
+      CALL Fatal(' Error in file "'//TRIM(SDInputFile)//'": For now, all DOF must be activated for interface lines. Problematic line: "'//trim(Line)//'"')
+      return
+   endif
 ENDDO
 IF (Check( ( p%nNodes_I < 0 ) .OR. (p%nNodes_I > Init%NJoints), 'NInterf must be non-negative and less than number of joints.')) RETURN
 
@@ -1047,10 +1078,58 @@ CONTAINS
 
    SUBROUTINE CleanUp()
       CLOSE( UnIn )
+      if(allocated(StrArray)) deallocate(StrArray)
       IF (Echo) CLOSE( UnEc )
    END SUBROUTINE
-
 END SUBROUTINE SD_Input
+
+!> Extract integers from a string (space delimited substrings)
+!! If StrArrayOut is present, non numeric strings are also returned
+!! Example Str="1 2 not_a_int 3" -> IntArray = (/1,2,3/)  StrArrayOut=(/"not_a_int"/)
+!! No need for error handling, the caller will check how many valid inputs were on the line
+!! TODO, place me in NWTC LIb 
+SUBROUTINE ReadIAryFromStr(Str, IntArray, nColMax, nColValid, nColNumeric, StrArrayOut)
+   character(len=*),               intent(in)            :: Str                    !< 
+   integer(IntKi), dimension(:),   intent(inout)         :: IntArray               !< NOTE: inout, to allow for init values
+   integer(IntKi),                 intent(in)            :: nColMax
+   integer(IntKi),                 intent(out)           :: nColValid, nColNumeric !< 
+   character(len=*), dimension(:), intent(out), optional :: StrArrayOut(:)         !< Array of strings that are non numeric
+   character(255), allocatable :: StrArray(:) ! Array of strings extracted from line
+   real(ReKi)                 :: DummyFloat
+   integer(IntKi)             :: J, nColStr
+   integer(IntKi)             :: ErrStat2
+   character(ErrMsgLen)       :: ErrMsg2
+   nColValid   = 0             ;
+   nColNumeric = 0             ;
+   nColStr     = 0             ;
+   ! --- First extract the different sub strings
+   CALL AllocAry(StrArray, nColMax, 'StrArray', ErrStat2, ErrMsg2); 
+   if (ErrStat2/=ErrID_None) then
+      return ! User should notice that there is 0 valid columns
+   endif
+   StrArray(:)='';
+   CALL ReadCAryFromStr(Str, StrArray, nColMax, 'StrArray', 'StrArray', ErrStat2, ErrMsg2)! NOTE:No Error handling!
+   ! --- Then look for numerical values
+   do J = 1, nColMax
+      if (len(trim(StrArray(J)))>0) then
+         nColValid=nColValid+1
+         if (is_numeric(StrArray(J), DummyFloat) ) then !< TODO we should check for int here!
+            nColNumeric=nColNumeric+1
+            if (nColNumeric<=size(IntArray)) then 
+               IntArray(nColNumeric) = int(DummyFloat)
+            endif
+         else
+            nColStr = nColStr+1
+            if (present(StrArrayOut)) then
+               if (nColStr <=size(StrArrayOut) )then
+                  StrArrayOut(nColStr) = StrArray(J)
+               endif
+            endif
+         endif
+      endif
+   enddo
+   if(allocated(StrArray)) deallocate(StrArray)
+END SUBROUTINE ReadIAryFromStr
 
 
 !----------------------------------------------------------------------------------------------------------------------------------

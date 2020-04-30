@@ -50,8 +50,8 @@ IMPLICIT NONE
 ! =======================
 ! =========  SD_InitOutputType  =======
   TYPE, PUBLIC :: SD_InitOutputType
-    CHARACTER(10) , DIMENSION(:), ALLOCATABLE  :: WriteOutputHdr      !< Names of the output-to-file channels [-]
-    CHARACTER(10) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !< Units of the output-to-file channels [-]
+    CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputHdr      !< Names of the output-to-file channels [-]
+    CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !< Units of the output-to-file channels [-]
     TYPE(ProgDesc)  :: Ver      !< This module's name, version, and date [-]
   END TYPE SD_InitOutputType
 ! =======================
@@ -122,9 +122,10 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: CMass      !< Concentrated mass information [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: JDampings      !< Damping coefficients for internal modes [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: Members      !< Member joints connection [-]
-    CHARACTER(10) , DIMENSION(:), ALLOCATABLE  :: SSOutList      !< List of Output Channels [-]
+    CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: SSOutList      !< List of Output Channels [-]
     LOGICAL  :: OutCOSM      !< Output Cos-matrices Flag [-]
     LOGICAL  :: TabDelim      !< Generate a tab-delimited output file in OutJckF-Flag [-]
+    CHARACTER(1024) , DIMENSION(:), ALLOCATABLE  :: SSIfile      !< Soil Structure Interaction (SSI) files to associate with each reaction node [-]
     INTEGER(IntKi)  :: NElem      !< Total number of elements [-]
     INTEGER(IntKi)  :: NPropB      !< Total number of property sets for Beams [-]
     INTEGER(IntKi)  :: NPropC      !< Total number of property sets for Cable [-]
@@ -2574,6 +2575,18 @@ IF (ALLOCATED(SrcInitTypeData%SSOutList)) THEN
 ENDIF
     DstInitTypeData%OutCOSM = SrcInitTypeData%OutCOSM
     DstInitTypeData%TabDelim = SrcInitTypeData%TabDelim
+IF (ALLOCATED(SrcInitTypeData%SSIfile)) THEN
+  i1_l = LBOUND(SrcInitTypeData%SSIfile,1)
+  i1_u = UBOUND(SrcInitTypeData%SSIfile,1)
+  IF (.NOT. ALLOCATED(DstInitTypeData%SSIfile)) THEN 
+    ALLOCATE(DstInitTypeData%SSIfile(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitTypeData%SSIfile.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInitTypeData%SSIfile = SrcInitTypeData%SSIfile
+ENDIF
     DstInitTypeData%NElem = SrcInitTypeData%NElem
     DstInitTypeData%NPropB = SrcInitTypeData%NPropB
     DstInitTypeData%NPropC = SrcInitTypeData%NPropC
@@ -2826,6 +2839,9 @@ ENDIF
 IF (ALLOCATED(InitTypeData%SSOutList)) THEN
   DEALLOCATE(InitTypeData%SSOutList)
 ENDIF
+IF (ALLOCATED(InitTypeData%SSIfile)) THEN
+  DEALLOCATE(InitTypeData%SSIfile)
+ENDIF
 IF (ALLOCATED(InitTypeData%Nodes)) THEN
   DEALLOCATE(InitTypeData%Nodes)
 ENDIF
@@ -2975,6 +2991,11 @@ ENDIF
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! OutCOSM
       Int_BufSz  = Int_BufSz  + 1  ! TabDelim
+  Int_BufSz   = Int_BufSz   + 1     ! SSIfile allocated yes/no
+  IF ( ALLOCATED(InData%SSIfile) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! SSIfile upper/lower bounds for each dimension
+      Int_BufSz  = Int_BufSz  + SIZE(InData%SSIfile)*LEN(InData%SSIfile)  ! SSIfile
+  END IF
       Int_BufSz  = Int_BufSz  + 1  ! NElem
       Int_BufSz  = Int_BufSz  + 1  ! NPropB
       Int_BufSz  = Int_BufSz  + 1  ! NPropC
@@ -3276,6 +3297,23 @@ ENDIF
       Int_Xferred   = Int_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+1-1 ) = TRANSFER( InData%TabDelim , IntKiBuf(1), 1)
       Int_Xferred   = Int_Xferred   + 1
+  IF ( .NOT. ALLOCATED(InData%SSIfile) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%SSIfile,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%SSIfile,1)
+    Int_Xferred = Int_Xferred + 2
+
+    DO i1 = LBOUND(InData%SSIfile,1), UBOUND(InData%SSIfile,1)
+        DO I = 1, LEN(InData%SSIfile)
+          IntKiBuf(Int_Xferred) = ICHAR(InData%SSIfile(i1)(I:I), IntKi)
+          Int_Xferred = Int_Xferred   + 1
+        END DO ! I
+    END DO !i1
+  END IF
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%NElem
       Int_Xferred   = Int_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%NPropB
@@ -3859,6 +3897,33 @@ ENDIF
       Int_Xferred   = Int_Xferred + 1
       OutData%TabDelim = TRANSFER( IntKiBuf( Int_Xferred ), mask0 )
       Int_Xferred   = Int_Xferred + 1
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! SSIfile not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%SSIfile)) DEALLOCATE(OutData%SSIfile)
+    ALLOCATE(OutData%SSIfile(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%SSIfile.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask1 = .TRUE. 
+    DO i1 = LBOUND(OutData%SSIfile,1), UBOUND(OutData%SSIfile,1)
+        DO I = 1, LEN(OutData%SSIfile)
+          OutData%SSIfile(i1)(I:I) = CHAR(IntKiBuf(Int_Xferred))
+          Int_Xferred = Int_Xferred   + 1
+        END DO ! I
+    END DO !i1
+    DEALLOCATE(mask1)
+  END IF
       OutData%NElem = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
       OutData%NPropB = IntKiBuf( Int_Xferred ) 
