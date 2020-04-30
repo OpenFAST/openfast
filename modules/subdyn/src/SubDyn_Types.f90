@@ -125,6 +125,8 @@ IMPLICIT NONE
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: SSOutList      !< List of Output Channels [-]
     LOGICAL  :: OutCOSM      !< Output Cos-matrices Flag [-]
     LOGICAL  :: TabDelim      !< Generate a tab-delimited output file in OutJckF-Flag [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: SSIK      !< SSI stiffness packed matrix elements (21 of them), for each reaction joint [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: SSIM      !< SSI mass packed matrix elements (21 of them), for each reaction joint [-]
     CHARACTER(1024) , DIMENSION(:), ALLOCATABLE  :: SSIfile      !< Soil Structure Interaction (SSI) files to associate with each reaction node [-]
     INTEGER(IntKi)  :: NElem      !< Total number of elements [-]
     INTEGER(IntKi)  :: NPropB      !< Total number of property sets for Beams [-]
@@ -2575,6 +2577,34 @@ IF (ALLOCATED(SrcInitTypeData%SSOutList)) THEN
 ENDIF
     DstInitTypeData%OutCOSM = SrcInitTypeData%OutCOSM
     DstInitTypeData%TabDelim = SrcInitTypeData%TabDelim
+IF (ALLOCATED(SrcInitTypeData%SSIK)) THEN
+  i1_l = LBOUND(SrcInitTypeData%SSIK,1)
+  i1_u = UBOUND(SrcInitTypeData%SSIK,1)
+  i2_l = LBOUND(SrcInitTypeData%SSIK,2)
+  i2_u = UBOUND(SrcInitTypeData%SSIK,2)
+  IF (.NOT. ALLOCATED(DstInitTypeData%SSIK)) THEN 
+    ALLOCATE(DstInitTypeData%SSIK(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitTypeData%SSIK.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInitTypeData%SSIK = SrcInitTypeData%SSIK
+ENDIF
+IF (ALLOCATED(SrcInitTypeData%SSIM)) THEN
+  i1_l = LBOUND(SrcInitTypeData%SSIM,1)
+  i1_u = UBOUND(SrcInitTypeData%SSIM,1)
+  i2_l = LBOUND(SrcInitTypeData%SSIM,2)
+  i2_u = UBOUND(SrcInitTypeData%SSIM,2)
+  IF (.NOT. ALLOCATED(DstInitTypeData%SSIM)) THEN 
+    ALLOCATE(DstInitTypeData%SSIM(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitTypeData%SSIM.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInitTypeData%SSIM = SrcInitTypeData%SSIM
+ENDIF
 IF (ALLOCATED(SrcInitTypeData%SSIfile)) THEN
   i1_l = LBOUND(SrcInitTypeData%SSIfile,1)
   i1_u = UBOUND(SrcInitTypeData%SSIfile,1)
@@ -2839,6 +2869,12 @@ ENDIF
 IF (ALLOCATED(InitTypeData%SSOutList)) THEN
   DEALLOCATE(InitTypeData%SSOutList)
 ENDIF
+IF (ALLOCATED(InitTypeData%SSIK)) THEN
+  DEALLOCATE(InitTypeData%SSIK)
+ENDIF
+IF (ALLOCATED(InitTypeData%SSIM)) THEN
+  DEALLOCATE(InitTypeData%SSIM)
+ENDIF
 IF (ALLOCATED(InitTypeData%SSIfile)) THEN
   DEALLOCATE(InitTypeData%SSIfile)
 ENDIF
@@ -2991,6 +3027,16 @@ ENDIF
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! OutCOSM
       Int_BufSz  = Int_BufSz  + 1  ! TabDelim
+  Int_BufSz   = Int_BufSz   + 1     ! SSIK allocated yes/no
+  IF ( ALLOCATED(InData%SSIK) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! SSIK upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%SSIK)  ! SSIK
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! SSIM allocated yes/no
+  IF ( ALLOCATED(InData%SSIM) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! SSIM upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%SSIM)  ! SSIM
+  END IF
   Int_BufSz   = Int_BufSz   + 1     ! SSIfile allocated yes/no
   IF ( ALLOCATED(InData%SSIfile) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! SSIfile upper/lower bounds for each dimension
@@ -3297,6 +3343,38 @@ ENDIF
       Int_Xferred   = Int_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+1-1 ) = TRANSFER( InData%TabDelim , IntKiBuf(1), 1)
       Int_Xferred   = Int_Xferred   + 1
+  IF ( .NOT. ALLOCATED(InData%SSIK) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%SSIK,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%SSIK,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%SSIK,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%SSIK,2)
+    Int_Xferred = Int_Xferred + 2
+
+      IF (SIZE(InData%SSIK)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%SSIK))-1 ) = PACK(InData%SSIK,.TRUE.)
+      Re_Xferred   = Re_Xferred   + SIZE(InData%SSIK)
+  END IF
+  IF ( .NOT. ALLOCATED(InData%SSIM) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%SSIM,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%SSIM,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%SSIM,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%SSIM,2)
+    Int_Xferred = Int_Xferred + 2
+
+      IF (SIZE(InData%SSIM)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%SSIM))-1 ) = PACK(InData%SSIM,.TRUE.)
+      Re_Xferred   = Re_Xferred   + SIZE(InData%SSIM)
+  END IF
   IF ( .NOT. ALLOCATED(InData%SSIfile) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -3897,6 +3975,58 @@ ENDIF
       Int_Xferred   = Int_Xferred + 1
       OutData%TabDelim = TRANSFER( IntKiBuf( Int_Xferred ), mask0 )
       Int_Xferred   = Int_Xferred + 1
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! SSIK not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%SSIK)) DEALLOCATE(OutData%SSIK)
+    ALLOCATE(OutData%SSIK(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%SSIK.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask2.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask2 = .TRUE. 
+      IF (SIZE(OutData%SSIK)>0) OutData%SSIK = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%SSIK))-1 ), mask2, 0.0_ReKi )
+      Re_Xferred   = Re_Xferred   + SIZE(OutData%SSIK)
+    DEALLOCATE(mask2)
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! SSIM not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%SSIM)) DEALLOCATE(OutData%SSIM)
+    ALLOCATE(OutData%SSIM(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%SSIM.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask2.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask2 = .TRUE. 
+      IF (SIZE(OutData%SSIM)>0) OutData%SSIM = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%SSIM))-1 ), mask2, 0.0_ReKi )
+      Re_Xferred   = Re_Xferred   + SIZE(OutData%SSIM)
+    DEALLOCATE(mask2)
+  END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! SSIfile not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE

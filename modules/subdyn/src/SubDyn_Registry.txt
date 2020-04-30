@@ -89,6 +89,8 @@ typedef	^	^	INTEGER	Members	{:}{:}	-	-	"Member joints connection"
 typedef	^	^	CHARACTER(ChanLen)	SSOutList	{:}	-	-	"List of Output Channels"
 typedef	^	^	LOGICAL	OutCOSM	-	-	-	"Output Cos-matrices Flag"
 typedef	^	^	LOGICAL	TabDelim	-	-	-	"Generate a tab-delimited output file in OutJckF-Flag"
+typedef	^	^	ReKi	SSIK	{:}{:}	-	-	"SSI stiffness packed matrix elements (21 of them), for each reaction joint"
+typedef	^	^	ReKi	SSIM	{:}{:}	-	-	"SSI mass packed matrix elements (21 of them), for each reaction joint"
 typedef	^	^	CHARACTER(1024)	SSIfile {:}	-	-	"Soil Structure Interaction (SSI) files to associate with each reaction node"
 #-------------------------- arrays and variables used in the module ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 typedef	^	^	INTEGER	NElem	-	-	-	"Total number of elements"

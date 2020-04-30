@@ -817,8 +817,12 @@ CALL AllocAry(p%Nodes_C, p%nNodes_C, ReactCol , 'Reacts', ErrStat2, ErrMsg2 ); i
 p%Nodes_C(:,:) = 1  ! Important: By default all DOFs are contrained
 p%Nodes_C(:,1) = -1 ! First column is node, initalize to wrong value for safety
 
-ALLOCATE(Init%SSIfile(p%nNodes_C)) ! Soil Structure Interaction (SSI) files to associated with each reaction node 
+call AllocAry(Init%SSIfile, p%nNodes_C,      'SSIFile', ErrStat2, ErrMsg2); if(Failed()) return
+call AllocAry(Init%SSIK   , p%nNodes_C, 21 , 'SSIK',    ErrStat2, ErrMsg2); if(Failed()) return
+call AllocAry(Init%SSIM   , p%nNodes_C, 21 , 'SSIM',    ErrStat2, ErrMsg2); if(Failed()) return
 Init%SSIfile(:) = ''
+Init%SSIK       = HUGE(Init%SSIK) ! NOTE: huge used later. TODO: read these matrices on the fly in SD_FEM maybe?
+Init%SSIM       = 0.0_ReKi
 ! Reading reaction lines one by one, allowing for 1, 7 or 8 columns, with col8 being a string for the SSIfile
 DO I = 1, p%nNodes_C
    READ(UnIn, FMT='(A)', IOSTAT=ErrStat2) Line  ; ErrMsg2='First line of joints array'; if (Failed()) return
@@ -838,6 +842,17 @@ DO I = 1, p%nNodes_C
    endif
 ENDDO
 IF (Check ( p%nNodes_C > Init%NJoints , 'NReact must be less than number of joints')) return
+
+
+! Reading SSI matrices  if present
+DO I = 1, p%nNodes_C
+   if ( Init%SSIfile(I)/='' .and. (ANY(p%Nodes_C(I,2:ReactCol)==0))) then
+      Init%SSIfile(I) = trim(PriPath)//trim(Init%SSIfile(I))
+      CALL ReadSSIfile( Init%SSIfile(I), p%Nodes_C(I,1), Init%SSIK(I,:),Init%SSIM(I,:), ErrStat, ErrMsg, UnEc ); if(Failed()) return
+   endif
+enddo
+       
+
 
 !------- INTERFACE JOINTS: T/F for Locked (to the TP)/Free DOF @each Interface Joint (only Locked-to-TP implemented thus far (=rigid TP)) ---------
 ! Joints with reaction forces, joint number and locked/free dof
@@ -2910,4 +2925,54 @@ FUNCTION is_numeric(string, x)
    is_numeric = e == 0
 END FUNCTION is_numeric
 
-End Module SubDyn
+!> Parses a file for Kxx,Kxy,..Kxthtx,..Kxtz, Kytx, Kyty,..Kztz
+SUBROUTINE ReadSSIfile ( Filename, JointID, SSIK, SSIM, ErrStat, ErrMsg, UnEc )
+   USE NWTC_IO
+   INTEGER,        INTENT(IN)                        :: JointID    !< ID of th ejoint for which we are reading SSI
+   INTEGER,        INTENT(IN), OPTIONAL              :: UnEc       !< I/O unit for echo file. If present and > 0, write to UnEc
+   INTEGER(IntKi), INTENT(OUT)                       :: ErrStat    !< Error status; if present, program does not abort on error
+   CHARACTER(*),   INTENT(OUT)                       :: ErrMsg     !< Error message
+   INTEGER                                           :: CurLine    !< The current line to be parsed in the FileInfo structure.
+   REAL(ReKi),        INTENT(INOUT)  , dimension(21) :: SSIK, SSIM !< Matrices being filled by reading the file.
+   CHARACTER(*),   INTENT(IN)                        :: Filename   !< Name of the input file.
+   ! Local declarations:
+   CHARACTER(5), DIMENSION(21) :: Knames=(/'Kxx  ','Kxy  ','Kyy  ','Kxz  ','Kyz  ', 'Kzz  ','Kxtx ','Kytx ','Kztx ','Ktxtx', &
+      'Kxty ','Kyty ','Kzty ','Ktxty','Ktyty', &
+      'Kxtz ','Kytz ','Kztz ','Ktxtz','Ktytz','Ktztz'/)           ! Dictionary of names by column for an Upper Triangular Matrix
+   CHARACTER(5), DIMENSION(21) :: Mnames=(/'Mxx  ','Mxy  ','Myy  ','Mxz  ','Myz  ', 'Mzz  ','Mxtx ','Mytx ','Mztx ','Mtxtx', &
+      'Mxty ','Myty ','Mzty ','Mtxty','Mtyty', &
+      'Mxtz ','Mytz ','Mztz ','Mtxtz','Mtytz','Mtztz'/)    
+   TYPE (FileInfoType)     :: FileInfo             ! The derived type for holding the file information.
+   INTEGER                 :: IOS                  ! I/O status returned from the read statement.
+   INTEGER(IntKi)          :: i, j, imax           !counters
+   CHARACTER(ErrMsgLen)    :: ErrMsg2
+   INTEGER(IntKi)          :: ErrStat2             ! Error status; if present, program does not abort on error
+   CHARACTER(*), PARAMETER :: RoutineName = 'ReadSSIfile'
+
+   SSIK=0.0_ReKi
+   SSIM=0.0_ReKi
+
+   CALL ProcessComFile ( Filename, FileInfo, ErrStat2, ErrMsg2 );CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ); IF (ErrStat >= AbortErrLev) RETURN
+   CurLine = 1                                                
+   imax=21
+   DO i=1, imax         !This will search also for already hit up names, but that's ok, it should be pretty fast
+      DO j=1,FileInfo%NumLines 
+         CurLine=j  
+         CALL ParseVarWDefault ( FileInfo, CurLine, Knames(i), SSIK(i), 0.0_ReKi, ErrStat2, ErrMsg2 )
+         CALL ParseVarWDefault ( FileInfo, CurLine, Mnames(i), SSIM(i), 0.0_ReKi, ErrStat2, ErrMsg2 )
+      ENDDO   
+   ENDDO
+   IF ( PRESENT(UnEc) )  THEN
+      IF ( UnEc .GT. 0 ) THEN
+         WRITE (UnEc,'(1X,A20," = ",I11)') 'JOINT ID',JointID
+         DO i=1,21
+            WRITE (UnEc,'(1X,ES11.4e2," = ",A20)') SSIK(i), Knames(i) 
+            WRITE (UnEc,'(1X,ES11.4e2," = ",A20)') SSIM(i), Mnames(i) 
+         ENDDO
+      ENDIF
+   END IF
+   RETURN
+END SUBROUTINE ReadSSIfile
+
+
+end module SubDyn
