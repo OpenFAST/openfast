@@ -105,7 +105,7 @@ contains
          enddo
          ! --- Control points spanwise location
          ! NOTE: we use the cos approximation of VanGarrel. For equispacing, it returns mid point
-         !       otehrwise, points are slightly closer to panels that are shorter
+         !       otherwise, points are slightly closer to panels that are shorter
          !call Meshing('middle'           , m%s_LL(:,iW), p%nSpan, m%s_CP_LL(:,iW))
          call Meshing('fullcosineapprox' , m%s_LL(:,iW), p%nSpan, m%s_CP_LL(:,iW))
          call InterpArray(m%s_LL(:,iW), m%chord_LL(:,iW), m%s_CP_LL(:,iW), m%chord_CP_LL(:,iW))
@@ -231,21 +231,25 @@ contains
       integer(IntKi), intent(in) :: iLabel
       ! Local
       integer(IntKi) :: iW
-      real(DbKi) :: s, ExpTerm
+      real(DbKi) :: s, RealAxis
       real(ReKi) :: GammaScale
       ErrStat = ErrID_None
       ErrMsg  = ""
 
       if (t<p%FullCirculationStart) then
          ! The circulation is ramped up progressively, starting from 0 
-         if (t<=0) then
+         if (t<=0.0_DbKi) then
             GammaScale=0.0_ReKi
          else
             s=t/p%FullCirculationStart
             ! If we have at least 10 points we use a smooth Heavyside, otherwise we use a simple linear scaling
             if (p%FullCirculationStart/p%DTfvw >= 9) then
-               ExpTerm=max( (1-2*s)/(s*(s-1._DbKi)+1.0e-04_DbKi),10.0_DbKi) ! Bounding exponential to avoid overflow
-               GammaScale = 1._ReKi- 1._ReKi/(1._ReKi+exp(real(ExpTerm,ReKi))) ! Using a smooth approximation of HeavySide function
+               ! Smooth approximations of the Heavyside function
+               ! Example 1: 1/2 (1+2/pi arctan(k x) )  x \in ]-infty,+infty [
+               ! Example 2: 1/(1+exp(k x) )            x \in ]-infty,+infty [
+               ! Example 3: sin(pi/2*s)**2             s \in [0,1]
+               RealAxis = (1-2*s)/(s*(s-1._DbKi)-1.0e-02_DbKi) ! Scaling from 0-1 to real axis
+               GammaScale = 1._ReKi- 1._ReKi/(1._ReKi+exp(real(RealAxis,ReKi)))
             else
                GammaScale = s  ! Using a linear scaling
             endif
@@ -434,7 +438,7 @@ contains
    subroutine CirculationFromPolarData(Gamma_LL, p, m, AFInfo, ErrStat, ErrMsg)
       real(ReKi), dimension(:,:),      intent(inout)  :: Gamma_LL       !< Circulation on all the lifting lines
       type(FVW_ParameterType),         intent(in   )  :: p              !< Parameters
-      type(FVW_MiscVarType),           intent(in   )  :: m              !< Initial misc/optimization variables
+      type(FVW_MiscVarType),           intent(inout)  :: m              !< Initial misc/optimization variables
       type(AFI_ParameterType),         intent(in   )  :: AFInfo(:)      !< The airfoil parameter data
       integer(IntKi),                  intent(  out)  :: ErrStat        !< Error status of the operation
       character(*),                    intent(  out)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
@@ -443,7 +447,7 @@ contains
       integer(IntKi) :: iW, iCP  !< Index on wings and spanwise control points
       real(ReKi), dimension(3) :: N, Tc      !<  Normal and Tangent vector
       real(ReKi), dimension(3) :: Vrel, Vrel_orth, Vjouk, Vjouk_orth
-      real(ReKi)               :: Vrel_orth_norm, Vjouk_orth_norm
+      real(ReKi)               :: Vrel_orth_norm, Vjouk_orth_norm, Vrel_norm
       real(ReKi)               :: alpha, Re, Cl, Cd, Cm
       type(AFI_OutputType)     :: AFI_interp
       integer(IntKi)           :: ErrStat2
@@ -465,9 +469,10 @@ contains
             Vjouk(1:3)      = cross_product(Vrel,m%dl(1:3,icp,iW))
             Vjouk_orth(1:3) = dot_product(Vjouk,N)*N + dot_product(Vjouk,Tc)*Tc
             Vjouk_orth_norm = norm2(Vjouk_orth)
+            Vrel_norm = norm2(Vrel)
 
             alpha = atan2(dot_product(Vrel,N) , dot_product(Vrel,Tc) ) ! [rad]  
-            Re = p%Chord(icp,iW) * norm2(Vrel) / p%KinVisc / 1.0E6
+            Re = p%Chord(icp,iW) * Vrel_norm  / p%KinVisc / 1.0E6
 
             !if (p%CircSolvPolar==idPolarAeroDyn) then
                ! compute steady Airfoil Coefs      ! NOTE: UserProp set to 0.0_ReKi (no idea what it does).  Also, note this assumes airfoils at nodes.
@@ -480,6 +485,9 @@ contains
             !    Gamma_LL=(0.5 * Cl * Vrel_orth_norm*chord)
             ! VanGarrel's method:
             Gamma_LL(icp,iW) =(0.5_ReKi * Cl * Vrel_orth_norm**2*m%Area(icp,iW)/(Vjouk_orth_norm))
+            ! Convenient storage
+            m%alpha_LL(icp, iW) = alpha ! [rad]
+            m%Vreln_LL(icp, iW) = Vrel_norm
          enddo
       enddo
    contains

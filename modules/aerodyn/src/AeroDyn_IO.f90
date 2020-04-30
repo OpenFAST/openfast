@@ -1513,14 +1513,60 @@ MODULE AeroDyn_IO
       
 contains
    
+!> Compute maximum radius over all blades (contains hub radius), in "projected rotor plane"
+!! Solely based on AD inputs,  needed for FVW since rLocal is not stored
+PURE REAL(ReKi) FUNCTION Calc_MaxRadius(p, u) result(rmax)
+   implicit none
+   TYPE(AD_ParameterType),    INTENT(IN   ) :: p    !< The module parameters
+   TYPE(AD_InputType),        INTENT(IN   ) :: u    !< Inputs
+   real(ReKi)     :: y_hat_disk(3), z_hat_disk(3), dr_gl(3), rLocal
+   integer(IntKi) :: iB, j
+   y_hat_disk = u%HubMotion%Orientation(2,:,1)
+   z_hat_disk = u%HubMotion%Orientation(3,:,1)
+   rmax = 0.0_ReKi
+   do iB=1,p%numBlades
+      do j=1,p%NumBlNds
+         dr_gl =  u%BladeMotion(iB)%Position(:,j) - u%HubMotion%Position(:,1) ! vector hub center to node j in global coord
+         rLocal = sqrt( dot_product(dr_gl, y_hat_disk)**2 + dot_product(dr_gl, z_hat_disk)**2 )
+         rmax   = max(rmax, rLocal)
+      end do !j=nodes
+   end do !iB=blades
+END FUNCTION Calc_MaxRadius
+
+!> Rotor speed
+PURE REAL(ReKi) FUNCTION Calc_Omega(u)
+   TYPE(AD_InputType),        INTENT(IN   ) :: u    !< Inputs
+   Calc_Omega = dot_product(u%HubMotion%RotationVel(:,1), u%HubMotion%Orientation(1,:,1))
+END FUNCTION Calc_Omega
+
+!> Mean skew angle
+REAL(ReKi) FUNCTION Calc_Chi0(V_diskAvg, V_dot_x)
+   implicit none
+   REAL(ReKi), INTENT(IN  ) :: V_diskAvg(3)
+   REAL(ReKi), INTENT(IN  ) :: V_dot_x
+   REAL(ReKi) :: V_norm, sy 
+   V_norm = TwoNorm( V_diskAvg )
+   if ( EqualRealNos( V_norm, 0.0_ReKi ) ) then
+      Calc_Chi0 = 0.0_ReKi
+   else
+      ! make sure we don't have numerical issues that make the ratio outside +/-1
+      sy = min(  1.0_ReKi, V_dot_x / V_norm )
+      sy = max( -1.0_ReKi, sy )
+      Calc_Chi0 = acos( sy )
+   end if
+END FUNCTION Calc_Chi0
+
+
    
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE Calc_WriteDbgOutput( p, u, m, y, ErrStat, ErrMsg )
+SUBROUTINE Calc_WriteDbgOutput( p, u, m, y, OtherState, xd, ErrStat, ErrMsg )
    
    TYPE(AD_ParameterType),    INTENT(IN   )  :: p                                 ! The module parameters
    TYPE(AD_InputType),        INTENT(IN   )  :: u                                 ! inputs
    TYPE(AD_MiscVarType),      INTENT(INOUT)  :: m                                 ! misc variables
    TYPE(AD_OutputType),       INTENT(IN   )  :: y                                 ! outputs
+   TYPE(AD_OtherStateType),   INTENT(IN   )  :: OtherState                        ! OtherState
+   TYPE(AD_DiscreteStateType),INTENT(IN   )  :: xd                                ! Discrete states
    INTEGER(IntKi),            INTENT(  OUT)  :: ErrStat                           ! The error status code
    CHARACTER(*),              INTENT(  OUT)  :: ErrMsg                            ! The error message, if an error occurred
 
@@ -1533,7 +1579,14 @@ SUBROUTINE Calc_WriteDbgOutput( p, u, m, y, ErrStat, ErrMsg )
    INTEGER(IntKi)                            :: j,k,i
    REAL(ReKi)                                :: ct, st ! cosine, sine of theta
    REAL(ReKi)                                :: cp, sp ! cosine, sine of phi
-   
+   ! Transformation matrices
+   !real(R8Ki), dimension(3,3)                :: M_cg ! from global to airfoil-chord (this is well defined, also called "n-t" system in AeroDyn)
+   real(ReKi), dimension(3,3)                :: M_sg ! from global to section  (this is ill-defined, also called "x-y" system in AeroDyn), this coordinate is used to define the "axial" and "tangential" inductions
+   real(ReKi), dimension(3,3)                :: M_ph ! Transformation from hub to "blade-rotor-plane": n,t,r (not the same as AeroDyn)
+   real(ReKi), dimension(3,3)                :: M_pg ! Transformation from global to "blade-rotor-plane" (n,t,r), with same x at hub coordinate system
+   real(ReKi)                                :: psi_hub ! Azimuth wrt hub
+   real(ReKi), dimension(3)                  :: Vind_g  ! Induced velocity vector in global coordinates
+   real(ReKi), dimension(3)                  :: Vind_s  ! Induced velocity vector in section coordinates (AeroDyn "x-y")
    
    
       ! start routine:
@@ -1541,16 +1594,23 @@ SUBROUTINE Calc_WriteDbgOutput( p, u, m, y, ErrStat, ErrMsg )
    ErrMsg  = ""
 
 
-
    if (p%WakeMod /= WakeMod_FVW) then
          ! blade outputs
       do k=1,p%numBlades
+
+         ! Rotor plane, polar coordinate system
+         psi_hub = TwoPi*(k-1)/p%NumBlades
+         M_ph(1,1:3) = (/ 1.0_ReKi, 0.0_ReKi    , 0.0_ReKi     /)
+         M_ph(2,1:3) = (/ 0.0_ReKi, cos(psi_hub), sin(psi_hub) /)
+         M_ph(3,1:3) = (/ 0.0_ReKi,-sin(psi_hub), cos(psi_hub) /)
+         M_pg = matmul(M_ph, u%HubMotion%Orientation(1:3,1:3,1) ) 
+
 
        ! m%AllOuts( BPitch(  k) ) = calculated in SetInputsForBEMT
 
          do j=1,p%NumBlNds
 
-            i = (k-1)*p%NumBlNds*24 + (j-1)*24 + 1
+            i = (k-1)*p%NumBlNds*p%NBlOuts + (j-1)*p%NBlOuts +1
 
             m%AllOuts( i    ) =  m%BEMT_u(indx)%theta(j,k)*R2D
             m%AllOuts( i+1  ) =  m%BEMT_u(indx)%psi(k)*R2D
@@ -1586,21 +1646,25 @@ SUBROUTINE Calc_WriteDbgOutput( p, u, m, y, ErrStat, ErrMsg )
             m%AllOuts( i+22 ) = -m%X(j,k)*st - m%Y(j,k)*ct
             m%AllOuts( i+23 ) = 0.5_ReKi * p%BEMT%chord(j,k) * m%BEMT_y%Vrel(j,k) * m%BEMT_y%Cl(j,k) ! "Gam" [m^2/s]
 
+            M_sg = m%WithoutSweepPitchTwist(:,:,j,k)       ! global to "section"
+            !M_cg = u%BladeMotion(k)%Orientation(1:3,1:3,j) ! global to chord
+
+            Vind_s = (/ -m%BEMT_u(indx)%Vx(j,k)*m%BEMT_y%axInduction(j,k), m%BEMT_u(indx)%Vy(j,k)*m%BEMT_y%tanInduction(j,k), 0.0_ReKi /)
+            Vind_g = matmul(Vind_s, M_sg)
+
+            m%AllOuts( i+24 ) =  dot_product(M_pg(1,:), Vind_g(1:3) ) ! Uihn, hub normal
+            m%AllOuts( i+25 ) =  dot_product(M_pg(2,:), Vind_g(1:3) ) ! Uiht, hub tangential
+            m%AllOuts( i+26 ) =  dot_product(M_pg(3,:), Vind_g(1:3) ) ! Uihr, hub radial
+
          end do ! nodes
       end do ! blades
    else  !  (p%WakeMod == WakeMod_FVW)
-      call calc_WriteDbgOutputFVW( p, u, m, y, ErrStat, ErrMsg )
+      call calc_WriteDbgOutputFVW()
    endif
 
 contains
-   subroutine  Calc_WriteDbgOutputFVW( p, u, m, y, ErrStat, ErrMsg )
-      TYPE(AD_ParameterType),    INTENT(IN   )  :: p                                 ! The module parameters
-      TYPE(AD_InputType),        INTENT(IN   )  :: u                                 ! inputs
-      TYPE(AD_MiscVarType),      INTENT(INOUT)  :: m                                 ! misc variables
-      TYPE(AD_OutputType),       INTENT(IN   )  :: y                                 ! outputs
-      INTEGER(IntKi),            INTENT(  OUT)  :: ErrStat                           ! The error status code
-      CHARACTER(*),              INTENT(  OUT)  :: ErrMsg                            ! The error message, if an error occurred
-
+   subroutine  Calc_WriteDbgOutputFVW()
+      use BEMTUnCoupled, only: Compute_UA_AirfoilCoefs
          ! local variables
       integer, parameter                        :: indx = 1  ! m%BEMT_u(1) is at t; m%BEMT_u(2) is t+dt
       CHARACTER(*), PARAMETER                   :: RoutineName = 'Calc_WriteOutput'
@@ -1613,22 +1677,51 @@ contains
       type(AFI_OutputType)                      :: AFI_interp                 ! Resulting values from lookup table
       real(ReKi)                                :: UrelWind_s(3)                  ! Wind in section coords
       real(ReKi)                                :: Vwnd(3) 
-      real(ReKi)                                :: Cx, Cy
+      real(ReKi)                                :: Cx, Cy, Cl_dyn, Cd_dyn, Cm_dyn
+      ! Transformation matrices
+      real(R8Ki), dimension(3,3)                :: M_cg ! from global to airfoil-chord (this is well defined, also called "n-t" system in AeroDyn)
+      real(ReKi), dimension(3,3)                :: M_sg ! from global to section  (this is ill-defined, also called "x-y" system in AeroDyn), this coordinate is used to define the "axial" and "tangential" inductions
+      real(ReKi), dimension(3,3)                :: M_ph ! Transformation from hub to "blade-rotor-plane": n,t,r (not the same as AeroDyn)
+      real(ReKi), dimension(3,3)                :: M_pg ! Transformation from global to "blade-rotor-plane" (n,t,r), with same x at hub coordinate system
+      real(ReKi)                                :: psi_hub ! Azimuth wrt hub
 
          ! blade outputs
-      do k=1,p%numBlades
+      do k=1,p%NumBlades
+
+         ! Rotor plane, polar coordinate system
+         psi_hub = TwoPi*(k-1)/p%NumBlades
+         M_ph(1,1:3) = (/ 1.0_ReKi, 0.0_ReKi    , 0.0_ReKi     /)
+         M_ph(2,1:3) = (/ 0.0_ReKi, cos(psi_hub), sin(psi_hub) /)
+         M_ph(3,1:3) = (/ 0.0_ReKi,-sin(psi_hub), cos(psi_hub) /)
+         M_pg = matmul(M_ph, u%HubMotion%Orientation(1:3,1:3,1) ) 
+
          do j=1,p%NumBlNds
 !TODO: Merge with BEM to avoid all code redundancy (discuss with Bonnie)
 
-            i = (k-1)*p%NumBlNds*24 + (j-1)*24 + 1
+            i = (k-1)*p%NumBlNds*p%NBlOuts + (j-1)*p%NBlOuts +1
 
             ! --- Computing main aero variables from induction - setting local variables
-            Vwnd  = m%DisturbedInflow(:,j,k) 
-            call FVW_AeroOuts( m%WithoutSweepPitchTwist(:,:,j,k), u%BladeMotion(k)%Orientation(1:3,1:3,j), m%FVW%PitchAndTwist(j,k), u%BladeMotion(k)%TranslationVel(1:3,j), &
+            Vwnd  = m%DisturbedInflow(:,j,k)  ! NOTE: contains tower shadow
+            M_sg = m%WithoutSweepPitchTwist(:,:,j,k)       ! global to "section"
+            M_cg = u%BladeMotion(k)%Orientation(1:3,1:3,j) ! global to chord
+            call FVW_AeroOuts(M_sg, M_cg, m%FVW%PitchAndTwist(j,k), u%BladeMotion(k)%TranslationVel(1:3,j), &
                         m%FVW_y%Vind(1:3,j,k), Vwnd, p%KinVisc, p%FVW%Chord(j,k), &
                         AxInd, TanInd, Vrel, phi, alpha, Re, UrelWind_s, ErrStat, ErrMsg )
-            !  NOTE: using airfoil coeffs at nodes
+
+            ! NOTE: using airfoil coeffs at nodes
+            ! Compute steady Airfoil Coefs first 
             call AFI_ComputeAirfoilCoefs( alpha, Re, 0.0_ReKi,  p%AFI(p%FVW%AFindx(j,k)), AFI_interp, ErrStat, ErrMsg )
+            Cl_dyn = AFI_interp%Cl
+            Cd_dyn = AFI_interp%Cd
+            Cm_dyn = AFI_interp%Cm
+
+            if ( m%FVW%UA_Flag) then ! Unsteady coeffs
+               if ((OtherState%FVW%UA_Flag(j,k)) .and. ( .not. EqualRealNos(Vrel,0.0_ReKi) ) ) then
+                  m%FVW%m_UA%iBladeNode = j
+                  m%FVW%m_UA%iBlade     = k
+                  call Compute_UA_AirfoilCoefs( alpha, Vrel, Re,  0.0_ReKi, p%AFI(p%FVW%AFindx(j,k)), m%FVW%p_UA, xd%FVW%UA, OtherState%FVW%UA, m%FVW%y_UA, m%FVW%m_UA, Cl_dyn, Cd_dyn, Cm_dyn, ErrStat, ErrMsg) 
+               end if
+            end if
 
             theta = m%FVW%PitchAndTwist(j,k)
 
@@ -1646,11 +1739,11 @@ contains
 
             cp = cos(phi)
             sp = sin(phi)
-            Cx = AFI_interp%Cl*cp + AFI_interp%Cd*sp
-            Cy = AFI_interp%Cl*sp - AFI_interp%Cd*cp
-            m%AllOuts( i+9  ) =  AFI_interp%Cl                    ! "Cl"
-            m%AllOuts( i+10 ) =  AFI_interp%Cd                    ! "Cd"
-            m%AllOuts( i+11 ) =  AFI_interp%Cm                    ! "Cm"
+            Cx = Cl_dyn*cp + Cd_dyn*sp
+            Cy = Cl_dyn*sp - Cd_dyn*cp
+            m%AllOuts( i+9  ) =  Cl_dyn                           ! "Cl"
+            m%AllOuts( i+10 ) =  Cd_dyn                           ! "Cd"
+            m%AllOuts( i+11 ) =  Cm_dyn                           ! "Cm"
             m%AllOuts( i+12 ) =  Cx                               ! "Cx"
             m%AllOuts( i+13 ) =  Cy                               ! "Cy"
 
@@ -1668,20 +1761,30 @@ contains
             m%AllOuts( i+20 ) = -m%Y(j,k)                     ! "Fy"
             m%AllOuts( i+21 ) =  m%X(j,k)*ct - m%Y(j,k)*st    ! "Fn"
             m%AllOuts( i+22 ) = -m%X(j,k)*st - m%Y(j,k)*ct    ! "Ft"
-            m%AllOuts( i+23 ) = 0.5_ReKi * p%FVW%Chord(j,k) * Vrel * AFI_interp%Cl ! "Gam" [m^2/s]
+            m%AllOuts( i+23 ) = 0.5_ReKi * p%FVW%Chord(j,k) * Vrel * Cl_dyn ! "Gam" [m^2/s]
+
+            m%AllOuts( i+24 ) =  dot_product(M_pg(1,:), m%FVW_y%Vind(1:3,j,k) ) ! Uihn, hub normal
+            m%AllOuts( i+25 ) =  dot_product(M_pg(2,:), m%FVW_y%Vind(1:3,j,k) ) ! Uiht, hub tangential
+            m%AllOuts( i+26 ) =  dot_product(M_pg(3,:), m%FVW_y%Vind(1:3,j,k) ) ! Uihr, hub radial
+
+            m%AllOuts( i+27 ) =  AFI_interp%Cl                  ! "Cl" static
+            m%AllOuts( i+28 ) =  AFI_interp%Cd                  ! "Cd" static
+            m%AllOuts( i+29 ) =  AFI_interp%Cm                  ! "Cm" static
+
          end do ! nodes
       end do ! blades
    end subroutine Calc_WriteDbgOutputFVW
 END SUBROUTINE Calc_WriteDbgOutput
 
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE Calc_WriteOutput( p, u, m, y, OtherState, indx, ErrStat, ErrMsg )
+SUBROUTINE Calc_WriteOutput( p, u, m, y, OtherState, xd, indx, ErrStat, ErrMsg )
    
    TYPE(AD_ParameterType),    INTENT(IN   )  :: p                                 ! The module parameters
    TYPE(AD_InputType),        INTENT(IN   )  :: u                                 ! inputs
    TYPE(AD_MiscVarType),      INTENT(INOUT)  :: m                                 ! misc variables
    TYPE(AD_OutputType),       INTENT(IN   )  :: y                                 ! outputs
-   TYPE(AD_OtherStateType),   INTENT(IN   )  :: OtherState                        ! other states at t (for DBEMT debugging)
+   TYPE(AD_OtherStateType),   INTENT(IN   )  :: OtherState                        ! other states at t (for DBEMT and UA)
+   TYPE(AD_DiscreteStateType),INTENT(IN   )  :: xd                                ! Discrete states
    integer,                   intent(in   )  :: indx                              ! index into m%BEMT_u(indx) array; 1=t and 2=t+dt (but not checked here)
    INTEGER(IntKi),            INTENT(  OUT)  :: ErrStat                           ! The error status code
    CHARACTER(*),              INTENT(  OUT)  :: ErrMsg                            ! The error message, if an error occurred
@@ -1870,6 +1973,10 @@ CONTAINS
       end if
    end subroutine Calc_WriteOutput_BEMT
 
+   !> Similar to Calc_WriteOutput_BEMT. TODO Merge me
+   !! NOTE: relies on the prior calculation of m%V_dot_x, and m%V_diskAvg (done in DiskAvgValues)
+   !!                                          m%DisturbedInflow (done in SetInputs)
+   !!       Make sure these are set!
    subroutine Calc_WriteOutput_FVW
       real(ReKi)           :: AxInd, TanInd, Vrel, phi, alpha, Re
       type(AFI_OutputType) :: AFI_interp              ! Resulting values from lookup table
@@ -1878,6 +1985,7 @@ CONTAINS
       real(ReKi)           :: Vstr(3)               ! 
       real(ReKi)           :: Vwnd(3)               ! 
       real(ReKi)           :: Cx, Cy, cphi, sphi, theta
+      real(ReKi)           :: rmax, omega
 
          ! blade outputs
       do k=1,p%numBlades
@@ -1886,13 +1994,14 @@ CONTAINS
             ! --- Computing main aero variables from induction - setting local variables
             Vind = m%FVW_y%Vind(1:3,j,k)
             Vstr = u%BladeMotion(k)%TranslationVel(1:3,j)
-            Vwnd = m%DisturbedInflow(:,j,k) 
+            Vwnd = m%DisturbedInflow(:,j,k)   ! NOTE: contains tower shadow
             call FVW_AeroOuts( m%WithoutSweepPitchTwist(:,:,j,k), u%BladeMotion(k)%Orientation(1:3,1:3,j), m%FVW%PitchAndTwist(j,k), Vstr , &
                         Vind(1:3), Vwnd , p%KinVisc, p%FVW%Chord(j,k), &
                         AxInd, TanInd, Vrel, phi, alpha, Re, UrelWind_s, ErrStat, ErrMsg )
 
             !  NOTE: using airfoil coeffs at nodes
             call AFI_ComputeAirfoilCoefs( alpha, Re, 0.0_ReKi,  p%AFI(p%FVW%AFindx(j,k)), AFI_interp, ErrStat, ErrMsg )
+            STOP
             theta = m%FVW%PitchAndTwist(j,k)
 
             ! --- Setting AD outputs 
@@ -1925,9 +2034,9 @@ CONTAINS
             m%AllOuts( BNAlpha(beta,k) ) = alpha*R2D
             m%AllOuts( BNTheta(beta,k) ) = theta*R2D
             m%AllOuts( BNPhi(  beta,k) ) = phi*R2D
-!             m%AllOuts( BNCurve(beta,k) ) = m%Curve(j,k)*R2D
+!             m%AllOuts( BNCurve(beta,k) ) = m%Curve(j,k)*R2D ! TODO
 
-!             m%AllOuts( BNCpmin(   beta,k) ) = m%BEMT_y%Cpmin(j,k)
+!             m%AllOuts( BNCpmin(   beta,k) ) = m%BEMT_y%Cpmin(j,k) ! TODO
             m%AllOuts( BNSigCr(   beta,k) ) = m%SigmaCavitCrit(j,k)
             m%AllOuts( BNSgCav(   beta,k) ) = m%SigmaCavit(j,k)
 
@@ -1956,24 +2065,20 @@ CONTAINS
 
          end do ! nodes
       end do ! blades
-!
-!      ! rotor outputs:
-!      rmax = 0.0_ReKi
-!      do k=1,p%NumBlades
-!         do j=1,p%NumBlNds
-!            rmax = max(rmax, m%BEMT_u(indx)%rLocal(j,k) ) ! TODO TODO TODO
-!         end do !j=nodes
-!      end do !k=blades
-!
-!      m%AllOuts( RtSpeed ) = m%BEMT_u(indx)%omega*RPS2RPM
-!      m%AllOuts( RtArea  ) = pi*rmax**2 ! TODO TODO TODO
-!
-     tmp = matmul( u%HubMotion%Orientation(:,:,1), m%V_DiskAvg )
-     m%AllOuts( RtVAvgxh ) = tmp(1)
-     m%AllOuts( RtVAvgyh ) = tmp(2)
-     m%AllOuts( RtVAvgzh ) = tmp(3)
-!
-!      m%AllOuts( RtSkew  ) = m%BEMT_u(indx)%chi0*R2D ! TODO TODO TODO Not applicable
+
+      ! Compute max radius and rotor speed
+      rmax  = Calc_MaxRadius(p, u)
+      omega = Calc_Omega(u)
+
+      m%AllOuts( RtSpeed ) = omega*RPS2RPM
+      m%AllOuts( RtArea  ) = pi*rmax**2 
+
+      tmp = matmul( u%HubMotion%Orientation(:,:,1), m%V_DiskAvg )
+      m%AllOuts( RtVAvgxh ) = tmp(1)
+      m%AllOuts( RtVAvgyh ) = tmp(2)
+      m%AllOuts( RtVAvgzh ) = tmp(3)
+
+      m%AllOuts( RtSkew  ) = Calc_Chi0(m%V_diskAvg, m%V_dot_x) * R2D 
 
          ! integrate force/moments over blades by performing mesh transfer to hub point:
       force  = 0.0_ReKi
@@ -1988,27 +2093,25 @@ CONTAINS
       m%AllOuts( RtAeroFyh ) = tmp(2)
       m%AllOuts( RtAeroFzh ) = tmp(3)
 
-     tmp = matmul( u%HubMotion%Orientation(:,:,1), moment )
-     m%AllOuts( RtAeroMxh ) = tmp(1)
-     m%AllOuts( RtAeroMyh ) = tmp(2)
-     m%AllOuts( RtAeroMzh ) = tmp(3)
-!
-!      m%AllOuts( RtAeroPwr ) = m%BEMT_u(indx)%omega * m%AllOuts( RtAeroMxh )! TODO TODO TODO
-!
-!
-     if ( EqualRealNos( m%V_dot_x, 0.0_ReKi ) ) then
-        m%AllOuts( RtTSR    ) = 0.0_ReKi
-        m%AllOuts( RtAeroCp ) = 0.0_ReKi
-        m%AllOuts( RtAeroCq ) = 0.0_ReKi
-        m%AllOuts( RtAeroCt ) = 0.0_ReKi
-     else
-        ! TODO TODO TODO (need rotor area)
-!        denom = 0.5*p%AirDens*m%AllOuts( RtArea )*m%V_dot_x**2
-!        m%AllOuts( RtTSR )    = m%BEMT_u(indx)%omega * rmax / m%V_dot_x
-!        m%AllOuts( RtAeroCp ) = m%AllOuts( RtAeroPwr ) / (denom * m%V_dot_x)
-!        m%AllOuts( RtAeroCq ) = m%AllOuts( RtAeroMxh ) / (denom * rmax)
-!        m%AllOuts( RtAeroCt ) = m%AllOuts( RtAeroFxh ) /  denom
-     end if
+      tmp = matmul( u%HubMotion%Orientation(:,:,1), moment )
+      m%AllOuts( RtAeroMxh ) = tmp(1)
+      m%AllOuts( RtAeroMyh ) = tmp(2)
+      m%AllOuts( RtAeroMzh ) = tmp(3)
+
+      m%AllOuts( RtAeroPwr ) = omega * m%AllOuts( RtAeroMxh )
+
+      if ( EqualRealNos( m%V_dot_x, 0.0_ReKi ) ) then
+         m%AllOuts( RtTSR    ) = 0.0_ReKi
+         m%AllOuts( RtAeroCp ) = 0.0_ReKi
+         m%AllOuts( RtAeroCq ) = 0.0_ReKi
+         m%AllOuts( RtAeroCt ) = 0.0_ReKi
+      else
+        denom = 0.5*p%AirDens*m%AllOuts( RtArea )*m%V_dot_x**2
+        m%AllOuts( RtTSR )    = omega * rmax / m%V_dot_x
+        m%AllOuts( RtAeroCp ) = m%AllOuts( RtAeroPwr ) / (denom * m%V_dot_x)
+        m%AllOuts( RtAeroCq ) = m%AllOuts( RtAeroMxh ) / (denom * rmax)
+        m%AllOuts( RtAeroCt ) = m%AllOuts( RtAeroFxh ) /  denom
+      end if
 
    end subroutine Calc_WriteOutput_FVW
 
@@ -2395,7 +2498,7 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, ADBlFile, OutFileRoot, UnE
    CALL ReadCom( UnIn, InputFile, 'Section Header: Free Vortex Wake (FVW) Theory Options', ErrStat2, ErrMsg2, UnEc )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-   CALL ReadVar ( UnIn, InputFile, InputFileData%FVWFileName, 'FVWFileName', 'FVW input file name', ErrStat2, ErrMsg2, UnEc )
+   CALL ReadVar ( UnIn, InputFile, InputFileData%FVWFileName, 'FVWFile', 'FVW input file name', ErrStat2, ErrMsg2, UnEc )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    IF ( PathIsRelative( InputFileData%FVWFileName ) ) InputFileData%FVWFileName = TRIM(PriPath)//TRIM(InputFileData%FVWFileName)
 

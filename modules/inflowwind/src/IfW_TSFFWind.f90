@@ -640,6 +640,9 @@ SUBROUTINE IfW_TSFFWind_CalcOutput(Time, PositionXYZ, ParamData,  Velocity, Disk
 
 
       ! Step through all the positions and get the velocities
+
+   !$OMP PARALLEL default(shared) if(PointNum>1000)
+   !$OMP do private(PointNum, TmpErrStat, TmpErrMsg ) schedule(runtime)
    DO PointNum = 1, NumPoints
 
          ! If the position is (0,0,0), assume it was never set and skip calculating
@@ -651,16 +654,22 @@ SUBROUTINE IfW_TSFFWind_CalcOutput(Time, PositionXYZ, ParamData,  Velocity, Disk
 
             ! Error handling
          IF (TmpErrStat /= ErrID_None) THEN  !  adding this so we don't have to convert numbers to strings every time
+            !$OMP CRITICAL  ! Needed to avoid data race on ErrStat and ErrMsg
+            ErrStat = ErrID_None
+            ErrMsg  = ""
             CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName//" [position=("//   &
                                                          TRIM(Num2LStr(PositionXYZ(1,PointNum)))//", "// &
                                                          TRIM(Num2LStr(PositionXYZ(2,PointNum)))//", "// &
                                                          TRIM(Num2LStr(PositionXYZ(3,PointNum)))//") in wind-file coordinates]" )
-            IF (ErrStat >= AbortErrLev) RETURN
+            !$OMP END CRITICAL
          END IF
       endif
 
    ENDDO
+   !$OMP END DO 
+   !$OMP END PARALLEL
 
+   IF (ErrStat >= AbortErrLev) RETURN ! Return cannot be in parallel loop
 
 
       !REMOVE THIS for AeroDyn 15

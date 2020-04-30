@@ -189,6 +189,7 @@ IMPLICIT NONE
     CHARACTER(20)  :: OutSFmt      !< Output format for header strings [-]
     CHARACTER(1)  :: Delim      !< Delimiter string for outputs, defaults to tab-delimiters [-]
     INTEGER(IntKi)  :: UnOutFile      !< File unit for the UnsteadyAero outputs [-]
+    LOGICAL  :: ShedEffect = .True.      !< Include the effect of shed vorticity. If False, the input alpha is assumed to already contain this effect (e.g. vortex methods) [-]
   END TYPE UA_ParameterType
 ! =======================
 ! =========  UA_InputType  =======
@@ -4616,6 +4617,7 @@ ENDIF
     DstParamData%OutSFmt = SrcParamData%OutSFmt
     DstParamData%Delim = SrcParamData%Delim
     DstParamData%UnOutFile = SrcParamData%UnOutFile
+    DstParamData%ShedEffect = SrcParamData%ShedEffect
  END SUBROUTINE UA_CopyParam
 
  SUBROUTINE UA_DestroyParam( ParamData, ErrStat, ErrMsg )
@@ -4684,6 +4686,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%OutSFmt)  ! OutSFmt
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%Delim)  ! Delim
       Int_BufSz  = Int_BufSz  + 1  ! UnOutFile
+      Int_BufSz  = Int_BufSz  + 1  ! ShedEffect
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -4756,6 +4759,8 @@ ENDIF
           Int_Xferred = Int_Xferred   + 1
         END DO ! I
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%UnOutFile
+      Int_Xferred   = Int_Xferred   + 1
+      IntKiBuf ( Int_Xferred:Int_Xferred+1-1 ) = TRANSFER( InData%ShedEffect , IntKiBuf(1), 1)
       Int_Xferred   = Int_Xferred   + 1
  END SUBROUTINE UA_PackParam
 
@@ -4848,6 +4853,8 @@ ENDIF
         Int_Xferred = Int_Xferred   + 1
       END DO ! I
       OutData%UnOutFile = IntKiBuf( Int_Xferred ) 
+      Int_Xferred   = Int_Xferred + 1
+      OutData%ShedEffect = TRANSFER( IntKiBuf( Int_Xferred ), mask0 )
       Int_Xferred   = Int_Xferred + 1
  END SUBROUTINE UA_UnPackParam
 

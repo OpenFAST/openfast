@@ -82,7 +82,12 @@ In OpenFAST development, the typical workflow follows this procedure:
 
 .. code-block:: bash
 
+    # This adds the remote
     git remote add upstream https://github.com/OpenFAST/OpenFAST
+
+    # This downloads all the info in the remote, but it doesnt change
+    # the local source code
+    git fetch --all
 
 4. Create a feature branch for active development starting from the OpenFAST
    ``dev`` branch and check it out

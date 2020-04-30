@@ -13,8 +13,6 @@ module VTK
     integer, save :: nData=0;
     integer, save :: nPoints=0;
 
-    logical, save :: bOverWritWarned = .true.
-
 
     logical, save :: bBinary = .false.
     character(len=255), save :: buffer
@@ -66,13 +64,14 @@ contains
     subroutine set_vtk_coordinate_transform(T_g2b_in,PO_g_in)
         real(ReKi),dimension(3,3), intent(in) :: T_g2b_in
         real(ReKi),dimension(3)  , intent(in) :: PO_g_in
-        !
         bChangeFrame=.true.
         T_g2b=T_g2b_in
         PO_g=PO_g_in
     end subroutine
 
-
+    subroutine set_vtk_no_coordinate_transform()
+        bChangeFrame=.false.
+    end subroutine
 
     logical function vtk_new_ascii_file(filename,label)
         !use MainIO,     only: get_free_unit ,check_io

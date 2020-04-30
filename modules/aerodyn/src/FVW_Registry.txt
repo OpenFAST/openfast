@@ -5,6 +5,7 @@
 ##################################################################################################################################
 include Registry_NWTC_Library.txt
 usefrom AirfoilInfo_Registry.txt
+usefrom UnsteadyAero_Registry.txt
 
 #####################  Registry for FVW ###############
 # ..... PARAMETERS .............
@@ -33,6 +34,11 @@ typedef     ^                   ^               IntKi                           
 typedef     ^                   ^               IntKi                            WakeRegMethod -  - -   "Method for regularization (constant, stretching, age, etc.)"  - 
 typedef     ^                   ^               ReKi                             WakeRegParam -  - -   "Initial value of the regularization parameter" 
 typedef     ^                   ^               ReKi                             WingRegParam -  - -   "Regularization parameter of the wing" 
+typedef     ^                   ^               IntKi                            ShearModel   -  - -   "Option for shear modelling" 
+typedef     ^                   ^               Logical                          TwrShadowOnWake - - -  "Include tower shadow effects on wake" 
+typedef     ^                   ^               IntKi                            VelocityMethod   - - -  "Velocity calculation method" 
+typedef     ^                   ^               ReKi                             TreeBranchFactor - - - "Factor used to determine if a point is far enough" 
+typedef     ^                   ^               IntKi                            PartPerSegment  - - -  "Number of particles per segment, e.g. for tree method" 
 typedef     ^                   ^               DbKi                             DTaero        -  - -   "Time interval for calls calculations"   s
 typedef     ^                   ^               DbKi                             DTfvw         -  - -   "Time interval for calculating wake induced velocities"   s
 typedef     ^                   ^               ReKi                             KinVisc       -  - -   "Kinematic air viscosity"   m^2/s
@@ -43,10 +49,6 @@ typedef     ^                   ^               DbKi                            
 typedef     ^                   ^               IntKi                            VTKCoord      -  - -    "Switch for VTK outputs coordinate  system" -
 typedef     ^                   ^               CHARACTER(1024)                  RootName      -  -  - "RootName for writing output files"	-
 
-# ....... OtherStateType ............
-# FVW_OtherStateType
-typedef  FVW/FVW           OtherStateType       IntKi                            NULL              -  -  - "Number of active near wake panels"      -
-
 # ....... MiscVars ............
 # FVW_MiscVarType
 typedef  FVW/FVW           MiscVarType          Logical                          FirstCall      -  - - "True if this is the first call to update state (used in CalcOutput)" -
@@ -55,7 +57,7 @@ typedef     ^                   ^               ReKi                            
 typedef     ^                   ^               ReKi                             TE           :::  -  -  "Trailing edge points" -
 typedef     ^                   ^               ReKi                             r_LL         :::: - -   "Position    of the Lifting line panels" -
 typedef     ^                   ^               ReKi                             s_LL         ::   -  -  "Spanwise coordinate of LL elements" m
-typedef     ^                   ^               ReKi                             chord_LL     ::  -  -   "chord on LL cp " m
+typedef     ^                   ^               ReKi                             chord_LL     ::  -  -   "chord on LL nodes " m
 # Variables at control point - Dimensions nSpan 
 typedef     ^                   ^               ReKi                             s_CP_LL      ::   -  -  "Spanwise coordinate of LL CP" m
 typedef     ^                   ^               ReKi                             chord_CP_LL  ::   -  -  "chord on LL cp " m
@@ -77,6 +79,7 @@ typedef     ^                   ^               ReKi                            
 typedef     ^                   ^               ReKi                             Vind_FW      :::: -  -  "Induced velocity on far  wake panels" m/s 
 typedef     ^                   ^               IntKi                            nNW           -   -  -  "Number of active near wake panels"      -
 typedef     ^                   ^               IntKi                            nFW           -   -  -  "Number of active far  wake panels"      -
+typedef     ^                   ^               IntKi                            iStep         -   -  -  "Current step number used for update state"      -
 typedef     ^                   ^               IntKi                            VTKstep       -   -  -  "Current vtk output step number"      -
 typedef     ^                   ^               DbKi                             VTKlastTime   -   -   -  "Time the last VTK file set was written out" s
 typedef     ^                   ^               ReKi                             r_wind        ::   -  -  "List of points where wind is requested for next time step"  -
@@ -84,6 +87,25 @@ typedef     ^                   ^               ReKi                            
 typedef     ^                   ^               Logical                          ComputeWakeInduced - - - "Compute induced velocities on this timestep" -
 typedef     ^                   ^               DbKi                             OldWakeTime   -   -   -  "Time the wake induction velocities were last calculated" s
 typedef     ^                   ^               ReKi                             tSpent        -   -  -  "Time spent in expensive Biot-Savart computation" s
+typedef     ^                   ^               ReKi                             dxdt_NW        ::::    -  -  "State time derivatie, stored for subcylcing" - 
+typedef     ^                   ^               ReKi                             dxdt_FW        ::::    -  -  "State time derivatie, stored for subcylcing" - 
+# Convenient storage
+typedef     ^                   ^               Reki                             alpha_LL     ::   -  -  "Angle of attack at lifting line CP, only computed with CircPolarData method" -
+typedef     ^                   ^               Reki                             Vreln_LL        ::   -  -  "Norm of Vrel on the lifting line" -
+# Segment storage (buffer)
+typedef     ^                   ^               IntKi                            SegConnct     ::    -  -  "Connectivity of segments" - 
+typedef     ^                   ^               ReKi                             SegPoints     ::    -  -  "Points delimiting the segments" - 
+typedef     ^                   ^               ReKi                             SegGamma      :     -  -  "Segment circulations" - 
+typedef     ^                   ^               ReKi                             SegEpsilon    :     -  -  "Segment regularization parameter" - 
+# Wake rollup storage (buffer)
+typedef     ^                   ^               ReKi                             CPs           ::    -  -  "Control points used for wake rollup computation" - 
+typedef     ^                   ^               ReKi                             Uind          ::    -  -  "Induced velocities obtained at control points" - 
+# TODO UA - Should be part of AeroDyn
+typedef     ^                   ^               UA_MiscVarType                   m_UA          -  -  -  "misc vars for UnsteadyAero"        -
+typedef     ^                   ^               UA_OutputType                    y_UA          -  -  -  "outputs from UnsteadyAero"        -
+typedef     ^                   ^               UA_ParameterType                 p_UA          -  -  -  "parameters for UnsteadyAero"        -
+typedef     ^                   ^               LOGICAL                          UA_Flag       -  -  -  "logical flag indicating whether to use UnsteadyAero"        -
+typedef     ^                   ^               ReKi                             Vwnd_ND       ::: - -  "InflowOnBlade (at nodes) values modified by tower influence. ONLY for UA" m/s
 
 # ........ Input ............
 # FVW_InputType
@@ -108,11 +130,20 @@ typedef     ^                   ^               ReKi                            
 #.......... DiscreteStateType ......
 # FVW_DiscreteStateType
 typedef FVW/FVW            DiscreteStateType    ReKi                             NULL         -  -  - "Empty to satisfy framework"           -
+# TODO UA
+typedef   ^                      ^              UA_DiscreteStateType             UA           -  -  - "states for UnsteadyAero"        -
 
 #.......... ConstraintStateType ......
 # FVW_ConstraintStateType
 typedef FVW/FVW            ConstraintStateType  Reki                             residual         -  -  "Residual" -
 typedef    ^                    ^               Reki                             Gamma_LL     ::  -  -  "Circulation on the wing lifting line" -
+
+# ....... OtherStateType ............
+# FVW_OtherStateType
+typedef  FVW/FVW           OtherStateType       IntKi                            NULL              -  -  - "Number of active near wake panels"      -
+# TODO UA
+typedef   ^                       ^             UA_OtherStateType                UA                -  -  -  "other states for UnsteadyAero"        -
+typedef   ^                       ^             Logical                          UA_Flag       {:}{:}  - -  "logical flag indicating whether to use UnsteadyAero"        -
 
 
 #.......... InitInputType ......
@@ -131,6 +162,11 @@ typedef     ^                   ^               IntKi                           
 typedef     ^                   ^               IntKi                            NumBladeNodes     -  -  - "Number of nodes on each blade"          -
 typedef     ^                   ^               DbKi                             DTaero            -  -  - "Time interval for calls (from AD15)"   s
 typedef     ^                   ^               ReKi                             KinVisc       -  - -   "Kinematic air viscosity"   m^2/s
+# TODO UA - Should be part of AeroDyn
+typedef     ^                   ^              IntKi                             UAMod             - - -   "Model for the dynamic stall equations [1 = Leishman/Beddoes, 2 = Gonzalez, 3 = Minnema]"    -
+typedef     ^                   ^              LOGICAL                           UA_Flag           - - -   "logical flag indicating whether to use UnsteadyAero"        -
+typedef     ^                   ^              LOGICAL                           Flookup           - - -   "Use table lookup for f' and f'' "    -
+typedef     ^                   ^              ReKi                              a_s               - - -   "speed of sound"        m/s
 
 #.......... InputFileType ......
 # FVW_InputFile
@@ -157,6 +193,11 @@ typedef     ^                   ^               IntKi                           
 typedef     ^                   ^               IntKi                            WakeRegMethod -  - -   "Method for regularization (constant, stretching, age, etc.)"  - 
 typedef     ^                   ^               ReKi                             WakeRegParam  -  - -   "Factor used in the regularization " 
 typedef     ^                   ^               ReKi                             WingRegParam  -  - -   "Factor used in the regularization " 
+typedef     ^                   ^               IntKi                            ShearModel   -  - -   "Option for shear modelling" 
+typedef     ^                   ^               Logical                          TwrShadowOnWake -  - -   "Include tower shadow effects on wake" 
+typedef     ^                   ^               IntKi                            VelocityMethod   - - -  "Velocity calculation method" 
+typedef     ^                   ^               ReKi                             TreeBranchFactor - - - "Factor used to determine if a point is far enough" 
+typedef     ^                   ^               IntKi                            PartPerSegment  - - -  "Number of particles per segment, e.g. for tree method" 
 typedef     ^                   ^               IntKi                            WrVTK         -  - -   "Outputs VTK at each calcoutput call, even if main fst doesnt do it"  - 
 typedef     ^                   ^               IntKi                            VTKBlades     -  - -   "Outputs VTk for each blade 0=no blade, 1=Bld 1"  - 
 typedef     ^                   ^               DbKi                             DTvtk         -  - -   "Requested timestep between VTK outputs (calculated from the VTK_fps read in)" s

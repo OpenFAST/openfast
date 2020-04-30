@@ -61,7 +61,6 @@ module AeroDyn
                                                !   states(z)
    PUBLIC :: AD_GetOP                          !< Routine to pack the operating point values (for linearization) into arrays
    
-  
 contains    
 !----------------------------------------------------------------------------------------------------------------------------------   
 !> This subroutine sets the initialization output data structure, which contains data to be returned to the calling program (e.g.,
@@ -111,7 +110,7 @@ subroutine AD_SetInitOut(p, InputFileData, InitOut, errStat, errMsg)
    do k=1,p%numBlades
       do j=1, p%NumBlNds
          
-         m = (k-1)*p%NumBlNds*24 + (j-1)*24 
+         m = (k-1)*p%NumBlNds*p%NBlOuts + (j-1)*p%NBlOuts
          
          WRITE (TmpChar,'(I3.3)') j
          chanPrefix = "B"//trim(num2lstr(k))//"N"//TmpChar
@@ -163,6 +162,18 @@ subroutine AD_SetInitOut(p, InputFileData, InitOut, errStat, errMsg)
          InitOut%WriteOutputUnt( m + 23 ) = '  (N/m)  '
          InitOut%WriteOutputHdr( m + 24 ) = ' '//trim(chanPrefix)//"Gam"
          InitOut%WriteOutputUnt( m + 24 ) = '  (m^2/s)  '
+         InitOut%WriteOutputHdr( m + 25 ) = ' '//trim(chanPrefix)//"Uin"
+         InitOut%WriteOutputUnt( m + 25 ) = '  (m/s)  '
+         InitOut%WriteOutputHdr( m + 26 ) = ' '//trim(chanPrefix)//"Uit"
+         InitOut%WriteOutputUnt( m + 26 ) = '  (m/s)  '
+         InitOut%WriteOutputHdr( m + 27 ) = ' '//trim(chanPrefix)//"Uir"
+         InitOut%WriteOutputUnt( m + 27 ) = '  (m/s)  '
+         InitOut%WriteOutputHdr( m + 28 ) = ' '//trim(chanPrefix)//"Clst"
+         InitOut%WriteOutputUnt( m + 28 ) = '   (-)   '
+         InitOut%WriteOutputHdr( m + 29 ) = ' '//trim(chanPrefix)//"Cdst"
+         InitOut%WriteOutputUnt( m + 29 ) = '   (-)   '
+         InitOut%WriteOutputHdr( m + 30 ) = ' '//trim(chanPrefix)//"Cmst"
+         InitOut%WriteOutputUnt( m + 30 ) = '   (-)   '
          
       end do
    end do
@@ -309,6 +320,9 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       ! Display the module information
 
    call DispNVD( AD_Ver )
+#ifdef DBG_OUTS
+   call WrScr(' - Compiled with DBG_OUTS')
+#endif
    
    
    p%NumBlades = InitInp%NumBlades ! need this before reading the AD input file so that we know how many blade files to read
@@ -1013,7 +1027,7 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
   !p%RootName       = TRIM(InitInp%RootName)//'.AD'   ! set earlier to it could be used   
    
 #ifdef DBG_OUTS
-   p%NBlOuts          = 24  
+   p%NBlOuts          = 30
    p%numOuts          = p%NumBlNds*p%NumBlades*p%NBlOuts
    p%NTwOuts          = 0
       
@@ -1170,6 +1184,9 @@ subroutine AD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, errStat
       if (allocated(OtherState%WakeLocationPoints)) then
          OtherState%WakeLocationPoints = m%FVW%r_wind
       endif
+      ! UA TODO
+      !call UA_UpdateState_Wrapper(p%AFI, n, p%FVW, x%FVW, xd%FVW, OtherState%FVW, m%FVW, ErrStat2, ErrMsg2)
+      !   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    endif
            
    call Cleanup()
@@ -1217,6 +1234,11 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
    ErrStat = ErrID_None
    ErrMsg  = ""
 
+#ifdef UA_OUTS
+  ! if ( mod(REAL(t,ReKi),.1) < p%dt) then
+   if (allocated(m%FVW%y_UA%WriteOutput)) m%FVW%y_UA%WriteOutput = 0.0 !reset to zero in case UA shuts off mid-simulation
+#endif            
+
 
    call SetInputs(p, u, m, indx, errStat2, errMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1238,7 +1260,7 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       CALL FVW_CalcOutput( t, m%FVW_u(1), p%FVW, x%FVW, xd%FVW, z%FVW, OtherState%FVW, p%AFI, m%FVW_y, m%FVW, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
-      call SetOutputsFromFVW( u, p, m, y, ErrStat2, ErrMsg2 )
+      call SetOutputsFromFVW( u, p, OtherState, xd, m, y, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    endif
 
@@ -1275,9 +1297,9 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
    !-------------------------------------------------------   
    if (p%NumOuts > 0) then
 #ifdef DBG_OUTS
-      call Calc_WriteDbgOutput( p, u, m, y, ErrStat2, ErrMsg2 ) 
+      call Calc_WriteDbgOutput( p, u, m, y, OtherState, xd, ErrStat2, ErrMsg2 ) 
 #else
-      call Calc_WriteOutput( p, u, m, y, OtherState, indx, ErrStat2, ErrMsg2 )   
+      call Calc_WriteOutput( p, u, m, y, OtherState, xd, indx, ErrStat2, ErrMsg2 )   
 #endif   
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)      
    
@@ -1296,6 +1318,12 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       
    end if
    
+#ifdef UA_OUTS
+  ! if ( mod(REAL(t,ReKi),.1) < p%dt) then
+   if (allocated(m%FVW%y_UA%WriteOutput)) &
+            WRITE (69, '(F20.6,'//trim(num2lstr(size(m%FVW%y_UA%WriteOutput)))//'(:,1x,ES19.5E3))') t, ( m%FVW%y_UA%WriteOutput(i), i=1,size(m%FVW%y_UA%WriteOutput))
+  ! end if              
+#endif 
    
    
 end subroutine AD_CalcOutput
@@ -1402,7 +1430,7 @@ subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
    real(ReKi)                              :: tmp(3)
    real(ReKi)                              :: tmp_sz, tmp_sz_y
    real(R8Ki)                              :: thetaBladeNds(p%NumBlNds,p%NumBlades)
-   real(R8Ki)                              :: Azimuth(p%NumBlNds)
+   real(R8Ki)                              :: Azimuth(p%NumBlades)
    
    integer(intKi)                          :: j                      ! loop counter for nodes
    integer(intKi)                          :: k                      ! loop counter for blades
@@ -1606,17 +1634,16 @@ subroutine SetInputsForFVW(p, u, m, errStat, errMsg)
 !   real(ReKi)                              :: tmp(3)
 !   real(ReKi)                              :: tmp_sz, tmp_sz_y
    real(R8Ki)                              :: thetaBladeNds(p%NumBlNds,p%NumBlades)
-   real(R8Ki)                              :: Azimuth(p%NumBlNds)
+   real(R8Ki)                              :: Azimuth(p%NumBlades)
    
    integer(intKi)                          :: tIndx
    integer(intKi)                          :: k                      ! loop counter for blades
-   integer(intKi)                          :: ErrStat2
-   character(ErrMsgLen)                    :: ErrMsg2
    character(*), parameter                 :: RoutineName = 'SetInputsForFVW'
 
    do tIndx=1,size(u)
-         ! Get disk average values and orientations
-      call DiskAvgValues(p, u(tIndx), m, x_hat_disk, y_hat_disk, z_hat_disk, Azimuth)
+      ! Get disk average values and orientations
+      ! NOTE: needed because it sets m%V_diskAvg and m%V_dot_x, needed by CalcOutput..
+      call DiskAvgValues(p, u(tIndx), m, x_hat_disk, y_hat_disk, z_hat_disk, Azimuth) 
       call GeomWithoutSweepPitchTwist(p,u(tIndx),m,thetaBladeNds,ErrStat,ErrMsg)
       if (ErrStat >= AbortErrLev) return
 
@@ -1638,8 +1665,17 @@ subroutine SetInputsForFVW(p, u, m, errStat, errMsg)
       enddo
       if (ALLOCATED(m%FVW_u(tIndx)%V_wind)) then
          m%FVW_u(tIndx)%V_wind   = u(tIndx)%InflowWakeVel
+         ! Applying tower shadow to V_wind based on r_wind positions
+         ! NOTE: m%DisturbedInflow also contains tower shadow and we need it for CalcOutput
+         if (p%TwrPotent /= TwrPotent_none .or. p%TwrShadow) then
+            if (p%FVW%TwrShadowOnWake) then
+               call TwrInflArray( p, u(tIndx), m, m%FVW%r_wind, m%FVW_u(tIndx)%V_wind, ErrStat, ErrMsg )
+               if (ErrStat >= AbortErrLev) return
+            endif
+         end if
       endif
    enddo
+   m%FVW%Vwnd_ND = m%DisturbedInflow ! Nasty transfer for UA, but this is temporary, waiting for AeroDyn to handle UA
 end subroutine SetInputsForFVW
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine converts outputs from BEMT (stored in m%BEMT_y) into values on the AeroDyn BladeLoad output mesh.
@@ -1688,13 +1724,16 @@ end subroutine SetOutputsFromBEMT
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine converts outputs from FVW (stored in m%FVW_y) into values on the AeroDyn BladeLoad output mesh.
-subroutine SetOutputsFromFVW(u, p, m, y, ErrStat, ErrMsg)
-   TYPE(AD_InputType),      intent(in   ) :: u           !< Inputs at Time t
-   type(AD_ParameterType),  intent(in   ) :: p           !< AD parameters
-   type(AD_OutputType),     intent(inout) :: y           !< AD outputs
-   type(AD_MiscVarType),    intent(inout) :: m           !< Misc/optimization variables
-   integer(IntKi),          intent(  out) :: ErrStat     !< Error status of the operation
-   character(*),            intent(  out) :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+subroutine SetOutputsFromFVW(u, p, OtherState, xd, m, y, ErrStat, ErrMsg)
+   use BEMTUnCoupled, only: Compute_UA_AirfoilCoefs
+   TYPE(AD_InputType),        intent(in   ) :: u           !< Inputs at Time t
+   type(AD_ParameterType),    intent(in   ) :: p           !< AD parameters
+   type(AD_OtherStateType),   intent(in   ) :: OtherState  !< OtherState
+   type(AD_DiscreteStateType),intent(in   ) :: xd          !< Discrete states
+   type(AD_OutputType),       intent(inout) :: y           !< AD outputs
+   type(AD_MiscVarType),      intent(inout) :: m           !< Misc/optimization variables
+   integer(IntKi),            intent(  out) :: ErrStat     !< Error status of the operation
+   character(*),              intent(  out) :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
    integer(intKi)                         :: j           ! loop counter for nodes
    integer(intKi)                         :: k           ! loop counter for blades
@@ -1706,7 +1745,7 @@ subroutine SetOutputsFromFVW(u, p, m, y, ErrStat, ErrMsg)
    real(ReKi)                             :: AxInd, TanInd, Vrel, phi, alpha, Re, theta
    type(AFI_OutputType)                   :: AFI_interp             ! Resulting values from lookup table
    real(ReKi)                             :: UrelWind_s(3)          ! Relative wind (wind+str) in section coords
-   real(ReKi)                             :: Cx, Cy
+   real(ReKi)                             :: Cx, Cy, Cl_dyn, Cd_dyn, Cm_dyn
 
    integer(intKi)                         :: ErrStat2
    character(ErrMsgLen)                   :: ErrMsg2
@@ -1724,17 +1763,33 @@ subroutine SetOutputsFromFVW(u, p, m, y, ErrStat, ErrMsg)
                      AxInd, TanInd, Vrel, phi, alpha, Re, UrelWind_s, ErrStat, ErrMsg )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SetOutputsFromFVW')
          !  NOTE: using airfoil coeffs at nodes
+
+         ! Compute steady Airfoil Coefs no matter what..
          call AFI_ComputeAirfoilCoefs( alpha, Re, 0.0_ReKi,  p%AFI(p%FVW%AFindx(j,k)), AFI_interp, ErrStat, ErrMsg )
+         Cl_dyn = AFI_interp%Cl
+         Cd_dyn = AFI_interp%Cd
+         Cm_dyn = AFI_interp%Cm
+         if (m%FVW%UA_Flag) then
+            if ((OtherState%FVW%UA_Flag(j,k)) .and. ( .not. EqualRealNos(Vrel,0.0_ReKi) ) ) then
+               m%FVW%m_UA%iBladeNode = j
+               m%FVW%m_UA%iBlade     = k
+               call Compute_UA_AirfoilCoefs( alpha, Vrel, Re,  0.0_ReKi, p%AFI(p%FVW%AFindx(j,k)), m%FVW%p_UA, xd%FVW%UA, OtherState%FVW%UA, m%FVW%y_UA, m%FVW%m_UA, Cl_dyn, Cd_dyn, Cm_dyn, ErrStat, ErrMsg) 
+               if(ErrStat/=ErrID_None) print*,'UA CalcOutput:', trim(ErrMsg)
+            end if
+         end if
+
+
+
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SetOutputsFromFVW')
          cp = cos(phi)
          sp = sin(phi)
-         Cx = AFI_interp%Cl*cp + AFI_interp%Cd*sp
-         Cy = AFI_interp%Cl*sp - AFI_interp%Cd*cp
+         Cx = Cl_dyn*cp + Cd_dyn*sp
+         Cy = Cl_dyn*sp - Cd_dyn*cp
 
          q = 0.5 * p%airDens * Vrel**2                         ! dynamic pressure of the jth node in the kth blade
          force(1) =  Cx * q * p%FVW%Chord(j,k)      ! X = normal force per unit length (normal to the plane, not chord) of the jth node in the kth blade
          force(2) = -Cy * q * p%FVW%Chord(j,k)      ! Y = tangential force per unit length (tangential to the plane, not chord) of the jth node in the kth blade
-         moment(3)=  AFI_interp%Cm * q * p%FVW%Chord(j,k)**2   ! M = pitching moment per unit length of the jth node in the kth blade
+         moment(3)=  Cm_dyn * q * p%FVW%Chord(j,k)**2   ! M = pitching moment per unit length of the jth node in the kth blade
 
             ! save these values for possible output later:
          m%X(j,k) = force(1)
@@ -2088,8 +2143,7 @@ SUBROUTINE Init_BEMTmodule( InputFileData, u_AD, u, p, x, xd, z, OtherState, y, 
    InitInp%aTol             = InputFileData%IndToler
    InitInp%useTipLoss       = InputFileData%TipLoss
    InitInp%useHubLoss       = InputFileData%HubLoss
-!FIXME: check the next flag.  Not sure if FVW can be used with it or not.
-   InitInp%useInduction     = (InputFileData%WakeMod /= WakeMod_none .and. InputFileData%WakeMod /= WakeMod_FVW)
+   InitInp%useInduction     = InputFileData%WakeMod /= WakeMod_none
    InitInp%useTanInd        = InputFileData%TanInd
    InitInp%useAIDrag        = InputFileData%AIDrag        
    InitInp%useTIDrag        = InputFileData%TIDrag  
@@ -2298,6 +2352,11 @@ SUBROUTINE Init_FVWmodule( InputFileData, u_AD, u, p, x, xd, z, OtherState, y, m
       end do
    end do
 
+   ! Unsteady Aero Data
+   InitInp%UA_Flag    = InputFileData%AFAeroMod == AFAeroMod_BL_unsteady
+   InitInp%UAMod      = InputFileData%UAMod
+   InitInp%Flookup    = InputFileData%Flookup
+   InitInp%a_s        = InputFileData%SpdSound
 
       ! Copy the mesh over for InitInp to FVW.  We would not need to copy this if we decided to break the Framework
       !  by passing u_AD%BladeMotion directly into FVW_Init, but nothing is really gained by doing that.
@@ -2320,7 +2379,7 @@ SUBROUTINE Init_FVWmodule( InputFileData, u_AD, u, p, x, xd, z, OtherState, y, m
    ENDDO
 
       ! NOTE: not passing p%AFI at present.  We are not storing it in FVW's parameters.
-   call FVW_Init( InitInp, u, p%FVW, x, xd, z, OtherState, y, m, Interval, InitOut, ErrStat2, ErrMsg2 )
+   call FVW_Init(p%AFI, InitInp, u, p%FVW, x, xd, z, OtherState, y, m, Interval, InitOut, ErrStat2, ErrMsg2 )
       CALL SetErrStat ( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
       ! set the size of the input and xd arrays for passing wind info to FVW.
@@ -2535,6 +2594,110 @@ SUBROUTINE TwrInfl( p, u, m, ErrStat, ErrMsg )
    
    
 END SUBROUTINE TwrInfl 
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Calculate the tower influence on a array of points `Positions` (3xn)
+!! The subroutine has side effecs and modifies the inflow 
+!! Relies heavily (i.e. unfortunate copy pasting), on TwrInfl 
+SUBROUTINE TwrInflArray( p, u, m, Positions, Inflow, ErrStat, ErrMsg )
+   TYPE(AD_InputType),           INTENT(IN   )  :: u                       !< Inputs at Time t
+   TYPE(AD_ParameterType),       INTENT(IN   )  :: p                       !< Parameters
+   type(AD_MiscVarType),         intent(inout)  :: m                       !< Misc/optimization variables
+   real(ReKi), dimension(:,:),   INTENT(IN   )  :: Positions               !< Positions where tower influence is to be computed
+   real(ReKi), dimension(:,:),   INTENT(INOUT)  :: Inflow                  !< Undisturbed inflow (in) -> disturbed inflow (out)
+   INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat                 !< Error status of the operation
+   CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg                  !< Error message if ErrStat /= ErrID_None
+   ! local variables
+   real(ReKi)                                   :: xbar                    ! local x^ component of r_TowerBlade (distance from tower to blade) normalized by tower radius
+   real(ReKi)                                   :: ybar                    ! local y^ component of r_TowerBlade (distance from tower to blade) normalized by tower radius
+   real(ReKi)                                   :: zbar                    ! local z^ component of r_TowerBlade (distance from tower to blade) normalized by tower radius
+   real(ReKi)                                   :: theta_tower_trans(3,3)  ! transpose of local tower orientation expressed as a DCM
+   real(ReKi)                                   :: TwrCd                   ! local tower drag coefficient
+   real(ReKi)                                   :: W_tower                 ! local relative wind speed normal to the tower
+   real(ReKi)                                   :: Pos(3)                  ! current point
+   real(ReKi)                                   :: u_TwrShadow             ! axial velocity deficit fraction from tower shadow
+   real(ReKi)                                   :: u_TwrPotent             ! axial velocity deficit fraction from tower potential flow
+   real(ReKi)                                   :: v_TwrPotent             ! transverse velocity deficit fraction from tower potential flow
+   real(ReKi)                                   :: denom                   ! denominator
+   real(ReKi)                                   :: v(3)                    ! temp vector
+   integer(IntKi)                               :: i                       ! loop counters for points
+   real(ReKi)                                   :: TwrClrnc                ! local tower clearance
+   real(ReKi)                                   :: r_TowerBlade(3)         ! distance vector from tower to blade
+   real(ReKi)                                   :: TwrDiam                 ! local tower diameter  
+   logical                                      :: found   
+   integer(intKi)                               :: ErrStat2
+   character(ErrMsgLen)                         :: ErrMsg2
+   character(*), parameter                      :: RoutineName = 'TwrInflArray'
+   ErrStat = ErrID_None
+   ErrMsg  = ""   
+   
+   ! these models are valid for only small tower deflections; check for potential division-by-zero errors:   
+   call CheckTwrInfl( u, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ); if (ErrStat >= AbortErrLev) return
+
+   !$OMP PARALLEL default(shared)
+   !$OMP do private(i,Pos,r_TowerBlade,theta_tower_trans,W_tower,xbar,ybar,zbar,TwrCd,TwrClrnc,TwrDiam,found,denom,u_TwrPotent,v_TwrPotent,u_TwrShadow,v) schedule(runtime)
+   do i = 1, size(Positions,2)
+      Pos=Positions(1:3,i)
+         
+      ! Find nearest line2 element or node of the tower  (see getLocalTowerProps)
+      ! values are found for the deflected tower, returning theta_tower, W_tower, xbar, ybar, zbar, and TowerCd:
+      ! option 1: nearest line2 element
+      call TwrInfl_NearestLine2Element(p, u, Pos, r_TowerBlade, theta_tower_trans, W_tower, xbar, ybar, zbar, TwrCd, TwrDiam, found)
+      if ( .not. found) then 
+         ! option 2: nearest node
+         call TwrInfl_NearestPoint(p, u, Pos, r_TowerBlade, theta_tower_trans, W_tower, xbar, ybar, zbar, TwrCd, TwrDiam)
+      end if
+      TwrClrnc = TwoNorm(r_TowerBlade) - 0.5_ReKi*TwrDiam
+
+      if ( TwrClrnc>20*TwrDiam) then
+         ! Far away, we skip the computation and keep undisturbed inflow 
+      elseif ( TwrClrnc<=0.01_ReKi*TwrDiam) then
+         ! Inside the tower, or very close, (will happen for vortex elements) we keep undisturbed inflow
+         ! We don't want to reach the stagnation points
+      else
+         ! calculate tower influence:
+         if ( abs(zbar) < 1.0_ReKi .and. p%TwrPotent /= TwrPotent_none ) then
+
+            if ( p%TwrPotent == TwrPotent_baseline ) then
+               denom = (xbar**2 + ybar**2)**2
+               u_TwrPotent = ( -1.0*xbar**2 + ybar**2 ) / denom
+               v_TwrPotent = ( -2.0*xbar    * ybar    ) / denom      
+
+            elseif (p%TwrPotent == TwrPotent_Bak) then
+               xbar = xbar + 0.1
+               denom = (xbar**2 + ybar**2)**2               
+               u_TwrPotent = ( -1.0*xbar**2 + ybar**2 ) / denom
+               v_TwrPotent = ( -2.0*xbar    * ybar    ) / denom        
+               denom = TwoPi*(xbar**2 + ybar**2)               
+               u_TwrPotent = u_TwrPotent + TwrCd*xbar / denom
+               v_TwrPotent = v_TwrPotent + TwrCd*ybar / denom                       
+               
+            end if
+         else
+            u_TwrPotent = 0.0_ReKi
+            v_TwrPotent = 0.0_ReKi
+         end if
+         
+         if ( p%TwrShadow .and. xbar > 0.0_ReKi .and. abs(zbar) < 1.0_ReKi) then
+            denom = sqrt( sqrt( xbar**2 + ybar**2 ) )
+            if ( abs(ybar) < denom ) then
+               u_TwrShadow = -TwrCd / denom * cos( PiBy2*ybar / denom )**2
+            else
+               u_TwrShadow = 0.0_ReKi
+            end if
+         else            
+            u_TwrShadow = 0.0_ReKi
+         end if
+                     
+         v(1) = (u_TwrPotent + u_TwrShadow)*W_tower
+         v(2) = v_TwrPotent*W_tower
+         v(3) = 0.0_ReKi
+         
+         Inflow(1:3,i) = Inflow(1:3,i) + matmul( theta_tower_trans, v ) 
+      endif ! Check if point far away or in tower
+   enddo ! loop on points
+   !$OMP END DO 
+   !$OMP END PARALLEL
+END SUBROUTINE TwrInflArray
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine returns the tower constants necessary to compute the tower influence. 
 !! if u%TowerMotion does not have any nodes there will be serious problems. I assume that has been checked earlier.
