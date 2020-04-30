@@ -28,9 +28,9 @@ typedef   ^             ^               ReKi              rLocal               {
 # Define outputs from the initialization routine here:
 typedef   ^   InitOutputType   ProgDesc             Ver                -   -   -   "This module's name, version, and date"   -
 
-typedef   ^   DBEMT_ElementContinuousStateType     ReKi    vind                   {2}      -        -        "The filtered induced velocity, [1,i,j] is the axial induced velocity (-Vx*a) at node i on blade j and [2,i,j] is the tantential induced velocity (Vy*a')"   m/s
-typedef   ^   DBEMT_ElementContinuousStateType     ReKi    vind_dot               {2}      -        -        "Time derivative of the filtered induced velocity, x%vind in CCSD"   "m/s^2"
-typedef   ^   DBEMT_ElementContinuousStateType     ReKi    vind_1                 {2}      -        -        "The filtered intermediate induced velocity"   "m/s"
+typedef   ^   DBEMT_ElementContinuousStateType     R8Ki    vind                   {2}      -        -        "The filtered induced velocity, [1,i,j] is the axial induced velocity (-Vx*a) at node i on blade j and [2,i,j] is the tantential induced velocity (Vy*a')"   m/s
+typedef   ^   DBEMT_ElementContinuousStateType     R8Ki    vind_dot               {2}      -        -        "Time derivative of the filtered induced velocity, x%vind in CCSD"   "m/s^2"
+typedef   ^   DBEMT_ElementContinuousStateType     R8Ki    vind_1                 {2}      -        -        "The filtered intermediate induced velocity"   "m/s"
 
 # ..... States ....................................................................................................................
 # Define continuous (differentiable) states here:

@@ -53,9 +53,9 @@ IMPLICIT NONE
 ! =======================
 ! =========  DBEMT_ElementContinuousStateType  =======
   TYPE, PUBLIC :: DBEMT_ElementContinuousStateType
-    REAL(ReKi) , DIMENSION(1:2)  :: vind      !< The filtered induced velocity, [1,i,j] is the axial induced velocity (-Vx*a) at node i on blade j and [2,i,j] is the tantential induced velocity (Vy*a') [m/s]
-    REAL(ReKi) , DIMENSION(1:2)  :: vind_dot      !< Time derivative of the filtered induced velocity, x%vind in CCSD [m/s^2]
-    REAL(ReKi) , DIMENSION(1:2)  :: vind_1      !< The filtered intermediate induced velocity [m/s]
+    REAL(R8Ki) , DIMENSION(1:2)  :: vind      !< The filtered induced velocity, [1,i,j] is the axial induced velocity (-Vx*a) at node i on blade j and [2,i,j] is the tantential induced velocity (Vy*a') [m/s]
+    REAL(R8Ki) , DIMENSION(1:2)  :: vind_dot      !< Time derivative of the filtered induced velocity, x%vind in CCSD [m/s^2]
+    REAL(R8Ki) , DIMENSION(1:2)  :: vind_1      !< The filtered intermediate induced velocity [m/s]
   END TYPE DBEMT_ElementContinuousStateType
 ! =======================
 ! =========  DBEMT_ContinuousStateType  =======
@@ -609,9 +609,9 @@ ENDIF
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
-      Re_BufSz   = Re_BufSz   + SIZE(InData%vind)  ! vind
-      Re_BufSz   = Re_BufSz   + SIZE(InData%vind_dot)  ! vind_dot
-      Re_BufSz   = Re_BufSz   + SIZE(InData%vind_1)  ! vind_1
+      Db_BufSz   = Db_BufSz   + SIZE(InData%vind)  ! vind
+      Db_BufSz   = Db_BufSz   + SIZE(InData%vind_dot)  ! vind_dot
+      Db_BufSz   = Db_BufSz   + SIZE(InData%vind_1)  ! vind_1
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -640,16 +640,16 @@ ENDIF
   Int_Xferred = 1
 
     DO i1 = LBOUND(InData%vind,1), UBOUND(InData%vind,1)
-      ReKiBuf(Re_Xferred) = InData%vind(i1)
-      Re_Xferred = Re_Xferred + 1
+      DbKiBuf(Db_Xferred) = InData%vind(i1)
+      Db_Xferred = Db_Xferred + 1
     END DO
     DO i1 = LBOUND(InData%vind_dot,1), UBOUND(InData%vind_dot,1)
-      ReKiBuf(Re_Xferred) = InData%vind_dot(i1)
-      Re_Xferred = Re_Xferred + 1
+      DbKiBuf(Db_Xferred) = InData%vind_dot(i1)
+      Db_Xferred = Db_Xferred + 1
     END DO
     DO i1 = LBOUND(InData%vind_1,1), UBOUND(InData%vind_1,1)
-      ReKiBuf(Re_Xferred) = InData%vind_1(i1)
-      Re_Xferred = Re_Xferred + 1
+      DbKiBuf(Db_Xferred) = InData%vind_1(i1)
+      Db_Xferred = Db_Xferred + 1
     END DO
  END SUBROUTINE DBEMT_PackElementContinuousStateType
 
@@ -683,20 +683,20 @@ ENDIF
     i1_l = LBOUND(OutData%vind,1)
     i1_u = UBOUND(OutData%vind,1)
     DO i1 = LBOUND(OutData%vind,1), UBOUND(OutData%vind,1)
-      OutData%vind(i1) = ReKiBuf(Re_Xferred)
-      Re_Xferred = Re_Xferred + 1
+      OutData%vind(i1) = REAL(DbKiBuf(Db_Xferred), R8Ki)
+      Db_Xferred = Db_Xferred + 1
     END DO
     i1_l = LBOUND(OutData%vind_dot,1)
     i1_u = UBOUND(OutData%vind_dot,1)
     DO i1 = LBOUND(OutData%vind_dot,1), UBOUND(OutData%vind_dot,1)
-      OutData%vind_dot(i1) = ReKiBuf(Re_Xferred)
-      Re_Xferred = Re_Xferred + 1
+      OutData%vind_dot(i1) = REAL(DbKiBuf(Db_Xferred), R8Ki)
+      Db_Xferred = Db_Xferred + 1
     END DO
     i1_l = LBOUND(OutData%vind_1,1)
     i1_u = UBOUND(OutData%vind_1,1)
     DO i1 = LBOUND(OutData%vind_1,1), UBOUND(OutData%vind_1,1)
-      OutData%vind_1(i1) = ReKiBuf(Re_Xferred)
-      Re_Xferred = Re_Xferred + 1
+      OutData%vind_1(i1) = REAL(DbKiBuf(Db_Xferred), R8Ki)
+      Db_Xferred = Db_Xferred + 1
     END DO
  END SUBROUTINE DBEMT_UnPackElementContinuousStateType
 

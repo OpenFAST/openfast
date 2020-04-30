@@ -3356,6 +3356,7 @@ SUBROUTINE AD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
    CHARACTER(ErrMsgLen)                                          :: ErrMsg2
    CHARACTER(*), PARAMETER                                       :: RoutineName = 'AD_GetOP'
    LOGICAL                                                       :: FieldMask(FIELDMASK_SIZE)
+   TYPE(AD_ContinuousStateType)                                  :: dxdt
 
    
       ! Initialize ErrStat
@@ -3398,6 +3399,8 @@ SUBROUTINE AD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
    
       FieldMask(MASKID_TRANSLATIONDISP) = .true.
       FieldMask(MASKID_TRANSLATIONVel)  = .true.
+      FieldMask(MASKID_RotationVel) = .true. 
+      FieldMask(MASKID_TRANSLATIONAcc) = .true. 
       do k=1,p%NumBlades     
          call PackMotionMesh(u%BladeMotion(k), u_op, index, FieldMask=FieldMask)
       end do
@@ -3445,11 +3448,102 @@ SUBROUTINE AD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
    END IF
 
    IF ( PRESENT( x_op ) ) THEN
-
+    
+      if (.not. allocated(x_op)) then 
+         call AllocAry(x_op, p%BEMT%DBEMT%lin_nx + p%BEMT%UA%lin_nx,'x_op',ErrStat2,ErrMsg2) 
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) 
+         if (ErrStat>=AbortErrLev) return 
+      end if 
+ 
+      index = 1 
+         ! set linearization operating points: 
+      if (p%BEMT%DBEMT%lin_nx>0) then 
+         do j=1,p%NumBlades ! size(x%BEMT%DBEMT%element,2) 
+            do i=1,p%NumBlNds ! size(x%BEMT%DBEMT%element,1) 
+               do k=1,size(x%BEMT%DBEMT%element(i,j)%vind) 
+                  x_op(index) = x%BEMT%DBEMT%element(i,j)%vind(k) 
+                  index = index + 1 
+               end do 
+            end do 
+         end do 
+    
+         do j=1,p%NumBlades ! size(x%BEMT%DBEMT%element,2) 
+            do i=1,p%NumBlNds ! size(x%BEMT%DBEMT%element,1) 
+               do k=1,size(x%BEMT%DBEMT%element(i,j)%vind_dot) 
+                  x_op(index) = x%BEMT%DBEMT%element(i,j)%vind_dot(k) 
+                  index = index + 1 
+               end do 
+            end do 
+         end do 
+       
+      end if 
+    
+      if (p%BEMT%UA%lin_nx>0) then 
+         do j=1,p%NumBlades ! size(x%BEMT%UA%element,2) 
+            do i=1,p%NumBlNds ! size(x%BEMT%UA%element,1) 
+               do k=1,size(x%BEMT%UA%element(i,j)%x) 
+                  x_op(index) = x%BEMT%UA%element(i,j)%x(k) 
+                  index = index + 1 
+               end do 
+            end do 
+         end do 
+       
+      end if 
+       
    END IF
 
    IF ( PRESENT( dx_op ) ) THEN
-
+    
+      if (.not. allocated(dx_op)) then 
+         call AllocAry(dx_op, p%BEMT%DBEMT%lin_nx + p%BEMT%UA%lin_nx,'dx_op',ErrStat2,ErrMsg2) 
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) 
+            if (ErrStat>=AbortErrLev) return 
+      end if 
+ 
+      call AD_CalcContStateDeriv(t, u, p, x, xd, z, OtherState, m, dxdt, ErrStat2, ErrMsg2) 
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) 
+         if (ErrStat>=AbortErrLev) then 
+            call AD_DestroyContState( dxdt, ErrStat2, ErrMsg2) 
+            return 
+         end if 
+       
+      index = 1 
+         ! set linearization operating points: 
+      if (p%BEMT%DBEMT%lin_nx>0) then 
+ 
+         do j=1,p%NumBlades ! size(dxdt%BEMT%DBEMT%element,2) 
+            do i=1,p%NumBlNds ! size(dxdt%BEMT%DBEMT%element,1) 
+               do k=1,size(dxdt%BEMT%DBEMT%element(i,j)%vind) 
+                  dx_op(index) = dxdt%BEMT%DBEMT%element(i,j)%vind(k) 
+                  index = index + 1 
+               end do 
+            end do 
+         end do 
+    
+         do j=1,p%NumBlades ! size(dxdt%BEMT%DBEMT%element,2) 
+            do i=1,p%NumBlNds ! size(dxdt%BEMT%DBEMT%element,1) 
+               do k=1,size(dxdt%BEMT%DBEMT%element(i,j)%vind_dot) 
+                  dx_op(index) = dxdt%BEMT%DBEMT%element(i,j)%vind_dot(k) 
+                  index = index + 1 
+               end do 
+            end do 
+         end do 
+       
+      end if 
+    
+      if (p%BEMT%UA%lin_nx>0) then 
+         do j=1,p%NumBlades ! size(dxdt%BEMT%UA%element,2) 
+            do i=1,p%NumBlNds ! size(dxdt%BEMT%UA%element,1) 
+               do k=1,size(dxdt%BEMT%UA%element(i,j)%x) 
+                  dx_op(index) = dxdt%BEMT%UA%element(i,j)%x(k) 
+                  index = index + 1 
+               end do 
+            end do 
+         end do 
+      end if 
+       
+      call AD_DestroyContState( dxdt, ErrStat2, ErrMsg2) 
+       
    END IF
 
    IF ( PRESENT( xd_op ) ) THEN
@@ -3874,7 +3968,7 @@ SUBROUTINE Init_Jacobian_x( p, InitOut, ErrStat, ErrMsg)
    if (nx==0) return
    
       ! allocate space for the row/column names and for perturbation sizes
-   CALL allocAry(p%dx,                 nx, 'p%dx',         ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   CALL AllocAry(p%dx,                 nx, 'p%dx',         ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    CALL AllocAry(InitOut%LinNames_x,   nx, 'LinNames_x',   ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    CALL AllocAry(InitOut%RotFrame_x,   nx, 'RotFrame_x',   ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    CALL AllocAry(InitOut%DerivOrder_x, nx, 'DerivOrder_x', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -4101,26 +4195,28 @@ SUBROUTINE Perturb_x( p, n, perturb_sign, x, dx )
       x%BEMT%UA%element(BladeNode,Blade)%x(StateIndex) = x%BEMT%UA%element(BladeNode,Blade)%x(StateIndex) + dx * perturb_sign
    
    end if
-   
-!   print *, n, Blade, BladeNode, StateIndex
 
 contains
-   subroutine GetStateIndices( Indx, NumberOfBlades, NumberOfElements, NumberOfStatesPerElement, Blade, BladeNode, StateIndex )
+   subroutine GetStateIndices( Indx, NumberOfBlades, NumberOfElementsPerBlade, NumberOfStatesPerElement, Blade, BladeNode, StateIndex )
    
       integer(IntKi), intent(in   ) :: Indx
       integer(IntKi), intent(in   ) :: NumberOfBlades             !< how many blades (size of array)
-      integer(IntKi), intent(in   ) :: NumberOfElements           !< how many nodes per blades (size of array)
+      integer(IntKi), intent(in   ) :: NumberOfElementsPerBlade   !< how many nodes per blades (size of array)
       integer(IntKi), intent(in   ) :: NumberOfStatesPerElement   !< how many states at each blade element
       
       integer(IntKi), intent(  out) :: Blade
       integer(IntKi), intent(  out) :: BladeNode
       integer(IntKi), intent(  out) :: StateIndex
-      
-      StateIndex = mod(Indx, NumberOfStatesPerElement-1) + 1               ! returns a number in [1,NumberOfStatesPerElement]
-      Blade      = Indx / (NumberOfElements*NumberOfStatesPerElement) + 1  ! integer division to find which blade this is on
-      
-      BladeNode  = ( Indx - (Blade-1)*NumberOfElements*NumberOfStatesPerElement ) / NumberOfStatesPerElement + 1 ! integer division to find which element
+      integer(IntKi)                :: CheckNum 
+       
+ 
+      StateIndex = mod(Indx-1, NumberOfStatesPerElement ) + 1    ! returns a number in [1,NumberOfStatesPerElement] 
+       
+      CheckNum = (Indx - StateIndex)/NumberOfStatesPerElement 
+      BladeNode = mod(CheckNum, NumberOfElementsPerBlade ) + 1   ! returns a number in [1,NumberOfElementsPerBlade] 
    
+      Blade = (CheckNum - BladeNode + 1)/NumberOfElementsPerBlade + 1 
+
    end subroutine GetStateIndices
 END SUBROUTINE Perturb_x
 !----------------------------------------------------------------------------------------------------------------------------------

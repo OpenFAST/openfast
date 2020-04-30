@@ -310,37 +310,6 @@ real(ReKi) function Get_f( alpha, alpha0, alpha1, alpha2, S1, S2, S3, S4 )
    end if
    
 end function Get_f
-!==============================================================================   
-!> this function is for the HGM model
-subroutine Get_f_st( alpha_in, Re, UserProp, AFInfo, BL_p, f_st, ErrStat, ErrMsg )
-        
-   real(ReKi),              intent(in   ) :: alpha_in      ! angle of attack (radians)
-   real(ReKi),              intent(in   ) :: Re            ! Reynolds number
-   real(ReKi),              intent(in   ) :: UserProp      ! User property for 2D AFI interpolation
-   type(AFI_ParameterType), intent(in   ) :: AFInfo        ! The airfoil parameter data
-   type(AFI_UA_BL_Type),    intent(in   ) :: BL_p          ! potentially interpolated UA parameters
-   
-   real(ReKi),              intent(  out) :: f_st
-   integer(IntKi),          intent(  out) :: ErrStat       ! Error status of the operation
-   character(*),            intent(  out) :: ErrMsg        ! Error message if ErrStat /= ErrID_None
-   
-   real(ReKi)                             :: alpha
-   type(AFI_OutputType)                   :: AFI_Interp
-
-   ErrStat = ErrID_None
-   ErrMsg  = ""
-   
-   alpha = alpha_in
-   call MPi2Pi(alpha)
-
-   call AFI_ComputeAirfoilCoefs( alpha, Re, UserProp, AFInfo, AFI_interp, ErrStat, ErrMsg)
-      if (ErrStat >= AbortErrLev) return
-   
-   f_st = AFI_interp%f_st
-
-end subroutine Get_f_st
-
-
 !==============================================================================                              
 subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, KC, BL_p, ErrStat, ErrMsg )
 ! 
@@ -1671,7 +1640,6 @@ subroutine UA_UpdateStates( i, j, t, n, u, uTimes, p, x, xd, OtherState, AFInfo,
    integer(IntKi)                               :: errStat2, ui
    character(*), parameter                      :: RoutineName = 'UA_UpdateStates'
    type(UA_InputType)                           :: u_interp        ! Input at current timestep, t and t+dt
-   TYPE(UA_ElementContinuousStateType)          :: x_tmp       ! Holds temporary modification to x
 
       ! Initialize variables
 
@@ -1762,6 +1730,7 @@ SUBROUTINE HGM_Steady( i, j, t, u, p, x, OtherState, AFInfo, m, ErrStat, ErrMsg 
       ! Local variables  
       
    type(AFI_UA_BL_Type)                         :: BL_p        ! potentially interpolated UA parameters
+   type(AFI_OutputType)                         :: AFI_Interp
    character(ErrMsgLen)                         :: errMsg2
    integer(IntKi)                               :: errStat2
    character(*), parameter                      :: RoutineName = 'HGM_Steady'
@@ -1769,7 +1738,6 @@ SUBROUTINE HGM_Steady( i, j, t, u, p, x, OtherState, AFInfo, m, ErrStat, ErrMsg 
    real(ReKi)                                   :: Tu
    real(ReKi)                                   :: alphaE
    real(ReKi)                                   :: alphaF
-   real(ReKi)                                   :: x4
    real(ReKi)                                   :: alpha_34
   
 
@@ -1786,29 +1754,26 @@ SUBROUTINE HGM_Steady( i, j, t, u, p, x, OtherState, AFInfo, m, ErrStat, ErrMsg 
    call Get_HGM_constants(i, j, p, u, x, BL_p, Tu, alpha_34, alphaE) ! compute Tu, alpha_34, and alphaE
     
       
-    ! States
-    !x1: Downwash memory term 1 (rad)
-    !x2: Downwash memory term 2 (rad)
-    !x3: Clp', Lift coefficient with a time lag to the attached lift coeff
-    !x4: f'' , Final separation point function
+   ! States
+   !x1: Downwash memory term 1 (rad)
+   !x2: Downwash memory term 2 (rad)
+   !x3: Clp', Lift coefficient with a time lag to the attached lift coeff
+   !x4: f'' , Final separation point function
 
 
-    ! Steady states
-    x%x(1)     = BL_p%A1 * alpha_34
-    x%x(2)     = BL_p%A2 * alpha_34
+   ! Steady states
+   x%x(1)     = BL_p%A1 * alpha_34
+   x%x(2)     = BL_p%A2 * alpha_34
     
-    alphaE   = alpha_34                                                    ! Eq. 12 (after substitute of x1 and x2 initializations)
-    x%x(3)   = BL_p%c_lalpha * (alphaE-BL_p%alpha0)
+   alphaE   = alpha_34                                                    ! Eq. 12 (after substitute of x1 and x2 initializations)
+   x%x(3)   = BL_p%c_lalpha * (alphaE-BL_p%alpha0)
     
       ! calculate x%x(4) = fs_aF = f_st(alphaF):
-    alphaF  = x%x(3)/BL_p%c_lalpha + BL_p%alpha0                           ! p. 13
+   alphaF  = x%x(3)/BL_p%c_lalpha + BL_p%alpha0                           ! p. 13
     
-    call Get_f_st(alphaF, u%Re, u%UserProp, AFInfo, BL_p, x4, ErrStat2, ErrMsg2 )
-      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      if (ErrStat >= AbortErrLev) return
-      
-    x%x(4) = x4
-    
+   call AFI_ComputeAirfoilCoefs( alphaF, u%Re, u%UserProp, AFInfo, AFI_interp, ErrStat, ErrMsg)
+   x%x(4) = AFI_interp%f_st
+   
 end subroutine HGM_Steady
 !----------------------------------------------------------------------------------------------------------------------------------
 subroutine UA_CalcContStateDeriv( i, j, t, u, p, x, OtherState, AFInfo, m, dxdt, ErrStat, ErrMsg )
@@ -1831,6 +1796,7 @@ subroutine UA_CalcContStateDeriv( i, j, t, u, p, x, OtherState, AFInfo, m, dxdt,
       ! Local variables  
       
    type(AFI_UA_BL_Type)                         :: BL_p        ! potentially interpolated UA parameters
+   type(AFI_OutputType)                         :: AFI_Interp
    character(ErrMsgLen)                         :: errMsg2
    integer(IntKi)                               :: errStat2
    character(*), parameter                      :: RoutineName = 'UA_CalcContStateDeriv'
@@ -1840,7 +1806,6 @@ subroutine UA_CalcContStateDeriv( i, j, t, u, p, x, OtherState, AFInfo, m, dxdt,
    real(ReKi)                                   :: alphaF
    real(ReKi)                                   :: Clp
    real(R8Ki)                                   :: x4
-   real(ReKi)                                   :: fs_aF
    real(ReKi)                                   :: alpha_34
    real(ReKi), parameter                        :: U_dot = 0.0_ReKi ! at some point we may add this term
   
@@ -1857,16 +1822,16 @@ subroutine UA_CalcContStateDeriv( i, j, t, u, p, x, OtherState, AFInfo, m, dxdt,
    
    call Get_HGM_constants(i, j, p, u, x, BL_p, Tu, alpha_34, alphaE) ! compute Tu, alpha_34, and alphaE
     
-    Clp     = BL_p%c_lalpha * (alphaE - BL_p%alpha0) + pi * Tu * u%omega   ! Eq. 13
+   Clp = BL_p%c_lalpha * (alphaE - BL_p%alpha0) + pi * Tu * u%omega   ! Eq. 13
 
-    !note: BL_p%c_lalpha cannot be zero. UA is turned off at initialization if this occurs.
-    alphaF  = x%x(3)/BL_p%c_lalpha + BL_p%alpha0                           ! p. 13
+      ! calculate fs_aF (stored in AFI_interp%f_st):
     
-      ! calculate fs_aF:
-    call Get_f_st(alphaF, u%Re, u%UserProp, AFInfo, BL_p, fs_aF, ErrStat2, ErrMsg2 )
+   !note: BL_p%c_lalpha cannot be zero. UA is turned off at initialization if this occurs.
+   alphaF  = x%x(3)/BL_p%c_lalpha + BL_p%alpha0                           ! p. 13
+   call AFI_ComputeAirfoilCoefs( alphaF, u%Re, u%UserProp, AFInfo, AFI_interp, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       if (ErrStat >= AbortErrLev) return
-    
+   
     ! States
     !x1: Downwash memory term 1 (rad)
     !x2: Downwash memory term 2 (rad)
@@ -1879,7 +1844,7 @@ subroutine UA_CalcContStateDeriv( i, j, t, u, p, x, OtherState, AFInfo, m, dxdt,
     dxdt%x(1) = -1.0_R8Ki / Tu * (BL_p%b1 + p%c(i,j) * U_dot/(2*u%u**2)) * x%x(1) + BL_p%b1 * BL_p%A1 / Tu * alpha_34
     dxdt%x(2) = -1.0_R8Ki / Tu * (BL_p%b2 + p%c(i,j) * U_dot/(2*u%u**2)) * x%x(2) + BL_p%b2 * BL_p%A2 / Tu * alpha_34
     dxdt%x(3) = -1.0_R8Ki / BL_p%T_p                                     * x%x(3) +         1.0_ReKi / BL_p%T_p  * Clp
-    dxdt%x(4) = -1.0_R8Ki / BL_p%T_f0                                    *    x4  +         1.0_ReKi / BL_p%T_f0 * fs_aF
+    dxdt%x(4) = -1.0_R8Ki / BL_p%T_f0                                    *    x4  +         1.0_ReKi / BL_p%T_f0 * AFI_interp%f_st
 
 END SUBROUTINE UA_CalcContStateDeriv
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -1903,13 +1868,15 @@ SUBROUTINE Get_HGM_constants(i, j, p, u, x, BL_p, Tu, alpha_34, alphaE)
     !u%u = U_ac = TwoNorm(u%v_ac)                                                 ! page 4 definitions
     
     Tu     = p%c(i,j) / (2.0_ReKi* u%u)                                    ! Eq. 23
-    Tu     = min(Tu, 50.0_ReKi)
+    Tu     = min(Tu, 50.0_ReKi)   ! ensure the time constant doesn't exceed 50 s.
+    Tu     = max(Tu,  0.001_ReKi) ! ensure the time constant doesn't get too small, either.
 
     vx_34 = u%v_ac(1) - u%omega * 0.5_ReKi*p%c(i,j)                        ! Eq. 1
     alpha_34 = atan2(vx_34, u%v_ac(2) )                                    ! page 5 definitions
     
     ! Variables derived from states
     alphaE  = alpha_34*(1.0_ReKi - BL_p%A1 - BL_p%A2) + x%x(1) + x%x(2)    ! Eq. 12
+    call MPi2Pi(alphaE)
 
 END SUBROUTINE Get_HGM_constants
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -2311,9 +2278,6 @@ subroutine UA_CalcOutput( i, j, u, p, x, xd, OtherState, AFInfo, y, misc, ErrSta
       
       call Get_HGM_constants(i, j, p, u, x%element(i, j), BL_p, Tu, alpha_34, alphaE) ! compute Tu, alpha_34, and alphaE
    
-      
-      call MPi2Pi(alphaE)
-      
       call AFI_ComputeAirfoilCoefs( alphaE, u%Re, u%UserProp, AFInfo, AFI_interp, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)   
       
