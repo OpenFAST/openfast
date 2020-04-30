@@ -1,4 +1,4 @@
-.. _OLAF_Theory:
+.. _sec:FVW:
 
 OLAF Theory
 ===========
@@ -7,15 +7,11 @@ This section details the FVW method and provides an overview of the
 computational method, followed by a brief explanation of its integration
 with OpenFAST.
 
-.. _sec:FVW:
-
-Free Vortex Wake Model
-----------------------
 
 .. _sec:vorticityformulation:
 
 Introduction - Vorticity formulation
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+------------------------------------
 
 The vorticity equation for incompressible homogeneous flows in the
 absence of non-conservative force is given by
@@ -50,7 +46,7 @@ in the following sections.
 .. _sec:discretization:
 
 Discretization - Projection
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+---------------------------
 
 The numerical method uses a finite number of states to model the
 continuous vorticity distribution. To achieve this, the vorticity
@@ -87,7 +83,7 @@ field and avoids the singularities that would otherwise occur.
 .. _sec:vortconv:
 
 Vortex Convection
-~~~~~~~~~~~~~~~~~
+-----------------
 
 The governing equation of motion for a vortex filament is given by the
 convection equation of a Lagrangian marker:
@@ -103,7 +99,7 @@ automatically accounts for the strain part of the vorticity equation.
 .. _sec:vortconvPolar:
 
 Vortex Convection in Polar Coordinates
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+--------------------------------------
 
 The governing equation of motion for a vortex filament is given by:
 
@@ -133,7 +129,7 @@ Eq. :eq:`Euler`.
    :label: Euler
 
 Induced Velocity and Velocity Field
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-----------------------------------
 
 The velocity term on the right-hand side of
 Eq. :eq:`VortFilCart` is a nonlinear function of the
@@ -181,7 +177,7 @@ the main flow, :math:`\vec{V}_0`, (here assumed divergence free):
 
 .. math::
    \begin{aligned}
-    \vec{V}(\vec{x}) = \vec{V}_0 +  \sum_{k} \vec{v}_k(\vec{x})
+    \vec{V}(\vec{x}) = \vec{V}_0(\vec{x}) + \vec{v}_\omega(\vec{x}), \quad\text{with}\quad \vec{v}_\omega(\vec{x}) = \sum_{k} \vec{v}_k(\vec{x}) 
    \end{aligned}
 
 where the sum is over all the vortex filaments, each of intensity
@@ -192,10 +188,10 @@ spanwise and time changes of the bound circulation, as discussed in
 .. _sec:Regularization:
 
 Regularization
-~~~~~~~~~~~~~~
+--------------
 
 Regularization and viscous diffusion
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The singularity that occurs in Eq. :eq:`BiotSavart`
 greatly affects the numerical accuracy of vortex methods. By
@@ -233,44 +229,43 @@ clarification is required, but a loose terminology is used when the
 context is clear enough.
 
 Determination of the regularization parameter
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The regularization parameter is both a function of the physics being
 modelled (blade boundary layer and wake) and the choice of
 discretization. Contributing factors are the chord length, the boundary
 layer height, and the volume that each vortex filament is approximating.
-Currently the choice is left to the user (**RegDetMethod\ =0**).
+Currently the choice is left to the user (**RegDetMethod=[0]**).
 Empirical results for a rotating blade are found in the work of
 Gupta (:cite:`Gupta06_1`). As a guideline, the
 regularization parameter may be chosen as twice the average spanwise
 discretization of the blade. The current implementation will implement
-this guideline when the user chooses **RegDetMethod\ =1**. Further
+this guideline when the user chooses **RegDetMethod=[1]**. Further
 refinement of this option will be considered in the future.
 
 .. _sec:RegularizationFunction:
 
 Regularization functions implemented
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Several regularization functions have been
 developed (:cite:`Rankine58_1,Scully75_1,Vatistas91_1`).
 At present, five options are available: (1) No correction, (2) the
 Rankine method, (3) the Lamb-Oseen method, (4) the Vatistas method, or
 (5) the denominator offset method. If no correction method is used,
-[**RegFunction=0**], :math:`F_\nu=1`. The remaining methods are detailed
+[**RegFunction=[0]**], :math:`F_\nu=1`. The remaining methods are detailed
 in the following sections. The regularization parameter
 (**WakeRegParam**) is noted :math:`r_c` and the distance to the filament
-is written :math:`\rho`. The different functions are compared in
-:numref:`FilamentRegularization`.
+is written :math:`\rho`. 
 
 Rankine
-'''''''
+^^^^^^^
 
 The Rankine method (:cite:`Rankine58_1`) is the simplest
 regularization model. With this method, the Rankine vortex has a finite
 core with a solid body rotation near the vortex center and a potential
 vortex away from the center. If this method is used,
-[**RegFunction=1**], the viscous core correction is given by
+[**RegFunction=[1]**], the viscous core correction is given by
 Eq. :eq:`rankine`.
 
 .. math::
@@ -282,9 +277,9 @@ Here, :math:`r_c` is the viscous core radius of a vortex filament,
 detailed in :numref:`sec:corerad`.
 
 Lamb-Oseen
-''''''''''
+^^^^^^^^^^
 
-If this method is used, [**RegFunction=2**], the viscous core correction
+If this method is used, [**RegFunction=[2]**], the viscous core correction
 is given by Eq. :eq:`lamboseen`.
 
 .. math::
@@ -292,9 +287,9 @@ is given by Eq. :eq:`lamboseen`.
    :label: lamboseen
 
 Vatistas
-''''''''
+^^^^^^^^
 
-If this method is used, [**RegFunction=3**], the viscous core correction
+If this method is used, [**RegFunction=[3]**], the viscous core correction
 is given by Eq. :eq:`vatistas`.
 
 .. math::
@@ -308,10 +303,10 @@ point (:cite:`Abedi16_1`). Research from rotorcraft
 applications suggests a value of :math:`n=2`, which is used in this
 work (:cite:`Bagai93_1`).
 
-Denominator offset/cut-off
-''''''''''''''''''''''''''
+Denominator Offset/Cut-Off
+^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-If this method is used, [**RegFunction=4**], the viscous core correction
+If this method is used, [**RegFunction=[4]**], the viscous core correction
 is given by Eq. :eq:`denom`
 
 .. math::
@@ -331,19 +326,19 @@ method is found in the work of van Garrel
 .. _sec:corerad:
 
 Time Evolution of the Regularization Parameter–Core Spreading Method
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 There are four available methods by which the regularization parameter
 may evolve with time: (1) constant value, (2) stretching, (3) wake age,
 or (4) stretching and wake age. The three latter methods blend the
 notion of viscous diffusion with the notion of regularization. The
 notation :math:`r_{c0}` used in this section corresponds to input file
-parameter value .
+parameter value **WakeRegParam**.
 
 Constant
-''''''''
+^^^^^^^^
 
-If a constant value is selected, [**WakeRegMethod=0**], the value of
+If a constant value is selected, (**WakeRegMethod=[0]**), the value of
 :math:`r_c` remains unchanged for all Lagrangian markers throughout the
 simulation and taken as the value given with the parameter in meters.
 
@@ -355,9 +350,9 @@ Here, :math:`\zeta` is the vortex wake age, measured from its emission
 time.
 
 Stretching
-''''''''''
+^^^^^^^^^^
 
-If the stretching method is selected, [**WakeRegMethod=1**], the viscous
+If the stretching method is selected, (**WakeRegMethod=[1]**), the viscous
 core radius is modeled by Eq. :eq:`stretch`.
 
 .. math::
@@ -373,10 +368,10 @@ between two time steps. The integral in Eq. :eq:`stretch`
 represents strain effects.
 
 Wake Age / Core-Spreading
-'''''''''''''''''''''''''
+^^^^^^^^^^^^^^^^^^^^^^^^^
 
-If the wake age method is selected, [], the viscous core radius is
-modeled by Eq. :eq:`age`.
+If the wake age method is selected, (WakeRegMethod=[2]), the viscous core radius
+is modeled by Eq. :eq:`age`.
 
 .. math::
    r_c(\zeta) = \sqrt{r_{c0}^2+4\alpha\delta\nu \zeta}
@@ -393,13 +388,13 @@ diffusion of the vorticity with time, and the higher the value of
 core-spreading method. It is a way to partially account for viscous
 diffusion of the vorticity without solving for the interaction between
 the wake vorticity or between the vorticity from the wake and the background
-flow. Setting **DiffusionMethod==1** is the same as using the wake age method,
-[**WakeRegMethod=2**].
+flow. Setting **DiffusionMethod=[1]** is the same as using the wake age method,
+(**WakeRegMethod=[2]**).
 
 Stretching and Wake Age
-'''''''''''''''''''''''
+^^^^^^^^^^^^^^^^^^^^^^^
 
-If the stretching and wake-age method is selected [**WakeRegMethod=3**],
+If the stretching and wake-age method is selected (**WakeRegMethod=[3]**),
 the viscous core radius is modeled by
 Eq. :eq:`stretchandage`.
 
@@ -410,7 +405,7 @@ Eq. :eq:`stretchandage`.
 .. _sec:diffusion:
 
 Diffusion
-~~~~~~~~~
+---------
 
 The viscous-splitting assumption is used to solve for the convection and
 diffusion of the vorticity separately. The diffusion term
@@ -426,8 +421,8 @@ the regularization parameter with the wake age.
 
 .. _sec:circ:
 
-Lifting-Line Circulation
-~~~~~~~~~~~~~~~~~~~~~~~~
+Lifting-Line Representation
+---------------------------
 
 The code relies on a lifting-line formulation. Lifting-line methods
 effectively lump the loads at each cross-section of the blade onto the
@@ -440,209 +435,200 @@ equation as the free vorticity of the wake. Instead, the intensity is
 linked to airfoil lift via the Kutta-Joukowski theorem. Spanwise
 variation of the bound circulation results in vorticity being emitted
 into the the wake, referred to as “trailed vorticity”. Time changes of
-the bound circulation are also emitted in the wake, referred to as “shed”
-vorticity. Three methods are implemented to determine the bound circulation
-strength. They are selected using the input **CircSolvMethod**, and are
-presented in the subsequent paragraphs. At the end of a time step, the
-circulation of each vortex element is propagated downstream so that vortex
-elements with a new intensity can be emitted from the blade at the next time
-step.
+the bound circulation are also emitted in the wake, referred to as
+“shed” vorticity. The subsequent paragraphs describe the representation
+of the bound vorticity.
+
+Lifting-Line Panels and Emitted Wake Panels
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The lifting-line and wake representation is illustrated in
+:numref:`fig:VortexLatticeMethod`. The blade lifting-line is discretized into a
+finite number of panels, each of them forming a four sided vortex rings. The
+spanwise discretization follows the discretization of the AeroDyn blade input
+file. The number of spanwise panels, :math:`n_\text{LL}`, is one less than the
+total number of AeroDyn nodes, **NumBlNds**. The sides of the panels coincide
+with the lifting-line and the trailing edge of the blade. The lifting-line is
+currently defined as the 3/4 chord location. More details on the panelling is
+provided in :numref:`sec:Panelling`. At a given time step, the circulation of
+each lifting-line panel is determined according to one of the three methods
+developed in :numref:`sec:CirculationMethods`. At the end of the time step, the
+circulation of each lifting-line panel is emitted into the wake, forming free
+vorticity panels. The circulation of the first near wake panel and the bound
+circulation are equivalent, to satisfy the Kutta condition (see
+:numref:`fig:VortexLatticeMethod` b). The wake panels model the thin shear
+layer resulting from the continuation of the blade boundary layer. This shear
+layer can be modelled using a continuous distribution of vortex doublets. A
+constant doublet strength is assumed on each panel, which in turn is equivalent
+to a vortex ring of constant circulation.
+
+.. figure:: Schematics/VortexLatticeMethod.png
+   :alt: Wake and lifting-line vorticity discretized into vortex ring panels.
+   :name: fig:VortexLatticeMethod
+   :width: 100.0%
+
+   Wake and lifting-line vorticity discretized into vortex ring panels.
+   (a) Overview. (b) Cross-sectional view, defining the leading-edge,
+   trailing edge, and lifting-line. (c) Circulation of panels and
+   corresponding circulation for vorticity segments between panels. (d)
+   Geometrical quantities for a lifting-line panel.
+
+The current implementation stores the positions and circulations of the
+panel corner points. In the vortex ring formulation, the boundary
+between two panels corresponds to a vortex segment of intensity equal to
+the difference of circulation between the two panels. The convention
+used to define the segment intensity based on the panels intensity is
+shown in :numref:`fig:VortexLatticeMethod` c. Since the
+circulation of the bound panels and the first row of near wake panels
+are equal, the vortex segments located on the trailing edge have no
+circulation.
+
+.. _sec:Panelling:
+
+Panelling
+~~~~~~~~~
+
+The definitions used for the panelling of the blade are given in
+:numref:`fig:VortexLatticeMethod` d, following the notations of van
+Garrel (:cite:`Garrel03_1`). The leading edge (LE) and
+trailing edge (TE) locations are directly obtained from the AeroDyn
+mesh. At two spanwise locations, the LE and TE define the corner points:
+:math:`\vec{x}_1`, :math:`\vec{x}_2`, :math:`\vec{x}_3`, and
+:math:`\vec{x}_4`. The current implementation assumes that the
+aerodynamic center, the lifting-line, and the 3/4 chord location all
+coincide. For a given panel, the lifting-line is then delimited by the
+points :math:`\vec{x}_9= 3/4\,\vec{x}_1 + 1/4\, \vec{x}_2` and
+:math:`\vec{x}_{10}=3/4\,\vec{x}_4 + 1/4\, \vec{x}_3`. The mid points of
+the four panel sides are noted :math:`\vec{x}_5`, :math:`\vec{x}_6`,
+:math:`\vec{x}_7`, and :math:`\vec{x}_8`. The lifting-line vector
+(:math:`\vec{dl}`) as well as the vectors tangential (:math:`\vec{T}`)
+and normal (:math:`\vec{N}`) to the panel are defined as:
+
+.. math::
+   \begin{aligned}
+       \vec{dl} = \vec{x}_{10}-\vec{x}_9
+      ,\qquad
+      \vec{T}  = \frac{\vec{x}_6-\vec{x}_8}{|\vec{x}_6-\vec{x}_8|}
+      ,\qquad
+      \vec{N}  = \frac{\vec{T}\times\vec{dl}}{|\vec{T}\times\vec{dl}|}
+   \end{aligned}
+   :label: eq:GeometricDefinitions
+
+The area of the panel is obtained as :math:`dA =
+|(\vec{x}_6-\vec{x}_8)\times(\vec{x}_{7}-\vec{x}_5)|`. For
+**CircSolvMethod=[3]**, the control points are located on the lifting-line at the
+location :math:`\vec{x}_9+\eta_j \vec{dl}`. The factor :math:`\eta_j` is
+determined based on the full-cosine approximation of van Garrel. This is based
+on the spanwise widths of the current panel, :math:`w_j`, and the neighboring
+panels :math:`w_{j-1}` and :math:`w_{j+1}`:
+
+.. math::
+   \begin{aligned}
+      \eta_j=\frac{1}{4}\left[\frac{w_{j-1}}{w_{j-1}+w_j} + \frac{w_j}{w_j+w_{j+1}} +1 \right]
+      ,\ j=2..n-1
+      ,\quad
+          \eta_1 = \frac{w_1}{w_1+w_2}
+      ,\quad
+          \eta_{n} = \frac{w_{n-1}}{w_{n-1}+w_{n}}
+   \end{aligned}
+
+For an equidistant spacing, this discretization places the control
+points at the middle of the lifting-line (:math:`\eta=0.5`). Theoretical
+circulation results for an elliptic wing with a cosine spacing are
+retrieved with such discretization since it places the control points
+closer to stronger trailing segments at the wing extremities (see
+e.g. :cite:`Kerwin:lecturenotes`).
+
+.. _sec:CirculationMethods:
+
+Circulation Solving Methods
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Three methods are implemented to determine the bound circulation
+strength. They are selected using the input , and are presented in the
+following sections.
 
 Cl-Based Iterative Method
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The Cl-based iterative method is extensively described in the work from van
-Garrel and it is only briefly presented here (:cite:`Garrel03_1`). The method
-was implemented following the same approach and notations as van Garrel. At
-present, it is the preferred method to compute the circulation along the blade
-span. It is selected with **CircSolvMethod==1**. In this method, the blade is
-discretized into a finite number of segments placed along the lifting line
-(i.e., the blade aerodynamic center line), representing the bound circulation,
-:math:`\Gamma_b`. The circulation is solved within a nonlinear iterative solver
-that makes use of the polar data at each control point located on the lifting
-line.
+The Cl-based iterative method determines the circulation within a
+nonlinear iterative solver that makes use of the polar data at each
+control point located on the lifting line. The algorithm ensures that
+the lift obtained using the angle of attack and the polar data matches
+the lift obtained with the Kutta-Joukowski theorem. At present, it is
+the preferred method to compute the circulation along the blade span. It is
+selected with **CircSolvMethod=[1]**. The method is described in the work from
+van Garrel (:cite:`Garrel03_1`). The algorithm is implemented in at iterative
+approach using the following steps:
 
-No-flow-through method
+#. The circulation distribution from the previous time step is used as a
+   guessed circulation, :math:`\Gamma_\text{prev}`.
+
+#. The velocity at each control points :math:`j` is computed as the sum
+   of the wind velocity, the structural velocity, and the velocity
+   induced by all the vorticity in the domain, evaluated at the control
+   point location.
+
+   .. math::
+      \begin{aligned}
+          \vec{v}_j = \vec{V}_0 - \vec{V}_\text{elast} + \vec{v}_{\omega,\text{free}} + \vec{v}_{\Gamma_{ll}}
+      \end{aligned}
+
+   The contribution of :math:`\vec{v}_{\Gamma_{ll}}` comes from the
+   lifting-line panels and the first row of near wake panels, for which
+   the circulation is set to :math:`\Gamma_\text{prev}`
+
+#. The circulation for all lifting-line panels :math:`j` is obtained as
+   follows.
+
+   .. math::
+      \begin{aligned}
+         \Gamma_{ll,j} =\frac{1}{2} C_{l,j}(\alpha_j) \frac{\left[ (\vec{v}_j  \cdot \vec{N})^2 +  (\vec{v}_j  \cdot \vec{T})^2\right]^2\,dA}{
+         \sqrt{\left[(\vec{v}_j\times \vec{dl})\cdot\vec{N}\right]^2 + \left[(\vec{v}_j\times \vec{dl})\cdot\vec{T}\right]^2}
+         }   %\label{eq:}
+      ,\quad\text{with}
+      \quad
+      \alpha_j = \operatorname{atan}\left(\frac{\vec{v}_j\cdot\vec{N}}{\vec{v}_j \cdot \vec{T}} \right)
+      \end{aligned}
+
+   The function :math:`C_{l,j}` is the lift coefficient obtained from
+   the polar data of blade section :math:`j` and :math:`\alpha_j` is the
+   angle of attack at the control point.
+
+#. The new circulation is set using the relaxation factor
+   :math:`k_\text{relax}` (**CircSolvRelaxation**):
+
+   .. math::
+      \begin{aligned}
+        \Gamma_\text{new}= \Gamma_\text{prev} + k_\text{relax} \Delta \Gamma
+            ,\qquad
+         \Delta \Gamma = \Gamma_{ll} - \Gamma_\text{prev}   %\label{eq:}
+      \end{aligned}
+
+#. Convergence is checked using the criterion :math:`k_\text{crit}`
+(**CircSolvConvCrit**):
+
+   .. math::
+      \begin{aligned}
+             \frac{ \operatorname{max}(|\Delta \Gamma|}{\operatorname{mean}(|\Gamma_\text{new}|)} <  k_\text{crit}
+       \end{aligned}
+
+   If convergence is not reached, steps 2-5 are repeated using
+   :math:`\Gamma_\text{new}` as the guessed circulation
+   :math:`\Gamma_\text{prev}`.
+
+No-flow-through Method
 ^^^^^^^^^^^^^^^^^^^^^^
 
 A Weissinger-L-based representation (:cite:`Weissinger47_1`)
 of the lifting surface is also
 available (:cite:`Bagai94_1,Gupta06_1,Ribera07_1`). In this
 method, the circulation is solved by satisfying a no-flow through
-condition at the 3/4-chord points.
+condition at the 3/4-chord points.  It is selected with **CircSolvMethod=[2]**.
 
-Prescribed circulation
+Prescribed Circulation
 ^^^^^^^^^^^^^^^^^^^^^^
 
 The final available method prescribes a constant circulation. A user
 specified spanwise distribution of circulation is prescribed onto the
-blades.
-
-State-Space Representation and Integration with OpenFAST
---------------------------------------------------------
-
-The OLAF module has been integrated into the latest version of OpenFAST
-via *AeroDyn15*, following the OpenFAST modularization
-framework (:cite:`Jonkman13_1,Sprague15_1`). To follow the
-OpenFAST framework, the vortex code is written as a module, and its
-formulation comprises state, constraint, and output equations. The data
-manipulated by the module include the following vectors: inputs,
-:math:`\vec{u}`; states, :math:`\vec{x}`; constrained state,
-:math:`\vec{z}`; outputs, :math:`\vec{y}`; and constant parameters,
-:math:`\vec{p}`. The vectors are defined as follows:
-
--  Inputs, :math:`\vec{u}~-` a set of values supplied to the module
-   that, along with the states, are needed to calculate future states
-   and the system’s output.
-
--  Outputs, :math:`\vec{y}~-` a set of values calculated and returned
-   by the module that depend on the states, inputs, and/or parameters
-   through output equations.
-
--  States, :math:`\vec{x}~-` a set of internal values of the module
-   that are influenced by the inputs and used to calculate future state
-   values and the output. Continuous states are employed, meaning that
-   the states are differentiable in time and characterized by continuous
-   time-differential equations.
-
--  Constraint states, :math:`\vec{z}~-` algebraic variables that are
-   calculated using a nonlinear solver, based on values from the current
-   time step.
-
--  Parameters, :math:`\vec{p}~-` a set of internal system values that
-   are independent of the states and inputs. The parameters can be fully
-   defined at initialization and characterize the system’s state
-   equations and output equations.
-
-The parameters of the vortex code include:
-
--  Fluid characteristics: kinematic viscosity, :math:`\nu`
-
--  Airfoil characteristics: polar data: (:math:`C_l(\alpha)`,
-   :math:`C_d(\alpha)`, :math:`C_m(\alpha)`), and chord :math:`c`
-
--  Algorithmic methods and parameters for regularization, viscous
-   diffusion, discretization, wake geometry, acceleration, and so on.
-
-The inputs of the vortex code are:
-
--  Position, orientation, translational velocity, and rotational
-   velocity of the different nodes of the lifting lines
-   (:math:`\vec{r}_{ll}`, :math:`\Lambda_{ll}`,
-   :math:`\vec{\dot{r}}_{ll}`, and :math:`\vec{\omega}_{ll}`,
-   respectively), gathered into the vector,
-   :math:`\vec{x}_{\text{elast},ll}`, for conciseness. These quantities
-   are handled using the mesh-mapping functionality and data structure
-   of OpenFAST.
-
--  Undisturbed velocity field at requested locations (lifting-line
-   points, :math:`\vec{r}_{ll}`, and a set of locations requested by the
-   vortex code, :math:`\vec{r}_r`), written
-   :math:`\vec{v}_0=[\vec{v}_{0,ll}, \vec{v}_{0,r}]`. Based on the
-   parameters, this velocity field may contain the following influences:
-   freestream, shear, veer, turbulence, tower, and nacelle disturbance.
-   The locations where the velocity field is requested are typically the
-   location of the Lagrangian markers.
-
-The constraint states are:
-
--  The circulation intensity along the lifting lines,
-   :math:`\Gamma_{ll}`.
-
-The continuous states are:
-
--  The position of the Lagrangian markers, :math:`\vec{r}_m`
-
--  The vorticity associated with each vortex element,
-   :math:`\vec{\omega}_e`. For a projection of the vorticity onto vortex
-   segments, this corresponds to the circulation,
-   :math:`\vec{\Gamma}_e`, where for each segment,
-   :math:`\vec{\Gamma}_e= \Gamma_e \vec{dl}_e =\vec{\omega}_e dV_e`,
-   with :math:`\vec{dl}_e` and :math:`dV_e`, the vortex segment length
-   and its equivalent vortex volume.
-
-The outputs are  [1]_:
-
--  The induced velocity at the lifting-line nodes,
-   :math:`\vec{v}_{i,ll}`
-
--  The locations where the undisturbed wind needs to be computed,
-   :math:`\vec{r}_{r}` (typically :math:`\vec{r_{r}}=\vec{r}_m`).
-
-State, Constraint, and Output Equations
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-An overview of the main states, constraints, and output equations is
-given in this paragraph. More details are provided in
-:numref:`sec:FVW`. The constraint equation is used to determine
-the circulation distribution along the span of each lifting line. For
-the van Garrel method, this circulation is a function of the angle of
-attack along the blade and the airfoil coefficients. The angle of attack
-at a given lifting-line node is a function of the undisturbed velocity,
-:math:`\vec{v}_{0,ll}`, and the velocity induced by the vorticity,
-:math:`\vec{v}_{i,ll}`, at that point. Part of the induced velocity is
-caused by the vorticity being shed and trailed at the current time step,
-which in turn is a function of the circulation distribution along the
-lifting line. This constraint equation may be written as:
-
-.. math::
-   \vec{Z} = \vec{0} = \vec{\Gamma}_{ll} - \vec{\Gamma}_p(\vec{\alpha}(\vec{x},\vec{u}),\vec{p})
-
-where :math:`\vec{\Gamma}_p` is the function that returns the
-circulation along the blade span, based on the distribution of angle of
-attacks and the airfoil characteristics. In practice, this nonlinear
-equation is solved using an iterative algorithm. The state equation
-specifies the time evolution of the vorticity and the convection of the
-Lagrangian markers:
-
-.. math::
-   \begin{aligned}
-       \frac{d \vec{\omega}_e}{dt} &= \left[(\vec{\omega}\cdot\nabla)\vec{v} + \nu\nabla^2 \vec{\omega} \right]_e
-           \\
-       \frac{d \vec{r}_m}{dt} &= \vec{V}(\vec{r}_m)
-    =\vec{V}_0(\vec{r}_m)  + \vec{v}_\omega(\vec{r}_m)
-    =\vec{V}_0(\vec{r}_m)  + \vec{V}_\omega(\vec{r}_m, \vec{r}_m, \vec{\omega})
-   \end{aligned}
-   :label: eq:Convection
-
-where :math:`\vec{v}_\omega` is the velocity induced by the vorticity in
-the domain; :math:`\vec{V}_\omega(\vec{r},\vec{r}_m,\vec{\omega})` is
-the function that computes this induced velocity at a given point,
-:math:`\vec{r}`, based on the location of the Lagrangian markers and the
-intensity of the vortex elements; and the subscript, :math:`e`,
-indicates that a quantity is applied to an element. The vorticity,
-:math:`\vec{\omega}`, is recovered from the vorticity of the vortex
-elements by means of discrete convolutions. For vortex-segment
-simulations, the viscous-splitting algorithm is used, and the convection
-step (Eq. :eq:`eq:Convection`) is the main state
-equation being solved for. The vorticity stretching is automatically
-accounted for, and the diffusion is performed *a posteriori*. The
-velocity function, :math:`\vec{V}_\omega`, uses the Biot-Savart law. The
-output equation is:
-
-.. math::
-   \begin{aligned}
-      \vec{y}_1&=\vec{v}_{i,ll} = \vec{V}_\omega ( \vec{r}_{ll}, \vec{r}_m, \vec{\omega})= \\
-      \vec{y}_2&=\vec{r}_{r}
-   \end{aligned}
-
-Integration with AeroDyn15
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The vortex code has been integrated as a submodule of the aerodynamic
-module of OpenFAST, *AeroDyn15*. The data workflow between the different
-modules and submodules of OpenFAST is illustrated in
-Figure :ref:`FAST-FVW`.
-
-This integration required a restructuring of the *AeroDyn15* module to
-isolate the parts of the code related to tower shadow modeling,
-induction computation, lifting-line-forces computations, and dynamic
-stall. The dynamic stall model will be adapted when used in conjunction
-with the vortex code to ensure the effect of shed vorticity is not
-accounted for twice. The interface between *AeroDyn15* and the inflow
-module, *InflowWind*, was accommodated to include the additionally
-requested points by the vortex code.
-
-.. [1]
-   The loads on the lifting line are not an output of the vortex code;
-   their calculation is handled by a separate submodule of *AeroDyn*.
+blades. It is selected with **CircSolvMethod=[3]**.

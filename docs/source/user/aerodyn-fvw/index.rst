@@ -24,20 +24,10 @@ OLAF User's Guide and Theory Manual (Free Vortex Wake)
    InputFiles.rst
    OutputFiles.rst
    OLAFTheory.rst
+   StateSpace.rst
    FutureWork.rst
    zrefs.rst
    AppendixA.rst
    AppendixB.rst
    AppendixC.rst
   
- 
-..   Acknowledgements.rst
-   Introduction.rst
-   RunningOLAF.rst
-   InputFiles.rst
-   OutputFiles.rst
-   OLAFTheory.rst
-   FutureWork.rst
-   AppendixA.rst
-   AppendixB.rst
-   AppendixC.rst
