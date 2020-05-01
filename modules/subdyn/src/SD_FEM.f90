@@ -872,6 +872,9 @@ SUBROUTINE AssembleKM(Init, p, ErrStat, ErrMsg)
    INTEGER(IntKi)           :: iNode !< Node index
    integer(IntKi), dimension(12) :: IDOF !  12 DOF indices in global unconstrained system
    integer(IntKi), dimension(3)  :: IDOF3!  3  DOF indices in global unconstrained system
+   real(ReKi), dimension(6,6) :: M66  ! Mass matrix of an element node
+   real(ReKi) :: m, x, y, z, Jxx, Jyy, Jzz, Jxy, Jxz, Jyz
+   INTEGER    :: jGlob, kGlob
    ErrMsg  = ""
    ErrStat = ErrID_None
    
@@ -881,7 +884,7 @@ SUBROUTINE AssembleKM(Init, p, ErrStat, ErrMsg)
 
    CALL AllocAry( Init%K, p%nDOF, p%nDOF , 'Init%K',  ErrStat2, ErrMsg2); if(Failed()) return; ! system stiffness matrix 
    CALL AllocAry( Init%M, p%nDOF, p%nDOF , 'Init%M',  ErrStat2, ErrMsg2); if(Failed()) return; ! system mass matrix 
-   CALL AllocAry( Init%FG,p%nDOF,             'Init%FG', ErrStat2, ErrMsg2); if(Failed()) return; ! system gravity force vector 
+   CALL AllocAry( Init%FG,p%nDOF,          'Init%FG', ErrStat2, ErrMsg2); if(Failed()) return; ! system gravity force vector 
    Init%K  = 0.0_ReKi
    Init%M  = 0.0_ReKi
    Init%FG = 0.0_ReKi
@@ -898,32 +901,44 @@ SUBROUTINE AssembleKM(Init, p, ErrStat, ErrMsg)
       Init%FG( IDOF )    = Init%FG( IDOF )     + FGe(1:12)+ FCe(1:12) ! Note: gravity and pretension cable forces
       Init%K(IDOF, IDOF) = Init%K( IDOF, IDOF) + Ke(1:12,1:12)
       Init%M(IDOF, IDOF) = Init%M( IDOF, IDOF) + Me(1:12,1:12)
-   ENDDO ! end loop over elements , i
+   ENDDO
       
-   ! add concentrated mass 
-   DO I = 1, Init%NCMass
+   ! Add concentrated mass to mass matrix
+   DO I = 1, Init%nCMass
       iNode = NINT(Init%CMass(I, 1)) ! Note index where concentrated mass is to be added
-      ! Safety
+      ! Safety check (otherwise we might have more than 6 DOF)
       if (Init%Nodes(iNode,iJointType) /= idJointCantilever) then
          ErrMsg2='Concentrated mass is only for cantilever joints. Problematic node: '//trim(Num2LStr(iNode)); ErrStat2=ErrID_Fatal;
          if(Failed()) return
       endif
-      DO J = 1, 3
-          iGlob = p%NodesDOF(iNode)%List(J) ! ux, uy, uz
-          Init%M(iGlob, iGlob) = Init%M(iGlob, iGlob) + Init%CMass(I, 2)
-      ENDDO
-      DO J = 4, 6
-          iGlob = p%NodesDOF(iNode)%List(J) ! theta_x, theta_y, theta_z
-          Init%M(iGlob, iGlob) = Init%M(iGlob, iGlob) + Init%CMass(I, J-1)
+      ! Mass matrix of a rigid body
+      M66 = 0.0_ReKi
+      m   = Init%CMass(I,2)
+      Jxx = Init%CMass(I,3 ); Jxy = Init%CMass(I,6 ); x = Init%CMass(I,9 );
+      Jyy = Init%CMass(I,4 ); Jxz = Init%CMass(I,7 ); y = Init%CMass(I,10);
+      Jzz = Init%CMass(I,5 ); Jyz = Init%CMass(I,8 ); z = Init%CMass(I,11);
+      M66(1 , :)=(/ m       , 0._ReKi , 0._ReKi , 0._ReKi             ,  z*m                , -y*m                 /)
+      M66(2 , :)=(/ 0._ReKi , m       , 0._ReKi , -z*m                , 0._ReKi             ,  x*m                 /)
+      M66(3 , :)=(/ 0._ReKi , 0._ReKi , m       ,  y*m                , -x*m                , 0._ReKi              /)
+      M66(4 , :)=(/ 0._ReKi , -z*m    ,  y*m    , Jxx + m*(y**2+z**2) , Jxy - m*x*y         , Jxz  - m*x*z         /)
+      M66(5 , :)=(/  z*m    , 0._ReKi , -x*m    , Jxy - m*x*y         , Jyy + m*(x**2+z**2) , Jyz  - m*y*z         /)
+      M66(6 , :)=(/ -y*m    , x*m     , 0._ReKi , Jxz - m*x*z         , Jyz - m*y*z         , Jzz  + m*(x**2+y**2) /)
+      ! Adding
+      DO J = 1, 6
+         jGlob = p%NodesDOF(iNode)%List(J)
+         DO K = 1, 6
+            kGlob = p%NodesDOF(iNode)%List(K)
+            Init%M(jGlob, kGlob) = Init%M(jGlob, kGlob) + M66(J,K)
+         ENDDO
       ENDDO
    ENDDO ! Loop on concentrated mass
 
    ! Add concentrated mass induced gravity force
-   DO I = 1, Init%NCMass
+   DO I = 1, Init%nCMass
        iNode = NINT(Init%CMass(I, 1)) ! Note index where concentrated mass is to be added
        iGlob = p%NodesDOF(iNode)%List(3) ! uz
        Init%FG(iGlob) = Init%FG(iGlob) - Init%CMass(I, 2)*Init%g 
-   ENDDO ! I concentrated mass induced gravity
+   ENDDO
    
    CALL CleanUp_AssembleKM()
    
