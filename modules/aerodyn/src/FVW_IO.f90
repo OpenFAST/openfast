@@ -189,7 +189,7 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth)
    type(FVW_ParameterType),        intent(in   ) :: p !< Parameters
    type(FVW_ContinuousStateType),  intent(in   ) :: x !< States
    type(FVW_ConstraintStateType),  intent(in   ) :: z !< Constraints
-   type(FVW_MiscVarType),          intent(in   ) :: m !< MiscVars
+   type(FVW_MiscVarType),          intent(inout) :: m !< MiscVars
    character(*),    intent(in)           :: FileRootName    !< Name of the file to write the output in (excluding extension)
    integer(IntKi),  intent(in)           :: VTKcount        !< Indicates number for VTK output file (when 0, the routine will also write reference information)
    integer(IntKi),  intent(in)           :: Twidth          !< Number of digits in the maximum write-out step (used to pad the VTK write-out in the filename with zeros)
@@ -210,7 +210,7 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth)
       print'(A,L1,A,I0,A,I0,A,I0)','VTK Output  -      First call ',m%FirstCall, '                                nNW:',m%nNW,' nFW:',m%nFW,'  i:',VTKCount
    endif
    !
-   call set_vtk_binary_format(.false.) ! TODO binary fails
+   call set_vtk_binary_format(.false.,m%vtk) ! TODO binary fails
 
    ! TimeStamp
    write(Tstr, '(i' // trim(Num2LStr(Twidth)) //'.'// trim(Num2LStr(Twidth)) // ')') VTKcount
@@ -222,25 +222,25 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth)
    do iW=1,p%VTKBlades
       write(Label,'(A,A)') 'BldPointCP.Bld', i2ABC(iW)
       Filename = TRIM(FileRootName)//'.'//trim(Label)//'.'//Tstr//'.vtk'
-      if ( vtk_new_ascii_file(trim(filename),Label) ) then
-         call vtk_dataset_polydata(m%CP_LL(1:3,1:p%nSpan,iW))
-         call vtk_point_data_init()
-         call vtk_point_data_scalar(m%Gamma_ll(    1:p%nSpan,iW),'Gamma_ll')
-         call vtk_point_data_vector(m%Vind_ll (1:3,1:p%nSpan,iW),'Vind_ll')
-         call vtk_point_data_vector(m%Vtot_ll (1:3,1:p%nSpan,iW),'Vtot_ll')
-         call vtk_point_data_vector(m%Vstr_ll (1:3,1:p%nSpan,iW),'Vstr_ll')
-         call vtk_point_data_vector(m%Vwnd_ll (1:3,1:p%nSpan,iW),'Vwnd_ll')
-         call vtk_point_data_vector(m%Tang    (1:3,1:p%nSpan,iW),'Tangent')
-         call vtk_point_data_vector(m%Norm    (1:3,1:p%nSpan,iW),'Normal')
-         call vtk_point_data_vector(m%Orth    (1:3,1:p%nSpan,iW),'Orth')
-         call vtk_close_file()
+      if ( vtk_new_ascii_file(trim(filename),Label,m%vtk) ) then
+         call vtk_dataset_polydata(m%CP_LL(1:3,1:p%nSpan,iW),m%vtk)
+         call vtk_point_data_init(m%vtk)
+         call vtk_point_data_scalar(m%Gamma_ll(    1:p%nSpan,iW),'Gamma_ll',m%vtk)
+         call vtk_point_data_vector(m%Vind_ll (1:3,1:p%nSpan,iW),'Vind_ll',m%vtk)
+         call vtk_point_data_vector(m%Vtot_ll (1:3,1:p%nSpan,iW),'Vtot_ll',m%vtk)
+         call vtk_point_data_vector(m%Vstr_ll (1:3,1:p%nSpan,iW),'Vstr_ll',m%vtk)
+         call vtk_point_data_vector(m%Vwnd_ll (1:3,1:p%nSpan,iW),'Vwnd_ll',m%vtk)
+         call vtk_point_data_vector(m%Tang    (1:3,1:p%nSpan,iW),'Tangent',m%vtk)
+         call vtk_point_data_vector(m%Norm    (1:3,1:p%nSpan,iW),'Normal',m%vtk)
+         call vtk_point_data_vector(m%Orth    (1:3,1:p%nSpan,iW),'Orth',m%vtk)
+         call vtk_close_file(m%vtk)
       endif
    enddo
    ! --- Lifting line panels
    do iW=1,p%VTKBlades
       write(Label,'(A,A)') 'LL.Bld', i2ABC(iW)
       Filename = TRIM(FileRootName)//'.'//trim(Label)//'.'//Tstr//'.vtk'
-      call WrVTK_Lattice(FileName, m%r_LL(1:3,:,:,iW), m%Gamma_LL(:,iW:iW))
+      call WrVTK_Lattice(FileName, m%vtk, m%r_LL(1:3,:,:,iW), m%Gamma_LL(:,iW:iW))
    enddo
    ! --------------------------------------------------------------------------------}
    ! --- Near wake 
@@ -251,10 +251,10 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth)
       Filename = TRIM(FileRootName)//'.'//trim(Label)//'.'//Tstr//'.vtk'
       if (m%FirstCall) then ! Small Hack - At t=0, NW not set, but first NW panel is the LL panel
          allocate(dxdt_0(3, size(m%dxdt_NW,2) , m%nNW+1)); dxdt_0=0.0_ReKi
-         call WrVTK_Lattice(FileName, m%r_LL(1:3,:,1:2,iW), m%Gamma_LL(:,iW:iW),dxdt_0)
+         call WrVTK_Lattice(FileName, m%vtk, m%r_LL(1:3,:,1:2,iW), m%Gamma_LL(:,iW:iW),dxdt_0)
          deallocate(dxdt_0)
       else
-         call WrVTK_Lattice(FileName, x%r_NW(1:3,:,1:m%nNW+1,iW), x%Gamma_NW(:,1:m%nNW,iW), m%dxdt_NW(:,:,1:m%nNW+1,iW))
+         call WrVTK_Lattice(FileName, m%vtk, x%r_NW(1:3,:,1:m%nNW+1,iW), x%Gamma_NW(:,1:m%nNW,iW), m%dxdt_NW(:,:,1:m%nNW+1,iW))
       endif
    enddo
    ! --------------------------------------------------------------------------------}
@@ -264,7 +264,7 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth)
    do iW=1,p%VTKBlades
       write(Label,'(A,A)') 'FW.Bld', i2ABC(iW)
       Filename = TRIM(FileRootName)//'.'//trim(Label)//'.'//Tstr//'.vtk'
-      call WrVTK_Lattice(FileName, x%r_FW(1:3,1:FWnSpan+1,1:m%nFW+1,iW), x%Gamma_FW(1:FWnSpan,1:m%nFW,iW),m%dxdt_FW(:,:,1:m%nFW+1,iW))
+      call WrVTK_Lattice(FileName, m%vtk, x%r_FW(1:3,1:FWnSpan+1,1:m%nFW+1,iW), x%Gamma_FW(1:FWnSpan,1:m%nFW,iW),m%dxdt_FW(:,:,1:m%nFW+1,iW))
    enddo
    ! --------------------------------------------------------------------------------}
    ! --- All Segments
@@ -281,34 +281,36 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth)
       nSegP = 2*nSegP
    endif
    Filename = TRIM(FileRootName)//'.AllSeg.'//Tstr//'.vtk'
-   CALL WrVTK_Segments(Filename, m%SegPoints(:,1:nSegP), m%SegConnct(:,1:nSeg), m%SegGamma(1:nSeg), m%SegEpsilon(1:nSeg)) 
+   CALL WrVTK_Segments(Filename, m%vtk, m%SegPoints(:,1:nSegP), m%SegConnct(:,1:nSeg), m%SegGamma(1:nSeg), m%SegEpsilon(1:nSeg)) 
 
    if(.false.) print*,z%Gamma_LL(1,1) ! unused var for now
 end subroutine WrVTK_FVW
 
 
-subroutine WrVTK_Segments(filename, SegPoints, SegConnct, SegGamma, SegEpsilon) 
+subroutine WrVTK_Segments(filename, mvtk, SegPoints, SegConnct, SegGamma, SegEpsilon) 
    use VTK
    character(len=*),intent(in)                 :: filename
+   type(FVW_VTK_Misc),           intent(inout) :: mvtk       !< miscvars for VTK output
    real(ReKi), dimension(:,:),      intent(in) :: SegPoints  !< 
    integer(IntKi), dimension(:,:),  intent(in) :: SegConnct  !< 
    real(ReKi),     dimension(:)  ,  intent(in) :: SegGamma   !< 
    real(ReKi),     dimension(:)  ,  intent(in) :: SegEpsilon !< 
-   if ( vtk_new_ascii_file(filename,'Sgmt') ) then
-      call vtk_dataset_polydata(SegPoints(1:3,:))
-      call vtk_lines(SegConnct(1:2,:)-1) ! NOTE: VTK indexing at 0
-      call vtk_cell_data_init()
-      call vtk_cell_data_scalar(SegGamma  ,'Gamma')
-      call vtk_cell_data_scalar(SegEpsilon,'Epsilon')
-!       call vtk_cell_data_scalar(real(SegConnct(3,:), ReKi),'Age')
-      !call vtk_cell_data_scalar(real(SegConnct(4,:), ReKi),'Span')
-      call vtk_close_file()
+   if ( vtk_new_ascii_file(filename,'Sgmt',mvtk) ) then
+      call vtk_dataset_polydata(SegPoints(1:3,:),mvtk)
+      call vtk_lines(SegConnct(1:2,:)-1,mvtk) ! NOTE: VTK indexing at 0
+      call vtk_cell_data_init(mvtk)
+      call vtk_cell_data_scalar(SegGamma  ,'Gamma',mvtk)
+      call vtk_cell_data_scalar(SegEpsilon,'Epsilon',mvtk)
+!       call vtk_cell_data_scalar(real(SegConnct(3,:), ReKi),'Age',mvtk)
+      !call vtk_cell_data_scalar(real(SegConnct(4,:), ReKi),'Span',mvtk)
+      call vtk_close_file(mvtk)
    endif
 end subroutine
 
-subroutine WrVTK_Lattice(filename, LatticePoints, LatticeGamma, LatticeData3d)
+subroutine WrVTK_Lattice(filename, mvtk, LatticePoints, LatticeGamma, LatticeData3d)
    use VTK ! for all the vtk_* functions
    character(len=*), intent(in)                         :: filename
+   type(FVW_VTK_Misc),           intent(inout)          :: mvtk          !< miscvars for VTK output
    real(Reki), dimension(:,:,:), intent(in  )           :: LatticePoints !< Array of points 3 x nSpan x nDepth
    real(Reki), dimension(:,:), intent(in  )             :: LatticeGamma  !< Array of            nSpan x nDepth
    real(Reki), dimension(:,:,:), intent(in  ), optional :: LatticeData3d !< Array of n x nSpan x nDepth KEEP ME
@@ -318,16 +320,16 @@ subroutine WrVTK_Lattice(filename, LatticePoints, LatticeGamma, LatticeData3d)
 
    CALL LatticeToPanlConnectivity(LatticePoints, Connectivity, Points)
 
-   if ( vtk_new_ascii_file(filename,'')) then
-      call vtk_dataset_polydata(Points)
-      call vtk_quad(Connectivity)
-      call vtk_cell_data_init()
-      call vtk_cell_data_scalar(LatticeGamma,'Gamma')
+   if ( vtk_new_ascii_file(filename,'',mvtk)) then
+      call vtk_dataset_polydata(Points,mvtk)
+      call vtk_quad(Connectivity,mvtk)
+      call vtk_cell_data_init(mvtk)
+      call vtk_cell_data_scalar(LatticeGamma,'Gamma',mvtk)
       if (present(LatticeData3d)) then
-         call vtk_point_data_init()
-         call vtk_point_data_vector(LatticeData3d,'Uconv')
+         call vtk_point_data_init(mvtk)
+         call vtk_point_data_vector(LatticeData3d,'Uconv',mvtk)
       endif
-      call vtk_close_file()
+      call vtk_close_file(mvtk)
    endif
 
 end subroutine WrVTK_Lattice
@@ -363,13 +365,13 @@ subroutine LatticeToPanlConnectivity(LatticePoints, Connectivity, Points)
    enddo; enddo
 
 !     do iWing=1,p%NumBlades
-!         if ( vtk_new_ascii_file(trim(filename),Label) ) then
+!         if ( vtk_new_ascii_file(trim(filename),Label,m%vtk) ) then
 !             ! Buffer for points
 !             k=1; do iNW=1,nNW; do iSpan=1,nSpan
 !                 Buffer(1:3,k) = Misc%NWake%r_nearj(1:3,iSpan,iNW,iWing)
 !                 k=k+1
 !             enddo; enddo
-!             call vtk_dataset_polydata(Buffer)
+!             call vtk_dataset_polydata(Buffer,m%vtk)
 !             call vtk_quad(Connectivity)
 !             call vtk_cell_data_init()
 !             ! Buffer for Gammas m1

@@ -35,6 +35,19 @@ USE AirfoilInfo_Types
 USE UnsteadyAero_Types
 USE NWTC_Library
 IMPLICIT NONE
+! =========  FVW_VTK_Misc  =======
+  TYPE, PUBLIC :: FVW_VTK_Misc
+    INTEGER(IntKi)  :: vtk_unit      !< VTK output unit [-]
+    LOGICAL  :: bFileOpen      !< binary file is open [-]
+    LOGICAL  :: bBinary      !< write binary files [-]
+    LOGICAL  :: bChangeFrame      !< change to blade ref frame [-]
+    INTEGER(IntKi)  :: nData      !< number of data lines [-]
+    INTEGER(IntKi)  :: nPoints      !< number of points [-]
+    Character(255)  :: buffer      !< character buffer [-]
+    REAL(ReKi) , DIMENSION(1:3,1:3)  :: T_g2b      !< reference frame transform [-]
+    REAL(ReKi) , DIMENSION(1:3)  :: PO_g      !< reference frame origin in transform [-]
+  END TYPE FVW_VTK_Misc
+! =======================
 ! =========  FVW_ParameterType  =======
   TYPE, PUBLIC :: FVW_ParameterType
     INTEGER(IntKi)  :: nWings      !< Number of Wings [-]
@@ -127,6 +140,7 @@ IMPLICIT NONE
     TYPE(UA_ParameterType)  :: p_UA      !< parameters for UnsteadyAero [-]
     LOGICAL  :: UA_Flag      !< logical flag indicating whether to use UnsteadyAero [-]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: Vwnd_ND      !< InflowOnBlade (at nodes) values modified by tower influence. ONLY for UA [m/s]
+    TYPE(FVW_VTK_Misc)  :: VTK      !< VTK output misc vars, for optimizing VTK writing [-]
   END TYPE FVW_MiscVarType
 ! =======================
 ! =========  FVW_InputType  =======
@@ -233,6 +247,217 @@ IMPLICIT NONE
   END TYPE FVW_InitOutputType
 ! =======================
 CONTAINS
+ SUBROUTINE FVW_CopyVTK_Misc( SrcVTK_MiscData, DstVTK_MiscData, CtrlCode, ErrStat, ErrMsg )
+   TYPE(FVW_VTK_Misc), INTENT(IN) :: SrcVTK_MiscData
+   TYPE(FVW_VTK_Misc), INTENT(INOUT) :: DstVTK_MiscData
+   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
+   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+! Local 
+   INTEGER(IntKi)                 :: i,j,k
+   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
+   INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
+   INTEGER(IntKi)                 :: i4, i4_l, i4_u  !  bounds (upper/lower) for an array dimension 4
+   INTEGER(IntKi)                 :: ErrStat2
+   CHARACTER(ErrMsgLen)           :: ErrMsg2
+   CHARACTER(*), PARAMETER        :: RoutineName = 'FVW_CopyVTK_Misc'
+! 
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+    DstVTK_MiscData%vtk_unit = SrcVTK_MiscData%vtk_unit
+    DstVTK_MiscData%bFileOpen = SrcVTK_MiscData%bFileOpen
+    DstVTK_MiscData%bBinary = SrcVTK_MiscData%bBinary
+    DstVTK_MiscData%bChangeFrame = SrcVTK_MiscData%bChangeFrame
+    DstVTK_MiscData%nData = SrcVTK_MiscData%nData
+    DstVTK_MiscData%nPoints = SrcVTK_MiscData%nPoints
+    DstVTK_MiscData%buffer = SrcVTK_MiscData%buffer
+    DstVTK_MiscData%T_g2b = SrcVTK_MiscData%T_g2b
+    DstVTK_MiscData%PO_g = SrcVTK_MiscData%PO_g
+ END SUBROUTINE FVW_CopyVTK_Misc
+
+ SUBROUTINE FVW_DestroyVTK_Misc( VTK_MiscData, ErrStat, ErrMsg )
+  TYPE(FVW_VTK_Misc), INTENT(INOUT) :: VTK_MiscData
+  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+  CHARACTER(*),    PARAMETER :: RoutineName = 'FVW_DestroyVTK_Misc'
+  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
+! 
+  ErrStat = ErrID_None
+  ErrMsg  = ""
+ END SUBROUTINE FVW_DestroyVTK_Misc
+
+ SUBROUTINE FVW_PackVTK_Misc( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
+  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
+  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
+  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
+  TYPE(FVW_VTK_Misc),  INTENT(IN) :: InData
+  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
+  CHARACTER(*),     INTENT(  OUT) :: ErrMsg
+  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
+    ! Local variables
+  INTEGER(IntKi)                 :: Re_BufSz
+  INTEGER(IntKi)                 :: Re_Xferred
+  INTEGER(IntKi)                 :: Db_BufSz
+  INTEGER(IntKi)                 :: Db_Xferred
+  INTEGER(IntKi)                 :: Int_BufSz
+  INTEGER(IntKi)                 :: Int_Xferred
+  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
+  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*), PARAMETER        :: RoutineName = 'FVW_PackVTK_Misc'
+ ! buffers to store subtypes, if any
+  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
+  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
+  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
+
+  OnlySize = .FALSE.
+  IF ( PRESENT(SizeOnly) ) THEN
+    OnlySize = SizeOnly
+  ENDIF
+    !
+  ErrStat = ErrID_None
+  ErrMsg  = ""
+  Re_BufSz  = 0
+  Db_BufSz  = 0
+  Int_BufSz  = 0
+      Int_BufSz  = Int_BufSz  + 1  ! vtk_unit
+      Int_BufSz  = Int_BufSz  + 1  ! bFileOpen
+      Int_BufSz  = Int_BufSz  + 1  ! bBinary
+      Int_BufSz  = Int_BufSz  + 1  ! bChangeFrame
+      Int_BufSz  = Int_BufSz  + 1  ! nData
+      Int_BufSz  = Int_BufSz  + 1  ! nPoints
+      Int_BufSz  = Int_BufSz  + 1*LEN(InData%buffer)  ! buffer
+      Re_BufSz   = Re_BufSz   + SIZE(InData%T_g2b)  ! T_g2b
+      Re_BufSz   = Re_BufSz   + SIZE(InData%PO_g)  ! PO_g
+  IF ( Re_BufSz  .GT. 0 ) THEN 
+     ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
+     IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+     END IF
+  END IF
+  IF ( Db_BufSz  .GT. 0 ) THEN 
+     ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
+     IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+     END IF
+  END IF
+  IF ( Int_BufSz  .GT. 0 ) THEN 
+     ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
+     IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+     END IF
+  END IF
+  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
+
+  Re_Xferred  = 1
+  Db_Xferred  = 1
+  Int_Xferred = 1
+
+      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%vtk_unit
+      Int_Xferred   = Int_Xferred   + 1
+      IntKiBuf ( Int_Xferred:Int_Xferred+1-1 ) = TRANSFER( InData%bFileOpen , IntKiBuf(1), 1)
+      Int_Xferred   = Int_Xferred   + 1
+      IntKiBuf ( Int_Xferred:Int_Xferred+1-1 ) = TRANSFER( InData%bBinary , IntKiBuf(1), 1)
+      Int_Xferred   = Int_Xferred   + 1
+      IntKiBuf ( Int_Xferred:Int_Xferred+1-1 ) = TRANSFER( InData%bChangeFrame , IntKiBuf(1), 1)
+      Int_Xferred   = Int_Xferred   + 1
+      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%nData
+      Int_Xferred   = Int_Xferred   + 1
+      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%nPoints
+      Int_Xferred   = Int_Xferred   + 1
+        DO I = 1, LEN(InData%buffer)
+          IntKiBuf(Int_Xferred) = ICHAR(InData%buffer(I:I), IntKi)
+          Int_Xferred = Int_Xferred   + 1
+        END DO ! I
+      ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%T_g2b))-1 ) = PACK(InData%T_g2b,.TRUE.)
+      Re_Xferred   = Re_Xferred   + SIZE(InData%T_g2b)
+      ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%PO_g))-1 ) = PACK(InData%PO_g,.TRUE.)
+      Re_Xferred   = Re_Xferred   + SIZE(InData%PO_g)
+ END SUBROUTINE FVW_PackVTK_Misc
+
+ SUBROUTINE FVW_UnPackVTK_Misc( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
+  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
+  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
+  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
+  TYPE(FVW_VTK_Misc), INTENT(INOUT) :: OutData
+  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+    ! Local variables
+  INTEGER(IntKi)                 :: Buf_size
+  INTEGER(IntKi)                 :: Re_Xferred
+  INTEGER(IntKi)                 :: Db_Xferred
+  INTEGER(IntKi)                 :: Int_Xferred
+  INTEGER(IntKi)                 :: i
+  LOGICAL                        :: mask0
+  LOGICAL, ALLOCATABLE           :: mask1(:)
+  LOGICAL, ALLOCATABLE           :: mask2(:,:)
+  LOGICAL, ALLOCATABLE           :: mask3(:,:,:)
+  LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
+  LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
+  INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+  INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
+  INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
+  INTEGER(IntKi)                 :: i4, i4_l, i4_u  !  bounds (upper/lower) for an array dimension 4
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*), PARAMETER        :: RoutineName = 'FVW_UnPackVTK_Misc'
+ ! buffers to store meshes, if any
+  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
+  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
+  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
+    !
+  ErrStat = ErrID_None
+  ErrMsg  = ""
+  Re_Xferred  = 1
+  Db_Xferred  = 1
+  Int_Xferred  = 1
+      OutData%vtk_unit = IntKiBuf( Int_Xferred ) 
+      Int_Xferred   = Int_Xferred + 1
+      OutData%bFileOpen = TRANSFER( IntKiBuf( Int_Xferred ), mask0 )
+      Int_Xferred   = Int_Xferred + 1
+      OutData%bBinary = TRANSFER( IntKiBuf( Int_Xferred ), mask0 )
+      Int_Xferred   = Int_Xferred + 1
+      OutData%bChangeFrame = TRANSFER( IntKiBuf( Int_Xferred ), mask0 )
+      Int_Xferred   = Int_Xferred + 1
+      OutData%nData = IntKiBuf( Int_Xferred ) 
+      Int_Xferred   = Int_Xferred + 1
+      OutData%nPoints = IntKiBuf( Int_Xferred ) 
+      Int_Xferred   = Int_Xferred + 1
+      DO I = 1, LEN(OutData%buffer)
+        OutData%buffer(I:I) = CHAR(IntKiBuf(Int_Xferred))
+        Int_Xferred = Int_Xferred   + 1
+      END DO ! I
+    i1_l = LBOUND(OutData%T_g2b,1)
+    i1_u = UBOUND(OutData%T_g2b,1)
+    i2_l = LBOUND(OutData%T_g2b,2)
+    i2_u = UBOUND(OutData%T_g2b,2)
+    ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask2.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask2 = .TRUE. 
+      OutData%T_g2b = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%T_g2b))-1 ), mask2, 0.0_ReKi )
+      Re_Xferred   = Re_Xferred   + SIZE(OutData%T_g2b)
+    DEALLOCATE(mask2)
+    i1_l = LBOUND(OutData%PO_g,1)
+    i1_u = UBOUND(OutData%PO_g,1)
+    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask1 = .TRUE. 
+      OutData%PO_g = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%PO_g))-1 ), mask1, 0.0_ReKi )
+      Re_Xferred   = Re_Xferred   + SIZE(OutData%PO_g)
+    DEALLOCATE(mask1)
+ END SUBROUTINE FVW_UnPackVTK_Misc
+
  SUBROUTINE FVW_CopyParam( SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg )
    TYPE(FVW_ParameterType), INTENT(IN) :: SrcParamData
    TYPE(FVW_ParameterType), INTENT(INOUT) :: DstParamData
@@ -243,8 +468,6 @@ CONTAINS
    INTEGER(IntKi)                 :: i,j,k
    INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
    INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-   INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
-   INTEGER(IntKi)                 :: i4, i4_l, i4_u  !  bounds (upper/lower) for an array dimension 4
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'FVW_CopyParam'
@@ -596,8 +819,6 @@ ENDIF
   LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-  INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
-  INTEGER(IntKi)                 :: i4, i4_l, i4_u  !  bounds (upper/lower) for an array dimension 4
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'FVW_UnPackParam'
@@ -1347,6 +1568,9 @@ IF (ALLOCATED(SrcMiscData%Vwnd_ND)) THEN
   END IF
     DstMiscData%Vwnd_ND = SrcMiscData%Vwnd_ND
 ENDIF
+      CALL FVW_Copyvtk_misc( SrcMiscData%VTK, DstMiscData%VTK, CtrlCode, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+         IF (ErrStat>=AbortErrLev) RETURN
  END SUBROUTINE FVW_CopyMisc
 
  SUBROUTINE FVW_DestroyMisc( MiscData, ErrStat, ErrMsg )
@@ -1469,6 +1693,7 @@ ENDIF
 IF (ALLOCATED(MiscData%Vwnd_ND)) THEN
   DEALLOCATE(MiscData%Vwnd_ND)
 ENDIF
+  CALL FVW_Destroyvtk_misc( MiscData%VTK, ErrStat, ErrMsg )
  END SUBROUTINE FVW_DestroyMisc
 
  SUBROUTINE FVW_PackMisc( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -1748,6 +1973,23 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*3  ! Vwnd_ND upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%Vwnd_ND)  ! Vwnd_ND
   END IF
+      Int_BufSz   = Int_BufSz + 3  ! VTK: size of buffers for each call to pack subtype
+      CALL FVW_Packvtk_misc( Re_Buf, Db_Buf, Int_Buf, InData%VTK, ErrStat2, ErrMsg2, .TRUE. ) ! VTK 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf)) THEN ! VTK
+         Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
+         DEALLOCATE(Re_Buf)
+      END IF
+      IF(ALLOCATED(Db_Buf)) THEN ! VTK
+         Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
+         DEALLOCATE(Db_Buf)
+      END IF
+      IF(ALLOCATED(Int_Buf)) THEN ! VTK
+         Int_BufSz = Int_BufSz + SIZE( Int_Buf )
+         DEALLOCATE(Int_Buf)
+      END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -2527,6 +2769,34 @@ ENDIF
       IF (SIZE(InData%Vwnd_ND)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%Vwnd_ND))-1 ) = PACK(InData%Vwnd_ND,.TRUE.)
       Re_Xferred   = Re_Xferred   + SIZE(InData%Vwnd_ND)
   END IF
+      CALL FVW_Packvtk_misc( Re_Buf, Db_Buf, Int_Buf, InData%VTK, ErrStat2, ErrMsg2, OnlySize ) ! VTK 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Re_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Re_Buf) > 0) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_Buf)-1 ) = Re_Buf
+        Re_Xferred = Re_Xferred + SIZE(Re_Buf)
+        DEALLOCATE(Re_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+      IF(ALLOCATED(Db_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Db_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Db_Buf) > 0) DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_Buf)-1 ) = Db_Buf
+        Db_Xferred = Db_Xferred + SIZE(Db_Buf)
+        DEALLOCATE(Db_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+      IF(ALLOCATED(Int_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Int_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Int_Buf) > 0) IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_Buf)-1 ) = Int_Buf
+        Int_Xferred = Int_Xferred + SIZE(Int_Buf)
+        DEALLOCATE(Int_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
  END SUBROUTINE FVW_PackMisc
 
  SUBROUTINE FVW_UnPackMisc( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -3713,6 +3983,46 @@ ENDIF
       Re_Xferred   = Re_Xferred   + SIZE(OutData%Vwnd_ND)
     DEALLOCATE(mask3)
   END IF
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Re_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Re_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Re_Buf = ReKiBuf( Re_Xferred:Re_Xferred+Buf_size-1 )
+        Re_Xferred = Re_Xferred + Buf_size
+      END IF
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Db_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Db_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Db_Buf = DbKiBuf( Db_Xferred:Db_Xferred+Buf_size-1 )
+        Db_Xferred = Db_Xferred + Buf_size
+      END IF
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Int_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Int_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
+        Int_Xferred = Int_Xferred + Buf_size
+      END IF
+      CALL FVW_Unpackvtk_misc( Re_Buf, Db_Buf, Int_Buf, OutData%VTK, ErrStat2, ErrMsg2 ) ! VTK 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
+      IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
+      IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
  END SUBROUTINE FVW_UnPackMisc
 
  SUBROUTINE FVW_CopyInput( SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg )

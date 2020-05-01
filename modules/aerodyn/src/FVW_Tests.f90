@@ -14,7 +14,6 @@ module FVW_Tests
    public :: FVW_RunTests
    private
 
-   character(len=255),save :: testname
    interface test_equal; module procedure &
          test_equal_i1, &
          test_equal_i0
@@ -28,7 +27,8 @@ contains
    ! --------------------------------------------------------------------------------
    ! --- Helper functions (should be part of NWTC library)
    ! --------------------------------------------------------------------------------
-    subroutine test_success(info,bPrint_in)
+    subroutine test_success(testname,info,bPrint_in)
+        character(len=*), intent(in) :: testname
         character(len=*), intent(in) :: info
         logical, intent(in), optional  ::  bPrint_in
         if(present(bPrint_in)) then
@@ -40,7 +40,8 @@ contains
         endif
     end subroutine
 
-    subroutine test_fail(info,bPrint_in,bStop_in)
+    subroutine test_fail(testname,info,bPrint_in,bStop_in)
+        character(len=*), intent(in) :: testname
         character(len=*), intent(in) :: info
         logical, intent(in), optional  ::  bPrint_in
         logical, intent(in), optional  ::  bStop_in
@@ -60,8 +61,9 @@ contains
         endif
     end subroutine
 
-    subroutine  test_equal_i0(Var,iTry,iRef)
+    subroutine  test_equal_i0(testname,Var,iTry,iRef)
         ! Arguments
+        character(len=*), intent(in) :: testname
         character(len=*), intent(in) :: Var
         integer, intent(in) :: iTry         !< 
         integer, intent(in) :: iRef         !< 
@@ -69,16 +71,17 @@ contains
         character(len=255) :: InfoAbs
         if(iRef/=iTry) then
             write(InfoAbs,'(A,I0,A,I0)') trim(Var),iRef,'/',iTry
-            call test_fail(InfoAbs)
+            call test_fail(testname,InfoAbs)
             STOP 
         else
             write(InfoAbs,'(A,A,I0)') trim(Var),' ok ',iRef
-            call test_success(InfoAbs)
+            call test_success(testname,InfoAbs)
         endif
     end subroutine
 
-    subroutine  test_equal_i1(Var,VecTry,VecRef,bTest,bPrintOnly,bPassed)
+    subroutine  test_equal_i1(testname,Var,VecTry,VecRef,bTest,bPrintOnly,bPassed)
         ! Arguments
+        character(len=*), intent(in) :: testname
         character(len=*), intent(in) :: Var
         integer, dimension(:), intent(in) :: VecTry         !< 
         integer, dimension(:), intent(in) :: VecRef         !< 
@@ -111,16 +114,17 @@ contains
         endif
         if(bTest) then
             if(cpt>0) then
-                call test_fail(InfoAbs)
+                call test_fail(testname,InfoAbs)
                 STOP 
             else
-                call test_success(InfoAbs)
+                call test_success(testname,InfoAbs)
             endif
         endif
     end subroutine
 
-    subroutine  test_almost_equal_0(Var,Ref,Try,MINNORM,bStop,bPrint,bPassed)
+    subroutine  test_almost_equal_0(testname,Var,Ref,Try,MINNORM,bStop,bPrint,bPassed)
         ! Arguments
+        character(len=*), intent(in) :: testname
         character(len=*), intent(in) :: Var
         real(ReKi), intent(in) :: Ref         !< 
         real(ReKi), intent(in) :: Try         !< 
@@ -137,17 +141,18 @@ contains
         delta=abs(Ref-Try)
         if(delta>MINNORM) then
             write(InfoAbs,'(A,ES8.1E2,A,ES8.1E2,A,I0)') trim(Var)//' tol: ',MINNORM,', mean: ',delta,' - Failed:',cpt
-            call test_fail(InfoAbs,bPrint,bStop)
+            call test_fail(testname,InfoAbs,bPrint,bStop)
         else
             write(InfoAbs,'(A,ES8.1E2,A,ES8.1E2)') trim(Var)//' tol: ',MINNORM,', mean: ',delta
-            call test_success(InfoAbs,bPrint)
+            call test_success(testname,InfoAbs,bPrint)
         endif
         if(present(bPassed)) then
             bPassed=delta>MINNORM
         endif
     end subroutine
-    subroutine  test_almost_equal_1(Var,VecRef,VecTry,MINNORM,bStop,bPrint,bPassed)
+    subroutine  test_almost_equal_1(testname,Var,VecRef,VecTry,MINNORM,bStop,bPrint,bPassed)
         ! Arguments
+        character(len=*), intent(in) :: testname
         character(len=*), intent(in) :: Var
         real(ReKi), dimension(:), intent(in) :: VecRef         !< 
         real(ReKi), dimension(:), intent(in) :: VecTry         !< 
@@ -174,17 +179,18 @@ contains
 
         if(cpt>0) then
             write(InfoAbs,'(A,ES8.1E2,A,ES8.1E2,A,I0)') trim(Var)//' tol: ',MINNORM,', mean: ',delta_cum,' - Failed:',cpt
-            call test_fail(InfoAbs,bPrint,bStop)
+            call test_fail(testname,InfoAbs,bPrint,bStop)
         else
             write(InfoAbs,'(A,ES8.1E2,A,ES8.1E2)') trim(Var)//' tol: ',MINNORM,', mean: ',delta_cum
-            call test_success(InfoAbs,bPrint)
+            call test_success(testname,InfoAbs,bPrint)
         endif
         if(present(bPassed)) then
             bPassed=(cpt==0)
         endif
     end subroutine
-    subroutine  test_almost_equal_2(Var,VecRef,VecTry,MINNORM,bStop,bPrint,bPassed)
+    subroutine  test_almost_equal_2(testname,Var,VecRef,VecTry,MINNORM,bStop,bPrint,bPassed)
         ! Arguments
+        character(len=*), intent(in) :: testname
         character(len=*), intent(in) :: Var
         real(ReKi), dimension(:,:), intent(in) :: VecRef         !< 
         real(ReKi), dimension(:,:), intent(in) :: VecTry         !< 
@@ -205,14 +211,15 @@ contains
             VecRef2(p)=VecRef(i,j)
             VecTry2(p)=VecTry(i,j)
         enddo; enddo;
-        call  test_almost_equal(Var,VecRef2,VecTry2,MINNORM,bStop,bPrint,bPassed)
+        call  test_almost_equal(testname,Var,VecRef2,VecTry2,MINNORM,bStop,bPrint,bPassed)
     end subroutine
 
    ! --------------------------------------------------------------------------------}
    ! --- Specific FVW tests 
    ! --------------------------------------------------------------------------------{
    !>
-   subroutine Test_BiotSavart_Sgmt(ErrStat, ErrMsg)
+   subroutine Test_BiotSavart_Sgmt(testname, ErrStat, ErrMsg)
+      character(len=*),     intent(in)  :: testname
       integer(IntKi)      , intent(out) :: ErrStat !< Error status of the operation
       character(ErrMsgLen), intent(out) :: ErrMsg  !< Error message if ErrStat /= ErrID_None
       real(ReKi), dimension(3) :: P1,P2,P3,CP
@@ -266,7 +273,7 @@ contains
             !print*,'Reg function', RegFunction, 'CP',CP
             !print*,'Uind_out',Uind_out
             !print*,'U1      ',U1
-            call test_almost_equal('Uind method1/2', U1, Uind_out(:,1), 1e-4_ReKi, .true.,.true.)
+            call test_almost_equal(testname,'Uind method1/2', U1, Uind_out(:,1), 1e-4_ReKi, .true.,.true.)
             !call test_almost_equal('Uind method1/2', U1, Uind_out(:,1), 1e-4, .false.,.true.)
          enddo
       enddo
@@ -305,13 +312,14 @@ contains
             !print*,'Reg function', RegFunction, 'CP',CP
             !print*,'Uind_out',Uind_out
             !print*,'U1      ',U1
-            call test_almost_equal('Uind 1seg/2seg', U1, Uind_out(:,1), 1e-4_ReKi, .true.,.true.)
+            call test_almost_equal(testname,'Uind 1seg/2seg', U1, Uind_out(:,1), 1e-4_ReKi, .true.,.true.)
          enddo
       enddo
    end subroutine
 
    !>
-   subroutine Test_BiotSavart_Part(ErrStat, ErrMsg)
+   subroutine Test_BiotSavart_Part(testname, ErrStat, ErrMsg)
+      character(len=*),     intent(in)  :: testname
       integer(IntKi)      , intent(out) :: ErrStat !< Error status of the operation
       character(ErrMsgLen), intent(out) :: ErrMsg  !< Error message if ErrStat /= ErrID_None
       real(ReKi), dimension(3) :: P1,CP
@@ -359,13 +367,14 @@ contains
             !print*,'Reg function', RegFunction, 'CP',CP
             !print*,'Uind_out',Uind_out
             !print*,'U1      ',U1
-            call test_almost_equal('Uind part method1/2', U1, Uind_out(:,1), 1e-4_ReKi, .true.,.true.)
+            call test_almost_equal(testname,'Uind part method1/2', U1, Uind_out(:,1), 1e-4_ReKi, .true.,.true.)
          enddo
       enddo
    end subroutine Test_BiotSavart_Part
 
    !> This test compares calls using the tree algorithm and the direct N^2 evaluation
-   subroutine Test_BiotSavart_PartTree(ErrStat, ErrMsg)
+   subroutine Test_BiotSavart_PartTree(testname, ErrStat, ErrMsg)
+      character(len=*),     intent(in)  :: testname
       integer(IntKi)      , intent(out) :: ErrStat !< Error status of the operation
       character(ErrMsgLen), intent(out) :: ErrMsg  !< Error message if ErrStat /= ErrID_None
       type(T_Tree) :: Tree
@@ -401,7 +410,7 @@ contains
       call ui_tree(Tree, CPs, 0, 1, nCPs, BranchFactor, BranchSmall,  Uind2, ErrStat, ErrMsg)
       call ui_part_nograd(CPs,PartPoints, PartAlpha, RegFunction, RegParam, Uind1, nCPs, nPart)
       ! Test
-      call test_almost_equal('Uind tree 0 part', U_ref, Uind2(:,1), 1e-4_ReKi, .true.,.true.)
+      call test_almost_equal(testname,'Uind tree 0 part', U_ref, Uind2(:,1), 1e-4_ReKi, .true.,.true.)
       call cut_tree(Tree)
       call dealloc()
 
@@ -417,7 +426,7 @@ contains
       call ui_tree(Tree, CPs, 0, 1, nCPs, BranchFactor, BranchSmall,  Uind2, ErrStat, ErrMsg)
       call ui_part_nograd(CPs,PartPoints, PartAlpha, RegFunction, RegParam, Uind1, nCPs, nPart)
       ! Test
-      call test_almost_equal('Uind tree 1 part', Uind1, Uind2, 1e-4_ReKi, .true.,.true.)
+      call test_almost_equal(testname,'Uind tree 1 part', Uind1, Uind2, 1e-4_ReKi, .true.,.true.)
       call cut_tree(Tree)
       !call print_tree(Tree)
       call dealloc()
@@ -451,12 +460,12 @@ contains
          call ui_part_nograd(CPs,PartPoints, PartAlpha, RegFunction, RegParam, Uind1, nCPs, nPart)
          !print*,'Uind',Uind1, Uind2
          ! Test
-         call test_almost_equal('Uind tree 81 part', Uind1, Uind2, 1e-2_ReKi, .true.,.true.)
+         call test_almost_equal(testname,'Uind tree 81 part', Uind1, Uind2, 1e-2_ReKi, .true.,.true.)
       enddo
       call cut_tree(Tree)
       ! --- Test that tree ui cannot be called after tree has been cut
       call ui_tree(Tree, CPs, 0, 1, nCPs, BranchFactor, BranchSmall, Uind2, ErrStat, ErrMsg)
-      call test_equal('Err. stat tree cut',ErrStat,ErrID_Fatal)
+      call test_equal(testname,'Err. stat tree cut',ErrStat,ErrID_Fatal)
       call dealloc()
 
    contains
@@ -478,7 +487,8 @@ contains
    end subroutine Test_BiotSavart_PartTree
 
    !> Compares the velocity field obtained from a segment and its convert to particle version
-   subroutine Test_SegmentsToPart(ErrStat, ErrMsg)
+   subroutine Test_SegmentsToPart(testname, ErrStat, ErrMsg)
+      character(len=*),     intent(in)  :: testname
       integer(IntKi)      , intent(out) :: ErrStat !< Error status of the operation
       character(ErrMsgLen), intent(out) :: ErrMsg  !< Error message if ErrStat /= ErrID_None
       real(ReKi),     dimension(:,:), allocatable :: PartPoints   !< Particle points
@@ -533,7 +543,7 @@ contains
       Uind1 =0.0_ReKi; Uind2 =0.0_ReKi;
       call ui_seg(1, nCPsTot, CPs, 1, nSegTot, nSegTot, nSegPTot, SegPoints, SegConnct, SegGamma, RegFunctionSeg, SegEpsilon, Uind1)
       call ui_part_nograd(CPs,PartPoints, PartAlpha, RegFunctionPart, PartEpsilon, Uind2, nCPsTot, nPart)
-      call test_almost_equal('Uind 10 part/sgmt no reg', Uind1, Uind2, 1e-3_ReKi, .true.,.true.)
+      call test_almost_equal(testname,'Uind 10 part/sgmt no reg', Uind1, Uind2, 1e-3_ReKi, .true.,.true.)
       call dealloc()
 
       ! --- Test 1 - 2 particles, no regularization
@@ -549,7 +559,7 @@ contains
       Uind1 =0.0_ReKi; Uind2 =0.0_ReKi;
       call ui_seg(1, nCPsTot, CPs, 1, nSegTot, nSegTot, nSegPTot, SegPoints, SegConnct, SegGamma, RegFunctionSeg, SegEpsilon, Uind1)
       call ui_part_nograd(CPs,PartPoints, PartAlpha, RegFunctionPart, PartEpsilon, Uind2, nCPsTot, nPart)
-      call test_almost_equal('Uind 2 part/sgmt noreg', Uind1, Uind2, 3e-1_ReKi, .true.,.true.)
+      call test_almost_equal(testname,'Uind 2 part/sgmt noreg', Uind1, Uind2, 3e-1_ReKi, .true.,.true.)
       call dealloc()
 
 
@@ -573,7 +583,7 @@ contains
       !print'(A,10F7.3)','Uind2',Uind2(2,:)
       !print'(A,10F7.3)','Uind1',Uind1(3,:)
       !print'(A,10F7.3)','Uind2',Uind2(3,:)
-      call test_almost_equal('Uind 10 part/sgmt w.reg', Uind1, Uind2, 5e-2_ReKi, .true.,.true.)
+      call test_almost_equal(testname,'Uind 10 part/sgmt w.reg', Uind1, Uind2, 5e-2_ReKi, .true.,.true.)
       call dealloc()
 
    contains 
@@ -590,7 +600,8 @@ contains
    end subroutine Test_SegmentsToPart
 
    !>
-   subroutine Test_LatticeToSegment(iStat)
+   subroutine Test_LatticeToSegment(mvtk,iStat)
+      type(FVW_VTK_Misc),intent(inout) :: mvtk       !< miscvars for VTK output
       integer(IntKi), intent(  out)  :: iStat !< Status for test
       ! Local
       integer(IntKi),dimension(:,:), allocatable :: SegConnct !< Segment connectivity
@@ -631,8 +642,8 @@ contains
       CALL MeshMe(LatticePoints1,(/0.,0.,0./))
       CALL MeshMe(LatticePoints2,(/0.,0.,1./))
 
-      CALL WrVTK_Lattice('Points1.vtk',LatticePoints1, LatticeGamma1)
-      CALL WrVTK_Lattice('Points2.vtk',LatticePoints2, LatticeGamma2)
+      CALL WrVTK_Lattice('Points1.vtk',mvtk,LatticePoints1, LatticeGamma1)
+      CALL WrVTK_Lattice('Points2.vtk',mvtk,LatticePoints2, LatticeGamma2)
 
       ! --- Convert lattice 1 to segments
       nSpan  = size(LatticePoints1,2)
@@ -648,7 +659,7 @@ contains
       iHeadC=1
       CALL LatticeToSegments(LatticePoints1, LatticeGamma1, 1, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC, .true., .true. )
       CALL printall()
-      CALL WrVTK_Segments('Points1_seg.vtk', SegPoints, SegConnct, SegGamma, SegEpsilon) 
+      CALL WrVTK_Segments('Points1_seg.vtk', mvtk, SegPoints, SegConnct, SegGamma, SegEpsilon) 
 
       allocate(Uind(1:3,1) ); Uind=0.0_ReKi
       allocate(CPs (1:3,1) ); 
@@ -675,7 +686,7 @@ contains
       iHeadC=1
       CALL LatticeToSegments(LatticePoints2, LatticeGamma2, 1, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC , .true., .true.)
       CALL printall()
-      CALL WrVTK_Segments('Points2_seg.vtk', SegPoints, SegConnct, SegGamma, SegEpsilon) 
+      CALL WrVTK_Segments('Points2_seg.vtk', mvtk, SegPoints, SegConnct, SegGamma, SegEpsilon) 
 
       ! --- Concatenate both
       nP = nP1 + nP2
@@ -691,7 +702,7 @@ contains
       CALL LatticeToSegments(LatticePoints1, LatticeGamma1, 1, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC, .true. , .true.)
       CALL LatticeToSegments(LatticePoints2, LatticeGamma2, 1, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC, .true. , .true.)
       CALL printall()
-      CALL WrVTK_Segments('PointsBoth_seg.vtk', SegPoints, SegConnct, SegGamma, SegEpsilon) 
+      CALL WrVTK_Segments('PointsBoth_seg.vtk', mvtk, SegPoints, SegConnct, SegGamma, SegEpsilon) 
 
 
    contains
@@ -726,14 +737,15 @@ contains
       character(ErrMsgLen), intent(out) :: ErrMsg  !< Error message if ErrStat /= ErrID_None
       integer(IntKi)       :: ErrStat2
       character(ErrMsgLen) :: ErrMsg2
+      character(len=255)   :: testname
       ! Initialize ErrStat
       ErrStat = ErrID_None
       ErrMsg  = ""
       testname='FVW'
-      call Test_BiotSavart_Sgmt(ErrStat2, ErrMsg2)
-      call Test_BiotSavart_Part(ErrStat2, ErrMsg2)
-      call Test_BiotSavart_PartTree(ErrStat2, ErrMsg2)
-      call Test_SegmentsToPart(ErrStat2, ErrMsg2)
+      call Test_BiotSavart_Sgmt(testname, ErrStat2, ErrMsg2)
+      call Test_BiotSavart_Part(testname, ErrStat2, ErrMsg2)
+      call Test_BiotSavart_PartTree(testname, ErrStat2, ErrMsg2)
+      call Test_SegmentsToPart(testname, ErrStat2, ErrMsg2)
    end subroutine FVW_RunTests
 
 end module FVW_Tests

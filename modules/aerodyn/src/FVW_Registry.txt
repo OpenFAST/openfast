@@ -7,6 +7,17 @@ include Registry_NWTC_Library.txt
 usefrom AirfoilInfo_Registry.txt
 usefrom UnsteadyAero_Registry.txt
 
+
+typedef  FVW/FVW           FVW_VTK_Misc         IntKi                            vtk_unit       -  -  -  "VTK output unit" -
+typedef     ^                 ^                 Logical                          bFileOpen      -  -  -  "binary file is open" -
+typedef     ^                 ^                 Logical                          bBinary        -  -  -  "write binary files" -
+typedef     ^                 ^                 Logical                          bChangeFrame   -  -  -  "change to blade ref frame" -
+typedef     ^                 ^                 IntKi                            nData          -  -  -  "number of data lines" -
+typedef     ^                 ^                 IntKi                            nPoints        -  -  -  "number of points" -
+typedef     ^                 ^                 Character(255)                   buffer         -  -  -  "character buffer" -
+typedef     ^                 ^                 ReKi                             T_g2b          {3}{3}   -  -  "reference frame transform" -
+typedef     ^                 ^                 ReKi                             PO_g           {3}   -     -  "reference frame origin in transform" -
+
 #####################  Registry for FVW ###############
 # ..... PARAMETERS .............
 #FVW_ParameterType  
@@ -106,6 +117,7 @@ typedef     ^                   ^               UA_OutputType                   
 typedef     ^                   ^               UA_ParameterType                 p_UA          -  -  -  "parameters for UnsteadyAero"        -
 typedef     ^                   ^               LOGICAL                          UA_Flag       -  -  -  "logical flag indicating whether to use UnsteadyAero"        -
 typedef     ^                   ^               ReKi                             Vwnd_ND       ::: - -  "InflowOnBlade (at nodes) values modified by tower influence. ONLY for UA" m/s
+typedef     ^                   ^               FVW_VTK_Misc                     VTK           -  -  -  "VTK output misc vars, for optimizing VTK writing" -
 
 # ........ Input ............
 # FVW_InputType

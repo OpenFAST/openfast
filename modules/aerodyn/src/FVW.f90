@@ -236,6 +236,10 @@ subroutine FVW_InitMiscVars( p, m, ErrStat, ErrMsg )
    m%OldWakeTime = -HUGE(1.0_DbKi)
    ! Temporary UA
    call AllocAry( m%Vwnd_ND, 3, p%nSpan+1, p%nWings, 'Vwnd_ND', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%TE = -999999_ReKi;
+
+   ! set the VTK misc vars
+   call vtk_misc_init(m%vtk)
+
 end subroutine FVW_InitMiscVars
 ! ==============================================================================
 subroutine FVW_InitMiscVarsPostParam( p, m, ErrStat, ErrMsg )
@@ -949,12 +953,12 @@ subroutine FVW_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, ErrStat,
          m%VTKlastTime = t
          if ((p%VTKCoord==2).or.(p%VTKCoord==3)) then
             ! Hub reference coordinates, for export only, ALL VTK Will be exported in this coordinate system!
-            call set_vtk_coordinate_transform(u%HubOrientation,u%HubPosition)
+            call set_vtk_coordinate_transform(u%HubOrientation,u%HubPosition,m%vtk)
             call WrVTK_FVW(p, x, z, m, 'vtk_fvw/'//trim(p%RootName)//'FVW_Hub', m%VTKStep, 9)
          endif
          if ((p%VTKCoord==1).or.(p%VTKCoord==3)) then
             ! Global coordinate system, ALL VTK will be exported in global
-            call set_vtk_no_coordinate_transform()
+            call set_vtk_no_coordinate_transform(m%vtk)
             call WrVTK_FVW(p, x, z, m, 'vtk_fvw/'//trim(p%RootName)//'FVW_Glb', m%VTKStep, 9)
          endif
       endif
