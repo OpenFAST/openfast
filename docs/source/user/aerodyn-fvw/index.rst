@@ -3,7 +3,7 @@ OLAF User's Guide and Theory Manual (Free Vortex Wake)
 
 .. only:: html
 
-   This document offers a quick reference guid for the free vortex wake module
+   This document offers a quick reference guide for the free vortex wake module
    named OLAF that is included in the AeroDyn module of OpenFAST.  It is
    intended to be used by the general user in combination with other features
    of AeroDyn and other OpenFAST modules. The manual will be updated as new
@@ -17,7 +17,6 @@ OLAF User's Guide and Theory Manual (Free Vortex Wake)
 .. toctree::
    :maxdepth: 2
 
-   Acknowledgments.rst
    Introduction.rst
    Acronyms.rst
    RunningOLAF.rst
@@ -31,3 +30,4 @@ OLAF User's Guide and Theory Manual (Free Vortex Wake)
    AppendixB.rst
    AppendixC.rst
   
+..   Acknowledgments.rst

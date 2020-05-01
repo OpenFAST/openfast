@@ -606,7 +606,7 @@ approach using the following steps:
       \end{aligned}
 
 #. Convergence is checked using the criterion :math:`k_\text{crit}`
-(**CircSolvConvCrit**):
+   (**CircSolvConvCrit**):
 
    .. math::
       \begin{aligned}

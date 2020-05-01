@@ -89,13 +89,13 @@ azimuthal span in degrees or a downstream distance in rotor diameter will be
 considered.
 
 **WakeLength** [D] specifies the length, in rotor diameters, of the far wake.
-The default value is :math:`8`.
+The default value is :math:`8`. [1]_
 
 **FreeWakeLength** [D] specifies the length, in rotor diameters, for which the
 turbine wake is convected as “free." If *FreeWakeLength* is greater than
 *WakeLength*, then the entire wake is free. Otherwise, the Lagrangian markers
 located within the buffer zone delimited by *FreeWakeLength* and *WakeLength*
-are convected with the average velocity. The default value is :math:`6`.
+are convected with the average velocity. The default value is :math:`6`. [2]_
 
 **FWShedVorticity** [flag] specifies whether shed vorticity is included in the
 far wake. The default value is *[False]*, specifying that the far wake consists
@@ -138,7 +138,7 @@ blades.
 **CoreSpreadEddyVisc** [-] specifies the eddy viscosity parameter :math:`\delta`
 used for the core-spreading method (*DiffusionMethod* = *[1]*) or the
 regularization method with age (*WakeRegMethod* = *[3]*). The variable
-:math:`\delta` is described in . The default value is :math:`100`.
+:math:`\delta` is described in :numref:`sec:corerad`. The default value is :math:`100`.
 
 Output Options
 ~~~~~~~~~~~~~~
@@ -175,3 +175,10 @@ FVW method.
 **FVWFile** [string] specifies the OLAF module file, the path is relative to the
 AeroDyn file, unless an absolute path is provided.
 
+.. [1]
+   At present, this variable is called nFWPanel and specified as the number of far
+   wake panels. This will be changed soon.
+
+.. [2]
+   At present, this variable is called nFWPanelFree and specified as the number of
+   free far wake panels. This will be changed soon.
