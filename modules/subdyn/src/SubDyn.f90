@@ -1651,8 +1651,10 @@ SUBROUTINE Craig_Bampton(Init, p, m, CBparams, ErrStat, ErrMsg)
    !     Init%M, Init%K, and Init%FG data and indices p%IDR and p%IDL:
    CALL BreakSysMtrx(Init, p, MRR, MLL, MRL, KRR, KLL, KRL, FGR, FGL)   
       
-   ! Set p%TI and CBparams%TI2
-   CALL TrnsfTI(Init, p, p%TI, p%nDOFI, p%IDI, CBparams%TI2, p%nDOFR, p%IDR, ErrStat2, ErrMsg2); if(Failed()) return
+   ! Set TI, transformation matrix from interface DOFs to TP ref point
+   CALL RigidTrnsf(Init, p, Init%TP_RefPoint, p%IDI, p%nDOFI, p%TI, ErrStat2, ErrMsg2); if(Failed()) return
+   ! Set TI2, transformation matrix from interface DOFs to TP ref point
+   CALL RigidTrnsf(Init, p, (/0._ReKi, 0._ReKi, 0._ReKi/), p%IDR, p%nDOFR, CBparams%TI2, ErrStat2, ErrMsg2); if(Failed()) return
 
    !................................
    ! Sets the following values, as documented in the SubDyn Theory Guide:
@@ -1836,6 +1838,9 @@ SUBROUTINE CBMatrix( MRR, MLL, MRL, KRR, KLL, KRL, nDOFM, Init, &
    ! Set OmegaL and PhiL from Eq. 2
    !....................................................
    IF ( DOFvar > 0 ) THEN ! Only time this wouldn't happen is if no modes retained and no static improvement...
+      ! NOTE: 
+      !   bRemoveConstraint = False
+      !   bCheckSingularity = True
       CALL EigenSolveWrap(KLL, MLL, p%nDOFL, DOFvar, .False.,Init,p, .True., PhiL(:,1:DOFvar), OmegaL(1:DOFvar),  ErrStat2, ErrMsg2); if(Failed()) return
 
       ! --- Normalize PhiL
@@ -1919,74 +1924,51 @@ CONTAINS
 END SUBROUTINE CBMatrix
 
 !------------------------------------------------------------------------------------------------------
-!>
-SUBROUTINE TrnsfTI(Init, p, TI, nDOFI, IDI, TI2, nDOFR, IDR, ErrStat, ErrMsg)
-   TYPE(SD_InitType),      INTENT(IN   )  :: Init         ! Input data for initialization routine
+!> Returns a rigid body transformation matrix from nDOF to 6 reference DOF: T_ref (6 x nDOF), such that Uref = T_ref.U_subset
+!! Typically called to get: 
+!!    - the transformation from the interface points to the TP point
+!!    - the transformation from the bottom nodes to SubDyn origin (0,0,)
+SUBROUTINE RigidTrnsf(Init, p, RefPoint, DOF, nDOF, T_ref, ErrStat, ErrMsg)
+   TYPE(SD_InitType),      INTENT(IN   )  :: Init        ! Input data for initialization routine
    TYPE(SD_ParameterType), INTENT(IN   )  :: p        
-   INTEGER(IntKi),         INTENT(IN   )  :: nDOFI         ! # of DOFS of interface nodes
-   INTEGER(IntKi),         INTENT(IN   )  :: nDOFR         ! # of DOFS of restrained nodes (restraints and interface)
-   INTEGER(IntKi),         INTENT(IN   )  :: IDI(nDOFI)
-   INTEGER(IntKi),         INTENT(IN   )  :: IDR(nDOFR)
-   REAL(ReKi),             INTENT(INOUT)  :: TI( nDOFI,6)  ! matrix TI that relates the reduced matrix to the TP, 
-   REAL(ReKi),             INTENT(INOUT)  :: TI2(nDOFR,6)  ! matrix TI2 that relates to (0,0,0) the overall substructure mass
+   REAL(ReKi),             INTENT(IN   )  :: RefPoint(3) ! Coordinate of the reference point 
+   INTEGER(IntKi),         INTENT(IN   )  :: nDOF        ! Number of DOFS 
+   INTEGER(IntKi),         INTENT(IN   )  :: DOF(nDOF)  ! DOF indices that are used to create the transformation matrix
+   REAL(ReKi),             INTENT(  OUT)  :: T_ref(nDOF,6)  ! matrix that relates the subset of DOFs to the reference point
    INTEGER(IntKi),         INTENT(  OUT)  :: ErrStat     ! Error status of the operation
    CHARACTER(*),           INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
    ! local variables
-   INTEGER                                :: I, J, K, iDOF, iiDOF, iNode, nDOFPerNode
+   INTEGER                                :: I, iDOF, iiDOF, iNode, nDOFPerNode
    REAL(ReKi)                             :: dx, dy, dz
    REAL(ReKi), dimension(6)               :: Line
-   
    ErrStat = ErrID_None
    ErrMsg  = ""
-
-   ! --- TI: Transformation matrix from interface points to ref point
-   TI(:,:)=0
-   DO I = 1, nDOFI
-      iDOF = IDI(I) ! DOF index in constrained system
+   T_ref(:,:)=0
+   DO I = 1, nDOF
+      iDOF        = DOF(I) ! DOF index in constrained system
       iNode       = p%DOFtilde2Nodes(iDOF,1) ! First column is node 
       nDOFPerNode = p%DOFtilde2Nodes(iDOF,2) ! Second column is number of DOF per node
       iiDOF       = p%DOFtilde2Nodes(iDOF,3) ! Third column is dof index for this joint (1-6 for cantilever)
 
       if ((iiDOF<1) .or. (iiDOF>6)) then
-         ErrMsg  = 'TransfTI, interface node DOF number is not valid. DOF:'//trim(Num2LStr(iDOF))//' Node:'//trim(Num2LStr(iNode))//' iiDOF:'//trim(Num2LStr(iiDOF)); ErrStat = ErrID_Fatal
+         ErrMsg  = 'RigidTrnsf, node DOF number is not valid. DOF:'//trim(Num2LStr(iDOF))//' Node:'//trim(Num2LStr(iNode))//' iiDOF:'//trim(Num2LStr(iiDOF)); ErrStat = ErrID_Fatal
          return
       endif
       if (nDOFPerNode/=6) then
-         ErrMsg  = 'TransfTI, interface node doesnt have 6 DOFs. DOF:'//trim(Num2LStr(iDOF))//' Node:'//trim(Num2LStr(iNode))//' nDOF:'//trim(Num2LStr(nDOFPerNode)); ErrStat = ErrID_Fatal
+         ErrMsg  = 'RigidTrnsf, node doesnt have 6 DOFs. DOF:'//trim(Num2LStr(iDOF))//' Node:'//trim(Num2LStr(iNode))//' nDOF:'//trim(Num2LStr(nDOFPerNode)); ErrStat = ErrID_Fatal
          return
       endif
       
-      dx = Init%Nodes(iNode, 2) - Init%TP_RefPoint(1)
-      dy = Init%Nodes(iNode, 3) - Init%TP_RefPoint(2)
-      dz = Init%Nodes(iNode, 4) - Init%TP_RefPoint(3)
+      dx = Init%Nodes(iNode, 2) - RefPoint(1)
+      dy = Init%Nodes(iNode, 3) - RefPoint(2)
+      dz = Init%Nodes(iNode, 4) - RefPoint(3)
 
       CALL RigidTransformationLine(dx,dy,dz,iiDOF,Line) !returns Line
-      TI(I, 1:6) = Line
+      T_ref(I, 1:6) = Line
    ENDDO
-   ! --- TI2: Transformation matrix from reaction points to origin
-   TI2(:,:) = 0. !Initialize 
-   DO I = 1, nDOFR
-      iDOF = IDR(I) ! DOF index in constrained system
-      iNode       = p%DOFtilde2Nodes(iDOF,1) ! First column is node
-      nDOFPerNode = p%DOFtilde2Nodes(iDOF,2) ! Second column is number of DOF per node
-      iiDOF       = p%DOFtilde2Nodes(iDOF,3) ! Third column is dof index for this joint (1-6 for cantilever)
+END SUBROUTINE RigidTrnsf
 
-      if ((iiDOF<1) .or. (iiDOF>6)) then
-         ErrMsg  = 'TransfTI, reaction node DOF number is not valid. DOF:'//trim(Num2LStr(iDOF))//' Node:'//trim(Num2LStr(iNode))//' iiDOF:'//trim(Num2LStr(iiDOF)); ErrStat = ErrID_Fatal
-         return
-      endif
-      if (nDOFPerNode/=6) then
-         ErrMsg  = 'TransfTI, reaction node doesnt have 6 DOFs. DOF:'//trim(Num2LStr(iDOF))//' Node:'//trim(Num2LStr(iNode))//' nDOF:'//trim(Num2LStr(nDOFPerNode)); ErrStat = ErrID_Fatal
-         return
-      endif
-      
-      dx = Init%Nodes(iNode, 2)
-      dy = Init%Nodes(iNode, 3) 
-      dz = Init%Nodes(iNode, 4) 
-      CALL RigidTransformationLine(dx,dy,dz,iiDOF,Line) ! returns Line
-      TI2(I, 1:6) = Line
-   ENDDO
-END SUBROUTINE TrnsfTI
+
 
 !------------------------------------------------------------------------------------------------------
 !> Wrapper function for eigen value analyses, for two cases:
@@ -2582,6 +2564,10 @@ SUBROUTINE OutSummary(Init, p, InitInput, CBparams, ErrStat,ErrMsg)
    nOmega = p%nDOF_red - p%nNodes_C*6 !removed an extra "-6"  !Note if fixity changes at the reaction points, this will need to change
    CALL AllocAry(Omega,             nOmega, 'Omega', ErrStat2, ErrMsg2 ); if(Failed()) return
    CALL AllocAry(Modes, p%nDOF_red, nOmega, 'Modes', ErrStat2, ErrMsg2 ); if(Failed()) return
+   ! NOTE: below, we don't check for singularity, since this is full system (R+L), which may contain rigid body modes
+   !    M and K are reduced matrices, but Boundary conditions are not applied
+   !    bRemoveConstraint = True
+   !    bCheckSingularity = False
    CALL EigenSolveWrap( Init%K, Init%M, p%nDOF_red, nOmega, .True., Init, p, .False., Modes, Omega, ErrStat2, ErrMsg2 ); if(Failed()) return
 
    !-------------------------------------------------------------------------------------------------------------

@@ -1118,6 +1118,8 @@ SUBROUTINE BuildTMatrix(Init, p, RA, RAm1, Tred, ErrStat, ErrMsg)
             endif
          else
             ! --- Regular cantilever joint
+            ! TODO/NOTE: We could apply fixed constraint/BC here, returning Tc as a 6xn matrix with n<6
+            !            Extreme case would be Tc: 6*0, in which case NodesDOFtilde would be empty ([])
             allocate(Tc(1:6,1:6))
             allocate(IDOFOld(1:6))
             Tc=I6
@@ -1230,6 +1232,7 @@ SUBROUTINE DirectElimination(Init, p, ErrStat, ErrMsg)
    ErrStat = ErrID_None
    ErrMsg  = ""
 
+   ! Setup list of rigid link assemblies (RA) and the inverse function RA^{-1}
    call RigidLinkAssemblies(Init, p, RA, RAm1, ErrStat2, ErrMsg2); if(Failed()) return
 
    call BuildTMatrix(Init, p, RA, RAm1, p%T_red, ErrStat2, ErrMsg2); if (Failed()) return
@@ -1293,7 +1296,7 @@ CONTAINS
       INTEGER(IntKi) :: I, J, iNode
       DO I = 1, p%nNodes_C
          iNode = p%Nodes_C(I,1) ! Node index
-         DO J = 1, 6
+         DO J = 1, 6 ! TODO NOTE here assumptions that 6 DOF are present
             Init%BCs( (I-1)*6+J, 1) = p%NodesDOFtilde(iNode)%List(J) ! DOF number (constrained)
          ENDDO
       ENDDO
