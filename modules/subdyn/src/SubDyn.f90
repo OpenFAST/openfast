@@ -1644,7 +1644,6 @@ SUBROUTINE Craig_Bampton(Init, p, m, CBparams, ErrStat, ErrMsg)
    CALL AllocAry( CBparams%PhiL,   p%nDOFL, p%nDOFL, 'CBparams%PhiL',   ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton')
    CALL AllocAry( CBparams%PhiR,   p%nDOFL, p%nDOFR, 'CBparams%PhiR',   ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton')
    CALL AllocAry( CBparams%OmegaL, p%nDOFL,          'CBparams%OmegaL', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton')
-   CALL AllocAry( CBparams%TI2,    p%nDOFR, 6,       'CBparams%TI2',    ErrStat2, ErrMsg2 ); if(Failed()) return
    
 
    ! Set MRR, MLL, MRL, KRR, KLL, KRL, FGR, FGL, based on
@@ -1653,8 +1652,6 @@ SUBROUTINE Craig_Bampton(Init, p, m, CBparams, ErrStat, ErrMsg)
       
    ! Set TI, transformation matrix from interface DOFs to TP ref point
    CALL RigidTrnsf(Init, p, Init%TP_RefPoint, p%IDI, p%nDOFI, p%TI, ErrStat2, ErrMsg2); if(Failed()) return
-   ! Set TI2, transformation matrix from interface DOFs to TP ref point
-   CALL RigidTrnsf(Init, p, (/0._ReKi, 0._ReKi, 0._ReKi/), p%IDR, p%nDOFR, CBparams%TI2, ErrStat2, ErrMsg2); if(Failed()) return
 
    !................................
    ! Sets the following values, as documented in the SubDyn Theory Guide:
@@ -1688,9 +1685,15 @@ SUBROUTINE Craig_Bampton(Init, p, m, CBparams, ErrStat, ErrMsg)
    !                  MBBb,          MBMb,          KBBb,          PHiRb, FGRb
    ! (throw out rows/columns of first matrices to create second matrices)
    !................................
-   CALL CBApplyConstr(p%nDOFI, p%nDOFR, p%nDOFM,  p%nDOFL,  &
-                      CBparams%MBB , CBparams%MBM , CBparams%KBB , CBparams%PhiR , FGR ,       &
-                               MBBb,          MBMb,          KBBb,          PHiRb, FGRb)
+   ! TODO avoid this all together
+   MBBb  = CBparams%MBB(p%nDOFR-p%nDOFI+1:p%nDOFR, p%nDOFR-p%nDOFI+1:p%nDOFR) 
+   KBBb  = CBparams%KBB(p%nDOFR-p%nDOFI+1:p%nDOFR, p%nDOFR-p%nDOFI+1:p%nDOFR)    
+IF (p%nDOFM > 0) THEN   
+   MBMb  = CBparams%MBM(p%nDOFR-p%nDOFI+1:p%nDOFR, :               )
+END IF
+   FGRb  = FGR(p%nDOFR-p%nDOFI+1:p%nDOFR )
+   PhiRb = CBparams%PhiR(              :, p%nDOFR-p%nDOFI+1:p%nDOFR)
+
    ! TODO TODO TODO Transform new damping matrix as well
    !................................
    ! set values needed to calculate outputs and update states:
@@ -1841,7 +1844,7 @@ SUBROUTINE CBMatrix( MRR, MLL, MRL, KRR, KLL, KRL, nDOFM, Init, &
       ! NOTE: 
       !   bRemoveConstraint = False
       !   bCheckSingularity = True
-      CALL EigenSolveWrap(KLL, MLL, p%nDOFL, DOFvar, .False.,Init,p, .True., PhiL(:,1:DOFvar), OmegaL(1:DOFvar),  ErrStat2, ErrMsg2); if(Failed()) return
+      CALL EigenSolveWrap(KLL, MLL, p%nDOFL, DOFvar, .True., PhiL(:,1:DOFvar), OmegaL(1:DOFvar),  ErrStat2, ErrMsg2); if(Failed()) return
 
       ! --- Normalize PhiL
       ! bjj: break up this equation to avoid as many tenporary variables on the stack
@@ -1972,82 +1975,77 @@ END SUBROUTINE RigidTrnsf
 
 !------------------------------------------------------------------------------------------------------
 !> Wrapper function for eigen value analyses, for two cases:
-!! Case1: K and M are taken "as is" (bRemoveConstraints=false), This is used for the "LL" part of the matrix
-!! Case2: K and M constain some constraints lines, and they need to be removed from the Mass/Stiffness matrix. Used for full system
-SUBROUTINE EigenSolveWrap(K, M, nDOF, NOmega, bRemoveConstraints, Init, p, bCheckSingularity, Phi, Omega, ErrStat, ErrMsg )
-   USE NWTC_ScaLAPACK, only: ScaLAPACK_LASRT
+!! Case1: K and M are taken "as is", this is used for the "LL" part of the matrix
+!! Case2: K and M contain some constraints lines, and they need to be removed from the Mass/Stiffness matrix. Used for full system
+SUBROUTINE EigenSolveWrap(K, M, nDOF, NOmega,  bCheckSingularity, EigVect, Omega, ErrStat, ErrMsg, bDOF )
    INTEGER,                INTENT(IN   )    :: nDOF                               ! Total degrees of freedom of the incoming system
    REAL(ReKi),             INTENT(IN   )    :: K(nDOF, nDOF)                      ! stiffness matrix 
    REAL(ReKi),             INTENT(IN   )    :: M(nDOF, nDOF)                      ! mass matrix 
    INTEGER,                INTENT(IN   )    :: NOmega                             ! No. of requested eigenvalues
-   LOGICAL,                INTENT(IN   )    :: bRemoveConstraints                 ! Whether or not to reduce matrices, this will be removed altogether later, when reduction will be done apriori
-   TYPE(SD_InitType),      INTENT(IN   )    :: Init  
-   TYPE(SD_ParameterType), INTENT(IN   )    :: p  
    LOGICAL,                INTENT(IN   )    :: bCheckSingularity                  ! If True, the solver will fail if rigid modes are present 
-   REAL(ReKi),             INTENT(  OUT)    :: Phi(nDOF, NOmega)                  ! Returned Eigenvectors
+   REAL(ReKi),             INTENT(  OUT)    :: EigVect(nDOF, NOmega)                  ! Returned Eigenvectors
    REAL(ReKi),             INTENT(  OUT)    :: Omega(NOmega)                      ! Returned Eigenvalues
    INTEGER(IntKi),         INTENT(  OUT)    :: ErrStat                            ! Error status of the operation
    CHARACTER(*),           INTENT(  OUT)    :: ErrMsg                             ! Error message if ErrStat /= ErrID_None
+   LOGICAL,   OPTIONAL,    INTENT(IN   )    :: bDOF(nDOF)                         ! Optinal Mask for DOF to keep (True), or reduce (False)
+   
    ! LOCALS         
-   REAL(LAKi), ALLOCATABLE                   :: Kred(:,:), Mred(:,:) 
-   REAL(LAKi), ALLOCATABLE                   :: EigVect(:,:), Omega2_LaKi(:) 
+   REAL(LAKi), ALLOCATABLE                   :: K_LaKi(:,:), M_LaKi(:,:) 
+   REAL(LAKi), ALLOCATABLE                   :: EigVect_LaKi(:,:), Omega2_LaKi(:) 
    REAL(ReKi)                                :: Om2
    INTEGER(IntKi)                            :: N, i
    INTEGER(IntKi)                            :: ErrStat2
    CHARACTER(ErrMsgLen)                      :: ErrMsg2
-   logical, allocatable                      :: bDOF(:)        ! Mask for DOF to keep (True), or reduce (False)
-      
    ErrStat = ErrID_None
    ErrMsg  = ''
-         
-   ! --- Special handling if constraint are present, and type conversion
-   IF (bRemoveConstraints) THEN 
-      ! Removing constrained nodes DOFs, only done for printing out the 'full' set of eigenvalues
-      ! Mred = M[bDOF,bDOF],  Kred = K[bDOF,bDOF]
-      call SelectNonBCConstraintsDOF(Init, p, nDOF, bDOF, ErrStat2, ErrMsg2); if(Failed()) return
-      call RemoveDOF(M, bDOF, Mred, ErrStat2, ErrMsg2); if(Failed()) return
-      call RemoveDOF(K, bDOF, Kred, ErrStat2, ErrMsg2); if(Failed()) return
-      N=SIZE(Kred,1)    
-   ELSE
-      ! This is actually done whe we are generating the CB-reduced set of eigenvalues
-      N=SIZE(K,1)
-      CALL AllocAry( Kred, n, n, 'Kred', ErrStat2, ErrMsg2 ); if(Failed()) return
-      CALL AllocAry( Mred, n, n, 'Mred', ErrStat2, ErrMsg2 ); if(Failed()) return
-      Kred=REAL( K, LAKi )
-      Mred=REAL( M, LAKi )
-   ENDIF
+
+   ! --- Unfortunate conversion to LaKi... TODO TODO consider storing M and K in LaKi
+   if (present(bDOF)) then
+      ! Remove unwanted DOFs
+      call RemoveDOF(M, bDOF, M_LaKi, ErrStat2, ErrMsg2); if(Failed()) return
+      call RemoveDOF(K, bDOF, K_LaKi, ErrStat2, ErrMsg2); if(Failed()) return
+   else
+      N=size(K,1)
+      CALL AllocAry(K_LaKi      , N, N, 'K_LaKi',    ErrStat2, ErrMsg2); if(Failed()) return
+      CALL AllocAry(M_LaKi      , N, N, 'M_LaKi',    ErrStat2, ErrMsg2); if(Failed()) return
+      K_LaKi = real( K, LaKi )
+      M_LaKi = real( M, LaKi )
+   endif
+   N=size(K_LaKi,1)
+
    ! Note:  NOmega must be <= N, which is the length of Omega2, Phi!
-   IF ( NOmega > N ) THEN
+   if ( NOmega > nDOF ) then
       CALL SetErrStat(ErrID_Fatal,"NOmega must be less than or equal to N",ErrStat,ErrMsg,'EigenSolveWrap')
       CALL CleanupEigen()
-      RETURN
-   END IF
+      return
+   end if
+
 
    ! --- Eigenvalue analysis
-   CALL AllocAry( Omega2_LaKi, N,     'Omega',    ErrStat2, ErrMsg2 ); if (Failed()) return;
-   CALL AllocAry( EigVect    , N,  N, 'EigVect',  ErrStat2, ErrMsg2 ); if (Failed()) return;
-   CALL EigenSolve(Kred, Mred, N, bCheckSingularity, EigVect, Omega2_LaKi, ErrStat2, ErrMsg2 ); if (Failed()) return;
+   CALL AllocAry(Omega2_LaKi , N,    'Omega',   ErrStat2, ErrMsg2); if(Failed()) return;
+   CALL AllocAry(EigVect_LaKi, N, N, 'EigVect', ErrStat2, ErrMsg2); if(Failed()) return;
+   CALL EigenSolve(K_LaKi, M_LaKi, N, bCheckSingularity, EigVect_LaKi, Omega2_LaKi, ErrStat2, ErrMsg2 ); if (Failed()) return;
 
    ! --- Setting up Phi, and type conversion
    do i = 1, NOmega
       Om2 = real(Omega2_LaKi(i), ReKi)  
-      if (Om2>0) then 
+      if (EqualRealNos(Om2, 0.0_ReKi)) then  ! NOTE: may be necessary for some corner numerics
+         Omega(i)=0.0_ReKi
+      elseif (Om2>0) then 
          Omega(i)=sqrt(Om2) ! was getting floating invalid
       else
          print*,'>>> Wrong eigenfrequency, Omega^2=',Om2
          Omega(i)= 0.0_ReKi 
       endif
    enddo
-   IF ( bRemoveConstraints ) THEN ! this is called for the full system Eigenvalues:
-      !Need to expand eigenvectors for removed DOFs, setting Phi 
-      CALL InsertDOFRows(EigVect(:,1:NOmega), bDOF, 0.0_ReKi, Phi, ErrStat2, ErrMsg2 ); if(Failed()) return
-   ELSE 
-      Phi=REAL( EigVect(:,1:NOmega), ReKi )   ! eigenvectors
-   ENDIF  
-   
+   if (present(bDOF)) then
+      ! Insert 0s where bDOF was false
+      CALL InsertDOFRows(EigVect_LaKi(:,1:nOmega), bDOF, 0.0_ReKi, EigVect, ErrStat2, ErrMsg2 ); if(Failed()) return
+   else
+      EigVect=REAL( EigVect_LaKi(:,1:NOmega), ReKi )   ! eigenvectors
+   endif
    CALL CleanupEigen()
-   RETURN
-
+   return
 CONTAINS
    LOGICAL FUNCTION Failed()
         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'EigenSolveWrap') 
@@ -2056,72 +2054,37 @@ CONTAINS
    END FUNCTION Failed
 
    SUBROUTINE CleanupEigen()
-      IF (ALLOCATED(Omega2_LaKi)) DEALLOCATE(Omega2_LaKi) 
-      IF (ALLOCATED(EigVect)   ) DEALLOCATE(EigVect)
-      IF (ALLOCATED(Kred)  ) DEALLOCATE(Kred)
-      IF (ALLOCATED(Mred)  ) DEALLOCATE(Mred)
-      IF (ALLOCATED(bDOF)  ) DEALLOCATE(bDOF)
+      IF (ALLOCATED(Omega2_LaKi) ) DEALLOCATE(Omega2_LaKi) 
+      IF (ALLOCATED(EigVect_LaKi)) DEALLOCATE(EigVect_LaKi)
+      IF (ALLOCATED(K_LaKi)      ) DEALLOCATE(K_LaKi)
+      IF (ALLOCATED(M_LaKi)      ) DEALLOCATE(M_LaKi)
    END SUBROUTINE CleanupEigen
   
 END SUBROUTINE EigenSolveWrap
 
-!> Returns a list of boolean which are true if a DOF is not part of a BC constraint
-SUBROUTINE SelectNonBCConstraintsDOF(Init, p, nDOF, bDOF, ErrStat, ErrMsg )
-   TYPE(SD_InitType),      INTENT(  in) :: Init  
-   TYPE(SD_ParameterType), INTENT(  in) :: p  
-   INTEGER(IntKi),         INTENT(  in) :: nDOF
-   LOGICAL, ALLOCATABLE,   INTENT( out) :: bDOF(:)  ! Mask, False for DOF that are Constraints BC DOF
+!> Returns a list of boolean which are true if a DOF is not part of a fixed BC
+SUBROUTINE SelectNonFixedDOF(BCs, bDOF, ErrStat, ErrMsg )
+   INTEGER(IntKi),         INTENT(  IN) :: BCs(:,:) ! nx2 array, columns: iDOF, BC_type
+   LOGICAL,                INTENT( OUT) :: bDOF(:)  ! Mask, False for DOF that are Constraints BC DOF
    INTEGER(IntKi),         INTENT(  OUT) :: ErrStat ! Error status of the operation
    CHARACTER(*),           INTENT(  OUT) :: ErrMsg  ! Error message if ErrStat /= ErrID_None
-   !locals
-   INTEGER                               :: I              ! counters into full or reduced matrix
-   INTEGER                               :: NReactDOFs
+   INTEGER :: iBC, iDOF
    ErrStat = ErrID_None
    ErrMsg  = ''    
-
-   NReactDOFs = p%nNodes_C*6 !p%nDOFC
-   IF (NReactDOFs > nDOF) THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg = 'SelectNonBCConstraintsDOF: invalid matrix sizes.'
-      RETURN
-   END IF
-
-   CALL AllocAry(bDOF, nDOF, 'bDOF',  ErrStat, ErrMsg ); IF (ErrStat >= AbortErrLev) RETURN
-
    ! Setting array of DOF, true if we keep them
-   bDOF(1:nDOF)=.True.
-   do I = 1, NReactDOFs  !Cycle on reaction DOFs      
-      if (Init%BCs(I, 2) == 1) THEN
-         bDOF(Init%BCs(I, 1)) = .False. ! Eliminate this one
+   bDOF(:)=.True.
+   do iBC = 1, size(BCs,1)  !Cycle on reaction DOFs      
+      if (BCs(iBC, 2) == idBC_Fixed) then
+         iDOF = BCs(iBC,1)
+         if (iDOF>size(bDOF)) then
+            ErrMsg='Error setting boundary condition, DOF index too large: '//trim(Num2LStr(iDOF))
+            ErrStat=ErrID_Fatal;
+            return
+         endif
+         bDOF(iDOF) = .False. ! Eliminate this one
       end if    
    end do   
-END SUBROUTINE
-!------------------------------------------------------------------------------------------------------
-SUBROUTINE CBApplyConstr(nDOFI, nDOFR, nDOFM,  nDOFL,  &
-                         MBB , MBM , KBB , PHiR , FGR ,       &
-                         MBBb, MBMb, KBBb, PHiRb, FGRb)
-   INTEGER(IntKi),         INTENT(IN   )  :: nDOFR, nDOFI, nDOFM, nDOFL
-   REAL(ReKi),             INTENT(IN   )  ::  FGR(nDOFR)
-   REAL(ReKi),             INTENT(IN   )  ::  MBB(nDOFR, nDOFR)
-   REAL(ReKi),             INTENT(IN   )  ::  MBM(nDOFR, nDOFM)
-   REAL(ReKi),             INTENT(IN   )  ::  KBB(nDOFR, nDOFR)
-   REAL(ReKi),             INTENT(IN   )  :: PhiR(nDOFL, nDOFR)   
-   REAL(ReKi),             INTENT(  OUT)  ::  MBBb(nDOFI, nDOFI)
-   REAL(ReKi),             INTENT(  OUT)  ::  KBBb(nDOFI, nDOFI)
-   REAL(ReKi),             INTENT(  OUT)  ::  MBMb(nDOFI, nDOFM)
-   REAL(ReKi),             INTENT(  OUT)  ::  FGRb(nDOFI)
-   REAL(ReKi),             INTENT(  OUT)  :: PhiRb(nDOFL, nDOFI)   
-      
-   MBBb  = MBB(nDOFR-nDOFI+1:nDOFR, nDOFR-nDOFI+1:nDOFR) 
-   KBBb  = KBB(nDOFR-nDOFI+1:nDOFR, nDOFR-nDOFI+1:nDOFR)    
-IF (nDOFM > 0) THEN   
-   MBMb  = MBM(nDOFR-nDOFI+1:nDOFR, :               )
-END IF
-   FGRb  = FGR(nDOFR-nDOFI+1:nDOFR )
-   PhiRb = PhiR(              :, nDOFR-nDOFI+1:nDOFR)
-   
-END SUBROUTINE CBApplyConstr
-
+END SUBROUTINE SelectNonFixedDOF
 !------------------------------------------------------------------------------------------------------
 SUBROUTINE SetParameters(Init, p, MBBb, MBmb, KBBb, FGRb, PhiRb, OmegaL, FGL, PhiL, ErrStat, ErrMsg)
    TYPE(SD_InitType),        INTENT(IN   )   :: Init         ! Input data for initialization routine
@@ -2547,28 +2510,29 @@ SUBROUTINE OutSummary(Init, p, InitInput, CBparams, ErrStat,ErrMsg)
    CHARACTER(*),PARAMETER                 :: SectionDivide = '____________________________________________________________________________________________________'
    CHARACTER(*),PARAMETER                 :: SubSectionDivide = '__________'
    CHARACTER(2),  DIMENSION(6), PARAMETER :: MatHds= (/'X ', 'Y ', 'Z ', 'XX', 'YY', 'ZZ'/)  !Headers for the columns and rows of 6x6 matrices
+   real(ReKi), dimension(:,:), allocatable :: TI2 ! For Equivalent mass matrix
    ! Variables for Eigenvalue analysis 
    integer(IntKi) :: nOmega
    real(ReKi), dimension(:,:), allocatable :: Modes
    real(ReKi), dimension(:)  , allocatable :: Omega
+   logical, allocatable                    :: bDOF(:)        ! Mask for DOF to keep (True), or reduce (False)
    !
    ErrStat = ErrID_None
    ErrMsg  = ""
 
    ! --- Eigen values of full system (for summary file output only)
-   ! True below is to remove the constraints
    ! We call the EigenSolver here only so that we get a print-out the eigenvalues from the full system (minus Reaction DOF)
+   ! M and K are reduced matrices, but Boundary conditions are not applied
+   ! We set bDOF, which is true if not a fixed Boundary conditions
    ! NOTE: we don't check for singularities/rigig body modes here
    CALL WrScr('   Calculating Full System Modes (for summary file output)')
-
-   nOmega = p%nDOF_red - p%nNodes_C*6 !removed an extra "-6"  !Note if fixity changes at the reaction points, this will need to change
-   CALL AllocAry(Omega,             nOmega, 'Omega', ErrStat2, ErrMsg2 ); if(Failed()) return
-   CALL AllocAry(Modes, p%nDOF_red, nOmega, 'Modes', ErrStat2, ErrMsg2 ); if(Failed()) return
-   ! NOTE: below, we don't check for singularity, since this is full system (R+L), which may contain rigid body modes
-   !    M and K are reduced matrices, but Boundary conditions are not applied
-   !    bRemoveConstraint = True
-   !    bCheckSingularity = False
-   CALL EigenSolveWrap( Init%K, Init%M, p%nDOF_red, nOmega, .True., Init, p, .False., Modes, Omega, ErrStat2, ErrMsg2 ); if(Failed()) return
+   CALL AllocAry(bDOF, p%nDOF_red, 'bDOF',  ErrStat2, ErrMsg2); if(Failed()) return
+   call SelectNonFixedDOF(Init%BCs, bDOF, ErrStat2, ErrMsg2); if(Failed()) return
+   nOmega = count(bDOF)
+   CALL AllocAry(Omega,             nOmega, 'Omega', ErrStat2, ErrMsg2); if(Failed()) return
+   CALL AllocAry(Modes, p%nDOF_red, nOmega, 'Modes', ErrStat2, ErrMsg2); if(Failed()) return
+   call EigenSolveWrap(Init%K, Init%M, p%nDOF_red, nOmega, .False., Modes, Omega, ErrStat2, ErrMsg2, bDOF); if(Failed()) return
+   IF (ALLOCATED(bDOF)  ) DEALLOCATE(bDOF)
 
    !-------------------------------------------------------------------------------------------------------------
    ! open txt file
@@ -2732,7 +2696,11 @@ SUBROUTINE OutSummary(Init, p, InitInput, CBparams, ErrStat,ErrMsg)
         WRITE(UnSum, '(A15, 6(e15.6))')   MatHds(i), (p%MBB(i,j), j = 1, 6)
     ENDDO  
  
-   MRB=matmul(TRANSPOSE(CBparams%TI2),matmul(CBparams%MBB,CBparams%TI2)) !Equivalent mass matrix of the rigid body
+    ! Set TI2, transformation matrix from R DOFs to SubDyn Origin
+   CALL AllocAry( TI2,    p%nDOFR, 6,       'TI2',    ErrStat2, ErrMsg2 ); if(Failed()) return
+   CALL RigidTrnsf(Init, p, (/0._ReKi, 0._ReKi, 0._ReKi/), p%IDR, p%nDOFR, TI2, ErrStat2, ErrMsg2); if(Failed()) return
+   MRB=matmul(TRANSPOSE(TI2),matmul(CBparams%MBB,TI2)) !Equivalent mass matrix of the rigid body
+   deallocate(TI2)
    WRITE(UnSum, '(A)') SectionDivide
    WRITE(UnSum, '(A)') 'Rigid Body Equivalent Mass Matrix w.r.t. (0,0,0).'
    WRITE(UnSum, '(A)') SubSectionDivide

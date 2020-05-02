@@ -70,7 +70,6 @@ IMPLICIT NONE
 ! =======================
 ! =========  CB_MatArrays  =======
   TYPE, PUBLIC :: CB_MatArrays
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: TI2      !< TI2 matrix to refer to total mass to (0,0,0) [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: MBB      !< FULL MBB ( no constraints applied) [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: MBM      !< FULL MBM ( no constraints applied) [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: KBB      !< FULL KBB ( no constraints applied) [-]
@@ -1637,20 +1636,6 @@ ENDIF
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
-IF (ALLOCATED(SrcCB_MatArraysData%TI2)) THEN
-  i1_l = LBOUND(SrcCB_MatArraysData%TI2,1)
-  i1_u = UBOUND(SrcCB_MatArraysData%TI2,1)
-  i2_l = LBOUND(SrcCB_MatArraysData%TI2,2)
-  i2_u = UBOUND(SrcCB_MatArraysData%TI2,2)
-  IF (.NOT. ALLOCATED(DstCB_MatArraysData%TI2)) THEN 
-    ALLOCATE(DstCB_MatArraysData%TI2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstCB_MatArraysData%TI2.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstCB_MatArraysData%TI2 = SrcCB_MatArraysData%TI2
-ENDIF
 IF (ALLOCATED(SrcCB_MatArraysData%MBB)) THEN
   i1_l = LBOUND(SrcCB_MatArraysData%MBB,1)
   i1_u = UBOUND(SrcCB_MatArraysData%MBB,1)
@@ -1744,9 +1729,6 @@ ENDIF
 ! 
   ErrStat = ErrID_None
   ErrMsg  = ""
-IF (ALLOCATED(CB_MatArraysData%TI2)) THEN
-  DEALLOCATE(CB_MatArraysData%TI2)
-ENDIF
 IF (ALLOCATED(CB_MatArraysData%MBB)) THEN
   DEALLOCATE(CB_MatArraysData%MBB)
 ENDIF
@@ -1802,11 +1784,6 @@ ENDIF
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
-  Int_BufSz   = Int_BufSz   + 1     ! TI2 allocated yes/no
-  IF ( ALLOCATED(InData%TI2) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*2  ! TI2 upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%TI2)  ! TI2
-  END IF
   Int_BufSz   = Int_BufSz   + 1     ! MBB allocated yes/no
   IF ( ALLOCATED(InData%MBB) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! MBB upper/lower bounds for each dimension
@@ -1864,22 +1841,6 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-  IF ( .NOT. ALLOCATED(InData%TI2) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%TI2,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%TI2,1)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%TI2,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%TI2,2)
-    Int_Xferred = Int_Xferred + 2
-
-      IF (SIZE(InData%TI2)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%TI2))-1 ) = PACK(InData%TI2,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%TI2)
-  END IF
   IF ( .NOT. ALLOCATED(InData%MBB) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -2009,32 +1970,6 @@ ENDIF
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! TI2 not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i2_l = IntKiBuf( Int_Xferred    )
-    i2_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%TI2)) DEALLOCATE(OutData%TI2)
-    ALLOCATE(OutData%TI2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%TI2.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask2.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask2 = .TRUE. 
-      IF (SIZE(OutData%TI2)>0) OutData%TI2 = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%TI2))-1 ), mask2, 0.0_ReKi )
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%TI2)
-    DEALLOCATE(mask2)
-  END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! MBB not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE

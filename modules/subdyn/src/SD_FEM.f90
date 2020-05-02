@@ -59,6 +59,11 @@ MODULE SD_FEM
   INTEGER(IntKi),   PARAMETER  :: idMemberBeam       = 1
   INTEGER(IntKi),   PARAMETER  :: idMemberCable      = 2
   INTEGER(IntKi),   PARAMETER  :: idMemberRigid      = 3
+
+  ! Types of Boundary Conditions
+  INTEGER(IntKi),   PARAMETER  :: idBC_Fixed    = 11
+  INTEGER(IntKi),   PARAMETER  :: idBC_Internal = 12
+  INTEGER(IntKi),   PARAMETER  :: idBC_Leader   = 13 ! TODO, and maybe "BC" not appropriate here
   
   INTEGER(IntKi),   PARAMETER  :: SDMaxInpCols    = MAX(JointsCol,InterfCol,MembersCol,PropSetsBCol,PropSetsXCol,COSMsCol,CMassCol)
 
@@ -830,7 +835,20 @@ CONTAINS
          iNode = p%Nodes_C(I,1) ! Node index
          DO J = 1, 6
             Init%BCs( (I-1)*6+J, 1) = p%NodesDOF(iNode)%List(J) ! DOF number (unconstrained)
-            Init%BCs( (I-1)*6+J, 2) = 1 ! NOTE: Always selected now  p%Nodes_C(I, J+1);         ! 0 or 1 if fixed reaction or not
+            if (p%Nodes_C(I,J+1)==1) then ! User input 1=Constrained/Fixed (should be eliminated)
+               Init%BCs( (I-1)*6+J, 2) = idBC_Fixed
+            else if (p%Nodes_C(I,J+1)==0) then ! User input 0=Free, fill be part of Internal DOF
+               Init%BCs( (I-1)*6+J, 2) = idBC_Internal
+               print*,'BC 0 not allowed for now, node',iNode
+               STOP
+            else if (p%Nodes_C(I,J+1)==2) then ! User input 2=Leader DOF
+               Init%BCs( (I-1)*6+J, 2) = idBC_Leader
+               print*,'BC 2 not allowed for now, node',iNode
+               STOP
+            else
+               print*,'Wrong boundary condition input for reaction node',iNode
+               STOP
+            endif
          ENDDO
       ENDDO
    END SUBROUTINE InitBCs
@@ -1289,7 +1307,7 @@ CONTAINS
       if (allocated(RA  )) deallocate(RA  )
    END SUBROUTINE CleanUp_DirectElimination
 
-   !> Reset DOF indices after elimination
+   !> Reset DOF indices after elimination, does not change the BC
    SUBROUTINE ReInitBCs(Init, p)
       TYPE(SD_InitType     ),INTENT(INOUT) :: Init
       TYPE(SD_ParameterType),INTENT(IN   ) :: p
@@ -1658,29 +1676,6 @@ SUBROUTINE InsertJointStiffDamp(p, Init, ErrStat, ErrMsg)
       endif
    enddo
 END SUBROUTINE InsertJointStiffDamp
-
-!> Apply constraint (Boundary conditions) on Mass and Stiffness matrices
-SUBROUTINE ApplyConstr(Init,p)
-   TYPE(SD_InitType     ),INTENT(INOUT):: Init
-   TYPE(SD_ParameterType),INTENT(IN   ):: p
-   
-   INTEGER :: I !, J, k
-   INTEGER :: row_n !bgn_j, end_j,
-   
-   DO I = 1, p%nNodes_C*6
-      row_n = Init%BCs(I, 1)
-      IF (Init%BCs(I, 2) == 1) THEN
-         Init%K(row_n,:    )= 0
-         Init%K(:    ,row_n)= 0
-         Init%K(row_n,row_n)= 1
-
-         Init%M(row_n,:    )= 0
-         Init%M(:    ,row_n)= 0
-         Init%M(row_n,row_n)= 0
-      ENDIF
-   ENDDO ! I, loop on reaction nodes
-END SUBROUTINE ApplyConstr
-
 
 SUBROUTINE ElemM(ep, Me)
    TYPE(ElemPropType), INTENT(IN) :: eP        !< Element Property

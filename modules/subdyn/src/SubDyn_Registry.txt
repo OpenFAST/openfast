@@ -38,7 +38,6 @@ typedef	^	MeshAuxDataType	ReKi   	Me      	{:}{:}{:}{:}	-	-	"Mass matrix connect
 typedef	^	MeshAuxDataType	ReKi   	Ke      	{:}{:}{:}{:}	-	-	"Mass matrix connected to each joint element for outAll output"
 typedef	^	MeshAuxDataType	ReKi   	Fg      	{:}{:}{:}	-	-	"Gravity load vector connected to each joint element for requested member output"
 # CB_MatArrays: Matrices and arrays for CB summary
-typedef	SubDyn/SD	CB_MatArrays	ReKi   	TI2	{:}{:}	-	-	"TI2 matrix to refer to total mass to (0,0,0)"
 typedef	^	CB_MatArrays	ReKi   	MBB	{:}{:}	-	-	"FULL MBB ( no constraints applied)"
 typedef	^	CB_MatArrays	ReKi   	MBM	{:}{:}	-	-	"FULL MBM ( no constraints applied)"
 typedef	^	CB_MatArrays	ReKi   	KBB	{:}{:}	-	-	"FULL KBB ( no constraints applied)"
