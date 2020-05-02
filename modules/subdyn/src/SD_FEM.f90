@@ -566,9 +566,9 @@ CONTAINS
       Init%Nodes(k, 4)                     = z
       Init%Nodes(k, iJointType)            = idJointCantilever ! Note: all added nodes are Cantilever
       ! Properties below are for non-cantilever joints
-      Init%Nodes(k, iJointDir:iJointDir+2) = -99999 
-      Init%Nodes(k, iJointStiff)           = -99999 
-      Init%Nodes(k, iJointDamp)            = -99999 
+      Init%Nodes(k, iJointDir:iJointDir+2) = 0.0_ReKi ! NOTE: irrelevant for cantilever nodes
+      Init%Nodes(k, iJointStiff)           = 0.0_ReKi ! NOTE: irrelevant for cantilever nodes
+      Init%Nodes(k, iJointDamp)            = 0.0_ReKi ! NOTE: irrelevant for cantilever nodes
    END SUBROUTINE SetNewNode
    
    !> Set properties of element k
@@ -828,7 +828,7 @@ CONTAINS
    !! Note: try to remove me and merge me with ApplyConstr, but used by "SelectNonBCConstraintsDOF" and "UnReduceVRdofs"
    SUBROUTINE InitBCs(Init, p)
       TYPE(SD_InitType     ),INTENT(INOUT) :: Init
-      TYPE(SD_ParameterType),INTENT(IN   ) :: p
+      TYPE(SD_ParameterType),INTENT(INOUT) :: p
       INTEGER(IntKi) :: I, J, iNode
       Init%BCs = -9999
       DO I = 1, p%nNodes_C
@@ -837,12 +837,15 @@ CONTAINS
             Init%BCs( (I-1)*6+J, 1) = p%NodesDOF(iNode)%List(J) ! DOF number (unconstrained)
             if (p%Nodes_C(I,J+1)==1) then ! User input 1=Constrained/Fixed (should be eliminated)
                Init%BCs( (I-1)*6+J, 2) = idBC_Fixed
+               p%Nodes_C(I, J+1)       = idBC_Fixed
             else if (p%Nodes_C(I,J+1)==0) then ! User input 0=Free, fill be part of Internal DOF
                Init%BCs( (I-1)*6+J, 2) = idBC_Internal
+               p%Nodes_C(I, J+1)       = idBC_Internal
                print*,'BC 0 not allowed for now, node',iNode
                STOP
             else if (p%Nodes_C(I,J+1)==2) then ! User input 2=Leader DOF
                Init%BCs( (I-1)*6+J, 2) = idBC_Leader
+               p%Nodes_C(I, J+1)       = idBC_Leader
                print*,'BC 2 not allowed for now, node',iNode
                STOP
             else
@@ -858,14 +861,26 @@ CONTAINS
    !! TODO remove me and merge me with CraigBampton
    SUBROUTINE InitIntFc(Init, p)
       TYPE(SD_InitType     ),INTENT(INOUT) :: Init
-      TYPE(SD_ParameterType),INTENT(IN   ) :: p
+      TYPE(SD_ParameterType),INTENT(INOUT) :: p
       INTEGER(IntKi) :: I, J, iNode
       Init%IntFc = -9999
       DO I = 1, p%nNodes_I
          iNode = p%Nodes_I(I,1) ! Node index
          DO J = 1, 6 ! ItfTDXss    ItfTDYss    ItfTDZss    ItfRDXss    ItfRDYss    ItfRDZss
             Init%IntFc( (I-1)*6+J, 1) = p%NodesDOF(iNode)%List(J) ! DOF number (unconstrained)
-            Init%IntFc( (I-1)*6+J, 2) = 1 ! NOTE: Always selected now p%Nodes_I(I, J+1);      ! 0 or 1 if fixed to interface 
+
+            if     (p%Nodes_I(I,J+1)==1) then ! User input 1=Leader DOF
+               Init%IntFc((I-1)*6+J, 2)  = idBC_Leader
+               p%Nodes_I(I,J+1)          = idBC_Leader
+            elseif (p%Nodes_I(I,J+1)==1) then ! User input 0=Fixed DOF
+               Init%IntFc( (I-1)*6+J, 2) = idBC_Fixed
+               p%Nodes_I(I,J+1)          = idBC_Fixed
+               print*,'Fixed boundary condition not yet supported for interface nodes, node:',iNode
+               STOP
+            else
+               print*,'Wrong boundary condition input for interface node',iNode
+               STOP
+            endif
          ENDDO
       ENDDO
    END SUBROUTINE InitIntFc
@@ -1002,27 +1017,30 @@ SUBROUTINE InsertSoilMatrices(M, K, Init, p, ErrStat, ErrMsg, Substract)
    integer(IntKi),               intent(  out) :: ErrStat     ! Error status of the operation
    character(*),                 intent(  out) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
    logical, optional,            intent(in   ) :: SubStract   ! If present, and if true, substract instead of adding
-   integer                    :: I, J
-   integer                    :: iDOF, iNode  !< DOF and node indices
+   integer                    :: I, J, iiNode
+   integer                    :: iDOF, jDOF, iNode  !< DOF and node indices
    real(ReKi), dimension(6,6) :: K_soil, M_soil ! Auxiliary matrices for soil
    ErrMsg  = ""
    ErrStat = ErrID_None
    ! TODO consider doing the 21 -> 6x6 conversion while reading
    ! 6x6 matrix goes to one node of one element only
-   do I = 1, p%nNodes_C ! loop on constrained nodes
-      iNode = p%Nodes_C(I,1)
-      call Array21_to_6by6(Init%SSIK(I,:), K_soil)
-      call Array21_to_6by6(Init%SSIM(I,:), M_soil)
+   do iiNode = 1, p%nNodes_C ! loop on constrained nodes
+      iNode = p%Nodes_C(iiNode,1)
+      call Array21_to_6by6(Init%SSIK(:,iiNode), K_soil)
+      call Array21_to_6by6(Init%SSIM(:,iiNode), M_soil)
       if (present(Substract)) then
          if (Substract) then
             K_soil = - K_soil
             M_soil = - M_soil
          endif
       endif
-      do J = 1, 6
-         iDOF          = p%NodesDOF(iNode)%List(J)   ! DOF index
-         K(iDOF, iDOF) = K(iDOF, iDOF) + K_soil(J,J)
-         M(iDOF, iDOF) = M(iDOF, iDOF) + M_soil(J,J)
+      do I = 1, 6
+         iDOF = p%NodesDOF(iNode)%List(I)   ! DOF index
+         do J = 1, 6
+            jDOF = p%NodesDOF(iNode)%List(J)   ! DOF index
+            K(iDOF, jDOF) = K(iDOF, jDOF) + K_soil(I,J)
+            M(iDOF, jDOF) = M(iDOF, jDOF) + M_soil(I,J)
+         enddo
       enddo
    enddo
 contains
@@ -1154,8 +1172,8 @@ SUBROUTINE BuildTMatrix(Init, p, RA, RAm1, Tred, ErrStat, ErrMsg)
       call init_list(p%NodesDOFtilde(iNode), nc, 0, ErrStat2, ErrMsg2)
       p%NodesDOFtilde(iNode)%List(1:nc) = (/ (iprev + i, i=1,nc) /)
       IDOFNew => p%NodesDOFtilde(iNode)%List(1:nc) ! alias to shorten notations
-      print*,'N',iNode,'I ',IDOFOld
-      print*,'N',iNode,'It',IDOFNew
+      !print*,'N',iNode,'I ',IDOFOld
+      !print*,'N',iNode,'It',IDOFNew
       Tred(IDOFOld, IDOFNew) = Tc
       iPrev = iPrev + nc
    enddo

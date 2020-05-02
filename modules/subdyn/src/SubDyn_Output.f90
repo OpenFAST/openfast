@@ -262,12 +262,12 @@ SUBROUTINE ReactMatx(Init, WtrDpth, p, ErrStat, ErrMsg)
    ErrStat=ErrID_None
    ErrMsg=""
    
-   CALL AllocAry(p%TIreact, 6, p%nDOFC, 'TIReact', ErrStat, ErrMsg); if ( ErrStat /= ErrID_None ) return
+   CALL AllocAry(p%TIreact, 6, p%nDOFC__, 'TIReact', ErrStat, ErrMsg); if ( ErrStat /= ErrID_None ) return
    
    ! --- TI: Transformation matrix from interface points to ref point
    p%TIreact(1:6,:)=0 !Initialize
-   DO I = 1, p%nDOFC
-      iDOF = p%IDC(I) ! DOF index in constrained system
+   DO I = 1, p%nDOFC__
+      iDOF = p%IDC__(I) ! DOF index in constrained system
       iNode       = p%DOFtilde2Nodes(iDOF,1) ! First column is node 
       nDOFPerNode = p%DOFtilde2Nodes(iDOF,2) ! Second column is number of DOF per node
       iiDOF       = p%DOFtilde2Nodes(iDOF,3) ! Third column is dof index for this joint (1-6 for cantilever)

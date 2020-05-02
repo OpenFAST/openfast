@@ -47,6 +47,17 @@ contains
       I3(1:size(I1)) = I1 
       I3(size(I1)+1:size(I1)+size(I2)) = I2
    endsubroutine
+   subroutine concatenate_3lists(I1,I2,I3,I4, ErrStat, ErrMsg)
+      integer(intki), intent(in)    :: i1(:), i2(:), i3(:)
+      integer(intki), intent(out)   :: i4(:)
+      integer(IntKi), intent(  out) :: ErrStat   !< Error status of the operation
+      character(*),   intent(  out) :: ErrMsg    !< Error message if ErrStat /    = ErrID_None
+      ErrStat=ErrID_None
+      ErrMsg=''
+      I4(                  1:size(I1)                  ) = I1 
+      I4(size(I1)         +1:size(I1)+size(I2)         ) = I2
+      I4(size(I1)+size(I2)+1:size(I1)+size(I2)+size(I3)) = I3
+   endsubroutine
 
    !> Set difference: I3=I1-I2 (assumes I1 is biggger than I2), elements of I1 not in I2
    subroutine lists_difference(I1, I2, I3, ErrStat, ErrMsg)

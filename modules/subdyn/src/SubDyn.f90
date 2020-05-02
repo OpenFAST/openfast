@@ -247,32 +247,14 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    CALL InsertJointStiffDamp(p, Init, ErrStat2, ErrMsg2); if(Failed()) return
 
 
-   ! Allocate the output matrices and the index mapping array
-!    DOF_reduced = Init%TDOF-p%DOFCr   
-!    CALL AllocAry(p%IDCr,  p%DOFCr, 'IDCR',  ErrStat2, ErrMsg2 )
-!    CALL AllocAry(RetDOFs,  DOF_reduced, 'RetDOFs',  ErrStat2, ErrMsg2 )
-!    !........
-!    ! set the indices we want to keep (i.e., a mapping from reduced to full matrix)
-!    J  = 1   
-!    J2 = 1
-!    DO I=1,Init%TDOF
-!       idx(J) = idx(I)      
-!       IF ( idx(J) /= 0 ) THEN 
-!           J = J + 1   
-!       ELSE 
-!           p%IDCR(J2) = I
-!           j2=j2+1
-!       ENDIF
-!                                 
-!    END DO
-!    !idx retains the rows (column) indices that are still active and has 0-padding (from elementTDOF-DOFCR to TDOF) to account for the removed ones, and everywhere else      
-!    !idx2 retains the rows (column) indices that are removed (fixed DOFs, there are DOFCR of them)   
-!    RetDOFs=idx(1:DOF_reduced)  
-
-
    ! --------------------------------------------------------------------------------
    ! --- CB, Misc  
    ! --------------------------------------------------------------------------------
+   ! --- Partitioning 
+   ! Nodes into (I,C,L,R):  I=Interface ,C=Boundary (bottom), R=(I+C), L=Interior
+   ! DOFs  into (B,F,L):    B=Leader (i.e. Rbar) ,F=Fixed, L=Interior
+   call PartitionDOFNodes(Init, m, p, ErrStat2, ErrMsg2) ; if(Failed()) return
+
    ! --- Craig-Bampton reduction (sets many parameters)
    CALL Craig_Bampton(Init, p, m, CBparams, ErrStat2, ErrMsg2); if(Failed()) return
 
@@ -410,7 +392,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       INTEGER(IntKi)               :: iSDNode, iY2Node
       REAL(ReKi)                   :: AllOuts(0:MaxOutPts+p%OutAllInt*p%OutAllDims)
       REAL(ReKi)                   :: rotations(3)
-      REAL(ReKi)                   :: ULS(p%nDOFL),  UL0m(p%nDOFL),  FLt(p%nDOFL)  ! Temporary values in static improvement method
+      REAL(ReKi)                   :: ULS(p%nDOF__L),  UL0m(p%nDOF__L),  FLt(p%nDOF__L)  ! Temporary values in static improvement method
       REAL(ReKi)                   :: Y1(6)
       REAL(ReKi)                   :: Y1_ExtraMoment(3) ! Lever arm moment contributions due to interface displacement
       INTEGER(IntKi), pointer      :: DOFList(:)
@@ -466,15 +448,18 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
          END IF          
       ENDIF    
       ! --- Build original DOF vectors (DOF before the CB reduction)
-      m%U_red       (p%IDI) = m%UR_bar
-      m%U_red       (p%IDL) = m%UL     
-      m%U_red       (p%IDC) = 0           !!! TODO, might not be generic
-      m%U_red_dot   (p%IDI) = m%UR_bar_dot
-      m%U_red_dot   (p%IDL) = m%UL_dot     
-      m%U_red_dot   (p%IDC) = 0           !!! TODO, might not be generic
-      m%U_red_dotdot(p%IDI) = m%UR_bar_dotdot
-      m%U_red_dotdot(p%IDL) = m%UL_dotdot    
-      m%U_red_dotdot(p%IDC) = 0           !!! TODO, might not be generic
+      m%U_red       (p%IDI__) = m%UR_bar
+      m%U_red       (p%ID__L) = m%UL     
+      m%U_red       (p%IDC_Rb)= 0    ! TODO
+      m%U_red       (p%ID__F) = 0
+      m%U_red_dot   (p%IDI__) = m%UR_bar_dot
+      m%U_red_dot   (p%ID__L) = m%UL_dot     
+      m%U_red_dot   (p%IDC_Rb)= 0    ! TODO
+      m%U_red_dot   (p%ID__F) = 0
+      m%U_red_dotdot(p%IDI__) = m%UR_bar_dotdot
+      m%U_red_dotdot(p%ID__L) = m%UL_dotdot    
+      m%U_red_dotdot(p%IDC_Rb)= 0    ! TODO
+      m%U_red_dotdot(p%ID__F) = 0
 
       m%U_full        = matmul(p%T_red, m%U_red)
       m%U_full_dot    = matmul(p%T_red, m%U_red_dot)
@@ -848,9 +833,9 @@ CALL AllocAry(p%Nodes_C, p%nNodes_C, ReactCol , 'Reacts', ErrStat2, ErrMsg2 ); i
 p%Nodes_C(:,:) = 1  ! Important: By default all DOFs are contrained
 p%Nodes_C(:,1) = -1 ! First column is node, initalize to wrong value for safety
 
-call AllocAry(Init%SSIfile, p%nNodes_C,      'SSIFile', ErrStat2, ErrMsg2); if(Failed()) return
-call AllocAry(Init%SSIK   , p%nNodes_C, 21 , 'SSIK',    ErrStat2, ErrMsg2); if(Failed()) return
-call AllocAry(Init%SSIM   , p%nNodes_C, 21 , 'SSIM',    ErrStat2, ErrMsg2); if(Failed()) return
+call AllocAry(Init%SSIfile,  p%nNodes_C, 'SSIFile', ErrStat2, ErrMsg2); if(Failed()) return
+call AllocAry(Init%SSIK, 21, p%nNodes_C, 'SSIK',    ErrStat2, ErrMsg2); if(Failed()) return
+call AllocAry(Init%SSIM, 21, p%nNodes_C, 'SSIM',    ErrStat2, ErrMsg2); if(Failed()) return
 Init%SSIfile(:) = ''
 Init%SSIK       = 0.0_ReKi ! Important init TODO: read these matrices on the fly in SD_FEM maybe?
 Init%SSIM       = 0.0_ReKi ! Important init
@@ -879,7 +864,7 @@ IF (Check ( p%nNodes_C > Init%NJoints , 'NReact must be less than number of join
 DO I = 1, p%nNodes_C
    if ( Init%SSIfile(I)/='' .and. (ANY(p%Nodes_C(I,2:ReactCol)==0))) then
       Init%SSIfile(I) = trim(PriPath)//trim(Init%SSIfile(I))
-      CALL ReadSSIfile( Init%SSIfile(I), p%Nodes_C(I,1), Init%SSIK(I,:),Init%SSIM(I,:), ErrStat, ErrMsg, UnEc ); if(Failed()) return
+      CALL ReadSSIfile( Init%SSIfile(I), p%Nodes_C(I,1), Init%SSIK(:,I),Init%SSIM(:,I), ErrStat, ErrMsg, UnEc ); if(Failed()) return
    endif
 enddo
        
@@ -1553,7 +1538,7 @@ SUBROUTINE SD_AM2( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg 
    TYPE(SD_InputType)                              :: u_interp       ! interpolated value of inputs 
    REAL(ReKi)                                      :: junk2(2*p%nDOFM) !temporary states (qm and qmdot only)
    REAL(ReKi)                                      :: udotdot_TP2(6) ! temporary copy of udotdot_TP
-   REAL(ReKi)                                      :: UFL2(p%nDOFL)   ! temporary copy of UFL
+   REAL(ReKi)                                      :: UFL2(p%nDOF__L)   ! temporary copy of UFL
    INTEGER(IntKi)                                  :: ErrStat2
    CHARACTER(ErrMsgLen)                            :: ErrMsg2
 
@@ -1629,53 +1614,50 @@ SUBROUTINE Craig_Bampton(Init, p, m, CBparams, ErrStat, ErrMsg)
    CHARACTER(ErrMsgLen)     :: ErrMsg2
    ErrStat = ErrID_None
    ErrMsg  = ""
-   ! --- Partitioon DOFs and Nodes into sets:  I=Interface ,C=Boundary (bottom), R=(I+C), L=Interior
-   !! Partition Nodes into: Nodes_I (Interf), Nodes_C (React), Nodes_L
-   !! Partitions the DOF index arrays into IDR=[IDC, ICI] and IDL (interior)
-   !! Sets the DOF mapping [_,IDY] =sort([IDI, IDL, IDC]), DOF map, Y is in the continuous order [I,L,C]
-   call PartitionDOFNodes_I_C_R_L(Init, m, p, ErrStat2, ErrMsg2) ; if(Failed()) return
 
    IF(Init%CBMod) THEN ! C-B reduction         
       ! check number of internal modes
-      IF(p%nDOFM > p%nDOFL) THEN
+      IF(p%nDOFM > p%nDOFL_L) THEN
          CALL SetErrStat(ErrID_Fatal,'Number of internal modes is larger than number of internal DOFs. ',ErrStat,ErrMsg,'Craig_Bampton')
          CALL CleanupCB()
          RETURN
       ENDIF
    ELSE ! full FEM 
-      p%nDOFM = p%nDOFL
+      p%nDOFM = p%nDOFL_L
       !Jdampings  need to be reallocated here because nDOFL not known during Init
       !So assign value to one temporary variable
       JDamping1=Init%Jdampings(1)
       DEALLOCATE(Init%JDampings)
-      CALL AllocAry( Init%JDampings, p%nDOFL, 'Init%JDampings',  ErrStat2, ErrMsg2 ) ; if(Failed()) return
+      CALL AllocAry( Init%JDampings, p%nDOFL_L, 'Init%JDampings',  ErrStat2, ErrMsg2 ) ; if(Failed()) return
       Init%JDampings = JDamping1 ! set default values for all modes
    ENDIF   
       
    CALL AllocParameters(p, p%nDOFM, ErrStat2, ErrMsg2);                                  ; if (Failed()) return
 
    ! Set TI, transformation matrix from interface DOFs to TP ref point (Note: TI allocated in AllocParameters)
-   CALL RigidTrnsf(Init, p, Init%TP_RefPoint, p%IDI, p%nDOFI, p%TI, ErrStat2, ErrMsg2); if(Failed()) return
+   CALL RigidTrnsf(Init, p, Init%TP_RefPoint, p%IDI__, p%nDOFI__, p%TI, ErrStat2, ErrMsg2); if(Failed()) return
 
-   CALL AllocAry( MRR,             p%nDOFR, p%nDOFR, 'matrix MRR',      ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton')  
-   CALL AllocAry( MLL,             p%nDOFL, p%nDOFL, 'matrix MLL',      ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton')  
-   CALL AllocAry( MRL,             p%nDOFR, p%nDOFL, 'matrix MRL',      ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton')  
-   CALL AllocAry( KRR,             p%nDOFR, p%nDOFR, 'matrix KRR',      ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton')  
-   CALL AllocAry( KLL,             p%nDOFL, p%nDOFL, 'matrix KLL',      ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton')  
-   CALL AllocAry( KRL,             p%nDOFR, p%nDOFL, 'matrix KRL',      ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton')  
-   CALL AllocAry( FGL,             p%nDOFL,          'array FGL',       ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton')  
-   CALL AllocAry( FGR,             p%nDOFR,          'array FGR',       ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton')  
+   ! TODO Used __Rb instead of R__
+   CALL AllocAry( MRR,             p%nDOFR__, p%nDOFR__, 'matrix MRR',      ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton')  
+   CALL AllocAry( MLL,             p%nDOF__L, p%nDOF__L, 'matrix MLL',      ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton')  
+   CALL AllocAry( MRL,             p%nDOFR__, p%nDOF__L, 'matrix MRL',      ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton')  
+   CALL AllocAry( KRR,             p%nDOFR__, p%nDOFR__, 'matrix KRR',      ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton')  
+   CALL AllocAry( KLL,             p%nDOF__L, p%nDOF__L, 'matrix KLL',      ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton')  
+   CALL AllocAry( KRL,             p%nDOFR__, p%nDOF__L, 'matrix KRL',      ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton')  
+   CALL AllocAry( FGL,             p%nDOF__L,          'array FGL',       ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton')  
+   CALL AllocAry( FGR,             p%nDOFR__,          'array FGR',       ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton')  
       
-   CALL AllocAry( CBparams%MBB,    p%nDOFR, p%nDOFR, 'CBparams%MBB',    ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton')
-   CALL AllocAry( CBparams%MBM,    p%nDOFR, p%nDOFM, 'CBparams%MBM',    ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton')
-   CALL AllocAry( CBparams%KBB,    p%nDOFR, p%nDOFR, 'CBparams%KBB',    ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton')
-   CALL AllocAry( CBparams%PhiL,   p%nDOFL, p%nDOFL, 'CBparams%PhiL',   ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton')
-   CALL AllocAry( CBparams%PhiR,   p%nDOFL, p%nDOFR, 'CBparams%PhiR',   ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton')
-   CALL AllocAry( CBparams%OmegaL, p%nDOFL,          'CBparams%OmegaL', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton')
+   CALL AllocAry( CBparams%MBB,    p%nDOFR__, p%nDOFR__, 'CBparams%MBB',    ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton')
+   CALL AllocAry( CBparams%MBM,    p%nDOFR__, p%nDOFM  , 'CBparams%MBM',    ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton')
+   CALL AllocAry( CBparams%KBB,    p%nDOFR__, p%nDOFR__, 'CBparams%KBB',    ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton')
+   CALL AllocAry( CBparams%PhiL,   p%nDOF__L, p%nDOF__L, 'CBparams%PhiL',   ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton')
+   CALL AllocAry( CBparams%PhiR,   p%nDOF__L, p%nDOFR__, 'CBparams%PhiR',   ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton')
+   CALL AllocAry( CBparams%OmegaL, p%nDOF__L,            'CBparams%OmegaL', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton')
 
    ! Set MRR, MLL, MRL, KRR, KLL, KRL, FGR, FGL, based on M, K, FG and indices IDR and IDL
    ! NOTE: generic FEM code
-   CALL BreakSysMtrx(Init%M, Init%K, Init%FG, p%IDR, p%IDL, p%nDOFR, p%nDOFL, MRR, MLL, MRL, KRR, KLL, KRL, FGR, FGL)   
+   ! TODO use __Rb
+   CALL BreakSysMtrx(Init%M, Init%K, Init%FG, p%IDR__, p%ID__L, p%nDOFR__, p%nDOF__L, MRR, MLL, MRL, KRR, KLL, KRL, FGR, FGL)   
       
    !................................
    ! Sets the following values, as documented in the SubDyn Theory Guide:
@@ -1684,14 +1666,15 @@ SUBROUTINE Craig_Bampton(Init, p, m, CBparams, ErrStat, ErrMsg)
    !    CBparams%PhiR from Eq. 3
    !    CBparams%MBB, CBparams%MBM, and CBparams%KBB from Eq. 4.
    !................................
-   CALL WrScr('   Performing Craig-Bampton decomposition')
+   CALL WrScr('   Performing Craig-Bampton reduction '//trim(Num2LStr(p%nDOF_red))//' DOFs -> '//trim(Num2LStr(p%nDOFM))//' modes + '//trim(Num2LStr(p%nDOF__Rb))//' DOFs')
    IF (p%SttcSolve) THEN ! STATIC TREATMENT IMPROVEMENT
-      nM_Out=p%nDOFL ! Selecting all CB modes for outputs to the function below
+      nM_Out=p%nDOF__L ! Selecting all CB modes for outputs to the function below ! TODO
    ELSE
       nM_Out=p%nDOFM ! Selecting only the requrested number of CB modes
    ENDIF  
-   CALL CBMatrix(MRR, MLL, MRL, KRR, KLL, KRL, p%nDOFR, p%nDOFL, p%nDOFM, nM_Out, &  ! < inputs
+   CALL CBMatrix(MRR, MLL, MRL, KRR, KLL, KRL, p%nDOFR__, p%nDOF__L, p%nDOFM, nM_Out, &  ! < inputs ! TODO
                  CBparams%MBB, CBparams%MBM, CBparams%KBB, CBparams%PhiL, CBparams%PhiR, CBparams%OmegaL, ErrStat2, ErrMsg2)  ! <- outputs
+   if(Failed()) return
 
    ! Set p%PhiL_T and p%PhiLInvOmgL2 for static improvement
    IF (p%SttcSolve) THEN   
@@ -1702,7 +1685,6 @@ SUBROUTINE Craig_Bampton(Init, p, m, CBparams, ErrStat, ErrMsg)
    END IF
 
    ! TODO TODO TODO DAMPING MATRIX 
-   if(Failed()) return
       
    ! to use a little less space, let's deallocate these arrays that we don't need anymore, then allocate the next set of temporary arrays:     
    IF(ALLOCATED(MRR)  ) DEALLOCATE(MRR) 
@@ -1713,11 +1695,12 @@ SUBROUTINE Craig_Bampton(Init, p, m, CBparams, ErrStat, ErrMsg)
    IF(ALLOCATED(KRL)  ) DEALLOCATE(KRL) 
 
    ! "b" stands for "bar"; "t" stands for "tilde"
-   CALL AllocAry( MBBb,  p%nDOFI, p%nDOFI, 'matrix MBBb',  ErrStat2, ErrMsg2 ); if (Failed()) return
-   CALL AllocAry( MBmb,  p%nDOFI, p%nDOFM, 'matrix MBmb',  ErrStat2, ErrMsg2 ); if (Failed()) return
-   CALL AllocAry( KBBb,  p%nDOFI, p%nDOFI, 'matrix KBBb',  ErrStat2, ErrMsg2 ); if (Failed()) return
-   CALL AllocAry( PhiRb, p%nDOFL, p%nDOFI, 'matrix PhiRb', ErrStat2, ErrMsg2 ); if (Failed()) return
-   CALL AllocAry( FGRb,  p%nDOFI,          'array FGRb',   ErrStat2, ErrMsg2 ); if (Failed()) return
+   ! TODO TODO TODO this is wrong
+   CALL AllocAry( MBBb,  p%nDOF__Rb, p%nDOF__Rb, 'matrix MBBb',  ErrStat2, ErrMsg2 ); if (Failed()) return
+   CALL AllocAry( MBmb,  p%nDOF__Rb, p%nDOFM,    'matrix MBmb',  ErrStat2, ErrMsg2 ); if (Failed()) return
+   CALL AllocAry( KBBb,  p%nDOF__Rb, p%nDOF__Rb, 'matrix KBBb',  ErrStat2, ErrMsg2 ); if (Failed()) return
+   CALL AllocAry( PhiRb, p%nDOF__L , p%nDOF__Rb, 'matrix PhiRb', ErrStat2, ErrMsg2 ); if (Failed()) return
+   CALL AllocAry( FGRb,  p%nDOF__Rb,             'array FGRb',   ErrStat2, ErrMsg2 ); if (Failed()) return
    
    !................................
    ! Convert CBparams%MBB , CBparams%MBM , CBparams%KBB , CBparams%PhiR , FGR to
@@ -1725,13 +1708,13 @@ SUBROUTINE Craig_Bampton(Init, p, m, CBparams, ErrStat, ErrMsg)
    ! (throw out rows/columns of first matrices to create second matrices)
    !................................
    ! TODO avoid this all together
-   MBBb  = CBparams%MBB(p%nDOFR-p%nDOFI+1:p%nDOFR, p%nDOFR-p%nDOFI+1:p%nDOFR) 
-   KBBb  = CBparams%KBB(p%nDOFR-p%nDOFI+1:p%nDOFR, p%nDOFR-p%nDOFI+1:p%nDOFR)    
+   MBBb  = CBparams%MBB(p%nDOFR__-p%nDOFI__+1:p%nDOFR__, p%nDOFR__-p%nDOFI__+1:p%nDOFR__) 
+   KBBb  = CBparams%KBB(p%nDOFR__-p%nDOFI__+1:p%nDOFR__, p%nDOFR__-p%nDOFI__+1:p%nDOFR__)    
 IF (p%nDOFM > 0) THEN   
-   MBMb  = CBparams%MBM(p%nDOFR-p%nDOFI+1:p%nDOFR, :               )
+   MBMb  = CBparams%MBM(p%nDOFR__-p%nDOFI__+1:p%nDOFR__, :               )
 END IF
-   FGRb  = FGR(p%nDOFR-p%nDOFI+1:p%nDOFR )
-   PhiRb = CBparams%PhiR(              :, p%nDOFR-p%nDOFI+1:p%nDOFR)
+   FGRb  = FGR         (p%nDOFR__-p%nDOFI__+1:p%nDOFR__ )
+   PhiRb = CBparams%PhiR(              :, p%nDOFR__-p%nDOFI__+1:p%nDOFR__)
 
    ! TODO TODO TODO Transform new damping matrix as well
    !................................
@@ -2116,26 +2099,33 @@ END SUBROUTINE SelectNonFixedDOF
 SUBROUTINE SetParameters(Init, p, MBBb, MBmb, KBBb, FGRb, PhiRb, OmegaL, FGL, PhiL, ErrStat, ErrMsg)
    TYPE(SD_InitType),        INTENT(IN   )   :: Init         ! Input data for initialization routine
    TYPE(SD_ParameterType),   INTENT(INOUT)   :: p            ! Parameters
-   REAL(ReKi),               INTENT(IN   )   :: MBBb(  p%nDOFI, p%nDOFI)
-   REAL(ReKi),               INTENT(IN   )   :: MBMb(  p%nDOFI, p%nDOFM)
-   REAL(ReKi),               INTENT(IN   )   :: KBBb(  p%nDOFI, p%nDOFI)
-   REAL(ReKi),               INTENT(IN   )   :: PhiL ( p%nDOFL, p%nDOFL)   
-   REAL(ReKi),               INTENT(IN   )   :: PhiRb( p%nDOFL, p%nDOFI)   
-   REAL(ReKi),               INTENT(IN   )   :: OmegaL(p%nDOFL)   
-   REAL(ReKi),               INTENT(IN   )   :: FGRb(p%nDOFI) 
-   REAL(ReKi),               INTENT(IN   )   :: FGL(p%nDOFL)
+   REAL(ReKi),               INTENT(IN   )   :: MBBb(  p%nDOF__Rb, p%nDOF__Rb)
+   REAL(ReKi),               INTENT(IN   )   :: MBMb(  p%nDOF__Rb, p%nDOFM)
+   REAL(ReKi),               INTENT(IN   )   :: KBBb(  p%nDOF__Rb, p%nDOF__Rb)
+   REAL(ReKi),               INTENT(IN   )   :: PhiL ( p%nDOF__L, p%nDOF__L)   
+   REAL(ReKi),               INTENT(IN   )   :: PhiRb( p%nDOF__L, p%nDOF__Rb)   
+   REAL(ReKi),               INTENT(IN   )   :: OmegaL(p%nDOF__L)   
+   REAL(ReKi),               INTENT(IN   )   :: FGRb(p%nDOF__Rb) 
+   REAL(ReKi),               INTENT(IN   )   :: FGL(p%nDOF__L)
    INTEGER(IntKi),           INTENT(  OUT)   :: ErrStat     ! Error status of the operation
    CHARACTER(*),             INTENT(  OUT)   :: ErrMsg      ! Error message if ErrStat /= ErrID_None
    ! local variables
-   REAL(ReKi)                                :: TI_transpose(nDOFL_TP,p%nDOFI) !bjj: added this so we don't have to take the transpose 5+ times
+   REAL(ReKi)                                :: TI_transpose(nDOFL_TP,p%nDOFI__) !bjj: added this so we don't have to take the transpose 5+ times
    INTEGER(IntKi)                            :: I
    integer(IntKi)                            :: n                          ! size of jacobian in AM2 calculation
    INTEGER(IntKi)                            :: ErrStat2
    CHARACTER(ErrMsgLen)                      :: ErrMsg2
    CHARACTER(*), PARAMETER                   :: RoutineName = 'SetParameters'
-   
    ErrStat = ErrID_None 
    ErrMsg  = ''
+
+   if (p%nDOFI__/=p%nDOF__Rb) then
+      ! Limitation due to the TI matrix, on the input U_R to the module for now
+      ErrMsg2='For now number of leader DOF has to be the same a Rb DOF'
+      ErrStat2=ErrID_Fatal
+      if(Failed()) return
+   endif
+
       
    TI_transpose =  TRANSPOSE(p%TI) 
 
@@ -2279,10 +2269,10 @@ SUBROUTINE AllocParameters(p, nDOFM, ErrStat, ErrMsg)
    
    CALL AllocAry( p%KBB,           nDOFL_TP, nDOFL_TP, 'p%KBB',           ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')
    CALL AllocAry( p%MBB,           nDOFL_TP, nDOFL_TP, 'p%MBB',           ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')
-   CALL AllocAry( p%TI,            p%nDOFI,  6,        'p%TI',            ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')
-   CALL AllocAry( p%D1_14,         nDOFL_TP, p%nDOFL,  'p%D1_14',         ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')        
+   CALL AllocAry( p%TI,            p%nDOFI__,  6,      'p%TI',            ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')
+   CALL AllocAry( p%D1_14,         nDOFL_TP, p%nDOF__L,  'p%D1_14',         ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')        
    CALL AllocAry( p%FY,            nDOFL_TP,           'p%FY',            ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')        
-   CALL AllocAry( p%PhiRb_TI,      p%nDOFL,  nDOFL_TP, 'p%PhiRb_TI',      ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')        
+   CALL AllocAry( p%PhiRb_TI,      p%nDOF__L, nDOFL_TP,'p%PhiRb_TI',      ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')        
    
 if (p%nDOFM > 0 ) THEN  
    CALL AllocAry( p%MBM,           nDOFL_TP, nDOFM,    'p%MBM',           ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')
@@ -2292,19 +2282,19 @@ if (p%nDOFM > 0 ) THEN
    CALL AllocAry( p%FX,            nDOFM,              'p%FX',            ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')        
    CALL AllocAry( p%C1_11,         nDOFL_TP, nDOFM,    'p%C1_11',         ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')        
    CALL AllocAry( p%C1_12,         nDOFL_TP, nDOFM,    'p%C1_12',         ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')        
-   CALL AllocAry( p%PhiM,          p%nDOFL,  nDOFM,    'p%PhiM',          ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')        
-   CALL AllocAry( p%C2_61,         p%nDOFL,  nDOFM,    'p%C2_61',         ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')        
-   CALL AllocAry( p%C2_62,         p%nDOFL,  nDOFM,    'p%C2_62',         ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')        
+   CALL AllocAry( p%PhiM,          p%nDOF__L,  nDOFM,    'p%PhiM',          ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')        
+   CALL AllocAry( p%C2_61,         p%nDOF__L,  nDOFM,    'p%C2_61',         ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')        
+   CALL AllocAry( p%C2_62,         p%nDOF__L,  nDOFM,    'p%C2_62',         ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')        
    CALL AllocAry( p%D1_13,         nDOFL_TP, nDOFL_TP, 'p%D1_13',         ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters') ! is p%MBB when p%nDOFM == 0        
-   CALL AllocAry( p%D2_63,         p%nDOFL,  nDOFL_TP, 'p%D2_63',         ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters') ! is p%PhiRb_TI when p%nDOFM == 0       
-   CALL AllocAry( p%D2_64,         p%nDOFL,  p%nDOFL,  'p%D2_64',         ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters') ! is zero when p%nDOFM == 0       
-   CALL AllocAry( p%F2_61,         p%nDOFL,            'p%F2_61',         ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters') ! is zero when p%nDOFM == 0
+   CALL AllocAry( p%D2_63,         p%nDOF__L,  nDOFL_TP, 'p%D2_63',         ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters') ! is p%PhiRb_TI when p%nDOFM == 0       
+   CALL AllocAry( p%D2_64,         p%nDOF__L,  p%nDOF__L,  'p%D2_64',         ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters') ! is zero when p%nDOFM == 0       
+   CALL AllocAry( p%F2_61,         p%nDOF__L,            'p%F2_61',         ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters') ! is zero when p%nDOFM == 0
 end if
            
 if ( p%SttcSolve ) THEN  
-   CALL AllocAry( p%PhiL_T,        p%nDOFL, p%nDOFL, 'p%PhiL_T',        ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')
-   CALL AllocAry( p%PhiLInvOmgL2,  p%nDOFL, p%nDOFL, 'p%PhiLInvOmgL2',  ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')
-   CALL AllocAry( p%FGL,           p%nDOFL,          'p%FGL',           ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')   
+   CALL AllocAry( p%PhiL_T,        p%nDOF__L, p%nDOF__L, 'p%PhiL_T',        ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')
+   CALL AllocAry( p%PhiLInvOmgL2,  p%nDOF__L, p%nDOF__L, 'p%PhiLInvOmgL2',  ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')
+   CALL AllocAry( p%FGL,           p%nDOF__L,            'p%FGL',           ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')   
 end if            
    
 END SUBROUTINE AllocParameters
@@ -2324,16 +2314,16 @@ SUBROUTINE AllocMiscVars(p, Misc, ErrStat, ErrMsg)
    ErrMsg  = ""
       
    ! for readability, we're going to keep track of the max ErrStat through SetErrStat() and not return until the end of this routine.
-   CALL AllocAry( Misc%UFL,          p%nDOFL,   'UFL',           ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
-   CALL AllocAry( Misc%UR_bar,       p%nDOFI,   'UR_bar',        ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
-   CALL AllocAry( Misc%UR_bar_dot,   p%nDOFI,   'UR_bar_dot',    ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
-   CALL AllocAry( Misc%UR_bar_dotdot,p%nDOFI,   'UR_bar_dotdot', ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
-   CALL AllocAry( Misc%UL,           p%nDOFL,   'UL',            ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
-   CALL AllocAry( Misc%UL_dot,       p%nDOFL,   'UL_dot',        ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
-   CALL AllocAry( Misc%UL_dotdot,    p%nDOFL,   'UL_dotdot',     ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
-   CALL AllocAry( Misc%U_full,       p%nDOF,    'U_full',        ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
-   CALL AllocAry( Misc%U_full_dot,   p%nDOF,    'U_full_dot',    ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
-   CALL AllocAry( Misc%U_full_dotdot,p%nDOF,    'U_full_dotdot', ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
+   CALL AllocAry( Misc%UFL,          p%nDOF__L,   'UFL',           ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
+   CALL AllocAry( Misc%UR_bar,       p%nDOFI__,   'UR_bar',        ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars') !TODO Rb
+   CALL AllocAry( Misc%UR_bar_dot,   p%nDOFI__,   'UR_bar_dot',    ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars') !TODO Rb
+   CALL AllocAry( Misc%UR_bar_dotdot,p%nDOFI__,   'UR_bar_dotdot', ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars') !TODO Rb
+   CALL AllocAry( Misc%UL,           p%nDOF__L,   'UL',            ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
+   CALL AllocAry( Misc%UL_dot,       p%nDOF__L,   'UL_dot',        ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
+   CALL AllocAry( Misc%UL_dotdot,    p%nDOF__L,   'UL_dotdot',     ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
+   CALL AllocAry( Misc%U_full,       p%nDOF,      'U_full',        ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
+   CALL AllocAry( Misc%U_full_dot,   p%nDOF,      'U_full_dot',    ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
+   CALL AllocAry( Misc%U_full_dotdot,p%nDOF,      'U_full_dotdot', ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
    CALL AllocAry( Misc%U_red,        p%nDOF_red,'U_red',         ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
    CALL AllocAry( Misc%U_red_dot,    p%nDOF_red,'U_red_dot',     ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
    CALL AllocAry( Misc%U_red_dotdot, p%nDOF_red,'U_red_dotdot',  ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
@@ -2344,24 +2334,33 @@ SUBROUTINE AllocMiscVars(p, Misc, ErrStat, ErrMsg)
 END SUBROUTINE AllocMiscVars
 
 !------------------------------------------------------------------------------------------------------
-!> Partition DOFs and Nodes into sets:  I=Interface ,C=Boundary (bottom), R=(I+C), L=Interior
-!! Partition Nodes into: Nodes_I (Interf), Nodes_C (React), Nodes_L
-!! Partition the DOF index arrays into IDR=[IDC, ICI] and IDL (interior)
-!! Sets the DOF mapping [_,IDY] =sort([IDI, IDL, IDC]), Y is in the continuous order [I,L,C]
-SUBROUTINE PartitionDOFNodes_I_C_R_L(Init, m, p, ErrStat, ErrMsg)
+!> Partition DOFs and Nodes into sets: 
+!! Nodes are partitioned into the I,C,L (and R) sets, Nodes_I, Nodes_C, Nodes_L, with:
+!!         I="Interface" nodes
+!!         C="Reaction" nodes
+!!         L=Interior nodes
+!!         R=I+C
+!! DOFs indices are partitioned into B, F, L
+!!         B=Leader DOFs (Rbar in SubDyn documentation)
+!!         F=Fixed DOFS
+!!         L=Interior DOFs
+!! Subpartitions of both categories use the convention: "NodePartition_DOFPartition"
+!!    e.g. C_F : "reaction" nodes DOFs that are fixed
+!!         C_L : "reaction" nodes DOFs that will be counted as internal
+!!         I_B : "interface" nodes DOFs that are leader DOFs
+SUBROUTINE PartitionDOFNodes(Init, m, p, ErrStat, ErrMsg)
    use qsort_c_module, only: QsortC
-   use IntegerList, only: len, concatenate_lists, lists_difference
+   use IntegerList, only: len, concatenate_lists, lists_difference, concatenate_3lists, sort_in_place
    type(SD_Inittype),       intent(  in)  :: Init        !< Input data for initialization routine
    type(SD_MiscVartype),    intent(  in)  :: m           !< Misc
    type(SD_Parametertype),  intent(inout) :: p           !< Parameters   
    integer(IntKi),          intent(  out) :: ErrStat     !< Error status of the operation
    character(*),            intent(  out) :: ErrMsg      !< Error message if ErrStat /= ErrID_None
    ! local variables
-   integer(IntKi), allocatable :: TempIDY(:,:)
-   integer(IntKi), allocatable :: IDT(:)
-   integer(IntKi)              :: I                ! counters
+   integer(IntKi)              :: I, J, c_B, c_F, c_L          ! counters
    integer(IntKi)              :: iNode, iiNode
-   integer(IntKi) :: nNodes_R
+   integer(IntKi)              :: nNodes_R
+   integer(IntKi), allocatable :: IDAll(:)
    integer(IntKi), allocatable :: INodesAll(:)
    integer(IntKi), allocatable :: Nodes_R(:)
    integer(IntKi)              :: ErrStat2 ! < Error status of the operation
@@ -2370,14 +2369,16 @@ SUBROUTINE PartitionDOFNodes_I_C_R_L(Init, m, p, ErrStat, ErrMsg)
    ErrMsg  = ""
    ! --- Count nodes per types
    p%nNodes_I  = p%nNodes_I             ! Number of interface nodes
-   nNodes_R    = p%nNodes_I+p%nNodes_C    ! Number of retained nodes
-   p%nNodes_L  = p%nNodes - nNodes_R ! Number of Interior nodes =(TDOF-nDOFC-nDOFI)/6 =  (6*p%nNodes - (p%nNodes_C+p%nNodes_I)*6 ) / 6 = p%nNodes - p%nNodes_C -p%nNodes_I
+   nNodes_R   = p%nNodes_I+p%nNodes_C  ! I+C nodes 
+   p%nNodes_L  = p%nNodes - nNodes_R ! Number of Interior nodes 
    ! NOTE: some of the interior nodes may have no DOF if they are involved in a rigid assembly..
 
-   CALL AllocAry( p%Nodes_L, p%nNodes_L, 1, 'p%Nodes_L', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'PartitionDOFNodes_I_C_R_L')        
-   CALL AllocAry( Nodes_R  , nNodes_R     , 'Nodes_R'  , ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'PartitionDOFNodes_I_C_R_L')        
+   CALL AllocAry( p%Nodes_L, p%nNodes_L, 1, 'p%Nodes_L', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'PartitionDOFNodes')        
+   CALL AllocAry( Nodes_R  , nNodes_R   , 'Nodes_R'  , ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'PartitionDOFNodes')        
 
+   ! --------------------------------------------------------------------------------
    ! --- Partition Nodes:  Nodes_L = IAll - NodesR
+   ! --------------------------------------------------------------------------------
    allocate(INodesAll(1:p%nNodes));
    do iNode=1,p%nNodes
       INodesAll(iNode)=iNode
@@ -2387,99 +2388,215 @@ SUBROUTINE PartitionDOFNodes_I_C_R_L(Init, m, p, ErrStat, ErrMsg)
    ! Nodes_L = IAll - Nodes_R
    call lists_difference(INodesAll, Nodes_R, p%Nodes_L(:,1), ErrStat2, ErrMsg2); if(Failed()) return
   
-   ! --- Count DOFs
-   ! Interface DOFS
-   p%nDOFI =0
+   ! --------------------------------------------------------------------------------
+   ! --- Count DOFs - NOTE: we count node by node
+   ! --------------------------------------------------------------------------------
+   ! DOFs of interface nodes
+   p%nDOFI__ =0 ! Total
+   p%nDOFI_Rb=0 ! Leader
+   p%nDOFI_F =0 ! Fixed
    do iiNode= 1,p%nNodes_I
-      p%nDOFI = p%nDOFI + len(p%NodesDOFtilde( p%Nodes_I(iiNode,1) ))
+      p%nDOFI__ = p%nDOFI__ + len(p%NodesDOFtilde( p%Nodes_I(iiNode,1) ))
+      p%nDOFI_Rb= p%nDOFI_Rb+ count(p%Nodes_I(iiNode, 2:7)==idBC_Leader) ! assumes 6 DOFs
+      p%nDOFI_F = p%nDOFI_F + count(p%Nodes_I(iiNode, 2:7)==idBC_Fixed) ! assumes 6 DOFs
    enddo
-   ! Reaction DOFs
-   p%nDOFC =0
+   if (p%nDOFI__/=p%nDOFI_Rb+p%nDOFI_F) then
+      call Fatal('Error in distributing interface DOFs, total number of DOF does not equal number of leader and fixed DOF'); return
+   endif
+
+   ! DOFs of reaction nodes
+   p%nDOFC__ =0 ! Total
+   p%nDOFC_Rb=0 ! Leader
+   p%nDOFC_F =0 ! Fixed
+   p%nDOFC_L =0 ! Internal
    do iiNode= 1,p%nNodes_C
-      p%nDOFC = p%nDOFC + len(p%NodesDOFtilde( p%Nodes_C(iiNode,1) ))
+      p%nDOFC__ = p%nDOFC__ + len(p%NodesDOFtilde( p%Nodes_C(iiNode,1) ))
+      p%nDOFC_Rb= p%nDOFC_Rb+ count(p%Nodes_C(iiNode, 2:7)==idBC_Leader)   ! assumes 6 DOFs
+      p%nDOFC_F = p%nDOFC_F + count(p%Nodes_C(iiNode, 2:7)==idBC_Fixed  )  ! assumes 6 DOFs
+      p%nDOFC_L = p%nDOFC_L + count(p%Nodes_C(iiNode, 2:7)==idBC_Internal) ! assumes 6 DOFs
    enddo
-   p%nDOFR = p%nDOFC + p%nDOFI
-   p%nDOFL = p%nDOF_red - p%nDOFR ! TODO
-   ! --- Safety checks
-   if (p%nDOFC /= p%nNodes_C*6) then
+   if (p%nDOFC__/=p%nDOFC_Rb+p%nDOFC_F+p%nDOFC_L) then
+      call Fatal('Error in distributing reaction DOFs, total number of DOF does not equal number of leader, fixed and internal DOF'); return
+   endif
+   ! DOFs of reaction + interface nodes
+   p%nDOFR__ = p%nDOFI__ + p%nDOFC__ ! Total number, used to be called "nDOFR"
+
+   ! DOFs of internal nodes
+   p%nDOFL_L=0
+   do iiNode= 1,p%nNodes_L
+      p%nDOFL_L = p%nDOFL_L + len(p%NodesDOFtilde( p%Nodes_L(iiNode,1) ))
+   enddo
+   if (p%nDOFL_L/=p%nDOF_red-p%nDOFR__) then
+      call Fatal('Error in distributing internal DOFs, total number of DOF does not equal total number of DOF minus interface and reaction'); return
+   endif
+
+   ! Total number of DOFs in each category:
+   p%nDOF__Rb = p%nDOFC_Rb + p%nDOFI_Rb            ! OK, generic
+   p%nDOF__F  = p%nDOFC_F  + p%nDOFI_F             ! OK, generic
+   p%nDOF__L  = p%nDOFC_L             + p%nDOFL_L ! OK, generic
+
+   ! --- Safety checks ! TODO: these checks are temporary!
+   if (p%nDOFC_F /= p%nNodes_C*6) then
       call Fatal('Wrong number of DOF for reactions nodes, likely some reaction nodes are special joints and should be cantilever instead.'); return
    endif
-   if (p%nDOFI /= p%nNodes_I*6) then
+   if (p%nDOFI_Rb /= p%nNodes_I*6) then
       call Fatal('Wrong number of DOF for interface nodes, likely some interface nodes are special joints and should be cantilever instead.'); return
    endif
 
-   ! Set the index arrays p%IDI, p%IDR, p%IDL, p%IDC, and p%IDY. 
-   CALL AllocAry( p%IDI, p%nDOFI,                 'p%IDI', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'PartitionDOFNodes_I_C_R_L')        
-   CALL AllocAry( p%IDC, p%nDOFC,                 'p%IDC', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'PartitionDOFNodes_I_C_R_L')        
-   CALL AllocAry( p%IDR, p%nDOFR,                 'p%IDR', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'PartitionDOFNodes_I_C_R_L')        
-   CALL AllocAry( p%IDL, p%nDOFL,                 'p%IDL', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'PartitionDOFNodes_I_C_R_L')        
-   CALL AllocAry( p%IDY, p%nDOFC+p%nDOFI+p%nDOFL, 'p%IDY', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'PartitionDOFNodes_I_C_R_L')        
+   ! Set the index arrays
+   CALL AllocAry( p%IDI__, p%nDOFI__,  'p%IDI__', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'PartitionDOFNodes')        
+   CALL AllocAry( p%IDI_Rb,p%nDOFI_Rb, 'p%IDI_Rb',ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'PartitionDOFNodes')        
+   CALL AllocAry( p%IDI_F, p%nDOFI_F,  'p%IDI_F', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'PartitionDOFNodes')        
+   CALL AllocAry( p%IDC__, p%nDOFC__,  'p%IDC__', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'PartitionDOFNodes')        
+   CALL AllocAry( p%IDC_Rb,p%nDOFC_Rb, 'p%IDC_Rb',ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'PartitionDOFNodes')        
+   CALL AllocAry( p%IDC_F, p%nDOFC_F,  'p%IDC_F', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'PartitionDOFNodes')        
+   CALL AllocAry( p%IDC_L, p%nDOFC_L,  'p%IDC_L', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'PartitionDOFNodes')        
+   CALL AllocAry( p%IDL_L, p%nDOFL_L,  'p%IDL_L', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'PartitionDOFNodes')        
+   CALL AllocAry( p%IDR__, p%nDOFR__,  'p%IDR__', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'PartitionDOFNodes')        
+   CALL AllocAry( p%ID__Rb,p%nDOF__Rb, 'p%ID__Rb',ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'PartitionDOFNodes')        
+   CALL AllocAry( p%ID__F, p%nDOF__F,  'p%ID__F', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'PartitionDOFNodes')        
+   CALL AllocAry( p%ID__L, p%nDOF__L,  'p%ID__L', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'PartitionDOFNodes')         ! TODO TODO
    if(Failed()) return
 
-   ! Indices IDI for interface DOFs
-   p%IDI = Init%IntFc(1:p%nDOFI, 1)  ! Interface DOFs (indices updated after DirectElimination)
-   ! Indices IDC for constraint DOFs
-   p%IDC = Init%BCs(1:p%nDOFC, 1) ! Reaction DOFs (indices updated after DirectElimination)
-   ! Indices IDR = [IDC, IDI], "retained interface DOFS" 
-   call concatenate_lists(p%IDC, p%IDI, p%IDR, ErrStat2, ErrMsg2); if(Failed()) return
+   ! --------------------------------------------------------------------------------
+   ! --- Distibutes the I, L, C nodal DOFs into  B, F, L sub-categories 
+   ! --------------------------------------------------------------------------------
 
-   ! --- Indices IDL for internal DOFs = AllDOF - IDR 
-   ! First set the all DOFs indices IDT = 1:nnDOFRed
-   allocate(IDT(1:p%nDOF_red))
-   DO I = 1, p%nDOF_red; IDT(I) = I;      ENDDO
-   call lists_difference(IDT, p%IDR, p%IDL, ErrStat2, ErrMsg2); if(Failed()) return
+   ! Distribute the interface DOFs into R,F
+   c_B=0;  c_F=0 ! Counters over R and F dofs
+   do iiNode= 1,p%nNodes_I !Loop on interface nodes
+      iNode = p%Nodes_I(iiNode,1)
+      do J = 1, 6 ! DOFs: ItfTDXss    ItfTDYss    ItfTDZss    ItfRDXss    ItfRDYss    ItfRDZss
+          if (p%Nodes_I(iiNode, J+1)==idBC_Leader) then
+             c_B=c_B+1
+             p%IDI_Rb(c_B) = p%NodesDOFtilde(iNode)%List(J) ! DOF number 
+
+          elseif (p%Nodes_I(iiNode, J+1)==idBC_Fixed) then !
+             c_F=c_F+1
+             p%IDI_F(c_F) = p%NodesDOFtilde(iNode)%List(J) ! DOF number 
+          endif
+       enddo
+   enddo
+   ! Indices IDI__ = [IDI_B, IDI_F], interface
+   call concatenate_lists(p%IDI_Rb, p%IDI_F, p%IDI__, ErrStat2, ErrMsg2); if(Failed()) return
+
+   ! Distribute the reaction DOFs into R,F,L 
+   c_B=0; c_F=0; c_L=0; ! Counters over R, F, L dofs
+   do iiNode= 1,p%nNodes_C !Loop on interface nodes
+      iNode = p%Nodes_C(iiNode,1)
+      do J = 1, 6 ! DOFs 
+          if (p%Nodes_C(iiNode, J+1)==idBC_Leader) then
+             c_B=c_B+1
+             p%IDC_Rb(c_B) = p%NodesDOFtilde(iNode)%List(J) ! DOF number 
+
+          elseif (p%Nodes_C(iiNode, J+1)==idBC_Fixed) then !
+             c_F=c_F+1
+             p%IDC_F(c_F) = p%NodesDOFtilde(iNode)%List(J) ! DOF number 
+
+          elseif (p%Nodes_C(iiNode, J+1)==idBC_Internal) then !
+             c_L=c_L+1
+             p%IDC_L(c_L) = p%NodesDOFtilde(iNode)%List(J) ! DOF number 
+          endif
+       enddo
+   enddo
+   ! Indices IDC__ = [IDC_B, IDC_F, IDC_L], interface
+   call concatenate_3lists(p%IDC_Rb, p%IDC_F, p%IDC_L, p%IDC__, ErrStat2, ErrMsg2); if(Failed()) return
+
+   ! Indices IDR__ = [IDI__, IDC__], interface
+   !call concatenate_lists(p%IDI__, p%IDC__, p%IDR__, ErrStat2, ErrMsg2); if(Failed()) return
+   ! TODO, NOTE: Backward compatibility [IDC, IDI]
+   call concatenate_lists(p%IDC__, p%IDI__, p%IDR__, ErrStat2, ErrMsg2); if(Failed()) return
+
+   ! Distribute the internal DOFs
+   c_L=0;  ! Counters over L dofs
+   do iiNode= 1,p%nNodes_L !Loop on interface nodes
+      iNode = p%Nodes_L(iiNode,1)
+      do J = 1, 6 ! DOFs 
+         c_L=c_L+1
+         p%IDL_L(c_L) = p%NodesDOFtilde(iNode)%List(J) ! DOF number 
+      enddo
+   enddo
+
+   ! --------------------------------------------------------------------------------
+   ! --- Total indices per partition B, F, L
+   ! --------------------------------------------------------------------------------
+   ! Indices ID__Rb = [IDC_B, IDI_B], retained/leader DOFs 
+   call concatenate_lists(p%IDC_Rb, p%IDI_Rb, p%ID__Rb, ErrStat2, ErrMsg2); if(Failed()) return
+   ! Indices ID__F = [IDC_F, IDI_F], fixed DOFs
+   call concatenate_lists(p%IDC_F, p%IDI_F, p%ID__F, ErrStat2, ErrMsg2); if(Failed()) return
+   ! Indices ID__L = [IDL_L, IDC_L], internal DOFs
+   call concatenate_lists(p%IDL_L, p%IDC_L, p%ID__L, ErrStat2, ErrMsg2); if(Failed()) return
+
+   ! --- Check that partition is complete
+   if     (any(p%ID__Rb<=0)) then
+      call Fatal('R - Partioning incorrect.'); return
+   elseif (any(p%ID__F<=0)) then
+      call Fatal('F - Partioning incorrect.'); return
+   elseif (any(p%ID__L<=0)) then
+      call Fatal('L - Partioning incorrect.'); return
+   endif
+   allocate(IDAll(1:p%nDOF_red))
+   call concatenate_3lists(p%ID__Rb, p%ID__L, p%ID__F, IDAll, ErrStat2, ErrMsg2); if(Failed()) return
+   call sort_in_place(IDAll)
+   do I = 1, p%nDOF_red
+      if (IDAll(I)/=I) then
+         call Fatal('DOF '//trim(Num2LStr(I))//' missing, problem in R, L F partitioning'); return
+      endif
+   enddo
    
-   ! --- Index [_,IDY] =sort([IDI, IDL, IDC]), DOF map, Y is in the continuous order [I,L,C]
-   ! set the second column of the temp array      
-   allocate(TempIDY(p%nDOFI+p%nDOFL+p%nDOFC, 2))
-   print*,SIZE(TempIDY),p%nDOF_red
-   DO I = 1, SIZE(TempIDY,1)
-      TempIDY(I, 2) = I   ! this column will become the returned "key" (i.e., the original location in the array)
-   ENDDO
-   ! set the first column of the temp array      
-   TempIDY(1:p%nDOFI, 1)                                  = p%IDI
-   TempIDY(p%nDOFI+1 : p%nDOFI+p%nDOFL, 1)                = p%IDL
-   TempIDY(p%nDOFI+p%nDOFL+1: p%nDOFI+p%nDOFL+p%nDOFC, 1) = p%IDC
-   CALL QsortC( TempIDY ) ! sort based on the first column
-   p%IDY = TempIDY(:, 2)  ! the second column is the key:
-   !
+   !print*,'DOFI__  ',p%IDI__
+   !print*,'DOFI_Rb ',p%IDI_Rb
+   !print*,'DOFI_F  ',p%IDI_F
+   !print*,'DOFC__  ',p%IDC__
+   !print*,'DOFC_Rb ',p%IDC_Rb
+   !print*,'DOFC_F  ',p%IDC_F
+   !print*,'DOFC_L  ',p%IDC_L
+   !print*,'DOFR__  ',p%IDR__
+   !print*,'DOFL_L  ',p%IDL_L
+   !print*,'DOF__Rb ',p%ID__Rb
+   !print*,'DOF__F  ',p%ID__F
+   !print*,'DOF__L  ',p%ID__L
+   !print*,'Nodes_C',p%Nodes_C(:,1)
+   !print*,'Nodes_L',p%Nodes_L(:,1)
+   !print*,'Nodes_I',p%Nodes_I(:,1)
+   write(*,'(A,I0)')'Number of DOFs: "interface"          (I__): ',p%nDOFI__
+   write(*,'(A,I0)')'Number of DOFs: "interface" retained (I_B): ',p%nDOFI_Rb
+   write(*,'(A,I0)')'Number of DOFs: "interface" fixed    (I_F): ',p%nDOFI_F
+   write(*,'(A,I0)')'Number of DOFs: "reactions"          (C__): ',p%nDOFC__
+   write(*,'(A,I0)')'Number of DOFs: "reactions" retained (C_B): ',p%nDOFC_Rb
+   write(*,'(A,I0)')'Number of DOFs: "reactions" internal (C_L): ',p%nDOFC_L
+   write(*,'(A,I0)')'Number of DOFs: "reactions" fixed    (C_F): ',p%nDOFC_F
+   write(*,'(A,I0)')'Number of DOFs: "intf+react"         (__R): ',p%nDOFR__
+   write(*,'(A,I0)')'Number of DOFs: "internal"  internal (L_L): ',p%nDOFL_L
+   write(*,'(A,I0)')'Number of DOFs:  total      retained (__B): ',p%nDOF__Rb
+   write(*,'(A,I0)')'Number of DOFs:  total      internal (__L): ',p%nDOF__L
+   write(*,'(A,I0)')'Number of DOFs:  total      fixed    (__F): ',p%nDOF__F
+   write(*,'(A,I0)')'Number of DOFs:  total                    : ',p%nDOF_red
+   write(*,'(A,I0)')'Number of Nodes: "interface" (I): ',p%nNodes_I
+   write(*,'(A,I0)')'Number of Nodes: "reactions" (C): ',p%nNodes_C
+   write(*,'(A,I0)')'Number of Nodes: "internal"  (L): ',p%nNodes_L
+   write(*,'(A,I0)')'Number of Nodes: total   (I+C+L): ',p%nNodes
+
    call CleanUp()
 
-   print*,'DOF_I  ',p%IDI
-   print*,'DOF_L  ',p%IDL
-   print*,'DOF_C  ',p%IDC
-   print*,'Nodes_C',p%Nodes_C(:,1)
-   print*,'Nodes_L',p%Nodes_L
-   print*,'Nodes_I',p%Nodes_I(:,1)
-   print*,'Nodes_C',p%Nodes_C(:,1)
-   print*,'Nodes_L',p%Nodes_L
-   print*,'Number of DOFs: "interface" (I)',p%nDOFI
-   print*,'Number of DOFs: "reactions" (C)',p%nDOFC
-   print*,'Number of DOFs: interface   (R)',p%nDOFR
-   print*,'Number of DOFs: internal    (L)',p%nDOFL
-   print*,'Number of DOFs: total     (R+L)',p%nDOF_red
-   print*,'Number of Nodes: "interface" (I)',p%nNodes_I
-   print*,'Number of Nodes: "reactions" (C)',p%nNodes_C
-   print*,'Number of Nodes: internal    (L)',p%nNodes_L
-   print*,'Number of Nodes: total     (R+L)',p%nNodes
 contains
    LOGICAL FUNCTION Failed()
-        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'PartitionDOFNodes_I_C_R_L') 
+        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'PartitionDOFNodes') 
         Failed =  ErrStat >= AbortErrLev
         if (Failed) call CleanUp()
    END FUNCTION Failed
    SUBROUTINE Fatal(ErrMsg_in)
       character(len=*), intent(in) :: ErrMsg_in
-      CALL SetErrStat(ErrID_Fatal, ErrMsg_in, ErrStat, ErrMsg, 'PartitionDOFNodes_I_C_R_L');
+      CALL SetErrStat(ErrID_Fatal, ErrMsg_in, ErrStat, ErrMsg, 'PartitionDOFNodes');
       CALL CleanUp()
    END SUBROUTINE Fatal
    SUBROUTINE CleanUp()
-      if(allocated(TempIDY))   deallocate(TempIDY)
-      if(allocated(IDT))       deallocate(IDT)
       if(allocated(INodesAll)) deallocate(INodesAll)
+      if(allocated(IDAll))    deallocate(IDAll)
+      if(allocated(Nodes_R)) deallocate(Nodes_R)
    END SUBROUTINE CleanUp
    
-END SUBROUTINE PartitionDOFNodes_I_C_R_L
+END SUBROUTINE PartitionDOFNodes
 
 !------------------------------------------------------------------------------------------------------
 !> Construct force vector on internal DOF (L) from the values on the input mesh 
@@ -2489,7 +2606,7 @@ SUBROUTINE ConstructUFL( u, p, m, UFL )
    type(SD_InputType),     intent(in   )  :: u ! Inputs
    type(SD_ParameterType), intent(in   )  :: p ! Parameters
    type(SD_MiscVarType),   intent(inout)  :: m ! Misc, for storage optimization of Fext and Fext_red
-   real(ReKi)          ,   intent(out)    :: UFL(p%nDOFL)
+   real(ReKi)          ,   intent(out)    :: UFL(p%nDOFL_L)
    integer :: iMeshNode, iSDNode ! indices of u-mesh nodes and SD nodes
    integer :: nMembers
    real(ReKi), parameter :: myNaN = -9999998.989_ReKi 
@@ -2515,7 +2632,7 @@ SUBROUTINE ConstructUFL( u, p, m, UFL )
    ! --- Reduced vector of external force
    m%Fext_red = matmul(transpose(p%T_red), m%Fext)
    UFL=0
-   UFL= m%Fext_red(p%IDL)
+   UFL= m%Fext_red(p%IDL_L)
 
 END SUBROUTINE ConstructUFL
 
@@ -2585,15 +2702,23 @@ SUBROUTINE OutSummary(Init, p, InitInput, CBparams, ErrStat,ErrMsg)
    !write(UnSum,'(A)')'Nodes_I',p%Nodes_I(:,1)
    !write(UnSum,'(A)')'Nodes_C',p%Nodes_C(:,1)
    !write(UnSum,'(A)')'Nodes_L',p%Nodes_L
-   write(UnSum,'(A,I0)')'Number of DOFs: "interface" (I): ',p%nDOFI
-   write(UnSum,'(A,I0)')'Number of DOFs: "reactions" (C): ',p%nDOFC
-   write(UnSum,'(A,I0)')'Number of DOFs: interface   (R): ',p%nDOFR
-   write(UnSum,'(A,I0)')'Number of DOFs: internal    (L): ',p%nDOFL
-   write(UnSum,'(A,I0)')'Number of DOFs: total     (R+L): ',p%nDOF_red
+   write(UnSum,'(A,I0)')'Number of DOFs: "interface"          (I__): ',p%nDOFI__
+   write(UnSum,'(A,I0)')'Number of DOFs: "interface" retained (I_B): ',p%nDOFI_Rb
+   write(UnSum,'(A,I0)')'Number of DOFs: "interface" fixed    (I_F): ',p%nDOFI_F
+   write(UnSum,'(A,I0)')'Number of DOFs: "reactions"          (C__): ',p%nDOFC__
+   write(UnSum,'(A,I0)')'Number of DOFs: "reactions" retained (C_B): ',p%nDOFC_Rb
+   write(UnSum,'(A,I0)')'Number of DOFs: "reactions" internal (C_L): ',p%nDOFC_L
+   write(UnSum,'(A,I0)')'Number of DOFs: "reactions" fixed    (C_F): ',p%nDOFC_F
+   write(UnSum,'(A,I0)')'Number of DOFs: "intf+react"         (__R): ',p%nDOFR__
+   write(UnSum,'(A,I0)')'Number of DOFs: "internal"  internal (L_L): ',p%nDOFL_L
+   write(UnSum,'(A,I0)')'Number of DOFs:  total      retained (__B): ',p%nDOF__Rb
+   write(UnSum,'(A,I0)')'Number of DOFs:  total      internal (__L): ',p%nDOF__L
+   write(UnSum,'(A,I0)')'Number of DOFs:  total      fixed    (__F): ',p%nDOF__F
+   write(UnSum,'(A,I0)')'Number of DOFs:  total                    : ',p%nDOF_red
    write(UnSum,'(A,I0)')'Number of Nodes: "interface" (I): ',p%nNodes_I
    write(UnSum,'(A,I0)')'Number of Nodes: "reactions" (C): ',p%nNodes_C
-   write(UnSum,'(A,I0)')'Number of Nodes: internal    (L): ',p%nNodes_L
-   write(UnSum,'(A,I0)')'Number of Nodes: total     (R+L): ',p%nNodes
+   write(UnSum,'(A,I0)')'Number of Nodes: "internal"  (L): ',p%nNodes_L
+   write(UnSum,'(A,I0)')'Number of Nodes: total   (I+C+L): ',p%nNodes
    write(UnSum,'(A,3(E15.6))')'TP reference point:',InitInput%TP_RefPoint(1:3)
 
 
@@ -2615,19 +2740,22 @@ SUBROUTINE OutSummary(Init, p, InitInput, CBparams, ErrStat,ErrMsg)
    WRITE(UnSum, '(I8, E15.6,E15.6,E15.6,E15.6,E15.6 ) ') (NINT(Init%PropsB(i, 1)), (Init%PropsB(i, j), j = 2, 6), i = 1, Init%NPropB)
 
    WRITE(UnSum, '()') 
-   WRITE(UnSum, '(A,I6)')  'No. of Reaction DOFs:',p%nNodes_C*6
-   WRITE(UnSum, '(A, A6)')  'Reaction DOF_ID',      'LOCK'
-   WRITE(UnSum, '(I10, I10)') ((Init%BCs(i, j), j = 1, 2), i = 1, p%nNodes_C*6)! TODO TODO TODO might have been updated
+   WRITE(UnSum, '(A,I6)')  'No. of Reaction DOFs:',p%nDOFC__
+   WRITE(UnSum, '(A, A6)')  'React. DOF_ID',      'BC'
+   do i = 1, size(p%IDC_F ); WRITE(UnSum, '(I10, A10)') p%IDC_F(i) , '   Fixed' ; enddo
+   do i = 1, size(p%IDC_L ); WRITE(UnSum, '(I10, A10)') p%IDC_L(i) , '   Free'  ; enddo
+   do i = 1, size(p%IDC_Rb); WRITE(UnSum, '(I10, A10)') p%IDC_Rb(i), '   Leader'; enddo
 
    WRITE(UnSum, '()') 
-   WRITE(UnSum, '(A,I6)')  'No. of Interface DOFs:',p%nDOFI
-   WRITE(UnSum, '(A,A6)')  'Interface DOF ID',      'LOCK'
-   WRITE(UnSum, '(I10, I10)') ((Init%IntFc(i, j), j = 1, 2), i = 1, p%nDOFI) ! TODO TODO TODO might have been updated
+   WRITE(UnSum, '(A,I6)')  'No. of Interface DOFs:',p%nDOFI__
+   WRITE(UnSum, '(A,A6)')  'Interf. DOF_ID',      'BC'
+   do i = 1, size(p%IDI_F ); WRITE(UnSum, '(I10, A10)') p%IDI_F(i) , '   Fixed' ; enddo
+   do i = 1, size(p%IDI_Rb); WRITE(UnSum, '(I10, A10)') p%IDI_Rb(i), '   Leader'; enddo
 
    WRITE(UnSum, '()') 
    WRITE(UnSum, '(A,I6)')  'Number of concentrated masses (NCMass):',Init%NCMass
-   WRITE(UnSum, '(A10,A15,A15,A15,A15)')  'JointCMass',     'Mass',         'JXX',             'JYY',             'JZZ'
-   WRITE(UnSum, '(F10.0, E15.6,E15.6,E15.6,E15.6)') ((Init%Cmass(i, j), j = 1, 5), i = 1, Init%NCMass)
+   WRITE(UnSum, '(A10,10(A15))')  'JointCMass',     'Mass',         'JXX',             'JYY',             'JZZ',              'JXY',             'JXZ',             'JYZ',              'MCGX',             'MCGY',             'MCGZ'
+   WRITE(UnSum, '(F10.0, 10(E15.6))') ((Init%Cmass(i, j), j = 1, CMassCol), i = 1, Init%NCMass)
 
    WRITE(UnSum, '()') 
    WRITE(UnSum, '(A,I6)')  'Number of members',p%NMembers
@@ -2703,7 +2831,7 @@ SUBROUTINE OutSummary(Init, p, InitInput, CBparams, ErrStat,ErrMsg)
    IF (p%nDOFM > 0) THEN
       CALL WrMatrix( CBparams%PhiL(:,1:p%nDOFM ), UnSum, 'e15.6', 'PhiM' ) 
    ELSE
-      WRITE( UnSum, '(A,": ",A," x ",A)', IOSTAT=ErrStat ) "PhiM", TRIM(Num2LStr(p%nDOFL)), '0' 
+      WRITE( UnSum, '(A,": ",A," x ",A)', IOSTAT=ErrStat ) "PhiM", TRIM(Num2LStr(p%nDOFL_L)), '0' 
    END IF
 
    WRITE(UnSum, '(A)') SubSectionDivide
@@ -2729,8 +2857,8 @@ SUBROUTINE OutSummary(Init, p, InitInput, CBparams, ErrStat,ErrMsg)
     ENDDO  
  
     ! Set TI2, transformation matrix from R DOFs to SubDyn Origin
-   CALL AllocAry( TI2,    p%nDOFR, 6,       'TI2',    ErrStat2, ErrMsg2 ); if(Failed()) return
-   CALL RigidTrnsf(Init, p, (/0._ReKi, 0._ReKi, 0._ReKi/), p%IDR, p%nDOFR, TI2, ErrStat2, ErrMsg2); if(Failed()) return
+   CALL AllocAry( TI2,    p%nDOFR__, 6,       'TI2',    ErrStat2, ErrMsg2 ); if(Failed()) return
+   CALL RigidTrnsf(Init, p, (/0._ReKi, 0._ReKi, 0._ReKi/), p%IDR__, p%nDOFR__, TI2, ErrStat2, ErrMsg2); if(Failed()) return
    MRB=matmul(TRANSPOSE(TI2),matmul(CBparams%MBB,TI2)) !Equivalent mass matrix of the rigid body
    deallocate(TI2)
    WRITE(UnSum, '(A)') SectionDivide
