@@ -246,6 +246,30 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    ! --- Additional Damping and stiffness at pin/ball/universal joints
    CALL InsertJointStiffDamp(p, Init, ErrStat2, ErrMsg2); if(Failed()) return
 
+
+   ! Allocate the output matrices and the index mapping array
+!    DOF_reduced = Init%TDOF-p%DOFCr   
+!    CALL AllocAry(p%IDCr,  p%DOFCr, 'IDCR',  ErrStat2, ErrMsg2 )
+!    CALL AllocAry(RetDOFs,  DOF_reduced, 'RetDOFs',  ErrStat2, ErrMsg2 )
+!    !........
+!    ! set the indices we want to keep (i.e., a mapping from reduced to full matrix)
+!    J  = 1   
+!    J2 = 1
+!    DO I=1,Init%TDOF
+!       idx(J) = idx(I)      
+!       IF ( idx(J) /= 0 ) THEN 
+!           J = J + 1   
+!       ELSE 
+!           p%IDCR(J2) = I
+!           j2=j2+1
+!       ENDIF
+!                                 
+!    END DO
+!    !idx retains the rows (column) indices that are still active and has 0-padding (from elementTDOF-DOFCR to TDOF) to account for the removed ones, and everywhere else      
+!    !idx2 retains the rows (column) indices that are removed (fixed DOFs, there are DOFCR of them)   
+!    RetDOFs=idx(1:DOF_reduced)  
+
+
    ! --------------------------------------------------------------------------------
    ! --- CB, Misc  
    ! --------------------------------------------------------------------------------
@@ -983,8 +1007,8 @@ DO I = 1, Init%nCMass
       CALL Fatal(' Error in file "'//TRIM(SDInputFile)//'": Interface line must consist of 5 or 11 numerical values. Problematic line: "'//trim(Line)//'"')
       return
    endif
-   if (any(p%Nodes_I(I,:)<=0)) then
-      CALL Fatal(' Error in file "'//TRIM(SDInputFile)//'": For now, all DOF must be activated for interface lines. Problematic line: "'//trim(Line)//'"')
+   if (Init%CMass(I,1)<=0) then ! Further checks in JointIDs are done in SD_FEM
+      CALL Fatal(' Error in file "'//TRIM(SDInputFile)//'": Invalid concentrated mass JointID.  Problematic line: "'//trim(Line)//'"')
       return
    endif
 ENDDO   
@@ -1600,6 +1624,7 @@ SUBROUTINE Craig_Bampton(Init, p, m, CBparams, ErrStat, ErrMsg)
    REAL(ReKi), ALLOCATABLE  :: PhiRb(:, :)   
    REAL(ReKi), ALLOCATABLE  :: FGRb(:) 
    REAL(ReKi)               :: JDamping1 ! temporary storage for first element of JDamping array 
+   INTEGER(IntKi)           :: nM_Out, i
    INTEGER(IntKi)           :: ErrStat2
    CHARACTER(ErrMsgLen)     :: ErrMsg2
    ErrStat = ErrID_None
@@ -1629,6 +1654,9 @@ SUBROUTINE Craig_Bampton(Init, p, m, CBparams, ErrStat, ErrMsg)
       
    CALL AllocParameters(p, p%nDOFM, ErrStat2, ErrMsg2);                                  ; if (Failed()) return
 
+   ! Set TI, transformation matrix from interface DOFs to TP ref point (Note: TI allocated in AllocParameters)
+   CALL RigidTrnsf(Init, p, Init%TP_RefPoint, p%IDI, p%nDOFI, p%TI, ErrStat2, ErrMsg2); if(Failed()) return
+
    CALL AllocAry( MRR,             p%nDOFR, p%nDOFR, 'matrix MRR',      ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton')  
    CALL AllocAry( MLL,             p%nDOFL, p%nDOFL, 'matrix MLL',      ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton')  
    CALL AllocAry( MRL,             p%nDOFR, p%nDOFL, 'matrix MRL',      ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton')  
@@ -1644,15 +1672,11 @@ SUBROUTINE Craig_Bampton(Init, p, m, CBparams, ErrStat, ErrMsg)
    CALL AllocAry( CBparams%PhiL,   p%nDOFL, p%nDOFL, 'CBparams%PhiL',   ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton')
    CALL AllocAry( CBparams%PhiR,   p%nDOFL, p%nDOFR, 'CBparams%PhiR',   ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton')
    CALL AllocAry( CBparams%OmegaL, p%nDOFL,          'CBparams%OmegaL', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton')
-   
 
-   ! Set MRR, MLL, MRL, KRR, KLL, KRL, FGR, FGL, based on
-   !     Init%M, Init%K, and Init%FG data and indices p%IDR and p%IDL:
-   CALL BreakSysMtrx(Init, p, MRR, MLL, MRL, KRR, KLL, KRL, FGR, FGL)   
+   ! Set MRR, MLL, MRL, KRR, KLL, KRL, FGR, FGL, based on M, K, FG and indices IDR and IDL
+   ! NOTE: generic FEM code
+   CALL BreakSysMtrx(Init%M, Init%K, Init%FG, p%IDR, p%IDL, p%nDOFR, p%nDOFL, MRR, MLL, MRL, KRR, KLL, KRL, FGR, FGL)   
       
-   ! Set TI, transformation matrix from interface DOFs to TP ref point
-   CALL RigidTrnsf(Init, p, Init%TP_RefPoint, p%IDI, p%nDOFI, p%TI, ErrStat2, ErrMsg2); if(Failed()) return
-
    !................................
    ! Sets the following values, as documented in the SubDyn Theory Guide:
    !    CBparams%OmegaL (omega) and CBparams%PhiL from Eq. 2
@@ -1660,8 +1684,23 @@ SUBROUTINE Craig_Bampton(Init, p, m, CBparams, ErrStat, ErrMsg)
    !    CBparams%PhiR from Eq. 3
    !    CBparams%MBB, CBparams%MBM, and CBparams%KBB from Eq. 4.
    !................................
-   CALL CBMatrix(MRR, MLL, MRL, KRR, KLL, KRL, p%nDOFM, Init, &  ! < inputs
-                 CBparams%MBB, CBparams%MBM, CBparams%KBB, CBparams%PhiL, CBparams%PhiR, CBparams%OmegaL, ErrStat2, ErrMsg2, p)  ! <- outputs (p is also input )
+   CALL WrScr('   Performing Craig-Bampton decomposition')
+   IF (p%SttcSolve) THEN ! STATIC TREATMENT IMPROVEMENT
+      nM_Out=p%nDOFL ! Selecting all CB modes for outputs to the function below
+   ELSE
+      nM_Out=p%nDOFM ! Selecting only the requrested number of CB modes
+   ENDIF  
+   CALL CBMatrix(MRR, MLL, MRL, KRR, KLL, KRL, p%nDOFR, p%nDOFL, p%nDOFM, nM_Out, &  ! < inputs
+                 CBparams%MBB, CBparams%MBM, CBparams%KBB, CBparams%PhiL, CBparams%PhiR, CBparams%OmegaL, ErrStat2, ErrMsg2)  ! <- outputs
+
+   ! Set p%PhiL_T and p%PhiLInvOmgL2 for static improvement
+   IF (p%SttcSolve) THEN   
+      p%PhiL_T=TRANSPOSE(CBparams%PhiL) !transpose of PhiL for static improvement
+      DO I = 1, nM_Out
+         p%PhiLInvOmgL2(:,I) = CBparams%PhiL(:,I)* (1./CBparams%OmegaL(I)**2)
+      ENDDO 
+   END IF
+
    ! TODO TODO TODO DAMPING MATRIX 
    if(Failed()) return
       
@@ -1737,80 +1776,89 @@ END SUBROUTINE Craig_Bampton
 
 !------------------------------------------------------------------------------------------------------
 !> Partition matrices and vectors into Boundary (R) and internal (L) nodes
-!! MRR = M(IDR, IDR),  KRR = M(IDR, IDR), FGR = FG(IDR)
-!! MLL = M(IDL, IDL),  KRR = K(IDL, IDL), FGL = FG(IDL)
+!!  M = [ MRR, MRL ]
+!!      [ sym, MLL ]
+!! MRR = M(IDR, IDR),  KRR = M(IDR, IDR), FR = F(IDR)
+!! MLL = M(IDL, IDL),  KRR = K(IDL, IDL), FL = F(IDL)
 !! MRL = M(IDR, IDL),  KRR = K(IDR, IDL)
-SUBROUTINE BreakSysMtrx(Init, p, MRR, MLL, MRL, KRR, KLL, KRL, FGR, FGL   )
-   TYPE(SD_InitType),      INTENT(IN   )  :: Init         ! Input data for initialization routine
-   TYPE(SD_ParameterType), INTENT(IN   )  :: p  
-   REAL(ReKi),             INTENT(  OUT)  :: MRR(p%nDOFR, p%nDOFR)
-   REAL(ReKi),             INTENT(  OUT)  :: MLL(p%nDOFL, p%nDOFL) 
-   REAL(ReKi),             INTENT(  OUT)  :: MRL(p%nDOFR, p%nDOFL)
-   REAL(ReKi),             INTENT(  OUT)  :: KRR(p%nDOFR, p%nDOFR)
-   REAL(ReKi),             INTENT(  OUT)  :: KLL(p%nDOFL, p%nDOFL)
-   REAL(ReKi),             INTENT(  OUT)  :: KRL(p%nDOFR, p%nDOFL)
-   REAL(ReKi),             INTENT(  OUT)  :: FGR(p%nDOFR)
-   REAL(ReKi),             INTENT(  OUT)  :: FGL(p%nDOFL)
-   ! local variables
-   INTEGER(IntKi)          :: I, J, II, JJ
-   
-   !MRR = Init%M(p%IDR,p%IDR)
-   !KRR = Init%K(p%IDR,p%IDR)
-   DO I = 1, p%nDOFR   !Boundary DOFs
-      II = p%IDR(I)
-      FGR(I) = Init%FG(II)
-      DO J = 1, p%nDOFR
-         JJ = p%IDR(J)
-         MRR(I, J) = Init%M(II, JJ)
-         KRR(I, J) = Init%K(II, JJ)
+!! NOTE: generic code, TODO: move me to FEM
+SUBROUTINE BreakSysMtrx(MM, KK, FG, IDR, IDL, nR, nL, MRR, MLL, MRL, KRR, KLL, KRL, FGR, FGL)
+   REAL(ReKi),             INTENT(IN   )  :: MM(:,:)   !< Mass Matrix
+   REAL(ReKi),             INTENT(IN   )  :: KK(:,:)   !< Stiffness matrix
+   REAL(ReKi),             INTENT(IN   )  :: FG(:)     !< Force vector
+   INTEGER(IntKi),         INTENT(IN   )  :: nR
+   INTEGER(IntKi),         INTENT(IN   )  :: nL
+   INTEGER(IntKi),         INTENT(IN   )  :: IDR(nR)   !< Indices of leader DOFs
+   INTEGER(IntKi),         INTENT(IN   )  :: IDL(nL)   !< Indices of interior DOFs
+   REAL(ReKi),             INTENT(  OUT)  :: MRR(nR, nR)
+   REAL(ReKi),             INTENT(  OUT)  :: MLL(nL, nL) 
+   REAL(ReKi),             INTENT(  OUT)  :: MRL(nR, nL)
+   REAL(ReKi),             INTENT(  OUT)  :: KRR(nR, nR)
+   REAL(ReKi),             INTENT(  OUT)  :: KLL(nL, nL)
+   REAL(ReKi),             INTENT(  OUT)  :: KRL(nR, nL)
+   REAL(ReKi),             INTENT(  OUT)  :: FGR(nR)
+   REAL(ReKi),             INTENT(  OUT)  :: FGL(nL)
+   INTEGER(IntKi) :: I, J, II, JJ
+
+   ! RR: Leader/Boundary DOFs
+   DO I = 1, nR 
+      II = IDR(I)
+      FGR(I) = FG(II)
+      DO J = 1, nR
+         JJ = IDR(J)
+         MRR(I, J) = MM(II, JJ)
+         KRR(I, J) = KK(II, JJ)
       ENDDO
    ENDDO
-   
-   DO I = 1, p%nDOFL
-      II = p%IDL(I)
-      FGL(I) = Init%FG(II)
-      DO J = 1, p%nDOFL
-         JJ = p%IDL(J)
-         MLL(I, J) = Init%M(II, JJ)
-         KLL(I, J) = Init%K(II, JJ)
+   ! LL: Interior/follower DOFs
+   DO I = 1, nL
+      II = IDL(I)
+      FGL(I) = FG(II)
+      DO J = 1, nL
+         JJ = IDL(J)
+         MLL(I, J) = MM(II, JJ)
+         KLL(I, J) = KK(II, JJ)
       ENDDO
    ENDDO
-   
-   DO I = 1, p%nDOFR
-      II = p%IDR(I)
-      DO J = 1, p%nDOFL
-         JJ = p%IDL(J)
-         MRL(I, J) = Init%M(II, JJ)
-         KRL(I, J) = Init%K(II, JJ)   !Note KRL and MRL are getting data from a constraint-applied formatted M and K (i.e. Mbar and Kbar) this may not be legit!! RRD
-      ENDDO                           !I think this is fixed now since the constraint application occurs later
+   ! RL: cross terms
+   DO I = 1, nR 
+      II = IDR(I)
+      DO J = 1, nL
+         JJ = IDL(J)
+         MRL(I, J) = MM(II, JJ)
+         KRL(I, J) = KK(II, JJ) 
+      ENDDO 
    ENDDO
-      
 END SUBROUTINE BreakSysMtrx
 
 !------------------------------------------------------------------------------------------------------
-!> Sets the CB values, as documented in the SubDyn Theory Guide:
-! OmegaL (omega) and PhiL from Eq. 2
-! p%PhiL_T and p%PhiLInvOmgL2 for static improvement (will be added to theory guide later?)
-! PhiR from Eq. 3
-! MBB, MBM, and KBB from Eq. 4.
-!................................
-SUBROUTINE CBMatrix( MRR, MLL, MRL, KRR, KLL, KRL, nDOFM, Init, &
-                     MBB, MBM, KBB, PhiL, PhiR, OmegaL, ErrStat, ErrMsg,p)
-   TYPE(SD_InitType),      INTENT(IN)    :: Init ! TODO remove me
-   TYPE(SD_ParameterType), INTENT(INOUT) :: p    ! TODO remove m
-   INTEGER(IntKi),         INTENT(  in)  :: nDOFM
-   REAL(ReKi),             INTENT(  IN)  :: MRR( p%nDOFR, p%nDOFR)
-   REAL(ReKi),             INTENT(  IN)  :: MLL( p%nDOFL, p%nDOFL) 
-   REAL(ReKi),             INTENT(  IN)  :: MRL( p%nDOFR, p%nDOFL)
-   REAL(ReKi),             INTENT(  IN)  :: KRR( p%nDOFR, p%nDOFR)
-   REAL(ReKi),             INTENT(INOUT) :: KLL( p%nDOFL, p%nDOFL)  ! on exit, it has been factored (otherwise not changed)
-   REAL(ReKi),             INTENT(  IN)  :: KRL( p%nDOFR, p%nDOFL)
-   REAL(ReKi),             INTENT(INOUT) :: MBB( p%nDOFR, p%nDOFR)
-   REAL(ReKi),             INTENT(INOUT) :: MBM( p%nDOFR,   nDOFM)
-   REAL(ReKi),             INTENT(INOUT) :: KBB( p%nDOFR, p%nDOFR)
-   REAL(ReKi),             INTENT(INOUT) :: PhiR(p%nDOFL, p%nDOFR)   
-   REAL(ReKi),             INTENT(INOUT) :: PhiL(p%nDOFL, p%nDOFL)    !used to be PhiM(nDOFL,nDOFM), now it is more generic
-   REAL(ReKi),             INTENT(INOUT) :: OmegaL(p%nDOFL)   !used to be omegaM only   ! Eigenvalues
+!> Performs Craig-Bampton reduction based on partitioned matrices M and K
+!! Convention is: 
+!!    "R": leader DOF     ->    "B": reduced leader DOF
+!!    "L": interior DOF   ->    "M": reduced interior DOF (CB-modes)
+!! NOTE: 
+!!    - M_MM = Identity and K_MM = Omega*2 hence these matrices are not returned
+!!    - Possibility to get all the CB modes using the input nM_Out>nM
+!!
+!! NOTE: generic code, TODO: move me to FEM
+SUBROUTINE CBMatrix( MRR, MLL, MRL, KRR, KLL, KRL, nR, nL, nM, nM_Out,&
+                     MBB, MBM, KBB, PhiL, PhiR, OmegaL, ErrStat, ErrMsg)
+   INTEGER(IntKi),         INTENT(  in)  :: nR
+   INTEGER(IntKi),         INTENT(  in)  :: nL
+   INTEGER(IntKi),         INTENT(  in)  :: nM_Out
+   INTEGER(IntKi),         INTENT(  in)  :: nM
+   REAL(ReKi),             INTENT(  IN)  :: MRR( nR, nR)
+   REAL(ReKi),             INTENT(  IN)  :: MLL( nL, nL) 
+   REAL(ReKi),             INTENT(  IN)  :: MRL( nR, nL)
+   REAL(ReKi),             INTENT(  IN)  :: KRR( nR, nR)
+   REAL(ReKi),             INTENT(INOUT) :: KLL( nL, nL)  ! on exit, it has been factored (otherwise not changed)
+   REAL(ReKi),             INTENT(  IN)  :: KRL( nR, nL)
+   REAL(ReKi),             INTENT(INOUT) :: MBB( nR, nR)
+   REAL(ReKi),             INTENT(INOUT) :: MBM( nR, nM)
+   REAL(ReKi),             INTENT(INOUT) :: KBB( nR, nR)
+   REAL(ReKi),             INTENT(INOUT) :: PhiR(nL, nR) ! Guyan Modes   
+   REAL(ReKi),             INTENT(INOUT) :: PhiL(nL, nL) ! Craig-Bampton modes    TODO nM_out? 
+   REAL(ReKi),             INTENT(INOUT) :: OmegaL(nL)   ! Eigenvalues            TODO nM_out?
    INTEGER(IntKi),         INTENT(  OUT) :: ErrStat     ! Error status of the operation
    CHARACTER(*),           INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
    ! LOCAL VARIABLES
@@ -1818,93 +1866,72 @@ SUBROUTINE CBMatrix( MRR, MLL, MRL, KRR, KLL, KRL, nDOFM, Init, &
    REAL(ReKi) , allocatable               :: Temp(:, :)        ! temp matrix for intermediate steps [bjj: made allocatable to try to avoid stack issues]
    REAL(ReKi) , allocatable               :: PhiR_T_MLL(:,:)   ! PhiR_T_MLL(p%nDOFR,p%nDOFL) = transpose of PhiR * MLL (temporary storage)
    INTEGER                                :: I !, lwork !counter, and varibales for inversion routines
-   INTEGER                                :: DOFvar !placeholder used to get both PhiL or PhiM into 1 process
-   INTEGER                                :: ipiv(p%nDOFL) !the integer vector ipvt of length min(m,n), containing the pivot indices. 
+   INTEGER                                :: ipiv(nL) !the integer vector ipvt of length min(m,n), containing the pivot indices. 
                                                        !Returned as: a one-dimensional array of (at least) length min(m,n), containing integers,
                                                        !where 1 <= less than or equal to ipvt(i) <= less than or equal to m.
    INTEGER(IntKi)                         :: ErrStat2                                                                    
    CHARACTER(ErrMsgLen)                   :: ErrMsg2
    CHARACTER(*), PARAMETER                :: RoutineName = 'CBMatrix'
-                                                       
    ErrStat = ErrID_None 
    ErrMsg  = ''
    
-   CALL WrScr('   Calculating Internal Modal Eigenvectors')
-        
-   IF (p%SttcSolve) THEN ! STATIC TREATMENT IMPROVEMENT
-      DOFvar=p%nDOFL
-   ELSE
-      DOFvar=nDOFM !Initialize for normal cases, dynamic only      
-   ENDIF  
+   if (nM_out>nL) then
+      ErrMsg2='Cannot request more modes than internal degrees of Freedom'; ErrStat2=ErrID_Fatal; 
+      if(Failed()) return;
+   endif
    
    !....................................................
    ! Set OmegaL and PhiL from Eq. 2
    !....................................................
-   IF ( DOFvar > 0 ) THEN ! Only time this wouldn't happen is if no modes retained and no static improvement...
-      ! NOTE: 
-      !   bRemoveConstraint = False
-      !   bCheckSingularity = True
-      CALL EigenSolveWrap(KLL, MLL, p%nDOFL, DOFvar, .True., PhiL(:,1:DOFvar), OmegaL(1:DOFvar),  ErrStat2, ErrMsg2); if(Failed()) return
+   IF ( nM_out > 0 ) THEN ! Only time this wouldn't happen is if no modes retained and no static improvement...
+      ! bCheckSingularity = True
+      CALL EigenSolveWrap(KLL, MLL, nL, nM_out, .True., PhiL(:,1:nM_out), OmegaL(1:nM_out),  ErrStat2, ErrMsg2); if(Failed()) return
 
       ! --- Normalize PhiL
-      ! bjj: break up this equation to avoid as many tenporary variables on the stack
+      ! bjj: break up this equation to avoid as many temporary variables on the stack
       ! MU = MATMUL ( MATMUL( TRANSPOSE(PhiL), MLL ), PhiL )
-      CALL AllocAry( Temp , p%nDOFL , p%nDOFL , 'Temp' , ErrStat2 , ErrMsg2); if(Failed()) return
-      CALL AllocAry( MU   , p%nDOFL , p%nDOFL , 'Mu'   , ErrStat2 , ErrMsg2); if(Failed()) return
+      CALL AllocAry( Temp , nL , nL , 'Temp' , ErrStat2 , ErrMsg2); if(Failed()) return
+      CALL AllocAry( MU   , nL , nL , 'Mu'   , ErrStat2 , ErrMsg2); if(Failed()) return
       MU   = TRANSPOSE(PhiL)
       Temp = MATMUL( MU, MLL )
       MU   = MATMUL( Temp, PhiL )
       DEALLOCATE(Temp)
       ! PhiL = MATMUL( PhiL, MU2 )  !this is the nondimensionalization (MU2 is diagonal)   
-      DO I = 1, DOFvar
+      DO I = 1, nM_out
          PhiL(:,I) = PhiL(:,I) / SQRT( MU(I, I) )
       ENDDO    
-      DO I=DOFvar+1, p%nDOFL !loop done only if .not. p%SttcSolve .and. nDOFM < p%nDOFL (and actually, in that case, these values aren't used anywhere anyway)
+      DO I=nM_out+1, nL !loop done only if .not. p%SttcSolve .and. nDOFM < p%nDOFL (and actually, in that case, these values aren't used anywhere anyway)
          PhiL(:,I) = 0.0_ReKi
          OmegaL(I) = 0.0_ReKi
       END DO     
       DEALLOCATE(MU)
-      
-      !....................................................
-      ! Set p%PhiL_T and p%PhiLInvOmgL2 for static improvement
-      !....................................................
-      IF (p%SttcSolve) THEN   
-         p%PhiL_T=TRANSPOSE(PhiL) !transpose of PhiL for static improvement
-         DO I = 1, p%nDOFL
-            p%PhiLInvOmgL2(:,I) = PhiL(:,I)* (1./OmegaL(I)**2)
-         ENDDO 
-      END IF
-      
-   ! ELSE .not. p%SttcSolve .and. nDOFM < p%nDOFL (in this case, PhiL, OmegaL aren't used)      
    END IF
-      
       
    !....................................................
    ! Set PhiR from Eq. 3:
    !....................................................   
    ! now factor KLL to compute PhiR: KLL*PhiR=-TRANSPOSE(KRL)
    ! ** note this must be done after EigenSolveWrap() because it modifies KLL **
-   CALL LAPACK_getrf( p%nDOFL, p%nDOFL, KLL, ipiv, ErrStat2, ErrMsg2); if(Failed()) return
+   CALL LAPACK_getrf( nL, nL, KLL, ipiv, ErrStat2, ErrMsg2); if(Failed()) return
    
    PhiR = -1.0_ReKi * TRANSPOSE(KRL) !set "b" in Ax=b  (solve KLL * PhiR = - TRANSPOSE( KRL ) for PhiR)
-   CALL LAPACK_getrs( TRANS='N',N=p%nDOFL,A=KLL,IPIV=ipiv, B=PhiR, ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
+   CALL LAPACK_getrs( TRANS='N', N=nL, A=KLL, IPIV=ipiv, B=PhiR, ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
    
    !....................................................
    ! Set MBB, MBM, and KBB from Eq. 4:
    !....................................................
-   CALL AllocAry( PhiR_T_MLL,  p%nDOFR, p%nDOFL, 'PhiR_T_MLL', ErrStat2, ErrMsg2); if(Failed()) return
+   CALL AllocAry( PhiR_T_MLL,  nR, nL, 'PhiR_T_MLL', ErrStat2, ErrMsg2); if(Failed()) return
       
    PhiR_T_MLL = TRANSPOSE(PhiR)
    PhiR_T_MLL = MATMUL(PhiR_T_MLL, MLL)
    MBB = MATMUL(MRL, PhiR)
    MBB = MRR + MBB + TRANSPOSE( MBB ) + MATMUL( PhiR_T_MLL, PhiR )
-   
       
-   IF ( nDOFM .EQ. 0) THEN
+   IF ( nM == 0) THEN
       MBM = 0.0_ReKi
    ELSE
-      MBM = MATMUL( PhiR_T_MLL, PhiL(:,1:nDOFM))  ! last half of operation
-      MBM = MATMUL( MRL, PhiL(:,1:nDOFM) ) + MBM    !This had PhiM      
+      MBM = MATMUL( PhiR_T_MLL, PhiL(:,1:nM))  ! last half of operation
+      MBM = MATMUL( MRL, PhiL(:,1:nM) ) + MBM    !This had PhiM      
    ENDIF
    DEALLOCATE( PhiR_T_MLL )
    
@@ -2096,7 +2123,7 @@ SUBROUTINE SetParameters(Init, p, MBBb, MBmb, KBBb, FGRb, PhiRb, OmegaL, FGL, Ph
    REAL(ReKi),               INTENT(IN   )   :: PhiRb( p%nDOFL, p%nDOFI)   
    REAL(ReKi),               INTENT(IN   )   :: OmegaL(p%nDOFL)   
    REAL(ReKi),               INTENT(IN   )   :: FGRb(p%nDOFI) 
-   REAL(ReKi),               INTENT(IN   )   ::  FGL(p%nDOFL)
+   REAL(ReKi),               INTENT(IN   )   :: FGL(p%nDOFL)
    INTEGER(IntKi),           INTENT(  OUT)   :: ErrStat     ! Error status of the operation
    CHARACTER(*),             INTENT(  OUT)   :: ErrMsg      ! Error message if ErrStat /= ErrID_None
    ! local variables
@@ -2418,6 +2445,11 @@ SUBROUTINE PartitionDOFNodes_I_C_R_L(Init, m, p, ErrStat, ErrMsg)
    !
    call CleanUp()
 
+   print*,'DOF_I  ',p%IDI
+   print*,'DOF_L  ',p%IDL
+   print*,'DOF_C  ',p%IDC
+   print*,'Nodes_C',p%Nodes_C(:,1)
+   print*,'Nodes_L',p%Nodes_L
    print*,'Nodes_I',p%Nodes_I(:,1)
    print*,'Nodes_C',p%Nodes_C(:,1)
    print*,'Nodes_L',p%Nodes_L
