@@ -2310,7 +2310,7 @@ SUBROUTINE PartitionDOFNodes(Init, m, p, ErrStat, ErrMsg)
    integer(IntKi),          intent(  out) :: ErrStat     !< Error status of the operation
    character(*),            intent(  out) :: ErrMsg      !< Error message if ErrStat /= ErrID_None
    ! local variables
-   integer(IntKi)              :: I, J, c_B, c_F, c_L          ! counters
+   integer(IntKi)              :: I, J, c_B, c_F, c_L, c__          ! counters
    integer(IntKi)              :: iNode, iiNode
    integer(IntKi)              :: nNodes_R
    integer(IntKi), allocatable :: IDAll(:)
@@ -2416,10 +2416,12 @@ SUBROUTINE PartitionDOFNodes(Init, m, p, ErrStat, ErrMsg)
    ! --------------------------------------------------------------------------------
 
    ! Distribute the interface DOFs into R,F
-   c_B=0;  c_F=0 ! Counters over R and F dofs
+   c__=0; c_B=0;  c_F=0 ! Counters over R and F dofs
    do iiNode= 1,p%nNodes_I !Loop on interface nodes
       iNode = p%Nodes_I(iiNode,1)
       do J = 1, 6 ! DOFs: ItfTDXss    ItfTDYss    ItfTDZss    ItfRDXss    ItfRDYss    ItfRDZss
+          c__=c__+1
+          p%IDI__(c__) = p%NodesDOFtilde(iNode)%List(J) ! DOF number 
           if (p%Nodes_I(iiNode, J+1)==idBC_Leader) then
              c_B=c_B+1
              p%IDI_Rb(c_B) = p%NodesDOFtilde(iNode)%List(J) ! DOF number 
@@ -2431,13 +2433,15 @@ SUBROUTINE PartitionDOFNodes(Init, m, p, ErrStat, ErrMsg)
        enddo
    enddo
    ! Indices IDI__ = [IDI_B, IDI_F], interface
-   call concatenate_lists(p%IDI_Rb, p%IDI_F, p%IDI__, ErrStat2, ErrMsg2); if(Failed()) return
+   !call concatenate_lists(p%IDI_Rb, p%IDI_F, p%IDI__, ErrStat2, ErrMsg2); if(Failed()) return
 
    ! Distribute the reaction DOFs into R,F,L 
-   c_B=0; c_F=0; c_L=0; ! Counters over R, F, L dofs
+   c__=0; c_B=0; c_F=0; c_L=0; ! Counters over R, F, L dofs
    do iiNode= 1,p%nNodes_C !Loop on interface nodes
       iNode = p%Nodes_C(iiNode,1)
       do J = 1, 6 ! DOFs 
+          c__=c__+1
+          p%IDC__(c__) = p%NodesDOFtilde(iNode)%List(J) ! DOF number 
           if (p%Nodes_C(iiNode, J+1)==idBC_Leader) then
              c_B=c_B+1
              p%IDC_Rb(c_B) = p%NodesDOFtilde(iNode)%List(J) ! DOF number 
@@ -2453,7 +2457,9 @@ SUBROUTINE PartitionDOFNodes(Init, m, p, ErrStat, ErrMsg)
        enddo
    enddo
    ! Indices IDC__ = [IDC_B, IDC_F, IDC_L], interface
-   call concatenate_3lists(p%IDC_Rb, p%IDC_F, p%IDC_L, p%IDC__, ErrStat2, ErrMsg2); if(Failed()) return
+   !call concatenate_3lists(p%IDC_Rb, p%IDC_F, p%IDC_L, p%IDC__, ErrStat2, ErrMsg2); if(Failed()) return
+   !call sort_in_place(p%IDC__)
+
 
    ! Indices IDR__ = [IDI__, IDC__], interface
    !call concatenate_lists(p%IDI__, p%IDC__, p%IDR__, ErrStat2, ErrMsg2); if(Failed()) return
