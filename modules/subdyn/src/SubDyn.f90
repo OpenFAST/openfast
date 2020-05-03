@@ -852,10 +852,6 @@ DO I = 1, p%nNodes_C
       CALL Fatal(' Error in file "'//TRIM(SDInputFile)//'": Reaction lines must consist of 7 numerical values, followed by an optional string. Problematic line: "'//trim(Line)//'"')
       return
    endif
-   if (any(p%Nodes_C(I,:)<=0)) then
-      CALL Fatal(' Error in file "'//TRIM(SDInputFile)//'": For now, all DOF must be activated for reactions. Problematic line: "'//trim(Line)//'"')
-      return
-   endif
 ENDDO
 IF (Check ( p%nNodes_C > Init%NJoints , 'NReact must be less than number of joints')) return
 
@@ -1589,7 +1585,7 @@ END SUBROUTINE SD_AM2
 !> Perform Craig Bampton reduction
 SUBROUTINE Craig_Bampton(Init, p, m, CBparams, ErrStat, ErrMsg)
    TYPE(SD_InitType),     INTENT(INOUT)      :: Init        ! Input data for initialization routine
-   TYPE(SD_ParameterType),INTENT(INOUT)      :: p           ! Parameters
+   TYPE(SD_ParameterType),INTENT(INOUT),target::p           ! Parameters
    TYPE(SD_MiscVarType),  INTENT(IN   )      :: m
    TYPE(CB_MatArrays),    INTENT(INOUT)      :: CBparams    ! CB parameters that will be passed out for summary file use 
    INTEGER(IntKi),        INTENT(  OUT)      :: ErrStat     ! Error status of the operation
@@ -1603,15 +1599,13 @@ SUBROUTINE Craig_Bampton(Init, p, m, CBparams, ErrStat, ErrMsg)
    REAL(ReKi), ALLOCATABLE  :: KRL(:, :)
    REAL(ReKi), ALLOCATABLE  :: FGR(:)
    REAL(ReKi), ALLOCATABLE  :: FGL(:)
-   REAL(ReKi), ALLOCATABLE  :: MBBb(:, :)
-   REAL(ReKi), ALLOCATABLE  :: MBMb(:, :)
-   REAL(ReKi), ALLOCATABLE  :: KBBb(:, :)
-   REAL(ReKi), ALLOCATABLE  :: PhiRb(:, :)   
-   REAL(ReKi), ALLOCATABLE  :: FGRb(:) 
    REAL(ReKi)               :: JDamping1 ! temporary storage for first element of JDamping array 
    INTEGER(IntKi)           :: nM_Out, i
+   INTEGER(IntKi)           :: nR     !< Dimension of R DOFs (to switch between __R and R__)
+   INTEGER(IntKi), pointer  :: IDR(:) !< Alias to switch between IDR__ and ID__Rb
    INTEGER(IntKi)           :: ErrStat2
    CHARACTER(ErrMsgLen)     :: ErrMsg2
+   LOGICAL :: BC_Before_CB   ! If true, apply fixed BC to the system before doing CB reduction, for temporary bacward compatibility
    ErrStat = ErrID_None
    ErrMsg  = ""
 
@@ -1637,27 +1631,38 @@ SUBROUTINE Craig_Bampton(Init, p, m, CBparams, ErrStat, ErrMsg)
    ! Set TI, transformation matrix from interface DOFs to TP ref point (Note: TI allocated in AllocParameters)
    CALL RigidTrnsf(Init, p, Init%TP_RefPoint, p%IDI__, p%nDOFI__, p%TI, ErrStat2, ErrMsg2); if(Failed()) return
 
-   ! TODO Used __Rb instead of R__
-   CALL AllocAry( MRR,             p%nDOFR__, p%nDOFR__, 'matrix MRR',      ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton')  
+   ! Temporary backward compatibility
+   BC_Before_CB=p%nDOFC_L>0 ! if we have some free C DOFs
+   if(BC_Before_CB) then
+      print*,' > Boundary conditions will be applied before Craig-Bampton (New)'
+      nR  =  p%nDOF__Rb ! we remove the Fixed BC before performing the CB-reduction
+      IDR => p%ID__Rb
+   else
+      print*,' > Craig-Bampton will be applied before boundary conditions (Legacy)'
+      nR  =  p%nDOFR__   ! Old way, applying CB on full unconstrained system
+      IDR => p%IDR__
+   endif
+
+   ! NOTE: these below are either "R" or "Rb" matrices
+   CALL AllocAry( MRR,             nR       , nR       , 'matrix MRR',      ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton')  
    CALL AllocAry( MLL,             p%nDOF__L, p%nDOF__L, 'matrix MLL',      ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton')  
-   CALL AllocAry( MRL,             p%nDOFR__, p%nDOF__L, 'matrix MRL',      ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton')  
-   CALL AllocAry( KRR,             p%nDOFR__, p%nDOFR__, 'matrix KRR',      ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton')  
+   CALL AllocAry( MRL,             nR       , p%nDOF__L, 'matrix MRL',      ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton')  
+   CALL AllocAry( KRR,             nR       , nR       , 'matrix KRR',      ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton')  
    CALL AllocAry( KLL,             p%nDOF__L, p%nDOF__L, 'matrix KLL',      ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton')  
-   CALL AllocAry( KRL,             p%nDOFR__, p%nDOF__L, 'matrix KRL',      ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton')  
+   CALL AllocAry( KRL,             nR       , p%nDOF__L, 'matrix KRL',      ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton')  
    CALL AllocAry( FGL,             p%nDOF__L,          'array FGL',       ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton')  
-   CALL AllocAry( FGR,             p%nDOFR__,          'array FGR',       ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton')  
+   CALL AllocAry( FGR,             nR       ,          'array FGR',       ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton')  
       
-   CALL AllocAry( CBparams%MBB,    p%nDOFR__, p%nDOFR__, 'CBparams%MBB',    ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton')
-   CALL AllocAry( CBparams%MBM,    p%nDOFR__, p%nDOFM  , 'CBparams%MBM',    ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton')
-   CALL AllocAry( CBparams%KBB,    p%nDOFR__, p%nDOFR__, 'CBparams%KBB',    ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton')
+   CALL AllocAry( CBparams%MBB,    nR       , nR       , 'CBparams%MBB',    ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton')
+   CALL AllocAry( CBparams%MBM,    nR       , p%nDOFM  , 'CBparams%MBM',    ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton')
+   CALL AllocAry( CBparams%KBB,    nR       , nR       , 'CBparams%KBB',    ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton')
    CALL AllocAry( CBparams%PhiL,   p%nDOF__L, p%nDOF__L, 'CBparams%PhiL',   ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton')
-   CALL AllocAry( CBparams%PhiR,   p%nDOF__L, p%nDOFR__, 'CBparams%PhiR',   ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton')
+   CALL AllocAry( CBparams%PhiR,   p%nDOF__L, nR       , 'CBparams%PhiR',   ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton')
    CALL AllocAry( CBparams%OmegaL, p%nDOF__L,            'CBparams%OmegaL', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton')
 
    ! Set MRR, MLL, MRL, KRR, KLL, KRL, FGR, FGL, based on M, K, FG and indices IDR and IDL
    ! NOTE: generic FEM code
-   ! TODO use __Rb
-   CALL BreakSysMtrx(Init%M, Init%K, Init%FG, p%IDR__, p%ID__L, p%nDOFR__, p%nDOF__L, MRR, MLL, MRL, KRR, KLL, KRL, FGR, FGL)   
+   CALL BreakSysMtrx(Init%M, Init%K, Init%FG, IDR     , p%ID__L, nR       , p%nDOF__L, MRR, MLL, MRL, KRR, KLL, KRL, FGR, FGL)   
       
    !................................
    ! Sets the following values, as documented in the SubDyn Theory Guide:
@@ -1668,11 +1673,11 @@ SUBROUTINE Craig_Bampton(Init, p, m, CBparams, ErrStat, ErrMsg)
    !................................
    CALL WrScr('   Performing Craig-Bampton reduction '//trim(Num2LStr(p%nDOF_red))//' DOFs -> '//trim(Num2LStr(p%nDOFM))//' modes + '//trim(Num2LStr(p%nDOF__Rb))//' DOFs')
    IF (p%SttcSolve) THEN ! STATIC TREATMENT IMPROVEMENT
-      nM_Out=p%nDOF__L ! Selecting all CB modes for outputs to the function below ! TODO
+      nM_Out=p%nDOF__L ! Selecting all CB modes for outputs to the function below 
    ELSE
       nM_Out=p%nDOFM ! Selecting only the requrested number of CB modes
    ENDIF  
-   CALL CBMatrix(MRR, MLL, MRL, KRR, KLL, KRL, p%nDOFR__, p%nDOF__L, p%nDOFM, nM_Out, &  ! < inputs ! TODO
+   CALL CBMatrix(MRR, MLL, MRL, KRR, KLL, KRL, nR, p%nDOF__L, p%nDOFM, nM_Out, &  ! < inputs 
                  CBparams%MBB, CBparams%MBM, CBparams%KBB, CBparams%PhiL, CBparams%PhiR, CBparams%OmegaL, ErrStat2, ErrMsg2)  ! <- outputs
    if(Failed()) return
 
@@ -1685,42 +1690,14 @@ SUBROUTINE Craig_Bampton(Init, p, m, CBparams, ErrStat, ErrMsg)
    END IF
 
    ! TODO TODO TODO DAMPING MATRIX 
-      
-   ! to use a little less space, let's deallocate these arrays that we don't need anymore, then allocate the next set of temporary arrays:     
-   IF(ALLOCATED(MRR)  ) DEALLOCATE(MRR) 
-   IF(ALLOCATED(MLL)  ) DEALLOCATE(MLL) 
-   IF(ALLOCATED(MRL)  ) DEALLOCATE(MRL) 
-   IF(ALLOCATED(KRR)  ) DEALLOCATE(KRR) 
-   IF(ALLOCATED(KLL)  ) DEALLOCATE(KLL) 
-   IF(ALLOCATED(KRL)  ) DEALLOCATE(KRL) 
 
-   ! "b" stands for "bar"; "t" stands for "tilde"
-   ! TODO TODO TODO this is wrong
-   CALL AllocAry( MBBb,  p%nDOF__Rb, p%nDOF__Rb, 'matrix MBBb',  ErrStat2, ErrMsg2 ); if (Failed()) return
-   CALL AllocAry( MBmb,  p%nDOF__Rb, p%nDOFM,    'matrix MBmb',  ErrStat2, ErrMsg2 ); if (Failed()) return
-   CALL AllocAry( KBBb,  p%nDOF__Rb, p%nDOF__Rb, 'matrix KBBb',  ErrStat2, ErrMsg2 ); if (Failed()) return
-   CALL AllocAry( PhiRb, p%nDOF__L , p%nDOF__Rb, 'matrix PhiRb', ErrStat2, ErrMsg2 ); if (Failed()) return
-   CALL AllocAry( FGRb,  p%nDOF__Rb,             'array FGRb',   ErrStat2, ErrMsg2 ); if (Failed()) return
-   
-   !................................
-   ! Convert CBparams%MBB , CBparams%MBM , CBparams%KBB , CBparams%PhiR , FGR to
-   !                  MBBb,          MBMb,          KBBb,          PHiRb, FGRb
-   ! (throw out rows/columns of first matrices to create second matrices)
-   !................................
-   ! TODO avoid this all together
-   MBBb  = CBparams%MBB(p%nDOFR__-p%nDOFI__+1:p%nDOFR__, p%nDOFR__-p%nDOFI__+1:p%nDOFR__) 
-   KBBb  = CBparams%KBB(p%nDOFR__-p%nDOFI__+1:p%nDOFR__, p%nDOFR__-p%nDOFI__+1:p%nDOFR__)    
-IF (p%nDOFM > 0) THEN   
-   MBMb  = CBparams%MBM(p%nDOFR__-p%nDOFI__+1:p%nDOFR__, :               )
-END IF
-   FGRb  = FGR         (p%nDOFR__-p%nDOFI__+1:p%nDOFR__ )
-   PhiRb = CBparams%PhiR(              :, p%nDOFR__-p%nDOFI__+1:p%nDOFR__)
 
-   ! TODO TODO TODO Transform new damping matrix as well
-   !................................
-   ! set values needed to calculate outputs and update states:
-   !................................
-   CALL SetParameters(Init, p, MBBb, MBmb, KBBb, FGRb, PhiRb, CBparams%OmegaL, FGL, CBparams%PhiL, ErrStat2, ErrMsg2)  
+   if(.not.BC_Before_CB) then
+      ! We apply the BC now, removing unwanted DOFs
+      call applyConstr(CBParams, FGR)
+   endif
+
+   CALL SetParameters(Init, p, CBparams%MBB, CBparams%MBM, CBparams%KBB, FGR, CBparams%PhiR, CBparams%OmegaL, FGL, CBparams%PhiL, ErrStat2, ErrMsg2)  
    CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'Craig_Bampton')
       
    CALL CleanUpCB()
@@ -1748,12 +1725,49 @@ contains
       IF(ALLOCATED(KRL)  ) DEALLOCATE(KRL) 
       IF(ALLOCATED(FGL)  ) DEALLOCATE(FGL) 
       IF(ALLOCATED(FGR)  ) DEALLOCATE(FGR) 
-      IF(ALLOCATED(MBBb) ) DEALLOCATE(MBBb) 
-      IF(ALLOCATED(MBmb) ) DEALLOCATE(MBmb) 
-      IF(ALLOCATED(KBBb) ) DEALLOCATE(KBBb) 
-      IF(ALLOCATED(PhiRb)) DEALLOCATE(PhiRb) 
-      IF(ALLOCATED(FGRb) ) DEALLOCATE(FGRb)             
    end subroutine CleanUpCB
+
+   !> Remove fixed DOF from system, this is in case the CB was done on an unconstrained system
+   !! NOTE: PhiL and OmegaL are not modified
+   subroutine applyConstr(CBParams, FGR)
+      TYPE(CB_MatArrays),  INTENT(INOUT) :: CBparams    !< NOTE: data will be reduced (andw hence reallocated)
+      REAL(ReKi),ALLOCATABLE,INTENT(INOUT) :: FGR(:)      !< NOTE: data will be reduced (andw hence reallocated)
+      REAL(ReKi), ALLOCATABLE  :: MBBb(:, :)
+      REAL(ReKi), ALLOCATABLE  :: MBMb(:, :)
+      REAL(ReKi), ALLOCATABLE  :: KBBb(:, :)
+      REAL(ReKi), ALLOCATABLE  :: PhiRb(:, :)   
+      REAL(ReKi), ALLOCATABLE  :: FGRb(:) 
+      ! "b" stands for "bar"
+      ! TODO TODO TODO this is wrong
+      CALL AllocAry( MBBb,  p%nDOF__Rb, p%nDOF__Rb, 'matrix MBBb',  ErrStat2, ErrMsg2 );
+      CALL AllocAry( MBmb,  p%nDOF__Rb, p%nDOFM,    'matrix MBmb',  ErrStat2, ErrMsg2 );
+      CALL AllocAry( KBBb,  p%nDOF__Rb, p%nDOF__Rb, 'matrix KBBb',  ErrStat2, ErrMsg2 );
+      CALL AllocAry( PhiRb, p%nDOF__L , p%nDOF__Rb, 'matrix PhiRb', ErrStat2, ErrMsg2 );
+      CALL AllocAry( FGRb,  p%nDOF__Rb,             'array FGRb',   ErrStat2, ErrMsg2 );
+      !................................
+      ! Convert CBparams%MBB , CBparams%MBM , CBparams%KBB , CBparams%PhiR , FGR to
+      !                  MBBb,          MBMb,          KBBb,          PHiRb, FGRb
+      ! (throw out rows/columns of first matrices to create second matrices)
+      !................................
+      ! TODO avoid this all together
+      MBBb  = CBparams%MBB(p%nDOFR__-p%nDOFI__+1:p%nDOFR__, p%nDOFR__-p%nDOFI__+1:p%nDOFR__) 
+      KBBb  = CBparams%KBB(p%nDOFR__-p%nDOFI__+1:p%nDOFR__, p%nDOFR__-p%nDOFI__+1:p%nDOFR__)    
+      IF (p%nDOFM > 0) THEN   
+         MBMb  = CBparams%MBM(p%nDOFR__-p%nDOFI__+1:p%nDOFR__, :               )
+      END IF
+      FGRb  = FGR         (p%nDOFR__-p%nDOFI__+1:p%nDOFR__ )
+      PhiRb = CBparams%PhiR(              :, p%nDOFR__-p%nDOFI__+1:p%nDOFR__)
+      deallocate(CBparams%MBB)
+      deallocate(CBparams%KBB)
+      deallocate(CBparams%MBM)
+      deallocate(CBparams%PhiR)
+      deallocate(FGR)
+      call move_alloc(MBBb,  CBparams%MBB)
+      call move_alloc(KBBb,  CBparams%KBB)
+      call move_alloc(MBMb,  CBparams%MBM)
+      call move_alloc(PhiRb, CBparams%PhiR)
+      call move_alloc(FGRb,  FGR)
+   end subroutine applyConstr
 
 END SUBROUTINE Craig_Bampton 
 
@@ -2389,11 +2403,8 @@ SUBROUTINE PartitionDOFNodes(Init, m, p, ErrStat, ErrMsg)
    p%nDOF__L  = p%nDOFC_L             + p%nDOFL_L ! OK, generic
 
    ! --- Safety checks ! TODO: these checks are temporary!
-   if (p%nDOFC_F /= p%nNodes_C*6) then
-      call Fatal('Wrong number of DOF for reactions nodes, likely some reaction nodes are special joints and should be cantilever instead.'); return
-   endif
    if (p%nDOFI_Rb /= p%nNodes_I*6) then
-      call Fatal('Wrong number of DOF for interface nodes, likely some interface nodes are special joints and should be cantilever instead.'); return
+      call Fatal('Wrong number of DOF for interface nodes, likely some interface nodes are special joints or are fixed'); return
    endif
 
    ! Set the index arrays
@@ -2816,22 +2827,27 @@ SUBROUTINE OutSummary(Init, p, InitInput, CBparams, ErrStat,ErrMsg)
     ENDDO  
  
     ! Set TI2, transformation matrix from R DOFs to SubDyn Origin
-   CALL AllocAry( TI2,    p%nDOFR__, 6,       'TI2',    ErrStat2, ErrMsg2 ); if(Failed()) return
-   CALL RigidTrnsf(Init, p, (/0._ReKi, 0._ReKi, 0._ReKi/), p%IDR__, p%nDOFR__, TI2, ErrStat2, ErrMsg2); if(Failed()) return
-   MRB=matmul(TRANSPOSE(TI2),matmul(CBparams%MBB,TI2)) !Equivalent mass matrix of the rigid body
-   deallocate(TI2)
-   WRITE(UnSum, '(A)') SectionDivide
-   WRITE(UnSum, '(A)') 'Rigid Body Equivalent Mass Matrix w.r.t. (0,0,0).'
-   WRITE(UnSum, '(A)') SubSectionDivide
-   WRITE(UnSum, '(A)') 'MRB'
-   WRITE(UnSum, '(7(A15))') ' ', (MatHds(i), i = 1, 6   )
-   DO i=1,6
-        WRITE(UnSum, '(A15, 6(e15.6))')   MatHds(i), (MRB(i,j), j = 1, 6)
-   ENDDO 
-   
-   WRITE(UnSum, '()') 
-   WRITE(UnSum, '(A,E15.6)')    "SubDyn's Total Mass (structural and non-structural)=", MRB(1,1) 
-   WRITE(UnSum, '(A,3(E15.6))') "SubDyn's Total Mass CM coordinates (Xcm,Ycm,Zcm)   =", (/-MRB(3,5),-MRB(1,6), MRB(1,5)/) /MRB(1,1)        
+    ! TODO TODO TODO
+   if (p%nDOFR__/=p%nDOF__Rb) then
+      WRITE(UnSum, '(A)') 'TODO, Equivalent mass matrix not available yet'
+   else
+      CALL AllocAry( TI2,    p%nDOFR__ , 6,       'TI2',    ErrStat2, ErrMsg2 ); if(Failed()) return
+      CALL RigidTrnsf(Init, p, (/0._ReKi, 0._ReKi, 0._ReKi/), p%IDR__, p%nDOFR__, TI2, ErrStat2, ErrMsg2); if(Failed()) return
+      MRB=matmul(TRANSPOSE(TI2),matmul(CBparams%MBB,TI2)) !Equivalent mass matrix of the rigid body
+      WRITE(UnSum, '(A)') SectionDivide
+      WRITE(UnSum, '(A)') 'Rigid Body Equivalent Mass Matrix w.r.t. (0,0,0).'
+      WRITE(UnSum, '(A)') SubSectionDivide
+      WRITE(UnSum, '(A)') 'MRB'
+      WRITE(UnSum, '(7(A15))') ' ', (MatHds(i), i = 1, 6   )
+      DO i=1,6
+           WRITE(UnSum, '(A15, 6(e15.6))')   MatHds(i), (MRB(i,j), j = 1, 6)
+      ENDDO 
+      
+      WRITE(UnSum, '()') 
+      WRITE(UnSum, '(A,E15.6)')    "SubDyn's Total Mass (structural and non-structural)=", MRB(1,1) 
+      WRITE(UnSum, '(A,3(E15.6))') "SubDyn's Total Mass CM coordinates (Xcm,Ycm,Zcm)   =", (/-MRB(3,5),-MRB(1,6), MRB(1,5)/) /MRB(1,1)        
+      deallocate(TI2)
+   endif
    
 #ifdef SD_SUMMARY_DEBUG
 

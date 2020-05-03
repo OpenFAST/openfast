@@ -885,8 +885,6 @@ CONTAINS
             else if (p%Nodes_C(I,J+1)==0) then ! User input 0=Free, fill be part of Internal DOF
                Init%BCs( (I-1)*6+J, 2) = idBC_Internal
                p%Nodes_C(I, J+1)       = idBC_Internal
-               print*,'BC 0 not allowed for now, node',iNode
-               STOP
             else if (p%Nodes_C(I,J+1)==2) then ! User input 2=Leader DOF
                Init%BCs( (I-1)*6+J, 2) = idBC_Leader
                p%Nodes_C(I, J+1)       = idBC_Leader
