@@ -65,6 +65,7 @@ SUBROUTINE SDOut_Init( Init, y,  p, misc, InitOut, WtrDpth, ErrStat, ErrMsg )
    INTEGER(IntKi)                 :: iiElem ! Loop counter on element index
    INTEGER(IntKi)                 :: nElemPerNode ! Number of elements connecting to a node
    type(MeshAuxDataType), pointer :: pLst                                                   !< Alias to shorten notation and highlight code similarities
+   real(ReKi), allocatable :: T_TIreact(:,:) ! Transpose of TIreact, temporary
    ErrStat = 0      
    ErrMsg=""
 
@@ -182,8 +183,12 @@ SUBROUTINE SDOut_Init( Init, y,  p, misc, InitOut, WtrDpth, ErrStat, ErrMsg )
             call ConfigOutputNode_MKF_ID(pLst, iElem, iiNode=1, iStore=iiElem, NodeID2=iNode) 
          ENDDO
       ENDDO
-      ! Compute p%TIreact, matrix to calculate single point reaction at the base of structure
-      CALL ReactMatx(Init, WtrDpth, p, ErrStat, ErrMsg)
+      ! Compute p%TIreact, rigid transf. matrix from reaction DOFs to base structure point (0,0,-WD)
+      CALL AllocAry(p%TIreact, 6, p%nDOFC__, 'TIReact  ', ErrStat2, ErrMsg2); if(Failed()) return
+      CALL AllocAry(T_TIreact, p%nDOFC__, 6, 'TIReact_T', ErrStat2, ErrMsg2); if(Failed()) return
+      call RigidTrnsf(Init, p, (/0.0_Reki, 0.0_ReKi, -WtrDpth /), p%IDC__, p%nDOFC__, T_TIreact, ErrStat2, ErrMsg2); if(Failed()) return
+      p%TIreact=transpose(T_TIreact)
+      deallocate(T_TIreact)
    ENDIF
    RETURN
 
@@ -245,58 +250,12 @@ CONTAINS
 
 
 END SUBROUTINE SDOut_Init
-
 !------------------------------------------------------------------------------------------------------
-!>This subroutine allocates and calculated TIreact, Matrix to go from local reactions at constrained nodes to single point reactions
-SUBROUTINE ReactMatx(Init, WtrDpth, p, ErrStat, ErrMsg)
-   TYPE(SD_InitType),      INTENT(IN   ) :: Init    !< Input data for initialization routine
-   REAL(ReKi),             INTENT(IN   ) :: WtrDpth !< Water depth
-   TYPE(SD_ParameterType), INTENT(INOUT) :: p       !< Parameter data
-   INTEGER(IntKi),         INTENT(  OUT) :: ErrStat !< Error status of the operation
-   CHARACTER(*),           INTENT(  OUT) :: ErrMsg  !< Error message if ErrStat /= ErrID_None
-   ! local variables
-   INTEGER                  :: I !counter
-   INTEGER(IntKi)           :: iDOF, iiDOF, iNode, nDOFPerNode !
-   REAL(ReKi)               :: dx, dy, dz ! distances from reaction points to subdyn origin (mudline)
-   REAL(ReKi), dimension(6) :: Line
-   ErrStat=ErrID_None
-   ErrMsg=""
-   
-   CALL AllocAry(p%TIreact, 6, p%nDOFC__, 'TIReact', ErrStat, ErrMsg); if ( ErrStat /= ErrID_None ) return
-   
-   ! --- TI: Transformation matrix from interface points to ref point
-   p%TIreact(1:6,:)=0 !Initialize
-   DO I = 1, p%nDOFC__
-      iDOF = p%IDC__(I) ! DOF index in constrained system
-      iNode       = p%DOFtilde2Nodes(iDOF,1) ! First column is node 
-      nDOFPerNode = p%DOFtilde2Nodes(iDOF,2) ! Second column is number of DOF per node
-      iiDOF       = p%DOFtilde2Nodes(iDOF,3) ! Third column is dof index for this joint (1-6 for cantilever)
-      if ((iiDOF<1) .or. (iiDOF>6)) then
-         ErrMsg  = 'ReactMatx, interface node DOF number is not valid. DOF:'//trim(Num2LStr(iDOF))//' Node:'//trim(Num2LStr(iNode))//' iiDOF:'//trim(Num2LStr(iiDOF)); ErrStat = ErrID_Fatal
-         return
-      endif
-      if (nDOFPerNode/=6) then
-         ErrMsg  = 'ReactMatx, interface node doesnt have 6 DOFs. DOF:'//trim(Num2LStr(iDOF))//' Node:'//trim(Num2LStr(iNode))//' nDOF:'//trim(Num2LStr(nDOFPerNode)); ErrStat = ErrID_Fatal
-         return
-      endif
-      
-      dx = Init%Nodes(iNode, 2)          
-      dy = Init%Nodes(iNode, 3)          
-      dz = Init%Nodes(iNode, 4) + WtrDpth
-
-      CALL RigidTransformationLine(dx,dy,dz,iiDOF,Line) !returns Line
-      p%TIreact(1:6, I) = Line
-   enddo
-
-END SUBROUTINE ReactMatx
-
-!====================================================================================================
 !> Writes the data stored in the y variable to the correct indexed postions in WriteOutput
 !! This is called by SD_CalcOutput() at each time step.
 !! This routine does fill Allouts
 !! note that this routine assumes m%u_TP and m%udotdot_TP have been set before calling 
 !!     this routine (which is done in SD_CalcOutput() and SD CalcContStateDeriv)
-!---------------------------------------------------------------------------------------------------- 
 SUBROUTINE SDOut_MapOutputs( CurrentTime, u,p,x, y, m, AllOuts, ErrStat, ErrMsg )
    real(DbKi),                    intent( in    )  :: CurrentTime          ! Current simulation time in seconds
    type(SD_InputType),            intent( in )     :: u                    ! SubDyn module's input data
@@ -419,10 +378,10 @@ SUBROUTINE SDOut_MapOutputs( CurrentTime, u,p,x, y, m, AllOuts, ErrStat, ErrMsg 
          ErrStat = ErrID_Fatal
          RETURN
       END IF
-      ReactNs = 0.0 !Initialize
+      ReactNs = 0.0_ReKi !Initialize
       DO I=1,p%nNodes_C   !Do for each constrained node, they are ordered as given in the input file and so as in the order of y2mesh
-         FK_elm2=0. !Initialize for cumulative force
-         FM_elm2=0. !Initialize
+         FK_elm2=0._ReKi !Initialize for cumulative force
+         FM_elm2=0._ReKi !Initialize
          pLst => p%MOutLst3(I)
          !Find the joint forces
          DO J=1,SIZE(pLst%ElmIDs(1,:))  !for all the elements connected (normally 1)

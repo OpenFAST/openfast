@@ -1937,53 +1937,6 @@ CONTAINS
 END SUBROUTINE CBMatrix
 
 !------------------------------------------------------------------------------------------------------
-!> Returns a rigid body transformation matrix from nDOF to 6 reference DOF: T_ref (6 x nDOF), such that Uref = T_ref.U_subset
-!! Typically called to get: 
-!!    - the transformation from the interface points to the TP point
-!!    - the transformation from the bottom nodes to SubDyn origin (0,0,)
-SUBROUTINE RigidTrnsf(Init, p, RefPoint, DOF, nDOF, T_ref, ErrStat, ErrMsg)
-   TYPE(SD_InitType),      INTENT(IN   )  :: Init        ! Input data for initialization routine
-   TYPE(SD_ParameterType), INTENT(IN   )  :: p        
-   REAL(ReKi),             INTENT(IN   )  :: RefPoint(3) ! Coordinate of the reference point 
-   INTEGER(IntKi),         INTENT(IN   )  :: nDOF        ! Number of DOFS 
-   INTEGER(IntKi),         INTENT(IN   )  :: DOF(nDOF)  ! DOF indices that are used to create the transformation matrix
-   REAL(ReKi),             INTENT(  OUT)  :: T_ref(nDOF,6)  ! matrix that relates the subset of DOFs to the reference point
-   INTEGER(IntKi),         INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-   CHARACTER(*),           INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
-   ! local variables
-   INTEGER                                :: I, iDOF, iiDOF, iNode, nDOFPerNode
-   REAL(ReKi)                             :: dx, dy, dz
-   REAL(ReKi), dimension(6)               :: Line
-   ErrStat = ErrID_None
-   ErrMsg  = ""
-   T_ref(:,:)=0
-   DO I = 1, nDOF
-      iDOF        = DOF(I) ! DOF index in constrained system
-      iNode       = p%DOFtilde2Nodes(iDOF,1) ! First column is node 
-      nDOFPerNode = p%DOFtilde2Nodes(iDOF,2) ! Second column is number of DOF per node
-      iiDOF       = p%DOFtilde2Nodes(iDOF,3) ! Third column is dof index for this joint (1-6 for cantilever)
-
-      if ((iiDOF<1) .or. (iiDOF>6)) then
-         ErrMsg  = 'RigidTrnsf, node DOF number is not valid. DOF:'//trim(Num2LStr(iDOF))//' Node:'//trim(Num2LStr(iNode))//' iiDOF:'//trim(Num2LStr(iiDOF)); ErrStat = ErrID_Fatal
-         return
-      endif
-      if (nDOFPerNode/=6) then
-         ErrMsg  = 'RigidTrnsf, node doesnt have 6 DOFs. DOF:'//trim(Num2LStr(iDOF))//' Node:'//trim(Num2LStr(iNode))//' nDOF:'//trim(Num2LStr(nDOFPerNode)); ErrStat = ErrID_Fatal
-         return
-      endif
-      
-      dx = Init%Nodes(iNode, 2) - RefPoint(1)
-      dy = Init%Nodes(iNode, 3) - RefPoint(2)
-      dz = Init%Nodes(iNode, 4) - RefPoint(3)
-
-      CALL RigidTransformationLine(dx,dy,dz,iiDOF,Line) !returns Line
-      T_ref(I, 1:6) = Line
-   ENDDO
-END SUBROUTINE RigidTrnsf
-
-
-
-!------------------------------------------------------------------------------------------------------
 !> Wrapper function for eigen value analyses, for two cases:
 !! Case1: K and M are taken "as is", this is used for the "LL" part of the matrix
 !! Case2: K and M contain some constraints lines, and they need to be removed from the Mass/Stiffness matrix. Used for full system
