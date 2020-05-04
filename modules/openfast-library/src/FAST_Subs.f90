@@ -4959,7 +4959,7 @@ END SUBROUTINE FillOutputAry
 !> This routine writes all the committed meshes to VTK-formatted files. It doesn't bother with returning an error code.
 SUBROUTINE WrVTK_AllMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, OpFM, HD, SD, ExtPtfm, SrvD, MAPp, FEAM, MD, Orca, IceF, IceD)
    use FVW_IO, only: WrVTK_FVW
-   use VTK, only: set_vtk_no_coordinate_transform
+   use FVW_VTK, only: set_vtk_no_coordinate_transform
 
    TYPE(FAST_ParameterType), INTENT(IN   ) :: p_FAST              !< Parameters for the glue code
    TYPE(FAST_OutputFileType),INTENT(IN   ) :: y_FAST              !< Output variables for the glue code
@@ -5327,7 +5327,7 @@ END SUBROUTINE WrVTK_BasicMeshes
 !! returning an error code.
 SUBROUTINE WrVTK_Surfaces(t_global, p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, OpFM, HD, SD, SrvD, MAPp, FEAM, MD, Orca, IceF, IceD)
    use FVW_IO, only: WrVTK_FVW
-   use VTK, only: set_vtk_no_coordinate_transform
+   use FVW_VTK, only: set_vtk_no_coordinate_transform
 
    REAL(DbKi),               INTENT(IN   ) :: t_global            !< Current global time
    TYPE(FAST_ParameterType), INTENT(IN   ) :: p_FAST              !< Parameters for the glue code

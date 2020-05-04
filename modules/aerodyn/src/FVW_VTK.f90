@@ -1,12 +1,27 @@
-module VTK
+module FVW_VTK
     !use PrecisionMod, only: ReKi
     use NWTC_Library, only: ReKi, GetNewUnit
-    use FVW_Types, only: FVW_VTK_Misc
     implicit none
 !     character(8), parameter :: RFMT='F14.5'
     !character(8), parameter :: RFMT='E24.15E3'
     character(8), parameter :: RFMT='E17.8E3'
     character(8), parameter :: IFMT='I7'
+
+   TYPE, PUBLIC :: FVW_VTK_Misc
+      integer :: vtk_unit
+      logical :: bFileOpen=.false.
+
+      integer :: nData=0;
+      integer :: nPoints=0;
+
+      logical :: bBinary = .false.
+      character(len=255) :: buffer
+
+      ! Reference Frame
+      logical                   :: bChangeFrame =.false.
+      real(ReKi),dimension(3,3) :: T_g2b
+      real(ReKi),dimension(3)   :: PO_g
+   END TYPE FVW_VTK_Misc
 
     character(1), parameter :: NL = char(10) ! New Line character
 
@@ -554,4 +569,4 @@ contains
             call vtk_close_file(mvtk)
         endif ! file opening
     end subroutine
-end module VTK
+end module FVW_VTK

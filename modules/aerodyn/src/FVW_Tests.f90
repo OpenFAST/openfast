@@ -8,6 +8,7 @@ module FVW_Tests
    use FVW_Wings
    use FVW_IO
    use FVW_BiotSavart
+   use FVW_VTK, only : FVW_VTK_Misc
 
    implicit none
 
