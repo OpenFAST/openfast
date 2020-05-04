@@ -18,7 +18,6 @@ module FVW_VTK
       character(len=255) :: buffer
 
       ! Reference Frame
-      logical                   :: bChangeFrame =.false.
       real(ReKi),dimension(3,3) :: T_g2b
       real(ReKi),dimension(3)   :: PO_g
    END TYPE FVW_VTK_Misc
@@ -54,7 +53,6 @@ contains
       mvtk%vtk_unit = -1           !< VTK output unit [-]
       mvtk%bFileOpen = .false.     !< binary file is open [-]
       mvtk%bBinary = .false.       !< write binary files [-]
-      mvtk%bChangeFrame = .false.  !< change to blade ref frame [-]
       mvtk%nData = 0               !< number of data lines [-]
       mvtk%nPoints = 0             !< number of points [-]
    end subroutine
@@ -73,14 +71,8 @@ contains
         real(ReKi),dimension(3,3), intent(in) :: T_g2b_in
         real(ReKi),dimension(3)  , intent(in) :: PO_g_in
         type(FVW_VTK_Misc),intent(inout) :: mvtk
-        mvtk%bChangeFrame=.true.
         mvtk%T_g2b=T_g2b_in
         mvtk%PO_g=PO_g_in
-    end subroutine
-
-    subroutine set_vtk_no_coordinate_transform(mvtk)
-        type(FVW_VTK_Misc),intent(inout) :: mvtk
-        mvtk%bChangeFrame=.false.
     end subroutine
 
     logical function vtk_new_ascii_file(filename,label,mvtk)
@@ -146,9 +138,10 @@ contains
     ! ------------------------------------------------------------------------- 
     ! --- POLYDATA STUFF
     ! ------------------------------------------------------------------------- 
-    subroutine vtk_dataset_polydata(Points,mvtk)
+    subroutine vtk_dataset_polydata(Points,mvtk,bladeFrame)
         real(ReKi), dimension(:,:),intent(in) :: Points  !< 3 x n
         type(FVW_VTK_Misc),intent(inout) :: mvtk
+        logical, intent(in) :: bladeFrame
         integer :: i
         if ( mvtk%bFileOpen ) then
             mvtk%nPoints=size(Points,2)
@@ -156,7 +149,7 @@ contains
                 write(mvtk%vtk_unit)'DATASET POLYDATA'//NL
                 write(mvtk%buffer,'(A,I0,A)') 'POINTS ', mvtk%nPoints ,' double'
                 write(mvtk%vtk_unit)trim(mvtk%buffer)//NL
-                if (mvtk%bChangeFrame)  then
+                if (bladeFrame)  then
                     do i=1,mvtk%nPoints
                         write(mvtk%vtk_unit)matmul(mvtk%T_g2b,Points(1:3,i)-mvtk%PO_g)
                     enddo
@@ -169,7 +162,7 @@ contains
             else
                 write(mvtk%vtk_unit,'(A)') 'DATASET POLYDATA'
                 write(mvtk%vtk_unit,'(A,I0,A)') 'POINTS ', mvtk%nPoints ,' double'
-                if (mvtk%bChangeFrame)  then
+                if (bladeFrame)  then
                     do i=1,mvtk%nPoints
                         write(mvtk%vtk_unit,'(3'//RFMT//')') matmul(mvtk%T_g2b,Points(1:3,i)-mvtk%PO_g)
                     enddo

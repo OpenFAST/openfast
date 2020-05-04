@@ -4662,7 +4662,7 @@ SUBROUTINE WriteOutputToFile(n_t_global, t_global, p_FAST, y_FAST, ED, BD, AD14,
    TYPE(BeamDyn_Data),       INTENT(IN   ) :: BD                  !< BeamDyn data
    TYPE(ServoDyn_Data),      INTENT(IN   ) :: SrvD                !< ServoDyn data
    TYPE(AeroDyn14_Data),     INTENT(IN   ) :: AD14                !< AeroDyn14 data
-   TYPE(AeroDyn_Data),       INTENT(IN   ) :: AD                  !< AeroDyn data
+   TYPE(AeroDyn_Data),       INTENT(INOUT) :: AD                  !< AeroDyn data      ! Out so the AD%m%FVW%vtk misc vars can be changed
    TYPE(InflowWind_Data),    INTENT(IN   ) :: IfW                 !< InflowWind data
    TYPE(OpenFOAM_Data),      INTENT(IN   ) :: OpFM                !< OpenFOAM data
    TYPE(HydroDyn_Data),      INTENT(IN   ) :: HD                  !< HydroDyn data
@@ -4959,7 +4959,6 @@ END SUBROUTINE FillOutputAry
 !> This routine writes all the committed meshes to VTK-formatted files. It doesn't bother with returning an error code.
 SUBROUTINE WrVTK_AllMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, OpFM, HD, SD, ExtPtfm, SrvD, MAPp, FEAM, MD, Orca, IceF, IceD)
    use FVW_IO, only: WrVTK_FVW
-   use FVW_VTK, only: set_vtk_no_coordinate_transform
 
    TYPE(FAST_ParameterType), INTENT(IN   ) :: p_FAST              !< Parameters for the glue code
    TYPE(FAST_OutputFileType),INTENT(IN   ) :: y_FAST              !< Output variables for the glue code
@@ -4969,7 +4968,7 @@ SUBROUTINE WrVTK_AllMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, O
    TYPE(BeamDyn_Data),       INTENT(IN   ) :: BD                  !< BeamDyn data
    TYPE(ServoDyn_Data),      INTENT(IN   ) :: SrvD                !< ServoDyn data
    TYPE(AeroDyn14_Data),     INTENT(IN   ) :: AD14                !< AeroDyn14 data
-   TYPE(AeroDyn_Data),       INTENT(IN   ) :: AD                  !< AeroDyn data
+   TYPE(AeroDyn_Data),       INTENT(IN   ) :: AD                  !< AeroDyn data      ! Out so the AD%m%FVW%vtk misc vars can be changed
    TYPE(InflowWind_Data),    INTENT(IN   ) :: IfW                 !< InflowWind data
    TYPE(OpenFOAM_Data),      INTENT(IN   ) :: OpFM                !< OpenFOAM data
    TYPE(HydroDyn_Data),      INTENT(IN   ) :: HD                  !< HydroDyn data
@@ -5118,16 +5117,10 @@ SUBROUTINE WrVTK_AllMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, O
                call MeshWrVTK(p_FAST%TurbinePos, AD%m%FVW_u(1)%WingsMesh(k), trim(VTK_path)//'.FVW_WingsMesh'//trim(num2lstr(k)), y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, Twidth, AD%Input(1)%BladeMotion(k) )
                !call MeshWrVTK(p_FAST%TurbinePos, AD%Input(1)%BladeMotion(K), trim(p_FAST%OutFileRoot)//'.AD_BladeMotion'//trim(num2lstr(k)), y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2 )
             END DO
+            ! Free wake
+            call WrVTK_FVW(AD%p%FVW, AD%x(1)%FVW, AD%z(1)%FVW, AD%m%FVW, trim(VTK_path)//'.FVW', y_FAST%VTK_count, Twidth, bladeFrame=.FALSE.)  ! bladeFrame==.FALSE. to output in global coords
          end if
       end if
-         ! Free wake
-!FIXME: Should the wake info be in a different routine?
-      if (allocated(AD%m%FVW_u)) then
-         if (allocated(AD%m%FVW_u(1)%WingsMesh)) then
-             call set_vtk_no_coordinate_transform() ! Output in global coords
-             call WrVTK_FVW(AD%p%FVW, AD%x(1)%FVW, AD%z(1)%FVW, AD%m%FVW, trim(VTK_path)//'.FVW', y_FAST%VTK_count, Twidth)
-          endif
-      end if   
    END IF
    
 ! HydroDyn            
@@ -5327,7 +5320,6 @@ END SUBROUTINE WrVTK_BasicMeshes
 !! returning an error code.
 SUBROUTINE WrVTK_Surfaces(t_global, p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, OpFM, HD, SD, SrvD, MAPp, FEAM, MD, Orca, IceF, IceD)
    use FVW_IO, only: WrVTK_FVW
-   use FVW_VTK, only: set_vtk_no_coordinate_transform
 
    REAL(DbKi),               INTENT(IN   ) :: t_global            !< Current global time
    TYPE(FAST_ParameterType), INTENT(IN   ) :: p_FAST              !< Parameters for the glue code
@@ -5410,11 +5402,9 @@ SUBROUTINE WrVTK_Surfaces(t_global, p_FAST, y_FAST, MeshMapData, ED, BD, AD14, A
    END IF   
 
 ! Free wake
-!FIXME: is there a better way of checking?
    if (allocated(AD%m%FVW_u)) then
       if (allocated(AD%m%FVW_u(1)%WingsMesh)) then
-         call set_vtk_no_coordinate_transform() ! Output in global coords
-         call WrVTK_FVW(AD%p%FVW, AD%x(1)%FVW, AD%z(1)%FVW, AD%m%FVW, trim(VTK_path)//'.FVW', y_FAST%VTK_count, Twidth)
+         call WrVTK_FVW(AD%p%FVW, AD%x(1)%FVW, AD%z(1)%FVW, AD%m%FVW, trim(VTK_path)//'.FVW', y_FAST%VTK_count, Twidth, bladeFrame=.FALSE.)  ! bladeFrame==.FALSE. to output in global coords
       end if   
    end if   
 

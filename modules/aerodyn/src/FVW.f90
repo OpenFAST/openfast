@@ -176,6 +176,7 @@ end subroutine FVW_Init
 
 ! ==============================================================================
 subroutine FVW_InitMiscVars( p, m, ErrStat, ErrMsg )
+   use FVW_VTK, only : vtk_misc_init
    type(FVW_ParameterType),         intent(in   )  :: p              !< Parameters
    type(FVW_MiscVarType),           intent(inout)  :: m              !< Initial misc/optimization variables
    integer(IntKi),                  intent(  out)  :: ErrStat        !< Error status of the operation
@@ -877,7 +878,7 @@ end subroutine FVW_CalcConstrStateResidual
 ! All of the calculated output channels are placed into the m%AllOuts(:), while the channels selected for outputs are
 ! placed in the y%WriteOutput(:) array.
 subroutine FVW_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, ErrStat, ErrMsg )
-   use FVW_VTK, only: set_vtk_coordinate_transform, set_vtk_no_coordinate_transform
+   use FVW_VTK, only: set_vtk_coordinate_transform
    use FVW_VortexTools, only: interpextrap_cp2node
    real(DbKi),                      intent(in   )  :: t           !< Current simulation time in seconds
    type(FVW_InputType),             intent(in   )  :: u           !< Inputs at Time t
@@ -950,13 +951,13 @@ subroutine FVW_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, ErrStat,
          m%VTKlastTime = t
          if ((p%VTKCoord==2).or.(p%VTKCoord==3)) then
             ! Hub reference coordinates, for export only, ALL VTK Will be exported in this coordinate system!
-!            call set_vtk_coordinate_transform(u%HubOrientation,u%HubPosition,mvtk)
-            call WrVTK_FVW(p, x, z, m, 'vtk_fvw/'//trim(p%RootName)//'FVW_Hub', m%VTKStep, 9)
+            ! Note: hubOrientation and HubPosition are optional, but required for bladeFrame==TRUE
+            call WrVTK_FVW(p, x, z, m, 'vtk_fvw/'//trim(p%RootName)//'FVW_Hub', m%VTKStep, 9, bladeFrame=.TRUE.,  &
+                     HubOrientation=real(u%HubOrientation,ReKi),HubPosition=real(u%HubPosition,ReKi))
          endif
          if ((p%VTKCoord==1).or.(p%VTKCoord==3)) then
             ! Global coordinate system, ALL VTK will be exported in global
-!            call set_vtk_no_coordinate_transform(mvtk)
-            call WrVTK_FVW(p, x, z, m, 'vtk_fvw/'//trim(p%RootName)//'FVW_Glb', m%VTKStep, 9)
+            call WrVTK_FVW(p, x, z, m, 'vtk_fvw/'//trim(p%RootName)//'FVW_Glb', m%VTKStep, 9, bladeFrame=.FALSE.)
          endif
       endif
    endif

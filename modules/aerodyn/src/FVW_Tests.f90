@@ -625,7 +625,9 @@ contains
       integer(IntKi) :: nC1, nC2
       integer(IntKi) :: nDepth, nSpan
       integer(IntKi) :: SmoothModel
+      logical :: bladeFrame   !< Output in blade frame instead of global coordinate frame
       iStat=0
+      bladeFrame=.FALSE.
 
       ! --- Creating two lattice
       allocate(LatticePoints1(3,2,2)) 
@@ -643,8 +645,8 @@ contains
       CALL MeshMe(LatticePoints1,(/0.,0.,0./))
       CALL MeshMe(LatticePoints2,(/0.,0.,1./))
 
-      CALL WrVTK_Lattice('Points1.vtk',mvtk,LatticePoints1, LatticeGamma1)
-      CALL WrVTK_Lattice('Points2.vtk',mvtk,LatticePoints2, LatticeGamma2)
+      CALL WrVTK_Lattice('Points1.vtk',mvtk,LatticePoints1, LatticeGamma1, bladeframe=bladeframe)
+      CALL WrVTK_Lattice('Points2.vtk',mvtk,LatticePoints2, LatticeGamma2, bladeframe=bladeframe)
 
       ! --- Convert lattice 1 to segments
       nSpan  = size(LatticePoints1,2)
@@ -660,7 +662,7 @@ contains
       iHeadC=1
       CALL LatticeToSegments(LatticePoints1, LatticeGamma1, 1, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC, .true., .true. )
       CALL printall()
-      CALL WrVTK_Segments('Points1_seg.vtk', mvtk, SegPoints, SegConnct, SegGamma, SegEpsilon) 
+      CALL WrVTK_Segments('Points1_seg.vtk', mvtk, SegPoints, SegConnct, SegGamma, SegEpsilon, bladeFrame) 
 
       allocate(Uind(1:3,1) ); Uind=0.0_ReKi
       allocate(CPs (1:3,1) ); 
@@ -687,7 +689,7 @@ contains
       iHeadC=1
       CALL LatticeToSegments(LatticePoints2, LatticeGamma2, 1, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC , .true., .true.)
       CALL printall()
-      CALL WrVTK_Segments('Points2_seg.vtk', mvtk, SegPoints, SegConnct, SegGamma, SegEpsilon) 
+      CALL WrVTK_Segments('Points2_seg.vtk', mvtk, SegPoints, SegConnct, SegGamma, SegEpsilon, bladeFrame) 
 
       ! --- Concatenate both
       nP = nP1 + nP2
@@ -703,7 +705,7 @@ contains
       CALL LatticeToSegments(LatticePoints1, LatticeGamma1, 1, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC, .true. , .true.)
       CALL LatticeToSegments(LatticePoints2, LatticeGamma2, 1, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC, .true. , .true.)
       CALL printall()
-      CALL WrVTK_Segments('PointsBoth_seg.vtk', mvtk, SegPoints, SegConnct, SegGamma, SegEpsilon) 
+      CALL WrVTK_Segments('PointsBoth_seg.vtk', mvtk, SegPoints, SegConnct, SegGamma, SegEpsilon, bladeFrame) 
 
 
    contains
