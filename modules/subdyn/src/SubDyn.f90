@@ -1591,6 +1591,7 @@ SUBROUTINE SD_Craig_Bampton(Init, p, CB, ErrStat, ErrMsg)
    CHARACTER(*),          INTENT(  OUT)      :: ErrMsg      ! Error message if ErrStat /= ErrID_None   
    ! local variables
    REAL(ReKi), ALLOCATABLE  :: FGR(:), FGL(:), FGB(:), FGM(:) !< Partitioned Force (R/L), and CB reduced forces(B/M)
+   REAL(ReKi), ALLOCATABLE  :: PhiRb(:, :)  ! Purely to avoid loosing these modes for output ! TODO, kept for backward compatibility of Summary file
    REAL(ReKi)               :: JDamping1 ! temporary storage for first element of JDamping array 
    INTEGER(IntKi)           :: i
    INTEGER(IntKi)           :: nR     !< Dimension of R DOFs (to switch between __R and R__)
@@ -1665,12 +1666,15 @@ SUBROUTINE SD_Craig_Bampton(Init, p, CB, ErrStat, ErrMsg)
       ENDDO 
    END IF
 
+   CALL AllocAry(PhiRb,  nL, nR, 'PhiRb',   ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if(.not.BC_Before_CB) then
       ! We apply the BC now, removing unwanted DOFs
-      call applyConstr(CB, FGB)
+      call applyConstr(CB, FGB, PhiRb)
+   else
+      PhiRb=CB%PhiR ! Remove me in the future
    endif
-
-   CALL SetParameters(Init, p, CB%MBB, CB%MBM, CB%KBB, CB%PhiR, CB%OmegaL, CB%PhiL, FGL, FGB, FGM, ErrStat2, ErrMsg2)  
+   ! TODO, right now using PhiRb instead of CB%PhiR, keeping PhiR in harmony with OmegaL for SummaryFile
+   CALL SetParameters(Init, p, CB%MBB, CB%MBM, CB%KBB, PhiRb, CB%OmegaL, CB%PhiL, FGL, FGB, FGM, ErrStat2, ErrMsg2)  
    CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'Craig_Bampton')
       
    CALL CleanUpCB()
@@ -1694,24 +1698,26 @@ contains
       IF(ALLOCATED(FGL)  ) DEALLOCATE(FGL) 
       IF(ALLOCATED(FGM)  ) DEALLOCATE(FGM) 
       IF(ALLOCATED(FGB)  ) DEALLOCATE(FGB) 
+      IF(ALLOCATED(PhiRb)) DEALLOCATE(PhiRb) 
    end subroutine CleanUpCB
 
    !> Remove fixed DOF from system, this is in case the CB was done on an unconstrained system
    !! NOTE: PhiL and OmegaL are not modified
-   subroutine applyConstr(CBParams, FGB)
+   subroutine applyConstr(CBParams, FGB, PhiRb)
       TYPE(CB_MatArrays),  INTENT(INOUT) :: CBparams    !< NOTE: data will be reduced (andw hence reallocated)
-      REAL(ReKi),ALLOCATABLE,INTENT(INOUT) :: FGB(:)      !< NOTE: data will be reduced (andw hence reallocated)
+      REAL(ReKi),ALLOCATABLE,INTENT(INOUT) :: FGB(:)    !< NOTE: data will be reduced (andw hence reallocated)
+      REAL(ReKi),ALLOCATABLE,INTENT(INOUT) :: PhiRb(:,:)!< NOTE: data will be reduced (andw hence reallocated)
+      !REAL(ReKi), ALLOCATABLE  :: PhiRb(:, :)   
       REAL(ReKi), ALLOCATABLE  :: MBBb(:, :)
       REAL(ReKi), ALLOCATABLE  :: MBMb(:, :)
       REAL(ReKi), ALLOCATABLE  :: KBBb(:, :)
-      REAL(ReKi), ALLOCATABLE  :: PhiRb(:, :)   
       REAL(ReKi), ALLOCATABLE  :: FGBb(:) 
       ! "b" stands for "bar"
       CALL AllocAry( MBBb,  p%nDOF__Rb, p%nDOF__Rb, 'matrix MBBb',  ErrStat2, ErrMsg2 );
       CALL AllocAry( MBmb,  p%nDOF__Rb, p%nDOFM,    'matrix MBmb',  ErrStat2, ErrMsg2 );
       CALL AllocAry( KBBb,  p%nDOF__Rb, p%nDOF__Rb, 'matrix KBBb',  ErrStat2, ErrMsg2 );
-      CALL AllocAry( PhiRb, p%nDOF__L , p%nDOF__Rb, 'matrix PhiRb', ErrStat2, ErrMsg2 );
       CALL AllocAry( FGBb,  p%nDOF__Rb,             'array FGBb',   ErrStat2, ErrMsg2 );
+      !CALL AllocAry( PhiRb, p%nDOF__L , p%nDOF__Rb, 'matrix PhiRb', ErrStat2, ErrMsg2 );
       !................................
       ! Convert CBparams%MBB , CBparams%MBM , CBparams%KBB , CBparams%PhiR , FGB to
       !                  MBBb,          MBMb,          KBBb,          PHiRb, FGBb
@@ -1728,12 +1734,12 @@ contains
       deallocate(CBparams%MBB)
       deallocate(CBparams%KBB)
       deallocate(CBparams%MBM)
-      deallocate(CBparams%PhiR)
+      !deallocate(CBparams%PhiR)
       call move_alloc(MBBb,  CBparams%MBB)
       call move_alloc(KBBb,  CBparams%KBB)
       call move_alloc(MBMb,  CBparams%MBM)
-      call move_alloc(PhiRb, CBparams%PhiR)
       call move_alloc(FGBb,  FGB)
+      !call move_alloc(PhiRb, CBparams%PhiR)
    end subroutine applyConstr
 
 END SUBROUTINE SD_Craig_Bampton 
