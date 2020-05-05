@@ -1596,10 +1596,8 @@ SUBROUTINE SD_Craig_Bampton(Init, p, CB, ErrStat, ErrMsg)
    INTEGER(IntKi)           :: i
    INTEGER(IntKi)           :: nR     !< Dimension of R DOFs (to switch between __R and R__)
    INTEGER(IntKi)           :: nL, nM, nM_out
-   INTEGER(IntKi), pointer  :: IDR(:) !< Alias to switch between IDR__ and ID__Rb
    INTEGER(IntKi)           :: ErrStat2
    CHARACTER(ErrMsgLen)     :: ErrMsg2
-   LOGICAL :: BC_Before_CB   ! If true, apply fixed BC to the system before doing CB reduction, for temporary bacward compatibility
    character(*), parameter :: RoutineName = 'SD_Craig_Bampton'
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -1622,18 +1620,6 @@ SUBROUTINE SD_Craig_Bampton(Init, p, CB, ErrStat, ErrMsg)
       
    CALL AllocParameters(p, p%nDOFM, ErrStat2, ErrMsg2);                                  ; if (Failed()) return
 
-   ! Temporary backward compatibility
-   BC_Before_CB=p%nDOFC_L>0 ! if we have some free C DOFs
-   if(BC_Before_CB) then
-      print*,' > Boundary conditions will be applied before Craig-Bampton (New)'
-      nR  =  p%nDOF__Rb ! we remove the Fixed BC before performing the CB-reduction
-      IDR => p%ID__Rb
-   else
-      print*,' > Craig-Bampton will be applied before boundary conditions (Legacy)'
-      nR  =  p%nDOFR__   ! Old way, applying CB on full unconstrained system
-      IDR => p%IDR__
-   endif
-   ! 
    IF (p%SttcSolve) THEN ! STATIC TREATMENT IMPROVEMENT
       nM_Out=p%nDOF__L ! Selecting all CB modes for outputs to the function below 
    ELSE
@@ -1641,6 +1627,7 @@ SUBROUTINE SD_Craig_Bampton(Init, p, CB, ErrStat, ErrMsg)
    ENDIF  
    nL = p%nDOF__L
    nM = p%nDOFM
+   nR =  p%nDOF__Rb ! we remove the Fixed BC before performing the CB-reduction
 
    CALL WrScr('   Performing Craig-Bampton reduction '//trim(Num2LStr(p%nDOF_red))//' DOFs -> '//trim(Num2LStr(p%nDOFM))//' modes + '//trim(Num2LStr(p%nDOF__Rb))//' DOFs')
    CALL AllocAry( FGL,       nL,        'array FGL', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)  
@@ -1654,7 +1641,7 @@ SUBROUTINE SD_Craig_Bampton(Init, p, CB, ErrStat, ErrMsg)
    CALL AllocAry( CB%PhiR,   nL, nR,    'CB%PhiR',   ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    CALL AllocAry( CB%OmegaL, nM_Out,    'CB%OmegaL', ErrStat2, ErrMsg2 ); if(Failed()) return
 
-   CALL CraigBamptonReduction(Init%M, Init%K, IDR, nR, p%ID__L, nL, nM, nM_Out, CB%MBB, CB%MBM, CB%KBB, CB%PhiL, CB%PhiR, CB%OmegaL, ErrStat2, ErrMsg2,&
+   CALL CraigBamptonReduction(Init%M, Init%K, p%ID__Rb, nR, p%ID__L, nL, nM, nM_Out, CB%MBB, CB%MBM, CB%KBB, CB%PhiL, CB%PhiR, CB%OmegaL, ErrStat2, ErrMsg2,&
                               Init%FG, FGR, FGL, FGB, FGM)
    if(Failed()) return
 
@@ -1667,12 +1654,7 @@ SUBROUTINE SD_Craig_Bampton(Init, p, CB, ErrStat, ErrMsg)
    END IF
 
    CALL AllocAry(PhiRb,  nL, nR, 'PhiRb',   ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if(.not.BC_Before_CB) then
-      ! We apply the BC now, removing unwanted DOFs
-      call applyConstr(CB, FGB, PhiRb)
-   else
-      PhiRb=CB%PhiR ! Remove me in the future
-   endif
+   PhiRb=CB%PhiR ! Remove me in the future
    ! TODO, right now using PhiRb instead of CB%PhiR, keeping PhiR in harmony with OmegaL for SummaryFile
    CALL SetParameters(Init, p, CB%MBB, CB%MBM, CB%KBB, PhiRb, CB%OmegaL, CB%PhiL, FGL, FGB, FGM, ErrStat2, ErrMsg2)  
    CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'Craig_Bampton')
@@ -1701,47 +1683,6 @@ contains
       IF(ALLOCATED(PhiRb)) DEALLOCATE(PhiRb) 
    end subroutine CleanUpCB
 
-   !> Remove fixed DOF from system, this is in case the CB was done on an unconstrained system
-   !! NOTE: PhiL and OmegaL are not modified
-   subroutine applyConstr(CBParams, FGB, PhiRb)
-      TYPE(CB_MatArrays),  INTENT(INOUT) :: CBparams    !< NOTE: data will be reduced (andw hence reallocated)
-      REAL(ReKi),ALLOCATABLE,INTENT(INOUT) :: FGB(:)    !< NOTE: data will be reduced (andw hence reallocated)
-      REAL(ReKi),ALLOCATABLE,INTENT(INOUT) :: PhiRb(:,:)!< NOTE: data will be reduced (andw hence reallocated)
-      !REAL(ReKi), ALLOCATABLE  :: PhiRb(:, :)   
-      REAL(ReKi), ALLOCATABLE  :: MBBb(:, :)
-      REAL(ReKi), ALLOCATABLE  :: MBMb(:, :)
-      REAL(ReKi), ALLOCATABLE  :: KBBb(:, :)
-      REAL(ReKi), ALLOCATABLE  :: FGBb(:) 
-      ! "b" stands for "bar"
-      CALL AllocAry( MBBb,  p%nDOF__Rb, p%nDOF__Rb, 'matrix MBBb',  ErrStat2, ErrMsg2 );
-      CALL AllocAry( MBmb,  p%nDOF__Rb, p%nDOFM,    'matrix MBmb',  ErrStat2, ErrMsg2 );
-      CALL AllocAry( KBBb,  p%nDOF__Rb, p%nDOF__Rb, 'matrix KBBb',  ErrStat2, ErrMsg2 );
-      CALL AllocAry( FGBb,  p%nDOF__Rb,             'array FGBb',   ErrStat2, ErrMsg2 );
-      !CALL AllocAry( PhiRb, p%nDOF__L , p%nDOF__Rb, 'matrix PhiRb', ErrStat2, ErrMsg2 );
-      !................................
-      ! Convert CBparams%MBB , CBparams%MBM , CBparams%KBB , CBparams%PhiR , FGB to
-      !                  MBBb,          MBMb,          KBBb,          PHiRb, FGBb
-      ! (throw out rows/columns of first matrices to create second matrices)
-      !................................
-      ! TODO avoid this all together
-      MBBb  = CBparams%MBB(p%nDOFR__-p%nDOFI__+1:p%nDOFR__, p%nDOFR__-p%nDOFI__+1:p%nDOFR__) 
-      KBBb  = CBparams%KBB(p%nDOFR__-p%nDOFI__+1:p%nDOFR__, p%nDOFR__-p%nDOFI__+1:p%nDOFR__)    
-      IF (p%nDOFM > 0) THEN   
-         MBMb  = CBparams%MBM(p%nDOFR__-p%nDOFI__+1:p%nDOFR__, :               )
-      END IF
-      FGBb  = FGB         (p%nDOFR__-p%nDOFI__+1:p%nDOFR__ )
-      PhiRb = CBparams%PhiR(              :, p%nDOFR__-p%nDOFI__+1:p%nDOFR__)
-      deallocate(CBparams%MBB)
-      deallocate(CBparams%KBB)
-      deallocate(CBparams%MBM)
-      !deallocate(CBparams%PhiR)
-      call move_alloc(MBBb,  CBparams%MBB)
-      call move_alloc(KBBb,  CBparams%KBB)
-      call move_alloc(MBMb,  CBparams%MBM)
-      call move_alloc(FGBb,  FGB)
-      !call move_alloc(PhiRb, CBparams%PhiR)
-   end subroutine applyConstr
-
 END SUBROUTINE SD_Craig_Bampton 
 
 !> Extract rigid body mass without SSI
@@ -1765,12 +1706,12 @@ SUBROUTINE SD_Guyan_RigidBodyMass(Init, p, MBB, ErrStat, ErrMsg)
    ! --- Remove SSI from Mass and stiffness matrix
    CALL InsertSoilMatrices(Init%M, Init%K, Init, p, ErrStat2, ErrMsg2, Substract=.True.);
 
-   ! --- Perform CB reduction to get MBB
-   nR = p%nDOFR__
-   nL = p%nDOF__L
-   nM = 0 
-   nM_out = 0  ! TODO nM_out is not well implemented
-   if(allocated(MBB)) deallocate(MBB) 
+   ! --- Perform Guyan reduction to get MBB
+   nR     = p%nDOFR__   ! Using interface + reaction nodes
+   nL     = p%nDOF__L
+   nM     = 0           ! No CB modes (Guyan)
+   nM_out = 0
+   if(allocated(MBB)) deallocate(MBB)
    CALL AllocAry( MBB,    nR, nR, 'MBB',    ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    CALL AllocAry( MBM,    nR, nM, 'MBM',    ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    CALL AllocAry( KBB,    nR, nR, 'KBB',    ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -2312,7 +2253,7 @@ SUBROUTINE ConstructUFL( u, p, m, UFL )
    type(SD_InputType),     intent(in   )  :: u ! Inputs
    type(SD_ParameterType), intent(in   )  :: p ! Parameters
    type(SD_MiscVarType),   intent(inout)  :: m ! Misc, for storage optimization of Fext and Fext_red
-   real(ReKi)          ,   intent(out)    :: UFL(p%nDOFL_L)
+   real(ReKi)          ,   intent(out)    :: UFL(p%nDOF__L)
    integer :: iMeshNode, iSDNode ! indices of u-mesh nodes and SD nodes
    integer :: nMembers
    real(ReKi), parameter :: myNaN = -9999998.989_ReKi 
@@ -2338,7 +2279,7 @@ SUBROUTINE ConstructUFL( u, p, m, UFL )
    ! --- Reduced vector of external force
    m%Fext_red = matmul(transpose(p%T_red), m%Fext)
    UFL=0
-   UFL= m%Fext_red(p%IDL_L)
+   UFL= m%Fext_red(p%ID__L)
 
 END SUBROUTINE ConstructUFL
 
@@ -2533,7 +2474,7 @@ SUBROUTINE OutSummary(Init, p, InitInput, CBparams, ErrStat,ErrMsg)
    ! write CB system matrices
    !-------------------------------------------------------------------------------------------------------------
    WRITE(UnSum, '(A)') SectionDivide
-   WRITE(UnSum, '(A)') 'CB Matrices (PhiM,PhiR) (no constraint applied)'
+   WRITE(UnSum, '(A)') 'CB Matrices (PhiM,PhiR) (constraint applied)'
    
    WRITE(UnSum, '(A)') SubSectionDivide
    IF (p%nDOFM > 0) THEN
@@ -2623,7 +2564,7 @@ SUBROUTINE OutSummary(Init, p, InitInput, CBparams, ErrStat,ErrMsg)
    ! write CB system matrices
    !-------------------------------------------------------------------------------------------------------------   
    WRITE(UnSum, '(A)') SectionDivide
-   WRITE(UnSum, '(A)') 'Additional CB Matrices (MBB,MBM,KBB) (no constraint applied)'
+   WRITE(UnSum, '(A)') 'Additional CB Matrices (MBB,MBM,KBB) (constraint applied)'
         
    WRITE(UnSum, '(A)') SubSectionDivide
    CALL WrMatrix( CBparams%MBB, UnSum, 'e15.6', 'MBB' ) 
