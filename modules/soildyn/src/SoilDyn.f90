@@ -518,21 +518,11 @@ subroutine SlD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg 
             Displacement(1:3) = u%SoilMesh%TranslationDisp(1:3,i)                 ! Translations -- This is R8Ki in the mesh
             Displacement(4:6) = GetSmllRotAngs(u%SoilMesh%Orientation(1:3,1:3,i), ErrStat2, ErrMsg2); if (Failed()) return;   ! Small angle assumption should be valid here -- Note we are assuming reforientation is identity
 
-            if (p%DLL_Model == 2) then
-               Displacement(3) = 0.0_R8Ki
-               Displacement(6) = 0.0_R8Ki
-            end if
- 
             call    REDWINinterface_CalcOutput( p%DLL_Trgt, p%DLL_Model, Displacement, Force, m%dll_data(i), ErrStat2, ErrMsg2 ); if (Failed()) return;
 
                ! store new states if not recalc
             if (.not. TimeStepRecalc) then
                m%dll_dataPREV(i) = m%dll_data(i)
-            endif
-
-            if (p%DLL_Model == 2) then
-               Force(3) = 0.0_R8Ki
-               Force(6) = 0.0_R8Ki
             endif
 
             ! Return reaction force onto the resulting point mesh

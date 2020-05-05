@@ -4508,7 +4508,7 @@ SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
    END IF
       
       ! set number of corrections to be used for this time step:
-   IF ( p_FAST%CompElast == Module_BD ) THEN ! BD accelerations have fewer spikes with these corrections on the first several time steps
+   IF ( p_FAST%CompElast == Module_BD .or. p_FAST%CompSoil == Module_SlD ) THEN ! BD accelerations have fewer spikes with these corrections on the first several time steps, and SoilDyn works better with HydroDyn.
       if (n_t_global > 2) then ! this 2 should probably be related to p_FAST%InterpOrder
          NumCorrections = p_FAST%NumCrctn
       elseif (n_t_global == 0) then
