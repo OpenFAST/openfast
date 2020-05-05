@@ -258,47 +258,132 @@ SUBROUTINE BreakSysMtrx(MM, KK, IDR, IDL, nR, nL, MRR, MLL, MRL, KRR, KLL, KRL, 
 END SUBROUTINE BreakSysMtrx
 
 !------------------------------------------------------------------------------------------------------
+!> Performs Craig-Bampton reduction of M and K matrices and optional Force vector
+!! TODO: (Damping  optional)
+!! Convention is: 
+!!    "R": leader DOF     ->    "B": reduced leader DOF
+!!    "L": interior DOF   ->    "M": reduced interior DOF (CB-modes)
+!! NOTE: 
+!!    - M_MM = Identity and K_MM = Omega*2 hence these matrices are not returned
+!!    - Possibility to get more CB modes using the input nM_Out>nM
+!!
+!! NOTE: generic code
+SUBROUTINE CraigBamptonReduction(MM, KK, IDR, nR, IDL, nL, nM, nM_Out, MBB, MBM, KBB, PhiL, PhiR, OmegaL, ErrStat, ErrMsg, FG, FGR, FGL, FGB, FGM) 
+   REAL(ReKi),             INTENT(IN   ) :: MM(:, :) !< Mass matrix
+   REAL(ReKi),             INTENT(IN   ) :: KK(:, :) !< Stiffness matrix
+   INTEGER(IntKi),         INTENT(IN   ) :: nR
+   INTEGER(IntKi),         INTENT(IN   ) :: IDR(nR)   !< Indices of leader DOFs
+   INTEGER(IntKi),         INTENT(IN   ) :: nL
+   INTEGER(IntKi),         INTENT(IN   ) :: IDL(nL)   !< Indices of interior DOFs
+   INTEGER(IntKi),         INTENT(IN   ) :: nM        !< Number of CB modes
+   INTEGER(IntKi),         INTENT(IN   ) :: nM_Out    !< Number of modes returned for PhiL & OmegaL
+   REAL(ReKi),             INTENT(  OUT) :: MBB( nR, nR)     !< Reduced Guyan Mass Matrix
+   REAL(ReKi),             INTENT(  OUT) :: KBB( nR, nR)     !< Reduced Guyan Stiffness matrix
+   REAL(ReKi),             INTENT(  OUT) :: MBM( nR, nM)     !< Cross term
+   REAL(ReKi),             INTENT(  OUT) :: PhiR(nL, nR)     !< Guyan Modes   
+   REAL(ReKi),             INTENT(  OUT) :: PhiL(nL, nM_out) !< Craig-Bampton modes
+   REAL(ReKi),             INTENT(  OUT) :: OmegaL(nM_out)   !< Eigenvalues 
+   REAL(ReKi), OPTIONAL,   INTENT(IN   ) :: FG(:)        !< Force vector (typically a constant force, like gravity)
+   REAL(ReKi), OPTIONAL,   INTENT(  OUT) :: FGR(nR)      !< Force vector partitioned for R DOFs (TODO remove me)
+   REAL(ReKi), OPTIONAL,   INTENT(  OUT) :: FGL(nL)      !< Force vector partitioned for L DOFs (TODO somehow for Static improvment..)
+   REAL(ReKi), OPTIONAL,   INTENT(  OUT) :: FGB(nR)      !< Force vector in Guyan modes = FR+PhiR^t FL
+   REAL(ReKi), OPTIONAL,   INTENT(  OUT) :: FGM(nM)      !< Force vector in CB modes    =    PhiM^t FL
+   INTEGER(IntKi),         INTENT(  OUT) :: ErrStat     ! Error status of the operation
+   CHARACTER(*),           INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi)                        :: ErrStat2                                                                    
+   CHARACTER(ErrMsgLen)                  :: ErrMsg2
+   CHARACTER(*), PARAMETER               :: RoutineName = 'CraigBamptonReduction_FromPartition'
+   ! Partitioned variables 
+   real(ReKi), allocatable :: MRR(:, :)
+   real(ReKi), allocatable :: MLL(:, :)
+   real(ReKi), allocatable :: MRL(:, :)
+   real(ReKi), allocatable :: KRR(:, :)
+   real(ReKi), allocatable :: KLL(:, :)
+   real(ReKi), allocatable :: KRL(:, :)
+   ! --- Break system
+   CALL AllocAry(MRR, nR, nR, 'matrix MRR', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)  
+   CALL AllocAry(MLL, nL, nL, 'matrix MLL', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)  
+   CALL AllocAry(MRL, nR, nL, 'matrix MRL', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)  
+   CALL AllocAry(KRR, nR, nR, 'matrix KRR', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)  
+   CALL AllocAry(KLL, nL, nL, 'matrix KLL', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)  
+   CALL AllocAry(KRL, nR, nL, 'matrix KRL', ErrStat2, ErrMsg2 ); if(Failed()) return
+   if (present(FG).and.present(FGR).and.present(FGL)) then
+      call BreakSysMtrx(MM, KK, IDR, IDL, nR, nL, MRR, MLL, MRL, KRR, KLL, KRL, FG, FGR, FGL)
+   else
+      call BreakSysMtrx(MM, KK, IDR, IDL, nR, nL, MRR, MLL, MRL, KRR, KLL, KRL)
+   endif
+   ! --- CB reduction
+   call CraigBamptonReduction_FromPartition( MRR, MLL, MRL, KRR, KLL, KRL, nR, nL, nM, nM_Out,& !< Inputs 
+                              MBB, MBM, KBB, PhiL, PhiR, OmegaL, ErrStat2, ErrMsg2) !< Outputs
+   if(Failed()) return
+
+   ! --- Reduction of force if provided
+   if (present(FG).and.present(FGR).and.present(FGL)) then
+      if (present(FGM)) then
+         FGB = FGR + matmul( transpose(PhiR), FGL)
+      endif
+      if (present(FGB)) then
+         FGM = matmul( FGL, PhiL(:,1:nM) ) != matmul( transpose(PhiM), FGL ) because FGL is 1-D
+      endif
+   endif
+   call CleanUp()
+
+contains
+   logical function Failed()
+        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CraigBamptonReduction') 
+        Failed =  ErrStat >= AbortErrLev
+        if (Failed) call CleanUp()
+   end function Failed
+   subroutine CleanUp()
+      IF(ALLOCATED(MRR)  ) DEALLOCATE(MRR) 
+      IF(ALLOCATED(MLL)  ) DEALLOCATE(MLL) 
+      IF(ALLOCATED(MRL)  ) DEALLOCATE(MRL) 
+      IF(ALLOCATED(KRR)  ) DEALLOCATE(KRR) 
+      IF(ALLOCATED(KLL)  ) DEALLOCATE(KLL) 
+      IF(ALLOCATED(KRL)  ) DEALLOCATE(KRL) 
+   end subroutine
+END SUBROUTINE CraigBamptonReduction
+
+!------------------------------------------------------------------------------------------------------
 !> Performs Craig-Bampton reduction based on partitioned matrices M and K
 !! Convention is: 
 !!    "R": leader DOF     ->    "B": reduced leader DOF
 !!    "L": interior DOF   ->    "M": reduced interior DOF (CB-modes)
 !! NOTE: 
 !!    - M_MM = Identity and K_MM = Omega*2 hence these matrices are not returned
-!!    - Possibility to get all the CB modes using the input nM_Out>nM
+!!    - Possibility to get more CB modes using the input nM_Out>nM (e.g. for static improvement)
 !!
 !! NOTE: generic code
-SUBROUTINE CraigBamptonReduction( MRR, MLL, MRL, KRR, KLL, KRL, nR, nL, nM, nM_Out,&
+SUBROUTINE CraigBamptonReduction_FromPartition( MRR, MLL, MRL, KRR, KLL, KRL, nR, nL, nM, nM_Out,&
                      MBB, MBM, KBB, PhiL, PhiR, OmegaL, ErrStat, ErrMsg)
    USE NWTC_LAPACK, only: LAPACK_getrs, LAPACK_getrf
    INTEGER(IntKi),         INTENT(  in)  :: nR
    INTEGER(IntKi),         INTENT(  in)  :: nL
    INTEGER(IntKi),         INTENT(  in)  :: nM_Out
    INTEGER(IntKi),         INTENT(  in)  :: nM
-   REAL(ReKi),             INTENT(  IN)  :: MRR( nR, nR)
+   REAL(ReKi),             INTENT(  IN)  :: MRR( nR, nR) !< Paritioned matrices
    REAL(ReKi),             INTENT(  IN)  :: MLL( nL, nL) 
    REAL(ReKi),             INTENT(  IN)  :: MRL( nR, nL)
    REAL(ReKi),             INTENT(  IN)  :: KRR( nR, nR)
    REAL(ReKi),             INTENT(INOUT) :: KLL( nL, nL)  ! on exit, it has been factored (otherwise not changed)
    REAL(ReKi),             INTENT(  IN)  :: KRL( nR, nL)
-   REAL(ReKi),             INTENT(INOUT) :: MBB( nR, nR)
-   REAL(ReKi),             INTENT(INOUT) :: MBM( nR, nM)
-   REAL(ReKi),             INTENT(INOUT) :: KBB( nR, nR)
-   REAL(ReKi),             INTENT(INOUT) :: PhiR(nL, nR) ! Guyan Modes   
-   REAL(ReKi),             INTENT(INOUT) :: PhiL(nL, nL) ! Craig-Bampton modes    TODO nM_out? 
-   REAL(ReKi),             INTENT(INOUT) :: OmegaL(nL)   ! Eigenvalues            TODO nM_out?
-   INTEGER(IntKi),         INTENT(  OUT) :: ErrStat     ! Error status of the operation
-   CHARACTER(*),           INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   REAL(ReKi),             INTENT(  OUT) :: MBB( nR, nR)
+   REAL(ReKi),             INTENT(  OUT) :: MBM( nR, nM)
+   REAL(ReKi),             INTENT(  OUT) :: KBB( nR, nR)
+   REAL(ReKi),             INTENT(  OUT) :: PhiR(nL, nR)     !< Guyan Modes   
+   REAL(ReKi),             INTENT(  OUT) :: PhiL(nL, nM_Out) !< Craig-Bampton modes
+   REAL(ReKi),             INTENT(  OUT) :: OmegaL(nM_Out)   !< Eigenvalues
+   INTEGER(IntKi),         INTENT(  OUT) :: ErrStat     !< Error status of the operation
+   CHARACTER(*),           INTENT(  OUT) :: ErrMsg      !< Error message if ErrStat /= ErrID_None
    ! LOCAL VARIABLES
-   REAL(ReKi) , allocatable               :: Mu(:, :)          ! matrix for normalization Mu(p%nDOFL, p%nDOFL) [bjj: made allocatable to try to avoid stack issues]
-   REAL(ReKi) , allocatable               :: Temp(:, :)        ! temp matrix for intermediate steps [bjj: made allocatable to try to avoid stack issues]
-   REAL(ReKi) , allocatable               :: PhiR_T_MLL(:,:)   ! PhiR_T_MLL(p%nDOFR,p%nDOFL) = transpose of PhiR * MLL (temporary storage)
-   INTEGER                                :: I !, lwork !counter, and varibales for inversion routines
-   INTEGER                                :: ipiv(nL) !the integer vector ipvt of length min(m,n), containing the pivot indices. 
-                                                       !Returned as: a one-dimensional array of (at least) length min(m,n), containing integers,
-                                                       !where 1 <= less than or equal to ipvt(i) <= less than or equal to m.
-   INTEGER(IntKi)                         :: ErrStat2                                                                    
-   CHARACTER(ErrMsgLen)                   :: ErrMsg2
-   CHARACTER(*), PARAMETER                :: RoutineName = 'CBMatrix'
+   REAL(ReKi) , allocatable :: Mu(:, :)          ! matrix for normalization Mu(p%nDOFL, p%nDOFL) [bjj: made allocatable to try to avoid stack issues]
+   REAL(ReKi) , allocatable :: Temp(:, :)        ! temp matrix for intermediate steps [bjj: made allocatable to try to avoid stack issues]
+   REAL(ReKi) , allocatable :: PhiR_T_MLL(:,:)   ! PhiR_T_MLL(nR,nL) = transpose of PhiR * MLL (temporary storage)
+   INTEGER                  :: I        !counter
+   INTEGER                  :: ipiv(nL) ! length min(m,n) (See LAPACK documentation)
+   INTEGER(IntKi)           :: ErrStat2
+   CHARACTER(ErrMsgLen)     :: ErrMsg2
+   CHARACTER(*), PARAMETER  :: RoutineName = 'CraigBamptonReduction_FromPartition'
    ErrStat = ErrID_None 
    ErrMsg  = ''
    
@@ -306,47 +391,40 @@ SUBROUTINE CraigBamptonReduction( MRR, MLL, MRL, KRR, KLL, KRL, nR, nL, nM, nM_O
       ErrMsg2='Cannot request more modes than internal degrees of Freedom'; ErrStat2=ErrID_Fatal; 
       if(Failed()) return;
    endif
+   if (nM_out<nM) then
+      ErrMsg2='Cannot request output modes than modes.'; ErrStat2=ErrID_Fatal; 
+      if(Failed()) return;
+   endif
    
-   !....................................................
-   ! Set OmegaL and PhiL from Eq. 2
-   !....................................................
-   IF ( nM_out > 0 ) THEN ! Only time this wouldn't happen is if no modes retained and no static improvement...
+   ! --- Compute CB modes (PhiL) and eigenvalues (OmegaL)
+   IF ( nM > 0 ) THEN 
       ! bCheckSingularity = True
       CALL EigenSolveWrap(KLL, MLL, nL, nM_out, .True., PhiL(:,1:nM_out), OmegaL(1:nM_out),  ErrStat2, ErrMsg2); if(Failed()) return
-
       ! --- Normalize PhiL
       ! bjj: break up this equation to avoid as many temporary variables on the stack
       ! MU = MATMUL ( MATMUL( TRANSPOSE(PhiL), MLL ), PhiL )
-      CALL AllocAry( Temp , nL , nL , 'Temp' , ErrStat2 , ErrMsg2); if(Failed()) return
-      CALL AllocAry( MU   , nL , nL , 'Mu'   , ErrStat2 , ErrMsg2); if(Failed()) return
+      CALL AllocAry( Temp , nL    , nL , 'Temp' , ErrStat2 , ErrMsg2); if(Failed()) return
+      CALL AllocAry( MU   , nM_out, nL , 'Mu'   , ErrStat2 , ErrMsg2); if(Failed()) return
       MU   = TRANSPOSE(PhiL)
       Temp = MATMUL( MU, MLL )
-      MU   = MATMUL( Temp, PhiL )
+      MU(1:nM_Out,1:nM_Out) = MATMUL( Temp, PhiL )
       DEALLOCATE(Temp)
       ! PhiL = MATMUL( PhiL, MU2 )  !this is the nondimensionalization (MU2 is diagonal)   
       DO I = 1, nM_out
          PhiL(:,I) = PhiL(:,I) / SQRT( MU(I, I) )
       ENDDO    
-      DO I=nM_out+1, nL !loop done only if .not. p%SttcSolve .and. nDOFM < p%nDOFL (and actually, in that case, these values aren't used anywhere anyway)
-         PhiL(:,I) = 0.0_ReKi
-         OmegaL(I) = 0.0_ReKi
-      END DO     
       DEALLOCATE(MU)
    END IF
       
-   !....................................................
-   ! Set PhiR from Eq. 3:
-   !....................................................   
-   ! now factor KLL to compute PhiR: KLL*PhiR=-TRANSPOSE(KRL)
+   ! --- Compute Guyan Modes (PhiR)
+   ! factor KLL to compute PhiR: KLL*PhiR=-TRANSPOSE(KRL)
    ! ** note this must be done after EigenSolveWrap() because it modifies KLL **
    CALL LAPACK_getrf( nL, nL, KLL, ipiv, ErrStat2, ErrMsg2); if(Failed()) return
    
    PhiR = -1.0_ReKi * TRANSPOSE(KRL) !set "b" in Ax=b  (solve KLL * PhiR = - TRANSPOSE( KRL ) for PhiR)
    CALL LAPACK_getrs( TRANS='N', N=nL, A=KLL, IPIV=ipiv, B=PhiR, ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
    
-   !....................................................
-   ! Set MBB, MBM, and KBB from Eq. 4:
-   !....................................................
+   ! --- Set MBB, MBM, and KBB from Eq. 4:
    CALL AllocAry( PhiR_T_MLL,  nR, nL, 'PhiR_T_MLL', ErrStat2, ErrMsg2); if(Failed()) return
       
    PhiR_T_MLL = TRANSPOSE(PhiR)
@@ -360,15 +438,15 @@ SUBROUTINE CraigBamptonReduction( MRR, MLL, MRL, KRR, KLL, KRL, nR, nL, nM, nM_O
       MBM = MATMUL( PhiR_T_MLL, PhiL(:,1:nM))  ! last half of operation
       MBM = MATMUL( MRL, PhiL(:,1:nM) ) + MBM    !This had PhiM      
    ENDIF
-   DEALLOCATE( PhiR_T_MLL )
    
    KBB = MATMUL(KRL, PhiR)   
    KBB = KBB + KRR
      
+   call CleanUp()
 CONTAINS
 
    logical function Failed()
-        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CraigBamptonReduction') 
+        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CraigBamptonReduction_FromPartition') 
         Failed =  ErrStat >= AbortErrLev
         if (Failed) call CleanUp()
    end function Failed
@@ -378,7 +456,7 @@ CONTAINS
       if (allocated(Temp      )) DEALLOCATE(Temp      )
       if (allocated(PhiR_T_MLL)) DEALLOCATE(PhiR_T_MLL)
    end subroutine
-END SUBROUTINE CraigBamptonReduction
+END SUBROUTINE CraigBamptonReduction_FromPartition
 
 !------------------------------------------------------------------------------------------------------
 !> Wrapper function for eigen value analyses, for two cases:
