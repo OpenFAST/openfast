@@ -22,7 +22,7 @@ the blade number.
    *  - Channel Name(s)
       - Units
       - Description
-   *  - :math:`Gam \beta B \alpha`
+   *  - :math:`B \alpha N \beta Gam`
       - :math:`m^2/s`
       - Circulation along the blade
 

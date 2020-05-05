@@ -548,7 +548,9 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    nP = p%nWings * (  (p%nSpan+1)*(m%nNW-1+2) +(FWnSpan+1)*(m%nFW+1) )
    nFWEff = min(m%nFW, p%nFWFree)
    ! --- Display some status to screen
-   if (mod(n,10)==0) print'(A,F10.3,A,I0,A,I0,A,I0,A,I0,A,I0,A,I0,A,I0,A,I0,A,F7.2,A)','FVW status - t:',t,'  n:',n,'  nNW:',m%nNW-1,'/',p%nNWMax-1,'  nFW:',nFWEff, '+',m%nFW-nFWEff,'=',m%nFW,'/',p%nFWMax,'  nP:',nP,'  spent:', m%tSpent, 's'
+!FIXME: this conflicts with the SimStatus WrOver from the FAST_Subs.f90.  Leaving out for now.
+!     Ideally we put this into a log file.
+!   if (mod(n,10)==0) print'(A,F10.3,A,I0,A,I0,A,I0,A,I0,A,I0,A,I0,A,I0,A,I0,A,F7.2,A)','FVW status - t:',t,'  n:',n,'  nNW:',m%nNW-1,'/',p%nNWMax-1,'  nFW:',nFWEff, '+',m%nFW-nFWEff,'=',m%nFW,'/',p%nFWMax,'  nP:',nP,'  spent:', m%tSpent, 's'
    if (DEV_VERSION)  print'(A,F10.3,A,I0,A,I0,A,I0,A,I0,A,I0,A,I0,A,I0,A,I0,A,F7.2,A,L1)','FVW status - t:',t,'  n:',n,'  nNW:',m%nNW-1,'/',p%nNWMax-1,'  nFW:',nFWEff, '+',m%nFW-nFWEff,'=',m%nFW,'/',p%nFWMax,'  nP:',nP,'  spent:', m%tSpent, 's Comp:',m%ComputeWakeInduced
 
    ! --- Evaluation at t
@@ -1078,8 +1080,10 @@ subroutine UA_UpdateState_Wrapper(AFInfo, n, u, p, x, xd, OtherState, m, ErrStat
    integer(intKi)         :: ErrStat2           ! temporary Error status
    character(ErrMsgLen)   :: ErrMsg2
    real(ReKi), dimension(:,:), allocatable :: Vind_node
-   ErrStat = ErrID_None
-   ErrMsg  = ""
+   ErrStat  = ErrID_None
+   ErrStat2 = ErrID_None
+   ErrMsg   = ""
+   ErrMsg2  = ""
    if (m%UA_Flag) then
 
       ! --- Induction on the lifting line control point
