@@ -1764,6 +1764,78 @@ contains
    end subroutine applyConstr
 
 END SUBROUTINE SD_Craig_Bampton 
+
+!> Extract rigid body mass without SSI
+!! NOTE: performs a Guyan reduction
+SUBROUTINE SD_Guyan_RigidBodyMass(Init, p, MBB, ErrStat, ErrMsg)
+   type(SD_InitType),       intent(inout) :: Init       ! NOTE: Mass and Stiffness are modified but then set back to original
+   type(SD_ParameterType),  intent(in   ) :: p           ! Parameters
+   real(ReKi), allocatable, intent(out)   :: MBB(:,:)     !< MBB
+   integer(IntKi),          intent(  out) :: ErrStat !< Error status of the operation
+   character(*),            intent(  out) :: ErrMsg  !< error message if errstat /= errid_none   
+   !
+   integer(IntKi) :: nM, nR, nL, nM_out
+   real(ReKi), allocatable :: MRR(:, :)
+   real(ReKi), allocatable :: MLL(:, :)
+   real(ReKi), allocatable :: MRL(:, :)
+   real(ReKi), allocatable :: KRR(:, :)
+   real(ReKi), allocatable :: KLL(:, :)
+   real(ReKi), allocatable :: KRL(:, :)
+   real(ReKi), allocatable :: MBM(:, :)
+   real(ReKi), allocatable :: KBB(:, :)
+   real(ReKi), allocatable :: PhiL(:, :)
+   real(ReKi), allocatable :: PhiR(:, :)
+   real(ReKi), allocatable :: OmegaL(:)
+   character(*), parameter :: RoutineName = 'SD_Guyan_RigidBodyMass'
+   integer(IntKi)          :: ErrStat2
+   character(ErrMsgLen)    :: ErrMsg2
+
+   ! --- Remove SSI from Mass and stiffness matrix
+   CALL InsertSoilMatrices(Init%M, Init%K, Init, p, ErrStat2, ErrMsg2, Substract=.True.);
+
+   ! --- Break system
+   nR = p%nDOFR__
+   nL = p%nDOF__L
+   CALL AllocAry( MRR,             p%nDOFR__, p%nDOFR__, 'matrix MRR',      ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)  
+   CALL AllocAry( MLL,             p%nDOF__L, p%nDOF__L, 'matrix MLL',      ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)  
+   CALL AllocAry( MRL,             p%nDOFR__, p%nDOF__L, 'matrix MRL',      ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)  
+   CALL AllocAry( KRR,             p%nDOFR__, p%nDOFR__, 'matrix KRR',      ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)  
+   CALL AllocAry( KLL,             p%nDOF__L, p%nDOF__L, 'matrix KLL',      ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)  
+   CALL AllocAry( KRL,             p%nDOFR__, p%nDOF__L, 'matrix KRL',      ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)  
+
+   CALL BreakSysMtrx(Init%M, Init%K, p%IDR__, p%ID__L, p%nDOFR__, p%nDOF__L, MRR, MLL, MRL, KRR, KLL, KRL)   
+
+   ! --- Perform CB reduction to get MBB
+   nM = 0 
+   nM_out = 0  ! TODO nM_out is not well implemented
+   if(allocated(MBB)) deallocate(MBB) 
+   CALL AllocAry( MBB,    nR, nR, 'MBB',    ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   CALL AllocAry( MBM,    nR, nM, 'MBM',    ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   CALL AllocAry( KBB,    nR, nR, 'KBB',    ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   CALL AllocAry( PhiL,   nL, nL, 'PhiL',   ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   CALL AllocAry( PhiR,   nL, nR, 'PhiR',   ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   CALL AllocAry( OmegaL, nL,     'OmegaL', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   CALL CraigBamptonReduction(MRR, MLL, MRL, KRR, KLL, KRL, nR, nL, nM, nM_out, &  ! < inputs 
+                 MBB, MBM, KBB, PhiL, PhiR, OmegaL, ErrStat2, ErrMsg2)  ! <- outputs
+
+   if(allocated(MRR)   ) deallocate(MRR) 
+   if(allocated(MLL)   ) deallocate(MLL) 
+   if(allocated(MRL)   ) deallocate(MRL) 
+   if(allocated(KRR)   ) deallocate(KRR) 
+   if(allocated(KLL)   ) deallocate(KLL) 
+   if(allocated(KRL)   ) deallocate(KRL) 
+   if(allocated(KBB)   ) deallocate(KBB)
+   if(allocated(MBM)   ) deallocate(MBM)
+   if(allocated(PhiR)  ) deallocate(PhiR)
+   if(allocated(PhiL)  ) deallocate(PhiL)
+   if(allocated(OmegaL)) deallocate(OmegaL)
+
+   ! --- Insert SSI from Mass and stiffness matrix again
+   CALL InsertSoilMatrices(Init%M, Init%K, Init, p, ErrStat2, ErrMsg2, Substract=.False.);
+END SUBROUTINE SD_Guyan_RigidBodyMass
+
+
+
 !------------------------------------------------------------------------------------------------------
 SUBROUTINE SetParameters(Init, p, MBBb, MBmb, KBBb, FGRb, PhiRb, OmegaL, FGL, PhiL, ErrStat, ErrMsg)
    use NWTC_LAPACK, only: LAPACK_GEMM, LAPACK_getrf
@@ -2311,7 +2383,7 @@ END SUBROUTINE ConstructUFL
 !------------------------------------------------------------------------------------------------------
 !> Output the summary file    
 SUBROUTINE OutSummary(Init, p, InitInput, CBparams, ErrStat,ErrMsg)
-   TYPE(SD_InitType),      INTENT(IN)     :: Init           ! Input data for initialization routine, this structure contains many variables needed for summary file
+   TYPE(SD_InitType),      INTENT(INOUT)  :: Init           ! Input data for initialization routine, this structure contains many variables needed for summary file
    TYPE(SD_ParameterType), INTENT(IN)     :: p              ! Parameters,this structure contains many variables needed for summary file
    TYPE(SD_InitInputType), INTENT(IN)     :: InitInput   !< Input data for initialization routine         
    TYPE(CB_MatArrays),     INTENT(IN)     :: CBparams       ! CB parameters that will be passed in for summary file use
@@ -2326,7 +2398,8 @@ SUBROUTINE OutSummary(Init, p, InitInput, CBparams, ErrStat,ErrMsg)
    INTEGER(IntKi)         :: iNode1, iNode2 ! Node indices
    INTEGER(IntKi)         :: mType ! Member Type
    Real(ReKi)             :: mMass, mLength ! Member mass and length
-   REAL(ReKi)             :: MRB(6,6)    !REDUCED SYSTEM Kmatrix, equivalent mass matrix
+   REAL(ReKi)             :: MRB(6,6)    ! REDUCED SYSTEM Kmatrix, equivalent mass matrix
+   REAL(ReKi),allocatable :: MBB(:,:)    ! Leader DOFs mass matrix
    REAL(ReKi)             :: XYZ1(3),XYZ2(3), DirCos(3,3) !temporary arrays, member i-th direction cosine matrix (global to local) and member length
    CHARACTER(*),PARAMETER                 :: SectionDivide = '____________________________________________________________________________________________________'
    CHARACTER(*),PARAMETER                 :: SubSectionDivide = '__________'
@@ -2529,28 +2602,29 @@ SUBROUTINE OutSummary(Init, p, InitInput, CBparams, ErrStat,ErrMsg)
         WRITE(UnSum, '(A15, 6(e15.6))')   MatHds(i), (p%MBB(i,j), j = 1, 6)
     ENDDO  
  
-    ! Set TI2, transformation matrix from R DOFs to SubDyn Origin
-    ! TODO TODO TODO
+   ! Set TI2, transformation matrix from R DOFs to SubDyn Origin
+   CALL AllocAry( TI2,    p%nDOFR__ , 6,       'TI2',    ErrStat2, ErrMsg2 ); if(Failed()) return
+   CALL RigidTrnsf(Init, p, (/0._ReKi, 0._ReKi, 0._ReKi/), p%IDR__, p%nDOFR__, TI2, ErrStat2, ErrMsg2); if(Failed()) return
+   ! Compute Rigid body mass matrix (without Soil, and using both Interface and Reactions nodes as leader DOF)
    if (p%nDOFR__/=p%nDOF__Rb) then
-      WRITE(UnSum, '(A)') 'TODO, Equivalent mass matrix not available yet'
+      call SD_Guyan_RigidBodyMass(Init, p, MBB, ErrStat2, ErrMsg2); if(Failed()) return
+      MRB=matmul(TRANSPOSE(TI2),matmul(MBB,TI2)) !Equivalent mass matrix of the rigid body
    else
-      CALL AllocAry( TI2,    p%nDOFR__ , 6,       'TI2',    ErrStat2, ErrMsg2 ); if(Failed()) return
-      CALL RigidTrnsf(Init, p, (/0._ReKi, 0._ReKi, 0._ReKi/), p%IDR__, p%nDOFR__, TI2, ErrStat2, ErrMsg2); if(Failed()) return
       MRB=matmul(TRANSPOSE(TI2),matmul(CBparams%MBB,TI2)) !Equivalent mass matrix of the rigid body
-      WRITE(UnSum, '(A)') SectionDivide
-      WRITE(UnSum, '(A)') 'Rigid Body Equivalent Mass Matrix w.r.t. (0,0,0).'
-      WRITE(UnSum, '(A)') SubSectionDivide
-      WRITE(UnSum, '(A)') 'MRB'
-      WRITE(UnSum, '(7(A15))') ' ', (MatHds(i), i = 1, 6   )
-      DO i=1,6
-           WRITE(UnSum, '(A15, 6(e15.6))')   MatHds(i), (MRB(i,j), j = 1, 6)
-      ENDDO 
-      
-      WRITE(UnSum, '()') 
-      WRITE(UnSum, '(A,E15.6)')    "SubDyn's Total Mass (structural and non-structural)=", MRB(1,1) 
-      WRITE(UnSum, '(A,3(E15.6))') "SubDyn's Total Mass CM coordinates (Xcm,Ycm,Zcm)   =", (/-MRB(3,5),-MRB(1,6), MRB(1,5)/) /MRB(1,1)        
-      deallocate(TI2)
    endif
+   WRITE(UnSum, '(A)') SectionDivide
+   WRITE(UnSum, '(A)') 'Rigid Body Equivalent Mass Matrix w.r.t. (0,0,0).'
+   WRITE(UnSum, '(A)') SubSectionDivide
+   WRITE(UnSum, '(A)') 'MRB'
+   WRITE(UnSum, '(7(A15))') ' ', (MatHds(i), i = 1, 6   )
+   DO i=1,6
+        WRITE(UnSum, '(A15, 6(e15.6))')   MatHds(i), (MRB(i,j), j = 1, 6)
+   ENDDO 
+   
+   WRITE(UnSum, '()') 
+   WRITE(UnSum, '(A,E15.6)')    "SubDyn's Total Mass (structural and non-structural)=", MRB(1,1) 
+   WRITE(UnSum, '(A,3(E15.6))') "SubDyn's Total Mass CM coordinates (Xcm,Ycm,Zcm)   =", (/-MRB(3,5),-MRB(1,6), MRB(1,5)/) /MRB(1,1)        
+   deallocate(TI2)
    
 #ifdef SD_SUMMARY_DEBUG
 
