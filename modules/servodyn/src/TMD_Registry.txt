@@ -56,6 +56,7 @@ typedef	^		^				ReKi			rho_SS         	-	-	-	"Side-Side TLCD liquid density"	 kg
 typedef	^		^				LOGICAL			USE_F_TBL	-	-	-	"use spring force from user-defined table (flag)"	-
 typedef	^		^				CHARACTER(1024)			TMD_F_TBL_FILE	-	-	-	"user-defined spring table filename"	-
 typedef	^		^				ReKi			F_TBL		{:}{:}	-	-	"user-defined spring force"	"N"
+typedef  ^     ^           CHARACTER(1024)         TMD_PrescribedFile - - - "Prescribed force time-series filename" -
 # ..... Initialization data .......................................................................................................
 # Define inputs that the initialization routine may need here:
 # e.g., the name of the input file, the file root name, etc.
@@ -95,6 +96,7 @@ typedef	^		MiscVarType  ReKi			C_Brake	{2}	-	-	"Braking Damping"	-
 typedef	^		MiscVarType  ReKi			F_table	{2}	-	-	"Tabled Stiffness"	-
 typedef	^		MiscVarType  ReKi			F_k_x	-	-	-	"Factor for x-component stiffness force"	-
 typedef	^		MiscVarType  ReKi			F_k_y	-	-	-	"Factor for y-component stiffness force"	-
+typedef  ^     MiscVarType  IntKi      PrescribedInterpIdx - - - "Index for interpolation of Prescribed force array" -
 
 
 # ..... Parameters ................................................................................................................
@@ -144,6 +146,7 @@ typedef	^		^				ReKi			rho_SS         	-	-	-	"Side-Side TLCD liquid density"	 kg
 typedef	^		^				LOGICAL			Use_F_TBL	-	-	-	"use spring force from user-defined table (flag)"	-
 typedef	^		^				ReKi			F_TBL	{:}{:} - -	"user-defined spring force"	"N"
 typedef	^	ParameterType	IntKi	NumBl	-	-	-	"Number of blades on the turbine"	-
+typedef  ^     ^           ReKi        TMD_PrescribedForce {:}{:} - - "TMD prescribed force time-series info" "(s,N,N-m)"
 # ..... Inputs ....................................................................................................................
 # Define inputs that are contained on the mesh here:
 typedef   ^                            InputType                     MeshType                 Mesh                     -         -         -         "Displacements at the TMD reference point P in the inertial frame" -

@@ -82,6 +82,7 @@ IMPLICIT NONE
     LOGICAL  :: USE_F_TBL      !< use spring force from user-defined table (flag) [-]
     CHARACTER(1024)  :: TMD_F_TBL_FILE      !< user-defined spring table filename [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: F_TBL      !< user-defined spring force [N]
+    CHARACTER(1024)  :: TMD_PrescribedFile      !< Prescribed force time-series filename [-]
   END TYPE TMD_InputFile
 ! =======================
 ! =========  TMD_InitInputType  =======
@@ -133,6 +134,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(1:2)  :: F_table      !< Tabled Stiffness [-]
     REAL(ReKi)  :: F_k_x      !< Factor for x-component stiffness force [-]
     REAL(ReKi)  :: F_k_y      !< Factor for y-component stiffness force [-]
+    INTEGER(IntKi)  :: PrescribedInterpIdx      !< Index for interpolation of Prescribed force array [-]
   END TYPE TMD_MiscVarType
 ! =======================
 ! =========  TMD_ParameterType  =======
@@ -181,6 +183,7 @@ IMPLICIT NONE
     LOGICAL  :: Use_F_TBL      !< use spring force from user-defined table (flag) [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: F_TBL      !< user-defined spring force [N]
     INTEGER(IntKi)  :: NumBl      !< Number of blades on the turbine [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: TMD_PrescribedForce      !< TMD prescribed force time-series info [(s,N,N-m)]
   END TYPE TMD_ParameterType
 ! =======================
 ! =========  TMD_InputType  =======
@@ -273,6 +276,7 @@ IF (ALLOCATED(SrcInputFileData%F_TBL)) THEN
   END IF
     DstInputFileData%F_TBL = SrcInputFileData%F_TBL
 ENDIF
+    DstInputFileData%TMD_PrescribedFile = SrcInputFileData%TMD_PrescribedFile
  END SUBROUTINE TMD_CopyInputFile
 
  SUBROUTINE TMD_DestroyInputFile( InputFileData, ErrStat, ErrMsg )
@@ -375,6 +379,7 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*2  ! F_TBL upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%F_TBL)  ! F_TBL
   END IF
+      Int_BufSz  = Int_BufSz  + 1*LEN(InData%TMD_PrescribedFile)  ! TMD_PrescribedFile
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -518,6 +523,10 @@ ENDIF
         END DO
       END DO
   END IF
+    DO I = 1, LEN(InData%TMD_PrescribedFile)
+      IntKiBuf(Int_Xferred) = ICHAR(InData%TMD_PrescribedFile(I:I), IntKi)
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
  END SUBROUTINE TMD_PackInputFile
 
  SUBROUTINE TMD_UnPackInputFile( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -668,6 +677,10 @@ ENDIF
         END DO
       END DO
   END IF
+    DO I = 1, LEN(OutData%TMD_PrescribedFile)
+      OutData%TMD_PrescribedFile(I:I) = CHAR(IntKiBuf(Int_Xferred))
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
  END SUBROUTINE TMD_UnPackInputFile
 
  SUBROUTINE TMD_CopyInitInput( SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg )
@@ -1716,6 +1729,7 @@ ENDIF
     DstMiscData%F_table = SrcMiscData%F_table
     DstMiscData%F_k_x = SrcMiscData%F_k_x
     DstMiscData%F_k_y = SrcMiscData%F_k_y
+    DstMiscData%PrescribedInterpIdx = SrcMiscData%PrescribedInterpIdx
  END SUBROUTINE TMD_CopyMisc
 
  SUBROUTINE TMD_DestroyMisc( MiscData, ErrStat, ErrMsg )
@@ -1772,6 +1786,7 @@ ENDIF
       Re_BufSz   = Re_BufSz   + SIZE(InData%F_table)  ! F_table
       Re_BufSz   = Re_BufSz   + 1  ! F_k_x
       Re_BufSz   = Re_BufSz   + 1  ! F_k_y
+      Int_BufSz  = Int_BufSz  + 1  ! PrescribedInterpIdx
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -1827,6 +1842,8 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%F_k_y
     Re_Xferred = Re_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%PrescribedInterpIdx
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE TMD_PackMisc
 
  SUBROUTINE TMD_UnPackMisc( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -1896,6 +1913,8 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%F_k_y = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
+    OutData%PrescribedInterpIdx = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE TMD_UnPackMisc
 
  SUBROUTINE TMD_CopyParam( SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg )
@@ -1971,6 +1990,20 @@ IF (ALLOCATED(SrcParamData%F_TBL)) THEN
     DstParamData%F_TBL = SrcParamData%F_TBL
 ENDIF
     DstParamData%NumBl = SrcParamData%NumBl
+IF (ALLOCATED(SrcParamData%TMD_PrescribedForce)) THEN
+  i1_l = LBOUND(SrcParamData%TMD_PrescribedForce,1)
+  i1_u = UBOUND(SrcParamData%TMD_PrescribedForce,1)
+  i2_l = LBOUND(SrcParamData%TMD_PrescribedForce,2)
+  i2_u = UBOUND(SrcParamData%TMD_PrescribedForce,2)
+  IF (.NOT. ALLOCATED(DstParamData%TMD_PrescribedForce)) THEN 
+    ALLOCATE(DstParamData%TMD_PrescribedForce(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%TMD_PrescribedForce.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstParamData%TMD_PrescribedForce = SrcParamData%TMD_PrescribedForce
+ENDIF
  END SUBROUTINE TMD_CopyParam
 
  SUBROUTINE TMD_DestroyParam( ParamData, ErrStat, ErrMsg )
@@ -1984,6 +2017,9 @@ ENDIF
   ErrMsg  = ""
 IF (ALLOCATED(ParamData%F_TBL)) THEN
   DEALLOCATE(ParamData%F_TBL)
+ENDIF
+IF (ALLOCATED(ParamData%TMD_PrescribedForce)) THEN
+  DEALLOCATE(ParamData%TMD_PrescribedForce)
 ENDIF
  END SUBROUTINE TMD_DestroyParam
 
@@ -2070,6 +2106,11 @@ ENDIF
       Re_BufSz   = Re_BufSz   + SIZE(InData%F_TBL)  ! F_TBL
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! NumBl
+  Int_BufSz   = Int_BufSz   + 1     ! TMD_PrescribedForce allocated yes/no
+  IF ( ALLOCATED(InData%TMD_PrescribedForce) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! TMD_PrescribedForce upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%TMD_PrescribedForce)  ! TMD_PrescribedForce
+  END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -2215,6 +2256,26 @@ ENDIF
   END IF
     IntKiBuf(Int_Xferred) = InData%NumBl
     Int_Xferred = Int_Xferred + 1
+  IF ( .NOT. ALLOCATED(InData%TMD_PrescribedForce) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%TMD_PrescribedForce,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%TMD_PrescribedForce,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%TMD_PrescribedForce,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%TMD_PrescribedForce,2)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i2 = LBOUND(InData%TMD_PrescribedForce,2), UBOUND(InData%TMD_PrescribedForce,2)
+        DO i1 = LBOUND(InData%TMD_PrescribedForce,1), UBOUND(InData%TMD_PrescribedForce,1)
+          ReKiBuf(Re_Xferred) = InData%TMD_PrescribedForce(i1,i2)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
  END SUBROUTINE TMD_PackParam
 
  SUBROUTINE TMD_UnPackParam( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -2376,6 +2437,29 @@ ENDIF
   END IF
     OutData%NumBl = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! TMD_PrescribedForce not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%TMD_PrescribedForce)) DEALLOCATE(OutData%TMD_PrescribedForce)
+    ALLOCATE(OutData%TMD_PrescribedForce(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%TMD_PrescribedForce.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i2 = LBOUND(OutData%TMD_PrescribedForce,2), UBOUND(OutData%TMD_PrescribedForce,2)
+        DO i1 = LBOUND(OutData%TMD_PrescribedForce,1), UBOUND(OutData%TMD_PrescribedForce,1)
+          OutData%TMD_PrescribedForce(i1,i2) = ReKiBuf(Re_Xferred)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
  END SUBROUTINE TMD_UnPackParam
 
  SUBROUTINE TMD_CopyInput( SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg )

@@ -49,8 +49,9 @@ MODULE TMD
    INTEGER(IntKi), PRIVATE, PARAMETER :: DOFMode_Indept        = 1          !< independent DOFs 
    INTEGER(IntKi), PRIVATE, PARAMETER :: DOFMode_Omni          = 2          !< omni-directional
    INTEGER(IntKi), PRIVATE, PARAMETER :: DOFMode_TLCD          = 3          !< tuned liquid column dampers !MEG & SP
+   INTEGER(IntKi), PRIVATE, PARAMETER :: DOFMode_Prescribed    = 4          !< prescribed force series
 !FIXME: this goes away eventually
-   INTEGER(IntKi), PRIVATE, PARAMETER :: DOFMode_BTMD          = 4          !< Blade tmd 
+   INTEGER(IntKi), PRIVATE, PARAMETER :: DOFMode_BTMD          = 5          !< Blade tmd 
 
    INTEGER(IntKi), PRIVATE, PARAMETER :: CMODE_Semi            = 1          !< semi-active control 
    INTEGER(IntKi), PRIVATE, PARAMETER :: CMODE_Active          = 2          !< active control
@@ -138,8 +139,9 @@ SUBROUTINE TMD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
     IF ( InputFileData%TMD_DOF_MODE /= ControlMode_None     .and. &
          InputFileData%TMD_DOF_MODE /= DOFMode_Indept       .and. &
          InputFileData%TMD_DOF_MODE /= DOFMode_Omni         .and. &
-         InputFileData%TMD_DOF_MODE /= DOFMode_TLCD ) &
-      CALL SetErrStat( ErrID_Fatal, 'DOF mode (TMD_DOF_MODE) must be 0 (no DOF), 1 (two independent DOFs), or 2 (omni-directional), or 3 (TLCD).', ErrStat, ErrMsg, RoutineName )
+         InputFileData%TMD_DOF_MODE /= DOFMode_TLCD         .and. &
+         InputFileData%TMD_DOF_MODE /= DOFMode_Prescribed) &
+      CALL SetErrStat( ErrID_Fatal, 'DOF mode (TMD_DOF_MODE) must be 0 (no DOF), 1 (two independent DOFs), or 2 (omni-directional), or 3 (TLCD), or 4 (prescribed force time-series).', ErrStat, ErrMsg, RoutineName )
 
    IF ( InputFileData%TMD_CMODE /= ControlMode_None .and. InputFileData%TMD_CMODE /= CMODE_Semi ) &
       CALL SetErrStat( ErrID_Fatal, 'Control mode (TMD_CMode) must be 0 (none) or 1 (semi-active) in this version of TMD.', ErrStat, ErrMsg, RoutineName )
@@ -184,6 +186,7 @@ SUBROUTINE TMD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
    m%C_ctrl   = 0.0_ReKi    ! whole array initialization
    m%C_Brake  = 0.0_ReKi    ! whole array initialization
    m%F_table  = 0.0_ReKi    ! whole array initialization
+   m%PrescribedInterpIdx = 0_IntKi ! index tracker for PrescribedForce option
    
    ! Allocate continuous states (x)
    call AllocAry(x%btmd_x,    4, p%NumBl,'x%btmd_x',     ErrStat2,ErrMsg2)
@@ -991,7 +994,7 @@ SUBROUTINE TMD_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
          do i=1,p%NumBl
             y%BMesh(i)%Force(:,1) =  matmul(transpose(u%BMesh(i)%Orientation(:,:,1)),F_P_B(:,i))
          enddo
-     
+
          ! Moments on nacelle in local coordinates
          do i=1,p%NumBl
             M_P_B(1,i) =  - F_z_btmdY_P_B(i)  * x%btmd_x(3,i)
@@ -1113,6 +1116,15 @@ SUBROUTINE TMD_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
          !moments in global coordinates
          y%Mesh%Moment(:,1) = matmul(transpose(u%Mesh%Orientation(:,:,1)), M_P_N)
 
+      ELSE IF ( p%TMD_DOF_MODE == DOFMode_Prescribed ) THEN
+         ! For prescribed forces, we are simply going to interpolate the input file
+         do i=1,3    ! Forces linear interpolation, hold end values
+            y%Mesh%Force(i,1) =InterpStp( real(Time,ReKi), p%TMD_PrescribedForce(1,:),p%TMD_PrescribedForce(i+1,:),m%PrescribedInterpIdx, size(p%TMD_PrescribedForce,2))
+         enddo
+         do i=1,3    ! Moments linear interpolation, hold end values
+            y%Mesh%Moment(i,1) =InterpStp( real(Time,ReKi), p%TMD_PrescribedForce(1,:),p%TMD_PrescribedForce(i+4,:),m%PrescribedInterpIdx, size(p%TMD_PrescribedForce,2))
+         enddo
+ 
       END IF
 CONTAINS
    subroutine CleanUp()
@@ -2196,6 +2208,15 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, OutFileRoot, UnEc, ErrStat
       IF ( ErrStat >= AbortErrLev ) RETURN  
       
 
+   !------------------ TMD Prescribed Forces -------------------
+     CALL ReadCom( UnIn, InputFile, 'Section Header: TMD CONTROL', ErrStat2, ErrMsg2, UnEc )
+     CALL CheckError( ErrStat2, ErrMsg2 )
+      
+     CALL ReadVar( UnIn, InputFile, InputFileData%TMD_PrescribedFile, "TMD_PrescribedFile","Prescribed input time series", ErrStat2, ErrMsg2, UnEc)
+      CALL CheckError( ErrStat2, ErrMsg2 )
+      IF ( ErrStat >= AbortErrLev ) RETURN  
+      
+      
    !!---------------------- OUTPUT --------------------------------------------------         
    !CALL ReadCom( UnIn, InputFile, 'Section Header: Output', ErrStat2, ErrMsg2, UnEc )
    !   CALL CheckError( ErrStat2, ErrMsg2 )
@@ -2269,7 +2290,7 @@ SUBROUTINE TMD_SetParameters( InputFileData, p, ErrStat, ErrMsg )
 
       ! Local variables   
    INTEGER(IntKi)                             :: ErrStat2       ! Temporary error ID   
-   !CHARACTER(ErrMsgLen)                       :: ErrMsg2        ! Temporary message describing error
+   CHARACTER(ErrMsgLen)                       :: ErrMsg2        ! Temporary message describing error
    CHARACTER(*), PARAMETER                    :: RoutineName = 'TMD_SetParameters'
 
    
@@ -2356,7 +2377,281 @@ SUBROUTINE TMD_SetParameters( InputFileData, p, ErrStat, ErrMsg )
    
    p%F_TBL = InputFileData%F_TBL;
                       
+   if ( p%TMD_DOF_MODE == DOFMode_Prescribed ) then
+      call Read_ForceTimeSeriesFile(InputFileData%TMD_PrescribedFile,p%TMD_PrescribedForce,ErrStat2,ErrMsg2)
+      call SetErrStat(ErrStat2,ErrMsg2, ErrStat,ErrMsg, RoutineName)
+   endif
+
+
 END SUBROUTINE TMD_SetParameters   
+
+
+
+
+subroutine Read_ForceTimeSeriesFile(ForceFilename,ForceArray,ErrStat,ErrMsg)
+   character(*),            intent(in   ) :: ForceFileName
+   real(ReKi), allocatable, intent(  out) :: ForceArray(:,:)
+   integer(IntKi),          intent(  out) :: ErrStat
+   character(ErrMsgLen),    intent(  out) :: ErrMsg
+
+   character(1024)                        :: ErrMsgTmp            !< Temporary error message for calls
+   integer(IntKi)                         :: ErrStatTmp           !< Temporary error status for calls
+   integer(IntKi)                         :: FiD         !< Unit number for points file to open
+   integer(IntKi)                         :: NumDataColumns       !< Number of data columns
+   integer(IntKi)                         :: NumDataPoints        !< Number of lines of data (one point per line)
+   integer(IntKi)                         :: NumHeaderLines       !< Number of header lines to ignore
+   integer(IntKi)                         :: I                    !< Generic counter
+   character(*), parameter                :: RoutineName='Read_ForceTimeSeriesFile'
+   
+      ! Initialization of subroutine
+   ErrMsg      =  ''
+   ErrMsgTmp   =  ''
+   ErrStat     =  ErrID_None
+   ErrStatTmp  =  ErrID_None
+
+      ! Now open file
+   call GetNewUnit(    FiD )
+   call OpenFInpFile(   FiD,  trim(ForceFileName), ErrStatTmp, ErrMsgTmp )   ! Unformatted input file
+   if ( ErrStatTmp >= AbortErrLev ) then
+      call SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
+      close( FiD )
+      return
+   endif
+
+      ! Find out how long the file is
+   call GetFileLength( FiD, ForceFileName, NumDataColumns, NumDataPoints, NumHeaderLines, ErrMsgTmp, ErrStatTmp )
+   if ( ErrStatTmp >= AbortErrLev ) then
+      call SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
+      close( FiD )
+      return
+   endif
+   if ( NumDataColumns /= 7 ) then
+      CALL SetErrStat( ErrID_Fatal,' Expecting 7 columns in '//TRIM(ForceFileName)//' corresponding to '//   &
+         'X, Y, and Z coordinates.  Instead found '//TRIM(Num2LStr(NumDataColumns))//'.', &
+         ErrStat, ErrMsg, RoutineName)
+      close( FiD )
+      return
+   endif
+
+      ! Allocate the storage for the data
+   call AllocAry( ForceArray, 7, NumDataPoints, "Array of Points data", ErrStatTmp, ErrMsgTmp )
+   if ( ErrStatTmp >= AbortErrLev ) then
+      call SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
+      close( FiD )
+      return
+   endif
+
+      ! Read in the headers and throw them away
+   do I=1,NumHeaderLines
+      call ReadCom( FiD, ForceFileName,' Points file header line', ErrStatTmp, ErrMsgTmp )
+      if ( ErrStatTmp /= ErrID_None ) then
+         call SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
+         close( FiD )
+         return
+      endif
+   enddo
+
+      ! Read in the datapoints
+   do I=1,NumDataPoints
+      call ReadAry ( FiD, ForceFileName, ForceArray(:,I), 7, 'ForceArray', &
+         'Coordinate point from Points file', ErrStatTmp, ErrMsgTmp)
+      if ( ErrStat /= ErrID_None ) THEN
+         call SetErrStat( ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
+         close( FiD )
+         return
+      endif
+   enddo
+
+   close( FiD )
+
+contains
+
+  !-------------------------------------------------------------------------------------------------------------------------------
+   !>    This subroutine looks at a file that has been opened and finds out how many header lines there are, how many columns there
+   !!    are, and    how many lines of data there are in the file.
+   !!
+   !!    A few things are assumed about the file:
+   !!       1. Any header lines are the first thing in the file.
+   !!       2. No text appears anyplace other than in first part of the file
+   !!       3. The datalines only contain numbers that can be read in as reals.
+   !!
+   !!    Limitations:
+   !!       1. only handles up to 20 words (columns) on a line
+   !!       2. empty lines are considered text lines
+   !!       3. All data rows must contain the same number of columns
+   !!
+   !!
+   subroutine GetFileLength(UnitDataFile, DataFileName, NumDataColumns, NumDataLines, NumHeaderLines, ErrMsg, ErrStat)
+      integer(IntKi),                     intent(in   )  :: UnitDataFile      !< Unit number of the file we are looking at.
+      character(*),                       intent(in   )  :: DataFileName      !< The name of the file we are looking at.
+      integer(IntKi),                     intent(  out)  :: NumDataColumns    !< The number of columns in the data file.
+      integer(IntKi),                     intent(  out)  :: NumDataLines      !< Number of lines containing data
+      integer(IntKi),                     intent(  out)  :: NumHeaderLines    !< Number of header lines at the start of the file
+      character(*),                       intent(  out)  :: ErrMsg            !< Error Message to return (empty if all good)
+      integer(IntKi),                     intent(  out)  :: ErrStat           !< Status flag if there were any problems (ErrID_None if all good)
+
+         ! Local Variables
+      character(2048)                                    :: ErrMsgTmp         !< Temporary message variable.  Used in calls.
+      integer(IntKi)                                     :: ErrStatTmp        !< Temporary error status.  Used in calls.
+      integer(IntKi)                                     :: LclErrStat        !< Temporary error status.  Used locally to indicate when we have reached the end of the file.
+      integer(IntKi)                                     :: TmpIOErrStat      !< Temporary error status for the internal read of the first word to a real number
+      logical                                            :: IsRealNum         !< Flag indicating if the first word on the line was a real number
+
+      character(1024)                                    :: TextLine          !< One line of text read from the file
+      integer(IntKi)                                     :: LineLen           !< The length of the line read in
+      character(1024)                                    :: StrRead           !< String containing the first word read in
+      real(ReKi)                                         :: RealRead          !< Returns value of the number (if there was one), or NaN (as set by NWTC_Num) if there wasn't
+      character(1024)                                    :: VarName           !< Name of the variable we are trying to read from the file
+      character(24)                                      :: Words(20)         !< Array of words we extract from a line.  We shouldn't have more than 20.
+      integer(IntKi)                                     :: i,j,k             !< simple integer counters
+      integer(IntKi)                                     :: LineNumber        !< the line I am on
+      logical                                            :: LineHasText       !< Flag indicating if the line I just read has text.  If so, it is a header line.
+      logical                                            :: HaveReadData      !< Flag indicating if I have started reading data.
+      integer(IntKi)                                     :: NumWords          !< Number of words on a line
+      integer(IntKi)                                     :: FirstDataLineNum  !< Line number of the first row of data in the file
+
+         ! Initialize the error handling
+      ErrStat     = ErrID_None
+      ErrStatTmp  = ErrID_None
+      LclErrStat  = ErrID_None
+      ErrMsg      = ''
+      ErrMsgTmp   = ''
+
+         ! Set some of the flags and counters
+      HaveReadData   = .FALSE.
+      NumDataColumns = 0
+      NumHeaderLines = 0
+      NumDataLines   = 0
+      LineNumber     = 0
+
+         ! Just in case we were handed a file that we are part way through reading (should never be true), rewind to the start
+      rewind( UnitDataFile )
+
+      !------------------------------------
+      !> The variable LclErrStat is used to indicate when we have reached the end of the file or had an error from
+      !! ReadLine.  Until that occurs, we read each line, and decide if it contained any non-numeric data.  The
+      !! first group of lines containing non-numeric data is considered the header.  The first line of all numeric
+      !! data is considered the start of the data section.  Any non-numeric containing found within the data section
+      !! will be considered as an invalid file format at which point we will return a fatal error from this routine.
+      do while ( LclErrStat == ErrID_None )
+
+            !> Reset the indicator flag for the non-numeric content
+         LineHasText = .FALSE.
+
+            !> Read in a single line from the file
+         call ReadLine( UnitDataFile, '', TextLine, LineLen, LclErrStat )
+
+            !> If there was an error in reading the file, then exit.
+            !!    Possible causes: reading beyond end of file in which case we are done so don't process it.
+         if ( LclErrStat /= ErrID_None ) exit
+
+            !> Increment the line counter.
+         LineNumber  = LineNumber + 1
+
+            !> Read all the words on the line into the array called 'Words'.  Only the first words will be encountered
+            !! will be stored.  The others are empty (i.e. only three words on the line, so the remaining 17 are empty).
+         call GetWords( TextLine, Words, 20 )
+
+            !> Cycle through and count how many are not empty.  Once an empty value is encountered, all the rest should
+            !! be empty if GetWords worked correctly.  The index of the last non-empty value is stored.
+         do i=1,20
+            if (TRIM(Words(i)) .ne. '') NumWords=i
+         enddo
+
+
+            !> Now cycle through the first 'NumWords' of non-empty values stored in 'Words'.  Words should contain
+            !! everything that is one the line.  The subroutine ReadRealNumberFromString will set a flag 'IsRealNum'
+            !! when the value in Words(i) can be read as a real(ReKi).  'StrRead' will contain the string equivalent.
+         do i=1,NumWords
+            CALL ReadRealNumberFromString( Words(i), RealRead, StrRead, IsRealNum, ErrStatTmp, ErrMsgTmp, TmpIOErrStat )
+            if ( .not. IsRealNum) LineHasText = .TRUE.
+         enddo
+
+            !> If all the words on that line had no text in them, then it must have been a line of data.
+            !! If not, then we have either a header line, which is ok, or a line containing text in the middle of the
+            !! the data section, which is not good (the flag HaveReadData tells us which case this is).
+         if ( LineHasText ) then
+            if ( HaveReadData ) then      ! Uh oh, we have already read a line of data before now, so there is a problem
+               call SetErrStat( ErrID_Fatal, ' Found text on line '//TRIM(Num2LStr(LineNumber))//' of '//TRIM(DataFileName)// &
+                           ' when real numbers were expected.  There may be a problem with format of the file: '// &
+                           TRIM(DataFileName)//'.', ErrStat, ErrMsg, 'GetFileLength')
+               if ( ErrStat >= AbortErrLev ) return 
+            else
+               NumHeaderLines = NumHeaderLines + 1
+            endif
+         else     ! No text, must be data line
+            NumDataLines = NumDataLines + 1
+               ! If this is the first row of data, then store the number of words that were on the line
+            if ( .not. HaveReadData )  then
+                  ! If this is the first line of data, keep some relevant info about it and the number of columns in it
+               HaveReadData      = .TRUE.
+               FirstDataLineNum  = LineNumber         ! Keep the line number of the first row of data (for error reporting)
+               NumDataColumns    = NumWords
+            else
+                  ! Make sure that the number columns on the row matches the number of columnns on the first row of data.
+               if ( NumWords /= NumDataColumns ) then
+                  call SetErrStat( ErrID_Fatal, ' Error in file: '//TRIM(DataFileName)//'.'// &
+                           ' The number of data columns on line '//TRIM(Num2LStr(LineNumber))// &
+                           '('//TRIM(Num2LStr(NumWords))//' columns) is different than the number of columns on first row of data '// &
+                           ' (line: '//TRIM(Num2LStr(FirstDataLineNum))//', '//TRIM(Num2LStr(NumDataColumns))//' columns).', &
+                           ErrStat, ErrMsg, 'GetFileLength')
+                  if ( ErrStat >= AbortErrLev ) return 
+               endif
+            endif
+         endif
+      enddo
+      rewind( UnitDataFile )
+   end subroutine GetFileLength
+
+   !-------------------------------------------------------------------------------
+   !> This subroutine takes a line of text that is passed in and reads the first
+   !! word to see if it is a number.  An internal read is used to do this.  If
+   !! it is a number, it is started in ValueRead and returned. The flag IsRealNum
+   !! is set to true.  Otherwise, ValueRead is set to NaN (value from the NWTC_Num)
+   !! and the flag is set to false.
+   !!
+   !! The IsRealNum flag is set to indicate if we actually have a real number or
+   !! not.  After calling this routine, a simple if statement can be used:
+   !!
+   !!       @code
+   !!    IF (IsRealNum) THEN
+   !!       ! do something
+   !!    ELSE
+   !!       ! do something else
+   !!    ENDIF
+   !!       @endcode
+   !!
+   !-------------------------------------------------------------------------------
+   subroutine ReadRealNumberFromString(StringToParse, ValueRead, StrRead, IsRealNum, ErrStat, ErrMsg, IOErrStat)
+      character(*),        intent(in   )           :: StringToParse  !< The string we were handed.
+      real(ReKi),          intent(  out)           :: ValueRead      !< The variable being read.  Returns as NaN (library defined) if not a Real.
+      character(*),        intent(  out)           :: StrRead        !< A string containing what was read from the ReadNum routine.
+      logical,             intent(  out)           :: IsRealNum      !< Flag indicating if we successfully read a Real
+      integer(IntKi),      intent(  out)           :: ErrStat        !< ErrID level returned from ReadNum
+      character(*),        intent(  out)           :: ErrMsg         !< Error message including message from ReadNum
+      integer(IntKi),      intent(  out)           :: IOErrStat      !< Error status from the internal read. Useful for diagnostics.
+
+         ! Initialize some things
+      ErrStat     = ErrID_None
+      ErrMsg      = ''
+
+         ! ReadNum returns a string contained in StrRead.  So, we now try to do an internal read to VarRead and then trap errors.
+      read(StringToParse,*,IOSTAT=IOErrStat)   StrRead
+      read(StringToParse,*,IOSTAT=IOErrStat)   ValueRead
+
+         ! If IOErrStat==0, then we have a real number, anything else is a problem.
+      if (IOErrStat==0) then
+         IsRealNum   = .TRUE.
+      else
+         IsRealNum   = .FALSE.
+         ValueRead   = NaN                ! This is NaN as defined in the NWTC_Num.
+         ErrMsg      = 'Not a real number. '//TRIM(ErrMsgTmp)//NewLine
+         ErrSTat     = ErrID_Severe
+      endif
+      return
+   end subroutine ReadRealNumberFromString
+end subroutine Read_ForceTimeSeriesFile
+
 !----------------------------------------------------------------------------------------------------------------------------------
 END MODULE TMD
 !**********************************************************************************************************************************
