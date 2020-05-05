@@ -236,7 +236,7 @@ PROGRAM TestSubDyn
    ! u(1)%UFL(3)=-12.958  !this is for testbeam3
     
    call wrscr('')
-   DO n = 0,drvrInitInp%NSteps
+   DO n = 0,drvrInitInp%NSteps-1
 
       Time = n*TimeInterval
       InputTime(1) = Time
@@ -258,21 +258,21 @@ PROGRAM TestSubDyn
             
             
             
-            u(1)%TPMesh%TranslationDisp(:,1)   = SDin(n,2:4) 
+            u(1)%TPMesh%TranslationDisp(:,1)   = SDin(n+1,2:4) 
             
             
                ! Compute direction cosine matrix from the rotation angles
                
-            IF ( abs(SDin(n,5)) > maxAngle ) maxAngle = abs(SDin(n,5))
-            IF ( abs(SDin(n,6)) > maxAngle ) maxAngle = abs(SDin(n,6))
-            IF ( abs(SDin(n,7)) > maxAngle ) maxAngle = abs(SDin(n,7))
+            IF ( abs(SDin(n+1,5)) > maxAngle ) maxAngle = abs(SDin(n+1,5))
+            IF ( abs(SDin(n+1,6)) > maxAngle ) maxAngle = abs(SDin(n+1,6))
+            IF ( abs(SDin(n+1,7)) > maxAngle ) maxAngle = abs(SDin(n+1,7))
             
-            CALL SmllRotTrans( 'InputRotation', REAL(SDin(n,5),reki), REAL(SDin(n,6),reki), REAL(SDin(n,7),reki), dcm, 'Junk', ErrStat, ErrMsg )            
+            CALL SmllRotTrans( 'InputRotation', REAL(SDin(n+1,5),reki), REAL(SDin(n+1,6),reki), REAL(SDin(n+1,7),reki), dcm, 'Junk', ErrStat, ErrMsg )            
             u(1)%TPMesh%Orientation(:,:,1)     = dcm 
             
             
-            u(1)%TPMesh%TranslationVel(:,1)    = SDin(n,8:10)  
-            u(1)%TPMesh%RotationVel(:,1)       = SDin(n,11:13) 
+            u(1)%TPMesh%TranslationVel(:,1)    = SDin(n+1,8:10)  
+            u(1)%TPMesh%RotationVel(:,1)       = SDin(n+1,11:13) 
             
          ELSE
             

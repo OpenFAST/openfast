@@ -44,3 +44,8 @@ vs-build/
 
 # backup files
 *.asv
+
+# LaTeX compiling files
+*.aux
+*.nlo
+*.log
