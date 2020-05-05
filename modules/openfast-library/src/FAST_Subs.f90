@@ -1367,9 +1367,6 @@ END FUNCTION GetVersion
 !! displays the copyright notice, and displays some version information (including addressing scheme and precision).
 SUBROUTINE FAST_ProgStart(ThisProgVer)
    TYPE(ProgDesc), INTENT(IN) :: ThisProgVer     !< program name/date/version description
-   character(200) :: name, version
-   character(200) :: git_commit, architecture, precision
-   character(200) :: execution_date, execution_time, execution_zone
    
    ! ... Initialize NWTC Library (open console, set pi constants) ...
    ! sets the pi constants, open console for output, etc...
