@@ -2035,7 +2035,6 @@ CONTAINS
 
             !  NOTE: using airfoil coeffs at nodes
             call AFI_ComputeAirfoilCoefs( alpha, Re, 0.0_ReKi,  p%AFI(p%FVW%AFindx(j,k)), AFI_interp, ErrStat, ErrMsg )
-            STOP
             theta = m%FVW%PitchAndTwist(j,k)
 
             ! --- Setting AD outputs 
