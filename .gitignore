@@ -43,3 +43,8 @@ vs-build/
 .fortls
 # backup files
 *.asv
+
+# LaTeX compiling files
+*.aux
+*.nlo
+*.log

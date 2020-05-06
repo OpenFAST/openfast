@@ -1,10 +1,10 @@
 OpenFAST
 ========
 
-|travisci| |nbsp| |rtfd|
+|actions| |nbsp| |rtfd|
 
-.. |travisci| image:: https://travis-ci.org/OpenFAST/openfast.svg?branch=dev
-   :target: https://travis-ci.org/OpenFAST/openfast
+.. |actions| image:: https://github.com/openfast/openfast/workflows/OpenFAST%20Build%20and%20Test/badge.svg?branch=dev
+   :target: https://github.com/OpenFAST/openfast/actions?query=workflow%3A%22OpenFAST+Build+and+Test%22
    :alt: Build Status
 .. |rtfd| image:: https://readthedocs.org/projects/openfast/badge/?version=dev
    :target: https://openfast.readthedocs.io/en/dev
