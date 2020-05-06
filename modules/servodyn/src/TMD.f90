@@ -720,10 +720,10 @@ SUBROUTINE TMD_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
       ELSE IF ( p%TMD_DOF_MODE == DOFMode_Prescribed ) THEN
          ! For prescribed forces, we are simply going to interpolate the input file
          do i=1,3    ! Forces linear interpolation, hold end values
-            y%Mesh%Force(:,i) =InterpStp( real(Time,ReKi), p%TMD_PrescribedForce(1,:),p%TMD_PrescribedForce(i+1,:),m%PrescribedInterpIdx, size(p%TMD_PrescribedForce,2))
+            y%Mesh%Force(i,1) =InterpStp( real(Time,ReKi), p%TMD_PrescribedForce(1,:),p%TMD_PrescribedForce(i+1,:),m%PrescribedInterpIdx, size(p%TMD_PrescribedForce,2))
          enddo
          do i=1,3    ! Moments linear interpolation, hold end values
-            y%Mesh%Moment(:,i) =InterpStp( real(Time,ReKi), p%TMD_PrescribedForce(1,:),p%TMD_PrescribedForce(i+4,:),m%PrescribedInterpIdx, size(p%TMD_PrescribedForce,2))
+            y%Mesh%Moment(i,1) =InterpStp( real(Time,ReKi), p%TMD_PrescribedForce(1,:),p%TMD_PrescribedForce(i+4,:),m%PrescribedInterpIdx, size(p%TMD_PrescribedForce,2))
          enddo
       END IF
      
