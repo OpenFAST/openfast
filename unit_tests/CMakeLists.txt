@@ -70,3 +70,4 @@ endif()
 ### Add the unit tests here
 add_subdirectory("beamdyn")
 add_subdirectory("nwtc-library")
+add_subdirectory("aerodyn")

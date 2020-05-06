@@ -39,7 +39,10 @@ set(AD_LIBS_SOURCES
   src/BEMT_Types.f90
   src/DBEMT_Types.f90
   src/UnsteadyAero_Types.f90
+)
 
+# FVW lib
+set(FVW_LIBS_SOURCES
   src/FVW.f90
   src/FVW_IO.f90
   src/FVW_VortexTools.f90
@@ -51,8 +54,12 @@ set(AD_LIBS_SOURCES
   src/FVW_VTK.f90
 )
 
+# this lib is only for the ctest
+add_library(fvwlib ${FVW_LIBS_SOURCES})
+target_link_libraries(fvwlib nwtclibs)
+
 add_library(aerodynlib ${AD_LIBS_SOURCES})
-target_link_libraries(aerodynlib nwtclibs)
+target_link_libraries(aerodynlib fvwlib nwtclibs)
 
 # AeroDyn driver
 set(AD_DRIVER_SOURCES
@@ -72,7 +79,7 @@ set(UA_DRIVER_SOURCES
 add_executable(unsteadyaero_driver ${UA_DRIVER_SOURCES})
 target_link_libraries(unsteadyaero_driver aerodynlib nwtclibs versioninfolib ${CMAKE_DL_LIBS})
 
-install(TARGETS unsteadyaero_driver aerodyn_driver aerodynlib
+install(TARGETS unsteadyaero_driver aerodyn_driver aerodynlib fvwlib
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
