@@ -28,17 +28,25 @@ endif()
 set(AD_LIBS_SOURCES
   src/AeroDyn.f90
   src/AeroDyn_IO.f90
-  src/AirfoilInfo.f90
   src/BEMT.f90
   src/DBEMT.f90
   src/BEMTUncoupled.f90
-  src/UnsteadyAero.f90
   src/mod_root1dim.f90
   src/AeroDyn_Types.f90
-  src/AirfoilInfo_Types.f90
   src/BEMT_Types.f90
   src/DBEMT_Types.f90
+)
+
+# UnsteadyAero lib
+set(UA_LIBS_SOURCES
+  src/UnsteadyAero.f90
   src/UnsteadyAero_Types.f90
+)
+
+# AirFoil Info lib
+set(AFINFO_LIBS_SOURCES
+  src/AirfoilInfo.f90
+  src/AirfoilInfo_Types.f90
 )
 
 # FVW lib
@@ -54,12 +62,20 @@ set(FVW_LIBS_SOURCES
   src/FVW_VTK.f90
 )
 
+# UnsteadyAero lib
+add_library(uaaerolib ${UA_LIBS_SOURCES})
+target_link_libraries(uaaerolib afinfolib nwtclibs)
+
+# AirfoilInfo lib
+add_library(afinfolib ${AFINFO_LIBS_SOURCES})
+target_link_libraries(afinfolib nwtclibs)
+
 # this lib is only for the ctest
 add_library(fvwlib ${FVW_LIBS_SOURCES})
-target_link_libraries(fvwlib nwtclibs)
+target_link_libraries(fvwlib uaaerolib afinfolib nwtclibs)
 
 add_library(aerodynlib ${AD_LIBS_SOURCES})
-target_link_libraries(aerodynlib fvwlib nwtclibs)
+target_link_libraries(aerodynlib fvwlib uaaerolib afinfolib nwtclibs)
 
 # AeroDyn driver
 set(AD_DRIVER_SOURCES
@@ -69,7 +85,7 @@ set(AD_DRIVER_SOURCES
 )
 
 add_executable(aerodyn_driver ${AD_DRIVER_SOURCES})
-target_link_libraries(aerodyn_driver aerodynlib nwtclibs versioninfolib ${CMAKE_DL_LIBS})
+target_link_libraries(aerodyn_driver aerodynlib fvwlib uaaerolib afinfolib nwtclibs versioninfolib ${CMAKE_DL_LIBS})
 
 # UnsteadyAero driver
 set(UA_DRIVER_SOURCES
@@ -77,9 +93,9 @@ set(UA_DRIVER_SOURCES
   src/UA_Dvr_Subs.f90
 )
 add_executable(unsteadyaero_driver ${UA_DRIVER_SOURCES})
-target_link_libraries(unsteadyaero_driver aerodynlib nwtclibs versioninfolib ${CMAKE_DL_LIBS})
+target_link_libraries(unsteadyaero_driver aerodynlib fvwlib uaaerolib afinfolib nwtclibs versioninfolib ${CMAKE_DL_LIBS})
 
-install(TARGETS unsteadyaero_driver aerodyn_driver aerodynlib fvwlib
+install(TARGETS unsteadyaero_driver aerodyn_driver aerodynlib fvwlib uaaerolib afinfolib
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib

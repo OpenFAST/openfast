@@ -6,7 +6,6 @@ subroutine test_AD_FVW()
 
     use pFUnit_mod
     use NWTC_Num
-    use test_tools
     use FVW_Tests 
     
     implicit none
