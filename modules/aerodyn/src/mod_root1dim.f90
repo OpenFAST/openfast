@@ -9,11 +9,35 @@
 ! modified by Bonnie Jonkman, Envision Energy, 2016
 ! 
 module mod_root1dim
-    use fminfcn
-
+   use NWTC_Library
+   use AirFoilInfo_Types
+   use BEMTUnCoupled, only: BEMTU_InductionWithResidual
+   
     implicit none
-    integer, parameter, private :: SolveKi = ReKi
-    real(SolveKi), parameter, private :: xtoler_def = 1d-6, toler_def = 1d-6, printmod_def = -1, maxiter_def = 100
+   
+   type, public :: fmin_fcnArgs 
+      real(ReKi)           :: nu
+      integer              :: numBlades
+      real(ReKi)           :: rlocal      
+      real(ReKi)           :: chord 
+      real(ReKi)           :: theta
+      real(ReKi)           :: Vx
+      real(ReKi)           :: Vy
+      real(ReKi)           :: UserProp
+      logical              :: useTanInd
+      logical              :: useAIDrag
+      logical              :: useTIDrag
+      logical              :: useHubLoss
+      logical              :: useTipLoss 
+      real(ReKi)           :: hubLossConst 
+      real(ReKi)           :: tipLossConst
+      logical              :: IsValidSolution
+      integer(IntKi)       :: errStat       ! Error status of the operation
+      character(ErrMsgLen) :: errMsg        ! Error message if ErrStat /= ErrID_None
+   end type fmin_fcnArgs
+   
+   integer, parameter, private :: SolveKi = ReKi
+   real(SolveKi), parameter, private :: xtoler_def = 1d-6, toler_def = 1d-6, printmod_def = -1, maxiter_def = 100
     
     
 contains
@@ -42,7 +66,7 @@ subroutine sub_brent(x,a_in,b_in, toler_in,maxiter_in,fcnArgs,AFInfo,fa_in,fb_in
     real(ReKi), intent(in) :: b_in  !< upper bound of solution region
     
     type(fmin_fcnArgs), intent(inout) :: fcnArgs !< function arguments
-    TYPE (AFInfoType),  INTENT(IN   ) :: AFInfo  !< The derived type for holding the constant parameters for this airfoil.
+    TYPE (AFI_ParameterType),  INTENT(IN   ) :: AFInfo  !< The derived type for holding the constant parameters for this airfoil.
     real(ReKi), intent(in),  optional :: toler_in !< induction tolerance
     real(ReKi), intent(in),  optional :: fa_in !< starting value for f(a), if not present, will be evaluated
     real(ReKi), intent(in),  optional :: fb_in !< starting value for f(b), if not present, will be evaluated
@@ -55,6 +79,13 @@ subroutine sub_brent(x,a_in,b_in, toler_in,maxiter_in,fcnArgs,AFInfo,fa_in,fb_in
     real(ReKi) :: a,b
     integer :: maxiter,printmod,iter
     character(len=6) :: step
+
+    integer                 :: ErrStat_a
+    character(ErrMsgLen)    :: ErrMsg_a
+    logical                 :: ValidPhi_a
+
+    fcnArgs%errStat  = ErrID_None
+    fcnArgs%ErrMsg   = ""
 
     ! Set of get parameters
     toler = 0.0_SolveKi; if (present(toler_in)) toler = toler_in ! Better to use custom toler here
@@ -75,14 +106,14 @@ subroutine sub_brent(x,a_in,b_in, toler_in,maxiter_in,fcnArgs,AFInfo,fa_in,fb_in
     if (present(fa_in)) then
         fa = fa_in
     else
-        fa = UncoupledErrFn( a,  fcnArgs%theta, fcnArgs%Re, fcnArgs%numBlades,  fcnArgs%rlocal, fcnArgs%chord, AFInfo, &
+        fa = BEMTU_InductionWithResidual( a,  fcnArgs%theta, fcnArgs%nu, fcnArgs%UserProp, fcnArgs%numBlades,  fcnArgs%rlocal, fcnArgs%chord, AFInfo, &
                             fcnArgs%Vx, fcnArgs%Vy, fcnArgs%useTanInd, fcnArgs%useAIDrag, fcnArgs%useTIDrag, fcnArgs%useHubLoss, fcnArgs%useTipLoss,  fcnArgs%hubLossConst, fcnArgs%tipLossConst,  &
-                            fcnArgs%IsValidSolution, fcnArgs%errStat, fcnArgs%errMsg)
+                            ValidPhi_a, errStat_a, errMsg_a)
     end if
     if (present(fb_in)) then
         fb = fb_in
     else
-        fb = UncoupledErrFn( b,  fcnArgs%theta, fcnArgs%Re, fcnArgs%numBlades,  fcnArgs%rlocal, fcnArgs%chord, AFInfo, &
+        fb = BEMTU_InductionWithResidual( b,  fcnArgs%theta, fcnArgs%nu, fcnArgs%UserProp, fcnArgs%numBlades,  fcnArgs%rlocal, fcnArgs%chord, AFInfo, &
                             fcnArgs%Vx, fcnArgs%Vy, fcnArgs%useTanInd, fcnArgs%useAIDrag, fcnArgs%useTIDrag, fcnArgs%useHubLoss, fcnArgs%useTipLoss,  fcnArgs%hubLossConst, fcnArgs%tipLossConst,  &
                             fcnArgs%IsValidSolution, fcnArgs%errStat, fcnArgs%errMsg)
     end if
@@ -92,6 +123,9 @@ subroutine sub_brent(x,a_in,b_in, toler_in,maxiter_in,fcnArgs,AFInfo,fa_in,fb_in
         if (abs(fa)<abs(fb)) then
             call WrScr( 'brent: WARNING: root is not bracketed, returning best endpoint a = '//trim(Num2Lstr(a))//' fa = '//trim(Num2Lstr(fa)) )
             x = a
+            fcnArgs%IsValidSolution = ValidPhi_a
+            fcnArgs%errStat         = ErrStat_a
+            fcnArgs%errMsg          = ErrMsg_a
         else
             call WrScr( 'brent: WARNING: root is not bracketed, returning best endpoint b = '//trim(Num2Lstr(b))//' fb = '//trim(Num2Lstr(fb)) )
             x = b
@@ -204,7 +238,7 @@ subroutine sub_brent(x,a_in,b_in, toler_in,maxiter_in,fcnArgs,AFInfo,fa_in,fb_in
         end if
 
         !!! Evaluate at the new point
-        fb = UncoupledErrFn( b,  fcnArgs%theta, fcnArgs%Re, fcnArgs%numBlades,  fcnArgs%rlocal, fcnArgs%chord, AFInfo, &
+        fb = BEMTU_InductionWithResidual( b,  fcnArgs%theta, fcnArgs%nu, fcnArgs%UserProp, fcnArgs%numBlades,  fcnArgs%rlocal, fcnArgs%chord, AFInfo, &
                             fcnArgs%Vx, fcnArgs%Vy, fcnArgs%useTanInd, fcnArgs%useAIDrag, fcnArgs%useTIDrag, fcnArgs%useHubLoss, fcnArgs%useTipLoss,  fcnArgs%hubLossConst, fcnArgs%tipLossConst,  &
                             fcnArgs%IsValidSolution, fcnArgs%errStat, fcnArgs%errMsg)
 

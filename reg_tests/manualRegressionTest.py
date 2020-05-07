@@ -38,7 +38,7 @@ parser.add_argument("executable", metavar="OpenFAST", type=str, nargs=1, help="p
 parser.add_argument("systemName", metavar="System-Name", type=str, nargs=1, help="current system's name: [Darwin,Linux,Windows]")
 parser.add_argument("compilerId", metavar="Compiler-Id", type=str, nargs=1, help="compiler's id: [Intel,GNU]")
 parser.add_argument("tolerance", metavar="Test-Tolerance", type=float, nargs=1, help="tolerance defining pass or failure in the regression test")
-parser.add_argument("-p", "-plot", dest="plot", default=False, metavar="Plotting-Flag", type=bool, nargs="?", help="bool to include matplotlib plots in failed cases")
+parser.add_argument("-p", "-plot", dest="plot", default=False, metavar="Plotting-Flag", type=bool, nargs="?", help="bool to include plots in failed cases")
 parser.add_argument("-n", "-no-exec", dest="noExec", default=False, metavar="No-Execution", type=bool, nargs="?", help="bool to prevent execution of the test cases")
 parser.add_argument("-v", "-verbose", dest="verbose", default=False, metavar="Verbose-Flag", type=bool, nargs="?", help="bool to include verbose system output")
 parser.add_argument("-case", dest="case", default="", metavar="Case-Name", type=str, nargs="?", help="single case name to execute")
@@ -60,7 +60,7 @@ case = args.case
 outstd = sys.stdout if verbose else open(os.devnull, 'w') 
 pythonCommand = sys.executable
 
-if case is not "":
+if case != "":
     caselist = [case]
 else:
     with open(os.path.join("r-test", "glue-codes", "openfast", "CaseList.md")) as listfile:

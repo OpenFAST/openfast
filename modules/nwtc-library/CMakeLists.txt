@@ -29,11 +29,9 @@ set(NWTCLIBS_SOURCES
   src/ranlux/RANLUX.f90
   
   # NetLib sources
-  src/NetLib/Dierckx_FitPack/dierckx_fitpack.f
   src/NetLib/fftpack/fftpack4.1.f
   src/NetLib/scalapack/dlasrt2.f
   src/NetLib/scalapack/slasrt2.f
-  src/NetLib/Dierckx_FitPack/NWTC_FitPack.f90
   src/NetLib/fftpack/NWTC_FFTPACK.f90
   src/NetLib/lapack/NWTC_LAPACK.f90
   src/NetLib/scalapack/NWTC_ScaLAPACK.f90
@@ -79,9 +77,9 @@ add_library(nwtclibs ${NWTCLIBS_SOURCES})
 
 if(BUILD_OPENFAST_SIMULINK_API)
   find_package(Matlab REQUIRED)
-  target_link_libraries(nwtclibs ${LAPACK_LIBRARIES} ${CMAKE_DL_LIBS} ${Matlab_MEX_LIBRARY})
+  target_link_libraries(nwtclibs versioninfolib ${LAPACK_LIBRARIES} ${CMAKE_DL_LIBS} ${Matlab_MEX_LIBRARY})
 else()
-  target_link_libraries(nwtclibs ${LAPACK_LIBRARIES} ${CMAKE_DL_LIBS})
+  target_link_libraries(nwtclibs versioninfolib ${LAPACK_LIBRARIES} ${CMAKE_DL_LIBS})
 endif()
 
 install(TARGETS nwtclibs

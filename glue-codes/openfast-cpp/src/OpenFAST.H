@@ -161,7 +161,7 @@ class OpenFAST {
   OpenFAST() ;
   
   // Destructor
-  ~OpenFAST() {} ;
+  ~OpenFAST() ;
 
   void setInputs(const fastInputs &);  
 
@@ -190,19 +190,20 @@ class OpenFAST {
 
   void setTurbineProcNo(int iTurbGlob, int procNo) { turbineMapGlobToProc[iTurbGlob] = procNo; }
   void allocateTurbinesToProcsSimple();
-  void getApproxHubPos(std::vector<double> & currentCoords, int iTurbGlob);
-  void getHubPos(std::vector<double> & currentCoords, int iTurbGlob);
-  void getHubShftDir(std::vector<double> & hubShftVec, int iTurbGlob);
+  void getApproxHubPos(double* currentCoords, int iTurbGlob, int nSize=3);
+  void getHubPos(double* currentCoords, int iTurbGlob, int nSize=3);
+  void getHubShftDir(double* hubShftVec, int iTurbGlob, int nSize=3);
 
   ActuatorNodeType getVelNodeType(int iTurbGlob, int iNode);
-  void getVelNodeCoordinates(std::vector<double> & currentCoords, int iNode, int iTurbGlob);
-  void setVelocity(std::vector<double> & velocity, int iNode, int iTurbGlob);
-  void setVelocityForceNode(std::vector<double> & velocity, int iNode, int iTurbGlob);
+  void getVelNodeCoordinates(double* currentCoords, int iNode, int iTurbGlob, int nSize=3);
+  void setVelocity(double* velocity, int iNode, int iTurbGlob, int nSize=3);
+  void setVelocityForceNode(double* velocity, int iNode, int iTurbGlob, int nSize=3);
   void interpolateVel_ForceToVelNodes();
   ActuatorNodeType getForceNodeType(int iTurbGlob, int iNode);
-  void getForceNodeCoordinates(std::vector<double> & currentCoords, int iNode, int iTurbGlob);
-  void getForceNodeOrientation(std::vector<double> & currentOrientation, int iNode, int iTurbGlob);
-  void getForce(std::vector<double> & force, int iNode, int iTurbGlob);
+  void getForceNodeCoordinates(double* currentCoords, int iNode, int iTurbGlob, int nSize=3);
+  void getForceNodeOrientation(double* currentOrientation, int iNode, int iTurbGlob, int nSize=9);
+  void getForce(double* force, int iNode, int iTurbGlob, int nSize=3);
+  void getRelativeVelForceNode(double* vel, int iNode, int iTurbGlob, int nSize=3);
   double getChord(int iNode, int iTurbGlob);
 
   int get_ntStart() { return ntStart; }
@@ -226,6 +227,57 @@ class OpenFAST {
   int get_numForcePts(int iTurbGlob) { return get_numForcePtsLoc(get_localTurbNo(iTurbGlob)); }
 
   void computeTorqueThrust(int iTurGlob, std::vector<double> &  torque, std::vector<double> &  thrust);
+
+
+  inline
+  void getHubPos(std::vector<double> & currentCoords, int iTurbGlob) {
+    getHubPos(currentCoords.data(), iTurbGlob, currentCoords.size());
+  }
+
+  inline
+  void getApproxHubPos(std::vector<double>& currentCoords, int iTurbGlob) {
+    getApproxHubPos(currentCoords.data(), iTurbGlob, currentCoords.size());
+  }
+
+  inline
+  void getHubShftDir(std::vector<double> & hubShftVec, int iTurbGlob) {
+    getHubShftDir(hubShftVec.data(), iTurbGlob, hubShftVec.size());
+  }
+
+  inline
+  void getVelNodeCoordinates(std::vector<double> & currentCoords, int iNode, int iTurbGlob) {
+    getVelNodeCoordinates(currentCoords.data(), iNode, iTurbGlob, currentCoords.size());
+  }
+
+  inline
+  void setVelocity(std::vector<double> & currentVelocity, int iNode, int iTurbGlob) {
+    setVelocity(currentVelocity.data(), iNode, iTurbGlob, currentVelocity.size());
+  }
+
+  inline
+  void setVelocityForceNode(std::vector<double> & currentVelocity, int iNode, int iTurbGlob) {
+    setVelocityForceNode(currentVelocity.data(), iNode, iTurbGlob, currentVelocity.size());
+  }
+
+  inline
+  void getForceNodeCoordinates(std::vector<double> & currentCoords, int iNode, int iTurbGlob) {
+    getForceNodeCoordinates(currentCoords.data(), iNode, iTurbGlob, currentCoords.size());
+  }
+
+  inline
+  void getForceNodeOrientation(std::vector<double> & currentOrientation, int iNode, int iTurbGlob) {
+    getForceNodeOrientation(currentOrientation.data(), iNode, iTurbGlob, currentOrientation.size());
+  }
+
+  inline
+  void getForce(std::vector<double> & currentForce, int iNode, int iTurbGlob) {
+    getForce(currentForce.data(), iNode, iTurbGlob, currentForce.size());
+  }
+
+  inline
+  void getRelativeVelForceNode(std::vector<double> & currentVelocity, int iNode, int iTurbGlob) {
+    getRelativeVelForceNode(currentVelocity.data(), iNode, iTurbGlob, currentVelocity.size());
+  }
 
  private:
 

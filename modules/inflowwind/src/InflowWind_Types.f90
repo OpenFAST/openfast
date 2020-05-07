@@ -115,6 +115,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: HAWC_ProfileType      !< HAWC -- Wind profile type (0=constant;1=logarithmic;2=power law) [-]
     REAL(ReKi)  :: HAWC_PLExp      !< HAWC -- Power law exponent (used for PL wind profile type only) [-]
     REAL(ReKi)  :: HAWC_Z0      !< HAWC -- Surface roughness length (used for LOG wind profile type only) [-]
+    REAL(ReKi) , DIMENSION(1:3)  :: HAWC_InitPosition      !< HAWC -- initial position (offset for wind file box) [meters]
     LOGICAL  :: SumPrint      !< Write summary info to a file <ROOTNAME>.IfW.Sum [-]
     INTEGER(IntKi)  :: NumOuts      !< Number of parameters in the output list (number of outputs requested) [-]
     CHARACTER(10) , DIMENSION(:), ALLOCATABLE  :: OutList      !< List of user-requested output channels [-]
@@ -590,6 +591,7 @@ ENDIF
     DstInputFileData%HAWC_ProfileType = SrcInputFileData%HAWC_ProfileType
     DstInputFileData%HAWC_PLExp = SrcInputFileData%HAWC_PLExp
     DstInputFileData%HAWC_Z0 = SrcInputFileData%HAWC_Z0
+    DstInputFileData%HAWC_InitPosition = SrcInputFileData%HAWC_InitPosition
     DstInputFileData%SumPrint = SrcInputFileData%SumPrint
     DstInputFileData%NumOuts = SrcInputFileData%NumOuts
 IF (ALLOCATED(SrcInputFileData%OutList)) THEN
@@ -722,6 +724,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! HAWC_ProfileType
       Re_BufSz   = Re_BufSz   + 1  ! HAWC_PLExp
       Re_BufSz   = Re_BufSz   + 1  ! HAWC_Z0
+      Re_BufSz   = Re_BufSz   + SIZE(InData%HAWC_InitPosition)  ! HAWC_InitPosition
       Int_BufSz  = Int_BufSz  + 1  ! SumPrint
       Int_BufSz  = Int_BufSz  + 1  ! NumOuts
   Int_BufSz   = Int_BufSz   + 1     ! OutList allocated yes/no
@@ -893,6 +896,8 @@ ENDIF
       Re_Xferred   = Re_Xferred   + 1
       ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%HAWC_Z0
       Re_Xferred   = Re_Xferred   + 1
+      ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%HAWC_InitPosition))-1 ) = PACK(InData%HAWC_InitPosition,.TRUE.)
+      Re_Xferred   = Re_Xferred   + SIZE(InData%HAWC_InitPosition)
       IntKiBuf ( Int_Xferred:Int_Xferred+1-1 ) = TRANSFER( InData%SumPrint , IntKiBuf(1), 1)
       Int_Xferred   = Int_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%NumOuts
@@ -1120,6 +1125,17 @@ ENDIF
       Re_Xferred   = Re_Xferred + 1
       OutData%HAWC_Z0 = ReKiBuf( Re_Xferred )
       Re_Xferred   = Re_Xferred + 1
+    i1_l = LBOUND(OutData%HAWC_InitPosition,1)
+    i1_u = UBOUND(OutData%HAWC_InitPosition,1)
+    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask1 = .TRUE. 
+      OutData%HAWC_InitPosition = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%HAWC_InitPosition))-1 ), mask1, 0.0_ReKi )
+      Re_Xferred   = Re_Xferred   + SIZE(OutData%HAWC_InitPosition)
+    DEALLOCATE(mask1)
       OutData%SumPrint = TRANSFER( IntKiBuf( Int_Xferred ), mask0 )
       Int_Xferred   = Int_Xferred + 1
       OutData%NumOuts = IntKiBuf( Int_Xferred ) 
@@ -5478,7 +5494,7 @@ ENDIF
 !
 !..................................................................................................................................
 
- TYPE(InflowWind_InputType), INTENT(INOUT)  :: u(:) ! Input at t1 > t2 > t3
+ TYPE(InflowWind_InputType), INTENT(IN)  :: u(:) ! Input at t1 > t2 > t3
  REAL(DbKi),                 INTENT(IN   )  :: t(:)           ! Times associated with the Inputs
  TYPE(InflowWind_InputType), INTENT(INOUT)  :: u_out ! Input at tin_out
  REAL(DbKi),                 INTENT(IN   )  :: t_out           ! time to be extrap/interp'd to
@@ -5525,8 +5541,8 @@ ENDIF
 !
 !..................................................................................................................................
 
- TYPE(InflowWind_InputType), INTENT(INOUT)  :: u1    ! Input at t1 > t2
- TYPE(InflowWind_InputType), INTENT(INOUT)  :: u2    ! Input at t2 
+ TYPE(InflowWind_InputType), INTENT(IN)  :: u1    ! Input at t1 > t2
+ TYPE(InflowWind_InputType), INTENT(IN)  :: u2    ! Input at t2 
  REAL(DbKi),         INTENT(IN   )          :: tin(2)   ! Times associated with the Inputs
  TYPE(InflowWind_InputType), INTENT(INOUT)  :: u_out ! Input at tin_out
  REAL(DbKi),         INTENT(IN   )          :: tin_out  ! time to be extrap/interp'd to
@@ -5583,9 +5599,9 @@ END IF ! check if allocated
 !
 !..................................................................................................................................
 
- TYPE(InflowWind_InputType), INTENT(INOUT)  :: u1      ! Input at t1 > t2 > t3
- TYPE(InflowWind_InputType), INTENT(INOUT)  :: u2      ! Input at t2 > t3
- TYPE(InflowWind_InputType), INTENT(INOUT)  :: u3      ! Input at t3
+ TYPE(InflowWind_InputType), INTENT(IN)  :: u1      ! Input at t1 > t2 > t3
+ TYPE(InflowWind_InputType), INTENT(IN)  :: u2      ! Input at t2 > t3
+ TYPE(InflowWind_InputType), INTENT(IN)  :: u3      ! Input at t3
  REAL(DbKi),                 INTENT(IN   )  :: tin(3)    ! Times associated with the Inputs
  TYPE(InflowWind_InputType), INTENT(INOUT)  :: u_out     ! Input at tin_out
  REAL(DbKi),                 INTENT(IN   )  :: tin_out   ! time to be extrap/interp'd to
@@ -5652,7 +5668,7 @@ END IF ! check if allocated
 !
 !..................................................................................................................................
 
- TYPE(InflowWind_OutputType), INTENT(INOUT)  :: y(:) ! Output at t1 > t2 > t3
+ TYPE(InflowWind_OutputType), INTENT(IN)  :: y(:) ! Output at t1 > t2 > t3
  REAL(DbKi),                 INTENT(IN   )  :: t(:)           ! Times associated with the Outputs
  TYPE(InflowWind_OutputType), INTENT(INOUT)  :: y_out ! Output at tin_out
  REAL(DbKi),                 INTENT(IN   )  :: t_out           ! time to be extrap/interp'd to
@@ -5699,8 +5715,8 @@ END IF ! check if allocated
 !
 !..................................................................................................................................
 
- TYPE(InflowWind_OutputType), INTENT(INOUT)  :: y1    ! Output at t1 > t2
- TYPE(InflowWind_OutputType), INTENT(INOUT)  :: y2    ! Output at t2 
+ TYPE(InflowWind_OutputType), INTENT(IN)  :: y1    ! Output at t1 > t2
+ TYPE(InflowWind_OutputType), INTENT(IN)  :: y2    ! Output at t2 
  REAL(DbKi),         INTENT(IN   )          :: tin(2)   ! Times associated with the Outputs
  TYPE(InflowWind_OutputType), INTENT(INOUT)  :: y_out ! Output at tin_out
  REAL(DbKi),         INTENT(IN   )          :: tin_out  ! time to be extrap/interp'd to
@@ -5771,9 +5787,9 @@ END IF ! check if allocated
 !
 !..................................................................................................................................
 
- TYPE(InflowWind_OutputType), INTENT(INOUT)  :: y1      ! Output at t1 > t2 > t3
- TYPE(InflowWind_OutputType), INTENT(INOUT)  :: y2      ! Output at t2 > t3
- TYPE(InflowWind_OutputType), INTENT(INOUT)  :: y3      ! Output at t3
+ TYPE(InflowWind_OutputType), INTENT(IN)  :: y1      ! Output at t1 > t2 > t3
+ TYPE(InflowWind_OutputType), INTENT(IN)  :: y2      ! Output at t2 > t3
+ TYPE(InflowWind_OutputType), INTENT(IN)  :: y3      ! Output at t3
  REAL(DbKi),                 INTENT(IN   )  :: tin(3)    ! Times associated with the Outputs
  TYPE(InflowWind_OutputType), INTENT(INOUT)  :: y_out     ! Output at tin_out
  REAL(DbKi),                 INTENT(IN   )  :: tin_out   ! time to be extrap/interp'd to

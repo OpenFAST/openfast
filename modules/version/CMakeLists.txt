@@ -14,8 +14,17 @@
 # limitations under the License.
 #
 
-include(GetGitRevisionDescription)
-git_describe(GIT_DESCRIBE)
+# Allow the git-version information to be set externally for the
+# package manager distributions (homebrew, conda, apt) that download
+# the tarball source code rather than clone with git.
+if( DEFINED GIT_DESCRIBE )
+  message( WARNING
+    "Version information has been set as a CMake flag. This should only used when the git-version cannot be set automatically."
+  )
+else()
+  include(GetGitRevisionDescription)
+  git_describe(GIT_DESCRIBE)
+endif()
 add_definitions(-DGIT_VERSION_INFO="${GIT_DESCRIBE}")
 
 add_library(versioninfolib src/VersionInfo.f90)

@@ -149,6 +149,10 @@ macro(set_fast_intel_fortran_windows)
     set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} /real_size:64 /double_size:128")
   endif (DOUBLE_PRECISION)
 
+  # increase the default 2MB stack size to 16 MB
+  MATH(EXPR stack_size "16 * 1024 * 1024")
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /STACK:${stack_size}")
+
   # debug flags
   if(CMAKE_BUILD_TYPE MATCHES Debug)
     set( CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} /check:all /traceback" )

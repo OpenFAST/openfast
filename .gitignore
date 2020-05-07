@@ -32,6 +32,7 @@ __pycache__/*
 
 # Build specific files
 build*/
+_build*/
 install/
 vs-build/
 
@@ -43,3 +44,8 @@ vs-build/
 
 # backup files
 *.asv
+
+# LaTeX compiling files
+*.aux
+*.nlo
+*.log
