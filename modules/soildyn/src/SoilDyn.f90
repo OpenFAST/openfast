@@ -187,16 +187,22 @@ contains
       real(R8Ki)                             :: NullDispl(6)   !< ignored
       real(R8Ki)                             :: NullForce(6)   !< ignored
 
+      ErrStat  =  ErrID_None
+      ErrMsg   =  ""
+
          ! set placeholder for DLL stifness matrices
-      call AllocAry( p%DLL_Stiffness, 6, 6, size(m%dll_data), 'DLL stiffness matrices', ErrStat2, ErrMsg2 ); if (Failed()) return;
+      call AllocAry( p%DLL_Stiffness, 6, 6, size(m%dll_data), 'DLL stiffness matrices', ErrStat2, ErrMsg2 )
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
          ! Initialize the dll
       do i=1,size(m%dll_data)
          call REDWINinterface_Init( InputFileData%DLL_FileName, InputFileData%DLL_ProcName, p%DLL_Trgt, p%DLL_Model, &
-               m%dll_data(i), p%UseREDWINinterface, ErrStat2, ErrMsg2); if (Failed()) return;
+               m%dll_data(i), p%UseREDWINinterface, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          NullDispl = 0.0_R8Ki
          NullForce = 0.0_ReKi
-         call REDWINinterface_GetStiffMatrix( p%DLL_Trgt, p%DLL_Model, NullDispl, NullForce, p%DLL_StiffNess(1:6,1:6,i), m%dll_data(i), ErrStat2, ErrMsg2 ); if (Failed()) return;
+         call REDWINinterface_GetStiffMatrix( p%DLL_Trgt, p%DLL_Model, NullDispl, NullForce, p%DLL_StiffNess(1:6,1:6,i), m%dll_data(i), ErrStat2, ErrMsg2 )
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       enddo
    end subroutine SlD_REDWINsetup
 
