@@ -20,8 +20,9 @@
 !> This module contains I/O-related variables and routines with non-system-specific logic.
 MODULE NWTC_IO
 
-   USE                             SysSubs
-   USE                             NWTC_Library_Types  ! ProgDesc and other types with copy and other routines for those types
+   USE SysSubs
+   USE NWTC_Library_Types  ! ProgDesc and other types with copy and other routines for those types
+   USE VersionInfo
 
    IMPLICIT  NONE
 
@@ -1487,7 +1488,7 @@ CONTAINS
 
       ! Local declarations:
    INTEGER                                    :: I, J          ! Iterator variables
-   CHARACTER(1024)                            :: Arg
+   CHARACTER(1024)                            :: Arg, FlagIter
    CHARACTER(1024), DIMENSION(:), ALLOCATABLE :: ArgArray, TempArray, Flags
    LOGICAL :: FirstArgumentSet, SecondArgumentSet
 
@@ -1544,13 +1545,24 @@ CONTAINS
 
    DO I = 1, SIZE(Flags)
 
-      Flag = Flags(I)(2:) ! This results in the flag without the switch character
-      CALL Conv2UC( Flag )
+      FlagIter = Flags(I)(2:) ! This results in the flag without the switch character
+      CALL Conv2UC( FlagIter )
+      IF ( PRESENT(Flag) ) Flag = FlagIter
 
-      SELECT CASE ( TRIM(Flag) )
+      SELECT CASE ( TRIM(FlagIter) )
 
       CASE ('H')
+         CALL DispCopyrightLicense( ProgName )
+         CALL DispCompileRuntimeInfo
          CALL NWTC_DisplaySyntax( Arg1, ProgName )
+         IF ( PRESENT( ErrStat ) ) ErrStat = ErrID_None
+         CALL CLEANUP()
+         RETURN
+
+      CASE ('V', 'VERSION')
+         CALL DispCopyrightLicense( ProgName )
+         CALL DispCompileRuntimeInfo
+         IF ( PRESENT( ErrStat ) ) ErrStat = ErrID_None
          CALL CLEANUP()
          RETURN
 
@@ -1566,7 +1578,7 @@ CONTAINS
          END IF
 
       CASE DEFAULT
-         CALL INVALID_SYNTAX( 'unknown command-line argument given: '//TRIM(Flag) )
+         CALL INVALID_SYNTAX( 'unknown command-line argument given: '//TRIM(FlagIter) )
          CALL CLEANUP()
          RETURN
 
@@ -1590,12 +1602,11 @@ CONTAINS
 
          CHARACTER(*), INTENT(IN) :: ErrorMessage
 
+         CALL DispCopyrightLicense( ProgName )
+         CALL DispCompileRuntimeInfo
          CALL NWTC_DisplaySyntax( Arg1, ProgName )
          CALL ProgAbort( ' Invalid syntax: '//TRIM(ErrorMessage), PRESENT(ErrStat) )
-         IF ( PRESENT(ErrStat) ) THEN
-            ErrStat = ErrID_Fatal
-            RETURN
-         END IF
+         IF ( PRESENT(ErrStat) ) ErrStat = ErrID_Fatal
 
       END SUBROUTINE
 
@@ -2016,38 +2027,28 @@ CONTAINS
    END FUNCTION CurTime
 !=======================================================================
 !> This routine displays some text about copyright and license.
-   SUBROUTINE DispCopyrightLicense( ProgInfo, AdditionalComment )
+   SUBROUTINE DispCopyrightLicense( ProgramName, AdditionalComment )
 
-
-   TYPE( ProgDesc ), INTENT(IN)           :: ProgInfo             !< Contains the name and version info of the program being run
+   CHARACTER(*),     INTENT(IN)           :: ProgramName          !< The name of the program being run
    CHARACTER(*),     INTENT(IN), OPTIONAL :: AdditionalComment    !< An additional comment displayed in the copyright notice. Typically used to describe alpha versions or one-off versions.
 
       ! local variable
-   INTEGER(IntKi)         :: DateLen   ! the trim length of the ProgInfo date field
    INTEGER(IntKi)         :: I         ! generic loop/index
-   CHARACTER(4)           :: year      ! the year, determined from ProgInfo's date field
+   CHARACTER(4)           :: Year      ! the year, determined from the FPP __DATE__ variable
    CHARACTER(MaxWrScrLen) :: Stars     ! a line of '*******' characters
 
    DO I=1,MaxWrScrLen
       Stars(I:I)='*'
    END DO
 
-
-   DateLen = LEN_TRIM(ProgInfo%date)
-   IF (  DateLen > 3 ) THEN
-      I = DateLen-4+1
-      year = ProgInfo%date(I:)
-   ELSE
-      year = ''
-   END IF
-
+   Year = __DATE__(8:11)
 
    CALL WrScr('')
    CALL WrScr(Stars)
-   CALL WrScr( TRIM(GetNVD(ProgInfo)) )
+   CALL WrScr( TRIM(ProgramName) )
    CALL WrScr('')
-   CALL WrScr( 'Copyright (C) '//TRIM(year)//' National Renewable Energy Laboratory' )
-   CALL WrScr( 'Copyright (C) '//TRIM(year)//' Envision Energy USA LTD' )
+   CALL WrScr( 'Copyright (C) '//TRIM(Year)//' National Renewable Energy Laboratory' )
+   CALL WrScr( 'Copyright (C) '//TRIM(Year)//' Envision Energy USA LTD' )
    CALL WrScr('')
    CALL WrScr( 'This program is licensed under Apache License Version 2.0 and comes with ABSOLUTELY NO WARRANTY. '//&
                'See the "LICENSE" file distributed with this software for details.')   
@@ -2163,7 +2164,44 @@ CONTAINS
       END IF
       
    END SUBROUTINE DLLTypeUnPack   
+!=======================================================================
+!>
+   SUBROUTINE DispCompileRuntimeInfo()
 
+      USE iso_fortran_env, ONLY: compiler_options, compiler_version
+
+      CHARACTER(200) :: name
+      CHARACTER(200) :: git_commit, architecture, compiled_precision
+      CHARACTER(200) :: execution_date, execution_time, execution_zone
+
+      name = ProgName
+      git_commit = QueryGitVersion()
+      architecture = TRIM(Num2LStr(BITS_IN_ADDR))//' bit'
+      IF (ReKi == SiKi) THEN
+         compiled_precision = 'single'
+      ELSE IF (ReKi == R8Ki) THEN
+         compiled_precision = 'double'
+      ELSE
+         compiled_precision = 'unknown'
+      END IF
+
+      CALL WrScr(trim(name)//'-'//trim(git_commit))
+      CALL WrScr('Compile Info:')
+      call wrscr(' - Compiler: '//trim(compiler_version()))
+      CALL WrScr(' - Architecture: '//trim(architecture))
+      CALL WrScr(' - Precision: '//trim(compiled_precision))
+      CALL WrScr(' - Date: '//__DATE__)
+      CALL WrScr(' - Time: '//__TIME__)
+      ! call wrscr(' - Options: '//trim(compiler_options()))
+
+      CALL DATE_AND_TIME(execution_date, execution_time, execution_zone)
+
+      CALL WrScr('Execution Info:')
+      CALL WrScr(' - Date: '//TRIM(execution_date(5:6)//'/'//execution_date(7:8)//'/'//execution_date(1:4)))
+      CALL WrScr(' - Time: '//TRIM(execution_time(1:2)//':'//execution_time(3:4)//':'//execution_time(5:6))//TRIM(execution_zone))
+      CALL WrScr('')
+
+   END SUBROUTINE
 !=======================================================================
 !> This routine displays the name of the program, its version, and its release date.
 !! Use DispNVD (nwtc_io::dispnvd) instead of directly calling a specific routine in the generic interface.
@@ -2354,9 +2392,8 @@ CONTAINS
    END FUNCTION GetErrStr
    
 !=======================================================================
-!> This function converts the three strings contained in the ProgDesc
-!! data type into a single string listing the program name,
-!! version, and release date.
+!> This function extracts the Name field from the ProgDesc data type
+!  and return it.
    FUNCTION GetNVD ( ProgInfo )
 
       ! Argument declarations.

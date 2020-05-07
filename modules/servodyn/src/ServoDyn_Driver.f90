@@ -58,17 +58,23 @@ PROGRAM SrvD_Driver
    INTEGER(IntKi)                                     :: Un
    INTEGER(IntKi), parameter                          :: nMax = 80
    CHARACTER(1024)                                    :: OutFile
-   
+   CHARACTER(20)                                      :: FlagArg              !< Flag argument from command line
+
+   TYPE(ProgDesc), PARAMETER :: version = ProgDesc( 'ServoDyn_driver', '', '' )
    
    !...............................................................................................................................
    ! Routines called in initialization
    !...............................................................................................................................
 
+   CALL NWTC_Init( ProgNameIN=version%Name )
+
          ! Populate the InitInData data structure here:
 
+      ! Check for command line arguments.
    InitInData%InputFile = '' !'ServoDyn_input.dat'
+   CALL CheckArgs( InitInData%InputFile, Flag=FlagArg )
+   IF ( LEN( TRIM(FlagArg) ) > 0 ) CALL NormStop()
 
-   CALL CheckArgs( InitInData%InputFile, ErrStat)  ! if ErrStat2 /= ErrID_None, we'll ignore and deal with the problem when we try to read the input file
    CALL GetRoot( InitInData%InputFile, OutFile )
    OutFile = trim(OutFile)//'.out'
    

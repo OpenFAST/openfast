@@ -227,6 +227,56 @@ contains
         deallocate(argument_array)
     end subroutine
 
+    ! ************************************************************************
+    ! The version flag in any position should show the version info and exit
+    ! normally.
+
+    @test
+    subroutine test_version1()
+
+        ! executable.exe -v FileName
+
+        character(1024) :: filename, second_argument, flag
+        integer(IntKi) :: error_status
+        character(16), dimension(:), allocatable :: argument_array
+
+        filename = ""
+        allocate(argument_array(2))
+        argument_array = (/      &
+            "-v              ",  &
+            "first_arg.txt   "   &
+        /)
+        call CheckArgs( filename, error_status, second_argument, flag, argument_array )
+        @assertEqual( "first_arg.txt", filename )
+        @assertEqual( 0, error_status )
+        @assertEqual( "", second_argument )
+        @assertEqual( "V", flag )
+        deallocate(argument_array)
+    end subroutine
+
+    @test
+    subroutine test_version2()
+
+        ! executable.exe FileName -VERSION 
+
+        character(1024) :: filename, second_argument, flag
+        integer(IntKi) :: error_status
+        character(16), dimension(:), allocatable :: argument_array
+
+        filename = ""
+        allocate(argument_array(2))
+        argument_array = (/      &
+            "first_arg.txt   ",  &
+            "-VERSION        "   &
+        /)
+        call CheckArgs( filename, error_status, second_argument, flag, argument_array )
+        @assertEqual( "first_arg.txt", filename )
+        @assertEqual( 0, error_status )
+        @assertEqual( "", second_argument )
+        @assertEqual( "VERSION", flag )
+        deallocate(argument_array)
+    end subroutine
+
     ! FAILING CASES
 
     ! ************************************************************************
