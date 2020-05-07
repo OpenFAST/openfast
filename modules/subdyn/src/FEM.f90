@@ -895,7 +895,7 @@ SUBROUTINE ElemK_Cable(A, L, E, T0, DirCos, K)
 
    Eps0 = T0/(E*A)
    L0   = L/(1+Eps0)  ! "rest length" for which pretension would be 0
-   EAL0 = E*A*L0
+   EAL0 = E*A/L0
    EE   = EAL0* Eps0/(1+Eps0)
 
    K(1:12,1:12)=0
