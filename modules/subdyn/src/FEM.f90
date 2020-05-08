@@ -397,7 +397,7 @@ SUBROUTINE CraigBamptonReduction_FromPartition( MRR, MLL, MRL, KRR, KLL, KRL, nR
    endif
    
    ! --- Compute CB modes (PhiL) and eigenvalues (OmegaL)
-   IF ( nM > 0 ) THEN 
+   if ( nM_out > 0 ) then 
       ! bCheckSingularity = True
       CALL EigenSolveWrap(KLL, MLL, nL, nM_out, .True., PhiL(:,1:nM_out), OmegaL(1:nM_out),  ErrStat2, ErrMsg2); if(Failed()) return
       ! --- Normalize PhiL
@@ -414,7 +414,10 @@ SUBROUTINE CraigBamptonReduction_FromPartition( MRR, MLL, MRL, KRR, KLL, KRL, nR
          PhiL(:,I) = PhiL(:,I) / SQRT( MU(I, I) )
       ENDDO    
       DEALLOCATE(MU)
-   END IF
+   else
+      PhiL   = 0.0_ReKi
+      OmegaL = 0.0_ReKi
+   end if
       
    ! --- Compute Guyan Modes (PhiR)
    ! factor KLL to compute PhiR: KLL*PhiR=-TRANSPOSE(KRL)
