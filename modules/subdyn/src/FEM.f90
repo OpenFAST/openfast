@@ -418,33 +418,40 @@ SUBROUTINE CraigBamptonReduction_FromPartition( MRR, MLL, MRL, KRR, KLL, KRL, nR
       PhiL   = 0.0_ReKi
       OmegaL = 0.0_ReKi
    end if
+
+   if (nL>0) then
+      ! --- Compute Guyan Modes (PhiR)
+      ! factor KLL to compute PhiR: KLL*PhiR=-TRANSPOSE(KRL)
+      ! ** note this must be done after EigenSolveWrap() because it modifies KLL **
+      CALL LAPACK_getrf( nL, nL, KLL, ipiv, ErrStat2, ErrMsg2); if(Failed()) return
       
-   ! --- Compute Guyan Modes (PhiR)
-   ! factor KLL to compute PhiR: KLL*PhiR=-TRANSPOSE(KRL)
-   ! ** note this must be done after EigenSolveWrap() because it modifies KLL **
-   CALL LAPACK_getrf( nL, nL, KLL, ipiv, ErrStat2, ErrMsg2); if(Failed()) return
-   
-   PhiR = -1.0_ReKi * TRANSPOSE(KRL) !set "b" in Ax=b  (solve KLL * PhiR = - TRANSPOSE( KRL ) for PhiR)
-   CALL LAPACK_getrs( TRANS='N', N=nL, A=KLL, IPIV=ipiv, B=PhiR, ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
-   
-   ! --- Set MBB, MBM, and KBB from Eq. 4:
-   CALL AllocAry( PhiR_T_MLL,  nR, nL, 'PhiR_T_MLL', ErrStat2, ErrMsg2); if(Failed()) return
+      PhiR = -1.0_ReKi * TRANSPOSE(KRL) !set "b" in Ax=b  (solve KLL * PhiR = - TRANSPOSE( KRL ) for PhiR)
+      CALL LAPACK_getrs( TRANS='N', N=nL, A=KLL, IPIV=ipiv, B=PhiR, ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
       
-   PhiR_T_MLL = TRANSPOSE(PhiR)
-   PhiR_T_MLL = MATMUL(PhiR_T_MLL, MLL)
-   MBB = MATMUL(MRL, PhiR)
-   MBB = MRR + MBB + TRANSPOSE( MBB ) + MATMUL( PhiR_T_MLL, PhiR )
+      ! --- Set MBB, MBM, and KBB from Eq. 4:
+      CALL AllocAry( PhiR_T_MLL,  nR, nL, 'PhiR_T_MLL', ErrStat2, ErrMsg2); if(Failed()) return
+         
+      PhiR_T_MLL = TRANSPOSE(PhiR)
+      PhiR_T_MLL = MATMUL(PhiR_T_MLL, MLL)
+      MBB = MATMUL(MRL, PhiR)
+      MBB = MRR + MBB + TRANSPOSE( MBB ) + MATMUL( PhiR_T_MLL, PhiR )
+         
+      IF ( nM == 0) THEN
+         MBM = 0.0_ReKi
+      ELSE
+         MBM = MATMUL( PhiR_T_MLL, PhiL(:,1:nM))  ! last half of operation
+         MBM = MATMUL( MRL, PhiL(:,1:nM) ) + MBM    !This had PhiM      
+      ENDIF
       
-   IF ( nM == 0) THEN
-      MBM = 0.0_ReKi
-   ELSE
-      MBM = MATMUL( PhiR_T_MLL, PhiL(:,1:nM))  ! last half of operation
-      MBM = MATMUL( MRL, PhiL(:,1:nM) ) + MBM    !This had PhiM      
-   ENDIF
-   
-   KBB = MATMUL(KRL, PhiR)   
-   KBB = KBB + KRR
-     
+      KBB = MATMUL(KRL, PhiR)   
+      KBB = KBB + KRR
+   else
+      PhiR(1:nL,1:nR) = 0.0_ReKi   ! Empty
+      MBM (1:nR,1:nM) = 0.0_ReKi ! Empty
+      MBB = MRR
+      KBB = KRR
+   endif
+        
    call CleanUp()
 CONTAINS
 
