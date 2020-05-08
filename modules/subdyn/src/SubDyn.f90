@@ -804,6 +804,10 @@ endif
 ! Extract fields from first line
 DO I = 1, nColumns
    bNumeric = is_numeric(StrArray(I), Init%Joints(1,I)) ! Convert from string to float
+   if (.not.bNumeric) then
+      CALL Fatal(' Error in file "'//TRIM(SDInputFile)//'": Non numeric character found in Joints line. Problematic line: "'//trim(Line)//'"')
+      return
+   endif
 ENDDO
 deallocate(StrArray)
 ! Read remaining lines
