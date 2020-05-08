@@ -1,16 +1,30 @@
 #!/bin/bash
 
+cd /openfast
+
 git fetch origin ${GITHUB_REF}:CI
 git checkout CI
 git submodule update
 
-# Print the current git info
-echo `git status`
-echo `git log -1`
+# Display the current git info
+echo git-status from openfast:
+git status
+
+echo git-log from openfast:
+git log -1
+
 cd /openfast/reg_tests/r-test
-echo `git status`
-echo `git log -1`
+echo git-status from r-test:
+git status
+
+echo git-log from r-test:
+git log -1
+
 cd /openfast
+
+# Display the differences between this commit and `dev`
+echo git-diff from ${GITHUB_REF} to dev:
+git diff dev
 
 # Move into the "build" directory, remove the old reg tests, and compile
 cd /openfast/build

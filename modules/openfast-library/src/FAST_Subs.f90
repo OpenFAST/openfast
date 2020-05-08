@@ -23,7 +23,6 @@ MODULE FAST_Subs
 
    USE FAST_Solver
    USE FAST_Linear
-   USE VersionInfo
 
    IMPLICIT NONE
 
@@ -1367,71 +1366,21 @@ FUNCTION GetVersion(ThisProgVer)
 END FUNCTION GetVersion
 
 !----------------------------------------------------------------------------------------------------------------------------------
-!> This subroutine parses and compiles the relevant version and compile data for a givne program
-subroutine GetProgramMetadata(ThisProgVer, name, version, git_commit, architecture, precision)
-
-   TYPE(ProgDesc), INTENT(IN ) :: ThisProgVer     !< program name/date/version description
-   character(200), intent(out) :: name, version
-   character(200), intent(out) :: git_commit, architecture, precision
-   
-   name = trim(ThisProgVer%Name)
-   version = trim(ThisProgVer%Ver)
-   
-   git_commit = QueryGitVersion()
-
-   architecture = TRIM(Num2LStr(BITS_IN_ADDR))//' bit'
-   
-   if (ReKi == SiKi) then
-     precision = 'single'
-   else if (ReKi == R8Ki) then
-     precision = 'double'
-   else
-     precision = 'unknown'
-   end if
-   
-end subroutine GetProgramMetadata
-
-!----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine is called at the start (or restart) of a FAST program (or FAST.Farm). It initializes the NWTC subroutine library,
 !! displays the copyright notice, and displays some version information (including addressing scheme and precision).
 SUBROUTINE FAST_ProgStart(ThisProgVer)
    TYPE(ProgDesc), INTENT(IN) :: ThisProgVer     !< program name/date/version description
-   character(200) :: name, version
-   character(200) :: git_commit, architecture, precision
-   character(200) :: execution_date, execution_time, execution_zone
    
    ! ... Initialize NWTC Library (open console, set pi constants) ...
    ! sets the pi constants, open console for output, etc...
    CALL NWTC_Init( ProgNameIN=ThisProgVer%Name, EchoLibVer=.FALSE. )
    
    ! Display the copyright notice
-   CALL DispCopyrightLicense( ThisProgVer )
+   CALL DispCopyrightLicense( ThisProgVer%Name )
    
-   ! Display the program metadata
-   call GetProgramMetadata(ThisProgVer, name, version, git_commit, architecture, precision)
-   
-   call wrscr(trim(name)//'-'//trim(git_commit))
-   call wrscr('Compile Info:')
-   call wrscr(' - Architecture: '//trim(architecture))
-   call wrscr(' - Precision: '//trim(precision))
-   call wrscr(' - Date: '//__DATE__)
-   call wrscr(' - Time: '//__TIME__)
-   ! use iso_fortran_env for compiler_version() and compiler_options()
-   ! call wrscr(' - Compiler: '//trim(compiler_version()))
-   ! call wrscr(' - Options: '//trim(compiler_options()))
+   CALL DispCompileRuntimeInfo
 
-   call date_and_time(execution_date, execution_time, execution_zone) 
-   
-   call wrscr('Execution Info:')
-   call wrscr(' - Date: '//trim(execution_date(5:6)//'/'//execution_date(7:8)//'/'//execution_date(1:4)))
-   call wrscr(' - Time: '//trim(execution_time(1:2)//':'//execution_time(3:4)//':'//execution_time(5:6))//trim(execution_zone))
-   
-   call wrscr('')
-   
-  !  CALL WrScr( ' Running '//TRIM(GetVersion(ThisProgVer))//NewLine//' linked with '//TRIM( GetNVD( NWTC_Ver ))//NewLine )
-   
 END SUBROUTINE FAST_ProgStart
-
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine gets the name of the FAST input file from the command line. It also returns a logical indicating if this there
 !! was a "DWM" argument after the file name.
