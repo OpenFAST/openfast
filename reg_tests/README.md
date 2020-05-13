@@ -7,7 +7,7 @@ This directory contains the regression test suite for OpenFAST and its modules. 
 - A `lib` subdirectory with lower level python scripts
 
 Dependencies required to run the regression test suite are
-- Python 3+
+- Python 3.7+
 - Numpy
 - CMake and CTest
 - Bokeh 1.4 (optional)

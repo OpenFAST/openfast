@@ -21,7 +21,7 @@ Dependencies
 ------------
 The following packages are required for unit testing:
 
-- Python 3+
+- Python 3.7+
 - CMake
 - pFUnit - Included in OpenFAST repo through a git-submodule
 

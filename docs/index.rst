@@ -42,7 +42,6 @@ package:
 
 - `OpenFAST Github Organization <https://github.com/OpenFAST>`_
 - `Github Repository <https://github.com/OpenFAST/OpenFAST>`_
-- `Nightly Tests <http://my.cdash.org/index.php?project=OpenFAST>`_
 
 **Documentation Directory**
 
