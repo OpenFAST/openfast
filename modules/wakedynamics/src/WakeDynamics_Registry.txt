@@ -98,8 +98,8 @@ typedef   ^         MiscVarType   ReKi  r_wake  {:}    - -   ""
 # ..... Parameters ................................................................................................................
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
-typedef ^ ParameterType  DbKi             dt             -  - -   "Time interval for wake dynamics calculations {or default}"      s
-#typedef  ^ ParameterType DbKi            tmax            -  - - "Total run time" seconds
+typedef ^ ParameterType  DbKi             dt_low         -  - -   "Time interval for wake dynamics calculations {or default}"      s
+#typedef  ^ ParameterType DbKi            tmax           -  - -   "Total run time" seconds
 typedef ^ ParameterType  IntKi            NumPlanes      -  - -   "Number of wake planes"      -
 typedef ^ ParameterType  IntKi            NumRadii       -  - -   "Number of radii in the radial finite-difference grid"      -
 typedef ^ ParameterType  ReKi             dr             -  - -   "Radial increment of radial finite-difference grid"      m

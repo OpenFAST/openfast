@@ -269,11 +269,11 @@ contains
 END SUBROUTINE FWrap_Init
 !----------------------------------------------------------------------------------------------------------------------------------
 ! this routine sets the parameters for the FAST Wrapper module. It does not set p%n_FAST_low because we need to initialize FAST first.
-subroutine SetParameters(InitInp, p, dt_FAST, InitInp_dt, ErrStat, ErrMsg)
+subroutine SetParameters(InitInp, p, dt_FAST, InitInp_dt_low, ErrStat, ErrMsg)
    TYPE(FWrap_InitInputType),       INTENT(IN   )  :: InitInp     !< Input data for initialization routine
    TYPE(FWrap_ParameterType),       INTENT(INOUT)  :: p           !< Parameters
    REAL(DbKi),                      INTENT(IN   )  :: dt_FAST     !< time step for FAST
-   REAL(DbKi),                      INTENT(IN   )  :: InitInp_dt  !< time step for FAST.Farm
+   REAL(DbKi),                      INTENT(IN   )  :: InitInp_dt_low  !< time step for FAST.Farm
    
    INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat     !< Error status of the operation
    CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
@@ -300,22 +300,22 @@ subroutine SetParameters(InitInp, p, dt_FAST, InitInp_dt, ErrStat, ErrMsg)
    
    
    ! p%n_FAST_low has to be set AFTER we initialize FAST, because we need to know what the FAST time step is going to be.    
-   IF ( EqualRealNos( dt_FAST, InitInp_dt ) ) THEN
+   IF ( EqualRealNos( dt_FAST, InitInp_dt_low ) ) THEN
       p%n_FAST_low = 1
    ELSE
-      IF ( dt_FAST > InitInp_dt ) THEN
+      IF ( dt_FAST > InitInp_dt_low ) THEN
          ErrStat = ErrID_Fatal
          ErrMsg = "The FAST time step ("//TRIM(Num2LStr(dt_FAST))// &
-                    " s) cannot be larger than FAST.Farm time step ("//TRIM(Num2LStr(InitInp_dt))//" s)."
+                    " s) cannot be larger than FAST.Farm time step ("//TRIM(Num2LStr(InitInp_dt_low))//" s)."
       ELSE
             ! calculate the number of subcycles:
-         p%n_FAST_low = NINT( InitInp_dt / dt_FAST )
+         p%n_FAST_low = NINT( InitInp_dt_low / dt_FAST )
             
             ! let's make sure the FAST DT is an exact integer divisor of the global (FAST.Farm) time step:
-         IF ( .NOT. EqualRealNos( InitInp_dt, dt_FAST * p%n_FAST_low )  ) THEN
+         IF ( .NOT. EqualRealNos( InitInp_dt_low, dt_FAST * p%n_FAST_low )  ) THEN
             ErrStat = ErrID_Fatal
             ErrMsg  = "The FASTWrapper module time step ("//TRIM(Num2LStr(dt_FAST))// &
-                      " s) must be an integer divisor of the FAST.Farm time step ("//TRIM(Num2LStr(InitInp_dt))//" s)."
+                      " s) must be an integer divisor of the FAST.Farm time step ("//TRIM(Num2LStr(InitInp_dt_low))//" s)."
          END IF
             
       END IF

@@ -208,18 +208,18 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
    
    farm%p%NOutTurb = min(farm%p%NumTurbines,9)  ! We only support output for the first 9 turbines, even if the farm has more than 9 
    
-   farm%p%n_high_low = NINT( farm%p%dt / farm%p%dt_high )
+   farm%p%n_high_low = NINT( farm%p%dt_low / farm%p%dt_high )
             
-         ! let's make sure the FAST DT is an exact integer divisor of dt_high 
-         ! (i'm doing this outside of Farm_ValidateInput so we know that dt/=0 before computing n_high_low):
-      IF ( .NOT. EqualRealNos( real(farm%p%DT,SiKi), real(farm%p%DT_high,SiKi) * farm%p%n_high_low )  ) THEN
-         CALL SetErrStat(ErrID_Fatal, "DT_high ("//TRIM(Num2LStr(farm%p%dt_high))//" s) must be an integer divisor of DT (" &
-                        //TRIM(Num2LStr(farm%p%dt))//" s).", ErrStat, ErrMsg, RoutineName ) 
+         ! let's make sure the FAST.Farm DT_low is an exact multiple of dt_high 
+         ! (i'm doing this outside of Farm_ValidateInput so we know that dt_low/=0 before computing n_high_low):
+      IF ( .NOT. EqualRealNos( real(farm%p%DT_low,SiKi), real(farm%p%DT_high,SiKi) * farm%p%n_high_low )  ) THEN
+         CALL SetErrStat(ErrID_Fatal, "DT_high ("//TRIM(Num2LStr(farm%p%dt_high))//" s) must be an integer divisor of DT_low (" &
+                        //TRIM(Num2LStr(farm%p%dt_low))//" s).", ErrStat, ErrMsg, RoutineName ) 
       END IF
       
    farm%p%TChanLen = max( 10, int(log10(farm%p%TMax))+7 )
    farm%p%OutFmt_t = 'F'//trim(num2lstr( farm%p%TChanLen ))//'.4' ! 'F10.4'    
-   farm%p%n_TMax  = FLOOR( ( farm%p%TMax / farm%p%DT ) ) + 1  ! We're going to go from step 0 to (n_TMax - 1)
+   farm%p%n_TMax  = FLOOR( ( farm%p%TMax / farm%p%DT_low ) ) + 1  ! We're going to go from step 0 to (n_TMax - 1)
                    ! [note that FAST uses the ceiling function, so it might think we're doing one more step than FAST.Farm; 
                    ! This difference will be a problem only if FAST thinks it's doing FEWER timesteps than FAST.Farm does.]
    
@@ -236,7 +236,7 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
       ! a. CALL AWAE_Init
    
    AWAE_InitInput%InputFileData%dr           = WD_InitInput%InputFileData%dr
-   AWAE_InitInput%InputFileData%dt           = farm%p%dt 
+   AWAE_InitInput%InputFileData%dt_low       = farm%p%dt_low 
    AWAE_InitInput%InputFileData%NumTurbines  = farm%p%NumTurbines
    AWAE_InitInput%InputFileData%NumRadii     = WD_InitInput%InputFileData%NumRadii
    AWAE_InitInput%InputFileData%NumPlanes    = WD_InitInput%InputFileData%NumPlanes
@@ -246,7 +246,7 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
    AWAE_InitInput%OutFileRoot                = farm%p%OutFileRoot
    
    call AWAE_Init( AWAE_InitInput, farm%AWAE%u, farm%AWAE%p, farm%AWAE%x, farm%AWAE%xd, farm%AWAE%z, farm%AWAE%OtherSt, farm%AWAE%y, &
-                   farm%AWAE%m, farm%p%DT, AWAE_InitOutput, ErrStat2, ErrMsg2 )
+                   farm%AWAE%m, farm%p%DT_low, AWAE_InitOutput, ErrStat2, ErrMsg2 )
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF (ErrStat >= AbortErrLev) THEN
          CALL Cleanup()
@@ -341,7 +341,7 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, OutList
    CHARACTER(*),                   INTENT(  OUT) :: ErrMsg                          !< Error message
 
       ! Local variables:
-   REAL(DbKi)                    :: TmpTime                                   ! temporary variable to read SttsTime and ChkptTime before converting to #steps based on DT
+   REAL(DbKi)                    :: TmpTime                                   ! temporary variable to read SttsTime and ChkptTime before converting to #steps based on DT_low
    INTEGER(IntKi)                :: I                                         ! loop counter
    INTEGER(IntKi)                :: UnIn                                      ! Unit number for reading file
    INTEGER(IntKi)                :: UnEc                                      ! I/O unit for echo file. If > 0, file is open for writing.
@@ -533,8 +533,8 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, OutList
          RETURN        
       end if
       
-      ! DT - Time step for low-resolution wind data input files; will be used as the global FAST.Farm time step (s) [>0.0]:
-   CALL ReadVar( UnIn, InputFile, p%DT, "DT", "Time step for low-resolution wind data input files; will be used as the global FAST.Farm time step (s) [>0.0]", ErrStat2, ErrMsg2, UnEc)
+      ! DT_low - Time step for low-resolution wind data input files; will be used as the global FAST.Farm time step (s) [>0.0]:
+   CALL ReadVar( UnIn, InputFile, p%DT_low, "DT_low", "Time step for low-resolution wind data input files; will be used as the global FAST.Farm time step (s) [>0.0]", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if ( ErrStat >= AbortErrLev ) then
          call cleanup()
@@ -574,14 +574,14 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, OutList
          RETURN        
       end if
       
-      ! DT - Time step for low-resolution wind data input files; will be used as the global FAST.Farm time step (s) [>0.0]:
-   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%DT, "DT", "Time step for low-resolution wind data input files; will be used as the global FAST.Farm time step (s) [>0.0]", ErrStat2, ErrMsg2, UnEc)
+      ! DT_low - Time step for low-resolution wind data input files; will be used as the global FAST.Farm time step (s) [>0.0]:
+   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%DT_low, "DT_low", "Time step for low-resolution wind data input files; will be used as the global FAST.Farm time step (s) [>0.0]", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if ( ErrStat >= AbortErrLev ) then
          call cleanup()
          RETURN        
       end if
-   if ( AWAE_InitInp%Mod_AmbWind == 2 ) p%DT = AWAE_InitInp%DT
+   if ( AWAE_InitInp%Mod_AmbWind == 2 ) p%DT_low = AWAE_InitInp%DT_low
    
       ! DT_high - Time step for high-resolution wind data input files (s) [>0.0]:
    CALL ReadVar( UnIn, InputFile, AWAE_InitInp%DT_high, "DT_high", "Time step for high-resolution wind data input files (s) [>0.0]", ErrStat2, ErrMsg2, UnEc)
@@ -1096,7 +1096,7 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, OutList
           ! WrDisDT -The time between vtk outputs [must be a multiple of the low resolution time step]:
    CALL ReadVarWDefault( UnIn, InputFile, AWAE_InitInp%WrDisDT, "WrDisDT", &
       "The time between vtk outputs [must be a multiple of the low resolution time step]", &
-      p%DT, ErrStat2, ErrMsg2, UnEc)
+      p%DT_low, ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if ( ErrStat >= AbortErrLev ) then
          call cleanup()
@@ -1131,7 +1131,7 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, OutList
       IF (TmpTime > p%TMax) THEN
          p%n_ChkptTime = HUGE(p%n_ChkptTime)
       ELSE         
-         p%n_ChkptTime = NINT( TmpTime / p%DT )
+         p%n_ChkptTime = NINT( TmpTime / p%DT_low )
       END IF
       
 
@@ -1334,7 +1334,7 @@ SUBROUTINE Farm_ValidateInput( p, WD_InitInp, AWAE_InitInp, ErrStat, ErrMsg )
    ErrStat = ErrID_None
    ErrMsg  = ""
    
-   IF (p%DT <= 0.0_ReKi) CALL SetErrStat(ErrID_Fatal,'DT must be positive.',ErrStat,ErrMsg,RoutineName)
+   IF (p%DT_low <= 0.0_ReKi) CALL SetErrStat(ErrID_Fatal,'DT_low must be positive.',ErrStat,ErrMsg,RoutineName)
    IF (p%DT_high <= 0.0_ReKi) CALL SetErrStat(ErrID_Fatal,'DT_high must be positive.',ErrStat,ErrMsg,RoutineName)
    IF (p%TMax < 0.0_ReKi) CALL SetErrStat(ErrID_Fatal,'TMax must not be negative.',ErrStat,ErrMsg,RoutineName)
    IF (p%NumTurbines < 1) CALL SetErrStat(ErrID_Fatal,'FAST.Farm requires at least 1 turbine. Set NumTurbines > 0.',ErrStat,ErrMsg,RoutineName)
@@ -1382,15 +1382,15 @@ SUBROUTINE Farm_ValidateInput( p, WD_InitInp, AWAE_InitInp, ErrStat, ErrMsg )
    IF (p%TStart < 0.0_ReKi) CALL SetErrStat(ErrID_Fatal,'TStart must not be negative.',ErrStat,ErrMsg,RoutineName)
    IF (.not. p%WrBinOutFile .and. .not. p%WrTxtOutFile) CALL SetErrStat( ErrID_Fatal, "FAST.Farm's OutFileFmt must be 1, 2, or 3.",ErrStat,ErrMsg,RoutineName)
    
-   if (AWAE_InitInp%WrDisDT < p%DT) CALL SetErrStat(ErrID_Fatal,'WrDisDT must greater than or equal to dt.',ErrStat,ErrMsg,RoutineName)
+   if (AWAE_InitInp%WrDisDT < p%DT_low) CALL SetErrStat(ErrID_Fatal,'WrDisDT must greater than or equal to dt_low.',ErrStat,ErrMsg,RoutineName)
    
-      ! let's make sure the FAST DT is an exact integer divisor of AWAE_InitInp%WrDisDT 
-   n_disDT_dt = nint( AWAE_InitInp%WrDisDT / p%DT )
-      ! (i'm doing this outside of Farm_ValidateInput so we know that dt/=0 before computing n_high_low):
-   IF ( .NOT. EqualRealNos( real(p%DT,SiKi)* n_disDT_dt, real(AWAE_InitInp%WrDisDT,SiKi)  )  ) THEN
-      CALL SetErrStat(ErrID_Fatal, "WrDisDT ("//TRIM(Num2LStr(AWAE_InitInp%WrDisDT))//" s) must be an integer multiple of dt ("//TRIM(Num2LStr(p%DT))//" s).", ErrStat, ErrMsg, RoutineName ) 
+      ! let's make sure the FAST.Farm DT_low is an exact integer divisor of AWAE_InitInp%WrDisDT 
+   n_disDT_dt = nint( AWAE_InitInp%WrDisDT / p%DT_low )
+      ! (i'm doing this outside of Farm_ValidateInput so we know that dt_low/=0 before computing n_high_low):
+   IF ( .NOT. EqualRealNos( real(p%DT_low,SiKi)* n_disDT_dt, real(AWAE_InitInp%WrDisDT,SiKi)  )  ) THEN
+      CALL SetErrStat(ErrID_Fatal, "WrDisDT ("//TRIM(Num2LStr(AWAE_InitInp%WrDisDT))//" s) must be an integer multiple of dt_low ("//TRIM(Num2LStr(p%DT_low))//" s).", ErrStat, ErrMsg, RoutineName ) 
    END IF
-   AWAE_InitInp%WrDisDT =  p%DT * n_disDT_dt
+   AWAE_InitInp%WrDisDT =  p%DT_low * n_disDT_dt
    
    
    if (AWAE_InitInp%NOutDisWindXY < 0 .or. AWAE_InitInp%NOutDisWindXY > maxOutputPoints ) CALL SetErrStat( ErrID_Fatal, 'NOutDisWindXY must be in the range [0, 9].', ErrStat, ErrMsg, RoutineName )
@@ -1469,9 +1469,9 @@ SUBROUTINE Farm_InitWD( farm, WD_InitInp, ErrStat, ErrMsg )
          
          WD_InitInp%TurbNum     = nt
          
-            ! note that WD_Init has Interval as INTENT(IN) so, we don't need to worry about overwriting farm%p%dt here:
+            ! note that WD_Init has Interval as INTENT(IN) so, we don't need to worry about overwriting farm%p%dt_low here:
          call WD_Init( WD_InitInp, farm%WD(nt)%u, farm%WD(nt)%p, farm%WD(nt)%x, farm%WD(nt)%xd, farm%WD(nt)%z, &
-                          farm%WD(nt)%OtherSt, farm%WD(nt)%y, farm%WD(nt)%m, farm%p%dt, WD_InitOut, ErrStat2, ErrMsg2 )
+                          farm%WD(nt)%OtherSt, farm%WD(nt)%y, farm%WD(nt)%m, farm%p%dt_low, WD_InitOut, ErrStat2, ErrMsg2 )
          
          farm%WD(nt)%IsInitialized = .true.
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'T'//trim(num2lstr(nt))//':'//RoutineName)
@@ -1555,9 +1555,9 @@ SUBROUTINE Farm_InitFAST( farm, WD_InitInp, AWAE_InitOutput, ErrStat, ErrMsg )
          FWrap_InitInp%dZ_high       = AWAE_InitOutput%dZ_high(nt)
          
          
-            ! note that FWrap_Init has Interval as INTENT(IN) so, we don't need to worry about overwriting farm%p%dt here:
+            ! note that FWrap_Init has Interval as INTENT(IN) so, we don't need to worry about overwriting farm%p%dt_low here:
          call FWrap_Init( FWrap_InitInp, farm%FWrap(nt)%u, farm%FWrap(nt)%p, farm%FWrap(nt)%x, farm%FWrap(nt)%xd, farm%FWrap(nt)%z, &
-                          farm%FWrap(nt)%OtherSt, farm%FWrap(nt)%y, farm%FWrap(nt)%m, farm%p%dt, FWrap_InitOut, ErrStat2, ErrMsg2 )
+                          farm%FWrap(nt)%OtherSt, farm%FWrap(nt)%y, farm%FWrap(nt)%m, farm%p%dt_low, FWrap_InitOut, ErrStat2, ErrMsg2 )
          
          farm%FWrap(nt)%IsInitialized = .true.
          
@@ -2145,7 +2145,7 @@ subroutine FARM_CalcOutput(t, farm, ErrStat, ErrMsg)
    ! Write Output to File
    !.......................................................................................
       ! NOTE: Visualization data is output via the AWAE module
-   n = nint(t/farm%p%DT)
+   n = nint(t/farm%p%DT_low)
    call Farm_WriteOutput(n, t, farm, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    

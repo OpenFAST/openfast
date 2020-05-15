@@ -122,7 +122,7 @@ IMPLICIT NONE
 ! =======================
 ! =========  WD_ParameterType  =======
   TYPE, PUBLIC :: WD_ParameterType
-    REAL(DbKi)  :: dt      !< Time interval for wake dynamics calculations {or default} [s]
+    REAL(DbKi)  :: dt_low      !< Time interval for wake dynamics calculations {or default} [s]
     INTEGER(IntKi)  :: NumPlanes      !< Number of wake planes [-]
     INTEGER(IntKi)  :: NumRadii      !< Number of radii in the radial finite-difference grid [-]
     REAL(ReKi)  :: dr      !< Radial increment of radial finite-difference grid [m]
@@ -2905,7 +2905,7 @@ ENDIF
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
-    DstParamData%dt = SrcParamData%dt
+    DstParamData%dt_low = SrcParamData%dt_low
     DstParamData%NumPlanes = SrcParamData%NumPlanes
     DstParamData%NumRadii = SrcParamData%NumRadii
     DstParamData%dr = SrcParamData%dr
@@ -2991,7 +2991,7 @@ ENDIF
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
-      Db_BufSz   = Db_BufSz   + 1  ! dt
+      Db_BufSz   = Db_BufSz   + 1  ! dt_low
       Int_BufSz  = Int_BufSz  + 1  ! NumPlanes
       Int_BufSz  = Int_BufSz  + 1  ! NumRadii
       Re_BufSz   = Re_BufSz   + 1  ! dr
@@ -3046,7 +3046,7 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-      DbKiBuf ( Db_Xferred:Db_Xferred+(1)-1 ) = InData%dt
+      DbKiBuf ( Db_Xferred:Db_Xferred+(1)-1 ) = InData%dt_low
       Db_Xferred   = Db_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%NumPlanes
       Int_Xferred   = Int_Xferred   + 1
@@ -3140,7 +3140,7 @@ ENDIF
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-      OutData%dt = DbKiBuf( Db_Xferred ) 
+      OutData%dt_low = DbKiBuf( Db_Xferred ) 
       Db_Xferred   = Db_Xferred + 1
       OutData%NumPlanes = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1

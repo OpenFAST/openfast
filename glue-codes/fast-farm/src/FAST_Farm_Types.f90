@@ -83,7 +83,7 @@ IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: ModuleFF_AWAE = 4      ! Ambient Wind and Array Effects [-]
 ! =========  Farm_ParameterType  =======
   TYPE, PUBLIC :: Farm_ParameterType
-    REAL(DbKi)  :: DT      !< Time step for low-resolution wind data input files; will be used as the global FAST.Farm time step [seconds]
+    REAL(DbKi)  :: DT_low      !< Time step for low-resolution wind data input files; will be used as the global FAST.Farm time step [seconds]
     REAL(DbKi)  :: DT_high      !< High-resolution time step [seconds]
     REAL(DbKi)  :: TMax      !< Total run time [seconds]
     INTEGER(IntKi)  :: n_high_low      !< Number of high-resolution time steps per low-resolution time step [-]
@@ -205,7 +205,7 @@ CONTAINS
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
-    DstParamData%DT = SrcParamData%DT
+    DstParamData%DT_low = SrcParamData%DT_low
     DstParamData%DT_high = SrcParamData%DT_high
     DstParamData%TMax = SrcParamData%TMax
     DstParamData%n_high_low = SrcParamData%n_high_low
@@ -428,7 +428,7 @@ ENDDO
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
-      Db_BufSz   = Db_BufSz   + 1  ! DT
+      Db_BufSz   = Db_BufSz   + 1  ! DT_low
       Db_BufSz   = Db_BufSz   + 1  ! DT_high
       Db_BufSz   = Db_BufSz   + 1  ! TMax
       Int_BufSz  = Int_BufSz  + 1  ! n_high_low
@@ -571,7 +571,7 @@ ENDDO
   Db_Xferred  = 1
   Int_Xferred = 1
 
-      DbKiBuf ( Db_Xferred:Db_Xferred+(1)-1 ) = InData%DT
+      DbKiBuf ( Db_Xferred:Db_Xferred+(1)-1 ) = InData%DT_low
       Db_Xferred   = Db_Xferred   + 1
       DbKiBuf ( Db_Xferred:Db_Xferred+(1)-1 ) = InData%DT_high
       Db_Xferred   = Db_Xferred   + 1
@@ -870,7 +870,7 @@ ENDDO
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-      OutData%DT = DbKiBuf( Db_Xferred ) 
+      OutData%DT_low = DbKiBuf( Db_Xferred ) 
       Db_Xferred   = Db_Xferred + 1
       OutData%DT_high = DbKiBuf( Db_Xferred ) 
       Db_Xferred   = Db_Xferred + 1

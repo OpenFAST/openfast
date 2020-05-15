@@ -86,7 +86,7 @@ function GetYawCorrection(yawErr, xhat_disk, dx, p, errStat, errMsg)
    real(ReKi), dimension(3) :: GetYawCorrection
    real(ReKi),                    intent(in   )  :: yawErr           !< Nacelle-yaw error at the wake planes
    real(ReKi),                    intent(in   )  :: xhat_disk(3)     !< Orientation of rotor centerline, normal to disk
-   real(ReKi),                    intent(in   )  :: dx               !< Dot_product(xhat_plane,V_plane)*DT
+   real(ReKi),                    intent(in   )  :: dx               !< Dot_product(xhat_plane,V_plane)*DT_low
    type(WD_ParameterType),        intent(in   )  :: p                !< Parameters
    integer(IntKi),                intent(  out)  :: errStat          !< Error status of the operation
    character(*),                  intent(  out)  :: errMsg           !< Error message if errStat /= ErrID_None
@@ -379,7 +379,7 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    
       
       ! set the rest of the parameters
-   p%DT            = interval         
+   p%DT_low        = interval         
    p%NumPlanes     = InitInp%InputFileData%NumPlanes   
    p%NumRadii      = InitInp%InputFileData%NumRadii    
    p%dr            = InitInp%InputFileData%dr  
@@ -411,7 +411,7 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       p%r(i)       = p%dr*i     
    end do
    
-   p%filtParam         = exp(-2.0_ReKi*pi*p%dt*InitInp%InputFileData%f_c)
+   p%filtParam         = exp(-2.0_ReKi*pi*p%dt_low*InitInp%InputFileData%f_c)
    p%oneMinusFiltParam = 1.0_ReKi - p%filtParam
       !............................................................................................
       ! Define and initialize inputs here 
@@ -689,7 +689,7 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
          ! dx      = xd%x_plane(i) - xd%x_plane(i-1)
          ! This is equivalent to
       
-      dx = dot_product(xd%xhat_plane(:,i-1),xd%V_plane_filt(:,i-1))*p%DT
+      dx = dot_product(xd%xhat_plane(:,i-1),xd%V_plane_filt(:,i-1))*p%DT_low
       absdx = abs(dx)
       if ( EqualRealNos( dx, 0.0_ReKi ) ) absdx = 1.0_ReKi  ! This is to avoid division by zero problems in the formation of m%b and m%d below, which are not used when dx=0; the value of unity is arbitrary
       
@@ -748,7 +748,7 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
    
          ! Update these states to [n+1]
 
-      xd%x_plane     (i) = xd%x_plane    (i-1) + abs(dx)   ! dx = dot_product(xd%xhat_plane(:,i-1),xd%V_plane_filt(:,i-1))*p%DT ; don't use absdx here  
+      xd%x_plane     (i) = xd%x_plane    (i-1) + abs(dx)   ! dx = dot_product(xd%xhat_plane(:,i-1),xd%V_plane_filt(:,i-1))*p%DT_low ; don't use absdx here  
       xd%YawErr_filt (i) = xd%YawErr_filt(i-1)
       xd%xhat_plane(:,i) = xd%xhat_plane(:,i-1)
       
@@ -762,7 +762,7 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
             return
          end if
       xd%p_plane        (:,i) =  xd%p_plane(:,i-1) + xd%xhat_plane(:,i-1)*dx + dy_HWkDfl &
-                              + ( u%V_plane(:,i-1) - xd%xhat_plane(:,i-1)*dot_product(xd%xhat_plane(:,i-1),u%V_plane(:,i-1)) )*p%DT
+                              + ( u%V_plane(:,i-1) - xd%xhat_plane(:,i-1)*dot_product(xd%xhat_plane(:,i-1),u%V_plane(:,i-1)) )*p%DT_low
          
       xd%Vx_wind_disk_filt(i) = xd%Vx_wind_disk_filt(i-1)
       xd%TI_amb_filt      (i) = xd%TI_amb_filt(i-1)
@@ -883,14 +883,14 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
    errStat = ErrID_None
    errMsg  = ""
 
-   n = nint(t/p%DT)
+   n = nint(t/p%DT_low)
    
       ! Check if we are fully initialized
    if ( OtherState%firstPass ) then
                         
       correction = 0.0_ReKi
       do i = 0, 1
-         y%x_plane(i) = u%Vx_rel_disk*real(i,ReKi)*real(p%DT,ReKi)
+         y%x_plane(i) = u%Vx_rel_disk*real(i,ReKi)*real(p%DT_low,ReKi)
        
          correction = correction + GetYawCorrection(u%YawErr, u%xhat_disk, y%x_plane(i), p,  errStat2, errMsg2)
             call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
@@ -989,7 +989,7 @@ subroutine InitStatesWithInputs(numPlanes, numRadii, u, p, xd, m, errStat, errMs
    
    correction = 0.0_ReKi
    do i = 0, 1
-      xd%x_plane     (i)   = u%Vx_rel_disk*real(i,ReKi)*real(p%DT,ReKi)
+      xd%x_plane     (i)   = u%Vx_rel_disk*real(i,ReKi)*real(p%DT_low,ReKi)
       xd%YawErr_filt (i)   = u%YawErr
       
       correction = correction + GetYawCorrection(u%YawErr, u%xhat_disk, xd%x_plane(i), p,  errStat2, errMsg2)
@@ -1023,11 +1023,11 @@ end subroutine InitStatesWithInputs
    
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine validates the inputs from the WakeDynamics input files.
-SUBROUTINE ValidateInitInputData( DT, InitInp, InputFileData, errStat, errMsg )
+SUBROUTINE ValidateInitInputData( DT_low, InitInp, InputFileData, errStat, errMsg )
 !..................................................................................................................................
       
       ! Passed variables:
-   real(DbKi),               intent(in   )  :: DT                                !< requested simulation time step size (s)
+   real(DbKi),               intent(in   )  :: DT_low                            !< requested simulation time step size (s)
    type(WD_InitInputType),   intent(in   )  :: InitInp                           !< Input data for initialization routine
    type(WD_InputFileType),   intent(in)     :: InputFileData                     !< All the data in the WakeDynamics input file
    integer(IntKi),           intent(out)    :: errStat                           !< Error status
@@ -1046,7 +1046,7 @@ SUBROUTINE ValidateInitInputData( DT, InitInp, InputFileData, errStat, errMsg )
    ! TODO: Talk to Bonnie about whether we want to convert <= or >= checks to EqualRealNos() .or. >  checks, etc.  GJH
    ! TEST: E13,
    !if (NumBl > MaxBl .or. NumBl < 1) call SetErrStat( ErrID_Fatal, 'Number of blades must be between 1 and '//trim(num2lstr(MaxBl))//'.', ErrSTat, errMsg, RoutineName )
-   if (  DT          <=  0.0)  call SetErrStat ( ErrID_Fatal, 'DT must be greater than zero.', errStat, errMsg, RoutineName )  
+   if (  DT_low                    <=  0.0)  call SetErrStat ( ErrID_Fatal, 'DT_low must be greater than zero.', errStat, errMsg, RoutineName )  
    if (  InputFileData%NumPlanes   <   2  )  call SetErrStat ( ErrID_Fatal, 'Number of wake planes must be greater than one.', ErrSTat, errMsg, RoutineName )
    if (  InputFileData%NumRadii    <   2  )  call SetErrStat ( ErrID_Fatal, 'Number of radii in the radial finite-difference grid must be greater than one.', ErrSTat, errMsg, RoutineName )
    if (  InputFileData%dr          <=  0.0)  call SetErrStat ( ErrID_Fatal, 'dr must be greater than zero.', errStat, errMsg, RoutineName ) 

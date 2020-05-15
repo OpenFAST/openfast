@@ -9824,7 +9824,7 @@ SUBROUTINE Farm_PrintSum( farm, WD_InputFileData, ErrStat, ErrMsg )
          outStr = ' - '
       end if
 
-      WRITE(UnSum,'(6X,I4,17X,A,8X,3(1X,F10.3),5X,F10.5,8X,I4,10X,A)')  I, outStr, farm%p%WT_Position(:,I), (farm%p%DT/real(farm%FWrap(I)%p%n_FAST_low)), farm%FWrap(I)%p%n_FAST_low, trim(farm%p%WT_FASTInFile(I))
+      WRITE(UnSum,'(6X,I4,17X,A,8X,3(1X,F10.3),5X,F10.5,8X,I4,10X,A)')  I, outStr, farm%p%WT_Position(:,I), (farm%p%DT_low/real(farm%FWrap(I)%p%n_FAST_low)), farm%FWrap(I)%p%n_FAST_low, trim(farm%p%WT_FASTInFile(I))
                                                                       
    end do
    
@@ -9893,15 +9893,15 @@ WRITE (UnSum,'(2X,A)')      'Calibrated parameter for wake meandering (-): '//tr
    WRITE (UnSum,'(/,A)'   )  'Time Steps'
    WRITE (UnSum,'(2X,A)')      'Component                        Time Step         Subcyles'
    WRITE (UnSum,'(2X,A)')      '  (-)                                (s)             (-)'
-   WRITE (UnSum,'(2X,A,F10.4,13X,A)')      'FAST.Farm (glue code)          ',farm%p%dt, '1'
-   WRITE (UnSum,'(2X,A,F10.4,13X,A)')      'Super Controller               ',farm%p%dt, '1'
-   WRITE (UnSum,'(2X,A,F10.4,13X,A)')      'FAST Wrapper                   ',farm%p%dt, '1 (See table above for OpenFAST.)'
-   WRITE (UnSum,'(2X,A,F10.4,13X,A)')      'Wake Dynamics                  ',farm%p%dt, '1'
-   WRITE (UnSum,'(2X,A,F10.4,13X,A)')      'Ambient Wind and Array Effects ',farm%p%dt, '1'
-   WRITE (UnSum,'(2X,A,F10.4,13X,A)')      'Low -resolution wind input     ',farm%p%dt, '1'
+   WRITE (UnSum,'(2X,A,F10.4,13X,A)')      'FAST.Farm (glue code)          ',farm%p%dt_low, '1'
+   WRITE (UnSum,'(2X,A,F10.4,13X,A)')      'Super Controller               ',farm%p%dt_low, '1'
+   WRITE (UnSum,'(2X,A,F10.4,13X,A)')      'FAST Wrapper                   ',farm%p%dt_low, '1 (See table above for OpenFAST.)'
+   WRITE (UnSum,'(2X,A,F10.4,13X,A)')      'Wake Dynamics                  ',farm%p%dt_low, '1'
+   WRITE (UnSum,'(2X,A,F10.4,13X,A)')      'Ambient Wind and Array Effects ',farm%p%dt_low, '1'
+   WRITE (UnSum,'(2X,A,F10.4,13X,A)')      'Low -resolution wind input     ',farm%p%dt_low, '1'
    WRITE (UnSum,'(2X,A,F10.4,12X,I2)')     'High-resolution wind input     ',farm%p%DT_high, farm%p%n_high_low
-   WRITE (UnSum,'(2X,A,F10.4,12X,I2,A)')   'Wind visualization output      ',farm%AWAE%p%WrDisSkp1*farm%p%dt, farm%AWAE%p%WrDisSkp1, '^-1'
-   WRITE (UnSum,'(2X,A,F10.4,13X,A)')      'FAST.Farm output files         ',farm%p%dt, '1'
+   WRITE (UnSum,'(2X,A,F10.4,12X,I2,A)')   'Wind visualization output      ',farm%AWAE%p%WrDisSkp1*farm%p%dt_low, farm%AWAE%p%WrDisSkp1, '^-1'
+   WRITE (UnSum,'(2X,A,F10.4,13X,A)')      'FAST.Farm output files         ',farm%p%dt_low, '1'
 
    WRITE (UnSum,'(/,A)'   )  'Requested Channels in FAST.Farm Output Files: '//trim(Num2LStr(farm%p%NumOuts+1))
    WRITE (UnSum,'(2X,A)'  )    'Number     Name         Units'
@@ -10928,7 +10928,7 @@ EddShrTND(:,:,9) = RESHAPE(  &
    !IF (farm%p%WrBinOutFile) THEN
    !
    !      ! calculate the size of the array of outputs we need to store
-   !   farm%p%NOutSteps = CEILING ( (farm%p%TMax - farm%p%TStart) / farm%p%DT ) + 1
+   !   farm%p%NOutSteps = CEILING ( (farm%p%TMax - farm%p%TStart) / farm%p%DT_low ) + 1
    !
    !   CALL AllocAry( farm%m%AllOutData, farm%p%NumOuts-1, farm%p%NOutSteps, 'AllOutData', ErrStat, ErrMsg )
    !   IF ( ErrStat >= AbortErrLev ) RETURN
@@ -10939,7 +10939,7 @@ EddShrTND(:,:,9) = RESHAPE(  &
    !      IF ( ErrStat >= AbortErrLev ) RETURN
    !
    !      farm%m%TimeData(1) = 0.0_DbKi           ! This is the first output time, which we will set later
-   !      farm%m%TimeData(2) = farm%p%DT          ! This is the (constant) time between subsequent writes to the output file
+   !      farm%m%TimeData(2) = farm%p%DT_low      ! This is the (constant) time between subsequent writes to the output file
    !
    !   !ELSE  ! we store the entire time array
    !   !

@@ -737,13 +737,13 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    p%NumTurbines      = InitInp%InputFileData%NumTurbines
    p%WindFilePath     = InitInp%InputFileData%WindFilePath ! TODO: Make sure this wasn't specified with the trailing folder separator. Note: on Windows a trailing / or \ causes no problem! GJH
    p%n_high_low       = InitInp%n_high_low
-   p%dt               = InitInp%InputFileData%dt
+   p%dt_low           = InitInp%InputFileData%dt_low
    p%NumDT            = InitInp%NumDT
    p%NOutDisWindXY    = InitInp%InputFileData%NOutDisWindXY
    p%NOutDisWindYZ    = InitInp%InputFileData%NOutDisWindYZ
    p%NOutDisWindXZ    = InitInp%InputFileData%NOutDisWindXZ
    p%WrDisWind        = InitInp%InputFileData%WrDisWind
-   p%WrDisSkp1        = nint(InitInp%InputFileData%WrDisDT / p%dt)
+   p%WrDisSkp1        = nint(InitInp%InputFileData%WrDisDT / p%dt_low)
    p%Mod_Meander      = InitInp%InputFileData%Mod_Meander
    p%C_Meander        = InitInp%InputFileData%C_Meander
 
@@ -872,7 +872,7 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       end if
 
 
-   !interval = InitOut%dt
+   !interval = InitOut%dt_low
 
       !............................................................................................
       ! Define and initialize inputs here
@@ -1129,7 +1129,7 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
 
    else
       ! Set low-resolution inflow wind velocities
-      call InflowWind_CalcOutput(t+p%dt, m%u_IfW_Low, p%IfW, x%IfW, xd%IfW, z%IfW, OtherState%IfW, m%y_IfW_Low, m%IfW, errStat, errMsg)
+      call InflowWind_CalcOutput(t+p%dt_low, m%u_IfW_Low, p%IfW, x%IfW, xd%IfW, z%IfW, OtherState%IfW, m%y_IfW_Low, m%IfW, errStat, errMsg)
       if ( errStat >= AbortErrLev ) then
          return
       end if
@@ -1146,7 +1146,7 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
       do nt = 1,p%NumTurbines
          m%u_IfW_High%PositionXYZ = p%Grid_high(:,:,nt)
          do n_hl=0, n_high_low
-            call InflowWind_CalcOutput(t+p%dt+n_hl*p%DT_high, m%u_IfW_High, p%IfW, x%IfW, xd%IfW, z%IfW, OtherState%IfW, m%y_IfW_High, m%IfW, errStat, errMsg)
+            call InflowWind_CalcOutput(t+p%dt_low+n_hl*p%DT_high, m%u_IfW_High, p%IfW, x%IfW, xd%IfW, z%IfW, OtherState%IfW, m%y_IfW_High, m%IfW, errStat, errMsg)
             if ( errStat >= AbortErrLev ) then
                return
             end if
@@ -1209,7 +1209,7 @@ subroutine AWAE_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg
 
    errStat = ErrID_None
    errMsg  = ""
-   n = nint(t / p%dt)
+   n = nint(t / p%dt_low)
    call ComputeLocals(n, u, p, y, m, errStat2, errMsg2)
       call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
       if (errStat2 >= AbortErrLev) then
@@ -1416,7 +1416,7 @@ subroutine AWAE_TEST_SetGoodInitInpData(interval, InitInp)
    InitInp%InputFileData%NumRadii       = 40
    InitInp%InputFileData%dr             = 5.0_ReKi
    InitInp%n_high_low                   = 6
-   InitInp%InputFileData%dt             = 2.0_DbKi
+   InitInp%InputFileData%dt_low         = 2.0_DbKi
    InitInp%NumDT                        = 1
    InitInp%InputFileData%NOutDisWindXY  = 0
    InitInp%InputFileData%NOutDisWindYZ  = 0

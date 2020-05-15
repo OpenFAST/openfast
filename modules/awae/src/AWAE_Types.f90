@@ -55,7 +55,7 @@ IMPLICIT NONE
 ! =========  AWAE_InputFileType  =======
   TYPE, PUBLIC :: AWAE_InputFileType
     REAL(ReKi)  :: dr      !< Radial increment of radial finite-difference grid [>0.0] [m]
-    REAL(DbKi)  :: dt      !< Low-resolution (FAST.Farm driver/glue code) time step [s]
+    REAL(DbKi)  :: dt_low      !< Low-resolution (FAST.Farm driver/glue code) time step [s]
     INTEGER(IntKi)  :: NumTurbines      !< Number of wind turbines in the farm [>=1] [-]
     INTEGER(IntKi)  :: NumRadii      !< Number of radii in the radial finite-difference grid  [>=2] [-]
     INTEGER(IntKi)  :: NumPlanes      !< Number of wake planes downwind of the rotor where the wake is propagated [>=2] [-]
@@ -205,7 +205,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Grid_low      !< XYZ components (global positions) of the spatial discretization of the low-resolution spatial domain [m]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: Grid_high      !< XYZ components (global positions) of the spatial discretization of the high-resolution spatial domain for each turbine  [m]
     INTEGER(IntKi)  :: n_high_low      !< Number of high-resolution time steps per low [-]
-    REAL(DbKi)  :: dt      !< Low-resolution (FAST.Farm driver/glue code) time step [s]
+    REAL(DbKi)  :: dt_low      !< Low-resolution (FAST.Farm driver/glue code) time step [s]
     REAL(DbKi)  :: dt_high      !< High-resolution (FAST) time step [s]
     INTEGER(IntKi)  :: NumDT      !< Number of low-resolution (FAST.Farm driver/glue code) time steps [-]
     INTEGER(IntKi)  :: Mod_Meander      !< Spatial filter model for wake meandering [-]
@@ -480,7 +480,7 @@ ENDIF
    ErrStat = ErrID_None
    ErrMsg  = ""
     DstInputFileTypeData%dr = SrcInputFileTypeData%dr
-    DstInputFileTypeData%dt = SrcInputFileTypeData%dt
+    DstInputFileTypeData%dt_low = SrcInputFileTypeData%dt_low
     DstInputFileTypeData%NumTurbines = SrcInputFileTypeData%NumTurbines
     DstInputFileTypeData%NumRadii = SrcInputFileTypeData%NumRadii
     DstInputFileTypeData%NumPlanes = SrcInputFileTypeData%NumPlanes
@@ -692,7 +692,7 @@ ENDIF
   Db_BufSz  = 0
   Int_BufSz  = 0
       Re_BufSz   = Re_BufSz   + 1  ! dr
-      Db_BufSz   = Db_BufSz   + 1  ! dt
+      Db_BufSz   = Db_BufSz   + 1  ! dt_low
       Int_BufSz  = Int_BufSz  + 1  ! NumTurbines
       Int_BufSz  = Int_BufSz  + 1  ! NumRadii
       Int_BufSz  = Int_BufSz  + 1  ! NumPlanes
@@ -794,7 +794,7 @@ ENDIF
 
       ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%dr
       Re_Xferred   = Re_Xferred   + 1
-      DbKiBuf ( Db_Xferred:Db_Xferred+(1)-1 ) = InData%dt
+      DbKiBuf ( Db_Xferred:Db_Xferred+(1)-1 ) = InData%dt_low
       Db_Xferred   = Db_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%NumTurbines
       Int_Xferred   = Int_Xferred   + 1
@@ -1008,7 +1008,7 @@ ENDIF
   Int_Xferred  = 1
       OutData%dr = ReKiBuf( Re_Xferred )
       Re_Xferred   = Re_Xferred + 1
-      OutData%dt = DbKiBuf( Db_Xferred ) 
+      OutData%dt_low = DbKiBuf( Db_Xferred ) 
       Db_Xferred   = Db_Xferred + 1
       OutData%NumTurbines = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
@@ -5057,7 +5057,7 @@ IF (ALLOCATED(SrcParamData%Grid_high)) THEN
     DstParamData%Grid_high = SrcParamData%Grid_high
 ENDIF
     DstParamData%n_high_low = SrcParamData%n_high_low
-    DstParamData%dt = SrcParamData%dt
+    DstParamData%dt_low = SrcParamData%dt_low
     DstParamData%dt_high = SrcParamData%dt_high
     DstParamData%NumDT = SrcParamData%NumDT
     DstParamData%Mod_Meander = SrcParamData%Mod_Meander
@@ -5260,7 +5260,7 @@ ENDIF
       Re_BufSz   = Re_BufSz   + SIZE(InData%Grid_high)  ! Grid_high
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! n_high_low
-      Db_BufSz   = Db_BufSz   + 1  ! dt
+      Db_BufSz   = Db_BufSz   + 1  ! dt_low
       Db_BufSz   = Db_BufSz   + 1  ! dt_high
       Int_BufSz  = Int_BufSz  + 1  ! NumDT
       Int_BufSz  = Int_BufSz  + 1  ! Mod_Meander
@@ -5504,7 +5504,7 @@ ENDIF
   END IF
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%n_high_low
       Int_Xferred   = Int_Xferred   + 1
-      DbKiBuf ( Db_Xferred:Db_Xferred+(1)-1 ) = InData%dt
+      DbKiBuf ( Db_Xferred:Db_Xferred+(1)-1 ) = InData%dt_low
       Db_Xferred   = Db_Xferred   + 1
       DbKiBuf ( Db_Xferred:Db_Xferred+(1)-1 ) = InData%dt_high
       Db_Xferred   = Db_Xferred   + 1
@@ -5905,7 +5905,7 @@ ENDIF
   END IF
       OutData%n_high_low = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
-      OutData%dt = DbKiBuf( Db_Xferred ) 
+      OutData%dt_low = DbKiBuf( Db_Xferred ) 
       Db_Xferred   = Db_Xferred + 1
       OutData%dt_high = DbKiBuf( Db_Xferred ) 
       Db_Xferred   = Db_Xferred + 1

@@ -23,7 +23,7 @@ param	^	-	INTEGER	ModuleFF_FWrap  -	2	-	"FAST Wrapper"	-
 param	^	-	INTEGER	ModuleFF_WD	  -	3	-	"Wake Dynamics"	-
 param	^	-	INTEGER	ModuleFF_AWAE	  -	4	-	"Ambient Wind and Array Effects"	-
 # ..... Parameters ................................................................................................................
-typedef  FAST_Farm/Farm  ParameterType         DbKi            DT              -    - - "Time step for low-resolution wind data input files; will be used as the global FAST.Farm time step" seconds
+typedef  FAST_Farm/Farm  ParameterType         DbKi            DT_low          -    - - "Time step for low-resolution wind data input files; will be used as the global FAST.Farm time step" seconds
 typedef  ^               ParameterType         DbKi            DT_high         -    - - "High-resolution time step"  seconds
 typedef  ^               ParameterType         DbKi            TMax            -    - - "Total run time" seconds
 typedef  ^               ParameterType         IntKi           n_high_low      -    - - "Number of high-resolution time steps per low-resolution time step"      -

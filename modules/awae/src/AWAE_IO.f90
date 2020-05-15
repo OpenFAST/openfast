@@ -100,7 +100,7 @@ subroutine WriteDisWindFiles( n, WrDisSkp1, p, y, m, errStat, errMsg )
    REAL(ReKi)                              :: t_out
    
    n_out = n/WrDisSkp1
-   t_out = n*p%DT
+   t_out = n*p%DT_low
    FileName = trim(p%OutFileRoot)//".Low.Dis.t"//trim(num2lstr(n_out))//".vtk"
    call WrVTK_SP_header( FileName, "Low resolution disturbed wind for time = "//trim(num2lstr(t_out))//" seconds.", Un, errStat2, errMsg2 )
       call SetErrStat(errStat2, errMsg2, ErrStat, ErrMsg, RoutineName)
