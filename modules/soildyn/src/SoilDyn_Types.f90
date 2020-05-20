@@ -53,6 +53,13 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: RunMode = 0      !< RunMode of DLL (read from Props(1,1) in Model 1 during initialization [-]
   END TYPE REDWINdllType
 ! =======================
+! =========  REDWINdllStates  =======
+  TYPE, PUBLIC :: REDWINdllStates
+    REAL(R8Ki) , DIMENSION(1:100,1:200)  :: Props      !< Array containing foundation model properties (used internally by the REDWIN models). Specific to each model. [-]
+    REAL(R8Ki) , DIMENSION(1:12,1:100)  :: StVar      !< Array containing the state variables at the end of the step (used internally by the REDWIN models). Specific to each model. [-]
+    INTEGER(IntKi) , DIMENSION(1:12,1:100)  :: StVarPrint      !< Array indicating which state variables should be printed to the screen. This feature is currently not supported. [-]
+  END TYPE REDWINdllStates
+! =======================
 ! =========  SlD_InputFile  =======
   TYPE, PUBLIC :: SlD_InputFile
     LOGICAL  :: EchoFlag      !< Echo the input file [-]
@@ -101,7 +108,7 @@ IMPLICIT NONE
 ! =======================
 ! =========  SlD_DiscreteStateType  =======
   TYPE, PUBLIC :: SlD_DiscreteStateType
-    REAL(ReKi)  :: DummyDiscState      !< Remove this variable if you have discrete states [-]
+    TYPE(REDWINdllStates) , DIMENSION(:), ALLOCATABLE  :: dll_states      !< state data used for REDWIN DLL (we think) [-]
   END TYPE SlD_DiscreteStateType
 ! =======================
 ! =========  SlD_ConstraintStateType  =======
@@ -117,8 +124,6 @@ IMPLICIT NONE
 ! =========  SlD_MiscVarType  =======
   TYPE, PUBLIC :: SlD_MiscVarType
     TYPE(REDWINdllType) , DIMENSION(:), ALLOCATABLE  :: dll_data      !< data used for REDWIN DLL [-]
-    TYPE(REDWINdllType) , DIMENSION(:), ALLOCATABLE  :: dll_dataPREV      !< data used for REDWIN DLL -- previous call [-]
-    REAL(DbKi)  :: PrevTime      !< previous call time [-]
   END TYPE SlD_MiscVarType
 ! =======================
 ! =========  SlD_ParameterType  =======
@@ -443,6 +448,186 @@ CONTAINS
       OutData%RunMode = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
  END SUBROUTINE SlD_UnPackREDWINdllType
+
+ SUBROUTINE SlD_CopyREDWINdllStates( SrcREDWINdllStatesData, DstREDWINdllStatesData, CtrlCode, ErrStat, ErrMsg )
+   TYPE(REDWINdllStates), INTENT(IN) :: SrcREDWINdllStatesData
+   TYPE(REDWINdllStates), INTENT(INOUT) :: DstREDWINdllStatesData
+   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
+   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+! Local 
+   INTEGER(IntKi)                 :: i,j,k
+   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
+   INTEGER(IntKi)                 :: ErrStat2
+   CHARACTER(ErrMsgLen)           :: ErrMsg2
+   CHARACTER(*), PARAMETER        :: RoutineName = 'SlD_CopyREDWINdllStates'
+! 
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+    DstREDWINdllStatesData%Props = SrcREDWINdllStatesData%Props
+    DstREDWINdllStatesData%StVar = SrcREDWINdllStatesData%StVar
+    DstREDWINdllStatesData%StVarPrint = SrcREDWINdllStatesData%StVarPrint
+ END SUBROUTINE SlD_CopyREDWINdllStates
+
+ SUBROUTINE SlD_DestroyREDWINdllStates( REDWINdllStatesData, ErrStat, ErrMsg )
+  TYPE(REDWINdllStates), INTENT(INOUT) :: REDWINdllStatesData
+  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+  CHARACTER(*),    PARAMETER :: RoutineName = 'SlD_DestroyREDWINdllStates'
+  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
+! 
+  ErrStat = ErrID_None
+  ErrMsg  = ""
+ END SUBROUTINE SlD_DestroyREDWINdllStates
+
+ SUBROUTINE SlD_PackREDWINdllStates( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
+  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
+  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
+  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
+  TYPE(REDWINdllStates),  INTENT(IN) :: InData
+  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
+  CHARACTER(*),     INTENT(  OUT) :: ErrMsg
+  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
+    ! Local variables
+  INTEGER(IntKi)                 :: Re_BufSz
+  INTEGER(IntKi)                 :: Re_Xferred
+  INTEGER(IntKi)                 :: Db_BufSz
+  INTEGER(IntKi)                 :: Db_Xferred
+  INTEGER(IntKi)                 :: Int_BufSz
+  INTEGER(IntKi)                 :: Int_Xferred
+  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
+  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*), PARAMETER        :: RoutineName = 'SlD_PackREDWINdllStates'
+ ! buffers to store subtypes, if any
+  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
+  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
+  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
+
+  OnlySize = .FALSE.
+  IF ( PRESENT(SizeOnly) ) THEN
+    OnlySize = SizeOnly
+  ENDIF
+    !
+  ErrStat = ErrID_None
+  ErrMsg  = ""
+  Re_BufSz  = 0
+  Db_BufSz  = 0
+  Int_BufSz  = 0
+      Db_BufSz   = Db_BufSz   + SIZE(InData%Props)  ! Props
+      Db_BufSz   = Db_BufSz   + SIZE(InData%StVar)  ! StVar
+      Int_BufSz  = Int_BufSz  + SIZE(InData%StVarPrint)  ! StVarPrint
+  IF ( Re_BufSz  .GT. 0 ) THEN 
+     ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
+     IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+     END IF
+  END IF
+  IF ( Db_BufSz  .GT. 0 ) THEN 
+     ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
+     IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+     END IF
+  END IF
+  IF ( Int_BufSz  .GT. 0 ) THEN 
+     ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
+     IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+     END IF
+  END IF
+  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
+
+  Re_Xferred  = 1
+  Db_Xferred  = 1
+  Int_Xferred = 1
+
+      DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%Props))-1 ) = PACK(InData%Props,.TRUE.)
+      Db_Xferred   = Db_Xferred   + SIZE(InData%Props)
+      DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%StVar))-1 ) = PACK(InData%StVar,.TRUE.)
+      Db_Xferred   = Db_Xferred   + SIZE(InData%StVar)
+      IntKiBuf ( Int_Xferred:Int_Xferred+(SIZE(InData%StVarPrint))-1 ) = PACK(InData%StVarPrint,.TRUE.)
+      Int_Xferred   = Int_Xferred   + SIZE(InData%StVarPrint)
+ END SUBROUTINE SlD_PackREDWINdllStates
+
+ SUBROUTINE SlD_UnPackREDWINdllStates( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
+  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
+  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
+  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
+  TYPE(REDWINdllStates), INTENT(INOUT) :: OutData
+  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+    ! Local variables
+  INTEGER(IntKi)                 :: Buf_size
+  INTEGER(IntKi)                 :: Re_Xferred
+  INTEGER(IntKi)                 :: Db_Xferred
+  INTEGER(IntKi)                 :: Int_Xferred
+  INTEGER(IntKi)                 :: i
+  LOGICAL                        :: mask0
+  LOGICAL, ALLOCATABLE           :: mask1(:)
+  LOGICAL, ALLOCATABLE           :: mask2(:,:)
+  LOGICAL, ALLOCATABLE           :: mask3(:,:,:)
+  LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
+  LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
+  INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+  INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*), PARAMETER        :: RoutineName = 'SlD_UnPackREDWINdllStates'
+ ! buffers to store meshes, if any
+  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
+  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
+  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
+    !
+  ErrStat = ErrID_None
+  ErrMsg  = ""
+  Re_Xferred  = 1
+  Db_Xferred  = 1
+  Int_Xferred  = 1
+    i1_l = LBOUND(OutData%Props,1)
+    i1_u = UBOUND(OutData%Props,1)
+    i2_l = LBOUND(OutData%Props,2)
+    i2_u = UBOUND(OutData%Props,2)
+    ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask2.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask2 = .TRUE. 
+      OutData%Props = REAL( UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(SIZE(OutData%Props))-1 ), mask2, 0.0_DbKi ), R8Ki)
+      Db_Xferred   = Db_Xferred   + SIZE(OutData%Props)
+    DEALLOCATE(mask2)
+    i1_l = LBOUND(OutData%StVar,1)
+    i1_u = UBOUND(OutData%StVar,1)
+    i2_l = LBOUND(OutData%StVar,2)
+    i2_u = UBOUND(OutData%StVar,2)
+    ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask2.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask2 = .TRUE. 
+      OutData%StVar = REAL( UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(SIZE(OutData%StVar))-1 ), mask2, 0.0_DbKi ), R8Ki)
+      Db_Xferred   = Db_Xferred   + SIZE(OutData%StVar)
+    DEALLOCATE(mask2)
+    i1_l = LBOUND(OutData%StVarPrint,1)
+    i1_u = UBOUND(OutData%StVarPrint,1)
+    i2_l = LBOUND(OutData%StVarPrint,2)
+    i2_u = UBOUND(OutData%StVarPrint,2)
+    ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask2.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask2 = .TRUE. 
+      OutData%StVarPrint = UNPACK( IntKiBuf ( Int_Xferred:Int_Xferred+(SIZE(OutData%StVarPrint))-1 ), mask2, 0_IntKi )
+      Int_Xferred   = Int_Xferred   + SIZE(OutData%StVarPrint)
+    DEALLOCATE(mask2)
+ END SUBROUTINE SlD_UnPackREDWINdllStates
 
  SUBROUTINE SlD_CopyInputFile( SrcInputFileData, DstInputFileData, CtrlCode, ErrStat, ErrMsg )
    TYPE(SlD_InputFile), INTENT(IN) :: SrcInputFileData
@@ -1737,13 +1922,29 @@ ENDIF
    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
 ! Local 
    INTEGER(IntKi)                 :: i,j,k
+   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'SlD_CopyDiscState'
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
-    DstDiscStateData%DummyDiscState = SrcDiscStateData%DummyDiscState
+IF (ALLOCATED(SrcDiscStateData%dll_states)) THEN
+  i1_l = LBOUND(SrcDiscStateData%dll_states,1)
+  i1_u = UBOUND(SrcDiscStateData%dll_states,1)
+  IF (.NOT. ALLOCATED(DstDiscStateData%dll_states)) THEN 
+    ALLOCATE(DstDiscStateData%dll_states(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstDiscStateData%dll_states.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DO i1 = LBOUND(SrcDiscStateData%dll_states,1), UBOUND(SrcDiscStateData%dll_states,1)
+      CALL SlD_Copyredwindllstates( SrcDiscStateData%dll_states(i1), DstDiscStateData%dll_states(i1), CtrlCode, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+         IF (ErrStat>=AbortErrLev) RETURN
+    ENDDO
+ENDIF
  END SUBROUTINE SlD_CopyDiscState
 
  SUBROUTINE SlD_DestroyDiscState( DiscStateData, ErrStat, ErrMsg )
@@ -1755,6 +1956,12 @@ ENDIF
 ! 
   ErrStat = ErrID_None
   ErrMsg  = ""
+IF (ALLOCATED(DiscStateData%dll_states)) THEN
+DO i1 = LBOUND(DiscStateData%dll_states,1), UBOUND(DiscStateData%dll_states,1)
+  CALL SlD_Destroyredwindllstates( DiscStateData%dll_states(i1), ErrStat, ErrMsg )
+ENDDO
+  DEALLOCATE(DiscStateData%dll_states)
+ENDIF
  END SUBROUTINE SlD_DestroyDiscState
 
  SUBROUTINE SlD_PackDiscState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -1792,7 +1999,30 @@ ENDIF
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
-      Re_BufSz   = Re_BufSz   + 1  ! DummyDiscState
+  Int_BufSz   = Int_BufSz   + 1     ! dll_states allocated yes/no
+  IF ( ALLOCATED(InData%dll_states) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! dll_states upper/lower bounds for each dimension
+   ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
+    DO i1 = LBOUND(InData%dll_states,1), UBOUND(InData%dll_states,1)
+      Int_BufSz   = Int_BufSz + 3  ! dll_states: size of buffers for each call to pack subtype
+      CALL SlD_Packredwindllstates( Re_Buf, Db_Buf, Int_Buf, InData%dll_states(i1), ErrStat2, ErrMsg2, .TRUE. ) ! dll_states 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf)) THEN ! dll_states
+         Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
+         DEALLOCATE(Re_Buf)
+      END IF
+      IF(ALLOCATED(Db_Buf)) THEN ! dll_states
+         Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
+         DEALLOCATE(Db_Buf)
+      END IF
+      IF(ALLOCATED(Int_Buf)) THEN ! dll_states
+         Int_BufSz = Int_BufSz + SIZE( Int_Buf )
+         DEALLOCATE(Int_Buf)
+      END IF
+    END DO
+  END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -1820,8 +2050,47 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%DummyDiscState
-      Re_Xferred   = Re_Xferred   + 1
+  IF ( .NOT. ALLOCATED(InData%dll_states) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%dll_states,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%dll_states,1)
+    Int_Xferred = Int_Xferred + 2
+
+    DO i1 = LBOUND(InData%dll_states,1), UBOUND(InData%dll_states,1)
+      CALL SlD_Packredwindllstates( Re_Buf, Db_Buf, Int_Buf, InData%dll_states(i1), ErrStat2, ErrMsg2, OnlySize ) ! dll_states 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Re_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Re_Buf) > 0) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_Buf)-1 ) = Re_Buf
+        Re_Xferred = Re_Xferred + SIZE(Re_Buf)
+        DEALLOCATE(Re_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+      IF(ALLOCATED(Db_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Db_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Db_Buf) > 0) DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_Buf)-1 ) = Db_Buf
+        Db_Xferred = Db_Xferred + SIZE(Db_Buf)
+        DEALLOCATE(Db_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+      IF(ALLOCATED(Int_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Int_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Int_Buf) > 0) IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_Buf)-1 ) = Int_Buf
+        Int_Xferred = Int_Xferred + SIZE(Int_Buf)
+        DEALLOCATE(Int_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+    END DO
+  END IF
  END SUBROUTINE SlD_PackDiscState
 
  SUBROUTINE SlD_UnPackDiscState( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -1843,6 +2112,7 @@ ENDIF
   LOGICAL, ALLOCATABLE           :: mask3(:,:,:)
   LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
   LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
+  INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'SlD_UnPackDiscState'
@@ -1856,8 +2126,62 @@ ENDIF
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-      OutData%DummyDiscState = ReKiBuf( Re_Xferred )
-      Re_Xferred   = Re_Xferred + 1
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! dll_states not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%dll_states)) DEALLOCATE(OutData%dll_states)
+    ALLOCATE(OutData%dll_states(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%dll_states.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    DO i1 = LBOUND(OutData%dll_states,1), UBOUND(OutData%dll_states,1)
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Re_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Re_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Re_Buf = ReKiBuf( Re_Xferred:Re_Xferred+Buf_size-1 )
+        Re_Xferred = Re_Xferred + Buf_size
+      END IF
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Db_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Db_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Db_Buf = DbKiBuf( Db_Xferred:Db_Xferred+Buf_size-1 )
+        Db_Xferred = Db_Xferred + Buf_size
+      END IF
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Int_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Int_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
+        Int_Xferred = Int_Xferred + Buf_size
+      END IF
+      CALL SlD_Unpackredwindllstates( Re_Buf, Db_Buf, Int_Buf, OutData%dll_states(i1), ErrStat2, ErrMsg2 ) ! dll_states 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
+      IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
+      IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
+    END DO
+  END IF
  END SUBROUTINE SlD_UnPackDiscState
 
  SUBROUTINE SlD_CopyConstrState( SrcConstrStateData, DstConstrStateData, CtrlCode, ErrStat, ErrMsg )
@@ -2153,23 +2477,6 @@ IF (ALLOCATED(SrcMiscData%dll_data)) THEN
          IF (ErrStat>=AbortErrLev) RETURN
     ENDDO
 ENDIF
-IF (ALLOCATED(SrcMiscData%dll_dataPREV)) THEN
-  i1_l = LBOUND(SrcMiscData%dll_dataPREV,1)
-  i1_u = UBOUND(SrcMiscData%dll_dataPREV,1)
-  IF (.NOT. ALLOCATED(DstMiscData%dll_dataPREV)) THEN 
-    ALLOCATE(DstMiscData%dll_dataPREV(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%dll_dataPREV.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DO i1 = LBOUND(SrcMiscData%dll_dataPREV,1), UBOUND(SrcMiscData%dll_dataPREV,1)
-      CALL SlD_Copyredwindlltype( SrcMiscData%dll_dataPREV(i1), DstMiscData%dll_dataPREV(i1), CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-    ENDDO
-ENDIF
-    DstMiscData%PrevTime = SrcMiscData%PrevTime
  END SUBROUTINE SlD_CopyMisc
 
  SUBROUTINE SlD_DestroyMisc( MiscData, ErrStat, ErrMsg )
@@ -2186,12 +2493,6 @@ DO i1 = LBOUND(MiscData%dll_data,1), UBOUND(MiscData%dll_data,1)
   CALL SlD_Destroyredwindlltype( MiscData%dll_data(i1), ErrStat, ErrMsg )
 ENDDO
   DEALLOCATE(MiscData%dll_data)
-ENDIF
-IF (ALLOCATED(MiscData%dll_dataPREV)) THEN
-DO i1 = LBOUND(MiscData%dll_dataPREV,1), UBOUND(MiscData%dll_dataPREV,1)
-  CALL SlD_Destroyredwindlltype( MiscData%dll_dataPREV(i1), ErrStat, ErrMsg )
-ENDDO
-  DEALLOCATE(MiscData%dll_dataPREV)
 ENDIF
  END SUBROUTINE SlD_DestroyMisc
 
@@ -2254,30 +2555,6 @@ ENDIF
       END IF
     END DO
   END IF
-  Int_BufSz   = Int_BufSz   + 1     ! dll_dataPREV allocated yes/no
-  IF ( ALLOCATED(InData%dll_dataPREV) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! dll_dataPREV upper/lower bounds for each dimension
-    DO i1 = LBOUND(InData%dll_dataPREV,1), UBOUND(InData%dll_dataPREV,1)
-      Int_BufSz   = Int_BufSz + 3  ! dll_dataPREV: size of buffers for each call to pack subtype
-      CALL SlD_Packredwindlltype( Re_Buf, Db_Buf, Int_Buf, InData%dll_dataPREV(i1), ErrStat2, ErrMsg2, .TRUE. ) ! dll_dataPREV 
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-        IF (ErrStat >= AbortErrLev) RETURN
-
-      IF(ALLOCATED(Re_Buf)) THEN ! dll_dataPREV
-         Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
-         DEALLOCATE(Re_Buf)
-      END IF
-      IF(ALLOCATED(Db_Buf)) THEN ! dll_dataPREV
-         Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
-         DEALLOCATE(Db_Buf)
-      END IF
-      IF(ALLOCATED(Int_Buf)) THEN ! dll_dataPREV
-         Int_BufSz = Int_BufSz + SIZE( Int_Buf )
-         DEALLOCATE(Int_Buf)
-      END IF
-    END DO
-  END IF
-      Db_BufSz   = Db_BufSz   + 1  ! PrevTime
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -2346,49 +2623,6 @@ ENDIF
       ENDIF
     END DO
   END IF
-  IF ( .NOT. ALLOCATED(InData%dll_dataPREV) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%dll_dataPREV,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%dll_dataPREV,1)
-    Int_Xferred = Int_Xferred + 2
-
-    DO i1 = LBOUND(InData%dll_dataPREV,1), UBOUND(InData%dll_dataPREV,1)
-      CALL SlD_Packredwindlltype( Re_Buf, Db_Buf, Int_Buf, InData%dll_dataPREV(i1), ErrStat2, ErrMsg2, OnlySize ) ! dll_dataPREV 
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-        IF (ErrStat >= AbortErrLev) RETURN
-
-      IF(ALLOCATED(Re_Buf)) THEN
-        IntKiBuf( Int_Xferred ) = SIZE(Re_Buf); Int_Xferred = Int_Xferred + 1
-        IF (SIZE(Re_Buf) > 0) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_Buf)-1 ) = Re_Buf
-        Re_Xferred = Re_Xferred + SIZE(Re_Buf)
-        DEALLOCATE(Re_Buf)
-      ELSE
-        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
-      ENDIF
-      IF(ALLOCATED(Db_Buf)) THEN
-        IntKiBuf( Int_Xferred ) = SIZE(Db_Buf); Int_Xferred = Int_Xferred + 1
-        IF (SIZE(Db_Buf) > 0) DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_Buf)-1 ) = Db_Buf
-        Db_Xferred = Db_Xferred + SIZE(Db_Buf)
-        DEALLOCATE(Db_Buf)
-      ELSE
-        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
-      ENDIF
-      IF(ALLOCATED(Int_Buf)) THEN
-        IntKiBuf( Int_Xferred ) = SIZE(Int_Buf); Int_Xferred = Int_Xferred + 1
-        IF (SIZE(Int_Buf) > 0) IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_Buf)-1 ) = Int_Buf
-        Int_Xferred = Int_Xferred + SIZE(Int_Buf)
-        DEALLOCATE(Int_Buf)
-      ELSE
-        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
-      ENDIF
-    END DO
-  END IF
-      DbKiBuf ( Db_Xferred:Db_Xferred+(1)-1 ) = InData%PrevTime
-      Db_Xferred   = Db_Xferred   + 1
  END SUBROUTINE SlD_PackMisc
 
  SUBROUTINE SlD_UnPackMisc( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -2480,64 +2714,6 @@ ENDIF
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
     END DO
   END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! dll_dataPREV not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%dll_dataPREV)) DEALLOCATE(OutData%dll_dataPREV)
-    ALLOCATE(OutData%dll_dataPREV(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%dll_dataPREV.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    DO i1 = LBOUND(OutData%dll_dataPREV,1), UBOUND(OutData%dll_dataPREV,1)
-      Buf_size=IntKiBuf( Int_Xferred )
-      Int_Xferred = Int_Xferred + 1
-      IF(Buf_size > 0) THEN
-        ALLOCATE(Re_Buf(Buf_size),STAT=ErrStat2)
-        IF (ErrStat2 /= 0) THEN 
-           CALL SetErrStat(ErrID_Fatal, 'Error allocating Re_Buf.', ErrStat, ErrMsg,RoutineName)
-           RETURN
-        END IF
-        Re_Buf = ReKiBuf( Re_Xferred:Re_Xferred+Buf_size-1 )
-        Re_Xferred = Re_Xferred + Buf_size
-      END IF
-      Buf_size=IntKiBuf( Int_Xferred )
-      Int_Xferred = Int_Xferred + 1
-      IF(Buf_size > 0) THEN
-        ALLOCATE(Db_Buf(Buf_size),STAT=ErrStat2)
-        IF (ErrStat2 /= 0) THEN 
-           CALL SetErrStat(ErrID_Fatal, 'Error allocating Db_Buf.', ErrStat, ErrMsg,RoutineName)
-           RETURN
-        END IF
-        Db_Buf = DbKiBuf( Db_Xferred:Db_Xferred+Buf_size-1 )
-        Db_Xferred = Db_Xferred + Buf_size
-      END IF
-      Buf_size=IntKiBuf( Int_Xferred )
-      Int_Xferred = Int_Xferred + 1
-      IF(Buf_size > 0) THEN
-        ALLOCATE(Int_Buf(Buf_size),STAT=ErrStat2)
-        IF (ErrStat2 /= 0) THEN 
-           CALL SetErrStat(ErrID_Fatal, 'Error allocating Int_Buf.', ErrStat, ErrMsg,RoutineName)
-           RETURN
-        END IF
-        Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
-        Int_Xferred = Int_Xferred + Buf_size
-      END IF
-      CALL SlD_Unpackredwindlltype( Re_Buf, Db_Buf, Int_Buf, OutData%dll_dataPREV(i1), ErrStat2, ErrMsg2 ) ! dll_dataPREV 
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-        IF (ErrStat >= AbortErrLev) RETURN
-
-      IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
-      IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
-      IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
-    END DO
-  END IF
-      OutData%PrevTime = DbKiBuf( Db_Xferred ) 
-      Db_Xferred   = Db_Xferred + 1
  END SUBROUTINE SlD_UnPackMisc
 
  SUBROUTINE SlD_CopyParam( SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg )

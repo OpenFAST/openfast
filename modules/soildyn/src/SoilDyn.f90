@@ -119,7 +119,6 @@ subroutine SlD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
 
       ! Define initial system states here:
    x%DummyContState           = 0.0_ReKi
-   xd%DummyDiscState          = 0.0_ReKi
    z%DummyConstrState         = 0.0_ReKi
    OtherState%DummyOtherState = 0.0_ReKi
 
@@ -141,7 +140,7 @@ subroutine SlD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
    end if
 
       ! Set miscvars: including dll_data arrays and checking for input files.
-   call SlD_InitMisc( InputFileData, m, ErrStat2,ErrMsg2); if (Failed()) return;
+   call SlD_InitStatesMisc( InputFileData, m, xd, ErrStat2,ErrMsg2); if (Failed()) return;
 
 
    call SlD_InitMeshes( InputFileData, InitInp, u, y, p, m, ErrStat2,ErrMsg2);  if (Failed()) return;
@@ -152,7 +151,7 @@ subroutine SlD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
       case (Calc_StiffDamp)
       case (Calc_PYcurve)
       case (Calc_REDWIN)
-         call SlD_REDWINsetup( InputFileData,p, m, ErrStat, ErrMsg )
+         call SlD_REDWINsetup( InputFileData,p, m, xd, ErrStat, ErrMsg )
    end select
 
       ! set paramaters for I/O data
@@ -175,17 +174,18 @@ contains
       Failed =    ErrStat >= AbortErrLev
    end function Failed
 
-   subroutine SlD_REDWINsetup( InputFileData,p, m, ErrStat, ErrMsg )
-      type(SlD_InputFile),    intent(in   )  :: InputFileData  !< Data stored in the module's input file
-      type(SlD_ParameterType),intent(inout)  :: p              !< Parameters 
-      type(SlD_MiscVarType),  intent(inout)  :: m              !< Misc variables for optimization (not copied in glue code)
-      integer(IntKi),         intent(  out)  :: ErrStat
-      character(*),           intent(  out)  :: ErrMsg
-      integer(IntKi)                         :: i              ! Generic counter
-      integer(IntKi)                         :: ErrStat2       !< local error status
-      character(ErrMsgLen)                   :: ErrMsg2        !< local error message
-      real(R8Ki)                             :: NullDispl(6)   !< ignored
-      real(R8Ki)                             :: NullForce(6)   !< ignored
+   subroutine SlD_REDWINsetup( InputFileData,p, m, xd, ErrStat, ErrMsg )
+      type(SlD_InputFile),          intent(in   )  :: InputFileData  !< Data stored in the module's input file
+      type(SlD_ParameterType),      intent(inout)  :: p              !< Parameters 
+      type(SlD_MiscVarType),        intent(inout)  :: m              !< Misc variables for optimization (not copied in glue code)
+      type(SlD_DiscreteStateType),  intent(inout)  :: xd             !< Initial discrete states
+      integer(IntKi),               intent(  out)  :: ErrStat
+      character(*),                 intent(  out)  :: ErrMsg
+      integer(IntKi)                               :: i              ! Generic counter
+      integer(IntKi)                               :: ErrStat2       !< local error status
+      character(ErrMsgLen)                         :: ErrMsg2        !< local error message
+      real(R8Ki)                                   :: NullDispl(6)   !< ignored
+      real(R8Ki)                                   :: NullForce(6)   !< ignored
 
       ErrStat  =  ErrID_None
       ErrMsg   =  ""
@@ -203,29 +203,47 @@ contains
          NullForce = 0.0_ReKi
          call REDWINinterface_GetStiffMatrix( p%DLL_Trgt, p%DLL_Model, NullDispl, NullForce, p%DLL_StiffNess(1:6,1:6,i), m%dll_data(i), ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+         ! now initialize the states info from the miscvar
+         xd%dll_states(i)%Props        = m%dll_data(i)%Props
+         xd%dll_states(i)%StVar        = m%dll_data(i)%StVar
+         xd%dll_states(i)%StVarPrint   = m%dll_data(i)%StVarPrint
       enddo
    end subroutine SlD_REDWINsetup
 
    !> Allocate arrays for storing the DLL input file names, and check that they exist. The DLL has no error checking (as of 2020.02.10)
    !! and will create empty input files before segfaulting.
-   subroutine SlD_InitMisc( InputFileData, m, ErrStat, ErrMsg )
-      type(SlD_InputFile),    intent(in   )  :: InputFileData  !< Data stored in the module's input file
-      type(SlD_MiscVarType),  intent(inout)  :: m              !< Misc variables for optimization (not copied in glue code)
-      integer(IntKi),         intent(  out)  :: ErrStat
-      character(*),           intent(  out)  :: ErrMsg
-      integer(IntKi)                         :: i              ! Generic counter
-      integer(IntKi)                         :: ErrStat2       !< local error status
-      character(ErrMsgLen)                   :: ErrMsg2        !< local error message
-      logical                                :: FileExist
-      character(1024)                        :: PropsLoc       !< Full path to PropsFile location
-      character(1024)                        :: LDispLoc       !< Full path to LDispFile location
+   subroutine SlD_InitStatesMisc( InputFileData, m, xd, ErrStat, ErrMsg )
+      type(SlD_InputFile),          intent(in   )  :: InputFileData  !< Data stored in the module's input file
+      type(SlD_MiscVarType),        intent(inout)  :: m              !< Misc variables for optimization (not copied in glue code)
+      type(SlD_DiscreteStateType),  intent(  out)  :: xd          !< Initial discrete states
+      integer(IntKi),               intent(  out)  :: ErrStat
+      character(*),                 intent(  out)  :: ErrMsg
+      integer(IntKi)                               :: i              ! Generic counter
+      integer(IntKi)                               :: ErrStat2       !< local error status
+      character(ErrMsgLen)                         :: ErrMsg2        !< local error message
+      logical                                      :: FileExist
+      character(1024)                              :: PropsLoc       !< Full path to PropsFile location
+      character(1024)                              :: LDispLoc       !< Full path to LDispFile location
 
       ErrStat = ErrID_None
       ErrMsg  = ''
 
       select case(p%CalcOption)
          case (Calc_StiffDamp)
+            allocate( xd%dll_states(1), STAT=ErrStat2 )
+            if (ErrStat2 /= 0) then
+               call SetErrStat(ErrID_Fatal, 'Could not allocate xd%dll_states', ErrStat, ErrMsg, RoutineName)
+               return
+            endif
+
          case (Calc_PYcurve)
+            allocate( xd%dll_states(1), STAT=ErrStat2 )
+            if (ErrStat2 /= 0) then
+               call SetErrStat(ErrID_Fatal, 'Could not allocate xd%dll_states', ErrStat, ErrMsg, RoutineName)
+               return
+            endif
+
          case (Calc_REDWIN)
             !-------------------
             ! Set DLL data
@@ -235,9 +253,9 @@ contains
                return
             endif
 
-            allocate( m%dll_dataPREV(InputFileData%DLL_NumPoints), STAT=ErrStat2 )
+            allocate( xd%dll_states(InputFileData%DLL_NumPoints), STAT=ErrStat2 )
             if (ErrStat2 /= 0) then
-               call SetErrStat(ErrID_Fatal, 'Could not allocate m%dll_data', ErrStat, ErrMsg, RoutineName)
+               call SetErrStat(ErrID_Fatal, 'Could not allocate xd%dll_states', ErrStat, ErrMsg, RoutineName)
                return
             endif
 
@@ -255,11 +273,9 @@ contains
                endif
             enddo
 
-            m%dll_dataPrev = m%dll_data
-            m%PrevTime = -1.0_DbKi
       end select
       if (ErrStat >= AbortErrLev) return
-   end subroutine SlD_InitMisc
+   end subroutine SlD_InitStatesMisc
 
    subroutine SlD_InitMeshes( InputFileData, InitInp, u, y, p, m, ErrStat, ErrMsg )
       type(SlD_InputFile),       intent(in   )  :: InputFileData  !< Data stored in the module's input file
@@ -283,22 +299,26 @@ contains
             p%NumPoints =  1_IntKi
 !FIXME: update to allow more than one set of points
 !            NumPoints   =  InputFileData%StiffDamp_NumPoints
-            call AllocAry(MeshLocations,3,1,'Mesh locations',ErrStat2,ErrMsg2);
+            call AllocAry(MeshLocations,3,1,'Mesh locations',ErrStat,ErrMsg);
             do i=1,size(MeshLocations,2)
                MeshLocations(1:3,i)  =  InputFileData%SD_locations(1:3)
             enddo
          case (Calc_PYcurve)
             p%NumPoints =  InputFileData%PY_NumPoints
-            call AllocAry(MeshLocations,3,p%NumPoints,'Mesh locations',ErrStat2,ErrMsg2);
+            call AllocAry(MeshLocations,3,p%NumPoints,'Mesh locations',ErrStat,ErrMsg);
             do i=1,size(MeshLocations,2)
                MeshLocations(1:3,i)  =  InputFileData%PY_locations(1:3,i)
             enddo
          case (Calc_REDWIN)
             p%NumPoints =  InputFileData%DLL_NumPoints
-            call AllocAry(MeshLocations,3,p%NumPoints,'Mesh locations',ErrStat2,ErrMsg2);
+            call AllocAry(MeshLocations,3,p%NumPoints,'Mesh locations',ErrStat,ErrMsg);
             do i=1,size(MeshLocations,2)
                MeshLocations(1:3,i)  =  InputFileData%DLL_locations(1:3,i)
             enddo
+         case default
+            ErrStat  =  ErrID_Fatal
+            ErrMsg   =  ' Programming error.  Unknown calculation type '//trim(Num2LStr(p%CalcOption))//' detected.'
+            return
       end select
 
       !.................................
@@ -361,7 +381,6 @@ contains
                  , ErrMess  = ErrMsg2          )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       if (ErrStat>=AbortErrLev) RETURN
-
 
 
    end subroutine SlD_InitMeshes
@@ -444,13 +463,30 @@ subroutine SlD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, 
    integer(IntKi),                     intent(  out) :: ErrStat         !< Error status of the operation
    character(*),                       intent(  out) :: ErrMsg          !< Error message if ErrStat /= ErrID_None
 
+   integer(IntKi)                                    :: i               !< Generic counter
+
       ! Initialize variables
    ErrStat   = ErrID_None           ! no error has occurred
    ErrMsg    = ""
 
    x%DummyContState     = 0.0_ReKi
-   xd%DummyDiscState    = 0.0_ReKi
    z%DummyConstrState   = 0.0_ReKi
+
+      ! The DLL states are copied over from misc var (ideally the DLL would have an update states
+      ! routine, but it doesn't so we have to work around that to satisfy the framework requirements)
+   if (p%CalcOption == Calc_REDWIN) then
+      do i=1,size(xd%dll_states)
+         xd%dll_states(i)%Props        = m%dll_data(i)%Props
+         xd%dll_states(i)%StVar        = m%dll_data(i)%StVar
+         xd%dll_states(i)%StVarPrint   = m%dll_data(i)%StVarPrint
+      enddo
+   else
+      do i=1,size(xd%dll_states)
+         xd%dll_states(i)%Props        = 0.0_R8Ki
+         xd%dll_states(i)%StVar        = 0.0_R8Ki
+         xd%dll_states(i)%StVarPrint   = 0.0_IntKi
+      enddo
+   endif
  
 end subroutine SlD_UpdateStates
 
@@ -480,18 +516,10 @@ subroutine SlD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg 
    real(R8Ki)                                         :: Displacement(6)
    real(R8Ki)                                         :: Force(6)
    integer(IntKi)                                     :: i           !< generic counter
-   logical                                            :: TimeStepRecalc
 
       ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ""
-
-      ! Are we recalculating a previous timestep (like correction step?)
-   if (T > m%PrevTime) then
-      TimeStepRecalc = .FALSE.
-   else
-      TimeStepRecalc = .TRUE.
-   endif
 
    select case(p%CalcOption)
       case (Calc_StiffDamp)
@@ -512,24 +540,22 @@ subroutine SlD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg 
          y%SoilMesh%Moment(3,1)  =  -real(Force(6),ReKi)
 
       case (Calc_PYcurve)
+         call SetErrStat(ErrID_Fatal,' SoilDyn does not support P-Y curve calculations yet.',ErrStat,ErrMsg,RoutineName)
+
       case (Calc_REDWIN)
             ! call the dll
          do i=1,size(m%dll_data)
-               ! reset old states if recalc
-            if (TimeStepRecalc) then
-               m%dll_data(i) = m%dll_dataPREV(i)
-            endif
   
+            ! copy the state info over to miscvar for passing to dll (we are separating states out to better match the framework)
+            m%dll_data(i)%Props        = xd%dll_states(i)%Props
+            m%dll_data(i)%StVar        = xd%dll_states(i)%StVar
+            m%dll_data(i)%StVarPrint   = xd%dll_states(i)%StVarPrint
+
             ! Copy displacement from point mesh (angles in radians -- REDWIN dll also uses rad)
             Displacement(1:3) = u%SoilMesh%TranslationDisp(1:3,i)                 ! Translations -- This is R8Ki in the mesh
             Displacement(4:6) = GetSmllRotAngs(u%SoilMesh%Orientation(1:3,1:3,i), ErrStat2, ErrMsg2); if (Failed()) return;   ! Small angle assumption should be valid here -- Note we are assuming reforientation is identity
 
             call    REDWINinterface_CalcOutput( p%DLL_Trgt, p%DLL_Model, Displacement, Force, m%dll_data(i), ErrStat2, ErrMsg2 ); if (Failed()) return;
-
-               ! store new states if not recalc
-            if (.not. TimeStepRecalc) then
-               m%dll_dataPREV(i) = m%dll_data(i)
-            endif
 
             ! Return reaction force onto the resulting point mesh
             y%SoilMesh%Force (1:3,i)  =  -real(Force(1:3),ReKi)

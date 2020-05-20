@@ -19,7 +19,12 @@
 !**********************************************************************************************************************************
 MODULE REDWINinterface
 
-!FIXME: when done, remove the ifdef NO_LibLoad checks.
+!> NOTE:  The REDWIN coordinate system is not the same as the OpenFAST global coordinate frame. The Y axis
+!!        is flipped, and the Z axis is flipped.  However, because REDWIN does not have a preferred
+!!        directionality (it is the same response amplitude for the negative direction time series of
+!!        displacements), this does not matter.  So we simply ignore the fact that the coordinate frames
+!!        are flipped on Y and Z.
+
    USE NWTC_Library,  only: IntKi, ReKi, SiKi, DbKi, R8Ki, ProgDesc, DLL_Type, ErrMsgLen, PathIsRelative, &
                               OS_DESC, ErrID_None, ErrID_Info, ErrID_Warn, ErrID_Fatal, AbortErrLev, PathSep, &
                               NewLine, Num2LStr, Get_CWD, LoadDynamicLib, FreeDynamicLib, SetErrStat, DispNVD
@@ -80,18 +85,6 @@ MODULE REDWINinterface
    INTEGER(IntKi), PARAMETER    :: RW_v00 = 0         ! Version number
    INTEGER(IntKi), PARAMETER    :: RW_ver = RW_v00    ! Current version number (read from DLL file)
 
-
-   ! Coordinate transforms
-   interface ToREDWINcoords
-      module procedure ToREDWINcoordsR8toR8
-      module procedure ToREDWINcoordsR8toR8Mat
-   end interface
-
-   interface FromREDWINcoords
-      module procedure FromREDWINcoordsR8toR8
-      module procedure FromREDWINcoordsR8toR8Mat
-   end interface
-
 CONTAINS
 !==================================================================================================================================
 !> This SUBROUTINE is used to call the REDWIN-style DLL.
@@ -107,7 +100,6 @@ subroutine CallREDWINdll ( DLL_Trgt, DLL_Model, dll_data, ErrStat, ErrMsg )
 
    PROCEDURE(REDWINdll_interface_V00),POINTER:: REDWIN_Subroutine_v00                 ! The address of the procedure in the RedWin DLL
 
-#ifndef NO_LibLoad
 #ifdef STATIC_DLL_LOAD
       ! if we're statically loading the library (i.e., OpenFOAM), we can just call INTERFACEFOUNDATION();
    CALL INTERFACEFOUNDATION( PROPSFILE, LDISPFILE, &
@@ -123,10 +115,6 @@ subroutine CallREDWINdll ( DLL_Trgt, DLL_Model, dll_data, ErrStat, ErrMsg )
             dll_data%Props, dll_data%StVar, dll_data%StVarPrint, &
             dll_data%Disp, dll_data%Force, dll_data%D )
    endif
-#endif
-#else
-dll_data%Force(:)=0.0_ReKi
-dll_data%Force(3)=-9.0e6_R8Ki
 #endif
 
       ! Call routine for error trapping the returned ErrorCodes
@@ -176,9 +164,6 @@ subroutine REDWINinterface_Init( DLL_FileName, DLL_ProcName, DLL_Trgt, DLL_Model
    if (ErrStat >= AbortErrLev) return
 
    ! Load the DLL
-#ifdef NO_LibLoad
-   CALL SetErrStat( ErrID_Warn,'   -->  Skipping LoadDynamicLib call for '//TRIM(DLL_FileName),ErrStat,ErrMsg,RoutineName )
-#else
 #ifdef STATIC_DLL_LOAD
       ! because OpenFOAM needs the MPI task to copy the library, we're not going to dynamically load it; it needs to be loaded at runtime.
    DLL_Trgt%FileName = ''
@@ -190,17 +175,17 @@ subroutine REDWINinterface_Init( DLL_FileName, DLL_ProcName, DLL_Trgt, DLL_Model
    DLL_Trgt%ProcName(1) = DLL_ProcName
    CALL LoadDynamicLib ( DLL_Trgt, ErrStat2, ErrMsg2 );   if(Failed()) return;
 #endif
-#endif
 
-      ! Initialize DLL
+   ! Initialize DLL
    dll_data%IDtask = IDtask_init
    CALL CallREDWINdll(DLL_Trgt, DLL_Model, dll_data, ErrStat2, ErrMsg2);   if(Failed()) return;
 
-!FIXME: For Model 1, the Props(1,1) will indicate which runmode we are using.  Test that here
-!!!!!! IDEA: check the stiffness matrix returned!!!!
+   ! Checks on model version
+   ! NOTE:  there is not a good way to tell exactly which DLL model is in use.  The DLL does not return
+   !        much info that would identify it.  Ideally we would add some checks here to figure out if
+   !        the model number we read from the input file matches the actual DLL model.
+   ! For Model 1, the Props(1,1) will indicate which runmode we are using.  Test that here
 
-
-!TODO: can we add a check on which type of library we actually loaded and compare to the model we set????
    ! Set status flag:
    UseREDWINinterface = .TRUE.
 
@@ -253,10 +238,9 @@ subroutine REDWINinterface_End( DLL_Trgt, ErrStat, ErrMsg )
    ErrStat = ErrID_None
    ErrMsg= ''
 
-#ifndef NO_LibLoad
       ! Free the library (note: this doesn't do anything #ifdef STATIC_DLL_LOAD  because DLL_Trgt is 0 (NULL))
    CALL FreeDynamicLib( DLL_Trgt, ErrStat, ErrMsg )
-#endif
+
 end subroutine REDWINinterface_End
 
 
@@ -282,12 +266,10 @@ subroutine REDWINinterface_CalcOutput( DLL_Trgt, DLL_Model, Displacement, Force,
    ErrStat = ErrID_None
    ErrMsg= ''
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!FIXME: should this be split out into multiple, one for each model?
-      ! Coordinate transform to REDWIN frame
-   dll_data%Disp = ToREDWINcoords( Displacement )
 
-!FIXME: add some debugging options
+      ! Copy data over
+   dll_data%Disp = Displacement
+
 #ifdef DEBUG_REDWIN_INTERFACE
 !CALL WrNumAryFileNR ( 58, m%dll_data%avrSWAP,'1x,ES15.6E2', ErrStat, ErrMsg )
 !write(58,'()')
@@ -298,15 +280,11 @@ subroutine REDWINinterface_CalcOutput( DLL_Trgt, DLL_Model, Displacement, Force,
    CALL CallREDWINdll( DLL_Trgt, DLL_Model, dll_data, ErrStat2, ErrMsg2); if(Failed()) return;
 
       ! Coordinate transform from REDWIN frame
-   Force = FromREDWINcoords( dll_data%Force )
-
-!FIXME: check the runmode info for model 1.  Not sure it applies to the other models.
+   Force = dll_data%Force
 
       ! Call routine for error trapping the returned ErrorCodes
    call CheckREDWINerrors( dll_data, DLL_Model, dll_data%SuppressWarn, ErrStat2, ErrMsg2 ); if(Failed()) return;
 
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 #ifdef DEBUG_REDWIN_INTERFACE
 !CALL WrNumAryFileNR ( 59, m%dll_data%avrSWAP,'1x,ES15.6E2', ErrStat, ErrMsg )
@@ -345,15 +323,15 @@ subroutine REDWINinterface_GetStiffMatrix( DLL_Trgt, DLL_Model, Displacement, Fo
    ErrMsg= ''
 
       ! Coordinate transform to REDWIN frame
-   dll_data%Disp = ToREDWINcoords( Displacement )
+   dll_data%Disp = Displacement
 
       ! Call the REDWIN-style DLL:
    dll_data%IDtask = IDtask_stiff
    CALL CallREDWINdll( DLL_Trgt, DLL_Model, dll_data, ErrStat2, ErrMsg2); if(Failed()) return;
 
       ! Coordinate transformation
-   Force       = FromREDWINcoords( dll_data%Force )
-   StiffMatrix = FromREDWINcoords( dll_data%D     )
+   Force       = dll_data%Force
+   StiffMatrix = dll_data%D
 
 #ifdef DEBUG_REDWIN_INTERFACE
 !CALL WrNumAryFileNR ( 59, m%dll_data%avrSWAP,'1x,ES15.6E2', ErrStat, ErrMsg )
@@ -371,6 +349,10 @@ end subroutine REDWINinterface_GetStiffMatrix
 !==================================================================================================================================
 !> Check errors from REDWIN
 !!    Error values taken from "20150014-11-R_Rev0_3D_Foundation Model Library.pdf"
+!!
+!! NOTE: the DLL does not at present return any error codes.  Instead when it hits an error
+!!       it simply aborts the whole program without returning.  So this routine will never
+!!       actually catch any errors... :(
 subroutine CheckREDWINerrors( dll_data, DLL_Model, SuppressWarn, ErrStat, ErrMsg )
    type(REDWINdllType),       intent(in   )  :: dll_data       ! data type
    integer(IntKi),            intent(in   )  :: DLL_Model      ! Model type of the DLL
@@ -553,69 +535,6 @@ CONTAINS
       end select
    end subroutine CheckErrorsModel3
 end subroutine CheckREDWINerrors
-
-
-
-!FIXME: check if we input Radians or Degrees in the angular displacements
-!> coordinate transform to REDWIN coordinates
-!!    -> signs flip on y,z
-!!        | 1  0  0 |
-!!    R = | 0 -1  0 |
-!!        | 0  0 -1 |
-function ToREDWINcoordsR8toR8(InArray) result(REDWIN)
-   real(R8Ki), intent(in)  :: InArray(6)
-   real(R8Ki)              :: REDWIN(6)
-   REDWIN(1) =  InArray(1)
-   REDWIN(2) =  InArray(2)
-   REDWIN(3) =  InArray(3)
-   REDWIN(4) =  InArray(4)
-   REDWIN(5) =  InArray(5)
-   REDWIN(6) =  InArray(6)
-end function ToREDWINcoordsR8toR8
-
-!> \copydoc redwininterface::ToREDWINcoordsR8toR8
-function ToREDWINcoordsR8toR8Mat(InArray) result(REDWIN)
-   real(R8Ki), intent(in)  :: InArray(6,6)
-   real(R8Ki)              :: REDWIN(6,6)
-   REDWIN(:,1)  =  InArray(:,1)
-   REDWIN(:,2)  =  InArray(:,2)
-   REDWIN(:,3)  =  InArray(:,3)
-   REDWIN(:,4)  =  InArray(:,4)
-   REDWIN(:,5)  =  InArray(:,5)
-   REDWIN(:,6)  =  InArray(:,6)
-end function ToREDWINcoordsR8toR8Mat
-
-
-
-!> coordinate transform from REDWIN coordinates
-!!    -> signs flip on y,z
-!!        | 1  0  0 |
-!!    R = | 0 -1  0 |
-!!        | 0  0 -1 |
-function FromREDWINcoordsR8toR8(InArray) result(FAST)
-   real(R8Ki), intent(in)  :: InArray(6)
-   real(R8Ki)              :: FAST(6)
-   FAST(1) =  InArray(1)
-   FAST(2) =  InArray(2)
-   FAST(3) =  InArray(3)
-   FAST(4) =  InArray(4)
-   FAST(5) =  InArray(5)
-   FAST(6) =  InArray(6)
-end function FromREDWINcoordsR8toR8
-
-!> \copydoc redwininterface::FromREDWINcoordsR8toR8
-function FromREDWINcoordsR8toR8Mat(InArray) result(FAST)
-   real(R8Ki), intent(in)  :: InArray(6,6)
-   real(R8Ki)              :: FAST(6,6)
-   FAST(:,1) =  InArray(:,1)
-   FAST(:,2) =  InArray(:,2)
-   FAST(:,3) =  InArray(:,3)
-   FAST(:,4) =  InArray(:,4)
-   FAST(:,5) =  InArray(:,5)
-   FAST(:,6) =  InArray(:,6)
-end function FromREDWINcoordsR8toR8Mat
-
-
 
 
 
