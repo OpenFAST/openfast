@@ -2669,60 +2669,41 @@ SUBROUTINE Linear_HD_InputSolve_du( p_FAST, y_FAST, u_HD, y_ED, MeshMapData, dUd
    if ( p_FAST%CompHydro == Module_HD ) then ! HydroDyn-{ElastoDyn or SubDyn}
          
       !===================================================   
-      !  y_ED%PlatformPtMesh and u_HD%Morison%DistribMesh
+      !  y_ED%PlatformPtMesh and u_HD%Morison%Mesh
       !===================================================    
-         
+!TODO-LIN: Check for new Morison GJH 4/23/20   NOw could depend on SD, right? GJH 5/11/2020
+      
             ! Transfer ED motions to HD motion input (HD inputs depend on previously calculated HD inputs from ED):
-  
-         call Linearize_Point_to_Line2( y_ED%PlatformPtMesh, u_HD%Morison%DistribMesh, MeshMapData%ED_P_2_HD_M_L, ErrStat2, ErrMsg2 )
+         
+         call Linearize_Point_to_Point( y_ED%PlatformPtMesh, u_HD%Morison%Mesh, MeshMapData%ED_P_2_HD_M_P, ErrStat2, ErrMsg2 )
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-
+         
          ! HD is destination in the mapping, so we want M_{tv_uD} and M_{ta_uD}
             
          HD_Start_td = y_FAST%Lin%Modules(MODULE_HD)%Instance(1)%LinStartIndx(LIN_INPUT_COL)  
-         HD_Start_tr = HD_Start_td + u_HD%Morison%DistribMesh%NNodes * 6 ! skip 2 fields (TranslationDisp and Orientation) with 3 components before translational velocity field      
-
-            ! translational velocity:
-         if (allocated(MeshMapData%ED_P_2_HD_M_L%dM%tv_uD )) then             
-            call SetBlockMatrix( dUdu, MeshMapData%ED_P_2_HD_M_L%dM%tv_ud, HD_Start_tr, HD_Start_td )
-         end if
-
-            ! translational acceleration:
-         HD_Start_tr = HD_Start_tr + u_HD%Morison%DistribMesh%NNodes * 6 ! skip 2 fields ( TranslationVel and RotationVel)
-         if (allocated(MeshMapData%ED_P_2_HD_M_L%dM%ta_uD )) then            
-            call SetBlockMatrix( dUdu, MeshMapData%ED_P_2_HD_M_L%dM%ta_ud, HD_Start_tr, HD_Start_td )
-         end if
-
-      !===================================================   
-      !  y_ED%PlatformPtMesh and u_HD%Morison%LumpedMesh
-      !===================================================    
-
-         call Linearize_Point_to_Point( y_ED%PlatformPtMesh, u_HD%Morison%LumpedMesh, MeshMapData%ED_P_2_HD_M_P, ErrStat2, ErrMsg2 )
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-
-         ! HD is destination in the mapping, so we want M_{tv_uD} and M_{ta_uD}
-         HD_Start_td = HD_Start_tr + u_HD%Morison%DistribMesh%NNodes * 6 ! skip 1 field ( TranslationAcc and RotationAcc)   
-         HD_Start_tr = HD_Start_td + u_HD%Morison%LumpedMesh%NNodes  * 6 ! skip 2 fields (TranslationDisp and Orientation) with 3 components before translational velocity field       
+         HD_Start_tr = HD_Start_td + u_HD%Morison%Mesh%NNodes * 6 ! skip 2 fields (TranslationDisp and Orientation) with 3 components before translational velocity field      
+         
             ! translational velocity:
          if (allocated(MeshMapData%ED_P_2_HD_M_P%dM%tv_uD )) then             
             call SetBlockMatrix( dUdu, MeshMapData%ED_P_2_HD_M_P%dM%tv_ud, HD_Start_tr, HD_Start_td )
          end if
-
+         
             ! translational acceleration:
-         HD_Start_tr = HD_Start_tr + u_HD%Morison%LumpedMesh%NNodes * 6 ! skip 2 fields ( TranslationVel and RotationVel)
-
-         if (allocated(MeshMapData%ED_P_2_HD_M_P%dM%ta_uD )) then
+         HD_Start_tr = HD_Start_tr + u_HD%Morison%Mesh%NNodes * 6 ! skip 2 fields ( TranslationVel and RotationVel)
+         if (allocated(MeshMapData%ED_P_2_HD_M_P%dM%ta_uD )) then            
             call SetBlockMatrix( dUdu, MeshMapData%ED_P_2_HD_M_P%dM%ta_ud, HD_Start_tr, HD_Start_td )
          end if
 
+      
       !===================================================   
-      !  y_ED%PlatformPtMesh and u_HD%Mesh
+      !  y_ED%PlatformPtMesh and u_HD%WAMITMesh
       !===================================================    
-
+!TODO-LIN: Check for new Morison+WAMIT GJH 4/23/20         
+!          Should this potentially be between SD and HD for some cases?
          call Linearize_Point_to_Point( y_ED%PlatformPtMesh, u_HD%WAMITMesh, MeshMapData%ED_P_2_HD_W_P, ErrStat2, ErrMsg2 )
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
-         HD_Start_td = HD_Start_tr + u_HD%Morison%LumpedMesh%NNodes * 6 ! skip 2 field ( TranslationalAcc and RotationAcc)   
+         HD_Start_td = HD_Start_tr + u_HD%Morison%Mesh%NNodes * 6 ! skip 2 field ( TranslationalAcc and RotationAcc)   
          HD_Start_tr = HD_Start_td + u_HD%WAMITMesh%NNodes  * 6 ! skip 2 fields (TranslationDisp and Orientation) with 3 components before translational velocity field       
             ! translational velocity:
          if (allocated(MeshMapData%ED_P_2_HD_W_P%dM%tv_uD )) then             
@@ -2768,32 +2749,17 @@ SUBROUTINE Linear_HD_InputSolve_dy( p_FAST, y_FAST, u_HD, y_ED, MeshMapData, dUd
                
  
       !...................................
-      ! Distributed Morison Mesh
+      ! Morison Mesh
       !...................................
-   IF (u_HD%Morison%DistribMesh%Committed) THEN
+   IF (u_HD%Morison%Mesh%Committed) THEN
             
       !!! ! This linearization was done in forming dUdu (see Linear_HD_InputSolve_du()), so we don't need to re-calculate these matrices 
       !!! ! while forming dUdy, too.
-      !!!call Linearize_Point_to_Line2( y_ED%PlatformPtMesh, u_HD%Morison%DistribMesh, MeshMapData%ED_P_2_HD_M_L, ErrStat2, ErrMsg2 )
+      !!!call Linearize_Point_to_Line2( y_ED%PlatformPtMesh, u_HD%Morison%Mesh, MeshMapData%ED_P_2_HD_M_P, ErrStat2, ErrMsg2 )
       
-      HD_Start     = Indx_u_HD_Distrib_Start(u_HD, y_FAST)  ! start of u_HD%Morison%DistribMesh%TranslationDisp field     
+      HD_Start     = Indx_u_HD_Morison_Start(u_HD, y_FAST)  ! start of u_HD%Morison%Mesh%TranslationDisp field     
       ED_Out_Start = Indx_y_ED_Platform_Start(y_ED, y_FAST) ! start of y_ED%PlatformPtMesh%TranslationDisp field
-      call Assemble_dUdy_Motions(y_ED%PlatformPtMesh, u_HD%Morison%DistribMesh, MeshMapData%ED_P_2_HD_M_L, HD_Start, ED_Out_Start, dUdy, .false.)
-   END IF
- 
-      !...................................
-      ! Lumped Morison Mesh
-      !...................................
-   IF (u_HD%Morison%LumpedMesh%Committed) THEN
-            
-      !!! ! This linearization was done in forming dUdu (see Linear_HD_InputSolve_du()), so we don't need to re-calculate these matrices 
-      !!! ! while forming dUdy, too.
-      !!!call Linearize_Point_to_Point( y_ED%PlatformPtMesh, u_HD%Morison%LumpedMesh, MeshMapData%ED_P_2_HD_M_P, ErrStat2, ErrMsg2 )
-      
-      HD_Start = Indx_u_HD_Lumped_Start(u_HD, y_FAST) ! start of u_HD%Morison%LumpedMesh%TranslationDisp field
-      
-      ED_Out_Start = Indx_y_ED_Platform_Start(y_ED, y_FAST) ! start of y_ED%PlatformPtMesh%TranslationDisp field
-      call Assemble_dUdy_Motions(y_ED%PlatformPtMesh, u_HD%Morison%LumpedMesh, MeshMapData%ED_P_2_HD_M_P, HD_Start, ED_Out_Start, dUdy, .false.)
+      call Assemble_dUdy_Motions(y_ED%PlatformPtMesh, u_HD%Morison%Mesh, MeshMapData%ED_P_2_HD_M_P, HD_Start, ED_Out_Start, dUdy, .false.)
    END IF
 
       !...................................
@@ -2907,7 +2873,7 @@ END SUBROUTINE Linear_MAP_InputSolve_dy
 !   if ( p_FAST%CompMooring == Module_MAP ) then ! MAP- ElastoDyn
 !              
 !      !===================================================   
-!      !  y_ED%PlatformPtMesh and u_MAP%Morison%DistribMesh
+!      !  y_ED%PlatformPtMesh and u_MAP%Morison%Mesh
 !      !===================================================    
 !         
 !            ! Transfer ED motions to HD motion input (HD inputs depend on previously calculated HD inputs from ED):
@@ -3801,8 +3767,8 @@ FUNCTION Indx_u_AD_BladeInflow_Start(u_AD, y_FAST) RESULT(AD_Start)
 END FUNCTION Indx_u_AD_BladeInflow_Start
 !----------------------------------------------------------------------------------------------------------------------------------
 !----------------------------------------------------------------------------------------------------------------------------------
-!> This routine returns the starting index for the u_HD%Morison%DistribMesh mesh in the FAST linearization inputs.
-FUNCTION Indx_u_HD_Distrib_Start(u_HD, y_FAST) RESULT(HD_Start)
+!> This routine returns the starting index for the u_HD%Morison%Mesh mesh in the FAST linearization inputs.
+FUNCTION Indx_u_HD_Morison_Start(u_HD, y_FAST) RESULT(HD_Start)
    TYPE(FAST_OutputFileType),      INTENT(IN )  :: y_FAST           !< FAST output file data (for linearization)
    TYPE(HydroDyn_InputType),       INTENT(IN )  :: u_HD             !< HD Inputs at t
 
@@ -3810,34 +3776,22 @@ FUNCTION Indx_u_HD_Distrib_Start(u_HD, y_FAST) RESULT(HD_Start)
 
    HD_Start = y_FAST%Lin%Modules(Module_HD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) 
 
-END FUNCTION Indx_u_HD_Distrib_Start
+END FUNCTION Indx_u_HD_Morison_Start
 !----------------------------------------------------------------------------------------------------------------------------------
-!> This routine returns the starting index for the u_HD%Morison%LumpedMesh mesh in the FAST linearization inputs.
-FUNCTION Indx_u_HD_Lumped_Start(u_HD, y_FAST) RESULT(HD_Start)
-   TYPE(FAST_OutputFileType),      INTENT(IN )  :: y_FAST           !< FAST output file data (for linearization)
-   TYPE(HydroDyn_InputType),       INTENT(IN )  :: u_HD             !< HD Inputs at t
-
-   INTEGER                                      :: HD_Start         !< starting index of this mesh in HydroDyn inputs
-
-   HD_Start = Indx_u_HD_Distrib_Start(u_HD, y_FAST) 
-   if (u_HD%Morison%DistribMesh%committed) HD_Start =  HD_Start + u_HD%Morison%DistribMesh%NNodes * 18  ! 6 fields (MASKID_TRANSLATIONDISP,MASKID_Orientation,MASKID_TRANSLATIONVel,MASKID_ROTATIONVel,MASKID_TRANSLATIONAcc,MASKID_ROTATIONAcc) with 3 components
-
-END FUNCTION Indx_u_HD_Lumped_Start
-!----------------------------------------------------------------------------------------------------------------------------------
-!> This routine returns the starting index for the u_HD%Mesh mesh in the FAST linearization inputs.
+!> This routine returns the starting index for the u_HD%WAMITMesh mesh in the FAST linearization inputs.
 FUNCTION Indx_u_HD_PlatformRef_Start(u_HD, y_FAST) RESULT(HD_Start)
    TYPE(FAST_OutputFileType),      INTENT(IN )  :: y_FAST           !< FAST output file data (for linearization)
    TYPE(HydroDyn_InputType),       INTENT(IN )  :: u_HD             !< HD Inputs at t
 
    INTEGER                                      :: HD_Start         !< starting index of this mesh in HydroDyn inputs
 
-   HD_Start = Indx_u_HD_Lumped_Start(u_HD, y_FAST) 
-   if (u_HD%Morison%LumpedMesh%committed)  HD_Start =  HD_Start + u_HD%Morison%LumpedMesh%NNodes * 18  ! 6 fields (MASKID_TRANSLATIONDISP,MASKID_Orientation,MASKID_TRANSLATIONVel,MASKID_ROTATIONVel,MASKID_TRANSLATIONAcc,MASKID_ROTATIONAcc) with 3 components
+   HD_Start = Indx_u_HD_Morison_Start(u_HD, y_FAST) 
+   if (u_HD%Morison%Mesh%committed)  HD_Start =  HD_Start + u_HD%Morison%Mesh%NNodes * 18  ! 6 fields (MASKID_TRANSLATIONDISP,MASKID_Orientation,MASKID_TRANSLATIONVel,MASKID_ROTATIONVel,MASKID_TRANSLATIONAcc,MASKID_ROTATIONAcc) with 3 components
 
    END FUNCTION Indx_u_HD_PlatformRef_Start
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine returns the starting index for the y_HD%Morison%DistribMesh mesh in the FAST linearization outputs.
-FUNCTION Indx_y_HD_Distrib_Start(y_HD, y_FAST) RESULT(HD_Start)
+FUNCTION Indx_y_HD_Morison_Start(y_HD, y_FAST) RESULT(HD_Start)
    TYPE(FAST_OutputFileType),      INTENT(IN )  :: y_FAST           !< FAST output file data (for linearization)
    TYPE(HydroDyn_OutputType),      INTENT(IN )  :: y_HD             !< HD Outputs at t
 
@@ -3845,19 +3799,7 @@ FUNCTION Indx_y_HD_Distrib_Start(y_HD, y_FAST) RESULT(HD_Start)
 
    HD_Start = y_FAST%Lin%Modules(Module_HD)%Instance(1)%LinStartIndx(LIN_OUTPUT_COL) 
 
-END FUNCTION Indx_y_HD_Distrib_Start
-!----------------------------------------------------------------------------------------------------------------------------------
-!> This routine returns the starting index for the y_HD%Morison%LumpedMesh mesh in the FAST linearization outputs.
-FUNCTION Indx_y_HD_Lumped_Start(y_HD, y_FAST) RESULT(HD_Start)
-   TYPE(FAST_OutputFileType),      INTENT(IN )  :: y_FAST           !< FAST output file data (for linearization)
-   TYPE(HydroDyn_OutputType),      INTENT(IN )  :: y_HD             !< HD Outputs at t
-
-   INTEGER                                      :: HD_Start         !< starting index of this mesh in HydroDyn Outputs
-
-   HD_Start = Indx_y_HD_Distrib_Start(y_HD, y_FAST) 
-   if (y_HD%Morison%DistribMesh%committed)  HD_Start =  HD_Start + y_HD%Morison%DistribMesh%NNodes * 6  ! 2 fields (MASKID_FORCE,MASKID_MOMENT) with 3 components
-
-END FUNCTION Indx_y_HD_Lumped_Start
+END FUNCTION Indx_y_HD_Morison_Start
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine returns the starting index for the y_HD%Mesh mesh in the FAST linearization outputs.
 FUNCTION Indx_y_HD_PlatformRef_Start(y_HD, y_FAST) RESULT(HD_Start)
@@ -3868,8 +3810,8 @@ FUNCTION Indx_y_HD_PlatformRef_Start(y_HD, y_FAST) RESULT(HD_Start)
    
       !< starting index of this mesh in HydroDyn Outputs
 
-   HD_Start = Indx_y_HD_Lumped_Start(y_HD, y_FAST) 
-   if (y_HD%Morison%LumpedMesh%committed)  HD_Start =  HD_Start + y_HD%Morison%LumpedMesh%NNodes * 6  ! 2 fields (MASKID_FORCE,MASKID_MOMENT) with 3 components
+   HD_Start = Indx_y_HD_Morison_Start(y_HD, y_FAST) 
+   if (y_HD%Morison%Mesh%committed)  HD_Start =  HD_Start + y_HD%Morison%Mesh%NNodes * 6  ! 2 fields (MASKID_FORCE,MASKID_MOMENT) with 3 components
 
    END FUNCTION Indx_y_HD_PlatformRef_Start
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -4365,6 +4307,7 @@ SUBROUTINE PerturbOP(t, iLinTime, iMode, p_FAST, y_FAST, ED, BD, SrvD, AD, IfW, 
    ! local variables
    INTEGER(IntKi)                          :: k                   ! generic loop counters
    INTEGER(IntKi)                          :: i                   ! generic loop counters
+   INTEGER(IntKi)                          :: iBody               ! WAMIT body loop counter
    INTEGER(IntKi)                          :: j                   ! generic loop counters
    INTEGER(IntKi)                          :: indx                ! generic loop counters
    INTEGER(IntKi)                          :: indx_last           ! generic loop counters
@@ -4460,13 +4403,20 @@ SUBROUTINE PerturbOP(t, iLinTime, iMode, p_FAST, y_FAST, ED, BD, SrvD, AD, IfW, 
    IF ( p_FAST%CompHydro == Module_HD ) THEN
       ThisModule = Module_HD
       if (allocated(y_FAST%Lin%Modules(ThisModule)%Instance(1)%op_x_eig_mag)) then
-         nStates = HD%p%WAMIT%SS_Exctn%N
-         if (nStates > 0) then
-            call GetStateAry(p_FAST, iMode, t, HD%x( STATE_CURR)%WAMIT%SS_Exctn%x, y_FAST%Lin%Modules(ThisModule)%Instance(1)%op_x_eig_mag(         :nStates), y_FAST%Lin%Modules(ThisModule)%Instance(1)%op_x_eig_phase(         :nStates))
-         end if
-         if (nStates < size(y_FAST%Lin%Modules(ThisModule)%Instance(1)%op_x_eig_mag)) then
-            call GetStateAry(p_FAST, iMode, t, HD%x( STATE_CURR)%WAMIT%SS_Rdtn%x,  y_FAST%Lin%Modules(ThisModule)%Instance(1)%op_x_eig_mag(1+nStates:       ), y_FAST%Lin%Modules(ThisModule)%Instance(1)%op_x_eig_phase(1+nStates:       ))
-         end if
+         ! TODO: WAMIT parameter and continuous states are now an arrays of length NBody, so we need to modify this following code to handle that
+         ! We will try to loop over NBody and add each to the state array
+         do iBody = 1, HD%p%NBody
+            nStates = HD%p%WAMIT(iBody)%SS_Exctn%numStates
+            if (nStates > 0) then
+               call GetStateAry(p_FAST, iMode, t, HD%x( STATE_CURR)%WAMIT(iBody)%SS_Exctn%x, y_FAST%Lin%Modules(ThisModule)%Instance(1)%op_x_eig_mag(         :nStates), y_FAST%Lin%Modules(ThisModule)%Instance(1)%op_x_eig_phase(         :nStates))
+            end if
+         end do
+         do iBody = 1, HD%p%NBody
+            nStates = HD%p%WAMIT(iBody)%SS_Rdtn%numStates
+            if (nStates < size(y_FAST%Lin%Modules(ThisModule)%Instance(1)%op_x_eig_mag)) then
+               call GetStateAry(p_FAST, iMode, t, HD%x( STATE_CURR)%WAMIT(iBody)%SS_Rdtn%x,  y_FAST%Lin%Modules(ThisModule)%Instance(1)%op_x_eig_mag(1+nStates:       ), y_FAST%Lin%Modules(ThisModule)%Instance(1)%op_x_eig_phase(1+nStates:       ))
+            end if
+         end do
       end if
    END IF
             
