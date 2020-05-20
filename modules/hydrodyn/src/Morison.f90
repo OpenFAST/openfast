@@ -2172,7 +2172,11 @@ SUBROUTINE RodrigMat(a, R, errStat, errMsg)
    !
       errStat = ErrID_Fatal
       errMsg  = 'RodrigMat encountered vector of zero length'
-      
+   else IF ( EqualRealNos(a(1), 0.0) .AND. EqualRealNos(a(2), 0.0) ) THEN    ! return identity if vertical
+      CALL EYE(R, errStat,errMsg)
+      IF (a(3) < 0) THEN
+         R = -R
+      END IF   
    else   
       vec = a/SQRT(factor) ! normalize a
       vec(3) = vec(3) + 1
