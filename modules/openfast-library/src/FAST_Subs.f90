@@ -3351,9 +3351,9 @@ SUBROUTINE SetVTKParameters(p_FAST, InitOutData_ED, InitOutData_AD, InitInData_H
    ! morison surfaces
    !.......................
    
-   IF ( HD%Input(1)%Morison%DistribMesh%Committed ) THEN      
-      
-      call move_alloc(InitOutData_HD%Morison%Morison_Rad, p_FAST%VTK_Surface%MorisonRad)
+   IF ( HD%Input(1)%Morison%Mesh%Committed ) THEN      
+    !TODO: FIX for visualization GJH 4/23/20  
+    !  call move_alloc(InitOutData_HD%Morison%Morison_Rad, p_FAST%VTK_Surface%MorisonRad)
       
    END IF
    
@@ -5320,21 +5320,20 @@ SUBROUTINE WrVTK_AllMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD, IfW, OpFM, H
    END IF
    
 ! HydroDyn            
-   IF ( p_FAST%CompHydro == Module_HD .and. allocated(HD%Input)) THEN       
+   IF ( p_FAST%CompHydro == Module_HD .and. allocated(HD%Input)) THEN     
+      !TODO: Fix for Visualizaton GJH 4/23/20
       !call MeshWrVTK(p_FAST%TurbinePos, HD%Input(1)%Mesh, trim(p_FAST%VTK_OutFileRoot)//'.HD_Mesh_motion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2 )     
       !call MeshWrVTK(p_FAST%TurbinePos, HD%Input(1)%Morison%LumpedMesh, trim(p_FAST%VTK_OutFileRoot)//'.HD_MorisonLumped_motion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2 )     
       !call MeshWrVTK(p_FAST%TurbinePos, HD%Input(1)%Morison%DistribMesh, trim(p_FAST%VTK_OutFileRoot)//'.HD_MorisonDistrib_motion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2 )     
       
       if (p_FAST%CompSub == Module_NONE) then
-         call MeshWrVTK(p_FAST%TurbinePos, HD%y%AllHdroOrigin, trim(p_FAST%VTK_OutFileRoot)//'.HD_AllHdroOrigin', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth, HD%Input(1)%Mesh )
+!TODO         call MeshWrVTK(p_FAST%TurbinePos, HD%y%AllHdroOrigin, trim(p_FAST%VTK_OutFileRoot)//'.HD_AllHdroOrigin', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth, HD%Input(1)%Mesh )
          outputFields = .false.
       else         
-         call MeshWrVTK(p_FAST%TurbinePos, HD%y%Mesh, trim(p_FAST%VTK_OutFileRoot)//'.HD_Mesh', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth, HD%Input(1)%Mesh )
+         call MeshWrVTK(p_FAST%TurbinePos, HD%y%WamitMesh, trim(p_FAST%VTK_OutFileRoot)//'.HD_Mesh', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth, HD%Input(1)%WAMITMesh )
          outputFields = p_FAST%VTK_fields
       end if
-      call MeshWrVTK(p_FAST%TurbinePos, HD%y%Morison%LumpedMesh, trim(p_FAST%VTK_OutFileRoot)//'.HD_MorisonLumped', y_FAST%VTK_count, outputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth, HD%Input(1)%Morison%LumpedMesh )
-      call MeshWrVTK(p_FAST%TurbinePos, HD%y%Morison%DistribMesh, trim(p_FAST%VTK_OutFileRoot)//'.HD_MorisonDistrib', y_FAST%VTK_count, outputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth, HD%Input(1)%Morison%DistribMesh )
-      
+      call MeshWrVTK(p_FAST%TurbinePos, HD%y%Morison%Mesh, trim(p_FAST%VTK_OutFileRoot)//'.HD_Morison', y_FAST%VTK_count, outputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth, HD%Input(1)%Morison%Mesh ) 
                   
    END IF
    
@@ -5478,14 +5477,14 @@ SUBROUTINE WrVTK_BasicMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD, IfW, OpFM,
    IF ( p_FAST%CompHydro == Module_HD ) THEN 
       
       if (p_FAST%CompSub == Module_NONE) then
-         call MeshWrVTK(p_FAST%TurbinePos, HD%y%AllHdroOrigin, trim(p_FAST%VTK_OutFileRoot)//'.HD_AllHdroOrigin', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth, HD%Input(1)%Mesh )
+         call MeshWrVTK(p_FAST%TurbinePos, HD%y%WAMITMesh, trim(p_FAST%VTK_OutFileRoot)//'.HD_AllHdroOrigin', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth, HD%Input(1)%WAMITMesh )
          outputFields = .false.
       else         
          OutputFields = p_FAST%VTK_fields
       end if
-      
-      call MeshWrVTK(p_FAST%TurbinePos, HD%Input(1)%Morison%DistribMesh, trim(p_FAST%VTK_OutFileRoot)//'.HD_MorisonDistrib', &
-                     y_FAST%VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth, Sib=HD%y%Morison%DistribMesh )
+     !TODO: Fix for Visualization GJH 4/23/20 
+     ! call MeshWrVTK(p_FAST%TurbinePos, HD%Input(1)%Morison%DistribMesh, trim(p_FAST%VTK_OutFileRoot)//'.HD_MorisonDistrib', &
+     !                y_FAST%VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth, Sib=HD%y%Morison%DistribMesh )
    END IF
    
    
@@ -5585,19 +5584,20 @@ SUBROUTINE WrVTK_Surfaces(t_global, p_FAST, y_FAST, MeshMapData, ED, BD, AD, IfW
 !   IF ( p_FAST%CompSub == Module_SD ) THEN
 !     call MeshWrVTK(p_FAST%TurbinePos, SD%Input(1)%TPMesh, trim(p_FAST%VTK_OutFileRoot)//'.SD_TPMesh_motion', y_FAST%VTK_count, OutputFields, ErrStat2, ErrMsg2 )     
 !      call MeshWrVTK(p_FAST%TurbinePos, SD%y%y2Mesh, trim(p_FAST%VTK_OutFileRoot)//'.SD_y2Mesh_motion', y_FAST%VTK_count, OutputFields, ErrStat2, ErrMsg2 )        
-!   END IF     
-      
-   IF ( HD%Input(1)%Morison%DistribMesh%Committed ) THEN 
-      !if ( p_FAST%CompSub == Module_NONE ) then ! floating
-      !   OutputFields = .false.
-      !else
-      !   OutputFields = p_FAST%VTK_fields
-      !end if
-         
-      call MeshWrVTK_Ln2Surface (p_FAST%TurbinePos, HD%Input(1)%Morison%DistribMesh, trim(p_FAST%VTK_OutFileRoot)//'.MorisonSurface', &
-                                 y_FAST%VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth, p_FAST%VTK_Surface%NumSectors, &
-                                 p_FAST%VTK_Surface%MorisonRad, Sib=HD%y%Morison%DistribMesh )
-   END IF
+!   END IF 
+!TODO: Fix below section for new Morison GJH 4/23/20
+   !   
+   !IF ( HD%Input(1)%Morison%DistribMesh%Committed ) THEN 
+   !   !if ( p_FAST%CompSub == Module_NONE ) then ! floating
+   !   !   OutputFields = .false.
+   !   !else
+   !   !   OutputFields = p_FAST%VTK_fields
+   !   !end if
+   !      
+   !   call MeshWrVTK_Ln2Surface (p_FAST%TurbinePos, HD%Input(1)%Morison%DistribMesh, trim(p_FAST%VTK_OutFileRoot)//'.MorisonSurface', &
+   !                              y_FAST%VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth, p_FAST%VTK_Surface%NumSectors, &
+   !                              p_FAST%VTK_Surface%MorisonRad, Sib=HD%y%Morison%DistribMesh )
+   !END IF
    
    
 ! Mooring Lines?            
@@ -5811,8 +5811,7 @@ SUBROUTINE WriteInputMeshesToFile(u_ED, u_AD, u_SD, u_HD, u_MAP, u_BD, FileName,
    CALL MeshWrBin( unOut, u_ED%PlatformPtMesh,          ErrStat, ErrMsg )
    CALL MeshWrBin( unOut, u_SD%TPMesh,                  ErrStat, ErrMsg )
    CALL MeshWrBin( unOut, u_SD%LMesh,                   ErrStat, ErrMsg )
-   CALL MeshWrBin( unOut, u_HD%Morison%distribMesh,     ErrStat, ErrMsg )
-   CALL MeshWrBin( unOut, u_HD%Morison%lumpedMesh,      ErrStat, ErrMsg )
+   CALL MeshWrBin( unOut, u_HD%Morison%Mesh,      ErrStat, ErrMsg )
    CALL MeshWrBin( unOut, u_HD%WAMITMesh,                    ErrStat, ErrMsg )
    CALL MeshWrBin( unOut, u_MAP%PtFairDisplacement,     ErrStat, ErrMsg )
       ! Add how many BD blade meshes there are:
@@ -5894,8 +5893,7 @@ SUBROUTINE WriteMotionMeshesToFile(time, y_ED, u_SD, y_SD, u_HD, u_MAP, y_BD, u_
    CALL MeshWrBin( unOut, y_ED%PlatformPtMesh,          ErrStat, ErrMsg )
    CALL MeshWrBin( unOut, u_SD%TPMesh,                  ErrStat, ErrMsg )
    CALL MeshWrBin( unOut, y_SD%y2Mesh,                  ErrStat, ErrMsg )
-   CALL MeshWrBin( unOut, u_HD%Morison%distribMesh,     ErrStat, ErrMsg )
-   CALL MeshWrBin( unOut, u_HD%Morison%lumpedMesh,      ErrStat, ErrMsg )
+   CALL MeshWrBin( unOut, u_HD%Morison%Mesh,      ErrStat, ErrMsg )
    CALL MeshWrBin( unOut, u_HD%WAMITMesh,                    ErrStat, ErrMsg )
    CALL MeshWrBin( unOut, u_MAP%PtFairDisplacement,     ErrStat, ErrMsg )
    DO K_local = 1,SIZE(y_BD,1)
