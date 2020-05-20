@@ -1593,19 +1593,6 @@ ENDIF
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
-  IF ( .NOT. ALLOCATED(InData%WaveElev0) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WaveElev0,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WaveElev0,1)
-    Int_Xferred = Int_Xferred + 2
-
-      IF (SIZE(InData%WaveElev0)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%WaveElev0))-1 ) = PACK(InData%WaveElev0,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%WaveElev0)
-  END IF
   IF ( .NOT. ALLOCATED(InData%WaveElevSeries) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -1969,29 +1956,6 @@ ENDIF
         OutData%WaveElev0(i1) = REAL(ReKiBuf(Re_Xferred), SiKi)
         Re_Xferred = Re_Xferred + 1
       END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WaveElev0 not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%WaveElev0)) DEALLOCATE(OutData%WaveElev0)
-    ALLOCATE(OutData%WaveElev0(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%WaveElev0.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask1 = .TRUE. 
-      IF (SIZE(OutData%WaveElev0)>0) OutData%WaveElev0 = REAL( UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%WaveElev0))-1 ), mask1, 0.0_ReKi ), SiKi)
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%WaveElev0)
-    DEALLOCATE(mask1)
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WaveElevSeries not allocated
     Int_Xferred = Int_Xferred + 1
@@ -3108,7 +3072,7 @@ ENDIF
 !
 !..................................................................................................................................
 
- TYPE(Waves_InputType), INTENT(INOUT)  :: u(:) ! Input at t1 > t2 > t3
+ TYPE(Waves_InputType), INTENT(IN)  :: u(:) ! Input at t1 > t2 > t3
  REAL(DbKi),                 INTENT(IN   )  :: t(:)           ! Times associated with the Inputs
  TYPE(Waves_InputType), INTENT(INOUT)  :: u_out ! Input at tin_out
  REAL(DbKi),                 INTENT(IN   )  :: t_out           ! time to be extrap/interp'd to
@@ -3155,8 +3119,8 @@ ENDIF
 !
 !..................................................................................................................................
 
- TYPE(Waves_InputType), INTENT(INOUT)  :: u1    ! Input at t1 > t2
- TYPE(Waves_InputType), INTENT(INOUT)  :: u2    ! Input at t2 
+ TYPE(Waves_InputType), INTENT(IN)  :: u1    ! Input at t1 > t2
+ TYPE(Waves_InputType), INTENT(IN)  :: u2    ! Input at t2 
  REAL(DbKi),         INTENT(IN   )          :: tin(2)   ! Times associated with the Inputs
  TYPE(Waves_InputType), INTENT(INOUT)  :: u_out ! Input at tin_out
  REAL(DbKi),         INTENT(IN   )          :: tin_out  ! time to be extrap/interp'd to
@@ -3203,9 +3167,9 @@ ENDIF
 !
 !..................................................................................................................................
 
- TYPE(Waves_InputType), INTENT(INOUT)  :: u1      ! Input at t1 > t2 > t3
- TYPE(Waves_InputType), INTENT(INOUT)  :: u2      ! Input at t2 > t3
- TYPE(Waves_InputType), INTENT(INOUT)  :: u3      ! Input at t3
+ TYPE(Waves_InputType), INTENT(IN)  :: u1      ! Input at t1 > t2 > t3
+ TYPE(Waves_InputType), INTENT(IN)  :: u2      ! Input at t2 > t3
+ TYPE(Waves_InputType), INTENT(IN)  :: u3      ! Input at t3
  REAL(DbKi),                 INTENT(IN   )  :: tin(3)    ! Times associated with the Inputs
  TYPE(Waves_InputType), INTENT(INOUT)  :: u_out     ! Input at tin_out
  REAL(DbKi),                 INTENT(IN   )  :: tin_out   ! time to be extrap/interp'd to
@@ -3263,7 +3227,7 @@ ENDIF
 !
 !..................................................................................................................................
 
- TYPE(Waves_OutputType), INTENT(INOUT)  :: y(:) ! Output at t1 > t2 > t3
+ TYPE(Waves_OutputType), INTENT(IN)  :: y(:) ! Output at t1 > t2 > t3
  REAL(DbKi),                 INTENT(IN   )  :: t(:)           ! Times associated with the Outputs
  TYPE(Waves_OutputType), INTENT(INOUT)  :: y_out ! Output at tin_out
  REAL(DbKi),                 INTENT(IN   )  :: t_out           ! time to be extrap/interp'd to
@@ -3310,8 +3274,8 @@ ENDIF
 !
 !..................................................................................................................................
 
- TYPE(Waves_OutputType), INTENT(INOUT)  :: y1    ! Output at t1 > t2
- TYPE(Waves_OutputType), INTENT(INOUT)  :: y2    ! Output at t2 
+ TYPE(Waves_OutputType), INTENT(IN)  :: y1    ! Output at t1 > t2
+ TYPE(Waves_OutputType), INTENT(IN)  :: y2    ! Output at t2 
  REAL(DbKi),         INTENT(IN   )          :: tin(2)   ! Times associated with the Outputs
  TYPE(Waves_OutputType), INTENT(INOUT)  :: y_out ! Output at tin_out
  REAL(DbKi),         INTENT(IN   )          :: tin_out  ! time to be extrap/interp'd to
@@ -3358,9 +3322,9 @@ ENDIF
 !
 !..................................................................................................................................
 
- TYPE(Waves_OutputType), INTENT(INOUT)  :: y1      ! Output at t1 > t2 > t3
- TYPE(Waves_OutputType), INTENT(INOUT)  :: y2      ! Output at t2 > t3
- TYPE(Waves_OutputType), INTENT(INOUT)  :: y3      ! Output at t3
+ TYPE(Waves_OutputType), INTENT(IN)  :: y1      ! Output at t1 > t2 > t3
+ TYPE(Waves_OutputType), INTENT(IN)  :: y2      ! Output at t2 > t3
+ TYPE(Waves_OutputType), INTENT(IN)  :: y3      ! Output at t3
  REAL(DbKi),                 INTENT(IN   )  :: tin(3)    ! Times associated with the Outputs
  TYPE(Waves_OutputType), INTENT(INOUT)  :: y_out     ! Output at tin_out
  REAL(DbKi),                 INTENT(IN   )  :: tin_out   ! time to be extrap/interp'd to

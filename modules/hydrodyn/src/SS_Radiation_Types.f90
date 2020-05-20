@@ -43,8 +43,8 @@ IMPLICIT NONE
 ! =======================
 ! =========  SS_Rad_InitOutputType  =======
   TYPE, PUBLIC :: SS_Rad_InitOutputType
-    CHARACTER(ChanLen) , DIMENSION(1:7)  :: WriteOutputHdr      !< Header of the output [-]
-    CHARACTER(ChanLen) , DIMENSION(1:7)  :: WriteOutputUnt      !< Units of the output [-]
+    CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputHdr      !< Header of the output [-]
+    CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !< Units of the output [-]
   END TYPE SS_Rad_InitOutputType
 ! =======================
 ! =========  SS_Rad_ContinuousStateType  =======
@@ -79,8 +79,9 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: A      !< A matrix [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: B      !< B matrix [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: C      !< C matrix [-]
-    INTEGER(IntKi)  :: N      !< Number of states [-]
-    INTEGER(IntKi) , DIMENSION(1:6)  :: spdof      !< States per dof [-]
+    INTEGER(IntKi)  :: numStates      !< Number of states [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: spdof      !< States per dof [-]
+    INTEGER(IntKi)  :: NBody      !< Number of WAMIT bodies for this State Space model [-]
   END TYPE SS_Rad_ParameterType
 ! =======================
 ! =========  SS_Rad_InputType  =======
@@ -234,12 +235,38 @@ ENDIF
       IntKiBuf(Int_Xferred) = ICHAR(InData%InputFile(I:I), IntKi)
       Int_Xferred = Int_Xferred + 1
     END DO ! I
-    DO i2 = LBOUND(InData%DOFs,2), UBOUND(InData%DOFs,2)
-      DO i1 = LBOUND(InData%DOFs,1), UBOUND(InData%DOFs,1)
-        ReKiBuf(Re_Xferred) = InData%DOFs(i1,i2)
+  IF ( .NOT. ALLOCATED(InData%enabledDOFs) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%enabledDOFs,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%enabledDOFs,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%enabledDOFs,1), UBOUND(InData%enabledDOFs,1)
+        ReKiBuf(Re_Xferred) = InData%enabledDOFs(i1)
         Re_Xferred = Re_Xferred + 1
       END DO
-    END DO
+  END IF
+    IntKiBuf(Int_Xferred) = InData%NBody
+    Int_Xferred = Int_Xferred + 1
+  IF ( .NOT. ALLOCATED(InData%PtfmRefztRot) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%PtfmRefztRot,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%PtfmRefztRot,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%PtfmRefztRot,1), UBOUND(InData%PtfmRefztRot,1)
+        DbKiBuf(Db_Xferred) = InData%PtfmRefztRot(i1)
+        Db_Xferred = Db_Xferred + 1
+      END DO
+  END IF
  END SUBROUTINE SS_Rad_PackInitInput
 
  SUBROUTINE SS_Rad_UnPackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -274,16 +301,44 @@ ENDIF
       OutData%InputFile(I:I) = CHAR(IntKiBuf(Int_Xferred))
       Int_Xferred = Int_Xferred + 1
     END DO ! I
-    i1_l = LBOUND(OutData%DOFs,1)
-    i1_u = UBOUND(OutData%DOFs,1)
-    i2_l = LBOUND(OutData%DOFs,2)
-    i2_u = UBOUND(OutData%DOFs,2)
-    DO i2 = LBOUND(OutData%DOFs,2), UBOUND(OutData%DOFs,2)
-      DO i1 = LBOUND(OutData%DOFs,1), UBOUND(OutData%DOFs,1)
-        OutData%DOFs(i1,i2) = ReKiBuf(Re_Xferred)
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! enabledDOFs not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%enabledDOFs)) DEALLOCATE(OutData%enabledDOFs)
+    ALLOCATE(OutData%enabledDOFs(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%enabledDOFs.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%enabledDOFs,1), UBOUND(OutData%enabledDOFs,1)
+        OutData%enabledDOFs(i1) = ReKiBuf(Re_Xferred)
         Re_Xferred = Re_Xferred + 1
       END DO
-    END DO
+  END IF
+    OutData%NBody = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! PtfmRefztRot not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%PtfmRefztRot)) DEALLOCATE(OutData%PtfmRefztRot)
+    ALLOCATE(OutData%PtfmRefztRot(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%PtfmRefztRot.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%PtfmRefztRot,1), UBOUND(OutData%PtfmRefztRot,1)
+        OutData%PtfmRefztRot(i1) = REAL(DbKiBuf(Db_Xferred), R8Ki)
+        Db_Xferred = Db_Xferred + 1
+      END DO
+  END IF
  END SUBROUTINE SS_Rad_UnPackInitInput
 
  SUBROUTINE SS_Rad_CopyInitOutput( SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg )
@@ -426,18 +481,30 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WriteOutputHdr,1)
     Int_Xferred = Int_Xferred + 2
 
-    DO i1 = LBOUND(InData%WriteOutputHdr,1), UBOUND(InData%WriteOutputHdr,1)
-      DO I = 1, LEN(InData%WriteOutputHdr)
-        IntKiBuf(Int_Xferred) = ICHAR(InData%WriteOutputHdr(i1)(I:I), IntKi)
-        Int_Xferred = Int_Xferred + 1
-      END DO ! I
-    END DO
-    DO i1 = LBOUND(InData%WriteOutputUnt,1), UBOUND(InData%WriteOutputUnt,1)
-      DO I = 1, LEN(InData%WriteOutputUnt)
-        IntKiBuf(Int_Xferred) = ICHAR(InData%WriteOutputUnt(i1)(I:I), IntKi)
-        Int_Xferred = Int_Xferred + 1
-      END DO ! I
-    END DO
+      DO i1 = LBOUND(InData%WriteOutputHdr,1), UBOUND(InData%WriteOutputHdr,1)
+        DO I = 1, LEN(InData%WriteOutputHdr)
+          IntKiBuf(Int_Xferred) = ICHAR(InData%WriteOutputHdr(i1)(I:I), IntKi)
+          Int_Xferred = Int_Xferred + 1
+        END DO ! I
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%WriteOutputUnt) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WriteOutputUnt,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WriteOutputUnt,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%WriteOutputUnt,1), UBOUND(InData%WriteOutputUnt,1)
+        DO I = 1, LEN(InData%WriteOutputUnt)
+          IntKiBuf(Int_Xferred) = ICHAR(InData%WriteOutputUnt(i1)(I:I), IntKi)
+          Int_Xferred = Int_Xferred + 1
+        END DO ! I
+      END DO
+  END IF
  END SUBROUTINE SS_Rad_PackInitOutput
 
  SUBROUTINE SS_Rad_UnPackInitOutput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -467,22 +534,46 @@ ENDIF
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-    i1_l = LBOUND(OutData%WriteOutputHdr,1)
-    i1_u = UBOUND(OutData%WriteOutputHdr,1)
-    DO i1 = LBOUND(OutData%WriteOutputHdr,1), UBOUND(OutData%WriteOutputHdr,1)
-      DO I = 1, LEN(OutData%WriteOutputHdr)
-        OutData%WriteOutputHdr(i1)(I:I) = CHAR(IntKiBuf(Int_Xferred))
-        Int_Xferred = Int_Xferred + 1
-      END DO ! I
-    END DO
-    i1_l = LBOUND(OutData%WriteOutputUnt,1)
-    i1_u = UBOUND(OutData%WriteOutputUnt,1)
-    DO i1 = LBOUND(OutData%WriteOutputUnt,1), UBOUND(OutData%WriteOutputUnt,1)
-      DO I = 1, LEN(OutData%WriteOutputUnt)
-        OutData%WriteOutputUnt(i1)(I:I) = CHAR(IntKiBuf(Int_Xferred))
-        Int_Xferred = Int_Xferred + 1
-      END DO ! I
-    END DO
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WriteOutputHdr not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%WriteOutputHdr)) DEALLOCATE(OutData%WriteOutputHdr)
+    ALLOCATE(OutData%WriteOutputHdr(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%WriteOutputHdr.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%WriteOutputHdr,1), UBOUND(OutData%WriteOutputHdr,1)
+        DO I = 1, LEN(OutData%WriteOutputHdr)
+          OutData%WriteOutputHdr(i1)(I:I) = CHAR(IntKiBuf(Int_Xferred))
+          Int_Xferred = Int_Xferred + 1
+        END DO ! I
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WriteOutputUnt not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%WriteOutputUnt)) DEALLOCATE(OutData%WriteOutputUnt)
+    ALLOCATE(OutData%WriteOutputUnt(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%WriteOutputUnt.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%WriteOutputUnt,1), UBOUND(OutData%WriteOutputUnt,1)
+        DO I = 1, LEN(OutData%WriteOutputUnt)
+          OutData%WriteOutputUnt(i1)(I:I) = CHAR(IntKiBuf(Int_Xferred))
+          Int_Xferred = Int_Xferred + 1
+        END DO ! I
+      END DO
+  END IF
  END SUBROUTINE SS_Rad_UnPackInitOutput
 
  SUBROUTINE SS_Rad_CopyContState( SrcContStateData, DstContStateData, CtrlCode, ErrStat, ErrMsg )
@@ -1322,8 +1413,20 @@ IF (ALLOCATED(SrcParamData%C)) THEN
   END IF
     DstParamData%C = SrcParamData%C
 ENDIF
-    DstParamData%N = SrcParamData%N
+    DstParamData%numStates = SrcParamData%numStates
+IF (ALLOCATED(SrcParamData%spdof)) THEN
+  i1_l = LBOUND(SrcParamData%spdof,1)
+  i1_u = UBOUND(SrcParamData%spdof,1)
+  IF (.NOT. ALLOCATED(DstParamData%spdof)) THEN 
+    ALLOCATE(DstParamData%spdof(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%spdof.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
     DstParamData%spdof = SrcParamData%spdof
+ENDIF
+    DstParamData%NBody = SrcParamData%NBody
  END SUBROUTINE SS_Rad_CopyParam
 
  SUBROUTINE SS_Rad_DestroyParam( ParamData, ErrStat, ErrMsg )
@@ -1400,8 +1503,13 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*2  ! C upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%C)  ! C
   END IF
-      Int_BufSz  = Int_BufSz  + 1  ! N
+      Int_BufSz  = Int_BufSz  + 1  ! numStates
+  Int_BufSz   = Int_BufSz   + 1     ! spdof allocated yes/no
+  IF ( ALLOCATED(InData%spdof) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! spdof upper/lower bounds for each dimension
       Int_BufSz  = Int_BufSz  + SIZE(InData%spdof)  ! spdof
+  END IF
+      Int_BufSz  = Int_BufSz  + 1  ! NBody
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -1491,12 +1599,25 @@ ENDIF
         END DO
       END DO
   END IF
-    IntKiBuf(Int_Xferred) = InData%N
+    IntKiBuf(Int_Xferred) = InData%numStates
     Int_Xferred = Int_Xferred + 1
-    DO i1 = LBOUND(InData%spdof,1), UBOUND(InData%spdof,1)
-      IntKiBuf(Int_Xferred) = InData%spdof(i1)
-      Int_Xferred = Int_Xferred + 1
-    END DO
+  IF ( .NOT. ALLOCATED(InData%spdof) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%spdof,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%spdof,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%spdof,1), UBOUND(InData%spdof,1)
+        IntKiBuf(Int_Xferred) = InData%spdof(i1)
+        Int_Xferred = Int_Xferred + 1
+      END DO
+  END IF
+    IntKiBuf(Int_Xferred) = InData%NBody
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE SS_Rad_PackParam
 
  SUBROUTINE SS_Rad_UnPackParam( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -1598,14 +1719,28 @@ ENDIF
         END DO
       END DO
   END IF
-    OutData%N = IntKiBuf(Int_Xferred)
+    OutData%numStates = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
-    i1_l = LBOUND(OutData%spdof,1)
-    i1_u = UBOUND(OutData%spdof,1)
-    DO i1 = LBOUND(OutData%spdof,1), UBOUND(OutData%spdof,1)
-      OutData%spdof(i1) = IntKiBuf(Int_Xferred)
-      Int_Xferred = Int_Xferred + 1
-    END DO
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! spdof not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%spdof)) DEALLOCATE(OutData%spdof)
+    ALLOCATE(OutData%spdof(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%spdof.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%spdof,1), UBOUND(OutData%spdof,1)
+        OutData%spdof(i1) = IntKiBuf(Int_Xferred)
+        Int_Xferred = Int_Xferred + 1
+      END DO
+  END IF
+    OutData%NBody = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE SS_Rad_UnPackParam
 
  SUBROUTINE SS_Rad_CopyInput( SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg )
@@ -1718,10 +1853,21 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-    DO i1 = LBOUND(InData%dq,1), UBOUND(InData%dq,1)
-      ReKiBuf(Re_Xferred) = InData%dq(i1)
-      Re_Xferred = Re_Xferred + 1
-    END DO
+  IF ( .NOT. ALLOCATED(InData%dq) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%dq,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%dq,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%dq,1), UBOUND(InData%dq,1)
+        ReKiBuf(Re_Xferred) = InData%dq(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
  END SUBROUTINE SS_Rad_PackInput
 
  SUBROUTINE SS_Rad_UnPackInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -1751,12 +1897,24 @@ ENDIF
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-    i1_l = LBOUND(OutData%dq,1)
-    i1_u = UBOUND(OutData%dq,1)
-    DO i1 = LBOUND(OutData%dq,1), UBOUND(OutData%dq,1)
-      OutData%dq(i1) = ReKiBuf(Re_Xferred)
-      Re_Xferred = Re_Xferred + 1
-    END DO
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! dq not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%dq)) DEALLOCATE(OutData%dq)
+    ALLOCATE(OutData%dq(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%dq.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%dq,1), UBOUND(OutData%dq,1)
+        OutData%dq(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
  END SUBROUTINE SS_Rad_UnPackInput
 
  SUBROUTINE SS_Rad_CopyOutput( SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg )
@@ -1889,14 +2047,36 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-    DO i1 = LBOUND(InData%y,1), UBOUND(InData%y,1)
-      ReKiBuf(Re_Xferred) = InData%y(i1)
-      Re_Xferred = Re_Xferred + 1
-    END DO
-    DO i1 = LBOUND(InData%WriteOutput,1), UBOUND(InData%WriteOutput,1)
-      ReKiBuf(Re_Xferred) = InData%WriteOutput(i1)
-      Re_Xferred = Re_Xferred + 1
-    END DO
+  IF ( .NOT. ALLOCATED(InData%y) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%y,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%y,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%y,1), UBOUND(InData%y,1)
+        ReKiBuf(Re_Xferred) = InData%y(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%WriteOutput) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WriteOutput,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WriteOutput,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%WriteOutput,1), UBOUND(InData%WriteOutput,1)
+        ReKiBuf(Re_Xferred) = InData%WriteOutput(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
  END SUBROUTINE SS_Rad_PackOutput
 
  SUBROUTINE SS_Rad_UnPackOutput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -1926,18 +2106,42 @@ ENDIF
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-    i1_l = LBOUND(OutData%y,1)
-    i1_u = UBOUND(OutData%y,1)
-    DO i1 = LBOUND(OutData%y,1), UBOUND(OutData%y,1)
-      OutData%y(i1) = ReKiBuf(Re_Xferred)
-      Re_Xferred = Re_Xferred + 1
-    END DO
-    i1_l = LBOUND(OutData%WriteOutput,1)
-    i1_u = UBOUND(OutData%WriteOutput,1)
-    DO i1 = LBOUND(OutData%WriteOutput,1), UBOUND(OutData%WriteOutput,1)
-      OutData%WriteOutput(i1) = ReKiBuf(Re_Xferred)
-      Re_Xferred = Re_Xferred + 1
-    END DO
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! y not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%y)) DEALLOCATE(OutData%y)
+    ALLOCATE(OutData%y(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%y.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%y,1), UBOUND(OutData%y,1)
+        OutData%y(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WriteOutput not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%WriteOutput)) DEALLOCATE(OutData%WriteOutput)
+    ALLOCATE(OutData%WriteOutput(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%WriteOutput.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%WriteOutput,1), UBOUND(OutData%WriteOutput,1)
+        OutData%WriteOutput(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
  END SUBROUTINE SS_Rad_UnPackOutput
 
 
@@ -1957,7 +2161,7 @@ ENDIF
 !
 !..................................................................................................................................
 
- TYPE(SS_Rad_InputType), INTENT(INOUT)  :: u(:) ! Input at t1 > t2 > t3
+ TYPE(SS_Rad_InputType), INTENT(IN)  :: u(:) ! Input at t1 > t2 > t3
  REAL(DbKi),                 INTENT(IN   )  :: t(:)           ! Times associated with the Inputs
  TYPE(SS_Rad_InputType), INTENT(INOUT)  :: u_out ! Input at tin_out
  REAL(DbKi),                 INTENT(IN   )  :: t_out           ! time to be extrap/interp'd to
@@ -2004,8 +2208,8 @@ ENDIF
 !
 !..................................................................................................................................
 
- TYPE(SS_Rad_InputType), INTENT(INOUT)  :: u1    ! Input at t1 > t2
- TYPE(SS_Rad_InputType), INTENT(INOUT)  :: u2    ! Input at t2 
+ TYPE(SS_Rad_InputType), INTENT(IN)  :: u1    ! Input at t1 > t2
+ TYPE(SS_Rad_InputType), INTENT(IN)  :: u2    ! Input at t2 
  REAL(DbKi),         INTENT(IN   )          :: tin(2)   ! Times associated with the Inputs
  TYPE(SS_Rad_InputType), INTENT(INOUT)  :: u_out ! Input at tin_out
  REAL(DbKi),         INTENT(IN   )          :: tin_out  ! time to be extrap/interp'd to
@@ -2035,10 +2239,12 @@ ENDIF
    END IF
 
    ScaleFactor = t_out / t(2)
+IF (ALLOCATED(u_out%dq) .AND. ALLOCATED(u1%dq)) THEN
   DO i1 = LBOUND(u_out%dq,1),UBOUND(u_out%dq,1)
     b = -(u1%dq(i1) - u2%dq(i1))
     u_out%dq(i1) = u1%dq(i1) + b * ScaleFactor
   END DO
+END IF ! check if allocated
  END SUBROUTINE SS_Rad_Input_ExtrapInterp1
 
 
@@ -2056,9 +2262,9 @@ ENDIF
 !
 !..................................................................................................................................
 
- TYPE(SS_Rad_InputType), INTENT(INOUT)  :: u1      ! Input at t1 > t2 > t3
- TYPE(SS_Rad_InputType), INTENT(INOUT)  :: u2      ! Input at t2 > t3
- TYPE(SS_Rad_InputType), INTENT(INOUT)  :: u3      ! Input at t3
+ TYPE(SS_Rad_InputType), INTENT(IN)  :: u1      ! Input at t1 > t2 > t3
+ TYPE(SS_Rad_InputType), INTENT(IN)  :: u2      ! Input at t2 > t3
+ TYPE(SS_Rad_InputType), INTENT(IN)  :: u3      ! Input at t3
  REAL(DbKi),                 INTENT(IN   )  :: tin(3)    ! Times associated with the Inputs
  TYPE(SS_Rad_InputType), INTENT(INOUT)  :: u_out     ! Input at tin_out
  REAL(DbKi),                 INTENT(IN   )  :: tin_out   ! time to be extrap/interp'd to
@@ -2096,11 +2302,13 @@ ENDIF
    END IF
 
    ScaleFactor = t_out / (t(2) * t(3) * (t(2) - t(3)))
+IF (ALLOCATED(u_out%dq) .AND. ALLOCATED(u1%dq)) THEN
   DO i1 = LBOUND(u_out%dq,1),UBOUND(u_out%dq,1)
     b = (t(3)**2*(u1%dq(i1) - u2%dq(i1)) + t(2)**2*(-u1%dq(i1) + u3%dq(i1)))* scaleFactor
     c = ( (t(2)-t(3))*u1%dq(i1) + t(3)*u2%dq(i1) - t(2)*u3%dq(i1) ) * scaleFactor
     u_out%dq(i1) = u1%dq(i1) + b  + c * t_out
   END DO
+END IF ! check if allocated
  END SUBROUTINE SS_Rad_Input_ExtrapInterp2
 
 
@@ -2120,7 +2328,7 @@ ENDIF
 !
 !..................................................................................................................................
 
- TYPE(SS_Rad_OutputType), INTENT(INOUT)  :: y(:) ! Output at t1 > t2 > t3
+ TYPE(SS_Rad_OutputType), INTENT(IN)  :: y(:) ! Output at t1 > t2 > t3
  REAL(DbKi),                 INTENT(IN   )  :: t(:)           ! Times associated with the Outputs
  TYPE(SS_Rad_OutputType), INTENT(INOUT)  :: y_out ! Output at tin_out
  REAL(DbKi),                 INTENT(IN   )  :: t_out           ! time to be extrap/interp'd to
@@ -2167,8 +2375,8 @@ ENDIF
 !
 !..................................................................................................................................
 
- TYPE(SS_Rad_OutputType), INTENT(INOUT)  :: y1    ! Output at t1 > t2
- TYPE(SS_Rad_OutputType), INTENT(INOUT)  :: y2    ! Output at t2 
+ TYPE(SS_Rad_OutputType), INTENT(IN)  :: y1    ! Output at t1 > t2
+ TYPE(SS_Rad_OutputType), INTENT(IN)  :: y2    ! Output at t2 
  REAL(DbKi),         INTENT(IN   )          :: tin(2)   ! Times associated with the Outputs
  TYPE(SS_Rad_OutputType), INTENT(INOUT)  :: y_out ! Output at tin_out
  REAL(DbKi),         INTENT(IN   )          :: tin_out  ! time to be extrap/interp'd to
@@ -2198,14 +2406,18 @@ ENDIF
    END IF
 
    ScaleFactor = t_out / t(2)
+IF (ALLOCATED(y_out%y) .AND. ALLOCATED(y1%y)) THEN
   DO i1 = LBOUND(y_out%y,1),UBOUND(y_out%y,1)
     b = -(y1%y(i1) - y2%y(i1))
     y_out%y(i1) = y1%y(i1) + b * ScaleFactor
   END DO
+END IF ! check if allocated
+IF (ALLOCATED(y_out%WriteOutput) .AND. ALLOCATED(y1%WriteOutput)) THEN
   DO i1 = LBOUND(y_out%WriteOutput,1),UBOUND(y_out%WriteOutput,1)
     b = -(y1%WriteOutput(i1) - y2%WriteOutput(i1))
     y_out%WriteOutput(i1) = y1%WriteOutput(i1) + b * ScaleFactor
   END DO
+END IF ! check if allocated
  END SUBROUTINE SS_Rad_Output_ExtrapInterp1
 
 
@@ -2223,9 +2435,9 @@ ENDIF
 !
 !..................................................................................................................................
 
- TYPE(SS_Rad_OutputType), INTENT(INOUT)  :: y1      ! Output at t1 > t2 > t3
- TYPE(SS_Rad_OutputType), INTENT(INOUT)  :: y2      ! Output at t2 > t3
- TYPE(SS_Rad_OutputType), INTENT(INOUT)  :: y3      ! Output at t3
+ TYPE(SS_Rad_OutputType), INTENT(IN)  :: y1      ! Output at t1 > t2 > t3
+ TYPE(SS_Rad_OutputType), INTENT(IN)  :: y2      ! Output at t2 > t3
+ TYPE(SS_Rad_OutputType), INTENT(IN)  :: y3      ! Output at t3
  REAL(DbKi),                 INTENT(IN   )  :: tin(3)    ! Times associated with the Outputs
  TYPE(SS_Rad_OutputType), INTENT(INOUT)  :: y_out     ! Output at tin_out
  REAL(DbKi),                 INTENT(IN   )  :: tin_out   ! time to be extrap/interp'd to
@@ -2263,16 +2475,20 @@ ENDIF
    END IF
 
    ScaleFactor = t_out / (t(2) * t(3) * (t(2) - t(3)))
+IF (ALLOCATED(y_out%y) .AND. ALLOCATED(y1%y)) THEN
   DO i1 = LBOUND(y_out%y,1),UBOUND(y_out%y,1)
     b = (t(3)**2*(y1%y(i1) - y2%y(i1)) + t(2)**2*(-y1%y(i1) + y3%y(i1)))* scaleFactor
     c = ( (t(2)-t(3))*y1%y(i1) + t(3)*y2%y(i1) - t(2)*y3%y(i1) ) * scaleFactor
     y_out%y(i1) = y1%y(i1) + b  + c * t_out
   END DO
+END IF ! check if allocated
+IF (ALLOCATED(y_out%WriteOutput) .AND. ALLOCATED(y1%WriteOutput)) THEN
   DO i1 = LBOUND(y_out%WriteOutput,1),UBOUND(y_out%WriteOutput,1)
     b = (t(3)**2*(y1%WriteOutput(i1) - y2%WriteOutput(i1)) + t(2)**2*(-y1%WriteOutput(i1) + y3%WriteOutput(i1)))* scaleFactor
     c = ( (t(2)-t(3))*y1%WriteOutput(i1) + t(3)*y2%WriteOutput(i1) - t(2)*y3%WriteOutput(i1) ) * scaleFactor
     y_out%WriteOutput(i1) = y1%WriteOutput(i1) + b  + c * t_out
   END DO
+END IF ! check if allocated
  END SUBROUTINE SS_Rad_Output_ExtrapInterp2
 
 END MODULE SS_Radiation_Types

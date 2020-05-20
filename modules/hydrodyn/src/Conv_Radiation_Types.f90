@@ -282,6 +282,8 @@ ENDIF
       IntKiBuf(Int_Xferred) = ICHAR(InData%RdtnDTChr(I:I), IntKi)
       Int_Xferred = Int_Xferred + 1
     END DO ! I
+    IntKiBuf(Int_Xferred) = InData%NBody
+    Int_Xferred = Int_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%HighFreq
     Re_Xferred = Re_Xferred + 1
     DO I = 1, LEN(InData%WAMITFile)
@@ -304,10 +306,12 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%HdroAddMs,3)
     Int_Xferred = Int_Xferred + 2
 
-      DO i2 = LBOUND(InData%HdroAddMs,2), UBOUND(InData%HdroAddMs,2)
-        DO i1 = LBOUND(InData%HdroAddMs,1), UBOUND(InData%HdroAddMs,1)
-          ReKiBuf(Re_Xferred) = InData%HdroAddMs(i1,i2)
-          Re_Xferred = Re_Xferred + 1
+      DO i3 = LBOUND(InData%HdroAddMs,3), UBOUND(InData%HdroAddMs,3)
+        DO i2 = LBOUND(InData%HdroAddMs,2), UBOUND(InData%HdroAddMs,2)
+          DO i1 = LBOUND(InData%HdroAddMs,1), UBOUND(InData%HdroAddMs,1)
+            ReKiBuf(Re_Xferred) = InData%HdroAddMs(i1,i2,i3)
+            Re_Xferred = Re_Xferred + 1
+          END DO
         END DO
       END DO
   END IF
@@ -342,10 +346,12 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%HdroDmpng,3)
     Int_Xferred = Int_Xferred + 2
 
-      DO i2 = LBOUND(InData%HdroDmpng,2), UBOUND(InData%HdroDmpng,2)
-        DO i1 = LBOUND(InData%HdroDmpng,1), UBOUND(InData%HdroDmpng,1)
-          ReKiBuf(Re_Xferred) = InData%HdroDmpng(i1,i2)
-          Re_Xferred = Re_Xferred + 1
+      DO i3 = LBOUND(InData%HdroDmpng,3), UBOUND(InData%HdroDmpng,3)
+        DO i2 = LBOUND(InData%HdroDmpng,2), UBOUND(InData%HdroDmpng,2)
+          DO i1 = LBOUND(InData%HdroDmpng,1), UBOUND(InData%HdroDmpng,1)
+            ReKiBuf(Re_Xferred) = InData%HdroDmpng(i1,i2,i3)
+            Re_Xferred = Re_Xferred + 1
+          END DO
         END DO
       END DO
   END IF
@@ -392,6 +398,8 @@ ENDIF
       OutData%RdtnDTChr(I:I) = CHAR(IntKiBuf(Int_Xferred))
       Int_Xferred = Int_Xferred + 1
     END DO ! I
+    OutData%NBody = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
     OutData%HighFreq = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     DO I = 1, LEN(OutData%WAMITFile)
@@ -417,10 +425,12 @@ ENDIF
        CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%HdroAddMs.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-      DO i2 = LBOUND(OutData%HdroAddMs,2), UBOUND(OutData%HdroAddMs,2)
-        DO i1 = LBOUND(OutData%HdroAddMs,1), UBOUND(OutData%HdroAddMs,1)
-          OutData%HdroAddMs(i1,i2) = REAL(ReKiBuf(Re_Xferred), SiKi)
-          Re_Xferred = Re_Xferred + 1
+      DO i3 = LBOUND(OutData%HdroAddMs,3), UBOUND(OutData%HdroAddMs,3)
+        DO i2 = LBOUND(OutData%HdroAddMs,2), UBOUND(OutData%HdroAddMs,2)
+          DO i1 = LBOUND(OutData%HdroAddMs,1), UBOUND(OutData%HdroAddMs,1)
+            OutData%HdroAddMs(i1,i2,i3) = REAL(ReKiBuf(Re_Xferred), SiKi)
+            Re_Xferred = Re_Xferred + 1
+          END DO
         END DO
       END DO
   END IF
@@ -461,10 +471,12 @@ ENDIF
        CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%HdroDmpng.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-      DO i2 = LBOUND(OutData%HdroDmpng,2), UBOUND(OutData%HdroDmpng,2)
-        DO i1 = LBOUND(OutData%HdroDmpng,1), UBOUND(OutData%HdroDmpng,1)
-          OutData%HdroDmpng(i1,i2) = REAL(ReKiBuf(Re_Xferred), SiKi)
-          Re_Xferred = Re_Xferred + 1
+      DO i3 = LBOUND(OutData%HdroDmpng,3), UBOUND(OutData%HdroDmpng,3)
+        DO i2 = LBOUND(OutData%HdroDmpng,2), UBOUND(OutData%HdroDmpng,2)
+          DO i1 = LBOUND(OutData%HdroDmpng,1), UBOUND(OutData%HdroDmpng,1)
+            OutData%HdroDmpng(i1,i2,i3) = REAL(ReKiBuf(Re_Xferred), SiKi)
+            Re_Xferred = Re_Xferred + 1
+          END DO
         END DO
       END DO
   END IF
@@ -1425,6 +1437,8 @@ ENDIF
     Db_Xferred = Db_Xferred + 1
     DbKiBuf(Db_Xferred) = InData%RdtnDT
     Db_Xferred = Db_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%NBody
+    Int_Xferred = Int_Xferred + 1
   IF ( .NOT. ALLOCATED(InData%RdtnKrnl) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -1489,6 +1503,8 @@ ENDIF
     Db_Xferred = Db_Xferred + 1
     OutData%RdtnDT = DbKiBuf(Db_Xferred)
     Db_Xferred = Db_Xferred + 1
+    OutData%NBody = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! RdtnKrnl not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
@@ -1633,10 +1649,21 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-    DO i1 = LBOUND(InData%Velocity,1), UBOUND(InData%Velocity,1)
-      ReKiBuf(Re_Xferred) = InData%Velocity(i1)
-      Re_Xferred = Re_Xferred + 1
-    END DO
+  IF ( .NOT. ALLOCATED(InData%Velocity) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Velocity,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Velocity,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%Velocity,1), UBOUND(InData%Velocity,1)
+        ReKiBuf(Re_Xferred) = InData%Velocity(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
  END SUBROUTINE Conv_Rdtn_PackInput
 
  SUBROUTINE Conv_Rdtn_UnPackInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -1666,12 +1693,24 @@ ENDIF
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-    i1_l = LBOUND(OutData%Velocity,1)
-    i1_u = UBOUND(OutData%Velocity,1)
-    DO i1 = LBOUND(OutData%Velocity,1), UBOUND(OutData%Velocity,1)
-      OutData%Velocity(i1) = ReKiBuf(Re_Xferred)
-      Re_Xferred = Re_Xferred + 1
-    END DO
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Velocity not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%Velocity)) DEALLOCATE(OutData%Velocity)
+    ALLOCATE(OutData%Velocity(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%Velocity.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%Velocity,1), UBOUND(OutData%Velocity,1)
+        OutData%Velocity(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
  END SUBROUTINE Conv_Rdtn_UnPackInput
 
  SUBROUTINE Conv_Rdtn_CopyOutput( SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg )
@@ -1784,10 +1823,21 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-    DO i1 = LBOUND(InData%F_Rdtn,1), UBOUND(InData%F_Rdtn,1)
-      ReKiBuf(Re_Xferred) = InData%F_Rdtn(i1)
-      Re_Xferred = Re_Xferred + 1
-    END DO
+  IF ( .NOT. ALLOCATED(InData%F_Rdtn) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%F_Rdtn,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%F_Rdtn,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%F_Rdtn,1), UBOUND(InData%F_Rdtn,1)
+        ReKiBuf(Re_Xferred) = InData%F_Rdtn(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
  END SUBROUTINE Conv_Rdtn_PackOutput
 
  SUBROUTINE Conv_Rdtn_UnPackOutput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -1817,12 +1867,24 @@ ENDIF
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-    i1_l = LBOUND(OutData%F_Rdtn,1)
-    i1_u = UBOUND(OutData%F_Rdtn,1)
-    DO i1 = LBOUND(OutData%F_Rdtn,1), UBOUND(OutData%F_Rdtn,1)
-      OutData%F_Rdtn(i1) = ReKiBuf(Re_Xferred)
-      Re_Xferred = Re_Xferred + 1
-    END DO
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! F_Rdtn not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%F_Rdtn)) DEALLOCATE(OutData%F_Rdtn)
+    ALLOCATE(OutData%F_Rdtn(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%F_Rdtn.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%F_Rdtn,1), UBOUND(OutData%F_Rdtn,1)
+        OutData%F_Rdtn(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
  END SUBROUTINE Conv_Rdtn_UnPackOutput
 
 
@@ -1842,7 +1904,7 @@ ENDIF
 !
 !..................................................................................................................................
 
- TYPE(Conv_Rdtn_InputType), INTENT(INOUT)  :: u(:) ! Input at t1 > t2 > t3
+ TYPE(Conv_Rdtn_InputType), INTENT(IN)  :: u(:) ! Input at t1 > t2 > t3
  REAL(DbKi),                 INTENT(IN   )  :: t(:)           ! Times associated with the Inputs
  TYPE(Conv_Rdtn_InputType), INTENT(INOUT)  :: u_out ! Input at tin_out
  REAL(DbKi),                 INTENT(IN   )  :: t_out           ! time to be extrap/interp'd to
@@ -1889,8 +1951,8 @@ ENDIF
 !
 !..................................................................................................................................
 
- TYPE(Conv_Rdtn_InputType), INTENT(INOUT)  :: u1    ! Input at t1 > t2
- TYPE(Conv_Rdtn_InputType), INTENT(INOUT)  :: u2    ! Input at t2 
+ TYPE(Conv_Rdtn_InputType), INTENT(IN)  :: u1    ! Input at t1 > t2
+ TYPE(Conv_Rdtn_InputType), INTENT(IN)  :: u2    ! Input at t2 
  REAL(DbKi),         INTENT(IN   )          :: tin(2)   ! Times associated with the Inputs
  TYPE(Conv_Rdtn_InputType), INTENT(INOUT)  :: u_out ! Input at tin_out
  REAL(DbKi),         INTENT(IN   )          :: tin_out  ! time to be extrap/interp'd to
@@ -1920,10 +1982,12 @@ ENDIF
    END IF
 
    ScaleFactor = t_out / t(2)
+IF (ALLOCATED(u_out%Velocity) .AND. ALLOCATED(u1%Velocity)) THEN
   DO i1 = LBOUND(u_out%Velocity,1),UBOUND(u_out%Velocity,1)
     b = -(u1%Velocity(i1) - u2%Velocity(i1))
     u_out%Velocity(i1) = u1%Velocity(i1) + b * ScaleFactor
   END DO
+END IF ! check if allocated
  END SUBROUTINE Conv_Rdtn_Input_ExtrapInterp1
 
 
@@ -1941,9 +2005,9 @@ ENDIF
 !
 !..................................................................................................................................
 
- TYPE(Conv_Rdtn_InputType), INTENT(INOUT)  :: u1      ! Input at t1 > t2 > t3
- TYPE(Conv_Rdtn_InputType), INTENT(INOUT)  :: u2      ! Input at t2 > t3
- TYPE(Conv_Rdtn_InputType), INTENT(INOUT)  :: u3      ! Input at t3
+ TYPE(Conv_Rdtn_InputType), INTENT(IN)  :: u1      ! Input at t1 > t2 > t3
+ TYPE(Conv_Rdtn_InputType), INTENT(IN)  :: u2      ! Input at t2 > t3
+ TYPE(Conv_Rdtn_InputType), INTENT(IN)  :: u3      ! Input at t3
  REAL(DbKi),                 INTENT(IN   )  :: tin(3)    ! Times associated with the Inputs
  TYPE(Conv_Rdtn_InputType), INTENT(INOUT)  :: u_out     ! Input at tin_out
  REAL(DbKi),                 INTENT(IN   )  :: tin_out   ! time to be extrap/interp'd to
@@ -1981,11 +2045,13 @@ ENDIF
    END IF
 
    ScaleFactor = t_out / (t(2) * t(3) * (t(2) - t(3)))
+IF (ALLOCATED(u_out%Velocity) .AND. ALLOCATED(u1%Velocity)) THEN
   DO i1 = LBOUND(u_out%Velocity,1),UBOUND(u_out%Velocity,1)
     b = (t(3)**2*(u1%Velocity(i1) - u2%Velocity(i1)) + t(2)**2*(-u1%Velocity(i1) + u3%Velocity(i1)))* scaleFactor
     c = ( (t(2)-t(3))*u1%Velocity(i1) + t(3)*u2%Velocity(i1) - t(2)*u3%Velocity(i1) ) * scaleFactor
     u_out%Velocity(i1) = u1%Velocity(i1) + b  + c * t_out
   END DO
+END IF ! check if allocated
  END SUBROUTINE Conv_Rdtn_Input_ExtrapInterp2
 
 
@@ -2005,7 +2071,7 @@ ENDIF
 !
 !..................................................................................................................................
 
- TYPE(Conv_Rdtn_OutputType), INTENT(INOUT)  :: y(:) ! Output at t1 > t2 > t3
+ TYPE(Conv_Rdtn_OutputType), INTENT(IN)  :: y(:) ! Output at t1 > t2 > t3
  REAL(DbKi),                 INTENT(IN   )  :: t(:)           ! Times associated with the Outputs
  TYPE(Conv_Rdtn_OutputType), INTENT(INOUT)  :: y_out ! Output at tin_out
  REAL(DbKi),                 INTENT(IN   )  :: t_out           ! time to be extrap/interp'd to
@@ -2052,8 +2118,8 @@ ENDIF
 !
 !..................................................................................................................................
 
- TYPE(Conv_Rdtn_OutputType), INTENT(INOUT)  :: y1    ! Output at t1 > t2
- TYPE(Conv_Rdtn_OutputType), INTENT(INOUT)  :: y2    ! Output at t2 
+ TYPE(Conv_Rdtn_OutputType), INTENT(IN)  :: y1    ! Output at t1 > t2
+ TYPE(Conv_Rdtn_OutputType), INTENT(IN)  :: y2    ! Output at t2 
  REAL(DbKi),         INTENT(IN   )          :: tin(2)   ! Times associated with the Outputs
  TYPE(Conv_Rdtn_OutputType), INTENT(INOUT)  :: y_out ! Output at tin_out
  REAL(DbKi),         INTENT(IN   )          :: tin_out  ! time to be extrap/interp'd to
@@ -2083,10 +2149,12 @@ ENDIF
    END IF
 
    ScaleFactor = t_out / t(2)
+IF (ALLOCATED(y_out%F_Rdtn) .AND. ALLOCATED(y1%F_Rdtn)) THEN
   DO i1 = LBOUND(y_out%F_Rdtn,1),UBOUND(y_out%F_Rdtn,1)
     b = -(y1%F_Rdtn(i1) - y2%F_Rdtn(i1))
     y_out%F_Rdtn(i1) = y1%F_Rdtn(i1) + b * ScaleFactor
   END DO
+END IF ! check if allocated
  END SUBROUTINE Conv_Rdtn_Output_ExtrapInterp1
 
 
@@ -2104,9 +2172,9 @@ ENDIF
 !
 !..................................................................................................................................
 
- TYPE(Conv_Rdtn_OutputType), INTENT(INOUT)  :: y1      ! Output at t1 > t2 > t3
- TYPE(Conv_Rdtn_OutputType), INTENT(INOUT)  :: y2      ! Output at t2 > t3
- TYPE(Conv_Rdtn_OutputType), INTENT(INOUT)  :: y3      ! Output at t3
+ TYPE(Conv_Rdtn_OutputType), INTENT(IN)  :: y1      ! Output at t1 > t2 > t3
+ TYPE(Conv_Rdtn_OutputType), INTENT(IN)  :: y2      ! Output at t2 > t3
+ TYPE(Conv_Rdtn_OutputType), INTENT(IN)  :: y3      ! Output at t3
  REAL(DbKi),                 INTENT(IN   )  :: tin(3)    ! Times associated with the Outputs
  TYPE(Conv_Rdtn_OutputType), INTENT(INOUT)  :: y_out     ! Output at tin_out
  REAL(DbKi),                 INTENT(IN   )  :: tin_out   ! time to be extrap/interp'd to
@@ -2144,11 +2212,13 @@ ENDIF
    END IF
 
    ScaleFactor = t_out / (t(2) * t(3) * (t(2) - t(3)))
+IF (ALLOCATED(y_out%F_Rdtn) .AND. ALLOCATED(y1%F_Rdtn)) THEN
   DO i1 = LBOUND(y_out%F_Rdtn,1),UBOUND(y_out%F_Rdtn,1)
     b = (t(3)**2*(y1%F_Rdtn(i1) - y2%F_Rdtn(i1)) + t(2)**2*(-y1%F_Rdtn(i1) + y3%F_Rdtn(i1)))* scaleFactor
     c = ( (t(2)-t(3))*y1%F_Rdtn(i1) + t(3)*y2%F_Rdtn(i1) - t(2)*y3%F_Rdtn(i1) ) * scaleFactor
     y_out%F_Rdtn(i1) = y1%F_Rdtn(i1) + b  + c * t_out
   END DO
+END IF ! check if allocated
  END SUBROUTINE Conv_Rdtn_Output_ExtrapInterp2
 
 END MODULE Conv_Radiation_Types

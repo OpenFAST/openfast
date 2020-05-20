@@ -246,8 +246,8 @@ typedef   ^                            ^                             INTEGER    
 #
 #typedef   ^                            InitOutputType                MeshType                 Mesh                              -          -        -         "Unused?"    -
 #typedef   ^                            ^                             SiKi                     Morison_Rad                      {:}         -        -         "radius of node (for FAST visualization)" (m)
-typedef   ^                            InitOutputType                CHARACTER(10)            WriteOutputHdr                   {:}        -        -         "User-requested Output channel names"    -
-typedef   ^                            ^                             CHARACTER(ChanLen)       WriteOutputUnt                   {:}        -        -         ""    -
+typedef   ^                            InitOutputType                CHARACTER(ChanLen)        WriteOutputHdr                   {:}        -        -         "User-requested Output channel names"    -
+typedef   ^                            ^                             CHARACTER(ChanLen)        WriteOutputUnt                   {:}        -        -         ""    -
 #
 #
 # ..... States ....................................................................................................................
