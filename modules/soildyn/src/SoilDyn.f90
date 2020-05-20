@@ -198,7 +198,7 @@ contains
       do i=1,size(m%dll_data)
          call REDWINinterface_Init( InputFileData%DLL_FileName, InputFileData%DLL_ProcName, p%DLL_Trgt, p%DLL_Model, &
                m%dll_data(i), p%UseREDWINinterface, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName); if (ErrStat >= AbortErrLev) return
          NullDispl = 0.0_R8Ki
          NullForce = 0.0_ReKi
          call REDWINinterface_GetStiffMatrix( p%DLL_Trgt, p%DLL_Model, NullDispl, NullForce, p%DLL_StiffNess(1:6,1:6,i), m%dll_data(i), ErrStat2, ErrMsg2 )
