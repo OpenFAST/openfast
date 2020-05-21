@@ -65,14 +65,11 @@ SUBROUTINE DWM_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
    CALL NWTC_Init( )
 
    ! Display the module information
-
-   !CALL DispNVD( DWM__Ver )
-   
-   ! read the wind file for DWM
-   
    CALL WrScr('')
    CALL DispNVD(DWM_Ver)
    
+   ! read the wind file for DWM
+
    CALL WrScr("  Reading the wind file for DWM simulation." )
    
    ! InitInp%IfW%InputFileName is already set in FAST
