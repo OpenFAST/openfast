@@ -9,8 +9,8 @@ packages: g++-8
 sudo: true
     
 before_install:
-      # linux configuration
-    - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get install g++-8 gfortran-8 libblas-dev liblapack3 liblapack-dev; fi
+    # linux configuration
+    - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get install gfortran libblas-dev liblapack-dev; fi
     - if [[ "$TRAVIS_OS_NAME" == "linux" && "$CPP_API" == "ON" ]]; then sudo apt-get install libopenmpi-dev libyaml-cpp-dev libhdf5-dev libxml2-dev; fi
     - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then pyenv shell 3.7.1; fi
     - apt-cache policy libblas-dev

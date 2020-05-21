@@ -28,6 +28,7 @@ FUNCTION QueryGitVersion()
 
    CHARACTER(200) :: QueryGitVersion
 
+! The Visual Studio project sets the path for where to find the header file with version info
 #ifdef GIT_INCLUDE_FILE
 #include GIT_INCLUDE_FILE
 #endif

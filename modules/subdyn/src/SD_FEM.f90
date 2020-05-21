@@ -28,8 +28,9 @@ MODULE SD_FEM
   INTEGER(IntKi),   PARAMETER  :: nDOFL_TP        = 6                     ! 6 degrees of freedom (length of u subarray [UTP])
    
   ! values of these parameters are ordered by their place in SubDyn input file:
-  INTEGER(IntKi),   PARAMETER  :: JointsCol       = 10                    ! Number of columns in Joints (JointID, JointXss, JointYss, JointZss)
+  INTEGER(IntKi),   PARAMETER  :: JointsCol       = 10                    ! Number of columns in Joints (JointID, JointXss, JointYss, JointZss, JointType, JointDirX JointDirY JointDirZ JointStiff JointDamp)
   INTEGER(IntKi),   PARAMETER  :: InterfCol       = 7                     ! Number of columns in interf matrix (JointID,ItfTDxss,ItfTDYss,ItfTDZss,ItfRDXss,ItfRDYss,ItfRDZss)
+  INTEGER(IntKi),   PARAMETER  :: ReactCol        = 7                     ! Number of columns in reaction matrix (JointID,ItfTDxss,ItfTDYss,ItfTDZss,ItfRDXss,ItfRDYss,ItfRDZss)
   INTEGER(IntKi),   PARAMETER  :: MaxNodesPerElem = 2                     ! Maximum number of nodes per element (currently 2)
   INTEGER(IntKi),   PARAMETER  :: MembersCol      = MaxNodesPerElem + 3+1 ! Number of columns in Members (MemberID,MJointID1,MJointID2,MPropSetID1,MPropSetID2,COSMID) 
   INTEGER(IntKi),   PARAMETER  :: PropSetsBCol    = 6                     ! Number of columns in PropSets  (PropSetID,YoungE,ShearG,MatDens,XsecD,XsecT)  !bjj: this really doesn't need to store k, does it? or is this supposed to be an ID, in which case we shouldn't be storing k (except new property sets), we should be storing IDs
@@ -37,7 +38,7 @@ MODULE SD_FEM
   INTEGER(IntKi),   PARAMETER  :: PropSetsCCol    = 4                     ! Number of columns in CablePropSet (PropSetID, EA, MatDens, T0)
   INTEGER(IntKi),   PARAMETER  :: PropSetsRCol    = 2                     ! Number of columns in RigidPropSet (PropSetID, MatDens)
   INTEGER(IntKi),   PARAMETER  :: COSMsCol        = 10                    ! Number of columns in (cosine matrices) COSMs (COSMID,COSM11,COSM12,COSM13,COSM21,COSM22,COSM23,COSM31,COSM32,COSM33)
-  INTEGER(IntKi),   PARAMETER  :: CMassCol        = 5                     ! Number of columns in Concentrated Mass (CMJointID,JMass,JMXX,JMYY,JMZZ)
+  INTEGER(IntKi),   PARAMETER  :: CMassCol        = 11                    ! Number of columns in Concentrated Mass (CMJointID,JMass,JMXX,JMYY,JMZZ, Optional:JMXY,JMXZ,JMYZ,CGX,CGY,CGZ)
   ! Indices in Members table
   INTEGER(IntKi),   PARAMETER  :: iMType= 6 ! Index in Members table where the type is stored
   INTEGER(IntKi),   PARAMETER  :: iMProp= 4 ! Index in Members table where the PropSet1 and 2 are stored
@@ -58,6 +59,11 @@ MODULE SD_FEM
   INTEGER(IntKi),   PARAMETER  :: idMemberBeam       = 1
   INTEGER(IntKi),   PARAMETER  :: idMemberCable      = 2
   INTEGER(IntKi),   PARAMETER  :: idMemberRigid      = 3
+
+  ! Types of Boundary Conditions
+  INTEGER(IntKi),   PARAMETER  :: idBC_Fixed    = 11
+  INTEGER(IntKi),   PARAMETER  :: idBC_Internal = 12
+  INTEGER(IntKi),   PARAMETER  :: idBC_Leader   = 13 ! TODO, and maybe "BC" not appropriate here
   
   INTEGER(IntKi),   PARAMETER  :: SDMaxInpCols    = MAX(JointsCol,InterfCol,MembersCol,PropSetsBCol,PropSetsXCol,COSMsCol,CMassCol)
 
@@ -205,6 +211,50 @@ LOGICAL FUNCTION NodeHasRigidElem(iJoint, Init, p, ei)
    enddo
    ei=-1
 END FUNCTION NodeHasRigidElem
+!------------------------------------------------------------------------------------------------------
+!> Returns a rigid body transformation matrix from nDOF to 6 reference DOF: T_ref (6 x nDOF), such that Uref = T_ref.U_subset
+!! Typically called to get: 
+!!    - the transformation from the interface points to the TP point
+!!    - the transformation from the bottom nodes to SubDyn origin (0,0,)
+SUBROUTINE RigidTrnsf(Init, p, RefPoint, DOF, nDOF, T_ref, ErrStat, ErrMsg)
+   TYPE(SD_InitType),      INTENT(IN   )  :: Init        ! Input data for initialization routine
+   TYPE(SD_ParameterType), INTENT(IN   )  :: p        
+   REAL(ReKi),             INTENT(IN   )  :: RefPoint(3) ! Coordinate of the reference point 
+   INTEGER(IntKi),         INTENT(IN   )  :: nDOF        ! Number of DOFS 
+   INTEGER(IntKi),         INTENT(IN   )  :: DOF(nDOF)  ! DOF indices that are used to create the transformation matrix
+   REAL(ReKi),             INTENT(  OUT)  :: T_ref(nDOF,6)  ! matrix that relates the subset of DOFs to the reference point
+   INTEGER(IntKi),         INTENT(  OUT)  :: ErrStat     ! Error status of the operation
+   CHARACTER(*),           INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   ! local variables
+   INTEGER                                :: I, iDOF, iiDOF, iNode, nDOFPerNode
+   REAL(ReKi)                             :: dx, dy, dz
+   REAL(ReKi), dimension(6)               :: Line
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   T_ref(:,:)=0
+   DO I = 1, nDOF
+      iDOF        = DOF(I) ! DOF index in constrained system
+      iNode       = p%DOFtilde2Nodes(iDOF,1) ! First column is node 
+      nDOFPerNode = p%DOFtilde2Nodes(iDOF,2) ! Second column is number of DOF per node
+      iiDOF       = p%DOFtilde2Nodes(iDOF,3) ! Third column is dof index for this joint (1-6 for cantilever)
+
+      if ((iiDOF<1) .or. (iiDOF>6)) then
+         ErrMsg  = 'RigidTrnsf, node DOF number is not valid. DOF:'//trim(Num2LStr(iDOF))//' Node:'//trim(Num2LStr(iNode))//' iiDOF:'//trim(Num2LStr(iiDOF)); ErrStat = ErrID_Fatal
+         return
+      endif
+      if (nDOFPerNode/=6) then
+         ErrMsg  = 'RigidTrnsf, node doesnt have 6 DOFs. DOF:'//trim(Num2LStr(iDOF))//' Node:'//trim(Num2LStr(iNode))//' nDOF:'//trim(Num2LStr(nDOFPerNode)); ErrStat = ErrID_Fatal
+         return
+      endif
+      
+      dx = Init%Nodes(iNode, 2) - RefPoint(1)
+      dy = Init%Nodes(iNode, 3) - RefPoint(2)
+      dz = Init%Nodes(iNode, 4) - RefPoint(3)
+
+      CALL RigidTransformationLine(dx,dy,dz,iiDOF,Line) !returns Line
+      T_ref(I, 1:6) = Line
+   ENDDO
+END SUBROUTINE RigidTrnsf
 
 !------------------------------------------------------------------------------------------------------
 ! --- Main routines, more or less listed in order in which they are called
@@ -560,9 +610,9 @@ CONTAINS
       Init%Nodes(k, 4)                     = z
       Init%Nodes(k, iJointType)            = idJointCantilever ! Note: all added nodes are Cantilever
       ! Properties below are for non-cantilever joints
-      Init%Nodes(k, iJointDir:iJointDir+2) = -99999 
-      Init%Nodes(k, iJointStiff)           = -99999 
-      Init%Nodes(k, iJointDamp)            = -99999 
+      Init%Nodes(k, iJointDir:iJointDir+2) = 0.0_ReKi ! NOTE: irrelevant for cantilever nodes
+      Init%Nodes(k, iJointStiff)           = 0.0_ReKi ! NOTE: irrelevant for cantilever nodes
+      Init%Nodes(k, iJointDamp)            = 0.0_ReKi ! NOTE: irrelevant for cantilever nodes
    END SUBROUTINE SetNewNode
    
    !> Set properties of element k
@@ -822,14 +872,28 @@ CONTAINS
    !! Note: try to remove me and merge me with ApplyConstr, but used by "SelectNonBCConstraintsDOF" and "UnReduceVRdofs"
    SUBROUTINE InitBCs(Init, p)
       TYPE(SD_InitType     ),INTENT(INOUT) :: Init
-      TYPE(SD_ParameterType),INTENT(IN   ) :: p
+      TYPE(SD_ParameterType),INTENT(INOUT) :: p
       INTEGER(IntKi) :: I, J, iNode
       Init%BCs = -9999
       DO I = 1, p%nNodes_C
          iNode = p%Nodes_C(I,1) ! Node index
          DO J = 1, 6
             Init%BCs( (I-1)*6+J, 1) = p%NodesDOF(iNode)%List(J) ! DOF number (unconstrained)
-            Init%BCs( (I-1)*6+J, 2) = 1 ! NOTE: Always selected now  p%Nodes_C(I, J+1);         ! 0 or 1 if fixed reaction or not
+            if (p%Nodes_C(I,J+1)==1) then ! User input 1=Constrained/Fixed (should be eliminated)
+               Init%BCs( (I-1)*6+J, 2) = idBC_Fixed
+               p%Nodes_C(I, J+1)       = idBC_Fixed
+            else if (p%Nodes_C(I,J+1)==0) then ! User input 0=Free, fill be part of Internal DOF
+               Init%BCs( (I-1)*6+J, 2) = idBC_Internal
+               p%Nodes_C(I, J+1)       = idBC_Internal
+            else if (p%Nodes_C(I,J+1)==2) then ! User input 2=Leader DOF
+               Init%BCs( (I-1)*6+J, 2) = idBC_Leader
+               p%Nodes_C(I, J+1)       = idBC_Leader
+               print*,'BC 2 not allowed for now, node',iNode
+               STOP
+            else
+               print*,'Wrong boundary condition input for reaction node',iNode
+               STOP
+            endif
          ENDDO
       ENDDO
    END SUBROUTINE InitBCs
@@ -839,14 +903,26 @@ CONTAINS
    !! TODO remove me and merge me with CraigBampton
    SUBROUTINE InitIntFc(Init, p)
       TYPE(SD_InitType     ),INTENT(INOUT) :: Init
-      TYPE(SD_ParameterType),INTENT(IN   ) :: p
+      TYPE(SD_ParameterType),INTENT(INOUT) :: p
       INTEGER(IntKi) :: I, J, iNode
       Init%IntFc = -9999
       DO I = 1, p%nNodes_I
          iNode = p%Nodes_I(I,1) ! Node index
          DO J = 1, 6 ! ItfTDXss    ItfTDYss    ItfTDZss    ItfRDXss    ItfRDYss    ItfRDZss
             Init%IntFc( (I-1)*6+J, 1) = p%NodesDOF(iNode)%List(J) ! DOF number (unconstrained)
-            Init%IntFc( (I-1)*6+J, 2) = 1 ! NOTE: Always selected now p%Nodes_I(I, J+1);      ! 0 or 1 if fixed to interface 
+
+            if     (p%Nodes_I(I,J+1)==1) then ! User input 1=Leader DOF
+               Init%IntFc((I-1)*6+J, 2)  = idBC_Leader
+               p%Nodes_I(I,J+1)          = idBC_Leader
+            elseif (p%Nodes_I(I,J+1)==1) then ! User input 0=Fixed DOF
+               Init%IntFc( (I-1)*6+J, 2) = idBC_Fixed
+               p%Nodes_I(I,J+1)          = idBC_Fixed
+               print*,'Fixed boundary condition not yet supported for interface nodes, node:',iNode
+               STOP
+            else
+               print*,'Wrong boundary condition input for interface node',iNode
+               STOP
+            endif
          ENDDO
       ENDDO
    END SUBROUTINE InitIntFc
@@ -865,11 +941,15 @@ SUBROUTINE AssembleKM(Init, p, ErrStat, ErrMsg)
    INTEGER                  :: iGlob
    REAL(ReKi)               :: Ke(12,12), Me(12, 12), FGe(12) ! element stiffness and mass matrices gravity force vector
    REAL(ReKi)               :: FCe(12) ! Pretension force from cable element
+   REAL(ReKi), DIMENSION(6,6):: K_soil, M_soil ! Auxiliary matrices for soil
    INTEGER(IntKi)           :: ErrStat2
    CHARACTER(ErrMsgLen)     :: ErrMsg2
    INTEGER(IntKi)           :: iNode !< Node index
    integer(IntKi), dimension(12) :: IDOF !  12 DOF indices in global unconstrained system
    integer(IntKi), dimension(3)  :: IDOF3!  3  DOF indices in global unconstrained system
+   real(ReKi), dimension(6,6) :: M66  ! Mass matrix of an element node
+   real(ReKi) :: m, x, y, z, Jxx, Jyy, Jzz, Jxy, Jxz, Jyz
+   INTEGER    :: jGlob, kGlob
    ErrMsg  = ""
    ErrStat = ErrID_None
    
@@ -879,7 +959,7 @@ SUBROUTINE AssembleKM(Init, p, ErrStat, ErrMsg)
 
    CALL AllocAry( Init%K, p%nDOF, p%nDOF , 'Init%K',  ErrStat2, ErrMsg2); if(Failed()) return; ! system stiffness matrix 
    CALL AllocAry( Init%M, p%nDOF, p%nDOF , 'Init%M',  ErrStat2, ErrMsg2); if(Failed()) return; ! system mass matrix 
-   CALL AllocAry( Init%FG,p%nDOF,             'Init%FG', ErrStat2, ErrMsg2); if(Failed()) return; ! system gravity force vector 
+   CALL AllocAry( Init%FG,p%nDOF,          'Init%FG', ErrStat2, ErrMsg2); if(Failed()) return; ! system gravity force vector 
    Init%K  = 0.0_ReKi
    Init%M  = 0.0_ReKi
    Init%FG = 0.0_ReKi
@@ -896,32 +976,44 @@ SUBROUTINE AssembleKM(Init, p, ErrStat, ErrMsg)
       Init%FG( IDOF )    = Init%FG( IDOF )     + FGe(1:12)+ FCe(1:12) ! Note: gravity and pretension cable forces
       Init%K(IDOF, IDOF) = Init%K( IDOF, IDOF) + Ke(1:12,1:12)
       Init%M(IDOF, IDOF) = Init%M( IDOF, IDOF) + Me(1:12,1:12)
-   ENDDO ! end loop over elements , i
+   ENDDO
       
-   ! add concentrated mass 
-   DO I = 1, Init%NCMass
+   ! Add concentrated mass to mass matrix
+   DO I = 1, Init%nCMass
       iNode = NINT(Init%CMass(I, 1)) ! Note index where concentrated mass is to be added
-      ! Safety
+      ! Safety check (otherwise we might have more than 6 DOF)
       if (Init%Nodes(iNode,iJointType) /= idJointCantilever) then
          ErrMsg2='Concentrated mass is only for cantilever joints. Problematic node: '//trim(Num2LStr(iNode)); ErrStat2=ErrID_Fatal;
          if(Failed()) return
       endif
-      DO J = 1, 3
-          iGlob = p%NodesDOF(iNode)%List(J) ! ux, uy, uz
-          Init%M(iGlob, iGlob) = Init%M(iGlob, iGlob) + Init%CMass(I, 2)
-      ENDDO
-      DO J = 4, 6
-          iGlob = p%NodesDOF(iNode)%List(J) ! theta_x, theta_y, theta_z
-          Init%M(iGlob, iGlob) = Init%M(iGlob, iGlob) + Init%CMass(I, J-1)
+      ! Mass matrix of a rigid body
+      M66 = 0.0_ReKi
+      m   = Init%CMass(I,2)
+      Jxx = Init%CMass(I,3 ); Jxy = Init%CMass(I,6 ); x = Init%CMass(I,9 );
+      Jyy = Init%CMass(I,4 ); Jxz = Init%CMass(I,7 ); y = Init%CMass(I,10);
+      Jzz = Init%CMass(I,5 ); Jyz = Init%CMass(I,8 ); z = Init%CMass(I,11);
+      M66(1 , :)=(/ m       , 0._ReKi , 0._ReKi , 0._ReKi             ,  z*m                , -y*m                 /)
+      M66(2 , :)=(/ 0._ReKi , m       , 0._ReKi , -z*m                , 0._ReKi             ,  x*m                 /)
+      M66(3 , :)=(/ 0._ReKi , 0._ReKi , m       ,  y*m                , -x*m                , 0._ReKi              /)
+      M66(4 , :)=(/ 0._ReKi , -z*m    ,  y*m    , Jxx + m*(y**2+z**2) , Jxy - m*x*y         , Jxz  - m*x*z         /)
+      M66(5 , :)=(/  z*m    , 0._ReKi , -x*m    , Jxy - m*x*y         , Jyy + m*(x**2+z**2) , Jyz  - m*y*z         /)
+      M66(6 , :)=(/ -y*m    , x*m     , 0._ReKi , Jxz - m*x*z         , Jyz - m*y*z         , Jzz  + m*(x**2+y**2) /)
+      ! Adding
+      DO J = 1, 6
+         jGlob = p%NodesDOF(iNode)%List(J)
+         DO K = 1, 6
+            kGlob = p%NodesDOF(iNode)%List(K)
+            Init%M(jGlob, kGlob) = Init%M(jGlob, kGlob) + M66(J,K)
+         ENDDO
       ENDDO
    ENDDO ! Loop on concentrated mass
 
-   ! add concentrated mass induced gravity force
-   DO I = 1, Init%NCMass
+   ! Add concentrated mass induced gravity force
+   DO I = 1, Init%nCMass
        iNode = NINT(Init%CMass(I, 1)) ! Note index where concentrated mass is to be added
        iGlob = p%NodesDOF(iNode)%List(3) ! uz
        Init%FG(iGlob) = Init%FG(iGlob) - Init%CMass(I, 2)*Init%g 
-   ENDDO ! I concentrated mass induced gravity
+   ENDDO
    
    CALL CleanUp_AssembleKM()
    
@@ -957,6 +1049,62 @@ CONTAINS
    END FUNCTION
    
 END SUBROUTINE AssembleKM
+
+!> Add soil stiffness and mass to global system matrices
+SUBROUTINE InsertSoilMatrices(M, K, Init, p, ErrStat, ErrMsg, Substract)
+   real(ReKi), dimension(:,:),   intent(inout) :: M
+   real(ReKi), dimension(:,:),   intent(inout) :: K
+   type(SD_InitType),            intent(in   ) :: Init
+   type(SD_ParameterType),       intent(in   ) :: p
+   integer(IntKi),               intent(  out) :: ErrStat     ! Error status of the operation
+   character(*),                 intent(  out) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   logical, optional,            intent(in   ) :: SubStract   ! If present, and if true, substract instead of adding
+   integer                    :: I, J, iiNode
+   integer                    :: iDOF, jDOF, iNode  !< DOF and node indices
+   real(ReKi), dimension(6,6) :: K_soil, M_soil ! Auxiliary matrices for soil
+   ErrMsg  = ""
+   ErrStat = ErrID_None
+   ! TODO consider doing the 21 -> 6x6 conversion while reading
+   ! 6x6 matrix goes to one node of one element only
+   do iiNode = 1, p%nNodes_C ! loop on constrained nodes
+      iNode = p%Nodes_C(iiNode,1)
+      call Array21_to_6by6(Init%SSIK(:,iiNode), K_soil)
+      call Array21_to_6by6(Init%SSIM(:,iiNode), M_soil)
+      if (present(Substract)) then
+         if (Substract) then
+            K_soil = - K_soil
+            M_soil = - M_soil
+         endif
+      endif
+      do I = 1, 6
+         iDOF = p%NodesDOF(iNode)%List(I)   ! DOF index
+         do J = 1, 6
+            jDOF = p%NodesDOF(iNode)%List(J)   ! DOF index
+            K(iDOF, jDOF) = K(iDOF, jDOF) + K_soil(I,J)
+            M(iDOF, jDOF) = M(iDOF, jDOF) + M_soil(I,J)
+         enddo
+      enddo
+   enddo
+contains
+   !> Convert a flatten array of 21 values into a symmetric  6x6 matrix
+   SUBROUTINE Array21_to_6by6(A21, M66)
+      use NWTC_LAPACK, only: LAPACK_TPTTR 
+      real(ReKi), dimension(21) , intent(in)  :: A21
+      real(ReKi), dimension(6,6), intent(out) :: M66
+      integer :: j
+      M66 = 0.0_ReKi
+      ! Reconstruct from sparse elements
+      CALL LAPACK_TPTTR('U',6,A21,M66,6, ErrStat, ErrMsg)
+      ! Ensuring symmetry
+      do j=1,6
+         M66(j,j) = M66(j,j)/2
+      enddo  
+      M66=M66+TRANSPOSE(M66) 
+   END SUBROUTINE Array21_to_6by6
+END SUBROUTINE InsertSoilMatrices
+
+
+
 
 !------------------------------------------------------------------------------------------------------
 !> Build transformation matrix T, such that x= T.x~ where x~ is the reduced vector of DOF
@@ -1048,6 +1196,8 @@ SUBROUTINE BuildTMatrix(Init, p, RA, RAm1, Tred, ErrStat, ErrMsg)
             endif
          else
             ! --- Regular cantilever joint
+            ! TODO/NOTE: We could apply fixed constraint/BC here, returning Tc as a 6xn matrix with n<6
+            !            Extreme case would be Tc: 6*0, in which case NodesDOFtilde would be empty ([])
             allocate(Tc(1:6,1:6))
             allocate(IDOFOld(1:6))
             Tc=I6
@@ -1064,8 +1214,8 @@ SUBROUTINE BuildTMatrix(Init, p, RA, RAm1, Tred, ErrStat, ErrMsg)
       call init_list(p%NodesDOFtilde(iNode), nc, 0, ErrStat2, ErrMsg2)
       p%NodesDOFtilde(iNode)%List(1:nc) = (/ (iprev + i, i=1,nc) /)
       IDOFNew => p%NodesDOFtilde(iNode)%List(1:nc) ! alias to shorten notations
-      print*,'N',iNode,'I ',IDOFOld
-      print*,'N',iNode,'It',IDOFNew
+      !print*,'N',iNode,'I ',IDOFOld
+      !print*,'N',iNode,'It',IDOFNew
       Tred(IDOFOld, IDOFNew) = Tc
       iPrev = iPrev + nc
    enddo
@@ -1160,6 +1310,7 @@ SUBROUTINE DirectElimination(Init, p, ErrStat, ErrMsg)
    ErrStat = ErrID_None
    ErrMsg  = ""
 
+   ! Setup list of rigid link assemblies (RA) and the inverse function RA^{-1}
    call RigidLinkAssemblies(Init, p, RA, RAm1, ErrStat2, ErrMsg2); if(Failed()) return
 
    call BuildTMatrix(Init, p, RA, RAm1, p%T_red, ErrStat2, ErrMsg2); if (Failed()) return
@@ -1216,14 +1367,14 @@ CONTAINS
       if (allocated(RA  )) deallocate(RA  )
    END SUBROUTINE CleanUp_DirectElimination
 
-   !> Reset DOF indices after elimination
+   !> Reset DOF indices after elimination, does not change the BC
    SUBROUTINE ReInitBCs(Init, p)
       TYPE(SD_InitType     ),INTENT(INOUT) :: Init
       TYPE(SD_ParameterType),INTENT(IN   ) :: p
       INTEGER(IntKi) :: I, J, iNode
       DO I = 1, p%nNodes_C
          iNode = p%Nodes_C(I,1) ! Node index
-         DO J = 1, 6
+         DO J = 1, 6 ! TODO NOTE here assumptions that 6 DOF are present
             Init%BCs( (I-1)*6+J, 1) = p%NodesDOFtilde(iNode)%List(J) ! DOF number (constrained)
          ENDDO
       ENDDO
@@ -1585,29 +1736,6 @@ SUBROUTINE InsertJointStiffDamp(p, Init, ErrStat, ErrMsg)
       endif
    enddo
 END SUBROUTINE InsertJointStiffDamp
-
-!> Apply constraint (Boundary conditions) on Mass and Stiffness matrices
-SUBROUTINE ApplyConstr(Init,p)
-   TYPE(SD_InitType     ),INTENT(INOUT):: Init
-   TYPE(SD_ParameterType),INTENT(IN   ):: p
-   
-   INTEGER :: I !, J, k
-   INTEGER :: row_n !bgn_j, end_j,
-   
-   DO I = 1, p%nNodes_C*6
-      row_n = Init%BCs(I, 1)
-      IF (Init%BCs(I, 2) == 1) THEN
-         Init%K(row_n,:    )= 0
-         Init%K(:    ,row_n)= 0
-         Init%K(row_n,row_n)= 1
-
-         Init%M(row_n,:    )= 0
-         Init%M(:    ,row_n)= 0
-         Init%M(row_n,row_n)= 0
-      ENDIF
-   ENDDO ! I, loop on reaction nodes
-END SUBROUTINE ApplyConstr
-
 
 SUBROUTINE ElemM(ep, Me)
    TYPE(ElemPropType), INTENT(IN) :: eP        !< Element Property

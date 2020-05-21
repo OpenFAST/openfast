@@ -23,8 +23,8 @@ typedef	^	InitInputType	ReKi	TP_RefPoint 	{3} 	-	-	"global position of transitio
 typedef	^	InitInputType	ReKi	SubRotateZ	-	-	-	"Rotation angle in degrees about global Z"
 
 # ============================== Define Initialization outputs here: ============================================================================================================================================
-typedef	^	InitOutputType	CHARACTER(10)	WriteOutputHdr	{:}	-	-	"Names of the output-to-file channels"	-
-typedef	^	InitOutputType	CHARACTER(10)	WriteOutputUnt	{:}	-	-	"Units of the output-to-file channels"	-
+typedef	^	InitOutputType	CHARACTER(ChanLen)	WriteOutputHdr	{:}	-	-	"Names of the output-to-file channels"	-
+typedef	^	InitOutputType	CHARACTER(ChanLen)	WriteOutputUnt	{:}	-	-	"Units of the output-to-file channels"	-
 typedef	^	InitOutputType	ProgDesc	Ver	-	-	-	"This module's name, version, and date"	-
 
 # ============================== Define Internal data types here: ============================================================================================================================================
@@ -38,7 +38,6 @@ typedef	^	MeshAuxDataType	ReKi   	Me      	{:}{:}{:}{:}	-	-	"Mass matrix connect
 typedef	^	MeshAuxDataType	ReKi   	Ke      	{:}{:}{:}{:}	-	-	"Mass matrix connected to each joint element for outAll output"
 typedef	^	MeshAuxDataType	ReKi   	Fg      	{:}{:}{:}	-	-	"Gravity load vector connected to each joint element for requested member output"
 # CB_MatArrays: Matrices and arrays for CB summary
-typedef	SubDyn/SD	CB_MatArrays	ReKi   	TI2	{:}{:}	-	-	"TI2 matrix to refer to total mass to (0,0,0)"
 typedef	^	CB_MatArrays	ReKi   	MBB	{:}{:}	-	-	"FULL MBB ( no constraints applied)"
 typedef	^	CB_MatArrays	ReKi   	MBM	{:}{:}	-	-	"FULL MBM ( no constraints applied)"
 typedef	^	CB_MatArrays	ReKi   	KBB	{:}{:}	-	-	"FULL KBB ( no constraints applied)"
@@ -86,9 +85,12 @@ typedef	^	^	ReKi	COSMs	{:}{:}	-	-	"Independent direction cosine matrices"
 typedef	^	^	ReKi	CMass	{:}{:}	-	-	"Concentrated mass information"
 typedef	^	^	ReKi	JDampings	{:}	-	-	"Damping coefficients for internal modes"
 typedef	^	^	INTEGER	Members	{:}{:}	-	-	"Member joints connection"
-typedef	^	^	CHARACTER(10)	SSOutList	{:}	-	-	"List of Output Channels"
+typedef	^	^	CHARACTER(ChanLen)	SSOutList	{:}	-	-	"List of Output Channels"
 typedef	^	^	LOGICAL	OutCOSM	-	-	-	"Output Cos-matrices Flag"
 typedef	^	^	LOGICAL	TabDelim	-	-	-	"Generate a tab-delimited output file in OutJckF-Flag"
+typedef	^	^	ReKi	SSIK	{:}{:}	-	-	"SSI stiffness packed matrix elements (21 of them), for each reaction joint"
+typedef	^	^	ReKi	SSIM	{:}{:}	-	-	"SSI mass packed matrix elements (21 of them), for each reaction joint"
+typedef	^	^	CHARACTER(1024)	SSIfile {:}	-	-	"Soil Structure Interaction (SSI) files to associate with each reaction node"
 #-------------------------- arrays and variables used in the module ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 typedef	^	^	INTEGER	NElem	-	-	-	"Total number of elements"
 typedef	^	^	INTEGER	NPropB  -	-	-	"Total number of property sets for Beams"
@@ -208,15 +210,30 @@ typedef	^	ParameterType	IntKi	nNodes_C	-	-	-	"Number of joints with reactions"
 typedef	^	ParameterType	IntKi	Nodes_I	{:}{:}	-	-	"Interface degree of freedoms"
 typedef	^	ParameterType	IntKi	Nodes_L	{:}{:}	-	-	"Internal nodes (not interface nor reaction)"
 typedef	^	ParameterType	IntKi	Nodes_C	{:}{:}	-	-	"React degree of freedoms"
-typedef	^	ParameterType	IntKi	nDOFI	-	-	-	"Interface nodes # of DOFs"
-typedef	^	ParameterType	IntKi	nDOFL	-	-	-	"Internal nodes # of DOFs"
-typedef	^	ParameterType	IntKi	nDOFC	-	-	-	"Contrained nodes # of DOFs"
-typedef	^	ParameterType	IntKi	nDOFR	-	-	-	"Interface and restrained nodes # of DOFs"
-typedef	^	ParameterType	IntKi	IDI	{:}	-	-	"Index array of the interface(nodes connect to TP) dofs"
-typedef	^	ParameterType	IntKi	IDL	{:}	-	-	"Index array of the internal dofs"
-typedef	^	ParameterType	IntKi	IDC	{:}	-	-	"Index array of the contraint dofs"
-typedef	^	ParameterType	IntKi	IDR	{:}	-	-	"Index array of the interface and restraint dofs"
-typedef	^	ParameterType	IntKi	IDY	{:}	-	-	"Index array of the all dofs in Y2"
+typedef	^	ParameterType	IntKi	nDOFI__	-	-	-	"Size of IDI__"
+typedef	^	ParameterType	IntKi	nDOFI_Rb -	-	-	"Size of IDI_Rb"
+typedef	^	ParameterType	IntKi	nDOFI_F	-	-	-	"Size of IDI_F"
+typedef	^	ParameterType	IntKi	nDOFL_L	-	-	-	"Size of IDL_L"
+typedef	^	ParameterType	IntKi	nDOFC__	-	-	-	"Size of IDC__"
+typedef	^	ParameterType	IntKi	nDOFC_Rb -	-	-	"Size of IDC_Rb"
+typedef	^	ParameterType	IntKi	nDOFC_L	-	-	-	"Size of IDC_L"
+typedef	^	ParameterType	IntKi	nDOFC_F	-	-	-	"Size of IDC_F"
+typedef	^	ParameterType	IntKi	nDOFR__	-	-	-	"Size of IDR__"
+typedef	^	ParameterType	IntKi	nDOF__Rb -	-	-	"Size of ID__Rb"
+typedef	^	ParameterType	IntKi	nDOF__L	-	-	-	"Size of ID__L"
+typedef	^	ParameterType	IntKi	nDOF__F	-	-	-	"Size of ID__F"
+typedef	^	ParameterType	IntKi	IDI__	{:}	-	-	"Index of all Interface DOFs"
+typedef	^	ParameterType	IntKi	IDI_Rb	{:}	-	-	"Index array of the interface (nodes connect to TP) dofs that are retained/master/follower DOFs"
+typedef	^	ParameterType	IntKi	IDI_F	{:}	-	-	"Index array of the interface (nodes connect to TP) dofs that are fixed DOF"
+typedef	^	ParameterType	IntKi	IDL_L	{:}	-	-	"Index array of the internal dofs coming from internal nodes"
+typedef	^	ParameterType	IntKi	IDC__	{:}	-	-	"Index of all bottom DOF"
+typedef	^	ParameterType	IntKi	IDC_Rb	{:}	-	-	"Index array of the contraint dofs that are retained/master/follower DOF"
+typedef	^	ParameterType	IntKi	IDC_L	{:}	-	-	"Index array of the contraint dofs that are follower/internal DOF"
+typedef	^	ParameterType	IntKi	IDC_F	{:}	-	-	"Index array of the contraint dofs that are fixd DOF"
+typedef	^	ParameterType	IntKi	IDR__	{:}	-	-	"Index array of the interface and restraint dofs"
+typedef	^	ParameterType	IntKi	ID__Rb	{:}	-	-	"Index array of all the retained/leader/master dofs (from any nodes of the structure)"
+typedef	^	ParameterType	IntKi	ID__L	{:}	-	-	"Index array of all the follower/internal dofs (from any nodes of the structure)"
+typedef	^	ParameterType	IntKi	ID__F	{:}	-	-	"Index array of the DOF that are fixed (from any nodes of the structure)"
 typedef	^	ParameterType	ReKi	FGL	{:}	-	-	"Internal node nDOFL, gravity loads"
 # --- Outputs
 typedef	^	ParameterType	IntKi	NMOutputs	-	- 	-	"Number of members whose output is written"
