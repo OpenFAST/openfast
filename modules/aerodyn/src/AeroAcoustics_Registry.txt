@@ -77,6 +77,7 @@ typedef     ^                   AA_InputFile         ReKi                ObsZ   
 typedef     ^                   AA_InputFile         AA_BladePropsType   BladeProps      {:}    -     -     "blade property information from blade input files"     -
 typedef     ^                   AA_InputFile         IntKi               NrOutFile        -     -     -     "Nr of output files"     -
 typedef     ^                   AA_InputFile         CHARACTER(1024)     AAoutfile       {:}    -     -     "AAoutfile for writing output files"     -
+typedef     ^                   AA_InputFile         CHARACTER(1024)     TICalcTabFile    -     -     -     "Name of the file containing the table for incident turbulence intensity" -
 typedef     ^                   AA_InputFile         IntKi               Comp_AA_After        -     -     -     " "     -
 typedef     ^                   AA_InputFile         ReKi                SaveEach        -     -     -     " "     -
 typedef     ^                   AA_InputFile         ReKi                z0_AA           -     -     -     "Surface roughness"     -
