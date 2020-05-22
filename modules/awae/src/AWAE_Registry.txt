@@ -63,6 +63,7 @@ typedef  ^            ^                   IntKi           nZ_low         -  - - 
 typedef  ^            ^                   ReKi            X0_low         -  - -   "X-component of the origin of the low-resolution spatial domain" m
 typedef  ^            ^                   ReKi            Y0_low         -  - -   "Y-component of the origin of the low-resolution spatial domain" m
 typedef  ^            ^                   ReKi            Z0_low         -  - -   "Z-component of the origin of the low-resolution spatial domain" m
+typedef  ^            ^                   ReKi            WT_Position  {:}{:} - - "X-Y-Z position of each wind turbine; index 1 = XYZ; index 2 = turbine number" meters
 
 # ..... Initialization data .......................................................................................................
 # Define inputs that the initialization routine may need here:
@@ -98,16 +99,16 @@ typedef   ^ InitOutputType ReKi               Z0_low           -  - -   "Z-compo
 
 # ..... States ....................................................................................................................
 # Define continuous (differentiable) states here:
-typedef   ^ ContinuousStateType InflowWind_ContinuousStateType     IfW   - - -  "Dummy IfW continuous states" -
+typedef   ^ ContinuousStateType InflowWind_ContinuousStateType     IfW   {:} - -  "Dummy IfW continuous states" -
 
 # Define discrete (nondifferentiable) states here:
-typedef   ^ DiscreteStateType   InflowWind_DiscreteStateType     IfW   - - -  "Dummy IfW discrete states" -
+typedef   ^ DiscreteStateType   InflowWind_DiscreteStateType     IfW   {:} - -  "Dummy IfW discrete states" -
 
 # Define constraint states here:
-typedef   ^ ConstraintStateType InflowWind_ConstraintStateType     IfW - - -  "Dummy IfW  constraint states" -
+typedef   ^ ConstraintStateType InflowWind_ConstraintStateType     IfW {:} - -  "Dummy IfW  constraint states" -
 
 # Define any other states, including integer or logical states here:
-typedef   ^ OtherStateType      InflowWind_OtherStateType     IfW  - - -  "Dummy IfW   other states" -
+typedef   ^ OtherStateType      InflowWind_OtherStateType     IfW  {:} - -  "Dummy IfW   other states" -
 
 # ..... Misc/Optimization variables.................................................................................................
 # Define any data that are used only for efficiency purposes (these variables are not associated with time):
@@ -130,7 +131,7 @@ typedef   ^ MiscVarType    ReKi     Vr_wake      {:}       - - "" m/s
 typedef	^	MiscVarType	   SiKi	   outVizXYPlane  {:}{:}{:}{:} -- "An array holding the output data for a 2D visualization slice" -
 typedef	^	MiscVarType	   SiKi	   outVizYZPlane  {:}{:}{:}{:} -- "An array holding the output data for a 2D visualization slice" -
 typedef	^	MiscVarType	   SiKi	   outVizXZPlane  {:}{:}{:}{:} -- "An array holding the output data for a 2D visualization slice" -
-typedef   ^ MiscVarType    InflowWind_MiscVarType IfW        - - - "InflowWind module misc vars"
+typedef   ^ MiscVarType    InflowWind_MiscVarType IfW        {:} - - "InflowWind module misc vars"
 typedef   ^ MiscVarType    InflowWind_InputType u_IfW_Low    - - - "InflowWind module inputs for the low-resolution grid" 
 typedef   ^ MiscVarType    InflowWind_InputType u_IfW_High    - - - "InflowWind module inputs for the high-resolution grid" 
 typedef   ^ MiscVarType    InflowWind_OutputType y_IfW_Low    - - - "InflowWind module outputs for the low-resolution grid" 
@@ -169,6 +170,7 @@ typedef   ^ ParameterType  IntKi            nY_high            -  - -   "Number 
 typedef   ^ ParameterType  IntKi            nZ_high            -  - -   "Number of high-resolution spatial nodes in Z direction" -
 typedef   ^ ParameterType  ReKi             Grid_low           {:}{:}    - -   "XYZ components (global positions) of the spatial discretization of the low-resolution spatial domain" m
 typedef   ^ ParameterType  ReKi             Grid_high          {:}{:}{:} - -   "XYZ components (global positions) of the spatial discretization of the high-resolution spatial domain for each turbine " m
+typedef   ^ ParameterType  ReKi             WT_Position        {:}{:} - -      "X-Y-Z position of each wind turbine; index 1 = XYZ; index 2 = turbine number" meters
 typedef   ^ ParameterType  IntKi            n_high_low         -  - -   "Number of high-resolution time steps per low" -
 typedef   ^ ParameterType  DbKi             dt_low             -  - -   "Low-resolution (FAST.Farm driver/glue code) time step" s
 typedef   ^ ParameterType  DbKi             dt_high            -  - -   "High-resolution (FAST) time step" s
@@ -176,7 +178,7 @@ typedef   ^ ParameterType  IntKi            NumDT              -  - -   "Number 
 typedef   ^ ParameterType  IntKi            Mod_Meander        -  - -   "Spatial filter model for wake meandering"      -
 typedef   ^ ParameterType  ReKi             C_Meander          -  - -   "Calibrated parameter for wake meandering"      -
 typedef   ^ ParameterType  ReKi             C_ScaleDiam        -  - -   "Normalized wake volume radius for wake meandering (normalized by the wake diameter)"      -
-typedef   ^ ParameterType  InflowWind_ParameterType IfW        -  - -   "InflowWind module parameters" -
+typedef   ^ ParameterType  InflowWind_ParameterType IfW        {:}  - -   "InflowWind module parameters" -
 # parameters for output  
 #typedef   ^ ParameterType  IntKi            NumOuts            -  - -   "Number of parameters in the output list (number of outputs requested)"      -
 typedef  ^  ParameterType  IntKi            WrDisSkp1           -  - -   "Number of time steps to skip plus one" -

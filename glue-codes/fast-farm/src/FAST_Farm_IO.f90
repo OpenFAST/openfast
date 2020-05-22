@@ -9796,10 +9796,12 @@ SUBROUTINE Farm_PrintSum( farm, WD_InputFileData, ErrStat, ErrMsg )
    
    WRITE (UnSum,'(/,A)') 'Ambient Wind:'
    
-   if ( farm%AWAE%p%mod_AmbWind == 1 ) then
+   if (     farm%AWAE%p%mod_AmbWind == 1 ) then
       strModDescr = 'High-Fidelity Precursor'
-   else
-      strModDescr = 'InflowWind Module'
+   elseif ( farm%AWAE%p%mod_AmbWind == 2 ) then
+      strModDescr = 'One InflowWind Module'
+   else   ! farm%AWAE%p%mod_AmbWind == 3
+      strModDescr = 'Multiple InflowWind Modules'
    end if
    
    WRITE (UnSum,'(2X,A)') 'Ambient wind model: '//trim(strModDescr)

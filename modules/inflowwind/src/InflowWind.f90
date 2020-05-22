@@ -186,7 +186,7 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
          ! Parse all the InflowWind related input files and populate the *_InitDataType derived types
 
       IF ( InitInp%UseInputFile ) THEN
-         CALL InflowWind_ReadInput( InitInp%InputFileName, EchoFileName, InputFileData, TmpErrStat, TmpErrMsg )
+         CALL InflowWind_ReadInput( InitInp%InputFileName, EchoFileName, InitInp%FixedWindFileRootName, InitInp%TurbineID, InputFileData, TmpErrStat, TmpErrMsg )
          CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
          IF ( ErrStat >= AbortErrLev ) THEN
             CALL Cleanup()

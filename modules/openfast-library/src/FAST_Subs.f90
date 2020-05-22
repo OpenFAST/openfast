@@ -553,6 +553,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       InitInData_IfW%InputFileName    = p_FAST%InflowFile
       InitInData_IfW%RootName         = TRIM(p_FAST%OutFileRoot)//'.'//TRIM(y_FAST%Module_Abrev(Module_IfW))
       InitInData_IfW%UseInputFile     = .TRUE.
+      InitInData_IfW%FixedWindFileRootName = .FALSE.
    
       InitInData_IfW%NumWindPoints = 0      
       IF ( p_FAST%CompServo == Module_SrvD ) InitInData_IfW%NumWindPoints = InitInData_IfW%NumWindPoints + 1

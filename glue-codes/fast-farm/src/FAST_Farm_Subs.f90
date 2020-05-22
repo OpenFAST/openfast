@@ -500,8 +500,8 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, OutList
          RETURN        
       end if
       
-       ! Mod_AmbWind - Ambient wind model (-) (switch) {1: high-fidelity precursor in VTK format, 2: InflowWind module}:
-   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%Mod_AmbWind, "Mod_AmbWind", "Ambient wind model (-) (switch) {1: high-fidelity precursor in VTK format, 2: InflowWind module}", ErrStat2, ErrMsg2, UnEc)
+       ! Mod_AmbWind - Ambient wind model (-) (switch) {1: high-fidelity precursor in VTK format, 2: one InflowWind module, 3: multiple InflowWind modules}:
+   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%Mod_AmbWind, "Mod_AmbWind", "Ambient wind model (-) (switch) {1: high-fidelity precursor in VTK format, 2: one InflowWind module, 3: multiple InflowWind modules}", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if ( ErrStat >= AbortErrLev ) then
          call cleanup()
@@ -581,7 +581,7 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, OutList
          call cleanup()
          RETURN        
       end if
-   if ( AWAE_InitInp%Mod_AmbWind == 2 ) p%DT_low = AWAE_InitInp%DT_low
+   if ( AWAE_InitInp%Mod_AmbWind > 1 ) p%DT_low = AWAE_InitInp%DT_low
    
       ! DT_high - Time step for high-resolution wind data input files (s) [>0.0]:
    CALL ReadVar( UnIn, InputFile, AWAE_InitInp%DT_high, "DT_high", "Time step for high-resolution wind data input files (s) [>0.0]", ErrStat2, ErrMsg2, UnEc)
@@ -590,7 +590,7 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, OutList
          call cleanup()
          RETURN        
       end if
-   if ( AWAE_InitInp%Mod_AmbWind == 2 ) p%DT_high = AWAE_InitInp%DT_high
+   if ( AWAE_InitInp%Mod_AmbWind > 1 ) p%DT_high = AWAE_InitInp%DT_high
    
       ! NX_Low - Number of low-resolution spatial nodes in X direction for wind data interpolation (-) [>=2]:
    CALL ReadVar( UnIn, InputFile, AWAE_InitInp%nX_Low, "nX_Low", "Number of low-resolution spatial nodes in X direction for wind data interpolation (-) [>=2]", ErrStat2, ErrMsg2, UnEc)
@@ -696,7 +696,7 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, OutList
          RETURN        
       end if
    IF ( PathIsRelative( AWAE_InitInp%InflowFile ) ) AWAE_InitInp%InflowFile = TRIM(PriPath)//TRIM(AWAE_InitInp%InflowFile)
-   if ( AWAE_InitInp%Mod_AmbWind == 2 ) p%WindFilePath = AWAE_InitInp%InflowFile  ! For the summary file
+   if ( AWAE_InitInp%Mod_AmbWind > 1 ) p%WindFilePath = AWAE_InitInp%InflowFile  ! For the summary file
    
    !---------------------- WIND TURBINES ---------------------------------------------
    CALL ReadCom( UnIn, InputFile, 'Section Header: Wind Turbines', ErrStat2, ErrMsg2, UnEc )
@@ -722,12 +722,13 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, OutList
       
    call AllocAry( p%WT_Position, 3, p%NumTurbines, 'WT_Position',   ErrStat2, ErrMsg2);  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call AllocAry( p%WT_FASTInFile,  p%NumTurbines, 'WT_FASTInFile', ErrStat2, ErrMsg2);  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AllocAry( AWAE_InitInp%WT_Position, 3, p%NumTurbines, 'AWAE_InitInp%WT_Position', ErrStat2, ErrMsg2);  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if ( ErrStat >= AbortErrLev ) then
          call cleanup()
          RETURN        
       end if      
 
-   if ( AWAE_InitInp%Mod_AmbWind == 2 ) then   
+   if ( AWAE_InitInp%Mod_AmbWind > 1 ) then   
          ! Using InflowWind
       call AllocAry(AWAE_InitInp%X0_high, p%NumTurbines, 'AWAE_InitInp%X0_high', ErrStat2, ErrMsg2)
          call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -755,6 +756,7 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, OutList
       else
          READ (UnIn, *, IOSTAT=IOS) p%WT_Position(:,i), p%WT_FASTInFile(i), AWAE_InitInp%X0_high(i), AWAE_InitInp%Y0_high(i), AWAE_InitInp%Z0_high(i), AWAE_InitInp%dX_high(i), AWAE_InitInp%dY_high(i), AWAE_InitInp%dZ_high(i)
       end if
+      AWAE_InitInp%WT_Position(:,i) = p%WT_Position(:,i)
       
       CALL CheckIOS ( IOS, InputFile, 'Wind Turbine Columns', NumType, ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
