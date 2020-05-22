@@ -2366,15 +2366,15 @@ SUBROUTINE OutSummary(Init, p, InitInput, CBparams, ErrStat,ErrMsg)
    REAL(ReKi)             :: MRB(6,6)    ! REDUCED SYSTEM Kmatrix, equivalent mass matrix
    REAL(ReKi),allocatable :: MBB(:,:)    ! Leader DOFs mass matrix
    REAL(ReKi)             :: XYZ1(3),XYZ2(3), DirCos(3,3) !temporary arrays, member i-th direction cosine matrix (global to local) and member length
-   CHARACTER(*),PARAMETER                 :: SectionDivide = '____________________________________________________________________________________________________'
-   CHARACTER(*),PARAMETER                 :: SubSectionDivide = '__________'
-   CHARACTER(2),  DIMENSION(6), PARAMETER :: MatHds= (/'X ', 'Y ', 'Z ', 'XX', 'YY', 'ZZ'/)  !Headers for the columns and rows of 6x6 matrices
+   CHARACTER(*),PARAMETER                 :: SectionDivide = '#____________________________________________________________________________________________________'
+   CHARACTER(*),PARAMETER                 :: SubSectionDivide = '#__________'
    real(ReKi), dimension(:,:), allocatable :: TI2 ! For Equivalent mass matrix
    ! Variables for Eigenvalue analysis 
    integer(IntKi) :: nOmega
    real(ReKi), dimension(:,:), allocatable :: Modes
    real(ReKi), dimension(:)  , allocatable :: Omega
    logical, allocatable                    :: bDOF(:)        ! Mask for DOF to keep (True), or reduce (False)
+   character(len=*),parameter :: ReFmt='E15.6'
    !
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -2407,71 +2407,76 @@ SUBROUTINE OutSummary(Init, p, InitInput, CBparams, ErrStat,ErrMsg)
    !-------------------------------------------------------------------------------------------------------------
 !bjj: for debugging, i recommend using the p% versions of all these variables whenever possible in this summary file:
 ! (it helps in debugging)
-   WRITE(UnSum, '(A)')  'Unless specified, units are consistent with Input units, [SI] system is advised.'
+   WRITE(UnSum, '(A)')  '#Unless specified, units are consistent with Input units, [SI] system is advised.'
    WRITE(UnSum, '(A)') SectionDivide
       
    !write(UnSum,'(A)')'Nodes_I',p%Nodes_I(:,1)
    !write(UnSum,'(A)')'Nodes_C',p%Nodes_C(:,1)
    !write(UnSum,'(A)')'Nodes_L',p%Nodes_L
-   write(UnSum,'(A,I0)')'Number of DOFs: "interface"          (I__): ',p%nDOFI__
-   write(UnSum,'(A,I0)')'Number of DOFs: "interface" retained (I_B): ',p%nDOFI_Rb
-   write(UnSum,'(A,I0)')'Number of DOFs: "interface" fixed    (I_F): ',p%nDOFI_F
-   write(UnSum,'(A,I0)')'Number of DOFs: "reactions"          (C__): ',p%nDOFC__
-   write(UnSum,'(A,I0)')'Number of DOFs: "reactions" retained (C_B): ',p%nDOFC_Rb
-   write(UnSum,'(A,I0)')'Number of DOFs: "reactions" internal (C_L): ',p%nDOFC_L
-   write(UnSum,'(A,I0)')'Number of DOFs: "reactions" fixed    (C_F): ',p%nDOFC_F
-   write(UnSum,'(A,I0)')'Number of DOFs: "intf+react"         (__R): ',p%nDOFR__
-   write(UnSum,'(A,I0)')'Number of DOFs: "internal"  internal (L_L): ',p%nDOFL_L
-   write(UnSum,'(A,I0)')'Number of DOFs:  total      retained (__B): ',p%nDOF__Rb
-   write(UnSum,'(A,I0)')'Number of DOFs:  total      internal (__L): ',p%nDOF__L
-   write(UnSum,'(A,I0)')'Number of DOFs:  total      fixed    (__F): ',p%nDOF__F
-   write(UnSum,'(A,I0)')'Number of DOFs:  total                    : ',p%nDOF_red
-   write(UnSum,'(A,I0)')'Number of Nodes: "interface" (I): ',p%nNodes_I
-   write(UnSum,'(A,I0)')'Number of Nodes: "reactions" (C): ',p%nNodes_C
-   write(UnSum,'(A,I0)')'Number of Nodes: "internal"  (L): ',p%nNodes_L
-   write(UnSum,'(A,I0)')'Number of Nodes: total   (I+C+L): ',p%nNodes
-   write(UnSum,'(A,3(E15.6))')'TP reference point:',InitInput%TP_RefPoint(1:3)
+   write(UnSum,'(A,I0)')'#Number of DOFs: "interface"          (I__): ',p%nDOFI__
+   write(UnSum,'(A,I0)')'#Number of DOFs: "interface" retained (I_B): ',p%nDOFI_Rb
+   write(UnSum,'(A,I0)')'#Number of DOFs: "interface" fixed    (I_F): ',p%nDOFI_F
+   write(UnSum,'(A,I0)')'#Number of DOFs: "reactions"          (C__): ',p%nDOFC__
+   write(UnSum,'(A,I0)')'#Number of DOFs: "reactions" retained (C_B): ',p%nDOFC_Rb
+   write(UnSum,'(A,I0)')'#Number of DOFs: "reactions" internal (C_L): ',p%nDOFC_L
+   write(UnSum,'(A,I0)')'#Number of DOFs: "reactions" fixed    (C_F): ',p%nDOFC_F
+   write(UnSum,'(A,I0)')'#Number of DOFs: "intf+react"         (__R): ',p%nDOFR__
+   write(UnSum,'(A,I0)')'#Number of DOFs: "internal"  internal (L_L): ',p%nDOFL_L
+   write(UnSum,'(A,I0)')'#Number of DOFs:  total      retained (__B): ',p%nDOF__Rb
+   write(UnSum,'(A,I0)')'#Number of DOFs:  total      internal (__L): ',p%nDOF__L
+   write(UnSum,'(A,I0)')'#Number of DOFs:  total      fixed    (__F): ',p%nDOF__F
+   write(UnSum,'(A,I0)')'#Number of DOFs:  total                    : ',p%nDOF_red
+   write(UnSum,'(A,I0)')'#Number of Nodes: "interface" (I): ',p%nNodes_I
+   write(UnSum,'(A,I0)')'#Number of Nodes: "reactions" (C): ',p%nNodes_C
+   write(UnSum,'(A,I0)')'#Number of Nodes: "internal"  (L): ',p%nNodes_L
+   write(UnSum,'(A,I0)')'#Number of Nodes: total   (I+C+L): ',p%nNodes
+   write(UnSum,'(A,3(E15.6))')'#TP reference point:',InitInput%TP_RefPoint(1:3)
 
 
    WRITE(UnSum, '(A)') SectionDivide
    WRITE(UnSum, '()')    
-   WRITE(UnSum, '(A,I6)')  'Number of nodes (nNodes):',p%nNodes
-   WRITE(UnSum, '(A8,1x,A11,9(1x,A15))')  'Node No.', 'Y2Mesh Node',          'X (m)',           'Y (m)',           'Z (m)' ,  'JType (-)', 'JDirX (-)','JDirY (-)','JDirZ (-)','JStff (Nm/rad)','JDmp (Nm/rad.s)'
-   WRITE(UnSum, '('//Num2LStr(p%nNodes)//'(I8,3x,I9,'//Num2lstr(JointsCol-1)//'(1x,F15.4),:,/))') &
-                          (NINT(Init%Nodes(i, 1)), p%INodes_SD_to_Mesh(i), (Init%Nodes(i, j), j = 2, JointsCol), i = 1, p%nNodes)
+   WRITE(UnSum, '(A,I6)')  '#Number of nodes (nNodes):',p%nNodes
+   WRITE(UnSum, '(A8,1x,A11,9(1x,A15))')  '#Node No.', 'Y2Mesh Node',          'X (m)',           'Y (m)',           'Z (m)' ,  'JType (-)', 'JDirX (-)','JDirY (-)','JDirZ (-)','JStff (Nm/rad)','JDmp (Nm/rad.s)'
+   
+   do i = 1, p%nNodes
+      WRITE(UnSum, '("#",'//Num2LStr(p%nNodes)//'(I8,3x,I9,'//Num2lstr(JointsCol-1)//'(1x,F15.4),:,/))') &
+                             NINT(Init%Nodes(i, 1)), p%INodes_SD_to_Mesh(i), (Init%Nodes(i, j), j = 2, JointsCol)
+   enddo
 
    WRITE(UnSum, '()') 
-   WRITE(UnSum, '(A,I6)')  'Number of elements (NElems):',Init%NElem
-   WRITE(UnSum, '(A10,5(A10))') 'Elem No.','Node_I','Node_J','Prop_I','Prop_J','Type'
-   WRITE(UnSum, '(6(I10))') ((p%Elems(i, j), j = 1, MembersCol), i = 1, Init%NElem)
+   WRITE(UnSum, '(A,I6)')  '#Number of elements (NElems):',Init%NElem
+   WRITE(UnSum, '("#",A10,5(A10))') 'Elem No.','Node_I','Node_J','Prop_I','Prop_J','Type'
+   do i=1, Init%nElem
+      WRITE(UnSum, '("#",6(I10))') (p%Elems(i, j), j = 1, MembersCol)
+   enddo
    
    WRITE(UnSum, '()') 
-   WRITE(UnSum, '(A,I6)')  'Number of properties (NProps):',Init%NPropB
-   WRITE(UnSum, '(A8,5(A15))')  'Prop No.',     'YoungE',       'ShearG',       'MatDens',     'XsecD',      'XsecT'
-   WRITE(UnSum, '(I8, E15.6,E15.6,E15.6,E15.6,E15.6 ) ') (NINT(Init%PropsB(i, 1)), (Init%PropsB(i, j), j = 2, 6), i = 1, Init%NPropB)
+   WRITE(UnSum, '(A,I6)')  '#Number of properties (NProps):',Init%NPropB
+   WRITE(UnSum, '(A8,5(A15))')  '#Prop No.',     'YoungE',       'ShearG',       'MatDens',     'XsecD',      'XsecT'
+   WRITE(UnSum, '("#",I8, E15.6,E15.6,E15.6,E15.6,E15.6 ) ') (NINT(Init%PropsB(i, 1)), (Init%PropsB(i, j), j = 2, 6), i = 1, Init%NPropB)
 
    WRITE(UnSum, '()') 
-   WRITE(UnSum, '(A,I6)')  'No. of Reaction DOFs:',p%nDOFC__
-   WRITE(UnSum, '(A, A6)')  'React. DOF_ID',      'BC'
-   do i = 1, size(p%IDC_F ); WRITE(UnSum, '(I10, A10)') p%IDC_F(i) , '   Fixed' ; enddo
-   do i = 1, size(p%IDC_L ); WRITE(UnSum, '(I10, A10)') p%IDC_L(i) , '   Free'  ; enddo
-   do i = 1, size(p%IDC_Rb); WRITE(UnSum, '(I10, A10)') p%IDC_Rb(i), '   Leader'; enddo
+   WRITE(UnSum, '(A,I6)')  '#No. of Reaction DOFs:',p%nDOFC__
+   WRITE(UnSum, '(A, A6)')  '#React. DOF_ID',      'BC'
+   do i = 1, size(p%IDC_F ); WRITE(UnSum, '("#",I10, A10)') p%IDC_F(i) , '   Fixed' ; enddo
+   do i = 1, size(p%IDC_L ); WRITE(UnSum, '("#",I10, A10)') p%IDC_L(i) , '   Free'  ; enddo
+   do i = 1, size(p%IDC_Rb); WRITE(UnSum, '("#",I10, A10)') p%IDC_Rb(i), '   Leader'; enddo
 
    WRITE(UnSum, '()') 
-   WRITE(UnSum, '(A,I6)')  'No. of Interface DOFs:',p%nDOFI__
-   WRITE(UnSum, '(A,A6)')  'Interf. DOF_ID',      'BC'
-   do i = 1, size(p%IDI_F ); WRITE(UnSum, '(I10, A10)') p%IDI_F(i) , '   Fixed' ; enddo
-   do i = 1, size(p%IDI_Rb); WRITE(UnSum, '(I10, A10)') p%IDI_Rb(i), '   Leader'; enddo
+   WRITE(UnSum, '(A,I6)')  '#No. of Interface DOFs:',p%nDOFI__
+   WRITE(UnSum, '(A,A6)')  '#Interf. DOF_ID',      'BC'
+   do i = 1, size(p%IDI_F ); WRITE(UnSum, '("#",I10, A10)') p%IDI_F(i) , '   Fixed' ; enddo
+   do i = 1, size(p%IDI_Rb); WRITE(UnSum, '("#",I10, A10)') p%IDI_Rb(i), '   Leader'; enddo
 
    WRITE(UnSum, '()') 
-   WRITE(UnSum, '(A,I6)')  'Number of concentrated masses (NCMass):',Init%NCMass
-   WRITE(UnSum, '(A10,10(A15))')  'JointCMass',     'Mass',         'JXX',             'JYY',             'JZZ',              'JXY',             'JXZ',             'JYZ',              'MCGX',             'MCGY',             'MCGZ'
-   WRITE(UnSum, '(F10.0, 10(E15.6))') ((Init%Cmass(i, j), j = 1, CMassCol), i = 1, Init%NCMass)
+   WRITE(UnSum, '(A,I6)')  '#Number of concentrated masses (NCMass):',Init%NCMass
+   WRITE(UnSum, '(A10,10(A15))')  '#JointCMass',     'Mass',         'JXX',             'JYY',             'JZZ',              'JXY',             'JXZ',             'JYZ',              'MCGX',             'MCGY',             'MCGZ'
+   WRITE(UnSum, '("#",F10.0, 10(E15.6))') ((Init%Cmass(i, j), j = 1, CMassCol), i = 1, Init%NCMass)
 
    WRITE(UnSum, '()') 
-   WRITE(UnSum, '(A,I6)')  'Number of members',p%NMembers
-   WRITE(UnSum, '(A,I6)')  'Number of nodes per member:', Init%Ndiv+1
-   WRITE(UnSum, '(A9,A10,A10,A10,A10,A15,A15,A16)')  'Member ID', 'Joint1_ID', 'Joint2_ID','Prop_I','Prop_J', 'Mass','Length', 'Node IDs...'
+   WRITE(UnSum, '(A,I6)')  '#Number of members',p%NMembers
+   WRITE(UnSum, '(A,I6)')  '#Number of nodes per member:', Init%Ndiv+1
+   WRITE(UnSum, '(A9,A10,A10,A10,A10,A15,A15,A16)')  '#Member ID', 'Joint1_ID', 'Joint2_ID','Prop_I','Prop_J', 'Mass','Length', 'Node IDs...'
    DO i=1,p%NMembers
        !Calculate member mass here; this should really be done somewhere else, yet it is not used anywhere else
        !IT WILL HAVE TO BE MODIFIED FOR OTHER THAN CIRCULAR PIPE ELEMENTS
@@ -2485,10 +2490,10 @@ SUBROUTINE OutSummary(Init, p, InitInput, CBparams, ErrStat,ErrMsg)
            mMass= BeamMass(Init%PropSetsB(iProp(1),4),Init%PropSetsB(iProp(1),5),Init%PropSetsB(iProp(1),6),   &
                              Init%PropSetsB(iProp(2),4),Init%PropSetsB(iProp(2),5),Init%PropSetsB(iProp(2),6), mLength, .TRUE.)
 
-           WRITE(UnSum, '(I9,I10,I10,I10,I10,E15.6,E15.6, A3,'//Num2LStr(Init%NDiv + 1 )//'(I6))') Init%Members(i,1:3),propids(1),propids(2),&
+           WRITE(UnSum, '("#",I9,I10,I10,I10,I10,E15.6,E15.6, A3,'//Num2LStr(Init%NDiv + 1 )//'(I6))') Init%Members(i,1:3),propids(1),propids(2),&
                  mMass,mLength,' ',(Init%MemberNodes(i, j), j = 1, Init%NDiv+1)
         else
-           WRITE(UnSum, '(A)') 'TODO, member mass for non-beam elements'
+           WRITE(UnSum, '(A)') '#TODO, member mass for non-beam elements'
         endif
        ELSE 
            RETURN
@@ -2498,8 +2503,8 @@ SUBROUTINE OutSummary(Init, p, InitInput, CBparams, ErrStat,ErrMsg)
    ! write Cosine matrix for all members to a txt file
    !-------------------------------------------------------------------------------------------------------------
    WRITE(UnSum, '(A)') SectionDivide
-   WRITE(UnSum, '(A, I6)') 'Direction Cosine Matrices for all Members: GLOBAL-2-LOCAL. No. of 3x3 matrices=', p%NMembers 
-   WRITE(UnSum, '(A9,9(A15))')  'Member ID', 'DC(1,1)', 'DC(1,2)', 'DC(1,3)', 'DC(2,1)','DC(2,2)','DC(2,3)','DC(3,1)','DC(3,2)','DC(3,3)'
+   WRITE(UnSum, '(A, I6)') '#Direction Cosine Matrices for all Members: GLOBAL-2-LOCAL. No. of 3x3 matrices=', p%NMembers 
+   WRITE(UnSum, '(A9,9(A15))')  '#Member ID', 'DC(1,1)', 'DC(1,2)', 'DC(1,3)', 'DC(2,1)','DC(2,2)','DC(2,3)','DC(3,1)','DC(3,2)','DC(3,3)'
    DO i=1,p%NMembers
       iNode1 = FINDLOCI(Init%Joints(:,1), Init%Members(i,2)) ! index of joint 1 of member i
       iNode2 = FINDLOCI(Init%Joints(:,1), Init%Members(i,3)) ! index of joint 2 of member i
@@ -2507,65 +2512,49 @@ SUBROUTINE OutSummary(Init, p, InitInput, CBparams, ErrStat,ErrMsg)
       XYZ2   = Init%Joints(iNode2,2:4)
       CALL GetDirCos(XYZ1(1:3), XYZ2(1:3), DirCos, mLength, ErrStat, ErrMsg)
       DirCos=TRANSPOSE(DirCos) !This is now global to local
-      WRITE(UnSum, '(I9,9(E15.6))') Init%Members(i,1), ((DirCos(k,j),j=1,3),k=1,3)
+      WRITE(UnSum, '("#",I9,9(E15.6))') Init%Members(i,1), ((DirCos(k,j),j=1,3),k=1,3)
    ENDDO
 
    !-------------------------------------------------------------------------------------------------------------
    ! write Eigenvalues of full SYstem and CB reduced System
    !-------------------------------------------------------------------------------------------------------------
    WRITE(UnSum, '(A)') SectionDivide
-   WRITE(UnSum, '(A)') 'Eigenvalues'
+   WRITE(UnSum, '(A)') '#Eigenvalues'
    WRITE(UnSum, '(A)') SubSectionDivide
-   WRITE(UnSum, '(A, I6)') "FEM Eigenvalues [Hz]. Number of shown eigenvalues (total # of DOFs minus restrained nodes' DOFs):", NOmega 
-   WRITE(UnSum, '(I6, e15.6)') ( i, Omega(i)/2.0/pi, i = 1, nOmega )
+   WRITE(UnSum, '(A, I6)') "#FEM Eigenvalues [Hz]. Number of shown eigenvalues (total # of DOFs minus restrained nodes' DOFs):", NOmega 
+   WRITE(UnSum, '("#",I6, e15.6)') ( i, Omega(i)/2.0/pi, i = 1, nOmega )
 
    WRITE(UnSum, '(A)') SubSectionDivide
-   WRITE(UnSum, '(A, I6)') "CB Reduced Eigenvalues [Hz].  Number of retained modes' eigenvalues:", p%nDOFM 
-   WRITE(UnSum, '(I6, e15.6)') ( i, CBparams%OmegaL(i)/2.0/pi, i = 1, p%nDOFM )  
+   WRITE(UnSum, '(A, I6)') "#CB Reduced Eigenvalues [Hz].  Number of retained modes' eigenvalues:", p%nDOFM 
+   WRITE(UnSum, '("#",I6, e15.6)') ( i, CBparams%OmegaL(i)/2.0/pi, i = 1, p%nDOFM )  
     
    !-------------------------------------------------------------------------------------------------------------
    ! write Eigenvectors of full System 
    !-------------------------------------------------------------------------------------------------------------
    WRITE(UnSum, '(A)') SectionDivide
-   WRITE(UnSum, '(A, I6)') ('FEM Eigenvectors ('//TRIM(Num2LStr(p%nDOF_red))//' x '//TRIM(Num2LStr(nOmega))//&
+   WRITE(UnSum, '(A, I6)') ('#FEM Eigenvectors ('//TRIM(Num2LStr(p%nDOF_red))//' x '//TRIM(Num2LStr(nOmega))//&
                               ') [m or rad]. Number of shown eigenvectors (total # of DOFs minus restrained nodes'' DOFs):'), nOmega 
-   WRITE(UnSum, '(6x,'//Num2LStr(nOmega)//'(I15))') (i, i = 1, nOmega  )!HEADERS
-   WRITE(UnSum, '(I6,'//Num2LStr(nOmega)//'e15.6)') ( i, (Modes(i,j), j = 1, nOmega ),i = 1, p%nDOF_red)
+   call yaml_write_array(UnSum, 'PhiM', Modes(:,1:nOmega), ReFmt, ErrStat2, ErrMsg2)
     
    !-------------------------------------------------------------------------------------------------------------
    ! write CB system matrices
    !-------------------------------------------------------------------------------------------------------------
    WRITE(UnSum, '(A)') SectionDivide
-   WRITE(UnSum, '(A)') 'CB Matrices (PhiM,PhiR) (constraint applied)'
-   
+   WRITE(UnSum, '(A)') '#CB Matrices (PhiM,PhiR) (constraint applied)'
    WRITE(UnSum, '(A)') SubSectionDivide
-   IF (p%nDOFM > 0) THEN
-      CALL WrMatrix( CBparams%PhiL(:,1:p%nDOFM ), UnSum, 'e15.6', 'PhiM' ) 
-   ELSE
-      WRITE( UnSum, '(A,": ",A," x ",A)', IOSTAT=ErrStat ) "PhiM", TRIM(Num2LStr(p%nDOFL_L)), '0' 
-   END IF
-
+   call yaml_write_array(UnSum, 'PhiM', CBparams%PhiL(:,1:p%nDOFM ), ReFmt, ErrStat2, ErrMsg2)
    WRITE(UnSum, '(A)') SubSectionDivide
-   CALL WrMatrix( CBparams%PhiR, UnSum, 'e15.6', 'PhiR' ) 
+   call yaml_write_array(UnSum, 'PhiR', CBparams%PhiR, ReFmt, ErrStat2, ErrMsg2)
            
    !-------------------------------------------------------------------------------------------------------------
    ! write CB system KBBt and MBBt matrices, eq stiffness matrices of the entire substructure at the TP ref point
    !-------------------------------------------------------------------------------------------------------------
    WRITE(UnSum, '(A)') SectionDivide
-   WRITE(UnSum, '(A)') "SubDyn's Structure Equivalent Stiffness and Mass Matrices at the TP reference point (KBBt and MBBt)"
+   WRITE(UnSum, '(A)') "#SubDyn's Structure Equivalent Stiffness and Mass Matrices at the TP reference point (KBBt and MBBt)"
    WRITE(UnSum, '(A)') SubSectionDivide
-   WRITE(UnSum, '(A)') 'KBBt'  !Note p%KBB stores KBBt
-   WRITE(UnSum, '(7(A15))') ' ', (MatHds(i), i = 1, 6   )
-    !tried implicit loop unsuccessfully
-    DO i=1,6
-        WRITE(UnSum, '(A15, 6(e15.6))')   MatHds(i), (p%KBB(i,j), j = 1, 6)
-    ENDDO    
+   call yaml_write_array(UnSum, 'KBBt', p%KBB, ReFmt, ErrStat2, ErrMsg2)
    WRITE(UnSum, '(A)') SubSectionDivide
-   WRITE(UnSum, '(A)') ('MBBt')!Note p%MBB stores MBBt
-   WRITE(UnSum, '(7(A15))') ' ', (MatHds(i), i = 1, 6   )
-    DO i=1,6
-        WRITE(UnSum, '(A15, 6(e15.6))')   MatHds(i), (p%MBB(i,j), j = 1, 6)
-    ENDDO  
+   call yaml_write_array(UnSum, 'KBBt', p%MBB, ReFmt, ErrStat2, ErrMsg2)
  
    ! Set TI2, transformation matrix from R DOFs to SubDyn Origin
    CALL AllocAry( TI2,    p%nDOFR__ , 6,       'TI2',    ErrStat2, ErrMsg2 ); if(Failed()) return
@@ -2578,78 +2567,53 @@ SUBROUTINE OutSummary(Init, p, InitInput, CBparams, ErrStat,ErrMsg)
       MRB=matmul(TRANSPOSE(TI2),matmul(CBparams%MBB,TI2)) !Equivalent mass matrix of the rigid body
    endif
    WRITE(UnSum, '(A)') SectionDivide
-   WRITE(UnSum, '(A)') 'Rigid Body Equivalent Mass Matrix w.r.t. (0,0,0).'
+   WRITE(UnSum, '(A)') '#Rigid Body Equivalent Mass Matrix w.r.t. (0,0,0).'
    WRITE(UnSum, '(A)') SubSectionDivide
-   WRITE(UnSum, '(A)') 'MRB'
-   WRITE(UnSum, '(7(A15))') ' ', (MatHds(i), i = 1, 6   )
-   DO i=1,6
-        WRITE(UnSum, '(A15, 6(e15.6))')   MatHds(i), (MRB(i,j), j = 1, 6)
-   ENDDO 
-   
-   WRITE(UnSum, '()') 
-   WRITE(UnSum, '(A,E15.6)')    "SubDyn's Total Mass (structural and non-structural)=", MRB(1,1) 
-   WRITE(UnSum, '(A,3(E15.6))') "SubDyn's Total Mass CM coordinates (Xcm,Ycm,Zcm)   =", (/-MRB(3,5),-MRB(1,6), MRB(1,5)/) /MRB(1,1)        
+   call yaml_write_array(UnSum, 'MRB', MRB, ReFmt, ErrStat2, ErrMsg2)
+   WRITE(UnSum, '(A,E15.6)')    "#SubDyn's Total Mass (structural and non-structural)=", MRB(1,1) 
+   WRITE(UnSum, '(A,3(E15.6))') "#SubDyn's Total Mass CM coordinates (Xcm,Ycm,Zcm)   =", (/-MRB(3,5),-MRB(1,6), MRB(1,5)/) /MRB(1,1)        
    deallocate(TI2)
    
 #ifdef SD_SUMMARY_DEBUG
 
    WRITE(UnSum, '()') 
    WRITE(UnSum, '(A)') SectionDivide
-   WRITE(UnSum, '(A)') '**** Additional Debugging Information ****'
+   WRITE(UnSum, '(A)') '#**** Additional Debugging Information ****'
 
    !-------------------------------------------------------------------------------------------------------------
    ! write assembed K M to a txt file
    !-------------------------------------------------------------------------------------------------------------
    WRITE(UnSum, '(A)') SectionDivide
-   WRITE(UnSum, '(A, I6)') 'FULL FEM K and M matrices. TOTAL FEM TDOFs:', p%nDOF 
-   WRITE(UnSum, '(A)') ('Stiffness matrix K' )
-   WRITE(UnSum, '(15x,'//TRIM(Num2LStr(p%nDOF))//'(I15))')  (i, i = 1, p%nDOF  )
-   DO i=1,p%nDOF
-        WRITE(UnSum, '(I15, '//TRIM(Num2LStr(p%nDOF))//'(e15.6))')   i, (Init%K(i, j), j = 1, p%nDOF)
-   ENDDO   
- 
+   WRITE(UnSum, '(A, I6)') '#FULL FEM K and M matrices. TOTAL FEM TDOFs:', p%nDOF 
+   call yaml_write_array(UnSum, 'K', Init%K, ReFmt, ErrStat2, ErrMsg2, comment='Stiffness matrix')
    WRITE(UnSum, '(A)') SubSectionDivide
-   WRITE(UnSum, '(A)') ('Mass matrix M' )
-   WRITE(UnSum, '(15x,'//TRIM(Num2LStr(p%nDOF))//'(I15))')  (i, i = 1, p%nDOF  )
-   DO i=1,p%nDOF
-        WRITE(UnSum, '(I15, '//TRIM(Num2LStr(p%nDOF))//'(e15.6))')   i, (Init%M(i, j), j = 1, p%nDOF)
-   ENDDO  
-   
+   call yaml_write_array(UnSum, 'K', Init%K, ReFmt, ErrStat2, ErrMsg2, comment='Mass matrix')
    !-------------------------------------------------------------------------------------------------------------
    ! write assembed GRAVITY FORCE FG VECTOR.  gravity forces applied at each node of the full system
    !-------------------------------------------------------------------------------------------------------------
    WRITE(UnSum, '(A)') SectionDivide
-   WRITE(UnSum, '(A)') 'Gravity force vector FG applied at each node of the full system' 
-   WRITE(UnSum, '(I6, e15.6)') (i, Init%FG(i), i = 1, p%nDOF)
+   WRITE(UnSum, '(A)') '#Gravity force vector FG applied at each node of the full system' 
+   WRITE(UnSum, '("#",I6, e15.6)') (i, Init%FG(i), i = 1, p%nDOF)
       
    !-------------------------------------------------------------------------------------------------------------
    ! write CB system matrices
    !-------------------------------------------------------------------------------------------------------------   
    WRITE(UnSum, '(A)') SectionDivide
-   WRITE(UnSum, '(A)') 'Additional CB Matrices (MBB,MBM,KBB) (constraint applied)'
-        
+   WRITE(UnSum, '(A)') '#Additional CB Matrices (MBB,MBM,KBB) (constraint applied)'
    WRITE(UnSum, '(A)') SubSectionDivide
-   CALL WrMatrix( CBparams%MBB, UnSum, 'e15.6', 'MBB' ) 
-    
+   call yaml_write_array(UnSum, 'MBB', CBparams%MBB, ReFmt, ErrStat2, ErrMsg2, comment='')
    WRITE(UnSum, '(A)') SubSectionDivide
-   IF ( p%nDOFM > 0 ) THEN
-      CALL WrMatrix( CBparams%MBM, UnSum, 'e15.6', 'MBM' ) 
-   ELSE
-      WRITE( UnSum, '(A,": ",A," x ",A)', IOSTAT=ErrStat ) "MBM", '6', '0' 
-   END IF
-   
+   call yaml_write_array(UnSum, 'MBM', CBparams%MBM, ReFmt, ErrStat2, ErrMsg2, comment='')
    WRITE(UnSum, '(A)') SubSectionDivide
-   CALL WrMatrix( CBparams%KBB, UnSum, 'e15.6', 'KBB' ) 
-    
+   call yaml_write_array(UnSum, 'KBB', CBparams%KBB, ReFmt, ErrStat2, ErrMsg2, comment='')
    WRITE(UnSum, '(A)') SubSectionDivide
-   CALL WrMatrix( CBparams%OmegaL**2, UnSum, 'e15.6','KMM (diagonal)' ) 
-   
+   ! TODO TODO TODO
+   !CALL WrMatrix( CBparams%OmegaL**2, UnSum, 'e15.6','#KMM (diagonal)' ) 
    !-------------------------------------------------------------------------------------------------------------
    ! write TP TI matrix
    !-------------------------------------------------------------------------------------------------------------
    WRITE(UnSum, '(A)') SectionDivide
-   WRITE(UnSum, '(A)') 'TP refpoint Transformation Matrix TI '
-   CALL WrMatrix( p%TI, UnSum, 'e15.6', 'TI' ) 
+   call yaml_write_array(UnSum, 'TI', p%TI, ReFmt, ErrStat2, ErrMsg2, comment='(TP refpoint Transformation Matrix TI)')
       
 #endif   
    call CleanUp()
