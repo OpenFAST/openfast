@@ -625,6 +625,44 @@ typedef	^	FAST_ExternInputType	ReKi	BlPitchCom	3	-	2pi	"blade pitch commands fro
 typedef	^	FAST_ExternInputType	ReKi	HSSBrFrac	-	-	-	"Fraction of full braking torque: 0 (off) <= HSSBrFrac <= 1 (full) from Simulink or LabVIEW"
 typedef	^	FAST_ExternInputType	ReKi	LidarFocus	3	-	-	"lidar focus (relative to lidar location)"	m
 
+
+# ..... FAST_InitData data .......................................................................................................
+typedef   ^   FAST_InitData    ED_InitInputType             InData_ED       -  -  -  "ED Initialization input data"
+typedef   ^   FAST_InitData    ED_InitOutputType           OutData_ED       -  -  -  "ED Initialization output data"
+typedef   ^   FAST_InitData    BD_InitInputType             InData_BD       -  -  -  "BD Initialization input data"
+typedef   ^   FAST_InitData    BD_InitOutputType           OutData_BD       :  -  -  "BD Initialization output data"
+typedef   ^   FAST_InitData    SrvD_InitInputType           InData_SrvD     -  -  -  "SrvD Initialization input data"
+typedef   ^   FAST_InitData    SrvD_InitOutputType         OutData_SrvD     -  -  -  "SrvD Initialization output data"
+typedef   ^   FAST_InitData    AD14_InitInputType           InData_AD14     -  -  -  "AD14 Initialization input data"
+typedef   ^   FAST_InitData    AD14_InitOutputType         OutData_AD14     -  -  -  "AD14 Initialization output data"
+typedef   ^   FAST_InitData    AD_InitInputType             InData_AD       -  -  -  "AD Initialization input data"
+typedef   ^   FAST_InitData    AD_InitOutputType           OutData_AD       -  -  -  "AD Initialization output data"
+typedef   ^   FAST_InitData    InflowWind_InitInputType     InData_IfW      -  -  -  "IfW Initialization input data"
+typedef   ^   FAST_InitData    InflowWind_InitOutputType   OutData_IfW      -  -  -  "IfW Initialization output data"
+typedef   ^   FAST_InitData    OpFM_InitInputType           InData_OpFM     -  -  -  "OpFM Initialization input data"
+typedef   ^   FAST_InitData    OpFM_InitOutputType         OutData_OpFM     -  -  -  "OpFM Initialization output data"
+typedef   ^   FAST_InitData    HydroDyn_InitInputType       InData_HD       -  -  -  "HD Initialization input data"
+typedef   ^   FAST_InitData    HydroDyn_InitOutputType     OutData_HD       -  -  -  "HD Initialization output data"
+typedef   ^   FAST_InitData    SD_InitInputType             InData_SD       -  -  -  "SD Initialization input data"
+typedef   ^   FAST_InitData    SD_InitOutputType           OutData_SD       -  -  -  "SD Initialization output data"
+typedef   ^   FAST_InitData    ExtPtfm_InitInputType        InData_ExtPtfm  -  -  -  "ExtPtfm Initialization input data"
+typedef   ^   FAST_InitData    ExtPtfm_InitOutputType      OutData_ExtPtfm  -  -  -  "ExtPtfm Initialization output data"
+typedef   ^   FAST_InitData    MAP_InitInputType            InData_MAP      -  -  -  "MAP Initialization input data"
+typedef   ^   FAST_InitData    MAP_InitOutputType          OutData_MAP      -  -  -  "MAP Initialization output data"
+typedef   ^   FAST_InitData    FEAM_InitInputType           InData_FEAM     -  -  -  "FEAM Initialization input data"
+typedef   ^   FAST_InitData    FEAM_InitOutputType         OutData_FEAM     -  -  -  "FEAM Initialization output data"
+typedef   ^   FAST_InitData    MD_InitInputType             InData_MD       -  -  -  "MD Initialization input data"
+typedef   ^   FAST_InitData    MD_InitOutputType           OutData_MD       -  -  -  "MD Initialization output data"
+typedef   ^   FAST_InitData    Orca_InitInputType           InData_Orca     -  -  -  "Orca Initialization input data"
+typedef   ^   FAST_InitData    Orca_InitOutputType         OutData_Orca     -  -  -  "Orca Initialization output data"
+typedef   ^   FAST_InitData    IceFloe_InitInputType        InData_IceF     -  -  -  "IceF Initialization input data"
+typedef   ^   FAST_InitData    IceFloe_InitOutputType      OutData_IceF     -  -  -  "IceF Initialization output data"
+typedef   ^   FAST_InitData    IceD_InitInputType           InData_IceD     -  -  -  "IceD Initialization input data"
+typedef   ^   FAST_InitData    IceD_InitOutputType         OutData_IceD     -  -  -  "IceD Initialization output data (each instance will have the same output channels)"
+typedef   ^   FAST_InitData    SC_InitInputType             InData_SC       -  -  -  "SC Initialization input data"
+typedef   ^   FAST_InitData    SC_InitOutputType           OutData_SC       -  -  -  "SC Initialization output data"
+
+
 # ..... FAST_MiscVarType data .......................................................................................................
 typedef	FAST	FAST_MiscVarType	DbKi	TiLstPrn	-	-	-	"The simulation time of the last print (to file)"	(s)
 typedef	^	FAST_MiscVarType	DbKi	t_global	-	-	-	"Current simulation time (for global/FAST simulation)"	(s)
@@ -679,3 +717,4 @@ typedef	^	FAST_TurbineType	OrcaFlex_Data	Orca	-	-	-	"Data for the OrcaFlex inter
 typedef	^	FAST_TurbineType	IceFloe_Data	IceF	-	-	-	"Data for the IceFloe module"	-
 typedef	^	FAST_TurbineType	IceDyn_Data	IceD	-	-	-	"Data for the IceDyn module"	-
 typedef	^	FAST_TurbineType	ExtPtfm_Data	ExtPtfm	-	-	-	"Data for the ExtPtfm (external platform loading) module"	-
+#typedef	^	FAST_TurbineType	FAST_InitData	Init	-	-	-	"Data for all modules at initialization"	-
