@@ -191,7 +191,7 @@ typedef   ^      ^                   BD_DiscreteStateType                  xd_BD
 typedef   ^      ^                   BD_ConstraintStateType                 z_BD      {:}{:} -   -   "Constraint states"
 typedef   ^      ^                   BD_OtherStateType                OtherSt_BD      {:}{:} -   -   "Other states"
 typedef   ^      ^                   BD_InputType                           u_BD      {:}{:} -   -   "System inputs"
-# ..... ElatoDyn OP data .......................................................................................................
+# ..... ElastoDyn OP data .....................................................................................................
 typedef   FAST   FAST_LinStateSave   ED_ContinuousStateType                 x_ED      {:}    -   -   "Continuous states"
 typedef   ^      ^                   ED_DiscreteStateType                  xd_ED      {:}    -   -   "Discrete states"
 typedef   ^      ^                   ED_ConstraintStateType                 z_ED      {:}    -   -   "Constraint states"
@@ -203,7 +203,7 @@ typedef   ^      ^                   SrvD_DiscreteStateType                xd_Sr
 typedef   ^      ^                   SrvD_ConstraintStateType               z_SrvD    {:}    -   -   "Constraint states"
 typedef   ^      ^                   SrvD_OtherStateType              OtherSt_SrvD    {:}    -   -   "Other states"
 typedef   ^      ^                   SrvD_InputType                         u_SrvD    {:}    -   -   "System inputs"
-# ..... No AeroDyn14 data .......................................................................................................
+# ..... No AeroDyn14 data .....................................................................................................
 # ..... AeroDyn OP data .......................................................................................................
 typedef   FAST   FAST_LinStateSave   AD_ContinuousStateType                 x_AD      {:}    -   -   "Continuous states"
 typedef   ^      ^                   AD_DiscreteStateType                  xd_AD      {:}    -   -   "Discrete states"
@@ -307,7 +307,7 @@ typedef	^	FAST_LinFileType	ReKi	WindSpeed	-	-	-	"Wind speed at reference height"
 
 # ..... FAST_MiscLinType data .......................................................................................................
 typedef  ^  FAST_MiscLinType  DbKi     LinTimes       {:} -  -  "List of times at which to linearize" s
-typedef  ^  FAST_MiscLinType  IntKi    CopyOP_CtrlCode -  -  -  "if we are mesh control code for copy type" -
+typedef  ^  FAST_MiscLinType  IntKi    CopyOP_CtrlCode -  -  -  "mesh control code for copy type (new on first call; update otherwise)" -
 typedef  ^  FAST_MiscLinType  DbKi     AzimTarget     {:} -  -  "target azimuth positions in CalcSteady algorithm" rad
 typedef  ^  FAST_MiscLinType  logical  IsConverged     -  -  -  "whether the error calculation in the CalcSteady algorithm is converged" -
 typedef  ^  FAST_MiscLinType  logical  FoundSteady     -  -  -  "whether the CalcSteady algorithm found a steady-state solution" -

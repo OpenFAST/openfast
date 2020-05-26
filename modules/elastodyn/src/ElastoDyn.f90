@@ -11770,7 +11770,7 @@ SUBROUTINE ED_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
       index = 1
       if (allocated(y%BladeLn2Mesh)) then
          do k=1,p%NumBl
-            call PackMotionMesh(y%BladeLn2Mesh(k), y_op, index)
+            call PackMotionMesh(y%BladeLn2Mesh(k), y_op, index, UseLogMaps=ReturnLogMap)
          end do      
       end if
       call PackMotionMesh(y%PlatformPtMesh, y_op, index, UseLogMaps=ReturnLogMap)

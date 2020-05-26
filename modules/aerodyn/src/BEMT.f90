@@ -480,7 +480,7 @@ subroutine BEMT_Init( InitInp, u, p, x, xd, z, OtherState, AFInfo, y, misc, Inte
    type(AFI_ParameterType),        intent(in   )  :: AFInfo(:)   ! The airfoil parameter data
    type(BEMT_OutputType),          intent(  out)  :: y           ! Initial system outputs (outputs are not calculated;
                                                                  !   only the output mesh is initialized)
-   real(DbKi),                     intent(inout)  :: interval    ! Coupling interval in seconds: the rate that
+   real(DbKi),                     intent(in   )  :: interval    ! Coupling interval in seconds: the rate that
                                                                  !   (1) BEMT_UpdateStates() is called in loose coupling &
                                                                  !   (2) BEMT_UpdateDiscState() is called in tight coupling.
                                                                  !   Input is the suggested time from the glue code;
@@ -662,12 +662,6 @@ subroutine BEMT_Init( InitInp, u, p, x, xd, z, OtherState, AFInfo, y, misc, Inte
          return
       end if
    
-      !............................................................................................
-      ! If you want to choose your own rate instead of using what the glue code suggests, tell the glue code the rate at which
-      !   this module must be called here:
-      !............................................................................................
-
-   Interval = p%DT
 
       ! set initial values for states and misc vars
    call BEMT_ReInit(p,x,xd,z,OtherState,misc,AFinfo,ErrStat2,ErrMsg2)

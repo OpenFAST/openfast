@@ -65,7 +65,7 @@ Dependencies
 ------------
 The following packages are required for regression testing:
 
-- Python 3+
+- Python 3.7+
 - Numpy
 - CMake and CTest (Optional)
 - Bokeh 1.4 (Optional)

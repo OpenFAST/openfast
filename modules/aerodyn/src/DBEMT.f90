@@ -40,7 +40,7 @@ private
    
    
 subroutine DBEMT_ValidateInitInp(interval, InitInp, errStat, errMsg)
-   real(DbKi),                      intent(inout) :: interval      !< Coupling interval in seconds: the rate that
+   real(DbKi),                      intent(in   ) :: interval      !< Coupling interval in seconds
    type(DBEMT_InitInputType),       intent(in   ) :: InitInp       !< Input data for initialization routine
    integer(IntKi),                  intent(  out) :: errStat       !< Error status of the operation
    character(*),                    intent(  out) :: errMsg        !< Error message if ErrStat /= ErrID_None
@@ -102,7 +102,7 @@ subroutine DBEMT_Init( InitInp, u, p, x, OtherState, m, Interval, InitOut, ErrSt
    type(DBEMT_ContinuousStateType), intent(  out) :: x             !< Initial continuous states
    type(DBEMT_OtherStateType),      intent(  out) :: OtherState    !< Initial other/logical states
    type(DBEMT_MiscVarType),         intent(  out) :: m             !< Initial misc/optimization variables
-   real(DbKi),                      intent(inout) :: interval      !< Coupling interval in seconds: the rate that
+   real(DbKi),                      intent(in   ) :: interval      !< Coupling interval in seconds: the rate that
                                                                    !!   (1) DBEMT_UpdateStates() is called in loose coupling &
                                                                    !!   (2) DBEMT_UpdateDiscState() is called in tight coupling.
                                                                    !!   Input is the suggested time from the glue code;
