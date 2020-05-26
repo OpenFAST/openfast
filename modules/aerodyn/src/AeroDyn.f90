@@ -436,7 +436,14 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
          call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    end if
       
-            
+      !............................................................................................
+      ! If you want to choose your own rate instead of using what the glue code suggests, tell the glue code the rate at which
+      !   this module must be called here:
+      !............................................................................................
+
+   Interval = p%DT
+
+
    call Cleanup() 
       
 contains

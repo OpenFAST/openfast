@@ -698,11 +698,11 @@ subroutine UA_SetParameters( dt, InitInp, p, ErrStat, ErrMsg )
 ! Calls  to : NONE
 !..............................................................................
    
-   real(DbKi),                             intent(inout)  :: dt          ! time step length (s)
+   real(DbKi),                   intent(in   )  :: dt          ! time step length (s)
    type(UA_InitInputType),       intent(inout)  :: InitInp     ! input data for initialization routine, needs to be inout because there is a copy of some data in InitInp in BEMT_SetParameters()
    type(UA_ParameterType),       intent(inout)  :: p           ! parameters
-   integer(IntKi),                         intent(  out)  :: ErrStat     ! error status of the operation
-   character(*),                           intent(  out)  :: ErrMsg      ! error message if ErrStat /= ErrID_None
+   integer(IntKi),               intent(  out)  :: ErrStat     ! error status of the operation
+   character(*),                 intent(  out)  :: ErrMsg      ! error message if ErrStat /= ErrID_None
 
    integer(IntKi)            :: ErrStat2
    character(*), parameter   :: RoutineName = 'UA_SetParameters'
@@ -886,7 +886,7 @@ subroutine UA_Init( InitInp, u, p, xd, OtherState, y,  m, Interval, &
    type(UA_OutputType),          intent(  out)  :: y           ! Initial system outputs (outputs are not calculated;
                                                                !   only the output mesh is initialized)
    type(UA_MiscVarType),         intent(  out)  :: m           ! Initial misc/optimization variables
-   real(DbKi),                   intent(inout)  :: interval    ! Coupling interval in seconds: the rate that
+   real(DbKi),                   intent(in   )  :: interval    ! Coupling interval in seconds: the rate that
                                                                !   (1) BEMT_UpdateStates() is called in loose coupling &
                                                                !   (2) BEMT_UpdateDiscState() is called in tight coupling.
                                                                !   Input is the suggested time from the glue code;
