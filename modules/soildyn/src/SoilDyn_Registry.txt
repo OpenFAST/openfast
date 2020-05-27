@@ -122,7 +122,7 @@ typedef   ^             ParameterType     DbKi              DT                  
 typedef  ^              ParameterType     DLL_Type          DLL_Trgt             - - - "The addresses and names of the Bladed DLL and its procedure"   -
 typedef  ^              ParameterType     DbKi              DLL_DT               - - - "Time step for DLL" seconds
 typedef  ^              ParameterType     CHARACTER(1024)   RootName             - - - "RootName for writing output files"   -
-typedef  ^              ParameterType     LOGICAL           UseREDWINinterface   - - - "True if interface successfully initialized" -
+typedef  ^              ParameterType     LOGICAL           UseREDWINinterface   - .FALSE. - "True if interface successfully initialized" -
 typedef  ^              ParameterType     CHARACTER(1024)   RootFileName         - - - "Root file name" -
 typedef  ^              ParameterType     CHARACTER(1024)   EchoFileName         - - - "Name of echo file" -
 typedef  ^              ParameterType     CHARACTER(1024)   SumFileName          - - - "Name of summary file" -

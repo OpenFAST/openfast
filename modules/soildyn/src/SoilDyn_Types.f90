@@ -132,7 +132,7 @@ IMPLICIT NONE
     TYPE(DLL_Type)  :: DLL_Trgt      !< The addresses and names of the Bladed DLL and its procedure [-]
     REAL(DbKi)  :: DLL_DT      !< Time step for DLL [seconds]
     CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
-    LOGICAL  :: UseREDWINinterface      !< True if interface successfully initialized [-]
+    LOGICAL  :: UseREDWINinterface = .FALSE.      !< True if interface successfully initialized [-]
     CHARACTER(1024)  :: RootFileName      !< Root file name [-]
     CHARACTER(1024)  :: EchoFileName      !< Name of echo file [-]
     CHARACTER(1024)  :: SumFileName      !< Name of summary file [-]

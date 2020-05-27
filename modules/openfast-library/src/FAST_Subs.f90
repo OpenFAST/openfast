@@ -1562,7 +1562,7 @@ SUBROUTINE FAST_Init( p, y_FAST, t_initial, InputFile, ErrStat, ErrMsg, TMax, Tu
    y_FAST%Module_Abrev( Module_Orca   ) = 'Orca'
    y_FAST%Module_Abrev( Module_IceF   ) = 'IceF'
    y_FAST%Module_Abrev( Module_IceD   ) = 'IceD'   
-   y_FAST%Module_Abrev( Module_SD     ) = 'SlD'
+   y_FAST%Module_Abrev( Module_SlD    ) = 'SlD'
    
    p%n_substeps = 1                                                ! number of substeps for between modules and global/FAST time
    p%BD_OutputSibling = .false.
@@ -6409,7 +6409,7 @@ SUBROUTINE FAST_DestroyAll( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW,
    CALL FAST_DestroyIceDyn_Data( IceD, ErrStat2, ErrMsg2 )
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)      
 
-   ! SubDyn
+   ! SoilDyn
    CALL FAST_DestroySoilDyn_Data( SlD, ErrStat2, ErrMsg2 )
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 

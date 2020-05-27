@@ -117,6 +117,8 @@ subroutine SlD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
    p%Stiffness       =  InputFileData%Stiffness
 !   p%Damping         =  InputFileData%Damping
 
+   p%UseREDWINinterface = .FALSE.    ! Initially set to false in case DLL not used.
+
       ! Define initial system states here:
    x%DummyContState           = 0.0_ReKi
    z%DummyConstrState         = 0.0_ReKi

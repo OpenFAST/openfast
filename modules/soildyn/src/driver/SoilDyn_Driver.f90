@@ -94,7 +94,7 @@ PROGRAM SoilDyn_Driver
    DvrOut=-1      ! Set output unit to negative
 
       ! Display the copyright notice
-   CALL DispCopyrightLicense( version )
+   CALL DispCopyrightLicense( version%Name )
       ! Obtain OpenFAST git commit hash
    git_commit = QueryGitVersion()
       ! Tell our users what they're running
