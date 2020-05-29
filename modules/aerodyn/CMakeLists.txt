@@ -14,25 +14,16 @@
 # limitations under the License.
 #
 
-# AeroAcoustics - TNO
-set(TNO_SOURCES
-#  src/AeroAcoustics/TNO/TNO.f90
-  src/AeroAcoustics/TNO/int1.f90
-  src/AeroAcoustics/TNO/int2.f90
-  src/AeroAcoustics/TNO/TNOMods.f90
-  src/AeroAcoustics/TNO/pressure.f90
-)
-add_library(TNO ${TNO_SOURCES})
-
 # AeroAcoustics - Main
 set(AEROACOUSTIC_SOURCES
+  src/AeroAcoustics/TNO.f90
   src/AeroAcoustics/AeroAcoustics.f90
   src/AeroAcoustics/AeroAcoustics_IO.f90
   src/AeroAcoustics_Types.f90
   src/AirfoilInfo_Types.f90
 )
 add_library(AeroAcoustics ${AEROACOUSTIC_SOURCES})
-target_link_libraries(AeroAcoustics nwtclibs TNO)
+target_link_libraries(AeroAcoustics nwtclibs)
 
 if (GENERATE_TYPES)
   generate_f90_types(src/AeroAcoustics_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/AeroAcoustics_Types.f90)
@@ -84,7 +75,7 @@ set(UA_DRIVER_SOURCES
 add_executable(unsteadyaero_driver ${UA_DRIVER_SOURCES})
 target_link_libraries(unsteadyaero_driver aerodynlib nwtclibs versioninfolib ${CMAKE_DL_LIBS})
 
-install(TARGETS unsteadyaero_driver aerodyn_driver aerodynlib AeroAcoustics TNO
+install(TARGETS unsteadyaero_driver aerodyn_driver aerodynlib AeroAcoustics
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
