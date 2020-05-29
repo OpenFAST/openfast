@@ -2244,22 +2244,15 @@ SUBROUTINE TBLTE_TNO(ALPSTAR,C,U,THETA,PHI,D,R,Cfall,d99all,EdgeVelAll,p,SPLP,SP
     character(ErrMsgLen)    :: ErrMsg2                                                                                   ! temporary Error message
     character(*), parameter :: RoutineName                              = 'TBLTE_TNO'
     REAL(kind=4) :: a,b
-    REAL(kind=4) :: epsabs,epsrel
     REAL(kind=4) :: answer
     REAL(kind=4) :: abserr,resabs,resasc
-    REAL(kind=4) :: alist (limit),blist (limit),rlist (limit)
-    REAL(kind=4) :: elist (limit)
     REAL(kind=4) :: freq(size(p%FreqList))
     REAL(kind=4) :: SPL_press,SPL_suction
     REAL(kind=4) :: band_width,band_ratio
     REAL(kind=4) :: Spectrum
     REAL(ReKi)   :: DBARH
     REAL(kind=4) :: P1,P2,P4
-    INTEGER (4)  :: neval
-    INTEGER (4)  :: ier
-    INTEGER (4)  :: iord (limit)
-    INTEGER (4)  :: last
-    INTEGER (4)  :: n_freq,i_low,i_hi
+    INTEGER (4)  :: n_freq
     INTEGER (4)  :: i_omega
     real(TNOKi)  :: omega
 
@@ -2269,8 +2262,6 @@ SUBROUTINE TBLTE_TNO(ALPSTAR,C,U,THETA,PHI,D,R,Cfall,d99all,EdgeVelAll,p,SPLP,SP
     ErrStat = ErrID_None
     ErrMsgn = ""
     ! Body of TNO 
-    epsabs = 1e-10     !absolute accuracy
-    epsrel = 1e-10     !relative accuracy
     band_ratio = 2.**(1./3.)
     ! Module AirfoilParams
     Mach = real(U  / p%SpdSound)
@@ -2295,7 +2286,7 @@ SUBROUTINE TBLTE_TNO(ALPSTAR,C,U,THETA,PHI,D,R,Cfall,d99all,EdgeVelAll,p,SPLP,SP
         band_width = freq(i_omega)*(sqrt(band_ratio)-1./sqrt(band_ratio)) * 4. * pi
         ISSUCTION = .TRUE.
         IF (Cf(1) .GT. 0.) THEN
-            CALL wrap_qk61(omega,f_int2,a,b,answer,abserr,resabs,resasc)   ! wrapper for qk61 routine from slatec library
+            CALL solve_qk61(omega,f_int2,a,b,answer,abserr,resabs,resasc)   ! wrapper for qk61 routine from slatec library
             Spectrum = D/(4.*pi*R**2.)*answer
             SPL_suction = 10.*log10(Spectrum*DBARH/2.e-5/2.e-5)
             SPLS(i_omega) = SPL_suction + 10.*log10(band_width)
@@ -2303,7 +2294,7 @@ SUBROUTINE TBLTE_TNO(ALPSTAR,C,U,THETA,PHI,D,R,Cfall,d99all,EdgeVelAll,p,SPLP,SP
 
         ISSUCTION = .FALSE.
         IF (Cf(2) .GT. 0.) THEN
-            CALL wrap_qk61(omega,f_int2,a,b,answer,abserr,resabs,resasc)   ! wrapper for qk61 routine from slatec library
+            CALL solve_qk61(omega,f_int2,a,b,answer,abserr,resabs,resasc)   ! wrapper for qk61 routine from slatec library
             Spectrum = D/(4.*pi*R**2.)*answer
             SPL_press = 10.*log10(Spectrum*DBARH/2.e-5/2.e-5)
             SPLP(i_omega) = SPL_press + 10.*log10(band_width)
