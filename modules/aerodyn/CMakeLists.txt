@@ -16,11 +16,11 @@
 
 # AeroAcoustics - TNO
 set(TNO_SOURCES
+#  src/AeroAcoustics/TNO/TNO.f90
   src/AeroAcoustics/TNO/int1.f90
   src/AeroAcoustics/TNO/int2.f90
   src/AeroAcoustics/TNO/TNOMods.f90
   src/AeroAcoustics/TNO/pressure.f90
-  src/AeroAcoustics/TNO/qk61.f
 )
 add_library(TNO ${TNO_SOURCES})
 

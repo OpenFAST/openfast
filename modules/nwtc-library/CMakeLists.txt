@@ -35,9 +35,30 @@ set(NWTCLIBS_SOURCES
   src/NetLib/fftpack/NWTC_FFTPACK.f90
   src/NetLib/lapack/NWTC_LAPACK.f90
   src/NetLib/scalapack/NWTC_ScaLAPACK.f90
-  )
+  src/NetLib/slatec/dqk61.f
+  src/NetLib/slatec/qk61.f
+  src/NetLib/slatec/d1mach.f
+  src/NetLib/slatec/r1mach.f
+  src/NetLib/slatec/xercnt.f
+  src/NetLib/slatec/xerhlt.f
+  src/NetLib/slatec/xerprn.f
+  src/NetLib/slatec/xersve.f
+  src/NetLib/slatec/fdump.f
+  src/NetLib/slatec/i1mach.f
+  src/NetLib/slatec/j4save.f
+  src/NetLib/slatec/xgetua.f
+  src/NetLib/slatec/xermsg.f  )
 
 get_filename_component(FCNAME ${CMAKE_Fortran_COMPILER} NAME)
+
+# in debug, remove the recursion check on dqk61.f and qk61.f
+if(CMAKE_BUILD_TYPE MATCHES Debug)
+   if(${CMAKE_Fortran_COMPILER_ID} STREQUAL "GNU")
+      set_source_files_properties(src/NetLib/slatec/dqk61.f PROPERTIES COMPILE_FLAGS -frecursive)
+      set_source_files_properties(src/NetLib/slatec/qk61.f  PROPERTIES COMPILE_FLAGS -frecursive)
+   endif()
+endif()
+
 
 if(BUILD_OPENFAST_SIMULINK_API)
 
