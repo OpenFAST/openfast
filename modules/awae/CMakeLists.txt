@@ -24,7 +24,7 @@ set(AWAE_LIBS_SOURCES
   )
 
 add_library(awaelib ${AWAE_LIBS_SOURCES})
-target_link_libraries(awaelib nwtclibs)
+target_link_libraries(awaelib ifwlib nwtclibs)
 
 install(TARGETS awaelib
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
