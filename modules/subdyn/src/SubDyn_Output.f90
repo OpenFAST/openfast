@@ -28,18 +28,7 @@ MODULE SubDyn_Output
 
    ! The maximum number of output channels which can be output by the code.
    INTEGER(IntKi),PUBLIC, PARAMETER      :: MaxOutPts = 2265
-   integer(IntKi), parameter :: INDENT_SPACES = 2
 
-   !> 
-   interface yaml_write_array
-      !module procedure yaml_write_array1R4  ! Single dimension array (Ary) of SiKi
-      module procedure yaml_write_array2R4  ! Two dimension array of SiKi
-      !module procedure yaml_write_array1R8  ! Single dimension array (Ary) of R8Ki
-      module procedure yaml_write_array2R8  ! Two dimension array of R8Ki
-      !module procedure yaml_write_array1R16 ! Single dimension array (Ary) of QuKi
-      !module procedure yaml_write_array2R16 ! Two dimension array of QuKi
-   end interface
-   
    PRIVATE
       ! ..... Public Subroutines ...................................................................................................
    PUBLIC :: SDOut_CloseSum
@@ -51,10 +40,6 @@ MODULE SubDyn_Output
    PUBLIC :: SDOut_WriteOutputUnits
    PUBLIC :: SDOut_WriteOutputs
    PUBLIC :: SDOut_Init
-
-   PUBLIC :: yaml_write_array
-
-
 
 CONTAINS
 
@@ -818,105 +803,4 @@ SUBROUTINE SDOut_ChkOutLst( OutList, p, ErrStat, ErrMsg )
 
 END SUBROUTINE SDOut_ChkOutLst
 !====================================================================================================
-
-! TODO put this into NWTC LIB as YAML.f90
-
-subroutine yaml_write_array2R4(fid, key, A, ReFmt, ErrStat, ErrMsg, level, comment)
-   integer(IntKi),             intent(in   ) :: fid     !< File Unit
-   character(len=*),           intent(in   ) :: key     !< Array name
-   real(SiKi), dimension(:,:), intent(in   ) :: A       !< Array
-   character(*),               intent(in   ) :: ReFmt   !< Format for printing real numbers  
-   integer,                    intent(  out) :: ErrStat !< A non-zero value indicates an error occurred
-   character(*),               intent(  out) :: ErrMsg  !< Error message if errstat /= errid_none
-   integer(IntKi),   optional, intent(in   ) :: level   !< indentation level
-   character(len=*), optional, intent(in   ) :: comment !< 
-   integer            :: nr, nc, i  ! size (rows and columns) of A
-   integer            :: nSpaces ! number of indentation spaces
-   character(256)     :: Fmt
-   ErrStat = ErrID_None   
-   ErrMsg  = ""
-   nr = size(A,1)
-   nc = size(A,2)
-
-   if (present(level)) then
-      Fmt = trim(Num2LStr(level*INDENT_SPACES))//'X,'
-   else
-      Fmt = ''
-   endif
-
-   if (present(comment)) then
-      write(fid, '('//trim(Fmt)//'A,": # ",I0," x ",I0,1X,A)', iostat=ErrStat ) trim(key), nr, nc, trim(comment)
-
-   else
-      write(fid, '('//trim(Fmt)//'A,": # ",I0," x ",I0)'     , iostat=ErrStat ) trim(key),nr,nc
-   end if
-
-   if (present(level)) then
-      Fmt = trim(Num2LStr((level+1)*INDENT_SPACES))//'X,'
-   else
-      Fmt = trim(Num2LStr(INDENT_SPACES))//'X,'
-   endif
-
-   if (nr==0) then
-      write(fid, '('//trim(Fmt)//'"- [ ]")', iostat=ErrStat) 
-   else
-      Fmt = '('//trim(Fmt)//'"- [",'//trim(Num2LStr(nc))//'(1x,'//ReFmt//',","),"]")'   
-      do i=1,nr
-         write(fid, Fmt, iostat=ErrStat) A(i,:)
-         if (ErrStat /= 0) then
-            ErrMsg='Error writting array'//trim(key)//' to YAML file'
-            return
-         end if
-      end do
-   endif
-end subroutine yaml_write_array2R4
-
-subroutine yaml_write_array2R8(fid, key, A, ReFmt, ErrStat, ErrMsg, level, comment)
-   integer(IntKi),             intent(in   ) :: fid     !< File Unit
-   character(len=*),           intent(in   ) :: key     !< Array name
-   real(R8Ki), dimension(:,:), intent(in   ) :: A       !< Array
-   character(*),               intent(in   ) :: ReFmt   !< Format for printing real numbers  
-   integer,                    intent(  out) :: ErrStat !< A non-zero value indicates an error occurred
-   character(*),               intent(  out) :: ErrMsg  !< Error message if errstat /= errid_none
-   integer(IntKi),   optional, intent(in   ) :: level   !< indentation level
-   character(len=*), optional, intent(in   ) :: comment !< 
-   integer            :: nr, nc, i  ! size (rows and columns) of A
-   integer            :: nSpaces ! number of indentation spaces
-   character(256)     :: Fmt
-   ErrStat = ErrID_None   
-   ErrMsg  = ""
-   nr = size(A,1)
-   nc = size(A,2)
-
-   if (present(level)) then
-      Fmt = trim(Num2LStr(level*INDENT_SPACES))//'X,'
-   else
-      Fmt = ''
-   endif
-   if (present(comment)) then
-      write(fid, '('//trim(Fmt)//'A,": # ",I0," x ",I0,1X,A)', iostat=ErrStat ) trim(key), nr, nc, trim(comment)
-
-   else
-      write(fid, '('//trim(Fmt)//'A,": # ",I0," x ",I0)'     , iostat=ErrStat ) trim(key),nr,nc
-   end if
-
-   if (present(level)) then
-      Fmt = trim(Num2LStr((level+1)*INDENT_SPACES))//'X,'
-   else
-      Fmt = trim(Num2LStr(INDENT_SPACES))//'X,'
-   endif
-   if (nr==0) then
-      write(fid, '('//trim(Fmt)//'"- [ ]")', iostat=ErrStat) 
-   else
-      Fmt = '('//trim(Fmt)//'"- [",'//trim(Num2LStr(nc))//'(1x,'//ReFmt//',","),"]")'   
-      do i=1,nr
-         write(fid, Fmt, iostat=ErrStat) A(i,:)
-         if (ErrStat /= 0) then
-            ErrMsg='Error writting array'//trim(key)//' to YAML file'
-            return
-         end if
-      end do
-   endif
-end subroutine yaml_write_array2R8
-
 END MODULE SubDyn_Output

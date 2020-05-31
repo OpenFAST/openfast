@@ -27,6 +27,7 @@ set(SUBDYN_SOURCES
   src/qsort_c_module.f90
   src/SubDyn_Tests.f90
   src/IntegerList.f90
+  src/Yaml.f90
   src/SubDyn_Types.f90
 )
 

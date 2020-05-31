@@ -1651,6 +1651,7 @@
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File></Filter>
 		<File RelativePath="..\..\modules\subdyn\src\qsort_c_module.f90"/>
 		<File RelativePath="..\..\modules\subdyn\src\IntegerList.f90"/>
+		<File RelativePath="..\..\modules\subdyn\src\Yaml.f90"/>
 		<File RelativePath="..\..\modules\subdyn\src\SD_FEM.f90"/>
 		<File RelativePath="..\..\modules\subdyn\src\FEM.f90"/>
 		<File RelativePath="..\..\modules\subdyn\src\SubDyn.f90"/>
