@@ -611,11 +611,8 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
             ! set up the data structures for integration with supercontroller
          IF ( p_FAST%UseSC ) CALL SC_DX_Init( ExternInitData%NumSC2CtrlGlob, ExternInitData%NumSC2Ctrl, ExternInitData%NumCtrl2SC, SC_DX, ErrStat2, ErrMsg2 )
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         !ELSE 
-         !   p_FAST%xd%FILT_FROMSCGLOB = 0.0
-         !   p_FAST%xd%FILT_FROMSC = 0.0
-         !END IF
-         !CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         END IF
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END IF
  
       IF (ErrStat >= AbortErrLev) THEN

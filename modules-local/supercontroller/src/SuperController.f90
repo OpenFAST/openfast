@@ -359,13 +359,6 @@ abstract interface
       p%NumStatesGlobal = 0
       p%NumStatesTurbine = 0
 
-        !!KS I moved the following 3 lines from below to up here.
-      !   allocate(p%ParamGlobal(p%NumParamGlobal))
-      !   p%ParamGlobal = 0
-      !   nParams = p%NumParamTurbine*p%nTurbines
-      !   allocate(p%ParamTurbine(nParams))
-      !   p%ParamTurbine = 0
-      
 #ifdef STATIC_DLL_LOAD
 
          ! if we're statically loading the library (i.e., OpenFOAM), we can just call SC_INIT(); 
@@ -394,9 +387,7 @@ abstract interface
       
           ! allocate output arrays  
       allocate(y%fromSCglob(p%NumSC2CtrlGlob))   
-           
       allocate(y%fromSC    (p%NumSC2Ctrl*p%nTurbines    ))
-
       
          ! Copy the Parameter and Output data created by the SuperController library into the FAST-framework parameters data structure
       if ( (p%NumParamGlobal > 0) .or. (p%NumParamTurbine > 0) .or. (p%NumSC2CtrlGlob > 0) .or. (p%NumSC2Ctrl > 0) ) then 
@@ -423,7 +414,6 @@ abstract interface
       
 
       ! TODO Fix allocations for error handling
-      
       allocate(xd%Global(p%NumStatesGlobal))
             !CALL AllocAry( xd%Global,   p%nStatesGlobal, 'xd%Global', errStat2, errMsg2 )
             !   call SetErrStat( errStat2, errMsg2, errStat, errMsg, routineName )

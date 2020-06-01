@@ -350,18 +350,6 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       xd%filt_fromSCglob = InitInp%fromSCGlob
 
    END IF
-
-      if( .not. allocated(xd%filt_fromSC) ) then
-       PRINT*, 'IM IN HERE!!!'
-       allocate(xd%filt_fromSC(1))
-         !xd%filt_fromSC = 100000000.0
-       PRINT*, 'xd%filt_fromSC:', xd%filt_fromSC
-      end if
-
-      if( .not. allocated(xd%filt_fromSCglob) ) then
-         allocate(xd%filt_fromSCglob(1))
-         !xd%filt_fromSCglob = 100000000.0
-      end if
       
    u%BlPitch = p%BlPitchInit
    
@@ -1108,16 +1096,6 @@ SUBROUTINE SrvD_UpdateDiscState( t, u, p, x, xd, z, OtherState, m, ErrStat, ErrM
          xd%filt_fromSCglob = p%ScInAlpha * xd%filt_fromSCglob + (1.0_SiKi - p%ScInAlpha) * u%fromSCglob
       end if
      
-      !PRINT*, 'xd%filt_fromSC:', xd%filt_fromSC
-      !if( .not. allocated(xd%filt_fromSC) ) then
-      !   xd%filt_fromSC = 100000000.0
-      !end if
-
-      !if( .not. allocated(xd%filt_fromSCglob) ) then
-      !   xd%filt_fromSCglob = 100000000.0
-      !end if
-      
-      
       !xd%BlPitchFilter = p%BlAlpha * xd%BlPitchFilter + (1.0_ReKi - p%BlAlpha) * u%BlPitch
    
       !if ( p%PCMode == ControlMode_DLL ) then
@@ -1133,8 +1111,6 @@ SUBROUTINE SrvD_UpdateDiscState( t, u, p, x, xd, z, OtherState, m, ErrStat, ErrM
       !else
       !   
       !end if
-      
-
 
       !   ! Update discrete states here:
       !IF (p%CompNTMD) THEN 
