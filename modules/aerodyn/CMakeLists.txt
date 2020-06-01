@@ -14,6 +14,17 @@
 # limitations under the License.
 #
 
+if (GENERATE_TYPES)
+  generate_f90_types(src/AeroAcoustics_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/AeroAcoustics_Types.f90)
+  generate_f90_types(src/AeroDyn_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/AeroDyn_Types.f90)
+  generate_f90_types(src/AirfoilInfo_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/AirfoilInfo_Types.f90)
+  generate_f90_types(src/BEMT_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/BEMT_Types.f90)
+  generate_f90_types(src/DBEMT_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/DBEMT_Types.f90)
+  generate_f90_types(src/UnsteadyAero_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/UnsteadyAero_Types.f90)
+  generate_f90_types(src/AeroDyn_Driver_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/AeroDyn_Driver_Types.f90 -noextrap)
+endif()
+
+
 # AeroAcoustics - Main
 set(AEROACOUSTIC_SOURCES
   src/AeroAcoustics/TNO.f90
@@ -24,16 +35,19 @@ set(AEROACOUSTIC_SOURCES
 )
 add_library(AeroAcoustics ${AEROACOUSTIC_SOURCES})
 target_link_libraries(AeroAcoustics nwtclibs)
+# Recursive use of routine in TNO will trigger errors in debug
+if (CMAKE_BUILD_TYPE MATCHES Debug)
+   if (${CMAKE_Fortran_COMPILER_ID} STREQUAL "GNU")
+      set_source_files_properties(src/AeroAcoustics/TNO.f90 PROPERTIES COMPILE_FLAGS -frecursive)
+   elseif (${CMAKE_Fortran_COMPILER_ID} STREQUAL "Intel")
+      if (WIN32)
+         set_source_files_properties(src/AeroAcoustics/TNO.f90 PROPERTIES COMPILE_FLAGS "/assume:recursion")
+      else()
+         set_source_files_properties(src/AeroAcoustics/TNO.f90 PROPERTIES COMPILE_FLAGS "-assume recursion")
+      endif()
+   endif()
+endif() 
 
-if (GENERATE_TYPES)
-  generate_f90_types(src/AeroAcoustics_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/AeroAcoustics_Types.f90)
-  generate_f90_types(src/AeroDyn_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/AeroDyn_Types.f90)
-  generate_f90_types(src/AirfoilInfo_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/AirfoilInfo_Types.f90)
-  generate_f90_types(src/BEMT_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/BEMT_Types.f90)
-  generate_f90_types(src/DBEMT_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/DBEMT_Types.f90)
-  generate_f90_types(src/UnsteadyAero_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/UnsteadyAero_Types.f90)
-  generate_f90_types(src/AeroDyn_Driver_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/AeroDyn_Driver_Types.f90 -noextrap)
-endif()
 
 # AeroDyn lib
 set(AD_LIBS_SOURCES
