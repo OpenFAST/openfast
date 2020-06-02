@@ -431,16 +431,28 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       END IF
       
       !STATIC IMPROVEMENT METHOD  ( modify UL )
-      IF (p%SttcSolve) THEN
-         FLt  = MATMUL(p%PhiL_T,                  m%UFL + p%FGL)  ! -> bjj: todo: this line takes up A LOT of time. is PhiL sparse???? no (solution: don't call this routine thousands of time to calculate the jacobian)
-         ULS  = MATMUL(p%PhiLInvOmgL2,            FLt          )  ! -> bjj: todo: this line takes up A LOT of time. is PhiL sparse????
+      if (p%SttcSolve/=idSIM_None) then
+         if (p%SttcSolve==idSIM_Full) then
+            FLt  = MATMUL(p%PhiL_T      , m%UFL + p%FGL)
+            ULS  = MATMUL(p%PhiLInvOmgL2, FLt )
+            ! TODO New
+            !ULS  = p%UL_st_g + MATMUL(p%KLLm1, m%UFL)
+         elseif (p%SttcSolve==idSIM_GravOnly) then
+            FLt  = MATMUL(p%PhiL_T      , p%FGL) 
+            ULS  = MATMUL(p%PhiLInvOmgL2, FLt )
+            ! TODO New
+            !ULS  = p%UL_st_g
+         else
+            STOP ! Should never happen
+         endif
          m%UL = m%UL + ULS 
-          
-         IF ( p%nDOFM > 0) THEN
+         if ( p%nDOFM > 0) then
             UL0M = MATMUL(p%PhiLInvOmgL2(:,1:p%nDOFM), FLt(1:p%nDOFM)       )
+            ! TODO new
+            ! <<<
             m%UL = m%UL - UL0M 
-         END IF          
-      ENDIF    
+         end if          
+      endif    
       ! --- Build original DOF vectors (DOF before the CB reduction)
       m%U_red       (p%IDI__) = m%UR_bar
       m%U_red       (p%ID__L) = m%UL     
@@ -620,8 +632,8 @@ SUBROUTINE SD_Input(SDInputFile, Init, p, ErrStat,ErrMsg)
    INTEGER(IntKi),          INTENT(  OUT)  :: ErrStat   ! Error status of the operation
    CHARACTER(*),            INTENT(  OUT)  :: ErrMsg    ! Error message if ErrStat /= ErrID_None
 ! local variable for input and output
-CHARACTER(1024)              :: PriPath                                         ! The path to the primary input file
-CHARACTER(1024)              :: Line                                            ! String to temporarially hold value of read line
+CHARACTER(1024)              :: PriPath          ! The path to the primary input file
+CHARACTER(1024)              :: Line, Dummy_Str  ! String to temporarially hold value of read line
 INTEGER                      :: Sttus
 CHARACTER(64), ALLOCATABLE   :: StrArray(:)  ! Array of strings, for better control of table inputs
 LOGICAL                      :: Echo  
@@ -631,12 +643,11 @@ INTEGER(IntKi)               :: UnIn
 INTEGER(IntKi)               :: nColumns, nColValid, nColNumeric
 INTEGER(IntKi)               :: IOS
 INTEGER(IntKi)               :: UnEc   !Echo file ID
-
 REAL(ReKi),PARAMETER        :: WrongNo=-9999.   ! Placeholder value for bad(old) values in JDampings
-
 INTEGER(IntKi)               :: I, J, flg, K, nColsReactInterf
-REAL(ReKi)                   :: Dummy_ReAry(SDMaxInpCols) , DummyFloat
+REAL(ReKi)                   :: Dummy_ReAry(SDMaxInpCols) , DummyFloat 
 INTEGER(IntKi)               :: Dummy_IntAry(SDMaxInpCols)
+LOGICAL                      :: Dummy_Bool
 INTEGER(IntKi)       :: ErrStat2
 CHARACTER(ErrMsgLen) :: ErrMsg2
 ! Initialize ErrStat
@@ -697,7 +708,18 @@ ELSE                                   ! The input must have been specified nume
 END IF
       
 CALL ReadVar ( UnIn, SDInputFile, p%IntMethod, 'IntMethod', 'Integration Method',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
-CALL ReadLVar(UnIn, SDInputFile, p%SttcSolve, 'SttcSolve', 'Solve dynamics about static equilibrium point', ErrStat2, ErrMsg2, UnEc); if(Failed()) return
+CALL ReadVar (UnIn, SDInputFile, Dummy_Str, 'SttcSolve', 'Solve dynamics about static equilibrium point', ErrStat2, ErrMsg2, UnEc); if(Failed()) return
+p%SttcSolve = idSIM_None
+if (is_numeric(Dummy_Str, DummyFloat)) then
+   p%SttcSolve = int(DummyFloat)
+else if (is_logical(Dummy_Str, Dummy_Bool)) then
+   if (Dummy_Bool) p%SttcSolve = idSIM_Full
+else
+   call Fatal('SttcSolve should be an integer or a logical, received: '//trim(Dummy_Str))
+   return
+endif
+IF (Check(.not.(any(idSIM_Valid==p%SttcSolve)), 'Invalid value entered for SttcSolve')) return
+
 !-------------------- FEA and CRAIG-BAMPTON PARAMETERS---------------------------
 CALL ReadCom  ( UnIn, SDInputFile, ' FEA and CRAIG-BAMPTON PARAMETERS ', ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL ReadIVar ( UnIn, SDInputFile, Init%FEMMod, 'FEMMod', 'FEM analysis mode'             ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return ! 0= Euler-Bernoulli(E-B); 1=Tapered E-B; 2= Timoshenko; 3= tapered Timoshenko
@@ -1637,10 +1659,10 @@ SUBROUTINE SD_Craig_Bampton(Init, p, CB, ErrStat, ErrMsg)
       IDR => p%IDR__
    endif
 
-   IF (p%SttcSolve) THEN ! STATIC TREATMENT IMPROVEMENT
-      nM_Out=p%nDOF__L ! Selecting all CB modes for outputs to the function below 
+   IF (p%SttcSolve/=idSIM_None) THEN ! STATIC TREATMENT IMPROVEMENT
+      nM_out=p%nDOF__L ! Selecting all CB modes for outputs to the function below 
    ELSE
-      nM_Out=p%nDOFM ! Selecting only the requrested number of CB modes
+      nM_out=p%nDOFM ! Selecting only the requrested number of CB modes
    ENDIF  
    nL = p%nDOF__L
    nM = p%nDOFM
@@ -1653,31 +1675,23 @@ SUBROUTINE SD_Craig_Bampton(Init, p, CB, ErrStat, ErrMsg)
    CALL AllocAry( CB%MBB,    nR, nR,    'CB%MBB',    ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    CALL AllocAry( CB%MBM,    nR, nM,    'CB%MBM',    ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    CALL AllocAry( CB%KBB,    nR, nR,    'CB%KBB',    ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   CALL AllocAry( CB%PhiL,   nL, nM_Out,'CB%PhiL',   ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   CALL AllocAry( CB%PhiL,   nL, nM_out,'CB%PhiL',   ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    CALL AllocAry( CB%PhiR,   nL, nR,    'CB%PhiR',   ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   CALL AllocAry( CB%OmegaL, nM_Out,    'CB%OmegaL', ErrStat2, ErrMsg2 ); if(Failed()) return
+   CALL AllocAry( CB%OmegaL, nM_out,    'CB%OmegaL', ErrStat2, ErrMsg2 ); if(Failed()) return
 
-   CALL CraigBamptonReduction(Init%M, Init%K, IDR, nR, p%ID__L, nL, nM, nM_Out, CB%MBB, CB%MBM, CB%KBB, CB%PhiL, CB%PhiR, CB%OmegaL, ErrStat2, ErrMsg2,&
+   CALL CraigBamptonReduction(Init%M, Init%K, IDR, nR, p%ID__L, nL, nM, nM_out, CB%MBB, CB%MBM, CB%KBB, CB%PhiL, CB%PhiR, CB%OmegaL, ErrStat2, ErrMsg2,&
                               Init%FG, FGR, FGL, FGB, FGM)
    if(Failed()) return
-
-   ! Set p%PhiL_T and p%PhiLInvOmgL2 for static improvement
-   IF (p%SttcSolve) THEN   
-      p%PhiL_T=TRANSPOSE(CB%PhiL) !transpose of PhiL for static improvement
-      DO I = 1, nM_Out
-         p%PhiLInvOmgL2(:,I) = CB%PhiL(:,I)* (1./CB%OmegaL(I)**2)
-      ENDDO 
-   END IF
 
    CALL AllocAry(PhiRb,  nL, nR, 'PhiRb',   ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if(.not.BC_Before_CB) then
       ! We apply the BC now, removing unwanted DOFs
-      call applyConstr(CB, FGB, PhiRb)
+      call applyConstr(CB, FGB, PhiRb) ! Reduces size of CB%MBB, CB%KBB, CB%MBM, FGB, NOTE: "L" unaffected
    else
       PhiRb=CB%PhiR ! Remove me in the future
    endif
    ! TODO, right now using PhiRb instead of CB%PhiR, keeping PhiR in harmony with OmegaL for SummaryFile
-   CALL SetParameters(Init, p, CB%MBB, CB%MBM, CB%KBB, PhiRb, CB%OmegaL, CB%PhiL, FGL, FGB, FGM, ErrStat2, ErrMsg2)  
+   CALL SetParameters(Init, p, CB%MBB, CB%MBM, CB%KBB, PhiRb, nM_out, CB%OmegaL, CB%PhiL, FGL, FGB, FGM, ErrStat2, ErrMsg2)  
    CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'Craig_Bampton')
       
    CALL CleanUpCB()
@@ -1801,16 +1815,17 @@ END SUBROUTINE SD_Guyan_RigidBodyMass
 
 !------------------------------------------------------------------------------------------------------
 !> Set parameters to compute state and output equations
-SUBROUTINE SetParameters(Init, p, MBBb, MBmb, KBBb, PhiRb, OmegaL, PhiL, FGL, FGB, FGM, ErrStat, ErrMsg)
+SUBROUTINE SetParameters(Init, p, MBBb, MBmb, KBBb, PhiRb, nM_out, OmegaL, PhiL, FGL, FGB, FGM, ErrStat, ErrMsg)
    use NWTC_LAPACK, only: LAPACK_GEMM, LAPACK_getrf
    TYPE(SD_InitType),        INTENT(IN   )   :: Init         ! Input data for initialization routine
    TYPE(SD_ParameterType),   INTENT(INOUT)   :: p            ! Parameters
    REAL(ReKi),               INTENT(IN   )   :: MBBb(  p%nDOF__Rb, p%nDOF__Rb)
    REAL(ReKi),               INTENT(IN   )   :: MBMb(  p%nDOF__Rb, p%nDOFM)
    REAL(ReKi),               INTENT(IN   )   :: KBBb(  p%nDOF__Rb, p%nDOF__Rb)
-   REAL(ReKi),               INTENT(IN   )   :: PhiL ( p%nDOF__L, p%nDOF__L)   
+   integer(IntKi),           INTENT(IN   )   :: nM_out
+   REAL(ReKi),               INTENT(IN   )   :: PhiL ( p%nDOF__L, nM_out)
    REAL(ReKi),               INTENT(IN   )   :: PhiRb( p%nDOF__L, p%nDOF__Rb)   
-   REAL(ReKi),               INTENT(IN   )   :: OmegaL(p%nDOF__L)   
+   REAL(ReKi),               INTENT(IN   )   :: OmegaL(nM_out)
    REAL(ReKi),               INTENT(IN   )   :: FGB(p%nDOF__Rb) 
    REAL(ReKi),               INTENT(IN   )   :: FGL(p%nDOF__L)
    REAL(ReKi),               INTENT(IN   )   :: FGM(p%nDOFM)
@@ -1837,10 +1852,28 @@ SUBROUTINE SetParameters(Init, p, MBBb, MBmb, KBBb, PhiRb, OmegaL, PhiL, FGL, FG
    CALL RigidTrnsf(Init, p, Init%TP_RefPoint, p%IDI__, p%nDOFI__, p%TI, ErrStat2, ErrMsg2); if(Failed()) return
    TI_transpose =  TRANSPOSE(p%TI) 
 
-   ! Store FGL for later processes
-   IF (p%SttcSolve) THEN     
-       p%FGL = FGL  
-   ENDIF     
+   ! Store Static Improvement Method constants
+   if (p%SttcSolve /= idSIM_None) then     
+      if (p%SttcSolve == idSIM_Full) then
+         CALL WrScr('   Using static improvement method for gravity and ext. loads')
+      else
+         CALL WrScr('   Using static improvement method for gravity only')
+      endif
+      ! Allocations
+      CALL AllocAry( p%PhiL_T,        p%nDOF__L, p%nDOF__L, 'p%PhiL_T',        ErrStat2, ErrMsg2 ); if(Failed())return
+      CALL AllocAry( p%PhiLInvOmgL2,  p%nDOF__L, p%nDOF__L, 'p%PhiLInvOmgL2',  ErrStat2, ErrMsg2 ); if(Failed())return
+      CALL AllocAry( p%KLLm1       ,  p%nDOF__L, p%nDOF__L, 'p%KLLm1',         ErrStat2, ErrMsg2 ); if(Failed())return
+      CALL AllocAry( p%FGL,           p%nDOF__L,            'p%FGL',           ErrStat2, ErrMsg2 ); if(Failed())return
+      CALL AllocAry( p%UL_st_g,       p%nDOF__L,            'p%UL_st_g',       ErrStat2, ErrMsg2 ); if(Failed())return
+      ! TODO PhiL_T and PhiLInvOmgL2 may not be needed if KLLm1 is stored.
+      p%PhiL_T=TRANSPOSE(PhiL) !transpose of PhiL for static improvement
+      do I = 1, nM_out
+         p%PhiLInvOmgL2(:,I) = PhiL(:,I)* (1./OmegaL(I)**2)
+      enddo 
+      p%KLLm1   = MATMUL(p%PhiLInvOmgL2, p%PhiL_T) ! Inverse of KLL: KLL^-1 = [PhiL] x [OmegaL^2]^-1 x [PhiL]^t
+      p%FGL     = FGL  
+      p%UL_st_g = MATMUL(p%KLLm1, FGL) 
+   endif     
       
    ! block element of D2 matrix (D2_21, D2_42, & part of D2_62)
    p%PhiRb_TI = MATMUL(PhiRb, p%TI)
@@ -1997,12 +2030,6 @@ if (p%nDOFM > 0 ) THEN
    CALL AllocAry( p%F2_61,         p%nDOF__L,            'p%F2_61',         ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters') ! is zero when p%nDOFM == 0
 end if
            
-if ( p%SttcSolve ) THEN  
-   CALL AllocAry( p%PhiL_T,        p%nDOF__L, p%nDOF__L, 'p%PhiL_T',        ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')
-   CALL AllocAry( p%PhiLInvOmgL2,  p%nDOF__L, p%nDOF__L, 'p%PhiLInvOmgL2',  ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')
-   CALL AllocAry( p%FGL,           p%nDOF__L,            'p%FGL',           ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')   
-end if            
-   
 END SUBROUTINE AllocParameters
 
 !------------------------------------------------------------------------------------------------------
@@ -2340,7 +2367,6 @@ SUBROUTINE ConstructUFL( u, p, m, UFL )
    endif
    ! --- Reduced vector of external force
    m%Fext_red = matmul(transpose(p%T_red), m%Fext)
-   UFL=0
    UFL= m%Fext_red(p%ID__L)
 
 END SUBROUTINE ConstructUFL
@@ -2645,10 +2671,10 @@ SUBROUTINE OutSummary(Init, p, InitInput, CBparams, ErrStat,ErrMsg)
    call yaml_write_array(UnSum, 'MBM', CBparams%MBM, ReFmt, ErrStat2, ErrMsg2, comment='')
    call yaml_write_array(UnSum, 'KBB', CBparams%KBB, ReFmt, ErrStat2, ErrMsg2, comment='')
    call yaml_write_array(UnSum, 'KMM', CBparams%OmegaL**2, ReFmt, ErrStat2, ErrMsg2, comment='(diagonal components, OmegaL^2)')
-   IF (p%SttcSolve) THEN
+   IF (p%SttcSolve/= idSIM_None) THEN
       call yaml_write_array(UnSum, 'PhiL', transpose(p%PhiL_T), ReFmt, ErrStat2, ErrMsg2, comment='')
       call yaml_write_array(UnSum, 'PhiLOm2-1', p%PhiLInvOmgL2, ReFmt, ErrStat2, ErrMsg2, comment='')
-      call yaml_write_array(UnSum, 'KLL^-1', MATMUL(p%PhiLInvOmgL2,p%PhiL_T ), ReFmt, ErrStat2, ErrMsg2, comment='')
+      call yaml_write_array(UnSum, 'KLL^-1'   , p%KLLm1       , ReFmt, ErrStat2, ErrMsg2, comment='')
    endif
 
    ! --- write TP TI matrix
@@ -2811,7 +2837,6 @@ FUNCTION is_numeric(string, x)
    CHARACTER(len=*), INTENT(IN) :: string
    REAL(ReKi), INTENT(OUT) :: x
    LOGICAL :: is_numeric
-   
    INTEGER :: e,n
    CHARACTER(len=12) :: fmt
    x = 0.0_ReKi
@@ -2820,6 +2845,17 @@ FUNCTION is_numeric(string, x)
    READ(string,fmt,IOSTAT=e) x
    is_numeric = e == 0
 END FUNCTION is_numeric
+FUNCTION is_logical(string, b)
+   IMPLICIT NONE
+   CHARACTER(len=*), INTENT(IN) :: string
+   Logical, INTENT(OUT) :: b
+   LOGICAL :: is_logical
+   INTEGER :: e,n
+   b = .false.
+   n=LEN_TRIM(string)
+   READ(string,*,IOSTAT=e) b
+   is_logical = e == 0
+END FUNCTION is_logical
 
 !> Parses a file for Kxx,Kxy,..Kxthtx,..Kxtz, Kytx, Kyty,..Kztz
 SUBROUTINE ReadSSIfile ( Filename, JointID, SSIK, SSIM, ErrStat, ErrMsg, UnEc )

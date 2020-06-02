@@ -64,8 +64,15 @@ MODULE SD_FEM
   INTEGER(IntKi),   PARAMETER  :: idBC_Fixed    = 11
   INTEGER(IntKi),   PARAMETER  :: idBC_Internal = 12
   INTEGER(IntKi),   PARAMETER  :: idBC_Leader   = 13 ! TODO, and maybe "BC" not appropriate here
+
+  ! Types of Static Improvement Methods
+  INTEGER(IntKi),   PARAMETER  :: idSIM_None     = 0
+  INTEGER(IntKi),   PARAMETER  :: idSIM_Full     = 1
+  INTEGER(IntKi),   PARAMETER  :: idSIM_GravOnly = 2 
+  INTEGER(IntKi)               :: idSIM_Valid(3)  = (/idSIM_None, idSIM_Full, idSIM_GravOnly /)
   
   INTEGER(IntKi),   PARAMETER  :: SDMaxInpCols    = MAX(JointsCol,InterfCol,MembersCol,PropSetsBCol,PropSetsXCol,COSMsCol,CMassCol)
+
 
   INTERFACE FINDLOCI ! In the future, use FINDLOC from intrinsic
      MODULE PROCEDURE FINDLOCI_ReKi
