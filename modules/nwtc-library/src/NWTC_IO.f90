@@ -2168,7 +2168,7 @@ CONTAINS
 !>
    SUBROUTINE DispCompileRuntimeInfo()
      
-      USE iso_fortran_env !ONLY: compiler_options, compiler_version
+      USE iso_fortran_env
       
       CHARACTER(200) :: compiler_version_str
       CHARACTER(200) :: name
@@ -2185,8 +2185,9 @@ CONTAINS
       ELSE
          compiled_precision = 'unknown'
       END IF
+
 #if defined(__INTEL_COMPILER) && (__INTEL_COMPILER<1800)
-      compiler_version_str = 'intel compiler '//num2lstr(__INTEL_COMPILER)
+      compiler_version_str = 'Intel(R) Fortran Compiler '//num2lstr(__INTEL_COMPILER)
 #else
       compiler_version_str = compiler_version()
 #endif
