@@ -2167,9 +2167,10 @@ CONTAINS
 !=======================================================================
 !>
    SUBROUTINE DispCompileRuntimeInfo()
-
-      USE iso_fortran_env, ONLY: compiler_options, compiler_version
-
+     
+      USE iso_fortran_env !ONLY: compiler_options, compiler_version
+      
+      CHARACTER(200) :: compiler_version_str
       CHARACTER(200) :: name
       CHARACTER(200) :: git_commit, architecture, compiled_precision
       CHARACTER(200) :: execution_date, execution_time, execution_zone
@@ -2184,10 +2185,15 @@ CONTAINS
       ELSE
          compiled_precision = 'unknown'
       END IF
+#if defined(__INTEL_COMPILER) && (__INTEL_COMPILER<1800)
+      compiler_version_str = 'intel compiler '//num2lstr(__INTEL_COMPILER)
+#else
+      compiler_version_str = compiler_version()
+#endif
 
       CALL WrScr(trim(name)//'-'//trim(git_commit))
       CALL WrScr('Compile Info:')
-      call wrscr(' - Compiler: '//trim(compiler_version()))
+      call wrscr(' - Compiler: '//trim(compiler_version_str))
       CALL WrScr(' - Architecture: '//trim(architecture))
       CALL WrScr(' - Precision: '//trim(compiled_precision))
       CALL WrScr(' - Date: '//__DATE__)
