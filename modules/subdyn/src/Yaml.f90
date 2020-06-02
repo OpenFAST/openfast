@@ -232,7 +232,7 @@ subroutine yaml_write_array1I(fid, key, A, VarFmt, ErrStat, ErrMsg, level, comme
    if (nc==0) then
       write(fid, '('//trim(Fmt)//'"- [ ]")', iostat=ErrStat) 
    else
-      Fmt = '('//trim(Fmt)//'"- [",'//trim(Num2LStr(nc))//'(1x,'//VarFmt//',","),"]")'   
+      Fmt = '('//trim(Fmt)//'"- [",'//trim(Num2LStr(nc))//'('//VarFmt//',","),"]")'   
       write(fid, Fmt, iostat=ErrStat) A(:)
       if (ErrStat /= 0) then
          ErrMsg='Error writting array '//trim(key)//' to YAML file'
@@ -279,7 +279,7 @@ subroutine yaml_write_array1R4(fid, key, A, VarFmt, ErrStat, ErrMsg, level, comm
    if (nc==0) then
       write(fid, '('//trim(Fmt)//'"- [ ]")', iostat=ErrStat) 
    else
-      Fmt = '('//trim(Fmt)//'"- [",'//trim(Num2LStr(nc))//'(1x,'//VarFmt//',","),"]")'   
+      Fmt = '('//trim(Fmt)//'"- [",'//trim(Num2LStr(nc))//'('//VarFmt//',","),"]")'   
       write(fid, Fmt, iostat=ErrStat) A(:)
       if (ErrStat /= 0) then
          ErrMsg='Error writting array '//trim(key)//' to YAML file'
@@ -325,7 +325,7 @@ subroutine yaml_write_array1R8(fid, key, A, VarFmt, ErrStat, ErrMsg, level, comm
    if (nc==0) then
       write(fid, '('//trim(Fmt)//'"- [ ]")', iostat=ErrStat) 
    else
-      Fmt = '('//trim(Fmt)//'"- [",'//trim(Num2LStr(nc))//'(1x,'//VarFmt//',","),"]")'   
+      Fmt = '('//trim(Fmt)//'"- [",'//trim(Num2LStr(nc))//'('//VarFmt//',","),"]")'   
       write(fid, Fmt, iostat=ErrStat) A(:)
       if (ErrStat /= 0) then
          ErrMsg='Error writting array '//trim(key)//' to YAML file'
@@ -372,7 +372,7 @@ subroutine yaml_write_array1R16(fid, key, A, VarFmt, ErrStat, ErrMsg, level, com
    if (nc==0) then
       write(fid, '('//trim(Fmt)//'"- [ ]")', iostat=ErrStat) 
    else
-      Fmt = '('//trim(Fmt)//'"- [",'//trim(Num2LStr(nc))//'(1x,'//VarFmt//',","),"]")'   
+      Fmt = '('//trim(Fmt)//'"- [",'//trim(Num2LStr(nc))//'('//VarFmt//',","),"]")'   
       write(fid, Fmt, iostat=ErrStat) A(:)
       if (ErrStat /= 0) then
          ErrMsg='Error writting array '//trim(key)//' to YAML file'
@@ -417,9 +417,9 @@ subroutine yaml_write_array2I(fid, key, A, VarFmt, ErrStat, ErrMsg, level, comme
       write(fid, '('//trim(Fmt)//'"- [ ]")', iostat=ErrStat) 
    else
       if (present(label)) then
-         Fmt = '('//trim(Fmt)//'"- [",'//trim(Num2LStr(nc))//'(1x,'//VarFmt//',","),"] # ",I0)'   
+         Fmt = '('//trim(Fmt)//'"- [",'//trim(Num2LStr(nc))//'('//VarFmt//',","),"] # ",I0)'   
       else
-         Fmt = '('//trim(Fmt)//'"- [",'//trim(Num2LStr(nc))//'(1x,'//VarFmt//',","),"]")'   
+         Fmt = '('//trim(Fmt)//'"- [",'//trim(Num2LStr(nc))//'('//VarFmt//',","),"]")'   
       endif
       do i=1,nr
          if (present(label)) then
@@ -435,7 +435,7 @@ subroutine yaml_write_array2I(fid, key, A, VarFmt, ErrStat, ErrMsg, level, comme
    endif
 end subroutine yaml_write_array2I
 
-subroutine yaml_write_array2R4(fid, key, A, VarFmt, ErrStat, ErrMsg, level, comment)
+subroutine yaml_write_array2R4(fid, key, A, VarFmt, ErrStat, ErrMsg, level, comment, AllFmt)
    integer(IntKi),             intent(in   ) :: fid     !< File Unit
    character(len=*),           intent(in   ) :: key     !< Array name
    real(SiKi), dimension(:,:), intent(in   ) :: A       !< Array
@@ -444,6 +444,7 @@ subroutine yaml_write_array2R4(fid, key, A, VarFmt, ErrStat, ErrMsg, level, comm
    character(len=*),           intent(  out) :: ErrMsg  !< Error message if errstat /= errid_none
    integer(IntKi),   optional, intent(in   ) :: level   !< indentation level
    character(len=*), optional, intent(in   ) :: comment !< 
+   character(len=*), optional, intent(in   ) :: AllFmt  !< Format for printing a line
    integer            :: nr, nc, i  ! size (rows and columns) of A
    integer            :: nSpaces ! number of indentation spaces
    character(256)     :: Fmt
@@ -474,7 +475,11 @@ subroutine yaml_write_array2R4(fid, key, A, VarFmt, ErrStat, ErrMsg, level, comm
    if (nr==0) then
       write(fid, '('//trim(Fmt)//'"- [ ]")', iostat=ErrStat) 
    else
-      Fmt = '('//trim(Fmt)//'"- [",'//trim(Num2LStr(nc))//'(1x,'//VarFmt//',","),"]")'   
+      if (present(AllFmt)) then
+         Fmt = '('//trim(Fmt)//'"- [",'//trim(AllFmt)//'"]")'   
+      else
+         Fmt = '('//trim(Fmt)//'"- [",'//trim(Num2LStr(nc))//'('//VarFmt//',","),"]")'   
+      endif
       do i=1,nr
          write(fid, Fmt, iostat=ErrStat) A(i,:)
          if (ErrStat /= 0) then
@@ -485,7 +490,7 @@ subroutine yaml_write_array2R4(fid, key, A, VarFmt, ErrStat, ErrMsg, level, comm
    endif
 end subroutine yaml_write_array2R4
 
-subroutine yaml_write_array2R8(fid, key, A, VarFmt, ErrStat, ErrMsg, level, comment)
+subroutine yaml_write_array2R8(fid, key, A, VarFmt, ErrStat, ErrMsg, level, comment, AllFmt)
    integer(IntKi),             intent(in   ) :: fid     !< File Unit
    character(len=*),           intent(in   ) :: key     !< Array name
    real(R8Ki), dimension(:,:), intent(in   ) :: A       !< Array
@@ -494,6 +499,7 @@ subroutine yaml_write_array2R8(fid, key, A, VarFmt, ErrStat, ErrMsg, level, comm
    character(len=*),           intent(  out) :: ErrMsg  !< Error message if errstat /= errid_none
    integer(IntKi),   optional, intent(in   ) :: level   !< indentation level
    character(len=*), optional, intent(in   ) :: comment !< 
+   character(len=*), optional, intent(in   ) :: AllFmt  !< Format for printing a line
    integer            :: nr, nc, i  ! size (rows and columns) of A
    integer            :: nSpaces ! number of indentation spaces
    character(256)     :: Fmt
@@ -522,7 +528,11 @@ subroutine yaml_write_array2R8(fid, key, A, VarFmt, ErrStat, ErrMsg, level, comm
    if (nr==0) then
       write(fid, '('//trim(Fmt)//'"- [ ]")', iostat=ErrStat) 
    else
-      Fmt = '('//trim(Fmt)//'"- [",'//trim(Num2LStr(nc))//'(1x,'//VarFmt//',","),"]")'   
+      if (present(AllFmt)) then
+         Fmt = '('//trim(Fmt)//'"- [",'//trim(AllFmt)//'"]")'   
+      else
+         Fmt = '('//trim(Fmt)//'"- [",'//trim(Num2LStr(nc))//'('//VarFmt//',","),"]")'   
+      endif
       do i=1,nr
          write(fid, Fmt, iostat=ErrStat) A(i,:)
          if (ErrStat /= 0) then
@@ -533,7 +543,7 @@ subroutine yaml_write_array2R8(fid, key, A, VarFmt, ErrStat, ErrMsg, level, comm
    endif
 end subroutine yaml_write_array2R8
 
-subroutine yaml_write_array2R16(fid, key, A, VarFmt, ErrStat, ErrMsg, level, comment)
+subroutine yaml_write_array2R16(fid, key, A, VarFmt, ErrStat, ErrMsg, level, comment, AllFmt)
    integer(IntKi),             intent(in   ) :: fid     !< File Unit
    character(len=*),           intent(in   ) :: key     !< Array name
    real(QuKi), dimension(:,:), intent(in   ) :: A       !< Array
@@ -542,6 +552,7 @@ subroutine yaml_write_array2R16(fid, key, A, VarFmt, ErrStat, ErrMsg, level, com
    character(len=*),           intent(  out) :: ErrMsg  !< Error message if errstat /= errid_none
    integer(IntKi),   optional, intent(in   ) :: level   !< indentation level
    character(len=*), optional, intent(in   ) :: comment !< 
+   character(len=*), optional, intent(in   ) :: AllFmt  !< Format for printing a line
    integer            :: nr, nc, i  ! size (rows and columns) of A
    integer            :: nSpaces ! number of indentation spaces
    character(256)     :: Fmt
@@ -567,7 +578,11 @@ subroutine yaml_write_array2R16(fid, key, A, VarFmt, ErrStat, ErrMsg, level, com
    if (nr==0) then
       write(fid, '('//trim(Fmt)//'"- [ ]")', iostat=ErrStat) 
    else
-      Fmt = '('//trim(Fmt)//'"- [",'//trim(Num2LStr(nc))//'(1x,'//VarFmt//',","),"]")'   
+      if (present(AllFmt)) then
+         Fmt = '('//trim(Fmt)//'"- [",'//trim(AllFmt)//'"]")'   
+      else
+         Fmt = '('//trim(Fmt)//'"- [",'//trim(Num2LStr(nc))//'('//VarFmt//',","),"]")'   
+      endif
       do i=1,nr
          write(fid, Fmt, iostat=ErrStat) A(i,:)
          if (ErrStat /= 0) then
