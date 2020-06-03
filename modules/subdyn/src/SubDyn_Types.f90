@@ -214,7 +214,7 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: ElemsDOF      !< 12 DOF indices of node 1 and 2 of a given member in unconstrained assembled system  [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: DOFtilde2Nodes      !< nDOFRed x 3, for each constrained DOF, col1 node index, col2 number of DOF, col3 DOF starting from 1 [-]
     INTEGER(IntKi)  :: nDOFM      !< retained degrees of freedom (modes) [-]
-    LOGICAL  :: SttcSolve      !< Solve dynamics about static equilibrium point (flag) [-]
+    INTEGER(IntKi)  :: SttcSolve      !< Solve dynamics about static equilibrium point (flag) [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: NOmegaM2      !< Coefficient of x in X (negative omegaM squared) [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: N2OmegaMJDamp      !< Coefficient of x in X (negative 2 omegaM * JDamping) [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: MMB      !< Matrix after C-B reduction (transpose of MBM [-]
@@ -234,8 +234,10 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: MBB      !< Matrix after C-B reduction [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: KBB      !< Matrix after C-B reduction [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: MBM      !< Matrix after C-B reduction [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: UL_st_g      !< Motion of internal DOFs due to static gravitational force, for static improvement [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PhiL_T      !< Transpose of Matrix of C-B  modes [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PhiLInvOmgL2      !< Matrix of C-B  modes times the inverse of OmegaL**2 (Phi_L*(Omg**2)^-1) [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: KLLm1      !< KLL^{-1}, inverse of matrix KLL, for static solve only [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: AM2Jac      !< Jacobian (factored) for Adams-Boulton 2nd order Integration [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: AM2JacPiv      !< Pivot array for Jacobian factorization (for Adams-Boulton 2nd order Integration) [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: TI      !< Matrix to calculate TP reference point reaction at top of structure [-]
@@ -6720,6 +6722,18 @@ IF (ALLOCATED(SrcParamData%MBM)) THEN
   END IF
     DstParamData%MBM = SrcParamData%MBM
 ENDIF
+IF (ALLOCATED(SrcParamData%UL_st_g)) THEN
+  i1_l = LBOUND(SrcParamData%UL_st_g,1)
+  i1_u = UBOUND(SrcParamData%UL_st_g,1)
+  IF (.NOT. ALLOCATED(DstParamData%UL_st_g)) THEN 
+    ALLOCATE(DstParamData%UL_st_g(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%UL_st_g.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstParamData%UL_st_g = SrcParamData%UL_st_g
+ENDIF
 IF (ALLOCATED(SrcParamData%PhiL_T)) THEN
   i1_l = LBOUND(SrcParamData%PhiL_T,1)
   i1_u = UBOUND(SrcParamData%PhiL_T,1)
@@ -6747,6 +6761,20 @@ IF (ALLOCATED(SrcParamData%PhiLInvOmgL2)) THEN
     END IF
   END IF
     DstParamData%PhiLInvOmgL2 = SrcParamData%PhiLInvOmgL2
+ENDIF
+IF (ALLOCATED(SrcParamData%KLLm1)) THEN
+  i1_l = LBOUND(SrcParamData%KLLm1,1)
+  i1_u = UBOUND(SrcParamData%KLLm1,1)
+  i2_l = LBOUND(SrcParamData%KLLm1,2)
+  i2_u = UBOUND(SrcParamData%KLLm1,2)
+  IF (.NOT. ALLOCATED(DstParamData%KLLm1)) THEN 
+    ALLOCATE(DstParamData%KLLm1(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%KLLm1.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstParamData%KLLm1 = SrcParamData%KLLm1
 ENDIF
 IF (ALLOCATED(SrcParamData%AM2Jac)) THEN
   i1_l = LBOUND(SrcParamData%AM2Jac,1)
@@ -7196,11 +7224,17 @@ ENDIF
 IF (ALLOCATED(ParamData%MBM)) THEN
   DEALLOCATE(ParamData%MBM)
 ENDIF
+IF (ALLOCATED(ParamData%UL_st_g)) THEN
+  DEALLOCATE(ParamData%UL_st_g)
+ENDIF
 IF (ALLOCATED(ParamData%PhiL_T)) THEN
   DEALLOCATE(ParamData%PhiL_T)
 ENDIF
 IF (ALLOCATED(ParamData%PhiLInvOmgL2)) THEN
   DEALLOCATE(ParamData%PhiLInvOmgL2)
+ENDIF
+IF (ALLOCATED(ParamData%KLLm1)) THEN
+  DEALLOCATE(ParamData%KLLm1)
 ENDIF
 IF (ALLOCATED(ParamData%AM2Jac)) THEN
   DEALLOCATE(ParamData%AM2Jac)
@@ -7525,6 +7559,11 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*2  ! MBM upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%MBM)  ! MBM
   END IF
+  Int_BufSz   = Int_BufSz   + 1     ! UL_st_g allocated yes/no
+  IF ( ALLOCATED(InData%UL_st_g) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! UL_st_g upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%UL_st_g)  ! UL_st_g
+  END IF
   Int_BufSz   = Int_BufSz   + 1     ! PhiL_T allocated yes/no
   IF ( ALLOCATED(InData%PhiL_T) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! PhiL_T upper/lower bounds for each dimension
@@ -7534,6 +7573,11 @@ ENDIF
   IF ( ALLOCATED(InData%PhiLInvOmgL2) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! PhiLInvOmgL2 upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%PhiLInvOmgL2)  ! PhiLInvOmgL2
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! KLLm1 allocated yes/no
+  IF ( ALLOCATED(InData%KLLm1) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! KLLm1 upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%KLLm1)  ! KLLm1
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! AM2Jac allocated yes/no
   IF ( ALLOCATED(InData%AM2Jac) ) THEN
@@ -8007,7 +8051,7 @@ ENDIF
   END IF
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%nDOFM
       Int_Xferred   = Int_Xferred   + 1
-      IntKiBuf ( Int_Xferred:Int_Xferred+1-1 ) = TRANSFER( InData%SttcSolve , IntKiBuf(1), 1)
+      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%SttcSolve
       Int_Xferred   = Int_Xferred   + 1
   IF ( .NOT. ALLOCATED(InData%NOmegaM2) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -8298,6 +8342,19 @@ ENDIF
       IF (SIZE(InData%MBM)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%MBM))-1 ) = PACK(InData%MBM,.TRUE.)
       Re_Xferred   = Re_Xferred   + SIZE(InData%MBM)
   END IF
+  IF ( .NOT. ALLOCATED(InData%UL_st_g) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%UL_st_g,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%UL_st_g,1)
+    Int_Xferred = Int_Xferred + 2
+
+      IF (SIZE(InData%UL_st_g)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%UL_st_g))-1 ) = PACK(InData%UL_st_g,.TRUE.)
+      Re_Xferred   = Re_Xferred   + SIZE(InData%UL_st_g)
+  END IF
   IF ( .NOT. ALLOCATED(InData%PhiL_T) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -8329,6 +8386,22 @@ ENDIF
 
       IF (SIZE(InData%PhiLInvOmgL2)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%PhiLInvOmgL2))-1 ) = PACK(InData%PhiLInvOmgL2,.TRUE.)
       Re_Xferred   = Re_Xferred   + SIZE(InData%PhiLInvOmgL2)
+  END IF
+  IF ( .NOT. ALLOCATED(InData%KLLm1) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%KLLm1,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%KLLm1,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%KLLm1,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%KLLm1,2)
+    Int_Xferred = Int_Xferred + 2
+
+      IF (SIZE(InData%KLLm1)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%KLLm1))-1 ) = PACK(InData%KLLm1,.TRUE.)
+      Re_Xferred   = Re_Xferred   + SIZE(InData%KLLm1)
   END IF
   IF ( .NOT. ALLOCATED(InData%AM2Jac) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -9200,7 +9273,7 @@ ENDIF
   END IF
       OutData%nDOFM = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
-      OutData%SttcSolve = TRANSFER( IntKiBuf( Int_Xferred ), mask0 )
+      OutData%SttcSolve = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! NOmegaM2 not allocated
     Int_Xferred = Int_Xferred + 1
@@ -9681,6 +9754,29 @@ ENDIF
       Re_Xferred   = Re_Xferred   + SIZE(OutData%MBM)
     DEALLOCATE(mask2)
   END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! UL_st_g not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%UL_st_g)) DEALLOCATE(OutData%UL_st_g)
+    ALLOCATE(OutData%UL_st_g(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%UL_st_g.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask1 = .TRUE. 
+      IF (SIZE(OutData%UL_st_g)>0) OutData%UL_st_g = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%UL_st_g))-1 ), mask1, 0.0_ReKi )
+      Re_Xferred   = Re_Xferred   + SIZE(OutData%UL_st_g)
+    DEALLOCATE(mask1)
+  END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! PhiL_T not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
@@ -9731,6 +9827,32 @@ ENDIF
     mask2 = .TRUE. 
       IF (SIZE(OutData%PhiLInvOmgL2)>0) OutData%PhiLInvOmgL2 = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%PhiLInvOmgL2))-1 ), mask2, 0.0_ReKi )
       Re_Xferred   = Re_Xferred   + SIZE(OutData%PhiLInvOmgL2)
+    DEALLOCATE(mask2)
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! KLLm1 not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%KLLm1)) DEALLOCATE(OutData%KLLm1)
+    ALLOCATE(OutData%KLLm1(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%KLLm1.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask2.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask2 = .TRUE. 
+      IF (SIZE(OutData%KLLm1)>0) OutData%KLLm1 = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%KLLm1))-1 ), mask2, 0.0_ReKi )
+      Re_Xferred   = Re_Xferred   + SIZE(OutData%KLLm1)
     DEALLOCATE(mask2)
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! AM2Jac not allocated
