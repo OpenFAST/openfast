@@ -933,8 +933,8 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,y,errStat,errMsg)
     real(ReKi)                                                 :: PBLNT,adforma
     REAL(ReKi),DIMENSION(2)                                    :: Cf ,d99, d_star
     TYPE(FFT_DataType)                                         :: FFT_Data             !< the instance of the FFT module we're using
-    REAL(kind=4),DIMENSION(p%total_sample)                     :: spect_signal
-    REAL(kind=4),DIMENSION(p%total_sample/2)                   :: spectra
+    REAL(ReKi),DIMENSION(p%total_sample)                     :: spect_signal
+    REAL(ReKi),DIMENSION(p%total_sample/2)                   :: spectra
     real(ReKi),ALLOCATABLE     ::  fft_freq(:)  
     integer(intKi)                                             :: ErrStat2
     character(ErrMsgLen)                                       :: ErrMsg2
@@ -2221,7 +2221,7 @@ END SUBROUTINE Simple_Guidati
 !================================ Turbulent Boundary Layer Trailing Edge Noise ====================================================!
 !=================================================== TNO START ====================================================================!
 SUBROUTINE TBLTE_TNO(ALPSTAR,C,U,THETA,PHI,D,R,Cfall,d99all,EdgeVelAll,p,SPLP,SPLS,SPLALPH,SPLTBL,errStat,errMsgn)
-   USE TNO
+   USE TNO, only: SPL_integrate
     REAL(ReKi),                               INTENT(IN   ) :: ALPSTAR    !< AOA                    (deg)
     REAL(ReKi),                               INTENT(IN   ) :: C          !< Chord Length           (m)
     REAL(ReKi),                               INTENT(IN   ) :: U          !< Unoise                 (m/s)
@@ -2243,18 +2243,20 @@ SUBROUTINE TBLTE_TNO(ALPSTAR,C,U,THETA,PHI,D,R,Cfall,d99all,EdgeVelAll,p,SPLP,SP
     integer(intKi)          :: ErrStat2                                                                                  ! temporary Error status
     character(ErrMsgLen)    :: ErrMsg2                                                                                   ! temporary Error message
     character(*), parameter :: RoutineName                              = 'TBLTE_TNO'
-    REAL(kind=4) :: a,b
-    REAL(kind=4) :: answer
-    REAL(kind=4) :: abserr,resabs,resasc
-    REAL(kind=4) :: freq(size(p%FreqList))
-    REAL(kind=4) :: SPL_press,SPL_suction
-    REAL(kind=4) :: band_width,band_ratio
-    REAL(kind=4) :: Spectrum
-    REAL(ReKi)   :: DBARH
-    REAL(kind=4) :: P1,P2,P4
+    REAL(ReKi) :: answer
+    REAL(ReKi) :: Spectrum
+    REAL(ReKi) :: freq(size(p%FreqList))
+    REAL(ReKi) :: SPL_press,SPL_suction
+    REAL(ReKi) :: band_width,band_ratio
+    REAL(ReKi) :: DBARH
+    REAL(ReKi) :: P1,P2,P4
     INTEGER (4)  :: n_freq
     INTEGER (4)  :: i_omega
-    real(TNOKi)  :: omega
+
+      ! Variables passed to integration routine
+   real(ReKi)  :: int_limits(2)  !< Lower and upper integration limits
+   real(ReKi)  :: Mach        !< Mach number
+   real(ReKi)  :: omega
 
     ! Init
     n_freq  = size(p%FreqList)
@@ -2263,38 +2265,34 @@ SUBROUTINE TBLTE_TNO(ALPSTAR,C,U,THETA,PHI,D,R,Cfall,d99all,EdgeVelAll,p,SPLP,SP
     ErrMsgn = ""
     ! Body of TNO 
     band_ratio = 2.**(1./3.)
-    ! Module AirfoilParams
-    Mach = real(U  / p%SpdSound)
-    ! Module Atmosphere
-    co   = real(p%SpdSound)
-    rho  = real(p%AirDens)
-    nu   = real(p%KinVisc)
+
+    ! Mach number
+    Mach = U  / p%SpdSound
+
     ! Directivity function
     CALL DIRECTH(REAL(Mach),THETA,PHI,DBARH,errStat2,errMsg2)
-    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsgn, RoutineName ) 
-    ! Module BlParams
-    Cf      = real(Cfall    )
-    d99     = real(d99all   )
-    edgevel = real(ABS(EdgeVelAll))
-
+    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsgn, RoutineName )
+ 
     do i_omega = 1,n_freq
         omega = 2.*pi*freq(i_omega)
         !integration limits
-        a = 0.0e0
-        b = 10*omega/(Mach*co)
+        int_limits(1) = 0.0e0
+        int_limits(2) = 10*omega/(Mach*p%SpdSound)
         ! Convert to third octave
         band_width = freq(i_omega)*(sqrt(band_ratio)-1./sqrt(band_ratio)) * 4. * pi
-        ISSUCTION = .TRUE.
-        IF (Cf(1) .GT. 0.) THEN
-            CALL solve_qk61(omega,f_int2,a,b,answer,abserr,resabs,resasc)   ! wrapper for qk61 routine from slatec library
+        IF (Cfall(1) .GT. 0.) THEN
+            answer = SPL_integrate(omega=omega,limits=int_limits,ISSUCTION=.true.,        &
+                     Mach=Mach,SpdSound=p%SpdSound,AirDens=p%AirDens,KinVisc=p%KinVisc,   &
+                     Cfall=Cfall,d99all=d99all,EdgeVelAll=EdgeVelAll)
             Spectrum = D/(4.*pi*R**2.)*answer
             SPL_suction = 10.*log10(Spectrum*DBARH/2.e-5/2.e-5)
             SPLS(i_omega) = SPL_suction + 10.*log10(band_width)
         ENDIF
 
-        ISSUCTION = .FALSE.
-        IF (Cf(2) .GT. 0.) THEN
-            CALL solve_qk61(omega,f_int2,a,b,answer,abserr,resabs,resasc)   ! wrapper for qk61 routine from slatec library
+        IF (Cfall(2) .GT. 0.) THEN
+            answer = SPL_integrate(omega=omega,limits=int_limits,ISSUCTION=.FALSE.,       &
+                     Mach=Mach,SpdSound=p%SpdSound,AirDens=p%AirDens,KinVisc=p%KinVisc,   &
+                     Cfall=Cfall,d99all=d99all,EdgeVelAll=EdgeVelAll)
             Spectrum = D/(4.*pi*R**2.)*answer
             SPL_press = 10.*log10(Spectrum*DBARH/2.e-5/2.e-5)
             SPLP(i_omega) = SPL_press + 10.*log10(band_width)

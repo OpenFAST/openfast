@@ -35,6 +35,9 @@ set(NWTCLIBS_SOURCES
   src/NetLib/fftpack/NWTC_FFTPACK.f90
   src/NetLib/lapack/NWTC_LAPACK.f90
   src/NetLib/scalapack/NWTC_ScaLAPACK.f90
+
+  # NetLib SLATEC sources
+  src/NetLib/slatec/NWTC_SLATEC.f90
   src/NetLib/slatec/dqk61.f
   src/NetLib/slatec/qk61.f
   src/NetLib/slatec/d1mach.f
@@ -51,13 +54,24 @@ set(NWTCLIBS_SOURCES
 
 get_filename_component(FCNAME ${CMAKE_Fortran_COMPILER} NAME)
 
-# in debug, remove the recursion check on dqk61.f and qk61.f
-if(CMAKE_BUILD_TYPE MATCHES Debug)
-   if(${CMAKE_Fortran_COMPILER_ID} STREQUAL "GNU")
-      set_source_files_properties(src/NetLib/slatec/dqk61.f PROPERTIES COMPILE_FLAGS -frecursive)
-      set_source_files_properties(src/NetLib/slatec/qk61.f  PROPERTIES COMPILE_FLAGS -frecursive)
+# Recursive use of routine in qk61/dqk61 will trigger errors in debug
+if (CMAKE_BUILD_TYPE MATCHES Debug)
+   if (${CMAKE_Fortran_COMPILER_ID} STREQUAL "GNU")
+      set_source_files_properties(src/NetLib/slatec/NWTC_SLATEC.f90 PROPERTIES COMPILE_FLAGS -frecursive)
+      set_source_files_properties(src/NetLib/slatec/dqk61.f         PROPERTIES COMPILE_FLAGS -frecursive)
+      set_source_files_properties(src/NetLib/slatec/qk61.f          PROPERTIES COMPILE_FLAGS -frecursive)
+   elseif (${CMAKE_Fortran_COMPILER_ID} STREQUAL "Intel")
+      if (WIN32)
+         set_source_files_properties(src/NetLib/slatec/NWTC_SLATEC.f90 PROPERTIES COMPILE_FLAGS "/assume:recursion")
+         set_source_files_properties(src/NetLib/slatec/dqk61.f         PROPERTIES COMPILE_FLAGS "/assume:recursion")
+         set_source_files_properties(src/NetLib/slatec/qk61.f          PROPERTIES COMPILE_FLAGS "/assume:recursion")
+      else()
+         set_source_files_properties(src/NetLib/slatec/NWTC_SLATEC.f90 PROPERTIES COMPILE_FLAGS "-assume recursion")
+         set_source_files_properties(src/NetLib/slatec/dqk61.f         PROPERTIES COMPILE_FLAGS "-assume recursion")
+         set_source_files_properties(src/NetLib/slatec/qk61.f          PROPERTIES COMPILE_FLAGS "-assume recursion")
+      endif()
    endif()
-endif()
+endif() 
 
 
 if(BUILD_OPENFAST_SIMULINK_API)

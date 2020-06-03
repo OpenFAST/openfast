@@ -1,109 +1,123 @@
 MODULE TNO
 
 
-   use NWTC_Library
+   use NWTC_Library  ! ReKi, DBKi, R8Ki
+   use NWTC_SLATEC   ! slatec_qk61 -- which is all that is in that library right now.
 
    implicit none
-   PUBLIC:: Pressure, f_int1, f_int2
+   PUBLIC :: SPL_integrate
 
-   INTEGER, PARAMETER :: TNOKi = ReKi
+   INTEGER,       PARAMETER :: TNOKi = ReKi
 
-   REAL (ReKi),PARAMETER :: Cnuk = 5.5
-   REAL (ReKi),PARAMETER :: kappa = 0.41
-   REAL (ReKi),PARAMETER :: Cmu = 0.09
-   INTEGER(IntKi),PARAMETER :: limit = 5000
+   REAL (TNOKi),  PARAMETER :: Cnuk = 5.5
+   REAL (TNOKi),  PARAMETER :: kappa = 0.41
+   REAL (TNOKi),  PARAMETER :: Cmu = 0.09
+!   INTEGER(IntKi),PARAMETER :: limit = 5000
 
    !TNO variables
-   REAL (ReKi) :: Omega_TNO ! NOTE: not a constant and used by function f_int1 and f_int2
+   REAL (TNOKi) :: Omega_TNO ! NOTE: not a constant and used by function f_int1 and f_int2
 
    !atmosphere variables
-   REAL (ReKi)  :: nu
-   REAL (ReKi)  :: co
-   REAL (ReKi)  :: rho
+   REAL (TNOKi)  :: nu
+   REAL (TNOKi)  :: co
+   REAL (TNOKi)  :: rho
 
    ! Wavenumber variables
-   REAL (ReKi)  :: k
-   REAL (ReKi)  :: k1
-   REAL (ReKi)  :: k3
+   REAL (TNOKi)  :: k
+   REAL (TNOKi)  :: k1
+   REAL (TNOKi)  :: k3
 
    ! Blade params
-   REAL (ReKi)  :: d99(2)
-   REAL (ReKi)  :: Cf(2)
-   REAL (ReKi)  :: edgevel(2)
+   REAL (TNOKi)  :: d99(2)
+   REAL (TNOKi)  :: Cf(2)
+   REAL (TNOKi)  :: edgevel(2)
 
    ! Airfoil
-    REAL(ReKi)  :: Mach
-    LOGICAL     :: ISSUCTION
-
-   interface solve_qk61
-      module procedure wrap_qk61
-      module procedure wrap_dqk61
-   end interface
-      
+    REAL(TNOKi)  :: Mach_TNO
+    LOGICAL      :: ISSUCTION_TNO
 
 
 contains
 
-! Single precision wrapper for qk61 routine
-subroutine wrap_qk61(Omega_TNO_in,f,a,b,answer,abserr,resabs,resasc)
-   real(SiKi), intent(in   ) :: Omega_TNO_in
-   real(SiKi), intent(in   ) :: a,b
-   real(SiKi), intent(  out) :: answer
-   real(SiKi), intent(in   ) :: abserr,resabs,resasc
-   real(SiKi), external :: f
-   Omega_TNO = real(Omega_TNO_in, TNOKi)
-   call qk61(f,a,b,answer,abserr,resabs,resasc)
-end subroutine wrap_qk61
+!> Solve the spl generated at this location and frequency
+function SPL_integrate(Omega,limits,ISSUCTION,   &
+               Mach,SpdSound,AirDens,KinVisc,      &
+               Cfall,d99all,EdgeVelAll) result(integrand)
+   real(ReKi), intent(in   ) :: Omega              !< frequency
+   real(ReKi), intent(in   ) :: limits(2)          !< integration limits
+   logical,    intent(in   ) :: ISSUCTION          !< Is it the suction edge
+   real(ReKi), intent(in   ) :: Mach               !< Mach number
+   real(ReKi), intent(in   ) :: SpdSound           !< Speed of sound
+   real(ReKi), intent(in   ) :: AirDens            !< Air density
+   real(ReKi), intent(in   ) :: KinVisc            !< Kinetic air viscosity
+   real(ReKi), intent(in   ) :: Cfall(2)           !< Skin friction coefficient   (-)
+   real(ReKi), intent(in   ) :: d99all(2)          !< 
+   real(ReKi), intent(in   ) :: EdgeVelAll(2)      !< 
+   real(ReKi)                :: integrand          !< integrand result
+   
+   real(TNOKi)               :: answer             !< value returned from qk61, NOTE the typing
 
-! double precision wrapper for dqk61 routine
-subroutine wrap_dqk61(Omega_TNO_in,f,a,b,answer,abserr,resabs,resasc)
-   real(R8Ki), intent(in   ) :: Omega_TNO_in
-   real(R8Ki), intent(in   ) :: a,b
-   real(R8Ki), intent(  out) :: answer
-   real(R8Ki), intent(in   ) :: abserr,resabs,resasc
-   real(R8Ki), external :: f
-   Omega_TNO = real(Omega_TNO_in, TNOKi)
-   call dqk61(f,a,b,answer,abserr,resabs,resasc)
-end subroutine wrap_dqk61
+   ! local variables that are ignored
+   real(TNOKi) :: abserr,resabs,resasc             !< accuracy estimates and residuals. Currently ignored
+
+   ! Set module values from input
+   ISSUCTION_TNO  = ISSUCTION
+   Omega_TNO      = real(Omega,TNOKi)
+   ! Mach number of segment
+   Mach_TNO       = real(Mach,TNOKi)
+   ! Atmospheric values
+   co       = real(SpdSound,  TNOKi)
+   rho      = real(AirDens,   TNOKi)
+   nu       = real(KinVisc,   TNOKi)
+   ! Blade node values
+   Cf       = real(Cfall,     TNOKi)
+   d99      = real(d99all,    TNOKi)
+   edgevel  = real(ABS(EdgeVelAll),TNOKi)
+
+   call slatec_qk61(f_int2,limits(1),limits(2),answer,abserr,resabs,resasc)
+   integrand = real( answer, ReKi )
+
+end function SPL_integrate
+
 
 
 FUNCTION f_int1(x2)
-   REAL(ReKi):: alpha
-   REAL(ReKi):: alpha_gauss
-   REAL(ReKi):: Cfin
-   REAL(ReKi):: delta 
-   REAL(ReKi):: dudx
-   REAL(ReKi):: f_int1
-   REAL(ReKi):: ke
-   REAL(ReKi):: k1_hat
-   REAL(ReKi):: k3_hat
-   REAL(ReKi):: kT
-   REAL(ReKi):: L
-   REAL(ReKi):: Nut
-   REAL(ReKi):: phi22
-   REAL(ReKi):: phim
-   REAL(ReKi):: ums
-   REAL(ReKi):: u_star
-   REAL(ReKi):: U
-   REAL(ReKi):: Uc
-   REAL(ReKi):: Uo
-   REAL(ReKi):: W
-   REAL(ReKi), intent(in) :: x2
+   REAL(TNOKi):: alpha
+   REAL(TNOKi):: alpha_gauss
+   REAL(TNOKi):: Cfin
+   REAL(TNOKi):: delta 
+   REAL(TNOKi):: dudx
+   REAL(TNOKi):: ke
+   REAL(TNOKi):: k1_hat
+   REAL(TNOKi):: k3_hat
+   REAL(TNOKi):: kT
+   REAL(TNOKi):: L
+   REAL(TNOKi):: Nut
+   REAL(TNOKi):: phi22
+   REAL(TNOKi):: phim
+   REAL(TNOKi):: ums
+   REAL(TNOKi):: u_star
+   REAL(TNOKi):: U
+   REAL(TNOKi):: Uc
+   REAL(TNOKi):: Uo
+   REAL(TNOKi):: W
+   REAL(TNOKi), intent(in) :: x2
+   REAL(TNOKi):: f_int1
    
    ! changed and being multiplied with edge velocity taken from xfoil output
-   ! Uo=Mach*co issuction use edgevel(1) 
+   ! Uo=Mach_TNO*co ISSUCTION_TNO use edgevel(1) 
    
    !constants from xfoil
-   if (ISSUCTION) then
+   if (ISSUCTION_TNO) then
       alpha = 0.45 ! = 0.3 pressure, = 0.45 suction
       Cfin = Cf(1)
       delta = d99(1)
-      Uo=Mach*co*edgevel(1)
+      Uo=Mach_TNO*co*edgevel(1)
    else
       alpha = 0.30
       Cfin = Cf(2)
       delta = d99(2)
-      Uo=Mach*co*edgevel(2)
+      Uo=Mach_TNO*co*edgevel(2)
    endif
    if (Cfin .le. 0.) then
       write(*,*) 'Cf is less than zero, Cf = ',Cfin
@@ -145,8 +159,8 @@ END FUNCTION f_int1
 
 
 FUNCTION f_int2(k1)  ! changed name from 'int2' to avoid conflicts with intrinsic of same name
-   REAL (ReKi), intent(in)  :: k1
-   REAL (ReKi) :: f_int2
+   REAL (TNOKi), intent(in)  :: k1
+   REAL (TNOKi) :: f_int2
    f_int2 = Omega_TNO/co/k1*Pressure(k1)
    RETURN 
 END FUNCTION f_int2
@@ -154,17 +168,17 @@ END FUNCTION f_int2
 
 FUNCTION Pressure(k1_in)
     ! Variables
-   REAL(ReKi)  :: a,b,answer
-   REAL(ReKi)  :: omega
-   REAL(ReKi)  :: abserr,resabs,resasc
-   REAL(ReKi)  :: k1_in
-   real(ReKi)  :: Pressure
+   REAL(TNOKi)  :: a,b,answer
+   REAL(TNOKi)  :: omega
+   REAL(TNOKi)  :: abserr,resabs,resasc
+   REAL(TNOKi)  :: k1_in
+   real(TNOKi)  :: Pressure
 
    ! Set variables used in f_int1
    k1 = k1_in
 
-    a = 0.0_ReKi !1e-4*d99(1)
-    IF (ISSUCTION)THEN
+    a = 0.0_TNOKi !1e-4*d99(1)
+    IF (ISSUCTION_TNO)THEN
         b = d99(1)
     ELSE
         b = d99(2)
@@ -173,7 +187,7 @@ FUNCTION Pressure(k1_in)
     k3 = 0.
     k= sqrt(k1**2+k3**2)
 
-    CALL qk61(f_int1,a,b,answer,abserr,resabs,resasc)
+    CALL slatec_qk61(f_int1,a,b,answer,abserr,resabs,resasc)
                
     Pressure = 4.*rho**2*k1**2./(k1**2.+k3**2.)*answer
                

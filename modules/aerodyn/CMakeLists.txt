@@ -35,19 +35,6 @@ set(AEROACOUSTIC_SOURCES
 )
 add_library(AeroAcoustics ${AEROACOUSTIC_SOURCES})
 target_link_libraries(AeroAcoustics nwtclibs)
-# Recursive use of routine in TNO will trigger errors in debug
-if (CMAKE_BUILD_TYPE MATCHES Debug)
-   if (${CMAKE_Fortran_COMPILER_ID} STREQUAL "GNU")
-      set_source_files_properties(src/AeroAcoustics/TNO.f90 PROPERTIES COMPILE_FLAGS -frecursive)
-   elseif (${CMAKE_Fortran_COMPILER_ID} STREQUAL "Intel")
-      if (WIN32)
-         set_source_files_properties(src/AeroAcoustics/TNO.f90 PROPERTIES COMPILE_FLAGS "/assume:recursion")
-      else()
-         set_source_files_properties(src/AeroAcoustics/TNO.f90 PROPERTIES COMPILE_FLAGS "-assume recursion")
-      endif()
-   endif()
-endif() 
-
 
 # AeroDyn lib
 set(AD_LIBS_SOURCES
