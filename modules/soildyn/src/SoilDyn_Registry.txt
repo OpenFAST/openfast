@@ -48,7 +48,7 @@ typedef  ^    SlD_InputFile   LOGICAL              EchoFlag       -   -   -   "E
 typedef  ^    SlD_InputFile   CHARACTER(ChanLen)   OutList        :   -   -   "List of user-requested output channels"                 -
 typedef  ^    SlD_InputFile   R8Ki                 DT             -   -   -   "Timestep requested"                                     '(s)'
 typedef  ^    SlD_InputFile   IntKi                CalcOption     -   -   -   "Calculation methodology to use"                         -
-typedef  ^    SlD_InputFile   ReKi                 SD_locations   3   -   -   "Location of the Stiffness damping point"                '(m)'
+typedef  ^    SlD_InputFile   ReKi                 SD_locations   ::  -   -   "Location of the Stiffness damping point"                '(m)'
 typedef  ^    SlD_InputFile   R8Ki                 Stiffness      {6}{6} - -  "Stiffness matrix 6x6"                                   '(N/m, N-m/rad)'
 typedef  ^    SlD_InputFile   R8Ki                 Damping        {6}{6} - -  "Damping ratio matrix 6x6"                               -
 typedef  ^    SlD_InputFile   IntKi                PY_numpoints   -   -   -   "Number of P-Y curve mesh points"                        -

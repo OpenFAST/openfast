@@ -28,11 +28,6 @@
 !**********************************************************************************************************************************
 MODULE SoilDyn
 
-!FIXME: stuff we need to do
-!     -  cannot allow checkpoints.  The DLL starts at T=0 always, and builds the history for histerysis loops
-!     -  Is the stiffness matrix returned about a given operating point, or is it just what is read in?  Can it be used in linearization?
-!     -
-
    USE SoilDyn_Types
    USE SoilDyn_IO
    USE NWTC_Library
@@ -301,9 +296,10 @@ contains
             p%NumPoints =  1_IntKi
 !FIXME: update to allow more than one set of points
 !            NumPoints   =  InputFileData%StiffDamp_NumPoints
-            call AllocAry(MeshLocations,3,1,'Mesh locations',ErrStat,ErrMsg);
+            p%NumPoints = 1
+            call AllocAry(MeshLocations,3,p%NumPoints,'Mesh locations',ErrStat,ErrMsg);
             do i=1,size(MeshLocations,2)
-               MeshLocations(1:3,i)  =  InputFileData%SD_locations(1:3)
+               MeshLocations(1:3,i)  =  InputFileData%SD_locations(1:3,i)
             enddo
          case (Calc_PYcurve)
             p%NumPoints =  InputFileData%PY_NumPoints

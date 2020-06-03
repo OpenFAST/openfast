@@ -66,7 +66,7 @@ IMPLICIT NONE
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: OutList      !< List of user-requested output channels [-]
     REAL(R8Ki)  :: DT      !< Timestep requested ['(s)']
     INTEGER(IntKi)  :: CalcOption      !< Calculation methodology to use [-]
-    REAL(ReKi) , DIMENSION(1:3)  :: SD_locations      !< Location of the Stiffness damping point ['(m)']
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: SD_locations      !< Location of the Stiffness damping point ['(m)']
     REAL(R8Ki) , DIMENSION(1:6,1:6)  :: Stiffness      !< Stiffness matrix 6x6 ['(N/m,]
     REAL(R8Ki) , DIMENSION(1:6,1:6)  :: Damping      !< Damping ratio matrix 6x6 [-]
     INTEGER(IntKi)  :: PY_numpoints      !< Number of P-Y curve mesh points [-]
@@ -660,7 +660,20 @@ IF (ALLOCATED(SrcInputFileData%OutList)) THEN
 ENDIF
     DstInputFileData%DT = SrcInputFileData%DT
     DstInputFileData%CalcOption = SrcInputFileData%CalcOption
+IF (ALLOCATED(SrcInputFileData%SD_locations)) THEN
+  i1_l = LBOUND(SrcInputFileData%SD_locations,1)
+  i1_u = UBOUND(SrcInputFileData%SD_locations,1)
+  i2_l = LBOUND(SrcInputFileData%SD_locations,2)
+  i2_u = UBOUND(SrcInputFileData%SD_locations,2)
+  IF (.NOT. ALLOCATED(DstInputFileData%SD_locations)) THEN 
+    ALLOCATE(DstInputFileData%SD_locations(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%SD_locations.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
     DstInputFileData%SD_locations = SrcInputFileData%SD_locations
+ENDIF
     DstInputFileData%Stiffness = SrcInputFileData%Stiffness
     DstInputFileData%Damping = SrcInputFileData%Damping
     DstInputFileData%PY_numpoints = SrcInputFileData%PY_numpoints
@@ -750,6 +763,9 @@ ENDIF
 IF (ALLOCATED(InputFileData%OutList)) THEN
   DEALLOCATE(InputFileData%OutList)
 ENDIF
+IF (ALLOCATED(InputFileData%SD_locations)) THEN
+  DEALLOCATE(InputFileData%SD_locations)
+ENDIF
 IF (ALLOCATED(InputFileData%PY_locations)) THEN
   DEALLOCATE(InputFileData%PY_locations)
 ENDIF
@@ -810,7 +826,11 @@ ENDIF
   END IF
       Db_BufSz   = Db_BufSz   + 1  ! DT
       Int_BufSz  = Int_BufSz  + 1  ! CalcOption
+  Int_BufSz   = Int_BufSz   + 1     ! SD_locations allocated yes/no
+  IF ( ALLOCATED(InData%SD_locations) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! SD_locations upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%SD_locations)  ! SD_locations
+  END IF
       Db_BufSz   = Db_BufSz   + SIZE(InData%Stiffness)  ! Stiffness
       Db_BufSz   = Db_BufSz   + SIZE(InData%Damping)  ! Damping
       Int_BufSz  = Int_BufSz  + 1  ! PY_numpoints
@@ -897,8 +917,22 @@ ENDIF
       Db_Xferred   = Db_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%CalcOption
       Int_Xferred   = Int_Xferred   + 1
-      ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%SD_locations))-1 ) = PACK(InData%SD_locations,.TRUE.)
+  IF ( .NOT. ALLOCATED(InData%SD_locations) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%SD_locations,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%SD_locations,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%SD_locations,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%SD_locations,2)
+    Int_Xferred = Int_Xferred + 2
+
+      IF (SIZE(InData%SD_locations)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%SD_locations))-1 ) = PACK(InData%SD_locations,.TRUE.)
       Re_Xferred   = Re_Xferred   + SIZE(InData%SD_locations)
+  END IF
       DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%Stiffness))-1 ) = PACK(InData%Stiffness,.TRUE.)
       Db_Xferred   = Db_Xferred   + SIZE(InData%Stiffness)
       DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%Damping))-1 ) = PACK(InData%Damping,.TRUE.)
@@ -1079,17 +1113,32 @@ ENDIF
       Db_Xferred   = Db_Xferred + 1
       OutData%CalcOption = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
-    i1_l = LBOUND(OutData%SD_locations,1)
-    i1_u = UBOUND(OutData%SD_locations,1)
-    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! SD_locations not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%SD_locations)) DEALLOCATE(OutData%SD_locations)
+    ALLOCATE(OutData%SD_locations(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%SD_locations.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-    mask1 = .TRUE. 
-      OutData%SD_locations = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%SD_locations))-1 ), mask1, 0.0_ReKi )
+    ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask2.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask2 = .TRUE. 
+      IF (SIZE(OutData%SD_locations)>0) OutData%SD_locations = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%SD_locations))-1 ), mask2, 0.0_ReKi )
       Re_Xferred   = Re_Xferred   + SIZE(OutData%SD_locations)
-    DEALLOCATE(mask1)
+    DEALLOCATE(mask2)
+  END IF
     i1_l = LBOUND(OutData%Stiffness,1)
     i1_u = UBOUND(OutData%Stiffness,1)
     i2_l = LBOUND(OutData%Stiffness,2)

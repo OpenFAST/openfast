@@ -298,7 +298,10 @@ subroutine SlD_ReadInput( InputFileName, EchoFileName, InputFileData, ErrStat, E
    !  K55 = K44
 
       ! Location
-   call ReadAry( UnitInput, InputFileName, InputFileData%SD_locations(1:3), 3, 'SD_locations', 'Stiffness Damping location', TmpErrStat, TmpErrMsg, UnitEcho); if (Failed()) return;
+      !NOTE: only 1 SD_location allowed at present. Sometime allow multiple SD_locations
+   allocate( InputFileData%SD_locations(3,1), STAT=TmpErrStat )      ! InputFileData%SD_NumPoints
+   if (TmpErrStat /= 0)    call SetErrStat(ErrID_Fatal, 'Could not allocate SD_locations', ErrStat, ErrMsg, RoutineName)
+   call ReadAry( UnitInput, InputFileName, InputFileData%SD_locations(1:3,1), 3, 'SD_locations', 'Stiffness Damping location', TmpErrStat, TmpErrMsg, UnitEcho); if (Failed()) return;
 
       ! Stiffness
    call ReadCom( UnitInput, InputFileName, 'SoilDyn input file separator line',  TmpErrStat, TmpErrMsg, UnitEcho );   if (Failed()) return;
@@ -478,7 +481,9 @@ SUBROUTINE SlD_ValidateInput( InitInp, InputFileData, ErrStat, ErrMsg )
 
     select case(InputFileData%CalcOption)
       case (Calc_StiffDamp)
+         call ValidateStiffnessMatrix()
       case (Calc_PYcurve)
+         call ValidatePYcurves()
       case (Calc_REDWIN)
          call ValidateDLL()
    end select
@@ -486,14 +491,21 @@ SUBROUTINE SlD_ValidateInput( InitInp, InputFileData, ErrStat, ErrMsg )
 
 CONTAINS
    subroutine ValidateStiffnessMatrix()
+      call CheckWtrDepth( InputFileData%SD_locations, 'SD locations', ErrStat2, ErrMsg2)
+         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
       ! Placeholder
    end subroutine ValidateStiffnessMatrix
 
    subroutine ValidatePYcurves()
+      call CheckWtrDepth( InputFileData%PY_locations, 'PY locations', ErrStat2, ErrMsg2)
+         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
       ! Placeholder
    end subroutine ValidatePYcurves
 
    subroutine ValidateDLL()
+      call CheckWtrDepth( InputFileData%DLL_locations, 'DLL locations', ErrStat2, ErrMsg2)
+         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+
       ! Check the model
       read( InputFileData%DLL_modelChr(1:1), *, IOSTAT=IOS ) InputFileData%DLL_model
          call CheckIOS ( IOS, "", 'DLL_model', NumType, ErrStat2, ErrMsg2 )
@@ -514,6 +526,23 @@ CONTAINS
       endif
 
    end subroutine ValidateDLL
+
+   subroutine CheckWtrDepth(Depths,InfoDesc,ErrStat3,ErrMsg3)
+      real(ReKi),             intent(in   ) :: Depths(:,:)
+      character(*),           intent(in   ) :: InfoDesc
+      integer(IntKi),         intent(  out) :: ErrStat3
+      character(ErrMsgLen),   intent(  out)  :: ErrMsg3
+      ErrStat3 = ErrID_None
+      ErrMsg3  = ''
+      do i = 1,size(Depths,dim=2)
+         if (Depths(3,i) > -abs(InitInp%WtrDpth)) then
+            call SetErrStat( ErrID_Fatal, ' Soil location '//trim(Num2LStr(i))//' ('//trim(Num2LStr(Depths(3,i)))//  &
+                  ' m) for '//trim(InfoDesc)//' is above mudline',ErrStat3,ErrMsg3,'')
+         endif
+      enddo
+      if (ErrStat3 /= ErrID_None)   ErrMsg3=trim(ErrMsg3)//NewLine//'Water depth passed to SoilDyn = '//trim(Num2LStr(InitInp%WtrDpth))//' m'
+      return
+   end subroutine CheckWtrDepth
 
 END SUBROUTINE SlD_ValidateInput
 
