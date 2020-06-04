@@ -1331,11 +1331,6 @@ END IF
                y%BladeLn2Mesh(K)%Orientation(2,3,NodeNum) =     m%CoordSys%te2(K,J2,2)
                y%BladeLn2Mesh(K)%Orientation(3,3,NodeNum) =     m%CoordSys%te3(K,J2,2)
                
-                  ! Translational Acceleration (for water-power request for added mass calculations)
-               y%BladeLn2Mesh(K)%TranslationAcc(1,NodeNum) =     LinAccES(1,J2,K)
-               y%BladeLn2Mesh(K)%TranslationAcc(2,NodeNum) = -1.*LinAccES(3,J2,K)
-               y%BladeLn2Mesh(K)%TranslationAcc(3,NodeNum) =     LinAccES(2,J2,K)  
-               
             else         
                   ! Translational Displacement (first calculate absolute position)
                y%BladeLn2Mesh(K)%TranslationDisp(1,NodeNum) =     m%RtHS%rS (1,K,J2)                ! = the distance from the undeflected tower centerline to the current blade node in the xi ( z1) direction
@@ -1357,12 +1352,22 @@ END IF
                ! Translational Displacement (get displacement, not absolute position):
             y%BladeLn2Mesh(K)%TranslationDisp(:,NodeNum) = y%BladeLn2Mesh(K)%TranslationDisp(:,NodeNum) - y%BladeLn2Mesh(K)%Position(:,NodeNum)
             
-           
                ! Translational Velocity
             y%BladeLn2Mesh(K)%TranslationVel(1,NodeNum) =     m%RtHS%LinVelES(1,J2,K)
             y%BladeLn2Mesh(K)%TranslationVel(2,NodeNum) = -1.*m%RtHS%LinVelES(3,J2,K)
             y%BladeLn2Mesh(K)%TranslationVel(3,NodeNum) =     m%RtHS%LinVelES(2,J2,K)  
-                                                
+            
+               ! Rotational Velocity
+            y%BladeLn2Mesh(K)%RotationVel(1,NodeNum) =     m%RtHS%AngVelEM(1,J2,K)
+            y%BladeLn2Mesh(K)%RotationVel(2,NodeNum) = -1.*m%RtHS%AngVelEM(3,J2,K)
+            y%BladeLn2Mesh(K)%RotationVel(3,NodeNum) =     m%RtHS%AngVelEM(2,J2,K)  
+
+               ! Translational Acceleration
+            y%BladeLn2Mesh(K)%TranslationAcc(1,NodeNum) =     LinAccES(1,J2,K)
+            y%BladeLn2Mesh(K)%TranslationAcc(2,NodeNum) = -1.*LinAccES(3,J2,K)
+            y%BladeLn2Mesh(K)%TranslationAcc(3,NodeNum) =     LinAccES(2,J2,K)  
+               
+            
          END DO !J = 1,p%BldNodes ! Loop through the blade nodes / elements
                   
       END DO !K = 1,p%NumBl
@@ -2969,7 +2974,7 @@ SUBROUTINE Alloc_RtHS( RtHS, p, ErrStat, ErrMsg  )
       ErrMsg = ' Error allocating memory for the PAngVelEL array.'
       RETURN
    ENDIF
-   ALLOCATE ( RtHS%PAngVelEM(p%NumBl,p%TipNode,p%NDOF,0:1,Dims) , STAT=ErrStat )
+   ALLOCATE ( RtHS%PAngVelEM(p%NumBl,0:p%TipNode,p%NDOF,0:1,Dims) , STAT=ErrStat )
    IF ( ErrStat /= 0_IntKi )  THEN
       ErrStat = ErrID_Fatal
       ErrMsg = ' Error allocating memory for the PAngVelEM array.'
@@ -2989,10 +2994,11 @@ SUBROUTINE Alloc_RtHS( RtHS, p, ErrStat, ErrMsg  )
    !CALL AllocAry( RtHS%LinVelET,  Dims, p%TwrNodes,         'LinVelET',  ErrStat, ErrMsg );  IF ( ErrStat /= ErrID_None ) RETURN         
 
    !CALL AllocAry( RtHS%LinVelESm2,                 p%NumBl, 'LinVelESm2',ErrStat, ErrMsg );  IF ( ErrStat /= ErrID_None ) RETURN ! The m2-component (closest to tip) of LinVelES
-   ALLOCATE( RtHS%LinVelES( Dims, 0:p%TipNode, p%NumBl ), STAT=ErrStat )
+   ALLOCATE( RtHS%LinVelES( Dims, 0:p%TipNode, p%NumBl ), &
+             RtHS%AngVelEM( Dims, 0:p%TipNode, p%NumBl ), STAT=ErrStat )
    IF (ErrStat /= 0 ) THEN
       ErrStat = ErrID_Fatal
-      ErrMsg = RoutineName//":Error allocating LinVelES."
+      ErrMsg = RoutineName//":Error allocating LinVelES and AngVelEM."
       RETURN
    END IF
    
@@ -3094,6 +3100,12 @@ SUBROUTINE Alloc_RtHS( RtHS, p, ErrStat, ErrMsg  )
       RETURN
    ENDIF
 
+   ALLOCATE(RtHS%AngPosHM(Dims, p%NumBl, 0:p%TipNode), STAT=ErrStat )
+   IF ( ErrStat /= 0_IntKi )  THEN
+      ErrStat = ErrID_Fatal
+      ErrMsg = ' Error allocating memory for the AngPosHM arrays.'
+      RETURN
+   ENDIF
 
    !CALL AllocAry( RtHS%LinAccESt, Dims, p%NumBl, p%TipNode,'LinAccESt', ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
    !CALL AllocAry( RtHS%LinAccETt, Dims, p%TwrNodes,        'LinAccETt', ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
@@ -3112,7 +3124,6 @@ SUBROUTINE Alloc_RtHS( RtHS, p, ErrStat, ErrMsg  )
    CALL AllocAry( RtHS%FSAero,    Dims, p%NumBl,p%BldNodes,'FSAero',    ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
    CALL AllocAry( RtHS%MMAero,    Dims, p%NumBl,p%BldNodes,'MMAero',    ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
    CALL AllocAry( RtHS%FSTipDrag, Dims, p%NumBl,           'FSTipDrag', ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-   CALL AllocAry( RtHS%AngPosHM,  Dims, p%NumBl,p%TipNode, 'AngPosHM',  ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
    CALL AllocAry( RtHS%PFTHydro,  Dims, p%TwrNodes, p%NDOF,'PFTHydro',  ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
    CALL AllocAry( RtHS%PMFHydro,  Dims, p%TwrNodes, p%NDOF,'PMFHydro',  ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
    CALL AllocAry( RtHS%FTHydrot,  Dims, p%TwrNodes,        'FTHydrot',  ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
@@ -6768,6 +6779,8 @@ SUBROUTINE CalculateAngularPosVelPAcc( p, x, CoordSys, RtHSdat )
    TYPE(ED_RtHndSide),           INTENT(INOUT)  :: RtHSdat     !< data from the RtHndSid module (contains positions to be set)
 
       !Local variables
+   
+   REAL(ReKi)                   :: AngVelHM  (3)                                   ! Angular velocity of eleMent J of blade K (body M) in the hub (body H).
 !   REAL(ReKi)                   :: AngVelEN  (3)                                   ! Angular velocity of the nacelle (body N) in the inertia frame (body E for earth).
    REAL(ReKi)                   :: AngAccELt (3)                                   ! Portion of the angular acceleration of the low-speed shaft (body L) in the inertia frame (body E for earth) associated with everything but the QD2T()'s.
    INTEGER(IntKi)               :: J                                               ! Counter for elements
@@ -6887,54 +6900,23 @@ ENDIF
 
    DO K = 1,p%NumBl ! Loop through all blades
 
-      ! Define the partial angular velocities of the tip (body M(p%BldFlexL)) in the  inertia frame:
-      ! NOTE: PAngVelEM(K,J,I,D,:) = the Dth-derivative of the partial angular velocity of DOF I for body M of blade K, element J in body E.
-
-      RtHSdat%PAngVelEM(K,p%TipNode,          :,0,:) = RtHSdat%PAngVelEH(:,0,:)
-      RtHSdat%PAngVelEM(K,p%TipNode,DOF_BF(K,1),0,:) = - p%TwistedSF(K,2,1,p%TipNode,1)*CoordSys%j1(K,:) &
-                                                       + p%TwistedSF(K,1,1,p%TipNode,1)*CoordSys%j2(K,:)
-      RtHSdat%PAngVelEM(K,p%TipNode,DOF_BF(K,2),0,:) = - p%TwistedSF(K,2,2,p%TipNode,1)*CoordSys%j1(K,:) &
-                                                       + p%TwistedSF(K,1,2,p%TipNode,1)*CoordSys%j2(K,:)
-      RtHSdat%PAngVelEM(K,p%TipNode,DOF_BE(K,1),0,:) = - p%TwistedSF(K,2,3,p%TipNode,1)*CoordSys%j1(K,:) &
-                                                       + p%TwistedSF(K,1,3,p%TipNode,1)*CoordSys%j2(K,:)
-   !           AngVelHM(K,p%TipNode              ,:) =  RtHSdat%AngVelEH + x%QDT(DOF_BF(K,1))*RtHSdat%PAngVelEM(K,p%TipNode,DOF_BF(K,1),0,:) & ! Currently
-   !                                                                     + x%QDT(DOF_BF(K,2))*RtHSdat%PAngVelEM(K,p%TipNode,DOF_BF(K,2),0,:) & ! unused
-   !                                                                     + x%QDT(DOF_BE(K,1))*RtHSdat%PAngVelEM(K,p%TipNode,DOF_BE(K,1),0,:)   ! calculations
-       RtHSdat%AngPosHM(:,K,p%TipNode) =        x%QT (DOF_BF(K,1))*RtHSdat%PAngVelEM(K,p%TipNode,DOF_BF(K,1),0,:) &
-                                              + x%QT (DOF_BF(K,2))*RtHSdat%PAngVelEM(K,p%TipNode,DOF_BF(K,2),0,:) &
-                                              + x%QT (DOF_BE(K,1))*RtHSdat%PAngVelEM(K,p%TipNode,DOF_BE(K,1),0,:)
-
-
-      ! Define the 1st derivatives of the partial angular velocities of the tip
-      !   (body M(p%BldFlexL)) in the inertia frame:
-
-   ! NOTE: These are currently unused by the code, therefore, they need not
-   !       be calculated.  Thus, they are currently commented out.  If it
-   !       turns out that they are ever needed (i.e., if inertias of the
-   !       blade elements are ever added, etc...) simply uncomment out these
-   !       computations:
-   !   RtHSdat%PAngVelEM(K,p%TipNode,          :,1,:) = RtHSdat%PAngVelEH(:,1,:)
-   !   RtHSdat%PAngVelEM(K,p%TipNode,DOF_BF(K,1),1,:) = CROSS_PRODUCT(   RtHSdat%AngVelEH, RtHSdat%PAngVelEM(K,p%TipNode,DOF_BF(K,1),0,:)    )
-   !   RtHSdat%PAngVelEM(K,p%TipNode,DOF_BF(K,2),1,:) = CROSS_PRODUCT(   RtHSdat%AngVelEH, RtHSdat%PAngVelEM(K,p%TipNode,DOF_BF(K,2),0,:)    )
-   !   RtHSdat%PAngVelEM(K,p%TipNode,DOF_BE(K,1),1,:) = CROSS_PRODUCT(   RtHSdat%AngVelEH, RtHSdat%PAngVelEM(K,p%TipNode,DOF_BE(K,1),0,:)    )
-
-
-      DO J = 1,p%BldNodes ! Loop through the blade nodes / elements
+      DO J = 0,p%TipNode ! Loop through the blade nodes / elements
       ! Define the partial angular velocities of the current node (body M(RNodes(J))) in the inertia frame:
       ! NOTE: PAngVelEM(K,J,I,D,:) = the Dth-derivative of the partial angular velocity
       !   of DOF I for body M of blade K, element J in body E.
 
          RtHSdat%PAngVelEM(K,J,          :,0,:) = RtHSdat%PAngVelEH(:,0,:)
          RtHSdat%PAngVelEM(K,J,DOF_BF(K,1),0,:) = - p%TwistedSF(K,2,1,J,1)*CoordSys%j1(K,:) &
-                                                + p%TwistedSF(K,1,1,J,1)*CoordSys%j2(K,:)
+                                                  + p%TwistedSF(K,1,1,J,1)*CoordSys%j2(K,:)
          RtHSdat%PAngVelEM(K,J,DOF_BF(K,2),0,:) = - p%TwistedSF(K,2,2,J,1)*CoordSys%j1(K,:) &
-                                                + p%TwistedSF(K,1,2,J,1)*CoordSys%j2(K,:)
+                                                  + p%TwistedSF(K,1,2,J,1)*CoordSys%j2(K,:)
          RtHSdat%PAngVelEM(K,J,DOF_BE(K,1),0,:) = - p%TwistedSF(K,2,3,J,1)*CoordSys%j1(K,:) &
-                                                + p%TwistedSF(K,1,3,J,1)*CoordSys%j2(K,:)
-!                 AngVelHM(K,J              ,:) =  RtHSdat%AngVelEH + x%QDT(DOF_BF(K,1))*RtHSdat%PAngVelEM(K,J,DOF_BF(K,1),0,:) & ! Currently
-!                                                                   + x%QDT(DOF_BF(K,2))*RtHSdat%PAngVelEM(K,J,DOF_BF(K,2),0,:) & ! unused
-!                                                                   + x%QDT(DOF_BE(K,1))*RtHSdat%PAngVelEM(K,J,DOF_BE(K,1),0,:)   ! calculations
-          RtHSdat%AngPosHM(:,K,J              ) =             x%QT (DOF_BF(K,1))*RtHSdat%PAngVelEM(K,J,DOF_BF(K,1),0,:) &
+                                                  + p%TwistedSF(K,1,3,J,1)*CoordSys%j2(K,:)
+                                      AngVelHM  =  RtHSdat%AngVelEH + x%QDT(DOF_BF(K,1))*RtHSdat%PAngVelEM(K,J,DOF_BF(K,1),0,:) &
+                                                                    + x%QDT(DOF_BF(K,2))*RtHSdat%PAngVelEM(K,J,DOF_BF(K,2),0,:) &
+                                                                    + x%QDT(DOF_BE(K,1))*RtHSdat%PAngVelEM(K,J,DOF_BE(K,1),0,:)
+          RtHSdat%AngVelEM(:,J,K              ) =  RtHSdat%AngVelEH + AngVelHM
+          RtHSdat%AngPosHM(:,K,J              ) =     x%QT (DOF_BF(K,1))*RtHSdat%PAngVelEM(K,J,DOF_BF(K,1),0,:) &
                                                     + x%QT (DOF_BF(K,2))*RtHSdat%PAngVelEM(K,J,DOF_BF(K,2),0,:) &
                                                     + x%QT (DOF_BE(K,1))*RtHSdat%PAngVelEM(K,J,DOF_BE(K,1),0,:)
 

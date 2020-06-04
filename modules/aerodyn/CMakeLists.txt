@@ -14,26 +14,6 @@
 # limitations under the License.
 #
 
-# AeroAcoustics - TNO
-set(TNO_SOURCES
-  src/AeroAcoustics/TNO/int1.f90
-  src/AeroAcoustics/TNO/int2.f90
-  src/AeroAcoustics/TNO/TNOMods.f90
-  src/AeroAcoustics/TNO/pressure.f90
-  src/AeroAcoustics/TNO/qk61.f
-)
-add_library(TNO ${TNO_SOURCES})
-
-# AeroAcoustics - Main
-set(AEROACOUSTIC_SOURCES
-  src/AeroAcoustics/AeroAcoustics.f90
-  src/AeroAcoustics/AeroAcoustics_IO.f90
-  src/AeroAcoustics_Types.f90
-  src/AirfoilInfo_Types.f90
-)
-add_library(AeroAcoustics ${AEROACOUSTIC_SOURCES})
-target_link_libraries(AeroAcoustics nwtclibs TNO)
-
 if (GENERATE_TYPES)
   generate_f90_types(src/AeroAcoustics_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/AeroAcoustics_Types.f90)
   generate_f90_types(src/AeroDyn_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/AeroDyn_Types.f90)
@@ -43,6 +23,18 @@ if (GENERATE_TYPES)
   generate_f90_types(src/UnsteadyAero_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/UnsteadyAero_Types.f90)
   generate_f90_types(src/AeroDyn_Driver_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/AeroDyn_Driver_Types.f90 -noextrap)
 endif()
+
+
+# AeroAcoustics - Main
+set(AEROACOUSTIC_SOURCES
+  src/AeroAcoustics/TNO.f90
+  src/AeroAcoustics/AeroAcoustics.f90
+  src/AeroAcoustics/AeroAcoustics_IO.f90
+  src/AeroAcoustics_Types.f90
+  src/AirfoilInfo_Types.f90
+)
+add_library(AeroAcoustics ${AEROACOUSTIC_SOURCES})
+target_link_libraries(AeroAcoustics nwtclibs)
 
 # AeroDyn lib
 set(AD_LIBS_SOURCES
@@ -84,7 +76,7 @@ set(UA_DRIVER_SOURCES
 add_executable(unsteadyaero_driver ${UA_DRIVER_SOURCES})
 target_link_libraries(unsteadyaero_driver aerodynlib nwtclibs versioninfolib ${CMAKE_DL_LIBS})
 
-install(TARGETS unsteadyaero_driver aerodyn_driver aerodynlib AeroAcoustics TNO
+install(TARGETS unsteadyaero_driver aerodyn_driver aerodynlib AeroAcoustics
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib

@@ -97,6 +97,7 @@ IMPLICIT NONE
     TYPE(AA_BladePropsType) , DIMENSION(:), ALLOCATABLE  :: BladeProps      !< blade property information from blade input files [-]
     INTEGER(IntKi)  :: NrOutFile      !< Nr of output files [-]
     CHARACTER(1024) , DIMENSION(:), ALLOCATABLE  :: AAoutfile      !< AAoutfile for writing output files [-]
+    CHARACTER(1024)  :: TICalcTabFile      !< Name of the file containing the table for incident turbulence intensity [-]
     INTEGER(IntKi)  :: Comp_AA_After      !<   [-]
     REAL(ReKi)  :: SaveEach      !<   [-]
     REAL(ReKi)  :: z0_AA      !< Surface roughness [-]
@@ -2003,6 +2004,7 @@ IF (ALLOCATED(SrcInputFileData%AAoutfile)) THEN
   END IF
     DstInputFileData%AAoutfile = SrcInputFileData%AAoutfile
 ENDIF
+    DstInputFileData%TICalcTabFile = SrcInputFileData%TICalcTabFile
     DstInputFileData%Comp_AA_After = SrcInputFileData%Comp_AA_After
     DstInputFileData%SaveEach = SrcInputFileData%SaveEach
     DstInputFileData%z0_AA = SrcInputFileData%z0_AA
@@ -2333,6 +2335,7 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*1  ! AAoutfile upper/lower bounds for each dimension
       Int_BufSz  = Int_BufSz  + SIZE(InData%AAoutfile)*LEN(InData%AAoutfile)  ! AAoutfile
   END IF
+      Int_BufSz  = Int_BufSz  + 1*LEN(InData%TICalcTabFile)  ! TICalcTabFile
       Int_BufSz  = Int_BufSz  + 1  ! Comp_AA_After
       Re_BufSz   = Re_BufSz   + 1  ! SaveEach
       Re_BufSz   = Re_BufSz   + 1  ! z0_AA
@@ -2549,6 +2552,10 @@ ENDIF
         END DO ! I
     END DO !i1
   END IF
+        DO I = 1, LEN(InData%TICalcTabFile)
+          IntKiBuf(Int_Xferred) = ICHAR(InData%TICalcTabFile(I:I), IntKi)
+          Int_Xferred = Int_Xferred   + 1
+        END DO ! I
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%Comp_AA_After
       Int_Xferred   = Int_Xferred   + 1
       ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%SaveEach
@@ -2974,6 +2981,10 @@ ENDIF
     END DO !i1
     DEALLOCATE(mask1)
   END IF
+      DO I = 1, LEN(OutData%TICalcTabFile)
+        OutData%TICalcTabFile(I:I) = CHAR(IntKiBuf(Int_Xferred))
+        Int_Xferred = Int_Xferred   + 1
+      END DO ! I
       OutData%Comp_AA_After = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
       OutData%SaveEach = ReKiBuf( Re_Xferred )
