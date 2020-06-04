@@ -83,6 +83,10 @@ subroutine sub_brent(x,a_in,b_in, toler_in,maxiter_in,fcnArgs,AFInfo,fa_in,fb_in
     integer                 :: ErrStat_a
     character(ErrMsgLen)    :: ErrMsg_a
     logical                 :: ValidPhi_a
+
+    fcnArgs%errStat  = ErrID_None
+    fcnArgs%ErrMsg   = ""
+
     ! Set of get parameters
     toler = 0.0_SolveKi; if (present(toler_in)) toler = toler_in ! Better to use custom toler here
     xtoler = xtoler_def; if (present(xtoler_in)) xtoler = xtoler_in
