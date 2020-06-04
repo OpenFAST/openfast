@@ -22,7 +22,6 @@ add_library(extptfm_mckflib
   src/ExtPtfm_MCKF.f90
   src/ExtPtfm_MCKF_IO.f90
   src/ExtPtfm_MCKF_Types.f90
-  )
 )
 
 target_link_libraries(extptfm_mckflib nwtclibs)
