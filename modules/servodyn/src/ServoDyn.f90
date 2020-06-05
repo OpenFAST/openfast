@@ -464,6 +464,12 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    OtherState%TTpBrFl = HUGE(OtherState%TTpBrFl) !basically never deploy them. Eventually this will be added back?
    !OtherState%TTpBrFl = InputFileData%TTpBrFl + p%TpBrDT
 
+
+      !............................................................................................
+      ! yaw control integrated command angle
+      !  -- this really should be in OtherStates, but it is calculated in calcoutput where otherstates is intent(in)
+      !............................................................................................
+   m%YawPosComInt = 0.0_ReKi
    
    
       !............................................................................................
@@ -2813,6 +2819,7 @@ SUBROUTINE Yaw_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg 
       ! local variables      
    REAL(ReKi)                                     :: YawPosCom   ! Commanded yaw angle from user-defined routines, rad.
    REAL(ReKi)                                     :: YawRateCom  ! Commanded yaw rate  from user-defined routines, rad/s.
+   REAL(ReKi)                                     :: YawPosComInt ! Integrated yaw commanded (from DLL), rad
 
    
 
@@ -2826,7 +2833,7 @@ SUBROUTINE Yaw_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg 
    ! Calculate standard yaw position and rate commands:
    !...................................................................
 
-   CALL CalculateStandardYaw(t, u, p, m, YawPosCom, YawRateCom, ErrStat, ErrMsg)
+   CALL CalculateStandardYaw(t, u, p, m, YawPosCom, YawRateCom, m%YawPosComInt, ErrStat, ErrMsg)
          
    !...................................................................
    ! Override standard yaw control with a linear maneuver if necessary:
@@ -2860,16 +2867,17 @@ SUBROUTINE Yaw_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg 
 END SUBROUTINE Yaw_CalcOutput
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine that calculates standard yaw position and rate commands: YawPosCom and YawRateCom.
-SUBROUTINE CalculateStandardYaw(t, u, p, m, YawPosCom, YawRateCom, ErrStat, ErrMsg)
+SUBROUTINE CalculateStandardYaw(t, u, p, m, YawPosCom, YawRateCom, YawPosComInt, ErrStat, ErrMsg)
 
-   REAL(DbKi),                     INTENT(IN   )  :: t           !< Current simulation time in seconds
-   TYPE(SrvD_InputType),           INTENT(IN   )  :: u           !< Inputs at t
-   TYPE(SrvD_ParameterType),       INTENT(IN   )  :: p           !< Parameters
-   TYPE(SrvD_MiscVarType),         INTENT(INOUT)  :: m           !< Misc (optimization) variables
-   REAL(ReKi),                     INTENT(  OUT)  :: YawPosCom   !< Commanded yaw angle from user-defined routines, rad.
-   REAL(ReKi),                     INTENT(  OUT)  :: YawRateCom  !< Commanded yaw rate  from user-defined routines, rad/s.
-   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     !< Error status of the operation
-   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+   REAL(DbKi),                     INTENT(IN   )  :: t            !< Current simulation time in seconds
+   TYPE(SrvD_InputType),           INTENT(IN   )  :: u            !< Inputs at t
+   TYPE(SrvD_ParameterType),       INTENT(IN   )  :: p            !< Parameters
+   TYPE(SrvD_MiscVarType),         INTENT(INOUT)  :: m            !< Misc (optimization) variables
+   REAL(ReKi),                     INTENT(  OUT)  :: YawPosCom    !< Commanded yaw angle from user-defined routines, rad.
+   REAL(ReKi),                     INTENT(  OUT)  :: YawRateCom   !< Commanded yaw rate  from user-defined routines, rad/s.
+   REAL(ReKi),                     INTENT(INOUT)  :: YawPosComInt !< Internal variable that integrates the commanded yaw rate and passes it to YawPosCom
+   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat      !< Error status of the operation
+   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg       !< Error message if ErrStat /= ErrID_None
 
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -2898,8 +2906,9 @@ SUBROUTINE CalculateStandardYaw(t, u, p, m, YawPosCom, YawRateCom, ErrStat, ErrM
 
          CASE ( ControlMode_DLL )                                ! User-defined yaw control from Bladed-style DLL
             
-            YawPosCom  = u%Yaw + m%dll_data%YawRateCom*p%DT !bjj: was this: LastYawPosCom + YawRateCom*( ZTime - LastTime )
-            YawRateCom =         m%dll_data%YawRateCom
+            YawPosComInt   = YawPosComInt + m%dll_data%YawRateCom*p%DT     ! Integrated yaw position
+            YawPosCom      = YawPosComInt !bjj: was this: LastYawPosCom + YawRateCom*( ZTime - LastTime )
+            YawRateCom     =                m%dll_data%YawRateCom
             
                         
       END SELECT
@@ -2954,7 +2963,7 @@ SUBROUTINE Yaw_UpdateStates( t, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
 
       IF ( .not. OtherState%BegYawMan )  THEN  ! Override yaw maneuver is just beginning (possibly again).
 
-         CALL CalculateStandardYaw(t, u, p, m, YawPosCom, YawRateCom, ErrStat, ErrMsg)
+         CALL CalculateStandardYaw(t, u, p, m, YawPosCom, YawRateCom, m%YawPosComInt, ErrStat, ErrMsg)
          
          OtherState%NacYawI   = YawPosCom  !bjj: was u%Yaw                                    ! Store the initial (current) yaw, at the start of the yaw maneuver
          YawManRat            = SIGN( p%YawManRat, p%NacYawF - OtherState%NacYawI )           ! Modify the sign of YawManRat based on the direction of the yaw maneuever

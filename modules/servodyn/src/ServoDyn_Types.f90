@@ -202,6 +202,7 @@ IMPLICIT NONE
     LOGICAL  :: FirstWarn      !< Whether or not this is the first warning about the DLL being called without Explicit-Loose coupling. [-]
     REAL(DbKi)  :: LastTimeFiltered      !< last time the CalcOutput/Bladed DLL was filtered [s]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: xd_BlPitchFilter      !< blade pitch filter [-]
+    REAL(ReKi)  :: YawPosComInt      !< Internal variable that integrates the commanded yaw rate and passes it to YawPosCom [radians]
     TYPE(TMD_MiscVarType)  :: NTMD      !< TMD module misc vars - nacelle [-]
     TYPE(TMD_MiscVarType)  :: TTMD      !< TMD module misc vars - tower [-]
   END TYPE SrvD_MiscVarType
@@ -4025,6 +4026,7 @@ IF (ALLOCATED(SrcMiscData%xd_BlPitchFilter)) THEN
   END IF
     DstMiscData%xd_BlPitchFilter = SrcMiscData%xd_BlPitchFilter
 ENDIF
+    DstMiscData%YawPosComInt = SrcMiscData%YawPosComInt
       CALL TMD_CopyMisc( SrcMiscData%NTMD, DstMiscData%NTMD, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
@@ -4111,6 +4113,7 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*1  ! xd_BlPitchFilter upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%xd_BlPitchFilter)  ! xd_BlPitchFilter
   END IF
+      Re_BufSz   = Re_BufSz   + 1  ! YawPosComInt
       Int_BufSz   = Int_BufSz + 3  ! NTMD: size of buffers for each call to pack subtype
       CALL TMD_PackMisc( Re_Buf, Db_Buf, Int_Buf, InData%NTMD, ErrStat2, ErrMsg2, .TRUE. ) ! NTMD 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -4219,6 +4222,8 @@ ENDIF
       IF (SIZE(InData%xd_BlPitchFilter)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%xd_BlPitchFilter))-1 ) = PACK(InData%xd_BlPitchFilter,.TRUE.)
       Re_Xferred   = Re_Xferred   + SIZE(InData%xd_BlPitchFilter)
   END IF
+      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%YawPosComInt
+      Re_Xferred   = Re_Xferred   + 1
       CALL TMD_PackMisc( Re_Buf, Db_Buf, Int_Buf, InData%NTMD, ErrStat2, ErrMsg2, OnlySize ) ! NTMD 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
@@ -4379,6 +4384,8 @@ ENDIF
       Re_Xferred   = Re_Xferred   + SIZE(OutData%xd_BlPitchFilter)
     DEALLOCATE(mask1)
   END IF
+      OutData%YawPosComInt = ReKiBuf( Re_Xferred )
+      Re_Xferred   = Re_Xferred + 1
       Buf_size=IntKiBuf( Int_Xferred )
       Int_Xferred = Int_Xferred + 1
       IF(Buf_size > 0) THEN
