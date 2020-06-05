@@ -161,6 +161,7 @@ typedef	^	OtherStateType	DbKi	TPitManE	{:}	-	-	"Time to end pitch maneuvers for 
 typedef	^	OtherStateType	Logical	BegYawMan	-	-	-	"Whether the yaw maneuver actually began"	-
 typedef	^	OtherStateType	ReKi	NacYawI	-	-	-	"Initial yaw angle at the start of the override yaw maneuver"	radians
 typedef	^	OtherStateType	DbKi	TYawManE	-	-	-	"Time to end override yaw maneuver"	s
+typedef	^	OtherStateType	ReKi	YawPosComInt	-	-	-	"Internal variable that integrates the commanded yaw rate and passes it to YawPosCom"	radians
 # other states for tip-brake deployment:
 typedef	^	OtherStateType	Logical	BegTpBr	{:}	-	-	"Whether the tip brakes actually deployed"	-
 typedef	^	OtherStateType	DbKi	TTpBrDp	{:}	-	-	"Times to initiate deployment of tip brakes"	s
@@ -178,7 +179,6 @@ typedef	^	MiscVarType	BladedDLLType	dll_data	-	-	-	"data used for Bladed DLL"	-
 typedef	^	MiscVarType	logical	FirstWarn	-	-	-	"Whether or not this is the first warning about the DLL being called without Explicit-Loose coupling."	-
 typedef	^	MiscVarType	DbKi	LastTimeFiltered	-	-	-	"last time the CalcOutput/Bladed DLL was filtered"	s
 typedef	^	MiscVarType	ReKi	xd_BlPitchFilter	{:}	-	-	"blade pitch filter"	-
-typedef	^	MiscVarType	ReKi	YawPosComInt	-	-	-	"Internal variable that integrates the commanded yaw rate and passes it to YawPosCom"	radians
 typedef	^	MiscVarType	TMD_MiscVarType	NTMD	-	-	-	"TMD module misc vars - nacelle"	-
 typedef	^	MiscVarType	TMD_MiscVarType	TTMD	-	-	-	"TMD module misc vars - tower"	-
 
