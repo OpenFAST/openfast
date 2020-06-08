@@ -485,9 +485,9 @@ MODULE ElastoDyn_Parameters
 
      ! Tower-Top / Yaw Bearing Motions:
 
-   INTEGER(IntKi), PARAMETER      :: YawBrTDxi = 315
-   INTEGER(IntKi), PARAMETER      :: YawBrTDyi = 316
-   INTEGER(IntKi), PARAMETER      :: YawBrTDzi = 317
+   INTEGER(IntKi), PARAMETER      :: TwrTpTDxi = 315
+   INTEGER(IntKi), PARAMETER      :: TwrTpTDyi = 316
+   INTEGER(IntKi), PARAMETER      :: TwrTpTDzi = 317
    INTEGER(IntKi), PARAMETER      :: YawBrTDxp = 318
    INTEGER(IntKi), PARAMETER      :: YawBrTDyp = 319
    INTEGER(IntKi), PARAMETER      :: YawBrTDzp = 320
