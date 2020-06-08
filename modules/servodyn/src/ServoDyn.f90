@@ -2828,12 +2828,6 @@ SUBROUTINE Yaw_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg 
       ErrMsg  = ""
 
 
-   !...................................................................
-   ! Calculate standard yaw position and rate commands:
-   !...................................................................
-
-   YawPosComInt = OtherState%YawPosComInt    ! get state value.  We don't update the state here.
-   CALL CalculateStandardYaw(t, u, p, m, YawPosCom, YawRateCom, YawPosComInt, ErrStat, ErrMsg)
          
    !...................................................................
    ! Override standard yaw control with a linear maneuver if necessary:
@@ -2852,8 +2846,17 @@ SUBROUTINE Yaw_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg 
          YawRateCom    = SIGN( p%YawManRat, p%NacYawF - OtherState%NacYawI )             ! Modify the sign of p%YawManRat based on the direction of the yaw maneuever
          YawPosCom     = OtherState%NacYawI + YawRateCom*( t - p%TYawManS )
 
-      ENDIF   
-      
+      ENDIF
+
+   ELSE
+   
+      !...................................................................
+      ! Calculate standard yaw position and rate commands:
+      !...................................................................
+
+      YawPosComInt = OtherState%YawPosComInt    ! get state value.  We don't update the state here.
+      CALL CalculateStandardYaw(t, u, p, m, YawPosCom, YawRateCom, YawPosComInt, ErrStat, ErrMsg)
+   
    ENDIF
                 
    !...................................................................
@@ -2954,16 +2957,6 @@ SUBROUTINE Yaw_UpdateStates( t, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
       ErrMsg  = ""
 
 
-
-   !...................................................................
-   ! Set yaw manuever from DLL or external 
-   !...................................................................
-
-   IF ( t >= p%TYCOn  .AND.  p%YCMode /= ControlMode_NONE )  THEN   ! Time now to enable active yaw control.
-      CALL CalculateStandardYaw(t, u, p, m, YawPosCom, YawRateCom, OtherState%YawPosComInt, ErrStat, ErrMsg)
-   ENDIF
-
-
    !...................................................................
    ! Determine if override of standard yaw control with a linear maneuver is necessary:
    !...................................................................
@@ -2982,7 +2975,14 @@ SUBROUTINE Yaw_UpdateStates( t, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
          OtherState%BegYawMan = .TRUE.                                                        ! Let's remember when we stored this these values
 
       ENDIF
-            
+
+   ELSE
+
+      !...................................................................
+      ! Update OtherState%YawPosComInt:
+      !...................................................................
+      CALL CalculateStandardYaw(t, u, p, m, YawPosCom, YawRateCom, OtherState%YawPosComInt, ErrStat, ErrMsg)
+   
    ENDIF
                 
    
