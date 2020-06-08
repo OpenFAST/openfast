@@ -142,7 +142,7 @@ if not os.path.isdir(dst):
 else:
     names = os.listdir(src)
     for name in names:
-        if name is "ServoData":
+        if name == "ServoData":
             continue
         srcname = os.path.join(src, name)
         dstname = os.path.join(dst, name)
