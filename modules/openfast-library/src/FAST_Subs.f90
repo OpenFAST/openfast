@@ -1678,7 +1678,7 @@ SUBROUTINE ValidateInputData(p, m_FAST, ErrStat, ErrMsg)
       if (p%CompInflow == MODULE_OpFM) call SetErrStat(ErrID_Fatal,'Linearization is not implemented for the OpenFOAM coupling.',ErrStat, ErrMsg, RoutineName)
       if (p%CompAero == MODULE_AD14) call SetErrStat(ErrID_Fatal,'Linearization is not implemented for the AeroDyn v14 module.',ErrStat, ErrMsg, RoutineName)
       !if (p%CompSub   == MODULE_SD) call SetErrStat(ErrID_Fatal,'Linearization is not implemented for the SubDyn module.',ErrStat, ErrMsg, RoutineName)
-      if (p%CompSub   /= MODULE_None) call SetErrStat(ErrID_Fatal,'Linearization is not implemented for the any of the substructure modules.',ErrStat, ErrMsg, RoutineName)
+      if (p%CompSub /= MODULE_None) call SetErrStat(ErrID_Fatal,'Linearization is not implemented for the any of the substructure modules.',ErrStat, ErrMsg, RoutineName)
       if (p%CompMooring /= MODULE_None .and. p%CompMooring /= MODULE_MAP) call SetErrStat(ErrID_Fatal,'Linearization is not implemented for the FEAMooring or MoorDyn mooring modules.',ErrStat, ErrMsg, RoutineName)
       if (p%CompIce /= MODULE_None) call SetErrStat(ErrID_Fatal,'Linearization is not implemented for any of the ice loading modules.',ErrStat, ErrMsg, RoutineName)
                   

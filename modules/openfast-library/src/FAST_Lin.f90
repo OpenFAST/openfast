@@ -492,13 +492,13 @@ SUBROUTINE Init_Lin_InputOutput(p_FAST, y_FAST, NumBl, ErrStat, ErrMsg)
             y_FAST%Lin%Modules(MODULE_HD)%Instance(1)%use_u(y_FAST%Lin%Modules(MODULE_HD)%Instance(1)%SizeLin(LIN_INPUT_COL)) = .true.
       end if
       
-
-      ! ExtPtfm standard inputs: x1, x1dot x1ddot  ! TODO TODO TODO CHECK
-      if (p_FAST%CompSub == MODULE_ExtPtfm) then
-         do j = 1,18
-            y_FAST%Lin%Modules(MODULE_ExtPtfm)%Instance(1)%use_u(y_FAST%Lin%Modules(MODULE_ExtPtfm)%Instance(1)%SizeLin(LIN_INPUT_COL)+1-j) = .true.
-         end do
-      end if
+      !bjj: removed because I'm not sure these should be included in the "standard" inputs
+      !!!! ExtPtfm standard inputs: x1, x1dot x1ddot  ! TODO TODO TODO CHECK
+      !!!if (p_FAST%CompSub == MODULE_ExtPtfm) then
+      !!!   do j = 1,18
+      !!!      y_FAST%Lin%Modules(MODULE_ExtPtfm)%Instance(1)%use_u(y_FAST%Lin%Modules(MODULE_ExtPtfm)%Instance(1)%SizeLin(LIN_INPUT_COL)+1-j) = .true.
+      !!!   end do
+      !!!end if
                   
    elseif(p_FAST%LinInputs == LIN_ALL) then
       do i = 1,p_FAST%Lin_NumMods
@@ -1652,7 +1652,7 @@ SUBROUTINE Glue_Jacobians( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, OpFM, 
    end if 
 
    IF (p_FAST%CompSub == Module_ExtPtfm) THEN
-       write(*,*)'>>> FAST_LIN: Linear_ExtPtfm_InputSolve_du, TODO'
+       CALL WrScr('>>> FAST_LIN: Linear_ExtPtfm_InputSolve_du, TODO')
    ENDIF
    
 
@@ -1757,7 +1757,7 @@ SUBROUTINE Glue_Jacobians( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, OpFM, 
    end if
    
    IF (p_FAST%CompSub == Module_ExtPtfm) THEN
-       write(*,*)'>>> FAST_LIN: Linear_ExtPtfm_InputSolve_dy, TODO'
+       CALL WrScr('>>> FAST_LIN: Linear_ExtPtfm_InputSolve_dy, TODO')
    ENDIF
    
 END SUBROUTINE Glue_Jacobians

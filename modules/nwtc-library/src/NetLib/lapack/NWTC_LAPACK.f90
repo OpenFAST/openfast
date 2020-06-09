@@ -99,7 +99,54 @@ MODULE NWTC_LAPACK
       MODULE PROCEDURE LAPACK_sgesvd
    END INTERFACE
 
+   
+!> straight-up lapack routines (from ExtPtfm_MCKF):
       
+   INTERFACE LAPACK_COPY
+       SUBROUTINE DCOPY(N,DX,INCX,DY,INCY)
+           USE Precision, only: R8Ki
+           INTEGER    :: INCX,INCY,N
+           real(R8Ki) :: DX(*),DY(*)
+       ENDSUBROUTINE
+       SUBROUTINE SCOPY(N,X,INCX,Y,INCY)
+           USE Precision, only: SiKi
+           INTEGER    :: INCX,INCY,N
+           real(SiKi) :: X(*),Y(*)
+       ENDSUBROUTINE
+   END INTERFACE
+   
+   INTERFACE LAPACK_GEMV
+       SUBROUTINE DGEMV(TRANS,M,N,ALPHA,A,LDA,X,INCX,BETA,Y,INCY)
+           USE Precision, only: R8Ki
+           real(R8Ki) :: ALPHA,BETA
+           integer    :: INCX,INCY,LDA,M,N
+           character  :: TRANS
+           real(R8Ki) :: A(LDA,*),X(*),Y(*)
+       ENDSUBROUTINE
+       SUBROUTINE SGEMV(TRANS,M,N,ALPHA,A,LDA,X,INCX,BETA,Y,INCY)
+           USE Precision, only: SiKi
+           real(SiKi) :: ALPHA,BETA
+           integer    :: INCX,INCY,LDA,M,N
+           character  :: TRANS
+           real(SiKi) :: A(LDA,*),X(*),Y(*)
+       ENDSUBROUTINE
+   END INTERFACE LAPACK_GEMV
+   
+   INTERFACE LAPACK_AXPY
+      SUBROUTINE DAXPY(N,DA,DX,INCX,DY,INCY)
+           USE Precision, only: R8Ki
+           real(R8Ki) :: DA
+           integer    :: INCX,INCY,N
+           real(R8Ki) :: DX(*),DY(*)
+       ENDSUBROUTINE
+      SUBROUTINE SAXPY(N,A,X,INCX,Y,INCY)
+           USE Precision, only: SiKi
+           real(SiKi) :: A
+           integer    :: INCX,INCY,N
+           real(SiKi) :: X(*),Y(*)
+       ENDSUBROUTINE
+   END INTERFACE
+
    CONTAINS
 
 !=======================================================================
