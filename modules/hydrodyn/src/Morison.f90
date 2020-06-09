@@ -1556,6 +1556,7 @@ subroutine SetMemberProperties( gravity, member, MCoefMod, MmbrCoefIDIndx, MmbrF
    ! calculate h_floor if seabed-piercing
    member%h_floor = 0.0_ReKi
    member%i_floor = member%NElements+1  ! Default to entire member is below the seabed
+   member%doEndBuoyancy = .false.
    if (Za < -WtrDepth) then
       do i= 2, member%NElements+1
          Za = InitInp%Nodes(member%NodeIndx(i))%Position(3)
@@ -1567,7 +1568,10 @@ subroutine SetMemberProperties( gravity, member, MCoefMod, MmbrCoefIDIndx, MmbrF
             
             member%h_floor = (-WtrDepth-Za)/cosPhi  ! get the distance from the node to the seabed along the member axis (negative value)
             member%i_floor = i-1                    ! record the number of the element that pierces the seabed
+            member%doEndBuoyancy = .true.
             exit
+         else if ( EqualRealNos(Za, -WtrDepth ) ) then
+            member%doEndBuoyancy = .true.
          end if
       end do
    else
@@ -2243,8 +2247,8 @@ SUBROUTINE AllocateNodeLoadVariables(InitInp, p, m, NNodes, errStat, errMsg )
    call AllocAry( p%DragConst_End,       p%NJoints, 'p%DragConst_End', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry( m%F_I_End      ,    3, p%NJoints, 'm%F_I_End'      , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry( m%F_BF_End     ,    6, p%NJoints, 'm%F_BF_End'     , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-   call AllocAry( m%F_A_End      ,    6, p%NJoints, 'm%F_A_End'      , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-   call AllocAry( m%F_D_End      ,    6, p%NJoints, 'm%F_D_End'      , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+   call AllocAry( m%F_A_End      ,    3, p%NJoints, 'm%F_A_End'      , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+   call AllocAry( m%F_D_End      ,    3, p%NJoints, 'm%F_D_End'      , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry( m%F_B_End      ,    6, p%NJoints, 'm%F_B_End'      , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry( m%F_IMG_End    ,    6, p%NJoints, 'm%F_IMG_End'    , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry( p%I_MG_End     , 3, 3, p%NJoints, 'p%I_MG_End'     , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
@@ -2547,10 +2551,13 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    !    so they need to be zeroed out before the summations happen)
    m%F_WMG   = 0.0_ReKi
    m%F_IMG   = 0.0_ReKi
+   m%F_BF_End= 0.0_ReKi
    m%F_If    = 0.0_ReKi
    m%F_D     = 0.0_ReKi
    m%F_A     = 0.0_ReKi
    m%F_I     = 0.0_ReKi
+   m%F_B     = 0.0_ReKi
+   m%F_BF    = 0.0_ReKi
    m%F_B_End = 0.0_ReKi
    
    ! Loop through each member
@@ -2966,8 +2973,9 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
             else
                ! Entire member is above the still water line
             end if
-         
-         elseif ( mem%i_floor < mem%NElements) then ! The member crosses the seabed line
+
+    !     elseif ( (mem%i_floor < mem%NElements) .and. (z2<= 0.0_ReKi) ) then ! The member crosses the seabed line so only the upper end could have bouyancy effects, if at or below free surface
+         elseif ( (mem%doEndBuoyancy) .and. (z2<= 0.0_ReKi) ) then ! The member crosses the seabed line so only the upper end could have bouyancy effects, if at or below free surface
             ! Only compute the buoyancy contribution from the upper end
             Fl      = p%WtrDens * g * pi *mem%RMG(N+1)**2*z2
             Moment  = p%WtrDens * g * pi *0.25*mem%RMG(N+1)**4*sinPhi
@@ -3094,19 +3102,19 @@ SUBROUTINE DistributeElementLoads(Fl, Fr, M, sinPhi, cosPhi, SinBeta, cosBeta, a
    REAL(ReKi),                     INTENT    ( OUT   )  :: F2(6)   ! (N, Nm) force/moment vector for the other node (whether i+1, or i-1)
          
 
-   F1(1) =  cosBeta*(Fl*sinPhi + Fr*cosPhi)*alpha
-   F1(2) = -sinBeta*(Fl*sinPhi + Fr*cosPhi)*alpha
-   F1(3) =          (Fl*cosPhi - Fr*sinPhi)*alpha
-   F1(4) =  sinBeta * M                    *alpha
-   F1(5) =  cosBeta * M                    *alpha
-   F1(6) = 0.0
+   F1(1) = F1(1) +  cosBeta*(Fl*sinPhi + Fr*cosPhi)*alpha
+   F1(2) = F1(2) -  sinBeta*(Fl*sinPhi + Fr*cosPhi)*alpha
+   F1(3) = F1(3) +          (Fl*cosPhi - Fr*sinPhi)*alpha
+   F1(4) = F1(4) +  sinBeta * M                    *alpha
+   F1(5) = F1(5) +  cosBeta * M                    *alpha
+   !F1(6) = F1(6) + 0.0
       
-   F2(1) =  cosBeta*(Fl*sinPhi + Fr*cosPhi)*(1-alpha)
-   F2(2) = -sinBeta*(Fl*sinPhi + Fr*cosPhi)*(1-alpha)
-   F2(3) =          (Fl*cosPhi - Fr*sinPhi)*(1-alpha)
-   F2(4) =  sinBeta * M                    *(1-alpha)
-   F2(5) =  cosBeta * M                    *(1-alpha)
-   F2(6) = 0.0
+   F2(1) = F2(1) +  cosBeta*(Fl*sinPhi + Fr*cosPhi)*(1-alpha)
+   F2(2) = F2(2) -  sinBeta*(Fl*sinPhi + Fr*cosPhi)*(1-alpha)
+   F2(3) = F2(3) +          (Fl*cosPhi - Fr*sinPhi)*(1-alpha)
+   F2(4) = F2(4) +  sinBeta * M                    *(1-alpha)
+   F2(5) = F2(5) +  cosBeta * M                    *(1-alpha)
+   !F2(6) = F2(6) + 0.0
 
 END SUBROUTINE DistributeElementLoads
 

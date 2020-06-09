@@ -151,6 +151,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: z_overfill      !< if member is fully filled, the head height of the fill pressure at the end node N+1. Zero if member is partially filled. [m]
     REAL(ReKi)  :: h_floor      !< the distance from the node to the seabed along the member axis (negative value) [m]
     INTEGER(IntKi)  :: i_floor      !< the number of the element that pierces the seabed (zero if the member doesn't pierce it) [-]
+    LOGICAL  :: doEndBuoyancy      !< compute the end plate effect for the hightest node of this member [-]
     INTEGER(IntKi)  :: memfloodstatus      !< Member-level flooded status for each elemen: 0 unflooded or fully below seabed, 2 partially flooded, 1 fully flooded  [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: floodstatus      !< flooded status for each element: 0 unflooded or fully below seabed, 1 fully flooded, 2 partially flooded [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: alpha      !< relative volume centroid of each element including marine growth, from node i to node i+1 [-]
@@ -1870,6 +1871,7 @@ ENDIF
     DstMemberTypeData%z_overfill = SrcMemberTypeData%z_overfill
     DstMemberTypeData%h_floor = SrcMemberTypeData%h_floor
     DstMemberTypeData%i_floor = SrcMemberTypeData%i_floor
+    DstMemberTypeData%doEndBuoyancy = SrcMemberTypeData%doEndBuoyancy
     DstMemberTypeData%memfloodstatus = SrcMemberTypeData%memfloodstatus
 IF (ALLOCATED(SrcMemberTypeData%floodstatus)) THEN
   i1_l = LBOUND(SrcMemberTypeData%floodstatus,1)
@@ -2443,6 +2445,7 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! z_overfill
       Re_BufSz   = Re_BufSz   + 1  ! h_floor
       Int_BufSz  = Int_BufSz  + 1  ! i_floor
+      Int_BufSz  = Int_BufSz  + 1  ! doEndBuoyancy
       Int_BufSz  = Int_BufSz  + 1  ! memfloodstatus
   Int_BufSz   = Int_BufSz   + 1     ! floodstatus allocated yes/no
   IF ( ALLOCATED(InData%floodstatus) ) THEN
@@ -2787,6 +2790,8 @@ ENDIF
     ReKiBuf(Re_Xferred) = InData%h_floor
     Re_Xferred = Re_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%i_floor
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%doEndBuoyancy, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%memfloodstatus
     Int_Xferred = Int_Xferred + 1
@@ -3468,6 +3473,8 @@ ENDIF
     OutData%h_floor = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%i_floor = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%doEndBuoyancy = TRANSFER(IntKiBuf(Int_Xferred), OutData%doEndBuoyancy)
     Int_Xferred = Int_Xferred + 1
     OutData%memfloodstatus = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
