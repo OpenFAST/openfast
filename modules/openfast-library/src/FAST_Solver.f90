@@ -1496,7 +1496,8 @@ SUBROUTINE ED_HD_InputOutputSolve(  this_time, p_FAST, calcJacobian &
                                  
          CALL HydroDyn_CalcOutput( this_time, u_HD, p_HD, x_HD, xd_HD, z_HD, OtherSt_HD, y_HD, m_HD, ErrStat2, ErrMsg2 )
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )      
-            
+ !write(*,*) 'y_HD%Morison%Mesh%Force', y_HD%Morison%Mesh%Force 
+ !write(*,*) 'y_HD%Morison%Mesh%Moment', y_HD%Morison%Mesh%Moment
          IF (ErrStat >= AbortErrLev) THEN
             CALL CleanUp()
             RETURN
@@ -1733,7 +1734,7 @@ CONTAINS
          CALL Transfer_Point_to_Point( y_ED2%PlatformPtMesh, u_MAP%PtFairDisplacement, MeshMapData%ED_P_2_Mooring_P, ErrStat, ErrMsg )
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                                  
-         CALL Transfer_Point_to_Point( y_MAP%PtFairleadLoad, MeshMapData%u_ED_PlatformPtMesh_2, MeshMapData%Mooring_P_2_ED_P, ErrStat2, ErrMsg2, u_MAP%PtFairDisplacement, PlatformMotions ) !u_MAP and y_ED contain the displacements needed for moment calculations
+         CALL Transfer_Point_to_Point( y_MAP%PtFairleadLoad, MeshMapData%u_ED_PlatformPtMesh, MeshMapData%Mooring_P_2_ED_P, ErrStat2, ErrMsg2, u_MAP%PtFairDisplacement, PlatformMotions ) !u_MAP and y_ED contain the displacements needed for moment calculations
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                  
       ELSEIF ( p_FAST%CompMooring == Module_MD ) THEN
@@ -1742,7 +1743,7 @@ CONTAINS
          CALL Transfer_Point_to_Point( y_ED2%PlatformPtMesh, u_MD%PtFairleadDisplacement, MeshMapData%ED_P_2_Mooring_P, ErrStat, ErrMsg )
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                  
-         CALL Transfer_Point_to_Point( y_MD%PtFairleadLoad, MeshMapData%u_ED_PlatformPtMesh_2, MeshMapData%Mooring_P_2_ED_P, ErrStat2, ErrMsg2, u_MD%PtFairleadDisplacement, PlatformMotions ) !u_MD and y_ED contain the displacements needed for moment calculations
+         CALL Transfer_Point_to_Point( y_MD%PtFairleadLoad, MeshMapData%u_ED_PlatformPtMesh, MeshMapData%Mooring_P_2_ED_P, ErrStat2, ErrMsg2, u_MD%PtFairleadDisplacement, PlatformMotions ) !u_MD and y_ED contain the displacements needed for moment calculations
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
             
       ELSEIF ( p_FAST%CompMooring == Module_FEAM ) THEN
@@ -1751,13 +1752,13 @@ CONTAINS
          CALL Transfer_Point_to_Point( y_ED2%PlatformPtMesh, u_FEAM%PtFairleadDisplacement, MeshMapData%ED_P_2_Mooring_P, ErrStat, ErrMsg )
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                  
-         CALL Transfer_Point_to_Point( y_FEAM%PtFairleadLoad, MeshMapData%u_ED_PlatformPtMesh_2, MeshMapData%Mooring_P_2_ED_P, ErrStat2, ErrMsg2, u_FEAM%PtFairleadDisplacement, PlatformMotions ) !u_FEAM and y_ED contain the displacements needed for moment calculations
+         CALL Transfer_Point_to_Point( y_FEAM%PtFairleadLoad, MeshMapData%u_ED_PlatformPtMesh, MeshMapData%Mooring_P_2_ED_P, ErrStat2, ErrMsg2, u_FEAM%PtFairleadDisplacement, PlatformMotions ) !u_FEAM and y_ED contain the displacements needed for moment calculations
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
             
       ELSE
          
-         MeshMapData%u_ED_PlatformPtMesh_2%Force  = 0.0_ReKi
-         MeshMapData%u_ED_PlatformPtMesh_2%Moment = 0.0_ReKi
+         MeshMapData%u_ED_PlatformPtMesh%Force  = 0.0_ReKi
+         MeshMapData%u_ED_PlatformPtMesh%Moment = 0.0_ReKi
          
       END IF
 
@@ -2862,7 +2863,9 @@ CONTAINS
       !..................
       ! Get ED loads input (from HD only)
       !..................
-            
+         MeshMapData%u_ED_PlatformPtMesh%Force  = 0.0_ReKi         
+         MeshMapData%u_ED_PlatformPtMesh%Moment = 0.0_ReKi
+         
             ! we're mapping loads, so we also need the sibling meshes' displacements:
          if ( y_HD2%WAMITMesh%Committed) then 
             CALL Transfer_Point_to_Point( y_HD2%WAMITMesh, MeshMapData%u_ED_PlatformPtMesh, MeshMapData%HD_W_P_2_ED_P, ErrStat2, ErrMsg2, MeshMapData%u_HD_W_Mesh, PlatformMotions) !u_HD and u_mapped_positions contain the displaced positions for load calculations
@@ -3794,16 +3797,15 @@ SUBROUTINE ResetRemapFlags(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, MAPp
    
    ! HydroDyn
    IF ( p_FAST%CompHydro == Module_HD ) THEN
+      HD%Input(1)%PRPMesh%RemapFlag       = .FALSE.
       IF (HD%Input(1)%WAMITMesh%Committed) THEN
-         HD%Input(1)%WAMITMesh%RemapFlag               = .FALSE.
-                HD%y%WAMITMesh%RemapFlag               = .FALSE.  
-                HD%y%WAMITMesh%RemapFlag      = .FALSE.
+          HD%Input(1)%WAMITMesh%RemapFlag  = .FALSE.
+                 HD%y%WAMITMesh%RemapFlag  = .FALSE.                
       END IF
       IF (HD%Input(1)%Morison%Mesh%Committed) THEN
-         HD%Input(1)%Morison%Mesh%RemapFlag  = .FALSE.
-                HD%y%Morison%Mesh%RemapFlag  = .FALSE.
+          HD%Input(1)%Morison%Mesh%RemapFlag  = .FALSE.
+                 HD%y%Morison%Mesh%RemapFlag  = .FALSE.
       END IF
-      
    END IF
 
    ! SubDyn
@@ -5532,9 +5534,12 @@ SUBROUTINE FAST_ExtrapInterpMods( t_global_next, p_FAST, m_FAST, ED, BD, SrvD, A
       ErrMsg  = ""
       
       ! ElastoDyn
+      !write(*,*) 'ED%Input(1)%PLATFORMPTMESH%Force', ED%Input(1)%PLATFORMPTMESH%Force
+      !write(*,*) 'ED%Input(2)%PLATFORMPTMESH%Force', ED%Input(2)%PLATFORMPTMESH%Force
+      !write(*,*) 'ED%Input(3)%PLATFORMPTMESH%Force', ED%Input(3)%PLATFORMPTMESH%Force
       CALL ED_Input_ExtrapInterp(ED%Input, ED%InputTimes, ED%u, t_global_next, ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
-  
+      !write(*,*) 'ED%u%PLATFORMPTMESH%Force', ED%u%PLATFORMPTMESH%Force
       DO j = p_FAST%InterpOrder, 1, -1
          CALL ED_CopyInput (ED%Input(j),  ED%Input(j+1),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
