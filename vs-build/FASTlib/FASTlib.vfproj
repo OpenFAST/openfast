@@ -494,7 +494,8 @@
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File></Filter>
-		<File RelativePath="..\..\modules\extptfm\src\ExtPtfm_MCKF.f90"/></Filter>
+		<File RelativePath="..\..\modules\extptfm\src\ExtPtfm_MCKF.f90"/>
+		<File RelativePath="..\..\modules\extptfm\src\ExtPtfm_MCKF_IO.f90"/></Filter>
 		<Filter Name="FAST">
 		<Filter Name="RegistryFiles">
 		<File RelativePath="..\..\modules\openfast-library\src\FAST_Registry.txt">
