@@ -176,7 +176,6 @@ end subroutine FVW_Init
 
 ! ==============================================================================
 subroutine FVW_InitMiscVars( p, m, ErrStat, ErrMsg )
-   use FVW_VTK, only : vtk_misc_init
    type(FVW_ParameterType),         intent(in   )  :: p              !< Parameters
    type(FVW_MiscVarType),           intent(inout)  :: m              !< Initial misc/optimization variables
    integer(IntKi),                  intent(  out)  :: ErrStat        !< Error status of the operation

@@ -183,7 +183,7 @@ END SUBROUTINE FVW_ReadInputFile
 
 !=================================================
 !> Export FVW variables to VTK
-!! NOTE: when entering this function nNW and nFW has been ncremented by 1
+!! NOTE: when entering this function nNW and nFW has been incremented by 1
 subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth, bladeFrame, HubOrientation, HubPosition)
    use FVW_VTK ! for all the vtk_* functions
    type(FVW_ParameterType),        intent(in   ) :: p !< Parameters
@@ -211,10 +211,14 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth, bladeFrame, Hub
 
    type(FVW_VTK_Misc)   :: mvtk
 
-   if (bladeFrame .and. present(HubOrientation) .and. present(HubPosition)) then
-      call set_vtk_coordinate_transform(HubOrientation,HubPosition,mvtk)
-   else
-      Call ProgAbort('Programming error in WrVTK_FVW call: Cannot use the WrVTK_FVW with bladeFrame==TRUE without the optional arguments of HubOrientation and HubPosition')
+   call vtk_misc_init(mvtk)
+
+   if (bladeFrame) then
+      if (present(HubOrientation) .and. present(HubPosition)) then
+         call set_vtk_coordinate_transform(HubOrientation,HubPosition,mvtk)
+      else
+         Call ProgAbort('Programming error in WrVTK_FVW call: Cannot use the WrVTK_FVW with bladeFrame==TRUE without the optional arguments of HubOrientation and HubPosition')
+      endif
    endif
  
    if (DEV_VERSION) then
