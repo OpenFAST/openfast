@@ -94,6 +94,12 @@ SUBROUTINE Init_Lin(p_FAST, y_FAST, m_FAST, AD, NumBl, ErrStat, ErrMsg)
       p_FAST%Lin_NumMods = p_FAST%Lin_NumMods + 1
       p_FAST%Lin_ModOrder( p_FAST%Lin_NumMods ) = Module_AD
    end if
+
+      ! ExtPtfm is next, if activated:
+   if ( p_FAST%CompSub  == Module_ExtPtfm ) then 
+      p_FAST%Lin_NumMods = p_FAST%Lin_NumMods + 1
+      p_FAST%Lin_ModOrder( p_FAST%Lin_NumMods ) = Module_ExtPtfm
+   end if
    
    
    !.....................
@@ -380,6 +386,13 @@ SUBROUTINE Init_Lin_InputOutput(p_FAST, y_FAST, NumBl, ErrStat, ErrMsg)
             y_FAST%Lin%Modules(MODULE_IfW)%Instance(1)%use_u(y_FAST%Lin%Modules(MODULE_IfW)%Instance(1)%SizeLin(LIN_INPUT_COL)+1-j) = .true.
          end do
       end if
+
+      ! ExtPtfm standard inputs: x1, x1dot x1ddot  ! TODO TODO TODO CHECK
+      if (p_FAST%CompSub == MODULE_ExtPtfm) then
+         do j = 1,18
+            y_FAST%Lin%Modules(MODULE_ExtPtfm)%Instance(1)%use_u(y_FAST%Lin%Modules(MODULE_ExtPtfm)%Instance(1)%SizeLin(LIN_INPUT_COL)+1-j) = .true.
+         end do
+      end if
                   
    elseif(p_FAST%LinInputs == LIN_ALL) then
       do i = 1,p_FAST%Lin_NumMods
@@ -432,7 +445,7 @@ SUBROUTINE Init_Lin_InputOutput(p_FAST, y_FAST, NumBl, ErrStat, ErrMsg)
 END SUBROUTINE Init_Lin_InputOutput
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine that performs lineaization at current operating point for a turbine. 
-SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, OpFM, HD, SD, MAPp, FEAM, MD, Orca, &
+SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, OpFM, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, &
                          IceF, IceD, MeshMapData, ErrStat, ErrMsg )
 
    REAL(DbKi),               INTENT(IN   ) :: t_global            !< current (global) simulation time
@@ -450,6 +463,7 @@ SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD1
    TYPE(OpenFOAM_Data),      INTENT(INOUT) :: OpFM                !< OpenFOAM data
    TYPE(HydroDyn_Data),      INTENT(INOUT) :: HD                  !< HydroDyn data
    TYPE(SubDyn_Data),        INTENT(INOUT) :: SD                  !< SubDyn data
+   TYPE(ExtPtfm_Data),       INTENT(INOUT) :: ExtPtfm             !< ExtPtfm data
    TYPE(MAP_Data),           INTENT(INOUT) :: MAPp                !< MAP data
    TYPE(FEAMooring_Data),    INTENT(INOUT) :: FEAM                !< FEAMooring data
    TYPE(MoorDyn_Data),       INTENT(INOUT) :: MD                  !< Data for the MoorDyn module
@@ -784,6 +798,47 @@ SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD1
       if (allocated(ipiv)) deallocate(ipiv)     
       
    end if
+   !.....................
+   ! ExtPtfm
+   !.....................
+   if ( p_FAST%CompSub == Module_ExtPtfm ) then 
+      ! get the jacobians
+      call ExtPtfm_JacobianPInput( t_global, ExtPtfm%Input(1), ExtPtfm%p, ExtPtfm%x(STATE_CURR), ExtPtfm%xd(STATE_CURR), &
+              ExtPtfm%z(STATE_CURR), ExtPtfm%OtherSt(STATE_CURR),  ExtPtfm%y, ExtPtfm%m, ErrStat2, ErrMsg2, &
+              dYdu=y_FAST%Lin%Modules(Module_ExtPtfm)%Instance(1)%D, dXdu=y_FAST%Lin%Modules(Module_ExtPtfm)%Instance(1)%B )
+      if(Failed()) return;
+
+      call ExtPtfm_JacobianPContState( t_global, ExtPtfm%Input(1), ExtPtfm%p, ExtPtfm%x(STATE_CURR), ExtPtfm%xd(STATE_CURR), &
+          ExtPtfm%z(STATE_CURR), ExtPtfm%OtherSt(STATE_CURR), ExtPtfm%y, ExtPtfm%m, ErrStat2, ErrMsg2,&
+          dYdx=y_FAST%Lin%Modules(Module_ExtPtfm)%Instance(1)%C, dXdx=y_FAST%Lin%Modules(Module_ExtPtfm)%Instance(1)%A )
+      if(Failed()) return;
+
+      ! get the operating point
+      call ExtPtfm_GetOP(t_global, ExtPtfm%Input(1), ExtPtfm%p, ExtPtfm%x(STATE_CURR), ExtPtfm%xd(STATE_CURR), ExtPtfm%z(STATE_CURR),&
+          ExtPtfm%OtherSt(STATE_CURR), ExtPtfm%y, ExtPtfm%m, ErrStat2, ErrMsg2, u_op=y_FAST%Lin%Modules(Module_ExtPtfm)%Instance(1)%op_u,&
+          y_op=y_FAST%Lin%Modules(Module_ExtPtfm)%Instance(1)%op_y, &
+          x_op=y_FAST%Lin%Modules(Module_ExtPtfm)%Instance(1)%op_x, dx_op=y_FAST%Lin%Modules(Module_ExtPtfm)%Instance(1)%op_dx)
+      if(Failed()) return;
+
+      ! write the module matrices:
+      if (p_FAST%LinOutMod) then
+         OutFileName = trim(LinRootName)//'.'//TRIM(y_FAST%Module_Abrev(Module_ExtPtfm))      
+         call WrLinFile_txt_Head(t_global, p_FAST, y_FAST, y_FAST%Lin%Modules(Module_ExtPtfm)%Instance(1), OutFileName, Un, ErrStat2, ErrMsg2)
+         if(Failed()) return;
+            
+         if (p_FAST%LinOutJac) then
+            ! Jacobians
+            call WrPartialMatrix(y_FAST%Lin%Modules(Module_ExtPtfm)%Instance(1)%A, Un, p_FAST%OutFmt, 'dXdx')
+            call WrPartialMatrix(y_FAST%Lin%Modules(Module_ExtPtfm)%Instance(1)%B, Un, p_FAST%OutFmt, 'dXdu', UseCol=y_FAST%Lin%Modules(Module_ExtPtfm)%Instance(1)%use_u)
+            call WrPartialMatrix(y_FAST%Lin%Modules(Module_ExtPtfm)%Instance(1)%C, Un, p_FAST%OutFmt, 'dYdx', UseRow=y_FAST%Lin%Modules(Module_ExtPtfm)%Instance(1)%use_y)
+            call WrPartialMatrix(y_FAST%Lin%Modules(Module_ExtPtfm)%Instance(1)%D, Un, p_FAST%OutFmt, 'dYdu', UseRow=y_FAST%Lin%Modules(Module_ExtPtfm)%Instance(1)%use_y, &
+                                                                                                               UseCol=y_FAST%Lin%Modules(Module_ExtPtfm)%Instance(1)%use_u)
+         end if
+         ! finish writing the file
+         call WrLinFile_txt_End(Un, p_FAST, y_FAST%Lin%Modules(Module_ExtPtfm)%Instance(1) )
+     end if
+   end if ! ExtPtfm
+   
    
    !.....................
    ! Linearization of glue code Input/Output solve:
@@ -839,6 +894,11 @@ SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD1
    call WrLinFile_txt_End(Un, p_FAST, y_FAST%Lin%Glue )            
 
 contains
+    logical function Failed()
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      Failed =  ErrStat >= AbortErrLev
+      if(Failed) call cleanup()
+   end function Failed
    subroutine cleanup()
       if (allocated(dYdz)) deallocate(dYdz)
       if (allocated(dZdz)) deallocate(dZdz)
@@ -1342,6 +1402,10 @@ SUBROUTINE Glue_Jacobians( t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14,
       call Linear_AD_InputSolve_du( p_FAST, y_FAST, AD%Input(1), ED%Output(1), BD, MeshMapData, dUdu, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    end if ! we're using the InflowWind module
+
+   IF (p_FAST%CompSub == Module_ExtPtfm) THEN
+       write(*,*)'>>> FAST_LIN: Linear_ExtPtfm_InputSolve_du, TODO'
+   ENDIF
    
    !.....................................
    ! dUdy
@@ -1415,6 +1479,9 @@ SUBROUTINE Glue_Jacobians( t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14,
    end if
       
    
+   IF (p_FAST%CompSub == Module_ExtPtfm) THEN
+       write(*,*)'>>> FAST_LIN: Linear_ExtPtfm_InputSolve_dy, TODO'
+   ENDIF
    
 END SUBROUTINE Glue_Jacobians
 !----------------------------------------------------------------------------------------------------------------------------------

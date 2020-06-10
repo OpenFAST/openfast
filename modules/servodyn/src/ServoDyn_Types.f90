@@ -186,6 +186,7 @@ IMPLICIT NONE
     LOGICAL  :: BegYawMan      !< Whether the yaw maneuver actually began [-]
     REAL(ReKi)  :: NacYawI      !< Initial yaw angle at the start of the override yaw maneuver [radians]
     REAL(DbKi)  :: TYawManE      !< Time to end override yaw maneuver [s]
+    REAL(ReKi)  :: YawPosComInt      !< Internal variable that integrates the commanded yaw rate and passes it to YawPosCom [radians]
     LOGICAL , DIMENSION(:), ALLOCATABLE  :: BegTpBr      !< Whether the tip brakes actually deployed [-]
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: TTpBrDp      !< Times to initiate deployment of tip brakes [s]
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: TTpBrFl      !< Times at which tip brakes are fully deployed [s]
@@ -3374,6 +3375,7 @@ ENDIF
     DstOtherStateData%BegYawMan = SrcOtherStateData%BegYawMan
     DstOtherStateData%NacYawI = SrcOtherStateData%NacYawI
     DstOtherStateData%TYawManE = SrcOtherStateData%TYawManE
+    DstOtherStateData%YawPosComInt = SrcOtherStateData%YawPosComInt
 IF (ALLOCATED(SrcOtherStateData%BegTpBr)) THEN
   i1_l = LBOUND(SrcOtherStateData%BegTpBr,1)
   i1_u = UBOUND(SrcOtherStateData%BegTpBr,1)
@@ -3504,6 +3506,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! BegYawMan
       Re_BufSz   = Re_BufSz   + 1  ! NacYawI
       Db_BufSz   = Db_BufSz   + 1  ! TYawManE
+      Re_BufSz   = Re_BufSz   + 1  ! YawPosComInt
   Int_BufSz   = Int_BufSz   + 1     ! BegTpBr allocated yes/no
   IF ( ALLOCATED(InData%BegTpBr) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! BegTpBr upper/lower bounds for each dimension
@@ -3628,6 +3631,8 @@ ENDIF
       Re_Xferred   = Re_Xferred   + 1
       DbKiBuf ( Db_Xferred:Db_Xferred+(1)-1 ) = InData%TYawManE
       Db_Xferred   = Db_Xferred   + 1
+      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%YawPosComInt
+      Re_Xferred   = Re_Xferred   + 1
   IF ( .NOT. ALLOCATED(InData%BegTpBr) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -3837,6 +3842,8 @@ ENDIF
       Re_Xferred   = Re_Xferred + 1
       OutData%TYawManE = DbKiBuf( Db_Xferred ) 
       Db_Xferred   = Db_Xferred + 1
+      OutData%YawPosComInt = ReKiBuf( Re_Xferred )
+      Re_Xferred   = Re_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! BegTpBr not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
