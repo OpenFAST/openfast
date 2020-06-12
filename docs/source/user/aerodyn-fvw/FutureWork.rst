@@ -28,4 +28,4 @@ The following list contains future work on OLAF software:
 
 -  Code speed-up
 
--  Dedicated dynamic stall model.
+-  Dedicated dynamic stall model

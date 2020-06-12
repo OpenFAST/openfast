@@ -1,7 +1,7 @@
 --------------------------- FREE WAKE INPUT FILE ---------------------------------------------- 
 Free wake input file for the BAR turbine
 --------------------------- GENERAL OPTIONS ---------------------------------------------------
-5       IntMethod          Integration method {4: 2nd order Predictor/Corrector, 5: Forward Euler 1st order, default: 5} (switch) 
+5       IntMethod          Integration method {5: Forward Euler 1st order, default: 5} (switch) 
 0.2     DTfvw              Time interval for wake propagation. {default: dtaero} (s)
 5       FreeWakeStart      Time when wake is free. (-) value = always free. {default: 0.0} (s)
 2.0     FullCircStart      Time at which full circulation is reached. {default: 0.0} (s)
