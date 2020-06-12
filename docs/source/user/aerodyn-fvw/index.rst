@@ -1,5 +1,5 @@
-OLAF User's Guide and Theory Manual (Free Vortex Wake)
-======================================================
+OLAF User's Guide and Theory Manual (Free Vortex Wake in AeroDyn15)
+===================================================================
 
 .. only:: html
 
