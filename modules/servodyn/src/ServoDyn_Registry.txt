@@ -133,6 +133,7 @@ typedef	^	BladedDLLType	IntKi	GenState	-	-	-	"Generator state from Bladed DLL"	N
 #typedef	^	BladedDLLType	ReKi	ElecPwr	-	-	-	"Electrical power sent to Bladed DLL"	W
 typedef	^	BladedDLLType	ReKi	BlPitchCom	3	-	-	"Commanded blade pitch angles"	radians
 typedef	^	BladedDLLType	ReKi	PrevBlPitch	3	-	-	"Previously commanded blade pitch angles"	radians
+typedef	^	BladedDLLType	ReKi	BlAirfoilCom	3	-	-	"Commanded Airfoil UserProp for blade.  Passed to AD15 for airfoil interpolation (must be same units as given in AD15 airfoil tables)"	-
 typedef	^	BladedDLLType	SiKi	SCoutput	{:}	-	-	"controller output to supercontroller"	-
 
 # ..... States ....................................................................................................................
@@ -160,6 +161,7 @@ typedef	^	OtherStateType	DbKi	TPitManE	{:}	-	-	"Time to end pitch maneuvers for 
 typedef	^	OtherStateType	Logical	BegYawMan	-	-	-	"Whether the yaw maneuver actually began"	-
 typedef	^	OtherStateType	ReKi	NacYawI	-	-	-	"Initial yaw angle at the start of the override yaw maneuver"	radians
 typedef	^	OtherStateType	DbKi	TYawManE	-	-	-	"Time to end override yaw maneuver"	s
+typedef	^	OtherStateType	ReKi	YawPosComInt	-	-	-	"Internal variable that integrates the commanded yaw rate and passes it to YawPosCom"	radians
 # other states for tip-brake deployment:
 typedef	^	OtherStateType	Logical	BegTpBr	{:}	-	-	"Whether the tip brakes actually deployed"	-
 typedef	^	OtherStateType	DbKi	TTpBrDp	{:}	-	-	"Times to initiate deployment of tip brakes"	s
@@ -329,6 +331,7 @@ typedef	^	InputType	SiKi	SuperController	{:}	-	-	"A swap array: used to pass inp
 # Define outputs that are not on this mesh here:
 typedef	^	OutputType	ReKi	WriteOutput	{:}	-	-	"Data to be written to an output file: see WriteOutputHdr for names of each variable"	"see WriteOutputUnt"
 typedef	^	OutputType	ReKi	BlPitchCom	{:}	-	-	"Commanded blade pitch angles"	radians
+typedef	^	OutputType	ReKi	BlAirfoilCom	{:}	-	-	"Commanded Airfoil UserProp for blade.  Passed to AD15 for airfoil interpolation (must be same units as given in AD15 airfoil tables)"	-
 typedef	^	OutputType	ReKi	YawMom	-	-	-	"Torque transmitted through the yaw bearing"	N-m
 typedef	^	OutputType	ReKi	GenTrq	-	-	-	"Electrical generator torque"	N-m
 typedef	^	OutputType	ReKi	HSSBrTrqC	-	-	-	"Commanded HSS brake torque"	N-m

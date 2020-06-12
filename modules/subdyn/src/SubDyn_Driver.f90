@@ -113,11 +113,11 @@ PROGRAM TestSubDyn
    CALL NWTC_Init( )
    
       ! Display the copyright notice
-   CALL DispCopyrightLicense( version )   
+   CALL DispCopyrightLicense( version%Name )
       ! Obtain OpenFAST git commit hash
    git_commit = QueryGitVersion()
       ! Tell our users what they're running
-   CALL WrScr( ' Running '//GetNVD( version )//' a part of OpenFAST - '//TRIM(git_Commit)//NewLine//' linked with '//TRIM( GetNVD( NWTC_Ver ))//NewLine )
+   CALL WrScr( ' Running '//TRIM( version%Name )//' a part of OpenFAST - '//TRIM(git_Commit)//NewLine//' linked with '//TRIM( NWTC_Ver%Name )//NewLine )
    
    
    
@@ -236,7 +236,7 @@ PROGRAM TestSubDyn
    ! u(1)%UFL(3)=-12.958  !this is for testbeam3
     
    call wrscr('')
-   DO n = 0,drvrInitInp%NSteps
+   DO n = 0,drvrInitInp%NSteps-1
 
       Time = n*TimeInterval
       InputTime(1) = Time
@@ -258,21 +258,21 @@ PROGRAM TestSubDyn
             
             
             
-            u(1)%TPMesh%TranslationDisp(:,1)   = SDin(n,2:4) 
+            u(1)%TPMesh%TranslationDisp(:,1)   = SDin(n+1,2:4) 
             
             
                ! Compute direction cosine matrix from the rotation angles
                
-            IF ( abs(SDin(n,5)) > maxAngle ) maxAngle = abs(SDin(n,5))
-            IF ( abs(SDin(n,6)) > maxAngle ) maxAngle = abs(SDin(n,6))
-            IF ( abs(SDin(n,7)) > maxAngle ) maxAngle = abs(SDin(n,7))
+            IF ( abs(SDin(n+1,5)) > maxAngle ) maxAngle = abs(SDin(n+1,5))
+            IF ( abs(SDin(n+1,6)) > maxAngle ) maxAngle = abs(SDin(n+1,6))
+            IF ( abs(SDin(n+1,7)) > maxAngle ) maxAngle = abs(SDin(n+1,7))
             
-            CALL SmllRotTrans( 'InputRotation', REAL(SDin(n,5),reki), REAL(SDin(n,6),reki), REAL(SDin(n,7),reki), dcm, 'Junk', ErrStat, ErrMsg )            
+            CALL SmllRotTrans( 'InputRotation', REAL(SDin(n+1,5),reki), REAL(SDin(n+1,6),reki), REAL(SDin(n+1,7),reki), dcm, 'Junk', ErrStat, ErrMsg )            
             u(1)%TPMesh%Orientation(:,:,1)     = dcm 
             
             
-            u(1)%TPMesh%TranslationVel(:,1)    = SDin(n,8:10)  
-            u(1)%TPMesh%RotationVel(:,1)       = SDin(n,11:13) 
+            u(1)%TPMesh%TranslationVel(:,1)    = SDin(n+1,8:10)  
+            u(1)%TPMesh%RotationVel(:,1)       = SDin(n+1,11:13) 
             
          ELSE
             

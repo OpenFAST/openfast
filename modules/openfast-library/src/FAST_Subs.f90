@@ -23,7 +23,6 @@ MODULE FAST_Subs
 
    USE FAST_Solver
    USE FAST_Linear
-   USE VersionInfo
 
    IMPLICIT NONE
 
@@ -889,9 +888,9 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
    ELSE IF ( p_FAST%CompSub == Module_ExtPtfm ) THEN
 
       InitInData_ExtPtfm%InputFile = p_FAST%SubFile
-!      InitInData_ExtPtfm%RootName  = trim(p_FAST%OutFileRoot)//'.'//TRIM(y_FAST%Module_Abrev(Module_ExtPtfm))
+      InitInData_ExtPtfm%RootName  = trim(p_FAST%OutFileRoot)//'.'//TRIM(y_FAST%Module_Abrev(Module_ExtPtfm))
       InitInData_ExtPtfm%Linearize = p_FAST%Linearize
-      
+      InitInData_ExtPtfm%PtfmRefzt = ED%p%PtfmRefzt ! Required
       
       CALL ExtPtfm_Init( InitInData_ExtPtfm, ExtPtfm%Input(1), ExtPtfm%p,  &
                          ExtPtfm%x(STATE_CURR), ExtPtfm%xd(STATE_CURR), ExtPtfm%z(STATE_CURR),  ExtPtfm%OtherSt(STATE_CURR), &
@@ -901,6 +900,20 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       p_FAST%ModuleInitialized(MODULE_ExtPtfm) = .TRUE.
       CALL SetModuleSubstepTime(MODULE_ExtPtfm, p_FAST, y_FAST, ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+      allocate( y_FAST%Lin%Modules(MODULE_ExtPtfm)%Instance(1), stat=ErrStat2)
+      if (ErrStat2 /= 0 ) then
+         call SetErrStat(ErrID_Fatal, "Error allocating Lin%Modules(ExtPtfm).", ErrStat, ErrMsg, RoutineName )
+      else
+         if (allocated(InitOutData_ExtPtfm%LinNames_y)) call move_alloc(InitOutData_ExtPtfm%LinNames_y,y_FAST%Lin%Modules(MODULE_ExtPtfm)%Instance(1)%Names_y)
+         if (allocated(InitOutData_ExtPtfm%LinNames_x)) call move_alloc(InitOutData_ExtPtfm%LinNames_x,y_FAST%Lin%Modules(MODULE_ExtPtfm)%Instance(1)%Names_x)
+         if (allocated(InitOutData_ExtPtfm%LinNames_u)) call move_alloc(InitOutData_ExtPtfm%LinNames_u,y_FAST%Lin%Modules(MODULE_ExtPtfm)%Instance(1)%Names_u)
+         if (allocated(InitOutData_ExtPtfm%RotFrame_y)) call move_alloc(InitOutData_ExtPtfm%RotFrame_y,y_FAST%Lin%Modules(MODULE_ExtPtfm)%Instance(1)%RotFrame_y)
+         if (allocated(InitOutData_ExtPtfm%RotFrame_x)) call move_alloc(InitOutData_ExtPtfm%RotFrame_x,y_FAST%Lin%Modules(MODULE_ExtPtfm)%Instance(1)%RotFrame_x)
+         if (allocated(InitOutData_ExtPtfm%RotFrame_u)) call move_alloc(InitOutData_ExtPtfm%RotFrame_u,y_FAST%Lin%Modules(MODULE_ExtPtfm)%Instance(1)%RotFrame_u)
+         if (allocated(InitOutData_ExtPtfm%IsLoad_u  )) call move_alloc(InitOutData_ExtPtfm%IsLoad_u  ,y_FAST%Lin%Modules(MODULE_ExtPtfm)%Instance(1)%IsLoad_u  )
+         if (allocated(InitOutData_ExtPtfm%WriteOutputHdr)) y_FAST%Lin%Modules(MODULE_ExtPtfm)%Instance(1)%NumOutputs = size(InitOutData_ExtPtfm%WriteOutputHdr)
+      end if
                
       IF (ErrStat >= AbortErrLev) THEN
          CALL Cleanup()
@@ -1396,71 +1409,21 @@ FUNCTION GetVersion(ThisProgVer)
 END FUNCTION GetVersion
 
 !----------------------------------------------------------------------------------------------------------------------------------
-!> This subroutine parses and compiles the relevant version and compile data for a givne program
-subroutine GetProgramMetadata(ThisProgVer, name, version, git_commit, architecture, precision)
-
-   TYPE(ProgDesc), INTENT(IN ) :: ThisProgVer     !< program name/date/version description
-   character(200), intent(out) :: name, version
-   character(200), intent(out) :: git_commit, architecture, precision
-   
-   name = trim(ThisProgVer%Name)
-   version = trim(ThisProgVer%Ver)
-   
-   git_commit = QueryGitVersion()
-
-   architecture = TRIM(Num2LStr(BITS_IN_ADDR))//' bit'
-   
-   if (ReKi == SiKi) then
-     precision = 'single'
-   else if (ReKi == R8Ki) then
-     precision = 'double'
-   else
-     precision = 'unknown'
-   end if
-   
-end subroutine GetProgramMetadata
-
-!----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine is called at the start (or restart) of a FAST program (or FAST.Farm). It initializes the NWTC subroutine library,
 !! displays the copyright notice, and displays some version information (including addressing scheme and precision).
 SUBROUTINE FAST_ProgStart(ThisProgVer)
    TYPE(ProgDesc), INTENT(IN) :: ThisProgVer     !< program name/date/version description
-   character(200) :: name, version
-   character(200) :: git_commit, architecture, precision
-   character(200) :: execution_date, execution_time, execution_zone
    
    ! ... Initialize NWTC Library (open console, set pi constants) ...
    ! sets the pi constants, open console for output, etc...
    CALL NWTC_Init( ProgNameIN=ThisProgVer%Name, EchoLibVer=.FALSE. )
    
    ! Display the copyright notice
-   CALL DispCopyrightLicense( ThisProgVer )
+   CALL DispCopyrightLicense( ThisProgVer%Name )
    
-   ! Display the program metadata
-   call GetProgramMetadata(ThisProgVer, name, version, git_commit, architecture, precision)
-   
-   call wrscr(trim(name)//'-'//trim(git_commit))
-   call wrscr('Compile Info:')
-   call wrscr(' - Architecture: '//trim(architecture))
-   call wrscr(' - Precision: '//trim(precision))
-   call wrscr(' - Date: '//__DATE__)
-   call wrscr(' - Time: '//__TIME__)
-   ! use iso_fortran_env for compiler_version() and compiler_options()
-   ! call wrscr(' - Compiler: '//trim(compiler_version()))
-   ! call wrscr(' - Options: '//trim(compiler_options()))
+   CALL DispCompileRuntimeInfo
 
-   call date_and_time(execution_date, execution_time, execution_zone) 
-   
-   call wrscr('Execution Info:')
-   call wrscr(' - Date: '//trim(execution_date(5:6)//'/'//execution_date(7:8)//'/'//execution_date(1:4)))
-   call wrscr(' - Time: '//trim(execution_time(1:2)//':'//execution_time(3:4)//':'//execution_time(5:6))//trim(execution_zone))
-   
-   call wrscr('')
-   
-  !  CALL WrScr( ' Running '//TRIM(GetVersion(ThisProgVer))//NewLine//' linked with '//TRIM( GetNVD( NWTC_Ver ))//NewLine )
-   
 END SUBROUTINE FAST_ProgStart
-
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine gets the name of the FAST input file from the command line. It also returns a logical indicating if this there
 !! was a "DWM" argument after the file name.
@@ -1633,7 +1596,8 @@ SUBROUTINE FAST_Init( p, y_FAST, t_initial, InputFile, ErrStat, ErrMsg, TMax, Tu
       END IF
    ELSEIF ( p%CompMooring == Module_Orca ) THEN
       p%TurbineType = Type_Offshore_Floating
-   !bjj: what about ExtPtfm_MCKF ???
+   ELSEIF ( p%CompSub == Module_ExtPtfm ) THEN
+      p%TurbineType = Type_Offshore_Fixed
    ELSE      
       p%TurbineType = Type_LandBased
    END IF   
@@ -1789,7 +1753,7 @@ SUBROUTINE ValidateInputData(p, ErrStat, ErrMsg)
       ! now, make sure we haven't asked for any modules that we can't yet linearize:
       if (p%CompInflow == MODULE_OpFM) call SetErrStat(ErrID_Fatal,'Linearization is not implemented for the OpenFOAM coupling.',ErrStat, ErrMsg, RoutineName)
       if (p%CompAero == MODULE_AD14) call SetErrStat(ErrID_Fatal,'Linearization is not implemented for the AeroDyn v14 module.',ErrStat, ErrMsg, RoutineName)
-      if (p%CompSub /= MODULE_None) call SetErrStat(ErrID_Fatal,'Linearization is not implemented for any of the substructure modules.',ErrStat, ErrMsg, RoutineName)
+      if (p%CompSub   == MODULE_SD) call SetErrStat(ErrID_Fatal,'Linearization is not implemented for the SubDyn module.',ErrStat, ErrMsg, RoutineName)
       if (p%CompMooring == MODULE_MD) call SetErrStat(ErrID_Fatal,'Linearization is not implemented MoorDyn.', ErrStat, ErrMsg, RoutineName)
       if (p%CompMooring == MODULE_FEAM) call SetErrStat(ErrID_Fatal,'Linearization is not implemented FEAMooring.', ErrStat, ErrMsg, RoutineName)
       if (p%CompIce /= MODULE_None) call SetErrStat(ErrID_Fatal,'Linearization is not implemented for any of the ice loading modules.',ErrStat, ErrMsg, RoutineName)
@@ -5838,7 +5802,7 @@ SUBROUTINE FAST_Linearize_T(t_initial, n_t_global, Turbine, ErrStat, ErrMsg)
 
          CALL FAST_Linearize_OP(t_global, Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, &
                   Turbine%ED, Turbine%BD, Turbine%SrvD, Turbine%AD14, Turbine%AD, Turbine%IfW, Turbine%OpFM, &
-                  Turbine%HD, Turbine%SD, Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, &
+                  Turbine%HD, Turbine%SD, Turbine%ExtPtfm, Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, &
                   Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, ErrStat2, ErrMsg2 )  
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
             IF (ErrStat >= AbortErrLev) RETURN
