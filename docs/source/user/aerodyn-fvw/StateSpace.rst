@@ -75,13 +75,12 @@ The continuous states are:
 
 -  The position of the Lagrangian markers, :math:`\vec{r}_m`
 
--  The vorticity associated with each vortex element,
-   :math:`\vec{\omega}_e`. For a projection of the vorticity onto vortex
-   segments, this corresponds to the circulation,
-   :math:`\vec{\Gamma}_e`, where for each segment,
-   :math:`\vec{\Gamma}_e= \Gamma_e \vec{dl}_e =\vec{\omega}_e dV_e`,
-   with :math:`\vec{dl}_e` and :math:`dV_e`, the vortex segment length
-   and its equivalent vortex volume.
+-  The vorticity associated with each vortex element, :math:`\vec{\omega}_e`.
+   For a projection of the vorticity onto vortex segments, this corresponds to
+   the circulation, :math:`\vec{\Gamma}_e`. For each segment,
+   :math:`\vec{\Gamma}_e= \Gamma_e \vec{dl}_e =\vec{\omega}_e dV_e`, with
+   :math:`\vec{dl}_e` and :math:`dV_e`, the vortex segment length and its
+   equivalent vortex volume.
 
 The outputs are  [1]_:
 
@@ -95,9 +94,9 @@ State, Constraint, and Output Equations
 ---------------------------------------
 
 An overview of the states, constraints, and output equations is given here. More
-details are provided in :numref:`sec:FVW`. The constraint equation is used to
-determine the circulation distribution along the span of each lifting line. For
-the van Garrel method, this circulation is a function of the angle of attack
+details are provided in :numref:`OLAF-Theory`. The constraint equation is used
+to determine the circulation distribution along the span of each lifting line.
+For the van Garrel method, this circulation is a function of the angle of attack
 along the blade and the airfoil coefficients. The angle of attack at a given
 lifting-line node is a function of the undisturbed velocity,
 :math:`\vec{v}_{0,ll}`, and the velocity induced by the vorticity,
@@ -117,7 +116,7 @@ convection of the Lagrangian markers:
 
 .. math::
    \begin{aligned}
-       \frac{d \vec{\omega}_e}{dt} &= \left[(\vec{\omega}\cdot\nabla)\vec{v} + \nu\nabla^2 \vec{\omega} \right]_e
+       \frac{d \vec{\omega}_e}{dt} &= \bigg[(\vec{\omega}\cdot\nabla)\vec{v} + \nu\nabla^2 \vec{\omega} \bigg]_e
    \end{aligned}
 
 .. math::
