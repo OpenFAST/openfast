@@ -10,8 +10,9 @@ OLAF User's Guide and Theory Manual (Free Vortex Wake in AeroDyn15)
    releases are issued and as needed to provide further information on
    advancements or modifications to the software.
 
-   The documentaiton here was derived from the OLAF users manual by K.\ Shaler,
-   E.\ Branlard, and A.\ Platt.  (FIXME: add link to pub)
+   The documentaiton here was derived from the OLAF users manual by K. Shaler,
+   E. Branlard, and A. Platt. (`https://www.nrel.gov/docs/fy20osti/75959.pdf
+   <https://www.nrel.gov/docs/fy20osti/75959.pdf>`_)
 
    
 .. toctree::
