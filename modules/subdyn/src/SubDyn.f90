@@ -2316,9 +2316,9 @@ SUBROUTINE PartitionDOFNodes(Init, m, p, ErrStat, ErrMsg)
    write(*,'(A,I0)')'Number of DOFs: "reactions" fixed    (C_F): ',p%nDOFC_F
    write(*,'(A,I0)')'Number of DOFs: "intf+react"         (__R): ',p%nDOFR__
    write(*,'(A,I0)')'Number of DOFs: "internal"  internal (L_L): ',p%nDOFL_L
-   write(*,'(A,I0)')'Number of DOFs:  total      retained (__B): ',p%nDOF__Rb
-   write(*,'(A,I0)')'Number of DOFs:  total      internal (__L): ',p%nDOF__L
-   write(*,'(A,I0)')'Number of DOFs:  total      fixed    (__F): ',p%nDOF__F
+   write(*,'(A,I0)')'Number of DOFs:             retained (__B): ',p%nDOF__Rb
+   write(*,'(A,I0)')'Number of DOFs:             internal (__L): ',p%nDOF__L
+   write(*,'(A,I0)')'Number of DOFs:             fixed    (__F): ',p%nDOF__F
    write(*,'(A,I0)')'Number of DOFs:  total                    : ',p%nDOF_red
    write(*,'(A,I0)')'Number of Nodes: "interface" (I): ',p%nNodes_I
    write(*,'(A,I0)')'Number of Nodes: "reactions" (C): ',p%nNodes_C
@@ -2470,10 +2470,10 @@ SUBROUTINE OutSummary(Init, p, InitInput, CBparams, ErrStat,ErrMsg)
    call yaml_write_var(UnSum, 'nDOFR__ ', p%nDOFR__ ,IFmt, ErrStat2, ErrMsg2, comment='Number of DOFs: "intf+react"         (__R)')
    call yaml_write_var(UnSum, 'nDOFL_L ', p%nDOFL_L ,IFmt, ErrStat2, ErrMsg2, comment='Number of DOFs: "internal"  internal (L_L)')
 #endif
-   call yaml_write_var(UnSum, 'nDOF__B', p%nDOF__Rb,IFmt, ErrStat2, ErrMsg2, comment='Number of DOFs:  total      retained (__B)')
-   call yaml_write_var(UnSum, 'nDOF__L ', p%nDOF__L ,IFmt, ErrStat2, ErrMsg2, comment='Number of DOFs:  total      internal (__L)')
-   call yaml_write_var(UnSum, 'nDOF__F ', p%nDOF__F ,IFmt, ErrStat2, ErrMsg2, comment='Number of DOFs:  total      fixed    (__F)')
-   call yaml_write_var(UnSum, 'nDOF_red', p%nDOF_red,IFmt, ErrStat2, ErrMsg2, comment='Number of DOFs:  total                    ')
+   call yaml_write_var(UnSum, 'nDOF__B ', p%nDOF__Rb,IFmt, ErrStat2, ErrMsg2, comment='Number of DOFs:             retained (__B)')
+   call yaml_write_var(UnSum, 'nDOF__L ', p%nDOF__L ,IFmt, ErrStat2, ErrMsg2, comment='Number of DOFs:             internal (__L)')
+   call yaml_write_var(UnSum, 'nDOF__F ', p%nDOF__F ,IFmt, ErrStat2, ErrMsg2, comment='Number of DOFs:             fixed    (__F)')
+   call yaml_write_var(UnSum, 'nDOF_red', p%nDOF_red,IFmt, ErrStat2, ErrMsg2, comment='Number of DOFs: total')
 #ifdef SD_SUMMARY_DEBUG
    call yaml_write_array(UnSum, 'Nodes_I', p%Nodes_I(:,1), IFmt, ErrStat2, ErrMsg2, comment='"interface" nodes"')
    call yaml_write_array(UnSum, 'Nodes_C', p%Nodes_C(:,1), IFmt, ErrStat2, ErrMsg2, comment='"reaction" nodes"')
@@ -2604,10 +2604,10 @@ SUBROUTINE OutSummary(Init, p, InitInput, CBparams, ErrStat,ErrMsg)
    ! write Eigenvalues of full SYstem and CB reduced System
    !-------------------------------------------------------------------------------------------------------------
    WRITE(UnSum, '(A)') SectionDivide
-   WRITE(UnSum, '(A, I6)') "#FEM Eigenvalues [Hz]. Number of shown eigenvalues (total # of DOFs minus restrained nodes' DOFs):", NOmega 
-   call yaml_write_array(UnSum, 'Full_Eigenvalues', Omega/(TwoPi), ReFmt, ErrStat2, ErrMsg2)
-   WRITE(UnSum, '(A, I6)') "#CB Reduced Eigenvalues [Hz].  Number of retained modes' eigenvalues:", p%nDOFM 
-   call yaml_write_array(UnSum, 'CB_Eigenvalues', CBparams%OmegaL(1:p%nDOFM)/(TwoPi), ReFmt, ErrStat2, ErrMsg2)
+   WRITE(UnSum, '(A, I6)') "#Eigenfrequencies for full system (no constraint) [Hz]"
+   call yaml_write_array(UnSum, 'Full_frequencies', Omega/(TwoPi), ReFmt, ErrStat2, ErrMsg2)
+   WRITE(UnSum, '(A, I6)') "#CB frequencies [Hz]"
+   call yaml_write_array(UnSum, 'CB_frequencies', CBparams%OmegaL(1:p%nDOFM)/(TwoPi), ReFmt, ErrStat2, ErrMsg2)
     
    !-------------------------------------------------------------------------------------------------------------
    ! write Eigenvectors of full System 
@@ -2622,8 +2622,8 @@ SUBROUTINE OutSummary(Init, p, InitInput, CBparams, ErrStat,ErrMsg)
    !-------------------------------------------------------------------------------------------------------------
    WRITE(UnSum, '(A)') SectionDivide
    WRITE(UnSum, '(A)') '#CB Matrices (PhiM,PhiR) (constraint applied)'
-   call yaml_write_array(UnSum, 'PhiM', CBparams%PhiL(:,1:p%nDOFM ), ReFmt, ErrStat2, ErrMsg2)
-   call yaml_write_array(UnSum, 'PhiR', CBparams%PhiR, ReFmt, ErrStat2, ErrMsg2)
+   call yaml_write_array(UnSum, 'PhiM', CBparams%PhiL(:,1:p%nDOFM ), ReFmt, ErrStat2, ErrMsg2, comment='(CB modes)')
+   call yaml_write_array(UnSum, 'PhiR', CBparams%PhiR, ReFmt, ErrStat2, ErrMsg2, comment='(Guyan modes)')
            
    !-------------------------------------------------------------------------------------------------------------
    ! write CB system KBBt and MBBt matrices, eq stiffness matrices of the entire substructure at the TP ref point
@@ -2691,7 +2691,8 @@ SUBROUTINE OutSummary(Init, p, InitInput, CBparams, ErrStat,ErrMsg)
 
    ! --- write TP TI matrix
    WRITE(UnSum, '(A)') SectionDivide
-   call yaml_write_array(UnSum, 'TI', p%TI, ReFmt, ErrStat2, ErrMsg2, comment='(TP refpoint Transformation Matrix TI)')
+   call yaml_write_array(UnSum, 'TI'     , p%TI, ReFmt, ErrStat2, ErrMsg2, comment='(TP refpoint Transformation Matrix TI)')
+   call yaml_write_array(UnSum, 'TIReact', p%TIReact, ReFmt, ErrStat2, ErrMsg2, comment='(Transformation Matrix TIreact to (0,0,-WtrDepth))')
       
 #endif   
    call CleanUp()

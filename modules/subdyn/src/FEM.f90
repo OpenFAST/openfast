@@ -523,7 +523,11 @@ SUBROUTINE EigenSolveWrap(K, M, nDOF, NOmega,  bCheckSingularity, EigVect, Omega
 
    ! --- Setting up Phi, and type conversion
    do i = 1, NOmega
-      Om2 = real(Omega2_LaKi(i), ReKi)  
+      if (abs(Omega2_LaKi(i))>huge(1.0_ReKi)) then
+         Om2 = sign(huge(1.0_ReKi), Omega2_LaKi(i))
+      else
+         Om2 = real(Omega2_LaKi(i), ReKi)  
+      endif
       if (EqualRealNos(Om2, 0.0_ReKi)) then  ! NOTE: may be necessary for some corner numerics
          Omega(i)=0.0_ReKi
       elseif (Om2>0) then 
