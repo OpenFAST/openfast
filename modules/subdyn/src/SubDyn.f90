@@ -46,6 +46,7 @@ Module SubDyn
    PUBLIC :: SD_CalcOutput                     ! Routine for computing outputs
    PUBLIC :: SD_CalcContStateDeriv             ! Tight coupling routine for computing derivatives of continuous states
    
+   LOGICAL, parameter :: NO_Y2_MAP = .False.
 CONTAINS
 
 SUBROUTINE CreateTPMeshes( TP_RefPoint, inputMesh, outputMesh, ErrStat, ErrMsg )
@@ -100,34 +101,43 @@ SUBROUTINE CreateY2Meshes( NNode, Nodes, INodes_I, INodes_L, INodes_C, inputMesh
    INTEGER         :: I, iOffset, iNode  ! generic counter variable
    INTEGER         :: nodeIndx
    
-   CALL MeshCreate( BlankMesh        = inputMesh                           &
-                  ,IOS               = COMPONENT_INPUT                     &
-                  ,Nnodes            = size(INodes_I) + size(INodes_L) + size(INodes_C)      &
-                  ,ErrStat           = ErrStat                             &
-                  ,ErrMess           = ErrMsg                              &
-                  ,Force             = .TRUE.                              &
-                  ,Moment            = .TRUE.                              )
-   ! --- Interface nodes
-   iOffset = 0
-   DO I = 1,size(INodes_I)
-      Point = Nodes(INodes_I(I), 2:4)
-      CALL MeshPositionNode(inputMesh, I+iOffSet, Point, ErrStat, ErrMsg); IF(ErrStat/=ErrID_None) RETURN
-      CALL MeshConstructElement(inputMesh, ELEMENT_POINT, ErrStat, ErrMsg, I+iOffset)
-   ENDDO
-   ! --- Interior nodes
-   iOffset = size(INodes_I)
-   DO I = 1,size(INodes_L)
-      Point = Nodes(INodes_L(I), 2:4)
-      CALL MeshPositionNode(inputMesh, I+iOffSet, Point, ErrStat, ErrMsg); IF(ErrStat/=ErrID_None) RETURN
-      CALL MeshConstructElement(inputMesh, ELEMENT_POINT, ErrStat, ErrMsg, I+iOffset)
-   END DO
-   ! --- Base Reaction nodes 
-   iOffset = size(INodes_I) + size(INodes_L)
-   DO I = 1,size(INodes_C)
-      Point = Nodes(INodes_C(I), 2:4)
-      CALL MeshPositionNode(inputMesh, I+iOffSet, Point, ErrStat, ErrMsg); IF(ErrStat/=ErrID_None) RETURN
-      CALL MeshConstructElement(inputMesh, ELEMENT_POINT, ErrStat, ErrMsg, I+iOffset)
-   END DO
+   CALL MeshCreate( BlankMesh        = inputMesh         &
+                  ,IOS               = COMPONENT_INPUT   &
+                  ,Nnodes            = size(Nodes,1)     &
+                  ,ErrStat           = ErrStat           &
+                  ,ErrMess           = ErrMsg            &
+                  ,Force             = .TRUE.            &
+                  ,Moment            = .TRUE.            )
+
+   if (NO_Y2_MAP) then
+      DO I = 1,size(Nodes,1)
+         Point = Nodes(I, 2:4)
+         CALL MeshPositionNode(inputMesh, I, Point, ErrStat, ErrMsg); IF(ErrStat/=ErrID_None) RETURN
+         CALL MeshConstructElement(inputMesh, ELEMENT_POINT, ErrStat, ErrMsg, I)
+      ENDDO 
+   else
+     ! --- Interface nodes
+     iOffset = 0
+     DO I = 1,size(INodes_I)
+        Point = Nodes(INodes_I(I), 2:4)
+        CALL MeshPositionNode(inputMesh, I+iOffSet, Point, ErrStat, ErrMsg); IF(ErrStat/=ErrID_None) RETURN
+        CALL MeshConstructElement(inputMesh, ELEMENT_POINT, ErrStat, ErrMsg, I+iOffset)
+     ENDDO
+     ! --- Interior nodes
+     iOffset = size(INodes_I)
+     DO I = 1,size(INodes_L)
+        Point = Nodes(INodes_L(I), 2:4)
+        CALL MeshPositionNode(inputMesh, I+iOffSet, Point, ErrStat, ErrMsg); IF(ErrStat/=ErrID_None) RETURN
+        CALL MeshConstructElement(inputMesh, ELEMENT_POINT, ErrStat, ErrMsg, I+iOffset)
+     END DO
+     ! --- Base Reaction nodes 
+     iOffset = size(INodes_I) + size(INodes_L)
+     DO I = 1,size(INodes_C)
+        Point = Nodes(INodes_C(I), 2:4)
+        CALL MeshPositionNode(inputMesh, I+iOffSet, Point, ErrStat, ErrMsg); IF(ErrStat/=ErrID_None) RETURN
+        CALL MeshConstructElement(inputMesh, ELEMENT_POINT, ErrStat, ErrMsg, I+iOffset)
+     END DO
+   endif
    CALL MeshCommit ( inputMesh, ErrStat, ErrMsg); IF(ErrStat/=ErrID_None) RETURN
          
    ! Create the Interior Points output mesh as a sibling copy of the input mesh
@@ -408,7 +418,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       m%udot_TP    = (/u%TPMesh%TranslationVel( :,1), u%TPMesh%RotationVel(:,1)/)
       m%udotdot_TP = (/u%TPMesh%TranslationAcc( :,1), u%TPMesh%RotationAcc(:,1)/)
       ! Inputs on interior nodes:
-      CALL ConstructUFL( u, p, m, m%UFL )
+      CALL GetExtForceOnInternalDOF( u, p, m, m%UFL )
 
       !________________________________________
       ! Set motion outputs on y%Y2mesh
@@ -497,9 +507,11 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
         !Aggregate the forces and moments at the interface nodes to the reference point
         !TODO: where are these HydroTP, HydroForces documented?
       DO I = 1, p%nNodes_I 
+         iSDNode = p%Nodes_I(I,1)
+         iY2Node = p%INodes_SD_to_Mesh(iSDNode)
          startDOF = (I-1)*6 + 1 ! NOTE: this works since interface is assumed to be sorted like LMesh and have 6 DOF per nodes
          !Take care of Hydrodynamic Forces that will go into INterface Forces later
-         HydroForces(startDOF:startDOF+5 ) =  (/u%LMesh%Force(:,I),u%LMesh%Moment(:,I)/)  !(6,NNODES_I)
+         HydroForces(startDOF:startDOF+5) =  (/u%LMesh%Force(1:3,iY2Node),u%LMesh%Moment(1:3,iY2Node)/)  !(6,NNODES_I)
       ENDDO
                 
       !HydroTP =  matmul(transpose(p%TI),HydroForces) ! (6,1) calculated below
@@ -615,7 +627,7 @@ SUBROUTINE SD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSta
       m%udotdot_TP = (/u%TPMesh%TranslationAcc(:,1), u%TPMesh%RotationAcc(:,1)/)
       
       ! form u(4) in Eq. 10:
-      CALL ConstructUFL( u, p, m, m%UFL )
+      CALL GetExtForceOnInternalDOF( u, p, m, m%UFL )
       
       !Equation 12: X=A*x + B*u + Fx (Eq 12)
       dxdt%qm= x%qmdot
@@ -938,7 +950,7 @@ else
    nColumns = MembersCol
 endif
 DO I = 1, p%NMembers
-   CALL ReadAry( UnIn, SDInputFile, Dummy_IntAry, nColumns, 'Members', 'Member number and connectivity ', ErrStat2,ErrMsg2, UnEc); if(Failed()) return
+   CALL ReadAry( UnIn, SDInputFile, Dummy_IntAry, nColumns, 'Members line '//Num2LStr(I), 'Member number and connectivity ', ErrStat2,ErrMsg2, UnEc); if(Failed()) return
    Init%Members(I,1:nColumns) = Dummy_IntAry(1:nColumns)
 ENDDO   
 IF (Check( p%NMembers < 1 , 'NMembers must be > 0')) return
@@ -1581,12 +1593,12 @@ SUBROUTINE SD_AM2( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg 
    ! interpolate u to find u_interp = u(t) = u_n     
    CALL SD_Input_ExtrapInterp( u, utimes, u_interp, t, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_AM2')
    m%udotdot_TP = (/u_interp%TPMesh%TranslationAcc(:,1), u_interp%TPMesh%RotationAcc(:,1)/)
-   CALL ConstructUFL( u_interp, p, m, m%UFL )     
+   CALL GetExtForceOnInternalDOF( u_interp, p, m, m%UFL )     
                 
    ! extrapolate u to find u_interp = u(t + dt)=u_n+1
    CALL SD_Input_ExtrapInterp(u, utimes, u_interp, t+p%SDDeltaT, ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_AM2')
    udotdot_TP2 = (/u_interp%TPMesh%TranslationAcc(:,1), u_interp%TPMesh%RotationAcc(:,1)/)
-   CALL ConstructUFL( u_interp, p, m, UFL2 )     
+   CALL GetExtForceOnInternalDOF( u_interp, p, m, UFL2 )     
    
    ! calculate (u_n + u_n+1)/2
    udotdot_TP2 = 0.5_ReKi * ( udotdot_TP2 + m%udotdot_TP )
@@ -2350,7 +2362,7 @@ END SUBROUTINE PartitionDOFNodes
 !> Construct force vector on internal DOF (L) from the values on the input mesh 
 !! First, the full vector of external forces is built on the non-reduced DOF
 !! Then, the vector is reduced using the Tred matrix
-SUBROUTINE ConstructUFL( u, p, m, UFL )
+SUBROUTINE GetExtForceOnInternalDOF( u, p, m, UFL )
    type(SD_InputType),     intent(in   )  :: u ! Inputs
    type(SD_ParameterType), intent(in   )  :: p ! Parameters
    type(SD_MiscVarType),   intent(inout)  :: m ! Misc, for storage optimization of Fext and Fext_red
@@ -2381,7 +2393,7 @@ SUBROUTINE ConstructUFL( u, p, m, UFL )
    m%Fext_red = matmul(transpose(p%T_red), m%Fext)
    UFL= m%Fext_red(p%ID__L)
 
-END SUBROUTINE ConstructUFL
+END SUBROUTINE GetExtForceOnInternalDOF
 
 !------------------------------------------------------------------------------------------------------
 !> Output the summary file    
@@ -2721,33 +2733,46 @@ SUBROUTINE SD_Y2Mesh_Mapping(p, SDtoMesh)
    INTEGER(IntKi) :: i
    INTEGER(IntKi) :: SDnode
    INTEGER(IntKi) :: y2Node
-   y2Node = 0
-   ! Interface nodes (IDI)
-   DO I = 1,SIZE(p%Nodes_I,1)
-      y2Node = y2Node + 1      
-      SDnode = p%Nodes_I(I,1)
-      SDtoMesh( SDnode ) = y2Node ! TODO add safety check
-   END DO
-   ! Interior nodes (IDL)
-   DO I = 1,SIZE(p%Nodes_L,1)
-      y2Node = y2Node + 1      
-      SDnode = p%Nodes_L(I,1)
-      SDtoMesh( SDnode ) = y2Node ! TODO add safety check
-   END DO
-   ! Base Reaction nodes (IDC)
-   DO I = 1,SIZE(p%Nodes_C,1) 
-      y2Node = y2Node + 1      
-      SDnode = p%Nodes_C(I,1)
-      SDtoMesh( SDnode ) = y2Node ! TODO add safety check
-   END DO
+   if (NO_Y2_MAP) then
+      DO I = 1,SIZE(SDtoMesh)
+         SDtoMesh( I ) = I
+      END DO
+   else
+      y2Node = 0
+      ! Interface nodes (IDI)
+      DO I = 1,SIZE(p%Nodes_I,1)
+         y2Node = y2Node + 1      
+         SDnode = p%Nodes_I(I,1)
+         SDtoMesh( SDnode ) = y2Node ! TODO add safety check
+      END DO
+      ! Interior nodes (IDL)
+      DO I = 1,SIZE(p%Nodes_L,1)
+         y2Node = y2Node + 1      
+         SDnode = p%Nodes_L(I,1)
+         SDtoMesh( SDnode ) = y2Node ! TODO add safety check
+      END DO
+      ! Base Reaction nodes (IDC)
+      DO I = 1,SIZE(p%Nodes_C,1) 
+         y2Node = y2Node + 1      
+         SDnode = p%Nodes_C(I,1)
+         SDtoMesh( SDnode ) = y2Node ! TODO add safety check
+      END DO
+   endif
 END SUBROUTINE SD_Y2Mesh_Mapping
 !>
 SUBROUTINE Y2Mesh_SD_Mapping(p, MeshtoSD)
    TYPE(SD_ParameterType), INTENT(IN   )  :: p           !< Parameters
    INTEGER(IntKi),         INTENT(  OUT)  :: MeshtoSD(:) !< index/mapping of mesh nodes with SD mesh
-   MeshtoSD(                      1:p%nNodes_I)                       = p%Nodes_I(:,1)
-   MeshtoSD(p%nNodes_I+           1:p%nNodes_I+p%nNodes_L)            = p%Nodes_L(:,1)
-   MeshtoSD(p%nNodes_I+p%nNodes_L+1:p%nNodes_I+p%nNodes_L+p%nNodes_C) = p%Nodes_C(:,1)
+   INTEGER(IntKi) :: I
+   if (NO_Y2_MAP) then
+      DO I = 1,SIZE(MeshtoSD)
+         MeshtoSD( I ) = I
+      END DO
+   else
+      MeshtoSD(                      1:p%nNodes_I)                       = p%Nodes_I(:,1)
+      MeshtoSD(p%nNodes_I+           1:p%nNodes_I+p%nNodes_L)            = p%Nodes_L(:,1)
+      MeshtoSD(p%nNodes_I+p%nNodes_L+1:p%nNodes_I+p%nNodes_L+p%nNodes_C) = p%Nodes_C(:,1)
+   endif
 END SUBROUTINE Y2Mesh_SD_Mapping
 
 !------------------------------------------------------------------------------------------------------
