@@ -107,6 +107,12 @@ SUBROUTINE Init_Lin(p_FAST, y_FAST, m_FAST, AD, ED, NumBl, ErrStat, ErrMsg)
       p_FAST%Lin_NumMods = p_FAST%Lin_NumMods + 1
       p_FAST%Lin_ModOrder( p_FAST%Lin_NumMods ) = Module_MAP
    end if
+
+      ! ExtPtfm is next, if activated:
+   if ( p_FAST%CompSub  == Module_ExtPtfm ) then 
+      p_FAST%Lin_NumMods = p_FAST%Lin_NumMods + 1
+      p_FAST%Lin_ModOrder( p_FAST%Lin_NumMods ) = Module_ExtPtfm
+   end if
    
    !.....................
    ! determine total number of inputs/outputs/contStates:
@@ -486,6 +492,14 @@ SUBROUTINE Init_Lin_InputOutput(p_FAST, y_FAST, NumBl, ErrStat, ErrMsg)
             y_FAST%Lin%Modules(MODULE_HD)%Instance(1)%use_u(y_FAST%Lin%Modules(MODULE_HD)%Instance(1)%SizeLin(LIN_INPUT_COL)) = .true.
       end if
       
+      !bjj: removed because I'm not sure these should be included in the "standard" inputs
+      !!!! ExtPtfm standard inputs: x1, x1dot x1ddot  ! TODO TODO TODO CHECK
+      !!!if (p_FAST%CompSub == MODULE_ExtPtfm) then
+      !!!   do j = 1,18
+      !!!      y_FAST%Lin%Modules(MODULE_ExtPtfm)%Instance(1)%use_u(y_FAST%Lin%Modules(MODULE_ExtPtfm)%Instance(1)%SizeLin(LIN_INPUT_COL)+1-j) = .true.
+      !!!   end do
+      !!!end if
+                  
    elseif(p_FAST%LinInputs == LIN_ALL) then
       do i = 1,p_FAST%Lin_NumMods
          ThisModule = p_FAST%Lin_ModOrder( i )
@@ -984,6 +998,47 @@ SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD,
                
       end if  ! if ( p_FAST%LinOutMod )
    end if     ! if ( p_FAST%CompMooring  == Module_MAP )
+   !.....................
+   ! ExtPtfm
+   !.....................
+   if ( p_FAST%CompSub == Module_ExtPtfm ) then 
+      ! get the jacobians
+      call ExtPtfm_JacobianPInput( t_global, ExtPtfm%Input(1), ExtPtfm%p, ExtPtfm%x(STATE_CURR), ExtPtfm%xd(STATE_CURR), &
+              ExtPtfm%z(STATE_CURR), ExtPtfm%OtherSt(STATE_CURR),  ExtPtfm%y, ExtPtfm%m, ErrStat2, ErrMsg2, &
+              dYdu=y_FAST%Lin%Modules(Module_ExtPtfm)%Instance(1)%D, dXdu=y_FAST%Lin%Modules(Module_ExtPtfm)%Instance(1)%B )
+      if(Failed()) return;
+
+      call ExtPtfm_JacobianPContState( t_global, ExtPtfm%Input(1), ExtPtfm%p, ExtPtfm%x(STATE_CURR), ExtPtfm%xd(STATE_CURR), &
+          ExtPtfm%z(STATE_CURR), ExtPtfm%OtherSt(STATE_CURR), ExtPtfm%y, ExtPtfm%m, ErrStat2, ErrMsg2,&
+          dYdx=y_FAST%Lin%Modules(Module_ExtPtfm)%Instance(1)%C, dXdx=y_FAST%Lin%Modules(Module_ExtPtfm)%Instance(1)%A )
+      if(Failed()) return;
+
+      ! get the operating point
+      call ExtPtfm_GetOP(t_global, ExtPtfm%Input(1), ExtPtfm%p, ExtPtfm%x(STATE_CURR), ExtPtfm%xd(STATE_CURR), ExtPtfm%z(STATE_CURR),&
+          ExtPtfm%OtherSt(STATE_CURR), ExtPtfm%y, ExtPtfm%m, ErrStat2, ErrMsg2, u_op=y_FAST%Lin%Modules(Module_ExtPtfm)%Instance(1)%op_u,&
+          y_op=y_FAST%Lin%Modules(Module_ExtPtfm)%Instance(1)%op_y, &
+          x_op=y_FAST%Lin%Modules(Module_ExtPtfm)%Instance(1)%op_x, dx_op=y_FAST%Lin%Modules(Module_ExtPtfm)%Instance(1)%op_dx)
+      if(Failed()) return;
+
+      ! write the module matrices:
+      if (p_FAST%LinOutMod) then
+         OutFileName = trim(LinRootName)//'.'//TRIM(y_FAST%Module_Abrev(Module_ExtPtfm))      
+         call WrLinFile_txt_Head(t_global, p_FAST, y_FAST, y_FAST%Lin%Modules(Module_ExtPtfm)%Instance(1), OutFileName, Un, ErrStat2, ErrMsg2)
+         if(Failed()) return;
+            
+         if (p_FAST%LinOutJac) then
+            ! Jacobians
+            call WrPartialMatrix(y_FAST%Lin%Modules(Module_ExtPtfm)%Instance(1)%A, Un, p_FAST%OutFmt, 'dXdx')
+            call WrPartialMatrix(y_FAST%Lin%Modules(Module_ExtPtfm)%Instance(1)%B, Un, p_FAST%OutFmt, 'dXdu', UseCol=y_FAST%Lin%Modules(Module_ExtPtfm)%Instance(1)%use_u)
+            call WrPartialMatrix(y_FAST%Lin%Modules(Module_ExtPtfm)%Instance(1)%C, Un, p_FAST%OutFmt, 'dYdx', UseRow=y_FAST%Lin%Modules(Module_ExtPtfm)%Instance(1)%use_y)
+            call WrPartialMatrix(y_FAST%Lin%Modules(Module_ExtPtfm)%Instance(1)%D, Un, p_FAST%OutFmt, 'dYdu', UseRow=y_FAST%Lin%Modules(Module_ExtPtfm)%Instance(1)%use_y, &
+                                                                                                               UseCol=y_FAST%Lin%Modules(Module_ExtPtfm)%Instance(1)%use_u)
+         end if
+         ! finish writing the file
+         call WrLinFile_txt_End(Un, p_FAST, y_FAST%Lin%Modules(Module_ExtPtfm)%Instance(1) )
+     end if
+   end if ! ExtPtfm
+   
    
    !.....................
    ! Linearization of glue code Input/Output solve:
@@ -1041,6 +1096,11 @@ SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD,
    m_FAST%Lin%NextLinTimeIndx = m_FAST%Lin%NextLinTimeIndx + 1
 
 contains
+    logical function Failed()
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      Failed =  ErrStat >= AbortErrLev
+      if(Failed) call cleanup()
+   end function Failed
    subroutine cleanup()
       
       if (allocated(dUdu)) deallocate(dUdu)
@@ -1548,6 +1608,10 @@ SUBROUTINE Glue_Jacobians( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, OpFM, 
       call Linear_AD_InputSolve_du( p_FAST, y_FAST, AD%Input(1), ED%y, BD, MeshMapData, dUdu, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    end if 
+
+   IF (p_FAST%CompSub == Module_ExtPtfm) THEN
+       CALL WrScr('>>> FAST_LIN: Linear_ExtPtfm_InputSolve_du, TODO')
+   ENDIF
    
 
       !............
@@ -1649,6 +1713,10 @@ SUBROUTINE Glue_Jacobians( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, OpFM, 
       call Linear_MAP_InputSolve_dy( p_FAST, y_FAST, MAPp%Input(1), ED%y, MeshMapData, dUdy, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    end if
+   
+   IF (p_FAST%CompSub == Module_ExtPtfm) THEN
+       CALL WrScr('>>> FAST_LIN: Linear_ExtPtfm_InputSolve_dy, TODO')
+   ENDIF
    
 END SUBROUTINE Glue_Jacobians
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -4130,7 +4198,7 @@ SUBROUTINE SaveOP(i, p_FAST, y_FAST, ED, BD, SrvD, AD, IfW, OpFM, HD, SD, ExtPtf
             CALL BD_CopyOtherState (BD%OtherSt( k,STATE_CURR), y_FAST%op%OtherSt_BD(k, i), CtrlCode, Errstat2, ErrMsg2)
                CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                      
-            CALL BD_CopyInput (BD%Input(k,1), y_FAST%op%u_BD(k, i), CtrlCode, Errstat2, ErrMsg2)
+            CALL BD_CopyInput (BD%Input(1,k), y_FAST%op%u_BD(k, i), CtrlCode, Errstat2, ErrMsg2)
                CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                      
          END DO
@@ -4537,7 +4605,7 @@ SUBROUTINE SetOperatingPoint(i, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, O
             CALL BD_CopyOtherState (y_FAST%op%OtherSt_BD(k, i), BD%OtherSt( k,STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
                CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                      
-            CALL BD_CopyInput (y_FAST%op%u_BD(k, i), BD%Input(k,1), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+            CALL BD_CopyInput (y_FAST%op%u_BD(k, i), BD%Input(1, k), MESH_UPDATECOPY, Errstat2, ErrMsg2)
                CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                      
          END DO

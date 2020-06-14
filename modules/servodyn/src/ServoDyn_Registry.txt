@@ -225,6 +225,7 @@ typedef	^	OtherStateType	DbKi	TPitManE	{:}	-	-	"Time to end pitch maneuvers for 
 typedef	^	OtherStateType	Logical	BegYawMan	-	-	-	"Whether the yaw maneuver actually began"	-
 typedef	^	OtherStateType	ReKi	NacYawI	-	-	-	"Initial yaw angle at the start of the override yaw maneuver"	radians
 typedef	^	OtherStateType	DbKi	TYawManE	-	-	-	"Time to end override yaw maneuver"	s
+typedef	^	OtherStateType	ReKi	YawPosComInt	-	-	-	"Internal variable that integrates the commanded yaw rate and passes it to YawPosCom"	radians
 # other states for tip-brake deployment:
 typedef	^	OtherStateType	Logical	BegTpBr	{:}	-	-	"Whether the tip brakes actually deployed"	-
 typedef	^	OtherStateType	DbKi	TTpBrDp	{:}	-	-	"Times to initiate deployment of tip brakes"	s
