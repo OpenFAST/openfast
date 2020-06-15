@@ -114,6 +114,7 @@ of_regression("5MW_OC3Spar_DLL_WTurb_WavesIrr"         "openfast;elastodyn;aerod
 of_regression("5MW_OC4Semi_WSt_WavesWN"                "openfast;elastodyn;aerodyn15;servodyn;hydrodyn;moordyn")
 of_regression("5MW_Land_BD_DLL_WTurb"                  "openfast;beamdyn;aerodyn15;servodyn")
 of_regression("5MW_OC4Jckt_ExtPtfm"                    "openfast;elastodyn;extptfm")
+of_regression("HelicalWake_OLAF"                       "openfast;aerodyn15;olaf")
 
 # Linearized OpenFAST regression tests
 of_regression_linear("WP_Stationary_Linear"         "openfast;linear;elastodyn;aerodyn15")

@@ -1,7 +1,7 @@
---------------------------- FREE WAKE INPUT FILE ---------------------------------------------- 
-Free wake input file for the BAR turbine
+--------------------------- OLAF (cOnvecting LAgrangian Filaments) INPUT FILE -----------------
+Free wake input file for the Helix test case
 --------------------------- GENERAL OPTIONS ---------------------------------------------------
-5       IntMethod          Integration method {5: Forward Euler 1st order, default: 5} (switch) 
+5       IntMethod          Integration method {5: Forward Euler 1st order, default: 5} (switch)
 0.2     DTfvw              Time interval for wake propagation. {default: dtaero} (s)
 5       FreeWakeStart      Time when wake is free. (-) value = always free. {default: 0.0} (s)
 2.0     FullCircStart      Time at which full circulation is reached. {default: 0.0} (s)
@@ -17,7 +17,7 @@ Free wake input file for the BAR turbine
 50      nNWPanel           Number of near-wake panels [integer] (-)
 400     WakeLength         Total wake distance [integer] (number of time steps)
 default FreeWakeLength     Wake length that is free [integer] (number of time steps) {default: WakeLength}
-False   FWShedVorticity    Include shed vorticity in the far wake   {default: false}
+False   FWShedVorticity    Include shed vorticity in the far wake {default: false}
 ------------------- WAKE REGULARIZATIONS AND DIFFUSION -----------------------------------------
 0       DiffusionMethod    Diffusion method to account for viscous effects {0: None, 1: Core Spreading, "default": 0}         
 0       RegDeterMethod     Method to determine the regularization parameters {0:  Manual, 1: Optimized, default: 0 }          
@@ -38,5 +38,5 @@ False   TwrShadowOnWake    Include tower flow disturbance effects on wake convec
 1       WrVTk              Outputs Visualization Toolkit (VTK) (independent of .fst option) {0: NoVTK, 1: Write VTK at each time step} (flag)
 1       nVTKBlades         Number of blades for which VTK files are exported {0: No VTK per blade, n: VTK for blade 1 to n} (-) 
 2       VTKCoord           Coordinate system used for VTK export. {1: Global, 2: Hub, "default": 1} 
-default VTK_fps          Frame rate for VTK output (frames per second) {"all" for all glue code timesteps, "default" for all FVW timesteps} [used only if WrVTK=1] 
+1       VTK_fps            Frame rate for VTK output (frames per second) {"all" for all glue code timesteps, "default" for all OLAF timesteps} [used only if WrVTK=1] 
 ------------------------------------------------------------------------------------------------
