@@ -49,7 +49,7 @@ typedef  ^                ^               LOGICAL       TabDelim     -          
 typedef  ^                ^               CHARACTER(20)  OutFmt       -         -  -   "Format used for text tabular output (except time)"   -
 typedef  ^                ^               DbKi          Tstart       -          -  -   "Time to start module's tabular output"   s
 typedef  ^                ^               IntKi         NumOuts      -          -  -   "Number of parameters in the output list (number of outputs requested)" -
-typedef  ^                ^               CHARACTER(10) OutList     {:}         -  -   "List of user-requested output channels"  -
+typedef  ^                ^          CHARACTER(ChanLen) OutList     {:}         -  -   "List of user-requested output channels"  -
 
 
 

@@ -52,7 +52,7 @@ IMPLICIT NONE
     REAL(SiKi)  :: WaveDirMin      !< Minimum wave direction from Waves module [-]
     REAL(SiKi)  :: WaveDirMax      !< Maximum wave direction from Waves module [-]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveTime      !< Simulation times at which the instantaneous second order loads associated with the incident waves are determined [sec]
-    CHARACTER(10) , DIMENSION(1:27)  :: OutList      !< This should really be dimensioned with MaxOutPts [-]
+    CHARACTER(ChanLen) , DIMENSION(1:27)  :: OutList      !< This should really be dimensioned with MaxOutPts [-]
     LOGICAL  :: OutAll      !<  [-]
     INTEGER(IntKi)  :: NumOuts      !<  [-]
     INTEGER(IntKi)  :: NumOutAll      !<  [-]
@@ -81,8 +81,8 @@ IMPLICIT NONE
 ! =======================
 ! =========  WAMIT2_InitOutputType  =======
   TYPE, PUBLIC :: WAMIT2_InitOutputType
-    CHARACTER(10) , DIMENSION(:), ALLOCATABLE  :: WriteOutputHdr      !<  [-]
-    CHARACTER(10) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !<  [-]
+    CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputHdr      !<  [-]
+    CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !<  [-]
   END TYPE WAMIT2_InitOutputType
 ! =======================
 ! =========  WAMIT2_ContinuousStateType  =======

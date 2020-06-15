@@ -118,7 +118,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(1:3)  :: HAWC_InitPosition      !< HAWC -- initial position (offset for wind file box) [meters]
     LOGICAL  :: SumPrint      !< Write summary info to a file <ROOTNAME>.IfW.Sum [-]
     INTEGER(IntKi)  :: NumOuts      !< Number of parameters in the output list (number of outputs requested) [-]
-    CHARACTER(10) , DIMENSION(:), ALLOCATABLE  :: OutList      !< List of user-requested output channels [-]
+    CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: OutList      !< List of user-requested output channels [-]
     INTEGER(IntKi)  :: SensorType = SensorType_None      !< Sensor type (for lidar/sensor module) [-]
     INTEGER(IntKi)  :: NumPulseGate      !< the number of range gates to return wind speeds at [-]
     REAL(ReKi) , DIMENSION(1:3)  :: RotorApexOffsetPos      !< position of the lidar unit relative to the rotor apex of rotation [m]

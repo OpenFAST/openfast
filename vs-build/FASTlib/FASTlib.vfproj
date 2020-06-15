@@ -192,9 +192,13 @@
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDyn" Description="Running Registry for AeroDyn" Outputs="..\..\modules\aerodyn\src\AeroDyn_Types.f90"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\aerodyn\src\AeroDyn_Types.f90">
 			<FileConfiguration Name="Debug_Double|Win32">
-				<Tool Name="VFFortranCompilerTool" WarnDeclarations="false" WarnUnusedVariables="false" BuildDependencies="false"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" WarnDeclarations="false" WarnUnusedVariables="false"/></FileConfiguration></File>
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Double|x64">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\aerodyn\src\AirfoilInfo_Registry.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AFI" Description="Running Registry for AirfoilInfo" Outputs="..\..\modules\aerodyn\src\AirfoilInfo_Types.f90"/></FileConfiguration>
@@ -744,6 +748,40 @@
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
+		<File RelativePath="..\..\modules\hydrodyn\src\SS_Excitation.txt">
+			<FileConfiguration Name="Debug_Double|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SS_Excitation" Description="Running Registry for SS_Excitation" Outputs="..\..\modules\hydrodyn\src\SS_Excitation_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SS_Excitation" Description="Running Registry for SS_Excitation" Outputs="..\..\modules\hydrodyn\src\SS_Excitation_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SS_Excitation" Description="Running Registry for SS_Excitation" Outputs="..\..\modules\hydrodyn\src\SS_Excitation_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SS_Excitation" Description="Running Registry for SS_Excitation" Outputs="..\..\modules\hydrodyn\src\SS_Excitation_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SS_Excitation" Description="Running Registry for SS_Excitation" Outputs="..\..\modules\hydrodyn\src\SS_Excitation_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SS_Excitation" Description="Running Registry for SS_Excitation" Outputs="..\..\modules\hydrodyn\src\SS_Excitation_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Matlab|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SS_Excitation" Description="Running Registry for SS_Excitation" Outputs="..\..\modules\hydrodyn\src\SS_Excitation_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SS_Excitation" Description="Running Registry for SS_Excitation" Outputs="..\..\modules\hydrodyn\src\SS_Excitation_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Matlab|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SS_Excitation" Description="Running Registry for SS_Excitation" Outputs="..\..\modules\hydrodyn\src\SS_Excitation_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Matlab|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SS_Excitation" Description="Running Registry for SS_Excitation" Outputs="..\..\modules\hydrodyn\src\SS_Excitation_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SS_Excitation" Description="Running Registry for SS_Excitation" Outputs="..\..\modules\hydrodyn\src\SS_Excitation_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Matlab|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SS_Excitation" Description="Running Registry for SS_Excitation" Outputs="..\..\modules\hydrodyn\src\SS_Excitation_Types.f90"/></FileConfiguration></File>
+		<File RelativePath="..\..\modules\hydrodyn\src\SS_Excitation_Types.f90">
+			<FileConfiguration Name="Debug_Double|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Double|x64">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\hydrodyn\src\SS_Radiation.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SS_Radiation" Description="Running Registry for SS_Radiation" Outputs="..\..\modules\hydrodyn\src\SS_Radiation_Types.f90"/></FileConfiguration>
@@ -921,6 +959,7 @@
 		<File RelativePath="..\..\modules\hydrodyn\src\HydroDyn_Output.f90"/>
 		<File RelativePath="..\..\modules\hydrodyn\src\Morison.f90"/>
 		<File RelativePath="..\..\modules\hydrodyn\src\Morison_Output.f90"/>
+		<File RelativePath="..\..\modules\hydrodyn\src\SS_Excitation.f90"/>
 		<File RelativePath="..\..\modules\hydrodyn\src\SS_Radiation.f90"/>
 		<File RelativePath="..\..\modules\hydrodyn\src\UserWaves.f90"/>
 		<File RelativePath="..\..\modules\hydrodyn\src\WAMIT.f90"/>
@@ -1341,9 +1380,45 @@
 		<File RelativePath="..\..\modules\feamooring\src\FEAM.f90"/></Filter>
 		<Filter Name="MAP">
 		<Filter Name="RegistryFiles">
+		<File RelativePath="..\..\modules\map\src\MAP_Fortran_Registry.txt">
+			<FileConfiguration Name="Debug_Double|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Map" Description="Running Registry for Map" Outputs="..\..\modules\map\src\Map_Fortran_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Map" Description="Running Registry for Map" Outputs="..\..\modules\map\src\Map_Fortran_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Map" Description="Running Registry for Map" Outputs="..\..\modules\map\src\Map_Fortran_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Map" Description="Running Registry for Map" Outputs="..\..\modules\map\src\Map_Fortran_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Map" Description="Running Registry for Map" Outputs="..\..\modules\map\src\Map_Fortran_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Matlab|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Map" Description="Running Registry for Map" Outputs="..\..\modules\map\src\Map_Fortran_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Map" Description="Running Registry for Map" Outputs="..\..\modules\map\src\Map_Fortran_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Matlab|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Map" Description="Running Registry for Map" Outputs="..\..\modules\map\src\Map_Fortran_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Map" Description="Running Registry for Map" Outputs="..\..\modules\map\src\Map_Fortran_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Matlab|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Map" Description="Running Registry for Map" Outputs="..\..\modules\map\src\Map_Fortran_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Map" Description="Running Registry for Map" Outputs="..\..\modules\map\src\Map_Fortran_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Matlab|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Map" Description="Running Registry for Map" Outputs="..\..\modules\map\src\Map_Fortran_Types.f90"/></FileConfiguration></File>
+		<File RelativePath="..\..\modules\map\src\MAP_Fortran_Types.f90">
+			<FileConfiguration Name="Debug_Double|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Double|x64">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\map\src\MAP_Registry.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="" Description="" Outputs=""/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Map" Description="Running Registry for Map" Outputs="..\..\modules\map\src\Map_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Map" Description="Running Registry for Map" Outputs="..\..\modules\map\src\Map_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Map" Description="Running Registry for Map" Outputs="..\..\modules\map\src\Map_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
@@ -1457,6 +1532,8 @@
 		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\fftpack\fftpack4.1.f">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" WarnDeclarations="false" WarnUnusedVariables="false"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
@@ -1483,6 +1560,8 @@
 		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\scalapack\dlasrt2.f">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" WarnDeclarations="false" WarnUnusedVariables="false"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
@@ -1508,6 +1587,8 @@
 		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\scalapack\slasrt2.f">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" WarnDeclarations="false" WarnUnusedVariables="false"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">

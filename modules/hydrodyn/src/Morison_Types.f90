@@ -283,7 +283,7 @@ IMPLICIT NONE
     TYPE(Morison_MOutput) , DIMENSION(:), ALLOCATABLE  :: MOutLst      !<  [-]
     INTEGER(IntKi)  :: NJOutputs      !<  [-]
     TYPE(Morison_JOutput) , DIMENSION(:), ALLOCATABLE  :: JOutLst      !<  [-]
-    CHARACTER(10) , DIMENSION(1:4032)  :: OutList      !< This list size needs to be the maximum   of possible outputs because of the use of ReadAry() [-]
+    CHARACTER(ChanLen) , DIMENSION(1:4032)  :: OutList      !< This list size needs to be the maximum   of possible outputs because of the use of ReadAry() [-]
     LOGICAL , DIMENSION(:), ALLOCATABLE  :: ValidOutList      !<  [-]
     INTEGER(IntKi)  :: NumOuts      !<  [-]
     INTEGER(IntKi)  :: OutSwtch      !<  [-]
@@ -304,8 +304,8 @@ IMPLICIT NONE
     TYPE(MeshType)  :: DistribMesh      !<  [-]
     TYPE(MeshType)  :: LumpedMesh      !<  [-]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: Morison_Rad      !< radius of node (for FAST visualization) [(m)]
-    CHARACTER(10) , DIMENSION(:), ALLOCATABLE  :: WriteOutputHdr      !<  [-]
-    CHARACTER(10) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !<  [-]
+    CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputHdr      !<  [-]
+    CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !<  [-]
   END TYPE Morison_InitOutputType
 ! =======================
 ! =========  Morison_ContinuousStateType  =======

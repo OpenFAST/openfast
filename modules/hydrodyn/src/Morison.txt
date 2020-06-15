@@ -223,7 +223,7 @@ typedef   ^                            ^                             INTEGER    
 typedef   ^                            ^                             Morison_MOutput          MOutLst                          {:}        -        -         ""    -
 typedef   ^                            ^                             INTEGER                  NJOutputs                        -          -        -         ""    -
 typedef   ^                            ^                             Morison_JOutput          JOutLst                          {:}        -        -         ""    -
-typedef   ^                            ^                             CHARACTER(10)            OutList                          {4032}     -        -         "This list size needs to be the maximum # of possible outputs because of the use of ReadAry()"    -
+typedef   ^                            ^                             CHARACTER(ChanLen)       OutList                          {4032}     -        -         "This list size needs to be the maximum # of possible outputs because of the use of ReadAry()"    -
 typedef   ^                            ^                             LOGICAL                  ValidOutList                     {:}        -        -         ""    -
 typedef   ^                            ^                             INTEGER                  NumOuts                          -          -        -         ""    -
 typedef   ^                            ^                             INTEGER                  OutSwtch                         -          -        -         ""    -
@@ -244,8 +244,8 @@ typedef   ^                            ^                             INTEGER    
 typedef   ^                            InitOutputType                MeshType                 DistribMesh                      -          -        -         ""  -
 typedef   ^                            ^                             MeshType                 LumpedMesh                       -          -        -         ""    -
 typedef   ^                            ^                             SiKi                     Morison_Rad                      {:}         -        -         "radius of node (for FAST visualization)" (m)
-typedef   ^                            ^                             CHARACTER(10)            WriteOutputHdr                   {:}        -        -         ""    -
-typedef   ^                            ^                             CHARACTER(10)            WriteOutputUnt                   {:}        -        -         ""    -
+typedef   ^                            ^                             CHARACTER(ChanLen)       WriteOutputHdr                   {:}        -        -         ""    -
+typedef   ^                            ^                             CHARACTER(ChanLen)       WriteOutputUnt                   {:}        -        -         ""    -
 #
 #
 # ..... States ....................................................................................................................

@@ -2312,6 +2312,7 @@ SUBROUTINE Init_Jacobian_x_z( p, InitOut, ErrStat, ErrMsg)
    !call allocAry(p%dx,               p%dof_node*(p%node_total-1),     'p%dx',       ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    CALL AllocAry(InitOut%LinNames_x, p%Jac_nx*2, 'LinNames_x', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    CALL AllocAry(InitOut%RotFrame_x, p%Jac_nx*2, 'RotFrame_x', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   CALL AllocAry(InitOut%DerivOrder_x, p%Jac_nx*2, 'DerivOrder_x', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    !CALL AllocAry(InitOut%LinNames_z, p%dof_node*2, 'LinNames_z', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    !CALL AllocAry(InitOut%RotFrame_z, p%dof_node*2, 'RotFrame_z', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
@@ -2324,6 +2325,7 @@ SUBROUTINE Init_Jacobian_x_z( p, InitOut, ErrStat, ErrMsg)
    p%dx(4:6) = 0.2_BDKi*D2R_D                                     ! deflection states in rad and rad/s
    
    InitOut%RotFrame_x   = p%RotStates
+   InitOut%DerivOrder_x = 2
    
       !......................................
       ! set linearization output names:
@@ -2378,13 +2380,8 @@ SUBROUTINE Perturb_u( p, n, perturb_sign, u, du )
    
 
    ! local variables
-   integer(intKi)                                      :: ErrStat2
-   character(ErrMsgLen)                                :: ErrMsg2
-   
    INTEGER                                             :: fieldIndx
    INTEGER                                             :: node
-   REAL(R8Ki)                                          :: orientation(3,3)
-   REAL(R8Ki)                                          :: angles(3)
       
    fieldIndx = p%Jac_u_indx(n,2)
    node      = p%Jac_u_indx(n,3)
@@ -2397,10 +2394,7 @@ SUBROUTINE Perturb_u( p, n, perturb_sign, u, du )
    CASE ( 1) !Module/Mesh/Field: u%RootMotion%TranslationDisp = 1;
       u%RootMotion%TranslationDisp( fieldIndx,node) = u%RootMotion%TranslationDisp( fieldIndx,node) + du * perturb_sign
    CASE ( 2) !Module/Mesh/Field: u%RootMotion%Orientation = 2;
-      angles = 0.0_R8Ki
-      angles(fieldIndx) = du * perturb_sign
-      call SmllRotTrans( 'linearization perturbation', angles(1), angles(2), angles(3), orientation, ErrStat=ErrStat2, ErrMsg=ErrMsg2 )
-      u%RootMotion%Orientation(:,:,node) = matmul(u%RootMotion%Orientation(:,:,node), orientation)
+      CALL PerturbOrientationMatrix( u%RootMotion%Orientation(:,:,node), du * perturb_sign, fieldIndx )
    CASE ( 3) !Module/Mesh/Field: u%RootMotion%TranslationVel = 3;
       u%RootMotion%TranslationVel( fieldIndx,node) = u%RootMotion%TranslationVel( fieldIndx,node) + du * perturb_sign
    CASE ( 4) !Module/Mesh/Field: u%RootMotion%RotationVel = 4;
@@ -2469,9 +2463,7 @@ SUBROUTINE Perturb_x( p, fieldIndx, node, dof, perturb_sign, x, dx )
    character(ErrMsgLen)                                :: ErrMsg2
    
    REAL(R8Ki)                                          :: orientation(3,3)
-   REAL(R8Ki)                                          :: oldRotation(3,3)
-   REAL(R8Ki)                                          :: newRotation(3,3)
-   REAL(R8Ki)                                          :: angles(3)
+   REAL(R8Ki)                                          :: rotation(3,3)
    
    dx = p%dx(dof)
                
@@ -2479,16 +2471,13 @@ SUBROUTINE Perturb_x( p, fieldIndx, node, dof, perturb_sign, x, dx )
       if (dof < 4) then ! translational displacement
          x%q( dof, node ) = x%q( dof, node ) + dx * perturb_sign
       else ! w-m parameters
-         angles = 0.0_R8Ki
-         angles(dof-3) = dx * perturb_sign
-         call SmllRotTrans( 'linearization perturbation', angles(1), angles(2), angles(3), orientation, ErrStat=ErrStat2, ErrMsg=ErrMsg2 )
+         call BD_CrvMatrixR( x%q( 4:6, node ), rotation ) ! returns the rotation matrix (transpose of DCM) that was stored in the state as a w-m parameter
+         orientation = transpose(rotation)
          
-         call BD_CrvMatrixR( x%q( 4:6, node ), oldRotation ) ! returns the rotation matrix (transpose of DCM) that was stored in the state as a w-m parameter
-         
-         !newRotation = transpose( matmul(transpose(oldRotation), orientation) )
-         newRotation = matmul( transpose(orientation), oldRotation)
-         call BD_CrvExtractCrv( newRotation, x%q( 4:6, node ), ErrStat2, ErrMsg2 ) ! return the w-m parameters of the new orientation
-         
+         CALL PerturbOrientationMatrix( orientation, dx * perturb_sign, dof-3 )
+
+         rotation = transpose(orientation)
+         call BD_CrvExtractCrv( rotation, x%q( 4:6, node ), ErrStat2, ErrMsg2 ) ! return the w-m parameters of the new orientation
       end if
    else
       x%dqdt( dof, node ) = x%dqdt( dof, node ) + dx * perturb_sign

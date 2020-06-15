@@ -42,7 +42,7 @@ FUNCTION CheckMeshOutput( output, numMemberOut, MOutLst, numJointOut )
 !     The routine
 !----------------------------------------------------------------------------------------------------
 !
-   CHARACTER(10),             INTENT ( IN    )  :: output
+   CHARACTER(ChanLen),        INTENT ( IN    )  :: output
    INTEGER,                   INTENT ( IN    )  :: numMemberOut
    TYPE(Morison_MOutput),     INTENT ( IN    )  :: MOutLst(:)
    INTEGER,                   INTENT ( IN    )  :: numJointOut
@@ -52,7 +52,7 @@ FUNCTION CheckMeshOutput( output, numMemberOut, MOutLst, numJointOut )
    LOGICAL                                      :: CheckMeshOutput
 
    INTEGER                                      :: ErrStat
-   CHARACTER(10)                                :: outputTmp
+   CHARACTER(ChanLen)                           :: outputTmp
    INTEGER                                      :: indx1, indx2
    CHARACTER(4)                                 :: testStr
    outputTmp         = TRIM(output)
@@ -140,7 +140,7 @@ SUBROUTINE PrintBadChannelWarning(NUserOutputs, UserOutputs , foundMask, ErrStat
 !     The errstat is set to ErrID_Warning if any element in foundMask is .FALSE.
 !----------------------------------------------------------------------------------------------------  
    INTEGER,                       INTENT( IN    ) :: NUserOutputs         ! Number of user-specified output channels
-   CHARACTER(10),                 INTENT( IN    ) :: UserOutputs (:)      ! An array holding the names of the requested output channels. 
+   CHARACTER(ChanLen),            INTENT( IN    ) :: UserOutputs (:)      ! An array holding the names of the requested output channels. 
    LOGICAL,                       INTENT( IN    ) :: foundMask (:)        ! A mask indicating whether a user requested channel belongs to a module's output channels.
    INTEGER,                       INTENT(   OUT ) :: ErrStat              ! returns a non-zero value when an error occurs  
    CHARACTER(*),                  INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
@@ -873,6 +873,16 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, ErrStat, ErrMsg )
          RETURN
       END IF
 
+      ! ExctnMod  - Wave Excitation model {0: None, 1: DFT, 2: state-space} (switch)
+      ! [STATE-SPACE REQUIRES *.ssexctn INPUT FILE]
+
+   CALL ReadVar ( UnIn, FileName, InitInp%WAMIT%ExctnMod, 'ExctnMod', &
+                                 'Wave Excitation model', ErrStat2, ErrMsg2, UnEchoLocal )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
+      IF (ErrStat >= AbortErrLev) THEN
+         CALL CleanUp()
+         RETURN
+      END IF
 
       ! RdtnMod  - Radiation memory-effect model {1: convolution, 2: state-space} (switch)
       ! [STATE-SPACE REQUIRES *.ss INPUT FILE]
@@ -2296,7 +2306,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
    REAL(ReKi)                                       :: z2
    REAL(ReKi)                                       :: MinMembrDpth
    REAL(ReKi)                                       :: MaxMembrDpth
-!   CHARACTER(10), ALLOCATABLE                       :: tmpOutLst(:)         !
+!   CHARACTER(ChanLen), ALLOCATABLE                       :: tmpOutLst(:)         !
    CHARACTER(3)                                     :: TmpExtension         ! Temporary variable for holding the file extension for 10d, 11d, 12d, 10s, 11s, 12s WAMIT files
    LOGICAL                                          :: TmpFileExist         ! Temporary variable in checking the existance of an input file.
    LOGICAL                                          :: JointUsed
@@ -2306,7 +2316,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
    INTEGER                                          :: WaveModIn
    
    INTEGER(IntKi)                                   :: ErrStat2, IOS
-   CHARACTER(1024)                                  :: ErrMsg2
+   CHARACTER(ErrMsgLen)                             :: ErrMsg2
    CHARACTER(*), PARAMETER                          :: RoutineName = 'HydroDynInput_ProcessInitData'
       ! Initialize ErrStat
          
@@ -2398,7 +2408,23 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
       END IF
    END IF
 
-
+      ! Linearization Checks
+   ! LIN-TODO:
+   !errors if:
+   !if (                                                                   &
+   !     (WaveModIn /= 0)                                             .or. &
+   !     (InitInp%Waves2%WvDiffQTFF /= .false.)                       .or. &
+   !     (InitInp%Waves2%WvSumQTFF /= .false.)                        .or. &
+   !     (InitInp%PotMod /= 0 .or. InitInp%PotMod /=1)                .or. &
+   !     (InitInp%WAMIT%ExctnMod /=0 .or. InitInp%WAMIT%ExctnMod /=2) .or. &
+   !     (InitInp%WAMIT%RdtnMod  /=0 .or. InitInp%WAMIT%RdtnMod  /=2) .or. &
+   !     (InitInp%WAMIT2%MnDrift /=0)                                 .or. &
+   !     (InitInp%WAMIT2%NewmanApp /= 0)                              .or. &
+   !     (InitInp%WAMIT2%SumQTF /= 0 )                                     ) then
+   !   
+   !end if
+        
+   
          ! WaveStMod - Model switch for stretching incident wave kinematics to instantaneous free surface.
 
          ! TODO: We are only implementing WaveStMod = 0 (No stretching) at this point in time. 1 Mar 2013 GJH
@@ -3011,6 +3037,11 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
          RETURN
       END IF
 
+      if ( (.not. ( EqualRealNos(InitInp%DT, InitInp%WAMIT%Conv_Rdtn%RdtnDT) ) ) .and. ( (InitInp%WAMIT%ExctnMod > 1) .or. (InitInp%WAMIT%RdtnMod > 0) ) ) then
+         call SetErrStat( ErrID_Fatal,'RdtnDT must be equal to the glue-code DT if PotMod = 1 and using RdtnMod > 0 or ExctnMod > 1.',ErrStat,ErrMsg,RoutineName)
+         return
+      end if
+      
    ELSE
 
       InitInp%WAMIT%Conv_Rdtn%RdtnDT = 0.0
@@ -3253,8 +3284,100 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
       END IF
    END IF
 
+   !..................
+   ! check for ExctnMod = 2 requirements
+   !..................
+   if ( (InitInp%WAMIT%ExctnMod == 2) ) then
 
-    
+      if ( InitInp%Waves%WaveMod == 6 ) then
+         call SetErrStat( ErrID_Fatal, 'Externally generated full wave-kinematics time series cannot be used with state-space wave excitations. Set WaveMod 0, 1, 1P#, 2, 3, 4, or 5.', ErrStat, ErrMsg, RoutineName )
+      end if
+      
+      if ( InitInp%Waves%WaveDirMod /= 0 ) then
+         call SetErrStat( ErrID_Fatal, 'Directional spreading cannot be used with state-space wave excitations. Set WaveDirMod=0.', ErrStat, ErrMsg, RoutineName )
+      end if
+      
+      if ( InitInp%Waves2%WvDiffQTFF ) then
+         call SetErrStat( ErrID_Fatal, 'Cannot use full difference-frequency 2nd-order wave kinematics with state-space wave excitations. Set WvDiffQTF=FALSE.', ErrStat, ErrMsg, RoutineName )
+      end if
+      
+      if ( InitInp%Waves2%WvSumQTFF ) then
+         call SetErrStat( ErrID_Fatal, 'Cannot use full summation-frequency 2nd-order wave kinematics with state-space wave excitations. Set WvSumQTF=FALSE.', ErrStat, ErrMsg, RoutineName )
+      end if
+
+      if ( InitInp%PotMod /= 1 ) then
+         call SetErrStat( ErrID_Fatal, 'Potential-flow model via WAMIT must be used with state-space wave excitations. Set PotMod= 1.', ErrStat, ErrMsg, RoutineName )
+      end if
+      
+      if ( InitInp%WAMIT2%MnDrift /= 0 ) then
+         call SetErrStat( ErrID_Fatal, 'Mean-drift 2nd-order forces cannot be used with state-space wave excitations. Set MnDrift=0.', ErrStat, ErrMsg, RoutineName )
+      end if
+
+      if ( InitInp%WAMIT2%NewmanApp /= 0 ) then
+         call SetErrStat( ErrID_Fatal, "Mean- and slow-drift 2nd-order forces computed with Newman's approximation cannot be used with state-space wave excitations. Set NewmanApp=0.", ErrStat, ErrMsg, RoutineName )
+      end if
+      
+      if ( InitInp%WAMIT2%DiffQTF /= 0 ) then
+         call SetErrStat( ErrID_Fatal, 'Full difference-frequency 2nd-order forces computed with full QTF cannot be used with state-space wave excitations. Set DiffQTF=0.', ErrStat, ErrMsg, RoutineName )
+      end if
+
+      if ( InitInp%WAMIT2%SumQTF /= 0 ) then
+         call SetErrStat( ErrID_Fatal, 'Full summation-frequency 2nd-order forces computed with full QTF cannot be used with State-space wave excitations. Set SumQTF=0.', ErrStat, ErrMsg, RoutineName )
+      end if
+
+   end if
+
+   !..................
+   ! check for linearization
+   !..................
+   if (InitInp%Linearize) then
+      
+      if ( InitInp%Waves%WaveMod /= 0 ) then
+         call SetErrStat( ErrID_Fatal, 'Still water conditions must be used for linearization. Set WaveMod=0.', ErrStat, ErrMsg, RoutineName )
+      end if
+      
+      if ( InitInp%Waves%WaveDirMod /= 0 ) then
+         call SetErrStat( ErrID_Fatal, 'No directional spreading must be used for linearization. Set WaveDirMod=0.', ErrStat, ErrMsg, RoutineName )
+      end if
+      
+      if ( InitInp%Waves2%WvDiffQTFF ) then
+         call SetErrStat( ErrID_Fatal, 'Cannot use full difference-frequency 2nd-order wave kinematics for linearization. Set WvDiffQTF=FALSE.', ErrStat, ErrMsg, RoutineName )
+      end if
+      
+      if ( InitInp%Waves2%WvSumQTFF ) then
+         call SetErrStat( ErrID_Fatal, 'Cannot use full summation-frequency 2nd-order wave kinematics for linearization. Set WvSumQTF=FALSE.', ErrStat, ErrMsg, RoutineName )
+      end if
+
+      if ( InitInp%PotMod > 1 ) then
+         call SetErrStat( ErrID_Fatal, 'Potential-flow model cannot be set to FIT for linearization. Set PotMod= 0 or 1.', ErrStat, ErrMsg, RoutineName )
+      end if
+      
+      if ( (InitInp%WAMIT%ExctnMod == 1) ) then
+         call SetErrStat( ErrID_Fatal, 'Cannot set wave excitation model to DFT for linearization. Set ExctnMod=0 or 2.', ErrStat, ErrMsg, RoutineName )
+      end if
+
+      if ( InitInp%WAMIT%RdtnMod == 1 ) then
+         call SetErrStat( ErrID_Fatal, 'Cannot set wave radiation model to convolution for linearization. Set RdtnMod=0 or 2.', ErrStat, ErrMsg, RoutineName )
+      end if
+      
+      if ( InitInp%WAMIT2%MnDrift /= 0 ) then
+         call SetErrStat( ErrID_Fatal, 'Mean-drift 2nd-order forces cannot be used for linearization. Set MnDrift=0.', ErrStat, ErrMsg, RoutineName )
+      end if
+
+      if ( InitInp%WAMIT2%NewmanApp /= 0 ) then
+         call SetErrStat( ErrID_Fatal, "Mean- and slow-drift 2nd-order forces computed with Newman's approximation cannot be used for linearization. Set NewmanApp=0.", ErrStat, ErrMsg, RoutineName )
+      end if
+      
+      if ( InitInp%WAMIT2%DiffQTF /= 0 ) then
+         call SetErrStat( ErrID_Fatal, 'Full difference-frequency 2nd-order forces computed with full QTF cannot be used for linearization. Set DiffQTF=0.', ErrStat, ErrMsg, RoutineName )
+      end if
+
+      if ( InitInp%WAMIT2%SumQTF /= 0 ) then
+         call SetErrStat( ErrID_Fatal, 'Full summation-frequency 2nd-order forces computed with full QTF cannot be used for linearization. Set SumQTF=0.', ErrStat, ErrMsg, RoutineName )
+      end if
+
+   end if
+ 
 
 
 

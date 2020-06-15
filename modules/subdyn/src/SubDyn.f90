@@ -1356,7 +1356,9 @@ CONTAINS
 
    SUBROUTINE CleanUp()
       INTEGER(IntKi)             :: ErrStat3    ! The error identifier (ErrStat)
-      CHARACTER(1024)            :: ErrMsg3     ! The error message (ErrMsg)
+      CHARACTER(ErrMsgLen)       :: ErrMsg3     ! The error message (ErrMsg)
+   
+   
       CALL SD_DestroyContState( xdot,     ErrStat3, ErrMsg3 )
       CALL SD_DestroyContState( k1,       ErrStat3, ErrMsg3 )
       CALL SD_DestroyContState( k2,       ErrStat3, ErrMsg3 )
@@ -2016,7 +2018,7 @@ SUBROUTINE ReduceKMdofs(Kred,K,TDOF, Init,p, ErrStat, ErrMsg )
    INTEGER                               :: NReactDOFs
    INTEGER                               :: DOF_reduced
    INTEGER                               :: ErrStat2
-   CHARACTER(1024)                       :: ErrMsg2
+   CHARACTER(ErrMsgLen)                  :: ErrMsg2
    
    ErrStat = ErrID_None
    ErrMsg  = ''    
