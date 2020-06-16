@@ -49,8 +49,8 @@ typedef  ^    SlD_InputFile   CHARACTER(ChanLen)   OutList        :   -   -   "L
 typedef  ^    SlD_InputFile   R8Ki                 DT             -   -   -   "Timestep requested"                                     '(s)'
 typedef  ^    SlD_InputFile   IntKi                CalcOption     -   -   -   "Calculation methodology to use"                         -
 typedef  ^    SlD_InputFile   ReKi                 SD_locations   ::  -   -   "Location of the Stiffness damping point"                '(m)'
-typedef  ^    SlD_InputFile   R8Ki                 Stiffness      {6}{6} - -  "Stiffness matrix 6x6"                                   '(N/m, N-m/rad)'
-typedef  ^    SlD_InputFile   R8Ki                 Damping        {6}{6} - -  "Damping ratio matrix 6x6"                               -
+typedef  ^    SlD_InputFile   R8Ki                 Stiffness      ::: -   -   "Stiffness matrix 6x6"                                   '(N/m, N-m/rad)'
+typedef  ^    SlD_InputFile   R8Ki                 Damping        ::: -   -   "Damping ratio matrix 6x6"                               -
 typedef  ^    SlD_InputFile   IntKi                PY_numpoints   -   -   -   "Number of P-Y curve mesh points"                        -
 typedef  ^    SlD_InputFile   ReKi                 PY_locations   ::  -   -   "P-Y curve location points for mesh"                     '(m)'
 typedef  ^    SlD_InputFile   character(1024)      PY_inputFile   :   -   -   "Input file with P-Y curve data"                         - 
@@ -74,14 +74,12 @@ typedef  ^     InitInputType  CHARACTER(1024)      RootName       - - -         
 typedef  ^     InitInputType  LOGICAL              Linearize      - .FALSE. -    "Flag that tells this module if the glue code wants to linearize." -
 typedef  ^     InitInputType  ReKi                 WtrDpth        - - -          "Water depth to mudline (global coordinates)" '(m)'
 typedef  ^     InitInputType  ReKi                 SubRotateZ     - - -          "Substructure rotation angle, in case we change orientations" '(rad)'
-#typedef  ^     InitInputType  IntKi                nNodes_R       - - -          "Number of nodes subdyn thinks are reaction nodes (from SubDyn nNodes_C)" -
-#typedef  ^     InitInputType  IntKi                Nodes_R        {:} - -        "Nodes in input mesh that reaction force may be applied to (note: p%Nodes_C in SD has 2 dimensions in the old format, but only 1 in new)" '(-)'
-#typedef  ^     InitInputType  MeshType             SoilMesh       - - -          "Interior+Interface nodes outputs on a point mesh (from SD) -- only some are used!" '(-)'
 
 # Define outputs from the initialization routine here:
 typedef   ^               InitOutputType CHARACTER(ChanLen)    WriteOutputHdr  {:} - -   "Names of the output-to-file channels" -
 typedef   ^               InitOutputType CHARACTER(ChanLen)    WriteOutputUnt  {:} - -   "Units of the output-to-file channels" -
 typedef   ^               InitOutputType ProgDesc              Ver             -   - -   "This module's name, version, and date"  -
+typedef   ^               InitOutputType ReKi                  SoilStiffness   {:}{:}{:} - - "Soil stiffness at each mesh point (in order)" '(N/m, N-m/rad)'
 # if this module has implemented linearization, return the names of the rows/columns of the Jacobian matrices:
 #typedef   ^               InitOutputType CHARACTER(LinChanLen) LinNames_y      {:} - -   "Names of the outputs used in linearization" -
 #typedef   ^               InitOutputType CHARACTER(LinChanLen) LinNames_x      {:} - -   "Names of the continuous states used in linearization" -
@@ -132,10 +130,8 @@ typedef  ^              ParameterType     OutParmType       OutParam           {
 typedef  ^              ParameterType     IntKi             NumOuts              - - - "Number of parameters in the output list (number of outputs requested)" -
 typedef  ^              ParameterType     IntKi             NumPoints            - - - "Number of points interfacing soil with" -
 typedef  ^              ParameterType     ReKi              WtrDepth             - - - "Water depth to mudline (global coordinates)" '(m)'
-typedef  ^              ParameterType     IntKi             Nodes_C         {:}{:} - - "Nodes in input mesh that reaction force may be applied to" '(-)'
-typedef  ^              ParameterType     R8Ki              Stiffness       {6}{6} - - "Stiffness matrix" '(N/m, N-m/rad)'
-#typedef  ^              ParameterType     R8Ki              Damping         {6}{6} - - "Damping matrix" '(N/m, N-m/rad)'
-typedef  ^              ParameterType     R8Ki              DLL_Stiffness {:}{:}{:} - - "Stiffness matrices from REDWIN DLL" '(N/m, N-m/rad)'
+typedef  ^              ParameterType     R8Ki              Stiffness          ::: - - "Stiffness matrix" '(N/m, N-m/rad)'
+#typedef  ^              ParameterType     R8Ki              Damping           ::: - - "Damping matrix" '(N/m, N-m/rad)'
 typedef  ^              ParameterType     logical           DLL_OnlyStiff        - - - "Use only the stiffness matrix in calculating the restoring forces" -
 
 # ..... Inputs ....................................................................................................................

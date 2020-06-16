@@ -109,8 +109,6 @@ subroutine SlD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
    p%DLL_Model       =  InputFileData%DLL_Model
    p%DLL_OnlyStiff   =  InputFileData%DLL_OnlyStiff
    p%CalcOption      =  InputFileData%CalcOption
-   p%Stiffness       =  InputFileData%Stiffness
-!   p%Damping         =  InputFileData%Damping
 
    p%UseREDWINinterface = .FALSE.    ! Initially set to false in case DLL not used.
 
@@ -146,6 +144,8 @@ subroutine SlD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
       ! Setup and initialize the Calc Options
    select case(p%CalcOption)
       case (Calc_StiffDamp)
+         call move_alloc(InputFileData%Stiffness,p%Stiffness)
+         !call move_alloc(InputFileData%Damping,p%Damping)
       case (Calc_PYcurve)
       case (Calc_REDWIN)
          call SlD_REDWINsetup( InputFileData,p, m, xd, ErrStat, ErrMsg )
@@ -188,7 +188,7 @@ contains
       ErrMsg   =  ""
 
          ! set placeholder for DLL stifness matrices
-      call AllocAry( p%DLL_Stiffness, 6, 6, size(m%dll_data), 'DLL stiffness matrices', ErrStat2, ErrMsg2 )
+      call AllocAry( p%Stiffness, 6, 6, size(m%dll_data), 'DLL stiffness matrices', ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
          ! Initialize the dll
@@ -198,7 +198,7 @@ contains
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName); if (ErrStat >= AbortErrLev) return
          NullDispl = 0.0_R8Ki
          NullForce = 0.0_ReKi
-         call REDWINinterface_GetStiffMatrix( p%DLL_Trgt, p%DLL_Model, NullDispl, NullForce, p%DLL_StiffNess(1:6,1:6,i), m%dll_data(i), ErrStat2, ErrMsg2 )
+         call REDWINinterface_GetStiffMatrix( p%DLL_Trgt, p%DLL_Model, NullDispl, NullForce, p%StiffNess(1:6,1:6,i), m%dll_data(i), ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
          ! now initialize the states info from the miscvar
@@ -522,20 +522,23 @@ subroutine SlD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg 
    select case(p%CalcOption)
       case (Calc_StiffDamp)
   
-            ! Copy displacement from point mesh (angles in radians -- REDWIN dll also uses rad)
-         Displacement(1:3) = u%SoilMesh%TranslationDisp(1:3,1)                 ! Translations -- This is R8Ki in the mesh
-         Displacement(4:6) = GetSmllRotAngs(u%SoilMesh%Orientation(1:3,1:3,1), ErrStat2, ErrMsg2); if (Failed()) return;
-
-            ! Calculate reaction with F = k*dX
-         Force = matmul(p%Stiffness, Displacement)
-
-         ! Return reaction force onto the resulting point mesh
-         y%SoilMesh%Force (1,1)  =  -real(Force(1),ReKi)
-         y%SoilMesh%Force (2,1)  =  -real(Force(2),ReKi)
-         y%SoilMesh%Force (3,1)  =  -real(Force(3),ReKi)
-         y%SoilMesh%Moment(1,1)  =  -real(Force(4),ReKi)
-         y%SoilMesh%Moment(2,1)  =  -real(Force(5),ReKi)
-         y%SoilMesh%Moment(3,1)  =  -real(Force(6),ReKi)
+!TODO: add ability to do more than one point
+         do i=1,1
+               ! Copy displacement from point mesh (angles in radians -- REDWIN dll also uses rad)
+            Displacement(1:3) = u%SoilMesh%TranslationDisp(1:3,i)                 ! Translations -- This is R8Ki in the mesh
+            Displacement(4:6) = GetSmllRotAngs(u%SoilMesh%Orientation(1:3,1:3,i), ErrStat2, ErrMsg2); if (Failed()) return;
+ 
+               ! Calculate reaction with F = k*dX
+            Force = matmul(p%Stiffness(1:6,1:6,i), Displacement)
+ 
+            ! Return reaction force onto the resulting point mesh
+            y%SoilMesh%Force (1,i)  =  -real(Force(1),ReKi)
+            y%SoilMesh%Force (2,i)  =  -real(Force(2),ReKi)
+            y%SoilMesh%Force (3,i)  =  -real(Force(3),ReKi)
+            y%SoilMesh%Moment(1,i)  =  -real(Force(4),ReKi)
+            y%SoilMesh%Moment(2,i)  =  -real(Force(5),ReKi)
+            y%SoilMesh%Moment(3,i)  =  -real(Force(6),ReKi)
+         enddo
 
       case (Calc_PYcurve)
          call SetErrStat(ErrID_Fatal,' SoilDyn does not support P-Y curve calculations yet.',ErrStat,ErrMsg,RoutineName)

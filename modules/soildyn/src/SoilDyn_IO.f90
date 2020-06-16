@@ -281,7 +281,7 @@ subroutine SlD_ReadInput( InputFileName, EchoFileName, InputFileData, ErrStat, E
             CALL CheckIOS ( IOS, InputFileName, 'DT', NumType, TmpErrStat, TmpErrMsg ); if (Failed()) return;
       END IF
 
-      ! CalcOption -- option on which calculation methodology to use {1: Stiffness / Damping matrices [unavailable], 2: P-Y curves [unavailable], 3: coupled REDWIN DLL}
+      ! CalcOption -- option on which calculation methodology to use {1: Stiffness / Damping matrices, 2: P-Y curves [unavailable], 3: coupled REDWIN DLL}
    call ReadVar( UnitInput, InputFileName, InputFileData%CalcOption, "CalcOption", "Calculation methodology to use", TmpErrStat, TmpErrMsg, UnitEcho); if (Failed()) return;
 
 
@@ -298,21 +298,23 @@ subroutine SlD_ReadInput( InputFileName, EchoFileName, InputFileData, ErrStat, E
    !  K55 = K44
 
       ! Location
-      !NOTE: only 1 SD_location allowed at present. Sometime allow multiple SD_locations
+      !NOTE: only 1 SD_location allowed at present. TODO allow multiple SD_locations
    allocate( InputFileData%SD_locations(3,1), STAT=TmpErrStat )      ! InputFileData%SD_NumPoints
    if (TmpErrStat /= 0)    call SetErrStat(ErrID_Fatal, 'Could not allocate SD_locations', ErrStat, ErrMsg, RoutineName)
    call ReadAry( UnitInput, InputFileName, InputFileData%SD_locations(1:3,1), 3, 'SD_locations', 'Stiffness Damping location', TmpErrStat, TmpErrMsg, UnitEcho); if (Failed()) return;
 
       ! Stiffness
    call ReadCom( UnitInput, InputFileName, 'SoilDyn input file separator line',  TmpErrStat, TmpErrMsg, UnitEcho );   if (Failed()) return;
+   call AllocAry( InputFileData%Stiffness, 6, 6, 1, 'Stiffness matrices', TmpErrStat, TmpErrMsg ); if (Failed()) return;
    do i=1,6
-      call ReadAry( UnitInput, InputFileName, InputFileData%Stiffness(i,:), 6, 'Stiffness', 'Elastic stiffness matrix', TmpErrStat, TmpErrMsg, UnitEcho); if (Failed()) return;
+      call ReadAry( UnitInput, InputFileName, InputFileData%Stiffness(i,:,1), 6, 'Stiffness', 'Elastic stiffness matrix', TmpErrStat, TmpErrMsg, UnitEcho); if (Failed()) return;
    enddo
 
       ! Damping
    call ReadCom( UnitInput, InputFileName, 'SoilDyn input file separator line',  TmpErrStat, TmpErrMsg, UnitEcho );   if (Failed()) return;
+   call AllocAry( InputFileData%Damping, 6, 6, 1, 'Damping matrices', TmpErrStat, TmpErrMsg ); if (Failed()) return;
    do i=1,6
-      call ReadAry( UnitInput, InputFileName, InputFileData%Damping(i,:), 6, 'Damping', 'Elastic damping ratio (-)',    TmpErrStat, TmpErrMsg, UnitEcho); if (Failed()) return;
+      call ReadAry( UnitInput, InputFileName, InputFileData%Damping(i,:,1), 6, 'Damping', 'Elastic damping ratio (-)',    TmpErrStat, TmpErrMsg, UnitEcho); if (Failed()) return;
    enddo
 
    !-------------------------------------------------------------------------------------------------
