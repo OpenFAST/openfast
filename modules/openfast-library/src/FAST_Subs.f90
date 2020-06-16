@@ -845,6 +845,43 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
    END IF   ! CompHydro
 
    ! ........................
+   ! initialize SoilDyn
+   ! ........................
+   ALLOCATE( SlD%Input( p_FAST%InterpOrder+1 ), SlD%InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat2 )
+      IF (ErrStat2 /= 0) THEN
+         CALL SetErrStat(ErrID_Fatal,"Error allocating SlD%Input and SlD%InputTimes.",ErrStat,ErrMsg,RoutineName)
+         CALL Cleanup()
+         RETURN
+      END IF
+
+  IF ( p_FAST%CompSoil == Module_SlD .and. p_FAST%CompSub == Module_SD ) THEN
+
+      IF ( p_FAST%CompHydro == Module_HD ) THEN
+         InitInData_SlD%WtrDpth = InitOutData_HD%WtrDpth
+      ELSE
+         InitInData_SlD%WtrDpth = 0.0_ReKi
+      END IF
+
+      !InitInData_SlD%UseInputFile   = .TRUE.
+      InitInData_SlD%InputFile      = p_FAST%SoilFile
+      InitInData_SlD%RootName       = p_FAST%OutFileRoot
+
+      CALL SlD_Init( InitInData_SlD, SlD%Input(1), SlD%p,  SlD%x(STATE_CURR), SlD%xd(STATE_CURR), SlD%z(STATE_CURR),  &
+                    SlD%OtherSt(STATE_CURR), SlD%y, SlD%m, p_FAST%dt_module( MODULE_SlD ), InitOutData_SlD, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+      p_FAST%ModuleInitialized(Module_SlD) = .TRUE.
+      CALL SetModuleSubstepTime(Module_SlD, p_FAST, y_FAST, ErrStat2, ErrMsg2)
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+      IF (ErrStat >= AbortErrLev) THEN
+         CALL Cleanup()
+         RETURN
+      END IF
+      ! Add interfaces as we develop them.
+   END IF
+
+   ! ........................
    ! initialize SubDyn or ExtPtfm_MCKF
    ! ........................
    ALLOCATE( SD%Input( p_FAST%InterpOrder+1 ), SD%InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat2 )
@@ -875,7 +912,28 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       InitInData_SD%RootName      = p_FAST%OutFileRoot
       InitInData_SD%TP_RefPoint   = ED%Output(1)%PlatformPtMesh%Position(:,1)  ! bjj: not sure what this is supposed to be 
       InitInData_SD%SubRotateZ    = 0.0                                        ! Rotation of substructure.  Only used with SD driver, so set to 0 here. 
-      
+
+      if ( p_FAST%CompSoil == Module_SlD ) then
+            ! Copy over the soil stiffness matrices
+         if (allocated(SlD%p%Stiffness)) then
+            call AllocAry(InitInData_SD%SoilStiffness,size(SlD%p%Stiffness,1),size(SlD%p%Stiffness,2),size(SlD%p%Stiffness,3),'SoilStiffness',ErrStat2,ErrMsg2)
+               CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+            IF (ErrStat >= AbortErrLev) THEN
+               CALL Cleanup()
+               RETURN
+            END IF   
+            InitInData_SD%SoilStiffness = SlD%p%Stiffness
+         endif
+            ! make a copy of the SoilMesh to pass over
+         if (SlD%Input(1)%SoilMesh%Initialized) then
+            CALL MeshCopy ( SrcMesh  = SlD%Input(1)%SoilMesh &
+                          , DestMesh = InitInData_SD%SoilMesh &
+                          , CtrlCode = MESH_COUSIN      &
+                          , IOS      = COMPONENT_OUTPUT &
+                          , ErrStat  = ErrStat2         &
+                          , ErrMess  = ErrMsg2          ) 
+            endif
+      endif
             
       CALL SD_Init( InitInData_SD, SD%Input(1), SD%p,  SD%x(STATE_CURR), SD%xd(STATE_CURR), SD%z(STATE_CURR),  &
                     SD%OtherSt(STATE_CURR), SD%y, SD%m, p_FAST%dt_module( MODULE_SD ), InitOutData_SD, ErrStat2, ErrMsg2 )
@@ -924,43 +982,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          RETURN
       END IF   
       
-   END IF
-
-   ! ........................
-   ! initialize SoilDyn
-   ! ........................
-   ALLOCATE( SlD%Input( p_FAST%InterpOrder+1 ), SlD%InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat2 )
-      IF (ErrStat2 /= 0) THEN
-         CALL SetErrStat(ErrID_Fatal,"Error allocating SlD%Input and SlD%InputTimes.",ErrStat,ErrMsg,RoutineName)
-         CALL Cleanup()
-         RETURN
-      END IF
-
-  IF ( p_FAST%CompSoil == Module_SlD .and. p_FAST%CompSub == Module_SD ) THEN
-
-      IF ( p_FAST%CompHydro == Module_HD ) THEN
-         InitInData_SlD%WtrDpth = InitOutData_HD%WtrDpth
-      ELSE
-         InitInData_SlD%WtrDpth = 0.0_ReKi
-      END IF
-
-      !InitInData_SlD%UseInputFile   = .TRUE.
-      InitInData_SlD%InputFile      = p_FAST%SoilFile
-      InitInData_SlD%RootName       = p_FAST%OutFileRoot
-
-      CALL SlD_Init( InitInData_SlD, SlD%Input(1), SlD%p,  SlD%x(STATE_CURR), SlD%xd(STATE_CURR), SlD%z(STATE_CURR),  &
-                    SlD%OtherSt(STATE_CURR), SlD%y, SlD%m, p_FAST%dt_module( MODULE_SlD ), InitOutData_SlD, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-
-      p_FAST%ModuleInitialized(Module_SlD) = .TRUE.
-      CALL SetModuleSubstepTime(Module_SlD, p_FAST, y_FAST, ErrStat2, ErrMsg2)
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-      ! Add interfaces as we develop them.
    END IF
 
    ! ------------------------------

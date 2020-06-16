@@ -21,6 +21,8 @@ typedef	^	InitInputType	ReKi	g	-	-	-	"Gravity acceleration"
 typedef	^	InitInputType	ReKi	WtrDpth 	-	-	-	"Water Depth (positive valued)"
 typedef	^	InitInputType	ReKi	TP_RefPoint 	{3} 	-	-	"global position of transition piece reference point (could also be defined in SubDyn itself)"
 typedef	^	InitInputType	ReKi	SubRotateZ	-	-	-	"Rotation angle in degrees about global Z"
+typedef  ^  InitInputType  ReKi  SoilStiffness ::: - - "Soil stiffness matrices from SoilDyn" '(N/m, N-m/rad)'
+typedef  ^  InitInputType  MeshType SoilMesh - - - "Mesh for soil stiffness locations" -
 
 # ============================== Define Initialization outputs here: ============================================================================================================================================
 typedef	^	InitOutputType	CHARACTER(ChanLen)	WriteOutputHdr	{:}	-	-	"Names of the output-to-file channels"	-

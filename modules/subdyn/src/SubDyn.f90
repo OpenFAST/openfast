@@ -193,6 +193,29 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    ErrStat = ErrID_None
    ErrMsg  = ""
    
+!TODO: parse the SoilDyn inputs if any were passed
+!  SoilStiffness is dimensioned (6,6,N)
+if (allocated(InitInput%SoilStiffness)) then
+print*,' add logic for handling soilstiffness matrices from SoilDyn: ',size(InitInput%SoilStiffness,3),' points'
+print*,'    ',InitInput%SoilStiffness(1,1:6,1)
+print*,'    ',InitInput%SoilStiffness(2,1:6,1)
+print*,'    ',InitInput%SoilStiffness(3,1:6,1)
+print*,'    ',InitInput%SoilStiffness(4,1:6,1)
+print*,'    ',InitInput%SoilStiffness(5,1:6,1)
+print*,'    ',InitInput%SoilStiffness(6,1:6,1)
+endif
+!  SoilMesh has N points.  Correspond in order to the SoilStiffness matrices passed in
+!     %RefOrientation   is the identity matrix (3,3,N)
+!     %Position         is the reference position (3,N)
+if (InitInput%SoilMesh%Initialized) then
+print*,' add logic for handling soilMesh from SoilDyn: ',InitInput%SoilMesh%NNodes,' mesh nodes'
+print*,InitInput%SoilMesh%Position
+endif
+! Maybe add some logic to check that these we have a match in dimensions
+! Maybe some logic to make sure these points correspond roughly to nodes -- though this may not be true for a long pile into the soil with multiple connection points
+! Note: F = -kx  whre k is the relevant 6x6 matrix from SoilStiffness
+
+
    ! Initialize the NWTC Subroutine Library
    CALL NWTC_Init( )
 
