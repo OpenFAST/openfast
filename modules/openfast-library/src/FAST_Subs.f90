@@ -874,7 +874,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       InitInData_SD%SDInputFile   = p_FAST%SubFile
       InitInData_SD%RootName      = p_FAST%OutFileRoot
       InitInData_SD%TP_RefPoint   = ED%Output(1)%PlatformPtMesh%Position(:,1)  ! bjj: not sure what this is supposed to be 
-      InitInData_SD%SubRotateZ    = 0.0                                        ! bjj: not sure what this is supposed to be 
+      InitInData_SD%SubRotateZ    = 0.0                                        ! Rotation of substructure.  Only used with SD driver, so set to 0 here. 
       
             
       CALL SD_Init( InitInData_SD, SD%Input(1), SD%p,  SD%x(STATE_CURR), SD%xd(STATE_CURR), SD%z(STATE_CURR),  &
@@ -947,7 +947,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       !InitInData_SlD%UseInputFile   = .TRUE.
       InitInData_SlD%InputFile      = p_FAST%SoilFile
       InitInData_SlD%RootName       = p_FAST%OutFileRoot
-      InitInData_SlD%SubRotateZ     = InitInData_SD%SubRotateZ    ! rotation angle of subdyn.  Since we link to SD nodes, rotate SlD accordingly
 
       CALL SlD_Init( InitInData_SlD, SlD%Input(1), SlD%p,  SlD%x(STATE_CURR), SlD%xd(STATE_CURR), SlD%z(STATE_CURR),  &
                     SlD%OtherSt(STATE_CURR), SlD%y, SlD%m, p_FAST%dt_module( MODULE_SlD ), InitOutData_SlD, ErrStat2, ErrMsg2 )

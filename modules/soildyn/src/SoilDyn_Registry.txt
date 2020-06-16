@@ -73,7 +73,6 @@ typedef  ^     InitInputType  CHARACTER(1024)      InputFile      - - -         
 typedef  ^     InitInputType  CHARACTER(1024)      RootName       - - -          "Root name of the input file" -
 typedef  ^     InitInputType  LOGICAL              Linearize      - .FALSE. -    "Flag that tells this module if the glue code wants to linearize." -
 typedef  ^     InitInputType  ReKi                 WtrDpth        - - -          "Water depth to mudline (global coordinates)" '(m)'
-typedef  ^     InitInputType  ReKi                 SubRotateZ     - - -          "Substructure rotation angle, in case we change orientations" '(rad)'
 
 # Define outputs from the initialization routine here:
 typedef   ^               InitOutputType CHARACTER(ChanLen)    WriteOutputHdr  {:} - -   "Names of the output-to-file channels" -

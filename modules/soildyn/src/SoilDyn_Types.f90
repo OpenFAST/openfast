@@ -91,7 +91,6 @@ IMPLICIT NONE
     CHARACTER(1024)  :: RootName      !< Root name of the input file [-]
     LOGICAL  :: Linearize = .FALSE.      !< Flag that tells this module if the glue code wants to linearize. [-]
     REAL(ReKi)  :: WtrDpth      !< Water depth to mudline (global coordinates) ['(m)']
-    REAL(ReKi)  :: SubRotateZ      !< Substructure rotation angle, in case we change orientations ['(rad)']
   END TYPE SlD_InitInputType
 ! =======================
 ! =========  SlD_InitOutputType  =======
@@ -1453,7 +1452,6 @@ ENDIF
     DstInitInputData%RootName = SrcInitInputData%RootName
     DstInitInputData%Linearize = SrcInitInputData%Linearize
     DstInitInputData%WtrDpth = SrcInitInputData%WtrDpth
-    DstInitInputData%SubRotateZ = SrcInitInputData%SubRotateZ
  END SUBROUTINE SlD_CopyInitInput
 
  SUBROUTINE SlD_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
@@ -1506,7 +1504,6 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%RootName)  ! RootName
       Int_BufSz  = Int_BufSz  + 1  ! Linearize
       Re_BufSz   = Re_BufSz   + 1  ! WtrDpth
-      Re_BufSz   = Re_BufSz   + 1  ! SubRotateZ
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -1545,8 +1542,6 @@ ENDIF
       IntKiBuf ( Int_Xferred:Int_Xferred+1-1 ) = TRANSFER( InData%Linearize , IntKiBuf(1), 1)
       Int_Xferred   = Int_Xferred   + 1
       ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%WtrDpth
-      Re_Xferred   = Re_Xferred   + 1
-      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%SubRotateZ
       Re_Xferred   = Re_Xferred   + 1
  END SUBROUTINE SlD_PackInitInput
 
@@ -1593,8 +1588,6 @@ ENDIF
       OutData%Linearize = TRANSFER( IntKiBuf( Int_Xferred ), mask0 )
       Int_Xferred   = Int_Xferred + 1
       OutData%WtrDpth = ReKiBuf( Re_Xferred )
-      Re_Xferred   = Re_Xferred + 1
-      OutData%SubRotateZ = ReKiBuf( Re_Xferred )
       Re_Xferred   = Re_Xferred + 1
  END SUBROUTINE SlD_UnPackInitInput
 
