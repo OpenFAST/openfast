@@ -204,7 +204,6 @@ contains
          ! now initialize the states info from the miscvar
          xd%dll_states(i)%Props        = m%dll_data(i)%Props
          xd%dll_states(i)%StVar        = m%dll_data(i)%StVar
-         xd%dll_states(i)%StVarPrint   = m%dll_data(i)%StVarPrint
       enddo
    end subroutine SlD_REDWINsetup
 
@@ -476,13 +475,11 @@ subroutine SlD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, 
       do i=1,size(xd%dll_states)
          xd%dll_states(i)%Props        = m%dll_data(i)%Props
          xd%dll_states(i)%StVar        = m%dll_data(i)%StVar
-         xd%dll_states(i)%StVarPrint   = m%dll_data(i)%StVarPrint
       enddo
    else
       do i=1,size(xd%dll_states)
          xd%dll_states(i)%Props        = 0.0_R8Ki
          xd%dll_states(i)%StVar        = 0.0_R8Ki
-         xd%dll_states(i)%StVarPrint   = 0.0_IntKi
       enddo
    endif
  
@@ -550,7 +547,6 @@ subroutine SlD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg 
             ! copy the state info over to miscvar for passing to dll (we are separating states out to better match the framework)
             m%dll_data(i)%Props        = xd%dll_states(i)%Props
             m%dll_data(i)%StVar        = xd%dll_states(i)%StVar
-            m%dll_data(i)%StVarPrint   = xd%dll_states(i)%StVarPrint
 
             ! Copy displacement from point mesh (angles in radians -- REDWIN dll also uses rad)
             Displacement(1:3) = u%SoilMesh%TranslationDisp(1:3,i)                 ! Translations -- This is R8Ki in the mesh

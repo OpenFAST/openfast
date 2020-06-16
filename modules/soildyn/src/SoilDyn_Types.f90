@@ -57,7 +57,6 @@ IMPLICIT NONE
   TYPE, PUBLIC :: REDWINdllStates
     REAL(R8Ki) , DIMENSION(1:100,1:200)  :: Props      !< Array containing foundation model properties (used internally by the REDWIN models). Specific to each model. [-]
     REAL(R8Ki) , DIMENSION(1:12,1:100)  :: StVar      !< Array containing the state variables at the end of the step (used internally by the REDWIN models). Specific to each model. [-]
-    INTEGER(IntKi) , DIMENSION(1:12,1:100)  :: StVarPrint      !< Array indicating which state variables should be printed to the screen. This feature is currently not supported. [-]
   END TYPE REDWINdllStates
 ! =======================
 ! =========  SlD_InputFile  =======
@@ -465,7 +464,6 @@ CONTAINS
    ErrMsg  = ""
     DstREDWINdllStatesData%Props = SrcREDWINdllStatesData%Props
     DstREDWINdllStatesData%StVar = SrcREDWINdllStatesData%StVar
-    DstREDWINdllStatesData%StVarPrint = SrcREDWINdllStatesData%StVarPrint
  END SUBROUTINE SlD_CopyREDWINdllStates
 
  SUBROUTINE SlD_DestroyREDWINdllStates( REDWINdllStatesData, ErrStat, ErrMsg )
@@ -516,7 +514,6 @@ CONTAINS
   Int_BufSz  = 0
       Db_BufSz   = Db_BufSz   + SIZE(InData%Props)  ! Props
       Db_BufSz   = Db_BufSz   + SIZE(InData%StVar)  ! StVar
-      Int_BufSz  = Int_BufSz  + SIZE(InData%StVarPrint)  ! StVarPrint
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -548,8 +545,6 @@ CONTAINS
       Db_Xferred   = Db_Xferred   + SIZE(InData%Props)
       DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%StVar))-1 ) = PACK(InData%StVar,.TRUE.)
       Db_Xferred   = Db_Xferred   + SIZE(InData%StVar)
-      IntKiBuf ( Int_Xferred:Int_Xferred+(SIZE(InData%StVarPrint))-1 ) = PACK(InData%StVarPrint,.TRUE.)
-      Int_Xferred   = Int_Xferred   + SIZE(InData%StVarPrint)
  END SUBROUTINE SlD_PackREDWINdllStates
 
  SUBROUTINE SlD_UnPackREDWINdllStates( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -611,19 +606,6 @@ CONTAINS
     mask2 = .TRUE. 
       OutData%StVar = REAL( UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(SIZE(OutData%StVar))-1 ), mask2, 0.0_DbKi ), R8Ki)
       Db_Xferred   = Db_Xferred   + SIZE(OutData%StVar)
-    DEALLOCATE(mask2)
-    i1_l = LBOUND(OutData%StVarPrint,1)
-    i1_u = UBOUND(OutData%StVarPrint,1)
-    i2_l = LBOUND(OutData%StVarPrint,2)
-    i2_u = UBOUND(OutData%StVarPrint,2)
-    ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask2.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask2 = .TRUE. 
-      OutData%StVarPrint = UNPACK( IntKiBuf ( Int_Xferred:Int_Xferred+(SIZE(OutData%StVarPrint))-1 ), mask2, 0_IntKi )
-      Int_Xferred   = Int_Xferred   + SIZE(OutData%StVarPrint)
     DEALLOCATE(mask2)
  END SUBROUTINE SlD_UnPackREDWINdllStates
 

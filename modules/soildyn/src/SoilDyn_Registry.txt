@@ -40,7 +40,6 @@ typedef  ^             REDWINdllType   IntKi          RunMode        -          
 
 typedef SoilDyn/SlD    REDWINdllStates R8Ki           Props          {100}{200} - - "Array containing foundation model properties (used internally by the REDWIN models). Specific to each model." -
 typedef  ^             REDWINdllStates R8Ki           StVar          {12}{100}  - - "Array containing the state variables at the end of the step (used internally by the REDWIN models). Specific to each model." -
-typedef  ^             REDWINdllStates IntKi          StVarPrint     {12}{100}  - - "Array indicating which state variables should be printed to the screen. This feature is currently not supported." -
 
 
 # SoilDyn input file
