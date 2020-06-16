@@ -454,6 +454,7 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
        TempProps = -9999.
        TempMembers                      = p%Elems(1:p%NMembers,:)
        TempProps(1:Init%NPropSetsB, :) = Init%PropSetsB   
+       p%Elems(:,:) = -9999. ! Reinitialized. Elements will be ordered by member subdivisions (see setNewElem)
 
        kelem = 0
        knode = Init%NJoints
