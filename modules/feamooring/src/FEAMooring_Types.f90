@@ -65,7 +65,7 @@ IMPLICIT NONE
     CHARACTER(20)  :: OutFmt      !< Format used for text tabular output (except time) [-]
     REAL(DbKi)  :: Tstart      !< Time to start module's tabular output [s]
     INTEGER(IntKi)  :: NumOuts      !< Number of parameters in the output list (number of outputs requested) [-]
-    CHARACTER(10) , DIMENSION(:), ALLOCATABLE  :: OutList      !< List of user-requested output channels [-]
+    CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: OutList      !< List of user-requested output channels [-]
   END TYPE FEAM_InputFile
 ! =======================
 ! =========  FEAM_InitInputType  =======

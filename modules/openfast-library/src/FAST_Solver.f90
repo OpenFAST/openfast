@@ -1778,7 +1778,7 @@ CONTAINS
    !...............................................................................................................................
    SUBROUTINE CleanUp()
       INTEGER(IntKi)             :: ErrStat3    ! The error identifier (ErrStat)
-      CHARACTER(1024)            :: ErrMsg3     ! The error message (ErrMsg)
+      CHARACTER(ErrMsgLen)       :: ErrMsg3     ! The error message (ErrMsg)
                   
       CALL ED_DestroyOutput(y_ED_input, ErrStat3, ErrMsg3 )
          IF (ErrStat3 /= ErrID_None) CALL WrScr(RoutineName//'/ED_DestroyOutput: '//TRIM(ErrMsg3) )

@@ -31,6 +31,7 @@
     char node_input_str[255] ;
     char line_input_str[255] ;
     char option_input_str[255] ;
+
   } MAP_InitInputType_t ;
   typedef struct MAP_InitOutputType {
     void * object ;
@@ -39,6 +40,7 @@
     char compilingData[24] ;
     char * writeOutputHdr ;     int writeOutputHdr_Len ;
     char * writeOutputUnt ;     int writeOutputUnt_Len ;
+
 
   } MAP_InitOutputType_t ;
   typedef struct MAP_ContinuousStateType {
@@ -83,6 +85,8 @@
     double rho_sea ;
     double dt ;
 
+
+    int numOuts ;
 
   } MAP_ParameterType_t ;
   typedef struct MAP_InputType {
