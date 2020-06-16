@@ -124,6 +124,7 @@ IMPLICIT NONE
 ! =========  SlD_MiscVarType  =======
   TYPE, PUBLIC :: SlD_MiscVarType
     TYPE(REDWINdllType) , DIMENSION(:), ALLOCATABLE  :: dll_data      !< data used for REDWIN DLL [-]
+    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: ForceTotal      !< Total reaction force at each node [-]
   END TYPE SlD_MiscVarType
 ! =======================
 ! =========  SlD_ParameterType  =======
@@ -2674,6 +2675,7 @@ ENDIF
 ! Local 
    INTEGER(IntKi)                 :: i,j,k
    INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'SlD_CopyMisc'
@@ -2696,6 +2698,20 @@ IF (ALLOCATED(SrcMiscData%dll_data)) THEN
          IF (ErrStat>=AbortErrLev) RETURN
     ENDDO
 ENDIF
+IF (ALLOCATED(SrcMiscData%ForceTotal)) THEN
+  i1_l = LBOUND(SrcMiscData%ForceTotal,1)
+  i1_u = UBOUND(SrcMiscData%ForceTotal,1)
+  i2_l = LBOUND(SrcMiscData%ForceTotal,2)
+  i2_u = UBOUND(SrcMiscData%ForceTotal,2)
+  IF (.NOT. ALLOCATED(DstMiscData%ForceTotal)) THEN 
+    ALLOCATE(DstMiscData%ForceTotal(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%ForceTotal.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstMiscData%ForceTotal = SrcMiscData%ForceTotal
+ENDIF
  END SUBROUTINE SlD_CopyMisc
 
  SUBROUTINE SlD_DestroyMisc( MiscData, ErrStat, ErrMsg )
@@ -2712,6 +2728,9 @@ DO i1 = LBOUND(MiscData%dll_data,1), UBOUND(MiscData%dll_data,1)
   CALL SlD_Destroyredwindlltype( MiscData%dll_data(i1), ErrStat, ErrMsg )
 ENDDO
   DEALLOCATE(MiscData%dll_data)
+ENDIF
+IF (ALLOCATED(MiscData%ForceTotal)) THEN
+  DEALLOCATE(MiscData%ForceTotal)
 ENDIF
  END SUBROUTINE SlD_DestroyMisc
 
@@ -2773,6 +2792,11 @@ ENDIF
          DEALLOCATE(Int_Buf)
       END IF
     END DO
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! ForceTotal allocated yes/no
+  IF ( ALLOCATED(InData%ForceTotal) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! ForceTotal upper/lower bounds for each dimension
+      Db_BufSz   = Db_BufSz   + SIZE(InData%ForceTotal)  ! ForceTotal
   END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -2842,6 +2866,22 @@ ENDIF
       ENDIF
     END DO
   END IF
+  IF ( .NOT. ALLOCATED(InData%ForceTotal) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%ForceTotal,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%ForceTotal,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%ForceTotal,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%ForceTotal,2)
+    Int_Xferred = Int_Xferred + 2
+
+      IF (SIZE(InData%ForceTotal)>0) DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%ForceTotal))-1 ) = PACK(InData%ForceTotal,.TRUE.)
+      Db_Xferred   = Db_Xferred   + SIZE(InData%ForceTotal)
+  END IF
  END SUBROUTINE SlD_PackMisc
 
  SUBROUTINE SlD_UnPackMisc( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -2864,6 +2904,7 @@ ENDIF
   LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
   LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+  INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'SlD_UnPackMisc'
@@ -2932,6 +2973,32 @@ ENDIF
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
     END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! ForceTotal not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%ForceTotal)) DEALLOCATE(OutData%ForceTotal)
+    ALLOCATE(OutData%ForceTotal(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%ForceTotal.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask2.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask2 = .TRUE. 
+      IF (SIZE(OutData%ForceTotal)>0) OutData%ForceTotal = REAL( UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(SIZE(OutData%ForceTotal))-1 ), mask2, 0.0_DbKi ), R8Ki)
+      Db_Xferred   = Db_Xferred   + SIZE(OutData%ForceTotal)
+    DEALLOCATE(mask2)
   END IF
  END SUBROUTINE SlD_UnPackMisc
 

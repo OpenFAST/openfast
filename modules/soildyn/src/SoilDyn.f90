@@ -136,11 +136,11 @@ subroutine SlD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
 
    end if
 
+   call SlD_InitMeshes( InputFileData, u, y, p, m, ErrStat2,ErrMsg2);  if (Failed()) return;
+
+
       ! Set miscvars: including dll_data arrays and checking for input files.
    call SlD_InitStatesMisc( InputFileData, m, xd, ErrStat2,ErrMsg2); if (Failed()) return;
-
-
-   call SlD_InitMeshes( InputFileData, InitInp, u, y, p, m, ErrStat2,ErrMsg2);  if (Failed()) return;
 
 
       ! Setup and initialize the Calc Options
@@ -227,6 +227,9 @@ contains
       ErrStat = ErrID_None
       ErrMsg  = ''
 
+      call AllocAry(m%ForceTotal,6,p%NumPoints,'ForceTotal array for output', ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
       select case(p%CalcOption)
          case (Calc_StiffDamp)
             allocate( xd%dll_states(1), STAT=ErrStat2 )
@@ -275,9 +278,8 @@ contains
       if (ErrStat >= AbortErrLev) return
    end subroutine SlD_InitStatesMisc
 
-   subroutine SlD_InitMeshes( InputFileData, InitInp, u, y, p, m, ErrStat, ErrMsg )
+   subroutine SlD_InitMeshes( InputFileData, u, y, p, m, ErrStat, ErrMsg )
       type(SlD_InputFile),       intent(in   )  :: InputFileData  !< Data stored in the module's input file
-      type(SlD_InitInputType),   intent(in   )  :: InitInp        !< Input data for initialization routine
       type(SlD_InputType),       intent(inout)  :: u              !< An initial guess for the input; input mesh must be defined
       type(SlD_OutputType),      intent(inout)  :: y              !< Initial system outputs
       type(SlD_ParameterType),   intent(inout)  :: p              !< Parameters
@@ -511,7 +513,6 @@ subroutine SlD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg 
 
    real(ReKi)                                         :: AllOuts(0:MaxOutPts)
    real(R8Ki)                                         :: Displacement(6)
-   real(R8Ki)                                         :: Force(6)
    real(R8Ki)                                         :: ForceLinear(6)
    integer(IntKi)                                     :: i           !< generic counter
 
@@ -529,7 +530,7 @@ subroutine SlD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg 
             Displacement(4:6) = GetSmllRotAngs(u%SoilMesh%Orientation(1:3,1:3,i), ErrStat2, ErrMsg2); if (Failed()) return;
  
                ! Calculate reaction with F = k*dX
-            Force = matmul(p%Stiffness(1:6,1:6,i), Displacement)
+            m%ForceTotal(1:6,i) = matmul(p%Stiffness(1:6,1:6,i), Displacement)
             if (p%SlDNonLinearForcePortionOnly) then
                ForceLinear = matmul(p%Stiffness(1:6,1:6,i), Displacement)
             endif
@@ -537,8 +538,8 @@ subroutine SlD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg 
             ! TODO: add damping term effects here
 
             ! Return reaction force onto the resulting point mesh
-            y%SoilMesh%Force (1:3,i)  =  -real(Force(1:3),ReKi)
-            y%SoilMesh%Moment(1:3,i)  =  -real(Force(4:6),ReKi)
+            y%SoilMesh%Force (1:3,i)  =  -real(m%ForceTotal(1:3,i),ReKi)
+            y%SoilMesh%Moment(1:3,i)  =  -real(m%ForceTotal(4:6,i),ReKi)
 
             ! Subrtract out the linear piece here
             if (p%SlDNonLinearForcePortionOnly) then
@@ -567,11 +568,11 @@ subroutine SlD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg 
                ForceLinear = matmul(p%Stiffness(1:6,1:6,i), Displacement)
             endif
 
-            call    REDWINinterface_CalcOutput( p%DLL_Trgt, p%DLL_Model, Displacement, Force, m%dll_data(i), ErrStat2, ErrMsg2 ); if (Failed()) return;
+            call    REDWINinterface_CalcOutput( p%DLL_Trgt, p%DLL_Model, Displacement, m%ForceTotal(1:6,i), m%dll_data(i), ErrStat2, ErrMsg2 ); if (Failed()) return;
 
             ! Return reaction force onto the resulting point mesh
-            y%SoilMesh%Force (1:3,i)  =  -real(Force(1:3),ReKi)
-            y%SoilMesh%Moment(1:3,i)  =  -real(Force(4:6),ReKi)
+            y%SoilMesh%Force (1:3,i)  =  -real(m%ForceTotal(1:3,i),ReKi)
+            y%SoilMesh%Moment(1:3,i)  =  -real(m%ForceTotal(4:6,i),ReKi)
 
             ! Subrtract out the linear piece here
             if (p%SlDNonLinearForcePortionOnly) then

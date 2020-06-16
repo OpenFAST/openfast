@@ -847,12 +847,12 @@ subroutine SlD_WriteOutput(p, AllOuts, u, y, m, ErrStat, ErrMsg )
    do i=1,p%NumPoints
          ! Forces
       do j=1,3
-         AllOuts( SoilPtF(j  ,i) )  =  y%SoilMesh%Force(j,i) / 1000.0_ReKi
+         AllOuts( SoilPtF(j,i) )  =  -m%ForceTotal(j,i) / 1000.0_ReKi
       enddo
 
          ! Moments
-      do j=1,3
-         AllOuts( SoilPtF(j+3,i) )  =  y%SoilMesh%Moment(j,i) / 1000.0_ReKi
+      do j=4,6
+         AllOuts( SoilPtF(j,i) )  =  -m%ForceTotal(j,i) / 1000.0_ReKi
       enddo
 
          ! Translation displacement
