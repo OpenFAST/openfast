@@ -90,6 +90,7 @@ IMPLICIT NONE
     CHARACTER(1024)  :: RootName      !< Root name of the input file [-]
     LOGICAL  :: Linearize = .FALSE.      !< Flag that tells this module if the glue code wants to linearize. [-]
     REAL(ReKi)  :: WtrDpth      !< Water depth to mudline (global coordinates) ['(m)']
+    LOGICAL  :: SlDNonLinearForcePortionOnly = .FALSE.      !< Only the non-linear portion of the reaction forces is returned [-]
   END TYPE SlD_InitInputType
 ! =======================
 ! =========  SlD_InitOutputType  =======
@@ -143,6 +144,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: WtrDepth      !< Water depth to mudline (global coordinates) ['(m)']
     REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: Stiffness      !< Stiffness matrix ['(N/m,]
     LOGICAL  :: DLL_OnlyStiff      !< Use only the stiffness matrix in calculating the restoring forces [-]
+    LOGICAL  :: SlDNonLinearForcePortionOnly = .FALSE.      !< Only the non-linear portion of the reaction forces is returned [-]
   END TYPE SlD_ParameterType
 ! =======================
 ! =========  SlD_InputType  =======
@@ -1434,6 +1436,7 @@ ENDIF
     DstInitInputData%RootName = SrcInitInputData%RootName
     DstInitInputData%Linearize = SrcInitInputData%Linearize
     DstInitInputData%WtrDpth = SrcInitInputData%WtrDpth
+    DstInitInputData%SlDNonLinearForcePortionOnly = SrcInitInputData%SlDNonLinearForcePortionOnly
  END SUBROUTINE SlD_CopyInitInput
 
  SUBROUTINE SlD_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
@@ -1486,6 +1489,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%RootName)  ! RootName
       Int_BufSz  = Int_BufSz  + 1  ! Linearize
       Re_BufSz   = Re_BufSz   + 1  ! WtrDpth
+      Int_BufSz  = Int_BufSz  + 1  ! SlDNonLinearForcePortionOnly
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -1525,6 +1529,8 @@ ENDIF
       Int_Xferred   = Int_Xferred   + 1
       ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%WtrDpth
       Re_Xferred   = Re_Xferred   + 1
+      IntKiBuf ( Int_Xferred:Int_Xferred+1-1 ) = TRANSFER( InData%SlDNonLinearForcePortionOnly , IntKiBuf(1), 1)
+      Int_Xferred   = Int_Xferred   + 1
  END SUBROUTINE SlD_PackInitInput
 
  SUBROUTINE SlD_UnPackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -1571,6 +1577,8 @@ ENDIF
       Int_Xferred   = Int_Xferred + 1
       OutData%WtrDpth = ReKiBuf( Re_Xferred )
       Re_Xferred   = Re_Xferred + 1
+      OutData%SlDNonLinearForcePortionOnly = TRANSFER( IntKiBuf( Int_Xferred ), mask0 )
+      Int_Xferred   = Int_Xferred + 1
  END SUBROUTINE SlD_UnPackInitInput
 
  SUBROUTINE SlD_CopyInitOutput( SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg )
@@ -2990,6 +2998,7 @@ IF (ALLOCATED(SrcParamData%Stiffness)) THEN
     DstParamData%Stiffness = SrcParamData%Stiffness
 ENDIF
     DstParamData%DLL_OnlyStiff = SrcParamData%DLL_OnlyStiff
+    DstParamData%SlDNonLinearForcePortionOnly = SrcParamData%SlDNonLinearForcePortionOnly
  END SUBROUTINE SlD_CopyParam
 
  SUBROUTINE SlD_DestroyParam( ParamData, ErrStat, ErrMsg )
@@ -3107,6 +3116,7 @@ ENDIF
       Db_BufSz   = Db_BufSz   + SIZE(InData%Stiffness)  ! Stiffness
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! DLL_OnlyStiff
+      Int_BufSz  = Int_BufSz  + 1  ! SlDNonLinearForcePortionOnly
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -3255,6 +3265,8 @@ ENDIF
       Db_Xferred   = Db_Xferred   + SIZE(InData%Stiffness)
   END IF
       IntKiBuf ( Int_Xferred:Int_Xferred+1-1 ) = TRANSFER( InData%DLL_OnlyStiff , IntKiBuf(1), 1)
+      Int_Xferred   = Int_Xferred   + 1
+      IntKiBuf ( Int_Xferred:Int_Xferred+1-1 ) = TRANSFER( InData%SlDNonLinearForcePortionOnly , IntKiBuf(1), 1)
       Int_Xferred   = Int_Xferred   + 1
  END SUBROUTINE SlD_PackParam
 
@@ -3451,6 +3463,8 @@ ENDIF
     DEALLOCATE(mask3)
   END IF
       OutData%DLL_OnlyStiff = TRANSFER( IntKiBuf( Int_Xferred ), mask0 )
+      Int_Xferred   = Int_Xferred + 1
+      OutData%SlDNonLinearForcePortionOnly = TRANSFER( IntKiBuf( Int_Xferred ), mask0 )
       Int_Xferred   = Int_Xferred + 1
  END SUBROUTINE SlD_UnPackParam
 

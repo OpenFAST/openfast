@@ -261,6 +261,7 @@ PROGRAM SoilDyn_Driver
    !...............................................................................................................................
 
    InitInData%InputFile = Settings%SldIptFileName
+   InitInData%SlDNonLinearForcePortionOnly = SettingsFlags%SlDNonLinearForcePortionOnly
 
       ! Initialize the module
    CALL SlD_Init( InitInData, u(1), p,  x, xd, z, OtherState, y, misc, TimeInterval, InitOutData, ErrStat, ErrMsg )

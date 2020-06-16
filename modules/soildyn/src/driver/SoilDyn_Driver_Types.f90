@@ -50,6 +50,7 @@ MODULE SoilDyn_Driver_Types
       LOGICAL                 :: DTDefault            = .FALSE.      !< specified a 'DEFAULT' for the time resolution
       LOGICAL                 :: Verbose              = .FALSE.      !< Verbose error reporting
       LOGICAL                 :: VVerbose             = .FALSE.      !< Very Verbose error reporting
+      LOGICAL                 :: SlDNonLinearForcePortionOnly = .FALSE. !< To only return the non-linear portion of the reaction force
    END TYPE    SlDDriver_Flags
 
 

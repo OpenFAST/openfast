@@ -117,8 +117,10 @@ subroutine SlD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
    z%DummyConstrState         = 0.0_ReKi
    OtherState%DummyOtherState = 0.0_ReKi
 
+   ! are the returned reaction forces only the non-linear portion (used when SubDyn is calculating the linear portion)
+   p%SlDNonLinearForcePortionOnly = InitInp%SlDNonLinearForcePortionOnly
+   if (p%SlDNonLinearForcePortionOnly) call WrScr(' SoilDyn returning only non-linear portion of reaction forces')
 
-!FIXME: set some initial values of y and u here)
 
    if (InitInp%Linearize) then
 
@@ -510,6 +512,7 @@ subroutine SlD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg 
    real(ReKi)                                         :: AllOuts(0:MaxOutPts)
    real(R8Ki)                                         :: Displacement(6)
    real(R8Ki)                                         :: Force(6)
+   real(R8Ki)                                         :: ForceLinear(6)
    integer(IntKi)                                     :: i           !< generic counter
 
       ! Initialize ErrStat
@@ -527,14 +530,21 @@ subroutine SlD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg 
  
                ! Calculate reaction with F = k*dX
             Force = matmul(p%Stiffness(1:6,1:6,i), Displacement)
- 
+            if (p%SlDNonLinearForcePortionOnly) then
+               ForceLinear = matmul(p%Stiffness(1:6,1:6,i), Displacement)
+            endif
+
+            ! TODO: add damping term effects here
+
             ! Return reaction force onto the resulting point mesh
-            y%SoilMesh%Force (1,i)  =  -real(Force(1),ReKi)
-            y%SoilMesh%Force (2,i)  =  -real(Force(2),ReKi)
-            y%SoilMesh%Force (3,i)  =  -real(Force(3),ReKi)
-            y%SoilMesh%Moment(1,i)  =  -real(Force(4),ReKi)
-            y%SoilMesh%Moment(2,i)  =  -real(Force(5),ReKi)
-            y%SoilMesh%Moment(3,i)  =  -real(Force(6),ReKi)
+            y%SoilMesh%Force (1:3,i)  =  -real(Force(1:3),ReKi)
+            y%SoilMesh%Moment(1:3,i)  =  -real(Force(4:6),ReKi)
+
+            ! Subrtract out the linear piece here
+            if (p%SlDNonLinearForcePortionOnly) then
+               y%SoilMesh%Force (1:3,i)  =  y%SoilMesh%Force (1:3,i) + real(ForceLinear(1:3),ReKi)
+               y%SoilMesh%Moment(1:3,i)  =  y%SoilMesh%Moment(1:3,i) + real(ForceLinear(4:6),ReKi)
+            endif
          enddo
 
       case (Calc_PYcurve)
@@ -552,11 +562,22 @@ subroutine SlD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg 
             Displacement(1:3) = u%SoilMesh%TranslationDisp(1:3,i)                 ! Translations -- This is R8Ki in the mesh
             Displacement(4:6) = GetSmllRotAngs(u%SoilMesh%Orientation(1:3,1:3,i), ErrStat2, ErrMsg2); if (Failed()) return;   ! Small angle assumption should be valid here -- Note we are assuming reforientation is identity
 
+            ! Linear portion of the stiffness reaction (NOTE: the DLL stiffness info is stored in parameters
+            if (p%SlDNonLinearForcePortionOnly) then
+               ForceLinear = matmul(p%Stiffness(1:6,1:6,i), Displacement)
+            endif
+
             call    REDWINinterface_CalcOutput( p%DLL_Trgt, p%DLL_Model, Displacement, Force, m%dll_data(i), ErrStat2, ErrMsg2 ); if (Failed()) return;
 
             ! Return reaction force onto the resulting point mesh
             y%SoilMesh%Force (1:3,i)  =  -real(Force(1:3),ReKi)
             y%SoilMesh%Moment(1:3,i)  =  -real(Force(4:6),ReKi)
+
+            ! Subrtract out the linear piece here
+            if (p%SlDNonLinearForcePortionOnly) then
+               y%SoilMesh%Force (1:3,i)  =  y%SoilMesh%Force (1:3,i) + real(ForceLinear(1:3),ReKi)
+               y%SoilMesh%Moment(1:3,i)  =  y%SoilMesh%Moment(1:3,i) + real(ForceLinear(4:6),ReKi)
+            endif
          enddo
    end select
 
