@@ -1193,24 +1193,34 @@ CONTAINS
 END SUBROUTINE ControlCableForceInit
 
 !> Add soil stiffness and mass to global system matrices
+!! Soil stiffness can come from two sources: 
+!!   - "SSI" matrices (specified at reaction nodes)
+!!   - "Soil" matrices (specified at Initalization)
 SUBROUTINE InsertSoilMatrices(M, K, NodesDOF, Init, p, ErrStat, ErrMsg, Substract)
    real(FEKi), dimension(:,:),   intent(inout) :: M
    real(FEKi), dimension(:,:),   intent(inout) :: K
    type(IList),dimension(:),     intent(in   ) :: NodesDOF !< Map from Node Index to DOF lists
-   type(SD_InitType),            intent(in   ) :: Init
+   type(SD_InitType),            intent(inout) :: Init ! TODO look for closest indices elsewhere
    type(SD_ParameterType),       intent(in   ) :: p
    integer(IntKi),               intent(  out) :: ErrStat     ! Error status of the operation
    character(*),                 intent(  out) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
    logical, optional,            intent(in   ) :: SubStract   ! If present, and if true, substract instead of adding
-   integer                    :: I, J, iiNode
+   integer                    :: I, J, iiNode, nDOF
    integer                    :: iDOF, jDOF, iNode  !< DOF and node indices
    real(FEKi), dimension(6,6) :: K_soil, M_soil ! Auxiliary matrices for soil
+   real(ReKi)                 :: Dist
    ErrMsg  = ""
    ErrStat = ErrID_None
+   ! --- SSI matrices
    ! TODO consider doing the 21 -> 6x6 conversion while reading
    ! 6x6 matrix goes to one node of one element only
    do iiNode = 1, p%nNodes_C ! loop on constrained nodes
       iNode = p%Nodes_C(iiNode,1)
+      nDOF=size(NodesDOF(iNode)%List)
+      if (nDOF/=6) then
+         ErrMsg='SSI soil matrix is to be inserted at SubDyn node '//Num2LStr(iNode)//', but this node has '//num2lstr(nDOF)//' DOFs';
+         ErrStat=ErrID_Fatal; return
+      endif
       call Array21_to_6by6(Init%SSIK(:,iiNode), K_soil)
       call Array21_to_6by6(Init%SSIM(:,iiNode), M_soil)
       if (present(Substract)) then
@@ -1228,6 +1238,46 @@ SUBROUTINE InsertSoilMatrices(M, K, NodesDOF, Init, p, ErrStat, ErrMsg, Substrac
          enddo
       enddo
    enddo
+   ! --- "Soil" matrices
+   if (allocated(Init%Soil_K)) then
+      do iiNode = 1,size(Init%Soil_Points,2)
+         ! --- Find closest node
+         call FindClosestNodes(Init%Soil_Points(1:3,iiNode), Init%Nodes, iNode, Dist);
+         if (Dist>0.1_ReKi) then
+            ErrMsg='Closest SubDyn Node is node '//Num2LStr(iNode)//', which is more than 0.1m away from soildyn point '//num2lstr(iiNode);
+            ErrStat=ErrID_Fatal; return
+         endif
+         Init%Soil_Nodes(iiNode) = iNode
+         ! --- Insert/remove from matrices
+         nDOF=size(NodesDOF(iNode)%List)
+         if (nDOF/=6) then
+            ErrMsg='Soil matrix is to be inserted at SubDyn node '//Num2LStr(iNode)//', but this node has '//num2lstr(nDOF)//' DOFs';
+            ErrStat=ErrID_Fatal; return
+         endif
+         K_soil = Init%Soil_K(1:6,1:6,iiNode)
+         if (present(Substract)) then
+            if (Substract) then
+               K_soil = - K_soil
+            endif
+         endif
+         do I = 1, 6
+            iDOF = NodesDOF(iNode)%List(I)   ! DOF index
+            do J = 1, 6
+               jDOF = NodesDOF(iNode)%List(J)   ! DOF index
+               K(iDOF, jDOF) = K(iDOF, jDOF) + K_soil(I,J)
+            enddo
+         enddo
+         if (.not.present(Substract)) then
+            CALL WrScr('   Soil stiffness inserted at SubDyn node '//trim(Num2LStr(iNode)))
+            print*,'    ',K_Soil(1,1:6)
+            print*,'    ',K_Soil(2,1:6)
+            print*,'    ',K_Soil(3,1:6)
+            print*,'    ',K_Soil(4,1:6)
+            print*,'    ',K_Soil(5,1:6)
+            print*,'    ',K_Soil(6,1:6)
+         endif
+      enddo
+   endif
 contains
    !> Convert a flatten array of 21 values into a symmetric  6x6 matrix
    SUBROUTINE Array21_to_6by6(A21, M66)
@@ -1246,8 +1296,27 @@ contains
    END SUBROUTINE Array21_to_6by6
 END SUBROUTINE InsertSoilMatrices
 
-
-
+!------------------------------------------------------------------------------------------------------
+!> Find closest node index to a point, returns distance as well
+SUBROUTINE FindClosestNodes(Point, Nodes, iNode, Dist)
+   real(ReKi), dimension(3),     intent(IN   ) :: Point  !< Point coordinates
+   real(ReKi), dimension(:,:),   intent(IN   ) :: Nodes  !< List of nodes, Positions are in columns 2-4...
+   integer(IntKi),               intent(  OUT) :: iNode  !< Index of closest node
+   real(ReKi),                   intent(  OUT) :: Dist   !< Distance from Point to node iNode
+   integer(IntKi) :: I
+   real(ReKi) :: min_dist, loc_dist
+   ! 
+   min_dist=999999._ReKi
+   iNode=-1
+   do i = 1, size(Nodes,1)
+      loc_dist = sqrt((Point(1) - Nodes(i,2))**2 + (Point(2) - Nodes(i,3))**2+ (Point(3) - Nodes(i,4))**2) 
+      if (loc_dist<min_dist) then
+         iNode=i
+         min_dist = loc_dist
+      endif
+   enddo
+   Dist=min_dist
+END SUBROUTINE FindClosestNodes
 
 !------------------------------------------------------------------------------------------------------
 !> Build transformation matrix T, such that x= T.x~ where x~ is the reduced vector of DOF

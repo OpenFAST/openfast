@@ -21,6 +21,8 @@ typedef ^   InitInputType       ReKi            g            - - -       "Gravit
 typedef ^   InitInputType       ReKi            WtrDpth      - - -       "Water Depth (positive valued)"
 typedef ^   InitInputType       ReKi            TP_RefPoint  {3} - -     "global position of transition piece reference point (could also be defined in SubDyn itself)"
 typedef ^   InitInputType       ReKi            SubRotateZ   - - -       "Rotation angle in degrees about global Z"
+typedef ^   InitInputType       ReKi            SoilStiffness ::: - -    "Soil stiffness matrices from SoilDyn" '(N/m, N-m/rad)'
+typedef ^   InitInputType       MeshType        SoilMesh     - - -       "Mesh for soil stiffness locations" -
 typedef ^   InitInputType       Logical         Linearize    - .FALSE. - "Flag that tells this module if the glue code wants to linearize." -
 
 # ============================== Define Initialization outputs here: ============================================================================================================================================
@@ -104,6 +106,9 @@ typedef	^	^	LOGICAL	TabDelim	-	-	-	"Generate a tab-delimited output file in OutJ
 typedef	^	^	R8Ki	SSIK	{:}{:}	-	-	"SSI stiffness packed matrix elements (21 of them), for each reaction joint"
 typedef	^	^	R8Ki	SSIM	{:}{:}	-	-	"SSI mass packed matrix elements (21 of them), for each reaction joint"
 typedef	^	^	CHARACTER(1024)	SSIfile {:}	-	-	"Soil Structure Interaction (SSI) files to associate with each reaction node"
+typedef	^	^	ReKi	Soil_K	{:}{:}{:}	-	-	"Soil stiffness (at passed at Init, not in input file)  6x6xn"
+typedef	^	^	ReKi	Soil_Points	{:}{:} 	-	-	"Node positions where soil stiffness will be added"
+typedef	^	^	Integer	Soil_Nodes	{:}  	-	-	"Node indices where soil stiffness will be added"
 #-------------------------- arrays and variables used in the module ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 typedef	^	^	INTEGER	NElem	-	-	-	"Total number of elements"
 typedef	^	^	INTEGER	NPropB  -	-	-	"Total number of property sets for Beams"
