@@ -41,6 +41,9 @@ ctest -VV -R nwtc_library_utest
 ctest -VV -j7 -R bd_
 ctest -VV -R beamdyn_utest
 
+# OLAF free vortex wake tests
+ctest -VV -R fvw_utest
+
 # OpenFAST linearization tests
 # Dont run these in parallel, copying the case files can fail in a race condition
 ctest -VV -L linear
