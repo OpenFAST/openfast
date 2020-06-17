@@ -102,7 +102,7 @@ of_regression("WP_VSP_WTurb_PitchFail"          "openfast;elastodyn;aerodyn14;se
 of_regression("WP_VSP_ECD"                      "openfast;elastodyn;aerodyn15;servodyn")
 of_regression("WP_VSP_WTurb"                    "openfast;elastodyn;aerodyn15;servodyn")
 of_regression("SWRT_YFree_VS_EDG01"             "openfast;elastodyn;aerodyn15;servodyn")
-of_regression("SWRT_YFree_VS_EDC01"             "openfast;elastodyn;aerodyn15;servodyn")
+of_regression("SWRT_YFree_VS_EDC01"             "openfast;elastodyn;aerodyn14;servodyn")
 of_regression("SWRT_YFree_VS_WTurb"             "openfast;elastodyn;aerodyn14;servodyn")
 of_regression("5MW_Land_DLL_WTurb"              "openfast;elastodyn;aerodyn15;servodyn")
 of_regression("5MW_OC3Mnpl_DLL_WTurb_WavesIrr"  "openfast;elastodyn;aerodyn15;servodyn;hydrodyn;subdyn")
