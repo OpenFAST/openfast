@@ -129,6 +129,9 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: SSIK      !< SSI stiffness packed matrix elements (21 of them), for each reaction joint [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: SSIM      !< SSI mass packed matrix elements (21 of them), for each reaction joint [-]
     CHARACTER(1024) , DIMENSION(:), ALLOCATABLE  :: SSIfile      !< Soil Structure Interaction (SSI) files to associate with each reaction node [-]
+    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: Soil_K      !< Soil stiffness (at passed at Init, not in input file)  6x6xn [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Soil_Points      !< Node positions where soil stiffness will be added [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: Soil_Nodes      !< Node indices where soil stiffness will be added [-]
     INTEGER(IntKi)  :: NElem      !< Total number of elements [-]
     INTEGER(IntKi)  :: NPropB      !< Total number of property sets for Beams [-]
     INTEGER(IntKi)  :: NPropC      !< Total number of property sets for Cable [-]
@@ -2539,6 +2542,7 @@ ENDIF
    INTEGER(IntKi)                 :: i,j,k
    INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
    INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
+   INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'SD_CopyInitType'
@@ -2737,6 +2741,48 @@ IF (ALLOCATED(SrcInitTypeData%SSIfile)) THEN
     END IF
   END IF
     DstInitTypeData%SSIfile = SrcInitTypeData%SSIfile
+ENDIF
+IF (ALLOCATED(SrcInitTypeData%Soil_K)) THEN
+  i1_l = LBOUND(SrcInitTypeData%Soil_K,1)
+  i1_u = UBOUND(SrcInitTypeData%Soil_K,1)
+  i2_l = LBOUND(SrcInitTypeData%Soil_K,2)
+  i2_u = UBOUND(SrcInitTypeData%Soil_K,2)
+  i3_l = LBOUND(SrcInitTypeData%Soil_K,3)
+  i3_u = UBOUND(SrcInitTypeData%Soil_K,3)
+  IF (.NOT. ALLOCATED(DstInitTypeData%Soil_K)) THEN 
+    ALLOCATE(DstInitTypeData%Soil_K(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitTypeData%Soil_K.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInitTypeData%Soil_K = SrcInitTypeData%Soil_K
+ENDIF
+IF (ALLOCATED(SrcInitTypeData%Soil_Points)) THEN
+  i1_l = LBOUND(SrcInitTypeData%Soil_Points,1)
+  i1_u = UBOUND(SrcInitTypeData%Soil_Points,1)
+  i2_l = LBOUND(SrcInitTypeData%Soil_Points,2)
+  i2_u = UBOUND(SrcInitTypeData%Soil_Points,2)
+  IF (.NOT. ALLOCATED(DstInitTypeData%Soil_Points)) THEN 
+    ALLOCATE(DstInitTypeData%Soil_Points(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitTypeData%Soil_Points.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInitTypeData%Soil_Points = SrcInitTypeData%Soil_Points
+ENDIF
+IF (ALLOCATED(SrcInitTypeData%Soil_Nodes)) THEN
+  i1_l = LBOUND(SrcInitTypeData%Soil_Nodes,1)
+  i1_u = UBOUND(SrcInitTypeData%Soil_Nodes,1)
+  IF (.NOT. ALLOCATED(DstInitTypeData%Soil_Nodes)) THEN 
+    ALLOCATE(DstInitTypeData%Soil_Nodes(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitTypeData%Soil_Nodes.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInitTypeData%Soil_Nodes = SrcInitTypeData%Soil_Nodes
 ENDIF
     DstInitTypeData%NElem = SrcInitTypeData%NElem
     DstInitTypeData%NPropB = SrcInitTypeData%NPropB
@@ -2999,6 +3045,15 @@ ENDIF
 IF (ALLOCATED(InitTypeData%SSIfile)) THEN
   DEALLOCATE(InitTypeData%SSIfile)
 ENDIF
+IF (ALLOCATED(InitTypeData%Soil_K)) THEN
+  DEALLOCATE(InitTypeData%Soil_K)
+ENDIF
+IF (ALLOCATED(InitTypeData%Soil_Points)) THEN
+  DEALLOCATE(InitTypeData%Soil_Points)
+ENDIF
+IF (ALLOCATED(InitTypeData%Soil_Nodes)) THEN
+  DEALLOCATE(InitTypeData%Soil_Nodes)
+ENDIF
 IF (ALLOCATED(InitTypeData%Nodes)) THEN
   DEALLOCATE(InitTypeData%Nodes)
 ENDIF
@@ -3162,6 +3217,21 @@ ENDIF
   IF ( ALLOCATED(InData%SSIfile) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! SSIfile upper/lower bounds for each dimension
       Int_BufSz  = Int_BufSz  + SIZE(InData%SSIfile)*LEN(InData%SSIfile)  ! SSIfile
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! Soil_K allocated yes/no
+  IF ( ALLOCATED(InData%Soil_K) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*3  ! Soil_K upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%Soil_K)  ! Soil_K
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! Soil_Points allocated yes/no
+  IF ( ALLOCATED(InData%Soil_Points) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! Soil_Points upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%Soil_Points)  ! Soil_Points
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! Soil_Nodes allocated yes/no
+  IF ( ALLOCATED(InData%Soil_Nodes) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! Soil_Nodes upper/lower bounds for each dimension
+      Int_BufSz  = Int_BufSz  + SIZE(InData%Soil_Nodes)  ! Soil_Nodes
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! NElem
       Int_BufSz  = Int_BufSz  + 1  ! NPropB
@@ -3513,6 +3583,54 @@ ENDIF
         END DO ! I
     END DO !i1
   END IF
+  IF ( .NOT. ALLOCATED(InData%Soil_K) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Soil_K,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Soil_K,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Soil_K,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Soil_K,2)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Soil_K,3)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Soil_K,3)
+    Int_Xferred = Int_Xferred + 2
+
+      IF (SIZE(InData%Soil_K)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%Soil_K))-1 ) = PACK(InData%Soil_K,.TRUE.)
+      Re_Xferred   = Re_Xferred   + SIZE(InData%Soil_K)
+  END IF
+  IF ( .NOT. ALLOCATED(InData%Soil_Points) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Soil_Points,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Soil_Points,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Soil_Points,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Soil_Points,2)
+    Int_Xferred = Int_Xferred + 2
+
+      IF (SIZE(InData%Soil_Points)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%Soil_Points))-1 ) = PACK(InData%Soil_Points,.TRUE.)
+      Re_Xferred   = Re_Xferred   + SIZE(InData%Soil_Points)
+  END IF
+  IF ( .NOT. ALLOCATED(InData%Soil_Nodes) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Soil_Nodes,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Soil_Nodes,1)
+    Int_Xferred = Int_Xferred + 2
+
+      IF (SIZE(InData%Soil_Nodes)>0) IntKiBuf ( Int_Xferred:Int_Xferred+(SIZE(InData%Soil_Nodes))-1 ) = PACK(InData%Soil_Nodes,.TRUE.)
+      Int_Xferred   = Int_Xferred   + SIZE(InData%Soil_Nodes)
+  END IF
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%NElem
       Int_Xferred   = Int_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%NPropB
@@ -3780,6 +3898,7 @@ ENDIF
   LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
+  INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'SD_UnPackInitType'
@@ -4173,6 +4292,84 @@ ENDIF
           Int_Xferred = Int_Xferred   + 1
         END DO ! I
     END DO !i1
+    DEALLOCATE(mask1)
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Soil_K not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i3_l = IntKiBuf( Int_Xferred    )
+    i3_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%Soil_K)) DEALLOCATE(OutData%Soil_K)
+    ALLOCATE(OutData%Soil_K(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%Soil_K.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    ALLOCATE(mask3(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask3.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask3 = .TRUE. 
+      IF (SIZE(OutData%Soil_K)>0) OutData%Soil_K = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%Soil_K))-1 ), mask3, 0.0_ReKi )
+      Re_Xferred   = Re_Xferred   + SIZE(OutData%Soil_K)
+    DEALLOCATE(mask3)
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Soil_Points not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%Soil_Points)) DEALLOCATE(OutData%Soil_Points)
+    ALLOCATE(OutData%Soil_Points(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%Soil_Points.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask2.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask2 = .TRUE. 
+      IF (SIZE(OutData%Soil_Points)>0) OutData%Soil_Points = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%Soil_Points))-1 ), mask2, 0.0_ReKi )
+      Re_Xferred   = Re_Xferred   + SIZE(OutData%Soil_Points)
+    DEALLOCATE(mask2)
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Soil_Nodes not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%Soil_Nodes)) DEALLOCATE(OutData%Soil_Nodes)
+    ALLOCATE(OutData%Soil_Nodes(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%Soil_Nodes.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask1 = .TRUE. 
+      IF (SIZE(OutData%Soil_Nodes)>0) OutData%Soil_Nodes = UNPACK( IntKiBuf ( Int_Xferred:Int_Xferred+(SIZE(OutData%Soil_Nodes))-1 ), mask1, 0_IntKi )
+      Int_Xferred   = Int_Xferred   + SIZE(OutData%Soil_Nodes)
     DEALLOCATE(mask1)
   END IF
       OutData%NElem = IntKiBuf( Int_Xferred ) 

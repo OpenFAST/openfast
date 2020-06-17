@@ -93,6 +93,9 @@ typedef	^	^	LOGICAL	TabDelim	-	-	-	"Generate a tab-delimited output file in OutJ
 typedef	^	^	ReKi	SSIK	{:}{:}	-	-	"SSI stiffness packed matrix elements (21 of them), for each reaction joint"
 typedef	^	^	ReKi	SSIM	{:}{:}	-	-	"SSI mass packed matrix elements (21 of them), for each reaction joint"
 typedef	^	^	CHARACTER(1024)	SSIfile {:}	-	-	"Soil Structure Interaction (SSI) files to associate with each reaction node"
+typedef	^	^	ReKi	Soil_K	{:}{:}{:}	-	-	"Soil stiffness (at passed at Init, not in input file)  6x6xn"
+typedef	^	^	ReKi	Soil_Points	{:}{:} 	-	-	"Node positions where soil stiffness will be added"
+typedef	^	^	Integer	Soil_Nodes	{:}  	-	-	"Node indices where soil stiffness will be added"
 #-------------------------- arrays and variables used in the module ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 typedef	^	^	INTEGER	NElem	-	-	-	"Total number of elements"
 typedef	^	^	INTEGER	NPropB  -	-	-	"Total number of property sets for Beams"
