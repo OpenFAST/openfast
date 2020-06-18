@@ -260,10 +260,10 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    ! Assemble Stiffness and mass matrix
    CALL AssembleKM(Init, p, ErrStat2, ErrMsg2); if(Failed()) return
 
-   ! Insert soil stiffness and mass matrix
-   CALL InsertSoilMatrices(Init%M, Init%K, Init, p, ErrStat2, ErrMsg2); if(Failed()) return
+   ! Insert soil stiffness and mass matrix (NOTE: using NodesDOF, unreduced matrix)
+   CALL InsertSoilMatrices(Init%M, Init%K, p%NodesDOF, Init, p, ErrStat2, ErrMsg2); if(Failed()) return
 
-   ! --- Elimination of constraints (reset M, K, D, and BCs IntFc )
+   ! --- Elimination of constraints (reset M, K, D, to lower size, and BCs IntFc )
    CALL DirectElimination(Init, p, ErrStat2, ErrMsg2); if(Failed()) return
 
    ! --- Additional Damping and stiffness at pin/ball/universal joints
@@ -320,6 +320,8 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    call AllocAry( p%INodes_SD_to_Mesh, p%nNodes, 'INodes_SD_to_Mesh', ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
    call Y2Mesh_SD_Mapping(p, p%INodes_Mesh_to_SD) ! Store mapping from y2/u mesh to Subdyn nodes indices
    call SD_Y2Mesh_Mapping(p, p%INodes_SD_to_Mesh) ! Store mapping from Subdyn to y2/u-mesh nodes indices
+   !print*,'I_SD_to_Mesh',p%INodes_SD_to_Mesh
+   !print*,'I_Mesh_to_SD',p%INodes_Mesh_to_SD
 
    ! --- Write the summary file
    IF ( Init%SSSum ) THEN 
@@ -379,7 +381,18 @@ SUBROUTINE SD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, m
       ErrStat   = ErrID_None           ! no error has occurred
       ErrMsg    = ""
             
+      !print*,'------------------------------------------------------'
+      !print*,'------------------------------------------------------'
+      !print*,'------------------------------------------------------'
+      !print*,'------------------------------------------------------'
+      !print*,'UpdateState',t,n
+      !print*,'------------------------------------------------------'
+      !print*,'------------------------------------------------------'
+      !print*,'------------------------------------------------------'
+      !print*,'------------------------------------------------------'
       IF ( p%nDOFM == 0) RETURN ! no retained modes = no states
+      !print*,'x%qm  (in)',x%qm
+      !print*,'x%qmd (in)',x%qmdot
         
       IF (p%IntMethod .eq. 1) THEN
          CALL SD_RK4( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
@@ -390,6 +403,8 @@ SUBROUTINE SD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, m
       ELSE  
          CALL SD_AM2( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
       END IF
+      !print*,'x%qm (out)',x%qm
+      !print*,'x%qmd(out)',x%qmdot
       
 END SUBROUTINE SD_UpdateStates
 
@@ -425,6 +440,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       TYPE(SD_ContinuousStateType) :: dxdt        ! Continuous state derivatives at t- for output file qmdotdot purposes only
       INTEGER(IntKi)               :: ErrStat2    ! Error status of the operation (occurs after initial error)
       CHARACTER(ErrMsgLen)         :: ErrMsg2     ! Error message if ErrStat2 /= ErrID_None
+      logical:: LinDetected
       ! Initialize ErrStat
       ErrStat = ErrID_None
       ErrMsg  = ""
@@ -436,6 +452,20 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       m%u_TP       = (/REAL(u%TPMesh%TranslationDisp(:,1),ReKi), rotations/)
       m%udot_TP    = (/u%TPMesh%TranslationVel( :,1), u%TPMesh%RotationVel(:,1)/)
       m%udotdot_TP = (/u%TPMesh%TranslationAcc( :,1), u%TPMesh%RotationAcc(:,1)/)
+
+      !print*,'-----------------------------------------'
+      !print*,'CalCoutput',t
+
+      LinDetected=.false.
+      DO iY2Node = 1,p%nNodes
+         if (any(abs(u%LMesh%Force (:,iY2Node) -  1000000)<1))  LinDetected = .true.
+         if (any(abs(u%LMesh%Moment (:,iY2Node) - 1000000)<1))  LinDetected = .true.
+      enddo
+      !if (.not. LinDetected) print*,'>>>> TRUE CALL'
+      !if (      LinDetected) print*,'>>>> LIN CALL'
+
+      !print*,'uTP',m%u_TP
+
       ! Inputs on interior nodes:
       CALL GetExtForceOnInternalDOF( u, p, m, m%UFL )
 
@@ -458,6 +488,11 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
          m%UL_dot        =                                   matmul( p%PhiRb_TI, m%udot_TP    )  ! UL_dot         [ Y2(4) =       0*x(2) + D2(4,2)*u(2) ]      
          m%UL_dotdot     =                                   matmul( p%PhiRb_TI, m%udotdot_TP )  ! UL_dotdot      [ Y2(6) =       0*x(:) + D2(6,3)*u(3) + 0*u(4) + 0]
       END IF
+      !if (.not. LinDetected) print*,'UL',m%UL
+
+      !if (t>0.010) then 
+      !   STOP
+      !endif
       
       !STATIC IMPROVEMENT METHOD  ( modify UL )
       if (p%SttcSolve/=idSIM_None) then
@@ -482,6 +517,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
             m%UL = m%UL - UL0M 
          end if          
       endif    
+      !print*,'UL',m%UL
       ! --- Build original DOF vectors (DOF before the CB reduction)
       m%U_red       (p%IDI__) = m%UR_bar
       m%U_red       (p%ID__L) = m%UL     
@@ -514,7 +550,13 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
          y%Y2mesh%TranslationAcc  (:,iY2Node)     = m%U_full_dotdot (DOFList(1:3))
          y%Y2mesh%RotationVel     (:,iY2Node)     = m%U_full_dot    (DOFList(4:6))
          y%Y2mesh%RotationAcc     (:,iY2Node)     = m%U_full_dotdot (DOFList(4:6))
+         !if (.not. LinDetected)print*,'Ufull  ',iSDNode, m%U_full     (DOFList(1:6))
+         !if (.not. LinDetected)print*,'Ufulld ',iSDNode, m%U_full_dot (DOFList(1:6))
+         !if (.not. LinDetected)print*,'Ufulldd',iSDNode, m%U_full_dotdot (DOFList(1:6))
       enddo
+!       DO iY2Node = 1,p%nNodes
+!          print*,'Y2Disp',iY2Node,y%Y2mesh%TranslationDisp (:,iY2Node)  
+!       enddo
       !________________________________________
       ! Set loads outputs on y%Y1Mesh
       !________________________________________
@@ -532,6 +574,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
          !Take care of Hydrodynamic Forces that will go into INterface Forces later
          HydroForces(startDOF:startDOF+5) =  (/u%LMesh%Force(1:3,iY2Node),u%LMesh%Moment(1:3,iY2Node)/)  !(6,NNODES_I)
       ENDDO
+      !print*,'HydroForces',HydroForces
                 
       !HydroTP =  matmul(transpose(p%TI),HydroForces) ! (6,1) calculated below
       ! note: matmul( HydroForces, p%TI ) = matmul( transpose(p%TI), HydroForces) because HydroForces is 1-D            
@@ -547,6 +590,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       !               Y1(:3) = -f_TP
       !               MExtra = -u_TP x f_TP
       ! Y1_MExtra = - MExtra = -u_TP x Y1(1:3) ! NOTE: double cancelling of signs 
+      !if (.not. LinDetected)print*,'Y1',Y1
       if (p%ExtraMoment) then
          Y1_ExtraMoment(1) = - m%u_TP(2) * Y1(3) + m%u_TP(3) * Y1(2)
          Y1_ExtraMoment(2) = - m%u_TP(3) * Y1(1) + m%u_TP(1) * Y1(3)
@@ -1822,8 +1866,8 @@ SUBROUTINE SD_Guyan_RigidBodyMass(Init, p, MBB, ErrStat, ErrMsg)
    integer(IntKi)          :: ErrStat2
    character(ErrMsgLen)    :: ErrMsg2
 
-   ! --- Remove SSI from Mass and stiffness matrix
-   CALL InsertSoilMatrices(Init%M, Init%K, Init, p, ErrStat2, ErrMsg2, Substract=.True.);
+   ! --- Remove SSI from Mass and stiffness matrix (NOTE: use NodesDOFtilde, reduced matrix)
+   CALL InsertSoilMatrices(Init%M, Init%K, p%NodesDOFtilde, Init, p, ErrStat2, ErrMsg2, Substract=.True.);
 
    ! --- Perform Guyan reduction to get MBB
    nR     = p%nDOFR__   ! Using interface + reaction nodes
@@ -1848,7 +1892,7 @@ SUBROUTINE SD_Guyan_RigidBodyMass(Init, p, MBB, ErrStat, ErrMsg)
    if(allocated(OmegaL)) deallocate(OmegaL)
 
    ! --- Insert SSI from Mass and stiffness matrix again
-   CALL InsertSoilMatrices(Init%M, Init%K, Init, p, ErrStat2, ErrMsg2, Substract=.False.); if(Failed()) return
+   CALL InsertSoilMatrices(Init%M, Init%K, p%NodesDOFtilde, Init, p, ErrStat2, ErrMsg2, Substract=.False.); if(Failed()) return
 contains
    logical function Failed()
         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
@@ -2177,7 +2221,7 @@ SUBROUTINE PartitionDOFNodes(Init, m, p, ErrStat, ErrMsg)
       p%nDOFI_F = p%nDOFI_F + count(p%Nodes_I(iiNode, 2:7)==idBC_Fixed) ! assumes 6 DOFs
    enddo
    if (p%nDOFI__/=p%nDOFI_Rb+p%nDOFI_F) then
-      call Fatal('Error in distributing interface DOFs, total number of DOF does not equal number of leader and fixed DOF'); return
+      call Fatal('Error in distributing interface DOFs, total number of interface DOF('//num2lstr(p%nDOFI__)//') does not equal sum of: leader ('//num2lstr(p%nDOFI_Rb)//'), fixed ('//num2lstr(p%nDOFI_F)//')'); return
    endif
 
    ! DOFs of reaction nodes
@@ -2192,7 +2236,7 @@ SUBROUTINE PartitionDOFNodes(Init, m, p, ErrStat, ErrMsg)
       p%nDOFC_L = p%nDOFC_L + count(p%Nodes_C(iiNode, 2:7)==idBC_Internal) ! assumes 6 DOFs
    enddo
    if (p%nDOFC__/=p%nDOFC_Rb+p%nDOFC_F+p%nDOFC_L) then
-      call Fatal('Error in distributing reaction DOFs, total number of DOF does not equal number of leader, fixed and internal DOF'); return
+      call Fatal('Error in distributing reaction DOFs, total number of reaction DOF('//num2lstr(p%nDOFC__)//') does not equal sum of: leader ('//num2lstr(p%nDOFC_Rb)//'), fixed ('//num2lstr(p%nDOFC_F)//'), internal ('//num2lstr(p%nDOFC_L)//')'); return
    endif
    ! DOFs of reaction + interface nodes
    p%nDOFR__ = p%nDOFI__ + p%nDOFC__ ! Total number, used to be called "nDOFR"
@@ -2200,10 +2244,12 @@ SUBROUTINE PartitionDOFNodes(Init, m, p, ErrStat, ErrMsg)
    ! DOFs of internal nodes
    p%nDOFL_L=0
    do iiNode= 1,p%nNodes_L
+      print*,'NodeL',p%Nodes_L(iiNode,1), 'DOF:',p%NodesDOFtilde( p%Nodes_L(iiNode,1) )%List
       p%nDOFL_L = p%nDOFL_L + len(p%NodesDOFtilde( p%Nodes_L(iiNode,1) ))
    enddo
+   print*,'L_L',p%nDOFL_L,'red',p%nDOF_red,'R__',p%nDOFR__
    if (p%nDOFL_L/=p%nDOF_red-p%nDOFR__) then
-      call Fatal('Error in distributing internal DOFs, total number of DOF does not equal total number of DOF minus interface and reaction'); return
+      call Fatal('Error in distributing internal DOFs, total number of internal DOF('//num2lstr(p%nDOFL_L)//') does not equal total number of DOF('//num2lstr(p%nDOF_red)//') minus interface and reaction ('//num2lstr(p%nDOFR__)//')'); return
    endif
 
    ! Total number of DOFs in each category:
@@ -2290,7 +2336,7 @@ SUBROUTINE PartitionDOFNodes(Init, m, p, ErrStat, ErrMsg)
    c_L=0;  ! Counters over L dofs
    do iiNode= 1,p%nNodes_L !Loop on interface nodes
       iNode = p%Nodes_L(iiNode,1)
-      do J = 1, 6 ! DOFs 
+      do J = 1, size(p%NodesDOFtilde(iNode)%List) ! DOFs 
          c_L=c_L+1
          p%IDL_L(c_L) = p%NodesDOFtilde(iNode)%List(J) ! DOF number 
       enddo
@@ -2394,6 +2440,7 @@ SUBROUTINE GetExtForceOnInternalDOF( u, p, m, UFL )
    ! --- Build vector of external force
    m%Fext= myNaN
    DO iMeshNode = 1,p%nNodes
+      !print*,'iMN',iMeshNode,u%LMesh%Force (:,iMeshNode),u%LMesh%Moment(:,iMeshNode)
       iSDNode  = p%INodes_Mesh_to_SD(iMeshNode) 
       nMembers = (size(p%NodesDOF(iSDNode)%List)-3)/3 ! Number of members deducted from Node's nDOFList
       ! Force - All nodes have only 3 translational DOFs 
@@ -2403,6 +2450,12 @@ SUBROUTINE GetExtForceOnInternalDOF( u, p, m, UFL )
       m%Fext( p%NodesDOF(iSDNode)%List(5::3)) =  u%LMesh%Moment(2,iMeshNode)/nMembers
       m%Fext( p%NodesDOF(iSDNode)%List(6::3)) =  u%LMesh%Moment(3,iMeshNode)/nMembers
    enddo
+   !print*,'----'
+   !DO iSDNode = 1,p%nNodes
+   !   iMeshNode  = p%INodes_SD_to_Mesh(iSDNode)
+   !   print*,'iSD',iSDNode,u%LMesh%Force (:,iMeshNode),u%LMesh%Moment(:,iMeshNode)
+   !enddo
+
    ! TODO: remove test below in the future
    if (any(m%Fext == myNaN)) then
       print*,'Error in setting up Fext'
@@ -2411,6 +2464,7 @@ SUBROUTINE GetExtForceOnInternalDOF( u, p, m, UFL )
    ! --- Reduced vector of external force
    m%Fext_red = matmul(transpose(p%T_red), m%Fext)
    UFL= m%Fext_red(p%ID__L)
+   !print*,'UFL',UFL
 
 END SUBROUTINE GetExtForceOnInternalDOF
 
@@ -2492,10 +2546,10 @@ SUBROUTINE OutSummary(Init, p, InitInput, CBparams, ErrStat,ErrMsg)
    call yaml_write_var(UnSum, 'nNodes  ', p%nNodes  ,IFmt, ErrStat2, ErrMsg2, comment='Number of Nodes: total   (I+C+L)')
 #ifdef SD_SUMMARY_DEBUG
    call yaml_write_var(UnSum, 'nDOFI__ ', p%nDOFI__ ,IFmt, ErrStat2, ErrMsg2, comment='Number of DOFs: "interface"          (I__)')
-   call yaml_write_var(UnSum, 'nDOFI_B',  p%nDOFI_Rb,IFmt, ErrStat2, ErrMsg2, comment='Number of DOFs: "interface" retained (I_B)')
+   call yaml_write_var(UnSum, 'nDOFI_B ', p%nDOFI_Rb,IFmt, ErrStat2, ErrMsg2, comment='Number of DOFs: "interface" retained (I_B)')
    call yaml_write_var(UnSum, 'nDOFI_F ', p%nDOFI_F ,IFmt, ErrStat2, ErrMsg2, comment='Number of DOFs: "interface" fixed    (I_F)')
    call yaml_write_var(UnSum, 'nDOFC__ ', p%nDOFC__ ,IFmt, ErrStat2, ErrMsg2, comment='Number of DOFs: "reactions"          (C__)')
-   call yaml_write_var(UnSum, 'nDOFC_B',  p%nDOFC_Rb,IFmt, ErrStat2, ErrMsg2, comment='Number of DOFs: "reactions" retained (C_B)')
+   call yaml_write_var(UnSum, 'nDOFC_B ', p%nDOFC_Rb,IFmt, ErrStat2, ErrMsg2, comment='Number of DOFs: "reactions" retained (C_B)')
    call yaml_write_var(UnSum, 'nDOFC_L ', p%nDOFC_L ,IFmt, ErrStat2, ErrMsg2, comment='Number of DOFs: "reactions" internal (C_L)')
    call yaml_write_var(UnSum, 'nDOFC_F ', p%nDOFC_F ,IFmt, ErrStat2, ErrMsg2, comment='Number of DOFs: "reactions" fixed    (C_F)')
    call yaml_write_var(UnSum, 'nDOFR__ ', p%nDOFR__ ,IFmt, ErrStat2, ErrMsg2, comment='Number of DOFs: "intf+react"         (__R)')
@@ -2731,13 +2785,18 @@ SUBROUTINE OutSummary(Init, p, InitInput, CBparams, ErrStat,ErrMsg)
       call yaml_write_array(UnSum, 'PhiLOm2-1', p%PhiLInvOmgL2, ReFmt, ErrStat2, ErrMsg2, comment='')
       call yaml_write_array(UnSum, 'KLL^-1'   , p%KLLm1       , ReFmt, ErrStat2, ErrMsg2, comment='')
    endif
+   ! --- Reduction info
+   WRITE(UnSum, '(A)') SectionDivide
+   call yaml_write_array(UnSum, 'T_red', p%T_red, 'E9.2', ErrStat2, ErrMsg2, comment='(Constraint elimination matrix)')
+#endif   
 
    ! --- write TP TI matrix
    WRITE(UnSum, '(A)') SectionDivide
-   call yaml_write_array(UnSum, 'TI'     , p%TI, ReFmt, ErrStat2, ErrMsg2, comment='(TP refpoint Transformation Matrix TI)')
-   call yaml_write_array(UnSum, 'TIReact', p%TIReact, ReFmt, ErrStat2, ErrMsg2, comment='(Transformation Matrix TIreact to (0,0,-WtrDepth))')
+   call yaml_write_array(UnSum, 'TI'     , p%TI     , 'E9.2', ErrStat2, ErrMsg2, comment='(TP refpoint Transformation Matrix TI)')
+   if (allocated(p%TIReact)) then
+      call yaml_write_array(UnSum, 'TIReact', p%TIReact, 'E9.2', ErrStat2, ErrMsg2, comment='(Transformation Matrix TIreact to (0,0,-WtrDepth))')
+   endif
       
-#endif   
    call CleanUp()
    
 contains
