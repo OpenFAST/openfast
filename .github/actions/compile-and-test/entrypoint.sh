@@ -24,7 +24,7 @@ cd /openfast
 
 # Display the differences between this commit and `dev`
 echo git-diff from ${GITHUB_REF} to dev:
-git diff dev
+git diff dev --numstat
 
 # Move into the "build" directory, remove the old reg tests, and compile
 cd /openfast/build
