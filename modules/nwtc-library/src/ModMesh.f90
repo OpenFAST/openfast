@@ -2907,14 +2907,15 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
             indx_first = indx_first + 1
          end do      
       end do
-                           
-      do i=1,M%NNodes
-         do j=1,3
-            Names(indx_first) = trim(MeshName)//' '//Comp(j)//' moment, node '//trim(num2lstr(i))//', Nm'//UnitDesc
-            indx_first = indx_first + 1
-         end do      
-      end do
-            
+            ! This is needed for MAP meshes because it only contains the Force field not the Moment field
+      if ( M%fieldmask(MASKID_Moment) .AND. ALLOCATED(M%Moment)) then                    
+         do i=1,M%NNodes
+            do j=1,3
+               Names(indx_first) = trim(MeshName)//' '//Comp(j)//' moment, node '//trim(num2lstr(i))//', Nm'//UnitDesc
+               indx_first = indx_first + 1
+            end do      
+         end do
+      end if      
 
    END SUBROUTINE PackLoadMesh_Names
 !...............................................................................................................................
@@ -2936,14 +2937,16 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
             indx_first = indx_first + 1
          end do      
       end do
-                           
-      do i=1,M%NNodes
-         do j=1,3
-            Ary(indx_first) = M%Moment(j,i)
-            indx_first = indx_first + 1
-         end do      
-      end do
-            
+      
+         ! This is needed for MAP meshes because it only contains the Force field not the Moment field
+      if ( M%fieldmask(MASKID_Moment) .AND. ALLOCATED(M%Moment)) then     
+         do i=1,M%NNodes
+            do j=1,3
+               Ary(indx_first) = M%Moment(j,i)
+               indx_first = indx_first + 1
+            end do      
+         end do
+      end if     
 
    END SUBROUTINE PackLoadMesh
 !...............................................................................................................................
@@ -2966,12 +2969,15 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
          indx_first = indx_last + 1
       end do
 
-      do i=1,M_p%NNodes
-         indx_last  = indx_first + 2 
-         dY(indx_first:indx_last) = M_p%Moment(:,i) - M_m%Moment(:,i)
-         indx_first = indx_last + 1
-      end do
-
+         ! This is needed for MAP meshes because it only contains the Force field not the Moment field
+      if ( M_p%fieldmask(MASKID_Moment) .AND. ALLOCATED(M_p%Moment)) then     
+         do i=1,M_p%NNodes
+            indx_last  = indx_first + 2 
+            dY(indx_first:indx_last) = M_p%Moment(:,i) - M_m%Moment(:,i)
+            indx_first = indx_last + 1
+         end do
+      end if
+      
    END SUBROUTINE PackLoadMesh_dY
 !...............................................................................................................................
 !> This subroutine returns the names of rows/columns of motion meshes in the Jacobian matrices. It assumes all fields marked
@@ -3150,8 +3156,9 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
       CHARACTER(ErrMsgLen)          :: ErrMsg2  
    
       INTEGER(IntKi)                :: i, indx_last
+      REAL(R8Ki)                    :: lambda_m(3)
+      REAL(R8Ki)                    :: lambda_p(3)
       REAL(R8Ki)                    :: smallAngles(3)
-      REAL(R8Ki)                    :: orientation(3,3)
       LOGICAL                       :: Mask(FIELDMASK_SIZE)               !< flags to determine if this field is part of the packing
 
       if (present(FieldMask)) then
@@ -3171,10 +3178,10 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
    
       if (Mask(MASKID_ORIENTATION)) then
          do i=1,M_p%NNodes
-            orientation = transpose(M_m%Orientation(:,:,i))
-            orientation = matmul(orientation, M_p%Orientation(:,:,i))
-            
-            smallAngles = GetSmllRotAngs( orientation, ErrStat2, ErrMsg2 )
+            call DCM_logMap( M_m%Orientation(:,:,i), lambda_m, ErrStat2, ErrMsg2 )
+            call DCM_logMap( M_p%Orientation(:,:,i), lambda_p, ErrStat2, ErrMsg2 )
+
+            smallAngles = lambda_p - lambda_m
 
             indx_last  = indx_first + 2 
             dY(indx_first:indx_last) = smallAngles

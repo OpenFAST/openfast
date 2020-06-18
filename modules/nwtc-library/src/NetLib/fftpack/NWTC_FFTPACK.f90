@@ -175,7 +175,7 @@ CONTAINS
      
       INTEGER(IntKi)                :: ErrStatTmp 
       LOGICAL                       :: TrapErrors
-      character(1024)               :: ErrMsg
+      character(ErrMsgLen)          :: ErrMsg
 
       ErrStatTmp  = ErrID_None
          
@@ -272,7 +272,7 @@ CONTAINS
       REAL(SiKi), ALLOCATABLE       :: TRH(:)
       
       LOGICAL                       :: TrapErrors
-      character(1024)               :: ErrMsg   
+      character(ErrMsgLen)          :: ErrMsg   
       
       
       IF ( PRESENT(ErrStat) ) THEN

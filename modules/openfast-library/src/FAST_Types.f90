@@ -56,6 +56,7 @@ USE Waves_Types
 USE Waves2_Types
 USE Conv_Radiation_Types
 USE SS_Radiation_Types
+USE SS_Excitation_Types
 USE WAMIT_Types
 USE WAMIT2_Types
 USE Morison_Types
@@ -65,6 +66,7 @@ USE OpenFOAM_Types
 USE SuperController_Types
 USE IceDyn_Types
 USE FEAMooring_Types
+USE MAP_Fortran_Types
 USE MAP_Types
 USE MoorDyn_Types
 USE OrcaFlexInterface_Types
@@ -207,6 +209,7 @@ IMPLICIT NONE
     LOGICAL , DIMENSION(:), ALLOCATABLE  :: RotFrame_y      !< Whether corresponding output is in rotating frame [-]
     LOGICAL , DIMENSION(:), ALLOCATABLE  :: RotFrame_x      !< Whether corresponding continuous state is in rotating frame [-]
     LOGICAL , DIMENSION(:), ALLOCATABLE  :: RotFrame_z      !< Whether corresponding constraint state is in rotating frame [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: DerivOrder_x      !< Derivative order for continuous states [-]
     INTEGER(IntKi) , DIMENSION(1:3)  :: SizeLin      !< sizes of (1) the module's inputs,  (2) the module's linearized outputs, and (3) the module's continuous states [-]
     INTEGER(IntKi) , DIMENSION(1:3)  :: LinStartIndx      !< the starting index in combined matrices of (1) the module's inputs, (2) the module's linearized outputs, and (3) the module's continuous states [-]
     INTEGER(IntKi)  :: NumOutputs      !< number of WriteOutputs in each linearized module [-]
@@ -2468,6 +2471,18 @@ IF (ALLOCATED(SrcLinTypeData%RotFrame_z)) THEN
   END IF
     DstLinTypeData%RotFrame_z = SrcLinTypeData%RotFrame_z
 ENDIF
+IF (ALLOCATED(SrcLinTypeData%DerivOrder_x)) THEN
+  i1_l = LBOUND(SrcLinTypeData%DerivOrder_x,1)
+  i1_u = UBOUND(SrcLinTypeData%DerivOrder_x,1)
+  IF (.NOT. ALLOCATED(DstLinTypeData%DerivOrder_x)) THEN 
+    ALLOCATE(DstLinTypeData%DerivOrder_x(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstLinTypeData%DerivOrder_x.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstLinTypeData%DerivOrder_x = SrcLinTypeData%DerivOrder_x
+ENDIF
     DstLinTypeData%SizeLin = SrcLinTypeData%SizeLin
     DstLinTypeData%LinStartIndx = SrcLinTypeData%LinStartIndx
     DstLinTypeData%NumOutputs = SrcLinTypeData%NumOutputs
@@ -2556,6 +2571,9 @@ IF (ALLOCATED(LinTypeData%RotFrame_x)) THEN
 ENDIF
 IF (ALLOCATED(LinTypeData%RotFrame_z)) THEN
   DEALLOCATE(LinTypeData%RotFrame_z)
+ENDIF
+IF (ALLOCATED(LinTypeData%DerivOrder_x)) THEN
+  DEALLOCATE(LinTypeData%DerivOrder_x)
 ENDIF
  END SUBROUTINE FAST_DestroyLinType
 
@@ -2718,6 +2736,11 @@ ENDIF
   IF ( ALLOCATED(InData%RotFrame_z) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! RotFrame_z upper/lower bounds for each dimension
       Int_BufSz  = Int_BufSz  + SIZE(InData%RotFrame_z)  ! RotFrame_z
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! DerivOrder_x allocated yes/no
+  IF ( ALLOCATED(InData%DerivOrder_x) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! DerivOrder_x upper/lower bounds for each dimension
+      Int_BufSz  = Int_BufSz  + SIZE(InData%DerivOrder_x)  ! DerivOrder_x
   END IF
       Int_BufSz  = Int_BufSz  + SIZE(InData%SizeLin)  ! SizeLin
       Int_BufSz  = Int_BufSz  + SIZE(InData%LinStartIndx)  ! LinStartIndx
@@ -3114,6 +3137,19 @@ ENDIF
 
       IF (SIZE(InData%RotFrame_z)>0) IntKiBuf ( Int_Xferred:Int_Xferred+SIZE(InData%RotFrame_z)-1 ) = TRANSFER(PACK( InData%RotFrame_z ,.TRUE.), IntKiBuf(1), SIZE(InData%RotFrame_z))
       Int_Xferred   = Int_Xferred   + SIZE(InData%RotFrame_z)
+  END IF
+  IF ( .NOT. ALLOCATED(InData%DerivOrder_x) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%DerivOrder_x,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%DerivOrder_x,1)
+    Int_Xferred = Int_Xferred + 2
+
+      IF (SIZE(InData%DerivOrder_x)>0) IntKiBuf ( Int_Xferred:Int_Xferred+(SIZE(InData%DerivOrder_x))-1 ) = PACK(InData%DerivOrder_x,.TRUE.)
+      Int_Xferred   = Int_Xferred   + SIZE(InData%DerivOrder_x)
   END IF
       IntKiBuf ( Int_Xferred:Int_Xferred+(SIZE(InData%SizeLin))-1 ) = PACK(InData%SizeLin,.TRUE.)
       Int_Xferred   = Int_Xferred   + SIZE(InData%SizeLin)
@@ -3771,6 +3807,29 @@ ENDIF
     mask1 = .TRUE. 
       IF (SIZE(OutData%RotFrame_z)>0) OutData%RotFrame_z = UNPACK( TRANSFER( IntKiBuf ( Int_Xferred:Int_Xferred+(SIZE(OutData%RotFrame_z))-1 ), OutData%RotFrame_z), mask1,.TRUE.)
       Int_Xferred   = Int_Xferred   + SIZE(OutData%RotFrame_z)
+    DEALLOCATE(mask1)
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! DerivOrder_x not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%DerivOrder_x)) DEALLOCATE(OutData%DerivOrder_x)
+    ALLOCATE(OutData%DerivOrder_x(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%DerivOrder_x.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask1 = .TRUE. 
+      IF (SIZE(OutData%DerivOrder_x)>0) OutData%DerivOrder_x = UNPACK( IntKiBuf ( Int_Xferred:Int_Xferred+(SIZE(OutData%DerivOrder_x))-1 ), mask1, 0_IntKi )
+      Int_Xferred   = Int_Xferred   + SIZE(OutData%DerivOrder_x)
     DEALLOCATE(mask1)
   END IF
     i1_l = LBOUND(OutData%SizeLin,1)
