@@ -214,8 +214,6 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: T_red      !< Transformation matrix performing the constraint reduction x = T. xtilde [-]
     TYPE(IList) , DIMENSION(:), ALLOCATABLE  :: NodesDOF      !< DOF indices of each nodes in unconstrained assembled system  [-]
     TYPE(IList) , DIMENSION(:), ALLOCATABLE  :: NodesDOFtilde      !< DOF indices of each nodes in constrained assembled system  [-]
-    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: INodes_Mesh_to_SD      !< Nodes indices from Y2/U-mesh to subdyn iSDNode = INodes_Mesh_to_SD(iMeshNode)   [-]
-    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: INodes_SD_to_Mesh      !< Nodes indices from subdyn nodes to U/Y2-Mesh iMeshNode = INodes_SD_to_Mesh(iSDNode)   [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: ElemsDOF      !< 12 DOF indices of node 1 and 2 of a given member in unconstrained assembled system  [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: DOFtilde2Nodes      !< nDOFRed x 3, for each constrained DOF, col1 node index, col2 number of DOF, col3 DOF starting from 1 [-]
     INTEGER(IntKi)  :: nDOFM      !< retained degrees of freedom (modes) [-]
@@ -6778,30 +6776,6 @@ IF (ALLOCATED(SrcParamData%NodesDOFtilde)) THEN
          IF (ErrStat>=AbortErrLev) RETURN
     ENDDO
 ENDIF
-IF (ALLOCATED(SrcParamData%INodes_Mesh_to_SD)) THEN
-  i1_l = LBOUND(SrcParamData%INodes_Mesh_to_SD,1)
-  i1_u = UBOUND(SrcParamData%INodes_Mesh_to_SD,1)
-  IF (.NOT. ALLOCATED(DstParamData%INodes_Mesh_to_SD)) THEN 
-    ALLOCATE(DstParamData%INodes_Mesh_to_SD(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%INodes_Mesh_to_SD.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstParamData%INodes_Mesh_to_SD = SrcParamData%INodes_Mesh_to_SD
-ENDIF
-IF (ALLOCATED(SrcParamData%INodes_SD_to_Mesh)) THEN
-  i1_l = LBOUND(SrcParamData%INodes_SD_to_Mesh,1)
-  i1_u = UBOUND(SrcParamData%INodes_SD_to_Mesh,1)
-  IF (.NOT. ALLOCATED(DstParamData%INodes_SD_to_Mesh)) THEN 
-    ALLOCATE(DstParamData%INodes_SD_to_Mesh(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%INodes_SD_to_Mesh.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstParamData%INodes_SD_to_Mesh = SrcParamData%INodes_SD_to_Mesh
-ENDIF
 IF (ALLOCATED(SrcParamData%ElemsDOF)) THEN
   i1_l = LBOUND(SrcParamData%ElemsDOF,1)
   i1_u = UBOUND(SrcParamData%ElemsDOF,1)
@@ -7522,12 +7496,6 @@ DO i1 = LBOUND(ParamData%NodesDOFtilde,1), UBOUND(ParamData%NodesDOFtilde,1)
 ENDDO
   DEALLOCATE(ParamData%NodesDOFtilde)
 ENDIF
-IF (ALLOCATED(ParamData%INodes_Mesh_to_SD)) THEN
-  DEALLOCATE(ParamData%INodes_Mesh_to_SD)
-ENDIF
-IF (ALLOCATED(ParamData%INodes_SD_to_Mesh)) THEN
-  DEALLOCATE(ParamData%INodes_SD_to_Mesh)
-ENDIF
 IF (ALLOCATED(ParamData%ElemsDOF)) THEN
   DEALLOCATE(ParamData%ElemsDOF)
 ENDIF
@@ -7808,16 +7776,6 @@ ENDIF
          DEALLOCATE(Int_Buf)
       END IF
     END DO
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! INodes_Mesh_to_SD allocated yes/no
-  IF ( ALLOCATED(InData%INodes_Mesh_to_SD) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! INodes_Mesh_to_SD upper/lower bounds for each dimension
-      Int_BufSz  = Int_BufSz  + SIZE(InData%INodes_Mesh_to_SD)  ! INodes_Mesh_to_SD
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! INodes_SD_to_Mesh allocated yes/no
-  IF ( ALLOCATED(InData%INodes_SD_to_Mesh) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! INodes_SD_to_Mesh upper/lower bounds for each dimension
-      Int_BufSz  = Int_BufSz  + SIZE(InData%INodes_SD_to_Mesh)  ! INodes_SD_to_Mesh
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! ElemsDOF allocated yes/no
   IF ( ALLOCATED(InData%ElemsDOF) ) THEN
@@ -8358,32 +8316,6 @@ ENDIF
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
     END DO
-  END IF
-  IF ( .NOT. ALLOCATED(InData%INodes_Mesh_to_SD) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%INodes_Mesh_to_SD,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%INodes_Mesh_to_SD,1)
-    Int_Xferred = Int_Xferred + 2
-
-      IF (SIZE(InData%INodes_Mesh_to_SD)>0) IntKiBuf ( Int_Xferred:Int_Xferred+(SIZE(InData%INodes_Mesh_to_SD))-1 ) = PACK(InData%INodes_Mesh_to_SD,.TRUE.)
-      Int_Xferred   = Int_Xferred   + SIZE(InData%INodes_Mesh_to_SD)
-  END IF
-  IF ( .NOT. ALLOCATED(InData%INodes_SD_to_Mesh) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%INodes_SD_to_Mesh,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%INodes_SD_to_Mesh,1)
-    Int_Xferred = Int_Xferred + 2
-
-      IF (SIZE(InData%INodes_SD_to_Mesh)>0) IntKiBuf ( Int_Xferred:Int_Xferred+(SIZE(InData%INodes_SD_to_Mesh))-1 ) = PACK(InData%INodes_SD_to_Mesh,.TRUE.)
-      Int_Xferred   = Int_Xferred   + SIZE(InData%INodes_SD_to_Mesh)
   END IF
   IF ( .NOT. ALLOCATED(InData%ElemsDOF) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -9542,52 +9474,6 @@ ENDIF
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
     END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! INodes_Mesh_to_SD not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%INodes_Mesh_to_SD)) DEALLOCATE(OutData%INodes_Mesh_to_SD)
-    ALLOCATE(OutData%INodes_Mesh_to_SD(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%INodes_Mesh_to_SD.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask1 = .TRUE. 
-      IF (SIZE(OutData%INodes_Mesh_to_SD)>0) OutData%INodes_Mesh_to_SD = UNPACK( IntKiBuf ( Int_Xferred:Int_Xferred+(SIZE(OutData%INodes_Mesh_to_SD))-1 ), mask1, 0_IntKi )
-      Int_Xferred   = Int_Xferred   + SIZE(OutData%INodes_Mesh_to_SD)
-    DEALLOCATE(mask1)
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! INodes_SD_to_Mesh not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%INodes_SD_to_Mesh)) DEALLOCATE(OutData%INodes_SD_to_Mesh)
-    ALLOCATE(OutData%INodes_SD_to_Mesh(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%INodes_SD_to_Mesh.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask1 = .TRUE. 
-      IF (SIZE(OutData%INodes_SD_to_Mesh)>0) OutData%INodes_SD_to_Mesh = UNPACK( IntKiBuf ( Int_Xferred:Int_Xferred+(SIZE(OutData%INodes_SD_to_Mesh))-1 ), mask1, 0_IntKi )
-      Int_Xferred   = Int_Xferred   + SIZE(OutData%INodes_SD_to_Mesh)
-    DEALLOCATE(mask1)
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! ElemsDOF not allocated
     Int_Xferred = Int_Xferred + 1

@@ -46,7 +46,6 @@ Module SubDyn
    PUBLIC :: SD_CalcOutput                     ! Routine for computing outputs
    PUBLIC :: SD_CalcContStateDeriv             ! Tight coupling routine for computing derivatives of continuous states
    
-   LOGICAL, parameter :: NO_Y2_MAP = .False.
 CONTAINS
 
 SUBROUTINE CreateTPMeshes( TP_RefPoint, inputMesh, outputMesh, ErrStat, ErrMsg )
@@ -85,13 +84,10 @@ SUBROUTINE CreateTPMeshes( TP_RefPoint, inputMesh, outputMesh, ErrStat, ErrMsg )
 END SUBROUTINE CreateTPMeshes
 !---------------------------------------------------------------------------
 !> Create output (Y2, for motion) and input (u, for forces)meshes, based on SubDyn nodes
-!! Ordering of nodes is: I (interface), L (internal), C (bottom)
-SUBROUTINE CreateY2Meshes( NNode, Nodes, INodes_I, INodes_L, INodes_C, inputMesh, outputMesh, ErrStat, ErrMsg )
+!! Ordering of nodes is the same as SubDyn (used to be : I L C)
+SUBROUTINE CreateInputOutputMeshes( NNode, Nodes, inputMesh, outputMesh, ErrStat, ErrMsg )
    INTEGER(IntKi),            INTENT( IN    ) :: NNode                     !total number of nodes in the structure, used to size the array Nodes, i.e. its rows
    REAL(ReKi),                INTENT( IN    ) :: Nodes(NNode, JointsCol)
-   INTEGER(IntKi),            INTENT( IN    ) :: INodes_I(:) !< Indices of interface nodes
-   INTEGER(IntKi),            INTENT( IN    ) :: INodes_L(:) !< Indices of interior nodes
-   INTEGER(IntKi),            INTENT( IN    ) :: INodes_C(:) !< Indices of reaction nodes
    TYPE(MeshType),            INTENT( INOUT ) :: inputMesh   ! u%LMesh
    TYPE(MeshType),            INTENT( INOUT ) :: outputMesh  ! y%Y2Mesh
    INTEGER(IntKi),            INTENT(   OUT ) :: ErrStat                   ! Error status of the operation
@@ -109,35 +105,11 @@ SUBROUTINE CreateY2Meshes( NNode, Nodes, INodes_I, INodes_L, INodes_C, inputMesh
                   ,Force             = .TRUE.            &
                   ,Moment            = .TRUE.            )
 
-   if (NO_Y2_MAP) then
-      DO I = 1,size(Nodes,1)
-         Point = Nodes(I, 2:4)
-         CALL MeshPositionNode(inputMesh, I, Point, ErrStat, ErrMsg); IF(ErrStat/=ErrID_None) RETURN
-         CALL MeshConstructElement(inputMesh, ELEMENT_POINT, ErrStat, ErrMsg, I)
-      ENDDO 
-   else
-     ! --- Interface nodes
-     iOffset = 0
-     DO I = 1,size(INodes_I)
-        Point = Nodes(INodes_I(I), 2:4)
-        CALL MeshPositionNode(inputMesh, I+iOffSet, Point, ErrStat, ErrMsg); IF(ErrStat/=ErrID_None) RETURN
-        CALL MeshConstructElement(inputMesh, ELEMENT_POINT, ErrStat, ErrMsg, I+iOffset)
-     ENDDO
-     ! --- Interior nodes
-     iOffset = size(INodes_I)
-     DO I = 1,size(INodes_L)
-        Point = Nodes(INodes_L(I), 2:4)
-        CALL MeshPositionNode(inputMesh, I+iOffSet, Point, ErrStat, ErrMsg); IF(ErrStat/=ErrID_None) RETURN
-        CALL MeshConstructElement(inputMesh, ELEMENT_POINT, ErrStat, ErrMsg, I+iOffset)
-     END DO
-     ! --- Base Reaction nodes 
-     iOffset = size(INodes_I) + size(INodes_L)
-     DO I = 1,size(INodes_C)
-        Point = Nodes(INodes_C(I), 2:4)
-        CALL MeshPositionNode(inputMesh, I+iOffSet, Point, ErrStat, ErrMsg); IF(ErrStat/=ErrID_None) RETURN
-        CALL MeshConstructElement(inputMesh, ELEMENT_POINT, ErrStat, ErrMsg, I+iOffset)
-     END DO
-   endif
+   DO I = 1,size(Nodes,1)
+      Point = Nodes(I, 2:4)
+      CALL MeshPositionNode(inputMesh, I, Point, ErrStat, ErrMsg); IF(ErrStat/=ErrID_None) RETURN
+      CALL MeshConstructElement(inputMesh, ELEMENT_POINT, ErrStat, ErrMsg, I)
+   ENDDO 
    CALL MeshCommit ( inputMesh, ErrStat, ErrMsg); IF(ErrStat/=ErrID_None) RETURN
          
    ! Create the Interior Points output mesh as a sibling copy of the input mesh
@@ -158,7 +130,7 @@ SUBROUTINE CreateY2Meshes( NNode, Nodes, INodes_I, INodes_L, INodes_C, inputMesh
     !Identity should mean no rotation, which is our first guess at the output -RRD
     CALL Eye( outputMesh%Orientation, ErrStat, ErrMsg )         
         
-END SUBROUTINE CreateY2Meshes
+END SUBROUTINE CreateInputOutputMeshes
 !---------------------------------------------------------------------------
 !> This routine is called at the start of the simulation to perform initialization steps.
 !! The parameters are set here and not changed during the simulation.
@@ -316,14 +288,8 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    ! Create the input and output meshes associated with Transition Piece reference point       
    CALL CreateTPMeshes( InitInput%TP_RefPoint, u%TPMesh, y%Y1Mesh, ErrStat2, ErrMsg2 ); if(Failed()) return
    
-   ! Construct the input mesh for the interior nodes which result from the Craig-Bampton reduction
-   CALL CreateY2Meshes( p%nNodes, Init%Nodes, p%Nodes_I(:,1), p%Nodes_L(:,1), p%Nodes_C(:,1), u%LMesh, y%Y2Mesh, ErrStat2, ErrMsg2 ); if(Failed()) return
-   call AllocAry( p%INodes_Mesh_to_SD, p%nNodes, 'INodes_Mesh_to_SD', ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
-   call AllocAry( p%INodes_SD_to_Mesh, p%nNodes, 'INodes_SD_to_Mesh', ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
-   call Y2Mesh_SD_Mapping(p, p%INodes_Mesh_to_SD) ! Store mapping from y2/u mesh to Subdyn nodes indices
-   call SD_Y2Mesh_Mapping(p, p%INodes_SD_to_Mesh) ! Store mapping from Subdyn to y2/u-mesh nodes indices
-   !print*,'I_SD_to_Mesh',p%INodes_SD_to_Mesh
-   !print*,'I_Mesh_to_SD',p%INodes_Mesh_to_SD
+   ! Construct the input mesh (u%LMesh, force on nodes) and output mesh (y%Y2Mesh, displacements)
+   CALL CreateInputOutputMeshes( p%nNodes, Init%Nodes, u%LMesh, y%Y2Mesh, ErrStat2, ErrMsg2 ); if(Failed()) return
 
    ! --- Write the summary file
    IF ( Init%SSSum ) THEN 
@@ -507,7 +473,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
                                                             
       ! --- Place displacement/velocity/acceleration into Y2 output mesh        
       DO iSDNode = 1,p%nNodes
-         iY2Node = p%INodes_SD_to_Mesh(iSDNode)
+         iY2Node = iSDNode
          DOFList => p%NodesDOF(iSDNode)%List  ! Alias to shorten notations
          ! TODO TODO which orientation to give for joints with more than 6 dofs?
          ! Construct the direction cosine matrix given the output angles
@@ -532,7 +498,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
         !TODO: where are these HydroTP, HydroForces documented?
       DO I = 1, p%nNodes_I 
          iSDNode = p%Nodes_I(I,1)
-         iY2Node = p%INodes_SD_to_Mesh(iSDNode)
+         iY2Node = iSDNode
          startDOF = (I-1)*6 + 1 ! NOTE: this works since interface is assumed to be sorted like LMesh and have 6 DOF per nodes
          !Take care of Hydrodynamic Forces that will go into INterface Forces later
          HydroForces(startDOF:startDOF+5) =  (/u%LMesh%Force(1:3,iY2Node),u%LMesh%Moment(1:3,iY2Node)/)  !(6,NNODES_I)
@@ -2386,7 +2352,7 @@ SUBROUTINE GetExtForceOnInternalDOF( u, p, m, UFL )
    ! --- Build vector of external force
    m%Fext= myNaN
    DO iMeshNode = 1,p%nNodes
-      iSDNode  = p%INodes_Mesh_to_SD(iMeshNode) 
+      iSDNode  = iMeshNode
       nMembers = (size(p%NodesDOF(iSDNode)%List)-3)/3 ! Number of members deducted from Node's nDOFList
       ! Force - All nodes have only 3 translational DOFs 
       m%Fext( p%NodesDOF(iSDNode)%List(1:3) ) =  u%LMesh%Force (:,iMeshNode)
@@ -2524,15 +2490,8 @@ SUBROUTINE OutSummary(Init, p, InitInput, CBparams, ErrStat,ErrMsg)
    call yaml_write_array(UnSum, 'DOF2Nodes', p%DOFtilde2Nodes , IFmt, ErrStat2, ErrMsg2, comment='(nDOFRed x 3, for each constrained DOF, col1: node index, col2: number of DOF, col3: DOF starting from 1)',label=.true.)
 
    ! Nodes properties
-   CALL AllocAry( DummyArray,  size(Init%Nodes,1), JointsCol+1, 'Elem', ErrStat2, ErrMsg2 ); if(Failed()) return
-   do i = 1, p%nNodes
-      DummyArray(i,1)             = Init%Nodes(i, 1)
-      DummyArray(i,2)             = p%INodes_SD_to_Mesh(i)
-      DummyArray(i,3:JointsCol+1) = Init%Nodes(i, 2:JointsCol)
-   enddo
-   write(UnSum, '("#",4x,2(A9),9('//trim(SFmt)//'))') 'Node_[#]', 'Y2Node', 'X_[m]','Y_[m]','Z_[m]', 'JType_[-]', 'JDirX_[-]','JDirY_[-]','JDirZ_[-]','JStff_[Nm/rad]','JDmp_[Nm/rad.s]'
-   call yaml_write_array(UnSum, 'Nodes', DummyArray, ReFmt, ErrStat2, ErrMsg2, AllFmt='2(F8.0,","),3(F15.3,","),F15.0,5(E15.6,",")') !, comment='',label=.true.)
-   deallocate(DummyArray)
+   write(UnSum, '("#",4x,1(A9),9('//trim(SFmt)//'))') 'Node_[#]', 'X_[m]','Y_[m]','Z_[m]', 'JType_[-]', 'JDirX_[-]','JDirY_[-]','JDirZ_[-]','JStff_[Nm/rad]','JDmp_[Nm/rad.s]'
+   call yaml_write_array(UnSum, 'Nodes', Init%Nodes, ReFmt, ErrStat2, ErrMsg2, AllFmt='1(F8.0,","),3(F15.3,","),F15.0,5(E15.6,",")') !, comment='',label=.true.)
 
    ! Element properties
    CALL AllocAry( DummyArray,  size(p%ElemProps), 16, 'Elem', ErrStat2, ErrMsg2 ); if(Failed()) return
@@ -2752,59 +2711,6 @@ contains
       CALL SDOut_CloseSum( UnSum, ErrStat2, ErrMsg2 )  
    END SUBROUTINE CleanUp
 END SUBROUTINE OutSummary
-
-!------------------------------------------------------------------------------------------------------
-!> Set the index array that maps SD internal nodes to the Y2Mesh nodes.
-!! NOTE: SDtoMesh is not checked for size, nor are the index array values checked for validity, 
-!!       so this routine could easily have segmentation faults if any errors exist.
-SUBROUTINE SD_Y2Mesh_Mapping(p, SDtoMesh)
-   TYPE(SD_ParameterType), INTENT(IN   )  :: p           !< Parameters
-   INTEGER(IntKi),         INTENT(  OUT)  :: SDtoMesh(:) !< index/mapping of mesh nodes with SD mesh
-   ! locals
-   INTEGER(IntKi) :: i
-   INTEGER(IntKi) :: SDnode
-   INTEGER(IntKi) :: y2Node
-   if (NO_Y2_MAP) then
-      DO I = 1,SIZE(SDtoMesh)
-         SDtoMesh( I ) = I
-      END DO
-   else
-      y2Node = 0
-      ! Interface nodes (IDI)
-      DO I = 1,SIZE(p%Nodes_I,1)
-         y2Node = y2Node + 1      
-         SDnode = p%Nodes_I(I,1)
-         SDtoMesh( SDnode ) = y2Node ! TODO add safety check
-      END DO
-      ! Interior nodes (IDL)
-      DO I = 1,SIZE(p%Nodes_L,1)
-         y2Node = y2Node + 1      
-         SDnode = p%Nodes_L(I,1)
-         SDtoMesh( SDnode ) = y2Node ! TODO add safety check
-      END DO
-      ! Base Reaction nodes (IDC)
-      DO I = 1,SIZE(p%Nodes_C,1) 
-         y2Node = y2Node + 1      
-         SDnode = p%Nodes_C(I,1)
-         SDtoMesh( SDnode ) = y2Node ! TODO add safety check
-      END DO
-   endif
-END SUBROUTINE SD_Y2Mesh_Mapping
-!>
-SUBROUTINE Y2Mesh_SD_Mapping(p, MeshtoSD)
-   TYPE(SD_ParameterType), INTENT(IN   )  :: p           !< Parameters
-   INTEGER(IntKi),         INTENT(  OUT)  :: MeshtoSD(:) !< index/mapping of mesh nodes with SD mesh
-   INTEGER(IntKi) :: I
-   if (NO_Y2_MAP) then
-      DO I = 1,SIZE(MeshtoSD)
-         MeshtoSD( I ) = I
-      END DO
-   else
-      MeshtoSD(                      1:p%nNodes_I)                       = p%Nodes_I(:,1)
-      MeshtoSD(p%nNodes_I+           1:p%nNodes_I+p%nNodes_L)            = p%Nodes_L(:,1)
-      MeshtoSD(p%nNodes_I+p%nNodes_L+1:p%nNodes_I+p%nNodes_L+p%nNodes_C) = p%Nodes_C(:,1)
-   endif
-END SUBROUTINE Y2Mesh_SD_Mapping
 
 !------------------------------------------------------------------------------------------------------
 !> Calculate length of a member as given in input file
