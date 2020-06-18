@@ -1134,12 +1134,6 @@ SUBROUTINE InsertSoilMatrices(M, K, Init, p, ErrStat, ErrMsg, Substract)
          enddo
          if (.not.present(Substract)) then
             CALL WrScr('   Soil stiffness inserted at SubDyn node '//trim(Num2LStr(iNode)))
-            print*,'    ',K_Soil(1,1:6)
-            print*,'    ',K_Soil(2,1:6)
-            print*,'    ',K_Soil(3,1:6)
-            print*,'    ',K_Soil(4,1:6)
-            print*,'    ',K_Soil(5,1:6)
-            print*,'    ',K_Soil(6,1:6)
          endif
       enddo
    endif

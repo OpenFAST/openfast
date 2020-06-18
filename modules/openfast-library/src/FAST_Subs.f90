@@ -865,8 +865,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       !InitInData_SlD%UseInputFile   = .TRUE.
       InitInData_SlD%InputFile      = p_FAST%SoilFile
       InitInData_SlD%RootName       = p_FAST%OutFileRoot
-print*,'FIXME: FAST_SUBS:SlD_Init: reset the SoilDynNonLinearOnly once SubDyn can handle the linear soil reaction'
-      InitInData_SlD%SlDNonLinearForcePortionOnly = .FALSE.      ! SoilDyn will only return the Non-Linear portion of the reaction force
+      InitInData_SlD%SlDNonLinearForcePortionOnly = .true. ! SoilDyn will only return the Non-Linear portion of the reaction force
 
       CALL SlD_Init( InitInData_SlD, SlD%Input(1), SlD%p,  SlD%x(STATE_CURR), SlD%xd(STATE_CURR), SlD%z(STATE_CURR),  &
                     SlD%OtherSt(STATE_CURR), SlD%y, SlD%m, p_FAST%dt_module( MODULE_SlD ), InitOutData_SlD, ErrStat2, ErrMsg2 )
