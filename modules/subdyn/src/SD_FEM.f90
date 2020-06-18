@@ -73,6 +73,7 @@ MODULE SD_FEM
   
   INTEGER(IntKi),   PARAMETER  :: SDMaxInpCols    = MAX(JointsCol,InterfCol,MembersCol,PropSetsBCol,PropSetsXCol,COSMsCol,CMassCol)
 
+  LOGICAL, PARAMETER :: DEV_VERSION = .false.
 
   INTERFACE FINDLOCI ! In the future, use FINDLOC from intrinsic
      MODULE PROCEDURE FINDLOCI_ReKi
@@ -170,7 +171,9 @@ TYPE(IList) FUNCTION NodesList(p, Elements)
       ! Sorting required by find function
       call sort(NodesList, ErrStat2, ErrMsg2)
    enddo
-   call print_list(NodesList, 'Joint list')
+   if (DEV_VERSION) then
+      call print_list(NodesList, 'Joint list')
+   endif
 END FUNCTION NodesList
 !------------------------------------------------------------------------------------------------------
 !> Returns list of rigid link elements (Er) 
@@ -193,7 +196,9 @@ TYPE(IList) FUNCTION RigidLinkElements(Init, p, ErrStat, ErrMsg)
          call append(RigidLinkElements, ie, ErrStat, ErrMsg);
       endif
    end do
-   call print_list(RigidLinkElements,'Rigid element list')
+   if (DEV_VERSION) then
+      call print_list(RigidLinkElements,'Rigid element list')
+   endif
 END FUNCTION RigidLinkElements
 
 !------------------------------------------------------------------------------------------------------
@@ -757,14 +762,18 @@ SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
          p%ElemProps(i)%Rho    = rho
 
       else if (eType==idMemberCable) then
-         print*,'Member',I,'eType',eType,'Ps',P1,P2
+         if (DEV_VERSION) then
+            print*,'Member',I,'is a cable'
+         endif
          p%ElemProps(i)%Area   = 1                       ! Arbitrary set to 1
          p%ElemProps(i)%YoungE = Init%PropsC(P1, 2)/1    ! Young's modulus, E=EA/A  [N/m^2]
          p%ElemProps(i)%Rho    = Init%PropsC(P1, 3)      ! Material density [kg/m3]
          p%ElemProps(i)%T0     = Init%PropsC(P1, 4)      ! Pretension force [N]
 
       else if (eType==idMemberRigid) then
-         print*,'Member',I,'eType',eType,'Ps',P1,P2
+         if (DEV_VERSION) then
+            print*,'Member',I,'is a rigid link'
+         endif
          p%ElemProps(i)%Area   = 1                  ! Arbitrary set to 1
          p%ElemProps(i)%Rho    = Init%PropsR(P1, 2)
 
@@ -963,7 +972,9 @@ SUBROUTINE AssembleKM(Init, p, ErrStat, ErrMsg)
    
    ! total unconstrained degrees of freedom of the system 
    p%nDOF = nDOF_Unconstrained()
-   print*,'nDOF_unconstrained:',p%nDOF, ' (if all Cantilever, it would be: ',6*p%nNodes,')'
+   if (DEV_VERSION) then
+      print*,'nDOF_unconstrained:',p%nDOF, ' (if all Cantilever, it would be: ',6*p%nNodes,')'
+   endif
 
    CALL AllocAry( Init%K, p%nDOF, p%nDOF , 'Init%K',  ErrStat2, ErrMsg2); if(Failed()) return; ! system stiffness matrix 
    CALL AllocAry( Init%M, p%nDOF, p%nDOF , 'Init%M',  ErrStat2, ErrMsg2); if(Failed()) return; ! system mass matrix 
@@ -1156,12 +1167,16 @@ SUBROUTINE BuildTMatrix(Init, p, RA, RAm1, Tred, ErrStat, ErrMsg)
    allocate(RA_DOFtilde(1:size(RA)), stat=ErrStat2); if(Failed()) return; ! Indices of DOF for each rigid assmbly, in reduced system
 
    p%nDOF_red = nDOF_ConstraintReduced()
-   print*,'nDOF constraint elim', p%nDOF_red , '/' , p%nDOF
+   if (DEV_VERSION) then
+      print*,'nDOF constraint elim', p%nDOF_red , '/' , p%nDOF
+   endif
    CALL AllocAry( Tred, p%nDOF, p%nDOF_red, 'p%T_red',  ErrStat2, ErrMsg2); if(Failed()) return; ! system stiffness matrix 
    Tred=0
    call init_list(IRA, size(RA), 0, ErrStat2, ErrMsg2); if(Failed()) return;
    IRA%List(1:size(RA)) = (/(ia , ia = 1,size(RA))/)
-   call print_list(IRA, 'List of RA indices')
+   if (DEV_VERSION) then
+      call print_list(IRA, 'List of RA indices')
+   endif
 
    ! --- For each node:
    !  - create list of indices I      in the assembled vector of DOF
@@ -1180,16 +1195,20 @@ SUBROUTINE BuildTMatrix(Init, p, RA, RAm1, Tred, ErrStat, ErrMsg)
                call Fatal('No rigid assembly attributed to node'//trim(Num2LStr(iNode))//'. RAm1 wrong'); return
             endif
             ia  = find(IRA, aID, ErrStat2, ErrMsg2); if(Failed()) return
-            print*,'Node',iNode, 'is involved in RA:', aID, '. Index in list of RA to process', ia
+            if (DEV_VERSION) then
+               print*,'Node',iNode, 'is involved in RA:', aID, '. Index in list of RA to process', ia
+            endif
             if ( ia <= 0) then
                ! This rigid assembly has already been processed
                ! OLD: The DOF list is taken from the stored RA DOF list
                ! call init_list(p%NodesDOFtilde(iNode), RA_DOFtilde(aID)%List, ErrStat2, ErrMsg2)
                ! NEW: this node has no DOFs
                call init_list(p%NodesDOFtilde(iNode), 0, 0, ErrStat2, ErrMsg2)
-               print*,'The RA',aID,', has already been processed!'
-               print*,'N',iNode,'I ',p%NodesDOF(iNode)%List(1:6)
-               print*,'N',iNode,'It',RA_DOFtilde(aID)%List
+               if (DEV_VERSION) then
+                  print*,'The RA',aID,', has already been processed!'
+                  print*,'N',iNode,'I ',p%NodesDOF(iNode)%List(1:6)
+                  print*,'N',iNode,'It',RA_DOFtilde(aID)%List
+               endif
                cycle ! We pass to the next joint
             else
                call RAElimination( RA(aID)%List, Tc, INodesID, Init, p, ErrStat2, ErrMsg2); if(Failed()) return;
@@ -1225,8 +1244,8 @@ SUBROUTINE BuildTMatrix(Init, p, RA, RAm1, Tred, ErrStat, ErrMsg)
       call init_list(p%NodesDOFtilde(iNode), nc, 0, ErrStat2, ErrMsg2)
       p%NodesDOFtilde(iNode)%List(1:nc) = (/ (iprev + i, i=1,nc) /)
       IDOFNew => p%NodesDOFtilde(iNode)%List(1:nc) ! alias to shorten notations
-      print*,'N',iNode,'I ',IDOFOld
-      print*,'N',iNode,'It',IDOFNew
+      !print*,'N',iNode,'I ',IDOFOld
+      !print*,'N',iNode,'It',IDOFNew
       Tred(IDOFOld, IDOFNew) = Tc
       iPrev = iPrev + nc
    enddo
@@ -1289,7 +1308,7 @@ contains
          elseif(NodeType == idJointCantilever ) then
             if ( NodeHasRigidElem(iNode, Init, p, er)) then
                ! This joint is involved in a rigid link assembly, we skip it (accounted for above)
-               print*,'Node',iNode, 'is involved in a RA'
+               print*,'Node',iNode, 'is involved in a Rigid assembly'
             else
                ! That's a regular Cantilever joint
                nDOF_ConstraintReduced = nDOF_ConstraintReduced + 6
@@ -1438,9 +1457,13 @@ SUBROUTINE RAElimination(Elements, Tc, INodesID, Init, p, ErrStat, ErrMsg)
 
    ! --- List of nodes stored first in LINodes than moved to INodes
    LNodesID = NodesList(p, Elements)
-   print*,'Nodes involved in assembly (bfr1) ',LNodesID%List
+   if (DEV_VERSION) then
+      print*,'Nodes involved in assembly (bfr1) ',LNodesID%List
+   endif
    call unique(LNodesID, ErrStat2, ErrMsg2);
-   print*,'Nodes involved in assembly (bfr2) ',LNodesID%List
+   if (DEV_VERSION) then
+      print*,'Nodes involved in assembly (bfr2) ',LNodesID%List
+   endif
 
    !--- Look for potential interface node
    call init_list(LNodesInterf, 0, 0, ErrStat2, ErrMsg2);
@@ -1477,7 +1500,9 @@ SUBROUTINE RAElimination(Elements, Tc, INodesID, Init, p, ErrStat, ErrMsg)
    iTmp                 = INodesID(1)
    INodesID(1)          = INodesID(iiMainNode)
    INodesID(iiMainNode) = iTmp
-   print*,'Nodes involved in assembly (after)',INodesID
+   if (DEV_VERSION) then
+      print*,'Nodes involved in assembly (after)',INodesID
+   endif
 
    ! --- Building Transformation matrix
    nNodes =size(INodesID)
@@ -1637,7 +1662,9 @@ SUBROUTINE RigidLinkAssemblies(Init, p, RA, RAm1, ErrStat, ErrMsg)
       e0 = pop(Er, ErrStat2, ErrMsg2);
       call append(Ea, e0, ErrStat2, ErrMsg2);
       call AddNeighbors(e0, Er, Ea)
-      call print_list(Ea,'Rigid assembly (loop 1)')
+      if (DEV_VERSION) then
+         call print_list(Ea,'Rigid assembly (loop 1)')
+      endif
       do ie = 1, len(Ea)
          e0 = get(Ea, ie, ErrStat2, ErrMsg2)
          RAm1(e0) = nRA ! Index of rigid assembly that this element belongs to
@@ -1658,9 +1685,11 @@ SUBROUTINE RigidLinkAssemblies(Init, p, RA, RAm1, ErrStat, ErrMsg)
          call append(RA(ia), ie, ErrStat2, ErrMsg2)
       endif
    enddo
-   do ia = 1, nRA
-      call print_list(RA(ia),'Rigid assembly (loop 2)')
-   enddo
+   if (DEV_VERSION) then
+      do ia = 1, nRA
+         call print_list(RA(ia),'Rigid assembly (loop 2)')
+      enddo
+   endif
 CONTAINS
    !> The neighbor-elements of element e0 (that are found within the list Er) are added to the list Ea  
    RECURSIVE SUBROUTINE AddNeighbors(e0, Er, Ea) 
@@ -1678,7 +1707,9 @@ CONTAINS
          ik=ik+1
          ek = Er%List(ik)
          if (ElementsConnected(p, e0, ek, iWhichNode_e0, iWhichNode_ek)) then
-            print*,'Element ',ek,'is connected to element',e0,'via its node',iWhichNode_ek
+            if (DEV_VERSION) then
+               print*,'Element ',ek,'is connected to element',e0,'via its node',iWhichNode_ek
+            endif
             ! Remove element from Er (a rigid element can belong to only one assembly)
             ek2 =  pop(Er, ik,  ErrStat2, ErrMsg2) ! same as ek before
             ik=ik-1

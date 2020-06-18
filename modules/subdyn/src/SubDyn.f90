@@ -201,7 +201,9 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    InitOut%Ver = SD_ProgDesc
 
    ! --- Test TODO remove me in the future
-   CALL SD_Tests(ErrStat2, ErrMsg2); if(Failed()) return
+   if (DEV_VERSION) then
+     CALL SD_Tests(ErrStat2, ErrMsg2); if(Failed()) return
+   endif
    
    ! transfer glue-code information to data structure for SubDyn initialization:
    Init%g           = InitInput%g   
@@ -362,18 +364,7 @@ SUBROUTINE SD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, m
       ErrStat   = ErrID_None           ! no error has occurred
       ErrMsg    = ""
             
-      !print*,'------------------------------------------------------'
-      !print*,'------------------------------------------------------'
-      !print*,'------------------------------------------------------'
-      !print*,'------------------------------------------------------'
-      !print*,'UpdateState',t,n
-      !print*,'------------------------------------------------------'
-      !print*,'------------------------------------------------------'
-      !print*,'------------------------------------------------------'
-      !print*,'------------------------------------------------------'
       IF ( p%nDOFM == 0) RETURN ! no retained modes = no states
-      !print*,'x%qm  (in)',x%qm
-      !print*,'x%qmd (in)',x%qmdot
         
       IF (p%IntMethod .eq. 1) THEN
          CALL SD_RK4( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
@@ -384,8 +375,6 @@ SUBROUTINE SD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, m
       ELSE  
          CALL SD_AM2( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
       END IF
-      !print*,'x%qm (out)',x%qm
-      !print*,'x%qmd(out)',x%qmdot
       
 END SUBROUTINE SD_UpdateStates
 
@@ -421,7 +410,6 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       TYPE(SD_ContinuousStateType) :: dxdt        ! Continuous state derivatives at t- for output file qmdotdot purposes only
       INTEGER(IntKi)               :: ErrStat2    ! Error status of the operation (occurs after initial error)
       CHARACTER(ErrMsgLen)         :: ErrMsg2     ! Error message if ErrStat2 /= ErrID_None
-      logical:: LinDetected
       ! Initialize ErrStat
       ErrStat = ErrID_None
       ErrMsg  = ""
@@ -433,19 +421,6 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       m%u_TP       = (/REAL(u%TPMesh%TranslationDisp(:,1),ReKi), rotations/)
       m%udot_TP    = (/u%TPMesh%TranslationVel( :,1), u%TPMesh%RotationVel(:,1)/)
       m%udotdot_TP = (/u%TPMesh%TranslationAcc( :,1), u%TPMesh%RotationAcc(:,1)/)
-
-      !print*,'-----------------------------------------'
-      !print*,'CalCoutput',t
-
-      LinDetected=.false.
-      DO iY2Node = 1,p%nNodes
-         if (any(abs(u%LMesh%Force (:,iY2Node) -  1000000)<1))  LinDetected = .true.
-         if (any(abs(u%LMesh%Moment (:,iY2Node) - 1000000)<1))  LinDetected = .true.
-      enddo
-      !if (.not. LinDetected) print*,'>>>> TRUE CALL'
-      !if (      LinDetected) print*,'>>>> LIN CALL'
-
-      !print*,'uTP',m%u_TP
 
       ! Inputs on interior nodes:
       CALL GetExtForceOnInternalDOF( u, p, m, m%UFL )
@@ -469,11 +444,6 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
          m%UL_dot        =                                   matmul( p%PhiRb_TI, m%udot_TP    )  ! UL_dot         [ Y2(4) =       0*x(2) + D2(4,2)*u(2) ]      
          m%UL_dotdot     =                                   matmul( p%PhiRb_TI, m%udotdot_TP )  ! UL_dotdot      [ Y2(6) =       0*x(:) + D2(6,3)*u(3) + 0*u(4) + 0]
       END IF
-      !if (.not. LinDetected) print*,'UL',m%UL
-
-      !if (t>0.010) then 
-      !   STOP
-      !endif
       
       !STATIC IMPROVEMENT METHOD  ( modify UL )
       if (p%SttcSolve/=idSIM_None) then
@@ -498,7 +468,6 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
             m%UL = m%UL - UL0M 
          end if          
       endif    
-      !print*,'UL',m%UL
       ! --- Build original DOF vectors (DOF before the CB reduction)
       m%U_red       (p%IDI__) = m%UR_bar
       m%U_red       (p%ID__L) = m%UL     
@@ -531,13 +500,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
          y%Y2mesh%TranslationAcc  (:,iY2Node)     = m%U_full_dotdot (DOFList(1:3))
          y%Y2mesh%RotationVel     (:,iY2Node)     = m%U_full_dot    (DOFList(4:6))
          y%Y2mesh%RotationAcc     (:,iY2Node)     = m%U_full_dotdot (DOFList(4:6))
-         !if (.not. LinDetected)print*,'Ufull  ',iSDNode, m%U_full     (DOFList(1:6))
-         !if (.not. LinDetected)print*,'Ufulld ',iSDNode, m%U_full_dot (DOFList(1:6))
-         !if (.not. LinDetected)print*,'Ufulldd',iSDNode, m%U_full_dotdot (DOFList(1:6))
       enddo
-!       DO iY2Node = 1,p%nNodes
-!          print*,'Y2Disp',iY2Node,y%Y2mesh%TranslationDisp (:,iY2Node)  
-!       enddo
       !________________________________________
       ! Set loads outputs on y%Y1Mesh
       !________________________________________
@@ -555,7 +518,6 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
          !Take care of Hydrodynamic Forces that will go into INterface Forces later
          HydroForces(startDOF:startDOF+5) =  (/u%LMesh%Force(1:3,iY2Node),u%LMesh%Moment(1:3,iY2Node)/)  !(6,NNODES_I)
       ENDDO
-      !print*,'HydroForces',HydroForces
                 
       !HydroTP =  matmul(transpose(p%TI),HydroForces) ! (6,1) calculated below
       ! note: matmul( HydroForces, p%TI ) = matmul( transpose(p%TI), HydroForces) because HydroForces is 1-D            
@@ -571,7 +533,6 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       !               Y1(:3) = -f_TP
       !               MExtra = -u_TP x f_TP
       ! Y1_MExtra = - MExtra = -u_TP x Y1(1:3) ! NOTE: double cancelling of signs 
-      !if (.not. LinDetected)print*,'Y1',Y1
       if (p%ExtraMoment) then
          Y1_ExtraMoment(1) = - m%u_TP(2) * Y1(3) + m%u_TP(3) * Y1(2)
          Y1_ExtraMoment(2) = - m%u_TP(3) * Y1(1) + m%u_TP(1) * Y1(3)
@@ -2225,10 +2186,8 @@ SUBROUTINE PartitionDOFNodes(Init, m, p, ErrStat, ErrMsg)
    ! DOFs of internal nodes
    p%nDOFL_L=0
    do iiNode= 1,p%nNodes_L
-      print*,'NodeL',p%Nodes_L(iiNode,1), 'DOF:',p%NodesDOFtilde( p%Nodes_L(iiNode,1) )%List
       p%nDOFL_L = p%nDOFL_L + len(p%NodesDOFtilde( p%Nodes_L(iiNode,1) ))
    enddo
-   print*,'L_L',p%nDOFL_L,'red',p%nDOF_red,'R__',p%nDOFR__
    if (p%nDOFL_L/=p%nDOF_red-p%nDOFR__) then
       call Fatal('Error in distributing internal DOFs, total number of internal DOF('//num2lstr(p%nDOFL_L)//') does not equal total number of DOF('//num2lstr(p%nDOF_red)//') minus interface and reaction ('//num2lstr(p%nDOFR__)//')'); return
    endif
@@ -2350,38 +2309,25 @@ SUBROUTINE PartitionDOFNodes(Init, m, p, ErrStat, ErrMsg)
       endif
    enddo
    
-   !print*,'DOFI__  ',p%IDI__
-   !print*,'DOFI_Rb ',p%IDI_Rb
-   !print*,'DOFI_F  ',p%IDI_F
-   !print*,'DOFC__  ',p%IDC__
-   !print*,'DOFC_Rb ',p%IDC_Rb
-   !print*,'DOFC_F  ',p%IDC_F
-   !print*,'DOFC_L  ',p%IDC_L
-   !print*,'DOFR__  ',p%IDR__
-   !print*,'DOFL_L  ',p%IDL_L
-   !print*,'DOF__Rb ',p%ID__Rb
-   !print*,'DOF__F  ',p%ID__F
-   !print*,'DOF__L  ',p%ID__L
-   !print*,'Nodes_C',p%Nodes_C(:,1)
-   !print*,'Nodes_L',p%Nodes_L(:,1)
-   !print*,'Nodes_I',p%Nodes_I(:,1)
-   write(*,'(A,I0)')'Number of DOFs: "interface"          (I__): ',p%nDOFI__
-   write(*,'(A,I0)')'Number of DOFs: "interface" retained (I_B): ',p%nDOFI_Rb
-   write(*,'(A,I0)')'Number of DOFs: "interface" fixed    (I_F): ',p%nDOFI_F
-   write(*,'(A,I0)')'Number of DOFs: "reactions"          (C__): ',p%nDOFC__
-   write(*,'(A,I0)')'Number of DOFs: "reactions" retained (C_B): ',p%nDOFC_Rb
-   write(*,'(A,I0)')'Number of DOFs: "reactions" internal (C_L): ',p%nDOFC_L
-   write(*,'(A,I0)')'Number of DOFs: "reactions" fixed    (C_F): ',p%nDOFC_F
-   write(*,'(A,I0)')'Number of DOFs: "intf+react"         (__R): ',p%nDOFR__
-   write(*,'(A,I0)')'Number of DOFs: "internal"  internal (L_L): ',p%nDOFL_L
-   write(*,'(A,I0)')'Number of DOFs:             retained (__B): ',p%nDOF__Rb
-   write(*,'(A,I0)')'Number of DOFs:             internal (__L): ',p%nDOF__L
-   write(*,'(A,I0)')'Number of DOFs:             fixed    (__F): ',p%nDOF__F
-   write(*,'(A,I0)')'Number of DOFs:  total                    : ',p%nDOF_red
-   write(*,'(A,I0)')'Number of Nodes: "interface" (I): ',p%nNodes_I
-   write(*,'(A,I0)')'Number of Nodes: "reactions" (C): ',p%nNodes_C
-   write(*,'(A,I0)')'Number of Nodes: "internal"  (L): ',p%nNodes_L
-   write(*,'(A,I0)')'Number of Nodes: total   (I+C+L): ',p%nNodes
+   if(DEV_VERSION) then
+      write(*,'(A,I0)')'Number of DOFs: "interface"          (I__): ',p%nDOFI__
+      write(*,'(A,I0)')'Number of DOFs: "interface" retained (I_B): ',p%nDOFI_Rb
+      write(*,'(A,I0)')'Number of DOFs: "interface" fixed    (I_F): ',p%nDOFI_F
+      write(*,'(A,I0)')'Number of DOFs: "reactions"          (C__): ',p%nDOFC__
+      write(*,'(A,I0)')'Number of DOFs: "reactions" retained (C_B): ',p%nDOFC_Rb
+      write(*,'(A,I0)')'Number of DOFs: "reactions" internal (C_L): ',p%nDOFC_L
+      write(*,'(A,I0)')'Number of DOFs: "reactions" fixed    (C_F): ',p%nDOFC_F
+      write(*,'(A,I0)')'Number of DOFs: "intf+react"         (__R): ',p%nDOFR__
+      write(*,'(A,I0)')'Number of DOFs: "internal"  internal (L_L): ',p%nDOFL_L
+      write(*,'(A,I0)')'Number of DOFs:             retained (__B): ',p%nDOF__Rb
+      write(*,'(A,I0)')'Number of DOFs:             internal (__L): ',p%nDOF__L
+      write(*,'(A,I0)')'Number of DOFs:             fixed    (__F): ',p%nDOF__F
+      write(*,'(A,I0)')'Number of DOFs:  total                    : ',p%nDOF_red
+      write(*,'(A,I0)')'Number of Nodes: "interface" (I): ',p%nNodes_I
+      write(*,'(A,I0)')'Number of Nodes: "reactions" (C): ',p%nNodes_C
+      write(*,'(A,I0)')'Number of Nodes: "internal"  (L): ',p%nNodes_L
+      write(*,'(A,I0)')'Number of Nodes: total   (I+C+L): ',p%nNodes
+   endif
 
    call CleanUp()
 
@@ -2421,7 +2367,6 @@ SUBROUTINE GetExtForceOnInternalDOF( u, p, m, UFL )
    ! --- Build vector of external force
    m%Fext= myNaN
    DO iMeshNode = 1,p%nNodes
-      !print*,'iMN',iMeshNode,u%LMesh%Force (:,iMeshNode),u%LMesh%Moment(:,iMeshNode)
       iSDNode  = p%INodes_Mesh_to_SD(iMeshNode) 
       nMembers = (size(p%NodesDOF(iSDNode)%List)-3)/3 ! Number of members deducted from Node's nDOFList
       ! Force - All nodes have only 3 translational DOFs 
@@ -2431,21 +2376,17 @@ SUBROUTINE GetExtForceOnInternalDOF( u, p, m, UFL )
       m%Fext( p%NodesDOF(iSDNode)%List(5::3)) =  u%LMesh%Moment(2,iMeshNode)/nMembers
       m%Fext( p%NodesDOF(iSDNode)%List(6::3)) =  u%LMesh%Moment(3,iMeshNode)/nMembers
    enddo
-   !print*,'----'
-   !DO iSDNode = 1,p%nNodes
-   !   iMeshNode  = p%INodes_SD_to_Mesh(iSDNode)
-   !   print*,'iSD',iSDNode,u%LMesh%Force (:,iMeshNode),u%LMesh%Moment(:,iMeshNode)
-   !enddo
 
    ! TODO: remove test below in the future
-   if (any(m%Fext == myNaN)) then
-      print*,'Error in setting up Fext'
-      STOP
+   if (DEV_VERSION) then
+      if (any(m%Fext == myNaN)) then
+         print*,'Error in setting up Fext'
+         STOP
+      endif
    endif
    ! --- Reduced vector of external force
    m%Fext_red = matmul(transpose(p%T_red), m%Fext)
    UFL= m%Fext_red(p%ID__L)
-   !print*,'UFL',UFL
 
 END SUBROUTINE GetExtForceOnInternalDOF
 
