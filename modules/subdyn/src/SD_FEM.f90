@@ -1059,9 +1059,10 @@ CONTAINS
 END SUBROUTINE AssembleKM
 
 !> Add soil stiffness and mass to global system matrices
-SUBROUTINE InsertSoilMatrices(M, K, Init, p, ErrStat, ErrMsg, Substract)
+SUBROUTINE InsertSoilMatrices(M, K, NodesDOF, Init, p, ErrStat, ErrMsg, Substract)
    real(ReKi), dimension(:,:),   intent(inout) :: M
    real(ReKi), dimension(:,:),   intent(inout) :: K
+   type(IList),dimension(:),     intent(in   ) :: NodesDOF !< Map from Node Index to DOF lists
    type(SD_InitType),            intent(in   ) :: Init
    type(SD_ParameterType),       intent(in   ) :: p
    integer(IntKi),               intent(  out) :: ErrStat     ! Error status of the operation
@@ -1085,9 +1086,9 @@ SUBROUTINE InsertSoilMatrices(M, K, Init, p, ErrStat, ErrMsg, Substract)
          endif
       endif
       do I = 1, 6
-         iDOF = p%NodesDOF(iNode)%List(I)   ! DOF index
+         iDOF = NodesDOF(iNode)%List(I)   ! DOF index
          do J = 1, 6
-            jDOF = p%NodesDOF(iNode)%List(J)   ! DOF index
+            jDOF = NodesDOF(iNode)%List(J)   ! DOF index
             K(iDOF, jDOF) = K(iDOF, jDOF) + K_soil(I,J)
             M(iDOF, jDOF) = M(iDOF, jDOF) + M_soil(I,J)
          enddo
@@ -1179,14 +1180,16 @@ SUBROUTINE BuildTMatrix(Init, p, RA, RAm1, Tred, ErrStat, ErrMsg)
                call Fatal('No rigid assembly attributed to node'//trim(Num2LStr(iNode))//'. RAm1 wrong'); return
             endif
             ia  = find(IRA, aID, ErrStat2, ErrMsg2); if(Failed()) return
-            print*,'Node',iNode, 'is involved in RA', aID, ia
+            print*,'Node',iNode, 'is involved in RA:', aID, '. Index in list of RA to process', ia
             if ( ia <= 0) then
                ! This rigid assembly has already been processed
-               ! The DOF list is taken from the stored RA DOF list
-               call init_list(p%NodesDOFtilde(iNode), RA_DOFtilde(aID)%List, ErrStat2, ErrMsg2)
+               ! OLD: The DOF list is taken from the stored RA DOF list
+               ! call init_list(p%NodesDOFtilde(iNode), RA_DOFtilde(aID)%List, ErrStat2, ErrMsg2)
+               ! NEW: this node has no DOFs
+               call init_list(p%NodesDOFtilde(iNode), 0, 0, ErrStat2, ErrMsg2)
                print*,'The RA',aID,', has already been processed!'
                print*,'N',iNode,'I ',p%NodesDOF(iNode)%List(1:6)
-               print*,'N',iNode,'It',p%NodesDOFtilde(iNode)%List
+               print*,'N',iNode,'It',RA_DOFtilde(aID)%List
                cycle ! We pass to the next joint
             else
                call RAElimination( RA(aID)%List, Tc, INodesID, Init, p, ErrStat2, ErrMsg2); if(Failed()) return;
@@ -1222,8 +1225,8 @@ SUBROUTINE BuildTMatrix(Init, p, RA, RAm1, Tred, ErrStat, ErrMsg)
       call init_list(p%NodesDOFtilde(iNode), nc, 0, ErrStat2, ErrMsg2)
       p%NodesDOFtilde(iNode)%List(1:nc) = (/ (iprev + i, i=1,nc) /)
       IDOFNew => p%NodesDOFtilde(iNode)%List(1:nc) ! alias to shorten notations
-      !print*,'N',iNode,'I ',IDOFOld
-      !print*,'N',iNode,'It',IDOFNew
+      print*,'N',iNode,'I ',IDOFOld
+      print*,'N',iNode,'It',IDOFNew
       Tred(IDOFOld, IDOFNew) = Tc
       iPrev = iPrev + nc
    enddo
@@ -1762,7 +1765,6 @@ SUBROUTINE ElemM(ep, Me)
       if ( EqualRealNos(eP%rho, 0.0_ReKi) ) then
          Me=0.0_ReKi
       else
-         print*,'FEM: Mass matrix for rigid members rho/=0 TODO'
          CALL ElemM_Cable(ep%Area, ep%Length, ep%rho, ep%DirCos, Me)
          !CALL ElemM_(A, L, rho, DirCos, Me)
       endif
