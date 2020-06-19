@@ -84,6 +84,12 @@ SET Output_Loc=%CURR_LOC%
 %REGISTRY% "%CURR_LOC%\SuperController_Registry.txt" -I "%NWTC_Lib_Loc%" -O "%Output_Loc%" -ccode
 GOTO checkError
 
+:SCDataEx:
+SET CURR_LOC=%SC_Loc%
+%REGISTRY% "%CURR_LOC%\SC_DataEx_Registry.txt" -I "%NWTC_Lib_Loc%" -O "%Output_Loc%" -ccode -noextrap
+GOTO checkError
+
+
 :ElastoDyn
 SET CURR_LOC=%ED_Loc%
 SET Output_Loc=%CURR_LOC%

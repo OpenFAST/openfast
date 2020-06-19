@@ -1,0 +1,54 @@
+###################################################################################################################################
+# Registry for SuperController in the FAST Modularization Framework
+# This Registry file is used to create MODULE FARM_SC_Types, which contains all of the user-defined types needed in SuperController.
+# It also contains copy, destroy, pack, and unpack routines associated with each defined data types.
+#
+# Entries are of the form
+# keyword <ModuleName/ModName> <TypeName>    <FieldType>    <FieldName>  <Dims>  <IO> <DNAME> <DESCRIP> <UNITS>
+#
+# Use ^ as a shortcut for the value from the previous line.
+# See NWTC Programmer's Handbook at https://nwtc.nrel.gov/FAST-Developers for further information on the format/contents of this file.
+###################################################################################################################################
+#
+# ...... Include files (definitions from NWTC Library) ............................................................................
+include Registry_NWTC_Library.txt
+# ..... InitInput  ................................................................................................................
+typedef  SuperController/SC InitInputType         IntKi           nTurbines       -    -       - "Number of turbines in the simulation" - 
+typedef  ^                  InitInputType          CHARACTER(1024) DLL_FileName    -    -       - "Name of the shared library which the super controller logic" -
+# ..... InitOutput ................................................................................................................
+typedef  ^                  InitOutputType         ProgDesc        Ver             -    -       - "This module's name, version, and date"	-                                        
+typedef  ^                  InitOutputType         IntKi           NumCtrl2SC      -    -       - "Number of turbine controller outputs [to supercontroller]" -
+typedef  ^                  InitOutputType         IntKi           nInpGlobal      -    -       - "Number of global inputs to SC" -
+typedef  ^                  InitOutputType         IntKi           NumSC2Ctrl      -    -       - "Number of turbine specific controller inputs [from supercontroller]"
+typedef  ^                  InitOutputType         IntKi           NumSC2CtrlGlob  -    -       - "Number of global controller inputs [from supercontroller]" -
+# ..... Parameters ................................................................................................................
+typedef	^	                ParameterType	        DbKi	         DT	             -	   -	     - "Time step for continuous state integration & discrete state update"	secondstypedef  ^                  ParameterType         IntKi           NumTurbines     -    -       - "Number of turbines in the simulation" -
+typedef  ^                  ParameterType         IntKi           nTurbines       -    -       - "Number of turbines in the simulation" - 
+typedef  ^                  ParameterType         IntKi           NumCtrl2SC      -    -       - "Number of turbine controller outputs [to supercontroller]" -
+typedef  ^                  ParameterType         IntKi           nInpGlobal      -    -       - "Number of global inputs" -
+typedef  ^                  ParameterType         IntKi           NumSC2Ctrl      -    -       - "Number of turbine specific controller inputs [from supercontroller]" -
+typedef  ^                  ParameterType         IntKi           NumSC2CtrlGlob  -    -       - "Number of global controller inputs [from supercontroller]" -
+typedef  ^                  ParameterType         IntKi           NumStatesGlobal  -    -       - "Number of global states" -
+typedef  ^                  ParameterType         IntKi           NumStatesTurbine -    -       - "Number of states per turbine" -
+typedef  ^                  ParameterType         IntKi           NumParamGlobal  -    -       - "Number of global parameters" -
+typedef  ^                  ParameterType         IntKi           NumParamTurbine -    -       - "Number of parameters per turbine" -
+typedef  ^                  ParameterType         SiKi            ParamGlobal    {:}   -       - "Global parameters" -
+typedef  ^                  ParameterType         SiKi            ParamTurbine   {:}   -       - "Parameters per turbine" -
+typedef	^                  ParameterType         DLL_Type        DLL_Trgt        -    -       - "The addresses and names of the super controller shared library and its procedures"	-
+# ..... Discrete (nondifferentiable) States .........................................................................................................
+typedef  ^                  DiscreteStateType     SiKi            Global         {:}   -       - "Global states at time increment, n (total of nStatesGlobal of these states)" -
+typedef  ^                  DiscreteStateType     SiKi            Turbine        {:}   -       - "Turbine-dependent states at time increment, n (total of nTurbines*nStatesTurbine of these states)" -
+# ..... Continuous States  ......................................................................................
+typedef    ^                ContinuousStateType   SiKi            Dummy           -    -       - "Remove this variable if you have continuous states" -
+# ..... constraint states here:
+typedef   ^                 ConstraintStateType   SiKi            Dummy           -    -       - "Remove this variable if you have constraint states" -
+# ..... misc vars here:
+typedef   ^                 MiscVarType           SiKi            Dummy           -    -       - "Remove this variable if you have misc vars" -
+# ..... Other States ..............................................................................................................
+typedef  ^                  OtherStateType        IntKi           Dummy           -    -       - "Dummy Other State" - 
+# ..... Inputs ....................................................................................................................
+typedef  ^                  InputType             SiKi            toSCglob       {:}   -       - "Global inputs" - 
+typedef  ^                  InputType             SiKi            toSC           {:}   -       - "inputs to the super controller (from the turbine controller)" - 
+# ..... Outputs ...................................................................................................................
+typedef  ^                  OutputType            SiKi            fromSCglob     {:}   -       - "Global outputs of the super controller (to the turbine controller)" - 
+typedef  ^                  OutputType            SiKi            fromSC         {:}   -       - "Turbine specific outputs of the super controller (to the turbine controller)" - 
