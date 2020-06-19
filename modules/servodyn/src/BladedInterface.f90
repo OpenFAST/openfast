@@ -141,7 +141,7 @@ SUBROUTINE CallBladedDLL ( u, filt_fromSCglob, filt_fromSC, DLL, dll_data, p, Er
       ! if we're statically loading the library (i.e., OpenFOAM), we can just call DISCON(); 
       ! I'll leave some options for whether the supercontroller is being used
 #ifdef LOAD_SUPERCONTROLLER
-   CALL DISCON( dll_data%avrSWAP, filt_fromSCglob, filt_fromSC, dll_data%toSC aviFAIL, accINFILE, avcOUTNAME, avcMSG )
+   CALL DISCON( dll_data%avrSWAP, filt_fromSCglob, filt_fromSC, dll_data%toSC, aviFAIL, accINFILE, avcOUTNAME, avcMSG )
 #else
    CALL DISCON( dll_data%avrSWAP, aviFAIL, accINFILE, avcOUTNAME, avcMSG )
 #endif
