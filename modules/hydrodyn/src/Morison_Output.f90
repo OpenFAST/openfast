@@ -6441,7 +6441,7 @@ SUBROUTINE MrsnOut_MapOutputs( CurrentTime, y, p, u, m, AllOuts, ErrStat, ErrMsg
 
    INTEGER                                              :: I, J
    
-   INTEGER                                              :: m1, m2       ! Indices of the markers which surround the requested output location
+   INTEGER                                              :: im, m1, m2, im1, im2       ! Indices of the markers which surround the requested output location
    real(ReKi)                                           :: mult1, mult2 ! Load multiplier for joint nodes vs interior nodes
    real(ReKi)                                           :: dl           ! member element length (m)
    REAL(ReKi)                                           :: s            ! The linear interpolation factor for the requested location
@@ -6453,12 +6453,15 @@ SUBROUTINE MrsnOut_MapOutputs( CurrentTime, y, p, u, m, AllOuts, ErrStat, ErrMsg
       ! Only generate member-based outputs for the number of user-requested member outputs
       
    IF ( p%NumOuts > 0 ) THEN
-      DO J=1,p%NMOutputs     
+      DO J=1,p%NMOutputs 
+         im = p%MOutLst(J)%MemberIDIndx
          DO I=1,p%MOutLst(J)%NOutLoc   
          
              
-            m1 = p%MOutLst(J)%Marker1(I)
-            m2 = p%MOutLst(J)%Marker2(I)
+            m1 = p%MOutLst(J)%MeshIndx1(I)
+            m2 = p%MOutLst(J)%MeshIndx2(I)
+            im1 = p%MOutLst(J)%MemberIndx1(I)
+            im2 = p%MOutLst(J)%MemberIndx2(I)
             s  = p%MOutLst(J)%s      (I)
             dl = p%Members(p%MOutLst(J)%MemberIDIndx)%dl
             
@@ -6488,29 +6491,53 @@ SUBROUTINE MrsnOut_MapOutputs( CurrentTime, y, p, u, m, AllOuts, ErrStat, ErrMsg
             AllOuts(MNSTAi(:,I,J))   =  u%Mesh%TranslationAcc(:  ,m1)*(1-s) + u%Mesh%TranslationAcc(:  ,m2)*s
            ! AllOuts(MNSRAi(:,I,J))   =  u%DistribMesh%RotationAcc   (:  ,m1)*(1-s) + u%DistribMesh%RotationAcc   (:  ,m2)*s
             
+            !   ! transverse drag force   
+            !AllOuts(MNFDi (:,I,J))    =(mult1*m%F_D   (1:3,m1)*(1-s) + mult2*m%F_D  (1:3,m2)*s)/dl
+            !   ! inertial force       
+            !AllOuts(MNFIi (:,I,J))    =(mult1*m%F_I   (1:3,m1)*(1-s) + mult2*m%F_I  (1:3,m2)*s)/dl
+            !                          
+            !   ! marine growth weight 
+            !AllOuts(MNFMGi(:,I,J))    =(mult1*m%F_WMG (1:3,m1)*(1-s) + mult2*m%F_WMG(1:3,m2)*s)/dl
+            !AllOuts(MNMMGi(:,I,J))    =(mult1*m%F_WMG (4:6,m1)*(1-s) + mult2*m%F_WMG(4:6,m2)*s)/dl
+            !                      
+            !   ! buoyancy forces  
+            !AllOuts(MNFBi (:,I,J))    =(mult1*m%F_B   (1:3,m1)*(1-s) + mult2*m%F_B  (1:3,m2)*s)/dl
+            !AllOuts(MNFBFi(:,I,J))    =(mult1*m%F_BF  (1:3,m1)*(1-s) + mult2*m%F_BF (1:3,m2)*s)/dl           
+            !                     
+            !   ! buoyancy moments
+            !AllOuts(MNMBi (:,I,J))    =(mult1*m%F_B   (4:6,m1)*(1-s) + mult2*m%F_B  (4:6,m2)*s)/dl
+            !AllOuts(MNMBFi(:,I,J))    =(mult1*m%F_BF  (4:6,m1)*(1-s) + mult2*m%F_BF (4:6,m2)*s)/dl 
+            !                         
+            !   ! added mass forces   
+            !AllOuts(MNFAGi(:,I,J))    =(mult1*m%F_IMG (1:3,m1)*(1-s) + mult2*m%F_IMG(1:3,m2)*s)/dl  ! due to marine growth
+            !AllOuts(MNMAGi(:,I,J))    =(mult1*m%F_IMG (4:6,m1)*(1-s) + mult2*m%F_IMG(4:6,m2)*s)/dl  
+            !AllOuts(MNFAMi (:,I,J))   =(mult1*m%F_A   (1:3,m1)*(1-s) + mult2*m%F_A  (1:3,m2)*s)/dl  ! due to the structural member moving the fluid
+            !AllOuts(MNFAFi (:,I,J))   =(mult1*m%F_If  (1:3,m1)*(1-s) + mult2*m%F_If(1:3 ,m2)*s)/dl  ! due to the ballasted/flooded fluid
+            !AllOuts(MNMAFi (:,I,J))   =(mult1*m%F_If  (4:6,m1)*(1-s) + mult2*m%F_If(4:6 ,m2)*s)/dl
+            
                ! transverse drag force   
-            AllOuts(MNFDi (:,I,J))    =(mult1*m%F_D   (1:3,m1)*(1-s) + mult2*m%F_D  (1:3,m2)*s)/dl
+            AllOuts(MNFDi (:,I,J))    =(mult1*m%memberLoads(im)%F_D   (1:3,im1)*(1-s) + mult2*m%memberLoads(im)%F_D  (1:3,im2)*s)/dl
                ! inertial force       
-            AllOuts(MNFIi (:,I,J))    =(mult1*m%F_I   (1:3,m1)*(1-s) + mult2*m%F_I  (1:3,m2)*s)/dl
+            AllOuts(MNFIi (:,I,J))    =(mult1*m%memberLoads(im)%F_I   (1:3,im1)*(1-s) + mult2*m%memberLoads(im)%F_I  (1:3,im2)*s)/dl
                                       
                ! marine growth weight 
-            AllOuts(MNFMGi(:,I,J))    =(mult1*m%F_WMG (1:3,m1)*(1-s) + mult2*m%F_WMG(1:3,m2)*s)/dl
-            AllOuts(MNMMGi(:,I,J))    =(mult1*m%F_WMG (4:6,m1)*(1-s) + mult2*m%F_WMG(4:6,m2)*s)/dl
+            AllOuts(MNFMGi(:,I,J))    =(mult1*m%memberLoads(im)%F_WMG (1:3,im1)*(1-s) + mult2*m%memberLoads(im)%F_WMG(1:3,im2)*s)/dl
+            AllOuts(MNMMGi(:,I,J))    =(mult1*m%memberLoads(im)%F_WMG (4:6,im1)*(1-s) + mult2*m%memberLoads(im)%F_WMG(4:6,im2)*s)/dl
                                   
                ! buoyancy forces  
-            AllOuts(MNFBi (:,I,J))    =(mult1*m%F_B   (1:3,m1)*(1-s) + mult2*m%F_B  (1:3,m2)*s)/dl
-            AllOuts(MNFBFi(:,I,J))    =(mult1*m%F_BF  (1:3,m1)*(1-s) + mult2*m%F_BF (1:3,m2)*s)/dl           
+            AllOuts(MNFBi (:,I,J))    =(mult1*m%memberLoads(im)%F_B   (1:3,im1)*(1-s) + mult2*m%memberLoads(im)%F_B  (1:3,im2)*s)/dl
+            AllOuts(MNFBFi(:,I,J))    =(mult1*m%memberLoads(im)%F_BF  (1:3,im1)*(1-s) + mult2*m%memberLoads(im)%F_BF (1:3,im2)*s)/dl           
                                  
                ! buoyancy moments
-            AllOuts(MNMBi (:,I,J))    =(mult1*m%F_B   (4:6,m1)*(1-s) + mult2*m%F_B  (4:6,m2)*s)/dl
-            AllOuts(MNMBFi(:,I,J))    =(mult1*m%F_BF  (4:6,m1)*(1-s) + mult2*m%F_BF (4:6,m2)*s)/dl 
+            AllOuts(MNMBi (:,I,J))    =(mult1*m%memberLoads(im)%F_B   (4:6,im1)*(1-s) + mult2*m%memberLoads(im)%F_B  (4:6,im2)*s)/dl
+            AllOuts(MNMBFi(:,I,J))    =(mult1*m%memberLoads(im)%F_BF  (4:6,im1)*(1-s) + mult2*m%memberLoads(im)%F_BF (4:6,im2)*s)/dl 
                                      
                ! added mass forces   
-            AllOuts(MNFAGi(:,I,J))    =(mult1*m%F_IMG (1:3,m1)*(1-s) + mult2*m%F_IMG(1:3,m2)*s)/dl  ! due to marine growth
-            AllOuts(MNMAGi(:,I,J))    =(mult1*m%F_IMG (4:6,m1)*(1-s) + mult2*m%F_IMG(4:6,m2)*s)/dl  
-            AllOuts(MNFAMi (:,I,J))   =(mult1*m%F_A   (1:3,m1)*(1-s) + mult2*m%F_A  (1:3,m2)*s)/dl  ! due to the structural member moving the fluid
-            AllOuts(MNFAFi (:,I,J))   =(mult1*m%F_If  (1:3,m1)*(1-s) + mult2*m%F_If(1:3 ,m2)*s)/dl  ! due to the ballasted/flooded fluid
-            AllOuts(MNMAFi (:,I,J))   =(mult1*m%F_If  (4:6,m1)*(1-s) + mult2*m%F_If(4:6 ,m2)*s)/dl
+            AllOuts(MNFAGi(:,I,J))    =(mult1*m%memberLoads(im)%F_IMG (1:3,im1)*(1-s) + mult2*m%memberLoads(im)%F_IMG(1:3,im2)*s)/dl  ! due to marine growth
+            AllOuts(MNMAGi(:,I,J))    =(mult1*m%memberLoads(im)%F_IMG (4:6,im1)*(1-s) + mult2*m%memberLoads(im)%F_IMG(4:6,im2)*s)/dl  
+            AllOuts(MNFAMi (:,I,J))   =(mult1*m%memberLoads(im)%F_A   (1:3,im1)*(1-s) + mult2*m%memberLoads(im)%F_A  (1:3,im2)*s)/dl  ! due to the structural member moving the fluid
+            AllOuts(MNFAFi (:,I,J))   =(mult1*m%memberLoads(im)%F_If  (1:3,im1)*(1-s) + mult2*m%memberLoads(im)%F_If(1:3 ,im2)*s)/dl  ! due to the ballasted/flooded fluid
+            AllOuts(MNMAFi (:,I,J))   =(mult1*m%memberLoads(im)%F_If  (4:6,im1)*(1-s) + mult2*m%memberLoads(im)%F_If(4:6 ,im2)*s)/dl
       
          END DO   
       END DO
@@ -6762,18 +6789,17 @@ SUBROUTINE MrsnOut_WriteOutputs( UnOutFile, Time, y, p, ErrStat, ErrMsg )
 
 END SUBROUTINE MrsnOut_WriteOutputs
 
-SUBROUTINE GetNeighboringNodes(member, d, m1, m2, s, ErrStat, ErrMsg) 
+SUBROUTINE GetNeighboringNodes(member, d, m1, m2, i1, i2, s, ErrStat, ErrMsg) 
 
    TYPE(Morison_MemberType),         INTENT( IN    ) :: member
    REAL(ReKi),                       INTENT( IN    ) :: d
    INTEGER,                          INTENT(   OUT ) :: m1
    INTEGER,                          INTENT(   OUT ) :: m2
+   INTEGER,                          INTENT(   OUT ) :: i1
+   INTEGER,                          INTENT(   OUT ) :: i2
    REAL(ReKi),                       INTENT(   OUT ) :: s
    INTEGER,                          INTENT(   OUT ) :: ErrStat              ! a non-zero value indicates an error occurred           
    CHARACTER(*),                     INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
-   
-   
-   INTEGER                                           :: i1, i2
 
 
    ErrStat = ErrID_None
@@ -6824,7 +6850,7 @@ SUBROUTINE MrsnOut_Init( InitInp, y,  p, InitOut, ErrStat, ErrMsg )
 !   INTEGER                                        :: Indx                 ! Counts the current index into the WaveKinNd array
 !   CHARACTER(1024)                                ::  OutFileName         ! The name of the output file  including the full path.
 !   CHARACTER(200)                                 :: Frmt                 ! a string to hold a format statement
-   INTEGER                                        :: m1, m2, memberIndx   ! marker1, marker2, and member indices
+   INTEGER                                        :: i1, i2, m1, m2, memberIndx   ! marker1, marker2, and member indices
    REAL(ReKi)                                     :: s                    ! interpolation factor
 !   INTEGER                                        :: count                ! node index
    
@@ -6878,10 +6904,12 @@ END IF
             ! scale factor based on how far they are from the requested output location.
             ! Since this is being done on markers and not nodes, the subroutine must be called after the Morison_Init() subroutine is called
 
-            CALL GetNeighboringNodes(p%Members(memberIndx), p%MOutLst(I)%NodeLocs(J),  m1, m2, s, ErrStat, ErrMsg)
+            CALL GetNeighboringNodes(p%Members(memberIndx), p%MOutLst(I)%NodeLocs(J),  m1, m2, i1, i2, s, ErrStat, ErrMsg)
                   
-            p%MOutLst(I)%Marker1(J) = m1
-            p%MOutLst(I)%Marker2(J) = m2 ! The 2nd marker indx which is used to
+            p%MOutLst(I)%MeshIndx1(J) = m1
+            p%MOutLst(I)%MeshIndx2(J) = m2 
+            p%MOutLst(I)%MemberIndx1(J) = i1
+            p%MOutLst(I)%MemberIndx2(J) = i2 
             p%MOutLst(I)%s(J)       = s ! linear interpolation factor     
             
          END DO

@@ -2063,20 +2063,31 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, ErrStat, ErrMsg )
             END IF      
 
 
-            ALLOCATE ( InitInp%Morison%MOutLst(I)%Marker1(InitInp%Morison%MOutLst(I)%NOutLoc), STAT = ErrStat2 )
+            ALLOCATE ( InitInp%Morison%MOutLst(I)%MeshIndx1(InitInp%Morison%MOutLst(I)%NOutLoc), STAT = ErrStat2 )
             IF ( ErrStat2 /= 0 ) THEN
-               CALL SetErrStat( ErrID_Fatal, 'Error allocating space for Marker1 array.', ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
+               CALL SetErrStat( ErrID_Fatal, 'Error allocating space for %MeshIndx1 array.', ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
                CALL CleanUp()
                RETURN
             END IF      
-
-
-            ALLOCATE ( InitInp%Morison%MOutLst(I)%Marker2(InitInp%Morison%MOutLst(I)%NOutLoc), STAT = ErrStat2 )
+            ALLOCATE ( InitInp%Morison%MOutLst(I)%MemberIndx1(InitInp%Morison%MOutLst(I)%NOutLoc), STAT = ErrStat2 )
             IF ( ErrStat2 /= 0 ) THEN
-               CALL SetErrStat( ErrID_Fatal, 'Error allocating space for Marker2 array.', ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
+               CALL SetErrStat( ErrID_Fatal, 'Error allocating space for %MemberIndx1 array.', ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
+               CALL CleanUp()
+               RETURN
+            END IF
+
+            ALLOCATE ( InitInp%Morison%MOutLst(I)%MeshIndx2(InitInp%Morison%MOutLst(I)%NOutLoc), STAT = ErrStat2 )
+            IF ( ErrStat2 /= 0 ) THEN
+               CALL SetErrStat( ErrID_Fatal, 'Error allocating space for %MeshIndx2 array.', ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
                CALL CleanUp()
                RETURN
             END IF      
+            ALLOCATE ( InitInp%Morison%MOutLst(I)%MemberIndx2(InitInp%Morison%MOutLst(I)%NOutLoc), STAT = ErrStat2 )
+            IF ( ErrStat2 /= 0 ) THEN
+               CALL SetErrStat( ErrID_Fatal, 'Error allocating space for %MemberIndx2 array.', ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
+               CALL CleanUp()
+               RETURN
+            END IF    
 
             ALLOCATE ( InitInp%Morison%MOutLst(I)%s(InitInp%Morison%MOutLst(I)%NOutLoc), STAT = ErrStat2 )
 
