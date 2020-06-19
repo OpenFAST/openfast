@@ -322,38 +322,38 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       IF (ErrStat >= AbortErrLev) RETURN
 
    IF ( (InitInp%NumSC2CtrlGlob > 0) .or. (InitInp%NumSC2Ctrl > 0) .or. (InitInp%NumCtrl2SC > 0) ) THEN
-      p%ScOn = .TRUE.
+      p%UseSC = .TRUE.
    ElSE
-      p%ScOn = .FALSE.
+      p%UseSC = .FALSE.
    END IF
         
    IF (InitInp%NumSC2Ctrl > 0 .and. p%UseBladedInterface) THEN
-      CALL AllocAry( u%SuperControllerTurbine, InitInp%NumSC2Ctrl, 'u%SuperController', ErrStat2, ErrMsg2 )
+      CALL AllocAry( u%fromSC, InitInp%NumSC2Ctrl, 'u%fromSC', ErrStat2, ErrMsg2 )
          CALL CheckError( ErrStat2, ErrMsg2 )
          IF (ErrStat >= AbortErrLev) RETURN
-      u%SuperControllerTurbine = InitInp%InitScOutputsTurbine
+      u%fromSC = InitInp%fromSC
 
       p%ScInAlpha = exp( -TwoPi*p%DT*InputFileData%ScInCutoff )
       if (InputFileData%ScInCutOff < EPSILON( InputFileData%ScInCutOff )) CALL CheckError( ErrID_Fatal, 'ScInCutoff must be greater than 0.')       
-      CALL AllocAry( xd%ScInFilter, InitInp%NumSC2Ctrl, 'xd%ScInFilter', ErrStat2, ErrMsg2 )
+      CALL AllocAry( xd%filt_fromSC, InitInp%NumSC2Ctrl, 'xd%filt_fromSC', ErrStat2, ErrMsg2 )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN
-      xd%ScInFilter = InitInp%InitScOutputsTurbine
+      xd%filt_fromSC = InitInp%fromSC
 
    END IF
                   
    IF (InitInp%NumSC2CtrlGlob > 0 .and. p%UseBladedInterface) THEN
-      CALL AllocAry( u%SuperControllerGlob, InitInp%NumSC2CtrlGlob, 'u%SuperControllerGlob', ErrStat2, ErrMsg2 )
+      CALL AllocAry( u%fromSCglob, InitInp%NumSC2CtrlGlob, 'u%fromSCglob', ErrStat2, ErrMsg2 )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN
-      u%SuperControllerGlob = InitInp%InitScOutputsGlob
+      u%fromSCglob = InitInp%fromSCGlob
 
       p%ScInAlpha = exp( -TwoPi*p%DT*InputFileData%ScInCutoff )
       if (InputFileData%ScInCutOff < EPSILON( InputFileData%ScInCutOff )) CALL CheckError( ErrID_Fatal, 'ScInCutoff must be greater than 0.')       
-      CALL AllocAry( xd%ScInGlobFilter, InitInp%NumSC2CtrlGlob, 'xd%ScInGlobFilter', ErrStat2, ErrMsg2 )
+      CALL AllocAry( xd%filt_fromSCglob, InitInp%NumSC2CtrlGlob, 'xd%filt_fromSCglob', ErrStat2, ErrMsg2 )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN
-      xd%ScInGlobFilter = InitInp%InitScOutputsGlob
+      xd%filt_fromSCglob = InitInp%fromSCGlob
 
    END IF
       
@@ -432,10 +432,10 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
 
    
    IF (InitInp%NumCtrl2SC > 0 .and. p%UseBladedInterface) THEN
-      CALL AllocAry( y%SuperController, InitInp%NumCtrl2SC, 'y%SuperController', ErrStat2, ErrMsg2 )
+      CALL AllocAry( y%toSC, InitInp%NumCtrl2SC, 'y%toSC', ErrStat2, ErrMsg2 )
          CALL CheckError( ErrStat2, ErrMsg2 )
          IF (ErrStat >= AbortErrLev) RETURN
-      y%SuperController = 0.0_SiKi
+      y%toSC = 0.0_SiKi
    END IF
       
       
@@ -978,8 +978,8 @@ SUBROUTINE SrvD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
       !  (might be used for airfoil flap angles for example)
       y%BlAirfoilCom(1:p%NumBl) = m%dll_data%BlAirfoilCom(1:p%NumBl)
       
-      IF (ALLOCATED(y%SuperController)) THEN
-         y%SuperController = m%dll_data%SCoutput
+      IF (ALLOCATED(y%toSC)) THEN
+         y%toSC = m%dll_data%toSC
       END IF
       
    END IF      
@@ -1018,7 +1018,7 @@ SUBROUTINE SrvD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
    AllOuts(HSSBrTqC)= 0.001*y%HSSBrTrqC
 
    DO K=1,p%NumBl
-      AllOuts( BlPitchC(K) )     = y%BlPitchCom(K)*R2D
+      AllOuts( BlPitchC(K) ) = y%BlPitchCom(K)*R2D
       AllOuts( BlAirfoilC(K) )   = y%BlAirfoilCom(K)
    END DO        
    
@@ -1110,16 +1110,16 @@ SUBROUTINE SrvD_UpdateDiscState( t, u, p, x, xd, z, OtherState, m, ErrStat, ErrM
       ErrMsg  = ""
 
 
-      if( allocated(u%SuperControllerTurbine) ) then
+      if( allocated(u%fromSC) ) then
          ! Filter the inputs from the Supercontroller to ServoDyn
-         xd%ScInFilter = p%ScInAlpha * xd%ScInFilter + (1.0_SiKi - p%ScInAlpha) * u%SuperControllerTurbine         
+         xd%filt_fromSC = p%ScInAlpha * xd%filt_fromSC + (1.0_SiKi - p%ScInAlpha) * u%fromSC         
       end if
 
-      if( allocated(u%SuperControllerGlob) ) then
+      if( allocated(u%fromSCglob) ) then
          ! Filter the global inputs from the Supercontroller to ServoDyn
-         xd%ScInGlobFilter = p%ScInAlpha * xd%ScInGlobFilter + (1.0_SiKi - p%ScInAlpha) * u%SuperControllerGlob
+         xd%filt_fromSCglob = p%ScInAlpha * xd%filt_fromSCglob + (1.0_SiKi - p%ScInAlpha) * u%fromSCglob
       end if
-      
+     
       
       !xd%BlPitchFilter = p%BlAlpha * xd%BlPitchFilter + (1.0_ReKi - p%BlAlpha) * u%BlPitch
    
@@ -2268,14 +2268,14 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, OutFileRoot, UnEc, ErrStat
                    
    END DO
                      
-   !TODO: UNCOMMENT THIS ONCE THE SUPERCONTROLLER HAS BEEN IMPLEMENTED AND THE INPUT FILES HAVE BEEN UPDATED !---------------------- SUPERCONTROLLER -------------
-   !TODO: UNCOMMENT THIS ONCE THE SUPERCONTROLLER HAS BEEN IMPLEMENTED AND THE INPUT FILES HAVE BEEN UPDATED CALL ReadCom( UnIn, InputFile, 'Section Header: Supercontroller', ErrStat2, ErrMsg2, UnEc )
-   !TODO: UNCOMMENT THIS ONCE THE SUPERCONTROLLER HAS BEEN IMPLEMENTED AND THE INPUT FILES HAVE BEEN UPDATED CALL CheckError( ErrStat2, ErrMsg2 )
-   !TODO: UNCOMMENT THIS ONCE THE SUPERCONTROLLER HAS BEEN IMPLEMENTED AND THE INPUT FILES HAVE BEEN UPDATED IF ( ErrStat >= AbortErrLev ) RETURN
-   !TODO: UNCOMMENT THIS ONCE THE SUPERCONTROLLER HAS BEEN IMPLEMENTED AND THE INPUT FILES HAVE BEEN UPDATED
-   !TODO: UNCOMMENT THIS ONCE THE SUPERCONTROLLER HAS BEEN IMPLEMENTED AND THE INPUT FILES HAVE BEEN UPDATED CALL ReadVar( UnIn, InputFile, InputFileData%ScInCutoff, "ScInCutoff", "Cuttoff frequency for low-pass filter on Supercontroller Inputs (Hz)", ErrStat2, ErrMsg2, UnEc)
-   !TODO: UNCOMMENT THIS ONCE THE SUPERCONTROLLER HAS BEEN IMPLEMENTED AND THE INPUT FILES HAVE BEEN UPDATED CALL CheckError( ErrStat2, ErrMsg2 )
-   !TODO: UNCOMMENT THIS ONCE THE SUPERCONTROLLER HAS BEEN IMPLEMENTED AND THE INPUT FILES HAVE BEEN UPDATED IF ( ErrStat >= AbortErrLev ) RETURN
+   !---------------------- SUPERCONTROLLER -------------
+   CALL ReadCom( UnIn, InputFile, 'Section Header: Supercontroller', ErrStat2, ErrMsg2, UnEc )
+      CALL CheckError( ErrStat2, ErrMsg2 )
+      IF ( ErrStat >= AbortErrLev ) RETURN
+
+   CALL ReadVar( UnIn, InputFile, InputFileData%ScInCutoff, "ScInCutoff", "Cut-off frequency for low-pass filter on Supercontroller Inputs (Hz)", ErrStat2, ErrMsg2, UnEc)
+      CALL CheckError( ErrStat2, ErrMsg2 )
+      IF ( ErrStat >= AbortErrLev ) RETURN
    
    !---------------------- OUTPUT --------------------------------------------------         
    CALL ReadCom( UnIn, InputFile, 'Section Header: Output', ErrStat2, ErrMsg2, UnEc )
@@ -3492,7 +3492,7 @@ SUBROUTINE Torque_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
 
       ! Local variables:
 
-   REAL(ReKi)                   :: HSSBrFrac                     ! Fraction of full braking torque {0 (off) <= HSSBrFrac <= 1 (full)} (-)
+   REAL(ReKi)                   :: HSSBrFrac                                       ! Fraction of full braking torque {0 (off) <= HSSBrFrac <= 1 (full)} (-)
 
 
 

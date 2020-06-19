@@ -48,5 +48,5 @@
 		<Filter Name="Header Files" Filter="fi;fd;h;inc"/>
 		<Filter Name="Resource Files" Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe"/>
 		<Filter Name="Source Files" Filter="f90;for;f;fpp;ftn;def;odl;idl">
-		<File RelativePath="..\..\reg_tests\r-test\glue-codes\fast\5MW_Baseline\ServoData\DISCON_SC\DISCON_SC.F90"/></Filter></Files>
+		<File RelativePath="..\..\reg_tests\r-test\glue-codes\openfast\5MW_Baseline\ServoData\DISCON_SC\DISCON_SC.F90"/></Filter></Files>
 	<Globals/></VisualStudioProject>

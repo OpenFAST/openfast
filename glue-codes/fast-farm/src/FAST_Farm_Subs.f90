@@ -158,7 +158,6 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
    TYPE(SC_InitOutputType)                 :: SC_InitOut              ! Init output for SC module
    CHARACTER(*), PARAMETER                 :: RoutineName = 'Farm_Initialize'       
    CHARACTER(ChanLenFF),ALLOCATABLE        :: OutList(:)              ! list of user-requested output channels
-   real(DbKi)                              :: Interval                ! Module's timestep size (should be same as farm%p%DT
    INTEGER(IntKi)                          :: i
    !..........
    ErrStat = ErrID_None
@@ -248,7 +247,6 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
    AWAE_InitInput%n_high_low                 = farm%p%n_high_low
    AWAE_InitInput%NumDT                      = farm%p%n_TMax
    AWAE_InitInput%OutFileRoot                = farm%p%OutFileRoot
-   Interval = farm%p%DT
    call AWAE_Init( AWAE_InitInput, farm%AWAE%u, farm%AWAE%p, farm%AWAE%x, farm%AWAE%xd, farm%AWAE%z, farm%AWAE%OtherSt, farm%AWAE%y, &
                    farm%AWAE%m, farm%p%DT_low, AWAE_InitOutput, ErrStat2, ErrMsg2 )
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -272,9 +270,8 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
       ! b. CALL SC_Init
    if ( farm%p%useSC ) then
       SC_InitInp%nTurbines = farm%p%NumTurbines
-      Interval = farm%p%DT
       call SC_Init(SC_InitInp, farm%SC%uInputs, farm%SC%p, farm%SC%x, farm%SC%xd, farm%SC%z, farm%SC%OtherState, &
-                     farm%SC%y, farm%SC%m, Interval, SC_InitOut, ErrStat2, ErrMsg2)
+                     farm%SC%y, farm%SC%m, farm%p%DT_low, SC_InitOut, ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
             if (ErrStat >= AbortErrLev) then
                call Cleanup()
