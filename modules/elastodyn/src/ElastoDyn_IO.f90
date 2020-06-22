@@ -4334,14 +4334,14 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, BldFile, FurlFile, TwrFile
 
 
    !----------- OUTLIST  -----------------------------------------------------------
-      ! In case there is something ill-formed in the additional nodal outputs section, we will simply ignore it and assume that it is an NREL compatable input file.
-   ErrMsg_NoAllBldNdOuts='AllBldNd section of ElastoDyn input file not found or improperly formatted. Therefore assuming no nodal outputs.'
+      ! In case there is something ill-formed in the additional nodal outputs section, we will simply ignore it and assume that this section does not exist.
+   ErrMsg_NoAllBldNdOuts='Nodal outputs section of ElastoDyn input file not found or improperly formatted.'
 
    !----------- OUTLIST for BldNd -----------------------------------------------------------
    CALL ReadCom( UnIn, InputFile, 'Section Header: OutList for Blade node channels', ErrStat2, ErrMsg2, UnEc )
    IF ( ErrStat2 >= AbortErrLev ) THEN
       InputFileData%BldNd_NumOuts = 0
-      call wrscr( trim(ErrMsg_NoAllBldNdOuts)//' --> '//trim(ErrMsg2) )
+      call wrscr( trim(ErrMsg_NoAllBldNdOuts) )
       CALL Cleanup()
       RETURN
    ENDIF
@@ -4353,7 +4353,7 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, BldFile, FurlFile, TwrFile
    CALL ReadVar(  UnIn, InputFile, InputFileData%BldNd_BladesOut, 'BldNd_BladesOut', 'Which blades to output node data on.'//TRIM(Num2Lstr(I)), ErrStat2, ErrMsg2, UnEc )
    IF ( ErrStat2 >= AbortErrLev ) THEN
       InputFileData%BldNd_NumOuts = 0
-      call wrscr( trim(ErrMsg_NoAllBldNdOuts)//' --> '//trim(ErrMsg2) )
+      call wrscr( trim(ErrMsg_NoAllBldNdOuts) )
       CALL Cleanup()
       RETURN
    ENDIF
@@ -4364,7 +4364,7 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, BldFile, FurlFile, TwrFile
    CALL ReadVar(  UnIn, InputFile, InputFileData%BldNd_BlOutNd_Str, 'BldNd_BlOutNd_Str', 'Which nodes to output node data on.'//TRIM(Num2Lstr(I)), ErrStat2, ErrMsg2, UnEc )
    IF ( ErrStat2 >= AbortErrLev ) THEN
       InputFileData%BldNd_NumOuts = 0
-      call wrscr( trim(ErrMsg_NoAllBldNdOuts)//' --> '//trim(ErrMsg2) )
+      call wrscr( trim(ErrMsg_NoAllBldNdOuts) )
       CALL Cleanup()
       RETURN
    ENDIF
@@ -4374,7 +4374,7 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, BldFile, FurlFile, TwrFile
    CALL ReadCom( UnIn, InputFile, 'Section Header: OutList', ErrStat2, ErrMsg2, UnEc )
    IF ( ErrStat2 >= AbortErrLev ) THEN
       InputFileData%BldNd_NumOuts = 0
-      call wrscr( trim(ErrMsg_NoAllBldNdOuts)//' --> '//trim(ErrMsg2) )
+      call wrscr( trim(ErrMsg_NoAllBldNdOuts) )
       CALL Cleanup()
       RETURN
    ENDIF
@@ -4384,7 +4384,7 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, BldFile, FurlFile, TwrFile
    CALL ReadOutputList ( UnIn, InputFile, InputFileData%BldNd_OutList, InputFileData%BldNd_NumOuts, 'BldNd_OutList', "List of user-requested output channels", ErrStat2, ErrMsg2, UnEc  )     ! Routine in NWTC Subroutine Library
    IF ( ErrStat2 >= AbortErrLev ) THEN
       InputFileData%BldNd_NumOuts = 0
-      call wrscr( trim(ErrMsg_NoAllBldNdOuts)//' --> '//trim(ErrMsg2) )
+      call wrscr( trim(ErrMsg_NoAllBldNdOuts) )
       CALL Cleanup()
       RETURN
    ENDIF
