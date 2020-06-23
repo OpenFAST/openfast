@@ -7124,6 +7124,7 @@ SUBROUTINE ReadModeShapeFile(p_FAST, InputFile, ErrStat, ErrMsg, checkpointOnly)
    CHARACTER(ErrMsgLen)                    :: ErrMsg2
    CHARACTER(*), PARAMETER                 :: RoutineName = 'ReadModeShapeFile'
    
+   CHARACTER(1024)                         :: PriPath            ! Path name of the primary file
    INTEGER(IntKi)                          :: i
    INTEGER(IntKi)                          :: UnIn
    INTEGER(IntKi)                          :: UnEc
@@ -7133,6 +7134,8 @@ SUBROUTINE ReadModeShapeFile(p_FAST, InputFile, ErrStat, ErrMsg, checkpointOnly)
    ErrMsg  = ""
    UnEc = -1
 
+   CALL GetPath( InputFile, PriPath )    ! Input files will be relative to the path where the primary input file is located.
+   
       !  Open data file.
    CALL GetNewUnit( UnIn, ErrStat2, ErrMsg2 )
 
@@ -7154,12 +7157,15 @@ SUBROUTINE ReadModeShapeFile(p_FAST, InputFile, ErrStat, ErrMsg, checkpointOnly)
    CALL ReadVar( UnIn, InputFile, p_FAST%VTK_modes%CheckpointRoot, 'CheckpointRoot', 'Name of the checkpoint file written by FAST when linearization data was produced', ErrStat2, ErrMsg2, UnEc )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       
+   IF ( PathIsRelative( p_FAST%VTK_modes%CheckpointRoot ) ) p_FAST%VTK_modes%CheckpointRoot = TRIM(PriPath)//TRIM(p_FAST%VTK_modes%CheckpointRoot)
+      
    if (present(checkpointOnly)) then
       if (checkpointOnly) then
          call cleanup()
          return
       end if
    end if
+   
       
    CALL ReadVar( UnIn, InputFile, p_FAST%VTK_modes%MatlabFileName, 'MatlabFileName', 'Name of the file with eigenvectors written by Matlab', ErrStat2, ErrMsg2, UnEc )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -7167,6 +7173,7 @@ SUBROUTINE ReadModeShapeFile(p_FAST, InputFile, ErrStat, ErrMsg, checkpointOnly)
          CALL Cleanup()
          RETURN
       END IF
+   IF ( PathIsRelative( p_FAST%VTK_modes%MatlabFileName ) ) p_FAST%VTK_modes%MatlabFileName = TRIM(PriPath)//TRIM(p_FAST%VTK_modes%MatlabFileName)
    
    !----------- VISUALIZATION OPTIONS ------------------------------------------
    
