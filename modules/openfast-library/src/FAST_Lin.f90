@@ -4198,7 +4198,7 @@ SUBROUTINE SaveOP(i, p_FAST, y_FAST, ED, BD, SrvD, AD, IfW, OpFM, HD, SD, ExtPtf
             CALL BD_CopyOtherState (BD%OtherSt( k,STATE_CURR), y_FAST%op%OtherSt_BD(k, i), CtrlCode, Errstat2, ErrMsg2)
                CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                      
-            CALL BD_CopyInput (BD%Input(k,1), y_FAST%op%u_BD(k, i), CtrlCode, Errstat2, ErrMsg2)
+            CALL BD_CopyInput (BD%Input(1,k), y_FAST%op%u_BD(k, i), CtrlCode, Errstat2, ErrMsg2)
                CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                      
          END DO
@@ -4643,7 +4643,7 @@ SUBROUTINE SetOperatingPoint(i, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, O
             CALL BD_CopyOtherState (y_FAST%op%OtherSt_BD(k, i), BD%OtherSt( k,STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
                CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                      
-            CALL BD_CopyInput (y_FAST%op%u_BD(k, i), BD%Input(k,1), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+            CALL BD_CopyInput (y_FAST%op%u_BD(k, i), BD%Input(1,k), MESH_UPDATECOPY, Errstat2, ErrMsg2)
                CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                      
          END DO
