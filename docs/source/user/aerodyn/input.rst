@@ -10,10 +10,11 @@ file is required. This driver file specifies initialization inputs
 normally provided to AeroDyn by OpenFAST, as well as the per-time-step
 inputs to AeroDyn.
 
-As an example,  the ``driver.dvr`` file is the main driver, the ``input.dat`` is the primary input file, the ``blade.dat`` file contains the blade
-geometry data, and the ``airfoil.dat`` file contains the airfoil
-angle of attack, lift, drag, moment coefficients, and pressure
-coefficients.  Example input files are included in :numref:`ad_appendix`.
+As an example,  the ``driver.dvr`` file is the main driver, the ``input.dat`` is
+the primary input file, the ``blade.dat`` file contains the blade geometry data,
+and the ``airfoil.dat`` file contains the airfoil angle of attack, lift, drag,
+moment coefficients, and pressure coefficients.  Example input files are
+included in :numref:`ad_appendix`.
 
 No lines should be added or removed from the input files, except in
 tables where the number of rows is specified and comment lines in the
@@ -151,11 +152,11 @@ for ``DTAero`` may be used to indicate that AeroDyn should employ the
 time step prescribed by the driver code (OpenFAST or the standalone driver
 program).
 
-Set ``WakeMod`` to 0 if you want to disable rotor wake/induction
-effects or 1 to include these effects using the (quasi-steady) BEM theory model. When
-``WakeMod`` is set to 2, a dynamic BEM theory model (DBEMT) is used (also referred to
-  as dynamic inflow or dynamic wake model). 
-``WakeMod`` cannot be set to 2 during linearization analyses.
+Set ``WakeMod`` to 0 if you want to disable rotor wake/induction effects or 1 to
+include these effects using the (quasi-steady) BEM theory model. When
+``WakeMod`` is set to 2, a dynamic BEM theory model (DBEMT) is used (also
+referred to as dynamic inflow or dynamic wake model).  ``WakeMod`` cannot be set
+to 2 during linearization analyses.
 
 Set ``AFAeroMod`` to 1 to include steady blade airfoil aerodynamics or 2
 to enable UA; ``AFAeroMod`` must be 1 during linearization analyses

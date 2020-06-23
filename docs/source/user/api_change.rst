@@ -9,10 +9,11 @@ The changes are tabulated according to the module input file, line number, and f
 The line number corresponds to the resulting line number after all changes are implemented.
 Thus, be sure to implement each in order so that subsequent line numbers are correct.
 
-OpenFAST v2.3.0 to OpenFAST vTBD
-----------------------------------
- ============== ==== ================== =============================================================================================================================================================================
-Added in OpenFAST vTBD
+OpenFAST v2.3.0 to OpenFAST `dev`
+---------------------------------
+
+============== ==== ================== =============================================================================================================================================================================
+Added in OpenFAST `dev`
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  Module        Line  Flag Name          Example Value
 ============== ==== ================== =============================================================================================================================================================================
@@ -45,7 +46,6 @@ Module                                        Line  Flag Name        Example Val
 AeroDyn Airfoil Input File - Airfoil Tables   2    UserProp         0   UserProp          ! User property (control) setting
 AeroDyn                                       37   AFTabMod         1   AFTabMod          - Interpolation method for multiple airfoil tables {1=1D interpolation on AoA (first table only); 2=2D interpolation on AoA and Re; 3=2D interpolation on AoA and UserProp} (-)
 ============================================= ==== =============== ========================================================================================================================================================================================================
-----------------------------------
 
 
 OpenFAST v2.1.0 to OpenFAST v2.2.0
