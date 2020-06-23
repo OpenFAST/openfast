@@ -592,8 +592,6 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
          DEALLOCATE( Waves_InitOut%WaveElev  )
          DEALLOCATE( Waves_InitOut%WaveTime  )
          DEALLOCATE( Waves_InitOut%NodeInWater  )
-      ELSE  ! No waves
-         Waves_InitOut%WaveDir=InitInp%Waves%WaveDir  ! Set direction: needed for SS excitation
       END IF       
 !==========================================================================     
           
