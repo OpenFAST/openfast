@@ -35,6 +35,7 @@ private
    
 
    public :: DBEMT_ReInit
+   public :: DBEMT_InitStates_AllNodes
 
    contains
    
@@ -268,7 +269,54 @@ subroutine DBEMT_ReInit( p, x, OtherState, m )
    m%FirstWarn_tau1 = .true.
 
 end subroutine DBEMT_ReInit
+!!----------------------------------------------------------------------------------------------------------------------------------
+!> routine to initialize the states based on inputs
+subroutine DBEMT_InitStates_AllNodes( u, p, x, OtherState )
+   type(DBEMT_InputType),           intent(in   ) :: u          !< Inputs at t
+   type(DBEMT_ParameterType),       intent(in   ) :: p          !< Parameters
+   type(DBEMT_ContinuousStateType), intent(inout) :: x          !< Input: Continuous states at t;
+                                                                !!   Output: Continuous states at t + Interval
+   type(DBEMT_OtherStateType),      intent(inout) :: OtherState !< Other/logical states at t on input; at t+dt on output
+   
+   integer(IntKi)                                 :: i          !< blade node counter
+   integer(IntKi)                                 :: j          !< blade counter
 
+   
+   do j=1,size(x%element,2)
+      do i=1,size(x%element,1)
+         call DBEMT_InitStates( i, j, u, p, x, OtherState )
+      end do
+   end do
+
+end subroutine DBEMT_InitStates_AllNodes
+!!----------------------------------------------------------------------------------------------------------------------------------
+!> routine to initialize the states based on inputs
+subroutine DBEMT_InitStates( i, j, u, p, x, OtherState )
+   integer(IntKi),                  intent(in   ) :: i          !< blade node counter
+   integer(IntKi),                  intent(in   ) :: j          !< blade counter
+   type(DBEMT_InputType),           intent(in   ) :: u          !< Inputs at t
+   type(DBEMT_ParameterType),       intent(in   ) :: p          !< Parameters
+   type(DBEMT_ContinuousStateType), intent(inout) :: x          !< Input: Continuous states at t;
+                                                                !!   Output: Continuous states at t + Interval
+   type(DBEMT_OtherStateType),      intent(inout) :: OtherState !< Other/logical states at t on input; at t+dt on output
+
+   if ( .not. OtherState%areStatesInitialized(i,j) ) then
+      x%element(i,j)%vind(1) = u%element(i,j)%vind_s(1)
+      x%element(i,j)%vind(2) = u%element(i,j)%vind_s(2)
+      
+      if (p%DBEMT_Mod == DBEMT_cont_tauConst) then
+         x%element(i,j)%vind_dot(1) = u%element(i,j)%vind_s_dot(1)
+         x%element(i,j)%vind_dot(2) = u%element(i,j)%vind_s_dot(2)
+      else
+         x%element(i,j)%vind_1(1) = u%element(i,j)%vind_s(1)
+         x%element(i,j)%vind_1(2) = u%element(i,j)%vind_s(2)
+      end if
+      
+      OtherState%areStatesInitialized(i,j) = .true.
+      return
+   end if
+   
+end subroutine DBEMT_InitStates
 !!----------------------------------------------------------------------------------------------------------------------------------
 !> Loose coupling routine for solving for constraint states, integrating continuous states, and updating discrete and other states.
 !! Continuous, constraint, discrete, and other states are updated for t + Interval
@@ -305,22 +353,7 @@ subroutine DBEMT_UpdateStates( i, j, t, n, u, p, x, OtherState, m, errStat, errM
       if (errStat >= AbortErrLev) return
    call ComputeTau2(i, j, u(1)%element(i,j), p, OtherState%tau1, OtherState%tau2, k_tau)
 
-   if ( .not. OtherState%areStatesInitialized(i,j) ) then
-      x%element(i,j)%vind(1) = u(1)%element(i,j)%vind_s(1)
-      x%element(i,j)%vind(2) = u(1)%element(i,j)%vind_s(2)
-      
-      if (p%DBEMT_Mod == DBEMT_cont_tauConst) then
-         x%element(i,j)%vind_dot(1) = u(1)%element(i,j)%vind_s_dot(1)
-         x%element(i,j)%vind_dot(2) = u(1)%element(i,j)%vind_s_dot(2)
-      else
-         x%element(i,j)%vind_1(1) = u(1)%element(i,j)%vind_s(1)
-         x%element(i,j)%vind_1(2) = u(1)%element(i,j)%vind_s(2)
-      end if
-      
-      OtherState%areStatesInitialized(i,j) = .true.
-      return
-   end if
-   
+   call DBEMT_InitStates( i, j, u(1), p, x, OtherState )
 
    if (p%DBEMT_Mod == DBEMT_cont_tauConst) then ! continuous formulation:
       utimes(1) = t

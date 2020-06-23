@@ -59,6 +59,7 @@ module BEMT
    public :: ComputeFrozenWake
    public :: CheckLinearizationInput
    public :: UpdatePhi
+   public :: BEMT_InitStates
    
    contains
 
@@ -891,7 +892,7 @@ subroutine BEMT_UpdateStates( t, n, u1, u2,  p, x, xd, z, OtherState, AFInfo, m,
    !  compute inputs to UA at step n
    !...............................................................................................................................
    if (p%UA_Flag) then
-      call CalculateInputsAndOtherStatesForUA(1, n, u1, p, x, xd, z, OtherState, AFInfo, m)
+      call CalculateInputsAndOtherStatesForUA(1, u1, p, x, xd, z, OtherState, AFInfo, m)
    end if
    
    !...............................................................................................................................
@@ -952,29 +953,27 @@ subroutine BEMT_UpdateStates( t, n, u1, u2,  p, x, xd, z, OtherState, AFInfo, m,
             
       end if
    
-      call CalculateInputsAndOtherStatesForUA(2, n, u2, p, x, xd, z, OtherState, AFInfo, m)
+      call CalculateInputsAndOtherStatesForUA(2, u2, p, x, xd, z, OtherState, AFInfo, m)
    
       !...............................................................................................................................
       !  compute UA states at t+dt
       !...............................................................................................................................
-      if (n>0) then
-         do j = 1,p%numBlades
-            do i = 1,p%numBladeNodes
+      do j = 1,p%numBlades
+         do i = 1,p%numBladeNodes
 
-               ! We only update the UnsteadyAero states if we have unsteady aero turned on for this node
-               if (OtherState%UA_Flag(i,j)) then
-                        ! COMPUTE: x%UA and/or xd%UA, OtherState%UA
-                     call UA_UpdateStates( i, j, t, n, m%u_UA(i,j,:), uTimes, p%UA, x%UA, xd%UA, OtherState%UA, AFInfo(p%AFIndx(i,j)), m%UA, errStat2, errMsg2 )
-                        if (ErrStat2 /= ErrID_None) then
-                           call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//trim(NodeText(i,j)))
-                           if (errStat >= AbortErrLev) return
-                        end if
+            ! We only update the UnsteadyAero states if we have unsteady aero turned on for this node
+            if (OtherState%UA_Flag(i,j)) then
+                     ! COMPUTE: x%UA and/or xd%UA, OtherState%UA
+                  call UA_UpdateStates( i, j, t, n, m%u_UA(i,j,:), uTimes, p%UA, x%UA, xd%UA, OtherState%UA, AFInfo(p%AFIndx(i,j)), m%UA, errStat2, errMsg2 )
+                     if (ErrStat2 /= ErrID_None) then
+                        call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//trim(NodeText(i,j)))
+                        if (errStat >= AbortErrLev) return
+                     end if
                      
-               end if
+            end if
 
-            end do
          end do
-      end if
+      end do
 
    end if ! is UA used?
     
@@ -1034,9 +1033,8 @@ subroutine SetInputs_For_DBEMT(u_DBEMT, u, p, axInduction, tanInduction, Rtip)
 
 end subroutine SetInputs_For_DBEMT
 !..................................................................................................................................
-subroutine CalculateInputsAndOtherStatesForUA(InputIndex, n, u, p, x, xd, z, OtherState, AFInfo, m)
+subroutine CalculateInputsAndOtherStatesForUA(InputIndex, u, p, x, xd, z, OtherState, AFInfo, m)
    integer(IntKi),                      intent(in   ) :: InputIndex ! InputIndex= 1 or 2, depending on time step we are calculating inputs for
-   integer(IntKi),                      intent(in   ) :: n          ! Current simulation time step n = 0,1,...
    type(BEMT_InputType),                intent(in   ) :: u          ! Input
    type(BEMT_ParameterType),            intent(in   ) :: p          ! Parameters   
    type(BEMT_ContinuousStateType),      intent(in   ) :: x          ! Input: Continuous states at t;
@@ -1061,28 +1059,25 @@ subroutine CalculateInputsAndOtherStatesForUA(InputIndex, n, u, p, x, xd, z, Oth
    !...............................................................................................................................
    !  compute inputs to UA at time n (also setting inductions--including DBEMT and skewed wake corrections--at time n)
    !...............................................................................................................................
-   if (n > 0) then ! UA states aren't updated on the first call
-
-      m%phi = z%phi
-      call SetInputs_for_UA_AllNodes(u, p, m%phi, m%axInduction, m%tanInduction, m%u_UA(:,:,InputIndex))
+   m%phi = z%phi
+   call SetInputs_for_UA_AllNodes(u, p, m%phi, m%axInduction, m%tanInduction, m%u_UA(:,:,InputIndex))
    
-      do j = 1,p%numBlades
-         do i = 1,p%numBladeNodes
+   do j = 1,p%numBlades
+      do i = 1,p%numBladeNodes
 
-               ! We only update the UnsteadyAero states if we have unsteady aero turned on for this node
-            if (OtherState%UA_Flag(i,j)) then
-                  ! ....... check inputs to UA ...........
-               call UA_TurnOff_input(p%UA, AFInfo(p%AFIndx(i,j)), m%u_UA(i,j,InputIndex), ErrStat2, ErrMsg2)
-               if (ErrStat2 /= ErrID_None) then
-                  OtherState%UA_Flag(i,j) = .FALSE.
-                  call WrScr( 'Warning: Turning off Unsteady Aerodynamics due to '//trim(ErrMsg2)//" "//trim(NodeText(i,j)) )
-               end if
+            ! We only update the UnsteadyAero states if we have unsteady aero turned on for this node
+         if (OtherState%UA_Flag(i,j)) then
+               ! ....... check inputs to UA ...........
+            call UA_TurnOff_input(p%UA, AFInfo(p%AFIndx(i,j)), m%u_UA(i,j,InputIndex), ErrStat2, ErrMsg2)
+            if (ErrStat2 /= ErrID_None) then
+               OtherState%UA_Flag(i,j) = .FALSE.
+               call WrScr( 'Warning: Turning off Unsteady Aerodynamics due to '//trim(ErrMsg2)//" "//trim(NodeText(i,j)) )
             end if
+         end if
             
-         end do
       end do
+   end do
 
-   end if
 end subroutine CalculateInputsAndOtherStatesForUA
 
 !..................................................................................................................................
@@ -1421,8 +1416,52 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, errStat
 end subroutine BEMT_CalcOutput
 
 !----------------------------------------------------------------------------------------------------------------------------------
+!> Routine used in linearization to get the states initialized properly at t=0 (before perturbing things)
+subroutine BEMT_InitStates(t, u, p, x, xd, z, OtherState, m, AFInfo, ErrStat, ErrMsg )
+   REAL(DbKi),                     intent(in   )  :: t           ! current simulation time
+   type(BEMT_InputType),           intent(in   )  :: u           ! Inputs at Time t
+   type(BEMT_ParameterType),       intent(in   )  :: p           ! Parameters
+   type(BEMT_ContinuousStateType), intent(inout)  :: x           ! Continuous states at t
+   type(BEMT_DiscreteStateType),   intent(in   )  :: xd          ! Discrete states at t
+   type(BEMT_ConstraintStateType), intent(in   )  :: z           ! Constraint states at t
+   type(BEMT_OtherStateType),      intent(inout)  :: OtherState  ! Other states at t
+   type(BEMT_MiscVarType),         intent(inout)  :: m           ! Misc/optimization variables
+   type(AFI_ParameterType),        intent(in   )  :: AFInfo(:)   ! The airfoil parameter data
+   integer(IntKi),                 intent(  out)  :: errStat     ! Error status of the operation
+   character(*),                   intent(  out)  :: errMsg      ! Error message if ErrStat /= ErrID_None
+
+   INTEGER(IntKi)                                 :: i, j
+   INTEGER(IntKi),                 parameter      :: InputIndex  = 1
+   LOGICAL,                        parameter      :: CalculateDBEMTInputs = .true.
+   LOGICAL,                        parameter      :: ApplyCorrections = .true.
+
+   integer(IntKi)                                 :: errStat2     ! Error status of the operation
+   character(ErrMsgLen)                           :: errMsg2      ! Error message if ErrStat /= ErrID_None
+   character(*), parameter                        :: RoutineName = 'BEMT_InitStates'
+   
+   
+   ErrStat = ErrID_None
+   ErrMsg = ""
+   
+   if (OtherState%nodesInitialized) return
+   
+   m%phi = z%phi
+   call BEMT_CalcOutput_Inductions( InputIndex, t, CalculateDBEMTInputs, ApplyCorrections, m%phi, u, p, x, xd, z, OtherState, AFInfo, m%axInduction, m%tanInduction, m%chi, m, errStat, errMsg )
+
+   if (p%DBEMT_Mod /= DBEMT_none) then
+      call DBEMT_InitStates_AllNodes( m%u_DBEMT(InputIndex), p%DBEMT, x%DBEMT, OtherState%DBEMT )
+   end if
+   
+   if (p%UA_Flag) then
+      call CalculateInputsAndOtherStatesForUA(InputIndex, u, p, x, xd, z, OtherState, AFInfo, m)
+      call UA_InitStates_AllNodes( m%u_UA(i,j,InputIndex), p%UA, x%UA, OtherState%UA, OtherState%UA_Flag, AFInfo, p%AFIndx )
+   end if ! is UA used?
+   
+   
+end subroutine BEMT_InitStates
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Routine for computing inductions outputs, used in both loose and tight coupling.
 subroutine BEMT_CalcOutput_Inductions( InputIndex, t, CalculateDBEMTInputs, ApplyCorrections, phi, u, p, x, xd, z, OtherState, AFInfo, axInduction, tanInduction, chi, m, errStat, errMsg )
-! Routine for computing inductions outputs, used in both loose and tight coupling.
 !..................................................................................................................................
 
    REAL(DbKi),                     intent(in   )  :: t           ! current simulation time

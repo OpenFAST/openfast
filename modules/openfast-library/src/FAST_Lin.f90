@@ -2141,7 +2141,7 @@ SUBROUTINE Linear_AD_InputSolve_du( p_FAST, y_FAST, u_AD, y_ED, BD, MeshMapData,
          call SetBlockMatrix( dUdu, MeshMapData%BDED_L_2_AD_L_B(k)%dM%tv_ud, AD_Start_tv, AD_Start_td )
       end if
          
-      if (allocated( MeshMapData%BDED_L_2_AD_L_B(k)%dM%ta_ud)) then
+      if (allocated( MeshMapData%BDED_L_2_AD_L_B(k)%dM%tv_ud)) then
          AD_Start_ta = AD_Start_td + u_AD%BladeMotion(k)%NNodes * 12 ! 4 fields (TranslationDisp, Orientation, TranslationVel, and RotationVel) with 3 components before translational velocity field
          
          call SetBlockMatrix( dUdu, MeshMapData%BDED_L_2_AD_L_B(k)%dM%ta_ud, AD_Start_ta, AD_Start_td )
@@ -4198,7 +4198,7 @@ SUBROUTINE SaveOP(i, p_FAST, y_FAST, ED, BD, SrvD, AD, IfW, OpFM, HD, SD, ExtPtf
             CALL BD_CopyOtherState (BD%OtherSt( k,STATE_CURR), y_FAST%op%OtherSt_BD(k, i), CtrlCode, Errstat2, ErrMsg2)
                CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                      
-            CALL BD_CopyInput (BD%Input(1,k), y_FAST%op%u_BD(k, i), CtrlCode, Errstat2, ErrMsg2)
+            CALL BD_CopyInput (BD%Input(k,1), y_FAST%op%u_BD(k, i), CtrlCode, Errstat2, ErrMsg2)
                CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                      
          END DO
@@ -4486,8 +4486,46 @@ SUBROUTINE PerturbOP(t, iLinTime, iMode, p_FAST, y_FAST, ED, BD, SrvD, AD, IfW, 
    !!!   ! AeroDyn: copy final predictions to actual states; copy current outputs to next 
    !!!!IF ( p_FAST%CompAero == Module_AD14 ) THEN
    !!!!ELSE
-   !!!IF ( p_FAST%CompAero == Module_AD ) THEN
-   !!!END IF
+   IF ( p_FAST%CompAero == Module_AD ) THEN
+      ThisModule = Module_AD
+      if (allocated(y_FAST%Lin%Modules(ThisModule)%Instance(1)%op_x_eig_mag)) then
+      
+         indx = 1
+            ! set linearization operating points:
+         if (AD%p%BEMT%DBEMT%lin_nx>0) then
+            do j=1,size(AD%x(STATE_CURR)%BEMT%DBEMT%element,2)
+               do i=1,size(AD%x(STATE_CURR)%BEMT%DBEMT%element,1)
+                  indx_last = indx + size(AD%x(STATE_CURR)%BEMT%DBEMT%element(i,j)%vind) - 1
+                  call GetStateAry(p_FAST, iMode, t, AD%x(STATE_CURR)%BEMT%DBEMT%element(i,j)%vind, y_FAST%Lin%Modules(ThisModule)%Instance(1)%op_x_eig_mag(  indx : indx_last), &
+                                                                                                    y_FAST%Lin%Modules(ThisModule)%Instance(1)%op_x_eig_phase(indx : indx_last) )
+                  indx = indx_last + 1
+               end do
+            end do
+   
+            do j=1,size(AD%x(STATE_CURR)%BEMT%DBEMT%element,2)
+               do i=1,size(AD%x(STATE_CURR)%BEMT%DBEMT%element,1)
+                  indx_last = indx + size(AD%x(STATE_CURR)%BEMT%DBEMT%element(i,j)%vind_dot) - 1
+                  call GetStateAry(p_FAST, iMode, t, AD%x(STATE_CURR)%BEMT%DBEMT%element(i,j)%vind_dot, y_FAST%Lin%Modules(ThisModule)%Instance(1)%op_x_eig_mag(  indx : indx_last), &
+                                                                                                        y_FAST%Lin%Modules(ThisModule)%Instance(1)%op_x_eig_phase(indx : indx_last) )
+                  indx = indx_last + 1
+               end do
+            end do
+      
+         end if
+   
+         if (AD%p%BEMT%UA%lin_nx>0) then
+            do j=1,size(AD%x(STATE_CURR)%BEMT%UA%element,2)
+               do i=1,size(AD%x(STATE_CURR)%BEMT%UA%element,1)
+                  indx_last = indx + size(AD%x(STATE_CURR)%BEMT%UA%element(i,j)%x) - 1
+                  call GetStateAry(p_FAST, iMode, t, AD%x(STATE_CURR)%BEMT%UA%element(i,j)%x,  y_FAST%Lin%Modules(ThisModule)%Instance(1)%op_x_eig_mag(  indx : indx_last), &
+                                                                                               y_FAST%Lin%Modules(ThisModule)%Instance(1)%op_x_eig_phase(indx : indx_last) )
+                  indx = indx_last + 1
+               end do
+            end do
+         end if
+      
+      end if
+   END IF
    !!!      
    !!!! InflowWind: copy op to actual states and inputs
    !!!IF ( p_FAST%CompInflow == Module_IfW ) THEN
@@ -4605,7 +4643,7 @@ SUBROUTINE SetOperatingPoint(i, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, O
             CALL BD_CopyOtherState (y_FAST%op%OtherSt_BD(k, i), BD%OtherSt( k,STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
                CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                      
-            CALL BD_CopyInput (y_FAST%op%u_BD(k, i), BD%Input(1, k), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+            CALL BD_CopyInput (y_FAST%op%u_BD(k, i), BD%Input(k,1), MESH_UPDATECOPY, Errstat2, ErrMsg2)
                CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                      
          END DO

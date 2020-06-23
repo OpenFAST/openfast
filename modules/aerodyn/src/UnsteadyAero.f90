@@ -41,6 +41,7 @@ private
    public :: UA_ValidateAFI
    public :: UA_TurnOff_param
    public :: UA_TurnOff_input
+   public :: UA_InitStates_AllNodes
 
    integer(intki), parameter         :: UA_Baseline      = 1   ! UAMod = 1 [Baseline model (Original)]
    integer(intki), parameter         :: UA_Gonzalez      = 2   ! UAMod = 2 [Gonzalez's variant (changes in Cn,Cc,Cm)]
@@ -1637,7 +1638,7 @@ subroutine UA_UpdateStates( i, j, t, n, u, uTimes, p, x, xd, OtherState, AFInfo,
       ! Local variables  
       
    character(ErrMsgLen)                         :: errMsg2
-   integer(IntKi)                               :: errStat2, ui
+   integer(IntKi)                               :: errStat2
    character(*), parameter                      :: RoutineName = 'UA_UpdateStates'
    type(UA_InputType)                           :: u_interp        ! Input at current timestep, t and t+dt
 
@@ -1650,14 +1651,6 @@ subroutine UA_UpdateStates( i, j, t, n, u, uTimes, p, x, xd, OtherState, AFInfo,
 
       
    if (p%UAMod == UA_HGM) then
-      do ui=1,size(u)
-         if (EqualRealNos(u(ui)%U, 0.0_ReKi) ) then
-            ErrStat = ErrID_Fatal
-            ErrMsg = RoutineName//': U (air velocity magnitude relative to the airfoil) is zero.'
-            return
-         end if
-      end do
-   
       
          ! initialize states to steady-state values:
       if (OtherState%FirstPass(i,j)) then
@@ -1665,7 +1658,7 @@ subroutine UA_UpdateStates( i, j, t, n, u, uTimes, p, x, xd, OtherState, AFInfo,
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
             IF ( ErrStat >= AbortErrLev ) RETURN
 
-         call HGM_Steady( i, j, t, u_interp, p, x%element(i,j), OtherState, AFInfo, m, ErrStat2, ErrMsg2 )
+         call HGM_Steady( i, j, u_interp, p, x%element(i,j), AFInfo, ErrStat2, ErrMsg2 )
       end if
 
       
@@ -1686,16 +1679,12 @@ subroutine UA_UpdateStates( i, j, t, n, u, uTimes, p, x, xd, OtherState, AFInfo,
       end if
       
    else
-
+      if (n<=0) return ! previous logic (before adding UA_HGM required n > 0 before UA_UpdateStates was called)
+      
       CALL UA_Input_ExtrapInterp( u, utimes, u_interp, t, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          IF ( ErrStat >= AbortErrLev ) RETURN
 
-      if (EqualRealNos(u_interp%U, 0.0_ReKi) ) then
-         ErrStat = ErrID_Fatal
-         ErrMsg = RoutineName//': U (air velocity magnitude relative to the airfoil) is zero.'
-         return
-      end if
       
          ! Update discrete states:
 #     ifdef DEBUG_v14
@@ -1711,18 +1700,58 @@ subroutine UA_UpdateStates( i, j, t, n, u, uTimes, p, x, xd, OtherState, AFInfo,
    
 end subroutine UA_UpdateStates
 !==============================================================================
-SUBROUTINE HGM_Steady( i, j, t, u, p, x, OtherState, AFInfo, m, ErrStat, ErrMsg )
+!!----------------------------------------------------------------------------------------------------------------------------------
+!> routine to initialize the states based on inputs at t=0
+subroutine UA_InitStates_AllNodes( u, p, x, OtherState, UA_is_on, AFInfo, AFIndx )
+   type(UA_InputType),           intent(in   ) :: u          !< Inputs at t
+   type(UA_ParameterType),       intent(in   ) :: p          !< Parameters
+   type(UA_ContinuousStateType), intent(inout) :: x          !< Input: Continuous states at t;
+   type(UA_OtherStateType),      intent(inout) :: OtherState !< Other/logical states at t on input; at t+dt on output
+   type(AFI_ParameterType),      intent(in   ) :: AFInfo(:)  !< The airfoil parameter data
+   logical,                      intent(in)    :: UA_is_on(:,:)
+   INTEGER(IntKi),               intent(in)    :: AFIndx(:,:)
+   
+   INTEGER(IntKi)                              :: i          !< blade node counter
+   INTEGER(IntKi)                              :: j          !< blade counter
+               
+   INTEGER(IntKi)                              :: ErrStat2
+   CHARACTER(ErrMsgLen)                        :: ErrMsg2
+   
+   
+      !...............................................................................................................................
+      !  compute UA states at t=0 (with known inputs)
+      !...............................................................................................................................
+      if (p%UAMod == UA_HGM) then
+      
+         do j = 1,size(UA_is_on,2) ! blades
+            do i = 1,size(UA_is_on,1) ! nodes
+
+               ! We only update the UnsteadyAero states if we have unsteady aero turned on for this node
+               if ( UA_is_on(i,j) .and. OtherState%FirstPass(i,j) ) then
+               
+                  ! initialize states to steady-state values:
+                  call HGM_Steady( i, j, u, p, x%element(i,j), AFInfo(AFIndx(i,j)), ErrStat2, ErrMsg2 )
+                     !call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+                     
+                  OtherState%FirstPass(i,j) = .false.
+               end if
+
+            end do
+         end do
+         
+      end if
+
+end subroutine UA_InitStates_AllNodes
+!==============================================================================
+SUBROUTINE HGM_Steady( i, j, u, p, x, AFInfo, ErrStat, ErrMsg )
 ! Routine to initialize the continuous states of the HGM model
 !..................................................................................................................................
 
    INTEGER(IntKi),                      INTENT(IN   )  :: i           !< blade node counter
    INTEGER(IntKi),                      INTENT(IN   )  :: j           !< blade counter
-   REAL(DbKi),                          INTENT(IN   )  :: t           ! Current simulation time in seconds
    TYPE(UA_InputType),                  INTENT(IN   )  :: u           ! Inputs at t
    TYPE(UA_ParameterType),              INTENT(IN   )  :: p           ! Parameters
    TYPE(UA_ElementContinuousStateType), INTENT(INOUT)  :: x           ! Continuous states at t
-   TYPE(UA_OtherStateType),             INTENT(IN   )  :: OtherState  ! Other states at t
-   type(UA_MiscVarType),                intent(inout)  :: m           ! Misc/optimization variables
    type(AFI_ParameterType),             intent(in   )  :: AFInfo      ! The airfoil parameter data
    INTEGER(IntKi),                      INTENT(  OUT)  :: ErrStat     ! Error status of the operation
    CHARACTER(*),                        INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
@@ -2207,6 +2236,7 @@ subroutine UA_CalcOutput( i, j, u, p, x, xd, OtherState, AFInfo, y, misc, ErrSta
    real(ReKi)                                   :: x4
    real(ReKi)                                   :: delta_c_df_primeprime
    real(ReKi), parameter                        :: delta_c_mf_primeprime = 0.0_ReKi
+   TYPE(UA_ElementContinuousStateType)          :: x_in        ! Continuous states at t
    
 
    type(AFI_OutputType)                         :: AFI_interp
@@ -2223,7 +2253,7 @@ subroutine UA_CalcOutput( i, j, u, p, x, xd, OtherState, AFInfo, y, misc, ErrSta
    AFI_interp%Cm = 0.0_ReKi ! value will be output if not computed below
    alpha_prime_f = 0.0_ReKi ! value will be output if not computed below
    
-   if ( OtherState%FirstPass(i, j) .or. EqualRealNos(u%U, 0.0_ReKi) ) then ! note: if u%U is = 0 in UpdateStates, BEMT shuts off UA; however, it could still be called with u%U=TwoNorm(u%v_ac)=0 here
+   if ( (OtherState%FirstPass(i, j) .and. p%UAMod /= UA_HGM) .or. EqualRealNos(u%U, 0.0_ReKi) ) then ! note: if u%U is = 0 in UpdateStates, BEMT shuts off UA; however, it could still be called with u%U=TwoNorm(u%v_ac)=0 here
             
       call AFI_ComputeAirfoilCoefs( u%alpha, u%Re, u%UserProp, AFInfo, AFI_interp, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)   
@@ -2253,30 +2283,25 @@ subroutine UA_CalcOutput( i, j, u, p, x, xd, OtherState, AFInfo, y, misc, ErrSta
       KC%alpha_filt_cur    = 0.0_ReKi
       KC%ds                = 2.0_ReKi*u%U*p%dt/p%c(i, j)
       
-      if (p%UAMod == UA_HGM) then
-         call AFI_ComputeUACoefs( AFInfo, u%Re, u%UserProp, BL_p, ErrMsg2, ErrStat2 )
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-            if (ErrStat >= AbortErrLev) return
-            
-         call Get_HGM_constants(i, j, p, u, x%element(i, j), BL_p, Tu, alpha_34, alphaE) ! compute Tu, alpha_34, and alphaE
-         
-         cl_fs = AFI_interp%cl_fs
-         fs_aE = AFI_interp%f_st ! this isn't exactly at the correct alpha, but it's better than nothing
-      else
-         alphaE   = 0.0
-         Tu       = 0.0
-         alpha_34 = 0.0
-         cl_fs    = 0.0
-         fs_aE    = 0.0
-      end if
+      alphaE   = 0.0
+      Tu       = 0.0
+      alpha_34 = 0.0
+      cl_fs    = 0.0
+      fs_aE    = 0.0
       
    elseif (p%UAMod == UA_HGM) then
-   
+      x_in = x%element(i,j)
+      
+      if (OtherState%FirstPass(i,j)) then
+         call HGM_Steady( i, j, u, p, x_in, AFInfo, ErrStat2, ErrMsg2 )
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      end if
+      
       call AFI_ComputeUACoefs( AFInfo, u%Re, u%UserProp, BL_p, ErrMsg2, ErrStat2 )
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          if (ErrStat >= AbortErrLev) return
       
-      call Get_HGM_constants(i, j, p, u, x%element(i, j), BL_p, Tu, alpha_34, alphaE) ! compute Tu, alpha_34, and alphaE
+      call Get_HGM_constants(i, j, p, u, x_in, BL_p, Tu, alpha_34, alphaE) ! compute Tu, alpha_34, and alphaE
    
       call AFI_ComputeAirfoilCoefs( alphaE, u%Re, u%UserProp, AFInfo, AFI_interp, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)   
@@ -2286,7 +2311,7 @@ subroutine UA_CalcOutput( i, j, u, p, x, xd, OtherState, AFInfo, y, misc, ErrSta
       fs_aE = AFI_interp%f_st
     
        ! Constraining x4 between 0 and 1 increases numerical stability (should be done elsewhere, but we'll double check here in case there were perturbations on the state value)
-      x4 = max( min( x%element(i, j)%x(4), 1.0_R8Ki ), 0.0_R8Ki )
+      x4 = max( min( x_in%x(4), 1.0_R8Ki ), 0.0_R8Ki )
     
       delta_c_df_primeprime = 0.5_ReKi * (sqrt(fs_aE) - sqrt(x4)) - 0.25_ReKi * (fs_aE - x4)
       

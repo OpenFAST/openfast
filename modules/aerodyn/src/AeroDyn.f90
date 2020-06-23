@@ -28,7 +28,7 @@ module AeroDyn
    use AirfoilInfo
    use NWTC_LAPACK
    use UnsteadyAero
-   
+ 
    
    implicit none
 
@@ -352,7 +352,7 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
          call Cleanup()
          return
       end if
-   
+  
       !............................................................................................
       ! Define and initialize inputs here 
       !............................................................................................
@@ -517,7 +517,7 @@ subroutine Init_MiscVars(m, p, u, y, errStat, errMsg)
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
    call AllocAry( m%WithoutSweepPitchTwist, 3_IntKi, 3_IntKi, p%NumBlNds, p%numBlades, 'OtherState%WithoutSweepPitchTwist', ErrStat2, ErrMsg2 )
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-   
+     
    call allocAry( m%SigmaCavit, p%NumBlNds, p%numBlades, 'm%SigmaCavit', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    call allocAry( m%SigmaCavitCrit, p%NumBlNds, p%numBlades, 'm%SigmaCavitCrit', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    call allocAry( m%CavitWarnSet, p%NumBlNds, p%numBlades, 'm%CavitWarnSet', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -535,7 +535,7 @@ subroutine Init_MiscVars(m, p, u, y, errStat, errMsg)
          return
       end if
    m%AllOuts = 0.0_ReKi
-   
+ 
       ! save these tower calculations for output:
    call AllocAry( m%W_Twr, p%NumTwrNds, 'm%W_Twr', ErrStat2, ErrMsg2 )
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
@@ -934,7 +934,7 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
    p%TwrAero          = InputFileData%TwrAero
    p%CavitCheck       = InputFileData%CavitCheck
    p%Gravity          = InitInp%Gravity
-  
+   
 
    
    if (InitInp%Linearize .and. InputFileData%WakeMod == WakeMod_BEMT) then
@@ -1186,7 +1186,7 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
       call ADTwr_CalcOutput(p, u, m, y, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)      
    end if
-   
+         
    if ( p%CavitCheck ) then      ! Calculate the cavitation number for the airfoil at the node in quesiton, and compare to the critical cavitation number based on the vapour pressure and submerged depth       
       do j = 1,p%numBlades ! Loop through all blades
          do i = 1,p%NumBlNds  ! Loop through all nodes
@@ -1634,7 +1634,7 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
    if (InputFileData%Patm <= 0.0) call SetErrStat ( ErrID_Fatal, 'The atmospheric pressure (Patm)  must be greater than zero.', ErrStat, ErrMsg, RoutineName )
    if (InputFileData%FluidDepth <= 0.0) call SetErrStat ( ErrID_Fatal, 'Fluid depth (FluidDepth) must be greater than zero', ErrStat, ErrMsg, RoutineName )
 
-                       
+      
    
       ! BEMT/DBEMT inputs
       ! bjj: these checks should probably go into BEMT where they are used...
@@ -2564,10 +2564,10 @@ SUBROUTINE AD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
    TYPE(AD_OutputType)                                           :: y_m
    TYPE(AD_ContinuousStateType)                                  :: x_p
    TYPE(AD_ContinuousStateType)                                  :: x_m
-   TYPE(AD_ContinuousStateType)                                  :: x_copy
-   TYPE(AD_DiscreteStateType)                                    :: xd_copy
+   TYPE(AD_ContinuousStateType)                                  :: x_init
    TYPE(AD_ConstraintStateType)                                  :: z_copy
    TYPE(AD_OtherStateType)                                       :: OtherState_copy
+   TYPE(AD_OtherStateType)                                       :: OtherState_init
    TYPE(AD_InputType)                                            :: u_perturb
    REAL(R8Ki)                                                    :: delta_p, delta_m  ! delta change in input
    INTEGER(IntKi)                                                :: i
@@ -2583,7 +2583,7 @@ SUBROUTINE AD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
    ErrStat = ErrID_None
    ErrMsg  = ''
 
-   
+
       ! get OP values here (i.e., set inputs for BEMT):
    if ( p%FrozenWake ) then
       call SetInputs(p, u, m, indx, errStat2, errMsg2)
@@ -2593,7 +2593,27 @@ SUBROUTINE AD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
       call computeFrozenWake(m%BEMT_u(indx), p%BEMT, m%BEMT_y, m%BEMT )
       m%BEMT%UseFrozenWake = .true.
    end if
+   
+   
+   call AD_CopyContState( x, x_init, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call AD_CopyOtherState( OtherState, OtherState_init, MESH_NEWCOPY, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      
+      if (ErrStat>=AbortErrLev) then
+         call cleanup()
+         return
+      end if
+      
+   ! initialize x_init so that we get accurrate values for first step
+   if (.not. OtherState%BEMT%nodesInitialized ) then
+      call SetInputs(p, u, m, indx, errStat2, errMsg2)
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          
+      call BEMT_InitStates(t, m%BEMT_u(indx), p%BEMT, x_init%BEMT, xd%BEMT, z%BEMT, OtherState_init%BEMT, m%BEMT, p%AFI, ErrStat2, ErrMsg2 ) ! changes values only if states haven't been initialized
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   end if
+   
    
       ! make a copy of the inputs to perturb
    call AD_CopyInput( u, u_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2)
@@ -2624,13 +2644,9 @@ SUBROUTINE AD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
       call AD_CopyOutput( y, y_m, MESH_NEWCOPY, ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          ! make a copy of the states to perturb
-      call AD_CopyContState( x, x_copy, MESH_NEWCOPY, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      call AD_CopyDiscState( xd, xd_copy, MESH_NEWCOPY, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       call AD_CopyConstrState( z, z_copy, MESH_NEWCOPY, ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      call AD_CopyOtherState( OtherState, OtherState_copy, MESH_NEWCOPY, ErrStat2, ErrMsg2)
+      call AD_CopyOtherState( OtherState_init, OtherState_copy, MESH_NEWCOPY, ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          
          if (ErrStat>=AbortErrLev) then
@@ -2647,7 +2663,7 @@ SUBROUTINE AD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
 
          call AD_CopyConstrState( z, z_copy, MESH_UPDATECOPY, ErrStat2, ErrMsg2)
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         call AD_CopyOtherState( OtherState, OtherState_copy, MESH_UPDATECOPY, ErrStat2, ErrMsg2)
+         call AD_CopyOtherState( OtherState_init, OtherState_copy, MESH_UPDATECOPY, ErrStat2, ErrMsg2)
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          
             ! get updated z%phi values:
@@ -2660,7 +2676,7 @@ SUBROUTINE AD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later
 
             ! compute y at u_op + delta_p u
-         call AD_CalcOutput( t, u_perturb, p, x, xd, z_copy, OtherState_copy, y_p, m, ErrStat2, ErrMsg2 ) 
+         call AD_CalcOutput( t, u_perturb, p, x_init, xd, z_copy, OtherState_copy, y_p, m, ErrStat2, ErrMsg2 ) 
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later
          
             
@@ -2683,7 +2699,7 @@ SUBROUTINE AD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later
             
             ! compute y at u_op - delta_m u
-         call AD_CalcOutput( t, u_perturb, p, x, xd, z_copy, OtherState_copy, y_m, m, ErrStat2, ErrMsg2 ) 
+         call AD_CalcOutput( t, u_perturb, p, x_init, xd, z_copy, OtherState_copy, y_m, m, ErrStat2, ErrMsg2 ) 
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later
          
             
@@ -2723,8 +2739,8 @@ SUBROUTINE AD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
          call Perturb_u( p, i, 1, u_perturb, delta_p )
 
             ! compute x at u_op + delta u
-         ! note that this routine updates z%phi instead of using the actual state value, so we don't need to call UpdateStates here to get z_op + delta_z:
-         call AD_CalcContStateDeriv( t, u_perturb, p, x, xd, z, OtherState, m, x_p, ErrStat2, ErrMsg2 ) 
+         ! note that this routine updates z%phi instead of using the actual state value, so we don't need to call UpdateStates/UpdatePhi here to get z_op + delta_z:
+         call AD_CalcContStateDeriv( t, u_perturb, p, x_init, xd, z, OtherState_init, m, x_p, ErrStat2, ErrMsg2 ) 
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
             
                                          
@@ -2735,7 +2751,7 @@ SUBROUTINE AD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
          
             ! compute x at u_op - delta u
          ! note that this routine updates z%phi instead of using the actual state value, so we don't need to call UpdateStates here to get z_op + delta_z:
-         call AD_CalcContStateDeriv( t, u_perturb, p, x, xd, z, OtherState, m, x_m, ErrStat2, ErrMsg2 ) 
+         call AD_CalcContStateDeriv( t, u_perturb, p, x_init, xd, z, OtherState_init, m, x_m, ErrStat2, ErrMsg2 ) 
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) 
             
             
@@ -2773,10 +2789,10 @@ contains
       call AD_DestroyOutput(                y_m,  ErrStat2, ErrMsg2)
       call AD_DestroyContState(             x_p,  ErrStat2, ErrMsg2)
       call AD_DestroyContState(             x_m,  ErrStat2, ErrMsg2)
-      call AD_DestroyContState(           x_copy, ErrStat2, ErrMsg2)
-      call AD_DestroyDiscState(          xd_copy, ErrStat2, ErrMsg2)
+      call AD_DestroyContState(          x_init,  ErrStat2, ErrMsg2)
       call AD_DestroyConstrState(         z_copy, ErrStat2, ErrMsg2)
       call AD_DestroyOtherState( OtherState_copy, ErrStat2, ErrMsg2)
+      call AD_DestroyOtherState( OtherState_init, ErrStat2, ErrMsg2)
       
       call AD_DestroyInput( u_perturb, ErrStat2, ErrMsg2 )
    end subroutine cleanup
@@ -2821,8 +2837,10 @@ SUBROUTINE AD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
    TYPE(AD_ContinuousStateType)                                  :: x_p
    TYPE(AD_ContinuousStateType)                                  :: x_m
    TYPE(AD_ContinuousStateType)                                  :: x_perturb
+   TYPE(AD_ContinuousStateType)                                  :: x_init
+   TYPE(AD_OtherStateType)                                       :: OtherState_init
    REAL(R8Ki)                                                    :: delta_p, delta_m  ! delta change in state
-   INTEGER(IntKi)                                                :: i, j, k, n   
+   INTEGER(IntKi)                                                :: i, k
    
    integer, parameter                                            :: indx = 1      ! m%BEMT_u(1) is at t; m%BEMT_u(2) is t+dt
    integer(intKi)                                                :: ErrStat2
@@ -2845,6 +2863,30 @@ SUBROUTINE AD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
       m%BEMT%UseFrozenWake = .true.
    end if
 
+
+   call AD_CopyContState( x, x_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      
+   call AD_CopyContState( x, x_init, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call AD_CopyOtherState( OtherState, OtherState_init, MESH_NEWCOPY, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      
+      if (ErrStat>=AbortErrLev) then
+         call cleanup()
+         return
+      end if
+      
+   ! initialize x_init so that we get accurrate values for 
+   if (.not. OtherState%BEMT%nodesInitialized ) then
+      call SetInputs(p, u, m, indx, errStat2, errMsg2)
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         
+      call BEMT_InitStates(t, m%BEMT_u(indx), p%BEMT, x_init%BEMT, xd%BEMT, z%BEMT, OtherState_init%BEMT, m%BEMT, p%AFI, ErrStat2, ErrMsg2 ) ! changes values only if states haven't been initialized
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   end if
+   
+   
    IF ( PRESENT( dYdx ) ) THEN
 
       ! Calculate the partial derivative of the output functions (Y) with respect to the continuous states (x) here:
@@ -2872,25 +2914,25 @@ SUBROUTINE AD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
       do i=1,size(p%dx)
          
             ! get x_op + delta_p x
-         call AD_CopyContState( x, x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
+         call AD_CopyContState( x_init, x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later            
          call Perturb_x( p, i, 1, x_perturb, delta_p )
 
 
             ! compute y at x_op + delta_p x
-         ! NOTE: z_op is the same as z because x_perturb does not affect the values of phi, thus I am not updating the states to get z_perturb.
-         call AD_CalcOutput( t, u, p, x_perturb, xd, z, OtherState, y_p, m, ErrStat2, ErrMsg2 ) 
+         ! NOTE: z_op is the same as z because x_perturb does not affect the values of phi, thus I am not updating the states or calling UpdatePhi to get z_perturb.
+         call AD_CalcOutput( t, u, p, x_perturb, xd, z, OtherState_init, y_p, m, ErrStat2, ErrMsg2 ) 
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later            
          
             
             ! get x_op - delta_m x
-         call AD_CopyContState( x, x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
+         call AD_CopyContState( x_init, x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later
          call Perturb_x( p, i, -1, x_perturb, delta_m )
          
             ! compute y at x_op - delta_m x
-         ! NOTE: z_op is the same as z because x_perturb does not affect the values of phi, thus I am not updating the states to get z_perturb.
-         call AD_CalcOutput( t, u, p, x_perturb, xd, z, OtherState, y_m, m, ErrStat2, ErrMsg2 ) 
+         ! NOTE: z_op is the same as z because x_perturb does not affect the values of phi, thus I am not updating the states or calling UpdatePhi to get z_perturb.
+         call AD_CalcOutput( t, u, p, x_perturb, xd, z, OtherState_init, y_m, m, ErrStat2, ErrMsg2 ) 
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later            
          
             
@@ -2928,28 +2970,27 @@ SUBROUTINE AD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
       end if
       
          
-      do i=1,size(p%Jac_u_indx,1)
+      do i=1,size(p%dx,1)
          
             ! get x_op + delta x
-         call AD_CopyContState( x, x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
+         call AD_CopyContState( x_init, x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later
          call Perturb_x( p, i, 1, x_perturb, delta_p )
 
             ! compute X at x_op + delta x
-         ! note that this routine updates z%phi instead of using the actual state value, so we don't need to call UpdateStates here to get z_op + delta_z:
-         ! also, x does not affect z_op
-         call AD_CalcContStateDeriv( t, u, p, x_perturb, xd, z, OtherState, m, x_p, ErrStat2, ErrMsg2 ) 
+         ! NOTE: z_op is the same as z because x_perturb does not affect the values of phi, thus I am not updating the states or calling UpdatePhi to get z_perturb.
+         call AD_CalcContStateDeriv( t, u, p, x_perturb, xd, z, OtherState_init, m, x_p, ErrStat2, ErrMsg2 ) 
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
             
                                          
             ! get x_op - delta x
-         call AD_CopyContState( x, x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
+         call AD_CopyContState( x_init, x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later
          call Perturb_x( p, i, -1, x_perturb, delta_m )
          
             ! compute x at u_op - delta u
-         ! note that this routine updates z%phi instead of using the actual state value, so we don't need to call UpdateStates here to get z_op + delta_z:
-         call AD_CalcContStateDeriv( t, u, p, x_perturb, xd, z, OtherState, m, x_m, ErrStat2, ErrMsg2 ) 
+         ! NOTE: z_op is the same as z because x_perturb does not affect the values of phi, thus I am not updating the states or calling UpdatePhi to get z_perturb.
+         call AD_CalcContStateDeriv( t, u, p, x_perturb, xd, z, OtherState_init, m, x_m, ErrStat2, ErrMsg2 ) 
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) 
             
             
@@ -3000,6 +3041,8 @@ contains
       call AD_DestroyContState( x_m,       ErrStat2, ErrMsg2)
       
       call AD_DestroyContState( x_perturb, ErrStat2, ErrMsg2 )
+      call AD_DestroyContState( x_init,    ErrStat2, ErrMsg2 )
+      call AD_DestroyOtherState( OtherState_init, ErrStat2, ErrMsg2 )
    end subroutine cleanup
 
 END SUBROUTINE AD_JacobianPContState
@@ -3406,8 +3449,8 @@ SUBROUTINE AD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
    
       FieldMask(MASKID_TRANSLATIONDISP) = .true.
       FieldMask(MASKID_TRANSLATIONVel)  = .true.
-      FieldMask(MASKID_RotationVel) = .true. 
-      FieldMask(MASKID_TRANSLATIONAcc) = .true. 
+      FieldMask(MASKID_RotationVel) = .true.
+      FieldMask(MASKID_TRANSLATIONAcc) = .true.
       do k=1,p%NumBlades     
          call PackMotionMesh(u%BladeMotion(k), u_op, index, FieldMask=FieldMask)
       end do
@@ -3455,102 +3498,102 @@ SUBROUTINE AD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
    END IF
 
    IF ( PRESENT( x_op ) ) THEN
-    
-      if (.not. allocated(x_op)) then 
-         call AllocAry(x_op, p%BEMT%DBEMT%lin_nx + p%BEMT%UA%lin_nx,'x_op',ErrStat2,ErrMsg2) 
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) 
-         if (ErrStat>=AbortErrLev) return 
-      end if 
- 
-      index = 1 
-         ! set linearization operating points: 
-      if (p%BEMT%DBEMT%lin_nx>0) then 
-         do j=1,p%NumBlades ! size(x%BEMT%DBEMT%element,2) 
-            do i=1,p%NumBlNds ! size(x%BEMT%DBEMT%element,1) 
-               do k=1,size(x%BEMT%DBEMT%element(i,j)%vind) 
-                  x_op(index) = x%BEMT%DBEMT%element(i,j)%vind(k) 
-                  index = index + 1 
-               end do 
-            end do 
-         end do 
-    
-         do j=1,p%NumBlades ! size(x%BEMT%DBEMT%element,2) 
-            do i=1,p%NumBlNds ! size(x%BEMT%DBEMT%element,1) 
-               do k=1,size(x%BEMT%DBEMT%element(i,j)%vind_dot) 
-                  x_op(index) = x%BEMT%DBEMT%element(i,j)%vind_dot(k) 
-                  index = index + 1 
-               end do 
-            end do 
-         end do 
-       
-      end if 
-    
-      if (p%BEMT%UA%lin_nx>0) then 
-         do j=1,p%NumBlades ! size(x%BEMT%UA%element,2) 
-            do i=1,p%NumBlNds ! size(x%BEMT%UA%element,1) 
-               do k=1,size(x%BEMT%UA%element(i,j)%x) 
-                  x_op(index) = x%BEMT%UA%element(i,j)%x(k) 
-                  index = index + 1 
-               end do 
-            end do 
-         end do 
-       
-      end if 
-       
+   
+      if (.not. allocated(x_op)) then
+         call AllocAry(x_op, p%BEMT%DBEMT%lin_nx + p%BEMT%UA%lin_nx,'x_op',ErrStat2,ErrMsg2)
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         if (ErrStat>=AbortErrLev) return
+      end if
+
+      index = 1
+         ! set linearization operating points:
+      if (p%BEMT%DBEMT%lin_nx>0) then
+         do j=1,p%NumBlades ! size(x%BEMT%DBEMT%element,2)
+            do i=1,p%NumBlNds ! size(x%BEMT%DBEMT%element,1)
+               do k=1,size(x%BEMT%DBEMT%element(i,j)%vind)
+                  x_op(index) = x%BEMT%DBEMT%element(i,j)%vind(k)
+                  index = index + 1
+               end do
+            end do
+         end do
+   
+         do j=1,p%NumBlades ! size(x%BEMT%DBEMT%element,2)
+            do i=1,p%NumBlNds ! size(x%BEMT%DBEMT%element,1)
+               do k=1,size(x%BEMT%DBEMT%element(i,j)%vind_dot)
+                  x_op(index) = x%BEMT%DBEMT%element(i,j)%vind_dot(k)
+                  index = index + 1
+               end do
+            end do
+         end do
+      
+      end if
+   
+      if (p%BEMT%UA%lin_nx>0) then
+         do j=1,p%NumBlades ! size(x%BEMT%UA%element,2)
+            do i=1,p%NumBlNds ! size(x%BEMT%UA%element,1)
+               do k=1,size(x%BEMT%UA%element(i,j)%x)
+                  x_op(index) = x%BEMT%UA%element(i,j)%x(k)
+                  index = index + 1
+               end do
+            end do
+         end do
+      
+      end if
+      
    END IF
 
    IF ( PRESENT( dx_op ) ) THEN
-    
-      if (.not. allocated(dx_op)) then 
-         call AllocAry(dx_op, p%BEMT%DBEMT%lin_nx + p%BEMT%UA%lin_nx,'dx_op',ErrStat2,ErrMsg2) 
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) 
-            if (ErrStat>=AbortErrLev) return 
-      end if 
- 
-      call AD_CalcContStateDeriv(t, u, p, x, xd, z, OtherState, m, dxdt, ErrStat2, ErrMsg2) 
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) 
-         if (ErrStat>=AbortErrLev) then 
-            call AD_DestroyContState( dxdt, ErrStat2, ErrMsg2) 
-            return 
-         end if 
-       
-      index = 1 
-         ! set linearization operating points: 
-      if (p%BEMT%DBEMT%lin_nx>0) then 
- 
-         do j=1,p%NumBlades ! size(dxdt%BEMT%DBEMT%element,2) 
-            do i=1,p%NumBlNds ! size(dxdt%BEMT%DBEMT%element,1) 
-               do k=1,size(dxdt%BEMT%DBEMT%element(i,j)%vind) 
-                  dx_op(index) = dxdt%BEMT%DBEMT%element(i,j)%vind(k) 
-                  index = index + 1 
-               end do 
-            end do 
-         end do 
-    
-         do j=1,p%NumBlades ! size(dxdt%BEMT%DBEMT%element,2) 
-            do i=1,p%NumBlNds ! size(dxdt%BEMT%DBEMT%element,1) 
-               do k=1,size(dxdt%BEMT%DBEMT%element(i,j)%vind_dot) 
-                  dx_op(index) = dxdt%BEMT%DBEMT%element(i,j)%vind_dot(k) 
-                  index = index + 1 
-               end do 
-            end do 
-         end do 
-       
-      end if 
-    
-      if (p%BEMT%UA%lin_nx>0) then 
-         do j=1,p%NumBlades ! size(dxdt%BEMT%UA%element,2) 
-            do i=1,p%NumBlNds ! size(dxdt%BEMT%UA%element,1) 
-               do k=1,size(dxdt%BEMT%UA%element(i,j)%x) 
-                  dx_op(index) = dxdt%BEMT%UA%element(i,j)%x(k) 
-                  index = index + 1 
-               end do 
-            end do 
-         end do 
-      end if 
-       
-      call AD_DestroyContState( dxdt, ErrStat2, ErrMsg2) 
-       
+   
+      if (.not. allocated(dx_op)) then
+         call AllocAry(dx_op, p%BEMT%DBEMT%lin_nx + p%BEMT%UA%lin_nx,'dx_op',ErrStat2,ErrMsg2)
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+            if (ErrStat>=AbortErrLev) return
+      end if
+
+      call AD_CalcContStateDeriv(t, u, p, x, xd, z, OtherState, m, dxdt, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         if (ErrStat>=AbortErrLev) then
+            call AD_DestroyContState( dxdt, ErrStat2, ErrMsg2)
+            return
+         end if
+      
+      index = 1
+         ! set linearization operating points:
+      if (p%BEMT%DBEMT%lin_nx>0) then
+
+         do j=1,p%NumBlades ! size(dxdt%BEMT%DBEMT%element,2)
+            do i=1,p%NumBlNds ! size(dxdt%BEMT%DBEMT%element,1)
+               do k=1,size(dxdt%BEMT%DBEMT%element(i,j)%vind)
+                  dx_op(index) = dxdt%BEMT%DBEMT%element(i,j)%vind(k)
+                  index = index + 1
+               end do
+            end do
+         end do
+   
+         do j=1,p%NumBlades ! size(dxdt%BEMT%DBEMT%element,2)
+            do i=1,p%NumBlNds ! size(dxdt%BEMT%DBEMT%element,1)
+               do k=1,size(dxdt%BEMT%DBEMT%element(i,j)%vind_dot)
+                  dx_op(index) = dxdt%BEMT%DBEMT%element(i,j)%vind_dot(k)
+                  index = index + 1
+               end do
+            end do
+         end do
+      
+      end if
+   
+      if (p%BEMT%UA%lin_nx>0) then
+         do j=1,p%NumBlades ! size(dxdt%BEMT%UA%element,2)
+            do i=1,p%NumBlNds ! size(dxdt%BEMT%UA%element,1)
+               do k=1,size(dxdt%BEMT%UA%element(i,j)%x)
+                  dx_op(index) = dxdt%BEMT%UA%element(i,j)%x(k)
+                  index = index + 1
+               end do
+            end do
+         end do
+      end if
+      
+      call AD_DestroyContState( dxdt, ErrStat2, ErrMsg2)
+      
    END IF
 
    IF ( PRESENT( xd_op ) ) THEN
@@ -3628,6 +3671,7 @@ SUBROUTINE Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
       InitOut%LinNames_y(i+indx_next-1) = trim(InitOut%WriteOutputHdr(i))//', '//trim(InitOut%WriteOutputUnt(i))  !trim(p%OutParam(i)%Name)//', '//p%OutParam(i)%Units
    end do    
    
+
       ! check for all the WriteOutput values that are functions of blade number:
    allocate( AllOut(0:MaxOutPts), STAT=ErrStat2 ) ! allocate starting at zero to account for invalid output channels
    if (ErrStat2 /=0 ) then
@@ -3983,7 +4027,7 @@ SUBROUTINE Init_Jacobian_x( p, InitOut, ErrStat, ErrMsg)
    
       ! All DBEMT continuous states are order = 2; UA states are order 1
    
-   ! set perturbation sizes: p%dx
+   ! set default perturbation sizes: p%dx
    p%dx = 2.0_R8Ki * D2R_D 
    
       ! set linearization output names:
@@ -4029,6 +4073,7 @@ SUBROUTINE Init_Jacobian_x( p, InitOut, ErrStat, ErrMsg)
             k = k + 1
             
             InitOut%LinNames_x(k) = 'x4 '//trim(NodeTxt)//', -'
+            p%dx(k) = 0.001 ! x4 is a number between 0 and 1, so we need this to be small
             k = k + 1
          end do
       end do
@@ -4148,9 +4193,9 @@ SUBROUTINE Perturb_u( p, n, perturb_sign, u, du )
       CALL PerturbOrientationMatrix( u%BladeMotion(3)%Orientation(:,:,node), du * perturb_sign, fieldIndx )
    CASE (22) !Module/Mesh/Field: u%BladeMotion(3)%TranslationVel = 22;
       u%BladeMotion(3)%TranslationVel(fieldIndx,node) = u%BladeMotion(3)%TranslationVel(fieldIndx,node) + du * perturb_sign
-   CASE (23) !Module/Mesh/Field: u%BladeMotion(2)%RotationVel = 23;
+   CASE (23) !Module/Mesh/Field: u%BladeMotion(3)%RotationVel = 23;
       u%BladeMotion(3)%RotationVel(fieldIndx,node) = u%BladeMotion(3)%RotationVel(fieldIndx,node) + du * perturb_sign
-   CASE (24) !Module/Mesh/Field: u%BladeMotion(2)%TranslationAcc = 24;
+   CASE (24) !Module/Mesh/Field: u%BladeMotion(3)%TranslationAcc = 24;
       u%BladeMotion(3)%TranslationAcc(fieldIndx,node) = u%BladeMotion(3)%TranslationAcc(fieldIndx,node) + du * perturb_sign
 
    CASE (25) !Module/Mesh/Field: u%InflowOnBlade(:,:,1) = 25;
@@ -4182,7 +4227,6 @@ SUBROUTINE Perturb_x( p, n, perturb_sign, x, dx )
    INTEGER(IntKi)    :: Blade             ! loop over blade nodes
    INTEGER(IntKi)    :: BladeNode         ! loop over blades
    INTEGER(IntKi)    :: StateIndex        ! loop over blades
-   INTEGER(IntKi)    :: indx_first        ! index indicating next value of dY to be filled 
 
 
    dx   = p%dx( n )
@@ -4214,15 +4258,16 @@ contains
       integer(IntKi), intent(  out) :: Blade
       integer(IntKi), intent(  out) :: BladeNode
       integer(IntKi), intent(  out) :: StateIndex
-      integer(IntKi)                :: CheckNum 
-       
- 
-      StateIndex = mod(Indx-1, NumberOfStatesPerElement ) + 1    ! returns a number in [1,NumberOfStatesPerElement] 
-       
-      CheckNum = (Indx - StateIndex)/NumberOfStatesPerElement 
-      BladeNode = mod(CheckNum, NumberOfElementsPerBlade ) + 1   ! returns a number in [1,NumberOfElementsPerBlade] 
-   
-      Blade = (CheckNum - BladeNode + 1)/NumberOfElementsPerBlade + 1 
+      
+      integer(IntKi)                :: CheckNum
+      
+
+      StateIndex = mod(Indx-1, NumberOfStatesPerElement ) + 1    ! returns a number in [1,NumberOfStatesPerElement]
+      
+      CheckNum = (Indx - StateIndex)/NumberOfStatesPerElement
+      BladeNode = mod(CheckNum, NumberOfElementsPerBlade ) + 1   ! returns a number in [1,NumberOfElementsPerBlade]
+      
+      Blade = (CheckNum - BladeNode + 1)/NumberOfElementsPerBlade + 1
 
    end subroutine GetStateIndices
 END SUBROUTINE Perturb_x
@@ -4244,10 +4289,11 @@ SUBROUTINE Compute_dY(p, y_p, y_m, delta_p, delta_m, dY)
 
    
    
-   indx_first = 1               
+   indx_first = 1
    call PackLoadMesh_dY(y_p%TowerLoad, y_m%TowerLoad, dY, indx_first)
+   
    do k=1,p%NumBlades
-      call PackLoadMesh_dY(y_p%BladeLoad(k), y_m%BladeLoad(k), dY, indx_first)                  
+      call PackLoadMesh_dY(y_p%BladeLoad(k), y_m%BladeLoad(k), dY, indx_first)
    end do
    
    
@@ -4284,14 +4330,14 @@ SUBROUTINE Compute_dX(p, x_p, x_m, delta_p, delta_m, dX)
       do j=1,size(x_p%BEMT%DBEMT%element,2) ! number of blades
          do i=1,size(x_p%BEMT%DBEMT%element,1) ! number of nodes per blade
             dX(indx_first:indx_first+1) = x_p%BEMT%DBEMT%element(i,j)%vind - x_m%BEMT%DBEMT%element(i,j)%vind
-            indx_first = indx_first + 2
+            indx_first = indx_first + size(x_p%BEMT%DBEMT%element(i,j)%vind) !+= 2
          end do
       end do
    
       do j=1,size(x_p%BEMT%DBEMT%element,2) ! number of blades
          do i=1,size(x_p%BEMT%DBEMT%element,1) ! number of nodes per blade
             dX(indx_first:indx_first+1) = x_p%BEMT%DBEMT%element(i,j)%vind_dot - x_m%BEMT%DBEMT%element(i,j)%vind_dot
-            indx_first = indx_first + 2
+            indx_first = indx_first + size(x_p%BEMT%DBEMT%element(i,j)%vind_dot) !+=2
          end do
       end do
       
@@ -4302,7 +4348,7 @@ SUBROUTINE Compute_dX(p, x_p, x_m, delta_p, delta_m, dX)
       do j=1,size(x_p%BEMT%UA%element,2) ! number of blades
          do i=1,size(x_p%BEMT%UA%element,1) ! number of nodes per blade
             dX(indx_first:indx_first+3) = x_p%BEMT%UA%element(i,j)%x - x_m%BEMT%UA%element(i,j)%x
-            indx_first = indx_first + 4
+            indx_first = indx_first + size(x_p%BEMT%UA%element(i,j)%x) ! = index_first += 4
          end do
       end do
 
