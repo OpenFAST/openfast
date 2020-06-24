@@ -283,15 +283,8 @@ PROGRAM SoilDyn_Driver
       ! If requested, get the stiffness matrix
    if ( SettingsFlags%StiffMatOut .and. p%CalcOption==Calc_REDWIN ) then
       do i=1,size(misc%dll_data)
-         Displacement = 0.0_R8Ki
-         call REDWINinterface_GetStiffMatrix( p%DLL_Trgt, p%DLL_Model, Displacement, Force, StiffMatrix, misc%dll_data(i), ErrStat, ErrMsg )
-         IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
-            CALL WrScr( 'Get stiffness: '//ErrMsg )
-            if ( ErrStat >= AbortErrLev ) call ProgEnd()
-         END IF
-
          call WrScr('Stiffness matrix for point '//trim(Num2LStr(i))//' at T = 0')
-         call WrMatrix( StiffMatrix, CU, '(ES12.4)', ' StiffMatrix' )
+         call WrMatrix( p%Stiffness(1:6,1:6,i), CU, '(ES12.4)', ' StiffMatrix' )
       enddo
    endif
 
