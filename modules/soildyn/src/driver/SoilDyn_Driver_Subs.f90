@@ -243,8 +243,6 @@ SUBROUTINE RetrieveArgs( CLSettings, CLFlags, ErrStat, ErrMsg )
       INTEGER(IntKi)                                     :: Delim1               ! where the [ is
       INTEGER(IntKi)                                     :: Delim2               ! where the ] is
       INTEGER(IntKi)                                     :: DelimSep             ! where the : is
-      INTEGER(IntKi)                                     :: DelimSep2            ! where the : is
-      INTEGER(IntKi)                                     :: DelimSep3            ! where the : is
       REAL(ReKi)                                         :: TempReal             ! temp variable to hold a real
 
       INTEGER(IntKi)                                     :: ErrStatTmp           ! Temporary error status for calls
@@ -395,11 +393,6 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
 
       ! Time steps
    CHARACTER(1024)                                    :: InputChr             ! Character string for timesteps and input file names (to handle DEFAULT or NONE value)
-
-      ! Gridded data
-   INTEGER(IntKi)                                     :: TmpIntAr3(3)         ! Temporary array for reading in a pair of integer values from the input file
-   REAL(ReKi)                                         :: TmpRealAr3(3)        ! Temporary array for reading in a pair of real values from the input file
-   REAL(ReKi)                                         :: GridCtrCoord(3)      ! Center coordinate of the grid read in
 
       ! Local error handling
    INTEGER(IntKi)                                     :: ios                  !< I/O status
@@ -816,9 +809,8 @@ CONTAINS
       INTEGER(IntKi)                                     :: LineLen           !< The length of the line read in
       CHARACTER(1024)                                    :: StrRead           !< String containing the first word read in
       REAL(R8Ki)                                         :: RealRead          !< Returns value of the number (if there was one), or NaN (as set by NWTC_Num) if there wasn't
-      CHARACTER(1024)                                    :: VarName           !< Name of the variable we are trying to read from the file
       CHARACTER(24)                                      :: Words(20)         !< Array of words we extract from a line.  We shouldn't have more than 20.
-      INTEGER(IntKi)                                     :: i,j,k             !< simple integer counters
+      INTEGER(IntKi)                                     :: i                 !< simple integer counters
       INTEGER(IntKi)                                     :: LineNumber        !< the line I am on
       LOGICAL                                            :: LineHasText       !< Flag indicating if the line I just read has text.  If so, it is a header line.
       LOGICAL                                            :: HaveReadData      !< Flag indicating if I have started reading data.

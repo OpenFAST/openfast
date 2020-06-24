@@ -67,7 +67,6 @@ PROGRAM SoilDyn_Driver
    TYPE(SlDDriver_Flags)                              :: SettingsFlags        ! Flags indicating which settings were specified (includes CL and ipt file)
    TYPE(SlDDriver_Settings)                           :: Settings             ! Driver settings
    REAL(DbKi)                                         :: Timer(1:2)           ! Keep track of how long this takes to run
-   REAL(DbKi)                                         :: TimeNow              ! The current time
 
       ! Data transfer
    real(R8Ki)                                         :: Force(6)

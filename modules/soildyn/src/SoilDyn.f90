@@ -83,7 +83,6 @@ subroutine SlD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
    character(ErrMsgLen)                               :: ErrMsg2     !< local error message
    character(*), parameter                            :: RoutineName = 'SlD_Init'
    type(SlD_InputFile)                                :: InputFileData   !< Data stored in the module's input file
-   character(1024)                                    :: EchoFileName
 
       ! Initialize variables
    ErrStat = ErrID_None
@@ -220,9 +219,6 @@ contains
       integer(IntKi)                               :: i              ! Generic counter
       integer(IntKi)                               :: ErrStat2       !< local error status
       character(ErrMsgLen)                         :: ErrMsg2        !< local error message
-      logical                                      :: FileExist
-      character(1024)                              :: PropsLoc       !< Full path to PropsFile location
-      character(1024)                              :: LDispLoc       !< Full path to LDispFile location
 
       ErrStat = ErrID_None
       ErrMsg  = ''
@@ -291,7 +287,6 @@ contains
       character(ErrMsgLen)                      :: ErrMsg2        !< local error message
 
       real(R8Ki)                                :: DCM(3,3)
-      real(ReKi)                                :: Pos(3)
       real(ReKi),                allocatable    :: MeshLocations(:,:)
 
       select case(p%CalcOption)
