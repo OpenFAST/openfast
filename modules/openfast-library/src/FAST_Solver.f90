@@ -5359,11 +5359,7 @@ SUBROUTINE FAST_AdvanceStates( t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED
    END IF            
             
 
-! FIXME: the copy to BD is redundant with above.
-      ! Transfer the outputs of ED to other modules.
-!   CALL Transfer_ED_to_HD_SD_BD_Mooring( p_FAST, ED%Output(1), HD%Input(STATE_PRED), SD%Input(1), ExtPtfm%Input(STATE_PRED), &
-!                                         MAPp%Input(STATE_PRED), FEAM%Input(STATE_PRED), MD%Input(STATE_PRED), &
-!                                         Orca%Input(STATE_PRED), BD%Input(STATE_PRED,:), MeshMapData, ErrStat2, ErrMsg2 )
+   ! Transfer platform ED to SD
    IF ( p_FAST%CompSub == Module_SD  ) THEN
          ! Map ED (motion) outputs to SD inputs:
       CALL Transfer_Point_to_Point( ED%Output(1)%PlatformPtMesh, SD%Input(1)%TPMesh, MeshMapData%ED_P_2_SD_TP, ErrStat2, ErrMsg2 )
