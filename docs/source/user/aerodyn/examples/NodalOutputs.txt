@@ -2,7 +2,7 @@ END of input file (the word "END" must appear in the first 3 columns of this las
 ---------------------- NODE OUTPUTS --------------------------------------------
           3   BldNd_BladesOut  - Blades to output
          99   BldNd_BlOutNd   - Blade nodes on each blade (currently unused)
-              OutList     - The next line(s) contains a list of output parameters.  See OutListParameters.xlsx, ElastoDyn_Nodes tab for a listing of available output channels, (-)
+              OutList     - The next line(s) contains a list of output parameters.  See OutListParameters.xlsx, AeroDyn_Nodes tab for a listing of available output channels, (-)
 "VUndx"   - x-component of undisturbed wind velocity at each node
 "VUndy"   - y-component of undisturbed wind velocity at each node
 "VUndz"   - z-component of undisturbed wind velocity at each node

@@ -108,7 +108,7 @@ END of input file (the word "END" must appear in the first 3 columns of the last
 END of input file (the word "END" must appear in the first 3 columns of this last OutList line)
 ---------------------- NODE OUTPUTS --------------------------------------------
          99   BldNd_BlOutNd   - Blade nodes on each blade (currently unused)
-              OutList     - The next line(s) contains a list of output parameters.  See OutListParameters.xlsx, ElastoDyn_Nodes tab for a listing of available output channels, (-)
+              OutList     - The next line(s) contains a list of output parameters.  See OutListParameters.xlsx, BeamDyn_Nodes tab for a listing of available output channels, (-)
 "FxL"
 "FyL"
 "FzL"
