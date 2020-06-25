@@ -2378,7 +2378,7 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, ADBlFile, OutFileRoot, UnE
 
    !----------- OUTLIST  -----------------------------------------------------------
       ! In case there is something ill-formed in the additional nodal outputs section, we will simply ignore it.
-   ErrMsg_NoAllBldNdOuts='AllBldNd section of AeroDyn input file not found or improperly formatted.'
+   ErrMsg_NoAllBldNdOuts='Nodal output section of AeroDyn input file not found or improperly formatted.'
 
    !----------- OUTLIST for BldNd -----------------------------------------------------------
    CALL ReadCom( UnIn, InputFile, 'Section Header: OutList for Blade node channels', ErrStat2, ErrMsg2, UnEc )

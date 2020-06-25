@@ -27,6 +27,9 @@ OpenFAST       49   Bld_Kdmp                0   Bld_Kdmp   - Damping factor for 
 InflowWind     48   InitPosition(x)       0.0   InitPosition(x) - Initial offset in +x direction (shift of wind box) [Only used with WindType = 5] (m)
 ============== ==== ================== =============================================================================================================================================================================
 
+Additional nodal output channels added for :ref:`AeroDyn15<AD-Nodal-Outputs>`,
+:ref:`BeamDyn<BD-Nodal-Outputs>`, and :ref:`ElastoDyn<ED-Nodal-Outputs>`.
+
 OpenFAST v2.2.0 to OpenFAST v2.3.0
 ----------------------------------
 

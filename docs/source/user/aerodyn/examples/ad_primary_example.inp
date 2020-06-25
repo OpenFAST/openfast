@@ -98,3 +98,50 @@ Vindx
 Vindy
 Alpha
 END (the word "END" must appear in the first 3 columns of this last OutList line in the optional nodal output section)
+---------------------- NODE OUTPUTS --------------------------------------------
+          3   BldNd_BladesOut  - Blades to output
+         99   BldNd_BlOutNd   - Blade nodes on each blade (currently unused)
+              OutList     - The next line(s) contains a list of output parameters.  See OutListParameters.xlsx, ElastoDyn_Nodes tab for a listing of available output channels, (-)
+"VUndx"
+"VUndy"
+"VUndz"
+"VDisx"
+"VDisy"
+"VDisz"
+"STVx"
+"STVy"
+"STVz"
+"VRel"
+"DynP"
+"Re"
+"M"
+"Vindx"
+"Vindy"
+"AxInd"
+"TnInd"
+"Alpha"
+"Theta"
+"Phi"
+"Curve"
+"Cl"
+"Cd"
+"Cm"
+"Cx"
+"Cy"
+"Cn"
+"Ct"
+"Fl"
+"Fd"
+"Mm"
+"Fx"
+"Fy"
+"Fn"
+"Ft"
+"Clrnc"
+"Vx"
+"Vy"
+"GeomPhi"
+"Chi"
+"UA_Flag"
+END of input file (the word "END" must appear in the first 3 columns of this last OutList line)
+---------------------------------------------------------------------------------------

@@ -362,6 +362,8 @@ specifies the local tower drag-force coefficient. ``TwrElev`` must be
 entered in monotonically increasing order—from the lowest (tower-base)
 to the highest (tower-top) elevation. See Figure 2.
 
+.. _AD-Outputs:
+
 Outputs
 ~~~~~~~
 
@@ -415,6 +417,9 @@ are generated for the requested nodes identified through the
 unknown/invalid channel name, it warns the users but will remove the
 suspect channel from the output file. Please refer to Appendix E for a
 complete list of possible output parameters.
+
+.. include:: ADNodalOutputs.rst
+
 
 .. _airfoil_data_input_file:
 
