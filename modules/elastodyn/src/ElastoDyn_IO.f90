@@ -4340,6 +4340,7 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, BldFile, FurlFile, TwrFile
    !----------- OUTLIST for BldNd -----------------------------------------------------------
    CALL ReadCom( UnIn, InputFile, 'Section Header: OutList for Blade node channels', ErrStat2, ErrMsg2, UnEc )
    IF ( ErrStat2 >= AbortErrLev ) THEN
+      InputFileData%BldNd_BladesOut = 0
       InputFileData%BldNd_NumOuts = 0
       call wrscr( trim(ErrMsg_NoAllBldNdOuts) )
       CALL Cleanup()
@@ -4352,6 +4353,7 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, BldFile, FurlFile, TwrFile
       !        Will likely require reading this line in as a string (BldNd_BladesOut_Str) and parsing it
    CALL ReadVar(  UnIn, InputFile, InputFileData%BldNd_BladesOut, 'BldNd_BladesOut', 'Which blades to output node data on.'//TRIM(Num2Lstr(I)), ErrStat2, ErrMsg2, UnEc )
    IF ( ErrStat2 >= AbortErrLev ) THEN
+      InputFileData%BldNd_BladesOut = 0
       InputFileData%BldNd_NumOuts = 0
       call wrscr( trim(ErrMsg_NoAllBldNdOuts) )
       CALL Cleanup()
@@ -4363,6 +4365,7 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, BldFile, FurlFile, TwrFile
       ! TODO: Parse this string into an array of nodes to output at (one idea is to set an array of boolean to T/F for which nodes to output).  At present, we ignore it entirely.
    CALL ReadVar(  UnIn, InputFile, InputFileData%BldNd_BlOutNd_Str, 'BldNd_BlOutNd_Str', 'Which nodes to output node data on.'//TRIM(Num2Lstr(I)), ErrStat2, ErrMsg2, UnEc )
    IF ( ErrStat2 >= AbortErrLev ) THEN
+      InputFileData%BldNd_BladesOut = 0
       InputFileData%BldNd_NumOuts = 0
       call wrscr( trim(ErrMsg_NoAllBldNdOuts) )
       CALL Cleanup()
@@ -4373,6 +4376,7 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, BldFile, FurlFile, TwrFile
       ! Section header for outlist
    CALL ReadCom( UnIn, InputFile, 'Section Header: OutList', ErrStat2, ErrMsg2, UnEc )
    IF ( ErrStat2 >= AbortErrLev ) THEN
+      InputFileData%BldNd_BladesOut = 0
       InputFileData%BldNd_NumOuts = 0
       call wrscr( trim(ErrMsg_NoAllBldNdOuts) )
       CALL Cleanup()
@@ -4383,6 +4387,7 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, BldFile, FurlFile, TwrFile
       ! OutList - List of user-requested output channels at each node(-):
    CALL ReadOutputList ( UnIn, InputFile, InputFileData%BldNd_OutList, InputFileData%BldNd_NumOuts, 'BldNd_OutList', "List of user-requested output channels", ErrStat2, ErrMsg2, UnEc  )     ! Routine in NWTC Subroutine Library
    IF ( ErrStat2 >= AbortErrLev ) THEN
+      InputFileData%BldNd_BladesOut = 0
       InputFileData%BldNd_NumOuts = 0
       call wrscr( trim(ErrMsg_NoAllBldNdOuts) )
       CALL Cleanup()
