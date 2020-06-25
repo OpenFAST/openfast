@@ -415,6 +415,8 @@ actuator, whereby the pitch angular orientation, velocity, and
 acceleration are determined by the actuator based on the input
 blade-pitch angle prescribed by the driver code.
 
+.. _BD-Outputs:
+
 Outputs
 ~~~~~~~
 
@@ -460,6 +462,9 @@ encounters an unknown/invalid channel name, it warns the users but will
 remove the suspect channel from the output file. Please refer to
 Appendix :numref:`app-output-channel` for a complete list of possible output
 parameters and their names.
+
+
+.. include:: BDNodalOutputs.rst
 
 Blade Input File
 ----------------

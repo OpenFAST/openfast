@@ -496,6 +496,7 @@ SUBROUTINE AllBldNdOuts_SetParameters( p, InputFileData, ErrStat, ErrMsg )
 
       ! Set the parameter to store number of requested Blade Node output sets
    IF ( p%BD4Blades .and. InputFileData%BldNd_NumOuts > 0 ) THEN
+      p%BldNd_BladesOut = 0_IntKi
       p%BldNd_NumOuts = 0_IntKi
       CALL SetErrStat( ErrID_Warn,' AllBldNdOuts option not available in ElastoDyn when BeamDyn is used.  Turning off these outputs.',ErrStat,ErrMsg,"SetPrimaryParameters" )
    ELSE
