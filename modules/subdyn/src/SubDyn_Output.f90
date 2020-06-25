@@ -395,11 +395,9 @@ SUBROUTINE SDOut_MapOutputs( CurrentTime, u,p,x, y, m, AllOuts, ErrStat, ErrMsg 
             ENDDO           
          ENDDO
          ! FK_elm2 ! + FM_elm2  !removed the inertial component 12/13 !Not sure why I need an intermediate step here, but the sum would not work otherwise
-         !NEED TO ADD HYDRODYNAMIC FORCES AT THE RESTRAINT NODES
-         !   The joind iD of the reaction, i.e. thre reaction node ID is within p%MOutLst3(I)%Noutcnt
-         !Since constrained nodes are ordered as given in the input file and so as in the order of y2mesh, i Can do:
-         iSDNode   = p%Nodes_C(I,1)
-         iMeshNode = p%INodes_SD_to_Mesh(iSDNode)
+         ! NEED TO ADD HYDRODYNAMIC FORCES AT THE RESTRAINT NODES
+         iSDNode   = p%Nodes_C(I,1) 
+         iMeshNode = iSDNode ! input and Y2 mesh nodes are the same as subdyn
          Fext =  (/ u%LMesh%Force(:,iMeshNode), u%LMesh%Moment(:,iMeshNode) /)
          ReactNs((I-1)*6+1:6*I) = FK_elm2 - Fext  !Accumulate reactions from all nodes in GLOBAL COORDINATES
       ENDDO

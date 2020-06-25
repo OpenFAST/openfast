@@ -625,7 +625,7 @@ CONTAINS
       CHARACTER(*),   INTENT(IN) :: Msg         ! The error message (ErrMsg)
 
       INTEGER(IntKi)             :: ErrStat3    ! The error identifier (ErrStat)
-      CHARACTER(1024)            :: ErrMsg3     ! The error message (ErrMsg)
+      CHARACTER(ErrMsgLen)       :: ErrMsg3     ! The error message (ErrMsg)
 
       !............................................................................................................................
       ! Set error status/message;

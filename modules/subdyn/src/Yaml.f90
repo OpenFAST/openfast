@@ -475,10 +475,14 @@ subroutine yaml_write_array2R4(fid, key, A, VarFmt, ErrStat, ErrMsg, level, comm
    if (nr==0) then
       write(fid, '('//trim(Fmt)//'"- [ ]")', iostat=ErrStat) 
    else
-      if (present(AllFmt)) then
-         Fmt = '('//trim(Fmt)//'"- [",'//trim(AllFmt)//'"]")'   
+      if (nc==0) then
+         Fmt = '('//trim(Fmt)//'"- []")'   
       else
-         Fmt = '('//trim(Fmt)//'"- [",'//trim(Num2LStr(nc))//'('//VarFmt//',","),"]")'   
+         if (present(AllFmt)) then
+            Fmt = '('//trim(Fmt)//'"- [",'//trim(AllFmt)//'"]")'   
+         else
+            Fmt = '('//trim(Fmt)//'"- [",'//trim(Num2LStr(nc))//'('//VarFmt//',","),"]")'   
+         endif
       endif
       do i=1,nr
          write(fid, Fmt, iostat=ErrStat) A(i,:)
@@ -528,10 +532,14 @@ subroutine yaml_write_array2R8(fid, key, A, VarFmt, ErrStat, ErrMsg, level, comm
    if (nr==0) then
       write(fid, '('//trim(Fmt)//'"- [ ]")', iostat=ErrStat) 
    else
-      if (present(AllFmt)) then
-         Fmt = '('//trim(Fmt)//'"- [",'//trim(AllFmt)//'"]")'   
+      if (nc==0) then
+         Fmt = '('//trim(Fmt)//'"- []")'   
       else
-         Fmt = '('//trim(Fmt)//'"- [",'//trim(Num2LStr(nc))//'('//VarFmt//',","),"]")'   
+         if (present(AllFmt)) then
+            Fmt = '('//trim(Fmt)//'"- [",'//trim(AllFmt)//'"]")'   
+         else
+            Fmt = '('//trim(Fmt)//'"- [",'//trim(Num2LStr(nc))//'('//VarFmt//',","),"]")'   
+         endif
       endif
       do i=1,nr
          write(fid, Fmt, iostat=ErrStat) A(i,:)
@@ -578,10 +586,14 @@ subroutine yaml_write_array2R16(fid, key, A, VarFmt, ErrStat, ErrMsg, level, com
    if (nr==0) then
       write(fid, '('//trim(Fmt)//'"- [ ]")', iostat=ErrStat) 
    else
-      if (present(AllFmt)) then
-         Fmt = '('//trim(Fmt)//'"- [",'//trim(AllFmt)//'"]")'   
+      if (nc==0) then
+         Fmt = '('//trim(Fmt)//'"- []")'   
       else
-         Fmt = '('//trim(Fmt)//'"- [",'//trim(Num2LStr(nc))//'('//VarFmt//',","),"]")'   
+         if (present(AllFmt)) then
+            Fmt = '('//trim(Fmt)//'"- [",'//trim(AllFmt)//'"]")'   
+         else
+            Fmt = '('//trim(Fmt)//'"- [",'//trim(Num2LStr(nc))//'('//VarFmt//',","),"]")'   
+         endif
       endif
       do i=1,nr
          write(fid, Fmt, iostat=ErrStat) A(i,:)
