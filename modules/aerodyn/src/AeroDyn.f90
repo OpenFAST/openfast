@@ -82,11 +82,6 @@ subroutine AD_SetInitOut(p, InputFileData, InitOut, errStat, errMsg)
    
    integer(IntKi)                               :: i, j, k, f
    integer(IntKi)                               :: NumCoords
-#ifdef DBG_OUTS
-   integer(IntKi)                               :: m
-   character(6)                                 ::chanPrefix
-   character(3)                                 :: TmpChar
-#endif   
       ! Initialize variables for this routine
 
    errStat = ErrID_None
@@ -103,71 +98,10 @@ subroutine AD_SetInitOut(p, InputFileData, InitOut, errStat, errMsg)
    if (ErrStat >= AbortErrLev) return
       
    
-#ifdef DBG_OUTS
-   ! Loop over blades and nodes to populate the output channel names and units
-   
-   do k=1,p%numBlades
-      do j=1, p%NumBlNds
-         
-         m = (k-1)*p%NumBlNds*23 + (j-1)*23 
-         
-         WRITE (TmpChar,'(I3.3)') j
-         chanPrefix = "B"//trim(num2lstr(k))//"N"//TmpChar
-         InitOut%WriteOutputHdr( m + 1 ) = trim(chanPrefix)//"Twst"
-         InitOut%WriteOutputUnt( m + 1 ) = '  (deg)  '
-         InitOut%WriteOutputHdr( m + 2 ) = trim(chanPrefix)//"Psi"
-         InitOut%WriteOutputUnt( m + 2 ) = '  (deg)  '
-         InitOut%WriteOutputHdr( m + 3 ) = trim(chanPrefix)//"Vx"
-         InitOut%WriteOutputUnt( m + 3 ) = '  (m/s)  '
-         InitOut%WriteOutputHdr( m + 4 ) = trim(chanPrefix)//"Vy"
-         InitOut%WriteOutputUnt( m + 4 ) = '  (m/s)  '
-         InitOut%WriteOutputHdr( m + 5 ) = ' '//trim(chanPrefix)//"AIn"
-         InitOut%WriteOutputUnt( m + 5 ) = '  (-)  '
-         InitOut%WriteOutputHdr( m + 6 ) = ' '//trim(chanPrefix)//"ApIn"
-         InitOut%WriteOutputUnt( m + 6 ) = '  (-)  '
-         InitOut%WriteOutputHdr( m + 7 ) = trim(chanPrefix)//"Vrel"
-         InitOut%WriteOutputUnt( m + 7 ) = '  (m/s)  '
-         InitOut%WriteOutputHdr( m + 8 ) = ' '//trim(chanPrefix)//"Phi"
-         InitOut%WriteOutputUnt( m + 8 ) = '  (deg)  '
-         InitOut%WriteOutputHdr( m + 9 ) = ' '//trim(chanPrefix)//"AOA"
-         InitOut%WriteOutputUnt( m + 9 ) = '  (deg)  '
-         InitOut%WriteOutputHdr( m + 10 ) = ' '//trim(chanPrefix)//"Cl"
-         InitOut%WriteOutputUnt( m + 10 ) = '   (-)   '
-         InitOut%WriteOutputHdr( m + 11 ) = ' '//trim(chanPrefix)//"Cd"
-         InitOut%WriteOutputUnt( m + 11 ) = '   (-)   '
-         InitOut%WriteOutputHdr( m + 12 ) = ' '//trim(chanPrefix)//"Cm"
-         InitOut%WriteOutputUnt( m + 12 ) = '   (-)   '
-         InitOut%WriteOutputHdr( m + 13 ) = ' '//trim(chanPrefix)//"Cx"
-         InitOut%WriteOutputUnt( m + 13 ) = '   (-)   '
-         InitOut%WriteOutputHdr( m + 14 ) = ' '//trim(chanPrefix)//"Cy"
-         InitOut%WriteOutputUnt( m + 14 ) = '   (-)   '
-         InitOut%WriteOutputHdr( m + 15 ) = ' '//trim(chanPrefix)//"Cn"
-         InitOut%WriteOutputUnt( m + 15 ) = '   (-)   '
-         InitOut%WriteOutputHdr( m + 16 ) = ' '//trim(chanPrefix)//"Ct"
-         InitOut%WriteOutputUnt( m + 16 ) = '   (-)   '
-         InitOut%WriteOutputHdr( m + 17 ) = ' '//trim(chanPrefix)//"Fl"
-         InitOut%WriteOutputUnt( m + 17 ) = '  (N/m)  '
-         InitOut%WriteOutputHdr( m + 18 ) = ' '//trim(chanPrefix)//"Fd"
-         InitOut%WriteOutputUnt( m + 18 ) = '  (N/m)  '
-         InitOut%WriteOutputHdr( m + 19 ) = ' '//trim(chanPrefix)//"M"
-         InitOut%WriteOutputUnt( m + 19 ) = ' (N/m^2) '
-         InitOut%WriteOutputHdr( m + 20 ) = ' '//trim(chanPrefix)//"Fx"
-         InitOut%WriteOutputUnt( m + 20 ) = '  (N/m)  '
-         InitOut%WriteOutputHdr( m + 21 ) = ' '//trim(chanPrefix)//"Fy"
-         InitOut%WriteOutputUnt( m + 21 ) = '  (N/m)  '
-         InitOut%WriteOutputHdr( m + 22 ) = ' '//trim(chanPrefix)//"Fn"
-         InitOut%WriteOutputUnt( m + 22 ) = '  (N/m)  '
-         InitOut%WriteOutputHdr( m + 23 ) = ' '//trim(chanPrefix)//"Ft"
-         InitOut%WriteOutputUnt( m + 23 ) = '  (N/m)  '
-         
-      end do
-   end do
-#else
    do i=1,p%NumOuts
       InitOut%WriteOutputHdr(i) = p%OutParam(i)%Name
       InitOut%WriteOutputUnt(i) = p%OutParam(i)%Units
    end do
-#endif
       
                 
       ! Set the info in WriteOutputHdr and WriteOutputUnt
@@ -524,11 +458,7 @@ subroutine Init_MiscVars(m, p, u, y, errStat, errMsg)
    m%SigmaCavitCrit = 0.0_ReKi
    m%CavitWarnSet   = .false.
          ! arrays for output
-#ifdef DBG_OUTS
-   allocate( m%AllOuts(0:p%NumOuts), STAT=ErrStat2 ) ! allocate starting at zero to account for invalid output channels
-#else
    allocate( m%AllOuts(0:MaxOutPts), STAT=ErrStat2 ) ! allocate starting at zero to account for invalid output channels
-#endif
       if (ErrStat2 /= 0) then
          call SetErrStat( ErrID_Fatal, "Error allocating AllOuts.", errStat, errMsg, RoutineName )
          return
@@ -964,12 +894,6 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
       
   !p%RootName       = TRIM(InitInp%RootName)//'.AD'   ! set earlier to it could be used   
    
-#ifdef DBG_OUTS
-   p%NBlOuts          = 23  
-   p%numOuts          = p%NumBlNds*p%NumBlades*p%NBlOuts
-   p%NTwOuts          = 0
-      
-#else
    p%numOuts          = InputFileData%NumOuts  
    p%NBlOuts          = InputFileData%NBlOuts      
    p%BlOutNd          = InputFileData%BlOutNd
@@ -985,7 +909,6 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
       call setErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       if (ErrStat >= AbortErrLev) return  
    
-#endif 
 
 
 
@@ -1212,11 +1135,7 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
    !-------------------------------------------------------   
    if (CalcWriteOutput) then
       if (p%NumOuts > 0) then
-#ifdef DBG_OUTS
-         call Calc_WriteDbgOutput( p, u, m, y, ErrStat2, ErrMsg2 ) 
-#else
          call Calc_WriteOutput( p, u, m, y, OtherState, indx, ErrStat2, ErrMsg2 )   
-#endif   
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)      
    
          !...............................................................................................................................   
@@ -1224,11 +1143,7 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
          !...............................................................................................................................   
 
          do i = 1,p%NumOuts  ! Loop through all selected output channels
-#ifdef DBG_OUTS
-            y%WriteOutput(i) = m%AllOuts( i )
-#else
             y%WriteOutput(i) = p%OutParam(i)%SignM * m%AllOuts( p%OutParam(i)%Indx )
-#endif
          end do             ! i - All selected output channels
 
        end if
@@ -1424,9 +1339,7 @@ subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
       call LAPACK_gemm( 'n', 't', 1.0_R8Ki, u%BladeRootMotion(k)%Orientation(:,:,1), u%HubMotion%Orientation(:,:,1), 0.0_R8Ki, orientation, errStat2, errMsg2)
          call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       theta = EulerExtract( orientation ) !hub_theta_root(k)
-#ifndef DBG_OUTS
       m%AllOuts( BPitch(  k) ) = -theta(3)*R2D ! save this value of pitch for potential output
-#endif
       theta(3) = 0.0_ReKi  
       m%hub_theta_x_root(k) = theta(1)   ! save this value for FAST.Farm
       
