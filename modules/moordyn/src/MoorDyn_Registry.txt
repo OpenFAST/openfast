@@ -98,8 +98,8 @@ typedef  ^            ^                ReKi               LineWrOutput {:}      
 
 
 # this is the MDOutParmType - a less literal alternative of the NWTC OutParmType for MoorDyn (to avoid huge lists of possible output channel permutations)
-typedef  ^            MD_OutParmType   CHARACTER(10)      Name          -        -  -   "name of output channel"
-typedef  ^            ^                CHARACTER(10)      Units         -        -  -   "units string"
+typedef  ^            MD_OutParmType   CHARACTER(ChanLen) Name          -        -  -   "name of output channel"
+typedef  ^            ^                CHARACTER(ChanLen) Units         -        -  -   "units string"
 typedef  ^            ^                IntKi              QType         -        -  -   "type of quantity - 0=tension, 1=x, 2=y, 3=z..."
 typedef  ^            ^                IntKi              OType         -        -  -   "type of object - 0=line, 1=connect"
 typedef  ^            ^                IntKi              NodeID        -        -  -   "node number if OType=0.  0=anchor, -1=N=Fairlead"

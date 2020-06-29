@@ -26,6 +26,7 @@ MODULE AeroDyn_IO
    use AirFoilInfo,   only : AFI_ComputeAirfoilCoefs
    use FVW_Subs,      only : FVW_AeroOuts
 
+   USE AeroDyn_AllBldNdOuts_IO
    
    implicit none
 
@@ -1442,19 +1443,19 @@ MODULE AeroDyn_IO
                                      B3N1Cm,B3N2Cm,B3N3Cm,B3N4Cm,B3N5Cm,B3N6Cm,B3N7Cm,B3N8Cm,B3N9Cm  &
                                    /), (/9, 3/) )
     
-        INTEGER,  PARAMETER          :: BNCpmin(9, 3) = RESHAPE( (/ &    ! pressure coefficient
+    INTEGER,  PARAMETER          :: BNCpmin(9, 3) = RESHAPE( (/ &    ! pressure coefficient
                                      B1N1Cpmin,B1N2Cpmin,B1N3Cpmin,B1N4Cpmin,B1N5Cpmin,B1N6Cpmin,B1N7Cpmin,B1N8Cpmin,B1N9Cpmin, &
                                      B2N1Cpmin,B2N2Cpmin,B2N3Cpmin,B2N4Cpmin,B2N5Cpmin,B2N6Cpmin,B2N7Cpmin,B2N8Cpmin,B2N9Cpmin, &
                                      B3N1Cpmin,B3N2Cpmin,B3N3Cpmin,B3N4Cpmin,B3N5Cpmin,B3N6Cpmin,B3N7Cpmin,B3N8Cpmin,B3N9Cpmin  &
                                    /), (/9, 3/) )  
                                      
-   INTEGER,  PARAMETER          :: BNSigCr(9, 3) = RESHAPE( (/ &    ! Critical cavitation number
+    INTEGER,  PARAMETER          :: BNSigCr(9, 3) = RESHAPE( (/ &    ! Critical cavitation number
                                      B1N1SigCr,B1N2SigCr,B1N3SigCr,B1N4SigCr,B1N5SigCr,B1N6SigCr,B1N7SigCr,B1N8SigCr,B1N9SigCr, &
                                      B2N1SigCr,B2N2SigCr,B2N3SigCr,B2N4SigCr,B2N5SigCr,B2N6SigCr,B2N7SigCr,B2N8SigCr,B2N9SigCr, &
                                      B3N1SigCr,B3N2SigCr,B3N3SigCr,B3N4SigCr,B3N5SigCr,B3N6SigCr,B3N7SigCr,B3N8SigCr,B3N9SigCr  &
                                    /), (/9, 3/) )   
                                      
-   INTEGER,  PARAMETER          :: BNSgCav(9, 3) = RESHAPE( (/ &    !  Cavitation number
+    INTEGER,  PARAMETER          :: BNSgCav(9, 3) = RESHAPE( (/ &    !  Cavitation number
                                      B1N1SgCav,B1N2SgCav,B1N3SgCav,B1N4SgCav,B1N5SgCav,B1N6SgCav,B1N7SgCav,B1N8SgCav,B1N9SgCav, &
                                      B2N1SgCav,B2N2SgCav,B2N3SgCav,B2N4SgCav,B2N5SgCav,B2N6SgCav,B2N7SgCav,B2N8SgCav,B2N9SgCav, &
                                      B3N1SgCav,B3N2SgCav,B3N3SgCav,B3N4SgCav,B3N5SgCav,B3N6SgCav,B3N7SgCav,B3N8SgCav,B3N9SgCav  &
@@ -2040,6 +2041,7 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, ADBlFile, OutFileRoot, UnE
    integer(IntKi)                :: ErrStat2, IOS                             ! Temporary Error status
    logical                       :: Echo                                      ! Determines if an echo file should be written
    character(ErrMsgLen)          :: ErrMsg2                                   ! Temporary Error message
+   character(ErrMsgLen)          :: ErrMsg_NoAllBldNdOuts                     ! Temporary Error message
    character(1024)               :: PriPath                                   ! Path name of the primary file
    character(1024)               :: FTitle                                    ! "File Title": the 2nd line of the input file, which contains a description of its contents
    character(200)                :: Line                                      ! Temporary storage of a line from the input file (to compare with "default")
@@ -2057,7 +2059,11 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, ADBlFile, OutFileRoot, UnE
 
    CALL AllocAry( InputFileData%OutList, MaxOutPts, "Outlist", ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-        
+   
+      ! Allocate array for holding the list of node outputs
+   CALL AllocAry( InputFileData%BldNd_OutList, BldNd_MaxOutPts, "BldNd_Outlist", ErrStat2, ErrMsg2 )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+     
       ! Get an available unit number for the file.
 
    CALL GetNewUnit( UnIn, ErrStat2, ErrMsg2 )
@@ -2322,8 +2328,8 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, ADBlFile, OutFileRoot, UnE
    CALL ReadCom( UnIn, InputFile, 'Section Header: Beddoes-Leishman Unsteady Airfoil Aerodynamics Options', ErrStat2, ErrMsg2, UnEc )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       
-      ! UAMod - Unsteady Aero Model Switch (switch) {1=Baseline model (Original), 2=Gonzalez's variant (changes in Cn,Cc,Cm), 3=Minemma/Pierce variant (changes in Cc and Cm)} [used only when AFAreoMod=2] (-):
-   CALL ReadVar( UnIn, InputFile, InputFileData%UAMod, "UAMod", "Unsteady Aero Model Switch (switch) {1=Baseline model (Original), 2=Gonzalez's variant (changes in Cn,Cc,Cm), 3=Minemma/Pierce variant (changes in Cc and Cm)} [used only when AFAreoMod=2] (-)", ErrStat2, ErrMsg2, UnEc)
+      ! UAMod - Unsteady Aero Model Switch (switch) {1=Baseline model (Original), 2=Gonzalez's variant (changes in Cn,Cc,Cm), 3=Minnema/Pierce variant (changes in Cc and Cm)} [used only when AFAreoMod=2] (-):
+   CALL ReadVar( UnIn, InputFile, InputFileData%UAMod, "UAMod", "Unsteady Aero Model Switch (switch) {1=Baseline model (Original), 2=Gonzalez's variant (changes in Cn,Cc,Cm), 3=Minnema/Pierce variant (changes in Cc and Cm)} [used only when AFAreoMod=2] (-)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
       ! FLookup - Flag to indicate whether a lookup for f' will be calculated (TRUE) or whether best-fit exponential equations will be used (FALSE); if FALSE S1-S4 must be provided in airfoil input files [used only when AFAreoMod=2] (flag):
@@ -2524,6 +2530,80 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, ADBlFile, OutFileRoot, UnE
    CALL ReadOutputList ( UnIn, InputFile, InputFileData%OutList, InputFileData%NumOuts, 'OutList', "List of user-requested output channels", ErrStat2, ErrMsg2, UnEc  )     ! Routine in NWTC Subroutine Library
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       
+
+      ! Return on error at end of section
+   IF ( ErrStat >= AbortErrLev ) THEN
+      CALL Cleanup()
+      RETURN
+   END IF
+                  
+   !---------------------- END OF FILE -----------------------------------------
+
+
+
+   !----------- OUTLIST  -----------------------------------------------------------
+      ! In case there is something ill-formed in the additional nodal outputs section, we will simply ignore it.
+   ErrMsg_NoAllBldNdOuts='Nodal output section of AeroDyn input file not found or improperly formatted.'
+
+   !----------- OUTLIST for BldNd -----------------------------------------------------------
+   CALL ReadCom( UnIn, InputFile, 'Section Header: OutList for Blade node channels', ErrStat2, ErrMsg2, UnEc )
+   IF ( ErrStat2 >= AbortErrLev ) THEN
+      InputFileData%BldNd_BladesOut = 0
+      InputFileData%BldNd_NumOuts = 0
+      call wrscr( trim(ErrMsg_NoAllBldNdOuts) )
+      CALL Cleanup()
+      RETURN  
+   ENDIF 
+
+
+      ! Number of blade nodes to output:  will modify this at some point for arrays
+      ! TODO:  In a future release, allow this to be an array of N blade numbers (change BldNd_BladesOut to an array if we do that).
+      !        Will likely require reading this line in as a string (BldNd_BladesOut_Str) and parsing it
+   CALL ReadVar(  UnIn, InputFile, InputFileData%BldNd_BladesOut, 'BldNd_BladesOut', 'Which blades to output node data on.'//TRIM(Num2Lstr(I)), ErrStat2, ErrMsg2, UnEc )
+   IF ( ErrStat2 >= AbortErrLev ) THEN
+      InputFileData%BldNd_BladesOut = 0
+      InputFileData%BldNd_NumOuts = 0
+      call wrscr( trim(ErrMsg_NoAllBldNdOuts) )
+      CALL Cleanup()
+      RETURN  
+   ENDIF 
+
+
+      ! Which blades to output for:  will add this at some point
+      ! TODO: Parse this string into an array of nodes to output at (one idea is to set an array of boolean to T/F for which nodes to output).  At present, we ignore it entirely.
+   CALL ReadVar(  UnIn, InputFile, InputFileData%BldNd_BlOutNd_Str, 'BldNd_BlOutNd_Str', 'Which nodes to output node data on.'//TRIM(Num2Lstr(I)), ErrStat2, ErrMsg2, UnEc )
+   IF ( ErrStat2 >= AbortErrLev ) THEN
+      InputFileData%BldNd_BladesOut = 0
+      InputFileData%BldNd_NumOuts = 0
+      call wrscr( trim(ErrMsg_NoAllBldNdOuts) )
+      CALL Cleanup()
+      RETURN  
+   ENDIF 
+
+
+      ! Section header for outlist
+   CALL ReadCom( UnIn, InputFile, 'Section Header: OutList', ErrStat2, ErrMsg2, UnEc )
+   IF ( ErrStat2 >= AbortErrLev ) THEN
+      InputFileData%BldNd_BladesOut = 0
+      InputFileData%BldNd_NumOuts = 0
+      call wrscr( trim(ErrMsg_NoAllBldNdOuts) )
+      CALL Cleanup()
+      RETURN  
+   ENDIF 
+     
+ 
+      ! OutList - List of user-requested output channels at each node(-):
+   CALL ReadOutputList ( UnIn, InputFile, InputFileData%BldNd_OutList, InputFileData%BldNd_NumOuts, 'OutList', "List of user-requested output channels", ErrStat2, ErrMsg2, UnEc  )     ! Routine in NWTC Subroutine Library
+   IF ( ErrStat2 >= AbortErrLev ) THEN
+      InputFileData%BldNd_BladesOut = 0
+      InputFileData%BldNd_NumOuts = 0
+      call wrscr( trim(ErrMsg_NoAllBldNdOuts) )
+      CALL Cleanup()
+      RETURN  
+   ENDIF 
+
+
+ 
    !---------------------- END OF FILE -----------------------------------------
       
    CALL Cleanup( )
@@ -2863,7 +2943,7 @@ SUBROUTINE AD_PrintSum( InputFileData, p, u, y, ErrStat, ErrMsg )
          case (2)
             Msg = "Gonzalez's variant (changes in Cn, Cc, and Cm)"
          case (3)
-            Msg = 'Minemma/Pierce variant (changes in Cc and Cm)'      
+            Msg = 'Minnema/Pierce variant (changes in Cc and Cm)'      
          !case (4)
          !   Msg = 'DYSTOOL'      
          case default      
@@ -2915,6 +2995,15 @@ SUBROUTINE AD_PrintSum( InputFileData, p, u, y, ErrStat, ErrMsg )
 
    DO I = 0,p%NumOuts
       WRITE (UnSu,OutPFmt)  I, p%OutParam(I)%Name, p%OutParam(I)%Units
+   END DO             
+
+   WRITE (UnSu,'(15x,A)')
+   WRITE (UnSu,'(15x,A)')
+   WRITE (UnSu,'(15x,A)')  'Requested Output Channels at each blade station:'
+   WRITE (UnSu,'(15x,A)')  'Col   Parameter       Units'
+   WRITE (UnSu,'(15x,A)')  '----  --------------  -----'
+   DO I = 1,p%BldNd_NumOuts
+      WRITE (UnSu,OutPFmt)  I, p%BldNd_OutParam(I)%Name, p%BldNd_OutParam(I)%Units
    END DO             
 
    CLOSE(UnSu)

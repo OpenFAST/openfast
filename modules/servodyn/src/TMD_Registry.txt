@@ -53,8 +53,8 @@ typedef		^		^				ReKi			Gravity	-	-	-	"Gravitational acceleration"	m/s^2
 typedef	^		^				ReKi			r_N_O_G		{3}	-	-	"nacelle origin for setting up mesh"	-
 # Define outputs from the initialization routine here:
 typedef ^ InitOutputType SiKi DummyInitOut - - - "dummy init output" -
-#typedef ^ InitOutputType CHARACTER(10) WriteOutputHdr {:} - - "Names of the output-to-file channels" -
-#typedef ^ InitOutputType CHARACTER(10) WriteOutputUnt {:}- - "Units of the output-to-file channels" -
+#typedef ^ InitOutputType CHARACTER(ChanLen) WriteOutputHdr {:} - - "Names of the output-to-file channels" -
+#typedef ^ InitOutputType CHARACTER(ChanLen) WriteOutputUnt {:}- - "Units of the output-to-file channels" -
 
 # ..... States ....................................................................................................................
 # Define continuous (differentiable) states here:

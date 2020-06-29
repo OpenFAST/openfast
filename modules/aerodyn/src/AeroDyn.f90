@@ -1,7 +1,7 @@
 !**********************************************************************************************************************************
 ! LICENSING
 ! Copyright (C) 2015-2016  National Renewable Energy Laboratory
-! Copyright (C) 2016-2018  Envision Energy USA, LTD
+! Copyright (C) 2016-2019  Envision Energy USA, LTD
 !
 !    This file is part of AeroDyn.
 !
@@ -89,20 +89,25 @@ subroutine AD_SetInitOut(p, InputFileData, InitOut, errStat, errMsg)
    errMsg  = ""
    
    InitOut%AirDens = p%AirDens
-   
-   call AllocAry( InitOut%WriteOutputHdr, p%numOuts, 'WriteOutputHdr', errStat2, errMsg2 )
+
+   call AllocAry( InitOut%WriteOutputHdr, p%numOuts + p%BldNd_TotNumOuts, 'WriteOutputHdr', errStat2, errMsg2 )
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
    
-   call AllocAry( InitOut%WriteOutputUnt, p%numOuts, 'WriteOutputUnt', errStat2, errMsg2 )
+   call AllocAry( InitOut%WriteOutputUnt, p%numOuts + p%BldNd_TotNumOuts, 'WriteOutputUnt', errStat2, errMsg2 )
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
 
    if (ErrStat >= AbortErrLev) return
       
+   
    do i=1,p%NumOuts
       InitOut%WriteOutputHdr(i) = p%OutParam(i)%Name
       InitOut%WriteOutputUnt(i) = p%OutParam(i)%Units
    end do
-                      
+      
+                
+      ! Set the info in WriteOutputHdr and WriteOutputUnt
+   CALL AllBldNdOuts_InitOut( InitOut, p, InputFileData, ErrStat2, ErrMsg2 )
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    
    InitOut%Ver = AD_Ver
    
@@ -398,7 +403,14 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
          call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    end if
       
-            
+      !............................................................................................
+      ! If you want to choose your own rate instead of using what the glue code suggests, tell the glue code the rate at which
+      !   this module must be called here:
+      !............................................................................................
+
+   Interval = p%DT
+
+
    call Cleanup() 
       
 contains
@@ -629,8 +641,8 @@ subroutine Init_y(y, u, p, errStat, errMsg)
          call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
                            
    end do
-   
-   call AllocAry( y%WriteOutput, p%numOuts, 'WriteOutput', errStat2, errMsg2 )
+
+   call AllocAry( y%WriteOutput, p%numOuts + p%BldNd_TotNumOuts, 'WriteOutput', errStat2, errMsg2 )
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    if (ErrStat >= AbortErrLev) RETURN      
    
@@ -953,6 +965,15 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
       call setErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       if (ErrStat >= AbortErrLev) return  
    
+
+
+
+      ! Set the nodal output parameters.  Note there is some validation in this, so we might get an error from here.
+   CALL AllBldNdOuts_SetParameters( InitInp, InputFileData, p, ErrStat2, ErrMsg2 )
+      call setErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+
+
    
 end subroutine SetParameters
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -1106,7 +1127,7 @@ end subroutine AD_UpdateStates
 !! This subroutine is used to compute the output channels (motions and loads) and place them in the WriteOutput() array.
 !! The descriptions of the output channels are not given here. Please see the included OutListParameters.xlsx sheet for
 !! for a complete description of each output parameter.
-subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
+subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, NeedWriteOutput )
 ! NOTE: no matter how many channels are selected for output, all of the outputs are calculated
 ! All of the calculated output channels are placed into the m%AllOuts(:), while the channels selected for outputs are
 ! placed in the y%WriteOutput(:) array.
@@ -1124,6 +1145,7 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
    type(AD_MiscVarType),         intent(inout)  :: m           !< Misc/optimization variables
    INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     !< Error status of the operation
    CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+   LOGICAL,          OPTIONAL,   INTENT(IN   )  :: NeedWriteOutput     !< Flag to determine if WriteOutput values need to be calculated in this call
 
 
       ! NOTE: there are inconsistencies in the usage of m%BEMT_u(i) from the way the framework is setup
@@ -1135,18 +1157,27 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
    character(ErrMsgLen)                         :: ErrMsg2
    character(*), parameter                      :: RoutineName = 'AD_CalcOutput'
    real(ReKi)                                   :: SigmaCavitCrit, SigmaCavit
-
+   LOGICAL                                      :: CalcWriteOutput
+   
    ErrStat = ErrID_None
    ErrMsg  = ""
 
 #ifdef UA_OUTS
   ! if ( mod(REAL(t,ReKi),.1) < p%dt) then
    if (allocated(m%FVW%y_UA%WriteOutput)) m%FVW%y_UA%WriteOutput = 0.0 !reset to zero in case UA shuts off mid-simulation
+  ! endif
 #endif            
 
-
-   call SetInputs(p, u, m, indx, errStat2, errMsg2)
+   if (present(NeedWriteOutput)) then
+      CalcWriteOutput = NeedWriteOutput
+   else
+      CalcWriteOutput = .true. ! by default, calculate WriteOutput unless told that we do not need it
+   end if
+   
+   
+   call SetInputs(p, u, m, indx, errStat2, errMsg2)      
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            
 
    if (p%WakeMod /= WakeMod_FVW) then
       ! Call the BEMT module CalcOutput.  Notice that the BEMT outputs are purposely attached to AeroDyn's MiscVar structure to
@@ -1200,19 +1231,28 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
    !-------------------------------------------------------   
    !     get values to output to file:  
    !-------------------------------------------------------   
-   if (p%NumOuts > 0) then
-      call Calc_WriteOutput( p, u, m, y, OtherState, xd, indx, ErrStat2, ErrMsg2 )   
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)      
+   if (CalcWriteOutput) then
+      if (p%NumOuts > 0) then
+         call Calc_WriteOutput( p, u, m, y, OtherState, xd, indx, ErrStat2, ErrMsg2 )   
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)      
    
-      !...............................................................................................................................   
-      ! Place the selected output channels into the WriteOutput(:) array with the proper sign:
-      !...............................................................................................................................   
+         !...............................................................................................................................   
+         ! Place the selected output channels into the WriteOutput(:) array with the proper sign:
+         !...............................................................................................................................   
 
-      do i = 1,p%NumOuts  ! Loop through all selected output channels
-         y%WriteOutput(i) = p%OutParam(i)%SignM * m%AllOuts( p%OutParam(i)%Indx )
-      end do             ! i - All selected output channels
-      
+         do i = 1,p%NumOuts  ! Loop through all selected output channels
+            y%WriteOutput(i) = p%OutParam(i)%SignM * m%AllOuts( p%OutParam(i)%Indx )
+         end do             ! i - All selected output channels
+
+       end if
+    
+      y%WriteOutput(p%NumOuts+1:) = 0.0_ReKi
+
+         ! Now we need to populate the blade node outputs here
+      call Calc_WriteAllBldNdOutput( p, u, m, y, OtherState, indx, ErrStat2, ErrMsg2 )   ! Call after normal writeoutput.  Will just postpend data on here.
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    end if
+      
    
 #ifdef UA_OUTS
   ! if ( mod(REAL(t,ReKi),.1) < p%dt) then
@@ -1260,7 +1300,7 @@ subroutine AD_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, m, z_re
    end if
    
    
-   call SetInputs(p, u, m, indx, errStat2, errMsg2)      
+   call SetInputs(p, u, m, indx, errStat2, errMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
                                 
       
@@ -1344,7 +1384,7 @@ subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
    m%BEMT_u(indx)%Un_disk  = m%V_dot_x
      
       ! "Angular velocity of rotor" rad/s
-   m%BEMT_u(indx)%omega   = dot_product( u%HubMotion%RotationVel(:,1), x_hat_disk )    
+   m%BEMT_u(indx)%omega   = dot_product( u%HubMotion%RotationVel(:,1), x_hat_disk )
    
       ! "Angle between the vector normal to the rotor plane and the wind vector (e.g., the yaw angle in the case of no tilt)" rad 
    tmp_sz = TwoNorm( m%V_diskAvg )
@@ -2935,12 +2975,213 @@ SUBROUTINE AD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
       ! local variables
    TYPE(AD_OutputType)                                           :: y_p
    TYPE(AD_OutputType)                                           :: y_m
+   TYPE(AD_ContinuousStateType)                                  :: x_copy
+   TYPE(AD_DiscreteStateType)                                    :: xd_copy
+   TYPE(AD_ConstraintStateType)                                  :: z_copy
+   TYPE(AD_OtherStateType)                                       :: OtherState_copy
+   TYPE(AD_InputType)                                            :: u_perturb(1)
+   REAL(R8Ki)                                                    :: delta_p, delta_m  ! delta change in input
+   INTEGER(IntKi)                                                :: i, j, k, n   
+   
+   integer, parameter                                            :: indx = 1      ! m%BEMT_u(1) is at t; m%BEMT_u(2) is t+dt
+   integer, parameter                                            :: op_indx = 2   ! m%BEMT_u(1) is at t; m%BEMT_u(2) is t+dt or the input at OP
+   integer(intKi)                                                :: ErrStat2
+   character(ErrMsgLen)                                          :: ErrMsg2
+   character(*), parameter                                       :: RoutineName = 'AD_JacobianPInput'
+
+
+      ! Initialize ErrStat
+
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+
+   
+      ! get OP values here:
+   !call AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat2, ErrMsg2 )
+   call SetInputsForBEMT(p, u, m, indx, errStat2, errMsg2)
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later
+   call BEMT_CopyInput( m%BEMT_u(indx), m%BEMT_u(op_indx), MESH_UPDATECOPY, ErrStat2, ErrMsg2) ! copy the BEMT OP inputs to a temporary location that won't be overwritten
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later
+
+
+   if ( p%FrozenWake ) then
+            ! compare arguments with call to BEMT_CalcOutput
+      call computeFrozenWake(m%BEMT_u(op_indx), p%BEMT, m%BEMT_y, m%BEMT )
+      m%BEMT%UseFrozenWake = .true.
+   end if
+         
+   
+      ! make a copy of the inputs to perturb
+   call AD_CopyInput( u, u_perturb(1), MESH_NEWCOPY, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      if (ErrStat>=AbortErrLev) then
+         call cleanup()
+         return
+      end if
+   
+
+   IF ( PRESENT( dYdu ) ) THEN
+      ! Calculate the partial derivative of the output functions (Y) with respect to the inputs (u) here:
+      
+      ! allocate dYdu
+      if (.not. allocated(dYdu) ) then
+         call AllocAry(dYdu,p%Jac_ny, size(p%Jac_u_indx,1),'dYdu', ErrStat2, ErrMsg2)
+         call setErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         if (ErrStat>=AbortErrLev) then
+            call cleanup()
+            return
+         end if
+      end if
+   
+      
+         ! make a copy of outputs because we will need two for the central difference computations (with orientations)
+      call AD_CopyOutput( y, y_p, MESH_NEWCOPY, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      call AD_CopyOutput( y, y_m, MESH_NEWCOPY, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         ! make a copy of the states to perturb
+      call AD_CopyContState( x, x_copy, MESH_NEWCOPY, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      call AD_CopyDiscState( xd, xd_copy, MESH_NEWCOPY, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      call AD_CopyConstrState( z, z_copy, MESH_NEWCOPY, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      call AD_CopyOtherState( OtherState, OtherState_copy, MESH_NEWCOPY, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         
+         if (ErrStat>=AbortErrLev) then
+            call cleanup()
+            return
+         end if
+         
+      do i=1,size(p%Jac_u_indx,1)
+         
+            ! get u_op + delta_p u
+         call AD_CopyInput( u, u_perturb(1), MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later            
+         call Perturb_u( p, i, 1, u_perturb(1), delta_p )
+
+         call AD_CopyContState( x, x_copy, MESH_UPDATECOPY, ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         call AD_CopyDiscState( xd, xd_copy, MESH_UPDATECOPY, ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         call AD_CopyConstrState( z, z_copy, MESH_UPDATECOPY, ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         call AD_CopyOtherState( OtherState, OtherState_copy, MESH_UPDATECOPY, ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         
+            
+         call AD_UpdateStates( t, 1, u_perturb, (/t/), p, x_copy, xd_copy, z_copy, OtherState_copy, m, errStat2, errMsg2 )
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         
+            ! compute y at u_op + delta_p u
+         call AD_CalcOutput( t, u_perturb(1), p, x_copy, xd_copy, z_copy, OtherState_copy, y_p, m, ErrStat2, ErrMsg2 ) 
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later            
+         
+            
+            ! get u_op - delta_m u
+         call AD_CopyInput( u, u_perturb(1), MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later
+         call Perturb_u( p, i, -1, u_perturb(1), delta_m )
+         
+         call AD_CopyContState( x, x_copy, MESH_UPDATECOPY, ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         call AD_CopyDiscState( xd, xd_copy, MESH_UPDATECOPY, ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         call AD_CopyConstrState( z, z_copy, MESH_UPDATECOPY, ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         call AD_CopyOtherState( OtherState, OtherState_copy, MESH_UPDATECOPY, ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+            
+         call AD_UpdateStates( t, 1, u_perturb, (/t/), p, x_copy, xd_copy, z_copy, OtherState_copy, m, errStat2, errMsg2 )
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         
+         
+            ! compute y at u_op - delta_m u
+         call AD_CalcOutput( t, u_perturb(1), p, x_copy, xd_copy, z_copy, OtherState_copy, y_m, m, ErrStat2, ErrMsg2 ) 
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later            
+         
+            
+            ! get central difference:            
+         call Compute_dY( p, y_p, y_m, delta_p, delta_m, dYdu(:,i) )
+         
+      end do
+      
+
+      if (ErrStat>=AbortErrLev) then
+         call cleanup()
+         return
+      end if
+      
+   END IF
+
+   IF ( PRESENT( dXdu ) ) THEN
+      if (allocated(dXdu)) deallocate(dXdu)
+   END IF
+
+   IF ( PRESENT( dXddu ) ) THEN
+      if (allocated(dXddu)) deallocate(dXddu)
+   END IF
+
+   IF ( PRESENT( dZdu ) ) THEN
+      if (allocated(dZdu)) deallocate(dZdu)
+   END IF
+   
+   call cleanup()
+contains
+   subroutine cleanup()
+      m%BEMT%UseFrozenWake = .false.
+   
+      call AD_DestroyOutput(               y_p,   ErrStat2, ErrMsg2 )
+      call AD_DestroyOutput(               y_m,   ErrStat2, ErrMsg2 )
+      call AD_DestroyContState(           x_copy, ErrStat2, ErrMsg2)
+      call AD_DestroyDiscState(          xd_copy, ErrStat2, ErrMsg2)
+      call AD_DestroyConstrState(         z_copy, ErrStat2, ErrMsg2)
+      call AD_DestroyOtherState( OtherState_copy, ErrStat2, ErrMsg2)
+      
+      call AD_DestroyInput( u_perturb(1), ErrStat2, ErrMsg2 )
+   end subroutine cleanup
+
+END SUBROUTINE AD_JacobianPInput
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
+!! with respect to the inputs (u). The partial derivatives dY/du, dX/du, dXd/du, and dZ/du are returned.
+SUBROUTINE AD_JacobianPInput_orig( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu)
+! This routine should be used instead of AD_JacobianPInput iff `OLD_AD_LINEAR` is defined in the FAST glue code.
+!..................................................................................................................................
+
+   REAL(DbKi),                           INTENT(IN   )           :: t          !< Time in seconds at operating point
+   TYPE(AD_InputType),                   INTENT(INOUT)           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
+   TYPE(AD_ParameterType),               INTENT(IN   )           :: p          !< Parameters
+   TYPE(AD_ContinuousStateType),         INTENT(IN   )           :: x          !< Continuous states at operating point
+   TYPE(AD_DiscreteStateType),           INTENT(IN   )           :: xd         !< Discrete states at operating point
+   TYPE(AD_ConstraintStateType),         INTENT(IN   )           :: z          !< Constraint states at operating point
+   TYPE(AD_OtherStateType),              INTENT(IN   )           :: OtherState !< Other states at operating point
+   TYPE(AD_OutputType),                  INTENT(INOUT)           :: y          !< Output (change to inout if a mesh copy is required);
+                                                                               !!   Output fields are not used by this routine, but type is
+                                                                               !!   available here so that mesh parameter information (i.e.,
+                                                                               !!   connectivity) does not have to be recalculated for dYdu.
+   TYPE(AD_MiscVarType),                 INTENT(INOUT)           :: m          !< Misc/optimization variables
+   INTEGER(IntKi),                       INTENT(  OUT)           :: ErrStat    !< Error status of the operation
+   CHARACTER(*),                         INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dYdu(:,:)  !< Partial derivatives of output functions (Y) with respect
+                                                                               !!   to the inputs (u) [intent in to avoid deallocation]
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXdu(:,:)  !< Partial derivatives of continuous state functions (X) with
+                                                                               !!   respect to the inputs (u) [intent in to avoid deallocation]
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXddu(:,:) !< Partial derivatives of discrete state functions (Xd) with
+                                                                               !!   respect to the inputs (u) [intent in to avoid deallocation]
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dZdu(:,:)  !< Partial derivatives of constraint state functions (Z) with
+                                                                               !!   respect to the inputs (u) [intent in to avoid deallocation]
+      ! local variables
+   TYPE(AD_OutputType)                                           :: y_p
+   TYPE(AD_OutputType)                                           :: y_m
    TYPE(AD_ConstraintStateType)                                  :: z_p
    TYPE(AD_ConstraintStateType)                                  :: z_m
    TYPE(AD_InputType)                                            :: u_perturb
    REAL(R8Ki)                                                    :: delta_p, delta_m  ! delta change in input
    INTEGER(IntKi)                                                :: i, j, k, n   
-   logical                                                       :: ValidInput
+   logical                                                       :: ValidInput_p
+   logical                                                       :: ValidInput_m
    
    integer, parameter                                            :: indx = 1      ! m%BEMT_u(1) is at t; m%BEMT_u(2) is t+dt
    integer, parameter                                            :: op_indx = 2   ! m%BEMT_u(1) is at t; m%BEMT_u(2) is t+dt or the input at OP
@@ -3013,13 +3254,13 @@ SUBROUTINE AD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
             ! we need to see if these perturbed inputs put us in different solution regions:
          call SetInputsForBEMT(p, u_perturb, m, indx, errStat2, errMsg2)  
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later            
-         ValidInput = CheckBEMTInputPerturbations( p, m )
+         ValidInput_p = CheckBEMTInputPerturbations( p, m )
       
             ! if so, we do a 1-sided difference:
-         if (.not. ValidInput) then
+         if (.not. ValidInput_p) then
             call AD_CopyInput( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
                call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later            
-            delta_p = 0
+            delta_p = 0.0_R8Ki
          end if
                
          
@@ -3036,14 +3277,14 @@ SUBROUTINE AD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
             ! we need to see if these perturbed inputs put us in different solution regions:
          call SetInputsForBEMT(p, u_perturb, m, indx, errStat2, errMsg2)  
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later            
-         ValidInput = CheckBEMTInputPerturbations( p, m )
+         ValidInput_m = CheckBEMTInputPerturbations( p, m )
       
             ! if so, we do a 1-sided difference:
-         if (.not. ValidInput) then
+         if (.not. ValidInput_m) then
             call AD_CopyInput( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
                call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later            
-            delta_m = 0
-            if (EqualRealNos(delta_p, 0.0_R8Ki)) then
+            delta_m = 0.0_R8Ki
+            if (.not. ValidInput_p) then
                call SetErrStat(ErrID_Fatal,'Both sides of central difference equation change solution region. '// &
                   'dYdu cannot be calculated for column '//trim(num2lstr(i))//'.',ErrStat,ErrMsg,RoutineName) 
                return
@@ -3113,13 +3354,13 @@ SUBROUTINE AD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
             ! we need to see if these perturbed inputs put us in different solution regions:
          call SetInputsForBEMT(p, u_perturb, m, indx, errStat2, errMsg2)  
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later            
-         ValidInput = CheckBEMTInputPerturbations( p, m )
+         ValidInput_p = CheckBEMTInputPerturbations( p, m )
       
             ! if so, we do a 1-sided difference:
-         if (.not. ValidInput) then
+         if (.not. ValidInput_p) then
             call AD_CopyInput( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
                call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later            
-            delta_p = 0
+            delta_p = 0.0_R8Ki
          end if
          
                   
@@ -3136,14 +3377,14 @@ SUBROUTINE AD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
             ! we need to see if these perturbed inputs put us in different solution regions:
          call SetInputsForBEMT(p, u_perturb, m, indx, errStat2, errMsg2)  
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later            
-         ValidInput = CheckBEMTInputPerturbations( p, m )
+         ValidInput_m = CheckBEMTInputPerturbations( p, m )
       
             ! if so, we do a 1-sided difference:
-         if (.not. ValidInput) then
+         if (.not. ValidInput_m) then
             call AD_CopyInput( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
                call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later            
-            delta_m = 0
-            if (EqualRealNos(delta_p, 0.0_R8Ki)) then
+            delta_m = 0.0_R8Ki
+            if (.not. ValidInput_p) then
                call SetErrStat(ErrID_Fatal,'Both sides of central difference equation change solution region. '// &
                   'dYdu cannot be calculated for column '//trim(num2lstr(i))//'.',ErrStat,ErrMsg,RoutineName) 
                return
@@ -3193,7 +3434,7 @@ contains
       call AD_DestroyInput( u_perturb, ErrStat2, ErrMsg2 )
    end subroutine cleanup
 
-END SUBROUTINE AD_JacobianPInput
+END SUBROUTINE AD_JacobianPInput_orig
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
 !! with respect to the continuous states (x). The partial derivatives dY/dx, dX/dx, dXd/dx, and dZ/dx are returned.
@@ -3400,8 +3641,6 @@ SUBROUTINE AD_JacobianPConstrState( t, u, p, x, xd, z, OtherState, y, m, ErrStat
 
    ErrStat = ErrID_None
    ErrMsg  = ''
-   
-!bjj: how do I figure out if F is 0??? In that case, need to se dY/dz = 0 and dZ/dz = 1 {and need to ask jmj if this is the whole matrix or just a row/column where it applies}   
 
       ! get OP values here:   
    !call AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat2, ErrMsg2 )  ! (bjj: is this necessary? if not, still need to get BEMT inputs)
@@ -3715,7 +3954,7 @@ SUBROUTINE AD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
       end do
    
       index = index - 1
-      do i=1,p%NumOuts
+      do i=1,p%NumOuts + p%BldNd_TotNumOuts
          y_op(i+index) = y%WriteOutput(i)
       end do   
          
@@ -3777,8 +4016,8 @@ SUBROUTINE Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
    
    
       ! determine how many outputs there are in the Jacobians     
-   p%Jac_ny = y%TowerLoad%NNodes * 6  & ! 3 forces + 3 moments at each node
-            + p%NumOuts                 ! WriteOutput values 
+   p%Jac_ny = y%TowerLoad%NNodes * 6         & ! 3 forces + 3 moments at each node
+            + p%NumOuts + p%BldNd_TotNumOuts   ! WriteOutput values 
       
    do k=1,p%NumBlades
       p%Jac_ny = p%Jac_ny + y%BladeLoad(k)%NNodes * 6  ! 3 forces + 3 moments at each node
@@ -3801,7 +4040,7 @@ SUBROUTINE Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
    end do
    ! InitOut%RotFrame_y(indx_last:indx_next-1) = .true. ! The mesh fields are in the global frame, so are not in the rotating frame
 
-   do i=1,p%NumOuts
+   do i=1,p%NumOuts + p%BldNd_TotNumOuts
       InitOut%LinNames_y(i+indx_next-1) = trim(InitOut%WriteOutputHdr(i))//', '//trim(InitOut%WriteOutputUnt(i))  !trim(p%OutParam(i)%Name)//', '//p%OutParam(i)%Units
    end do    
    
@@ -3860,6 +4099,12 @@ SUBROUTINE Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
    do i=1,p%NumOuts
       InitOut%RotFrame_y(i+indx_next-1) = AllOut( p%OutParam(i)%Indx )      
    end do    
+   
+   do i=1,p%BldNd_TotNumOuts
+      InitOut%RotFrame_y(i+p%NumOuts+indx_next-1) = .true.
+      !AbsCant, AbsToe, AbsTwist should probably be set to .false.
+   end do
+      
    
    deallocate(AllOut)
           
@@ -4247,7 +4492,7 @@ SUBROUTINE Compute_dY(p, y_p, y_m, delta_p, delta_m, dY)
    end do
    
    
-   do k=1,p%NumOuts
+   do k=1,p%NumOuts + p%BldNd_TotNumOuts
       dY(k+indx_first-1) = y_p%WriteOutput(k) - y_m%WriteOutput(k)
    end do   
    
@@ -4329,7 +4574,7 @@ FUNCTION CheckBEMTInputPerturbations( p, m ) RESULT(ValidPerturb)
          do k=1,p%NumBlades      
             do j=1,p%NumBlNds         
             
-                  ! don't allow the input perturbations to change Vx or Vy so that Vx=0 or Vy=0:
+                  ! don't allow the input perturbations to change Vx or Vy so that Vx=0 and Vy=0:
                if ( EqualRealNos( m%BEMT_u(indx)%Vx(j,k), 0.0_ReKi ) .and. EqualRealNos( m%BEMT_u(indx)%Vy(j,k), 0.0_ReKi ) ) then
                   ValidPerturb = .false.
                   return

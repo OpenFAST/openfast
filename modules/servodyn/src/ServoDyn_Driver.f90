@@ -26,7 +26,7 @@ PROGRAM SrvD_Driver
 
    IMPLICIT NONE
 
-   INTEGER(IntKi), PARAMETER                          :: NumInp = 1           !< Number of inputs sent to SrvD_UpdateStates
+   INTEGER(IntKi), PARAMETER                          :: NumInp = 3           !< Number of inputs sent to SrvD_UpdateStates
    
       ! Program variables
 
@@ -51,12 +51,13 @@ PROGRAM SrvD_Driver
 
 
    INTEGER(IntKi)                                     :: n                    !< Loop counter (for time step)
+   INTEGER(IntKi)                                     :: j                    !< Loop counter (for interpolation time history)
    INTEGER(IntKi)                                     :: ErrStat              !< Status of error message
    CHARACTER(ErrMsgLen)                               :: ErrMsg               !< Error message if ErrStat /= ErrID_None
    
    REAL(R8Ki), allocatable                            :: dYdu(:,:)
    INTEGER(IntKi)                                     :: Un
-   INTEGER(IntKi), parameter                          :: nMax = 80
+   INTEGER(IntKi)                                     :: nMax 
    CHARACTER(1024)                                    :: OutFile
    CHARACTER(20)                                      :: FlagArg              !< Flag argument from command line
 
@@ -83,16 +84,37 @@ PROGRAM SrvD_Driver
    
          ! Set the driver's request for time interval here:
 
-   TimeInterval = 0.25                        ! Glue code's request for delta time (likely based on information from other modules)
-
-
+      TimeInterval             = 0.01 ! s    
+      InitInData%InputFile     = 'ServoDyn.dat'
+      InitInData%RootName      = OutFile(1:(len_trim(OutFile)-4))
+      InitInData%NumBl         = 3
+      InitInData%gravity       = 9.81 !m/s^2
+      InitInData%r_N_O_G       = (/ 90.0, 0.0, 0.0 /) ! m, position of nacelle (for NTMD)
+      InitInData%r_TwrBase     = (/  0.0, 0.0, 0.0 /) ! m, position of tower base (for TTMD)
+      InitInData%TMax          = 10.0 !s
+      InitInData%AirDens       = 1.225 !kg/m^3
+      InitInData%AvgWindSpeed  = 10.0 !m/s
+      InitInData%Linearize     = .false.
+      InitInData%NumSC2Ctrl    = 0
+      InitInData%NumCtrl2SC    = 0
+            
+      CALL AllocAry(InitInData%BlPitchInit, InitInData%NumBl, 'BlPitchInit', ErrStat, ErrMsg)
+         IF ( ErrStat /= ErrID_None ) THEN
+            CALL WrScr( ErrMsg )
+         END IF
+      InitInData%BlPitchInit = 5.0*pi/180.0 ! radians
+   
+   
          ! Initialize the module
 
    CALL SrvD_Init( InitInData, u(1), p,  x, xd, z, OtherState, y, misc, TimeInterval, InitOutData, ErrStat, ErrMsg )
    IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
       CALL WrScr( ErrMsg )
+      IF (ErrStat >= AbortErrLev) call ProgAbort('')
    END IF
 
+   nMax = nint(InitInData%TMax/TimeInterval)
+   
 
          ! Destroy initialization data
 
@@ -100,36 +122,62 @@ PROGRAM SrvD_Driver
    CALL SrvD_DestroyInitOutput( InitOutData, ErrStat, ErrMsg )
 
 
+   Time = 0.0_ReKi
+   DO j = 1, NumInp
+      InputTime(j) =  Time - j*TimeInterval
+   END DO
+   DO j = 2, NumInp
+      CALL SrvD_CopyInput (u(1),  u(j),  MESH_NEWCOPY, ErrStat, ErrMsg)
+   END DO
+
    !...............................................................................................................................
    ! Check the results of the Jacobian routines
    !...............................................................................................................................
 
-   Time = 0.0_ReKi
-
+   
+   CALL SrvD_CalcOutput( Time, u(1), p, x, xd, z, OtherState, y, misc, ErrStat, ErrMsg )
+   IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
+      CALL WrScr( ErrMsg )
+   END IF
+   write(Un,'(600(ES15.5,1x))') Time, y%BlPitchCom, y%WriteOutput
+   
+         
+   
    DO n = 0,nMax
 
          ! Modify u for inputs at n (likely from the outputs of another module or a set of test conditions) here:
+      DO j = NumInp-1, 1, -1
+         CALL SrvD_CopyInput (u(j),  u(j+1), MESH_UPDATECOPY, ErrStat, ErrMsg)
+         InputTime(j+1)  = InputTime(j)
+      END DO  
+      InputTime(1) = Time
+      u(1)%BlPitch = y%BlPitchCom   
          
-      u(1)%HSS_Spd = (2000.0_ReKi)/nMax  * RPM2RPS * n
+      !u(1)%HSS_Spd = (2000.0_ReKi)/nMax  * RPM2RPS * n
       
+      CALL SrvD_UpdateStates( Time, n, u, InputTime, p, x, xd, z, OtherState, misc, ErrStat, ErrMsg )
+      IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
+         CALL WrScr( ErrMsg )
+      END IF
+   
       
          ! Calculate outputs at n
-
+      Time = (n+1)*TimeInterval
       CALL SrvD_CalcOutput( Time, u(1), p, x, xd, z, OtherState, y, misc, ErrStat, ErrMsg )
       IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
          CALL WrScr( ErrMsg )
       END IF
 
       
-      call SrvD_JacobianPInput( Time, u(1), p, x, xd, z, OtherState, y, misc, ErrStat, ErrMsg, dYdu)
+      !call SrvD_JacobianPInput( Time, u(1), p, x, xd, z, OtherState, y, misc, ErrStat, ErrMsg, dYdu)
       
-      write(Un,'(100(ES15.5,1x))') u(1)%Yaw, u(1)%YawRate, u(1)%HSS_Spd, y%YawMom, y%GenTrq, y%ElecPwr, dYdu(4,1), dYdu(4,2), dYdu(5,3), dYdu(6,3)
+      !write(Un,'(100(ES15.5,1x))') u(1)%Yaw, u(1)%YawRate, u(1)%HSS_Spd, y%YawMom, y%GenTrq, y%ElecPwr, dYdu(4,1), dYdu(4,2), dYdu(5,3), dYdu(6,3)
+      write(Un,'(600(ES15.5,1x))') Time, y%BlPitchCom, y%WriteOutput
             
    END DO
    close (un)
 
 
-   
    !...............................................................................................................................
    ! Routine to terminate program execution
    !...............................................................................................................................
