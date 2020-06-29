@@ -990,7 +990,7 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,y,errStat,errMsg)
     !!!ENDIF
 
 
-
+    
     DO I = 1,p%numBlades
         DO J = p%startnode,p%NumBlNds  ! starts loop from startnode. 
             !------------------------------!!------------------------------!!------------------------------!!------------------------------!
@@ -1087,7 +1087,7 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,y,errStat,errMsg)
                         CALL Simple_Guidati(UNoise,p%BlChord(J,I),p%AFThickGuida(2,p%BlAFID(J,I)), &
                             p%AFThickGuida(1,p%BlAFID(J,I)),p,m%SPLTIGui,errStat2,errMsg2 )
                         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
-                        m%SPLti=m%SPLti+m%SPLTIGui!+10 ! +10 is fudge factor to match NLR data
+                        m%SPLti=m%SPLti+m%SPLTIGui + 10. ! +10 is fudge factor to match NLR data
                     ELSEIF ( p%IInflow .EQ. 3 )   THEN                                     
                        print*,'Full Guidati removed'
                        STOP
@@ -1202,11 +1202,11 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,y,errStat,errMsg)
                      y%SumSpecNoiseSep(7,K,III) = PTI + y%SumSpecNoiseSep(7,K,III)        ! Assigns Current TI to Appropriate Mechanism (7), Observer (K), and Frequency (III)
                   ENDIF
                     
-                  y%DirectiviOutput(K)         = Ptotal + y%DirectiviOutput(K)            ! Assigns Overall Pressure to Appropriate Observer for Directivity   
-                  IF (y%DirectiviOutput(K)  .EQ. 0.)      y%DirectiviOutput(K) = 1        ! Since these will all be converted via LOG10, they will produce an error if .EQ. 0. 
+                ENDDO ! III = 1, size(p%FreqList)
+              
+              y%DirectiviOutput(K)         = Ptotal + y%DirectiviOutput(K)            ! Assigns Overall Pressure to Appropriate Observer for Directivity   
+              IF (y%DirectiviOutput(K)  .EQ. 0.)      y%DirectiviOutput(K) = 1        ! Since these will all be converted via LOG10, they will produce an error if .EQ. 0. 
                                                                                           !    Set .EQ. to 1 instead (LOG10(1)=0)
-
-               ENDDO ! III = 1, size(p%FreqList)
            ENDDO ! Loop on observers
        ENDDO ! Loop on blade nodes
    ENDDO ! Loop on blades
