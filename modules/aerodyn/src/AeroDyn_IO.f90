@@ -3651,6 +3651,7 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
       InvalidOutput( BNGam(  :,i) ) = .true.
       InvalidOutput( BNSgCav(:,i) ) = .true.
       InvalidOutput( BNSigCr(:,i) ) = .true.
+      InvalidOutput( BNCpMin(:,i) ) = .true.
                
    END DO
       
@@ -3695,6 +3696,7 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
       InvalidOutput( BNGam(  i,:) ) = .true.
       InvalidOutput( BNSgCav(i,:) ) = .true.
       InvalidOutput( BNSigCr(i,:) ) = .true.
+      InvalidOutput( BNCpMin(i,:) ) = .true.
          
    END DO   
    
