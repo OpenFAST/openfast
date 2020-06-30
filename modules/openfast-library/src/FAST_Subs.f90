@@ -522,7 +522,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
             Init%InData_IfW%NumWindPoints = Init%InData_IfW%NumWindPoints + AD%Input(1)%BladeMotion(k)%NNodes
          END DO
          if (allocated(AD%OtherSt(STATE_CURR)%WakeLocationPoints)) then
-            InitInData_IfW%NumWindPoints = InitInData_IfW%NumWindPoints + size(AD%OtherSt(STATE_CURR)%WakeLocationPoints,DIM=2)
+            Init%InData_IfW%NumWindPoints = Init%InData_IfW%NumWindPoints + size(AD%OtherSt(STATE_CURR)%WakeLocationPoints,DIM=2)
          end if
       END IF
       
@@ -4670,7 +4670,7 @@ SUBROUTINE WriteOutputToFile(n_t_global, t_global, p_FAST, y_FAST, ED, BD, AD14,
    TYPE(BeamDyn_Data),       INTENT(IN   ) :: BD                  !< BeamDyn data
    TYPE(ServoDyn_Data),      INTENT(IN   ) :: SrvD                !< ServoDyn data
    TYPE(AeroDyn14_Data),     INTENT(IN   ) :: AD14                !< AeroDyn14 data
-   TYPE(AeroDyn_Data),       INTENT(INOUT) :: AD                  !< AeroDyn data      ! Out so the AD%m%FVW%vtk misc vars can be changed
+   TYPE(AeroDyn_Data),       INTENT(IN   ) :: AD                  !< AeroDyn data
    TYPE(InflowWind_Data),    INTENT(IN   ) :: IfW                 !< InflowWind data
    TYPE(OpenFOAM_Data),      INTENT(IN   ) :: OpFM                !< OpenFOAM data
    TYPE(HydroDyn_Data),      INTENT(IN   ) :: HD                  !< HydroDyn data
@@ -5138,11 +5138,11 @@ SUBROUTINE WrVTK_AllMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD, IfW, OpFM, H
       if (allocated(AD%m%FVW_u)) then
          if (allocated(AD%m%FVW_u(1)%WingsMesh)) then
             DO K=1,NumBl
-               call MeshWrVTK(p_FAST%TurbinePos, AD%m%FVW_u(1)%WingsMesh(k), trim(p_FAST%VTK_OutFileRoot)//'.FVW_WingsMesh'//trim(num2lstr(k)), y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, Twidth, AD%Input(1)%BladeMotion(k) )
+               call MeshWrVTK(p_FAST%TurbinePos, AD%m%FVW_u(1)%WingsMesh(k), trim(p_FAST%VTK_OutFileRoot)//'.FVW_WingsMesh'//trim(num2lstr(k)), y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth, AD%Input(1)%BladeMotion(k) )
                !call MeshWrVTK(p_FAST%TurbinePos, AD%Input(1)%BladeMotion(K), trim(p_FAST%OutFileRoot)//'.AD_BladeMotion'//trim(num2lstr(k)), y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2 )
             END DO
             ! Free wake
-            call WrVTK_FVW(AD%p%FVW, AD%x(1)%FVW, AD%z(1)%FVW, AD%m%FVW, trim(p_FAST%VTK_OutFileRoot)//'.FVW', y_FAST%VTK_count, Twidth, bladeFrame=.FALSE.)  ! bladeFrame==.FALSE. to output in global coords
+            call WrVTK_FVW(AD%p%FVW, AD%x(1)%FVW, AD%z(1)%FVW, AD%m%FVW, trim(p_FAST%VTK_OutFileRoot)//'.FVW', y_FAST%VTK_count, p_FAST%VTK_tWidth, bladeFrame=.FALSE.)  ! bladeFrame==.FALSE. to output in global coords
          end if
       end if
    END IF
@@ -5407,7 +5407,7 @@ SUBROUTINE WrVTK_Surfaces(t_global, p_FAST, y_FAST, MeshMapData, ED, BD, AD, IfW
 ! Free wake
    if (allocated(AD%m%FVW_u)) then
       if (allocated(AD%m%FVW_u(1)%WingsMesh)) then
-         call WrVTK_FVW(AD%p%FVW, AD%x(1)%FVW, AD%z(1)%FVW, AD%m%FVW, trim(p_FAST%VTK_OutFileRoot)//'.FVW', y_FAST%VTK_count, Twidth, bladeFrame=.FALSE.)  ! bladeFrame==.FALSE. to output in global coords
+         call WrVTK_FVW(AD%p%FVW, AD%x(1)%FVW, AD%z(1)%FVW, AD%m%FVW, trim(p_FAST%VTK_OutFileRoot)//'.FVW', y_FAST%VTK_count, p_FAST%VTK_tWidth, bladeFrame=.FALSE.)  ! bladeFrame==.FALSE. to output in global coords
       end if   
    end if   
 

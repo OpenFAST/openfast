@@ -4625,7 +4625,7 @@ SUBROUTINE CalcOutputs_And_SolveForInputs( n_t_global, this_time, this_state, ca
    END IF
 
    IF ( p_FAST%CompInflow == Module_IfW ) THEN
-      CALL IfW_InputSolve( p_FAST, m_FAST, IfW%Input(:), IfW%p, AD14%Input(1), AD%Input(1), AD%OtherSt(1), ED%Output(1), ErrStat2, ErrMsg2 )
+      CALL IfW_InputSolve( p_FAST, m_FAST, IfW%Input(:), IfW%p, AD14%Input(1), AD%Input(1), AD%OtherSt(1), ED%y, ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
    ELSE IF ( p_FAST%CompInflow == Module_OpFM ) THEN
    ! OpenFOAM is the driver and it sets these inputs outside of this solve; the OpenFOAM inputs and outputs thus don't change 
@@ -4945,7 +4945,7 @@ SUBROUTINE SolveOption2b_Inp2IfW(this_time, this_state, p_FAST, m_FAST, ED, BD, 
    
    IF (p_FAST%CompInflow == Module_IfW) THEN
       ! must be done after ED_CalcOutput and before AD_CalcOutput and SrvD
-      CALL IfW_InputSolve( p_FAST, m_FAST, IfW%Input(:), IfW%p, AD14%Input(1), AD%Input(1), AD%OtherSt(1), ED%Output(1), ErrStat2, ErrMsg2 )
+      CALL IfW_InputSolve( p_FAST, m_FAST, IfW%Input(:), IfW%p, AD14%Input(1), AD%Input(1), AD%OtherSt(1), ED%y, ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    !ELSE IF ( p_FAST%CompInflow == Module_OpFM ) THEN
    ! ! OpenFOAM is the driver and it computes outputs outside of this solve; the OpenFOAM inputs and outputs thus don't change 
