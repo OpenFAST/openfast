@@ -3648,6 +3648,9 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
       InvalidOutput( BNFn(   :,i) ) = .true.
       InvalidOutput( BNFt(   :,i) ) = .true.
       InvalidOutput( BNClrnc(:,i) ) = .true.
+      InvalidOutput( BNGam(  :,i) ) = .true.
+      InvalidOutput( BNSgCav(:,i) ) = .true.
+      InvalidOutput( BNSigCr(:,i) ) = .true.
                
    END DO
       
@@ -3689,6 +3692,9 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
       InvalidOutput( BNFn(   i,:) ) = .true.
       InvalidOutput( BNFt(   i,:) ) = .true.
       InvalidOutput( BNClrnc(i,:) ) = .true.
+      InvalidOutput( BNGam(  i,:) ) = .true.
+      InvalidOutput( BNSgCav(i,:) ) = .true.
+      InvalidOutput( BNSigCr(i,:) ) = .true.
          
    END DO   
    
