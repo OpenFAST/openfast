@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Configure Bash to exit if any command returns an error
+set -e
+
 cd /openfast
 
 git fetch origin ${GITHUB_REF}:CI
@@ -51,5 +54,5 @@ ctest -VV -L linear
 # Subset of OpenFAST regression tests; do not run
 ## - 9, 16 because they're very sensitive
 ## - 19, 20 because theyre too long
-## - 17, 22, 23 becuase we dont know why they fail :(
+## - 17, 22, 23 because we dont know why they fail :(
 ctest -VV -j8 -I 1,1,1,2,3,4,5,6,7,8,10,11,12,13,14,15,18,21,24,25,26,27,28
