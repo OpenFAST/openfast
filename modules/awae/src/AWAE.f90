@@ -929,13 +929,14 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       m%u_IfW_Low%PositionXYZ = p%Grid_low
 
          ! Initialize the high-resolution grid inputs and outputs
-
-      call AllocAry(m%u_IfW_High%PositionXYZ, 3, p%nX_high*p%nY_high*p%nZ_high, 'm%u_IfW_High%PositionXYZ', ErrStat2, ErrMsg2)
-         call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
-      call AllocAry(m%y_IfW_High%VelocityUVW, 3, p%nX_high*p%nY_high*p%nZ_high, 'm%y_IfW_High%VelocityUVW', ErrStat2, ErrMsg2)
-         call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
-      call AllocAry(m%y_IfW_High%WriteOutput, size(m%y_IfW_Low%WriteOutput), 'm%y_IfW_High%WriteOutput', ErrStat2, ErrMsg2)
-         call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
+       IF ( .NOT. ALLOCATED( m%u_IfW_High%PositionXYZ ) ) THEN
+         call AllocAry(m%u_IfW_High%PositionXYZ, 3, p%nX_high*p%nY_high*p%nZ_high, 'm%u_IfW_High%PositionXYZ', ErrStat2, ErrMsg2)
+            call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
+         call AllocAry(m%y_IfW_High%VelocityUVW, 3, p%nX_high*p%nY_high*p%nZ_high, 'm%y_IfW_High%VelocityUVW', ErrStat2, ErrMsg2)
+            call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
+         call AllocAry(m%y_IfW_High%WriteOutput, size(m%y_IfW_Low%WriteOutput), 'm%y_IfW_High%WriteOutput', ErrStat2, ErrMsg2)
+            call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
+      END IF
       if (errStat2 >= AbortErrLev) then
             return
       end if
