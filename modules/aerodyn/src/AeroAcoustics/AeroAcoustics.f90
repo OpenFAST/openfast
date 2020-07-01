@@ -816,6 +816,8 @@ SUBROUTINE CalcObserve(p,m,u,xd,nt,errStat,errMsg)
     REAL(ReKi)     :: RLEObserve (3)              ! position vector from leading edge to observer in trailing edge coordinate system
     !REAL(ReKi)     :: BladeObserve (3)            ! position vector from leading edge to observer in trailing edge coordinate system
     REAL(ReKi)     :: RTEObserve (3)              ! position vector from trailing edge to observer in trailing edge coordinate system
+    REAL(ReKi)     :: RTEObserveG (3)             ! position vector from trailing edge to observer in the coordinate system located at the trailing edge but rotated as the global
+    REAL(ReKi)     :: RLEObserveG (3)             ! position vector from leading edge to observer in the coordinate system located at the leading edge but rotated as the global
     REAL(ReKi)     :: RTEObservereal (3)          ! location of trailing edge in global coordinate system
     REAL(ReKi)     :: RLEObservereal (3)          ! location of leading edge in global coordinate system
     REAL(ReKi)     :: LocalToGlobal(3,3)          ! trasnformation matrix
@@ -823,6 +825,8 @@ SUBROUTINE CalcObserve(p,m,u,xd,nt,errStat,errMsg)
     REAL(ReKi)     :: rSTE       (3)              ! Distance from tower base to trailing edge in trailing edge coordinate system
     REAL(ReKi)     :: timeLE                      ! Time of sound propagation from leading edge to observer
     REAL(ReKi)     :: timeTE                      ! Time of sound propagation from trailing edge to observer
+    REAL(ReKi)     :: phi_e
+    REAL(ReKi)     :: theta_e 
     REAL(ReKi)     :: tmpR       (3)              ! temporary distance vector
     REAL(ReKi)     :: UConvect   (3)              ! convection velocity of noise source in trailing edge coordinate system
     INTEGER(intKi) :: I                           ! I A generic index for DO loops.
@@ -852,13 +856,19 @@ SUBROUTINE CalcObserve(p,m,u,xd,nt,errStat,errMsg)
 
                     DO K = 1,p%NrObsLoc
                         ! Calculate position vector from leading and trailing edge to observer in retarded trailing edge coordinate system
-                        RTEObserve(1)=ABS(p%Obsx(K)-RTEObservereal(1))
-                        RTEObserve(2)=ABS(p%Obsy(K)-RTEObservereal(2))
-                        RTEObserve(3)=ABS(p%Obsz(K)-RTEObservereal(3))
 
-                        RLEObserve(1)=ABS(p%Obsx(K)-RLEObservereal(1))
-                        RLEObserve(2)=ABS(p%Obsy(K)-RLEObservereal(2))
-                        RLEObserve(3)=ABS(p%Obsz(K)-RLEObservereal(3))
+                        RTEObserveG(1)=p%Obsx(K)-RTEObservereal(1)
+                        RTEObserveG(2)=p%Obsy(K)-RTEObservereal(2)
+                        RTEObserveG(3)=p%Obsz(K)-RTEObservereal(3)
+                        
+                        RLEObserveG(1)=p%Obsx(K)-RLEObservereal(1)
+                        RLEObserveG(2)=p%Obsy(K)-RLEObservereal(2)
+                        RLEObserveG(3)=p%Obsz(K)-RLEObservereal(3)
+                        
+                        RTEObserve = MATMUL(u%RotLtoG(:,:,J,I), RTEObserveG)
+                        RLEObserve = MATMUL(u%RotLtoG(:,:,J,I), RLEObserveG)
+                        
+                        
                         !
                         ! Calculate convection velocity of noise source
                         ! Assumes noise source convects at some constant times the mean wind speed, approximately accounts for
@@ -866,22 +876,36 @@ SUBROUTINE CalcObserve(p,m,u,xd,nt,errStat,errMsg)
                         UConvect (1) = 0.8*xd%MeanVxVyVz(J,I)
                         UConvect (2) = 0.8*xd%MeanVxVyVz(J,I)
                         UConvect (3) = 0.8*xd%MeanVxVyVz(J,I)
-                        ! Calculate time of noise propagation to observer
-                        timeTE = SQRT (RTEObserve(1)**2+RTEObserve(2)**2+RTEObserve(3)**2)/p%SpdSound
-                        timeLE = SQRT (RLEObserve(1)**2+RLEObserve(2)**2+RLEObserve(3)**2)/p%SpdSound
-                        ! Calculate inputs into noise subroutines
+                        
+                        ! Calculate absolute distance to the observer
                         m%rTEtoObserve(K,J,I) = SQRT (RTEObserve(1)**2+RTEObserve(2)**2+RTEObserve(3)**2)
                         m%rLEtoObserve(K,J,I) = SQRT (RLEObserve(1)**2+RLEObserve(2)**2+RLEObserve(3)**2)
 
-                        m%ChordAngleTE(K,J,I) = ACOS (RTEObserve(2)/SQRT(RTEObserve(1)**2+RTEObserve(2)**2+RTEObserve(3)**2))*R2D ! theta
-                        m%SpanAngleTE(K,J,I)  = ACOS (RTEObserve(3)/SQRT(RTEObserve(1)**2+RTEObserve(3)**2))*R2D !phi
-                        IF (m%SpanAngleTE(K,J,I)< 0) m%SpanAngleTE(K,J,I)= 180+m%SpanAngleTE(K,J,I)
-                        IF (m%ChordAngleTE(K,J,I)< 0) m%ChordAngleTE(K,J,I)= 180+m%ChordAngleTE(K,J,I)
+                        ! Calculate time of noise propagation to observer
+                        timeTE = m%rTEtoObserve(K,J,I) / p%SpdSound
+                        timeLE = m%rLEtoObserve(K,J,I) / p%SpdSound
+                        
+                        ! Compute spanwise directivity angle phi
+                        phi_e = ATAN (RTEObserve(1)/RTEObserve(3))
+                        m%SpanAngleTE(K,J,I)  = phi_e * R2D
 
-                        m%ChordAngleLE(K,J,I) = ACOS (RLEObserve(2)/SQRT(RLEObserve(1)**2+RLEObserve(2)**2+RLEObserve(3)**2))*R2D
-                        m%SpanAngleLE(K,J,I) = ACOS (RLEObserve(3)/SQRT(RLEObserve(1)**2+RLEObserve(3)**2))*R2D
-                        IF (m%SpanAngleLE(K,J,I)< 0) m%SpanAngleLE(K,J,I)= 180+m%SpanAngleLE(K,J,I)
-                        IF (m%ChordAngleLE(K,J,I)< 0) m%ChordAngleLE(K,J,I)= 180+m%ChordAngleLE(K,J,I)
+                        ! Compute chordwise directivity angle theta
+                        theta_e = ATAN ((RTEObserve(3) * COS (phi_e) + RTEObserve(1) * SIN (phi_e) ) / RTEObserve(2))
+                        m%ChordAngleTE(K,J,I) = theta_e * R2D
+                        
+                        ! IF (m%SpanAngleTE(K,J,I)< 0) m%SpanAngleTE(K,J,I)= 180+m%SpanAngleTE(K,J,I)
+                        ! IF (m%ChordAngleTE(K,J,I)< 0) m%ChordAngleTE(K,J,I)= 180+m%ChordAngleTE(K,J,I)
+
+                        ! Compute spanwise directivity angle phi
+                        phi_e = ATAN (RLEObserve(1)/RLEObserve(3))
+                        m%SpanAngleLE(K,J,I)  = phi_e * R2D
+
+                        ! Compute chordwise directivity angle theta
+                        theta_e = ATAN ((RLEObserve(3) * COS (phi_e) + RLEObserve(1) * SIN (phi_e) ) / RLEObserve(2))
+                        m%ChordAngleLE(K,J,I) = theta_e * R2D
+
+                        ! IF (m%SpanAngleLE(K,J,I)< 0) m%SpanAngleLE(K,J,I)= 180+m%SpanAngleLE(K,J,I)
+                        ! IF (m%ChordAngleLE(K,J,I)< 0) m%ChordAngleLE(K,J,I)= 180+m%ChordAngleLE(K,J,I)
 
                     ENDDO !K, observers
                 ENDIF !  every Xth time step or so..
