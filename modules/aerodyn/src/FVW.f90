@@ -226,6 +226,15 @@ subroutine FVW_InitMiscVars( p, m, ErrStat, ErrMsg )
    call AllocAry( m%Vind_FW , 3   ,  FWnSpan+1  ,p%nFWMax+1,  p%nWings, 'Vind on FW ', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%Vind_FW= -999_ReKi;
    call AllocAry( m%dxdt_NW , 3   ,  p%nSpan+1 , p%nNWMax+1,  p%nWings, 'NW dxdt'    , ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%dxdt_NW = -999999_ReKi;
    call AllocAry( m%dxdt_FW , 3   ,  FWnSpan+1 , p%nFWMax+1,  p%nWings, 'FW dxdt'    , ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%dxdt_FW = -999999_ReKi;
+   ! Variables for optimizing outputs at blade nodes
+   call AllocAry( m%BN_UrelWind_s, 3, p%nSpan+1 , p%nWings, 'Relative wind in section coordinates',   ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%BN_UrelWind_s= -999999_ReKi;
+   call AllocAry( m%BN_AxInd   ,      p%nSpan+1 , p%nWings, 'Axial induction',                        ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%BN_AxInd     = -999999_ReKi;
+   call AllocAry( m%BN_TanInd  ,      p%nSpan+1 , p%nWings, 'Tangential induction',                   ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%BN_TanInd    = -999999_ReKi;
+   call AllocAry( m%BN_Vrel    ,      p%nSpan+1 , p%nWings, 'Relative velocity',                      ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%BN_Vrel      = -999999_ReKi;
+   call AllocAry( m%BN_alpha   ,      p%nSpan+1 , p%nWings, 'Angle of attack',                        ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%BN_alpha     = -999999_ReKi;
+   call AllocAry( m%BN_phi     ,      p%nSpan+1 , p%nWings, 'angle between the plane local wind dir', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%BN_phi       = -999999_ReKi;
+   call AllocAry( m%BN_Re      ,      p%nSpan+1 , p%nWings, 'Reynolds number',                        ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%BN_Re        = -999999_ReKi;
+
    ! Wind request points
    nMax = 0
    nMax = nMax +  p%nSpan                   * p%nWings   ! Lifting line Control Points

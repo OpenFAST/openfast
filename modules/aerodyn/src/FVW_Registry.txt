@@ -100,7 +100,16 @@ typedef     ^                   ^               ReKi                            
 typedef     ^                   ^               ReKi                             SegEpsilon    :     -  -  "Segment regularization parameter" - 
 # Wake rollup storage (buffer)
 typedef     ^                   ^               ReKi                             CPs           ::    -  -  "Control points used for wake rollup computation" - 
-typedef     ^                   ^               ReKi                             Uind          ::    -  -  "Induced velocities obtained at control points" - 
+typedef     ^                   ^               ReKi                             Uind          ::    -  -  "Induced velocities obtained at control points" -
+# for calculating outputs at blade nodes
+typedef     ^                   ^               ReKi                             BN_AxInd      ::    -  -  "Axial induction [size: (NumBlNds,numBlades)]" -
+typedef     ^                   ^               ReKi                             BN_TanInd     ::    -  -  "Tangential induction [size: (NumBlNds,numBlades)]" -
+typedef     ^                   ^               ReKi                             BN_Vrel       ::    -  -  "Relative velocity [size: (NumBlNds,numBlades)]" m/s
+typedef     ^                   ^               ReKi                             BN_alpha      ::    -  -  "Angle of attack [size: (NumBlNds,numBlades)]" rad
+typedef     ^                   ^               ReKi                             BN_phi        ::    -  -  "angle between the plane of rotation and the direction of the local wind [size: (NumBlNds,numBlades)]" rad
+typedef     ^                   ^               ReKi                             BN_Re         ::    -  -  "Reynolds number [size: (NumBlNds,numBlades)]" -
+typedef     ^                   ^               ReKi                             BN_URelWind_s :::   -  -  "Relative wind velocity in section coordinates [size: (3,NumBlNds,numBlades)]" m/s
+
 # TODO UA - Should be part of AeroDyn
 typedef     ^                   ^               UA_MiscVarType                   m_UA          -  -  -  "misc vars for UnsteadyAero"        -
 typedef     ^                   ^               UA_OutputType                    y_UA          -  -  -  "outputs from UnsteadyAero"        -

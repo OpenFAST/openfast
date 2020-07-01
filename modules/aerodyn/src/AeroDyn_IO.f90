@@ -1794,30 +1794,59 @@ CONTAINS
    !!                                          m%DisturbedInflow (done in SetInputs)
    !!       Make sure these are set!
    subroutine Calc_WriteOutput_FVW
-      real(ReKi)           :: AxInd, TanInd, Vrel, phi, alpha, Re
       type(AFI_OutputType) :: AFI_interp              ! Resulting values from lookup table
-      real(ReKi)           :: UrelWind_s(3)           ! Relative Wind in section coords
+      ! Local vars for readability
       real(ReKi)           :: Vind(3)               ! 
       real(ReKi)           :: Vstr(3)               ! 
       real(ReKi)           :: Vwnd(3)               ! 
-      real(ReKi)           :: Cx, Cy, cphi, sphi, theta
+      real(ReKi)           :: theta
+      ! Local variables that we store in misc for nodal outputs
+      real(ReKi)           :: UrelWind_s(3)           ! Relative Wind in section coords
+      real(ReKi)           :: AxInd, TanInd, Vrel, phi, alpha, Re
+
+      real(ReKi)           :: Cx, Cy, cphi, sphi
       real(ReKi)           :: rmax, omega
+
+         ! set all blade outputs for all nodes (needed in nodal outputs
+      do k=1,p%numBlades
+         do j=1,p%NumBlNds
+            ! --- Computing main aero variables from induction - setting local variables
+            Vind = m%FVW_y%Vind(1:3,j,k)
+            Vstr = u%BladeMotion(k)%TranslationVel(1:3,j)
+            Vwnd = m%DisturbedInflow(1:3,j,k)   ! NOTE: contains tower shadow
+            theta = m%FVW%PitchAndTwist(j,k)
+            call FVW_AeroOuts( m%WithoutSweepPitchTwist(1:3,1:3,j,k), u%BladeMotion(k)%Orientation(1:3,1:3,j), & ! inputs
+                        theta, Vstr(1:3), Vind(1:3), VWnd(1:3), p%KinVisc, p%FVW%Chord(j,k), &               ! inputs
+                        AxInd, TanInd, Vrel, phi, alpha, Re, UrelWind_s(1:3), ErrStat, ErrMsg )        ! outputs
+
+            ! Save results for outputs
+            m%FVW%BN_AxInd(j,k)           = AxInd
+            m%FVW%BN_TanInd(j,k)          = TanInd
+            m%FVW%BN_Vrel(j,k)            = Vrel
+            m%FVW%BN_alpha(j,k)           = alpha
+            m%FVW%BN_phi(j,k)             = phi
+            m%FVW%BN_Re(j,k)              = Re
+            m%FVW%BN_UrelWind_s(1:3,j,k)  = UrelWind_s(1:3)
+         end do ! nodes
+      end do ! blades
+
+
 
          ! blade outputs
       do k=1,p%numBlades
          do beta=1,p%NBlOuts
             j=p%BlOutNd(beta)
-            ! --- Computing main aero variables from induction - setting local variables
-            Vind = m%FVW_y%Vind(1:3,j,k)
-            Vstr = u%BladeMotion(k)%TranslationVel(1:3,j)
-            Vwnd = m%DisturbedInflow(:,j,k)   ! NOTE: contains tower shadow
-            call FVW_AeroOuts( m%WithoutSweepPitchTwist(:,:,j,k), u%BladeMotion(k)%Orientation(1:3,1:3,j), m%FVW%PitchAndTwist(j,k), Vstr , &
-                        Vind(1:3), Vwnd , p%KinVisc, p%FVW%Chord(j,k), &
-                        AxInd, TanInd, Vrel, phi, alpha, Re, UrelWind_s, ErrStat, ErrMsg )
+            AxInd           =  m%FVW%BN_AxInd(j,k)
+            TanInd          =  m%FVW%BN_TanInd(j,k)
+            Vrel            =  m%FVW%BN_Vrel(j,k)
+            alpha           =  m%FVW%BN_alpha(j,k)
+            phi             =  m%FVW%BN_phi(j,k)
+            Re              =  m%FVW%BN_Re(j,k)
+            UrelWind_s(1:3) =  m%FVW%BN_UrelWind_s(1:3,j,k)
+            theta = m%FVW%PitchAndTwist(j,k)
 
             !  NOTE: using airfoil coeffs at nodes
             call AFI_ComputeAirfoilCoefs( alpha, Re, 0.0_ReKi,  p%AFI(p%FVW%AFindx(j,k)), AFI_interp, ErrStat, ErrMsg )
-            theta = m%FVW%PitchAndTwist(j,k)
 
             ! --- Setting AD outputs 
             tmp = matmul( m%WithoutSweepPitchTwist(:,:,j,k), u%InflowOnBlade(:,j,k) )
@@ -1864,12 +1893,12 @@ CONTAINS
             m%AllOuts( BNCm(   beta,k) ) = AFI_interp%Cm
             m%AllOuts( BNCx(   beta,k) ) = Cx
             m%AllOuts( BNCy(   beta,k) ) = Cy
-! 
+ 
             ct=cos(theta)
             st=sin(theta)
             m%AllOuts( BNCn(   beta,k) ) = Cx*ct + Cy*st
             m%AllOuts( BNCt(   beta,k) ) =-Cx*st + Cy*ct
-! 
+
             m%AllOuts( BNFl(   beta,k) ) =  m%X(j,k)*cp - m%Y(j,k)*sp
             m%AllOuts( BNFd(   beta,k) ) =  m%X(j,k)*sp + m%Y(j,k)*cp
             m%AllOuts( BNMm(   beta,k) ) =  m%M(j,k)
