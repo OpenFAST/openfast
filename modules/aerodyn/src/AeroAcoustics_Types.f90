@@ -256,7 +256,7 @@ IMPLICIT NONE
 ! =======================
 ! =========  AA_InputType  =======
   TYPE, PUBLIC :: AA_InputType
-    REAL(ReKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: RotLtoG      !< 3x3 rotation matrix transform a vector from the local airfoil coordinate system to the global inertial coordinate system [-]
+    REAL(ReKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: RotGtoL      !< 3x3 rotation matrix transform a vector from the local airfoil coordinate system to the global inertial coordinate system [-]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: AeroCent_G      !< location in global coordinates of the blade element aerodynamic center.  1st index = vector components, 2nd index = blade node, 3rd index = blade [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Vrel      !< Vrel [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: AoANoise      !< Angle of attack [-]
@@ -8612,23 +8612,23 @@ ENDIF
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
-IF (ALLOCATED(SrcInputData%RotLtoG)) THEN
-  i1_l = LBOUND(SrcInputData%RotLtoG,1)
-  i1_u = UBOUND(SrcInputData%RotLtoG,1)
-  i2_l = LBOUND(SrcInputData%RotLtoG,2)
-  i2_u = UBOUND(SrcInputData%RotLtoG,2)
-  i3_l = LBOUND(SrcInputData%RotLtoG,3)
-  i3_u = UBOUND(SrcInputData%RotLtoG,3)
-  i4_l = LBOUND(SrcInputData%RotLtoG,4)
-  i4_u = UBOUND(SrcInputData%RotLtoG,4)
-  IF (.NOT. ALLOCATED(DstInputData%RotLtoG)) THEN 
-    ALLOCATE(DstInputData%RotLtoG(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u,i4_l:i4_u),STAT=ErrStat2)
+IF (ALLOCATED(SrcInputData%RotGtoL)) THEN
+  i1_l = LBOUND(SrcInputData%RotGtoL,1)
+  i1_u = UBOUND(SrcInputData%RotGtoL,1)
+  i2_l = LBOUND(SrcInputData%RotGtoL,2)
+  i2_u = UBOUND(SrcInputData%RotGtoL,2)
+  i3_l = LBOUND(SrcInputData%RotGtoL,3)
+  i3_u = UBOUND(SrcInputData%RotGtoL,3)
+  i4_l = LBOUND(SrcInputData%RotGtoL,4)
+  i4_u = UBOUND(SrcInputData%RotGtoL,4)
+  IF (.NOT. ALLOCATED(DstInputData%RotGtoL)) THEN 
+    ALLOCATE(DstInputData%RotGtoL(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u,i4_l:i4_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%RotLtoG.', ErrStat, ErrMsg,RoutineName)
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%RotGtoL.', ErrStat, ErrMsg,RoutineName)
       RETURN
     END IF
   END IF
-    DstInputData%RotLtoG = SrcInputData%RotLtoG
+    DstInputData%RotGtoL = SrcInputData%RotGtoL
 ENDIF
 IF (ALLOCATED(SrcInputData%AeroCent_G)) THEN
   i1_l = LBOUND(SrcInputData%AeroCent_G,1)
@@ -8701,8 +8701,8 @@ ENDIF
 ! 
   ErrStat = ErrID_None
   ErrMsg  = ""
-IF (ALLOCATED(InputData%RotLtoG)) THEN
-  DEALLOCATE(InputData%RotLtoG)
+IF (ALLOCATED(InputData%RotGtoL)) THEN
+  DEALLOCATE(InputData%RotGtoL)
 ENDIF
 IF (ALLOCATED(InputData%AeroCent_G)) THEN
   DEALLOCATE(InputData%AeroCent_G)
@@ -8753,10 +8753,10 @@ ENDIF
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
-  Int_BufSz   = Int_BufSz   + 1     ! RotLtoG allocated yes/no
-  IF ( ALLOCATED(InData%RotLtoG) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*4  ! RotLtoG upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%RotLtoG)  ! RotLtoG
+  Int_BufSz   = Int_BufSz   + 1     ! RotGtoL allocated yes/no
+  IF ( ALLOCATED(InData%RotGtoL) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*4  ! RotGtoL upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%RotGtoL)  ! RotGtoL
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! AeroCent_G allocated yes/no
   IF ( ALLOCATED(InData%AeroCent_G) ) THEN
@@ -8805,27 +8805,27 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-  IF ( .NOT. ALLOCATED(InData%RotLtoG) ) THEN
+  IF ( .NOT. ALLOCATED(InData%RotGtoL) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
   ELSE
     IntKiBuf( Int_Xferred ) = 1
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%RotLtoG,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%RotLtoG,1)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%RotGtoL,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%RotGtoL,1)
     Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%RotLtoG,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%RotLtoG,2)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%RotGtoL,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%RotGtoL,2)
     Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%RotLtoG,3)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%RotLtoG,3)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%RotGtoL,3)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%RotGtoL,3)
     Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%RotLtoG,4)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%RotLtoG,4)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%RotGtoL,4)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%RotGtoL,4)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%RotLtoG)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%RotLtoG))-1 ) = PACK(InData%RotLtoG,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%RotLtoG)
+      IF (SIZE(InData%RotGtoL)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%RotGtoL))-1 ) = PACK(InData%RotGtoL,.TRUE.)
+      Re_Xferred   = Re_Xferred   + SIZE(InData%RotGtoL)
   END IF
   IF ( .NOT. ALLOCATED(InData%AeroCent_G) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -8935,7 +8935,7 @@ ENDIF
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! RotLtoG not allocated
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! RotGtoL not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
     Int_Xferred = Int_Xferred + 1
@@ -8951,10 +8951,10 @@ ENDIF
     i4_l = IntKiBuf( Int_Xferred    )
     i4_u = IntKiBuf( Int_Xferred + 1)
     Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%RotLtoG)) DEALLOCATE(OutData%RotLtoG)
-    ALLOCATE(OutData%RotLtoG(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u,i4_l:i4_u),STAT=ErrStat2)
+    IF (ALLOCATED(OutData%RotGtoL)) DEALLOCATE(OutData%RotGtoL)
+    ALLOCATE(OutData%RotGtoL(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u,i4_l:i4_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%RotLtoG.', ErrStat, ErrMsg,RoutineName)
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%RotGtoL.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
     ALLOCATE(mask4(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u,i4_l:i4_u),STAT=ErrStat2)
@@ -8963,8 +8963,8 @@ ENDIF
        RETURN
     END IF
     mask4 = .TRUE. 
-      IF (SIZE(OutData%RotLtoG)>0) OutData%RotLtoG = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%RotLtoG))-1 ), mask4, 0.0_ReKi )
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%RotLtoG)
+      IF (SIZE(OutData%RotGtoL)>0) OutData%RotGtoL = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%RotGtoL))-1 ), mask4, 0.0_ReKi )
+      Re_Xferred   = Re_Xferred   + SIZE(OutData%RotGtoL)
     DEALLOCATE(mask4)
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! AeroCent_G not allocated
@@ -10031,13 +10031,13 @@ ENDIF
      CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
      RETURN
    END IF
-IF (ALLOCATED(u_out%RotLtoG) .AND. ALLOCATED(u1%RotLtoG)) THEN
-  ALLOCATE(b4(SIZE(u_out%RotLtoG,1),SIZE(u_out%RotLtoG,2), &
-              SIZE(u_out%RotLtoG,3),SIZE(u_out%RotLtoG,4) ))
-  ALLOCATE(c4(SIZE(u_out%RotLtoG,1),SIZE(u_out%RotLtoG,2), &
-              SIZE(u_out%RotLtoG,3),SIZE(u_out%RotLtoG,4) ))
-  b4 = -(u1%RotLtoG - u2%RotLtoG)/t(2)
-  u_out%RotLtoG = u1%RotLtoG + b4 * t_out
+IF (ALLOCATED(u_out%RotGtoL) .AND. ALLOCATED(u1%RotGtoL)) THEN
+  ALLOCATE(b4(SIZE(u_out%RotGtoL,1),SIZE(u_out%RotGtoL,2), &
+              SIZE(u_out%RotGtoL,3),SIZE(u_out%RotGtoL,4) ))
+  ALLOCATE(c4(SIZE(u_out%RotGtoL,1),SIZE(u_out%RotGtoL,2), &
+              SIZE(u_out%RotGtoL,3),SIZE(u_out%RotGtoL,4) ))
+  b4 = -(u1%RotGtoL - u2%RotGtoL)/t(2)
+  u_out%RotGtoL = u1%RotGtoL + b4 * t_out
   DEALLOCATE(b4)
   DEALLOCATE(c4)
 END IF ! check if allocated
@@ -10137,14 +10137,14 @@ END IF ! check if allocated
      CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
      RETURN
    END IF
-IF (ALLOCATED(u_out%RotLtoG) .AND. ALLOCATED(u1%RotLtoG)) THEN
-  ALLOCATE(b4(SIZE(u_out%RotLtoG,1),SIZE(u_out%RotLtoG,2), &
-              SIZE(u_out%RotLtoG,3),SIZE(u_out%RotLtoG,4) ))
-  ALLOCATE(c4(SIZE(u_out%RotLtoG,1),SIZE(u_out%RotLtoG,2), &
-              SIZE(u_out%RotLtoG,3),SIZE(u_out%RotLtoG,4) ))
-  b4 = (t(3)**2*(u1%RotLtoG - u2%RotLtoG) + t(2)**2*(-u1%RotLtoG + u3%RotLtoG))/(t(2)*t(3)*(t(2) - t(3)))
-  c4 = ( (t(2)-t(3))*u1%RotLtoG + t(3)*u2%RotLtoG - t(2)*u3%RotLtoG ) / (t(2)*t(3)*(t(2) - t(3)))
-  u_out%RotLtoG = u1%RotLtoG + b4 * t_out + c4 * t_out**2
+IF (ALLOCATED(u_out%RotGtoL) .AND. ALLOCATED(u1%RotGtoL)) THEN
+  ALLOCATE(b4(SIZE(u_out%RotGtoL,1),SIZE(u_out%RotGtoL,2), &
+              SIZE(u_out%RotGtoL,3),SIZE(u_out%RotGtoL,4) ))
+  ALLOCATE(c4(SIZE(u_out%RotGtoL,1),SIZE(u_out%RotGtoL,2), &
+              SIZE(u_out%RotGtoL,3),SIZE(u_out%RotGtoL,4) ))
+  b4 = (t(3)**2*(u1%RotGtoL - u2%RotGtoL) + t(2)**2*(-u1%RotGtoL + u3%RotGtoL))/(t(2)*t(3)*(t(2) - t(3)))
+  c4 = ( (t(2)-t(3))*u1%RotGtoL + t(3)*u2%RotGtoL - t(2)*u3%RotGtoL ) / (t(2)*t(3)*(t(2) - t(3)))
+  u_out%RotGtoL = u1%RotGtoL + b4 * t_out + c4 * t_out**2
   DEALLOCATE(b4)
   DEALLOCATE(c4)
 END IF ! check if allocated

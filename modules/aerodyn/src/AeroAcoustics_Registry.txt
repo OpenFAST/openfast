@@ -229,7 +229,7 @@ typedef     ^                   ParameterType        ReKi                AFThick
 # ..... Inputs ....................................................................................................................
 # Define inputs that are contained on the mesh here:
 
-typedef     ^                   InputType            ReKi                RotLtoG     {:}{:}{:}{:}     -     -     "3x3 rotation matrix transform a vector from the local airfoil coordinate system to the global inertial coordinate system"     -
+typedef     ^                   InputType            ReKi                RotGtoL     {:}{:}{:}{:}     -     -     "3x3 rotation matrix transform a vector from the local airfoil coordinate system to the global inertial coordinate system"     -
 typedef     ^                   InputType            ReKi                AeroCent_G  {:}{:}{:}     -     -     "location in global coordinates of the blade element aerodynamic center.  1st index = vector components, 2nd index = blade node, 3rd index = blade"     -
 typedef     ^                   InputType            ReKi                Vrel        {:}{:}        -     -     "Vrel"     -
 typedef     ^                   InputType            ReKi                AoANoise    {:}{:}        -     -     "Angle of attack"     -

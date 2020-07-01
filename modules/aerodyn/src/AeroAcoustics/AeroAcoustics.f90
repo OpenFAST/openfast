@@ -443,10 +443,10 @@ subroutine Init_u( u, p, InputFileData, InitInp, errStat, errMsg )
    call AllocAry(u%Vrel      , p%NumBlNds, p%numBlades, 'u%Vrel'    , errStat2      , errMsg2); if(Failed()) return
    call AllocAry(u%AeroCent_G, 3         , p%NumBlNds , p%numBlades , 'u%AeroCent_G', errStat2    , errMsg2); if(Failed()) return
    call AllocAry(u%Inflow    , 3_IntKi   , p%NumBlNds , p%numBlades , 'u%Inflow'    , ErrStat2    , ErrMsg2); if(Failed()) return
-   call AllocAry(u%RotLtoG   , 3         , 3          , p%NumBlNds  , p%numBlades   , 'u%RotLtoG' , errStat2  , errMsg2); if(Failed()) return
+   call AllocAry(u%RotGtoL   , 3         , 3          , p%NumBlNds  , p%numBlades   , 'u%RotGtoL' , errStat2  , errMsg2); if(Failed()) return
    u%AoANoise   = 0.0_Reki
    u%Vrel       = 0.0_Reki
-   u%RotLtoG    = 0.0_Reki
+   u%RotGtoL    = 0.0_Reki
    u%AeroCent_G = 0.0_Reki
    u%Inflow     = 0.0_Reki
 contains
@@ -813,26 +813,20 @@ SUBROUTINE CalcObserve(p,m,u,xd,nt,errStat,errMsg)
     INTEGER(IntKi),                      intent(  out) :: errStat !< Error status of the operation
     CHARACTER(*),                        intent(  out) :: errMsg  !< Error message if ErrStat /= ErrID_None
     ! Local variables.
-    REAL(ReKi)     :: RLEObserve (3)              ! position vector from leading edge to observer in trailing edge coordinate system
-    !REAL(ReKi)     :: BladeObserve (3)            ! position vector from leading edge to observer in trailing edge coordinate system
-    REAL(ReKi)     :: RTEObserve (3)              ! position vector from trailing edge to observer in trailing edge coordinate system
-    REAL(ReKi)     :: RTEObserveG (3)             ! position vector from trailing edge to observer in the coordinate system located at the trailing edge but rotated as the global
-    REAL(ReKi)     :: RLEObserveG (3)             ! position vector from leading edge to observer in the coordinate system located at the leading edge but rotated as the global
-    REAL(ReKi)     :: RTEObservereal (3)          ! location of trailing edge in global coordinate system
-    REAL(ReKi)     :: RLEObservereal (3)          ! location of leading edge in global coordinate system
-    REAL(ReKi)     :: LocalToGlobal(3,3)          ! trasnformation matrix
-    REAL(ReKi)     :: rSLE       (3)              ! Distance from tower base to leading edge in trailing edge coordinate system
-    REAL(ReKi)     :: rSTE       (3)              ! Distance from tower base to trailing edge in trailing edge coordinate system
+    REAL(ReKi)     :: RLEObserve (3)              ! Position vector from leading edge to observer in trailing edge coordinate system
+    REAL(ReKi)     :: RTEObserve (3)              ! Position vector from trailing edge to observer in trailing edge coordinate system
+    REAL(ReKi)     :: RTEObserveG (3)             ! Position vector from trailing edge to observer in the coordinate system located at the trailing edge and rotated as the global
+    REAL(ReKi)     :: RLEObserveG (3)             ! Position vector from leading edge to observer in the coordinate system located at the leading edge and rotated as the global
+    REAL(ReKi)     :: RTEObservereal (3)          ! Location of trailing edge in global coordinate system
+    REAL(ReKi)     :: RLEObservereal (3)          ! Location of leading edge in global coordinate system
+    REAL(ReKi)     :: LocalToGlobal(3,3)          ! Transformation matrix
     REAL(ReKi)     :: timeLE                      ! Time of sound propagation from leading edge to observer
     REAL(ReKi)     :: timeTE                      ! Time of sound propagation from trailing edge to observer
-    REAL(ReKi)     :: phi_e
-    REAL(ReKi)     :: theta_e 
-    REAL(ReKi)     :: tmpR       (3)              ! temporary distance vector
-    REAL(ReKi)     :: UConvect   (3)              ! convection velocity of noise source in trailing edge coordinate system
+    REAL(ReKi)     :: phi_e                       ! Spanwise directivity angle
+    REAL(ReKi)     :: theta_e                     ! Chordwise directivity angle 
     INTEGER(intKi) :: I                           ! I A generic index for DO loops.
     INTEGER(intKi) :: J                           ! J A generic index for DO loops.
     INTEGER(intKi) :: K                           ! K A generic index for DO loops.
-    INTEGER(intKi) :: cou                         ! K A generic index for DO loops.
     INTEGER(intKi)               :: ErrStat2
     CHARACTER(ErrMsgLen)         :: ErrMsg2
     CHARACTER(*), parameter      :: RoutineName = 'CalcObserveDist'
@@ -840,44 +834,38 @@ SUBROUTINE CalcObserve(p,m,u,xd,nt,errStat,errMsg)
 
     ErrStat = ErrID_None
     ErrMsg  = ""
-
+    ! Loop thoruhg the blades
     DO I = 1,p%numBlades
+        ! Loop through the nodes along blade span
         DO J = 1,p%NumBlNds
-            ! Transpose the matrix RotLtoG
-            LocalToGlobal  = TRANSPOSE(u%RotLtoG(:,:,J,I))
+            ! Transpose the rotational vector GlobalToLocal to obtain the rotation LocalToGlobal
+            LocalToGlobal  = TRANSPOSE(u%RotGtoL(:,:,J,I))
+            ! Rotate the coordinates of leading and trailing edge from the local reference system to the global. Then add the coordinates of the aerodynamic center in the global coordinate system
+            ! The global coordinate system is located on the ground, has x pointing downwind, y pointing laterally, and z pointing vertically upwards
             RTEObservereal = MATMUL(LocalToGlobal, p%AFTeCo(:,J,I)) + u%AeroCent_G(:,J,I)
             RLEObservereal = MATMUL(LocalToGlobal, p%AFLeCo(:,J,I)) + u%AeroCent_G(:,J,I)
-
-            m%LE_Location(1,J,I) = RLEObservereal(1)  ! 
-            m%LE_Location(2,J,I) = RLEObservereal(2)  ! 
-            m%LE_Location(3,J,I) = RLEObservereal(3)  ! the height of leading edge
+            ! Compute the coordinates of the leading edge in the global coordinate system
+            m%LE_Location(1,J,I) = RLEObservereal(1)
+            m%LE_Location(2,J,I) = RLEObservereal(2)
+            m%LE_Location(3,J,I) = RLEObservereal(3)
+            ! If the time step is set to generate AA outputs
             IF (nt.gt.p%Comp_AA_after) THEN
                 IF ( (mod(nt,p%saveeach).eq.0)  ) THEN
-
+                    ! Loop through the observers
                     DO K = 1,p%NrObsLoc
-                        ! Calculate position vector from leading and trailing edge to observer in retarded trailing edge coordinate system
-
+                        ! Calculate the position of the observer K in a reference system located at the trailing edge and oriented as the global reference system
                         RTEObserveG(1)=p%Obsx(K)-RTEObservereal(1)
                         RTEObserveG(2)=p%Obsy(K)-RTEObservereal(2)
                         RTEObserveG(3)=p%Obsz(K)-RTEObservereal(3)
-                        
+                        ! Calculate the position of the observer K in a reference system located at the leading edge and oriented as the global reference system
                         RLEObserveG(1)=p%Obsx(K)-RLEObservereal(1)
                         RLEObserveG(2)=p%Obsy(K)-RLEObservereal(2)
                         RLEObserveG(3)=p%Obsz(K)-RLEObservereal(3)
-                        
-                        RTEObserve = MATMUL(u%RotLtoG(:,:,J,I), RTEObserveG)
-                        RLEObserve = MATMUL(u%RotLtoG(:,:,J,I), RLEObserveG)
-                        
-                        
-                        !
-                        ! Calculate convection velocity of noise source
-                        ! Assumes noise source convects at some constant times the mean wind speed, approximately accounts for
-                        ! induction velocity and change in convection velocity as noise propagates to observer (likely on the ground)
-                        UConvect (1) = 0.8*xd%MeanVxVyVz(J,I)
-                        UConvect (2) = 0.8*xd%MeanVxVyVz(J,I)
-                        UConvect (3) = 0.8*xd%MeanVxVyVz(J,I)
-                        
-                        ! Calculate absolute distance to the observer
+                        ! Rotate back the two reference systems from global to local. 
+                        RTEObserve = MATMUL(u%RotGtoL(:,:,J,I), RTEObserveG)
+                        RLEObserve = MATMUL(u%RotGtoL(:,:,J,I), RLEObserveG)
+
+                        ! Calculate absolute distance between node and observer
                         m%rTEtoObserve(K,J,I) = SQRT (RTEObserve(1)**2+RTEObserve(2)**2+RTEObserve(3)**2)
                         m%rLEtoObserve(K,J,I) = SQRT (RLEObserve(1)**2+RLEObserve(2)**2+RLEObserve(3)**2)
 
@@ -885,27 +873,26 @@ SUBROUTINE CalcObserve(p,m,u,xd,nt,errStat,errMsg)
                         timeTE = m%rTEtoObserve(K,J,I) / p%SpdSound
                         timeLE = m%rLEtoObserve(K,J,I) / p%SpdSound
                         
-                        ! Compute spanwise directivity angle phi
+                        ! The local system has y alinged with the chord, x pointing towards the airfoil suction side, and z aligned with blade span from root towards tip 
+                        ! x ---> z_e
+                        ! y ---> x_e
+                        ! z ---> y_e
+
+                        ! Compute spanwise directivity angle phi for the trailing edge
                         phi_e = ATAN (RTEObserve(1)/RTEObserve(3))
                         m%SpanAngleTE(K,J,I)  = phi_e * R2D
 
-                        ! Compute chordwise directivity angle theta
+                        ! Compute chordwise directivity angle theta for the trailing edge
                         theta_e = ATAN ((RTEObserve(3) * COS (phi_e) + RTEObserve(1) * SIN (phi_e) ) / RTEObserve(2))
                         m%ChordAngleTE(K,J,I) = theta_e * R2D
                         
-                        ! IF (m%SpanAngleTE(K,J,I)< 0) m%SpanAngleTE(K,J,I)= 180+m%SpanAngleTE(K,J,I)
-                        ! IF (m%ChordAngleTE(K,J,I)< 0) m%ChordAngleTE(K,J,I)= 180+m%ChordAngleTE(K,J,I)
-
-                        ! Compute spanwise directivity angle phi
+                        ! Compute spanwise directivity angle phi  for the leading edge (it's the same angle for the trailing edge)
                         phi_e = ATAN (RLEObserve(1)/RLEObserve(3))
                         m%SpanAngleLE(K,J,I)  = phi_e * R2D
 
-                        ! Compute chordwise directivity angle theta
+                        ! Compute chordwise directivity angle theta for the leading edge
                         theta_e = ATAN ((RLEObserve(3) * COS (phi_e) + RLEObserve(1) * SIN (phi_e) ) / RLEObserve(2))
                         m%ChordAngleLE(K,J,I) = theta_e * R2D
-
-                        ! IF (m%SpanAngleLE(K,J,I)< 0) m%SpanAngleLE(K,J,I)= 180+m%SpanAngleLE(K,J,I)
-                        ! IF (m%ChordAngleLE(K,J,I)< 0) m%ChordAngleLE(K,J,I)= 180+m%ChordAngleLE(K,J,I)
 
                     ENDDO !K, observers
                 ENDIF !  every Xth time step or so..
