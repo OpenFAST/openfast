@@ -1560,13 +1560,9 @@ subroutine SetInputsForFVW(p, u, m, errStat, errMsg)
    integer(IntKi),          intent(  out)  :: ErrStat                         !< Error status of the operation
    character(*),            intent(  out)  :: ErrMsg                          !< Error message if ErrStat /= ErrID_None
 
-!   real(ReKi)                              :: x_hat(3)
-!   real(ReKi)                              :: y_hat(3)
    real(ReKi)                              :: x_hat_disk(3)
    real(ReKi)                              :: y_hat_disk(3)
    real(ReKi)                              :: z_hat_disk(3)
-!   real(ReKi)                              :: tmp(3)
-!   real(ReKi)                              :: tmp_sz, tmp_sz_y
    real(R8Ki)                              :: thetaBladeNds(p%NumBlNds,p%NumBlades)
    real(R8Ki)                              :: Azimuth(p%NumBlades)
    
@@ -1674,9 +1670,16 @@ subroutine SetOutputsFromFVW(u, p, OtherState, xd, m, y, ErrStat, ErrMsg)
    real(reki)                             :: force(3)
    real(reki)                             :: moment(3)
    real(reki)                             :: q
-   REAL(ReKi)                             :: ct, st      ! cosine, sine of theta
    REAL(ReKi)                             :: cp, sp      ! cosine, sine of phi
-   real(ReKi)                             :: AxInd, TanInd, Vrel, phi, alpha, Re, theta
+
+   ! Local vars for readability
+   real(ReKi)                             :: Vind(3)
+   real(ReKi)                             :: Vstr(3)
+   real(ReKi)                             :: Vwnd(3)
+   real(ReKi)                             :: theta
+   ! Local variables that we store in misc for nodal outputs
+   real(ReKi)                             :: AxInd, TanInd, Vrel, phi, alpha, Re
+
    type(AFI_OutputType)                   :: AFI_interp             ! Resulting values from lookup table
    real(ReKi)                             :: UrelWind_s(3)          ! Relative wind (wind+str) in section coords
    real(ReKi)                             :: Cx, Cy, Cl_dyn, Cd_dyn, Cm_dyn
@@ -1688,15 +1691,43 @@ subroutine SetOutputsFromFVW(u, p, OtherState, xd, m, y, ErrStat, ErrMsg)
    ErrMsg2 = ""
 
 
+      ! set all blade outputs for all nodes (needed in nodal outputs)
+      ! This loop is separated from below in case we want to move it later.
+   do k=1,p%numBlades
+      do j=1,p%NumBlNds
+         ! --- Computing main aero variables from induction - setting local variables
+         Vind = m%FVW_y%Vind(1:3,j,k)
+         Vstr = u%BladeMotion(k)%TranslationVel(1:3,j)
+         Vwnd = m%DisturbedInflow(1:3,j,k)   ! NOTE: contains tower shadow
+         theta = m%FVW%PitchAndTwist(j,k)
+         call FVW_AeroOuts( m%WithoutSweepPitchTwist(1:3,1:3,j,k), u%BladeMotion(k)%Orientation(1:3,1:3,j), & ! inputs
+                     theta, Vstr(1:3), Vind(1:3), VWnd(1:3), p%KinVisc, p%FVW%Chord(j,k), &               ! inputs
+                     AxInd, TanInd, Vrel, phi, alpha, Re, UrelWind_s(1:3), ErrStat2, ErrMsg2 )        ! outputs
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SetOutputsFromFVW')
+
+         ! Save results for outputs
+         m%FVW%BN_AxInd(j,k)           = AxInd
+         m%FVW%BN_TanInd(j,k)          = TanInd
+         m%FVW%BN_Vrel(j,k)            = Vrel
+         m%FVW%BN_alpha(j,k)           = alpha
+         m%FVW%BN_phi(j,k)             = phi
+         m%FVW%BN_Re(j,k)              = Re
+         m%FVW%BN_UrelWind_s(1:3,j,k)  = UrelWind_s(1:3)
+      end do !j=nodes
+   end do !k=blades
+
+
+   ! zero forces
    force(3)    =  0.0_ReKi
    moment(1:2) =  0.0_ReKi
-   do k=1,p%NumBlades
-      do j=1,p%NumBlNds 
-         call FVW_AeroOuts( m%WithoutSweepPitchTwist(:,:,j,k), u%BladeMotion(k)%Orientation(1:3,1:3,j), m%FVW%PitchAndTwist(j,k), u%BladeMotion(k)%TranslationVel(1:3,j), &
-                     m%FVW_y%Vind(1:3,j,k), m%DisturbedInflow(:,j,k) , p%KinVisc, p%FVW%Chord(j,k), &
-                     AxInd, TanInd, Vrel, phi, alpha, Re, UrelWind_s, ErrStat, ErrMsg )
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SetOutputsFromFVW')
-         !  NOTE: using airfoil coeffs at nodes
+
+   do k=1,p%numBlades
+      do j=1,p%NumBlNds
+         ! Set local values (more readable)
+         Vrel   =  m%FVW%BN_Vrel(j,k)
+         alpha  =  m%FVW%BN_alpha(j,k)
+         phi    =  m%FVW%BN_phi(j,k)
+         Re     =  m%FVW%BN_Re(j,k)
 
          ! Compute steady Airfoil Coefs no matter what..
          call AFI_ComputeAirfoilCoefs( alpha, Re, 0.0_ReKi,  p%AFI(p%FVW%AFindx(j,k)), AFI_interp, ErrStat, ErrMsg )
@@ -1712,18 +1743,15 @@ subroutine SetOutputsFromFVW(u, p, OtherState, xd, m, y, ErrStat, ErrMsg)
             end if
          end if
 
-
-
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SetOutputsFromFVW')
          cp = cos(phi)
          sp = sin(phi)
          Cx = Cl_dyn*cp + Cd_dyn*sp
          Cy = Cl_dyn*sp - Cd_dyn*cp
 
          q = 0.5 * p%airDens * Vrel**2                         ! dynamic pressure of the jth node in the kth blade
-         force(1) =  Cx * q * p%FVW%Chord(j,k)      ! X = normal force per unit length (normal to the plane, not chord) of the jth node in the kth blade
-         force(2) = -Cy * q * p%FVW%Chord(j,k)      ! Y = tangential force per unit length (tangential to the plane, not chord) of the jth node in the kth blade
-         moment(3)=  Cm_dyn * q * p%FVW%Chord(j,k)**2   ! M = pitching moment per unit length of the jth node in the kth blade
+         force(1) =  Cx * q * p%FVW%Chord(j,k)        ! X = normal force per unit length (normal to the plane, not chord) of the jth node in the kth blade
+         force(2) = -Cy * q * p%FVW%Chord(j,k)        ! Y = tangential force per unit length (tangential to the plane, not chord) of the jth node in the kth blade
+         moment(3)=  Cm_dyn * q * p%FVW%Chord(j,k)**2 ! M = pitching moment per unit length of the jth node in the kth blade
 
             ! save these values for possible output later:
          m%X(j,k) = force(1)

@@ -1795,41 +1795,13 @@ CONTAINS
    !!       Make sure these are set!
    subroutine Calc_WriteOutput_FVW
       type(AFI_OutputType) :: AFI_interp              ! Resulting values from lookup table
-      ! Local vars for readability
-      real(ReKi)           :: Vind(3)               ! 
-      real(ReKi)           :: Vstr(3)               ! 
-      real(ReKi)           :: Vwnd(3)               ! 
-      real(ReKi)           :: theta
       ! Local variables that we store in misc for nodal outputs
       real(ReKi)           :: UrelWind_s(3)           ! Relative Wind in section coords
       real(ReKi)           :: AxInd, TanInd, Vrel, phi, alpha, Re
+      real(ReKi)           :: theta
 
-      real(ReKi)           :: Cx, Cy, cphi, sphi
+      real(ReKi)           :: Cx, Cy
       real(ReKi)           :: rmax, omega
-
-         ! set all blade outputs for all nodes (needed in nodal outputs
-      do k=1,p%numBlades
-         do j=1,p%NumBlNds
-            ! --- Computing main aero variables from induction - setting local variables
-            Vind = m%FVW_y%Vind(1:3,j,k)
-            Vstr = u%BladeMotion(k)%TranslationVel(1:3,j)
-            Vwnd = m%DisturbedInflow(1:3,j,k)   ! NOTE: contains tower shadow
-            theta = m%FVW%PitchAndTwist(j,k)
-            call FVW_AeroOuts( m%WithoutSweepPitchTwist(1:3,1:3,j,k), u%BladeMotion(k)%Orientation(1:3,1:3,j), & ! inputs
-                        theta, Vstr(1:3), Vind(1:3), VWnd(1:3), p%KinVisc, p%FVW%Chord(j,k), &               ! inputs
-                        AxInd, TanInd, Vrel, phi, alpha, Re, UrelWind_s(1:3), ErrStat, ErrMsg )        ! outputs
-
-            ! Save results for outputs
-            m%FVW%BN_AxInd(j,k)           = AxInd
-            m%FVW%BN_TanInd(j,k)          = TanInd
-            m%FVW%BN_Vrel(j,k)            = Vrel
-            m%FVW%BN_alpha(j,k)           = alpha
-            m%FVW%BN_phi(j,k)             = phi
-            m%FVW%BN_Re(j,k)              = Re
-            m%FVW%BN_UrelWind_s(1:3,j,k)  = UrelWind_s(1:3)
-         end do ! nodes
-      end do ! blades
-
 
 
          ! blade outputs
