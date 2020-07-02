@@ -58,7 +58,7 @@ CONTAINS
       CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
       ! local variables
-      REAL(ReKi)                                   :: t              ! instantaneous time, to be used during IC generation
+      REAL(DbKi)                                   :: t              ! instantaneous time, to be used during IC generation
       INTEGER(IntKi)                               :: I              ! index
       INTEGER(IntKi)                               :: J              ! index
       INTEGER(IntKi)                               :: K              ! index
@@ -391,7 +391,7 @@ CONTAINS
          END DO
       END DO
 
-      t = 0.0_ReKi     ! start time at zero
+      t = 0.0_DbKi     ! start time at zero
 
       ! because TimeStep wants an array...
       call MD_CopyInput( u, uArray(1), MESH_NEWCOPY, ErrStat2, ErrMsg2 )
@@ -518,12 +518,12 @@ CONTAINS
 ! moved to TimeStep      TYPE(MD_InputType)                              :: u_interp   !
       INTEGER(IntKi)                                  :: nTime
 
-      REAL(ReKi)                                      :: t2         ! should work out a consistent data type for time...
+      REAL(DbKi)                                      :: t2         ! copy of time passed to TimeStep
 
 
       nTime = size(u) ! the number of times of input data provided?
 
-      t2 = real(t, ReKi)
+      t2 = t
 
 ! >>> removing this section and putting it inside loop of TimeStep (to be done at every time step) <<<
 !      ! create space for arrays/meshes in u_interp
@@ -604,15 +604,12 @@ CONTAINS
       TYPE(MD_ContinuousStateType)                   :: dxdt    ! time derivatives of continuous states (initialized in CalcContStateDeriv)
       INTEGER(IntKi)                                 :: I       ! counter
       INTEGER(IntKi)                                 :: J       ! counter
-      REAL(ReKi)                                     :: t2      ! real version of t (double)
 
       INTEGER(IntKi)                                 :: ErrStat2   ! Error status of the operation
       CHARACTER(ErrMsgLen)                           :: ErrMsg2    ! Error message if ErrStat2 /= ErrID_None
 
 
       ! below updated to make sure outputs are current (based on provided x and u)  - similar to what's in UpdateStates
-
-      t2 = real(t, ReKi)
 
       ! go through fairleads and apply motions from driver
       DO I = 1, p%NFairs
@@ -623,7 +620,7 @@ CONTAINS
       END DO
 
       ! call CalcContStateDeriv in order to run model and calculate dynamics with provided x and u
-      CALL MD_CalcContStateDeriv( t2, u, p, x, xd, z, other, m, dxdt, ErrStat, ErrMsg )
+      CALL MD_CalcContStateDeriv( t, u, p, x, xd, z, other, m, dxdt, ErrStat, ErrMsg )
 
 
       ! assign net force on fairlead Connects to the output mesh
@@ -635,7 +632,7 @@ CONTAINS
 
 
       ! calculate outputs (y%WriteOutput) for glue code and write any m outputs to MoorDyn output files
-      CALL MDIO_WriteOutputs(REAL(t,DbKi) , p, m, y, ErrStat2, ErrMsg2)
+      CALL MDIO_WriteOutputs(t, p, m, y, ErrStat2, ErrMsg2)
       CALL CheckError(ErrStat2, 'In MDIO_WriteOutputs: '//trim(ErrMsg2))
       IF ( ErrStat >= AbortErrLev ) RETURN
 
@@ -680,7 +677,7 @@ CONTAINS
    ! Tight coupling routine for computing derivatives of continuous states
    ! this is modelled off what used to be subroutine DoRHSmaster
 
-      REAL(ReKi),                         INTENT(IN )    :: t       ! Current simulation time in seconds
+      REAL(DbKi),                         INTENT(IN )    :: t       ! Current simulation time in seconds
       TYPE(MD_InputType),                 INTENT(IN )    :: u       ! Inputs at t
       TYPE(MD_ParameterType),             INTENT(IN )    :: p       ! Parameters
       TYPE(MD_ContinuousStateType),       INTENT(IN )    :: x       ! Continuous states at t
@@ -774,7 +771,7 @@ CONTAINS
 
          Real(ReKi), INTENT( IN )      :: X(:)           ! state vector, provided
          Real(ReKi), INTENT( INOUT )   :: Xd(:)          ! derivative of state vector, returned ! cahnged to INOUT
-         Real(ReKi), INTENT (IN)       :: t              ! instantaneous time
+         Real(DbKi), INTENT (IN)       :: t              ! instantaneous time
          TYPE(MD_Line), INTENT (INOUT) :: Line           ! label for the current line, for convenience
          TYPE(MD_LineProp), INTENT(IN) :: LineProp       ! the single line property set for the line of interest
          Real(ReKi), INTENT(INOUT)     :: FairFtot(:)    ! total force on Connect top of line is attached to
@@ -1025,7 +1022,7 @@ CONTAINS
       
          Real(ReKi),       INTENT( IN )    :: X(:)           ! state vector for this connect, provided
          Real(ReKi),       INTENT( OUT )   :: Xd(:)          ! derivative of state vector for this connect, returned
-         Real(ReKi),       INTENT (IN)     :: t              ! instantaneous time
+         Real(DbKi),       INTENT (IN)     :: t              ! instantaneous time
          Type(MD_Connect), INTENT (INOUT)  :: Connect        ! Connect number
 
 
@@ -1040,7 +1037,7 @@ CONTAINS
          ! itself, which will be added below.
 
 
-         IF (EqualRealNos(t, 0.0_ReKi)) THEN  ! this is old: with current IC gen approach, we skip the first call to the line objects, because they're set AFTER the call to the connects
+         IF (EqualRealNos(t, 0.0_DbKi)) THEN  ! this is old: with current IC gen approach, we skip the first call to the line objects, because they're set AFTER the call to the connects
 
             DO J = 1,3
                Xd(3+J) = X(J)        ! velocities - these are unused in integration
@@ -1179,7 +1176,7 @@ CONTAINS
 
    !========================================================================================================
    SUBROUTINE TimeStep ( t, dtStep, u, utimes, p, x, xd, z, other, m, ErrStat, ErrMsg )
-      REAL(ReKi)                     , INTENT(INOUT)      :: t
+      REAL(DbKi)                     , INTENT(INOUT)      :: t
       REAL(ReKi)                     , INTENT(IN   )      :: dtStep     ! how long to advance the time for
       TYPE( MD_InputType )           , INTENT(INOUT)      :: u(:)       ! INTENT(IN   )
       REAL(DbKi)                     , INTENT(IN   )      :: utimes(:)  ! times corresponding to elements of u(:)?
@@ -1196,7 +1193,7 @@ CONTAINS
       TYPE(MD_ContinuousStateType)                        :: dxdt       ! time derivatives of continuous states (initialized in CalcContStateDeriv)
       TYPE(MD_ContinuousStateType)                        :: x2         ! temporary copy of continuous states used in RK2 calculations
       INTEGER(IntKi)                                      :: NdtM       ! the number of time steps to make with the mooring model
-      Real(ReKi)                                          :: dtM        ! the actual time step size to use
+      Real(DbKi)                                          :: dtM        ! the actual time step size to use
       INTEGER(IntKi)                                      :: Nx         ! size of states vector
       INTEGER(IntKi)                                      :: I          ! counter
       INTEGER(IntKi)                                      :: J          ! counter
@@ -1224,7 +1221,7 @@ CONTAINS
       DO I = 1, NdtM                                 ! for (double ts=t; ts<=t+ICdt-dts; ts+=dts)
       
       
-         tDbKi = t        ! get DbKi version of current time (why does ExtrapInterp except different time type than UpdateStates?)
+         !tDbKi = t        ! get DbKi version of current time (why does ExtrapInterp except different time type than UpdateStates?)
          
       
          ! -------------------------------------------------------------------------------
@@ -1233,7 +1230,7 @@ CONTAINS
 
          ! step 1
 
-         CALL MD_Input_ExtrapInterp(u, utimes, u_interp, tDbKi          , ErrStat, ErrMsg)   ! interpolate input mesh to correct time (t)
+         CALL MD_Input_ExtrapInterp(u, utimes, u_interp, t          , ErrStat, ErrMsg)   ! interpolate input mesh to correct time (t)
       
          CALL MD_CalcContStateDeriv( t, u_interp, p, x, xd, z, other, m, dxdt, ErrStat, ErrMsg )
          DO J = 1, Nx
@@ -1242,7 +1239,7 @@ CONTAINS
 
          ! step 2
    
-         CALL MD_Input_ExtrapInterp(u, utimes, u_interp, tDbKi + 0.5_ReKi*dtM, ErrStat, ErrMsg)   ! interpolate input mesh to correct time (t+0.5*dtM)
+         CALL MD_Input_ExtrapInterp(u, utimes, u_interp, t + 0.5_DbKi*dtM, ErrStat, ErrMsg)   ! interpolate input mesh to correct time (t+0.5*dtM)
             
          CALL MD_CalcContStateDeriv( (t + 0.5_ReKi*dtM), u_interp, p, x2, xd, z, other, m, dxdt, ErrStat, ErrMsg )       !called with updated states x2 and time = t + dt/2.0
          DO J = 1, Nx
