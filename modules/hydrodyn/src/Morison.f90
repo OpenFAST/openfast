@@ -2066,7 +2066,7 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
          
          ! Constant part of the external hydrodynamic dynamic pressure force
          if ( Amag > 0.0 ) then
-            p%DP_Const_End(:,i) = InitInp%Nodes(i)%JAxCp*An 
+            p%DP_Const_End(:,i) = -InitInp%Nodes(i)%JAxCp*An 
          endif
          
          ! marine growth mass/inertia magnitudes
@@ -3086,7 +3086,8 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          qdotdot                 = reshape((/u%Mesh%TranslationAcc(:,J),u%Mesh%RotationAcc(:,J)/),(/6/)) 
          m%F_A_End(:,J)          = m%nodeInWater(j) * matmul( p%AM_End(:,:,J) , ( - qdotdot) )
          
-         m%F_I_End(:,J) =  m%nodeInWater(j) * (p%DP_Const_End(:,j) * m%FDynP(j) + matmul(p%AM_End(:,:,j),m%FA(:,j)))
+         ! TODO: The original code did not multiply by nodeInWater, but should we? GJH
+         m%F_I_End(:,J) =   (p%DP_Const_End(:,j) * m%FDynP(j) + matmul(p%AM_End(:,:,j),m%FA(:,j)))
          
          ! Marine growth inertia: ends: Section 4.2.2  
          m%F_IMG_End(1:3,j) = -m%nodeInWater(j) * p%Mass_MG_End(j)*qdotdot(1:3)
