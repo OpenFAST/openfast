@@ -51,8 +51,8 @@ END of input file (the word "END" must appear in the first 3 columns of this las
 "Cl_Static" - Static portion of lift force coefficient at each node, without  unsteady effects -- not available for BEMT/DBEMT
 "Cd_Static" - Static portion of drag force coefficient at each node, without unsteady effects -- not available for BEMT/DBEMT
 "Cm_Static" - Static portion of pitching moment coefficient at each node, without unsteady effects -- not available for BEMT/DBEMT
-"Uin"       - Axial induction in rotating hub coordinates. Axial aligned with hub axis.     rotor plane polar hub rotating coordinates
-"Uit"       - Tangential induction in rotating hub coordinates. Tangential to the rotation plane. Perpendicular to blade aziumth.     rotor plane polar hub rotating coordinates
-"Uir"       - Radial induction in rotating hub coordinates. Radial outwards in rotation plane. Aligned with blade azimuth.     rotor plane polar hub rotating coordinates
+"Uin"       - Axial induced velocity in rotating hub coordinates. Axial aligned with hub axis.     rotor plane polar hub rotating coordinates
+"Uit"       - Tangential induced velocity in rotating hub coordinates. Tangential to the rotation plane. Perpendicular to blade aziumth.     rotor plane polar hub rotating coordinates
+"Uir"       - Radial induced velocity in rotating hub coordinates. Radial outwards in rotation plane. Aligned with blade azimuth.     rotor plane polar hub rotating coordinates
 END of input file (the word "END" must appear in the first 3 columns of this last OutList line)
 ---------------------------------------------------------------------------------------

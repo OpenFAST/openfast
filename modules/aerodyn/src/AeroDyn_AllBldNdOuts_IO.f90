@@ -193,13 +193,12 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, u, m, y, OtherState, Indx, ErrStat, ErrM
 
          ! Precalculate the M_ph matrix -- no reason to recalculate for each output
       DO IdxBlade=1,p%NumBlades
-         psi_hub = TwoPi*(IdxBlade-1)/p%NumBlades
+         psi_hub = TwoPi*(real(IdxBlade-1,ReKi))/real(p%NumBlades,ReKi)
          M_ph(1,1:3) = (/ 1.0_ReKi, 0.0_ReKi    , 0.0_ReKi     /)
          M_ph(2,1:3) = (/ 0.0_ReKi, cos(psi_hub), sin(psi_hub) /)
          M_ph(3,1:3) = (/ 0.0_ReKi,-sin(psi_hub), cos(psi_hub) /)
          M_pg(1:3,1:3,IdxBlade) = matmul(M_ph, u%HubMotion%Orientation(1:3,1:3,1) ) 
       ENDDO
-
 
 
          ! Populate the header an unit lines for all blades and nodes
@@ -504,7 +503,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, u, m, y, OtherState, Indx, ErrStat, ErrM
                DO IdxBlade=1,p%BldNd_BladesOut
                   DO IdxNode=1,p%NumBlNds                   
 !NOT available in FVW yet
-!                     y%WriteOutput( OutIdx )  = m%Curve(IdxNode,IdxBlade)*R2D                                            
+                     y%WriteOutput( OutIdx ) = 0.0_ReKi 
                      OutIdx = OutIdx + 1
                   END DO
                END DO
@@ -848,7 +847,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, u, m, y, OtherState, Indx, ErrStat, ErrM
                DO IdxBlade=1,p%BldNd_BladesOut
                   DO IdxNode=1,p%NumBlNds
 !NOT available in FVW yet
-!                     y%WriteOutput( OutIdx )  =
+                     y%WriteOutput( OutIdx ) = 0.0_ReKi
                      OutIdx = OutIdx + 1
                   END DO
                END DO
@@ -892,7 +891,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, u, m, y, OtherState, Indx, ErrStat, ErrM
                DO IdxBlade=1,p%BldNd_BladesOut
                   DO IdxNode=1,u%BladeMotion(IdxBlade)%NNodes
 !NOT available in FVW yet
-!                     y%WriteOutput( OutIdx ) = m%BEMT_y%Cpmin(IdxNode,IdxBlade)
+                     y%WriteOutput( OutIdx ) = 0.0_ReKi
                      OutIdx = OutIdx + 1
                   ENDDO
                ENDDO
@@ -942,7 +941,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, u, m, y, OtherState, Indx, ErrStat, ErrM
                DO IdxBlade=1,p%BldNd_BladesOut
                   DO IdxNode=1,u%BladeMotion(IdxBlade)%NNodes
 !NOT available in BEMT/DBEMT yet
-!                     y%WriteOutput( OutIdx ) = 
+                     y%WriteOutput( OutIdx ) = 0.0_ReKi
                      OutIdx = OutIdx + 1
                   ENDDO
                ENDDO
@@ -961,7 +960,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, u, m, y, OtherState, Indx, ErrStat, ErrM
                DO IdxBlade=1,p%BldNd_BladesOut
                   DO IdxNode=1,u%BladeMotion(IdxBlade)%NNodes
 !NOT available in BEMT/DBEMT yet
-!                     y%WriteOutput( OutIdx ) = 
+                     y%WriteOutput( OutIdx ) = 0.0_ReKi
                      OutIdx = OutIdx + 1
                   ENDDO
                ENDDO
@@ -980,7 +979,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, u, m, y, OtherState, Indx, ErrStat, ErrM
                DO IdxBlade=1,p%BldNd_BladesOut
                   DO IdxNode=1,u%BladeMotion(IdxBlade)%NNodes
 !NOT available in BEMT/DBEMT yet
-!                     y%WriteOutput( OutIdx ) = 
+                     y%WriteOutput( OutIdx ) = 0.0_ReKi
                      OutIdx = OutIdx + 1
                   ENDDO
                ENDDO
@@ -1005,10 +1004,6 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, u, m, y, OtherState, Indx, ErrStat, ErrM
                      Vind_s = (/ -m%BEMT_u(Indx)%Vx(IdxNode,IdxBlade)*m%BEMT_y%axInduction(IdxNode,IdxBlade), m%BEMT_u(Indx)%Vy(IdxNode,IdxBlade)*m%BEMT_y%tanInduction(IdxNode,IdxBlade), 0.0_ReKi /)
                      Vind_g = matmul(Vind_s, m%WithoutSweepPitchTwist(:,:,IdxNode,IdxBlade))
                      y%WriteOutput( OutIdx ) = dot_product(M_pg(1,1:3,IdxBlade), Vind_g(1:3) ) ! Uihn, hub normal
-
-
-
-
                      OutIdx = OutIdx + 1
                   ENDDO
                ENDDO
@@ -1206,7 +1201,7 @@ SUBROUTINE BldNdOuts_SetOutParam(BldNd_OutList, p, ErrStat, ErrMsg )
                                "(-)    ","(-)    ","(-)    ","(-)    ","(-)    ","(deg)  ","(-)    ","(-)    ", &
                                "(Pa)   ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(m^2/s)", &
                                "(1/0)  ","(-)    ","(N-m/m)","(deg)  ","(-)    ","(-)    ","(-)    ","(m/s)  ", &
-                               "(m/s)  ","(m/s)  ","(deg)  ","(-)    ","(-)    ","(-)    ","(-)    ","(-)    ", &
+                               "(m/s)  ","(m/s)  ","(deg)  ","(-)    ","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ", &
                                "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
                                "(m/s)  ","(m/s)  ","(m/s)  "/)
 
