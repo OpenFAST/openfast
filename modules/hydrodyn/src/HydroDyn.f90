@@ -2358,7 +2358,7 @@ function CalcLoadsAtWRP( y, u, AllHdroOrigin, PRP_Position,  MrsnMesh_Position, 
    
    if ( y%Morison%Mesh%Committed ) then 
 
-      call Transfer_Point_to_Point( y%Morison%Mesh, AllHdroOrigin, MeshMapData%M_P_2_PRP_P, ErrStat2, ErrMsg2,  MrsnMesh_Position, PRP_Position )
+      call Transfer_Point_to_Point( y%Morison%Mesh, AllHdroOrigin, MeshMapData%M_P_2_PRP_P, ErrStat2, ErrMsg2,  u%Morison%Mesh, PRP_Position )
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CalcLoadsAtWRP')
             if (ErrStat >= AbortErrLev) return
  
