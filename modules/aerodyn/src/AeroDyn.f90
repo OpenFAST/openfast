@@ -1682,7 +1682,9 @@ subroutine SetOutputsFromFVW(u, p, OtherState, xd, m, y, ErrStat, ErrMsg)
 
    type(AFI_OutputType)                   :: AFI_interp             ! Resulting values from lookup table
    real(ReKi)                             :: UrelWind_s(3)          ! Relative wind (wind+str) in section coords
-   real(ReKi)                             :: Cx, Cy, Cl_dyn, Cd_dyn, Cm_dyn
+   real(ReKi)                             :: Cx, Cy
+   real(ReKi)                             :: Cl_Static, Cd_Static, Cm_Static
+   real(ReKi)                             :: Cl_dyn, Cd_dyn, Cm_dyn
 
    integer(intKi)                         :: ErrStat2
    character(ErrMsgLen)                   :: ErrMsg2
@@ -1690,6 +1692,9 @@ subroutine SetOutputsFromFVW(u, p, OtherState, xd, m, y, ErrStat, ErrMsg)
    ErrStat2 = 0
    ErrMsg2 = ""
 
+   ! zero forces
+   force(3)    =  0.0_ReKi
+   moment(1:2) =  0.0_ReKi
 
       ! set all blade outputs for all nodes (needed in nodal outputs)
       ! This loop is separated from below in case we want to move it later.
@@ -1705,35 +1710,12 @@ subroutine SetOutputsFromFVW(u, p, OtherState, xd, m, y, ErrStat, ErrMsg)
                      AxInd, TanInd, Vrel, phi, alpha, Re, UrelWind_s(1:3), ErrStat2, ErrMsg2 )        ! outputs
             call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SetOutputsFromFVW')
 
-         ! Save results for outputs
-         m%FVW%BN_AxInd(j,k)           = AxInd
-         m%FVW%BN_TanInd(j,k)          = TanInd
-         m%FVW%BN_Vrel(j,k)            = Vrel
-         m%FVW%BN_alpha(j,k)           = alpha
-         m%FVW%BN_phi(j,k)             = phi
-         m%FVW%BN_Re(j,k)              = Re
-         m%FVW%BN_UrelWind_s(1:3,j,k)  = UrelWind_s(1:3)
-      end do !j=nodes
-   end do !k=blades
-
-
-   ! zero forces
-   force(3)    =  0.0_ReKi
-   moment(1:2) =  0.0_ReKi
-
-   do k=1,p%numBlades
-      do j=1,p%NumBlNds
-         ! Set local values (more readable)
-         Vrel   =  m%FVW%BN_Vrel(j,k)
-         alpha  =  m%FVW%BN_alpha(j,k)
-         phi    =  m%FVW%BN_phi(j,k)
-         Re     =  m%FVW%BN_Re(j,k)
-
          ! Compute steady Airfoil Coefs no matter what..
          call AFI_ComputeAirfoilCoefs( alpha, Re, 0.0_ReKi,  p%AFI(p%FVW%AFindx(j,k)), AFI_interp, ErrStat, ErrMsg )
-         Cl_dyn = AFI_interp%Cl
-         Cd_dyn = AFI_interp%Cd
-         Cm_dyn = AFI_interp%Cm
+         Cl_Static = AFI_interp%Cl
+         Cd_Static = AFI_interp%Cd
+         Cm_Static = AFI_interp%Cm
+
          if (m%FVW%UA_Flag) then
             if ((OtherState%FVW%UA_Flag(j,k)) .and. ( .not. EqualRealNos(Vrel,0.0_ReKi) ) ) then
                m%FVW%m_UA%iBladeNode = j
@@ -1742,6 +1724,10 @@ subroutine SetOutputsFromFVW(u, p, OtherState, xd, m, y, ErrStat, ErrMsg)
                if(ErrStat/=ErrID_None) print*,'UA CalcOutput:', trim(ErrMsg)
             end if
          end if
+         ! Set dynamic to the (will be same as static if UA_Flag is false)
+         Cl_dyn    = AFI_interp%Cl
+         Cd_dyn    = AFI_interp%Cd
+         Cm_dyn    = AFI_interp%Cm
 
          cp = cos(phi)
          sp = sin(phi)
@@ -1763,6 +1749,22 @@ subroutine SetOutputsFromFVW(u, p, OtherState, xd, m, y, ErrStat, ErrMsg)
          y%BladeLoad(k)%Force(:,j)  = matmul( force,  m%WithoutSweepPitchTwist(:,:,j,k) )  ! force per unit length of the jth node in the kth blade
          y%BladeLoad(k)%Moment(:,j) = matmul( moment, m%WithoutSweepPitchTwist(:,:,j,k) )  ! moment per unit length of the jth node in the kth blade
 
+         ! Save results for outputs so we don't have to recalculate them all when we write outputs
+         m%FVW%BN_AxInd(j,k)           = AxInd
+         m%FVW%BN_TanInd(j,k)          = TanInd
+         m%FVW%BN_Vrel(j,k)            = Vrel
+         m%FVW%BN_alpha(j,k)           = alpha
+         m%FVW%BN_phi(j,k)             = phi
+         m%FVW%BN_Re(j,k)              = Re
+         m%FVW%BN_UrelWind_s(1:3,j,k)  = UrelWind_s(1:3)
+         m%FVW%BN_Cl_Static(j,k)       = Cl_Static
+         m%FVW%BN_Cd_Static(j,k)       = Cd_Static
+         m%FVW%BN_Cm_Static(j,k)       = Cm_Static
+         m%FVW%BN_Cl(j,k)              = Cl_dyn
+         m%FVW%BN_Cd(j,k)              = Cd_dyn
+         m%FVW%BN_Cm(j,k)              = Cm_dyn
+         m%FVW%BN_Cx(j,k)              = Cx
+         m%FVW%BN_Cy(j,k)              = Cy
       end do !j=nodes
    end do !k=blades
 

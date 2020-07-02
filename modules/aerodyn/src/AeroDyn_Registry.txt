@@ -16,6 +16,18 @@ usefrom	BEMT_Registry.txt
 usefrom  FVW_Registry.txt
 usefrom	UnsteadyAero_Registry.txt
 
+param    AeroDyn/AD     -  IntKi    ModelUnknown            - -1  -  "" -
+param    ^              -  IntKi    WakeMod_none            -  0  -  "Wake model - none"                                      -
+param    ^              -  IntKi    WakeMod_BEMT            -  1  -  "Wake model - BEMT (blade elememnt momentum theory)"     -
+param    ^              -  IntKi    WakeMod_DBEMT           -  2  -  "Wake model - DBEMT (dynamic elememnt momentum theory)"  -
+param    ^              -  IntKi    WakeMod_FVW             -  3  -  "Wake model - FVW (free vortex wake, OLAF)"              -
+param    ^              -  IntKi    AFAeroMod_steady        -  1  -  "steady model"                               -
+param    ^              -  IntKi    AFAeroMod_BL_unsteady   -  2  -  "Beddoes-Leishman unsteady model"            -
+param    ^              -  IntKi    TwrPotent_none          -  0  -  "no tower potential flow"                    -
+param    ^              -  IntKi    TwrPotent_baseline      -  1  -  "baseline tower potential flow"              -
+param    ^              -  IntKi    TwrPotent_Bak           -  2  -  "tower potential flow with Bak correction"   -
+ 
+
 # ..... Initialization data .......................................................................................................
 # Define inputs that the initialization routine may need here:
 typedef	AeroDyn/AD	InitInputType	CHARACTER(1024)	InputFile	-	-	-	"Name of the input file"	-

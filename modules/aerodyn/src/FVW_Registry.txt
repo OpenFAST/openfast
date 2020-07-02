@@ -109,6 +109,14 @@ typedef     ^                   ^               ReKi                            
 typedef     ^                   ^               ReKi                             BN_phi        ::    -  -  "angle between the plane of rotation and the direction of the local wind [size: (NumBlNds,numBlades)]" rad
 typedef     ^                   ^               ReKi                             BN_Re         ::    -  -  "Reynolds number [size: (NumBlNds,numBlades)]" -
 typedef     ^                   ^               ReKi                             BN_URelWind_s :::   -  -  "Relative wind velocity in section coordinates [size: (3,NumBlNds,numBlades)]" m/s
+typedef     ^                   ^               ReKi                             BN_Cl_Static  ::    -  -  "Coefficient lift,   excluding unsteady aero effects" - 
+typedef     ^                   ^               ReKi                             BN_Cd_Static  ::    -  -  "Coefficient drag.   excluding unsteady aero effects" -
+typedef     ^                   ^               ReKi                             BN_Cm_Static  ::    -  -  "Coefficient moment, excluding unsteady aero effects" -
+typedef     ^                   ^               ReKi                             BN_Cl         ::    -  -  "Coefficient lift,   including unsteady aero effects" -
+typedef     ^                   ^               ReKi                             BN_Cd         ::    -  -  "Coefficient drag,   including unsteady aero effects" -
+typedef     ^                   ^               ReKi                             BN_Cm         ::    -  -  "Coefficient moment, including unsteady aero effects" -
+typedef     ^                   ^               ReKi                             BN_Cx         ::    -  -  "normal force coefficient (normal to the plane, not chord) of the jth node in the kth blade"   -
+typedef     ^                   ^               ReKi                             BN_Cy         ::    -  -  "tangential force coefficient (tangential to the plane, not chord) of the jth node in the kth blade"   -
 
 # TODO UA - Should be part of AeroDyn
 typedef     ^                   ^               UA_MiscVarType                   m_UA          -  -  -  "misc vars for UnsteadyAero"        -

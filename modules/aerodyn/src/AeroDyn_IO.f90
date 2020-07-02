@@ -1530,21 +1530,7 @@ MODULE AeroDyn_IO
    
    INTEGER(IntKi), PARAMETER        :: MaxBl    =  3                                   ! Maximum number of blades allowed in simulation
    
-   ! model identifiers
-   integer(intKi), parameter        :: ModelUnknown  = -1
-   
-   integer(intKi), parameter        :: WakeMod_none  = 0  
-   integer(intKi), parameter        :: WakeMod_BEMT  = 1
-   integer(intKi), parameter        :: WakeMod_DBEMT = 2
-   integer(intKi), parameter        :: WakeMod_FVW   = 3
-   
-   integer(intKi), parameter        :: AFAeroMod_steady      = 1  ! steady model
-   integer(intKi), parameter        :: AFAeroMod_BL_unsteady = 2  ! Beddoes-Leishman unsteady model
-   
-   integer(intKi), parameter        :: TwrPotent_none     = 0  ! none
-   integer(intKi), parameter        :: TwrPotent_baseline = 1  ! baseline potential flow
-   integer(intKi), parameter        :: TwrPotent_Bak      = 2  ! potential flow with Bak correction 
-      
+     
 contains
    
 !> Compute maximum radius over all blades (contains hub radius), in "projected rotor plane"
@@ -1794,31 +1780,13 @@ CONTAINS
    !!                                          m%DisturbedInflow (done in SetInputs)
    !!       Make sure these are set!
    subroutine Calc_WriteOutput_FVW
-      type(AFI_OutputType) :: AFI_interp              ! Resulting values from lookup table
-      ! Local variables that we store in misc for nodal outputs
-      real(ReKi)           :: UrelWind_s(3)           ! Relative Wind in section coords
-      real(ReKi)           :: AxInd, TanInd, Vrel, phi, alpha, Re
-      real(ReKi)           :: theta
 
-      real(ReKi)           :: Cx, Cy
       real(ReKi)           :: rmax, omega
-
 
          ! blade outputs
       do k=1,p%numBlades
          do beta=1,p%NBlOuts
             j=p%BlOutNd(beta)
-            AxInd           =  m%FVW%BN_AxInd(j,k)
-            TanInd          =  m%FVW%BN_TanInd(j,k)
-            Vrel            =  m%FVW%BN_Vrel(j,k)
-            alpha           =  m%FVW%BN_alpha(j,k)
-            phi             =  m%FVW%BN_phi(j,k)
-            Re              =  m%FVW%BN_Re(j,k)
-            UrelWind_s(1:3) =  m%FVW%BN_UrelWind_s(1:3,j,k)
-            theta = m%FVW%PitchAndTwist(j,k)
-
-            !  NOTE: using airfoil coeffs at nodes
-            call AFI_ComputeAirfoilCoefs( alpha, Re, 0.0_ReKi,  p%AFI(p%FVW%AFindx(j,k)), AFI_interp, ErrStat, ErrMsg )
 
             ! --- Setting AD outputs 
             tmp = matmul( m%WithoutSweepPitchTwist(:,:,j,k), u%InflowOnBlade(:,j,k) )
@@ -1836,41 +1804,39 @@ CONTAINS
             m%AllOuts( BNSTVy( beta,k) ) = tmp(2)
             m%AllOuts( BNSTVz( beta,k) ) = tmp(3)
 
-            m%AllOuts( BNVrel( beta,k) ) = Vrel
-            m%AllOuts( BNDynP( beta,k) ) = 0.5 * p%airDens * Vrel**2
-            m%AllOuts( BNRe(   beta,k) ) = Re
-            m%AllOuts( BNM(    beta,k) ) = Vrel / p%SpdSound
+            m%AllOuts( BNVrel( beta,k) ) = m%FVW%BN_Vrel(j,k)
+            m%AllOuts( BNDynP( beta,k) ) = 0.5 * p%airDens * m%FVW%BN_Vrel(j,k)**2
+            m%AllOuts( BNRe(   beta,k) ) = m%FVW%BN_Re(j,k)
+            m%AllOuts( BNM(    beta,k) ) = m%FVW%BN_Vrel(j,k) / p%SpdSound
 
-            m%AllOuts( BNVIndx(beta,k) ) = -UrelWind_s(1) * AxInd
-            m%AllOuts( BNVIndy(beta,k) ) =  UrelWind_s(2) * TanInd
+            m%AllOuts( BNVIndx(beta,k) ) = -m%FVW%BN_UrelWind_s(1,j,k) * m%FVW%BN_AxInd(j,k)
+            m%AllOuts( BNVIndy(beta,k) ) =  m%FVW%BN_UrelWind_s(2,j,k) * m%FVW%BN_TanInd(j,k)
 
-            m%AllOuts( BNAxInd(beta,k) ) = AxInd
-            m%AllOuts( BNTnInd(beta,k) ) = TanInd
+            m%AllOuts( BNAxInd(beta,k) ) = m%FVW%BN_AxInd(j,k)
+            m%AllOuts( BNTnInd(beta,k) ) = m%FVW%BN_TanInd(j,k)
 
-            m%AllOuts( BNAlpha(beta,k) ) = alpha*R2D
-            m%AllOuts( BNTheta(beta,k) ) = theta*R2D
-            m%AllOuts( BNPhi(  beta,k) ) = phi*R2D
+            m%AllOuts( BNAlpha(beta,k) ) = m%FVW%BN_alpha(j,k)*R2D
+            m%AllOuts( BNTheta(beta,k) ) = m%FVW%PitchAndTwist(j,k)*R2D
+            m%AllOuts( BNPhi(  beta,k) ) = m%FVW%BN_phi(j,k)*R2D
 !             m%AllOuts( BNCurve(beta,k) ) = m%Curve(j,k)*R2D ! TODO
 
 !             m%AllOuts( BNCpmin(   beta,k) ) = m%BEMT_y%Cpmin(j,k) ! TODO
             m%AllOuts( BNSigCr(   beta,k) ) = m%SigmaCavitCrit(j,k)
             m%AllOuts( BNSgCav(   beta,k) ) = m%SigmaCavit(j,k)
 
-            cp = cos(phi)
-            sp = sin(phi)
-            Cx = AFI_interp%Cl*cp + AFI_interp%Cd*sp 
-            Cy = AFI_interp%Cl*sp - AFI_interp%Cd*cp
-            m%AllOuts( BNCl(   beta,k) ) = AFI_interp%Cl
-            m%AllOuts( BNCd(   beta,k) ) = AFI_interp%Cd
-            m%AllOuts( BNCm(   beta,k) ) = AFI_interp%Cm
-            m%AllOuts( BNCx(   beta,k) ) = Cx
-            m%AllOuts( BNCy(   beta,k) ) = Cy
- 
-            ct=cos(theta)
-            st=sin(theta)
-            m%AllOuts( BNCn(   beta,k) ) = Cx*ct + Cy*st
-            m%AllOuts( BNCt(   beta,k) ) =-Cx*st + Cy*ct
+            m%AllOuts( BNCl(   beta,k) ) = m%FVW%BN_Cl(j,k)
+            m%AllOuts( BNCd(   beta,k) ) = m%FVW%BN_Cd(j,k)
+            m%AllOuts( BNCm(   beta,k) ) = m%FVW%BN_Cm(j,k)
+            m%AllOuts( BNCx(   beta,k) ) = m%FVW%BN_Cx(j,k)
+            m%AllOuts( BNCy(   beta,k) ) = m%FVW%BN_Cy(j,k)
 
+            ct=cos(m%FVW%PitchAndTwist(j,k))    ! cos(theta)
+            st=sin(m%FVW%PitchAndTwist(j,k))    ! sin(theta)
+            m%AllOuts( BNCn(   beta,k) ) = m%FVW%BN_Cx(j,k)*ct + m%FVW%BN_Cy(j,k)*st
+            m%AllOuts( BNCt(   beta,k) ) =-m%FVW%BN_Cx(j,k)*st + m%FVW%BN_Cy(j,k)*ct
+
+            cp=cos(m%FVW%BN_phi(j,k))
+            sp=sin(m%FVW%BN_phi(j,k))
             m%AllOuts( BNFl(   beta,k) ) =  m%X(j,k)*cp - m%Y(j,k)*sp
             m%AllOuts( BNFd(   beta,k) ) =  m%X(j,k)*sp + m%Y(j,k)*cp
             m%AllOuts( BNMm(   beta,k) ) =  m%M(j,k)
@@ -1879,7 +1845,7 @@ CONTAINS
             m%AllOuts( BNFn(   beta,k) ) =  m%X(j,k)*ct - m%Y(j,k)*st
             m%AllOuts( BNFt(   beta,k) ) = -m%X(j,k)*st - m%Y(j,k)*ct
 
-            m%AllOuts( BNGam(  beta,k) ) = 0.5_ReKi * p%FVW%Chord(j,k) * Vrel * AFI_interp%Cl ! "Gam" [m^2/s]
+            m%AllOuts( BNGam(  beta,k) ) = 0.5_ReKi * p%FVW%Chord(j,k) * m%FVW%BN_Vrel(j,k) * m%FVW%BN_Cl(j,k) ! "Gam" [m^2/s]
          end do ! nodes
       end do ! blades
 
