@@ -2816,12 +2816,14 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          y%Mesh%Moment(:,mem%NodeIndx(i+1)) = y%Mesh%Moment(:,mem%NodeIndx(i+1)) + F_If(4:6)  
          
          ! ------------------ flooded ballast weight : sides : Section 5.1.2 & 5.2.2  : Always compute regardless of PropPot setting ---------------------
-        
+         
+         ! NOTE: For memfloodstatus and floodstatus: 0 = fully buried or not ballasted, 1 = fully flooded, 2 = partially flooded
+         
          ! fully filled elements
          if (mem%floodstatus(i) == 1) then
             
             ! Compute lstar
-            if ( mem%memfloodstatus == 1) then
+            if ( mem%memfloodstatus == 2) then  
                ! partially flooded MEMBER
                lstar = dl*(i-1) - mem%l_fill
             elseif (cosPhi >= 0.0 ) then
@@ -2979,7 +2981,8 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       if ( mem%i_floor == 0 ) then   ! both ends are above seabed
          !--- Water ballast buoyancy ---
          ! if member is fully flooded
-         if (mem%z_overfill >= 0) then 
+         if (mem%memfloodstatus == 1) then
+         !if (mem%z_overfill >= 0) then 
             Fl      = -mem%FillDens * g * pi *mem%Rin(  1)**2* (mem%z_overfill + max(z2-z1, 0.0_ReKi))
             Moment  =  mem%FillDens * g * pi *0.25*mem%Rin(  1)**4*sinPhi
             call AddEndLoad(Fl, Moment, sinPhi1, cosPhi1, sinBeta1, cosBeta1, m%F_BF_End(:, mem%NodeIndx(1)))
@@ -2997,8 +3000,9 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
             ! no load if member is not flooded at all
          end if
          
-      elseif ( mem%i_floor < mem%NElements ) then ! upper node is still above the seabed, but lower node is below seabed
-         if (mem%z_overfill >= 0) then 
+      elseif ( mem%i_floor < mem%NElements+1 ) then ! upper node is still above the seabed, but lower node is below seabed
+         !if (mem%z_overfill >= 0) then 
+         if (mem%memfloodstatus == 1) then
             Fl      =   mem%FillDens * g * pi *mem%Rin(N+1)**2* (mem%z_overfill + max(z1-z2, 0.0_ReKi))
             Moment  =  -mem%FillDens * g * pi *0.25*mem%Rin(N+1)**4*sinPhi            
             call AddEndLoad(Fl, Moment, sinPhi2, cosPhi2, sinBeta2, cosBeta2, m%F_BF_End(:, mem%NodeIndx(N+1)))
