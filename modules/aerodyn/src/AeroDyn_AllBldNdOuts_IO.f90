@@ -130,6 +130,7 @@ SUBROUTINE AllBldNdOuts_InitOut( InitOut, p, InputFileData, ErrStat, ErrMsg )
 
          ! Populate the header an unit lines for all blades and nodes
          ! First set a counter so we know where in the output array we are in
+         ! NOTE: we populate invalid names as well (some names are not valid outputs for certain configurations).  That means we will have zeros in those values.
       INDX = p%NumOuts + 1       ! p%NumOuts is the number of outputs from the normal AeroDyn output.  The WriteOutput array is sized to p%NumOuts + num(AllBldNdOuts)
 
       DO IdxChan=1,p%BldNd_NumOuts
@@ -212,8 +213,16 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, u, m, y, OtherState, Indx, ErrStat, ErrM
 
          SELECT CASE( p%BldNd_OutParam(IdxChan)%Indx )      ! Indx contains the information on what channel should be output
          CASE (0) ! Invalid channel
+            ! We still have headers for invalid channels.  Need to account for that
+            DO IdxBlade=1,p%BldNd_BladesOut
+               DO IdxNode=1,p%NumBlNds
+                  y%WriteOutput( OutIdx ) = 0.0_ReKi
+                  OutIdx = OutIdx + 1
+               END DO
+            END DO
             CYCLE
-               ! ***** Undisturbed wind velocity in local blade coord system *****
+
+            ! ***** Undisturbed wind velocity in local blade coord system *****
          CASE ( BldNd_VUndx )
             DO IdxBlade=1,p%BldNd_BladesOut
                DO IdxNode=1,p%NumBlNds
