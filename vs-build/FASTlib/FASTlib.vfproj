@@ -1716,8 +1716,13 @@
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File></Filter>
 		<File RelativePath="..\..\modules\subdyn\src\qsort_c_module.f90"/>
+		<File RelativePath="..\..\modules\subdyn\src\IntegerList.f90"/>
+		<File RelativePath="..\..\modules\subdyn\src\Yaml.f90"/>
 		<File RelativePath="..\..\modules\subdyn\src\SD_FEM.f90"/>
+		<File RelativePath="..\..\modules\subdyn\src\FEM.f90"/>
 		<File RelativePath="..\..\modules\subdyn\src\SubDyn.f90"/>
+		<File RelativePath="..\..\modules\subdyn\src\SubDyn_Tests.f90"/>
+		<File RelativePath="..\..\modules\subdyn\src\SubDyn_Output_Params.f90"/>
 		<File RelativePath="..\..\modules\subdyn\src\SubDyn_Output.f90"/></Filter>
 		<Filter Name="Super Controller">
 		<Filter Name="RegistryFiles">
