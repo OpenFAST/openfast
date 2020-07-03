@@ -35,6 +35,7 @@ endif()
 include(ExternalProject)
 set(ExternalProjectCMakeArgs
   -DCMAKE_INSTALL_PREFIX=${PROJECT_BINARY_DIR}/pfunit
+  -DCMAKE_Fortran_COMPILER=${CMAKE_Fortran_COMPILER}
   -DROBUST=OFF
 )
 set(PFUNIT_INSTALL ${PROJECT_BINARY_DIR}/pfunit)
