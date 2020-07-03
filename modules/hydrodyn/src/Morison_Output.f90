@@ -6876,7 +6876,7 @@ END IF
    
    IF ( InitInp%OutAll  ) THEN
      ! p%NumOutAll = InitInp%NMember*2*22 + InitInp%NJoints*19
-     p%NumOutAll = 0
+      p%NumOutAll = 0
    ELSE
       p%NumOutAll = 0
    END IF

@@ -6,7 +6,7 @@ This directory contains the unit test suite for the OpenFAST framework. Containe
 - A unit test template file
 
 The dependencies for unit testing are:
-- Python 3+
+- Python 3.7+
 - pFUnit
 - CMake
 

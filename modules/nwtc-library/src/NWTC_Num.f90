@@ -270,7 +270,7 @@ CONTAINS
    
    DelAngle = OldAngle - NewAngle
 
-   DO WHILE ( ABS( DelAngle ) >= Pi_R4 )
+   DO WHILE ( ABS( DelAngle ) > Pi_R4 )
 
       NewAngle = NewAngle + SIGN( TwoPi_R4, DelAngle )
       DelAngle = OldAngle - NewAngle
@@ -300,7 +300,7 @@ CONTAINS
    
    DelAngle = OldAngle - NewAngle
 
-   DO WHILE ( ABS( DelAngle ) >= Pi_R8 )
+   DO WHILE ( ABS( DelAngle ) > Pi_R8 )
 
       NewAngle = NewAngle + SIGN( TwoPi_R8, DelAngle )
       DelAngle = OldAngle - NewAngle
@@ -330,7 +330,7 @@ CONTAINS
    
    DelAngle = OldAngle - NewAngle
 
-   DO WHILE ( ABS( DelAngle ) >= Pi_R16 )
+   DO WHILE ( ABS( DelAngle ) > Pi_R16 )
 
       NewAngle = NewAngle + SIGN( TwoPi_R16, DelAngle )
       DelAngle = OldAngle - NewAngle

@@ -2526,7 +2526,11 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
       ! TODO: Issue warning if WaveTMax was not already 0.0 in this case.
       IF ( .NOT. EqualRealNos(InitInp%Waves%WaveTMax, 0.0_DbKi) ) THEN
          CALL WrScr( '  Setting WaveTMax to 0.0 since WaveMod = 0' )
-      InitInp%Waves%WaveTMax = 0.0
+         InitInp%Waves%WaveTMax = 0.0
+      END IF
+      IF ( .NOT. EqualRealNos(InitInp%Waves%WaveDir, 0.0_SiKi) ) THEN
+         CALL WrScr( '  Setting WaveDir to 0.0 since WaveMod = 0' )
+         InitInp%Waves%WaveDir = 0.0
       END IF
    ELSEIF ( InitInp%Waves%WaveMod == 5 ) THEN   ! User wave elevation file reading in
       IF (InitInp%TMax > InitInp%Waves%WaveTMax ) THEN
