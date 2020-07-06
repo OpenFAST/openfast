@@ -1636,6 +1636,11 @@ SUBROUTINE JointElimination(Elements, JType, phat, Init, p, Tc, ErrStat, ErrMsg)
       ! --- Forming Tc
       do i = 1,3    ; Tc(i,i)=1_ReKi; enddo !  I3 for translational DOF
       Tc(4:nDOFt,4:nDOFr)=Tc_rot(1:nDOFt-3, 1:nDOFr-3)
+      do i = 1,size(Tc,1); do ie = 1,size(Tc,2)
+         if (abs(Tc(i,ie))<1e-13) then
+            Tc(i,ie)=0.0_ReKi
+         endif; enddo;
+      enddo;
       deallocate(Tc_rot)
       deallocate(Tc_rot_m1)
 
@@ -1831,11 +1836,39 @@ SUBROUTINE InsertJointStiffDamp(p, Init, ErrStat, ErrMsg)
          ! Ball/Pin/Universal joints
          if(StifAdd>0) then 
             print*,'StiffAdd, Node',iNode,StifAdd, Ifreerot
-            Init%K(Ifreerot,Ifreerot) = Init%K(Ifreerot,Ifreerot) + StifAdd
+            if ( JType == idJointPin       ) then
+               print*,'>>>>>> Adding stiffness'
+               print*,'K (before)',Init%K(Ifreerot(1),Ifreerot)
+               print*,'K (before)',Init%K(Ifreerot(2),Ifreerot)
+               Init%K(Ifreerot(1),Ifreerot(1)) = Init%K(Ifreerot(1),Ifreerot(1)) + StifAdd
+               Init%K(Ifreerot(2),Ifreerot(2)) = Init%K(Ifreerot(2),Ifreerot(2)) + StifAdd
+               Init%K(Ifreerot(1),Ifreerot(2)) = Init%K(Ifreerot(1),Ifreerot(2)) - StifAdd
+               Init%K(Ifreerot(2),Ifreerot(1)) = Init%K(Ifreerot(2),Ifreerot(1)) - StifAdd
+               print*,'K (after)',Init%K(Ifreerot(1),Ifreerot)
+               print*,'K (after)',Init%K(Ifreerot(2),Ifreerot)
+            else
+               print*,'NOT READY'
+               STOP
+               Init%K(Ifreerot,Ifreerot) = Init%K(Ifreerot,Ifreerot) + StifAdd
+            endif
          endif
          if(DampAdd>0) then 
             print*,'DampAdd, Node',iNode,DampAdd, Ifreerot
-            Init%D(Ifreerot,Ifreerot) = Init%D(Ifreerot,Ifreerot) +DampAdd
+            if ( JType == idJointPin       ) then
+               print*,'>>>>>> Adding Damping'
+               print*,'D (before)',Init%D(Ifreerot(1),Ifreerot)
+               print*,'D (before)',Init%D(Ifreerot(2),Ifreerot)
+               Init%D(Ifreerot(1),Ifreerot(1)) = Init%D(Ifreerot(1),Ifreerot(1)) + DampAdd
+               Init%D(Ifreerot(2),Ifreerot(2)) = Init%D(Ifreerot(2),Ifreerot(2)) + DampAdd
+               Init%D(Ifreerot(1),Ifreerot(2)) = Init%D(Ifreerot(1),Ifreerot(2)) - DampAdd
+               Init%D(Ifreerot(2),Ifreerot(1)) = Init%D(Ifreerot(2),Ifreerot(1)) - DampAdd
+               print*,'D (after)',Init%D(Ifreerot(1),Ifreerot)
+               print*,'D (after)',Init%D(Ifreerot(2),Ifreerot)
+            else
+               print*,'NOT READY'
+               STOP
+               Init%D(Ifreerot,Ifreerot) = Init%D(Ifreerot,Ifreerot) +DampAdd
+            endif
          endif
       endif
    enddo

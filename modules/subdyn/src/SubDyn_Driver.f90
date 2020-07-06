@@ -145,7 +145,7 @@ PROGRAM TestSubDyn
    ! Initialize the module
    CALL SD_Init( InitInData, u(1), p,  x, xd, z, OtherState, y, m, TimeInterval, InitOutData, ErrStat2, ErrMsg2 ); call AbortIfFailed()
 
-   CALL AllocAry(SDin, drvrInitInp%NSteps, 13, 'SDinput array', ErrStat2, ErrMsg2); call AbortIfFailed()
+   CALL AllocAry(SDin, drvrInitInp%NSteps, 19, 'SDinput array', ErrStat2, ErrMsg2); call AbortIfFailed()
    SDin(:,:)=0.0_ReKi
 
    ! Read Input time series data from a file
@@ -154,7 +154,8 @@ PROGRAM TestSubDyn
       CALL GetNewUnit( UnIn ) 
       CALL OpenFInpFile ( UnIn, drvrInitInp%InputsFile, ErrStat2, ErrMsg2); Call AbortIfFailed()
       DO n = 1,drvrInitInp%NSteps
-         READ (UnIn,*,IOSTAT=ErrStat2) (SDin (n,J), J=1,13)
+         ! TODO Add safety for backward compatibility if only 13 columns
+         READ (UnIn,*,IOSTAT=ErrStat2) (SDin (n,J), J=1,19)
          ErrMsg2 = ' Error reading line '//trim(Num2LStr(n))//' of file: '//trim(drvrInitInp%InputsFile)
          call AbortIfFailed()
       END DO  
@@ -198,9 +199,8 @@ PROGRAM TestSubDyn
          u(1)%TPMesh%RotationVel(:,1)       = SDin(n+1,11:13) 
 
          IF ( drvrInitInp%InputsMod == 2 ) THEN
-            ! User time series have no acceleration for now..
-            u(1)%TPMesh%TranslationAcc(:,1)    = 0.0_ReKi
-            u(1)%TPMesh%RotationAcc(:,1)       = 0.0_ReKi
+            u(1)%TPMesh%TranslationAcc(:,1)    = SDin(n+1,14:16) 
+            u(1)%TPMesh%RotationAcc(:,1)       = SDin(n+1,17:19)
          ELSE ! constant inputs
             u(1)%TPMesh%TranslationAcc(:,1)    = drvrInitInp%uDotDotTPInSteady(1:3)  
             u(1)%TPMesh%RotationAcc(:,1)       = drvrInitInp%uDotDotTPInSteady(4:6) 
