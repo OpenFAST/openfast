@@ -1,5 +1,6 @@
 # Makefile for Sphinx documentation
 #
+MAIN=SubDyn
 
 # You can set these variables from the command line.
 SPHINXOPTS    =
@@ -16,7 +17,7 @@ ALLSPHINXOPTS   = -d _build/doctrees $(PAPEROPT_$(PAPER)) $(SPHINXOPTS) .
 all: pdf
 
 doc2rst:
-	pandoc -F pandoc-crossref -F pandoc-citeproc -s -t rst --toc SubDyn_Manual_Rev037.docx -o output.rst   --bibliography=references.bib
+	pandoc -F pandoc-crossref -F pandoc-citeproc -s -t rst --toc SubDyn_Manual_Rev037.docx -o output.rst   --bibliography=references_SD.bib
 
 # --wrap=preserve
 # -F pandoc-crossref
@@ -41,14 +42,20 @@ help:
 clean:
 	-rm -rf _build/*
 
-pdf: latex
-	cd _build/latex && make all-pdf
+pdf: latex pdf-compile diff
+# 	cd _build/latex && make all-pdf
 
 pdf-compile: 
-	cd _build/latex && make all-pdf
+	cd _build/latex && pdflatex $(MAIN).tex
+# 	cd _build/latex && make all-pdf
 
 pdf-html: pdf html
 	cp _build/latex/sampledoc.pdf _build/html
+
+diff:
+	cd _build/latex  && latexdiff -p ../../LatexDiffPreamble.tex $(MAIN)-old.tex $(MAIN).tex > $(MAIN)-diff.tex
+	cd _build/latex  && cp $(MAIN).aux $(MAIN)-diff.aux
+	cd _build/latex  && pdflatex --interaction=nonstopmode $(MAIN)-diff.tex   
 
 
 html:

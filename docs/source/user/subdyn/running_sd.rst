@@ -16,53 +16,10 @@ need both forms, he/she would likely need to be familiar with and run
 the stand-alone model if building a model of the substructure from
 scratch. The stand-alone version is also helpful for model
 troubleshooting and may benefit users who are interested in conducting
-aero-hydro-servo-elastic simulations of an offshore wind turbine. For
-this reason, SubDyn can be obtained from two different repositories: one
-for the stand-alone SubDyn and one for the coupled solution through
-FAST.
+aero-hydro-servo-elastic simulations of an offshore wind turbine. 
 
-Stand-Alone SubDyn Archive
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Users can refer to the OpenFAST installation to download and compile SubDyn. 
 
-Users can refer to :numref:`installation` download the stand-alone SubDyn archive from our Web server at
-`*https://nwtc.nrel.gov/SubDyn* <https://nwtc.nrel.gov/SubDyn>`__. The
-file has a name similar to *SD\_v1.03.00a-rrd.exe*, but may have a
-different version number. The user can then download the self-extracting
-archive (.exe) to expand the archive into a folder he/she specifies.
-
-.. _self-extractor:
-
-.. figure:: figs/self-extractor.png
-   :width: 40%
-           
-   WinZip Self-Extractor main window --TO REPLACE WITH CURRENT
-ARCHIVE METHODS ETC.
-
-The archive contains the **bin**, **CertTest**, **Compiling**,
-**Documentation**, and **Source** folders. The **bin** folder
-includes the main executable file, *SubDyn\_win32.exe*, which is used to
-execute the stand-alone SubDyn program. The **CertTest** folder
-contains a collection of sample SubDyn input files and driver input
-files that can be used as templates for the user’s own models. If the
-user runs the *CertTest.bat* DOS script, he/she can compare the results
-to the ones stored in the **NREL\_Results** subfolder. This manual may
-be found in the **Documentation** folder. The **Compiling** folder
-contains files for compiling the stand-alone *SubDyn\_win32.exe* file
-with either Visual Studio or gFortran. The Fortran source code is
-located in the **Source** folder.
-
-FAST Archive
-~~~~~~~~~~~~
-
-Download the FAST archive, which includes a coupling to SubDyn, from our
-Web server at https://nwtc.nrel.gov/FAST8. The file has a name similar
-to *FAST\_v8.08.00.exe*, but may have a different version number. Run
-the downloaded self-extracting archive (*.exe*) to expand the archive
-into a user-specified folder. The FAST executable file is located in the
-archive’s **bin** folder. Example models using the NREL 5-MW reference
-turbine and various substructures are located in the **CertTest**
-folder. These include Test19: OC3-Monopile, Test20: OC3-Tripod, Test21:
-OC4-jacket.
 
 Running SubDyn
 ---------------
@@ -88,8 +45,8 @@ for example:
     >SubDyn_win32.exe MyDriverFile.dvr
 
 where, *MyDriverFile.dvr* is the name of the SubDyn driver file, as
-described in Section :numref:`main-input-file`. The SubDyn primary input file is described in
-Section :numref:`driver-input-file`.
+described in :numref:`sd_main-input-file`. The SubDyn primary input file is described in
+Section :numref:`sd_driver-input-file`.
 
 
 Running SubDyn Coupled to FAST  

@@ -1,4 +1,4 @@
-.. _input-files:
+.. _sd_input-files:
 
 Input Files
 ===========
@@ -22,7 +22,7 @@ Units
 SubDyn uses the SI system (kg, m, s, N). Angles are assumed to be in
 radians unless otherwise specified.
 
-.. _driver-input-file:
+.. _sd_driver-input-file:
 
 SubDyn Driver Input File
 -------------------------
@@ -33,8 +33,8 @@ necessary to control the simulation for uncoupled models. It is possible
 to provide per-time-step inputs to SubDyn, even in stand-alone mode, by
 tying the driver file to an additional input file containing
 time-histories of the TP motion (displacements, velocities, and
-accelerations). A sample SubDyn driver input file is given in Appendix
-B.
+accelerations). A sample SubDyn driver input file is given in 
+:numref:`sd_appendix_B`.
 
 Users can set the **Echo** flag in this file to TRUE so that
 *SubDyn\_win32.exe* echoes the contents of the driver input file (useful
@@ -105,7 +105,7 @@ Table 1. TP Reference Point Inputs Time-Series Data File Contents
 | 17-19           | TP reference point rotational accelerations about *X*, *Y*, and *Z*                                   | `rad/s^2`                                |
 +-----------------+-------------------------------------------------------------------------------------------------------+------------------------------------------+
 
-.. _main-input-file:
+.. _sd_main-input-file:
 
 SubDyn Primary Input File
 -------------------------
@@ -140,7 +140,7 @@ If this manual refers to an ID in a table entry, it is an integer
 identifier for the table entry and must be unique for a given table
 entry.
 
-A sample SubDyn primary input file is given in Appendix A.
+A sample SubDyn primary input file is given in :numref:`sd_appendix_A`.
 
 The input file begins with two lines of header information, which is for
 the user but is not used by the software.
@@ -176,6 +176,11 @@ minimize the number of retained modes needed to capture effects such as
 static gravity and buoyancy loads, and high-frequency loads transferred
 from the turbine.
 
+
+**ExtraMoment** is a flag to specify whether the extra moment due to 
+the interface lever arm is to be included in the interface reactions.
+
+
 FEA and Craig-Bampton Parameters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -209,8 +214,18 @@ line, separated by white space. If the number of **JDampings** is less
 than the number of retained modes, the last value will be replicated for
 all the remaining modes.
 
+
+**GuyanDampMod** Guyan damping [0=none, 1=Rayleigh Damping, 2= user specified 6x6 matrix]
+
+**RayleighDamp** Mass and stiffness proportional damping  coefficients (:math:`(\alpha,\beta)` Rayleigh damping) [only if GuyanDampMod=1]
+Guyan damping matrix (6x6) [only if GuyanDamgMod=2]
+
+**Guyan damping matrix**: The 6 lines following this input line consits of the
+  6x6 coefficients of the damping matrix to be applied at the interface.
+
+
 For more information on these parameters and guidelines on how to set
-them, see Sections 5 and 6.
+them, see Sections :numref:`sd_modeling-considerations` and :numref:`subdyn-theory`.
 
 Structure Joints
 ~~~~~~~~~~~~~~~~
@@ -449,7 +464,7 @@ lines of channel names. Modal kinematics and member-node-, base-, and
 interface-related kinematic and load quantities can be selected.
 Member-node-related data follow the organization described in Section .
 If SubDyn encounters an unknown/invalid channel name, it prints an error
-message and halts execution. Please refer to Appendix C for a complete
+message and halts execution. Please refer to :numref:`sd_appendix_C` for a complete
 list of possible output parameters and their names.
 
 SSI Input File
@@ -487,4 +502,4 @@ Note that by selecting fixities of 1 in the various DOFs of the
 restrained nodes, the columns and rows associated with those DOFs will
 be removed, therefore the associated matrix elements will be ignored.
 
-A sample SubDyn SSI input file is given in Appendix C.
+A sample SubDyn SSI input file is given in :numref:`sd_appendix_C`.

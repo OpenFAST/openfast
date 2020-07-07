@@ -1,4 +1,4 @@
-.. _modeling-considerations:
+.. _sd_modeling-considerations:
 
 Modeling Considerations
 =======================
@@ -113,7 +113,7 @@ choice of these parameters as they may render the system matrix
 singular. Inspection of the eigenvalue results in the summary file
 should confirm whether acceptable approximations have been achieved.
 
-.. _TowerTurbineCpling
+.. _TowerTurbineCpling:
 
 Substructure Tower/Turbine Coupling 
 -----------------------------------
@@ -181,6 +181,17 @@ the undeflected tower about its centerline. Note that the platform mass
 and inertia in ElastoDyn can be used to model heavy and rigid transition
 pieces that one would not want to model as a flexible body in either the
 ElastoDyn tower or SubDyn substructure models.
+
+***Damping of the Guyan modes:***
+
+There are three ways to specify the damping associated with the motion
+of the interface node.
+
+1. SubDyn Guyan damping matrix using Rayleigh damping
+2. SubDyn Guyan damping matrix using user defined 6x6 matrix
+3. HydroDyn additional linear damping matrix (**AddBLin**)
+
+**Old:**
 
 The C-B method assumes no damping for the interface modes. This is
 equivalent to having six undamped rigid-body DOFs at the TP reference

@@ -11,12 +11,32 @@ SubDyn made since v0.4. Following are the main changes that the user may
 notice, but for more information, refer to the *changelog.txt* text file
 within the official archive and the GitHub log.
 
+
+V1.04.00 (September 2020)
+------------------------------
+
+- Version 1.04.00 integrates with OpenFAST version 2.4
+
+- Member types: beam, rigid link, pretension cable  
+
+- Joint types: cantilever, universal, pin, ball
+
+- Input of all terms for concentrated mass
+
+- Guyan damping matrix
+
+- Extra lever arm
+
+- Coupling sith SoilDyn
+
+- Inclusion of soil-structure interaction (SSI) via flexible degrees of fixity at the restrained nodes and a new input file that allows for 6x6 stiffness and mass matrices that simulate boundary conditions at those nodes.
+
+
 V1.03.00a-rrd (September 2017)
 ------------------------------
 
 - Version 1.03.00a-rrd integrates with the  `OpenFast software <https://github.com/OpenFAST/OpenFAST>`__.
 
-- Inclusion of soil-structure interaction (SSI) via flexible degrees of fixity at the restrained nodes and a new input file that allows for 6x6 stiffness and mass matrices that simulate boundary conditions at those nodes.
 
 
 V1.01.01a-rrd (September 2014)
@@ -109,7 +129,7 @@ good results.
    modes were needed to engage substructural modes excited by static and
    high-frequency forces. These modes are no longer needed and fewer
    modes can be retained while still achieving accurate results (see
-   also Section :ref:`_subdyn-theory`). With SIM enabled, all modes that are not considered
+   also :numref:`subdyn-theory`). With SIM enabled, all modes that are not considered
    by the Craig-Bampton reduction are treated quasi-statically.
 
 -  There is now the possibility of retaining no internal C-B modes, thus

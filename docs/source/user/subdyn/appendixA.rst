@@ -4,7 +4,7 @@ Appendix A. OC4 Jacket Input File
 =================================
 
 SubDyn's primary input file 
-.. :download:`(OC4 Jacket SubDyn's Input File) <./examples/OC4_Jacket_SD_Input.txt>`: 
+:download:`(OC4 Jacket SubDyn's Input File) <./examples/OC4_Jacket_SD_Input.dat>`: 
 
 This file includes information on the integration method (e.g., Adams-Bashforth 4 :sup:`th`} order), 
 numerical-solution parameters (e.g., integration time interval, static solver flag, numer of modes to retain within the Craig-Bampton reduction), 

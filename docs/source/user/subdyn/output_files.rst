@@ -1,4 +1,4 @@
-.. _output-files:
+.. _sd_output-files:
    
 Output Files
 ============
@@ -21,7 +21,7 @@ file will be truncated if SubDyn encounters an error while parsing an
 input file. The error usually corresponds to the line after the last
 successfully echoed line.
 
-.. _sum-file:
+.. _sd_sum-file:
 
 Summary File
 ------------

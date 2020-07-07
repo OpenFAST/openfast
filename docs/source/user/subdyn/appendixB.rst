@@ -4,7 +4,7 @@ Appendix B. OC4 Jacket Driver File
 ==================================
 
 SubDyn's Driver Input File 
-.. :download:`(OC4 Jacket Driver File) <./examples/OC4_Jacket_SD_Driver.txt>`: 
+:download:`(OC4 Jacket Driver File) <./examples/OC4_Jacket_SD_Driver.dvr>`: 
 
 This file includes information on the environmental conditions (gravity and water depth), 
 numerical-solution parameters (e.g., integration time interval, numer of time-steps), TP reference point coordinates in global reference frame, 
