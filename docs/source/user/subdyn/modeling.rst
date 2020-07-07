@@ -191,6 +191,9 @@ of the interface node.
 2. SubDyn Guyan damping matrix using user defined 6x6 matrix
 3. HydroDyn additional linear damping matrix (**AddBLin**)
 
+The specificaiton of the Guyan damping matrix in SubDyn is discussed in :numref:`SD_DampingSpecifications`.
+
+
 **Old:**
 
 The C-B method assumes no damping for the interface modes. This is

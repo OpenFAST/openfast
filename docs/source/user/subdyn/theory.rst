@@ -172,7 +172,7 @@ Member or Element Local Coordinate System (:math:`{x_e, y_e, z_e}`) (:numref:`el
    (per user's input definition).
 
 -  The local  :math:`x_{e}` axis is parallel to the global :math:`\text{XY}` plane, and
-   directed such that a positive, less than or equal to 180:math:`^\circ` rotation
+   directed such that a positive, less than or equal to 180 :math:`^\circ` rotation
    about it, would bring the local :math:`z_{e}` axis parallel to the global *Z* axis.
 
 -  The local :math:`y_{e}` axis can be found assuming a right-handed Cartesian
@@ -431,7 +431,7 @@ The main equations of motion of SubDyn are written as follows:
 
 .. math::  :label: main
 
-         [M] \left\{ \ddot{U} \right\} +[C] \{ \dot{U} \} + [K] \{ U \} = \{ F \}
+         [M] \{ \ddot{U} \} +[C] \{ \dot{U} \} + [K] \{ U \} = \{ F \}
 	
 
 where :math:`{[M]}` and :math:`{[K]}` are the global mass and stiffness matrices of the substructure
@@ -442,10 +442,9 @@ column indexed elements.
 
 :math:`{{U}}` and :math:`{{F}}` are the displacements and external forces along all of the DOFs of
 the assembled system. The damping matrix :math:`{[C]}` is not assembled from the
-element contributions, because those are normally unknown, but treated
-from a system point of view as shown in the following paragraphs. A
-derivative with respect to time is represented by a dot, so that :math:`{\dot{U}}` and :math:`{\ddot{U}}` are
-the first- and second-time derivatives of :math:`{{U}}` , respectively.
+element contributions, because those are normally unknown, but can be specified in different ways, as discussed in :numref:`SD_DampingSpecifications`.
+A derivative with respect to time is represented by a dot, so that :math:`{\dot{U}}` and :math:`{\ddot{U}}` are
+the first- and second-time derivatives of :math:`{{U}}`, respectively.
 
 The number of DOFs associated with Eq. :eq:`main` can easily grow to the thousands
 for typical beam frame substructures. That factor, combined with the
@@ -459,61 +458,60 @@ With the C-B method, the DOFs of the substructure can be reduced to
 about 10 (user defined, see also Section :ref:`CBguide`). This system reduction method
 was first introduced by :cite:`hurty1964` and later expanded by :cite:`craig1968`.
 
-In SubDyn’s C-B reduction, the substructure nodes are separated into two
+
+.. _GenericCBReduction:
+
+Craig-Bampton reduction
+~~~~~~~~~~~~~~~~~~~~~~~
+
+In this section we present the generic Craig-Bampton technique. 
+The specific application in SubDyn is presented in following sections.
+In a C-B reduction, the structure nodes are separated into two
 groups: 1) the boundary nodes (identified with a subscript “\ *R*\ ” in
 what follows) that include the nodes fully restrained at the base of the
 structure and the interface nodes; and 2) the interior nodes (or
-leftover nodes, identified with a subscript “\ *L*\ ”). The interface
-nodes are assumed rigidly connected among one another and to the TP
-reference point. Note that the DOFs of partially restrained or “free”
+leftover nodes, identified with a subscript “\ *L*\ ”).  Note that the DOFs of partially restrained or “free”
 nodes at the base of the structure are included in the “L” subset in
 this version of SubDyn that contains SSI capabilities.
 
-The derivation of the system reduction is shown below. After the LFEB
-assembly, the system equation of motion of Eq. :eq:`main` can be partitioned as
+The derivation of the system reduction is shown below. The system equation of motion of Eq. :eq:`main` can be partitioned as
 follows:
 
 .. math::  :label: main2
 
         \begin{bmatrix} 
         	M_{RR} & M_{RL} \\
-                M_{LR} & M_{LL} 
+             M_{LR} & M_{LL} 
         \end{bmatrix} 
         \begin{bmatrix} 
-        	\ddot{U_R} \\ 
-                \ddot{U_L} 
+        	\ddot{U}_R \\ 
+            \ddot{U}_L 
         \end{bmatrix} +
         \begin{bmatrix} 
 	         	C_{RR} & C_{RL} \\
-	                C_{LR} & C_{LL} 
+	            C_{LR} & C_{LL} \\
         \end{bmatrix}
          \begin{bmatrix} 
-	        	\dot{U_R} \\ 
-	                \dot{U_L} 
+	        	\dot{U}_R \\ 
+	            \dot{U}_L 
         \end{bmatrix} +
-        \begin{bmatrix} K_{RR} & K_{RL} \\
-			K_{LR} & K_{LL}
+        \begin{bmatrix}
+            K_{RR} & K_{RL} \\
+			K_{LR} & K_{LL} \\
         \end{bmatrix} 
         \begin{bmatrix} 
         	U_R \\ 
-                U_L 
+            U_L \\
         \end{bmatrix} =
-        \begin{bmatrix} F_R + F_{Rg} \\
-                                        F_L + F_{Lg}
-                        \end{bmatrix}  
+        \begin{bmatrix}
+            F_R \\
+            F_L \\
+         \end{bmatrix}  
 
 where the subscript *R* denotes the boundary DOFs (there are *R* DOFs), and
 the subscript *L* the interior DOFs (there are *L* DOFs).
-
 In Eq. :eq:`main2`, the applied forces include external forces (e.g., hydrodynamic
-forces and those transmitted through the TP to the substructure) :math:`{(F_R,F_L)}` and
-gravity forces :math:`{(F_{Rg},F_{L}g)}`, which are considered static forces lumped at each node.
-The forces at the boundary nodes can be broken down into hydrodynamic
-forces and those transferred to and from ElastoDyn via the TP, thus:
-
-.. math:: :label: FR
-
-	F_R =F_{HDR} + F_{EDR}
+forces and those transmitted through the TP to the substructure), gravity and pretension forces which are considered static forces lumped at each node.
 
 The fundamental assumption of the C-B method is that the contribution to
 the displacement of the interior nodes can be simply approximated by a
@@ -524,7 +522,7 @@ between physical DOFs and generalized DOFs can be written as:
 
         \begin{bmatrix} 
         	U_R \\ 
-                U_L 
+            U_L 
         \end{bmatrix} =
 	  \begin{bmatrix} 
         	I & 0 \\
@@ -532,7 +530,7 @@ between physical DOFs and generalized DOFs can be written as:
         \end{bmatrix} 
         \begin{bmatrix} 
         	U_R \\ 
-                q_L 
+            q_L 
         \end{bmatrix}
       
 where *I* is the identity matrix; :math:`{\Phi_R}` is the (*L*\ ×\ *R*) matrix of Guyan modes, 
@@ -585,67 +583,60 @@ Retaining zero modes corresponds to a Guyan (static) reduction;
 retaining all modes corresponds to keeping the full finite-element
 model.
 
-The C-B transformation is therefore represented by:
+The C-B transformation is therefore represented by the coordinate transformation matrix 
+:math:`T_{\Phi_m}` as:
 
 .. math::  :label: CB3
 
         \begin{bmatrix} 
         	U_R \\ 
-                U_L 
+            U_L \\
         \end{bmatrix} =
-	  \begin{bmatrix} 
-        	I & 0 \\
-           \Phi_R & \Phi_m 
-        \end{bmatrix} 
+        T_{\Phi_m} 
         \begin{bmatrix} 
         	U_R \\ 
-                q_m 
+            q_m \\
         \end{bmatrix}
+        ,\qquad
+        T_{\Phi_m} =
+        \begin{bmatrix} 
+              I     & 0 \\
+             \Phi_R & \Phi_m 
+        \end{bmatrix} 
         
 By using Eq. :eq:`CB3`, the interior DOFs are hence transformed from physical
-DOFs to modal DOFs, and by pre-multiplying both sides of Eq. :eq:`main2` by  
-
-.. math::
-
-	\begin{bmatrix} 
-                I & 0 \\
-           \Phi_R & \Phi_m 
-        \end{bmatrix}^T =  
-        \begin{bmatrix} 
-        	I & \Phi_R^T \\
-                0 & \Phi_m^T 
-        \end{bmatrix}^T 
-
-and making use of Eq. :eq:`PhiL2`, Eq. :eq:`main2` can be rewritten as:
+DOFs to modal DOFs. By pre-multiplying both sides of Eq. :eq:`main2` by :math:`T_{\Phi_m}^T` on the left and :math:`T_{\Phi_m}` on the right, and making use of Eq. :eq:`PhiL2`, Eq. :eq:`main2` can be rewritten as:
 
 .. math::  :label: main3
 
         \begin{bmatrix} 
         	M_{BB} & M_{Bm} \\
-                M_{mB} & I 
+            M_{mB} & I 
         \end{bmatrix} 
         \begin{bmatrix} 
         	\ddot{U}_R \\ 
-                \ddot{q}_m 
+            \ddot{q}_m 
         \end{bmatrix} +
         \begin{bmatrix} 
         	C_{BB} & C_{Bm} \\
             C_{mB} & C_{mm} 
         \end{bmatrix}
          \begin{bmatrix} 
-	        	\dot{U}_R \\ 
-	                \dot{q}_m 
+	       	\dot{U}_R \\ 
+	        \dot{q}_m 
         \end{bmatrix} +
-        \begin{bmatrix} K_{BB} & 0 \\
-			0      & K_{mm}
+        \begin{bmatrix}
+             K_{BB} & 0 \\
+		  	 0      & K_{mm}
         \end{bmatrix} 
         \begin{bmatrix} 
         	U_R \\ 
-                q_m 
+            q_m 
         \end{bmatrix} =
-        \begin{bmatrix} F_R + F_{Rg} + \Phi_R^T \left( F_L + F_{Lg} \right)\\
-                            \Phi_m^T \left( F_L + F_{Lg} \right)
-                        \end{bmatrix}  
+        \begin{bmatrix}
+            F_B \\
+            F_m
+        \end{bmatrix}  
 
 where
 
@@ -658,33 +649,23 @@ where
     K_{BB} &= K_{RR} + K_{RL} \Phi_R                                             \nonumber \\
     M_{mB} &= \Phi_m^T M_{LR} + \Phi_m^T M_{LL} \Phi_R                           \nonumber \\
     C_{mB} &= \Phi_m^T C_{LR} + \Phi_m^T C_{LL} \Phi_R                           \nonumber \\
-    M_{Bm} &= M_{mB}^T                                                           \nonumber \\
-    C_{Bm} &= C_{mB}^T                                                           \nonumber \\
     K_{mm} & =\Phi_m^T K_{LL} \Phi_m = \Omega_m^2  \nonumber \\
-    C_{mm} &= \Phi_m^T C_{LL} \Phi_m  \nonumber 
+    C_{mm} &= \Phi_m^T C_{LL} \Phi_m  \nonumber  \\
+    F_B    &= F_R +\Phi_R^T F_L \nonumber\\
+    F_m    &= \Phi_m^T F_L  \nonumber
     \end{align}
     
-Currently, SubDyn assumes:
-
-.. math::  :label: dampingassumptions
-        :nowrap:
-
-        \begin{align} 
-        C_{BB} = C_{Bm} =C_{mB}&\approx 0    \nonumber \\
-        C_{mm}  &\approx 2 \zeta \Omega_m  
-        \end{align} 
-
-In other words, the only damping matrix term retained is the one
-associated with internal DOF damping. This assumption has implications
-on the damping at the interface with the turbine system, as discussed in
-Section :ref:`TowerTurbineCpling`. The diagonal (*m*\ ×\ *m*) :math:`\zeta` matrix contains the modal
-damping ratios corresponding to each retained internal mode. In SubDyn,
-the user provides damping ratios (in percent of critical damping
-coefficients) for the retained modes.
+and :math:`M_{Bm} = M_{mB}^T`, :math:`C_{Bm} =C_{mB}^T`.
 
 
+.. _TP2Interface:
 
-Next, the boundary nodes are partitioned into those at the interface, :math:`{\bar{U}_R}`,
+Boundary nodes: fixed DOFs and rigid connection to TP
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+In this section we present the treatment of the boundary nodes: fixed DOFs are eliminated, and interface DOFs are condensed via a rigid connection to the TP reference point. 
+
+The boundary nodes are partitioned into those at the interface, :math:`{\bar{U}_R}`,
 and those at the bottom, which are fixed:
 
 .. math:: :label: UR
@@ -696,15 +677,17 @@ and those at the bottom, which are fixed:
 		
 
 The overhead bar here and below denotes matrices/vectors after the
-fixed-bottom boundary conditions are applied. The interface nodes are
-treated as rigidly connected to the TP, hence it is convenient to use
+fixed-bottom boundary conditions are applied. 
+
+The interface nodes are
+assumed to be rigidly connected among one another and to the TP reference point, hence it is convenient to use
 rigid-body TP DOFs (one node with 6 DOFs at the TP reference point) in
 place of the interface DOFs. The interface DOFs, :math:`{\bar{U}_R}`, and the TP DOFs are
 related to each other as follows:
 
 .. math:: :label: UTP
 
-	U_R = T_I U_{TP}
+	\bar{U}_R = T_I U_{TP}
 
 where :math:`T_I` is a :math:`{\left(6 NIN \right) \times 6}` matrix, :math:`NIN` is the number of interface nodes, and :math:`{U_{TP}}` is the 6 DOFs
 of the rigid transition piece. The matrix :math:`T_I` can be written as follows:
@@ -753,7 +736,7 @@ equation of motion) becomes:
 
         \begin{bmatrix} 
         	\tilde{M}_{BB} & \tilde{M}_{Bm} \\
-                \tilde{M}_{mB} & I 
+            \tilde{M}_{mB} & I 
         \end{bmatrix} 
         \begin{bmatrix} 
         	\ddot{U}_{TP} \\ 
@@ -761,22 +744,24 @@ equation of motion) becomes:
         \end{bmatrix} +
         \begin{bmatrix} 
 	          \tilde{C}_{BB} & \tilde{C}_{Bm} \\
-	          \tilde{C}_{mB} & \tilde{C}_{mm} 
+	          \tilde{C}_{mB} &   C_{mm} 
         \end{bmatrix}
          \begin{bmatrix} 
 	        	\dot{U}_{TP} \\ 
 	            \dot{q}_m 
         \end{bmatrix} +
-        \begin{bmatrix} \tilde{K}_{BB} & 0 \\
-			0      & \tilde{K}_{mm} 
+        \begin{bmatrix} 
+             \tilde{K}_{BB} & 0 \\
+			0      &           K_{mm} 
         \end{bmatrix} 
         \begin{bmatrix} 
         	U_{TP} \\ 
-                q_m 
+            q_m 
         \end{bmatrix} =
-        \begin{bmatrix} \tilde{F}_{TP} \\
-                        \tilde{F}_m  
-                        \end{bmatrix}  
+        \begin{bmatrix}
+             \tilde{F}_{TP} \\
+             F_m  
+         \end{bmatrix}  
 
 
 with
@@ -790,41 +775,59 @@ with
         \tilde{K}_{BB}  = T_I^T \bar{K}_{BB} T_I   \\
         \tilde{M}_{Bm} &= T_I^T \bar{M}_{Bm}, \quad
         \tilde{C}_{Bm}  = T_I^T \bar{C}_{Bm}  \nonumber \\
-        \tilde{M}_{mB} &= \tilde{M}_{Bm}^T  ,\quad
-        \tilde{C}_{mB}  = \tilde{C}_{Bm}^T   \nonumber \\
-        \tilde{C}_{mm} &= C_{mm}, \quad
-        \tilde{K}_{mm} = K_{mm} = \Omega_m^2\nonumber \\
-        \tilde{F}_{TP} &= F_{TP} + T_I^T \left[ \bar{F}_{HDR}+ \bar{F}_{Rg} + \bar{\Phi}_{R}^T \left( F_L + F_{Lg} \right) \right] \nonumber \\
-        \tilde{F}_{m}  &= \Phi_m^T \left( F_L + F_{Lg} \right)  \nonumber
+        \tilde{F}_{TP} &= T_I^T F_B  \nonumber 
     \end{align}
 
+..        \tilde{F}_{TP} &= F_{TP} + T_I^T \left[ \bar{F}_{HDR}+ \bar{F}_{Rg} + \bar{\Phi}_{R}^T \left( F_{L,e} + F_{L,g} \right) \right] \nonumber \\
+..        \tilde{C}_{mm} &= C_{mm}, \quad
+..        \tilde{K}_{mm} = K_{mm} = \Omega_m^2\nonumber \\
+..        \tilde{F}_{m}  &= \Phi_m^T \left( F_{L,e} + F_{L,g} \right)  \nonumber
                            
-and, for now, with: 
-
-.. math:: :label: tilde_partitions_assumptions
-    :nowrap:
-
-    \begin{align}
-        \tilde{C}_{BB} &= \tilde{C}_{Bm}=\tilde{C}_{mB}=0 \nonumber\\
-        \tilde{C}_{mm} &=  2\zeta \Omega_m                
-    \end{align}
-
-
-and where the TP reaction force, i.e., the force applied to the substructure
-through the TP, is denoted by:
-
-.. math:: :label: FTP1
-	
-	F_{TP} = T_I^T F_{EDR} 
+and :math:`\tilde{M}_{mB}= \tilde{M}_{Bm}^T`, :math:`\tilde{C}_{mB} = \tilde{C}_{Bm}^T`. 
 
 Equation :eq:`main4` represents the equations of motion of the substructure after
 the C-B reduction. The total DOFs of the substructure are reduced from
 (6 x total number of nodes) to (6 + *m*).
 
-During initialization, SubDyn calculates: the parameter matrices :math:`{\tilde{M}_{BB}, \tilde{M}_{mB}, \tilde{M}_{Bm}, \tilde{K}_{BB}, \Phi_m, \Phi_R, T_I}`; the
-gravity arrays :math:`\bar{F}_{Rg}` and :math:`F_{Lg}` ; and the internal frequency matrix :math:`\Omega_m` . The
+During initialization, SubDyn calculates: the parameter matrices :math:`{\tilde{M}_{BB}, \tilde{M}_{mB}, \tilde{M}_{Bm}, \tilde{K}_{BB}, \Phi_m, \Phi_R, T_I}`; constant load arrays ; and the internal frequency matrix :math:`\Omega_m` . The
 substructure response at each time step can then be obtained by using
 the state-space formulation discussed in the next section.
+
+
+.. _Loads:
+
+Loads 
+~~~~~
+
+In this section we details the loads acting on the boundary (*R*), interior (*L*) and transition piece node (*TP*). External forces included in the FEM representation, such as the gravity forces, or the pretension forces are noted with the subscript *g*.
+The forces at the boundary nodes can be broken down into external loads (*e*, e.g., hydrodynamic
+forces, mooring forces), those transferred to and from ElastoDyn via the TP (ED), and the FEM loads:
+
+.. math:: :label: FR
+
+	F_R =F_{R,e} + F_{R, \text{ED}} + F_{R,g}
+
+The forces at the internal nodes are the external loads from other modules (e.g. hydrodynamic), and the FEM loads (e.g. gravity):
+
+.. math:: :label: FL
+
+	F_L =F_{L,e} + F_{L,g}
+
+Conversely, the TP reaction force, i.e., the force applied to the substructure
+through the TP, is denoted by:
+
+.. math:: :label: FTP1
+	
+	F_{TP} = T_I^T F_{R,\textit{ED}} 
+
+
+The Guyan TP force, :math:`\tilde{F}_{TP}`, and the CB force, :math:`F_m`, given in Eq. :eq:`tilde_partitions0` is then given by:
+
+.. math:: :label: FTPtilde
+	
+       \tilde{F}_{TP} &= F_{TP} + T_I^T \left[ \bar{F}_{R,e}+ \bar{F}_{R,g} + \bar{\Phi}_{R}^T \left( F_{L,e} + F_{L,g} \right) \right]
+
+       F_m & = \Phi_m^t \left(F_{L,e}  +  F_{L,g}\right)
 
 
 .. _SSformulation:
@@ -865,8 +868,8 @@ In SubDyn, the inputs are defined as:
 	     			U_{TP} \\
 	     			\dot{U}_{TP}  \\
 	     			\ddot{U}_{TP}  \\
-	     			F_{L} \\
-	     			F_{HDR} \\
+	     			F_{L,e} \\
+	     			F_{R,e} \\
 	     		     \end{bmatrix}
 	     			
 
@@ -874,7 +877,7 @@ where :math:`F_L` are the hydrodynamic forces on every interior node of the
 substructure from HydroDyn, and :math:`F_{HDR}` are the analogous forces at the boundary
 nodes; :math:`{ U_{TP},\dot{U}_{TP},\text{ and } \ddot{U}_{TP}}` are TP deflections (6 DOFs), velocities, and
 accelerations, respectively. For SubDyn in stand-alone mode (uncoupled
-from FAST), :math:`F_{L}` and :math:`F_{HDR}` are assumed to be zero.
+from FAST), :math:`F_{L,e}` and :math:`F_{R,e}` are assumed to be zero.
 
 In first-order form, the states are defined as:
 
@@ -883,10 +886,11 @@ In first-order form, the states are defined as:
 	x = \begin{bmatrix}
 		x_1 \\ 
 		x_2 \\
- 	     \end{bmatrix} = \begin{bmatrix}
-	     			q_m  \\
-	     			\dot{q}_m  \\
-	     		     \end{bmatrix}
+     \end{bmatrix} 
+     = \begin{bmatrix}
+        q_m  \\
+        \dot{q}_m  \\
+     \end{bmatrix}
 	     		     
 	     		     
 From the system equation of motion, the state equation corresponding to
@@ -896,24 +900,36 @@ Eq. :eq:`main4` can be written as a standard linear system state equation:
 
 	\dot{x} = X = A x +Bu + F_X
 
-where
+These state matrices are obtained by isolating the mode accelerations, :math:`\ddot{q}_m` from the second block row of Eq. :eq:`main4` as:
 
+.. math:: :label: ddotqm
+    :nowrap:
+                 
+    \begin{align}
+    \ddot{q}_m =  \underbrace{\Phi_m^T(F_{L,e} + F_{L,g})}_{F_m}
+                - \tilde{M}_{mB} \ddot{U}_{TP}
+                - \tilde{C}_{mB} \dot{U}_{TP}
+                - \tilde{C}_{mm} \dot{q}_m
+                - \tilde{K}_{mm} q_m
+     \end{align}
+
+leading to the following identification:
 
 .. math:: :label: ABFx
 
     A = \begin{bmatrix}
         0 & I \\ 
-        -\Omega_m^2 & -2 \zeta \Omega_m
+        -\tilde{K}_{mm} & -\tilde{C}_{mm}
         \end{bmatrix}
     ,\quad
     B = \begin{bmatrix}
         0 & 0  & 0 & 0 & 0 \\ 
-        0 & 0 & -\tilde{M}_{mB} & \Phi_m^T & 0
+        0 & -\tilde{C}_{mB} & -\tilde{M}_{mB} & \Phi_m^T & 0
     \end{bmatrix} 
     ,\qquad
     F_X = \begin{bmatrix}
         0 \\ 
-        \Phi_m^T F_{Lg}
+        \Phi_m^T F_{L,g}
     \end{bmatrix} 
 
 
@@ -923,7 +939,7 @@ In SubDyn, the outputs to the ElastoDyn module are the reaction forces at the tr
 
 	y1 = Y_1 =-F_{TP}
 
-By examining Eq. :eq:`main4` , the force is extracted from the first block row as:
+By examining Eq. :eq:`main4` and Eq. :eq:`FTPtilde`, the force is extracted from the first block row as:
 
 
 .. math:: :label: FTP2
@@ -934,32 +950,16 @@ By examining Eq. :eq:`main4` , the force is extracted from the first block row a
             \\
            &+ \tilde{C}_{BB}\dot{U}_{TP} +  \tilde{C}_{Bm} \dot{q}_m 
             + \tilde{K}_{BB} U_{TP} 
-            - T_I^T \left(\bar{F}_{HDR} + \bar{F}_{Rg} + \bar{\Phi}_R(F_L + F_{Lg}) \right)
+            - T_I^T \left(\bar{F}_{R,e} + \bar{F}_{R,g} + \bar{\Phi}_R(F_{L,e} + F_{L,g}) \right)
               \nonumber
     \end{align}
 
-The mode accelerations, :math:`\ddot{q}_m`, are extracted from the second block row as:
-
-.. math:: :label: ddotqm
-    :nowrap:
-                 
-    \begin{align}
-    \ddot{q}_m =  \Phi_m^T(F_L + F_{Lg})
-                - \tilde{M}_{mB} \ddot{U}_{TP}
-                - \tilde{C}_{mB} \dot{U}_{TP}
-                - \tilde{C}_{mm} \dot{q}_m
-                - \tilde{K}_{mm} q_m
-     \end{align}
 
 Inserting the expression of  :math:`\ddot{q}_m` into :math:`F_{TP}` leads to:
 
-.. math:: :label: FTP3
-    :nowrap:
-                 
-    \begin{align}
-     F_{TP} =& \tilde{M}_{BB}\ddot{U}_{TP} 
+..     F_{TP} =& \tilde{M}_{BB}\ddot{U}_{TP} 
              +   \tilde{M}_{Bm} \left[
-                       \Phi_m^T(F_L + F_{Lg})
+                       \Phi_m^T(F_L + F_{L,g})
                      - \tilde{M}_{mB} \ddot{U}_{TP}
                      - \tilde{C}_{mB} \dot{U}_{TP}            
                      - \tilde{C}_{mm} \dot{q}_m          
@@ -968,8 +968,12 @@ Inserting the expression of  :math:`\ddot{q}_m` into :math:`F_{TP}` leads to:
                        \nonumber\\
              &+ \tilde{C}_{BB}\dot{U}_{TP} +  \tilde{C}_{Bm} \dot{q}_m
              + \tilde{K}_{BB} U_{TP} 
-             - T_I^T \left(\bar{F}_{HDR} + \bar{F}_{Rg} + \bar{\Phi}_R(F_L + F_{Lg}) \right)
+             - T_I^T \left(\bar{F}_{HDR} + \bar{F}_{Rg} + \bar{\Phi}_R(F_{L,e} + F_{L,g}) \right)
            \nonumber\\
+.. math:: :label: FTP3
+    :nowrap:
+                 
+    \begin{align}
      F_{TP} =& 
       \left[              - \tilde{M}_{Bm}\tilde{K}_{mm}  \right] q_m
      +\left[\tilde{C}_{Bm}- \tilde{M}_{Bm}\tilde{C}_{mm}  \right] \dot{q}_m
@@ -978,8 +982,8 @@ Inserting the expression of  :math:`\ddot{q}_m` into :math:`F_{TP}` leads to:
      +\left[\tilde{C}_{BB} -\tilde{M}_{Bm} \tilde{C}_{mB} \right] \dot{U}_{TP}            
      +\left[\tilde{M}_{BB} -\tilde{M}_{Bm} \tilde{M}_{mB} \right] \ddot{U}_{TP}            
     \nonumber \\ 
-     &+\left[\tilde{M}_{Bm}\Phi_m^T - T_I^T \bar{\Phi}_R^T \right] (F_L + F_{Lg})
-     +\left[ -T_I^T \right]\bar{F}_{Rg}
+     &+\left[\tilde{M}_{Bm}\Phi_m^T - T_I^T \bar{\Phi}_R^T \right] \left(F_{L,e} + F_{L,g}\right)
+     +\left[ -T_I^T \right]\left(\bar{F}_{R,e} + \bar{F}_{R,g}\right)
     \nonumber
     \end{align}
 
@@ -992,22 +996,27 @@ The output equation for :math:`y_1` can now be identified as:
 	 
 where
 
+
 .. math:: :label: C1D1FY1u
     :nowrap:
 
     \begin{align}
-        C_1 &= \begin{bmatrix}  -\tilde{M}_{Bm} \Omega_m^2 & -2\tilde{M}_{Bm} \zeta \Omega_m \end{bmatrix}
+        C_1 &= \begin{bmatrix} 
+        -\tilde{M}_{Bm} \tilde{K}_{mm} & \tilde{C}_{Bm}-\tilde{M}_{Bm} \tilde{C}_{mm} 
+        \end{bmatrix}
+            \nonumber\\
+        D_1 &= \begin{bmatrix} 
+            \tilde{K}_{BB} & \tilde{C}_{BB} -\tilde{M}_{Bm} \tilde{C}_{mB} & \tilde{M}_{BB} - \tilde{M}_{Bm} \tilde{M}_{mB} & \tilde{M}_{Bm} \Phi_m^T - T_I^T \bar{\Phi}_R^T  & -T_I^T
+            \end{bmatrix}
     \nonumber\\
-        D_1 &= \begin{bmatrix}  \tilde{K}_{BB} & 0 & \tilde{M}_{BB} - \tilde{M}_{Bm} \tilde{M}_{mB} & \tilde{M}_{Bm} \Phi_m^T - T_I^T \bar{\Phi}_R^T  & -T_I^T \end{bmatrix}
-    \nonumber\\
-        F_{Y1} &= \begin{bmatrix}  \tilde{M}_{Bm} \Phi_m^T F_{Lg} - T_I^T \left( \bar{F}_{Rg} + \bar{\Phi}_R^T F_{Lg} \right) \end{bmatrix}
+        F_{Y1} &= \begin{bmatrix}  \tilde{M}_{Bm} \Phi_m^T F_{L,g} - T_I^T \left( \bar{F}_{R,g} + \bar{\Phi}_R^T F_{L,g} \right) \end{bmatrix}
     \\
-        u &= \begin{bmatrix}
+        \bar{u} &= \begin{bmatrix}
         U_{TP} \\
         \dot{U}_{TP}  \\
         \ddot{U}_{TP}  \\
-        F_{L} \\
-        \bar{F}_{HDR} 
+        F_{L,e} \\
+        \bar{F}_{R,e} 
         \end{bmatrix}
     \nonumber
     \end{align}
@@ -1031,6 +1040,37 @@ velocities, and accelerations of the substructure:
 	     \end{bmatrix}
 
 
+
+From the CB coordinate transformation (Eq. :eq:`CB3`), and the link between boundary nodes and TP node (Eq. :eq:`UTP`) the motions are given as:
+
+.. math:: :label: y2motions
+
+        \bar{U}_R  &= T_I U_{TP} 
+        ,\qquad
+        \bar{U}_L  = \bar{\Phi}_R \bar{U}_R + \Phi_m q_m
+
+        \dot{\bar{U}}_R  &= T_I \dot{U}_{TP} 
+        ,\qquad
+        \dot{\bar{U}}_L  = \bar{\Phi}_R \dot{\bar{U}}_R + \Phi_m \dot{q}_m
+
+        \ddot{\bar{U}}_R  &= T_I \ddot{U}_{TP} 
+        ,\qquad
+        \ddot{\bar{U}}_L  = \bar{\Phi}_R \ddot{\bar{U}}_R + \Phi_m \ddot{q}_m
+
+Using the expression of :math:`\ddot{q}m` from Eq. :eq:`ddotqm`, the internal accelerations are:
+
+
+.. math:: :label: y2internalacc
+
+        \ddot{\bar{U}}_L  = \bar{\Phi}_R T_I \ddot{U}_{TP} + \Phi_m\left[\Phi_m^T(F_{L,e} + F_{L,g})
+                - \tilde{M}_{mB} \ddot{U}_{TP}
+                - \tilde{C}_{mB} \dot{U}_{TP}
+                - \tilde{C}_{mm} \dot{q}_m
+                - \tilde{K}_{mm} q_m \right]
+
+
+
+
 The output equation for :math:`y_2`: can then be written as:
 
 .. math:: :label: Y2
@@ -1048,7 +1088,7 @@ where
            0 & 0 \\
            0 & \Phi_m \\
            0 & 0 \\
-       -\Phi_m \Omega_m^2 & -2 \Phi_m \zeta \Omega_m \\
+       -\Phi_m \tilde{K}_{mm} & -\Phi_m \tilde{C}_{mm} \\
           \end{bmatrix}
 
     D_2 &= \begin{bmatrix}
@@ -1057,7 +1097,7 @@ where
            0 & T_I  & 0 & 0 & 0 \\
            0 & \bar{\Phi}_R T_I & 0 & 0 & 0 \\
            0 & 0 & T_I  & 0 & 0  \\
-           0 & 0 & \bar{\Phi}_R T_I - \Phi_m \tilde{M}_{mB} &  \Phi_m \Phi_m^T & 0 
+           0 & -\Phi_m \tilde{C}_{mB} & \bar{\Phi}_R T_I - \Phi_m \tilde{M}_{mB} &  \Phi_m \Phi_m^T & 0 
           \end{bmatrix}
 
     F_{Y2}& = \begin{bmatrix}
@@ -1066,8 +1106,11 @@ where
            0 \\
            0 \\
            0 \\
-           \Phi_m \Phi_m^T F_{Lg} 
+           \Phi_m \Phi_m^T F_{L,g} 
           \end{bmatrix}
+
+The expression for :math:`F_{Y2}` will be modified by the SIM method and Eq. :eq:`Y2sim` is used instead.
+
 
 
 The above neglected the influence of the lever arm introduced by the TP
@@ -1183,6 +1226,8 @@ and hydrodynamic loads (:math:`F_{HDR}`) at the restrained node. No direct
 element-level inertial or damping effect is therefore included in the
 reaction calculation.
 
+
+
 .. _TimeIntegration:
 
 Time Integration  
@@ -1220,6 +1265,58 @@ time integrator options for loose coupling are:
 For more information, consult any numerical methods reference, e.g.,
 :cite:`chapra2010`.
 
+
+.. _SD_DampingSpecifications:
+
+Damping specifications
+~~~~~~~~~~~~~~~~~~~~~~
+
+
+There are three ways to specify the damping associated with the motion
+of the interface node in SubDyn: no damping, Rayleigh damping or user defined 6x6 matrix.
+
+NOTE: Damping associated with joints is not documented yet and would change the developments below.
+
+When **GuyanDampMod=0**, SubDyn assumes zero damping for the Guyan modes, and modal damping for the CB modes, with no cross couplings:
+
+.. math::  :label: dampingassumptions
+
+            C_{BB} =  \tilde{C}_{BB} &=0 
+
+        C_{Bm} =C_{mB} = \tilde{C}_{Bm}=\tilde{C}_{mB}&=0 
+
+            C_{mm} = \tilde{C}_{mm} &=  2\zeta \Omega_m                
+
+In other words, the only damping matrix term retained is the one
+associated with internal DOF damping. This assumption has implications
+on the damping at the interface with the turbine system, as discussed in
+Section :ref:`TowerTurbineCpling`. The diagonal (*m*\ ×\ *m*) :math:`\zeta` matrix contans the modal
+damping ratios corresponding to each retained internal mode. In SubDyn,
+the user provides damping ratios (in percent of critical damping
+coefficients) for the retained modes.
+
+When **GuyanDampMod=1**, SubDyn assumes Rayleigh Damping for the Guyan modes, and modal damping for the CB modes, with no cross couplings:
+
+
+.. math::  :label: dampingRayleigh
+
+        \tilde{C}_{BB}&=\alpha \tilde{M}_{BB} + \beta \tilde{K}_{BB}
+
+        \tilde{C}_{Bm}=\tilde{C}_{mB}&=0 
+
+        \tilde{C}_{mm} &=  2\zeta \Omega_m  
+
+where :math:`\alpha` and :math:`\beta` are the mass and stiffness proportional Rayleigh damping coefficients.  The damping is directly applied to the tilde matrices, that is, the matrices related to the 6 DOF of the TP node.
+
+The case **GuyanDampMod=2**, is similar to the previous case, except that the user specifies the :math:`6\times6` terms of :math:`\tilde{C}_{BB}`.
+
+
+
+
+
+
+
+
 .. _sim:
 
 Static-Improvement Method
@@ -1251,46 +1348,37 @@ with C-B modes (:math:`U_{L0m}`), as cast in :eq:`SIM` :
    U_L = \hat{U}_L + U_{L0} - U_{L0m} = \underbrace{\Phi_R U_R + \Phi_m q_m}_{\hat{U}_L}  +  \underbrace{\Phi_L q_{L0}}_{U_{L0}} - \underbrace{\Phi_m q_{m0}}_{U_{L0m}} 
  
 
-where the expression for :math:`U_{L0}` and :math:`U_{L0m}` will be derived in the next paragraph.
-will be derived in the next paragraph. Eq. :eq:`SIM` can be rewritten as:
-
-.. math::  :label: SIM2
-
-        \begin{bmatrix} 
-        	U_R \\ 
-                U_L 
-        \end{bmatrix} =
-	  \begin{bmatrix} 
-        	I & 0 & 0 & 0 \\
-           \Phi_R & \Phi_m & \Phi_L & -\Phi_m 
-        \end{bmatrix} 
-        \begin{bmatrix} 
-        	U_R \\ 
-                q_m \\
-                q_{L0} \\
-                q_{m0}
-        \end{bmatrix}
-
-with:
-
-.. math::  :label: UL0
-
-	U_{L0} = \Phi_L q_{L0}, \qquad U_{L0m} = \Phi_m q_{m0}
-
+.. where the expression for :math:`U_{L0}` and :math:`U_{L0m}` will be derived in the next paragraph.
+   will be derived in the next paragraph. Eq. :eq:`SIM` can be rewritten as:
+            \begin{bmatrix} 
+                U_R \\ 
+                    U_L 
+            \end{bmatrix} =
+          \begin{bmatrix} 
+                I & 0 & 0 & 0 \\
+               \Phi_R & \Phi_m & \Phi_L & -\Phi_m 
+            \end{bmatrix} 
+            \begin{bmatrix} 
+                U_R \\ 
+                    q_m \\
+                    q_{L0} \\
+                    q_{m0}
+            \end{bmatrix}
+    with:
+        U_{L0} = \Phi_L q_{L0}, \qquad U_{L0m} = \Phi_m q_{m0}
 
 where :math:`{q_{m0}}` and :math:`{q_{L0}}` are the *m* and *L* modal coefficients that are assumed to be
-operating in a static fashion. For Eqs. :eq:`SIM2` and :eq:`UL0` to be valid, and are
+operating in a static fashion. These coefficients are
 calculated under the C-B hypothesis that the boundary nodes are fixed.
-
-The static displacement vectors can also be calculated as follows:
+The static displacement vectors can be calculated as follows:
 
 
 .. math::  :label: SIM3
 	
-	K_{LL} U_{L0} = F_L + F_{Lg}
+	K_{LL} U_{L0} = F_{L,e} + F_{L,g}
 
-By making use of :eq:`UL0`, and by pre-multiplying both sides times , Eq. :eq:`SIM3` can be
-rewritten as: :math:`{\Phi_L^T K_{LL} \Phi_L q_{L0} = \Phi_L^T  \left( F_L + F_{Lg} \right) = \tilde{F}_L }` or, recalling that :math:`{\Phi_L^T K_{LL} \Phi_L = \Omega_L^2}`, as: :math:`{\Omega_L^2 q_{L0} =\tilde{F}_L }`, or equivalently in terms of :math:`U_{L0}`:
+By pre-multiplying both sides times , Eq. :eq:`SIM3` can be
+rewritten as: :math:`{\Phi_L^T K_{LL} \Phi_L q_{L0} = \Phi_L^T  \left( F_{L,e} + F_{L,g} \right) = \tilde{F}_L }` or, recalling that :math:`{\Phi_L^T K_{LL} \Phi_L = \Omega_L^2}`, as: :math:`{\Omega_L^2 q_{L0} =\tilde{F}_L }`, or equivalently in terms of :math:`U_{L0}`:
 
 .. math::  :label: UL02
 
@@ -1300,9 +1388,9 @@ Similarly:
 
 .. math::  :label: UL0m2
 
-   K_{LL} U_{L0m} = F_L + F_{Lg} \quad\rightarrow \quad U_{L0m} = \Phi_m \left[ \Omega_m^2 \right]^{-1} \tilde{F}_m 
+   K_{LL} U_{L0m} = F_{L,e} + F_{L,g} \quad\rightarrow \quad U_{L0m} = \Phi_m \left[ \Omega_m^2 \right]^{-1} \tilde{F}_m 
 
-with :math:`\tilde{F}_m =\Phi_m^T(F_L + F_{Lg})`.
+with :math:`\tilde{F}_m =\Phi_m^T(F_{L,e} + F_{L,g})`.
 Note that: :math:`{ \dot{U}_{L0} = \dot{q}_{L0} = \dot{U}_{L0m} = \dot{q}_{m0} =0 }` and :math:`{ \ddot{U}_{L0} = \ddot{q}_{L0} = \ddot{U}_{L0m} = \ddot{q}_{m0} =0 }`.
 
 The dynamic component :math:`{ \hat{U} = \begin{bmatrix} \hat{U}_R \\ \hat{U}_R \end{bmatrix} }` is calculated following the usual procedure
@@ -1317,7 +1405,7 @@ when computing the outputs to HydroDyn as:
 
 .. math:: :label: y2sim
 
-	y_2= = \begin{bmatrix}
+	y_2= \begin{bmatrix}
         	\bar{U}_R \\
                      U_L  \\
            	\dot{\bar{U}}_R  \\
@@ -1333,39 +1421,17 @@ when computing the outputs to HydroDyn as:
            	\ddot{U}_L \\
 	     \end{bmatrix}
 
+The array :math:`F_{Y2}` from Eq. :eq:`Y2` is now defined as follows:
+
 .. math:: :label: Y2sim
-
-  Y_2 = C_2 x + D_2 u + F_{Y2}
-
-where the matrices now have the following meaning:
-
-.. math:: :label:  C2D2FY2sim
-
-	C_2 &= \begin{bmatrix}
-	       0 & 0 \\
-	       \Phi_m & 0 \\
-	       0 & 0 \\
-	       0 & \Phi_m \\
-	       0 & 0 \\
-	   -\Phi_m \Omega_m^2 & -2 \Phi_m \zeta \Omega_m \\
-	      \end{bmatrix}
-	      
-	D_2 &= \begin{bmatrix}
-	       T_I & 0 & 0 & 0 & 0 \\
-	       \bar{\Phi}_R T_I & 0 & 0 & 0 & 0 \\
-	       0 & T_I  & 0 & 0 & 0 \\
-	       0 & \bar{\Phi}_R T_I & 0 & 0 & 0 \\
-	       0 & 0 & T_I  & 0 & 0  \\
-	       0 & 0 & \bar{\Phi}_R T_I - \Phi_m \tilde{M}_{mB} &  \Phi_m \Phi_m^T & 0 
-	      \end{bmatrix}
 
 	F_{Y2} &= \begin{bmatrix}
 	       0 \\
-	       U_{L0} - U_{L0m} \\
+	       \boldsymbol{U_{L0} - U_{L0m}} \\
 	       0 \\
 	       0 \\
 	       0 \\
-	       \Phi_m \Phi_m^T F_{Lg} 
+	       \Phi_m \Phi_m^T F_{L,g} 
 	      \end{bmatrix}
 
 
