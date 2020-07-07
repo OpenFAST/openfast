@@ -15,6 +15,7 @@ Details on the transition from FAST v8 to OpenFAST may be found in :numref:`fast
    api_change.rst
    aerodyn/index.rst
    beamdyn/index.rst
+   subdyn/index.rst
    fast_to_openfast.rst
    cppapi/index.rst
 
