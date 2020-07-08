@@ -165,6 +165,7 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    ErrStat = ErrID_None
    ErrMsg  = ""
    
+
    ! Initialize the NWTC Subroutine Library
    CALL NWTC_Init( )
 
@@ -181,6 +182,24 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    Init%g           = InitInput%g   
    Init%TP_RefPoint = InitInput%TP_RefPoint
    Init%SubRotateZ  = InitInput%SubRotateZ
+   if ((allocated(InitInput%SoilStiffness)) .and. (InitInput%SoilMesh%Initialized)) then 
+      ! Soil Mesh and Stiffness
+      !  SoilMesh has N points.  Correspond in order to the SoilStiffness matrices passed in
+      !     %RefOrientation   is the identity matrix (3,3,N)
+      !     %Position         is the reference position (3,N)
+      ! Maybe some logic to make sure these points correspond roughly to nodes -- though this may not be true for a long pile into the soil with multiple connection points
+      ! Note: F = -kx  whre k is the relevant 6x6 matrix from SoilStiffness
+      call AllocAry(Init%Soil_K, 6,6, size(InitInput%SoilStiffness,3), 'Soil_K', ErrStat2, ErrMsg2);
+      call AllocAry(Init%Soil_Points, 3, InitInput%SoilMesh%NNodes, 'Soil_Points', ErrStat2, ErrMsg2);
+      call AllocAry(Init%Soil_Nodes,     InitInput%SoilMesh%NNodes, 'Soil_Nodes' , ErrStat2, ErrMsg2);
+      Init%Soil_K = InitInput%SoilStiffness !  SoilStiffness is dimensioned (6,6,N)
+      Init%Soil_Points = InitInput%SoilMesh%Position !  SoilStiffness is dimensioned (6,6,N)
+      Init%Soil_Nodes  = -1 ! Will be determined in InsertSoilMatrices, Nodes not known yet
+      if (size(Init%Soil_K,3) /= size(Init%Soil_Points,2)) then 
+         ErrStat2=ErrID_Fatal; ErrMsg2='Number of soil points inconsistent with number of soil stiffness matrix'
+      endif
+      if (Failed()) return
+   endif
 
    !bjj added this ugly check (mostly for checking SubDyn driver). not sure if anyone would want to play with different values of gravity so I don't return an error.
    IF (Init%g < 0.0_ReKi ) CALL ProgWarn( ' SubDyn calculations use gravity assuming it is input as a positive number; the input value is negative.' ) 
@@ -489,10 +508,10 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       ! note: matmul( HydroForces, p%TI ) = matmul( transpose(p%TI), HydroForces) because HydroForces is 1-D            
       IF ( p%nDOFM > 0) THEN
          Y1 = -(   matmul(p%C1_11, x%qm) + matmul(p%C1_12,x%qmdot)                                    &  ! -(   C1(1,1)*x(1) + C1(1,2)*x(2)
-                 + matmul(p%KBB,   m%u_TP) + matmul(p%D1_12, m%udot_TP) + matmul(p%D1_13, m%udotdot_TP) + matmul(p%D1_14, m%UFL)   &  !    + D1(1,1)*u(1) + 0*u(2) + D1(1,3)*u(3) + D1(1,4)*u(4)
+                 + matmul(p%KBB,   m%u_TP) + matmul(p%D1_13, m%udotdot_TP) + matmul(p%D1_14, m%UFL)   &  !    + D1(1,1)*u(1) + 0*u(2) + D1(1,3)*u(3) + D1(1,4)*u(4)
                  - matmul( HydroForces, p%TI )  + p%FY )                                                                            !    + D1(1,5)*u(5) + Fy(1) )
       ELSE ! No retained modes, so there are no states
-         Y1 = -( matmul(p%KBB,   m%u_TP)   + matmul(p%D1_12, m%udot_TP) + matmul(p%D1_13, m%udotdot_TP) + matmul(p%D1_14, m%UFL)   &  ! -(  0*x + D1(1,1)*u(1) + 0*u(2) + D1(1,3)*u(3) + D1(1,4)*u(4)
+         Y1 = -( matmul(p%KBB,   m%u_TP) + matmul(p%MBB, m%udotdot_TP) + matmul(p%D1_14, m%UFL)   &  ! -(  0*x + D1(1,1)*u(1) + 0*u(2) + D1(1,3)*u(3) + D1(1,4)*u(4)
                  - matmul( HydroForces, p%TI )  + p%FY )                                             !    + D1(1,5)*u(5) + Fy(1) )
       END IF
       ! Computing extra moments due to lever arm introduced by interface displacement
@@ -713,7 +732,6 @@ if (is_logical(Dummy_Str, Dummy_Bool)) then ! the parameter was present
    ! We still need to read the comment on the next line 
    CALL ReadCom  ( UnIn, SDInputFile, ' FEA and CRAIG-BAMPTON PARAMETERS ', ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 else ! we have a actually read a comment line, we do nothing. 
-   call LegacyWarning('ExtraMom line missing from input file. Assuming no extra moment.')
    p%ExtraMoment=.False.  ! For Legacy, ExtraMoment is False
 endif
 
@@ -786,29 +804,8 @@ IF ((p%nDOFM > 0) .OR. (.NOT.(Init%CBMod))) THEN !This if should not be at all, 
    Init%JDampings = Init%JDampings/100.0_ReKi   !now the 20 is .20 as it should in all cases for 1 or Nmodes JDampings
 END IF
 
-! --- Guyan damping
-! For legacy, allowing these lines to be missing
-CALL ReadVar (UnIn, SDInputFile, Dummy_Str, 'GuyanDampMod', 'Guyan damping', ErrStat2, ErrMsg2, UnEc); if(Failed()) return
-if (is_numeric(Dummy_Str, DummyFloat)) then
-   Init%GuyanDampMod=int(DummyFloat)
-   CALL ReadAry( UnIn, SDInputFile, Init%RayleighDamp, 2, "RayleighDamp", "", ErrStat2, ErrMsg2, UnEc)
-   CALL ReadCom( UnIn, SDInputFile,  'Guyan damping matrix (6x6)' ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
-   CALL ReadAry( UnIn, SDInputFile, Init%GuyanDampMat(1,:), 6, "GuyanDampMat1", "Guyan Damping matrix ", ErrStat2, ErrMsg2, UnEc)
-   CALL ReadAry( UnIn, SDInputFile, Init%GuyanDampMat(2,:), 6, "GuyanDampMat2", "Guyan Damping matrix ", ErrStat2, ErrMsg2, UnEc)
-   CALL ReadAry( UnIn, SDInputFile, Init%GuyanDampMat(3,:), 6, "GuyanDampMat3", "Guyan Damping matrix ", ErrStat2, ErrMsg2, UnEc)
-   CALL ReadAry( UnIn, SDInputFile, Init%GuyanDampMat(4,:), 6, "GuyanDampMat4", "Guyan Damping matrix ", ErrStat2, ErrMsg2, UnEc)
-   CALL ReadAry( UnIn, SDInputFile, Init%GuyanDampMat(5,:), 6, "GuyanDampMat5", "Guyan Damping matrix ", ErrStat2, ErrMsg2, UnEc)
-   CALL ReadAry( UnIn, SDInputFile, Init%GuyanDampMat(6,:), 6, "GuyanDampMat6", "Guyan Damping matrix ", ErrStat2, ErrMsg2, UnEc)
-   CALL ReadCom  ( UnIn, SDInputFile,               'STRUCTURE JOINTS'           ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
-else
-   call LegacyWarning('GuyanDampMod and following lines missing from input file. Assuming 0 Guyan damping.')
-   Init%GuyanDampMod = idGuyanDamp_None
-   Init%RayleighDamp = 0.0_ReKi
-   Init%GuyanDampMat = 0.0_ReKi
-endif
-IF (Check(.not.(any(idGuyanDamp_Valid==Init%GuyanDampMod)), 'Invalid value entered for GuyanDampMod')) return
-
 !--------------------- STRUCTURE JOINTS: joints connect structure members -------------------------------
+CALL ReadCom  ( UnIn, SDInputFile,               'STRUCTURE JOINTS'           ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL ReadIVar ( UnIn, SDInputFile, Init%NJoints, 'NJoints', 'Number of joints',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL ReadCom  ( UnIn, SDInputFile,               'Joint Coordinates Headers'  ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL ReadCom  ( UnIn, SDInputFile,               'Joint Coordinates Units'    ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
@@ -826,7 +823,13 @@ if (ErrStat2/=0) then
    deallocate(StrArray)
    CALL AllocAry(StrArray, nColumns, 'StrArray',ErrStat2,ErrMsg2); if (Failed()) return 
    CALL ReadCAryFromStr ( Line, StrArray, nColumns, 'Joints', 'First line of joints array', ErrStat2, ErrMsg2 ); if(Failed()) return
-   call LegacyWarning('Joint table contains 4 columns instead of 10. All joints will be assumed cantilever, all members regular beams.')
+   print*,'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
+   print*,'Warning: Legacy joints table format detected in SubDyn input file!' 
+   print*,'         Some feature might be missing and only partial legacy support is provided.'
+   print*,'         All joints are assumed cantilever, all members regular beams.' 
+   print*,'         Visit: https://openfast.readthedocs.io/en/dev/source/user/api_change.html'
+   print*,'         Look at the SubDyn API changes to adapt your input files.'
+   print*,'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
    Init%Joints(:,iJointType) = idJointCantilever ! All joints assumed cantilever
    Init%Joints(:,iJointType+1:JointsCol) = 0.0 ! remaining columns set to 0
    LegacyFormat=.True.  ! Legacy format - Delete me in 2024
@@ -876,7 +879,7 @@ DO I = 1, p%nNodes_C
    call ReadIAryFromStr(Line, p%Nodes_C(I,:), 8, nColValid, nColNumeric, Init%SSIfile(I:I));
    if (nColValid==1 .and. nColNumeric==1) then
       ! Temporary allowing this
-      call LegacyWarning('SubDyn reaction line has only 1 column. Please use 7 or 8 values')
+      print*,'Warning: SubDyn reaction line has only 1 column. Please use 7 or 8 values'
    else if (nColNumeric==7 .and.(nColValid==7.or.nColValid==8)) then
       ! This is fine.
    else
@@ -1023,9 +1026,6 @@ DO I = 1, Init%nCMass
       CALL Fatal(' Error in file "'//TRIM(SDInputFile)//'": Invalid concentrated mass JointID.  Problematic line: "'//trim(Line)//'"')
       return
    endif
-   if (nColNumeric==5) then
-      call LegacyWarning('Using 5 values instead of 11 for concentrated mass. Off-diagonal terms will be assumed 0.')
-   endif
 ENDDO   
 IF (Check( Init%nCMass < 0     , 'NCMass must be >=0')) return
 
@@ -1127,15 +1127,6 @@ CALL ReadOutputList ( UnIn, SDInputFile, Init%SSOutList, p%NumOuts, 'SSOutList',
 CALL CleanUp()
 
 CONTAINS
-
-   subroutine LegacyWarning(Message)
-      character(len=*), intent(in) :: Message
-      print*,'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
-      print*,'Warning: the SubDyn input file is not at the latest format!' 
-      print*,'         Visit: https://openfast.readthedocs.io/en/dev/source/user/api_change.html'
-      print*,'> Issue: '//trim(Message)
-      print*,'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
-   end subroutine LegacyWarning
 
    LOGICAL FUNCTION Check(Condition, ErrMsg_in)
         logical, intent(in) :: Condition
@@ -1907,22 +1898,6 @@ SUBROUTINE SetParameters(Init, p, MBBb, MBmb, KBBb, PhiRb, nM_out, OmegaL, PhiL,
    p%MBB = MATMUL( MATMUL( TI_transpose, MBBb ), p%TI) != MBBt
    p%KBB = MATMUL( MATMUL( TI_transpose, KBBb ), p%TI) != KBBt
 
-   ! 6x6 Guyan Damping matrix
-   if     (Init%GuyanDampMod == idGuyanDamp_None) then
-      ! No Damping
-      p%CBB=0.0_ReKi
-   elseif (Init%GuyanDampMod == idGuyanDamp_Rayleigh) then
-      ! Rayleigh Damping
-      p%CBB = Init%RayleighDamp(1) * p%MBB + Init%RayleighDamp(2) * p%KBB
-   elseif (Init%GuyanDampMod == idGuyanDamp_66) then
-      ! User 6x6 matrix
-      if (size(p%CBB,1)/=6) then
-         ErrMsg='Cannot use 6x6 Guyan Damping matrix, number of interface DOFs is'//num2lstr(size(p%CBB,1)); ErrStat=ErrID_Fatal;
-         return
-      endif
-      p%CBB = Init%GuyanDampMat
-   endif
-
    !p%D1_15=-TI_transpose  !this is 6x6NIN
    IF ( p%nDOFM > 0 ) THEN ! These values don't exist for nDOFM=0; i.e., p%nDOFM == 0
          ! p%MBM = MATMUL( TRANSPOSE(p%TI), MBmb )    != MBMt
@@ -1948,10 +1923,7 @@ SUBROUTINE SetParameters(Init, p, MBBb, MBmb, KBBb, PhiRb, nM_out, OmegaL, PhiL,
          p%C1_12(:, I) = p%MBM(:, I)*p%N2OmegaMJDamp(I)  
       ENDDO   
    
-      ! D1 Matrices 
-      ! D1_12 = CBBt - MBmt*CmBt
-      p%D1_12 = p%CBB !TODO TODO cross coupling term
-      ! D1_13 = MBBt - MBmt*MmBt
+      ! D1_13, D1_14 (with retained modes)
       !p%D1_13 = p%MBB - MATMUL( p%MBM, p%MMB )
       CALL LAPACK_GEMM( 'N', 'T', 1.0_ReKi, p%MBM,   p%MBM,  0.0_ReKi, p%D1_13, ErrStat2, ErrMsg2 )  ! p%D1_13 = MATMUL( p%MBM, p%MMB )
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -2014,8 +1986,9 @@ SUBROUTINE SetParameters(Init, p, MBBb, MBmb, KBBb, PhiRb, nM_out, OmegaL, PhiL,
       ! OmegaM, JDampings, PhiM, MBM, MMB, FX , x don't exist in this case
       ! p%F2_61, p%D2_64 are zero in this case so we simplify the equations in the code, omitting these variables
       ! p%D2_63 = p%PhiRb_TI in this case so we simplify the equations in the code, omitting storage of this variable
-      p%D1_12 = p%CBB ! No cross couplings
-      p%D1_13 = p%MBB ! No cross couplings 
+      ! p%D1_13 = p%MBB in this case so we simplify the equations in the code, omitting storage of this variable
+      
+      ! D1_14 (with 0 retained modes)
       p%D1_14 = - MATMUL( TI_transpose, TRANSPOSE(PHiRb))  
 
       ! FY (with 0 retained modes)
@@ -2048,7 +2021,6 @@ SUBROUTINE AllocParameters(p, nDOFM, ErrStat, ErrMsg)
    ! for readability, we're going to keep track of the max ErrStat through SetErrStat() and not return until the end of this routine.
    
    CALL AllocAry( p%KBB,           nDOFL_TP, nDOFL_TP, 'p%KBB',           ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')
-   CALL AllocAry( p%CBB,           nDOFL_TP, nDOFL_TP, 'p%CBB',           ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')
    CALL AllocAry( p%MBB,           nDOFL_TP, nDOFL_TP, 'p%MBB',           ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')
    CALL AllocAry( p%TI,            p%nDOFI__,  6,      'p%TI',            ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')
    CALL AllocAry( p%D1_14,         nDOFL_TP, p%nDOF__L,  'p%D1_14',         ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')        
@@ -2066,8 +2038,7 @@ if (p%nDOFM > 0 ) THEN
    CALL AllocAry( p%PhiM,          p%nDOF__L,  nDOFM,    'p%PhiM',          ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')        
    CALL AllocAry( p%C2_61,         p%nDOF__L,  nDOFM,    'p%C2_61',         ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')        
    CALL AllocAry( p%C2_62,         p%nDOF__L,  nDOFM,    'p%C2_62',         ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')        
-   CALL AllocAry( p%D1_12,         nDOFL_TP, nDOFL_TP  , 'p%D1_12',         ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters') ! is p%MBB when p%nDOFM == 0        
-   CALL AllocAry( p%D1_13,         nDOFL_TP, nDOFL_TP  , 'p%D1_13',         ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters') ! is p%MBB when p%nDOFM == 0        
+   CALL AllocAry( p%D1_13,         nDOFL_TP, nDOFL_TP, 'p%D1_13',         ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters') ! is p%MBB when p%nDOFM == 0        
    CALL AllocAry( p%D2_63,         p%nDOF__L,  nDOFL_TP, 'p%D2_63',         ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters') ! is p%PhiRb_TI when p%nDOFM == 0       
    CALL AllocAry( p%D2_64,         p%nDOF__L,  p%nDOF__L,  'p%D2_64',         ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters') ! is zero when p%nDOFM == 0       
    CALL AllocAry( p%F2_61,         p%nDOF__L,            'p%F2_61',         ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters') ! is zero when p%nDOFM == 0
@@ -2520,7 +2491,7 @@ SUBROUTINE OutSummary(Init, p, InitInput, CBparams, ErrStat,ErrMsg)
 
    ! Nodes properties
    write(UnSum, '("#",4x,1(A9),9('//trim(SFmt)//'))') 'Node_[#]', 'X_[m]','Y_[m]','Z_[m]', 'JType_[-]', 'JDirX_[-]','JDirY_[-]','JDirZ_[-]','JStff_[Nm/rad]','JDmp_[Nm/rad.s]'
-   call yaml_write_array(UnSum, 'Nodes', Init%Nodes, ReFmt, ErrStat2, ErrMsg2, AllFmt='1(F8.0,","),3(F15.3,","),(F15.0,","),5(E15.6,",")') !, comment='',label=.true.)
+   call yaml_write_array(UnSum, 'Nodes', Init%Nodes, ReFmt, ErrStat2, ErrMsg2, AllFmt='1(F8.0,","),3(F15.3,","),F15.0,5(E15.6,",")') !, comment='',label=.true.)
 
    ! Element properties
    CALL AllocAry( DummyArray,  size(p%ElemProps), 16, 'Elem', ErrStat2, ErrMsg2 ); if(Failed()) return
@@ -2545,6 +2516,18 @@ SUBROUTINE OutSummary(Init, p, InitInput, CBparams, ErrStat,ErrMsg)
    write(UnSum, '("#",4x,6(A9),10('//trim(SFmt)//'))') 'Elem_[#] ','Node_1','Node_2','Prop_1','Prop_2','Type','Length_[m]','Area_[m^2]','Dens._[kg/m^3]','E_[N/m2]','G_[N/m2]','shear_[-]','Ixx_[m^4]','Iyy_[m^4]','Jzz_[m^4]','T0_[N]'
    call yaml_write_array(UnSum, 'Elements', DummyArray, ReFmt, ErrStat2, ErrMsg2, AllFmt='6(F8.0,","),3(F15.3,","),7(E15.6,",")') !, comment='',label=.true.)
    deallocate(DummyArray)
+
+   if (allocated(Init%Soil_K)) then
+      call yaml_write_array(UnSum, 'Soil_Nodes', Init%Soil_Nodes, IFmt, ErrStat2, ErrMsg2, comment='')
+      CALL AllocAry( DummyArray,  3, size(Init%Soil_Points,2), 'SoilP', ErrStat2, ErrMsg2 ); if(Failed()) return
+      do i=1,size(Init%Soil_K,3)
+         DummyArray(1:3,I) = Init%Nodes(Init%Soil_Nodes(I), 2:4)
+         call yaml_write_array(UnSum, 'Soil_K'//Num2LStr(I), Init%Soil_K(:,:,I), ReFmt, ErrStat2, ErrMsg2, comment='')
+      enddo
+      call yaml_write_array(UnSum, 'Soil_Points_SoilDyn', Init%Soil_Points, ReFmt, ErrStat2, ErrMsg2, comment='')
+      call yaml_write_array(UnSum, 'Soil_Points_SubDyn', DummyArray, ReFmt, ErrStat2, ErrMsg2, comment='')
+      deallocate(DummyArray)
+   endif
    
    ! --- User inputs (less interesting, repeat of input file)
    WRITE(UnSum, '(A)') SectionDivide
@@ -2643,10 +2626,9 @@ SUBROUTINE OutSummary(Init, p, InitInput, CBparams, ErrStat,ErrMsg)
    ! write CB system KBBt and MBBt matrices, eq stiffness matrices of the entire substructure at the TP ref point
    !-------------------------------------------------------------------------------------------------------------
    WRITE(UnSum, '(A)') SectionDivide
-   WRITE(UnSum, '(A)') "#SubDyn's Structure Equivalent Stiffness and Mass Matrices at the TP reference point (Guyan DOFs)"
+   WRITE(UnSum, '(A)') "#SubDyn's Structure Equivalent Stiffness and Mass Matrices at the TP reference point (KBBt and MBBt)"
    call yaml_write_array(UnSum, 'KBBt', p%KBB, ReFmt, ErrStat2, ErrMsg2)
    call yaml_write_array(UnSum, 'MBBt', p%MBB, ReFmt, ErrStat2, ErrMsg2)
-   call yaml_write_array(UnSum, 'CBBt', p%CBB, 'E15.9', ErrStat2, ErrMsg2)
  
    ! Set TI2, transformation matrix from R DOFs to SubDyn Origin
    CALL AllocAry( TI2,    p%nDOFR__ , 6,       'TI2',    ErrStat2, ErrMsg2 ); if(Failed()) return

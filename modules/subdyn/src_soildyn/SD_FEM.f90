@@ -25,7 +25,7 @@ MODULE SD_FEM
  
   INTEGER(IntKi),   PARAMETER  :: MaxMemJnt       = 10                    ! Maximum number of members at one joint
   INTEGER(IntKi),   PARAMETER  :: MaxOutChs       = 2000                  ! Max number of Output Channels to be read in
-  INTEGER(IntKi),   PARAMETER  :: nDOFL_TP        = 6  !TODO rename me    ! 6 degrees of freedom (length of u subarray [UTP])
+  INTEGER(IntKi),   PARAMETER  :: nDOFL_TP        = 6                     ! 6 degrees of freedom (length of u subarray [UTP])
    
   ! values of these parameters are ordered by their place in SubDyn input file:
   INTEGER(IntKi),   PARAMETER  :: JointsCol       = 10                    ! Number of columns in Joints (JointID, JointXss, JointYss, JointZss, JointType, JointDirX JointDirY JointDirZ JointStiff JointDamp)
@@ -70,12 +70,6 @@ MODULE SD_FEM
   INTEGER(IntKi),   PARAMETER  :: idSIM_Full     = 1
   INTEGER(IntKi),   PARAMETER  :: idSIM_GravOnly = 2 
   INTEGER(IntKi)               :: idSIM_Valid(3)  = (/idSIM_None, idSIM_Full, idSIM_GravOnly /)
-
-  ! Types of Guyan Damping
-  INTEGER(IntKi),   PARAMETER  :: idGuyanDamp_None     = 0
-  INTEGER(IntKi),   PARAMETER  :: idGuyanDamp_Rayleigh = 1
-  INTEGER(IntKi),   PARAMETER  :: idGuyanDamp_66       = 2 
-  INTEGER(IntKi)               :: idGuyanDamp_Valid(3)  = (/idGuyanDamp_None, idGuyanDamp_Rayleigh, idGuyanDamp_66 /)
   
   INTEGER(IntKi),   PARAMETER  :: SDMaxInpCols    = MAX(JointsCol,InterfCol,MembersCol,PropSetsBCol,PropSetsXCol,COSMsCol,CMassCol)
 
@@ -1076,24 +1070,34 @@ CONTAINS
 END SUBROUTINE AssembleKM
 
 !> Add soil stiffness and mass to global system matrices
+!! Soil stiffness can come from two sources: 
+!!   - "SSI" matrices (specified at reaction nodes)
+!!   - "Soil" matrices (specified at Initalization)
 SUBROUTINE InsertSoilMatrices(M, K, NodesDOF, Init, p, ErrStat, ErrMsg, Substract)
    real(ReKi), dimension(:,:),   intent(inout) :: M
    real(ReKi), dimension(:,:),   intent(inout) :: K
    type(IList),dimension(:),     intent(in   ) :: NodesDOF !< Map from Node Index to DOF lists
-   type(SD_InitType),            intent(in   ) :: Init
+   type(SD_InitType),            intent(inout) :: Init  !< TODO set it to in only
    type(SD_ParameterType),       intent(in   ) :: p
    integer(IntKi),               intent(  out) :: ErrStat     ! Error status of the operation
    character(*),                 intent(  out) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
    logical, optional,            intent(in   ) :: SubStract   ! If present, and if true, substract instead of adding
-   integer                    :: I, J, iiNode
+   integer                    :: I, J, iiNode, nDOF
    integer                    :: iDOF, jDOF, iNode  !< DOF and node indices
    real(ReKi), dimension(6,6) :: K_soil, M_soil ! Auxiliary matrices for soil
+   real(ReKi)                 :: Dist
    ErrMsg  = ""
    ErrStat = ErrID_None
+   ! --- SSI matrices
    ! TODO consider doing the 21 -> 6x6 conversion while reading
    ! 6x6 matrix goes to one node of one element only
    do iiNode = 1, p%nNodes_C ! loop on constrained nodes
       iNode = p%Nodes_C(iiNode,1)
+      nDOF=size(NodesDOF(iNode)%List)
+      if (nDOF/=6) then
+         ErrMsg='SSI soil matrix is to be inserted at SubDyn node '//Num2LStr(iNode)//', but this node has '//num2lstr(nDOF)//' DOFs';
+         ErrStat=ErrID_Fatal; return
+      endif
       call Array21_to_6by6(Init%SSIK(:,iiNode), K_soil)
       call Array21_to_6by6(Init%SSIM(:,iiNode), M_soil)
       if (present(Substract)) then
@@ -1111,6 +1115,40 @@ SUBROUTINE InsertSoilMatrices(M, K, NodesDOF, Init, p, ErrStat, ErrMsg, Substrac
          enddo
       enddo
    enddo
+   ! --- "Soil" matrices
+   if (allocated(Init%Soil_K)) then
+      do iiNode = 1,size(Init%Soil_Points,2)
+         ! --- Find closest node
+         call FindClosestNodes(Init%Soil_Points(1:3,iiNode), Init%Nodes, iNode, Dist);
+         if (Dist>0.1_ReKi) then
+            ErrMsg='Closest SubDyn Node is node '//Num2LStr(iNode)//', which is more than 0.1m away from soildyn point '//num2lstr(iiNode);
+            ErrStat=ErrID_Fatal; return
+         endif
+         Init%Soil_Nodes(iiNode) = iNode
+         ! --- Insert/remove from matrices
+         nDOF=size(NodesDOF(iNode)%List)
+         if (nDOF/=6) then
+            ErrMsg='Soil matrix is to be inserted at SubDyn node '//Num2LStr(iNode)//', but this node has '//num2lstr(nDOF)//' DOFs';
+            ErrStat=ErrID_Fatal; return
+         endif
+         K_soil = Init%Soil_K(1:6,1:6,iiNode)
+         if (present(Substract)) then
+            if (Substract) then
+               K_soil = - K_soil
+            endif
+         endif
+         do I = 1, 6
+            iDOF = NodesDOF(iNode)%List(I)   ! DOF index
+            do J = 1, 6
+               jDOF = NodesDOF(iNode)%List(J)   ! DOF index
+               K(iDOF, jDOF) = K(iDOF, jDOF) + K_soil(I,J)
+            enddo
+         enddo
+         if (.not.present(Substract)) then
+            CALL WrScr('   Soil stiffness inserted at SubDyn node '//trim(Num2LStr(iNode)))
+         endif
+      enddo
+   endif
 contains
    !> Convert a flatten array of 21 values into a symmetric  6x6 matrix
    SUBROUTINE Array21_to_6by6(A21, M66)
@@ -1129,8 +1167,26 @@ contains
    END SUBROUTINE Array21_to_6by6
 END SUBROUTINE InsertSoilMatrices
 
-
-
+!------------------------------------------------------------------------------------------------------
+!> Find closest node index to a point, returns distance as well
+SUBROUTINE FindClosestNodes(Point, Nodes, iNode, Dist)
+   real(ReKi), dimension(3),     intent(IN   ) :: Point  !< Point coordinates
+   real(ReKi), dimension(:,:),   intent(IN   ) :: Nodes  !< List of nodes, Positions are in columns 2-4...
+   integer(IntKi),               intent(  OUT) :: iNode  !< Index of closest node
+   real(ReKi),                   intent(  OUT) :: Dist   !< Distance from Point to node iNode
+   integer(IntKi) :: I
+   real(ReKi) :: min_dist, loc_dist
+   ! 
+   min_dist=999999._ReKi
+   iNode=-1
+   do i = 1, size(Nodes,1)
+      loc_dist = sqrt((Point(1) - Nodes(i,2))**2 + (Point(2) - Nodes(i,3))**2+ (Point(3) - Nodes(i,4))**2) 
+      if (loc_dist<min_dist) then
+         iNode=1
+         min_dist = loc_dist
+      endif
+   enddo
+END SUBROUTINE FindClosestNodes
 
 !------------------------------------------------------------------------------------------------------
 !> Build transformation matrix T, such that x= T.x~ where x~ is the reduced vector of DOF
@@ -1580,11 +1636,6 @@ SUBROUTINE JointElimination(Elements, JType, phat, Init, p, Tc, ErrStat, ErrMsg)
       ! --- Forming Tc
       do i = 1,3    ; Tc(i,i)=1_ReKi; enddo !  I3 for translational DOF
       Tc(4:nDOFt,4:nDOFr)=Tc_rot(1:nDOFt-3, 1:nDOFr-3)
-      do i = 1,size(Tc,1); do ie = 1,size(Tc,2)
-         if (abs(Tc(i,ie))<1e-13) then
-            Tc(i,ie)=0.0_ReKi
-         endif; enddo;
-      enddo;
       deallocate(Tc_rot)
       deallocate(Tc_rot_m1)
 
@@ -1751,12 +1802,8 @@ SUBROUTINE InsertJointStiffDamp(p, Init, ErrStat, ErrMsg)
    INTEGER(IntKi),               INTENT(  OUT) :: ErrStat     ! Error status of the operation
    CHARACTER(*),                 INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
    ! Local variables
-   integer(IntKi) :: iNode, JType, iStart, i
-   integer(IntKi) :: nFreeRot ! Number of free rot DOF
-   integer(IntKi) :: nMembers ! Number of members attached to this node
-   integer(IntKi) :: nSpace   ! Number of spaces between diagonal "bands" (0:pin, 1:univ, 2:ball)
+   integer(IntKi) :: iNode, JType, iStart
    real(ReKi) :: StifAdd, DampAdd
-   real(ReKi), dimension(:,:), allocatable :: K_Add, D_Add ! Stiffness and damping matrix added to global system
    integer(IntKi), dimension(:), pointer :: Ifreerot
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -1776,32 +1823,19 @@ SUBROUTINE InsertJointStiffDamp(p, Init, ErrStat, ErrMsg)
          endif
       else
          ! Ball/Univ/Pin joints have damping/stiffness inserted at indices of "free rotation"
-         nMembers = Init%NodesConnE(iNode,1) ! Col1: number of elements connected to this joint
-         if      ( JType == idJointBall      ) then; iStart=4; nSpace=2;
-         else if ( JType == idJointUniversal ) then; iStart=5; nSpace=1;
-         else if ( JType == idJointPin       ) then; iStart=6; nSpace=0;
+         if      ( JType == idJointBall      ) then; iStart=4;
+         else if ( JType == idJointUniversal ) then; iStart=5;
+         else if ( JType == idJointPin       ) then; iStart=6;
          endif
          Ifreerot=>p%NodesDOFtilde(iNode)%List(iStart:)
-         nFreeRot = size(Ifreerot)
-         ! Creating matrices of 0, and -K and nK on diagonals
-         allocate(K_Add(1:nFreeRot,1:nFreeRot)); 
-         allocate(D_Add(1:nFreeRot,1:nFreeRot)); 
-         call ChessBoard(K_Add, -StifAdd, 0._ReKi, nSpace=nSpace, diagVal=(nMembers-1)*StifAdd)
-         call ChessBoard(D_Add, -DampAdd, 0._ReKi, nSpace=nSpace, diagVal=(nMembers-1)*DampAdd)
          ! Ball/Pin/Universal joints
          if(StifAdd>0) then 
-            print*,'Stiffness Add, Node:',iNode,'DOF:', Ifreerot
-            do i=1,nFreeRot
-               print*,'K Add',K_Add(i,:)
-            enddo
-            Init%K(Ifreerot,Ifreerot) = Init%K(Ifreerot,Ifreerot) + K_Add
+            print*,'StiffAdd, Node',iNode,StifAdd, Ifreerot
+            Init%K(Ifreerot,Ifreerot) = Init%K(Ifreerot,Ifreerot) + StifAdd
          endif
          if(DampAdd>0) then 
-            print*,'Damping   Add, Node:',iNode,'DOF:', Ifreerot
-            do i=1,nFreeRot
-               print*,'D Add',D_Add(i,:)
-            enddo
-            Init%D(Ifreerot,Ifreerot) = Init%D(Ifreerot,Ifreerot) + D_Add
+            print*,'DampAdd, Node',iNode,DampAdd, Ifreerot
+            Init%D(Ifreerot,Ifreerot) = Init%D(Ifreerot,Ifreerot) +DampAdd
          endif
       endif
    enddo
