@@ -188,6 +188,43 @@ FUNCTION Determinant(A, ErrStat, ErrMsg) result(det)
    endif
 END FUNCTION Determinant
 !------------------------------------------------------------------------------------------------------
+!> Create a chessboard-like matrix with `valBlack` on the "black" cases, starting with black at (1,1)
+!! As a generalization, "black" values may be spaced every `nSpace` squares
+!! For instance, blackVal=9, whiteVal=0, nSpace=2
+!!  [9 0 0 9 0 0 9]
+!!  [0 9 0 0 9 0 0]
+!!  [0 0 9 0 0 9 0]
+!! Diagonal values may be overriden by `diagVal`
+!! Matrix M does not need to be square
+subroutine ChessBoard(M, blackVal, whiteVal, nSpace, diagVal)
+   real(ReKi), dimension(:,:), intent(  out) :: M        !< Output matrix
+   real(ReKi),                 intent(in   ) :: blackVal !< value for black squares
+   real(ReKi),                 intent(in   ) :: whiteVal !< value for white squre
+   integer(IntKi), optional,   intent(in   ) :: nSpace   !< spacing between black values, default 1
+   real(ReKi), optional,       intent(in   ) :: diagVal  !< Value to override diagonal
+   integer(IntKi) :: i, j, jFake, n
+   ! Default value for spacing is 1 if not provided
+   if (present(nSpace)) then; n=nSpace+1; else; n=2; endif
+   ! Default values are white values
+   M(:,:) = whiteVal
+   ! Setting black values everyother n values
+   do i=1,size(M,2)
+      do jFake=1,size(M,2),n ! everyother n values
+         j = mod(jFake+i-2, size(M,2)) +1
+         !print*,'i,j',i,jFake,j
+         M(i,j) = blackVal
+      enddo
+   enddo
+   ! Forcing diagonal values
+   if (present(diagVal)) then
+      do i=1,size(M,1)
+         do j=1,size(M,2) ! Matrix not necessarily square
+            if (i==j) M(i,i) = diagVal
+         enddo
+      enddo
+   endif
+end subroutine ChessBoard
+!------------------------------------------------------------------------------------------------------
 !> Partition matrices and vectors into Boundary (R) and internal (L) nodes
 !!  M = [ MRR, MRL ]
 !!      [ sym, MLL ]

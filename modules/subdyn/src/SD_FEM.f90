@@ -1745,8 +1745,12 @@ SUBROUTINE InsertJointStiffDamp(p, Init, ErrStat, ErrMsg)
    INTEGER(IntKi),               INTENT(  OUT) :: ErrStat     ! Error status of the operation
    CHARACTER(*),                 INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
    ! Local variables
-   integer(IntKi) :: iNode, JType, iStart
+   integer(IntKi) :: iNode, JType, iStart, i
+   integer(IntKi) :: nFreeRot ! Number of free rot DOF
+   integer(IntKi) :: nMembers ! Number of members attached to this node
+   integer(IntKi) :: nSpace   ! Number of spaces between diagonal "bands" (0:pin, 1:univ, 2:ball)
    real(ReKi) :: StifAdd, DampAdd
+   real(ReKi), dimension(:,:), allocatable :: K_Add, D_Add ! Stiffness and damping matrix added to global system
    integer(IntKi), dimension(:), pointer :: Ifreerot
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -1766,47 +1770,32 @@ SUBROUTINE InsertJointStiffDamp(p, Init, ErrStat, ErrMsg)
          endif
       else
          ! Ball/Univ/Pin joints have damping/stiffness inserted at indices of "free rotation"
-         if      ( JType == idJointBall      ) then; iStart=4;
-         else if ( JType == idJointUniversal ) then; iStart=5;
-         else if ( JType == idJointPin       ) then; iStart=6;
+         nMembers = Init%NodesConnE(iNode,1) ! Col1: number of elements connected to this joint
+         if      ( JType == idJointBall      ) then; iStart=4; nSpace=2;
+         else if ( JType == idJointUniversal ) then; iStart=5; nSpace=1;
+         else if ( JType == idJointPin       ) then; iStart=6; nSpace=0;
          endif
          Ifreerot=>p%NodesDOFtilde(iNode)%List(iStart:)
+         nFreeRot = size(Ifreerot)
+         ! Creating matrices of 0, and -K and nK on diagonals
+         allocate(K_Add(1:nFreeRot,1:nFreeRot)); 
+         allocate(D_Add(1:nFreeRot,1:nFreeRot)); 
+         call ChessBoard(K_Add, -StifAdd, 0._ReKi, nSpace=nSpace, diagVal=(nMembers-1)*StifAdd)
+         call ChessBoard(D_Add, -DampAdd, 0._ReKi, nSpace=nSpace, diagVal=(nMembers-1)*DampAdd)
          ! Ball/Pin/Universal joints
          if(StifAdd>0) then 
-            print*,'StiffAdd, Node',iNode,StifAdd, Ifreerot
-            if ( JType == idJointPin       ) then
-               print*,'>>>>>> Adding stiffness'
-               print*,'K (before)',Init%K(Ifreerot(1),Ifreerot)
-               print*,'K (before)',Init%K(Ifreerot(2),Ifreerot)
-               Init%K(Ifreerot(1),Ifreerot(1)) = Init%K(Ifreerot(1),Ifreerot(1)) + StifAdd
-               Init%K(Ifreerot(2),Ifreerot(2)) = Init%K(Ifreerot(2),Ifreerot(2)) + StifAdd
-               Init%K(Ifreerot(1),Ifreerot(2)) = Init%K(Ifreerot(1),Ifreerot(2)) - StifAdd
-               Init%K(Ifreerot(2),Ifreerot(1)) = Init%K(Ifreerot(2),Ifreerot(1)) - StifAdd
-               print*,'K (after)',Init%K(Ifreerot(1),Ifreerot)
-               print*,'K (after)',Init%K(Ifreerot(2),Ifreerot)
-            else
-               print*,'NOT READY'
-               STOP
-               Init%K(Ifreerot,Ifreerot) = Init%K(Ifreerot,Ifreerot) + StifAdd
-            endif
+            print*,'Stiffness Add, Node:',iNode,'DOF:', Ifreerot
+            do i=1,nFreeRot
+               print*,'K Add',K_Add(i,:)
+            enddo
+            Init%K(Ifreerot,Ifreerot) = Init%K(Ifreerot,Ifreerot) + K_Add
          endif
          if(DampAdd>0) then 
-            print*,'DampAdd, Node',iNode,DampAdd, Ifreerot
-            if ( JType == idJointPin       ) then
-               print*,'>>>>>> Adding Damping'
-               print*,'D (before)',Init%D(Ifreerot(1),Ifreerot)
-               print*,'D (before)',Init%D(Ifreerot(2),Ifreerot)
-               Init%D(Ifreerot(1),Ifreerot(1)) = Init%D(Ifreerot(1),Ifreerot(1)) + DampAdd
-               Init%D(Ifreerot(2),Ifreerot(2)) = Init%D(Ifreerot(2),Ifreerot(2)) + DampAdd
-               Init%D(Ifreerot(1),Ifreerot(2)) = Init%D(Ifreerot(1),Ifreerot(2)) - DampAdd
-               Init%D(Ifreerot(2),Ifreerot(1)) = Init%D(Ifreerot(2),Ifreerot(1)) - DampAdd
-               print*,'D (after)',Init%D(Ifreerot(1),Ifreerot)
-               print*,'D (after)',Init%D(Ifreerot(2),Ifreerot)
-            else
-               print*,'NOT READY'
-               STOP
-               Init%D(Ifreerot,Ifreerot) = Init%D(Ifreerot,Ifreerot) +DampAdd
-            endif
+            print*,'Damping   Add, Node:',iNode,'DOF:', Ifreerot
+            do i=1,nFreeRot
+               print*,'D Add',D_Add(i,:)
+            enddo
+            Init%D(Ifreerot,Ifreerot) = Init%D(Ifreerot,Ifreerot) + D_Add
          endif
       endif
    enddo

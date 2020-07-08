@@ -422,6 +422,51 @@ contains
       call destroy_list(L2, ErrStat, ErrMsg)
    end subroutine Test_lists
 
+   !> Test CheckBoard (from FEM), useful for joint stiffness
+   subroutine Test_ChessBoard(ErrStat,ErrMsg)
+      integer(IntKi)      , intent(out) :: ErrStat
+      character(ErrMsgLen), intent(out) :: ErrMsg
+      real(ReKi), dimension(:,:), allocatable :: M, Mref
+      real(ReKi) :: L
+      integer(IntKi) :: I
+      ErrStat = ErrID_None
+      ErrMsg  = ""
+      testname='ChessBoard'
+      allocate(M(1:6,1:6), Mref(1:6,1:6))
+      ! Typical example for pin joint Stiffness add
+      Mref(1 , :)= (/4  , -1 , -1 , -1 , -1, -1/)
+      Mref(2 , :)= (/-1 ,  4 , -1 , -1 , -1, -1/)
+      Mref(3 , :)= (/-1 , -1 ,  4 , -1 , -1, -1/)
+      Mref(4 , :)= (/-1 , -1 , -1 ,  4 , -1, -1/)
+      Mref(5 , :)= (/-1 , -1 , -1 , -1 ,  4, -1/)
+      Mref(6 , :)= (/-1 , -1 , -1 , -1 , -1,  4/)
+      call ChessBoard(M, -1._ReKi, -10._ReKi, nSpace=0, diagVal=4._ReKi)
+      call test_almost_equal('ChessBoardPin', Mref, M, 1e-6_ReKi, .true., .true.)
+
+      ! Typical example for universal joint Stiffness add
+      Mref=0.0_ReKi
+      Mref(1 , :)= (/2  ,  0 , -1 ,  0 , -1,  0 /)
+      Mref(2 , :)= (/0  ,  2 ,  0 , -1 ,  0, -1 /)
+      Mref(3 , :)= (/-1 ,  0 ,  2 ,  0 , -1,  0 /)
+      Mref(4 , :)= (/ 0 , -1 ,  0 ,  2 ,  0, -1 /)
+      Mref(5 , :)= (/-1 ,  0 , -1 ,  0 ,  2,  0 /)
+      Mref(6 , :)= (/ 0 , -1 ,  0 , -1 ,  0,  2 /)
+      call ChessBoard(M, -1._ReKi, 0._ReKi, nSpace=1, diagVal=2._ReKi)
+      call test_almost_equal('ChessBoardUnv', Mref, M, 1e-6_ReKi, .true., .true.)
+
+      ! Typical example for ball joint Stiffness add
+      Mref(1 , :)= (/ 1 ,  0 ,  0 , -1 ,  0,  0 /)
+      Mref(2 , :)= (/ 0 ,  1 ,  0 ,  0 , -1,  0 /)
+      Mref(3 , :)= (/ 0 ,  0 ,  1 ,  0 ,  0, -1 /)
+      Mref(4 , :)= (/-1 ,  0 ,  0 ,  1 ,  0,  0 /)
+      Mref(5 , :)= (/ 0 , -1 ,  0 ,  0 ,  1,  0 /)
+      Mref(6 , :)= (/ 0 ,  0 , -1 ,  0 ,  0,  1 /)
+      call ChessBoard(M, -1._ReKi, 0._ReKi, nSpace=2, diagVal=1._ReKi)
+      call test_almost_equal('ChessBoardBll', Mref, M, 1e-6_ReKi, .true., .true.)
+
+      deallocate(M,Mref)
+   end subroutine Test_ChessBoard
+
    subroutine SD_Tests(ErrStat,ErrMsg)
       integer(IntKi)      , intent(out) :: ErrStat !< Error status of the operation
       character(ErrMsgLen), intent(out) :: ErrMsg  !< Error message if ErrStat /= ErrID_None
@@ -431,9 +476,15 @@ contains
       ErrStat = ErrID_None
       ErrMsg  = ""
 
-      call Test_lists(ErrStat2, ErrMsg2)
-      call Test_Transformations(ErrStat2, ErrMsg2)
-      call Test_Linalg(ErrStat2, ErrMsg2)
+      call Test_lists(ErrStat2, ErrMsg2); if(Failed()) return
+      call Test_Transformations(ErrStat2, ErrMsg2); if(Failed()) return
+      call Test_Linalg(ErrStat2, ErrMsg2); if(Failed()) return
+      call Test_ChessBoard(ErrStat2, ErrMsg2); if(Failed()) return
+      contains
+         logical function Failed()
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SD_Tests') 
+            Failed =  ErrStat >= AbortErrLev
+         end function failed
    end subroutine SD_Tests
 
 
