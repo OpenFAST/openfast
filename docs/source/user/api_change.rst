@@ -13,7 +13,7 @@ OpenFAST v2.3.0 to OpenFAST v2.4.0
 ----------------------------------
 
 Many changes were applied to SubDyn input file format. You may consult the following example:
-:download:`(SubDyn's Input File) < subdyn/examples/OC4_Jacket_SD_Input.dat>`: 
+:download:`(SubDyn's Input File) <./subdyn/examples/OC4_Jacket_SD_Input.dat>`: 
 and the online SubDyn documentation.
 
 ============================================= ==== =============== ========================================================================================================================================================================================================

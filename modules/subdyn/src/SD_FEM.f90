@@ -1281,6 +1281,7 @@ contains
       if (allocated(Tc)     ) deallocate(Tc)
       if (allocated(IDOFOld)) deallocate(IDOFOld)
       if (allocated(INodesID)) deallocate(INodesID)
+      if (allocated(RA_DOFtilde)) deallocate(RA_DOFtilde)
    END SUBROUTINE CleanUp_BuildTMatrix
 
    !> Returns number of DOF after constraint reduction (via the matrix T)
@@ -1803,6 +1804,8 @@ SUBROUTINE InsertJointStiffDamp(p, Init, ErrStat, ErrMsg)
             enddo
             Init%D(Ifreerot,Ifreerot) = Init%D(Ifreerot,Ifreerot) + D_Add
          endif
+         if(allocated(K_Add)) deallocate(K_Add)
+         if(allocated(D_Add)) deallocate(D_Add)
       endif
    enddo
 END SUBROUTINE InsertJointStiffDamp
