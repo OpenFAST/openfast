@@ -195,6 +195,7 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    
    ! Parse the SubDyn inputs 
    CALL SD_Input(InitInput%SDInputFile, Init, p, ErrStat2, ErrMsg2); if(Failed()) return
+   if (p%ExtraMoment) call WrScr('   Extra moment will be included in Y1')
 
    ! --------------------------------------------------------------------------------
    ! --- Manipulation of Init and parameters
@@ -448,9 +449,15 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       m%U_red_dotdot(p%IDC_Rb)= 0    ! TODO
       m%U_red_dotdot(p%ID__F) = 0
 
-      m%U_full        = matmul(p%T_red, m%U_red)
-      m%U_full_dot    = matmul(p%T_red, m%U_red_dot)
-      m%U_full_dotdot = matmul(p%T_red, m%U_red_dotdot)
+      if (p%reduced) then
+         m%U_full        = matmul(p%T_red, m%U_red)
+         m%U_full_dot    = matmul(p%T_red, m%U_red_dot)
+         m%U_full_dotdot = matmul(p%T_red, m%U_red_dotdot)
+      else
+         m%U_full        = m%U_red
+         m%U_full_dot    = m%U_red_dot
+         m%U_full_dotdot = m%U_red_dotdot
+      endif
                                                             
       ! --- Place displacement/velocity/acceleration into Y2 output mesh        
       DO iSDNode = 1,p%nNodes
@@ -1802,8 +1809,8 @@ SUBROUTINE SD_Guyan_RigidBodyMass(Init, p, MBB, ErrStat, ErrMsg)
    integer(IntKi)          :: ErrStat2
    character(ErrMsgLen)    :: ErrMsg2
 
-   ! --- Remove SSI from Mass and stiffness matrix (NOTE: use NodesDOFtilde, reduced matrix)
-   CALL InsertSoilMatrices(Init%M, Init%K, p%NodesDOFtilde, Init, p, ErrStat2, ErrMsg2, Substract=.True.);
+   ! --- Remove SSI from Mass and stiffness matrix (NOTE: use NodesDOFred, reduced matrix)
+   CALL InsertSoilMatrices(Init%M, Init%K, p%NodesDOFred, Init, p, ErrStat2, ErrMsg2, Substract=.True.);
 
    ! --- Perform Guyan reduction to get MBB
    nR     = p%nDOFR__   ! Using interface + reaction nodes
@@ -1828,7 +1835,7 @@ SUBROUTINE SD_Guyan_RigidBodyMass(Init, p, MBB, ErrStat, ErrMsg)
    if(allocated(OmegaL)) deallocate(OmegaL)
 
    ! --- Insert SSI from Mass and stiffness matrix again
-   CALL InsertSoilMatrices(Init%M, Init%K, p%NodesDOFtilde, Init, p, ErrStat2, ErrMsg2, Substract=.False.); if(Failed()) return
+   CALL InsertSoilMatrices(Init%M, Init%K, p%NodesDOFred, Init, p, ErrStat2, ErrMsg2, Substract=.False.); if(Failed()) return
 contains
    logical function Failed()
         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
@@ -1861,6 +1868,8 @@ SUBROUTINE SetParameters(Init, p, MBBb, MBmb, KBBb, PhiRb, nM_out, OmegaL, PhiL,
    INTEGER(IntKi)                            :: ErrStat2
    CHARACTER(ErrMsgLen)                      :: ErrMsg2
    CHARACTER(*), PARAMETER                   :: RoutineName = 'SetParameters'
+   real(ReKi) :: dt_max, freq_max
+   character(ErrMsgLen) :: Info
    ErrStat = ErrID_None 
    ErrMsg  = ''
 
@@ -2010,6 +2019,13 @@ SUBROUTINE SetParameters(Init, p, MBBb, MBmb, KBBb, PhiRb, nM_out, OmegaL, PhiL,
          CALL LAPACK_getrf( n, n, p%AM2Jac, p%AM2JacPiv, ErrStat2, ErrMsg2); if(Failed()) return
       END IF     
       
+      freq_max =maxval(OmegaL(1:p%nDOFM))/TwoPi
+      dt_max = 1/(20*freq_max)
+      if (p%SDDeltaT>dt_max) then
+         print*,'Warning: time step appears too large compared to max SubDyn frequency.'
+      endif
+      write(Info,'(3x,A,F8.5,A,F8.5,A,F8.5)') 'SubDyn recommended dt:',dt_max, ' - Current dt:', p%SDDeltaT,' - Max frequency:', freq_max
+      call WrScr(Info)
    ELSE ! no retained modes, so 
       ! OmegaM, JDampings, PhiM, MBM, MMB, FX , x don't exist in this case
       ! p%F2_61, p%D2_64 are zero in this case so we simplify the equations in the code, omitting these variables
@@ -2020,7 +2036,6 @@ SUBROUTINE SetParameters(Init, p, MBBb, MBmb, KBBb, PhiRb, nM_out, OmegaL, PhiL,
 
       ! FY (with 0 retained modes)
       p%FY    = - MATMUL( TI_transpose, FGB ) 
-                  
    END IF
 
 CONTAINS
@@ -2172,7 +2187,7 @@ SUBROUTINE PartitionDOFNodes(Init, m, p, ErrStat, ErrMsg)
    p%nDOFI_Rb=0 ! Leader
    p%nDOFI_F =0 ! Fixed
    do iiNode= 1,p%nNodes_I
-      p%nDOFI__ = p%nDOFI__ + len(p%NodesDOFtilde( p%Nodes_I(iiNode,1) ))
+      p%nDOFI__ = p%nDOFI__ + len(p%NodesDOFred( p%Nodes_I(iiNode,1) ))
       p%nDOFI_Rb= p%nDOFI_Rb+ count(p%Nodes_I(iiNode, 2:7)==idBC_Leader) ! assumes 6 DOFs
       p%nDOFI_F = p%nDOFI_F + count(p%Nodes_I(iiNode, 2:7)==idBC_Fixed) ! assumes 6 DOFs
    enddo
@@ -2186,7 +2201,7 @@ SUBROUTINE PartitionDOFNodes(Init, m, p, ErrStat, ErrMsg)
    p%nDOFC_F =0 ! Fixed
    p%nDOFC_L =0 ! Internal
    do iiNode= 1,p%nNodes_C
-      p%nDOFC__ = p%nDOFC__ + len(p%NodesDOFtilde( p%Nodes_C(iiNode,1) ))
+      p%nDOFC__ = p%nDOFC__ + len(p%NodesDOFred( p%Nodes_C(iiNode,1) ))
       p%nDOFC_Rb= p%nDOFC_Rb+ count(p%Nodes_C(iiNode, 2:7)==idBC_Leader)   ! assumes 6 DOFs
       p%nDOFC_F = p%nDOFC_F + count(p%Nodes_C(iiNode, 2:7)==idBC_Fixed  )  ! assumes 6 DOFs
       p%nDOFC_L = p%nDOFC_L + count(p%Nodes_C(iiNode, 2:7)==idBC_Internal) ! assumes 6 DOFs
@@ -2200,7 +2215,7 @@ SUBROUTINE PartitionDOFNodes(Init, m, p, ErrStat, ErrMsg)
    ! DOFs of internal nodes
    p%nDOFL_L=0
    do iiNode= 1,p%nNodes_L
-      p%nDOFL_L = p%nDOFL_L + len(p%NodesDOFtilde( p%Nodes_L(iiNode,1) ))
+      p%nDOFL_L = p%nDOFL_L + len(p%NodesDOFred( p%Nodes_L(iiNode,1) ))
    enddo
    if (p%nDOFL_L/=p%nDOF_red-p%nDOFR__) then
       call Fatal('Error in distributing internal DOFs, total number of internal DOF('//num2lstr(p%nDOFL_L)//') does not equal total number of DOF('//num2lstr(p%nDOF_red)//') minus interface and reaction ('//num2lstr(p%nDOFR__)//')'); return
@@ -2241,14 +2256,14 @@ SUBROUTINE PartitionDOFNodes(Init, m, p, ErrStat, ErrMsg)
       iNode = p%Nodes_I(iiNode,1)
       do J = 1, 6 ! DOFs: ItfTDXss    ItfTDYss    ItfTDZss    ItfRDXss    ItfRDYss    ItfRDZss
           c__=c__+1
-          p%IDI__(c__) = p%NodesDOFtilde(iNode)%List(J) ! DOF number 
+          p%IDI__(c__) = p%NodesDOFred(iNode)%List(J) ! DOF number 
           if (p%Nodes_I(iiNode, J+1)==idBC_Leader) then
              c_B=c_B+1
-             p%IDI_Rb(c_B) = p%NodesDOFtilde(iNode)%List(J) ! DOF number 
+             p%IDI_Rb(c_B) = p%NodesDOFred(iNode)%List(J) ! DOF number 
 
           elseif (p%Nodes_I(iiNode, J+1)==idBC_Fixed) then !
              c_F=c_F+1
-             p%IDI_F(c_F) = p%NodesDOFtilde(iNode)%List(J) ! DOF number 
+             p%IDI_F(c_F) = p%NodesDOFred(iNode)%List(J) ! DOF number 
           endif
        enddo
    enddo
@@ -2261,18 +2276,18 @@ SUBROUTINE PartitionDOFNodes(Init, m, p, ErrStat, ErrMsg)
       iNode = p%Nodes_C(iiNode,1)
       do J = 1, 6 ! DOFs 
           c__=c__+1
-          p%IDC__(c__) = p%NodesDOFtilde(iNode)%List(J) ! DOF number 
+          p%IDC__(c__) = p%NodesDOFred(iNode)%List(J) ! DOF number 
           if (p%Nodes_C(iiNode, J+1)==idBC_Leader) then
              c_B=c_B+1
-             p%IDC_Rb(c_B) = p%NodesDOFtilde(iNode)%List(J) ! DOF number 
+             p%IDC_Rb(c_B) = p%NodesDOFred(iNode)%List(J) ! DOF number 
 
           elseif (p%Nodes_C(iiNode, J+1)==idBC_Fixed) then !
              c_F=c_F+1
-             p%IDC_F(c_F) = p%NodesDOFtilde(iNode)%List(J) ! DOF number 
+             p%IDC_F(c_F) = p%NodesDOFred(iNode)%List(J) ! DOF number 
 
           elseif (p%Nodes_C(iiNode, J+1)==idBC_Internal) then !
              c_L=c_L+1
-             p%IDC_L(c_L) = p%NodesDOFtilde(iNode)%List(J) ! DOF number 
+             p%IDC_L(c_L) = p%NodesDOFred(iNode)%List(J) ! DOF number 
           endif
        enddo
    enddo
@@ -2290,9 +2305,9 @@ SUBROUTINE PartitionDOFNodes(Init, m, p, ErrStat, ErrMsg)
    c_L=0;  ! Counters over L dofs
    do iiNode= 1,p%nNodes_L !Loop on interface nodes
       iNode = p%Nodes_L(iiNode,1)
-      do J = 1, size(p%NodesDOFtilde(iNode)%List) ! DOFs 
+      do J = 1, size(p%NodesDOFred(iNode)%List) ! DOFs 
          c_L=c_L+1
-         p%IDL_L(c_L) = p%NodesDOFtilde(iNode)%List(J) ! DOF number 
+         p%IDL_L(c_L) = p%NodesDOFred(iNode)%List(J) ! DOF number 
       enddo
    enddo
 
@@ -2399,8 +2414,12 @@ SUBROUTINE GetExtForceOnInternalDOF( u, p, m, UFL )
       endif
    endif
    ! --- Reduced vector of external force
-   m%Fext_red = matmul(transpose(p%T_red), m%Fext)
-   UFL= m%Fext_red(p%ID__L)
+   if (p%reduced) then
+      m%Fext_red = matmul(transpose(p%T_red), m%Fext)
+      UFL= m%Fext_red(p%ID__L)
+   else
+      UFL= m%Fext(p%ID__L)
+   endif
 
 END SUBROUTINE GetExtForceOnInternalDOF
 
@@ -2516,7 +2535,7 @@ SUBROUTINE OutSummary(Init, p, InitInput, CBparams, ErrStat,ErrMsg)
    WRITE(UnSum, '()') 
    WRITE(UnSum, '(A)') '#Index map from DOF to nodes'
    WRITE(UnSum, '(A)') '#     Node No.,  DOF/Node,   NodalDOF'
-   call yaml_write_array(UnSum, 'DOF2Nodes', p%DOFtilde2Nodes , IFmt, ErrStat2, ErrMsg2, comment='(nDOFRed x 3, for each constrained DOF, col1: node index, col2: number of DOF, col3: DOF starting from 1)',label=.true.)
+   call yaml_write_array(UnSum, 'DOF2Nodes', p%DOFred2Nodes , IFmt, ErrStat2, ErrMsg2, comment='(nDOFRed x 3, for each constrained DOF, col1: node index, col2: number of DOF, col3: DOF starting from 1)',label=.true.)
 
    ! Nodes properties
    write(UnSum, '("#",4x,1(A9),9('//trim(SFmt)//'))') 'Node_[#]', 'X_[m]','Y_[m]','Z_[m]', 'JType_[-]', 'JDirX_[-]','JDirY_[-]','JDirZ_[-]','JStff_[Nm/rad]','JDmp_[Nm/rad.s]'

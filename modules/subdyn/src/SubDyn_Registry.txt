@@ -173,11 +173,12 @@ typedef	^	ParameterType	IntKi	Nmembers	-	-	-	"Number of members of the sub struc
 typedef	^	ParameterType	IntKi	Elems	{:}{:}	-	-	"Element nodes connections"
 typedef	^	ParameterType	ElemPropType	ElemProps	{:}	-	-	"List of element properties"
 # --- Constraints reduction
+typedef ^             ^     Logical reduced           -      -  -  "True if system has been reduced to account for constraints"  "-"
 typedef ^             ^     ReKi    T_red             {:}{:} -  -  "Transformation matrix performing the constraint reduction x = T. xtilde"	"-"
 typedef ^             ^     IList   NodesDOF          {:}    -  -  "DOF indices of each nodes in unconstrained assembled system "	"-"
-typedef ^             ^     IList   NodesDOFtilde     {:}    -  -  "DOF indices of each nodes in constrained assembled system "	"-"
+typedef ^             ^     IList   NodesDOFred       {:}    -  -  "DOF indices of each nodes in constrained assembled system "	"-"
 typedef ^             ^     IntKi   ElemsDOF          {:}{:} -  -  "12 DOF indices of node 1 and 2 of a given member in unconstrained assembled system "	"-"
-typedef ^             ^     IntKi   DOFtilde2Nodes    {:}{:} -  -  "nDOFRed x 3, for each constrained DOF, col1 node index, col2 number of DOF, col3 DOF starting from 1"	"-"
+typedef ^             ^     IntKi   DOFred2Nodes      {:}{:} -  -  "nDOFRed x 3, for each constrained DOF, col1 node index, col2 number of DOF, col3 DOF starting from 1"	"-"
 # --- CB reduction
 typedef	^	ParameterType	IntKi	nDOFM	-	-	-	"retained degrees of freedom (modes)"
 typedef	^	ParameterType	IntKi  	SttcSolve	-	-	-	"Solve dynamics about static equilibrium point (flag)"

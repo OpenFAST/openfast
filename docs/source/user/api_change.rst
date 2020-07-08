@@ -27,14 +27,14 @@ SubDyn                                        16   RayleighDamp     0.001, 0.003
 SubDyn                                        17   GuyanDampSize    6      GuyanDampSize - Guyan damping matrix size (square, 6x6) [only if GuyanDampMod=2]
 SubDyn                                        18   GuyanDampMat     0.0000e+00   0.0000e+00   0.0000e+00   0.0000e+00   0.0000e+00   0.0000e+00 
 SubDyn                                        -23  GuyanDampMat     0.0000e+00   0.0000e+00   0.0000e+00   0.0000e+00   0.0000e+00   0.0000e+00 
-SubDyn                                        -    CablesSection    -------------------------- CABLE PROPERTIES  -------------------------------------
-SubDyn                                        -    CablesSection    0   NCablePropSets   - Number of cable cable properties
-SubDyn                                        -    CablesSection    PropSetID     EA          MatDens       T0 
-SubDyn                                        -    CablesSection       (-)        (N)         (kg/m)        (N) 
-SubDyn                                        -    RigidSection     ---------------------- RIGID LINK PROPERTIES ------------------------------------
-SubDyn                                        -    RigidSection     0   NRigidPropSets - Number of rigid link properties
-SubDyn                                        -    RigidSection     PropSetID   MatDens   
-SubDyn                                        -    RigidSection       (-)       (kg/m)
+SubDyn                                        na   CablesSection    -------------------------- CABLE PROPERTIES  -------------------------------------
+SubDyn                                        na   CablesSection    0   NCablePropSets   - Number of cable cable properties
+SubDyn                                        na   CablesSection    PropSetID     EA          MatDens       T0 
+SubDyn                                        na   CablesSection       (-)        (N)         (kg/m)        (N) 
+SubDyn                                        na   RigidSection     ---------------------- RIGID LINK PROPERTIES ------------------------------------
+SubDyn                                        na   RigidSection     0   NRigidPropSets - Number of rigid link properties
+SubDyn                                        na   RigidSection     PropSetID   MatDens   
+SubDyn                                        na   RigidSection       (-)       (kg/m)
 ============================================= ==== =============== ========================================================================================================================================================================================================
 
 
@@ -45,10 +45,10 @@ Module                                        Line  Flag Name        Example Val
 ============================================= ==== =============== ========================================================================================================================================================================================================
 SubDyn                                        26   Joints           JointID JointXss JointYss JointZss JointType JointDirX  JointDirY JointDirZ JointStiff  JointDamp
 SubDyn                                        27   Joints             (-)     (m)      (m)      (m)      (-)        (-)       (-)       (-)      (Nm/rad)   (Nm/rad.s)
-SubDyn                                        -    Members          MemberID MJointID1 MJointID2 MPropSetID1 MPropSetID2 MType COSMID
-SubDyn                                        -    Members            (-)       (-)       (-)        (-)         (-)      (-)   (-)
-SubDyn                                        -    ConcentratedM    CMJointID  JMass    JMXX      JMYY      JMZZ       JMXY     JMXZ     JMYZ    MCGX  MCGY MCGZ
-SubDyn                                        -    ConcentratedM      (-)      (kg)    (kg*m^2)  (kg*m^2)  (kg*m^2)  (kg*m^2)  (kg*m^2) (kg*m^2)  (m)  (m)   (m)
+SubDyn                                        na   Members          MemberID MJointID1 MJointID2 MPropSetID1 MPropSetID2 MType COSMID
+SubDyn                                        na   Members            (-)       (-)       (-)        (-)         (-)      (-)   (-)
+SubDyn                                        na   ConcentratedM    CMJointID  JMass    JMXX      JMYY      JMZZ       JMXY     JMXZ     JMYZ    MCGX  MCGY MCGZ
+SubDyn                                        na   ConcentratedM      (-)      (kg)    (kg*m^2)  (kg*m^2)  (kg*m^2)  (kg*m^2)  (kg*m^2) (kg*m^2)  (m)  (m)   (m)
 ============================================= ==== =============== ========================================================================================================================================================================================================
 
 
