@@ -4061,6 +4061,27 @@ end function Rad2M180to180Deg
 
    END FUNCTION OuterProductR16 
 !=======================================================================
+!> This subroutine perturbs an orientation matrix by a small angle, using 
+!! a logarithmic map. For small angles, the change in angle is equivalent to 
+!! a change in log map parameters.
+   SUBROUTINE PerturbOrientationMatrix( Orientation, Perturbation, AngleDim )
+      REAL(R8Ki), INTENT(INOUT)  :: Orientation(3,3)
+      REAL(R8Ki), INTENT(IN)     :: Perturbation
+      INTEGER,    INTENT(IN)     :: AngleDim
+   
+           ! Local variables
+      REAL(R8Ki)                 :: angles(3)
+      integer(intKi)             :: ErrStat2
+      character(ErrMsgLen)       :: ErrMsg2
+      
+      CALL DCM_LogMap( Orientation, angles, ErrStat2, ErrMsg2 )
+      
+      angles(AngleDim) = angles(AngleDim) + Perturbation
+      
+      Orientation = DCM_exp( angles )
+
+   END SUBROUTINE PerturbOrientationMatrix
+!=======================================================================
 !> This routine factors the number N into its primes. If any of those
 !! prime factors is greater than the NumPrimes'th prime, a value of 1
 !! is added to N and the new number is factored.  This process is 

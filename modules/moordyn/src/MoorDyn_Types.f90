@@ -46,7 +46,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: TMaxIC = 120      !< maximum time to allow for getting converged ICs [[s]]
     REAL(ReKi)  :: CdScaleIC = 1      !< factor to scale drag coefficients by during dynamic relaxation [[]]
     REAL(ReKi)  :: threshIC = 0.01      !< convergence tolerance for ICs  (0.01 means 1%) [[]]
-    CHARACTER(10) , DIMENSION(:), ALLOCATABLE  :: OutList      !< string containing list of output channels requested in input file [-]
+    CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: OutList      !< string containing list of output channels requested in input file [-]
   END TYPE MD_InitInputType
 ! =======================
 ! =========  MD_LineProp  =======

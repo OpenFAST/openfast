@@ -20,6 +20,7 @@ endif()
 
 add_library(extptfm_mckflib
   src/ExtPtfm_MCKF.f90
+  src/ExtPtfm_MCKF_IO.f90
   src/ExtPtfm_MCKF_Types.f90
 )
 

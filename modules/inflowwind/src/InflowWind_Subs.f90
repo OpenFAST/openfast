@@ -1750,7 +1750,7 @@ SUBROUTINE InflowWind_CloseSumFile( SumFileUnit, ErrStat, ErrMsg )
 
       ! Local variables
    INTEGER(IntKi)                                  :: TmpErrStat
-   CHARACTER(1024)                                 :: TmpErrMsg
+   CHARACTER(ErrMsgLen)                            :: TmpErrMsg
 
       ! Initialize ErrStat
 

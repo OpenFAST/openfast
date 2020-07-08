@@ -52,6 +52,7 @@ typedef   ^        InitOutputType LOGICAL               RotFrame_y   {:}  -   - 
 typedef   ^        InitOutputType LOGICAL               RotFrame_x   {:}  -   -   "Flag that tells FAST/MBC3 if the continuous states used in linearization are in the rotating frame (not used for glue)" -
 typedef   ^        InitOutputType LOGICAL               RotFrame_u   {:}  -   -   "Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame" -
 typedef   ^        InitOutputType LOGICAL               IsLoad_u     {:}  -   -   "Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix)" -
+typedef   ^        InitOutputType IntKi                 DerivOrder_x {:}  -   -   "Integer that tells FAST/MBC3 the maximum derivative order of continuous states used in linearization" -
 
 # ..... Blade Input file data........................................................................
 typedef   ^        BladeInputData    IntKi    station_total    -     -     -    "Number of blade input stations"

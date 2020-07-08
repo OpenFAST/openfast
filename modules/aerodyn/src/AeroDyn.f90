@@ -3842,13 +3842,8 @@ SUBROUTINE Perturb_u( p, n, perturb_sign, u, du )
    
 
    ! local variables
-   integer(intKi)                                      :: ErrStat2
-   character(ErrMsgLen)                                :: ErrMsg2
-   
    INTEGER                                             :: fieldIndx
    INTEGER                                             :: node
-   REAL(R8Ki)                                          :: orientation(3,3)
-   REAL(R8Ki)                                          :: angles(3)
       
    fieldIndx = p%Jac_u_indx(n,2) 
    node      = p%Jac_u_indx(n,3) 
@@ -3858,69 +3853,47 @@ SUBROUTINE Perturb_u( p, n, perturb_sign, u, du )
       ! determine which mesh we're trying to perturb and perturb the input:
    SELECT CASE( p%Jac_u_indx(n,1) )
       
-   CASE ( 1) !Module/Mesh/Field: u%TowerMotion%TranslationDisp = 1;      
-      u%TowerMotion%TranslationDisp( fieldIndx,node) = u%TowerMotion%TranslationDisp( fieldIndx,node) + du * perturb_sign       
+   CASE ( 1) !Module/Mesh/Field: u%TowerMotion%TranslationDisp = 1;
+      u%TowerMotion%TranslationDisp( fieldIndx,node) = u%TowerMotion%TranslationDisp( fieldIndx,node) + du * perturb_sign
    CASE ( 2) !Module/Mesh/Field: u%TowerMotion%Orientation = 2;
-      angles = 0.0_R8Ki
-      angles(fieldIndx) = du * perturb_sign
-      call SmllRotTrans( 'linearization perturbation', angles(1), angles(2), angles(3), orientation, ErrStat=ErrStat2, ErrMsg=ErrMsg2 )            
-      u%TowerMotion%Orientation(:,:,node) = matmul(u%TowerMotion%Orientation(:,:,node), orientation)      
+      CALL PerturbOrientationMatrix( u%TowerMotion%Orientation(:,:,node), du * perturb_sign, fieldIndx )
    CASE ( 3) !Module/Mesh/Field: u%TowerMotion%TranslationVel = 3;
-      u%TowerMotion%TranslationVel( fieldIndx,node) = u%TowerMotion%TranslationVel( fieldIndx,node) + du * perturb_sign       
+      u%TowerMotion%TranslationVel( fieldIndx,node ) = u%TowerMotion%TranslationVel( fieldIndx,node) + du * perturb_sign
       
    CASE ( 4) !Module/Mesh/Field: u%HubMotion%TranslationDisp = 4;
-      u%HubMotion%TranslationDisp(fieldIndx,node) = u%HubMotion%TranslationDisp(fieldIndx,node) + du * perturb_sign            
+      u%HubMotion%TranslationDisp(fieldIndx,node) = u%HubMotion%TranslationDisp(fieldIndx,node) + du * perturb_sign
    CASE ( 5) !Module/Mesh/Field: u%HubMotion%Orientation = 5;
-      angles = 0.0_R8Ki
-      angles(fieldIndx) = du * perturb_sign
-      call SmllRotTrans( 'linearization perturbation', angles(1), angles(2), angles(3), orientation, ErrStat=ErrStat2, ErrMsg=ErrMsg2 )            
-      u%HubMotion%Orientation(:,:,node) = matmul(u%HubMotion%Orientation(:,:,node), orientation)
+      CALL PerturbOrientationMatrix( u%HubMotion%Orientation(:,:,node), du * perturb_sign, fieldIndx )
    CASE ( 6) !Module/Mesh/Field: u%HubMotion%RotationVel = 6;
       u%HubMotion%RotationVel(fieldIndx,node) = u%HubMotion%RotationVel(fieldIndx,node) + du * perturb_sign
    
    CASE ( 7) !Module/Mesh/Field: u%BladeRootMotion(1)%Orientation = 7;
-      angles = 0.0_R8Ki
-      angles(fieldIndx) = du * perturb_sign
-      call SmllRotTrans( 'linearization perturbation', angles(1), angles(2), angles(3), orientation, ErrStat=ErrStat2, ErrMsg=ErrMsg2 )            
-      u%BladeRootMotion(1)%Orientation(:,:,node) = matmul(u%BladeRootMotion(1)%Orientation(:,:,node), orientation)
+      CALL PerturbOrientationMatrix( u%BladeRootMotion(1)%Orientation(:,:,node), du * perturb_sign, fieldIndx )
+
    CASE ( 8) !Module/Mesh/Field: u%BladeRootMotion(2)%Orientation = 8;
-      angles = 0.0_R8Ki
-      angles(fieldIndx) = du * perturb_sign
-      call SmllRotTrans( 'linearization perturbation', angles(1), angles(2), angles(3), orientation, ErrStat=ErrStat2, ErrMsg=ErrMsg2 )            
-      u%BladeRootMotion(2)%Orientation(:,:,node) = matmul(u%BladeRootMotion(2)%Orientation(:,:,node), orientation)
+      CALL PerturbOrientationMatrix( u%BladeRootMotion(2)%Orientation(:,:,node), du * perturb_sign, fieldIndx )
+      
    CASE ( 9) !Module/Mesh/Field: u%BladeRootMotion(3)%Orientation = 9;
-      angles = 0.0_R8Ki
-      angles(fieldIndx) = du * perturb_sign
-      call SmllRotTrans( 'linearization perturbation', angles(1), angles(2), angles(3), orientation, ErrStat=ErrStat2, ErrMsg=ErrMsg2 )            
-      u%BladeRootMotion(3)%Orientation(:,:,node) = matmul(u%BladeRootMotion(3)%Orientation(:,:,node), orientation)
+      CALL PerturbOrientationMatrix( u%BladeRootMotion(3)%Orientation(:,:,node), du * perturb_sign, fieldIndx )
       
    CASE (10) !Module/Mesh/Field: u%BladeMotion(1)%TranslationDisp = 10;
-      u%BladeMotion(1)%TranslationDisp(fieldIndx,node) = u%BladeMotion(1)%TranslationDisp(fieldIndx,node) + du * perturb_sign   
+      u%BladeMotion(1)%TranslationDisp(fieldIndx,node) = u%BladeMotion(1)%TranslationDisp(fieldIndx,node) + du * perturb_sign
    CASE (11) !Module/Mesh/Field: u%BladeMotion(1)%Orientation = 11;
-      angles = 0.0_R8Ki
-      angles(fieldIndx) = du * perturb_sign
-      call SmllRotTrans( 'linearization perturbation', angles(1), angles(2), angles(3), orientation, ErrStat=ErrStat2, ErrMsg=ErrMsg2 )            
-      u%BladeMotion(1)%Orientation(:,:,node) = matmul(u%BladeMotion(1)%Orientation(:,:,node), orientation)
+      CALL PerturbOrientationMatrix( u%BladeMotion(1)%Orientation(:,:,node), du * perturb_sign, fieldIndx )
    CASE (12) !Module/Mesh/Field: u%BladeMotion(1)%TranslationVel  = 12;
-      u%BladeMotion(1)%TranslationVel(fieldIndx,node) = u%BladeMotion(1)%TranslationVel(fieldIndx,node) + du * perturb_sign            
+      u%BladeMotion(1)%TranslationVel(fieldIndx,node) = u%BladeMotion(1)%TranslationVel(fieldIndx,node) + du * perturb_sign
       
    CASE (13) !Module/Mesh/Field: u%BladeMotion(2)%TranslationDisp = 13;
-      u%BladeMotion(2)%TranslationDisp( fieldIndx,node) = u%BladeMotion(2)%TranslationDisp( fieldIndx,node) + du * perturb_sign       
+      u%BladeMotion(2)%TranslationDisp( fieldIndx,node) = u%BladeMotion(2)%TranslationDisp( fieldIndx,node) + du * perturb_sign
    CASE (14) !Module/Mesh/Field: u%BladeMotion(2)%Orientation = 14;
-      angles = 0.0_R8Ki
-      angles(fieldIndx) = du * perturb_sign
-      call SmllRotTrans( 'linearization perturbation', angles(1), angles(2), angles(3), orientation, ErrStat=ErrStat2, ErrMsg=ErrMsg2 )            
-      u%BladeMotion(2)%Orientation(:,:,node) = matmul(u%BladeMotion(2)%Orientation(:,:,node), orientation)
+      CALL PerturbOrientationMatrix( u%BladeMotion(2)%Orientation(:,:,node), du * perturb_sign, fieldIndx )
    CASE (15) !Module/Mesh/Field: u%BladeMotion(2)%TranslationVel = 15;
       u%BladeMotion(2)%TranslationVel(fieldIndx,node) = u%BladeMotion(2)%TranslationVel(fieldIndx,node) + du * perturb_sign
       
    CASE (16) !Module/Mesh/Field: u%BladeMotion(3)%TranslationDisp = 16;
-      u%BladeMotion(3)%TranslationDisp( fieldIndx,node) = u%BladeMotion(3)%TranslationDisp( fieldIndx,node) + du * perturb_sign       
+      u%BladeMotion(3)%TranslationDisp( fieldIndx,node) = u%BladeMotion(3)%TranslationDisp( fieldIndx,node) + du * perturb_sign
    CASE (17) !Module/Mesh/Field: u%BladeMotion(3)%Orientation     = 17;
-      angles = 0.0_R8Ki
-      angles(fieldIndx) = du * perturb_sign
-      call SmllRotTrans( 'linearization perturbation', angles(1), angles(2), angles(3), orientation, ErrStat=ErrStat2, ErrMsg=ErrMsg2 )            
-      u%BladeMotion(3)%Orientation(:,:,node) = matmul(u%BladeMotion(3)%Orientation(:,:,node), orientation)
+      CALL PerturbOrientationMatrix( u%BladeMotion(3)%Orientation(:,:,node), du * perturb_sign, fieldIndx )
    CASE (18) !Module/Mesh/Field: u%BladeMotion(3)%TranslationVel  = 18;
       u%BladeMotion(3)%TranslationVel(fieldIndx,node) = u%BladeMotion(3)%TranslationVel(fieldIndx,node) + du * perturb_sign
 
