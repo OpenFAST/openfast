@@ -79,7 +79,7 @@ MODULE ModMesh_Mapping
       REAL(R8Ki),     ALLOCATABLE :: LoadLn2_M(:,:)            !< The 3-components of the moments for each node of an element in the point-to-line load mapping (for each element)
       
       TYPE(MeshMapLinearizationType) :: dM                     !< type that contains information for linearization matrices, partial M partial u (or y)                  
-   END TYPE
+   END TYPE MeshMapType
    
       ! note that these parameters must be negative (positive indicates the node/element it is mapped to)
    INTEGER(IntKi),  PARAMETER   :: NODE_NOT_MAPPED = -1        !< constant that indicates a node is not mapped
@@ -391,7 +391,7 @@ SUBROUTINE MeshMapWrBin( UnIn, Src, Dest, MeshMap, ErrStat, ErrMsg, FileName )
  
    IF ( HasLoadFields(Src) ) THEN
       WRITE (UnIn, IOSTAT=ErrStat2)   INT(1,B4Ki) ! contains a load field
-   MapMat = 0.0_ReKi
+      MapMat = 0.0_ReKi
       IF ( Src%ElemTable(ELEMENT_POINT)%Nelem > 0 ) THEN
          DO i=1,Src%Nnodes
             j=MeshMap%MapLoads(i)%OtherMesh_Element
@@ -4217,6 +4217,7 @@ SUBROUTINE Create_Augmented_Ln2_Src_Mesh(Src, Dest, MeshMap, Dest_TYPE, ErrStat,
    INTEGER(IntKi)                                 :: Aug_NElem, curr_Aug_NElem
    INTEGER(IntKi)                                 :: n1, n2
    REAL(ReKi)                                     :: p_ED(3), p_ES(3), n1S_nD_vector(3), position(3)
+   REAL(ReKi)                                     :: p_ED_orig(3), denom_orig
    REAL(R8Ki)                                     :: RefOrientation(3,3)
    REAL(DbKi)                                     :: TmpVec(3), RefOrientationD(3,3), FieldValue(3,2)   ! values for interpolating direction cosine matrices
    REAL(ReKi)                                     :: denom, elem_position
@@ -4320,6 +4321,7 @@ SUBROUTINE Create_Augmented_Ln2_Src_Mesh(Src, Dest, MeshMap, Dest_TYPE, ErrStat,
       IF ( Dest_TYPE == ELEMENT_LINE2 ) THEN
          p_eD =   dest%Position(:, dest%ElemTable(Dest_TYPE)%Elements(jElem)%ElemNodes(2)) &
                 - dest%Position(:, dest%ElemTable(Dest_TYPE)%Elements(jElem)%ElemNodes(1))
+         p_eD_orig = p_eD ! save for later calculations (to allow point elements, too)
       END IF
       
      
@@ -4337,11 +4339,11 @@ SUBROUTINE Create_Augmented_Ln2_Src_Mesh(Src, Dest, MeshMap, Dest_TYPE, ErrStat,
             
   
          IF ( .NOT. EqualRealNos( denom, 0.0_ReKi) ) THEN ! we ignore source elements that are parallel to the destination element (i.e., denom == 0)
-            DO jNode = j, NumNodes( Dest_TYPE ) 
+            DO jNode = j, NumNodes( Dest_TYPE ) ! check each node of the destination element
                n1S_nD_vector =            dest%Position(:, dest%ElemTable(Dest_TYPE)%Elements(jElem)%ElemNodes(jNode)) &
                                 - Temp_Ln2_Src%Position(:, Temp_Ln2_Src%ElemTable(ELEMENT_LINE2)%Elements(iElem)%ElemNodes(1))
                
-               elem_position = DOT_PRODUCT( p_eD, n1S_nD_vector ) / denom
+               elem_position = DOT_PRODUCT( p_eD, n1S_nD_vector ) / denom                 ! Eq 37 (AIAA 2015 paper)
                
 !bjj: todo: we need to set this TOL based on actual distances, not relative values (0,1) on an element....                 
 !  for now, I've calculated the element length inside this tolerance and reserve the right to reject new nodes that create 0-length elements.
@@ -4356,14 +4358,14 @@ SUBROUTINE Create_Augmented_Ln2_Src_Mesh(Src, Dest, MeshMap, Dest_TYPE, ErrStat,
                      ! calculate the position and orientation relative to the *original* source element:
                   n1=Src%ElemTable(ELEMENT_LINE2)%Elements(Original_Src_Element(iElem))%ElemNodes(1)
                   n2=Src%ElemTable(ELEMENT_LINE2)%Elements(Original_Src_Element(iElem))%ElemNodes(2)
-                     
+                                          
                                           
                   p_eS  = Src%Position(:, n2) - Src%Position(:, n1)
-                  IF ( Dest_TYPE == ELEMENT_POINT ) p_eD = p_eS
-                  denom = DOT_PRODUCT( p_eD , p_eS )   ! we don't need to check that this is zero because it's just a shorter version of the temp Temp_Ln2_Src element
+                  IF ( Dest_TYPE == ELEMENT_POINT ) p_eD_orig = p_eS
+                  denom_orig = DOT_PRODUCT( p_eD_orig , p_eS )   ! we don't need to check that this is zero because it's just a shorter version of the temp Temp_Ln2_Src element
                   n1S_nD_vector =   dest%Position(:, dest%ElemTable(Dest_TYPE)%Elements(jElem)%ElemNodes(jNode)) &
                                    - Src%Position(:, n1 )
-                  shape_fn2(Aug_Nnodes) = DOT_PRODUCT( p_eD, n1S_nD_vector ) / denom       ! save this for later, when we need to map the mesh fields...
+                  shape_fn2(Aug_Nnodes) = DOT_PRODUCT( p_eD_orig, n1S_nD_vector ) / denom_orig       ! save this for later, when we need to map the mesh fields...
                   
                      ! interpolate position on the original souce element:                     
                      
@@ -4372,19 +4374,19 @@ SUBROUTINE Create_Augmented_Ln2_Src_Mesh(Src, Dest, MeshMap, Dest_TYPE, ErrStat,
                   
                   ! let's just verify that this new node (n1) doesn't give us zero-length elements:
                   ! (note we use the NEW (not original) source element, which may have been split)
-                  p_eS = position - Temp_Ln2_Src%Position(:, Temp_Ln2_Src%ElemTable(ELEMENT_LINE2)%Elements(iElem)%ElemNodes(1) )                                    
+                  p_eS = position - Temp_Ln2_Src%Position(:, Temp_Ln2_Src%ElemTable(ELEMENT_LINE2)%Elements(iElem)%ElemNodes(1) )
                   L = SQRT(dot_product(p_eS,p_eS)) ! length of new element
-                                    
-                  IF ( L < TOL ) THEN ! this element is basically zero length
+                  
+                  IF ( L < MIN_LINE2_ELEMENT_LENGTH ) THEN ! this element is basically zero length
                         ! for numerical reasons, we really didn't want this node....
-                        Aug_Nnodes = Aug_Nnodes - 1
+                     Aug_Nnodes = Aug_Nnodes - 1
                   ELSE
                      
                      ! let's verify the other node (n2) of this element doesn't give zero-length:
-                     p_eS = position - Temp_Ln2_Src%Position(:, Temp_Ln2_Src%ElemTable(ELEMENT_LINE2)%Elements(iElem)%ElemNodes(2))                                    
+                     p_eS = position - Temp_Ln2_Src%Position(:, Temp_Ln2_Src%ElemTable(ELEMENT_LINE2)%Elements(iElem)%ElemNodes(2))
                      L = SQRT(dot_product(p_eS,p_eS)) ! length of new element
                      
-                     IF ( L < TOL ) THEN ! this element is basically zero length
+                     IF ( L < MIN_LINE2_ELEMENT_LENGTH ) THEN ! this element is basically zero length
                         ! for numerical reasons, we really didn't want this node....
                         Aug_Nnodes = Aug_Nnodes - 1
                      ELSE   
@@ -4398,44 +4400,30 @@ SUBROUTINE Create_Augmented_Ln2_Src_Mesh(Src, Dest, MeshMap, Dest_TYPE, ErrStat,
                               RETURN      
                            END IF
                        
-                           Original_Src_Element( Aug_NElem ) = Original_Src_Element( iElem )  ! this node can now be mapped to original source mesh element               
+                        Original_Src_Element( Aug_NElem ) = Original_Src_Element( iElem )  ! this node can now be mapped to original source mesh element               
                        
                         
-                        ! get the Reference orientation for this new node                                                                                                                     
-#ifdef __NN_ORIENTATIONS                        
-                        ! set the RefOrientation based on proximity to original element's nodes:
-                        IF ( NINT( shape_fn2(Aug_Nnodes) ) .EQ. 0 ) THEN
-                           n = n1
-                        ELSE
-                           n = n2                        
-                        END IF
-                        RefOrientation = Src%RefOrientation(:, :, n) 
-#else
-                        
-                           ! convert DCMs to tensors: 
+                     ! get the Reference orientation for this new node
+                        ! convert DCMs to tensors: 
 
-                           RefOrientationD = Src%RefOrientation(:, :, n1)
-                           CALL DCM_logmap( RefOrientationD, FieldValue(:,1), ErrStat, ErrMsg )
-                           IF (ErrStat >= AbortErrLev) RETURN
+                        RefOrientationD = Src%RefOrientation(:, :, n1)
+                        CALL DCM_logmap( RefOrientationD, FieldValue(:,1), ErrStat, ErrMsg )
+                        IF (ErrStat >= AbortErrLev) RETURN
                   
-                           RefOrientationD = Src%RefOrientation(:, :, n2)
-                           CALL DCM_logmap( RefOrientationD, FieldValue(:,2), ErrStat, ErrMsg )                  
-                           IF (ErrStat >= AbortErrLev) RETURN
+                        RefOrientationD = Src%RefOrientation(:, :, n2)
+                        CALL DCM_logmap( RefOrientationD, FieldValue(:,2), ErrStat, ErrMsg )
+                        IF (ErrStat >= AbortErrLev) RETURN
          
-                           CALL DCM_SetLogMapForInterp( FieldValue )  ! make sure we don't cross a 2pi boundary
+                        CALL DCM_SetLogMapForInterp( FieldValue )  ! make sure we don't cross a 2pi boundary
                   
-                              ! interpolate tensors: 
-                           TmpVec = (1.0_ReKi - shape_fn2(Aug_Nnodes)) * FieldValue(:, 1) &
-                                              + shape_fn2(Aug_Nnodes)  * FieldValue(:, 2) 
+                           ! interpolate tensors: 
+                        TmpVec = (1.0_ReKi - shape_fn2(Aug_Nnodes)) * FieldValue(:, 1) &
+                                             + shape_fn2(Aug_Nnodes)  * FieldValue(:, 2) 
                               
-                              ! convert back to DCM:
-                           RefOrientationD = DCM_exp( TmpVec )
-                           RefOrientation  = REAL(RefOrientationD, R8Ki)
+                           ! convert back to DCM:
+                        RefOrientationD = DCM_exp( TmpVec )
+                        RefOrientation  = REAL(RefOrientationD, R8Ki)
 
-                        
-
-#endif
-                        
                         
                         CALL MeshPositionNode ( Mesh       = Temp_Ln2_Src                      &
                                                 ,INode     = Aug_Nnodes                        &
@@ -4446,10 +4434,10 @@ SUBROUTINE Create_Augmented_Ln2_Src_Mesh(Src, Dest, MeshMap, Dest_TYPE, ErrStat,
                            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
                            IF (ErrStat >= AbortErrLev) THEN
                               CALL CleanUp()
-                              RETURN      
+                              RETURN
                            END IF
                      
-                        ! if we have to check a second node, we need to first recalculate p_eS and denom on Temp_Ln2_Src:            
+                        ! if we have to check a second node, we need to first recalculate p_eS and denom on Temp_Ln2_Src:
                         IF ( jNode < NumNodes( Dest_TYPE )) THEN
                            j = jNode+1 ! start on the next node
                            CYCLE Src_Elements 

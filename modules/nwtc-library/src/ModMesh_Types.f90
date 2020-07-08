@@ -71,6 +71,10 @@ MODULE ModMesh_Types
 
    LOGICAL, PARAMETER :: mesh_debug = .FALSE.
 
+
+!   REAL(ReKi), PARAMETER            :: MIN_LINE2_ELEMENT_LENGTH = 0.001 ! 1 millimeter
+   REAL(ReKi), PARAMETER            :: MIN_LINE2_ELEMENT_LENGTH = sqrt(epsilon(1.0_ReKi)) ! old length
+   
       !> element record type: fields for a particular element
    TYPE, PUBLIC :: ElemRecType 
       ! note: any fields added to this type must be copied in Mesh_MoveAlloc_ElemRecType (modmesh_types::mesh_movealloc_elemrectype)
