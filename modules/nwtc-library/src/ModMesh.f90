@@ -91,6 +91,7 @@ SUBROUTINE MeshWrBin ( UnIn, M, ErrStat, ErrMsg, FileName)
    WRITE (UnIn, IOSTAT=ErrStat2)   M%fieldmask           ! BJJ: do we need to verify that this is size B4Ki?
    WRITE (UnIn, IOSTAT=ErrStat2)   INT(M%Nnodes,B4Ki)
    WRITE (UnIn, IOSTAT=ErrStat2)   INT(M%nelemlist,B4Ki)
+   if (M%Fieldmask(MASKID_SCALAR))  WRITE (UnIn, IOSTAT=ErrStat2)   INT(M%nScalars,B4Ki)
 
 
    !...........
@@ -2411,7 +2412,7 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
 
         Mesh%ElemTable(ELEMENT_LINE2)%Elements(J)%det_jac  = 0.5_ReKi * TwoNorm( n1_n2_vector )   ! = L / 2
         
-        IF ( EqualRealNos( 2.0_ReKi*Mesh%ElemTable(ELEMENT_LINE2)%Elements(J)%det_jac, 0.0_Reki ) ) THEN
+        IF ( 2.0_ReKi*Mesh%ElemTable(ELEMENT_LINE2)%Elements(J)%det_jac < MIN_LINE2_ELEMENT_LENGTH ) THEN
            ErrStat = ErrID_Fatal
            ErrMess = trim(ErrMess)//"MeshCommit: Line2 element "//TRIM(Num2Lstr(j))//" has 0 length."//NewLine// &
                      "   n2 = n("//TRIM(Num2Lstr(n2))//") = ("//TRIM(Num2Lstr(Mesh%Position(1,n2)))//','//TRIM(Num2Lstr(mesh%position(2,n2)))//','//TRIM(Num2Lstr(mesh%position(3,n2))) //')'//NewLine// &
