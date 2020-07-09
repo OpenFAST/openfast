@@ -221,8 +221,8 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: nDOFM      !< retained degrees of freedom (modes) [-]
     INTEGER(IntKi)  :: SttcSolve      !< Solve dynamics about static equilibrium point (flag) [-]
     LOGICAL  :: ExtraMoment      !< Add Extra lever arm contribution to interface reaction outputs [-]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: NOmegaM2      !< Coefficient of x in X (negative omegaM squared) [-]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: N2OmegaMJDamp      !< Coefficient of x in X (negative 2 omegaM * JDamping) [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: KMMDiag      !< Diagonal coefficients of Kmm (OmegaM squared) [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: CMMDiag      !< Diagonal coefficients of Cmm (~2 Zeta OmegaM)) [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: MMB      !< Matrix after C-B reduction (transpose of MBM [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: FX      !< Load components in X [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: C1_11      !< Coefficient of x in Y1 [-]
@@ -241,6 +241,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: MBB      !< Guyan Mass Matrix after C-B reduction [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: KBB      !< Guyan Stiffness Matrix after C-B reduction [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: CBB      !< Guyan Damping Matrix after C-B reduction [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: CMB      !< Cross coupling Guyan-CB damping matrix [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: CBM      !< Cross coupling Guyan-CB damping matrix [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: CMM      !< CB damping matrix [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: MBM      !< Matrix after C-B reduction [-]
@@ -6684,29 +6685,29 @@ ENDIF
     DstParamData%nDOFM = SrcParamData%nDOFM
     DstParamData%SttcSolve = SrcParamData%SttcSolve
     DstParamData%ExtraMoment = SrcParamData%ExtraMoment
-IF (ALLOCATED(SrcParamData%NOmegaM2)) THEN
-  i1_l = LBOUND(SrcParamData%NOmegaM2,1)
-  i1_u = UBOUND(SrcParamData%NOmegaM2,1)
-  IF (.NOT. ALLOCATED(DstParamData%NOmegaM2)) THEN 
-    ALLOCATE(DstParamData%NOmegaM2(i1_l:i1_u),STAT=ErrStat2)
+IF (ALLOCATED(SrcParamData%KMMDiag)) THEN
+  i1_l = LBOUND(SrcParamData%KMMDiag,1)
+  i1_u = UBOUND(SrcParamData%KMMDiag,1)
+  IF (.NOT. ALLOCATED(DstParamData%KMMDiag)) THEN 
+    ALLOCATE(DstParamData%KMMDiag(i1_l:i1_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%NOmegaM2.', ErrStat, ErrMsg,RoutineName)
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%KMMDiag.', ErrStat, ErrMsg,RoutineName)
       RETURN
     END IF
   END IF
-    DstParamData%NOmegaM2 = SrcParamData%NOmegaM2
+    DstParamData%KMMDiag = SrcParamData%KMMDiag
 ENDIF
-IF (ALLOCATED(SrcParamData%N2OmegaMJDamp)) THEN
-  i1_l = LBOUND(SrcParamData%N2OmegaMJDamp,1)
-  i1_u = UBOUND(SrcParamData%N2OmegaMJDamp,1)
-  IF (.NOT. ALLOCATED(DstParamData%N2OmegaMJDamp)) THEN 
-    ALLOCATE(DstParamData%N2OmegaMJDamp(i1_l:i1_u),STAT=ErrStat2)
+IF (ALLOCATED(SrcParamData%CMMDiag)) THEN
+  i1_l = LBOUND(SrcParamData%CMMDiag,1)
+  i1_u = UBOUND(SrcParamData%CMMDiag,1)
+  IF (.NOT. ALLOCATED(DstParamData%CMMDiag)) THEN 
+    ALLOCATE(DstParamData%CMMDiag(i1_l:i1_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%N2OmegaMJDamp.', ErrStat, ErrMsg,RoutineName)
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%CMMDiag.', ErrStat, ErrMsg,RoutineName)
       RETURN
     END IF
   END IF
-    DstParamData%N2OmegaMJDamp = SrcParamData%N2OmegaMJDamp
+    DstParamData%CMMDiag = SrcParamData%CMMDiag
 ENDIF
 IF (ALLOCATED(SrcParamData%MMB)) THEN
   i1_l = LBOUND(SrcParamData%MMB,1)
@@ -6953,6 +6954,20 @@ IF (ALLOCATED(SrcParamData%CBB)) THEN
     END IF
   END IF
     DstParamData%CBB = SrcParamData%CBB
+ENDIF
+IF (ALLOCATED(SrcParamData%CMB)) THEN
+  i1_l = LBOUND(SrcParamData%CMB,1)
+  i1_u = UBOUND(SrcParamData%CMB,1)
+  i2_l = LBOUND(SrcParamData%CMB,2)
+  i2_u = UBOUND(SrcParamData%CMB,2)
+  IF (.NOT. ALLOCATED(DstParamData%CMB)) THEN 
+    ALLOCATE(DstParamData%CMB(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%CMB.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstParamData%CMB = SrcParamData%CMB
 ENDIF
 IF (ALLOCATED(SrcParamData%CBM)) THEN
   i1_l = LBOUND(SrcParamData%CBM,1)
@@ -7435,11 +7450,11 @@ ENDIF
 IF (ALLOCATED(ParamData%DOFred2Nodes)) THEN
   DEALLOCATE(ParamData%DOFred2Nodes)
 ENDIF
-IF (ALLOCATED(ParamData%NOmegaM2)) THEN
-  DEALLOCATE(ParamData%NOmegaM2)
+IF (ALLOCATED(ParamData%KMMDiag)) THEN
+  DEALLOCATE(ParamData%KMMDiag)
 ENDIF
-IF (ALLOCATED(ParamData%N2OmegaMJDamp)) THEN
-  DEALLOCATE(ParamData%N2OmegaMJDamp)
+IF (ALLOCATED(ParamData%CMMDiag)) THEN
+  DEALLOCATE(ParamData%CMMDiag)
 ENDIF
 IF (ALLOCATED(ParamData%MMB)) THEN
   DEALLOCATE(ParamData%MMB)
@@ -7494,6 +7509,9 @@ IF (ALLOCATED(ParamData%KBB)) THEN
 ENDIF
 IF (ALLOCATED(ParamData%CBB)) THEN
   DEALLOCATE(ParamData%CBB)
+ENDIF
+IF (ALLOCATED(ParamData%CMB)) THEN
+  DEALLOCATE(ParamData%CMB)
 ENDIF
 IF (ALLOCATED(ParamData%CBM)) THEN
   DEALLOCATE(ParamData%CBM)
@@ -7736,15 +7754,15 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! nDOFM
       Int_BufSz  = Int_BufSz  + 1  ! SttcSolve
       Int_BufSz  = Int_BufSz  + 1  ! ExtraMoment
-  Int_BufSz   = Int_BufSz   + 1     ! NOmegaM2 allocated yes/no
-  IF ( ALLOCATED(InData%NOmegaM2) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! NOmegaM2 upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%NOmegaM2)  ! NOmegaM2
+  Int_BufSz   = Int_BufSz   + 1     ! KMMDiag allocated yes/no
+  IF ( ALLOCATED(InData%KMMDiag) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! KMMDiag upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%KMMDiag)  ! KMMDiag
   END IF
-  Int_BufSz   = Int_BufSz   + 1     ! N2OmegaMJDamp allocated yes/no
-  IF ( ALLOCATED(InData%N2OmegaMJDamp) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! N2OmegaMJDamp upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%N2OmegaMJDamp)  ! N2OmegaMJDamp
+  Int_BufSz   = Int_BufSz   + 1     ! CMMDiag allocated yes/no
+  IF ( ALLOCATED(InData%CMMDiag) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! CMMDiag upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%CMMDiag)  ! CMMDiag
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! MMB allocated yes/no
   IF ( ALLOCATED(InData%MMB) ) THEN
@@ -7835,6 +7853,11 @@ ENDIF
   IF ( ALLOCATED(InData%CBB) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! CBB upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%CBB)  ! CBB
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! CMB allocated yes/no
+  IF ( ALLOCATED(InData%CMB) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! CMB upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%CMB)  ! CMB
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! CBM allocated yes/no
   IF ( ALLOCATED(InData%CBM) ) THEN
@@ -8323,31 +8346,31 @@ ENDIF
       Int_Xferred   = Int_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+1-1 ) = TRANSFER( InData%ExtraMoment , IntKiBuf(1), 1)
       Int_Xferred   = Int_Xferred   + 1
-  IF ( .NOT. ALLOCATED(InData%NOmegaM2) ) THEN
+  IF ( .NOT. ALLOCATED(InData%KMMDiag) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
   ELSE
     IntKiBuf( Int_Xferred ) = 1
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%NOmegaM2,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%NOmegaM2,1)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%KMMDiag,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%KMMDiag,1)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%NOmegaM2)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%NOmegaM2))-1 ) = PACK(InData%NOmegaM2,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%NOmegaM2)
+      IF (SIZE(InData%KMMDiag)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%KMMDiag))-1 ) = PACK(InData%KMMDiag,.TRUE.)
+      Re_Xferred   = Re_Xferred   + SIZE(InData%KMMDiag)
   END IF
-  IF ( .NOT. ALLOCATED(InData%N2OmegaMJDamp) ) THEN
+  IF ( .NOT. ALLOCATED(InData%CMMDiag) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
   ELSE
     IntKiBuf( Int_Xferred ) = 1
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%N2OmegaMJDamp,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%N2OmegaMJDamp,1)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%CMMDiag,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%CMMDiag,1)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%N2OmegaMJDamp)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%N2OmegaMJDamp))-1 ) = PACK(InData%N2OmegaMJDamp,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%N2OmegaMJDamp)
+      IF (SIZE(InData%CMMDiag)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%CMMDiag))-1 ) = PACK(InData%CMMDiag,.TRUE.)
+      Re_Xferred   = Re_Xferred   + SIZE(InData%CMMDiag)
   END IF
   IF ( .NOT. ALLOCATED(InData%MMB) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -8627,6 +8650,22 @@ ENDIF
 
       IF (SIZE(InData%CBB)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%CBB))-1 ) = PACK(InData%CBB,.TRUE.)
       Re_Xferred   = Re_Xferred   + SIZE(InData%CBB)
+  END IF
+  IF ( .NOT. ALLOCATED(InData%CMB) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%CMB,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%CMB,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%CMB,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%CMB,2)
+    Int_Xferred = Int_Xferred + 2
+
+      IF (SIZE(InData%CMB)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%CMB))-1 ) = PACK(InData%CMB,.TRUE.)
+      Re_Xferred   = Re_Xferred   + SIZE(InData%CMB)
   END IF
   IF ( .NOT. ALLOCATED(InData%CBM) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -9567,17 +9606,17 @@ ENDIF
       Int_Xferred   = Int_Xferred + 1
       OutData%ExtraMoment = TRANSFER( IntKiBuf( Int_Xferred ), mask0 )
       Int_Xferred   = Int_Xferred + 1
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! NOmegaM2 not allocated
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! KMMDiag not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
     Int_Xferred = Int_Xferred + 1
     i1_l = IntKiBuf( Int_Xferred    )
     i1_u = IntKiBuf( Int_Xferred + 1)
     Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%NOmegaM2)) DEALLOCATE(OutData%NOmegaM2)
-    ALLOCATE(OutData%NOmegaM2(i1_l:i1_u),STAT=ErrStat2)
+    IF (ALLOCATED(OutData%KMMDiag)) DEALLOCATE(OutData%KMMDiag)
+    ALLOCATE(OutData%KMMDiag(i1_l:i1_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%NOmegaM2.', ErrStat, ErrMsg,RoutineName)
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%KMMDiag.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
     ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
@@ -9586,21 +9625,21 @@ ENDIF
        RETURN
     END IF
     mask1 = .TRUE. 
-      IF (SIZE(OutData%NOmegaM2)>0) OutData%NOmegaM2 = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%NOmegaM2))-1 ), mask1, 0.0_ReKi )
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%NOmegaM2)
+      IF (SIZE(OutData%KMMDiag)>0) OutData%KMMDiag = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%KMMDiag))-1 ), mask1, 0.0_ReKi )
+      Re_Xferred   = Re_Xferred   + SIZE(OutData%KMMDiag)
     DEALLOCATE(mask1)
   END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! N2OmegaMJDamp not allocated
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! CMMDiag not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
     Int_Xferred = Int_Xferred + 1
     i1_l = IntKiBuf( Int_Xferred    )
     i1_u = IntKiBuf( Int_Xferred + 1)
     Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%N2OmegaMJDamp)) DEALLOCATE(OutData%N2OmegaMJDamp)
-    ALLOCATE(OutData%N2OmegaMJDamp(i1_l:i1_u),STAT=ErrStat2)
+    IF (ALLOCATED(OutData%CMMDiag)) DEALLOCATE(OutData%CMMDiag)
+    ALLOCATE(OutData%CMMDiag(i1_l:i1_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%N2OmegaMJDamp.', ErrStat, ErrMsg,RoutineName)
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%CMMDiag.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
     ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
@@ -9609,8 +9648,8 @@ ENDIF
        RETURN
     END IF
     mask1 = .TRUE. 
-      IF (SIZE(OutData%N2OmegaMJDamp)>0) OutData%N2OmegaMJDamp = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%N2OmegaMJDamp))-1 ), mask1, 0.0_ReKi )
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%N2OmegaMJDamp)
+      IF (SIZE(OutData%CMMDiag)>0) OutData%CMMDiag = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%CMMDiag))-1 ), mask1, 0.0_ReKi )
+      Re_Xferred   = Re_Xferred   + SIZE(OutData%CMMDiag)
     DEALLOCATE(mask1)
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! MMB not allocated
@@ -10070,6 +10109,32 @@ ENDIF
     mask2 = .TRUE. 
       IF (SIZE(OutData%CBB)>0) OutData%CBB = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%CBB))-1 ), mask2, 0.0_ReKi )
       Re_Xferred   = Re_Xferred   + SIZE(OutData%CBB)
+    DEALLOCATE(mask2)
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! CMB not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%CMB)) DEALLOCATE(OutData%CMB)
+    ALLOCATE(OutData%CMB(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%CMB.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask2.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask2 = .TRUE. 
+      IF (SIZE(OutData%CMB)>0) OutData%CMB = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%CMB))-1 ), mask2, 0.0_ReKi )
+      Re_Xferred   = Re_Xferred   + SIZE(OutData%CMB)
     DEALLOCATE(mask2)
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! CBM not allocated
