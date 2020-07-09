@@ -25,7 +25,7 @@ MODULE SD_FEM
  
   INTEGER(IntKi),   PARAMETER  :: MaxMemJnt       = 10                    ! Maximum number of members at one joint
   INTEGER(IntKi),   PARAMETER  :: MaxOutChs       = 2000                  ! Max number of Output Channels to be read in
-  INTEGER(IntKi),   PARAMETER  :: nDOFL_TP        = 6  !TODO rename me    ! 6 degrees of freedom (length of u subarray [UTP])
+  INTEGER(IntKi),   PARAMETER  :: nDOFL_TP        = 6                     ! 6 degrees of freedom (length of u subarray [UTP])
    
   ! values of these parameters are ordered by their place in SubDyn input file:
   INTEGER(IntKi),   PARAMETER  :: JointsCol       = 10                    ! Number of columns in Joints (JointID, JointXss, JointYss, JointZss, JointType, JointDirX JointDirY JointDirZ JointStiff JointDamp)
@@ -70,12 +70,6 @@ MODULE SD_FEM
   INTEGER(IntKi),   PARAMETER  :: idSIM_Full     = 1
   INTEGER(IntKi),   PARAMETER  :: idSIM_GravOnly = 2 
   INTEGER(IntKi)               :: idSIM_Valid(3)  = (/idSIM_None, idSIM_Full, idSIM_GravOnly /)
-
-  ! Types of Guyan Damping
-  INTEGER(IntKi),   PARAMETER  :: idGuyanDamp_None     = 0
-  INTEGER(IntKi),   PARAMETER  :: idGuyanDamp_Rayleigh = 1
-  INTEGER(IntKi),   PARAMETER  :: idGuyanDamp_66       = 2 
-  INTEGER(IntKi)               :: idGuyanDamp_Valid(3)  = (/idGuyanDamp_None, idGuyanDamp_Rayleigh, idGuyanDamp_66 /)
   
   INTEGER(IntKi),   PARAMETER  :: SDMaxInpCols    = MAX(JointsCol,InterfCol,MembersCol,PropSetsBCol,PropSetsXCol,COSMsCol,CMassCol)
 
@@ -252,9 +246,9 @@ SUBROUTINE RigidTrnsf(Init, p, RefPoint, DOF, nDOF, T_ref, ErrStat, ErrMsg)
    T_ref(:,:)=0
    DO I = 1, nDOF
       iDOF        = DOF(I) ! DOF index in constrained system
-      iNode       = p%DOFred2Nodes(iDOF,1) ! First column is node 
-      nDOFPerNode = p%DOFred2Nodes(iDOF,2) ! Second column is number of DOF per node
-      iiDOF       = p%DOFred2Nodes(iDOF,3) ! Third column is dof index for this joint (1-6 for cantilever)
+      iNode       = p%DOFtilde2Nodes(iDOF,1) ! First column is node 
+      nDOFPerNode = p%DOFtilde2Nodes(iDOF,2) ! Second column is number of DOF per node
+      iiDOF       = p%DOFtilde2Nodes(iDOF,3) ! Third column is dof index for this joint (1-6 for cantilever)
 
       if ((iiDOF<1) .or. (iiDOF>6)) then
          ErrMsg  = 'RigidTrnsf, node DOF number is not valid. DOF:'//trim(Num2LStr(iDOF))//' Node:'//trim(Num2LStr(iNode))//' iiDOF:'//trim(Num2LStr(iiDOF)); ErrStat = ErrID_Fatal
@@ -1222,7 +1216,7 @@ SUBROUTINE BuildTMatrix(Init, p, RA, RAm1, Tred, ErrStat, ErrMsg)
    integer(IntKi) :: nc !< Number of DOF after constraints applied
    integer(IntKi) :: nj
    real(ReKi)  :: phat(3) !< Directional vector of the joint
-   type(IList), dimension(:), allocatable :: RA_DOFred ! DOF indices for each rigid assembly, in reduced system
+   type(IList), dimension(:), allocatable :: RA_DOFtilde ! DOF indices for each rigid assembly, in reduced system
    INTEGER(IntKi)       :: ErrStat2
    CHARACTER(ErrMsgLen) :: ErrMsg2
    ErrStat = ErrID_None
@@ -1231,12 +1225,10 @@ SUBROUTINE BuildTMatrix(Init, p, RA, RAm1, Tred, ErrStat, ErrMsg)
    ! --- Misc inits
    nullify(IDOFNew)
    I6(1:6,1:6)=0; do i = 1,6 ; I6(i,i)=1_ReKi; enddo ! I6 =  eye(6)
-   allocate(p%NodesDOFred(1:p%nNodes), stat=ErrStat2); if(Failed()) return; ! Indices of DOF for each joint, in reduced system
-   allocate(RA_DOFred(1:size(RA)), stat=ErrStat2); if(Failed()) return; ! Indices of DOF for each rigid assmbly, in reduced system
+   allocate(p%NodesDOFtilde(1:p%nNodes), stat=ErrStat2); if(Failed()) return; ! Indices of DOF for each joint, in reduced system
+   allocate(RA_DOFtilde(1:size(RA)), stat=ErrStat2); if(Failed()) return; ! Indices of DOF for each rigid assmbly, in reduced system
 
    p%nDOF_red = nDOF_ConstraintReduced()
-   p%reduced  = reductionNeeded()      ! True if reduction needed, allow for optimization if not needed
-
    if (DEV_VERSION) then
       print*,'nDOF constraint elim', p%nDOF_red , '/' , p%nDOF
    endif
@@ -1271,13 +1263,13 @@ SUBROUTINE BuildTMatrix(Init, p, RA, RAm1, Tred, ErrStat, ErrMsg)
             if ( ia <= 0) then
                ! This rigid assembly has already been processed
                ! OLD: The DOF list is taken from the stored RA DOF list
-               ! call init_list(p%NodesDOFred(iNode), RA_DOFred(aID)%List, ErrStat2, ErrMsg2)
+               ! call init_list(p%NodesDOFtilde(iNode), RA_DOFtilde(aID)%List, ErrStat2, ErrMsg2)
                ! NEW: this node has no DOFs
-               call init_list(p%NodesDOFred(iNode), 0, 0, ErrStat2, ErrMsg2)
+               call init_list(p%NodesDOFtilde(iNode), 0, 0, ErrStat2, ErrMsg2)
                if (DEV_VERSION) then
                   print*,'The RA',aID,', has already been processed!'
                   print*,'N',iNode,'I ',p%NodesDOF(iNode)%List(1:6)
-                  print*,'N',iNode,'It',RA_DOFred(aID)%List
+                  print*,'N',iNode,'It',RA_DOFtilde(aID)%List
                endif
                cycle ! We pass to the next joint
             else
@@ -1289,15 +1281,15 @@ SUBROUTINE BuildTMatrix(Init, p, RA, RAm1, Tred, ErrStat, ErrMsg)
                   IDOFOld( (I-1)*6+1 : I*6 ) = p%NodesDOF(INodesID(I))%List(1:6)
                enddo
 
-               ! Storing DOF list for this RA (Note: same as NodesDOFred below)
+               ! Storing DOF list for this RA (Note: same as NodesDOFtilde below)
                nc=size(Tc,2) 
-               call init_list(RA_DOFred(aID), (/ (iprev + i, i=1,nc) /), ErrStat2, ErrMsg2);
+               call init_list(RA_DOFtilde(aID), (/ (iprev + i, i=1,nc) /), ErrStat2, ErrMsg2);
 
             endif
          else
             ! --- Regular cantilever joint
             ! TODO/NOTE: We could apply fixed constraint/BC here, returning Tc as a 6xn matrix with n<6
-            !            Extreme case would be Tc: 6*0, in which case NodesDOFred would be empty ([])
+            !            Extreme case would be Tc: 6*0, in which case NodesDOFtilde would be empty ([])
             allocate(Tc(1:6,1:6))
             allocate(IDOFOld(1:6))
             Tc=I6
@@ -1311,9 +1303,9 @@ SUBROUTINE BuildTMatrix(Init, p, RA, RAm1, Tred, ErrStat, ErrMsg)
          call JointElimination(Init%NodesConnE(iNode,:), JType, phat, Init, p, Tc, ErrStat2, ErrMsg2); if(Failed()) return
       endif
       nc=size(Tc,2) 
-      call init_list(p%NodesDOFred(iNode), nc, 0, ErrStat2, ErrMsg2)
-      p%NodesDOFred(iNode)%List(1:nc) = (/ (iprev + i, i=1,nc) /)
-      IDOFNew => p%NodesDOFred(iNode)%List(1:nc) ! alias to shorten notations
+      call init_list(p%NodesDOFtilde(iNode), nc, 0, ErrStat2, ErrMsg2)
+      p%NodesDOFtilde(iNode)%List(1:nc) = (/ (iprev + i, i=1,nc) /)
+      IDOFNew => p%NodesDOFtilde(iNode)%List(1:nc) ! alias to shorten notations
       !print*,'N',iNode,'I ',IDOFOld
       !print*,'N',iNode,'It',IDOFNew
       Tred(IDOFOld, IDOFNew) = Tc
@@ -1345,7 +1337,6 @@ contains
       if (allocated(Tc)     ) deallocate(Tc)
       if (allocated(IDOFOld)) deallocate(IDOFOld)
       if (allocated(INodesID)) deallocate(INodesID)
-      if (allocated(RA_DOFred)) deallocate(RA_DOFred)
    END SUBROUTINE CleanUp_BuildTMatrix
 
    !> Returns number of DOF after constraint reduction (via the matrix T)
@@ -1390,30 +1381,6 @@ contains
          endif
       end do
    END FUNCTION nDOF_ConstraintReduced
-
-   !> return true if reduction needed (i.e. special joints, special elements)
-   logical FUNCTION reductionNeeded()
-      integer(IntKi) :: i
-      integer(IntKi) :: myType
-      reductionNeeded=.false.
-      ! Rigid or cable links
-      do i =1,size(p%Elems,1)
-         myType = p%Elems(i, iMType)
-         if (any((/idMemberCable, idMemberRigid/)==myType)) then
-            reductionNeeded=.true.
-            return
-         endif
-      enddo
-      ! Special joints
-      do i = 1, p%nNodes
-         myType = Init%Nodes(i,iJointType)
-         if (any((/idJointPin, idJointUniversal, idJointBall/)==myType)) then
-            reductionNeeded=.true.
-            return
-         endif
-      enddo
-   end FUNCTION reductionNeeded
-
 END SUBROUTINE BuildTMatrix
 !------------------------------------------------------------------------------------------------------
 !> Assemble stiffness and mass matrix, and gravity force vector
@@ -1441,38 +1408,36 @@ SUBROUTINE DirectElimination(Init, p, ErrStat, ErrMsg)
    call BuildTMatrix(Init, p, RA, RAm1, p%T_red, ErrStat2, ErrMsg2); if (Failed()) return
 
    ! --- DOF elimination for system matrices and RHS vector
+   ! Temporary backup of M and K of full system
+   call move_alloc(Init%M,  MM)
+   call move_alloc(Init%K,  KK)
+   call move_alloc(Init%FG, FF)
+   !  Reallocating
    nDOF = p%nDOF_red
-   if (p%reduced) then
-      ! Temporary backup of M and K of full system
-      call move_alloc(Init%M,  MM)
-      call move_alloc(Init%K,  KK)
-      call move_alloc(Init%FG, FF)
-      !  Reallocating
-      CALL AllocAry( Init%K,      nDOF, nDOF,  'Init%K'   ,  ErrStat2, ErrMsg2); if(Failed()) return; ! system stiffness matrix 
-      CALL AllocAry( Init%M,      nDOF, nDOF,  'Init%M'   ,  ErrStat2, ErrMsg2); if(Failed()) return; ! system mass matrix 
-      CALL AllocAry( Init%FG     ,nDOF,        'Init%FG'  ,  ErrStat2, ErrMsg2); if(Failed()) return; ! system gravity force vector 
-      ! Elimination
-      Init%M  = matmul(transpose(p%T_red), matmul(MM, p%T_red))
-      Init%K  = matmul(transpose(p%T_red), matmul(KK, p%T_red))
-      Init%FG = matmul(transpose(p%T_red), FF)
-
-      ! --- Triggers for storage of DOF indices, replacing with indices in constrained system
-      CALL ReInitBCs(Init, p)
-      CALL ReInitIntFc(Init, p)
-   endif
    CALL AllocAry( Init%D,      nDOF, nDOF,  'Init%D'   ,  ErrStat2, ErrMsg2); if(Failed()) return; ! system damping matrix 
+   CALL AllocAry( Init%K,      nDOF, nDOF,  'Init%K'   ,  ErrStat2, ErrMsg2); if(Failed()) return; ! system stiffness matrix 
+   CALL AllocAry( Init%M,      nDOF, nDOF,  'Init%M'   ,  ErrStat2, ErrMsg2); if(Failed()) return; ! system mass matrix 
+   CALL AllocAry( Init%FG     ,nDOF,        'Init%FG'  ,  ErrStat2, ErrMsg2); if(Failed()) return; ! system gravity force vector 
+   ! Elimination
+   Init%M  = matmul(transpose(p%T_red), matmul(MM, p%T_red))
+   Init%K  = matmul(transpose(p%T_red), matmul(KK, p%T_red))
+   Init%FG = matmul(transpose(p%T_red), FF)
    Init%D = 0 !< Used for additional stiffness 
 
+   ! --- Triggers for storage of DOF indices, replacing with indices in constrained system
+   CALL ReInitBCs(Init, p)
+   CALL ReInitIntFc(Init, p)
+
    ! --- Creating a convenient Map from DOF to Nodes
-   call AllocAry(p%DOFred2Nodes, p%nDOF_red, 3, 'DOFred2Nodes', ErrStat2, ErrMsg2); if(Failed()) return;
-   p%DOFred2Nodes=-999
+   call AllocAry(p%DOFtilde2Nodes, p%nDOF_red, 3, 'DOFtilde2Nodes', ErrStat2, ErrMsg2); if(Failed()) return;
+   p%DOFtilde2Nodes=-999
    do iNode=1,p%nNodes
-      nDOFPerNode = len(p%NodesDOFred(iNode))
+      nDOFPerNode = len(p%NodesDOFtilde(iNode))
       do iiDOF = 1, nDOFPerNode
-         iDOF = p%NodesDOFred(iNode)%List(iiDOF)
-         p%DOFred2Nodes(iDOF,1) = iNode       ! First column is Node index
-         p%DOFred2Nodes(iDOF,2) = nDOFPerNode ! Second column is number of DOF per node
-         p%DOFred2Nodes(iDOF,3) = iiDOF       ! Third column is number of DOF per node
+         iDOF = p%NodesDOFtilde(iNode)%List(iiDOF)
+         p%DOFtilde2Nodes(iDOF,1) = iNode       ! First column is Node index
+         p%DOFtilde2Nodes(iDOF,2) = nDOFPerNode ! Second column is number of DOF per node
+         p%DOFtilde2Nodes(iDOF,3) = iiDOF       ! Third column is number of DOF per node
       enddo
    enddo
 
@@ -1502,7 +1467,7 @@ CONTAINS
       DO I = 1, p%nNodes_C
          iNode = p%Nodes_C(I,1) ! Node index
          DO J = 1, 6 ! TODO NOTE here assumptions that 6 DOF are present
-            Init%BCs( (I-1)*6+J, 1) = p%NodesDOFred(iNode)%List(J) ! DOF number (constrained)
+            Init%BCs( (I-1)*6+J, 1) = p%NodesDOFtilde(iNode)%List(J) ! DOF number (constrained)
          ENDDO
       ENDDO
    END SUBROUTINE ReInitBCs
@@ -1515,7 +1480,7 @@ CONTAINS
       DO I = 1, p%nNodes_I
          iNode = p%Nodes_I(I,1) ! Node index
          DO J = 1, 6 ! ItfTDXss    ItfTDYss    ItfTDZss    ItfRDXss    ItfRDYss    ItfRDZss
-            Init%IntFc( (I-1)*6+J, 1) = p%NodesDOFred(iNode)%List(J) ! DOF number (unconstrained)
+            Init%IntFc( (I-1)*6+J, 1) = p%NodesDOFtilde(iNode)%List(J) ! DOF number (unconstrained)
          ENDDO
       ENDDO
    END SUBROUTINE ReInitIntFc
@@ -1671,11 +1636,6 @@ SUBROUTINE JointElimination(Elements, JType, phat, Init, p, Tc, ErrStat, ErrMsg)
       ! --- Forming Tc
       do i = 1,3    ; Tc(i,i)=1_ReKi; enddo !  I3 for translational DOF
       Tc(4:nDOFt,4:nDOFr)=Tc_rot(1:nDOFt-3, 1:nDOFr-3)
-      do i = 1,size(Tc,1); do ie = 1,size(Tc,2)
-         if (abs(Tc(i,ie))<1e-13) then
-            Tc(i,ie)=0.0_ReKi
-         endif; enddo;
-      enddo;
       deallocate(Tc_rot)
       deallocate(Tc_rot_m1)
 
@@ -1842,12 +1802,8 @@ SUBROUTINE InsertJointStiffDamp(p, Init, ErrStat, ErrMsg)
    INTEGER(IntKi),               INTENT(  OUT) :: ErrStat     ! Error status of the operation
    CHARACTER(*),                 INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
    ! Local variables
-   integer(IntKi) :: iNode, JType, iStart, i
-   integer(IntKi) :: nFreeRot ! Number of free rot DOF
-   integer(IntKi) :: nMembers ! Number of members attached to this node
-   integer(IntKi) :: nSpace   ! Number of spaces between diagonal "bands" (0:pin, 1:univ, 2:ball)
+   integer(IntKi) :: iNode, JType, iStart
    real(ReKi) :: StifAdd, DampAdd
-   real(ReKi), dimension(:,:), allocatable :: K_Add, D_Add ! Stiffness and damping matrix added to global system
    integer(IntKi), dimension(:), pointer :: Ifreerot
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -1867,35 +1823,20 @@ SUBROUTINE InsertJointStiffDamp(p, Init, ErrStat, ErrMsg)
          endif
       else
          ! Ball/Univ/Pin joints have damping/stiffness inserted at indices of "free rotation"
-         nMembers = Init%NodesConnE(iNode,1) ! Col1: number of elements connected to this joint
-         if      ( JType == idJointBall      ) then; iStart=4; nSpace=2;
-         else if ( JType == idJointUniversal ) then; iStart=5; nSpace=1;
-         else if ( JType == idJointPin       ) then; iStart=6; nSpace=0;
+         if      ( JType == idJointBall      ) then; iStart=4;
+         else if ( JType == idJointUniversal ) then; iStart=5;
+         else if ( JType == idJointPin       ) then; iStart=6;
          endif
-         Ifreerot=>p%NodesDOFred(iNode)%List(iStart:)
-         nFreeRot = size(Ifreerot)
-         ! Creating matrices of 0, and -K and nK on diagonals
-         allocate(K_Add(1:nFreeRot,1:nFreeRot)); 
-         allocate(D_Add(1:nFreeRot,1:nFreeRot)); 
-         call ChessBoard(K_Add, -StifAdd, 0._ReKi, nSpace=nSpace, diagVal=(nMembers-1)*StifAdd)
-         call ChessBoard(D_Add, -DampAdd, 0._ReKi, nSpace=nSpace, diagVal=(nMembers-1)*DampAdd)
+         Ifreerot=>p%NodesDOFtilde(iNode)%List(iStart:)
          ! Ball/Pin/Universal joints
          if(StifAdd>0) then 
-            print*,'Stiffness Add, Node:',iNode,'DOF:', Ifreerot
-            do i=1,nFreeRot
-               print*,'K Add',K_Add(i,:)
-            enddo
-            Init%K(Ifreerot,Ifreerot) = Init%K(Ifreerot,Ifreerot) + K_Add
+            print*,'StiffAdd, Node',iNode,StifAdd, Ifreerot
+            Init%K(Ifreerot,Ifreerot) = Init%K(Ifreerot,Ifreerot) + StifAdd
          endif
          if(DampAdd>0) then 
-            print*,'Damping   Add, Node:',iNode,'DOF:', Ifreerot
-            do i=1,nFreeRot
-               print*,'D Add',D_Add(i,:)
-            enddo
-            Init%D(Ifreerot,Ifreerot) = Init%D(Ifreerot,Ifreerot) + D_Add
+            print*,'DampAdd, Node',iNode,DampAdd, Ifreerot
+            Init%D(Ifreerot,Ifreerot) = Init%D(Ifreerot,Ifreerot) +DampAdd
          endif
-         if(allocated(K_Add)) deallocate(K_Add)
-         if(allocated(D_Add)) deallocate(D_Add)
       endif
    enddo
 END SUBROUTINE InsertJointStiffDamp

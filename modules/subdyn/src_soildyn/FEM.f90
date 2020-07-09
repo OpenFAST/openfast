@@ -188,43 +188,6 @@ FUNCTION Determinant(A, ErrStat, ErrMsg) result(det)
    endif
 END FUNCTION Determinant
 !------------------------------------------------------------------------------------------------------
-!> Create a chessboard-like matrix with `valBlack` on the "black" cases, starting with black at (1,1)
-!! As a generalization, "black" values may be spaced every `nSpace` squares
-!! For instance, blackVal=9, whiteVal=0, nSpace=2
-!!  [9 0 0 9 0 0 9]
-!!  [0 9 0 0 9 0 0]
-!!  [0 0 9 0 0 9 0]
-!! Diagonal values may be overriden by `diagVal`
-!! Matrix M does not need to be square
-subroutine ChessBoard(M, blackVal, whiteVal, nSpace, diagVal)
-   real(ReKi), dimension(:,:), intent(  out) :: M        !< Output matrix
-   real(ReKi),                 intent(in   ) :: blackVal !< value for black squares
-   real(ReKi),                 intent(in   ) :: whiteVal !< value for white squre
-   integer(IntKi), optional,   intent(in   ) :: nSpace   !< spacing between black values, default 1
-   real(ReKi), optional,       intent(in   ) :: diagVal  !< Value to override diagonal
-   integer(IntKi) :: i, j, jFake, n
-   ! Default value for spacing is 1 if not provided
-   if (present(nSpace)) then; n=nSpace+1; else; n=2; endif
-   ! Default values are white values
-   M(:,:) = whiteVal
-   ! Setting black values everyother n values
-   do i=1,size(M,2)
-      do jFake=1,size(M,2),n ! everyother n values
-         j = mod(jFake+i-2, size(M,2)) +1
-         !print*,'i,j',i,jFake,j
-         M(i,j) = blackVal
-      enddo
-   enddo
-   ! Forcing diagonal values
-   if (present(diagVal)) then
-      do i=1,size(M,1)
-         do j=1,size(M,2) ! Matrix not necessarily square
-            if (i==j) M(i,i) = diagVal
-         enddo
-      enddo
-   endif
-end subroutine ChessBoard
-!------------------------------------------------------------------------------------------------------
 !> Partition matrices and vectors into Boundary (R) and internal (L) nodes
 !!  M = [ MRR, MRL ]
 !!      [ sym, MLL ]
@@ -232,7 +195,7 @@ end subroutine ChessBoard
 !! MLL = M(IDL, IDL),  KRR = K(IDL, IDL), FL = F(IDL)
 !! MRL = M(IDR, IDL),  KRR = K(IDR, IDL)
 !! NOTE: generic code
-SUBROUTINE BreakSysMtrx(MM, KK, IDR, IDL, nR, nL, MRR, MLL, MRL, KRR, KLL, KRL, FG, FGR, FGL, CC, CRR, CLL, CRL)
+SUBROUTINE BreakSysMtrx(MM, KK, IDR, IDL, nR, nL, MRR, MLL, MRL, KRR, KLL, KRL, FG, FGR, FGL)
    REAL(ReKi),             INTENT(IN   )  :: MM(:,:)   !< Mass Matrix
    REAL(ReKi),             INTENT(IN   )  :: KK(:,:)   !< Stiffness matrix
    INTEGER(IntKi),         INTENT(IN   )  :: nR
@@ -248,10 +211,6 @@ SUBROUTINE BreakSysMtrx(MM, KK, IDR, IDL, nR, nL, MRR, MLL, MRL, KRR, KLL, KRL, 
    REAL(ReKi), OPTIONAL,   INTENT(IN   )  :: FG(:)     !< Force vector
    REAL(ReKi), OPTIONAL,   INTENT(  OUT)  :: FGR(nR)
    REAL(ReKi), OPTIONAL,   INTENT(  OUT)  :: FGL(nL)
-   REAL(ReKi), OPTIONAL,   INTENT(IN   )  :: CC(:,:)   !< Stiffness matrix
-   REAL(ReKi), OPTIONAL,   INTENT(  OUT)  :: CRR(nR, nR)
-   REAL(ReKi), OPTIONAL,   INTENT(  OUT)  :: CLL(nL, nL)
-   REAL(ReKi), OPTIONAL,   INTENT(  OUT)  :: CRL(nR, nL)
    INTEGER(IntKi) :: I, J, II, JJ
 
    ! RR: Leader/Boundary DOFs
@@ -296,32 +255,6 @@ SUBROUTINE BreakSysMtrx(MM, KK, IDR, IDL, nR, nL, MRR, MLL, MRL, KRR, KLL, KRL, 
          enddo
       endif
    endif
-   if (present(CC)) then
-      ! RR: Leader/Boundary DOFs
-      DO I = 1, nR 
-         II = IDR(I)
-         DO J = 1, nR
-            JJ = IDR(J)
-            CRR(I, J) = CC(II, JJ)
-         ENDDO
-      ENDDO
-      ! LL: Interior/follower DOFs
-      DO I = 1, nL
-         II = IDL(I)
-         DO J = 1, nL
-            JJ = IDL(J)
-            CLL(I, J) = CC(II, JJ)
-         ENDDO
-      ENDDO
-      ! RL: cross terms
-      DO I = 1, nR 
-         II = IDR(I)
-         DO J = 1, nL
-            JJ = IDL(J)
-            CRL(I, J) = CC(II, JJ) 
-         ENDDO 
-      ENDDO
-   endif
 END SUBROUTINE BreakSysMtrx
 
 !------------------------------------------------------------------------------------------------------
@@ -335,7 +268,7 @@ END SUBROUTINE BreakSysMtrx
 !!    - Possibility to get more CB modes using the input nM_Out>nM
 !!
 !! NOTE: generic code
-SUBROUTINE CraigBamptonReduction(MM, KK, IDR, nR, IDL, nL, nM, nM_Out, MBB, MBM, KBB, PhiL, PhiR, OmegaL, ErrStat, ErrMsg, FG, FGR, FGL, FGB, FGM, CC, CBB, CBM, CMM) 
+SUBROUTINE CraigBamptonReduction(MM, KK, IDR, nR, IDL, nL, nM, nM_Out, MBB, MBM, KBB, PhiL, PhiR, OmegaL, ErrStat, ErrMsg, FG, FGR, FGL, FGB, FGM) 
    REAL(ReKi),             INTENT(IN   ) :: MM(:, :) !< Mass matrix
    REAL(ReKi),             INTENT(IN   ) :: KK(:, :) !< Stiffness matrix
    INTEGER(IntKi),         INTENT(IN   ) :: nR
@@ -355,10 +288,6 @@ SUBROUTINE CraigBamptonReduction(MM, KK, IDR, nR, IDL, nL, nM, nM_Out, MBB, MBM,
    REAL(ReKi), OPTIONAL,   INTENT(  OUT) :: FGL(nL)      !< Force vector partitioned for L DOFs (TODO somehow for Static improvment..)
    REAL(ReKi), OPTIONAL,   INTENT(  OUT) :: FGB(nR)      !< Force vector in Guyan modes = FR+PhiR^t FL
    REAL(ReKi), OPTIONAL,   INTENT(  OUT) :: FGM(nM)      !< Force vector in CB modes    =    PhiM^t FL
-   REAL(ReKi), OPTIONAL,   INTENT(IN   ) :: CC(:, :)     !< Damping matrix
-   REAL(ReKi), OPTIONAL,   INTENT(  OUT) :: CBB(nR, nR)  !< Guyan Damping matrix
-   REAL(ReKi), OPTIONAL,   INTENT(  OUT) :: CBM(nR, nM)  !< Coupling Damping matrix
-   REAL(ReKi), OPTIONAL,   INTENT(  OUT) :: CMM(nM, nM)  !< Craig-Bampton Damping matrix
    INTEGER(IntKi),         INTENT(  OUT) :: ErrStat     ! Error status of the operation
    CHARACTER(*),           INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
    INTEGER(IntKi)                        :: ErrStat2                                                                    
@@ -371,9 +300,6 @@ SUBROUTINE CraigBamptonReduction(MM, KK, IDR, nR, IDL, nL, nM, nM_Out, MBB, MBM,
    real(ReKi), allocatable :: KRR(:, :)
    real(ReKi), allocatable :: KLL(:, :)
    real(ReKi), allocatable :: KRL(:, :)
-   real(ReKi), allocatable :: CRR(:, :)
-   real(ReKi), allocatable :: CRL(:, :)
-   real(ReKi), allocatable :: CLL(:, :)
    ! --- Break system
    CALL AllocAry(MRR, nR, nR, 'matrix MRR', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)  
    CALL AllocAry(MLL, nL, nL, 'matrix MLL', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)  
@@ -381,17 +307,14 @@ SUBROUTINE CraigBamptonReduction(MM, KK, IDR, nR, IDL, nL, nM, nM_Out, MBB, MBM,
    CALL AllocAry(KRR, nR, nR, 'matrix KRR', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)  
    CALL AllocAry(KLL, nL, nL, 'matrix KLL', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)  
    CALL AllocAry(KRL, nR, nL, 'matrix KRL', ErrStat2, ErrMsg2 ); if(Failed()) return
-   if (present(CC)) then
-      CALL AllocAry(CRR, nR, nR, 'matrix CRR', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)  
-      CALL AllocAry(CLL, nL, nL, 'matrix CLL', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)  
-      CALL AllocAry(CRL, nR, nL, 'matrix CRL', ErrStat2, ErrMsg2 ); if(Failed()) return
+   if (present(FG).and.present(FGR).and.present(FGL)) then
+      call BreakSysMtrx(MM, KK, IDR, IDL, nR, nL, MRR, MLL, MRL, KRR, KLL, KRL, FG, FGR, FGL)
+   else
+      call BreakSysMtrx(MM, KK, IDR, IDL, nR, nL, MRR, MLL, MRL, KRR, KLL, KRL)
    endif
-   call BreakSysMtrx(MM, KK, IDR, IDL, nR, nL, MRR, MLL, MRL, KRR, KLL, KRL, FG=FG, FGR=FGR, FGL=FGL, CC=CC, CRR=CRR, CLL=CLL, CRL=CRL)
    ! --- CB reduction
    call CraigBamptonReduction_FromPartition( MRR, MLL, MRL, KRR, KLL, KRL, nR, nL, nM, nM_Out,& !< Inputs 
-                              MBB, MBM, KBB, PhiL, PhiR, OmegaL, ErrStat2, ErrMsg2,& !< Outputs
-                              CRR=CRR, CLL=CLL, CRL=CRL,& !< Optional inputs
-                              CBB=CBB, CBM=CBM, CMM=CMM)  !< Optional Outputs
+                              MBB, MBM, KBB, PhiL, PhiR, OmegaL, ErrStat2, ErrMsg2) !< Outputs
    if(Failed()) return
 
    ! --- Reduction of force if provided
@@ -418,9 +341,6 @@ contains
       IF(ALLOCATED(KRR)  ) DEALLOCATE(KRR) 
       IF(ALLOCATED(KLL)  ) DEALLOCATE(KLL) 
       IF(ALLOCATED(KRL)  ) DEALLOCATE(KRL) 
-      IF(ALLOCATED(CRR)  ) DEALLOCATE(CRR) 
-      IF(ALLOCATED(CLL)  ) DEALLOCATE(CLL) 
-      IF(ALLOCATED(CRL)  ) DEALLOCATE(CRL) 
    end subroutine
 END SUBROUTINE CraigBamptonReduction
 
@@ -435,14 +355,13 @@ END SUBROUTINE CraigBamptonReduction
 !!
 !! NOTE: generic code
 SUBROUTINE CraigBamptonReduction_FromPartition( MRR, MLL, MRL, KRR, KLL, KRL, nR, nL, nM, nM_Out,&
-                     MBB, MBM, KBB, PhiL, PhiR, OmegaL, ErrStat, ErrMsg,&
-                     CRR, CLL, CRL, CBB, CBM, CMM)
+                     MBB, MBM, KBB, PhiL, PhiR, OmegaL, ErrStat, ErrMsg)
    USE NWTC_LAPACK, only: LAPACK_getrs, LAPACK_getrf
    INTEGER(IntKi),         INTENT(  in)  :: nR
    INTEGER(IntKi),         INTENT(  in)  :: nL
    INTEGER(IntKi),         INTENT(  in)  :: nM_Out
    INTEGER(IntKi),         INTENT(  in)  :: nM
-   REAL(ReKi),             INTENT(  IN)  :: MRR( nR, nR) !< Partitioned mass and stiffness matrices
+   REAL(ReKi),             INTENT(  IN)  :: MRR( nR, nR) !< Paritioned matrices
    REAL(ReKi),             INTENT(  IN)  :: MLL( nL, nL) 
    REAL(ReKi),             INTENT(  IN)  :: MRL( nR, nL)
    REAL(ReKi),             INTENT(  IN)  :: KRR( nR, nR)
@@ -454,14 +373,8 @@ SUBROUTINE CraigBamptonReduction_FromPartition( MRR, MLL, MRL, KRR, KLL, KRL, nR
    REAL(ReKi),             INTENT(  OUT) :: PhiR(nL, nR)     !< Guyan Modes   
    REAL(ReKi),             INTENT(  OUT) :: PhiL(nL, nM_Out) !< Craig-Bampton modes
    REAL(ReKi),             INTENT(  OUT) :: OmegaL(nM_Out)   !< Eigenvalues
-   INTEGER(IntKi),         INTENT(  OUT) :: ErrStat          !< Error status of the operation
-   CHARACTER(*),           INTENT(  OUT) :: ErrMsg           !< Error message if ErrStat /= ErrID_None
-   REAL(ReKi), OPTIONAL,   INTENT(  IN)  :: CRR( nR, nR) !< Partitioned damping matrices
-   REAL(ReKi), OPTIONAL,   INTENT(  IN)  :: CLL( nL, nL) 
-   REAL(ReKi), OPTIONAL,   INTENT(  IN)  :: CRL( nR, nL)
-   REAL(ReKi), OPTIONAL,   INTENT(  OUT) :: CBB( nR, nR)  !< Guyan damping matrix
-   REAL(ReKi), OPTIONAL,   INTENT(  OUT) :: CBM( nR, nM)  !< Coupling damping matrix
-   REAL(ReKi), OPTIONAL,   INTENT(  OUT) :: CMM( nM, nM)  !< CB damping matrix
+   INTEGER(IntKi),         INTENT(  OUT) :: ErrStat     !< Error status of the operation
+   CHARACTER(*),           INTENT(  OUT) :: ErrMsg      !< Error message if ErrStat /= ErrID_None
    ! LOCAL VARIABLES
    REAL(ReKi) , allocatable :: Mu(:, :)          ! matrix for normalization Mu(p%nDOFL, p%nDOFL) [bjj: made allocatable to try to avoid stack issues]
    REAL(ReKi) , allocatable :: Temp(:, :)        ! temp matrix for intermediate steps [bjj: made allocatable to try to avoid stack issues]
@@ -501,20 +414,9 @@ SUBROUTINE CraigBamptonReduction_FromPartition( MRR, MLL, MRL, KRR, KLL, KRL, nR
          PhiL(:,I) = PhiL(:,I) / SQRT( MU(I, I) )
       ENDDO    
       DEALLOCATE(MU)
-      if (present(CRR)) then
-         ! CB damping CMM = PhiL^T  CLL PhiL
-         CALL AllocAry( Temp , nM, nL , 'Temp' , ErrStat2 , ErrMsg2); if(Failed()) return
-         CALL AllocAry( MU   , nM, nL , 'Mu'   , ErrStat2 , ErrMsg2); if(Failed()) return
-         MU  = TRANSPOSE(PhiL(1:nL, 1:nM))
-         Temp = MATMUL( MU, CLL )
-         CMM = MATMUL( Temp, PhiL(1:nL, 1:nM) )
-         DEALLOCATE(MU)
-         DEALLOCATE(Temp)
-      endif
    else
       PhiL   = 0.0_ReKi
       OmegaL = 0.0_ReKi
-      if (present(CRR)) CMM  = 0.0_ReKi
    end if
 
    if (nL>0) then
@@ -543,32 +445,11 @@ SUBROUTINE CraigBamptonReduction_FromPartition( MRR, MLL, MRL, KRR, KLL, KRL, nR
       
       KBB = MATMUL(KRL, PhiR)   
       KBB = KBB + KRR
-
-      if (present(CRR)) then
-         ! Guyan damping CBB = CRR + (CRL*PhiR) + (CRL*PhiR)^T + PhiR^T*CLL*PhiR
-         PhiR_T_MLL = TRANSPOSE(PhiR)
-         PhiR_T_MLL = MATMUL(PhiR_T_MLL, CLL)
-         CBB = MATMUL(CRL, PhiR)
-         CBB = CRR + CBB + TRANSPOSE( CBB ) + MATMUL( PhiR_T_MLL, PhiR )
-         ! Cross coupling CMB = PhiM^T*CLR + PhiM^T CLL PhiR
-         !                CBM = CRL*PhiM + PhiR^T CLL^T PhiM (NOTE: assuming CLL symmetric)
-         IF ( nM == 0) THEN
-            CBM = 0.0_ReKi
-            CMM = 0.0_ReKi
-         ELSE
-            CBM = MATMUL( PhiR_T_MLL, PhiL(:,1:nM))  ! last half of operation
-            CBM = MATMUL( CRL, PhiL(:,1:nM) ) + CBM    !This had PhiM      
-         ENDIF
-      endif
    else
       PhiR(1:nL,1:nR) = 0.0_ReKi   ! Empty
       MBM (1:nR,1:nM) = 0.0_ReKi ! Empty
       MBB = MRR
       KBB = KRR
-      if (present(CRR)) then
-         CBB=CRR
-         CBM=0.0_ReKi
-      endif
    endif
         
    call CleanUp()

@@ -9,6 +9,52 @@ The changes are tabulated according to the module input file, line number, and f
 The line number corresponds to the resulting line number after all changes are implemented.
 Thus, be sure to implement each in order so that subsequent line numbers are correct.
 
+OpenFAST v2.3.0 to OpenFAST v2.4.0
+----------------------------------
+
+Many changes were applied to SubDyn input file format. You may consult the following example:
+:download:`(SubDyn's Input File) <./subdyn/examples/OC4_Jacket_SD_Input.dat>`: 
+and the online SubDyn documentation.
+
+============================================= ==== =============== ========================================================================================================================================================================================================
+Added in OpenFAST v2.4.0
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line  Flag Name        Example Value
+============================================= ==== =============== ========================================================================================================================================================================================================
+SubDyn                                        8    ExtraMom         False  ExtraMoment  - Include extra moment from lever arm at interface in interface reactions.
+SubDyn                                        15   GuyanDampMod     0      GuyanDampMod - Guyan damping {0=none, 1=Rayleigh Damping, 2=user specified 6x6 matrix}
+SubDyn                                        16   RayleighDamp     0.001, 0.003   RayleighDamp - Mass and stiffness proportional damping  coefficients (Rayleigh Damping) [only if GuyanDampMod=1]
+SubDyn                                        17   GuyanDampSize    6      GuyanDampSize - Guyan damping matrix size (square, 6x6) [only if GuyanDampMod=2]
+SubDyn                                        18   GuyanDampMat     0.0000e+00   0.0000e+00   0.0000e+00   0.0000e+00   0.0000e+00   0.0000e+00 
+SubDyn                                        -23  GuyanDampMat     0.0000e+00   0.0000e+00   0.0000e+00   0.0000e+00   0.0000e+00   0.0000e+00 
+SubDyn                                        na   CablesSection    -------------------------- CABLE PROPERTIES  -------------------------------------
+SubDyn                                        na   CablesSection    0   NCablePropSets   - Number of cable cable properties
+SubDyn                                        na   CablesSection    PropSetID     EA          MatDens       T0 
+SubDyn                                        na   CablesSection       (-)        (N)         (kg/m)        (N) 
+SubDyn                                        na   RigidSection     ---------------------- RIGID LINK PROPERTIES ------------------------------------
+SubDyn                                        na   RigidSection     0   NRigidPropSets - Number of rigid link properties
+SubDyn                                        na   RigidSection     PropSetID   MatDens   
+SubDyn                                        na   RigidSection       (-)       (kg/m)
+============================================= ==== =============== ========================================================================================================================================================================================================
+
+
+============================================= ==== =============== ========================================================================================================================================================================================================
+Changed in OpenFAST v2.4.0
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line  Flag Name        Example Value
+============================================= ==== =============== ========================================================================================================================================================================================================
+SubDyn                                        26   Joints           JointID JointXss JointYss JointZss JointType JointDirX  JointDirY JointDirZ JointStiff  JointDamp
+SubDyn                                        27   Joints             (-)     (m)      (m)      (m)      (-)        (-)       (-)       (-)      (Nm/rad)   (Nm/rad.s)
+SubDyn                                        na   Members          MemberID MJointID1 MJointID2 MPropSetID1 MPropSetID2 MType COSMID
+SubDyn                                        na   Members            (-)       (-)       (-)        (-)         (-)      (-)   (-)
+SubDyn                                        na   ConcentratedM    CMJointID  JMass    JMXX      JMYY      JMZZ       JMXY     JMXZ     JMYZ    MCGX  MCGY MCGZ
+SubDyn                                        na   ConcentratedM      (-)      (kg)    (kg*m^2)  (kg*m^2)  (kg*m^2)  (kg*m^2)  (kg*m^2) (kg*m^2)  (m)  (m)   (m)
+============================================= ==== =============== ========================================================================================================================================================================================================
+
+
+
+
+
 OpenFAST v2.2.0 to OpenFAST v2.3.0
 ----------------------------------
 
