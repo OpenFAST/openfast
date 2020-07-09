@@ -5,9 +5,15 @@ set -e
 
 cd /openfast
 
-git fetch origin ${GITHUB_REF}:CI
-git checkout CI
-git submodule update
+repo="OpenFAST"
+echo "GITHUB_EVENT_NAME: ${GITHUB_EVENT_NAME}"
+if [[ "${GITHUB_EVENT_NAME}" != "pull_request" ]]; then
+    repo=${GITHUB_ACTOR}
+fi
+# Create a branch "CI" at the current commit from the GH Actor's fork.
+verbosecommand "git fetch https://github.com/${repo}/openfast ${GITHUB_REF}:CI"
+verbosecommand "git checkout CI"
+verbosecommand "git submodule update"
 
 # Display the current git info
 echo git-status from openfast:
