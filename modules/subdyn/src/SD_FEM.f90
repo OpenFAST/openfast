@@ -28,7 +28,7 @@ MODULE SD_FEM
   INTEGER(IntKi),   PARAMETER  :: nDOFL_TP        = 6  !TODO rename me    ! 6 degrees of freedom (length of u subarray [UTP])
    
   ! values of these parameters are ordered by their place in SubDyn input file:
-  INTEGER(IntKi),   PARAMETER  :: JointsCol       = 10                    ! Number of columns in Joints (JointID, JointXss, JointYss, JointZss, JointType, JointDirX JointDirY JointDirZ JointStiff JointDamp)
+  INTEGER(IntKi),   PARAMETER  :: JointsCol       = 9                    ! Number of columns in Joints (JointID, JointXss, JointYss, JointZss, JointType, JointDirX JointDirY JointDirZ JointStiff)
   INTEGER(IntKi),   PARAMETER  :: InterfCol       = 7                     ! Number of columns in interf matrix (JointID,ItfTDxss,ItfTDYss,ItfTDZss,ItfRDXss,ItfRDYss,ItfRDZss)
   INTEGER(IntKi),   PARAMETER  :: ReactCol        = 7                     ! Number of columns in reaction matrix (JointID,ItfTDxss,ItfTDYss,ItfTDZss,ItfRDXss,ItfRDYss,ItfRDZss)
   INTEGER(IntKi),   PARAMETER  :: MaxNodesPerElem = 2                     ! Maximum number of nodes per element (currently 2)
@@ -47,7 +47,6 @@ MODULE SD_FEM
   INTEGER(IntKi),   PARAMETER  :: iJointType= 5  ! Index in Joints where the joint type is stored
   INTEGER(IntKi),   PARAMETER  :: iJointDir= 6 ! Index in Joints where the joint-direction are stored
   INTEGER(IntKi),   PARAMETER  :: iJointStiff= 9 ! Index in Joints where the joint-stiffness is stored
-  INTEGER(IntKi),   PARAMETER  :: iJointDamp= 10 ! Index in Joints where the joint-damping is stored
 
   ! ID for joint types
   INTEGER(IntKi),   PARAMETER  :: idJointCantilever = 1
@@ -631,7 +630,6 @@ CONTAINS
       ! Properties below are for non-cantilever joints
       Init%Nodes(k, iJointDir:iJointDir+2) = 0.0_ReKi ! NOTE: irrelevant for cantilever nodes
       Init%Nodes(k, iJointStiff)           = 0.0_ReKi ! NOTE: irrelevant for cantilever nodes
-      Init%Nodes(k, iJointDamp)            = 0.0_ReKi ! NOTE: irrelevant for cantilever nodes
    END SUBROUTINE SetNewNode
    
    !> Set properties of element k
@@ -1398,8 +1396,8 @@ SUBROUTINE DirectElimination(Init, p, ErrStat, ErrMsg)
       CALL ReInitBCs(Init, p)
       CALL ReInitIntFc(Init, p)
    endif
-   CALL AllocAry( Init%D,      nDOF, nDOF,  'Init%D'   ,  ErrStat2, ErrMsg2); if(Failed()) return; ! system damping matrix 
-   Init%D = 0 !< Used for additional stiffness 
+   !CALL AllocAry( Init%D,      nDOF, nDOF,  'Init%D'   ,  ErrStat2, ErrMsg2); if(Failed()) return; ! system damping matrix 
+   !Init%D = 0 !< Used for additional damping 
 
    ! --- Creating a convenient Map from DOF to Nodes
    call AllocAry(p%DOFred2Nodes, p%nDOF_red, 3, 'DOFred2Nodes', ErrStat2, ErrMsg2); if(Failed()) return;
@@ -1774,6 +1772,7 @@ END SUBROUTINE RigidLinkAssemblies
 
 !------------------------------------------------------------------------------------------------------
 !> Add stiffness and damping to some joints
+!! NOTE: damping was removed around 13/07/2020
 SUBROUTINE InsertJointStiffDamp(p, Init, ErrStat, ErrMsg)
    TYPE(SD_ParameterType),target,INTENT(IN   ) :: p
    TYPE(SD_InitType),            INTENT(INOUT) :: Init
@@ -1784,23 +1783,18 @@ SUBROUTINE InsertJointStiffDamp(p, Init, ErrStat, ErrMsg)
    integer(IntKi) :: nFreeRot ! Number of free rot DOF
    integer(IntKi) :: nMembers ! Number of members attached to this node
    integer(IntKi) :: nSpace   ! Number of spaces between diagonal "bands" (0:pin, 1:univ, 2:ball)
-   real(ReKi) :: StifAdd, DampAdd
-   real(ReKi), dimension(:,:), allocatable :: K_Add, D_Add ! Stiffness and damping matrix added to global system
+   real(ReKi) :: StifAdd
+   real(ReKi), dimension(:,:), allocatable :: K_Add ! Stiffness matrix added to global system
    integer(IntKi), dimension(:), pointer :: Ifreerot
    ErrStat = ErrID_None
    ErrMsg  = ""
    do iNode = 1, p%nNodes
       JType   = int(Init%Nodes(iNode,iJointType))
       StifAdd = Init%Nodes(iNode, iJointStiff)
-      DampAdd = Init%Nodes(iNode, iJointDamp )
       if(JType == idJointCantilever ) then
          ! Cantilever joints should not have damping or stiffness
          if(StifAdd>0) then 
             ErrMsg='InsertJointStiffDamp: Additional stiffness should be 0 for cantilever joints. Index of problematic node: '//trim(Num2LStr(iNode)); ErrStat=ErrID_Fatal;
-            return
-         endif
-         if(DampAdd>0) then 
-            ErrMsg='InsertJointStiffDamp: Additional damping should be 0 for cantilever joints. Index of problematic node: '//trim(Num2LStr(iNode)); ErrStat=ErrID_Fatal;
             return
          endif
       else
@@ -1814,9 +1808,7 @@ SUBROUTINE InsertJointStiffDamp(p, Init, ErrStat, ErrMsg)
          nFreeRot = size(Ifreerot)
          ! Creating matrices of 0, and -K and nK on diagonals
          allocate(K_Add(1:nFreeRot,1:nFreeRot)); 
-         allocate(D_Add(1:nFreeRot,1:nFreeRot)); 
          call ChessBoard(K_Add, -StifAdd, 0._ReKi, nSpace=nSpace, diagVal=(nMembers-1)*StifAdd)
-         call ChessBoard(D_Add, -DampAdd, 0._ReKi, nSpace=nSpace, diagVal=(nMembers-1)*DampAdd)
          ! Ball/Pin/Universal joints
          if(StifAdd>0) then 
             print*,'Stiffness Add, Node:',iNode,'DOF:', Ifreerot
@@ -1825,15 +1817,7 @@ SUBROUTINE InsertJointStiffDamp(p, Init, ErrStat, ErrMsg)
             enddo
             Init%K(Ifreerot,Ifreerot) = Init%K(Ifreerot,Ifreerot) + K_Add
          endif
-         if(DampAdd>0) then 
-            print*,'Damping   Add, Node:',iNode,'DOF:', Ifreerot
-            do i=1,nFreeRot
-               print*,'D Add',D_Add(i,:)
-            enddo
-            Init%D(Ifreerot,Ifreerot) = Init%D(Ifreerot,Ifreerot) + D_Add
-         endif
          if(allocated(K_Add)) deallocate(K_Add)
-         if(allocated(D_Add)) deallocate(D_Add)
       endif
    enddo
 END SUBROUTINE InsertJointStiffDamp
