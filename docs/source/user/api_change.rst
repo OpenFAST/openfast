@@ -43,8 +43,8 @@ Changed in OpenFAST v2.4.0
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 Module                                        Line  Flag Name        Example Value
 ============================================= ==== =============== ========================================================================================================================================================================================================
-SubDyn                                        26   Joints           JointID JointXss JointYss JointZss JointType JointDirX  JointDirY JointDirZ JointStiff  JointDamp
-SubDyn                                        27   Joints             (-)     (m)      (m)      (m)      (-)        (-)       (-)       (-)      (Nm/rad)   (Nm/rad.s)
+SubDyn                                        26   Joints           JointID JointXss JointYss JointZss JointType JointDirX  JointDirY JointDirZ JointStiff
+SubDyn                                        27   Joints             (-)     (m)      (m)      (m)      (-)        (-)       (-)       (-)      (Nm/rad) 
 SubDyn                                        na   Members          MemberID MJointID1 MJointID2 MPropSetID1 MPropSetID2 MType COSMID
 SubDyn                                        na   Members            (-)       (-)       (-)        (-)         (-)      (-)   (-)
 SubDyn                                        na   ConcentratedM    CMJointID  JMass    JMXX      JMYY      JMZZ       JMXY     JMXZ     JMYZ    MCGX  MCGY MCGZ
