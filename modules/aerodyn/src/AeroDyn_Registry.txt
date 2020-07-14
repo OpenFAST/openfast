@@ -83,7 +83,7 @@ typedef	^	AD_InputFile	LOGICAL	AIDrag	-	-	-	"Include the drag term in the axial-
 typedef	^	AD_InputFile	LOGICAL	TIDrag	-	-	-	"Include the drag term in the tangential-induction calculation? [unused when WakeMod=0 or TanInd=FALSE]"	flag
 typedef	^	AD_InputFile	ReKi	IndToler	-	-	-	"Convergence tolerance for BEM induction factors [unused when WakeMod=0]"	-
 typedef	^	AD_InputFile	ReKi	MaxIter	-	-	-	"Maximum number of iteration steps [unused when WakeMod=0]"	-
-typedef	^	AD_InputFile	IntKi	UAMod	-	-	-	"Unsteady Aero Model Switch (switch) {1=Baseline model (Original), 2=Gonzalez's variant (changes in Cn,Cc,Cm), 3=Minemma/Pierce variant (changes in Cc and Cm)} [used only when AFAeroMod=2]"	-
+typedef	^	AD_InputFile	IntKi	UAMod	-	-	-	"Unsteady Aero Model Switch (switch) {1=Baseline model (Original), 2=Gonzalez's variant (changes in Cn,Cc,Cm), 3=Minnema/Pierce variant (changes in Cc and Cm)} [used only when AFAeroMod=2]"	-
 typedef	^	AD_InputFile	LOGICAL	FLookup	-	-	-	"Flag to indicate whether a lookup for f' will be calculated (TRUE) or whether best-fit exponential equations will be used (FALSE); if FALSE S1-S4 must be provided in airfoil input files [used only when AFAeroMod=2]"	flag
 typedef	^	AD_InputFile	ReKi	InCol_Alfa	-	-	-	"The column in the airfoil tables that contains the angle of attack"	-
 typedef	^	AD_InputFile	ReKi	InCol_Cl	-	-	-	"The column in the airfoil tables that contains the lift coefficient"	-
@@ -109,6 +109,12 @@ typedef	^	AD_InputFile	IntKi	NumOuts	-	-	-	"Number of parameters in the output l
 typedef	^	AD_InputFile	CHARACTER(ChanLen)	OutList	{:}	-	-	"List of user-requested output channels"	-
 typedef	^	AD_InputFile	ReKi	tau1_const	-	-	-	"time constant for DBEMT [used only when WakeMod=2 and DBEMT_Mod=1]"	s
 typedef	^	AD_InputFile	IntKi	DBEMT_Mod	-	-	-	"Type of dynamic BEMT (DBEMT) model {1=constant tau1, 2=time-dependent tau1}"	-
+typedef	^	AD_InputFile	IntKi	BldNd_NumOuts	-	-	-	"Number of requested output channels per blade node (AD_AllBldNdOuts)"	-
+typedef	^	AD_InputFile	CHARACTER(ChanLen)	BldNd_OutList	{:}	-	-	"List of user-requested output channels (AD_AllBldNdOuts)"	-
+#typedef  ^  AD_InputFile   IntKi BldNd_BlOutNd {:} - - "The blade nodes to actually output (AD_AllBldNdOuts)" -
+typedef  ^  AD_InputFile   CHARACTER(1024) BldNd_BlOutNd_Str - - - "String to parse for the blade nodes to actually output (AD_AllBldNdOuts)" -
+typedef  ^  AD_InputFile   IntKi BldNd_BladesOut - - - "The blades to output (AD_AllBldNdOuts)" -
+#typedef  ^  AD_InputFile   CHARACTER(1024) BldNd_BladesOut_Str - - - "String to parse for the he blades to output (AD_AllBldNdOuts)" -
 
 # ..... States ....................................................................................................................
 # Define continuous (differentiable) states here:
@@ -179,6 +185,14 @@ typedef	^	ParameterType	IntKi	NBlOuts	-	-	-	"Number of blade node outputs [0 - 9
 typedef	^	ParameterType	IntKi	BlOutNd	{9}	-	-	"Blade nodes whose values will be output"	-
 typedef	^	ParameterType	IntKi	NTwOuts	-	-	-	"Number of tower node outputs [0 - 9]"	-
 typedef	^	ParameterType	IntKi	TwOutNd	{9}	-	-	"Tower nodes whose values will be output"	-
+
+typedef	^	ParameterType	IntKi	BldNd_NumOuts	-	-	-	"Number of requested output channels per blade node (AD_AllBldNdOuts)"	-
+typedef	^	ParameterType	IntKi	BldNd_TotNumOuts	-	-	-	"Total number of requested output channels of blade node information (BldNd_NumOuts * BldNd_BlOutNd * BldNd_BladesOut -- AD_AllBldNdOuts)"	-
+typedef	^	ParameterType	OutParmType	BldNd_OutParam	{:}	-	-	"Names and units (and other characteristics) of all requested output parameters"	-
+typedef  ^  ParameterType  IntKi BldNd_BlOutNd {:} - - "The blade nodes to actually output (AD_AllBldNdOuts)" -
+typedef  ^  ParameterType  IntKi BldNd_BladesOut - - - "The blades to output (AD_AllBldNdOuts)" -
+
+
 typedef	^	ParameterType	Integer	Jac_u_indx	{:}{:}	-	-	"matrix to help fill/pack the u vector in computing the jacobian"	-
 typedef	^	ParameterType	ReKi	du	{:}	-	-	"vector that determines size of perturbation for u (inputs)"
 typedef	^	ParameterType	Integer	Jac_ny	-	-	-	"number of outputs in jacobian matrix"	-

@@ -137,7 +137,7 @@ typedef     ^                 ^                 INTEGER              NumOuts    
 typedef     ^                 ^                 INTEGER              NumOutAll         -        -        -        ""    -
 typedef     ^                 ^                 CHARACTER(20)        OutFmt            -        -        -        ""        -
 typedef     ^                 ^                 CHARACTER(20)        OutSFmt           -        -        -        ""        -
-typedef     ^                 ^                 CHARACTER(10)        Delim             -        -        -        ""        -
+typedef     ^                 ^                 CHARACTER(ChanLen)   Delim             -        -        -        ""        -
 typedef     ^                 ^                 INTEGER              UnOutFile         -        -        -        ""        -
 
 

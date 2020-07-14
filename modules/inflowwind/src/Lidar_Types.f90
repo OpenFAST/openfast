@@ -209,18 +209,22 @@ CONTAINS
   Db_Xferred  = 1
   Int_Xferred = 1
 
-      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%SensorType
-      Int_Xferred   = Int_Xferred   + 1
-      DbKiBuf ( Db_Xferred:Db_Xferred+(1)-1 ) = InData%Tmax
-      Db_Xferred   = Db_Xferred   + 1
-      ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%RotorApexOffsetPos))-1 ) = PACK(InData%RotorApexOffsetPos,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%RotorApexOffsetPos)
-      ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%HubPosition))-1 ) = PACK(InData%HubPosition,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%HubPosition)
-      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%NumPulseGate
-      Int_Xferred   = Int_Xferred   + 1
-      IntKiBuf ( Int_Xferred:Int_Xferred+1-1 ) = TRANSFER( InData%LidRadialVel , IntKiBuf(1), 1)
-      Int_Xferred   = Int_Xferred   + 1
+    IntKiBuf(Int_Xferred) = InData%SensorType
+    Int_Xferred = Int_Xferred + 1
+    DbKiBuf(Db_Xferred) = InData%Tmax
+    Db_Xferred = Db_Xferred + 1
+    DO i1 = LBOUND(InData%RotorApexOffsetPos,1), UBOUND(InData%RotorApexOffsetPos,1)
+      ReKiBuf(Re_Xferred) = InData%RotorApexOffsetPos(i1)
+      Re_Xferred = Re_Xferred + 1
+    END DO
+    DO i1 = LBOUND(InData%HubPosition,1), UBOUND(InData%HubPosition,1)
+      ReKiBuf(Re_Xferred) = InData%HubPosition(i1)
+      Re_Xferred = Re_Xferred + 1
+    END DO
+    IntKiBuf(Int_Xferred) = InData%NumPulseGate
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%LidRadialVel, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE Lidar_PackInitInput
 
  SUBROUTINE Lidar_UnPackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -236,12 +240,6 @@ CONTAINS
   INTEGER(IntKi)                 :: Db_Xferred
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
-  LOGICAL                        :: mask0
-  LOGICAL, ALLOCATABLE           :: mask1(:)
-  LOGICAL, ALLOCATABLE           :: mask2(:,:)
-  LOGICAL, ALLOCATABLE           :: mask3(:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
@@ -256,36 +254,26 @@ CONTAINS
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-      OutData%SensorType = IntKiBuf( Int_Xferred ) 
-      Int_Xferred   = Int_Xferred + 1
-      OutData%Tmax = DbKiBuf( Db_Xferred ) 
-      Db_Xferred   = Db_Xferred + 1
+    OutData%SensorType = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%Tmax = DbKiBuf(Db_Xferred)
+    Db_Xferred = Db_Xferred + 1
     i1_l = LBOUND(OutData%RotorApexOffsetPos,1)
     i1_u = UBOUND(OutData%RotorApexOffsetPos,1)
-    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask1 = .TRUE. 
-      OutData%RotorApexOffsetPos = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%RotorApexOffsetPos))-1 ), mask1, 0.0_ReKi )
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%RotorApexOffsetPos)
-    DEALLOCATE(mask1)
+    DO i1 = LBOUND(OutData%RotorApexOffsetPos,1), UBOUND(OutData%RotorApexOffsetPos,1)
+      OutData%RotorApexOffsetPos(i1) = ReKiBuf(Re_Xferred)
+      Re_Xferred = Re_Xferred + 1
+    END DO
     i1_l = LBOUND(OutData%HubPosition,1)
     i1_u = UBOUND(OutData%HubPosition,1)
-    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask1 = .TRUE. 
-      OutData%HubPosition = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%HubPosition))-1 ), mask1, 0.0_ReKi )
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%HubPosition)
-    DEALLOCATE(mask1)
-      OutData%NumPulseGate = IntKiBuf( Int_Xferred ) 
-      Int_Xferred   = Int_Xferred + 1
-      OutData%LidRadialVel = TRANSFER( IntKiBuf( Int_Xferred ), mask0 )
-      Int_Xferred   = Int_Xferred + 1
+    DO i1 = LBOUND(OutData%HubPosition,1), UBOUND(OutData%HubPosition,1)
+      OutData%HubPosition(i1) = ReKiBuf(Re_Xferred)
+      Re_Xferred = Re_Xferred + 1
+    END DO
+    OutData%NumPulseGate = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%LidRadialVel = TRANSFER(IntKiBuf(Int_Xferred), OutData%LidRadialVel)
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE Lidar_UnPackInitInput
 
  SUBROUTINE Lidar_CopyInitOutput( SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg )
@@ -379,8 +367,8 @@ CONTAINS
   Db_Xferred  = 1
   Int_Xferred = 1
 
-      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%DummyInitOut
-      Re_Xferred   = Re_Xferred   + 1
+    ReKiBuf(Re_Xferred) = InData%DummyInitOut
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE Lidar_PackInitOutput
 
  SUBROUTINE Lidar_UnPackInitOutput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -396,12 +384,6 @@ CONTAINS
   INTEGER(IntKi)                 :: Db_Xferred
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
-  LOGICAL                        :: mask0
-  LOGICAL, ALLOCATABLE           :: mask1(:)
-  LOGICAL, ALLOCATABLE           :: mask2(:,:)
-  LOGICAL, ALLOCATABLE           :: mask3(:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'Lidar_UnPackInitOutput'
@@ -415,8 +397,8 @@ CONTAINS
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-      OutData%DummyInitOut = ReKiBuf( Re_Xferred )
-      Re_Xferred   = Re_Xferred + 1
+    OutData%DummyInitOut = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE Lidar_UnPackInitOutput
 
  SUBROUTINE Lidar_CopyParam( SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg )
@@ -531,28 +513,30 @@ CONTAINS
   Db_Xferred  = 1
   Int_Xferred = 1
 
-      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%NumPulseGate
-      Int_Xferred   = Int_Xferred   + 1
-      ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%RotorApexOffsetPos))-1 ) = PACK(InData%RotorApexOffsetPos,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%RotorApexOffsetPos)
-      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%RayRangeSq
-      Re_Xferred   = Re_Xferred   + 1
-      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%SpatialRes
-      Re_Xferred   = Re_Xferred   + 1
-      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%SensorType
-      Int_Xferred   = Int_Xferred   + 1
-      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%WtFnTrunc
-      Re_Xferred   = Re_Xferred   + 1
-      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%PulseRangeOne
-      Re_Xferred   = Re_Xferred   + 1
-      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%DeltaP
-      Re_Xferred   = Re_Xferred   + 1
-      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%DeltaR
-      Re_Xferred   = Re_Xferred   + 1
-      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%r_p
-      Re_Xferred   = Re_Xferred   + 1
-      IntKiBuf ( Int_Xferred:Int_Xferred+1-1 ) = TRANSFER( InData%LidRadialVel , IntKiBuf(1), 1)
-      Int_Xferred   = Int_Xferred   + 1
+    IntKiBuf(Int_Xferred) = InData%NumPulseGate
+    Int_Xferred = Int_Xferred + 1
+    DO i1 = LBOUND(InData%RotorApexOffsetPos,1), UBOUND(InData%RotorApexOffsetPos,1)
+      ReKiBuf(Re_Xferred) = InData%RotorApexOffsetPos(i1)
+      Re_Xferred = Re_Xferred + 1
+    END DO
+    ReKiBuf(Re_Xferred) = InData%RayRangeSq
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%SpatialRes
+    Re_Xferred = Re_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%SensorType
+    Int_Xferred = Int_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%WtFnTrunc
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%PulseRangeOne
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%DeltaP
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%DeltaR
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%r_p
+    Re_Xferred = Re_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%LidRadialVel, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE Lidar_PackParam
 
  SUBROUTINE Lidar_UnPackParam( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -568,12 +552,6 @@ CONTAINS
   INTEGER(IntKi)                 :: Db_Xferred
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
-  LOGICAL                        :: mask0
-  LOGICAL, ALLOCATABLE           :: mask1(:)
-  LOGICAL, ALLOCATABLE           :: mask2(:,:)
-  LOGICAL, ALLOCATABLE           :: mask3(:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
@@ -588,37 +566,32 @@ CONTAINS
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-      OutData%NumPulseGate = IntKiBuf( Int_Xferred ) 
-      Int_Xferred   = Int_Xferred + 1
+    OutData%NumPulseGate = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
     i1_l = LBOUND(OutData%RotorApexOffsetPos,1)
     i1_u = UBOUND(OutData%RotorApexOffsetPos,1)
-    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask1 = .TRUE. 
-      OutData%RotorApexOffsetPos = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%RotorApexOffsetPos))-1 ), mask1, 0.0_ReKi )
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%RotorApexOffsetPos)
-    DEALLOCATE(mask1)
-      OutData%RayRangeSq = ReKiBuf( Re_Xferred )
-      Re_Xferred   = Re_Xferred + 1
-      OutData%SpatialRes = ReKiBuf( Re_Xferred )
-      Re_Xferred   = Re_Xferred + 1
-      OutData%SensorType = IntKiBuf( Int_Xferred ) 
-      Int_Xferred   = Int_Xferred + 1
-      OutData%WtFnTrunc = ReKiBuf( Re_Xferred )
-      Re_Xferred   = Re_Xferred + 1
-      OutData%PulseRangeOne = ReKiBuf( Re_Xferred )
-      Re_Xferred   = Re_Xferred + 1
-      OutData%DeltaP = ReKiBuf( Re_Xferred )
-      Re_Xferred   = Re_Xferred + 1
-      OutData%DeltaR = ReKiBuf( Re_Xferred )
-      Re_Xferred   = Re_Xferred + 1
-      OutData%r_p = ReKiBuf( Re_Xferred )
-      Re_Xferred   = Re_Xferred + 1
-      OutData%LidRadialVel = TRANSFER( IntKiBuf( Int_Xferred ), mask0 )
-      Int_Xferred   = Int_Xferred + 1
+    DO i1 = LBOUND(OutData%RotorApexOffsetPos,1), UBOUND(OutData%RotorApexOffsetPos,1)
+      OutData%RotorApexOffsetPos(i1) = ReKiBuf(Re_Xferred)
+      Re_Xferred = Re_Xferred + 1
+    END DO
+    OutData%RayRangeSq = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%SpatialRes = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%SensorType = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%WtFnTrunc = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%PulseRangeOne = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%DeltaP = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%DeltaR = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%r_p = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%LidRadialVel = TRANSFER(IntKiBuf(Int_Xferred), OutData%LidRadialVel)
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE Lidar_UnPackParam
 
  SUBROUTINE Lidar_CopyContState( SrcContStateData, DstContStateData, CtrlCode, ErrStat, ErrMsg )
@@ -712,8 +685,8 @@ CONTAINS
   Db_Xferred  = 1
   Int_Xferred = 1
 
-      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%DummyContState
-      Re_Xferred   = Re_Xferred   + 1
+    ReKiBuf(Re_Xferred) = InData%DummyContState
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE Lidar_PackContState
 
  SUBROUTINE Lidar_UnPackContState( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -729,12 +702,6 @@ CONTAINS
   INTEGER(IntKi)                 :: Db_Xferred
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
-  LOGICAL                        :: mask0
-  LOGICAL, ALLOCATABLE           :: mask1(:)
-  LOGICAL, ALLOCATABLE           :: mask2(:,:)
-  LOGICAL, ALLOCATABLE           :: mask3(:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'Lidar_UnPackContState'
@@ -748,8 +715,8 @@ CONTAINS
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-      OutData%DummyContState = ReKiBuf( Re_Xferred )
-      Re_Xferred   = Re_Xferred + 1
+    OutData%DummyContState = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE Lidar_UnPackContState
 
  SUBROUTINE Lidar_CopyDiscState( SrcDiscStateData, DstDiscStateData, CtrlCode, ErrStat, ErrMsg )
@@ -843,8 +810,8 @@ CONTAINS
   Db_Xferred  = 1
   Int_Xferred = 1
 
-      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%DummyDiscState
-      Re_Xferred   = Re_Xferred   + 1
+    ReKiBuf(Re_Xferred) = InData%DummyDiscState
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE Lidar_PackDiscState
 
  SUBROUTINE Lidar_UnPackDiscState( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -860,12 +827,6 @@ CONTAINS
   INTEGER(IntKi)                 :: Db_Xferred
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
-  LOGICAL                        :: mask0
-  LOGICAL, ALLOCATABLE           :: mask1(:)
-  LOGICAL, ALLOCATABLE           :: mask2(:,:)
-  LOGICAL, ALLOCATABLE           :: mask3(:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'Lidar_UnPackDiscState'
@@ -879,8 +840,8 @@ CONTAINS
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-      OutData%DummyDiscState = ReKiBuf( Re_Xferred )
-      Re_Xferred   = Re_Xferred + 1
+    OutData%DummyDiscState = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE Lidar_UnPackDiscState
 
  SUBROUTINE Lidar_CopyConstrState( SrcConstrStateData, DstConstrStateData, CtrlCode, ErrStat, ErrMsg )
@@ -974,8 +935,8 @@ CONTAINS
   Db_Xferred  = 1
   Int_Xferred = 1
 
-      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%DummyConstrState
-      Re_Xferred   = Re_Xferred   + 1
+    ReKiBuf(Re_Xferred) = InData%DummyConstrState
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE Lidar_PackConstrState
 
  SUBROUTINE Lidar_UnPackConstrState( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -991,12 +952,6 @@ CONTAINS
   INTEGER(IntKi)                 :: Db_Xferred
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
-  LOGICAL                        :: mask0
-  LOGICAL, ALLOCATABLE           :: mask1(:)
-  LOGICAL, ALLOCATABLE           :: mask2(:,:)
-  LOGICAL, ALLOCATABLE           :: mask3(:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'Lidar_UnPackConstrState'
@@ -1010,8 +965,8 @@ CONTAINS
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-      OutData%DummyConstrState = ReKiBuf( Re_Xferred )
-      Re_Xferred   = Re_Xferred + 1
+    OutData%DummyConstrState = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE Lidar_UnPackConstrState
 
  SUBROUTINE Lidar_CopyOtherState( SrcOtherStateData, DstOtherStateData, CtrlCode, ErrStat, ErrMsg )
@@ -1105,8 +1060,8 @@ CONTAINS
   Db_Xferred  = 1
   Int_Xferred = 1
 
-      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%DummyOtherState
-      Re_Xferred   = Re_Xferred   + 1
+    ReKiBuf(Re_Xferred) = InData%DummyOtherState
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE Lidar_PackOtherState
 
  SUBROUTINE Lidar_UnPackOtherState( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -1122,12 +1077,6 @@ CONTAINS
   INTEGER(IntKi)                 :: Db_Xferred
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
-  LOGICAL                        :: mask0
-  LOGICAL, ALLOCATABLE           :: mask1(:)
-  LOGICAL, ALLOCATABLE           :: mask2(:,:)
-  LOGICAL, ALLOCATABLE           :: mask3(:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'Lidar_UnPackOtherState'
@@ -1141,8 +1090,8 @@ CONTAINS
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-      OutData%DummyOtherState = ReKiBuf( Re_Xferred )
-      Re_Xferred   = Re_Xferred + 1
+    OutData%DummyOtherState = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE Lidar_UnPackOtherState
 
  SUBROUTINE Lidar_CopyMisc( SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg )
@@ -1236,8 +1185,8 @@ CONTAINS
   Db_Xferred  = 1
   Int_Xferred = 1
 
-      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%DummyMiscVar
-      Re_Xferred   = Re_Xferred   + 1
+    ReKiBuf(Re_Xferred) = InData%DummyMiscVar
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE Lidar_PackMisc
 
  SUBROUTINE Lidar_UnPackMisc( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -1253,12 +1202,6 @@ CONTAINS
   INTEGER(IntKi)                 :: Db_Xferred
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
-  LOGICAL                        :: mask0
-  LOGICAL, ALLOCATABLE           :: mask1(:)
-  LOGICAL, ALLOCATABLE           :: mask2(:,:)
-  LOGICAL, ALLOCATABLE           :: mask3(:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'Lidar_UnPackMisc'
@@ -1272,8 +1215,8 @@ CONTAINS
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-      OutData%DummyMiscVar = ReKiBuf( Re_Xferred )
-      Re_Xferred   = Re_Xferred + 1
+    OutData%DummyMiscVar = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE Lidar_UnPackMisc
 
  SUBROUTINE Lidar_CopyInput( SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg )
@@ -1374,14 +1317,18 @@ CONTAINS
   Db_Xferred  = 1
   Int_Xferred = 1
 
-      ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%LidPosition))-1 ) = PACK(InData%LidPosition,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%LidPosition)
-      ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%MsrPosition))-1 ) = PACK(InData%MsrPosition,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%MsrPosition)
-      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%PulseLidEl
-      Re_Xferred   = Re_Xferred   + 1
-      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%PulseLidAz
-      Re_Xferred   = Re_Xferred   + 1
+    DO i1 = LBOUND(InData%LidPosition,1), UBOUND(InData%LidPosition,1)
+      ReKiBuf(Re_Xferred) = InData%LidPosition(i1)
+      Re_Xferred = Re_Xferred + 1
+    END DO
+    DO i1 = LBOUND(InData%MsrPosition,1), UBOUND(InData%MsrPosition,1)
+      ReKiBuf(Re_Xferred) = InData%MsrPosition(i1)
+      Re_Xferred = Re_Xferred + 1
+    END DO
+    ReKiBuf(Re_Xferred) = InData%PulseLidEl
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%PulseLidAz
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE Lidar_PackInput
 
  SUBROUTINE Lidar_UnPackInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -1397,12 +1344,6 @@ CONTAINS
   INTEGER(IntKi)                 :: Db_Xferred
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
-  LOGICAL                        :: mask0
-  LOGICAL, ALLOCATABLE           :: mask1(:)
-  LOGICAL, ALLOCATABLE           :: mask2(:,:)
-  LOGICAL, ALLOCATABLE           :: mask3(:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
@@ -1419,30 +1360,20 @@ CONTAINS
   Int_Xferred  = 1
     i1_l = LBOUND(OutData%LidPosition,1)
     i1_u = UBOUND(OutData%LidPosition,1)
-    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask1 = .TRUE. 
-      OutData%LidPosition = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%LidPosition))-1 ), mask1, 0.0_ReKi )
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%LidPosition)
-    DEALLOCATE(mask1)
+    DO i1 = LBOUND(OutData%LidPosition,1), UBOUND(OutData%LidPosition,1)
+      OutData%LidPosition(i1) = ReKiBuf(Re_Xferred)
+      Re_Xferred = Re_Xferred + 1
+    END DO
     i1_l = LBOUND(OutData%MsrPosition,1)
     i1_u = UBOUND(OutData%MsrPosition,1)
-    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask1 = .TRUE. 
-      OutData%MsrPosition = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%MsrPosition))-1 ), mask1, 0.0_ReKi )
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%MsrPosition)
-    DEALLOCATE(mask1)
-      OutData%PulseLidEl = ReKiBuf( Re_Xferred )
-      Re_Xferred   = Re_Xferred + 1
-      OutData%PulseLidAz = ReKiBuf( Re_Xferred )
-      Re_Xferred   = Re_Xferred + 1
+    DO i1 = LBOUND(OutData%MsrPosition,1), UBOUND(OutData%MsrPosition,1)
+      OutData%MsrPosition(i1) = ReKiBuf(Re_Xferred)
+      Re_Xferred = Re_Xferred + 1
+    END DO
+    OutData%PulseLidEl = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%PulseLidAz = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE Lidar_UnPackInput
 
  SUBROUTINE Lidar_CopyOutput( SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg )
@@ -1585,8 +1516,10 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%LidSpeed,1)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%LidSpeed)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%LidSpeed))-1 ) = PACK(InData%LidSpeed,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%LidSpeed)
+      DO i1 = LBOUND(InData%LidSpeed,1), UBOUND(InData%LidSpeed,1)
+        ReKiBuf(Re_Xferred) = InData%LidSpeed(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
   IF ( .NOT. ALLOCATED(InData%WtTrunc) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -1598,8 +1531,10 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WtTrunc,1)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%WtTrunc)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%WtTrunc))-1 ) = PACK(InData%WtTrunc,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%WtTrunc)
+      DO i1 = LBOUND(InData%WtTrunc,1), UBOUND(InData%WtTrunc,1)
+        ReKiBuf(Re_Xferred) = InData%WtTrunc(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
  END SUBROUTINE Lidar_PackOutput
 
@@ -1616,12 +1551,6 @@ ENDIF
   INTEGER(IntKi)                 :: Db_Xferred
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
-  LOGICAL                        :: mask0
-  LOGICAL, ALLOCATABLE           :: mask1(:)
-  LOGICAL, ALLOCATABLE           :: mask2(:,:)
-  LOGICAL, ALLOCATABLE           :: mask3(:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
@@ -1649,15 +1578,10 @@ ENDIF
        CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%LidSpeed.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask1 = .TRUE. 
-      IF (SIZE(OutData%LidSpeed)>0) OutData%LidSpeed = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%LidSpeed))-1 ), mask1, 0.0_ReKi )
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%LidSpeed)
-    DEALLOCATE(mask1)
+      DO i1 = LBOUND(OutData%LidSpeed,1), UBOUND(OutData%LidSpeed,1)
+        OutData%LidSpeed(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WtTrunc not allocated
     Int_Xferred = Int_Xferred + 1
@@ -1672,15 +1596,10 @@ ENDIF
        CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%WtTrunc.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask1 = .TRUE. 
-      IF (SIZE(OutData%WtTrunc)>0) OutData%WtTrunc = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%WtTrunc))-1 ), mask1, 0.0_ReKi )
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%WtTrunc)
-    DEALLOCATE(mask1)
+      DO i1 = LBOUND(OutData%WtTrunc,1), UBOUND(OutData%WtTrunc,1)
+        OutData%WtTrunc(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
  END SUBROUTINE Lidar_UnPackOutput
 
@@ -1759,12 +1678,12 @@ ENDIF
  REAL(DbKi)                                 :: t(2)     ! Times associated with the Inputs
  REAL(DbKi)                                 :: t_out    ! Time to which to be extrap/interpd
  CHARACTER(*),                    PARAMETER :: RoutineName = 'Lidar_Input_ExtrapInterp1'
- REAL(DbKi)                                 :: b0       ! temporary for extrapolation/interpolation
- REAL(DbKi)                                 :: c0       ! temporary for extrapolation/interpolation
- REAL(DbKi),ALLOCATABLE,DIMENSION(:)        :: b1       ! temporary for extrapolation/interpolation
- REAL(DbKi),ALLOCATABLE,DIMENSION(:)        :: c1       ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: b        ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: ScaleFactor ! temporary for extrapolation/interpolation
  INTEGER(IntKi)                             :: ErrStat2 ! local errors
  CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
+ INTEGER                                    :: i01    ! dim1 level 0 counter variable for arrays of ddts
+ INTEGER                                    :: i1    ! dim1 counter variable for arrays
     ! Initialize ErrStat
  ErrStat = ErrID_None
  ErrMsg  = ""
@@ -1777,22 +1696,20 @@ ENDIF
      CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
      RETURN
    END IF
-  ALLOCATE(b1(SIZE(u_out%LidPosition,1)))
-  ALLOCATE(c1(SIZE(u_out%LidPosition,1)))
-  b1 = -(u1%LidPosition - u2%LidPosition)/t(2)
-  u_out%LidPosition = u1%LidPosition + b1 * t_out
-  DEALLOCATE(b1)
-  DEALLOCATE(c1)
-  ALLOCATE(b1(SIZE(u_out%MsrPosition,1)))
-  ALLOCATE(c1(SIZE(u_out%MsrPosition,1)))
-  b1 = -(u1%MsrPosition - u2%MsrPosition)/t(2)
-  u_out%MsrPosition = u1%MsrPosition + b1 * t_out
-  DEALLOCATE(b1)
-  DEALLOCATE(c1)
-  b0 = -(u1%PulseLidEl - u2%PulseLidEl)/t(2)
-  u_out%PulseLidEl = u1%PulseLidEl + b0 * t_out
-  b0 = -(u1%PulseLidAz - u2%PulseLidAz)/t(2)
-  u_out%PulseLidAz = u1%PulseLidAz + b0 * t_out
+
+   ScaleFactor = t_out / t(2)
+  DO i1 = LBOUND(u_out%LidPosition,1),UBOUND(u_out%LidPosition,1)
+    b = -(u1%LidPosition(i1) - u2%LidPosition(i1))
+    u_out%LidPosition(i1) = u1%LidPosition(i1) + b * ScaleFactor
+  END DO
+  DO i1 = LBOUND(u_out%MsrPosition,1),UBOUND(u_out%MsrPosition,1)
+    b = -(u1%MsrPosition(i1) - u2%MsrPosition(i1))
+    u_out%MsrPosition(i1) = u1%MsrPosition(i1) + b * ScaleFactor
+  END DO
+  b = -(u1%PulseLidEl - u2%PulseLidEl)
+  u_out%PulseLidEl = u1%PulseLidEl + b * ScaleFactor
+  b = -(u1%PulseLidAz - u2%PulseLidAz)
+  u_out%PulseLidAz = u1%PulseLidAz + b * ScaleFactor
  END SUBROUTINE Lidar_Input_ExtrapInterp1
 
 
@@ -1822,13 +1739,14 @@ ENDIF
  REAL(DbKi)                                 :: t(3)      ! Times associated with the Inputs
  REAL(DbKi)                                 :: t_out     ! Time to which to be extrap/interpd
  INTEGER(IntKi)                             :: order     ! order of polynomial fit (max 2)
- REAL(DbKi)                                 :: b0       ! temporary for extrapolation/interpolation
- REAL(DbKi)                                 :: c0       ! temporary for extrapolation/interpolation
- REAL(DbKi),ALLOCATABLE,DIMENSION(:)        :: b1       ! temporary for extrapolation/interpolation
- REAL(DbKi),ALLOCATABLE,DIMENSION(:)        :: c1       ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: b        ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: c        ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: ScaleFactor ! temporary for extrapolation/interpolation
  INTEGER(IntKi)                             :: ErrStat2 ! local errors
  CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
  CHARACTER(*),            PARAMETER         :: RoutineName = 'Lidar_Input_ExtrapInterp2'
+ INTEGER                                    :: i01    ! dim1 level 0 counter variable for arrays of ddts
+ INTEGER                                    :: i1    ! dim1 counter variable for arrays
     ! Initialize ErrStat
  ErrStat = ErrID_None
  ErrMsg  = ""
@@ -1847,26 +1765,24 @@ ENDIF
      CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
      RETURN
    END IF
-  ALLOCATE(b1(SIZE(u_out%LidPosition,1)))
-  ALLOCATE(c1(SIZE(u_out%LidPosition,1)))
-  b1 = (t(3)**2*(u1%LidPosition - u2%LidPosition) + t(2)**2*(-u1%LidPosition + u3%LidPosition))/(t(2)*t(3)*(t(2) - t(3)))
-  c1 = ( (t(2)-t(3))*u1%LidPosition + t(3)*u2%LidPosition - t(2)*u3%LidPosition ) / (t(2)*t(3)*(t(2) - t(3)))
-  u_out%LidPosition = u1%LidPosition + b1 * t_out + c1 * t_out**2
-  DEALLOCATE(b1)
-  DEALLOCATE(c1)
-  ALLOCATE(b1(SIZE(u_out%MsrPosition,1)))
-  ALLOCATE(c1(SIZE(u_out%MsrPosition,1)))
-  b1 = (t(3)**2*(u1%MsrPosition - u2%MsrPosition) + t(2)**2*(-u1%MsrPosition + u3%MsrPosition))/(t(2)*t(3)*(t(2) - t(3)))
-  c1 = ( (t(2)-t(3))*u1%MsrPosition + t(3)*u2%MsrPosition - t(2)*u3%MsrPosition ) / (t(2)*t(3)*(t(2) - t(3)))
-  u_out%MsrPosition = u1%MsrPosition + b1 * t_out + c1 * t_out**2
-  DEALLOCATE(b1)
-  DEALLOCATE(c1)
-  b0 = (t(3)**2*(u1%PulseLidEl - u2%PulseLidEl) + t(2)**2*(-u1%PulseLidEl + u3%PulseLidEl))/(t(2)*t(3)*(t(2) - t(3)))
-  c0 = ( (t(2)-t(3))*u1%PulseLidEl + t(3)*u2%PulseLidEl - t(2)*u3%PulseLidEl ) / (t(2)*t(3)*(t(2) - t(3)))
-  u_out%PulseLidEl = u1%PulseLidEl + b0 * t_out + c0 * t_out**2
-  b0 = (t(3)**2*(u1%PulseLidAz - u2%PulseLidAz) + t(2)**2*(-u1%PulseLidAz + u3%PulseLidAz))/(t(2)*t(3)*(t(2) - t(3)))
-  c0 = ( (t(2)-t(3))*u1%PulseLidAz + t(3)*u2%PulseLidAz - t(2)*u3%PulseLidAz ) / (t(2)*t(3)*(t(2) - t(3)))
-  u_out%PulseLidAz = u1%PulseLidAz + b0 * t_out + c0 * t_out**2
+
+   ScaleFactor = t_out / (t(2) * t(3) * (t(2) - t(3)))
+  DO i1 = LBOUND(u_out%LidPosition,1),UBOUND(u_out%LidPosition,1)
+    b = (t(3)**2*(u1%LidPosition(i1) - u2%LidPosition(i1)) + t(2)**2*(-u1%LidPosition(i1) + u3%LidPosition(i1)))* scaleFactor
+    c = ( (t(2)-t(3))*u1%LidPosition(i1) + t(3)*u2%LidPosition(i1) - t(2)*u3%LidPosition(i1) ) * scaleFactor
+    u_out%LidPosition(i1) = u1%LidPosition(i1) + b  + c * t_out
+  END DO
+  DO i1 = LBOUND(u_out%MsrPosition,1),UBOUND(u_out%MsrPosition,1)
+    b = (t(3)**2*(u1%MsrPosition(i1) - u2%MsrPosition(i1)) + t(2)**2*(-u1%MsrPosition(i1) + u3%MsrPosition(i1)))* scaleFactor
+    c = ( (t(2)-t(3))*u1%MsrPosition(i1) + t(3)*u2%MsrPosition(i1) - t(2)*u3%MsrPosition(i1) ) * scaleFactor
+    u_out%MsrPosition(i1) = u1%MsrPosition(i1) + b  + c * t_out
+  END DO
+  b = (t(3)**2*(u1%PulseLidEl - u2%PulseLidEl) + t(2)**2*(-u1%PulseLidEl + u3%PulseLidEl))* scaleFactor
+  c = ( (t(2)-t(3))*u1%PulseLidEl + t(3)*u2%PulseLidEl - t(2)*u3%PulseLidEl ) * scaleFactor
+  u_out%PulseLidEl = u1%PulseLidEl + b  + c * t_out
+  b = (t(3)**2*(u1%PulseLidAz - u2%PulseLidAz) + t(2)**2*(-u1%PulseLidAz + u3%PulseLidAz))* scaleFactor
+  c = ( (t(2)-t(3))*u1%PulseLidAz + t(3)*u2%PulseLidAz - t(2)*u3%PulseLidAz ) * scaleFactor
+  u_out%PulseLidAz = u1%PulseLidAz + b  + c * t_out
  END SUBROUTINE Lidar_Input_ExtrapInterp2
 
 
@@ -1944,12 +1860,12 @@ ENDIF
  REAL(DbKi)                                 :: t(2)     ! Times associated with the Outputs
  REAL(DbKi)                                 :: t_out    ! Time to which to be extrap/interpd
  CHARACTER(*),                    PARAMETER :: RoutineName = 'Lidar_Output_ExtrapInterp1'
- REAL(DbKi)                                 :: b0       ! temporary for extrapolation/interpolation
- REAL(DbKi)                                 :: c0       ! temporary for extrapolation/interpolation
- REAL(DbKi),ALLOCATABLE,DIMENSION(:)        :: b1       ! temporary for extrapolation/interpolation
- REAL(DbKi),ALLOCATABLE,DIMENSION(:)        :: c1       ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: b        ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: ScaleFactor ! temporary for extrapolation/interpolation
  INTEGER(IntKi)                             :: ErrStat2 ! local errors
  CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
+ INTEGER                                    :: i01    ! dim1 level 0 counter variable for arrays of ddts
+ INTEGER                                    :: i1    ! dim1 counter variable for arrays
     ! Initialize ErrStat
  ErrStat = ErrID_None
  ErrMsg  = ""
@@ -1962,21 +1878,19 @@ ENDIF
      CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
      RETURN
    END IF
+
+   ScaleFactor = t_out / t(2)
 IF (ALLOCATED(y_out%LidSpeed) .AND. ALLOCATED(y1%LidSpeed)) THEN
-  ALLOCATE(b1(SIZE(y_out%LidSpeed,1)))
-  ALLOCATE(c1(SIZE(y_out%LidSpeed,1)))
-  b1 = -(y1%LidSpeed - y2%LidSpeed)/t(2)
-  y_out%LidSpeed = y1%LidSpeed + b1 * t_out
-  DEALLOCATE(b1)
-  DEALLOCATE(c1)
+  DO i1 = LBOUND(y_out%LidSpeed,1),UBOUND(y_out%LidSpeed,1)
+    b = -(y1%LidSpeed(i1) - y2%LidSpeed(i1))
+    y_out%LidSpeed(i1) = y1%LidSpeed(i1) + b * ScaleFactor
+  END DO
 END IF ! check if allocated
 IF (ALLOCATED(y_out%WtTrunc) .AND. ALLOCATED(y1%WtTrunc)) THEN
-  ALLOCATE(b1(SIZE(y_out%WtTrunc,1)))
-  ALLOCATE(c1(SIZE(y_out%WtTrunc,1)))
-  b1 = -(y1%WtTrunc - y2%WtTrunc)/t(2)
-  y_out%WtTrunc = y1%WtTrunc + b1 * t_out
-  DEALLOCATE(b1)
-  DEALLOCATE(c1)
+  DO i1 = LBOUND(y_out%WtTrunc,1),UBOUND(y_out%WtTrunc,1)
+    b = -(y1%WtTrunc(i1) - y2%WtTrunc(i1))
+    y_out%WtTrunc(i1) = y1%WtTrunc(i1) + b * ScaleFactor
+  END DO
 END IF ! check if allocated
  END SUBROUTINE Lidar_Output_ExtrapInterp1
 
@@ -2007,13 +1921,14 @@ END IF ! check if allocated
  REAL(DbKi)                                 :: t(3)      ! Times associated with the Outputs
  REAL(DbKi)                                 :: t_out     ! Time to which to be extrap/interpd
  INTEGER(IntKi)                             :: order     ! order of polynomial fit (max 2)
- REAL(DbKi)                                 :: b0       ! temporary for extrapolation/interpolation
- REAL(DbKi)                                 :: c0       ! temporary for extrapolation/interpolation
- REAL(DbKi),ALLOCATABLE,DIMENSION(:)        :: b1       ! temporary for extrapolation/interpolation
- REAL(DbKi),ALLOCATABLE,DIMENSION(:)        :: c1       ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: b        ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: c        ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: ScaleFactor ! temporary for extrapolation/interpolation
  INTEGER(IntKi)                             :: ErrStat2 ! local errors
  CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
  CHARACTER(*),            PARAMETER         :: RoutineName = 'Lidar_Output_ExtrapInterp2'
+ INTEGER                                    :: i01    ! dim1 level 0 counter variable for arrays of ddts
+ INTEGER                                    :: i1    ! dim1 counter variable for arrays
     ! Initialize ErrStat
  ErrStat = ErrID_None
  ErrMsg  = ""
@@ -2032,23 +1947,21 @@ END IF ! check if allocated
      CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
      RETURN
    END IF
+
+   ScaleFactor = t_out / (t(2) * t(3) * (t(2) - t(3)))
 IF (ALLOCATED(y_out%LidSpeed) .AND. ALLOCATED(y1%LidSpeed)) THEN
-  ALLOCATE(b1(SIZE(y_out%LidSpeed,1)))
-  ALLOCATE(c1(SIZE(y_out%LidSpeed,1)))
-  b1 = (t(3)**2*(y1%LidSpeed - y2%LidSpeed) + t(2)**2*(-y1%LidSpeed + y3%LidSpeed))/(t(2)*t(3)*(t(2) - t(3)))
-  c1 = ( (t(2)-t(3))*y1%LidSpeed + t(3)*y2%LidSpeed - t(2)*y3%LidSpeed ) / (t(2)*t(3)*(t(2) - t(3)))
-  y_out%LidSpeed = y1%LidSpeed + b1 * t_out + c1 * t_out**2
-  DEALLOCATE(b1)
-  DEALLOCATE(c1)
+  DO i1 = LBOUND(y_out%LidSpeed,1),UBOUND(y_out%LidSpeed,1)
+    b = (t(3)**2*(y1%LidSpeed(i1) - y2%LidSpeed(i1)) + t(2)**2*(-y1%LidSpeed(i1) + y3%LidSpeed(i1)))* scaleFactor
+    c = ( (t(2)-t(3))*y1%LidSpeed(i1) + t(3)*y2%LidSpeed(i1) - t(2)*y3%LidSpeed(i1) ) * scaleFactor
+    y_out%LidSpeed(i1) = y1%LidSpeed(i1) + b  + c * t_out
+  END DO
 END IF ! check if allocated
 IF (ALLOCATED(y_out%WtTrunc) .AND. ALLOCATED(y1%WtTrunc)) THEN
-  ALLOCATE(b1(SIZE(y_out%WtTrunc,1)))
-  ALLOCATE(c1(SIZE(y_out%WtTrunc,1)))
-  b1 = (t(3)**2*(y1%WtTrunc - y2%WtTrunc) + t(2)**2*(-y1%WtTrunc + y3%WtTrunc))/(t(2)*t(3)*(t(2) - t(3)))
-  c1 = ( (t(2)-t(3))*y1%WtTrunc + t(3)*y2%WtTrunc - t(2)*y3%WtTrunc ) / (t(2)*t(3)*(t(2) - t(3)))
-  y_out%WtTrunc = y1%WtTrunc + b1 * t_out + c1 * t_out**2
-  DEALLOCATE(b1)
-  DEALLOCATE(c1)
+  DO i1 = LBOUND(y_out%WtTrunc,1),UBOUND(y_out%WtTrunc,1)
+    b = (t(3)**2*(y1%WtTrunc(i1) - y2%WtTrunc(i1)) + t(2)**2*(-y1%WtTrunc(i1) + y3%WtTrunc(i1)))* scaleFactor
+    c = ( (t(2)-t(3))*y1%WtTrunc(i1) + t(3)*y2%WtTrunc(i1) - t(2)*y3%WtTrunc(i1) ) * scaleFactor
+    y_out%WtTrunc(i1) = y1%WtTrunc(i1) + b  + c * t_out
+  END DO
 END IF ! check if allocated
  END SUBROUTINE Lidar_Output_ExtrapInterp2
 

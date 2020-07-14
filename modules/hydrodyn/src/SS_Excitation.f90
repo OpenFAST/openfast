@@ -87,8 +87,8 @@ SUBROUTINE SS_Exc_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
     character(ErrMsgLen)                   :: ErrMsg2
     
     ! Initialize ErrStat   
-      ErrStat = ErrID_None         
-      ErrMsg  = ""               
+    ErrStat = ErrID_None
+    ErrMsg  = ""
       
     u%DummyInput = 0.0_ReKi
       
@@ -110,7 +110,7 @@ SUBROUTINE SS_Exc_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
     CALL ReadCom ( UnSS, TRIM(InitInp%InputFile)//'.ssexctn', 'Header',ErrStat2, ErrMsg2  )! Reads the first entire line (Title header)
       CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Exc_Init')    
    
-    CALL ReadVar( UnSS,TRIM(InitInp%InputFile)//'.ssexctn', WaveDir, 'WaveDir', 'Wave direction (deg)',ErrStat2, ErrMsg2) ! Reads in the third line, containing the number of states
+    CALL ReadVar( UnSS,TRIM(InitInp%InputFile)//'.ssexctn', WaveDir, 'WaveDir', 'Wave direction (deg)',ErrStat2, ErrMsg2) ! Reads in the second line, containing the wave direction
       CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Exc_Init')
          
    ! Check that excitation state-space file Beta angle (in degrees) matches the HydroDyn input file angle

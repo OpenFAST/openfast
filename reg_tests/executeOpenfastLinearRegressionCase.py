@@ -142,7 +142,7 @@ if not os.path.isdir(dst):
 else:
     names = os.listdir(src)
     for name in names:
-        if name is "ServoData":
+        if name == "ServoData":
             continue
         srcname = os.path.join(src, name)
         dstname = os.path.join(dst, name)
@@ -198,16 +198,16 @@ for i, f in enumerate(localOutFiles):
         local_handle.readline()
     
     # the next 10 lines are simulation info; save what we need
-    for i in range(10):
+    for i in range(11):
         b_line = baseline_handle.readline()
         l_line = local_handle.readline()
-        if i == 4:
+        if i == 5:
             b_num_continuous_states = int(b_line.split()[-1])
             l_num_continuous_states = int(l_line.split()[-1])
-        elif i == 7:
+        elif i == 8:
             b_num_inputs = int(b_line.split()[-1])
             l_num_inputs = int(l_line.split()[-1])
-        elif i == 8:
+        elif i == 9:
             b_num_outputs = int(b_line.split()[-1])
             l_num_outputs = int(l_line.split()[-1])
     
