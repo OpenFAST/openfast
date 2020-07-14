@@ -1,4 +1,3 @@
-.. _BD-Nodal-Outputs:
 
 Nodal Outputs
 ~~~~~~~~~~~~~

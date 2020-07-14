@@ -418,6 +418,8 @@ unknown/invalid channel name, it warns the users but will remove the
 suspect channel from the output file. Please refer to Appendix E for a
 complete list of possible output parameters.
 
+.. _AD-Nodal-Outputs:
+
 .. include:: ADNodalOutputs.rst
 
 
