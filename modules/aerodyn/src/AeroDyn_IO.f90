@@ -1513,81 +1513,6 @@ contains
    
    
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE Calc_WriteDbgOutput( p, u, m, y, ErrStat, ErrMsg )
-   
-   TYPE(AD_ParameterType),    INTENT(IN   )  :: p                                 ! The module parameters
-   TYPE(AD_InputType),        INTENT(IN   )  :: u                                 ! inputs
-   TYPE(AD_MiscVarType),      INTENT(INOUT)  :: m                                 ! misc variables
-   TYPE(AD_OutputType),       INTENT(IN   )  :: y                                 ! outputs
-   INTEGER(IntKi),            INTENT(  OUT)  :: ErrStat                           ! The error status code
-   CHARACTER(*),              INTENT(  OUT)  :: ErrMsg                            ! The error message, if an error occurred
-
-      ! local variables
-   integer, parameter                        :: indx = 1  ! m%BEMT_u(1) is at t; m%BEMT_u(2) is t+dt
-   CHARACTER(*), PARAMETER                   :: RoutineName = 'Calc_WriteOutput'
-   !INTEGER(intKi)                            :: ErrStat2
-   !CHARACTER(ErrMsgLen)                      :: ErrMsg2
-   
-   INTEGER(IntKi)                            :: j,k,i
-   REAL(ReKi)                                :: ct, st ! cosine, sine of theta
-   REAL(ReKi)                                :: cp, sp ! cosine, sine of phi
-   
-   
-   
-      ! start routine:
-   ErrStat = ErrID_None
-   ErrMsg  = ""
-   
-   
-   
-      ! blade outputs
-   do k=1,p%numBlades
-      
-    ! m%AllOuts( BPitch(  k) ) = calculated in SetInputsForBEMT
-      
-      do j=1,p%NumBlNds
-         
-         i = (k-1)*p%NumBlNds*23 + (j-1)*23 + 1
-
-         m%AllOuts( i    ) =  m%BEMT_u(indx)%theta(j,k)*R2D     
-         m%AllOuts( i+1  ) =  m%BEMT_u(indx)%psi(k)*R2D 
-         m%AllOuts( i+2  ) = -m%BEMT_u(indx)%Vx(j,k) 
-         m%AllOuts( i+3  ) =  m%BEMT_u(indx)%Vy(j,k) 
-                                 
-         m%AllOuts( i+4  ) =  m%BEMT_y%axInduction(j,k)
-         m%AllOuts( i+5  ) =  m%BEMT_y%tanInduction(j,k)
-         m%AllOuts( i+6  ) =  m%BEMT_y%Vrel(j,k)
-         m%AllOuts( i+7  ) =  m%BEMT_y%phi(j,k)*R2D   
-         m%AllOuts( i+8  ) =  (m%BEMT_y%phi(j,k) - m%BEMT_u(indx)%theta(j,k))*R2D         
-                                      
-                                      
-         m%AllOuts( i+9  ) =  m%BEMT_y%Cl(j,k)         
-         m%AllOuts( i+10 ) =  m%BEMT_y%Cd(j,k)         
-         m%AllOuts( i+11 ) =  m%BEMT_y%Cm(j,k)  
-         m%AllOuts( i+12 ) =  m%BEMT_y%Cx(j,k)  
-         m%AllOuts( i+13 ) =  m%BEMT_y%Cy(j,k)  
-         
-         ct=cos(m%BEMT_u(indx)%theta(j,k))
-         st=sin(m%BEMT_u(indx)%theta(j,k))
-         m%AllOuts( i+14 ) =  m%BEMT_y%Cx(j,k)*ct + m%BEMT_y%Cy(j,k)*st
-         m%AllOuts( i+15 ) = -m%BEMT_y%Cx(j,k)*st + m%BEMT_y%Cy(j,k)*ct
-         
-         cp=cos(m%BEMT_y%phi(j,k))
-         sp=sin(m%BEMT_y%phi(j,k))
-         m%AllOuts( i+16 ) =  m%X(j,k)*cp - m%Y(j,k)*sp
-         m%AllOuts( i+17 ) =  m%X(j,k)*sp + m%Y(j,k)*cp
-         m%AllOuts( i+18 ) =  m%M(j,k)
-         m%AllOuts( i+19 ) =  m%X(j,k)
-         m%AllOuts( i+20 ) = -m%Y(j,k)
-         m%AllOuts( i+21 ) =  m%X(j,k)*ct - m%Y(j,k)*st
-         m%AllOuts( i+22 ) = -m%X(j,k)*st - m%Y(j,k)*ct
-                  
-      end do ! nodes
-   end do ! blades 
-   
-END SUBROUTINE Calc_WriteDbgOutput
-
-!----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE Calc_WriteOutput( p, u, m, y, OtherState, indx, ErrStat, ErrMsg )
    
    TYPE(AD_ParameterType),    INTENT(IN   )  :: p                                 ! The module parameters
@@ -2379,13 +2304,14 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, ADBlFile, OutFileRoot, UnE
 
    !----------- OUTLIST  -----------------------------------------------------------
       ! In case there is something ill-formed in the additional nodal outputs section, we will simply ignore it.
-   ErrMsg_NoAllBldNdOuts='AllBldNd section of AeroDyn input file not found or improperly formatted. Therefore assuming no nodal outputs.'
+   ErrMsg_NoAllBldNdOuts='Nodal output section of AeroDyn input file not found or improperly formatted.'
 
    !----------- OUTLIST for BldNd -----------------------------------------------------------
    CALL ReadCom( UnIn, InputFile, 'Section Header: OutList for Blade node channels', ErrStat2, ErrMsg2, UnEc )
    IF ( ErrStat2 >= AbortErrLev ) THEN
+      InputFileData%BldNd_BladesOut = 0
       InputFileData%BldNd_NumOuts = 0
-      call wrscr( trim(ErrMsg_NoAllBldNdOuts)//' --> '//trim(ErrMsg2) )
+      call wrscr( trim(ErrMsg_NoAllBldNdOuts) )
       CALL Cleanup()
       RETURN  
    ENDIF 
@@ -2396,8 +2322,9 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, ADBlFile, OutFileRoot, UnE
       !        Will likely require reading this line in as a string (BldNd_BladesOut_Str) and parsing it
    CALL ReadVar(  UnIn, InputFile, InputFileData%BldNd_BladesOut, 'BldNd_BladesOut', 'Which blades to output node data on.'//TRIM(Num2Lstr(I)), ErrStat2, ErrMsg2, UnEc )
    IF ( ErrStat2 >= AbortErrLev ) THEN
+      InputFileData%BldNd_BladesOut = 0
       InputFileData%BldNd_NumOuts = 0
-      call wrscr( trim(ErrMsg_NoAllBldNdOuts)//' --> '//trim(ErrMsg2) )
+      call wrscr( trim(ErrMsg_NoAllBldNdOuts) )
       CALL Cleanup()
       RETURN  
    ENDIF 
@@ -2407,8 +2334,9 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, ADBlFile, OutFileRoot, UnE
       ! TODO: Parse this string into an array of nodes to output at (one idea is to set an array of boolean to T/F for which nodes to output).  At present, we ignore it entirely.
    CALL ReadVar(  UnIn, InputFile, InputFileData%BldNd_BlOutNd_Str, 'BldNd_BlOutNd_Str', 'Which nodes to output node data on.'//TRIM(Num2Lstr(I)), ErrStat2, ErrMsg2, UnEc )
    IF ( ErrStat2 >= AbortErrLev ) THEN
+      InputFileData%BldNd_BladesOut = 0
       InputFileData%BldNd_NumOuts = 0
-      call wrscr( trim(ErrMsg_NoAllBldNdOuts)//' --> '//trim(ErrMsg2) )
+      call wrscr( trim(ErrMsg_NoAllBldNdOuts) )
       CALL Cleanup()
       RETURN  
    ENDIF 
@@ -2417,8 +2345,9 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, ADBlFile, OutFileRoot, UnE
       ! Section header for outlist
    CALL ReadCom( UnIn, InputFile, 'Section Header: OutList', ErrStat2, ErrMsg2, UnEc )
    IF ( ErrStat2 >= AbortErrLev ) THEN
+      InputFileData%BldNd_BladesOut = 0
       InputFileData%BldNd_NumOuts = 0
-      call wrscr( trim(ErrMsg_NoAllBldNdOuts)//' --> '//trim(ErrMsg2) )
+      call wrscr( trim(ErrMsg_NoAllBldNdOuts) )
       CALL Cleanup()
       RETURN  
    ENDIF 
@@ -2427,8 +2356,9 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, ADBlFile, OutFileRoot, UnE
       ! OutList - List of user-requested output channels at each node(-):
    CALL ReadOutputList ( UnIn, InputFile, InputFileData%BldNd_OutList, InputFileData%BldNd_NumOuts, 'OutList', "List of user-requested output channels", ErrStat2, ErrMsg2, UnEc  )     ! Routine in NWTC Subroutine Library
    IF ( ErrStat2 >= AbortErrLev ) THEN
+      InputFileData%BldNd_BladesOut = 0
       InputFileData%BldNd_NumOuts = 0
-      call wrscr( trim(ErrMsg_NoAllBldNdOuts)//' --> '//trim(ErrMsg2) )
+      call wrscr( trim(ErrMsg_NoAllBldNdOuts) )
       CALL Cleanup()
       RETURN  
    ENDIF 
@@ -2820,9 +2750,6 @@ SUBROUTINE AD_PrintSum( InputFileData, p, u, y, ErrStat, ErrMsg )
    end if
    
    
-#ifndef DBG_OUTS
-! p%OutParam isn't allocated when DBG_OUTS is defined
-
    OutPFmt =  '( 15x, I4, 2X, A '//TRIM(Num2LStr(ChanLen))//',1 X, A'//TRIM(Num2LStr(ChanLen))//' )'
    WRITE (UnSu,'(15x,A)')  'Requested Output Channels:'
    WRITE (UnSu,'(15x,A)')  'Col   Parameter       Units'
@@ -2840,7 +2767,6 @@ SUBROUTINE AD_PrintSum( InputFileData, p, u, y, ErrStat, ErrMsg )
    DO I = 1,p%BldNd_NumOuts
       WRITE (UnSu,OutPFmt)  I, p%BldNd_OutParam(I)%Name, p%BldNd_OutParam(I)%Units
    END DO             
-#endif
 
    CLOSE(UnSu)
 

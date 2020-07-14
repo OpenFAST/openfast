@@ -102,6 +102,7 @@ SUBROUTINE Init_Lin(p_FAST, y_FAST, m_FAST, AD, ED, NumBl, ErrStat, ErrMsg)
       p_FAST%Lin_NumMods = p_FAST%Lin_NumMods + 1
       p_FAST%Lin_ModOrder( p_FAST%Lin_NumMods ) = Module_HD
    end if
+
       ! MAP is next, if activated:
    if ( p_FAST%CompMooring  == Module_MAP ) then 
       p_FAST%Lin_NumMods = p_FAST%Lin_NumMods + 1
@@ -113,7 +114,7 @@ SUBROUTINE Init_Lin(p_FAST, y_FAST, m_FAST, AD, ED, NumBl, ErrStat, ErrMsg)
       p_FAST%Lin_NumMods = p_FAST%Lin_NumMods + 1
       p_FAST%Lin_ModOrder( p_FAST%Lin_NumMods ) = Module_ExtPtfm
    end if
-   
+
    !.....................
    ! determine total number of inputs/outputs/contStates:
    !.....................
@@ -486,7 +487,7 @@ SUBROUTINE Init_Lin_InputOutput(p_FAST, y_FAST, NumBl, ErrStat, ErrMsg)
             y_FAST%Lin%Modules(MODULE_IfW)%Instance(1)%use_u(y_FAST%Lin%Modules(MODULE_IfW)%Instance(1)%SizeLin(LIN_INPUT_COL)+1-j) = .true.
          end do
       end if
-                 
+
       ! HD standard inputs: WaveElev0
       if (p_FAST%CompHydro == MODULE_HD) then
             y_FAST%Lin%Modules(MODULE_HD)%Instance(1)%use_u(y_FAST%Lin%Modules(MODULE_HD)%Instance(1)%SizeLin(LIN_INPUT_COL)) = .true.
@@ -499,7 +500,7 @@ SUBROUTINE Init_Lin_InputOutput(p_FAST, y_FAST, NumBl, ErrStat, ErrMsg)
       !!!      y_FAST%Lin%Modules(MODULE_ExtPtfm)%Instance(1)%use_u(y_FAST%Lin%Modules(MODULE_ExtPtfm)%Instance(1)%SizeLin(LIN_INPUT_COL)+1-j) = .true.
       !!!   end do
       !!!end if
-                  
+
    elseif(p_FAST%LinInputs == LIN_ALL) then
       do i = 1,p_FAST%Lin_NumMods
          ThisModule = p_FAST%Lin_ModOrder( i )
@@ -1612,7 +1613,6 @@ SUBROUTINE Glue_Jacobians( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, OpFM, 
    IF (p_FAST%CompSub == Module_ExtPtfm) THEN
        CALL WrScr('>>> FAST_LIN: Linear_ExtPtfm_InputSolve_du, TODO')
    ENDIF
-   
 
       !............
       ! \f$ \frac{\partial U_\Lambda^{HD}}{\partial u^{HD}} \end{bmatrix} = \f$ (dUdu block row 6=HD)
@@ -1695,7 +1695,7 @@ SUBROUTINE Glue_Jacobians( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, OpFM, 
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
    end if
-      
+
 ! LIN-TODO: Implement HD-related solve
       !............
       ! \f$ \frac{\partial U_\Lambda^{HD}}{\partial y^{ED}} \end{bmatrix} = \f$ (dUdy block row 6=HD)
@@ -1713,7 +1713,7 @@ SUBROUTINE Glue_Jacobians( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, OpFM, 
       call Linear_MAP_InputSolve_dy( p_FAST, y_FAST, MAPp%Input(1), ED%y, MeshMapData, dUdy, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    end if
-   
+
    IF (p_FAST%CompSub == Module_ExtPtfm) THEN
        CALL WrScr('>>> FAST_LIN: Linear_ExtPtfm_InputSolve_dy, TODO')
    ENDIF
