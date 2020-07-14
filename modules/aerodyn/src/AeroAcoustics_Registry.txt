@@ -56,7 +56,7 @@ typedef     ^                   InitOutputType       ReKi                AirDens
 #
 
 # ..... Primary Input file data ...................................................................................................
-typedef     ^                   AA_InputFile         DbKi                DTAero           -     -     -     "Time interval for aerodynamic calculations {or "default"}"     s
+typedef     ^                   AA_InputFile         DbKi                DT_AA            -     -     -     "Time interval for aerodynamic calculations {or "default"}"     s
 typedef     ^                   AA_InputFile         IntKi               IBLUNT           -     -     -     "FLAG TO COMPUTE BLUNTNESS NOISE"     -
 typedef     ^                   AA_InputFile         IntKi               ILAM             -     -     -     "FLAG TO COMPUTE LBL NOISE {1=steady model, 2=Beddoes-Leishman unsteady model}"     -
 typedef     ^                   AA_InputFile         IntKi               ITIP             -     -     -     "FLAG TO COMPUTE TIP NOISE {0=none, 1=baseline potential flow, 2=potential flow with Bak correction}"     -
@@ -79,7 +79,6 @@ typedef     ^                   AA_InputFile         IntKi               NrOutFi
 typedef     ^                   AA_InputFile         CHARACTER(1024)     AAoutfile       {:}    -     -     "AAoutfile for writing output files"     -
 typedef     ^                   AA_InputFile         CHARACTER(1024)     TICalcTabFile    -     -     -     "Name of the file containing the table for incident turbulence intensity" -
 typedef     ^                   AA_InputFile         IntKi               Comp_AA_After        -     -     -     " "     -
-typedef     ^                   AA_InputFile         ReKi                SaveEach        -     -     -     " "     -
 typedef     ^                   AA_InputFile         ReKi                z0_AA           -     -     -     "Surface roughness"     -
 typedef     ^                   AA_InputFile         ReKi                ReListBL            {:}    -     -     ""          
 typedef     ^                   AA_InputFile         ReKi                AoAListBL           {:}    -     -     ""         deg
@@ -148,7 +147,6 @@ typedef     ^                   MiscVarType          IntKi               filesop
 # ..... Parameters ................................................................................................................
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
-typedef     ^                   ParameterType        ReKI               saveeach                  -      -     -     "FLAG TO COMPUTE BLUNTNESS NOISE "     -
 typedef     ^                   ParameterType        DbKi                DT                      -      -     -     "Time step for continuous state integration & discrete state update"     seconds
 typedef     ^                   ParameterType        IntKi               IBLUNT                  -      -     -     "Bluntness noise model"     -
 typedef     ^                   ParameterType        IntKi               ILAM                    -      -     -     "LBL noise model "     -
