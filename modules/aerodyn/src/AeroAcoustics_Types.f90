@@ -76,7 +76,7 @@ IMPLICIT NONE
 ! =======================
 ! =========  AA_InputFile  =======
   TYPE, PUBLIC :: AA_InputFile
-    REAL(DbKi)  :: DTAero      !< Time interval for aerodynamic calculations {or "default"} [s]
+    REAL(DbKi)  :: DT_AA      !< Time interval for aerodynamic calculations {or "default"} [s]
     INTEGER(IntKi)  :: IBLUNT      !< FLAG TO COMPUTE BLUNTNESS NOISE [-]
     INTEGER(IntKi)  :: ILAM      !< FLAG TO COMPUTE LBL NOISE {1=steady model, 2=Beddoes-Leishman unsteady model} [-]
     INTEGER(IntKi)  :: ITIP      !< FLAG TO COMPUTE TIP NOISE {0=none, 1=baseline potential flow, 2=potential flow with Bak correction} [-]
@@ -99,7 +99,6 @@ IMPLICIT NONE
     CHARACTER(1024) , DIMENSION(:), ALLOCATABLE  :: AAoutfile      !< AAoutfile for writing output files [-]
     CHARACTER(1024)  :: TICalcTabFile      !< Name of the file containing the table for incident turbulence intensity [-]
     INTEGER(IntKi)  :: Comp_AA_After      !<   [-]
-    REAL(ReKi)  :: SaveEach      !<   [-]
     REAL(ReKi)  :: z0_AA      !< Surface roughness [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: ReListBL      !<  [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: AoAListBL      !<  [deg]
@@ -176,7 +175,6 @@ IMPLICIT NONE
 ! =======================
 ! =========  AA_ParameterType  =======
   TYPE, PUBLIC :: AA_ParameterType
-    REAL(ReKi)  :: saveeach      !< FLAG TO COMPUTE BLUNTNESS NOISE  [-]
     REAL(DbKi)  :: DT      !< Time step for continuous state integration & discrete state update [seconds]
     INTEGER(IntKi)  :: IBLUNT      !< Bluntness noise model [-]
     INTEGER(IntKi)  :: ILAM      !< LBL noise model  [-]
@@ -1924,7 +1922,7 @@ ENDIF
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
-    DstInputFileData%DTAero = SrcInputFileData%DTAero
+    DstInputFileData%DT_AA = SrcInputFileData%DT_AA
     DstInputFileData%IBLUNT = SrcInputFileData%IBLUNT
     DstInputFileData%ILAM = SrcInputFileData%ILAM
     DstInputFileData%ITIP = SrcInputFileData%ITIP
@@ -2006,7 +2004,6 @@ IF (ALLOCATED(SrcInputFileData%AAoutfile)) THEN
 ENDIF
     DstInputFileData%TICalcTabFile = SrcInputFileData%TICalcTabFile
     DstInputFileData%Comp_AA_After = SrcInputFileData%Comp_AA_After
-    DstInputFileData%SaveEach = SrcInputFileData%SaveEach
     DstInputFileData%z0_AA = SrcInputFileData%z0_AA
 IF (ALLOCATED(SrcInputFileData%ReListBL)) THEN
   i1_l = LBOUND(SrcInputFileData%ReListBL,1)
@@ -2275,7 +2272,7 @@ ENDIF
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
-      Db_BufSz   = Db_BufSz   + 1  ! DTAero
+      Db_BufSz   = Db_BufSz   + 1  ! DT_AA
       Int_BufSz  = Int_BufSz  + 1  ! IBLUNT
       Int_BufSz  = Int_BufSz  + 1  ! ILAM
       Int_BufSz  = Int_BufSz  + 1  ! ITIP
@@ -2337,7 +2334,6 @@ ENDIF
   END IF
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%TICalcTabFile)  ! TICalcTabFile
       Int_BufSz  = Int_BufSz  + 1  ! Comp_AA_After
-      Re_BufSz   = Re_BufSz   + 1  ! SaveEach
       Re_BufSz   = Re_BufSz   + 1  ! z0_AA
   Int_BufSz   = Int_BufSz   + 1     ! ReListBL allocated yes/no
   IF ( ALLOCATED(InData%ReListBL) ) THEN
@@ -2423,7 +2419,7 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-      DbKiBuf ( Db_Xferred:Db_Xferred+(1)-1 ) = InData%DTAero
+      DbKiBuf ( Db_Xferred:Db_Xferred+(1)-1 ) = InData%DT_AA
       Db_Xferred   = Db_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%IBLUNT
       Int_Xferred   = Int_Xferred   + 1
@@ -2558,8 +2554,6 @@ ENDIF
         END DO ! I
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%Comp_AA_After
       Int_Xferred   = Int_Xferred   + 1
-      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%SaveEach
-      Re_Xferred   = Re_Xferred   + 1
       ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%z0_AA
       Re_Xferred   = Re_Xferred   + 1
   IF ( .NOT. ALLOCATED(InData%ReListBL) ) THEN
@@ -2797,7 +2791,7 @@ ENDIF
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-      OutData%DTAero = DbKiBuf( Db_Xferred ) 
+      OutData%DT_AA = DbKiBuf( Db_Xferred ) 
       Db_Xferred   = Db_Xferred + 1
       OutData%IBLUNT = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
@@ -2987,8 +2981,6 @@ ENDIF
       END DO ! I
       OutData%Comp_AA_After = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
-      OutData%SaveEach = ReKiBuf( Re_Xferred )
-      Re_Xferred   = Re_Xferred + 1
       OutData%z0_AA = ReKiBuf( Re_Xferred )
       Re_Xferred   = Re_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! ReListBL not allocated
@@ -5999,7 +5991,6 @@ ENDIF
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
-    DstParamData%saveeach = SrcParamData%saveeach
     DstParamData%DT = SrcParamData%DT
     DstParamData%IBLUNT = SrcParamData%IBLUNT
     DstParamData%ILAM = SrcParamData%ILAM
@@ -6645,7 +6636,6 @@ ENDIF
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
-      Re_BufSz   = Re_BufSz   + 1  ! saveeach
       Db_BufSz   = Db_BufSz   + 1  ! DT
       Int_BufSz  = Int_BufSz  + 1  ! IBLUNT
       Int_BufSz  = Int_BufSz  + 1  ! ILAM
@@ -6913,8 +6903,6 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%saveeach
-      Re_Xferred   = Re_Xferred   + 1
       DbKiBuf ( Db_Xferred:Db_Xferred+(1)-1 ) = InData%DT
       Db_Xferred   = Db_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%IBLUNT
@@ -7606,8 +7594,6 @@ ENDIF
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-      OutData%saveeach = ReKiBuf( Re_Xferred )
-      Re_Xferred   = Re_Xferred + 1
       OutData%DT = DbKiBuf( Db_Xferred ) 
       Db_Xferred   = Db_Xferred + 1
       OutData%IBLUNT = IntKiBuf( Int_Xferred ) 

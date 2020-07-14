@@ -83,11 +83,10 @@ SUBROUTINE ReadInputFiles( InputFileName, BL_Files, InputFileData, Default_DT, O
     ErrStat = ErrID_None
     ErrMsg  = ''
     UnEcho  = -1
-    InputFileData%DTAero = Default_DT  ! the glue code's suggested DT for the module (may be overwritten in ReadPrimaryFile())
 
 
     ! Reads the module input-file data
-    CALL ReadPrimaryFile( InputFileName, InputFileData, AABlFile,  OutFileRoot, UnEcho, ErrStat2, ErrMsg2 )
+    CALL ReadPrimaryFile( InputFileName, InputFileData, AABlFile, Default_DT,  OutFileRoot, UnEcho, ErrStat2, ErrMsg2 )
     if(Failed()) return
 
     ! get the blade input-file data
@@ -123,9 +122,10 @@ END SUBROUTINE ReadInputFiles
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine reads in the primary Noise input file and places the values it reads in the InputFileData structure.
 !   It opens and prints to an echo file if requested.
-SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, AABlFile,  OutFileRoot, UnEc, ErrStat, ErrMsg )
+SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, AABlFile,  Default_DT, OutFileRoot, UnEc, ErrStat, ErrMsg )
     integer(IntKi),     intent(out)     :: UnEc                                ! I/O unit for echo file. If > 0, file is open for writing.
     integer(IntKi),     intent(out)     :: ErrStat                             ! Error status
+    REAL(DbKi),         INTENT(IN)      :: Default_DT                          ! The default DT (from glue code)
     character(*),       intent(out)     :: AABlFile(MaxBl)                     ! name of the files containing blade inputs
     character(*),       intent(in)      :: InputFile                           ! Name of the file containing the primary input data
     character(*),       intent(out)     :: ErrMsg                              ! Error message
@@ -200,16 +200,24 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, AABlFile,  OutFileRoot, Un
         CALL WrScr( '   '//TRIM( FTitle ) )
     END IF
 
-    ! DTAero - Time interval for aerodynamic calculations {or default} (s):
+    ! DT_AA - Time interval for aerodynamic calculations {or default} (s):
     Line = ""
-    CALL ReadVar( UnIn, InputFile, Line, "DTAero", "Time interval for aerodynamic calculations {or default} (s)", ErrStat2, ErrMsg2, UnEc); call check
+    CALL ReadVar( UnIn, InputFile, Line, "DT_AA", "Time interval for aeroacoustics calculations {or default} (s)", ErrStat2, ErrMsg2, UnEc); call check
     CALL Conv2UC( Line )
-    IF ( INDEX(Line, "DEFAULT" ) /= 1 ) THEN ! If it's not "default", read this variable; otherwise use the value already stored in InputFileData%DTAero
-        READ( Line, *, IOSTAT=IOS) InputFileData%DTAero
-        CALL CheckIOS ( IOS, InputFile, 'DTAero', NumType, ErrStat2, ErrMsg2 ); call check
+
+    IF ( INDEX(Line, "DEFAULT" ) /= 1 ) THEN ! If DT_AA is not "default", read it and make sure it is a multiple of DTAero from AeroDyn. Else, just use DTAero
+        READ( Line, *, IOSTAT=IOS) InputFileData%DT_AA
+        CALL CheckIOS ( IOS, InputFile, 'DT_AA', NumType, ErrStat2, ErrMsg2 ); call check
+
+        IF (mod(InputFileData%DT_AA, Default_DT) .gt. 1E-10) THEN
+            CALL SetErrStat(ErrID_Fatal,"The Aeroacoustics input DT_AA must be a multiple of DTAero.", ErrStat, ErrMsg, RoutineName)
+            return
+        END IF
+    ELSE
+        InputFileData%DT_AA = Default_DT
     END IF
+
     CALL ReadVar(UnIn,InputFile,InputFileData%Comp_AA_After,"AAStart"      ,"" ,ErrStat2,ErrMsg2,UnEc); call check
-    CALL ReadVar(UnIn,InputFile,InputFileData%saveeach     ,"SaveEach"     ,"" ,ErrStat2,ErrMsg2,UnEc); call check
     CALL ReadVar(UnIn,InputFile,InputFileData%AA_Bl_Prcntge,"BldPrcnt"     ,"-",ErrStat2,ErrMsg2,UnEc); call check
     CALL ReadCom( UnIn, InputFile, 'Section Header: Aeroacoustic Models', ErrStat2, ErrMsg2, UnEc ); call check
     CALL ReadVar(UnIn,InputFile,InputFileData%IInflow      ,"InflowMod"    ,"" ,ErrStat2,ErrMsg2,UnEc); call check
@@ -224,6 +232,12 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, AABlFile,  OutFileRoot, Un
     CALL ReadVar(UnIn,InputFile,InputFileData%ROUND        ,"RoundTip"     ,"" ,ErrStat2,ErrMsg2,UnEc); call check
     CALL ReadVar(UnIn,InputFile,InputFileData%ALPRAT       ,"ALPRAT"       ,"" ,ErrStat2,ErrMsg2,UnEc); call check
     CALL ReadVar(UnIn,InputFile,InputFileData%IBLUNT       ,"BluntMod"     ,"" ,ErrStat2,ErrMsg2,UnEc); call check
+    
+    ! AABlFile - Names of files containing distributed aerodynamic properties for each blade (see AA_BladeInputFile type):
+    DO I = 1,MaxBl
+        CALL ReadVar ( UnIn, InputFile, AABlFile(I), 'AABlFile('//TRIM(Num2Lstr(I))//')', 'Name of file containing distributed aerodynamic properties for blade '//TRIM(Num2Lstr(I)), ErrStat2, ErrMsg2, UnEc ); call check
+        IF ( PathIsRelative( AABlFile(I) ) ) AABlFile(I) = TRIM(PriPath)//TRIM(AABlFile(I))
+    END DO
 
     ! Return on error at end of section
     IF ( ErrStat >= AbortErrLev ) THEN
@@ -233,14 +247,6 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, AABlFile,  OutFileRoot, Un
 
     !----------- OBSERVER INPUT  ------------------------------
     CALL ReadCom( UnIn, InputFile, 'Section Header: Observer Input ', ErrStat2, ErrMsg2, UnEc ); call check
-    ! NrObsLoc  - Nr of Observers (-):
-    CALL ReadVar( UnIn, InputFile, InputFileData%NrObsLoc, "NrObsLoc", "Nr of Observers (-)", ErrStat2, ErrMsg2, UnEc); call check
-
-    ! Observer location in tower-base coordinate  (m):
-    CALL AllocAry( InputFileData%ObsX,InputFileData%NrObsLoc, 'ObsX', ErrStat2, ErrMsg2); call check
-    CALL AllocAry( InputFileData%ObsY,InputFileData%NrObsLoc, 'ObsY', ErrStat2, ErrMsg2); call check
-    CALL AllocAry( InputFileData%ObsZ,InputFileData%NrObsLoc, 'ObsZ', ErrStat2, ErrMsg2); call check
-
     !----- read from observer file
     CALL ReadVar ( UnIn, InputFile, ObserverFile, ObserverFile, 'Name of file  observer locations', ErrStat2, ErrMsg2, UnEc ); call check
     IF ( PathIsRelative( ObserverFile ) ) ObserverFile = TRIM(PriPath)//TRIM(ObserverFile)
@@ -249,6 +255,14 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, AABlFile,  OutFileRoot, Un
 
     CALL OpenFInpFile ( UnIn2, ObserverFile, ErrStat2, ErrMsg2 ); call check
     IF ( ErrStat >= AbortErrLev ) RETURN
+    
+    ! NrObsLoc  - Nr of Observers (-):
+    CALL ReadVar( UnIn2, ObserverFile, InputFileData%NrObsLoc, "NrObsLoc", "Nr of Observers (-)", ErrStat2, ErrMsg2, UnEc); call check
+
+    ! Observer location in tower-base coordinate  (m):
+    CALL AllocAry( InputFileData%ObsX,InputFileData%NrObsLoc, 'ObsX', ErrStat2, ErrMsg2); call check
+    CALL AllocAry( InputFileData%ObsY,InputFileData%NrObsLoc, 'ObsY', ErrStat2, ErrMsg2); call check
+    CALL AllocAry( InputFileData%ObsZ,InputFileData%NrObsLoc, 'ObsZ', ErrStat2, ErrMsg2); call check
 
     CALL ReadCom( UnIn2, InputFile, ' Header', ErrStat2, ErrMsg2, UnEc ); call check
 
@@ -263,21 +277,6 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, AABlFile,  OutFileRoot, Un
     ENDDO
     CLOSE ( UnIn2 )
     !----- end read from observer file
-
-    !----------- ROTOR/BLADE PROPERTIES  --------------------------------------------
-    CALL ReadCom( UnIn, InputFile, 'Section Header: Rotor/Blade Properties', ErrStat2, ErrMsg2, UnEc ); call check
-
-    ! AABlFile - Names of files containing distributed aerodynamic properties for each blade (see AA_BladeInputFile type):
-    DO I = 1,MaxBl
-        CALL ReadVar ( UnIn, InputFile, AABlFile(I), 'AABlFile('//TRIM(Num2Lstr(I))//')', 'Name of file containing distributed aerodynamic properties for blade '//TRIM(Num2Lstr(I)), ErrStat2, ErrMsg2, UnEc ); call check
-        IF ( PathIsRelative( AABlFile(I) ) ) AABlFile(I) = TRIM(PriPath)//TRIM(AABlFile(I))
-    END DO
-
-    ! Return on error at end of section
-    IF ( ErrStat >= AbortErrLev ) THEN
-        CALL Cleanup()
-        RETURN
-    END IF
 
     !----------- OUTPUTS  -----------------------------------------------------------
     CALL ReadCom( UnIn, InputFile, 'Section Header: Outputs', ErrStat2, ErrMsg2, UnEc); call check
@@ -568,7 +567,7 @@ SUBROUTINE ValidateInputData( InputFileData, NumBl, ErrStat, ErrMsg )
    ErrStat = ErrID_None
    ErrMsg  = ""
    if (NumBl > MaxBl .or. NumBl < 1) call SetErrStat( ErrID_Fatal, 'Number of blades must be between 1 and '//trim(num2lstr(MaxBl))//'.', ErrSTat, ErrMsg, RoutineName )
-   if (InputFileData%DTAero <= 0.0)  call SetErrStat ( ErrID_Fatal, 'DTAero must be greater than zero.', ErrStat, ErrMsg, RoutineName )
+   if (InputFileData%DT_AA <= 0.0)  call SetErrStat ( ErrID_Fatal, 'DT_AA must be greater than zero.', ErrStat, ErrMsg, RoutineName )
    if (InputFileData%IBLUNT /= IBLUNT_None .and. InputFileData%IBLUNT /= IBLUNT_BPM) then
        call SetErrStat ( ErrID_Fatal, &
            'IBLUNT must '//trim(num2lstr(IBLUNT_None))//' (none) or '//trim(num2lstr(IBLUNT_BPM))//' (Bluntness noise calculated).', ErrStat, ErrMsg, RoutineName )
@@ -603,15 +602,12 @@ SUBROUTINE ValidateInputData( InputFileData, NumBl, ErrStat, ErrMsg )
            trim(num2lstr(X_BLMethod_Tables))//' (X_BLMethod with BL tables).', ErrStat, ErrMsg, RoutineName )
    end if
    if (InputFileData%NrObsLoc <= 0.0) call SetErrStat ( ErrID_Fatal, 'Number of Observer Locations should be greater than zero', ErrStat, ErrMsg, RoutineName )
-   if (InputFileData%NrOutFile /= 0 .and.  InputFileData%NrOutFile /= 1 .and. InputFileData%NrOutFile /= 2 .and. InputFileData%NrOutFile /= 3 &
+   if (InputFileData%NrOutFile /= 1 .and. InputFileData%NrOutFile /= 2 .and. InputFileData%NrOutFile /= 3 &
        .and. InputFileData%NrOutFile /= 4) then
-       call SetErrStat ( ErrID_Fatal, ' NrOutFile must be 0 or 1 or 2 or 3 or 4', ErrStat, ErrMsg, RoutineName )
+       call SetErrStat ( ErrID_Fatal, ' NrOutFile must be 1 or 2 or 3 or 4', ErrStat, ErrMsg, RoutineName )
    end if
-   if (InputFileData%Comp_AA_After .eq.0 ) then
-       call SetErrStat ( ErrID_Fatal, ' Comp_AA_After variable in aeroacustics input must be more than 0', ErrStat, ErrMsg, RoutineName )
-   end if
-   if (InputFileData%saveeach .eq. 0 ) then
-       call SetErrStat ( ErrID_Fatal, ' saveeach variable in aeroacustics input must be more than 0', ErrStat, ErrMsg, RoutineName )
+   if (InputFileData%Comp_AA_After .lt. 0) then
+       call SetErrStat ( ErrID_Fatal, ' Comp_AA_After variable in aeroacustics input must be greater or equal than 0', ErrStat, ErrMsg, RoutineName )
    end if
 END SUBROUTINE ValidateInputData
 

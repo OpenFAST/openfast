@@ -126,13 +126,12 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
     ErrStat  = ErrID_None
     ErrMsg   = ""
     !!Assign input fiel data to parameters
-    p%DT               = InputFileData%DTAero         ! seconds
+    p%DT               = InputFileData%DT_AA         ! seconds
     p%AA_Bl_Prcntge    = InputFileData%AA_Bl_Prcntge  ! %
     p%fsample          = 1/p%DT     ! Hz
     p%total_sample     = 2**( ceiling(log(1*p%fsample)/log(2.0d0)))! 1 stands for the 1 seconds. Every 1 second Vrel spectra will be calculated for the dissipation calculation (change if more needed & recompile )
     p%total_sampleTI   = 5/p%DT  ! 10 seconds for TI sampling
     p%Comp_AA_After    = InputFileData%Comp_AA_After
-    p%saveeach         = InputFileData%saveeach
     p%IBLUNT           = InputFileData%IBLUNT
     p%ILAM             = InputFileData%ILAM
     p%ITIP             = InputFileData%ITIP
@@ -786,11 +785,10 @@ subroutine AA_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg)
     ErrMsg  = ""
     ! assume integer divide is possible
     nt = t/p%DT
-    call CalcObserve(p,m,u,xd,nt,errStat2, errMsg2)
+    call CalcObserve(p,m,u,xd,nt,t,errStat2, errMsg2)
     call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-    IF (nt.gt.p%Comp_AA_after) THEN
-        IF (mod(nt,p%saveeach).eq.0) THEN
-
+    IF (nt.gt.p%Comp_AA_after) THEN        
+        IF (mod(t + 1E-10,p%DT) .lt. 1E-6) THEN
             call CalcAeroAcousticsOutput(u,p,m,xd,y,errStat2,errMsg2)
             call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
@@ -804,7 +802,8 @@ subroutine AA_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg)
 end subroutine AA_CalcOutput
 !----------------------------------------------------------------------------------------------------------------------------------
 !----------------------------------------------------------------------------------------------------------------------------------!
-SUBROUTINE CalcObserve(p,m,u,xd,nt,errStat,errMsg)
+SUBROUTINE CalcObserve(p,m,u,xd,nt,t,errStat,errMsg)
+    REAL(DbKi),                          INTENT(IN   )  :: t           !< Current simulation time in seconds
     TYPE(AA_DiscreteStateType),          INTENT(IN   ) :: xd      !< discrete state type
     TYPE(AA_ParameterType),              intent(in   ) :: p       !< Parameters
     TYPE(AA_InputType),                  intent(in   ) :: u       !< NN Inputs at Time
@@ -834,7 +833,7 @@ SUBROUTINE CalcObserve(p,m,u,xd,nt,errStat,errMsg)
 
     ErrStat = ErrID_None
     ErrMsg  = ""
-    ! Loop thoruhg the blades
+    ! Loop through the blades
     DO I = 1,p%numBlades
         ! Loop through the nodes along blade span
         DO J = 1,p%NumBlNds
@@ -850,7 +849,7 @@ SUBROUTINE CalcObserve(p,m,u,xd,nt,errStat,errMsg)
             m%LE_Location(3,J,I) = RLEObservereal(3)
             ! If the time step is set to generate AA outputs
             IF (nt.gt.p%Comp_AA_after) THEN
-                IF ( (mod(nt,p%saveeach).eq.0)  ) THEN
+                IF ( mod(t + 1E-10,p%DT) .lt. 1E-6)  THEN
                     ! Loop through the observers
                     DO K = 1,p%NrObsLoc
                         ! Calculate the position of the observer K in a reference system located at the trailing edge and oriented as the global reference system
