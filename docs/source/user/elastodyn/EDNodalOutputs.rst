@@ -1,4 +1,3 @@
-.. _ED-Nodal-Outputs:
 
 Nodal Outputs
 ~~~~~~~~~~~~~
