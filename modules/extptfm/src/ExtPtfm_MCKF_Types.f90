@@ -73,6 +73,7 @@ IMPLICIT NONE
     LOGICAL , DIMENSION(:), ALLOCATABLE  :: RotFrame_x      !< Flag that tells FAST/MBC3 if the continuous states used in linearization are in the rotating frame [-]
     LOGICAL , DIMENSION(:), ALLOCATABLE  :: RotFrame_u      !< Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame [-]
     LOGICAL , DIMENSION(:), ALLOCATABLE  :: IsLoad_u      !< Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix) [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: DerivOrder_x      !< Integer that tells FAST/MBC3 the maximum derivative order of continuous states used in linearization [-]
   END TYPE ExtPtfm_InitOutputType
 ! =======================
 ! =========  ExtPtfm_ContinuousStateType  =======
@@ -884,6 +885,18 @@ IF (ALLOCATED(SrcInitOutputData%IsLoad_u)) THEN
   END IF
     DstInitOutputData%IsLoad_u = SrcInitOutputData%IsLoad_u
 ENDIF
+IF (ALLOCATED(SrcInitOutputData%DerivOrder_x)) THEN
+  i1_l = LBOUND(SrcInitOutputData%DerivOrder_x,1)
+  i1_u = UBOUND(SrcInitOutputData%DerivOrder_x,1)
+  IF (.NOT. ALLOCATED(DstInitOutputData%DerivOrder_x)) THEN 
+    ALLOCATE(DstInitOutputData%DerivOrder_x(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%DerivOrder_x.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInitOutputData%DerivOrder_x = SrcInitOutputData%DerivOrder_x
+ENDIF
  END SUBROUTINE ExtPtfm_CopyInitOutput
 
  SUBROUTINE ExtPtfm_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg )
@@ -922,6 +935,9 @@ IF (ALLOCATED(InitOutputData%RotFrame_u)) THEN
 ENDIF
 IF (ALLOCATED(InitOutputData%IsLoad_u)) THEN
   DEALLOCATE(InitOutputData%IsLoad_u)
+ENDIF
+IF (ALLOCATED(InitOutputData%DerivOrder_x)) THEN
+  DEALLOCATE(InitOutputData%DerivOrder_x)
 ENDIF
  END SUBROUTINE ExtPtfm_DestroyInitOutput
 
@@ -1022,6 +1038,11 @@ ENDIF
   IF ( ALLOCATED(InData%IsLoad_u) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! IsLoad_u upper/lower bounds for each dimension
       Int_BufSz  = Int_BufSz  + SIZE(InData%IsLoad_u)  ! IsLoad_u
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! DerivOrder_x allocated yes/no
+  IF ( ALLOCATED(InData%DerivOrder_x) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! DerivOrder_x upper/lower bounds for each dimension
+      Int_BufSz  = Int_BufSz  + SIZE(InData%DerivOrder_x)  ! DerivOrder_x
   END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -1214,6 +1235,19 @@ ENDIF
 
       IF (SIZE(InData%IsLoad_u)>0) IntKiBuf ( Int_Xferred:Int_Xferred+SIZE(InData%IsLoad_u)-1 ) = TRANSFER(PACK( InData%IsLoad_u ,.TRUE.), IntKiBuf(1), SIZE(InData%IsLoad_u))
       Int_Xferred   = Int_Xferred   + SIZE(InData%IsLoad_u)
+  END IF
+  IF ( .NOT. ALLOCATED(InData%DerivOrder_x) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%DerivOrder_x,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%DerivOrder_x,1)
+    Int_Xferred = Int_Xferred + 2
+
+      IF (SIZE(InData%DerivOrder_x)>0) IntKiBuf ( Int_Xferred:Int_Xferred+(SIZE(InData%DerivOrder_x))-1 ) = PACK(InData%DerivOrder_x,.TRUE.)
+      Int_Xferred   = Int_Xferred   + SIZE(InData%DerivOrder_x)
   END IF
  END SUBROUTINE ExtPtfm_PackInitOutput
 
@@ -1515,6 +1549,29 @@ ENDIF
     mask1 = .TRUE. 
       IF (SIZE(OutData%IsLoad_u)>0) OutData%IsLoad_u = UNPACK( TRANSFER( IntKiBuf ( Int_Xferred:Int_Xferred+(SIZE(OutData%IsLoad_u))-1 ), OutData%IsLoad_u), mask1,.TRUE.)
       Int_Xferred   = Int_Xferred   + SIZE(OutData%IsLoad_u)
+    DEALLOCATE(mask1)
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! DerivOrder_x not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%DerivOrder_x)) DEALLOCATE(OutData%DerivOrder_x)
+    ALLOCATE(OutData%DerivOrder_x(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%DerivOrder_x.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask1 = .TRUE. 
+      IF (SIZE(OutData%DerivOrder_x)>0) OutData%DerivOrder_x = UNPACK( IntKiBuf ( Int_Xferred:Int_Xferred+(SIZE(OutData%DerivOrder_x))-1 ), mask1, 0_IntKi )
+      Int_Xferred   = Int_Xferred   + SIZE(OutData%DerivOrder_x)
     DEALLOCATE(mask1)
   END IF
  END SUBROUTINE ExtPtfm_UnPackInitOutput

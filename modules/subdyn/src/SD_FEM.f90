@@ -78,7 +78,10 @@ MODULE SD_FEM
   
   INTEGER(IntKi),   PARAMETER  :: SDMaxInpCols    = MAX(JointsCol,InterfCol,MembersCol,PropSetsBCol,PropSetsXCol,COSMsCol,CMassCol)
 
-  LOGICAL, PARAMETER :: DEV_VERSION = .false.
+  ! Implementation Flags
+  LOGICAL, PARAMETER :: DEV_VERSION    = .false.
+  LOGICAL, PARAMETER :: BC_Before_CB   = .true.
+  LOGICAL, PARAMETER :: ANALYTICAL_LIN = .true.
 
   INTERFACE FINDLOCI ! In the future, use FINDLOC from intrinsic
      MODULE PROCEDURE FINDLOCI_ReKi

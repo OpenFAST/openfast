@@ -54,6 +54,7 @@ typedef   ^                   ^          LOGICAL               RotFrame_y      {
 typedef   ^                   ^          LOGICAL               RotFrame_x      {:} - - "Flag that tells FAST/MBC3 if the continuous states used in linearization are in the rotating frame"	-
 typedef   ^                   ^          LOGICAL               RotFrame_u      {:} - - "Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame"	-
 typedef   ^                   ^          LOGICAL               IsLoad_u        {:} - - "Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix)" -
+typedef   ^                   ^          IntKi                 DerivOrder_x    {:} - -  "Integer that tells FAST/MBC3 the maximum derivative order of continuous states used in linearization" -
 
 
 # ..... States ....................................................................................................................
