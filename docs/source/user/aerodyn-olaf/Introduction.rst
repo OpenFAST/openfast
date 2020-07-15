@@ -149,9 +149,8 @@ downloading, compiling, and running OLAF. :numref:`Input-Files` describes the
 OLAF input file and modifications to the *AeroDyn15* input file.
 :numref:`Output-Files` details the OLAF output file.  :numref:`OLAF-Theory`
 provides an overview of the OLAF theory, including the free vortex wake method
-as well as integration into the *AeroDyn15* module.  :numref:`future-work`
-presents future work. Example input files and a list of output channels are
-detailed in Appendices A, B, and C.
+as well as integration into the *AeroDyn15* module. Example input files and a
+list of output channels are detailed in Appendices A, B, and C.
 
 
 

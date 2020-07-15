@@ -245,6 +245,7 @@ texinfo_documents = [
 ]
 
 def setup(app):
+    app.add_css_file('css/math_eq.css')
     app.add_object_type(
         "confval",
         "confval",
@@ -258,5 +259,3 @@ def setup(app):
         indextemplate="pair: %s; CMake configuration"
     )
 
-def setup(app):
-    app.add_stylesheet('css/math_eq.css')
