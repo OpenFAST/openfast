@@ -294,7 +294,7 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    END IF
       
    if (InitInput%Linearize) then
-      call SD_Init_Jacobian( p, u, y, m, InitOut, ErrStat2, ErrMsg2); if(Failed()) return
+      call SD_Init_Jacobian(Init, p, u, y, m, InitOut, ErrStat2, ErrMsg2); if(Failed()) return
    endif
    
    ! Tell GLUECODE the SubDyn timestep interval 
@@ -614,7 +614,6 @@ SUBROUTINE SD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSta
       
       ! form u(4) in Eq. 10:
       CALL GetExtForceOnInternalDOF( u, p, m, m%UFL )
-      !print*,'UFL',m%UFL
       
       !Equation 12: X=A*x + B*u + Fx (Eq 12)
       dxdt%qm= x%qmdot
@@ -622,8 +621,7 @@ SUBROUTINE SD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSta
       ! NOTE: matmul( TRANSPOSE(p%PhiM), m%UFL ) = matmul( m%UFL, p%PhiM ) because UFL is 1-D
                 != a(2,1) * x(1)   +   a(2,2) * x(2)         +  b(2,3) * u(3)                       + b(2,4) * u(4)                   + fx(2) 
      !dxdt%qmdot = -p%KMMDiag*x%qm + p%CMMDiag*x%qmdot  - matmul(p%CMB,m%udotdot_TP)- matmul(p%MMB,m%udotdot_TP)  + matmul(p%PhiM_T,m%UFL) + p%FX 
-      dxdt%qmdot = -p%KMMDiag*x%qm - p%CMMDiag*x%qmdot  - matmul(p%CMB,m%udot_TP)   - matmul(p%MMB,m%udotdot_TP)  + matmul(transpose(p%PhiM), m%UFL) + p%FX 
-      !print*,'PhiM_T UFL', matmul(transpose(p%PhiM), m%UFL) 
+      dxdt%qmdot = -p%KMMDiag*x%qm - p%CMMDiag*x%qmdot  - matmul(p%CMB,m%udot_TP)   - matmul(p%MMB,m%udotdot_TP)  + matmul(m%UFL, p%PhiM) + p%FX 
 
 END SUBROUTINE SD_CalcContStateDeriv
 
@@ -1137,11 +1135,11 @@ CONTAINS
 
    subroutine LegacyWarning(Message)
       character(len=*), intent(in) :: Message
-      print*,'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
-      print*,'Warning: the SubDyn input file is not at the latest format!' 
-      print*,'         Visit: https://openfast.readthedocs.io/en/dev/source/user/api_change.html'
-      print*,'> Issue: '//trim(Message)
-      print*,'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
+      call WrScr('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+      call WrScr('Warning: the SubDyn input file is not at the latest format!' )
+      call WrScr('         Visit: https://openfast.readthedocs.io/en/dev/source/user/api_change.html')
+      call WrScr('> Issue: '//trim(Message))
+      call WrScr('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
    end subroutine LegacyWarning
 
    LOGICAL FUNCTION Check(Condition, ErrMsg_in)
@@ -3211,55 +3209,59 @@ SUBROUTINE StateMatrices(p, ErrStat, ErrMsg, AA, BB, CC, DD)
    if (present(AA)) then
       if(allocated(AA)) deallocate(AA)
       call AllocAry(AA, nX, nX, 'AA',    ErrStat2, ErrMsg2 ); if(Failed()) return; AA(:,:) = 0.0_ReKi
-      do i=1,nCB
-         AA(i,nCB+i) = 1.0_ReKi ! Identity for 12
-      enddo
-      do i=1,nCB
-         AA(nCB+i,i    ) = -p%KMMDiag(i) ! 11
-         AA(nCB+i,nCB+i) = -p%CMMDiag(i) ! 22
-      enddo
+      if (nCB>0) then 
+         do i=1,nCB
+            AA(i,nCB+i) = 1.0_ReKi ! Identity for 12
+         enddo
+         do i=1,nCB
+            AA(nCB+i,i    ) = -p%KMMDiag(i) ! 11
+            AA(nCB+i,nCB+i) = -p%CMMDiag(i) ! 22
+         enddo
+      endif
    endif
 
    ! --- B matrix
    if (present(BB)) then
       if(allocated(BB)) deallocate(BB)
       call AllocAry(BB, nX, nU, 'BB',    ErrStat2, ErrMsg2 ); if(Failed()) return; BB(:,:) = 0.0_ReKi
-      BB(nCB+1:nX, 1 :6  ) = 0.0_ReKi
-      BB(nCB+1:nX, 7:12  ) = -p%CMB(1:nCB,1:6)
-      BB(nCB+1:nX, 13:18 ) = -p%MMB(1:nCB,1:6)
-      call AllocAry(dFext_dFmeshk, p%nDOF              , 'dFext',    ErrStat2, ErrMsg2 ); if(Failed()) return
-      call AllocAry(dFred_dFmeshk, p%nDOF_red          , 'dFred',    ErrStat2, ErrMsg2 ); if(Failed()) return
-      call AllocAry(dFL_dFmeshk  , p%nDOF__L           , 'dFl'  ,    ErrStat2, ErrMsg2 ); if(Failed()) return
-      call AllocAry(PhiM_T       , p%nDOFM , p%nDOF__L , 'PhiMT',    ErrStat2, ErrMsg2 ); if(Failed()) return
-      PhiM_T = transpose(p%PhiM)
-      iOff=18
-      k=0
-      do iField = 1,2 ! Forces, Moment
-         do iNode = 1,p%nNodes
-            nMembers = (size(p%NodesDOF(iNode)%List)-3)/3 ! Number of members deducted from Node's nDOFList
-            do j=1,3
-               k=k+1
-               ! Build Fext with unit load (see GetExtForceOnInternalDOF)
-               dFext_dFmeshk= 0.0_ReKi
-               if (iField==1) then
-                  ! Force - All nodes have only 3 translational DOFs 
-                  dFext_dFmeshk( p%NodesDOF(iNode)%List(j) ) =  1.0_ReKi
-               else
-                  ! Moment is spread equally across all rotational DOFs if more than 3 rotational DOFs
-                  dFext_dFmeshk( p%NodesDOF(iNode)%List((3+j)::3)) =  1.0_ReKi/nMembers
-               endif
-               ! Reduce and keep only "internal" DOFs L
-               if (p%reduced) then
-                  dFred_dFmeshk = matmul(transpose(p%T_red), dFext_dFmeshk)
-                  dFL_dFmeshk= dFred_dFmeshk(p%ID__L)
-               else
-                  dFL_dFmeshk= dFext_dFmeshk(p%ID__L)
-               endif
-               !  
-               BB(nCB+1:nX, iOff+k) = matmul(PhiM_T, dFL_dFmeshk)
-            enddo ! 1-3
-         enddo ! nodes
-      enddo ! field
+      if(nCB>0) then
+         BB(nCB+1:nX, 1 :6  ) = 0.0_ReKi
+         BB(nCB+1:nX, 7:12  ) = -p%CMB(1:nCB,1:6)
+         BB(nCB+1:nX, 13:18 ) = -p%MMB(1:nCB,1:6)
+         call AllocAry(dFext_dFmeshk, p%nDOF              , 'dFext',    ErrStat2, ErrMsg2 ); if(Failed()) return
+         call AllocAry(dFred_dFmeshk, p%nDOF_red          , 'dFred',    ErrStat2, ErrMsg2 ); if(Failed()) return
+         call AllocAry(dFL_dFmeshk  , p%nDOF__L           , 'dFl'  ,    ErrStat2, ErrMsg2 ); if(Failed()) return
+         call AllocAry(PhiM_T       , p%nDOFM , p%nDOF__L , 'PhiMT',    ErrStat2, ErrMsg2 ); if(Failed()) return
+         PhiM_T = transpose(p%PhiM)
+         iOff=18
+         k=0
+         do iField = 1,2 ! Forces, Moment
+            do iNode = 1,p%nNodes
+               nMembers = (size(p%NodesDOF(iNode)%List)-3)/3 ! Number of members deducted from Node's nDOFList
+               do j=1,3
+                  k=k+1
+                  ! Build Fext with unit load (see GetExtForceOnInternalDOF)
+                  dFext_dFmeshk= 0.0_ReKi
+                  if (iField==1) then
+                     ! Force - All nodes have only 3 translational DOFs 
+                     dFext_dFmeshk( p%NodesDOF(iNode)%List(j) ) =  1.0_ReKi
+                  else
+                     ! Moment is spread equally across all rotational DOFs if more than 3 rotational DOFs
+                     dFext_dFmeshk( p%NodesDOF(iNode)%List((3+j)::3)) =  1.0_ReKi/nMembers
+                  endif
+                  ! Reduce and keep only "internal" DOFs L
+                  if (p%reduced) then
+                     dFred_dFmeshk = matmul(transpose(p%T_red), dFext_dFmeshk)
+                     dFL_dFmeshk= dFred_dFmeshk(p%ID__L)
+                  else
+                     dFL_dFmeshk= dFext_dFmeshk(p%ID__L)
+                  endif
+                  !  
+                  BB(nCB+1:nX, iOff+k) = matmul(PhiM_T, dFL_dFmeshk)
+               enddo ! 1-3
+            enddo ! nodes
+         enddo ! field
+      endif
    endif
 
    ! --- C matrix
@@ -3267,8 +3269,10 @@ SUBROUTINE StateMatrices(p, ErrStat, ErrMsg, AA, BB, CC, DD)
       if(allocated(CC)) deallocate(CC)
       call AllocAry(CC, nY, nX, 'CC',    ErrStat2, ErrMsg2 ); if(Failed()) return; CC(:,:) = 0.0_ReKi
       !print*,'Warning: C matrix does not have all outputs, or extra moment, or static solve'
-      CC(1:nY,1:nCB )   = - p%C1_11
-      CC(1:nY,nCB+1:nX) = - p%C1_12
+      if (nCB>0) then
+         CC(1:nY,1:nCB )   = - p%C1_11
+         CC(1:nY,nCB+1:nX) = - p%C1_12
+      endif
    endif
 
    ! --- D matrix

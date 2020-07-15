@@ -809,7 +809,8 @@ END SUBROUTINE SDOut_ChkOutLst
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 !> This routine initializes the array that maps rows/columns of the Jacobian to specific mesh fields.
 !! Do not change the order of this packing without changing subroutine !
-SUBROUTINE SD_Init_Jacobian( p, u, y, m, InitOut, ErrStat, ErrMsg)
+SUBROUTINE SD_Init_Jacobian(Init, p, u, y, m, InitOut, ErrStat, ErrMsg)
+   TYPE(SD_InitType)                 , INTENT(IN   ) :: Init                  !< Init
    TYPE(SD_ParameterType)            , INTENT(INOUT) :: p                     !< parameters
    TYPE(SD_InputType)                , INTENT(IN   ) :: u                     !< inputs
    TYPE(SD_OutputType)               , INTENT(IN   ) :: y                     !< outputs
@@ -820,10 +821,18 @@ SUBROUTINE SD_Init_Jacobian( p, u, y, m, InitOut, ErrStat, ErrMsg)
    INTEGER(IntKi)                                    :: ErrStat2
    CHARACTER(ErrMsgLen)                              :: ErrMsg2
    CHARACTER(*), PARAMETER                           :: RoutineName = 'SD_Init_Jacobian'
+   real(ReKi) :: dx, dy, dz, maxDim
    ! local variables:
    ErrStat = ErrID_None
    ErrMsg  = ""
+   ! --- System dimension
+   dx = maxval(Init%Nodes(:,2))- minval(Init%Nodes(:,2))
+   dy = maxval(Init%Nodes(:,3))- minval(Init%Nodes(:,3))
+   dz = maxval(Init%Nodes(:,4))- minval(Init%Nodes(:,4))
+   maxDim = max(dx, dy, dz)
+   print*,'dx,dy,dz', dx, dy, dz, maxDim
    
+   ! --- System dimension
    call Init_Jacobian_y(); if (Failed()) return
    call Init_Jacobian_x(); if (Failed()) return
    call Init_Jacobian_u(); if (Failed()) return
@@ -940,8 +949,8 @@ contains
       p%du( 4) = perturb       ! u%TPMesh%RotationVel      = 4;
       p%du( 5) = perturb       ! u%TPMesh%TranslationAcc   = 5;
       p%du( 6) = perturb       ! u%TPMesh%RotationAcc      = 6;
-      p%du( 7) = perturb*5000  ! u%LMesh%Force             = 7;
-      p%du( 8) = perturb*50000 ! u%LMesh%Moment            = 8;
+      p%du( 7) = 170*maxDim**2 ! u%LMesh%Force             = 7;
+      p%du( 8) =  14*maxDim**3 ! u%LMesh%Moment            = 8;
    END SUBROUTINE Init_Jacobian_u
 
 END SUBROUTINE SD_Init_Jacobian
