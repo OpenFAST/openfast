@@ -431,21 +431,6 @@ subroutine BEMT_AllocOutput( y, p, errStat, errMsg )
 end subroutine BEMT_AllocOutput
 
 
-
-subroutine BEMT_MapOutputs(p, OtherState, y, errStat, errMsg)
-
-   type(BEMT_ParameterType),       intent(in   )  :: p           ! Parameters
-   type(BEMT_OtherStateType),      intent(in   )  :: OtherState  ! other states
-   type(BEMT_OutputType),          intent(inout)  :: y           ! system outputs 
-   integer(IntKi),                 intent(  out)  :: errStat     ! Error status of the operation
-   character(*),                   intent(  out)  :: errMsg      ! Error message if ErrStat /= ErrID_None
-   
-   ErrStat = ErrID_None
-   ErrMsg = ""
-   
-end subroutine BEMT_MapOutputs
-
-
 !----------------------------------------------------------------------------------------------------------------------------------
 subroutine BEMT_Init( InitInp, u, p, x, xd, z, OtherState, AFInfo, y, misc, Interval, InitOut, ErrStat, ErrMsg )
 ! This routine is called at the start of the simulation to perform initialization steps.
@@ -464,7 +449,7 @@ subroutine BEMT_Init( InitInp, u, p, x, xd, z, OtherState, AFInfo, y, misc, Inte
    type(AFI_ParameterType),        intent(in   )  :: AFInfo(:)   ! The airfoil parameter data
    type(BEMT_OutputType),          intent(  out)  :: y           ! Initial system outputs (outputs are not calculated;
                                                                  !   only the output mesh is initialized)
-   real(DbKi),                     intent(inout)  :: interval    ! Coupling interval in seconds: the rate that
+   real(DbKi),                     intent(in   )  :: interval    ! Coupling interval in seconds: the rate that
                                                                  !   (1) BEMT_UpdateStates() is called in loose coupling &
                                                                  !   (2) BEMT_UpdateDiscState() is called in tight coupling.
                                                                  !   Input is the suggested time from the glue code;
@@ -646,25 +631,6 @@ subroutine BEMT_Init( InitInp, u, p, x, xd, z, OtherState, AFInfo, y, misc, Inte
    call AllocAry(misc%AxInduction,p%numBladeNodes,p%numBlades,'misc%AxInduction', errStat2,errMsg2); call SetErrStat(errStat2,errMsg2,errStat,errMsg,RoutineName)
    call AllocAry(misc%TanInduction,p%numBladeNodes,p%numBlades,'misc%TanInduction', errStat2,errMsg2); call SetErrStat(errStat2,errMsg2,errStat,errMsg,RoutineName)
    call AllocAry(misc%Rtip,p%numBlades,'misc%Rtip', errStat2,errMsg2); call SetErrStat(errStat2,errMsg2,errStat,errMsg,RoutineName)
-
-      !............................................................................................
-      ! If you want to choose your own rate instead of using what the glue code suggests, tell the glue code the rate at which
-      !   this module must be called here:
-      !............................................................................................
-
-   Interval = p%DT
-
-
-       ! Print the summary file if requested:
-   !IF (InputFileData%SumPrint) THEN
-   !   CALL BEMT_PrintSum( p, OtherState, GetAdamsVals, ErrStat2, ErrMsg2 )
-   !   call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-   !END IF
-       
-       ! Destroy the InputFileData structure (deallocate arrays)
-
-   !CALL BEMT_DestroyInputFile(InputFileData, ErrStat2, ErrMsg2 )
-   !   call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
 
 CONTAINS
    !...............................................................................................................................
@@ -1198,12 +1164,6 @@ end subroutine calculate_Inductions_from_DBEMT
 !----------------------------------------------------------------------------------------------------------------------------------
 subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, errStat, errMsg )
 ! Routine for computing outputs, used in both loose and tight coupling.
-! This SUBROUTINE is used to compute the output channels (motions and loads) and place them in the WriteOutput() array.
-! NOTE: the descriptions of the output channels are not given here. Please see the included OutListParameters.xlsx sheet for
-! for a complete description of each output parameter.
-! NOTE: no matter how many channels are selected for output, all of the outputs are calculated
-! All of the calculated output channels are placed into the OtherState%AllOuts(:), while the channels selected for outputs are
-! placed in the y%WriteOutput(:) array.
 !..................................................................................................................................
 
    
@@ -1241,7 +1201,6 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, errStat
    integer(IntKi)                 :: k
 #endif
 
-   logical, parameter             :: UpdateValues  = .TRUE.                          ! determines if the OtherState values need to be updated
    logical                        :: IsValidSolution !< this is set to false if k<=1 in propeller brake region or k<-1 in momentum region, indicating an invalid solution
          ! Initialize some output values
    errStat = ErrID_None
@@ -1304,16 +1263,6 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, errStat
 
       end if
    end if
-   
-   ! Array OtherState%AllOuts() is initialized to 0.0 in initialization, so we are not going to reinitialize it here.
-   
-      
-   !...............................................................................................................................
-   ! Calculate all of the total forces and moments using all of the partial forces and moments calculated in RtHS().  Also,
-   !   calculate all of the total angular and linear accelerations using all of the partial accelerations calculated in RtHS().
-   !   To do this, first initialize the variables using the portions not associated with the accelerations.  Then add the portions
-   !   associated with the accelerations one by one:
-   !...............................................................................................................................  
    
    do j = 1,p%numBlades ! Loop through all blades
       
@@ -1423,29 +1372,6 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, errStat
             WRITE (69, '(F20.6,'//trim(num2lstr(size(m%y_UA%WriteOutput)))//'(:,1x,ES19.5E3))') t, ( m%y_UA%WriteOutput(k), k=1,size(m%y_UA%WriteOutput))
   ! end if              
 #endif 
-   
-   !...............................................................................................................................
-   ! Place the selected output channels into the WriteOutput(:) array with the proper sign:
-   !...............................................................................................................................
-
-   call BEMT_MapOutputs(p, OtherState, y, errStat2, errMsg2)
-      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      if (errStat >= AbortErrLev) return 
-   
-   !DO I = 1,p%NumOuts  ! Loop through all selected output channels
-   !
-   !   y%WriteOutput(I) = p%OutParam(I)%SignM * OtherState%AllOuts( p%OutParam(I)%Indx )
-   !
-   !ENDDO             ! I - All selected output channels
-
-   
-   !...............................................................................................................................
-   ! Outputs required for AeroDyn
-   !...............................................................................................................................
-  
-   !...........
-   ! Blade elements:
-   !...........
    
                
    return

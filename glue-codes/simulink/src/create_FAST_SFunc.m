@@ -1,7 +1,7 @@
 %% INSTRUCTIONS
 % Before running this script, you must have compiled OpenFAST for Simulink to create a DLL (i.e., a shared library like .so, .dylib, .lib, etc.).
 % - If cmake was used, make sure the install directory is specified properly in the `installDir` variable below,
-%   and set `built_with_visualStudio` to false (necessary on Windows only).
+%   and if using Windows, set `built_with_visualStudio` to false.
 % - If the Visual Studio Solution file contained in the vs-build directory was used to create the DLL on Windows,
 %   make sure `built_with_visualStudio` is set to true.
 % - The name of the library that was generated must match the `libname` variable below

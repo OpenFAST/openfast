@@ -40,6 +40,7 @@ target_link_libraries(AeroAcoustics nwtclibs)
 set(AD_LIBS_SOURCES
   src/AeroDyn.f90
   src/AeroDyn_IO.f90
+  src/AeroDyn_AllBldNdOuts_IO.f90
   src/AirfoilInfo.f90
   src/BEMT.f90
   src/DBEMT.f90

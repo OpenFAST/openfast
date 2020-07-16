@@ -24,10 +24,6 @@ typedef     ^             ^                 CHARACTER(ChanLen)       Name   - - 
 typedef     ^             ^                 CHARACTER(ChanLen)       Units  - - - "Units this channel is specified in"
 typedef     ^             ^                 IntKi                    SignM  - - - "Multiplier for output channel; usually -1 (minus) or 0 (invalid channel)"
 
-typedef   NWTC_Library  OutParmFFType       IntKi                    Indx   - - - "An index into AllOuts array where this channel is computed/stored"
-typedef     ^             ^                 CHARACTER(ChanLenFF)     Name   - - - "Name of the output channel"
-typedef     ^             ^                 CHARACTER(ChanLenFF)     Units  - - - "Units this channel is specified in"
-typedef     ^             ^                 IntKi                    SignM  - - - "Multiplier for output channel; usually -1 (minus) or 0 (invalid channel)"
 
 typedef   NWTC_Library  FileInfoType        IntKi                    NumLines
 typedef     ^             ^                 IntKi                    NumFiles

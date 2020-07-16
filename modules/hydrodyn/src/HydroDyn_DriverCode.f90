@@ -112,7 +112,6 @@ PROGRAM HydroDynDriver
    real(ReKi)                                     :: PrevClockTime                           ! Clock time at start of simulation in seconds
    real(ReKi)                                     :: UsrTime1                                ! User CPU time for simulation initialization
    real(ReKi)                                     :: UsrTime2                                ! User CPU time for simulation (without intialization)
-   real(ReKi)                                     :: UsrTimeDiff                             ! Difference in CPU time from start to finish of program execution
    real(DbKi)                                     :: TiLstPrn                                ! The simulation time of the last print
    real(DbKi)                                     :: t_global                                ! Current simulation time (for global/FAST simulation)
    real(DbKi)                                     :: SttsTime                                ! Amount of time between screen status messages (sec)
@@ -540,7 +539,7 @@ subroutine HD_DvrCleanup()
       end if
       
      ! Print *, time
-      call RunTimes( StrtTime, REAL(UsrTime1,ReKi), SimStrtTime, REAL(UsrTime2,ReKi), time, UsrTimeDiff )
+      call RunTimes( StrtTime, REAL(UsrTime1,ReKi), SimStrtTime, REAL(UsrTime2,ReKi), time )
       call NormStop()
       
 end subroutine HD_DvrCleanup

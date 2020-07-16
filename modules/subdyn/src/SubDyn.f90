@@ -712,7 +712,6 @@ SUBROUTINE SD_Input(SDInputFile, Init, p, ErrStat,ErrMsg)
 ! local variable for input and output
 CHARACTER(1024)              :: PriPath                                         ! The path to the primary input file
 CHARACTER(1024)              :: Line                                            ! String to temporarially hold value of read line
-INTEGER                      :: Sttus
 
 LOGICAL                      :: Echo  
 INTEGER(IntKi)               :: UnIn

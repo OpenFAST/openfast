@@ -109,6 +109,11 @@ typedef   ^        BD_InputFile    CHARACTER(ChanLen)  OutList    {:} - - "List 
 typedef   ^        BD_InputFile    LOGICAL             SumPrint    -  - - "Print summary data to file? (.sum)"	-
 typedef   ^        BD_InputFile    CHARACTER(20)       OutFmt      -  - - "Format specifier" -
 
+# ..... BldNdOuts ............................................................................................
+typedef   ^        BD_InputFile   IntKi                BldNd_NumOuts          -  - - "Number of requested output channels per blade node (BD_BldNdOuts)"  -
+typedef   ^        BD_InputFile   CHARACTER(ChanLen)   BldNd_OutList         {:} - - "List of user-requested output channels (BD_BldNdOuts)"      -
+typedef   ^        BD_InputFile   IntKi                BldNd_BlOutNd         {:} - - "The blade nodes to actually output (BD_BldNdOuts)" -
+typedef   ^        BD_InputFile   CHARACTER(1024)      BldNd_BlOutNd_Str      -  - - "String to parse for the blade nodes to actually output (BD_BldNdOuts)" -
 
 
 # ..... States
@@ -210,6 +215,7 @@ typedef   ^        ParameterType OutParmType    OutParam        {:}        - -  
 typedef   ^        ParameterType IntKi          NNodeOuts        -         - -  "Number of nodes to output data to a file[0 - 9]"	-
 typedef   ^        ParameterType IntKi          OutNd           {9}        - -  "Nodes whose values will be output"	-
 typedef   ^        ParameterType IntKi          NdIndx          {:}        - -  "Index into BldMotion mesh (to number the nodes for output without using collocated nodes)"	-
+typedef   ^        ParameterType IntKi          NdIndxInverse   {:}        - -  "Index from BldMotion mesh to unique nodes (to number the nodes for output without using collocated nodes)"	-
 typedef   ^        ParameterType IntKi          OutNd2NdElem    {:}{:}     - -  "To go from an output node number to a node/elem pair" -
 typedef   ^        ParameterType CHARACTER(20)  OutFmt           -         - -  "Format specifier" -
 typedef   ^        ParameterType Logical        UsePitchAct      -         - -  "Whether to use a pitch actuator inside BeamDyn" (flag) 
@@ -224,6 +230,11 @@ typedef   ^        ParameterType Logical        tngt_stf_fd      -         - -  
 typedef   ^        ParameterType Logical        tngt_stf_comp    -         - -  "Flag to compare finite differenced and analytical tangent stifness" - 
 typedef   ^        ParameterType R8Ki           tngt_stf_pert    -         - -  "Perturbation size for computing finite differenced tangent stiffness" - 
 typedef   ^        ParameterType R8Ki           tngt_stf_difftol -         - -  "When comparing tangent stiffness matrix, stop simulation if error greater than this" -
+# .... BD_BlNdOuts ........................................................................................................
+typedef   ^        ParameterType IntKi          BldNd_NumOuts           -  - -  "[BD_BldNdOuts] Number of requested output channels per blade node"  -
+typedef   ^        ParameterType IntKi          BldNd_TotNumOuts        -  - -  "[BD_BldNdOuts] Total number of requested output channels of blade node information (equal to BldNd_NumOuts * BldNd_BlOutNd)" -
+typedef   ^        ParameterType OutParmType    BldNd_OutParam         {:} - -  "[BD_BldNdOuts] Names and units (and other characteristics) of all requested output parameters"        -
+typedef   ^        ParameterType IntKi          BldNd_BlOutNd          {:} - -  "[BD_BldNdOuts] The blade nodes to actually output" -
 # .... arrays for optimization ........................................................................................................
 typedef   ^        ParameterType    R8Ki        QPtw_Shp_Shp_Jac       {:}{:}{:}{:}  - - "optimization variable: QPtw_Shp_Shp_Jac(idx_qp,i,j,nelem) = p%Shp(i,idx_qp)*p%Shp(j,idx_qp)*p%QPtWeight(idx_qp)*p%Jacobian(idx_qp,nelem)" -
 typedef   ^        ParameterType    ^           QPtw_Shp_ShpDer        {:}{:}{:}     - - "optimization variable: QPtw_Shp_ShpDer(idx_qp,i,j) = p%Shp(i,idx_qp)*p%ShpDer(j,idx_qp)*p%QPtWeight(idx_qp)" -

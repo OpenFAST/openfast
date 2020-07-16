@@ -186,10 +186,10 @@ CONTAINS
   Db_Xferred  = 1
   Int_Xferred = 1
 
-      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%NumSC2Ctrl
-      Int_Xferred   = Int_Xferred   + 1
-      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%NumCtrl2SC
-      Int_Xferred   = Int_Xferred   + 1
+    IntKiBuf(Int_Xferred) = InData%NumSC2Ctrl
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%NumCtrl2SC
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE SC_PackInitInput
 
  SUBROUTINE SC_UnPackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -205,12 +205,6 @@ CONTAINS
   INTEGER(IntKi)                 :: Db_Xferred
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
-  LOGICAL                        :: mask0
-  LOGICAL, ALLOCATABLE           :: mask1(:)
-  LOGICAL, ALLOCATABLE           :: mask2(:,:)
-  LOGICAL, ALLOCATABLE           :: mask3(:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
@@ -225,24 +219,51 @@ CONTAINS
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-      OutData%NumSC2Ctrl = IntKiBuf( Int_Xferred ) 
-      Int_Xferred   = Int_Xferred + 1
+    OutData%NumSC2Ctrl = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
       OutData%C_obj%NumSC2Ctrl = OutData%NumSC2Ctrl
-      OutData%NumCtrl2SC = IntKiBuf( Int_Xferred ) 
-      Int_Xferred   = Int_Xferred + 1
+    OutData%NumCtrl2SC = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
       OutData%C_obj%NumCtrl2SC = OutData%NumCtrl2SC
  END SUBROUTINE SC_UnPackInitInput
 
- SUBROUTINE SC_C2Fary_CopyInitInput( InitInputData, ErrStat, ErrMsg )
+ SUBROUTINE SC_C2Fary_CopyInitInput( InitInputData, ErrStat, ErrMsg, SkipPointers )
     TYPE(SC_InitInputType), INTENT(INOUT) :: InitInputData
     INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
     CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
     ! 
+    LOGICAL                        :: SkipPointers_local
     ErrStat = ErrID_None
     ErrMsg  = ""
+
+    IF (PRESENT(SkipPointers)) THEN
+       SkipPointers_local = SkipPointers
+    ELSE
+       SkipPointers_local = .false.
+    END IF
     InitInputData%NumSC2Ctrl = InitInputData%C_obj%NumSC2Ctrl
     InitInputData%NumCtrl2SC = InitInputData%C_obj%NumCtrl2SC
  END SUBROUTINE SC_C2Fary_CopyInitInput
+
+ SUBROUTINE SC_F2C_CopyInitInput( InitInputData, ErrStat, ErrMsg, SkipPointers  )
+    TYPE(SC_InitInputType), INTENT(INOUT) :: InitInputData
+    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
+    ! 
+    LOGICAL                        :: SkipPointers_local
+    ErrStat = ErrID_None
+    ErrMsg  = ""
+
+    IF (PRESENT(SkipPointers)) THEN
+       SkipPointers_local = SkipPointers
+    ELSE
+       SkipPointers_local = .false.
+    END IF
+    InitInputData%C_obj%NumSC2Ctrl = InitInputData%NumSC2Ctrl
+    InitInputData%C_obj%NumCtrl2SC = InitInputData%NumCtrl2SC
+ END SUBROUTINE SC_F2C_CopyInitInput
 
  SUBROUTINE SC_CopyInitOutput( SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg )
    TYPE(SC_InitOutputType), INTENT(IN) :: SrcInitOutputData
@@ -400,12 +421,6 @@ CONTAINS
   INTEGER(IntKi)                 :: Db_Xferred
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
-  LOGICAL                        :: mask0
-  LOGICAL, ALLOCATABLE           :: mask1(:)
-  LOGICAL, ALLOCATABLE           :: mask2(:,:)
-  LOGICAL, ALLOCATABLE           :: mask3(:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'SC_UnPackInitOutput'
@@ -461,14 +476,39 @@ CONTAINS
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
  END SUBROUTINE SC_UnPackInitOutput
 
- SUBROUTINE SC_C2Fary_CopyInitOutput( InitOutputData, ErrStat, ErrMsg )
+ SUBROUTINE SC_C2Fary_CopyInitOutput( InitOutputData, ErrStat, ErrMsg, SkipPointers )
     TYPE(SC_InitOutputType), INTENT(INOUT) :: InitOutputData
     INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
     CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
     ! 
+    LOGICAL                        :: SkipPointers_local
     ErrStat = ErrID_None
     ErrMsg  = ""
+
+    IF (PRESENT(SkipPointers)) THEN
+       SkipPointers_local = SkipPointers
+    ELSE
+       SkipPointers_local = .false.
+    END IF
  END SUBROUTINE SC_C2Fary_CopyInitOutput
+
+ SUBROUTINE SC_F2C_CopyInitOutput( InitOutputData, ErrStat, ErrMsg, SkipPointers  )
+    TYPE(SC_InitOutputType), INTENT(INOUT) :: InitOutputData
+    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
+    ! 
+    LOGICAL                        :: SkipPointers_local
+    ErrStat = ErrID_None
+    ErrMsg  = ""
+
+    IF (PRESENT(SkipPointers)) THEN
+       SkipPointers_local = SkipPointers
+    ELSE
+       SkipPointers_local = .false.
+    END IF
+ END SUBROUTINE SC_F2C_CopyInitOutput
 
  SUBROUTINE SC_CopyParam( SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg )
    TYPE(SC_ParameterType), INTENT(IN) :: SrcParamData
@@ -564,8 +604,8 @@ CONTAINS
   Db_Xferred  = 1
   Int_Xferred = 1
 
-      IntKiBuf ( Int_Xferred:Int_Xferred+1-1 ) = TRANSFER( InData%scOn , IntKiBuf(1), 1)
-      Int_Xferred   = Int_Xferred   + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%scOn, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE SC_PackParam
 
  SUBROUTINE SC_UnPackParam( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -581,12 +621,6 @@ CONTAINS
   INTEGER(IntKi)                 :: Db_Xferred
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
-  LOGICAL                        :: mask0
-  LOGICAL, ALLOCATABLE           :: mask1(:)
-  LOGICAL, ALLOCATABLE           :: mask2(:,:)
-  LOGICAL, ALLOCATABLE           :: mask3(:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'SC_UnPackParam'
@@ -600,20 +634,46 @@ CONTAINS
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-      OutData%scOn = TRANSFER( IntKiBuf( Int_Xferred ), mask0 )
-      Int_Xferred   = Int_Xferred + 1
+    OutData%scOn = TRANSFER(IntKiBuf(Int_Xferred), OutData%scOn)
+    Int_Xferred = Int_Xferred + 1
       OutData%C_obj%scOn = OutData%scOn
  END SUBROUTINE SC_UnPackParam
 
- SUBROUTINE SC_C2Fary_CopyParam( ParamData, ErrStat, ErrMsg )
+ SUBROUTINE SC_C2Fary_CopyParam( ParamData, ErrStat, ErrMsg, SkipPointers )
     TYPE(SC_ParameterType), INTENT(INOUT) :: ParamData
     INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
     CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
     ! 
+    LOGICAL                        :: SkipPointers_local
     ErrStat = ErrID_None
     ErrMsg  = ""
+
+    IF (PRESENT(SkipPointers)) THEN
+       SkipPointers_local = SkipPointers
+    ELSE
+       SkipPointers_local = .false.
+    END IF
     ParamData%scOn = ParamData%C_obj%scOn
  END SUBROUTINE SC_C2Fary_CopyParam
+
+ SUBROUTINE SC_F2C_CopyParam( ParamData, ErrStat, ErrMsg, SkipPointers  )
+    TYPE(SC_ParameterType), INTENT(INOUT) :: ParamData
+    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
+    ! 
+    LOGICAL                        :: SkipPointers_local
+    ErrStat = ErrID_None
+    ErrMsg  = ""
+
+    IF (PRESENT(SkipPointers)) THEN
+       SkipPointers_local = SkipPointers
+    ELSE
+       SkipPointers_local = .false.
+    END IF
+    ParamData%C_obj%scOn = ParamData%scOn
+ END SUBROUTINE SC_F2C_CopyParam
 
  SUBROUTINE SC_CopyInput( SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg )
    TYPE(SC_InputType), INTENT(IN) :: SrcInputData
@@ -743,8 +803,10 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%toSC,1)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%toSC)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%toSC))-1 ) = PACK(InData%toSC,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%toSC)
+      DO i1 = LBOUND(InData%toSC,1), UBOUND(InData%toSC,1)
+        ReKiBuf(Re_Xferred) = InData%toSC(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
  END SUBROUTINE SC_PackInput
 
@@ -761,12 +823,6 @@ ENDIF
   INTEGER(IntKi)                 :: Db_Xferred
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
-  LOGICAL                        :: mask0
-  LOGICAL, ALLOCATABLE           :: mask1(:)
-  LOGICAL, ALLOCATABLE           :: mask2(:,:)
-  LOGICAL, ALLOCATABLE           :: mask3(:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
@@ -797,33 +853,67 @@ ENDIF
     OutData%c_obj%toSC_Len = SIZE(OutData%toSC)
     IF (OutData%c_obj%toSC_Len > 0) &
        OutData%c_obj%toSC = C_LOC( OutData%toSC(i1_l) ) 
-    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask1 = .TRUE. 
-      IF (SIZE(OutData%toSC)>0) OutData%toSC = REAL( UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%toSC))-1 ), mask1, 0.0_ReKi ), C_FLOAT)
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%toSC)
-    DEALLOCATE(mask1)
+      DO i1 = LBOUND(OutData%toSC,1), UBOUND(OutData%toSC,1)
+        OutData%toSC(i1) = REAL(ReKiBuf(Re_Xferred), C_FLOAT)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
  END SUBROUTINE SC_UnPackInput
 
- SUBROUTINE SC_C2Fary_CopyInput( InputData, ErrStat, ErrMsg )
+ SUBROUTINE SC_C2Fary_CopyInput( InputData, ErrStat, ErrMsg, SkipPointers )
     TYPE(SC_InputType), INTENT(INOUT) :: InputData
     INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
     CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
     ! 
+    LOGICAL                        :: SkipPointers_local
     ErrStat = ErrID_None
     ErrMsg  = ""
 
-    ! -- toSC Input Data fields
-    IF ( .NOT. C_ASSOCIATED( InputData%C_obj%toSC ) ) THEN
-       NULLIFY( InputData%toSC )
+    IF (PRESENT(SkipPointers)) THEN
+       SkipPointers_local = SkipPointers
     ELSE
-       CALL C_F_POINTER(InputData%C_obj%toSC, InputData%toSC, (/InputData%C_obj%toSC_Len/))
+       SkipPointers_local = .false.
+    END IF
+
+    ! -- toSC Input Data fields
+    IF ( .NOT. SkipPointers_local ) THEN
+       IF ( .NOT. C_ASSOCIATED( InputData%C_obj%toSC ) ) THEN
+          NULLIFY( InputData%toSC )
+       ELSE
+          CALL C_F_POINTER(InputData%C_obj%toSC, InputData%toSC, (/InputData%C_obj%toSC_Len/))
+       END IF
     END IF
  END SUBROUTINE SC_C2Fary_CopyInput
+
+ SUBROUTINE SC_F2C_CopyInput( InputData, ErrStat, ErrMsg, SkipPointers  )
+    TYPE(SC_InputType), INTENT(INOUT) :: InputData
+    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
+    ! 
+    LOGICAL                        :: SkipPointers_local
+    ErrStat = ErrID_None
+    ErrMsg  = ""
+
+    IF (PRESENT(SkipPointers)) THEN
+       SkipPointers_local = SkipPointers
+    ELSE
+       SkipPointers_local = .false.
+    END IF
+
+    ! -- toSC Input Data fields
+    IF ( .NOT. SkipPointers_local ) THEN
+       IF ( .NOT. ASSOCIATED(InputData%toSC)) THEN 
+          InputData%c_obj%toSC_Len = 0
+          InputData%c_obj%toSC = C_NULL_PTR
+       ELSE
+          InputData%c_obj%toSC_Len = SIZE(InputData%toSC)
+          IF (InputData%c_obj%toSC_Len > 0) &
+             InputData%c_obj%toSC = C_LOC( InputData%toSC( LBOUND(InputData%toSC,1) ) ) 
+       END IF
+    END IF
+ END SUBROUTINE SC_F2C_CopyInput
 
  SUBROUTINE SC_CopyOutput( SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg )
    TYPE(SC_OutputType), INTENT(IN) :: SrcOutputData
@@ -953,8 +1043,10 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%fromSC,1)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%fromSC)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%fromSC))-1 ) = PACK(InData%fromSC,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%fromSC)
+      DO i1 = LBOUND(InData%fromSC,1), UBOUND(InData%fromSC,1)
+        ReKiBuf(Re_Xferred) = InData%fromSC(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
  END SUBROUTINE SC_PackOutput
 
@@ -971,12 +1063,6 @@ ENDIF
   INTEGER(IntKi)                 :: Db_Xferred
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
-  LOGICAL                        :: mask0
-  LOGICAL, ALLOCATABLE           :: mask1(:)
-  LOGICAL, ALLOCATABLE           :: mask2(:,:)
-  LOGICAL, ALLOCATABLE           :: mask3(:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
@@ -1007,33 +1093,67 @@ ENDIF
     OutData%c_obj%fromSC_Len = SIZE(OutData%fromSC)
     IF (OutData%c_obj%fromSC_Len > 0) &
        OutData%c_obj%fromSC = C_LOC( OutData%fromSC(i1_l) ) 
-    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask1 = .TRUE. 
-      IF (SIZE(OutData%fromSC)>0) OutData%fromSC = REAL( UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%fromSC))-1 ), mask1, 0.0_ReKi ), C_FLOAT)
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%fromSC)
-    DEALLOCATE(mask1)
+      DO i1 = LBOUND(OutData%fromSC,1), UBOUND(OutData%fromSC,1)
+        OutData%fromSC(i1) = REAL(ReKiBuf(Re_Xferred), C_FLOAT)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
  END SUBROUTINE SC_UnPackOutput
 
- SUBROUTINE SC_C2Fary_CopyOutput( OutputData, ErrStat, ErrMsg )
+ SUBROUTINE SC_C2Fary_CopyOutput( OutputData, ErrStat, ErrMsg, SkipPointers )
     TYPE(SC_OutputType), INTENT(INOUT) :: OutputData
     INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
     CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
     ! 
+    LOGICAL                        :: SkipPointers_local
     ErrStat = ErrID_None
     ErrMsg  = ""
 
-    ! -- fromSC Output Data fields
-    IF ( .NOT. C_ASSOCIATED( OutputData%C_obj%fromSC ) ) THEN
-       NULLIFY( OutputData%fromSC )
+    IF (PRESENT(SkipPointers)) THEN
+       SkipPointers_local = SkipPointers
     ELSE
-       CALL C_F_POINTER(OutputData%C_obj%fromSC, OutputData%fromSC, (/OutputData%C_obj%fromSC_Len/))
+       SkipPointers_local = .false.
+    END IF
+
+    ! -- fromSC Output Data fields
+    IF ( .NOT. SkipPointers_local ) THEN
+       IF ( .NOT. C_ASSOCIATED( OutputData%C_obj%fromSC ) ) THEN
+          NULLIFY( OutputData%fromSC )
+       ELSE
+          CALL C_F_POINTER(OutputData%C_obj%fromSC, OutputData%fromSC, (/OutputData%C_obj%fromSC_Len/))
+       END IF
     END IF
  END SUBROUTINE SC_C2Fary_CopyOutput
+
+ SUBROUTINE SC_F2C_CopyOutput( OutputData, ErrStat, ErrMsg, SkipPointers  )
+    TYPE(SC_OutputType), INTENT(INOUT) :: OutputData
+    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
+    ! 
+    LOGICAL                        :: SkipPointers_local
+    ErrStat = ErrID_None
+    ErrMsg  = ""
+
+    IF (PRESENT(SkipPointers)) THEN
+       SkipPointers_local = SkipPointers
+    ELSE
+       SkipPointers_local = .false.
+    END IF
+
+    ! -- fromSC Output Data fields
+    IF ( .NOT. SkipPointers_local ) THEN
+       IF ( .NOT. ASSOCIATED(OutputData%fromSC)) THEN 
+          OutputData%c_obj%fromSC_Len = 0
+          OutputData%c_obj%fromSC = C_NULL_PTR
+       ELSE
+          OutputData%c_obj%fromSC_Len = SIZE(OutputData%fromSC)
+          IF (OutputData%c_obj%fromSC_Len > 0) &
+             OutputData%c_obj%fromSC = C_LOC( OutputData%fromSC( LBOUND(OutputData%fromSC,1) ) ) 
+       END IF
+    END IF
+ END SUBROUTINE SC_F2C_CopyOutput
 
 
  SUBROUTINE SC_Input_ExtrapInterp(u, t, u_out, t_out, ErrStat, ErrMsg )
@@ -1110,12 +1230,12 @@ ENDIF
  REAL(DbKi)                                 :: t(2)     ! Times associated with the Inputs
  REAL(DbKi)                                 :: t_out    ! Time to which to be extrap/interpd
  CHARACTER(*),                    PARAMETER :: RoutineName = 'SC_Input_ExtrapInterp1'
- REAL(DbKi)                                 :: b0       ! temporary for extrapolation/interpolation
- REAL(DbKi)                                 :: c0       ! temporary for extrapolation/interpolation
- REAL(DbKi),ALLOCATABLE,DIMENSION(:)        :: b1       ! temporary for extrapolation/interpolation
- REAL(DbKi),ALLOCATABLE,DIMENSION(:)        :: c1       ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: b        ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: ScaleFactor ! temporary for extrapolation/interpolation
  INTEGER(IntKi)                             :: ErrStat2 ! local errors
  CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
+ INTEGER                                    :: i01    ! dim1 level 0 counter variable for arrays of ddts
+ INTEGER                                    :: i1    ! dim1 counter variable for arrays
     ! Initialize ErrStat
  ErrStat = ErrID_None
  ErrMsg  = ""
@@ -1128,13 +1248,13 @@ ENDIF
      CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
      RETURN
    END IF
+
+   ScaleFactor = t_out / t(2)
 IF (ASSOCIATED(u_out%toSC) .AND. ASSOCIATED(u1%toSC)) THEN
-  ALLOCATE(b1(SIZE(u_out%toSC,1)))
-  ALLOCATE(c1(SIZE(u_out%toSC,1)))
-  b1 = -(u1%toSC - u2%toSC)/t(2)
-  u_out%toSC = u1%toSC + b1 * t_out
-  DEALLOCATE(b1)
-  DEALLOCATE(c1)
+  DO i1 = LBOUND(u_out%toSC,1),UBOUND(u_out%toSC,1)
+    b = -(u1%toSC(i1) - u2%toSC(i1))
+    u_out%toSC(i1) = u1%toSC(i1) + b * ScaleFactor
+  END DO
 END IF ! check if allocated
  END SUBROUTINE SC_Input_ExtrapInterp1
 
@@ -1165,13 +1285,14 @@ END IF ! check if allocated
  REAL(DbKi)                                 :: t(3)      ! Times associated with the Inputs
  REAL(DbKi)                                 :: t_out     ! Time to which to be extrap/interpd
  INTEGER(IntKi)                             :: order     ! order of polynomial fit (max 2)
- REAL(DbKi)                                 :: b0       ! temporary for extrapolation/interpolation
- REAL(DbKi)                                 :: c0       ! temporary for extrapolation/interpolation
- REAL(DbKi),ALLOCATABLE,DIMENSION(:)        :: b1       ! temporary for extrapolation/interpolation
- REAL(DbKi),ALLOCATABLE,DIMENSION(:)        :: c1       ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: b        ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: c        ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: ScaleFactor ! temporary for extrapolation/interpolation
  INTEGER(IntKi)                             :: ErrStat2 ! local errors
  CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
  CHARACTER(*),            PARAMETER         :: RoutineName = 'SC_Input_ExtrapInterp2'
+ INTEGER                                    :: i01    ! dim1 level 0 counter variable for arrays of ddts
+ INTEGER                                    :: i1    ! dim1 counter variable for arrays
     ! Initialize ErrStat
  ErrStat = ErrID_None
  ErrMsg  = ""
@@ -1190,14 +1311,14 @@ END IF ! check if allocated
      CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
      RETURN
    END IF
+
+   ScaleFactor = t_out / (t(2) * t(3) * (t(2) - t(3)))
 IF (ASSOCIATED(u_out%toSC) .AND. ASSOCIATED(u1%toSC)) THEN
-  ALLOCATE(b1(SIZE(u_out%toSC,1)))
-  ALLOCATE(c1(SIZE(u_out%toSC,1)))
-  b1 = (t(3)**2*(u1%toSC - u2%toSC) + t(2)**2*(-u1%toSC + u3%toSC))/(t(2)*t(3)*(t(2) - t(3)))
-  c1 = ( (t(2)-t(3))*u1%toSC + t(3)*u2%toSC - t(2)*u3%toSC ) / (t(2)*t(3)*(t(2) - t(3)))
-  u_out%toSC = u1%toSC + b1 * t_out + c1 * t_out**2
-  DEALLOCATE(b1)
-  DEALLOCATE(c1)
+  DO i1 = LBOUND(u_out%toSC,1),UBOUND(u_out%toSC,1)
+    b = (t(3)**2*(u1%toSC(i1) - u2%toSC(i1)) + t(2)**2*(-u1%toSC(i1) + u3%toSC(i1)))* scaleFactor
+    c = ( (t(2)-t(3))*u1%toSC(i1) + t(3)*u2%toSC(i1) - t(2)*u3%toSC(i1) ) * scaleFactor
+    u_out%toSC(i1) = u1%toSC(i1) + b  + c * t_out
+  END DO
 END IF ! check if allocated
  END SUBROUTINE SC_Input_ExtrapInterp2
 
@@ -1276,12 +1397,12 @@ END IF ! check if allocated
  REAL(DbKi)                                 :: t(2)     ! Times associated with the Outputs
  REAL(DbKi)                                 :: t_out    ! Time to which to be extrap/interpd
  CHARACTER(*),                    PARAMETER :: RoutineName = 'SC_Output_ExtrapInterp1'
- REAL(DbKi)                                 :: b0       ! temporary for extrapolation/interpolation
- REAL(DbKi)                                 :: c0       ! temporary for extrapolation/interpolation
- REAL(DbKi),ALLOCATABLE,DIMENSION(:)        :: b1       ! temporary for extrapolation/interpolation
- REAL(DbKi),ALLOCATABLE,DIMENSION(:)        :: c1       ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: b        ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: ScaleFactor ! temporary for extrapolation/interpolation
  INTEGER(IntKi)                             :: ErrStat2 ! local errors
  CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
+ INTEGER                                    :: i01    ! dim1 level 0 counter variable for arrays of ddts
+ INTEGER                                    :: i1    ! dim1 counter variable for arrays
     ! Initialize ErrStat
  ErrStat = ErrID_None
  ErrMsg  = ""
@@ -1294,13 +1415,13 @@ END IF ! check if allocated
      CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
      RETURN
    END IF
+
+   ScaleFactor = t_out / t(2)
 IF (ASSOCIATED(y_out%fromSC) .AND. ASSOCIATED(y1%fromSC)) THEN
-  ALLOCATE(b1(SIZE(y_out%fromSC,1)))
-  ALLOCATE(c1(SIZE(y_out%fromSC,1)))
-  b1 = -(y1%fromSC - y2%fromSC)/t(2)
-  y_out%fromSC = y1%fromSC + b1 * t_out
-  DEALLOCATE(b1)
-  DEALLOCATE(c1)
+  DO i1 = LBOUND(y_out%fromSC,1),UBOUND(y_out%fromSC,1)
+    b = -(y1%fromSC(i1) - y2%fromSC(i1))
+    y_out%fromSC(i1) = y1%fromSC(i1) + b * ScaleFactor
+  END DO
 END IF ! check if allocated
  END SUBROUTINE SC_Output_ExtrapInterp1
 
@@ -1331,13 +1452,14 @@ END IF ! check if allocated
  REAL(DbKi)                                 :: t(3)      ! Times associated with the Outputs
  REAL(DbKi)                                 :: t_out     ! Time to which to be extrap/interpd
  INTEGER(IntKi)                             :: order     ! order of polynomial fit (max 2)
- REAL(DbKi)                                 :: b0       ! temporary for extrapolation/interpolation
- REAL(DbKi)                                 :: c0       ! temporary for extrapolation/interpolation
- REAL(DbKi),ALLOCATABLE,DIMENSION(:)        :: b1       ! temporary for extrapolation/interpolation
- REAL(DbKi),ALLOCATABLE,DIMENSION(:)        :: c1       ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: b        ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: c        ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: ScaleFactor ! temporary for extrapolation/interpolation
  INTEGER(IntKi)                             :: ErrStat2 ! local errors
  CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
  CHARACTER(*),            PARAMETER         :: RoutineName = 'SC_Output_ExtrapInterp2'
+ INTEGER                                    :: i01    ! dim1 level 0 counter variable for arrays of ddts
+ INTEGER                                    :: i1    ! dim1 counter variable for arrays
     ! Initialize ErrStat
  ErrStat = ErrID_None
  ErrMsg  = ""
@@ -1356,14 +1478,14 @@ END IF ! check if allocated
      CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
      RETURN
    END IF
+
+   ScaleFactor = t_out / (t(2) * t(3) * (t(2) - t(3)))
 IF (ASSOCIATED(y_out%fromSC) .AND. ASSOCIATED(y1%fromSC)) THEN
-  ALLOCATE(b1(SIZE(y_out%fromSC,1)))
-  ALLOCATE(c1(SIZE(y_out%fromSC,1)))
-  b1 = (t(3)**2*(y1%fromSC - y2%fromSC) + t(2)**2*(-y1%fromSC + y3%fromSC))/(t(2)*t(3)*(t(2) - t(3)))
-  c1 = ( (t(2)-t(3))*y1%fromSC + t(3)*y2%fromSC - t(2)*y3%fromSC ) / (t(2)*t(3)*(t(2) - t(3)))
-  y_out%fromSC = y1%fromSC + b1 * t_out + c1 * t_out**2
-  DEALLOCATE(b1)
-  DEALLOCATE(c1)
+  DO i1 = LBOUND(y_out%fromSC,1),UBOUND(y_out%fromSC,1)
+    b = (t(3)**2*(y1%fromSC(i1) - y2%fromSC(i1)) + t(2)**2*(-y1%fromSC(i1) + y3%fromSC(i1)))* scaleFactor
+    c = ( (t(2)-t(3))*y1%fromSC(i1) + t(3)*y2%fromSC(i1) - t(2)*y3%fromSC(i1) ) * scaleFactor
+    y_out%fromSC(i1) = y1%fromSC(i1) + b  + c * t_out
+  END DO
 END IF ! check if allocated
  END SUBROUTINE SC_Output_ExtrapInterp2
 

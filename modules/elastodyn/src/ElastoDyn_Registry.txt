@@ -40,6 +40,8 @@ typedef	^	InitOutputType	ReKi	TwrHNodes	{:}	-	-	"Location of variable-spaced tow
 typedef	^	InitOutputType	ReKi	PlatformPos	{6}	-	-	"Initial platform position (6 DOFs)"
 typedef	^	InitOutputType	ReKi	TwrBasePos	{3}	-	-	"initial position of the tower base (for SrvD)"	m
 typedef	^	InitOutputType	ReKi	HubRad	-	-	-	"Preconed hub radius (distance from the rotor apex to the blade root)"	m
+typedef	^	InitOutputType	ReKi	RotSpeed	-	-	-	"Initial or fixed rotor speed"	rad/s
+typedef	^	InitOutputType	LOGICAL	isFixed_GenDOF	-	-	-	"whether the generator is fixed or free" -
 typedef	^	InitOutputType	CHARACTER(LinChanLen)	LinNames_y	{:}	-	-	"Names of the outputs used in linearization"	-
 typedef	^	InitOutputType	CHARACTER(LinChanLen)	LinNames_x	{:}	-	-	"Names of the continuous states used in linearization"	-
 typedef	^	InitOutputType	CHARACTER(LinChanLen)	LinNames_u	{:}	-	-	"Names of the inputs used in linearization"	-
@@ -270,6 +272,12 @@ typedef	^	ED_InputFile	ReKi	TFrlUSDmp	-	-	-	"Tail-furl up-stop damping constant"
 typedef	^	ED_InputFile	ReKi	TFrlDSDmp	-	-	-	"Tail-furl down-stop damping constant"	N-m/(rad/s)
 typedef	^	ED_InputFile	IntKi	method	-	-	-	"Identifier for integration method (1 [RK4], 2 [AB4], or 3 [ABM4])"	-
 
+# ..... ED_AllBldNdOuts compile option ............................................................................................
+typedef  ^  ED_InputFile   IntKi BldNd_NumOuts   -       -       -       "Number of requested output channels per blade node (ED_AllBldNdOuts)"  -
+typedef  ^  ED_InputFile   CHARACTER(ChanLen)      BldNd_OutList   {:}     -       -       "List of user-requested output channels (ED_AllBldNdOuts)"      -
+#typedef  ^  ED_InputFile   IntKi BldNd_BlOutNd {:} - - "The blade nodes to actually output (ED_AllBldNdOuts)" -
+typedef  ^  ED_InputFile   CHARACTER(1024) BldNd_BlOutNd_Str - - - "String to parse for the blade nodes to actually output (ED_AllBldNdOuts)" -
+typedef  ^  ED_InputFile   IntKi BldNd_BladesOut - - - "The blades to output (ED_AllBldNdOuts)" -
 
 # ..... Internal data types .......................................................................................................
 
@@ -797,6 +805,13 @@ typedef	^	ParameterType	ReKi	PtfmCMxt	-	-	-	"Downwind distance from the ground [
 typedef	^	ParameterType	ReKi	PtfmCMyt	-	-	-	"Lateral distance from the ground [onshore] or MSL [offshore] to the platform CM"	meters
 typedef	^	ParameterType	LOGICAL	BD4Blades	-	-	-	"flag to determine if BeamDyn is computing blade loads (true) or ElastoDyn is (false)"	-
 typedef	^	ParameterType	LOGICAL	UseAD14	-	-	-	"flag to determine if AeroDyn14 is being used. Will remove this later when we've replaced AD14."	-
+# .... ED_AllBlNds option ........................................................................................................
+typedef  ^  ParameterType  IntKi   BldNd_NumOuts        -  -  -  "Number of requested output channels per blade node (ED_AllBldNdOuts)"  -
+typedef  ^  ParameterType  IntKi   BldNd_TotNumOuts     -  -  -  "Total number of requested output channels of blade node information (BldNd_NumOuts * BldNd_BlOutNd * BldNd_BladesOut -- ED_AllBldNdOuts)" -
+typedef  ^  ParameterType  OutParmType BldNd_OutParam  {:} -  -  "Names and units (and other characteristics) of all requested output parameters"        -
+#typedef  ^  ParameterType  IntKi BldNd_BlOutNd {:} - - "The blade nodes to actually output (ED_AllBldNdOuts)" -
+typedef  ^  ParameterType  IntKi BldNd_BladesOut - - - "The blades to output (ED_AllBldNdOuts)" -
+
 typedef	^	ParameterType	Integer	Jac_u_indx	{:}{:}	-	-	"matrix to help fill/pack the u vector in computing the jacobian"	-
 typedef	^	ParameterType	R8Ki	du	{:}	-	-	"vector that determines size of perturbation for u (inputs)"
 typedef	^	ParameterType	R8Ki	dx	{:}	-	-	"vector that determines size of perturbation for x (continuous states)"
@@ -812,7 +827,7 @@ typedef	^	InputType	MeshType	NacelleLoads	-	-	-	"From ServoDyn/TMD: loads on the
 # Define inputs that are not on a mesh here:
 typedef	^	InputType	ReKi	TwrAddedMass	{:}{:}{:}	-	-	"6-by-6 added mass matrix of the tower elements, per unit length-bjj: place on a mesh" 	"per unit length"
 typedef	^	InputType	ReKi	PtfmAddedMass	{6}{6}	-	-	"Platform added mass matrix"	"kg, kg-m, kg-m^2"
-typedef	^	InputType	ReKi	BlPitchCom	{:}	-	-	"Commanded blade pitch angles"	radians
+typedef	^	InputType	ReKi	BlPitchCom	{:}	-	2pi	"Commanded blade pitch angles"	radians
 typedef	^	InputType	ReKi	YawMom	-	-	-	"Torque transmitted through the yaw bearing"	N-m
 typedef	^	InputType	ReKi	GenTrq	-	-	-	"Electrical generator torque"	N-m
 typedef	^	InputType	ReKi	HSSBrTrqC	-	-	-	"Commanded HSS brake torque"	N-m
@@ -832,18 +847,18 @@ typedef	^	OutputType	MeshType	TowerBaseMotion14	-	-	-	"For AeroDyn 14: motions o
 
 # Define outputs that are not on this mesh here:
 typedef	^	OutputType	ReKi	WriteOutput	{:}	-	-	"Data to be written to an output file: see WriteOutputHdr for names of each variable"	"see WriteOutputUnt"
-typedef	^	OutputType	ReKi	BlPitch	{:}	-	-	"Current blade pitch angles"	radians
-typedef	^	OutputType	ReKi	Yaw	-	-	-	"Current nacelle yaw"	radians
+typedef	^	OutputType	ReKi	BlPitch	{:}	-	2pi	"Current blade pitch angles"	radians
+typedef	^	OutputType	ReKi	Yaw	-	-	2pi	"Current nacelle yaw"	radians
 typedef	^	OutputType	ReKi	YawRate	-	-	-	"Current nacelle yaw rate"	rad/s
 typedef	^	OutputType	ReKi	LSS_Spd	-	-	-	"Low-speed shaft (LSS) speed at entrance to gearbox"	rad/s
 typedef	^	OutputType	ReKi	HSS_Spd	-	-	-	"High-speed shaft (HSS) speed"	rad/s
 typedef	^	OutputType	ReKi	RotSpeed	-	-	-	"Rotor azimuth angular speed"	rad/s
 typedef	^	OutputType	ReKi	TwrAccel	-	-	-	"Tower acceleration for tower feedback control (user routine only)"	m/s^2
-typedef	^	OutputType	ReKi	YawAngle	-	-	-	"Yaw angle to be used for yaw error calculations"	radians
+typedef	^	OutputType	ReKi	YawAngle	-	-	2pi	"Yaw angle to be used for yaw error calculations"	radians
 typedef	^	OutputType	ReKi	RootMyc	3	-	-	"Out-of-plane moment (i.e., the moment caused by out-of-plane forces) at the blade root for each of the blades (max 3)"	N-m
 typedef	^	OutputType	ReKi	YawBrTAxp	-	-	-	"Tower-top / yaw bearing fore-aft (translational) acceleration (absolute)"	m/s^2
 typedef	^	OutputType	ReKi	YawBrTAyp	-	-	-	"Tower-top / yaw bearing side-to-side (translational) acceleration (absolute)"	m/s^2
-typedef	^	OutputType	ReKi	LSSTipPxa	-	-	-	"Rotor azimuth angle (position)"	radians
+typedef	^	OutputType	ReKi	LSSTipPxa	-	-	2pi	"Rotor azimuth angle (position)"	radians
 typedef	^	OutputType	ReKi	RootMxc	3	-	-	"In-plane moment (i.e., the moment caused by in-plane forces) at the blade root"	N-m
 typedef	^	OutputType	ReKi	LSSTipMxa	-	-	-	"Rotating low-speed shaft bending moment at the shaft tip (teeter pin for 2-blader, apex of rotation for 3-blader)"	N-m
 typedef	^	OutputType	ReKi	LSSTipMya	-	-	-	"Rotating low-speed shaft bending moment at the shaft tip (teeter pin for 2-blader, apex of rotation for 3-blader)"	N-m

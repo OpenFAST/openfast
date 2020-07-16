@@ -27,13 +27,13 @@ typedef     ^             ^                 R8Ki                     M_f       {
 
 typedef   NWTC_Library  MeshMapType         MapType                  MapLoads          {:}       - - "mapping data structure for loads on the mesh"
 typedef     ^               ^               MapType                  MapMotions        {:}       - - "mapping data structure for motions and/or scalars on the mesh"
-typedef     ^               ^               MapType                  MapSrcToAugmt     {:}       - - "for source line2 loads, we map between source and an augmented source mesh, then betwee augmented source and destination"
+typedef     ^               ^               MapType                  MapSrcToAugmt     {:}       - - "for source line2 loads, we map between source and an augmented source mesh, then between augmented source and destination"
 typedef     ^               ^               MeshType                 Augmented_Ln2_Src  -        - - "temporary mesh for storing augmented line2 source values"
 typedef     ^               ^               MeshType                 Lumped_Points_Src  -        - - "temporary mesh for lumping lines to points, stored here for efficiency"
-typedef     ^               ^               INTEGER                  LoadLn2_A_Mat_Piv {:}       - - "The pivot values for the factorizatioin of LoadLn2_A_Mat"
+typedef     ^               ^               INTEGER                  LoadLn2_A_Mat_Piv {:}       - - "The pivot values for the factorization of LoadLn2_A_Mat"
 typedef     ^               ^               R8Ki                     DisplacedPosition {:}{:}{:} - - "couple_arm +Scr%Disp - Dest%Disp for each mapped node (stored here for efficiency)"
-typedef     ^               ^               R8Ki                     LoadLn2_F         {:}{:}    - - "The 6-by-6 matrix that makes up the diagonal of the [A 0; B A] matrix in the point-to-line load mapping"
 typedef     ^               ^               R8Ki                     LoadLn2_A_Mat     {:}{:}    - - "The 3-components of the forces for each node of an element in the point-to-line load mapping (for each element)"
+typedef     ^               ^               R8Ki                     LoadLn2_F         {:}{:}    - - "The 6-by-6 matrix that makes up the diagonal of the [A 0; B A] matrix in the point-to-line load mapping"
 typedef     ^               ^               R8Ki                     LoadLn2_M         {:}{:}    - - "The 3-components of the moments for each node of an element in the point-to-line load mapping (for each element)"
 typedef     ^             ^                 MeshMapLinearizationType dM
 #typedef     ^               ^               MeshType                 Lumped_Points_Dest -        - - "temporary mesh for debugging the lumped values in the line2-to-line2"
