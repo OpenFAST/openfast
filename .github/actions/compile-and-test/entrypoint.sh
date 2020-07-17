@@ -41,6 +41,9 @@ ctest -VV -R nwtc_library_utest
 ctest -VV -j7 -R bd_
 ctest -VV -R beamdyn_utest
 
+# OLAF free vortex wake tests
+ctest -VV -R fvw_utest
+
 # OpenFAST linearization tests
 # Dont run these in parallel, copying the case files can fail in a race condition
 ctest -VV -L linear
@@ -49,4 +52,4 @@ ctest -VV -L linear
 ## - 9, 16 because they're very sensitive
 ## - 19, 20 because theyre too long
 ## - 17, 22, 23 becuase we dont know why they fail :(
-ctest -VV -j8 -I 1,1,1,2,3,4,5,6,7,8,10,11,12,13,14,15,18,21,24,25,26
+ctest -VV -j8 -I 1,1,1,2,3,4,5,6,7,8,10,11,12,13,14,15,18,21,24,25,26,27,28

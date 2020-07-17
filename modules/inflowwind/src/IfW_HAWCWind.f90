@@ -534,18 +534,22 @@ SUBROUTINE IfW_HAWCWind_CalcOutput(Time, PositionXYZ, p, Velocity, DiskVel, Misc
       ! Step through all the positions and get the velocities
    DO PointNum = 1, NumPoints
 
-         ! Calculate the velocity for the position
-      Velocity(:,PointNum) = FF_Interp(Time,PositionXYZ(:,PointNum),p,MiscVars,TmpErrStat,TmpErrMsg)
+         ! If the position is (0,0,0), assume it was never set and skip calculating
+      if (  TwoNorm(PositionXYZ(1:3,PointNum)) > 0.0_ReKi ) then
+
+            ! Calculate the velocity for the position
+         Velocity(:,PointNum) = FF_Interp(Time,PositionXYZ(:,PointNum),p,MiscVars,TmpErrStat,TmpErrMsg)
 
 
-         ! Error handling
-      IF (TmpErrStat /= ErrID_None) THEN  !  adding this so we don't have to convert numbers to strings every time
-         CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName//" [position=("//   &
-                                                      TRIM(Num2LStr(PositionXYZ(1,PointNum)))//", "// &
-                                                      TRIM(Num2LStr(PositionXYZ(2,PointNum)))//", "// &
-                                                      TRIM(Num2LStr(PositionXYZ(3,PointNum)))//") in wind-file coordinates]" )
-         IF (ErrStat >= AbortErrLev) RETURN
-      END IF
+            ! Error handling
+         IF (TmpErrStat /= ErrID_None) THEN  !  adding this so we don't have to convert numbers to strings every time
+            CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName//" [position=("//   &
+                                                         TRIM(Num2LStr(PositionXYZ(1,PointNum)))//", "// &
+                                                         TRIM(Num2LStr(PositionXYZ(2,PointNum)))//", "// &
+                                                         TRIM(Num2LStr(PositionXYZ(3,PointNum)))//") in wind-file coordinates]" )
+            IF (ErrStat >= AbortErrLev) RETURN
+         END IF
+      endif
 
    ENDDO
 

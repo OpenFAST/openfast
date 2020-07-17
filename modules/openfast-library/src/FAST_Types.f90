@@ -49,6 +49,7 @@ USE AirfoilInfo_Types
 USE UnsteadyAero_Types
 USE DBEMT_Types
 USE BEMT_Types
+USE FVW_Types
 USE AeroDyn_Types
 USE SubDyn_Types
 USE Current_Types
