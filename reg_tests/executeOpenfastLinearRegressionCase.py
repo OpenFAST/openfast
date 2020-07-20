@@ -237,7 +237,7 @@ for i, f in enumerate(localOutFiles):
             l_float = float(l_element)
             b_float = float(b_elements[j])
             if not isclose(l_float, b_float, tolerance, tolerance):
-                print("Failed in Jacobian matrix comparison: {l_float} and {b_float}")
+                print(f"Failed in Jacobian matrix comparison: {l_float} and {b_float}")
                 sys.exit(1)
 
     # skip 2 empty/header lines
@@ -259,7 +259,7 @@ for i, f in enumerate(localOutFiles):
             l_float = float(l_element)
             b_float = float(b_elements[j])
             if not isclose(l_float, b_float, tolerance, tolerance):
-                print("Failed in state matrix comparison: {l_float} and {b_float}")
+                print(f"Failed in state matrix comparison: {l_float} and {b_float}")
                 sys.exit(1)
 
     local_handle.close()
