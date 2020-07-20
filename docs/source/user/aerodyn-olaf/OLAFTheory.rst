@@ -149,7 +149,7 @@ Panelling
 
 The definitions used for the panelling of the blade are given in
 :numref:`fig:VortexLatticeMethod` d, following the notations of van
-Garrel (:cite:`Garrel03_1`). The leading edge and
+Garrel (:cite:`olaf-Garrel03_1`). The leading edge and
 trailing edge (TE) locations are directly obtained from the AeroDyn
 mesh. At two spanwise locations, the LE and TE define the corner points:
 :math:`\vec{x}_1`, :math:`\vec{x}_2`, :math:`\vec{x}_3`, and
@@ -195,7 +195,7 @@ For an equidistant spacing, this discretization places the control points at the
 middle of the lifting-line (:math:`\eta=0.5`). Theoretical circulation results
 for an elliptic wing with a cosine spacing are retrieved with such
 discretization since it places the control points closer to stronger trailing
-segments at the wing extremities (see e.g. :cite:`Kerwin:lecturenotes`).
+segments at the wing extremities (see e.g. :cite:`olaf-Kerwin:lecturenotes`).
 
 .. _sec:CirculationMethods:
 
@@ -216,7 +216,7 @@ the lift obtained using the angle of attack and the polar data matches
 the lift obtained with the Kutta-Joukowski theorem. At present, it is
 the preferred method to compute the circulation along the blade span. It is
 selected with **CircSolvMethod=[1]**. The method is described in the work from
-van Garrel (:cite:`Garrel03_1`). The algorithm is implemented in at iterative
+van Garrel (:cite:`olaf-Garrel03_1`). The algorithm is implemented in at iterative
 approach using the following steps:
 
 #. The circulation distribution from the previous time step is used as a
@@ -280,9 +280,9 @@ approach using the following steps:
 No-flow-through Method
 ^^^^^^^^^^^^^^^^^^^^^^
 
-A Weissinger-L-based representation (:cite:`Weissinger47_1`)
+A Weissinger-L-based representation (:cite:`olaf-Weissinger47_1`)
 of the lifting surface is also
-available (:cite:`Bagai94_1,Gupta06_1,Ribera07_1`). In this
+available (:cite:`olaf-Bagai94_1,olaf-Gupta06_1,olaf-Ribera07_1`). In this
 method, the circulation is solved by satisfying a no-flow through
 condition at the 1/4-chord points.  It is selected with **CircSolvMethod=[2]**.
 
@@ -339,7 +339,7 @@ Using the chain rule, Eq. :eq:`VortFil` is rewritten as:
    :label: VortFil_expanded
 
 where :math:`d\psi/dt=\Omega` and
-:math:`d\psi=d\zeta` (:cite:`Leishman02_1`). Here,
+:math:`d\psi=d\zeta` (:cite:`olaf-Leishman02_1`). Here,
 :math:`\vec{r}(\psi,\zeta)` is the position vector of a Lagrangian
 marker, and :math:`\vec{V}[\vec{r}(\psi,\zeta)]` is the velocity.
 
@@ -358,11 +358,11 @@ Induced Velocity and Velocity Field
 The velocity term on the right-hand side of
 Eq. :eq:`VortFilCart` is a nonlinear function of the
 vortex position, representing a combination of the freestream and
-induced velocities (:cite:`Hansen08_1`). The induced
+induced velocities (:cite:`olaf-Hansen08_1`). The induced
 velocities at point :math:`\vec{x}`, caused by each straight-line
 filament, are computed using the Biot-Savart law, which considers the
 locations of the Lagrangian markers and the intensity of the vortex
-elements (:cite:`Leishman02_1`):
+elements (:cite:`olaf-Leishman02_1`):
 
 .. math::
    d\vec{v}(\vec{x})=\frac{\Gamma}{4\pi}\frac{d\vec{l}\times\vec{r}}{r^3}
@@ -456,7 +456,7 @@ The regularization parameter is both a function of the physics being modeled
 factors are the chord length, the boundary layer height, and the volume that
 each vortex filament is approximating.  Currently the choice is left to the user
 (**RegDetMethod=[0]**).  Empirical results for a rotating blade are found in the
-work of Gupta (:cite:`Gupta06_1`). As a guideline, the regularization parameter
+work of Gupta (:cite:`olaf-Gupta06_1`). As a guideline, the regularization parameter
 may be chosen as twice the average spanwise discretization of the blade. This
 guideline is implemented when the user chooses **RegDetMethod=[1]**. Further
 refinement of this option will be considered in the future.
@@ -467,7 +467,7 @@ Implemented regularization functions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Several regularization functions have been
-developed (:cite:`Rankine58_1,Scully75_1,Vatistas91_1`).  At present, five
+developed (:cite:`olaf-Rankine58_1,olaf-Scully75_1,olaf-Vatistas91_1`).  At present, five
 options are available: 1) No correction, 2) the Rankine method, 3) the
 Lamb-Oseen method, 4) the Vatistas method, or 5) the denominator offset method.
 If no correction method is used, (**RegFunction=[0]**), :math:`F_\nu=1`. The
@@ -478,7 +478,7 @@ to the filament. Both variables are expressed in meters.
 Rankine
 ^^^^^^^
 
-The Rankine method (:cite:`Rankine58_1`) is the simplest
+The Rankine method (:cite:`olaf-Rankine58_1`) is the simplest
 regularization model. With this method, the Rankine vortex has a finite
 core with a solid body rotation near the vortex center and a potential
 vortex away from the center. If this method is used
@@ -516,8 +516,8 @@ correction is given by Eq. :eq:`vatistas`.
    :label: vatistas
 
 Here, :math:`\rho` is the distance from a vortex segment to an arbitrary
-point (:cite:`Abedi16_1`). Research from rotorcraft applications suggests a
-value of :math:`n=2`, which is used in this work (:cite:`Bagai93_1`).
+point (:cite:`olaf-Abedi16_1`). Research from rotorcraft applications suggests a
+value of :math:`n=2`, which is used in this work (:cite:`olaf-Bagai93_1`).
 
 Denominator Offset/Cut-Off
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -535,7 +535,7 @@ core correction is given by Eq. :eq:`denom`
 Here, the singularity is removed by introducing an additive factor in the
 denominator of Eq. :eq:`eq:BiotSavartSegment`, proportional to the filament
 length :math:`r_0`. In this case, :math:`F_\nu=1`. This method is found in the
-work of van Garrel (:cite:`Garrel03_1`).
+work of van Garrel (:cite:`olaf-Garrel03_1`).
 
 .. _sec:corerad:
 
