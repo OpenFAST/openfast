@@ -414,6 +414,7 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
    INTEGER                       :: knode, kelem, kprop, nprop
    REAL(ReKi)                    :: x1, y1, z1, x2, y2, z2, dx, dy, dz, dd, dt, d1, d2, t1, t2
    LOGICAL                       :: found, CreateNewProp
+   INTEGER(IntKi)                :: nMemberCable, nMemberRigid, nMemberBeam !< Number of memebers per type
    INTEGER(IntKi)                :: eType !< Element Type
    INTEGER(IntKi)                :: ErrStat2
    CHARACTER(ErrMsgLen)          :: ErrMsg2
@@ -427,22 +428,29 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
       CALL Fatal('FEMMod '//TRIM(Num2LStr(Init%FEMMod))//' not implemented.'); return
    ENDIF
    
-   ! Total number of element   
-   Init%NElem = p%NMembers*Init%NDiv  ! Note: This is a max since cable and rigid cannot be subdivided
+   ! --- Total number of element   
+   nMemberBeam  = count(Init%Members(:,iMType) == idMemberBeam)
+   nMemberCable = count(Init%Members(:,iMType) == idMemberCable)
+   nMemberRigid = count(Init%Members(:,iMType) == idMemberRigid)
+   Init%NElem = nMemberBeam*Init%NDiv + nMemberCable + nMemberRigid  ! NOTE: only Beams are divided
+   IF ( (nMemberBeam+nMemberRigid+nMemberCable) /= size(Init%Members,1)) then
+      CALL Fatal(' Member list contains an element which is not a beam, a cable or a rigid link'); return
+   ENDIF
+
    ! Total number of nodes - Depends on division and number of nodes per element
-   p%nNodes = Init%NJoints + ( Init%NDiv - 1 )*p%NMembers 
-   p%nNodes = p%nNodes + (NNE - 2)*Init%NElem  ! Note: Same as above. Can be improved by counting R&C
+   p%nNodes = Init%NJoints + ( Init%NDiv - 1 )*nMemberBeam
    
    ! check the number of interior modes
    IF ( p%nDOFM > 6*(p%nNodes - p%nNodes_I - p%nNodes_C) ) THEN
       CALL Fatal(' NModes must be less than or equal to '//TRIM(Num2LStr( 6*(p%nNodes - p%nNodes_I - p%nNodes_C) ))); return
    ENDIF
    
+   ! TODO replace this with an integer list!
    CALL AllocAry(Init%MemberNodes,p%NMembers,    Init%NDiv+1,'Init%MemberNodes',ErrStat2, ErrMsg2); if(Failed()) return ! for two-node element only, otherwise the number of nodes in one element is different
 
    ! --- Reindexing JointsID and MembersID into Nodes and Elems arrays
    ! NOTE: need NNode and NElem 
-   CALL SD_ReIndex_CreateNodesAndElems(Init,p, ErrStat2, ErrMsg2);  if(Failed()) return
+   CALL SD_ReIndex_CreateNodesAndElems(Init, p, ErrStat2, ErrMsg2);  if(Failed()) return
    
   
     Init%MemberNodes = 0
@@ -534,7 +542,7 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
           ! node connect to Node1
           knode = knode + 1
           Init%MemberNodes(I, 2) = knode
-          CALL SetNewNode(knode, x1+dx, y1+dy, z1+dz, Init) ! Set Init%Nodes(knode,:)
+          CALL SetNewNode(knode, x1+dx, y1+dy, z1+dz, Init); if (ErrStat>ErrID_None) return;
           
           IF ( CreateNewProp ) THEN   
                ! create a new property set 
@@ -542,11 +550,11 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
                kprop = kprop + 1
                CALL SetNewProp(kprop, TempProps(Prop1, 2), TempProps(Prop1, 3), TempProps(Prop1, 4), d1+dd, t1+dt, TempProps)           
                kelem = kelem + 1
-               CALL SetNewElem(kelem, Node1, knode, eType, Prop1, kprop, p)  
+               CALL SetNewElem(kelem, Node1, knode, eType, Prop1, kprop, p); if (ErrStat>ErrID_None) return;
                nprop = kprop
           ELSE
                kelem = kelem + 1
-               CALL SetNewElem(kelem, Node1, knode, eType, Prop1, Prop1, p)                
+               CALL SetNewElem(kelem, Node1, knode, eType, Prop1, Prop1, p); if (ErrStat>ErrID_None) return;             
                nprop = Prop1 
           ENDIF
           
@@ -563,22 +571,26 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
                   kprop = kprop + 1
                   CALL SetNewProp(kprop, TempProps(Prop1, 2), TempProps(Prop1, 3), Init%PropSetsB(Prop1, 4), d1 + J*dd, t1 + J*dt,  TempProps)           
                   kelem = kelem + 1
-                  CALL SetNewElem(kelem, knode-1, knode, eType, nprop, kprop, p)
+                  CALL SetNewElem(kelem, knode-1, knode, eType, nprop, kprop, p); if (ErrStat>ErrID_None) return;
                   nprop = kprop
              ELSE
                   kelem = kelem + 1
-                  CALL SetNewElem(kelem, knode-1, knode, eType, nprop, nprop, p)                          
+                  CALL SetNewElem(kelem, knode-1, knode, eType, nprop, nprop, p); if (ErrStat>ErrID_None) return;
              ENDIF
           ENDDO
           
           ! the element connect to Node2
           kelem = kelem + 1
-          CALL SetNewElem(kelem, knode, Node2, eType, nprop, Prop2, p)                
+          CALL SetNewElem(kelem, knode, Node2, eType, nprop, Prop2, p); if (ErrStat>ErrID_None) return;
        ENDDO ! loop over all members
        !
        Init%NPropB = kprop
-       Init%NElem  = kelem ! TODO since not all members might have been divided
-       p%nNodes  = knode ! TODO since not all members might have been divided
+       if(knode/=size(Init%Nodes,1)) then
+          call Fatal('Implementation error. Number of nodes wrongly estimated.');return
+       endif
+       if(kelem/=size(p%Elems,1)) then
+          call Fatal('Implementation error. Number of elements wrongly estimated.');return
+       endif
 
     ENDIF ! if NDiv is greater than 1
 
@@ -625,6 +637,10 @@ CONTAINS
       TYPE(SD_InitType),      INTENT(INOUT) :: Init
       INTEGER,                INTENT(IN)    :: k
       REAL(ReKi),             INTENT(IN)    :: x, y, z
+      if (k>size(Init%Nodes,1)) then
+         call Fatal('Implementation Error. Attempt to add more node than space allocated.');
+         return
+      endif
       Init%Nodes(k, 1)                     = k
       Init%Nodes(k, 2)                     = x
       Init%Nodes(k, 3)                     = y
@@ -644,6 +660,10 @@ CONTAINS
       INTEGER,                INTENT(IN   )   :: p1
       INTEGER,                INTENT(IN   )   :: p2
       TYPE(SD_ParameterType), INTENT(INOUT)   :: p
+      if (k>size(p%Elems,1)) then
+         call Fatal('Implementation Error. Attempt to add more element than space allocated.');
+         return
+      endif
       p%Elems(k, 1)        = k
       p%Elems(k, 2)        = n1
       p%Elems(k, 3)        = n2
@@ -657,6 +677,10 @@ CONTAINS
       INTEGER   , INTENT(IN)   :: k
       REAL(ReKi), INTENT(IN)   :: E, G, rho, d, t
       REAL(ReKi), INTENT(INOUT):: TempProps(:, :)
+      if (k>size(TempProps,1)) then
+         call Fatal('Implementation Error. Attempt to add more properties than space allocated.');
+         return
+      endif
       TempProps(k, 1) = k
       TempProps(k, 2) = E
       TempProps(k, 3) = G

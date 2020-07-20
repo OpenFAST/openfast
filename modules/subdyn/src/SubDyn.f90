@@ -3003,7 +3003,9 @@ SUBROUTINE OutSummary(Init, p, InitInput, CBparams, ErrStat,ErrMsg)
    WRITE(UnSum, '()') 
    WRITE(UnSum, '(A,I6)')  '#Number of concentrated masses (NCMass):',Init%NCMass
    WRITE(UnSum, '(A10,10(A15))')  '#JointCMass',     'Mass',         'JXX',             'JYY',             'JZZ',              'JXY',             'JXZ',             'JYZ',              'MCGX',             'MCGY',             'MCGZ'
-   WRITE(UnSum, '("#",F10.0, 10(E15.6))') ((Init%Cmass(i, j), j = 1, CMassCol), i = 1, Init%NCMass)
+   do i=1,Init%NCMass
+      WRITE(UnSum, '("#",F10.0, 10(E15.6))') (Init%Cmass(i, j), j = 1, CMassCol)
+   enddo
 
    WRITE(UnSum, '()') 
    WRITE(UnSum, '(A,I6)')  '#Number of members',p%NMembers
@@ -3150,10 +3152,10 @@ SUBROUTINE OutSummary(Init, p, InitInput, CBparams, ErrStat,ErrMsg)
 
    ! --- Linearization/ state matrices
    call StateMatrices(p, ErrStat2, ErrMsg2, AA, BB, CC, DD); if(Failed()) return
-   call yaml_write_array(UnSum, 'AA', AA, 'ES10.3E2', ErrStat2, ErrMsg2)
-   call yaml_write_array(UnSum, 'BB', BB, 'ES10.3E2', ErrStat2, ErrMsg2)
-   call yaml_write_array(UnSum, 'CC', CC, 'ES10.3E2', ErrStat2, ErrMsg2)
-   call yaml_write_array(UnSum, 'DD', DD, 'ES10.3E2', ErrStat2, ErrMsg2)
+   call yaml_write_array(UnSum, 'AA', AA, 'ES10.3E2', ErrStat2, ErrMsg2, comment='(State matrix dXdx)')
+   call yaml_write_array(UnSum, 'BB', BB, 'ES10.3E2', ErrStat2, ErrMsg2, comment='(State matrix dXdu)')
+   call yaml_write_array(UnSum, 'CC', CC, 'ES10.3E2', ErrStat2, ErrMsg2, comment='(State matrix dYdx)')
+   call yaml_write_array(UnSum, 'DD', DD, 'ES10.3E2', ErrStat2, ErrMsg2, comment='(State matrix dYdu)')
    if(allocated(AA)) deallocate(AA)
    if(allocated(BB)) deallocate(BB)
    if(allocated(CC)) deallocate(CC)

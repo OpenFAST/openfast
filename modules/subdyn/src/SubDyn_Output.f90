@@ -68,7 +68,7 @@ SUBROUTINE SDOut_Init( Init, y,  p, misc, InitOut, WtrDpth, ErrStat, ErrMsg )
    INTEGER(IntKi)                 :: iElem  ! Index of element in Element List
    INTEGER(IntKi)                 :: iNode  ! Index of node in Node list
    INTEGER(IntKi)                 :: iiElem ! Loop counter on element index
-   INTEGER(IntKi)                 :: nElemPerNode ! Number of elements connecting to a node
+   INTEGER(IntKi)                 :: nElemPerNode, nNodesPerElem ! Number of elements connecting to a node, Number of nodes per elem 
    type(MeshAuxDataType), pointer :: pLst                                                   !< Alias to shorten notation and highlight code similarities
    real(ReKi), allocatable :: T_TIreact(:,:) ! Transpose of TIreact, temporary
    ErrStat = 0      
@@ -137,20 +137,21 @@ SUBROUTINE SDOut_Init( Init, y,  p, misc, InitOut, WtrDpth, ErrStat, ErrMsg )
 
       DO iMember=1,p%NMembers
          pLst => p%MOutLst2(iMember) ! Alias
-         CALL AllocAry(pLst%NodeIDs, Init%Ndiv+1, 'MOutLst2(I)%NodeIDs', ErrStat2, ErrMsg2); if(Failed()) return
+         pLst%MemberID = Init%Members(iMember,1)
+         nNodesPerElem = count(Init%MemberNodes(iMember,:) >0 ) 
+         CALL AllocAry(pLst%NodeIDs, nNodesPerElem, 'MOutLst2(I)%NodeIDs', ErrStat2, ErrMsg2); if(Failed()) return
          CALL AllocAry(pLst%ElmIDs,     2, 1, 'MOutLst2(I)%ElmIDs'     , ErrStat2, ErrMsg2); if(Failed()) return
          CALL AllocAry(pLst%ElmNds,     2, 1, 'MOutLst2(I)%ElmNds'     , ErrStat2, ErrMsg2); if(Failed()) return
          CALL AllocAry(pLst%Me, 12, 12, 2, 1, 'MOutLst2(I)%Me'         , ErrStat2, ErrMsg2); if(Failed()) return
          CALL AllocAry(pLst%Ke, 12, 12, 2, 1, 'MOutLst2(I)%Ke'         , ErrStat2, ErrMsg2); if(Failed()) return
          CALL AllocAry(pLst%Fg,     12, 2, 1, 'MOutLst2(I)%Fg'         , ErrStat2, ErrMsg2); if(Failed()) return
-         pLst%MemberID = Init%Members(iMember,1)
-         pLst%NodeIDs  = Init%MemberNodes(iMember,1:Init%Ndiv+1) ! We are storing  the actual node numbers in the member
+         pLst%NodeIDs(1:nNodesPerElem) = Init%MemberNodes(iMember,1:nNodesPerElem) ! We are storing  the actual node numbers in the member
          !ElmIDs could contain the same element twice if Ndiv=1
          pLst%ElmIDs=0  !Initialize to 0
-         DO J=1,Init%Ndiv+1,Init%Ndiv ! loop on first and last node of member
+         DO J=1,nNodesPerElem,nNodesPerElem-1 ! loop on first and last node of member
             iNode        = pLst%NodeIDs(J)           ! Index of requested node in node list
             nElemPerNode = Init%NodesConnE(iNode, 1) ! Number of elements connecting to the 1st or last node of the member
-            K2= J/(Init%Ndiv+1)+1  ! 1 (first node) or 2 (last node) depending on J
+            K2= J/(nNodesPerElem)+1  ! 1 (first node) or 2 (last node) depending on J
             DO iiElem=1, nElemPerNode
                iElem = Init%NodesConnE(iNode,iiElem+1) ! iiElem-th Element Number in the set of elements attached to the selected node
                IF (ThisElementIsAlongMember(iElem, iNode, iMember)) THEN
