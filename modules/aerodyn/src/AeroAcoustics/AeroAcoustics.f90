@@ -131,7 +131,7 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
     p%fsample          = 1/p%DT     ! Hz
     p%total_sample     = 2**( ceiling(log(1*p%fsample)/log(2.0d0)))! 1 stands for the 1 seconds. Every 1 second Vrel spectra will be calculated for the dissipation calculation (change if more needed & recompile )
     p%total_sampleTI   = 5/p%DT  ! 10 seconds for TI sampling
-    p%Comp_AA_After    = InputFileData%Comp_AA_After
+    p%AAStart          = InputFileData%AAStart
     p%IBLUNT           = InputFileData%IBLUNT
     p%ILAM             = InputFileData%ILAM
     p%ITIP             = InputFileData%ITIP
@@ -777,17 +777,15 @@ subroutine AA_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg)
     ! Local variables
     integer, parameter      :: indx = 1  ! m%BEMT_u(1) is at t; m%BEMT_u(2) is t+dt
     integer(intKi)          :: i
-    REAL(ReKi)              :: nt         !< timestep increment
     integer(intKi)          :: ErrStat2
     character(ErrMsgLen)    :: ErrMsg2
     character(*), parameter :: RoutineName = 'AA_CalcOutput'
     ErrStat = ErrID_None
     ErrMsg  = ""
     ! assume integer divide is possible
-    nt = t/p%DT
-    call CalcObserve(p,m,u,xd,nt,t,errStat2, errMsg2)
+    call CalcObserve(t,p,m,u,xd,errStat2, errMsg2)
     call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-    IF (nt.gt.p%Comp_AA_after) THEN        
+    IF (t >= p%AAStart) THEN        
         IF (mod(t + 1E-10,p%DT) .lt. 1E-6) THEN
             call CalcAeroAcousticsOutput(u,p,m,xd,y,errStat2,errMsg2)
             call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -802,13 +800,12 @@ subroutine AA_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg)
 end subroutine AA_CalcOutput
 !----------------------------------------------------------------------------------------------------------------------------------
 !----------------------------------------------------------------------------------------------------------------------------------!
-SUBROUTINE CalcObserve(p,m,u,xd,nt,t,errStat,errMsg)
-    REAL(DbKi),                          INTENT(IN   )  :: t           !< Current simulation time in seconds
+SUBROUTINE CalcObserve(t,p,m,u,xd,errStat,errMsg)
+    REAL(DbKi),                          INTENT(IN   )  :: t      !< Current simulation time in seconds
     TYPE(AA_DiscreteStateType),          INTENT(IN   ) :: xd      !< discrete state type
     TYPE(AA_ParameterType),              intent(in   ) :: p       !< Parameters
     TYPE(AA_InputType),                  intent(in   ) :: u       !< NN Inputs at Time
     TYPE(AA_MiscVarType),                intent(inout) :: m       !< misc/optimization data (not defined in submodules)
-    REAL(ReKi),                          INTENT(IN   ) :: nt      !< DELETE LATER
     INTEGER(IntKi),                      intent(  out) :: errStat !< Error status of the operation
     CHARACTER(*),                        intent(  out) :: errMsg  !< Error message if ErrStat /= ErrID_None
     ! Local variables.
@@ -848,7 +845,7 @@ SUBROUTINE CalcObserve(p,m,u,xd,nt,t,errStat,errMsg)
             m%LE_Location(2,J,I) = RLEObservereal(2)
             m%LE_Location(3,J,I) = RLEObservereal(3)
             ! If the time step is set to generate AA outputs
-            IF (nt.gt.p%Comp_AA_after) THEN
+            IF (t >= p%AAStart) THEN
                 IF ( mod(t + 1E-10,p%DT) .lt. 1E-6)  THEN
                     ! Loop through the observers
                     DO K = 1,p%NrObsLoc

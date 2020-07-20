@@ -98,7 +98,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NrOutFile      !< Nr of output files [-]
     CHARACTER(1024) , DIMENSION(:), ALLOCATABLE  :: AAoutfile      !< AAoutfile for writing output files [-]
     CHARACTER(1024)  :: TICalcTabFile      !< Name of the file containing the table for incident turbulence intensity [-]
-    INTEGER(IntKi)  :: Comp_AA_After      !<   [-]
+    REAL(DbKi)  :: AAStart      !< Time after which to calculate AA [s]
     REAL(ReKi)  :: z0_AA      !< Surface roughness [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: ReListBL      !<  [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: AoAListBL      !<  [deg]
@@ -201,7 +201,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NrObsLoc      !< Number of observer locations  [-]
     LOGICAL  :: aweightflag      !<   [-]
     LOGICAL  :: TxtFileOutput      !<   [-]
-    INTEGER(IntKi)  :: Comp_AA_After      !<   [-]
+    REAL(DbKi)  :: AAStart      !< Time after which to calculate AA [s]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: ObsX      !< Observer location in tower-base coordinate X horizontal [m]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: ObsY      !< Observer location in tower-base coordinate Y lateral [m]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: ObsZ      !< Observer location in tower-base coordinate Z vertical [m]
@@ -1920,7 +1920,7 @@ IF (ALLOCATED(SrcInputFileData%AAoutfile)) THEN
     DstInputFileData%AAoutfile = SrcInputFileData%AAoutfile
 ENDIF
     DstInputFileData%TICalcTabFile = SrcInputFileData%TICalcTabFile
-    DstInputFileData%Comp_AA_After = SrcInputFileData%Comp_AA_After
+    DstInputFileData%AAStart = SrcInputFileData%AAStart
     DstInputFileData%z0_AA = SrcInputFileData%z0_AA
 IF (ALLOCATED(SrcInputFileData%ReListBL)) THEN
   i1_l = LBOUND(SrcInputFileData%ReListBL,1)
@@ -2250,7 +2250,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + SIZE(InData%AAoutfile)*LEN(InData%AAoutfile)  ! AAoutfile
   END IF
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%TICalcTabFile)  ! TICalcTabFile
-      Int_BufSz  = Int_BufSz  + 1  ! Comp_AA_After
+      Db_BufSz   = Db_BufSz   + 1  ! AAStart
       Re_BufSz   = Re_BufSz   + 1  ! z0_AA
   Int_BufSz   = Int_BufSz   + 1     ! ReListBL allocated yes/no
   IF ( ALLOCATED(InData%ReListBL) ) THEN
@@ -2475,8 +2475,8 @@ ENDIF
       IntKiBuf(Int_Xferred) = ICHAR(InData%TICalcTabFile(I:I), IntKi)
       Int_Xferred = Int_Xferred + 1
     END DO ! I
-    IntKiBuf(Int_Xferred) = InData%Comp_AA_After
-    Int_Xferred = Int_Xferred + 1
+    DbKiBuf(Db_Xferred) = InData%AAStart
+    Db_Xferred = Db_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%z0_AA
     Re_Xferred = Re_Xferred + 1
   IF ( .NOT. ALLOCATED(InData%ReListBL) ) THEN
@@ -2930,8 +2930,8 @@ ENDIF
       OutData%TICalcTabFile(I:I) = CHAR(IntKiBuf(Int_Xferred))
       Int_Xferred = Int_Xferred + 1
     END DO ! I
-    OutData%Comp_AA_After = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
+    OutData%AAStart = DbKiBuf(Db_Xferred)
+    Db_Xferred = Db_Xferred + 1
     OutData%z0_AA = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! ReListBL not allocated
@@ -5973,7 +5973,7 @@ ENDIF
     DstParamData%NrObsLoc = SrcParamData%NrObsLoc
     DstParamData%aweightflag = SrcParamData%aweightflag
     DstParamData%TxtFileOutput = SrcParamData%TxtFileOutput
-    DstParamData%Comp_AA_After = SrcParamData%Comp_AA_After
+    DstParamData%AAStart = SrcParamData%AAStart
 IF (ALLOCATED(SrcParamData%ObsX)) THEN
   i1_l = LBOUND(SrcParamData%ObsX,1)
   i1_u = UBOUND(SrcParamData%ObsX,1)
@@ -6590,7 +6590,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! NrObsLoc
       Int_BufSz  = Int_BufSz  + 1  ! aweightflag
       Int_BufSz  = Int_BufSz  + 1  ! TxtFileOutput
-      Int_BufSz  = Int_BufSz  + 1  ! Comp_AA_After
+      Db_BufSz   = Db_BufSz   + 1  ! AAStart
   Int_BufSz   = Int_BufSz   + 1     ! ObsX allocated yes/no
   IF ( ALLOCATED(InData%ObsX) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! ObsX upper/lower bounds for each dimension
@@ -6919,8 +6919,8 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%TxtFileOutput, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%Comp_AA_After
-    Int_Xferred = Int_Xferred + 1
+    DbKiBuf(Db_Xferred) = InData%AAStart
+    Db_Xferred = Db_Xferred + 1
   IF ( .NOT. ALLOCATED(InData%ObsX) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -7736,8 +7736,8 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     OutData%TxtFileOutput = TRANSFER(IntKiBuf(Int_Xferred), OutData%TxtFileOutput)
     Int_Xferred = Int_Xferred + 1
-    OutData%Comp_AA_After = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
+    OutData%AAStart = DbKiBuf(Db_Xferred)
+    Db_Xferred = Db_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! ObsX not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE

@@ -78,7 +78,7 @@ typedef     ^                   AA_InputFile         AA_BladePropsType   BladePr
 typedef     ^                   AA_InputFile         IntKi               NrOutFile        -     -     -     "Nr of output files"     -
 typedef     ^                   AA_InputFile         CHARACTER(1024)     AAoutfile       {:}    -     -     "AAoutfile for writing output files"     -
 typedef     ^                   AA_InputFile         CHARACTER(1024)     TICalcTabFile    -     -     -     "Name of the file containing the table for incident turbulence intensity" -
-typedef     ^                   AA_InputFile         IntKi               Comp_AA_After        -     -     -     " "     -
+typedef     ^                   AA_InputFile         DBKi                AAStart         -     -     -     "Time after which to calculate AA"     s
 typedef     ^                   AA_InputFile         ReKi                z0_AA           -     -     -     "Surface roughness"     -
 typedef     ^                   AA_InputFile         ReKi                ReListBL            {:}    -     -     ""          
 typedef     ^                   AA_InputFile         ReKi                AoAListBL           {:}    -     -     ""         deg
@@ -173,7 +173,7 @@ typedef     ^                   ParameterType        ReKi                rotorre
 typedef     ^                   ParameterType        IntKi               NrObsLoc                -      -     -     "Number of observer locations "     -
 typedef     ^                   ParameterType        Logical             aweightflag             -      -     -     " "     -
 typedef     ^                   ParameterType        Logical             TxtFileOutput           -      -     -     " "     -
-typedef     ^                   ParameterType        IntKi               Comp_AA_After             -      -     -     " "     -
+typedef     ^                   ParameterType        DBKi                AAStart                -     -     -     "Time after which to calculate AA"     s
 typedef     ^                   ParameterType        ReKi                ObsX                   {:}     -     -     "Observer location in tower-base coordinate X horizontal"     m
 typedef     ^                   ParameterType        ReKi                ObsY                   {:}     -     -     "Observer location in tower-base coordinate Y lateral"          m
 typedef     ^                   ParameterType        ReKi                ObsZ                   {:}     -     -     "Observer location in tower-base coordinate Z vertical"          m
