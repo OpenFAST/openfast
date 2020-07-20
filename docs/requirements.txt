@@ -2,8 +2,8 @@ breathe>=4.4
 docutils>=0.13
 Pygments>=2.2
 pyparsing>=2.1
-Sphinx>=1.5
-sphinxcontrib-bibtex>=0.3
+Sphinx>=1.8.5
+sphinxcontrib-bibtex>=0.3.3
 sphinxcontrib-doxylink>=1.3
 sphinx_rtd_theme>=0.3
 requests[security]

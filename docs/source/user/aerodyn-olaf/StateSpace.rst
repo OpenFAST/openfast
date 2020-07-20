@@ -10,7 +10,7 @@ State, Constraint, Input, and Output Variables
 
 The OLAF module has been integrated into the latest version of OpenFAST via
 *AeroDyn15*, following the OpenFAST modularization
-framework (:cite:`Jonkman13_1,Sprague15_1`). To follow the OpenFAST framework,
+framework (:cite:`olaf-Jonkman13_1,olaf-Sprague15_1`). To follow the OpenFAST framework,
 the vortex code is written as a module, and its formulation comprises state,
 constraint, and output equations. The data manipulated by the module include the
 following vectors: constant parameters, :math:`\vec{p}`;  inputs,
