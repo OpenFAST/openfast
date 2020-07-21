@@ -2245,8 +2245,8 @@ END SUBROUTINE CheckR16Var
 !>
    SUBROUTINE DispCompileRuntimeInfo()
      
-      USE iso_fortran_env
-      
+      USE iso_fortran_env, ONLY: compiler_version
+
       CHARACTER(200) :: compiler_version_str
       CHARACTER(200) :: name
       CHARACTER(200) :: git_commit, architecture, compiled_precision
