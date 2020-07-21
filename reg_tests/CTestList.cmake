@@ -118,7 +118,7 @@ of_regression("HelicalWake_OLAF"                       "openfast;aerodyn15;olaf"
 of_regression("EllipticalWing_OLAF"                    "openfast;aerodyn15;olaf")
 
 # Linearized OpenFAST regression tests
-of_regression_linear("WP_Stationary_Linear"         "openfast;linear;elastodyn;aerodyn15")
+of_regression_linear("WP_Stationary_Linear"         "openfast;linear;elastodyn")
 of_regression_linear("Ideal_Beam_Fixed_Free_Linear" "openfast;linear;beamdyn")
 of_regression_linear("Ideal_Beam_Free_Free_Linear"  "openfast;linear;beamdyn")
 of_regression_linear("5MW_Land_BD_Linear"           "openfast;linear;beamdyn;servodyn")
