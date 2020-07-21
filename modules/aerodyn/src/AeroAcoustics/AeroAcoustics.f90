@@ -475,11 +475,12 @@ subroutine Init_y(y, u, p, errStat, errMsg)
     p%numOuts       = p%NrObsLoc
     p%NumOutsForSep = p%NrObsLoc*size(p%FreqList)*nNoiseMechanism
     p%NumOutsForPE  = p%NrObsLoc*size(p%Freqlist)
+    p%NumOutsForNodes = p%NrObsLoc*p%NumBlNds*p%NumBlades
     call AllocAry(y%WriteOutput        , p%numOuts              , 'y%WriteOutput'           , errStat2                   , errMsg2); if(Failed()) return
     call AllocAry(y%WriteOutputSep     , p%NumOutsForSep        , 'y%WriteOutputSep'        , errStat2                   , errMsg2); if(Failed()) return
     call AllocAry(y%WriteOutputForPE   , p%numOutsForPE         , 'y%WriteOutputForPE'      , errStat2                   , errMsg2); if(Failed()) return
     call AllocAry(y%DirectiviOutput    , p%NrObsLoc             , 'y%DirectiviOutput'       , errStat2                   , errMsg2); if(Failed()) return
-    call AllocAry(y%WriteOutputSepFreq , size(y%SumSpecNoiseSep,1)*size(y%SumSpecNoiseSep,2)*size(y%SumSpecNoiseSep,3)   , 'y%WriteOutputSepFreq' , errStat2  , errMsg2); if(Failed()) return
+    call AllocAry(y%WriteOutputNode    , p%NumOutsForNodes      , 'y%WriteOutputSepFreq' , errStat2  , errMsg2); if(Failed()) return
     call AllocAry(y%OASPL              , p%NrObsLoc             , p%NumBlNds                , p%NumBlades                , 'y%OASPL'           , errStat2               , errMsg2); if(Failed()) return
     call AllocAry(y%SumSpecNoise       , size(p%FreqList)       , p%NrObsLoc                , p%NumBlades                , 'y%SumSpecNoise'    , errStat2               , errMsg2); if(Failed()) return
     call AllocAry(y%SumSpecNoiseSep    , 7                      , p%NrObsLoc                , size(p%FreqList)           , 'y%SumSpecNoiseSep' , errStat2               , errMsg2); if(Failed()) return
@@ -491,7 +492,7 @@ subroutine Init_y(y, u, p, errStat, errMsg)
     y%WriteOutputSep     = 0.0_reki
     y%WriteOutputForPE   = 0.0_reki
     y%DirectiviOutput    = 0.0_reki
-    y%WriteOutputSepFreq = 0.0_reki
+    y%WriteOutputNode    = 0.0_reki
     y%OASPL              = 0.0_reki
     y%OASPL_Mech         = 0.0_reki
     y%SumSpecNoise       = 0.0_reki
@@ -1217,15 +1218,25 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,y,errStat,errMsg)
               y%DirectiviOutput(K)         = Ptotal + y%DirectiviOutput(K)            ! Assigns Overall Pressure to Appropriate Observer for Directivity   
               IF (y%DirectiviOutput(K)  .EQ. 0.)      y%DirectiviOutput(K) = 1        ! Since these will all be converted via LOG10, they will produce an error if .EQ. 0. 
                                                                                           !    Set .EQ. to 1 instead (LOG10(1)=0)
+              y%OASPL(K,J,I) = Ptotal + y%OASPL(K,J,I)               ! Assigns Overall Pressure to Appropriate Observer/Blade/Node for Directivity
            ENDDO ! Loop on observers
        ENDDO ! Loop on blade nodes
    ENDDO ! Loop on blades
 
-   ! If any Output file is wanted, convert DirectiviOutput from Directivity Factor to Directivity Index
-   ! Ref: Fundamentals of Acoustics by Colin Hansen (1951)
-   IF  (p%NrOutFile .gt. 0) y%DirectiviOutput = 10.*LOG10(y%DirectiviOutput)            !! DirectiviOutput is used as total observer OASPL for Output File 1   
+    ! If any Output file is wanted, convert DirectiviOutput from Directivity Factor to Directivity Index
+    ! Ref: Fundamentals of Acoustics by Colin Hansen (1951)
+    y%DirectiviOutput = 10.*LOG10(y%DirectiviOutput)        !! DirectiviOutput is used as total observer OASPL for Output File 1   
+    ! Since these will all be converted via LOG10, they will produce an error if .EQ. 0., Set .EQ. to 1 instead (LOG10(1)=0)
+    DO I = 1,p%numBlades
+        DO J = 1,p%NumBlNds
+            DO K = 1,p%NrObsLoc 
+                IF (y%OASPL(K,J,I)  .EQ. 0.)      y%OASPL(K,J,I) = 1   
+            ENDDO
+        ENDDO
+    ENDDO
+    IF  (p%NrOutFile .gt. 0) y%OASPL = 10.*LOG10(y%OASPL)                            !! OASPL is used as observer/blade/node OASPL for Output File 4
 
-   ! Procedure for Output file 2
+    ! Procedure for Output file 2
     IF  (p%NrOutFile .gt. 1) THEN 
       DO K = 1,p%NrObsLoc
          DO III=1,size(p%FreqList)

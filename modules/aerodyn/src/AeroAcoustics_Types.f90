@@ -67,8 +67,8 @@ IMPLICIT NONE
     CHARACTER(20) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUntforPE      !< Units of the output-to-file channels [-]
     CHARACTER(25) , DIMENSION(:), ALLOCATABLE  :: WriteOutputHdrSep      !< Names of the output-to-file channels [-]
     CHARACTER(25) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUntSep      !< Units of the output-to-file channels [-]
-    CHARACTER(25) , DIMENSION(:), ALLOCATABLE  :: WriteOutputHdrSepFreq      !< Names of the output-to-file channels [-]
-    CHARACTER(25) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUntSepFreq      !< Units of the output-to-file channels [-]
+    CHARACTER(25) , DIMENSION(:), ALLOCATABLE  :: WriteOutputHdrNodes      !< Names of the output-to-file channels [-]
+    CHARACTER(25) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUntNodes      !< Units of the output-to-file channels [-]
     character(1)  :: delim      !< column delimiter [-]
     TYPE(ProgDesc)  :: Ver      !< This module's name, version, and date [-]
     REAL(ReKi)  :: AirDens      !< Air density [kg/m^3]
@@ -222,7 +222,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NumOuts      !< Number of parameters in the output list (number of outputs requested) [-]
     INTEGER(IntKi)  :: NumOutsForPE      !< Number of parameters in the output list (number of outputs requested) [-]
     INTEGER(IntKi)  :: NumOutsForSep      !< Number of parameters in the output list (number of outputs requested) [-]
-    INTEGER(IntKi)  :: NumOutsForSepFreq      !< Number of parameters in the output list (number of outputs requested) [-]
+    INTEGER(IntKi)  :: NumOutsForNodes      !< Number of parameters in the output list (number of outputs requested) [-]
     INTEGER(IntKi)  :: unOutFile      !< unit number for writing output file [-]
     INTEGER(IntKi)  :: unOutFile2      !< unit number for writing output file [-]
     INTEGER(IntKi)  :: unOutFile3      !< unit number for writing output file [-]
@@ -273,7 +273,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: WriteOutputForPE      !< Data to be written to an output file: see WriteOutputHdr for names of each variable [see WriteOutputUnt]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: WriteOutput      !< Data to be written to an output file: see WriteOutputHdr for names of each variable [see WriteOutputUnt]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: WriteOutputSep      !< Data to be written to an output file: see WriteOutputHdr for names of each variable [see WriteOutputUnt]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: WriteOutputSepFreq      !< Data to be written to an output file: see WriteOutputHdr for names of each variable [see WriteOutputUnt]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: WriteOutputNode     !< Data to be written to an output file: see WriteOutputHdr for names of each variable [see WriteOutputUnt]
   END TYPE AA_OutputType
 ! =======================
 CONTAINS
@@ -1247,29 +1247,29 @@ IF (ALLOCATED(SrcInitOutputData%WriteOutputUntSep)) THEN
   END IF
     DstInitOutputData%WriteOutputUntSep = SrcInitOutputData%WriteOutputUntSep
 ENDIF
-IF (ALLOCATED(SrcInitOutputData%WriteOutputHdrSepFreq)) THEN
-  i1_l = LBOUND(SrcInitOutputData%WriteOutputHdrSepFreq,1)
-  i1_u = UBOUND(SrcInitOutputData%WriteOutputHdrSepFreq,1)
-  IF (.NOT. ALLOCATED(DstInitOutputData%WriteOutputHdrSepFreq)) THEN 
-    ALLOCATE(DstInitOutputData%WriteOutputHdrSepFreq(i1_l:i1_u),STAT=ErrStat2)
+IF (ALLOCATED(SrcInitOutputData%WriteOutputHdrNodes)) THEN
+  i1_l = LBOUND(SrcInitOutputData%WriteOutputHdrNodes,1)
+  i1_u = UBOUND(SrcInitOutputData%WriteOutputHdrNodes,1)
+  IF (.NOT. ALLOCATED(DstInitOutputData%WriteOutputHdrNodes)) THEN 
+    ALLOCATE(DstInitOutputData%WriteOutputHdrNodes(i1_l:i1_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%WriteOutputHdrSepFreq.', ErrStat, ErrMsg,RoutineName)
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%WriteOutputHdrNodes.', ErrStat, ErrMsg,RoutineName)
       RETURN
     END IF
   END IF
-    DstInitOutputData%WriteOutputHdrSepFreq = SrcInitOutputData%WriteOutputHdrSepFreq
+    DstInitOutputData%WriteOutputHdrNodes = SrcInitOutputData%WriteOutputHdrNodes
 ENDIF
-IF (ALLOCATED(SrcInitOutputData%WriteOutputUntSepFreq)) THEN
-  i1_l = LBOUND(SrcInitOutputData%WriteOutputUntSepFreq,1)
-  i1_u = UBOUND(SrcInitOutputData%WriteOutputUntSepFreq,1)
-  IF (.NOT. ALLOCATED(DstInitOutputData%WriteOutputUntSepFreq)) THEN 
-    ALLOCATE(DstInitOutputData%WriteOutputUntSepFreq(i1_l:i1_u),STAT=ErrStat2)
+IF (ALLOCATED(SrcInitOutputData%WriteOutputUntNodes)) THEN
+  i1_l = LBOUND(SrcInitOutputData%WriteOutputUntNodes,1)
+  i1_u = UBOUND(SrcInitOutputData%WriteOutputUntNodes,1)
+  IF (.NOT. ALLOCATED(DstInitOutputData%WriteOutputUntNodes)) THEN 
+    ALLOCATE(DstInitOutputData%WriteOutputUntNodes(i1_l:i1_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%WriteOutputUntSepFreq.', ErrStat, ErrMsg,RoutineName)
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%WriteOutputUntNodes.', ErrStat, ErrMsg,RoutineName)
       RETURN
     END IF
   END IF
-    DstInitOutputData%WriteOutputUntSepFreq = SrcInitOutputData%WriteOutputUntSepFreq
+    DstInitOutputData%WriteOutputUntNodes = SrcInitOutputData%WriteOutputUntNodes
 ENDIF
     DstInitOutputData%delim = SrcInitOutputData%delim
       CALL NWTC_Library_Copyprogdesc( SrcInitOutputData%Ver, DstInitOutputData%Ver, CtrlCode, ErrStat2, ErrMsg2 )
@@ -1305,11 +1305,11 @@ ENDIF
 IF (ALLOCATED(InitOutputData%WriteOutputUntSep)) THEN
   DEALLOCATE(InitOutputData%WriteOutputUntSep)
 ENDIF
-IF (ALLOCATED(InitOutputData%WriteOutputHdrSepFreq)) THEN
-  DEALLOCATE(InitOutputData%WriteOutputHdrSepFreq)
+IF (ALLOCATED(InitOutputData%WriteOutputHdrNodes)) THEN
+  DEALLOCATE(InitOutputData%WriteOutputHdrNodes)
 ENDIF
-IF (ALLOCATED(InitOutputData%WriteOutputUntSepFreq)) THEN
-  DEALLOCATE(InitOutputData%WriteOutputUntSepFreq)
+IF (ALLOCATED(InitOutputData%WriteOutputUntNodes)) THEN
+  DEALLOCATE(InitOutputData%WriteOutputUntNodes)
 ENDIF
   CALL NWTC_Library_Destroyprogdesc( InitOutputData%Ver, ErrStat, ErrMsg )
  END SUBROUTINE AA_DestroyInitOutput
@@ -1379,15 +1379,15 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*1  ! WriteOutputUntSep upper/lower bounds for each dimension
       Int_BufSz  = Int_BufSz  + SIZE(InData%WriteOutputUntSep)*LEN(InData%WriteOutputUntSep)  ! WriteOutputUntSep
   END IF
-  Int_BufSz   = Int_BufSz   + 1     ! WriteOutputHdrSepFreq allocated yes/no
-  IF ( ALLOCATED(InData%WriteOutputHdrSepFreq) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! WriteOutputHdrSepFreq upper/lower bounds for each dimension
-      Int_BufSz  = Int_BufSz  + SIZE(InData%WriteOutputHdrSepFreq)*LEN(InData%WriteOutputHdrSepFreq)  ! WriteOutputHdrSepFreq
+  Int_BufSz   = Int_BufSz   + 1     ! WriteOutputHdrNodes allocated yes/no
+  IF ( ALLOCATED(InData%WriteOutputHdrNodes) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! WriteOutputHdrNodes upper/lower bounds for each dimension
+      Int_BufSz  = Int_BufSz  + SIZE(InData%WriteOutputHdrNodes)*LEN(InData%WriteOutputHdrNodes)  ! WriteOutputHdrNodes
   END IF
-  Int_BufSz   = Int_BufSz   + 1     ! WriteOutputUntSepFreq allocated yes/no
-  IF ( ALLOCATED(InData%WriteOutputUntSepFreq) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! WriteOutputUntSepFreq upper/lower bounds for each dimension
-      Int_BufSz  = Int_BufSz  + SIZE(InData%WriteOutputUntSepFreq)*LEN(InData%WriteOutputUntSepFreq)  ! WriteOutputUntSepFreq
+  Int_BufSz   = Int_BufSz   + 1     ! WriteOutputUntNodes allocated yes/no
+  IF ( ALLOCATED(InData%WriteOutputUntNodes) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! WriteOutputUntNodes upper/lower bounds for each dimension
+      Int_BufSz  = Int_BufSz  + SIZE(InData%WriteOutputUntNodes)*LEN(InData%WriteOutputUntNodes)  ! WriteOutputUntNodes
   END IF
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%delim)  ! delim
    ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
@@ -1538,36 +1538,36 @@ ENDIF
         END DO ! I
     END DO !i1
   END IF
-  IF ( .NOT. ALLOCATED(InData%WriteOutputHdrSepFreq) ) THEN
+  IF ( .NOT. ALLOCATED(InData%WriteOutputHdrNodes) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
   ELSE
     IntKiBuf( Int_Xferred ) = 1
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WriteOutputHdrSepFreq,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WriteOutputHdrSepFreq,1)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WriteOutputHdrNodes,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WriteOutputHdrNodes,1)
     Int_Xferred = Int_Xferred + 2
 
-    DO i1 = LBOUND(InData%WriteOutputHdrSepFreq,1), UBOUND(InData%WriteOutputHdrSepFreq,1)
-        DO I = 1, LEN(InData%WriteOutputHdrSepFreq)
-          IntKiBuf(Int_Xferred) = ICHAR(InData%WriteOutputHdrSepFreq(i1)(I:I), IntKi)
+    DO i1 = LBOUND(InData%WriteOutputHdrNodes,1), UBOUND(InData%WriteOutputHdrNodes,1)
+        DO I = 1, LEN(InData%WriteOutputHdrNodes)
+          IntKiBuf(Int_Xferred) = ICHAR(InData%WriteOutputHdrNodes(i1)(I:I), IntKi)
           Int_Xferred = Int_Xferred   + 1
         END DO ! I
     END DO !i1
   END IF
-  IF ( .NOT. ALLOCATED(InData%WriteOutputUntSepFreq) ) THEN
+  IF ( .NOT. ALLOCATED(InData%WriteOutputUntNodes) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
   ELSE
     IntKiBuf( Int_Xferred ) = 1
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WriteOutputUntSepFreq,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WriteOutputUntSepFreq,1)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WriteOutputUntNodes,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WriteOutputUntNodes,1)
     Int_Xferred = Int_Xferred + 2
 
-    DO i1 = LBOUND(InData%WriteOutputUntSepFreq,1), UBOUND(InData%WriteOutputUntSepFreq,1)
-        DO I = 1, LEN(InData%WriteOutputUntSepFreq)
-          IntKiBuf(Int_Xferred) = ICHAR(InData%WriteOutputUntSepFreq(i1)(I:I), IntKi)
+    DO i1 = LBOUND(InData%WriteOutputUntNodes,1), UBOUND(InData%WriteOutputUntNodes,1)
+        DO I = 1, LEN(InData%WriteOutputUntNodes)
+          IntKiBuf(Int_Xferred) = ICHAR(InData%WriteOutputUntNodes(i1)(I:I), IntKi)
           Int_Xferred = Int_Xferred   + 1
         END DO ! I
     END DO !i1
@@ -1803,17 +1803,17 @@ ENDIF
     END DO !i1
     DEALLOCATE(mask1)
   END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WriteOutputHdrSepFreq not allocated
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WriteOutputHdrNodes not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
     Int_Xferred = Int_Xferred + 1
     i1_l = IntKiBuf( Int_Xferred    )
     i1_u = IntKiBuf( Int_Xferred + 1)
     Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%WriteOutputHdrSepFreq)) DEALLOCATE(OutData%WriteOutputHdrSepFreq)
-    ALLOCATE(OutData%WriteOutputHdrSepFreq(i1_l:i1_u),STAT=ErrStat2)
+    IF (ALLOCATED(OutData%WriteOutputHdrNodes)) DEALLOCATE(OutData%WriteOutputHdrNodes)
+    ALLOCATE(OutData%WriteOutputHdrNodes(i1_l:i1_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%WriteOutputHdrSepFreq.', ErrStat, ErrMsg,RoutineName)
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%WriteOutputHdrNodes.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
     ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
@@ -1822,25 +1822,25 @@ ENDIF
        RETURN
     END IF
     mask1 = .TRUE. 
-    DO i1 = LBOUND(OutData%WriteOutputHdrSepFreq,1), UBOUND(OutData%WriteOutputHdrSepFreq,1)
-        DO I = 1, LEN(OutData%WriteOutputHdrSepFreq)
-          OutData%WriteOutputHdrSepFreq(i1)(I:I) = CHAR(IntKiBuf(Int_Xferred))
+    DO i1 = LBOUND(OutData%WriteOutputHdrNodes,1), UBOUND(OutData%WriteOutputHdrNodes,1)
+        DO I = 1, LEN(OutData%WriteOutputHdrNodes)
+          OutData%WriteOutputHdrNodes(i1)(I:I) = CHAR(IntKiBuf(Int_Xferred))
           Int_Xferred = Int_Xferred   + 1
         END DO ! I
     END DO !i1
     DEALLOCATE(mask1)
   END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WriteOutputUntSepFreq not allocated
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WriteOutputUntNodes not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
     Int_Xferred = Int_Xferred + 1
     i1_l = IntKiBuf( Int_Xferred    )
     i1_u = IntKiBuf( Int_Xferred + 1)
     Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%WriteOutputUntSepFreq)) DEALLOCATE(OutData%WriteOutputUntSepFreq)
-    ALLOCATE(OutData%WriteOutputUntSepFreq(i1_l:i1_u),STAT=ErrStat2)
+    IF (ALLOCATED(OutData%WriteOutputUntNodes)) DEALLOCATE(OutData%WriteOutputUntNodes)
+    ALLOCATE(OutData%WriteOutputUntNodes(i1_l:i1_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%WriteOutputUntSepFreq.', ErrStat, ErrMsg,RoutineName)
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%WriteOutputUntNodes.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
     ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
@@ -1849,9 +1849,9 @@ ENDIF
        RETURN
     END IF
     mask1 = .TRUE. 
-    DO i1 = LBOUND(OutData%WriteOutputUntSepFreq,1), UBOUND(OutData%WriteOutputUntSepFreq,1)
-        DO I = 1, LEN(OutData%WriteOutputUntSepFreq)
-          OutData%WriteOutputUntSepFreq(i1)(I:I) = CHAR(IntKiBuf(Int_Xferred))
+    DO i1 = LBOUND(OutData%WriteOutputUntNodes,1), UBOUND(OutData%WriteOutputUntNodes,1)
+        DO I = 1, LEN(OutData%WriteOutputUntNodes)
+          OutData%WriteOutputUntNodes(i1)(I:I) = CHAR(IntKiBuf(Int_Xferred))
           Int_Xferred = Int_Xferred   + 1
         END DO ! I
     END DO !i1
@@ -6150,7 +6150,7 @@ ENDIF
     DstParamData%NumOuts = SrcParamData%NumOuts
     DstParamData%NumOutsForPE = SrcParamData%NumOutsForPE
     DstParamData%NumOutsForSep = SrcParamData%NumOutsForSep
-    DstParamData%NumOutsForSepFreq = SrcParamData%NumOutsForSepFreq
+    DstParamData%NumOutsForNodes = SrcParamData%NumOutsForNodes
     DstParamData%unOutFile = SrcParamData%unOutFile
     DstParamData%unOutFile2 = SrcParamData%unOutFile2
     DstParamData%unOutFile3 = SrcParamData%unOutFile3
@@ -6723,7 +6723,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! NumOuts
       Int_BufSz  = Int_BufSz  + 1  ! NumOutsForPE
       Int_BufSz  = Int_BufSz  + 1  ! NumOutsForSep
-      Int_BufSz  = Int_BufSz  + 1  ! NumOutsForSepFreq
+      Int_BufSz  = Int_BufSz  + 1  ! NumOutsForNodes
       Int_BufSz  = Int_BufSz  + 1  ! unOutFile
       Int_BufSz  = Int_BufSz  + 1  ! unOutFile2
       Int_BufSz  = Int_BufSz  + 1  ! unOutFile3
@@ -7114,7 +7114,7 @@ ENDIF
       Int_Xferred   = Int_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%NumOutsForSep
       Int_Xferred   = Int_Xferred   + 1
-      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%NumOutsForSepFreq
+      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%NumOutsForNodes
       Int_Xferred   = Int_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%unOutFile
       Int_Xferred   = Int_Xferred   + 1
@@ -7905,7 +7905,7 @@ ENDIF
       Int_Xferred   = Int_Xferred + 1
       OutData%NumOutsForSep = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
-      OutData%NumOutsForSepFreq = IntKiBuf( Int_Xferred ) 
+      OutData%NumOutsForNodes = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
       OutData%unOutFile = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
@@ -9229,17 +9229,17 @@ IF (ALLOCATED(SrcOutputData%WriteOutputSep)) THEN
   END IF
     DstOutputData%WriteOutputSep = SrcOutputData%WriteOutputSep
 ENDIF
-IF (ALLOCATED(SrcOutputData%WriteOutputSepFreq)) THEN
-  i1_l = LBOUND(SrcOutputData%WriteOutputSepFreq,1)
-  i1_u = UBOUND(SrcOutputData%WriteOutputSepFreq,1)
-  IF (.NOT. ALLOCATED(DstOutputData%WriteOutputSepFreq)) THEN 
-    ALLOCATE(DstOutputData%WriteOutputSepFreq(i1_l:i1_u),STAT=ErrStat2)
+IF (ALLOCATED(SrcOutputData%WriteOutputNode)) THEN
+  i1_l = LBOUND(SrcOutputData%WriteOutputNode,1)
+  i1_u = UBOUND(SrcOutputData%WriteOutputNode,1)
+  IF (.NOT. ALLOCATED(DstOutputData%WriteOutputNode)) THEN 
+    ALLOCATE(DstOutputData%WriteOutputNode(i1_l:i1_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%WriteOutputSepFreq.', ErrStat, ErrMsg,RoutineName)
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%WriteOutputNode.', ErrStat, ErrMsg,RoutineName)
       RETURN
     END IF
   END IF
-    DstOutputData%WriteOutputSepFreq = SrcOutputData%WriteOutputSepFreq
+    DstOutputData%WriteOutputNode = SrcOutputData%WriteOutputNode
 ENDIF
  END SUBROUTINE AA_CopyOutput
 
@@ -9282,8 +9282,8 @@ ENDIF
 IF (ALLOCATED(OutputData%WriteOutputSep)) THEN
   DEALLOCATE(OutputData%WriteOutputSep)
 ENDIF
-IF (ALLOCATED(OutputData%WriteOutputSepFreq)) THEN
-  DEALLOCATE(OutputData%WriteOutputSepFreq)
+IF (ALLOCATED(OutputData%WriteOutputNode)) THEN
+  DEALLOCATE(OutputData%WriteOutputNode)
 ENDIF
  END SUBROUTINE AA_DestroyOutput
 
@@ -9372,10 +9372,10 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*1  ! WriteOutputSep upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%WriteOutputSep)  ! WriteOutputSep
   END IF
-  Int_BufSz   = Int_BufSz   + 1     ! WriteOutputSepFreq allocated yes/no
-  IF ( ALLOCATED(InData%WriteOutputSepFreq) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! WriteOutputSepFreq upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%WriteOutputSepFreq)  ! WriteOutputSepFreq
+  Int_BufSz   = Int_BufSz   + 1     ! WriteOutputNode allocated yes/no
+  IF ( ALLOCATED(InData%WriteOutputNode) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! WriteOutputNode upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%WriteOutputNode)  ! WriteOutputNode
   END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -9573,18 +9573,18 @@ ENDIF
       IF (SIZE(InData%WriteOutputSep)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%WriteOutputSep))-1 ) = PACK(InData%WriteOutputSep,.TRUE.)
       Re_Xferred   = Re_Xferred   + SIZE(InData%WriteOutputSep)
   END IF
-  IF ( .NOT. ALLOCATED(InData%WriteOutputSepFreq) ) THEN
+  IF ( .NOT. ALLOCATED(InData%WriteOutputNode) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
   ELSE
     IntKiBuf( Int_Xferred ) = 1
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WriteOutputSepFreq,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WriteOutputSepFreq,1)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WriteOutputNode,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WriteOutputNode,1)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%WriteOutputSepFreq)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%WriteOutputSepFreq))-1 ) = PACK(InData%WriteOutputSepFreq,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%WriteOutputSepFreq)
+      IF (SIZE(InData%WriteOutputNode)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%WriteOutputNode))-1 ) = PACK(InData%WriteOutputNode,.TRUE.)
+      Re_Xferred   = Re_Xferred   + SIZE(InData%WriteOutputNode)
   END IF
  END SUBROUTINE AA_PackOutput
 
@@ -9893,17 +9893,17 @@ ENDIF
       Re_Xferred   = Re_Xferred   + SIZE(OutData%WriteOutputSep)
     DEALLOCATE(mask1)
   END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WriteOutputSepFreq not allocated
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WriteOutputNode not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
     Int_Xferred = Int_Xferred + 1
     i1_l = IntKiBuf( Int_Xferred    )
     i1_u = IntKiBuf( Int_Xferred + 1)
     Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%WriteOutputSepFreq)) DEALLOCATE(OutData%WriteOutputSepFreq)
-    ALLOCATE(OutData%WriteOutputSepFreq(i1_l:i1_u),STAT=ErrStat2)
+    IF (ALLOCATED(OutData%WriteOutputNode)) DEALLOCATE(OutData%WriteOutputNode)
+    ALLOCATE(OutData%WriteOutputNode(i1_l:i1_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%WriteOutputSepFreq.', ErrStat, ErrMsg,RoutineName)
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%WriteOutputNode.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
     ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
@@ -9912,8 +9912,8 @@ ENDIF
        RETURN
     END IF
     mask1 = .TRUE. 
-      IF (SIZE(OutData%WriteOutputSepFreq)>0) OutData%WriteOutputSepFreq = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%WriteOutputSepFreq))-1 ), mask1, 0.0_ReKi )
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%WriteOutputSepFreq)
+      IF (SIZE(OutData%WriteOutputNode)>0) OutData%WriteOutputNode = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%WriteOutputNode))-1 ), mask1, 0.0_ReKi )
+      Re_Xferred   = Re_Xferred   + SIZE(OutData%WriteOutputNode)
     DEALLOCATE(mask1)
   END IF
  END SUBROUTINE AA_UnPackOutput
@@ -10365,11 +10365,11 @@ IF (ALLOCATED(y_out%WriteOutputSep) .AND. ALLOCATED(y1%WriteOutputSep)) THEN
   DEALLOCATE(b1)
   DEALLOCATE(c1)
 END IF ! check if allocated
-IF (ALLOCATED(y_out%WriteOutputSepFreq) .AND. ALLOCATED(y1%WriteOutputSepFreq)) THEN
-  ALLOCATE(b1(SIZE(y_out%WriteOutputSepFreq,1)))
-  ALLOCATE(c1(SIZE(y_out%WriteOutputSepFreq,1)))
-  b1 = -(y1%WriteOutputSepFreq - y2%WriteOutputSepFreq)/t(2)
-  y_out%WriteOutputSepFreq = y1%WriteOutputSepFreq + b1 * t_out
+IF (ALLOCATED(y_out%WriteOutputNode) .AND. ALLOCATED(y1%WriteOutputNode)) THEN
+  ALLOCATE(b1(SIZE(y_out%WriteOutputNode,1)))
+  ALLOCATE(c1(SIZE(y_out%WriteOutputNode,1)))
+  b1 = -(y1%WriteOutputNode - y2%WriteOutputNode)/t(2)
+  y_out%WriteOutputNode = y1%WriteOutputNode + b1 * t_out
   DEALLOCATE(b1)
   DEALLOCATE(c1)
 END IF ! check if allocated
@@ -10533,12 +10533,12 @@ IF (ALLOCATED(y_out%WriteOutputSep) .AND. ALLOCATED(y1%WriteOutputSep)) THEN
   DEALLOCATE(b1)
   DEALLOCATE(c1)
 END IF ! check if allocated
-IF (ALLOCATED(y_out%WriteOutputSepFreq) .AND. ALLOCATED(y1%WriteOutputSepFreq)) THEN
-  ALLOCATE(b1(SIZE(y_out%WriteOutputSepFreq,1)))
-  ALLOCATE(c1(SIZE(y_out%WriteOutputSepFreq,1)))
-  b1 = (t(3)**2*(y1%WriteOutputSepFreq - y2%WriteOutputSepFreq) + t(2)**2*(-y1%WriteOutputSepFreq + y3%WriteOutputSepFreq))/(t(2)*t(3)*(t(2) - t(3)))
-  c1 = ( (t(2)-t(3))*y1%WriteOutputSepFreq + t(3)*y2%WriteOutputSepFreq - t(2)*y3%WriteOutputSepFreq ) / (t(2)*t(3)*(t(2) - t(3)))
-  y_out%WriteOutputSepFreq = y1%WriteOutputSepFreq + b1 * t_out + c1 * t_out**2
+IF (ALLOCATED(y_out%WriteOutputNode) .AND. ALLOCATED(y1%WriteOutputNode)) THEN
+  ALLOCATE(b1(SIZE(y_out%WriteOutputNode,1)))
+  ALLOCATE(c1(SIZE(y_out%WriteOutputNode,1)))
+  b1 = (t(3)**2*(y1%WriteOutputNode - y2%WriteOutputNode) + t(2)**2*(-y1%WriteOutputNode + y3%WriteOutputNode))/(t(2)*t(3)*(t(2) - t(3)))
+  c1 = ( (t(2)-t(3))*y1%WriteOutputNode + t(3)*y2%WriteOutputNode - t(2)*y3%WriteOutputNode ) / (t(2)*t(3)*(t(2) - t(3)))
+  y_out%WriteOutputNode = y1%WriteOutputNode + b1 * t_out + c1 * t_out**2
   DEALLOCATE(b1)
   DEALLOCATE(c1)
 END IF ! check if allocated
