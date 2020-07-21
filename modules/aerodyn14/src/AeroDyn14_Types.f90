@@ -209,22 +209,22 @@ IMPLICIT NONE
 ! =======================
 ! =========  Element  =======
   TYPE, PUBLIC :: Element
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: A 
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: AP 
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: ALPHA 
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: W2 
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: A      !< - [Axial induction factor]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: AP      !< - [Tangential induction factor]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: ALPHA      !< - [Angle of attack]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: W2      !< - [Relative velocity norm ]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: OLD_A_NS 
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: OLD_AP_NS 
-    REAL(ReKi)  :: PITNOW 
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PITNOW      !< - [Current pitch angle - Based on blade orientation (to verify)]
   END TYPE Element
 ! =======================
 ! =========  ElementParms  =======
   TYPE, PUBLIC :: ElementParms
-    INTEGER(IntKi)  :: NELM 
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: TWIST 
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: RELM 
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: HLCNST 
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: TLCNST 
+    INTEGER(IntKi)  :: NELM      !< - [Number of elements (constant)]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: TWIST      !< - [Airfoil twist angle (constant)]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: RELM      !< - [Radius of element (constant)]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: HLCNST      !< - [Hub loss constant B/2*(r-rh)/rh (constant)]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: TLCNST      !< - [Tip loss constant B/2*(R-r)/R (constant) ]
   END TYPE ElementParms
 ! =======================
 ! =========  ElOutParms  =======
@@ -243,6 +243,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: PMM 
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: PITSAV 
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: ReyNum 
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Gamma      !< - [Circulation along the span, 1/2 c Vrel Cl]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: SaveVX 
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: SaveVY 
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: SaveVZ 
@@ -7193,7 +7194,20 @@ IF (ALLOCATED(SrcElementData%OLD_AP_NS)) THEN
   END IF
     DstElementData%OLD_AP_NS = SrcElementData%OLD_AP_NS
 ENDIF
+IF (ALLOCATED(SrcElementData%PITNOW)) THEN
+  i1_l = LBOUND(SrcElementData%PITNOW,1)
+  i1_u = UBOUND(SrcElementData%PITNOW,1)
+  i2_l = LBOUND(SrcElementData%PITNOW,2)
+  i2_u = UBOUND(SrcElementData%PITNOW,2)
+  IF (.NOT. ALLOCATED(DstElementData%PITNOW)) THEN 
+    ALLOCATE(DstElementData%PITNOW(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstElementData%PITNOW.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
     DstElementData%PITNOW = SrcElementData%PITNOW
+ENDIF
  END SUBROUTINE AD14_CopyElement
 
  SUBROUTINE AD14_DestroyElement( ElementData, ErrStat, ErrMsg )
@@ -7222,6 +7236,9 @@ IF (ALLOCATED(ElementData%OLD_A_NS)) THEN
 ENDIF
 IF (ALLOCATED(ElementData%OLD_AP_NS)) THEN
   DEALLOCATE(ElementData%OLD_AP_NS)
+ENDIF
+IF (ALLOCATED(ElementData%PITNOW)) THEN
+  DEALLOCATE(ElementData%PITNOW)
 ENDIF
  END SUBROUTINE AD14_DestroyElement
 
@@ -7290,7 +7307,11 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*2  ! OLD_AP_NS upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%OLD_AP_NS)  ! OLD_AP_NS
   END IF
-      Re_BufSz   = Re_BufSz   + 1  ! PITNOW
+  Int_BufSz   = Int_BufSz   + 1     ! PITNOW allocated yes/no
+  IF ( ALLOCATED(InData%PITNOW) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! PITNOW upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%PITNOW)  ! PITNOW
+  END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -7438,8 +7459,26 @@ ENDIF
         END DO
       END DO
   END IF
-    ReKiBuf(Re_Xferred) = InData%PITNOW
-    Re_Xferred = Re_Xferred + 1
+  IF ( .NOT. ALLOCATED(InData%PITNOW) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%PITNOW,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%PITNOW,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%PITNOW,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%PITNOW,2)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i2 = LBOUND(InData%PITNOW,2), UBOUND(InData%PITNOW,2)
+        DO i1 = LBOUND(InData%PITNOW,1), UBOUND(InData%PITNOW,1)
+          ReKiBuf(Re_Xferred) = InData%PITNOW(i1,i2)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
  END SUBROUTINE AD14_PackElement
 
  SUBROUTINE AD14_UnPackElement( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -7608,8 +7647,29 @@ ENDIF
         END DO
       END DO
   END IF
-    OutData%PITNOW = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! PITNOW not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%PITNOW)) DEALLOCATE(OutData%PITNOW)
+    ALLOCATE(OutData%PITNOW(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%PITNOW.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i2 = LBOUND(OutData%PITNOW,2), UBOUND(OutData%PITNOW,2)
+        DO i1 = LBOUND(OutData%PITNOW,1), UBOUND(OutData%PITNOW,1)
+          OutData%PITNOW(i1,i2) = ReKiBuf(Re_Xferred)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
  END SUBROUTINE AD14_UnPackElement
 
  SUBROUTINE AD14_CopyElementParms( SrcElementParmsData, DstElementParmsData, CtrlCode, ErrStat, ErrMsg )
@@ -8135,6 +8195,18 @@ IF (ALLOCATED(SrcElOutParmsData%ReyNum)) THEN
   END IF
     DstElOutParmsData%ReyNum = SrcElOutParmsData%ReyNum
 ENDIF
+IF (ALLOCATED(SrcElOutParmsData%Gamma)) THEN
+  i1_l = LBOUND(SrcElOutParmsData%Gamma,1)
+  i1_u = UBOUND(SrcElOutParmsData%Gamma,1)
+  IF (.NOT. ALLOCATED(DstElOutParmsData%Gamma)) THEN 
+    ALLOCATE(DstElOutParmsData%Gamma(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstElOutParmsData%Gamma.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstElOutParmsData%Gamma = SrcElOutParmsData%Gamma
+ENDIF
 IF (ALLOCATED(SrcElOutParmsData%SaveVX)) THEN
   i1_l = LBOUND(SrcElOutParmsData%SaveVX,1)
   i1_u = UBOUND(SrcElOutParmsData%SaveVX,1)
@@ -8283,6 +8355,9 @@ ENDIF
 IF (ALLOCATED(ElOutParmsData%ReyNum)) THEN
   DEALLOCATE(ElOutParmsData%ReyNum)
 ENDIF
+IF (ALLOCATED(ElOutParmsData%Gamma)) THEN
+  DEALLOCATE(ElOutParmsData%Gamma)
+ENDIF
 IF (ALLOCATED(ElOutParmsData%SaveVX)) THEN
   DEALLOCATE(ElOutParmsData%SaveVX)
 ENDIF
@@ -8410,6 +8485,11 @@ ENDIF
   IF ( ALLOCATED(InData%ReyNum) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! ReyNum upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%ReyNum)  ! ReyNum
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! Gamma allocated yes/no
+  IF ( ALLOCATED(InData%Gamma) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! Gamma upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%Gamma)  ! Gamma
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! SaveVX allocated yes/no
   IF ( ALLOCATED(InData%SaveVX) ) THEN
@@ -8685,6 +8765,21 @@ ENDIF
 
       DO i1 = LBOUND(InData%ReyNum,1), UBOUND(InData%ReyNum,1)
         ReKiBuf(Re_Xferred) = InData%ReyNum(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%Gamma) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Gamma,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Gamma,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%Gamma,1), UBOUND(InData%Gamma,1)
+        ReKiBuf(Re_Xferred) = InData%Gamma(i1)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
@@ -9097,6 +9192,24 @@ ENDIF
     END IF
       DO i1 = LBOUND(OutData%ReyNum,1), UBOUND(OutData%ReyNum,1)
         OutData%ReyNum(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Gamma not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%Gamma)) DEALLOCATE(OutData%Gamma)
+    ALLOCATE(OutData%Gamma(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%Gamma.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%Gamma,1), UBOUND(OutData%Gamma,1)
+        OutData%Gamma(i1) = ReKiBuf(Re_Xferred)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF

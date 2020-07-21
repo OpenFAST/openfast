@@ -99,6 +99,7 @@ SUBROUTINE AllBldNdOuts_InitOut( InitOut, p, ErrStat, ErrMsg )
       ErrStat = ErrID_None
 
          ! First set a counter so we know where in the output array we are in
+         ! NOTE: we populate invalid names as well (some names are not valid outputs for certain configurations).  That means we will have zeros in those values.
       INDX = p%NumOuts + 1       ! p%NumOuts is the number of outputs from the normal ElastoDyn output.  The WriteOutput array is sized to p%NumOuts + num(AllBldNdOuts)
 
       ! Populate the header and unit lines for all blades and nodes

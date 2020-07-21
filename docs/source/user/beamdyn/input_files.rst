@@ -1,4 +1,4 @@
-.. _input-files:
+.. _bd-input-files:
 
 Input Files
 ===========
