@@ -48,8 +48,8 @@ typedef     ^                   InitOutputType       CHARACTER(20)  WriteOutputH
 typedef     ^                   InitOutputType       CHARACTER(20)  WriteOutputUntforPE  {:}    -     -     "Units of the output-to-file channels"     -
 typedef     ^                   InitOutputType       CHARACTER(25)  WriteOutputHdrSep    {:}    -     -     "Names of the output-to-file channels"     -
 typedef     ^                   InitOutputType       CHARACTER(25)  WriteOutputUntSep    {:}    -     -     "Units of the output-to-file channels"     -
-typedef     ^                   InitOutputType       CHARACTER(25)  WriteOutputHdrSepFreq    {:}    -     -     "Names of the output-to-file channels"     -
-typedef     ^                   InitOutputType       CHARACTER(25)  WriteOutputUntSepFreq    {:}    -     -     "Units of the output-to-file channels"     -
+typedef     ^                   InitOutputType       CHARACTER(25)  WriteOutputHdrNodes    {:}    -     -     "Names of the output-to-file channels"     -
+typedef     ^                   InitOutputType       CHARACTER(25)  WriteOutputUntNodes    {:}    -     -     "Units of the output-to-file channels"     -
 typedef     ^                   InitOutputType       character(1)           delim            -      -     -   "column delimiter" "-"
 typedef     ^                   InitOutputType       ProgDesc            Ver              -     -     -     "This module's name, version, and date"     -
 typedef     ^                   InitOutputType       ReKi                AirDens          -     -     -     "Air density"     kg/m^3
@@ -196,7 +196,7 @@ typedef     ^                   ParameterType        character(1)        delim  
 typedef     ^                   ParameterType        IntKi               NumOuts                 -      -     -     "Number of parameters in the output list (number of outputs requested)"     -
 typedef     ^                   ParameterType        IntKi               NumOutsForPE                 -      -     -     "Number of parameters in the output list (number of outputs requested)"     -
 typedef     ^                   ParameterType        IntKi               NumOutsForSep                 -      -     -     "Number of parameters in the output list (number of outputs requested)"     -
-typedef     ^                   ParameterType        IntKi               NumOutsForSepFreq                 -      -     -     "Number of parameters in the output list (number of outputs requested)"     -
+typedef     ^                   ParameterType        IntKi               NumOutsForNodes               -      -     -     "Number of parameters in the output list (number of outputs requested)"     -
 typedef     ^                   ParameterType        IntKi               unOutFile        -      -     -   "unit number for writing output file" "-"
 typedef     ^                   ParameterType        IntKi               unOutFile2        -      -     -   "unit number for writing output file" "-"
 typedef     ^                   ParameterType        IntKi               unOutFile3        -      -     -   "unit number for writing output file" "-"
@@ -247,4 +247,4 @@ typedef     ^                   OutputType           ReKi                PtotalF
 typedef     ^                   OutputType           ReKi                WriteOutputForPE       {:}        -     -     "Data to be written to an output file: see WriteOutputHdr for names of each variable"     "see WriteOutputUnt"
 typedef     ^                   OutputType           ReKi                WriteOutput            {:}        -     -     "Data to be written to an output file: see WriteOutputHdr for names of each variable"     "see WriteOutputUnt"
 typedef     ^                   OutputType           ReKi                WriteOutputSep         {:}        -     -     "Data to be written to an output file: see WriteOutputHdr for names of each variable"     "see WriteOutputUnt"
-typedef     ^                   OutputType           ReKi                WriteOutputSepFreq         {:}        -     -     "Data to be written to an output file: see WriteOutputHdr for names of each variable"     "see WriteOutputUnt"
+typedef     ^                   OutputType           ReKi                WriteOutputNode        {:}        -     -     "Data to be written to an output file: see WriteOutputHdr for names of each variable"     "see WriteOutputUnt"
