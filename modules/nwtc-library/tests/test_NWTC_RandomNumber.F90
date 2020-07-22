@@ -1,4 +1,4 @@
-module test_RandNum
+module test_NWTC_RandomNumber
 
     use pFUnit_mod
     use NWTC_RandomNumber
