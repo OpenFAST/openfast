@@ -953,26 +953,26 @@ SUBROUTINE ElemK_Beam(A, L, Ixx, Iyy, Jzz, Shear, kappa, E, G, DirCos, K)
    Ax = kappa*A
    Ay = kappa*A
    
-   K(1:12,1:12) = 0
+   K(1:12,1:12) = 0.0_ReKi
    
    IF (Shear) THEN
-      Kx = 12.0*E*Iyy / (G*Ax*L*L)
-      Ky = 12.0*E*Ixx / (G*Ay*L*L)
+      Kx = 12.0_ReKi*E*Iyy / (G*Ax*L*L)
+      Ky = 12.0_ReKi*E*Ixx / (G*Ay*L*L)
    ELSE
-      Kx = 0.0
-      Ky = 0.0
+      Kx = 0.0_ReKi
+      Ky = 0.0_ReKi
    ENDIF
       
    K( 9,  9) = E*A/L
-   K( 7,  7) = 12.0*E*Iyy/( L*L*L*(1.0 + Kx) )
-   K( 8,  8) = 12.0*E*Ixx/( L*L*L*(1.0 + Ky) )
+   K( 7,  7) = 12.0_ReKi*E*Iyy/( L*L*L*(1.0_ReKi + Kx) )
+   K( 8,  8) = 12.0_ReKi*E*Ixx/( L*L*L*(1.0_ReKi + Ky) )
    K(12, 12) = G*Jzz/L
-   K(10, 10) = (4.0 + Ky)*E*Ixx / ( L*(1.0+Ky) )  
-   K(11, 11) = (4.0 + Kx)*E*Iyy / ( L*(1.0+Kx) )
-   K( 2,  4) = -6.*E*Ixx / ( L*L*(1.0+Ky) )
-   K( 1,  5) =  6.*E*Iyy / ( L*L*(1.0+Kx) )
-   K( 4, 10) = (2.0-Ky)*E*Ixx / ( L*(1.0+Ky) )
-   K( 5, 11) = (2.0-Kx)*E*Iyy / ( L*(1.0+Kx) )
+   K(10, 10) = (4.0_ReKi + Ky)*E*Ixx / ( L*(1.0_ReKi+Ky) )  
+   K(11, 11) = (4.0_ReKi + Kx)*E*Iyy / ( L*(1.0_ReKi+Kx) )
+   K( 2,  4) = -6._ReKi*E*Ixx / ( L*L*(1.0_ReKi+Ky) )
+   K( 1,  5) =  6._ReKi*E*Iyy / ( L*L*(1.0_ReKi+Kx) )
+   K( 4, 10) = (2.0_ReKi-Ky)*E*Ixx / ( L*(1.0_ReKi+Ky) )
+   K( 5, 11) = (2.0_ReKi-Kx)*E*Iyy / ( L*(1.0_ReKi+Kx) )
    
    K( 3,  3)  = K(9,9)
    K( 1,  1)  = K(7,7)
@@ -1005,7 +1005,7 @@ SUBROUTINE ElemK_Beam(A, L, Ixx, Iyy, Jzz, Shear, kappa, E, G, DirCos, K)
    K(8,4) = -K(4,2)
    K(4,8) = -K(4,2)
    
-   DC = 0
+   DC = 0.0_ReKi
    DC( 1: 3,  1: 3) = DirCos
    DC( 4: 6,  4: 6) = DirCos
    DC( 7: 9,  7: 9) = DirCos
@@ -1031,9 +1031,9 @@ SUBROUTINE ElemK_Cable(A, L, E, T0, DirCos, K)
    EAL0 = E*A/L0
    EE   = EAL0* Eps0/(1+Eps0)
 
-   K(1:12,1:12)=0
+   K(1:12,1:12)=0.0_ReKi
 
-   ! Note: only translatoinal DOF involved (1-3, 7-9)
+   ! Note: only translational DOF involved (1-3, 7-9)
    K(1,1)= EE
    K(2,2)= EE
    K(3,3)= EAL0
@@ -1050,7 +1050,8 @@ SUBROUTINE ElemK_Cable(A, L, E, T0, DirCos, K)
    K(8,8)= EE
    K(9,9)= EAL0
 
-   DC = 0
+
+   DC = 0.0_ReKi
    DC( 1: 3,  1: 3) = DirCos
    DC( 4: 6,  4: 6) = DirCos
    DC( 7: 9,  7: 9) = DirCos
@@ -1073,28 +1074,28 @@ SUBROUTINE ElemM_Beam(A, L, Ixx, Iyy, Jzz, rho, DirCos, M)
    ry = rho*Iyy;
    po = rho*Jzz*L;   
 
-   M(1:12,1:12) = 0
+   M(1:12,1:12) = 0.0_ReKi
       
-   M( 9,  9) = t/3.0
-   M( 7,  7) = 13.0*t/35.0 + 6.0*ry/(5.0*L)
-   M( 8,  8) = 13.0*t/35.0 + 6.0*rx/(5.0*L)
-   M(12, 12) = po/3.0
-   M(10, 10) = t*L*L/105.0 + 2.0*L*rx/15.0
-   M(11, 11) = t*L*L/105.0 + 2.0*L*ry/15.0
-   M( 2,  4) = -11.0*t*L/210.0 - rx/10.0
-   M( 1,  5) =  11.0*t*L/210.0 + ry/10.0
-   M( 3,  9) = t/6.0
-   M( 5,  7) =  13.*t*L/420. - ry/10.
-   M( 4,  8) = -13.*t*L/420. + rx/10. 
-   M( 6, 12) = po/6.
-   M( 2, 10) =  13.*t*L/420. - rx/10. 
-   M( 1, 11) = -13.*t*L/420. + ry/10.
-   M( 8, 10) =  11.*t*L/210. + rx/10.
-   M( 7, 11) = -11.*t*L/210. - ry/10. 
-   M( 1,  7) =  9.*t/70. - 6.*ry/(5.*L)
-   M( 2,  8) =  9.*t/70. - 6.*rx/(5.*L)
-   M( 4, 10) = -L*L*t/140. - rx*L/30. 
-   M( 5, 11) = -L*L*t/140. - ry*L/30.
+   M( 9,  9) = t/3.0_ReKi
+   M( 7,  7) = 13.0_ReKi*t/35.0_ReKi + 6.0_ReKi*ry/(5.0_ReKi*L)
+   M( 8,  8) = 13.0_ReKi*t/35.0_ReKi + 6.0_ReKi*rx/(5.0_ReKi*L)
+   M(12, 12) = po/3.0_ReKi
+   M(10, 10) = t*L*L/105.0_ReKi + 2.0_ReKi*L*rx/15.0_ReKi
+   M(11, 11) = t*L*L/105.0_ReKi + 2.0_ReKi*L*ry/15.0_ReKi
+   M( 2,  4) = -11.0_ReKi*t*L/210.0_ReKi - rx/10.0_ReKi
+   M( 1,  5) =  11.0_ReKi*t*L/210.0_ReKi + ry/10.0_ReKi
+   M( 3,  9) = t/6.0_ReKi
+   M( 5,  7) =  13._ReKi*t*L/420._ReKi - ry/10._ReKi
+   M( 4,  8) = -13._ReKi*t*L/420._ReKi + rx/10._ReKi
+   M( 6, 12) = po/6._ReKi
+   M( 2, 10) =  13._ReKi*t*L/420._ReKi - rx/10._ReKi
+   M( 1, 11) = -13._ReKi*t*L/420._ReKi + ry/10._ReKi
+   M( 8, 10) =  11._ReKi*t*L/210._ReKi + rx/10._ReKi
+   M( 7, 11) = -11._ReKi*t*L/210._ReKi - ry/10._ReKi
+   M( 1,  7) =  9._ReKi*t/70._ReKi - 6._ReKi*ry/(5._ReKi*L)
+   M( 2,  8) =  9._ReKi*t/70._ReKi - 6._ReKi*rx/(5._ReKi*L)
+   M( 4, 10) = -L*L*t/140._ReKi - rx*L/30._ReKi 
+   M( 5, 11) = -L*L*t/140._ReKi - ry*L/30._ReKi
    
    M( 3,  3) = M( 9,  9)
    M( 1,  1) = M( 7,  7)
@@ -1117,7 +1118,7 @@ SUBROUTINE ElemM_Beam(A, L, Ixx, Iyy, Jzz, rho, DirCos, M)
    M(10,  4) = M( 4, 10)
    M(11,  5) = M( 5, 11)
    
-   DC = 0
+   DC = 0.0_ReKi
    DC( 1: 3,  1: 3) = DirCos
    DC( 4: 6,  4: 6) = DirCos
    DC( 7: 9,  7: 9) = DirCos
@@ -1138,7 +1139,7 @@ SUBROUTINE ElemM_Cable(A, L, rho, DirCos, M)
 
    t = rho*A*L;
 
-   M(1:12,1:12) = 0
+   M(1:12,1:12) = 0.0_ReKi
 
    M( 1,  1) = 13._ReKi/35._ReKi * t
    M( 2,  2) = 13._ReKi/35._ReKi * t
@@ -1156,7 +1157,7 @@ SUBROUTINE ElemM_Cable(A, L, rho, DirCos, M)
    M( 8,  2) =  9._ReKi/70._ReKi * t
    M( 9,  3) = t/6.0_ReKi
    
-   DC = 0
+   DC = 0.0_ReKi
    DC( 1: 3,  1: 3) = DirCos
    DC( 4: 6,  4: 6) = DirCos
    DC( 7: 9,  7: 9) = DirCos
@@ -1179,19 +1180,19 @@ SUBROUTINE ElemG(A, L, rho, DirCos, F, g)
    REAL(ReKi) :: TempCoeff
    REAL(ReKi) :: w            ! weight per unit length
    
-   F = 0             ! initialize whole array to zero, then set the non-zero portions
+   F = 0.0_ReKi      ! initialize whole array to zero, then set the non-zero portions
    w = rho*A*g       ! weight per unit length
    
    ! lumped forces on both nodes (z component only):
-   F(3) = -0.5*L*w 
+   F(3) = -0.5_ReKi*L*w 
    F(9) = F(3)
           
    ! lumped moments on node 1 (x and y components only):
    ! bjj: note that RRD wants factor of 1/12 because of boundary conditions. Our MeshMapping routines use factor of 1/6 (assuming generic/different boundary  
    !      conditions), so we may have some inconsistent behavior. JMJ suggests using line2 elements for SubDyn's input/output meshes to improve the situation.
    TempCoeff = L*L*w/12.0_ReKi ! let's not calculate this twice  
-   F(4) = -TempCoeff * DirCos(2,3) ! = -L*w*Dy/12.   !bjj: DirCos(2,3) = Dy/L
-   F(5) =  TempCoeff * DirCos(1,3) ! =  L*w*Dx/12.   !bjj: DirCos(1,3) = Dx/L
+   F(4) = -TempCoeff * DirCos(2,3) ! = -L*w*Dy/12._ReKi   !bjj: DirCos(2,3) = Dy/L
+   F(5) =  TempCoeff * DirCos(1,3) ! =  L*w*Dx/12._ReKi   !bjj: DirCos(1,3) = Dx/L
 
       ! lumped moments on node 2: (note the opposite sign of node 1 moment)
    F(10) = -F(4)
@@ -1208,11 +1209,11 @@ SUBROUTINE ElemF_Cable(T0, DirCos, F)
    ! Local variables
    REAL(ReKi) :: DC(12, 12)
 
-   F(1:12) = 0  ! init 
+   F(1:12) = 0.0_ReKi  ! init 
    F(3) = +T0  
    F(9) = -T0 
 
-   DC = 0
+   DC = 0.0_ReKi
    DC( 1: 3,  1: 3) = DirCos
    DC( 4: 6,  4: 6) = DirCos
    DC( 7: 9,  7: 9) = DirCos
