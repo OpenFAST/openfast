@@ -28,9 +28,9 @@ endif()
 
 # AeroAcoustics - Main
 set(AEROACOUSTIC_SOURCES
-  src/AeroAcoustics/TNO.f90
-  src/AeroAcoustics/AeroAcoustics.f90
-  src/AeroAcoustics/AeroAcoustics_IO.f90
+  src/AeroAcoustics_TNO.f90
+  src/AeroAcoustics.f90
+  src/AeroAcoustics_IO.f90
   src/AeroAcoustics_Types.f90
 )
 
