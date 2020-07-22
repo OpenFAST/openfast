@@ -217,7 +217,7 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, AABlFile,  Default_DT, Out
         InputFileData%DT_AA = Default_DT
     END IF
 
-    CALL ReadVar(UnIn,InputFile,InputFileData%Comp_AA_After,"AAStart"      ,"" ,ErrStat2,ErrMsg2,UnEc); call check
+    CALL ReadVar(UnIn,InputFile,InputFileData%AAStart      ,"AAStart"      ,"" ,ErrStat2,ErrMsg2,UnEc); call check
     CALL ReadVar(UnIn,InputFile,InputFileData%AA_Bl_Prcntge,"BldPrcnt"     ,"-",ErrStat2,ErrMsg2,UnEc); call check
     CALL ReadCom( UnIn, InputFile, 'Section Header: Aeroacoustic Models', ErrStat2, ErrMsg2, UnEc ); call check
     CALL ReadVar(UnIn,InputFile,InputFileData%IInflow      ,"InflowMod"    ,"" ,ErrStat2,ErrMsg2,UnEc); call check
@@ -605,9 +605,6 @@ SUBROUTINE ValidateInputData( InputFileData, NumBl, ErrStat, ErrMsg )
    if (InputFileData%NrOutFile /= 1 .and. InputFileData%NrOutFile /= 2 .and. InputFileData%NrOutFile /= 3 &
        .and. InputFileData%NrOutFile /= 4) then
        call SetErrStat ( ErrID_Fatal, ' NrOutFile must be 1 or 2 or 3 or 4', ErrStat, ErrMsg, RoutineName )
-   end if
-   if (InputFileData%Comp_AA_After .lt. 0) then
-       call SetErrStat ( ErrID_Fatal, ' Comp_AA_After variable in aeroacustics input must be greater or equal than 0', ErrStat, ErrMsg, RoutineName )
    end if
 END SUBROUTINE ValidateInputData
 

@@ -102,7 +102,7 @@ typedef  ^                       ^                 ReKi              HAWC_Z0    
 typedef  ^                       ^                 ReKi              HAWC_InitPosition 3     -     -     "HAWC -- initial position (offset for wind file box)" meters
 typedef  ^                       ^                 LOGICAL           SumPrint          -     -     -     "Write summary info to a file <ROOTNAME>.IfW.Sum"        -
 typedef  ^                       ^                 IntKi             NumOuts           -     -     -     "Number of parameters in the output list (number of outputs requested)" -
-typedef  ^                       ^                 CHARACTER(10)     OutList           :     -     -     "List of user-requested output channels"                 -
+typedef  ^                       ^                CHARACTER(ChanLen) OutList           :     -     -     "List of user-requested output channels"                 -
 typedef  ^                       ^                 IntKi             SensorType        -  SensorType_None    -     "Sensor type (for lidar/sensor module)"                 -
 typedef  ^                       ^                 IntKi             NumPulseGate      -     -     -     "the number of range gates to return wind speeds at"                 -
 typedef  ^                       ^                 ReKi              RotorApexOffsetPos 3    -     -     "position of the lidar unit relative to the rotor apex of rotation"	m

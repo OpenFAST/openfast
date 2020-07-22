@@ -38,7 +38,7 @@ private
    
    
 subroutine DBEMT_ValidateInitInp(interval, InitInp, errStat, errMsg)
-   real(DbKi),                      intent(inout) :: interval      !< Coupling interval in seconds: the rate that
+   real(DbKi),                      intent(in   ) :: interval      !< Coupling interval in seconds
    type(DBEMT_InitInputType),       intent(in   ) :: InitInp       !< Input data for initialization routine
    integer(IntKi),                  intent(  out) :: errStat       !< Error status of the operation
    character(*),                    intent(  out) :: errMsg        !< Error message if ErrStat /= ErrID_None
@@ -98,7 +98,7 @@ subroutine DBEMT_Init( InitInp, u, p, x, OtherState, m, Interval, InitOut, ErrSt
    type(DBEMT_ContinuousStateType), intent(  out) :: x             !< Initial continuous states
    type(DBEMT_OtherStateType),      intent(  out) :: OtherState    !< Initial other/logical states
    type(DBEMT_MiscVarType),         intent(  out) :: m             !< Initial misc/optimization variables
-   real(DbKi),                      intent(inout) :: interval      !< Coupling interval in seconds: the rate that
+   real(DbKi),                      intent(in   ) :: interval      !< Coupling interval in seconds: the rate that
                                                                    !!   (1) DBEMT_UpdateStates() is called in loose coupling &
                                                                    !!   (2) DBEMT_UpdateDiscState() is called in tight coupling.
                                                                    !!   Input is the suggested time from the glue code;
@@ -234,9 +234,7 @@ subroutine DBEMT_UpdateStates( i, j, t, u,  p, x, OtherState, m, errStat, errMsg
 
    ! local variables
    real(ReKi)                                   :: spanRatio       ! local version of r / R
-   real(ReKi)                                   :: temp, tau2 , A, B, C0, k_tau, C0_2 ! tau1_plus1, C_tau1, C, K1
-   real(ReKi)                                   :: Un_disk
-   real(ReKi)                                   :: AxInd_disk
+   real(ReKi)                                   :: tau2 , A, B, C0, k_tau, C0_2 ! tau1_plus1, C_tau1, C, K1
    integer(IntKi)                               :: indx
    
    character(*), parameter                      :: RoutineName = 'DBEMT_UpdateStates'

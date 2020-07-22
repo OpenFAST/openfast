@@ -36,6 +36,7 @@ PROGRAM HydroDynDriver
       REAL(ReKi)              :: Gravity
       CHARACTER(1024)         :: HDInputFile
       CHARACTER(1024)         :: OutRootName
+      LOGICAL                 :: Linearize
       INTEGER                 :: NSteps
       REAL(DbKi)              :: TimeInterval
       INTEGER                 :: WAMITInputsMod
@@ -111,7 +112,6 @@ PROGRAM HydroDynDriver
    real(ReKi)                                     :: PrevClockTime                           ! Clock time at start of simulation in seconds
    real(ReKi)                                     :: UsrTime1                                ! User CPU time for simulation initialization
    real(ReKi)                                     :: UsrTime2                                ! User CPU time for simulation (without intialization)
-   real(ReKi)                                     :: UsrTimeDiff                             ! Difference in CPU time from start to finish of program execution
    real(DbKi)                                     :: TiLstPrn                                ! The simulation time of the last print
    real(DbKi)                                     :: t_global                                ! Current simulation time (for global/FAST simulation)
    real(DbKi)                                     :: SttsTime                                ! Amount of time between screen status messages (sec)
@@ -184,6 +184,7 @@ PROGRAM HydroDynDriver
       InitInData%InputFile    = drvrInitInp%HDInputFile
       InitInData%OutRootName  = drvrInitInp%OutRootName
       InitInData%TMax         = drvrInitInp%NSteps * drvrInitInp%TimeInterval
+      InitInData%Linearize    = drvrInitInp%Linearize
    END IF
   
       ! Get the current time
@@ -538,7 +539,7 @@ subroutine HD_DvrCleanup()
       end if
       
      ! Print *, time
-      call RunTimes( StrtTime, REAL(UsrTime1,ReKi), SimStrtTime, REAL(UsrTime2,ReKi), time, UsrTimeDiff )
+      call RunTimes( StrtTime, REAL(UsrTime1,ReKi), SimStrtTime, REAL(UsrTime2,ReKi), time )
       call NormStop()
       
 end subroutine HD_DvrCleanup
@@ -743,7 +744,19 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
       RETURN
    END IF   
      
+       ! Linearize
    
+   CALL ReadVar ( UnIn, FileName, InitInp%Linearize, 'Linearize', &
+                                    'Linearize parameter', ErrStat, ErrMsg, UnEchoLocal )
+
+   IF ( ErrStat /= ErrID_None ) THEN
+      ErrMsg  = ' Failed to read Linearize parameter.'
+      ErrStat = ErrID_Fatal
+      CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
+      CLOSE( UnIn )
+      RETURN
+   END IF   
+  
       ! NSteps
    
    CALL ReadVar ( UnIn, FileName, InitInp%NSteps, 'NSteps', &

@@ -294,7 +294,7 @@ SUBROUTINE HDOut_WriteWvKinFiles( Rootname, HD_Prog, NStepWave, NNodes, NWaveEle
    CHARACTER(5)                               :: extension(7)     
    INTEGER                                    :: i, j, iFile
    CHARACTER(64)                              :: Frmt, Sfrmt
-   CHARACTER(10)                              :: Delim
+   CHARACTER(ChanLen)                         :: Delim
       ! Initialize ErrStat      
    ErrStat = ErrID_None         
    ErrMsg  = ""       
@@ -717,10 +717,7 @@ SUBROUTINE HDOUT_Init( HydroDyn_ProgDesc, InitInp, y,  p, m, InitOut, ErrStat, E
          IF (ErrStat >= AbortErrLev ) RETURN
       END IF
       
-      IF ( p%OutSwtch == 1 ) THEN ! Only HD-level output writing
-         ! HACK  WE can tell FAST not to write any HD outputs by simply deallocating the WriteOutputHdr array!
-         DEALLOCATE ( InitOut%WriteOutputHdr )
-      END IF
+      
 
    RETURN
 
@@ -865,8 +862,8 @@ FUNCTION   HDOut_GetChannels    ( NUserOutputs, UserOutputs, OutList, foundMask,
 
 !----------------------------------------------------------------------------------------------------    
    INTEGER,                       INTENT( IN    ) :: NUserOutputs         ! Number of user-specified output channels
-   CHARACTER(10),                 INTENT( IN    ) :: UserOutputs (:)      ! An array holding the names of the requested output channels.
-   CHARACTER(10),                 INTENT(   OUT ) :: OutList (:)          ! An array holding the names of the matched WAMIT output channels. 
+   CHARACTER(ChanLen),            INTENT( IN    ) :: UserOutputs (:)      ! An array holding the names of the requested output channels.
+   CHARACTER(ChanLen),            INTENT(   OUT ) :: OutList (:)          ! An array holding the names of the matched WAMIT output channels. 
    LOGICAL,                       INTENT( INOUT ) :: foundMask (:)        ! A mask indicating whether a user requested channel belongs to a module's output channels.
    INTEGER,                       INTENT(   OUT ) :: ErrStat              ! a non-zero value indicates an error occurred           
    CHARACTER(*),                  INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
@@ -879,7 +876,7 @@ FUNCTION   HDOut_GetChannels    ( NUserOutputs, UserOutputs, OutList, foundMask,
    INTEGER                                :: count                                     ! Generic loop-counting index.
    INTEGER                                :: INDX                                      ! Index for valid arrays
    
-   CHARACTER(10)                          :: OutListTmp                                ! A string to temporarily hold OutList(I).
+   CHARACTER(ChanLen)                     :: OutListTmp                                ! A string to temporarily hold OutList(I).
    CHARACTER(28), PARAMETER               :: OutPFmt   = "( I4, 3X,A 10,1 X, A10 )"    ! Output format parameter output list.
    LOGICAL                                :: CheckOutListAgain
    LOGICAL                                :: newFoundMask (NUserOutputs)        ! A mask indicating whether a user requested channel belongs to a module's output channels.
@@ -972,7 +969,7 @@ SUBROUTINE HDOut_ChkOutLst( OutList, y, p, ErrStat, ErrMsg )
    TYPE(HydroDyn_OutputType),     INTENT( INOUT ) :: y                                ! This module's internal data
    TYPE(HydroDyn_ParameterType),  INTENT( INOUT ) :: p                                   ! parameter data for this instance of the HD module   
 !   INTEGER,                 INTENT(IN   ) :: NumMemberNodes(*)                         ! the number of nodes on each of the first 9 members
-   CHARACTER(10),                 INTENT( IN    ) :: OutList (:)                               ! An array holding the names of the requested output channels.         
+   CHARACTER(ChanLen),            INTENT( IN    ) :: OutList (:)                               ! An array holding the names of the requested output channels.         
    INTEGER,                       INTENT(   OUT ) :: ErrStat              ! a non-zero value indicates an error occurred           
    CHARACTER(*),                  INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
    
@@ -982,7 +979,7 @@ SUBROUTINE HDOut_ChkOutLst( OutList, y, p, ErrStat, ErrMsg )
 !   INTEGER                                :: J                                         ! Generic loop-counting index.
    INTEGER                                :: INDX                                      ! Index for valid arrays
    
-   CHARACTER(10)                          :: OutListTmp                                ! A string to temporarily hold OutList(I).
+   CHARACTER(ChanLen)                     :: OutListTmp                                ! A string to temporarily hold OutList(I).
    CHARACTER(28), PARAMETER               :: OutPFmt = "( I4, 3X,A 10,1 X, A10 )"      ! Output format parameter output list.
    LOGICAL                                :: InvalidOutput(MaxHDOutputs)               ! This array determines if the output channel is valid for this configuration
    LOGICAL                                :: CheckOutListAgain

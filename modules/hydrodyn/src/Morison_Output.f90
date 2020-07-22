@@ -7327,7 +7327,7 @@ END IF
    
    IF ( InitInp%OutAll  ) THEN
      ! p%NumOutAll = InitInp%NMember*2*22 + InitInp%NJoints*19
-     p%NumOutAll = 0
+      p%NumOutAll = 0
    ELSE
       p%NumOutAll = 0
    END IF
@@ -7430,8 +7430,8 @@ FUNCTION   GetMorisonChannels    ( NUserOutputs, UserOutputs, OutList, foundMask
 
 !----------------------------------------------------------------------------------------------------    
    INTEGER,                       INTENT( IN    ) :: NUserOutputs         ! Number of user-specified output channels
-   CHARACTER(10),                 INTENT( IN    ) :: UserOutputs (:)      ! An array holding the names of the requested output channels.
-   CHARACTER(10),                 INTENT(   OUT ) :: OutList (:)          ! An array holding the names of the matched WAMIT output channels. 
+   CHARACTER(ChanLen),            INTENT( IN    ) :: UserOutputs (:)      ! An array holding the names of the requested output channels.
+   CHARACTER(ChanLen),            INTENT(   OUT ) :: OutList (:)          ! An array holding the names of the matched WAMIT output channels. 
    LOGICAL,                       INTENT( INOUT ) :: foundMask (:)        ! A mask indicating whether a user requested channel belongs to a module's output channels.
    INTEGER,                       INTENT(   OUT ) :: ErrStat              ! a non-zero value indicates an error occurred           
    CHARACTER(*),                  INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
@@ -7444,7 +7444,7 @@ FUNCTION   GetMorisonChannels    ( NUserOutputs, UserOutputs, OutList, foundMask
    INTEGER                                :: count                                     ! Generic loop-counting index.
    INTEGER                                :: INDX                                      ! Index for valid arrays
    
-   CHARACTER(10)                          :: OutListTmp                                ! A string to temporarily hold OutList(I).
+   CHARACTER(ChanLen)                     :: OutListTmp                                ! A string to temporarily hold OutList(I).
    CHARACTER(28), PARAMETER               :: OutPFmt   = "( I4, 3X,A 10,1 X, A10 )"    ! Output format parameter output list.
 !   LOGICAL                                :: InvalidOutput(MaxMrsnOutputs)                        ! This array determines if the output channel is valid for this configuration
    LOGICAL                                :: CheckOutListAgain
@@ -7534,7 +7534,7 @@ SUBROUTINE MrsnOut_ChkOutLst( OutList, ValidOutList, y, p, ErrStat, ErrMsg )
    
    
       ! Passed variables
-   CHARACTER(10),                 INTENT( IN    ) :: OutList (:)          ! An array holding the names of the requested output channels.   
+   CHARACTER(ChanLen),            INTENT( IN    ) :: OutList (:)          ! An array holding the names of the requested output channels.   
    LOGICAL,                       INTENT( IN    ) :: ValidOutList (:)     ! An array holding the a flag for whether the elements are valid requested output channels.   
    TYPE(Morison_OutputType),      INTENT( INOUT ) :: y                    ! Morison module output data
    TYPE(Morison_ParameterType),   INTENT( INOUT ) :: p                    ! Morison module parameter data
@@ -7548,7 +7548,7 @@ SUBROUTINE MrsnOut_ChkOutLst( OutList, ValidOutList, y, p, ErrStat, ErrMsg )
 !   INTEGER                                :: J                                         ! Generic loop-counting index.
    INTEGER                                :: INDX                                      ! Index for valid arrays
    
-   CHARACTER(10)                          :: OutListTmp                                ! A string to temporarily hold OutList(I).
+   CHARACTER(ChanLen)                     :: OutListTmp                                ! A string to temporarily hold OutList(I).
    CHARACTER(28), PARAMETER               :: OutPFmt = "( I4, 3X,A 10,1 X, A10 )"      ! Output format parameter output list.
    
    

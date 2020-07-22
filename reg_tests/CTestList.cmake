@@ -102,7 +102,7 @@ of_regression("WP_VSP_WTurb_PitchFail"          "openfast;elastodyn;aerodyn14;se
 of_regression("WP_VSP_ECD"                      "openfast;elastodyn;aerodyn15;servodyn")
 of_regression("WP_VSP_WTurb"                    "openfast;elastodyn;aerodyn15;servodyn")
 of_regression("SWRT_YFree_VS_EDG01"             "openfast;elastodyn;aerodyn15;servodyn")
-of_regression("SWRT_YFree_VS_EDC01"             "openfast;elastodyn;aerodyn15;servodyn")
+of_regression("SWRT_YFree_VS_EDC01"             "openfast;elastodyn;aerodyn14;servodyn")
 of_regression("SWRT_YFree_VS_WTurb"             "openfast;elastodyn;aerodyn14;servodyn")
 of_regression("5MW_Land_DLL_WTurb"              "openfast;elastodyn;aerodyn15;servodyn")
 of_regression("5MW_OC3Mnpl_DLL_WTurb_WavesIrr"  "openfast;elastodyn;aerodyn15;servodyn;hydrodyn;subdyn")
@@ -113,12 +113,16 @@ of_regression("5MW_TLP_DLL_WTurb_WavesIrr_WavesMulti"  "openfast;elastodyn;aerod
 of_regression("5MW_OC3Spar_DLL_WTurb_WavesIrr"         "openfast;elastodyn;aerodyn15;servodyn;hydrodyn;map")
 of_regression("5MW_OC4Semi_WSt_WavesWN"                "openfast;elastodyn;aerodyn15;servodyn;hydrodyn;moordyn")
 of_regression("5MW_Land_BD_DLL_WTurb"                  "openfast;beamdyn;aerodyn15;servodyn")
+of_regression("5MW_OC4Jckt_ExtPtfm"                    "openfast;elastodyn;extptfm")
+of_regression("HelicalWake_OLAF"                       "openfast;aerodyn15;olaf")
+of_regression("EllipticalWing_OLAF"                    "openfast;aerodyn15;olaf")
 
 # Linearized OpenFAST regression tests
-of_regression_linear("WP_Stationary_Linear"         "openfast;linear;elastodyn;aerodyn15")
+of_regression_linear("WP_Stationary_Linear"         "openfast;linear;elastodyn")
 of_regression_linear("Ideal_Beam_Fixed_Free_Linear" "openfast;linear;beamdyn")
 of_regression_linear("Ideal_Beam_Free_Free_Linear"  "openfast;linear;beamdyn")
 of_regression_linear("5MW_Land_BD_Linear"           "openfast;linear;beamdyn;servodyn")
+of_regression_linear("5MW_OC4Semi_Linear"           "openfast;linear;hydrodyn;servodyn")
 
 # BeamDyn regression tests
 bd_regression("bd_5MW_dynamic"              "beamdyn;dynamic")
