@@ -65,6 +65,16 @@ function(of_regression TESTNAME LABEL)
   regression(${TEST_SCRIPT} ${OPENFAST_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
 endfunction(of_regression)
 
+# openfast aeroacoustic 
+function(of_regression_aeroacoustic TESTNAME LABEL)
+  set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeOpenfastAeroAcousticRegressionCase.py")
+  set(OPENFAST_EXECUTABLE "${CTEST_OPENFAST_EXECUTABLE}")
+  set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
+  set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/glue-codes/openfast")
+  regression(${TEST_SCRIPT} ${OPENFAST_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
+endfunction(of_regression_aeroacoustic)
+
+# beamdyn
 # openfast linearized
 function(of_regression_linear TESTNAME LABEL)
   set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeOpenfastLinearRegressionCase.py")
@@ -116,6 +126,9 @@ of_regression("5MW_Land_BD_DLL_WTurb"                  "openfast;beamdyn;aerodyn
 of_regression("5MW_OC4Jckt_ExtPtfm"                    "openfast;elastodyn;extptfm")
 of_regression("HelicalWake_OLAF"                       "openfast;aerodyn15;olaf")
 of_regression("EllipticalWing_OLAF"                    "openfast;aerodyn15;olaf")
+
+# AeroAcoustic regression test
+of_regression_aeroacoustic("IEA_LB_RWT-AeroAcoustics"  "openfast;aerodyn15;aeroacoustics")
 
 # Linearized OpenFAST regression tests
 of_regression_linear("WP_Stationary_Linear"         "openfast;linear;elastodyn")
