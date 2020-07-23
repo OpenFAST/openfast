@@ -3057,7 +3057,7 @@ SUBROUTINE Init_FullOpt1_Jacobian( p_FAST, MeshMapData, ED_PlatformPtMesh, SD_TP
                                     + SD_LMesh%NNodes *6          ! SD inputs: 6 loads per node (size of SD input from HD)       
    END IF
                
-   p_FAST%SizeJac_Opt1(4) = HD_M_Mesh%NNodes *6 &    ! HD inputs: 6 accelerations per node (on each Morison mesh) 
+   p_FAST%SizeJac_Opt1(4) = HD_M_Mesh%NNodes *6 &                 ! HD inputs: 6 accelerations per node (on each Morison mesh) 
                                  + HD_WAMIT_Mesh%NNodes*6         ! HD inputs: 6 accelerations per node (on the WAMIT mesh)      
    
    IF ( p_FAST%CompElast == Module_BD .and. BD_Solve_Option1) THEN   
@@ -3231,7 +3231,7 @@ SUBROUTINE Init_FullOpt1_Jacobian( p_FAST, MeshMapData, ED_PlatformPtMesh, SD_TP
    !(Mesh)
    do i=1,HD_WAMIT_Mesh%NNodes
       do j=1,3
-         MeshMapData%Jac_u_indx(index,1) = 13 !Module/Mesh/Field: u_HD%WAMITMesh%TranslationAcc = 13
+         MeshMapData%Jac_u_indx(index,1) = 11 !Module/Mesh/Field: u_HD%WAMITMesh%TranslationAcc = 11
          MeshMapData%Jac_u_indx(index,2) =  j !index:  j
          MeshMapData%Jac_u_indx(index,3) =  i !Node:   i
          index = index + 1
@@ -3240,7 +3240,7 @@ SUBROUTINE Init_FullOpt1_Jacobian( p_FAST, MeshMapData, ED_PlatformPtMesh, SD_TP
    
    do i=1,HD_WAMIT_Mesh%NNodes
       do j=1,3
-         MeshMapData%Jac_u_indx(index,1) = 14 !Module/Mesh/Field:  u_HD%WAMITMesh%RotationAcc = 14
+         MeshMapData%Jac_u_indx(index,1) = 12 !Module/Mesh/Field:  u_HD%WAMITMesh%RotationAcc = 12
          MeshMapData%Jac_u_indx(index,2) =  j !index:  j
          MeshMapData%Jac_u_indx(index,3) =  i !Node:   i
          index = index + 1
@@ -3257,7 +3257,7 @@ SUBROUTINE Init_FullOpt1_Jacobian( p_FAST, MeshMapData, ED_PlatformPtMesh, SD_TP
          
          do i=1,u_BD(k)%RootMotion%NNodes
             do j=1,3
-               MeshMapData%Jac_u_indx(index,1) =  13 + 2*k !Module/Mesh/Field: u_BD(k)%RootMotion%TranslationAcc = 15 (k=1), 17 (k=2), 19 (k=3)
+               MeshMapData%Jac_u_indx(index,1) =  11 + 2*k !Module/Mesh/Field: u_BD(k)%RootMotion%TranslationAcc = 13 (k=1), 15 (k=2), 17 (k=3)
                MeshMapData%Jac_u_indx(index,2) =  j !index:  j
                MeshMapData%Jac_u_indx(index,3) =  i !Node:   i
                index = index + 1
@@ -3266,7 +3266,7 @@ SUBROUTINE Init_FullOpt1_Jacobian( p_FAST, MeshMapData, ED_PlatformPtMesh, SD_TP
       
          do i=1,u_BD(k)%RootMotion%NNodes
             do j=1,3
-               MeshMapData%Jac_u_indx(index,1) =  14 + 2*k !Module/Mesh/Field: u_BD(k)%RootMotion%RotationAcc = 16 (k=1), 18 (k=2), 20 (k=3)
+               MeshMapData%Jac_u_indx(index,1) =  12 + 2*k !Module/Mesh/Field: u_BD(k)%RootMotion%RotationAcc = 14 (k=1), 16 (k=2), 18 (k=3)
                MeshMapData%Jac_u_indx(index,2) =  j !index:  j
                MeshMapData%Jac_u_indx(index,3) =  i !Node:   i
                index = index + 1
@@ -3284,7 +3284,7 @@ SUBROUTINE Init_FullOpt1_Jacobian( p_FAST, MeshMapData, ED_PlatformPtMesh, SD_TP
    ! Orca_PtfmMesh
    do i=1,Orca_PtfmMesh%NNodes
       do j=1,3
-         MeshMapData%Jac_u_indx(index,1) =  21 !Module/Mesh/Field: u_Orca%PtfmMesh%TranslationAcc = 21
+         MeshMapData%Jac_u_indx(index,1) =  19 !Module/Mesh/Field: u_Orca%PtfmMesh%TranslationAcc = 19
          MeshMapData%Jac_u_indx(index,2) =  j !index:  j
          MeshMapData%Jac_u_indx(index,3) =  i !Node:   i
          index = index + 1                  
@@ -3293,7 +3293,7 @@ SUBROUTINE Init_FullOpt1_Jacobian( p_FAST, MeshMapData, ED_PlatformPtMesh, SD_TP
                                             
    do i=1,Orca_PtfmMesh%NNodes                  
       do j=1,3                              
-         MeshMapData%Jac_u_indx(index,1) =  22 !Module/Mesh/Field:  u_Orca%PtfmMesh%RotationAcc = 22
+         MeshMapData%Jac_u_indx(index,1) =  20 !Module/Mesh/Field:  u_Orca%PtfmMesh%RotationAcc = 20
          MeshMapData%Jac_u_indx(index,2) =  j !index:  j
          MeshMapData%Jac_u_indx(index,3) =  i !Node:   i
          index = index + 1
@@ -3307,7 +3307,7 @@ SUBROUTINE Init_FullOpt1_Jacobian( p_FAST, MeshMapData, ED_PlatformPtMesh, SD_TP
    ! ExtPtfm_PtfmMesh
    do i=1,ExtPtfm_PtfmMesh%NNodes
       do j=1,3
-         MeshMapData%Jac_u_indx(index,1) =  23 !Module/Mesh/Field: u_ExtPtfm%PtfmMesh%TranslationAcc = 23
+         MeshMapData%Jac_u_indx(index,1) =  21 !Module/Mesh/Field: u_ExtPtfm%PtfmMesh%TranslationAcc = 21
          MeshMapData%Jac_u_indx(index,2) =  j !index:  j
          MeshMapData%Jac_u_indx(index,3) =  i !Node:   i
          index = index + 1                  
@@ -3316,7 +3316,7 @@ SUBROUTINE Init_FullOpt1_Jacobian( p_FAST, MeshMapData, ED_PlatformPtMesh, SD_TP
                                             
    do i=1,ExtPtfm_PtfmMesh%NNodes                  
       do j=1,3                              
-         MeshMapData%Jac_u_indx(index,1) =  24 !Module/Mesh/Field:  u_ExtPtfm%PtfmMesh%RotationAcc = 24
+         MeshMapData%Jac_u_indx(index,1) =  22 !Module/Mesh/Field:  u_ExtPtfm%PtfmMesh%RotationAcc = 22
          MeshMapData%Jac_u_indx(index,2) =  j !index:  j
          MeshMapData%Jac_u_indx(index,3) =  i !Node:   i
          index = index + 1
