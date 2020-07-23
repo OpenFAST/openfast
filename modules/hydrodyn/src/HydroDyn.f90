@@ -1429,19 +1429,31 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
          
          
          IF ( InitLocal%PotMod == 1 .AND.  InitLocal%WAMIT%RdtnMod == 1) THEN
-            ! Write the header for this section
-            WRITE( InitLocal%UnSum,  '(//)' ) 
-            WRITE( InitLocal%UnSum,  '(A)' ) 'Radiation memory effect kernel'
-            WRITE( InitLocal%UnSum,  '(//)' ) 
-            WRITE( InitLocal%UnSum, '(1X,A10,2X,A10,21(2X,A16))' )    '    n    ' , '     t    ', '   K11    ', '   K12    ', '    K13   ', '    K14    ', '    K15    ', '    K16    ', '    K22   ', '    K23   ', '    K24    ', '    K25    ', '    K26    ', '    K33    ', '    K34    ', '    K35    ',     'K36    ', '    K44    ', '    K45    ', '    K46    ', '    K55    ', '    K56    ', '    K66    '
-            WRITE( InitLocal%UnSum, '(1X,A10,2X,A10,21(2X,A16))' )    '   (-)   ' , '    (s)   ', ' (kg/s^2) ', ' (kg/s^2) ', ' (kg/s^2) ', ' (kgm/s^2) ', ' (kgm/s^2) ', ' (kgm/s^2) ', ' (kg/s^2) ', ' (kg/s^2) ', ' (kgm/s^2) ', ' (kgm/s^2) ', ' (kgm/s^2) ', ' (kg/s^2)  ', ' (kgm/s^2) ', ' (kgm/s^2) ', ' (kgm/s^2) ', '(kgm^2/s^2)', '(kgm^2/s^2)', '(kgm^2/s^2)', '(kgm^2/s^2)', '(kgm^2/s^2)', '(kgm^2/s^2)'
+            ! Write the header for this section:  Note: When NBodyMod = 1 the kernel is now 6*NBody by 6*Nbody in size,
+            !   and we have NBody 6 by 6 kernels for NBodyMod=2 or 3
+            if (p%NBodyMod == 1) then
+               !TODO: Implement NBodyMod=1 kernel printout
+            else
+               do j = 1,p%nWAMITObj
+                  WRITE( InitLocal%UnSum,  '(//)' ) 
+                  WRITE( InitLocal%UnSum,  '(A)' ) 'Radiation memory effect kernel'
+                  WRITE( InitLocal%UnSum,  '(//)' ) 
+                  WRITE( InitLocal%UnSum, '(1X,A10,2X,A10,21(2X,A16))' )    '    n    ' , '     t    ', '   K11    ', '   K12    ', '    K13   ', '    K14    ', '    K15    ', '    K16    ', '    K22   ', '    K23   ', '    K24    ', '    K25    ', '    K26    ', '    K33    ', '    K34    ', '    K35    ',     'K36    ', '    K44    ', '    K45    ', '    K46    ', '    K55    ', '    K56    ', '    K66    '
+                  WRITE( InitLocal%UnSum, '(1X,A10,2X,A10,21(2X,A16))' )    '   (-)   ' , '    (s)   ', ' (kg/s^2) ', ' (kg/s^2) ', ' (kg/s^2) ', ' (kgm/s^2) ', ' (kgm/s^2) ', ' (kgm/s^2) ', ' (kg/s^2) ', ' (kg/s^2) ', ' (kgm/s^2) ', ' (kgm/s^2) ', ' (kgm/s^2) ', ' (kg/s^2)  ', ' (kgm/s^2) ', ' (kgm/s^2) ', ' (kgm/s^2) ', '(kgm^2/s^2)', '(kgm^2/s^2)', '(kgm^2/s^2)', '(kgm^2/s^2)', '(kgm^2/s^2)', '(kgm^2/s^2)'
 
                ! Write the data
-            DO I = 0,p%WAMIT(1)%Conv_Rdtn%NStepRdtn-1
-   
-               WRITE( InitLocal%UnSum, '(1X,I10,2X,E12.5,21(2X,ES16.5))' ) I, I*p%WAMIT(1)%Conv_Rdtn%RdtnDT, p%WAMIT(1)%Conv_Rdtn%RdtnKrnl(I,1,1), p%WAMIT(1)%Conv_Rdtn%RdtnKrnl(I,1,2), p%WAMIT(1)%Conv_Rdtn%RdtnKrnl(I,1,3), p%WAMIT(1)%Conv_Rdtn%RdtnKrnl(I,1,4), p%WAMIT(1)%Conv_Rdtn%RdtnKrnl(I,1,5), p%WAMIT(1)%Conv_Rdtn%RdtnKrnl(I,1,6), p%WAMIT(1)%Conv_Rdtn%RdtnKrnl(I,2,2), p%WAMIT(1)%Conv_Rdtn%RdtnKrnl(I,2,3), p%WAMIT(1)%Conv_Rdtn%RdtnKrnl(I,2,4), p%WAMIT(1)%Conv_Rdtn%RdtnKrnl(I,2,5), p%WAMIT(1)%Conv_Rdtn%RdtnKrnl(I,2,6), p%WAMIT(1)%Conv_Rdtn%RdtnKrnl(I,3,3), p%WAMIT(1)%Conv_Rdtn%RdtnKrnl(I,3,4), p%WAMIT(1)%Conv_Rdtn%RdtnKrnl(I,3,5), p%WAMIT(1)%Conv_Rdtn%RdtnKrnl(I,3,6), p%WAMIT(1)%Conv_Rdtn%RdtnKrnl(I,4,4), p%WAMIT(1)%Conv_Rdtn%RdtnKrnl(I,4,5), p%WAMIT(1)%Conv_Rdtn%RdtnKrnl(I,4,6), p%WAMIT(1)%Conv_Rdtn%RdtnKrnl(I,5,5), p%WAMIT(1)%Conv_Rdtn%RdtnKrnl(I,5,6), p%WAMIT(1)%Conv_Rdtn%RdtnKrnl(I,6,6)
-      
-            END DO
+                  DO I = 0,p%WAMIT(j)%Conv_Rdtn%NStepRdtn-1
+                     WRITE( InitLocal%UnSum, '(1X,I10,2X,E12.5,21(2X,ES16.5))' ) I, I*p%WAMIT(j)%Conv_Rdtn%RdtnDT, &
+                        p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(I,1,1), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(I,1,2), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(I,1,3), &
+                        p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(I,1,4), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(I,1,5), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(I,1,6), &
+                        p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(I,2,2), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(I,2,3), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(I,2,4), &
+                        p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(I,2,5), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(I,2,6), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(I,3,3), &
+                        p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(I,3,4), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(I,3,5), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(I,3,6), &
+                        p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(I,4,4), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(I,4,5), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(I,4,6), &
+                        p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(I,5,5), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(I,5,6), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(I,6,6)
+                  END DO
+               end do
+            end if
          END IF
          
       END IF
@@ -2409,7 +2421,7 @@ SUBROUTINE HD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
    TYPE(HydroDyn_ContinuousStateType)                      :: x_m
    TYPE(HydroDyn_InputType)                                :: u_perturb
    REAL(R8Ki)                                        :: delta        ! delta change in input or state
-   INTEGER(IntKi)                                    :: i, j, NN, offsetI, offsetJ
+   INTEGER(IntKi)                                    :: i, j, k, startingI, startingJ, bOffset, offsetI, offsetJ, n_du_plus1
    
    INTEGER(IntKi)                                    :: ErrStat2
    CHARACTER(ErrMsgLen)                              :: ErrMsg2
@@ -2421,8 +2433,7 @@ SUBROUTINE HD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
    ErrStat = ErrID_None
    ErrMsg  = ''
    
-   ! LIN_TODO: We need to deal with the case where either RdtnMod=0, and/or ExtcnMod=0 and hence %SS_Rdtn data or %SS_Exctn data is not valid
-   NN = p%WAMIT(1)%SS_Rdtn%numStates + p%WAMIT(1)%SS_Exctn%numStates
+   n_du_plus1 = size(p%Jac_u_indx,1)+1
    
       ! make a copy of the inputs to perturb
    call HydroDyn_CopyInput( u, u_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2)
@@ -2440,7 +2451,7 @@ SUBROUTINE HD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
 
       ! allocate dYdu if necessary
       if (.not. allocated(dYdu)) then
-         call AllocAry(dYdu, p%Jac_ny, size(p%Jac_u_indx,1)+1, 'dYdu', ErrStat2, ErrMsg2)
+         call AllocAry(dYdu, p%Jac_ny, n_du_plus1, 'dYdu', ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          if (ErrStat>=AbortErrLev) then
             call cleanup()
@@ -2486,7 +2497,7 @@ SUBROUTINE HD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
       end do
       
          ! p%WaveElev0 column
-      dYdu(:,size(p%Jac_u_indx,1)+1) = 0
+      dYdu(:,n_du_plus1) = 0
       
 
       if (ErrStat>=AbortErrLev) then
@@ -2502,11 +2513,14 @@ SUBROUTINE HD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
 
    IF ( PRESENT( dXdu ) ) THEN
 
+   ! LIN_TODO: We need to deal with the case where either RdtnMod=0, and/or ExtcnMod=0 and hence %SS_Rdtn data or %SS_Exctn data is not valid
+
+   
       ! Calculate the partial derivative of the continuous state functions (X) with respect to the inputs (u) here:
 
       ! allocate dXdu if necessary
       if (.not. allocated(dXdu)) then
-         call AllocAry(dXdu, NN, size(p%Jac_u_indx,1)+1, 'dXdu', ErrStat2, ErrMsg2)
+         call AllocAry(dXdu, p%totalStates, n_du_plus1, 'dXdu', ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          if (ErrStat>=AbortErrLev) then
             call cleanup()
@@ -2517,20 +2531,102 @@ SUBROUTINE HD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
       offsetI = 0
       dXdu = 0.0_R8Ki
       
-   
-      do i = 1,p%WAMIT(1)%SS_Exctn%numStates
-         dXdu(offsetI+i,size(p%Jac_u_indx,1)+1) = p%WAMIT(1)%SS_Exctn%B(i)
-      end do
-
-
-      offsetI = NN - p%WAMIT(1)%SS_Rdtn%numStates
-      offsetJ = size(p%Jac_u_indx,1)+1 - 13
-      do j = 1, 6
-         do i = 1,p%WAMIT(1)%SS_Rdtn%numStates
-            dXdu(offsetI+i,offsetJ+j) = p%WAMIT(1)%SS_Rdtn%B(i,j)
+      do j = 1,p%nWAMITObj
+         do i = 1,p%WAMIT(j)%SS_Exctn%numStates
+            dXdu(offsetI+i,n_du_plus1) = p%WAMIT(j)%SS_Exctn%B(i) ! B is numStates by 1
          end do
+         offsetI = offsetI + p%WAMIT(j)%SS_Exctn%numStates
       end do
-     
+
+      startingI = p%totalStates - p%totalRdtnStates
+      startingJ = n_du_plus1 - 1 - 18 - 4*3*p%NBody !  subtract 1 for WaveElev0, then 6*3 for PRPMesh and then 4*3*NBody to place us at the beginning of the velocity inputs
+      ! B is numStates by 6*NBody where NBody =1 if NBodyMod=2 or 3, but could be >1 for NBodyMod=1
+      if ( p%NBodyMod == 1 ) then
+         ! Example for NBodyMod=1 and NBody = 2,
+         ! dXdu(:,startingIndx + 1) = p%WAMIT(1)%SS_Rdtn%B(:,1)
+         ! dXdu(:,startingIndx + 2) = p%WAMIT(1)%SS_Rdtn%B(:,2)
+         ! dXdu(:,startingIndx + 3) = p%WAMIT(1)%SS_Rdtn%B(:,3)
+         ! dXdu(:,startingIndx + 4) = p%WAMIT(1)%SS_Rdtn%B(:,7)
+         ! dXdu(:,startingIndx + 5) = p%WAMIT(1)%SS_Rdtn%B(:,8)
+         ! dXdu(:,startingIndx + 6) = p%WAMIT(1)%SS_Rdtn%B(:,9)
+         ! dXdu(:,startingIndx + 7) = p%WAMIT(1)%SS_Rdtn%B(:,4)   ! start of rotationalVel
+         ! dXdu(:,startingIndx + 8) = p%WAMIT(1)%SS_Rdtn%B(:,5)
+         ! dXdu(:,startingIndx + 9) = p%WAMIT(1)%SS_Rdtn%B(:,6)
+         ! dXdu(:,startingIndx +10) = p%WAMIT(1)%SS_Rdtn%B(:,10)
+         ! dXdu(:,startingIndx +11) = p%WAMIT(1)%SS_Rdtn%B(:,11)
+         ! dXdu(:,startingIndx +12) = p%WAMIT(1)%SS_Rdtn%B(:,12)
+
+         do i = 1,p%WAMIT(1)%SS_Rdtn%numStates
+            k=0
+            ! First set all translationalVel components
+            do j = 1, p%WAMIT(1)%NBody
+               bOffset = (j-1)*6
+               dXdu(startingI+i,startingJ+k+1) = p%WAMIT(1)%SS_Rdtn%B(i,bOffset+1) 
+               dXdu(startingI+i,startingJ+k+2) = p%WAMIT(1)%SS_Rdtn%B(i,bOffset+2)
+               dXdu(startingI+i,startingJ+k+3) = p%WAMIT(1)%SS_Rdtn%B(i,bOffset+3)   
+               k = k + 3
+            end do
+            ! Now set all rotationalVel components
+            do j = 1, p%WAMIT(1)%NBody
+               bOffset = (j-1)*6
+               dXdu(startingI+i,startingJ+k+1) = p%WAMIT(1)%SS_Rdtn%B(i,bOffset+4)
+               dXdu(startingI+i,startingJ+k+2) = p%WAMIT(1)%SS_Rdtn%B(i,bOffset+5)
+               dXdu(startingI+i,startingJ+k+3) = p%WAMIT(1)%SS_Rdtn%B(i,bOffset+6)   
+               k = k + 3
+            end do
+         end do         
+      else
+         ! Example NBodyMod=2or3 and NBody = 2,
+         ! dXdu(:,startingIndx + 1) = p%WAMIT(1)%SS_Rdtn%B(:,1)
+         ! dXdu(:,startingIndx + 2) = p%WAMIT(1)%SS_Rdtn%B(:,2)
+         ! dXdu(:,startingIndx + 3) = p%WAMIT(1)%SS_Rdtn%B(:,3)
+         ! dXdu(:,startingIndx + 4) = p%WAMIT(2)%SS_Rdtn%B(:,1)
+         ! dXdu(:,startingIndx + 5) = p%WAMIT(2)%SS_Rdtn%B(:,2)
+         ! dXdu(:,startingIndx + 6) = p%WAMIT(2)%SS_Rdtn%B(:,3)
+         ! dXdu(:,startingIndx + 7) = p%WAMIT(1)%SS_Rdtn%B(:,4)   ! start of rotationalVel
+         ! dXdu(:,startingIndx + 8) = p%WAMIT(1)%SS_Rdtn%B(:,5)
+         ! dXdu(:,startingIndx + 9) = p%WAMIT(1)%SS_Rdtn%B(:,6)
+         ! dXdu(:,startingIndx +10) = p%WAMIT(2)%SS_Rdtn%B(:,4)
+         ! dXdu(:,startingIndx +11) = p%WAMIT(2)%SS_Rdtn%B(:,5)
+         ! dXdu(:,startingIndx +12) = p%WAMIT(2)%SS_Rdtn%B(:,6)
+
+         
+         k=0
+         offsetI=0
+         ! First set all translationalVel components
+         do j = 1, p%nWAMITObj
+            do i = 1,p%WAMIT(j)%SS_Rdtn%numStates
+               dXdu(startingI+offsetI+i,startingJ+k+1) = p%WAMIT(j)%SS_Rdtn%B(i,1) 
+               dXdu(startingI+offsetI+i,startingJ+k+2) = p%WAMIT(j)%SS_Rdtn%B(i,2)
+               dXdu(startingI+offsetI+i,startingJ+k+3) = p%WAMIT(j)%SS_Rdtn%B(i,3) 
+            end do
+            k = k + 3
+            offsetI = offsetI + p%WAMIT(j)%SS_Rdtn%numStates
+         end do
+         ! Now set all rotationalVel components
+         offsetI=0
+         do j = 1, p%nWAMITObj
+            do i = 1,p%WAMIT(j)%SS_Rdtn%numStates
+               dXdu(startingI+offsetI+i,startingJ+k+1) = p%WAMIT(1)%SS_Rdtn%B(i,4)
+               dXdu(startingI+offsetI+i,startingJ+k+2) = p%WAMIT(1)%SS_Rdtn%B(i,5)
+               dXdu(startingI+offsetI+i,startingJ+k+3) = p%WAMIT(1)%SS_Rdtn%B(i,6)   
+            end do
+            k = k + 3
+            offsetI = offsetI + p%WAMIT(j)%SS_Rdtn%numStates
+         end do
+      end if
+      
+      do k = 1,p%nWAMITObj
+         ! TODO
+         
+         do j = 1, 6*p%WAMIT(k)%NBody
+            do i = 1,p%WAMIT(k)%SS_Rdtn%numStates
+               dXdu(offsetI+i,offsetJ+j) = p%WAMIT(k)%SS_Rdtn%B(i,j) ! B is numStates by 6*NBody where NBody =1 if NBodyMod=2 or 3, but could be >1 for NBodyMod=1
+            end do
+         end do
+         offsetI = offsetI + p%WAMIT(k)%SS_Rdtn%numStates
+         offsetJ = offsetJ + p%WAMIT(k)%SS_Rdtn%numStates
+      end do
      
       
       
@@ -2594,7 +2690,7 @@ SUBROUTINE HD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
    TYPE(HydroDyn_ContinuousStateType)                      :: x_m
    TYPE(HydroDyn_ContinuousStateType)                      :: x_perturb
    REAL(R8Ki)                                        :: delta        ! delta change in input or state
-   INTEGER(IntKi)                                    :: i, j, NN
+   INTEGER(IntKi)                                    :: i, j, k, sOffset
    
    INTEGER(IntKi)                                    :: ErrStat2
    CHARACTER(ErrMsgLen)                              :: ErrMsg2
@@ -2608,7 +2704,7 @@ SUBROUTINE HD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
 
    
    ! Calculate the partial derivative of the output functions (Y) with respect to the continuous states (x) here:
-   NN = p%WAMIT(1)%SS_Exctn%numStates+p%WAMIT(1)%SS_Rdtn%numStates
+   
       
       ! make a copy of the continuous states to perturb
    call HydroDyn_CopyContState( x, x_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2)
@@ -2623,7 +2719,7 @@ SUBROUTINE HD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
       
       ! allocate dYdx if necessary
       if (.not. allocated(dYdx)) then
-         call AllocAry(dYdx, p%Jac_ny, NN, 'dYdx', ErrStat2, ErrMsg2)
+         call AllocAry(dYdx, p%Jac_ny, p%totalStates, 'dYdx', ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          if (ErrStat>=AbortErrLev) then
             call cleanup()
@@ -2642,7 +2738,7 @@ SUBROUTINE HD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
          end if
          
          
-      do i=1,NN
+      do i=1,p%totalStates
 
             ! get x_op + delta x
          call HydroDyn_CopyContState( x, x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
@@ -2684,7 +2780,7 @@ SUBROUTINE HD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
 
       ! allocate dXdu if necessary
       if (.not. allocated(dXdx)) then
-         call AllocAry(dXdx, NN, NN, 'dXdx', ErrStat2, ErrMsg2)
+         call AllocAry(dXdx, p%totalStates, p%totalStates, 'dXdx', ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          if (ErrStat>=AbortErrLev) then
             call cleanup()
@@ -2694,18 +2790,26 @@ SUBROUTINE HD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
       dXdx = 0.0_R8Ki
       
       ! Analytical Jacobians from State-space models
-      if ( p%WAMIT(1)%SS_Exctn%numStates > 0 ) then
-         do j=1,p%WAMIT(1)%SS_Exctn%numStates   
-            do i=1,p%WAMIT(1)%SS_Exctn%numStates ! Loop through all active (enabled) DOFs
-               dXdx(i, j) = p%WAMIT(1)%SS_Exctn%A(i,j)
+      if ( p%totalExctnStates > 0 ) then
+         sOffset = 0
+         do k=1,p%nWAMITObj
+            do j=1,p%WAMIT(k)%SS_Exctn%numStates   
+               do i=1,p%WAMIT(k)%SS_Exctn%numStates ! Loop through all active (enabled) DOFs
+                  dXdx(i+sOffset, j+sOffset) = p%WAMIT(k)%SS_Exctn%A(i,j)
+               end do
             end do
+            sOffset = sOffset + p%WAMIT(k)%SS_Exctn%numStates
          end do
       end if
-      if ( p%WAMIT(1)%SS_Rdtn%numStates > 0 ) then
-         do j=1,p%WAMIT(1)%SS_Rdtn%numStates   
-            do i=1,p%WAMIT(1)%SS_Rdtn%numStates ! Loop through all active (enabled) DOFs
-               dXdx(i+p%WAMIT(1)%SS_Exctn%numStates, j+p%WAMIT(1)%SS_Exctn%numStates) = p%WAMIT(1)%SS_Rdtn%A(i,j)
+      if ( p%totalRdtnStates > 0 ) then
+         sOffset = 0
+         do k=1,p%nWAMITObj
+            do j=1,p%WAMIT(k)%SS_Rdtn%numStates   
+               do i=1,p%WAMIT(k)%SS_Rdtn%numStates ! Loop through all active (enabled) DOFs
+                  dXdx(i+p%totalExctnStates+sOffset, j+p%totalExctnStates+sOffset) = p%WAMIT(k)%SS_Rdtn%A(i,j)
+               end do
             end do
+            sOffset = sOffset + p%WAMIT(k)%SS_Rdtn%numStates
          end do
       end if
       
@@ -2904,12 +3008,12 @@ SUBROUTINE HD_Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
       ! determine how many outputs there are in the Jacobians      
    p%Jac_ny = 0         
    if ( y%Morison%Mesh%Committed ) then
-      p%Jac_ny = p%Jac_ny + y%Morison%Mesh%NNodes * 6    ! 3 Force, Moment, at each node on the distributed loads mesh       
+      p%Jac_ny = p%Jac_ny + y%Morison%Mesh%NNodes * 6        ! 3 Force, Moment, at each node on the morison mesh       
    end if
-
-   p%Jac_ny = p%Jac_ny + y%WAMITMesh%NNodes * 6                   ! 3 Force, Moment, at the WAMIT reference Point 
-!TODO: With NBody WAMIT rework need to see if removing this causes issues
-  ! p%Jac_ny = p%Jac_ny + y%AllHdroOrigin%NNodes * 6          ! 3 Force, Moment, of all HD loads integrated to the origin (0,0,0) 
+   if ( y%WAMITMesh%Committed ) then
+      p%Jac_ny = p%Jac_ny + y%WAMITMesh%NNodes    * 6        ! 3 Force, Moment, at the WAMIT reference Point(s)
+   end if
+   
    p%Jac_ny = p%Jac_ny + p%NumTotalOuts                      ! WriteOutput values 
       
 
@@ -2930,13 +3034,10 @@ SUBROUTINE HD_Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
       call PackLoadMesh_Names(y%Morison%Mesh, 'MorisonLoads', InitOut%LinNames_y, index_next)
    end if
 
-
-   index_last = index_next
-   call PackLoadMesh_Names(y%WAMITMesh, 'PlatformRefPtLoads', InitOut%LinNames_y, index_next)
-   
-!TODO: With NBody WAMIT rework need to see if removing this causes issues
- !  index_last = index_next
- !  call PackLoadMesh_Names(y%AllHdroOrigin, 'AllHdroOrigin', InitOut%LinNames_y, index_next)
+   if ( y%WAMITMesh%Committed ) then
+      index_last = index_next
+      call PackLoadMesh_Names(y%WAMITMesh, 'WAMITLoads', InitOut%LinNames_y, index_next)
+   end if
    
    index_last = index_next
          
@@ -2963,54 +3064,67 @@ SUBROUTINE HD_Init_Jacobian_x( p, InitOut, ErrStat, ErrMsg)
    CHARACTER(*), PARAMETER                           :: RoutineName = 'HD_Init_Jacobian_x'
    
       ! local variables:
-   INTEGER(IntKi)                :: i, j, k, NN, spdof, indx
+   INTEGER(IntKi)                :: i, j, k, l, spdof, indx
    CHARACTER(10)                 :: modLabels(2), dofLabels(6)
    ErrStat = ErrID_None
    ErrMsg  = ""
    indx = 1
-   NN = p%WAMIT(1)%SS_Rdtn%numStates + p%WAMIT(1)%SS_Exctn%numStates
-   if ( NN == 0 ) return
+   
+   ! Need to determine how many wamit body objects there are
+   p%totalExctnStates = 0
+   p%totalRdtnStates = 0
+   do j = 1, p%nWAMITObj
+      p%totalExctnStates = p%totalExctnStates + p%WAMIT(j)%SS_Exctn%numStates
+      p%totalRdtnStates  = p%totalRdtnStates  + p%WAMIT(j)%SS_Rdtn%numStates
+   end do
+   p%totalStates = p%totalExctnStates + p%totalRdtnStates
+   if ( p%totalStates == 0 ) return
       ! allocate space for the row/column names and for perturbation sizes
-   call allocAry(p%dx,               NN, 'p%dx',       ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call AllocAry(InitOut%LinNames_x, NN, 'LinNames_x', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   CALL AllocAry(InitOut%DerivOrder_x, NN, 'DerivOrder_x', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call allocAry(p%dx,                 p%totalStates, 'p%dx',         ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AllocAry(InitOut%LinNames_x,   p%totalStates, 'LinNames_x'  , ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   CALL AllocAry(InitOut%DerivOrder_x, p%totalStates, 'DerivOrder_x', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    
       ! All Hydrodyn continuous states are max order = 1
    if ( allocated(InitOut%DerivOrder_x) ) InitOut%DerivOrder_x = 1
    
    ! set perturbation sizes: p%dx
-   
-   do i = 1, p%WAMIT(1)%SS_Exctn%numStates    
-      p%dx(i)  = 20000.0_R8Ki * D2R_D 
+   k = 1
+   do j = 1, p%nWAMITObj
+      do i = 1, p%WAMIT(j)%SS_Exctn%numStates    
+         p%dx(k)  = 20000.0_R8Ki * D2R_D 
+         k=k+1
+      end do
    end do
-   
-   do i = 1, p%WAMIT(1)%SS_Rdtn%numStates
-      p%dx(i+p%WAMIT(1)%SS_Exctn%numStates)  = 2.0_R8Ki * D2R_D 
+   do j = 1, p%nWAMITObj
+      do i = 1, p%WAMIT(j)%SS_Rdtn%numStates
+         p%dx(k)  = 2.0_R8Ki * D2R_D 
+         k=k+1
+      end do
    end do
    
    modLabels = (/'Exctn     ','Rdtn      '/)
    dofLabels = (/'PtfmSg    ','PtfmSw    ','PtfmHv    ','PtfmR     ','PtfmP     ','PtfmY     '/)
-   
-      ! set linearization state names:
+   !TODO: If NBodyMod=1, do not use the 'B' + number prefix
    do k = 1, 2   ! 1 = Excitation,  2 = Radiation
-      
-        
-      do j = 1, 6
+      do l=1,p%nWAMITObj
          
-         if (k == 1) then
-            spdof = p%WAMIT(1)%SS_Exctn%spdof(j)
-         else 
-            spdof = p%WAMIT(1)%SS_Rdtn%spdof(j)
-         end if
+         ! set linearization state names:   
+         do j = 1, 6
          
-         do i = 1,spdof
-            InitOut%LinNames_x(indx) = trim(modLabels(k))//trim(dofLabels(j))//trim(num2lstr(i))
-            indx = indx + 1
+            if (k == 1) then
+               spdof = p%WAMIT(l)%SS_Exctn%spdof(j)
+            else 
+               spdof = p%WAMIT(l)%SS_Rdtn%spdof(j)
+            end if
+         
+            do i = 1,spdof
+               InitOut%LinNames_x(indx) = 'B'//trim(num2lstr(l))//trim(modLabels(k))//trim(dofLabels(j))//trim(num2lstr(i))
+               indx = indx + 1
+            end do
          end do
       end do
    end do
-   
 END SUBROUTINE HD_Init_Jacobian_x
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine initializes the array that maps rows/columns of the Jacobian to specific mesh fields.
@@ -3051,10 +3165,13 @@ SUBROUTINE HD_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
       ! determine how many inputs there are in the Jacobians
    nu = 0;
    if ( u%Morison%Mesh%Committed ) then
-      nu = nu + u%Morison%Mesh%NNodes   * 18   ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, and RotationAcc at each node     
+      nu = u%Morison%Mesh%NNodes   * 18   ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, and RotationAcc at each node     
+   end if
+   if ( u%WAMITMesh%Committed ) then
+      nu = nu + u%WAMITMesh%NNodes * 18   ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, and RotationAcc at each node     
    end if
    
-   nu = nu + u%WAMITMesh%NNodes * 18   ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, and RotationAcc at each node     
+   nu = nu + u%PRPMesh%NNodes * 18   ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, and RotationAcc at each node
    
    ! DO NOT Add the extended input WaveElev0 when computing the size of p%Jac_u_indx
       
@@ -3078,6 +3195,7 @@ SUBROUTINE HD_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
      
    index = 1
    meshFieldCount = 0
+   
    if ( u%Morison%Mesh%Committed ) then
       !Module/Mesh/Field: u%Morison%Mesh%TranslationDisp  = 1;
       !Module/Mesh/Field: u%Morison%Mesh%Orientation      = 2;
@@ -3086,34 +3204,28 @@ SUBROUTINE HD_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
       !Module/Mesh/Field: u%Morison%Mesh%TranslationAcc   = 5;
       !Module/Mesh/Field: u%Morison%Mesh%RotationAcc      = 6;
          
-         do i_meshField = 1,6
-            do i=1,u%Morison%Mesh%NNodes
-               do j=1,3
-                  p%Jac_u_indx(index,1) =  i_meshField  !Module/Mesh/Field: u%Morison%Mesh%{TranslationDisp/Orientation/TranslationVel/RotationVel/TranslationAcc/RotationAcc} = m
-                  p%Jac_u_indx(index,2) =  j !index:  j
-                  p%Jac_u_indx(index,3) =  i !Node:   i
-                  index = index + 1
-               end do !j      
-            end do !i   
+      do i_meshField = 1,6
+         do i=1,u%Morison%Mesh%NNodes
+            do j=1,3
+               p%Jac_u_indx(index,1) =  i_meshField  !Module/Mesh/Field: u%Morison%Mesh%{TranslationDisp/Orientation/TranslationVel/RotationVel/TranslationAcc/RotationAcc} = m
+               p%Jac_u_indx(index,2) =  j !index:  j
+               p%Jac_u_indx(index,3) =  i !Node:   i
+               index = index + 1
+            end do !j      
+         end do !i   
             
-         end do !i_meshField                                             
-         meshFieldCount = 6 
-      !Module/Mesh/Field: u%Morison%LumpedMesh%TranslationDisp  =  7;
-      !Module/Mesh/Field: u%Morison%LumpedMesh%Orientation      =  8;
-      !Module/Mesh/Field: u%Morison%LumpedMesh%TranslationVel   =  9;
-      !Module/Mesh/Field: u%Morison%LumpedMesh%RotationVel      = 10;
-      !Module/Mesh/Field: u%Morison%LumpedMesh%TranslationAcc   = 11;
-      !Module/Mesh/Field: u%Morison%LumpedMesh%RotationAcc      = 12;
+      end do !i_meshField                                             
+      meshFieldCount = 6 
          
    end if
    
-   !Module/Mesh/Field: u%WAMITMesh%TranslationDisp  = 13  or 1;
-   !Module/Mesh/Field: u%WAMITMesh%Orientation      = 14  or 2;
-   !Module/Mesh/Field: u%WAMITMesh%TranslationVel   = 15  or 3;
-   !Module/Mesh/Field: u%WAMITMesh%RotationVel      = 16  or 4;
-   !Module/Mesh/Field: u%WAMITMesh%TranslationAcc   = 17  or 5;
-   !Module/Mesh/Field: u%WAMITMesh%RotationAcc      = 18  or 6;
-         
+   if ( u%WAMITMesh%Committed ) then      
+      !Module/Mesh/Field: u%WAMITMesh%TranslationDisp  = 7   or 1;
+      !Module/Mesh/Field: u%WAMITMesh%Orientation      = 8   or 2;
+      !Module/Mesh/Field: u%WAMITMesh%TranslationVel   = 9   or 3;
+      !Module/Mesh/Field: u%WAMITMesh%RotationVel      = 10  or 4;
+      !Module/Mesh/Field: u%WAMITMesh%TranslationAcc   = 11  or 5;
+      !Module/Mesh/Field: u%WAMITMesh%RotationAcc      = 12  or 6;
       do i_meshField = 1,6
          do i=1,u%WAMITMesh%NNodes
             do j=1,3
@@ -3123,22 +3235,36 @@ SUBROUTINE HD_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
                index = index + 1
             end do !j      
          end do !i         
-      end do !i_meshField                                             
-
+      end do !i_meshField   
+      meshFieldCount = meshFieldCount + 6 
+   end if
+   
+   !Module/Mesh/Field: u%PRPMesh%TranslationDisp  = 13 or 7  or 1;
+   !Module/Mesh/Field: u%PRPMesh%Orientation      = 14 or 8  or 2;
+   !Module/Mesh/Field: u%PRPMesh%TranslationVel   = 15 or 9  or 3;
+   !Module/Mesh/Field: u%PRPMesh%RotationVel      = 16 or 10 or 4;
+   !Module/Mesh/Field: u%PRPMesh%TranslationAcc   = 17 or 11 or 5;
+   !Module/Mesh/Field: u%PRPMesh%RotationAcc      = 18 or 12 or 6;
+   do i_meshField = 1,6
+      do i=1,u%PRPMesh%NNodes
+         do j=1,3
+            p%Jac_u_indx(index,1) =  meshFieldCount + i_meshField 
+            p%Jac_u_indx(index,2) =  j !index:  j
+            p%Jac_u_indx(index,3) =  i !Node:   i
+            index = index + 1
+         end do !j      
+      end do !i         
+   end do !i_meshField  
+   meshFieldCount = meshFieldCount + 6 
    
    !................
    ! input perturbations, du:
    !................
-   if ( u%Morison%Mesh%Committed ) then
-      call AllocAry(p%du, 12, 'p%du', ErrStat2, ErrMsg2) ! number of unique values in p%Jac_u_indx(:,1)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)      
-      if (ErrStat >= AbortErrLev) return
-   else
-      call AllocAry(p%du, 6, 'p%du', ErrStat2, ErrMsg2) ! number of unique values in p%Jac_u_indx(:,1)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)      
-      if (ErrStat >= AbortErrLev) return
-
-   end if
+   
+   call AllocAry(p%du, meshFieldCount, 'p%du', ErrStat2, ErrMsg2) ! number of unique values in p%Jac_u_indx(:,1)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)      
+   if (ErrStat >= AbortErrLev) return
+  
    
    perturb_t = 0.02_ReKi*D2R * max(p%WtrDpth,1.0_ReKi) ! translation input scaling  ! LIN-TODO What about MSL offset?  
    perturb   = 2*D2R                 ! rotational input scaling
@@ -3154,16 +3280,22 @@ SUBROUTINE HD_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
       index = 6     
    end if
    
-      
-   p%du(index + 1) = perturb_t                    ! u%WAMITMesh%TranslationDisp 
-   p%du(index + 2) = perturb                      ! u%WAMITMesh%Orientation     
-   p%du(index + 3) = perturb_t                    ! u%WAMITMesh%TranslationVel  
-   p%du(index + 4) = perturb                      ! u%WAMITMesh%RotationVel
-   p%du(index + 5) = perturb_t                    ! u%WAMITMesh%TranslationAcc   
-   p%du(index + 6) = perturb                      ! u%WAMITMesh%RotationAcc    
-   index = index + 6
-
+   if ( u%WAMITMesh%Committed ) then    
+      p%du(index + 1) = perturb_t            ! u%WAMITMesh%TranslationDisp 
+      p%du(index + 2) = perturb              ! u%WAMITMesh%Orientation     
+      p%du(index + 3) = perturb_t            ! u%WAMITMesh%TranslationVel  
+      p%du(index + 4) = perturb              ! u%WAMITMesh%RotationVel
+      p%du(index + 5) = perturb_t            ! u%WAMITMesh%TranslationAcc   
+      p%du(index + 6) = perturb              ! u%WAMITMesh%RotationAcc    
+      index = index + 6
+   end if
    
+   p%du(index + 1) = perturb_t               ! u%PRPMesh%TranslationDisp 
+   p%du(index + 2) = perturb                 ! u%PRPMesh%Orientation     
+   p%du(index + 3) = perturb_t               ! u%PRPMesh%TranslationVel  
+   p%du(index + 4) = perturb                 ! u%PRPMesh%RotationVel
+   p%du(index + 5) = perturb_t               ! u%PRPMesh%TranslationAcc   
+   p%du(index + 6) = perturb                 ! u%PRPMesh%RotationAcc    
    
    !................
    ! names of the columns, InitOut%LinNames_u:
@@ -3190,6 +3322,17 @@ SUBROUTINE HD_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
    
    end if
 
+   if ( u%WAMITMesh%Committed ) then
+      FieldMask = .false.
+      FieldMask(MASKID_TRANSLATIONDISP) = .true.
+      FieldMask(MASKID_Orientation) = .true.
+      FieldMask(MASKID_TRANSLATIONVel) = .true.
+      FieldMask(MASKID_ROTATIONVel) = .true.
+      FieldMask(MASKID_TRANSLATIONACC) = .true.
+      FieldMask(MASKID_ROTATIONACC) = .true.
+      call PackMotionMesh_Names(u%WAMITMesh, 'WAMIT', InitOut%LinNames_u, index, FieldMask=FieldMask)
+   end if
+   
    FieldMask = .false.
    FieldMask(MASKID_TRANSLATIONDISP) = .true.
    FieldMask(MASKID_Orientation) = .true.
@@ -3197,8 +3340,8 @@ SUBROUTINE HD_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
    FieldMask(MASKID_ROTATIONVel) = .true.
    FieldMask(MASKID_TRANSLATIONACC) = .true.
    FieldMask(MASKID_ROTATIONACC) = .true.
-   call PackMotionMesh_Names(u%WAMITMesh, 'Platform-RefPt', InitOut%LinNames_u, index, FieldMask=FieldMask)
-
+   call PackMotionMesh_Names(u%PRPMesh, 'Platform-RefPt', InitOut%LinNames_u, index, FieldMask=FieldMask)
+   
    InitOut%LinNames_u(index) = 'Extended input: wave elevation at platform ref point, m'
    
 END SUBROUTINE HD_Init_Jacobian
@@ -3216,19 +3359,18 @@ SUBROUTINE HD_Perturb_u( p, n, perturb_sign, u, du )
 
    ! local variables
    integer                                             :: fieldIndx
-   integer                                             :: node
+   integer                                             :: node, index
 
-      
+   index = 0  
    fieldIndx = p%Jac_u_indx(n,2) 
    node      = p%Jac_u_indx(n,3) 
-   
+   !TODO: One last review of mesh names in below logic GJH
    du = p%du(  p%Jac_u_indx(n,1) )
    
       ! determine which mesh we're trying to perturb and perturb the input:
    
       ! If we do not have Morison meshes, then the following select cases will vary
    if ( u%Morison%Mesh%Committed ) then
-      
       SELECT CASE( p%Jac_u_indx(n,1) )
          CASE ( 1) !Module/Mesh/Field: u%Morison%Mesh%TranslationDisp = 1      
             u%Morison%Mesh%TranslationDisp (fieldIndx,node) = u%Morison%Mesh%TranslationDisp (fieldIndx,node) + du * perturb_sign       
@@ -3242,40 +3384,97 @@ SUBROUTINE HD_Perturb_u( p, n, perturb_sign, u, du )
             u%Morison%Mesh%TranslationAcc( fieldIndx,node) = u%Morison%Mesh%TranslationAcc( fieldIndx,node) + du * perturb_sign       
          CASE ( 6) !Module/Mesh/Field: u%Morison%Mesh%RotationAcc = 6
             u%Morison%Mesh%RotationAcc(fieldIndx,node) = u%Morison%Mesh%RotationAcc(fieldIndx,node) + du * perturb_sign    
-
-         CASE ( 7) !Module/Mesh/Field: u%WAMITMesh%TranslationDisp = 13     
-            u%WAMITMesh%TranslationDisp (fieldIndx,node) = u%WAMITMesh%TranslationDisp (fieldIndx,node) + du * perturb_sign       
-         CASE ( 8) !Module/Mesh/Field: u%WAMITMesh%Orientation = 14
-            CALL PerturbOrientationMatrix( u%WAMITMesh%Orientation(:,:,node), du * perturb_sign, fieldIndx )
-         CASE ( 9) !Module/Mesh/Field: u%WAMITMesh%TranslationVel = 15
-            u%WAMITMesh%TranslationVel( fieldIndx,node) = u%WAMITMesh%TranslationVel( fieldIndx,node) + du * perturb_sign         
-         CASE (10) !Module/Mesh/Field: u%WAMITMesh%RotationVel = 16
-            u%WAMITMesh%RotationVel (fieldIndx,node) = u%WAMITMesh%RotationVel (fieldIndx,node) + du * perturb_sign               
-         CASE (11) !Module/Mesh/Field: u%WAMITMesh%TranslationAcc = 17
-            u%WAMITMesh%TranslationAcc( fieldIndx,node) = u%WAMITMesh%TranslationAcc( fieldIndx,node) + du * perturb_sign       
-         CASE (12) !Module/Mesh/Field: u%WAMITMesh%RotationAcc = 18
-            u%WAMITMesh%RotationAcc(fieldIndx,node) = u%WAMITMesh%RotationAcc(fieldIndx,node) + du * perturb_sign            
-         
-      
+      end select  
+      if ( u%WAMITMesh%Committed ) then    
+         SELECT CASE( p%Jac_u_indx(n,1) )      
+            CASE ( 7) !Module/Mesh/Field: u%WAMITMesh%TranslationDisp = 7     
+               u%WAMITMesh%TranslationDisp (fieldIndx,node) = u%WAMITMesh%TranslationDisp (fieldIndx,node) + du * perturb_sign       
+            CASE ( 8) !Module/Mesh/Field: u%WAMITMesh%Orientation = 8
+               CALL PerturbOrientationMatrix( u%WAMITMesh%Orientation(:,:,node), du * perturb_sign, fieldIndx )
+            CASE ( 9) !Module/Mesh/Field: u%WAMITMesh%TranslationVel = 9
+               u%WAMITMesh%TranslationVel( fieldIndx,node) = u%WAMITMesh%TranslationVel( fieldIndx,node) + du * perturb_sign         
+            CASE (10) !Module/Mesh/Field: u%WAMITMesh%RotationVel = 10
+               u%WAMITMesh%RotationVel (fieldIndx,node) = u%WAMITMesh%RotationVel (fieldIndx,node) + du * perturb_sign               
+            CASE (11) !Module/Mesh/Field: u%WAMITMesh%TranslationAcc = 11
+               u%WAMITMesh%TranslationAcc( fieldIndx,node) = u%WAMITMesh%TranslationAcc( fieldIndx,node) + du * perturb_sign       
+            CASE (12) !Module/Mesh/Field: u%WAMITMesh%RotationAcc = 12
+               u%WAMITMesh%RotationAcc(fieldIndx,node) = u%WAMITMesh%RotationAcc(fieldIndx,node) + du * perturb_sign               
          END SELECT
-   else
+         SELECT CASE( p%Jac_u_indx(n,1) )     
+            CASE (13) !Module/Mesh/Field: u%PRPMesh%TranslationDisp = 13    
+               u%PRPMesh%TranslationDisp (fieldIndx,node) = u%PRPMesh%TranslationDisp (fieldIndx,node) + du * perturb_sign       
+            CASE (14) !Module/Mesh/Field: u%PRPMesh%Orientation = 14
+               CALL PerturbOrientationMatrix( u%PRPMesh%Orientation(:,:,node), du * perturb_sign, fieldIndx )
+            CASE (15) !Module/Mesh/Field: u%PRPMesh%TranslationVel = 15
+               u%PRPMesh%TranslationVel( fieldIndx,node) = u%PRPMesh%TranslationVel( fieldIndx,node) + du * perturb_sign         
+            CASE (16) !Module/Mesh/Field: u%WAMITMesh%RotationVel = 16
+               u%PRPMesh%RotationVel (fieldIndx,node) = u%PRPMesh%RotationVel (fieldIndx,node) + du * perturb_sign               
+            CASE (17) !Module/Mesh/Field: u%PRPMesh%TranslationAcc = 17
+               u%PRPMesh%TranslationAcc( fieldIndx,node) = u%PRPMesh%TranslationAcc( fieldIndx,node) + du * perturb_sign       
+            CASE (18) !Module/Mesh/Field: u%PRPMesh%RotationAcc = 18
+               u%PRPMesh%RotationAcc(fieldIndx,node) = u%PRPMesh%RotationAcc(fieldIndx,node) + du * perturb_sign 
+         END SELECT
+      else
+         SELECT CASE( p%Jac_u_indx(n,1) )     
+            CASE ( 7) !Module/Mesh/Field: u%PRPMesh%TranslationDisp = 7     
+               u%PRPMesh%TranslationDisp (fieldIndx,node) = u%PRPMesh%TranslationDisp (fieldIndx,node) + du * perturb_sign       
+            CASE ( 8) !Module/Mesh/Field: u%PRPMesh%Orientation = 8
+               CALL PerturbOrientationMatrix( u%PRPMesh%Orientation(:,:,node), du * perturb_sign, fieldIndx )
+            CASE ( 9) !Module/Mesh/Field: u%PRPMesh%TranslationVel = 9
+               u%PRPMesh%TranslationVel( fieldIndx,node) = u%PRPMesh%TranslationVel( fieldIndx,node) + du * perturb_sign         
+            CASE (10) !Module/Mesh/Field: u%PRPMesh%RotationVel = 10
+               u%PRPMesh%RotationVel (fieldIndx,node) = u%PRPMesh%RotationVel (fieldIndx,node) + du * perturb_sign               
+            CASE (11) !Module/Mesh/Field: u%PRPMesh%TranslationAcc = 11
+               u%PRPMesh%TranslationAcc( fieldIndx,node) = u%PRPMesh%TranslationAcc( fieldIndx,node) + du * perturb_sign       
+            CASE (12) !Module/Mesh/Field: u%PRPMesh%RotationAcc = 12
+               u%PRPMesh%RotationAcc(fieldIndx,node) = u%PRPMesh%RotationAcc(fieldIndx,node) + du * perturb_sign 
+         END SELECT
+      end if
+   else if ( u%WAMITMesh%Committed ) then   
       SELECT CASE( p%Jac_u_indx(n,1) )
-         CASE (1) !Module/Mesh/Field: u%WAMITMesh%TranslationDisp = 13     
+         CASE (1) !Module/Mesh/Field: u%WAMITMesh%TranslationDisp = 1     
             u%WAMITMesh%TranslationDisp (fieldIndx,node) = u%WAMITMesh%TranslationDisp (fieldIndx,node) + du * perturb_sign       
-         CASE (2) !Module/Mesh/Field: u%WAMITMesh%Orientation = 14
+         CASE (2) !Module/Mesh/Field: u%WAMITMesh%Orientation = 2
             CALL PerturbOrientationMatrix( u%WAMITMesh%Orientation(:,:,node), du * perturb_sign, fieldIndx )
-         CASE (3) !Module/Mesh/Field: u%WAMITMesh%TranslationVel = 15
+         CASE (3) !Module/Mesh/Field: u%WAMITMesh%TranslationVel = 3
             u%WAMITMesh%TranslationVel( fieldIndx,node) = u%WAMITMesh%TranslationVel( fieldIndx,node) + du * perturb_sign         
-         CASE (4) !Module/Mesh/Field: u%WAMITMesh%RotationVel = 16
+         CASE (4) !Module/Mesh/Field: u%WAMITMesh%RotationVel = 4
             u%WAMITMesh%RotationVel (fieldIndx,node) = u%WAMITMesh%RotationVel (fieldIndx,node) + du * perturb_sign               
-         CASE (5) !Module/Mesh/Field: u%WAMITMesh%TranslationAcc = 17
+         CASE (5) !Module/Mesh/Field: u%WAMITMesh%TranslationAcc = 5
             u%WAMITMesh%TranslationAcc( fieldIndx,node) = u%WAMITMesh%TranslationAcc( fieldIndx,node) + du * perturb_sign       
-         CASE (6) !Module/Mesh/Field: u%WAMITMesh%RotationAcc = 18
+         CASE (6) !Module/Mesh/Field: u%WAMITMesh%RotationAcc = 6
             u%WAMITMesh%RotationAcc(fieldIndx,node) = u%WAMITMesh%RotationAcc(fieldIndx,node) + du * perturb_sign            
-       
-       END SELECT
+      END SELECT
+      SELECT CASE( p%Jac_u_indx(n,1) )      
+         CASE ( 7) !Module/Mesh/Field: u%PRPMesh%TranslationDisp = 7     
+            u%PRPMesh%TranslationDisp (fieldIndx,node) = u%PRPMesh%TranslationDisp (fieldIndx,node) + du * perturb_sign       
+         CASE ( 8) !Module/Mesh/Field: u%PRPMesh%Orientation = 8
+            CALL PerturbOrientationMatrix( u%PRPMesh%Orientation(:,:,node), du * perturb_sign, fieldIndx )
+         CASE ( 9) !Module/Mesh/Field: u%PRPMesh%TranslationVel = 9
+            u%PRPMesh%TranslationVel( fieldIndx,node) = u%PRPMesh%TranslationVel( fieldIndx,node) + du * perturb_sign         
+         CASE (10) !Module/Mesh/Field: u%PRPMesh%RotationVel = 10
+            u%PRPMesh%RotationVel (fieldIndx,node) = u%PRPMesh%RotationVel (fieldIndx,node) + du * perturb_sign               
+         CASE (11) !Module/Mesh/Field: u%PRPMesh%TranslationAcc = 11
+            u%PRPMesh%TranslationAcc( fieldIndx,node) = u%PRPMesh%TranslationAcc( fieldIndx,node) + du * perturb_sign       
+         CASE (12) !Module/Mesh/Field: u%PRPMesh%RotationAcc = 12
+            u%PRPMesh%RotationAcc(fieldIndx,node) = u%PRPMesh%RotationAcc(fieldIndx,node) + du * perturb_sign               
+      END SELECT
+   else
+      SELECT CASE( p%Jac_u_indx(n,1) )      
+         CASE ( 1) !Module/Mesh/Field: u%PRPMesh%TranslationDisp = 1     
+            u%PRPMesh%TranslationDisp (fieldIndx,node) = u%PRPMesh%TranslationDisp (fieldIndx,node) + du * perturb_sign       
+         CASE ( 2) !Module/Mesh/Field: u%PRPMesh%Orientation = 2
+            CALL PerturbOrientationMatrix( u%PRPMesh%Orientation(:,:,node), du * perturb_sign, fieldIndx )
+         CASE ( 3) !Module/Mesh/Field: u%PRPMesh%TranslationVel = 3
+            u%PRPMesh%TranslationVel( fieldIndx,node) = u%PRPMesh%TranslationVel( fieldIndx,node) + du * perturb_sign         
+         CASE ( 4) !Module/Mesh/Field: u%PRPMesh%RotationVel = 4
+            u%PRPMesh%RotationVel (fieldIndx,node) = u%PRPMesh%RotationVel (fieldIndx,node) + du * perturb_sign               
+         CASE ( 5) !Module/Mesh/Field: u%PRPMesh%TranslationAcc = 5
+            u%PRPMesh%TranslationAcc( fieldIndx,node) = u%PRPMesh%TranslationAcc( fieldIndx,node) + du * perturb_sign       
+         CASE ( 6) !Module/Mesh/Field: u%PRPMesh%RotationAcc = 6
+            u%PRPMesh%RotationAcc(fieldIndx,node) = u%PRPMesh%RotationAcc(fieldIndx,node) + du * perturb_sign               
+      END SELECT   
    end if
-   
                                              
 END SUBROUTINE HD_Perturb_u
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -3291,17 +3490,34 @@ SUBROUTINE HD_Perturb_x( p, n, perturb_sign, x, dx )
    
 
    ! local variables
-   integer(intKi)                                      :: indx
+   integer(intKi)                                      :: i, indx, offset1, offset2, n2
    
+   !TODO: Note: All excitation states for all bodies are stored 1st, then all radiation states
    dx = p%dx(n)
+   offset1 = 1
+   if ( n <= p%totalExctnStates ) then
       
-   if (n > p%WAMIT(1)%SS_Exctn%numStates) then
-      indx = n - p%WAMIT(1)%SS_Exctn%numStates
-      x%WAMIT(1)%SS_Rdtn%x( indx ) = x%WAMIT(1)%SS_Rdtn%x( indx ) + dx * perturb_sign 
+      ! Find body index for exctn states
+      
    else
-      indx = n
-      x%WAMIT(1)%SS_Exctn%x( indx ) = x%WAMIT(1)%SS_Exctn%x( indx ) + dx * perturb_sign 
+      ! Find body index for rdtn states
    end if
+   
+   do i=1,p%nWAMITObj 
+      offset2 = offset1 + p%WAMIT(i)%SS_Exctn%numStates + p%WAMIT(i)%SS_Rdtn%numStates
+      if ( n >= offset1 .and. n < offset2) then
+         n2 = n - offset1
+         if ( n2 > p%WAMIT(i)%SS_Exctn%numStates) then
+            indx = n2 - p%WAMIT(i)%SS_Exctn%numStates
+            x%WAMIT(i)%SS_Rdtn%x( indx ) = x%WAMIT(i)%SS_Rdtn%x( indx ) + dx * perturb_sign 
+         else
+            indx = n2
+            x%WAMIT(i)%SS_Exctn%x( indx ) = x%WAMIT(i)%SS_Exctn%x( indx ) + dx * perturb_sign 
+         end if
+      else 
+         offset1 = offset2
+      end if
+   end do
                                                 
 END SUBROUTINE HD_Perturb_x
 
@@ -3329,10 +3545,9 @@ SUBROUTINE Compute_dY(p, y_p, y_m, delta, dY)
    if ( y_p%Morison%Mesh%Committed ) then
       call PackLoadMesh_dY(y_p%Morison%Mesh, y_m%Morison%Mesh, dY, indx_first)   
    end if
-
-   call PackLoadMesh_dY(y_p%WAMITMesh, y_m%WAMITMesh, dY, indx_first)   
-!TODO: With NBody WAMIT rework need to see if removing this causes issues
-   !call PackLoadMesh_dY(y_p%AllHdroOrigin, y_m%AllHdroOrigin, dY, indx_first) 
+   if ( y_p%WAMITMesh%Committed ) then
+      call PackLoadMesh_dY(y_p%WAMITMesh, y_m%WAMITMesh, dY, indx_first)   
+   end if
    
    do k=1,p%NumTotalOuts
       dY(k+indx_first-1) = y_p%WriteOutput(k) - y_m%WriteOutput(k)
@@ -3368,7 +3583,7 @@ SUBROUTINE HD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
 
 
 
-   INTEGER(IntKi)                                    :: i, k, index, nu
+   INTEGER(IntKi)                                    :: i, j, k, index, nu
    INTEGER(IntKi)                                    :: ny
    INTEGER(IntKi)                                    :: ErrStat2
    CHARACTER(ErrMsgLen)                              :: ErrMsg2
@@ -3391,13 +3606,14 @@ SUBROUTINE HD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
          
              ! our operating point includes DCM (orientation) matrices, not just small angles like the perturbation matrices do
          if ( u%Morison%Mesh%Committed ) then          
-            nu = nu + u%Morison%Mesh%NNodes * 6 & ! p%Jac_u_indx has 3 for Orientation, but we need 9 at each node
-                    + u%WAMITMesh%NNodes                * 6   ! p%Jac_u_indx has 3 for Orientation, but we need 9 at each node
-            nu = nu + 1   ! Extended input
-         else
-            nu = nu + u%WAMITMesh%NNodes                * 6   ! p%Jac_u_indx has 3 for Orientation, but we need 9 at each node
-            nu = nu + 1   ! Extended input
+            nu = nu + u%Morison%Mesh%NNodes  * 6   ! p%Jac_u_indx has 3 for Orientation, but we need 9 at each node
          end if
+         if ( u%WAMITMesh%Committed ) then
+            nu = nu + u%WAMITMesh%NNodes     * 6   ! p%Jac_u_indx has 3 for Orientation, but we need 9 at each node
+         end if
+         
+         nu = nu + u%PRPMesh%NNodes          * 6   ! p%Jac_u_indx has 3 for Orientation, but we need 9 at each node
+         nu = nu + 1   ! Extended input
          
          call AllocAry(u_op, nu,'u_op',ErrStat2,ErrMsg2) ! 
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -3418,8 +3634,12 @@ SUBROUTINE HD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
          call PackMotionMesh(u%Morison%Mesh, u_op, index, FieldMask=Mask)    
       end if
 
-      call PackMotionMesh(u%WAMITMesh, u_op, index, FieldMask=Mask)   
-   
+      if ( u%WAMITMesh%Committed ) then
+         call PackMotionMesh(u%WAMITMesh, u_op, index, FieldMask=Mask)   
+      end if
+      
+      call PackMotionMesh(u%PRPMesh, u_op, index, FieldMask=Mask) 
+      
          ! extended input:
       u_op(index) = 0.0_R8Ki !u%WaveElev0
           
@@ -3439,10 +3659,9 @@ SUBROUTINE HD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
       if ( y%Morison%Mesh%Committed ) then
          call PackLoadMesh(y%Morison%Mesh, y_op, index)   
       end if
-
-      call PackLoadMesh(y%WAMITMesh, y_op, index) 
-!TODO: With NBody WAMIT rework need to see if removing this causes issues
-!      call PackLoadMesh(y%AllHdroOrigin, y_op, index)
+      if ( y%WAMITMesh%Committed ) then
+         call PackLoadMesh(y%WAMITMesh, y_op, index)
+      end if
       
       index = index - 1
       do i=1,p%NumTotalOuts
@@ -3453,47 +3672,58 @@ SUBROUTINE HD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
 
    !..................................
    IF ( PRESENT( x_op ) ) THEN
-
-      if (.not. allocated(x_op)) then                           
-         call AllocAry(x_op, p%WAMIT(1)%SS_Exctn%numStates+p%WAMIT(1)%SS_Rdtn%numStates,'x_op',ErrStat2,ErrMsg2)
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         if (ErrStat>=AbortErrLev) return
+      if ( y%WAMITMesh%Committed ) then
+         if (.not. allocated(x_op)) then 
+            call AllocAry(x_op, p%totalStates,'x_op',ErrStat2,ErrMsg2)
+               call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+            if (ErrStat>=AbortErrLev) return
+         end if
+         index = 1
+         do j=1, p%nWAMITObj
+            do i=1,p%WAMIT(j)%SS_Exctn%numStates ! Loop through all DOFs
+               x_op(index) = x%WAMIT(j)%SS_Exctn%x(i)
+               index = index + 1
+            end do
+         end do
+         do j=1, p%nWAMITObj
+            do i=1,p%WAMIT(j)%SS_Rdtn%numStates ! Loop through all DOFs
+               x_op(index) = x%WAMIT(j)%SS_Rdtn%x(i)
+               index = index + 1
+            end do
+         end do
       end if
-      
-      do i=1,p%WAMIT(1)%SS_Exctn%numStates ! Loop through all DOFs
-         x_op(i) = x%WAMIT(1)%SS_Exctn%x(i)
-      end do
-      do i=1,p%WAMIT(1)%SS_Rdtn%numStates ! Loop through all DOFs
-         x_op(i+p%WAMIT(1)%SS_Exctn%numStates) = x%WAMIT(1)%SS_Rdtn%x(i)
-      end do                               
-      
    END IF
 
    !..................................
    IF ( PRESENT( dx_op ) ) THEN
-
-      if (.not. allocated(dx_op)) then                           
-         call AllocAry(dx_op, p%WAMIT(1)%SS_Exctn%numStates+p%WAMIT(1)%SS_Rdtn%numStates,'dx_op',ErrStat2,ErrMsg2)
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         if (ErrStat>=AbortErrLev) return
-      end if
-      
-      call HydroDyn_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dx, ErrStat2, ErrMsg2 ) 
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) 
-         if (ErrStat>=AbortErrLev) then
-            call HydroDyn_DestroyContState( dx, ErrStat2, ErrMsg2)
-            return
+      if ( y%WAMITMesh%Committed ) then
+         if (.not. allocated(dx_op)) then 
+            call AllocAry(dx_op, p%totalStates,'dx_op',ErrStat2,ErrMsg2)
+               call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+            if (ErrStat>=AbortErrLev) return
          end if
-                     
-      do i=1,p%WAMIT(1)%SS_Exctn%numStates ! Loop through all DOFs
-         dx_op(i) = dx%WAMIT(1)%SS_Exctn%x(i)
-      end do
-      do i=1,p%WAMIT(1)%SS_Rdtn%numStates ! Loop through all DOFs
-         dx_op(i+p%WAMIT(1)%SS_Exctn%numStates) = dx%WAMIT(1)%SS_Rdtn%x(i)
-      end do                                 
       
-      call HydroDyn_DestroyContState( dx, ErrStat2, ErrMsg2)
-            
+         call HydroDyn_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dx, ErrStat2, ErrMsg2 ) 
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) 
+            if (ErrStat>=AbortErrLev) then
+               call HydroDyn_DestroyContState( dx, ErrStat2, ErrMsg2)
+               return
+            end if
+         index = 1
+         do j=1, p%nWAMITObj            
+            do i=1,p%WAMIT(j)%SS_Exctn%numStates ! Loop through all DOFs
+               dx_op(index) = dx%WAMIT(j)%SS_Exctn%x(i)
+               index = index + 1
+            end do
+         end do
+         do j=1, p%nWAMITObj
+            do i=1,p%WAMIT(j)%SS_Rdtn%numStates ! Loop through all DOFs
+               dx_op(index) = dx%WAMIT(j)%SS_Rdtn%x(i)
+               index = index + 1
+            end do                                 
+         end do
+         call HydroDyn_DestroyContState( dx, ErrStat2, ErrMsg2)
+      end if    
    END IF
 
    !..................................

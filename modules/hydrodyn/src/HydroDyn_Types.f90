@@ -185,6 +185,9 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: PotMod      !< 1 if using WAMIT model, 0 if no potential flow model, or 2 if FIT model [-]
     INTEGER(IntKi)  :: NBody      !< [>=1; only used when PotMod=1. If NBodyMod=1, the WAMIT data contains a vector of size 6*NBody x 1 and matrices of size 6*NBody x 6*NBody; if NBodyMod>1, there are NBody sets of WAMIT data each with a vector of size 6 x 1 and matrices of size 6 x 6] [-]
     INTEGER(IntKi)  :: NBodyMod      !< Body coupling model {1: include coupling terms between each body and NBody in HydroDyn equals NBODY in WAMIT, 2: neglect coupling terms between each body and NBODY=1 with XBODY=0 in WAMIT, 3: Neglect coupling terms between each body and NBODY=1 with XBODY=/0 in WAMIT} (switch) [only used when PotMod=1] [-]
+    INTEGER(IntKi)  :: totalStates      !< Number of excitation and radiation states for all WAMIT bodies [-]
+    INTEGER(IntKi)  :: totalExctnStates      !< Number of excitation states for all WAMIT bodies [-]
+    INTEGER(IntKi)  :: totalRdtnStates      !< Number of radiation states for all WAMIT bodies [-]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveTime      !< Array of time samples, (sec) [-]
     INTEGER(IntKi)  :: NStepWave      !< Number of data points in the wave kinematics arrays [-]
     INTEGER(IntKi)  :: NWaveElev      !< Number of wave elevation outputs [-]
@@ -7197,6 +7200,9 @@ ENDIF
     DstParamData%PotMod = SrcParamData%PotMod
     DstParamData%NBody = SrcParamData%NBody
     DstParamData%NBodyMod = SrcParamData%NBodyMod
+    DstParamData%totalStates = SrcParamData%totalStates
+    DstParamData%totalExctnStates = SrcParamData%totalExctnStates
+    DstParamData%totalRdtnStates = SrcParamData%totalRdtnStates
 IF (ALLOCATED(SrcParamData%WaveTime)) THEN
   i1_l = LBOUND(SrcParamData%WaveTime,1)
   i1_u = UBOUND(SrcParamData%WaveTime,1)
@@ -7568,6 +7574,9 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! PotMod
       Int_BufSz  = Int_BufSz  + 1  ! NBody
       Int_BufSz  = Int_BufSz  + 1  ! NBodyMod
+      Int_BufSz  = Int_BufSz  + 1  ! totalStates
+      Int_BufSz  = Int_BufSz  + 1  ! totalExctnStates
+      Int_BufSz  = Int_BufSz  + 1  ! totalRdtnStates
   Int_BufSz   = Int_BufSz   + 1     ! WaveTime allocated yes/no
   IF ( ALLOCATED(InData%WaveTime) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! WaveTime upper/lower bounds for each dimension
@@ -7835,6 +7844,12 @@ ENDIF
     IntKiBuf(Int_Xferred) = InData%NBody
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%NBodyMod
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%totalStates
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%totalExctnStates
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%totalRdtnStates
     Int_Xferred = Int_Xferred + 1
   IF ( .NOT. ALLOCATED(InData%WaveTime) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -8363,6 +8378,12 @@ ENDIF
     OutData%NBody = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%NBodyMod = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%totalStates = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%totalExctnStates = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%totalRdtnStates = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WaveTime not allocated
     Int_Xferred = Int_Xferred + 1
