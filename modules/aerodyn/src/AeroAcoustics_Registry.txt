@@ -78,6 +78,7 @@ typedef     ^                   AA_InputFile         AA_BladePropsType   BladePr
 typedef     ^                   AA_InputFile         IntKi               NrOutFile        -     -     -     "Nr of output files"     -
 typedef     ^                   AA_InputFile         CHARACTER(1024)     AAoutfile       {:}    -     -     "AAoutfile for writing output files"     -
 typedef     ^                   AA_InputFile         CHARACTER(1024)     TICalcTabFile    -     -     -     "Name of the file containing the table for incident turbulence intensity" -
+typedef     ^                   AA_InputFile         CHARACTER(1024)     FTitle           -     -     -     "File Title: the 2nd line of the input file, which contains a description of its contents" -
 typedef     ^                   AA_InputFile         DBKi                AAStart         -     -     -     "Time after which to calculate AA"     s
 typedef     ^                   AA_InputFile         ReKi                z0_AA           -     -     -     "Surface roughness"     -
 typedef     ^                   AA_InputFile         ReKi                ReListBL            {:}    -     -     ""          
@@ -188,6 +189,7 @@ typedef     ^                   ParameterType        ReKi                z0_aa  
 typedef     ^                   ParameterType        ReKi                dz_turb_in                  -     -      -     ""  m    
 typedef     ^                   ParameterType        ReKi                dy_turb_in                  -     -      -     ""  m    
 typedef     ^                   ParameterType        ReKi                TI_Grid_In          {:}{:}    -     -     ""         
+typedef     ^                   ParameterType        CHARACTER(1024)     FTitle                 -     -     -     "File Title: the 2nd line of the input file, which contains a description of its contents" -
 
 # parameters for output
 typedef     ^                   ParameterType        character(20)       outFmt           -      -     -   "Format specifier" "-"

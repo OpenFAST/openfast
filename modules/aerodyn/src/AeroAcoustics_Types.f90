@@ -98,6 +98,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NrOutFile      !< Nr of output files [-]
     CHARACTER(1024) , DIMENSION(:), ALLOCATABLE  :: AAoutfile      !< AAoutfile for writing output files [-]
     CHARACTER(1024)  :: TICalcTabFile      !< Name of the file containing the table for incident turbulence intensity [-]
+    CHARACTER(1024)  :: FTitle      !< File Title: the 2nd line of the input file, which contains a description of its contents [-]
     REAL(DbKi)  :: AAStart      !< Time after which to calculate AA [s]
     REAL(ReKi)  :: z0_AA      !< Surface roughness [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: ReListBL      !<  [-]
@@ -216,6 +217,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: dz_turb_in      !<  [m]
     REAL(ReKi)  :: dy_turb_in      !<  [m]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: TI_Grid_In      !<  [-]
+    CHARACTER(1024)  :: FTitle      !< File Title: the 2nd line of the input file, which contains a description of its contents [-]
     character(20)  :: outFmt      !< Format specifier [-]
     INTEGER(IntKi)  :: NrOutFile      !< Nr of output files [-]
     character(1)  :: delim      !< column delimiter [-]
@@ -1920,6 +1922,7 @@ IF (ALLOCATED(SrcInputFileData%AAoutfile)) THEN
     DstInputFileData%AAoutfile = SrcInputFileData%AAoutfile
 ENDIF
     DstInputFileData%TICalcTabFile = SrcInputFileData%TICalcTabFile
+    DstInputFileData%FTitle = SrcInputFileData%FTitle
     DstInputFileData%AAStart = SrcInputFileData%AAStart
     DstInputFileData%z0_AA = SrcInputFileData%z0_AA
 IF (ALLOCATED(SrcInputFileData%ReListBL)) THEN
@@ -2250,6 +2253,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + SIZE(InData%AAoutfile)*LEN(InData%AAoutfile)  ! AAoutfile
   END IF
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%TICalcTabFile)  ! TICalcTabFile
+      Int_BufSz  = Int_BufSz  + 1*LEN(InData%FTitle)  ! FTitle
       Db_BufSz   = Db_BufSz   + 1  ! AAStart
       Re_BufSz   = Re_BufSz   + 1  ! z0_AA
   Int_BufSz   = Int_BufSz   + 1     ! ReListBL allocated yes/no
@@ -2473,6 +2477,10 @@ ENDIF
   END IF
     DO I = 1, LEN(InData%TICalcTabFile)
       IntKiBuf(Int_Xferred) = ICHAR(InData%TICalcTabFile(I:I), IntKi)
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
+    DO I = 1, LEN(InData%FTitle)
+      IntKiBuf(Int_Xferred) = ICHAR(InData%FTitle(I:I), IntKi)
       Int_Xferred = Int_Xferred + 1
     END DO ! I
     DbKiBuf(Db_Xferred) = InData%AAStart
@@ -2928,6 +2936,10 @@ ENDIF
   END IF
     DO I = 1, LEN(OutData%TICalcTabFile)
       OutData%TICalcTabFile(I:I) = CHAR(IntKiBuf(Int_Xferred))
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
+    DO I = 1, LEN(OutData%FTitle)
+      OutData%FTitle(I:I) = CHAR(IntKiBuf(Int_Xferred))
       Int_Xferred = Int_Xferred + 1
     END DO ! I
     OutData%AAStart = DbKiBuf(Db_Xferred)
@@ -6056,6 +6068,7 @@ IF (ALLOCATED(SrcParamData%TI_Grid_In)) THEN
   END IF
     DstParamData%TI_Grid_In = SrcParamData%TI_Grid_In
 ENDIF
+    DstParamData%FTitle = SrcParamData%FTitle
     DstParamData%outFmt = SrcParamData%outFmt
     DstParamData%NrOutFile = SrcParamData%NrOutFile
     DstParamData%delim = SrcParamData%delim
@@ -6629,6 +6642,7 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*2  ! TI_Grid_In upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%TI_Grid_In)  ! TI_Grid_In
   END IF
+      Int_BufSz  = Int_BufSz  + 1*LEN(InData%FTitle)  ! FTitle
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%outFmt)  ! outFmt
       Int_BufSz  = Int_BufSz  + 1  ! NrOutFile
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%delim)  ! delim
@@ -7032,6 +7046,10 @@ ENDIF
         END DO
       END DO
   END IF
+    DO I = 1, LEN(InData%FTitle)
+      IntKiBuf(Int_Xferred) = ICHAR(InData%FTitle(I:I), IntKi)
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
     DO I = 1, LEN(InData%outFmt)
       IntKiBuf(Int_Xferred) = ICHAR(InData%outFmt(I:I), IntKi)
       Int_Xferred = Int_Xferred + 1
@@ -7867,6 +7885,10 @@ ENDIF
         END DO
       END DO
   END IF
+    DO I = 1, LEN(OutData%FTitle)
+      OutData%FTitle(I:I) = CHAR(IntKiBuf(Int_Xferred))
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
     DO I = 1, LEN(OutData%outFmt)
       OutData%outFmt(I:I) = CHAR(IntKiBuf(Int_Xferred))
       Int_Xferred = Int_Xferred + 1
