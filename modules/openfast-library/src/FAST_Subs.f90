@@ -837,12 +837,13 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          Init%InData_SD%WtrDpth = 0.0_ReKi
       END IF
             
-      Init%InData_SD%g             = Init%OutData_ED%Gravity     
-      !Init%InData_SD%UseInputFile = .TRUE. 
-      Init%InData_SD%SDInputFile   = p_FAST%SubFile
-      Init%InData_SD%RootName      = p_FAST%OutFileRoot
-      Init%InData_SD%TP_RefPoint   = ED%y%PlatformPtMesh%Position(:,1)  ! bjj: not sure what this is supposed to be 
-      Init%InData_SD%SubRotateZ    = 0.0                                ! bjj: not sure what this is supposed to be 
+      InitInData_SD%Linearize     = p_FAST%Linearize
+      InitInData_SD%g             = InitOutData_ED%Gravity     
+      !InitInData_SD%UseInputFile = .TRUE. 
+      InitInData_SD%SDInputFile   = p_FAST%SubFile
+      InitInData_SD%RootName      = p_FAST%OutFileRoot
+      InitInData_SD%TP_RefPoint   = ED%Output(1)%PlatformPtMesh%Position(:,1)  ! "Interface point" where loads will be transferred to
+      InitInData_SD%SubRotateZ    = 0.0                                        ! Used by driver to rotate structure around z
       
             
       CALL SD_Init( Init%InData_SD, SD%Input(1), SD%p,  SD%x(STATE_CURR), SD%xd(STATE_CURR), SD%z(STATE_CURR),  &
@@ -852,6 +853,21 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       p_FAST%ModuleInitialized(Module_SD) = .TRUE.
       CALL SetModuleSubstepTime(Module_SD, p_FAST, y_FAST, ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+      allocate( y_FAST%Lin%Modules(MODULE_SD)%Instance(1), stat=ErrStat2)
+      if (ErrStat2 /= 0 ) then
+         call SetErrStat(ErrID_Fatal, "Error allocating Lin%Modules(SD).", ErrStat, ErrMsg, RoutineName )
+      else
+         if (allocated(InitOutData_SD%LinNames_y)) call move_alloc(InitOutData_SD%LinNames_y,y_FAST%Lin%Modules(MODULE_SD)%Instance(1)%Names_y)
+         if (allocated(InitOutData_SD%LinNames_x)) call move_alloc(InitOutData_SD%LinNames_x,y_FAST%Lin%Modules(MODULE_SD)%Instance(1)%Names_x)
+         if (allocated(InitOutData_SD%LinNames_u)) call move_alloc(InitOutData_SD%LinNames_u,y_FAST%Lin%Modules(MODULE_SD)%Instance(1)%Names_u)
+         if (allocated(InitOutData_SD%RotFrame_y)) call move_alloc(InitOutData_SD%RotFrame_y,y_FAST%Lin%Modules(MODULE_SD)%Instance(1)%RotFrame_y)
+         if (allocated(InitOutData_SD%RotFrame_x)) call move_alloc(InitOutData_SD%RotFrame_x,y_FAST%Lin%Modules(MODULE_SD)%Instance(1)%RotFrame_x)
+         if (allocated(InitOutData_SD%RotFrame_u)) call move_alloc(InitOutData_SD%RotFrame_u,y_FAST%Lin%Modules(MODULE_SD)%Instance(1)%RotFrame_u)
+         if (allocated(InitOutData_SD%IsLoad_u  )) call move_alloc(InitOutData_SD%IsLoad_u  ,y_FAST%Lin%Modules(MODULE_SD)%Instance(1)%IsLoad_u  )
+         if (allocated(InitOutData_SD%WriteOutputHdr)) y_FAST%Lin%Modules(MODULE_SD)%Instance(1)%NumOutputs = size(InitOutData_SD%WriteOutputHdr)
+         if (allocated(InitOutData_SD%DerivOrder_x)) call move_alloc(InitOutData_SD%DerivOrder_x,y_FAST%Lin%Modules(MODULE_SD)%Instance(1)%DerivOrder_x)
+      end if
                
       IF (ErrStat >= AbortErrLev) THEN
          CALL Cleanup()
@@ -877,14 +893,15 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       if (ErrStat2 /= 0 ) then
          call SetErrStat(ErrID_Fatal, "Error allocating Lin%Modules(ExtPtfm).", ErrStat, ErrMsg, RoutineName )
       else
-         if (allocated(Init%OutData_ExtPtfm%LinNames_y)) call move_alloc(Init%OutData_ExtPtfm%LinNames_y,y_FAST%Lin%Modules(MODULE_ExtPtfm)%Instance(1)%Names_y)
-         if (allocated(Init%OutData_ExtPtfm%LinNames_x)) call move_alloc(Init%OutData_ExtPtfm%LinNames_x,y_FAST%Lin%Modules(MODULE_ExtPtfm)%Instance(1)%Names_x)
-         if (allocated(Init%OutData_ExtPtfm%LinNames_u)) call move_alloc(Init%OutData_ExtPtfm%LinNames_u,y_FAST%Lin%Modules(MODULE_ExtPtfm)%Instance(1)%Names_u)
-         if (allocated(Init%OutData_ExtPtfm%RotFrame_y)) call move_alloc(Init%OutData_ExtPtfm%RotFrame_y,y_FAST%Lin%Modules(MODULE_ExtPtfm)%Instance(1)%RotFrame_y)
-         if (allocated(Init%OutData_ExtPtfm%RotFrame_x)) call move_alloc(Init%OutData_ExtPtfm%RotFrame_x,y_FAST%Lin%Modules(MODULE_ExtPtfm)%Instance(1)%RotFrame_x)
-         if (allocated(Init%OutData_ExtPtfm%RotFrame_u)) call move_alloc(Init%OutData_ExtPtfm%RotFrame_u,y_FAST%Lin%Modules(MODULE_ExtPtfm)%Instance(1)%RotFrame_u)
-         if (allocated(Init%OutData_ExtPtfm%IsLoad_u  )) call move_alloc(Init%OutData_ExtPtfm%IsLoad_u  ,y_FAST%Lin%Modules(MODULE_ExtPtfm)%Instance(1)%IsLoad_u  )
-         if (allocated(Init%OutData_ExtPtfm%WriteOutputHdr)) y_FAST%Lin%Modules(MODULE_ExtPtfm)%Instance(1)%NumOutputs = size(Init%OutData_ExtPtfm%WriteOutputHdr)
+         if (allocated(InitOutData_ExtPtfm%LinNames_y)) call move_alloc(InitOutData_ExtPtfm%LinNames_y,y_FAST%Lin%Modules(MODULE_ExtPtfm)%Instance(1)%Names_y)
+         if (allocated(InitOutData_ExtPtfm%LinNames_x)) call move_alloc(InitOutData_ExtPtfm%LinNames_x,y_FAST%Lin%Modules(MODULE_ExtPtfm)%Instance(1)%Names_x)
+         if (allocated(InitOutData_ExtPtfm%LinNames_u)) call move_alloc(InitOutData_ExtPtfm%LinNames_u,y_FAST%Lin%Modules(MODULE_ExtPtfm)%Instance(1)%Names_u)
+         if (allocated(InitOutData_ExtPtfm%RotFrame_y)) call move_alloc(InitOutData_ExtPtfm%RotFrame_y,y_FAST%Lin%Modules(MODULE_ExtPtfm)%Instance(1)%RotFrame_y)
+         if (allocated(InitOutData_ExtPtfm%RotFrame_x)) call move_alloc(InitOutData_ExtPtfm%RotFrame_x,y_FAST%Lin%Modules(MODULE_ExtPtfm)%Instance(1)%RotFrame_x)
+         if (allocated(InitOutData_ExtPtfm%RotFrame_u)) call move_alloc(InitOutData_ExtPtfm%RotFrame_u,y_FAST%Lin%Modules(MODULE_ExtPtfm)%Instance(1)%RotFrame_u)
+         if (allocated(InitOutData_ExtPtfm%IsLoad_u  )) call move_alloc(InitOutData_ExtPtfm%IsLoad_u  ,y_FAST%Lin%Modules(MODULE_ExtPtfm)%Instance(1)%IsLoad_u  )
+         if (allocated(InitOutData_ExtPtfm%WriteOutputHdr)) y_FAST%Lin%Modules(MODULE_ExtPtfm)%Instance(1)%NumOutputs = size(InitOutData_ExtPtfm%WriteOutputHdr)
+         if (allocated(InitOutData_ExtPtfm%DerivOrder_x)) call move_alloc(InitOutData_ExtPtfm%DerivOrder_x,y_FAST%Lin%Modules(MODULE_ExtPtfm)%Instance(1)%DerivOrder_x)
       end if
                
       IF (ErrStat >= AbortErrLev) THEN

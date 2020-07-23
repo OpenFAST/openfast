@@ -25,10 +25,10 @@ MODULE SD_FEM
  
   INTEGER(IntKi),   PARAMETER  :: MaxMemJnt       = 10                    ! Maximum number of members at one joint
   INTEGER(IntKi),   PARAMETER  :: MaxOutChs       = 2000                  ! Max number of Output Channels to be read in
-  INTEGER(IntKi),   PARAMETER  :: nDOFL_TP        = 6  !TODO rename me    ! 6 degrees of freedom (length of u subarray [UTP])
+  INTEGER(IntKi),   PARAMETER  :: nDOFL_TP        = 6                     ! 6 degrees of freedom (length of u subarray [UTP])
    
   ! values of these parameters are ordered by their place in SubDyn input file:
-  INTEGER(IntKi),   PARAMETER  :: JointsCol       = 9                    ! Number of columns in Joints (JointID, JointXss, JointYss, JointZss, JointType, JointDirX JointDirY JointDirZ JointStiff)
+  INTEGER(IntKi),   PARAMETER  :: JointsCol       = 10                    ! Number of columns in Joints (JointID, JointXss, JointYss, JointZss, JointType, JointDirX JointDirY JointDirZ JointStiff JointDamp)
   INTEGER(IntKi),   PARAMETER  :: InterfCol       = 7                     ! Number of columns in interf matrix (JointID,ItfTDxss,ItfTDYss,ItfTDZss,ItfRDXss,ItfRDYss,ItfRDZss)
   INTEGER(IntKi),   PARAMETER  :: ReactCol        = 7                     ! Number of columns in reaction matrix (JointID,ItfTDxss,ItfTDYss,ItfTDZss,ItfRDXss,ItfRDYss,ItfRDZss)
   INTEGER(IntKi),   PARAMETER  :: MaxNodesPerElem = 2                     ! Maximum number of nodes per element (currently 2)
@@ -47,6 +47,7 @@ MODULE SD_FEM
   INTEGER(IntKi),   PARAMETER  :: iJointType= 5  ! Index in Joints where the joint type is stored
   INTEGER(IntKi),   PARAMETER  :: iJointDir= 6 ! Index in Joints where the joint-direction are stored
   INTEGER(IntKi),   PARAMETER  :: iJointStiff= 9 ! Index in Joints where the joint-stiffness is stored
+  INTEGER(IntKi),   PARAMETER  :: iJointDamp= 10 ! Index in Joints where the joint-damping is stored
 
   ! ID for joint types
   INTEGER(IntKi),   PARAMETER  :: idJointCantilever = 1
@@ -69,19 +70,10 @@ MODULE SD_FEM
   INTEGER(IntKi),   PARAMETER  :: idSIM_Full     = 1
   INTEGER(IntKi),   PARAMETER  :: idSIM_GravOnly = 2 
   INTEGER(IntKi)               :: idSIM_Valid(3)  = (/idSIM_None, idSIM_Full, idSIM_GravOnly /)
-
-  ! Types of Guyan Damping
-  INTEGER(IntKi),   PARAMETER  :: idGuyanDamp_None     = 0
-  INTEGER(IntKi),   PARAMETER  :: idGuyanDamp_Rayleigh = 1
-  INTEGER(IntKi),   PARAMETER  :: idGuyanDamp_66       = 2 
-  INTEGER(IntKi)               :: idGuyanDamp_Valid(3)  = (/idGuyanDamp_None, idGuyanDamp_Rayleigh, idGuyanDamp_66 /)
   
   INTEGER(IntKi),   PARAMETER  :: SDMaxInpCols    = MAX(JointsCol,InterfCol,MembersCol,PropSetsBCol,PropSetsXCol,COSMsCol,CMassCol)
 
-  ! Implementation Flags
-  LOGICAL, PARAMETER :: DEV_VERSION    = .false.
-  LOGICAL, PARAMETER :: BC_Before_CB   = .true.
-  LOGICAL, PARAMETER :: ANALYTICAL_LIN = .true.
+  LOGICAL, PARAMETER :: DEV_VERSION = .false.
 
   INTERFACE FINDLOCI ! In the future, use FINDLOC from intrinsic
      MODULE PROCEDURE FINDLOCI_ReKi
@@ -254,9 +246,9 @@ SUBROUTINE RigidTrnsf(Init, p, RefPoint, DOF, nDOF, T_ref, ErrStat, ErrMsg)
    T_ref(:,:)=0
    DO I = 1, nDOF
       iDOF        = DOF(I) ! DOF index in constrained system
-      iNode       = p%DOFred2Nodes(iDOF,1) ! First column is node 
-      nDOFPerNode = p%DOFred2Nodes(iDOF,2) ! Second column is number of DOF per node
-      iiDOF       = p%DOFred2Nodes(iDOF,3) ! Third column is dof index for this joint (1-6 for cantilever)
+      iNode       = p%DOFtilde2Nodes(iDOF,1) ! First column is node 
+      nDOFPerNode = p%DOFtilde2Nodes(iDOF,2) ! Second column is number of DOF per node
+      iiDOF       = p%DOFtilde2Nodes(iDOF,3) ! Third column is dof index for this joint (1-6 for cantilever)
 
       if ((iiDOF<1) .or. (iiDOF>6)) then
          ErrMsg  = 'RigidTrnsf, node DOF number is not valid. DOF:'//trim(Num2LStr(iDOF))//' Node:'//trim(Num2LStr(iNode))//' iiDOF:'//trim(Num2LStr(iiDOF)); ErrStat = ErrID_Fatal
@@ -414,7 +406,6 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
    INTEGER                       :: knode, kelem, kprop, nprop
    REAL(ReKi)                    :: x1, y1, z1, x2, y2, z2, dx, dy, dz, dd, dt, d1, d2, t1, t2
    LOGICAL                       :: found, CreateNewProp
-   INTEGER(IntKi)                :: nMemberCable, nMemberRigid, nMemberBeam !< Number of memebers per type
    INTEGER(IntKi)                :: eType !< Element Type
    INTEGER(IntKi)                :: ErrStat2
    CHARACTER(ErrMsgLen)          :: ErrMsg2
@@ -428,29 +419,22 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
       CALL Fatal('FEMMod '//TRIM(Num2LStr(Init%FEMMod))//' not implemented.'); return
    ENDIF
    
-   ! --- Total number of element   
-   nMemberBeam  = count(Init%Members(:,iMType) == idMemberBeam)
-   nMemberCable = count(Init%Members(:,iMType) == idMemberCable)
-   nMemberRigid = count(Init%Members(:,iMType) == idMemberRigid)
-   Init%NElem = nMemberBeam*Init%NDiv + nMemberCable + nMemberRigid  ! NOTE: only Beams are divided
-   IF ( (nMemberBeam+nMemberRigid+nMemberCable) /= size(Init%Members,1)) then
-      CALL Fatal(' Member list contains an element which is not a beam, a cable or a rigid link'); return
-   ENDIF
-
+   ! Total number of element   
+   Init%NElem = p%NMembers*Init%NDiv  ! Note: This is a max since cable and rigid cannot be subdivided
    ! Total number of nodes - Depends on division and number of nodes per element
-   p%nNodes = Init%NJoints + ( Init%NDiv - 1 )*nMemberBeam
+   p%nNodes = Init%NJoints + ( Init%NDiv - 1 )*p%NMembers 
+   p%nNodes = p%nNodes + (NNE - 2)*Init%NElem  ! Note: Same as above. Can be improved by counting R&C
    
    ! check the number of interior modes
    IF ( p%nDOFM > 6*(p%nNodes - p%nNodes_I - p%nNodes_C) ) THEN
       CALL Fatal(' NModes must be less than or equal to '//TRIM(Num2LStr( 6*(p%nNodes - p%nNodes_I - p%nNodes_C) ))); return
    ENDIF
    
-   ! TODO replace this with an integer list!
    CALL AllocAry(Init%MemberNodes,p%NMembers,    Init%NDiv+1,'Init%MemberNodes',ErrStat2, ErrMsg2); if(Failed()) return ! for two-node element only, otherwise the number of nodes in one element is different
 
    ! --- Reindexing JointsID and MembersID into Nodes and Elems arrays
    ! NOTE: need NNode and NElem 
-   CALL SD_ReIndex_CreateNodesAndElems(Init, p, ErrStat2, ErrMsg2);  if(Failed()) return
+   CALL SD_ReIndex_CreateNodesAndElems(Init,p, ErrStat2, ErrMsg2);  if(Failed()) return
    
   
     Init%MemberNodes = 0
@@ -542,7 +526,7 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
           ! node connect to Node1
           knode = knode + 1
           Init%MemberNodes(I, 2) = knode
-          CALL SetNewNode(knode, x1+dx, y1+dy, z1+dz, Init); if (ErrStat>ErrID_None) return;
+          CALL SetNewNode(knode, x1+dx, y1+dy, z1+dz, Init) ! Set Init%Nodes(knode,:)
           
           IF ( CreateNewProp ) THEN   
                ! create a new property set 
@@ -550,11 +534,11 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
                kprop = kprop + 1
                CALL SetNewProp(kprop, TempProps(Prop1, 2), TempProps(Prop1, 3), TempProps(Prop1, 4), d1+dd, t1+dt, TempProps)           
                kelem = kelem + 1
-               CALL SetNewElem(kelem, Node1, knode, eType, Prop1, kprop, p); if (ErrStat>ErrID_None) return;
+               CALL SetNewElem(kelem, Node1, knode, eType, Prop1, kprop, p)  
                nprop = kprop
           ELSE
                kelem = kelem + 1
-               CALL SetNewElem(kelem, Node1, knode, eType, Prop1, Prop1, p); if (ErrStat>ErrID_None) return;             
+               CALL SetNewElem(kelem, Node1, knode, eType, Prop1, Prop1, p)                
                nprop = Prop1 
           ENDIF
           
@@ -571,26 +555,22 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
                   kprop = kprop + 1
                   CALL SetNewProp(kprop, TempProps(Prop1, 2), TempProps(Prop1, 3), Init%PropSetsB(Prop1, 4), d1 + J*dd, t1 + J*dt,  TempProps)           
                   kelem = kelem + 1
-                  CALL SetNewElem(kelem, knode-1, knode, eType, nprop, kprop, p); if (ErrStat>ErrID_None) return;
+                  CALL SetNewElem(kelem, knode-1, knode, eType, nprop, kprop, p)
                   nprop = kprop
              ELSE
                   kelem = kelem + 1
-                  CALL SetNewElem(kelem, knode-1, knode, eType, nprop, nprop, p); if (ErrStat>ErrID_None) return;
+                  CALL SetNewElem(kelem, knode-1, knode, eType, nprop, nprop, p)                          
              ENDIF
           ENDDO
           
           ! the element connect to Node2
           kelem = kelem + 1
-          CALL SetNewElem(kelem, knode, Node2, eType, nprop, Prop2, p); if (ErrStat>ErrID_None) return;
+          CALL SetNewElem(kelem, knode, Node2, eType, nprop, Prop2, p)                
        ENDDO ! loop over all members
        !
        Init%NPropB = kprop
-       if(knode/=size(Init%Nodes,1)) then
-          call Fatal('Implementation error. Number of nodes wrongly estimated.');return
-       endif
-       if(kelem/=size(p%Elems,1)) then
-          call Fatal('Implementation error. Number of elements wrongly estimated.');return
-       endif
+       Init%NElem  = kelem ! TODO since not all members might have been divided
+       p%nNodes  = knode ! TODO since not all members might have been divided
 
     ENDIF ! if NDiv is greater than 1
 
@@ -637,10 +617,6 @@ CONTAINS
       TYPE(SD_InitType),      INTENT(INOUT) :: Init
       INTEGER,                INTENT(IN)    :: k
       REAL(ReKi),             INTENT(IN)    :: x, y, z
-      if (k>size(Init%Nodes,1)) then
-         call Fatal('Implementation Error. Attempt to add more node than space allocated.');
-         return
-      endif
       Init%Nodes(k, 1)                     = k
       Init%Nodes(k, 2)                     = x
       Init%Nodes(k, 3)                     = y
@@ -649,6 +625,7 @@ CONTAINS
       ! Properties below are for non-cantilever joints
       Init%Nodes(k, iJointDir:iJointDir+2) = 0.0_ReKi ! NOTE: irrelevant for cantilever nodes
       Init%Nodes(k, iJointStiff)           = 0.0_ReKi ! NOTE: irrelevant for cantilever nodes
+      Init%Nodes(k, iJointDamp)            = 0.0_ReKi ! NOTE: irrelevant for cantilever nodes
    END SUBROUTINE SetNewNode
    
    !> Set properties of element k
@@ -660,10 +637,6 @@ CONTAINS
       INTEGER,                INTENT(IN   )   :: p1
       INTEGER,                INTENT(IN   )   :: p2
       TYPE(SD_ParameterType), INTENT(INOUT)   :: p
-      if (k>size(p%Elems,1)) then
-         call Fatal('Implementation Error. Attempt to add more element than space allocated.');
-         return
-      endif
       p%Elems(k, 1)        = k
       p%Elems(k, 2)        = n1
       p%Elems(k, 3)        = n2
@@ -677,10 +650,6 @@ CONTAINS
       INTEGER   , INTENT(IN)   :: k
       REAL(ReKi), INTENT(IN)   :: E, G, rho, d, t
       REAL(ReKi), INTENT(INOUT):: TempProps(:, :)
-      if (k>size(TempProps,1)) then
-         call Fatal('Implementation Error. Attempt to add more properties than space allocated.');
-         return
-      endif
       TempProps(k, 1) = k
       TempProps(k, 2) = E
       TempProps(k, 3) = G
@@ -1101,24 +1070,34 @@ CONTAINS
 END SUBROUTINE AssembleKM
 
 !> Add soil stiffness and mass to global system matrices
+!! Soil stiffness can come from two sources: 
+!!   - "SSI" matrices (specified at reaction nodes)
+!!   - "Soil" matrices (specified at Initalization)
 SUBROUTINE InsertSoilMatrices(M, K, NodesDOF, Init, p, ErrStat, ErrMsg, Substract)
    real(ReKi), dimension(:,:),   intent(inout) :: M
    real(ReKi), dimension(:,:),   intent(inout) :: K
    type(IList),dimension(:),     intent(in   ) :: NodesDOF !< Map from Node Index to DOF lists
-   type(SD_InitType),            intent(in   ) :: Init
+   type(SD_InitType),            intent(inout) :: Init  !< TODO set it to in only
    type(SD_ParameterType),       intent(in   ) :: p
    integer(IntKi),               intent(  out) :: ErrStat     ! Error status of the operation
    character(*),                 intent(  out) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
    logical, optional,            intent(in   ) :: SubStract   ! If present, and if true, substract instead of adding
-   integer                    :: I, J, iiNode
+   integer                    :: I, J, iiNode, nDOF
    integer                    :: iDOF, jDOF, iNode  !< DOF and node indices
    real(ReKi), dimension(6,6) :: K_soil, M_soil ! Auxiliary matrices for soil
+   real(ReKi)                 :: Dist
    ErrMsg  = ""
    ErrStat = ErrID_None
+   ! --- SSI matrices
    ! TODO consider doing the 21 -> 6x6 conversion while reading
    ! 6x6 matrix goes to one node of one element only
    do iiNode = 1, p%nNodes_C ! loop on constrained nodes
       iNode = p%Nodes_C(iiNode,1)
+      nDOF=size(NodesDOF(iNode)%List)
+      if (nDOF/=6) then
+         ErrMsg='SSI soil matrix is to be inserted at SubDyn node '//Num2LStr(iNode)//', but this node has '//num2lstr(nDOF)//' DOFs';
+         ErrStat=ErrID_Fatal; return
+      endif
       call Array21_to_6by6(Init%SSIK(:,iiNode), K_soil)
       call Array21_to_6by6(Init%SSIM(:,iiNode), M_soil)
       if (present(Substract)) then
@@ -1136,6 +1115,40 @@ SUBROUTINE InsertSoilMatrices(M, K, NodesDOF, Init, p, ErrStat, ErrMsg, Substrac
          enddo
       enddo
    enddo
+   ! --- "Soil" matrices
+   if (allocated(Init%Soil_K)) then
+      do iiNode = 1,size(Init%Soil_Points,2)
+         ! --- Find closest node
+         call FindClosestNodes(Init%Soil_Points(1:3,iiNode), Init%Nodes, iNode, Dist);
+         if (Dist>0.1_ReKi) then
+            ErrMsg='Closest SubDyn Node is node '//Num2LStr(iNode)//', which is more than 0.1m away from soildyn point '//num2lstr(iiNode);
+            ErrStat=ErrID_Fatal; return
+         endif
+         Init%Soil_Nodes(iiNode) = iNode
+         ! --- Insert/remove from matrices
+         nDOF=size(NodesDOF(iNode)%List)
+         if (nDOF/=6) then
+            ErrMsg='Soil matrix is to be inserted at SubDyn node '//Num2LStr(iNode)//', but this node has '//num2lstr(nDOF)//' DOFs';
+            ErrStat=ErrID_Fatal; return
+         endif
+         K_soil = Init%Soil_K(1:6,1:6,iiNode)
+         if (present(Substract)) then
+            if (Substract) then
+               K_soil = - K_soil
+            endif
+         endif
+         do I = 1, 6
+            iDOF = NodesDOF(iNode)%List(I)   ! DOF index
+            do J = 1, 6
+               jDOF = NodesDOF(iNode)%List(J)   ! DOF index
+               K(iDOF, jDOF) = K(iDOF, jDOF) + K_soil(I,J)
+            enddo
+         enddo
+         if (.not.present(Substract)) then
+            CALL WrScr('   Soil stiffness inserted at SubDyn node '//trim(Num2LStr(iNode)))
+         endif
+      enddo
+   endif
 contains
    !> Convert a flatten array of 21 values into a symmetric  6x6 matrix
    SUBROUTINE Array21_to_6by6(A21, M66)
@@ -1154,8 +1167,26 @@ contains
    END SUBROUTINE Array21_to_6by6
 END SUBROUTINE InsertSoilMatrices
 
-
-
+!------------------------------------------------------------------------------------------------------
+!> Find closest node index to a point, returns distance as well
+SUBROUTINE FindClosestNodes(Point, Nodes, iNode, Dist)
+   real(ReKi), dimension(3),     intent(IN   ) :: Point  !< Point coordinates
+   real(ReKi), dimension(:,:),   intent(IN   ) :: Nodes  !< List of nodes, Positions are in columns 2-4...
+   integer(IntKi),               intent(  OUT) :: iNode  !< Index of closest node
+   real(ReKi),                   intent(  OUT) :: Dist   !< Distance from Point to node iNode
+   integer(IntKi) :: I
+   real(ReKi) :: min_dist, loc_dist
+   ! 
+   min_dist=999999._ReKi
+   iNode=-1
+   do i = 1, size(Nodes,1)
+      loc_dist = sqrt((Point(1) - Nodes(i,2))**2 + (Point(2) - Nodes(i,3))**2+ (Point(3) - Nodes(i,4))**2) 
+      if (loc_dist<min_dist) then
+         iNode=1
+         min_dist = loc_dist
+      endif
+   enddo
+END SUBROUTINE FindClosestNodes
 
 !------------------------------------------------------------------------------------------------------
 !> Build transformation matrix T, such that x= T.x~ where x~ is the reduced vector of DOF
@@ -1185,7 +1216,7 @@ SUBROUTINE BuildTMatrix(Init, p, RA, RAm1, Tred, ErrStat, ErrMsg)
    integer(IntKi) :: nc !< Number of DOF after constraints applied
    integer(IntKi) :: nj
    real(ReKi)  :: phat(3) !< Directional vector of the joint
-   type(IList), dimension(:), allocatable :: RA_DOFred ! DOF indices for each rigid assembly, in reduced system
+   type(IList), dimension(:), allocatable :: RA_DOFtilde ! DOF indices for each rigid assembly, in reduced system
    INTEGER(IntKi)       :: ErrStat2
    CHARACTER(ErrMsgLen) :: ErrMsg2
    ErrStat = ErrID_None
@@ -1194,12 +1225,10 @@ SUBROUTINE BuildTMatrix(Init, p, RA, RAm1, Tred, ErrStat, ErrMsg)
    ! --- Misc inits
    nullify(IDOFNew)
    I6(1:6,1:6)=0; do i = 1,6 ; I6(i,i)=1_ReKi; enddo ! I6 =  eye(6)
-   allocate(p%NodesDOFred(1:p%nNodes), stat=ErrStat2); if(Failed()) return; ! Indices of DOF for each joint, in reduced system
-   allocate(RA_DOFred(1:size(RA)), stat=ErrStat2); if(Failed()) return; ! Indices of DOF for each rigid assmbly, in reduced system
+   allocate(p%NodesDOFtilde(1:p%nNodes), stat=ErrStat2); if(Failed()) return; ! Indices of DOF for each joint, in reduced system
+   allocate(RA_DOFtilde(1:size(RA)), stat=ErrStat2); if(Failed()) return; ! Indices of DOF for each rigid assmbly, in reduced system
 
    p%nDOF_red = nDOF_ConstraintReduced()
-   p%reduced  = reductionNeeded()      ! True if reduction needed, allow for optimization if not needed
-
    if (DEV_VERSION) then
       print*,'nDOF constraint elim', p%nDOF_red , '/' , p%nDOF
    endif
@@ -1234,13 +1263,13 @@ SUBROUTINE BuildTMatrix(Init, p, RA, RAm1, Tred, ErrStat, ErrMsg)
             if ( ia <= 0) then
                ! This rigid assembly has already been processed
                ! OLD: The DOF list is taken from the stored RA DOF list
-               ! call init_list(p%NodesDOFred(iNode), RA_DOFred(aID)%List, ErrStat2, ErrMsg2)
+               ! call init_list(p%NodesDOFtilde(iNode), RA_DOFtilde(aID)%List, ErrStat2, ErrMsg2)
                ! NEW: this node has no DOFs
-               call init_list(p%NodesDOFred(iNode), 0, 0, ErrStat2, ErrMsg2)
+               call init_list(p%NodesDOFtilde(iNode), 0, 0, ErrStat2, ErrMsg2)
                if (DEV_VERSION) then
                   print*,'The RA',aID,', has already been processed!'
                   print*,'N',iNode,'I ',p%NodesDOF(iNode)%List(1:6)
-                  print*,'N',iNode,'It',RA_DOFred(aID)%List
+                  print*,'N',iNode,'It',RA_DOFtilde(aID)%List
                endif
                cycle ! We pass to the next joint
             else
@@ -1252,15 +1281,15 @@ SUBROUTINE BuildTMatrix(Init, p, RA, RAm1, Tred, ErrStat, ErrMsg)
                   IDOFOld( (I-1)*6+1 : I*6 ) = p%NodesDOF(INodesID(I))%List(1:6)
                enddo
 
-               ! Storing DOF list for this RA (Note: same as NodesDOFred below)
+               ! Storing DOF list for this RA (Note: same as NodesDOFtilde below)
                nc=size(Tc,2) 
-               call init_list(RA_DOFred(aID), (/ (iprev + i, i=1,nc) /), ErrStat2, ErrMsg2);
+               call init_list(RA_DOFtilde(aID), (/ (iprev + i, i=1,nc) /), ErrStat2, ErrMsg2);
 
             endif
          else
             ! --- Regular cantilever joint
             ! TODO/NOTE: We could apply fixed constraint/BC here, returning Tc as a 6xn matrix with n<6
-            !            Extreme case would be Tc: 6*0, in which case NodesDOFred would be empty ([])
+            !            Extreme case would be Tc: 6*0, in which case NodesDOFtilde would be empty ([])
             allocate(Tc(1:6,1:6))
             allocate(IDOFOld(1:6))
             Tc=I6
@@ -1274,9 +1303,9 @@ SUBROUTINE BuildTMatrix(Init, p, RA, RAm1, Tred, ErrStat, ErrMsg)
          call JointElimination(Init%NodesConnE(iNode,:), JType, phat, Init, p, Tc, ErrStat2, ErrMsg2); if(Failed()) return
       endif
       nc=size(Tc,2) 
-      call init_list(p%NodesDOFred(iNode), nc, 0, ErrStat2, ErrMsg2)
-      p%NodesDOFred(iNode)%List(1:nc) = (/ (iprev + i, i=1,nc) /)
-      IDOFNew => p%NodesDOFred(iNode)%List(1:nc) ! alias to shorten notations
+      call init_list(p%NodesDOFtilde(iNode), nc, 0, ErrStat2, ErrMsg2)
+      p%NodesDOFtilde(iNode)%List(1:nc) = (/ (iprev + i, i=1,nc) /)
+      IDOFNew => p%NodesDOFtilde(iNode)%List(1:nc) ! alias to shorten notations
       !print*,'N',iNode,'I ',IDOFOld
       !print*,'N',iNode,'It',IDOFNew
       Tred(IDOFOld, IDOFNew) = Tc
@@ -1308,7 +1337,6 @@ contains
       if (allocated(Tc)     ) deallocate(Tc)
       if (allocated(IDOFOld)) deallocate(IDOFOld)
       if (allocated(INodesID)) deallocate(INodesID)
-      if (allocated(RA_DOFred)) deallocate(RA_DOFred)
    END SUBROUTINE CleanUp_BuildTMatrix
 
    !> Returns number of DOF after constraint reduction (via the matrix T)
@@ -1353,30 +1381,6 @@ contains
          endif
       end do
    END FUNCTION nDOF_ConstraintReduced
-
-   !> return true if reduction needed (i.e. special joints, special elements)
-   logical FUNCTION reductionNeeded()
-      integer(IntKi) :: i
-      integer(IntKi) :: myType
-      reductionNeeded=.false.
-      ! Rigid or cable links
-      do i =1,size(p%Elems,1)
-         myType = p%Elems(i, iMType)
-         if (any((/idMemberCable, idMemberRigid/)==myType)) then
-            reductionNeeded=.true.
-            return
-         endif
-      enddo
-      ! Special joints
-      do i = 1, p%nNodes
-         myType = Init%Nodes(i,iJointType)
-         if (any((/idJointPin, idJointUniversal, idJointBall/)==myType)) then
-            reductionNeeded=.true.
-            return
-         endif
-      enddo
-   end FUNCTION reductionNeeded
-
 END SUBROUTINE BuildTMatrix
 !------------------------------------------------------------------------------------------------------
 !> Assemble stiffness and mass matrix, and gravity force vector
@@ -1404,38 +1408,36 @@ SUBROUTINE DirectElimination(Init, p, ErrStat, ErrMsg)
    call BuildTMatrix(Init, p, RA, RAm1, p%T_red, ErrStat2, ErrMsg2); if (Failed()) return
 
    ! --- DOF elimination for system matrices and RHS vector
+   ! Temporary backup of M and K of full system
+   call move_alloc(Init%M,  MM)
+   call move_alloc(Init%K,  KK)
+   call move_alloc(Init%FG, FF)
+   !  Reallocating
    nDOF = p%nDOF_red
-   if (p%reduced) then
-      ! Temporary backup of M and K of full system
-      call move_alloc(Init%M,  MM)
-      call move_alloc(Init%K,  KK)
-      call move_alloc(Init%FG, FF)
-      !  Reallocating
-      CALL AllocAry( Init%K,      nDOF, nDOF,  'Init%K'   ,  ErrStat2, ErrMsg2); if(Failed()) return; ! system stiffness matrix 
-      CALL AllocAry( Init%M,      nDOF, nDOF,  'Init%M'   ,  ErrStat2, ErrMsg2); if(Failed()) return; ! system mass matrix 
-      CALL AllocAry( Init%FG     ,nDOF,        'Init%FG'  ,  ErrStat2, ErrMsg2); if(Failed()) return; ! system gravity force vector 
-      ! Elimination
-      Init%M  = matmul(transpose(p%T_red), matmul(MM, p%T_red))
-      Init%K  = matmul(transpose(p%T_red), matmul(KK, p%T_red))
-      Init%FG = matmul(transpose(p%T_red), FF)
+   CALL AllocAry( Init%D,      nDOF, nDOF,  'Init%D'   ,  ErrStat2, ErrMsg2); if(Failed()) return; ! system damping matrix 
+   CALL AllocAry( Init%K,      nDOF, nDOF,  'Init%K'   ,  ErrStat2, ErrMsg2); if(Failed()) return; ! system stiffness matrix 
+   CALL AllocAry( Init%M,      nDOF, nDOF,  'Init%M'   ,  ErrStat2, ErrMsg2); if(Failed()) return; ! system mass matrix 
+   CALL AllocAry( Init%FG     ,nDOF,        'Init%FG'  ,  ErrStat2, ErrMsg2); if(Failed()) return; ! system gravity force vector 
+   ! Elimination
+   Init%M  = matmul(transpose(p%T_red), matmul(MM, p%T_red))
+   Init%K  = matmul(transpose(p%T_red), matmul(KK, p%T_red))
+   Init%FG = matmul(transpose(p%T_red), FF)
+   Init%D = 0 !< Used for additional stiffness 
 
-      ! --- Triggers for storage of DOF indices, replacing with indices in constrained system
-      CALL ReInitBCs(Init, p)
-      CALL ReInitIntFc(Init, p)
-   endif
-   !CALL AllocAry( Init%D,      nDOF, nDOF,  'Init%D'   ,  ErrStat2, ErrMsg2); if(Failed()) return; ! system damping matrix 
-   !Init%D = 0 !< Used for additional damping 
+   ! --- Triggers for storage of DOF indices, replacing with indices in constrained system
+   CALL ReInitBCs(Init, p)
+   CALL ReInitIntFc(Init, p)
 
    ! --- Creating a convenient Map from DOF to Nodes
-   call AllocAry(p%DOFred2Nodes, p%nDOF_red, 3, 'DOFred2Nodes', ErrStat2, ErrMsg2); if(Failed()) return;
-   p%DOFred2Nodes=-999
+   call AllocAry(p%DOFtilde2Nodes, p%nDOF_red, 3, 'DOFtilde2Nodes', ErrStat2, ErrMsg2); if(Failed()) return;
+   p%DOFtilde2Nodes=-999
    do iNode=1,p%nNodes
-      nDOFPerNode = len(p%NodesDOFred(iNode))
+      nDOFPerNode = len(p%NodesDOFtilde(iNode))
       do iiDOF = 1, nDOFPerNode
-         iDOF = p%NodesDOFred(iNode)%List(iiDOF)
-         p%DOFred2Nodes(iDOF,1) = iNode       ! First column is Node index
-         p%DOFred2Nodes(iDOF,2) = nDOFPerNode ! Second column is number of DOF per node
-         p%DOFred2Nodes(iDOF,3) = iiDOF       ! Third column is number of DOF per node
+         iDOF = p%NodesDOFtilde(iNode)%List(iiDOF)
+         p%DOFtilde2Nodes(iDOF,1) = iNode       ! First column is Node index
+         p%DOFtilde2Nodes(iDOF,2) = nDOFPerNode ! Second column is number of DOF per node
+         p%DOFtilde2Nodes(iDOF,3) = iiDOF       ! Third column is number of DOF per node
       enddo
    enddo
 
@@ -1465,7 +1467,7 @@ CONTAINS
       DO I = 1, p%nNodes_C
          iNode = p%Nodes_C(I,1) ! Node index
          DO J = 1, 6 ! TODO NOTE here assumptions that 6 DOF are present
-            Init%BCs( (I-1)*6+J, 1) = p%NodesDOFred(iNode)%List(J) ! DOF number (constrained)
+            Init%BCs( (I-1)*6+J, 1) = p%NodesDOFtilde(iNode)%List(J) ! DOF number (constrained)
          ENDDO
       ENDDO
    END SUBROUTINE ReInitBCs
@@ -1478,7 +1480,7 @@ CONTAINS
       DO I = 1, p%nNodes_I
          iNode = p%Nodes_I(I,1) ! Node index
          DO J = 1, 6 ! ItfTDXss    ItfTDYss    ItfTDZss    ItfRDXss    ItfRDYss    ItfRDZss
-            Init%IntFc( (I-1)*6+J, 1) = p%NodesDOFred(iNode)%List(J) ! DOF number (unconstrained)
+            Init%IntFc( (I-1)*6+J, 1) = p%NodesDOFtilde(iNode)%List(J) ! DOF number (unconstrained)
          ENDDO
       ENDDO
    END SUBROUTINE ReInitIntFc
@@ -1634,11 +1636,6 @@ SUBROUTINE JointElimination(Elements, JType, phat, Init, p, Tc, ErrStat, ErrMsg)
       ! --- Forming Tc
       do i = 1,3    ; Tc(i,i)=1_ReKi; enddo !  I3 for translational DOF
       Tc(4:nDOFt,4:nDOFr)=Tc_rot(1:nDOFt-3, 1:nDOFr-3)
-      do i = 1,size(Tc,1); do ie = 1,size(Tc,2)
-         if (abs(Tc(i,ie))<1e-13) then
-            Tc(i,ie)=0.0_ReKi
-         endif; enddo;
-      enddo;
       deallocate(Tc_rot)
       deallocate(Tc_rot_m1)
 
@@ -1799,52 +1796,47 @@ END SUBROUTINE RigidLinkAssemblies
 
 !------------------------------------------------------------------------------------------------------
 !> Add stiffness and damping to some joints
-!! NOTE: damping was removed around 13/07/2020
 SUBROUTINE InsertJointStiffDamp(p, Init, ErrStat, ErrMsg)
    TYPE(SD_ParameterType),target,INTENT(IN   ) :: p
    TYPE(SD_InitType),            INTENT(INOUT) :: Init
    INTEGER(IntKi),               INTENT(  OUT) :: ErrStat     ! Error status of the operation
    CHARACTER(*),                 INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
    ! Local variables
-   integer(IntKi) :: iNode, JType, iStart, i
-   integer(IntKi) :: nFreeRot ! Number of free rot DOF
-   integer(IntKi) :: nMembers ! Number of members attached to this node
-   integer(IntKi) :: nSpace   ! Number of spaces between diagonal "bands" (0:pin, 1:univ, 2:ball)
-   real(ReKi) :: StifAdd
-   real(ReKi), dimension(:,:), allocatable :: K_Add ! Stiffness matrix added to global system
+   integer(IntKi) :: iNode, JType, iStart
+   real(ReKi) :: StifAdd, DampAdd
    integer(IntKi), dimension(:), pointer :: Ifreerot
    ErrStat = ErrID_None
    ErrMsg  = ""
    do iNode = 1, p%nNodes
       JType   = int(Init%Nodes(iNode,iJointType))
       StifAdd = Init%Nodes(iNode, iJointStiff)
+      DampAdd = Init%Nodes(iNode, iJointDamp )
       if(JType == idJointCantilever ) then
          ! Cantilever joints should not have damping or stiffness
          if(StifAdd>0) then 
             ErrMsg='InsertJointStiffDamp: Additional stiffness should be 0 for cantilever joints. Index of problematic node: '//trim(Num2LStr(iNode)); ErrStat=ErrID_Fatal;
             return
          endif
+         if(DampAdd>0) then 
+            ErrMsg='InsertJointStiffDamp: Additional damping should be 0 for cantilever joints. Index of problematic node: '//trim(Num2LStr(iNode)); ErrStat=ErrID_Fatal;
+            return
+         endif
       else
          ! Ball/Univ/Pin joints have damping/stiffness inserted at indices of "free rotation"
-         nMembers = Init%NodesConnE(iNode,1) ! Col1: number of elements connected to this joint
-         if      ( JType == idJointBall      ) then; iStart=4; nSpace=2;
-         else if ( JType == idJointUniversal ) then; iStart=5; nSpace=1;
-         else if ( JType == idJointPin       ) then; iStart=6; nSpace=0;
+         if      ( JType == idJointBall      ) then; iStart=4;
+         else if ( JType == idJointUniversal ) then; iStart=5;
+         else if ( JType == idJointPin       ) then; iStart=6;
          endif
-         Ifreerot=>p%NodesDOFred(iNode)%List(iStart:)
-         nFreeRot = size(Ifreerot)
-         ! Creating matrices of 0, and -K and nK on diagonals
-         allocate(K_Add(1:nFreeRot,1:nFreeRot)); 
-         call ChessBoard(K_Add, -StifAdd, 0._ReKi, nSpace=nSpace, diagVal=(nMembers-1)*StifAdd)
+         Ifreerot=>p%NodesDOFtilde(iNode)%List(iStart:)
          ! Ball/Pin/Universal joints
          if(StifAdd>0) then 
-            print*,'Stiffness Add, Node:',iNode,'DOF:', Ifreerot
-            do i=1,nFreeRot
-               print*,'K Add',K_Add(i,:)
-            enddo
-            Init%K(Ifreerot,Ifreerot) = Init%K(Ifreerot,Ifreerot) + K_Add
+            print*,'StiffAdd, Node',iNode,StifAdd, Ifreerot
+            Init%K(Ifreerot,Ifreerot) = Init%K(Ifreerot,Ifreerot) + StifAdd
          endif
-         if(allocated(K_Add)) deallocate(K_Add)
+         if(DampAdd>0) then 
+            print*,'DampAdd, Node',iNode,DampAdd, Ifreerot
+            Init%D(Ifreerot,Ifreerot) = Init%D(Ifreerot,Ifreerot) +DampAdd
+         endif
       endif
    enddo
 END SUBROUTINE InsertJointStiffDamp
