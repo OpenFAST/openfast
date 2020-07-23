@@ -2263,10 +2263,10 @@ END SUBROUTINE CheckR16Var
          compiled_precision = 'unknown'
       END IF
 
-#ifndef HAS_FORTRAN2008_FEATURES
-      compiler_version_str = 'Intel(R) Fortran Compiler '//num2lstr(__INTEL_COMPILER)
-#else
+#if defined(HAS_FORTRAN2008_FEATURES)
       compiler_version_str = compiler_version()
+#elif defined(__INTEL_COMPILER)
+      compiler_version_str = 'Intel(R) Fortran Compiler '//num2lstr(__INTEL_COMPILER)
 #endif
 
       CALL WrScr(trim(name)//'-'//trim(git_commit))
