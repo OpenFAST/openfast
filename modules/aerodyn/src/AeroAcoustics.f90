@@ -877,19 +877,19 @@ SUBROUTINE CalcObserve(t,p,m,u,xd,errStat,errMsg)
                         ! z ---> y_e
 
                         ! Compute spanwise directivity angle phi for the trailing edge
-                        phi_e = ATAN (RTEObserve(1)/RTEObserve(3))
+                        phi_e = ATAN2 (RTEObserve(1) , RTEObserve(3))
                         m%SpanAngleTE(K,J,I)  = phi_e * R2D
 
                         ! Compute chordwise directivity angle theta for the trailing edge
-                        theta_e = ATAN ((RTEObserve(3) * COS (phi_e) + RTEObserve(1) * SIN (phi_e) ) / RTEObserve(2))
+                        theta_e = ATAN2 ((RTEObserve(3) * COS (phi_e) + RTEObserve(1) * SIN (phi_e) ) , RTEObserve(2))
                         m%ChordAngleTE(K,J,I) = theta_e * R2D
                         
                         ! Compute spanwise directivity angle phi  for the leading edge (it's the same angle for the trailing edge)
-                        phi_e = ATAN (RLEObserve(1)/RLEObserve(3))
+                        phi_e = ATAN2 (RLEObserve(1) , RLEObserve(3))
                         m%SpanAngleLE(K,J,I)  = phi_e * R2D
 
                         ! Compute chordwise directivity angle theta for the leading edge
-                        theta_e = ATAN ((RLEObserve(3) * COS (phi_e) + RLEObserve(1) * SIN (phi_e) ) / RLEObserve(2))
+                        theta_e = ATAN2 ((RLEObserve(3) * COS (phi_e) + RLEObserve(1) * SIN (phi_e) ) , RLEObserve(2))
                         m%ChordAngleLE(K,J,I) = theta_e * R2D
 
                     ENDDO !K, observers

@@ -207,7 +207,7 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, AABlFile,  Default_DT, Out
         READ( Line, *, IOSTAT=IOS) InputFileData%DT_AA
         CALL CheckIOS ( IOS, InputFile, 'DT_AA', NumType, ErrStat2, ErrMsg2 ); call check
 
-        IF (mod(InputFileData%DT_AA, Default_DT) .gt. 1E-10) THEN
+        IF (abs(InputFileData%DT_AA / Default_DT - NINT(InputFileData%DT_AA / Default_DT)) .gt. 1E-10) THEN
             CALL SetErrStat(ErrID_Fatal,"The Aeroacoustics input DT_AA must be a multiple of DTAero.", ErrStat, ErrMsg, RoutineName)
             return
         END IF
