@@ -5,18 +5,17 @@ Aeroacoustics Noise Models
 
 The aeroacoustics noise of wind turbine rotors emanates from pressure
 oscillations that are generated along the blades and propagate in the
-atmosphere. This source of noise has been historically simulated with
-models characterized by different fidelity levels. At lower fidelity,
-models correlated aeroacoustics noise with rotor thrust and torque
-(Lowson 1970; Viterna 1981). At higher fidelity, three-dimensional
-incompressible computational fluid dynamics models are coupled with the
-Ffowcs Williams-Hawkings model to propagate pressure oscillations
-generated along the surface of the rotor blades to the far field (Klein
-et al. 2018). The latter models are often only suitable to estimate
-noise at low frequency because capturing noise in the audible range,
-which is commonly defined between 20 (hertz) Hz and 20 kilohertz (kHz),
-requires a very fine space-time discretization with enormous
-computational costs.
+atmosphere. This source of noise has been historically simulated with models
+characterized by different fidelity levels. At lower fidelity, models correlated
+aeroacoustics noise with rotor thrust and torque
+(:cite:`aa-Lowson:1970,aa-Viterna:1981`). At higher fidelity, three-dimensional
+incompressible computational fluid dynamics models are coupled with the Ffowcs
+Williams-Hawkings model to propagate pressure oscillations generated along the
+surface of the rotor blades to the far field (:cite:`aa-Klein:2018`). The latter
+models are often only suitable to estimate noise at low frequency because
+capturing noise in the audible range, which is commonly defined between 20
+(hertz) Hz and 20 kilohertz (kHz), requires a very fine space-time
+discretization with enormous computational costs.
 
 For the audible range, a variety of models is available in the public
 domain, and Sucameli et al. (2018) offers the most recent literature
@@ -68,7 +67,7 @@ generates surface pressure fluctuations. Over the years, several
 formulations of the turbulent inflow noise model have been developed
 (Sucameli et al. 2018). In this model of OpenFAST, the formulation
 defined in Moriarty et al. (2004) is adopted. The formulation is based
-on the model of Amiet (:cite:`Amiet:1975` ; Amiet and Paterson 1976) and is
+on the model of Amiet (:cite:`aa-Amiet:1975` ; Amiet and Paterson 1976) and is
 presented in Section 2.1.1. Additionally, the user can activate the
 correction defined by Moriarty et al. (2005), which builds upon the
 Amiet model and accounts for the thickness of the airfoils adopted along
@@ -80,7 +79,7 @@ presented in Section 2.1.2.
 Amiet model
 ^^^^^^^^^^^
 
-The formulation is based on work from :cite:`Amiet:1975` and Amiet and
+The formulation is based on work from :cite:`aa-Amiet:1975` and Amiet and
 Paterson (1976), and it represents the blade as a flat plate and
 neglects the shape of the airfoil.
 
@@ -161,7 +160,7 @@ intensity.
 
 Two corrections to this model are also implemented. The first one
 comprises a correction for the angle of attack, :math:`\alpha`, in which
-the effect is neglected in the original formulation from :cite:`Amiet:1975`
+the effect is neglected in the original formulation from :cite:`aa-Amiet:1975`
 and Amiet and Peterson (1976). This correction is formulated as:
 
 +---------------------------------------------------------------+-----+

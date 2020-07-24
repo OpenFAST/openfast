@@ -1,4 +1,4 @@
-.. _AA-model-verifcation:
+.. _AA-model-verification:
 
 
 Model Verification
