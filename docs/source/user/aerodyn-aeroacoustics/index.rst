@@ -37,5 +37,5 @@ Aeroacoustics Noise Model of OpenFAST
    02-noise-models.rst
    03-model-verification.rst
    04-conclusions.rst
-   05-usage.rst
+   App-usage.rst
    refs.rst

@@ -128,6 +128,9 @@ be made both at the theoretical implementation levels.
    Comparison of overall sound pressure levels for the observers
    distributed, as shown in the previous figure 
 
+
+.. _aa-sec-ModelUsage:
+
 Model Usage
 ~~~~~~~~~~~
 

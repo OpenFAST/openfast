@@ -152,7 +152,7 @@ The formulations of :math:`{\overline{D}}_{h}\ `\ and
 
 The current implementation offers two approaches to estimate
 :math:`I_{1}`. The first one is through a user-defined grid of
-:math:`I_{1}`; see :numref:`Appendix A.4`. The second option is to have the code
+:math:`I_{1}`; see :numref:`aa-sec-TIgrid`. The second option is to have the code
 reconstructing :math:`I_{1}` from the turbulent wind grid, where the
 code computes the airfoil relative position of each blade section,
 :math:`i`, at every time instant and, given the rotor speed,
@@ -252,7 +252,7 @@ implemented in the code: (1) the original formulation from the BPM
 model, described in :numref:`aa-amiet`, and (2) a more recent model developed
 at the Dutch research institute, TNO, described in :numref:`aa-guidati`. Both
 models take as input the characteristics of the airfoil boundary layer.
-These must be provided by the user and are discussed in :numref:`Appendix A.2`.
+These must be provided by the user and are discussed in :numref:`aa-sec-BLinputs`.
 
 .. _aa-turb-TE-bpm:
 
@@ -359,9 +359,9 @@ is computed as:
 
 The implementation of the TNO model is identical to the one described in
 :cite:`aa-MoriartyGuidatiMigliore:2005`. The inputs to the model are generated from the
-boundary layer characteristics provided by the user (see :numref:`Appendix A.2`).
+boundary layer characteristics provided by the user (see :numref:`aa-sec-BLinputs`).
 
-.. _aa-laminar-rtex:
+.. _aa-laminar-vortex:
 
 Laminar Boundary Layer – Vortex Shedding
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -467,7 +467,7 @@ along the blade may strengthen this noise source. When this noise source
 is activated, the user is asked to provide the distribution along the
 blade span of the blunt thickness of the trailing edge, :math:`h`, and
 the solid angle between the suction and pressure sides of the airfoil,
-:math:`\Psi` (see :numref:`Appendix A.5`). :math:`h` and :math:`\Psi` are inputs
+:math:`\Psi` (see :numref:`aa-sec-TEgeom`). :math:`h` and :math:`\Psi` are inputs
 to the equation:
 
 .. math::
@@ -489,7 +489,7 @@ Directivity
 ~~~~~~~~~~~
 
 The position of one or more observers is specified by the user, as
-described in :numref:`Appendix A.3`. The directivity from the BPM model is adopted
+described in :numref:`aa-sec-ObsPos`. The directivity from the BPM model is adopted
 in this implementation (:cite:`aa-Brooks:1989`). The directivity term,
 :math:`\overline{D}`, corrects the :math:`\text{SPL}` depending on the
 relative position of the observer to the emitter. The position is
