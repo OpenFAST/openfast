@@ -155,6 +155,7 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
     p%dy_turb_in       = InputFileData%dy_turb_in
     p%dz_turb_in       = InputFileData%dz_turb_in
     p%NrObsLoc         = InputFileData%NrObsLoc
+    p%FTitle           = InputFileData%FTitle
 
     call AllocAry(p%TI_Grid_In,size(InputFileData%TI_Grid_In,1), size(InputFileData%TI_Grid_In,2),  'p%TI_Grid_In', errStat2, errMsg2); if(Failed()) return
     p%TI_Grid_In=InputFileData%TI_Grid_In

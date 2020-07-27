@@ -56,7 +56,6 @@ MODULE AeroAcoustics_IO
    integer(intKi), parameter        :: IInflow_FullGuidati         = 2  ! IInflow noise is calculated with FullGuidati
    integer(intKi), parameter        :: IInflow_SimpleGuidati    = 3  ! IInflow noise is calculated with SimpleGuidati
 
-   INTEGER(IntKi), PARAMETER      :: MaxOutPts = 1103
 contains
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE ReadInputFiles( InputFileName, BL_Files, InputFileData, Default_DT, OutFileRoot, NumBlades, UnEcho, ErrStat, ErrMsg )
@@ -141,7 +140,6 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, AABlFile,  Default_DT, Out
     logical                       :: Echo                                      ! Determines if an echo file should be written
     character(ErrMsgLen)          :: ErrMsg2                                   ! Temporary Error message
     character(1024)               :: PriPath                                   ! Path name of the primary file
-    character(1024)               :: FTitle                                    ! "File Title": the 2nd line of the input file, which contains a description of its contents
     character(200)                :: Line                                      ! Temporary storage of a line from the input file (to compare with "default")
     character(*), parameter       :: RoutineName = 'ReadPrimaryFile'
     integer(IntKi)                :: n                                         ! dummy integer
@@ -168,7 +166,7 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, AABlFile,  Default_DT, Out
     DO
         !----------- HEADER -------------------------------------------------------------
         CALL ReadCom( UnIn, InputFile, 'File header: Module Version (line 1)', ErrStat2, ErrMsg2, UnEc ); call check
-        CALL ReadStr( UnIn, InputFile, FTitle, 'FTitle', 'File Header: File Description (line 2)', ErrStat2, ErrMsg2, UnEc ); call check
+        CALL ReadStr( UnIn, InputFile, InputFileData%FTitle, 'FTitle', 'File Header: File Description (line 2)', ErrStat2, ErrMsg2, UnEc ); call check
         IF ( ErrStat >= AbortErrLev ) THEN
             CALL Cleanup()
             RETURN
@@ -197,7 +195,7 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, AABlFile,  Default_DT, Out
 
     IF (NWTC_VerboseLevel == NWTC_Verbose) THEN
         CALL WrScr( ' Heading of the '//TRIM(AA_Ver%Name)//' input file: ' )
-        CALL WrScr( '   '//TRIM( FTitle ) )
+        CALL WrScr( '   '//TRIM( InputFileData%FTitle ) )
     END IF
 
     ! DT_AA - Time interval for aerodynamic calculations {or default} (s):
@@ -737,12 +735,14 @@ subroutine AA_InitializeOutputFile(p, InputFileData,InitOut,errStat, errMsg)
       call OpenFOutFile ( p%unOutFile, trim(InputFileData%AAOutFile(1)), ErrStat, ErrMsg )
       if ( ErrStat >= AbortErrLev ) return
 
-      write (p%unOutFile,'(/,A)')  'Predictions were generated on '//CurDate()//' at '//CurTime()//' using AA '
-      write (p%unOutFile,'(1X,A)') trim(GetNVD(InitOut%ver))
+      write (p%unOutFile,'(/,A)')  'Predictions were generated on '//CurDate()//' at '//CurTime()//' using AA '//trim(GetNVD(InitOut%ver))
+      write (p%unOutFile,'(A)')  ''
+      write( p%unOutFile,'(A,I5)' )      'Number of observers      :', p%NrObsLoc
+      write (p%unOutFile,'(A)')  'Description from AA input file, line2: '//trim(InputFileData%FTitle)
+      write (p%unOutFile,'(A)')  ''
       numOuts = size(InitOut%WriteOutputHdr)
-      write( p%unOutFile, '(A,I5)' )'Number of observers      :', p%NrObsLoc
       !......................................................
-      ! Write the names of the output parameters on one line:
+      ! Write the names of the output parameters on one line: line 7
       !......................................................
       call WrFileNR ( p%unOutFile, '     Time           ' )
       do i=1,NumOuts
@@ -750,7 +750,7 @@ subroutine AA_InitializeOutputFile(p, InputFileData,InitOut,errStat, errMsg)
       end do ! i
       write (p%unOutFile,'()')
       !......................................................
-      ! Write the units of the output parameters on one line:
+      ! Write the units of the output parameters on one line: line 8
       !......................................................
       call WrFileNR ( p%unOutFile, '      (s)           ' )
       do i=1,NumOuts
@@ -767,13 +767,14 @@ subroutine AA_InitializeOutputFile(p, InputFileData,InitOut,errStat, errMsg)
       end if
       call OpenFOutFile ( p%unOutFile2, trim(InputFileData%AAOutFile(2)), ErrStat, ErrMsg )
       if ( ErrStat >= AbortErrLev ) return
-      write (p%unOutFile2,'(/,A)')  'Predictions were generated on '//CurDate()//' at '//CurTime()//' using AA '
-      write (p%unOutFile2,'(1X,A)') trim(GetNVD(InitOut%Ver))
-      write( p%unOutFile2, '(A,I5)' )'Number of observers      :', p%NrObsLoc
-      write( p%unOutFile2, '(A,I5)' )'Number of frequencies    :', size(p%FreqList)
+      write (p%unOutFile2,'(/,A)')  'Predictions were generated on '//CurDate()//' at '//CurTime()//' using AA '//trim(GetNVD(InitOut%Ver))
+      write (p%unOutFile2,'(A)')  ''
+      write( p%unOutFile2,'(A,I5,A,I5)' )      'Number of observers      :', p%NrObsLoc,';  Number of frequencies    :', size(p%FreqList)
+      write (p%unOutFile2,'(A)')  'Description from AA input file, line2: '//trim(InputFileData%FTitle)
+      write (p%unOutFile2,'(A)')  ''
       numOuts = size(InitOut%WriteOutputHdrforPE)
       !......................................................
-      ! Write the names of the output parameters on one line:
+      ! Write the names of the output parameters on one line: line 7
       !......................................................
       call WrFileNR ( p%unOutFile2, '     Time           ' )
       do i=1,NumOuts
@@ -781,7 +782,7 @@ subroutine AA_InitializeOutputFile(p, InputFileData,InitOut,errStat, errMsg)
       end do ! i
       write (p%unOutFile2,'()')
       !......................................................
-      ! Write the units of the output parameters on one line:
+      ! Write the units of the output parameters on one line: line 8
       !......................................................
       call WrFileNR ( p%unOutFile2, '      (s)           ' )
       do i=1,NumOuts
@@ -802,14 +803,13 @@ subroutine AA_InitializeOutputFile(p, InputFileData,InitOut,errStat, errMsg)
       end if
       call OpenFOutFile ( p%unOutFile3, trim(InputFileData%AAOutFile(3)), ErrStat, ErrMsg )
       if ( ErrStat >= AbortErrLev ) return
-      write (p%unOutFile3,'(/,A)')  'Predictions were generated on '//CurDate()//' at '//CurTime()//' using AA '
-      write (p%unOutFile3,'(1X,A)') trim(GetNVD(InitOut%Ver))
-      write( p%unOutFile3, '(A,I5)' )'Number of observers      :', p%NrObsLoc
-      write( p%unOutFile3, '(A,I5)' )'Number of frequencies    :', size(p%FreqList)
-
+      write (p%unOutFile3,'(/,A)')  'Predictions were generated on '//CurDate()//' at '//CurTime()//' using AA '//trim(GetNVD(InitOut%Ver))
+      write (p%unOutFile3,'(A)')  ''
+      write( p%unOutFile3,'(A,I5,A,I5)' )      'Number of observers      :', p%NrObsLoc,';  Number of frequencies    :', size(p%FreqList)
+      write (p%unOutFile3,'(A)')  'Description from AA input file, line2: '//trim(InputFileData%FTitle)
       numOuts = size(InitOut%WriteOutputHdrSep)
       !......................................................
-      ! Write the names of the output parameters on one line:
+      ! Write the names of the output parameters on one line: line 7
       !......................................................
       call WrFileNR ( p%unOutFile3,  "1-LBL 2-TBLPres 3-TBLSuc 4-Sep  5-BLUNT 6-TIP 7-Inflow")
       write (p%unOutFile3,'()')
@@ -819,7 +819,7 @@ subroutine AA_InitializeOutputFile(p, InputFileData,InitOut,errStat, errMsg)
       end do ! i
       write (p%unOutFile3,'()')
       !......................................................
-      ! Write the units of the output parameters on one line:
+      ! Write the units of the output parameters on one line: line 8
       !......................................................
       call WrFileNR ( p%unOutFile3, '      (s)           ' )
 
@@ -837,14 +837,13 @@ subroutine AA_InitializeOutputFile(p, InputFileData,InitOut,errStat, errMsg)
       end if
       call OpenFOutFile ( p%unOutFile4, trim(InputFileData%AAOutFile(4)), ErrStat, ErrMsg )
       if ( ErrStat >= AbortErrLev ) return
-      write (p%unOutFile4,'(/,A)')  'Predictions were generated on '//CurDate()//' at '//CurTime()//' using AA '
-      write (p%unOutFile4,'(1X,A)') trim(GetNVD(InitOut%Ver))
-      write( p%unOutFile4, '(A,I5)' )'Number of blades         :', p%numBlades
-      write( p%unOutFile4, '(A,I5)' )'Number of nodes per blade:', p%NumBlNds
-      write( p%unOutFile4, '(A,I5)' )'Number of observers      :', p%NrObsLoc
+      write (p%unOutFile4,'(/,A)')  'Predictions were generated on '//CurDate()//' at '//CurTime()//' using AA '//trim(GetNVD(InitOut%Ver))
+      write (p%unOutFile4,'()')
+      write( p%unOutFile4,'(A,I5)' )      'Number of observers      :', p%NrObsLoc, ';        Number of blades         :', p%numBlades,'     Number of nodes per blade:', p%NumBlNds
+      write (p%unOutFile4,'(A)')  'Description from AA input file, line2: '//trim(InputFileData%FTitle)
       numOuts = size(InitOut%WriteOutputHdrNodes)
       !......................................................
-      ! Write the names of the output parameters on one line:
+      ! Write the names of the output parameters on one line: line 7
       !......................................................
       write (p%unOutFile4,'()')
       call WrFileNR ( p%unOutFile4, '     Time           ' )
@@ -853,7 +852,7 @@ subroutine AA_InitializeOutputFile(p, InputFileData,InitOut,errStat, errMsg)
       end do ! i
       write (p%unOutFile4,'()')
       !......................................................
-      ! Write the units of the output parameters on one line:
+      ! Write the units of the output parameters on one line: line 8
       !......................................................
       call WrFileNR ( p%unOutFile4, '      (s)           ' )
       do i=1,NumOuts
