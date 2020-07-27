@@ -458,17 +458,16 @@ noise.
 Trailing-Edge Bluntness – Vortex Shedding
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Lastly, wind turbine blades are often characterized by a finite height
-of the trailing edge, which generates noise as a result of vortex
-shedding. The frequency and amplitude of this noise source depends on
-the geometry of the trailing edge and is typically characterized by a
-tonal nature. Adopting flatback and truncated airfoils far outboard
-along the blade may strengthen this noise source. When this noise source
-is activated, the user is asked to provide the distribution along the
-blade span of the blunt thickness of the trailing edge, :math:`h`, and
-the solid angle between the suction and pressure sides of the airfoil,
-:math:`\Psi` (see :numref:`aa-sec-TEgeom`). :math:`h` and :math:`\Psi` are inputs
-to the equation:
+Lastly, wind turbine blades are often characterized by a finite height of the
+trailing edge, which generates noise as a result of vortex shedding. The
+frequency and amplitude of this noise source depends on the geometry of the
+trailing edge and is typically characterized by a tonal nature. Adopting
+flatback and truncated airfoils far outboard along the blade may strengthen this
+noise source. When this noise source is activated, the user is asked to provide
+the distribution along the blade span of the blunt thickness of the trailing
+edge, :math:`h`, and the solid angle between the suction and pressure sides of
+the airfoil, :math:`\Psi` (see :numref:`aa-sec-TEgeom`). :math:`h` and
+:math:`\Psi` are inputs to the equation:
 
 .. math::
    \text{SPL}_{TEB - VS} = 10\log_{10}{
@@ -488,20 +487,20 @@ therefore, should be estimated accurately.
 Directivity
 ~~~~~~~~~~~
 
-The position of one or more observers is specified by the user, as
-described in :numref:`aa-sec-ObsPos`. The directivity from the BPM model is adopted
-in this implementation (:cite:`aa-Brooks:1989`). The directivity term,
-:math:`\overline{D}`, corrects the :math:`\text{SPL}` depending on the
-relative position of the observer to the emitter. The position is
-described by the spanwise directivity angle, :math:`\Phi_{e}`, and by
-the chordwise directivity angle, :math:`\Theta_{e}`, which are
-schematically represented in :numref:`aa-fig:directivity` and defined as:
+The position of one or more observers is specified by the user, as described in
+:numref:`aa-sec-ObsPos`. The directivity from the BPM model is adopted in this
+implementation (:cite:`aa-Brooks:1989`). The directivity term,
+:math:`\overline{D}`, corrects the :math:`\text{SPL}` depending on the relative
+position of the observer to the emitter. The position is described by the
+spanwise directivity angle, :math:`\Phi_{e}`, and by the chordwise directivity
+angle, :math:`\Theta_{e}`, which are schematically represented in
+:numref:`aa-fig:directivity` and defined as:
 
 .. math::
    \Phi_{e} = \text{atan}\left( \frac{z_{e}}{y_{e}} \right)
    :label:  aa-eq:30
 .. math::
-   \Theta_{e} = \text{\atan}\left( \frac{y_{e} \bullet \cos\left( \Phi_{e} \right)
+   \Theta_{e} = \text{atan}\left( \frac{y_{e} \bullet \cos\left( \Phi_{e} \right)
       + z_{e} \bullet \sin\left( \Phi_{e} \right)}{x_{e}} \right)
    :label:  aa-eq:31
 
@@ -513,14 +512,14 @@ schematically represented in :numref:`aa-fig:directivity` and defined as:
 
    Angles used in the directivity function (:cite:`aa-Brooks:1989,aa-MoriartyMigliore:2003`)
 
-The reference axis is located at each blade node and :math:`x_{e}` is
-aligned with the chord, :math:`y_{e}` is aligned with the span pointing
-to the blade tip, and :math:`z_{e}` is aligned toward the airfoil
-suction side. Note that in OpenFAST the local airfoil-oriented reference
-system is used, and a rotation is applied.
+The reference axis is located at each blade node and :math:`x_{e}` is aligned
+with the chord, :math:`y_{e}` is aligned with the span pointing to the blade
+tip, and :math:`z_{e}` is aligned toward the airfoil suction side. Note that in
+OpenFAST the local airfoil-oriented reference system is used, and a rotation is
+applied.
 
-Given the angles :math:`\Theta_{e}` and :math:`\Phi_{e}`, at high
-frequency, :math:`\overline{D}` takes the expression:
+Given the angles :math:`\Theta_{e}` and :math:`\Phi_{e}`, at high frequency,
+:math:`\overline{D}` takes the expression:
 
 .. math::
    {\overline{D}}_{h}\left( \Theta_{e},\Phi_{e} \right) = \frac{
