@@ -33,14 +33,15 @@ and :cite:`aa-Moriarty:2005`. OpenFAST is implemented as a modularization
 framework and the aeroacoustics model is implemented as a submodule of
 AeroDyn (:cite:`aa-MoriartyHansen:2005`).
 
-The set of models is described in Section 2 and exercised on the noise
-estimate of the International Energy Agency (IEA) land-based reference
-wind turbine in Section 3. In Section 3, we also show a comparison to
-results obtained running the noise models implemented at the Technical
-University of Munich. The report closes with conclusions, an outlook on
-future work, and appendices, where the input files to OpenFAST are
-presented.
+The set of models is described in :numref:`AA-noise-models` and exercised on the
+noise estimate of the International Energy Agency (IEA) land-based reference
+wind turbine in :numref:`AA-model-verification`. In
+:numref:`AA-model-verification`, we also show a comparison to results obtained
+running the noise models implemented at the Technical University of Munich. This
+documentation closes with conclusions, an outlook on future work, and
+appendices, where the input files to OpenFAST are presented.
 
 
 .. [1]
    https://github.com/OpenFAST/openfast
+

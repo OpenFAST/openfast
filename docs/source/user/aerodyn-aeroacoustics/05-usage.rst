@@ -718,11 +718,14 @@ text file. The positions must be specified in the OpenFAST global
 inertial frame coordinate system, which is located at the tower base and
 has the x-axis pointing downwind, the y-axis pointing laterally, and the
 z-axis pointing vertically upward. A scheme of the coordinate system for
-the observers is shown in Figure A-1.
+the observers is shown in :numref:`aa-fig:ObsRefSys`.
 
-|image8|
+.. figure:: media/NoiseN010.png
+   :alt:    Reference system for the observers
+   :name:   aa-fig:ObsRefSys
+   :width:  100.0%
 
-Figure A-1. Reference system for the observers
+   Reference system for the observers
 
 The International Energy Agency Wind Task 37 land-based reference wind
 turbine, which is shown in Table 1, has a hub height of 110 meters and a
@@ -760,7 +763,7 @@ done by creating a file called TIGrid_In.txt, which mimics a TurbSim
 output file and contains a grid of turbulence intensity, which is
 defined as a fraction value. The file defines a grid centered at hub
 height and oriented with the OpenFAST global inertial frame coordinate
-system; see Figure A.1. A user-defined number of lateral and vertical
+system; see :numref:`aa-fig:ObsRefSys`. A user-defined number of lateral and vertical
 points equally spaced by a user-defined number of meters must be
 specified. An example file for a 160 (lateral) by 180 (vertical) meters
 grid looks like the following:
@@ -796,13 +799,16 @@ pressure sides of the profile, right before the trailing-edge point, and
 the height, :math:`h`, of the trailing edge. :math:`\Psi` must be
 defined in degrees, while :math:`h` is in meters. Note that the BPM
 trailing-edge bluntness model is very sensitive to these two parameters,
-which, however, are often not easy to determine for real blades. Figure
-A-2 shows the two inputs.
+which, however, are often not easy to determine for real blades. 
+:numref:`aa-fig:GeomParamTE` shows the two inputs.
 
-|image9|
+.. figure:: media/NoiseN011.png
+   :alt:    Geometric parameters of the trailing-edge bluntness
+   :name:   aa-fig:GeomParamTE
+   :width:  100.0%
 
-Figure A-2. Geometric parameters :math:`\mathbf{\Psi}` and
-:math:`\mathbf{h}` of the trailing-edge bluntness
+   Geometric parameters :math:`\mathbf{\Psi}` and
+   :math:`\mathbf{h}` of the trailing-edge bluntness
 
 The two distributions must be defined with the same spanwise resolution
 of the AeroDyn15 blade file, such as:
@@ -882,9 +888,3 @@ TEAngle TEThick
 .. [4]
    https://github.com/OpenFAST/python-toolbox
 
-.. |image8| image:: media/NoiseN010.png
-   :width: 1.53659in
-   :height: 3in
-.. |image9| image:: media/NoiseN011.png
-   :width: 3.95678in
-   :height: 1.25581in
