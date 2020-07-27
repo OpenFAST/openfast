@@ -11,3 +11,4 @@ Appendix A: OLAF Primary Input File
 
    .. literalinclude:: ExampleFiles/ExampleFile--OLAF.txt
       :linenos:
+      :language: none
