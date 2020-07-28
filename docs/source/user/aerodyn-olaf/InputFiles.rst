@@ -1,4 +1,4 @@
-.. _Input-files:
+.. _OLAF-Input-Files:
 
 Input Files
 ===========

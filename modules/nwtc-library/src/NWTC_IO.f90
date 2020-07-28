@@ -2244,9 +2244,9 @@ END SUBROUTINE CheckR16Var
 !=======================================================================
 !>
    SUBROUTINE DispCompileRuntimeInfo()
-     
+#ifdef HAS_FORTRAN2008_FEATURES
       USE iso_fortran_env, ONLY: compiler_version
-
+#endif
       CHARACTER(200) :: compiler_version_str
       CHARACTER(200) :: name
       CHARACTER(200) :: git_commit, architecture, compiled_precision
@@ -2263,10 +2263,10 @@ END SUBROUTINE CheckR16Var
          compiled_precision = 'unknown'
       END IF
 
-#if defined(__INTEL_COMPILER) && (__INTEL_COMPILER<1800)
-      compiler_version_str = 'Intel(R) Fortran Compiler '//num2lstr(__INTEL_COMPILER)
-#else
+#if defined(HAS_FORTRAN2008_FEATURES)
       compiler_version_str = compiler_version()
+#elif defined(__INTEL_COMPILER)
+      compiler_version_str = 'Intel(R) Fortran Compiler '//num2lstr(__INTEL_COMPILER)
 #endif
 
       CALL WrScr(trim(name)//'-'//trim(git_commit))
