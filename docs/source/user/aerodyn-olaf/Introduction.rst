@@ -145,7 +145,7 @@ viscous diffusion may be accounted for by dynamically changing the
 regularization parameter. Wake visualization output options are also available.
 
 This document is organized as follows. :numref:`Running-OLAF` covers
-downloading, compiling, and running OLAF. :numref:`Input-Files` describes the
+downloading, compiling, and running OLAF. :numref:`OLAF-Input-Files` describes the
 OLAF input file and modifications to the *AeroDyn15* input file.
 :numref:`Output-Files` details the OLAF output file.  :numref:`OLAF-Theory`
 provides an overview of the OLAF theory, including the free vortex wake method

@@ -155,8 +155,10 @@ program).
 Set ``WakeMod`` to 0 if you want to disable rotor wake/induction effects or 1 to
 include these effects using the (quasi-steady) BEM theory model. When
 ``WakeMod`` is set to 2, a dynamic BEM theory model (DBEMT) is used (also
-referred to as dynamic inflow or dynamic wake model).  ``WakeMod`` cannot be set
-to 2 during linearization analyses.
+referred to as dynamic inflow or dynamic wake model).  When ``WakeMod`` is set
+to 3, the free vortex wake model is used, also referred to as OLAF (see
+:numref:`OLAF`). ``WakeMod`` cannot be set to 2 or 3 during linearization
+analyses.
 
 Set ``AFAeroMod`` to 1 to include steady blade airfoil aerodynamics or 2
 to enable UA; ``AFAeroMod`` must be 1 during linearization analyses
@@ -258,6 +260,16 @@ to use a model where tau1 varies with time.
 
 If ``DBEMT_Mod=1`` (constant-tau1 model), set ``tau1_const`` to the time 
 constant to use for DBEMT.
+
+OLAF -- cOnvecting LAgrangian Filaments (Free Vortex Wake) Theory Options
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The input parameters in this section are used only when ``WakeMod = 3``.
+
+The settings for the free vortex wake model are set in the OLAF input file
+described in :numref:`OLAF-Input-Files`.  ``OLAFInputFileName`` is the filename
+for this input file.
+
 
 Unsteady Airfoil Aerodynamics Options
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
