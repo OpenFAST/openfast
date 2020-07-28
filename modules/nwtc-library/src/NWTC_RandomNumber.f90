@@ -31,6 +31,13 @@ INTEGER(IntKi), PARAMETER :: pRNG_INTRINSIC = 2
 
 INTEGER, PARAMETER        :: LuxLevel       = 3       ! Luxury Level for RanLux RNG
 
+!> \copydoc nwtc_randomnumber::uniformrandomnumbersr4
+INTERFACE UniformRandomNumbers
+MODULE PROCEDURE UniformRandomNumbersR4   ! 4-byte reals
+MODULE PROCEDURE UniformRandomNumbersR8   ! 8-byte reals
+MODULE PROCEDURE UniformRandomNumbersR16  ! 16-byte reals
+END INTERFACE
+
 CONTAINS
    
 SUBROUTINE RandNum_Init(p, ErrStat, ErrMsg )
@@ -95,34 +102,89 @@ SUBROUTINE RandNum_Init(p, ErrStat, ErrMsg )
    END IF
 
 END SUBROUTINE RandNum_Init
+
 !=======================================================================
-SUBROUTINE UniformRandomNumbers( pRNG_Type, RandomNumbers )
- 
-   !This subroutine produces uniformly distributed random numbers, based on
-   !the pRNG requested. This routine assumes that the random number
-   !generator has been initialized earlier in the main program.
+!> This subroutine produces uniformly distributed random numbers, based on
+!!   the pRNG requested. This routine assumes that the random number
+!!   generator has been initialized earlier in the main program.
+SUBROUTINE UniformRandomNumbersR4( pRNG_Type, RandomNumbers )
 
    IMPLICIT NONE
 
    INTEGER,    INTENT(IN   )               :: pRNG_Type
-   REAL(ReKi), INTENT(  OUT), DIMENSION(:) :: RandomNumbers
+   REAL(SiKi), INTENT(  OUT), DIMENSION(:) :: RandomNumbers
 
    REAL(ReKi), ALLOCATABLE :: RN(:)
 
-   ALLOCATE( RN( SIZE(RandomNumbers) ) )
-
    IF ( pRNG_Type == pRNG_INTRINSIC ) THEN
 
-      CALL RANDOM_NUMBER( RN )
+      ! The Fortran intrinsic has an interface for various floating
+      ! point types, so pass the variable directly
+      CALL RANDOM_NUMBER( RandomNumbers )
 
    ELSEIF ( pRNG_Type == pRNG_RANLUX ) THEN
-
+      
+      ! RanLux, as implemented, uses ReKi, so cast the return value as needed
+      ALLOCATE( RN( SIZE(RandomNumbers) ) )
       CALL RanLux ( RN )
+      RandomNumbers = REAL(RN, KIND=SiKi)
 
    END IF
 
-   RandomNumbers = RN
+END SUBROUTINE UniformRandomNumbersR4
+!=======================================================================
+!> \copydoc nwtc_randomnumber::uniformrandomnumbersr4
+SUBROUTINE UniformRandomNumbersR8( pRNG_Type, RandomNumbers )
 
-END SUBROUTINE UniformRandomNumbers
+   IMPLICIT NONE
+
+   INTEGER,    INTENT(IN   )               :: pRNG_Type
+   REAL(R8Ki), INTENT(  OUT), DIMENSION(:) :: RandomNumbers
+
+   REAL(ReKi), ALLOCATABLE :: RN(:)
+
+   IF ( pRNG_Type == pRNG_INTRINSIC ) THEN
+
+      ! The Fortran intrinsic has an interface for various floating
+      ! point types, so pass the variable directly
+      CALL RANDOM_NUMBER( RandomNumbers )
+
+   ELSEIF ( pRNG_Type == pRNG_RANLUX ) THEN
+
+      ! RanLux, as implemented, uses ReKi, so cast the return value as needed
+      ALLOCATE( RN( SIZE(RandomNumbers) ) )
+      CALL RanLux ( RN )
+      RandomNumbers = REAL(RN, KIND=R8Ki)
+
+   END IF
+
+END SUBROUTINE UniformRandomNumbersR8
+!=======================================================================
+!> \copydoc nwtc_randomnumber::uniformrandomnumbersr4
+SUBROUTINE UniformRandomNumbersR16( pRNG_Type, RandomNumbers )
+
+   IMPLICIT NONE
+
+   INTEGER,    INTENT(IN   )               :: pRNG_Type
+   REAL(QuKi), INTENT(  OUT), DIMENSION(:) :: RandomNumbers
+
+   REAL(ReKi), ALLOCATABLE :: RN(:)
+
+   IF ( pRNG_Type == pRNG_INTRINSIC ) THEN
+
+      ! The Fortran intrinsic has an interface for various floating
+      ! point types, so pass the variable directly
+      CALL RANDOM_NUMBER( RandomNumbers )
+
+   ELSEIF ( pRNG_Type == pRNG_RANLUX ) THEN
+
+      ! RanLux, as implemented, uses ReKi, so cast the return value as needed
+      ALLOCATE( RN( SIZE(RandomNumbers) ) )
+      CALL RanLux ( RN )
+      RandomNumbers = REAL(RN, KIND=QuKi)
+
+   END IF
+
+END SUBROUTINE UniformRandomNumbersR16
 
 END MODULE

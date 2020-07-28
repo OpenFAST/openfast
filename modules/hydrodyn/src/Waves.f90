@@ -122,8 +122,8 @@ CONTAINS
 
       REAL(SiKi)                   :: C1                                              ! Intermediate variable
       REAL(SiKi)                   :: C2                                              ! Intermediate variable
-      REAL(ReKi)                   :: U1(1)                                           ! First uniformly distributed random
-      REAL(ReKi)                   :: U2(1)                                           ! Second uniformly distributed random
+      REAL(SiKi)                   :: U1(1)                                           ! First  uniformly distributed random
+      REAL(SiKi)                   :: U2(1)                                           ! Second uniformly distributed random
 
          ! Compute the two uniformly distributed randoms:
          ! NOTE: The first random, U1, cannot be zero else the LOG() function
@@ -135,11 +135,11 @@ CONTAINS
          CALL UniformRandomNumbers(RNGType, U1)
       END DO
       CALL UniformRandomNumbers(RNGType, U2)
-
+      
          ! Compute intermediate variables:
 
       IF ( NDAmp )  THEN            ! Normally-distributed amplitudes
-         C1 = SQRT( -2.0*LOG(U1(1)) )
+         C1 = SQRT( -2.0*LOG(U1(1)) )	
       ELSE                          ! Constant amplitudes (ignore U1); therefore, C1 = SQRT( 2.0 ) = MEAN( SQRT( -2.0*LOG(U1) ) for a uniform distribution of U1 between 0 and 1
          C1 = SQRT(  2.0         )
       END IF
@@ -785,7 +785,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
    REAL(SiKi),    ALLOCATABLE   :: WvSpreadIntegral(:)                             !< Cumulative integral of the wave spreading function.  Used in finding equal energy wave directions.
    REAL(SiKi)                   :: WvSpreadDTheta                                  !< Wave direction step size for intermediate calculations.  Used in finding equal energy wave directions.
    REAL(SiKi),    ALLOCATABLE   :: WvSpreadThetas(:)                               !< Wave direction used in calculations and interpolations
-   REAL(ReKi),    ALLOCATABLE   :: WvSpreadThetaIdx(:)                             !< Indices for wave directions 
+   REAL(SiKi),    ALLOCATABLE   :: WvSpreadThetaIdx(:)                             !< Indices for wave directions 
    REAL(SiKi),    ALLOCATABLE   :: WvTheta(:)                                      !< Final set of wave directions (degrees)
    REAL(SiKi)                   :: WvSpreadIntegralTmp                             !< Temporary variable for the interpolation
 
