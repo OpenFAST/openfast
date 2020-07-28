@@ -190,6 +190,15 @@ turbines or FALSE to disable this calculation. If ``CavitCheck`` is
 TRUE, ``AFAeroMod`` must be set to 1 because the cavitation check does
 not function with unsteady airfoil aerodynamics.
 
+Set the ``CompAA`` flag to TRUE to run aero-acoustic calculations.  This
+option is only available for ``WakeMod = 1`` or ``2``.  See section
+:numref:`AeroAcoustics` for information on how to use this feature.
+
+The ``AA_InputFile`` is used to specify the input file for the aeroacoustics
+sub-module. See :numref:`AeroAcoustics` for information on how to use this
+feature.
+
+
 Environmental Conditions
 ~~~~~~~~~~~~~~~~~~~~~~~~
 

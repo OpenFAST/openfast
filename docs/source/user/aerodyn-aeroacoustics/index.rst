@@ -1,3 +1,5 @@
+.. _AeroAcoustics:
+
 Aeroacoustics Noise Model of OpenFAST
 =====================================
 
