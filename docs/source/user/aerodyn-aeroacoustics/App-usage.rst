@@ -39,7 +39,7 @@ Starting from the General Options, these are:
    multiples of the time step **DTAero** of AeroDyn can be used. If set to
    default, the time step DTAero is adopted.
 
--  **AAStart** – Float: time step when the aeroacoustics model starts.
+-  **AAStart** – Float: time after which the AeroAcoustics module is run.
 
 -  **BldPrcnt** – Float: percentage value of blade span measured from blade
    tip that contributes to the noise emissions; 100% corresponds to the
@@ -54,9 +54,9 @@ models:
    :numref:`aa-guidati`.
 
 -  **TICalcMeth** – Integer 1/2: flag to set the calculation method for the
-   turbulence intensity. When set to 1, turbulence intensity is
-   reconstructed from a user-defined grid; see :numref:`aa-sec-TIgrid`. When set to
-   2, turbulence intensity is estimated from the time history of the
+   incident turbulence intensity. When set to 1, incident turbulence intensity is
+   defined in a user-defined grid; see :numref:`aa-sec-TIgrid`. When set to
+   2, incident turbulence intensity is estimated from the time history of the
    incident flow.
 
 -  **TICalcTabFile** – String: name of the text file with the user-defined
@@ -118,13 +118,15 @@ Finally, the set Outputs contains a few options for the output data:
    set to 1, a value of overall sound pressure level at every **DT_AA** time
    step per observer is printed to file. When set to 2, the first output
    is accompanied by a second file where the total sound pressure level
-   spectrum is printed per time step per observer. Finally, when set to
+   spectrum is printed per time step per observer. When set to
    3, the two first outputs are accompanied by a third file where the
    sound pressure level spectrum per noise mechanism is printed per time
-   step per observer.
+   step per observer. When set to 4, a fourth file is generated with the
+   values of overall sound pressure levels per node, per blade, 
+   per observer, and per time step.
 
 -  The following line contains the file name used to store the outputs.
-   The file name is attached with a 1, 2, and 3 flag based on the
+   The file name is attached with a 1, 2, 3, and 4 flag based on the
    **NAAOutFile** options.
 
 The file must be closed by an END command.
@@ -200,9 +202,8 @@ adopt the last available values and print to screen a warning.
 Observer Positions
 ------------------
 
-The number of observers is set by the field **NrObsLoc**, which is explained
-in :numref:`aa-sec-MainInput`. The position of the observers is specified in the same
-text file. The positions must be specified in the OpenFAST global
+The number and position of observers is set in the file ObserverLocations,
+which is explained in :numref:`aa-sec-MainInput`. The positions must be specified in the OpenFAST global
 inertial frame coordinate system, which is located at the tower base and
 has the x-axis pointing downwind, the y-axis pointing laterally, and the
 z-axis pointing vertically upward. A scheme of the coordinate system for

@@ -182,7 +182,7 @@ The second correction is called low-frequency correction
    \text{SPL}_{\text{TI}} = \text{SPL}_{\text{TI}} + 10\log_{10}\left( \frac{\text{LFC}}{1 + LFC} \right).       
    :label:  aa-eq:11
 
-In Eq. 9 and Eq. 10, :math:`S^{2}` represents the squared Sears
+In :eq:`aa-eq:9` and :eq:`aa-eq:10`, :math:`S^{2}` represents the squared Sears
 function, and :math:`\beta^{2}` is the Prandtl-Glauert correction
 factor, which is defined as:
 
@@ -312,10 +312,8 @@ equal to -∞, whereas :math:`\text{SPL}_{\alpha}` becomes:
       + A'\left( \frac{\text{St}_{s}}{\text{St}_{2}} \right) + K_{2.}
    :label:  aa-eq:20
 
-Notably, the low-frequency directivity is adopted above stall (see
+Notably, above stall the low-frequency directivity :math:`{\overline{D}}_{l}` is adopted in Eqs. 18 and 19 (see
 :numref:`aa-directivity`).
-
-.. _aa-turb-TE-tno:
 
 TNO model
 ^^^^^^^^^
@@ -329,7 +327,7 @@ the far-field noise. The spectrum, :math:`P`, is assumed to be:
 
 .. math::
    P\left( k_{1},k_{3},\omega \right) = 4\rho_{0}^{2}\frac{k_{1}^{2}}{k_{1}^{2}
-   + k_{3}^{2}}\int_{0}^{\delta}{L_{2}\overline{u_{2}^{2}}
+   + k_{3}^{2}}\int_{0}^{10\frac{\omega}{Mc}}{L_{2}\overline{u_{2}^{2}}
    \left( \frac{\partial U_{1}}{\partial x_{2}} \right)^{2}
    \phi_{22}\left( k_{1},k_{3},\omega \right)} \\
    \phi_{m}\left( \omega - U_{c}\left( x_{2} \right)k_{1} \right)
@@ -530,7 +528,7 @@ Given the angles :math:`\Theta_{e}` and :math:`\Phi_{e}`, at high frequency,
    :label:  aa-eq:32
 
 where :math:`M_{c}` represents the Mach number past the trailing edge
-and that is here for simplicity assumed equal to 80% of M. At low
+and that is here for simplicity assumed equal to 80% of free-stream M. At low
 frequency, the equation becomes:
 
 .. math::
@@ -553,9 +551,8 @@ A-Weighting
 
 The code offers the possibility to weigh the aeroacoustics outputs by
 A-weighting, which is an experimental coefficient that aims to take into
-account the sensitivity of human hearing to different frequencies. The
-A-weighting is a function of frequency and is added to the values of
-sound pressure levels. The A-weight, :math:`A_{w}`, is computed as:
+account the sensitivity of human hearing to different frequencies. 
+The A-weight, :math:`A_{w}`, is computed as:
 
 .. math::
    A_{w} = \frac{10\log\left( 1.562339\frac{f^{4}}
@@ -568,4 +565,10 @@ sound pressure levels. The A-weight, :math:`A_{w}`, is computed as:
          {\log 10}
    :label:  aa-eq:34
 
+The A-weighting is a function of frequency and is added to the values of
+sound pressure levels:
+
+.. math::
+   SPL_{A_{w}} = SPL + A_{w} 
+   :label:  aa-eq:35
 

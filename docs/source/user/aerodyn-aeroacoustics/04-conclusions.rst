@@ -15,4 +15,8 @@ same turbine model is later used to exercise the aeroacoustics model showcasing
 its capabilities. Finally, the appendices describe the entries of the input
 files of OpenFAST to run the aeroacoustics analysis.
 
+Future work will focus on the validation of the aeroacoustics models. 
+In parallel, propagation models will be investigated and implemented. 
+Finally, attention will be dedicated to infrasound noise and to the
+time-domain models that can simulate it.
 
