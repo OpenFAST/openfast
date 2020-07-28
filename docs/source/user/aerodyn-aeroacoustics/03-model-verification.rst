@@ -211,9 +211,7 @@ faces the leading edge of an airfoil (high :math:`\Theta_e`), than when it faces
 trailing edge (low :math:`\Theta_e`).
 
 .. figure:: media/NoiseN012.png
-   :alt:    Map of the overall SPL of the rotor of the reference wind turbine
-   from Simplified Guidati and BPM TBL-TE noise models. The observer
-   is located 175 meters downwind at a height of 2 meters.
+   :alt:    Map of the overall SPL of the rotor of the reference wind turbine from Simplified Guidati and BPM TBL-TE noise models. The observer is located 175 meters downwind at a height of 2 meters.
    :name:   aa-fig:rotor-map
    :width:  100.0%
 

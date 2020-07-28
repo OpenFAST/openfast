@@ -315,6 +315,8 @@ equal to -∞, whereas :math:`\text{SPL}_{\alpha}` becomes:
 Notably, above stall the low-frequency directivity :math:`{\overline{D}}_{l}` is adopted in Eqs. 18 and 19 (see
 :numref:`aa-directivity`).
 
+.. _aa-turb-TE-tno:
+
 TNO model
 ^^^^^^^^^
 
