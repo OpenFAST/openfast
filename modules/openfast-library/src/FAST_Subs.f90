@@ -677,6 +677,9 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       Init%InData_SrvD%TrimCase      = p_FAST%TrimCase
       Init%InData_SrvD%TrimGain      = p_FAST%TrimGain
       Init%InData_SrvD%RotSpeedRef   = Init%OutData_ED%RotSpeed
+!SP_start
+      Init%InData_SrvD%r_BldBase     = Init%OutData_ED%BldBasePos
+!SP_end
       
       IF ( PRESENT(ExternInitData) ) THEN
          Init%InData_SrvD%NumSC2Ctrl = ExternInitData%NumSC2Ctrl

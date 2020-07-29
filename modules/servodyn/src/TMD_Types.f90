@@ -78,6 +78,7 @@ IMPLICIT NONE
     CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
     REAL(ReKi)  :: Gravity      !< Gravitational acceleration [m/s^2]
     REAL(ReKi) , DIMENSION(1:3)  :: r_N_O_G      !< nacelle origin for setting up mesh [-]
+    REAL(ReKi) , DIMENSION(1:3,1:3)  :: r_B_O_G      !< blade origin for setting up mesh [-]
   END TYPE TMD_InitInputType
 ! =======================
 ! =========  TMD_InitOutputType  =======
@@ -89,6 +90,9 @@ IMPLICIT NONE
   TYPE, PUBLIC :: TMD_ContinuousStateType
     REAL(ReKi)  :: DummyContState      !< Remove this variable if you have continuous states [-]
     REAL(ReKi) , DIMENSION(1:4)  :: tmd_x      !< Continuous States [-]
+    REAL(ReKi) , DIMENSION(1:4)  :: btmd_x1      !< Continuous States [-]
+    REAL(ReKi) , DIMENSION(1:4)  :: btmd_x2      !< Continuous States [-]
+    REAL(ReKi) , DIMENSION(1:4)  :: btmd_x3      !< Continuous States [-]
   END TYPE TMD_ContinuousStateType
 ! =======================
 ! =========  TMD_DiscreteStateType  =======
@@ -155,11 +159,13 @@ IMPLICIT NONE
 ! =========  TMD_InputType  =======
   TYPE, PUBLIC :: TMD_InputType
     TYPE(MeshType)  :: Mesh      !< Displacements at the TMD reference point P in the inertial frame [-]
+    TYPE(MeshType) , DIMENSION(1:3)  :: BMesh      !< Displacements at the TMD reference point P in the inertial frame [-]
   END TYPE TMD_InputType
 ! =======================
 ! =========  TMD_OutputType  =======
   TYPE, PUBLIC :: TMD_OutputType
     TYPE(MeshType)  :: Mesh      !< Loads at the TMD reference point in the inertial frame [-]
+    TYPE(MeshType) , DIMENSION(1:3)  :: BMesh      !< Loads at the TMD reference point in the inertial frame [-]
   END TYPE TMD_OutputType
 ! =======================
 CONTAINS
@@ -572,6 +578,7 @@ ENDIF
 ! Local 
    INTEGER(IntKi)                 :: i,j,k
    INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'TMD_CopyInitInput'
@@ -582,6 +589,7 @@ ENDIF
     DstInitInputData%RootName = SrcInitInputData%RootName
     DstInitInputData%Gravity = SrcInitInputData%Gravity
     DstInitInputData%r_N_O_G = SrcInitInputData%r_N_O_G
+    DstInitInputData%r_B_O_G = SrcInitInputData%r_B_O_G
  END SUBROUTINE TMD_CopyInitInput
 
  SUBROUTINE TMD_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
@@ -634,6 +642,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%RootName)  ! RootName
       Re_BufSz   = Re_BufSz   + 1  ! Gravity
       Re_BufSz   = Re_BufSz   + SIZE(InData%r_N_O_G)  ! r_N_O_G
+      Re_BufSz   = Re_BufSz   + SIZE(InData%r_B_O_G)  ! r_B_O_G
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -675,6 +684,12 @@ ENDIF
       ReKiBuf(Re_Xferred) = InData%r_N_O_G(i1)
       Re_Xferred = Re_Xferred + 1
     END DO
+    DO i2 = LBOUND(InData%r_B_O_G,2), UBOUND(InData%r_B_O_G,2)
+      DO i1 = LBOUND(InData%r_B_O_G,1), UBOUND(InData%r_B_O_G,1)
+        ReKiBuf(Re_Xferred) = InData%r_B_O_G(i1,i2)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+    END DO
  END SUBROUTINE TMD_PackInitInput
 
  SUBROUTINE TMD_UnPackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -691,6 +706,7 @@ ENDIF
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+  INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'TMD_UnPackInitInput'
@@ -719,6 +735,16 @@ ENDIF
     DO i1 = LBOUND(OutData%r_N_O_G,1), UBOUND(OutData%r_N_O_G,1)
       OutData%r_N_O_G(i1) = ReKiBuf(Re_Xferred)
       Re_Xferred = Re_Xferred + 1
+    END DO
+    i1_l = LBOUND(OutData%r_B_O_G,1)
+    i1_u = UBOUND(OutData%r_B_O_G,1)
+    i2_l = LBOUND(OutData%r_B_O_G,2)
+    i2_u = UBOUND(OutData%r_B_O_G,2)
+    DO i2 = LBOUND(OutData%r_B_O_G,2), UBOUND(OutData%r_B_O_G,2)
+      DO i1 = LBOUND(OutData%r_B_O_G,1), UBOUND(OutData%r_B_O_G,1)
+        OutData%r_B_O_G(i1,i2) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
     END DO
  END SUBROUTINE TMD_UnPackInitInput
 
@@ -864,6 +890,9 @@ ENDIF
    ErrMsg  = ""
     DstContStateData%DummyContState = SrcContStateData%DummyContState
     DstContStateData%tmd_x = SrcContStateData%tmd_x
+    DstContStateData%btmd_x1 = SrcContStateData%btmd_x1
+    DstContStateData%btmd_x2 = SrcContStateData%btmd_x2
+    DstContStateData%btmd_x3 = SrcContStateData%btmd_x3
  END SUBROUTINE TMD_CopyContState
 
  SUBROUTINE TMD_DestroyContState( ContStateData, ErrStat, ErrMsg )
@@ -914,6 +943,9 @@ ENDIF
   Int_BufSz  = 0
       Re_BufSz   = Re_BufSz   + 1  ! DummyContState
       Re_BufSz   = Re_BufSz   + SIZE(InData%tmd_x)  ! tmd_x
+      Re_BufSz   = Re_BufSz   + SIZE(InData%btmd_x1)  ! btmd_x1
+      Re_BufSz   = Re_BufSz   + SIZE(InData%btmd_x2)  ! btmd_x2
+      Re_BufSz   = Re_BufSz   + SIZE(InData%btmd_x3)  ! btmd_x3
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -945,6 +977,18 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     DO i1 = LBOUND(InData%tmd_x,1), UBOUND(InData%tmd_x,1)
       ReKiBuf(Re_Xferred) = InData%tmd_x(i1)
+      Re_Xferred = Re_Xferred + 1
+    END DO
+    DO i1 = LBOUND(InData%btmd_x1,1), UBOUND(InData%btmd_x1,1)
+      ReKiBuf(Re_Xferred) = InData%btmd_x1(i1)
+      Re_Xferred = Re_Xferred + 1
+    END DO
+    DO i1 = LBOUND(InData%btmd_x2,1), UBOUND(InData%btmd_x2,1)
+      ReKiBuf(Re_Xferred) = InData%btmd_x2(i1)
+      Re_Xferred = Re_Xferred + 1
+    END DO
+    DO i1 = LBOUND(InData%btmd_x3,1), UBOUND(InData%btmd_x3,1)
+      ReKiBuf(Re_Xferred) = InData%btmd_x3(i1)
       Re_Xferred = Re_Xferred + 1
     END DO
  END SUBROUTINE TMD_PackContState
@@ -982,6 +1026,24 @@ ENDIF
     i1_u = UBOUND(OutData%tmd_x,1)
     DO i1 = LBOUND(OutData%tmd_x,1), UBOUND(OutData%tmd_x,1)
       OutData%tmd_x(i1) = ReKiBuf(Re_Xferred)
+      Re_Xferred = Re_Xferred + 1
+    END DO
+    i1_l = LBOUND(OutData%btmd_x1,1)
+    i1_u = UBOUND(OutData%btmd_x1,1)
+    DO i1 = LBOUND(OutData%btmd_x1,1), UBOUND(OutData%btmd_x1,1)
+      OutData%btmd_x1(i1) = ReKiBuf(Re_Xferred)
+      Re_Xferred = Re_Xferred + 1
+    END DO
+    i1_l = LBOUND(OutData%btmd_x2,1)
+    i1_u = UBOUND(OutData%btmd_x2,1)
+    DO i1 = LBOUND(OutData%btmd_x2,1), UBOUND(OutData%btmd_x2,1)
+      OutData%btmd_x2(i1) = ReKiBuf(Re_Xferred)
+      Re_Xferred = Re_Xferred + 1
+    END DO
+    i1_l = LBOUND(OutData%btmd_x3,1)
+    i1_u = UBOUND(OutData%btmd_x3,1)
+    DO i1 = LBOUND(OutData%btmd_x3,1), UBOUND(OutData%btmd_x3,1)
+      OutData%btmd_x3(i1) = ReKiBuf(Re_Xferred)
       Re_Xferred = Re_Xferred + 1
     END DO
  END SUBROUTINE TMD_UnPackContState
@@ -1970,6 +2032,7 @@ ENDIF
    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
 ! Local 
    INTEGER(IntKi)                 :: i,j,k
+   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'TMD_CopyInput'
@@ -1979,6 +2042,11 @@ ENDIF
       CALL MeshCopy( SrcInputData%Mesh, DstInputData%Mesh, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
+    DO i1 = LBOUND(SrcInputData%BMesh,1), UBOUND(SrcInputData%BMesh,1)
+      CALL MeshCopy( SrcInputData%BMesh(i1), DstInputData%BMesh(i1), CtrlCode, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         IF (ErrStat>=AbortErrLev) RETURN
+    ENDDO
  END SUBROUTINE TMD_CopyInput
 
  SUBROUTINE TMD_DestroyInput( InputData, ErrStat, ErrMsg )
@@ -1991,6 +2059,9 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
   CALL MeshDestroy( InputData%Mesh, ErrStat, ErrMsg )
+DO i1 = LBOUND(InputData%BMesh,1), UBOUND(InputData%BMesh,1)
+  CALL MeshDestroy( InputData%BMesh(i1), ErrStat, ErrMsg )
+ENDDO
  END SUBROUTINE TMD_DestroyInput
 
  SUBROUTINE TMD_PackInput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -2046,6 +2117,25 @@ ENDIF
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
+    DO i1 = LBOUND(InData%BMesh,1), UBOUND(InData%BMesh,1)
+      Int_BufSz   = Int_BufSz + 3  ! BMesh: size of buffers for each call to pack subtype
+      CALL MeshPack( InData%BMesh(i1), Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2, .TRUE. ) ! BMesh 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf)) THEN ! BMesh
+         Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
+         DEALLOCATE(Re_Buf)
+      END IF
+      IF(ALLOCATED(Db_Buf)) THEN ! BMesh
+         Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
+         DEALLOCATE(Db_Buf)
+      END IF
+      IF(ALLOCATED(Int_Buf)) THEN ! BMesh
+         Int_BufSz = Int_BufSz + SIZE( Int_Buf )
+         DEALLOCATE(Int_Buf)
+      END IF
+    END DO
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -2101,6 +2191,36 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
+    DO i1 = LBOUND(InData%BMesh,1), UBOUND(InData%BMesh,1)
+      CALL MeshPack( InData%BMesh(i1), Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2, OnlySize ) ! BMesh 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Re_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Re_Buf) > 0) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_Buf)-1 ) = Re_Buf
+        Re_Xferred = Re_Xferred + SIZE(Re_Buf)
+        DEALLOCATE(Re_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+      IF(ALLOCATED(Db_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Db_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Db_Buf) > 0) DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_Buf)-1 ) = Db_Buf
+        Db_Xferred = Db_Xferred + SIZE(Db_Buf)
+        DEALLOCATE(Db_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+      IF(ALLOCATED(Int_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Int_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Int_Buf) > 0) IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_Buf)-1 ) = Int_Buf
+        Int_Xferred = Int_Xferred + SIZE(Int_Buf)
+        DEALLOCATE(Int_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+    END DO
  END SUBROUTINE TMD_PackInput
 
  SUBROUTINE TMD_UnPackInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -2116,6 +2236,7 @@ ENDIF
   INTEGER(IntKi)                 :: Db_Xferred
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
+  INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'TMD_UnPackInput'
@@ -2169,6 +2290,50 @@ ENDIF
       IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
+    i1_l = LBOUND(OutData%BMesh,1)
+    i1_u = UBOUND(OutData%BMesh,1)
+    DO i1 = LBOUND(OutData%BMesh,1), UBOUND(OutData%BMesh,1)
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Re_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Re_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Re_Buf = ReKiBuf( Re_Xferred:Re_Xferred+Buf_size-1 )
+        Re_Xferred = Re_Xferred + Buf_size
+      END IF
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Db_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Db_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Db_Buf = DbKiBuf( Db_Xferred:Db_Xferred+Buf_size-1 )
+        Db_Xferred = Db_Xferred + Buf_size
+      END IF
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Int_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Int_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
+        Int_Xferred = Int_Xferred + Buf_size
+      END IF
+      CALL MeshUnpack( OutData%BMesh(i1), Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2 ) ! BMesh 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
+      IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
+      IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
+    END DO
  END SUBROUTINE TMD_UnPackInput
 
  SUBROUTINE TMD_CopyOutput( SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg )
@@ -2179,6 +2344,7 @@ ENDIF
    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
 ! Local 
    INTEGER(IntKi)                 :: i,j,k
+   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'TMD_CopyOutput'
@@ -2188,6 +2354,11 @@ ENDIF
       CALL MeshCopy( SrcOutputData%Mesh, DstOutputData%Mesh, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
+    DO i1 = LBOUND(SrcOutputData%BMesh,1), UBOUND(SrcOutputData%BMesh,1)
+      CALL MeshCopy( SrcOutputData%BMesh(i1), DstOutputData%BMesh(i1), CtrlCode, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         IF (ErrStat>=AbortErrLev) RETURN
+    ENDDO
  END SUBROUTINE TMD_CopyOutput
 
  SUBROUTINE TMD_DestroyOutput( OutputData, ErrStat, ErrMsg )
@@ -2200,6 +2371,9 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
   CALL MeshDestroy( OutputData%Mesh, ErrStat, ErrMsg )
+DO i1 = LBOUND(OutputData%BMesh,1), UBOUND(OutputData%BMesh,1)
+  CALL MeshDestroy( OutputData%BMesh(i1), ErrStat, ErrMsg )
+ENDDO
  END SUBROUTINE TMD_DestroyOutput
 
  SUBROUTINE TMD_PackOutput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -2255,6 +2429,25 @@ ENDIF
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
+    DO i1 = LBOUND(InData%BMesh,1), UBOUND(InData%BMesh,1)
+      Int_BufSz   = Int_BufSz + 3  ! BMesh: size of buffers for each call to pack subtype
+      CALL MeshPack( InData%BMesh(i1), Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2, .TRUE. ) ! BMesh 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf)) THEN ! BMesh
+         Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
+         DEALLOCATE(Re_Buf)
+      END IF
+      IF(ALLOCATED(Db_Buf)) THEN ! BMesh
+         Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
+         DEALLOCATE(Db_Buf)
+      END IF
+      IF(ALLOCATED(Int_Buf)) THEN ! BMesh
+         Int_BufSz = Int_BufSz + SIZE( Int_Buf )
+         DEALLOCATE(Int_Buf)
+      END IF
+    END DO
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -2310,6 +2503,36 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
+    DO i1 = LBOUND(InData%BMesh,1), UBOUND(InData%BMesh,1)
+      CALL MeshPack( InData%BMesh(i1), Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2, OnlySize ) ! BMesh 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Re_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Re_Buf) > 0) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_Buf)-1 ) = Re_Buf
+        Re_Xferred = Re_Xferred + SIZE(Re_Buf)
+        DEALLOCATE(Re_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+      IF(ALLOCATED(Db_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Db_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Db_Buf) > 0) DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_Buf)-1 ) = Db_Buf
+        Db_Xferred = Db_Xferred + SIZE(Db_Buf)
+        DEALLOCATE(Db_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+      IF(ALLOCATED(Int_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Int_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Int_Buf) > 0) IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_Buf)-1 ) = Int_Buf
+        Int_Xferred = Int_Xferred + SIZE(Int_Buf)
+        DEALLOCATE(Int_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+    END DO
  END SUBROUTINE TMD_PackOutput
 
  SUBROUTINE TMD_UnPackOutput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -2325,6 +2548,7 @@ ENDIF
   INTEGER(IntKi)                 :: Db_Xferred
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
+  INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'TMD_UnPackOutput'
@@ -2378,6 +2602,50 @@ ENDIF
       IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
+    i1_l = LBOUND(OutData%BMesh,1)
+    i1_u = UBOUND(OutData%BMesh,1)
+    DO i1 = LBOUND(OutData%BMesh,1), UBOUND(OutData%BMesh,1)
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Re_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Re_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Re_Buf = ReKiBuf( Re_Xferred:Re_Xferred+Buf_size-1 )
+        Re_Xferred = Re_Xferred + Buf_size
+      END IF
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Db_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Db_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Db_Buf = DbKiBuf( Db_Xferred:Db_Xferred+Buf_size-1 )
+        Db_Xferred = Db_Xferred + Buf_size
+      END IF
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Int_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Int_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
+        Int_Xferred = Int_Xferred + Buf_size
+      END IF
+      CALL MeshUnpack( OutData%BMesh(i1), Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2 ) ! BMesh 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
+      IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
+      IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
+    END DO
  END SUBROUTINE TMD_UnPackOutput
 
 
@@ -2459,6 +2727,8 @@ ENDIF
  REAL(DbKi)                                 :: ScaleFactor ! temporary for extrapolation/interpolation
  INTEGER(IntKi)                             :: ErrStat2 ! local errors
  CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
+ INTEGER                                    :: i01    ! dim1 level 0 counter variable for arrays of ddts
+ INTEGER                                    :: i1    ! dim1 counter variable for arrays
     ! Initialize ErrStat
  ErrStat = ErrID_None
  ErrMsg  = ""
@@ -2475,6 +2745,10 @@ ENDIF
    ScaleFactor = t_out / t(2)
       CALL MeshExtrapInterp1(u1%Mesh, u2%Mesh, tin, u_out%Mesh, tin_out, ErrStat2, ErrMsg2 )
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+  DO i1 = LBOUND(u_out%BMesh,1),UBOUND(u_out%BMesh,1)
+      CALL MeshExtrapInterp1(u1%BMesh(i1), u2%BMesh(i1), tin, u_out%BMesh(i1), tin_out, ErrStat2, ErrMsg2 )
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+   ENDDO
  END SUBROUTINE TMD_Input_ExtrapInterp1
 
 
@@ -2510,6 +2784,8 @@ ENDIF
  INTEGER(IntKi)                             :: ErrStat2 ! local errors
  CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
  CHARACTER(*),            PARAMETER         :: RoutineName = 'TMD_Input_ExtrapInterp2'
+ INTEGER                                    :: i01    ! dim1 level 0 counter variable for arrays of ddts
+ INTEGER                                    :: i1    ! dim1 counter variable for arrays
     ! Initialize ErrStat
  ErrStat = ErrID_None
  ErrMsg  = ""
@@ -2532,6 +2808,10 @@ ENDIF
    ScaleFactor = t_out / (t(2) * t(3) * (t(2) - t(3)))
       CALL MeshExtrapInterp2(u1%Mesh, u2%Mesh, u3%Mesh, tin, u_out%Mesh, tin_out, ErrStat2, ErrMsg2 )
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+  DO i1 = LBOUND(u_out%BMesh,1),UBOUND(u_out%BMesh,1)
+      CALL MeshExtrapInterp2(u1%BMesh(i1), u2%BMesh(i1), u3%BMesh(i1), tin, u_out%BMesh(i1), tin_out, ErrStat2, ErrMsg2 )
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+   ENDDO
  END SUBROUTINE TMD_Input_ExtrapInterp2
 
 
@@ -2613,6 +2893,8 @@ ENDIF
  REAL(DbKi)                                 :: ScaleFactor ! temporary for extrapolation/interpolation
  INTEGER(IntKi)                             :: ErrStat2 ! local errors
  CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
+ INTEGER                                    :: i01    ! dim1 level 0 counter variable for arrays of ddts
+ INTEGER                                    :: i1    ! dim1 counter variable for arrays
     ! Initialize ErrStat
  ErrStat = ErrID_None
  ErrMsg  = ""
@@ -2629,6 +2911,10 @@ ENDIF
    ScaleFactor = t_out / t(2)
       CALL MeshExtrapInterp1(y1%Mesh, y2%Mesh, tin, y_out%Mesh, tin_out, ErrStat2, ErrMsg2 )
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+  DO i1 = LBOUND(y_out%BMesh,1),UBOUND(y_out%BMesh,1)
+      CALL MeshExtrapInterp1(y1%BMesh(i1), y2%BMesh(i1), tin, y_out%BMesh(i1), tin_out, ErrStat2, ErrMsg2 )
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+   ENDDO
  END SUBROUTINE TMD_Output_ExtrapInterp1
 
 
@@ -2664,6 +2950,8 @@ ENDIF
  INTEGER(IntKi)                             :: ErrStat2 ! local errors
  CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
  CHARACTER(*),            PARAMETER         :: RoutineName = 'TMD_Output_ExtrapInterp2'
+ INTEGER                                    :: i01    ! dim1 level 0 counter variable for arrays of ddts
+ INTEGER                                    :: i1    ! dim1 counter variable for arrays
     ! Initialize ErrStat
  ErrStat = ErrID_None
  ErrMsg  = ""
@@ -2686,6 +2974,10 @@ ENDIF
    ScaleFactor = t_out / (t(2) * t(3) * (t(2) - t(3)))
       CALL MeshExtrapInterp2(y1%Mesh, y2%Mesh, y3%Mesh, tin, y_out%Mesh, tin_out, ErrStat2, ErrMsg2 )
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+  DO i1 = LBOUND(y_out%BMesh,1),UBOUND(y_out%BMesh,1)
+      CALL MeshExtrapInterp2(y1%BMesh(i1), y2%BMesh(i1), y3%BMesh(i1), tin, y_out%BMesh(i1), tin_out, ErrStat2, ErrMsg2 )
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+   ENDDO
  END SUBROUTINE TMD_Output_ExtrapInterp2
 
 END MODULE TMD_Types

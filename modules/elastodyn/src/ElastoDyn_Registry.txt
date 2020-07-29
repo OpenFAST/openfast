@@ -39,6 +39,7 @@ typedef	^	InitOutputType	ReKi	BldRNodes	{:}	-	-	"Radius to analysis nodes relati
 typedef	^	InitOutputType	ReKi	TwrHNodes	{:}	-	-	"Location of variable-spaced tower nodes (relative to the tower rigid base height"
 typedef	^	InitOutputType	ReKi	PlatformPos	{6}	-	-	"Initial platform position (6 DOFs)"
 typedef	^	InitOutputType	ReKi	TwrBasePos	{3}	-	-	"initial position of the tower base (for SrvD)"	m
+typedef	^	InitOutputType	ReKi	BldBasePos	{3}{3}	-	-	"initial position of the blade base (for SrvD)"	m
 typedef	^	InitOutputType	ReKi	HubRad	-	-	-	"Preconed hub radius (distance from the rotor apex to the blade root)"	m
 typedef	^	InitOutputType	ReKi	RotSpeed	-	-	-	"Initial or fixed rotor speed"	rad/s
 typedef	^	InitOutputType	LOGICAL	isFixed_GenDOF	-	-	-	"whether the generator is fixed or free" -
@@ -428,9 +429,11 @@ typedef	^	ED_RtHndSide	ReKi	AngAccERt	3	-	-	"Portion of the angular acceleration
 typedef	^	ED_RtHndSide	ReKi	AngAccEXt	3	-	-	"Portion of the angular acceleration of the platform (body X) in the inertia frame (body E for earth) associated with everything but the QD2T()s"
 typedef	^	ED_RtHndSide	ReKi	AngAccEFt	{:}{:}	-	-	"Portion of the angular acceleration of tower element J (body F) in the inertia frame (body E for earth) associated with everything but the QD2T()s"
 typedef	^	ED_RtHndSide	ReKi	AngVelEF	{:}{:}	-	-	"Angular velocity of the current point on the tower (body F) in the inertia frame (body E for earth)"
+typedef	^	ED_RtHndSide	ReKi	AngVelHM	{:}{:}{:}	-	-	"Angular velocity of the current point on the blade in the inertia frame "
 typedef	^	ED_RtHndSide	ReKi	AngAccEAt	3	-	-	"Portion of the angular acceleration of the tail (body A) in the inertia frame (body E for earth) associated with everything but the QD2T()'s"
 typedef	^	ED_RtHndSide	ReKi	AngAccEGt	3	-	-	"Portion of the angular acceleration of the generator (body G) in the inertia frame (body E for earth) associated with everything but the QD2T()'s"
 typedef	^	ED_RtHndSide	ReKi	AngAccEHt	3	-	-	"Portion of the angular acceleration of the hub (body H) in the inertia frame (body E for earth) associated with everything but the QD2T()'s"
+typedef	^	ED_RtHndSide	ReKi	AngAccEKt	{:}{:}{:}	-	-	"Portion of the angular acceleration of the blade in the inertia frame associated with everything but the QD2T()'s"
 #typedef	^	ED_RtHndSide	ReKi	AngAccELt	3	-	-	"Portion of the angular acceleration of the low-speed shaft (body L) in the inertia frame (body E for earth) associated with everything but the QD2T()'s"
 typedef	^	ED_RtHndSide	ReKi	AngAccENt	3	-	-	"Portion of the angular acceleration of the nacelle (body N) in the inertia frame (body E for earth) associated with everything but the QD2T()'s"
 # RtHS Linear

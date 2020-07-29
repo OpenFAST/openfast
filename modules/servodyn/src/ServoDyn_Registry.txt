@@ -24,6 +24,7 @@ typedef	^	InitInputType	ReKi	BlPitchInit	{:}	-	-	"Initial blade pitch"	-
 typedef	^	InitInputType	ReKi	Gravity	-	-	-	"Gravitational acceleration"	m/s^2
 typedef	^	InitInputType	ReKi	r_N_O_G	{3}	-	-	"nacelle origin for setting up mesh"	m
 typedef	^	InitInputType	ReKi	r_TwrBase	{3}	-	-	"tower base origin for setting up mesh"	m
+typedef	^	InitInputType	ReKi	r_BldBase	{3}{3}	-	-	"tower base origin for setting up mesh"	m
 typedef	^	InitInputType	DbKi	Tmax	-	-	-	"max time from glue code"	s
 typedef	^	InitInputType	ReKi	AvgWindSpeed	-	-	-	"average wind speed for the simulation"	m/s
 typedef	^	InitInputType	ReKi	AirDens	-	-	-	"air density"	kg/m^3
@@ -126,6 +127,8 @@ typedef	^	SrvD_InputFile	LOGICAL	CompNTMD	-	-	-	"Compute nacelle tuned mass damp
 typedef	^	SrvD_InputFile	CHARACTER(1024)	NTMDfile	-	-	-	"File for nacelle tuned mass damper (quoted string)"	-
 typedef	^	SrvD_InputFile	LOGICAL	CompTTMD	-	-	-	"Compute tower tuned mass damper {true/false}"	-
 typedef	^	SrvD_InputFile	CHARACTER(1024)	TTMDfile	-	-	-	"File for tower tuned mass damper (quoted string)"	-
+typedef	^	SrvD_InputFile	LOGICAL	CompBTMD	-	-	-	"Compute tower tuned mass damper {true/false}"	-
+typedef	^	SrvD_InputFile	CHARACTER(1024)	BTMDfile	-	-	-	"File for blade tuned mass damper (quoted string)"	-
 
 # ..... Data for using Bladed DLLs .......................................................................................................
 typedef	^	BladedDLLType	SiKi	avrSWAP	{:}	-	-	"The swap array: used to pass data to and from the DLL controller"	"see Bladed DLL documentation"
@@ -204,17 +207,20 @@ typedef	^	BladedDLLType	IntKi	Yaw_Cntrl	-	-	-	"Yaw control: 0 = rate;  1 = torqu
 typedef	^	ContinuousStateType	ReKi	DummyContState	-	-	-	"Remove this variable if you have continuous states"	-
 typedef	^	ContinuousStateType	TMD_ContinuousStateType	NTMD	-	-	-	"TMD module states - nacelle"	-
 typedef	^	ContinuousStateType	TMD_ContinuousStateType	TTMD	-	-	-	"TMD module states - tower"	-
+typedef	^	ContinuousStateType	TMD_ContinuousStateType	BTMD	-	-	-	"TMD module states - blade"	-
 
 # Define discrete (nondifferentiable) states here:
 typedef	^	DiscreteStateType	ReKi	CtrlOffset	-	-	-	"Controller offset parameter" N-m
 #typedef	^	DiscreteStateType	ReKi	BlPitchFilter	{:}	-	-	"blade pitch filter"	-
 typedef	^	DiscreteStateType	TMD_DiscreteStateType	NTMD	-	-	-	"TMD module states - nacelle"	-
 typedef	^	DiscreteStateType	TMD_DiscreteStateType	TTMD	-	-	-	"TMD module states - tower"	-
+typedef	^	DiscreteStateType	TMD_DiscreteStateType	BTMD	-	-	-	"TMD module states - blade"	-
 
 # Define constraint states here:
 typedef	^	ConstraintStateType	ReKi	DummyConstrState	-	-	-	"Remove this variable if you have constraint states"	-
 typedef	^	ConstraintStateType	TMD_ConstraintStateType	NTMD	-	-	-	"TMD module states - nacelle"	-
 typedef	^	ConstraintStateType	TMD_ConstraintStateType	TTMD	-	-	-	"TMD module states - tower"	-
+typedef	^	ConstraintStateType	TMD_ConstraintStateType	BTMD	-	-	-	"TMD module states - blade"	-
 
 # Define "other" states (e.g. logical states) here:
 # other states for pitch maneuver:
@@ -236,6 +242,7 @@ typedef	^	OtherStateType	Logical	GenOnLine	-	-	-	"Is the generator online?"	-
 # other states for TMD sub-module:
 typedef	^	OtherStateType	TMD_OtherStateType	NTMD	-	-	-	"TMD module states - nacelle"	-
 typedef	^	OtherStateType	TMD_OtherStateType	TTMD	-	-	-	"TMD module states - tower"	-
+typedef	^	OtherStateType	TMD_OtherStateType	BTMD	-	-	-	"TMD module states - blade"	-
 
 # ..... Misc Variables ................................................................................................................
 typedef	^	MiscVarType	DbKi	LastTimeCalled	-	-	-	"last time the CalcOutput/Bladed DLL was called"	s
@@ -245,6 +252,7 @@ typedef	^	MiscVarType	DbKi	LastTimeFiltered	-	-	-	"last time the CalcOutput/Blad
 typedef	^	MiscVarType	ReKi	xd_BlPitchFilter	{:}	-	-	"blade pitch filter"	-
 typedef	^	MiscVarType	TMD_MiscVarType	NTMD	-	-	-	"TMD module misc vars - nacelle"	-
 typedef	^	MiscVarType	TMD_MiscVarType	TTMD	-	-	-	"TMD module misc vars - tower"	-
+typedef	^	MiscVarType	TMD_MiscVarType	BTMD	-	-	-	"TMD module misc vars - blade"	-
 
 # ..... Parameters ................................................................................................................
 # Define parameters here:
@@ -312,6 +320,7 @@ typedef	^	ParameterType	ReKi	TBDrConD	-	-	-	"Tip-brake drag constant during full
 typedef	^	ParameterType	IntKi	NumBl	-	-	-	"Number of blades on the turbine"	-
 typedef	^	ParameterType	LOGICAL	CompNTMD	-	-	-	"Compute nacelle tuned mass damper {true/false}"	-
 typedef	^	ParameterType	LOGICAL	CompTTMD	-	-	-	"Compute tower tuned mass damper {true/false}"	-
+typedef	^	ParameterType	LOGICAL	CompBTMD	-	-	-	"Compute blade tuned mass damper {true/false}"	-
 # parameters for output
 typedef	^	ParameterType	IntKi	NumOuts	-	-	-	"Number of parameters in the output list (number of outputs requested)"	-
 typedef	^	ParameterType	IntKi	NumOuts_DLL	-	-	-	"Number of logging channels output from the DLL (set at initialization)"	-
@@ -336,6 +345,7 @@ typedef	^	ParameterType	ReKi	RotSpeedRef	-	-	-	"Reference rotor speed"	"rad/s"
 # parameters for other modules:
 typedef	^	ParameterType	TMD_ParameterType	NTMD	-	-	-	"TMD module parameters - nacelle"	-
 typedef	^	ParameterType	TMD_ParameterType	TTMD	-	-	-	"TMD module parameters - tower"	-
+typedef	^	ParameterType	TMD_ParameterType	BTMD	-	-	-	"TMD module parameters - blade"	-
 
 # ..... Inputs ....................................................................................................................
 # Define inputs that are not on this mesh here:
@@ -374,6 +384,7 @@ typedef	^	InputType	ReKi	HorWindV	-	-	-	"Horizontal hub-height wind velocity mag
 typedef	^	InputType	ReKi	YawAngle	-	-	2pi	"Estimate of yaw (nacelle + platform)"	radians
 typedef	^	InputType	TMD_InputType	NTMD	-	-	-	"TMD module inputs - nacelle"	-
 typedef	^	InputType	TMD_InputType	TTMD	-	-	-	"TMD module inputs - tower"	-
+typedef	^	InputType	TMD_InputType	BTMD	-	-	-	"TMD module inputs - blade"	-
 typedef	^	InputType	SiKi	SuperController	{:}	-	-	"A swap array: used to pass input data to the DLL controller from the supercontroller"	-
 
 # ..... Outputs ...................................................................................................................
@@ -390,5 +401,6 @@ typedef	^	OutputType	ReKi	ElecPwr	-	-	-	"Electrical power"	W
 typedef	^	OutputType	ReKi	TBDrCon	{:}	-	-	"Instantaneous tip-brake drag constant, Cd*Area"
 typedef	^	OutputType	TMD_OutputType	NTMD	-	-	-	"TMD module outputs - nacelle"	-
 typedef	^	OutputType	TMD_OutputType	TTMD	-	-	-	"TMD module outputs - tower"	-
+typedef	^	OutputType	TMD_OutputType	BTMD	-	-	-	"TMD module outputs - blade"	-
 typedef	^	OutputType	SiKi	SuperController	{:}	-	-	"A swap array: used to pass output data from the DLL controller to the supercontroller"	-
 
