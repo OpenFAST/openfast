@@ -339,17 +339,9 @@
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Matlab|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
-			<FileConfiguration Name="Release_Matlab|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Matlab|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
-			<FileConfiguration Name="Release_Matlab|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration></File></Filter>
 		<Filter Name="ScaLAPACK">
 		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\scalapack\dlasrt2.f">
@@ -367,17 +359,9 @@
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Matlab|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
-			<FileConfiguration Name="Release_Matlab|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Matlab|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
-			<FileConfiguration Name="Release_Matlab|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\scalapack\slasrt2.f">
 			<FileConfiguration Name="Debug_Double|Win32">
@@ -394,17 +378,9 @@
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Matlab|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
-			<FileConfiguration Name="Release_Matlab|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Matlab|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
-			<FileConfiguration Name="Release_Matlab|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration></File></Filter>
 		<Filter Name="SLATEC">
 		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\slatec\d1mach.f">
@@ -422,17 +398,9 @@
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Matlab|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
-			<FileConfiguration Name="Release_Matlab|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Matlab|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
-			<FileConfiguration Name="Release_Matlab|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\slatec\dqk61.f">
 			<FileConfiguration Name="Debug_Double|Win32">
@@ -449,17 +417,9 @@
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Matlab|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
-			<FileConfiguration Name="Release_Matlab|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Matlab|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
-			<FileConfiguration Name="Release_Matlab|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\slatec\fdump.f">
 			<FileConfiguration Name="Debug_Double|Win32">
@@ -476,17 +436,9 @@
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Matlab|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
-			<FileConfiguration Name="Release_Matlab|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Matlab|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
-			<FileConfiguration Name="Release_Matlab|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\slatec\i1mach.f">
 			<FileConfiguration Name="Debug_Double|Win32">
@@ -503,17 +455,9 @@
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Matlab|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
-			<FileConfiguration Name="Release_Matlab|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Matlab|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
-			<FileConfiguration Name="Release_Matlab|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\slatec\j4save.f">
 			<FileConfiguration Name="Debug_Double|Win32">
@@ -530,17 +474,9 @@
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Matlab|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
-			<FileConfiguration Name="Release_Matlab|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Matlab|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
-			<FileConfiguration Name="Release_Matlab|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\slatec\qk61.f">
 			<FileConfiguration Name="Debug_Double|Win32">
@@ -557,17 +493,9 @@
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Matlab|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
-			<FileConfiguration Name="Release_Matlab|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Matlab|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
-			<FileConfiguration Name="Release_Matlab|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\slatec\r1mach.f">
 			<FileConfiguration Name="Debug_Double|Win32">
@@ -584,17 +512,9 @@
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Matlab|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
-			<FileConfiguration Name="Release_Matlab|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Matlab|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
-			<FileConfiguration Name="Release_Matlab|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\slatec\xercnt.f">
 			<FileConfiguration Name="Debug_Double|Win32">
@@ -611,17 +531,9 @@
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Matlab|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
-			<FileConfiguration Name="Release_Matlab|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Matlab|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
-			<FileConfiguration Name="Release_Matlab|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\slatec\xerhlt.f">
 			<FileConfiguration Name="Debug_Double|Win32">
@@ -638,17 +550,9 @@
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Matlab|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
-			<FileConfiguration Name="Release_Matlab|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Matlab|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
-			<FileConfiguration Name="Release_Matlab|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\slatec\xermsg.f">
 			<FileConfiguration Name="Debug_Double|Win32">
@@ -665,17 +569,9 @@
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Matlab|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
-			<FileConfiguration Name="Release_Matlab|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Matlab|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
-			<FileConfiguration Name="Release_Matlab|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\slatec\xerprn.f">
 			<FileConfiguration Name="Debug_Double|Win32">
@@ -692,17 +588,9 @@
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Matlab|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
-			<FileConfiguration Name="Release_Matlab|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Matlab|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
-			<FileConfiguration Name="Release_Matlab|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\slatec\xersve.f">
 			<FileConfiguration Name="Debug_Double|Win32">
@@ -719,17 +607,9 @@
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Matlab|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
-			<FileConfiguration Name="Release_Matlab|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Matlab|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
-			<FileConfiguration Name="Release_Matlab|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\slatec\xgetua.f">
 			<FileConfiguration Name="Debug_Double|Win32">
@@ -746,22 +626,14 @@
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Matlab|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
-			<FileConfiguration Name="Release_Matlab|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Matlab|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
-			<FileConfiguration Name="Release_Matlab|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration></File></Filter>
 		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\fftpack\NWTC_FFTPACK.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\lapack\NWTC_LAPACK.f90"/>
-		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\slatec\NWTC_SLATEC.f90"/>
-		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\scalapack\NWTC_ScaLAPACK.f90"/></Filter>
+		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\scalapack\NWTC_ScaLAPACK.f90"/>
+		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\slatec\NWTC_SLATEC.f90"/></Filter>
 		<Filter Name="RanLux">
 		<File RelativePath="..\..\modules\nwtc-library\src\ranlux\RANLUX.f90"/></Filter>
 		<Filter Name="RegistryFiles">
@@ -783,20 +655,7 @@
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_Num.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\SingPrec.f90"/>
-		<File RelativePath="..\..\modules\nwtc-library\src\SysIVF.f90">
-			<FileConfiguration Name="Debug_Matlab|x64" ExcludedFromBuild="true"/>
-			<FileConfiguration Name="Release_Matlab|x64" ExcludedFromBuild="true"/>
-			<FileConfiguration Name="Debug_Matlab|Win32" ExcludedFromBuild="true"/>
-			<FileConfiguration Name="Release_Matlab|Win32" ExcludedFromBuild="true"/></File>
-		<File RelativePath="..\..\modules\nwtc-library\src\SysMatlabWindows.f90">
-			<FileConfiguration Name="Debug_Double|Win32" ExcludedFromBuild="true"/>
-			<FileConfiguration Name="Release_Double|Win32" ExcludedFromBuild="true"/>
-			<FileConfiguration Name="Debug|Win32" ExcludedFromBuild="true"/>
-			<FileConfiguration Name="Release|x64" ExcludedFromBuild="true"/>
-			<FileConfiguration Name="Debug|x64" ExcludedFromBuild="true"/>
-			<FileConfiguration Name="Debug_Double|x64" ExcludedFromBuild="true"/>
-			<FileConfiguration Name="Release_Double|x64" ExcludedFromBuild="true"/>
-			<FileConfiguration Name="Release|Win32" ExcludedFromBuild="true"/></File></Filter>
+		<File RelativePath="..\..\modules\nwtc-library\src\SysIVF.f90"/></Filter>
 		<Filter Name="UnsteadyAero">
 		<Filter Name="RegistryFiles">
 		<File RelativePath="..\..\modules\AeroDyn\src\UnsteadyAero_Registry.txt">
