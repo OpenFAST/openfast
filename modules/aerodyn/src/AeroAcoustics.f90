@@ -60,6 +60,11 @@ subroutine AA_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    ! Display the module information
    call DispNVD( AA_Ver )
 
+   ! To get rid of a compiler warning.
+   x%DummyContState           = 0.0_SiKi
+   z%DummyConstrState         = 0.0_SiKi
+   OtherState%DummyOtherState = 0.0_SiKi
+
    !bjj: note that we haven't validated p%NumBlades before using it below!
    p%NumBlades = InitInp%NumBlades ! need this before reading the AD input file so that we know how many blade files to read
    p%RootName  = TRIM(InitInp%RootName)//'.NN'
@@ -144,7 +149,7 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
     p%ROUND            = InputFileData%ROUND
     p%alprat           = InputFileData%ALPRAT
     p%NrOutFile        = InputFileData%NrOutFile
-    p%delim            = "	"
+    p%delim            = Tab 
     p%outFmt           = "ES15.6E3" 
     p%NumBlNds         = InitInp%NumBlNds
     p%AirDens          = InitInp%AirDens          

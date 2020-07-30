@@ -1534,438 +1534,438 @@
 		<Filter Name="FFTPACK">
 		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\fftpack\fftpack4.1.f">
 			<FileConfiguration Name="Debug_Double|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" WarnDeclarations="false" WarnUnusedVariables="false"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Matlab|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Matlab|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration></File></Filter>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration></File></Filter>
 		<Filter Name="ScaLAPACK">
 		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\scalapack\dlasrt2.f">
 			<FileConfiguration Name="Debug_Double|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" WarnDeclarations="false" WarnUnusedVariables="false"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Matlab|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Matlab|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration></File>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\scalapack\slasrt2.f">
 			<FileConfiguration Name="Debug_Double|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" WarnDeclarations="false" WarnUnusedVariables="false"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Matlab|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Matlab|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration></File></Filter>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration></File></Filter>
 		<Filter Name="SLATEC">
 		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\slatec\d1mach.f">
 			<FileConfiguration Name="Debug_Double|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" WarnDeclarations="false" WarnUnusedVariables="false"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Matlab|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Matlab|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration></File>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\slatec\dqk61.f">
 			<FileConfiguration Name="Debug_Double|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" WarnDeclarations="false" WarnUnusedVariables="false"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Matlab|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Matlab|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration></File>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\slatec\fdump.f">
 			<FileConfiguration Name="Debug_Double|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" WarnDeclarations="false" WarnUnusedVariables="false"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Matlab|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Matlab|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration></File>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\slatec\i1mach.f">
 			<FileConfiguration Name="Debug_Double|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" WarnDeclarations="false" WarnUnusedVariables="false"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Matlab|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Matlab|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration></File>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\slatec\j4save.f">
 			<FileConfiguration Name="Debug_Double|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" WarnDeclarations="false" WarnUnusedVariables="false"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Matlab|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Matlab|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration></File>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\slatec\qk61.f">
 			<FileConfiguration Name="Debug_Double|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" WarnDeclarations="false" WarnUnusedVariables="false"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Matlab|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Matlab|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration></File>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\slatec\r1mach.f">
 			<FileConfiguration Name="Debug_Double|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" WarnDeclarations="false" WarnUnusedVariables="false"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Matlab|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Matlab|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration></File>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\slatec\xercnt.f">
 			<FileConfiguration Name="Debug_Double|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" WarnDeclarations="false" WarnUnusedVariables="false"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Matlab|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Matlab|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration></File>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\slatec\xerhlt.f">
 			<FileConfiguration Name="Debug_Double|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" WarnDeclarations="false" WarnUnusedVariables="false"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Matlab|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Matlab|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration></File>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\slatec\xermsg.f">
 			<FileConfiguration Name="Debug_Double|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" WarnDeclarations="false" WarnUnusedVariables="false"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Matlab|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Matlab|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration></File>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\slatec\xerprn.f">
 			<FileConfiguration Name="Debug_Double|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" WarnDeclarations="false" WarnUnusedVariables="false"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Matlab|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Matlab|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration></File>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\slatec\xersve.f">
 			<FileConfiguration Name="Debug_Double|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" WarnDeclarations="false" WarnUnusedVariables="false"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Matlab|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Matlab|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration></File>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\slatec\xgetua.f">
 			<FileConfiguration Name="Debug_Double|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" WarnDeclarations="false" WarnUnusedVariables="false"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Matlab|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Matlab|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration></File></Filter>
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration></File></Filter>
 		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\fftpack\NWTC_FFTPACK.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\lapack\NWTC_LAPACK.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\slatec\NWTC_SLATEC.f90"/>
