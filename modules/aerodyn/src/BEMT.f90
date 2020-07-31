@@ -596,6 +596,8 @@ subroutine BEMT_Init( InitInp, u, p, x, xd, z, OtherState, AFInfo, y, misc, Inte
             call cleanup()
             return
          end if
+      p%UA%ShedEffect=.True. ! This should be true when coupled to BEM. True in registry as default.
+
          
       ! note: we check the validity of using UA in BEMT_ReInit()
          

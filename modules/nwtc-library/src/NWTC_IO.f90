@@ -139,7 +139,7 @@ MODULE NWTC_IO
    END INTERFACE
 
       !> \copydoc nwtc_io::parsechvarwdefault
-   INTERFACE ParseVarWDefault                                                 ! Parses a character variable name and value from a string, potentially sets to a default value if "Default" is parsed.
+   INTERFACE ParseVarWDefault                                                 ! Parses a boolean variable name and value from a string, potentially sets to a default value if "Default" is parsed.
       MODULE PROCEDURE ParseChVarWDefault                                     ! Parses a character string from a string, potentially sets to a default value if "Default" is parsed.
       MODULE PROCEDURE ParseDbVarWDefault                                     ! Parses a double-precision REAL from a string, potentially sets to a default value if "Default" is parsed.
       MODULE PROCEDURE ParseInVarWDefault                                     ! Parses an INTEGER from a string, potentially sets to a default value if "Default" is parsed.
@@ -176,7 +176,7 @@ MODULE NWTC_IO
    INTERFACE ReadVarWDefault
       !MODULE PROCEDURE ReadCVar
       MODULE PROCEDURE ReadIVarWDefault
-      !MODULE PROCEDURE ReadLVar
+      MODULE PROCEDURE ReadLVarWDefault      ! Logical
       MODULE PROCEDURE ReadR4VarWDefault     ! 4-byte real
       MODULE PROCEDURE ReadR8VarWDefault     ! 8-byte real
       MODULE PROCEDURE ReadR16VarWDefault    ! 16-byte real
@@ -2244,9 +2244,9 @@ END SUBROUTINE CheckR16Var
 !=======================================================================
 !>
    SUBROUTINE DispCompileRuntimeInfo()
-     
-      USE iso_fortran_env
-      
+#ifdef HAS_FORTRAN2008_FEATURES
+      USE iso_fortran_env, ONLY: compiler_version
+#endif
       CHARACTER(200) :: compiler_version_str
       CHARACTER(200) :: name
       CHARACTER(200) :: git_commit, architecture, compiled_precision
@@ -2263,10 +2263,10 @@ END SUBROUTINE CheckR16Var
          compiled_precision = 'unknown'
       END IF
 
-#if defined(__INTEL_COMPILER) && (__INTEL_COMPILER<1800)
-      compiler_version_str = 'Intel(R) Fortran Compiler '//num2lstr(__INTEL_COMPILER)
-#else
+#if defined(HAS_FORTRAN2008_FEATURES)
       compiler_version_str = compiler_version()
+#elif defined(__INTEL_COMPILER)
+      compiler_version_str = 'Intel(R) Fortran Compiler '//num2lstr(__INTEL_COMPILER)
 #endif
 
       CALL WrScr(trim(name)//'-'//trim(git_commit))
@@ -5688,6 +5688,56 @@ END SUBROUTINE CheckR16Var
    RETURN
    END SUBROUTINE ReadIVarWDefault
 !=======================================================================
+!> This routine reads a logical variable from the next line of the input file.
+!! Use ReadVarWDefault (nwtc_io::readvarwdefault) instead of directly calling a specific routine in the generic interface.    
+!! WARNING: this routine limits the size of the number being read to 30 characters   
+   SUBROUTINE ReadLVarWDefault ( UnIn, Fil, Var, VarName, VarDescr, VarDefault, ErrStat, ErrMsg, UnEc )
+
+      ! Argument declarations:
+
+   LOGICAL,        INTENT(OUT)         :: Var                                             !< variable being read
+   LOGICAL,        INTENT(IN)          :: VarDefault                                      !< default value of variable being read
+   INTEGER,        INTENT(IN)          :: UnIn                                            !< I/O unit for input file.
+   INTEGER,        INTENT(IN), OPTIONAL:: UnEc                                            !< I/O unit for echo file. If present and > 0, write to UnEc
+   INTEGER(IntKi), INTENT(OUT)         :: ErrStat                                         !< Error status; if present, program does not abort on error
+   CHARACTER(*),   INTENT(OUT)         :: ErrMsg                                          !< Error message
+
+   CHARACTER(*),   INTENT(IN)          :: Fil                                             !< Name of the input file.
+   CHARACTER(*),   INTENT(IN)          :: VarDescr                                        !< Text string describing the variable.
+   CHARACTER(*),   INTENT(IN)          :: VarName                                         !< Text string containing the variable name.
+
+
+      ! Local declarations:
+
+   INTEGER                             :: IOS                                             ! I/O status returned from the read statement.
+
+   CHARACTER(30)                       :: Word                                            ! String to hold the first word on the line.
+
+
+   CALL ReadNum ( UnIn, Fil, Word, VarName, ErrStat, ErrMsg )   
+   IF ( ErrStat >= AbortErrLev ) RETURN  ! If we're about to read a T/F and treat it as a number, we have a less severe ErrStat
+
+   CALL Conv2UC( Word )
+   IF ( INDEX(Word, "DEFAULT" ) /= 1 ) THEN ! If it's not "default", read this variable; otherwise use the DEFAULT value
+      READ (Word,*,IOSTAT=IOS)  Var
+
+      CALL CheckIOS ( IOS, Fil, VarName, NumType, ErrStat, ErrMsg )
+
+      IF (ErrStat >= AbortErrLev) RETURN
+   ELSE
+      Var = VarDefault
+   END IF   
+
+   IF ( PRESENT(UnEc) )  THEN
+      IF ( UnEc > 0 ) &
+         WRITE (UnEc,Ec_IntFrmt)  Var, VarName, VarDescr
+   END IF
+
+
+   RETURN
+   END SUBROUTINE ReadLVarWDefault
+!=======================================================================
+
 !> \copydoc nwtc_io::readcary
    SUBROUTINE ReadLAry ( UnIn, Fil, Ary, AryLen, AryName, AryDescr, ErrStat, ErrMsg, UnEc )
 

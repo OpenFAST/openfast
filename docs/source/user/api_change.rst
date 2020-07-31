@@ -25,6 +25,12 @@ OpenFAST       47   TrimGain            0.001   TrimGain   - Proportional gain f
 OpenFAST       48   Twr_Kdmp                0   Twr_Kdmp   - Damping factor for the tower [used only if CalcSteady=True] (N/(m/s))
 OpenFAST       49   Bld_Kdmp                0   Bld_Kdmp   - Damping factor for the blades [used only if CalcSteady=True] (N/(m/s))
 InflowWind     48   InitPosition(x)       0.0   InitPosition(x) - Initial offset in +x direction (shift of wind box) [Only used with WindType = 5] (m)
+AeroDyn        13   CompAA             False                   CompAA             - Flag to compute AeroAcoustics calculation [only used when WakeMod=1 or 2]
+AeroDyn        14   AA_InputFile       "unused"                AA_InputFile       - Aeroacoustics input file
+AeroDyn        35   [separator line]   ======  OLAF -- cOnvecting LAgrangian Filaments (Free Vortex Wake) Theory Options  ================== [used only when WakeMod=3]
+AeroDyn        36   OLAFInputFileName  "Elliptic_OLAF.dat"     OLAFInputFileName - Input file for OLAF [used only when WakeMod=3]
+AirFoilTables  11   BL_file            "unused"                BL_file           - The file name including the boundary layer characteristics of the profile. Ignored if the aeroacoustic module is not called.
+
 ============== ==== ================== =============================================================================================================================================================================
 
 Additional nodal output channels added for :ref:`AeroDyn15<AD-Nodal-Outputs>`,

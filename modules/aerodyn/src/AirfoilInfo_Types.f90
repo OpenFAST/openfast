@@ -118,6 +118,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Y_Coord      !< Y-coordinate for the airfoil shape [unused] [-]
     INTEGER(IntKi)  :: NumTabs      !< The number of airfoil tables in the airfoil file [-]
     TYPE(AFI_Table_Type) , DIMENSION(:), ALLOCATABLE  :: Table      !< The tables of airfoil data for given Re and control setting [-]
+    CHARACTER(1024)  :: BL_file      !< The name of the file with the boundary layer data [-]
   END TYPE AFI_ParameterType
 ! =======================
 ! =========  AFI_InputType  =======
@@ -1354,6 +1355,7 @@ IF (ALLOCATED(SrcParamData%Table)) THEN
          IF (ErrStat>=AbortErrLev) RETURN
     ENDDO
 ENDIF
+    DstParamData%BL_file = SrcParamData%BL_file
  END SUBROUTINE AFI_CopyParam
 
  SUBROUTINE AFI_DestroyParam( ParamData, ErrStat, ErrMsg )
@@ -1466,6 +1468,7 @@ ENDIF
       END IF
     END DO
   END IF
+      Int_BufSz  = Int_BufSz  + 1*LEN(InData%BL_file)  ! BL_file
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -1599,6 +1602,10 @@ ENDIF
       ENDIF
     END DO
   END IF
+    DO I = 1, LEN(InData%BL_file)
+      IntKiBuf(Int_Xferred) = ICHAR(InData%BL_file(I:I), IntKi)
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
  END SUBROUTINE AFI_PackParam
 
  SUBROUTINE AFI_UnPackParam( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -1758,6 +1765,10 @@ ENDIF
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
     END DO
   END IF
+    DO I = 1, LEN(OutData%BL_file)
+      OutData%BL_file(I:I) = CHAR(IntKiBuf(Int_Xferred))
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
  END SUBROUTINE AFI_UnPackParam
 
  SUBROUTINE AFI_CopyInput( SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg )

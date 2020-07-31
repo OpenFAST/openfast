@@ -1,4 +1,4 @@
-.. _input-files:
+.. _bd-input-files:
 
 Input Files
 ===========
@@ -463,6 +463,7 @@ remove the suspect channel from the output file. Please refer to
 Appendix :numref:`app-output-channel` for a complete list of possible output
 parameters and their names.
 
+.. _BD-Nodal-Outputs:
 
 .. include:: BDNodalOutputs.rst
 
