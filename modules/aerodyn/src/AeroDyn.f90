@@ -1227,7 +1227,7 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
       CALL FVW_CalcOutput( t, m%FVW_u(1), p%FVW, x%FVW, xd%FVW, z%FVW, OtherState%FVW, p%AFI, m%FVW_y, m%FVW, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
-      call SetOutputsFromFVW( u, p, OtherState, xd, m, y, ErrStat2, ErrMsg2 )
+      call SetOutputsFromFVW( u, p, OtherState, x, xd, m, y, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    endif
 
@@ -1540,9 +1540,9 @@ subroutine DiskAvgValues(p, u, m, x_hat_disk, y_hat_disk, z_hat_disk, Azimuth)
    type(AD_ParameterType),  intent(in   )  :: p                               !< AD parameters
    type(AD_InputType),      intent(in   )  :: u                               !< AD Inputs at Time
    type(AD_MiscVarType),    intent(inout)  :: m                               !< Misc/optimization variables
-   real(ReKi),              intent(  out)  :: x_hat_disk(3)
-   real(ReKi),              intent(  out)  :: y_hat_disk(3)
-   real(ReKi),              intent(  out)  :: z_hat_disk(3)
+   real(R8Ki),              intent(  out)  :: x_hat_disk(3)
+   real(R8Ki),              intent(  out)  :: y_hat_disk(3)
+   real(R8Ki),              intent(  out)  :: z_hat_disk(3)
    real(R8Ki),              intent(  out)  :: Azimuth(p%NumBlades)
    real(ReKi)                              :: z_hat(3)
    real(ReKi)                              :: tmp(3)
@@ -1655,9 +1655,9 @@ subroutine SetInputsForFVW(p, u, m, errStat, errMsg)
    integer(IntKi),          intent(  out)  :: ErrStat                         !< Error status of the operation
    character(*),            intent(  out)  :: ErrMsg                          !< Error message if ErrStat /= ErrID_None
 
-   real(ReKi)                              :: x_hat_disk(3)
-   real(ReKi)                              :: y_hat_disk(3)
-   real(ReKi)                              :: z_hat_disk(3)
+   real(R8Ki)                              :: x_hat_disk(3)
+   real(R8Ki)                              :: y_hat_disk(3)
+   real(R8Ki)                              :: z_hat_disk(3)
    real(R8Ki)                              :: thetaBladeNds(p%NumBlNds,p%NumBlades)
    real(R8Ki)                              :: Azimuth(p%NumBlades)
    
@@ -1787,11 +1787,11 @@ end subroutine SetOutputsFromBEMT
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine converts outputs from FVW (stored in m%FVW_y) into values on the AeroDyn BladeLoad output mesh.
-subroutine SetOutputsFromFVW(u, p, OtherState, xd, m, y, ErrStat, ErrMsg)
-   use BEMTUnCoupled, only: Compute_UA_AirfoilCoefs
+subroutine SetOutputsFromFVW(u, p, OtherState, x, xd, m, y, ErrStat, ErrMsg)
    TYPE(AD_InputType),        intent(in   ) :: u           !< Inputs at Time t
    type(AD_ParameterType),    intent(in   ) :: p           !< AD parameters
    type(AD_OtherStateType),   intent(in   ) :: OtherState  !< OtherState
+   type(AD_ContinuousStateType),intent(in ) :: x           !< continuous states
    type(AD_DiscreteStateType),intent(in   ) :: xd          !< Discrete states
    type(AD_OutputType),       intent(inout) :: y           !< AD outputs
    type(AD_MiscVarType),      intent(inout) :: m           !< Misc/optimization variables
@@ -1818,12 +1818,13 @@ subroutine SetOutputsFromFVW(u, p, OtherState, xd, m, y, ErrStat, ErrMsg)
    real(ReKi)                             :: Cx, Cy
    real(ReKi)                             :: Cl_Static, Cd_Static, Cm_Static
    real(ReKi)                             :: Cl_dyn, Cd_dyn, Cm_dyn
+   type(UA_InputType)                     :: u_UA
 
    integer(intKi)                         :: ErrStat2
    character(ErrMsgLen)                   :: ErrMsg2
 
-   ErrStat2 = 0
-   ErrMsg2 = ""
+   ErrStat = 0
+   ErrMsg = ""
 
    ! zero forces
    force(3)    =  0.0_ReKi
@@ -1849,18 +1850,33 @@ subroutine SetOutputsFromFVW(u, p, OtherState, xd, m, y, ErrStat, ErrMsg)
          Cd_Static = AFI_interp%Cd
          Cm_Static = AFI_interp%Cm
 
-         if (m%FVW%UA_Flag) then
-            if ((OtherState%FVW%UA_Flag(j,k)) .and. ( .not. EqualRealNos(Vrel,0.0_ReKi) ) ) then
-               m%FVW%m_UA%iBladeNode = j
-               m%FVW%m_UA%iBlade     = k
-               call Compute_UA_AirfoilCoefs( alpha, Vrel, Re,  0.0_ReKi, p%AFI(p%FVW%AFindx(j,k)), m%FVW%p_UA, xd%FVW%UA, OtherState%FVW%UA, m%FVW%y_UA, m%FVW%m_UA, Cl_dyn, Cd_dyn, Cm_dyn, ErrStat, ErrMsg) 
-               if(ErrStat/=ErrID_None) print*,'UA CalcOutput:', trim(ErrMsg)
-            end if
-         end if
          ! Set dynamic to the (will be same as static if UA_Flag is false)
          Cl_dyn    = AFI_interp%Cl
          Cd_dyn    = AFI_interp%Cd
          Cm_dyn    = AFI_interp%Cm
+         
+         if (m%FVW%UA_Flag) then
+            if ((OtherState%FVW%UA_Flag(j,k)) .and. ( .not. EqualRealNos(Vrel,0.0_ReKi) ) ) then
+
+                  ! ....... compute inputs to UA ...........
+               u_UA%alpha    =  alpha
+               u_UA%U        = Vrel
+               u_UA%Re       = Re
+               u_UA%UserProp = 0.0_ReKi ! FIX ME
+
+               ! FIX ME: this is copied 3 times!!!!
+               u_UA%v_ac(1) = sin(u_UA%alpha)*u_UA%U
+               u_UA%v_ac(2) = cos(u_UA%alpha)*u_UA%U
+               u_UA%omega = dot_product( u%BladeMotion(k)%RotationVel(   :,j), m%WithoutSweepPitchTwist(3,:,j,k) ) ! rotation of no-sweep-pitch coordinate system around z of the jth node in the kth blade
+
+               call UA_CalcOutput(j, k, u_UA, m%FVW%p_UA, x%FVW%UA, xd%FVW%UA, OtherState%FVW%UA, p%AFI(p%FVW%AFindx(j,k)), m%FVW%y_UA, m%FVW%m_UA, errStat2, errMsg2 )
+                  call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SetOutputsFromFVW')
+               Cl_dyn = m%FVW%y_UA%Cl
+               Cd_dyn = m%FVW%y_UA%Cd
+               Cm_dyn = m%FVW%y_UA%Cm
+               
+            end if
+         end if
 
          cp = cos(phi)
          sp = sin(phi)
