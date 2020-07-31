@@ -36,6 +36,7 @@ USE UnsteadyAero_Types
 USE DBEMT_Types
 USE BEMT_Types
 USE FVW_Types
+USE AeroAcoustics_Types
 USE AeroDyn_Types
 USE NWTC_Library
 IMPLICIT NONE

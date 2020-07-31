@@ -15,6 +15,7 @@
 #
 
 if (GENERATE_TYPES)
+  generate_f90_types(src/AeroAcoustics_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/AeroAcoustics_Types.f90)
   generate_f90_types(src/AeroDyn_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/AeroDyn_Types.f90)
   generate_f90_types(src/AirfoilInfo_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/AirfoilInfo_Types.f90)
   generate_f90_types(src/BEMT_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/BEMT_Types.f90)
@@ -23,6 +24,15 @@ if (GENERATE_TYPES)
   generate_f90_types(src/AeroDyn_Driver_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/AeroDyn_Driver_Types.f90 -noextrap)
   generate_f90_types(src/FVW_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/FVW_Types.f90)
 endif()
+
+
+# AeroAcoustics - Main
+set(AEROACOUSTIC_SOURCES
+  src/AeroAcoustics_TNO.f90
+  src/AeroAcoustics.f90
+  src/AeroAcoustics_IO.f90
+  src/AeroAcoustics_Types.f90
+)
 
 # AeroDyn lib
 set(AD_LIBS_SOURCES
@@ -75,8 +85,12 @@ target_link_libraries(afinfolib nwtclibs)
 add_library(fvwlib ${FVW_LIBS_SOURCES})
 target_link_libraries(fvwlib uaaerolib afinfolib nwtclibs)
 
+# Aero acoustics
+add_library(aeroacoustics ${AEROACOUSTIC_SOURCES})
+target_link_libraries(aeroacoustics afinfolib nwtclibs)
+
 add_library(aerodynlib ${AD_LIBS_SOURCES})
-target_link_libraries(aerodynlib fvwlib uaaerolib afinfolib nwtclibs)
+target_link_libraries(aerodynlib fvwlib uaaerolib afinfolib nwtclibs aeroacoustics)
 
 # AeroDyn driver
 set(AD_DRIVER_SOURCES
@@ -86,7 +100,7 @@ set(AD_DRIVER_SOURCES
 )
 
 add_executable(aerodyn_driver ${AD_DRIVER_SOURCES})
-target_link_libraries(aerodyn_driver aerodynlib fvwlib uaaerolib afinfolib nwtclibs versioninfolib ${CMAKE_DL_LIBS})
+target_link_libraries(aerodyn_driver aerodynlib fvwlib uaaerolib afinfolib nwtclibs versioninfolib aeroacoustics ${CMAKE_DL_LIBS})
 
 # UnsteadyAero driver
 set(UA_DRIVER_SOURCES
@@ -96,7 +110,7 @@ set(UA_DRIVER_SOURCES
 add_executable(unsteadyaero_driver ${UA_DRIVER_SOURCES})
 target_link_libraries(unsteadyaero_driver aerodynlib fvwlib uaaerolib afinfolib nwtclibs versioninfolib ${CMAKE_DL_LIBS})
 
-install(TARGETS unsteadyaero_driver aerodyn_driver aerodynlib fvwlib uaaerolib afinfolib
+install(TARGETS unsteadyaero_driver aerodyn_driver aerodynlib fvwlib uaaerolib afinfolib aeroacoustics
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib

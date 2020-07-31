@@ -183,12 +183,10 @@ panels :math:`w_{j-1}` and :math:`w_{j+1}`:
 
 .. math::
    \begin{aligned}
-      \eta_j=\frac{1}{4}\left[\frac{w_{j-1}}{w_{j-1}+w_j} + \frac{w_j}{w_j+w_{j+1}} +1 \right]
-      ,\ j=2..n-1
-      ,\quad
-          \eta_1 = \frac{w_1}{w_1+w_2}
-      ,\quad
-          \eta_{n} = \frac{w_{n-1}}{w_{n-1}+w_{n}}
+      \eta_1 &= \frac{w_1}{w_1+w_2},\\
+      \eta_j &= \frac{1}{4}\left[\frac{w_{j-1}}{w_{j-1}+w_j} + \frac{w_j}{w_j+w_{j+1}} +1 \right]
+      ,\ j=2..n-1,\\
+      \eta_{n} &= \frac{w_{n-1}}{w_{n-1}+w_{n}}
    \end{aligned}
 
 For an equidistant spacing, this discretization places the control points at the

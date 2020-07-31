@@ -150,6 +150,12 @@ SET Output_Loc=%CURR_LOC%
 %REGISTRY% "%CURR_LOC%\FVW_Registry.txt" -I "%NWTC_Lib_Loc%" -I "%CURR_LOC%" -O "%Output_Loc%"
 GOTO checkError
 
+:AA
+SET CURR_LOC=%AD_Loc%
+SET Output_Loc=%CURR_LOC%
+%REGISTRY% "%CURR_LOC%\AeroAcoustics_Registry.txt" -I "%NWTC_Lib_Loc%" -I "%CURR_LOC%" -O "%Output_Loc%"
+GOTO checkError
+
 :AeroDyn14
 SET CURR_LOC=%AD14_Loc%
 SET Output_Loc=%CURR_LOC%

@@ -66,4 +66,4 @@ verbosecommand "ctest -VV -L linear -E Ideal"
 ## - 9, 16 because they're very sensitive
 ## - 19, 20 because theyre too long
 ## - 17, 22, 23 because we dont know why they fail :(
-verbosecommand "ctest -VV -j8 -I 1,1,1,2,3,4,5,6,7,8,10,11,12,13,14,15,18,21,24,25,26,27,28"
+verbosecommand "ctest -VV -j8 -I 1,1,1,2,3,4,5,6,7,8,10,11,12,13,14,15,18,21,24,25,26,27,28,29"

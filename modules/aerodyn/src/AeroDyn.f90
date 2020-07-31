@@ -27,10 +27,10 @@ module AeroDyn
    use BEMT
    use AirfoilInfo
    use NWTC_LAPACK
+   use AeroAcoustics
    use UnsteadyAero
    use FVW
    use FVW_Subs, only: FVW_AeroOuts
-   
    
    implicit none
 
@@ -319,6 +319,15 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
 
       call BEMT_CopyInput( m%BEMT_u(1), m%BEMT_u(2), MESH_NEWCOPY, ErrStat2, ErrMsg2 )
          call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+ 
+         
+         !............................................................................................
+         ! Initialize the AeroAcoustics Module if the CompAA flag is set
+         !............................................................................................
+      if (p%CompAA) then
+         call Init_AAmodule( InitInp, InputFileData, u, m%AA_u, p, x%AA, xd%AA, z%AA, OtherState%AA, m%AA_y, m%AA, ErrStat2, ErrMsg2 )
+            call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
+      end if   
    endif
 
       !-------------------------------------------------------------------------------------------------
@@ -925,7 +934,8 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
    else
       p%FrozenWake = .FALSE.
    end if
-   
+
+   p%CompAA = InputFileData%CompAA
    
  ! p%numBlades        = InitInp%numBlades    ! this was set earlier because it was necessary
    p%NumBlNds         = InputFileData%BladeProps(1)%NumBlNds
@@ -1099,6 +1109,16 @@ subroutine AD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, errStat
       call BEMT_UpdateStates(t, n, m%BEMT_u(1), m%BEMT_u(2),  p%BEMT, x%BEMT, xd%BEMT, z%BEMT, OtherState%BEMT, p%AFI, m%BEMT, errStat2, errMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
+         ! Call AeroAcoustics updates states
+      if ( p%CompAA ) then
+         ! We need the outputs from BEMT as inputs to AeroAcoustics module
+         ! Also,  SetInputs() [called above] calls SetInputsForBEMT() which in turn establishes current versions of the Global to local transformations we need as inputs to AA
+         call SetInputsForAA(p, u(1), m, errStat2, errMsg2)  
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         call AA_UpdateStates(t,  n,m%AA, m%AA_u, p%AA, xd%AA,  errStat2, errMsg2)
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end if       
+
    else  ! Call the FVW sub module
          ! This needs to extract the inputs from the AD data types (mesh) and copy pieces for the FVW module
       call SetInputsForFVW(p, u, m, errStat2, errMsg2)
@@ -1178,7 +1198,6 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
    call SetInputs(p, u, m, indx, errStat2, errMsg2)      
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
             
-
    if (p%WakeMod /= WakeMod_FVW) then
       ! Call the BEMT module CalcOutput.  Notice that the BEMT outputs are purposely attached to AeroDyn's MiscVar structure to
       ! avoid issues with the coupling code
@@ -1187,6 +1206,15 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
       call SetOutputsFromBEMT(p, m, y )
+        
+      if ( p%CompAA ) then
+         ! We need the outputs from BEMT as inputs to AeroAcoustics module
+         ! Also,  SetInputs() [called above] calls SetInputsForBEMT() which in turn establishes current versions of the Global to local transformations we need as inputs to AA
+         call SetInputsForAA(p, u, m, errStat2, errMsg2)  
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         call AA_CalcOutput(t, m%AA_u, p%AA, x%AA, xd%AA,  z%AA, OtherState%AA,  m%AA_y, m%AA, errStat2, errMsg2)
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end if  
 
    else  !(p%WakeMod == WakeMod_FVW)
          ! This needs to extract the inputs from the AD data types (mesh) and copy pieces for the FVW module
@@ -1607,6 +1635,44 @@ subroutine SetInputsForFVW(p, u, m, errStat, errMsg)
    enddo
    m%FVW%Vwnd_ND = m%DisturbedInflow ! Nasty transfer for UA, but this is temporary, waiting for AeroDyn to handle UA
 end subroutine SetInputsForFVW
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine sets m%AA_u.
+subroutine SetInputsForAA(p, u, m, errStat, errMsg)
+   type(AD_ParameterType),  intent(in   ) :: p        !< AD parameters
+   type(AD_InputType),      intent(in   ) :: u        !< AD Inputs at Time
+   type(AD_MiscVarType),    intent(inout) :: m        !< Misc/optimization variables
+   integer(IntKi),          intent(  out) :: ErrStat  !< Error status of the operation
+   character(*),            intent(  out) :: ErrMsg   !< Error message if ErrStat /= ErrID_None
+   ! local variables
+   integer(intKi)                         :: i        ! loop counter for nodes
+   integer(intKi)                         :: j        ! loop counter for blades
+   
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
+   do j=1,p%NumBlades
+      do i = 1,p%NumBlNds
+         ! Get local orientation matrix to transform from blade element coordinates to global coordinates
+         m%AA_u%RotGtoL(:,:,i,j) = u%BladeMotion(j)%Orientation(:,:,i)
+
+         ! Get blade element aerodynamic center in global coordinates
+         m%AA_u%AeroCent_G(:,i,j) = u%BladeMotion(j)%Position(:,i) + u%BladeMotion(j)%TranslationDisp(:,i)
+
+         ! Set the blade element relative velocity (including induction)
+         m%AA_u%Vrel(i,j) = m%BEMT_y%Vrel(i,j)
+   
+         ! Set the blade element angle of attack
+         m%AA_u%AoANoise(i,j) = m%BEMT_y%AOA(i,j)
+
+         ! Set the blade element undisturbed flow
+         m%AA_u%Inflow(1,i,j) = u%InflowonBlade(1,i,j)
+         m%AA_u%Inflow(2,i,j) = u%InflowonBlade(2,i,j)
+         m%AA_u%Inflow(3,i,j) = u%InflowonBlade(3,i,j)
+      end do
+   end do
+end subroutine SetInputsForAA
+!----------------------------------------------------------------------------------------------------------------------------------
+
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine converts outputs from BEMT (stored in m%BEMT_y) into values on the AeroDyn BladeLoad output mesh.
 subroutine SetOutputsFromBEMT(p, m, y )
@@ -2051,6 +2117,102 @@ SUBROUTINE Init_AFIparams( InputFileData, p_AFI, UnEc, NumBl, ErrStat, ErrMsg )
    
    
 END SUBROUTINE Init_AFIparams
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine initializes the Airfoil Noise module from within AeroDyn.
+SUBROUTINE Init_AAmodule( DrvInitInp, AD_InputFileData, u_AD, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
+!..................................................................................................................................
+   type(AD_InitInputType),       intent(in   ) :: DrvInitInp    !< AeroDyn-level initialization inputs
+   type(AD_InputFile),           intent(in   ) :: AD_InputFileData  !< All the data in the AeroDyn input file
+   type(AD_InputType),           intent(in   ) :: u_AD           !< AD inputs - used for input mesh node positions
+   type(AA_InputType),           intent(  out) :: u              !< An initial guess for the input; input mesh must be defined
+   type(AD_ParameterType),       intent(inout) :: p              !< Parameters ! intent out b/c we set the AA parameters here
+   type(AA_ContinuousStateType), intent(  out) :: x              !< Initial continuous states
+   type(AA_DiscreteStateType),   intent(  out) :: xd             !< Initial discrete states
+   type(AA_ConstraintStateType), intent(  out) :: z              !< Initial guess of the constraint states
+   type(AA_OtherStateType),      intent(  out) :: OtherState     !< Initial other states
+   type(AA_OutputType),          intent(  out) :: y              !< Initial system outputs (outputs are not calculated;
+                                                                 !!   only the output mesh is initialized)
+   type(AA_MiscVarType),         intent(  out) :: m              !< Initial misc/optimization variables
+   integer(IntKi),               intent(  out) :: errStat        !< Error status of the operation
+   character(*),                 intent(  out) :: errMsg         !< Error message if ErrStat /= ErrID_None
+   ! Local variables
+   real(DbKi)                                  :: Interval       ! Coupling interval in seconds: the rate that
+                                                                 !   (1) BEMT_UpdateStates() is called in loose coupling &
+                                                                 !   (2) BEMT_UpdateDiscState() is called in tight coupling.
+                                                                 !   Input is the suggested time from the glue code;
+                                                                 !   Output is the actual coupling interval that will be used
+                                                                 !   by the glue code.
+   type(AA_InitInputType)                      :: InitInp        ! Input data for initialization routine
+   type(AA_InitOutputType)                     :: InitOut        ! Output for initialization routine
+   integer(intKi)                              :: i              ! airfoil file index                            
+   integer(intKi)                              :: j              ! node index
+   integer(intKi)                              :: k              ! blade index
+   integer(IntKi)                              :: ErrStat2
+   character(ErrMsgLen)                        :: ErrMsg2
+   character(*), parameter                     :: RoutineName = 'Init_AAmodule'
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
+   ! Transfer from parameters and input file to init input
+   Interval                 = p%DT   
+   InitInp%NumBlades        = p%NumBlades
+   InitInp%NumBlNds         = p%NumBlNds
+   InitInp%airDens          = AD_InputFileData%AirDens 
+   InitInp%kinVisc          = AD_InputFileData%KinVisc                    
+   InitInp%InputFile        = AD_InputFileData%AA_InputFile
+   InitInp%RootName         = DrvInitInp%RootName
+   InitInp%SpdSound         = AD_InputFileData%SpdSound
+   InitInp%HubHeight        = DrvInitInp%HubPosition(3)
+
+   ! --- Transfer of airfoil info
+   ALLOCATE ( InitInp%AFInfo( size(p%AFI) ), STAT=ErrStat2 )
+   IF ( ErrStat2 /= 0 )  THEN
+      CALL SetErrStat ( ErrID_Fatal, 'Error allocating memory for the InitInp%AFInfo array.', ErrStat2, ErrMsg2, RoutineName )
+      RETURN
+   ENDIF
+   do i=1,size(p%AFI)
+      call AFI_CopyParam( p%AFI(i), InitInp%AFInfo(i), MESH_NEWCOPY, errStat2, errMsg2 )
+      call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+   end do
+  
+   ! --- Allocate and set AirfoilID, chord and Span for each blades
+   ! note here that each blade is required to have the same number of nodes
+   call AllocAry( InitInp%BlAFID, p%NumBlNds, p%NumBlades,'InitInp%BlAFID', errStat2, ErrMsg2 )
+   call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+   call AllocAry( InitInp%BlChord, p%NumBlNds, p%NumBlades, 'BlChord', errStat2, ErrMsg2 )
+   call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+   call AllocAry( InitInp%BlSpn,   p%NumBlNds, p%NumBlades, 'BlSpn', errStat2, ErrMsg2 )
+   call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+   if (ErrStat >= AbortErrLev) then
+      call cleanup()
+      return
+   end if
+   do k = 1, p%NumBlades
+      do j=1, AD_InputFileData%BladeProps(k)%NumBlNds
+         InitInp%BlChord(j,k)  = AD_InputFileData%BladeProps(k)%BlChord(  j)
+         InitInp%BlSpn  (j,k)  = AD_InputFileData%BladeProps(k)%BlSpn(j)
+         InitInp%BlAFID(j,k)   = AD_InputFileData%BladeProps(k)%BlAFID(j)           
+      end do
+   end do
+   
+   ! --- AeroAcoustics initialization call
+   call AA_Init(InitInp, u, p%AA,  x, xd, z, OtherState, y, m, Interval, InitOut, ErrStat2, ErrMsg2 )
+   call SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)   
+         
+   if (.not. equalRealNos(Interval, p%DT) ) then
+      call SetErrStat( ErrID_Fatal, "DTAero was changed in Init_AAmodule(); this is not allowed.", ErrStat2, ErrMsg2, RoutineName)
+   endif
+
+   call Cleanup()
+   
+contains   
+
+   subroutine Cleanup()
+      call AA_DestroyInitInput ( InitInp, ErrStat2, ErrMsg2 )   
+      call AA_DestroyInitOutput( InitOut, ErrStat2, ErrMsg2 )   
+   end subroutine Cleanup
+   
+END SUBROUTINE Init_AAmodule
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine initializes the BEMT module from within AeroDyn.
 SUBROUTINE Init_BEMTmodule( InputFileData, u_AD, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
