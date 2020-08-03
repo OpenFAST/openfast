@@ -4126,7 +4126,15 @@ SUBROUTINE AD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
             index = index + 1
          end do            
       end do
+
+      do k=1,p%NumBlades
+         do j = 1, size(u%UserProp,1) ! Number of nodes for a blade
+            u_op(index) = u%UserProp(j,k)
+            index = index + 1
+         end do
+      end do
       
+         
    END IF
 
    IF ( PRESENT( y_op ) ) THEN
@@ -4345,7 +4353,8 @@ SUBROUTINE Init_Jacobian( InputFileData, p, u, y, m, InitOut, ErrStat, ErrMsg)
    nu = u%TowerMotion%NNodes * 9            & ! 3 Translation Displacements + 3 orientations + 3 Translation velocities at each node
       + u%hubMotion%NNodes   * 9            & ! 3 Translation Displacements + 3 orientations + 3 Rotation velocities at each node
       + size( u%InflowOnBlade)              &
-      + size( u%InflowOnTower)
+      + size( u%InflowOnTower)              &
+      + size( u%UserProp)
 
    do i=1,p%NumBlades
       nu = nu + u%BladeMotion(i)%NNodes * 9 & ! 3 Translation Displacements + 3 orientations + 3 Translation velocities at each node
@@ -4465,7 +4474,16 @@ SUBROUTINE Init_Jacobian( InputFileData, p, u, y, m, InitOut, ErrStat, ErrMsg)
       end do !j      
    end do !i
    
+   !Module/Mesh/Field: u%UserProp(:,:) = 23,24,25;
    
+   do k=1,size(u%UserProp,2) ! p%NumBlades         
+      do i=1,size(u%UserProp,1) ! numNodes
+            p%Jac_u_indx(index,1) =  22 + k
+            p%Jac_u_indx(index,2) =  1 !component index:  this is a scalar, so 1, but is never used
+            p%Jac_u_indx(index,3) =  i !Node:   i
+            index = index + 1     
+      end do !i
+   end do !k
       !......................................
       ! default perturbations, p%du:
       !......................................
@@ -4502,8 +4520,9 @@ SUBROUTINE Init_Jacobian( InputFileData, p, u, y, m, InitOut, ErrStat, ErrMsg)
       p%du(18 + k) = perturb_b(k)         ! u%InflowOnBlade(:,:,k) = 18 + k
    end do      
    p%du(22) = perturb_t                   ! u%InflowOnTower(:,:) = 22
-  
-         
+   do k=1,p%NumBlades 
+      p%du(22+k) = perturb                     ! u%UserProp(:,:) = 23,24,25
+   end do      
       !.....................
       ! get names of linearized inputs
       !.....................
@@ -4655,7 +4674,12 @@ SUBROUTINE Perturb_u( p, n, perturb_sign, u, du )
       
    CASE (22) !Module/Mesh/Field: u%InflowOnTower(:,:)   = 22;
       u%InflowOnTower(fieldIndx,node) = u%InflowOnTower(fieldIndx,node) + du * perturb_sign
-      
+   CASE (23) !Module/Mesh/Field: u%UserProp(:,1)   = 23; 
+      u%UserProp(node,1) = u%UserProp(node,1) + du * perturb_sign
+   CASE (24) !Module/Mesh/Field: u%UserProp(:,2)   = 23; 
+      u%UserProp(node,2) = u%UserProp(node,2) + du * perturb_sign
+   CASE (25) !Module/Mesh/Field: u%UserProp(:,3)   = 23; 
+      u%UserProp(node,3) = u%UserProp(node,3) + du * perturb_sign
    END SELECT
       
 END SUBROUTINE Perturb_u
