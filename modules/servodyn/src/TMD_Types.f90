@@ -67,6 +67,18 @@ IMPLICIT NONE
     REAL(ReKi)  :: TMD_Y_C_LOW      !< TMD Y high damping for ground hook control [N/(m/s)]
     REAL(ReKi)  :: TMD_X_C_BRAKE      !< TMD X high damping for braking the TMD [N/(m/s)]
     REAL(ReKi)  :: TMD_Y_C_BRAKE      !< TMD X high damping for braking the TMD [N/(m/s)]
+    REAL(ReKi)  :: L_FA      !< Fore-Aft TLCD total length [m]
+    REAL(ReKi)  :: B_FA      !< Fore-Aft TLCD horizontal length [m]
+    REAL(ReKi)  :: area_FA      !< Fore-Aft TLCD cross-sectional area of vertical column [m2]
+    REAL(ReKi)  :: area_ratio_FA      !< Fore-Aft TLCD cross-sectional area ratio (vertical column area divided by horizontal column area) [-]
+    REAL(ReKi)  :: headLossCoeff_FA      !< Fore-Aft TLCD head loss coeff [-]
+    REAL(ReKi)  :: rho_FA      !< Fore-Aft TLCD liquid density [kg/m3]
+    REAL(ReKi)  :: L_SS      !< Side-Side TLCD total length [m]
+    REAL(ReKi)  :: B_SS      !< Side-Side TLCD horizontal length [m]
+    REAL(ReKi)  :: area_SS      !< Side-Side TLCD cross-sectional area of vertical column [m]
+    REAL(ReKi)  :: area_ratio_SS      !< Side-Side TLCD cross-sectional area ratio (vertical column area divided by horizontal column area) [-]
+    REAL(ReKi)  :: headLossCoeff_SS      !< Side-Side TLCD head loss coeff [-]
+    REAL(ReKi)  :: rho_SS      !< Side-Side TLCD liquid density [kg/m3]
     LOGICAL  :: USE_F_TBL      !< use spring force from user-defined table (flag) [-]
     CHARACTER(1024)  :: TMD_F_TBL_FILE      !< user-defined spring table filename [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: F_TBL      !< user-defined spring force [N]
@@ -153,6 +165,18 @@ IMPLICIT NONE
     REAL(ReKi)  :: TMD_Y_C_LOW      !< TMD Y high damping for ground hook control [N/(m/s)]
     REAL(ReKi)  :: TMD_X_C_BRAKE      !< TMD X high damping for braking the TMD [N/(m/s)]
     REAL(ReKi)  :: TMD_Y_C_BRAKE      !< TMD X high damping for braking the TMD [N/(m/s)]
+    REAL(ReKi)  :: L_FA      !< Fore-Aft TLCD total length [m]
+    REAL(ReKi)  :: B_FA      !< Fore-Aft TLCD horizontal length [m]
+    REAL(ReKi)  :: area_FA      !< Fore-Aft TLCD cross-sectional area of vertical column [m2]
+    REAL(ReKi)  :: area_ratio_FA      !< Fore-Aft TLCD cross-sectional area ratio (vertical column area divided by horizontal column area) [-]
+    REAL(ReKi)  :: headLossCoeff_FA      !< Fore-Aft TLCD head loss coeff [-]
+    REAL(ReKi)  :: rho_FA      !< Fore-Aft TLCD liquid density [kg/m3]
+    REAL(ReKi)  :: L_SS      !< Side-Side TLCD total length [m]
+    REAL(ReKi)  :: B_SS      !< Side-Side TLCD horizontal length [m]
+    REAL(ReKi)  :: area_SS      !< Side-Side TLCD cross-sectional area of vertical column [m]
+    REAL(ReKi)  :: area_ratio_SS      !< Side-Side TLCD cross-sectional area ratio (vertical column area divided by horizontal column area) [-]
+    REAL(ReKi)  :: headLossCoeff_SS      !< Side-Side TLCD head loss coeff [-]
+    REAL(ReKi)  :: rho_SS      !< Side-Side TLCD liquid density [kg/m3]
     LOGICAL  :: Use_F_TBL      !< use spring force from user-defined table (flag) [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: F_TBL      !< user-defined spring force [N]
     INTEGER(IntKi)  :: NumBl      !< Number of blades on the turbine [-]
@@ -220,6 +244,18 @@ CONTAINS
     DstInputFileData%TMD_Y_C_LOW = SrcInputFileData%TMD_Y_C_LOW
     DstInputFileData%TMD_X_C_BRAKE = SrcInputFileData%TMD_X_C_BRAKE
     DstInputFileData%TMD_Y_C_BRAKE = SrcInputFileData%TMD_Y_C_BRAKE
+    DstInputFileData%L_FA = SrcInputFileData%L_FA
+    DstInputFileData%B_FA = SrcInputFileData%B_FA
+    DstInputFileData%area_FA = SrcInputFileData%area_FA
+    DstInputFileData%area_ratio_FA = SrcInputFileData%area_ratio_FA
+    DstInputFileData%headLossCoeff_FA = SrcInputFileData%headLossCoeff_FA
+    DstInputFileData%rho_FA = SrcInputFileData%rho_FA
+    DstInputFileData%L_SS = SrcInputFileData%L_SS
+    DstInputFileData%B_SS = SrcInputFileData%B_SS
+    DstInputFileData%area_SS = SrcInputFileData%area_SS
+    DstInputFileData%area_ratio_SS = SrcInputFileData%area_ratio_SS
+    DstInputFileData%headLossCoeff_SS = SrcInputFileData%headLossCoeff_SS
+    DstInputFileData%rho_SS = SrcInputFileData%rho_SS
     DstInputFileData%USE_F_TBL = SrcInputFileData%USE_F_TBL
     DstInputFileData%TMD_F_TBL_FILE = SrcInputFileData%TMD_F_TBL_FILE
 IF (ALLOCATED(SrcInputFileData%F_TBL)) THEN
@@ -319,6 +355,18 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! TMD_Y_C_LOW
       Re_BufSz   = Re_BufSz   + 1  ! TMD_X_C_BRAKE
       Re_BufSz   = Re_BufSz   + 1  ! TMD_Y_C_BRAKE
+      Re_BufSz   = Re_BufSz   + 1  ! L_FA
+      Re_BufSz   = Re_BufSz   + 1  ! B_FA
+      Re_BufSz   = Re_BufSz   + 1  ! area_FA
+      Re_BufSz   = Re_BufSz   + 1  ! area_ratio_FA
+      Re_BufSz   = Re_BufSz   + 1  ! headLossCoeff_FA
+      Re_BufSz   = Re_BufSz   + 1  ! rho_FA
+      Re_BufSz   = Re_BufSz   + 1  ! L_SS
+      Re_BufSz   = Re_BufSz   + 1  ! B_SS
+      Re_BufSz   = Re_BufSz   + 1  ! area_SS
+      Re_BufSz   = Re_BufSz   + 1  ! area_ratio_SS
+      Re_BufSz   = Re_BufSz   + 1  ! headLossCoeff_SS
+      Re_BufSz   = Re_BufSz   + 1  ! rho_SS
       Int_BufSz  = Int_BufSz  + 1  ! USE_F_TBL
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%TMD_F_TBL_FILE)  ! TMD_F_TBL_FILE
   Int_BufSz   = Int_BufSz   + 1     ! F_TBL allocated yes/no
@@ -418,6 +466,30 @@ ENDIF
     ReKiBuf(Re_Xferred) = InData%TMD_X_C_BRAKE
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%TMD_Y_C_BRAKE
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%L_FA
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%B_FA
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%area_FA
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%area_ratio_FA
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%headLossCoeff_FA
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%rho_FA
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%L_SS
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%B_SS
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%area_SS
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%area_ratio_SS
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%headLossCoeff_SS
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%rho_SS
     Re_Xferred = Re_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%USE_F_TBL, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
@@ -541,6 +613,30 @@ ENDIF
     OutData%TMD_X_C_BRAKE = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%TMD_Y_C_BRAKE = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%L_FA = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%B_FA = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%area_FA = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%area_ratio_FA = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%headLossCoeff_FA = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%rho_FA = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%L_SS = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%B_SS = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%area_SS = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%area_ratio_SS = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%headLossCoeff_SS = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%rho_SS = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%USE_F_TBL = TRANSFER(IntKiBuf(Int_Xferred), OutData%USE_F_TBL)
     Int_Xferred = Int_Xferred + 1
@@ -1802,6 +1898,18 @@ ENDIF
     DstParamData%TMD_Y_C_LOW = SrcParamData%TMD_Y_C_LOW
     DstParamData%TMD_X_C_BRAKE = SrcParamData%TMD_X_C_BRAKE
     DstParamData%TMD_Y_C_BRAKE = SrcParamData%TMD_Y_C_BRAKE
+    DstParamData%L_FA = SrcParamData%L_FA
+    DstParamData%B_FA = SrcParamData%B_FA
+    DstParamData%area_FA = SrcParamData%area_FA
+    DstParamData%area_ratio_FA = SrcParamData%area_ratio_FA
+    DstParamData%headLossCoeff_FA = SrcParamData%headLossCoeff_FA
+    DstParamData%rho_FA = SrcParamData%rho_FA
+    DstParamData%L_SS = SrcParamData%L_SS
+    DstParamData%B_SS = SrcParamData%B_SS
+    DstParamData%area_SS = SrcParamData%area_SS
+    DstParamData%area_ratio_SS = SrcParamData%area_ratio_SS
+    DstParamData%headLossCoeff_SS = SrcParamData%headLossCoeff_SS
+    DstParamData%rho_SS = SrcParamData%rho_SS
     DstParamData%Use_F_TBL = SrcParamData%Use_F_TBL
 IF (ALLOCATED(SrcParamData%F_TBL)) THEN
   i1_l = LBOUND(SrcParamData%F_TBL,1)
@@ -1897,6 +2005,18 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! TMD_Y_C_LOW
       Re_BufSz   = Re_BufSz   + 1  ! TMD_X_C_BRAKE
       Re_BufSz   = Re_BufSz   + 1  ! TMD_Y_C_BRAKE
+      Re_BufSz   = Re_BufSz   + 1  ! L_FA
+      Re_BufSz   = Re_BufSz   + 1  ! B_FA
+      Re_BufSz   = Re_BufSz   + 1  ! area_FA
+      Re_BufSz   = Re_BufSz   + 1  ! area_ratio_FA
+      Re_BufSz   = Re_BufSz   + 1  ! headLossCoeff_FA
+      Re_BufSz   = Re_BufSz   + 1  ! rho_FA
+      Re_BufSz   = Re_BufSz   + 1  ! L_SS
+      Re_BufSz   = Re_BufSz   + 1  ! B_SS
+      Re_BufSz   = Re_BufSz   + 1  ! area_SS
+      Re_BufSz   = Re_BufSz   + 1  ! area_ratio_SS
+      Re_BufSz   = Re_BufSz   + 1  ! headLossCoeff_SS
+      Re_BufSz   = Re_BufSz   + 1  ! rho_SS
       Int_BufSz  = Int_BufSz  + 1  ! Use_F_TBL
   Int_BufSz   = Int_BufSz   + 1     ! F_TBL allocated yes/no
   IF ( ALLOCATED(InData%F_TBL) ) THEN
@@ -1998,6 +2118,30 @@ ENDIF
     ReKiBuf(Re_Xferred) = InData%TMD_X_C_BRAKE
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%TMD_Y_C_BRAKE
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%L_FA
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%B_FA
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%area_FA
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%area_ratio_FA
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%headLossCoeff_FA
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%rho_FA
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%L_SS
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%B_SS
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%area_SS
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%area_ratio_SS
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%headLossCoeff_SS
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%rho_SS
     Re_Xferred = Re_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%Use_F_TBL, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
@@ -2130,6 +2274,30 @@ ENDIF
     OutData%TMD_X_C_BRAKE = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%TMD_Y_C_BRAKE = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%L_FA = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%B_FA = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%area_FA = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%area_ratio_FA = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%headLossCoeff_FA = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%rho_FA = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%L_SS = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%B_SS = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%area_SS = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%area_ratio_SS = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%headLossCoeff_SS = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%rho_SS = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%Use_F_TBL = TRANSFER(IntKiBuf(Int_Xferred), OutData%Use_F_TBL)
     Int_Xferred = Int_Xferred + 1

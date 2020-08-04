@@ -41,6 +41,18 @@ typedef	^		^				ReKi			TMD_Y_C_HIGH		-	-	-	"TMD Y high damping for ground hook c
 typedef	^		^				ReKi			TMD_Y_C_LOW		-	-	-	"TMD Y high damping for ground hook control"	"N/(m/s)"
 typedef	^		^				ReKi			TMD_X_C_BRAKE	-	-	-	"TMD X high damping for braking the TMD"	"N/(m/s)"
 typedef	^		^				ReKi			TMD_Y_C_BRAKE	-	-	-	"TMD X high damping for braking the TMD"	"N/(m/s)"
+typedef	^		^				ReKi			L_FA         	-	-	-	"Fore-Aft TLCD total length"	 m
+typedef	^		^				ReKi			B_FA         	-	-	-	"Fore-Aft TLCD horizontal length"	 m
+typedef	^		^				ReKi			area_FA         -	-	-	"Fore-Aft TLCD cross-sectional area of vertical column"	 m2
+typedef	^		^				ReKi			area_ratio_FA      	-	-	-	"Fore-Aft TLCD cross-sectional area ratio (vertical column area divided by horizontal column area)"	 
+typedef	^		^				ReKi			headLossCoeff_FA   	-	-	-	"Fore-Aft TLCD head loss coeff"	 
+typedef	^		^				ReKi			rho_FA         	-	-	-	"Fore-Aft TLCD liquid density"	 kg/m3
+typedef	^		^				ReKi			L_SS         	-	-	-	"Side-Side TLCD total length"	 m
+typedef	^		^				ReKi			B_SS         	-	-	-	"Side-Side TLCD horizontal length"	 m
+typedef	^		^				ReKi			area_SS         -	-	-	"Side-Side TLCD cross-sectional area of vertical column"	 m
+typedef	^		^				ReKi			area_ratio_SS    	-	-	-	"Side-Side TLCD cross-sectional area ratio (vertical column area divided by horizontal column area)"	 
+typedef	^		^				ReKi			headLossCoeff_SS   	-	-	-	"Side-Side TLCD head loss coeff"	 
+typedef	^		^				ReKi			rho_SS         	-	-	-	"Side-Side TLCD liquid density"	 kg/m3
 typedef	^		^				LOGICAL			USE_F_TBL	-	-	-	"use spring force from user-defined table (flag)"	-
 typedef	^		^				CHARACTER(1024)			TMD_F_TBL_FILE	-	-	-	"user-defined spring table filename"	-
 typedef	^		^				ReKi			F_TBL		{:}{:}	-	-	"user-defined spring force"	"N"
@@ -115,6 +127,18 @@ typedef	^		^				ReKi			TMD_Y_C_HIGH		-	-	-	"TMD Y high damping for ground hook c
 typedef	^		^				ReKi			TMD_Y_C_LOW		-	-	-	"TMD Y high damping for ground hook control"	"N/(m/s)"
 typedef	^		^				ReKi			TMD_X_C_BRAKE	-	-	-	"TMD X high damping for braking the TMD"	"N/(m/s)"
 typedef	^		^				ReKi			TMD_Y_C_BRAKE	-	-	-	"TMD X high damping for braking the TMD"	"N/(m/s)"
+typedef	^		^				ReKi			L_FA         	-	-	-	"Fore-Aft TLCD total length"	 m
+typedef	^		^				ReKi			B_FA         	-	-	-	"Fore-Aft TLCD horizontal length"	 m
+typedef	^		^				ReKi			area_FA         	-	-	-	"Fore-Aft TLCD cross-sectional area of vertical column"	 m2
+typedef	^		^				ReKi			area_ratio_FA      	-	-	-	"Fore-Aft TLCD cross-sectional area ratio (vertical column area divided by horizontal column area)"	 
+typedef	^		^				ReKi			headLossCoeff_FA   	-	-	-	"Fore-Aft TLCD head loss coeff"	 
+typedef	^		^				ReKi			rho_FA         	-	-	-	"Fore-Aft TLCD liquid density"	 kg/m3
+typedef	^		^				ReKi			L_SS         	-	-	-	"Side-Side TLCD total length"	 m
+typedef	^		^				ReKi			B_SS         	-	-	-	"Side-Side TLCD horizontal length"	 m
+typedef	^		^				ReKi			area_SS         	-	-	-	"Side-Side TLCD cross-sectional area of vertical column"	 m
+typedef	^		^				ReKi			area_ratio_SS       -	-	-	"Side-Side TLCD cross-sectional area ratio (vertical column area divided by horizontal column area)"	 
+typedef	^		^				ReKi			headLossCoeff_SS    -	-	-	"Side-Side TLCD head loss coeff"	 
+typedef	^		^				ReKi			rho_SS         	-	-	-	"Side-Side TLCD liquid density"	 kg/m3
 typedef	^		^				LOGICAL			Use_F_TBL	-	-	-	"use spring force from user-defined table (flag)"	-
 typedef	^		^				ReKi			F_TBL	{:}{:} - -	"user-defined spring force"	"N"
 typedef	^	ParameterType	IntKi	NumBl	-	-	-	"Number of blades on the turbine"	-
