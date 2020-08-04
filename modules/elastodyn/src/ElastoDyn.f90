@@ -243,9 +243,11 @@ SUBROUTINE ED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    InitOut%PlatformPos = x%QT(1:6)
    InitOut%HubHt       = p%HubHt
    InitOut%TwrBasePos  = y%TowerLn2Mesh%Position(:,p%TwrNodes + 2)
+!FIXME: convert this over to use the RootMotionMesh??
 !SP_start
-   DO K = 1,3
-   InitOut%BldBasePos(:,K)  = y%BladeLn2Mesh(K)%Position(:,p%BldNodes + 2)
+   InitOut%BldBasePos(:,:) = 0.0_ReKi
+   DO K = 1,p%NumBl ! Loop through all blades
+      InitOut%BldBasePos(:,K)  = y%BladeLn2Mesh(K)%Position(:,p%BldNodes + 2)
    END DO
 !SP_end
    InitOut%HubRad      = p%HubRad
