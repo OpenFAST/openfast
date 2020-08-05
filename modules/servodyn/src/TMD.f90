@@ -125,7 +125,6 @@ SUBROUTINE TMD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN
 
-      
    !CALL ValidatePrimaryData( InputFileData, InitInp%NumBl, ErrStat2, ErrMsg2 )
    !   CALL CheckError( ErrStat2, ErrMsg2 )
    !    IF (ErrStat >= AbortErrLev) RETURN
@@ -156,56 +155,53 @@ SUBROUTINE TMD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN      
    
-      p%DT  = Interval
-      p%Gravity = InitInp%Gravity
-         ! Destroy the local initialization data
-      !CALL CleanUp()
+   p%DT  = Interval
+   p%Gravity = InitInp%Gravity
          
       !............................................................................................
       ! Define initial system states here:
       !............................................................................................
-      ! Define initial system states here:
             
-    xd%DummyDiscState = 0
-    z%DummyConstrState = 0
-    
-    ! Initialize other states here:
-    OtherState%DummyOtherState = 0
-    
-    ! misc variables: external and stop forces
-    m%F_ext    = 0.0_ReKi    ! whole array initializaton
-    m%F_stop   = 0.0_ReKi    ! whole array initializaton
-    m%F_fr     = 0.0_ReKi    ! whole array initialization
-    m%C_ctrl   = 0.0_ReKi    ! whole array initialization
-    m%C_Brake  = 0.0_ReKi    ! whole array initialization
-    m%F_table  = 0.0_ReKi    ! whole array initialization
-    
-    ! Define initial guess for the system inputs here:
-    x%tmd_x(1) = p%X_DSP
-    x%tmd_x(2) = 0
-    x%tmd_x(3) = p%Y_DSP
-    x%tmd_x(4) = 0
+   xd%DummyDiscState = 0
+   z%DummyConstrState = 0
+   
+   ! Initialize other states here:
+   OtherState%DummyOtherState = 0
+   
+   ! misc variables: external and stop forces
+   m%F_ext    = 0.0_ReKi    ! whole array initializaton
+   m%F_stop   = 0.0_ReKi    ! whole array initializaton
+   m%F_fr     = 0.0_ReKi    ! whole array initialization
+   m%C_ctrl   = 0.0_ReKi    ! whole array initialization
+   m%C_Brake  = 0.0_ReKi    ! whole array initialization
+   m%F_table  = 0.0_ReKi    ! whole array initialization
+   
+   ! Define initial guess for the system inputs here:
+   x%tmd_x(1) = p%X_DSP
+   x%tmd_x(2) = 0
+   x%tmd_x(3) = p%Y_DSP
+   x%tmd_x(4) = 0
 !SP_start
-    x%btmd_x1(1) = p%X_DSP
-    x%btmd_x1(2) = 0
-    x%btmd_x1(3) = p%Y_DSP
-    x%btmd_x1(4) = 0
+   x%btmd_x1(1) = p%X_DSP
+   x%btmd_x1(2) = 0
+   x%btmd_x1(3) = p%Y_DSP
+   x%btmd_x1(4) = 0
 
-    x%btmd_x2(1) = p%X_DSP
-    x%btmd_x2(2) = 0
-    x%btmd_x2(3) = p%Y_DSP
-    x%btmd_x2(4) = 0
+   x%btmd_x2(1) = p%X_DSP
+   x%btmd_x2(2) = 0
+   x%btmd_x2(3) = p%Y_DSP
+   x%btmd_x2(4) = 0
 
-    x%btmd_x3(1) = p%X_DSP
-    x%btmd_x3(2) = 0
-    x%btmd_x3(3) = p%Y_DSP
-    x%btmd_x3(4) = 0
+   x%btmd_x3(1) = p%X_DSP
+   x%btmd_x3(2) = 0
+   x%btmd_x3(3) = p%Y_DSP
+   x%btmd_x3(4) = 0
 !SP_end
     ! Define system output initializations (set up mesh) here:
     ! Create the input and output meshes associated with lumped loads
 
 !SP_
-      IF (p%TMD_DOF_MODE == ControlMode_None .OR. p%TMD_DOF_MODE == DOFMode_Indept .OR. p%TMD_DOF_MODE == DOFMode_Omni) THEN
+   IF (p%TMD_DOF_MODE == ControlMode_None .OR. p%TMD_DOF_MODE == DOFMode_Indept .OR. p%TMD_DOF_MODE == DOFMode_Omni) THEN
 
       CALL MeshCreate( BlankMesh        = u%Mesh            &
                      ,IOS               = COMPONENT_INPUT   &
@@ -218,7 +214,6 @@ SUBROUTINE TMD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
                      ,RotationVel       = .TRUE.            &
                      ,TranslationAcc    = .TRUE.            &
                      ,RotationAcc       = .TRUE.)
-         
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          IF ( ErrStat >= AbortErrLev ) THEN
             CALL Cleanup()
@@ -226,27 +221,21 @@ SUBROUTINE TMD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
          END IF
       
          ! Create the node on the mesh
-            
-         
          ! make position node at point P (rest position of TMDs, somewhere above the yaw bearing) 
       CALL MeshPositionNode (u%Mesh                                &
                               , 1                                  &
                               , (/InitInp%r_N_O_G(1)+InputFileData%TMD_P_X, InitInp%r_N_O_G(2)+InputFileData%TMD_P_Y, InitInp%r_N_O_G(3)+InputFileData%TMD_P_Z/)   &  
                               , ErrStat2                           &
                               , ErrMsg2                            )
-      
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
        
-      
          ! Create the mesh element
       CALL MeshConstructElement (  u%Mesh              &
                                   , ELEMENT_POINT      &                         
                                   , ErrStat2           &
                                   , ErrMsg2            &
-                                  , 1                  &
-                                              )
+                                  , 1                  )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-
       CALL MeshCommit ( u%Mesh              &
                       , ErrStat2            &
                       , ErrMsg2             )
@@ -255,7 +244,6 @@ SUBROUTINE TMD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
             CALL Cleanup()
             RETURN
          END IF      
-
          
       CALL MeshCopy ( SrcMesh      = u%Mesh                 &
                      ,DestMesh     = y%Mesh                 &
@@ -272,83 +260,77 @@ SUBROUTINE TMD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
             RETURN
          END IF      
       
-      
-     u%Mesh%RemapFlag  = .TRUE.
-     y%Mesh%RemapFlag  = .TRUE.
+      u%Mesh%RemapFlag  = .TRUE.
+      y%Mesh%RemapFlag  = .TRUE.
 
-      ELSE IF (p%TMD_DOF_MODE == DOFMode_BTMD) THEN
+   ELSE IF (p%TMD_DOF_MODE == DOFMode_BTMD) THEN
 
+!FIXME: numbl
       DO K = 1,3
 
-      CALL MeshCreate( BlankMesh        = u%BMesh(K)            &
-                     ,IOS               = COMPONENT_INPUT   &
-                     ,Nnodes            = 1                 &
-                     ,ErrStat           = ErrStat2          &
-                     ,ErrMess           = ErrMsg2           &
-                     ,TranslationDisp   = .TRUE.            &
-                     ,Orientation       = .TRUE.            &
-                     ,TranslationVel    = .TRUE.            &
-                     ,RotationVel       = .TRUE.            &
-                     ,TranslationAcc    = .TRUE.            &
-                     ,RotationAcc       = .TRUE.)
-         
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         IF ( ErrStat >= AbortErrLev ) THEN
-            CALL Cleanup()
-            RETURN
-         END IF
-      
-         ! Create the node on the mesh
+         CALL MeshCreate( BlankMesh        = u%BMesh(K)            &
+                        ,IOS               = COMPONENT_INPUT   &
+                        ,Nnodes            = 1                 &
+                        ,ErrStat           = ErrStat2          &
+                        ,ErrMess           = ErrMsg2           &
+                        ,TranslationDisp   = .TRUE.            &
+                        ,Orientation       = .TRUE.            &
+                        ,TranslationVel    = .TRUE.            &
+                        ,RotationVel       = .TRUE.            &
+                        ,TranslationAcc    = .TRUE.            &
+                        ,RotationAcc       = .TRUE.)
             
-         
-         ! make position node at point P (rest position of TMDs, somewhere above the yaw bearing) 
-      CALL MeshPositionNode (u%BMesh(K)                            &
-                              , 1                                  &
-                              , (/InitInp%r_B_O_G(1,K)+InputFileData%TMD_P_X, InitInp%r_B_O_G(2,K)+InputFileData%TMD_P_Y, InitInp%r_B_O_G(3,K)+InputFileData%TMD_P_Z/)   &  
-                              , ErrStat2                           &
-                              , ErrMsg2                            )
-      
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-       
-      
-         ! Create the mesh element
-      CALL MeshConstructElement (  u%BMesh(K)          &
-                                  , ELEMENT_POINT      &                         
-                                  , ErrStat2           &
-                                  , ErrMsg2            &
-                                  , 1                  &
-                                              )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            IF ( ErrStat >= AbortErrLev ) THEN
+               CALL Cleanup()
+               RETURN
+            END IF
 
-      CALL MeshCommit ( u%BMesh(K)              &
-                      , ErrStat2            &
-                      , ErrMsg2             )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         IF ( ErrStat >= AbortErrLev ) THEN
-            CALL Cleanup()
-            RETURN
-         END IF      
-
-         
-      CALL MeshCopy ( SrcMesh      = u%BMesh(K)             &
-                     ,DestMesh     = y%BMesh(K)             &
-                     ,CtrlCode     = MESH_SIBLING           &
-                     ,IOS          = COMPONENT_OUTPUT       &
-                     ,ErrStat      = ErrStat2               &
-                     ,ErrMess      = ErrMsg2                &
-                     ,Force        = .TRUE.                 &
-                     ,Moment       = .TRUE.                 )
-     
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         IF ( ErrStat >= AbortErrLev ) THEN
-            CALL Cleanup()
-            RETURN
-         END IF      
+!FIXME: wrong mesh positions         
+            ! Create the node on the mesh
+            ! make position node at point P (rest position of TMDs, somewhere above the yaw bearing) 
+         CALL MeshPositionNode (u%BMesh(K)                            &
+                                 , 1                                  &
+                                 , (/InitInp%r_B_O_G(1,K)+InputFileData%TMD_P_X, InitInp%r_B_O_G(2,K)+InputFileData%TMD_P_Y, InitInp%r_B_O_G(3,K)+InputFileData%TMD_P_Z/)   &  
+                                 , ErrStat2                           &
+                                 , ErrMsg2                            )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+          
+            ! Create the mesh element
+         CALL MeshConstructElement (  u%BMesh(K)          &
+                                     , ELEMENT_POINT      &                         
+                                     , ErrStat2           &
+                                     , ErrMsg2            &
+                                     , 1                  )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      
+         CALL MeshCommit ( u%BMesh(K)              &
+                         , ErrStat2            &
+                         , ErrMsg2             )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            IF ( ErrStat >= AbortErrLev ) THEN
+               CALL Cleanup()
+               RETURN
+            END IF      
+      
+         CALL MeshCopy ( SrcMesh      = u%BMesh(K)             &
+                        ,DestMesh     = y%BMesh(K)             &
+                        ,CtrlCode     = MESH_SIBLING           &
+                        ,IOS          = COMPONENT_OUTPUT       &
+                        ,ErrStat      = ErrStat2               &
+                        ,ErrMess      = ErrMsg2                &
+                        ,Force        = .TRUE.                 &
+                        ,Moment       = .TRUE.                 )
         
-     u%BMesh(K)%RemapFlag  = .TRUE.
-     y%BMesh(K)%RemapFlag  = .TRUE.
-     
-     END DO
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            IF ( ErrStat >= AbortErrLev ) THEN
+               CALL Cleanup()
+               RETURN
+            END IF      
+           
+         u%BMesh(K)%RemapFlag  = .TRUE.
+         y%BMesh(K)%RemapFlag  = .TRUE.
+      END DO
 
    END IF
 
