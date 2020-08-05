@@ -539,9 +539,15 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       TMD_InitInp%InputFile = InputFileData%BTMDfile
       TMD_InitInp%RootName  = TRIM(p%RootName)//'.BTMD'
       TMD_InitInp%Gravity   = InitInp%gravity
-      DO K = 1,3
-      TMD_InitInp%r_B_O_G(:,K)   = InitInp%r_BldBase(:,K)
-      END DO
+      CALL AllocAry( TMD_InitInp%BladeRootPosition,      3, p%NumBl, 'TMD_InitInp%BladeRootPosition', errStat2, ErrMsg2)
+         CALL CheckError( ErrStat2, ErrMsg2 )
+      CALL AllocAry( TMD_InitInp%BladeRootOrientation,3, 3, p%NumBl, 'TMD_InitInp%BladeRootOrientation', errStat2, ErrMsg2)
+         CALL CheckError( ErrStat2, ErrMsg2 )
+         IF (ErrStat >= AbortErrLev) RETURN
+      do k=1,p%NumBl
+         TMD_InitInp%BladeRootPosition(:,k)      = InitInp%BladeRootPosition(:,k)
+         TMD_InitInp%BladeRootOrientation(:,:,k) = InitInp%BladeRootOrientation(:,:,k)
+      enddo
       CALL TMD_Init( TMD_InitInp, u%BTMD, p%BTMD, x%BTMD, xd%BTMD, z%BTMD, OtherState%BTMD, y%BTMD, m%BTMD, Interval, TMD_InitOut, ErrStat2, ErrMsg2 )
          CALL CheckError( ErrStat2, ErrMsg2 )
          IF (ErrStat >= AbortErrLev) RETURN

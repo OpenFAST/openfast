@@ -51,7 +51,8 @@ typedef   TMD/TMD   InitInputType   CHARACTER(1024)   InputFile   -   -   -   "N
 typedef	^	InitInputType	CHARACTER(1024)	RootName	-	-	-	"RootName for writing output files"	-
 typedef		^		^				ReKi			Gravity	-	-	-	"Gravitational acceleration"	m/s^2
 typedef	^		^				ReKi			r_N_O_G		{3}	-	-	"nacelle origin for setting up mesh"	-
-typedef	^		^				ReKi			r_B_O_G		{3}{3}	-	-	"blade origin for setting up mesh"	-
+typedef	^	InitInputType	ReKi	BladeRootPosition	{:}{:}	-	-	"X-Y-Z reference position of each blade root (3 x NumBlades)"	m
+typedef	^	InitInputType	R8Ki	BladeRootOrientation	{:}{:}{:}	-	-	"DCM reference orientation of blade roots (3x3 x NumBlades)"	-
 # Define outputs from the initialization routine here:
 typedef ^ InitOutputType SiKi DummyInitOut - - - "dummy init output" -
 #typedef ^ InitOutputType CHARACTER(ChanLen) WriteOutputHdr {:} - - "Names of the output-to-file channels" -

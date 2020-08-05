@@ -78,7 +78,8 @@ IMPLICIT NONE
     CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
     REAL(ReKi)  :: Gravity      !< Gravitational acceleration [m/s^2]
     REAL(ReKi) , DIMENSION(1:3)  :: r_N_O_G      !< nacelle origin for setting up mesh [-]
-    REAL(ReKi) , DIMENSION(1:3,1:3)  :: r_B_O_G      !< blade origin for setting up mesh [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: BladeRootPosition      !< X-Y-Z reference position of each blade root (3 x NumBlades) [m]
+    REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: BladeRootOrientation      !< DCM reference orientation of blade roots (3x3 x NumBlades) [-]
   END TYPE TMD_InitInputType
 ! =======================
 ! =========  TMD_InitOutputType  =======
@@ -179,6 +180,7 @@ CONTAINS
    INTEGER(IntKi)                 :: i,j,k
    INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
    INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
+   INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'TMD_CopyInputFile'
@@ -459,6 +461,7 @@ ENDIF
   INTEGER(IntKi)                 :: i
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
+  INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'TMD_UnPackInputFile'
@@ -579,6 +582,7 @@ ENDIF
    INTEGER(IntKi)                 :: i,j,k
    INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
    INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
+   INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'TMD_CopyInitInput'
@@ -589,7 +593,36 @@ ENDIF
     DstInitInputData%RootName = SrcInitInputData%RootName
     DstInitInputData%Gravity = SrcInitInputData%Gravity
     DstInitInputData%r_N_O_G = SrcInitInputData%r_N_O_G
-    DstInitInputData%r_B_O_G = SrcInitInputData%r_B_O_G
+IF (ALLOCATED(SrcInitInputData%BladeRootPosition)) THEN
+  i1_l = LBOUND(SrcInitInputData%BladeRootPosition,1)
+  i1_u = UBOUND(SrcInitInputData%BladeRootPosition,1)
+  i2_l = LBOUND(SrcInitInputData%BladeRootPosition,2)
+  i2_u = UBOUND(SrcInitInputData%BladeRootPosition,2)
+  IF (.NOT. ALLOCATED(DstInitInputData%BladeRootPosition)) THEN 
+    ALLOCATE(DstInitInputData%BladeRootPosition(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%BladeRootPosition.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInitInputData%BladeRootPosition = SrcInitInputData%BladeRootPosition
+ENDIF
+IF (ALLOCATED(SrcInitInputData%BladeRootOrientation)) THEN
+  i1_l = LBOUND(SrcInitInputData%BladeRootOrientation,1)
+  i1_u = UBOUND(SrcInitInputData%BladeRootOrientation,1)
+  i2_l = LBOUND(SrcInitInputData%BladeRootOrientation,2)
+  i2_u = UBOUND(SrcInitInputData%BladeRootOrientation,2)
+  i3_l = LBOUND(SrcInitInputData%BladeRootOrientation,3)
+  i3_u = UBOUND(SrcInitInputData%BladeRootOrientation,3)
+  IF (.NOT. ALLOCATED(DstInitInputData%BladeRootOrientation)) THEN 
+    ALLOCATE(DstInitInputData%BladeRootOrientation(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%BladeRootOrientation.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInitInputData%BladeRootOrientation = SrcInitInputData%BladeRootOrientation
+ENDIF
  END SUBROUTINE TMD_CopyInitInput
 
  SUBROUTINE TMD_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
@@ -601,6 +634,12 @@ ENDIF
 ! 
   ErrStat = ErrID_None
   ErrMsg  = ""
+IF (ALLOCATED(InitInputData%BladeRootPosition)) THEN
+  DEALLOCATE(InitInputData%BladeRootPosition)
+ENDIF
+IF (ALLOCATED(InitInputData%BladeRootOrientation)) THEN
+  DEALLOCATE(InitInputData%BladeRootOrientation)
+ENDIF
  END SUBROUTINE TMD_DestroyInitInput
 
  SUBROUTINE TMD_PackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -642,7 +681,16 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%RootName)  ! RootName
       Re_BufSz   = Re_BufSz   + 1  ! Gravity
       Re_BufSz   = Re_BufSz   + SIZE(InData%r_N_O_G)  ! r_N_O_G
-      Re_BufSz   = Re_BufSz   + SIZE(InData%r_B_O_G)  ! r_B_O_G
+  Int_BufSz   = Int_BufSz   + 1     ! BladeRootPosition allocated yes/no
+  IF ( ALLOCATED(InData%BladeRootPosition) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! BladeRootPosition upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%BladeRootPosition)  ! BladeRootPosition
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! BladeRootOrientation allocated yes/no
+  IF ( ALLOCATED(InData%BladeRootOrientation) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*3  ! BladeRootOrientation upper/lower bounds for each dimension
+      Db_BufSz   = Db_BufSz   + SIZE(InData%BladeRootOrientation)  ! BladeRootOrientation
+  END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -684,12 +732,51 @@ ENDIF
       ReKiBuf(Re_Xferred) = InData%r_N_O_G(i1)
       Re_Xferred = Re_Xferred + 1
     END DO
-    DO i2 = LBOUND(InData%r_B_O_G,2), UBOUND(InData%r_B_O_G,2)
-      DO i1 = LBOUND(InData%r_B_O_G,1), UBOUND(InData%r_B_O_G,1)
-        ReKiBuf(Re_Xferred) = InData%r_B_O_G(i1,i2)
-        Re_Xferred = Re_Xferred + 1
+  IF ( .NOT. ALLOCATED(InData%BladeRootPosition) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%BladeRootPosition,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%BladeRootPosition,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%BladeRootPosition,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%BladeRootPosition,2)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i2 = LBOUND(InData%BladeRootPosition,2), UBOUND(InData%BladeRootPosition,2)
+        DO i1 = LBOUND(InData%BladeRootPosition,1), UBOUND(InData%BladeRootPosition,1)
+          ReKiBuf(Re_Xferred) = InData%BladeRootPosition(i1,i2)
+          Re_Xferred = Re_Xferred + 1
+        END DO
       END DO
-    END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%BladeRootOrientation) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%BladeRootOrientation,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%BladeRootOrientation,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%BladeRootOrientation,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%BladeRootOrientation,2)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%BladeRootOrientation,3)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%BladeRootOrientation,3)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i3 = LBOUND(InData%BladeRootOrientation,3), UBOUND(InData%BladeRootOrientation,3)
+        DO i2 = LBOUND(InData%BladeRootOrientation,2), UBOUND(InData%BladeRootOrientation,2)
+          DO i1 = LBOUND(InData%BladeRootOrientation,1), UBOUND(InData%BladeRootOrientation,1)
+            DbKiBuf(Db_Xferred) = InData%BladeRootOrientation(i1,i2,i3)
+            Db_Xferred = Db_Xferred + 1
+          END DO
+        END DO
+      END DO
+  END IF
  END SUBROUTINE TMD_PackInitInput
 
  SUBROUTINE TMD_UnPackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -707,6 +794,7 @@ ENDIF
   INTEGER(IntKi)                 :: i
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
+  INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'TMD_UnPackInitInput'
@@ -736,16 +824,57 @@ ENDIF
       OutData%r_N_O_G(i1) = ReKiBuf(Re_Xferred)
       Re_Xferred = Re_Xferred + 1
     END DO
-    i1_l = LBOUND(OutData%r_B_O_G,1)
-    i1_u = UBOUND(OutData%r_B_O_G,1)
-    i2_l = LBOUND(OutData%r_B_O_G,2)
-    i2_u = UBOUND(OutData%r_B_O_G,2)
-    DO i2 = LBOUND(OutData%r_B_O_G,2), UBOUND(OutData%r_B_O_G,2)
-      DO i1 = LBOUND(OutData%r_B_O_G,1), UBOUND(OutData%r_B_O_G,1)
-        OutData%r_B_O_G(i1,i2) = ReKiBuf(Re_Xferred)
-        Re_Xferred = Re_Xferred + 1
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! BladeRootPosition not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%BladeRootPosition)) DEALLOCATE(OutData%BladeRootPosition)
+    ALLOCATE(OutData%BladeRootPosition(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%BladeRootPosition.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i2 = LBOUND(OutData%BladeRootPosition,2), UBOUND(OutData%BladeRootPosition,2)
+        DO i1 = LBOUND(OutData%BladeRootPosition,1), UBOUND(OutData%BladeRootPosition,1)
+          OutData%BladeRootPosition(i1,i2) = ReKiBuf(Re_Xferred)
+          Re_Xferred = Re_Xferred + 1
+        END DO
       END DO
-    END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! BladeRootOrientation not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i3_l = IntKiBuf( Int_Xferred    )
+    i3_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%BladeRootOrientation)) DEALLOCATE(OutData%BladeRootOrientation)
+    ALLOCATE(OutData%BladeRootOrientation(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%BladeRootOrientation.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i3 = LBOUND(OutData%BladeRootOrientation,3), UBOUND(OutData%BladeRootOrientation,3)
+        DO i2 = LBOUND(OutData%BladeRootOrientation,2), UBOUND(OutData%BladeRootOrientation,2)
+          DO i1 = LBOUND(OutData%BladeRootOrientation,1), UBOUND(OutData%BladeRootOrientation,1)
+            OutData%BladeRootOrientation(i1,i2,i3) = REAL(DbKiBuf(Db_Xferred), R8Ki)
+            Db_Xferred = Db_Xferred + 1
+          END DO
+        END DO
+      END DO
+  END IF
  END SUBROUTINE TMD_UnPackInitInput
 
  SUBROUTINE TMD_CopyInitOutput( SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg )

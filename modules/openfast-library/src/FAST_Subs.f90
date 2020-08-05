@@ -678,7 +678,18 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       Init%InData_SrvD%TrimGain      = p_FAST%TrimGain
       Init%InData_SrvD%RotSpeedRef   = Init%OutData_ED%RotSpeed
 !SP_start
-      Init%InData_SrvD%r_BldBase     = Init%OutData_ED%BldBasePos
+      CALL AllocAry( Init%InData_SrvD%BladeRootPosition,      3, Init%OutData_ED%NumBl, 'Init%InData_SrvD%BladeRootPosition', errStat2, ErrMsg2)
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      CALL AllocAry( Init%InData_SrvD%BladeRootOrientation,3, 3, Init%OutData_ED%NumBl, 'Init%InData_SrvD%BladeRootOrientation', errStat2, ErrMsg2)
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         IF (ErrStat >= AbortErrLev) THEN
+            CALL Cleanup()
+            RETURN
+         END IF
+      do k=1,Init%OutData_ED%NumBl
+         Init%InData_SrvD%BladeRootPosition(:,k)      = ED%y%BladeRootMotion(k)%Position(:,1)
+         Init%InData_SrvD%BladeRootOrientation(:,:,k) = ED%y%BladeRootMotion(k)%RefOrientation(:,:,1)
+      enddo
 !SP_end
       
       IF ( PRESENT(ExternInitData) ) THEN

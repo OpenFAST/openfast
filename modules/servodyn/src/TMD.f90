@@ -93,7 +93,9 @@ SUBROUTINE TMD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
       INTEGER(IntKi)                                :: NumOuts
       TYPE(TMD_InputFile)                           :: InputFileData ! Data stored in the module's input file    
       INTEGER(IntKi)                                :: K                                               ! Counter for blades
-                                                   
+      REAL(ReKi)                                    :: PositionP(3)
+      REAL(ReKi)                                    :: PositionGlobal(3)
+
       INTEGER(IntKi)                                :: UnEcho        ! Unit number for the echo file   
       INTEGER(IntKi)                                :: ErrStat2      ! local error status
       CHARACTER(ErrMsgLen)                          :: ErrMsg2       ! local error message
@@ -286,14 +288,11 @@ SUBROUTINE TMD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
                RETURN
             END IF
 
-!FIXME: wrong mesh positions         
+            PositionP      = (/ InputFileData%TMD_P_X, InputFileData%TMD_P_Y, InputFileData%TMD_P_Z /)
+            PositionGlobal = InitInp%BladeRootPosition(:,K)+matmul(PositionP,InitInp%BladeRootOrientation(:,:,k))
+
             ! Create the node on the mesh
-            ! make position node at point P (rest position of TMDs, somewhere above the yaw bearing) 
-         CALL MeshPositionNode (u%BMesh(K)                            &
-                                 , 1                                  &
-                                 , (/InitInp%r_B_O_G(1,K)+InputFileData%TMD_P_X, InitInp%r_B_O_G(2,K)+InputFileData%TMD_P_Y, InitInp%r_B_O_G(3,K)+InputFileData%TMD_P_Z/)   &  
-                                 , ErrStat2                           &
-                                 , ErrMsg2                            )
+         CALL MeshPositionNode ( u%BMesh(K),1, PositionGlobal, ErrStat2, ErrMsg2, InitInp%BladeRootOrientation(:,:,k) )
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
           
             ! Create the mesh element

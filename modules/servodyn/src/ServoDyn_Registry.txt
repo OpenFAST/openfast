@@ -24,7 +24,6 @@ typedef	^	InitInputType	ReKi	BlPitchInit	{:}	-	-	"Initial blade pitch"	-
 typedef	^	InitInputType	ReKi	Gravity	-	-	-	"Gravitational acceleration"	m/s^2
 typedef	^	InitInputType	ReKi	r_N_O_G	{3}	-	-	"nacelle origin for setting up mesh"	m
 typedef	^	InitInputType	ReKi	r_TwrBase	{3}	-	-	"tower base origin for setting up mesh"	m
-typedef	^	InitInputType	ReKi	r_BldBase	{3}{3}	-	-	"tower base origin for setting up mesh"	m
 typedef	^	InitInputType	DbKi	Tmax	-	-	-	"max time from glue code"	s
 typedef	^	InitInputType	ReKi	AvgWindSpeed	-	-	-	"average wind speed for the simulation"	m/s
 typedef	^	InitInputType	ReKi	AirDens	-	-	-	"air density"	kg/m^3
@@ -33,6 +32,8 @@ typedef	^	InitInputType	IntKi	NumCtrl2SC	-	-	-	"number of controller outputs [to
 typedef	^	InitInputType	IntKi	TrimCase	-	-	-	"Controller parameter to be trimmed {1:yaw; 2:torque; 3:pitch} [used only if CalcSteady=True]"	-
 typedef	^	InitInputType	ReKi	TrimGain	-	-	-	"Proportional gain for the rotational speed error (>0) [used only if TrimCase>0]"	"rad/(rad/s) for yaw or pitch; Nm/(rad/s) for torque"
 typedef	^	InitInputType	ReKi	RotSpeedRef	-	-	-	"Reference rotor speed"	"rad/s"
+typedef	^	InitInputType	ReKi	BladeRootPosition	{:}{:}	-	-	"X-Y-Z reference position of each blade root (3 x NumBlades)"	m
+typedef	^	InitInputType	R8Ki	BladeRootOrientation	{:}{:}{:}	-	-	"DCM reference orientation of blade roots (3x3 x NumBlades)"	-
 
 # Define outputs from the initialization routine here:
 typedef	^	InitOutputType	CHARACTER(ChanLen)	WriteOutputHdr	{:}	-	-	"Names of the output-to-file channels"	-
