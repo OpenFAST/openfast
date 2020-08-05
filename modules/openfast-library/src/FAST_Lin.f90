@@ -30,14 +30,15 @@ MODULE FAST_Linear
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine that initializes some variables for linearization.
-SUBROUTINE Init_Lin(p_FAST, y_FAST, m_FAST, AD, ED, NumBl, ErrStat, ErrMsg)
+SUBROUTINE Init_Lin(p_FAST, y_FAST, m_FAST, AD, ED, NumBl, NumBlNodes, ErrStat, ErrMsg)
 
    TYPE(FAST_ParameterType), INTENT(INOUT) :: p_FAST              !< Parameters for the glue code
    TYPE(FAST_OutputFileType),INTENT(INOUT) :: y_FAST              !< Output variables for the glue code
    TYPE(FAST_MiscVarType),   INTENT(INOUT) :: m_FAST              !< Miscellaneous variables
    TYPE(AeroDyn_Data),       INTENT(IN   ) :: AD                  !< AeroDyn data
    TYPE(ElastoDyn_Data),     INTENT(IN   ) :: ED                  !< ElastoDyn data
-   INTEGER(IntKi),           INTENT(IN   ) :: NumBl               !< Number of blades (for index into ED input array)
+   INTEGER(IntKi),           INTENT(IN   ) :: NumBl               !< Number of blades (for index into ED,AD input array)
+   INTEGER(IntKi),           INTENT(IN   ) :: NumBlNodes          !< Number of blade nodes (for index into AD input array)
    
    INTEGER(IntKi),           INTENT(  OUT) :: ErrStat             !< Error status of the operation
    CHARACTER(*),             INTENT(  OUT) :: ErrMsg              !< Error message if ErrStat /= ErrID_None
@@ -153,7 +154,7 @@ SUBROUTINE Init_Lin(p_FAST, y_FAST, m_FAST, AD, ED, NumBl, ErrStat, ErrMsg)
       ! ...................................
       ! determine which of the module inputs/outputs are written to file
       ! ...................................
-   call Init_Lin_InputOutput(p_FAST, y_FAST, NumBl, ErrStat2, ErrMsg2)
+   call Init_Lin_InputOutput(p_FAST, y_FAST, NumBl, NumBlNodes, ErrStat2, ErrMsg2)
       call SetErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    
       ! ...................................
@@ -419,11 +420,12 @@ SUBROUTINE Init_Lin_IfW( p_FAST, y_FAST, u_AD )
 END SUBROUTINE Init_Lin_IfW
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine that initializes some use_u and use_y, which determine which, if any, inputs and outputs are output in the linearization file.
-SUBROUTINE Init_Lin_InputOutput(p_FAST, y_FAST, NumBl, ErrStat, ErrMsg)
+SUBROUTINE Init_Lin_InputOutput(p_FAST, y_FAST, NumBl, NumBlNodes, ErrStat, ErrMsg)
 
    TYPE(FAST_ParameterType), INTENT(INOUT) :: p_FAST              !< Parameters for the glue code
    TYPE(FAST_OutputFileType),INTENT(INOUT) :: y_FAST              !< Output variables for the glue code
-   INTEGER(IntKi),           INTENT(IN   ) :: NumBl               !< Number of blades (for index into ED input array)
+   INTEGER(IntKi),           INTENT(IN   ) :: NumBl               !< Number of blades (for index into ED,AD input array)
+   INTEGER(IntKi),           INTENT(IN   ) :: NumBlNodes          !< Number of blades nodes (for index into AD input array)
    
    INTEGER(IntKi),           INTENT(  OUT) :: ErrStat             !< Error status of the operation
    CHARACTER(*),             INTENT(  OUT) :: ErrMsg              !< Error message if ErrStat /= ErrID_None
@@ -476,6 +478,12 @@ SUBROUTINE Init_Lin_InputOutput(p_FAST, y_FAST, NumBl, ErrStat, ErrMsg)
          end do
       end do
       
+      ! AD standard inputs: UserProp(NumBlNodes,NumBl)
+      ! LIN-TODO Add these Userprop values
+      do j=1,NumBl*NumBlNodes
+         y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%use_u(y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%SizeLin(LIN_INPUT_COL)+1-j) = .true.
+      end do
+     
       ! ED standard inputs: BlPitchCom, YawMom, GenTrq, extended input (collective pitch)
       do j=1,NumBl+3
          y_FAST%Lin%Modules(MODULE_ED)%Instance(1)%use_u(y_FAST%Lin%Modules(MODULE_ED)%Instance(1)%SizeLin(LIN_INPUT_COL)+1-j) = .true.

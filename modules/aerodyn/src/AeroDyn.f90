@@ -937,7 +937,8 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
 
    p%CompAA = InputFileData%CompAA
    
- ! p%numBlades        = InitInp%numBlades    ! this was set earlier because it was necessary
+   ! NOTE: In the following we use InputFileData%BladeProps(1)%NumBlNds as the number of aero nodes on EACH blade, 
+   !       but if AD changes this, then it must be handled in the Glue-code linearization code, too (and elsewhere?) !
    p%NumBlNds         = InputFileData%BladeProps(1)%NumBlNds
    if (p%TwrPotent == TwrPotent_none .and. .not. p%TwrShadow .and. .not. p%TwrAero) then
       p%NumTwrNds     = 0
