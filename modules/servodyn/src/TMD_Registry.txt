@@ -117,6 +117,7 @@ typedef	^		^				ReKi			TMD_X_C_BRAKE	-	-	-	"TMD X high damping for braking the T
 typedef	^		^				ReKi			TMD_Y_C_BRAKE	-	-	-	"TMD X high damping for braking the TMD"	"N/(m/s)"
 typedef	^		^				LOGICAL			Use_F_TBL	-	-	-	"use spring force from user-defined table (flag)"	-
 typedef	^		^				ReKi			F_TBL	{:}{:} - -	"user-defined spring force"	"N"
+typedef	^	ParameterType	IntKi	NumBl	-	-	-	"Number of blades on the turbine"	-
 # ..... Inputs ....................................................................................................................
 # Define inputs that are contained on the mesh here:
 typedef   ^                            InputType                     MeshType                 Mesh                     -         -         -         "Displacements at the TMD reference point P in the inertial frame" -

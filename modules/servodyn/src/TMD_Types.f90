@@ -155,6 +155,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: TMD_Y_C_BRAKE      !< TMD X high damping for braking the TMD [N/(m/s)]
     LOGICAL  :: Use_F_TBL      !< use spring force from user-defined table (flag) [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: F_TBL      !< user-defined spring force [N]
+    INTEGER(IntKi)  :: NumBl      !< Number of blades on the turbine [-]
   END TYPE TMD_ParameterType
 ! =======================
 ! =========  TMD_InputType  =======
@@ -1816,6 +1817,7 @@ IF (ALLOCATED(SrcParamData%F_TBL)) THEN
   END IF
     DstParamData%F_TBL = SrcParamData%F_TBL
 ENDIF
+    DstParamData%NumBl = SrcParamData%NumBl
  END SUBROUTINE TMD_CopyParam
 
  SUBROUTINE TMD_DestroyParam( ParamData, ErrStat, ErrMsg )
@@ -1901,6 +1903,7 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*2  ! F_TBL upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%F_TBL)  ! F_TBL
   END IF
+      Int_BufSz  = Int_BufSz  + 1  ! NumBl
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -2018,6 +2021,8 @@ ENDIF
         END DO
       END DO
   END IF
+    IntKiBuf(Int_Xferred) = InData%NumBl
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE TMD_PackParam
 
  SUBROUTINE TMD_UnPackParam( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -2151,6 +2156,8 @@ ENDIF
         END DO
       END DO
   END IF
+    OutData%NumBl = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE TMD_UnPackParam
 
  SUBROUTINE TMD_CopyInput( SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg )

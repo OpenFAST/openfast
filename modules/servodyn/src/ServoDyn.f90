@@ -3579,15 +3579,13 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
       IF ( Indx > 0 ) THEN ! we found the channel name
          p%OutParam(I)%Indx     = ParamIndxAry(Indx)
          IF ( InvalidOutput( ParamIndxAry(Indx) ) ) THEN  ! but, it isn't valid for these settings
-            p%OutParam(I)%Indx  = 0                 ! pick any valid channel (I just picked "Time=0" here because it's universal)
             p%OutParam(I)%Units = "INVALID"
             p%OutParam(I)%SignM = 0
          ELSE
-            p%OutParam(I)%Indx  = ParamIndxAry(Indx)
             p%OutParam(I)%Units = ParamUnitsAry(Indx) ! it's a valid output
          END IF
       ELSE ! this channel isn't valid
-         p%OutParam(I)%Indx  = 0                    ! pick any valid channel (I just picked "Time=0" here because it's universal)
+         p%OutParam(I)%Indx  = Time                 ! pick any valid channel (I just picked "Time" here because it's universal)
          p%OutParam(I)%Units = "INVALID"
          p%OutParam(I)%SignM = 0                    ! multiply all results by zero
 
