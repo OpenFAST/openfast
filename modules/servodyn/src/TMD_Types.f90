@@ -161,13 +161,13 @@ IMPLICIT NONE
 ! =========  TMD_InputType  =======
   TYPE, PUBLIC :: TMD_InputType
     TYPE(MeshType)  :: Mesh      !< Displacements at the TMD reference point P in the inertial frame [-]
-    TYPE(MeshType) , DIMENSION(1:3)  :: BMesh      !< Displacements at the TMD reference point P in the inertial frame [-]
+    TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: BMesh      !< Displacements at the TMD reference point P in the inertial frame [-]
   END TYPE TMD_InputType
 ! =======================
 ! =========  TMD_OutputType  =======
   TYPE, PUBLIC :: TMD_OutputType
     TYPE(MeshType)  :: Mesh      !< Loads at the TMD reference point in the inertial frame [-]
-    TYPE(MeshType) , DIMENSION(1:3)  :: BMesh      !< Loads at the TMD reference point in the inertial frame [-]
+    TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: BMesh      !< Loads at the TMD reference point in the inertial frame [-]
   END TYPE TMD_OutputType
 ! =======================
 CONTAINS
@@ -2178,11 +2178,22 @@ ENDIF
       CALL MeshCopy( SrcInputData%Mesh, DstInputData%Mesh, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
+IF (ALLOCATED(SrcInputData%BMesh)) THEN
+  i1_l = LBOUND(SrcInputData%BMesh,1)
+  i1_u = UBOUND(SrcInputData%BMesh,1)
+  IF (.NOT. ALLOCATED(DstInputData%BMesh)) THEN 
+    ALLOCATE(DstInputData%BMesh(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%BMesh.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
     DO i1 = LBOUND(SrcInputData%BMesh,1), UBOUND(SrcInputData%BMesh,1)
       CALL MeshCopy( SrcInputData%BMesh(i1), DstInputData%BMesh(i1), CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
     ENDDO
+ENDIF
  END SUBROUTINE TMD_CopyInput
 
  SUBROUTINE TMD_DestroyInput( InputData, ErrStat, ErrMsg )
@@ -2195,9 +2206,12 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
   CALL MeshDestroy( InputData%Mesh, ErrStat, ErrMsg )
+IF (ALLOCATED(InputData%BMesh)) THEN
 DO i1 = LBOUND(InputData%BMesh,1), UBOUND(InputData%BMesh,1)
   CALL MeshDestroy( InputData%BMesh(i1), ErrStat, ErrMsg )
 ENDDO
+  DEALLOCATE(InputData%BMesh)
+ENDIF
  END SUBROUTINE TMD_DestroyInput
 
  SUBROUTINE TMD_PackInput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -2253,6 +2267,9 @@ ENDDO
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
+  Int_BufSz   = Int_BufSz   + 1     ! BMesh allocated yes/no
+  IF ( ALLOCATED(InData%BMesh) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! BMesh upper/lower bounds for each dimension
     DO i1 = LBOUND(InData%BMesh,1), UBOUND(InData%BMesh,1)
       Int_BufSz   = Int_BufSz + 3  ! BMesh: size of buffers for each call to pack subtype
       CALL MeshPack( InData%BMesh(i1), Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2, .TRUE. ) ! BMesh 
@@ -2272,6 +2289,7 @@ ENDDO
          DEALLOCATE(Int_Buf)
       END IF
     END DO
+  END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -2327,6 +2345,16 @@ ENDDO
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
+  IF ( .NOT. ALLOCATED(InData%BMesh) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%BMesh,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%BMesh,1)
+    Int_Xferred = Int_Xferred + 2
+
     DO i1 = LBOUND(InData%BMesh,1), UBOUND(InData%BMesh,1)
       CALL MeshPack( InData%BMesh(i1), Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2, OnlySize ) ! BMesh 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -2357,6 +2385,7 @@ ENDDO
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
     END DO
+  END IF
  END SUBROUTINE TMD_PackInput
 
  SUBROUTINE TMD_UnPackInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -2426,8 +2455,19 @@ ENDDO
       IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
-    i1_l = LBOUND(OutData%BMesh,1)
-    i1_u = UBOUND(OutData%BMesh,1)
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! BMesh not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%BMesh)) DEALLOCATE(OutData%BMesh)
+    ALLOCATE(OutData%BMesh(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%BMesh.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
     DO i1 = LBOUND(OutData%BMesh,1), UBOUND(OutData%BMesh,1)
       Buf_size=IntKiBuf( Int_Xferred )
       Int_Xferred = Int_Xferred + 1
@@ -2470,6 +2510,7 @@ ENDDO
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
     END DO
+  END IF
  END SUBROUTINE TMD_UnPackInput
 
  SUBROUTINE TMD_CopyOutput( SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg )
@@ -2490,11 +2531,22 @@ ENDDO
       CALL MeshCopy( SrcOutputData%Mesh, DstOutputData%Mesh, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
+IF (ALLOCATED(SrcOutputData%BMesh)) THEN
+  i1_l = LBOUND(SrcOutputData%BMesh,1)
+  i1_u = UBOUND(SrcOutputData%BMesh,1)
+  IF (.NOT. ALLOCATED(DstOutputData%BMesh)) THEN 
+    ALLOCATE(DstOutputData%BMesh(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%BMesh.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
     DO i1 = LBOUND(SrcOutputData%BMesh,1), UBOUND(SrcOutputData%BMesh,1)
       CALL MeshCopy( SrcOutputData%BMesh(i1), DstOutputData%BMesh(i1), CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
     ENDDO
+ENDIF
  END SUBROUTINE TMD_CopyOutput
 
  SUBROUTINE TMD_DestroyOutput( OutputData, ErrStat, ErrMsg )
@@ -2507,9 +2559,12 @@ ENDDO
   ErrStat = ErrID_None
   ErrMsg  = ""
   CALL MeshDestroy( OutputData%Mesh, ErrStat, ErrMsg )
+IF (ALLOCATED(OutputData%BMesh)) THEN
 DO i1 = LBOUND(OutputData%BMesh,1), UBOUND(OutputData%BMesh,1)
   CALL MeshDestroy( OutputData%BMesh(i1), ErrStat, ErrMsg )
 ENDDO
+  DEALLOCATE(OutputData%BMesh)
+ENDIF
  END SUBROUTINE TMD_DestroyOutput
 
  SUBROUTINE TMD_PackOutput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -2565,6 +2620,9 @@ ENDDO
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
+  Int_BufSz   = Int_BufSz   + 1     ! BMesh allocated yes/no
+  IF ( ALLOCATED(InData%BMesh) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! BMesh upper/lower bounds for each dimension
     DO i1 = LBOUND(InData%BMesh,1), UBOUND(InData%BMesh,1)
       Int_BufSz   = Int_BufSz + 3  ! BMesh: size of buffers for each call to pack subtype
       CALL MeshPack( InData%BMesh(i1), Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2, .TRUE. ) ! BMesh 
@@ -2584,6 +2642,7 @@ ENDDO
          DEALLOCATE(Int_Buf)
       END IF
     END DO
+  END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -2639,6 +2698,16 @@ ENDDO
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
+  IF ( .NOT. ALLOCATED(InData%BMesh) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%BMesh,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%BMesh,1)
+    Int_Xferred = Int_Xferred + 2
+
     DO i1 = LBOUND(InData%BMesh,1), UBOUND(InData%BMesh,1)
       CALL MeshPack( InData%BMesh(i1), Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2, OnlySize ) ! BMesh 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -2669,6 +2738,7 @@ ENDDO
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
     END DO
+  END IF
  END SUBROUTINE TMD_PackOutput
 
  SUBROUTINE TMD_UnPackOutput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -2738,8 +2808,19 @@ ENDDO
       IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
-    i1_l = LBOUND(OutData%BMesh,1)
-    i1_u = UBOUND(OutData%BMesh,1)
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! BMesh not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%BMesh)) DEALLOCATE(OutData%BMesh)
+    ALLOCATE(OutData%BMesh(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%BMesh.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
     DO i1 = LBOUND(OutData%BMesh,1), UBOUND(OutData%BMesh,1)
       Buf_size=IntKiBuf( Int_Xferred )
       Int_Xferred = Int_Xferred + 1
@@ -2782,6 +2863,7 @@ ENDDO
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
     END DO
+  END IF
  END SUBROUTINE TMD_UnPackOutput
 
 
@@ -2881,10 +2963,12 @@ ENDDO
    ScaleFactor = t_out / t(2)
       CALL MeshExtrapInterp1(u1%Mesh, u2%Mesh, tin, u_out%Mesh, tin_out, ErrStat2, ErrMsg2 )
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+IF (ALLOCATED(u_out%BMesh) .AND. ALLOCATED(u1%BMesh)) THEN
   DO i1 = LBOUND(u_out%BMesh,1),UBOUND(u_out%BMesh,1)
       CALL MeshExtrapInterp1(u1%BMesh(i1), u2%BMesh(i1), tin, u_out%BMesh(i1), tin_out, ErrStat2, ErrMsg2 )
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
    ENDDO
+END IF ! check if allocated
  END SUBROUTINE TMD_Input_ExtrapInterp1
 
 
@@ -2944,10 +3028,12 @@ ENDDO
    ScaleFactor = t_out / (t(2) * t(3) * (t(2) - t(3)))
       CALL MeshExtrapInterp2(u1%Mesh, u2%Mesh, u3%Mesh, tin, u_out%Mesh, tin_out, ErrStat2, ErrMsg2 )
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+IF (ALLOCATED(u_out%BMesh) .AND. ALLOCATED(u1%BMesh)) THEN
   DO i1 = LBOUND(u_out%BMesh,1),UBOUND(u_out%BMesh,1)
       CALL MeshExtrapInterp2(u1%BMesh(i1), u2%BMesh(i1), u3%BMesh(i1), tin, u_out%BMesh(i1), tin_out, ErrStat2, ErrMsg2 )
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
    ENDDO
+END IF ! check if allocated
  END SUBROUTINE TMD_Input_ExtrapInterp2
 
 
@@ -3047,10 +3133,12 @@ ENDDO
    ScaleFactor = t_out / t(2)
       CALL MeshExtrapInterp1(y1%Mesh, y2%Mesh, tin, y_out%Mesh, tin_out, ErrStat2, ErrMsg2 )
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+IF (ALLOCATED(y_out%BMesh) .AND. ALLOCATED(y1%BMesh)) THEN
   DO i1 = LBOUND(y_out%BMesh,1),UBOUND(y_out%BMesh,1)
       CALL MeshExtrapInterp1(y1%BMesh(i1), y2%BMesh(i1), tin, y_out%BMesh(i1), tin_out, ErrStat2, ErrMsg2 )
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
    ENDDO
+END IF ! check if allocated
  END SUBROUTINE TMD_Output_ExtrapInterp1
 
 
@@ -3110,10 +3198,12 @@ ENDDO
    ScaleFactor = t_out / (t(2) * t(3) * (t(2) - t(3)))
       CALL MeshExtrapInterp2(y1%Mesh, y2%Mesh, y3%Mesh, tin, y_out%Mesh, tin_out, ErrStat2, ErrMsg2 )
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+IF (ALLOCATED(y_out%BMesh) .AND. ALLOCATED(y1%BMesh)) THEN
   DO i1 = LBOUND(y_out%BMesh,1),UBOUND(y_out%BMesh,1)
       CALL MeshExtrapInterp2(y1%BMesh(i1), y2%BMesh(i1), y3%BMesh(i1), tin, y_out%BMesh(i1), tin_out, ErrStat2, ErrMsg2 )
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
    ENDDO
+END IF ! check if allocated
  END SUBROUTINE TMD_Output_ExtrapInterp2
 
 END MODULE TMD_Types

@@ -121,10 +121,10 @@ typedef	^	ParameterType	IntKi	NumBl	-	-	-	"Number of blades on the turbine"	-
 # ..... Inputs ....................................................................................................................
 # Define inputs that are contained on the mesh here:
 typedef   ^                            InputType                     MeshType                 Mesh                     -         -         -         "Displacements at the TMD reference point P in the inertial frame" -
-typedef   ^                            InputType                     MeshType                 BMesh                     {3}         -         -         "Displacements at the TMD reference point P in the inertial frame" -
+typedef   ^                            InputType                     MeshType                 BMesh                     {:}         -         -         "Displacements at the TMD reference point P in the inertial frame" -
 # ..... Outputs ...................................................................................................................
 # Define outputs that are contained on the mesh here:
 typedef ^   OutputType          MeshType        Mesh                     -         -         -         "Loads at the TMD reference point in the inertial frame" -
-typedef ^   OutputType          MeshType        BMesh                     {3}         -         -         "Loads at the TMD reference point in the inertial frame" -
+typedef ^   OutputType          MeshType        BMesh                     {:}         -         -         "Loads at the TMD reference point in the inertial frame" -
 # Define outputs that are not on this mesh here:
 #typedef	^	OutputType	ReKi	WriteOutput	{:}	-	-	"Data to be written to an output file: see WriteOutputHdr for names of each variable"	"see WriteOutputUnt"

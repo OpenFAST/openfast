@@ -268,6 +268,19 @@ SUBROUTINE TMD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
 
    ELSE IF (p%TMD_DOF_MODE == DOFMode_BTMD) THEN
 
+      ALLOCATE (u%BMesh(p%NumBl), STAT=ErrStat2)
+      IF (ErrStat2/=0) THEN
+         CALL SetErrStat(ErrID_Fatal,"Error allocating u%BMesh.",ErrStat,ErrMsg,RoutineName)
+         CALL Cleanup()
+         RETURN
+      END IF
+      ALLOCATE (y%BMesh(p%NumBl), STAT=ErrStat2)
+      IF (ErrStat2/=0) THEN
+         CALL SetErrStat(ErrID_Fatal,"Error allocating y%BMesh.",ErrStat,ErrMsg,RoutineName)
+         CALL Cleanup()
+         RETURN
+      END IF
+
       DO K = 1,p%NumBl
 
          CALL MeshCreate( BlankMesh        = u%BMesh(K)            &
