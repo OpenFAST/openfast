@@ -230,6 +230,13 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    ! --- Additional Damping and stiffness at pin/ball/universal joints
    CALL InsertJointStiffDamp(p, Init, ErrStat2, ErrMsg2); if(Failed()) return
 
+   ! --- Prepare for control cable load, RHS
+   if (any(Init%PropsC(:,5)>0)) then
+      print*,'Need to assemble Cable Force'
+      CALL ControlCableForceInit(Init, p, m, ErrStat2, ErrMsg2); if(Failed()) return
+      print*,'Controlable cables, feature not ready.'
+      STOP
+   endif
 
    ! --------------------------------------------------------------------------------
    ! --- CB, Misc  
@@ -976,11 +983,21 @@ if (.not. LegacyFormat) then
    CALL ReadIVar ( UnIn, SDInputFile, Init%NPropSetsC, 'NPropSetsC', 'Number of cable properties' ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
    CALL ReadCom  ( UnIn, SDInputFile,                  'Cable properties Header'                          ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
    CALL ReadCom  ( UnIn, SDInputFile,                  'Cable properties Unit  '                          ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+   IF (Check( Init%NPropSetsC < 0, 'NPropSetsCable must be >=0')) return
    CALL AllocAry(Init%PropSetsC, Init%NPropSetsC, PropSetsCCol, 'PropSetsC', ErrStat2, ErrMsg2); if(Failed()) return
    DO I = 1, Init%NPropSetsC
-      CALL ReadAry( UnIn, SDInputFile, Init%PropSetsC(I,:), PropSetsCCol, 'PropSetsC', 'PropSetsC ID and values ', ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+      !CALL ReadAry( UnIn, SDInputFile, Init%PropSetsC(I,:), PropSetsCCol, 'PropSetsC', 'PropSetsC ID and values ', ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+      READ(UnIn, FMT='(A)', IOSTAT=ErrStat2) Line; ErrMsg2='Error reading cable property line'; if (Failed()) return
+      call ReadFAryFromStr(Line, Init%PropSetsC(I,:), PropSetsCCol, nColValid, nColNumeric);
+      if ((nColValid/=nColNumeric).or.((nColNumeric/=4).and.(nColNumeric/=PropSetsCCol)) ) then
+         CALL Fatal(' Error in file "'//TRIM(SDInputFile)//'": Cable property line must consist of 4 or 5 numerical values. Problematic line: "'//trim(Line)//'"')
+         return
+      endif
+      if (nColNumeric==4) then
+         call LegacyWarning('Using 4 values instead of 5 for cable properties. Cable will have constant properties and wont be controllable.')
+         Init%PropSetsC(:,5:PropSetsCCol)=0 ! No CtrlChannel
+      endif
    ENDDO   
-   IF (Check( Init%NPropSetsC < 0, 'NPropSetsCable must be >=0')) return
    !----------------------- RIGID LINK PROPERTIES ------------------------------------
    CALL ReadCom  ( UnIn, SDInputFile,                  'Rigid link properties'                                 ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
    CALL ReadIVar ( UnIn, SDInputFile, Init%NPropSetsR, 'NPropSetsR', 'Number of rigid link properties' ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
@@ -3056,7 +3073,7 @@ SUBROUTINE OutSummary(Init, p, InitInput, CBparams, ErrStat,ErrMsg)
       XYZ2   = Init%Joints(iNode2,2:4)
       CALL GetDirCos(XYZ1(1:3), XYZ2(1:3), DirCos, mLength, ErrStat, ErrMsg)
       DirCos=TRANSPOSE(DirCos) !This is now global to local
-      WRITE(UnSum, '("#",I9,9(ES15.6E2))') Init%Members(i,1), ((DirCos(k,j),j=1,3),k=1,3)
+      WRITE(UnSum, '("#",I9,9(ES11.3E2))') Init%Members(i,1), ((DirCos(k,j),j=1,3),k=1,3)
    ENDDO
 
    !-------------------------------------------------------------------------------------------------------------

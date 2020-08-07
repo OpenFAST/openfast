@@ -116,7 +116,7 @@ typedef	^	^	ReKi	PropsR    	{:}{:}	-	-	"Property sets and values for Rigid link"
 typedef	^	^	ReKi	K	{:}{:}	-	-	"System stiffness matrix"
 typedef	^	^	ReKi	M	{:}{:}	-	-	"System mass matrix"
 typedef	^	^	ReKi	F	{:}	-	-	"System force vector"	N
-typedef	^	^	ReKi	FG	{:}	-	-	"Gravity force vector"	N
+typedef	^	^	ReKi	FG	{:}	-	-	"Gravity force vector (include initial Cable force T0)"	N
 typedef	^	^	ReKi	ElemProps	{:}{:}	-	-	"Element properties(A, L, Ixx, Iyy, Jzz, Shear, Kappa, E, G, Rho, DirCos(1,1), DirCos(2, 1), ....., DirCos(3, 3) )"
 typedef	^	^	INTEGER	BCs	{:}{:}	-	-	"Boundary constraint degree of freedoms. First column - DOFs(rows in the system matrices), Second column - constrained(1) or not(0)"
 typedef	^	^	INTEGER	IntFc	{:}{:}	-	-	"Interface constraint degree of freedoms"
@@ -159,6 +159,8 @@ typedef  ^            ^             ReKi                     U_full_dotdot {:}  
 typedef  ^            ^             ReKi                     U_red          {:}  -  -  
 typedef  ^            ^             ReKi                     U_red_dot      {:}  -  -  
 typedef  ^            ^             ReKi                     U_red_dotdot   {:}  -  -  
+typedef  ^            ^             ReKi                     FC_red        {:}   -  -   "Cable Force vector (for varying cable load)"	N
+typedef  ^            ^             ReKi                     FC_red_unit   {:}   -  -   "Cable Force vector (for varying cable load, of unit cable load)"	N
 ### data for writing to an output file (this data is associated with time, but saved/written in CalcOutput so not stored as an other state) ###
 typedef	^	          ^             ReKi                     SDWrOutput {:} -  -  "Data from previous step to be written to a SubDyn output file"
 typedef	^	          ^             DbKi                     LastOutTime -  -  -  "The time of the most recent stored output data"	"s"
@@ -280,8 +282,9 @@ typedef ^   ParameterType   Integer Jac_nx            -       - - "half the numb
 typedef ^   ParameterType   logical RotStates         -       - - "Orient states in rotating frame during linearization? (flag)" -
 
 # ============================== Inputs ============================================================================================================================================
-typedef	^	InputType	MeshType	TPMesh	-	-	-	"Transition piece inputs on a point mesh"
-typedef	^	InputType	MeshType	LMesh	-	-	-	"Point mesh for interior node inputs"
+typedef ^   InputType   MeshType    TPMesh   -   -   -   "Transition piece inputs on a point mesh"
+typedef ^   InputType   MeshType    LMesh    -   -   -   "Point mesh for interior node inputs"
+typedef ^   InputType   ReKi        CableTension   {:}  -   -   "Cable tension, control input"
 
 # ============================== Outputs ============================================================================================================================================
 typedef	^	OutputType	MeshType	Y1Mesh	-	-	-	"Transition piece outputs on a point mesh"

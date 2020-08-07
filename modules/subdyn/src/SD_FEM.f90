@@ -35,7 +35,7 @@ MODULE SD_FEM
   INTEGER(IntKi),   PARAMETER  :: MembersCol      = MaxNodesPerElem + 3+1 ! Number of columns in Members (MemberID,MJointID1,MJointID2,MPropSetID1,MPropSetID2,COSMID) 
   INTEGER(IntKi),   PARAMETER  :: PropSetsBCol    = 6                     ! Number of columns in PropSets  (PropSetID,YoungE,ShearG,MatDens,XsecD,XsecT)  !bjj: this really doesn't need to store k, does it? or is this supposed to be an ID, in which case we shouldn't be storing k (except new property sets), we should be storing IDs
   INTEGER(IntKi),   PARAMETER  :: PropSetsXCol    = 10                    ! Number of columns in XPropSets (PropSetID,YoungE,ShearG,MatDens,XsecA,XsecAsx,XsecAsy,XsecJxx,XsecJyy,XsecJ0)
-  INTEGER(IntKi),   PARAMETER  :: PropSetsCCol    = 5                     ! Number of columns in CablePropSet (PropSetID, EA, MatDens, T0, CtrlChannel)
+  INTEGER(IntKi),   PARAMETER  :: PropSetsCCol    = 5                     ! Number of columns in CablePropSet (PropSetID, EA, MatDens, T0)
   INTEGER(IntKi),   PARAMETER  :: PropSetsRCol    = 2                     ! Number of columns in RigidPropSet (PropSetID, MatDens)
   INTEGER(IntKi),   PARAMETER  :: COSMsCol        = 10                    ! Number of columns in (cosine matrices) COSMs (COSMID,COSM11,COSM12,COSM13,COSM21,COSM22,COSM23,COSM31,COSM32,COSM33)
   INTEGER(IntKi),   PARAMETER  :: CMassCol        = 11                    ! Number of columns in Concentrated Mass (CMJointID,JMass,JMXX,JMYY,JMZZ, Optional:JMXY,JMXZ,JMYZ,CGX,CGY,CGZ)
@@ -1099,6 +1099,87 @@ CONTAINS
    END FUNCTION
    
 END SUBROUTINE AssembleKM
+
+!> Init for control Cable force
+!! The change of cable forces due to the control is linear, so we just store a "unit" force vector
+!! We will just scale this vector at each time step based on the control input (Tcontrol):
+!!   Fcontrol =  (Tcontrol-T0) * Funit
+SUBROUTINE ControlCableForceInit(Init, p, m, ErrStat, ErrMsg)
+   TYPE(SD_InitType),            INTENT(INOUT) :: Init !< Remove me, kept just in case for now
+   TYPE(SD_ParameterType),       INTENT(IN   ) :: p
+   TYPE(SD_MiscVarType),         INTENT(INOUT) :: m
+   INTEGER(IntKi),               INTENT(  OUT) :: ErrStat     ! Error status of the operation
+   CHARACTER(*),                 INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   ! Local variables
+   INTEGER                  :: I, J, K
+   INTEGER                  :: iGlob
+   REAL(ReKi)               :: FCe(12) ! Pretension force from cable element
+   INTEGER(IntKi)           :: ErrStat2
+   CHARACTER(ErrMsgLen)     :: ErrMsg2
+   INTEGER(IntKi)           :: iNode !< Node index
+   integer(IntKi), dimension(12) :: IDOF !  12 DOF indices in global unconstrained system
+   integer(IntKi), dimension(3)  :: IDOF3!  3  DOF indices in global unconstrained system
+   real(ReKi), dimension(6,6) :: M66  ! Mass matrix of an element node
+   ErrMsg  = ""
+   ErrStat = ErrID_None
+   
+   ! Allocating necessary arrays
+   CALL AllocAry( m%FC_red      , p%nDOF_red, 'm%FC0_red', ErrStat2, ErrMsg2); if(Failed()) return; ! Constant cable force
+   CALL AllocAry( m%FC_red_unit , p%nDOF_red, 'm%FC_red' , ErrStat2, ErrMsg2); if(Failed()) return; ! Control cable force
+   m%FC_red      = 0.0_ReKi
+   m%FC_red_unit = 0.0_ReKi
+
+   ! Setting up unit force vector 
+   call ControlCableForce_Unit(p, m%FC_red_unit, ErrStat2, ErrMsg2);  if(Failed()) return;
+   
+CONTAINS
+   LOGICAL FUNCTION Failed()
+        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ControlCableForceInit') 
+        Failed =  ErrStat >= AbortErrLev
+   END FUNCTION Failed
+END SUBROUTINE ControlCableForceInit
+
+!> Init for control Cable force
+!! TODO TODO Expensive implementation for now
+SUBROUTINE ControlCableForce_Unit(p, FC_red, ErrStat, ErrMsg)
+   TYPE(SD_ParameterType),       INTENT(IN   ) :: p
+   real(ReKi), DIMENSION(:),     INTENT(INOUT) :: FC_red
+   INTEGER(IntKi),               INTENT(  OUT) :: ErrStat     ! Error status of the operation
+   CHARACTER(*),                 INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   ! Local variables
+   INTEGER                  :: I, J, K, iGlob
+   real(ReKi), DIMENSION(:), allocatable :: FC
+   REAL(ReKi)               :: FCe(12) ! Pretension force from cable element
+   INTEGER(IntKi)           :: ErrStat2
+   CHARACTER(ErrMsgLen)     :: ErrMsg2
+   integer(IntKi), dimension(12) :: IDOF !  12 DOF indices in global unconstrained system
+   ErrMsg  = ""
+   ErrStat = ErrID_None
+   CALL AllocAry(FC     ,p%nDOF    , 'FC'     , ErrStat2, ErrMsg2); if(Failed()) return; ! Control cable force
+
+   ! loop over all elements, compute element matrices and assemble into global matrices
+   DO i = 1, size(p%ElemProps) ! TODO loop on cable only
+      if (p%ElemProps(i)%eType==idMemberCable) then
+         CALL ElemF_Cable(1.0_ReKi, p%ElemProps(i)%DirCos, FCe) !< NOTE: using unitary load T0=1.0_ReKi
+         ! --- Assembly in global unconstrained system
+         IDOF = p%ElemsDOF(1:12, i)
+         FC( IDOF )    = FC( IDOF ) + FCe(1:12) ! Note: gravity and pretension cable forces
+      endif
+   ENDDO
+   ! Transforming the vector into reduced, direct elimination system:
+   FC_red = matmul(transpose(p%T_red), FC)
+   if(allocated(FC)) deallocate(FC)
+
+CONTAINS
+   LOGICAL FUNCTION Failed()
+        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ControlCableForce') 
+        Failed =  ErrStat >= AbortErrLev
+   END FUNCTION Failed
+END SUBROUTINE ControlCableForce_Unit
+
+
+
+
 
 !> Add soil stiffness and mass to global system matrices
 SUBROUTINE InsertSoilMatrices(M, K, NodesDOF, Init, p, ErrStat, ErrMsg, Substract)

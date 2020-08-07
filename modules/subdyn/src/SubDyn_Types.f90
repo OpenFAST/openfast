@@ -150,7 +150,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: K      !< System stiffness matrix [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: M      !< System mass matrix [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: F      !< System force vector [N]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: FG      !< Gravity force vector [N]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: FG      !< Gravity force vector (include initial Cable force T0) [N]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: ElemProps      !< Element properties(A, L, Ixx, Iyy, Jzz, Shear, Kappa, E, G, Rho, DirCos(1,1), DirCos(2, 1), ....., DirCos(3, 3) ) [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: BCs      !< Boundary constraint degree of freedoms. First column - DOFs(rows in the system matrices), Second column - constrained(1) or not(0) [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: IntFc      !< Interface constraint degree of freedoms [-]
@@ -201,6 +201,8 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: U_red 
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: U_red_dot 
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: U_red_dotdot 
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: FC_red      !< Cable Force vector (for varying cable load) [N]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: FC_red_unit      !< Cable Force vector (for varying cable load, of unit cable load) [N]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: SDWrOutput      !< Data from previous step to be written to a SubDyn output file [-]
     REAL(DbKi)  :: LastOutTime      !< The time of the most recent stored output data [s]
     INTEGER(IntKi)  :: Decimat      !< Current output decimation counter [-]
@@ -318,6 +320,7 @@ IMPLICIT NONE
   TYPE, PUBLIC :: SD_InputType
     TYPE(MeshType)  :: TPMesh      !< Transition piece inputs on a point mesh [-]
     TYPE(MeshType)  :: LMesh      !< Point mesh for interior node inputs [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: CableTension      !< Cable tension, control input [-]
   END TYPE SD_InputType
 ! =======================
 ! =========  SD_OutputType  =======
@@ -5839,6 +5842,30 @@ IF (ALLOCATED(SrcMiscData%U_red_dotdot)) THEN
   END IF
     DstMiscData%U_red_dotdot = SrcMiscData%U_red_dotdot
 ENDIF
+IF (ALLOCATED(SrcMiscData%FC_red)) THEN
+  i1_l = LBOUND(SrcMiscData%FC_red,1)
+  i1_u = UBOUND(SrcMiscData%FC_red,1)
+  IF (.NOT. ALLOCATED(DstMiscData%FC_red)) THEN 
+    ALLOCATE(DstMiscData%FC_red(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%FC_red.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstMiscData%FC_red = SrcMiscData%FC_red
+ENDIF
+IF (ALLOCATED(SrcMiscData%FC_red_unit)) THEN
+  i1_l = LBOUND(SrcMiscData%FC_red_unit,1)
+  i1_u = UBOUND(SrcMiscData%FC_red_unit,1)
+  IF (.NOT. ALLOCATED(DstMiscData%FC_red_unit)) THEN 
+    ALLOCATE(DstMiscData%FC_red_unit(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%FC_red_unit.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstMiscData%FC_red_unit = SrcMiscData%FC_red_unit
+ENDIF
 IF (ALLOCATED(SrcMiscData%SDWrOutput)) THEN
   i1_l = LBOUND(SrcMiscData%SDWrOutput,1)
   i1_u = UBOUND(SrcMiscData%SDWrOutput,1)
@@ -5929,6 +5956,12 @@ IF (ALLOCATED(MiscData%U_red_dot)) THEN
 ENDIF
 IF (ALLOCATED(MiscData%U_red_dotdot)) THEN
   DEALLOCATE(MiscData%U_red_dotdot)
+ENDIF
+IF (ALLOCATED(MiscData%FC_red)) THEN
+  DEALLOCATE(MiscData%FC_red)
+ENDIF
+IF (ALLOCATED(MiscData%FC_red_unit)) THEN
+  DEALLOCATE(MiscData%FC_red_unit)
 ENDIF
 IF (ALLOCATED(MiscData%SDWrOutput)) THEN
   DEALLOCATE(MiscData%SDWrOutput)
@@ -6048,6 +6081,16 @@ ENDIF
   IF ( ALLOCATED(InData%U_red_dotdot) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! U_red_dotdot upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%U_red_dotdot)  ! U_red_dotdot
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! FC_red allocated yes/no
+  IF ( ALLOCATED(InData%FC_red) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! FC_red upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%FC_red)  ! FC_red
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! FC_red_unit allocated yes/no
+  IF ( ALLOCATED(InData%FC_red_unit) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! FC_red_unit upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%FC_red_unit)  ! FC_red_unit
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! SDWrOutput allocated yes/no
   IF ( ALLOCATED(InData%SDWrOutput) ) THEN
@@ -6280,6 +6323,32 @@ ENDIF
 
       IF (SIZE(InData%U_red_dotdot)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%U_red_dotdot))-1 ) = PACK(InData%U_red_dotdot,.TRUE.)
       Re_Xferred   = Re_Xferred   + SIZE(InData%U_red_dotdot)
+  END IF
+  IF ( .NOT. ALLOCATED(InData%FC_red) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%FC_red,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%FC_red,1)
+    Int_Xferred = Int_Xferred + 2
+
+      IF (SIZE(InData%FC_red)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%FC_red))-1 ) = PACK(InData%FC_red,.TRUE.)
+      Re_Xferred   = Re_Xferred   + SIZE(InData%FC_red)
+  END IF
+  IF ( .NOT. ALLOCATED(InData%FC_red_unit) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%FC_red_unit,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%FC_red_unit,1)
+    Int_Xferred = Int_Xferred + 2
+
+      IF (SIZE(InData%FC_red_unit)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%FC_red_unit))-1 ) = PACK(InData%FC_red_unit,.TRUE.)
+      Re_Xferred   = Re_Xferred   + SIZE(InData%FC_red_unit)
   END IF
   IF ( .NOT. ALLOCATED(InData%SDWrOutput) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -6712,6 +6781,52 @@ ENDIF
     mask1 = .TRUE. 
       IF (SIZE(OutData%U_red_dotdot)>0) OutData%U_red_dotdot = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%U_red_dotdot))-1 ), mask1, 0.0_ReKi )
       Re_Xferred   = Re_Xferred   + SIZE(OutData%U_red_dotdot)
+    DEALLOCATE(mask1)
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! FC_red not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%FC_red)) DEALLOCATE(OutData%FC_red)
+    ALLOCATE(OutData%FC_red(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%FC_red.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask1 = .TRUE. 
+      IF (SIZE(OutData%FC_red)>0) OutData%FC_red = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%FC_red))-1 ), mask1, 0.0_ReKi )
+      Re_Xferred   = Re_Xferred   + SIZE(OutData%FC_red)
+    DEALLOCATE(mask1)
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! FC_red_unit not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%FC_red_unit)) DEALLOCATE(OutData%FC_red_unit)
+    ALLOCATE(OutData%FC_red_unit(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%FC_red_unit.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask1 = .TRUE. 
+      IF (SIZE(OutData%FC_red_unit)>0) OutData%FC_red_unit = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%FC_red_unit))-1 ), mask1, 0.0_ReKi )
+      Re_Xferred   = Re_Xferred   + SIZE(OutData%FC_red_unit)
     DEALLOCATE(mask1)
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! SDWrOutput not allocated
@@ -11476,6 +11591,7 @@ ENDIF
    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
 ! Local 
    INTEGER(IntKi)                 :: i,j,k
+   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'SD_CopyInput'
@@ -11488,6 +11604,18 @@ ENDIF
       CALL MeshCopy( SrcInputData%LMesh, DstInputData%LMesh, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
+IF (ALLOCATED(SrcInputData%CableTension)) THEN
+  i1_l = LBOUND(SrcInputData%CableTension,1)
+  i1_u = UBOUND(SrcInputData%CableTension,1)
+  IF (.NOT. ALLOCATED(DstInputData%CableTension)) THEN 
+    ALLOCATE(DstInputData%CableTension(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%CableTension.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInputData%CableTension = SrcInputData%CableTension
+ENDIF
  END SUBROUTINE SD_CopyInput
 
  SUBROUTINE SD_DestroyInput( InputData, ErrStat, ErrMsg )
@@ -11501,6 +11629,9 @@ ENDIF
   ErrMsg  = ""
   CALL MeshDestroy( InputData%TPMesh, ErrStat, ErrMsg )
   CALL MeshDestroy( InputData%LMesh, ErrStat, ErrMsg )
+IF (ALLOCATED(InputData%CableTension)) THEN
+  DEALLOCATE(InputData%CableTension)
+ENDIF
  END SUBROUTINE SD_DestroyInput
 
  SUBROUTINE SD_PackInput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -11573,6 +11704,11 @@ ENDIF
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
+  Int_BufSz   = Int_BufSz   + 1     ! CableTension allocated yes/no
+  IF ( ALLOCATED(InData%CableTension) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! CableTension upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%CableTension)  ! CableTension
+  END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -11656,6 +11792,19 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
+  IF ( .NOT. ALLOCATED(InData%CableTension) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%CableTension,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%CableTension,1)
+    Int_Xferred = Int_Xferred + 2
+
+      IF (SIZE(InData%CableTension)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%CableTension))-1 ) = PACK(InData%CableTension,.TRUE.)
+      Re_Xferred   = Re_Xferred   + SIZE(InData%CableTension)
+  END IF
  END SUBROUTINE SD_PackInput
 
  SUBROUTINE SD_UnPackInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -11677,6 +11826,7 @@ ENDIF
   LOGICAL, ALLOCATABLE           :: mask3(:,:,:)
   LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
   LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
+  INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'SD_UnPackInput'
@@ -11770,6 +11920,29 @@ ENDIF
       IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! CableTension not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%CableTension)) DEALLOCATE(OutData%CableTension)
+    ALLOCATE(OutData%CableTension(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%CableTension.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask1 = .TRUE. 
+      IF (SIZE(OutData%CableTension)>0) OutData%CableTension = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%CableTension))-1 ), mask1, 0.0_ReKi )
+      Re_Xferred   = Re_Xferred   + SIZE(OutData%CableTension)
+    DEALLOCATE(mask1)
+  END IF
  END SUBROUTINE SD_UnPackInput
 
  SUBROUTINE SD_CopyOutput( SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg )
@@ -12211,6 +12384,8 @@ ENDIF
  CHARACTER(*),                    PARAMETER :: RoutineName = 'SD_Input_ExtrapInterp1'
  REAL(DbKi)                                 :: b0       ! temporary for extrapolation/interpolation
  REAL(DbKi)                                 :: c0       ! temporary for extrapolation/interpolation
+ REAL(DbKi),ALLOCATABLE,DIMENSION(:)        :: b1       ! temporary for extrapolation/interpolation
+ REAL(DbKi),ALLOCATABLE,DIMENSION(:)        :: c1       ! temporary for extrapolation/interpolation
  INTEGER(IntKi)                             :: ErrStat2 ! local errors
  CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
     ! Initialize ErrStat
@@ -12229,6 +12404,14 @@ ENDIF
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
       CALL MeshExtrapInterp1(u1%LMesh, u2%LMesh, tin, u_out%LMesh, tin_out, ErrStat2, ErrMsg2 )
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+IF (ALLOCATED(u_out%CableTension) .AND. ALLOCATED(u1%CableTension)) THEN
+  ALLOCATE(b1(SIZE(u_out%CableTension,1)))
+  ALLOCATE(c1(SIZE(u_out%CableTension,1)))
+  b1 = -(u1%CableTension - u2%CableTension)/t(2)
+  u_out%CableTension = u1%CableTension + b1 * t_out
+  DEALLOCATE(b1)
+  DEALLOCATE(c1)
+END IF ! check if allocated
  END SUBROUTINE SD_Input_ExtrapInterp1
 
 
@@ -12260,6 +12443,8 @@ ENDIF
  INTEGER(IntKi)                             :: order     ! order of polynomial fit (max 2)
  REAL(DbKi)                                 :: b0       ! temporary for extrapolation/interpolation
  REAL(DbKi)                                 :: c0       ! temporary for extrapolation/interpolation
+ REAL(DbKi),ALLOCATABLE,DIMENSION(:)        :: b1       ! temporary for extrapolation/interpolation
+ REAL(DbKi),ALLOCATABLE,DIMENSION(:)        :: c1       ! temporary for extrapolation/interpolation
  INTEGER(IntKi)                             :: ErrStat2 ! local errors
  CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
  CHARACTER(*),            PARAMETER         :: RoutineName = 'SD_Input_ExtrapInterp2'
@@ -12285,6 +12470,15 @@ ENDIF
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
       CALL MeshExtrapInterp2(u1%LMesh, u2%LMesh, u3%LMesh, tin, u_out%LMesh, tin_out, ErrStat2, ErrMsg2 )
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+IF (ALLOCATED(u_out%CableTension) .AND. ALLOCATED(u1%CableTension)) THEN
+  ALLOCATE(b1(SIZE(u_out%CableTension,1)))
+  ALLOCATE(c1(SIZE(u_out%CableTension,1)))
+  b1 = (t(3)**2*(u1%CableTension - u2%CableTension) + t(2)**2*(-u1%CableTension + u3%CableTension))/(t(2)*t(3)*(t(2) - t(3)))
+  c1 = ( (t(2)-t(3))*u1%CableTension + t(3)*u2%CableTension - t(2)*u3%CableTension ) / (t(2)*t(3)*(t(2) - t(3)))
+  u_out%CableTension = u1%CableTension + b1 * t_out + c1 * t_out**2
+  DEALLOCATE(b1)
+  DEALLOCATE(c1)
+END IF ! check if allocated
  END SUBROUTINE SD_Input_ExtrapInterp2
 
 
