@@ -376,9 +376,16 @@ SUBROUTINE SD_ReIndex_CreateNodesAndElems(Init,p, ErrStat, ErrMsg)
             print*,'Element type unknown',mType
             STOP
          end if
-
+         ! Test that the two properties match for non-beam 
+         if (mType/=idMemberBeam) then
+             if (Init%Members(iMem, iMProp)/=Init%Members(iMem, iMProp+1)) then
+                call Fatal('Properties should be the same at each node for non-beam members. Check member with ID: '//TRIM(Num2LStr(Init%Members(iMem,1))))
+                return
+             endif
+         endif
          if (p%Elems(iMem,n)<=0) then
             CALL Fatal('For MemberID '//TRIM(Num2LStr(Init%Members(iMem,1)))//', the PropSetID'//TRIM(Num2LStr(n-3))//' is not in the'//trim(sType)//' table!')
+            return
          endif
       END DO !n, loop through property ids         
       ! Column 6: member type
@@ -494,7 +501,7 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
           ENDIF
           
           if (eType/=idMemberBeam) then
-             ! --- Cables and rigid links are not subdivided
+             ! --- Cables and rigid links are not subdivided and have same prop at nodes
              ! No need to create new properties or new nodes
              Init%MemberNodes(I, 1) = Node1
              Init%MemberNodes(I, 2) = Node2
