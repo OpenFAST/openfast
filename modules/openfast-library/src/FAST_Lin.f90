@@ -480,10 +480,11 @@ SUBROUTINE Init_Lin_InputOutput(p_FAST, y_FAST, NumBl, NumBlNodes, ErrStat, ErrM
       
       ! AD standard inputs: UserProp(NumBlNodes,NumBl)
       ! LIN-TODO Add these Userprop values
-      do j=1,NumBl*NumBlNodes
-         y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%use_u(y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%SizeLin(LIN_INPUT_COL)+1-j) = .true.
-      end do
-     
+      if (p_FAST%CompAero == MODULE_AD) then
+          do j=1,NumBl*NumBlNodes
+             y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%use_u(y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%SizeLin(LIN_INPUT_COL)+1-j) = .true.
+          end do
+      end if
       ! ED standard inputs: BlPitchCom, YawMom, GenTrq, extended input (collective pitch)
       do j=1,NumBl+3
          y_FAST%Lin%Modules(MODULE_ED)%Instance(1)%use_u(y_FAST%Lin%Modules(MODULE_ED)%Instance(1)%SizeLin(LIN_INPUT_COL)+1-j) = .true.
