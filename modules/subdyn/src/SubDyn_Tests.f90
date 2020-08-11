@@ -272,9 +272,7 @@ contains
    ! --------------------------------------------------------------------------------}
    ! --- Specific SubDyn tests 
    ! --------------------------------------------------------------------------------{
-   subroutine Test_CB_Results(MBBt, MBMt, KBBt, OmegaM, DOFTP, DOFM, ErrStat, ErrMsg, Init, p)
-      TYPE(SD_InitType),      INTENT(  in)                :: Init         ! Input data for initialization routine
-      TYPE(SD_ParameterType), INTENT(inout)                :: p           ! Parameters
+   subroutine Test_CB_Results(MBBt, MBMt, KBBt, OmegaM, DOFTP, DOFM, ErrStat, ErrMsg)
       INTEGER(IntKi)                                     :: DOFTP, DOFM
       REAL(ReKi)                                         :: MBBt(DOFTP, DOFTP)
       REAL(ReKi)                                         :: MBmt(DOFTP, DOFM)
@@ -325,7 +323,6 @@ contains
       character(ErrMsgLen), intent(out) :: ErrMsg
 
       real(ReKi), dimension(3) :: P1, P2, e1, e2, e3
-      real(ReKi), dimension(3,3) :: A, R0
       real(FEKi), dimension(3,3) :: DirCos, Ref
       real(ReKi), dimension(6,6) :: T, Tref
       real(ReKi) :: L
@@ -372,7 +369,6 @@ contains
       character(ErrMsgLen), intent(out) :: ErrMsg
       real(FEKi), dimension(:,:), allocatable :: A, Ainv, Aref
       real(DbKi) :: det
-      integer(IntKi) :: I, J
       testname='Linalg'
 
       ! --- Determinant of a singular matrix
@@ -491,8 +487,6 @@ contains
       integer(IntKi)      , intent(out) :: ErrStat
       character(ErrMsgLen), intent(out) :: ErrMsg
       real(ReKi), dimension(:,:), allocatable :: M, Mref
-      real(ReKi) :: L
-      integer(IntKi) :: I
       ErrStat = ErrID_None
       ErrMsg  = ""
       testname='ChessBoard'

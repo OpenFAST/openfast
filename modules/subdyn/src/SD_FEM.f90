@@ -101,7 +101,6 @@ SUBROUTINE NodeCon(Init,p, ErrStat, ErrMsg)
    INTEGER(IntKi),                 INTENT(   OUT ) :: ErrStat     ! Error status of the operation
    CHARACTER(*),                   INTENT(   OUT ) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
    ! Local variables
-   INTEGER(IntKi) :: SortA(MaxMemJnt,1)  !To sort nodes and elements
    INTEGER(IntKi) :: I,J,K  !counter
 
    ! The row index is the number of the real node, i.e. ID, 1st col has number of elements attached to node, and 2nd col has element numbers (up to 10)                                    
@@ -218,7 +217,6 @@ LOGICAL FUNCTION NodeHasRigidElem(iJoint, Init, p, ei)
    integer(IntKi),               intent(  out) :: ei !< Element index that connects do iJoint rigidly
    ! Local variables
    integer(IntKi) :: ie       !< Loop index on elements
-   integer(IntKi) :: m  ! Number of elements connected to a joint
 
    NodeHasRigidElem = .False. ! default return value
    ! Loop through elements connected to node J 
@@ -413,14 +411,14 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
    INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     ! Error status of the operation
    CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
    ! local variable
-   INTEGER                       :: I, J, n, Node1, Node2, Prop1, Prop2   
+   INTEGER                       :: I, J, Node1, Node2, Prop1, Prop2   
    INTEGER                       :: NNE      ! number of nodes per element
    INTEGER                       :: MaxNProp
    REAL(ReKi), ALLOCATABLE       :: TempProps(:, :)
    INTEGER, ALLOCATABLE          :: TempMembers(:, :)
    INTEGER                       :: knode, kelem, kprop, nprop
    REAL(ReKi)                    :: x1, y1, z1, x2, y2, z2, dx, dy, dz, dd, dt, d1, d2, t1, t2
-   LOGICAL                       :: found, CreateNewProp
+   LOGICAL                       :: CreateNewProp
    INTEGER(IntKi)                :: nMemberCable, nMemberRigid, nMemberBeam !< Number of memebers per type
    INTEGER(IntKi)                :: eType !< Element Type
    INTEGER(IntKi)                :: ErrStat2
@@ -706,13 +704,12 @@ SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
    INTEGER(IntKi),               INTENT(  OUT) :: ErrStat     ! Error status of the operation
    CHARACTER(*),                 INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
    ! Local variables
-   INTEGER                  :: I, J, K, iTmp
+   INTEGER                  :: I
    INTEGER                  :: N1, N2     ! starting node and ending node in the element
    INTEGER                  :: P1, P2     ! property set numbers for starting and ending nodes
    REAL(ReKi)               :: D1, D2, t1, t2, E, G, rho ! properties of a section
    REAL(FEKi)               :: DirCos(3, 3)              ! direction cosine matrices
    REAL(ReKi)               :: L                         ! length of the element
-   REAL(ReKi)               :: T0                        ! pretension force in cable [N]
    REAL(ReKi)               :: r1, r2, t, Iyy, Jzz, Ixx, A, kappa, nu, ratioSq, D_inner, D_outer
    LOGICAL                  :: shear
    INTEGER(IntKi)           :: eType !< Member type
@@ -996,12 +993,10 @@ SUBROUTINE AssembleKM(Init, p, ErrStat, ErrMsg)
    INTEGER                  :: iGlob
    REAL(FEKi)               :: Ke(12,12), Me(12, 12), FGe(12) ! element stiffness and mass matrices gravity force vector
    REAL(FEKi)               :: FCe(12) ! Pretension force from cable element
-   REAL(FEKi), DIMENSION(6,6):: K_soil, M_soil ! Auxiliary matrices for soil
    INTEGER(IntKi)           :: ErrStat2
    CHARACTER(ErrMsgLen)     :: ErrMsg2
    INTEGER(IntKi)           :: iNode !< Node index
    integer(IntKi), dimension(12) :: IDOF !  12 DOF indices in global unconstrained system
-   integer(IntKi), dimension(3)  :: IDOF3!  3  DOF indices in global unconstrained system
    real(ReKi), dimension(6,6) :: M66  ! Mass matrix of an element node
    real(ReKi) :: m, x, y, z, Jxx, Jyy, Jzz, Jxy, Jxz, Jyz
    INTEGER    :: jGlob, kGlob
@@ -1118,15 +1113,8 @@ SUBROUTINE ControlCableForceInit(Init, p, m, ErrStat, ErrMsg)
    INTEGER(IntKi),               INTENT(  OUT) :: ErrStat     ! Error status of the operation
    CHARACTER(*),                 INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
    ! Local variables
-   INTEGER                  :: I, J, K
-   INTEGER                  :: iGlob
-   REAL(ReKi)               :: FCe(12) ! Pretension force from cable element
    INTEGER(IntKi)           :: ErrStat2
    CHARACTER(ErrMsgLen)     :: ErrMsg2
-   INTEGER(IntKi)           :: iNode !< Node index
-   integer(IntKi), dimension(12) :: IDOF !  12 DOF indices in global unconstrained system
-   integer(IntKi), dimension(3)  :: IDOF3!  3  DOF indices in global unconstrained system
-   real(ReKi), dimension(6,6) :: M66  ! Mass matrix of an element node
    ErrMsg  = ""
    ErrStat = ErrID_None
    
@@ -1154,7 +1142,7 @@ SUBROUTINE ControlCableForce_Unit(p, FC_red, ErrStat, ErrMsg)
    INTEGER(IntKi),               INTENT(  OUT) :: ErrStat     ! Error status of the operation
    CHARACTER(*),                 INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
    ! Local variables
-   INTEGER                  :: I, J, K, iGlob
+   INTEGER                  :: I
    real(FEKi), DIMENSION(:), allocatable :: FC
    REAL(FEKi)               :: FCe(12) ! Pretension force from cable element
    INTEGER(IntKi)           :: ErrStat2
@@ -1359,7 +1347,7 @@ SUBROUTINE BuildTMatrix(Init, p, RA, RAm1, Tred, ErrStat, ErrMsg)
          allocate(IDOFOld(1:len(p%NodesDOF(iNode))))
          IDOFOld(:) = p%NodesDOF(iNode)%List(:)
          phat = Init%Nodes(iNode, iJointDir:iJointDir+2)
-         call JointElimination(Init%NodesConnE(iNode,:), JType, phat, Init, p, Tc, ErrStat2, ErrMsg2); if(Failed()) return
+         call JointElimination(Init%NodesConnE(iNode,:), JType, phat, p, Tc, ErrStat2, ErrMsg2); if(Failed()) return
       endif
       nc=size(Tc,2) 
       call init_list(p%NodesDOFred(iNode), nc, 0, ErrStat2, ErrMsg2)
@@ -1672,12 +1660,11 @@ END SUBROUTINE RAElimination
 !! where
 !    x_c       are all the DOF of the joint (3 translation + 3*m, m the number of elements) 
 !    x_c_tilde are the nc reduced DOF 
-SUBROUTINE JointElimination(Elements, JType, phat, Init, p, Tc, ErrStat, ErrMsg)
+SUBROUTINE JointElimination(Elements, JType, phat, p, Tc, ErrStat, ErrMsg)
    use IntegerList, only: init_list, len, append, print_list, pop, destroy_list, get
    integer(IntKi), dimension(:), INTENT(IN   ) :: Elements !< List of elements involved at a joint
    integer(IntKi),               INTENT(IN   ) :: JType !< Joint type
    real(ReKi),                   INTENT(IN   ) :: phat(3) !< Directional vector of the joint
-   TYPE(SD_InitType),            INTENT(IN   ) :: Init
    TYPE(SD_ParameterType),       INTENT(IN   ) :: p
    real(ReKi), dimension(:,:), allocatable     :: Tc  !< Transformation matrix from eliminated to full
    INTEGER(IntKi),               INTENT(  OUT) :: ErrStat  !< Error status of the operation

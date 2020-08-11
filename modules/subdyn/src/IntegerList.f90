@@ -347,7 +347,6 @@ contains
       integer(IntKi), dimension(:), intent(in) :: Array !< Array to search in
       integer(IntKi), intent(in)               :: val   !< Val
       integer(IntKi)                           :: i     !< Index of joint in joint table
-      logical :: found
       i = 1
       do while ( i <= size(Array) )
          if ( Val == Array(i) ) THEN

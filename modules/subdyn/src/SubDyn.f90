@@ -99,7 +99,7 @@ SUBROUTINE CreateInputOutputMeshes( NNode, Nodes, inputMesh, outputMesh, ErrStat
    CHARACTER(*),              INTENT(   OUT ) :: ErrMsg                    ! Error message if ErrStat /= ErrID_None
    ! Local variables
    REAL(ReKi), dimension(3) :: Point
-   INTEGER         :: I, iOffset, iNode  ! generic counter variable
+   INTEGER         :: I  ! generic counter variable
    INTEGER         :: nodeIndx
    
    CALL MeshCreate( BlankMesh        = inputMesh         &
@@ -301,7 +301,7 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    END IF
       
    if (InitInput%Linearize) then
-      call SD_Init_Jacobian(Init, p, u, y, m, InitOut, ErrStat2, ErrMsg2); if(Failed()) return
+     call SD_Init_Jacobian(Init, p, u, y, InitOut, ErrStat2, ErrMsg2); if(Failed()) return
    endif
    
    ! Tell GLUECODE the SubDyn timestep interval 
@@ -377,8 +377,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     !< Error status of the operation
       CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
       !locals
-      INTEGER(IntKi)               :: L1,L2       ! partial Lengths of state and input arrays
-      INTEGER(IntKi)               :: I,J          ! Counters
+      INTEGER(IntKi)               :: I          ! Counters
       INTEGER(IntKi)               :: iSDNode, iY2Node
       REAL(ReKi)                   :: AllOuts(0:MaxOutPts+p%OutAllInt*p%OutAllDims)
       REAL(ReKi)                   :: rotations(3)
@@ -387,7 +386,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       REAL(ReKi)                   :: Y1_ExtraMoment(3) ! Lever arm moment contributions due to interface displacement
       INTEGER(IntKi), pointer      :: DOFList(:)
       INTEGER(IntKi)               :: startDOF
-      REAL(ReKi)                   :: DCM(3,3),junk(6,p%nNodes_L)
+      REAL(ReKi)                   :: DCM(3,3)
       REAL(ReKi)                   :: HydroForces(6*p%nNodes_I) !  !Forces from all interface nodes listed in one big array  ( those translated to TP ref point HydroTP(6) are implicitly calculated in the equations)
       TYPE(SD_ContinuousStateType) :: dxdt        ! Continuous state derivatives at t- for output file qmdotdot purposes only
       INTEGER(IntKi)               :: ErrStat2    ! Error status of the operation (occurs after initial error)
@@ -563,7 +562,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
          END IF        
          
          ! Map calculated results into the AllOuts Array + perform averaging and all necessary extra calculations
-         CALL SDOut_MapOutputs(t, u, p, x, y, m, AllOuts, ErrStat2, ErrMsg2); if(Failed()) return
+         CALL SDOut_MapOutputs(u, p, x, y, m, AllOuts, ErrStat2, ErrMsg2); if(Failed()) return
             
          ! Put the output data in the WriteOutput array
          DO I = 1,p%NumOuts+p%OutAllInt*p%OutAllDims
@@ -642,7 +641,6 @@ SUBROUTINE SD_Input(SDInputFile, Init, p, ErrStat,ErrMsg)
 ! local variable for input and output
 CHARACTER(1024)              :: PriPath          ! The path to the primary input file
 CHARACTER(1024)              :: Line, Dummy_Str  ! String to temporarially hold value of read line
-INTEGER                      :: Sttus
 CHARACTER(64), ALLOCATABLE   :: StrArray(:)  ! Array of strings, for better control of table inputs
 LOGICAL                      :: Echo  
 LOGICAL                      :: LegacyFormat
@@ -652,7 +650,7 @@ INTEGER(IntKi)               :: nColumns, nColValid, nColNumeric
 INTEGER(IntKi)               :: IOS
 INTEGER(IntKi)               :: UnEc   !Echo file ID
 REAL(ReKi),PARAMETER        :: WrongNo=-9999.   ! Placeholder value for bad(old) values in JDampings
-INTEGER(IntKi)               :: I, J, flg, K, nColsReactInterf
+INTEGER(IntKi)               :: I, J, flg, K
 REAL(ReKi)                   :: Dummy_ReAry(SDMaxInpCols) , DummyFloat 
 INTEGER(IntKi)               :: Dummy_IntAry(SDMaxInpCols)
 LOGICAL                      :: Dummy_Bool
@@ -1675,7 +1673,6 @@ SUBROUTINE SD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
    TYPE(SD_InputType)           :: u_perturb
    REAL(R8Ki)                   :: delta_p, delta_m   ! delta change in input (plus, minus)
    INTEGER(IntKi)               :: i
-   REAL(R8Ki)                   :: RotateStates(3,3)
    integer(intKi)               :: ErrStat2
    character(ErrMsgLen)         :: ErrMsg2
    character(*), parameter      :: RoutineName = 'SD_JacobianPInput'
@@ -1765,7 +1762,7 @@ END SUBROUTINE SD_JacobianPInput
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
 !! with respect to the continuous states (x). The partial derivatives dY/dx, dX/dx, dXd/dx, and dZ/dx are returned.
-SUBROUTINE SD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdx, dXdx, dXddx, dZdx, StateRotation )
+SUBROUTINE SD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdx, dXdx, dXddx, dZdx)
    REAL(DbKi),                        INTENT(IN   ) :: t                  !< Time in seconds at operating point
    TYPE(SD_InputType),                INTENT(INOUT) :: u                  !< Inputs at operating point (may change to inout if a mesh copy is required)
    TYPE(SD_ParameterType),            INTENT(IN   ) :: p                  !< Parameters
@@ -1781,13 +1778,10 @@ SUBROUTINE SD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
    REAL(R8Ki), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: dXdx(:,:)          !< Partial derivatives of continuous state functions (X) wrt the continuous states (x) [intent in to avoid deallocation]
    REAL(R8Ki), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: dXddx(:,:)         !< Partial derivatives of discrete state functions (Xd) wrt the continuous states (x) [intent in to avoid deallocation]
    REAL(R8Ki), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: dZdx(:,:)          !< Partial derivatives of constraint state functions (Z) wrt the continuous states (x) [intent in to avoid deallocation]
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: StateRotation(:,:) !< Matrix by which the states are optionally rotated
    ! local variables
    TYPE(SD_OutputType)          :: y_p, y_m
    TYPE(SD_ContinuousStateType) :: x_p, x_m
    TYPE(SD_ContinuousStateType) :: x_perturb
-   REAL(R8Ki)                   :: RotateStates(3,3)
-   REAL(R8Ki)                   :: RotateStatesTranspose(3,3)
    REAL(R8Ki)                   :: delta        ! delta change in input or state
    INTEGER(IntKi)               :: i, k
    INTEGER(IntKi)               :: idx
@@ -2076,7 +2070,6 @@ SUBROUTINE SD_Craig_Bampton(Init, p, CB, ErrStat, ErrMsg)
    REAL(FEKi), ALLOCATABLE  :: FGR(:), FGL(:), FGB(:), FGM(:) !< Partitioned Force (R/L), and CB reduced forces(B/M)
    REAL(FEKi), ALLOCATABLE  :: PhiRb(:, :)  ! Purely to avoid loosing these modes for output ! TODO, kept for backward compatibility of Summary file
    REAL(ReKi)               :: JDamping1 ! temporary storage for first element of JDamping array 
-   INTEGER(IntKi)           :: i
    INTEGER(IntKi)           :: nR     !< Dimension of R DOFs (to switch between __R and R__)
    INTEGER(IntKi)           :: nL, nM, nM_out
    INTEGER(IntKi), pointer  :: IDR(:) !< Alias to switch between IDR__ and ID__Rb
@@ -3224,7 +3217,7 @@ SUBROUTINE StateMatrices(p, ErrStat, ErrMsg, AA, BB, CC, DD)
    real(R8Ki), dimension(:,:), allocatable, optional   :: BB      !<
    real(R8Ki), dimension(:,:), allocatable, optional   :: CC      !<
    real(R8Ki), dimension(:,:), allocatable, optional   :: DD      !<
-   integer(IntKi)             :: nU, nX, nY, nCB, i, j, iNode, iDOF, iOff,jj, k, nMembers, iField
+   integer(IntKi)             :: nU, nX, nY, nCB, i, j, iNode, iOff, k, nMembers, iField
    real(R8Ki), dimension(:), allocatable   :: dFext_dFmeshk
    real(R8Ki), dimension(:), allocatable   :: dFred_dFmeshk
    real(R8Ki), dimension(:), allocatable   :: dFL_dFmeshk
@@ -3472,7 +3465,6 @@ SUBROUTINE ReadSSIfile ( Filename, JointID, SSIK, SSIM, ErrStat, ErrMsg, UnEc )
       'Mxty ','Myty ','Mzty ','Mtxty','Mtyty', &
       'Mxtz ','Mytz ','Mztz ','Mtxtz','Mtytz','Mtztz'/)    
    TYPE (FileInfoType)     :: FileInfo             ! The derived type for holding the file information.
-   INTEGER                 :: IOS                  ! I/O status returned from the read statement.
    INTEGER(IntKi)          :: i, j, imax           !counters
    CHARACTER(ErrMsgLen)    :: ErrMsg2
    INTEGER(IntKi)          :: ErrStat2             ! Error status; if present, program does not abort on error

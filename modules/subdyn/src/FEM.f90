@@ -648,7 +648,7 @@ SUBROUTINE EigenSolveWrap(K, M, nDOF, NOmega,  bCheckSingularity, EigVect, Omega
    ! LOCALS         
    REAL(FEKi), ALLOCATABLE                   :: K_FEKi(:,:), M_FEKi(:,:) 
    REAL(FEKi), ALLOCATABLE                   :: EigVect_FEKi(:,:), Omega2_FEKi(:) 
-   INTEGER(IntKi)                            :: N, i
+   INTEGER(IntKi)                            :: N
    INTEGER(IntKi)                            :: ErrStat2
    CHARACTER(ErrMsgLen)                      :: ErrMsg2
    ErrStat = ErrID_None
@@ -782,7 +782,6 @@ FUNCTION FINDLOCI_ReKi(Array, Val) result(i)
    real(ReKi)    , dimension(:), intent(in) :: Array !< Array to search in
    integer(IntKi), intent(in)               :: val   !< Val
    integer(IntKi)                           :: i     !< Index of joint in joint table
-   logical :: found
    i = 1
    do while ( i <= size(Array) )
       if ( Val == NINT(Array(i)) ) THEN
@@ -799,7 +798,6 @@ FUNCTION FINDLOCI_IntKi(Array, Val) result(i)
    integer(IntKi), dimension(:), intent(in) :: Array !< Array to search in
    integer(IntKi), intent(in)               :: val   !< Val
    integer(IntKi)                           :: i     !< Index of joint in joint table
-   logical :: found
    i = 1
    do while ( i <= size(Array) )
       if ( Val == Array(i) ) THEN
@@ -1312,14 +1310,12 @@ SUBROUTINE PseudoInverse(A, Ainv, ErrStat, ErrMsg)
    real(FEKi), dimension(:,:), allocatable :: Vt
    real(FEKi), dimension(:),   allocatable :: WORK
    real(FEKi), dimension(:,:), allocatable :: Acopy
-   integer :: i, j ! Loop indices
+   integer :: j ! Loop indices
    integer :: M !< The number of rows of the input matrix A
    integer :: N !< The number of columns of the input matrix A
    integer :: K !< 
    integer :: L !< 
    integer :: LWORK !< 
-   integer :: INFO 
-   real(ReKi) :: tol
    M = size(A,1)
    N = size(A,2)
    K = min(M,N)

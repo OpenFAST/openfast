@@ -262,8 +262,7 @@ END SUBROUTINE SDOut_Init
 !! This routine does fill Allouts
 !! note that this routine assumes m%u_TP and m%udotdot_TP have been set before calling 
 !!     this routine (which is done in SD_CalcOutput() and SD CalcContStateDeriv)
-SUBROUTINE SDOut_MapOutputs( CurrentTime, u,p,x, y, m, AllOuts, ErrStat, ErrMsg )
-   real(DbKi),                    intent( in    )  :: CurrentTime          ! Current simulation time in seconds
+SUBROUTINE SDOut_MapOutputs(u,p,x, y, m, AllOuts, ErrStat, ErrMsg )
    type(SD_InputType),            intent( in )     :: u                    ! SubDyn module's input data
    type(SD_ContinuousStateType),  intent( in )     :: x                    ! SubDyn module's states data
    type(SD_OutputType),           intent( inout )  :: y                    ! SubDyn module's output data
@@ -811,12 +810,11 @@ END SUBROUTINE SDOut_ChkOutLst
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 !> This routine initializes the array that maps rows/columns of the Jacobian to specific mesh fields.
 !! Do not change the order of this packing without changing subroutine !
-SUBROUTINE SD_Init_Jacobian(Init, p, u, y, m, InitOut, ErrStat, ErrMsg)
+SUBROUTINE SD_Init_Jacobian(Init, p, u, y, InitOut, ErrStat, ErrMsg)
    TYPE(SD_InitType)                 , INTENT(IN   ) :: Init                  !< Init
    TYPE(SD_ParameterType)            , INTENT(INOUT) :: p                     !< parameters
    TYPE(SD_InputType)                , INTENT(IN   ) :: u                     !< inputs
    TYPE(SD_OutputType)               , INTENT(IN   ) :: y                     !< outputs
-   TYPE(SD_MiscVarType)              , INTENT(INOUT) :: m                     !< misc var data
    TYPE(SD_InitOutputType)           , INTENT(INOUT) :: InitOut               !< Initialization output data (for Jacobian row/column names)
    INTEGER(IntKi)                    , INTENT(  OUT) :: ErrStat               !< Error status of the operation
    CHARACTER(*)                      , INTENT(  OUT) :: ErrMsg                !< Error message if ErrStat /= ErrID_None
