@@ -27,24 +27,24 @@ MODULE FEM
 CONTAINS
 !------------------------------------------------------------------------------------------------------
 !> Return eigenvalues, Omega, and eigenvectors
-SUBROUTINE EigenSolve(K, M, N, bCheckSingularity, EigVect, Omega2, ErrStat, ErrMsg )
+SUBROUTINE EigenSolve(K, M, N, EigVect, Omega2, ErrStat, ErrMsg )
    USE NWTC_LAPACK, only: LAPACK_ggev
    USE NWTC_ScaLAPACK, only : ScaLAPACK_LASRT
    INTEGER       ,          INTENT(IN   )    :: N             !< Number of degrees of freedom, size of M and K
    REAL(LaKi),              INTENT(INOUT)    :: K(N, N)       !< Stiffness matrix 
    REAL(LaKi),              INTENT(INOUT)    :: M(N, N)       !< Mass matrix 
-   LOGICAL,                 INTENT(IN   )    :: bCheckSingularity !< If True, check for singularities
    REAL(LaKi),              INTENT(INOUT)    :: EigVect(N, N) !< Returned Eigenvectors
    REAL(LaKi),              INTENT(INOUT)    :: Omega2(N)      !< Returned Eigenvalues
    INTEGER(IntKi),          INTENT(  OUT)    :: ErrStat       !< Error status of the operation
    CHARACTER(*),            INTENT(  OUT)    :: ErrMsg        !< Error message if ErrStat /= ErrID_None
    ! LOCALS         
-   REAL(LAKi), ALLOCATABLE                   :: WORK (:),  VL(:,:), ALPHAR(:), ALPHAI(:), BETA(:) ! eigensolver variables
+   REAL(LAKi), ALLOCATABLE                   :: WORK (:),  VL(:,:), AlphaR(:), AlphaI(:), BETA(:) ! eigensolver variables
    INTEGER                                   :: i  
    INTEGER                                   :: LWORK                          !variables for the eigensolver
    INTEGER,    ALLOCATABLE                   :: KEY(:)
    INTEGER(IntKi)                            :: ErrStat2
    CHARACTER(ErrMsgLen)                      :: ErrMsg2
+   REAL(LaKi) :: normA
       
    ErrStat = ErrID_None
    ErrMsg  = ''
@@ -53,9 +53,9 @@ SUBROUTINE EigenSolve(K, M, N, bCheckSingularity, EigVect, Omega2, ErrStat, ErrM
    LWORK=8*N + 16  !this is what the eigensolver wants  >> bjj: +16 because of MKL ?ggev documenation ( "lwork >= max(1, 8n+16) for real flavors"), though LAPACK documenation says 8n is fine
    !bjj: there seems to be a memory problem in *GGEV, so I'm making the WORK array larger to see if I can figure it out
    CALL AllocAry( Work,    LWORK, 'Work',   ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'EigenSolve') 
-   CALL AllocAry( ALPHAR,  N,     'ALPHAR', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'EigenSolve')
-   CALL AllocAry( ALPHAI,  N,     'ALPHAI', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'EigenSolve')
-   CALL AllocAry( BETA,    N,     'BETA',   ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'EigenSolve')
+   CALL AllocAry( AlphaR,  N,     'AlphaR', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'EigenSolve')
+   CALL AllocAry( AlphaI,  N,     'AlphaI', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'EigenSolve')
+   CALL AllocAry( Beta,    N,     'Beta',   ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'EigenSolve')
    CALL AllocAry( VL,      N,  N, 'VL',     ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'EigenSolve')
    CALL AllocAry( KEY,     N,     'KEY',    ErrStat2, ErrMsg2 ); if(Failed()) return
     
@@ -63,45 +63,53 @@ SUBROUTINE EigenSolve(K, M, N, bCheckSingularity, EigVect, Omega2, ErrStat, ErrM
    ! note: SGGEV seems to have memory issues in certain cases. The eigenvalues seem to be okay, but the eigenvectors vary wildly with different compiling options.
    !       DGGEV seems to work better, so I'm making these variables LAKi (which is set to R8Ki for now)   - bjj 4/25/2014
    ! bjj: This comes from the LAPACK documentation:
-   !   Note: the quotients ALPHAR(j)/BETA(j) and ALPHAI(j)/BETA(j) may easily over- or underflow, and BETA(j) may even be zero.
-   !   Thus, the user should avoid naively computing the ratio alpha/beta.  However, ALPHAR and ALPHAI will be always less
+   !   Note: the quotients AlphaR(j)/BETA(j) and AlphaI(j)/BETA(j) may easily over- or underflow, and BETA(j) may even be zero.
+   !   Thus, the user should avoid naively computing the ratio Alpha/beta.  However, AlphaR and AlphaI will be always less
    !   than and usually comparable with norm(A) in magnitude, and BETA always less than and usually comparable with norm(B).    
-   ! Omega2=ALPHAR/BETA  !Note this may not be correct if ALPHAI<>0 and/or BETA=0 TO INCLUDE ERROR CHECK, also they need to be sorted
-   CALL  LAPACK_ggev('N','V',N ,K, M, ALPHAR, ALPHAI, BETA, VL, EigVect, WORK, LWORK, ErrStat2, ErrMsg2)
+   ! Omega2=AlphaR/BETA  !Note this may not be correct if AlphaI<>0 and/or BETA=0 TO INCLUDE ERROR CHECK, also they need to be sorted
+   CALL  LAPACK_ggev('N','V',N ,K, M, AlphaR, AlphaI, Beta, VL, EigVect, WORK, LWORK, ErrStat2, ErrMsg2)
    if(Failed()) return
 
    ! --- Determinign and sorting eigen frequencies 
+   Omega2(:) =0.0_LaKi
    DO I=1,N !Initialize the key and calculate Omega
       KEY(I)=I
-      IF ( AlphaR(I)<0.0_LAKi ) THEN
-         !print*,'I', I, AlphaR(I), AlphaI(I), Beta(I), real(AlphaR(I)/Beta(I))
-         if (bCheckSingularity) then
-            ErrStat2=ErrID_Fatal
-            ErrMsg2= 'Negative eigenvalue found, system may be singular (may contain rigid body modes)'
-            if(Failed()) return
+      if ( EqualRealNos(real(Beta(I),ReKi),0.0_ReKi) ) then
+         ! --- Beta =0 
+         print*,'Large eigenvalue found, system may be ill-conditioned'
+         Omega2(I) = HUGE(1.0_LaKi) 
+      elseif ( EqualRealNos(real(AlphaI(I),ReKi),0.0_ReKi) ) THEN
+         ! --- Real Eigenvalues
+         IF ( AlphaR(I)<0.0_LaKi ) THEN
+            if ( (AlphaR(I)/Beta(I))<1e-6_LaKi ) then
+               ! Tolerating very small negative eigenvalues
+               print*,'Negative eigenvalue found with small norm, system may be singular (may contain rigid body modes)'
+               Omega2(I)=0.0_LaKi
+            else
+               print*,'Negative eigenvalue found, system may be singular (may contain rigid body modes)'
+               Omega2(I)=AlphaR(I)/Beta(I)
+            endif
+         else
+            Omega2(I) = AlphaR(I)/Beta(I)
          endif
-      !ELSE IF ( .not.EqualRealNos(AlphaI(I),0.0_LAKi )) THEN
-      !   print*,'I', I, AlphaR(I), AlphaI(I), Beta(I), real(AlphaR(I)/Beta(I))
-      !   ErrStat2=ErrID_Fatal
-      !   ErrMsg2= 'Complex eigenvalue found, system may be singular (may contain rigid body modes)'
-      !   if(Failed()) return
-      ELSE IF ( EqualRealNos(real(Beta(I),ReKi),0.0_ReKi) ) THEN
-         Omega2(I) = HUGE(Omega2)  ! bjj: should this be an error?
-         if (bCheckSingularity) then
-            ErrStat2=ErrID_Fatal
-            ErrMsg2= 'Large eigenvalue found, system may be singular (may contain rigid body modes)'
-            if(Failed()) return
+      else
+         ! --- Complex Eigenvalues
+         normA = sqrt(AlphaR(I)**2 + AlphaI(I)**2)
+         if ( (normA/Beta(I))<1e-6_LaKi ) then
+            ! Tolerating very small eigenvalues with imaginary part
+            print*,'Complex eigenvalue found with small norm, approximating as 0'
+            Omega2(I) = 0.0_LaKi
+         elseif ( abs(AlphaR(I))>1e3_LaKi*abs(AlphaI(I)) ) then
+            ! Tolerating very small imaginary part compared to real part... (not pretty)
+            print*,'Complex eigenvalue found with small Im compare to Re'
+            !print*'AlphaR,AlphaI,beta=',AlphaR(I), AlphaI(I), beta(I), AlphaR(I)/beta(I), AlphaI(I)/beta(I)
+            Omega2(I) = AlphaR(I)/Beta(I)
+         else
+            print*,'Complex eigenvalue found, AlphaR,AlphaI,beta=',AlphaR(I), AlphaI(I), beta(I), AlphaR(I)/beta(I), AlphaI(I)/beta(I)
+            Omega2(I) = HUGE(1.0_LaKi)
          endif
-      ELSE IF ( EqualRealNos(real(ALPHAR(I),ReKi),0.0_ReKi) ) THEN
-         if (bCheckSingularity) then
-            ErrStat2=ErrID_Fatal
-            ErrMsg2= 'Eigenvalue zero found, system is singular (may contain rigid body modes)'
-            if(Failed()) return
-         endif
-      ELSE
-         Omega2(I) = REAL( ALPHAR(I)/BETA(I), ReKi )
-      END IF           
-   ENDDO  
+      endif
+   enddo  
    ! Sorting
    CALL ScaLAPACK_LASRT('I',N,Omega2,KEY,ErrStat2,ErrMsg2); if(Failed()) return 
     
@@ -130,9 +138,9 @@ CONTAINS
 
    SUBROUTINE CleanupEigen()
       IF (ALLOCATED(Work)  ) DEALLOCATE(Work)
-      IF (ALLOCATED(ALPHAR)) DEALLOCATE(ALPHAR)
-      IF (ALLOCATED(ALPHAI)) DEALLOCATE(ALPHAI)
-      IF (ALLOCATED(BETA)  ) DEALLOCATE(BETA)
+      IF (ALLOCATED(AlphaR)) DEALLOCATE(AlphaR)
+      IF (ALLOCATED(AlphaI)) DEALLOCATE(AlphaI)
+      IF (ALLOCATED(Beta)  ) DEALLOCATE(Beta)
       IF (ALLOCATED(VL)    ) DEALLOCATE(VL)
       IF (ALLOCATED(KEY)   ) DEALLOCATE(KEY)
    END SUBROUTINE CleanupEigen
@@ -638,7 +646,7 @@ SUBROUTINE EigenSolveWrap(K, M, nDOF, NOmega,  bCheckSingularity, EigVect, Omega
    ! --- Eigenvalue analysis
    CALL AllocAry(Omega2_LaKi , N,    'Omega',   ErrStat2, ErrMsg2); if(Failed()) return;
    CALL AllocAry(EigVect_LaKi, N, N, 'EigVect', ErrStat2, ErrMsg2); if(Failed()) return;
-   CALL EigenSolve(K_LaKi, M_LaKi, N, bCheckSingularity, EigVect_LaKi, Omega2_LaKi, ErrStat2, ErrMsg2 ); if (Failed()) return;
+   CALL EigenSolve(K_LaKi, M_LaKi, N, EigVect_LaKi, Omega2_LaKi, ErrStat2, ErrMsg2 ); if (Failed()) return;
 
    ! --- Setting up Phi, and type conversion
    do i = 1, NOmega
@@ -649,11 +657,22 @@ SUBROUTINE EigenSolveWrap(K, M, nDOF, NOmega,  bCheckSingularity, EigVect, Omega
       endif
       if (EqualRealNos(Om2, 0.0_ReKi)) then  ! NOTE: may be necessary for some corner numerics
          Omega(i)=0.0_ReKi
+         if (bCheckSingularity) then
+            ErrStat2=ErrID_Fatal
+            ErrMsg2= 'Zero eigenvalue found, system may be singular (may contain rigid body modes)'
+            if(Failed()) return
+         endif
       elseif (Om2>0) then 
          Omega(i)=sqrt(Om2) ! was getting floating invalid
       else
+         ! Negative eigenfrequency
          print*,'>>> Wrong eigenfrequency, Omega^2=',Om2
          Omega(i)= 0.0_ReKi 
+         if (bCheckSingularity) then
+            ErrStat2=ErrID_Fatal
+            ErrMsg2= 'Negative eigenvalue found, system may be singular (may contain rigid body modes)'
+            if(Failed()) return
+         endif
       endif
    enddo
    if (present(bDOF)) then
