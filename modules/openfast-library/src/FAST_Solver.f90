@@ -965,17 +965,19 @@ SUBROUTINE SrvD_InputSolve( p_FAST, m_FAST, u_SrvD, y_ED, y_IfW, y_OpFM, y_BD, M
    END IF
    
    ! Blade TMD
-   DO K = 1,SIZE(y_ED%BladeLn2Mesh,1)
-      IF (u_SrvD%BTMD%BMesh(K)%Committed) THEN
-         IF ( p_FAST%CompElast == Module_ED ) then
-            CALL Transfer_Line2_to_Point( y_ED%BladeLn2Mesh(K), u_SrvD%BTMD%BMesh(K), MeshMapData%ED_L_2_SrvD_P_B(K), ErrStat2, ErrMsg2 )
-               call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-!         ELSEIF ( p_FAST%CompElast == Module_BD ) THEN
-!            CALL Transfer_Line2_to_Point( BD%y(k)%BldMotion, u_SrvD%BTMD%BMesh(K), MeshMapData%BD_L_2_SrvD_P_B(K), ErrStat2, ErrMsg2 )
-!               call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         ENDIF
-      END IF
-   END DO
+   IF ( ALLOCATED(u_SrvD%BTMD%BMesh) ) THEN
+      DO K = 1,SIZE(y_ED%BladeLn2Mesh,1)
+         IF (u_SrvD%BTMD%BMesh(K)%Committed) THEN
+            IF ( p_FAST%CompElast == Module_ED ) then
+               CALL Transfer_Line2_to_Point( y_ED%BladeLn2Mesh(K), u_SrvD%BTMD%BMesh(K), MeshMapData%ED_L_2_SrvD_P_B(K), ErrStat2, ErrMsg2 )
+                  call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+!            ELSEIF ( p_FAST%CompElast == Module_BD ) THEN
+!               CALL Transfer_Line2_to_Point( BD%y(k)%BldMotion, u_SrvD%BTMD%BMesh(K), MeshMapData%BD_L_2_SrvD_P_B(K), ErrStat2, ErrMsg2 )
+!                  call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+            ENDIF
+         END IF
+      END DO
+   END IF
 
 #ifdef SIMULINK_TIMESHIFT   
       ! we're going to use the extrapolated values instead of the old values (Simulink inputs are from t, not t+dt)
@@ -3912,13 +3914,14 @@ SUBROUTINE ResetRemapFlags(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, MAPp
          SrvD%Input(1)%TTMD%Mesh%RemapFlag = .FALSE.
       END IF
 
-   !add blade TMD
-   DO K = 1,SIZE(SrvD%y%BTMD%BMesh)
-      IF (SrvD%y%BTMD%BMesh(K)%Committed) THEN
-         SrvD%y%BTMD%BMesh(K)%RemapFlag        = .FALSE.
-         SrvD%Input(1)%BTMD%BMesh(K)%RemapFlag = .FALSE.
+      IF ( ALLOCATED(SrvD%y%BTMD%BMesh) ) THEN
+         DO K = 1,SIZE(SrvD%y%BTMD%BMesh)
+            IF (SrvD%y%BTMD%BMesh(K)%Committed) THEN
+               SrvD%y%BTMD%BMesh(K)%RemapFlag        = .FALSE.
+               SrvD%Input(1)%BTMD%BMesh(K)%RemapFlag = .FALSE.
+            END IF
+         END DO
       END IF
-   END DO  
    
    END IF
    
