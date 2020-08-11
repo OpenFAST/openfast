@@ -28,7 +28,7 @@ CONTAINS
 !------------------------------------------------------------------------------------------------------
 !> Return eigenvalues, Omega, and eigenvectors
 
-SUBROUTINE EigenSolve(K, M, N, bCheckSingularity, EigVect, Omega2, ErrStat, ErrMsg )
+SUBROUTINE EigenSolve(K, M, N, bCheckSingularity, EigVect, Omega, ErrStat, ErrMsg )
    USE NWTC_LAPACK, only: LAPACK_ggev
    USE NWTC_ScaLAPACK, only : ScaLAPACK_LASRT
    INTEGER       ,          INTENT(IN   )    :: N             !< Number of degrees of freedom, size of M and K
@@ -36,7 +36,7 @@ SUBROUTINE EigenSolve(K, M, N, bCheckSingularity, EigVect, Omega2, ErrStat, ErrM
    REAL(FEKi),              INTENT(INOUT)    :: M(N, N)       !< Mass matrix 
    LOGICAL,                 INTENT(IN   )    :: bCheckSingularity                  ! If True, the solver will fail if rigid modes are present 
    REAL(FEKi),              INTENT(INOUT)    :: EigVect(N, N) !< Returned Eigenvectors
-   REAL(FEKi),              INTENT(INOUT)    :: Omega2(N)      !< Returned Eigenvalues
+   REAL(FEKi),              INTENT(INOUT)    :: Omega(N)      !< Returned Eigenvalues
    INTEGER(IntKi),          INTENT(  OUT)    :: ErrStat       !< Error status of the operation
    CHARACTER(*),            INTENT(  OUT)    :: ErrMsg        !< Error message if ErrStat /= ErrID_None
    ! LOCALS         
@@ -46,7 +46,8 @@ SUBROUTINE EigenSolve(K, M, N, bCheckSingularity, EigVect, Omega2, ErrStat, ErrM
    INTEGER,    ALLOCATABLE                   :: KEY(:)
    INTEGER(IntKi)                            :: ErrStat2
    CHARACTER(ErrMsgLen)                      :: ErrMsg2
-   REAL(FEKi) :: normA
+   REAL(FEKi) :: normA, Om2
+   REAL(FEKi) :: Omega2(N)  !< Squared eigenvalues
       
    ErrStat = ErrID_None
    ErrMsg  = ''
@@ -111,16 +112,6 @@ SUBROUTINE EigenSolve(K, M, N, bCheckSingularity, EigVect, Omega2, ErrStat, ErrM
             Omega2(I) = HUGE(1.0_FEKi)
          endif
       endif
-      if (bCheckSingularity) then
-         if ( EqualRealNos(real(Omega2(I),ReKi),0.0_ReKi) ) THEN
-            ErrStat2=ErrID_Fatal
-            ErrMsg2= 'Zero eigenvalue found, system may be singular (may contain rigid body modes)'
-         elseif (Omega2(I) < 0.0_FEKi) then
-            ErrStat2=ErrID_Fatal
-            ErrMsg2= 'Negative eigenvalue found, system may be singular (may contain rigid body modes)'
-         endif
-         if(Failed()) return
-      endif
    enddo  
    ! Sorting
    CALL ScaLAPACK_LASRT('I',N,Omega2,KEY,ErrStat2,ErrMsg2); if(Failed()) return 
@@ -138,6 +129,37 @@ SUBROUTINE EigenSolve(K, M, N, bCheckSingularity, EigVect, Omega2, ErrStat, ErrM
       EigVect(:,I)=VL(:,KEY(I))  !just reordered as Huimin had a normalization outside of this one
    ENDDO
    !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++!
+
+   ! --- Return Omega (capped by huge(ReKi)) and check for singularity
+   Omega(:) = 0.0_FEKi
+   do I=1,N 
+      ! Capping Om2 to avoid overflow
+      if (abs(Omega2(I))>huge(1.0_ReKi)) then
+         Om2 = huge(1.0_ReKi) * sign(1.0_FEKI, Omega2(i)) !< NOTE huge(ReKi)
+      else
+         Om2 = Omega2(i)
+      endif
+      if (EqualRealNos(real(Om2,ReKi), 0.0_ReKi)) then  ! NOTE: may be necessary for some corner numerics
+         Omega(i)=0.0_FEKi
+         if (bCheckSingularity) then
+            ErrStat2=ErrID_Fatal
+            ErrMsg2= 'Zero eigenvalue found, system may be singular (may contain rigid body modes)'
+            if(Failed()) return
+         endif
+      elseif (Om2>0) then 
+         Omega(i)=sqrt(Om2)
+      else
+         ! Negative eigenfrequency
+         print*,'>>> Wrong eigenfrequency, Omega^2=',Om2
+         Omega(i)= 0.0_FEKi 
+         if (bCheckSingularity) then
+            ErrStat2=ErrID_Fatal
+            ErrMsg2= 'Negative eigenvalue found, system may be singular (may contain rigid body modes)'
+            if(Failed()) return
+         endif
+      endif
+   enddo
+
    CALL CleanupEigen()
    RETURN
 
@@ -626,7 +648,6 @@ SUBROUTINE EigenSolveWrap(K, M, nDOF, NOmega,  bCheckSingularity, EigVect, Omega
    ! LOCALS         
    REAL(FEKi), ALLOCATABLE                   :: K_FEKi(:,:), M_FEKi(:,:) 
    REAL(FEKi), ALLOCATABLE                   :: EigVect_FEKi(:,:), Omega2_FEKi(:) 
-   REAL(FEKi)                                :: Om2
    INTEGER(IntKi)                            :: N, i
    INTEGER(IntKi)                            :: ErrStat2
    CHARACTER(ErrMsgLen)                      :: ErrMsg2
@@ -654,39 +675,11 @@ SUBROUTINE EigenSolveWrap(K, M, nDOF, NOmega,  bCheckSingularity, EigVect, Omega
       return
    end if
 
-
    ! --- Eigenvalue analysis
-   CALL AllocAry(Omega2_FEKi , N,    'Omega',   ErrStat2, ErrMsg2); if(Failed()) return;
    CALL AllocAry(EigVect_FEKi, N, N, 'EigVect', ErrStat2, ErrMsg2); if(Failed()) return;
-   CALL EigenSolve(K_FEKi, M_FEKi, N, bCheckSingularity, EigVect_FEKi, Omega2_FEKi, ErrStat2, ErrMsg2 ); if (Failed()) return;
+   CALL EigenSolve(K_FEKi, M_FEKi, N, bCheckSingularity, EigVect_FEKi, Omega, ErrStat2, ErrMsg2 ); if (Failed()) return;
 
    ! --- Setting up Phi, and type conversion
-   do i = 1, NOmega
-      if (abs(Omega2_FEKi(i))>huge(1.0_ReKi)) then
-         Om2 = huge(1.0_ReKi) * sign(1.0_FEKi, Omega2_FEKi(i))
-      else
-         Om2 = real(Omega2_FEKi(i), FEKi)  
-      endif
-      if (EqualRealNos(Om2, 0.0_FEKi)) then  ! NOTE: may be necessary for some corner numerics
-         Omega(i)=0.0_FEKi
-         if (bCheckSingularity) then
-            ErrStat2=ErrID_Fatal
-            ErrMsg2= 'Zero eigenvalue found, system may be singular (may contain rigid body modes)'
-            if(Failed()) return
-         endif
-      elseif (Om2>0) then 
-         Omega(i)=sqrt(Om2) ! was getting floating invalid
-      else
-         ! Negative eigenfrequency
-         print*,'>>> Wrong eigenfrequency, Omega^2=',Om2
-         Omega(i)= 0.0_FEKi 
-         if (bCheckSingularity) then
-            ErrStat2=ErrID_Fatal
-            ErrMsg2= 'Negative eigenvalue found, system may be singular (may contain rigid body modes)'
-            if(Failed()) return
-         endif
-      endif
-   enddo
    if (present(bDOF)) then
       ! Insert 0s where bDOF was false
       CALL InsertDOFRows(EigVect_FEKi(:,1:nOmega), bDOF, 0.0_FEKi, EigVect, ErrStat2, ErrMsg2 ); if(Failed()) return
