@@ -72,19 +72,19 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: NodeIDs      !< Node IDs associated with ordinal numbers for the output member [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: ElmIDs      !< Element IDs connected to each NodeIDs; max 10 elements [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: ElmNds      !< Flag to indicate 1st or 2nd node of element for each ElmIDs [-]
-    REAL(ReKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: Me      !< Mass matrix connected to each joint element for outAll output [-]
-    REAL(ReKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: Ke      !< Mass matrix connected to each joint element for outAll output [-]
-    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: Fg      !< Gravity load vector connected to each joint element for requested member output [-]
+    REAL(R8Ki) , DIMENSION(:,:,:,:), ALLOCATABLE  :: Me      !< Mass matrix connected to each joint element for outAll output [-]
+    REAL(R8Ki) , DIMENSION(:,:,:,:), ALLOCATABLE  :: Ke      !< Mass matrix connected to each joint element for outAll output [-]
+    REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: Fg      !< Gravity load vector connected to each joint element for requested member output [-]
   END TYPE MeshAuxDataType
 ! =======================
 ! =========  CB_MatArrays  =======
   TYPE, PUBLIC :: CB_MatArrays
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: MBB      !< FULL MBB ( no constraints applied) [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: MBM      !< FULL MBM ( no constraints applied) [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: KBB      !< FULL KBB ( no constraints applied) [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PhiL      !< Retained CB modes, possibly allPhiL(nDOFL,nDOFL), or PhiL(nDOFL,nDOFM) [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PhiR      !< FULL PhiR ( no constraints applied) [-]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: OmegaL      !< Eigenvalues of retained CB modes, possibly all (nDOFL or nDOFM) [-]
+    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: MBB      !< FULL MBB ( no constraints applied) [-]
+    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: MBM      !< FULL MBM ( no constraints applied) [-]
+    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: KBB      !< FULL KBB ( no constraints applied) [-]
+    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: PhiL      !< Retained CB modes, possibly allPhiL(nDOFL,nDOFL), or PhiL(nDOFL,nDOFM) [-]
+    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: PhiR      !< FULL PhiR ( no constraints applied) [-]
+    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: OmegaL      !< Eigenvalues of retained CB modes, possibly all (nDOFL or nDOFM) [-]
   END TYPE CB_MatArrays
 ! =======================
 ! =========  ElemPropType  =======
@@ -101,7 +101,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: Area      !< Area of an element [m^2]
     REAL(ReKi)  :: Rho      !< Density [kg/m^3]
     REAL(ReKi)  :: T0      !< Pretension  [N]
-    REAL(ReKi) , DIMENSION(1:3,1:3)  :: DirCos      !< Element direction cosine matrix [-]
+    REAL(R8Ki) , DIMENSION(1:3,1:3)  :: DirCos      !< Element direction cosine matrix [-]
   END TYPE ElemPropType
 ! =======================
 ! =========  SD_InitType  =======
@@ -118,7 +118,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NPropSetsR      !< Number of property sets for rigid links [-]
     INTEGER(IntKi)  :: NCMass      !< Number of joints with concentrated mass [-]
     INTEGER(IntKi)  :: NCOSMs      !< Number of independent cosine matrices [-]
-    INTEGER(IntKi)  :: FEMMod      !< FEM switch: element model in the FEM [-]
+    INTEGER(IntKi)  :: FEMMod      !< FEM switch  element model in the FEM [-]
     INTEGER(IntKi)  :: NDiv      !< Number of divisions for each member [-]
     LOGICAL  :: CBMod      !< Perform C-B flag [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Joints      !< Joints number and coordinate values [-]
@@ -136,8 +136,8 @@ IMPLICIT NONE
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: SSOutList      !< List of Output Channels [-]
     LOGICAL  :: OutCOSM      !< Output Cos-matrices Flag [-]
     LOGICAL  :: TabDelim      !< Generate a tab-delimited output file in OutJckF-Flag [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: SSIK      !< SSI stiffness packed matrix elements (21 of them), for each reaction joint [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: SSIM      !< SSI mass packed matrix elements (21 of them), for each reaction joint [-]
+    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: SSIK      !< SSI stiffness packed matrix elements (21 of them), for each reaction joint [-]
+    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: SSIM      !< SSI mass packed matrix elements (21 of them), for each reaction joint [-]
     CHARACTER(1024) , DIMENSION(:), ALLOCATABLE  :: SSIfile      !< Soil Structure Interaction (SSI) files to associate with each reaction node [-]
     INTEGER(IntKi)  :: NElem      !< Total number of elements [-]
     INTEGER(IntKi)  :: NPropB      !< Total number of property sets for Beams [-]
@@ -147,10 +147,9 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PropsB      !< Property sets and values for Beams [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PropsC      !< Property sets and values for Cable [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PropsR      !< Property sets and values for Rigid link [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: K      !< System stiffness matrix [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: M      !< System mass matrix [-]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: F      !< System force vector [N]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: FG      !< Gravity force vector (include initial Cable force T0) [N]
+    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: K      !< System stiffness matrix [-]
+    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: M      !< System mass matrix [-]
+    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: FG      !< Gravity force vector (include initial Cable force T0) [N]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: ElemProps      !< Element properties(A, L, Ixx, Iyy, Jzz, Shear, Kappa, E, G, Rho, DirCos(1,1), DirCos(2, 1), ....., DirCos(3, 3) ) [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: BCs      !< Boundary constraint degree of freedoms. First column - DOFs(rows in the system matrices), Second column - constrained(1) or not(0) [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: IntFc      !< Interface constraint degree of freedoms [-]
@@ -220,7 +219,7 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: Elems      !< Element nodes connections [-]
     TYPE(ElemPropType) , DIMENSION(:), ALLOCATABLE  :: ElemProps      !< List of element properties [-]
     LOGICAL  :: reduced      !< True if system has been reduced to account for constraints [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: T_red      !< Transformation matrix performing the constraint reduction x = T. xtilde [-]
+    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: T_red      !< Transformation matrix performing the constraint reduction x = T. xtilde [-]
     TYPE(IList) , DIMENSION(:), ALLOCATABLE  :: NodesDOF      !< DOF indices of each nodes in unconstrained assembled system  [-]
     TYPE(IList) , DIMENSION(:), ALLOCATABLE  :: NodesDOFred      !< DOF indices of each nodes in constrained assembled system  [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: ElemsDOF      !< 12 DOF indices of node 1 and 2 of a given member in unconstrained assembled system  [-]
@@ -1741,17 +1740,17 @@ ENDIF
   Int_BufSz   = Int_BufSz   + 1     ! Me allocated yes/no
   IF ( ALLOCATED(InData%Me) ) THEN
     Int_BufSz   = Int_BufSz   + 2*4  ! Me upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%Me)  ! Me
+      Db_BufSz   = Db_BufSz   + SIZE(InData%Me)  ! Me
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! Ke allocated yes/no
   IF ( ALLOCATED(InData%Ke) ) THEN
     Int_BufSz   = Int_BufSz   + 2*4  ! Ke upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%Ke)  ! Ke
+      Db_BufSz   = Db_BufSz   + SIZE(InData%Ke)  ! Ke
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! Fg allocated yes/no
   IF ( ALLOCATED(InData%Fg) ) THEN
     Int_BufSz   = Int_BufSz   + 2*3  ! Fg upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%Fg)  ! Fg
+      Db_BufSz   = Db_BufSz   + SIZE(InData%Fg)  ! Fg
   END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -1861,8 +1860,8 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Me,4)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%Me)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%Me))-1 ) = PACK(InData%Me,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%Me)
+      IF (SIZE(InData%Me)>0) DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%Me))-1 ) = PACK(InData%Me,.TRUE.)
+      Db_Xferred   = Db_Xferred   + SIZE(InData%Me)
   END IF
   IF ( .NOT. ALLOCATED(InData%Ke) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -1883,8 +1882,8 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Ke,4)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%Ke)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%Ke))-1 ) = PACK(InData%Ke,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%Ke)
+      IF (SIZE(InData%Ke)>0) DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%Ke))-1 ) = PACK(InData%Ke,.TRUE.)
+      Db_Xferred   = Db_Xferred   + SIZE(InData%Ke)
   END IF
   IF ( .NOT. ALLOCATED(InData%Fg) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -1902,8 +1901,8 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Fg,3)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%Fg)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%Fg))-1 ) = PACK(InData%Fg,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%Fg)
+      IF (SIZE(InData%Fg)>0) DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%Fg))-1 ) = PACK(InData%Fg,.TRUE.)
+      Db_Xferred   = Db_Xferred   + SIZE(InData%Fg)
   END IF
  END SUBROUTINE SD_PackMeshAuxDataType
 
@@ -2073,8 +2072,8 @@ ENDIF
        RETURN
     END IF
     mask4 = .TRUE. 
-      IF (SIZE(OutData%Me)>0) OutData%Me = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%Me))-1 ), mask4, 0.0_ReKi )
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%Me)
+      IF (SIZE(OutData%Me)>0) OutData%Me = REAL( UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(SIZE(OutData%Me))-1 ), mask4, 0.0_DbKi ), R8Ki)
+      Db_Xferred   = Db_Xferred   + SIZE(OutData%Me)
     DEALLOCATE(mask4)
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Ke not allocated
@@ -2105,8 +2104,8 @@ ENDIF
        RETURN
     END IF
     mask4 = .TRUE. 
-      IF (SIZE(OutData%Ke)>0) OutData%Ke = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%Ke))-1 ), mask4, 0.0_ReKi )
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%Ke)
+      IF (SIZE(OutData%Ke)>0) OutData%Ke = REAL( UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(SIZE(OutData%Ke))-1 ), mask4, 0.0_DbKi ), R8Ki)
+      Db_Xferred   = Db_Xferred   + SIZE(OutData%Ke)
     DEALLOCATE(mask4)
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Fg not allocated
@@ -2134,8 +2133,8 @@ ENDIF
        RETURN
     END IF
     mask3 = .TRUE. 
-      IF (SIZE(OutData%Fg)>0) OutData%Fg = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%Fg))-1 ), mask3, 0.0_ReKi )
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%Fg)
+      IF (SIZE(OutData%Fg)>0) OutData%Fg = REAL( UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(SIZE(OutData%Fg))-1 ), mask3, 0.0_DbKi ), R8Ki)
+      Db_Xferred   = Db_Xferred   + SIZE(OutData%Fg)
     DEALLOCATE(mask3)
   END IF
  END SUBROUTINE SD_UnPackMeshAuxDataType
@@ -2307,32 +2306,32 @@ ENDIF
   Int_BufSz   = Int_BufSz   + 1     ! MBB allocated yes/no
   IF ( ALLOCATED(InData%MBB) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! MBB upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%MBB)  ! MBB
+      Db_BufSz   = Db_BufSz   + SIZE(InData%MBB)  ! MBB
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! MBM allocated yes/no
   IF ( ALLOCATED(InData%MBM) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! MBM upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%MBM)  ! MBM
+      Db_BufSz   = Db_BufSz   + SIZE(InData%MBM)  ! MBM
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! KBB allocated yes/no
   IF ( ALLOCATED(InData%KBB) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! KBB upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%KBB)  ! KBB
+      Db_BufSz   = Db_BufSz   + SIZE(InData%KBB)  ! KBB
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! PhiL allocated yes/no
   IF ( ALLOCATED(InData%PhiL) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! PhiL upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%PhiL)  ! PhiL
+      Db_BufSz   = Db_BufSz   + SIZE(InData%PhiL)  ! PhiL
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! PhiR allocated yes/no
   IF ( ALLOCATED(InData%PhiR) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! PhiR upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%PhiR)  ! PhiR
+      Db_BufSz   = Db_BufSz   + SIZE(InData%PhiR)  ! PhiR
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! OmegaL allocated yes/no
   IF ( ALLOCATED(InData%OmegaL) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! OmegaL upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%OmegaL)  ! OmegaL
+      Db_BufSz   = Db_BufSz   + SIZE(InData%OmegaL)  ! OmegaL
   END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -2374,8 +2373,8 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%MBB,2)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%MBB)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%MBB))-1 ) = PACK(InData%MBB,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%MBB)
+      IF (SIZE(InData%MBB)>0) DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%MBB))-1 ) = PACK(InData%MBB,.TRUE.)
+      Db_Xferred   = Db_Xferred   + SIZE(InData%MBB)
   END IF
   IF ( .NOT. ALLOCATED(InData%MBM) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -2390,8 +2389,8 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%MBM,2)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%MBM)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%MBM))-1 ) = PACK(InData%MBM,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%MBM)
+      IF (SIZE(InData%MBM)>0) DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%MBM))-1 ) = PACK(InData%MBM,.TRUE.)
+      Db_Xferred   = Db_Xferred   + SIZE(InData%MBM)
   END IF
   IF ( .NOT. ALLOCATED(InData%KBB) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -2406,8 +2405,8 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%KBB,2)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%KBB)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%KBB))-1 ) = PACK(InData%KBB,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%KBB)
+      IF (SIZE(InData%KBB)>0) DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%KBB))-1 ) = PACK(InData%KBB,.TRUE.)
+      Db_Xferred   = Db_Xferred   + SIZE(InData%KBB)
   END IF
   IF ( .NOT. ALLOCATED(InData%PhiL) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -2422,8 +2421,8 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%PhiL,2)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%PhiL)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%PhiL))-1 ) = PACK(InData%PhiL,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%PhiL)
+      IF (SIZE(InData%PhiL)>0) DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%PhiL))-1 ) = PACK(InData%PhiL,.TRUE.)
+      Db_Xferred   = Db_Xferred   + SIZE(InData%PhiL)
   END IF
   IF ( .NOT. ALLOCATED(InData%PhiR) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -2438,8 +2437,8 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%PhiR,2)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%PhiR)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%PhiR))-1 ) = PACK(InData%PhiR,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%PhiR)
+      IF (SIZE(InData%PhiR)>0) DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%PhiR))-1 ) = PACK(InData%PhiR,.TRUE.)
+      Db_Xferred   = Db_Xferred   + SIZE(InData%PhiR)
   END IF
   IF ( .NOT. ALLOCATED(InData%OmegaL) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -2451,8 +2450,8 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%OmegaL,1)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%OmegaL)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%OmegaL))-1 ) = PACK(InData%OmegaL,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%OmegaL)
+      IF (SIZE(InData%OmegaL)>0) DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%OmegaL))-1 ) = PACK(InData%OmegaL,.TRUE.)
+      Db_Xferred   = Db_Xferred   + SIZE(InData%OmegaL)
   END IF
  END SUBROUTINE SD_PackCB_MatArrays
 
@@ -2512,8 +2511,8 @@ ENDIF
        RETURN
     END IF
     mask2 = .TRUE. 
-      IF (SIZE(OutData%MBB)>0) OutData%MBB = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%MBB))-1 ), mask2, 0.0_ReKi )
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%MBB)
+      IF (SIZE(OutData%MBB)>0) OutData%MBB = REAL( UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(SIZE(OutData%MBB))-1 ), mask2, 0.0_DbKi ), R8Ki)
+      Db_Xferred   = Db_Xferred   + SIZE(OutData%MBB)
     DEALLOCATE(mask2)
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! MBM not allocated
@@ -2538,8 +2537,8 @@ ENDIF
        RETURN
     END IF
     mask2 = .TRUE. 
-      IF (SIZE(OutData%MBM)>0) OutData%MBM = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%MBM))-1 ), mask2, 0.0_ReKi )
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%MBM)
+      IF (SIZE(OutData%MBM)>0) OutData%MBM = REAL( UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(SIZE(OutData%MBM))-1 ), mask2, 0.0_DbKi ), R8Ki)
+      Db_Xferred   = Db_Xferred   + SIZE(OutData%MBM)
     DEALLOCATE(mask2)
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! KBB not allocated
@@ -2564,8 +2563,8 @@ ENDIF
        RETURN
     END IF
     mask2 = .TRUE. 
-      IF (SIZE(OutData%KBB)>0) OutData%KBB = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%KBB))-1 ), mask2, 0.0_ReKi )
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%KBB)
+      IF (SIZE(OutData%KBB)>0) OutData%KBB = REAL( UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(SIZE(OutData%KBB))-1 ), mask2, 0.0_DbKi ), R8Ki)
+      Db_Xferred   = Db_Xferred   + SIZE(OutData%KBB)
     DEALLOCATE(mask2)
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! PhiL not allocated
@@ -2590,8 +2589,8 @@ ENDIF
        RETURN
     END IF
     mask2 = .TRUE. 
-      IF (SIZE(OutData%PhiL)>0) OutData%PhiL = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%PhiL))-1 ), mask2, 0.0_ReKi )
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%PhiL)
+      IF (SIZE(OutData%PhiL)>0) OutData%PhiL = REAL( UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(SIZE(OutData%PhiL))-1 ), mask2, 0.0_DbKi ), R8Ki)
+      Db_Xferred   = Db_Xferred   + SIZE(OutData%PhiL)
     DEALLOCATE(mask2)
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! PhiR not allocated
@@ -2616,8 +2615,8 @@ ENDIF
        RETURN
     END IF
     mask2 = .TRUE. 
-      IF (SIZE(OutData%PhiR)>0) OutData%PhiR = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%PhiR))-1 ), mask2, 0.0_ReKi )
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%PhiR)
+      IF (SIZE(OutData%PhiR)>0) OutData%PhiR = REAL( UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(SIZE(OutData%PhiR))-1 ), mask2, 0.0_DbKi ), R8Ki)
+      Db_Xferred   = Db_Xferred   + SIZE(OutData%PhiR)
     DEALLOCATE(mask2)
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! OmegaL not allocated
@@ -2639,8 +2638,8 @@ ENDIF
        RETURN
     END IF
     mask1 = .TRUE. 
-      IF (SIZE(OutData%OmegaL)>0) OutData%OmegaL = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%OmegaL))-1 ), mask1, 0.0_ReKi )
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%OmegaL)
+      IF (SIZE(OutData%OmegaL)>0) OutData%OmegaL = REAL( UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(SIZE(OutData%OmegaL))-1 ), mask1, 0.0_DbKi ), R8Ki)
+      Db_Xferred   = Db_Xferred   + SIZE(OutData%OmegaL)
     DEALLOCATE(mask1)
   END IF
  END SUBROUTINE SD_UnPackCB_MatArrays
@@ -2734,7 +2733,7 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! Area
       Re_BufSz   = Re_BufSz   + 1  ! Rho
       Re_BufSz   = Re_BufSz   + 1  ! T0
-      Re_BufSz   = Re_BufSz   + SIZE(InData%DirCos)  ! DirCos
+      Db_BufSz   = Db_BufSz   + SIZE(InData%DirCos)  ! DirCos
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -2786,8 +2785,8 @@ ENDIF
       Re_Xferred   = Re_Xferred   + 1
       ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%T0
       Re_Xferred   = Re_Xferred   + 1
-      ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%DirCos))-1 ) = PACK(InData%DirCos,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%DirCos)
+      DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%DirCos))-1 ) = PACK(InData%DirCos,.TRUE.)
+      Db_Xferred   = Db_Xferred   + SIZE(InData%DirCos)
  END SUBROUTINE SD_PackElemPropType
 
  SUBROUTINE SD_UnPackElemPropType( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -2858,8 +2857,8 @@ ENDIF
        RETURN
     END IF
     mask2 = .TRUE. 
-      OutData%DirCos = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%DirCos))-1 ), mask2, 0.0_ReKi )
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%DirCos)
+      OutData%DirCos = REAL( UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(SIZE(OutData%DirCos))-1 ), mask2, 0.0_DbKi ), R8Ki)
+      Db_Xferred   = Db_Xferred   + SIZE(OutData%DirCos)
     DEALLOCATE(mask2)
  END SUBROUTINE SD_UnPackElemPropType
 
@@ -3163,18 +3162,6 @@ IF (ALLOCATED(SrcInitTypeData%M)) THEN
   END IF
     DstInitTypeData%M = SrcInitTypeData%M
 ENDIF
-IF (ALLOCATED(SrcInitTypeData%F)) THEN
-  i1_l = LBOUND(SrcInitTypeData%F,1)
-  i1_u = UBOUND(SrcInitTypeData%F,1)
-  IF (.NOT. ALLOCATED(DstInitTypeData%F)) THEN 
-    ALLOCATE(DstInitTypeData%F(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitTypeData%F.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInitTypeData%F = SrcInitTypeData%F
-ENDIF
 IF (ALLOCATED(SrcInitTypeData%FG)) THEN
   i1_l = LBOUND(SrcInitTypeData%FG,1)
   i1_u = UBOUND(SrcInitTypeData%FG,1)
@@ -3340,9 +3327,6 @@ ENDIF
 IF (ALLOCATED(InitTypeData%M)) THEN
   DEALLOCATE(InitTypeData%M)
 ENDIF
-IF (ALLOCATED(InitTypeData%F)) THEN
-  DEALLOCATE(InitTypeData%F)
-ENDIF
 IF (ALLOCATED(InitTypeData%FG)) THEN
   DEALLOCATE(InitTypeData%FG)
 ENDIF
@@ -3474,12 +3458,12 @@ ENDIF
   Int_BufSz   = Int_BufSz   + 1     ! SSIK allocated yes/no
   IF ( ALLOCATED(InData%SSIK) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! SSIK upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%SSIK)  ! SSIK
+      Db_BufSz   = Db_BufSz   + SIZE(InData%SSIK)  ! SSIK
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! SSIM allocated yes/no
   IF ( ALLOCATED(InData%SSIM) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! SSIM upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%SSIM)  ! SSIM
+      Db_BufSz   = Db_BufSz   + SIZE(InData%SSIM)  ! SSIM
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! SSIfile allocated yes/no
   IF ( ALLOCATED(InData%SSIfile) ) THEN
@@ -3513,22 +3497,17 @@ ENDIF
   Int_BufSz   = Int_BufSz   + 1     ! K allocated yes/no
   IF ( ALLOCATED(InData%K) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! K upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%K)  ! K
+      Db_BufSz   = Db_BufSz   + SIZE(InData%K)  ! K
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! M allocated yes/no
   IF ( ALLOCATED(InData%M) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! M upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%M)  ! M
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! F allocated yes/no
-  IF ( ALLOCATED(InData%F) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! F upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%F)  ! F
+      Db_BufSz   = Db_BufSz   + SIZE(InData%M)  ! M
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! FG allocated yes/no
   IF ( ALLOCATED(InData%FG) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! FG upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%FG)  ! FG
+      Db_BufSz   = Db_BufSz   + SIZE(InData%FG)  ! FG
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! ElemProps allocated yes/no
   IF ( ALLOCATED(InData%ElemProps) ) THEN
@@ -3801,8 +3780,8 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%SSIK,2)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%SSIK)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%SSIK))-1 ) = PACK(InData%SSIK,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%SSIK)
+      IF (SIZE(InData%SSIK)>0) DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%SSIK))-1 ) = PACK(InData%SSIK,.TRUE.)
+      Db_Xferred   = Db_Xferred   + SIZE(InData%SSIK)
   END IF
   IF ( .NOT. ALLOCATED(InData%SSIM) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -3817,8 +3796,8 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%SSIM,2)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%SSIM)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%SSIM))-1 ) = PACK(InData%SSIM,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%SSIM)
+      IF (SIZE(InData%SSIM)>0) DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%SSIM))-1 ) = PACK(InData%SSIM,.TRUE.)
+      Db_Xferred   = Db_Xferred   + SIZE(InData%SSIM)
   END IF
   IF ( .NOT. ALLOCATED(InData%SSIfile) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -3922,8 +3901,8 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%K,2)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%K)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%K))-1 ) = PACK(InData%K,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%K)
+      IF (SIZE(InData%K)>0) DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%K))-1 ) = PACK(InData%K,.TRUE.)
+      Db_Xferred   = Db_Xferred   + SIZE(InData%K)
   END IF
   IF ( .NOT. ALLOCATED(InData%M) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -3938,21 +3917,8 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%M,2)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%M)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%M))-1 ) = PACK(InData%M,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%M)
-  END IF
-  IF ( .NOT. ALLOCATED(InData%F) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%F,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%F,1)
-    Int_Xferred = Int_Xferred + 2
-
-      IF (SIZE(InData%F)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%F))-1 ) = PACK(InData%F,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%F)
+      IF (SIZE(InData%M)>0) DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%M))-1 ) = PACK(InData%M,.TRUE.)
+      Db_Xferred   = Db_Xferred   + SIZE(InData%M)
   END IF
   IF ( .NOT. ALLOCATED(InData%FG) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -3964,8 +3930,8 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%FG,1)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%FG)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%FG))-1 ) = PACK(InData%FG,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%FG)
+      IF (SIZE(InData%FG)>0) DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%FG))-1 ) = PACK(InData%FG,.TRUE.)
+      Db_Xferred   = Db_Xferred   + SIZE(InData%FG)
   END IF
   IF ( .NOT. ALLOCATED(InData%ElemProps) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -4452,8 +4418,8 @@ ENDIF
        RETURN
     END IF
     mask2 = .TRUE. 
-      IF (SIZE(OutData%SSIK)>0) OutData%SSIK = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%SSIK))-1 ), mask2, 0.0_ReKi )
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%SSIK)
+      IF (SIZE(OutData%SSIK)>0) OutData%SSIK = REAL( UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(SIZE(OutData%SSIK))-1 ), mask2, 0.0_DbKi ), R8Ki)
+      Db_Xferred   = Db_Xferred   + SIZE(OutData%SSIK)
     DEALLOCATE(mask2)
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! SSIM not allocated
@@ -4478,8 +4444,8 @@ ENDIF
        RETURN
     END IF
     mask2 = .TRUE. 
-      IF (SIZE(OutData%SSIM)>0) OutData%SSIM = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%SSIM))-1 ), mask2, 0.0_ReKi )
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%SSIM)
+      IF (SIZE(OutData%SSIM)>0) OutData%SSIM = REAL( UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(SIZE(OutData%SSIM))-1 ), mask2, 0.0_DbKi ), R8Ki)
+      Db_Xferred   = Db_Xferred   + SIZE(OutData%SSIM)
     DEALLOCATE(mask2)
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! SSIfile not allocated
@@ -4643,8 +4609,8 @@ ENDIF
        RETURN
     END IF
     mask2 = .TRUE. 
-      IF (SIZE(OutData%K)>0) OutData%K = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%K))-1 ), mask2, 0.0_ReKi )
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%K)
+      IF (SIZE(OutData%K)>0) OutData%K = REAL( UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(SIZE(OutData%K))-1 ), mask2, 0.0_DbKi ), R8Ki)
+      Db_Xferred   = Db_Xferred   + SIZE(OutData%K)
     DEALLOCATE(mask2)
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! M not allocated
@@ -4669,32 +4635,9 @@ ENDIF
        RETURN
     END IF
     mask2 = .TRUE. 
-      IF (SIZE(OutData%M)>0) OutData%M = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%M))-1 ), mask2, 0.0_ReKi )
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%M)
+      IF (SIZE(OutData%M)>0) OutData%M = REAL( UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(SIZE(OutData%M))-1 ), mask2, 0.0_DbKi ), R8Ki)
+      Db_Xferred   = Db_Xferred   + SIZE(OutData%M)
     DEALLOCATE(mask2)
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! F not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%F)) DEALLOCATE(OutData%F)
-    ALLOCATE(OutData%F(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%F.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask1 = .TRUE. 
-      IF (SIZE(OutData%F)>0) OutData%F = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%F))-1 ), mask1, 0.0_ReKi )
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%F)
-    DEALLOCATE(mask1)
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! FG not allocated
     Int_Xferred = Int_Xferred + 1
@@ -4715,8 +4658,8 @@ ENDIF
        RETURN
     END IF
     mask1 = .TRUE. 
-      IF (SIZE(OutData%FG)>0) OutData%FG = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%FG))-1 ), mask1, 0.0_ReKi )
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%FG)
+      IF (SIZE(OutData%FG)>0) OutData%FG = REAL( UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(SIZE(OutData%FG))-1 ), mask1, 0.0_DbKi ), R8Ki)
+      Db_Xferred   = Db_Xferred   + SIZE(OutData%FG)
     DEALLOCATE(mask1)
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! ElemProps not allocated
@@ -8077,7 +8020,7 @@ ENDIF
   Int_BufSz   = Int_BufSz   + 1     ! T_red allocated yes/no
   IF ( ALLOCATED(InData%T_red) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! T_red upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%T_red)  ! T_red
+      Db_BufSz   = Db_BufSz   + SIZE(InData%T_red)  ! T_red
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! NodesDOF allocated yes/no
   IF ( ALLOCATED(InData%NodesDOF) ) THEN
@@ -8621,8 +8564,8 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%T_red,2)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%T_red)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%T_red))-1 ) = PACK(InData%T_red,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%T_red)
+      IF (SIZE(InData%T_red)>0) DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%T_red))-1 ) = PACK(InData%T_red,.TRUE.)
+      Db_Xferred   = Db_Xferred   + SIZE(InData%T_red)
   END IF
   IF ( .NOT. ALLOCATED(InData%NodesDOF) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -9867,8 +9810,8 @@ ENDIF
        RETURN
     END IF
     mask2 = .TRUE. 
-      IF (SIZE(OutData%T_red)>0) OutData%T_red = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%T_red))-1 ), mask2, 0.0_ReKi )
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%T_red)
+      IF (SIZE(OutData%T_red)>0) OutData%T_red = REAL( UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(SIZE(OutData%T_red))-1 ), mask2, 0.0_DbKi ), R8Ki)
+      Db_Xferred   = Db_Xferred   + SIZE(OutData%T_red)
     DEALLOCATE(mask2)
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! NodesDOF not allocated

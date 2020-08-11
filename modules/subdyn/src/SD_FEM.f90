@@ -710,7 +710,7 @@ SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
    INTEGER                  :: N1, N2     ! starting node and ending node in the element
    INTEGER                  :: P1, P2     ! property set numbers for starting and ending nodes
    REAL(ReKi)               :: D1, D2, t1, t2, E, G, rho ! properties of a section
-   REAL(ReKi)               :: DirCos(3, 3)              ! direction cosine matrices
+   REAL(FEKi)               :: DirCos(3, 3)              ! direction cosine matrices
    REAL(ReKi)               :: L                         ! length of the element
    REAL(ReKi)               :: T0                        ! pretension force in cable [N]
    REAL(ReKi)               :: r1, r2, t, Iyy, Jzz, Ixx, A, kappa, nu, ratioSq, D_inner, D_outer
@@ -994,9 +994,9 @@ SUBROUTINE AssembleKM(Init, p, ErrStat, ErrMsg)
    ! Local variables
    INTEGER                  :: I, J, K
    INTEGER                  :: iGlob
-   REAL(ReKi)               :: Ke(12,12), Me(12, 12), FGe(12) ! element stiffness and mass matrices gravity force vector
-   REAL(ReKi)               :: FCe(12) ! Pretension force from cable element
-   REAL(ReKi), DIMENSION(6,6):: K_soil, M_soil ! Auxiliary matrices for soil
+   REAL(FEKi)               :: Ke(12,12), Me(12, 12), FGe(12) ! element stiffness and mass matrices gravity force vector
+   REAL(FEKi)               :: FCe(12) ! Pretension force from cable element
+   REAL(FEKi), DIMENSION(6,6):: K_soil, M_soil ! Auxiliary matrices for soil
    INTEGER(IntKi)           :: ErrStat2
    CHARACTER(ErrMsgLen)     :: ErrMsg2
    INTEGER(IntKi)           :: iNode !< Node index
@@ -1017,9 +1017,9 @@ SUBROUTINE AssembleKM(Init, p, ErrStat, ErrMsg)
    CALL AllocAry( Init%K, p%nDOF, p%nDOF , 'Init%K',  ErrStat2, ErrMsg2); if(Failed()) return; ! system stiffness matrix 
    CALL AllocAry( Init%M, p%nDOF, p%nDOF , 'Init%M',  ErrStat2, ErrMsg2); if(Failed()) return; ! system mass matrix 
    CALL AllocAry( Init%FG,p%nDOF,          'Init%FG', ErrStat2, ErrMsg2); if(Failed()) return; ! system gravity force vector 
-   Init%K  = 0.0_ReKi
-   Init%M  = 0.0_ReKi
-   Init%FG = 0.0_ReKi
+   Init%K  = 0.0_FEKi
+   Init%M  = 0.0_FEKi
+   Init%FG = 0.0_FEKi
 
    ! loop over all elements, compute element matrices and assemble into global matrices
    DO i = 1, Init%NElem
@@ -1155,8 +1155,8 @@ SUBROUTINE ControlCableForce_Unit(p, FC_red, ErrStat, ErrMsg)
    CHARACTER(*),                 INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
    ! Local variables
    INTEGER                  :: I, J, K, iGlob
-   real(ReKi), DIMENSION(:), allocatable :: FC
-   REAL(ReKi)               :: FCe(12) ! Pretension force from cable element
+   real(FEKi), DIMENSION(:), allocatable :: FC
+   REAL(FEKi)               :: FCe(12) ! Pretension force from cable element
    INTEGER(IntKi)           :: ErrStat2
    CHARACTER(ErrMsgLen)     :: ErrMsg2
    integer(IntKi), dimension(12) :: IDOF !  12 DOF indices in global unconstrained system
@@ -1190,8 +1190,8 @@ END SUBROUTINE ControlCableForce_Unit
 
 !> Add soil stiffness and mass to global system matrices
 SUBROUTINE InsertSoilMatrices(M, K, NodesDOF, Init, p, ErrStat, ErrMsg, Substract)
-   real(ReKi), dimension(:,:),   intent(inout) :: M
-   real(ReKi), dimension(:,:),   intent(inout) :: K
+   real(FEKi), dimension(:,:),   intent(inout) :: M
+   real(FEKi), dimension(:,:),   intent(inout) :: K
    type(IList),dimension(:),     intent(in   ) :: NodesDOF !< Map from Node Index to DOF lists
    type(SD_InitType),            intent(in   ) :: Init
    type(SD_ParameterType),       intent(in   ) :: p
@@ -1200,7 +1200,7 @@ SUBROUTINE InsertSoilMatrices(M, K, NodesDOF, Init, p, ErrStat, ErrMsg, Substrac
    logical, optional,            intent(in   ) :: SubStract   ! If present, and if true, substract instead of adding
    integer                    :: I, J, iiNode
    integer                    :: iDOF, jDOF, iNode  !< DOF and node indices
-   real(ReKi), dimension(6,6) :: K_soil, M_soil ! Auxiliary matrices for soil
+   real(FEKi), dimension(6,6) :: K_soil, M_soil ! Auxiliary matrices for soil
    ErrMsg  = ""
    ErrStat = ErrID_None
    ! TODO consider doing the 21 -> 6x6 conversion while reading
@@ -1228,8 +1228,8 @@ contains
    !> Convert a flatten array of 21 values into a symmetric  6x6 matrix
    SUBROUTINE Array21_to_6by6(A21, M66)
       use NWTC_LAPACK, only: LAPACK_TPTTR 
-      real(ReKi), dimension(21) , intent(in)  :: A21
-      real(ReKi), dimension(6,6), intent(out) :: M66
+      real(FEKi), dimension(21) , intent(in)  :: A21
+      real(FEKi), dimension(6,6), intent(out) :: M66
       integer :: j
       M66 = 0.0_ReKi
       ! Reconstruct from sparse elements
@@ -1256,7 +1256,7 @@ SUBROUTINE BuildTMatrix(Init, p, RA, RAm1, Tred, ErrStat, ErrMsg)
    integer(IntKi), dimension(:), INTENT(IN   ) :: RAm1 !< RA^-1(e) = a , for a given element give the index of a rigid assembly
    INTEGER(IntKi),               INTENT(  OUT) :: ErrStat     ! Error status of the operation
    CHARACTER(*),                 INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
-   real(ReKi), dimension(:,:), allocatable :: Tred !< Transformation matrix for DOF elimination
+   real(FEKi), dimension(:,:), allocatable :: Tred !< Transformation matrix for DOF elimination
    ! Local  
    real(ReKi), dimension(:,:), allocatable   :: Tc
    integer(IntKi), dimension(:), allocatable :: INodesID !< List of unique nodes involved in Elements
@@ -1480,8 +1480,8 @@ SUBROUTINE DirectElimination(Init, p, ErrStat, ErrMsg)
    ! Varaibles for rigid assembly
    type(IList), dimension(:), allocatable    :: RA       !< RA(a) = [e1,..,en]  list of elements forming a rigid link assembly
    integer(IntKi), dimension(:), allocatable :: RAm1 !< RA^-1(e) = a , for a given element give the index of a rigid assembly
-   real(ReKi), dimension(:,:), allocatable :: MM, KK
-   real(ReKi), dimension(:),   allocatable :: FF
+   real(FEKi), dimension(:,:), allocatable :: MM, KK
+   real(FEKi), dimension(:),   allocatable :: FF
    integer(IntKi) :: nDOF, iDOF, nDOFPerNode, iNode, iiDOF
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -1690,8 +1690,8 @@ SUBROUTINE JointElimination(Elements, JType, phat, Init, p, Tc, ErrStat, ErrMsg)
    real(ReKi)           :: e1(3), e2(3), e3(3) ! forming orthonormal basis with phat 
    integer(IntKi)       :: ErrStat2
    character(ErrMsgLen) :: ErrMsg2
-   real(LaKi), dimension(:,:), allocatable :: Tc_rot !< Part of Tc just for rotational DOF
-   real(LaKi), dimension(:,:), allocatable :: Tc_rot_m1 !< Inverse of Tc_rot
+   real(FEKi), dimension(:,:), allocatable :: Tc_rot !< Part of Tc just for rotational DOF
+   real(FEKi), dimension(:,:), allocatable :: Tc_rot_m1 !< Inverse of Tc_rot
    real(ReKi) :: ColMean
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -1939,8 +1939,8 @@ END SUBROUTINE InsertJointStiffDamp
 
 SUBROUTINE ElemM(ep, Me)
    TYPE(ElemPropType), INTENT(IN) :: eP        !< Element Property
-   REAL(ReKi), INTENT(OUT)        :: Me(12, 12)
-   REAL(ReKi) :: L0, Eps0
+   REAL(FEKi), INTENT(OUT)        :: Me(12, 12)
+   REAL(FEKi) :: L0, Eps0
    if (ep%eType==idMemberBeam) then
       !Calculate Ke, Me to be used for output
       CALL ElemM_Beam(eP%Area, eP%Length, eP%Ixx, eP%Iyy, eP%Jzz,  eP%rho, eP%DirCos, Me)
@@ -1952,9 +1952,9 @@ SUBROUTINE ElemM(ep, Me)
 
    else if (ep%eType==idMemberRigid) then
       if ( EqualRealNos(eP%rho, 0.0_ReKi) ) then
-         Me=0.0_ReKi
+         Me=0.0_FEKi
       else
-         CALL ElemM_Cable(ep%Area, ep%Length, ep%rho, ep%DirCos, Me)
+         CALL ElemM_Cable(ep%Area, real(ep%Length,FEKi), ep%rho, ep%DirCos, Me)
          !CALL ElemM_(A, L, rho, DirCos, Me)
       endif
    endif
@@ -1962,7 +1962,7 @@ END SUBROUTINE ElemM
 
 SUBROUTINE ElemK(ep, Ke)
    TYPE(ElemPropType), INTENT(IN) :: eP        !< Element Property
-   REAL(ReKi), INTENT(OUT)        :: Ke(12, 12)
+   REAL(FEKi), INTENT(OUT)        :: Ke(12, 12)
 
    if (ep%eType==idMemberBeam) then
       CALL ElemK_Beam( eP%Area, eP%Length, eP%Ixx, eP%Iyy, eP%Jzz, eP%Shear, eP%kappa, eP%YoungE, eP%ShearG, eP%DirCos, Ke)
@@ -1971,21 +1971,21 @@ SUBROUTINE ElemK(ep, Ke)
       CALL ElemK_Cable(ep%Area, ep%Length, ep%YoungE, ep%T0, eP%DirCos, Ke)
 
    else if (ep%eType==idMemberRigid) then
-      Ke = 0.0_ReKi
+      Ke = 0.0_FEKi
    endif
 END SUBROUTINE ElemK
 
 SUBROUTINE ElemF(ep, gravity, Fg, Fo)
    TYPE(ElemPropType), INTENT(IN) :: eP        !< Element Property
    REAL(ReKi), INTENT(IN)     :: gravity       !< acceleration of gravity
-   REAL(ReKi), INTENT(OUT)    :: Fg(12)
-   REAL(ReKi), INTENT(OUT)    :: Fo(12)
+   REAL(FEKi), INTENT(OUT)    :: Fg(12)
+   REAL(FEKi), INTENT(OUT)    :: Fo(12)
    if (ep%eType==idMemberBeam) then
-      Fo(1:12)=0
+      Fo(1:12)=0.0_FEKi
    else if (ep%eType==idMemberCable) then
       CALL ElemF_Cable(ep%T0, ep%DirCos, Fo)
    else if (ep%eType==idMemberRigid) then
-      Fo(1:12)=0
+      Fo(1:12)=0.0_FEKi
    endif
    CALL ElemG( eP%Area, eP%Length, eP%rho, eP%DirCos, Fg, gravity )
 END SUBROUTINE ElemF

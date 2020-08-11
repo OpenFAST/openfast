@@ -22,29 +22,31 @@ MODULE FEM
   USE NWTC_Library
   IMPLICIT NONE
 
-  INTEGER,          PARAMETER  :: LAKi            = R8Ki                  ! Define the kind to be used for LAPACK routines for getting eigenvalues/vectors. Apparently there is a problem with SGGEV's eigenvectors
+  INTEGER, PARAMETER  :: FEKi = R8Ki  ! Define the kind to be used for FEM
  
 CONTAINS
 !------------------------------------------------------------------------------------------------------
 !> Return eigenvalues, Omega, and eigenvectors
-SUBROUTINE EigenSolve(K, M, N, EigVect, Omega2, ErrStat, ErrMsg )
+
+SUBROUTINE EigenSolve(K, M, N, bCheckSingularity, EigVect, Omega2, ErrStat, ErrMsg )
    USE NWTC_LAPACK, only: LAPACK_ggev
    USE NWTC_ScaLAPACK, only : ScaLAPACK_LASRT
    INTEGER       ,          INTENT(IN   )    :: N             !< Number of degrees of freedom, size of M and K
-   REAL(LaKi),              INTENT(INOUT)    :: K(N, N)       !< Stiffness matrix 
-   REAL(LaKi),              INTENT(INOUT)    :: M(N, N)       !< Mass matrix 
-   REAL(LaKi),              INTENT(INOUT)    :: EigVect(N, N) !< Returned Eigenvectors
-   REAL(LaKi),              INTENT(INOUT)    :: Omega2(N)      !< Returned Eigenvalues
+   REAL(FEKi),              INTENT(INOUT)    :: K(N, N)       !< Stiffness matrix 
+   REAL(FEKi),              INTENT(INOUT)    :: M(N, N)       !< Mass matrix 
+   LOGICAL,                 INTENT(IN   )    :: bCheckSingularity                  ! If True, the solver will fail if rigid modes are present 
+   REAL(FEKi),              INTENT(INOUT)    :: EigVect(N, N) !< Returned Eigenvectors
+   REAL(FEKi),              INTENT(INOUT)    :: Omega2(N)      !< Returned Eigenvalues
    INTEGER(IntKi),          INTENT(  OUT)    :: ErrStat       !< Error status of the operation
    CHARACTER(*),            INTENT(  OUT)    :: ErrMsg        !< Error message if ErrStat /= ErrID_None
    ! LOCALS         
-   REAL(LAKi), ALLOCATABLE                   :: WORK (:),  VL(:,:), AlphaR(:), AlphaI(:), BETA(:) ! eigensolver variables
+   REAL(FEKi), ALLOCATABLE                   :: WORK (:),  VL(:,:), AlphaR(:), AlphaI(:), BETA(:) ! eigensolver variables
    INTEGER                                   :: i  
    INTEGER                                   :: LWORK                          !variables for the eigensolver
    INTEGER,    ALLOCATABLE                   :: KEY(:)
    INTEGER(IntKi)                            :: ErrStat2
    CHARACTER(ErrMsgLen)                      :: ErrMsg2
-   REAL(LaKi) :: normA
+   REAL(FEKi) :: normA
       
    ErrStat = ErrID_None
    ErrMsg  = ''
@@ -61,7 +63,7 @@ SUBROUTINE EigenSolve(K, M, N, EigVect, Omega2, ErrStat, ErrMsg )
     
    ! --- Eigenvalue  analysis
    ! note: SGGEV seems to have memory issues in certain cases. The eigenvalues seem to be okay, but the eigenvectors vary wildly with different compiling options.
-   !       DGGEV seems to work better, so I'm making these variables LAKi (which is set to R8Ki for now)   - bjj 4/25/2014
+   !       DGGEV seems to work better, so I'm making these variables FEKi (which is set to R8Ki for now)   - bjj 4/25/2014
    ! bjj: This comes from the LAPACK documentation:
    !   Note: the quotients AlphaR(j)/BETA(j) and AlphaI(j)/BETA(j) may easily over- or underflow, and BETA(j) may even be zero.
    !   Thus, the user should avoid naively computing the ratio Alpha/beta.  However, AlphaR and AlphaI will be always less
@@ -71,20 +73,20 @@ SUBROUTINE EigenSolve(K, M, N, EigVect, Omega2, ErrStat, ErrMsg )
    if(Failed()) return
 
    ! --- Determinign and sorting eigen frequencies 
-   Omega2(:) =0.0_LaKi
+   Omega2(:) =0.0_FEKi
    DO I=1,N !Initialize the key and calculate Omega
       KEY(I)=I
       if ( EqualRealNos(real(Beta(I),ReKi),0.0_ReKi) ) then
          ! --- Beta =0 
          print*,'Large eigenvalue found, system may be ill-conditioned'
-         Omega2(I) = HUGE(1.0_LaKi) 
+         Omega2(I) = HUGE(1.0_FEKi) 
       elseif ( EqualRealNos(real(AlphaI(I),ReKi),0.0_ReKi) ) THEN
          ! --- Real Eigenvalues
-         IF ( AlphaR(I)<0.0_LaKi ) THEN
-            if ( (AlphaR(I)/Beta(I))<1e-6_LaKi ) then
+         IF ( AlphaR(I)<0.0_FEKi ) THEN
+            if ( (AlphaR(I)/Beta(I))<1e-6_FEKi ) then
                ! Tolerating very small negative eigenvalues
                print*,'Negative eigenvalue found with small norm, system may be singular (may contain rigid body modes)'
-               Omega2(I)=0.0_LaKi
+               Omega2(I)=0.0_FEKi
             else
                print*,'Negative eigenvalue found, system may be singular (may contain rigid body modes)'
                Omega2(I)=AlphaR(I)/Beta(I)
@@ -95,19 +97,29 @@ SUBROUTINE EigenSolve(K, M, N, EigVect, Omega2, ErrStat, ErrMsg )
       else
          ! --- Complex Eigenvalues
          normA = sqrt(AlphaR(I)**2 + AlphaI(I)**2)
-         if ( (normA/Beta(I))<1e-6_LaKi ) then
+         if ( (normA/Beta(I))<1e-6_FEKi ) then
             ! Tolerating very small eigenvalues with imaginary part
             print*,'Complex eigenvalue found with small norm, approximating as 0'
-            Omega2(I) = 0.0_LaKi
-         elseif ( abs(AlphaR(I))>1e3_LaKi*abs(AlphaI(I)) ) then
+            Omega2(I) = 0.0_FEKi
+         elseif ( abs(AlphaR(I))>1e3_FEKi*abs(AlphaI(I)) ) then
             ! Tolerating very small imaginary part compared to real part... (not pretty)
             print*,'Complex eigenvalue found with small Im compare to Re'
             !print*'AlphaR,AlphaI,beta=',AlphaR(I), AlphaI(I), beta(I), AlphaR(I)/beta(I), AlphaI(I)/beta(I)
             Omega2(I) = AlphaR(I)/Beta(I)
          else
             print*,'Complex eigenvalue found, AlphaR,AlphaI,beta=',AlphaR(I), AlphaI(I), beta(I), AlphaR(I)/beta(I), AlphaI(I)/beta(I)
-            Omega2(I) = HUGE(1.0_LaKi)
+            Omega2(I) = HUGE(1.0_FEKi)
          endif
+      endif
+      if (bCheckSingularity) then
+         if ( EqualRealNos(real(Omega2(I),ReKi),0.0_ReKi) ) THEN
+            ErrStat2=ErrID_Fatal
+            ErrMsg2= 'Zero eigenvalue found, system may be singular (may contain rigid body modes)'
+         elseif (Omega2(I) < 0.0_FEKi) then
+            ErrStat2=ErrID_Fatal
+            ErrMsg2= 'Negative eigenvalue found, system may be singular (may contain rigid body modes)'
+         endif
+         if(Failed()) return
       endif
    enddo  
    ! Sorting
@@ -150,20 +162,20 @@ END SUBROUTINE EigenSolve
 !> Compute the determinant of a real matrix using an LU factorization
 FUNCTION Determinant(A, ErrStat, ErrMsg) result(det)
    use NWTC_LAPACK, only: LAPACK_GETRF
-   REAL(LaKi),      INTENT(IN   ) :: A(:, :) !< Input matrix, no side effect
+   REAL(FEKi),      INTENT(IN   ) :: A(:, :) !< Input matrix, no side effect
    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat !< Error status of the operation
    CHARACTER(*),    INTENT(  OUT) :: ErrMsg  !< Error message if ErrStat /= ErrID_None
-   real(LaKi)              :: det !< May easily overflow
+   real(FEKi)              :: det !< May easily overflow
    integer(IntKi)          :: i
    integer                 :: n
    integer, allocatable    :: ipiv(:)
-   real(LaKi), allocatable :: PLU(:,:)
-   real(LaKi) :: ScaleVal
+   real(FEKi), allocatable :: PLU(:,:)
+   real(FEKi) :: ScaleVal
 
    n = size(A(1,:))
    allocate(PLU(n,n))
    allocate(ipiv(n))
-   ScaleVal= 1.0_LaKi
+   ScaleVal= 1.0_FEKi
    PLU = A/ScaleVal
    ! general matrix factorization: Factor matrix into A=PLU.
    call LAPACK_GETRF( n, n, PLU, ipiv, ErrStat, ErrMsg ) !call dgetrf(n, n, PLU, n, ipiv, info)
@@ -178,7 +190,7 @@ FUNCTION Determinant(A, ErrStat, ErrMsg) result(det)
    ! As L has unit diagonal entries, the determinant can be computed
    ! from the product of U's diagonal entries. Additional sign changes
    ! stemming from the permutations P have to be taken into account as well.
-   det = 1.0_LaKi
+   det = 1.0_FEKi
    do i = 1,n
       if(ipiv(i) /= i) then  ! additional sign change
          det = -det*PLU(i,i)
@@ -241,25 +253,25 @@ end subroutine ChessBoard
 !! MRL = M(IDR, IDL),  KRR = K(IDR, IDL)
 !! NOTE: generic code
 SUBROUTINE BreakSysMtrx(MM, KK, IDR, IDL, nR, nL, MRR, MLL, MRL, KRR, KLL, KRL, FG, FGR, FGL, CC, CRR, CLL, CRL)
-   REAL(ReKi),             INTENT(IN   )  :: MM(:,:)   !< Mass Matrix
-   REAL(ReKi),             INTENT(IN   )  :: KK(:,:)   !< Stiffness matrix
+   REAL(FEKi),             INTENT(IN   )  :: MM(:,:)   !< Mass Matrix
+   REAL(FEKi),             INTENT(IN   )  :: KK(:,:)   !< Stiffness matrix
    INTEGER(IntKi),         INTENT(IN   )  :: nR
    INTEGER(IntKi),         INTENT(IN   )  :: nL
    INTEGER(IntKi),         INTENT(IN   )  :: IDR(nR)   !< Indices of leader DOFs
    INTEGER(IntKi),         INTENT(IN   )  :: IDL(nL)   !< Indices of interior DOFs
-   REAL(ReKi),             INTENT(  OUT)  :: MRR(nR, nR)
-   REAL(ReKi),             INTENT(  OUT)  :: MLL(nL, nL) 
-   REAL(ReKi),             INTENT(  OUT)  :: MRL(nR, nL)
-   REAL(ReKi),             INTENT(  OUT)  :: KRR(nR, nR)
-   REAL(ReKi),             INTENT(  OUT)  :: KLL(nL, nL)
-   REAL(ReKi),             INTENT(  OUT)  :: KRL(nR, nL)
-   REAL(ReKi), OPTIONAL,   INTENT(IN   )  :: FG(:)     !< Force vector
-   REAL(ReKi), OPTIONAL,   INTENT(  OUT)  :: FGR(nR)
-   REAL(ReKi), OPTIONAL,   INTENT(  OUT)  :: FGL(nL)
-   REAL(ReKi), OPTIONAL,   INTENT(IN   )  :: CC(:,:)   !< Stiffness matrix
-   REAL(ReKi), OPTIONAL,   INTENT(  OUT)  :: CRR(nR, nR)
-   REAL(ReKi), OPTIONAL,   INTENT(  OUT)  :: CLL(nL, nL)
-   REAL(ReKi), OPTIONAL,   INTENT(  OUT)  :: CRL(nR, nL)
+   REAL(FEKi),             INTENT(  OUT)  :: MRR(nR, nR)
+   REAL(FEKi),             INTENT(  OUT)  :: MLL(nL, nL) 
+   REAL(FEKi),             INTENT(  OUT)  :: MRL(nR, nL)
+   REAL(FEKi),             INTENT(  OUT)  :: KRR(nR, nR)
+   REAL(FEKi),             INTENT(  OUT)  :: KLL(nL, nL)
+   REAL(FEKi),             INTENT(  OUT)  :: KRL(nR, nL)
+   REAL(FEKi), OPTIONAL,   INTENT(IN   )  :: FG(:)     !< Force vector
+   REAL(FEKi), OPTIONAL,   INTENT(  OUT)  :: FGR(nR)
+   REAL(FEKi), OPTIONAL,   INTENT(  OUT)  :: FGL(nL)
+   REAL(FEKi), OPTIONAL,   INTENT(IN   )  :: CC(:,:)   !< Stiffness matrix
+   REAL(FEKi), OPTIONAL,   INTENT(  OUT)  :: CRR(nR, nR)
+   REAL(FEKi), OPTIONAL,   INTENT(  OUT)  :: CLL(nL, nL)
+   REAL(FEKi), OPTIONAL,   INTENT(  OUT)  :: CRL(nR, nL)
    INTEGER(IntKi) :: I, J, II, JJ
 
    ! RR: Leader/Boundary DOFs
@@ -344,44 +356,44 @@ END SUBROUTINE BreakSysMtrx
 !!
 !! NOTE: generic code
 SUBROUTINE CraigBamptonReduction(MM, KK, IDR, nR, IDL, nL, nM, nM_Out, MBB, MBM, KBB, PhiL, PhiR, OmegaL, ErrStat, ErrMsg, FG, FGR, FGL, FGB, FGM, CC, CBB, CBM, CMM) 
-   REAL(ReKi),             INTENT(IN   ) :: MM(:, :) !< Mass matrix
-   REAL(ReKi),             INTENT(IN   ) :: KK(:, :) !< Stiffness matrix
+   REAL(FEKi),             INTENT(IN   ) :: MM(:, :) !< Mass matrix
+   REAL(FEKi),             INTENT(IN   ) :: KK(:, :) !< Stiffness matrix
    INTEGER(IntKi),         INTENT(IN   ) :: nR
    INTEGER(IntKi),         INTENT(IN   ) :: IDR(nR)   !< Indices of leader DOFs
    INTEGER(IntKi),         INTENT(IN   ) :: nL
    INTEGER(IntKi),         INTENT(IN   ) :: IDL(nL)   !< Indices of interior DOFs
    INTEGER(IntKi),         INTENT(IN   ) :: nM        !< Number of CB modes
    INTEGER(IntKi),         INTENT(IN   ) :: nM_Out    !< Number of modes returned for PhiL & OmegaL
-   REAL(ReKi),             INTENT(  OUT) :: MBB( nR, nR)     !< Reduced Guyan Mass Matrix
-   REAL(ReKi),             INTENT(  OUT) :: KBB( nR, nR)     !< Reduced Guyan Stiffness matrix
-   REAL(ReKi),             INTENT(  OUT) :: MBM( nR, nM)     !< Cross term
-   REAL(ReKi),             INTENT(  OUT) :: PhiR(nL, nR)     !< Guyan Modes   
-   REAL(ReKi),             INTENT(  OUT) :: PhiL(nL, nM_out) !< Craig-Bampton modes
-   REAL(ReKi),             INTENT(  OUT) :: OmegaL(nM_out)   !< Eigenvalues 
-   REAL(ReKi), OPTIONAL,   INTENT(IN   ) :: FG(:)        !< Force vector (typically a constant force, like gravity)
-   REAL(ReKi), OPTIONAL,   INTENT(  OUT) :: FGR(nR)      !< Force vector partitioned for R DOFs (TODO remove me)
-   REAL(ReKi), OPTIONAL,   INTENT(  OUT) :: FGL(nL)      !< Force vector partitioned for L DOFs (TODO somehow for Static improvment..)
-   REAL(ReKi), OPTIONAL,   INTENT(  OUT) :: FGB(nR)      !< Force vector in Guyan modes = FR+PhiR^t FL
-   REAL(ReKi), OPTIONAL,   INTENT(  OUT) :: FGM(nM)      !< Force vector in CB modes    =    PhiM^t FL
-   REAL(ReKi), OPTIONAL,   INTENT(IN   ) :: CC(:, :)     !< Damping matrix
-   REAL(ReKi), OPTIONAL,   INTENT(  OUT) :: CBB(nR, nR)  !< Guyan Damping matrix
-   REAL(ReKi), OPTIONAL,   INTENT(  OUT) :: CBM(nR, nM)  !< Coupling Damping matrix
-   REAL(ReKi), OPTIONAL,   INTENT(  OUT) :: CMM(nM, nM)  !< Craig-Bampton Damping matrix
+   REAL(FEKi),             INTENT(  OUT) :: MBB( nR, nR)     !< Reduced Guyan Mass Matrix
+   REAL(FEKi),             INTENT(  OUT) :: KBB( nR, nR)     !< Reduced Guyan Stiffness matrix
+   REAL(FEKi),             INTENT(  OUT) :: MBM( nR, nM)     !< Cross term
+   REAL(FEKi),             INTENT(  OUT) :: PhiR(nL, nR)     !< Guyan Modes   
+   REAL(FEKi),             INTENT(  OUT) :: PhiL(nL, nM_out) !< Craig-Bampton modes
+   REAL(FEKi),             INTENT(  OUT) :: OmegaL(nM_out)   !< Eigenvalues 
+   REAL(FEKi), OPTIONAL,   INTENT(IN   ) :: FG(:)        !< Force vector (typically a constant force, like gravity)
+   REAL(FEKi), OPTIONAL,   INTENT(  OUT) :: FGR(nR)      !< Force vector partitioned for R DOFs (TODO remove me)
+   REAL(FEKi), OPTIONAL,   INTENT(  OUT) :: FGL(nL)      !< Force vector partitioned for L DOFs (TODO somehow for Static improvment..)
+   REAL(FEKi), OPTIONAL,   INTENT(  OUT) :: FGB(nR)      !< Force vector in Guyan modes = FR+PhiR^t FL
+   REAL(FEKi), OPTIONAL,   INTENT(  OUT) :: FGM(nM)      !< Force vector in CB modes    =    PhiM^t FL
+   REAL(FEKi), OPTIONAL,   INTENT(IN   ) :: CC(:, :)     !< Damping matrix
+   REAL(FEKi), OPTIONAL,   INTENT(  OUT) :: CBB(nR, nR)  !< Guyan Damping matrix
+   REAL(FEKi), OPTIONAL,   INTENT(  OUT) :: CBM(nR, nM)  !< Coupling Damping matrix
+   REAL(FEKi), OPTIONAL,   INTENT(  OUT) :: CMM(nM, nM)  !< Craig-Bampton Damping matrix
    INTEGER(IntKi),         INTENT(  OUT) :: ErrStat     ! Error status of the operation
    CHARACTER(*),           INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
    INTEGER(IntKi)                        :: ErrStat2                                                                    
    CHARACTER(ErrMsgLen)                  :: ErrMsg2
    CHARACTER(*), PARAMETER               :: RoutineName = 'CraigBamptonReduction_FromPartition'
    ! Partitioned variables 
-   real(ReKi), allocatable :: MRR(:, :)
-   real(ReKi), allocatable :: MLL(:, :)
-   real(ReKi), allocatable :: MRL(:, :)
-   real(ReKi), allocatable :: KRR(:, :)
-   real(ReKi), allocatable :: KLL(:, :)
-   real(ReKi), allocatable :: KRL(:, :)
-   real(ReKi), allocatable :: CRR(:, :)
-   real(ReKi), allocatable :: CRL(:, :)
-   real(ReKi), allocatable :: CLL(:, :)
+   real(FEKi), allocatable :: MRR(:, :)
+   real(FEKi), allocatable :: MLL(:, :)
+   real(FEKi), allocatable :: MRL(:, :)
+   real(FEKi), allocatable :: KRR(:, :)
+   real(FEKi), allocatable :: KLL(:, :)
+   real(FEKi), allocatable :: KRL(:, :)
+   real(FEKi), allocatable :: CRR(:, :)
+   real(FEKi), allocatable :: CRL(:, :)
+   real(FEKi), allocatable :: CLL(:, :)
    ! --- Break system
    CALL AllocAry(MRR, nR, nR, 'matrix MRR', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)  
    CALL AllocAry(MLL, nL, nL, 'matrix MLL', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)  
@@ -450,30 +462,30 @@ SUBROUTINE CraigBamptonReduction_FromPartition( MRR, MLL, MRL, KRR, KLL, KRL, nR
    INTEGER(IntKi),         INTENT(  in)  :: nL
    INTEGER(IntKi),         INTENT(  in)  :: nM_Out
    INTEGER(IntKi),         INTENT(  in)  :: nM
-   REAL(ReKi),             INTENT(  IN)  :: MRR( nR, nR) !< Partitioned mass and stiffness matrices
-   REAL(ReKi),             INTENT(  IN)  :: MLL( nL, nL) 
-   REAL(ReKi),             INTENT(  IN)  :: MRL( nR, nL)
-   REAL(ReKi),             INTENT(  IN)  :: KRR( nR, nR)
-   REAL(ReKi),             INTENT(INOUT) :: KLL( nL, nL)  ! on exit, it has been factored (otherwise not changed)
-   REAL(ReKi),             INTENT(  IN)  :: KRL( nR, nL)
-   REAL(ReKi),             INTENT(  OUT) :: MBB( nR, nR)
-   REAL(ReKi),             INTENT(  OUT) :: MBM( nR, nM)
-   REAL(ReKi),             INTENT(  OUT) :: KBB( nR, nR)
-   REAL(ReKi),             INTENT(  OUT) :: PhiR(nL, nR)     !< Guyan Modes   
-   REAL(ReKi),             INTENT(  OUT) :: PhiL(nL, nM_Out) !< Craig-Bampton modes
-   REAL(ReKi),             INTENT(  OUT) :: OmegaL(nM_Out)   !< Eigenvalues
+   REAL(FEKi),             INTENT(  IN)  :: MRR( nR, nR) !< Partitioned mass and stiffness matrices
+   REAL(FEKi),             INTENT(  IN)  :: MLL( nL, nL) 
+   REAL(FEKi),             INTENT(  IN)  :: MRL( nR, nL)
+   REAL(FEKi),             INTENT(  IN)  :: KRR( nR, nR)
+   REAL(FEKi),             INTENT(INOUT) :: KLL( nL, nL)  ! on exit, it has been factored (otherwise not changed)
+   REAL(FEKi),             INTENT(  IN)  :: KRL( nR, nL)
+   REAL(FEKi),             INTENT(  OUT) :: MBB( nR, nR)
+   REAL(FEKi),             INTENT(  OUT) :: MBM( nR, nM)
+   REAL(FEKi),             INTENT(  OUT) :: KBB( nR, nR)
+   REAL(FEKi),             INTENT(  OUT) :: PhiR(nL, nR)     !< Guyan Modes   
+   REAL(FEKi),             INTENT(  OUT) :: PhiL(nL, nM_Out) !< Craig-Bampton modes
+   REAL(FEKi),             INTENT(  OUT) :: OmegaL(nM_Out)   !< Eigenvalues
    INTEGER(IntKi),         INTENT(  OUT) :: ErrStat          !< Error status of the operation
    CHARACTER(*),           INTENT(  OUT) :: ErrMsg           !< Error message if ErrStat /= ErrID_None
-   REAL(ReKi), OPTIONAL,   INTENT(  IN)  :: CRR( nR, nR) !< Partitioned damping matrices
-   REAL(ReKi), OPTIONAL,   INTENT(  IN)  :: CLL( nL, nL) 
-   REAL(ReKi), OPTIONAL,   INTENT(  IN)  :: CRL( nR, nL)
-   REAL(ReKi), OPTIONAL,   INTENT(  OUT) :: CBB( nR, nR)  !< Guyan damping matrix
-   REAL(ReKi), OPTIONAL,   INTENT(  OUT) :: CBM( nR, nM)  !< Coupling damping matrix
-   REAL(ReKi), OPTIONAL,   INTENT(  OUT) :: CMM( nM, nM)  !< CB damping matrix
+   REAL(FEKi), OPTIONAL,   INTENT(  IN)  :: CRR( nR, nR) !< Partitioned damping matrices
+   REAL(FEKi), OPTIONAL,   INTENT(  IN)  :: CLL( nL, nL) 
+   REAL(FEKi), OPTIONAL,   INTENT(  IN)  :: CRL( nR, nL)
+   REAL(FEKi), OPTIONAL,   INTENT(  OUT) :: CBB( nR, nR)  !< Guyan damping matrix
+   REAL(FEKi), OPTIONAL,   INTENT(  OUT) :: CBM( nR, nM)  !< Coupling damping matrix
+   REAL(FEKi), OPTIONAL,   INTENT(  OUT) :: CMM( nM, nM)  !< CB damping matrix
    ! LOCAL VARIABLES
-   REAL(ReKi) , allocatable :: Mu(:, :)          ! matrix for normalization Mu(p%nDOFL, p%nDOFL) [bjj: made allocatable to try to avoid stack issues]
-   REAL(ReKi) , allocatable :: Temp(:, :)        ! temp matrix for intermediate steps [bjj: made allocatable to try to avoid stack issues]
-   REAL(ReKi) , allocatable :: PhiR_T_MLL(:,:)   ! PhiR_T_MLL(nR,nL) = transpose of PhiR * MLL (temporary storage)
+   REAL(FEKi) , allocatable :: Mu(:, :)          ! matrix for normalization Mu(p%nDOFL, p%nDOFL) [bjj: made allocatable to try to avoid stack issues]
+   REAL(FEKi) , allocatable :: Temp(:, :)        ! temp matrix for intermediate steps [bjj: made allocatable to try to avoid stack issues]
+   REAL(FEKi) , allocatable :: PhiR_T_MLL(:,:)   ! PhiR_T_MLL(nR,nL) = transpose of PhiR * MLL (temporary storage)
    INTEGER                  :: I        !counter
    INTEGER                  :: ipiv(nL) ! length min(m,n) (See LAPACK documentation)
    INTEGER(IntKi)           :: ErrStat2
@@ -520,9 +532,9 @@ SUBROUTINE CraigBamptonReduction_FromPartition( MRR, MLL, MRL, KRR, KLL, KRL, nR
          DEALLOCATE(Temp)
       endif
    else
-      PhiL   = 0.0_ReKi
-      OmegaL = 0.0_ReKi
-      if (present(CRR)) CMM  = 0.0_ReKi
+      PhiL   = 0.0_FEKi
+      OmegaL = 0.0_FEKi
+      if (present(CRR)) CMM  = 0.0_FEKi
    end if
 
    if (nL>0) then
@@ -531,7 +543,7 @@ SUBROUTINE CraigBamptonReduction_FromPartition( MRR, MLL, MRL, KRR, KLL, KRL, nR
       ! ** note this must be done after EigenSolveWrap() because it modifies KLL **
       CALL LAPACK_getrf( nL, nL, KLL, ipiv, ErrStat2, ErrMsg2); if(Failed()) return
       
-      PhiR = -1.0_ReKi * TRANSPOSE(KRL) !set "b" in Ax=b  (solve KLL * PhiR = - TRANSPOSE( KRL ) for PhiR)
+      PhiR = -1.0_FEKi * TRANSPOSE(KRL) !set "b" in Ax=b  (solve KLL * PhiR = - TRANSPOSE( KRL ) for PhiR)
       CALL LAPACK_getrs( TRANS='N', N=nL, A=KLL, IPIV=ipiv, B=PhiR, ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
       
       ! --- Set MBB, MBM, and KBB from Eq. 4:
@@ -543,7 +555,7 @@ SUBROUTINE CraigBamptonReduction_FromPartition( MRR, MLL, MRL, KRR, KLL, KRL, nR
       MBB = MRR + MBB + TRANSPOSE( MBB ) + MATMUL( PhiR_T_MLL, PhiR )
          
       IF ( nM == 0) THEN
-         MBM = 0.0_ReKi
+         MBM = 0.0_FEKi
       ELSE
          MBM = MATMUL( PhiR_T_MLL, PhiL(:,1:nM))  ! last half of operation
          MBM = MATMUL( MRL, PhiL(:,1:nM) ) + MBM    !This had PhiM      
@@ -561,21 +573,21 @@ SUBROUTINE CraigBamptonReduction_FromPartition( MRR, MLL, MRL, KRR, KLL, KRL, nR
          ! Cross coupling CMB = PhiM^T*CLR + PhiM^T CLL PhiR
          !                CBM = CRL*PhiM + PhiR^T CLL^T PhiM (NOTE: assuming CLL symmetric)
          IF ( nM == 0) THEN
-            CBM = 0.0_ReKi
-            CMM = 0.0_ReKi
+            CBM = 0.0_FEKi
+            CMM = 0.0_FEKi
          ELSE
             CBM = MATMUL( PhiR_T_MLL, PhiL(:,1:nM))  ! last half of operation
             CBM = MATMUL( CRL, PhiL(:,1:nM) ) + CBM    !This had PhiM      
          ENDIF
       endif
    else
-      PhiR(1:nL,1:nR) = 0.0_ReKi   ! Empty
-      MBM (1:nR,1:nM) = 0.0_ReKi ! Empty
+      PhiR(1:nL,1:nR) = 0.0_FEKi   ! Empty
+      MBM (1:nR,1:nM) = 0.0_FEKi ! Empty
       MBB = MRR
       KBB = KRR
       if (present(CRR)) then
          CBB=CRR
-         CBM=0.0_ReKi
+         CBM=0.0_FEKi
       endif
    endif
         
@@ -601,39 +613,39 @@ END SUBROUTINE CraigBamptonReduction_FromPartition
 !! Case2: K and M contain some constraints lines, and they need to be removed from the Mass/Stiffness matrix. Used for full system
 SUBROUTINE EigenSolveWrap(K, M, nDOF, NOmega,  bCheckSingularity, EigVect, Omega, ErrStat, ErrMsg, bDOF )
    INTEGER,                INTENT(IN   )    :: nDOF                               ! Total degrees of freedom of the incoming system
-   REAL(ReKi),             INTENT(IN   )    :: K(nDOF, nDOF)                      ! stiffness matrix 
-   REAL(ReKi),             INTENT(IN   )    :: M(nDOF, nDOF)                      ! mass matrix 
+   REAL(FEKi),             INTENT(IN   )    :: K(nDOF, nDOF)                      ! stiffness matrix 
+   REAL(FEKi),             INTENT(IN   )    :: M(nDOF, nDOF)                      ! mass matrix 
    INTEGER,                INTENT(IN   )    :: NOmega                             ! No. of requested eigenvalues
    LOGICAL,                INTENT(IN   )    :: bCheckSingularity                  ! If True, the solver will fail if rigid modes are present 
-   REAL(ReKi),             INTENT(  OUT)    :: EigVect(nDOF, NOmega)                  ! Returned Eigenvectors
-   REAL(ReKi),             INTENT(  OUT)    :: Omega(NOmega)                      ! Returned Eigenvalues
+   REAL(FEKi),             INTENT(  OUT)    :: EigVect(nDOF, NOmega)                  ! Returned Eigenvectors
+   REAL(FEKi),             INTENT(  OUT)    :: Omega(NOmega)                      ! Returned Eigenvalues
    INTEGER(IntKi),         INTENT(  OUT)    :: ErrStat                            ! Error status of the operation
    CHARACTER(*),           INTENT(  OUT)    :: ErrMsg                             ! Error message if ErrStat /= ErrID_None
    LOGICAL,   OPTIONAL,    INTENT(IN   )    :: bDOF(nDOF)                         ! Optinal Mask for DOF to keep (True), or reduce (False)
    
    ! LOCALS         
-   REAL(LAKi), ALLOCATABLE                   :: K_LaKi(:,:), M_LaKi(:,:) 
-   REAL(LAKi), ALLOCATABLE                   :: EigVect_LaKi(:,:), Omega2_LaKi(:) 
-   REAL(ReKi)                                :: Om2
+   REAL(FEKi), ALLOCATABLE                   :: K_FEKi(:,:), M_FEKi(:,:) 
+   REAL(FEKi), ALLOCATABLE                   :: EigVect_FEKi(:,:), Omega2_FEKi(:) 
+   REAL(FEKi)                                :: Om2
    INTEGER(IntKi)                            :: N, i
    INTEGER(IntKi)                            :: ErrStat2
    CHARACTER(ErrMsgLen)                      :: ErrMsg2
    ErrStat = ErrID_None
    ErrMsg  = ''
 
-   ! --- Unfortunate conversion to LaKi... TODO TODO consider storing M and K in LaKi
+   ! --- Unfortunate conversion to FEKi... TODO TODO consider storing M and K in FEKi
    if (present(bDOF)) then
       ! Remove unwanted DOFs
-      call RemoveDOF(M, bDOF, M_LaKi, ErrStat2, ErrMsg2); if(Failed()) return
-      call RemoveDOF(K, bDOF, K_LaKi, ErrStat2, ErrMsg2); if(Failed()) return
+      call RemoveDOF(M, bDOF, M_FEKi, ErrStat2, ErrMsg2); if(Failed()) return
+      call RemoveDOF(K, bDOF, K_FEKi, ErrStat2, ErrMsg2); if(Failed()) return
    else
       N=size(K,1)
-      CALL AllocAry(K_LaKi      , N, N, 'K_LaKi',    ErrStat2, ErrMsg2); if(Failed()) return
-      CALL AllocAry(M_LaKi      , N, N, 'M_LaKi',    ErrStat2, ErrMsg2); if(Failed()) return
-      K_LaKi = real( K, LaKi )
-      M_LaKi = real( M, LaKi )
+      CALL AllocAry(K_FEKi      , N, N, 'K_FEKi',    ErrStat2, ErrMsg2); if(Failed()) return
+      CALL AllocAry(M_FEKi      , N, N, 'M_FEKi',    ErrStat2, ErrMsg2); if(Failed()) return
+      K_FEKi = real( K, FEKi )
+      M_FEKi = real( M, FEKi )
    endif
-   N=size(K_LaKi,1)
+   N=size(K_FEKi,1)
 
    ! Note:  NOmega must be <= N, which is the length of Omega2, Phi!
    if ( NOmega > nDOF ) then
@@ -644,19 +656,19 @@ SUBROUTINE EigenSolveWrap(K, M, nDOF, NOmega,  bCheckSingularity, EigVect, Omega
 
 
    ! --- Eigenvalue analysis
-   CALL AllocAry(Omega2_LaKi , N,    'Omega',   ErrStat2, ErrMsg2); if(Failed()) return;
-   CALL AllocAry(EigVect_LaKi, N, N, 'EigVect', ErrStat2, ErrMsg2); if(Failed()) return;
-   CALL EigenSolve(K_LaKi, M_LaKi, N, EigVect_LaKi, Omega2_LaKi, ErrStat2, ErrMsg2 ); if (Failed()) return;
+   CALL AllocAry(Omega2_FEKi , N,    'Omega',   ErrStat2, ErrMsg2); if(Failed()) return;
+   CALL AllocAry(EigVect_FEKi, N, N, 'EigVect', ErrStat2, ErrMsg2); if(Failed()) return;
+   CALL EigenSolve(K_FEKi, M_FEKi, N, bCheckSingularity, EigVect_FEKi, Omega2_FEKi, ErrStat2, ErrMsg2 ); if (Failed()) return;
 
    ! --- Setting up Phi, and type conversion
    do i = 1, NOmega
-      if (abs(Omega2_LaKi(i))>huge(1.0_ReKi)) then
-         Om2 = huge(1.0_ReKi) * sign(1.0_LaKi, Omega2_LaKi(i))
+      if (abs(Omega2_FEKi(i))>huge(1.0_ReKi)) then
+         Om2 = huge(1.0_ReKi) * sign(1.0_FEKi, Omega2_FEKi(i))
       else
-         Om2 = real(Omega2_LaKi(i), ReKi)  
+         Om2 = real(Omega2_FEKi(i), FEKi)  
       endif
-      if (EqualRealNos(Om2, 0.0_ReKi)) then  ! NOTE: may be necessary for some corner numerics
-         Omega(i)=0.0_ReKi
+      if (EqualRealNos(Om2, 0.0_FEKi)) then  ! NOTE: may be necessary for some corner numerics
+         Omega(i)=0.0_FEKi
          if (bCheckSingularity) then
             ErrStat2=ErrID_Fatal
             ErrMsg2= 'Zero eigenvalue found, system may be singular (may contain rigid body modes)'
@@ -667,7 +679,7 @@ SUBROUTINE EigenSolveWrap(K, M, nDOF, NOmega,  bCheckSingularity, EigVect, Omega
       else
          ! Negative eigenfrequency
          print*,'>>> Wrong eigenfrequency, Omega^2=',Om2
-         Omega(i)= 0.0_ReKi 
+         Omega(i)= 0.0_FEKi 
          if (bCheckSingularity) then
             ErrStat2=ErrID_Fatal
             ErrMsg2= 'Negative eigenvalue found, system may be singular (may contain rigid body modes)'
@@ -677,9 +689,9 @@ SUBROUTINE EigenSolveWrap(K, M, nDOF, NOmega,  bCheckSingularity, EigVect, Omega
    enddo
    if (present(bDOF)) then
       ! Insert 0s where bDOF was false
-      CALL InsertDOFRows(EigVect_LaKi(:,1:nOmega), bDOF, 0.0_ReKi, EigVect, ErrStat2, ErrMsg2 ); if(Failed()) return
+      CALL InsertDOFRows(EigVect_FEKi(:,1:nOmega), bDOF, 0.0_FEKi, EigVect, ErrStat2, ErrMsg2 ); if(Failed()) return
    else
-      EigVect=REAL( EigVect_LaKi(:,1:NOmega), ReKi )   ! eigenvectors
+      EigVect=REAL( EigVect_FEKi(:,1:NOmega), FEKi )   ! eigenvectors
    endif
    CALL CleanupEigen()
    return
@@ -691,19 +703,19 @@ CONTAINS
    END FUNCTION Failed
 
    SUBROUTINE CleanupEigen()
-      IF (ALLOCATED(Omega2_LaKi) ) DEALLOCATE(Omega2_LaKi) 
-      IF (ALLOCATED(EigVect_LaKi)) DEALLOCATE(EigVect_LaKi)
-      IF (ALLOCATED(K_LaKi)      ) DEALLOCATE(K_LaKi)
-      IF (ALLOCATED(M_LaKi)      ) DEALLOCATE(M_LaKi)
+      IF (ALLOCATED(Omega2_FEKi) ) DEALLOCATE(Omega2_FEKi) 
+      IF (ALLOCATED(EigVect_FEKi)) DEALLOCATE(EigVect_FEKi)
+      IF (ALLOCATED(K_FEKi)      ) DEALLOCATE(K_FEKi)
+      IF (ALLOCATED(M_FEKi)      ) DEALLOCATE(M_FEKi)
    END SUBROUTINE CleanupEigen
   
 END SUBROUTINE EigenSolveWrap
 !------------------------------------------------------------------------------------------------------
 !> Remove degrees of freedom from a matrix (lines and rows)
 SUBROUTINE RemoveDOF(A, bDOF, Ared, ErrStat, ErrMsg )
-   REAL(ReKi),             INTENT(IN   ) :: A(:, :)        ! full matrix
+   REAL(FEKi),             INTENT(IN   ) :: A(:, :)        ! full matrix
    logical,                INTENT(IN   ) :: bDOF(:)        ! Array of logical specifying whether a DOF is to be kept(True), or removed (False)
-   REAL(LAKi),ALLOCATABLE, INTENT(  OUT) :: Ared(:,:)      ! reduced matrix
+   REAL(FEKi),ALLOCATABLE, INTENT(  OUT) :: Ared(:,:)      ! reduced matrix
    INTEGER(IntKi),         INTENT(  OUT) :: ErrStat        ! Error status of the operation
    CHARACTER(*),           INTENT(  OUT) :: ErrMsg         ! Error message if ErrStat /= ErrID_None
    !locals
@@ -725,7 +737,7 @@ SUBROUTINE RemoveDOF(A, bDOF, Ared, ErrStat, ErrMsg )
          do I = 1, size(A,1)
             if (bDOF(I)) then
                Ir=Ir+1
-               Ared(Ir, Jr) = REAL( A(I, J), LAKi )
+               Ared(Ir, Jr) = REAL( A(I, J), FEKi )
             end if
          end do
       endif
@@ -734,10 +746,10 @@ END SUBROUTINE RemoveDOF
 
 !> Expand a matrix to includes rows where bDOF is False (inverse behavior as RemoveDOF)
 SUBROUTINE InsertDOFrows(Ared, bDOF, DefaultVal, A, ErrStat, ErrMsg )
-   REAL(LAKi),             INTENT(IN   ) :: Ared(:, :)     ! Reduced matrix
+   REAL(FEKi),             INTENT(IN   ) :: Ared(:, :)     ! Reduced matrix
    logical,                INTENT(IN   ) :: bDOF(:)        ! Array of logical specifying whether a DOF is to be kept(True), or removed (False)
-   REAL(ReKi),             INTENT(IN   ) :: DefaultVal     ! Default value to fill the 
-   REAL(ReKi)            , INTENT(INOUT) :: A(:,:)         ! Full matrix
+   REAL(FEKi),             INTENT(IN   ) :: DefaultVal     ! Default value to fill the 
+   REAL(FEKi)            , INTENT(INOUT) :: A(:,:)         ! Full matrix
    INTEGER(IntKi),         INTENT(  OUT) :: ErrStat        ! Error status of the operation
    CHARACTER(*),           INTENT(  OUT) :: ErrMsg         ! Error message if ErrStat /= ErrID_None
    !locals
@@ -764,7 +776,7 @@ SUBROUTINE InsertDOFrows(Ared, bDOF, DefaultVal, A, ErrStat, ErrMsg )
    do i=1,n
       if (bDOF(i)) then
          ir =ir +1
-         A(i,:)=real( Ared(ir,:), ReKi ) 
+         A(i,:)=Ared(ir,:)
       else
          A(i,:)=DefaultVal
       endif   
@@ -874,13 +886,13 @@ END SUBROUTINE GetRigidTransformation
 !!
 !! bjj: note that this is the transpose of what is normally considered the Direction Cosine Matrix  
 !!      in the FAST framework.
-SUBROUTINE GetDirCos(P1, P2, DirCos, L, ErrStat, ErrMsg)
+SUBROUTINE GetDirCos(P1, P2, DirCos, L_out, ErrStat, ErrMsg)
    REAL(ReKi) ,      INTENT(IN   )  :: P1(3), P2(3)      ! (x,y,z) global positions of two nodes making up an element
-   REAL(ReKi) ,      INTENT(  OUT)  :: DirCos(3, 3)      ! calculated direction cosine matrix
-   REAL(ReKi) ,      INTENT(  OUT)  :: L                 ! length of element
+   REAL(FEKi) ,      INTENT(  OUT)  :: DirCos(3, 3)      ! calculated direction cosine matrix
+   REAL(ReKi) ,      INTENT(  OUT)  :: L_out             ! length of element
    INTEGER(IntKi),   INTENT(  OUT)  :: ErrStat           ! Error status of the operation
    CHARACTER(*),     INTENT(  OUT)  :: ErrMsg            ! Error message if ErrStat /= ErrID_None
-   REAL(ReKi)                       :: Dx, Dy, Dz, Dxy   ! distances between nodes
+   REAL(FEKi)                       :: Dx, Dy, Dz, Dxy,L! distances between nodes
    ErrMsg  = ""
    ErrStat = ErrID_None
    
@@ -890,18 +902,18 @@ SUBROUTINE GetDirCos(P1, P2, DirCos, L, ErrStat, ErrMsg)
    Dxy = sqrt( Dx**2 + Dy**2 )
    L   = sqrt( Dx**2 + Dy**2 + Dz**2)
    
-   IF ( EqualRealNos(L, 0.0_ReKi) ) THEN
+   IF ( EqualRealNos(L, 0.0_FEKi) ) THEN
       ErrMsg = ' Same starting and ending location in the element.'
       ErrStat = ErrID_Fatal
       RETURN
    ENDIF
    
-   IF ( EqualRealNos(Dxy, 0.0_ReKi) ) THEN 
-      DirCos=0.0_ReKi    ! whole matrix set to 0
+   IF ( EqualRealNos(Dxy, 0.0_FEKi) ) THEN 
+      DirCos=0.0_FEKi    ! whole matrix set to 0
       IF ( Dz < 0) THEN  !x is kept along global x
-         DirCos(1, 1) =  1.0_ReKi
-         DirCos(2, 2) = -1.0_ReKi
-         DirCos(3, 3) = -1.0_ReKi
+         DirCos(1, 1) =  1.0_FEKi
+         DirCos(2, 2) = -1.0_FEKi
+         DirCos(3, 3) = -1.0_FEKi
       ELSE
          DirCos(1, 1) = 1.0_ReKi
          DirCos(2, 2) = 1.0_ReKi
@@ -916,10 +928,11 @@ SUBROUTINE GetDirCos(P1, P2, DirCos, L, ErrStat, ErrMsg)
       DirCos(2, 2) = +Dz*Dy/(L*Dxy)
       DirCos(2, 3) =  Dy/L
      
-      DirCos(3, 1) = 0.0_ReKi
+      DirCos(3, 1) = 0.0_FEKi
       DirCos(3, 2) = -Dxy/L
       DirCos(3, 3) = +Dz/L
    ENDIF
+   L_out= real(L, ReKi)
 
 END SUBROUTINE GetDirCos
 !------------------------------------------------------------------------------------------------------
@@ -962,36 +975,36 @@ END SUBROUTINE GetOrthVectors
 !! shear is false -- non-tapered Euler-Bernoulli beam 
 SUBROUTINE ElemK_Beam(A, L, Ixx, Iyy, Jzz, Shear, kappa, E, G, DirCos, K)
    REAL(ReKi), INTENT( IN) :: A, L, Ixx, Iyy, Jzz, E, G, kappa
-   REAL(ReKi), INTENT( IN) :: DirCos(3,3) !< From element to global: xg = DC.xe,  Kg = DC.Ke.DC^t
+   REAL(FEKi), INTENT( IN) :: DirCos(3,3) !< From element to global: xg = DC.xe,  Kg = DC.Ke.DC^t
    LOGICAL   , INTENT( IN) :: Shear
-   REAL(ReKi), INTENT(OUT) :: K(12, 12) 
+   REAL(FEKi), INTENT(OUT) :: K(12, 12) 
    ! Local variables
-   REAL(ReKi)                            :: Ax, Ay, Kx, Ky
-   REAL(ReKi)                            :: DC(12, 12)
+   REAL(FEKi)                            :: Ax, Ay, Kx, Ky
+   REAL(FEKi)                            :: DC(12, 12)
    
    Ax = kappa*A
    Ay = kappa*A
    
-   K(1:12,1:12) = 0.0_ReKi
+   K(1:12,1:12) = 0.0_FEKi
    
    IF (Shear) THEN
-      Kx = 12.0_ReKi*E*Iyy / (G*Ax*L*L)
-      Ky = 12.0_ReKi*E*Ixx / (G*Ay*L*L)
+      Kx = 12.0_FEKi*E*Iyy / (G*Ax*L*L)
+      Ky = 12.0_FEKi*E*Ixx / (G*Ay*L*L)
    ELSE
-      Kx = 0.0_ReKi
-      Ky = 0.0_ReKi
+      Kx = 0.0_FEKi
+      Ky = 0.0_FEKi
    ENDIF
       
    K( 9,  9) = E*A/L
-   K( 7,  7) = 12.0_ReKi*E*Iyy/( L*L*L*(1.0_ReKi + Kx) )
-   K( 8,  8) = 12.0_ReKi*E*Ixx/( L*L*L*(1.0_ReKi + Ky) )
+   K( 7,  7) = 12.0_FEKi*E*Iyy/( L*L*L*(1.0_FEKi + Kx) )
+   K( 8,  8) = 12.0_FEKi*E*Ixx/( L*L*L*(1.0_FEKi + Ky) )
    K(12, 12) = G*Jzz/L
-   K(10, 10) = (4.0_ReKi + Ky)*E*Ixx / ( L*(1.0_ReKi+Ky) )  
-   K(11, 11) = (4.0_ReKi + Kx)*E*Iyy / ( L*(1.0_ReKi+Kx) )
-   K( 2,  4) = -6._ReKi*E*Ixx / ( L*L*(1.0_ReKi+Ky) )
-   K( 1,  5) =  6._ReKi*E*Iyy / ( L*L*(1.0_ReKi+Kx) )
-   K( 4, 10) = (2.0_ReKi-Ky)*E*Ixx / ( L*(1.0_ReKi+Ky) )
-   K( 5, 11) = (2.0_ReKi-Kx)*E*Iyy / ( L*(1.0_ReKi+Kx) )
+   K(10, 10) = (4.0_FEKi + Ky)*E*Ixx / ( L*(1.0_FEKi+Ky) )  
+   K(11, 11) = (4.0_FEKi + Kx)*E*Iyy / ( L*(1.0_FEKi+Kx) )
+   K( 2,  4) = -6._FEKi*E*Ixx / ( L*L*(1.0_FEKi+Ky) )
+   K( 1,  5) =  6._FEKi*E*Iyy / ( L*L*(1.0_FEKi+Kx) )
+   K( 4, 10) = (2.0_FEKi-Ky)*E*Ixx / ( L*(1.0_FEKi+Ky) )
+   K( 5, 11) = (2.0_FEKi-Kx)*E*Iyy / ( L*(1.0_FEKi+Kx) )
    
    K( 3,  3)  = K(9,9)
    K( 1,  1)  = K(7,7)
@@ -1024,7 +1037,7 @@ SUBROUTINE ElemK_Beam(A, L, Ixx, Iyy, Jzz, Shear, kappa, E, G, DirCos, K)
    K(8,4) = -K(4,2)
    K(4,8) = -K(4,2)
    
-   DC = 0.0_ReKi
+   DC = 0.0_FEKi
    DC( 1: 3,  1: 3) = DirCos
    DC( 4: 6,  4: 6) = DirCos
    DC( 7: 9,  7: 9) = DirCos
@@ -1039,18 +1052,18 @@ END SUBROUTINE ElemK_Beam
 SUBROUTINE ElemK_Cable(A, L, E, T0, DirCos, K)
    REAL(ReKi), INTENT( IN) :: A, L, E
    REAL(ReKi), INTENT( IN) :: T0 ! Pretension [N]
-   REAL(ReKi), INTENT( IN) :: DirCos(3,3) !< From element to global: xg = DC.xe,  Kg = DC.Ke.DC^t
-   REAL(ReKi), INTENT(OUT) :: K(12, 12) 
+   REAL(FEKi), INTENT( IN) :: DirCos(3,3) !< From element to global: xg = DC.xe,  Kg = DC.Ke.DC^t
+   REAL(FEKi), INTENT(OUT) :: K(12, 12) 
    ! Local variables
-   REAL(ReKi) :: L0, Eps0, EAL0, EE
-   REAL(ReKi) :: DC(12, 12)
+   REAL(FEKi) :: L0, Eps0, EAL0, EE
+   REAL(FEKi) :: DC(12, 12)
 
    Eps0 = T0/(E*A)
    L0   = L/(1+Eps0)  ! "rest length" for which pretension would be 0
    EAL0 = E*A/L0
    EE   = EAL0* Eps0/(1+Eps0)
 
-   K(1:12,1:12)=0.0_ReKi
+   K(1:12,1:12)=0.0_FEKi
 
    ! Note: only translational DOF involved (1-3, 7-9)
    K(1,1)= EE
@@ -1070,7 +1083,7 @@ SUBROUTINE ElemK_Cable(A, L, E, T0, DirCos, K)
    K(9,9)= EAL0
 
 
-   DC = 0.0_ReKi
+   DC = 0.0_FEKi
    DC( 1: 3,  1: 3) = DirCos
    DC( 4: 6,  4: 6) = DirCos
    DC( 7: 9,  7: 9) = DirCos
@@ -1082,39 +1095,39 @@ END SUBROUTINE ElemK_Cable
 !> Element mass matrix for classical beam elements
 SUBROUTINE ElemM_Beam(A, L, Ixx, Iyy, Jzz, rho, DirCos, M)
    REAL(ReKi), INTENT( IN) :: A, L, Ixx, Iyy, Jzz, rho
-   REAL(ReKi), INTENT( IN) :: DirCos(3,3) !< From element to global: xg = DC.xe,  Kg = DC.Ke.DC^t
-   REAL(ReKi), INTENT(OUT) :: M(12, 12)
+   REAL(FEKi), INTENT( IN) :: DirCos(3,3) !< From element to global: xg = DC.xe,  Kg = DC.Ke.DC^t
+   REAL(FEKi), INTENT(OUT) :: M(12, 12)
 
-   REAL(ReKi) :: t, rx, ry, po
-   REAL(ReKi) :: DC(12, 12)
+   REAL(FEKi) :: t, rx, ry, po
+   REAL(FEKi) :: DC(12, 12)
    
    t = rho*A*L;
    rx = rho*Ixx;
    ry = rho*Iyy;
    po = rho*Jzz*L;   
 
-   M(1:12,1:12) = 0.0_ReKi
+   M(1:12,1:12) = 0.0_FEKi
       
-   M( 9,  9) = t/3.0_ReKi
-   M( 7,  7) = 13.0_ReKi*t/35.0_ReKi + 6.0_ReKi*ry/(5.0_ReKi*L)
-   M( 8,  8) = 13.0_ReKi*t/35.0_ReKi + 6.0_ReKi*rx/(5.0_ReKi*L)
-   M(12, 12) = po/3.0_ReKi
-   M(10, 10) = t*L*L/105.0_ReKi + 2.0_ReKi*L*rx/15.0_ReKi
-   M(11, 11) = t*L*L/105.0_ReKi + 2.0_ReKi*L*ry/15.0_ReKi
-   M( 2,  4) = -11.0_ReKi*t*L/210.0_ReKi - rx/10.0_ReKi
-   M( 1,  5) =  11.0_ReKi*t*L/210.0_ReKi + ry/10.0_ReKi
-   M( 3,  9) = t/6.0_ReKi
-   M( 5,  7) =  13._ReKi*t*L/420._ReKi - ry/10._ReKi
-   M( 4,  8) = -13._ReKi*t*L/420._ReKi + rx/10._ReKi
-   M( 6, 12) = po/6._ReKi
-   M( 2, 10) =  13._ReKi*t*L/420._ReKi - rx/10._ReKi
-   M( 1, 11) = -13._ReKi*t*L/420._ReKi + ry/10._ReKi
-   M( 8, 10) =  11._ReKi*t*L/210._ReKi + rx/10._ReKi
-   M( 7, 11) = -11._ReKi*t*L/210._ReKi - ry/10._ReKi
-   M( 1,  7) =  9._ReKi*t/70._ReKi - 6._ReKi*ry/(5._ReKi*L)
-   M( 2,  8) =  9._ReKi*t/70._ReKi - 6._ReKi*rx/(5._ReKi*L)
-   M( 4, 10) = -L*L*t/140._ReKi - rx*L/30._ReKi 
-   M( 5, 11) = -L*L*t/140._ReKi - ry*L/30._ReKi
+   M( 9,  9) = t/3.0_FEKi
+   M( 7,  7) = 13.0_FEKi*t/35.0_FEKi + 6.0_FEKi*ry/(5.0_FEKi*L)
+   M( 8,  8) = 13.0_FEKi*t/35.0_FEKi + 6.0_FEKi*rx/(5.0_FEKi*L)
+   M(12, 12) = po/3.0_FEKi
+   M(10, 10) = t*L*L/105.0_FEKi + 2.0_FEKi*L*rx/15.0_FEKi
+   M(11, 11) = t*L*L/105.0_FEKi + 2.0_FEKi*L*ry/15.0_FEKi
+   M( 2,  4) = -11.0_FEKi*t*L/210.0_FEKi - rx/10.0_FEKi
+   M( 1,  5) =  11.0_FEKi*t*L/210.0_FEKi + ry/10.0_FEKi
+   M( 3,  9) = t/6.0_FEKi
+   M( 5,  7) =  13._FEKi*t*L/420._FEKi - ry/10._FEKi
+   M( 4,  8) = -13._FEKi*t*L/420._FEKi + rx/10._FEKi
+   M( 6, 12) = po/6._FEKi
+   M( 2, 10) =  13._FEKi*t*L/420._FEKi - rx/10._FEKi
+   M( 1, 11) = -13._FEKi*t*L/420._FEKi + ry/10._FEKi
+   M( 8, 10) =  11._FEKi*t*L/210._FEKi + rx/10._FEKi
+   M( 7, 11) = -11._FEKi*t*L/210._FEKi - ry/10._FEKi
+   M( 1,  7) =  9._FEKi*t/70._FEKi - 6._FEKi*ry/(5._FEKi*L)
+   M( 2,  8) =  9._FEKi*t/70._FEKi - 6._FEKi*rx/(5._FEKi*L)
+   M( 4, 10) = -L*L*t/140._FEKi - rx*L/30._FEKi 
+   M( 5, 11) = -L*L*t/140._FEKi - ry*L/30._FEKi
    
    M( 3,  3) = M( 9,  9)
    M( 1,  1) = M( 7,  7)
@@ -1137,7 +1150,7 @@ SUBROUTINE ElemM_Beam(A, L, Ixx, Iyy, Jzz, rho, DirCos, M)
    M(10,  4) = M( 4, 10)
    M(11,  5) = M( 5, 11)
    
-   DC = 0.0_ReKi
+   DC = 0.0_FEKi
    DC( 1: 3,  1: 3) = DirCos
    DC( 4: 6,  4: 6) = DirCos
    DC( 7: 9,  7: 9) = DirCos
@@ -1149,34 +1162,35 @@ END SUBROUTINE ElemM_Beam
 !------------------------------------------------------------------------------------------------------
 !> Element stiffness matrix for pretension cable
 SUBROUTINE ElemM_Cable(A, L, rho, DirCos, M)
-   REAL(ReKi), INTENT( IN) :: A, L, rho
-   REAL(ReKi), INTENT( IN) :: DirCos(3,3) !< From element to global: xg = DC.xe,  Kg = DC.Ke.DC^t
-   REAL(ReKi), INTENT(OUT) :: M(12, 12) 
+   REAL(ReKi), INTENT( IN) :: A,rho
+   REAL(FEKi), INTENT( IN) :: L
+   REAL(FEKi), INTENT( IN) :: DirCos(3,3) !< From element to global: xg = DC.xe,  Kg = DC.Ke.DC^t
+   REAL(FEKi), INTENT(OUT) :: M(12, 12) 
    ! Local variables
-   REAL(ReKi) :: DC(12, 12)
-   REAL(ReKi) :: t
+   REAL(FEKi) :: DC(12, 12)
+   REAL(FEKi) :: t
 
    t = rho*A*L;
 
-   M(1:12,1:12) = 0.0_ReKi
+   M(1:12,1:12) = 0.0_FEKi
 
-   M( 1,  1) = 13._ReKi/35._ReKi * t
-   M( 2,  2) = 13._ReKi/35._ReKi * t
-   M( 3,  3) = t/3.0_ReKi
+   M( 1,  1) = 13._FEKi/35._FEKi * t
+   M( 2,  2) = 13._FEKi/35._FEKi * t
+   M( 3,  3) = t/3.0_FEKi
 
-   M( 7,  7) = 13._ReKi/35._ReKi * t
-   M( 8,  8) = 13._ReKi/35._ReKi * t
-   M( 9,  9) = t/3.0_ReKi
+   M( 7,  7) = 13._FEKi/35._FEKi * t
+   M( 8,  8) = 13._FEKi/35._FEKi * t
+   M( 9,  9) = t/3.0_FEKi
 
-   M( 1,  7) =  9._ReKi/70._ReKi * t
-   M( 2,  8) =  9._ReKi/70._ReKi * t
-   M( 3,  9) = t/6.0_ReKi
+   M( 1,  7) =  9._FEKi/70._FEKi * t
+   M( 2,  8) =  9._FEKi/70._FEKi * t
+   M( 3,  9) = t/6.0_FEKi
 
-   M( 7,  1) =  9._ReKi/70._ReKi * t 
-   M( 8,  2) =  9._ReKi/70._ReKi * t
-   M( 9,  3) = t/6.0_ReKi
+   M( 7,  1) =  9._FEKi/70._FEKi * t 
+   M( 8,  2) =  9._FEKi/70._FEKi * t
+   M( 9,  3) = t/6.0_FEKi
    
-   DC = 0.0_ReKi
+   DC = 0.0_FEKi
    DC( 1: 3,  1: 3) = DirCos
    DC( 4: 6,  4: 6) = DirCos
    DC( 7: 9,  7: 9) = DirCos
@@ -1193,25 +1207,25 @@ SUBROUTINE ElemG(A, L, rho, DirCos, F, g)
    REAL(ReKi), INTENT( IN ) :: A     !< area
    REAL(ReKi), INTENT( IN ) :: L     !< element length
    REAL(ReKi), INTENT( IN ) :: rho   !< density
-   REAL(ReKi), INTENT( IN)  :: DirCos(3,3)      !< From element to global: xg = DC.xe,  Kg = DC.Ke.DC^t
+   REAL(FEKi), INTENT( IN)  :: DirCos(3,3)      !< From element to global: xg = DC.xe,  Kg = DC.Ke.DC^t
    REAL(ReKi), INTENT( IN ) :: g     !< gravity
-   REAL(ReKi), INTENT( OUT) :: F(12) !< returned loads. positions 1-6 are the loads for node 1 ; 7-12 are loads for node 2.
-   REAL(ReKi) :: TempCoeff
-   REAL(ReKi) :: w            ! weight per unit length
+   REAL(FEKi), INTENT( OUT) :: F(12) !< returned loads. positions 1-6 are the loads for node 1 ; 7-12 are loads for node 2.
+   REAL(FEKi) :: TempCoeff
+   REAL(FEKi) :: w            ! weight per unit length
    
-   F = 0.0_ReKi      ! initialize whole array to zero, then set the non-zero portions
+   F = 0.0_FEKi      ! initialize whole array to zero, then set the non-zero portions
    w = rho*A*g       ! weight per unit length
    
    ! lumped forces on both nodes (z component only):
-   F(3) = -0.5_ReKi*L*w 
+   F(3) = -0.5_FEKi*L*w 
    F(9) = F(3)
           
    ! lumped moments on node 1 (x and y components only):
    ! bjj: note that RRD wants factor of 1/12 because of boundary conditions. Our MeshMapping routines use factor of 1/6 (assuming generic/different boundary  
    !      conditions), so we may have some inconsistent behavior. JMJ suggests using line2 elements for SubDyn's input/output meshes to improve the situation.
-   TempCoeff = L*L*w/12.0_ReKi ! let's not calculate this twice  
-   F(4) = -TempCoeff * DirCos(2,3) ! = -L*w*Dy/12._ReKi   !bjj: DirCos(2,3) = Dy/L
-   F(5) =  TempCoeff * DirCos(1,3) ! =  L*w*Dx/12._ReKi   !bjj: DirCos(1,3) = Dx/L
+   TempCoeff = L*L*w/12.0_FEKi ! let's not calculate this twice  
+   F(4) = -TempCoeff * DirCos(2,3) ! = -L*w*Dy/12._FEKi   !bjj: DirCos(2,3) = Dy/L
+   F(5) =  TempCoeff * DirCos(1,3) ! =  L*w*Dx/12._FEKi   !bjj: DirCos(1,3) = Dx/L
 
       ! lumped moments on node 2: (note the opposite sign of node 1 moment)
    F(10) = -F(4)
@@ -1223,16 +1237,16 @@ END SUBROUTINE ElemG
 !> 
 SUBROUTINE ElemF_Cable(T0, DirCos, F)
    REAL(ReKi), INTENT( IN ) :: T0          !< Pretension load [N]
-   REAL(ReKi), INTENT( IN)  :: DirCos(3,3) !< From element to global: xg = DC.xe,  Kg = DC.Ke.DC^t
-   REAL(ReKi), INTENT( OUT) :: F(12)       !< returned loads. 1-6 for node 1; 7-12 for node 2.
+   REAL(FEKi), INTENT( IN)  :: DirCos(3,3) !< From element to global: xg = DC.xe,  Kg = DC.Ke.DC^t
+   REAL(FEKi), INTENT( OUT) :: F(12)       !< returned loads. 1-6 for node 1; 7-12 for node 2.
    ! Local variables
-   REAL(ReKi) :: DC(12, 12)
+   REAL(FEKi) :: DC(12, 12)
 
-   F(1:12) = 0.0_ReKi  ! init 
+   F(1:12) = 0.0_FEKi  ! init 
    F(3) = +T0  
    F(9) = -T0 
 
-   DC = 0.0_ReKi
+   DC = 0.0_FEKi
    DC( 1: 3,  1: 3) = DirCos
    DC( 4: 6,  4: 6) = DirCos
    DC( 7: 9,  7: 9) = DirCos
@@ -1295,16 +1309,16 @@ END SUBROUTINE LumpForces
 !     perform lapack GESVD and then  pinv(A) = V*(inv(S))*U'
 SUBROUTINE PseudoInverse(A, Ainv, ErrStat, ErrMsg)
    use NWTC_LAPACK, only: LAPACK_DGESVD, LAPACK_GEMM
-   real(LaKi), dimension(:,:), intent(in)  :: A
-   real(LaKi), dimension(:,:), allocatable :: Ainv
+   real(FEKi), dimension(:,:), intent(in)  :: A
+   real(FEKi), dimension(:,:), allocatable :: Ainv
    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat       ! < Error status of the operation
    CHARACTER(*),    INTENT(  OUT) :: ErrMsg        ! < Error message if ErrStat /    = ErrID_None
    !
-   real(LaKi), dimension(:),   allocatable :: S
-   real(LaKi), dimension(:,:), allocatable :: U
-   real(LaKi), dimension(:,:), allocatable :: Vt
-   real(LaKi), dimension(:),   allocatable :: WORK
-   real(LaKi), dimension(:,:), allocatable :: Acopy
+   real(FEKi), dimension(:),   allocatable :: S
+   real(FEKi), dimension(:,:), allocatable :: U
+   real(FEKi), dimension(:,:), allocatable :: Vt
+   real(FEKi), dimension(:),   allocatable :: WORK
+   real(FEKi), dimension(:,:), allocatable :: Acopy
    integer :: i, j ! Loop indices
    integer :: M !< The number of rows of the input matrix A
    integer :: N !< The number of columns of the input matrix A
@@ -1338,7 +1352,7 @@ SUBROUTINE PseudoInverse(A, Ainv, ErrStat, ErrMsg)
    end do
    ! Compute Ainv = 1.0*V^t * U^t + 0.0*Ainv     V*(inv(S))*U' 
    !call DGEMM( 'T', 'T', N, M, K, 1.0, V, K, U, M, 0.0, Ainv, N)
-   call LAPACK_GEMM( 'T', 'T', 1.0_Laki, Vt, U, 0.0_LaKi, Ainv, ErrStat, ErrMsg)
+   call LAPACK_GEMM( 'T', 'T', 1.0_FEKi, Vt, U, 0.0_FEKi, Ainv, ErrStat, ErrMsg)
    ! --- Compute rank
    !tol=maxval(shape(A))*epsilon(maxval(S))
    !rank=0

@@ -17,7 +17,9 @@ module SubDyn_Tests
     interface test_almost_equal; module procedure &
           test_almost_equal_0, &
           test_almost_equal_1, &
-          test_almost_equal_2
+          test_almost_equal_1d, &
+          test_almost_equal_2,  &
+          test_almost_equal_2d  
     end interface
 contains
 
@@ -145,20 +147,57 @@ contains
     subroutine  test_almost_equal_1(Var,VecRef,VecTry,MINNORM,bStop,bPrint,bPassed)
         ! Arguments
         character(len=*), intent(in) :: Var
-        real(ReKi), dimension(:), intent(in) :: VecRef         !< 
-        real(ReKi), dimension(:), intent(in) :: VecTry         !< 
-        real(ReKi), intent(in) :: MINNORM
+        real(SiKi), dimension(:), intent(in) :: VecRef         !< 
+        real(SiKi), dimension(:), intent(in) :: VecTry         !< 
+        real(SiKi), intent(in) :: MINNORM
         logical, intent(in) :: bStop
         logical, intent(in) :: bPrint
         logical, intent(out),optional :: bPassed
         ! Variables
         character(len=255) :: InfoAbs
         integer :: i,cpt
-        real(ReKi) :: delta
-        real(ReKi) :: delta_cum
+        real(SiKi) :: delta
+        real(SiKi) :: delta_cum
         ! 
         cpt=0
-        delta_cum=0.0_ReKi
+        delta_cum=0.0_SiKi
+        do i=1,size(VecRef,1)
+            delta=abs(VecRef(i)-VecTry(i))
+            delta_cum=delta_cum+delta
+            if(delta>MINNORM) then
+                cpt=cpt+1
+            endif
+        enddo
+        delta_cum=delta_cum/size(VecRef)
+
+        if(cpt>0) then
+            write(InfoAbs,'(A,ES8.1E2,A,ES8.1E2,A,I0)') trim(Var)//' tol: ',MINNORM,', mean: ',delta_cum,' - Failed:',cpt
+            call test_fail(InfoAbs,bPrint,bStop)
+        else
+            write(InfoAbs,'(A,ES8.1E2,A,ES8.1E2)') trim(Var)//' tol: ',MINNORM,', mean: ',delta_cum
+            call test_success(InfoAbs,bPrint)
+        endif
+        if(present(bPassed)) then
+            bPassed=(cpt==0)
+        endif
+    end subroutine
+    subroutine  test_almost_equal_1d(Var,VecRef,VecTry,MINNORM,bStop,bPrint,bPassed)
+        ! Arguments
+        character(len=*), intent(in) :: Var
+        real(R8Ki), dimension(:), intent(in) :: VecRef         !< 
+        real(R8Ki), dimension(:), intent(in) :: VecTry         !< 
+        real(R8Ki), intent(in) :: MINNORM
+        logical, intent(in) :: bStop
+        logical, intent(in) :: bPrint
+        logical, intent(out),optional :: bPassed
+        ! Variables
+        character(len=255) :: InfoAbs
+        integer :: i,cpt
+        real(R8Ki) :: delta
+        real(R8Ki) :: delta_cum
+        ! 
+        cpt=0
+        delta_cum=0.0_R8Ki
         do i=1,size(VecRef,1)
             delta=abs(VecRef(i)-VecTry(i))
             delta_cum=delta_cum+delta
@@ -182,15 +221,39 @@ contains
     subroutine  test_almost_equal_2(Var,VecRef,VecTry,MINNORM,bStop,bPrint,bPassed)
         ! Arguments
         character(len=*), intent(in) :: Var
-        real(ReKi), dimension(:,:), intent(in) :: VecRef         !< 
-        real(ReKi), dimension(:,:), intent(in) :: VecTry         !< 
-        real(ReKi), intent(in) :: MINNORM
+        real(SiKi), dimension(:,:), intent(in) :: VecRef         !< 
+        real(SiKi), dimension(:,:), intent(in) :: VecTry         !< 
+        real(SiKi), intent(in) :: MINNORM
         logical, intent(in) :: bStop
         logical, intent(in) :: bPrint
         logical, intent(out),optional :: bPassed
         ! Variables
-        real(ReKi), dimension(:),allocatable :: VecRef2    !< 
-        real(ReKi), dimension(:),allocatable :: VecTry2   !<
+        real(SiKi), dimension(:),allocatable :: VecRef2    !< 
+        real(SiKi), dimension(:),allocatable :: VecTry2   !<
+        integer :: p, i,j,n1,n2,nCPs
+        ! 
+        n1 = size(VecRef,1); n2 = size(VecRef,2); nCPs=n1*n2
+        allocate ( VecRef2 (n1*n2)  ) ; allocate ( VecTry2 (n1*n2)  ) 
+        p=0
+        do j=1,n2; do i=1,n1
+            p=p+1
+            VecRef2(p)=VecRef(i,j)
+            VecTry2(p)=VecTry(i,j)
+        enddo; enddo;
+        call  test_almost_equal(Var,VecRef2,VecTry2,MINNORM,bStop,bPrint,bPassed)
+    end subroutine
+    subroutine  test_almost_equal_2d(Var,VecRef,VecTry,MINNORM,bStop,bPrint,bPassed)
+        ! Arguments
+        character(len=*), intent(in) :: Var
+        real(R8Ki), dimension(:,:), intent(in) :: VecRef         !< 
+        real(R8Ki), dimension(:,:), intent(in) :: VecTry         !< 
+        real(R8Ki), intent(in) :: MINNORM
+        logical, intent(in) :: bStop
+        logical, intent(in) :: bPrint
+        logical, intent(out),optional :: bPassed
+        ! Variables
+        real(R8Ki), dimension(:),allocatable :: VecRef2    !< 
+        real(R8Ki), dimension(:),allocatable :: VecTry2   !<
         integer :: p, i,j,n1,n2,nCPs
         ! 
         n1 = size(VecRef,1); n2 = size(VecRef,2); nCPs=n1*n2
@@ -262,7 +325,8 @@ contains
       character(ErrMsgLen), intent(out) :: ErrMsg
 
       real(ReKi), dimension(3) :: P1, P2, e1, e2, e3
-      real(ReKi), dimension(3,3) :: DirCos, A, R0, Ref
+      real(ReKi), dimension(3,3) :: A, R0
+      real(FEKi), dimension(3,3) :: DirCos, Ref
       real(ReKi), dimension(6,6) :: T, Tref
       real(ReKi) :: L
       integer(IntKi) :: I
@@ -272,8 +336,8 @@ contains
       P1=(/0,0,0/)
       P2=(/2,0,0/)
       call GetDirCos(P1, P2, DirCos, L, ErrStat, ErrMsg)
-      Ref = reshape( (/0_ReKi,-1_ReKi,0_ReKi, 0_ReKi, 0_ReKi, -1_ReKi, 1_ReKi, 0_ReKi, 0_ReKi/) , (/3,3/))
-      call  test_almost_equal('DirCos',Ref,DirCos,1e-8_ReKi,.true.,.true.)
+      Ref = reshape( (/0_FEKi,-1_FEKi,0_FEKi, 0_FEKi, 0_FEKi, -1_FEKi, 1_FEKi, 0_FEKi, 0_FEKi/) , (/3,3/))
+      call  test_almost_equal('DirCos',Ref,DirCos,1e-8_FEKi,.true.,.true.)
 
       ! --- Rigid Transo
       P1=(/1,2,-1/)
@@ -306,7 +370,7 @@ contains
    subroutine Test_Linalg(ErrStat,ErrMsg)
       integer(IntKi)      , intent(out) :: ErrStat
       character(ErrMsgLen), intent(out) :: ErrMsg
-      real(LaKi), dimension(:,:), allocatable :: A, Ainv, Aref
+      real(FEKi), dimension(:,:), allocatable :: A, Ainv, Aref
       real(DbKi) :: det
       integer(IntKi) :: I, J
       testname='Linalg'
