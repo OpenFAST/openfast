@@ -1470,14 +1470,16 @@ SUBROUTINE DirectElimination(Init, p, ErrStat, ErrMsg)
    integer(IntKi), dimension(:), allocatable :: RAm1 !< RA^-1(e) = a , for a given element give the index of a rigid assembly
    real(FEKi), dimension(:,:), allocatable :: MM, KK
    real(FEKi), dimension(:),   allocatable :: FF
+   real(FEKi), dimension(:,:), allocatable :: Temp, T_red_T
    integer(IntKi) :: nDOF, iDOF, nDOFPerNode, iNode, iiDOF
    ErrStat = ErrID_None
    ErrMsg  = ""
 
    ! Setup list of rigid link assemblies (RA) and the inverse function RA^{-1}
    call RigidLinkAssemblies(Init, p, RA, RAm1, ErrStat2, ErrMsg2); if(Failed()) return
-
    call BuildTMatrix(Init, p, RA, RAm1, p%T_red, ErrStat2, ErrMsg2); if (Failed()) return
+   if (allocated(RAm1)) deallocate(RAm1)
+   if (allocated(RA  )) deallocate(RA  )
 
    ! --- DOF elimination for system matrices and RHS vector
    nDOF = p%nDOF_red
@@ -1487,13 +1489,22 @@ SUBROUTINE DirectElimination(Init, p, ErrStat, ErrMsg)
       call move_alloc(Init%K,  KK)
       call move_alloc(Init%FG, FF)
       !  Reallocating
-      CALL AllocAry( Init%K,      nDOF, nDOF,  'Init%K'   ,  ErrStat2, ErrMsg2); if(Failed()) return; ! system stiffness matrix 
-      CALL AllocAry( Init%M,      nDOF, nDOF,  'Init%M'   ,  ErrStat2, ErrMsg2); if(Failed()) return; ! system mass matrix 
-      CALL AllocAry( Init%FG     ,nDOF,        'Init%FG'  ,  ErrStat2, ErrMsg2); if(Failed()) return; ! system gravity force vector 
+      CALL AllocAry( Init%K,      nDOF, nDOF,       'Init%K'   ,  ErrStat2, ErrMsg2); if(Failed()) return; ! system stiffness matrix 
+      CALL AllocAry( Init%M,      nDOF, nDOF,       'Init%M'   ,  ErrStat2, ErrMsg2); if(Failed()) return; ! system mass matrix 
+      CALL AllocAry( Init%FG,     nDOF,             'Init%FG'  ,  ErrStat2, ErrMsg2); if(Failed()) return; ! system gravity force vector 
+      CALL AllocAry( Temp   ,size(MM,1), nDOF,      'Temp'     ,  ErrStat2, ErrMsg2); if(Failed()) return; 
+      CALL AllocAry( T_red_T,nDOF     , size(MM,1), 'T_red_T' ,  ErrStat2, ErrMsg2); if(Failed()) return; 
       ! Elimination
-      Init%M  = matmul(transpose(p%T_red), matmul(MM, p%T_red))
-      Init%K  = matmul(transpose(p%T_red), matmul(KK, p%T_red))
-      Init%FG = matmul(transpose(p%T_red), FF)
+      !Init%M  = matmul(transpose(p%T_red), matmul(MM, p%T_red))
+      !Init%K  = matmul(transpose(p%T_red), matmul(KK, p%T_red))
+      T_red_T = transpose(p%T_red)
+      Temp    = matmul(MM, p%T_red)
+      Init%M  = matmul(T_red_T, Temp)
+      Temp    = matmul(KK, p%T_red)
+      Init%K  = matmul(T_red_T, Temp)
+      Init%FG = matmul(T_red_T, FF)
+      if (allocated(Temp))    deallocate(Temp)
+      if (allocated(T_red_T)) deallocate(T_red_T)
 
       ! --- Triggers for storage of DOF indices, replacing with indices in constrained system
       CALL ReInitBCs(Init, p)
@@ -1530,7 +1541,8 @@ CONTAINS
       if (allocated(FF  )) deallocate(FF  )
       if (allocated(RA  )) deallocate(RA  )
       if (allocated(RAm1)) deallocate(RAm1)
-      if (allocated(RA  )) deallocate(RA  )
+      if (allocated(Temp)) deallocate(Temp)
+      if (allocated(T_red_T)) deallocate(T_red_T)
    END SUBROUTINE CleanUp_DirectElimination
 
    !> Reset DOF indices after elimination, does not change the BC

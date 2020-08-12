@@ -30,7 +30,6 @@ CONTAINS
 
 SUBROUTINE EigenSolve(K, M, N, bCheckSingularity, EigVect, Omega, ErrStat, ErrMsg )
    USE NWTC_LAPACK, only: LAPACK_ggev
-   USE NWTC_ScaLAPACK, only : ScaLAPACK_LASRT
    INTEGER       ,          INTENT(IN   )    :: N             !< Number of degrees of freedom, size of M and K
    REAL(FEKi),              INTENT(INOUT)    :: K(N, N)       !< Stiffness matrix 
    REAL(FEKi),              INTENT(INOUT)    :: M(N, N)       !< Mass matrix 
@@ -46,8 +45,9 @@ SUBROUTINE EigenSolve(K, M, N, bCheckSingularity, EigVect, Omega, ErrStat, ErrMs
    INTEGER,    ALLOCATABLE                   :: KEY(:)
    INTEGER(IntKi)                            :: ErrStat2
    CHARACTER(ErrMsgLen)                      :: ErrMsg2
-   REAL(FEKi) :: normA, Om2
+   REAL(FEKi) :: normA
    REAL(FEKi) :: Omega2(N)  !< Squared eigenvalues
+   REAL(FEKi), parameter :: MAX_EIGENVALUE = HUGE(1.0_ReKi) ! To avoid overflow when switching to ReKi
       
    ErrStat = ErrID_None
    ErrMsg  = ''
@@ -77,19 +77,20 @@ SUBROUTINE EigenSolve(K, M, N, bCheckSingularity, EigVect, Omega, ErrStat, ErrMs
    Omega2(:) =0.0_FEKi
    DO I=1,N !Initialize the key and calculate Omega
       KEY(I)=I
+      Omega2(I) = AlphaR(I)/Beta(I)
       if ( EqualRealNos(real(Beta(I),ReKi),0.0_ReKi) ) then
          ! --- Beta =0 
-         print*,'Large eigenvalue found, system may be ill-conditioned'
-         Omega2(I) = HUGE(1.0_FEKi) 
+         call WrScr('[WARN] Large eigenvalue found, system may be ill-conditioned')
+         Omega2(I) = MAX_EIGENVALUE
       elseif ( EqualRealNos(real(AlphaI(I),ReKi),0.0_ReKi) ) THEN
          ! --- Real Eigenvalues
          IF ( AlphaR(I)<0.0_FEKi ) THEN
             if ( (AlphaR(I)/Beta(I))<1e-6_FEKi ) then
                ! Tolerating very small negative eigenvalues
-               print*,'Negative eigenvalue found with small norm, system may be singular (may contain rigid body modes)'
+               call WrScr('[INFO] Negative eigenvalue found with small norm (system may contain rigid body mode)')
                Omega2(I)=0.0_FEKi
             else
-               print*,'Negative eigenvalue found, system may be singular (may contain rigid body modes)'
+               call WrScr('[WARN] Negative eigenvalue found, system may be ill-conditioned.')
                Omega2(I)=AlphaR(I)/Beta(I)
             endif
          else
@@ -100,21 +101,27 @@ SUBROUTINE EigenSolve(K, M, N, bCheckSingularity, EigVect, Omega, ErrStat, ErrMs
          normA = sqrt(AlphaR(I)**2 + AlphaI(I)**2)
          if ( (normA/Beta(I))<1e-6_FEKi ) then
             ! Tolerating very small eigenvalues with imaginary part
-            print*,'Complex eigenvalue found with small norm, approximating as 0'
+            call WrScr('[WARN] Complex eigenvalue found with small norm, approximating as 0')
             Omega2(I) = 0.0_FEKi
          elseif ( abs(AlphaR(I))>1e3_FEKi*abs(AlphaI(I)) ) then
             ! Tolerating very small imaginary part compared to real part... (not pretty)
-            print*,'Complex eigenvalue found with small Im compare to Re'
-            !print*'AlphaR,AlphaI,beta=',AlphaR(I), AlphaI(I), beta(I), AlphaR(I)/beta(I), AlphaI(I)/beta(I)
+            call WrScr('[WARN] Complex eigenvalue found with small Im compare to Re')
             Omega2(I) = AlphaR(I)/Beta(I)
          else
-            print*,'Complex eigenvalue found, AlphaR,AlphaI,beta=',AlphaR(I), AlphaI(I), beta(I), AlphaR(I)/beta(I), AlphaI(I)/beta(I)
-            Omega2(I) = HUGE(1.0_FEKi)
+            call WrScr('[WARN] Complex eigenvalue found with large imaginary value)')
+            Omega2(I) = MAX_EIGENVALUE
          endif
+         call Fatal('Complex eigenvalue found, system may be ill-conditioned'); return
+      endif
+      ! Capping to avoid overflow
+      if (Omega2(I)> MAX_EIGENVALUE) then
+         Omega2(I) = MAX_EIGENVALUE
       endif
    enddo  
-   ! Sorting
-   CALL ScaLAPACK_LASRT('I',N,Omega2,KEY,ErrStat2,ErrMsg2); if(Failed()) return 
+
+   ! Sorting. LASRT has issues for double precision 64 bit on windows
+   !CALL ScaLAPACK_LASRT('I',N,Omega2,KEY,ErrStat2,ErrMsg2); if(Failed()) return 
+   CALL sort_in_place(Omega2,KEY)
     
    ! --- Sorting eigen vectors
    ! KEEP ME: scaling of the eigenvectors using generalized mass =identity criterion
@@ -133,30 +140,18 @@ SUBROUTINE EigenSolve(K, M, N, bCheckSingularity, EigVect, Omega, ErrStat, ErrMs
    ! --- Return Omega (capped by huge(ReKi)) and check for singularity
    Omega(:) = 0.0_FEKi
    do I=1,N 
-      ! Capping Om2 to avoid overflow
-      if (abs(Omega2(I))>huge(1.0_ReKi)) then
-         Om2 = huge(1.0_ReKi) * sign(1.0_FEKI, Omega2(i)) !< NOTE huge(ReKi)
-      else
-         Om2 = Omega2(i)
-      endif
-      if (EqualRealNos(real(Om2,ReKi), 0.0_ReKi)) then  ! NOTE: may be necessary for some corner numerics
+      if (EqualRealNos(real(Omega2(I),ReKi), 0.0_ReKi)) then  ! NOTE: may be necessary for some corner numerics
          Omega(i)=0.0_FEKi
          if (bCheckSingularity) then
-            ErrStat2=ErrID_Fatal
-            ErrMsg2= 'Zero eigenvalue found, system may be singular (may contain rigid body modes)'
-            if(Failed()) return
+            call Fatal('Zero eigenvalue found, system may contain rigid body mode'); return
          endif
-      elseif (Om2>0) then 
-         Omega(i)=sqrt(Om2)
+      elseif (Omega2(I)>0) then 
+         Omega(i)=sqrt(Omega2(I))
       else
          ! Negative eigenfrequency
-         print*,'>>> Wrong eigenfrequency, Omega^2=',Om2
+         print*,'>>> Wrong eigenfrequency, Omega^2=',Omega2(I) ! <<< This should never happen
          Omega(i)= 0.0_FEKi 
-         if (bCheckSingularity) then
-            ErrStat2=ErrID_Fatal
-            ErrMsg2= 'Negative eigenvalue found, system may be singular (may contain rigid body modes)'
-            if(Failed()) return
-         endif
+         call Fatal('Negative eigenvalue found, system may be ill-conditioned'); return
       endif
    enddo
 
@@ -170,6 +165,12 @@ CONTAINS
         if (Failed) call CleanUpEigen()
    END FUNCTION Failed
 
+   SUBROUTINE Fatal(ErrMsg_in)
+      character(len=*), intent(in) :: ErrMsg_in
+      CALL SetErrStat(ErrID_Fatal, ErrMsg_in, ErrStat, ErrMsg, 'EigenSolve');
+      CALL CleanUpEigen()
+   END SUBROUTINE Fatal
+
    SUBROUTINE CleanupEigen()
       IF (ALLOCATED(Work)  ) DEALLOCATE(Work)
       IF (ALLOCATED(AlphaR)) DEALLOCATE(AlphaR)
@@ -180,6 +181,29 @@ CONTAINS
    END SUBROUTINE CleanupEigen
   
 END SUBROUTINE EigenSolve
+
+pure subroutine sort_in_place(a,key)
+   real(FEKi), intent(inout), dimension(:) :: a
+   integer(IntKi), intent(inout), dimension(:) :: key
+   integer(IntKi) :: tempI
+   real(FEKi) :: temp
+   integer(IntKi) :: i, j
+   do i = 2, size(a)
+      j = i - 1
+      temp  = a(i)
+      tempI = key(i)
+      do while (j>=1 .and. a(j)>temp)
+         a(j+1) = a(j)
+         key(j+1) = key(j)
+         j = j - 1
+         if (j<1) then
+            exit
+         endif
+      end do
+      a(j+1)   = temp
+      key(j+1) = tempI
+   end do
+end subroutine sort_in_place
 
 !> Compute the determinant of a real matrix using an LU factorization
 FUNCTION Determinant(A, ErrStat, ErrMsg) result(det)

@@ -2567,7 +2567,6 @@ END SUBROUTINE AllocMiscVars
 !!         C_L : "reaction" nodes DOFs that will be counted as internal
 !!         I_B : "interface" nodes DOFs that are leader DOFs
 SUBROUTINE PartitionDOFNodes(Init, m, p, ErrStat, ErrMsg)
-   use qsort_c_module, only: QsortC
    use IntegerList, only: len, concatenate_lists, lists_difference, concatenate_3lists, sort_in_place
    type(SD_Inittype),       intent(  in)  :: Init        !< Input data for initialization routine
    type(SD_MiscVartype),    intent(  in)  :: m           !< Misc
@@ -3078,7 +3077,7 @@ SUBROUTINE OutSummary(Init, p, InitInput, CBparams, ErrStat,ErrMsg)
    ! write Eigenvalues of full SYstem and CB reduced System
    !-------------------------------------------------------------------------------------------------------------
    WRITE(UnSum, '(A)') SectionDivide
-   WRITE(UnSum, '(A, I6)') "#Eigenfrequencies for full system (no constraint) [Hz]"
+   WRITE(UnSum, '(A, I6)') "#Eigenfrequencies [Hz] for full system, with reaction constraints (+ Soil K/M + SoilDyn K0) "
    call yaml_write_array(UnSum, 'Full_frequencies', Omega/(TwoPi), ReFmt, ErrStat2, ErrMsg2)
    WRITE(UnSum, '(A, I6)') "#CB frequencies [Hz]"
    call yaml_write_array(UnSum, 'CB_frequencies', CBparams%OmegaL(1:p%nDOFM)/(TwoPi), ReFmt, ErrStat2, ErrMsg2)
@@ -3087,15 +3086,15 @@ SUBROUTINE OutSummary(Init, p, InitInput, CBparams, ErrStat,ErrMsg)
    ! write Eigenvectors of full System 
    !-------------------------------------------------------------------------------------------------------------
    WRITE(UnSum, '(A)') SectionDivide
-   WRITE(UnSum, '(A, I6)') ('#FEM Eigenvectors ('//TRIM(Num2LStr(p%nDOF_red))//' x '//TRIM(Num2LStr(nOmega))//&
-                              ') [m or rad]. Number of shown eigenvectors (total # of DOFs minus restrained nodes'' DOFs):'), nOmega 
+   WRITE(UnSum, '(A)') ('#FEM Eigenvectors ('//TRIM(Num2LStr(p%nDOF_red))//' x '//TRIM(Num2LStr(nOmega))//&
+                              ') [m or rad], full system with reaction constraints (+ Soil K/M + SoilDyn K0)')
    call yaml_write_array(UnSum, 'Full_Modes', Modes(:,1:nOmega), ReFmt, ErrStat2, ErrMsg2)
     
    !-------------------------------------------------------------------------------------------------------------
    ! write CB system matrices
    !-------------------------------------------------------------------------------------------------------------
    WRITE(UnSum, '(A)') SectionDivide
-   WRITE(UnSum, '(A)') '#CB Matrices (PhiM,PhiR) (constraint applied)'
+   WRITE(UnSum, '(A)') '#CB Matrices (PhiM,PhiR) (reaction constraints applied)'
    call yaml_write_array(UnSum, 'PhiM', CBparams%PhiL(:,1:p%nDOFM ), ReFmt, ErrStat2, ErrMsg2, comment='(CB modes)')
    call yaml_write_array(UnSum, 'PhiR', CBparams%PhiR, ReFmt, ErrStat2, ErrMsg2, comment='(Guyan modes)')
            
@@ -3126,7 +3125,7 @@ SUBROUTINE OutSummary(Init, p, InitInput, CBparams, ErrStat,ErrMsg)
    deallocate(TI2)
    
 
-   if(p%OutAll) then
+   if(p%OutAll) then ! //--- START DEBUG OUTPUTS
 
    WRITE(UnSum, '()') 
    WRITE(UnSum, '(A)') SectionDivide
@@ -3185,7 +3184,7 @@ SUBROUTINE OutSummary(Init, p, InitInput, CBparams, ErrStat,ErrMsg)
    if(allocated(BB)) deallocate(BB)
    if(allocated(CC)) deallocate(CC)
    if(allocated(DD)) deallocate(DD)
-   endif
+   endif ! //--- END DEBUG OUTPUTS
 
    ! --- write TP TI matrix
    WRITE(UnSum, '(A)') SectionDivide
