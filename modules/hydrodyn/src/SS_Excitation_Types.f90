@@ -85,7 +85,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: A      !< A matrix [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: B      !< B matrix [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: C      !< C matrix [-]
-    INTEGER(IntKi)  :: numStates      !< Number of states [-]
+    INTEGER(IntKi)  :: numStates = 0      !< Number of states [-]
     REAL(DbKi)  :: Tc      !< Time shift [s]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveElev0      !< Wave elevation time history at origin [m]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveTime      !< Times where wave elevation is known [s]

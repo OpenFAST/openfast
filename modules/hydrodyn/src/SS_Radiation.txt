@@ -45,7 +45,7 @@ typedef ^                     ParameterType       DbKi            DT            
 typedef ^                     ^                   ReKi            A              {:}{:} - - "A matrix" -
 typedef ^                     ^                   ReKi            B              {:}{:} - - "B matrix" -
 typedef ^                     ^                   ReKi            C              {:}{:} - - "C matrix" -
-typedef ^                     ^                   INTEGER         numStates       -     - - "Number of states" -
+typedef ^                     ^                   INTEGER         numStates       -     0 - "Number of states" -
 typedef ^                     ^                   INTEGER         spdof          {:}    - - "States per dof" -
 typedef ^                     ^                   IntKi           NBody           -     - - "Number of WAMIT bodies for this State Space model" -
 

@@ -87,7 +87,7 @@ SUBROUTINE WvStretch_Init(WaveStMod, WtrDpth, NStepWave, NNodes,  &
    INTEGER,          INTENT(IN   )  :: WaveStMod
    REAL(SiKi),       INTENT(IN   )  :: WtrDpth
    INTEGER,          INTENT(IN   )  :: NStepWave
-   INTEGER,          INTENT(IN   )  :: NNodes              !< TODO: WHY are there both NNodes and NWaveElev ??? GJH 2/1/2016
+   INTEGER,          INTENT(IN   )  :: NNodes
    INTEGER,          INTENT(IN   )  :: NWaveElev
    REAL(SiKi),       INTENT(IN   )  :: WaveElev(0:,:)
    REAL(SiKi),       INTENT(IN   )  :: WaveKinzi(:)
@@ -225,7 +225,7 @@ END SUBROUTINE WvStretch_Init
 SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-      TYPE(HydroDyn_InitInputType),       INTENT(IN   )  :: InitInp     !< Input data for initialization routine. TODO: This does not follow the template due to the interface of HydroDyn_CopyInitInput()
+      TYPE(HydroDyn_InitInputType),       INTENT(IN   )  :: InitInp     !< Input data for initialization routine.
       TYPE(HydroDyn_InputType),           INTENT(  OUT)  :: u           !< An initial guess for the input; input mesh must be defined
       TYPE(HydroDyn_ParameterType),       INTENT(  OUT)  :: p           !< Parameters      
       TYPE(HydroDyn_ContinuousStateType), INTENT(  OUT)  :: x           !< Initial continuous states
@@ -256,7 +256,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
 !      LOGICAL                                :: hasWAMITOuts                        ! Are there any WAMIT-related outputs
 !      LOGICAL                                :: hasMorisonOuts                      ! Are there any Morison-related outputs
 !      INTEGER                                :: numHydroOuts                        ! total number of WAMIT and Morison outputs
-      INTEGER                                :: I, J, iBody                                ! Generic counters
+      INTEGER                                :: I, J, k, iBody                                ! Generic counters
       REAL(SiKi)                             :: WaveNmbr                            ! Wavenumber of the current frequency component (1/meter)
          ! These are dummy variables to satisfy the framework, but are not used 
          
@@ -930,12 +930,10 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
             InitLocal%WAMIT%WaveDirMin   = Waves_InitOut%WaveDirMin
             InitLocal%WAMIT%WaveDirMax   = Waves_InitOut%WaveDirMax
             InitLocal%WAMIT%WaveDOmega   = Waves_InitOut%WaveDOmega   
- 
-!<==============TODO Check if this code block is needed =====================
+
                ! Init inputs for the SS_Excitation model (set this just in case it will be used)
             InitLocal%WAMIT%WaveDir = Waves_InitOut%WaveDir
-            CALL MOVE_ALLOC(Waves_InitOut%WaveElev0, InitLocal%WAMIT%WaveElev0) 
-!<==============TODO Check if this code block is needed =====================            
+            CALL MOVE_ALLOC(Waves_InitOut%WaveElev0, InitLocal%WAMIT%WaveElev0)          
                
                 ! Temporarily move arrays to init input for WAMIT (save some space)
             CALL MOVE_ALLOC(p%WaveTime,               InitLocal%WAMIT%WaveTime) 
@@ -1432,7 +1430,50 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
             ! Write the header for this section:  Note: When NBodyMod = 1 the kernel is now 6*NBody by 6*Nbody in size,
             !   and we have NBody 6 by 6 kernels for NBodyMod=2 or 3
             if (p%NBodyMod == 1) then
-               !TODO: Implement NBodyMod=1 kernel printout
+               ! NBodyMod=1 kernel printout which is 6*NBody x 6*NBody long
+               WRITE( InitLocal%UnSum,  '(//)' ) 
+               WRITE( InitLocal%UnSum,  '(A)' ) 'Radiation memory effect kernel'
+               WRITE( InitLocal%UnSum,  '(//)' ) 
+               
+               WRITE( InitLocal%UnSum, '(1X,A10,2X,A10)',ADVANCE='no' )    '    n    ' , '     t    '
+               do i = 1,6*p%NBody
+                  do j = 1,6*p%NBody
+                     WRITE( InitLocal%UnSum, '(2X,A16)',ADVANCE='no' ) 'K'//trim(num2lstr(i))//trim(num2lstr(j))
+                  end do
+               end do
+               write(InitLocal%UnSum,'()')  ! end of line character
+               
+             
+               WRITE( InitLocal%UnSum, '(1X,A10,2X,A10)',ADVANCE='no' )    '   (-)   ' , '    (s)   ' 
+               do i = 1,6*p%NBody
+                  do j = 1,6*p%NBody
+                     if ( mod(i-1,6)+1 < 4 ) then
+                        if ( mod(j-1,6)+1 < 4  ) then  
+                           WRITE( InitLocal%UnSum, '(2X,A16)',ADVANCE='no' ) ' (kg/s^2) '
+                        else
+                           WRITE( InitLocal%UnSum, '(2X,A16)',ADVANCE='no' ) ' (kgm/s^2) '
+                        end if  
+                     else
+                        if  ( mod(j-1,6)+1 < 4 )  then
+                           WRITE( InitLocal%UnSum, '(2X,A16)',ADVANCE='no' ) ' (kgm/s^2) '
+                        else
+                           WRITE( InitLocal%UnSum, '(2X,A16)',ADVANCE='no' ) '(kgm^2/s^2)'
+                        end if                      
+                     end if
+                  end do
+               end do
+               write(InitLocal%UnSum,'()')  ! end of line character
+                 
+               do k= 0,p%WAMIT(1)%Conv_Rdtn%NStepRdtn-1
+                  WRITE( InitLocal%UnSum, '(1X,I10,2X,E12.5)',ADVANCE='no' ) K, K*p%WAMIT(1)%Conv_Rdtn%RdtnDT
+                  do i = 1,6*p%NBody
+                     do j = 1,6*p%NBody
+                        WRITE( InitLocal%UnSum, '(2X,ES16.5)',ADVANCE='no' ) p%WAMIT(1)%Conv_Rdtn%RdtnKrnl(k,i,j)
+                     end do
+                  end do
+                  write(InitLocal%UnSum,'()')  ! end of line character
+               end do
+               
             else
                do j = 1,p%nWAMITObj
                   WRITE( InitLocal%UnSum,  '(//)' ) 
@@ -1842,7 +1883,6 @@ SUBROUTINE HydroDyn_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherSt
       
       
          ! Allocate array of WAMIT inputs
-         ! TODO: We should avoid allocating this at each time step if we can!
          
 !FIXME: Error handling appears to be broken here
 
@@ -2017,7 +2057,6 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat,
 
 
       if ( p%PotMod == 1 ) then
-    !TODO: Check that we have valid Mesh data?  
          do iBody = 1, p%NBody
                ! Determine the rotational angles from the direction-cosine matrix
             rotdisp = GetSmllRotAngs ( u%WAMITMesh%Orientation(:,:,iBody), ErrStat2, ErrMsg2 )
@@ -2513,8 +2552,10 @@ SUBROUTINE HD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
 
    IF ( PRESENT( dXdu ) ) THEN
 
-   ! LIN_TODO: We need to deal with the case where either RdtnMod=0, and/or ExtcnMod=0 and hence %SS_Rdtn data or %SS_Exctn data is not valid
-
+      ! For the case where either RdtnMod=0 and ExtcnMod=0 and hence %SS_Rdtn data or %SS_Exctn data is not valid then we do not have states, so simply return
+      ! The key here is to never allocate the dXdu and related state Jacobian arrays because then the glue-code will behave properly
+      
+      if ( p%totalStates == 0 ) return
    
       ! Calculate the partial derivative of the continuous state functions (X) with respect to the inputs (u) here:
 
@@ -2614,21 +2655,7 @@ SUBROUTINE HD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
             k = k + 3
             offsetI = offsetI + p%WAMIT(j)%SS_Rdtn%numStates
          end do
-      end if
-      
-      do k = 1,p%nWAMITObj
-         ! TODO
-         
-         do j = 1, 6*p%WAMIT(k)%NBody
-            do i = 1,p%WAMIT(k)%SS_Rdtn%numStates
-               dXdu(offsetI+i,offsetJ+j) = p%WAMIT(k)%SS_Rdtn%B(i,j) ! B is numStates by 6*NBody where NBody =1 if NBodyMod=2 or 3, but could be >1 for NBodyMod=1
-            end do
-         end do
-         offsetI = offsetI + p%WAMIT(k)%SS_Rdtn%numStates
-         offsetJ = offsetJ + p%WAMIT(k)%SS_Rdtn%numStates
-      end do
-     
-      
+      end if   
       
    END IF
 
@@ -2702,6 +2729,7 @@ SUBROUTINE HD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
    ErrStat = ErrID_None
    ErrMsg  = ''
 
+   if ( p%totalStates == 0 ) return
    
    ! Calculate the partial derivative of the output functions (Y) with respect to the continuous states (x) here:
    
@@ -3021,7 +3049,8 @@ SUBROUTINE HD_Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
       ! set linearization output names:
       !.................   
    CALL AllocAry(InitOut%LinNames_y, p%Jac_ny, 'LinNames_y', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   ! LIN-TODO: Do we need RotFrame_y for this module?
+   ! We do not need RotFrame_y for this module and the glue code with handle the fact that we did not allocate the array and hence set all values to false at the glue-code level
+   ! Same with RotFrame_x
    !CALL AllocAry(InitOut%RotFrame_y, p%Jac_ny, 'RotFrame_y', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    
@@ -3074,11 +3103,13 @@ SUBROUTINE HD_Init_Jacobian_x( p, InitOut, ErrStat, ErrMsg)
    p%totalExctnStates = 0
    p%totalRdtnStates = 0
    do j = 1, p%nWAMITObj
-      p%totalExctnStates = p%totalExctnStates + p%WAMIT(j)%SS_Exctn%numStates
-      p%totalRdtnStates  = p%totalRdtnStates  + p%WAMIT(j)%SS_Rdtn%numStates
+      p%totalExctnStates = p%totalExctnStates + p%WAMIT(j)%SS_Exctn%numStates  !numStates defaults to zero in the case where ExctnMod = 0 instead of 2
+      p%totalRdtnStates  = p%totalRdtnStates  + p%WAMIT(j)%SS_Rdtn%numStates   !numStates defaults to zero in the case where RdtnMod  = 0 instead of 2
    end do
    p%totalStates = p%totalExctnStates + p%totalRdtnStates
-   if ( p%totalStates == 0 ) return
+   
+   if ( p%totalStates == 0 ) return  ! No states, so return and do not allocate the following arrays.  This lets the glue-code know that the module does not have states
+   
       ! allocate space for the row/column names and for perturbation sizes
    call allocAry(p%dx,                 p%totalStates, 'p%dx',         ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call AllocAry(InitOut%LinNames_x,   p%totalStates, 'LinNames_x'  , ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -3105,7 +3136,6 @@ SUBROUTINE HD_Init_Jacobian_x( p, InitOut, ErrStat, ErrMsg)
    
    modLabels = (/'Exctn     ','Rdtn      '/)
    dofLabels = (/'PtfmSg    ','PtfmSw    ','PtfmHv    ','PtfmR     ','PtfmP     ','PtfmY     '/)
-   !TODO: If NBodyMod=1, do not use the 'B' + number prefix
    do k = 1, 2   ! 1 = Excitation,  2 = Radiation
       do l=1,p%nWAMITObj
          
@@ -3118,10 +3148,18 @@ SUBROUTINE HD_Init_Jacobian_x( p, InitOut, ErrStat, ErrMsg)
                spdof = p%WAMIT(l)%SS_Rdtn%spdof(j)
             end if
          
-            do i = 1,spdof
-               InitOut%LinNames_x(indx) = 'B'//trim(num2lstr(l))//trim(modLabels(k))//trim(dofLabels(j))//trim(num2lstr(i))
-               indx = indx + 1
-            end do
+            if ( p%NBodyMod == 1 ) then
+               do i = 1,spdof
+                  InitOut%LinNames_x(indx) = trim(modLabels(k))//trim(dofLabels(j))//trim(num2lstr(i))
+                  indx = indx + 1
+               end do
+            else  
+               do i = 1,spdof
+                  InitOut%LinNames_x(indx) = 'B'//trim(num2lstr(l))//trim(modLabels(k))//trim(dofLabels(j))//trim(num2lstr(i))
+                  indx = indx + 1
+               end do
+            end if
+            
          end do
       end do
    end do
@@ -3266,7 +3304,7 @@ SUBROUTINE HD_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
    if (ErrStat >= AbortErrLev) return
   
    
-   perturb_t = 0.02_ReKi*D2R * max(p%WtrDpth,1.0_ReKi) ! translation input scaling  ! LIN-TODO What about MSL offset?  
+   perturb_t = 0.02_ReKi*D2R * max(p%WtrDpth,1.0_ReKi) ! translation input scaling  
    perturb   = 2*D2R                 ! rotational input scaling
    
    index = 0
@@ -3301,9 +3339,9 @@ SUBROUTINE HD_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
    ! names of the columns, InitOut%LinNames_u:
    !................
    call AllocAry(InitOut%LinNames_u, nu+1, 'LinNames_u', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   !LIN-TODO: We do not need any RotFrame info, right?
+   ! We do not need RotFrame_u for this module and the glue code with handle the fact that we did not allocate the array and hence set all values to false at the glue-code level
    !call AllocAry(InitOut%RotFrame_u, nu+1, 'RotFrame_u', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   ! LIN-TODO: have we implemented IsLoad_u ?
+   
    call AllocAry(InitOut%IsLoad_u,   nu+1, 'IsLoad_u',   ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
       
@@ -3364,7 +3402,7 @@ SUBROUTINE HD_Perturb_u( p, n, perturb_sign, u, du )
    index = 0  
    fieldIndx = p%Jac_u_indx(n,2) 
    node      = p%Jac_u_indx(n,3) 
-   !TODO: One last review of mesh names in below logic GJH
+   
    du = p%du(  p%Jac_u_indx(n,1) )
    
       ! determine which mesh we're trying to perturb and perturb the input:
@@ -3407,7 +3445,7 @@ SUBROUTINE HD_Perturb_u( p, n, perturb_sign, u, du )
                CALL PerturbOrientationMatrix( u%PRPMesh%Orientation(:,:,node), du * perturb_sign, fieldIndx )
             CASE (15) !Module/Mesh/Field: u%PRPMesh%TranslationVel = 15
                u%PRPMesh%TranslationVel( fieldIndx,node) = u%PRPMesh%TranslationVel( fieldIndx,node) + du * perturb_sign         
-            CASE (16) !Module/Mesh/Field: u%WAMITMesh%RotationVel = 16
+            CASE (16) !Module/Mesh/Field: u%PRPMesh%RotationVel = 16
                u%PRPMesh%RotationVel (fieldIndx,node) = u%PRPMesh%RotationVel (fieldIndx,node) + du * perturb_sign               
             CASE (17) !Module/Mesh/Field: u%PRPMesh%TranslationAcc = 17
                u%PRPMesh%TranslationAcc( fieldIndx,node) = u%PRPMesh%TranslationAcc( fieldIndx,node) + du * perturb_sign       
@@ -3490,34 +3528,39 @@ SUBROUTINE HD_Perturb_x( p, n, perturb_sign, x, dx )
    
 
    ! local variables
-   integer(intKi)                                      :: i, indx, offset1, offset2, n2
+   integer(intKi)                                      :: i, offset1, offset2, n2
+  
+   if ( p%totalStates == 0 ) return
    
-   !TODO: Note: All excitation states for all bodies are stored 1st, then all radiation states
+   !Note: All excitation states for all bodies are stored 1st, then all radiation states
    dx = p%dx(n)
    offset1 = 1
    if ( n <= p%totalExctnStates ) then
       
       ! Find body index for exctn states
+      do i=1,p%nWAMITObj 
+         offset2 = offset1 + p%WAMIT(i)%SS_Exctn%numStates
+         if ( n >= offset1 .and. n < offset2) then
+            n2 = n - offset1 + 1
+            x%WAMIT(i)%SS_Exctn%x( n2 ) = x%WAMIT(i)%SS_Exctn%x( n2 ) + dx * perturb_sign 
+            exit
+         end if
+         offset1 = offset2
+      end do
       
    else
+      offset1 = p%totalExctnStates + 1
       ! Find body index for rdtn states
-   end if
-   
-   do i=1,p%nWAMITObj 
-      offset2 = offset1 + p%WAMIT(i)%SS_Exctn%numStates + p%WAMIT(i)%SS_Rdtn%numStates
-      if ( n >= offset1 .and. n < offset2) then
-         n2 = n - offset1
-         if ( n2 > p%WAMIT(i)%SS_Exctn%numStates) then
-            indx = n2 - p%WAMIT(i)%SS_Exctn%numStates
-            x%WAMIT(i)%SS_Rdtn%x( indx ) = x%WAMIT(i)%SS_Rdtn%x( indx ) + dx * perturb_sign 
-         else
-            indx = n2
-            x%WAMIT(i)%SS_Exctn%x( indx ) = x%WAMIT(i)%SS_Exctn%x( indx ) + dx * perturb_sign 
+      do i=1,p%nWAMITObj 
+         offset2 = offset1 + p%WAMIT(i)%SS_Exctn%numStates
+         if ( n >= offset1 .and. n < offset2) then
+            n2 = n - offset1 + 1
+            x%WAMIT(i)%SS_Rdtn%x( n2 ) = x%WAMIT(i)%SS_Rdtn%x( n2 ) + dx * perturb_sign 
+            exit
          end if
-      else 
          offset1 = offset2
-      end if
-   end do
+      end do
+   end if
                                                 
 END SUBROUTINE HD_Perturb_x
 
@@ -3672,6 +3715,9 @@ SUBROUTINE HD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
 
    !..................................
    IF ( PRESENT( x_op ) ) THEN
+      
+      if ( p%totalStates == 0 ) return
+      
       if ( y%WAMITMesh%Committed ) then
          if (.not. allocated(x_op)) then 
             call AllocAry(x_op, p%totalStates,'x_op',ErrStat2,ErrMsg2)
@@ -3696,6 +3742,9 @@ SUBROUTINE HD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
 
    !..................................
    IF ( PRESENT( dx_op ) ) THEN
+      
+      if ( p%totalStates == 0 ) return
+      
       if ( y%WAMITMesh%Committed ) then
          if (.not. allocated(dx_op)) then 
             call AllocAry(dx_op, p%totalStates,'dx_op',ErrStat2,ErrMsg2)

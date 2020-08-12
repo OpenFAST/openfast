@@ -79,7 +79,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: A      !< A matrix [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: B      !< B matrix [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: C      !< C matrix [-]
-    INTEGER(IntKi)  :: numStates      !< Number of states [-]
+    INTEGER(IntKi)  :: numStates = 0      !< Number of states [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: spdof      !< States per dof [-]
     INTEGER(IntKi)  :: NBody      !< Number of WAMIT bodies for this State Space model [-]
   END TYPE SS_Rad_ParameterType

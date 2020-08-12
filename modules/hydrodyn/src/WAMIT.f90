@@ -1835,7 +1835,7 @@ SUBROUTINE WAMIT_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, 
       CALL SS_Rad_CalcContStateDeriv( Time, m%SS_Rdtn_u, p%SS_Rdtn, x%SS_Rdtn, xd%SS_Rdtn, z%SS_Rdtn, OtherState%SS_Rdtn, m%SS_Rdtn, dxdt%SS_Rdtn, ErrStat, ErrMsg )      
          
          ! NOTE: The input below (0.0) will only work as part of a linearization Get_OP call! If this routine (WAMIT_CalcContStateDeriv) is called in another context, then the following
-         ! input needs to be implemented generically.
+         ! input needs to be implemented generically. As of Aug 10, 2020, this is only called for Get_OP related work. GJH
       CALL SS_Exc_CalcContStateDeriv( Time, 0.0_SiKi, p%SS_Exctn, x%SS_Exctn, xd%SS_Exctn, z%SS_Exctn, OtherState%SS_Exctn, m%SS_Exctn, dxdt%SS_Exctn, ErrStat, ErrMsg )      
 
 END SUBROUTINE WAMIT_CalcContStateDeriv
