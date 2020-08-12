@@ -90,6 +90,8 @@ IMPLICIT NONE
     CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
     REAL(ReKi)  :: Gravity      !< Gravitational acceleration [m/s^2]
     REAL(ReKi) , DIMENSION(1:3)  :: r_N_O_G      !< nacelle origin for setting up mesh [-]
+    LOGICAL  :: TMD_On_Blade = .FALSE.      !< The TMD is on the Blade [-]
+    INTEGER(IntKi)  :: NumBl      !< Number of blades [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: BladeRootPosition      !< X-Y-Z reference position of each blade root (3 x NumBlades) [m]
     REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: BladeRootOrientation      !< DCM reference orientation of blade roots (3x3 x NumBlades) [-]
   END TYPE TMD_InitInputType
@@ -142,6 +144,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: TMD_DOF_MODE      !< DOF mode {0: NO TMD_DOF; 1: TMD_X_DOF and TMD_Y_DOF; 2: TMD_XY_DOF}  [-]
     LOGICAL  :: TMD_X_DOF      !< DOF on or off [-]
     LOGICAL  :: TMD_Y_DOF      !< DOF on or off [-]
+    LOGICAL  :: TMD_On_Blade      !< The TMD is on the Blade [-]
     REAL(ReKi)  :: X_DSP      !< TMD_X initial displacement [m]
     REAL(ReKi)  :: Y_DSP      !< TMD_Y initial displacement [m]
     REAL(ReKi)  :: M_X      !< TMD mass [kg]
@@ -690,6 +693,8 @@ ENDIF
     DstInitInputData%RootName = SrcInitInputData%RootName
     DstInitInputData%Gravity = SrcInitInputData%Gravity
     DstInitInputData%r_N_O_G = SrcInitInputData%r_N_O_G
+    DstInitInputData%TMD_On_Blade = SrcInitInputData%TMD_On_Blade
+    DstInitInputData%NumBl = SrcInitInputData%NumBl
 IF (ALLOCATED(SrcInitInputData%BladeRootPosition)) THEN
   i1_l = LBOUND(SrcInitInputData%BladeRootPosition,1)
   i1_u = UBOUND(SrcInitInputData%BladeRootPosition,1)
@@ -778,6 +783,8 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%RootName)  ! RootName
       Re_BufSz   = Re_BufSz   + 1  ! Gravity
       Re_BufSz   = Re_BufSz   + SIZE(InData%r_N_O_G)  ! r_N_O_G
+      Int_BufSz  = Int_BufSz  + 1  ! TMD_On_Blade
+      Int_BufSz  = Int_BufSz  + 1  ! NumBl
   Int_BufSz   = Int_BufSz   + 1     ! BladeRootPosition allocated yes/no
   IF ( ALLOCATED(InData%BladeRootPosition) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! BladeRootPosition upper/lower bounds for each dimension
@@ -829,6 +836,10 @@ ENDIF
       ReKiBuf(Re_Xferred) = InData%r_N_O_G(i1)
       Re_Xferred = Re_Xferred + 1
     END DO
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%TMD_On_Blade, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%NumBl
+    Int_Xferred = Int_Xferred + 1
   IF ( .NOT. ALLOCATED(InData%BladeRootPosition) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -921,6 +932,10 @@ ENDIF
       OutData%r_N_O_G(i1) = ReKiBuf(Re_Xferred)
       Re_Xferred = Re_Xferred + 1
     END DO
+    OutData%TMD_On_Blade = TRANSFER(IntKiBuf(Int_Xferred), OutData%TMD_On_Blade)
+    Int_Xferred = Int_Xferred + 1
+    OutData%NumBl = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! BladeRootPosition not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
@@ -1875,6 +1890,7 @@ ENDIF
     DstParamData%TMD_DOF_MODE = SrcParamData%TMD_DOF_MODE
     DstParamData%TMD_X_DOF = SrcParamData%TMD_X_DOF
     DstParamData%TMD_Y_DOF = SrcParamData%TMD_Y_DOF
+    DstParamData%TMD_On_Blade = SrcParamData%TMD_On_Blade
     DstParamData%X_DSP = SrcParamData%X_DSP
     DstParamData%Y_DSP = SrcParamData%Y_DSP
     DstParamData%M_X = SrcParamData%M_X
@@ -1982,6 +1998,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! TMD_DOF_MODE
       Int_BufSz  = Int_BufSz  + 1  ! TMD_X_DOF
       Int_BufSz  = Int_BufSz  + 1  ! TMD_Y_DOF
+      Int_BufSz  = Int_BufSz  + 1  ! TMD_On_Blade
       Re_BufSz   = Re_BufSz   + 1  ! X_DSP
       Re_BufSz   = Re_BufSz   + 1  ! Y_DSP
       Re_BufSz   = Re_BufSz   + 1  ! M_X
@@ -2062,6 +2079,8 @@ ENDIF
     IntKiBuf(Int_Xferred) = TRANSFER(InData%TMD_X_DOF, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%TMD_Y_DOF, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%TMD_On_Blade, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%X_DSP
     Re_Xferred = Re_Xferred + 1
@@ -2208,6 +2227,8 @@ ENDIF
     OutData%TMD_X_DOF = TRANSFER(IntKiBuf(Int_Xferred), OutData%TMD_X_DOF)
     Int_Xferred = Int_Xferred + 1
     OutData%TMD_Y_DOF = TRANSFER(IntKiBuf(Int_Xferred), OutData%TMD_Y_DOF)
+    Int_Xferred = Int_Xferred + 1
+    OutData%TMD_On_Blade = TRANSFER(IntKiBuf(Int_Xferred), OutData%TMD_On_Blade)
     Int_Xferred = Int_Xferred + 1
     OutData%X_DSP = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1

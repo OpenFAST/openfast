@@ -48,8 +48,9 @@ MODULE TMD
    
    INTEGER(IntKi), PRIVATE, PARAMETER :: DOFMode_Indept        = 1          !< independent DOFs 
    INTEGER(IntKi), PRIVATE, PARAMETER :: DOFMode_Omni          = 2          !< omni-directional
-   INTEGER(IntKi), PRIVATE, PARAMETER :: DOFMode_BTMD          = 3          !< omni-directional
-   INTEGER(IntKi), PRIVATE, PARAMETER :: DOFMode_TLCD          = 4          !< tuned liquid column dampers !MEG & SP
+   INTEGER(IntKi), PRIVATE, PARAMETER :: DOFMode_TLCD          = 3          !< tuned liquid column dampers !MEG & SP
+!FIXME: this goes away eventually
+   INTEGER(IntKi), PRIVATE, PARAMETER :: DOFMode_BTMD          = 4          !< Blade tmd 
 
    INTEGER(IntKi), PRIVATE, PARAMETER :: CMODE_Semi            = 1          !< semi-active control 
    INTEGER(IntKi), PRIVATE, PARAMETER :: CMODE_Active          = 2          !< active control
@@ -121,9 +122,10 @@ SUBROUTINE TMD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
     ! Read the input file and validate the data
     ! (note p%RootName must be set first!) 
     !............................................................................................      
-   p%RootName = TRIM(InitInp%RootName)//'.TMD' ! all of the output file names from this module will end with '.TMD'
-   p%NumBl = size(InitInp%BladeRootPosition(:,K),1)
-          
+   p%RootName     =  TRIM(InitInp%RootName)     ! Already includes NTMD, TTMD, or BTMD
+   p%NumBl        =  InitInp%NumBl
+   p%TMD_On_Blade =  InitInp%TMD_On_Blade
+
       
    CALL TMD_ReadInput( InitInp%InputFile, InputFileData, Interval, p%RootName, ErrStat2, ErrMsg2 )
       CALL CheckError( ErrStat2, ErrMsg2 )
@@ -136,9 +138,8 @@ SUBROUTINE TMD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
     IF ( InputFileData%TMD_DOF_MODE /= ControlMode_None     .and. &
          InputFileData%TMD_DOF_MODE /= DOFMode_Indept       .and. &
          InputFileData%TMD_DOF_MODE /= DOFMode_Omni         .and. &
-         InputFileData%TMD_DOF_MODE /= DOFMode_TLCD         .and. &
-         InputFileData%TMD_DOF_MODE /= DOFMode_BTMD ) &
-      CALL SetErrStat( ErrID_Fatal, 'DOF mode (TMD_DOF_MODE) must be 0 (no DOF), 1 (two independent DOFs), or 2 (omni-directional), or 3 (TLCD), or 4 (BTMD).', ErrStat, ErrMsg, RoutineName )
+         InputFileData%TMD_DOF_MODE /= DOFMode_TLCD ) &
+      CALL SetErrStat( ErrID_Fatal, 'DOF mode (TMD_DOF_MODE) must be 0 (no DOF), 1 (two independent DOFs), or 2 (omni-directional), or 3 (TLCD).', ErrStat, ErrMsg, RoutineName )
 
    IF ( InputFileData%TMD_CMODE /= ControlMode_None .and. InputFileData%TMD_CMODE /= CMODE_Semi ) &
       CALL SetErrStat( ErrID_Fatal, 'Control mode (TMD_CMode) must be 0 (none) or 1 (semi-active) in this version of TMD.', ErrStat, ErrMsg, RoutineName )
@@ -209,7 +210,7 @@ SUBROUTINE TMD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
     ! Create the input and output meshes associated with lumped loads
 
 !SP_
-   IF (p%TMD_DOF_MODE == ControlMode_None .OR. p%TMD_DOF_MODE == DOFMode_Indept .OR. p%TMD_DOF_MODE == DOFMode_Omni) THEN
+   IF (p%TMD_DOF_MODE == ControlMode_None .OR. p%TMD_DOF_MODE == DOFMode_Indept .OR. p%TMD_DOF_MODE == DOFMode_Omni .OR. p%TMD_DOF_MODE == DOFMode_TLCD) THEN
 
       CALL MeshCreate( BlankMesh        = u%Mesh            &
                      ,IOS               = COMPONENT_INPUT   &
@@ -590,7 +591,7 @@ SUBROUTINE TMD_RK4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg
       ErrStat = ErrID_None
       ErrMsg  = "" 
 
-      IF (p%TMD_DOF_MODE == ControlMode_None .OR. p%TMD_DOF_MODE == DOFMode_Indept .OR. p%TMD_DOF_MODE == DOFMode_Omni) THEN
+      IF (p%TMD_DOF_MODE /= DOFMode_BTMD) THEN
  
          CALL TMD_CopyContState( x, k1, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
             CALL CheckError(ErrStat2,ErrMsg2)
@@ -941,10 +942,10 @@ SUBROUTINE TMD_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
       a_G_O (2) = 0
       a_G_O (3) = -p%Gravity
       
-      IF (p%TMD_DOF_MODE == ControlMode_None .OR. p%TMD_DOF_MODE == DOFMode_Indept .OR. p%TMD_DOF_MODE == DOFMode_Omni) THEN
+      IF (p%TMD_DOF_MODE /= DOFMode_BTMD) THEN
  
             ! Compute nacelle and gravitational acceleration in nacelle coordinates 
-         a_G_N  = matmul(u%Mesh%Orientation(:,:,1),a_G_O)
+         a_G_N       = matmul(u%Mesh%Orientation(:,:,1),a_G_O)
          r_ddot_P_N  = matmul(u%Mesh%Orientation(:,:,1),u%Mesh%TranslationAcc(:,1))
          omega_N_O_N = matmul(u%Mesh%Orientation(:,:,1),u%Mesh%RotationVel(:,1))
          alpha_N_O_N = matmul(u%Mesh%Orientation(:,:,1),u%Mesh%RotationAcc(:,1))
@@ -1086,33 +1087,108 @@ SUBROUTINE TMD_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
       ELSE IF (p%TMD_DOF_MODE == DOFMode_TLCD) THEN
 
          !fore-aft TLCD external forces of dependent degrees
-         F_x_tlcd_WR_N = p%rho_FA*p%area_FA*((p%L_FA-p%B_FA)/2+x%tmd_x(1))*(r_ddot_P_N(1)+2*omega_N_O_N(2)*x%tmd_x(2)+alpha_N_O_N(2)*((p%L_FA-p%B_FA)/2+x%tmd_x(1))-omega_N_O_N(2)*omega_N_O_N(2)*p%B_FA*.5-omega_N_O_N(3)*omega_N_O_N(3)*p%B_FA*.5+omega_N_O_N(3)*omega_N_O_N(1)*((p%L_FA-p%B_FA)/2+x%tmd_x(1))-a_G_N(1))
-         F_y_tlcd_WR_N = p%rho_FA*p%area_FA*((p%L_FA-p%B_FA)/2+x%tmd_x(1))*(r_ddot_P_N(2)-2*omega_N_O_N(1)*x%tmd_x(2)+alpha_N_O_N(3)*p%B_FA*.5-alpha_N_O_N(1)*((p%L_FA-p%B_FA)/2+x%tmd_x(1))+omega_N_O_N(3)*omega_N_O_N(2)*((p%L_FA-p%B_FA)/2+x%tmd_x(1))+omega_N_O_N(1)*omega_N_O_N(2)*p%B_FA*.5-a_G_N(2))
-         F_x_tlcd_WL_N = p%rho_FA*p%area_FA*((p%L_FA-p%B_FA)/2-x%tmd_x(1))*(r_ddot_P_N(1)-2*omega_N_O_N(2)*x%tmd_x(2)+alpha_N_O_N(2)*((p%L_FA-p%B_FA)/2-x%tmd_x(1))+omega_N_O_N(2)*omega_N_O_N(2)*p%B_FA*.5+omega_N_O_N(3)*omega_N_O_N(3)*p%B_FA*.5+omega_N_O_N(3)*omega_N_O_N(1)*((p%L_FA-p%B_FA)/2-x%tmd_x(1))-a_G_N(1))
-         F_y_tlcd_WL_N = p%rho_FA*p%area_FA*((p%L_FA-p%B_FA)/2-x%tmd_x(1))*(r_ddot_P_N(2)+2*omega_N_O_N(1)*x%tmd_x(2)-alpha_N_O_N(3)*p%B_FA*.5-alpha_N_O_N(1)*((p%L_FA-p%B_FA)/2-x%tmd_x(1))+omega_N_O_N(3)*omega_N_O_N(2)*((p%L_FA-p%B_FA)/2-x%tmd_x(1))-omega_N_O_N(1)*omega_N_O_N(2)*p%B_FA*.5-a_G_N(2))
-         F_y_tlcd_WH_N = p%rho_FA*p%area_FA/p%area_ratio_FA*p%B_FA*(r_ddot_P_N(2)+2*omega_N_O_N(3)*p%area_ratio_FA*x%tmd_x(2)-a_G_N(2))
-         F_z_tlcd_WH_N = p%rho_FA*p%area_FA/p%area_ratio_FA*p%B_FA*(r_ddot_P_N(3)-2*omega_N_O_N(2)*p%area_ratio_FA*x%tmd_x(2)-a_G_N(3))
+         F_x_tlcd_WR_N = p%rho_FA*p%area_FA*((p%L_FA-p%B_FA)/2+x%tmd_x(1))*(                             &
+                                 r_ddot_P_N(1)                                                           &
+                              +2*omega_N_O_N(2)*x%tmd_x(2)                                               &
+                                +alpha_N_O_N(2)*((p%L_FA-p%B_FA)/2+x%tmd_x(1))                           &
+                                -omega_N_O_N(2)*omega_N_O_N(2)*p%B_FA*.5                                 &
+                                -omega_N_O_N(3)*omega_N_O_N(3)*p%B_FA*.5                                 &
+                                +omega_N_O_N(3)*omega_N_O_N(1)*((p%L_FA-p%B_FA)/2+x%tmd_x(1))-a_G_N(1)   &
+                              )
+         F_y_tlcd_WR_N = p%rho_FA*p%area_FA*((p%L_FA-p%B_FA)/2+x%tmd_x(1))*(                             &
+                                 r_ddot_P_N(2)                                                           &
+                              -2*omega_N_O_N(1)*x%tmd_x(2)                                               &
+                                +alpha_N_O_N(3)*p%B_FA*.5                                                &
+                                -alpha_N_O_N(1)*((p%L_FA-p%B_FA)/2+x%tmd_x(1))                           &
+                                +omega_N_O_N(3)*omega_N_O_N(2)*((p%L_FA-p%B_FA)/2+x%tmd_x(1))            &
+                                +omega_N_O_N(1)*omega_N_O_N(2)*p%B_FA*.5-a_G_N(2)                        &
+                              )
+         F_x_tlcd_WL_N = p%rho_FA*p%area_FA*((p%L_FA-p%B_FA)/2-x%tmd_x(1))*(                             &
+                                 r_ddot_P_N(1)                                                           &
+                              -2*omega_N_O_N(2)*x%tmd_x(2)                                               &
+                                +alpha_N_O_N(2)*((p%L_FA-p%B_FA)/2-x%tmd_x(1))                           &
+                                +omega_N_O_N(2)*omega_N_O_N(2)*p%B_FA*.5                                 &
+                                +omega_N_O_N(3)*omega_N_O_N(3)*p%B_FA*.5                                 &
+                                +omega_N_O_N(3)*omega_N_O_N(1)*((p%L_FA-p%B_FA)/2-x%tmd_x(1))-a_G_N(1)   &
+                              )
+         F_y_tlcd_WL_N = p%rho_FA*p%area_FA*((p%L_FA-p%B_FA)/2-x%tmd_x(1))*(                             &
+                                 r_ddot_P_N(2)                                                           &
+                              +2*omega_N_O_N(1)*x%tmd_x(2)                                               &
+                                -alpha_N_O_N(3)*p%B_FA*.5                                                &
+                                -alpha_N_O_N(1)*((p%L_FA-p%B_FA)/2-x%tmd_x(1))                           &
+                                +omega_N_O_N(3)*omega_N_O_N(2)*((p%L_FA-p%B_FA)/2-x%tmd_x(1))            &
+                                -omega_N_O_N(1)*omega_N_O_N(2)*p%B_FA*.5-a_G_N(2)                        &
+                              )
+         F_y_tlcd_WH_N = p%rho_FA*p%area_FA/p%area_ratio_FA*p%B_FA*(             &
+                                 r_ddot_P_N(2)                                   &
+                              +2*omega_N_O_N(3)*p%area_ratio_FA*x%tmd_x(2)       &
+                                -a_G_N(2)                                        &
+                              )
+         F_z_tlcd_WH_N = p%rho_FA*p%area_FA/p%area_ratio_FA*p%B_FA*(             &
+                                 r_ddot_P_N(3)                                   &
+                              -2*omega_N_O_N(2)*p%area_ratio_FA*x%tmd_x(2)       &
+                                -a_G_N(3)                                        &
+                              )
 
          !side-to-side TLCD external forces of dependent degrees
-         F_x_otlcd_WB_N = p%rho_SS*p%area_SS*((p%L_SS-p%B_SS)/2+x%tmd_x(3))*(r_ddot_P_N(1)+2*omega_N_O_N(2)*x%tmd_x(4)+alpha_N_O_N(2)*((p%L_SS-p%B_SS)/2+x%tmd_x(3))+alpha_N_O_N(3)*p%B_SS/2-omega_N_O_N(2)*omega_N_O_N(1)*p%B_SS/2+omega_N_O_N(3)*omega_N_O_N(1)*((p%L_SS-p%B_SS)/2+x%tmd_x(3))-a_G_N(1))
-         F_y_otlcd_WB_N = p%rho_SS*p%area_SS*((p%L_SS-p%B_SS)/2+x%tmd_x(3))*(r_ddot_P_N(2)-2*omega_N_O_N(1)*x%tmd_x(4)-alpha_N_O_N(1)*((p%L_SS-p%B_SS)/2+x%tmd_x(3))+omega_N_O_N(3)*omega_N_O_N(2)*((p%L_SS-p%B_SS)/2+x%tmd_x(3))+omega_N_O_N(3)*omega_N_O_N(3)*p%B_SS/2+omega_N_O_N(1)*omega_N_O_N(1)*p%B_SS/2-a_G_N(2))
-         F_x_otlcd_WF_N = p%rho_SS*p%area_SS*((p%L_SS-p%B_SS)/2-x%tmd_x(3))*(r_ddot_P_N(1)-2*omega_N_O_N(2)*x%tmd_x(4)+alpha_N_O_N(2)*((p%L_SS-p%B_SS)/2-x%tmd_x(3))-alpha_N_O_N(2)*p%B_SS/2+omega_N_O_N(2)*omega_N_O_N(1)*p%B_SS/2+omega_N_O_N(3)*omega_N_O_N(1)*((p%L_SS-p%B_SS)/2-x%tmd_x(3))-a_G_N(1))
-         F_y_otlcd_WF_N = p%rho_SS*p%area_SS*((p%L_SS-p%B_SS)/2-x%tmd_x(3))*(r_ddot_P_N(2)+2*omega_N_O_N(1)*x%tmd_x(4)-alpha_N_O_N(1)*((p%L_SS-p%B_SS)/2-x%tmd_x(3))+omega_N_O_N(3)*omega_N_O_N(2)*((p%L_SS-p%B_SS)/2-x%tmd_x(3))-omega_N_O_N(3)*omega_N_O_N(3)*p%B_SS/2-omega_N_O_N(1)*omega_N_O_N(1)*p%B_SS/2-a_G_N(2))
-         F_x_otlcd_WH_N = p%rho_SS*p%area_SS/p%area_ratio_SS*p%B_SS*(r_ddot_P_N(1)-2*omega_N_O_N(3)*p%area_ratio_SS*x%tmd_x(4)-a_G_N(1))
-         F_z_otlcd_WH_N = p%rho_SS*p%area_SS/p%area_ratio_SS*p%B_SS*(r_ddot_P_N(3)+2*omega_N_O_N(1)*p%area_ratio_SS*x%tmd_x(4)-a_G_N(3))
+         F_x_otlcd_WB_N = p%rho_SS*p%area_SS*((p%L_SS-p%B_SS)/2+x%tmd_x(3))*(                      &
+                                 r_ddot_P_N(1)                                                     &
+                              +2*omega_N_O_N(2)*x%tmd_x(4)                                         &
+                                +alpha_N_O_N(2)*((p%L_SS-p%B_SS)/2+x%tmd_x(3))                     &
+                                +alpha_N_O_N(3)*p%B_SS/2-omega_N_O_N(2)*omega_N_O_N(1)*p%B_SS/2    &
+                                +omega_N_O_N(3)*omega_N_O_N(1)*((p%L_SS-p%B_SS)/2+x%tmd_x(3))      &
+                                -a_G_N(1)                                                          &
+                              )
+         F_y_otlcd_WB_N = p%rho_SS*p%area_SS*((p%L_SS-p%B_SS)/2+x%tmd_x(3))*(                      &
+                                 r_ddot_P_N(2)                                                     &
+                              -2*omega_N_O_N(1)*x%tmd_x(4)                                         &
+                                -alpha_N_O_N(1)*((p%L_SS-p%B_SS)/2+x%tmd_x(3))                     &
+                                +omega_N_O_N(3)*omega_N_O_N(2)*((p%L_SS-p%B_SS)/2+x%tmd_x(3))      &
+                                +omega_N_O_N(3)*omega_N_O_N(3)*p%B_SS/2                            &
+                                +omega_N_O_N(1)*omega_N_O_N(1)*p%B_SS/2                            &
+                                -a_G_N(2)                                                          &
+                              )
+         F_x_otlcd_WF_N = p%rho_SS*p%area_SS*((p%L_SS-p%B_SS)/2-x%tmd_x(3))*(                      &
+                                 r_ddot_P_N(1)                                                     &
+                              -2*omega_N_O_N(2)*x%tmd_x(4)                                         &
+                                +alpha_N_O_N(2)*((p%L_SS-p%B_SS)/2-x%tmd_x(3))                     &
+                                -alpha_N_O_N(2)*p%B_SS/2                                           &
+                                +omega_N_O_N(2)*omega_N_O_N(1)*p%B_SS/2                            &
+                                +omega_N_O_N(3)*omega_N_O_N(1)*((p%L_SS-p%B_SS)/2-x%tmd_x(3))      &
+                                -a_G_N(1)                                                          &
+                              )
+         F_y_otlcd_WF_N = p%rho_SS*p%area_SS*((p%L_SS-p%B_SS)/2-x%tmd_x(3))*(                      &
+                                 r_ddot_P_N(2)                                                     &
+                              +2*omega_N_O_N(1)*x%tmd_x(4)                                         &
+                                -alpha_N_O_N(1)*((p%L_SS-p%B_SS)/2-x%tmd_x(3))                     &
+                                +omega_N_O_N(3)*omega_N_O_N(2)*((p%L_SS-p%B_SS)/2-x%tmd_x(3))      &
+                                -omega_N_O_N(3)*omega_N_O_N(3)*p%B_SS/2                            &
+                                -omega_N_O_N(1)*omega_N_O_N(1)*p%B_SS/2                            &
+                                -a_G_N(2)                                                          &
+                              )
+         F_x_otlcd_WH_N = p%rho_SS*p%area_SS/p%area_ratio_SS*p%B_SS*(      &
+                                 r_ddot_P_N(1)                             &
+                              -2*omega_N_O_N(3)*p%area_ratio_SS*x%tmd_x(4) &
+                                -a_G_N(1)                                  &
+                              )
+         F_z_otlcd_WH_N = p%rho_SS*p%area_SS/p%area_ratio_SS*p%B_SS*(      &
+                                 r_ddot_P_N(3)                             &
+                              +2*omega_N_O_N(1)*p%area_ratio_SS*x%tmd_x(4) &
+                                -a_G_N(3)                                  &
+                              )
 
          !forces in local coordinates (from fore-aft and side-to-side TLCDs)
-         F_P_N(1) =-F_x_tlcd_WR_N-F_x_tlcd_WL_N-p%rho_FA*(p%area_FA/p%area_ratio_FA)*p%B_FA*dxdt%tmd_x(2)*p%area_ratio_FA+F_x_otlcd_WB_N+F_x_otlcd_WF_N+F_x_otlcd_WH_N
-         F_P_N(2) =+F_y_tlcd_WR_N+F_y_tlcd_WL_N-p%rho_SS*(p%area_SS/p%area_ratio_SS)*p%B_SS*dxdt%tmd_x(4)*p%area_ratio_SS+F_y_tlcd_WH_N-F_y_otlcd_WB_N-F_y_otlcd_WF_N
-         F_P_N(3) =-F_z_tlcd_WH_N-F_z_otlcd_WH_N
+         F_P_N(1) = -F_x_tlcd_WR_N - F_x_tlcd_WL_N - p%rho_FA*(p%area_FA/p%area_ratio_FA)*p%B_FA*dxdt%tmd_x(2)*p%area_ratio_FA + F_x_otlcd_WB_N + F_x_otlcd_WF_N + F_x_otlcd_WH_N
+         F_P_N(2) = +F_y_tlcd_WR_N + F_y_tlcd_WL_N - p%rho_SS*(p%area_SS/p%area_ratio_SS)*p%B_SS*dxdt%tmd_x(4)*p%area_ratio_SS + F_y_tlcd_WH_N  - F_y_otlcd_WB_N - F_y_otlcd_WF_N
+         F_P_N(3) = -F_z_tlcd_WH_N - F_z_otlcd_WH_N
 
          !forces in global coordinates
          y%Mesh%Force(:,1) = matmul(transpose(u%Mesh%Orientation(:,:,1)),F_P_N)
 
          !moments in local coordinates (from fore-aft and side-to-side TLCDs)
-         M_P_N(1) = F_y_tlcd_WR_N*((p%L_FA-p%B_FA)/2+x%tmd_x(1)) + F_y_tlcd_WL_N*((p%L_FA-p%B_FA)/2-x%tmd_x(1))-F_y_otlcd_WB_N*((p%L_SS-p%B_SS)/2+x%tmd_x(3))-F_y_otlcd_WF_N*((p%L_SS-p%B_SS)/2-x%tmd_x(3))
-         M_P_N(2) = -F_x_tlcd_WR_N*((p%L_FA-p%B_FA)/2+x%tmd_x(1)) - F_x_tlcd_WL_N*((p%L_FA-p%B_FA)/2-x%tmd_x(1))+F_x_otlcd_WB_N*((p%L_SS-p%B_SS)/2+x%tmd_x(3))+F_x_otlcd_WF_N*((p%L_SS-p%B_SS)/2-x%tmd_x(3))
-         M_P_N(3) = F_y_tlcd_WR_N*p%B_FA*.5 - F_y_tlcd_WL_N*p%B_FA*.5 + F_x_otlcd_WB_N*p%B_SS*.5 - F_x_otlcd_WF_N*p%B_SS*.5
+         M_P_N(1) =  F_y_tlcd_WR_N*((p%L_FA-p%B_FA)/2+x%tmd_x(1)) + F_y_tlcd_WL_N*((p%L_FA-p%B_FA)/2-x%tmd_x(1)) - F_y_otlcd_WB_N*((p%L_SS-p%B_SS)/2+x%tmd_x(3)) - F_y_otlcd_WF_N*((p%L_SS-p%B_SS)/2-x%tmd_x(3))
+         M_P_N(2) = -F_x_tlcd_WR_N*((p%L_FA-p%B_FA)/2+x%tmd_x(1)) - F_x_tlcd_WL_N*((p%L_FA-p%B_FA)/2-x%tmd_x(1)) + F_x_otlcd_WB_N*((p%L_SS-p%B_SS)/2+x%tmd_x(3)) + F_x_otlcd_WF_N*((p%L_SS-p%B_SS)/2-x%tmd_x(3))
+         M_P_N(3) =  F_y_tlcd_WR_N*p%B_FA*.5 - F_y_tlcd_WL_N*p%B_FA*.5 + F_x_otlcd_WB_N*p%B_SS*.5 - F_x_otlcd_WF_N*p%B_SS*.5
 
          !moments in global coordinates
          y%Mesh%Moment(:,1) = matmul(transpose(u%Mesh%Orientation(:,:,1)), M_P_N)
@@ -1196,7 +1272,7 @@ SUBROUTINE TMD_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
       a_G_O (2) = 0
       a_G_O (3) = -p%Gravity
       
-      IF (p%TMD_DOF_MODE == ControlMode_None .OR. p%TMD_DOF_MODE == DOFMode_Indept .OR. p%TMD_DOF_MODE == DOFMode_Omni) THEN
+      IF (p%TMD_DOF_MODE /= DOFMode_BTMD) THEN
 
           ! Compute nacelle and gravitational acceleration in nacelle coordinates 
          a_G_N     = matmul(u%Mesh%Orientation(:,:,1),a_G_O)
@@ -1318,46 +1394,71 @@ SUBROUTINE TMD_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
       ! Compute the first time derivatives, dxdt%tmd_x(2) and dxdt%tmd_x(4), of the continuous states,:
       IF (p%TMD_DOF_MODE == DOFMode_Indept) THEN
      
-          IF (p%TMD_X_DOF) THEN
-               dxdt%tmd_x(2) = (omega_P_N(2)**2 + omega_P_N(3)**2 - K(1) / p%M_X) * x%tmd_x(1) - ( m%C_ctrl(1)/p%M_X ) * x%tmd_x(2) - ( m%C_Brake(1)/p%M_X ) * x%tmd_x(2) + B_X + m%F_fr(1) / p%M_X
-          ELSE
-               dxdt%tmd_x(2) = 0.0_ReKi
-          END IF
-          IF (p%TMD_Y_DOF) THEN
-               dxdt%tmd_x(4) = (omega_P_N(1)**2 + omega_P_N(3)**2 - K(2) / p%M_Y) * x%tmd_x(3) - ( m%C_ctrl(2)/p%M_Y ) * x%tmd_x(4) - ( m%C_Brake(2)/p%M_Y ) * x%tmd_x(4) + B_Y + m%F_fr(2) / p%M_Y 
-          ELSE
-               dxdt%tmd_x(4) = 0.0_ReKi
-          END IF
+         IF (p%TMD_X_DOF) THEN
+            dxdt%tmd_x(2) = (omega_P_N(2)**2 + omega_P_N(3)**2 - K(1) / p%M_X) * x%tmd_x(1) - ( m%C_ctrl(1)/p%M_X ) * x%tmd_x(2) - ( m%C_Brake(1)/p%M_X ) * x%tmd_x(2) + B_X + m%F_fr(1) / p%M_X
+         ELSE
+            dxdt%tmd_x(2) = 0.0_ReKi
+         END IF
+         IF (p%TMD_Y_DOF) THEN
+            dxdt%tmd_x(4) = (omega_P_N(1)**2 + omega_P_N(3)**2 - K(2) / p%M_Y) * x%tmd_x(3) - ( m%C_ctrl(2)/p%M_Y ) * x%tmd_x(4) - ( m%C_Brake(2)/p%M_Y ) * x%tmd_x(4) + B_Y + m%F_fr(2) / p%M_Y 
+         ELSE
+            dxdt%tmd_x(4) = 0.0_ReKi
+         END IF
 
-       ELSE IF (p%TMD_DOF_MODE == DOFMode_Omni) THEN
-          ! Compute the first time derivatives of the continuous states of Omnidirectional TMD mode by sm 2015-0904 
-            dxdt%tmd_x(2) = (omega_P_N(2)**2 + omega_P_N(3)**2 - K(1) / p%M_XY) * x%tmd_x(1) - ( m%C_ctrl(1)/p%M_XY ) * x%tmd_x(2) - ( m%C_Brake(1)/p%M_XY ) * x%tmd_x(2) + B_X + 1 / p%M_XY * ( m%F_fr(1) ) - ( omega_P_N(1)*omega_P_N(2) - alpha_P_N(3) ) * x%tmd_x(3) + 2 * omega_P_N(3) * x%tmd_x(4)
-            dxdt%tmd_x(4) = (omega_P_N(1)**2 + omega_P_N(3)**2 - K(2) / p%M_XY) * x%tmd_x(3) - ( m%C_ctrl(2)/p%M_XY ) * x%tmd_x(4) - ( m%C_Brake(2)/p%M_XY ) * x%tmd_x(4) + B_Y + 1 / p%M_XY * ( m%F_fr(2) ) - ( omega_P_N(1)*omega_P_N(2) + alpha_P_N(3) ) * x%tmd_x(1) - 2 * omega_P_N(3) * x%tmd_x(2)         
-       ELSE IF (p%TMD_DOF_MODE == DOFMode_BTMD) THEN
+      ELSE IF (p%TMD_DOF_MODE == DOFMode_Omni) THEN
+               ! Compute the first time derivatives of the continuous states of Omnidirectional TMD mode by sm 2015-0904 
+               dxdt%tmd_x(2) =  ( omega_P_N(2)**2 + omega_P_N(3)**2 - K(1) / p%M_XY) * x%tmd_x(1)  &
+                              - ( m%C_ctrl (1)/p%M_XY ) * x%tmd_x(2)                               &
+                              - ( m%C_Brake(1)/p%M_XY ) * x%tmd_x(2)                               &
+                              + B_X + 1 / p%M_XY * ( m%F_fr(1) )                                   &
+                              - ( omega_P_N(1)*omega_P_N(2) - alpha_P_N(3) ) * x%tmd_x(3)          &
+                             +2 * omega_P_N(3) * x%tmd_x(4)
+               dxdt%tmd_x(4) =  ( omega_P_N(1)**2 + omega_P_N(3)**2 - K(2) / p%M_XY) * x%tmd_x(3)  &
+                              - ( m%C_ctrl( 2)/p%M_XY ) * x%tmd_x(4)                               &
+                              - ( m%C_Brake(2)/p%M_XY ) * x%tmd_x(4)                               &
+                              + B_Y + 1 / p%M_XY * ( m%F_fr(2) )                                   &
+                              - ( omega_P_N(1)*omega_P_N(2) + alpha_P_N(3) ) * x%tmd_x(1)          &
+                             -2 * omega_P_N(3) * x%tmd_x(2)
+      ELSE IF (p%TMD_DOF_MODE == DOFMode_BTMD) THEN
 
-          IF (p%TMD_X_DOF) THEN
-               dxdt%btmd_x1(2) = (omega_P_B1(2)**2 + omega_P_B1(3)**2 - K(1) / p%M_X) * x%btmd_x1(1) - ( m%C_ctrl(1)/p%M_X ) * x%btmd_x1(2) - ( m%C_Brake(1)/p%M_X ) * x%btmd_x1(2) + B_X_B1 + m%F_fr(1) / p%M_X
-               dxdt%btmd_x2(2) = (omega_P_B2(2)**2 + omega_P_B2(3)**2 - K(1) / p%M_X) * x%btmd_x2(1) - ( m%C_ctrl(1)/p%M_X ) * x%btmd_x2(2) - ( m%C_Brake(1)/p%M_X ) * x%btmd_x2(2) + B_X_B2 + m%F_fr(1) / p%M_X
-               dxdt%btmd_x3(2) = (omega_P_B3(2)**2 + omega_P_B3(3)**2 - K(1) / p%M_X) * x%btmd_x3(1) - ( m%C_ctrl(1)/p%M_X ) * x%btmd_x3(2) - ( m%C_Brake(1)/p%M_X ) * x%btmd_x3(2) + B_X_B3 + m%F_fr(1) / p%M_X
-          ELSE
-               dxdt%btmd_x1(2) = 0.0_ReKi
-               dxdt%btmd_x2(2) = 0.0_ReKi
-               dxdt%btmd_x3(2) = 0.0_ReKi
-          END IF
-          IF (p%TMD_Y_DOF) THEN
-               dxdt%btmd_x1(4) = (omega_P_B1(1)**2 + omega_P_B1(3)**2 - K(2) / p%M_Y) * x%btmd_x1(3) - ( m%C_ctrl(2)/p%M_Y ) * x%btmd_x1(4) - ( m%C_Brake(2)/p%M_Y ) * x%btmd_x1(4) + B_Y_B1 + m%F_fr(2) / p%M_Y 
-               dxdt%btmd_x2(4) = (omega_P_B2(1)**2 + omega_P_B2(3)**2 - K(2) / p%M_Y) * x%btmd_x2(3) - ( m%C_ctrl(2)/p%M_Y ) * x%btmd_x2(4) - ( m%C_Brake(2)/p%M_Y ) * x%btmd_x2(4) + B_Y_B2 + m%F_fr(2) / p%M_Y 
-               dxdt%btmd_x3(4) = (omega_P_B3(1)**2 + omega_P_B3(3)**2 - K(2) / p%M_Y) * x%btmd_x3(3) - ( m%C_ctrl(2)/p%M_Y ) * x%btmd_x3(4) - ( m%C_Brake(2)/p%M_Y ) * x%btmd_x3(4) + B_Y_B3 + m%F_fr(2) / p%M_Y 
-          ELSE
-               dxdt%btmd_x1(4) = 0.0_ReKi
-               dxdt%btmd_x2(4) = 0.0_ReKi
-               dxdt%btmd_x3(4) = 0.0_ReKi
-          END IF
-      
+         IF (p%TMD_X_DOF) THEN
+            dxdt%btmd_x1(2) = (omega_P_B1(2)**2 + omega_P_B1(3)**2 - K(1) / p%M_X) * x%btmd_x1(1) - ( m%C_ctrl(1)/p%M_X ) * x%btmd_x1(2) - ( m%C_Brake(1)/p%M_X ) * x%btmd_x1(2) + B_X_B1 + m%F_fr(1) / p%M_X
+            dxdt%btmd_x2(2) = (omega_P_B2(2)**2 + omega_P_B2(3)**2 - K(1) / p%M_X) * x%btmd_x2(1) - ( m%C_ctrl(1)/p%M_X ) * x%btmd_x2(2) - ( m%C_Brake(1)/p%M_X ) * x%btmd_x2(2) + B_X_B2 + m%F_fr(1) / p%M_X
+            dxdt%btmd_x3(2) = (omega_P_B3(2)**2 + omega_P_B3(3)**2 - K(1) / p%M_X) * x%btmd_x3(1) - ( m%C_ctrl(1)/p%M_X ) * x%btmd_x3(2) - ( m%C_Brake(1)/p%M_X ) * x%btmd_x3(2) + B_X_B3 + m%F_fr(1) / p%M_X
+         ELSE
+            dxdt%btmd_x1(2) = 0.0_ReKi
+            dxdt%btmd_x2(2) = 0.0_ReKi
+            dxdt%btmd_x3(2) = 0.0_ReKi
+         END IF
+         IF (p%TMD_Y_DOF) THEN
+            dxdt%btmd_x1(4) = (omega_P_B1(1)**2 + omega_P_B1(3)**2 - K(2) / p%M_Y) * x%btmd_x1(3) - ( m%C_ctrl(2)/p%M_Y ) * x%btmd_x1(4) - ( m%C_Brake(2)/p%M_Y ) * x%btmd_x1(4) + B_Y_B1 + m%F_fr(2) / p%M_Y 
+            dxdt%btmd_x2(4) = (omega_P_B2(1)**2 + omega_P_B2(3)**2 - K(2) / p%M_Y) * x%btmd_x2(3) - ( m%C_ctrl(2)/p%M_Y ) * x%btmd_x2(4) - ( m%C_Brake(2)/p%M_Y ) * x%btmd_x2(4) + B_Y_B2 + m%F_fr(2) / p%M_Y 
+            dxdt%btmd_x3(4) = (omega_P_B3(1)**2 + omega_P_B3(3)**2 - K(2) / p%M_Y) * x%btmd_x3(3) - ( m%C_ctrl(2)/p%M_Y ) * x%btmd_x3(4) - ( m%C_Brake(2)/p%M_Y ) * x%btmd_x3(4) + B_Y_B3 + m%F_fr(2) / p%M_Y 
+         ELSE
+            dxdt%btmd_x1(4) = 0.0_ReKi
+            dxdt%btmd_x2(4) = 0.0_ReKi
+            dxdt%btmd_x3(4) = 0.0_ReKi
+         END IF
+
       ELSE IF (p%TMD_DOF_MODE == DOFMode_TLCD) THEN !MEG & SP
          ! Compute the first time derivatives of the continuous states of TLCD mode
-         dxdt%tmd_x(2) = (2*p%rho_FA*p%area_FA*x%tmd_x(1)*rddot_N_N(3)+p%rho_FA*p%area_FA*p%B_FA*alpha_P_N(2)*((p%L_FA-p%B_FA)/2)-p%rho_FA*p%area_FA*p%B_FA*omega_P_N(1)*omega_P_N(3)*((p%L_FA-p%B_FA)/2)+2*p%rho_FA*p%area_FA*omega_P_N(1)*omega_P_N(1)*x%tmd_x(1)*(p%L_FA-p%B_FA)+2*p%rho_FA*p%area_FA*omega_P_N(2)*omega_P_N(2)*x%tmd_x(1)*(p%L_FA-p%B_FA)+2*p%rho_FA*p%area_FA*x%tmd_x(1)*a_G_N(3)-p%rho_FA*p%area_FA*p%B_FA*rddot_N_N(1)+p%rho_FA*p%area_FA*p%B_FA*a_G_N(1)-.5*p%rho_FA*p%area_FA*p%headLossCoeff_FA*p%area_ratio_FA*p%area_ratio_FA*x%tmd_x(2)*ABS(x%tmd_x(2)))/(p%rho_FA*p%area_FA*(p%L_FA-p%B_FA+p%area_ratio_FA*p%B_FA))
-         dxdt%tmd_x(4) = (2*p%rho_SS*p%area_SS*x%tmd_x(3)*rddot_N_N(3)+p%rho_SS*p%area_SS*p%B_SS*alpha_P_N(1)*((p%L_SS-p%B_SS)/2)-p%rho_SS*p%area_SS*p%B_SS*omega_P_N(2)*omega_P_N(3)*((p%L_SS-p%B_SS)/2)+2*p%rho_SS*p%area_SS*x%tmd_x(3)*omega_P_N(1)*omega_P_N(1)*(p%L_SS-p%B_SS)+2*p%rho_SS*p%area_SS*x%tmd_x(3)*omega_P_N(2)*omega_P_N(2)*(p%L_SS-p%B_SS)+2*p%rho_SS*p%area_SS*x%tmd_x(3)*a_G_N(3)-p%rho_SS*p%area_SS*p%B_SS*rddot_N_N(2)+p%rho_SS*p%area_SS*p%B_SS*a_G_N(2)-.5*p%rho_SS*p%area_SS*p%headLossCoeff_SS*p%area_ratio_SS*p%area_ratio_SS*x%tmd_x(4)*ABS(x%tmd_x(4)))/(p%rho_SS*p%area_SS*(p%L_SS-p%B_SS+p%area_ratio_SS*p%B_SS))
+         dxdt%tmd_x(2) = (2*p%rho_FA*p%area_FA*x%tmd_x(1)*rddot_N_N(3)  &
+                           +p%rho_FA*p%area_FA*p%B_FA*alpha_P_N(2)*((p%L_FA-p%B_FA)/2) &
+                           -p%rho_FA*p%area_FA*p%B_FA*omega_P_N(1)*omega_P_N(3)*((p%L_FA-p%B_FA)/2)   &
+                         +2*p%rho_FA*p%area_FA*omega_P_N(1)*omega_P_N(1)*x%tmd_x(1)*(p%L_FA-p%B_FA)   &
+                         +2*p%rho_FA*p%area_FA*omega_P_N(2)*omega_P_N(2)*x%tmd_x(1)*(p%L_FA-p%B_FA)   &
+                         +2*p%rho_FA*p%area_FA*x%tmd_x(1)*a_G_N(3)   &
+                           -p%rho_FA*p%area_FA*p%B_FA*rddot_N_N(1)   &
+                           +p%rho_FA*p%area_FA*p%B_FA*a_G_N(1) &
+                        -.5*p%rho_FA*p%area_FA*p%headLossCoeff_FA*p%area_ratio_FA*p%area_ratio_FA*x%tmd_x(2)*ABS(x%tmd_x(2)))/(p%rho_FA*p%area_FA*(p%L_FA-p%B_FA+p%area_ratio_FA*p%B_FA))
+         dxdt%tmd_x(4) = (2*p%rho_SS*p%area_SS*x%tmd_x(3)*rddot_N_N(3)  &
+                           +p%rho_SS*p%area_SS*p%B_SS*alpha_P_N(1)*((p%L_SS-p%B_SS)/2) &
+                           -p%rho_SS*p%area_SS*p%B_SS*omega_P_N(2)*omega_P_N(3)*((p%L_SS-p%B_SS)/2)   &
+                         +2*p%rho_SS*p%area_SS*x%tmd_x(3)*omega_P_N(1)*omega_P_N(1)*(p%L_SS-p%B_SS)   &
+                         +2*p%rho_SS*p%area_SS*x%tmd_x(3)*omega_P_N(2)*omega_P_N(2)*(p%L_SS-p%B_SS)   &
+                         +2*p%rho_SS*p%area_SS*x%tmd_x(3)*a_G_N(3)-p%rho_SS*p%area_SS*p%B_SS*rddot_N_N(2)   &
+                           +p%rho_SS*p%area_SS*p%B_SS*a_G_N(2)    &
+                        -.5*p%rho_SS*p%area_SS*p%headLossCoeff_SS*p%area_ratio_SS*p%area_ratio_SS*x%tmd_x(4)*ABS(x%tmd_x(4)))/(p%rho_SS*p%area_SS*(p%L_SS-p%B_SS+p%area_ratio_SS*p%B_SS))
 
       END IF
       
@@ -1777,9 +1878,9 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, OutFileRoot, UnEc, ErrStat
    REAL(ReKi)                    :: TmpRAry(4)                                ! A temporary array to read a table from the input file
    INTEGER(IntKi)                :: I                                         ! loop counter
    INTEGER(IntKi)                :: UnIn                                      ! Unit number for reading file
+   LOGICAL                       :: Echo                                      ! Determines if an echo file should be written
      
    INTEGER(IntKi)                :: ErrStat2                                  ! Temporary Error status
-   LOGICAL                       :: Echo                                      ! Determines if an echo file should be written
    CHARACTER(ErrMsgLen)          :: ErrMsg2                                   ! Temporary Error message
    CHARACTER(1024)               :: PriPath                                   ! Path name of the primary file
    CHARACTER(1024)               :: FTitle                                    ! "File Title": the 2nd line of the input file, which contains a description of its contents
@@ -1796,20 +1897,13 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, OutFileRoot, UnEc, ErrStat
    CALL GetPath( InputFile, PriPath )     ! Input files will be relative to the path where the primary input file is located.
    
 
-   !CALL AllocAry( InputFileData%OutList, MaxOutPts, "ServoDyn Input File's Outlist", ErrStat2, ErrMsg2 )
-   !   CALL CheckError( ErrStat2, ErrMsg2 )
-   !   IF ( ErrStat >= AbortErrLev ) RETURN   
-      
-   
       ! Get an available unit number for the file.
-
    CALL GetNewUnit( UnIn, ErrStat2, ErrMsg2 )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
 
       ! Open the Primary input file.
-
    CALL OpenFInpFile ( UnIn, InputFile, ErrStat2, ErrMsg2 )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
@@ -1820,7 +1914,7 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, OutFileRoot, UnEc, ErrStat
    ! If Echo is TRUE, rewind and write on the second try.
    
    I = 1 !set the number of times we've read the file
-  ! DO 
+   DO 
    !-------------------------- HEADER ---------------------------------------------
    
       CALL ReadCom( UnIn, InputFile, 'File header: Module Version (line 1)', ErrStat2, ErrMsg2, UnEc )
@@ -1831,6 +1925,40 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, OutFileRoot, UnEc, ErrStat
          CALL CheckError( ErrStat2, ErrMsg2 )
          IF ( ErrStat >= AbortErrLev ) RETURN      
          
+   !---------------------- SIMULATION CONTROL --------------------------------------
+   
+      CALL ReadCom( UnIn, InputFile, 'Section Header: Simulation Control', ErrStat2, ErrMsg2, UnEc )
+         CALL CheckError( ErrStat2, ErrMsg2 )
+         IF ( ErrStat >= AbortErrLev ) RETURN
+   
+         ! Echo - Echo input to "<RootName>.ech".
+   
+      CALL ReadVar( UnIn, InputFile, Echo, 'Echo',   'Echo switch', ErrStat2, ErrMsg2, UnEc )
+         CALL CheckError( ErrStat2, ErrMsg2 )
+         IF ( ErrStat >= AbortErrLev ) RETURN
+   
+   
+      IF (.NOT. Echo .OR. I > 1) EXIT !exit this loop
+   
+         ! Otherwise, open the echo file, then rewind the input file and echo everything we've read
+      
+      I = I + 1         ! make sure we do this only once (increment counter that says how many times we've read this file)
+   
+      CALL OpenEcho ( UnEc, TRIM(OutFileRoot)//'.ech', ErrStat2, ErrMsg2, TMD_Ver )
+         CALL CheckError( ErrStat2, ErrMsg2 )
+         IF ( ErrStat >= AbortErrLev ) RETURN
+   
+      IF ( UnEc > 0 )  WRITE (UnEc,'(/,A,/)')  'Data from '//TRIM(TMD_Ver%Name)//' primary input file "'//TRIM( InputFile )//'":'
+         
+      REWIND( UnIn, IOSTAT=ErrStat2 )  
+         IF (ErrStat2 /= 0_IntKi ) THEN
+            CALL CheckError( ErrID_Fatal, 'Error rewinding file "'//TRIM(InputFile)//'".' )      
+            RETURN
+         END IF         
+      
+   END DO    
+
+
    !------------------ TMD DEGREES OF FREEDOM -----------------------------
    CALL ReadCom( UnIn, InputFile, 'Section Header: TMD DEGREES OF FREEDOM', ErrStat2, ErrMsg2, UnEc )
       CALL CheckError( ErrStat2, ErrMsg2 )
@@ -1904,7 +2032,6 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, OutFileRoot, UnEc, ErrStat
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
       
-      
    !------------------ TMD MASS, STIFFNESS, & DAMPING -----------------------------
    CALL ReadCom( UnIn, InputFile, 'Section Header: TMD MASS, STIFFNESS, & DAMPING', ErrStat2, ErrMsg2, UnEc )
       CALL CheckError( ErrStat2, ErrMsg2 )
@@ -1954,7 +2081,12 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, OutFileRoot, UnEc, ErrStat
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN   
 
-   !MEG & SP
+   !-------------------------------------------------------------------------------
+   !------------------ TLCD -------------------------------------------------------
+   CALL ReadCom( UnIn, InputFile, 'Section Header: TLCD', ErrStat2, ErrMsg2, UnEc )
+      CALL CheckError( ErrStat2, ErrMsg2 )
+
+   ! --------------  FORE-AFT TLCD TOTAL LENGTH, HORIZONTAL LENGTH, VERTICAL AREA, AREA RATIO, DAMPING COEFF, & DENSITY -----
    CALL ReadCom( UnIn, InputFile, 'Section Header: FORE-AFT TLCD TOTAL LENGTH, HORIZONTAL LENGTH, VERTICAL AREA, AREA RATIO, DAMPING COEFF, & DENSITY', ErrStat2, ErrMsg2, UnEc )
       CALL CheckError(ErrStat2, ErrMsg2)
       IF (ErrStat>= AbortErrLev) RETURN
@@ -2198,8 +2330,13 @@ SUBROUTINE TMD_SetParameters( InputFileData, p, ErrStat, ErrMsg )
    !p%RootName = 'TMD'
    ! DOFs 
    
-   
-   p%TMD_DOF_MODE = InputFileData%TMD_DOF_MODE
+   if (p%TMD_On_Blade) then
+!FIXME: this is a short term hack!
+      ! Overwrite the DOF MODE for now.  Will change once we update how the reference orientation and position is handled.
+      p%TMD_DOF_MODE = DOFMode_BTMD
+   else
+      p%TMD_DOF_MODE = InputFileData%TMD_DOF_MODE
+   endif
    p%TMD_X_DOF = InputFileData%TMD_X_DOF
    p%TMD_Y_DOF = InputFileData%TMD_Y_DOF
 

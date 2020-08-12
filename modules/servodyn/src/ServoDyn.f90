@@ -493,10 +493,12 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       !............................................................................................
    IF (p%CompNTMD) THEN
       
-      TMD_InitInp%InputFile = InputFileData%NTMDfile
-      TMD_InitInp%RootName  = TRIM(p%RootName)//'.NTMD'
-      TMD_InitInp%Gravity   = InitInp%gravity
-      TMD_InitInp%r_N_O_G   = InitInp%r_N_O_G
+      TMD_InitInp%InputFile      =  InputFileData%NTMDfile
+      TMD_InitInp%RootName       =  TRIM(p%RootName)//'.NTMD'
+      TMD_InitInp%Gravity        =  InitInp%gravity
+      TMD_InitInp%r_N_O_G        =  InitInp%r_N_O_G
+      TMD_InitInp%NumBl          =  p%NumBl
+      TMD_InitInp%TMD_On_Blade   =  .FALSE.
       
       CALL TMD_Init( TMD_InitInp, u%NTMD, p%NTMD, x%NTMD, xd%NTMD, z%NTMD, OtherState%NTMD, y%NTMD, m%NTMD, Interval, TMD_InitOut, ErrStat2, ErrMsg2 )
          CALL CheckError( ErrStat2, ErrMsg2 )
@@ -514,10 +516,12 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       !............................................................................................
    IF (p%CompTTMD) THEN
       
-      TMD_InitInp%InputFile = InputFileData%TTMDfile
-      TMD_InitInp%RootName  = TRIM(p%RootName)//'.TTMD'
-      TMD_InitInp%Gravity   = InitInp%gravity
-      TMD_InitInp%r_N_O_G   = InitInp%r_TwrBase
+      TMD_InitInp%InputFile      =  InputFileData%TTMDfile
+      TMD_InitInp%RootName       =  TRIM(p%RootName)//'.TTMD'
+      TMD_InitInp%Gravity        =  InitInp%gravity
+      TMD_InitInp%r_N_O_G        =  InitInp%r_TwrBase
+      TMD_InitInp%NumBl          =  p%NumBl
+      TMD_InitInp%TMD_On_Blade   =  .FALSE.
       
       CALL TMD_Init( TMD_InitInp, u%TTMD, p%TTMD, x%TTMD, xd%TTMD, z%TTMD, OtherState%TTMD, y%TTMD, m%TTMD, Interval, TMD_InitOut, ErrStat2, ErrMsg2 )
          CALL CheckError( ErrStat2, ErrMsg2 )
@@ -536,9 +540,12 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       !............................................................................................
    IF (p%CompBTMD) THEN
       
-      TMD_InitInp%InputFile = InputFileData%BTMDfile
-      TMD_InitInp%RootName  = TRIM(p%RootName)//'.BTMD'
-      TMD_InitInp%Gravity   = InitInp%gravity
+      TMD_InitInp%InputFile      =  InputFileData%BTMDfile
+      TMD_InitInp%RootName       =  TRIM(p%RootName)//'.BTMD'
+      TMD_InitInp%Gravity        =  InitInp%gravity
+      TMD_InitInp%NumBl          =  p%NumBl
+      TMD_InitInp%TMD_On_Blade   =  .TRUE.
+
       CALL AllocAry( TMD_InitInp%BladeRootPosition,      3, p%NumBl, 'TMD_InitInp%BladeRootPosition', errStat2, ErrMsg2)
          CALL CheckError( ErrStat2, ErrMsg2 )
       CALL AllocAry( TMD_InitInp%BladeRootOrientation,3, 3, p%NumBl, 'TMD_InitInp%BladeRootOrientation', errStat2, ErrMsg2)
@@ -1202,6 +1209,7 @@ SUBROUTINE SrvD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
    AllOuts(TTMD_YQD) = x%TTMD%tmd_x(4)
    
 !SP_start
+!FIXME: this is a hardcoded size....
    AllOuts(BTMD1_XQ ) = x%BTMD%btmd_x1(1)
    AllOuts(BTMD1_XQD) = x%BTMD%btmd_x1(2)
    AllOuts(BTMD1_YQ ) = x%BTMD%btmd_x1(3)
