@@ -797,9 +797,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          if (allocated(Init%OutData_HD%LinNames_y)) call move_alloc(Init%OutData_HD%LinNames_y,y_FAST%Lin%Modules(MODULE_HD)%Instance(1)%Names_y )
          if (allocated(Init%OutData_HD%LinNames_u)) call move_alloc(Init%OutData_HD%LinNames_u,y_FAST%Lin%Modules(MODULE_HD)%Instance(1)%Names_u )
          if (allocated(Init%OutData_HD%LinNames_x)) call move_alloc(Init%OutData_HD%LinNames_x, y_FAST%Lin%Modules(MODULE_HD)%Instance(1)%Names_x )
-! LIN-TODO: Determine if we need to create this data even though we don't have rotating frames in HD
-         !if (allocated(Init%OutData_HD%RotFrame_y)) call move_alloc(Init%OutData_HD%RotFrame_y,y_FAST%Lin%Modules(MODULE_HD)%Instance(1)%RotFrame_y )
-         !if (allocated(Init%OutData_HD%RotFrame_u)) call move_alloc(Init%OutData_HD%RotFrame_u,y_FAST%Lin%Modules(MODULE_HD)%Instance(1)%RotFrame_u )
          if (allocated(Init%OutData_HD%DerivOrder_x)) call move_alloc(Init%OutData_HD%DerivOrder_x,y_FAST%Lin%Modules(MODULE_HD)%Instance(1)%DerivOrder_x)
          if (allocated(Init%OutData_HD%IsLoad_u  )) call move_alloc(Init%OutData_HD%IsLoad_u  ,y_FAST%Lin%Modules(MODULE_HD)%Instance(1)%IsLoad_u   )
 
@@ -974,9 +971,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       else
          if (allocated(Init%OutData_MAP%LinInitOut%LinNames_y)) call move_alloc(Init%OutData_MAP%LinInitOut%LinNames_y,y_FAST%Lin%Modules(Module_MAP)%Instance(1)%Names_y )
          if (allocated(Init%OutData_MAP%LinInitOut%LinNames_u)) call move_alloc(Init%OutData_MAP%LinInitOut%LinNames_u,y_FAST%Lin%Modules(Module_MAP)%Instance(1)%Names_u )
-! LIN-TODO: Determine if we need to create this data even though we don't have rotating frames in MAP
-         !if (allocated(Init%OutData_MAP%LinInitOut%RotFrame_y)) call move_alloc(Init%OutData_MAP%LinInitOut%RotFrame_y,y_FAST%Lin%Modules(Module_MAP)%Instance(1)%RotFrame_y )
-         !if (allocated(Init%OutData_MAP%LinInitOut%RotFrame_u)) call move_alloc(Init%OutData_MAP%LinInitOut%RotFrame_u,y_FAST%Lin%Modules(Module_MAP)%Instance(1)%RotFrame_u )
          if (allocated(Init%OutData_MAP%LinInitOut%IsLoad_u  )) call move_alloc(Init%OutData_MAP%LinInitOut%IsLoad_u  ,y_FAST%Lin%Modules(Module_MAP)%Instance(1)%IsLoad_u   )
 
          if (allocated(Init%OutData_MAP%WriteOutputHdr)) y_FAST%Lin%Modules(Module_MAP)%Instance(1)%NumOutputs = size(Init%OutData_MAP%WriteOutputHdr)
