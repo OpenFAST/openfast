@@ -23,6 +23,7 @@ MODULE FEM
   IMPLICIT NONE
 
   INTEGER, PARAMETER  :: FEKi = R8Ki  ! Define the kind to be used for FEM
+  INTEGER, PARAMETER  :: LaKi = R8Ki  ! Define the kind to be used for LaPack
  
 CONTAINS
 !------------------------------------------------------------------------------------------------------
@@ -31,23 +32,23 @@ CONTAINS
 SUBROUTINE EigenSolve(K, M, N, bCheckSingularity, EigVect, Omega, ErrStat, ErrMsg )
    USE NWTC_LAPACK, only: LAPACK_ggev
    INTEGER       ,          INTENT(IN   )    :: N             !< Number of degrees of freedom, size of M and K
-   REAL(FEKi),              INTENT(INOUT)    :: K(N, N)       !< Stiffness matrix 
-   REAL(FEKi),              INTENT(INOUT)    :: M(N, N)       !< Mass matrix 
+   REAL(LaKi),              INTENT(INOUT)    :: K(N, N)       !< Stiffness matrix 
+   REAL(LaKi),              INTENT(INOUT)    :: M(N, N)       !< Mass matrix 
    LOGICAL,                 INTENT(IN   )    :: bCheckSingularity                  ! If True, the solver will fail if rigid modes are present 
-   REAL(FEKi),              INTENT(INOUT)    :: EigVect(N, N) !< Returned Eigenvectors
-   REAL(FEKi),              INTENT(INOUT)    :: Omega(N)      !< Returned Eigenvalues
+   REAL(LaKi),              INTENT(INOUT)    :: EigVect(N, N) !< Returned Eigenvectors
+   REAL(LaKi),              INTENT(INOUT)    :: Omega(N)      !< Returned Eigenvalues
    INTEGER(IntKi),          INTENT(  OUT)    :: ErrStat       !< Error status of the operation
    CHARACTER(*),            INTENT(  OUT)    :: ErrMsg        !< Error message if ErrStat /= ErrID_None
    ! LOCALS         
-   REAL(FEKi), ALLOCATABLE                   :: WORK (:),  VL(:,:), AlphaR(:), AlphaI(:), BETA(:) ! eigensolver variables
+   REAL(LaKi), ALLOCATABLE                   :: WORK (:),  VL(:,:), AlphaR(:), AlphaI(:), BETA(:) ! eigensolver variables
    INTEGER                                   :: i  
    INTEGER                                   :: LWORK                          !variables for the eigensolver
    INTEGER,    ALLOCATABLE                   :: KEY(:)
    INTEGER(IntKi)                            :: ErrStat2
    CHARACTER(ErrMsgLen)                      :: ErrMsg2
-   REAL(FEKi) :: normA
-   REAL(FEKi) :: Omega2(N)  !< Squared eigenvalues
-   REAL(FEKi), parameter :: MAX_EIGENVALUE = HUGE(1.0_ReKi) ! To avoid overflow when switching to ReKi
+   REAL(LaKi) :: normA
+   REAL(LaKi) :: Omega2(N)  !< Squared eigenvalues
+   REAL(LaKi), parameter :: MAX_EIGENVALUE = HUGE(1.0_ReKi) ! To avoid overflow when switching to ReKi
       
    ErrStat = ErrID_None
    ErrMsg  = ''
@@ -64,7 +65,7 @@ SUBROUTINE EigenSolve(K, M, N, bCheckSingularity, EigVect, Omega, ErrStat, ErrMs
     
    ! --- Eigenvalue  analysis
    ! note: SGGEV seems to have memory issues in certain cases. The eigenvalues seem to be okay, but the eigenvectors vary wildly with different compiling options.
-   !       DGGEV seems to work better, so I'm making these variables FEKi (which is set to R8Ki for now)   - bjj 4/25/2014
+   !       DGGEV seems to work better, so I'm making these variables LaKi (which is set to R8Ki for now)   - bjj 4/25/2014
    ! bjj: This comes from the LAPACK documentation:
    !   Note: the quotients AlphaR(j)/BETA(j) and AlphaI(j)/BETA(j) may easily over- or underflow, and BETA(j) may even be zero.
    !   Thus, the user should avoid naively computing the ratio Alpha/beta.  However, AlphaR and AlphaI will be always less
@@ -74,7 +75,7 @@ SUBROUTINE EigenSolve(K, M, N, bCheckSingularity, EigVect, Omega, ErrStat, ErrMs
    if(Failed()) return
 
    ! --- Determinign and sorting eigen frequencies 
-   Omega2(:) =0.0_FEKi
+   Omega2(:) =0.0_LaKi
    DO I=1,N !Initialize the key and calculate Omega
       KEY(I)=I
       Omega2(I) = AlphaR(I)/Beta(I)
@@ -84,11 +85,11 @@ SUBROUTINE EigenSolve(K, M, N, bCheckSingularity, EigVect, Omega, ErrStat, ErrMs
          Omega2(I) = MAX_EIGENVALUE
       elseif ( EqualRealNos(real(AlphaI(I),ReKi),0.0_ReKi) ) THEN
          ! --- Real Eigenvalues
-         IF ( AlphaR(I)<0.0_FEKi ) THEN
-            if ( (AlphaR(I)/Beta(I))<1e-6_FEKi ) then
+         IF ( AlphaR(I)<0.0_LaKi ) THEN
+            if ( (AlphaR(I)/Beta(I))<1e-6_LaKi ) then
                ! Tolerating very small negative eigenvalues
                call WrScr('[INFO] Negative eigenvalue found with small norm (system may contain rigid body mode)')
-               Omega2(I)=0.0_FEKi
+               Omega2(I)=0.0_LaKi
             else
                call WrScr('[WARN] Negative eigenvalue found, system may be ill-conditioned.')
                Omega2(I)=AlphaR(I)/Beta(I)
@@ -99,11 +100,11 @@ SUBROUTINE EigenSolve(K, M, N, bCheckSingularity, EigVect, Omega, ErrStat, ErrMs
       else
          ! --- Complex Eigenvalues
          normA = sqrt(AlphaR(I)**2 + AlphaI(I)**2)
-         if ( (normA/Beta(I))<1e-6_FEKi ) then
+         if ( (normA/Beta(I))<1e-6_LaKi ) then
             ! Tolerating very small eigenvalues with imaginary part
             call WrScr('[WARN] Complex eigenvalue found with small norm, approximating as 0')
-            Omega2(I) = 0.0_FEKi
-         elseif ( abs(AlphaR(I))>1e3_FEKi*abs(AlphaI(I)) ) then
+            Omega2(I) = 0.0_LaKi
+         elseif ( abs(AlphaR(I))>1e3_LaKi*abs(AlphaI(I)) ) then
             ! Tolerating very small imaginary part compared to real part... (not pretty)
             call WrScr('[WARN] Complex eigenvalue found with small Im compare to Re')
             Omega2(I) = AlphaR(I)/Beta(I)
@@ -111,7 +112,7 @@ SUBROUTINE EigenSolve(K, M, N, bCheckSingularity, EigVect, Omega, ErrStat, ErrMs
             call WrScr('[WARN] Complex eigenvalue found with large imaginary value)')
             Omega2(I) = MAX_EIGENVALUE
          endif
-         call Fatal('Complex eigenvalue found, system may be ill-conditioned'); return
+         !call Fatal('Complex eigenvalue found, system may be ill-conditioned'); return
       endif
       ! Capping to avoid overflow
       if (Omega2(I)> MAX_EIGENVALUE) then
@@ -138,10 +139,10 @@ SUBROUTINE EigenSolve(K, M, N, bCheckSingularity, EigVect, Omega, ErrStat, ErrMs
    !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++!
 
    ! --- Return Omega (capped by huge(ReKi)) and check for singularity
-   Omega(:) = 0.0_FEKi
+   Omega(:) = 0.0_LaKi
    do I=1,N 
       if (EqualRealNos(real(Omega2(I),ReKi), 0.0_ReKi)) then  ! NOTE: may be necessary for some corner numerics
-         Omega(i)=0.0_FEKi
+         Omega(i)=0.0_LaKi
          if (bCheckSingularity) then
             call Fatal('Zero eigenvalue found, system may contain rigid body mode'); return
          endif
@@ -150,7 +151,7 @@ SUBROUTINE EigenSolve(K, M, N, bCheckSingularity, EigVect, Omega, ErrStat, ErrMs
       else
          ! Negative eigenfrequency
          print*,'>>> Wrong eigenfrequency, Omega^2=',Omega2(I) ! <<< This should never happen
-         Omega(i)= 0.0_FEKi 
+         Omega(i)= 0.0_LaKi 
          call Fatal('Negative eigenvalue found, system may be ill-conditioned'); return
       endif
    enddo
@@ -183,10 +184,10 @@ CONTAINS
 END SUBROUTINE EigenSolve
 
 pure subroutine sort_in_place(a,key)
-   real(FEKi), intent(inout), dimension(:) :: a
+   real(LaKi), intent(inout), dimension(:) :: a
    integer(IntKi), intent(inout), dimension(:) :: key
    integer(IntKi) :: tempI
-   real(FEKi) :: temp
+   real(LaKi) :: temp
    integer(IntKi) :: i, j
    do i = 2, size(a)
       j = i - 1
@@ -455,10 +456,11 @@ SUBROUTINE CraigBamptonReduction(MM, KK, IDR, nR, IDL, nL, nM, nM_Out, MBB, MBM,
    call BreakSysMtrx(MM, KK, IDR, IDL, nR, nL, MRR, MLL, MRL, KRR, KLL, KRL, FG=FG, FGR=FGR, FGL=FGL, CC=CC, CRR=CRR, CLL=CLL, CRL=CRL)
    ! --- CB reduction
    call CraigBamptonReduction_FromPartition( MRR, MLL, MRL, KRR, KLL, KRL, nR, nL, nM, nM_Out,& !< Inputs 
-                              MBB, MBM, KBB, PhiL, PhiR, OmegaL, ErrStat2, ErrMsg2,& !< Outputs
+                              MBB, MBM, KBB, PhiL, PhiR, OmegaL, ErrStat2, ErrMsg2, & !< Outputs
                               CRR=CRR, CLL=CLL, CRL=CRL,& !< Optional inputs
                               CBB=CBB, CBM=CBM, CMM=CMM)  !< Optional Outputs
    if(Failed()) return
+
 
    ! --- Reduction of force if provided
    if (present(FG).and.present(FGR).and.present(FGL)) then
@@ -670,27 +672,29 @@ SUBROUTINE EigenSolveWrap(K, M, nDOF, NOmega,  bCheckSingularity, EigVect, Omega
    LOGICAL,   OPTIONAL,    INTENT(IN   )    :: bDOF(nDOF)                         ! Optinal Mask for DOF to keep (True), or reduce (False)
    
    ! LOCALS         
-   REAL(FEKi), ALLOCATABLE                   :: K_FEKi(:,:), M_FEKi(:,:) 
-   REAL(FEKi), ALLOCATABLE                   :: EigVect_FEKi(:,:), Omega2_FEKi(:) 
+   REAL(LaKi), ALLOCATABLE                   :: K_LaKi(:,:), M_LaKi(:,:) 
+   REAL(LaKi), ALLOCATABLE                   :: EigVect_LaKi(:,:), Omega_LaKi(:) 
    INTEGER(IntKi)                            :: N
    INTEGER(IntKi)                            :: ErrStat2
    CHARACTER(ErrMsgLen)                      :: ErrMsg2
    ErrStat = ErrID_None
    ErrMsg  = ''
+   EigVect=0.0_FeKi
+   Omega=0.0_FeKi
 
    ! --- Unfortunate conversion to FEKi... TODO TODO consider storing M and K in FEKi
    if (present(bDOF)) then
       ! Remove unwanted DOFs
-      call RemoveDOF(M, bDOF, M_FEKi, ErrStat2, ErrMsg2); if(Failed()) return
-      call RemoveDOF(K, bDOF, K_FEKi, ErrStat2, ErrMsg2); if(Failed()) return
+      call RemoveDOF(M, bDOF, M_LaKi, ErrStat2, ErrMsg2); if(Failed()) return
+      call RemoveDOF(K, bDOF, K_LaKi, ErrStat2, ErrMsg2); if(Failed()) return
    else
       N=size(K,1)
-      CALL AllocAry(K_FEKi      , N, N, 'K_FEKi',    ErrStat2, ErrMsg2); if(Failed()) return
-      CALL AllocAry(M_FEKi      , N, N, 'M_FEKi',    ErrStat2, ErrMsg2); if(Failed()) return
-      K_FEKi = real( K, FEKi )
-      M_FEKi = real( M, FEKi )
+      CALL AllocAry(K_LaKi      , N, N, 'K_FEKi',    ErrStat2, ErrMsg2); if(Failed()) return
+      CALL AllocAry(M_LaKi      , N, N, 'M_FEKi',    ErrStat2, ErrMsg2); if(Failed()) return
+      K_LaKi = real( K, LaKi )
+      M_LaKi = real( M, LaKi )
    endif
-   N=size(K_FEKi,1)
+   N=size(K_LaKi,1)
 
    ! Note:  NOmega must be <= N, which is the length of Omega2, Phi!
    if ( NOmega > nDOF ) then
@@ -700,15 +704,19 @@ SUBROUTINE EigenSolveWrap(K, M, nDOF, NOmega,  bCheckSingularity, EigVect, Omega
    end if
 
    ! --- Eigenvalue analysis
-   CALL AllocAry(EigVect_FEKi, N, N, 'EigVect', ErrStat2, ErrMsg2); if(Failed()) return;
-   CALL EigenSolve(K_FEKi, M_FEKi, N, bCheckSingularity, EigVect_FEKi, Omega, ErrStat2, ErrMsg2 ); if (Failed()) return;
+   CALL AllocAry(EigVect_LAKi, N, N, 'EigVect', ErrStat2, ErrMsg2); if(Failed()) return;
+   CALL AllocAry(Omega_LaKi,     N , 'Omega', ErrStat2, ErrMsg2); if(Failed()) return; ! <<< NOTE: Needed due to dimension of Omega
+   CALL EigenSolve(K_LaKi, M_LaKi, N, bCheckSingularity, EigVect_LaKi, Omega_LaKi, ErrStat2, ErrMsg2 ); if (Failed()) return;
+
+   Omega(:)        = huge(1.0_ReKi)
+   Omega(1:nOmega) = real(Omega_LaKi(1:nOmega), FEKi) !<<< nOmega<N
 
    ! --- Setting up Phi, and type conversion
    if (present(bDOF)) then
       ! Insert 0s where bDOF was false
-      CALL InsertDOFRows(EigVect_FEKi(:,1:nOmega), bDOF, 0.0_FEKi, EigVect, ErrStat2, ErrMsg2 ); if(Failed()) return
+      CALL InsertDOFRows(EigVect_LaKi(:,1:nOmega), bDOF, 0.0_FEKi, EigVect, ErrStat2, ErrMsg2 ); if(Failed()) return
    else
-      EigVect=REAL( EigVect_FEKi(:,1:NOmega), FEKi )   ! eigenvectors
+      EigVect=REAL( EigVect_LaKi(:,1:NOmega), LaKi )   ! eigenvectors
    endif
    CALL CleanupEigen()
    return
@@ -720,10 +728,10 @@ CONTAINS
    END FUNCTION Failed
 
    SUBROUTINE CleanupEigen()
-      IF (ALLOCATED(Omega2_FEKi) ) DEALLOCATE(Omega2_FEKi) 
-      IF (ALLOCATED(EigVect_FEKi)) DEALLOCATE(EigVect_FEKi)
-      IF (ALLOCATED(K_FEKi)      ) DEALLOCATE(K_FEKi)
-      IF (ALLOCATED(M_FEKi)      ) DEALLOCATE(M_FEKi)
+      IF (ALLOCATED(Omega_LaKi)  ) DEALLOCATE(Omega_LaKi) 
+      IF (ALLOCATED(EigVect_LaKi)) DEALLOCATE(EigVect_LaKi)
+      IF (ALLOCATED(K_LaKi)      ) DEALLOCATE(K_LaKi)
+      IF (ALLOCATED(M_LaKi)      ) DEALLOCATE(M_LaKi)
    END SUBROUTINE CleanupEigen
   
 END SUBROUTINE EigenSolveWrap
@@ -732,7 +740,7 @@ END SUBROUTINE EigenSolveWrap
 SUBROUTINE RemoveDOF(A, bDOF, Ared, ErrStat, ErrMsg )
    REAL(FEKi),             INTENT(IN   ) :: A(:, :)        ! full matrix
    logical,                INTENT(IN   ) :: bDOF(:)        ! Array of logical specifying whether a DOF is to be kept(True), or removed (False)
-   REAL(FEKi),ALLOCATABLE, INTENT(  OUT) :: Ared(:,:)      ! reduced matrix
+   REAL(LaKi),ALLOCATABLE, INTENT(  OUT) :: Ared(:,:)      ! reduced matrix
    INTEGER(IntKi),         INTENT(  OUT) :: ErrStat        ! Error status of the operation
    CHARACTER(*),           INTENT(  OUT) :: ErrMsg         ! Error message if ErrStat /= ErrID_None
    !locals
@@ -763,7 +771,7 @@ END SUBROUTINE RemoveDOF
 
 !> Expand a matrix to includes rows where bDOF is False (inverse behavior as RemoveDOF)
 SUBROUTINE InsertDOFrows(Ared, bDOF, DefaultVal, A, ErrStat, ErrMsg )
-   REAL(FEKi),             INTENT(IN   ) :: Ared(:, :)     ! Reduced matrix
+   REAL(LaKi),             INTENT(IN   ) :: Ared(:, :)     ! Reduced matrix
    logical,                INTENT(IN   ) :: bDOF(:)        ! Array of logical specifying whether a DOF is to be kept(True), or removed (False)
    REAL(FEKi),             INTENT(IN   ) :: DefaultVal     ! Default value to fill the 
    REAL(FEKi)            , INTENT(INOUT) :: A(:,:)         ! Full matrix
@@ -1323,7 +1331,7 @@ END SUBROUTINE LumpForces
 !! Method 2: [U,S,V] = svd(A); pinv_A = ( V / S ) * U'; (matlab) 
 !     perform lapack GESVD and then  pinv(A) = V*(inv(S))*U'
 SUBROUTINE PseudoInverse(A, Ainv, ErrStat, ErrMsg)
-   use NWTC_LAPACK, only: LAPACK_DGESVD, LAPACK_GEMM
+   use NWTC_LAPACK, only: LAPACK_GESVD, LAPACK_GEMM
    real(FEKi), dimension(:,:), intent(in)  :: A
    real(FEKi), dimension(:,:), allocatable :: Ainv
    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat       ! < Error status of the operation
@@ -1356,7 +1364,7 @@ SUBROUTINE PseudoInverse(A, Ainv, ErrStat, ErrMsg)
    ! --- Compute the SVD of A
    ! [U,S,V] = svd(A)
    !call DGESVD       ('S', 'S', M, N, A, M,  S, U, M  , Vt  , K,   WORK, LWORK, INFO)
-   call LAPACK_DGESVD('S', 'S', M, N, Acopy, S, U, Vt, WORK, LWORK, ErrStat, ErrMsg)
+   call LAPACK_GESVD('S', 'S', M, N, Acopy, S, U, Vt, WORK, LWORK, ErrStat, ErrMsg)
 
    !--- Compute PINV = V**T * SIGMA * U**T in two steps
    !  SIGMA = S^(-1)=1/S(j), S is diagonal
