@@ -14,9 +14,9 @@
 				<Tool Name="VFPreBuildEventTool" CommandLine="..\CreateGitVersion.bat"/>
 				<Tool Name="VFPostBuildEventTool"/>
 				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration>
-		<Configuration Name="Release|Win32" OutputDirectory="..\..\build\bin">
+		<Configuration Name="Release|Win32" OutputDirectory="..\..\build\bin" TargetName="HydroDynDriver_dev_$(ConfigurationName)_$(PlatformName)">
 				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" Preprocess="preprocessYes" PreprocessorDefinitions="&quot;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'&quot;" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268" InitLocalVarToNAN="true" UseMkl="mklSequential"/>
-				<Tool Name="VFLinkerTool" OutputFile="$(OutDir)\HydroDynDriver_dev_$(ConfigurationName)_$(PlatformName).exe" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" GenerateManifest="false" SubSystem="subSystemConsole" StackReserveSize="999999999" LargeAddressAware="addrAwareLarge"/>
+				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" GenerateManifest="false" SubSystem="subSystemConsole" StackReserveSize="999999999" LargeAddressAware="addrAwareLarge"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true"/>
 				<Tool Name="VFCustomBuildTool"/>
@@ -147,6 +147,16 @@
 		<File RelativePath="..\..\modules\HydroDyn\src\Waves.f90"/>
 		<File RelativePath="..\..\modules\HydroDyn\src\Waves2.f90"/>
 		<File RelativePath="..\..\modules\HydroDyn\src\Waves2_Output.f90"/></Filter>
+		<Filter Name="RanLux">
+		<File RelativePath="..\..\modules\nwtc-library\src\ranlux\RANLUX.f90">
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" WarnDeclarations="false" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Release|x64">
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" WarnDeclarations="false" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" WarnUnusedVariables="false"/></FileConfiguration></File></Filter>
 		<Filter Name="NetLib">
 		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\fftpack\fftpack4.1.f">
 			<FileConfiguration Name="Debug|Win32">
@@ -224,6 +234,15 @@
 			<FileConfiguration Name="Release|Win32">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_Num.f90">
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Release|x64">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
+		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_RandomNumber.f90">
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">

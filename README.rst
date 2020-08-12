@@ -29,7 +29,7 @@ FAST v8 - OpenFAST v0.1.0
 The transition from FAST v8 to OpenFAST v0.1.0 represents the effort to better
 support an open-source developer community around FAST-based aero-hydro-servo-
 elastic engineering models of wind-turbines and wind-plants. OpenFAST is the
-next generation of FAST analysis tools. More inforation is available in the
+next generation of FAST analysis tools. More information is available in the
 `transition notes <http://openfast.readthedocs.io/en/latest/source/user/fast_to_openfast.html>`_.
 
 FAST v8 is a computer-aided engineering tool for simulating the coupled dynamic
@@ -116,7 +116,7 @@ OpenFAST on Unix-based and Windows machines are available at `readthedocs <http:
 
 Help
 ----
-Please use `github issues <https://github.com/OpenFAST/OpenFAST/issues>`_ to:
+Please use `GitHub Issues <https://github.com/OpenFAST/OpenFAST/issues>`_ to:
 
 * ask usage questions
 * report bugs

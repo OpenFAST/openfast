@@ -37,7 +37,7 @@ typedef struct node_struct {
 
 
 /* CTRL */
-  int gen_wrapper ;
+  int gen_periodic ;
   struct node_struct * next ;
 
 /* fields used by rconfig nodes */

@@ -30,6 +30,7 @@ MODULE HydroDyn_Input
    USE                              WAMIT2_Output
    USE                              Waves2_Output
    USE                              Morison_Output
+   USE                              NWTC_RandomNumber
    IMPLICIT                         NONE
 
    PRIVATE :: CleanupEchoFile
@@ -218,8 +219,7 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, ErrStat, ErrMsg )
 !   INTEGER                                          :: PropSetID            ! Temporary storage of PropSetID read from HydroDyn input file
 !   INTEGER                                          :: MemberID             ! Temporary storage of MemberID read from HydroDyn input file
    INTEGER, ALLOCATABLE                             :: tmpArray(:)          ! Temporary array storage of the joint output list
-
-
+   CHARACTER(1)                                     :: Line1                ! The first character of an input line
    INTEGER(IntKi)                                   :: ErrStat2
    CHARACTER(ErrMsgLen)                             :: ErrMsg2
    
@@ -520,22 +520,52 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, ErrStat, ErrMsg )
    InitInp%Waves%WaveDirRange =  ABS( InitInp%Waves%WaveDirRange )
 
 
-      ! WaveSeed(1), !WaveSeed(2)
+      ! WaveSeed(1)
+   CALL ReadVar( UnIn, FileName, InitInp%Waves%WaveSeed(1), 'WaveSeed(1)', "Random seed #1", ErrStat2, ErrMsg2, UnEchoLocal)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput')
+      IF (ErrStat >= AbortErrLev) THEN
+         CALL CleanUp()
+         RETURN
+      END IF
+   InitInp%Waves%RNG%RandSeed(1) = InitInp%Waves%WaveSeed(1)
 
-   DO I = 1,2
+      !WaveSeed(2)
+   CALL ReadVar( UnIn, FileName, Line, 'WaveSeed(2)', "Random seed #2", ErrStat2, ErrMsg2, UnEchoLocal)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput')
+      IF (ErrStat >= AbortErrLev) THEN
+         CALL Cleanup()
+         RETURN
+      END IF
 
-      WRITE(Line,'(I2)') I
+   READ (Line,*,IOSTAT=ErrStat2) Line1  ! check the first character to make sure we don't have T/F, which can be interpreted as 1/-1 or 0 in Fortran
+   CALL Conv2UC( Line1 )
+   IF ( (Line1 == 'T') .OR. (Line1 == 'F') ) THEN
+      CALL SetErrStat( ErrID_Fatal, ' WaveSeed(2): Invalid RNG type.', ErrStat, ErrMsg, 'HydroDynInput_GetInput')
+      CALL Cleanup()
+      RETURN
+   ENDIF
 
-      CALL ReadVar ( UnIn, FileName, InitInp%Waves%WaveSeed(I), 'WaveSeed('//TRIM(Line)//')', &
-                                    'Random seed #'//TRIM(Line), ErrStat2, ErrMsg2, UnEchoLocal )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-         IF (ErrStat >= AbortErrLev) THEN
-            CALL CleanUp()
-            RETURN
-         END IF
+   READ (Line,*,IOSTAT=ErrStat2) InitInp%Waves%WaveSeed(2)
+   InitInp%Waves%RNG%RandSeed(2) = InitInp%Waves%WaveSeed(2)
 
-   END DO !I
+   IF (ErrStat2 == 0) THEN ! the user entered a number
+      InitInp%Waves%RNG%RNG_type = "NORMAL"
+      InitInp%Waves%RNG%pRNG = pRNG_INTRINSIC
 
+   ELSE
+
+      InitInp%Waves%RNG%RNG_type = ADJUSTL( Line )
+      CALL Conv2UC( InitInp%Waves%RNG%RNG_type )
+
+      IF ( InitInp%Waves%RNG%RNG_type == "RANLUX") THEN
+         InitInp%Waves%RNG%pRNG = pRNG_RANLUX
+      ELSE
+         CALL SetErrStat( ErrID_Fatal, ' WaveSeed(2): Invalid alternative random number generator.', ErrStat, ErrMsg, 'HydroDynInput_GetInput')
+         CALL Cleanup()
+         RETURN
+      ENDIF
+
+   ENDIF
 
       ! WaveNDAmp - Flag for normally distributed amplitudes.
 
@@ -2475,7 +2505,11 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
       ! TODO: Issue warning if WaveTMax was not already 0.0 in this case.
       IF ( .NOT. EqualRealNos(InitInp%Waves%WaveTMax, 0.0_DbKi) ) THEN
          CALL WrScr( '  Setting WaveTMax to 0.0 since WaveMod = 0' )
-      InitInp%Waves%WaveTMax = 0.0
+         InitInp%Waves%WaveTMax = 0.0
+      END IF
+      IF ( .NOT. EqualRealNos(InitInp%Waves%WaveDir, 0.0_SiKi) ) THEN
+         CALL WrScr( '  Setting WaveDir to 0.0 since WaveMod = 0' )
+         InitInp%Waves%WaveDir = 0.0
       END IF
    ELSEIF ( InitInp%Waves%WaveMod == 5 ) THEN   ! User wave elevation file reading in
       IF (InitInp%TMax > InitInp%Waves%WaveTMax ) THEN

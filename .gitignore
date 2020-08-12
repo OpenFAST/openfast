@@ -41,9 +41,9 @@ vs-build/
 .vscode
 .atom
 .fortls
-
 # backup files
 *.asv
+~$*.xlsx
 
 # LaTeX compiling files
 *.aux

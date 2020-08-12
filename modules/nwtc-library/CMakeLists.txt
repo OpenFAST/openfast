@@ -22,6 +22,7 @@ set(NWTCLIBS_SOURCES
   src/NWTC_IO.f90
   src/NWTC_Library.f90
   src/NWTC_Num.f90
+  src/NWTC_RandomNumber.f90
   src/SingPrec.f90
   src/NWTC_Library_Types.f90
 
@@ -35,9 +36,44 @@ set(NWTCLIBS_SOURCES
   src/NetLib/fftpack/NWTC_FFTPACK.f90
   src/NetLib/lapack/NWTC_LAPACK.f90
   src/NetLib/scalapack/NWTC_ScaLAPACK.f90
-  )
+
+  # NetLib SLATEC sources
+  src/NetLib/slatec/NWTC_SLATEC.f90
+  src/NetLib/slatec/dqk61.f
+  src/NetLib/slatec/qk61.f
+  src/NetLib/slatec/d1mach.f
+  src/NetLib/slatec/r1mach.f
+  src/NetLib/slatec/xercnt.f
+  src/NetLib/slatec/xerhlt.f
+  src/NetLib/slatec/xerprn.f
+  src/NetLib/slatec/xersve.f
+  src/NetLib/slatec/fdump.f
+  src/NetLib/slatec/i1mach.f
+  src/NetLib/slatec/j4save.f
+  src/NetLib/slatec/xgetua.f
+  src/NetLib/slatec/xermsg.f  )
 
 get_filename_component(FCNAME ${CMAKE_Fortran_COMPILER} NAME)
+
+# Recursive use of routine in qk61/dqk61 will trigger errors in debug
+if (CMAKE_BUILD_TYPE MATCHES Debug)
+   if (${CMAKE_Fortran_COMPILER_ID} STREQUAL "GNU")
+      set_source_files_properties(src/NetLib/slatec/NWTC_SLATEC.f90 PROPERTIES COMPILE_FLAGS -frecursive)
+      set_source_files_properties(src/NetLib/slatec/dqk61.f         PROPERTIES COMPILE_FLAGS -frecursive)
+      set_source_files_properties(src/NetLib/slatec/qk61.f          PROPERTIES COMPILE_FLAGS -frecursive)
+   elseif (${CMAKE_Fortran_COMPILER_ID} STREQUAL "Intel")
+      if (WIN32)
+         set_source_files_properties(src/NetLib/slatec/NWTC_SLATEC.f90 PROPERTIES COMPILE_FLAGS "/assume:recursion")
+         set_source_files_properties(src/NetLib/slatec/dqk61.f         PROPERTIES COMPILE_FLAGS "/assume:recursion")
+         set_source_files_properties(src/NetLib/slatec/qk61.f          PROPERTIES COMPILE_FLAGS "/assume:recursion")
+      else()
+         set_source_files_properties(src/NetLib/slatec/NWTC_SLATEC.f90 PROPERTIES COMPILE_FLAGS "-assume recursion")
+         set_source_files_properties(src/NetLib/slatec/dqk61.f         PROPERTIES COMPILE_FLAGS "-assume recursion")
+         set_source_files_properties(src/NetLib/slatec/qk61.f          PROPERTIES COMPILE_FLAGS "-assume recursion")
+      endif()
+   endif()
+endif() 
+
 
 if(BUILD_OPENFAST_SIMULINK_API)
 

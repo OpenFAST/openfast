@@ -91,6 +91,7 @@ SUBROUTINE MeshWrBin ( UnIn, M, ErrStat, ErrMsg, FileName)
    WRITE (UnIn, IOSTAT=ErrStat2)   M%fieldmask           ! BJJ: do we need to verify that this is size B4Ki?
    WRITE (UnIn, IOSTAT=ErrStat2)   INT(M%Nnodes,B4Ki)
    WRITE (UnIn, IOSTAT=ErrStat2)   INT(M%nelemlist,B4Ki)
+   if (M%Fieldmask(MASKID_SCALAR))  WRITE (UnIn, IOSTAT=ErrStat2)   INT(M%nScalars,B4Ki)
 
 
    !...........
@@ -1543,7 +1544,7 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
       ELSE ! initialized, may or may not be committed           
          Int_BufSz =  3                & ! number of logicals in MeshType (initialized, committed, RemapFlag)
                      + FIELDMASK_SIZE  & ! number of logicals in MeshType (fieldmask)
-                     + 4                 ! number of non-pointer integers (ios, nnodes, nextelem, nscalars)
+                     + 5                 ! number of non-pointer integers (ios, nnodes, nextelem, nscalars, refNode)
          
          !......
          ! we'll store the element structure (and call MeshCommit on Unpack if necessary to get the remaining fields like det_jac)
@@ -1638,6 +1639,7 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
             ! integers
          IntKiBuf(Int_Xferred) = Mesh%ios;           Int_Xferred = Int_Xferred + 1 
          IntKiBuf(Int_Xferred) = Mesh%nnodes;        Int_Xferred = Int_Xferred + 1 
+         IntKiBuf(Int_Xferred) = Mesh%refnode;       Int_Xferred = Int_Xferred + 1 
          IntKiBuf(Int_Xferred) = Mesh%nextelem;      Int_Xferred = Int_Xferred + 1 
          IntKiBuf(Int_Xferred) = Mesh%nscalars;      Int_Xferred = Int_Xferred + 1 
          
@@ -1746,7 +1748,7 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
 
          ! Local
       LOGICAL committed, RemapFlag, fieldmask(FIELDMASK_SIZE)
-      INTEGER nScalars, ios, nnodes, nextelem, nelemnodes, nelem
+      INTEGER nScalars, ios, nnodes, nextelem, nelemnodes, nelem, refnode
       INTEGER i,j
      
       INTEGER(IntKi)                             :: Re_Xferred    ! number of reals transferred
@@ -1780,6 +1782,7 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
          ! integers
       ios              = IntKiBuf(Int_Xferred) ; Int_Xferred = Int_Xferred + 1 
       nnodes           = IntKiBuf(Int_Xferred) ; Int_Xferred = Int_Xferred + 1 
+      refnode          = IntKiBuf(Int_Xferred) ; Int_Xferred = Int_Xferred + 1 
       nextelem         = IntKiBuf(Int_Xferred) ; Int_Xferred = Int_Xferred + 1 
       nscalars         = IntKiBuf(Int_Xferred) ; Int_Xferred = Int_Xferred + 1 
                   
@@ -1799,6 +1802,7 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
          CALL SetErrStat(ErrStat2, ErrMess2, ErrStat, ErrMess, RoutineName)
          IF (ErrStat >= AbortErrLev) RETURN
 
+      Mesh%RefNode = refnode
       Mesh%RemapFlag = RemapFlag
       Mesh%nextelem  = nextelem
      
@@ -2013,7 +2017,7 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
       IF ( CtrlCode .EQ. MESH_NEWCOPY .OR. CtrlCode .EQ. MESH_SIBLING .OR. CtrlCode .EQ. MESH_COUSIN ) THEN
          
          IF (CtrlCode .EQ. MESH_NEWCOPY) THEN
-            IOS_l              = SrcMesh%IOS 
+            IOS_l              = SrcMesh%IOS
             Force_l            = SrcMesh%FieldMask(MASKID_FORCE)                     
             Moment_l           = SrcMesh%FieldMask(MASKID_MOMENT)                   
             Orientation_l      = SrcMesh%FieldMask(MASKID_ORIENTATION)         
@@ -2195,6 +2199,7 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
 
       DestMesh%Initialized = SrcMesh%Initialized
       DestMesh%Committed   = SrcMesh%Committed
+      DestMesh%refNode = SrcMesh%refNode
       IF ( ALLOCATED(SrcMesh%Force          ) .AND. ALLOCATED(DestMesh%Force          ) ) DestMesh%Force = SrcMesh%Force
       IF ( ALLOCATED(SrcMesh%Moment         ) .AND. ALLOCATED(DestMesh%Moment         ) ) DestMesh%Moment = SrcMesh%Moment
       IF ( ALLOCATED(SrcMesh%Orientation    ) .AND. ALLOCATED(DestMesh%Orientation    ) ) DestMesh%Orientation = SrcMesh%Orientation
@@ -2215,7 +2220,7 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
 !! If an Orient argument is included, the node will also be assigned the specified orientation 
 !! (orientation is assumed to be the identity matrix if omitted). Returns a non-zero value in  
 !! ErrStat if Inode is outside the range 1..Nnodes.     
-   SUBROUTINE MeshPositionNode( Mesh, Inode, Pos, ErrStat, ErrMess, Orient )
+   SUBROUTINE MeshPositionNode( Mesh, Inode, Pos, ErrStat, ErrMess, Orient, Ref )
    
      TYPE(MeshType),              INTENT(INOUT) :: Mesh         !< Mesh being spatio-located
      INTEGER(IntKi),              INTENT(IN   ) :: Inode        !< Number of node being located
@@ -2223,6 +2228,7 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
      INTEGER(IntKi),              INTENT(  OUT) :: ErrStat      !< Error code
      CHARACTER(*),                INTENT(  OUT) :: ErrMess      !< Error message
      REAL(R8Ki), OPTIONAL,        INTENT(IN   ) :: Orient(3,3)  !< Orientation (direction cosine matrix) of node; identity by default
+     LOGICAL, OPTIONAL,           INTENT(IN   ) :: Ref
      
      ErrStat = ErrID_None
      ErrMess = ""
@@ -2274,6 +2280,10 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
         Mesh%RefOrientation(:,1,Inode) = (/ 1._R8Ki, 0._R8Ki, 0._R8Ki /)
         Mesh%RefOrientation(:,2,Inode) = (/ 0._R8Ki, 1._R8Ki, 0._R8Ki /)
         Mesh%RefOrientation(:,3,Inode) = (/ 0._R8Ki, 0._R8Ki, 1._R8Ki /)
+     END IF
+
+     IF (PRESENT(Ref)) THEN
+        Mesh%RefNode = Inode
      END IF
 
      RETURN
@@ -2411,7 +2421,7 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
 
         Mesh%ElemTable(ELEMENT_LINE2)%Elements(J)%det_jac  = 0.5_ReKi * TwoNorm( n1_n2_vector )   ! = L / 2
         
-        IF ( EqualRealNos( 2.0_ReKi*Mesh%ElemTable(ELEMENT_LINE2)%Elements(J)%det_jac, 0.0_Reki ) ) THEN
+        IF ( 2.0_ReKi*Mesh%ElemTable(ELEMENT_LINE2)%Elements(J)%det_jac < MIN_LINE2_ELEMENT_LENGTH ) THEN
            ErrStat = ErrID_Fatal
            ErrMess = trim(ErrMess)//"MeshCommit: Line2 element "//TRIM(Num2Lstr(j))//" has 0 length."//NewLine// &
                      "   n2 = n("//TRIM(Num2Lstr(n2))//") = ("//TRIM(Num2Lstr(Mesh%Position(1,n2)))//','//TRIM(Num2Lstr(mesh%position(2,n2)))//','//TRIM(Num2Lstr(mesh%position(3,n2))) //')'//NewLine// &
@@ -2913,9 +2923,9 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
             do j=1,3
                Names(indx_first) = trim(MeshName)//' '//Comp(j)//' moment, node '//trim(num2lstr(i))//', Nm'//UnitDesc
                indx_first = indx_first + 1
-            end do      
+            end do
          end do
-      end if      
+      end if
 
    END SUBROUTINE PackLoadMesh_Names
 !...............................................................................................................................
@@ -2944,9 +2954,9 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
             do j=1,3
                Ary(indx_first) = M%Moment(j,i)
                indx_first = indx_first + 1
-            end do      
+            end do
          end do
-      end if     
+      end if
 
    END SUBROUTINE PackLoadMesh
 !...............................................................................................................................
@@ -2977,7 +2987,7 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
             indx_first = indx_last + 1
          end do
       end if
-      
+
    END SUBROUTINE PackLoadMesh_dY
 !...............................................................................................................................
 !> This subroutine returns the names of rows/columns of motion meshes in the Jacobian matrices. It assumes all fields marked
@@ -3064,17 +3074,23 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
 !> This subroutine returns the operating point values of the mesh fields. It assumes all fields marked
 !! by FieldMask are allocated; Some fields may be allocated by the ModMesh module and not used in
 !! the linearization procedure, thus I am not using the check if they are allocated to determine if they should be included.
-   SUBROUTINE PackMotionMesh(M, Ary, indx_first, FieldMask)
+   SUBROUTINE PackMotionMesh(M, Ary, indx_first, FieldMask, UseLogMaps)
    
       TYPE(MeshType)                    , INTENT(IN   ) :: M                          !< Motion mesh
       REAL(ReKi)                        , INTENT(INOUT) :: Ary(:)                     !< array to pack this mesh into 
       INTEGER(IntKi)                    , INTENT(INOUT) :: indx_first                 !< index into Ary; gives location of next array position to fill
       LOGICAL, OPTIONAL                 , INTENT(IN   ) :: FieldMask(FIELDMASK_SIZE)  !< flags to determine if this field is part of the packing
+      LOGICAL, OPTIONAL                 , INTENT(IN   ) :: UseLogMaps                 !< flag to determine if the orientation should be packed as a DCM or a log map
       
       
          ! local variables:
       INTEGER(IntKi)                :: i, j, k
       LOGICAL                       :: Mask(FIELDMASK_SIZE)               !< flags to determine if this field is part of the packing
+      LOGICAL                       :: OutputLogMap
+      REAL(R8Ki)                    :: logmap(3)                          !< array to pack logmaps into 
+      INTEGER(IntKi)                :: ErrStat2
+      CHARACTER(ErrMsgLen)          :: ErrMsg2
+      
 
       if (present(FieldMask)) then
          Mask = FieldMask
@@ -3093,14 +3109,30 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
       end if
       
       if (Mask(MASKID_ORIENTATION)) then
-         do i=1,M%NNodes
-            do j=1,3
-               do k=1,3 ! note this gives us 9 values instead of 3 for this "operating point"
-                  Ary(indx_first) = M%Orientation(j,k,i)
+         if (present(UseLogMaps)) then
+            OutputLogMap = UseLogMaps
+         else
+            OutputLogMap = .false.
+         end if
+         
+         if (OutputLogMap) then
+            do i=1,M%NNodes
+               call DCM_logMap(M%Orientation(:,:,i), logmap, ErrStat2, ErrMsg2)
+               do k=1,3
+                  Ary(indx_first) = logmap(k)
                   indx_first = indx_first + 1
-               end do               
-            end do      
-         end do
+               end do
+            end do
+         else
+            do i=1,M%NNodes
+               do j=1,3
+                  do k=1,3 ! note this gives us 9 values instead of 3 for this "operating point"
+                     Ary(indx_first) = M%Orientation(j,k,i)
+                     indx_first = indx_first + 1
+                  end do
+               end do
+            end do
+         end if
       end if
       
       if (Mask(MASKID_TRANSLATIONVEL)) then
@@ -3388,7 +3420,7 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
 
       if ( size(t) .ne. order+1) then
          ErrStat = ErrID_Fatal
-         ErrMsg = 'MeshExtrapInterp2: size(t) must equal 2.'
+         ErrMsg = 'MeshExtrapInterp2: size(t) must equal 3.'
          RETURN
       end if
 

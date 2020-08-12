@@ -35,6 +35,14 @@ All precompiled binaries can be found in the ``Assets`` dropdown in the
 `here <https://github.com/OpenFAST/openfast/releases/latest/download/windows_openfast_binaries.zip>`__
 to download the latest binaries.
 
+Note that the precompiled binaries require either the Intel fortran
+compiler or the Intel MKL redistributable libraries, which are not by
+default included with the binaries. To configure the libraries, download the
+installers from `here <https://software.intel.com/sites/default/files/managed/bb/e0/ww_ifort_redist_msi_2017.8.275.zip>`__
+and run the MSI file(s) to install the libraries. Note that if you have a
+Command Prompt open, you will need to close it after installing the libraries
+in order for the changes to take effect.
+
 Compile from source
 ~~~~~~~~~~~~~~~~~~~
 For compiling from source code, the NREL OpenFAST team has developed an
@@ -228,6 +236,7 @@ The CMake options specific to OpenFAST and their default settings are:
     GENERATE_TYPES                 - Use the openfast-regsitry to autogenerate types modules
     ORCA_DLL_LOAD                  - Enable OrcaFlex library load (Default: OFF)
     USE_DLL_INTERFACE              - Enable runtime loading of dynamic libraries (Default: ON)
+    OPENMP                         - Enable OpenMP parallelization in FVW (Default: OFF)
 
 Additional system-specific options may exist for a given system, but those
 should not impact the OpenFAST configuration. As mentioned above, the

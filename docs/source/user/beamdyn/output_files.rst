@@ -1,4 +1,4 @@
-.. _output-files:
+.. _bd-output-files:
    
 Output Files
 ============

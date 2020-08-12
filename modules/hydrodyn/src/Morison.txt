@@ -339,7 +339,7 @@ typedef   ^                            ^                             INTEGER    
 typedef   ^                            ^                             INTEGER                  UnOutFile                       -          -         -         ""        -
 typedef   ^                            ^                             CHARACTER(20)            OutFmt                          -          -         -        ""        -
 typedef   ^                            ^                             CHARACTER(20)            OutSFmt                         -          -         -         ""        -
-typedef   ^                            ^                             CHARACTER(10)            Delim                           -          -         -         ""        -
+typedef   ^                            ^                             CHARACTER(ChanLen)       Delim                           -          -         -         ""        -
 #
 #
 # ..... Inputs ....................................................................................................................
