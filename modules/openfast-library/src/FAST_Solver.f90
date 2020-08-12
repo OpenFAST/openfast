@@ -1095,8 +1095,8 @@ SUBROUTINE Transfer_ED_to_HD_SD_BD_Mooring( p_FAST, y_ED, u_HD, u_SD, u_ExtPtfm,
    END IF
       
    
-   IF ( p_FAST%CompMooring == Module_MAP ) THEN
-!TODO: GJH Need to check for SD, if present, then SD will transfer to these Mooring modules, NOT ED! GJH 5/11/2020      
+   IF ( p_FAST%CompMooring == Module_MAP .and.  p_FAST%CompSub /= Module_SD ) THEN
+!TODO: GJH I do not have plan documentation for the External Platform connection to MAP GJH 8/11/2020      
          ! motions:
       CALL Transfer_Point_to_Point( y_ED%PlatformPtMesh, u_MAP%PtFairDisplacement, MeshMapData%ED_P_2_Mooring_P, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//'u_MAP%PtFairDisplacement' )
@@ -2626,12 +2626,12 @@ CONTAINS
    
    PlatformMotions => y_ED2%PlatformPtMesh
    
+   
    !..................
    ! Set mooring line and ice inputs (which don't have acceleration fields and aren't used elsewhere in this routine, thus we're using the actual inputs (not a copy) 
    ! Note that these values get overwritten at the completion of this routine.)
    !..................
 
-!TODO: GJH Need to determine if mooring is connected to ED or SD GJH 5/11/2020
    
       IF ( p_FAST%CompMooring == Module_MAP ) THEN
          
@@ -2729,10 +2729,6 @@ CONTAINS
             CALL Transfer_SD_to_HD( y_SD2, MeshMapData%u_HD_W_Mesh, MeshMapData%u_HD_M_Mesh, MeshMapData, ErrStat2, ErrMsg2 )
                CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)       
       
-!TODO: GJH I don't believe we need the following   GJH 5/12/2020
-            !   ! Map ED motion output to HD PRP inputs:
-            !CALL Transfer_Point_to_Point( PlatformMotions, MeshMapData%u_HD_PRP_Mesh, MeshMapData%ED_P_2_HD_PRP_P, ErrStat2, ErrMsg2 ) 
-            !   CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)      
                
       !..................
       ! Get SD loads inputs (MeshMapData%u_HD_W_Mesh and MeshMapData%u_HD_M_Mesh meshes must be set first)
@@ -2893,9 +2889,8 @@ CONTAINS
    !   at this point, MeshMapData%u_ED_PlatformPtMesh contains the portion of loads from SD and/or HD
    !..................
   
-      !TODO: GJH This is no longer added to ED if SD is present, instead these are sent to SD GJH 5/11/2020
          
-         ! Get the loads for ED from a mooring module and add them:
+         ! Get the loads for ED/SD from a mooring module and add them:
       IF ( p_FAST%CompMooring == Module_MAP ) THEN
          if ( p_FAST%CompSub == Module_SD ) then
             CALL Transfer_Point_to_Point( y_MAP%PtFairleadLoad, MeshMapData%u_SD_LMesh_2, MeshMapData%Mooring_P_2_SD_P, ErrStat2, ErrMsg2, u_MAP%PtFairDisplacement, y_SD2%Y2Mesh ) !u_MAP and y_SD contain the displacements needed for moment calculations
@@ -4133,7 +4128,6 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, M
             
             ! ElastoDyn point mesh HydroDyn Morison point mesh (ED sets inputs, but gets outputs from HD%y%WAMITMesh in floating case)
          IF ( HD%Input(1)%Morison%Mesh%Committed  ) THEN  
-            !TODO: HD Changes: Need to transfer Morison Loads to PlatformLoads
             CALL MeshMapCreate( HD%y%Morison%Mesh, PlatformLoads, MeshMapData%HD_M_P_2_ED_P, ErrStat2, ErrMsg2 )
                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':HD_M_P_2_ED_P' )
             CALL MeshMapCreate( PlatformMotion,  HD%Input(1)%Morison%Mesh, MeshMapData%ED_P_2_HD_M_P, ErrStat2, ErrMsg2 )
@@ -4724,7 +4718,6 @@ SUBROUTINE SolveOption1(this_time, this_state, calcJacobian, p_FAST, ED, BD, HD,
 ! Set mooring line and ice inputs (which don't have acceleration fields)
 !..................
 
-!TODO: GJH Need to check whether SD or ED sends output to Mooring GJH 5/11/2020
    
    IF ( p_FAST%CompMooring == Module_MAP ) THEN
          
