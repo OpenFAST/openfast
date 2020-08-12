@@ -1687,8 +1687,10 @@ subroutine SetMemberProperties( gravity, member, MCoefMod, MmbrCoefIDIndx, MmbrF
          
          ! force and moment magnitude constants
          member%Cfl_fb(i) = TwoPi * member%dRdl_in(i) * member%FillDens * gravity * member%h_fill *( (li - member%l_fill)*member%Rin(i) + 0.5*((li - member%l_fill)*member%dRdl_in(i) + member%Rin(i))*member%h_fill + 1/3*member%dRdl_in(i)*member%h_fill**2 )
-         member%Cfr_fb(i) =    Pi *     member%FillDens * gravity * member%h_fill *( member%Rin(i)**2 + member%dRdl_in(i)*member%Rin(i)*member%h_fill +1/3 *member%dRdl_in(i)**2 *member%h_fill**2 )
-         member%CM0_fb(i) = TwoPi *     member%FillDens * gravity * member%h_fill *( 0.25*member%h_fill**3*member%dRdl_in(i)**4 + 0.25*member%h_fill**3*member%dRdl_in(i)**2 + member%h_fill**2*member%dRdl_in(i)**3*member%Rin(i) + 2/3*member%h_fill**2*member%dRdl_in(i)*member%Rin(i) + 1.5*member%h_fill*member%dRdl_in(i)**2*member%Rin(i)**2 + 0.5*member%h_fill*member%Rin(i)**2 + member%dRdl_in(i)*member%Rin(i)**3 )
+         member%Cfr_fb(i) =    Pi * member%FillDens * gravity * member%h_fill *( member%Rin(i)**2 + member%dRdl_in(i)*member%Rin(i)*member%h_fill +1/3 *member%dRdl_in(i)**2 *member%h_fill**2 )
+         member%CM0_fb(i) = TwoPi * member%FillDens * gravity * member%h_fill *( 0.25*member%h_fill**3*member%dRdl_in(i)**4 + 0.25*member%h_fill**3*member%dRdl_in(i)**2 + member%h_fill**2*member%dRdl_in(i)**3*member%Rin(i) + 2/3*member%h_fill**2*member%dRdl_in(i)*member%Rin(i)  &
+                                                                                 + 1.5*member%h_fill*member%dRdl_in(i)**2*member%Rin(i)**2 + 0.5*member%h_fill*member%Rin(i)**2 + member%dRdl_in(i)*member%Rin(i)**3 ) &
+                                    -0.25 * member%FillDens * gravity * Pi * (  member%Rin(i) + member%h_fill*member%dRdl_in(i))**4
       
       ! unflooded element
       else
@@ -3102,11 +3104,8 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
               
               
                m%F_D_End(i,j) =  p%An_End(i,j)*p%DragConst_End(j)*abs(vmag)*vmag  ! Note: vmag is zero if node is not in the water
-               !TODO: This needs to be reworked with new equations
-               !m%F_B_End(I,J) =  m%nodeInWater(j)*p%F_B_End(I,J)
                y%Mesh%Force(i,j)    = y%Mesh%Force(i,j)    + m%F_D_End(i,j) + m%F_I_End(i,j) + p%F_WMG_End(i,j) + m%F_B_End(i,j) + m%F_BF_End(i,j) + m%F_A_End(i,j) + m%F_IMG_End(i,j)
             ELSE
-               !m%F_B_End(I,J) =  m%nodeInWater(j)*p%F_B_End(I,J)
                y%Mesh%Moment(i-3,j) = y%Mesh%Moment(i-3,j) + m%F_B_End(i,j) + m%F_BF_End(i,j)  + m%F_IMG_End(i,j)
             END IF
          END DO      ! I=1,6
