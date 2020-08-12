@@ -239,7 +239,7 @@ CONTAINS
       integer(IntKi)       , intent(in)          :: iStore !< Storage index, used several informations are stored per node
       integer(IntKi)       , intent(in)          :: NodeID2 !< If ElemNode(2) == NodeID2, then it's the second node
       integer(IntKi), dimension(2) :: ElemNodes  ! Node IDs for element under consideration (may not be consecutive numbers)
-      REAL(ReKi)                   :: FCe(12) ! Pretension force from cable element
+      REAL(FEKi)                   :: FCe(12) ! Pretension force from cable element
       pLst%ElmIDs(iiNode,iStore) = iElem              ! This array has for each joint requested  the elements' ID to get results for
       ElemNodes = p%Elems(iElem,2:3) ! 1st and 2nd node of the k-th element
       if (ElemNodes(2) == NodeID2) then 
@@ -262,8 +262,7 @@ END SUBROUTINE SDOut_Init
 !! This routine does fill Allouts
 !! note that this routine assumes m%u_TP and m%udotdot_TP have been set before calling 
 !!     this routine (which is done in SD_CalcOutput() and SD CalcContStateDeriv)
-SUBROUTINE SDOut_MapOutputs( CurrentTime, u,p,x, y, m, AllOuts, ErrStat, ErrMsg )
-   real(DbKi),                    intent( in    )  :: CurrentTime          ! Current simulation time in seconds
+SUBROUTINE SDOut_MapOutputs(u,p,x, y, m, AllOuts, ErrStat, ErrMsg )
    type(SD_InputType),            intent( in )     :: u                    ! SubDyn module's input data
    type(SD_ContinuousStateType),  intent( in )     :: x                    ! SubDyn module's states data
    type(SD_OutputType),           intent( inout )  :: y                    ! SubDyn module's output data
@@ -277,7 +276,7 @@ SUBROUTINE SDOut_MapOutputs( CurrentTime, u,p,x, y, m, AllOuts, ErrStat, ErrMsg 
    integer(IntKi)                 :: maxOutModes  ! maximum modes to output, the minimum of 99 or p%nDOFM
    real(ReKi), dimension (6)      :: FM_elm, FK_elm, Fext  !output static and dynamic forces and moments
    real(ReKi), dimension (6)      :: FM_elm2, FK_elm2      !output static and dynamic forces and moments
-   real(ReKi), dimension (3,3)    :: DIRCOS    !direction cosice matrix (global to local) (3x3)
+   real(FEKi), dimension (3,3)    :: DIRCOS    !direction cosice matrix (global to local) (3x3)
    real(ReKi), allocatable        :: ReactNs(:)    !6*Nreact reactions
    integer(IntKi)                 :: sgn !+1/-1 for node force calculations
    type(MeshAuxDataType), pointer :: pLst       !< Info for a given member-output (Alias to shorten notation)
@@ -417,7 +416,7 @@ contains
       type(MeshAuxDataType), intent(in)          :: pLst   !< Info for one member output
       integer(IntKi)       , intent(in)          :: iiNode !< Index over the nodes of a given member (>2 if nDIV>1)
       integer(IntKi)       , intent(in)          :: JJ     !< TODO: interpretation: index over other member connected to the current member (for averaging)
-      real(ReKi), dimension (3,3), intent(inout) :: DIRCOS  !direction cosice matrix (global to local) (3x3)
+      real(FEKi), dimension (3,3), intent(inout) :: DIRCOS  !direction cosice matrix (global to local) (3x3)
       real(ReKi), dimension (6), intent(out)     :: FM_elm, FK_elm  !output static and dynamic forces and moments
       integer(IntKi), intent(out)                :: sgn !+1/-1 for node force calculations
       logical, intent(in)                        :: bUseInputDirCos !< If True, use DIRCOS from input, otherwise, use element DirCos
@@ -448,9 +447,10 @@ contains
    !and K2 indicating wheter the 1st (1) or 2nd (2) node is to be picked
    !----------------------------------------------------------------------------------------------------
    SUBROUTINE CALC_NODE_FORCES(DIRCOS,Me,Ke,Udotdot,Y2 ,Fg, FirstOrSecond, FM_nod, FK_nod)
-      Real(ReKi), DIMENSION (3,3),   INTENT(IN)  :: DIRCOS    !direction cosice matrix (global to local) (3x3)
-      Real(ReKi), DIMENSION (12,12), INTENT(IN)  :: Me,Ke    !element M and K matrices (12x12) in GLOBAL REFERENCE (DIRCOS^T K DIRCOS)
-      Real(ReKi), DIMENSION (12),    INTENT(IN)  :: Udotdot, Y2, Fg     !acceleration and velocities, gravity forces
+      Real(FEKi), DIMENSION (3,3),   INTENT(IN)  :: DIRCOS    !direction cosice matrix (global to local) (3x3)
+      Real(FEKi), DIMENSION (12,12), INTENT(IN)  :: Me,Ke    !element M and K matrices (12x12) in GLOBAL REFERENCE (DIRCOS^T K DIRCOS)
+      Real(ReKi), DIMENSION (12),    INTENT(IN)  :: Udotdot, Y2     !acceleration and velocities, gravity forces
+      Real(FEKi), DIMENSION (12),    INTENT(IN)  :: Fg     !acceleration and velocities, gravity forces
       Integer(IntKi),                INTENT(IN)  :: FirstOrSecond !1 or 2 depending on node of interest
       REAL(ReKi), DIMENSION (6),    INTENT(OUT)  :: FM_nod, FK_nod  !output static and dynamic forces and moments
       !Locals
@@ -810,12 +810,11 @@ END SUBROUTINE SDOut_ChkOutLst
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 !> This routine initializes the array that maps rows/columns of the Jacobian to specific mesh fields.
 !! Do not change the order of this packing without changing subroutine !
-SUBROUTINE SD_Init_Jacobian(Init, p, u, y, m, InitOut, ErrStat, ErrMsg)
+SUBROUTINE SD_Init_Jacobian(Init, p, u, y, InitOut, ErrStat, ErrMsg)
    TYPE(SD_InitType)                 , INTENT(IN   ) :: Init                  !< Init
    TYPE(SD_ParameterType)            , INTENT(INOUT) :: p                     !< parameters
    TYPE(SD_InputType)                , INTENT(IN   ) :: u                     !< inputs
    TYPE(SD_OutputType)               , INTENT(IN   ) :: y                     !< outputs
-   TYPE(SD_MiscVarType)              , INTENT(INOUT) :: m                     !< misc var data
    TYPE(SD_InitOutputType)           , INTENT(INOUT) :: InitOut               !< Initialization output data (for Jacobian row/column names)
    INTEGER(IntKi)                    , INTENT(  OUT) :: ErrStat               !< Error status of the operation
    CHARACTER(*)                      , INTENT(  OUT) :: ErrMsg                !< Error message if ErrStat /= ErrID_None

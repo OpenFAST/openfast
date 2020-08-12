@@ -99,7 +99,7 @@ SUBROUTINE CreateInputOutputMeshes( NNode, Nodes, inputMesh, outputMesh, ErrStat
    CHARACTER(*),              INTENT(   OUT ) :: ErrMsg                    ! Error message if ErrStat /= ErrID_None
    ! Local variables
    REAL(ReKi), dimension(3) :: Point
-   INTEGER         :: I, iOffset, iNode  ! generic counter variable
+   INTEGER         :: I  ! generic counter variable
    INTEGER         :: nodeIndx
    
    CALL MeshCreate( BlankMesh        = inputMesh         &
@@ -230,6 +230,13 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    ! --- Additional Damping and stiffness at pin/ball/universal joints
    CALL InsertJointStiffDamp(p, Init, ErrStat2, ErrMsg2); if(Failed()) return
 
+   ! --- Prepare for control cable load, RHS
+   if (any(Init%PropsC(:,5)>0)) then
+      print*,'Need to assemble Cable Force'
+      CALL ControlCableForceInit(Init, p, m, ErrStat2, ErrMsg2); if(Failed()) return
+      print*,'Controlable cables, feature not ready.'
+      STOP
+   endif
 
    ! --------------------------------------------------------------------------------
    ! --- CB, Misc  
@@ -294,7 +301,7 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    END IF
       
    if (InitInput%Linearize) then
-      call SD_Init_Jacobian(Init, p, u, y, m, InitOut, ErrStat2, ErrMsg2); if(Failed()) return
+     call SD_Init_Jacobian(Init, p, u, y, InitOut, ErrStat2, ErrMsg2); if(Failed()) return
    endif
    
    ! Tell GLUECODE the SubDyn timestep interval 
@@ -370,8 +377,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     !< Error status of the operation
       CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
       !locals
-      INTEGER(IntKi)               :: L1,L2       ! partial Lengths of state and input arrays
-      INTEGER(IntKi)               :: I,J          ! Counters
+      INTEGER(IntKi)               :: I          ! Counters
       INTEGER(IntKi)               :: iSDNode, iY2Node
       REAL(ReKi)                   :: AllOuts(0:MaxOutPts+p%OutAllInt*p%OutAllDims)
       REAL(ReKi)                   :: rotations(3)
@@ -380,7 +386,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       REAL(ReKi)                   :: Y1_ExtraMoment(3) ! Lever arm moment contributions due to interface displacement
       INTEGER(IntKi), pointer      :: DOFList(:)
       INTEGER(IntKi)               :: startDOF
-      REAL(ReKi)                   :: DCM(3,3),junk(6,p%nNodes_L)
+      REAL(ReKi)                   :: DCM(3,3)
       REAL(ReKi)                   :: HydroForces(6*p%nNodes_I) !  !Forces from all interface nodes listed in one big array  ( those translated to TP ref point HydroTP(6) are implicitly calculated in the equations)
       TYPE(SD_ContinuousStateType) :: dxdt        ! Continuous state derivatives at t- for output file qmdotdot purposes only
       INTEGER(IntKi)               :: ErrStat2    ! Error status of the operation (occurs after initial error)
@@ -556,7 +562,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
          END IF        
          
          ! Map calculated results into the AllOuts Array + perform averaging and all necessary extra calculations
-         CALL SDOut_MapOutputs(t, u, p, x, y, m, AllOuts, ErrStat2, ErrMsg2); if(Failed()) return
+         CALL SDOut_MapOutputs(u, p, x, y, m, AllOuts, ErrStat2, ErrMsg2); if(Failed()) return
             
          ! Put the output data in the WriteOutput array
          DO I = 1,p%NumOuts+p%OutAllInt*p%OutAllDims
@@ -635,7 +641,6 @@ SUBROUTINE SD_Input(SDInputFile, Init, p, ErrStat,ErrMsg)
 ! local variable for input and output
 CHARACTER(1024)              :: PriPath          ! The path to the primary input file
 CHARACTER(1024)              :: Line, Dummy_Str  ! String to temporarially hold value of read line
-INTEGER                      :: Sttus
 CHARACTER(64), ALLOCATABLE   :: StrArray(:)  ! Array of strings, for better control of table inputs
 LOGICAL                      :: Echo  
 LOGICAL                      :: LegacyFormat
@@ -645,7 +650,7 @@ INTEGER(IntKi)               :: nColumns, nColValid, nColNumeric
 INTEGER(IntKi)               :: IOS
 INTEGER(IntKi)               :: UnEc   !Echo file ID
 REAL(ReKi),PARAMETER        :: WrongNo=-9999.   ! Placeholder value for bad(old) values in JDampings
-INTEGER(IntKi)               :: I, J, flg, K, nColsReactInterf
+INTEGER(IntKi)               :: I, J, flg, K
 REAL(ReKi)                   :: Dummy_ReAry(SDMaxInpCols) , DummyFloat 
 INTEGER(IntKi)               :: Dummy_IntAry(SDMaxInpCols)
 LOGICAL                      :: Dummy_Bool
@@ -976,11 +981,21 @@ if (.not. LegacyFormat) then
    CALL ReadIVar ( UnIn, SDInputFile, Init%NPropSetsC, 'NPropSetsC', 'Number of cable properties' ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
    CALL ReadCom  ( UnIn, SDInputFile,                  'Cable properties Header'                          ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
    CALL ReadCom  ( UnIn, SDInputFile,                  'Cable properties Unit  '                          ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+   IF (Check( Init%NPropSetsC < 0, 'NPropSetsCable must be >=0')) return
    CALL AllocAry(Init%PropSetsC, Init%NPropSetsC, PropSetsCCol, 'PropSetsC', ErrStat2, ErrMsg2); if(Failed()) return
    DO I = 1, Init%NPropSetsC
-      CALL ReadAry( UnIn, SDInputFile, Init%PropSetsC(I,:), PropSetsCCol, 'PropSetsC', 'PropSetsC ID and values ', ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+      !CALL ReadAry( UnIn, SDInputFile, Init%PropSetsC(I,:), PropSetsCCol, 'PropSetsC', 'PropSetsC ID and values ', ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+      READ(UnIn, FMT='(A)', IOSTAT=ErrStat2) Line; ErrMsg2='Error reading cable property line'; if (Failed()) return
+      call ReadFAryFromStr(Line, Init%PropSetsC(I,:), PropSetsCCol, nColValid, nColNumeric);
+      if ((nColValid/=nColNumeric).or.((nColNumeric/=4).and.(nColNumeric/=PropSetsCCol)) ) then
+         CALL Fatal(' Error in file "'//TRIM(SDInputFile)//'": Cable property line must consist of 4 or 5 numerical values. Problematic line: "'//trim(Line)//'"')
+         return
+      endif
+      if (nColNumeric==4) then
+         call LegacyWarning('Using 4 values instead of 5 for cable properties. Cable will have constant properties and wont be controllable.')
+         Init%PropSetsC(:,5:PropSetsCCol)=0 ! No CtrlChannel
+      endif
    ENDDO   
-   IF (Check( Init%NPropSetsC < 0, 'NPropSetsCable must be >=0')) return
    !----------------------- RIGID LINK PROPERTIES ------------------------------------
    CALL ReadCom  ( UnIn, SDInputFile,                  'Rigid link properties'                                 ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
    CALL ReadIVar ( UnIn, SDInputFile, Init%NPropSetsR, 'NPropSetsR', 'Number of rigid link properties' ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
@@ -1658,7 +1673,6 @@ SUBROUTINE SD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
    TYPE(SD_InputType)           :: u_perturb
    REAL(R8Ki)                   :: delta_p, delta_m   ! delta change in input (plus, minus)
    INTEGER(IntKi)               :: i
-   REAL(R8Ki)                   :: RotateStates(3,3)
    integer(intKi)               :: ErrStat2
    character(ErrMsgLen)         :: ErrMsg2
    character(*), parameter      :: RoutineName = 'SD_JacobianPInput'
@@ -1748,7 +1762,7 @@ END SUBROUTINE SD_JacobianPInput
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
 !! with respect to the continuous states (x). The partial derivatives dY/dx, dX/dx, dXd/dx, and dZ/dx are returned.
-SUBROUTINE SD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdx, dXdx, dXddx, dZdx, StateRotation )
+SUBROUTINE SD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdx, dXdx, dXddx, dZdx)
    REAL(DbKi),                        INTENT(IN   ) :: t                  !< Time in seconds at operating point
    TYPE(SD_InputType),                INTENT(INOUT) :: u                  !< Inputs at operating point (may change to inout if a mesh copy is required)
    TYPE(SD_ParameterType),            INTENT(IN   ) :: p                  !< Parameters
@@ -1764,13 +1778,10 @@ SUBROUTINE SD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
    REAL(R8Ki), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: dXdx(:,:)          !< Partial derivatives of continuous state functions (X) wrt the continuous states (x) [intent in to avoid deallocation]
    REAL(R8Ki), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: dXddx(:,:)         !< Partial derivatives of discrete state functions (Xd) wrt the continuous states (x) [intent in to avoid deallocation]
    REAL(R8Ki), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: dZdx(:,:)          !< Partial derivatives of constraint state functions (Z) wrt the continuous states (x) [intent in to avoid deallocation]
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: StateRotation(:,:) !< Matrix by which the states are optionally rotated
    ! local variables
    TYPE(SD_OutputType)          :: y_p, y_m
    TYPE(SD_ContinuousStateType) :: x_p, x_m
    TYPE(SD_ContinuousStateType) :: x_perturb
-   REAL(R8Ki)                   :: RotateStates(3,3)
-   REAL(R8Ki)                   :: RotateStatesTranspose(3,3)
    REAL(R8Ki)                   :: delta        ! delta change in input or state
    INTEGER(IntKi)               :: i, k
    INTEGER(IntKi)               :: idx
@@ -2056,10 +2067,9 @@ SUBROUTINE SD_Craig_Bampton(Init, p, CB, ErrStat, ErrMsg)
    INTEGER(IntKi),        INTENT(  OUT)      :: ErrStat     ! Error status of the operation
    CHARACTER(*),          INTENT(  OUT)      :: ErrMsg      ! Error message if ErrStat /= ErrID_None   
    ! local variables
-   REAL(ReKi), ALLOCATABLE  :: FGR(:), FGL(:), FGB(:), FGM(:) !< Partitioned Force (R/L), and CB reduced forces(B/M)
-   REAL(ReKi), ALLOCATABLE  :: PhiRb(:, :)  ! Purely to avoid loosing these modes for output ! TODO, kept for backward compatibility of Summary file
+   REAL(FEKi), ALLOCATABLE  :: FGR(:), FGL(:), FGB(:), FGM(:) !< Partitioned Force (R/L), and CB reduced forces(B/M)
+   REAL(FEKi), ALLOCATABLE  :: PhiRb(:, :)  ! Purely to avoid loosing these modes for output ! TODO, kept for backward compatibility of Summary file
    REAL(ReKi)               :: JDamping1 ! temporary storage for first element of JDamping array 
-   INTEGER(IntKi)           :: i
    INTEGER(IntKi)           :: nR     !< Dimension of R DOFs (to switch between __R and R__)
    INTEGER(IntKi)           :: nL, nM, nM_out
    INTEGER(IntKi), pointer  :: IDR(:) !< Alias to switch between IDR__ and ID__Rb
@@ -2160,13 +2170,13 @@ contains
    !! NOTE: PhiL and OmegaL are not modified
    subroutine applyConstr(CBParams, FGB, PhiRb)
       TYPE(CB_MatArrays),  INTENT(INOUT) :: CBparams    !< NOTE: data will be reduced (andw hence reallocated)
-      REAL(ReKi),ALLOCATABLE,INTENT(INOUT) :: FGB(:)    !< NOTE: data will be reduced (andw hence reallocated)
-      REAL(ReKi),ALLOCATABLE,INTENT(INOUT) :: PhiRb(:,:)!< NOTE: data will be reduced (andw hence reallocated)
+      REAL(FEKi),ALLOCATABLE,INTENT(INOUT) :: FGB(:)    !< NOTE: data will be reduced (andw hence reallocated)
+      REAL(FEKi),ALLOCATABLE,INTENT(INOUT) :: PhiRb(:,:)!< NOTE: data will be reduced (andw hence reallocated)
       !REAL(ReKi), ALLOCATABLE  :: PhiRb(:, :)   
-      REAL(ReKi), ALLOCATABLE  :: MBBb(:, :)
-      REAL(ReKi), ALLOCATABLE  :: MBMb(:, :)
-      REAL(ReKi), ALLOCATABLE  :: KBBb(:, :)
-      REAL(ReKi), ALLOCATABLE  :: FGBb(:) 
+      REAL(FEKi), ALLOCATABLE  :: MBBb(:, :)
+      REAL(FEKi), ALLOCATABLE  :: MBMb(:, :)
+      REAL(FEKi), ALLOCATABLE  :: KBBb(:, :)
+      REAL(FEKi), ALLOCATABLE  :: FGBb(:) 
       ! "b" stands for "bar"
       CALL AllocAry( MBBb,  p%nDOF__Rb, p%nDOF__Rb, 'matrix MBBb',  ErrStat2, ErrMsg2 );
       CALL AllocAry( MBmb,  p%nDOF__Rb, p%nDOFM,    'matrix MBmb',  ErrStat2, ErrMsg2 );
@@ -2204,15 +2214,15 @@ END SUBROUTINE SD_Craig_Bampton
 SUBROUTINE SD_Guyan_RigidBodyMass(Init, p, MBB, ErrStat, ErrMsg)
    type(SD_InitType),       intent(inout) :: Init       ! NOTE: Mass and Stiffness are modified but then set back to original
    type(SD_ParameterType),  intent(in   ) :: p           ! Parameters
-   real(ReKi), allocatable, intent(out)   :: MBB(:,:)     !< MBB
+   real(FEKi), allocatable, intent(out)   :: MBB(:,:)     !< MBB
    integer(IntKi),          intent(  out) :: ErrStat !< Error status of the operation
    character(*),            intent(  out) :: ErrMsg  !< error message if errstat /= errid_none   
    integer(IntKi) :: nM, nR, nL, nM_out
-   real(ReKi), allocatable :: MBM(:, :)
-   real(ReKi), allocatable :: KBB(:, :)
-   real(ReKi), allocatable :: PhiL(:, :)
-   real(ReKi), allocatable :: PhiR(:, :)
-   real(ReKi), allocatable :: OmegaL(:)
+   real(FEKi), allocatable :: MBM(:, :)
+   real(FEKi), allocatable :: KBB(:, :)
+   real(FEKi), allocatable :: PhiL(:, :)
+   real(FEKi), allocatable :: PhiR(:, :)
+   real(FEKi), allocatable :: OmegaL(:)
    character(*), parameter :: RoutineName = 'SD_Guyan_RigidBodyMass'
    integer(IntKi)          :: ErrStat2
    character(ErrMsgLen)    :: ErrMsg2
@@ -2253,20 +2263,21 @@ END SUBROUTINE SD_Guyan_RigidBodyMass
 
 !------------------------------------------------------------------------------------------------------
 !> Set parameters to compute state and output equations
+!! NOTE: this function converst from FEKi to ReKi
 SUBROUTINE SetParameters(Init, p, MBBb, MBmb, KBBb, PhiRb, nM_out, OmegaL, PhiL, FGL, FGB, FGM, ErrStat, ErrMsg)
    use NWTC_LAPACK, only: LAPACK_GEMM, LAPACK_getrf
    TYPE(SD_InitType),        INTENT(IN   )   :: Init         ! Input data for initialization routine
    TYPE(SD_ParameterType),   INTENT(INOUT)   :: p            ! Parameters
-   REAL(ReKi),               INTENT(IN   )   :: MBBb(  p%nDOF__Rb, p%nDOF__Rb) ! Guyan mass matrix
-   REAL(ReKi),               INTENT(IN   )   :: MBMb(  p%nDOF__Rb, p%nDOFM)
-   REAL(ReKi),               INTENT(IN   )   :: KBBb(  p%nDOF__Rb, p%nDOF__Rb) ! Guyan stiffness matrix
+   REAL(FEKi),               INTENT(IN   )   :: MBBb(  p%nDOF__Rb, p%nDOF__Rb) ! Guyan mass matrix
+   REAL(FEKi),               INTENT(IN   )   :: MBMb(  p%nDOF__Rb, p%nDOFM)
+   REAL(FEKi),               INTENT(IN   )   :: KBBb(  p%nDOF__Rb, p%nDOF__Rb) ! Guyan stiffness matrix
    integer(IntKi),           INTENT(IN   )   :: nM_out
-   REAL(ReKi),               INTENT(IN   )   :: PhiL ( p%nDOF__L, nM_out)
-   REAL(ReKi),               INTENT(IN   )   :: PhiRb( p%nDOF__L, p%nDOF__Rb)   
-   REAL(ReKi),               INTENT(IN   )   :: OmegaL(nM_out)
-   REAL(ReKi),               INTENT(IN   )   :: FGB(p%nDOF__Rb) 
-   REAL(ReKi),               INTENT(IN   )   :: FGL(p%nDOF__L)
-   REAL(ReKi),               INTENT(IN   )   :: FGM(p%nDOFM)
+   REAL(FEKi),               INTENT(IN   )   :: PhiL ( p%nDOF__L, nM_out)
+   REAL(FEKi),               INTENT(IN   )   :: PhiRb( p%nDOF__L, p%nDOF__Rb)   
+   REAL(FEKi),               INTENT(IN   )   :: OmegaL(nM_out)
+   REAL(FEKi),               INTENT(IN   )   :: FGB(p%nDOF__Rb) 
+   REAL(FEKi),               INTENT(IN   )   :: FGL(p%nDOF__L)
+   REAL(FEKi),               INTENT(IN   )   :: FGM(p%nDOFM)
    INTEGER(IntKi),           INTENT(  OUT)   :: ErrStat     ! Error status of the operation
    CHARACTER(*),             INTENT(  OUT)   :: ErrMsg      ! Error message if ErrStat /= ErrID_None
    ! local variables
@@ -2342,8 +2353,9 @@ SUBROUTINE SetParameters(Init, p, MBBb, MBmb, KBBb, PhiRb, nM_out, OmegaL, PhiL,
 
    !p%D1_15=-TI_transpose  !this is 6x6NIN
    IF ( p%nDOFM > 0 ) THEN ! These values don't exist for nDOFM=0; i.e., p%nDOFM == 0
-      ! p%MBM = MATMUL( TRANSPOSE(p%TI), MBmb )    != MBMt
-      CALL LAPACK_gemm( 'T', 'N', 1.0_ReKi, p%TI, MBmb, 0.0_ReKi, p%MBM, ErrStat2, ErrMsg2); if(Failed()) return
+      ! TODO cant use LAPACK due to type conversions FEKi->ReKi
+      p%MBM = MATMUL( TRANSPOSE(p%TI), MBmb )    != MBMt 
+      !CALL LAPACK_gemm( 'T', 'N', 1.0_ReKi, p%TI, MBmb, 0.0_ReKi, p%MBM, ErrStat2, ErrMsg2); if(Failed()) return
       !p%CBM = MATMUL( TRANSPOSE(p%TI), CBMb )    != CBMt
       !CALL LAPACK_gemm( 'T', 'N', 1.0_ReKi, p%TI, CBMb, 0.0_ReKi, p%CBM, ErrStat2, ErrMsg2); if (Failed()) return
       p%CBM = 0.0_ReKi ! TODO no cross couplings
@@ -2380,8 +2392,10 @@ SUBROUTINE SetParameters(Init, p, MBBb, MBmb, KBBb, PhiRb, nM_out, OmegaL, PhiL,
       CALL LAPACK_GEMM( 'N', 'T', 1.0_ReKi, p%MBM,   p%MBM,  0.0_ReKi, p%D1_13, ErrStat2, ErrMsg2 ); if(Failed()) return  ! p%D1_13 = MATMUL( p%MBM, p%MMB )
       p%D1_13 = p%MBB - p%D1_13
 
+      ! TODO cant use LAPACK due to type conversions FEKi->ReKi
       !p%D1_14 = MATMUL( p%MBM, p%PhiM_T ) - MATMUL( TI_transpose, TRANSPOSE(PHiRb))  
-      CALL LAPACK_GEMM( 'T', 'T', 1.0_ReKi, p%TI,   PHiRb,  0.0_ReKi, p%D1_14, ErrStat2, ErrMsg2 ); if(Failed()) return   ! p%D1_14 = MATMUL( TRANSPOSE(TI), TRANSPOSE(PHiRb))  
+      p%D1_14 = MATMUL( TI_transpose, TRANSPOSE(PHiRb)) 
+      !CALL LAPACK_GEMM( 'T', 'T', 1.0_ReKi, p%TI,   PHiRb,  0.0_ReKi, p%D1_14, ErrStat2, ErrMsg2 ); if(Failed()) return   ! p%D1_14 = MATMUL( TRANSPOSE(TI), TRANSPOSE(PHiRb))  
       CALL LAPACK_GEMM( 'N', 'T', 1.0_ReKi, p%MBM, p%PhiM, -1.0_ReKi, p%D1_14, ErrStat2, ErrMsg2 ); if(Failed()) return   ! p%D1_14 = MATMUL( p%MBM, TRANSPOSE(p%PhiM) ) - p%D1_14 
 
    
@@ -2553,7 +2567,6 @@ END SUBROUTINE AllocMiscVars
 !!         C_L : "reaction" nodes DOFs that will be counted as internal
 !!         I_B : "interface" nodes DOFs that are leader DOFs
 SUBROUTINE PartitionDOFNodes(Init, m, p, ErrStat, ErrMsg)
-   use qsort_c_module, only: QsortC
    use IntegerList, only: len, concatenate_lists, lists_difference, concatenate_3lists, sort_in_place
    type(SD_Inittype),       intent(  in)  :: Init        !< Input data for initialization routine
    type(SD_MiscVartype),    intent(  in)  :: m           !< Misc
@@ -2856,17 +2869,18 @@ SUBROUTINE OutSummary(Init, p, InitInput, CBparams, ErrStat,ErrMsg)
    INTEGER(IntKi)         :: mType ! Member Type
    Real(ReKi)             :: mMass, mLength ! Member mass and length
    REAL(ReKi)             :: MRB(6,6)    ! REDUCED SYSTEM Kmatrix, equivalent mass matrix
-   REAL(ReKi),allocatable :: MBB(:,:)    ! Leader DOFs mass matrix
-   REAL(ReKi)             :: XYZ1(3),XYZ2(3), DirCos(3,3) !temporary arrays, member i-th direction cosine matrix (global to local) and member length
+   REAL(FEKi),allocatable :: MBB(:,:)    ! Leader DOFs mass matrix
+   REAL(ReKi)             :: XYZ1(3),XYZ2(3) !temporary arrays
+   REAL(FEKi)             :: DirCos(3,3) ! direction cosine matrix (global to local)
    CHARACTER(*),PARAMETER                 :: SectionDivide = '#____________________________________________________________________________________________________'
    real(ReKi), dimension(:,:), allocatable :: TI2 ! For Equivalent mass matrix
-   real(ReKi) :: Ke(12,12), Me(12, 12), FCe(12), FGe(12) ! element stiffness and mass matrices gravity force vector
+   real(FEKi) :: Ke(12,12), Me(12, 12), FCe(12), FGe(12) ! element stiffness and mass matrices gravity force vector
    real(ReKi), dimension(:,:), allocatable :: DummyArray ! 
    ! Variables for Eigenvalue analysis 
    integer(IntKi) :: nOmega
-   real(ReKi), dimension(:,:), allocatable :: Modes
+   real(FEKi), dimension(:,:), allocatable :: Modes
    real(R8Ki), dimension(:,:), allocatable :: AA, BB, CC, DD ! Linearization matrices
-   real(ReKi), dimension(:)  , allocatable :: Omega
+   real(FEKi), dimension(:)  , allocatable :: Omega
    logical, allocatable                    :: bDOF(:)        ! Mask for DOF to keep (True), or reduce (False)
    character(len=*),parameter :: ReFmt='ES15.6E2'
    character(len=*),parameter :: SFmt='A15,1x' ! Need +1 for comma compared to ReFmt
@@ -3056,14 +3070,14 @@ SUBROUTINE OutSummary(Init, p, InitInput, CBparams, ErrStat,ErrMsg)
       XYZ2   = Init%Joints(iNode2,2:4)
       CALL GetDirCos(XYZ1(1:3), XYZ2(1:3), DirCos, mLength, ErrStat, ErrMsg)
       DirCos=TRANSPOSE(DirCos) !This is now global to local
-      WRITE(UnSum, '("#",I9,9(ES15.6E2))') Init%Members(i,1), ((DirCos(k,j),j=1,3),k=1,3)
+      WRITE(UnSum, '("#",I9,9(ES11.3E2))') Init%Members(i,1), ((DirCos(k,j),j=1,3),k=1,3)
    ENDDO
 
    !-------------------------------------------------------------------------------------------------------------
    ! write Eigenvalues of full SYstem and CB reduced System
    !-------------------------------------------------------------------------------------------------------------
    WRITE(UnSum, '(A)') SectionDivide
-   WRITE(UnSum, '(A, I6)') "#Eigenfrequencies for full system (no constraint) [Hz]"
+   WRITE(UnSum, '(A, I6)') "#Eigenfrequencies [Hz] for full system, with reaction constraints (+ Soil K/M + SoilDyn K0) "
    call yaml_write_array(UnSum, 'Full_frequencies', Omega/(TwoPi), ReFmt, ErrStat2, ErrMsg2)
    WRITE(UnSum, '(A, I6)') "#CB frequencies [Hz]"
    call yaml_write_array(UnSum, 'CB_frequencies', CBparams%OmegaL(1:p%nDOFM)/(TwoPi), ReFmt, ErrStat2, ErrMsg2)
@@ -3072,15 +3086,15 @@ SUBROUTINE OutSummary(Init, p, InitInput, CBparams, ErrStat,ErrMsg)
    ! write Eigenvectors of full System 
    !-------------------------------------------------------------------------------------------------------------
    WRITE(UnSum, '(A)') SectionDivide
-   WRITE(UnSum, '(A, I6)') ('#FEM Eigenvectors ('//TRIM(Num2LStr(p%nDOF_red))//' x '//TRIM(Num2LStr(nOmega))//&
-                              ') [m or rad]. Number of shown eigenvectors (total # of DOFs minus restrained nodes'' DOFs):'), nOmega 
+   WRITE(UnSum, '(A)') ('#FEM Eigenvectors ('//TRIM(Num2LStr(p%nDOF_red))//' x '//TRIM(Num2LStr(nOmega))//&
+                              ') [m or rad], full system with reaction constraints (+ Soil K/M + SoilDyn K0)')
    call yaml_write_array(UnSum, 'Full_Modes', Modes(:,1:nOmega), ReFmt, ErrStat2, ErrMsg2)
     
    !-------------------------------------------------------------------------------------------------------------
    ! write CB system matrices
    !-------------------------------------------------------------------------------------------------------------
    WRITE(UnSum, '(A)') SectionDivide
-   WRITE(UnSum, '(A)') '#CB Matrices (PhiM,PhiR) (constraint applied)'
+   WRITE(UnSum, '(A)') '#CB Matrices (PhiM,PhiR) (reaction constraints applied)'
    call yaml_write_array(UnSum, 'PhiM', CBparams%PhiL(:,1:p%nDOFM ), ReFmt, ErrStat2, ErrMsg2, comment='(CB modes)')
    call yaml_write_array(UnSum, 'PhiR', CBparams%PhiR, ReFmt, ErrStat2, ErrMsg2, comment='(Guyan modes)')
            
@@ -3111,7 +3125,7 @@ SUBROUTINE OutSummary(Init, p, InitInput, CBparams, ErrStat,ErrMsg)
    deallocate(TI2)
    
 
-   if(p%OutAll) then
+   if(p%OutAll) then ! //--- START DEBUG OUTPUTS
 
    WRITE(UnSum, '()') 
    WRITE(UnSum, '(A)') SectionDivide
@@ -3170,7 +3184,7 @@ SUBROUTINE OutSummary(Init, p, InitInput, CBparams, ErrStat,ErrMsg)
    if(allocated(BB)) deallocate(BB)
    if(allocated(CC)) deallocate(CC)
    if(allocated(DD)) deallocate(DD)
-   endif
+   endif ! //--- END DEBUG OUTPUTS
 
    ! --- write TP TI matrix
    WRITE(UnSum, '(A)') SectionDivide
@@ -3202,7 +3216,7 @@ SUBROUTINE StateMatrices(p, ErrStat, ErrMsg, AA, BB, CC, DD)
    real(R8Ki), dimension(:,:), allocatable, optional   :: BB      !<
    real(R8Ki), dimension(:,:), allocatable, optional   :: CC      !<
    real(R8Ki), dimension(:,:), allocatable, optional   :: DD      !<
-   integer(IntKi)             :: nU, nX, nY, nCB, i, j, iNode, iDOF, iOff,jj, k, nMembers, iField
+   integer(IntKi)             :: nU, nX, nY, nCB, i, j, iNode, iOff, k, nMembers, iField
    real(R8Ki), dimension(:), allocatable   :: dFext_dFmeshk
    real(R8Ki), dimension(:), allocatable   :: dFred_dFmeshk
    real(R8Ki), dimension(:), allocatable   :: dFL_dFmeshk
@@ -3440,7 +3454,7 @@ SUBROUTINE ReadSSIfile ( Filename, JointID, SSIK, SSIM, ErrStat, ErrMsg, UnEc )
    INTEGER(IntKi), INTENT(OUT)                       :: ErrStat    !< Error status; if present, program does not abort on error
    CHARACTER(*),   INTENT(OUT)                       :: ErrMsg     !< Error message
    INTEGER                                           :: CurLine    !< The current line to be parsed in the FileInfo structure.
-   REAL(ReKi),        INTENT(INOUT)  , dimension(21) :: SSIK, SSIM !< Matrices being filled by reading the file.
+   REAL(FEKi),        INTENT(INOUT)  , dimension(21) :: SSIK, SSIM !< Matrices being filled by reading the file.
    CHARACTER(*),   INTENT(IN)                        :: Filename   !< Name of the input file.
    ! Local declarations:
    CHARACTER(5), DIMENSION(21) :: Knames=(/'Kxx  ','Kxy  ','Kyy  ','Kxz  ','Kyz  ', 'Kzz  ','Kxtx ','Kytx ','Kztx ','Ktxtx', &
@@ -3450,14 +3464,13 @@ SUBROUTINE ReadSSIfile ( Filename, JointID, SSIK, SSIM, ErrStat, ErrMsg, UnEc )
       'Mxty ','Myty ','Mzty ','Mtxty','Mtyty', &
       'Mxtz ','Mytz ','Mztz ','Mtxtz','Mtytz','Mtztz'/)    
    TYPE (FileInfoType)     :: FileInfo             ! The derived type for holding the file information.
-   INTEGER                 :: IOS                  ! I/O status returned from the read statement.
    INTEGER(IntKi)          :: i, j, imax           !counters
    CHARACTER(ErrMsgLen)    :: ErrMsg2
    INTEGER(IntKi)          :: ErrStat2             ! Error status; if present, program does not abort on error
    CHARACTER(*), PARAMETER :: RoutineName = 'ReadSSIfile'
 
-   SSIK=0.0_ReKi
-   SSIM=0.0_ReKi
+   SSIK=0.0_FEKi
+   SSIM=0.0_FEKi
 
    CALL ProcessComFile ( Filename, FileInfo, ErrStat2, ErrMsg2 );CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ); IF (ErrStat >= AbortErrLev) RETURN
    CurLine = 1                                                
@@ -3465,8 +3478,8 @@ SUBROUTINE ReadSSIfile ( Filename, JointID, SSIK, SSIM, ErrStat, ErrMsg, UnEc )
    DO i=1, imax         !This will search also for already hit up names, but that's ok, it should be pretty fast
       DO j=1,FileInfo%NumLines 
          CurLine=j  
-         CALL ParseVarWDefault ( FileInfo, CurLine, Knames(i), SSIK(i), 0.0_ReKi, ErrStat2, ErrMsg2 )
-         CALL ParseVarWDefault ( FileInfo, CurLine, Mnames(i), SSIM(i), 0.0_ReKi, ErrStat2, ErrMsg2 )
+         CALL ParseVarWDefault ( FileInfo, CurLine, Knames(i), SSIK(i), 0.0_FEKi, ErrStat2, ErrMsg2 )
+         CALL ParseVarWDefault ( FileInfo, CurLine, Mnames(i), SSIM(i), 0.0_FEKi, ErrStat2, ErrMsg2 )
       ENDDO   
    ENDDO
    IF ( PRESENT(UnEc) )  THEN

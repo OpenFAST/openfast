@@ -361,4 +361,6 @@ suspect channel from the output file. Please refer to the ElastoDyn tab in the
 Excel file :download:`OutListParameters.xlsx <../../../OtherSupporting/OutListParameters.xlsx>`
 for a complete list of possible output parameters.
 
+.. _ED-Nodal-Outputs:
+
 .. include:: EDNodalOutputs.rst

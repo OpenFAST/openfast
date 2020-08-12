@@ -24,7 +24,6 @@ set(SUBDYN_SOURCES
   src/SD_FEM.f90
   src/SubDyn_Output.f90
   src/SubDyn_Output_Params.f90
-  src/qsort_c_module.f90
   src/SubDyn_Tests.f90
   src/IntegerList.f90
   src/Yaml.f90

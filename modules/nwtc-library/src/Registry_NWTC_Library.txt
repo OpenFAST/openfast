@@ -64,12 +64,8 @@ usefrom     ^             ^                 R8Ki                     LoadLn2_F  
 usefrom     ^             ^                 R8Ki                     LoadLn2_M         {:}{:}
 usefrom     ^             ^                 MeshMapLinearizationType dM
 
-
-#bjj ???: add Marshall's FNlist_Type, InpErrsType, too????
-
-
-# ----------- NWTC_Num.f90 ---------------------------------
-#bjj ???: use Marshall's CubSplineType, RegCubSplineType, RegGridType
-
-
+usefrom   NWTC_Library  NWTC_RandomNumber_ParameterType   IntKi                pRNG
+usefrom     ^             ^                     IntKi                RandSeed          {3}
+usefrom     ^             ^                     IntKi                RandSeedAry       {:}
+usefrom     ^             ^              CHARACTER(6)                RNG_type
 

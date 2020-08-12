@@ -935,7 +935,7 @@ leading to the following identification:
 
 In SubDyn, the outputs to the ElastoDyn module are the reaction forces at the transition piece :math:`F_{TP}`:
 
-.. math:: :label: y1
+.. math:: :label: smally1
 
 	y1 = Y_1 =-F_{TP}
 
@@ -990,7 +990,7 @@ Inserting the expression of  :math:`\ddot{q}_m` into :math:`F_{TP}` leads to:
 
 The output equation for :math:`y_1` can now be identified as:
 
-.. math:: :label: Y1
+.. math:: :label: bigY1
 
 	 -Y_1 = F_{TP} = C_1 x + D_1 \bar{u} + F_{Y1}
 	 
@@ -1073,7 +1073,7 @@ Using the expression of :math:`\ddot{q}m` from Eq. :eq:`ddotqm`, the internal ac
 
 The output equation for :math:`y_2`: can then be written as:
 
-.. math:: :label: Y2
+.. math:: :label: bigY2
 
   Y_2 = C_2 x + D_2 u + F_{Y2}
   
@@ -1109,7 +1109,7 @@ where
            \Phi_m \Phi_m^T F_{L,g} 
           \end{bmatrix}
 
-The expression for :math:`F_{Y2}` will be modified by the SIM method and Eq. :eq:`Y2sim` is used instead.
+The expression for :math:`F_{Y2}` will be modified by the SIM method and Eq. :eq:`bigY2sim` is used instead.
 
 
 
@@ -1240,7 +1240,7 @@ known values, with the inputs :math:`u(t)` coming from ElastoDyn and HydroDyn, a
 the states :math:`x(t)` known from the previous time-step integration. All of the
 parameter matrices are calculated in the SubDyn initiation module. With
 known :math:`u(t)` and :math:`x(t)`, :math:`{\dot{x}(t)}` can be calculated using the state equation :math:`{\dot{x}(t)=X(u,x,t)}` (see Eq. :eq:`state_eq`), and
-the outputs :math:`y_1(t)` and :math:`y_2(t)` can be calculated solving Eqs. :eq:`Y1` and :eq:`Y2`. The element forces
+the outputs :math:`y_1(t)` and :math:`y_2(t)` can be calculated solving Eqs. :eq:`bigY1` and :eq:`bigY2`. The element forces
 can also be calculated using Eq. :eq:`el_loads`. The next time-step states :math:`{x(t + \Delta t)}` are
 obtained by integration:
 
@@ -1397,7 +1397,7 @@ The dynamic component :math:`{ \hat{U} = \begin{bmatrix} \hat{U}_R \\ \hat{U}_R 
 described in :numref:`SSformulation` to :numref:`TimeIntegration`. For example, states are still
 calculated and integrated as in Eq. :eq:`state_eq`, and the output to ElastoDyn, i.e.,
 the reaction provided by the substructure at the TP interface, is also
-calculated as it was done previously in Eqs. :eq:`y1` and :eq:`Y1`.
+calculated as it was done previously in Eqs. :eq:`smally1` and :eq:`bigY1`.
 
 However, the state-space formulation is slightly modified  
 (simply adding the contribution :math:`U_{L0}-U_{L0m}` to :math:`F_{Y2}` 
@@ -1421,9 +1421,9 @@ when computing the outputs to HydroDyn as:
            	\ddot{U}_L \\
 	     \end{bmatrix}
 
-The array :math:`F_{Y2}` from Eq. :eq:`Y2` is now defined as follows:
+The array :math:`F_{Y2}` from Eq. :eq:`bigY2` is now defined as follows:
 
-.. math:: :label: Y2sim
+.. math:: :label: bigY2sim
 
 	F_{Y2} &= \begin{bmatrix}
 	       0 \\

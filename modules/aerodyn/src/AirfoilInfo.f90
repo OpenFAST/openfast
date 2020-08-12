@@ -406,11 +406,13 @@ MODULE AirfoilInfo
       CHARACTER(ErrMsgLen)                    :: ErrMsg2
       CHARACTER(*), PARAMETER                 :: RoutineName = 'ReadAFfile'
       CHARACTER(10)                           :: defaultStr
-      
+      CHARACTER(1024)                           :: PriPath
+    
       ErrStat = ErrID_None
       ErrMsg  = ""
       defaultStr = ""
-      
+      ! Getting parent folder of airfoils data (e.g. "Arifoils/")
+      CALL GetPath( AFFile, PriPath )
          ! Process the (possibly) nested set of files.  This copies the decommented contents of
          ! AFI_FileInfo%FileName and the files it includes (both directly and indirectly) into
          ! the FileInfo structure that we can then parse.
@@ -477,9 +479,13 @@ MODULE AirfoilInfo
          ENDDO ! Row
 
       ENDIF
-
-
-         ! How many columns do we need to read in the input and how many total coefficients will be used?
+      
+      ! Reading Boundary layer file  for aeroacoustics
+      CALL ParseVar ( FileInfo, CurLine, 'BL_file' , p%BL_file , ErrStat2, ErrMsg2, UnEc )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      IF ( PathIsRelative( p%BL_file ) )  p%BL_file=trim(PriPath)//trim(p%BL_file)
+         
+    ! How many columns do we need to read in the input and how many total coefficients will be used?
 
       Cols2Parse = MAX( InCol_Alfa, InCol_Cl, InCol_Cd, InCol_Cm, InCol_Cpmin )
       ALLOCATE ( SiAry( Cols2Parse ) , STAT=ErrStat2 )

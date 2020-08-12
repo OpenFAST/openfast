@@ -28,6 +28,7 @@ MODULE HydroDyn_Input
    USE                              Waves2_Output
    USE                              Morison
    USE                              Morison_Output
+   USE                              NWTC_RandomNumber
    IMPLICIT                         NONE
 
    PRIVATE :: CleanupEchoFile
@@ -267,8 +268,7 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, ErrStat, ErrMsg )
    CHARACTER(1024)                                  :: FileName             ! Name of HydroDyn input file
    CHARACTER(  35)                                  :: Frmt                 ! Output format for logical parameters. (matches NWTC Subroutine Library format)
    INTEGER, ALLOCATABLE                             :: tmpArray(:)          ! Temporary array storage of the joint output list
-   real(ReKi), ALLOCATABLE                          :: tmpVec1(:), tmpVec2(:) ! Temporary arrays for WAMIT data
-   integer(IntKi)                                   :: startIndx, endIndx   ! indices into working arrays
+   CHARACTER(1)                                     :: Line1                ! The first character of an input line
    INTEGER(IntKi)                                   :: ErrStat2
    CHARACTER(ErrMsgLen)                             :: ErrMsg2
    
@@ -569,22 +569,52 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, ErrStat, ErrMsg )
    InitInp%Waves%WaveDirRange =  ABS( InitInp%Waves%WaveDirRange )
 
 
-      ! WaveSeed(1), !WaveSeed(2)
+      ! WaveSeed(1)
+   CALL ReadVar( UnIn, FileName, InitInp%Waves%WaveSeed(1), 'WaveSeed(1)', "Random seed #1", ErrStat2, ErrMsg2, UnEchoLocal)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput')
+      IF (ErrStat >= AbortErrLev) THEN
+         CALL CleanUp()
+         RETURN
+      END IF
+   InitInp%Waves%RNG%RandSeed(1) = InitInp%Waves%WaveSeed(1)
 
-   DO I = 1,2
+      !WaveSeed(2)
+   CALL ReadVar( UnIn, FileName, Line, 'WaveSeed(2)', "Random seed #2", ErrStat2, ErrMsg2, UnEchoLocal)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput')
+      IF (ErrStat >= AbortErrLev) THEN
+         CALL Cleanup()
+         RETURN
+      END IF
 
-      WRITE(Line,'(I2)') I
+   READ (Line,*,IOSTAT=ErrStat2) Line1  ! check the first character to make sure we don't have T/F, which can be interpreted as 1/-1 or 0 in Fortran
+   CALL Conv2UC( Line1 )
+   IF ( (Line1 == 'T') .OR. (Line1 == 'F') ) THEN
+      CALL SetErrStat( ErrID_Fatal, ' WaveSeed(2): Invalid RNG type.', ErrStat, ErrMsg, 'HydroDynInput_GetInput')
+      CALL Cleanup()
+      RETURN
+   ENDIF
 
-      CALL ReadVar ( UnIn, FileName, InitInp%Waves%WaveSeed(I), 'WaveSeed('//TRIM(Line)//')', &
-                                    'Random seed #'//TRIM(Line), ErrStat2, ErrMsg2, UnEchoLocal )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-         IF (ErrStat >= AbortErrLev) THEN
-            CALL CleanUp()
-            RETURN
-         END IF
+   READ (Line,*,IOSTAT=ErrStat2) InitInp%Waves%WaveSeed(2)
+   InitInp%Waves%RNG%RandSeed(2) = InitInp%Waves%WaveSeed(2)
 
-   END DO !I
+   IF (ErrStat2 == 0) THEN ! the user entered a number
+      InitInp%Waves%RNG%RNG_type = "NORMAL"
+      InitInp%Waves%RNG%pRNG = pRNG_INTRINSIC
 
+   ELSE
+
+      InitInp%Waves%RNG%RNG_type = ADJUSTL( Line )
+      CALL Conv2UC( InitInp%Waves%RNG%RNG_type )
+
+      IF ( InitInp%Waves%RNG%RNG_type == "RANLUX") THEN
+         InitInp%Waves%RNG%pRNG = pRNG_RANLUX
+      ELSE
+         CALL SetErrStat( ErrID_Fatal, ' WaveSeed(2): Invalid alternative random number generator.', ErrStat, ErrMsg, 'HydroDynInput_GetInput')
+         CALL Cleanup()
+         RETURN
+      ENDIF
+
+   ENDIF
 
       ! WaveNDAmp - Flag for normally distributed amplitudes.
 

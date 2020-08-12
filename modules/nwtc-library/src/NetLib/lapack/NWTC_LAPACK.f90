@@ -105,8 +105,7 @@ MODULE NWTC_LAPACK
       MODULE PROCEDURE LAPACK_DTPTTR
    END INTERFACE   
    
-!> straight-up lapack routines (from ExtPtfm_MCKF):
-      
+   !> straight-up lapack routines (from ExtPtfm_MCKF):
    INTERFACE LAPACK_COPY
        SUBROUTINE DCOPY(N,DX,INCX,DY,INCY)
            USE Precision, only: R8Ki

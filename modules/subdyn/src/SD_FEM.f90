@@ -35,7 +35,7 @@ MODULE SD_FEM
   INTEGER(IntKi),   PARAMETER  :: MembersCol      = MaxNodesPerElem + 3+1 ! Number of columns in Members (MemberID,MJointID1,MJointID2,MPropSetID1,MPropSetID2,COSMID) 
   INTEGER(IntKi),   PARAMETER  :: PropSetsBCol    = 6                     ! Number of columns in PropSets  (PropSetID,YoungE,ShearG,MatDens,XsecD,XsecT)  !bjj: this really doesn't need to store k, does it? or is this supposed to be an ID, in which case we shouldn't be storing k (except new property sets), we should be storing IDs
   INTEGER(IntKi),   PARAMETER  :: PropSetsXCol    = 10                    ! Number of columns in XPropSets (PropSetID,YoungE,ShearG,MatDens,XsecA,XsecAsx,XsecAsy,XsecJxx,XsecJyy,XsecJ0)
-  INTEGER(IntKi),   PARAMETER  :: PropSetsCCol    = 4                     ! Number of columns in CablePropSet (PropSetID, EA, MatDens, T0)
+  INTEGER(IntKi),   PARAMETER  :: PropSetsCCol    = 5                     ! Number of columns in CablePropSet (PropSetID, EA, MatDens, T0)
   INTEGER(IntKi),   PARAMETER  :: PropSetsRCol    = 2                     ! Number of columns in RigidPropSet (PropSetID, MatDens)
   INTEGER(IntKi),   PARAMETER  :: COSMsCol        = 10                    ! Number of columns in (cosine matrices) COSMs (COSMID,COSM11,COSM12,COSM13,COSM21,COSM22,COSM23,COSM31,COSM32,COSM33)
   INTEGER(IntKi),   PARAMETER  :: CMassCol        = 11                    ! Number of columns in Concentrated Mass (CMJointID,JMass,JMXX,JMYY,JMZZ, Optional:JMXY,JMXZ,JMYZ,CGX,CGY,CGZ)
@@ -101,7 +101,6 @@ SUBROUTINE NodeCon(Init,p, ErrStat, ErrMsg)
    INTEGER(IntKi),                 INTENT(   OUT ) :: ErrStat     ! Error status of the operation
    CHARACTER(*),                   INTENT(   OUT ) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
    ! Local variables
-   INTEGER(IntKi) :: SortA(MaxMemJnt,1)  !To sort nodes and elements
    INTEGER(IntKi) :: I,J,K  !counter
 
    ! The row index is the number of the real node, i.e. ID, 1st col has number of elements attached to node, and 2nd col has element numbers (up to 10)                                    
@@ -218,7 +217,6 @@ LOGICAL FUNCTION NodeHasRigidElem(iJoint, Init, p, ei)
    integer(IntKi),               intent(  out) :: ei !< Element index that connects do iJoint rigidly
    ! Local variables
    integer(IntKi) :: ie       !< Loop index on elements
-   integer(IntKi) :: m  ! Number of elements connected to a joint
 
    NodeHasRigidElem = .False. ! default return value
    ! Loop through elements connected to node J 
@@ -376,9 +374,16 @@ SUBROUTINE SD_ReIndex_CreateNodesAndElems(Init,p, ErrStat, ErrMsg)
             print*,'Element type unknown',mType
             STOP
          end if
-
+         ! Test that the two properties match for non-beam 
+         if (mType/=idMemberBeam) then
+             if (Init%Members(iMem, iMProp)/=Init%Members(iMem, iMProp+1)) then
+                call Fatal('Properties should be the same at each node for non-beam members. Check member with ID: '//TRIM(Num2LStr(Init%Members(iMem,1))))
+                return
+             endif
+         endif
          if (p%Elems(iMem,n)<=0) then
             CALL Fatal('For MemberID '//TRIM(Num2LStr(Init%Members(iMem,1)))//', the PropSetID'//TRIM(Num2LStr(n-3))//' is not in the'//trim(sType)//' table!')
+            return
          endif
       END DO !n, loop through property ids         
       ! Column 6: member type
@@ -406,14 +411,14 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
    INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     ! Error status of the operation
    CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
    ! local variable
-   INTEGER                       :: I, J, n, Node1, Node2, Prop1, Prop2   
+   INTEGER                       :: I, J, Node1, Node2, Prop1, Prop2   
    INTEGER                       :: NNE      ! number of nodes per element
    INTEGER                       :: MaxNProp
    REAL(ReKi), ALLOCATABLE       :: TempProps(:, :)
    INTEGER, ALLOCATABLE          :: TempMembers(:, :)
    INTEGER                       :: knode, kelem, kprop, nprop
    REAL(ReKi)                    :: x1, y1, z1, x2, y2, z2, dx, dy, dz, dd, dt, d1, d2, t1, t2
-   LOGICAL                       :: found, CreateNewProp
+   LOGICAL                       :: CreateNewProp
    INTEGER(IntKi)                :: nMemberCable, nMemberRigid, nMemberBeam !< Number of memebers per type
    INTEGER(IntKi)                :: eType !< Element Type
    INTEGER(IntKi)                :: ErrStat2
@@ -494,7 +499,7 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
           ENDIF
           
           if (eType/=idMemberBeam) then
-             ! --- Cables and rigid links are not subdivided
+             ! --- Cables and rigid links are not subdivided and have same prop at nodes
              ! No need to create new properties or new nodes
              Init%MemberNodes(I, 1) = Node1
              Init%MemberNodes(I, 2) = Node2
@@ -699,13 +704,12 @@ SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
    INTEGER(IntKi),               INTENT(  OUT) :: ErrStat     ! Error status of the operation
    CHARACTER(*),                 INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
    ! Local variables
-   INTEGER                  :: I, J, K, iTmp
+   INTEGER                  :: I
    INTEGER                  :: N1, N2     ! starting node and ending node in the element
    INTEGER                  :: P1, P2     ! property set numbers for starting and ending nodes
    REAL(ReKi)               :: D1, D2, t1, t2, E, G, rho ! properties of a section
-   REAL(ReKi)               :: DirCos(3, 3)              ! direction cosine matrices
+   REAL(FEKi)               :: DirCos(3, 3)              ! direction cosine matrices
    REAL(ReKi)               :: L                         ! length of the element
-   REAL(ReKi)               :: T0                        ! pretension force in cable [N]
    REAL(ReKi)               :: r1, r2, t, Iyy, Jzz, Ixx, A, kappa, nu, ratioSq, D_inner, D_outer
    LOGICAL                  :: shear
    INTEGER(IntKi)           :: eType !< Member type
@@ -987,14 +991,12 @@ SUBROUTINE AssembleKM(Init, p, ErrStat, ErrMsg)
    ! Local variables
    INTEGER                  :: I, J, K
    INTEGER                  :: iGlob
-   REAL(ReKi)               :: Ke(12,12), Me(12, 12), FGe(12) ! element stiffness and mass matrices gravity force vector
-   REAL(ReKi)               :: FCe(12) ! Pretension force from cable element
-   REAL(ReKi), DIMENSION(6,6):: K_soil, M_soil ! Auxiliary matrices for soil
+   REAL(FEKi)               :: Ke(12,12), Me(12, 12), FGe(12) ! element stiffness and mass matrices gravity force vector
+   REAL(FEKi)               :: FCe(12) ! Pretension force from cable element
    INTEGER(IntKi)           :: ErrStat2
    CHARACTER(ErrMsgLen)     :: ErrMsg2
    INTEGER(IntKi)           :: iNode !< Node index
    integer(IntKi), dimension(12) :: IDOF !  12 DOF indices in global unconstrained system
-   integer(IntKi), dimension(3)  :: IDOF3!  3  DOF indices in global unconstrained system
    real(ReKi), dimension(6,6) :: M66  ! Mass matrix of an element node
    real(ReKi) :: m, x, y, z, Jxx, Jyy, Jzz, Jxy, Jxz, Jyz
    INTEGER    :: jGlob, kGlob
@@ -1010,9 +1012,9 @@ SUBROUTINE AssembleKM(Init, p, ErrStat, ErrMsg)
    CALL AllocAry( Init%K, p%nDOF, p%nDOF , 'Init%K',  ErrStat2, ErrMsg2); if(Failed()) return; ! system stiffness matrix 
    CALL AllocAry( Init%M, p%nDOF, p%nDOF , 'Init%M',  ErrStat2, ErrMsg2); if(Failed()) return; ! system mass matrix 
    CALL AllocAry( Init%FG,p%nDOF,          'Init%FG', ErrStat2, ErrMsg2); if(Failed()) return; ! system gravity force vector 
-   Init%K  = 0.0_ReKi
-   Init%M  = 0.0_ReKi
-   Init%FG = 0.0_ReKi
+   Init%K  = 0.0_FEKi
+   Init%M  = 0.0_FEKi
+   Init%FG = 0.0_FEKi
 
    ! loop over all elements, compute element matrices and assemble into global matrices
    DO i = 1, Init%NElem
@@ -1100,10 +1102,84 @@ CONTAINS
    
 END SUBROUTINE AssembleKM
 
+!> Init for control Cable force
+!! The change of cable forces due to the control is linear, so we just store a "unit" force vector
+!! We will just scale this vector at each time step based on the control input (Tcontrol):
+!!   Fcontrol =  (Tcontrol-T0) * Funit
+SUBROUTINE ControlCableForceInit(Init, p, m, ErrStat, ErrMsg)
+   TYPE(SD_InitType),            INTENT(INOUT) :: Init !< Remove me, kept just in case for now
+   TYPE(SD_ParameterType),       INTENT(IN   ) :: p
+   TYPE(SD_MiscVarType),         INTENT(INOUT) :: m
+   INTEGER(IntKi),               INTENT(  OUT) :: ErrStat     ! Error status of the operation
+   CHARACTER(*),                 INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   ! Local variables
+   INTEGER(IntKi)           :: ErrStat2
+   CHARACTER(ErrMsgLen)     :: ErrMsg2
+   ErrMsg  = ""
+   ErrStat = ErrID_None
+   
+   ! Allocating necessary arrays
+   CALL AllocAry( m%FC_red      , p%nDOF_red, 'm%FC0_red', ErrStat2, ErrMsg2); if(Failed()) return; ! Constant cable force
+   CALL AllocAry( m%FC_red_unit , p%nDOF_red, 'm%FC_red' , ErrStat2, ErrMsg2); if(Failed()) return; ! Control cable force
+   m%FC_red      = 0.0_ReKi
+   m%FC_red_unit = 0.0_ReKi
+
+   ! Setting up unit force vector 
+   call ControlCableForce_Unit(p, m%FC_red_unit, ErrStat2, ErrMsg2);  if(Failed()) return;
+   
+CONTAINS
+   LOGICAL FUNCTION Failed()
+        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ControlCableForceInit') 
+        Failed =  ErrStat >= AbortErrLev
+   END FUNCTION Failed
+END SUBROUTINE ControlCableForceInit
+
+!> Init for control Cable force
+!! TODO TODO Expensive implementation for now
+SUBROUTINE ControlCableForce_Unit(p, FC_red, ErrStat, ErrMsg)
+   TYPE(SD_ParameterType),       INTENT(IN   ) :: p
+   real(ReKi), DIMENSION(:),     INTENT(INOUT) :: FC_red
+   INTEGER(IntKi),               INTENT(  OUT) :: ErrStat     ! Error status of the operation
+   CHARACTER(*),                 INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   ! Local variables
+   INTEGER                  :: I
+   real(FEKi), DIMENSION(:), allocatable :: FC
+   REAL(FEKi)               :: FCe(12) ! Pretension force from cable element
+   INTEGER(IntKi)           :: ErrStat2
+   CHARACTER(ErrMsgLen)     :: ErrMsg2
+   integer(IntKi), dimension(12) :: IDOF !  12 DOF indices in global unconstrained system
+   ErrMsg  = ""
+   ErrStat = ErrID_None
+   CALL AllocAry(FC     ,p%nDOF    , 'FC'     , ErrStat2, ErrMsg2); if(Failed()) return; ! Control cable force
+
+   ! loop over all elements, compute element matrices and assemble into global matrices
+   DO i = 1, size(p%ElemProps) ! TODO loop on cable only
+      if (p%ElemProps(i)%eType==idMemberCable) then
+         CALL ElemF_Cable(1.0_ReKi, p%ElemProps(i)%DirCos, FCe) !< NOTE: using unitary load T0=1.0_ReKi
+         ! --- Assembly in global unconstrained system
+         IDOF = p%ElemsDOF(1:12, i)
+         FC( IDOF )    = FC( IDOF ) + FCe(1:12) ! Note: gravity and pretension cable forces
+      endif
+   ENDDO
+   ! Transforming the vector into reduced, direct elimination system:
+   FC_red = matmul(transpose(p%T_red), FC)
+   if(allocated(FC)) deallocate(FC)
+
+CONTAINS
+   LOGICAL FUNCTION Failed()
+        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ControlCableForce') 
+        Failed =  ErrStat >= AbortErrLev
+   END FUNCTION Failed
+END SUBROUTINE ControlCableForce_Unit
+
+
+
+
+
 !> Add soil stiffness and mass to global system matrices
 SUBROUTINE InsertSoilMatrices(M, K, NodesDOF, Init, p, ErrStat, ErrMsg, Substract)
-   real(ReKi), dimension(:,:),   intent(inout) :: M
-   real(ReKi), dimension(:,:),   intent(inout) :: K
+   real(FEKi), dimension(:,:),   intent(inout) :: M
+   real(FEKi), dimension(:,:),   intent(inout) :: K
    type(IList),dimension(:),     intent(in   ) :: NodesDOF !< Map from Node Index to DOF lists
    type(SD_InitType),            intent(in   ) :: Init
    type(SD_ParameterType),       intent(in   ) :: p
@@ -1112,7 +1188,7 @@ SUBROUTINE InsertSoilMatrices(M, K, NodesDOF, Init, p, ErrStat, ErrMsg, Substrac
    logical, optional,            intent(in   ) :: SubStract   ! If present, and if true, substract instead of adding
    integer                    :: I, J, iiNode
    integer                    :: iDOF, jDOF, iNode  !< DOF and node indices
-   real(ReKi), dimension(6,6) :: K_soil, M_soil ! Auxiliary matrices for soil
+   real(FEKi), dimension(6,6) :: K_soil, M_soil ! Auxiliary matrices for soil
    ErrMsg  = ""
    ErrStat = ErrID_None
    ! TODO consider doing the 21 -> 6x6 conversion while reading
@@ -1140,8 +1216,8 @@ contains
    !> Convert a flatten array of 21 values into a symmetric  6x6 matrix
    SUBROUTINE Array21_to_6by6(A21, M66)
       use NWTC_LAPACK, only: LAPACK_TPTTR 
-      real(ReKi), dimension(21) , intent(in)  :: A21
-      real(ReKi), dimension(6,6), intent(out) :: M66
+      real(FEKi), dimension(21) , intent(in)  :: A21
+      real(FEKi), dimension(6,6), intent(out) :: M66
       integer :: j
       M66 = 0.0_ReKi
       ! Reconstruct from sparse elements
@@ -1168,7 +1244,7 @@ SUBROUTINE BuildTMatrix(Init, p, RA, RAm1, Tred, ErrStat, ErrMsg)
    integer(IntKi), dimension(:), INTENT(IN   ) :: RAm1 !< RA^-1(e) = a , for a given element give the index of a rigid assembly
    INTEGER(IntKi),               INTENT(  OUT) :: ErrStat     ! Error status of the operation
    CHARACTER(*),                 INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
-   real(ReKi), dimension(:,:), allocatable :: Tred !< Transformation matrix for DOF elimination
+   real(FEKi), dimension(:,:), allocatable :: Tred !< Transformation matrix for DOF elimination
    ! Local  
    real(ReKi), dimension(:,:), allocatable   :: Tc
    integer(IntKi), dimension(:), allocatable :: INodesID !< List of unique nodes involved in Elements
@@ -1271,7 +1347,7 @@ SUBROUTINE BuildTMatrix(Init, p, RA, RAm1, Tred, ErrStat, ErrMsg)
          allocate(IDOFOld(1:len(p%NodesDOF(iNode))))
          IDOFOld(:) = p%NodesDOF(iNode)%List(:)
          phat = Init%Nodes(iNode, iJointDir:iJointDir+2)
-         call JointElimination(Init%NodesConnE(iNode,:), JType, phat, Init, p, Tc, ErrStat2, ErrMsg2); if(Failed()) return
+         call JointElimination(Init%NodesConnE(iNode,:), JType, phat, p, Tc, ErrStat2, ErrMsg2); if(Failed()) return
       endif
       nc=size(Tc,2) 
       call init_list(p%NodesDOFred(iNode), nc, 0, ErrStat2, ErrMsg2)
@@ -1392,16 +1468,18 @@ SUBROUTINE DirectElimination(Init, p, ErrStat, ErrMsg)
    ! Varaibles for rigid assembly
    type(IList), dimension(:), allocatable    :: RA       !< RA(a) = [e1,..,en]  list of elements forming a rigid link assembly
    integer(IntKi), dimension(:), allocatable :: RAm1 !< RA^-1(e) = a , for a given element give the index of a rigid assembly
-   real(ReKi), dimension(:,:), allocatable :: MM, KK
-   real(ReKi), dimension(:),   allocatable :: FF
+   real(FEKi), dimension(:,:), allocatable :: MM, KK
+   real(FEKi), dimension(:),   allocatable :: FF
+   real(FEKi), dimension(:,:), allocatable :: Temp, T_red_T
    integer(IntKi) :: nDOF, iDOF, nDOFPerNode, iNode, iiDOF
    ErrStat = ErrID_None
    ErrMsg  = ""
 
    ! Setup list of rigid link assemblies (RA) and the inverse function RA^{-1}
    call RigidLinkAssemblies(Init, p, RA, RAm1, ErrStat2, ErrMsg2); if(Failed()) return
-
    call BuildTMatrix(Init, p, RA, RAm1, p%T_red, ErrStat2, ErrMsg2); if (Failed()) return
+   if (allocated(RAm1)) deallocate(RAm1)
+   if (allocated(RA  )) deallocate(RA  )
 
    ! --- DOF elimination for system matrices and RHS vector
    nDOF = p%nDOF_red
@@ -1411,13 +1489,22 @@ SUBROUTINE DirectElimination(Init, p, ErrStat, ErrMsg)
       call move_alloc(Init%K,  KK)
       call move_alloc(Init%FG, FF)
       !  Reallocating
-      CALL AllocAry( Init%K,      nDOF, nDOF,  'Init%K'   ,  ErrStat2, ErrMsg2); if(Failed()) return; ! system stiffness matrix 
-      CALL AllocAry( Init%M,      nDOF, nDOF,  'Init%M'   ,  ErrStat2, ErrMsg2); if(Failed()) return; ! system mass matrix 
-      CALL AllocAry( Init%FG     ,nDOF,        'Init%FG'  ,  ErrStat2, ErrMsg2); if(Failed()) return; ! system gravity force vector 
+      CALL AllocAry( Init%K,      nDOF, nDOF,       'Init%K'   ,  ErrStat2, ErrMsg2); if(Failed()) return; ! system stiffness matrix 
+      CALL AllocAry( Init%M,      nDOF, nDOF,       'Init%M'   ,  ErrStat2, ErrMsg2); if(Failed()) return; ! system mass matrix 
+      CALL AllocAry( Init%FG,     nDOF,             'Init%FG'  ,  ErrStat2, ErrMsg2); if(Failed()) return; ! system gravity force vector 
+      CALL AllocAry( Temp   ,size(MM,1), nDOF,      'Temp'     ,  ErrStat2, ErrMsg2); if(Failed()) return; 
+      CALL AllocAry( T_red_T,nDOF     , size(MM,1), 'T_red_T' ,  ErrStat2, ErrMsg2); if(Failed()) return; 
       ! Elimination
-      Init%M  = matmul(transpose(p%T_red), matmul(MM, p%T_red))
-      Init%K  = matmul(transpose(p%T_red), matmul(KK, p%T_red))
-      Init%FG = matmul(transpose(p%T_red), FF)
+      !Init%M  = matmul(transpose(p%T_red), matmul(MM, p%T_red))
+      !Init%K  = matmul(transpose(p%T_red), matmul(KK, p%T_red))
+      T_red_T = transpose(p%T_red)
+      Temp    = matmul(MM, p%T_red)
+      Init%M  = matmul(T_red_T, Temp)
+      Temp    = matmul(KK, p%T_red)
+      Init%K  = matmul(T_red_T, Temp)
+      Init%FG = matmul(T_red_T, FF)
+      if (allocated(Temp))    deallocate(Temp)
+      if (allocated(T_red_T)) deallocate(T_red_T)
 
       ! --- Triggers for storage of DOF indices, replacing with indices in constrained system
       CALL ReInitBCs(Init, p)
@@ -1454,7 +1541,8 @@ CONTAINS
       if (allocated(FF  )) deallocate(FF  )
       if (allocated(RA  )) deallocate(RA  )
       if (allocated(RAm1)) deallocate(RAm1)
-      if (allocated(RA  )) deallocate(RA  )
+      if (allocated(Temp)) deallocate(Temp)
+      if (allocated(T_red_T)) deallocate(T_red_T)
    END SUBROUTINE CleanUp_DirectElimination
 
    !> Reset DOF indices after elimination, does not change the BC
@@ -1584,12 +1672,11 @@ END SUBROUTINE RAElimination
 !! where
 !    x_c       are all the DOF of the joint (3 translation + 3*m, m the number of elements) 
 !    x_c_tilde are the nc reduced DOF 
-SUBROUTINE JointElimination(Elements, JType, phat, Init, p, Tc, ErrStat, ErrMsg)
+SUBROUTINE JointElimination(Elements, JType, phat, p, Tc, ErrStat, ErrMsg)
    use IntegerList, only: init_list, len, append, print_list, pop, destroy_list, get
    integer(IntKi), dimension(:), INTENT(IN   ) :: Elements !< List of elements involved at a joint
    integer(IntKi),               INTENT(IN   ) :: JType !< Joint type
    real(ReKi),                   INTENT(IN   ) :: phat(3) !< Directional vector of the joint
-   TYPE(SD_InitType),            INTENT(IN   ) :: Init
    TYPE(SD_ParameterType),       INTENT(IN   ) :: p
    real(ReKi), dimension(:,:), allocatable     :: Tc  !< Transformation matrix from eliminated to full
    INTEGER(IntKi),               INTENT(  OUT) :: ErrStat  !< Error status of the operation
@@ -1602,8 +1689,8 @@ SUBROUTINE JointElimination(Elements, JType, phat, Init, p, Tc, ErrStat, ErrMsg)
    real(ReKi)           :: e1(3), e2(3), e3(3) ! forming orthonormal basis with phat 
    integer(IntKi)       :: ErrStat2
    character(ErrMsgLen) :: ErrMsg2
-   real(LaKi), dimension(:,:), allocatable :: Tc_rot !< Part of Tc just for rotational DOF
-   real(LaKi), dimension(:,:), allocatable :: Tc_rot_m1 !< Inverse of Tc_rot
+   real(FEKi), dimension(:,:), allocatable :: Tc_rot !< Part of Tc just for rotational DOF
+   real(FEKi), dimension(:,:), allocatable :: Tc_rot_m1 !< Inverse of Tc_rot
    real(ReKi) :: ColMean
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -1851,8 +1938,8 @@ END SUBROUTINE InsertJointStiffDamp
 
 SUBROUTINE ElemM(ep, Me)
    TYPE(ElemPropType), INTENT(IN) :: eP        !< Element Property
-   REAL(ReKi), INTENT(OUT)        :: Me(12, 12)
-   REAL(ReKi) :: L0, Eps0
+   REAL(FEKi), INTENT(OUT)        :: Me(12, 12)
+   REAL(FEKi) :: L0, Eps0
    if (ep%eType==idMemberBeam) then
       !Calculate Ke, Me to be used for output
       CALL ElemM_Beam(eP%Area, eP%Length, eP%Ixx, eP%Iyy, eP%Jzz,  eP%rho, eP%DirCos, Me)
@@ -1864,9 +1951,9 @@ SUBROUTINE ElemM(ep, Me)
 
    else if (ep%eType==idMemberRigid) then
       if ( EqualRealNos(eP%rho, 0.0_ReKi) ) then
-         Me=0.0_ReKi
+         Me=0.0_FEKi
       else
-         CALL ElemM_Cable(ep%Area, ep%Length, ep%rho, ep%DirCos, Me)
+         CALL ElemM_Cable(ep%Area, real(ep%Length,FEKi), ep%rho, ep%DirCos, Me)
          !CALL ElemM_(A, L, rho, DirCos, Me)
       endif
    endif
@@ -1874,7 +1961,7 @@ END SUBROUTINE ElemM
 
 SUBROUTINE ElemK(ep, Ke)
    TYPE(ElemPropType), INTENT(IN) :: eP        !< Element Property
-   REAL(ReKi), INTENT(OUT)        :: Ke(12, 12)
+   REAL(FEKi), INTENT(OUT)        :: Ke(12, 12)
 
    if (ep%eType==idMemberBeam) then
       CALL ElemK_Beam( eP%Area, eP%Length, eP%Ixx, eP%Iyy, eP%Jzz, eP%Shear, eP%kappa, eP%YoungE, eP%ShearG, eP%DirCos, Ke)
@@ -1883,21 +1970,21 @@ SUBROUTINE ElemK(ep, Ke)
       CALL ElemK_Cable(ep%Area, ep%Length, ep%YoungE, ep%T0, eP%DirCos, Ke)
 
    else if (ep%eType==idMemberRigid) then
-      Ke = 0.0_ReKi
+      Ke = 0.0_FEKi
    endif
 END SUBROUTINE ElemK
 
 SUBROUTINE ElemF(ep, gravity, Fg, Fo)
    TYPE(ElemPropType), INTENT(IN) :: eP        !< Element Property
    REAL(ReKi), INTENT(IN)     :: gravity       !< acceleration of gravity
-   REAL(ReKi), INTENT(OUT)    :: Fg(12)
-   REAL(ReKi), INTENT(OUT)    :: Fo(12)
+   REAL(FEKi), INTENT(OUT)    :: Fg(12)
+   REAL(FEKi), INTENT(OUT)    :: Fo(12)
    if (ep%eType==idMemberBeam) then
-      Fo(1:12)=0
+      Fo(1:12)=0.0_FEKi
    else if (ep%eType==idMemberCable) then
       CALL ElemF_Cable(ep%T0, ep%DirCos, Fo)
    else if (ep%eType==idMemberRigid) then
-      Fo(1:12)=0
+      Fo(1:12)=0.0_FEKi
    endif
    CALL ElemG( eP%Area, eP%Length, eP%rho, eP%DirCos, Fg, gravity )
 END SUBROUTINE ElemF
