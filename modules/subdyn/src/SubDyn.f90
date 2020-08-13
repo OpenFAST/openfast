@@ -215,6 +215,9 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    !Store mapping between nodes and elements      
    CALL NodeCon(Init, p, ErrStat2, ErrMsg2); if(Failed()) return
 
+   !Store mapping between controllable elements and control channels
+   CALL ControlCableMapping(Init, p, ErrStat2, ErrMsg2); if(Failed()) return
+
    ! --- Allocate DOF indices to joints and members 
    call DistributeDOF(Init, p ,ErrStat2, ErrMsg2); if(Failed()) return; 
 
@@ -231,10 +234,9 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    CALL InsertJointStiffDamp(p, Init, ErrStat2, ErrMsg2); if(Failed()) return
 
    ! --- Prepare for control cable load, RHS
-   if (any(Init%PropsC(:,5)>0)) then
-      print*,'Need to assemble Cable Force'
-      CALL ControlCableForceInit(Init, p, m, ErrStat2, ErrMsg2); if(Failed()) return
-      print*,'Controlable cables, feature not ready.'
+   if (size(p%CtrlElem2Channel,1)>0) then
+      CALL ControlCableForceInit(p, m, ErrStat2, ErrMsg2); if(Failed()) return
+      print*,'Controlable cables are present, this feature is not ready at the glue code level.'
       STOP
    endif
 
@@ -289,7 +291,7 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    IF ( Init%SSSum ) THEN 
       ! note p%KBB/MBB are KBBt/MBBt
       ! Write a summary of the SubDyn Initialization                     
-      CALL OutSummary(Init, p, InitInput, CBparams,  ErrStat2, ErrMsg2); if(Failed()) return
+      CALL OutSummary(Init, p, m, InitInput, CBparams,  ErrStat2, ErrMsg2); if(Failed()) return
    ENDIF 
    
    ! Initialize the outputs & Store mapping between nodes and elements  
@@ -404,7 +406,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       m%udotdot_TP = (/u%TPMesh%TranslationAcc( :,1), u%TPMesh%RotationAcc(:,1)/)
 
       ! Inputs on interior nodes:
-      CALL GetExtForceOnInternalDOF( u, p, m, m%UFL )
+      CALL GetExtForceOnInternalDOF( u, p, m, m%UFL, ErrStat2, ErrMsg2 ); if(Failed()) return
 
       !________________________________________
       ! Set motion outputs on y%Y2mesh
@@ -619,7 +621,7 @@ SUBROUTINE SD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSta
       m%udotdot_TP = (/u%TPMesh%TranslationAcc(:,1), u%TPMesh%RotationAcc(:,1)/)
       
       ! form u(4) in Eq. 10:
-      CALL GetExtForceOnInternalDOF( u, p, m, m%UFL )
+      CALL GetExtForceOnInternalDOF( u, p, m, m%UFL, ErrStat2, ErrMsg2 );
       
       !Equation 12: X=A*x + B*u + Fx (Eq 12)
       dxdt%qm= x%qmdot
@@ -1129,7 +1131,7 @@ IF ( p%NMOutputs > 0 ) THEN
                ENDIF
             ENDIF
          ENDDO
-         IF (Check (flg .EQ. 0 , ' MemberID is not in the Members list. ')) return
+         IF (Check (flg .EQ. 0 , ' MemberID '//trim(Num2LStr(p%MOutLst(I)%MemberID))//' requested for output is not in the list of Members. ')) return
 
          IF ( Echo ) THEN
             WRITE( UnEc, '(A)' ) TRIM(Line)
@@ -1612,12 +1614,12 @@ SUBROUTINE SD_AM2( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg 
    ! interpolate u to find u_interp = u(t) = u_n     
    CALL SD_Input_ExtrapInterp( u, utimes, u_interp, t, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_AM2')
    m%udotdot_TP = (/u_interp%TPMesh%TranslationAcc(:,1), u_interp%TPMesh%RotationAcc(:,1)/)
-   CALL GetExtForceOnInternalDOF( u_interp, p, m, m%UFL )     
+   CALL GetExtForceOnInternalDOF( u_interp, p, m, m%UFL, ErrStat2, ErrMsg2 );
                 
    ! extrapolate u to find u_interp = u(t + dt)=u_n+1
    CALL SD_Input_ExtrapInterp(u, utimes, u_interp, t+p%SDDeltaT, ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_AM2')
    udotdot_TP2 = (/u_interp%TPMesh%TranslationAcc(:,1), u_interp%TPMesh%RotationAcc(:,1)/)
-   CALL GetExtForceOnInternalDOF( u_interp, p, m, UFL2 )     
+   CALL GetExtForceOnInternalDOF( u_interp, p, m, UFL2, ErrStat2, ErrMsg2 );    
    
    ! calculate (u_n + u_n+1)/2
    udotdot_TP2 = 0.5_ReKi * ( udotdot_TP2 + m%udotdot_TP )
@@ -2809,13 +2811,17 @@ END SUBROUTINE PartitionDOFNodes
 !> Construct force vector on internal DOF (L) from the values on the input mesh 
 !! First, the full vector of external forces is built on the non-reduced DOF
 !! Then, the vector is reduced using the Tred matrix
-SUBROUTINE GetExtForceOnInternalDOF( u, p, m, UFL )
+SUBROUTINE GetExtForceOnInternalDOF( u, p, m, UFL, ErrStat, ErrMsg )
    type(SD_InputType),     intent(in   )  :: u ! Inputs
    type(SD_ParameterType), intent(in   )  :: p ! Parameters
    type(SD_MiscVarType),   intent(inout)  :: m ! Misc, for storage optimization of Fext and Fext_red
-   real(ReKi)          ,   intent(out)    :: UFL(p%nDOF__L)
+   real(ReKi)          ,   intent(out)    :: UFL(p%nDOF__L)  !< External force on internal nodes "L"
+   integer(IntKi),         intent(  out)  :: ErrStat     !< Error status of the operation
+   character(*),           intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
    integer :: iMeshNode, iSDNode ! indices of u-mesh nodes and SD nodes
    integer :: nMembers
+   integer :: iCC, iElem, iChannel !< Index on control cables, element, Channel
+   integer(IntKi), dimension(12) :: IDOF !  12 DOF indices in global unconstrained system
    real(ReKi), parameter :: myNaN = -9999998.989_ReKi 
    ! TODO to save time, perform Tred multiplication only if Tred is not identity
 
@@ -2839,6 +2845,23 @@ SUBROUTINE GetExtForceOnInternalDOF( u, p, m, UFL )
          STOP
       endif
    endif
+
+   ! --- Adding controllable cable forces
+   if (size(p%CtrlElem2Channel,1) > 0) then
+      if (.not. allocated (u%CableTension)) then
+         call Fatal('Cable tension input not allocated but controllable cables are present'); return
+      endif
+      if (size(u%CableTension)< maxval(p%CtrlElem2Channel(:,2)) ) then
+         call Fatal('Cable tension input has length '//trim(num2lstr(size(u%CableTension)))//' but controllable cables need to access channel '//trim(num2lstr(maxval(p%CtrlElem2Channel(:,2))))); return
+      endif
+      do iCC = 1, size(p%CtrlElem2Channel,1) 
+         iElem    = p%CtrlElem2Channel(iCC,1)
+         iChannel = p%CtrlElem2Channel(iCC,2)
+         IDOF = p%ElemsDOF(1:12, iElem)
+         m%Fext(IDOF) = m%Fext(IDOF) + m%FC_unit( IDOF ) * (u%CableTension(iChannel) - p%ElemProps(iElem)%T0)
+      enddo
+   endif
+
    ! --- Reduced vector of external force
    if (p%reduced) then
       m%Fext_red = matmul(transpose(p%T_red), m%Fext)
@@ -2846,15 +2869,20 @@ SUBROUTINE GetExtForceOnInternalDOF( u, p, m, UFL )
    else
       UFL= m%Fext(p%ID__L)
    endif
-
+contains
+   subroutine Fatal(ErrMsg_in)
+      character(len=*), intent(in) :: ErrMsg_in
+      call SetErrStat(ErrID_Fatal, ErrMsg_in, ErrStat, ErrMsg, 'GetExtForce');
+   end subroutine Fatal
 END SUBROUTINE GetExtForceOnInternalDOF
 
 !------------------------------------------------------------------------------------------------------
 !> Output the summary file    
-SUBROUTINE OutSummary(Init, p, InitInput, CBparams, ErrStat,ErrMsg)
+SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, ErrStat,ErrMsg)
    use Yaml
-   TYPE(SD_InitType),      INTENT(INOUT)  :: Init           ! Input data for initialization routine, this structure contains many variables needed for summary file
-   TYPE(SD_ParameterType), INTENT(IN)     :: p              ! Parameters,this structure contains many variables needed for summary file
+   TYPE(SD_InitType),      INTENT(INOUT)  :: Init           ! Input data for initialization routine
+   TYPE(SD_ParameterType), INTENT(IN)     :: p              ! Parameters
+   TYPE(SD_MiscVarType)  , INTENT(IN)     :: m              ! Misc
    TYPE(SD_InitInputType), INTENT(IN)     :: InitInput   !< Input data for initialization routine         
    TYPE(CB_MatArrays),     INTENT(IN)     :: CBparams       ! CB parameters that will be passed in for summary file use
    INTEGER(IntKi),         INTENT(OUT)    :: ErrStat        ! Error status of the operation
@@ -2989,9 +3017,16 @@ SUBROUTINE OutSummary(Init, p, InitInput, CBparams, ErrStat,ErrMsg)
       DummyArray(i,15) = p%ElemProps(i)%Jzz   ! Moment of inertia
       DummyArray(i,16) = p%ElemProps(i)%T0    ! Pretension [N]
    enddo
-   write(UnSum, '("#",4x,6(A9),10('//trim(SFmt)//'))') 'Elem_[#] ','Node_1','Node_2','Prop_1','Prop_2','Type','Length_[m]','Area_[m^2]','Dens._[kg/m^3]','E_[N/m2]','G_[N/m2]','shear_[-]','Ixx_[m^4]','Iyy_[m^4]','Jzz_[m^4]','T0_[N]'
+   write(UnSum, '("#",4x,6(A9),10('//SFmt//'))') 'Elem_[#] ','Node_1','Node_2','Prop_1','Prop_2','Type','Length_[m]','Area_[m^2]','Dens._[kg/m^3]','E_[N/m2]','G_[N/m2]','shear_[-]','Ixx_[m^4]','Iyy_[m^4]','Jzz_[m^4]','T0_[N]'
    call yaml_write_array(UnSum, 'Elements', DummyArray, ReFmt, ErrStat2, ErrMsg2, AllFmt='6(F8.0,","),3(F15.3,","),7(E15.6,",")') !, comment='',label=.true.)
    deallocate(DummyArray)
+
+   ! --- C
+   if(size(p%CtrlElem2Channel,1)>0) then
+      write(UnSum, '("#",2x,2(A11))') 'Elem_[#]  ','Channel_[#]'
+      call yaml_write_array(UnSum, 'CtrlElem2Channel', p%CtrlElem2Channel, IFmt, ErrStat2, ErrMsg2, comment='')
+   endif
+
    
    ! --- User inputs (less interesting, repeat of input file)
    WRITE(UnSum, '(A)') SectionDivide

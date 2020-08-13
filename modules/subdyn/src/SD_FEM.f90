@@ -1102,79 +1102,95 @@ CONTAINS
    
 END SUBROUTINE AssembleKM
 
+!> Map control cable index to control channel index
+subroutine ControlCableMapping(Init, p, ErrStat, ErrMsg)
+   type(SD_InitType),            intent(in   ) :: Init        !< init
+   type(SD_ParameterType),       intent(inout) :: p           !< param
+   integer(IntKi),               intent(  out) :: ErrStat     !< Error status of the operation
+   character(*),                 intent(  out) :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+   ! Local variables
+   integer(IntKi)           :: i, nCC, idCProp !< index, number of controlable cables, id of Cable Prop
+   integer(IntKi)           :: ErrStat2
+   character(ErrMsgLen)     :: ErrMsg2
+   ErrMsg  = ""
+   ErrStat = ErrID_None
+
+   ! --- Count number of Controllable cables
+   nCC = 0
+   do i = 1, size(p%ElemProps)
+      if (p%ElemProps(i)%eType==idMemberCable) then
+         idCProp= p%Elems(i,iMProp)
+         if (Init%PropsC(idCProp, 5 )>0) then
+            !print*,'Cable Element',i,'controllable with channel',Init%PropsC(idCProp, 5 )
+            nCC=nCC+1
+         endif
+      endif
+   enddo
+   if (nCC>0) then
+      call WrScr('Number of controllable cables: '//trim(num2lstr(nCC)))
+   endif
+   call AllocAry( p%CtrlElem2Channel, nCC, 2, 'p%CtrlElem2Channel', ErrStat2, ErrMsg2); if(Failed()) return; ! Constant cable force
+
+   ! --- Store mapping 
+   nCC = 0
+   do i = 1, size(p%ElemProps)
+      if (p%ElemProps(i)%eType==idMemberCable) then
+         idCProp= p%Elems(i,iMProp)
+         if (Init%PropsC(idCProp, 5 )>0) then
+            nCC=nCC+1
+            p%CtrlElem2Channel(nCC, 1) = i ! Element index (in p%Elems and p%ElemProps)
+            p%CtrlElem2Channel(nCC, 2) = Init%PropsC(idCProp,5) ! Control channel
+         endif
+      endif
+   enddo
+contains
+   logical function Failed()
+        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ControlCableMapping') 
+        Failed =  ErrStat >= AbortErrLev
+   end function Failed
+end subroutine ControlCableMapping
+
 !> Init for control Cable force
 !! The change of cable forces due to the control is linear, so we just store a "unit" force vector
 !! We will just scale this vector at each time step based on the control input (Tcontrol):
 !!   Fcontrol =  (Tcontrol-T0) * Funit
-SUBROUTINE ControlCableForceInit(Init, p, m, ErrStat, ErrMsg)
-   TYPE(SD_InitType),            INTENT(INOUT) :: Init !< Remove me, kept just in case for now
-   TYPE(SD_ParameterType),       INTENT(IN   ) :: p
-   TYPE(SD_MiscVarType),         INTENT(INOUT) :: m
+!! We store it in "non-reduced" system since it will added to the external forces
+SUBROUTINE ControlCableForceInit(p, m, ErrStat, ErrMsg)
+   TYPE(SD_ParameterType),       INTENT(IN   ) :: p  !< Parameters 
+   TYPE(SD_MiscVarType),         INTENT(INOUT) :: m  !< Misc
    INTEGER(IntKi),               INTENT(  OUT) :: ErrStat     ! Error status of the operation
    CHARACTER(*),                 INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
    ! Local variables
+   INTEGER                  :: iCC, iElem
+   REAL(FEKi)               :: FCe(12) ! Pretension force from cable element
+   integer(IntKi), dimension(12) :: IDOF !  12 DOF indices in global unconstrained system
    INTEGER(IntKi)           :: ErrStat2
    CHARACTER(ErrMsgLen)     :: ErrMsg2
    ErrMsg  = ""
    ErrStat = ErrID_None
    
    ! Allocating necessary arrays
-   CALL AllocAry( m%FC_red      , p%nDOF_red, 'm%FC0_red', ErrStat2, ErrMsg2); if(Failed()) return; ! Constant cable force
-   CALL AllocAry( m%FC_red_unit , p%nDOF_red, 'm%FC_red' , ErrStat2, ErrMsg2); if(Failed()) return; ! Control cable force
-   m%FC_red      = 0.0_ReKi
-   m%FC_red_unit = 0.0_ReKi
+   CALL AllocAry( m%FC_unit , p%nDOF, 'm%FC0' , ErrStat2, ErrMsg2); if(Failed()) return; ! Control cable force
+   m%FC_unit = 0.0_ReKi
 
-   ! Setting up unit force vector 
-   call ControlCableForce_Unit(p, m%FC_red_unit, ErrStat2, ErrMsg2);  if(Failed()) return;
-   
+   ! loop over all elements, compute element matrices and assemble into global matrices
+   DO iCC = 1, size(p%CtrlElem2Channel,1) 
+      iElem = p%CtrlElem2Channel(iCC,1)
+      CALL ElemF_Cable(1.0_ReKi, p%ElemProps(iElem)%DirCos, FCe) !< NOTE: using unitary load T0=1.0_ReKi
+      ! --- Assembly in global unconstrained system
+      IDOF = p%ElemsDOF(1:12, iElem)
+      m%FC_unit( IDOF )    = m%FC_unit( IDOF ) + FCe(1:12) 
+   ENDDO
+   ! Transforming the vector into reduced, direct elimination system:
+   !FC_red = matmul(transpose(p%T_red), FC)
+   !if(allocated(FC)) deallocate(FC)
+
 CONTAINS
    LOGICAL FUNCTION Failed()
         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ControlCableForceInit') 
         Failed =  ErrStat >= AbortErrLev
    END FUNCTION Failed
 END SUBROUTINE ControlCableForceInit
-
-!> Init for control Cable force
-!! TODO TODO Expensive implementation for now
-SUBROUTINE ControlCableForce_Unit(p, FC_red, ErrStat, ErrMsg)
-   TYPE(SD_ParameterType),       INTENT(IN   ) :: p
-   real(ReKi), DIMENSION(:),     INTENT(INOUT) :: FC_red
-   INTEGER(IntKi),               INTENT(  OUT) :: ErrStat     ! Error status of the operation
-   CHARACTER(*),                 INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
-   ! Local variables
-   INTEGER                  :: I
-   real(FEKi), DIMENSION(:), allocatable :: FC
-   REAL(FEKi)               :: FCe(12) ! Pretension force from cable element
-   INTEGER(IntKi)           :: ErrStat2
-   CHARACTER(ErrMsgLen)     :: ErrMsg2
-   integer(IntKi), dimension(12) :: IDOF !  12 DOF indices in global unconstrained system
-   ErrMsg  = ""
-   ErrStat = ErrID_None
-   CALL AllocAry(FC     ,p%nDOF    , 'FC'     , ErrStat2, ErrMsg2); if(Failed()) return; ! Control cable force
-
-   ! loop over all elements, compute element matrices and assemble into global matrices
-   DO i = 1, size(p%ElemProps) ! TODO loop on cable only
-      if (p%ElemProps(i)%eType==idMemberCable) then
-         CALL ElemF_Cable(1.0_ReKi, p%ElemProps(i)%DirCos, FCe) !< NOTE: using unitary load T0=1.0_ReKi
-         ! --- Assembly in global unconstrained system
-         IDOF = p%ElemsDOF(1:12, i)
-         FC( IDOF )    = FC( IDOF ) + FCe(1:12) ! Note: gravity and pretension cable forces
-      endif
-   ENDDO
-   ! Transforming the vector into reduced, direct elimination system:
-   FC_red = matmul(transpose(p%T_red), FC)
-   if(allocated(FC)) deallocate(FC)
-
-CONTAINS
-   LOGICAL FUNCTION Failed()
-        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ControlCableForce') 
-        Failed =  ErrStat >= AbortErrLev
-   END FUNCTION Failed
-END SUBROUTINE ControlCableForce_Unit
-
-
-
-
 
 !> Add soil stiffness and mass to global system matrices
 SUBROUTINE InsertSoilMatrices(M, K, NodesDOF, Init, p, ErrStat, ErrMsg, Substract)

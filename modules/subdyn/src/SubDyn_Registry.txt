@@ -158,14 +158,13 @@ typedef  ^            ^             ReKi                     U_full_dotdot {:}  
 typedef  ^            ^             ReKi                     U_red          {:}  -  -  
 typedef  ^            ^             ReKi                     U_red_dot      {:}  -  -  
 typedef  ^            ^             ReKi                     U_red_dotdot   {:}  -  -  
-typedef  ^            ^             ReKi                     FC_red        {:}   -  -   "Cable Force vector (for varying cable load)"	N
-typedef  ^            ^             ReKi                     FC_red_unit   {:}   -  -   "Cable Force vector (for varying cable load, of unit cable load)"	N
+typedef  ^            ^             ReKi                     FC_unit   {:}   -  -   "Cable Force vector (for varying cable load, of unit cable load)"	N
 ### data for writing to an output file (this data is associated with time, but saved/written in CalcOutput so not stored as an other state) ###
-typedef	^	          ^             ReKi                     SDWrOutput {:} -  -  "Data from previous step to be written to a SubDyn output file"
-typedef	^	          ^             DbKi                     LastOutTime -  -  -  "The time of the most recent stored output data"	"s"
-typedef	^	          ^             IntKi                    Decimat     -  -  -  "Current output decimation counter"	"-"
-typedef	^	          ^             ReKi                     Fext      {:} -  -  "External loads on unconstrained DOFs"	"-"
-typedef	^	          ^             ReKi                     Fext_red  {:} -  -  "External loads on constrained DOFs, Fext_red= T^t Fext"	"-"
+typedef  ^            ^             ReKi                     SDWrOutput {:} -  -  "Data from previous step to be written to a SubDyn output file"
+typedef  ^            ^             DbKi                     LastOutTime -  -  -  "The time of the most recent stored output data"	"s"
+typedef  ^            ^             IntKi                    Decimat     -  -  -  "Current output decimation counter"	"-"
+typedef  ^            ^             ReKi                     Fext      {:} -  -  "External loads on unconstrained DOFs"	"-"
+typedef  ^            ^             ReKi                     Fext_red  {:} -  -  "External loads on constrained DOFs, Fext_red= T^t Fext"	"-"
 
 
 
@@ -186,6 +185,8 @@ typedef ^             ^     IList   NodesDOF          {:}    -  -  "DOF indices 
 typedef ^             ^     IList   NodesDOFred       {:}    -  -  "DOF indices of each nodes in constrained assembled system "	"-"
 typedef ^             ^     IntKi   ElemsDOF          {:}{:} -  -  "12 DOF indices of node 1 and 2 of a given member in unconstrained assembled system "	"-"
 typedef ^             ^     IntKi   DOFred2Nodes      {:}{:} -  -  "nDOFRed x 3, for each constrained DOF, col1 node index, col2 number of DOF, col3 DOF starting from 1"	"-"
+# --- Control
+typedef  ^            ^     IntKi   CtrlElem2Channel  {:}{:} - -   "nCtrlCable x 2, for each CtrlCable, Elem index, and Channel Index"
 # --- CB reduction
 typedef	^	ParameterType	IntKi	nDOFM	-	-	-	"retained degrees of freedom (modes)"
 typedef	^	ParameterType	IntKi  	SttcSolve	-	-	-	"Solve dynamics about static equilibrium point (flag)"
