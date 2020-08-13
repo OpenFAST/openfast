@@ -2485,8 +2485,12 @@ END SUBROUTINE CheckR16Var
       ! Function delcaration
       CHARACTER(200)               :: GetNVD      !< A single string containing the name, date, and version info
 
-      ! Store all the version info into a single string
-      GetNVD = TRIM( ProgInfo%Name ) !//' ('//Trim( ProgInfo%Ver )//', '//Trim( ProgInfo%Date )//')'
+      ! Store all the version info into a single string:
+      if (len_trim(ProgInfo%Ver) > 0) then
+         GetNVD = TRIM( ProgInfo%Name )//' ('//Trim( ProgInfo%Ver )//', '//Trim( ProgInfo%Date )//')'
+      else
+         GetNVD = TRIM( ProgInfo%Name )
+      end if
 
    END FUNCTION GetNVD
 !=======================================================================
@@ -4634,16 +4638,18 @@ END SUBROUTINE CheckR16Var
 
 !=======================================================================
 !> \copydoc nwtc_io::int2lstr
-   FUNCTION R2LStr4 ( Num )
+   FUNCTION R2LStr4 ( Num, Fmt_in )
 
       ! Function declaration.
 
    CHARACTER(15)                :: R2LStr4                                         ! This function.
+   CHARACTER(*), OPTIONAL       :: Fmt_in
 
 
       ! Argument declarations.
 
    REAL(SiKi), INTENT(IN)       :: Num                                             ! The number to convert.
+   CHARACTER(15)                :: Fmt                                             ! format for output
 
 
       ! Return a 0 if that's what we have.
@@ -4655,8 +4661,14 @@ END SUBROUTINE CheckR16Var
 
 
       ! Write the number into the string using G format and left justify it.
+   if ( present( Fmt_in ) ) then
+      Fmt = '('//Fmt_in//')'
+   else
+      Fmt = '(1PG15.5)'
+   end if
+      
 
-   WRITE (R2LStr4,'(1PG15.5)')  Num
+   WRITE (R2LStr4,Fmt)  Num
 
    CALL AdjRealStr( R2LStr4 )
 
@@ -4665,16 +4677,18 @@ END SUBROUTINE CheckR16Var
    END FUNCTION R2LStr4
 !=======================================================================
 !> \copydoc nwtc_io::int2lstr
-   FUNCTION R2LStr8 ( Num )
+   FUNCTION R2LStr8 ( Num, Fmt_in )
 
       ! Function declaration.
 
    CHARACTER(15)                :: R2LStr8                                         ! This function.
+   CHARACTER(*), OPTIONAL       :: Fmt_in
 
 
       ! Argument declarations.
 
    REAL(R8Ki), INTENT(IN)       :: Num                                             ! The floating-point number to convert.
+   CHARACTER(15)                :: Fmt                                             ! format for output
 
 
       ! Return a 0 if that's what we have.
@@ -4686,8 +4700,13 @@ END SUBROUTINE CheckR16Var
 
 
       ! Write the number into the string using G format and left justify it.
+   if ( present( Fmt_in ) ) then
+      Fmt = '('//Fmt_in//')'
+   else
+      Fmt = '(1PG15.5)'
+   end if
 
-   WRITE (R2LStr8,'(1PG15.5)')  Num
+   WRITE (R2LStr8,Fmt)  Num
 
    CALL AdjRealStr( R2LStr8 )
 
@@ -4696,7 +4715,7 @@ END SUBROUTINE CheckR16Var
    END FUNCTION R2LStr8
 !=======================================================================
 !> \copydoc nwtc_io::int2lstr
-   FUNCTION R2LStr16 ( Num )
+   FUNCTION R2LStr16 ( Num, Fmt_in )
 
       ! This function converts a 16-byte floating point number to
       ! a left-aligned string.  It eliminates trailing zeroes
@@ -4706,11 +4725,13 @@ END SUBROUTINE CheckR16Var
       ! Function declaration.
 
    CHARACTER(15)                :: R2LStr16                                        ! This function.
+   CHARACTER(*), OPTIONAL       :: Fmt_in
 
 
       ! Argument declarations.
 
    REAL(QuKi), INTENT(IN)       :: Num                                             ! The floating-point number to convert.
+   CHARACTER(15)                :: Fmt                                             ! format for output
 
 
       ! Return a 0 if that's what we have.
@@ -4722,8 +4743,13 @@ END SUBROUTINE CheckR16Var
 
 
       ! Write the number into the string using G format and left justify it.
+   if ( present( Fmt_in ) ) then
+      Fmt = '('//Fmt_in//')'
+   else
+      Fmt = '(1PG15.5)'
+   end if
 
-   WRITE (R2LStr16,'(1PG15.5)')  Num
+   WRITE (R2LStr16,Fmt)  Num
 
    CALL AdjRealStr( R2LStr16 )
 

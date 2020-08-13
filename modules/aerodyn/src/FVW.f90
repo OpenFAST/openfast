@@ -585,7 +585,7 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    z_guess%Gamma_LL = m%Gamma_LL
    call FVW_CalcConstrStateResidual(t, uInterp, p, x, xd, z_guess, OtherState, m, z, AFInfo, ErrStat2, ErrMsg2, 1); if(Failed()) return
 
-   call UA_UpdateState_Wrapper(AFInfo, n, uInterp, p, x, xd, OtherState, m, ErrStat2, ErrMsg2); if(Failed()) return
+   call UA_UpdateState_Wrapper(AFInfo,t, n, uInterp, p, x, xd, OtherState, m, ErrStat2, ErrMsg2); if(Failed()) return
 
    ! Map circulation and positions between LL and NW  and then NW and FW
    ! Changes: x only
@@ -1037,11 +1037,11 @@ subroutine UA_Init_Wrapper(AFInfo, InitInp, interval, p, x, xd, OtherState, m, E
       Init_UA_Data%Flookup         = InitInp%Flookup
       Init_UA_Data%a_s             = InitInp%a_s ! m/s  
       ! --- UA init
-      call UA_Init( Init_UA_Data, u_UA, m%p_UA, xd%UA, OtherState%UA, m%y_UA, m%m_UA, interval, InitOutData_UA, ErrStat2, ErrMsg2); if(Failed())return
+      call UA_Init( Init_UA_Data, u_UA, m%p_UA, x%UA, xd%UA, OtherState%UA, m%y_UA, m%m_UA, interval, InitOutData_UA, ErrStat2, ErrMsg2); if(Failed())return
       m%p_UA%ShedEffect=.False. !< Important, when coupling UA wih vortex code, shed vorticity is inherently accounted for
       ! --- Condensed version of "BEMT_CheckInitUA"
       do j = 1,InitInp%numBlades; do i = 1,InitInp%numBladeNodes; ! Loop over blades and nodes
-         call UA_TurnOff_param(AFInfo(p%AFindx(i,j)), ErrStat2, ErrMsg2)
+         call UA_TurnOff_param(m%p_UA, AFInfo(p%AFindx(i,j)), ErrStat2, ErrMsg2)
          if (ErrStat2 /= ErrID_None) then
             call WrScr( 'Warning: Turning off Unsteady Aerodynamics because '//trim(ErrMsg2)//' BladeNode = '//trim(num2lstr(i))//', Blade = '//trim(num2lstr(j)) )
             OtherState%UA_Flag(i,j) = .false.
@@ -1078,10 +1078,11 @@ contains
    end function Failed
 end subroutine  UA_Init_Wrapper
 
-subroutine UA_UpdateState_Wrapper(AFInfo, n, u, p, x, xd, OtherState, m, ErrStat, ErrMsg )
+subroutine UA_UpdateState_Wrapper(AFInfo, t, n, u, p, x, xd, OtherState, m, ErrStat, ErrMsg )
    use FVW_VortexTools, only: interpextrap_cp2node
    use UnsteadyAero, only: UA_UpdateStates, UA_TurnOff_input
    type(AFI_ParameterType),         intent(in   )  :: AFInfo(:)      !< The airfoil parameter data, temporary, for UA..
+   real(DbKi),                      intent(in   )  :: t           !< Current simulation time in seconds
    integer(IntKi),                  intent(in   )  :: n           !< time step  
    type(FVW_ParameterType),         intent(in   )  :: p           !< Parameters
    type(FVW_InputType),             intent(in   )  :: u           !< Inputs
@@ -1092,8 +1093,10 @@ subroutine UA_UpdateState_Wrapper(AFInfo, n, u, p, x, xd, OtherState, m, ErrStat
    integer(IntKi),                  intent(  out)  :: ErrStat     !< Error status of the operation
    character(*),                    intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
    ! Local
-   type(UA_InputType)     :: u_UA
+   type(UA_InputType)     :: u_UA(1)
+   REAL(DbKi)             :: uTimes(1)
    integer                :: i,j
+   integer, parameter     :: k=1 ! index for u_UA (in case it is ever dimensioned differently)
    integer(intKi)         :: ErrStat2           ! temporary Error status
    character(ErrMsgLen)   :: ErrMsg2
    real(ReKi), dimension(:,:), allocatable :: Vind_node
@@ -1101,6 +1104,9 @@ subroutine UA_UpdateState_Wrapper(AFInfo, n, u, p, x, xd, OtherState, m, ErrStat
    ErrStat2 = ErrID_None
    ErrMsg   = ""
    ErrMsg2  = ""
+   
+   uTimes = t
+   
    if (m%UA_Flag) then
 
       ! --- Induction on the lifting line control point
@@ -1128,18 +1134,22 @@ subroutine UA_UpdateState_Wrapper(AFInfo, n, u, p, x, xd, OtherState, m, ErrStat
                !! ....... compute inputs to UA ...........
                ! NOTE: To be consistent with CalcOutput we take Vwind_ND that was set using m%DisturbedInflow from AeroDyn.. 
                ! This is not clean, but done to be consistent, waiting for AeroDyn to handle UA
-               call AlphaVrel_Generic(u%WingsMesh(j)%Orientation(1:3,1:3,i), u%WingsMesh(j)%TranslationVel(1:3,i),  Vind_node(:,i), m%Vwnd_ND(:,i,j), p%KinVisc, p%Chord(i,j), u_UA%U, u_UA%alpha, u_UA%Re)
-               m%m_UA%iBladeNode = i
-               m%m_UA%iBlade     = j
-               u_UA%UserProp = 0 ! u1%UserProp(i,j) ! TODO
+               call AlphaVrel_Generic(u%WingsMesh(j)%Orientation(1:3,1:3,i), u%WingsMesh(j)%TranslationVel(1:3,i),  Vind_node(:,i), m%Vwnd_ND(:,i,j), &
+                                       p%KinVisc, p%Chord(i,j), u_UA(k)%U, u_UA(k)%alpha, u_UA(k)%Re)
+               ! FIX ME: this is copied 3 times!!!!
+               u_UA%v_ac(1) = sin(u_UA%alpha)*u_UA%U
+               u_UA%v_ac(2) = cos(u_UA%alpha)*u_UA%U
+               u_UA%omega = 0.0_ReKi ! FIX ME!!!! dot_product( u%BladeMotion(j)%RotationVel(   :,i), m%WithoutSweepPitchTwist(3,:,i,j) ) ! rotation of no-sweep-pitch coordinate system around z of the jth node in the kth blade
+               u_UA(k)%UserProp = 0 ! u1%UserProp(i,j) ! TODO
+               
                !! ....... check inputs to UA ...........
-               call UA_TurnOff_input(AFInfo(p%AFIndx(i,j)), u_UA, ErrStat2, ErrMsg2)
+               call UA_TurnOff_input(m%p_UA, AFInfo(p%AFIndx(i,j)), u_UA(k), ErrStat2, ErrMsg2)
                if (ErrStat2 /= ErrID_None) then
                   OtherState%UA_Flag(i,j) = .FALSE.
                   call WrScr( 'Warning: Turning off dynamic stall due to '//trim(ErrMsg2)//' '//trim(NodeText(i,j)))
                else
                  ! COMPUTE: xd%UA, OtherState%UA
-                 call UA_UpdateStates( i, j, u_UA, m%p_UA, xd%UA, OtherState%UA, AFInfo(p%AFIndx(i,j)), m%m_UA, ErrStat2, ErrMsg2 )
+                 call UA_UpdateStates( i, j, t, n, u_UA, uTimes, m%p_UA, x%UA, xd%UA, OtherState%UA, AFInfo(p%AFIndx(i,j)), m%m_UA, ErrStat2, ErrMsg2 )
                  if (ErrStat2 /= ErrID_None) then
                      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'UA_UpdateState_Wrapper'//trim(NodeText(i,j)))
                      call WrScr(trim(ErrMsg))
@@ -1149,7 +1159,7 @@ subroutine UA_UpdateState_Wrapper(AFInfo, n, u, p, x, xd, OtherState, m, ErrStat
             end if
          end do
       end do
-      call UA_DestroyInput( u_UA, ErrStat2, ErrMsg2 ); 
+      call UA_DestroyInput( u_UA(k), ErrStat2, ErrMsg2 ); 
       deallocate(Vind_node)
    endif
    call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'UA_UpdateState_Wrapper')

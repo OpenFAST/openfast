@@ -90,7 +90,7 @@ contains
          s_in(1) = 0
          do iSpan = 2, Meshes(iW)%nNodes
             DP          = Meshes(iW)%Position(1:3, iSpan) - Meshes(iW)%Position(1:3, iSpan-1)
-            s_in(iSpan) = s_in(iSpan-1) + norm2(DP)
+            s_in(iSpan) = s_in(iSpan-1) + TwoNorm(DP)
          enddo
 
          ! --- Setting up Lifting line variables based on input  and a "meshing" method (TODO)
@@ -176,14 +176,14 @@ contains
             DP2                   = P10-P9
             DP3                   = P7-P5
             m%Norm(1:3,iSpan,iW)  = cross_product(DP1,DP2)
-            m%Norm(1:3,iSpan,iW)  = m%Norm(1:3,iSpan,iW)/norm2(m%Norm(1:3,iSpan,iW))
-            m%Tang(1:3,iSpan,iW)  = (DP1)/norm2(DP1)                       ! tangential unit vector, along chord
+            m%Norm(1:3,iSpan,iW)  = m%Norm(1:3,iSpan,iW)/TwoNorm(m%Norm(1:3,iSpan,iW))
+            m%Tang(1:3,iSpan,iW)  = (DP1)/TwoNorm(DP1)                       ! tangential unit vector, along chord
             ! m%Tscoord(1:3,iSpan) = (DP3)/norm2(DP3)                      ! tangential unit vector, along span, follows ref line
             m%dl  (1:3,iSpan,iW)  = DP2
             m%Orth(1:3,iSpan,iW)  = cross_product(m%Norm(1:3,iSpan,iW),m%Tang(1:3,iSpan,iW)) ! orthogonal vector to N and T
-            m%Area(iSpan, iW) = norm2(cross_product(DP1,DP3))
+            m%Area(iSpan, iW) = TwoNorm(cross_product(DP1,DP3))
             DP3 = P1-P3
-            m%diag_LL(iSpan, iW) = norm2(DP3)
+            m%diag_LL(iSpan, iW) = TwoNorm(DP3)
          end do
       enddo
 !FIXME: does it make sense to use the position mesh for this info?
@@ -465,11 +465,11 @@ contains
             Vrel = m%Vtot_LL(1:3,icp,iW)
             ! "Orth": cross sectional plane of the lifting line 
             Vrel_orth(1:3)  = dot_product(Vrel,N)*N + dot_product(Vrel,Tc)*Tc
-            Vrel_orth_norm  = norm2(Vrel_orth(1:3))
+            Vrel_orth_norm  = TwoNorm(Vrel_orth(1:3))
             Vjouk(1:3)      = cross_product(Vrel,m%dl(1:3,icp,iW))
             Vjouk_orth(1:3) = dot_product(Vjouk,N)*N + dot_product(Vjouk,Tc)*Tc
-            Vjouk_orth_norm = norm2(Vjouk_orth)
-            Vrel_norm = norm2(Vrel)
+            Vjouk_orth_norm = TwoNorm(Vjouk_orth)
+            Vrel_norm = TwoNorm(Vrel)
 
             alpha = atan2(dot_product(Vrel,N) , dot_product(Vrel,Tc) ) ! [rad]  
             Re = p%Chord(icp,iW) * Vrel_norm  / p%KinVisc / 1.0E6
