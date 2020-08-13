@@ -389,7 +389,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       INTEGER(IntKi), pointer      :: DOFList(:)
       INTEGER(IntKi)               :: startDOF
       REAL(ReKi)                   :: DCM(3,3)
-      REAL(ReKi)                   :: HydroForces(6*p%nNodes_I) !  !Forces from all interface nodes listed in one big array  ( those translated to TP ref point HydroTP(6) are implicitly calculated in the equations)
+      REAL(ReKi)                   :: F_I(6*p%nNodes_I) !  !Forces from all interface nodes listed in one big array  ( those translated to TP ref point HydroTP(6) are implicitly calculated in the equations)
       TYPE(SD_ContinuousStateType) :: dxdt        ! Continuous state derivatives at t- for output file qmdotdot purposes only
       INTEGER(IntKi)               :: ErrStat2    ! Error status of the operation (occurs after initial error)
       CHARACTER(ErrMsgLen)         :: ErrMsg2     ! Error message if ErrStat2 /= ErrID_None
@@ -405,8 +405,9 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       m%udot_TP    = (/u%TPMesh%TranslationVel( :,1), u%TPMesh%RotationVel(:,1)/)
       m%udotdot_TP = (/u%TPMesh%TranslationAcc( :,1), u%TPMesh%RotationAcc(:,1)/)
 
-      ! Inputs on interior nodes:
-      CALL GetExtForceOnInternalDOF( u, p, m, m%UFL, ErrStat2, ErrMsg2 ); if(Failed()) return
+      ! External force on internal and interface nodes
+      call GetExtForceOnInternalDOF( u, p, m, m%UFL, ErrStat2, ErrMsg2 ); if(Failed()) return
+      call GetExtForceOnInterfaceDOF(p, m%Fext, F_I)
 
       !________________________________________
       ! Set motion outputs on y%Y2mesh
@@ -497,26 +498,15 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       !Y1= TP reaction Forces, i.e. force that the jacket exerts onto the TP and above  
       ! ---------------------------------------------------------------------------------
       ! Eq. 15: Y1 = -(C1*x + D1*u + FY)  [note the negative sign!!!!]
-      !NEED TO ADD HYDRODYNAMIC FORCES AT THE Interface NODES
-        !Aggregate the forces and moments at the interface nodes to the reference point
-        !TODO: where are these HydroTP, HydroForces documented?
-      DO I = 1, p%nNodes_I 
-         iSDNode = p%Nodes_I(I,1)
-         iY2Node = iSDNode
-         startDOF = (I-1)*6 + 1 ! NOTE: this works since interface is assumed to be sorted like LMesh and have 6 DOF per nodes
-         !Take care of Hydrodynamic Forces that will go into INterface Forces later
-         HydroForces(startDOF:startDOF+5) =  (/u%LMesh%Force(1:3,iY2Node),u%LMesh%Moment(1:3,iY2Node)/)  !(6,NNODES_I)
-      ENDDO
-                
-      !HydroTP =  matmul(transpose(p%TI),HydroForces) ! (6,1) calculated below
-      ! note: matmul( HydroForces, p%TI ) = matmul( transpose(p%TI), HydroForces) because HydroForces is 1-D            
+      !HydroTP =  matmul(transpose(p%TI), F_I) ! (6,1) calculated below
+      ! note: matmul( F_I, p%TI ) = matmul( transpose(p%TI), F_I) because F_I is 1-D            
       IF ( p%nDOFM > 0) THEN
          Y1 = -(   matmul(p%C1_11, x%qm) + matmul(p%C1_12,x%qmdot)                                    &  ! -(   C1(1,1)*x(1) + C1(1,2)*x(2)
                  + matmul(p%KBB,   m%u_TP) + matmul(p%D1_12, m%udot_TP) + matmul(p%D1_13, m%udotdot_TP) + matmul(p%D1_14, m%UFL)   &  !    + D1(1,1)*u(1) + 0*u(2) + D1(1,3)*u(3) + D1(1,4)*u(4)
-                 - matmul( HydroForces, p%TI )  + p%FY )                                                                            !    + D1(1,5)*u(5) + Fy(1) )
+                 - matmul( F_I, p%TI )  + p%FY )                                                                            !    + D1(1,5)*u(5) + Fy(1) )
       ELSE ! No retained modes, so there are no states
          Y1 = -( matmul(p%KBB,   m%u_TP)   + matmul(p%D1_12, m%udot_TP) + matmul(p%D1_13, m%udotdot_TP) + matmul(p%D1_14, m%UFL)   &  ! -(  0*x + D1(1,1)*u(1) + 0*u(2) + D1(1,3)*u(3) + D1(1,4)*u(4)
-                 - matmul( HydroForces, p%TI )  + p%FY )                                             !    + D1(1,5)*u(5) + Fy(1) )
+                 - matmul( F_I, p%TI )  + p%FY )                                             !    + D1(1,5)*u(5) + Fy(1) )
       END IF
       ! Computing extra moments due to lever arm introduced by interface displacement
       !               Y1(:3) = -f_TP
@@ -2811,19 +2801,19 @@ END SUBROUTINE PartitionDOFNodes
 !> Construct force vector on internal DOF (L) from the values on the input mesh 
 !! First, the full vector of external forces is built on the non-reduced DOF
 !! Then, the vector is reduced using the Tred matrix
-SUBROUTINE GetExtForceOnInternalDOF( u, p, m, UFL, ErrStat, ErrMsg )
+SUBROUTINE GetExtForceOnInternalDOF( u, p, m, F_L, ErrStat, ErrMsg )
    type(SD_InputType),     intent(in   )  :: u ! Inputs
    type(SD_ParameterType), intent(in   )  :: p ! Parameters
    type(SD_MiscVarType),   intent(inout)  :: m ! Misc, for storage optimization of Fext and Fext_red
-   real(ReKi)          ,   intent(out)    :: UFL(p%nDOF__L)  !< External force on internal nodes "L"
+   real(ReKi)          ,   intent(out)    :: F_L(p%nDOF__L)  !< External force on internal nodes "L"
    integer(IntKi),         intent(  out)  :: ErrStat     !< Error status of the operation
    character(*),           intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
    integer :: iMeshNode, iSDNode ! indices of u-mesh nodes and SD nodes
    integer :: nMembers
+   integer :: startDOF, I
    integer :: iCC, iElem, iChannel !< Index on control cables, element, Channel
    integer(IntKi), dimension(12) :: IDOF !  12 DOF indices in global unconstrained system
    real(ReKi), parameter :: myNaN = -9999998.989_ReKi 
-   ! TODO to save time, perform Tred multiplication only if Tred is not identity
 
    ! --- Build vector of external force
    m%Fext= myNaN
@@ -2865,16 +2855,32 @@ SUBROUTINE GetExtForceOnInternalDOF( u, p, m, UFL, ErrStat, ErrMsg )
    ! --- Reduced vector of external force
    if (p%reduced) then
       m%Fext_red = matmul(transpose(p%T_red), m%Fext)
-      UFL= m%Fext_red(p%ID__L)
+      F_L= m%Fext_red(p%ID__L)
    else
-      UFL= m%Fext(p%ID__L)
+      F_L= m%Fext(p%ID__L)
    endif
+
 contains
    subroutine Fatal(ErrMsg_in)
       character(len=*), intent(in) :: ErrMsg_in
       call SetErrStat(ErrID_Fatal, ErrMsg_in, ErrStat, ErrMsg, 'GetExtForce');
    end subroutine Fatal
 END SUBROUTINE GetExtForceOnInternalDOF
+
+!------------------------------------------------------------------------------------------------------
+!> Construct force vector on interface DOF (I) 
+!! NOTE: This function should only be called after GetExtForceOnInternalDOF 
+SUBROUTINE GetExtForceOnInterfaceDOF(  p, Fext, F_I)
+   type(SD_ParameterType),   intent(in  ) :: p ! Parameters
+   real(ReKi), dimension(:), intent(in  ) :: Fext !< Vector of external forces on un-reduced DOF
+   real(ReKi)            ,   intent(out ) :: F_I(6*p%nNodes_I)          !< External force on interface DOF
+   integer :: iSDNode, startDOF, I
+   DO I = 1, p%nNodes_I 
+      iSDNode = p%Nodes_I(I,1)
+      startDOF = (I-1)*6 + 1 ! NOTE: for now we have 6 DOF per interface nodes
+      F_I(startDOF:startDOF+5) = Fext(p%NodesDOF(iSDNode)%List(1:6)) !TODO try to use Fext_red
+   ENDDO
+END SUBROUTINE GetExtForceOnInterfaceDOF
 
 !------------------------------------------------------------------------------------------------------
 !> Output the summary file    
