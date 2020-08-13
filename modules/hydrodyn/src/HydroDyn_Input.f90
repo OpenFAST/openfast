@@ -267,6 +267,8 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, ErrStat, ErrMsg )
    CHARACTER(1024)                                  :: Line                 ! String to temporarially hold value of read line
    CHARACTER(1024)                                  :: FileName             ! Name of HydroDyn input file
    CHARACTER(  35)                                  :: Frmt                 ! Output format for logical parameters. (matches NWTC Subroutine Library format)
+   real(ReKi), ALLOCATABLE                          :: tmpVec1(:), tmpVec2(:) ! Temporary arrays for WAMIT data
+   integer(IntKi)                                   :: startIndx, endIndx   ! indices into working arrays
    INTEGER, ALLOCATABLE                             :: tmpArray(:)          ! Temporary array storage of the joint output list
    CHARACTER(1)                                     :: Line1                ! The first character of an input line
    INTEGER(IntKi)                                   :: ErrStat2
