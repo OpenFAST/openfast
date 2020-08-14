@@ -1114,28 +1114,29 @@ SUBROUTINE Transfer_ED_to_HD_SD_BD_Mooring( p_FAST, y_ED, u_HD, u_SD, u_ExtPtfm,
          
    END IF
       
-   
-   IF ( p_FAST%CompMooring == Module_MAP .and.  p_FAST%CompSub /= Module_SD ) THEN
-!TODO: GJH I do not have plan documentation for the External Platform connection to MAP GJH 8/11/2020      
-         ! motions:
-      CALL Transfer_Point_to_Point( y_ED%PlatformPtMesh, u_MAP%PtFairDisplacement, MeshMapData%ED_P_2_Mooring_P, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//'u_MAP%PtFairDisplacement' )
+   if (  p_FAST%CompSub /= Module_SD ) then
+      IF ( p_FAST%CompMooring == Module_MAP  ) THEN
+   !TODO: GJH I do not have plan documentation for the External Platform connection to MAP GJH 8/11/2020      
+            ! motions:
+         CALL Transfer_Point_to_Point( y_ED%PlatformPtMesh, u_MAP%PtFairDisplacement, MeshMapData%ED_P_2_Mooring_P, ErrStat2, ErrMsg2 )
+            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//'u_MAP%PtFairDisplacement' )
                                  
-   ELSEIF ( p_FAST%CompMooring == Module_MD ) THEN
-         ! motions:
-      CALL Transfer_Point_to_Point( y_ED%PlatformPtMesh, u_MD%PtFairleadDisplacement, MeshMapData%ED_P_2_Mooring_P, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//'u_MD%PtFairleadDisplacement' )
+      ELSEIF ( p_FAST%CompMooring == Module_MD ) THEN
+            ! motions:
+         CALL Transfer_Point_to_Point( y_ED%PlatformPtMesh, u_MD%PtFairleadDisplacement, MeshMapData%ED_P_2_Mooring_P, ErrStat2, ErrMsg2 )
+            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//'u_MD%PtFairleadDisplacement' )
                         
-   ELSEIF ( p_FAST%CompMooring == Module_FEAM ) THEN
-         ! motions:
-      CALL Transfer_Point_to_Point( y_ED%PlatformPtMesh, u_FEAM%PtFairleadDisplacement, MeshMapData%ED_P_2_Mooring_P, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//'u_FEAM%PtFairleadDisplacement' )
+      ELSEIF ( p_FAST%CompMooring == Module_FEAM ) THEN
+            ! motions:
+         CALL Transfer_Point_to_Point( y_ED%PlatformPtMesh, u_FEAM%PtFairleadDisplacement, MeshMapData%ED_P_2_Mooring_P, ErrStat2, ErrMsg2 )
+            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//'u_FEAM%PtFairleadDisplacement' )
                         
-   ELSEIF ( p_FAST%CompMooring == Module_Orca ) THEN
-         ! motions:
-      CALL Transfer_Point_to_Point( y_ED%PlatformPtMesh, u_Orca%PtfmMesh, MeshMapData%ED_P_2_Mooring_P, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//'u_Orca%PtfmMesh' )
-   END IF
+      ELSEIF ( p_FAST%CompMooring == Module_Orca ) THEN
+            ! motions:
+         CALL Transfer_Point_to_Point( y_ED%PlatformPtMesh, u_Orca%PtfmMesh, MeshMapData%ED_P_2_Mooring_P, ErrStat2, ErrMsg2 )
+            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//'u_Orca%PtfmMesh' )
+      END IF
+   end if
    
 contains
    subroutine TransferEDToHD_PRP()
@@ -4557,6 +4558,23 @@ SUBROUTINE CalcOutputs_And_SolveForInputs( n_t_global, this_time, this_state, ca
                                          Orca%Input(1), BD%Input(1,:), MeshMapData, ErrStat2, ErrMsg2 )         
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )                                     
       
+   IF ( p_FAST%CompSub == Module_SD .and. p_FAST%CompHydro == Module_HD ) THEN            
+      CALL SD_CalcOutput( this_time, SD%Input(1), SD%p, SD%x(this_state), SD%xd(this_state), SD%z(this_state), SD%OtherSt(this_state), SD%y, SD%m, ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName  )
+      call Transfer_SD_to_HD( SD%y, HD%Input(1)%WAMITMesh, HD%Input(1)%Morison%Mesh, MeshMapData, ErrStat, ErrMsg )
+      
+      IF ( p_FAST%CompMooring == Module_MAP ) THEN         
+         CALL Transfer_Point_to_Point( SD%y%y2Mesh, MAPp%Input(1)%PtFairDisplacement, MeshMapData%SD_P_2_Mooring_P, ErrStat, ErrMsg )
+            CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      ELSEIF ( p_FAST%CompMooring == Module_MD ) THEN
+         CALL Transfer_Point_to_Point( SD%y%y2Mesh, MD%Input(1)%PtFairleadDisplacement, MeshMapData%SD_P_2_Mooring_P, ErrStat, ErrMsg )
+            CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      ELSEIF ( p_FAST%CompMooring == Module_FEAM ) THEN
+         CALL Transfer_Point_to_Point( SD%y%y2Mesh, FEAM%Input(1)%PtFairleadDisplacement, MeshMapData%SD_P_2_Mooring_P, ErrStat, ErrMsg )
+            CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)                  
+      END IF     
+   END IF
+   
       !> Solve option 1 (rigorous solve on loads/accelerations)
    CALL SolveOption1(this_time, this_state, calcJacobian, p_FAST, ED, BD, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ErrStat2, ErrMsg2, WriteThisStep)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
