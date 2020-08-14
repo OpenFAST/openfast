@@ -4597,11 +4597,11 @@ SUBROUTINE Init_Jacobian_u( InputFileData, p, u, InitOut, ErrStat, ErrMsg)
       end do !j      
    end do !i
    
-   !Module/Mesh/Field: u%UserProp(:,:) = 23,24,25;
+   !Module/Mesh/Field: u%UserProp(:,:) = 29,30,31;
    
    do k=1,size(u%UserProp,2) ! p%NumBlades         
       do i=1,size(u%UserProp,1) ! numNodes
-            p%Jac_u_indx(index,1) =  22 + k
+            p%Jac_u_indx(index,1) =  28 + k
             p%Jac_u_indx(index,2) =  1 !component index:  this is a scalar, so 1, but is never used
             p%Jac_u_indx(index,3) =  i !Node:   i
             index = index + 1     
@@ -4610,7 +4610,7 @@ SUBROUTINE Init_Jacobian_u( InputFileData, p, u, InitOut, ErrStat, ErrMsg)
       !......................................
       ! default perturbations, p%du:
       !......................................
-   call allocAry( p%du, 28, 'p%du', ErrStat2, ErrMsg2) ! 28 = number of unique values in p%Jac_u_indx(:,1)
+   call allocAry( p%du, 31, 'p%du', ErrStat2, ErrMsg2) ! 31 = number of unique values in p%Jac_u_indx(:,1)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
    perturb = 2*D2R
@@ -4644,9 +4644,9 @@ SUBROUTINE Init_Jacobian_u( InputFileData, p, u, InitOut, ErrStat, ErrMsg)
    do k=1,p%NumBlades
       p%du(24 + k) = perturb_b(k)         ! u%InflowOnBlade(:,:,k) = 24 + k
    end do      
-   p%du(22) = perturb_t                   ! u%InflowOnTower(:,:) = 22
+   p%du(28) = perturb_t                   ! u%InflowOnTower(:,:) = 28
    do k=1,p%NumBlades 
-      p%du(22+k) = perturb                     ! u%UserProp(:,:) = 23,24,25
+      p%du(28+k) = perturb                ! u%UserProp(:,:) = 29,30,31
    end do      
       !.....................
       ! get names of linearized inputs
@@ -4661,7 +4661,9 @@ SUBROUTINE Init_Jacobian_u( InputFileData, p, u, InitOut, ErrStat, ErrMsg)
 
    InitOut%IsLoad_u   = .false. ! None of AeroDyn's inputs are loads
    InitOut%RotFrame_u = .false.
-      
+   do k=0,p%NumBlades*p%NumBlNds-1
+      InitOut%RotFrame_u(nu - k ) = .true.   ! UserProp(:,:)
+   end do  
    index = 1
    FieldMask = .false.
    FieldMask(MASKID_TRANSLATIONDISP) = .true.
@@ -4921,11 +4923,11 @@ SUBROUTINE Perturb_u( p, n, perturb_sign, u, du )
       
    CASE (28) !Module/Mesh/Field: u%InflowOnTower(:,:)   = 28;
       u%InflowOnTower(fieldIndx,node) = u%InflowOnTower(fieldIndx,node) + du * perturb_sign
-   CASE (23) !Module/Mesh/Field: u%UserProp(:,1)   = 23; 
+   CASE (29) !Module/Mesh/Field: u%UserProp(:,1)   = 29; 
       u%UserProp(node,1) = u%UserProp(node,1) + du * perturb_sign
-   CASE (24) !Module/Mesh/Field: u%UserProp(:,2)   = 23; 
+   CASE (30) !Module/Mesh/Field: u%UserProp(:,2)   = 30; 
       u%UserProp(node,2) = u%UserProp(node,2) + du * perturb_sign
-   CASE (25) !Module/Mesh/Field: u%UserProp(:,3)   = 23; 
+   CASE (31) !Module/Mesh/Field: u%UserProp(:,3)   = 31; 
       u%UserProp(node,3) = u%UserProp(node,3) + du * perturb_sign
    END SELECT
       
