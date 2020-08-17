@@ -908,7 +908,7 @@ CONTAINS
       INTEGER                                        :: I                    ! Generic loop counter
       INTEGER                                        :: J                    ! Generic loop counter
       CHARACTER(1024)                                :: OutFileName          ! The name of the output file  including the full path.
-      INTEGER                                        :: L                           ! counter for index in LineWrOutput
+!      INTEGER                                        :: L                           ! counter for index in LineWrOutput
       INTEGER                                        :: LineNumOuts                 ! number of entries in LineWrOutput for each line
       CHARACTER(200)                                 :: Frmt                 ! a string to hold a format statement
       INTEGER                                        :: ErrStat2
@@ -1139,7 +1139,12 @@ CONTAINS
          RETURN
       ELSE
          ErrStat = ErrID_None
+         ErrMsg  = ''
       END IF
+
+      ! Return if there are no outputs
+      if ( p%NumOuts < 1_IntKi ) return
+
 
       ! gather the required output quantities (INCOMPLETE!)
       DO I = 1,p%NumOuts

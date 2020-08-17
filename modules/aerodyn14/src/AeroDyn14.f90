@@ -165,6 +165,11 @@ SUBROUTINE AD14_Init( InitInp, u, p, x, xd, z, O, y, m, Interval, InitOut, ErrSt
       CALL AllocAry(m%Element%Alpha, p%Element%NELM, p%NumBl,'m%Element%Alpha',ErrStatLcl,ErrMessLcl  )
          CALL SetErrStat( ErrStatLcl,ErrMessLcl,ErrStat,ErrMess,RoutineName)
    END IF
+
+   IF (.NOT. ALLOCATED(m%Element%PitNow) ) THEN
+      CALL AllocAry(m%Element%PitNow, p%Element%NELM, p%NumBl,'m%Element%PitNow',ErrStatLcl,ErrMessLcl  )
+         CALL SetErrStat( ErrStatLcl,ErrMessLcl,ErrStat,ErrMess,RoutineName)
+   END IF
    IF (ErrStat >= AbortErrLev ) RETURN 
 
    
@@ -726,6 +731,7 @@ SUBROUTINE AD14_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrSt
    ! identify which variables are states.
       
 END SUBROUTINE AD14_UpdateStates
+
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE AD14_CalcOutput( Time, u, p, x, xd, z, O, y, m, ErrStat, ErrMess )
 ! Routine for computing outputs, used in both loose and tight coupling.
@@ -736,11 +742,11 @@ SUBROUTINE AD14_CalcOutput( Time, u, p, x, xd, z, O, y, m, ErrStat, ErrMess )
       USE               DWM
 
       REAL(DbKi),                     INTENT(IN   )  :: Time        ! Current simulation time in seconds
-      TYPE(AD14_InputType),           INTENT(IN   )  :: u           ! Inputs at Time
+      TYPE(AD14_InputType),           INTENT(INOUT)  :: u           ! Inputs at Time
       TYPE(AD14_ParameterType),       INTENT(IN   )  :: p           ! Parameters
       TYPE(AD14_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at Time
       TYPE(AD14_DiscreteStateType),   INTENT(IN   )  :: xd          ! Discrete states at Time
-      TYPE(AD14_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at Time
+      TYPE(AD14_ConstraintStateType), INTENT(INOUT)  :: z           ! Constraint states at Time
       TYPE(AD14_OtherStateType),      INTENT(IN   )  :: O           ! Other states at Time
       TYPE(AD14_OutputType),          INTENT(INOUT)  :: y           ! Outputs computed at Time (Input only so that mesh con-
                                                                        !   nectivity information does not have to be recalculated)
@@ -752,15 +758,22 @@ SUBROUTINE AD14_CalcOutput( Time, u, p, x, xd, z, O, y, m, ErrStat, ErrMess )
       ! Local variables
    REAL(DbKi), PARAMETER      :: OnePlusEpsilon = 1 + EPSILON(Time)
 
-   REAL(ReKi)                 :: VNElement
    REAL(ReKi)                 :: VelNormalToRotor2
+   REAL(ReKi)                 :: VTWind
    REAL(ReKi)                 :: VNWind
+   REAL(ReKi)                 :: VNElement
+   REAL(ReKi)                 :: VTElement
+   REAL(ReKi)                 :: VN_ind
+   REAL(ReKi)                 :: VT_ind
+   REAL(ReKi)                 :: VN
+   REAL(ReKi)                 :: VT
    REAL(ReKi)                 :: VTTotal
    REAL(ReKi)                 :: DFN
    REAL(ReKi)                 :: DFT
    REAL(ReKi)                 :: PMA
    REAL(ReKi)                 :: SPitch                     ! sine of PitNow
    REAL(ReKi)                 :: CPitch                     ! cosine of PitNow
+   REAL(ReKi)                 :: Phi                        ! Local value of Phi
 
    REAL(ReKi)                 :: AvgVelNacelleRotorFurlYaw
    REAL(ReKi)                 :: AvgVelTowerBaseNacelleYaw
@@ -772,6 +785,8 @@ SUBROUTINE AD14_CalcOutput( Time, u, p, x, xd, z, O, y, m, ErrStat, ErrMess )
    REAL(ReKi)                 :: rTowerBaseHub (2)
 
    REAL(ReKi)                 :: tmpVector     (3)
+   REAL(ReKi)                 :: norm_Vector   (3) ! Unit vector normal to chord
+   REAL(ReKi)                 :: tang_Vector   (3) ! Unit vector tangent to chord
    REAL(ReKi)                 :: VelocityVec   (3)
 
    INTEGER                    :: ErrStatLcL        ! Error status returned by called routines.
@@ -782,7 +797,7 @@ SUBROUTINE AD14_CalcOutput( Time, u, p, x, xd, z, O, y, m, ErrStat, ErrMess )
    INTEGER                    :: I
    CHARACTER(ErrMsgLen)       :: ErrMessLcl          ! Error message returned by called routines.
 
-
+   CHARACTER(*), PARAMETER                   :: RoutineName = 'AD14_AeroSubs' !KS Not sure why I added this
 
    ! Initialize ErrStat
       ErrStat = ErrID_None
@@ -913,7 +928,20 @@ SUBROUTINE AD14_CalcOutput( Time, u, p, x, xd, z, O, y, m, ErrStat, ErrMess )
    ! end of NewTime routine
    !.................................................................................................
 
+      ! Set blade element pitches
+   DO IBlade = 1,p%NumBl
+      DO IElement = 1,p%Element%NElm
+            ! calculate element pitch
+         m%Element%PitNow(IElement,IBlade)   = -1.*ATAN2( -1.*DOT_PRODUCT( u%TurbineComponents%Blade(IBlade)%Orientation(1,:),    &
+                                                           u%InputMarkers(IBlade)%Orientation(2,:,IElement) ) , &
+                                              DOT_PRODUCT( u%TurbineComponents%Blade(IBlade)%Orientation(1,:),    &
+                                                           u%InputMarkers(IBlade)%Orientation(1,:,IElement) )   )
+      ENDDO
+   ENDDO
+
+
    Node = 0
+   ! --- Loop on blades
    DO IBlade = 1,p%NumBl
 
          ! calculate the azimuth angle ( we add pi because AeroDyn defines 0 as pointing downward)
@@ -924,24 +952,13 @@ SUBROUTINE AD14_CalcOutput( Time, u, p, x, xd, z, O, y, m, ErrStat, ErrMess )
                                              u%TurbineComponents%RotorFurl%Orientation(2,:) ), &
                                 DOT_PRODUCT( u%TurbineComponents%Hub%Orientation(3,:),         &
                                              u%TurbineComponents%RotorFurl%Orientation(3,:) )  ) + pi + (IBlade - 1)*p%TwoPiNB
-
-
-
+      ! --- Loop on elements
       DO IElement = 1,p%Element%NElm
 
-            ! calculate element pitch
-
-         m%Element%PitNow    = -1.*ATAN2( -1.*DOT_PRODUCT( u%TurbineComponents%Blade(IBlade)%Orientation(1,:),    &
-                                                           u%InputMarkers(IBlade)%Orientation(2,:,IElement) ) , &
-                                              DOT_PRODUCT( u%TurbineComponents%Blade(IBlade)%Orientation(1,:),    &
-                                                           u%InputMarkers(IBlade)%Orientation(1,:,IElement) )   )
-
-         SPitch    = SIN( m%Element%PitNow )
-         CPitch    = COS( m%Element%PitNow )
-
+         SPitch    = SIN( m%Element%PitNow(IElement,IBlade) )
+         CPitch    = COS( m%Element%PitNow(IElement,IBlade) )
 
             ! calculate distance between hub and element
-
          tmpVector = u%InputMarkers(IBlade)%Position(:,IElement) - u%TurbineComponents%Hub%Position(:)
          rLocal = SQRT(   DOT_PRODUCT( tmpVector, u%TurbineComponents%Hub%Orientation(2,:) )**2  &
                         + DOT_PRODUCT( tmpVector, u%TurbineComponents%Hub%Orientation(3,:) )**2  )
@@ -1028,30 +1045,53 @@ SUBROUTINE AD14_CalcOutput( Time, u, p, x, xd, z, O, y, m, ErrStat, ErrMess )
             
          !-----------------------------------------------------------------------------------------------------------------------
          
-         
-         
-         
+         ! NOTE: VelocityVec is freestream with disturbances from Tower Shadow and Wakes (DWM) 
          VelNormalToRotor2 = ( VelocityVec(3) * m%Rotor%STilt + (VelocityVec(1) * m%Rotor%CYaw               &
                              - VelocityVec(2) * m%Rotor%SYaw) * m%Rotor%CTilt )**2
 
          !-------------------------------------------------------------------------------------------
-         ! reproduce GetVNVT routine:
+         ! Normal and tangential velocities from wind and relative blade motion
          !-------------------------------------------------------------------------------------------
-         tmpVector =  -1.*SPitch*u%InputMarkers(IBlade)%Orientation(1,:,IElement) &
-                        + CPitch*u%InputMarkers(IBlade)%Orientation(2,:,IElement)
-         VTTotal   =     DOT_PRODUCT( tmpVector, VelocityVec - u%InputMarkers(IBlade)%TranslationVel(:,IElement)  )
+         tang_Vector = - SPitch*u%InputMarkers(IBlade)%Orientation(1,:,IElement) &
+                     & + CPitch*u%InputMarkers(IBlade)%Orientation(2,:,IElement)
+         norm_Vector =   CPitch*u%InputMarkers(IBlade)%Orientation(1,:,IElement) &
+                     & + SPitch*u%InputMarkers(IBlade)%Orientation(2,:,IElement)
 
-         tmpVector =     CPitch*u%InputMarkers(IBlade)%Orientation(1,:,IElement) &
-                       + SPitch*u%InputMarkers(IBlade)%Orientation(2,:,IElement)
-         VNWind    =     DOT_PRODUCT( tmpVector, VelocityVec )
-         VNElement = -1.*DOT_PRODUCT( tmpVector, u%InputMarkers(IBlade)%TranslationVel(:,IElement ) )
+         VTTotal   =   DOT_PRODUCT( tang_Vector, VelocityVec - u%InputMarkers(IBlade)%TranslationVel(:,IElement)  )
+         VTElement = - DOT_PRODUCT( tang_Vector, u%InputMarkers(IBlade)%TranslationVel(:,IElement)  )
+         VNElement = - DOT_PRODUCT( norm_Vector, u%InputMarkers(IBlade)%TranslationVel(:,IElement ) )
+
+         VTWind    =   DOT_PRODUCT( tang_Vector, VelocityVec)
+         VNWind    =   DOT_PRODUCT( norm_Vector, VelocityVec)
 
          !-------------------------------------------------------------------------------------------
          ! Get blade element forces and induced velocity
          !-------------------------------------------------------------------------------------------
-         CALL ELEMFRC( p, m, ErrStatLcl, ErrMessLcl,                             &
-                       AzimuthAngle, rLocal, IElement, IBlade, VelNormalToRotor2, VTTotal, VNWind, &
-                       VNElement, DFN, DFT, PMA, m%NoLoadsCalculated )
+         ! --------------------------------------------------------------------------------}
+         ! --- Setting Element% values: W2, Alpha, A, AP
+         ! --------------------------------------------------------------------------------{
+         ! --- BEM
+         CALL ELEM_INDUCTIONS( p, m, ErrStatLcl, ErrMessLcl,                             &
+                    AzimuthAngle, rLocal, IElement, IBlade, VelNormalToRotor2, VTTotal, VNWind, &
+                     VNElement, m%NoLoadsCalculated)
+         ! Normal and tangential induced velocities
+         VN_ind =  -  VNWind * m%Element%A (IElement, IBLADE)
+         VT_ind =    VTTotal * m%Element%AP(IElement, IBLADE) 
+
+         ! Cumulative (integrated) induction over the blades
+         m%InducedVel%SumInfl = m%InducedVel%SumInfl - VN_IND * RLOCAL * p%Blade%DR(IElement)
+
+         !  --- Total flow velocity at the blade element
+         VN = VN_IND + VNWind  + VNElement ! Normal velocity     : Indution +  Wind + Rel. blade vel
+         VT = VT_IND + VTTotal             ! Tangential velocity : Indution + (Wind + Rel. blade vel)
+
+         PHI   = ATAN2( VN, VT)                                                     ! Flow angle [rad]
+         m%Element%ALPHA(IElement,IBlade) = PHI - m%Element%PitNow(IElement,IBlade) ! Angle of attack [rad]
+         CALL MPI2PI ( m%Element%ALPHA(IElement,IBlade) )
+         m%Element%W2(IElement,IBlade) = VN * VN + VT * VT                          ! Relative velocity norm
+
+         CALL ELEMFRC2( p, m, ErrStatLcl, ErrMessLcl, IElement, IBlade, &
+                     DFN, DFT, PMA, m%NoLoadsCalculated, phi )
             CALL SetErrStat ( ErrStatLcl, ErrMessLcl, ErrStat,ErrMess,'AD14_CalcOutput' )
             IF (ErrStat >= AbortErrLev) THEN
                CALL CleanUp()
@@ -1112,7 +1152,6 @@ SUBROUTINE AD14_CalcOutput( Time, u, p, x, xd, z, O, y, m, ErrStat, ErrMess )
    END DO !IBlade
 
    m%NoLoadsCalculated = .FALSE.
-
 
    DO IBlade=1,p%NumBl
      DO IElement=1,p%Element%Nelm

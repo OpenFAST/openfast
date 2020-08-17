@@ -3,7 +3,7 @@
 Working with OpenFAST on GitHub
 ===============================
 The majority of the collaboration and development for OpenFAST takes place
-on the `github repository <http://github.com/openfast/openfast>`__. There,
+on the `GitHub repository <http://github.com/openfast/openfast>`__. There,
 `issues <http://github.com/openfast/openfast/issues>`__ and
 `pull requests <http://github.com/openfast/openfast/pulls>`__
 are discussed and new versions are released. It is the best mechanism for
@@ -26,14 +26,14 @@ submitted along with all appropriate documentation and tests. An NREL OpenFAST
 team member will assign a reviewer and work with the  developer to have the
 code merged into the main repository.
 
-New pull requests should contain
+New pull requests should contain the following:
 
 - A description of the need for modifications
 
   - If the pull request fixes a bug,
     the accompanying GitHub issue should be referenced
 
-- A highlight of the work implemented
+- A summary of the work implemented
 - Regression test results
 
   - If all tests pass, the summary print out should be provided
@@ -47,19 +47,16 @@ New pull requests should contain
 Git workflow and interacting with the main repository
 -----------------------------------------------------
 OpenFAST development should follow "Git Flow" when interacting with the github
-repository. Git Flow is a git workflow outlining safe methods of pushing and
-pulling commits to a shared repository. Maintaining Git Flow is critical to
-prevent remote changes from blocking your local development.
-
-Git Flow
---------
-The Git Flow process is well defined and adopted throughout the software
-development community. It is detailed nicely
+repository. Git Flow is a well-defined and widely adopted workflow for using
+git that outlines safe methods of pushing and pulling commits to a shared
+repository. Maintaining Git Flow is critical to prevent remote changes from
+blocking your local development. This workflow is detailed nicely
 `here <http://nvie.com/posts/a-successful-git-branching-model>`__
 and the chart below provides a high level perspective.
 
 .. image:: ../../_static/GitFlowFeatureBranches.png
-    :align: center
+   :width: 70%
+   :align: center
 
 Reference: http://nvie.com/posts/a-successful-git-branching-model
 
@@ -71,24 +68,50 @@ On public branches, avoid using
 `git rebase <https://git-scm.com/book/en/v2/Git-Branching-Rebasing>`__
 and never `force push <https://git-scm.com/docs/git-push#git-push---force>`__.
 
-In OpenFAST development, the typical workflow follows this procedure
+In OpenFAST development, the typical workflow follows this procedure:
 
-1. Fork the OpenFAST/OpenFAST repository on GitHub
+1. Fork the OpenFAST repository on GitHub
 
-2. Clone your new fork: ``git clone https://github.com/<youruser>/OpenFAST``
+2. Clone your new fork
 
-3. Add OpenFAST/OpenFAST as a remote: ``git remote add upstream https://github.com/OpenFAST/OpenFAST``
+.. code-block:: bash
 
-4. Create a feature branch for active development:
-``git branch feature/a_great_feature`` or
-``git checkout -b feature/a_great_feature``
+    git clone https://github.com/<youruser>/OpenFAST
 
-5. Add new development on `feature/a_great_feature`:
-``git add a_file.f90 && git commit -m "A message" && git push``
+3. Add OpenFAST/OpenFAST as a remote named ``upstream``
 
-5. Update your feature branch with OpenFAST/dev:
-``git pull upstream dev && git push``
+.. code-block:: bash
 
-6. Create a GitHub pull request to merge
-``youruser/OpenFAST/feature/a_great_feature`` into ``OpenFAST/OpenFAST/dev``
+    # This adds the remote
+    git remote add upstream https://github.com/OpenFAST/OpenFAST
 
+    # This downloads all the info in the remote, but it doesnt change
+    # the local source code
+    git fetch --all
+
+4. Create a feature branch for active development starting from the OpenFAST
+   ``dev`` branch and check it out
+
+.. code-block:: bash
+
+    git branch feature/a_great_feature upstream/dev
+    git checkout feature/a_great_feature
+
+5. Add new development on ``feature/a_great_feature``
+
+.. code-block:: bash
+
+    git add a_file.f90
+    git commit -m "A message"
+    git push origin feature/a_great_feature
+
+6. Update your feature branch with ``upstream``
+
+.. code-block:: bash
+
+    git pull upstream dev
+    git push origin feature/a_great_feature
+
+7. Open a new `pull request <https://github.com/OpenFAST/openfast/compare>`__
+   to merge ``<youruser>/OpenFAST/feature/a_great_feature`` into
+   ``OpenFAST/OpenFAST/dev``

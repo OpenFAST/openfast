@@ -44,8 +44,8 @@ subroutine Dvr_Init(DvrData,errStat,errMsg )
 
    CHARACTER(1000)                             :: inputFile     ! String to hold the file name.
    CHARACTER(200)                              :: git_commit    ! String containing the current git commit hash
+   CHARACTER(20)                               :: FlagArg       ! flag argument from command line
 
-   TYPE(ProgDesc), PARAMETER                   :: version   = ProgDesc( 'AeroDyn Driver', '', '' )  ! The version number of this program.
 
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -53,30 +53,18 @@ subroutine Dvr_Init(DvrData,errStat,errMsg )
 
    DvrData%OutFileData%unOutFile   = -1
    
-   CALL NWTC_Init()
+   CALL NWTC_Init( ProgNameIN=version%Name )
+
+   InputFile = ""  ! initialize to empty string to make sure it's input from the command line
+   CALL CheckArgs( InputFile, Flag=FlagArg )
+   IF ( LEN( TRIM(FlagArg) ) > 0 ) CALL NormStop()
+
       ! Display the copyright notice
-   CALL DispCopyrightLicense( version )   
+   CALL DispCopyrightLicense( version%Name )
       ! Obtain OpenFAST git commit hash
    git_commit = QueryGitVersion()
       ! Tell our users what they're running
-   CALL WrScr( ' Running '//GetNVD( version )//' a part of OpenFAST - '//TRIM(git_Commit)//NewLine//' linked with '//TRIM( GetNVD( NWTC_Ver ))//NewLine )
-
-   InputFile = ""  ! initialize to empty string to make sure it's input from the command line
-   CALL CheckArgs( InputFile, ErrStat2 )
-   IF (LEN_TRIM(InputFile) == 0) THEN ! no input file was specified
-      call SetErrStat(ErrID_Fatal, 'The required input file was not specified on the command line.', ErrStat, ErrMsg, RoutineName) 
-      
-         !bjj:  if people have compiled themselves, they should be able to figure out the file name, right?         
-      IF (BITS_IN_ADDR==32) THEN
-         CALL NWTC_DisplaySyntax( InputFile, 'AeroDyn_Driver_Win32.exe' )
-      ELSEIF( BITS_IN_ADDR == 64) THEN
-         CALL NWTC_DisplaySyntax( InputFile, 'AeroDyn_Driver_x64.exe' )
-      ELSE
-         CALL NWTC_DisplaySyntax( InputFile, 'AeroDyn_Driver.exe' )
-      END IF
-         
-      return
-   END IF        
+   CALL WrScr( ' Running '//TRIM( version%Name )//' a part of OpenFAST - '//TRIM(git_Commit)//NewLine//' linked with '//TRIM( NWTC_Ver%Name )//NewLine )
          
       ! Read the AeroDyn driver input file
    call Dvr_ReadInputFile(inputFile, DvrData, errStat2, errMsg2 )
@@ -262,7 +250,7 @@ subroutine Set_AD_Inputs(iCase,nt,DvrData,AD,errStat,errMsg)
       
       AD%u(1)%HubMotion%RotationVel(    :,1) = AD%u(1)%HubMotion%Orientation(1,:,1) * DvrData%Cases(iCase)%RotSpeed
                   
-      ! Blade root motions:
+      ! Blade motions:
       do k=1,DvrData%numBlades         
          theta(1) = (k-1)*TwoPi/real(DvrData%numBlades,ReKi)
          theta(2) =  DvrData%precone
@@ -273,7 +261,7 @@ subroutine Set_AD_Inputs(iCase,nt,DvrData,AD,errStat,errMsg)
          
       end do !k=numBlades
             
-      ! Blade motions:
+      ! Blade and blade root motions:
       do k=1,DvrData%numBlades
          rotateMat = transpose( AD%u(1)%BladeRootMotion(k)%Orientation(  :,:,1) )
          rotateMat = matmul( rotateMat, AD%u(1)%BladeRootMotion(k)%RefOrientation(  :,:,1) ) 
@@ -283,6 +271,14 @@ subroutine Set_AD_Inputs(iCase,nt,DvrData,AD,errStat,errMsg)
          rotateMat(2,2) = rotateMat(2,2) - 1.0_ReKi
          rotateMat(3,3) = rotateMat(3,3) - 1.0_ReKi
                   
+
+         position = AD%u(1)%BladeRootMotion(k)%Position(:,1) - AD%u(1)%HubMotion%Position(:,1) 
+         AD%u(1)%BladeRootMotion(k)%TranslationDisp(:,1) = AD%u(1)%HubMotion%TranslationDisp(:,1) + matmul( rotateMat, position )
+
+         position =  AD%u(1)%BladeRootMotion(k)%Position(:,1) + AD%u(1)%BladeRootMotion(k)%TranslationDisp(:,1) &
+                     - AD%u(1)%HubMotion%Position(:,1) - AD%u(1)%HubMotion%TranslationDisp(:,1)
+         AD%u(1)%BladeRootMotion(k)%TranslationVel( :,1) = cross_product( AD%u(1)%HubMotion%RotationVel(:,1), position )
+
          do j=1,AD%u(1)%BladeMotion(k)%nnodes        
             position = AD%u(1)%BladeMotion(k)%Position(:,j) - AD%u(1)%HubMotion%Position(:,1) 
             AD%u(1)%BladeMotion(k)%TranslationDisp(:,j) = AD%u(1)%HubMotion%TranslationDisp(:,1) + matmul( rotateMat, position )
@@ -462,6 +458,7 @@ subroutine Dvr_ReadInputFile(fileName, DvrData, errStat, errMsg )
       call setErrStat( errStat2, ErrMsg2 , errStat, ErrMsg , RoutineName )
    call ReadVar ( unIn, fileName, DvrData%OutFileData%Root, 'OutFileRoot', 'Root name for any output files', errStat2, errMsg2, UnEc )
       call setErrStat( errStat2, ErrMsg2 , errStat, ErrMsg , RoutineName )
+      IF ( PathIsRelative( DvrData%OutFileData%Root ) ) DvrData%OutFileData%Root = TRIM(PriPath)//TRIM(DvrData%OutFileData%Root)
    if (len_trim(DvrData%OutFileData%Root) == 0) then
       call getroot(fileName,DvrData%OutFileData%Root)
    end if
@@ -642,7 +639,7 @@ subroutine Dvr_InitializeOutputFile( iCase, CaseData, OutFileData, errStat, errM
       call OpenFOutFile ( OutFileData%unOutFile, trim(outFileData%Root)//'.'//trim(num2lstr(iCase))//'.out', ErrStat, ErrMsg )
          if ( ErrStat >= AbortErrLev ) return
          
-      write (OutFileData%unOutFile,'(/,A)')  'Predictions were generated on '//CurDate()//' at '//CurTime()//' using '//trim(GetNVD(version))
+      write (OutFileData%unOutFile,'(/,A)')  'Predictions were generated on '//CurDate()//' at '//CurTime()//' using '//trim( version%Name )
       write (OutFileData%unOutFile,'(1X,A)') trim(GetNVD(OutFileData%AD_ver))
       write (OutFileData%unOutFile,'()' )    !print a blank line
      ! write (OutFileData%unOutFile,'(A,11(1x,A,"=",ES11.4e2,1x,A))'   ) 'Case '//trim(num2lstr(iCase))//':' &

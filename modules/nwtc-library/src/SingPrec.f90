@@ -28,6 +28,10 @@
 MODULE Precision
 !..................................................................................................................................
 
+#ifdef HAS_FORTRAN2008_FEATURES
+USE, INTRINSIC :: ISO_FORTRAN_ENV, ONLY: real32, real64, real128
+#endif
+
 IMPLICIT                           NONE
 
 INTEGER, PARAMETER              :: B1Ki     = SELECTED_INT_KIND(  2 )           !< Kind for one-byte whole numbers
@@ -35,9 +39,15 @@ INTEGER, PARAMETER              :: B2Ki     = SELECTED_INT_KIND(  4 )           
 INTEGER, PARAMETER              :: B4Ki     = SELECTED_INT_KIND(  9 )           !< Kind for four-byte whole numbers
 INTEGER, PARAMETER              :: B8Ki     = SELECTED_INT_KIND( 18 )           !< Kind for eight-byte whole numbers
 
+#ifdef HAS_FORTRAN2008_FEATURES
+INTEGER, PARAMETER              :: QuKi     = real128    !< Kind for 16-byte, floating-point numbers
+INTEGER, PARAMETER              :: R8Ki     = real64     !< Kind for eight-byte floating-point numbers
+INTEGER, PARAMETER              :: SiKi     = real32     !< Kind for four-byte, floating-point numbers
+#else
 INTEGER, PARAMETER              :: QuKi     = SELECTED_REAL_KIND( 20, 500 )     !< Kind for 16-byte, floating-point numbers
 INTEGER, PARAMETER              :: R8Ki     = SELECTED_REAL_KIND( 14, 300 )     !< Kind for eight-byte floating-point numbers
 INTEGER, PARAMETER              :: SiKi     = SELECTED_REAL_KIND(  6,  30 )     !< Kind for four-byte, floating-point numbers
+#endif
 
 INTEGER, PARAMETER              :: BYTES_IN_SiKi =  4                           !< Number of bytes per SiKi number
 INTEGER, PARAMETER              :: BYTES_IN_R8Ki =  8                           !< Number of bytes per R8Ki number 
@@ -50,7 +60,7 @@ INTEGER, PARAMETER              :: BYTES_IN_QuKi = 16                           
 INTEGER, PARAMETER              :: IntKi          = B4Ki                        !< Default kind for integers
 INTEGER, PARAMETER              :: BYTES_IN_INT   = 4                           !< Number of bytes per IntKi number    - use SIZEOF()
 
-#ifndef DOUBLE_PRECISION
+#if !defined (DOUBLE_PRECISION) && !defined (OPENFAST_DOUBLE_PRECISION)
 INTEGER, PARAMETER              :: ReKi           = SiKi                        !< Default kind for floating-point numbers
 INTEGER, PARAMETER              :: DbKi           = R8Ki                        !< Default kind for double floating-point numbers
                                                   

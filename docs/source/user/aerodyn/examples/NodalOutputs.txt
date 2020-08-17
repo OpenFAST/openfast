@@ -1,0 +1,58 @@
+END of input file (the word "END" must appear in the first 3 columns of this last OutList line)
+---------------------- NODE OUTPUTS --------------------------------------------
+          3   BldNd_BladesOut  - Blades to output
+         99   BldNd_BlOutNd   - Blade nodes on each blade (currently unused)
+              OutList     - The next line(s) contains a list of output parameters.  See OutListParameters.xlsx, AeroDyn_Nodes tab for a listing of available output channels, (-)
+"VUndx"     - x-component of undisturbed wind velocity at each node
+"VUndy"     - y-component of undisturbed wind velocity at each node
+"VUndz"     - z-component of undisturbed wind velocity at each node
+"VDisx"     - x-component of disturbed wind velocity at each node
+"VDisy"     - y-component of disturbed wind velocity at each node
+"VDisz"     - z-component of disturbed wind velocity at each node
+"STVx"      - x-component of structural translational velocity at each node
+"STVy"      - y-component of structural translational velocity at each node
+"STVz"      - z-component of structural translational velocity at each node
+"VRel"      - Relvative wind speed at each node
+"DynP"      - Dynamic pressure at each node
+"Re"        - Reynolds number (in millions) at each node
+"M"         - Mach number at each node
+"Vindx"     - Axial induced wind velocity at each node
+"Vindy"     - Tangential induced wind velocity at each node
+"AxInd"     - Axial induction factor at each node
+"TnInd"     - Tangential induction factor at each node
+"Alpha"     - Angle of attack at each node
+"Theta"     - Pitch+Twist angle at each node
+"Phi"       - Inflow angle at each node
+"Curve"     - Curvature angle at each node
+"Cl"        - Lift force coefficient at each node
+"Cd"        - Drag force coefficient at each node
+"Cm"        - Pitching moment coefficient at each node
+"Cx"        - Normal force (to plane) coefficient at each node
+"Cy"        - Tangential force (to plane) coefficient at each node
+"Cn"        - Normal force (to chord) coefficient at each node
+"Ct"        - Tangential force (to chord) coefficient at each node
+"Fl"        - Lift force per unit length at each node
+"Fd"        - Drag force per unit length at each node
+"Mm"        - Pitching moment per unit length at each node
+"Fx"        - Normal force (to plane) per unit length at each node
+"Fy"        - Tangential force (to plane) per unit length at each node
+"Fn"        - Normal force (to chord) per unit length at each node
+"Ft"        - Tangential force (to chord) per unit length at each node
+"Clrnc"     - Tower clearance at each node (based on the absolute distance to the nearest point in the tower from blade node B#N# minus the local tower radius, in the deflected configuration); please note that this clearance is only approximate because the calculation assumes that the blade is a line with no volume (however, the calculation does use the local tower radius); when blade node B#N# is above the tower top (or below the tower base), the absolute distance to the tower top (or base) minus the local tower radius, in the deflected configuration, is output
+"Vx"        - Local axial velocity
+"Vy"        - Local tangential velocity
+"GeomPhi"   - Geometric phi? If phi was solved using normal BEMT equations, GeomPhi = 1; otherwise, if it was solved geometrically, GeomPhi = 0.
+"Chi"       - Skew angle (used in skewed wake correction) -- not available for OLAF
+"UA_Flag"   - Flag indicating if UA is turned on for this node. -- not available for OLAF
+"CpMin"     - Pressure coefficient
+"SgCav"     - Cavitation number
+"SigCr"     - Critical cavitation number
+"Gam"       - Gamma -- circulation on blade
+"Cl_Static" - Static portion of lift force coefficient at each node, without  unsteady effects -- not available for BEMT/DBEMT
+"Cd_Static" - Static portion of drag force coefficient at each node, without unsteady effects -- not available for BEMT/DBEMT
+"Cm_Static" - Static portion of pitching moment coefficient at each node, without unsteady effects -- not available for BEMT/DBEMT
+"Uin"       - Axial induced velocity in rotating hub coordinates. Axial aligned with hub axis.     rotor plane polar hub rotating coordinates
+"Uit"       - Tangential induced velocity in rotating hub coordinates. Tangential to the rotation plane. Perpendicular to blade aziumth.     rotor plane polar hub rotating coordinates
+"Uir"       - Radial induced velocity in rotating hub coordinates. Radial outwards in rotation plane. Aligned with blade azimuth.     rotor plane polar hub rotating coordinates
+END of input file (the word "END" must appear in the first 3 columns of this last OutList line)
+---------------------------------------------------------------------------------------

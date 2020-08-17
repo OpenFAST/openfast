@@ -10,10 +10,11 @@ file is required. This driver file specifies initialization inputs
 normally provided to AeroDyn by OpenFAST, as well as the per-time-step
 inputs to AeroDyn.
 
-As an example,  the ``driver.dvr`` file is the main driver, the ``input.dat`` is the primary input file, the ``blade.dat`` file contains the blade
-geometry data, and the ``airfoil.dat`` file contains the airfoil
-angle of attack, lift, drag, moment coefficients, and pressure
-coefficients.  Example input files are included in :numref:`ad_appendix`.
+As an example,  the ``driver.dvr`` file is the main driver, the ``input.dat`` is
+the primary input file, the ``blade.dat`` file contains the blade geometry data,
+and the ``airfoil.dat`` file contains the airfoil angle of attack, lift, drag,
+moment coefficients, and pressure coefficients.  Example input files are
+included in :numref:`ad_appendix`.
 
 No lines should be added or removed from the input files, except in
 tables where the number of rows is specified and comment lines in the
@@ -151,10 +152,13 @@ for ``DTAero`` may be used to indicate that AeroDyn should employ the
 time step prescribed by the driver code (OpenFAST or the standalone driver
 program).
 
-Set ``WakeMod`` to 0 if you want to disable rotor wake/induction
-effects or 1 to include these effects using the BEM theory model. When
-``WakeMod`` is set to 2, a dynamic BEM theory model (DBEMT) is used.
-``WakeMod`` cannot be set to 2 during linearization analyses.
+Set ``WakeMod`` to 0 if you want to disable rotor wake/induction effects or 1 to
+include these effects using the (quasi-steady) BEM theory model. When
+``WakeMod`` is set to 2, a dynamic BEM theory model (DBEMT) is used (also
+referred to as dynamic inflow or dynamic wake model).  When ``WakeMod`` is set
+to 3, the free vortex wake model is used, also referred to as OLAF (see
+:numref:`OLAF`). ``WakeMod`` cannot be set to 2 or 3 during linearization
+analyses.
 
 Set ``AFAeroMod`` to 1 to include steady blade airfoil aerodynamics or 2
 to enable UA; ``AFAeroMod`` must be 1 during linearization analyses
@@ -185,6 +189,15 @@ Set the ``CavitCheck`` flag to TRUE to perform a cavitation check for MHK
 turbines or FALSE to disable this calculation. If ``CavitCheck`` is
 TRUE, ``AFAeroMod`` must be set to 1 because the cavitation check does
 not function with unsteady airfoil aerodynamics.
+
+Set the ``CompAA`` flag to TRUE to run aero-acoustic calculations.  This
+option is only available for ``WakeMod = 1`` or ``2``.  See section
+:numref:`AeroAcoustics` for information on how to use this feature.
+
+The ``AA_InputFile`` is used to specify the input file for the aeroacoustics
+sub-module. See :numref:`AeroAcoustics` for information on how to use this
+feature.
+
 
 Environmental Conditions
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -256,6 +269,16 @@ to use a model where tau1 varies with time.
 
 If ``DBEMT_Mod=1`` (constant-tau1 model), set ``tau1_const`` to the time 
 constant to use for DBEMT.
+
+OLAF -- cOnvecting LAgrangian Filaments (Free Vortex Wake) Theory Options
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The input parameters in this section are used only when ``WakeMod = 3``.
+
+The settings for the free vortex wake model are set in the OLAF input file
+described in :numref:`OLAF-Input-Files`.  ``OLAFInputFileName`` is the filename
+for this input file.
+
 
 Unsteady Airfoil Aerodynamics Options
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -360,6 +383,8 @@ specifies the local tower drag-force coefficient. ``TwrElev`` must be
 entered in monotonically increasing order—from the lowest (tower-base)
 to the highest (tower-top) elevation. See Figure 2.
 
+.. _AD-Outputs:
+
 Outputs
 ~~~~~~~
 
@@ -414,6 +439,11 @@ unknown/invalid channel name, it warns the users but will remove the
 suspect channel from the output file. Please refer to Appendix E for a
 complete list of possible output parameters.
 
+.. _AD-Nodal-Outputs:
+
+.. include:: ADNodalOutputs.rst
+
+
 .. _airfoil_data_input_file:
 
 Airfoil Data Input File
@@ -453,16 +483,15 @@ used by OpenFAST for blade surface visualization when enabled.
 
 Specify the number of Reynolds number- or aerodynamic-control
 setting-dependent tables of data for the given airfoil via the
-``NumTabs`` setting. **Currently, AeroDyn can only use the first table
-in any given airfoil file, so you should set ``NumTabs = 1`` and you
-will need to make separate airfoil data input files and run separate
-simulations if you need to analyze data for different Reynolds numbers
-or aerodynamic-control settings.** The remaining parameters in the
+``NumTabs`` setting. The remaining parameters in the
 airfoil data input files are entered separately for each table.
 
-``Re`` and ``Ctrl`` are the Reynolds number (in millions) and
-aerodynamic-control setting for the included table, **but are both
-currently unused by AeroDyn**.
+``Re`` and ``UserProp`` are the Reynolds number (in millions) and
+aerodynamic-control (or user property) setting for the included table.
+These values are used only when the ``AFTabMod`` parameter in the 
+primary AeroDyn input file is set to use 2D interpolation based on 
+``Re`` or ``UserProp``. If 1D interpolation (based only on angle of attack)
+is used, only the first table in the file will be used.
 
 Set ``InclUAdata`` to TRUE if you are including the 32 UA model
 parameters (required when ``AFAeroMod = 2`` in the AeroDyn primary
@@ -615,10 +644,17 @@ input file):
 ``NumAlf`` is the number of distinct AoA entries and determines the
 number of rows in the subsequent table of static airfoil coefficients;
 ``NumAlf`` must be greater than or equal to one (``NumAlf = 1``
-implies constant coefficients, regardless of the AoA). AeroDyn will
-interpolate the data provided via linear interpolation or via cubic
-splines, depending on the setting of input ``InterpOrd`` above. For
-each AoA, you must set the AoA (in degrees), ``alpha``, the lift-force
+implies constant coefficients, regardless of the AoA). 
+
+AeroDyn will
+interpolate on AoA using the data provided via linear interpolation or via cubic
+splines, depending on the setting of input ``InterpOrd`` above. 
+If ``AFTabMod`` is set to ``1``, only the first airfoil table in each file
+will be used. If ``AFTabMod`` is set to ``2``, AeroDyn will find the
+airfoil table that bounds the computed Reynolds number, and linearly interpolate
+between the tables, using the logarithm of the Reynolds numbers.
+
+For each AoA, you must set the AoA (in degrees), ``alpha``, the lift-force
 coefficient, ``Coefs``\ (:,1), the drag-force coefficient,
 ``Coefs(:,2)``, and optionally the pitching-moment coefficient,
 ``Coefs(:,3)``, and minimum pressure coefficient,
