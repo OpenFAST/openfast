@@ -4582,7 +4582,12 @@ SUBROUTINE Init_Jacobian( InputFileData, p, u, y, m, InitOut, ErrStat, ErrMsg)
       end do            
    end do
                
-   
+   do k=1,p%NumBlades
+      do i=1,p%NumBlNds     
+         InitOut%LinNames_u(index) = 'User defined control property for blade '//trim(num2lstr(k))//', node '//trim(num2lstr(i))//', -'
+         index = index + 1            
+      end do
+   end do
 
       !.....................
       ! get names of linearized constraint states (though i don't think we really need them)
