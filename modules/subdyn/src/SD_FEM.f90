@@ -1188,7 +1188,7 @@ SUBROUTINE FindClosestNodes(Point, Nodes, iNode, Dist)
    do i = 1, size(Nodes,1)
       loc_dist = sqrt((Point(1) - Nodes(i,2))**2 + (Point(2) - Nodes(i,3))**2+ (Point(3) - Nodes(i,4))**2) 
       if (loc_dist<min_dist) then
-         iNode=1
+         iNode=i
          min_dist = loc_dist
       endif
    enddo
