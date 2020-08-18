@@ -28,7 +28,8 @@ MODULE SubDyn_Output
 
    ! The maximum number of output channels which can be output by the code.
    INTEGER(IntKi),PUBLIC, PARAMETER      :: MaxOutPts = 2265
-
+   INTEGER(IntKi), PARAMETER             :: OutStrLenM1 = ChanLen - 1
+   
    PRIVATE
       ! ..... Public Subroutines ...................................................................................................
    PUBLIC :: SDOut_CloseSum

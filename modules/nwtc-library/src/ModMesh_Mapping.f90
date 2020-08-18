@@ -59,13 +59,13 @@ MODULE ModMesh_Mapping
       REAL(R8Ki),     ALLOCATABLE :: M_uS(:,:)         !< block matrix of moment that is multiplied by Source u (translationDisp) [-]
       REAL(R8Ki),     ALLOCATABLE :: M_uD(:,:)         !< block matrix of moment that is multiplied by Destination u (translationDisp) [-]
       REAL(R8Ki),     ALLOCATABLE :: M_f(:,:)          !< block matrix of moment that is multiplied by force [-]
-   END TYPE
+   END TYPE MeshMapLinearizationType
    
    
       !> data structures to determine full mapping between fields on different meshes
    TYPE, PUBLIC :: MeshMapType
-      TYPE(MapType),  ALLOCATABLE :: MapLoads(:)               !< mapping for load fields
-      TYPE(MapType),  ALLOCATABLE :: MapMotions(:)             !< mapping for motion fields
+      TYPE(MapType),  ALLOCATABLE :: MapLoads(:)               !< mapping data structure for loads on the mesh
+      TYPE(MapType),  ALLOCATABLE :: MapMotions(:)             !< mapping data structure for motions and/or scalars on the mesh [-]
       TYPE(MapType),  ALLOCATABLE :: MapSrcToAugmt(:)          !< for source line2 loads, we map between source and an augmented source mesh, then between augmented source and destination
       TYPE(MeshType)              :: Augmented_Ln2_Src         !< the augmented source mesh needed for some mapping types
       TYPE(MeshType)              :: Lumped_Points_Src         !< a lumped mesh needed for some mapping types, stored here for efficiency
@@ -73,13 +73,13 @@ MODULE ModMesh_Mapping
       TYPE(MeshType)              :: Lumped_Points_Dest        
 #endif
       INTEGER,        ALLOCATABLE :: LoadLn2_A_Mat_Piv(:)      !< The pivot values for the factorization of LoadLn2_A_Mat
-      REAL(R8Ki),     ALLOCATABLE :: DisplacedPosition(:,:,:)  !< couple_arm +Scr%Disp - Dest%Disp for each mapped node (stored here for efficiency.)
+      REAL(R8Ki),     ALLOCATABLE :: DisplacedPosition(:,:,:)  !< couple_arm +Scr%Disp - Dest%Disp for each mapped node (stored here for efficiency)
       REAL(R8Ki),     ALLOCATABLE :: LoadLn2_A_Mat(:,:)        !< The n-by-n (n=3xNNodes) matrix that makes up the diagonal of the [A 0; B A] matrix in the point-to-line load mapping
       REAL(R8Ki),     ALLOCATABLE :: LoadLn2_F(:,:)            !< The 3-components of the forces for each node of an element in the point-to-line load mapping (for each element)
       REAL(R8Ki),     ALLOCATABLE :: LoadLn2_M(:,:)            !< The 3-components of the moments for each node of an element in the point-to-line load mapping (for each element)
       
       TYPE(MeshMapLinearizationType) :: dM                     !< type that contains information for linearization matrices, partial M partial u (or y)                  
-   END TYPE
+   END TYPE MeshMapType
    
       ! note that these parameters must be negative (positive indicates the node/element it is mapped to)
    INTEGER(IntKi),  PARAMETER   :: NODE_NOT_MAPPED = -1        !< constant that indicates a node is not mapped
@@ -391,7 +391,7 @@ SUBROUTINE MeshMapWrBin( UnIn, Src, Dest, MeshMap, ErrStat, ErrMsg, FileName )
  
    IF ( HasLoadFields(Src) ) THEN
       WRITE (UnIn, IOSTAT=ErrStat2)   INT(1,B4Ki) ! contains a load field
-   MapMat = 0.0_ReKi
+      MapMat = 0.0_ReKi
       IF ( Src%ElemTable(ELEMENT_POINT)%Nelem > 0 ) THEN
          DO i=1,Src%Nnodes
             j=MeshMap%MapLoads(i)%OtherMesh_Element
@@ -1227,6 +1227,7 @@ SUBROUTINE Transfer_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
       ! local variables
    INTEGER(IntKi)            :: i , j                          ! counter over the nodes
    INTEGER(IntKi)            :: k                              ! counter components
+   INTEGER(IntKi)            :: nScalars                       ! number of scalars transferred
    INTEGER(IntKi)            :: n, n1, n2                      ! temporary space for node numbers
    REAL(R8Ki)                :: FieldValueN1(3)                ! Temporary variable to store field values on element nodes
    REAL(R8Ki)                :: FieldValueN2(3)                ! Temporary variable to store field values on element nodes
@@ -1495,14 +1496,21 @@ SUBROUTINE Transfer_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
       !!              \phi_i\f$
 
    if (Src%FieldMask(MASKID_SCALAR) .AND. Dest%FieldMask(MASKID_SCALAR) ) then
+      nScalars = min(Dest%nScalars, Src%nScalars)
+      
+      if (Dest%nScalars > nScalars) then
+         call SetErrStat(ErrID_Severe, "Not all scalars could be computed from source mesh (insufficient data).", ErrStat, ErrMsg, 'Transfer_Motions_Line2_to_Point')
+         Dest%Scalars(nScalars+1:,:) = 0.0_ReKi
+      end if
+         
       do i=1, Dest%Nnodes
          !if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
 
          n1 = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(1)
          n2 = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(2)
 
-         Dest%Scalars(:,i) = MeshMap%MapMotions(i)%shape_fn(1)*Src%Scalars(:,n1)  &
-                           + MeshMap%MapMotions(i)%shape_fn(2)*Src%Scalars(:,n2)
+         Dest%Scalars(1:nScalars,i) = MeshMap%MapMotions(i)%shape_fn(1)*Src%Scalars(1:nScalars,n1)  &
+                                    + MeshMap%MapMotions(i)%shape_fn(2)*Src%Scalars(1:nScalars,n2)
 
       end do
    end if
@@ -1941,7 +1949,7 @@ SUBROUTINE CreateMapping_ProjectToLine2(Mesh1, Mesh2, NodeMap, Mesh1_TYPE, ErrSt
 
             ! if failed to find an element that the Point projected into, throw an error
          if (.not. found) then
-            if ( closest_elem_distance < 5.0e-3 ) then ! if it is within 5mm of the end of an element, we'll accept it
+            if ( closest_elem_distance <= 7.5e-3 ) then ! if it is within 7.5mm of the end of an element, we'll accept it
                NodeMap(i)%OtherMesh_Element = closest_elem
                NodeMap(i)%shape_fn(1)       = 1.0_ReKi - closest_elem_position
                NodeMap(i)%shape_fn(2)       = closest_elem_position
@@ -1949,7 +1957,8 @@ SUBROUTINE CreateMapping_ProjectToLine2(Mesh1, Mesh2, NodeMap, Mesh1_TYPE, ErrSt
             end if
          
             if (NodeMap(i)%OtherMesh_Element .lt. 1 )  then
-               CALL SetErrStat( ErrID_Fatal, 'Node '//trim(num2Lstr(i))//' does not project onto any line2 element.', ErrStat, ErrMsg, RoutineName)
+               CALL SetErrStat( ErrID_Fatal, 'Node '//trim(num2Lstr(i))//' does not project onto any line2 element.' &
+                           //' Closest distance is '//trim(num2lstr(closest_elem_distance))//' m.', ErrStat, ErrMsg, RoutineName)
                
 #ifdef DEBUG_MESHMAPPING
                   ! output some mesh information for debugging
@@ -2625,6 +2634,7 @@ SUBROUTINE Transfer_Motions_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
    CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg    !< Error message if ErrStat /= ErrID_None
 
       ! local variables
+   INTEGER(IntKi)  :: nScalars
    INTEGER(IntKi)  :: i, j                                     ! counter over the nodes
    REAL(R8Ki)      :: RotationMatrix(3,3)
    REAL(ReKi)      :: TmpVec(3)
@@ -2773,10 +2783,17 @@ SUBROUTINE Transfer_Motions_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
       !> Scalars: \f$S^D = S^S\f$
 
    if (Src%FieldMask(MASKID_SCALAR) .AND. Dest%FieldMask(MASKID_SCALAR) ) then
+      nScalars = min(Dest%nScalars, Src%nScalars)
+      
+      if (Dest%nScalars > nScalars) then
+         call SetErrStat(ErrID_Severe, "Not all scalars could be computed from source mesh (insufficient data).", ErrStat, ErrMsg, 'Transfer_Motions_Point_to_Point')
+         Dest%Scalars(nScalars+1:,:) = 0.0_ReKi
+      end if
+
       do i=1, Dest%Nnodes
          !if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
 
-         Dest%Scalars(:,i) = Src%Scalars(:,MeshMap%MapMotions(i)%OtherMesh_Element)
+         Dest%Scalars(1:nScalars,i) = Src%Scalars(1:nScalars,MeshMap%MapMotions(i)%OtherMesh_Element)
       end do
    end if
 
@@ -4217,6 +4234,7 @@ SUBROUTINE Create_Augmented_Ln2_Src_Mesh(Src, Dest, MeshMap, Dest_TYPE, ErrStat,
    INTEGER(IntKi)                                 :: Aug_NElem, curr_Aug_NElem
    INTEGER(IntKi)                                 :: n1, n2
    REAL(ReKi)                                     :: p_ED(3), p_ES(3), n1S_nD_vector(3), position(3)
+   REAL(ReKi)                                     :: p_ED_orig(3), denom_orig
    REAL(R8Ki)                                     :: RefOrientation(3,3)
    REAL(DbKi)                                     :: TmpVec(3), RefOrientationD(3,3), FieldValue(3,2)   ! values for interpolating direction cosine matrices
    REAL(ReKi)                                     :: denom, elem_position
@@ -4320,6 +4338,7 @@ SUBROUTINE Create_Augmented_Ln2_Src_Mesh(Src, Dest, MeshMap, Dest_TYPE, ErrStat,
       IF ( Dest_TYPE == ELEMENT_LINE2 ) THEN
          p_eD =   dest%Position(:, dest%ElemTable(Dest_TYPE)%Elements(jElem)%ElemNodes(2)) &
                 - dest%Position(:, dest%ElemTable(Dest_TYPE)%Elements(jElem)%ElemNodes(1))
+         p_eD_orig = p_eD ! save for later calculations (to allow point elements, too)
       END IF
       
      
@@ -4337,11 +4356,11 @@ SUBROUTINE Create_Augmented_Ln2_Src_Mesh(Src, Dest, MeshMap, Dest_TYPE, ErrStat,
             
   
          IF ( .NOT. EqualRealNos( denom, 0.0_ReKi) ) THEN ! we ignore source elements that are parallel to the destination element (i.e., denom == 0)
-            DO jNode = j, NumNodes( Dest_TYPE ) 
+            DO jNode = j, NumNodes( Dest_TYPE ) ! check each node of the destination element
                n1S_nD_vector =            dest%Position(:, dest%ElemTable(Dest_TYPE)%Elements(jElem)%ElemNodes(jNode)) &
                                 - Temp_Ln2_Src%Position(:, Temp_Ln2_Src%ElemTable(ELEMENT_LINE2)%Elements(iElem)%ElemNodes(1))
                
-               elem_position = DOT_PRODUCT( p_eD, n1S_nD_vector ) / denom
+               elem_position = DOT_PRODUCT( p_eD, n1S_nD_vector ) / denom                 ! Eq 37 (AIAA 2015 paper)
                
 !bjj: todo: we need to set this TOL based on actual distances, not relative values (0,1) on an element....                 
 !  for now, I've calculated the element length inside this tolerance and reserve the right to reject new nodes that create 0-length elements.
@@ -4356,14 +4375,14 @@ SUBROUTINE Create_Augmented_Ln2_Src_Mesh(Src, Dest, MeshMap, Dest_TYPE, ErrStat,
                      ! calculate the position and orientation relative to the *original* source element:
                   n1=Src%ElemTable(ELEMENT_LINE2)%Elements(Original_Src_Element(iElem))%ElemNodes(1)
                   n2=Src%ElemTable(ELEMENT_LINE2)%Elements(Original_Src_Element(iElem))%ElemNodes(2)
-                     
+                                          
                                           
                   p_eS  = Src%Position(:, n2) - Src%Position(:, n1)
-                  IF ( Dest_TYPE == ELEMENT_POINT ) p_eD = p_eS
-                  denom = DOT_PRODUCT( p_eD , p_eS )   ! we don't need to check that this is zero because it's just a shorter version of the temp Temp_Ln2_Src element
+                  IF ( Dest_TYPE == ELEMENT_POINT ) p_eD_orig = p_eS
+                  denom_orig = DOT_PRODUCT( p_eD_orig , p_eS )   ! we don't need to check that this is zero because it's just a shorter version of the temp Temp_Ln2_Src element
                   n1S_nD_vector =   dest%Position(:, dest%ElemTable(Dest_TYPE)%Elements(jElem)%ElemNodes(jNode)) &
                                    - Src%Position(:, n1 )
-                  shape_fn2(Aug_Nnodes) = DOT_PRODUCT( p_eD, n1S_nD_vector ) / denom       ! save this for later, when we need to map the mesh fields...
+                  shape_fn2(Aug_Nnodes) = DOT_PRODUCT( p_eD_orig, n1S_nD_vector ) / denom_orig       ! save this for later, when we need to map the mesh fields...
                   
                      ! interpolate position on the original souce element:                     
                      
@@ -4372,19 +4391,19 @@ SUBROUTINE Create_Augmented_Ln2_Src_Mesh(Src, Dest, MeshMap, Dest_TYPE, ErrStat,
                   
                   ! let's just verify that this new node (n1) doesn't give us zero-length elements:
                   ! (note we use the NEW (not original) source element, which may have been split)
-                  p_eS = position - Temp_Ln2_Src%Position(:, Temp_Ln2_Src%ElemTable(ELEMENT_LINE2)%Elements(iElem)%ElemNodes(1) )                                    
+                  p_eS = position - Temp_Ln2_Src%Position(:, Temp_Ln2_Src%ElemTable(ELEMENT_LINE2)%Elements(iElem)%ElemNodes(1) )
                   L = SQRT(dot_product(p_eS,p_eS)) ! length of new element
-                                    
-                  IF ( L < TOL ) THEN ! this element is basically zero length
+                  
+                  IF ( L < MIN_LINE2_ELEMENT_LENGTH ) THEN ! this element is basically zero length
                         ! for numerical reasons, we really didn't want this node....
-                        Aug_Nnodes = Aug_Nnodes - 1
+                     Aug_Nnodes = Aug_Nnodes - 1
                   ELSE
                      
                      ! let's verify the other node (n2) of this element doesn't give zero-length:
-                     p_eS = position - Temp_Ln2_Src%Position(:, Temp_Ln2_Src%ElemTable(ELEMENT_LINE2)%Elements(iElem)%ElemNodes(2))                                    
+                     p_eS = position - Temp_Ln2_Src%Position(:, Temp_Ln2_Src%ElemTable(ELEMENT_LINE2)%Elements(iElem)%ElemNodes(2))
                      L = SQRT(dot_product(p_eS,p_eS)) ! length of new element
                      
-                     IF ( L < TOL ) THEN ! this element is basically zero length
+                     IF ( L < MIN_LINE2_ELEMENT_LENGTH ) THEN ! this element is basically zero length
                         ! for numerical reasons, we really didn't want this node....
                         Aug_Nnodes = Aug_Nnodes - 1
                      ELSE   
@@ -4398,44 +4417,30 @@ SUBROUTINE Create_Augmented_Ln2_Src_Mesh(Src, Dest, MeshMap, Dest_TYPE, ErrStat,
                               RETURN      
                            END IF
                        
-                           Original_Src_Element( Aug_NElem ) = Original_Src_Element( iElem )  ! this node can now be mapped to original source mesh element               
+                        Original_Src_Element( Aug_NElem ) = Original_Src_Element( iElem )  ! this node can now be mapped to original source mesh element               
                        
                         
-                        ! get the Reference orientation for this new node                                                                                                                     
-#ifdef __NN_ORIENTATIONS                        
-                        ! set the RefOrientation based on proximity to original element's nodes:
-                        IF ( NINT( shape_fn2(Aug_Nnodes) ) .EQ. 0 ) THEN
-                           n = n1
-                        ELSE
-                           n = n2                        
-                        END IF
-                        RefOrientation = Src%RefOrientation(:, :, n) 
-#else
-                        
-                           ! convert DCMs to tensors: 
+                     ! get the Reference orientation for this new node
+                        ! convert DCMs to tensors: 
 
-                           RefOrientationD = Src%RefOrientation(:, :, n1)
-                           CALL DCM_logmap( RefOrientationD, FieldValue(:,1), ErrStat, ErrMsg )
-                           IF (ErrStat >= AbortErrLev) RETURN
+                        RefOrientationD = Src%RefOrientation(:, :, n1)
+                        CALL DCM_logmap( RefOrientationD, FieldValue(:,1), ErrStat, ErrMsg )
+                        IF (ErrStat >= AbortErrLev) RETURN
                   
-                           RefOrientationD = Src%RefOrientation(:, :, n2)
-                           CALL DCM_logmap( RefOrientationD, FieldValue(:,2), ErrStat, ErrMsg )                  
-                           IF (ErrStat >= AbortErrLev) RETURN
+                        RefOrientationD = Src%RefOrientation(:, :, n2)
+                        CALL DCM_logmap( RefOrientationD, FieldValue(:,2), ErrStat, ErrMsg )
+                        IF (ErrStat >= AbortErrLev) RETURN
          
-                           CALL DCM_SetLogMapForInterp( FieldValue )  ! make sure we don't cross a 2pi boundary
+                        CALL DCM_SetLogMapForInterp( FieldValue )  ! make sure we don't cross a 2pi boundary
                   
-                              ! interpolate tensors: 
-                           TmpVec = (1.0_ReKi - shape_fn2(Aug_Nnodes)) * FieldValue(:, 1) &
-                                              + shape_fn2(Aug_Nnodes)  * FieldValue(:, 2) 
+                           ! interpolate tensors: 
+                        TmpVec = (1.0_ReKi - shape_fn2(Aug_Nnodes)) * FieldValue(:, 1) &
+                                             + shape_fn2(Aug_Nnodes)  * FieldValue(:, 2) 
                               
-                              ! convert back to DCM:
-                           RefOrientationD = DCM_exp( TmpVec )
-                           RefOrientation  = REAL(RefOrientationD, R8Ki)
+                           ! convert back to DCM:
+                        RefOrientationD = DCM_exp( TmpVec )
+                        RefOrientation  = REAL(RefOrientationD, R8Ki)
 
-                        
-
-#endif
-                        
                         
                         CALL MeshPositionNode ( Mesh       = Temp_Ln2_Src                      &
                                                 ,INode     = Aug_Nnodes                        &
@@ -4446,10 +4451,10 @@ SUBROUTINE Create_Augmented_Ln2_Src_Mesh(Src, Dest, MeshMap, Dest_TYPE, ErrStat,
                            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
                            IF (ErrStat >= AbortErrLev) THEN
                               CALL CleanUp()
-                              RETURN      
+                              RETURN
                            END IF
                      
-                        ! if we have to check a second node, we need to first recalculate p_eS and denom on Temp_Ln2_Src:            
+                        ! if we have to check a second node, we need to first recalculate p_eS and denom on Temp_Ln2_Src:
                         IF ( jNode < NumNodes( Dest_TYPE )) THEN
                            j = jNode+1 ! start on the next node
                            CYCLE Src_Elements 
@@ -5540,7 +5545,7 @@ SUBROUTINE WriteMappingTransferToFile(Mesh1_I,Mesh1_O,Mesh2_I,Mesh2_O,Map_Mod1_M
    INTEGER(IntKi)                         :: i
    INTEGER(IntKi)                         :: un_out
    INTEGER(IntKi)                         :: ErrStat          ! Error status of the operation
-   CHARACTER(1024)                        :: ErrMsg           ! Error message if ErrStat /= ErrID_None
+   CHARACTER(ErrMsgLen)                   :: ErrMsg           ! Error message if ErrStat /= ErrID_None
    CHARACTER(256)                         :: PrintWarnF, PrintWarnM, TmpValues
 
 #ifdef MESH_DEBUG     
@@ -5863,14 +5868,18 @@ END SUBROUTINE WriteMappingTransferToFile
   Db_Xferred  = 1
   Int_Xferred = 1
 
-      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%OtherMesh_Element
-      Int_Xferred   = Int_Xferred   + 1
-      DbKiBuf ( Db_Xferred:Db_Xferred+(1)-1 ) = InData%distance
-      Db_Xferred   = Db_Xferred   + 1
-      DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%couple_arm))-1 ) = PACK(InData%couple_arm,.TRUE.)
-      Db_Xferred   = Db_Xferred   + SIZE(InData%couple_arm)
-      DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%shape_fn))-1 ) = PACK(InData%shape_fn,.TRUE.)
-      Db_Xferred   = Db_Xferred   + SIZE(InData%shape_fn)
+    IntKiBuf(Int_Xferred) = InData%OtherMesh_Element
+    Int_Xferred = Int_Xferred + 1
+    DbKiBuf(Db_Xferred) = InData%distance
+    Db_Xferred = Db_Xferred + 1
+    DO i1 = LBOUND(InData%couple_arm,1), UBOUND(InData%couple_arm,1)
+      DbKiBuf(Db_Xferred) = InData%couple_arm(i1)
+      Db_Xferred = Db_Xferred + 1
+    END DO
+    DO i1 = LBOUND(InData%shape_fn,1), UBOUND(InData%shape_fn,1)
+      DbKiBuf(Db_Xferred) = InData%shape_fn(i1)
+      Db_Xferred = Db_Xferred + 1
+    END DO
  END SUBROUTINE NWTC_Library_PackMapType
 
  SUBROUTINE NWTC_Library_UnPackMapType( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -5886,12 +5895,6 @@ END SUBROUTINE WriteMappingTransferToFile
   INTEGER(IntKi)                 :: Db_Xferred
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
-  LOGICAL                        :: mask0
-  LOGICAL, ALLOCATABLE           :: mask1(:)
-  LOGICAL, ALLOCATABLE           :: mask2(:,:)
-  LOGICAL, ALLOCATABLE           :: mask3(:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
   INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
@@ -5908,32 +5911,22 @@ END SUBROUTINE WriteMappingTransferToFile
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-      OutData%OtherMesh_Element = IntKiBuf( Int_Xferred ) 
-      Int_Xferred   = Int_Xferred + 1
-      OutData%distance = REAL( DbKiBuf( Db_Xferred ), R8Ki) 
-      Db_Xferred   = Db_Xferred + 1
+    OutData%OtherMesh_Element = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%distance = REAL(DbKiBuf(Db_Xferred), R8Ki)
+    Db_Xferred = Db_Xferred + 1
     i1_l = LBOUND(OutData%couple_arm,1)
     i1_u = UBOUND(OutData%couple_arm,1)
-    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask1 = .TRUE. 
-      OutData%couple_arm = REAL( UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(SIZE(OutData%couple_arm))-1 ), mask1, 0.0_DbKi ), R8Ki)
-      Db_Xferred   = Db_Xferred   + SIZE(OutData%couple_arm)
-    DEALLOCATE(mask1)
+    DO i1 = LBOUND(OutData%couple_arm,1), UBOUND(OutData%couple_arm,1)
+      OutData%couple_arm(i1) = REAL(DbKiBuf(Db_Xferred), R8Ki)
+      Db_Xferred = Db_Xferred + 1
+    END DO
     i1_l = LBOUND(OutData%shape_fn,1)
     i1_u = UBOUND(OutData%shape_fn,1)
-    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask1 = .TRUE. 
-      OutData%shape_fn = REAL( UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(SIZE(OutData%shape_fn))-1 ), mask1, 0.0_DbKi ), R8Ki)
-      Db_Xferred   = Db_Xferred   + SIZE(OutData%shape_fn)
-    DEALLOCATE(mask1)
+    DO i1 = LBOUND(OutData%shape_fn,1), UBOUND(OutData%shape_fn,1)
+      OutData%shape_fn(i1) = REAL(DbKiBuf(Db_Xferred), R8Ki)
+      Db_Xferred = Db_Xferred + 1
+    END DO
  END SUBROUTINE NWTC_Library_UnPackMapType
 
  SUBROUTINE NWTC_Library_CopyMeshMapLinearizationType( SrcMeshMapLinearizationTypeData, DstMeshMapLinearizationTypeData, CtrlCode, ErrStat, ErrMsg )
@@ -6282,8 +6275,12 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%mi,2)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%mi)>0) DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%mi))-1 ) = PACK(InData%mi,.TRUE.)
-      Db_Xferred   = Db_Xferred   + SIZE(InData%mi)
+      DO i2 = LBOUND(InData%mi,2), UBOUND(InData%mi,2)
+        DO i1 = LBOUND(InData%mi,1), UBOUND(InData%mi,1)
+          DbKiBuf(Db_Xferred) = InData%mi(i1,i2)
+          Db_Xferred = Db_Xferred + 1
+        END DO
+      END DO
   END IF
   IF ( .NOT. ALLOCATED(InData%fx_p) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -6298,8 +6295,12 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%fx_p,2)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%fx_p)>0) DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%fx_p))-1 ) = PACK(InData%fx_p,.TRUE.)
-      Db_Xferred   = Db_Xferred   + SIZE(InData%fx_p)
+      DO i2 = LBOUND(InData%fx_p,2), UBOUND(InData%fx_p,2)
+        DO i1 = LBOUND(InData%fx_p,1), UBOUND(InData%fx_p,1)
+          DbKiBuf(Db_Xferred) = InData%fx_p(i1,i2)
+          Db_Xferred = Db_Xferred + 1
+        END DO
+      END DO
   END IF
   IF ( .NOT. ALLOCATED(InData%tv_uD) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -6314,8 +6315,12 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%tv_uD,2)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%tv_uD)>0) DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%tv_uD))-1 ) = PACK(InData%tv_uD,.TRUE.)
-      Db_Xferred   = Db_Xferred   + SIZE(InData%tv_uD)
+      DO i2 = LBOUND(InData%tv_uD,2), UBOUND(InData%tv_uD,2)
+        DO i1 = LBOUND(InData%tv_uD,1), UBOUND(InData%tv_uD,1)
+          DbKiBuf(Db_Xferred) = InData%tv_uD(i1,i2)
+          Db_Xferred = Db_Xferred + 1
+        END DO
+      END DO
   END IF
   IF ( .NOT. ALLOCATED(InData%tv_uS) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -6330,8 +6335,12 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%tv_uS,2)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%tv_uS)>0) DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%tv_uS))-1 ) = PACK(InData%tv_uS,.TRUE.)
-      Db_Xferred   = Db_Xferred   + SIZE(InData%tv_uS)
+      DO i2 = LBOUND(InData%tv_uS,2), UBOUND(InData%tv_uS,2)
+        DO i1 = LBOUND(InData%tv_uS,1), UBOUND(InData%tv_uS,1)
+          DbKiBuf(Db_Xferred) = InData%tv_uS(i1,i2)
+          Db_Xferred = Db_Xferred + 1
+        END DO
+      END DO
   END IF
   IF ( .NOT. ALLOCATED(InData%ta_uD) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -6346,8 +6355,12 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%ta_uD,2)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%ta_uD)>0) DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%ta_uD))-1 ) = PACK(InData%ta_uD,.TRUE.)
-      Db_Xferred   = Db_Xferred   + SIZE(InData%ta_uD)
+      DO i2 = LBOUND(InData%ta_uD,2), UBOUND(InData%ta_uD,2)
+        DO i1 = LBOUND(InData%ta_uD,1), UBOUND(InData%ta_uD,1)
+          DbKiBuf(Db_Xferred) = InData%ta_uD(i1,i2)
+          Db_Xferred = Db_Xferred + 1
+        END DO
+      END DO
   END IF
   IF ( .NOT. ALLOCATED(InData%ta_uS) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -6362,8 +6375,12 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%ta_uS,2)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%ta_uS)>0) DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%ta_uS))-1 ) = PACK(InData%ta_uS,.TRUE.)
-      Db_Xferred   = Db_Xferred   + SIZE(InData%ta_uS)
+      DO i2 = LBOUND(InData%ta_uS,2), UBOUND(InData%ta_uS,2)
+        DO i1 = LBOUND(InData%ta_uS,1), UBOUND(InData%ta_uS,1)
+          DbKiBuf(Db_Xferred) = InData%ta_uS(i1,i2)
+          Db_Xferred = Db_Xferred + 1
+        END DO
+      END DO
   END IF
   IF ( .NOT. ALLOCATED(InData%ta_rv) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -6378,8 +6395,12 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%ta_rv,2)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%ta_rv)>0) DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%ta_rv))-1 ) = PACK(InData%ta_rv,.TRUE.)
-      Db_Xferred   = Db_Xferred   + SIZE(InData%ta_rv)
+      DO i2 = LBOUND(InData%ta_rv,2), UBOUND(InData%ta_rv,2)
+        DO i1 = LBOUND(InData%ta_rv,1), UBOUND(InData%ta_rv,1)
+          DbKiBuf(Db_Xferred) = InData%ta_rv(i1,i2)
+          Db_Xferred = Db_Xferred + 1
+        END DO
+      END DO
   END IF
   IF ( .NOT. ALLOCATED(InData%li) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -6394,8 +6415,12 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%li,2)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%li)>0) DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%li))-1 ) = PACK(InData%li,.TRUE.)
-      Db_Xferred   = Db_Xferred   + SIZE(InData%li)
+      DO i2 = LBOUND(InData%li,2), UBOUND(InData%li,2)
+        DO i1 = LBOUND(InData%li,1), UBOUND(InData%li,1)
+          DbKiBuf(Db_Xferred) = InData%li(i1,i2)
+          Db_Xferred = Db_Xferred + 1
+        END DO
+      END DO
   END IF
   IF ( .NOT. ALLOCATED(InData%M_uS) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -6410,8 +6435,12 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%M_uS,2)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%M_uS)>0) DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%M_uS))-1 ) = PACK(InData%M_uS,.TRUE.)
-      Db_Xferred   = Db_Xferred   + SIZE(InData%M_uS)
+      DO i2 = LBOUND(InData%M_uS,2), UBOUND(InData%M_uS,2)
+        DO i1 = LBOUND(InData%M_uS,1), UBOUND(InData%M_uS,1)
+          DbKiBuf(Db_Xferred) = InData%M_uS(i1,i2)
+          Db_Xferred = Db_Xferred + 1
+        END DO
+      END DO
   END IF
   IF ( .NOT. ALLOCATED(InData%M_uD) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -6426,8 +6455,12 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%M_uD,2)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%M_uD)>0) DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%M_uD))-1 ) = PACK(InData%M_uD,.TRUE.)
-      Db_Xferred   = Db_Xferred   + SIZE(InData%M_uD)
+      DO i2 = LBOUND(InData%M_uD,2), UBOUND(InData%M_uD,2)
+        DO i1 = LBOUND(InData%M_uD,1), UBOUND(InData%M_uD,1)
+          DbKiBuf(Db_Xferred) = InData%M_uD(i1,i2)
+          Db_Xferred = Db_Xferred + 1
+        END DO
+      END DO
   END IF
   IF ( .NOT. ALLOCATED(InData%M_f) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -6442,8 +6475,12 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%M_f,2)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%M_f)>0) DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%M_f))-1 ) = PACK(InData%M_f,.TRUE.)
-      Db_Xferred   = Db_Xferred   + SIZE(InData%M_f)
+      DO i2 = LBOUND(InData%M_f,2), UBOUND(InData%M_f,2)
+        DO i1 = LBOUND(InData%M_f,1), UBOUND(InData%M_f,1)
+          DbKiBuf(Db_Xferred) = InData%M_f(i1,i2)
+          Db_Xferred = Db_Xferred + 1
+        END DO
+      END DO
   END IF
  END SUBROUTINE NWTC_Library_PackMeshMapLinearizationType
 
@@ -6460,12 +6497,6 @@ ENDIF
   INTEGER(IntKi)                 :: Db_Xferred
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
-  LOGICAL                        :: mask0
-  LOGICAL, ALLOCATABLE           :: mask1(:)
-  LOGICAL, ALLOCATABLE           :: mask2(:,:)
-  LOGICAL, ALLOCATABLE           :: mask3(:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
   INTEGER(IntKi)                 :: ErrStat2
@@ -6497,15 +6528,12 @@ ENDIF
        CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%mi.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-    ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask2.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask2 = .TRUE. 
-      IF (SIZE(OutData%mi)>0) OutData%mi = REAL( UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(SIZE(OutData%mi))-1 ), mask2, 0.0_DbKi ), R8Ki)
-      Db_Xferred   = Db_Xferred   + SIZE(OutData%mi)
-    DEALLOCATE(mask2)
+      DO i2 = LBOUND(OutData%mi,2), UBOUND(OutData%mi,2)
+        DO i1 = LBOUND(OutData%mi,1), UBOUND(OutData%mi,1)
+          OutData%mi(i1,i2) = REAL(DbKiBuf(Db_Xferred), R8Ki)
+          Db_Xferred = Db_Xferred + 1
+        END DO
+      END DO
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! fx_p not allocated
     Int_Xferred = Int_Xferred + 1
@@ -6523,15 +6551,12 @@ ENDIF
        CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%fx_p.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-    ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask2.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask2 = .TRUE. 
-      IF (SIZE(OutData%fx_p)>0) OutData%fx_p = REAL( UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(SIZE(OutData%fx_p))-1 ), mask2, 0.0_DbKi ), R8Ki)
-      Db_Xferred   = Db_Xferred   + SIZE(OutData%fx_p)
-    DEALLOCATE(mask2)
+      DO i2 = LBOUND(OutData%fx_p,2), UBOUND(OutData%fx_p,2)
+        DO i1 = LBOUND(OutData%fx_p,1), UBOUND(OutData%fx_p,1)
+          OutData%fx_p(i1,i2) = REAL(DbKiBuf(Db_Xferred), R8Ki)
+          Db_Xferred = Db_Xferred + 1
+        END DO
+      END DO
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! tv_uD not allocated
     Int_Xferred = Int_Xferred + 1
@@ -6549,15 +6574,12 @@ ENDIF
        CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%tv_uD.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-    ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask2.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask2 = .TRUE. 
-      IF (SIZE(OutData%tv_uD)>0) OutData%tv_uD = REAL( UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(SIZE(OutData%tv_uD))-1 ), mask2, 0.0_DbKi ), R8Ki)
-      Db_Xferred   = Db_Xferred   + SIZE(OutData%tv_uD)
-    DEALLOCATE(mask2)
+      DO i2 = LBOUND(OutData%tv_uD,2), UBOUND(OutData%tv_uD,2)
+        DO i1 = LBOUND(OutData%tv_uD,1), UBOUND(OutData%tv_uD,1)
+          OutData%tv_uD(i1,i2) = REAL(DbKiBuf(Db_Xferred), R8Ki)
+          Db_Xferred = Db_Xferred + 1
+        END DO
+      END DO
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! tv_uS not allocated
     Int_Xferred = Int_Xferred + 1
@@ -6575,15 +6597,12 @@ ENDIF
        CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%tv_uS.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-    ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask2.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask2 = .TRUE. 
-      IF (SIZE(OutData%tv_uS)>0) OutData%tv_uS = REAL( UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(SIZE(OutData%tv_uS))-1 ), mask2, 0.0_DbKi ), R8Ki)
-      Db_Xferred   = Db_Xferred   + SIZE(OutData%tv_uS)
-    DEALLOCATE(mask2)
+      DO i2 = LBOUND(OutData%tv_uS,2), UBOUND(OutData%tv_uS,2)
+        DO i1 = LBOUND(OutData%tv_uS,1), UBOUND(OutData%tv_uS,1)
+          OutData%tv_uS(i1,i2) = REAL(DbKiBuf(Db_Xferred), R8Ki)
+          Db_Xferred = Db_Xferred + 1
+        END DO
+      END DO
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! ta_uD not allocated
     Int_Xferred = Int_Xferred + 1
@@ -6601,15 +6620,12 @@ ENDIF
        CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%ta_uD.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-    ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask2.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask2 = .TRUE. 
-      IF (SIZE(OutData%ta_uD)>0) OutData%ta_uD = REAL( UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(SIZE(OutData%ta_uD))-1 ), mask2, 0.0_DbKi ), R8Ki)
-      Db_Xferred   = Db_Xferred   + SIZE(OutData%ta_uD)
-    DEALLOCATE(mask2)
+      DO i2 = LBOUND(OutData%ta_uD,2), UBOUND(OutData%ta_uD,2)
+        DO i1 = LBOUND(OutData%ta_uD,1), UBOUND(OutData%ta_uD,1)
+          OutData%ta_uD(i1,i2) = REAL(DbKiBuf(Db_Xferred), R8Ki)
+          Db_Xferred = Db_Xferred + 1
+        END DO
+      END DO
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! ta_uS not allocated
     Int_Xferred = Int_Xferred + 1
@@ -6627,15 +6643,12 @@ ENDIF
        CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%ta_uS.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-    ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask2.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask2 = .TRUE. 
-      IF (SIZE(OutData%ta_uS)>0) OutData%ta_uS = REAL( UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(SIZE(OutData%ta_uS))-1 ), mask2, 0.0_DbKi ), R8Ki)
-      Db_Xferred   = Db_Xferred   + SIZE(OutData%ta_uS)
-    DEALLOCATE(mask2)
+      DO i2 = LBOUND(OutData%ta_uS,2), UBOUND(OutData%ta_uS,2)
+        DO i1 = LBOUND(OutData%ta_uS,1), UBOUND(OutData%ta_uS,1)
+          OutData%ta_uS(i1,i2) = REAL(DbKiBuf(Db_Xferred), R8Ki)
+          Db_Xferred = Db_Xferred + 1
+        END DO
+      END DO
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! ta_rv not allocated
     Int_Xferred = Int_Xferred + 1
@@ -6653,15 +6666,12 @@ ENDIF
        CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%ta_rv.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-    ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask2.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask2 = .TRUE. 
-      IF (SIZE(OutData%ta_rv)>0) OutData%ta_rv = REAL( UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(SIZE(OutData%ta_rv))-1 ), mask2, 0.0_DbKi ), R8Ki)
-      Db_Xferred   = Db_Xferred   + SIZE(OutData%ta_rv)
-    DEALLOCATE(mask2)
+      DO i2 = LBOUND(OutData%ta_rv,2), UBOUND(OutData%ta_rv,2)
+        DO i1 = LBOUND(OutData%ta_rv,1), UBOUND(OutData%ta_rv,1)
+          OutData%ta_rv(i1,i2) = REAL(DbKiBuf(Db_Xferred), R8Ki)
+          Db_Xferred = Db_Xferred + 1
+        END DO
+      END DO
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! li not allocated
     Int_Xferred = Int_Xferred + 1
@@ -6679,15 +6689,12 @@ ENDIF
        CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%li.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-    ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask2.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask2 = .TRUE. 
-      IF (SIZE(OutData%li)>0) OutData%li = REAL( UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(SIZE(OutData%li))-1 ), mask2, 0.0_DbKi ), R8Ki)
-      Db_Xferred   = Db_Xferred   + SIZE(OutData%li)
-    DEALLOCATE(mask2)
+      DO i2 = LBOUND(OutData%li,2), UBOUND(OutData%li,2)
+        DO i1 = LBOUND(OutData%li,1), UBOUND(OutData%li,1)
+          OutData%li(i1,i2) = REAL(DbKiBuf(Db_Xferred), R8Ki)
+          Db_Xferred = Db_Xferred + 1
+        END DO
+      END DO
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! M_uS not allocated
     Int_Xferred = Int_Xferred + 1
@@ -6705,15 +6712,12 @@ ENDIF
        CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%M_uS.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-    ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask2.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask2 = .TRUE. 
-      IF (SIZE(OutData%M_uS)>0) OutData%M_uS = REAL( UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(SIZE(OutData%M_uS))-1 ), mask2, 0.0_DbKi ), R8Ki)
-      Db_Xferred   = Db_Xferred   + SIZE(OutData%M_uS)
-    DEALLOCATE(mask2)
+      DO i2 = LBOUND(OutData%M_uS,2), UBOUND(OutData%M_uS,2)
+        DO i1 = LBOUND(OutData%M_uS,1), UBOUND(OutData%M_uS,1)
+          OutData%M_uS(i1,i2) = REAL(DbKiBuf(Db_Xferred), R8Ki)
+          Db_Xferred = Db_Xferred + 1
+        END DO
+      END DO
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! M_uD not allocated
     Int_Xferred = Int_Xferred + 1
@@ -6731,15 +6735,12 @@ ENDIF
        CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%M_uD.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-    ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask2.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask2 = .TRUE. 
-      IF (SIZE(OutData%M_uD)>0) OutData%M_uD = REAL( UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(SIZE(OutData%M_uD))-1 ), mask2, 0.0_DbKi ), R8Ki)
-      Db_Xferred   = Db_Xferred   + SIZE(OutData%M_uD)
-    DEALLOCATE(mask2)
+      DO i2 = LBOUND(OutData%M_uD,2), UBOUND(OutData%M_uD,2)
+        DO i1 = LBOUND(OutData%M_uD,1), UBOUND(OutData%M_uD,1)
+          OutData%M_uD(i1,i2) = REAL(DbKiBuf(Db_Xferred), R8Ki)
+          Db_Xferred = Db_Xferred + 1
+        END DO
+      END DO
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! M_f not allocated
     Int_Xferred = Int_Xferred + 1
@@ -6757,15 +6758,12 @@ ENDIF
        CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%M_f.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-    ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask2.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask2 = .TRUE. 
-      IF (SIZE(OutData%M_f)>0) OutData%M_f = REAL( UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(SIZE(OutData%M_f))-1 ), mask2, 0.0_DbKi ), R8Ki)
-      Db_Xferred   = Db_Xferred   + SIZE(OutData%M_f)
-    DEALLOCATE(mask2)
+      DO i2 = LBOUND(OutData%M_f,2), UBOUND(OutData%M_f,2)
+        DO i1 = LBOUND(OutData%M_f,1), UBOUND(OutData%M_f,1)
+          OutData%M_f(i1,i2) = REAL(DbKiBuf(Db_Xferred), R8Ki)
+          Db_Xferred = Db_Xferred + 1
+        END DO
+      END DO
   END IF
  END SUBROUTINE NWTC_Library_UnPackMeshMapLinearizationType
 
@@ -6868,20 +6866,6 @@ IF (ALLOCATED(SrcMeshMapTypeData%DisplacedPosition)) THEN
   END IF
     DstMeshMapTypeData%DisplacedPosition = SrcMeshMapTypeData%DisplacedPosition
 ENDIF
-IF (ALLOCATED(SrcMeshMapTypeData%LoadLn2_F)) THEN
-  i1_l = LBOUND(SrcMeshMapTypeData%LoadLn2_F,1)
-  i1_u = UBOUND(SrcMeshMapTypeData%LoadLn2_F,1)
-  i2_l = LBOUND(SrcMeshMapTypeData%LoadLn2_F,2)
-  i2_u = UBOUND(SrcMeshMapTypeData%LoadLn2_F,2)
-  IF (.NOT. ALLOCATED(DstMeshMapTypeData%LoadLn2_F)) THEN 
-    ALLOCATE(DstMeshMapTypeData%LoadLn2_F(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMeshMapTypeData%LoadLn2_F.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstMeshMapTypeData%LoadLn2_F = SrcMeshMapTypeData%LoadLn2_F
-ENDIF
 IF (ALLOCATED(SrcMeshMapTypeData%LoadLn2_A_Mat)) THEN
   i1_l = LBOUND(SrcMeshMapTypeData%LoadLn2_A_Mat,1)
   i1_u = UBOUND(SrcMeshMapTypeData%LoadLn2_A_Mat,1)
@@ -6895,6 +6879,20 @@ IF (ALLOCATED(SrcMeshMapTypeData%LoadLn2_A_Mat)) THEN
     END IF
   END IF
     DstMeshMapTypeData%LoadLn2_A_Mat = SrcMeshMapTypeData%LoadLn2_A_Mat
+ENDIF
+IF (ALLOCATED(SrcMeshMapTypeData%LoadLn2_F)) THEN
+  i1_l = LBOUND(SrcMeshMapTypeData%LoadLn2_F,1)
+  i1_u = UBOUND(SrcMeshMapTypeData%LoadLn2_F,1)
+  i2_l = LBOUND(SrcMeshMapTypeData%LoadLn2_F,2)
+  i2_u = UBOUND(SrcMeshMapTypeData%LoadLn2_F,2)
+  IF (.NOT. ALLOCATED(DstMeshMapTypeData%LoadLn2_F)) THEN 
+    ALLOCATE(DstMeshMapTypeData%LoadLn2_F(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMeshMapTypeData%LoadLn2_F.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstMeshMapTypeData%LoadLn2_F = SrcMeshMapTypeData%LoadLn2_F
 ENDIF
 IF (ALLOCATED(SrcMeshMapTypeData%LoadLn2_M)) THEN
   i1_l = LBOUND(SrcMeshMapTypeData%LoadLn2_M,1)
@@ -6950,11 +6948,11 @@ ENDIF
 IF (ALLOCATED(MeshMapTypeData%DisplacedPosition)) THEN
   DEALLOCATE(MeshMapTypeData%DisplacedPosition)
 ENDIF
-IF (ALLOCATED(MeshMapTypeData%LoadLn2_F)) THEN
-  DEALLOCATE(MeshMapTypeData%LoadLn2_F)
-ENDIF
 IF (ALLOCATED(MeshMapTypeData%LoadLn2_A_Mat)) THEN
   DEALLOCATE(MeshMapTypeData%LoadLn2_A_Mat)
+ENDIF
+IF (ALLOCATED(MeshMapTypeData%LoadLn2_F)) THEN
+  DEALLOCATE(MeshMapTypeData%LoadLn2_F)
 ENDIF
 IF (ALLOCATED(MeshMapTypeData%LoadLn2_M)) THEN
   DEALLOCATE(MeshMapTypeData%LoadLn2_M)
@@ -7111,15 +7109,15 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*3  ! DisplacedPosition upper/lower bounds for each dimension
       Db_BufSz   = Db_BufSz   + SIZE(InData%DisplacedPosition)  ! DisplacedPosition
   END IF
-  Int_BufSz   = Int_BufSz   + 1     ! LoadLn2_F allocated yes/no
-  IF ( ALLOCATED(InData%LoadLn2_F) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*2  ! LoadLn2_F upper/lower bounds for each dimension
-      Db_BufSz   = Db_BufSz   + SIZE(InData%LoadLn2_F)  ! LoadLn2_F
-  END IF
   Int_BufSz   = Int_BufSz   + 1     ! LoadLn2_A_Mat allocated yes/no
   IF ( ALLOCATED(InData%LoadLn2_A_Mat) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! LoadLn2_A_Mat upper/lower bounds for each dimension
       Db_BufSz   = Db_BufSz   + SIZE(InData%LoadLn2_A_Mat)  ! LoadLn2_A_Mat
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! LoadLn2_F allocated yes/no
+  IF ( ALLOCATED(InData%LoadLn2_F) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! LoadLn2_F upper/lower bounds for each dimension
+      Db_BufSz   = Db_BufSz   + SIZE(InData%LoadLn2_F)  ! LoadLn2_F
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! LoadLn2_M allocated yes/no
   IF ( ALLOCATED(InData%LoadLn2_M) ) THEN
@@ -7359,8 +7357,10 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%LoadLn2_A_Mat_Piv,1)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%LoadLn2_A_Mat_Piv)>0) IntKiBuf ( Int_Xferred:Int_Xferred+(SIZE(InData%LoadLn2_A_Mat_Piv))-1 ) = PACK(InData%LoadLn2_A_Mat_Piv,.TRUE.)
-      Int_Xferred   = Int_Xferred   + SIZE(InData%LoadLn2_A_Mat_Piv)
+      DO i1 = LBOUND(InData%LoadLn2_A_Mat_Piv,1), UBOUND(InData%LoadLn2_A_Mat_Piv,1)
+        IntKiBuf(Int_Xferred) = InData%LoadLn2_A_Mat_Piv(i1)
+        Int_Xferred = Int_Xferred + 1
+      END DO
   END IF
   IF ( .NOT. ALLOCATED(InData%DisplacedPosition) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -7378,24 +7378,14 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%DisplacedPosition,3)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%DisplacedPosition)>0) DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%DisplacedPosition))-1 ) = PACK(InData%DisplacedPosition,.TRUE.)
-      Db_Xferred   = Db_Xferred   + SIZE(InData%DisplacedPosition)
-  END IF
-  IF ( .NOT. ALLOCATED(InData%LoadLn2_F) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%LoadLn2_F,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%LoadLn2_F,1)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%LoadLn2_F,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%LoadLn2_F,2)
-    Int_Xferred = Int_Xferred + 2
-
-      IF (SIZE(InData%LoadLn2_F)>0) DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%LoadLn2_F))-1 ) = PACK(InData%LoadLn2_F,.TRUE.)
-      Db_Xferred   = Db_Xferred   + SIZE(InData%LoadLn2_F)
+      DO i3 = LBOUND(InData%DisplacedPosition,3), UBOUND(InData%DisplacedPosition,3)
+        DO i2 = LBOUND(InData%DisplacedPosition,2), UBOUND(InData%DisplacedPosition,2)
+          DO i1 = LBOUND(InData%DisplacedPosition,1), UBOUND(InData%DisplacedPosition,1)
+            DbKiBuf(Db_Xferred) = InData%DisplacedPosition(i1,i2,i3)
+            Db_Xferred = Db_Xferred + 1
+          END DO
+        END DO
+      END DO
   END IF
   IF ( .NOT. ALLOCATED(InData%LoadLn2_A_Mat) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -7410,8 +7400,32 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%LoadLn2_A_Mat,2)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%LoadLn2_A_Mat)>0) DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%LoadLn2_A_Mat))-1 ) = PACK(InData%LoadLn2_A_Mat,.TRUE.)
-      Db_Xferred   = Db_Xferred   + SIZE(InData%LoadLn2_A_Mat)
+      DO i2 = LBOUND(InData%LoadLn2_A_Mat,2), UBOUND(InData%LoadLn2_A_Mat,2)
+        DO i1 = LBOUND(InData%LoadLn2_A_Mat,1), UBOUND(InData%LoadLn2_A_Mat,1)
+          DbKiBuf(Db_Xferred) = InData%LoadLn2_A_Mat(i1,i2)
+          Db_Xferred = Db_Xferred + 1
+        END DO
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%LoadLn2_F) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%LoadLn2_F,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%LoadLn2_F,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%LoadLn2_F,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%LoadLn2_F,2)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i2 = LBOUND(InData%LoadLn2_F,2), UBOUND(InData%LoadLn2_F,2)
+        DO i1 = LBOUND(InData%LoadLn2_F,1), UBOUND(InData%LoadLn2_F,1)
+          DbKiBuf(Db_Xferred) = InData%LoadLn2_F(i1,i2)
+          Db_Xferred = Db_Xferred + 1
+        END DO
+      END DO
   END IF
   IF ( .NOT. ALLOCATED(InData%LoadLn2_M) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -7426,8 +7440,12 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%LoadLn2_M,2)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%LoadLn2_M)>0) DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%LoadLn2_M))-1 ) = PACK(InData%LoadLn2_M,.TRUE.)
-      Db_Xferred   = Db_Xferred   + SIZE(InData%LoadLn2_M)
+      DO i2 = LBOUND(InData%LoadLn2_M,2), UBOUND(InData%LoadLn2_M,2)
+        DO i1 = LBOUND(InData%LoadLn2_M,1), UBOUND(InData%LoadLn2_M,1)
+          DbKiBuf(Db_Xferred) = InData%LoadLn2_M(i1,i2)
+          Db_Xferred = Db_Xferred + 1
+        END DO
+      END DO
   END IF
       CALL NWTC_Library_Packmeshmaplinearizationtype( Re_Buf, Db_Buf, Int_Buf, InData%dM, ErrStat2, ErrMsg2, OnlySize ) ! dM 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -7472,12 +7490,6 @@ ENDIF
   INTEGER(IntKi)                 :: Db_Xferred
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
-  LOGICAL                        :: mask0
-  LOGICAL, ALLOCATABLE           :: mask1(:)
-  LOGICAL, ALLOCATABLE           :: mask2(:,:)
-  LOGICAL, ALLOCATABLE           :: mask3(:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
   INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
@@ -7755,15 +7767,10 @@ ENDIF
        CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%LoadLn2_A_Mat_Piv.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask1 = .TRUE. 
-      IF (SIZE(OutData%LoadLn2_A_Mat_Piv)>0) OutData%LoadLn2_A_Mat_Piv = UNPACK( IntKiBuf ( Int_Xferred:Int_Xferred+(SIZE(OutData%LoadLn2_A_Mat_Piv))-1 ), mask1, 0_IntKi )
-      Int_Xferred   = Int_Xferred   + SIZE(OutData%LoadLn2_A_Mat_Piv)
-    DEALLOCATE(mask1)
+      DO i1 = LBOUND(OutData%LoadLn2_A_Mat_Piv,1), UBOUND(OutData%LoadLn2_A_Mat_Piv,1)
+        OutData%LoadLn2_A_Mat_Piv(i1) = IntKiBuf(Int_Xferred)
+        Int_Xferred = Int_Xferred + 1
+      END DO
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! DisplacedPosition not allocated
     Int_Xferred = Int_Xferred + 1
@@ -7784,41 +7791,14 @@ ENDIF
        CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%DisplacedPosition.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-    ALLOCATE(mask3(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask3.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask3 = .TRUE. 
-      IF (SIZE(OutData%DisplacedPosition)>0) OutData%DisplacedPosition = REAL( UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(SIZE(OutData%DisplacedPosition))-1 ), mask3, 0.0_DbKi ), R8Ki)
-      Db_Xferred   = Db_Xferred   + SIZE(OutData%DisplacedPosition)
-    DEALLOCATE(mask3)
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! LoadLn2_F not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i2_l = IntKiBuf( Int_Xferred    )
-    i2_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%LoadLn2_F)) DEALLOCATE(OutData%LoadLn2_F)
-    ALLOCATE(OutData%LoadLn2_F(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%LoadLn2_F.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask2.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask2 = .TRUE. 
-      IF (SIZE(OutData%LoadLn2_F)>0) OutData%LoadLn2_F = REAL( UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(SIZE(OutData%LoadLn2_F))-1 ), mask2, 0.0_DbKi ), R8Ki)
-      Db_Xferred   = Db_Xferred   + SIZE(OutData%LoadLn2_F)
-    DEALLOCATE(mask2)
+      DO i3 = LBOUND(OutData%DisplacedPosition,3), UBOUND(OutData%DisplacedPosition,3)
+        DO i2 = LBOUND(OutData%DisplacedPosition,2), UBOUND(OutData%DisplacedPosition,2)
+          DO i1 = LBOUND(OutData%DisplacedPosition,1), UBOUND(OutData%DisplacedPosition,1)
+            OutData%DisplacedPosition(i1,i2,i3) = REAL(DbKiBuf(Db_Xferred), R8Ki)
+            Db_Xferred = Db_Xferred + 1
+          END DO
+        END DO
+      END DO
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! LoadLn2_A_Mat not allocated
     Int_Xferred = Int_Xferred + 1
@@ -7836,15 +7816,35 @@ ENDIF
        CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%LoadLn2_A_Mat.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-    ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+      DO i2 = LBOUND(OutData%LoadLn2_A_Mat,2), UBOUND(OutData%LoadLn2_A_Mat,2)
+        DO i1 = LBOUND(OutData%LoadLn2_A_Mat,1), UBOUND(OutData%LoadLn2_A_Mat,1)
+          OutData%LoadLn2_A_Mat(i1,i2) = REAL(DbKiBuf(Db_Xferred), R8Ki)
+          Db_Xferred = Db_Xferred + 1
+        END DO
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! LoadLn2_F not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%LoadLn2_F)) DEALLOCATE(OutData%LoadLn2_F)
+    ALLOCATE(OutData%LoadLn2_F(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask2.', ErrStat, ErrMsg,RoutineName)
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%LoadLn2_F.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-    mask2 = .TRUE. 
-      IF (SIZE(OutData%LoadLn2_A_Mat)>0) OutData%LoadLn2_A_Mat = REAL( UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(SIZE(OutData%LoadLn2_A_Mat))-1 ), mask2, 0.0_DbKi ), R8Ki)
-      Db_Xferred   = Db_Xferred   + SIZE(OutData%LoadLn2_A_Mat)
-    DEALLOCATE(mask2)
+      DO i2 = LBOUND(OutData%LoadLn2_F,2), UBOUND(OutData%LoadLn2_F,2)
+        DO i1 = LBOUND(OutData%LoadLn2_F,1), UBOUND(OutData%LoadLn2_F,1)
+          OutData%LoadLn2_F(i1,i2) = REAL(DbKiBuf(Db_Xferred), R8Ki)
+          Db_Xferred = Db_Xferred + 1
+        END DO
+      END DO
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! LoadLn2_M not allocated
     Int_Xferred = Int_Xferred + 1
@@ -7862,15 +7862,12 @@ ENDIF
        CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%LoadLn2_M.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-    ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask2.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask2 = .TRUE. 
-      IF (SIZE(OutData%LoadLn2_M)>0) OutData%LoadLn2_M = REAL( UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(SIZE(OutData%LoadLn2_M))-1 ), mask2, 0.0_DbKi ), R8Ki)
-      Db_Xferred   = Db_Xferred   + SIZE(OutData%LoadLn2_M)
-    DEALLOCATE(mask2)
+      DO i2 = LBOUND(OutData%LoadLn2_M,2), UBOUND(OutData%LoadLn2_M,2)
+        DO i1 = LBOUND(OutData%LoadLn2_M,1), UBOUND(OutData%LoadLn2_M,1)
+          OutData%LoadLn2_M(i1,i2) = REAL(DbKiBuf(Db_Xferred), R8Ki)
+          Db_Xferred = Db_Xferred + 1
+        END DO
+      END DO
   END IF
       Buf_size=IntKiBuf( Int_Xferred )
       Int_Xferred = Int_Xferred + 1

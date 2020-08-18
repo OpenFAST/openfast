@@ -2,13 +2,13 @@
 NREL 5MW blade primary input file
 ---------------------- SIMULATION CONTROL --------------------------------------
 TRUE          Echo             - Echo input data to "<RootName>.ech"? (flag)
-False         QuasiStaticInit  - Use quasistatic pre-conditioning with centripetal accelerations in initialization? (flag) [dynamic solve only]
+False         QuasiStaticInit  - Use quasi-static pre-conditioning with centripetal accelerations in initialization? (flag) [dynamic solve only]
           0   rhoinf           - Numerical damping parameter for generalized-alpha integrator
           2   quadrature       - Quadrature method: 1=Gaussian; 2=Trapezoidal (switch)
 "DEFAULT"     refine           - Refinement factor for trapezoidal quadrature (-) [DEFAULT = 1; used only when quadrature=2]
 "DEFAULT"     n_fact           - Factorization frequency for the Jacobian in N-R iteration(-) [DEFAULT = 5]
 "DEFAULT"     DTBeam           - Time step size (s)
-"DEFAULT"     load_retries     - Number of factored load retries before quitting the aimulation [DEFAULT = 20]
+"DEFAULT"     load_retries     - Number of factored load retries before quitting the simulation [DEFAULT = 20]
 "DEFAULT"     NRMax            - Max number of iterations in Newton-Raphson algorithm (-) [DEFAULT = 10]
 "DEFAULT"     stop_tol         - Tolerance for stopping criterion (-) [DEFAULT = 1E-5]
 FALSE         tngt_stf_fd      - Use finite differenced tangent stiffness matrix? (flag)
@@ -92,5 +92,17 @@ True          SumPrint       - Print summary data to "<RootName>.sum" (flag)
 "N1Mxl,N1Myl,N1Mzl"          
 "TipTDxr, TipTDyr, TipTDzr"  
 "TipRDxr, TipRDyr, TipRDzr"  
+END of input file (the word "END" must appear in the first 3 columns of the last OutList line)
+====== Outputs for all blade stations (same ending as above for B1N1.... =========================== (optional section)
+   "All"          BldNd_BlOutNd       - Future feature will allow selecting a portion of the nodes to output.  Not implemented yet. (-)
+                  OutList             - The next line(s) contains a list of output parameters.  See OutListParameters.xlsx for a listing of available output channels, (-)
+"TDxr, TDyr, TDzr"
+"TVxr, TVyr, TVzr"
+"TAxr, TAyr, TAzr"
+"RDxr, RDyr, RDzr"
+"RVxr, RVyr, RVzr"
+"RAxr, RAyr, RAzr"
+"Fxr, Fyr, Fzr"
+"TipTDxr, TipTDyr, TipTDzr"  
+"TipRDxr, TipRDyr, TipRDzr"  
 END of input file (the word "END" must appear in the first 3 columns of this last OutList line)
----------------------------------------------------------------------------------------

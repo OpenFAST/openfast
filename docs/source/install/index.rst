@@ -234,8 +234,9 @@ The CMake options specific to OpenFAST and their default settings are:
     DOUBLE_PRECISION               - Treat REAL as double precision (Default: ON)
     FPE_TRAP_ENABLED               - Enable Floating Point Exception (FPE) trap in compiler options (Default: OFF)
     GENERATE_TYPES                 - Use the openfast-regsitry to autogenerate types modules
-    ORCA_DLL_LOAD                  - Enable OrcaFlex library load (Default: OFF)
+    WIN_DLL_LOAD                   - Enable loading of Windows DLLs for OrcaFlex and SoilDyn (Default: ON)
     USE_DLL_INTERFACE              - Enable runtime loading of dynamic libraries (Default: ON)
+    OPENMP                         - Enable OpenMP parallelization in FVW (Default: OFF)
 
 Additional system-specific options may exist for a given system, but those
 should not impact the OpenFAST configuration. As mentioned above, the

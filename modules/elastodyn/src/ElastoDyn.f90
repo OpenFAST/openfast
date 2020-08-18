@@ -28,6 +28,8 @@ MODULE ElastoDyn
 
    USE ED_UserSubs         ! <- module not in the FAST Framework!
 
+   USE ElastoDyn_AllBldNdOuts_IO
+
    IMPLICIT NONE
 
    PRIVATE
@@ -95,7 +97,7 @@ SUBROUTINE ED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
 
    TYPE(ED_InputFile)                           :: InputFileData           ! Data stored in the module's input file
    INTEGER(IntKi)                               :: ErrStat2                ! temporary Error status of the operation
-   INTEGER(IntKi)                               :: i, K                    ! loop counters
+   INTEGER(IntKi)                               :: i                       ! loop counters
    LOGICAL, PARAMETER                           :: GetAdamsVals = .FALSE.  ! Determines if we should read Adams values and create (update) an Adams model
    CHARACTER(ErrMsgLen)                         :: ErrMsg2                 ! temporary Error message if ErrStat /= ErrID_None
 
@@ -214,10 +216,11 @@ SUBROUTINE ED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       !............................................................................................
       ! Define initialization-routine output here:
       !............................................................................................
-   CALL AllocAry( InitOut%WriteOutputHdr, p%NumOuts, 'WriteOutputHdr', ErrStat2, ErrMsg2 )
+   CALL AllocAry( InitOut%WriteOutputHdr, p%numOuts + p%BldNd_TotNumOuts, 'WriteOutputHdr', errStat2, errMsg2 )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN
-   CALL AllocAry( InitOut%WriteOutputUnt, p%NumOuts, 'WriteOutputUnt', ErrStat2, ErrMsg2 )
+
+   CALL AllocAry( InitOut%WriteOutputUnt, p%numOuts + p%BldNd_TotNumOuts, 'WriteOutputUnt', errStat2, errMsg2 )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN
 
@@ -225,6 +228,11 @@ SUBROUTINE ED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       InitOut%WriteOutputHdr(i) = p%OutParam(i)%Name
       InitOut%WriteOutputUnt(i) = p%OutParam(i)%Units
    end do
+
+      ! Set the info in WriteOutputHdr and WriteOutputUnt
+   CALL AllBldNdOuts_InitOut( InitOut, p, ErrStat2, ErrMsg2 )
+      CALL CheckError( ErrStat2, ErrMsg2 )
+      IF (ErrStat >= AbortErrLev) RETURN
       
    InitOut%Ver         = ED_Ver
    InitOut%NumBl       = p%NumBl
@@ -236,6 +244,9 @@ SUBROUTINE ED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    InitOut%HubHt       = p%HubHt
    InitOut%TwrBasePos  = y%TowerLn2Mesh%Position(:,p%TwrNodes + 2)
    InitOut%HubRad      = p%HubRad
+   InitOut%RotSpeed    = p%RotSpeed
+   InitOut%isFixed_GenDOF = .not. InputFileData%GenDOF
+   
 
    if (.not. p%BD4Blades) then
       ALLOCATE(InitOut%BldRNodes(p%BldNodes),  STAT=ErrStat2)
@@ -1291,7 +1302,15 @@ END IF
 
    ENDDO             ! I - All selected output channels
 
-   
+   IF ( .NOT. p%BD4Blades ) THEN
+      y%WriteOutput(p%NumOuts+1:) = 0.0_ReKi
+
+         ! Now we need to populate the blade node outputs here
+      call Calc_WriteAllBldNdOutput( p, u, m, y, LinAccES, ErrStat2, ErrMsg2 )   ! Call after normal writeoutput.  Will just postpend data on here.
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ED_CalcOutput')
+   ENDIF
+
+
    !...............................................................................................................................
    ! Outputs required for AeroDyn
    !...............................................................................................................................
@@ -2015,8 +2034,12 @@ SUBROUTINE ED_SetParameters( InputFileData, p, ErrStat, ErrMsg )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
+   CALL AllBldNdOuts_SetParameters( p, InputFileData, ErrStat2, ErrMsg2 )
+      CALL CheckError( ErrStat2, ErrMsg2 )
+      IF ( ErrStat >= AbortErrLev ) RETURN
+    !p%BldNd_NumOuts = 0_IntKi
+    !p%BldNd_TotNumOuts = 0_IntKi
 
-   
 CONTAINS
    !...............................................................................................................................
    SUBROUTINE CheckError(ErrID,Msg)
@@ -2073,7 +2096,7 @@ SUBROUTINE Init_DOFparameters( InputFileData, p, ErrStat, ErrMsg )
    IF ( p%NumBl == 2 )  THEN
       p%NDOF = 22
    ELSE
-      p%NDOF = 24
+      p%NDOF = ED_MaxDOFs
    ENDIF
 
    p%NAug = p%NDOF + 1
@@ -8535,6 +8558,7 @@ END SUBROUTINE FillAugMat
 !> This routine allocates the arrays and meshes stored in the ED_OutputType data structure (y), based on the parameters (p). 
 !! Inputs (u) are included only so that output meshes can be siblings of the inputs.
 !! The routine assumes that the arrays/meshes are not currently allocated (It will produce a fatal error otherwise.)
+!! Also note that this must be called after init_u() so that the misc variables that contain the orientations are set.
 SUBROUTINE ED_AllocOutput( p, m, u, y, ErrStat, ErrMsg )
 !..................................................................................................................................
 
@@ -8561,7 +8585,7 @@ SUBROUTINE ED_AllocOutput( p, m, u, y, ErrStat, ErrMsg )
    ErrMsg  = ""
       
 
-   CALL AllocAry( y%WriteOutput, p%NumOuts, 'WriteOutput', ErrStat2, ErrMsg2 )
+   CALL AllocAry( y%WriteOutput, p%numOuts + p%BldNd_TotNumOuts, 'WriteOutput', errStat2, errMsg2 )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN
 
@@ -8610,7 +8634,7 @@ SUBROUTINE ED_AllocOutput( p, m, u, y, ErrStat, ErrMsg )
                IF (ErrStat >= AbortErrLev) RETURN
             
                ! Use orientation at node 1 for the blade root            
-            CALL MeshPositionNode ( y%BladeLn2Mesh(K), p%BldNodes + 2, (/0.0_ReKi, 0.0_ReKi, 0.0_ReKi /), ErrStat2, ErrMsg2, Orient=u%BladePtLoads(K)%RefOrientation(:,:,1) )
+            CALL MeshPositionNode ( y%BladeLn2Mesh(K), p%BldNodes + 2, (/0.0_ReKi, 0.0_ReKi, 0.0_ReKi /), ErrStat2, ErrMsg2, Orient=u%BladePtLoads(K)%RefOrientation(:,:,1), ref=.true. )
                CALL CheckError( ErrStat2, ErrMsg2 )
                IF (ErrStat >= AbortErrLev) RETURN
                
@@ -8620,6 +8644,7 @@ SUBROUTINE ED_AllocOutput( p, m, u, y, ErrStat, ErrMsg )
             DO J = 0,p%TipNode,p%TipNode
                if (j==0) then ! blade root
                   NodeNum = p%BldNodes + 2
+                  y%BladeLn2Mesh(K)%RefNode = NodeNum
                elseif (j==p%TipNode) then ! blade tip
                   NodeNum = p%BldNodes + 1
                end if
@@ -8737,7 +8762,7 @@ SUBROUTINE ED_AllocOutput( p, m, u, y, ErrStat, ErrMsg )
          CALL CheckError(ErrStat2,ErrMsg2)
          IF (ErrStat >= AbortErrLev) RETURN
          
-      CALL MeshPositionNode ( y%TowerLn2Mesh, p%TwrNodes + 2, (/0.0_ReKi, 0.0_ReKi, p%TowerBsHt  /), ErrStat2, ErrMsg2 )
+      CALL MeshPositionNode ( y%TowerLn2Mesh, p%TwrNodes + 2, (/0.0_ReKi, 0.0_ReKi, p%TowerBsHt  /), ErrStat2, ErrMsg2, ref=.true. )
          CALL CheckError(ErrStat2,ErrMsg2)
          IF (ErrStat >= AbortErrLev) RETURN
 
@@ -10232,6 +10257,19 @@ END IF
       WRITE (UnSu,OutPFmt)  I, p%OutParam(I)%Name, p%OutParam(I)%Units
    END DO             
 
+   IF (.not. p%BD4Blades) THEN
+      WRITE (UnSu,'(2x,A)')
+      WRITE (UnSu,'(2x,A)')
+      WRITE (UnSu,'(2x,A)')  'Requested Output Channels at each blade station:'
+      WRITE (UnSu,OutPFmtS)  "Col", TitleStr
+      WRITE (UnSu,OutPFmtS)  "---", TitleStrLines
+      !WRITE (UnSu,'(2x,A)')  'Col   Parameter       Units'
+      !WRITE (UnSu,'(2x,A)')  '----  --------------  ----------'
+      DO I = 1,p%BldNd_NumOuts
+         WRITE (UnSu,OutPFmt)  I, p%BldNd_OutParam(I)%Name, p%BldNd_OutParam(I)%Units
+      END DO
+   ENDIF
+
    CLOSE(UnSu)
 
 RETURN
@@ -11057,7 +11095,7 @@ SUBROUTINE ED_Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
       + y%HubPtMotion%NNodes     * 9            & ! 3 TranslationDisp, Orientation, and RotationVel at each node
       + y%NacelleMotion%NNodes   * 18           & ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, and RotationAcc at each node
       + 3                                       & ! Yaw, YawRate, and HSS_Spd
-      + p%NumOuts                                 ! WriteOutput values 
+      + p%NumOuts  + p%BldNd_TotNumOuts           ! WriteOutput values 
       
    do i=1,p%NumBl
       p%Jac_ny = p%Jac_ny + y%BladeRootMotion(i)%NNodes * 18  ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, and RotationAcc at each (1) node on each blade
@@ -11101,7 +11139,7 @@ SUBROUTINE ED_Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
    InitOut%LinNames_y(index_next) = 'YawRate, rad/s'; index_next = index_next+1
    InitOut%LinNames_y(index_next) = 'HSS_Spd, rad/s'
          
-   do i=1,p%NumOuts
+   do i=1,p%NumOuts + p%BldNd_TotNumOuts
       InitOut%LinNames_y(i+index_next) = trim(InitOut%WriteOutputHdr(i))//', '//trim(InitOut%WriteOutputUnt(i)) !trim(p%OutParam(i)%Name)//', '//p%OutParam(i)%Units
    end do   
    
@@ -11161,6 +11199,10 @@ SUBROUTINE ED_Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
    do i=1,p%NumOuts
       InitOut%RotFrame_y(i+index_next) = AllOut( p%OutParam(i)%Indx )      
    end do    
+   
+   do i=1, p%BldNd_TotNumOuts
+      InitOut%RotFrame_y(i+p%NumOuts+index_next) = .true.     
+   end do
    
    deallocate(AllOut)         
    
@@ -11609,7 +11651,7 @@ SUBROUTINE Compute_dY(p, y_p, y_m, delta, dY)
    dY(indx_first) = y_p%HSS_Spd - y_m%HSS_Spd;   indx_first = indx_first + 1
    
    !indx_last = indx_first + p%NumOuts - 1
-   do k=1,p%NumOuts
+   do k=1,p%NumOuts + p%BldNd_TotNumOuts
       dY(k+indx_first-1) = y_p%WriteOutput(k) - y_m%WriteOutput(k)
    end do   
    
@@ -11618,7 +11660,7 @@ SUBROUTINE Compute_dY(p, y_p, y_m, delta, dY)
 END SUBROUTINE Compute_dY
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to pack the data structures representing the operating points into arrays for linearization.
-SUBROUTINE ED_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op, y_op, x_op, dx_op, xd_op, z_op )
+SUBROUTINE ED_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op, y_op, x_op, dx_op, xd_op, z_op, NeedLogMap )
 
    REAL(DbKi),                           INTENT(IN   )           :: t          !< Time in seconds at operating point
    TYPE(ED_InputType),                   INTENT(IN   )           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
@@ -11637,6 +11679,7 @@ SUBROUTINE ED_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
    REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dx_op(:)   !< values of first time derivatives of linearized continuous states
    REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: xd_op(:)   !< values of linearized discrete states
    REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: z_op(:)    !< values of linearized constraint states
+   LOGICAL,                 OPTIONAL,    INTENT(IN   )           :: NeedLogMap !< whether a y_op values should contain log maps instead of full orientation matrices
 
 
 
@@ -11645,6 +11688,7 @@ SUBROUTINE ED_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
    INTEGER(IntKi)                                    :: ErrStat2
    CHARACTER(ErrMsgLen)                              :: ErrMsg2
    CHARACTER(*), PARAMETER                           :: RoutineName = 'ED_GetOP'
+   LOGICAL                                           :: ReturnLogMap
    TYPE(ED_ContinuousStateType)                      :: dx          !< derivative of continuous states at operating point
    LOGICAL                                           :: Mask(FIELDMASK_SIZE)               !< flags to determine if this field is part of the packing
    
@@ -11695,6 +11739,11 @@ SUBROUTINE ED_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
 
    !..................................
    IF ( PRESENT( y_op ) ) THEN
+      if (present(NeedLogMap)) then
+         ReturnLogMap = NeedLogMap
+      else
+         ReturnLogMap = .false.
+      end if
       
       if (.not. allocated(y_op)) then 
             ! our operating point includes DCM (orientation) matrices, not just small angles like the perturbation matrices do
@@ -11727,22 +11776,22 @@ SUBROUTINE ED_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
       index = 1
       if (allocated(y%BladeLn2Mesh)) then
          do k=1,p%NumBl
-            call PackMotionMesh(y%BladeLn2Mesh(k), y_op, index)
+            call PackMotionMesh(y%BladeLn2Mesh(k), y_op, index, UseLogMaps=ReturnLogMap)
          end do      
       end if
-      call PackMotionMesh(y%PlatformPtMesh, y_op, index)
-      call PackMotionMesh(y%TowerLn2Mesh, y_op, index)
-      call PackMotionMesh(y%HubPtMotion, y_op, index, FieldMask=Mask)
+      call PackMotionMesh(y%PlatformPtMesh, y_op, index, UseLogMaps=ReturnLogMap)
+      call PackMotionMesh(y%TowerLn2Mesh, y_op, index, UseLogMaps=ReturnLogMap)
+      call PackMotionMesh(y%HubPtMotion, y_op, index, FieldMask=Mask, UseLogMaps=ReturnLogMap)
       do k=1,p%NumBl
-         call PackMotionMesh(y%BladeRootMotion(k), y_op, index)
+         call PackMotionMesh(y%BladeRootMotion(k), y_op, index, UseLogMaps=ReturnLogMap)
       end do   
-      call PackMotionMesh(y%NacelleMotion, y_op, index)
+      call PackMotionMesh(y%NacelleMotion, y_op, index, UseLogMaps=ReturnLogMap)
       
       y_op(index) = y%Yaw     ; index = index + 1    
       y_op(index) = y%YawRate ; index = index + 1    
       y_op(index) = y%HSS_Spd 
    
-      do i=1,p%NumOuts
+      do i=1,p%NumOuts + p%BldNd_TotNumOuts
          y_op(i+index) = y%WriteOutput(i)
       end do   
                         

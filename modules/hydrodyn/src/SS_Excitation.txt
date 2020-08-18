@@ -24,7 +24,7 @@ typedef   ^                 	 ^                   SiKi	          WaveTime   {:} 
 typedef   ^                    InitOutputType      CHARACTER(ChanLen)   WriteOutputHdr  {7} - -  "Header of the output" -
 typedef   ^                    InitOutputType      CHARACTER(ChanLen)   WriteOutputUnt  {7} - -  "Units of the output" -
                                
-typedef   ^                    ContinuousStateType ReKi            x             {:} - -  "Continuous States" -
+typedef   ^                    ContinuousStateType R8Ki            x             {:} - -  "Continuous States" -
 
 typedef   ^                    DiscreteStateType   SiKi            DummyDiscState - - -  "" -
 

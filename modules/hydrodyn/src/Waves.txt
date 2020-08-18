@@ -59,6 +59,7 @@ typedef     ^                 ^                 SiKi                 CurrVxi    
 typedef     ^                 ^                 SiKi                 CurrVyi           {:}      -        -        "yi-component of the current velocity at elevation i" (m/s)
 typedef     ^                 ^                 SiKi                 PCurrVxiPz0       -        -        -        "xi-component of the partial derivative of the current velocity at elevation near mean sea level"  (m/s)
 typedef     ^                 ^                 SiKi                 PCurrVyiPz0       -        -        -        "yi-component of the partial derivative of the current velocity at elevation near mean sea level"  (m/s)
+typedef     ^                 ^                NWTC_RandomNumber_ParameterType RNG               -        -        -        "Parameters for the pseudo random number generator"  -
 
 
 # Define outputs from the initialization routine here:

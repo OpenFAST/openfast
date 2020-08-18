@@ -65,6 +65,16 @@ function(of_regression TESTNAME LABEL)
   regression(${TEST_SCRIPT} ${OPENFAST_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
 endfunction(of_regression)
 
+# openfast aeroacoustic 
+function(of_regression_aeroacoustic TESTNAME LABEL)
+  set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeOpenfastAeroAcousticRegressionCase.py")
+  set(OPENFAST_EXECUTABLE "${CTEST_OPENFAST_EXECUTABLE}")
+  set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
+  set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/glue-codes/openfast")
+  regression(${TEST_SCRIPT} ${OPENFAST_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
+endfunction(of_regression_aeroacoustic)
+
+# beamdyn
 # openfast linearized
 function(of_regression_linear TESTNAME LABEL)
   set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeOpenfastLinearRegressionCase.py")
@@ -82,6 +92,15 @@ function(bd_regression TESTNAME LABEL)
   set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/modules/beamdyn")
   regression(${TEST_SCRIPT} ${BEAMDYN_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
 endfunction(bd_regression)
+
+# hydrodyn
+function(hd_regression TESTNAME LABEL)
+  set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeHydrodynRegressionCase.py")
+  set(HYDRODYN_EXECUTABLE "${CTEST_HYDRODYN_EXECUTABLE}")
+  set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
+  set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/modules/hydrodyn")
+  regression(${TEST_SCRIPT} ${HYDRODYN_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
+endfunction(hd_regression)
 
 #===============================================================================
 # Regression tests
@@ -102,7 +121,7 @@ of_regression("WP_VSP_WTurb_PitchFail"          "openfast;elastodyn;aerodyn14;se
 of_regression("WP_VSP_ECD"                      "openfast;elastodyn;aerodyn15;servodyn")
 of_regression("WP_VSP_WTurb"                    "openfast;elastodyn;aerodyn15;servodyn")
 of_regression("SWRT_YFree_VS_EDG01"             "openfast;elastodyn;aerodyn15;servodyn")
-of_regression("SWRT_YFree_VS_EDC01"             "openfast;elastodyn;aerodyn15;servodyn")
+of_regression("SWRT_YFree_VS_EDC01"             "openfast;elastodyn;aerodyn14;servodyn")
 of_regression("SWRT_YFree_VS_WTurb"             "openfast;elastodyn;aerodyn14;servodyn")
 of_regression("5MW_Land_DLL_WTurb"              "openfast;elastodyn;aerodyn15;servodyn")
 of_regression("5MW_OC3Mnpl_DLL_WTurb_WavesIrr"  "openfast;elastodyn;aerodyn15;servodyn;hydrodyn;subdyn")
@@ -114,9 +133,14 @@ of_regression("5MW_OC3Spar_DLL_WTurb_WavesIrr"         "openfast;elastodyn;aerod
 of_regression("5MW_OC4Semi_WSt_WavesWN"                "openfast;elastodyn;aerodyn15;servodyn;hydrodyn;moordyn")
 of_regression("5MW_Land_BD_DLL_WTurb"                  "openfast;beamdyn;aerodyn15;servodyn")
 of_regression("5MW_OC4Jckt_ExtPtfm"                    "openfast;elastodyn;extptfm")
+of_regression("HelicalWake_OLAF"                       "openfast;aerodyn15;olaf")
+of_regression("EllipticalWing_OLAF"                    "openfast;aerodyn15;olaf")
+
+# AeroAcoustic regression test
+of_regression_aeroacoustic("IEA_LB_RWT-AeroAcoustics"  "openfast;aerodyn15;aeroacoustics")
 
 # Linearized OpenFAST regression tests
-of_regression_linear("WP_Stationary_Linear"         "openfast;linear;elastodyn;aerodyn15")
+of_regression_linear("WP_Stationary_Linear"         "openfast;linear;elastodyn")
 of_regression_linear("Ideal_Beam_Fixed_Free_Linear" "openfast;linear;beamdyn")
 of_regression_linear("Ideal_Beam_Free_Free_Linear"  "openfast;linear;beamdyn")
 of_regression_linear("5MW_Land_BD_Linear"           "openfast;linear;beamdyn;servodyn")
@@ -130,3 +154,6 @@ bd_regression("bd_curved_beam"              "beamdyn;static")
 bd_regression("bd_isotropic_rollup"         "beamdyn;static")
 bd_regression("bd_static_cantilever_beam"   "beamdyn;static")
 bd_regression("bd_static_twisted_with_k1"   "beamdyn;static")
+
+# HydroDyn regression tests
+hd_regression("hd_OC3tripod_offshore_fixedbottom_wavesirr" "hydrodyn;offshore")

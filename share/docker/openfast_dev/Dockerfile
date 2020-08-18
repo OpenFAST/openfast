@@ -42,4 +42,4 @@ RUN ctest -VV -L linear
 ## - 9, 16 because they're very sensitive
 ## - 19, 20 because theyre too long
 ## - 17, 22, 23 becuase we dont know why they fail :(
-RUN ctest -VV -j8 -I 1,1,1,2,3,4,5,6,7,8,10,11,12,13,14,15,18,21,24,25
+RUN ctest -VV -j8 -I 1,1,1,2,3,4,5,6,7,8,10,11,12,13,14,15,18,21,24,25,27,28,29

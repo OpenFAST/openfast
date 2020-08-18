@@ -15,8 +15,8 @@ jobs:
         name: OpenFAST tests on Ubuntu
         steps:
         - name: Checkout
-          uses: actions/checkout@master
+          uses: actions/checkout@main
           with:
-            submodule: recursive
+            submodules: recursive
         - name: Build and test step
           uses: ./.github/actions/compile-and-test
