@@ -9,8 +9,9 @@ The changes are tabulated according to the module input file, line number, and f
 The line number corresponds to the resulting line number after all changes are implemented.
 Thus, be sure to implement each in order so that subsequent line numbers are correct.
 
+
 OpenFAST v2.4.0 to OpenFAST `dev`
-----------------------------------
+---------------------------------
 
 Many changes were applied to SubDyn input file format. You may consult the following example:
 :download:`(SubDyn's Input File) <./subdyn/examples/OC4_Jacket_SD_Input.dat>`: 
@@ -44,14 +45,13 @@ Changed in OpenFAST v2.4.0
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 Module                                        Line  Flag Name        Example Value
 ============================================= ==== =============== ========================================================================================================================================================================================================
-SubDyn                                        26   Joints           JointID JointXss JointYss JointZss JointType JointDirX  JointDirY JointDirZ JointStiff  JointDamp
-SubDyn                                        27   Joints             (-)     (m)      (m)      (m)      (-)        (-)       (-)       (-)      (Nm/rad)   (Nm/rad.s)
+SubDyn                                        26   Joints           JointID JointXss JointYss JointZss JointType JointDirX  JointDirY JointDirZ JointStiff
+SubDyn                                        27   Joints             (-)     (m)      (m)      (m)      (-)        (-)       (-)       (-)      (Nm/rad) 
 SubDyn                                        na   Members          MemberID MJointID1 MJointID2 MPropSetID1 MPropSetID2 MType COSMID
 SubDyn                                        na   Members            (-)       (-)       (-)        (-)         (-)      (-)   (-)
 SubDyn                                        na   ConcentratedM    CMJointID  JMass    JMXX      JMYY      JMZZ       JMXY     JMXZ     JMYZ    MCGX  MCGY MCGZ
 SubDyn                                        na   ConcentratedM      (-)      (kg)    (kg*m^2)  (kg*m^2)  (kg*m^2)  (kg*m^2)  (kg*m^2) (kg*m^2)  (m)  (m)   (m)
 ============================================= ==== =============== ========================================================================================================================================================================================================
-
 
 
 
@@ -81,6 +81,8 @@ AirFoilTables  11   BL_file            "unused"                BL_file          
 
 Additional nodal output channels added for :ref:`AeroDyn15<AD-Nodal-Outputs>`,
 :ref:`BeamDyn<BD-Nodal-Outputs>`, and :ref:`ElastoDyn<ED-Nodal-Outputs>`.
+
+
 
 OpenFAST v2.2.0 to OpenFAST v2.3.0
 ----------------------------------
