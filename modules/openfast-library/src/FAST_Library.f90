@@ -497,6 +497,10 @@ subroutine FAST_OpFM_Init(iTurb, TMax, InputFileName_c, TurbID, NumSC2Ctrl, NumC
    ExternInitData%NumActForcePtsTower = NumActForcePtsTower
 
    CALL FAST_InitializeAll_T( t_initial, 1_IntKi, Turbine(iTurb), ErrStat, ErrMsg, InputFileName, ExternInitData )
+
+   IF ( ErrStat >= AbortErrLev ) THEN
+      CALL ProgAbort( "Error in FAST_OpFM_Init:FAST_InitializeAll_T" // TRIM(ErrMsg) )
+   END IF
    
       ! set values for return to OpenFOAM
    AbortErrLev_c = AbortErrLev   
