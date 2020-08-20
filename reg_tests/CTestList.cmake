@@ -93,6 +93,15 @@ function(bd_regression TESTNAME LABEL)
   regression(${TEST_SCRIPT} ${BEAMDYN_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
 endfunction(bd_regression)
 
+# hydrodyn
+function(hd_regression TESTNAME LABEL)
+  set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeHydrodynRegressionCase.py")
+  set(HYDRODYN_EXECUTABLE "${CTEST_HYDRODYN_EXECUTABLE}")
+  set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
+  set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/modules/hydrodyn")
+  regression(${TEST_SCRIPT} ${HYDRODYN_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
+endfunction(hd_regression)
+
 #===============================================================================
 # Regression tests
 #===============================================================================
@@ -145,3 +154,6 @@ bd_regression("bd_curved_beam"              "beamdyn;static")
 bd_regression("bd_isotropic_rollup"         "beamdyn;static")
 bd_regression("bd_static_cantilever_beam"   "beamdyn;static")
 bd_regression("bd_static_twisted_with_k1"   "beamdyn;static")
+
+# HydroDyn regression tests
+hd_regression("hd_OC3tripod_offshore_fixedbottom_wavesirr" "hydrodyn;offshore")

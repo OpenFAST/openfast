@@ -22,6 +22,7 @@ set(NWTCLIBS_SOURCES
   src/NWTC_IO.f90
   src/NWTC_Library.f90
   src/NWTC_Num.f90
+  src/NWTC_RandomNumber.f90
   src/SingPrec.f90
   src/NWTC_Library_Types.f90
 

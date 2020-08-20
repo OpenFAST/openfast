@@ -76,6 +76,7 @@ IMPLICIT NONE
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: CurrVyi      !< yi-component of the current velocity at elevation i [(m/s)]
     REAL(SiKi)  :: PCurrVxiPz0      !< xi-component of the partial derivative of the current velocity at elevation near mean sea level [(m/s)]
     REAL(SiKi)  :: PCurrVyiPz0      !< yi-component of the partial derivative of the current velocity at elevation near mean sea level [(m/s)]
+    TYPE(NWTC_RandomNumber_ParameterType)  :: RNG      !< Parameters for the pseudo random number generator [-]
   END TYPE Waves_InitInputType
 ! =======================
 ! =========  Waves_InitOutputType  =======
@@ -299,6 +300,9 @@ IF (ALLOCATED(SrcInitInputData%CurrVyi)) THEN
 ENDIF
     DstInitInputData%PCurrVxiPz0 = SrcInitInputData%PCurrVxiPz0
     DstInitInputData%PCurrVyiPz0 = SrcInitInputData%PCurrVyiPz0
+      CALL NWTC_Library_Copynwtc_randomnumber_parametertype( SrcInitInputData%RNG, DstInitInputData%RNG, CtrlCode, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+         IF (ErrStat>=AbortErrLev) RETURN
  END SUBROUTINE Waves_CopyInitInput
 
  SUBROUTINE Waves_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
@@ -334,6 +338,7 @@ ENDIF
 IF (ALLOCATED(InitInputData%CurrVyi)) THEN
   DEALLOCATE(InitInputData%CurrVyi)
 ENDIF
+  CALL NWTC_Library_Destroynwtc_randomnumber_parametertype( InitInputData%RNG, ErrStat, ErrMsg )
  END SUBROUTINE Waves_DestroyInitInput
 
  SUBROUTINE Waves_PackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -444,6 +449,24 @@ ENDIF
   END IF
       Re_BufSz   = Re_BufSz   + 1  ! PCurrVxiPz0
       Re_BufSz   = Re_BufSz   + 1  ! PCurrVyiPz0
+   ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
+      Int_BufSz   = Int_BufSz + 3  ! RNG: size of buffers for each call to pack subtype
+      CALL NWTC_Library_Packnwtc_randomnumber_parametertype( Re_Buf, Db_Buf, Int_Buf, InData%RNG, ErrStat2, ErrMsg2, .TRUE. ) ! RNG 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf)) THEN ! RNG
+         Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
+         DEALLOCATE(Re_Buf)
+      END IF
+      IF(ALLOCATED(Db_Buf)) THEN ! RNG
+         Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
+         DEALLOCATE(Db_Buf)
+      END IF
+      IF(ALLOCATED(Int_Buf)) THEN ! RNG
+         Int_BufSz = Int_BufSz + SIZE( Int_Buf )
+         DEALLOCATE(Int_Buf)
+      END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -674,6 +697,34 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%PCurrVyiPz0
     Re_Xferred = Re_Xferred + 1
+      CALL NWTC_Library_Packnwtc_randomnumber_parametertype( Re_Buf, Db_Buf, Int_Buf, InData%RNG, ErrStat2, ErrMsg2, OnlySize ) ! RNG 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Re_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Re_Buf) > 0) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_Buf)-1 ) = Re_Buf
+        Re_Xferred = Re_Xferred + SIZE(Re_Buf)
+        DEALLOCATE(Re_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+      IF(ALLOCATED(Db_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Db_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Db_Buf) > 0) DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_Buf)-1 ) = Db_Buf
+        Db_Xferred = Db_Xferred + SIZE(Db_Buf)
+        DEALLOCATE(Db_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+      IF(ALLOCATED(Int_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Int_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Int_Buf) > 0) IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_Buf)-1 ) = Int_Buf
+        Int_Xferred = Int_Xferred + SIZE(Int_Buf)
+        DEALLOCATE(Int_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
  END SUBROUTINE Waves_PackInitInput
 
  SUBROUTINE Waves_UnPackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -934,6 +985,46 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%PCurrVyiPz0 = REAL(ReKiBuf(Re_Xferred), SiKi)
     Re_Xferred = Re_Xferred + 1
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Re_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Re_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Re_Buf = ReKiBuf( Re_Xferred:Re_Xferred+Buf_size-1 )
+        Re_Xferred = Re_Xferred + Buf_size
+      END IF
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Db_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Db_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Db_Buf = DbKiBuf( Db_Xferred:Db_Xferred+Buf_size-1 )
+        Db_Xferred = Db_Xferred + Buf_size
+      END IF
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Int_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Int_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
+        Int_Xferred = Int_Xferred + Buf_size
+      END IF
+      CALL NWTC_Library_Unpacknwtc_randomnumber_parametertype( Re_Buf, Db_Buf, Int_Buf, OutData%RNG, ErrStat2, ErrMsg2 ) ! RNG 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
+      IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
+      IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
  END SUBROUTINE Waves_UnPackInitInput
 
  SUBROUTINE Waves_CopyInitOutput( SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg )
