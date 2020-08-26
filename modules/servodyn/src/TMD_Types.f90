@@ -105,9 +105,7 @@ IMPLICIT NONE
   TYPE, PUBLIC :: TMD_ContinuousStateType
     REAL(ReKi)  :: DummyContState      !< Remove this variable if you have continuous states [-]
     REAL(ReKi) , DIMENSION(1:4)  :: tmd_x      !< Continuous States [-]
-    REAL(ReKi) , DIMENSION(1:4)  :: btmd_x1      !< Continuous States [-]
-    REAL(ReKi) , DIMENSION(1:4)  :: btmd_x2      !< Continuous States [-]
-    REAL(ReKi) , DIMENSION(1:4)  :: btmd_x3      !< Continuous States [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: btmd_x      !< Continuous States [-]
   END TYPE TMD_ContinuousStateType
 ! =======================
 ! =========  TMD_DiscreteStateType  =======
@@ -1123,6 +1121,7 @@ ENDIF
 ! Local 
    INTEGER(IntKi)                 :: i,j,k
    INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'TMD_CopyContState'
@@ -1131,9 +1130,20 @@ ENDIF
    ErrMsg  = ""
     DstContStateData%DummyContState = SrcContStateData%DummyContState
     DstContStateData%tmd_x = SrcContStateData%tmd_x
-    DstContStateData%btmd_x1 = SrcContStateData%btmd_x1
-    DstContStateData%btmd_x2 = SrcContStateData%btmd_x2
-    DstContStateData%btmd_x3 = SrcContStateData%btmd_x3
+IF (ALLOCATED(SrcContStateData%btmd_x)) THEN
+  i1_l = LBOUND(SrcContStateData%btmd_x,1)
+  i1_u = UBOUND(SrcContStateData%btmd_x,1)
+  i2_l = LBOUND(SrcContStateData%btmd_x,2)
+  i2_u = UBOUND(SrcContStateData%btmd_x,2)
+  IF (.NOT. ALLOCATED(DstContStateData%btmd_x)) THEN 
+    ALLOCATE(DstContStateData%btmd_x(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstContStateData%btmd_x.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstContStateData%btmd_x = SrcContStateData%btmd_x
+ENDIF
  END SUBROUTINE TMD_CopyContState
 
  SUBROUTINE TMD_DestroyContState( ContStateData, ErrStat, ErrMsg )
@@ -1145,6 +1155,9 @@ ENDIF
 ! 
   ErrStat = ErrID_None
   ErrMsg  = ""
+IF (ALLOCATED(ContStateData%btmd_x)) THEN
+  DEALLOCATE(ContStateData%btmd_x)
+ENDIF
  END SUBROUTINE TMD_DestroyContState
 
  SUBROUTINE TMD_PackContState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -1184,9 +1197,11 @@ ENDIF
   Int_BufSz  = 0
       Re_BufSz   = Re_BufSz   + 1  ! DummyContState
       Re_BufSz   = Re_BufSz   + SIZE(InData%tmd_x)  ! tmd_x
-      Re_BufSz   = Re_BufSz   + SIZE(InData%btmd_x1)  ! btmd_x1
-      Re_BufSz   = Re_BufSz   + SIZE(InData%btmd_x2)  ! btmd_x2
-      Re_BufSz   = Re_BufSz   + SIZE(InData%btmd_x3)  ! btmd_x3
+  Int_BufSz   = Int_BufSz   + 1     ! btmd_x allocated yes/no
+  IF ( ALLOCATED(InData%btmd_x) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! btmd_x upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%btmd_x)  ! btmd_x
+  END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -1220,18 +1235,26 @@ ENDIF
       ReKiBuf(Re_Xferred) = InData%tmd_x(i1)
       Re_Xferred = Re_Xferred + 1
     END DO
-    DO i1 = LBOUND(InData%btmd_x1,1), UBOUND(InData%btmd_x1,1)
-      ReKiBuf(Re_Xferred) = InData%btmd_x1(i1)
-      Re_Xferred = Re_Xferred + 1
-    END DO
-    DO i1 = LBOUND(InData%btmd_x2,1), UBOUND(InData%btmd_x2,1)
-      ReKiBuf(Re_Xferred) = InData%btmd_x2(i1)
-      Re_Xferred = Re_Xferred + 1
-    END DO
-    DO i1 = LBOUND(InData%btmd_x3,1), UBOUND(InData%btmd_x3,1)
-      ReKiBuf(Re_Xferred) = InData%btmd_x3(i1)
-      Re_Xferred = Re_Xferred + 1
-    END DO
+  IF ( .NOT. ALLOCATED(InData%btmd_x) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%btmd_x,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%btmd_x,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%btmd_x,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%btmd_x,2)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i2 = LBOUND(InData%btmd_x,2), UBOUND(InData%btmd_x,2)
+        DO i1 = LBOUND(InData%btmd_x,1), UBOUND(InData%btmd_x,1)
+          ReKiBuf(Re_Xferred) = InData%btmd_x(i1,i2)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
  END SUBROUTINE TMD_PackContState
 
  SUBROUTINE TMD_UnPackContState( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -1248,6 +1271,7 @@ ENDIF
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+  INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'TMD_UnPackContState'
@@ -1269,24 +1293,29 @@ ENDIF
       OutData%tmd_x(i1) = ReKiBuf(Re_Xferred)
       Re_Xferred = Re_Xferred + 1
     END DO
-    i1_l = LBOUND(OutData%btmd_x1,1)
-    i1_u = UBOUND(OutData%btmd_x1,1)
-    DO i1 = LBOUND(OutData%btmd_x1,1), UBOUND(OutData%btmd_x1,1)
-      OutData%btmd_x1(i1) = ReKiBuf(Re_Xferred)
-      Re_Xferred = Re_Xferred + 1
-    END DO
-    i1_l = LBOUND(OutData%btmd_x2,1)
-    i1_u = UBOUND(OutData%btmd_x2,1)
-    DO i1 = LBOUND(OutData%btmd_x2,1), UBOUND(OutData%btmd_x2,1)
-      OutData%btmd_x2(i1) = ReKiBuf(Re_Xferred)
-      Re_Xferred = Re_Xferred + 1
-    END DO
-    i1_l = LBOUND(OutData%btmd_x3,1)
-    i1_u = UBOUND(OutData%btmd_x3,1)
-    DO i1 = LBOUND(OutData%btmd_x3,1), UBOUND(OutData%btmd_x3,1)
-      OutData%btmd_x3(i1) = ReKiBuf(Re_Xferred)
-      Re_Xferred = Re_Xferred + 1
-    END DO
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! btmd_x not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%btmd_x)) DEALLOCATE(OutData%btmd_x)
+    ALLOCATE(OutData%btmd_x(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%btmd_x.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i2 = LBOUND(OutData%btmd_x,2), UBOUND(OutData%btmd_x,2)
+        DO i1 = LBOUND(OutData%btmd_x,1), UBOUND(OutData%btmd_x,1)
+          OutData%btmd_x(i1,i2) = ReKiBuf(Re_Xferred)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
  END SUBROUTINE TMD_UnPackContState
 
  SUBROUTINE TMD_CopyDiscState( SrcDiscStateData, DstDiscStateData, CtrlCode, ErrStat, ErrMsg )

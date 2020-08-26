@@ -1207,24 +1207,28 @@ SUBROUTINE SrvD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
    AllOuts(TTMD_XQD) = x%TTMD%tmd_x(2)
    AllOuts(TTMD_YQ ) = x%TTMD%tmd_x(3)
    AllOuts(TTMD_YQD) = x%TTMD%tmd_x(4)
-   
-!SP_start
-!FIXME: this is a hardcoded size....
-   AllOuts(BTMD1_XQ ) = x%BTMD%btmd_x1(1)
-   AllOuts(BTMD1_XQD) = x%BTMD%btmd_x1(2)
-   AllOuts(BTMD1_YQ ) = x%BTMD%btmd_x1(3)
-   AllOuts(BTMD1_YQD) = x%BTMD%btmd_x1(4)
-
-   AllOuts(BTMD2_XQ ) = x%BTMD%btmd_x2(1)
-   AllOuts(BTMD2_XQD) = x%BTMD%btmd_x2(2)
-   AllOuts(BTMD2_YQ ) = x%BTMD%btmd_x2(3)
-   AllOuts(BTMD2_YQD) = x%BTMD%btmd_x2(4)
-
-   AllOuts(BTMD3_XQ ) = x%BTMD%btmd_x3(1)
-   AllOuts(BTMD3_XQD) = x%BTMD%btmd_x3(2)
-   AllOuts(BTMD3_YQ ) = x%BTMD%btmd_x3(3)
-   AllOuts(BTMD3_YQD) = x%BTMD%btmd_x3(4)
-!SP_end
+   if (p%CompBTMD) then
+      if (p%NumBl >= 1) then
+         AllOuts(BTMD1_XQ ) = x%BTMD%btmd_x(1,1)
+         AllOuts(BTMD1_XQD) = x%BTMD%btmd_x(2,1)
+         AllOuts(BTMD1_YQ ) = x%BTMD%btmd_x(3,1)
+         AllOuts(BTMD1_YQD) = x%BTMD%btmd_x(4,1)
+      endif
+ 
+      if (p%NumBl >= 2) then
+         AllOuts(BTMD2_XQ ) = x%BTMD%btmd_x(1,2)
+         AllOuts(BTMD2_XQD) = x%BTMD%btmd_x(2,2)
+         AllOuts(BTMD2_YQ ) = x%BTMD%btmd_x(3,2)
+         AllOuts(BTMD2_YQD) = x%BTMD%btmd_x(4,2)
+      endif
+ 
+      if (p%NumBl >= 3) then
+         AllOuts(BTMD3_XQ ) = x%BTMD%btmd_x(1,3)
+         AllOuts(BTMD3_XQD) = x%BTMD%btmd_x(2,3)
+         AllOuts(BTMD3_YQ ) = x%BTMD%btmd_x(3,3)
+         AllOuts(BTMD3_YQD) = x%BTMD%btmd_x(4,3)
+      endif
+   endif
    
    !...............................................................................................................................   
    ! Place the selected output channels into the WriteOutput(:) array with the proper sign:
@@ -3511,18 +3515,20 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
    InvalidOutput(       TTMD_XQD) = ( .not. p%CompTTMD )
    InvalidOutput(        TTMD_YQ) = ( .not. p%CompTTMD )
    InvalidOutput(       TTMD_YQD) = ( .not. p%CompTTMD )
-   InvalidOutput(      BTMD1_XQ ) = ( .not. P%CompBTMD )
-   InvalidOutput(      BTMD1_XQD) = ( .not. P%CompBTMD )
-   InvalidOutput(      BTMD1_YQ ) = ( .not. P%CompBTMD )
-   InvalidOutput(      BTMD1_YQD) = ( .not. P%CompBTMD )
-   InvalidOutput(      BTMD2_XQ ) = ( .not. P%CompBTMD )
-   InvalidOutput(      BTMD2_XQD) = ( .not. P%CompBTMD )
-   InvalidOutput(      BTMD2_YQ ) = ( .not. P%CompBTMD )
-   InvalidOutput(      BTMD2_YQD) = ( .not. P%CompBTMD )
-   InvalidOutput(      BTMD3_XQ ) = ( .not. P%CompBTMD )
-   InvalidOutput(      BTMD3_XQD) = ( .not. P%CompBTMD )
-   InvalidOutput(      BTMD3_YQ ) = ( .not. P%CompBTMD )
-   InvalidOutput(      BTMD3_YQD) = ( .not. P%CompBTMD )
+
+   ! NOTE: only the first 3 blades can be output.  If more blades exist, we can't output them here
+   InvalidOutput(      BTMD1_XQ ) = ( .not. P%CompBTMD .and. p%NumBl < 1 )
+   InvalidOutput(      BTMD1_XQD) = ( .not. P%CompBTMD .and. p%NumBl < 1 )
+   InvalidOutput(      BTMD1_YQ ) = ( .not. P%CompBTMD .and. p%NumBl < 1 )
+   InvalidOutput(      BTMD1_YQD) = ( .not. P%CompBTMD .and. p%NumBl < 1 )
+   InvalidOutput(      BTMD2_XQ ) = ( .not. P%CompBTMD .and. p%NumBl < 2 )
+   InvalidOutput(      BTMD2_XQD) = ( .not. P%CompBTMD .and. p%NumBl < 2 )
+   InvalidOutput(      BTMD2_YQ ) = ( .not. P%CompBTMD .and. p%NumBl < 2 )
+   InvalidOutput(      BTMD2_YQD) = ( .not. P%CompBTMD .and. p%NumBl < 2 )
+   InvalidOutput(      BTMD3_XQ ) = ( .not. P%CompBTMD .and. p%NumBl < 3 )
+   InvalidOutput(      BTMD3_XQD) = ( .not. P%CompBTMD .and. p%NumBl < 3 )
+   InvalidOutput(      BTMD3_YQ ) = ( .not. P%CompBTMD .and. p%NumBl < 3 )
+   InvalidOutput(      BTMD3_YQD) = ( .not. P%CompBTMD .and. p%NumBl < 3 )
 
 
    !-------------------------------------------------------------------------------------------------

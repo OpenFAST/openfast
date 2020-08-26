@@ -77,9 +77,7 @@ typedef ^ InitOutputType SiKi DummyInitOut - - - "dummy init output" -
 # Define continuous (differentiable) states here:
 typedef	^	ContinuousStateType	ReKi	DummyContState	-	-	-	"Remove this variable if you have continuous states"	-
 typedef	^		ContinuousStateType	ReKi		tmd_x			{4} - -  "Continuous States" -
-typedef	^		ContinuousStateType	ReKi		btmd_x1			{4} - -  "Continuous States" -
-typedef	^		ContinuousStateType	ReKi		btmd_x2			{4} - -  "Continuous States" -
-typedef	^		ContinuousStateType	ReKi		btmd_x3			{4} - -  "Continuous States" -
+typedef	^		ContinuousStateType	ReKi		btmd_x			{:}{:} - -  "Continuous States" -
 # Define discrete (nondifferentiable) states here:
 typedef ^ DiscreteStateType ReKi DummyDiscState - - - "Remove this variable if you have discrete states" -
 # Define constraint states here:

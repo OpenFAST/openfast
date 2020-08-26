@@ -172,8 +172,8 @@ SUBROUTINE TMD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
       !............................................................................................
             
    xd%DummyDiscState = 0
-   z%DummyConstrState = 0
-   
+   z%DummyConstrState = 0  
+ 
    ! Initialize other states here:
    OtherState%DummyOtherState = 0
    
@@ -185,32 +185,30 @@ SUBROUTINE TMD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
    m%C_Brake  = 0.0_ReKi    ! whole array initialization
    m%F_table  = 0.0_ReKi    ! whole array initialization
    
+   ! Allocate continuous states (x)
+   call AllocAry(x%btmd_x,    4, p%NumBl,'x%btmd_x',     ErrStat2,ErrMsg2)
+      CALL CheckError( ErrStat2, ErrMsg2 )
+      IF (ErrStat >= AbortErrLev) RETURN      
+!   call AllocAry(x%btmd_dxdt, 4, p%NumBl,'x%btmd_dxdt',  ErrStat2,ErrMsg2); if (Failed()) return;
+
    ! Define initial guess for the system inputs here:
    x%tmd_x(1) = p%X_DSP
    x%tmd_x(2) = 0
    x%tmd_x(3) = p%Y_DSP
    x%tmd_x(4) = 0
-!SP_start
-   x%btmd_x1(1) = p%X_DSP
-   x%btmd_x1(2) = 0
-   x%btmd_x1(3) = p%Y_DSP
-   x%btmd_x1(4) = 0
+   ! Blade
+   do K=1,p%NumBl
+      x%btmd_x(1,K) = p%X_DSP
+      x%btmd_x(2,K) = 0
+      x%btmd_x(3,K) = p%Y_DSP
+      x%btmd_x(4,K) = 0
+   enddo
 
-   x%btmd_x2(1) = p%X_DSP
-   x%btmd_x2(2) = 0
-   x%btmd_x2(3) = p%Y_DSP
-   x%btmd_x2(4) = 0
 
-   x%btmd_x3(1) = p%X_DSP
-   x%btmd_x3(2) = 0
-   x%btmd_x3(3) = p%Y_DSP
-   x%btmd_x3(4) = 0
-!SP_end
     ! Define system output initializations (set up mesh) here:
     ! Create the input and output meshes associated with lumped loads
 
-!SP_
-   IF (p%TMD_DOF_MODE == ControlMode_None .OR. p%TMD_DOF_MODE == DOFMode_Indept .OR. p%TMD_DOF_MODE == DOFMode_Omni .OR. p%TMD_DOF_MODE == DOFMode_TLCD) THEN
+   IF (p%TMD_DOF_MODE /= DOFMode_BTMD) THEN
 
       CALL MeshCreate( BlankMesh        = u%Mesh            &
                      ,IOS               = COMPONENT_INPUT   &
@@ -563,25 +561,15 @@ SUBROUTINE TMD_RK4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg
       TYPE(TMD_ContinuousStateType)                 :: k2          ! RK4 constant; see above 
       TYPE(TMD_ContinuousStateType)                 :: k3          ! RK4 constant; see above 
       TYPE(TMD_ContinuousStateType)                 :: k4          ! RK4 constant; see above 
-!SP_
-      TYPE(TMD_ContinuousStateType)                 :: b1k1          ! RK4 constant; see above
-      TYPE(TMD_ContinuousStateType)                 :: b1k2          ! RK4 constant; see above 
-      TYPE(TMD_ContinuousStateType)                 :: b1k3          ! RK4 constant; see above 
-      TYPE(TMD_ContinuousStateType)                 :: b1k4          ! RK4 constant; see above 
-      
-      TYPE(TMD_ContinuousStateType)                 :: b2k1          ! RK4 constant; see above
-      TYPE(TMD_ContinuousStateType)                 :: b2k2          ! RK4 constant; see above 
-      TYPE(TMD_ContinuousStateType)                 :: b2k3          ! RK4 constant; see above 
-      TYPE(TMD_ContinuousStateType)                 :: b2k4          ! RK4 constant; see above 
 
-      TYPE(TMD_ContinuousStateType)                 :: b3k1          ! RK4 constant; see above
-      TYPE(TMD_ContinuousStateType)                 :: b3k2          ! RK4 constant; see above 
-      TYPE(TMD_ContinuousStateType)                 :: b3k3          ! RK4 constant; see above 
-      TYPE(TMD_ContinuousStateType)                 :: b3k4          ! RK4 constant; see above 
+      TYPE(TMD_ContinuousStateType)                 :: bk1         ! RK4 constant; see above
+      TYPE(TMD_ContinuousStateType)                 :: bk2         ! RK4 constant; see above 
+      TYPE(TMD_ContinuousStateType)                 :: bk3         ! RK4 constant; see above 
+      TYPE(TMD_ContinuousStateType)                 :: bk4         ! RK4 constant; see above 
       
       TYPE(TMD_ContinuousStateType)                 :: x_tmp       ! Holds temporary modification to x
       TYPE(TMD_InputType)                           :: u_interp    ! interpolated value of inputs 
-      INTEGER(IntKi)                                :: K                                               ! Counter for blades
+      INTEGER(IntKi)                                :: i           ! Counter for blades
 
       INTEGER(IntKi)                                :: ErrStat2    ! local error status
       CHARACTER(ErrMsgLen)                          :: ErrMsg2     ! local error message (ErrMsg)
@@ -666,43 +654,18 @@ SUBROUTINE TMD_RK4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg
          CALL ExitThisRoutine(  )
 
       ELSE IF (p%TMD_DOF_MODE == DOFMode_BTMD) THEN
-
-         CALL TMD_CopyContState( x, b1k1, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+!FIXME: can we further consolidate?
+          CALL TMD_CopyContState( x, bk1, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+          CALL TMD_CopyContState( x, bk2, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
             CALL CheckError(ErrStat2,ErrMsg2)
-         CALL TMD_CopyContState( x, b1k2, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+         CALL TMD_CopyContState( x, bk3, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
             CALL CheckError(ErrStat2,ErrMsg2)
-         CALL TMD_CopyContState( x, b1k3, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
-            CALL CheckError(ErrStat2,ErrMsg2)
-         CALL TMD_CopyContState( x, b1k4,    MESH_NEWCOPY, ErrStat2, ErrMsg2 )
-            CALL CheckError(ErrStat2,ErrMsg2)
-         CALL TMD_CopyContState( x, x_tmp, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
-            CALL CheckError(ErrStat2,ErrMsg2)
-            IF ( ErrStat >= AbortErrLev ) RETURN
- 
-         CALL TMD_CopyContState( x, b2k1, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
-            CALL CheckError(ErrStat2,ErrMsg2)
-         CALL TMD_CopyContState( x, b2k2, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
-            CALL CheckError(ErrStat2,ErrMsg2)
-         CALL TMD_CopyContState( x, b2k3, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
-            CALL CheckError(ErrStat2,ErrMsg2)
-         CALL TMD_CopyContState( x, b2k4,    MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+         CALL TMD_CopyContState( x, bk4,    MESH_NEWCOPY, ErrStat2, ErrMsg2 )
             CALL CheckError(ErrStat2,ErrMsg2)
          CALL TMD_CopyContState( x, x_tmp, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
             CALL CheckError(ErrStat2,ErrMsg2)
             IF ( ErrStat >= AbortErrLev ) RETURN
- 
-         CALL TMD_CopyContState( x, b3k1, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
             CALL CheckError(ErrStat2,ErrMsg2)
-         CALL TMD_CopyContState( x, b3k2, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
-            CALL CheckError(ErrStat2,ErrMsg2)
-         CALL TMD_CopyContState( x, b3k3, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
-            CALL CheckError(ErrStat2,ErrMsg2)
-         CALL TMD_CopyContState( x, b3k4,    MESH_NEWCOPY, ErrStat2, ErrMsg2 )
-            CALL CheckError(ErrStat2,ErrMsg2)
-         CALL TMD_CopyContState( x, x_tmp, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
-            CALL CheckError(ErrStat2,ErrMsg2)
-            IF ( ErrStat >= AbortErrLev ) RETURN
-            
  
          CALL TMD_CopyInput( u(1), u_interp, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
             CALL CheckError(ErrStat2,ErrMsg2)
@@ -718,15 +681,12 @@ SUBROUTINE TMD_RK4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg
             CALL CheckError(ErrStat2,ErrMsg2)
             IF ( ErrStat >= AbortErrLev ) RETURN
  
-         b1k1%btmd_x1  = p%dt * xdot%btmd_x1
-         x_tmp%btmd_x1  = x%btmd_x1  + 0.5 * b1k1%btmd_x1
-         
-         b2k1%btmd_x2  = p%dt * xdot%btmd_x2
-         x_tmp%btmd_x2  = x%btmd_x2  + 0.5 * b2k1%btmd_x2
-         
-         b3k1%btmd_x3  = p%dt * xdot%btmd_x3
-         x_tmp%btmd_x3  = x%btmd_x3  + 0.5 * b3k1%btmd_x3
- 
+         do i=1,p%NumBl
+            bk1%btmd_x(:,i)   = p%dt * xdot%btmd_x(:,i)
+            x_tmp%btmd_x(:,i) = x%btmd_x(:,i)  + 0.5 * bk1%btmd_x(:,i)
+         enddo
+
+
          ! interpolate u to find u_interp = u(t + dt/2)
          CALL TMD_Input_ExtrapInterp(u, utimes, u_interp, t+0.5*p%dt, ErrStat2, ErrMsg2)
             CALL CheckError(ErrStat2,ErrMsg2)
@@ -737,29 +697,23 @@ SUBROUTINE TMD_RK4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg
             CALL CheckError(ErrStat2,ErrMsg2)
             IF ( ErrStat >= AbortErrLev ) RETURN
  
-         b1k2%btmd_x1  = p%dt * xdot%btmd_x1
-         x_tmp%btmd_x1  = x%btmd_x1  + 0.5 * b1k2%btmd_x1
- 
-         b2k2%btmd_x2  = p%dt * xdot%btmd_x2
-         x_tmp%btmd_x2  = x%btmd_x2  + 0.5 * b2k2%btmd_x2
- 
-         b3k2%btmd_x3  = p%dt * xdot%btmd_x3
-         x_tmp%btmd_x3  = x%btmd_x3  + 0.5 * b3k2%btmd_x3
- 
+         do i=1,p%NumBl
+           bk2%btmd_x(:,i)   = p%dt * xdot%btmd_x(:,i)
+           x_tmp%btmd_x(:,i) = x%btmd_x(:,i)  + 0.5 * bk2%btmd_x(:,i)
+         enddo 
+
+
          ! find xdot at t + dt/2
          CALL TMD_CalcContStateDeriv( t + 0.5*p%dt, u_interp, p, x_tmp, xd, z, OtherState, m, xdot, ErrStat2, ErrMsg2 )
             CALL CheckError(ErrStat2,ErrMsg2)
             IF ( ErrStat >= AbortErrLev ) RETURN
  
-         b1k3%btmd_x1  = p%dt * xdot%btmd_x1
-         x_tmp%btmd_x1  = x%btmd_x1  + b1k3%btmd_x1
- 
-         b2k3%btmd_x2  = p%dt * xdot%btmd_x2
-         x_tmp%btmd_x2  = x%btmd_x2  + b2k3%btmd_x2
- 
-         b3k3%btmd_x3  = p%dt * xdot%btmd_x3
-         x_tmp%btmd_x3  = x%btmd_x3  + b3k3%btmd_x3
- 
+         do i=1,p%NumBl
+           bk3%btmd_x(:,i)  = p%dt * xdot%btmd_x(:,i)
+           x_tmp%btmd_x(:,i)  = x%btmd_x(:,i)  + bk3%btmd_x(:,i)
+         enddo
+
+
          ! interpolate u to find u_interp = u(t + dt)
          CALL TMD_Input_ExtrapInterp(u, utimes, u_interp, t + p%dt, ErrStat2, ErrMsg2)
             CALL CheckError(ErrStat2,ErrMsg2)
@@ -770,15 +724,12 @@ SUBROUTINE TMD_RK4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg
             CALL CheckError(ErrStat2,ErrMsg2)
             IF ( ErrStat >= AbortErrLev ) RETURN
  
-         b1k4%btmd_x1  = p%dt * xdot%btmd_x1
-         x%btmd_x1  = x%btmd_x1  +  ( b1k1%btmd_x1  + 2. * b1k2%btmd_x1  + 2. * b1k3%btmd_x1  + b1k4%btmd_x1  ) / 6.      
- 
-         b2k4%btmd_x2  = p%dt * xdot%btmd_x2
-         x%btmd_x2  = x%btmd_x2  +  ( b2k1%btmd_x2  + 2. * b2k2%btmd_x2  + 2. * b2k3%btmd_x2  + b2k4%btmd_x2  ) / 6.      
- 
-         b3k4%btmd_x3  = p%dt * xdot%btmd_x3
-         x%btmd_x3  = x%btmd_x3  +  ( b3k1%btmd_x3  + 2. * b3k2%btmd_x3  + 2. * b3k3%btmd_x3  + b3k4%btmd_x3  ) / 6.      
- 
+         do i=1,p%NumBl
+            bk4%btmd_x(:,i) = p%dt * xdot%btmd_x(:,i)
+            x%btmd_x(:,i)  = x%btmd_x(:,i)  +  ( bk1%btmd_x(:,i)  + 2. * bk2%btmd_x(:,i)  + 2. * bk3%btmd_x(:,i)  + bk4%btmd_x(:,i)  ) / 6.      
+         enddo
+
+
          ! x%tmd_dxdt = x%tmd_dxdt +  ( k1%tmd_dxdt + 2. * k2%tmd_dxdt + 2. * k3%tmd_dxdt + k4%tmd_dxdt ) / 6.      
             ! clean up local variables:
          CALL ExitThisRoutine(  )
@@ -802,6 +753,10 @@ CONTAINS
       CALL TMD_DestroyContState( k3,       ErrStat3, ErrMsg3 )
       CALL TMD_DestroyContState( k4,       ErrStat3, ErrMsg3 )
       CALL TMD_DestroyContState( x_tmp,    ErrStat3, ErrMsg3 )
+      CALL TMD_DestroyContState( bk1,      ErrStat3, ErrMsg3 )
+      CALL TMD_DestroyContState( bk2,      ErrStat3, ErrMsg3 )
+      CALL TMD_DestroyContState( bk3,      ErrStat3, ErrMsg3 )
+      CALL TMD_DestroyContState( bk4,      ErrStat3, ErrMsg3 )
 
       CALL TMD_DestroyInput(     u_interp, ErrStat3, ErrMsg3 )
          
@@ -864,53 +819,30 @@ SUBROUTINE TMD_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
       REAL(ReKi), dimension(3)                   :: a_G_N
       REAL(ReKi), dimension(3)                   :: F_P_N
       REAL(ReKi), dimension(3)                   :: M_P_N
-!SP_start
-      REAL(ReKi), dimension(3)                   :: a_G_B1
-      REAL(ReKi), dimension(3)                   :: a_G_B2
-      REAL(ReKi), dimension(3)                   :: a_G_B3
-      REAL(ReKi), dimension(3)                   :: F_P_B1
-      REAL(ReKi), dimension(3)                   :: M_P_B1
-      REAL(ReKi), dimension(3)                   :: F_P_B2
-      REAL(ReKi), dimension(3)                   :: M_P_B2
-      REAL(ReKi), dimension(3)                   :: F_P_B3
-      REAL(ReKi), dimension(3)                   :: M_P_B3
-!SP_end
+
       !nacelle movement in local coordinates
       Real(ReKi), dimension(3)                   :: r_ddot_P_N
       Real(ReKi), dimension(3)                   :: omega_N_O_N
       Real(ReKi), dimension(3)                   :: alpha_N_O_N
-!SP_start
-      Real(ReKi), dimension(3)                   :: r_ddot_P_B1
-      Real(ReKi), dimension(3)                   :: omega_B_O_B1
-      Real(ReKi), dimension(3)                   :: alpha_B_O_B1
 
-      Real(ReKi), dimension(3)                   :: r_ddot_P_B2
-      Real(ReKi), dimension(3)                   :: omega_B_O_B2
-      Real(ReKi), dimension(3)                   :: alpha_B_O_B2
+!FIXME: once we generalize this, move it to miscvars
+      REAL(ReKi), allocatable, dimension(:,:)    :: a_G_B
+      REAL(ReKi), allocatable, dimension(:,:)    :: F_P_B
+      REAL(ReKi), allocatable, dimension(:,:)    :: M_P_B
+      ! Blade motion
+      real(ReKi), allocatable, dimension(:,:)    :: r_ddot_P_B
+      real(ReKi), allocatable, dimension(:,:)    :: omega_B_O_B
+      real(ReKi), allocatable, dimension(:,:)    :: alpha_B_O_B
+      Real(ReKi), allocatable, dimension(:)      :: F_x_btmdY_P_B 
+      Real(ReKi), allocatable, dimension(:)      :: F_z_btmdY_P_B 
+      Real(ReKi), allocatable, dimension(:)      :: F_y_btmdX_P_B 
+      Real(ReKi), allocatable, dimension(:)      :: F_z_btmdX_P_B
 
-      Real(ReKi), dimension(3)                   :: r_ddot_P_B3
-      Real(ReKi), dimension(3)                   :: omega_B_O_B3
-      Real(ReKi), dimension(3)                   :: alpha_B_O_B3
-!SP_end
       !dependent accelerations
       Real(ReKi)                                 :: F_x_tmdY_P_N 
       Real(ReKi)                                 :: F_z_tmdY_P_N 
       Real(ReKi)                                 :: F_y_tmdX_P_N 
       Real(ReKi)                                 :: F_z_tmdX_P_N
-!SP_start
-      Real(ReKi)                                 :: F_x_btmdY_P_B1 
-      Real(ReKi)                                 :: F_z_btmdY_P_B1 
-      Real(ReKi)                                 :: F_y_btmdX_P_B1 
-      Real(ReKi)                                 :: F_z_btmdX_P_B1
-      Real(ReKi)                                 :: F_x_btmdY_P_B2 
-      Real(ReKi)                                 :: F_z_btmdY_P_B2 
-      Real(ReKi)                                 :: F_y_btmdX_P_B2 
-      Real(ReKi)                                 :: F_z_btmdX_P_B2
-      Real(ReKi)                                 :: F_x_btmdY_P_B3 
-      Real(ReKi)                                 :: F_z_btmdY_P_B3 
-      Real(ReKi)                                 :: F_y_btmdX_P_B3 
-      Real(ReKi)                                 :: F_z_btmdX_P_B3
-!SP_end
 
       Real(ReKi)                                 :: F_x_tmdXY_P_N 
       Real(ReKi)                                 :: F_z_tmdXY_P_N 
@@ -933,10 +865,29 @@ SUBROUTINE TMD_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
      Real(ReKi) :: F_z_otlcd_WH_N
 
       TYPE(TMD_ContinuousStateType)              :: dxdt    ! first time derivative of continuous states
+
+      integer(IntKi)       :: i     !< generic counter
+
+      ! Local error handling
+      integer(IntKi)       :: ErrStat2
+      character(ErrMsgLen) :: ErrMsg2
       
 
-      ErrStat = ErrID_None         
-      ErrMsg  = "" 
+      ErrStat = ErrID_None
+      ErrMsg  = ""
+
+!FIXME: move this to miscvars, or states.
+      call AllocAry(a_G_B,       3, p%NumBl,'a_G_B',         ErrStat2,ErrMsg2); if (Failed()) return;
+      call AllocAry(F_P_B,       3, p%NumBl,'F_P_B',         ErrStat2,ErrMsg2); if (Failed()) return;
+      call AllocAry(M_P_B,       3, p%NumBl,'M_P_B',         ErrStat2,ErrMsg2); if (Failed()) return;
+      call AllocAry(r_ddot_P_B  ,3, p%NumBl,'r_ddot_P_B' ,   ErrStat2,ErrMsg2); if (Failed()) return;
+      call AllocAry(omega_B_O_B ,3, p%NumBl,'omega_B_O_B',   ErrStat2,ErrMsg2); if (Failed()) return;
+      call AllocAry(alpha_B_O_B ,3, p%NumBl,'alpha_B_O_B',   ErrStat2,ErrMsg2); if (Failed()) return;
+      call AllocAry(F_x_btmdY_P_B,  p%NumBl,'F_x_btmdY_P_B', ErrStat2,ErrMsg2); if (Failed()) return;
+      call AllocAry(F_z_btmdY_P_B,  p%NumBl,'F_z_btmdY_P_B', ErrStat2,ErrMsg2); if (Failed()) return;
+      call AllocAry(F_y_btmdX_P_B,  p%NumBl,'F_y_btmdX_P_B', ErrStat2,ErrMsg2); if (Failed()) return;
+      call AllocAry(F_z_btmdX_P_B,  p%NumBl,'F_z_btmdX_P_B', ErrStat2,ErrMsg2); if (Failed()) return;
+
       ! gravity vector in global coordinates
       a_G_O (1) = 0 
       a_G_O (2) = 0
@@ -952,26 +903,17 @@ SUBROUTINE TMD_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
  
       ELSE IF (p%TMD_DOF_MODE == DOFMode_BTMD) THEN
  
-         a_G_B1  = matmul(u%BMesh(1)%Orientation(:,:,1),a_G_O)
-         a_G_B2  = matmul(u%BMesh(2)%Orientation(:,:,1),a_G_O)
-         a_G_B3  = matmul(u%BMesh(3)%Orientation(:,:,1),a_G_O)
- 
-         r_ddot_P_B1  = matmul(u%BMesh(1)%Orientation(:,:,1),u%BMesh(1)%TranslationAcc(:,1))
-         r_ddot_P_B2  = matmul(u%BMesh(2)%Orientation(:,:,1),u%BMesh(2)%TranslationAcc(:,1))
-         r_ddot_P_B3  = matmul(u%BMesh(3)%Orientation(:,:,1),u%BMesh(3)%TranslationAcc(:,1))
- 
-         omega_B_O_B1 = matmul(u%BMesh(1)%Orientation(:,:,1),u%BMesh(1)%RotationVel(:,1))
-         omega_B_O_B2 = matmul(u%BMesh(2)%Orientation(:,:,1),u%BMesh(2)%RotationVel(:,1))
-         omega_B_O_B3 = matmul(u%BMesh(3)%Orientation(:,:,1),u%BMesh(3)%RotationVel(:,1))
- 
-         alpha_B_O_B1 = matmul(u%BMesh(1)%Orientation(:,:,1),u%BMesh(1)%RotationAcc(:,1))
-         alpha_B_O_B2 = matmul(u%BMesh(2)%Orientation(:,:,1),u%BMesh(2)%RotationAcc(:,1))
-         alpha_B_O_B3 = matmul(u%BMesh(3)%Orientation(:,:,1),u%BMesh(3)%RotationAcc(:,1))
+         do i=1,p%NumBl
+            a_G_B(:,i)       = matmul(u%BMesh(i)%Orientation(:,:,1),a_G_O)
+            r_ddot_P_B(:,i)  = matmul(u%BMesh(i)%Orientation(:,:,1),u%BMesh(i)%TranslationAcc(:,1))
+            omega_B_O_B(:,i) = matmul(u%BMesh(i)%Orientation(:,:,1),u%BMesh(i)%RotationVel(:,1))
+            alpha_B_O_B(:,i) = matmul(u%BMesh(i)%Orientation(:,:,1),u%BMesh(i)%RotationAcc(:,1))
+         enddo
  
       ENDIF
 
          ! calculate the derivative, only to get updated values of m, which are used in the equations below
-      CALL TMD_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, ErrStat, ErrMsg )      
+      CALL TMD_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, ErrStat2, ErrMsg2 ); if (Failed()) return;
       
       IF (p%TMD_DOF_MODE == ControlMode_None .OR. p%TMD_DOF_MODE == DOFMode_Indept) THEN
          
@@ -1029,60 +971,38 @@ SUBROUTINE TMD_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
 
 
          ! tmd external forces of dependent degrees:
-         F_x_btmdY_P_B1 = - p%M_Y * (a_G_B1(1) - r_ddot_P_B1(1) + (alpha_B_O_B1(3) - omega_B_O_B1(1)*omega_B_O_B1(2))*x%btmd_x1(3) + 2*omega_B_O_B1(3)*x%btmd_x1(4))
-         F_z_btmdY_P_B1 = - p%M_Y * (a_G_B1(3) - r_ddot_P_B1(3) - (alpha_B_O_B1(1) + omega_B_O_B1(2)*omega_B_O_B1(3))*x%btmd_x1(3) - 2*omega_B_O_B1(1)*x%btmd_x1(4))
+         do i=1,p%NumBl
+            F_x_btmdY_P_B(i) = - p%M_Y * (a_G_B(1,i) - r_ddot_P_B(1,i) + (alpha_B_O_B(3,i) - omega_B_O_B(1,i)*omega_B_O_B(2,i))*x%btmd_x(3,i) + 2*omega_B_O_B(3,i)*x%btmd_x(4,i))
+            F_z_btmdY_P_B(i) = - p%M_Y * (a_G_B(3,i) - r_ddot_P_B(3,i) - (alpha_B_O_B(1,i) + omega_B_O_B(2,i)*omega_B_O_B(3,i))*x%btmd_x(3,i) - 2*omega_B_O_B(1,i)*x%btmd_x(4,i))
 
-         F_x_btmdY_P_B2 = - p%M_Y * (a_G_B2(1) - r_ddot_P_B2(1) + (alpha_B_O_B2(3) - omega_B_O_B2(1)*omega_B_O_B2(2))*x%btmd_x2(3) + 2*omega_B_O_B2(3)*x%btmd_x2(4))
-         F_z_btmdY_P_B2 = - p%M_Y * (a_G_B2(3) - r_ddot_P_B2(3) - (alpha_B_O_B2(1) + omega_B_O_B2(2)*omega_B_O_B2(3))*x%btmd_x2(3) - 2*omega_B_O_B2(1)*x%btmd_x2(4))
-
-         F_x_btmdY_P_B3 = - p%M_Y * (a_G_B3(1) - r_ddot_P_B3(1) + (alpha_B_O_B3(3) - omega_B_O_B3(1)*omega_B_O_B3(2))*x%btmd_x3(3) + 2*omega_B_O_B3(3)*x%btmd_x3(4))
-         F_z_btmdY_P_B3 = - p%M_Y * (a_G_B3(3) - r_ddot_P_B3(3) - (alpha_B_O_B3(1) + omega_B_O_B3(2)*omega_B_O_B3(3))*x%btmd_x3(3) - 2*omega_B_O_B3(1)*x%btmd_x3(4))
-
-         F_y_btmdX_P_B1 = - p%M_X * (a_G_B1(2) - r_ddot_P_B1(2) - (alpha_B_O_B1(3) + omega_B_O_B1(1)*omega_B_O_B1(2))*x%btmd_x1(1) - 2*omega_B_O_B1(3)*x%btmd_x1(2))
-         F_z_btmdX_P_B1 = - p%M_X * (a_G_B1(3) - r_ddot_P_B1(3) + (alpha_B_O_B1(2) - omega_B_O_B1(1)*omega_B_O_B1(3))*x%btmd_x1(1) + 2*omega_B_O_B1(2)*x%btmd_x1(2))
-
-         F_y_btmdX_P_B2 = - p%M_X * (a_G_B2(2) - r_ddot_P_B2(2) - (alpha_B_O_B2(3) + omega_B_O_B2(1)*omega_B_O_B2(2))*x%btmd_x2(1) - 2*omega_B_O_B2(3)*x%btmd_x2(2))
-         F_z_btmdX_P_B2 = - p%M_X * (a_G_B2(3) - r_ddot_P_B2(3) + (alpha_B_O_B2(2) - omega_B_O_B2(1)*omega_B_O_B2(3))*x%btmd_x2(1) + 2*omega_B_O_B2(2)*x%btmd_x2(2))
-
-         F_y_btmdX_P_B3 = - p%M_X * (a_G_B3(2) - r_ddot_P_B3(2) - (alpha_B_O_B3(3) + omega_B_O_B3(1)*omega_B_O_B3(2))*x%btmd_x3(1) - 2*omega_B_O_B3(3)*x%btmd_x3(2))
-         F_z_btmdX_P_B3 = - p%M_X * (a_G_B3(3) - r_ddot_P_B3(3) + (alpha_B_O_B3(2) - omega_B_O_B3(1)*omega_B_O_B3(3))*x%btmd_x3(1) + 2*omega_B_O_B3(2)*x%btmd_x3(2))
+            F_y_btmdX_P_B(i) = - p%M_X * (a_G_B(2,i) - r_ddot_P_B(2,i) - (alpha_B_O_B(3,i) + omega_B_O_B(1,i)*omega_B_O_B(2,i))*x%btmd_x(1,i) - 2*omega_B_O_B(3,i)*x%btmd_x(2,i))
+            F_z_btmdX_P_B(i) = - p%M_X * (a_G_B(3,i) - r_ddot_P_B(3,i) + (alpha_B_O_B(2,i) - omega_B_O_B(1,i)*omega_B_O_B(3,i))*x%btmd_x(1,i) + 2*omega_B_O_B(2,i)*x%btmd_x(2,i))
+         enddo
 
          ! forces in local coordinates
-         F_P_B1(1) =  p%K_X * x%btmd_x1(1) + m%C_ctrl(1) * x%btmd_x1(2) + m%C_Brake(1) * x%btmd_x1(2) - m%F_stop(1) - m%F_ext(1) - m%F_fr(1) - F_x_btmdY_P_B1 + m%F_table(1)
-         F_P_B1(2) =  p%K_Y * x%btmd_x1(3) + m%C_ctrl(2) * x%btmd_x1(4) + m%C_Brake(2) * x%btmd_x1(4) - m%F_stop(2) - m%F_ext(2) - m%F_fr(2) - F_y_btmdX_P_B1 + m%F_table(2)
-         F_P_B1(3) = - F_z_btmdX_P_B1 - F_z_btmdY_P_B1
-
-         F_P_B2(1) =  p%K_X * x%btmd_x2(1) + m%C_ctrl(1) * x%btmd_x2(2) + m%C_Brake(1) * x%btmd_x2(2) - m%F_stop(1) - m%F_ext(1) - m%F_fr(1) - F_x_btmdY_P_B2 + m%F_table(1)
-         F_P_B2(2) =  p%K_Y * x%btmd_x2(3) + m%C_ctrl(2) * x%btmd_x2(4) + m%C_Brake(2) * x%btmd_x2(4) - m%F_stop(2) - m%F_ext(2) - m%F_fr(2) - F_y_btmdX_P_B2 + m%F_table(2)
-         F_P_B2(3) = - F_z_btmdX_P_B2 - F_z_btmdY_P_B2
-
-         F_P_B3(1) =  p%K_X * x%btmd_x3(1) + m%C_ctrl(1) * x%btmd_x3(2) + m%C_Brake(1) * x%btmd_x3(2) - m%F_stop(1) - m%F_ext(1) - m%F_fr(1) - F_x_btmdY_P_B3 + m%F_table(1)
-         F_P_B3(2) =  p%K_Y * x%btmd_x3(3) + m%C_ctrl(2) * x%btmd_x3(4) + m%C_Brake(2) * x%btmd_x3(4) - m%F_stop(2) - m%F_ext(2) - m%F_fr(2) - F_y_btmdX_P_B3 + m%F_table(2)
-         F_P_B3(3) = - F_z_btmdX_P_B3 - F_z_btmdY_P_B3
+         do i=1,p%NumBl
+            F_P_B(1,i) =  p%K_X * x%btmd_x(1,i) + m%C_ctrl(1) * x%btmd_x(2,i) + m%C_Brake(1) * x%btmd_x(2,i) - m%F_stop(1) - m%F_ext(1) - m%F_fr(1) - F_x_btmdY_P_B(i) + m%F_table(1)
+            F_P_B(2,i) =  p%K_Y * x%btmd_x(3,i) + m%C_ctrl(2) * x%btmd_x(4,i) + m%C_Brake(2) * x%btmd_x(4,i) - m%F_stop(2) - m%F_ext(2) - m%F_fr(2) - F_y_btmdX_P_B(i) + m%F_table(2)
+            F_P_B(3,i) = - F_z_btmdX_P_B(i) - F_z_btmdY_P_B(i)
+         enddo
 
          ! inertial contributions from mass of TMDs and acceleration of nacelle
          ! forces in global coordinates
-         y%BMesh(1)%Force(:,1) =  matmul(transpose(u%BMesh(1)%Orientation(:,:,1)),F_P_B1)
-         y%BMesh(2)%Force(:,1) =  matmul(transpose(u%BMesh(2)%Orientation(:,:,1)),F_P_B2)
-         y%BMesh(3)%Force(:,1) =  matmul(transpose(u%BMesh(3)%Orientation(:,:,1)),F_P_B3)
+         do i=1,p%NumBl
+            y%BMesh(i)%Force(:,1) =  matmul(transpose(u%BMesh(i)%Orientation(:,:,1)),F_P_B(:,i))
+         enddo
      
          ! Moments on nacelle in local coordinates
-         M_P_B1(1) =  - F_z_btmdY_P_B1  * x%btmd_x1(3)
-         M_P_B1(2) =    F_z_btmdX_P_B1  * x%btmd_x1(1)
-         M_P_B1(3) = (- F_x_btmdY_P_B1) * x%btmd_x1(3) + (F_y_btmdX_P_B1) * x%btmd_x1(1)
-
-         M_P_B2(1) =  - F_z_btmdY_P_B2  * x%btmd_x2(3)
-         M_P_B2(2) =    F_z_btmdX_P_B2  * x%btmd_x2(1)
-         M_P_B2(3) = (- F_x_btmdY_P_B2) * x%btmd_x2(3) + (F_y_btmdX_P_B2) * x%btmd_x2(1)
-
-         M_P_B3(1) =  - F_z_btmdY_P_B3  * x%btmd_x3(3)
-         M_P_B3(2) =    F_z_btmdX_P_B3  * x%btmd_x3(1)
-         M_P_B3(3) = (- F_x_btmdY_P_B3) * x%btmd_x3(3) + (F_y_btmdX_P_B3) * x%btmd_x3(1)
+         do i=1,p%NumBl
+            M_P_B(1,i) =  - F_z_btmdY_P_B(i)  * x%btmd_x(3,i)
+            M_P_B(2,i) =    F_z_btmdX_P_B(i)  * x%btmd_x(1,i)
+            M_P_B(3,i) = (- F_x_btmdY_P_B(i)) * x%btmd_x(3,i) + (F_y_btmdX_P_B(i)) * x%btmd_x(1,i)
+         enddo
 
          ! moments in global coordinates
-         y%BMesh(1)%Moment(:,1) = matmul(transpose(u%BMesh(1)%Orientation(:,:,1)),M_P_B1)
-         y%BMesh(2)%Moment(:,1) = matmul(transpose(u%BMesh(2)%Orientation(:,:,1)),M_P_B2)
-         y%BMesh(3)%Moment(:,1) = matmul(transpose(u%BMesh(3)%Orientation(:,:,1)),M_P_B3)
+         do i=1,p%NumBl
+            y%BMesh(i)%Moment(:,1) = matmul(transpose(u%BMesh(i)%Orientation(:,:,1)),M_P_B(:,i))
+         enddo
 
       ELSE IF (p%TMD_DOF_MODE == DOFMode_TLCD) THEN
 
@@ -1194,8 +1114,27 @@ SUBROUTINE TMD_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
          y%Mesh%Moment(:,1) = matmul(transpose(u%Mesh%Orientation(:,:,1)), M_P_N)
 
       END IF
-     
+CONTAINS
+   subroutine CleanUp()
+      if (allocated(a_G_B        )) deallocate(a_G_B        )
+      if (allocated(F_P_B        )) deallocate(F_P_B        )
+      if (allocated(M_P_B        )) deallocate(M_P_B        )
+      if (allocated(r_ddot_P_B   )) deallocate(r_ddot_P_B   ) 
+      if (allocated(omega_B_O_B  )) deallocate(omega_B_O_B  )
+      if (allocated(alpha_B_O_B  )) deallocate(alpha_B_O_B  )
+      if (allocated(F_x_btmdY_P_B)) deallocate(F_x_btmdY_P_B)
+      if (allocated(F_z_btmdY_P_B)) deallocate(F_z_btmdY_P_B)
+      if (allocated(F_y_btmdX_P_B)) deallocate(F_y_btmdX_P_B)
+      if (allocated(F_z_btmdX_P_B)) deallocate(F_z_btmdX_P_B)
+      call TMD_DestroyContState(dxdt,ErrStat2,ErrMsg2)    !Ignore error status
+   end subroutine CleanUp
+   logical function Failed()
+        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'TMD_CalcOutput') 
+        Failed =  ErrStat >= AbortErrLev
+        if (Failed) call CleanUp()
+   end function Failed
 END SUBROUTINE TMD_CalcOutput
+
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Tight coupling routine for computing derivatives of continuous states
 SUBROUTINE TMD_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, ErrStat, ErrMsg )  
@@ -1218,39 +1157,41 @@ SUBROUTINE TMD_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
       REAL(ReKi), dimension(3)                      :: rddot_N_N
       REAL(ReKi), dimension(3)                      :: omega_P_N  ! angular velocity of nacelle transformed to nacelle orientation
       Real(ReKi), dimension(3)                      :: alpha_P_N
-!SP_
-      REAL(ReKi), dimension(3)                      :: a_G_B1
-      REAL(ReKi), dimension(3)                      :: a_G_B2
-      REAL(ReKi), dimension(3)                      :: a_G_B3
-      REAL(ReKi), dimension(3)                      :: rddot_B_B1
-      REAL(ReKi), dimension(3)                      :: rddot_B_B2
-      REAL(ReKi), dimension(3)                      :: rddot_B_B3
-      REAL(ReKi), dimension(3)                      :: omega_P_B1  
-      REAL(ReKi), dimension(3)                      :: omega_P_B2  
-      REAL(ReKi), dimension(3)                      :: omega_P_B3  
-      Real(ReKi), dimension(3)                      :: alpha_P_B1
-      Real(ReKi), dimension(3)                      :: alpha_P_B2
-      Real(ReKi), dimension(3)                      :: alpha_P_B3
-!SP_
-
       REAL(ReKi)                                    :: B_X 
       REAL(ReKi)                                    :: B_Y
-!SP_
-      REAL(ReKi)                                    :: B_X_B1 
-      REAL(ReKi)                                    :: B_Y_B1
-      REAL(ReKi)                                    :: B_X_B2 
-      REAL(ReKi)                                    :: B_Y_B2
-      REAL(ReKi)                                    :: B_X_B3 
-      REAL(ReKi)                                    :: B_Y_B3
-!SP_
       REAL(ReKi), dimension(2)                      :: K          ! tmd stiffness
       Real(ReKi)                                    :: denom      ! denominator for omni-direction factors
 
+!FIXME: once we generalize this, move it to miscvars
+      REAL(ReKi), allocatable, dimension(:,:)    :: a_G_B
+      ! Blade motion
+      real(ReKi), allocatable, dimension(:,:)    :: rddot_B_B
+      real(ReKi), allocatable, dimension(:,:)    :: omega_P_B
+      real(ReKi), allocatable, dimension(:,:)    :: alpha_P_B
+      Real(ReKi), allocatable, dimension(:)      :: B_X_B
+      Real(ReKi), allocatable, dimension(:)      :: B_Y_B
+
+      integer(IntKi)       :: i
+
+      ! Local error handling
+      integer(IntKi)       :: ErrStat2
+      character(ErrMsgLen) :: ErrMsg2
          
          ! Initialize ErrStat
       ErrStat = ErrID_None         
       ErrMsg  = ""               
       
+!FIXME: once we generalize this, move it to miscvars
+      call AllocAry(a_G_B       ,3, p%NumBl,'a_G_B',         ErrStat2,ErrMsg2); if (Failed()) return;
+      call AllocAry(rddot_B_B   ,3, p%NumBl,'rddot_B_B',     ErrStat2,ErrMsg2); if (Failed()) return;
+      call AllocAry(omega_P_B   ,3, p%NumBl,'omega_P_B',     ErrStat2,ErrMsg2); if (Failed()) return;
+      call AllocAry(alpha_P_B   ,3, p%NumBl,'alpha_P_B',     ErrStat2,ErrMsg2); if (Failed()) return;
+      call AllocAry(B_X_B       ,   p%NumBl,'B_X_B',         ErrStat2,ErrMsg2); if (Failed()) return;
+      call AllocAry(B_Y_B       ,   p%NumBl,'B_Y_B',         ErrStat2,ErrMsg2); if (Failed()) return;
+
+!FIXME: this really shouldn't be changed at all in CalcOutput? should it?
+      call AllocAry(dxdt%btmd_x, 4, p%NumBl,'dxdt%btmd_x',   ErrStat2,ErrMsg2); if (Failed()) return;
+
          ! compute stop force (m%F_stop) 
       IF (p%Use_F_TBL) THEN
          m%F_stop = 0.0_ReKi
@@ -1281,22 +1222,12 @@ SUBROUTINE TMD_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
          alpha_P_N = matmul(u%Mesh%Orientation(:,:,1),u%Mesh%RotationAcc(:,1))
 
       ELSE IF (p%TMD_DOF_MODE == DOFMode_BTMD) THEN
-
-         a_G_B1     = matmul(u%BMesh(1)%Orientation(:,:,1),a_G_O)
-         a_G_B2     = matmul(u%BMesh(2)%Orientation(:,:,1),a_G_O)
-         a_G_B3     = matmul(u%BMesh(3)%Orientation(:,:,1),a_G_O)
-         
-         rddot_B_B1 = matmul(u%BMesh(1)%Orientation(:,:,1),u%BMesh(1)%TranslationAcc(:,1))    
-         rddot_B_B2 = matmul(u%BMesh(2)%Orientation(:,:,1),u%BMesh(2)%TranslationAcc(:,1))    
-         rddot_B_B3 = matmul(u%BMesh(3)%Orientation(:,:,1),u%BMesh(3)%TranslationAcc(:,1))    
-         
-         omega_P_B1 = matmul(u%BMesh(1)%Orientation(:,:,1),u%BMesh(1)%RotationVel(:,1)) 
-         omega_P_B2 = matmul(u%BMesh(2)%Orientation(:,:,1),u%BMesh(2)%RotationVel(:,1)) 
-         omega_P_B3 = matmul(u%BMesh(3)%Orientation(:,:,1),u%BMesh(3)%RotationVel(:,1)) 
-         
-         alpha_P_B1 = matmul(u%BMesh(1)%Orientation(:,:,1),u%BMesh(1)%RotationAcc(:,1))
-         alpha_P_B2 = matmul(u%BMesh(2)%Orientation(:,:,1),u%BMesh(2)%RotationAcc(:,1))
-         alpha_P_B3 = matmul(u%BMesh(3)%Orientation(:,:,1),u%BMesh(3)%RotationAcc(:,1))
+         do i=1,p%NumBl
+            a_G_B(:,i)     = matmul(u%BMesh(i)%Orientation(:,:,1),a_G_O)
+            rddot_B_B(:,i) = matmul(u%BMesh(i)%Orientation(:,:,1),u%BMesh(i)%TranslationAcc(:,1))    
+            omega_P_B(:,i) = matmul(u%BMesh(i)%Orientation(:,:,1),u%BMesh(i)%RotationVel(:,1)) 
+            alpha_P_B(:,i) = matmul(u%BMesh(i)%Orientation(:,:,1),u%BMesh(i)%RotationAcc(:,1))
+         enddo
       ENDIF
 
 
@@ -1325,15 +1256,11 @@ SUBROUTINE TMD_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
          B_Y = - rddot_N_N(2) + a_G_N(2) + 1 / p%M_XY * ( m%F_ext(2) + m%F_stop(2) - m%F_table(2)*(m%F_k_y) )
 
       ELSE IF (p%TMD_DOF_MODE == DOFMode_BTMD) THEN
+         do i=1,p%NumBl
          ! Compute inputs
-         B_X_B1 = - rddot_B_B1(1) + a_G_B1(1) + 1 / p%M_X * ( m%F_ext(1) + m%F_stop(1) - m%F_table(1) )
-         B_Y_B1 = - rddot_B_B1(2) + a_G_B1(2) + 1 / p%M_Y * ( m%F_ext(2) + m%F_stop(2) - m%F_table(2) )
-         ! Compute inputs
-         B_X_B2 = - rddot_B_B2(1) + a_G_B2(1) + 1 / p%M_X * ( m%F_ext(1) + m%F_stop(1) - m%F_table(1) )
-         B_Y_B2 = - rddot_B_B2(2) + a_G_B2(2) + 1 / p%M_Y * ( m%F_ext(2) + m%F_stop(2) - m%F_table(2) )
-         ! Compute inputs
-         B_X_B3 = - rddot_B_B3(1) + a_G_B3(1) + 1 / p%M_X * ( m%F_ext(1) + m%F_stop(1) - m%F_table(1) )
-         B_Y_B3 = - rddot_B_B3(2) + a_G_B3(2) + 1 / p%M_Y * ( m%F_ext(2) + m%F_stop(2) - m%F_table(2) )
+            B_X_B(i) = - rddot_B_B(1,i) + a_G_B(1,i) + 1 / p%M_X * ( m%F_ext(1) + m%F_stop(1) - m%F_table(1) )
+            B_Y_B(i) = - rddot_B_B(2,i) + a_G_B(2,i) + 1 / p%M_Y * ( m%F_ext(2) + m%F_stop(2) - m%F_table(2) )
+         enddo
       END IF
       
             
@@ -1358,23 +1285,23 @@ SUBROUTINE TMD_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
          END IF
 
          IF (p%TMD_DOF_MODE == DOFMode_BTMD .AND. .NOT. p%TMD_X_DOF) THEN
-            dxdt%btmd_x1(1) = 0.0_ReKi
-            dxdt%btmd_x2(1) = 0.0_ReKi
-            dxdt%btmd_x3(1) = 0.0_ReKi
+            do i=1,p%NumBl
+               dxdt%btmd_x(1,i) = 0.0_ReKi
+            enddo
          ELSE
-            dxdt%btmd_x1(1) = x%btmd_x1(2)
-            dxdt%btmd_x2(1) = x%btmd_x2(2)
-            dxdt%btmd_x3(1) = x%btmd_x3(2)
+            do i=1,p%NumBl
+               dxdt%btmd_x(1,i) = x%btmd_x(2,i)
+            enddo
          END IF
 
          IF (p%TMD_DOF_MODE == DOFMode_BTMD .AND. .NOT. p%TMD_Y_DOF) THEN
-            dxdt%btmd_x1(3) = 0.0_ReKi
-            dxdt%btmd_x2(3) = 0.0_ReKi
-            dxdt%btmd_x3(3) = 0.0_ReKi
+            do i=1,p%NumBl
+               dxdt%btmd_x(3,i) = 0.0_ReKi
+            enddo
          ELSE
-            dxdt%btmd_x1(3) = x%btmd_x1(4)
-            dxdt%btmd_x2(3) = x%btmd_x2(4)
-            dxdt%btmd_x3(3) = x%btmd_x3(4)
+            do i=1,p%NumBl
+               dxdt%btmd_x(3,i) = x%btmd_x(4,i)
+            enddo
          END IF
       END IF
       
@@ -1395,12 +1322,18 @@ SUBROUTINE TMD_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
       IF (p%TMD_DOF_MODE == DOFMode_Indept) THEN
      
          IF (p%TMD_X_DOF) THEN
-            dxdt%tmd_x(2) = (omega_P_N(2)**2 + omega_P_N(3)**2 - K(1) / p%M_X) * x%tmd_x(1) - ( m%C_ctrl(1)/p%M_X ) * x%tmd_x(2) - ( m%C_Brake(1)/p%M_X ) * x%tmd_x(2) + B_X + m%F_fr(1) / p%M_X
+            dxdt%tmd_x(2) =  ( omega_P_N(2)**2 + omega_P_N(3)**2 - K(1) / p%M_X) * x%tmd_x(1)   &
+                           - ( m%C_ctrl(1)/p%M_X ) * x%tmd_x(2)                                 &
+                           - ( m%C_Brake(1)/p%M_X ) * x%tmd_x(2)                                &
+                           + B_X + m%F_fr(1) / p%M_X
          ELSE
             dxdt%tmd_x(2) = 0.0_ReKi
          END IF
          IF (p%TMD_Y_DOF) THEN
-            dxdt%tmd_x(4) = (omega_P_N(1)**2 + omega_P_N(3)**2 - K(2) / p%M_Y) * x%tmd_x(3) - ( m%C_ctrl(2)/p%M_Y ) * x%tmd_x(4) - ( m%C_Brake(2)/p%M_Y ) * x%tmd_x(4) + B_Y + m%F_fr(2) / p%M_Y 
+            dxdt%tmd_x(4) =  ( omega_P_N(1)**2 + omega_P_N(3)**2 - K(2) / p%M_Y) * x%tmd_x(3)   &
+                           - ( m%C_ctrl(2)/p%M_Y ) * x%tmd_x(4)                                 &
+                           - ( m%C_Brake(2)/p%M_Y ) * x%tmd_x(4)                                &
+                           + B_Y + m%F_fr(2) / p%M_Y 
          ELSE
             dxdt%tmd_x(4) = 0.0_ReKi
          END IF
@@ -1408,7 +1341,7 @@ SUBROUTINE TMD_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
       ELSE IF (p%TMD_DOF_MODE == DOFMode_Omni) THEN
                ! Compute the first time derivatives of the continuous states of Omnidirectional TMD mode by sm 2015-0904 
                dxdt%tmd_x(2) =  ( omega_P_N(2)**2 + omega_P_N(3)**2 - K(1) / p%M_XY) * x%tmd_x(1)  &
-                              - ( m%C_ctrl (1)/p%M_XY ) * x%tmd_x(2)                               &
+                              - ( m%C_ctrl( 1)/p%M_XY ) * x%tmd_x(2)                               &
                               - ( m%C_Brake(1)/p%M_XY ) * x%tmd_x(2)                               &
                               + B_X + 1 / p%M_XY * ( m%F_fr(1) )                                   &
                               - ( omega_P_N(1)*omega_P_N(2) - alpha_P_N(3) ) * x%tmd_x(3)          &
@@ -1422,22 +1355,28 @@ SUBROUTINE TMD_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
       ELSE IF (p%TMD_DOF_MODE == DOFMode_BTMD) THEN
 
          IF (p%TMD_X_DOF) THEN
-            dxdt%btmd_x1(2) = (omega_P_B1(2)**2 + omega_P_B1(3)**2 - K(1) / p%M_X) * x%btmd_x1(1) - ( m%C_ctrl(1)/p%M_X ) * x%btmd_x1(2) - ( m%C_Brake(1)/p%M_X ) * x%btmd_x1(2) + B_X_B1 + m%F_fr(1) / p%M_X
-            dxdt%btmd_x2(2) = (omega_P_B2(2)**2 + omega_P_B2(3)**2 - K(1) / p%M_X) * x%btmd_x2(1) - ( m%C_ctrl(1)/p%M_X ) * x%btmd_x2(2) - ( m%C_Brake(1)/p%M_X ) * x%btmd_x2(2) + B_X_B2 + m%F_fr(1) / p%M_X
-            dxdt%btmd_x3(2) = (omega_P_B3(2)**2 + omega_P_B3(3)**2 - K(1) / p%M_X) * x%btmd_x3(1) - ( m%C_ctrl(1)/p%M_X ) * x%btmd_x3(2) - ( m%C_Brake(1)/p%M_X ) * x%btmd_x3(2) + B_X_B3 + m%F_fr(1) / p%M_X
+            do i=1,p%NumBl
+               dxdt%btmd_x(2,i) =  ( omega_P_B(2,i)**2 + omega_P_B(3,i)**2 - K(1) / p%M_X) * x%btmd_x(1,i)  &
+                                 - ( m%C_ctrl( 1)/p%M_X ) * x%btmd_x(2,i)                                   &
+                                 - ( m%C_Brake(1)/p%M_X ) * x%btmd_x(2,i)                                   &
+                                 + B_X_B(i) + m%F_fr(1) / p%M_X
+            enddo
          ELSE
-            dxdt%btmd_x1(2) = 0.0_ReKi
-            dxdt%btmd_x2(2) = 0.0_ReKi
-            dxdt%btmd_x3(2) = 0.0_ReKi
+            do i=1,p%NumBl
+               dxdt%btmd_x(2,i) = 0.0_ReKi
+            enddo
          END IF
          IF (p%TMD_Y_DOF) THEN
-            dxdt%btmd_x1(4) = (omega_P_B1(1)**2 + omega_P_B1(3)**2 - K(2) / p%M_Y) * x%btmd_x1(3) - ( m%C_ctrl(2)/p%M_Y ) * x%btmd_x1(4) - ( m%C_Brake(2)/p%M_Y ) * x%btmd_x1(4) + B_Y_B1 + m%F_fr(2) / p%M_Y 
-            dxdt%btmd_x2(4) = (omega_P_B2(1)**2 + omega_P_B2(3)**2 - K(2) / p%M_Y) * x%btmd_x2(3) - ( m%C_ctrl(2)/p%M_Y ) * x%btmd_x2(4) - ( m%C_Brake(2)/p%M_Y ) * x%btmd_x2(4) + B_Y_B2 + m%F_fr(2) / p%M_Y 
-            dxdt%btmd_x3(4) = (omega_P_B3(1)**2 + omega_P_B3(3)**2 - K(2) / p%M_Y) * x%btmd_x3(3) - ( m%C_ctrl(2)/p%M_Y ) * x%btmd_x3(4) - ( m%C_Brake(2)/p%M_Y ) * x%btmd_x3(4) + B_Y_B3 + m%F_fr(2) / p%M_Y 
+            do i=1,p%NumBl
+               dxdt%btmd_x(4,i) =  ( omega_P_B(1,i)**2 + omega_P_B(3,i)**2 - K(2) / p%M_Y) * x%btmd_x(3,i)  &
+                                 - ( m%C_ctrl( 2)/p%M_Y ) * x%btmd_x(4,i)                                   &
+                                 - ( m%C_Brake(2)/p%M_Y ) * x%btmd_x(4,i)                                   &
+                                 + B_Y_B(i) + m%F_fr(2) / p%M_Y 
+            enddo
          ELSE
-            dxdt%btmd_x1(4) = 0.0_ReKi
-            dxdt%btmd_x2(4) = 0.0_ReKi
-            dxdt%btmd_x3(4) = 0.0_ReKi
+            do i=1,p%NumBl
+               dxdt%btmd_x(4,i) = 0.0_ReKi
+            enddo
          END IF
 
       ELSE IF (p%TMD_DOF_MODE == DOFMode_TLCD) THEN !MEG & SP
@@ -1461,7 +1400,21 @@ SUBROUTINE TMD_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
                         -.5*p%rho_SS*p%area_SS*p%headLossCoeff_SS*p%area_ratio_SS*p%area_ratio_SS*x%tmd_x(4)*ABS(x%tmd_x(4)))/(p%rho_SS*p%area_SS*(p%L_SS-p%B_SS+p%area_ratio_SS*p%B_SS))
 
       END IF
-      
+
+CONTAINS
+   subroutine CleanUp()
+      if (allocated(a_G_B      )) deallocate(a_G_B      )
+      if (allocated(rddot_B_B  )) deallocate(rddot_B_B  )
+      if (allocated(omega_P_B  )) deallocate(omega_P_B  )
+      if (allocated(alpha_P_B  )) deallocate(alpha_P_B  )
+      if (allocated(B_X_B      )) deallocate(B_X_B      )
+      if (allocated(B_Y_B      )) deallocate(B_Y_B      )
+   end subroutine CleanUp
+   logical function Failed()
+        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'TMD_CalcContStateDeriv') 
+        Failed =  ErrStat >= AbortErrLev
+        if (Failed) call CleanUp()
+   end function Failed
 END SUBROUTINE TMD_CalcContStateDeriv
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE TMD_CalcStopForce(x,p,F_stop)
