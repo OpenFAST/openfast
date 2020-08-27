@@ -93,7 +93,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: Gravity      !< Gravitational acceleration [m/s^2]
     REAL(ReKi) , DIMENSION(1:3)  :: r_N_O_G      !< nacelle origin for setting up mesh [-]
     LOGICAL  :: TMD_On_Blade = .FALSE.      !< The TMD is on the Blade [-]
-    INTEGER(IntKi)  :: NumBl      !< Number of blades [-]
+    INTEGER(IntKi)  :: NumMeshPts      !< Number of mesh points [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: BladeRootPosition      !< X-Y-Z reference position of each blade root (3 x NumBlades) [m]
     REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: BladeRootOrientation      !< DCM reference orientation of blade roots (3x3 x NumBlades) [-]
   END TYPE TMD_InitInputType
@@ -106,7 +106,7 @@ IMPLICIT NONE
 ! =========  TMD_ContinuousStateType  =======
   TYPE, PUBLIC :: TMD_ContinuousStateType
     REAL(ReKi)  :: DummyContState      !< Remove this variable if you have continuous states [-]
-    REAL(ReKi) , DIMENSION(1:4)  :: tmd_x      !< Continuous States [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: tmd_x      !< Continuous States [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: btmd_x      !< Continuous States [-]
   END TYPE TMD_ContinuousStateType
 ! =======================
@@ -183,7 +183,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: rho_SS      !< Side-Side TLCD liquid density [kg/m3]
     LOGICAL  :: Use_F_TBL      !< use spring force from user-defined table (flag) [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: F_TBL      !< user-defined spring force [N]
-    INTEGER(IntKi)  :: NumBl      !< Number of blades on the turbine [-]
+    INTEGER(IntKi)  :: NumMeshPts      !< Number of mesh points [-]
     INTEGER(IntKi)  :: PrescribedForcesCoordSys      !< Prescribed forces coordinate system {0: global; 1: local} [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: TMD_PrescribedForce      !< TMD prescribed force time-series info [(s,N,N-m)]
   END TYPE TMD_ParameterType
@@ -713,7 +713,7 @@ ENDIF
     DstInitInputData%Gravity = SrcInitInputData%Gravity
     DstInitInputData%r_N_O_G = SrcInitInputData%r_N_O_G
     DstInitInputData%TMD_On_Blade = SrcInitInputData%TMD_On_Blade
-    DstInitInputData%NumBl = SrcInitInputData%NumBl
+    DstInitInputData%NumMeshPts = SrcInitInputData%NumMeshPts
 IF (ALLOCATED(SrcInitInputData%BladeRootPosition)) THEN
   i1_l = LBOUND(SrcInitInputData%BladeRootPosition,1)
   i1_u = UBOUND(SrcInitInputData%BladeRootPosition,1)
@@ -803,7 +803,7 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! Gravity
       Re_BufSz   = Re_BufSz   + SIZE(InData%r_N_O_G)  ! r_N_O_G
       Int_BufSz  = Int_BufSz  + 1  ! TMD_On_Blade
-      Int_BufSz  = Int_BufSz  + 1  ! NumBl
+      Int_BufSz  = Int_BufSz  + 1  ! NumMeshPts
   Int_BufSz   = Int_BufSz   + 1     ! BladeRootPosition allocated yes/no
   IF ( ALLOCATED(InData%BladeRootPosition) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! BladeRootPosition upper/lower bounds for each dimension
@@ -857,7 +857,7 @@ ENDIF
     END DO
     IntKiBuf(Int_Xferred) = TRANSFER(InData%TMD_On_Blade, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%NumBl
+    IntKiBuf(Int_Xferred) = InData%NumMeshPts
     Int_Xferred = Int_Xferred + 1
   IF ( .NOT. ALLOCATED(InData%BladeRootPosition) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -953,7 +953,7 @@ ENDIF
     END DO
     OutData%TMD_On_Blade = TRANSFER(IntKiBuf(Int_Xferred), OutData%TMD_On_Blade)
     Int_Xferred = Int_Xferred + 1
-    OutData%NumBl = IntKiBuf(Int_Xferred)
+    OutData%NumMeshPts = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! BladeRootPosition not allocated
     Int_Xferred = Int_Xferred + 1
@@ -1150,7 +1150,20 @@ ENDIF
    ErrStat = ErrID_None
    ErrMsg  = ""
     DstContStateData%DummyContState = SrcContStateData%DummyContState
+IF (ALLOCATED(SrcContStateData%tmd_x)) THEN
+  i1_l = LBOUND(SrcContStateData%tmd_x,1)
+  i1_u = UBOUND(SrcContStateData%tmd_x,1)
+  i2_l = LBOUND(SrcContStateData%tmd_x,2)
+  i2_u = UBOUND(SrcContStateData%tmd_x,2)
+  IF (.NOT. ALLOCATED(DstContStateData%tmd_x)) THEN 
+    ALLOCATE(DstContStateData%tmd_x(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstContStateData%tmd_x.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
     DstContStateData%tmd_x = SrcContStateData%tmd_x
+ENDIF
 IF (ALLOCATED(SrcContStateData%btmd_x)) THEN
   i1_l = LBOUND(SrcContStateData%btmd_x,1)
   i1_u = UBOUND(SrcContStateData%btmd_x,1)
@@ -1176,6 +1189,9 @@ ENDIF
 ! 
   ErrStat = ErrID_None
   ErrMsg  = ""
+IF (ALLOCATED(ContStateData%tmd_x)) THEN
+  DEALLOCATE(ContStateData%tmd_x)
+ENDIF
 IF (ALLOCATED(ContStateData%btmd_x)) THEN
   DEALLOCATE(ContStateData%btmd_x)
 ENDIF
@@ -1217,7 +1233,11 @@ ENDIF
   Db_BufSz  = 0
   Int_BufSz  = 0
       Re_BufSz   = Re_BufSz   + 1  ! DummyContState
+  Int_BufSz   = Int_BufSz   + 1     ! tmd_x allocated yes/no
+  IF ( ALLOCATED(InData%tmd_x) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! tmd_x upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%tmd_x)  ! tmd_x
+  END IF
   Int_BufSz   = Int_BufSz   + 1     ! btmd_x allocated yes/no
   IF ( ALLOCATED(InData%btmd_x) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! btmd_x upper/lower bounds for each dimension
@@ -1252,10 +1272,26 @@ ENDIF
 
     ReKiBuf(Re_Xferred) = InData%DummyContState
     Re_Xferred = Re_Xferred + 1
-    DO i1 = LBOUND(InData%tmd_x,1), UBOUND(InData%tmd_x,1)
-      ReKiBuf(Re_Xferred) = InData%tmd_x(i1)
-      Re_Xferred = Re_Xferred + 1
-    END DO
+  IF ( .NOT. ALLOCATED(InData%tmd_x) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%tmd_x,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%tmd_x,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%tmd_x,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%tmd_x,2)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i2 = LBOUND(InData%tmd_x,2), UBOUND(InData%tmd_x,2)
+        DO i1 = LBOUND(InData%tmd_x,1), UBOUND(InData%tmd_x,1)
+          ReKiBuf(Re_Xferred) = InData%tmd_x(i1,i2)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
   IF ( .NOT. ALLOCATED(InData%btmd_x) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -1308,12 +1344,29 @@ ENDIF
   Int_Xferred  = 1
     OutData%DummyContState = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
-    i1_l = LBOUND(OutData%tmd_x,1)
-    i1_u = UBOUND(OutData%tmd_x,1)
-    DO i1 = LBOUND(OutData%tmd_x,1), UBOUND(OutData%tmd_x,1)
-      OutData%tmd_x(i1) = ReKiBuf(Re_Xferred)
-      Re_Xferred = Re_Xferred + 1
-    END DO
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! tmd_x not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%tmd_x)) DEALLOCATE(OutData%tmd_x)
+    ALLOCATE(OutData%tmd_x(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%tmd_x.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i2 = LBOUND(OutData%tmd_x,2), UBOUND(OutData%tmd_x,2)
+        DO i1 = LBOUND(OutData%tmd_x,1), UBOUND(OutData%tmd_x,1)
+          OutData%tmd_x(i1,i2) = ReKiBuf(Re_Xferred)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! btmd_x not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
@@ -1997,7 +2050,7 @@ IF (ALLOCATED(SrcParamData%F_TBL)) THEN
   END IF
     DstParamData%F_TBL = SrcParamData%F_TBL
 ENDIF
-    DstParamData%NumBl = SrcParamData%NumBl
+    DstParamData%NumMeshPts = SrcParamData%NumMeshPts
     DstParamData%PrescribedForcesCoordSys = SrcParamData%PrescribedForcesCoordSys
 IF (ALLOCATED(SrcParamData%TMD_PrescribedForce)) THEN
   i1_l = LBOUND(SrcParamData%TMD_PrescribedForce,1)
@@ -2114,7 +2167,7 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*2  ! F_TBL upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%F_TBL)  ! F_TBL
   END IF
-      Int_BufSz  = Int_BufSz  + 1  ! NumBl
+      Int_BufSz  = Int_BufSz  + 1  ! NumMeshPts
       Int_BufSz  = Int_BufSz  + 1  ! PrescribedForcesCoordSys
   Int_BufSz   = Int_BufSz   + 1     ! TMD_PrescribedForce allocated yes/no
   IF ( ALLOCATED(InData%TMD_PrescribedForce) ) THEN
@@ -2264,7 +2317,7 @@ ENDIF
         END DO
       END DO
   END IF
-    IntKiBuf(Int_Xferred) = InData%NumBl
+    IntKiBuf(Int_Xferred) = InData%NumMeshPts
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%PrescribedForcesCoordSys
     Int_Xferred = Int_Xferred + 1
@@ -2447,7 +2500,7 @@ ENDIF
         END DO
       END DO
   END IF
-    OutData%NumBl = IntKiBuf(Int_Xferred)
+    OutData%NumMeshPts = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%PrescribedForcesCoordSys = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1

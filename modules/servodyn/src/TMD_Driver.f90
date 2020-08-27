@@ -616,7 +616,8 @@ SUBROUTINE TMD_WriteOutputFile( x, y, UnIn, ErrStat, ErrMsg )
  
    ! create output array
    DO i=1,4
-      OutAry(i) = x%tmd_x(i)
+!FIXME: allow different sizes for tmd_x second dimension
+      OutAry(i) = x%tmd_x(i,1)
    END DO
    DO i=5,7
       OutAry(i) = y%Mesh%Force(i-4,1)

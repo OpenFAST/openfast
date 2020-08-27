@@ -66,7 +66,7 @@ typedef	^	InitInputType	CHARACTER(1024)	RootName	-	-	-	"RootName for writing out
 typedef	^		^				ReKi			Gravity	-	-	-	"Gravitational acceleration"	m/s^2
 typedef	^		^				ReKi			r_N_O_G		{3}	-	-	"nacelle origin for setting up mesh"	-
 typedef	^	InitInputType	LOGICAL	TMD_On_Blade	-	.FALSE.	-	"The TMD is on the Blade"	-
-typedef	^	InitInputType	IntKi			NumBl	-	-	-	"Number of blades"	-
+typedef	^	InitInputType	IntKi			NumMeshPts	-	-	-	"Number of mesh points"	-
 typedef	^	InitInputType	ReKi	BladeRootPosition	{:}{:}	-	-	"X-Y-Z reference position of each blade root (3 x NumBlades)"	m
 typedef	^	InitInputType	R8Ki	BladeRootOrientation	{:}{:}{:}	-	-	"DCM reference orientation of blade roots (3x3 x NumBlades)"	-
 
@@ -78,7 +78,7 @@ typedef ^ InitOutputType SiKi DummyInitOut - - - "dummy init output" -
 # ..... States ....................................................................................................................
 # Define continuous (differentiable) states here:
 typedef	^	ContinuousStateType	ReKi	DummyContState	-	-	-	"Remove this variable if you have continuous states"	-
-typedef	^		ContinuousStateType	ReKi		tmd_x			{4} - -  "Continuous States" -
+typedef	^		ContinuousStateType	ReKi		tmd_x			{:}{:} - -  "Continuous States" -
 typedef	^		ContinuousStateType	ReKi		btmd_x			{:}{:} - -  "Continuous States" -
 # Define discrete (nondifferentiable) states here:
 typedef ^ DiscreteStateType ReKi DummyDiscState - - - "Remove this variable if you have discrete states" -
@@ -146,7 +146,7 @@ typedef	^		^				ReKi			headLossCoeff_SS    -	-	-	"Side-Side TLCD head loss coeff
 typedef	^		^				ReKi			rho_SS         	-	-	-	"Side-Side TLCD liquid density"	 kg/m3
 typedef	^		^				LOGICAL			Use_F_TBL	-	-	-	"use spring force from user-defined table (flag)"	-
 typedef	^		^				ReKi			F_TBL	{:}{:} - -	"user-defined spring force"	"N"
-typedef	^	ParameterType	IntKi	NumBl	-	-	-	"Number of blades on the turbine"	-
+typedef	^	ParameterType	IntKi	NumMeshPts	-	-	-	"Number of mesh points"	-
 typedef	^		^				IntKi			PrescribedForcesCoordSys	-	-	-	"Prescribed forces coordinate system {0: global; 1: local}"	-
 typedef	^		^				ReKi			TMD_PrescribedForce	{:}{:}	-	-	"TMD prescribed force time-series info"	"(s,N,N-m)"
 # ..... Inputs ....................................................................................................................
