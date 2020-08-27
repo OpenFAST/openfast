@@ -2683,6 +2683,9 @@ END SUBROUTINE CheckR16Var
 
          IW        = IW + 1
          Words(IW) = Line(Ch+1:Ch+NextWhite-1)
+         if (NextWhite > len(words(iw)) ) then 
+            call ProgWarn('Error reading field from file. There are too many characters in the input file to store in the field. Value may be truncated.') 
+         end if 
 
          IF ( IW == NumWords )  EXIT
 
@@ -3643,7 +3646,6 @@ END SUBROUTINE CheckR16Var
 
       INTEGER(IntKi)                         :: ErrStatLcl                    ! Error status local to this routine.
 
-      CHARACTER(20), ALLOCATABLE             :: Words       (:)               ! The array "words" parsed from the line.
       CHARACTER(*), PARAMETER                :: RoutineName = 'ParseInAry'
 
       ErrStat = ErrID_None
@@ -3656,13 +3658,6 @@ END SUBROUTINE CheckR16Var
          RETURN
       END IF
 
-      ALLOCATE ( Words( AryLen ) , STAT=ErrStatLcl )
-      IF ( ErrStatLcl /= 0 )  THEN
-         CALL SetErrStat ( ErrID_Fatal, 'Fatal error allocating memory for the Words array.',ErrStat,ErrMsg,RoutineName )
-         CALL Cleanup()
-         RETURN
-      ENDIF
-
 
       READ (FileInfo%Lines(LineNum),*,IOSTAT=ErrStatLcl)  Ary
       IF ( ErrStatLcl /= 0 )  THEN
@@ -3671,7 +3666,6 @@ END SUBROUTINE CheckR16Var
                    ' >> The "'//TRIM( AryName )//'" array was not assigned valid INTEGER values on line #' &
                    //TRIM( Num2LStr( FileInfo%FileLine(LineNum) ) )//'.'//NewLine//' >> The text being parsed was :'//NewLine &
                    //'    "'//TRIM( FileInfo%Lines(LineNum) )//'"',ErrStat,ErrMsg,RoutineName )
-         CALL Cleanup()
          RETURN
       ENDIF
 
@@ -3681,25 +3675,9 @@ END SUBROUTINE CheckR16Var
 
       LineNum = LineNum + 1
 
-      CALL Cleanup()
-      
+
       RETURN
 
-   !=======================================================================
-   CONTAINS
-   !=======================================================================
-      SUBROUTINE Cleanup ( )
-
-         ! This subroutine cleans up the parent routine before exiting.
-
-            ! Deallocate the Words array if it had been allocated.
-
-         IF ( ALLOCATED( Words ) ) DEALLOCATE( Words )
-
-
-         RETURN
-
-      END SUBROUTINE Cleanup
 
    END SUBROUTINE ParseInAry
 !=======================================================================
@@ -3974,7 +3952,6 @@ END SUBROUTINE CheckR16Var
 
       INTEGER(IntKi)                         :: ErrStatLcl                    ! Error status local to this routine.
 
-      CHARACTER(20), ALLOCATABLE             :: Words       (:)               ! The array "words" parsed from the line.
       CHARACTER(*), PARAMETER                :: RoutineName = 'ParseLoAry'
 
       ErrStat = ErrID_None
@@ -3986,14 +3963,6 @@ END SUBROUTINE CheckR16Var
                    , ErrStat, ErrMsg, RoutineName )
          RETURN
       END IF
-      
-      
-      ALLOCATE ( Words( AryLen ) , STAT=ErrStatLcl )
-      IF ( ErrStatLcl /= 0 )  THEN
-         CALL SetErrStat ( ErrID_Fatal, NewLine//'Fatal error allocating memory for the Words array.',ErrStat,ErrMsg,RoutineName )
-         CALL Cleanup()
-         RETURN
-      ENDIF
 
 
       READ (FileInfo%Lines(LineNum),*,IOSTAT=ErrStatLcl)  Ary
@@ -4003,7 +3972,6 @@ END SUBROUTINE CheckR16Var
                    ' >> The "'//TRIM( AryName )//'" array was not assigned valid LOGICAL values on line #' &
                    //TRIM( Num2LStr( FileInfo%FileLine(LineNum) ) )//'.'//NewLine//' >> The text being parsed was :'//NewLine &
                    //'    "'//TRIM( FileInfo%Lines(LineNum) )//'"',ErrStat,ErrMsg,RoutineName )
-         CALL Cleanup()
          RETURN
       ENDIF
 
@@ -4012,24 +3980,8 @@ END SUBROUTINE CheckR16Var
       END IF
 
       LineNum = LineNum + 1
-      CALL Cleanup()
 
       RETURN
-
-   !=======================================================================
-   CONTAINS
-   !=======================================================================
-      SUBROUTINE Cleanup ( )
-
-         ! This subroutine cleans up the parent routine before exiting.
-
-            ! Deallocate the Words array if it had been allocated.
-
-         IF ( ALLOCATED( Words ) ) DEALLOCATE( Words )
-
-         RETURN
-
-      END SUBROUTINE Cleanup
 
    END SUBROUTINE ParseLoAry
 !=======================================================================
