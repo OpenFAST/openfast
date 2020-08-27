@@ -50,8 +50,6 @@ MODULE TMD
    INTEGER(IntKi), PRIVATE, PARAMETER :: DOFMode_Omni          = 2          !< omni-directional
    INTEGER(IntKi), PRIVATE, PARAMETER :: DOFMode_TLCD          = 3          !< tuned liquid column dampers !MEG & SP
    INTEGER(IntKi), PRIVATE, PARAMETER :: DOFMode_Prescribed    = 4          !< prescribed force series
-!FIXME: this goes away eventually
-   INTEGER(IntKi), PRIVATE, PARAMETER :: DOFMode_BTMD          = 5          !< Blade tmd 
 
    INTEGER(IntKi), PRIVATE, PARAMETER :: CMODE_Semi            = 1          !< semi-active control 
    INTEGER(IntKi), PRIVATE, PARAMETER :: CMODE_Active          = 2          !< active control
@@ -157,8 +155,16 @@ SUBROUTINE TMD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
                    '2 (inverse velocity-based ground hook control), 3 (displacement-based ground hook control), '// &
                    '4 (phase difference algorithm with friction force), or 5 (phase difference algorithm with damping force).', ErrStat, ErrMsg, RoutineName )
    END IF
-   
-      
+  
+   if (InputFileData%TMD_DOF_MODE == DOFMode_Prescribed) then
+      if (InputFileData%PrescribedForcesCoordSys /= 0_IntKi .and. InputFileData%PrescribedForcesCoordSys /= 1_IntKi) then
+         ErrStat2=ErrID_Fatal
+         ErrMsg2='PrescribedForcesCoordSys must be 0 (Global) or 1 (local)'
+      endif
+   endif
+      CALL CheckError( ErrStat2, ErrMsg2 )
+      IF (ErrStat >= AbortErrLev) RETURN      
+
       !............................................................................................
       ! Define parameters here:
       !............................................................................................
@@ -211,7 +217,7 @@ SUBROUTINE TMD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
     ! Define system output initializations (set up mesh) here:
     ! Create the input and output meshes associated with lumped loads
 
-   IF (p%TMD_DOF_MODE /= DOFMode_BTMD) THEN
+   IF (.not. p%TMD_On_Blade) THEN
 
       CALL MeshCreate( BlankMesh        = u%Mesh            &
                      ,IOS               = COMPONENT_INPUT   &
@@ -273,7 +279,7 @@ SUBROUTINE TMD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
       u%Mesh%RemapFlag  = .TRUE.
       y%Mesh%RemapFlag  = .TRUE.
 
-   ELSE IF (p%TMD_DOF_MODE == DOFMode_BTMD) THEN
+   ELSE IF (p%TMD_On_Blade) THEN
 
       ALLOCATE (u%BMesh(p%NumBl), STAT=ErrStat2)
       IF (ErrStat2/=0) THEN
@@ -582,7 +588,7 @@ SUBROUTINE TMD_RK4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg
       ErrStat = ErrID_None
       ErrMsg  = "" 
 
-      IF (p%TMD_DOF_MODE /= DOFMode_BTMD) THEN
+      IF (.not. p%TMD_On_Blade) THEN
  
          CALL TMD_CopyContState( x, k1, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
             CALL CheckError(ErrStat2,ErrMsg2)
@@ -656,8 +662,7 @@ SUBROUTINE TMD_RK4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg
             ! clean up local variables:
          CALL ExitThisRoutine(  )
 
-      ELSE IF (p%TMD_DOF_MODE == DOFMode_BTMD) THEN
-!FIXME: can we further consolidate?
+      ELSE IF (p%TMD_On_Blade) THEN
           CALL TMD_CopyContState( x, bk1, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
           CALL TMD_CopyContState( x, bk2, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
             CALL CheckError(ErrStat2,ErrMsg2)
@@ -869,7 +874,9 @@ SUBROUTINE TMD_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
 
       TYPE(TMD_ContinuousStateType)              :: dxdt    ! first time derivative of continuous states
 
-      integer(IntKi)       :: i     !< generic counter
+      integer(IntKi)       :: i,j     !< generic counter
+      real(ReKi)           :: PrescribedForce(3)
+      real(ReKi)           :: PrescribedMoment(3)
 
       ! Local error handling
       integer(IntKi)       :: ErrStat2
@@ -896,7 +903,7 @@ SUBROUTINE TMD_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
       a_G_O (2) = 0
       a_G_O (3) = -p%Gravity
       
-      IF (p%TMD_DOF_MODE /= DOFMode_BTMD) THEN
+      IF (.not. p%TMD_On_Blade) THEN
  
             ! Compute nacelle and gravitational acceleration in nacelle coordinates 
          a_G_N       = matmul(u%Mesh%Orientation(:,:,1),a_G_O)
@@ -904,7 +911,7 @@ SUBROUTINE TMD_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
          omega_N_O_N = matmul(u%Mesh%Orientation(:,:,1),u%Mesh%RotationVel(:,1))
          alpha_N_O_N = matmul(u%Mesh%Orientation(:,:,1),u%Mesh%RotationAcc(:,1))
  
-      ELSE IF (p%TMD_DOF_MODE == DOFMode_BTMD) THEN
+      ELSE IF (p%TMD_On_Blade) THEN
  
          do i=1,p%NumBl
             a_G_B(:,i)       = matmul(u%BMesh(i)%Orientation(:,:,1),a_G_O)
@@ -917,7 +924,46 @@ SUBROUTINE TMD_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
 
          ! calculate the derivative, only to get updated values of m, which are used in the equations below
       CALL TMD_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, ErrStat2, ErrMsg2 ); if (Failed()) return;
-      
+
+
+   IF (p%TMD_On_Blade) THEN
+
+         ! tmd external forces of dependent degrees:
+         do i=1,p%NumBl
+            F_x_btmdY_P_B(i) = - p%M_Y * (a_G_B(1,i) - r_ddot_P_B(1,i) + (alpha_B_O_B(3,i) - omega_B_O_B(1,i)*omega_B_O_B(2,i))*x%btmd_x(3,i) + 2*omega_B_O_B(3,i)*x%btmd_x(4,i))
+            F_z_btmdY_P_B(i) = - p%M_Y * (a_G_B(3,i) - r_ddot_P_B(3,i) - (alpha_B_O_B(1,i) + omega_B_O_B(2,i)*omega_B_O_B(3,i))*x%btmd_x(3,i) - 2*omega_B_O_B(1,i)*x%btmd_x(4,i))
+
+            F_y_btmdX_P_B(i) = - p%M_X * (a_G_B(2,i) - r_ddot_P_B(2,i) - (alpha_B_O_B(3,i) + omega_B_O_B(1,i)*omega_B_O_B(2,i))*x%btmd_x(1,i) - 2*omega_B_O_B(3,i)*x%btmd_x(2,i))
+            F_z_btmdX_P_B(i) = - p%M_X * (a_G_B(3,i) - r_ddot_P_B(3,i) + (alpha_B_O_B(2,i) - omega_B_O_B(1,i)*omega_B_O_B(3,i))*x%btmd_x(1,i) + 2*omega_B_O_B(2,i)*x%btmd_x(2,i))
+         enddo
+
+         ! forces in local coordinates
+         do i=1,p%NumBl
+            F_P_B(1,i) =  p%K_X * x%btmd_x(1,i) + m%C_ctrl(1) * x%btmd_x(2,i) + m%C_Brake(1) * x%btmd_x(2,i) - m%F_stop(1) - m%F_ext(1) - m%F_fr(1) - F_x_btmdY_P_B(i) + m%F_table(1)
+            F_P_B(2,i) =  p%K_Y * x%btmd_x(3,i) + m%C_ctrl(2) * x%btmd_x(4,i) + m%C_Brake(2) * x%btmd_x(4,i) - m%F_stop(2) - m%F_ext(2) - m%F_fr(2) - F_y_btmdX_P_B(i) + m%F_table(2)
+            F_P_B(3,i) = - F_z_btmdX_P_B(i) - F_z_btmdY_P_B(i)
+         enddo
+
+         ! inertial contributions from mass of TMDs and acceleration of nacelle
+         ! forces in global coordinates
+         do i=1,p%NumBl
+            y%BMesh(i)%Force(:,1) =  matmul(transpose(u%BMesh(i)%Orientation(:,:,1)),F_P_B(:,i))
+         enddo
+
+         ! Moments on nacelle in local coordinates
+         do i=1,p%NumBl
+            M_P_B(1,i) =  - F_z_btmdY_P_B(i)  * x%btmd_x(3,i)
+            M_P_B(2,i) =    F_z_btmdX_P_B(i)  * x%btmd_x(1,i)
+            M_P_B(3,i) = (- F_x_btmdY_P_B(i)) * x%btmd_x(3,i) + (F_y_btmdX_P_B(i)) * x%btmd_x(1,i)
+         enddo
+
+         ! moments in global coordinates
+         do i=1,p%NumBl
+            y%BMesh(i)%Moment(:,1) = matmul(transpose(u%BMesh(i)%Orientation(:,:,1)),M_P_B(:,i))
+         enddo
+   ELSE ! p%TMD_On_Blade
+
+
       IF (p%TMD_DOF_MODE == ControlMode_None .OR. p%TMD_DOF_MODE == DOFMode_Indept) THEN
          
          ! tmd external forces of dependent degrees:
@@ -969,43 +1015,6 @@ SUBROUTINE TMD_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
       
          ! moments in global coordinates
          y%Mesh%Moment(:,1) = matmul(transpose(u%Mesh%Orientation(:,:,1)),M_P_N)
-
-      ELSE IF (p%TMD_DOF_MODE == DOFMode_BTMD) THEN
-
-
-         ! tmd external forces of dependent degrees:
-         do i=1,p%NumBl
-            F_x_btmdY_P_B(i) = - p%M_Y * (a_G_B(1,i) - r_ddot_P_B(1,i) + (alpha_B_O_B(3,i) - omega_B_O_B(1,i)*omega_B_O_B(2,i))*x%btmd_x(3,i) + 2*omega_B_O_B(3,i)*x%btmd_x(4,i))
-            F_z_btmdY_P_B(i) = - p%M_Y * (a_G_B(3,i) - r_ddot_P_B(3,i) - (alpha_B_O_B(1,i) + omega_B_O_B(2,i)*omega_B_O_B(3,i))*x%btmd_x(3,i) - 2*omega_B_O_B(1,i)*x%btmd_x(4,i))
-
-            F_y_btmdX_P_B(i) = - p%M_X * (a_G_B(2,i) - r_ddot_P_B(2,i) - (alpha_B_O_B(3,i) + omega_B_O_B(1,i)*omega_B_O_B(2,i))*x%btmd_x(1,i) - 2*omega_B_O_B(3,i)*x%btmd_x(2,i))
-            F_z_btmdX_P_B(i) = - p%M_X * (a_G_B(3,i) - r_ddot_P_B(3,i) + (alpha_B_O_B(2,i) - omega_B_O_B(1,i)*omega_B_O_B(3,i))*x%btmd_x(1,i) + 2*omega_B_O_B(2,i)*x%btmd_x(2,i))
-         enddo
-
-         ! forces in local coordinates
-         do i=1,p%NumBl
-            F_P_B(1,i) =  p%K_X * x%btmd_x(1,i) + m%C_ctrl(1) * x%btmd_x(2,i) + m%C_Brake(1) * x%btmd_x(2,i) - m%F_stop(1) - m%F_ext(1) - m%F_fr(1) - F_x_btmdY_P_B(i) + m%F_table(1)
-            F_P_B(2,i) =  p%K_Y * x%btmd_x(3,i) + m%C_ctrl(2) * x%btmd_x(4,i) + m%C_Brake(2) * x%btmd_x(4,i) - m%F_stop(2) - m%F_ext(2) - m%F_fr(2) - F_y_btmdX_P_B(i) + m%F_table(2)
-            F_P_B(3,i) = - F_z_btmdX_P_B(i) - F_z_btmdY_P_B(i)
-         enddo
-
-         ! inertial contributions from mass of TMDs and acceleration of nacelle
-         ! forces in global coordinates
-         do i=1,p%NumBl
-            y%BMesh(i)%Force(:,1) =  matmul(transpose(u%BMesh(i)%Orientation(:,:,1)),F_P_B(:,i))
-         enddo
-
-         ! Moments on nacelle in local coordinates
-         do i=1,p%NumBl
-            M_P_B(1,i) =  - F_z_btmdY_P_B(i)  * x%btmd_x(3,i)
-            M_P_B(2,i) =    F_z_btmdX_P_B(i)  * x%btmd_x(1,i)
-            M_P_B(3,i) = (- F_x_btmdY_P_B(i)) * x%btmd_x(3,i) + (F_y_btmdX_P_B(i)) * x%btmd_x(1,i)
-         enddo
-
-         ! moments in global coordinates
-         do i=1,p%NumBl
-            y%BMesh(i)%Moment(:,1) = matmul(transpose(u%BMesh(i)%Orientation(:,:,1)),M_P_B(:,i))
-         enddo
 
       ELSE IF (p%TMD_DOF_MODE == DOFMode_TLCD) THEN
 
@@ -1115,16 +1124,41 @@ SUBROUTINE TMD_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
 
          !moments in global coordinates
          y%Mesh%Moment(:,1) = matmul(transpose(u%Mesh%Orientation(:,:,1)), M_P_N)
+      ENDIF
+   ENDIF
 
-      ELSE IF ( p%TMD_DOF_MODE == DOFMode_Prescribed ) THEN
-         ! For prescribed forces, we are simply going to interpolate the input file
-         do i=1,3    ! Forces linear interpolation, hold end values
-            y%Mesh%Force(i,1) =InterpStp( real(Time,ReKi), p%TMD_PrescribedForce(1,:),p%TMD_PrescribedForce(i+1,:),m%PrescribedInterpIdx, size(p%TMD_PrescribedForce,2))
+      IF ( p%TMD_DOF_MODE == DOFMode_Prescribed ) THEN
+         do i=1,3
+            ! Get interpolated force   -- this is not in any particular coordinate system yet
+            PrescribedForce(i)   = InterpStp( real(Time,ReKi), p%TMD_PrescribedForce(1,:),p%TMD_PrescribedForce(i+1,:),m%PrescribedInterpIdx, size(p%TMD_PrescribedForce,2)) 
+            ! Get interpolated moment  -- this is not in any particular coordinate system yet
+            PrescribedMoment(i)  = InterpStp( real(Time,ReKi), p%TMD_PrescribedForce(1,:),p%TMD_PrescribedForce(i+4,:),m%PrescribedInterpIdx, size(p%TMD_PrescribedForce,2))
          enddo
-         do i=1,3    ! Moments linear interpolation, hold end values
-            y%Mesh%Moment(i,1) =InterpStp( real(Time,ReKi), p%TMD_PrescribedForce(1,:),p%TMD_PrescribedForce(i+4,:),m%PrescribedInterpIdx, size(p%TMD_PrescribedForce,2))
-         enddo
- 
+         IF (.not. p%TMD_On_Blade) THEN
+            if (p%PrescribedForcesCoordSys == 0_IntKi) then
+               ! Global coords
+               y%Mesh%Force(1:3,1)  =  PrescribedForce
+               y%Mesh%Moment(1:3,1) =  PrescribedMoment
+            elseif (p%PrescribedForcesCoordSys == 1_IntKi) then
+               ! local coords
+               y%Mesh%Force(1:3,1)  =  matmul(transpose(u%Mesh%Orientation(:,:,1)), PrescribedForce)
+               y%Mesh%Moment(1:3,1) =  matmul(transpose(u%Mesh%Orientation(:,:,1)), PrescribedMoment)
+            endif
+         ELSE if (p%TMD_On_Blade) then
+            if (p%PrescribedForcesCoordSys == 0_IntKi) then
+               ! Global coords
+               do j=1,p%NumBl
+                  y%BMesh(j)%Force(1:3,1)  =  PrescribedForce
+                  y%BMesh(j)%Moment(1:3,1) =  PrescribedMoment
+               enddo
+            elseif (p%PrescribedForcesCoordSys == 1_IntKi) then
+               ! local coords
+               do j=1,p%NumBl
+                  y%BMesh(j)%Force(1:3,1)  =  matmul(transpose(u%BMesh(j)%Orientation(:,:,1)), PrescribedForce)
+                  y%BMesh(j)%Moment(1:3,1) =  matmul(transpose(u%BMesh(j)%Orientation(:,:,1)), PrescribedMoment)
+               enddo
+            endif
+         ENDIF
       END IF
 CONTAINS
    subroutine CleanUp()
@@ -1225,7 +1259,7 @@ SUBROUTINE TMD_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
       a_G_O (2) = 0
       a_G_O (3) = -p%Gravity
       
-      IF (p%TMD_DOF_MODE /= DOFMode_BTMD) THEN
+      IF (.not. p%TMD_On_Blade) THEN
 
           ! Compute nacelle and gravitational acceleration in nacelle coordinates 
          a_G_N     = matmul(u%Mesh%Orientation(:,:,1),a_G_O)
@@ -1233,7 +1267,7 @@ SUBROUTINE TMD_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
          omega_P_N = matmul(u%Mesh%Orientation(:,:,1),u%Mesh%RotationVel(:,1)) 
          alpha_P_N = matmul(u%Mesh%Orientation(:,:,1),u%Mesh%RotationAcc(:,1))
 
-      ELSE IF (p%TMD_DOF_MODE == DOFMode_BTMD) THEN
+      ELSE IF (p%TMD_On_Blade) THEN
          do i=1,p%NumBl
             a_G_B(:,i)     = matmul(u%BMesh(i)%Orientation(:,:,1),a_G_O)
             rddot_B_B(:,i) = matmul(u%BMesh(i)%Orientation(:,:,1),u%BMesh(i)%TranslationAcc(:,1))    
@@ -1267,7 +1301,8 @@ SUBROUTINE TMD_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
          B_X = - rddot_N_N(1) + a_G_N(1) + 1 / p%M_XY * ( m%F_ext(1) + m%F_stop(1) - m%F_table(1)*(m%F_k_x) )
          B_Y = - rddot_N_N(2) + a_G_N(2) + 1 / p%M_XY * ( m%F_ext(2) + m%F_stop(2) - m%F_table(2)*(m%F_k_y) )
 
-      ELSE IF (p%TMD_DOF_MODE == DOFMode_BTMD) THEN
+      ENDIF
+      IF (p%TMD_On_Blade) THEN
          do i=1,p%NumBl
          ! Compute inputs
             B_X_B(i) = - rddot_B_B(1,i) + a_G_B(1,i) + 1 / p%M_X * ( m%F_ext(1) + m%F_stop(1) - m%F_table(1) )
@@ -1296,7 +1331,9 @@ SUBROUTINE TMD_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
             dxdt%tmd_x(3) = x%tmd_x(4)
          END IF
 
-         IF (p%TMD_DOF_MODE == DOFMode_BTMD .AND. .NOT. p%TMD_X_DOF) THEN
+      ENDIF
+      IF (p%TMD_On_Blade) THEN
+         IF (.NOT. p%TMD_X_DOF) THEN
             do i=1,p%NumBl
                dxdt%btmd_x(1,i) = 0.0_ReKi
             enddo
@@ -1306,7 +1343,7 @@ SUBROUTINE TMD_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
             enddo
          END IF
 
-         IF (p%TMD_DOF_MODE == DOFMode_BTMD .AND. .NOT. p%TMD_Y_DOF) THEN
+         IF (.NOT. p%TMD_Y_DOF) THEN
             do i=1,p%NumBl
                dxdt%btmd_x(3,i) = 0.0_ReKi
             enddo
@@ -1329,7 +1366,35 @@ SUBROUTINE TMD_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
          CALL TMD_GroundHookDamp(dxdt,x,u,p,m%C_ctrl,m%C_Brake,m%F_fr)
       END IF
       
-      
+   IF (p%TMD_On_Blade) THEN
+
+      IF (p%TMD_X_DOF) THEN
+         do i=1,p%NumBl
+            dxdt%btmd_x(2,i) =  ( omega_P_B(2,i)**2 + omega_P_B(3,i)**2 - K(1) / p%M_X) * x%btmd_x(1,i)  &
+                              - ( m%C_ctrl( 1)/p%M_X ) * x%btmd_x(2,i)                                   &
+                              - ( m%C_Brake(1)/p%M_X ) * x%btmd_x(2,i)                                   &
+                              + B_X_B(i) + m%F_fr(1) / p%M_X
+         enddo
+      ELSE
+         do i=1,p%NumBl
+            dxdt%btmd_x(2,i) = 0.0_ReKi
+         enddo
+      END IF
+      IF (p%TMD_Y_DOF) THEN
+         do i=1,p%NumBl
+            dxdt%btmd_x(4,i) =  ( omega_P_B(1,i)**2 + omega_P_B(3,i)**2 - K(2) / p%M_Y) * x%btmd_x(3,i)  &
+                              - ( m%C_ctrl( 2)/p%M_Y ) * x%btmd_x(4,i)                                   &
+                              - ( m%C_Brake(2)/p%M_Y ) * x%btmd_x(4,i)                                   &
+                              + B_Y_B(i) + m%F_fr(2) / p%M_Y 
+         enddo
+      ELSE
+         do i=1,p%NumBl
+            dxdt%btmd_x(4,i) = 0.0_ReKi
+         enddo
+      END IF
+   ELSE
+
+
       ! Compute the first time derivatives, dxdt%tmd_x(2) and dxdt%tmd_x(4), of the continuous states,:
       IF (p%TMD_DOF_MODE == DOFMode_Indept) THEN
      
@@ -1364,32 +1429,6 @@ SUBROUTINE TMD_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
                               + B_Y + 1 / p%M_XY * ( m%F_fr(2) )                                   &
                               - ( omega_P_N(1)*omega_P_N(2) + alpha_P_N(3) ) * x%tmd_x(1)          &
                              -2 * omega_P_N(3) * x%tmd_x(2)
-      ELSE IF (p%TMD_DOF_MODE == DOFMode_BTMD) THEN
-
-         IF (p%TMD_X_DOF) THEN
-            do i=1,p%NumBl
-               dxdt%btmd_x(2,i) =  ( omega_P_B(2,i)**2 + omega_P_B(3,i)**2 - K(1) / p%M_X) * x%btmd_x(1,i)  &
-                                 - ( m%C_ctrl( 1)/p%M_X ) * x%btmd_x(2,i)                                   &
-                                 - ( m%C_Brake(1)/p%M_X ) * x%btmd_x(2,i)                                   &
-                                 + B_X_B(i) + m%F_fr(1) / p%M_X
-            enddo
-         ELSE
-            do i=1,p%NumBl
-               dxdt%btmd_x(2,i) = 0.0_ReKi
-            enddo
-         END IF
-         IF (p%TMD_Y_DOF) THEN
-            do i=1,p%NumBl
-               dxdt%btmd_x(4,i) =  ( omega_P_B(1,i)**2 + omega_P_B(3,i)**2 - K(2) / p%M_Y) * x%btmd_x(3,i)  &
-                                 - ( m%C_ctrl( 2)/p%M_Y ) * x%btmd_x(4,i)                                   &
-                                 - ( m%C_Brake(2)/p%M_Y ) * x%btmd_x(4,i)                                   &
-                                 + B_Y_B(i) + m%F_fr(2) / p%M_Y 
-            enddo
-         ELSE
-            do i=1,p%NumBl
-               dxdt%btmd_x(4,i) = 0.0_ReKi
-            enddo
-         END IF
 
       ELSE IF (p%TMD_DOF_MODE == DOFMode_TLCD) THEN !MEG & SP
          ! Compute the first time derivatives of the continuous states of TLCD mode
@@ -1412,6 +1451,7 @@ SUBROUTINE TMD_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
                         -.5*p%rho_SS*p%area_SS*p%headLossCoeff_SS*p%area_ratio_SS*p%area_ratio_SS*x%tmd_x(4)*ABS(x%tmd_x(4)))/(p%rho_SS*p%area_SS*(p%L_SS-p%B_SS+p%area_ratio_SS*p%B_SS))
 
       END IF
+   END IF   ! p%TMD_On_Blade
 
 CONTAINS
    subroutine CleanUp()
@@ -2209,10 +2249,13 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, OutFileRoot, UnEc, ErrStat
       
 
    !------------------ TMD Prescribed Forces -------------------
-     CALL ReadCom( UnIn, InputFile, 'Section Header: TMD CONTROL', ErrStat2, ErrMsg2, UnEc )
+     CALL ReadCom( UnIn, InputFile, 'Section Header: TMD Prescribed Forces', ErrStat2, ErrMsg2, UnEc )
      CALL CheckError( ErrStat2, ErrMsg2 )
-      
-     CALL ReadVar( UnIn, InputFile, InputFileData%TMD_PrescribedFile, "TMD_PrescribedFile","Prescribed input time series", ErrStat2, ErrMsg2, UnEc)
+
+     CALL ReadVar( UnIn, InputFile, InputFileData%PrescribedForcesCoordSys, "PrescribedForcesCoordSys","Prescribed forces coordinate system", ErrStat2, ErrMsg2, UnEc)
+      CALL CheckError( ErrStat2, ErrMsg2 )
+
+     CALL ReadVar( UnIn, InputFile, InputFileData%PrescribedForcesFile, "PrescribedForcesFile","Prescribed input time series", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN  
       
@@ -2269,7 +2312,7 @@ CONTAINS
          !.........................................................................................................................
          IF ( ErrStat >= AbortErrLev ) THEN
             CLOSE( UnIn )
-!            IF ( UnEc > 0 ) CLOSE ( UnEc )
+            IF ( UnEc > 0 ) CLOSE ( UnEc )
          END IF
 
       END IF
@@ -2299,18 +2342,12 @@ SUBROUTINE TMD_SetParameters( InputFileData, p, ErrStat, ErrMsg )
    ErrStat = ErrID_None
    ErrMsg  = ''
 
+   p%TMD_DOF_MODE = InputFileData%TMD_DOF_MODE
 
    !p%DT = InputFileData%DT
    !p%RootName = 'TMD'
    ! DOFs 
    
-   if (p%TMD_On_Blade) then
-!FIXME: this is a short term hack!
-      ! Overwrite the DOF MODE for now.  Will change once we update how the reference orientation and position is handled.
-      p%TMD_DOF_MODE = DOFMode_BTMD
-   else
-      p%TMD_DOF_MODE = InputFileData%TMD_DOF_MODE
-   endif
    p%TMD_X_DOF = InputFileData%TMD_X_DOF
    p%TMD_Y_DOF = InputFileData%TMD_Y_DOF
 
@@ -2378,10 +2415,11 @@ SUBROUTINE TMD_SetParameters( InputFileData, p, ErrStat, ErrMsg )
    p%F_TBL = InputFileData%F_TBL;
                       
    if ( p%TMD_DOF_MODE == DOFMode_Prescribed ) then
-      call Read_ForceTimeSeriesFile(InputFileData%TMD_PrescribedFile,p%TMD_PrescribedForce,ErrStat2,ErrMsg2)
+      call Read_ForceTimeSeriesFile(InputFileData%PrescribedForcesFile,p%TMD_PrescribedForce,ErrStat2,ErrMsg2)
       call SetErrStat(ErrStat2,ErrMsg2, ErrStat,ErrMsg, RoutineName)
    endif
 
+   p%PrescribedForcesCoordSys =  InputFileData%PrescribedForcesCoordSys
 
 END SUBROUTINE TMD_SetParameters   
 

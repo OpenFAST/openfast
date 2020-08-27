@@ -82,7 +82,8 @@ IMPLICIT NONE
     LOGICAL  :: USE_F_TBL      !< use spring force from user-defined table (flag) [-]
     CHARACTER(1024)  :: TMD_F_TBL_FILE      !< user-defined spring table filename [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: F_TBL      !< user-defined spring force [N]
-    CHARACTER(1024)  :: TMD_PrescribedFile      !< Prescribed force time-series filename [-]
+    INTEGER(IntKi)  :: PrescribedForcesCoordSys      !< Prescribed forces coordinate system {0: global; 1: local} [-]
+    CHARACTER(1024)  :: PrescribedForcesFile      !< Prescribed force time-series filename [-]
   END TYPE TMD_InputFile
 ! =======================
 ! =========  TMD_InitInputType  =======
@@ -183,6 +184,7 @@ IMPLICIT NONE
     LOGICAL  :: Use_F_TBL      !< use spring force from user-defined table (flag) [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: F_TBL      !< user-defined spring force [N]
     INTEGER(IntKi)  :: NumBl      !< Number of blades on the turbine [-]
+    INTEGER(IntKi)  :: PrescribedForcesCoordSys      !< Prescribed forces coordinate system {0: global; 1: local} [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: TMD_PrescribedForce      !< TMD prescribed force time-series info [(s,N,N-m)]
   END TYPE TMD_ParameterType
 ! =======================
@@ -276,7 +278,8 @@ IF (ALLOCATED(SrcInputFileData%F_TBL)) THEN
   END IF
     DstInputFileData%F_TBL = SrcInputFileData%F_TBL
 ENDIF
-    DstInputFileData%TMD_PrescribedFile = SrcInputFileData%TMD_PrescribedFile
+    DstInputFileData%PrescribedForcesCoordSys = SrcInputFileData%PrescribedForcesCoordSys
+    DstInputFileData%PrescribedForcesFile = SrcInputFileData%PrescribedForcesFile
  END SUBROUTINE TMD_CopyInputFile
 
  SUBROUTINE TMD_DestroyInputFile( InputFileData, ErrStat, ErrMsg )
@@ -379,7 +382,8 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*2  ! F_TBL upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%F_TBL)  ! F_TBL
   END IF
-      Int_BufSz  = Int_BufSz  + 1*LEN(InData%TMD_PrescribedFile)  ! TMD_PrescribedFile
+      Int_BufSz  = Int_BufSz  + 1  ! PrescribedForcesCoordSys
+      Int_BufSz  = Int_BufSz  + 1*LEN(InData%PrescribedForcesFile)  ! PrescribedForcesFile
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -523,8 +527,10 @@ ENDIF
         END DO
       END DO
   END IF
-    DO I = 1, LEN(InData%TMD_PrescribedFile)
-      IntKiBuf(Int_Xferred) = ICHAR(InData%TMD_PrescribedFile(I:I), IntKi)
+    IntKiBuf(Int_Xferred) = InData%PrescribedForcesCoordSys
+    Int_Xferred = Int_Xferred + 1
+    DO I = 1, LEN(InData%PrescribedForcesFile)
+      IntKiBuf(Int_Xferred) = ICHAR(InData%PrescribedForcesFile(I:I), IntKi)
       Int_Xferred = Int_Xferred + 1
     END DO ! I
  END SUBROUTINE TMD_PackInputFile
@@ -677,8 +683,10 @@ ENDIF
         END DO
       END DO
   END IF
-    DO I = 1, LEN(OutData%TMD_PrescribedFile)
-      OutData%TMD_PrescribedFile(I:I) = CHAR(IntKiBuf(Int_Xferred))
+    OutData%PrescribedForcesCoordSys = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    DO I = 1, LEN(OutData%PrescribedForcesFile)
+      OutData%PrescribedForcesFile(I:I) = CHAR(IntKiBuf(Int_Xferred))
       Int_Xferred = Int_Xferred + 1
     END DO ! I
  END SUBROUTINE TMD_UnPackInputFile
@@ -1990,6 +1998,7 @@ IF (ALLOCATED(SrcParamData%F_TBL)) THEN
     DstParamData%F_TBL = SrcParamData%F_TBL
 ENDIF
     DstParamData%NumBl = SrcParamData%NumBl
+    DstParamData%PrescribedForcesCoordSys = SrcParamData%PrescribedForcesCoordSys
 IF (ALLOCATED(SrcParamData%TMD_PrescribedForce)) THEN
   i1_l = LBOUND(SrcParamData%TMD_PrescribedForce,1)
   i1_u = UBOUND(SrcParamData%TMD_PrescribedForce,1)
@@ -2106,6 +2115,7 @@ ENDIF
       Re_BufSz   = Re_BufSz   + SIZE(InData%F_TBL)  ! F_TBL
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! NumBl
+      Int_BufSz  = Int_BufSz  + 1  ! PrescribedForcesCoordSys
   Int_BufSz   = Int_BufSz   + 1     ! TMD_PrescribedForce allocated yes/no
   IF ( ALLOCATED(InData%TMD_PrescribedForce) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! TMD_PrescribedForce upper/lower bounds for each dimension
@@ -2255,6 +2265,8 @@ ENDIF
       END DO
   END IF
     IntKiBuf(Int_Xferred) = InData%NumBl
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%PrescribedForcesCoordSys
     Int_Xferred = Int_Xferred + 1
   IF ( .NOT. ALLOCATED(InData%TMD_PrescribedForce) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -2436,6 +2448,8 @@ ENDIF
       END DO
   END IF
     OutData%NumBl = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%PrescribedForcesCoordSys = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! TMD_PrescribedForce not allocated
     Int_Xferred = Int_Xferred + 1
