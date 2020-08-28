@@ -164,6 +164,7 @@ program UnsteadyAero_Driver
       call ReadTimeSeriesData( dvrInitInp%InputsFile, nSimSteps, timeArr, AOAarr, Uarr, OmegaArr, errStat, errMsg )
          call checkError()
       dt = (timeArr(nSimSteps) - timeArr(1)) / (nSimSteps-1)
+      nSimSteps = nSimSteps-NumInp + 1
       
    end if
      
@@ -325,6 +326,9 @@ program UnsteadyAero_Driver
          u%alpha = AOAarr(indx)*pi/180.0   ! This needs to be in radians
          u%omega = OmegaArr(indx)
          u%U     = Uarr(indx)
+         if (n> size(timeArr)) then
+            t = t + dt*(n - size(timeArr) ) ! update for NumInp>1;
+         end if
       end if
       u%v_ac(1) = sin(u%alpha)*u%U
       u%v_ac(2) = cos(u%alpha)*u%U
