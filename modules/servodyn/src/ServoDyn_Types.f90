@@ -41,7 +41,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NumBl      !< Number of blades on the turbine [-]
     CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: BlPitchInit      !< Initial blade pitch [-]
-    REAL(ReKi)  :: Gravity      !< Gravitational acceleration [m/s^2]
+    REAL(ReKi) , DIMENSION(1:3)  :: Gravity      !< Gravitational acceleration vector [m/s^2]
     REAL(ReKi) , DIMENSION(1:3)  :: r_N_O_G      !< nacelle origin for setting up mesh [m]
     REAL(ReKi) , DIMENSION(1:3)  :: r_TwrBase      !< tower base origin for setting up mesh [m]
     REAL(DbKi)  :: Tmax      !< max time from glue code [s]
@@ -566,7 +566,7 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*1  ! BlPitchInit upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%BlPitchInit)  ! BlPitchInit
   END IF
-      Re_BufSz   = Re_BufSz   + 1  ! Gravity
+      Re_BufSz   = Re_BufSz   + SIZE(InData%Gravity)  ! Gravity
       Re_BufSz   = Re_BufSz   + SIZE(InData%r_N_O_G)  ! r_N_O_G
       Re_BufSz   = Re_BufSz   + SIZE(InData%r_TwrBase)  ! r_TwrBase
       Db_BufSz   = Db_BufSz   + 1  ! Tmax
@@ -641,8 +641,10 @@ ENDIF
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
-    ReKiBuf(Re_Xferred) = InData%Gravity
-    Re_Xferred = Re_Xferred + 1
+    DO i1 = LBOUND(InData%Gravity,1), UBOUND(InData%Gravity,1)
+      ReKiBuf(Re_Xferred) = InData%Gravity(i1)
+      Re_Xferred = Re_Xferred + 1
+    END DO
     DO i1 = LBOUND(InData%r_N_O_G,1), UBOUND(InData%r_N_O_G,1)
       ReKiBuf(Re_Xferred) = InData%r_N_O_G(i1)
       Re_Xferred = Re_Xferred + 1
@@ -773,8 +775,12 @@ ENDIF
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
-    OutData%Gravity = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
+    i1_l = LBOUND(OutData%Gravity,1)
+    i1_u = UBOUND(OutData%Gravity,1)
+    DO i1 = LBOUND(OutData%Gravity,1), UBOUND(OutData%Gravity,1)
+      OutData%Gravity(i1) = ReKiBuf(Re_Xferred)
+      Re_Xferred = Re_Xferred + 1
+    END DO
     i1_l = LBOUND(OutData%r_N_O_G,1)
     i1_u = UBOUND(OutData%r_N_O_G,1)
     DO i1 = LBOUND(OutData%r_N_O_G,1), UBOUND(OutData%r_N_O_G,1)

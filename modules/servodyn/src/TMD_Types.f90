@@ -90,7 +90,7 @@ IMPLICIT NONE
   TYPE, PUBLIC :: TMD_InitInputType
     CHARACTER(1024)  :: InputFile      !< Name of the input file; remove if there is no file [-]
     CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
-    REAL(ReKi)  :: Gravity      !< Gravitational acceleration [m/s^2]
+    REAL(ReKi) , DIMENSION(1:3)  :: Gravity      !< Gravitational acceleration vector [m/s^2]
     REAL(ReKi) , DIMENSION(1:3)  :: r_N_O_G      !< nacelle origin for setting up mesh [-]
     LOGICAL  :: TMD_On_Blade = .FALSE.      !< The TMD is on the Blade [-]
     INTEGER(IntKi)  :: NumMeshPts      !< Number of mesh points [-]
@@ -159,7 +159,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(1:2)  :: P_SP      !< Positive stop position (maximum mass displacement) [m]
     REAL(ReKi) , DIMENSION(1:2)  :: N_SP      !< Negative stop position (minimum X mass displacement) [m]
     REAL(ReKi) , DIMENSION(1:3)  :: F_ext      !< External forces (for user modification) [-]
-    REAL(ReKi)  :: Gravity      !< Gravitational acceleration [m/s^2]
+    REAL(ReKi) , DIMENSION(1:3)  :: Gravity      !< Gravitational acceleration vector [m/s^2]
     INTEGER(IntKi)  :: TMD_CMODE      !< control mode {0:none; 1: Semi-Active Control Mode; 2: Active Control Mode;}  [-]
     INTEGER(IntKi)  :: TMD_SA_MODE      !< Semi-Active control mode {1: velocity-based ground hook control; 2: Inverse velocity-based ground hook control; 3: displacement-based ground hook control 4: Phase difference Algorithm with Friction Force 5: Phase difference Algorithm with Damping Force}  [-]
     REAL(ReKi)  :: TMD_X_C_HIGH      !< TMD X high damping for ground hook control [N/(m/s)]
@@ -797,7 +797,7 @@ ENDIF
   Int_BufSz  = 0
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%InputFile)  ! InputFile
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%RootName)  ! RootName
-      Re_BufSz   = Re_BufSz   + 1  ! Gravity
+      Re_BufSz   = Re_BufSz   + SIZE(InData%Gravity)  ! Gravity
       Re_BufSz   = Re_BufSz   + SIZE(InData%r_N_O_G)  ! r_N_O_G
       Int_BufSz  = Int_BufSz  + 1  ! TMD_On_Blade
       Int_BufSz  = Int_BufSz  + 1  ! NumMeshPts
@@ -846,8 +846,10 @@ ENDIF
       IntKiBuf(Int_Xferred) = ICHAR(InData%RootName(I:I), IntKi)
       Int_Xferred = Int_Xferred + 1
     END DO ! I
-    ReKiBuf(Re_Xferred) = InData%Gravity
-    Re_Xferred = Re_Xferred + 1
+    DO i1 = LBOUND(InData%Gravity,1), UBOUND(InData%Gravity,1)
+      ReKiBuf(Re_Xferred) = InData%Gravity(i1)
+      Re_Xferred = Re_Xferred + 1
+    END DO
     DO i1 = LBOUND(InData%r_N_O_G,1), UBOUND(InData%r_N_O_G,1)
       ReKiBuf(Re_Xferred) = InData%r_N_O_G(i1)
       Re_Xferred = Re_Xferred + 1
@@ -940,8 +942,12 @@ ENDIF
       OutData%RootName(I:I) = CHAR(IntKiBuf(Int_Xferred))
       Int_Xferred = Int_Xferred + 1
     END DO ! I
-    OutData%Gravity = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
+    i1_l = LBOUND(OutData%Gravity,1)
+    i1_u = UBOUND(OutData%Gravity,1)
+    DO i1 = LBOUND(OutData%Gravity,1), UBOUND(OutData%Gravity,1)
+      OutData%Gravity(i1) = ReKiBuf(Re_Xferred)
+      Re_Xferred = Re_Xferred + 1
+    END DO
     i1_l = LBOUND(OutData%r_N_O_G,1)
     i1_u = UBOUND(OutData%r_N_O_G,1)
     DO i1 = LBOUND(OutData%r_N_O_G,1), UBOUND(OutData%r_N_O_G,1)
@@ -2072,7 +2078,7 @@ ENDIF
       Re_BufSz   = Re_BufSz   + SIZE(InData%P_SP)  ! P_SP
       Re_BufSz   = Re_BufSz   + SIZE(InData%N_SP)  ! N_SP
       Re_BufSz   = Re_BufSz   + SIZE(InData%F_ext)  ! F_ext
-      Re_BufSz   = Re_BufSz   + 1  ! Gravity
+      Re_BufSz   = Re_BufSz   + SIZE(InData%Gravity)  ! Gravity
       Int_BufSz  = Int_BufSz  + 1  ! TMD_CMODE
       Int_BufSz  = Int_BufSz  + 1  ! TMD_SA_MODE
       Re_BufSz   = Re_BufSz   + 1  ! TMD_X_C_HIGH
@@ -2185,8 +2191,10 @@ ENDIF
       ReKiBuf(Re_Xferred) = InData%F_ext(i1)
       Re_Xferred = Re_Xferred + 1
     END DO
-    ReKiBuf(Re_Xferred) = InData%Gravity
-    Re_Xferred = Re_Xferred + 1
+    DO i1 = LBOUND(InData%Gravity,1), UBOUND(InData%Gravity,1)
+      ReKiBuf(Re_Xferred) = InData%Gravity(i1)
+      Re_Xferred = Re_Xferred + 1
+    END DO
     IntKiBuf(Int_Xferred) = InData%TMD_CMODE
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%TMD_SA_MODE
@@ -2365,8 +2373,12 @@ ENDIF
       OutData%F_ext(i1) = ReKiBuf(Re_Xferred)
       Re_Xferred = Re_Xferred + 1
     END DO
-    OutData%Gravity = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
+    i1_l = LBOUND(OutData%Gravity,1)
+    i1_u = UBOUND(OutData%Gravity,1)
+    DO i1 = LBOUND(OutData%Gravity,1), UBOUND(OutData%Gravity,1)
+      OutData%Gravity(i1) = ReKiBuf(Re_Xferred)
+      Re_Xferred = Re_Xferred + 1
+    END DO
     OutData%TMD_CMODE = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%TMD_SA_MODE = IntKiBuf(Int_Xferred)

@@ -174,7 +174,7 @@ SUBROUTINE TMD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
       IF (ErrStat >= AbortErrLev) RETURN
 
    p%DT  = Interval
-   p%Gravity = InitInp%Gravity
+   p%Gravity = InitInp%Gravity      ! Gravity vector pointed in negative (/0,0,-g/)
 
       !............................................................................................
       ! Define initial system states here:
@@ -773,7 +773,6 @@ SUBROUTINE TMD_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
       CHARACTER(*),                  INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
       ! local variables
-      REAL(ReKi), dimension(3)                   :: a_G_O
       REAL(ReKi), dimension(3)                   :: a_G_N
       REAL(ReKi), dimension(3)                   :: F_P_N
       REAL(ReKi), dimension(3)                   :: M_P_N
@@ -859,15 +858,11 @@ SUBROUTINE TMD_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
       call AllocAry(F_y_btmdX_P_B,  p%NumMeshPts,'F_y_btmdX_P_B', ErrStat2,ErrMsg2); if (Failed()) return;
       call AllocAry(F_z_btmdX_P_B,  p%NumMeshPts,'F_z_btmdX_P_B', ErrStat2,ErrMsg2); if (Failed()) return;
 
-      ! gravity vector in global coordinates
-      a_G_O (1) = 0
-      a_G_O (2) = 0
-      a_G_O (3) = -p%Gravity
 
       IF (.not. p%TMD_On_Blade) THEN
          i_pt=1
             ! Compute nacelle and gravitational acceleration in nacelle coordinates
-         a_G_N       = matmul(u%Mesh(i_pt)%Orientation(:,:,1),a_G_O)
+         a_G_N       = matmul(u%Mesh(i_pt)%Orientation(:,:,1),p%Gravity)
          r_ddot_P_N  = matmul(u%Mesh(i_pt)%Orientation(:,:,1),u%Mesh(i_pt)%TranslationAcc(:,1))
          omega_N_O_N = matmul(u%Mesh(i_pt)%Orientation(:,:,1),u%Mesh(i_pt)%RotationVel(:,1))
          alpha_N_O_N = matmul(u%Mesh(i_pt)%Orientation(:,:,1),u%Mesh(i_pt)%RotationAcc(:,1))
@@ -875,7 +870,7 @@ SUBROUTINE TMD_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
       ELSE IF (p%TMD_On_Blade) THEN
 
          do i_pt=1,p%NumMeshPts
-            a_G_B(:,i_pt)       = matmul(u%Mesh(i_pt)%Orientation(:,:,1),a_G_O)
+            a_G_B(:,i_pt)       = matmul(u%Mesh(i_pt)%Orientation(:,:,1),p%Gravity)
             r_ddot_P_B(:,i_pt)  = matmul(u%Mesh(i_pt)%Orientation(:,:,1),u%Mesh(i_pt)%TranslationAcc(:,1))
             omega_B_O_B(:,i_pt) = matmul(u%Mesh(i_pt)%Orientation(:,:,1),u%Mesh(i_pt)%RotationVel(:,1))
             alpha_B_O_B(:,i_pt) = matmul(u%Mesh(i_pt)%Orientation(:,:,1),u%Mesh(i_pt)%RotationAcc(:,1))
@@ -1175,7 +1170,6 @@ SUBROUTINE TMD_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
       INTEGER(IntKi),                INTENT(  OUT)  :: ErrStat     !< Error status of the operation
       CHARACTER(*),                  INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
          ! local variables
-      REAL(ReKi), dimension(3)                      :: a_G_O
       REAL(ReKi), dimension(3)                      :: a_G_N
       REAL(ReKi), dimension(3)                      :: rddot_N_N
       REAL(ReKi), dimension(3)                      :: omega_P_N  ! angular velocity of nacelle transformed to nacelle orientation
@@ -1230,16 +1224,12 @@ SUBROUTINE TMD_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
          K(2) = p%K_Y
       END IF
 
-      ! gravity vector in global coordinates
-      a_G_O (1) = 0
-      a_G_O (2) = 0
-      a_G_O (3) = -p%Gravity
 
       IF (.not. p%TMD_On_Blade) THEN
 
          do i_pt=1,p%NumMeshPts
             ! Compute point and gravitational acceleration in local coordinates
-            a_G_N     = matmul(u%Mesh(i_pt)%Orientation(:,:,1),a_G_O)
+            a_G_N     = matmul(u%Mesh(i_pt)%Orientation(:,:,1),p%Gravity)
             rddot_N_N = matmul(u%Mesh(i_pt)%Orientation(:,:,1),u%Mesh(i_pt)%TranslationAcc(:,1))
             omega_P_N = matmul(u%Mesh(i_pt)%Orientation(:,:,1),u%Mesh(i_pt)%RotationVel(:,1))
             alpha_P_N = matmul(u%Mesh(i_pt)%Orientation(:,:,1),u%Mesh(i_pt)%RotationAcc(:,1))
@@ -1247,7 +1237,7 @@ SUBROUTINE TMD_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
 
       ELSE IF (p%TMD_On_Blade) THEN
          do i_pt=1,p%NumMeshPts
-            a_G_B(:,i_pt)     = matmul(u%Mesh(i_pt)%Orientation(:,:,1),a_G_O)
+            a_G_B(:,i_pt)     = matmul(u%Mesh(i_pt)%Orientation(:,:,1),p%Gravity)
             rddot_B_B(:,i_pt) = matmul(u%Mesh(i_pt)%Orientation(:,:,1),u%Mesh(i_pt)%TranslationAcc(:,1))
             omega_P_B(:,i_pt) = matmul(u%Mesh(i_pt)%Orientation(:,:,1),u%Mesh(i_pt)%RotationVel(:,1))
             alpha_P_B(:,i_pt) = matmul(u%Mesh(i_pt)%Orientation(:,:,1),u%Mesh(i_pt)%RotationAcc(:,1))

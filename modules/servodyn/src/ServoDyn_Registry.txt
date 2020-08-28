@@ -21,7 +21,7 @@ typedef	^	InitInputType	Logical	Linearize	-	.FALSE.	-	"Flag that tells this modu
 typedef	^	InitInputType	IntKi	NumBl	-	-	-	"Number of blades on the turbine"	-
 typedef	^	InitInputType	CHARACTER(1024)	RootName	-	-	-	"RootName for writing output files"	-
 typedef	^	InitInputType	ReKi	BlPitchInit	{:}	-	-	"Initial blade pitch"	-
-typedef	^	InitInputType	ReKi	Gravity	-	-	-	"Gravitational acceleration"	m/s^2
+typedef	^	InitInputType	ReKi	Gravity	{3}	-	-	"Gravitational acceleration vector"	m/s^2
 typedef	^	InitInputType	ReKi	r_N_O_G	{3}	-	-	"nacelle origin for setting up mesh"	m
 typedef	^	InitInputType	ReKi	r_TwrBase	{3}	-	-	"tower base origin for setting up mesh"	m
 typedef	^	InitInputType	DbKi	Tmax	-	-	-	"max time from glue code"	s

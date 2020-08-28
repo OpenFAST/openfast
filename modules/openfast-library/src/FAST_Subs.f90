@@ -667,7 +667,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       Init%InData_SrvD%InputFile     = p_FAST%ServoFile
       Init%InData_SrvD%RootName      = TRIM(p_FAST%OutFileRoot)//'.'//TRIM(y_FAST%Module_Abrev(Module_SrvD))
       Init%InData_SrvD%NumBl         = Init%OutData_ED%NumBl
-      Init%InData_SrvD%gravity       = Init%OutData_ED%gravity
+      Init%InData_SrvD%Gravity       = (/ 0.0_ReKi, 0.0_ReKi, -Init%OutData_ED%Gravity /)       ! "Gravitational acceleration vector" m/s^2
       Init%InData_SrvD%r_N_O_G       = ED%Input(1)%NacelleLoads%Position(:,1)
       Init%InData_SrvD%r_TwrBase     = Init%OutData_ED%TwrBasePos
       Init%InData_SrvD%TMax          = p_FAST%TMax
