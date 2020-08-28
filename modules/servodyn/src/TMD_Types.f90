@@ -107,7 +107,6 @@ IMPLICIT NONE
   TYPE, PUBLIC :: TMD_ContinuousStateType
     REAL(ReKi)  :: DummyContState      !< Remove this variable if you have continuous states [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: tmd_x      !< Continuous States [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: btmd_x      !< Continuous States [-]
   END TYPE TMD_ContinuousStateType
 ! =======================
 ! =========  TMD_DiscreteStateType  =======
@@ -190,13 +189,13 @@ IMPLICIT NONE
 ! =======================
 ! =========  TMD_InputType  =======
   TYPE, PUBLIC :: TMD_InputType
-    TYPE(MeshType)  :: Mesh      !< Displacements at the TMD reference point P in the inertial frame [-]
+    TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: Mesh      !< Displacements at the TMD reference point P in the inertial frame [-]
     TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: BMesh      !< Displacements at the TMD reference point P in the inertial frame [-]
   END TYPE TMD_InputType
 ! =======================
 ! =========  TMD_OutputType  =======
   TYPE, PUBLIC :: TMD_OutputType
-    TYPE(MeshType)  :: Mesh      !< Loads at the TMD reference point in the inertial frame [-]
+    TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: Mesh      !< Loads at the TMD reference point in the inertial frame [-]
     TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: BMesh      !< Loads at the TMD reference point in the inertial frame [-]
   END TYPE TMD_OutputType
 ! =======================
@@ -1164,20 +1163,6 @@ IF (ALLOCATED(SrcContStateData%tmd_x)) THEN
   END IF
     DstContStateData%tmd_x = SrcContStateData%tmd_x
 ENDIF
-IF (ALLOCATED(SrcContStateData%btmd_x)) THEN
-  i1_l = LBOUND(SrcContStateData%btmd_x,1)
-  i1_u = UBOUND(SrcContStateData%btmd_x,1)
-  i2_l = LBOUND(SrcContStateData%btmd_x,2)
-  i2_u = UBOUND(SrcContStateData%btmd_x,2)
-  IF (.NOT. ALLOCATED(DstContStateData%btmd_x)) THEN 
-    ALLOCATE(DstContStateData%btmd_x(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstContStateData%btmd_x.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstContStateData%btmd_x = SrcContStateData%btmd_x
-ENDIF
  END SUBROUTINE TMD_CopyContState
 
  SUBROUTINE TMD_DestroyContState( ContStateData, ErrStat, ErrMsg )
@@ -1191,9 +1176,6 @@ ENDIF
   ErrMsg  = ""
 IF (ALLOCATED(ContStateData%tmd_x)) THEN
   DEALLOCATE(ContStateData%tmd_x)
-ENDIF
-IF (ALLOCATED(ContStateData%btmd_x)) THEN
-  DEALLOCATE(ContStateData%btmd_x)
 ENDIF
  END SUBROUTINE TMD_DestroyContState
 
@@ -1237,11 +1219,6 @@ ENDIF
   IF ( ALLOCATED(InData%tmd_x) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! tmd_x upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%tmd_x)  ! tmd_x
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! btmd_x allocated yes/no
-  IF ( ALLOCATED(InData%btmd_x) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*2  ! btmd_x upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%btmd_x)  ! btmd_x
   END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -1288,26 +1265,6 @@ ENDIF
       DO i2 = LBOUND(InData%tmd_x,2), UBOUND(InData%tmd_x,2)
         DO i1 = LBOUND(InData%tmd_x,1), UBOUND(InData%tmd_x,1)
           ReKiBuf(Re_Xferred) = InData%tmd_x(i1,i2)
-          Re_Xferred = Re_Xferred + 1
-        END DO
-      END DO
-  END IF
-  IF ( .NOT. ALLOCATED(InData%btmd_x) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%btmd_x,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%btmd_x,1)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%btmd_x,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%btmd_x,2)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i2 = LBOUND(InData%btmd_x,2), UBOUND(InData%btmd_x,2)
-        DO i1 = LBOUND(InData%btmd_x,1), UBOUND(InData%btmd_x,1)
-          ReKiBuf(Re_Xferred) = InData%btmd_x(i1,i2)
           Re_Xferred = Re_Xferred + 1
         END DO
       END DO
@@ -1363,29 +1320,6 @@ ENDIF
       DO i2 = LBOUND(OutData%tmd_x,2), UBOUND(OutData%tmd_x,2)
         DO i1 = LBOUND(OutData%tmd_x,1), UBOUND(OutData%tmd_x,1)
           OutData%tmd_x(i1,i2) = ReKiBuf(Re_Xferred)
-          Re_Xferred = Re_Xferred + 1
-        END DO
-      END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! btmd_x not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i2_l = IntKiBuf( Int_Xferred    )
-    i2_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%btmd_x)) DEALLOCATE(OutData%btmd_x)
-    ALLOCATE(OutData%btmd_x(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%btmd_x.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i2 = LBOUND(OutData%btmd_x,2), UBOUND(OutData%btmd_x,2)
-        DO i1 = LBOUND(OutData%btmd_x,1), UBOUND(OutData%btmd_x,1)
-          OutData%btmd_x(i1,i2) = ReKiBuf(Re_Xferred)
           Re_Xferred = Re_Xferred + 1
         END DO
       END DO
@@ -2544,9 +2478,22 @@ ENDIF
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
-      CALL MeshCopy( SrcInputData%Mesh, DstInputData%Mesh, CtrlCode, ErrStat2, ErrMsg2 )
+IF (ALLOCATED(SrcInputData%Mesh)) THEN
+  i1_l = LBOUND(SrcInputData%Mesh,1)
+  i1_u = UBOUND(SrcInputData%Mesh,1)
+  IF (.NOT. ALLOCATED(DstInputData%Mesh)) THEN 
+    ALLOCATE(DstInputData%Mesh(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%Mesh.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DO i1 = LBOUND(SrcInputData%Mesh,1), UBOUND(SrcInputData%Mesh,1)
+      CALL MeshCopy( SrcInputData%Mesh(i1), DstInputData%Mesh(i1), CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
+    ENDDO
+ENDIF
 IF (ALLOCATED(SrcInputData%BMesh)) THEN
   i1_l = LBOUND(SrcInputData%BMesh,1)
   i1_u = UBOUND(SrcInputData%BMesh,1)
@@ -2574,7 +2521,12 @@ ENDIF
 ! 
   ErrStat = ErrID_None
   ErrMsg  = ""
-  CALL MeshDestroy( InputData%Mesh, ErrStat, ErrMsg )
+IF (ALLOCATED(InputData%Mesh)) THEN
+DO i1 = LBOUND(InputData%Mesh,1), UBOUND(InputData%Mesh,1)
+  CALL MeshDestroy( InputData%Mesh(i1), ErrStat, ErrMsg )
+ENDDO
+  DEALLOCATE(InputData%Mesh)
+ENDIF
 IF (ALLOCATED(InputData%BMesh)) THEN
 DO i1 = LBOUND(InputData%BMesh,1), UBOUND(InputData%BMesh,1)
   CALL MeshDestroy( InputData%BMesh(i1), ErrStat, ErrMsg )
@@ -2618,9 +2570,13 @@ ENDIF
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
+  Int_BufSz   = Int_BufSz   + 1     ! Mesh allocated yes/no
+  IF ( ALLOCATED(InData%Mesh) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! Mesh upper/lower bounds for each dimension
    ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
+    DO i1 = LBOUND(InData%Mesh,1), UBOUND(InData%Mesh,1)
       Int_BufSz   = Int_BufSz + 3  ! Mesh: size of buffers for each call to pack subtype
-      CALL MeshPack( InData%Mesh, Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2, .TRUE. ) ! Mesh 
+      CALL MeshPack( InData%Mesh(i1), Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2, .TRUE. ) ! Mesh 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -2636,6 +2592,8 @@ ENDIF
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
+    END DO
+  END IF
   Int_BufSz   = Int_BufSz   + 1     ! BMesh allocated yes/no
   IF ( ALLOCATED(InData%BMesh) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! BMesh upper/lower bounds for each dimension
@@ -2686,7 +2644,18 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-      CALL MeshPack( InData%Mesh, Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2, OnlySize ) ! Mesh 
+  IF ( .NOT. ALLOCATED(InData%Mesh) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Mesh,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Mesh,1)
+    Int_Xferred = Int_Xferred + 2
+
+    DO i1 = LBOUND(InData%Mesh,1), UBOUND(InData%Mesh,1)
+      CALL MeshPack( InData%Mesh(i1), Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2, OnlySize ) ! Mesh 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -2714,6 +2683,8 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
+    END DO
+  END IF
   IF ( .NOT. ALLOCATED(InData%BMesh) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -2784,6 +2755,20 @@ ENDIF
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Mesh not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%Mesh)) DEALLOCATE(OutData%Mesh)
+    ALLOCATE(OutData%Mesh(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%Mesh.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    DO i1 = LBOUND(OutData%Mesh,1), UBOUND(OutData%Mesh,1)
       Buf_size=IntKiBuf( Int_Xferred )
       Int_Xferred = Int_Xferred + 1
       IF(Buf_size > 0) THEN
@@ -2817,13 +2802,15 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL MeshUnpack( OutData%Mesh, Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2 ) ! Mesh 
+      CALL MeshUnpack( OutData%Mesh(i1), Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2 ) ! Mesh 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
       IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
+    END DO
+  END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! BMesh not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
@@ -2897,9 +2884,22 @@ ENDIF
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
-      CALL MeshCopy( SrcOutputData%Mesh, DstOutputData%Mesh, CtrlCode, ErrStat2, ErrMsg2 )
+IF (ALLOCATED(SrcOutputData%Mesh)) THEN
+  i1_l = LBOUND(SrcOutputData%Mesh,1)
+  i1_u = UBOUND(SrcOutputData%Mesh,1)
+  IF (.NOT. ALLOCATED(DstOutputData%Mesh)) THEN 
+    ALLOCATE(DstOutputData%Mesh(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%Mesh.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DO i1 = LBOUND(SrcOutputData%Mesh,1), UBOUND(SrcOutputData%Mesh,1)
+      CALL MeshCopy( SrcOutputData%Mesh(i1), DstOutputData%Mesh(i1), CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
+    ENDDO
+ENDIF
 IF (ALLOCATED(SrcOutputData%BMesh)) THEN
   i1_l = LBOUND(SrcOutputData%BMesh,1)
   i1_u = UBOUND(SrcOutputData%BMesh,1)
@@ -2927,7 +2927,12 @@ ENDIF
 ! 
   ErrStat = ErrID_None
   ErrMsg  = ""
-  CALL MeshDestroy( OutputData%Mesh, ErrStat, ErrMsg )
+IF (ALLOCATED(OutputData%Mesh)) THEN
+DO i1 = LBOUND(OutputData%Mesh,1), UBOUND(OutputData%Mesh,1)
+  CALL MeshDestroy( OutputData%Mesh(i1), ErrStat, ErrMsg )
+ENDDO
+  DEALLOCATE(OutputData%Mesh)
+ENDIF
 IF (ALLOCATED(OutputData%BMesh)) THEN
 DO i1 = LBOUND(OutputData%BMesh,1), UBOUND(OutputData%BMesh,1)
   CALL MeshDestroy( OutputData%BMesh(i1), ErrStat, ErrMsg )
@@ -2971,9 +2976,13 @@ ENDIF
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
+  Int_BufSz   = Int_BufSz   + 1     ! Mesh allocated yes/no
+  IF ( ALLOCATED(InData%Mesh) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! Mesh upper/lower bounds for each dimension
    ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
+    DO i1 = LBOUND(InData%Mesh,1), UBOUND(InData%Mesh,1)
       Int_BufSz   = Int_BufSz + 3  ! Mesh: size of buffers for each call to pack subtype
-      CALL MeshPack( InData%Mesh, Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2, .TRUE. ) ! Mesh 
+      CALL MeshPack( InData%Mesh(i1), Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2, .TRUE. ) ! Mesh 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -2989,6 +2998,8 @@ ENDIF
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
+    END DO
+  END IF
   Int_BufSz   = Int_BufSz   + 1     ! BMesh allocated yes/no
   IF ( ALLOCATED(InData%BMesh) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! BMesh upper/lower bounds for each dimension
@@ -3039,7 +3050,18 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-      CALL MeshPack( InData%Mesh, Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2, OnlySize ) ! Mesh 
+  IF ( .NOT. ALLOCATED(InData%Mesh) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Mesh,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Mesh,1)
+    Int_Xferred = Int_Xferred + 2
+
+    DO i1 = LBOUND(InData%Mesh,1), UBOUND(InData%Mesh,1)
+      CALL MeshPack( InData%Mesh(i1), Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2, OnlySize ) ! Mesh 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -3067,6 +3089,8 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
+    END DO
+  END IF
   IF ( .NOT. ALLOCATED(InData%BMesh) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -3137,6 +3161,20 @@ ENDIF
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Mesh not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%Mesh)) DEALLOCATE(OutData%Mesh)
+    ALLOCATE(OutData%Mesh(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%Mesh.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    DO i1 = LBOUND(OutData%Mesh,1), UBOUND(OutData%Mesh,1)
       Buf_size=IntKiBuf( Int_Xferred )
       Int_Xferred = Int_Xferred + 1
       IF(Buf_size > 0) THEN
@@ -3170,13 +3208,15 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL MeshUnpack( OutData%Mesh, Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2 ) ! Mesh 
+      CALL MeshUnpack( OutData%Mesh(i1), Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2 ) ! Mesh 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
       IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
+    END DO
+  END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! BMesh not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
@@ -3330,8 +3370,12 @@ ENDIF
    END IF
 
    ScaleFactor = t_out / t(2)
-      CALL MeshExtrapInterp1(u1%Mesh, u2%Mesh, tin, u_out%Mesh, tin_out, ErrStat2, ErrMsg2 )
+IF (ALLOCATED(u_out%Mesh) .AND. ALLOCATED(u1%Mesh)) THEN
+  DO i1 = LBOUND(u_out%Mesh,1),UBOUND(u_out%Mesh,1)
+      CALL MeshExtrapInterp1(u1%Mesh(i1), u2%Mesh(i1), tin, u_out%Mesh(i1), tin_out, ErrStat2, ErrMsg2 )
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+   ENDDO
+END IF ! check if allocated
 IF (ALLOCATED(u_out%BMesh) .AND. ALLOCATED(u1%BMesh)) THEN
   DO i1 = LBOUND(u_out%BMesh,1),UBOUND(u_out%BMesh,1)
       CALL MeshExtrapInterp1(u1%BMesh(i1), u2%BMesh(i1), tin, u_out%BMesh(i1), tin_out, ErrStat2, ErrMsg2 )
@@ -3395,8 +3439,12 @@ END IF ! check if allocated
    END IF
 
    ScaleFactor = t_out / (t(2) * t(3) * (t(2) - t(3)))
-      CALL MeshExtrapInterp2(u1%Mesh, u2%Mesh, u3%Mesh, tin, u_out%Mesh, tin_out, ErrStat2, ErrMsg2 )
+IF (ALLOCATED(u_out%Mesh) .AND. ALLOCATED(u1%Mesh)) THEN
+  DO i1 = LBOUND(u_out%Mesh,1),UBOUND(u_out%Mesh,1)
+      CALL MeshExtrapInterp2(u1%Mesh(i1), u2%Mesh(i1), u3%Mesh(i1), tin, u_out%Mesh(i1), tin_out, ErrStat2, ErrMsg2 )
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+   ENDDO
+END IF ! check if allocated
 IF (ALLOCATED(u_out%BMesh) .AND. ALLOCATED(u1%BMesh)) THEN
   DO i1 = LBOUND(u_out%BMesh,1),UBOUND(u_out%BMesh,1)
       CALL MeshExtrapInterp2(u1%BMesh(i1), u2%BMesh(i1), u3%BMesh(i1), tin, u_out%BMesh(i1), tin_out, ErrStat2, ErrMsg2 )
@@ -3500,8 +3548,12 @@ END IF ! check if allocated
    END IF
 
    ScaleFactor = t_out / t(2)
-      CALL MeshExtrapInterp1(y1%Mesh, y2%Mesh, tin, y_out%Mesh, tin_out, ErrStat2, ErrMsg2 )
+IF (ALLOCATED(y_out%Mesh) .AND. ALLOCATED(y1%Mesh)) THEN
+  DO i1 = LBOUND(y_out%Mesh,1),UBOUND(y_out%Mesh,1)
+      CALL MeshExtrapInterp1(y1%Mesh(i1), y2%Mesh(i1), tin, y_out%Mesh(i1), tin_out, ErrStat2, ErrMsg2 )
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+   ENDDO
+END IF ! check if allocated
 IF (ALLOCATED(y_out%BMesh) .AND. ALLOCATED(y1%BMesh)) THEN
   DO i1 = LBOUND(y_out%BMesh,1),UBOUND(y_out%BMesh,1)
       CALL MeshExtrapInterp1(y1%BMesh(i1), y2%BMesh(i1), tin, y_out%BMesh(i1), tin_out, ErrStat2, ErrMsg2 )
@@ -3565,8 +3617,12 @@ END IF ! check if allocated
    END IF
 
    ScaleFactor = t_out / (t(2) * t(3) * (t(2) - t(3)))
-      CALL MeshExtrapInterp2(y1%Mesh, y2%Mesh, y3%Mesh, tin, y_out%Mesh, tin_out, ErrStat2, ErrMsg2 )
+IF (ALLOCATED(y_out%Mesh) .AND. ALLOCATED(y1%Mesh)) THEN
+  DO i1 = LBOUND(y_out%Mesh,1),UBOUND(y_out%Mesh,1)
+      CALL MeshExtrapInterp2(y1%Mesh(i1), y2%Mesh(i1), y3%Mesh(i1), tin, y_out%Mesh(i1), tin_out, ErrStat2, ErrMsg2 )
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+   ENDDO
+END IF ! check if allocated
 IF (ALLOCATED(y_out%BMesh) .AND. ALLOCATED(y1%BMesh)) THEN
   DO i1 = LBOUND(y_out%BMesh,1),UBOUND(y_out%BMesh,1)
       CALL MeshExtrapInterp2(y1%BMesh(i1), y2%BMesh(i1), y3%BMesh(i1), tin, y_out%BMesh(i1), tin_out, ErrStat2, ErrMsg2 )

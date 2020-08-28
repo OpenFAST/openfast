@@ -1214,22 +1214,22 @@ SUBROUTINE SrvD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
 
    if (p%CompBTMD) then
       if (p%NumBl >= 1) then
-         AllOuts(BTMD1_XQ ) = x%BTMD%btmd_x(1,1)
-         AllOuts(BTMD1_XQD) = x%BTMD%btmd_x(2,1)
-         AllOuts(BTMD1_YQ ) = x%BTMD%btmd_x(3,1)
-         AllOuts(BTMD1_YQD) = x%BTMD%btmd_x(4,1)
+         AllOuts(BTMD1_XQ ) = x%BTMD%tmd_x(1,1)
+         AllOuts(BTMD1_XQD) = x%BTMD%tmd_x(2,1)
+         AllOuts(BTMD1_YQ ) = x%BTMD%tmd_x(3,1)
+         AllOuts(BTMD1_YQD) = x%BTMD%tmd_x(4,1)
       endif
       if (p%NumBl >= 2) then
-         AllOuts(BTMD2_XQ ) = x%BTMD%btmd_x(1,2)
-         AllOuts(BTMD2_XQD) = x%BTMD%btmd_x(2,2)
-         AllOuts(BTMD2_YQ ) = x%BTMD%btmd_x(3,2)
-         AllOuts(BTMD2_YQD) = x%BTMD%btmd_x(4,2)
+         AllOuts(BTMD2_XQ ) = x%BTMD%tmd_x(1,2)
+         AllOuts(BTMD2_XQD) = x%BTMD%tmd_x(2,2)
+         AllOuts(BTMD2_YQ ) = x%BTMD%tmd_x(3,2)
+         AllOuts(BTMD2_YQD) = x%BTMD%tmd_x(4,2)
       endif
       if (p%NumBl >= 3) then
-         AllOuts(BTMD3_XQ ) = x%BTMD%btmd_x(1,3)
-         AllOuts(BTMD3_XQD) = x%BTMD%btmd_x(2,3)
-         AllOuts(BTMD3_YQ ) = x%BTMD%btmd_x(3,3)
-         AllOuts(BTMD3_YQD) = x%BTMD%btmd_x(4,3)
+         AllOuts(BTMD3_XQ ) = x%BTMD%tmd_x(1,3)
+         AllOuts(BTMD3_XQD) = x%BTMD%tmd_x(2,3)
+         AllOuts(BTMD3_YQ ) = x%BTMD%tmd_x(3,3)
+         AllOuts(BTMD3_YQD) = x%BTMD%tmd_x(4,3)
       endif
    endif
    

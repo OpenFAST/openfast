@@ -611,19 +611,23 @@ SUBROUTINE TMD_WriteOutputFile( x, y, UnIn, ErrStat, ErrMsg )
     CHARACTER(1024)              :: Fmt !text format
     REAL(ReKi), dimension(10)                   :: OutAry
     INTEGER(IntKi)                              :: i
+    INTEGER(IntKi)                              :: i_pt  ! index into mesh point
     ErrStat = ErrID_None
    ErrMsg  = ''
  
+!FIXME: allow different sizes for tmd_x second dimension -- loop over i_pt
+!FIXME: allow for different size meshes                  -- loop over i_pt
+   i_pt=1
+
    ! create output array
    DO i=1,4
-!FIXME: allow different sizes for tmd_x second dimension
-      OutAry(i) = x%tmd_x(i,1)
+      OutAry(i) = x%tmd_x(i,i_pt)
    END DO
    DO i=5,7
-      OutAry(i) = y%Mesh%Force(i-4,1)
+      OutAry(i) = y%Mesh(i_pt)%Force(i-4,1)
    END DO
    DO i=8,10
-      OutAry(i) = y%Mesh%Moment(i-7,1)
+      OutAry(i) = y%Mesh(i_pt)%Moment(i-7,1)
    END DO
    !Write output 
     Fmt = '(10(1x,F10.2))'
@@ -689,6 +693,8 @@ PROGRAM TestTemplate
     Real(ReKi), dimension(3,NumSteps) :: AAvec
     Real(ReKi), dimension(3,NumSteps) :: LAvec
     CHARACTER(1024)              :: OutputName !text file output
+
+    integer(IntKi)                     :: i_pt     ! index counter to points 
 !...............................................................................................................................
 ! Routines called in initialization
 !...............................................................................................................................
@@ -729,7 +735,10 @@ PROGRAM TestTemplate
     CALL TMD_OpenOutputFile(OutputName,UnOut,ErrStat,ErrMsg)
     
     ! run simulation 
-    
+
+   !FIXME: allow for more than one point?
+   i_pt = 1    ! index counter of number of points we are simulating
+
 DO n = 0,NumSteps-1
        count=1
        ! Modify u (likely from the outputs of another module or a set of test conditions) here:
@@ -742,12 +751,12 @@ DO n = 0,NumSteps-1
        ! setup input mesh with data from nacelle positions:
        do i = 1,3
           do j=1,3
-               u(2)%Mesh%Orientation(i,j,1) = APvec(count,n+1)
+               u(2)%Mesh(i_pt)%Orientation(i,j,1) = APvec(count,n+1)
                count = count+1
           end do
-          u(2)%Mesh%RotationVel(i,1) = AVvec(i,n+1)
-          u(2)%Mesh%RotationAcc(i,1) = AAvec(i,n+1)
-          u(2)%Mesh%TranslationAcc(i,1) = LAvec(i,n+1)
+          u(2)%Mesh(i_pt)%RotationVel(i,1) = AVvec(i,n+1)
+          u(2)%Mesh(i_pt)%RotationAcc(i,1) = AAvec(i,n+1)
+          u(2)%Mesh(i_pt)%TranslationAcc(i,1) = LAvec(i,n+1)
        end do
         if (n==0) then
           InputTime(1) = 0

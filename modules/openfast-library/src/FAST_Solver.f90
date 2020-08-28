@@ -225,35 +225,37 @@ SUBROUTINE ED_InputSolve( p_FAST, u_ED, y_ED, p_AD14, y_AD14, y_AD, y_SrvD, u_AD
       u_ED%YawMom     = y_SrvD%YawMom
    !   u_ED%TBDrCon    = y_SrvD%TBDrCon !array
    
-      IF (y_SrvD%NTMD%Mesh%Committed) THEN
-      
-         CALL Transfer_Point_to_Point( y_SrvD%NTMD%Mesh, u_ED%NacelleLoads, MeshMapData%SrvD_P_2_ED_P_N, ErrStat2, ErrMsg2, u_SrvD%NTMD%Mesh, y_ED%NacelleMotion )
-            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//':u_ED%NacelleLoads' )      
-            
+      IF ( ALLOCATED(y_SrvD%NTMD%Mesh) ) THEN
+         IF (y_SrvD%NTMD%Mesh(1)%Committed) THEN      ! size 1 only for NTMD
+            CALL Transfer_Point_to_Point( y_SrvD%NTMD%Mesh(1), u_ED%NacelleLoads, MeshMapData%SrvD_P_2_ED_P_N, ErrStat2, ErrMsg2, u_SrvD%NTMD%Mesh(1), y_ED%NacelleMotion )
+               CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//':u_ED%NacelleLoads' )      
+         ENDIF
       END IF
    
-      IF (y_SrvD%TTMD%Mesh%Committed) THEN
-      
-         CALL Transfer_Point_to_Point( y_SrvD%TTMD%Mesh, u_ED%TowerPtLoads, MeshMapData%SrvD_P_2_ED_P_T, ErrStat2, ErrMsg2, u_SrvD%TTMD%Mesh, y_ED%TowerLn2Mesh )
-            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//':u_ED%TowerPtLoads' )      
-
+      IF ( ALLOCATED(y_SrvD%TTMD%Mesh) ) THEN
+         IF (y_SrvD%TTMD%Mesh(1)%Committed) THEN      ! size 1 only for NTMD
+            CALL Transfer_Point_to_Point( y_SrvD%TTMD%Mesh(1), u_ED%TowerPtLoads, MeshMapData%SrvD_P_2_ED_P_T, ErrStat2, ErrMsg2, u_SrvD%TTMD%Mesh(1), y_ED%TowerLn2Mesh )
+               CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//':u_ED%TowerPtLoads' )      
+!FIXME: there is a better way to transfer this
          ! we'll need to add this to the loads from AeroDyn, later, so we're going to transfer to a temp mesh here instead of u_ED%TowerPtLoads
             Force  = u_ED%TowerPtLoads%force
             Moment = u_ED%TowerPtLoads%moment
-                        
+         ENDIF        
       END IF
 
-      IF (p_FAST%CompElast == Module_ED .and. ALLOCATED(y_SrvD%BTMD%BMesh) ) THEN
-         !Add BladeTMD
-         DO K = 1,SIZE(u_ED%BladePtLoads,1) ! Loop through all blades (p_ED%NumBl)
-            IF (y_SrvD%BTMD%BMesh(k)%Committed) THEN
-               CALL Transfer_Point_to_Point( y_SrvD%BTMD%BMesh(k), u_ED%BladePtLoads(k), MeshMapData%SrvD_P_2_ED_P_B(k), ErrStat2, ErrMsg2, u_SrvD%BTMD%BMesh(k), y_ED%BladeLn2Mesh(k) )
-!               CALL Transfer_Point_to_Point( y_SrvD%BTMD%BMesh(k), MeshMapData%u_ED_SrvDBMesh, MeshMapData%SrvD_P_2_ED_P_B(k), ErrStat2, ErrMsg2, u_SrvD%BTMD%BMesh(k), y_ED%BladeLn2Mesh(k) )
-                  CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//':u_ED%BladePtLoads' )
-               ForceBTMD(:,:,k)  = u_ED%BladePtLoads(k)%force
-               MomentBTMD(:,:,k) = u_ED%BladePtLoads(k)%moment
-            END IF
-         ENDDO
+      IF (p_FAST%CompElast == Module_ED) THEN
+         IF ( ALLOCATED(y_SrvD%BTMD%BMesh) ) THEN
+            !Add BladeTMD
+            DO K = 1,SIZE(u_ED%BladePtLoads,1) ! Loop through all blades (p_ED%NumBl)
+               IF (y_SrvD%BTMD%BMesh(k)%Committed) THEN
+                  CALL Transfer_Point_to_Point( y_SrvD%BTMD%BMesh(k), u_ED%BladePtLoads(k), MeshMapData%SrvD_P_2_ED_P_B(k), ErrStat2, ErrMsg2, u_SrvD%BTMD%BMesh(k), y_ED%BladeLn2Mesh(k) )
+!!                 CALL Transfer_Point_to_Point( y_SrvD%BTMD%BMesh(k), MeshMapData%u_ED_SrvDBMesh, MeshMapData%SrvD_P_2_ED_P_B(k), ErrStat2, ErrMsg2, u_SrvD%BTMD%BMesh(k), y_ED%BladeLn2Mesh(k) )
+                     CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//':u_ED%BladePtLoads' )
+                  ForceBTMD(:,:,k)  = u_ED%BladePtLoads(k)%force
+                  MomentBTMD(:,:,k) = u_ED%BladePtLoads(k)%moment
+               END IF
+            ENDDO
+         ENDIF
       ENDIF
 
    ELSE !we'll just take the initial guesses..
@@ -950,18 +952,18 @@ SUBROUTINE SrvD_InputSolve( p_FAST, m_FAST, u_SrvD, y_ED, y_IfW, y_OpFM, y_BD, M
    !END IF
    !
    
-   IF (u_SrvD%NTMD%Mesh%Committed) THEN
-      
-      CALL Transfer_Point_to_Point( y_ED%NacelleMotion, u_SrvD%NTMD%Mesh, MeshMapData%ED_P_2_SrvD_P_N, ErrStat2, ErrMsg2 )
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-            
+   IF ( ALLOCATED(u_SrvD%NTMD%Mesh) ) THEN
+      IF (u_SrvD%NTMD%Mesh(1)%Committed) THEN
+         CALL Transfer_Point_to_Point( y_ED%NacelleMotion, u_SrvD%NTMD%Mesh(1), MeshMapData%ED_P_2_SrvD_P_N, ErrStat2, ErrMsg2 )
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      ENDIF
    END IF
 
-   IF (u_SrvD%TTMD%Mesh%Committed) THEN
-      
-      CALL Transfer_Line2_to_Point( y_ED%TowerLn2Mesh, u_SrvD%TTMD%Mesh, MeshMapData%ED_L_2_SrvD_P_T, ErrStat2, ErrMsg2 )
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-            
+   IF ( ALLOCATED(u_SrvD%TTMD%Mesh) ) THEN
+      IF (u_SrvD%TTMD%Mesh(1)%Committed) THEN
+         CALL Transfer_Line2_to_Point( y_ED%TowerLn2Mesh, u_SrvD%TTMD%Mesh(1), MeshMapData%ED_L_2_SrvD_P_T, ErrStat2, ErrMsg2 )
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      ENDIF
    END IF
    
    ! Blade TMD
@@ -3904,14 +3906,22 @@ SUBROUTINE ResetRemapFlags(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, MAPp
    
    ! ServoDyn
    IF ( p_FAST%CompServo == Module_SrvD ) THEN
-      IF (SrvD%y%NTMD%Mesh%Committed) THEN
-         SrvD%y%NTMD%Mesh%RemapFlag        = .FALSE.
-         SrvD%Input(1)%NTMD%Mesh%RemapFlag = .FALSE.
+      IF ( ALLOCATED(SrvD%y%NTMD%Mesh) ) THEN
+         DO K = 1,SIZE(SrvD%y%NTMD%Mesh)
+            IF (SrvD%y%NTMD%Mesh(K)%Committed) THEN
+               SrvD%y%NTMD%Mesh(K)%RemapFlag        = .FALSE.
+               SrvD%Input(1)%NTMD%Mesh(K)%RemapFlag = .FALSE.
+            END IF
+         ENDDO
       END IF
             
-      IF (SrvD%y%TTMD%Mesh%Committed) THEN
-         SrvD%y%TTMD%Mesh%RemapFlag        = .FALSE.
-         SrvD%Input(1)%TTMD%Mesh%RemapFlag = .FALSE.
+      IF ( ALLOCATED(SrvD%y%TTMD%Mesh) ) THEN
+         DO K = 1,SIZE(SrvD%y%TTMD%Mesh)
+            IF (SrvD%y%TTMD%Mesh(K)%Committed) THEN
+               SrvD%y%TTMD%Mesh(K)%RemapFlag        = .FALSE.
+               SrvD%Input(1)%TTMD%Mesh(K)%RemapFlag = .FALSE.
+            END IF
+         ENDDO
       END IF
 
       IF ( ALLOCATED(SrvD%y%BTMD%BMesh) ) THEN
@@ -4081,22 +4091,22 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, M
 !  ElastoDyn <-> ServoDyn
 !-------------------------
       
-   IF ( SrvD%Input(1)%NTMD%Mesh%Committed ) THEN ! ED-SrvD
-         
-      CALL MeshMapCreate( ED%y%NacelleMotion, SrvD%Input(1)%NTMD%Mesh, MeshMapData%ED_P_2_SrvD_P_N, ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':ED_2_SrvD_NacelleMotion' )
-      CALL MeshMapCreate( SrvD%y%NTMD%Mesh, ED%Input(1)%NacelleLoads,  MeshMapData%SrvD_P_2_ED_P_N, ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':SrvD_2_ED_NacelleLoads' )
-   
+   IF ( ALLOCATED(SrvD%Input(1)%NTMD%Mesh) ) THEN     ! size 1 only for NTMD
+      IF ( SrvD%Input(1)%NTMD%Mesh(1)%Committed ) THEN ! ED-SrvD
+         CALL MeshMapCreate( ED%y%NacelleMotion, SrvD%Input(1)%NTMD%Mesh(1), MeshMapData%ED_P_2_SrvD_P_N, ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':ED_2_SrvD_NacelleMotion' )
+         CALL MeshMapCreate( SrvD%y%NTMD%Mesh(1), ED%Input(1)%NacelleLoads,  MeshMapData%SrvD_P_2_ED_P_N, ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':SrvD_2_ED_NacelleLoads' )
+      ENDIF
    END IF   
    
-   IF ( SrvD%Input(1)%TTMD%Mesh%Committed ) THEN ! ED-SrvD
-         
-      CALL MeshMapCreate( ED%y%TowerLn2Mesh, SrvD%Input(1)%TTMD%Mesh, MeshMapData%ED_L_2_SrvD_P_T, ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':ED_2_SrvD_TowerMotion' )
-      CALL MeshMapCreate( SrvD%y%TTMD%Mesh, ED%Input(1)%TowerPtLoads,  MeshMapData%SrvD_P_2_ED_P_T, ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':SrvD_2_ED_TowerLoad' )
-   
+   IF ( ALLOCATED(SrvD%Input(1)%TTMD%Mesh) ) THEN     ! size 1 only for TTMD
+      IF ( SrvD%Input(1)%TTMD%Mesh(1)%Committed ) THEN ! ED-SrvD
+         CALL MeshMapCreate( ED%y%TowerLn2Mesh, SrvD%Input(1)%TTMD%Mesh(1), MeshMapData%ED_L_2_SrvD_P_T, ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':ED_2_SrvD_TowerMotion' )
+         CALL MeshMapCreate( SrvD%y%TTMD%Mesh(1), ED%Input(1)%TowerPtLoads,  MeshMapData%SrvD_P_2_ED_P_T, ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':SrvD_2_ED_TowerLoad' )
+      ENDIF
    END IF
 
 !-------------------------
