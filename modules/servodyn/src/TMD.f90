@@ -229,160 +229,83 @@ SUBROUTINE TMD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
       enddo
    endif
 
+
     ! Define system output initializations (set up mesh) here:
     ! Create the input and output meshes associated with lumped loads
 
-   IF (.not. p%TMD_On_Blade) THEN
-
-      ALLOCATE (u%Mesh(p%NumMeshPts), STAT=ErrStat2)
-      IF (ErrStat2/=0) THEN
-         CALL SetErrStat(ErrID_Fatal,"Error allocating u%Mesh.",ErrStat,ErrMsg,RoutineName)
-         CALL Cleanup()
-         RETURN
-      END IF
-      ALLOCATE (y%Mesh(p%NumMeshPts), STAT=ErrStat2)
-      IF (ErrStat2/=0) THEN
-         CALL SetErrStat(ErrID_Fatal,"Error allocating y%Mesh.",ErrStat,ErrMsg,RoutineName)
-         CALL Cleanup()
-         RETURN
-      END IF
-
-      DO i_pt = 1,p%NumMeshPts
-
-         CALL MeshCreate( BlankMesh        = u%Mesh(i_pt)      &
-                        ,IOS               = COMPONENT_INPUT   &
-                        ,Nnodes            = 1                 &
-                        ,ErrStat           = ErrStat2          &
-                        ,ErrMess           = ErrMsg2           &
-                        ,TranslationDisp   = .TRUE.            &
-                        ,Orientation       = .TRUE.            &
-                        ,TranslationVel    = .TRUE.            &
-                        ,RotationVel       = .TRUE.            &
-                        ,TranslationAcc    = .TRUE.            &
-                        ,RotationAcc       = .TRUE.)
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-            IF ( ErrStat >= AbortErrLev ) THEN
-               CALL Cleanup()
-               RETURN
-            END IF
-
-
-            ! Create the node on the mesh
-            ! make position node at point P (rest position of TMDs, somewhere above the yaw bearing)
-         CALL MeshPositionNode ( u%Mesh(i_pt),1, PositionGlobal(:,i_pt), ErrStat2, ErrMsg2, OrientationP(:,:,i_pt) )
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-
-            ! Create the mesh element
-         CALL MeshConstructElement (  u%Mesh(i_pt)        &
-                                     , ELEMENT_POINT      &
-                                     , ErrStat2           &
-                                     , ErrMsg2            &
-                                     , 1                  )
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         CALL MeshCommit ( u%Mesh(i_pt)        &
-                         , ErrStat2            &
-                         , ErrMsg2             )
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-            IF ( ErrStat >= AbortErrLev ) THEN
-               CALL Cleanup()
-               RETURN
-            END IF
-
-         CALL MeshCopy ( SrcMesh      = u%Mesh(i_pt)           &
-                        ,DestMesh     = y%Mesh(i_pt)           &
-                        ,CtrlCode     = MESH_SIBLING           &
-                        ,IOS          = COMPONENT_OUTPUT       &
-                        ,ErrStat      = ErrStat2               &
-                        ,ErrMess      = ErrMsg2                &
-                        ,Force        = .TRUE.                 &
-                        ,Moment       = .TRUE.                 )
-
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-            IF ( ErrStat >= AbortErrLev ) THEN
-               CALL Cleanup()
-               RETURN
-            END IF
-
-         u%Mesh(i_pt)%RemapFlag  = .TRUE.
-         y%Mesh(i_pt)%RemapFlag  = .TRUE.
-      enddo
-
-   ELSE IF (p%TMD_On_Blade) THEN
-
-      ALLOCATE (u%BMesh(p%NumMeshPts), STAT=ErrStat2)
-      IF (ErrStat2/=0) THEN
-         CALL SetErrStat(ErrID_Fatal,"Error allocating u%BMesh.",ErrStat,ErrMsg,RoutineName)
-         CALL Cleanup()
-         RETURN
-      END IF
-      ALLOCATE (y%BMesh(p%NumMeshPts), STAT=ErrStat2)
-      IF (ErrStat2/=0) THEN
-         CALL SetErrStat(ErrID_Fatal,"Error allocating y%BMesh.",ErrStat,ErrMsg,RoutineName)
-         CALL Cleanup()
-         RETURN
-      END IF
-
-      DO i_pt = 1,p%NumMeshPts
-
-         CALL MeshCreate( BlankMesh        = u%BMesh(i_pt)            &
-                        ,IOS               = COMPONENT_INPUT   &
-                        ,Nnodes            = 1                 &
-                        ,ErrStat           = ErrStat2          &
-                        ,ErrMess           = ErrMsg2           &
-                        ,TranslationDisp   = .TRUE.            &
-                        ,Orientation       = .TRUE.            &
-                        ,TranslationVel    = .TRUE.            &
-                        ,RotationVel       = .TRUE.            &
-                        ,TranslationAcc    = .TRUE.            &
-                        ,RotationAcc       = .TRUE.)
-
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-            IF ( ErrStat >= AbortErrLev ) THEN
-               CALL Cleanup()
-               RETURN
-            END IF
-
-            ! Create the node on the mesh
-         CALL MeshPositionNode ( u%BMesh(i_pt),1, PositionGlobal(:,i_pt), ErrStat2, ErrMsg2, OrientationP(:,:,i_pt) )
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-
-            ! Create the mesh element
-         CALL MeshConstructElement (  u%BMesh(i_pt)        &
-                                     , ELEMENT_POINT      &
-                                     , ErrStat2           &
-                                     , ErrMsg2            &
-                                     , 1                  )
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-
-         CALL MeshCommit ( u%BMesh(i_pt)              &
-                         , ErrStat2            &
-                         , ErrMsg2             )
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-            IF ( ErrStat >= AbortErrLev ) THEN
-               CALL Cleanup()
-               RETURN
-            END IF
-
-         CALL MeshCopy ( SrcMesh      = u%BMesh(i_pt)           &
-                        ,DestMesh     = y%BMesh(i_pt)           &
-                        ,CtrlCode     = MESH_SIBLING           &
-                        ,IOS          = COMPONENT_OUTPUT       &
-                        ,ErrStat      = ErrStat2               &
-                        ,ErrMess      = ErrMsg2                &
-                        ,Force        = .TRUE.                 &
-                        ,Moment       = .TRUE.                 )
-
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-            IF ( ErrStat >= AbortErrLev ) THEN
-               CALL Cleanup()
-               RETURN
-            END IF
-
-         u%BMesh(i_pt)%RemapFlag  = .TRUE.
-         y%BMesh(i_pt)%RemapFlag  = .TRUE.
-      END DO
-
+   ALLOCATE (u%Mesh(p%NumMeshPts), STAT=ErrStat2)
+   IF (ErrStat2/=0) THEN
+      CALL SetErrStat(ErrID_Fatal,"Error allocating u%Mesh.",ErrStat,ErrMsg,RoutineName)
+      CALL Cleanup()
+      RETURN
    END IF
+   ALLOCATE (y%Mesh(p%NumMeshPts), STAT=ErrStat2)
+   IF (ErrStat2/=0) THEN
+      CALL SetErrStat(ErrID_Fatal,"Error allocating y%Mesh.",ErrStat,ErrMsg,RoutineName)
+      CALL Cleanup()
+      RETURN
+   END IF
+
+   ! Create Mesh(i_pt)
+   DO i_pt = 1,p%NumMeshPts
+
+      CALL MeshCreate( BlankMesh        = u%Mesh(i_pt)      &
+                     ,IOS               = COMPONENT_INPUT   &
+                     ,Nnodes            = 1                 &
+                     ,ErrStat           = ErrStat2          &
+                     ,ErrMess           = ErrMsg2           &
+                     ,TranslationDisp   = .TRUE.            &
+                     ,Orientation       = .TRUE.            &
+                     ,TranslationVel    = .TRUE.            &
+                     ,RotationVel       = .TRUE.            &
+                     ,TranslationAcc    = .TRUE.            &
+                     ,RotationAcc       = .TRUE.)
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         IF ( ErrStat >= AbortErrLev ) THEN
+            CALL Cleanup()
+            RETURN
+         END IF
+
+
+         ! Create the node on the mesh
+         ! make position node at point P (rest position of TMDs, somewhere above the yaw bearing)
+      CALL MeshPositionNode ( u%Mesh(i_pt),1, PositionGlobal(:,i_pt), ErrStat2, ErrMsg2, OrientationP(:,:,i_pt) )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
+         ! Create the mesh element
+      CALL MeshConstructElement (  u%Mesh(i_pt)        &
+                                  , ELEMENT_POINT      &
+                                  , ErrStat2           &
+                                  , ErrMsg2            &
+                                  , 1                  )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      CALL MeshCommit ( u%Mesh(i_pt)        &
+                      , ErrStat2            &
+                      , ErrMsg2             )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         IF ( ErrStat >= AbortErrLev ) THEN
+            CALL Cleanup()
+            RETURN
+         END IF
+
+      CALL MeshCopy ( SrcMesh      = u%Mesh(i_pt)           &
+                     ,DestMesh     = y%Mesh(i_pt)           &
+                     ,CtrlCode     = MESH_SIBLING           &
+                     ,IOS          = COMPONENT_OUTPUT       &
+                     ,ErrStat      = ErrStat2               &
+                     ,ErrMess      = ErrMsg2                &
+                     ,Force        = .TRUE.                 &
+                     ,Moment       = .TRUE.                 )
+
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         IF ( ErrStat >= AbortErrLev ) THEN
+            CALL Cleanup()
+            RETURN
+         END IF
+
+      u%Mesh(i_pt)%RemapFlag  = .TRUE.
+      y%Mesh(i_pt)%RemapFlag  = .TRUE.
+   enddo
 
 
    !bjj: removed for now; output handled in ServoDyn
@@ -952,10 +875,10 @@ SUBROUTINE TMD_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
       ELSE IF (p%TMD_On_Blade) THEN
 
          do i_pt=1,p%NumMeshPts
-            a_G_B(:,i_pt)       = matmul(u%BMesh(i_pt)%Orientation(:,:,1),a_G_O)
-            r_ddot_P_B(:,i_pt)  = matmul(u%BMesh(i_pt)%Orientation(:,:,1),u%BMesh(i_pt)%TranslationAcc(:,1))
-            omega_B_O_B(:,i_pt) = matmul(u%BMesh(i_pt)%Orientation(:,:,1),u%BMesh(i_pt)%RotationVel(:,1))
-            alpha_B_O_B(:,i_pt) = matmul(u%BMesh(i_pt)%Orientation(:,:,1),u%BMesh(i_pt)%RotationAcc(:,1))
+            a_G_B(:,i_pt)       = matmul(u%Mesh(i_pt)%Orientation(:,:,1),a_G_O)
+            r_ddot_P_B(:,i_pt)  = matmul(u%Mesh(i_pt)%Orientation(:,:,1),u%Mesh(i_pt)%TranslationAcc(:,1))
+            omega_B_O_B(:,i_pt) = matmul(u%Mesh(i_pt)%Orientation(:,:,1),u%Mesh(i_pt)%RotationVel(:,1))
+            alpha_B_O_B(:,i_pt) = matmul(u%Mesh(i_pt)%Orientation(:,:,1),u%Mesh(i_pt)%RotationAcc(:,1))
          enddo
 
       ENDIF
@@ -992,9 +915,9 @@ SUBROUTINE TMD_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
 
          do i_pt=1,p%NumMeshPts
             ! forces in global coordinates
-            y%BMesh(i_pt)%Force(:,1) =  matmul(transpose(u%BMesh(i_pt)%Orientation(:,:,1)),F_P_B(:,i_pt))
+            y%Mesh(i_pt)%Force(:,1) =  matmul(transpose(u%Mesh(i_pt)%Orientation(:,:,1)),F_P_B(:,i_pt))
             ! moments in global coordinates
-            y%BMesh(i_pt)%Moment(:,1) = matmul(transpose(u%BMesh(i_pt)%Orientation(:,:,1)),M_P_B(:,i_pt))
+            y%Mesh(i_pt)%Moment(:,1) = matmul(transpose(u%Mesh(i_pt)%Orientation(:,:,1)),M_P_B(:,i_pt))
          enddo
    ELSE ! p%TMD_On_Blade
 
@@ -1202,14 +1125,14 @@ SUBROUTINE TMD_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
             if (p%PrescribedForcesCoordSys == 0_IntKi) then
                ! Global coords
                do i_pt=1,p%NumMeshPts
-                  y%BMesh(i_pt)%Force(1:3,1)  =  PrescribedForce
-                  y%BMesh(i_pt)%Moment(1:3,1) =  PrescribedMoment
+                  y%Mesh(i_pt)%Force(1:3,1)  =  PrescribedForce
+                  y%Mesh(i_pt)%Moment(1:3,1) =  PrescribedMoment
                enddo
             elseif (p%PrescribedForcesCoordSys == 1_IntKi) then
                ! local coords
                do i_pt=1,p%NumMeshPts
-                  y%BMesh(i_pt)%Force(1:3,1)  =  matmul(transpose(u%BMesh(i_pt)%Orientation(:,:,1)), PrescribedForce)
-                  y%BMesh(i_pt)%Moment(1:3,1) =  matmul(transpose(u%BMesh(i_pt)%Orientation(:,:,1)), PrescribedMoment)
+                  y%Mesh(i_pt)%Force(1:3,1)  =  matmul(transpose(u%Mesh(i_pt)%Orientation(:,:,1)), PrescribedForce)
+                  y%Mesh(i_pt)%Moment(1:3,1) =  matmul(transpose(u%Mesh(i_pt)%Orientation(:,:,1)), PrescribedMoment)
                enddo
             endif
 !         ENDIF
@@ -1324,10 +1247,10 @@ SUBROUTINE TMD_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
 
       ELSE IF (p%TMD_On_Blade) THEN
          do i_pt=1,p%NumMeshPts
-            a_G_B(:,i_pt)     = matmul(u%BMesh(i_pt)%Orientation(:,:,1),a_G_O)
-            rddot_B_B(:,i_pt) = matmul(u%BMesh(i_pt)%Orientation(:,:,1),u%BMesh(i_pt)%TranslationAcc(:,1))
-            omega_P_B(:,i_pt) = matmul(u%BMesh(i_pt)%Orientation(:,:,1),u%BMesh(i_pt)%RotationVel(:,1))
-            alpha_P_B(:,i_pt) = matmul(u%BMesh(i_pt)%Orientation(:,:,1),u%BMesh(i_pt)%RotationAcc(:,1))
+            a_G_B(:,i_pt)     = matmul(u%Mesh(i_pt)%Orientation(:,:,1),a_G_O)
+            rddot_B_B(:,i_pt) = matmul(u%Mesh(i_pt)%Orientation(:,:,1),u%Mesh(i_pt)%TranslationAcc(:,1))
+            omega_P_B(:,i_pt) = matmul(u%Mesh(i_pt)%Orientation(:,:,1),u%Mesh(i_pt)%RotationVel(:,1))
+            alpha_P_B(:,i_pt) = matmul(u%Mesh(i_pt)%Orientation(:,:,1),u%Mesh(i_pt)%RotationAcc(:,1))
          enddo
       ENDIF
 

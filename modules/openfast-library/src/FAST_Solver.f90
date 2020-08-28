@@ -115,9 +115,9 @@ SUBROUTINE BD_InputSolve( p_FAST, BD, y_AD, u_AD, y_ED, MeshMapData, ErrStat, Er
 !      IF ( p_FAST%CompServo == Module_SrvD ) THEN
 !         !Add BladeTMD
 !         DO K = 1,p_FAST%nBeams ! Loop through all blades
-!            IF (y_SrvD%BTMD%BMesh(1)%Committed) THEN
+!            IF (y_SrvD%BTMD%Mesh(1)%Committed) THEN
 !FIXME: add right mesh mapping
-!               CALL Transfer_Point_to_Point( y_SrvD%BTMD%BMesh(k), MeshMapData%u_BD_SrvDBMesh, MeshMapData%SrvD_P_2_BD_P_B(k), ErrStat2, ErrMsg2, u_SrvD%BTMD%BMesh(k), y_ED%BladeLn2Mesh(k) )
+!               CALL Transfer_Point_to_Point( y_SrvD%BTMD%Mesh(k), MeshMapData%u_BD_SrvDMesh, MeshMapData%SrvD_P_2_BD_P_B(k), ErrStat2, ErrMsg2, u_SrvD%BTMD%Mesh(k), y_ED%BladeLn2Mesh(k) )
 !                  CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//':u_ED%BladePtLoads' )
 !               BD%Input(1,k)%DistrLoad%Force  =  BD%Input(1,k)%DistrLoad%Force  + ForceBTMD(:,:,k)
 !               BD%Input(1,k)%DistrLoad%Moment =  BD%Input(1,k)%DistrLoad%Moment + MomentBTMD(:,:,k)
@@ -244,12 +244,12 @@ SUBROUTINE ED_InputSolve( p_FAST, u_ED, y_ED, p_AD14, y_AD14, y_AD, y_SrvD, u_AD
       END IF
 
       IF (p_FAST%CompElast == Module_ED) THEN
-         IF ( ALLOCATED(y_SrvD%BTMD%BMesh) ) THEN
+         IF ( ALLOCATED(y_SrvD%BTMD%Mesh) ) THEN
             !Add BladeTMD
             DO K = 1,SIZE(u_ED%BladePtLoads,1) ! Loop through all blades (p_ED%NumBl)
-               IF (y_SrvD%BTMD%BMesh(k)%Committed) THEN
-                  CALL Transfer_Point_to_Point( y_SrvD%BTMD%BMesh(k), u_ED%BladePtLoads(k), MeshMapData%SrvD_P_2_ED_P_B(k), ErrStat2, ErrMsg2, u_SrvD%BTMD%BMesh(k), y_ED%BladeLn2Mesh(k) )
-!!                 CALL Transfer_Point_to_Point( y_SrvD%BTMD%BMesh(k), MeshMapData%u_ED_SrvDBMesh, MeshMapData%SrvD_P_2_ED_P_B(k), ErrStat2, ErrMsg2, u_SrvD%BTMD%BMesh(k), y_ED%BladeLn2Mesh(k) )
+               IF (y_SrvD%BTMD%Mesh(k)%Committed) THEN
+                  CALL Transfer_Point_to_Point( y_SrvD%BTMD%Mesh(k), u_ED%BladePtLoads(k), MeshMapData%SrvD_P_2_ED_P_B(k), ErrStat2, ErrMsg2, u_SrvD%BTMD%Mesh(k), y_ED%BladeLn2Mesh(k) )
+!!                 CALL Transfer_Point_to_Point( y_SrvD%BTMD%Mesh(k), MeshMapData%u_ED_SrvDMesh, MeshMapData%SrvD_P_2_ED_P_B(k), ErrStat2, ErrMsg2, u_SrvD%BTMD%Mesh(k), y_ED%BladeLn2Mesh(k) )
                      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//':u_ED%BladePtLoads' )
                   ForceBTMD(:,:,k)  = u_ED%BladePtLoads(k)%force
                   MomentBTMD(:,:,k) = u_ED%BladePtLoads(k)%moment
@@ -967,14 +967,14 @@ SUBROUTINE SrvD_InputSolve( p_FAST, m_FAST, u_SrvD, y_ED, y_IfW, y_OpFM, y_BD, M
    END IF
    
    ! Blade TMD
-   IF ( ALLOCATED(u_SrvD%BTMD%BMesh) ) THEN
+   IF ( ALLOCATED(u_SrvD%BTMD%Mesh) ) THEN
       DO K = 1,SIZE(y_ED%BladeLn2Mesh,1)
-         IF (u_SrvD%BTMD%BMesh(K)%Committed) THEN
+         IF (u_SrvD%BTMD%Mesh(K)%Committed) THEN
             IF ( p_FAST%CompElast == Module_ED ) then
-               CALL Transfer_Line2_to_Point( y_ED%BladeLn2Mesh(K), u_SrvD%BTMD%BMesh(K), MeshMapData%ED_L_2_SrvD_P_B(K), ErrStat2, ErrMsg2 )
+               CALL Transfer_Line2_to_Point( y_ED%BladeLn2Mesh(K), u_SrvD%BTMD%Mesh(K), MeshMapData%ED_L_2_SrvD_P_B(K), ErrStat2, ErrMsg2 )
                   call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 !            ELSEIF ( p_FAST%CompElast == Module_BD ) THEN
-!               CALL Transfer_Line2_to_Point( BD%y(k)%BldMotion, u_SrvD%BTMD%BMesh(K), MeshMapData%BD_L_2_SrvD_P_B(K), ErrStat2, ErrMsg2 )
+!               CALL Transfer_Line2_to_Point( BD%y(k)%BldMotion, u_SrvD%BTMD%Mesh(K), MeshMapData%BD_L_2_SrvD_P_B(K), ErrStat2, ErrMsg2 )
 !                  call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
             ENDIF
          END IF
@@ -3924,11 +3924,11 @@ SUBROUTINE ResetRemapFlags(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, MAPp
          ENDDO
       END IF
 
-      IF ( ALLOCATED(SrvD%y%BTMD%BMesh) ) THEN
-         DO K = 1,SIZE(SrvD%y%BTMD%BMesh)
-            IF (SrvD%y%BTMD%BMesh(K)%Committed) THEN
-               SrvD%y%BTMD%BMesh(K)%RemapFlag        = .FALSE.
-               SrvD%Input(1)%BTMD%BMesh(K)%RemapFlag = .FALSE.
+      IF ( ALLOCATED(SrvD%y%BTMD%Mesh) ) THEN
+         DO K = 1,SIZE(SrvD%y%BTMD%Mesh)
+            IF (SrvD%y%BTMD%Mesh(K)%Committed) THEN
+               SrvD%y%BTMD%Mesh(K)%RemapFlag        = .FALSE.
+               SrvD%Input(1)%BTMD%Mesh(K)%RemapFlag = .FALSE.
             END IF
          END DO
       END IF
@@ -4113,7 +4113,7 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, M
 !  ServoDyn Blade TMD <-> Blades
 !-------------------------
 
-   IF ( ALLOCATED(SrvD%Input(1)%BTMD%BMesh) ) THEN
+   IF ( ALLOCATED(SrvD%Input(1)%BTMD%Mesh) ) THEN
 
 !FIXME: make this use MeshMapData for force collection
 !      ALLOCATE( MeshMapData%ED_L_2_SrvD_P_B(NumBl), MeshMapData%SrvD_P_2_ED_P_B(NumBl), STAT=ErrStat2 )
@@ -4125,23 +4125,23 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, M
 
       DO K = 1,NumBl
          IF ( p_FAST%CompElast == Module_ED ) then
-            IF ( SrvD%Input(1)%BTMD%BMesh(K)%Committed ) THEN ! ED-SrvD
-               CALL MeshMapCreate( ED%y%BladeLn2Mesh(K), SrvD%Input(1)%BTMD%BMesh(K), MeshMapData%ED_L_2_SrvD_P_B(K), ErrStat2, ErrMsg2 )
+            IF ( SrvD%Input(1)%BTMD%Mesh(K)%Committed ) THEN ! ED-SrvD
+               CALL MeshMapCreate( ED%y%BladeLn2Mesh(K), SrvD%Input(1)%BTMD%Mesh(K), MeshMapData%ED_L_2_SrvD_P_B(K), ErrStat2, ErrMsg2 )
                   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':ED_L_2_SrvD_P_B' )
-               CALL MeshMapCreate( SrvD%y%BTMD%BMesh(K), ED%Input(1)%BladePtLoads(K),  MeshMapData%SrvD_P_2_ED_P_B(K), ErrStat2, ErrMsg2 )
+               CALL MeshMapCreate( SrvD%y%BTMD%Mesh(K), ED%Input(1)%BladePtLoads(K),  MeshMapData%SrvD_P_2_ED_P_B(K), ErrStat2, ErrMsg2 )
                   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':SrvD_P_2_ED_P_B' )
       
-!               CALL MeshCopy ( ED%Input(1)%BladePtLoads(K), MeshMapData%u_ED_SrvDBMesh, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+!               CALL MeshCopy ( ED%Input(1)%BladePtLoads(K), MeshMapData%u_ED_SrvDMesh, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
 !                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':u_SrvD_B_LMesh' )
             END IF
 !         ELSEIF ( p_FAST%CompElast == Module_BD ) THEN
-!            IF ( SrvD%Input(1)%BTMD%BMesh(K)%Committed ) THEN ! ED-SrvD
-!               CALL MeshMapCreate( BD%y(k)%BldMotion, SrvD%Input(1)%BTMD%BMesh(K), MeshMapData%BD_L_2_SrvD_P_B(K), ErrStat2, ErrMsg2 )
+!            IF ( SrvD%Input(1)%BTMD%Mesh(K)%Committed ) THEN ! ED-SrvD
+!               CALL MeshMapCreate( BD%y(k)%BldMotion, SrvD%Input(1)%BTMD%Mesh(K), MeshMapData%BD_L_2_SrvD_P_B(K), ErrStat2, ErrMsg2 )
 !                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':BD_L_2_SrvD_P_B' )
-!               CALL MeshMapCreate( SrvD%y%BTMD%BMesh(K), BD%Input(1,k)%DistrLoad,  MeshMapData%SrvD_P_2_BD_P_B(K), ErrStat2, ErrMsg2 )
+!               CALL MeshMapCreate( SrvD%y%BTMD%Mesh(K), BD%Input(1,k)%DistrLoad,  MeshMapData%SrvD_P_2_BD_P_B(K), ErrStat2, ErrMsg2 )
 !                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':SrvD_P_2_BD_P_B' )
 !     
-!               CALL MeshCopy ( BD%Input(1,k)%DistrLoad, MeshMapData%u_BD_SrvDBMesh, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+!               CALL MeshCopy ( BD%Input(1,k)%DistrLoad, MeshMapData%u_BD_SrvDMesh, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
 !                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':u_SrvD_B_LMesh' )
 !            END IF
          ENDIF
