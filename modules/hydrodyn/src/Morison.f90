@@ -2655,22 +2655,30 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
             ! ------------------- buoyancy loads: sides: Sections 3.1 and 3.2 ------------------------
 
 !TODO: What about elements which are buried in the seabed?  This doesn't seem to be tested for
-            if (z1 <= 0) then   ! if segment is at least partially submerged ...
+            if (z1 < 0) then   ! if segment is at least partially submerged ...
               
               
                if (z1*z2 <= 0) then ! special calculation if the slice is partially submerged
-        
+                  
+                  ! Check that this is not the 1st element of the member
+                  if ( i == 1 ) then
+                     call SeterrStat(ErrID_Fatal, 'The lowest element of a Morison member has become partially submerged!  This is not allowed.  Please review your model and create a discretization such that even with displacements, the lowest element of a member does not become partially submerged.', errStat, errMsg, 'Morison_CalcOutput' )                  
+                     return
+                  end if
+                  
                   h0 = -z1/cosPhi             ! distances along element centerline from point 1 to the waterplane
               
               
                   if (abs(dRdl_mg) < 0.0001) then      ! untapered cylinder case
 
                      Vs =    Pi*r1*r1*h0   ! volume of total submerged portion
-                 
-                     cr = 0.25*r1*r1*tanPhi/h0
-                     cl = 0.5*h0 + 0.125*r1*r1*tanPhi*tanPhi/h0
-
-                     cx = cr*cosPhi + cl*sinPhi
+                     if ( EqualRealNos(Vs, 0.0_ReKi) ) then
+                        cx = 0.0_ReKi  ! Avoid singularity, but continue to provide the correct solution
+                     else
+                        cr = 0.25*r1*r1*tanPhi/h0
+                        cl = 0.5*h0 + 0.125*r1*r1*tanPhi*tanPhi/h0
+                        cx = cr*cosPhi + cl*sinPhi
+                     end if
                     
                      !alpha0 = 0.5*h0/dl            ! force distribution between end nodes
                  
@@ -2964,7 +2972,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       z1 = pos1(3)
       
       call GetOrientationAngles( pos1, pos2, phi1, sinPhi1, cosPhi1, tanPhi, sinBeta1, cosBeta1, k_hat1, errStat2, errMsg2 )
-      if ( N == 1 ) then 
+      if ( N == 1 ) then       ! Only one element in member
          sinPhi2 = sinPhi1
          cosPhi2 = cosPhi1
          sinBeta2  = sinBeta1
@@ -2976,6 +2984,17 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       end if
       pos2    = u%Mesh%TranslationDisp(:, mem%NodeIndx(N+1)) + u%Mesh%Position(:, mem%NodeIndx(N+1))
       z2 = pos2(3)
+      
+      ! Check the member does not exhibit any of the following conditions
+      if (.not. mem%PropPot) then 
+         if ( abs(z2) < abs(mem%Rmg(N+1)*sinPhi2) ) then
+            call SetErrStat(ErrID_Fatal, 'The upper end-plate of a member must not cross the water plane.  This is not true for Member ID '//trim(num2lstr(mem%MemberID)), errStat, errMsg, 'Morison_CalcOutput' )   
+         end if
+         if ( abs(z1) < abs(mem%Rmg(1)*sinPhi1) ) then
+            call SetErrStat(ErrID_Fatal, 'The lower end-plate of a member must not cross the water plane.  This is not true for Member ID '//trim(num2lstr(mem%MemberID)), errStat, errMsg, 'Morison_CalcOutput' )   
+         end if
+      end if
+
 ! TODO: Do the equations below still work if z1 > z2 ?
  !TODO, should not have to test seabed crossing in time-marching loop
 
