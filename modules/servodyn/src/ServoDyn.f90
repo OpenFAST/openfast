@@ -496,9 +496,15 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       TMD_InitInp%InputFile      =  InputFileData%NTMDfile
       TMD_InitInp%RootName       =  TRIM(p%RootName)//'.NTMD'
       TMD_InitInp%Gravity        =  InitInp%gravity
-      TMD_InitInp%r_N_O_G        =  InitInp%r_N_O_G
       TMD_InitInp%NumMeshPts     =  1_IntKi        ! single point mesh for Nacelle 
-      TMD_InitInp%TMD_On_Blade   =  .FALSE.
+
+      CALL AllocAry( TMD_InitInp%InitPosition,      3, TMD_InitInp%NumMeshPts, 'TMD_InitInp%InitPosition', errStat2, ErrMsg2)
+         CALL CheckError( ErrStat2, ErrMsg2 )
+      CALL AllocAry( TMD_InitInp%InitOrientation,3, 3, TMD_InitInp%NumMeshPts, 'TMD_InitInp%InitOrientation', errStat2, ErrMsg2)
+         CALL CheckError( ErrStat2, ErrMsg2 )
+         IF (ErrStat >= AbortErrLev) RETURN
+      TMD_InitInp%InitPosition(:,1)      = InitInp%NacPosition
+      TMD_InitInp%InitOrientation(:,:,1) = InitInp%NacOrientation
       
       CALL TMD_Init( TMD_InitInp, u%NTMD, p%NTMD, x%NTMD, xd%NTMD, z%NTMD, OtherState%NTMD, y%NTMD, m%NTMD, Interval, TMD_InitOut, ErrStat2, ErrMsg2 )
          CALL CheckError( ErrStat2, ErrMsg2 )
@@ -519,9 +525,15 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       TMD_InitInp%InputFile      =  InputFileData%TTMDfile
       TMD_InitInp%RootName       =  TRIM(p%RootName)//'.TTMD'
       TMD_InitInp%Gravity        =  InitInp%gravity
-      TMD_InitInp%r_N_O_G        =  InitInp%r_TwrBase
       TMD_InitInp%NumMeshPts     =  1_IntKi        ! single point mesh for Tower 
-      TMD_InitInp%TMD_On_Blade   =  .FALSE.
+
+      CALL AllocAry( TMD_InitInp%InitPosition,      3, TMD_InitInp%NumMeshPts, 'TMD_InitInp%InitPosition', errStat2, ErrMsg2)
+         CALL CheckError( ErrStat2, ErrMsg2 )
+      CALL AllocAry( TMD_InitInp%InitOrientation,3, 3, TMD_InitInp%NumMeshPts, 'TMD_InitInp%InitOrientation', errStat2, ErrMsg2)
+         CALL CheckError( ErrStat2, ErrMsg2 )
+         IF (ErrStat >= AbortErrLev) RETURN
+      TMD_InitInp%InitPosition(:,1)      = InitInp%TwrBasePos
+      TMD_InitInp%InitOrientation(:,:,1) = InitInp%TwrBaseOrient
       
       CALL TMD_Init( TMD_InitInp, u%TTMD, p%TTMD, x%TTMD, xd%TTMD, z%TTMD, OtherState%TTMD, y%TTMD, m%TTMD, Interval, TMD_InitOut, ErrStat2, ErrMsg2 )
          CALL CheckError( ErrStat2, ErrMsg2 )
@@ -534,7 +546,6 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    
    END IF
     
-!SP_start
       !............................................................................................
       ! Initialize the TMD module for blade:
       !............................................................................................
@@ -544,16 +555,15 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       TMD_InitInp%RootName       =  TRIM(p%RootName)//'.BTMD'
       TMD_InitInp%Gravity        =  InitInp%gravity
       TMD_InitInp%NumMeshPts     =  p%NumBl        ! p%NumBl points for blades 
-      TMD_InitInp%TMD_On_Blade   =  .TRUE.
 
-      CALL AllocAry( TMD_InitInp%BladeRootPosition,      3, p%NumBl, 'TMD_InitInp%BladeRootPosition', errStat2, ErrMsg2)
+      CALL AllocAry( TMD_InitInp%InitPosition,      3, TMD_InitInp%NumMeshPts, 'TMD_InitInp%InitPosition', errStat2, ErrMsg2)
          CALL CheckError( ErrStat2, ErrMsg2 )
-      CALL AllocAry( TMD_InitInp%BladeRootOrientation,3, 3, p%NumBl, 'TMD_InitInp%BladeRootOrientation', errStat2, ErrMsg2)
+      CALL AllocAry( TMD_InitInp%InitOrientation,3, 3, TMD_InitInp%NumMeshPts, 'TMD_InitInp%InitOrientation', errStat2, ErrMsg2)
          CALL CheckError( ErrStat2, ErrMsg2 )
          IF (ErrStat >= AbortErrLev) RETURN
-      do k=1,p%NumBl
-         TMD_InitInp%BladeRootPosition(:,k)      = InitInp%BladeRootPosition(:,k)
-         TMD_InitInp%BladeRootOrientation(:,:,k) = InitInp%BladeRootOrientation(:,:,k)
+      do k=1,TMD_InitInp%NumMeshPts
+         TMD_InitInp%InitPosition(:,k)      = InitInp%BladeRootPosition(:,k)
+         TMD_InitInp%InitOrientation(:,:,k) = InitInp%BladeRootOrientation(:,:,k)
       enddo
       CALL TMD_Init( TMD_InitInp, u%BTMD, p%BTMD, x%BTMD, xd%BTMD, z%BTMD, OtherState%BTMD, y%BTMD, m%BTMD, Interval, TMD_InitOut, ErrStat2, ErrMsg2 )
          CALL CheckError( ErrStat2, ErrMsg2 )
@@ -565,7 +575,6 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       END IF      
    
    END IF
-!SP_end
    
    
       !............................................................................................

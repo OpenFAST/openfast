@@ -22,8 +22,10 @@ typedef	^	InitInputType	IntKi	NumBl	-	-	-	"Number of blades on the turbine"	-
 typedef	^	InitInputType	CHARACTER(1024)	RootName	-	-	-	"RootName for writing output files"	-
 typedef	^	InitInputType	ReKi	BlPitchInit	{:}	-	-	"Initial blade pitch"	-
 typedef	^	InitInputType	ReKi	Gravity	{3}	-	-	"Gravitational acceleration vector"	m/s^2
-typedef	^	InitInputType	ReKi	r_N_O_G	{3}	-	-	"nacelle origin for setting up mesh"	m
-typedef	^	InitInputType	ReKi	r_TwrBase	{3}	-	-	"tower base origin for setting up mesh"	m
+typedef	^	InitInputType	ReKi	NacPosition	{3}	-	-	"nacelle origin for setting up mesh"	m
+typedef	^	InitInputType	R8Ki	NacOrientation	{3}{3}	-	-	"nacelle orientation for setting up mesh"	-
+typedef	^	InitInputType	ReKi	TwrBasePos	{3}	-	-	"tower base origin for setting up mesh"	m
+typedef	^	InitInputType	R8Ki	TwrBaseOrient	{3}{3}	-	-	"tower base orientation for setting up mesh"	m
 typedef	^	InitInputType	DbKi	Tmax	-	-	-	"max time from glue code"	s
 typedef	^	InitInputType	ReKi	AvgWindSpeed	-	-	-	"average wind speed for the simulation"	m/s
 typedef	^	InitInputType	ReKi	AirDens	-	-	-	"air density"	kg/m^3

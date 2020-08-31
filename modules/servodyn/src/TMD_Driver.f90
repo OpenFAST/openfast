@@ -703,10 +703,14 @@ PROGRAM TestTemplate
     InitInData%InputFile = 'TMD_Input_test.dat'
     ! gravity
     InitInData%Gravity = 9.80665
-    ! nacelle origin
-    InitInData%r_N_O_G(1) = 0
-    InitInData%r_N_O_G(2) = 0
-    InitInData%r_N_O_G(3) = 0
+    ! TMD origin and orientation
+    call AllocAry(InitInData%InitPosition,       3, 1, 'InitPosition',      ErrStat,ErrMsg)
+    call AllocAry(InitInData%InitOrientation, 3, 3, 1, 'InitOrientation',   ErrStat,ErrMsg)
+    InitInData%InitPosition(1:3,1) = (/ 0.0_ReKi, 0.0_ReKi, 0.0_ReKi /)
+    InitInData%InitOrientation = 0.0_R8Ki
+    do i=1,3
+      InitInData%InitOrientation(i,i,1) = 1.0_R8Ki
+    enddo
     
     ! Set the driver's request for time interval here:
     

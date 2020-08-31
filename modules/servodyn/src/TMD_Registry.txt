@@ -12,7 +12,7 @@
 typedef TMD/TMD TMD_InputFile CHARACTER(1024) TMDFileName - - - "Name of the input file; remove if there is no file" -
 typedef	^		^				INTEGER			TMD_CMODE	-	-	-	"control mode {0:none; 1: Semi-Active Control Mode; 2: Active Control Mode;} "	-
 typedef	^		^				INTEGER			TMD_SA_MODE	-	-	-	"Semi-Active control mode {1: velocity-based ground hook control; 2: Inverse velocity-based ground hook control; 3: displacement-based ground hook control 4: Phase difference Algorithm with Friction Force 5: Phase difference Algorithm with Damping Force} "	-
-typedef	^		^				INTEGER			TMD_DOF_MODE	-	-	-	"DOF mode {0: NO TMD_DOF; 1: TMD_X_DOF and TMD_Y_DOF; 2: TMD_XY_DOF} "	-
+typedef	^		^				INTEGER			TMD_DOF_MODE	-	-	-	"DOF mode {0: NO TMD_DOF; 1: TMD_X_DOF and TMD_Y_DOF; 2: TMD_XY_DOF; 3: TLCD; 4: Prescribed force/moment time series}"	-
 typedef	^		^				LOGICAL			TMD_X_DOF	-	-	-	"DOF on or off"	-
 typedef	^		^				LOGICAL			TMD_Y_DOF	-	-	-	"DOF on or off"	-
 typedef	^		^				ReKi			TMD_X_DSP	-	-	-	"TMD_X initial displacement"	m
@@ -64,11 +64,9 @@ typedef	^		^				CHARACTER(1024)	PrescribedForcesFile	-	-	-	"Prescribed force tim
 typedef   TMD/TMD   InitInputType   CHARACTER(1024)   InputFile   -   -   -   "Name of the input file; remove if there is no file" -
 typedef	^	InitInputType	CHARACTER(1024)	RootName	-	-	-	"RootName for writing output files"	-
 typedef	^		^				ReKi			Gravity	{3}	-	-	"Gravitational acceleration vector"	"m/s^2"
-typedef	^		^				ReKi			r_N_O_G		{3}	-	-	"nacelle origin for setting up mesh"	-
-typedef	^	InitInputType	LOGICAL	TMD_On_Blade	-	.FALSE.	-	"The TMD is on the Blade"	-
 typedef	^	InitInputType	IntKi			NumMeshPts	-	-	-	"Number of mesh points"	-
-typedef	^	InitInputType	ReKi	BladeRootPosition	{:}{:}	-	-	"X-Y-Z reference position of each blade root (3 x NumBlades)"	m
-typedef	^	InitInputType	R8Ki	BladeRootOrientation	{:}{:}{:}	-	-	"DCM reference orientation of blade roots (3x3 x NumBlades)"	-
+typedef	^	InitInputType	ReKi	InitPosition	{:}{:}	-	-	"X-Y-Z reference position of point: i.e. each blade root (3 x NumBlades)"	m
+typedef	^	InitInputType	R8Ki	InitOrientation	{:}{:}{:}	-	-	"DCM reference orientation of point: i.e. each blade root (3x3 x NumBlades)"	-
 
 # Define outputs from the initialization routine here:
 typedef ^ InitOutputType SiKi DummyInitOut - - - "dummy init output" -
@@ -104,10 +102,9 @@ typedef  ^     MiscVarType  IntKi      PrescribedInterpIdx - - - "Index for inte
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
 typedef ^ ParameterType DbKi DT - - - "Time step for cont. state integration & disc. state update" seconds
 typedef  ^     ^           CHARACTER(1024) RootName   -   -   -   "RootName for writing output files"	-
-typedef	^		^				INTEGER			TMD_DOF_MODE	-	-	-	"DOF mode {0: NO TMD_DOF; 1: TMD_X_DOF and TMD_Y_DOF; 2: TMD_XY_DOF} "	-
+typedef	^		^				INTEGER			TMD_DOF_MODE	-	-	-	"DOF mode {0: NO TMD_DOF; 1: TMD_X_DOF and TMD_Y_DOF; 2: TMD_XY_DOF; 3: TLCD; 4: Prescribed force/moment time series}"	-
 typedef	^		^				LOGICAL			TMD_X_DOF	-	-	-	"DOF on or off"	-
 typedef	^		^				LOGICAL			TMD_Y_DOF	-	-	-	"DOF on or off"	-
-typedef	^		^				LOGICAL			TMD_On_Blade	-	-	-	"The TMD is on the Blade"	-
 typedef	^		^				ReKi			X_DSP	-	-	-	"TMD_X initial displacement"	m
 typedef	^		^				ReKi			Y_DSP	-	-	-	"TMD_Y initial displacement"	m
 typedef	^		^				ReKi			M_X		-	-	-	"TMD mass"	kg
@@ -121,7 +118,6 @@ typedef	^		^				ReKi			K_S	{2}	-	-	"TMD stop stiffness"	"N/m"
 typedef	^		^				ReKi			C_S	{2}	-	-	"TMD stop damping" "N/(m/s)"
 typedef	^		^				ReKi			P_SP	{2}	-	-	"Positive stop position (maximum mass displacement)"	m
 typedef	^		^				ReKi			N_SP	{2}	-	-	"Negative stop position (minimum X mass displacement)" m
-typedef	^		^				ReKi			F_ext	{3}	-	-	"External forces (for user modification)"	-
 typedef	^		^				ReKi			Gravity	{3}	-	-	"Gravitational acceleration vector"	"m/s^2"
 typedef	^		^				INTEGER			TMD_CMODE	-	-	-	"control mode {0:none; 1: Semi-Active Control Mode; 2: Active Control Mode;} "	-
 typedef	^		^				INTEGER			TMD_SA_MODE	-	-	-	"Semi-Active control mode {1: velocity-based ground hook control; 2: Inverse velocity-based ground hook control; 3: displacement-based ground hook control 4: Phase difference Algorithm with Friction Force 5: Phase difference Algorithm with Damping Force} "	-

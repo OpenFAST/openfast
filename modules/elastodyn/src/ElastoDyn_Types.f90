@@ -59,7 +59,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: TwrHNodes      !< Location of variable-spaced tower nodes (relative to the tower rigid base height [-]
     REAL(ReKi) , DIMENSION(1:6)  :: PlatformPos      !< Initial platform position (6 DOFs) [-]
     REAL(ReKi) , DIMENSION(1:3)  :: TwrBasePos      !< initial position of the tower base (for SrvD) [m]
-    REAL(ReKi) , DIMENSION(1:3,1:3)  :: BldBasePos      !< initial position of the blade base (for SrvD) [m]
+    REAL(R8Ki) , DIMENSION(1:3,1:3)  :: TwrBaseOrient      !< initial position of the tower base (for SrvD) [m]
     REAL(ReKi)  :: HubRad      !< Preconed hub radius (distance from the rotor apex to the blade root) [m]
     REAL(ReKi)  :: RotSpeed      !< Initial or fixed rotor speed [rad/s]
     LOGICAL  :: isFixed_GenDOF      !< whether the generator is fixed or free [-]
@@ -1133,7 +1133,7 @@ IF (ALLOCATED(SrcInitOutputData%TwrHNodes)) THEN
 ENDIF
     DstInitOutputData%PlatformPos = SrcInitOutputData%PlatformPos
     DstInitOutputData%TwrBasePos = SrcInitOutputData%TwrBasePos
-    DstInitOutputData%BldBasePos = SrcInitOutputData%BldBasePos
+    DstInitOutputData%TwrBaseOrient = SrcInitOutputData%TwrBaseOrient
     DstInitOutputData%HubRad = SrcInitOutputData%HubRad
     DstInitOutputData%RotSpeed = SrcInitOutputData%RotSpeed
     DstInitOutputData%isFixed_GenDOF = SrcInitOutputData%isFixed_GenDOF
@@ -1372,7 +1372,7 @@ ENDIF
   END IF
       Re_BufSz   = Re_BufSz   + SIZE(InData%PlatformPos)  ! PlatformPos
       Re_BufSz   = Re_BufSz   + SIZE(InData%TwrBasePos)  ! TwrBasePos
-      Re_BufSz   = Re_BufSz   + SIZE(InData%BldBasePos)  ! BldBasePos
+      Db_BufSz   = Db_BufSz   + SIZE(InData%TwrBaseOrient)  ! TwrBaseOrient
       Re_BufSz   = Re_BufSz   + 1  ! HubRad
       Re_BufSz   = Re_BufSz   + 1  ! RotSpeed
       Int_BufSz  = Int_BufSz  + 1  ! isFixed_GenDOF
@@ -1570,10 +1570,10 @@ ENDIF
       ReKiBuf(Re_Xferred) = InData%TwrBasePos(i1)
       Re_Xferred = Re_Xferred + 1
     END DO
-    DO i2 = LBOUND(InData%BldBasePos,2), UBOUND(InData%BldBasePos,2)
-      DO i1 = LBOUND(InData%BldBasePos,1), UBOUND(InData%BldBasePos,1)
-        ReKiBuf(Re_Xferred) = InData%BldBasePos(i1,i2)
-        Re_Xferred = Re_Xferred + 1
+    DO i2 = LBOUND(InData%TwrBaseOrient,2), UBOUND(InData%TwrBaseOrient,2)
+      DO i1 = LBOUND(InData%TwrBaseOrient,1), UBOUND(InData%TwrBaseOrient,1)
+        DbKiBuf(Db_Xferred) = InData%TwrBaseOrient(i1,i2)
+        Db_Xferred = Db_Xferred + 1
       END DO
     END DO
     ReKiBuf(Re_Xferred) = InData%HubRad
@@ -1896,14 +1896,14 @@ ENDIF
       OutData%TwrBasePos(i1) = ReKiBuf(Re_Xferred)
       Re_Xferred = Re_Xferred + 1
     END DO
-    i1_l = LBOUND(OutData%BldBasePos,1)
-    i1_u = UBOUND(OutData%BldBasePos,1)
-    i2_l = LBOUND(OutData%BldBasePos,2)
-    i2_u = UBOUND(OutData%BldBasePos,2)
-    DO i2 = LBOUND(OutData%BldBasePos,2), UBOUND(OutData%BldBasePos,2)
-      DO i1 = LBOUND(OutData%BldBasePos,1), UBOUND(OutData%BldBasePos,1)
-        OutData%BldBasePos(i1,i2) = ReKiBuf(Re_Xferred)
-        Re_Xferred = Re_Xferred + 1
+    i1_l = LBOUND(OutData%TwrBaseOrient,1)
+    i1_u = UBOUND(OutData%TwrBaseOrient,1)
+    i2_l = LBOUND(OutData%TwrBaseOrient,2)
+    i2_u = UBOUND(OutData%TwrBaseOrient,2)
+    DO i2 = LBOUND(OutData%TwrBaseOrient,2), UBOUND(OutData%TwrBaseOrient,2)
+      DO i1 = LBOUND(OutData%TwrBaseOrient,1), UBOUND(OutData%TwrBaseOrient,1)
+        OutData%TwrBaseOrient(i1,i2) = REAL(DbKiBuf(Db_Xferred), R8Ki)
+        Db_Xferred = Db_Xferred + 1
       END DO
     END DO
     OutData%HubRad = ReKiBuf(Re_Xferred)

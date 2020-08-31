@@ -38,7 +38,7 @@ IMPLICIT NONE
     CHARACTER(1024)  :: TMDFileName      !< Name of the input file; remove if there is no file [-]
     INTEGER(IntKi)  :: TMD_CMODE      !< control mode {0:none; 1: Semi-Active Control Mode; 2: Active Control Mode;}  [-]
     INTEGER(IntKi)  :: TMD_SA_MODE      !< Semi-Active control mode {1: velocity-based ground hook control; 2: Inverse velocity-based ground hook control; 3: displacement-based ground hook control 4: Phase difference Algorithm with Friction Force 5: Phase difference Algorithm with Damping Force}  [-]
-    INTEGER(IntKi)  :: TMD_DOF_MODE      !< DOF mode {0: NO TMD_DOF; 1: TMD_X_DOF and TMD_Y_DOF; 2: TMD_XY_DOF}  [-]
+    INTEGER(IntKi)  :: TMD_DOF_MODE      !< DOF mode {0: NO TMD_DOF; 1: TMD_X_DOF and TMD_Y_DOF; 2: TMD_XY_DOF; 3: TLCD; 4: Prescribed force/moment time series} [-]
     LOGICAL  :: TMD_X_DOF      !< DOF on or off [-]
     LOGICAL  :: TMD_Y_DOF      !< DOF on or off [-]
     REAL(ReKi)  :: TMD_X_DSP      !< TMD_X initial displacement [m]
@@ -91,11 +91,9 @@ IMPLICIT NONE
     CHARACTER(1024)  :: InputFile      !< Name of the input file; remove if there is no file [-]
     CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
     REAL(ReKi) , DIMENSION(1:3)  :: Gravity      !< Gravitational acceleration vector [m/s^2]
-    REAL(ReKi) , DIMENSION(1:3)  :: r_N_O_G      !< nacelle origin for setting up mesh [-]
-    LOGICAL  :: TMD_On_Blade = .FALSE.      !< The TMD is on the Blade [-]
     INTEGER(IntKi)  :: NumMeshPts      !< Number of mesh points [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: BladeRootPosition      !< X-Y-Z reference position of each blade root (3 x NumBlades) [m]
-    REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: BladeRootOrientation      !< DCM reference orientation of blade roots (3x3 x NumBlades) [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: InitPosition      !< X-Y-Z reference position of point: i.e. each blade root (3 x NumBlades) [m]
+    REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: InitOrientation      !< DCM reference orientation of point: i.e. each blade root (3x3 x NumBlades) [-]
   END TYPE TMD_InitInputType
 ! =======================
 ! =========  TMD_InitOutputType  =======
@@ -141,10 +139,9 @@ IMPLICIT NONE
   TYPE, PUBLIC :: TMD_ParameterType
     REAL(DbKi)  :: DT      !< Time step for cont. state integration & disc. state update [seconds]
     CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
-    INTEGER(IntKi)  :: TMD_DOF_MODE      !< DOF mode {0: NO TMD_DOF; 1: TMD_X_DOF and TMD_Y_DOF; 2: TMD_XY_DOF}  [-]
+    INTEGER(IntKi)  :: TMD_DOF_MODE      !< DOF mode {0: NO TMD_DOF; 1: TMD_X_DOF and TMD_Y_DOF; 2: TMD_XY_DOF; 3: TLCD; 4: Prescribed force/moment time series} [-]
     LOGICAL  :: TMD_X_DOF      !< DOF on or off [-]
     LOGICAL  :: TMD_Y_DOF      !< DOF on or off [-]
-    LOGICAL  :: TMD_On_Blade      !< The TMD is on the Blade [-]
     REAL(ReKi)  :: X_DSP      !< TMD_X initial displacement [m]
     REAL(ReKi)  :: Y_DSP      !< TMD_Y initial displacement [m]
     REAL(ReKi)  :: M_X      !< TMD mass [kg]
@@ -158,7 +155,6 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(1:2)  :: C_S      !< TMD stop damping [N/(m/s)]
     REAL(ReKi) , DIMENSION(1:2)  :: P_SP      !< Positive stop position (maximum mass displacement) [m]
     REAL(ReKi) , DIMENSION(1:2)  :: N_SP      !< Negative stop position (minimum X mass displacement) [m]
-    REAL(ReKi) , DIMENSION(1:3)  :: F_ext      !< External forces (for user modification) [-]
     REAL(ReKi) , DIMENSION(1:3)  :: Gravity      !< Gravitational acceleration vector [m/s^2]
     INTEGER(IntKi)  :: TMD_CMODE      !< control mode {0:none; 1: Semi-Active Control Mode; 2: Active Control Mode;}  [-]
     INTEGER(IntKi)  :: TMD_SA_MODE      !< Semi-Active control mode {1: velocity-based ground hook control; 2: Inverse velocity-based ground hook control; 3: displacement-based ground hook control 4: Phase difference Algorithm with Friction Force 5: Phase difference Algorithm with Damping Force}  [-]
@@ -708,38 +704,36 @@ ENDIF
     DstInitInputData%InputFile = SrcInitInputData%InputFile
     DstInitInputData%RootName = SrcInitInputData%RootName
     DstInitInputData%Gravity = SrcInitInputData%Gravity
-    DstInitInputData%r_N_O_G = SrcInitInputData%r_N_O_G
-    DstInitInputData%TMD_On_Blade = SrcInitInputData%TMD_On_Blade
     DstInitInputData%NumMeshPts = SrcInitInputData%NumMeshPts
-IF (ALLOCATED(SrcInitInputData%BladeRootPosition)) THEN
-  i1_l = LBOUND(SrcInitInputData%BladeRootPosition,1)
-  i1_u = UBOUND(SrcInitInputData%BladeRootPosition,1)
-  i2_l = LBOUND(SrcInitInputData%BladeRootPosition,2)
-  i2_u = UBOUND(SrcInitInputData%BladeRootPosition,2)
-  IF (.NOT. ALLOCATED(DstInitInputData%BladeRootPosition)) THEN 
-    ALLOCATE(DstInitInputData%BladeRootPosition(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+IF (ALLOCATED(SrcInitInputData%InitPosition)) THEN
+  i1_l = LBOUND(SrcInitInputData%InitPosition,1)
+  i1_u = UBOUND(SrcInitInputData%InitPosition,1)
+  i2_l = LBOUND(SrcInitInputData%InitPosition,2)
+  i2_u = UBOUND(SrcInitInputData%InitPosition,2)
+  IF (.NOT. ALLOCATED(DstInitInputData%InitPosition)) THEN 
+    ALLOCATE(DstInitInputData%InitPosition(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%BladeRootPosition.', ErrStat, ErrMsg,RoutineName)
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%InitPosition.', ErrStat, ErrMsg,RoutineName)
       RETURN
     END IF
   END IF
-    DstInitInputData%BladeRootPosition = SrcInitInputData%BladeRootPosition
+    DstInitInputData%InitPosition = SrcInitInputData%InitPosition
 ENDIF
-IF (ALLOCATED(SrcInitInputData%BladeRootOrientation)) THEN
-  i1_l = LBOUND(SrcInitInputData%BladeRootOrientation,1)
-  i1_u = UBOUND(SrcInitInputData%BladeRootOrientation,1)
-  i2_l = LBOUND(SrcInitInputData%BladeRootOrientation,2)
-  i2_u = UBOUND(SrcInitInputData%BladeRootOrientation,2)
-  i3_l = LBOUND(SrcInitInputData%BladeRootOrientation,3)
-  i3_u = UBOUND(SrcInitInputData%BladeRootOrientation,3)
-  IF (.NOT. ALLOCATED(DstInitInputData%BladeRootOrientation)) THEN 
-    ALLOCATE(DstInitInputData%BladeRootOrientation(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
+IF (ALLOCATED(SrcInitInputData%InitOrientation)) THEN
+  i1_l = LBOUND(SrcInitInputData%InitOrientation,1)
+  i1_u = UBOUND(SrcInitInputData%InitOrientation,1)
+  i2_l = LBOUND(SrcInitInputData%InitOrientation,2)
+  i2_u = UBOUND(SrcInitInputData%InitOrientation,2)
+  i3_l = LBOUND(SrcInitInputData%InitOrientation,3)
+  i3_u = UBOUND(SrcInitInputData%InitOrientation,3)
+  IF (.NOT. ALLOCATED(DstInitInputData%InitOrientation)) THEN 
+    ALLOCATE(DstInitInputData%InitOrientation(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%BladeRootOrientation.', ErrStat, ErrMsg,RoutineName)
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%InitOrientation.', ErrStat, ErrMsg,RoutineName)
       RETURN
     END IF
   END IF
-    DstInitInputData%BladeRootOrientation = SrcInitInputData%BladeRootOrientation
+    DstInitInputData%InitOrientation = SrcInitInputData%InitOrientation
 ENDIF
  END SUBROUTINE TMD_CopyInitInput
 
@@ -752,11 +746,11 @@ ENDIF
 ! 
   ErrStat = ErrID_None
   ErrMsg  = ""
-IF (ALLOCATED(InitInputData%BladeRootPosition)) THEN
-  DEALLOCATE(InitInputData%BladeRootPosition)
+IF (ALLOCATED(InitInputData%InitPosition)) THEN
+  DEALLOCATE(InitInputData%InitPosition)
 ENDIF
-IF (ALLOCATED(InitInputData%BladeRootOrientation)) THEN
-  DEALLOCATE(InitInputData%BladeRootOrientation)
+IF (ALLOCATED(InitInputData%InitOrientation)) THEN
+  DEALLOCATE(InitInputData%InitOrientation)
 ENDIF
  END SUBROUTINE TMD_DestroyInitInput
 
@@ -798,18 +792,16 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%InputFile)  ! InputFile
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%RootName)  ! RootName
       Re_BufSz   = Re_BufSz   + SIZE(InData%Gravity)  ! Gravity
-      Re_BufSz   = Re_BufSz   + SIZE(InData%r_N_O_G)  ! r_N_O_G
-      Int_BufSz  = Int_BufSz  + 1  ! TMD_On_Blade
       Int_BufSz  = Int_BufSz  + 1  ! NumMeshPts
-  Int_BufSz   = Int_BufSz   + 1     ! BladeRootPosition allocated yes/no
-  IF ( ALLOCATED(InData%BladeRootPosition) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*2  ! BladeRootPosition upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%BladeRootPosition)  ! BladeRootPosition
+  Int_BufSz   = Int_BufSz   + 1     ! InitPosition allocated yes/no
+  IF ( ALLOCATED(InData%InitPosition) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! InitPosition upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%InitPosition)  ! InitPosition
   END IF
-  Int_BufSz   = Int_BufSz   + 1     ! BladeRootOrientation allocated yes/no
-  IF ( ALLOCATED(InData%BladeRootOrientation) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*3  ! BladeRootOrientation upper/lower bounds for each dimension
-      Db_BufSz   = Db_BufSz   + SIZE(InData%BladeRootOrientation)  ! BladeRootOrientation
+  Int_BufSz   = Int_BufSz   + 1     ! InitOrientation allocated yes/no
+  IF ( ALLOCATED(InData%InitOrientation) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*3  ! InitOrientation upper/lower bounds for each dimension
+      Db_BufSz   = Db_BufSz   + SIZE(InData%InitOrientation)  ! InitOrientation
   END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -850,54 +842,48 @@ ENDIF
       ReKiBuf(Re_Xferred) = InData%Gravity(i1)
       Re_Xferred = Re_Xferred + 1
     END DO
-    DO i1 = LBOUND(InData%r_N_O_G,1), UBOUND(InData%r_N_O_G,1)
-      ReKiBuf(Re_Xferred) = InData%r_N_O_G(i1)
-      Re_Xferred = Re_Xferred + 1
-    END DO
-    IntKiBuf(Int_Xferred) = TRANSFER(InData%TMD_On_Blade, IntKiBuf(1))
-    Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%NumMeshPts
     Int_Xferred = Int_Xferred + 1
-  IF ( .NOT. ALLOCATED(InData%BladeRootPosition) ) THEN
+  IF ( .NOT. ALLOCATED(InData%InitPosition) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
   ELSE
     IntKiBuf( Int_Xferred ) = 1
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%BladeRootPosition,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%BladeRootPosition,1)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%InitPosition,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%InitPosition,1)
     Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%BladeRootPosition,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%BladeRootPosition,2)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%InitPosition,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%InitPosition,2)
     Int_Xferred = Int_Xferred + 2
 
-      DO i2 = LBOUND(InData%BladeRootPosition,2), UBOUND(InData%BladeRootPosition,2)
-        DO i1 = LBOUND(InData%BladeRootPosition,1), UBOUND(InData%BladeRootPosition,1)
-          ReKiBuf(Re_Xferred) = InData%BladeRootPosition(i1,i2)
+      DO i2 = LBOUND(InData%InitPosition,2), UBOUND(InData%InitPosition,2)
+        DO i1 = LBOUND(InData%InitPosition,1), UBOUND(InData%InitPosition,1)
+          ReKiBuf(Re_Xferred) = InData%InitPosition(i1,i2)
           Re_Xferred = Re_Xferred + 1
         END DO
       END DO
   END IF
-  IF ( .NOT. ALLOCATED(InData%BladeRootOrientation) ) THEN
+  IF ( .NOT. ALLOCATED(InData%InitOrientation) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
   ELSE
     IntKiBuf( Int_Xferred ) = 1
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%BladeRootOrientation,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%BladeRootOrientation,1)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%InitOrientation,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%InitOrientation,1)
     Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%BladeRootOrientation,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%BladeRootOrientation,2)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%InitOrientation,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%InitOrientation,2)
     Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%BladeRootOrientation,3)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%BladeRootOrientation,3)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%InitOrientation,3)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%InitOrientation,3)
     Int_Xferred = Int_Xferred + 2
 
-      DO i3 = LBOUND(InData%BladeRootOrientation,3), UBOUND(InData%BladeRootOrientation,3)
-        DO i2 = LBOUND(InData%BladeRootOrientation,2), UBOUND(InData%BladeRootOrientation,2)
-          DO i1 = LBOUND(InData%BladeRootOrientation,1), UBOUND(InData%BladeRootOrientation,1)
-            DbKiBuf(Db_Xferred) = InData%BladeRootOrientation(i1,i2,i3)
+      DO i3 = LBOUND(InData%InitOrientation,3), UBOUND(InData%InitOrientation,3)
+        DO i2 = LBOUND(InData%InitOrientation,2), UBOUND(InData%InitOrientation,2)
+          DO i1 = LBOUND(InData%InitOrientation,1), UBOUND(InData%InitOrientation,1)
+            DbKiBuf(Db_Xferred) = InData%InitOrientation(i1,i2,i3)
             Db_Xferred = Db_Xferred + 1
           END DO
         END DO
@@ -948,17 +934,9 @@ ENDIF
       OutData%Gravity(i1) = ReKiBuf(Re_Xferred)
       Re_Xferred = Re_Xferred + 1
     END DO
-    i1_l = LBOUND(OutData%r_N_O_G,1)
-    i1_u = UBOUND(OutData%r_N_O_G,1)
-    DO i1 = LBOUND(OutData%r_N_O_G,1), UBOUND(OutData%r_N_O_G,1)
-      OutData%r_N_O_G(i1) = ReKiBuf(Re_Xferred)
-      Re_Xferred = Re_Xferred + 1
-    END DO
-    OutData%TMD_On_Blade = TRANSFER(IntKiBuf(Int_Xferred), OutData%TMD_On_Blade)
-    Int_Xferred = Int_Xferred + 1
     OutData%NumMeshPts = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! BladeRootPosition not allocated
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! InitPosition not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
     Int_Xferred = Int_Xferred + 1
@@ -968,20 +946,20 @@ ENDIF
     i2_l = IntKiBuf( Int_Xferred    )
     i2_u = IntKiBuf( Int_Xferred + 1)
     Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%BladeRootPosition)) DEALLOCATE(OutData%BladeRootPosition)
-    ALLOCATE(OutData%BladeRootPosition(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ALLOCATED(OutData%InitPosition)) DEALLOCATE(OutData%InitPosition)
+    ALLOCATE(OutData%InitPosition(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%BladeRootPosition.', ErrStat, ErrMsg,RoutineName)
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%InitPosition.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-      DO i2 = LBOUND(OutData%BladeRootPosition,2), UBOUND(OutData%BladeRootPosition,2)
-        DO i1 = LBOUND(OutData%BladeRootPosition,1), UBOUND(OutData%BladeRootPosition,1)
-          OutData%BladeRootPosition(i1,i2) = ReKiBuf(Re_Xferred)
+      DO i2 = LBOUND(OutData%InitPosition,2), UBOUND(OutData%InitPosition,2)
+        DO i1 = LBOUND(OutData%InitPosition,1), UBOUND(OutData%InitPosition,1)
+          OutData%InitPosition(i1,i2) = ReKiBuf(Re_Xferred)
           Re_Xferred = Re_Xferred + 1
         END DO
       END DO
   END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! BladeRootOrientation not allocated
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! InitOrientation not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
     Int_Xferred = Int_Xferred + 1
@@ -994,16 +972,16 @@ ENDIF
     i3_l = IntKiBuf( Int_Xferred    )
     i3_u = IntKiBuf( Int_Xferred + 1)
     Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%BladeRootOrientation)) DEALLOCATE(OutData%BladeRootOrientation)
-    ALLOCATE(OutData%BladeRootOrientation(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
+    IF (ALLOCATED(OutData%InitOrientation)) DEALLOCATE(OutData%InitOrientation)
+    ALLOCATE(OutData%InitOrientation(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%BladeRootOrientation.', ErrStat, ErrMsg,RoutineName)
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%InitOrientation.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-      DO i3 = LBOUND(OutData%BladeRootOrientation,3), UBOUND(OutData%BladeRootOrientation,3)
-        DO i2 = LBOUND(OutData%BladeRootOrientation,2), UBOUND(OutData%BladeRootOrientation,2)
-          DO i1 = LBOUND(OutData%BladeRootOrientation,1), UBOUND(OutData%BladeRootOrientation,1)
-            OutData%BladeRootOrientation(i1,i2,i3) = REAL(DbKiBuf(Db_Xferred), R8Ki)
+      DO i3 = LBOUND(OutData%InitOrientation,3), UBOUND(OutData%InitOrientation,3)
+        DO i2 = LBOUND(OutData%InitOrientation,2), UBOUND(OutData%InitOrientation,2)
+          DO i1 = LBOUND(OutData%InitOrientation,1), UBOUND(OutData%InitOrientation,1)
+            OutData%InitOrientation(i1,i2,i3) = REAL(DbKiBuf(Db_Xferred), R8Ki)
             Db_Xferred = Db_Xferred + 1
           END DO
         END DO
@@ -1937,7 +1915,6 @@ ENDIF
     DstParamData%TMD_DOF_MODE = SrcParamData%TMD_DOF_MODE
     DstParamData%TMD_X_DOF = SrcParamData%TMD_X_DOF
     DstParamData%TMD_Y_DOF = SrcParamData%TMD_Y_DOF
-    DstParamData%TMD_On_Blade = SrcParamData%TMD_On_Blade
     DstParamData%X_DSP = SrcParamData%X_DSP
     DstParamData%Y_DSP = SrcParamData%Y_DSP
     DstParamData%M_X = SrcParamData%M_X
@@ -1951,7 +1928,6 @@ ENDIF
     DstParamData%C_S = SrcParamData%C_S
     DstParamData%P_SP = SrcParamData%P_SP
     DstParamData%N_SP = SrcParamData%N_SP
-    DstParamData%F_ext = SrcParamData%F_ext
     DstParamData%Gravity = SrcParamData%Gravity
     DstParamData%TMD_CMODE = SrcParamData%TMD_CMODE
     DstParamData%TMD_SA_MODE = SrcParamData%TMD_SA_MODE
@@ -2063,7 +2039,6 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! TMD_DOF_MODE
       Int_BufSz  = Int_BufSz  + 1  ! TMD_X_DOF
       Int_BufSz  = Int_BufSz  + 1  ! TMD_Y_DOF
-      Int_BufSz  = Int_BufSz  + 1  ! TMD_On_Blade
       Re_BufSz   = Re_BufSz   + 1  ! X_DSP
       Re_BufSz   = Re_BufSz   + 1  ! Y_DSP
       Re_BufSz   = Re_BufSz   + 1  ! M_X
@@ -2077,7 +2052,6 @@ ENDIF
       Re_BufSz   = Re_BufSz   + SIZE(InData%C_S)  ! C_S
       Re_BufSz   = Re_BufSz   + SIZE(InData%P_SP)  ! P_SP
       Re_BufSz   = Re_BufSz   + SIZE(InData%N_SP)  ! N_SP
-      Re_BufSz   = Re_BufSz   + SIZE(InData%F_ext)  ! F_ext
       Re_BufSz   = Re_BufSz   + SIZE(InData%Gravity)  ! Gravity
       Int_BufSz  = Int_BufSz  + 1  ! TMD_CMODE
       Int_BufSz  = Int_BufSz  + 1  ! TMD_SA_MODE
@@ -2151,8 +2125,6 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%TMD_Y_DOF, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = TRANSFER(InData%TMD_On_Blade, IntKiBuf(1))
-    Int_Xferred = Int_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%X_DSP
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%Y_DSP
@@ -2185,10 +2157,6 @@ ENDIF
     END DO
     DO i1 = LBOUND(InData%N_SP,1), UBOUND(InData%N_SP,1)
       ReKiBuf(Re_Xferred) = InData%N_SP(i1)
-      Re_Xferred = Re_Xferred + 1
-    END DO
-    DO i1 = LBOUND(InData%F_ext,1), UBOUND(InData%F_ext,1)
-      ReKiBuf(Re_Xferred) = InData%F_ext(i1)
       Re_Xferred = Re_Xferred + 1
     END DO
     DO i1 = LBOUND(InData%Gravity,1), UBOUND(InData%Gravity,1)
@@ -2323,8 +2291,6 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     OutData%TMD_Y_DOF = TRANSFER(IntKiBuf(Int_Xferred), OutData%TMD_Y_DOF)
     Int_Xferred = Int_Xferred + 1
-    OutData%TMD_On_Blade = TRANSFER(IntKiBuf(Int_Xferred), OutData%TMD_On_Blade)
-    Int_Xferred = Int_Xferred + 1
     OutData%X_DSP = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%Y_DSP = ReKiBuf(Re_Xferred)
@@ -2365,12 +2331,6 @@ ENDIF
     i1_u = UBOUND(OutData%N_SP,1)
     DO i1 = LBOUND(OutData%N_SP,1), UBOUND(OutData%N_SP,1)
       OutData%N_SP(i1) = ReKiBuf(Re_Xferred)
-      Re_Xferred = Re_Xferred + 1
-    END DO
-    i1_l = LBOUND(OutData%F_ext,1)
-    i1_u = UBOUND(OutData%F_ext,1)
-    DO i1 = LBOUND(OutData%F_ext,1), UBOUND(OutData%F_ext,1)
-      OutData%F_ext(i1) = ReKiBuf(Re_Xferred)
       Re_Xferred = Re_Xferred + 1
     END DO
     i1_l = LBOUND(OutData%Gravity,1)

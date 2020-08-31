@@ -96,7 +96,7 @@ SUBROUTINE TMD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
       INTEGER(IntKi)                                :: i_pt          ! Generic counter for mesh point
       REAL(ReKi), allocatable, dimension(:,:)       :: PositionP
       REAL(ReKi), allocatable, dimension(:,:)       :: PositionGlobal
-      REAL(ReKi), allocatable, dimension(:,:,:)     :: OrientationP
+      REAL(R8Ki), allocatable, dimension(:,:,:)     :: OrientationP
 
       INTEGER(IntKi)                                :: UnEcho        ! Unit number for the echo file
       INTEGER(IntKi)                                :: ErrStat2      ! local error status
@@ -124,7 +124,6 @@ SUBROUTINE TMD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
     !............................................................................................
    p%RootName     =  TRIM(InitInp%RootName)     ! Already includes NTMD, TTMD, or BTMD
    p%NumMeshPts   =  InitInp%NumMeshPts
-   p%TMD_On_Blade =  InitInp%TMD_On_Blade
 
 
    CALL TMD_ReadInput( InitInp%InputFile, InputFileData, Interval, p%RootName, ErrStat2, ErrMsg2 )
@@ -215,20 +214,12 @@ SUBROUTINE TMD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
    call AllocAry(OrientationP, 3, 3, p%NumMeshPts, 'OrientationP',   ErrStat2,ErrMsg2); CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN
 
-   if (p%TMD_On_Blade) then
-      do i_pt = 1,p%NumMeshPts
-         PositionP(:,i_pt)      = (/ InputFileData%TMD_P_X, InputFileData%TMD_P_Y, InputFileData%TMD_P_Z /)
-         OrientationP(:,:,i_pt) = InitInp%BladeRootOrientation(:,:,i_pt)
-         PositionGlobal(:,i_pt) = InitInp%BladeRootPosition(:,i_pt)+matmul(PositionP(:,i_pt),OrientationP(:,:,i_pt))
-      enddo
-   else !tower or nacelle
-      do i_pt = 1,p%NumMeshPts
-         PositionP(:,i_pt)      = (/ InputFileData%TMD_P_X, InputFileData%TMD_P_Y, InputFileData%TMD_P_Z /)
-         call Eye(OrientationP(:,:,i_pt), ErrStat2,ErrMsg2); CALL CheckError( ErrStat2, ErrMsg2 )      ! Assume identity matrix for reference orientation
-         PositionGlobal(:,i_pt) = InitInp%r_N_O_G(1:3) + matmul(PositionP(:,i_pt),OrientationP(:,:,i_pt))
-      enddo
-   endif
-
+   ! Set the initial positions and orietantions for each point
+   do i_pt = 1,p%NumMeshPts
+      PositionP(:,i_pt)      = (/ InputFileData%TMD_P_X, InputFileData%TMD_P_Y, InputFileData%TMD_P_Z /)
+      OrientationP(:,:,i_pt) = InitInp%InitOrientation(:,:,i_pt)
+      PositionGlobal(:,i_pt) = InitInp%InitPosition(:,i_pt) + real( matmul(PositionP(:,i_pt),OrientationP(:,:,i_pt)), ReKi)
+   enddo
 
     ! Define system output initializations (set up mesh) here:
     ! Create the input and output meshes associated with lumped loads
@@ -534,6 +525,7 @@ SUBROUTINE TMD_RK4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg
       ErrMsg  = ""
 
       CALL TMD_CopyContState( x, k1, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+         CALL CheckError(ErrStat2,ErrMsg2)
       CALL TMD_CopyContState( x, k2, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
          CALL CheckError(ErrStat2,ErrMsg2)
       CALL TMD_CopyContState( x, k3, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
@@ -543,7 +535,6 @@ SUBROUTINE TMD_RK4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg
       CALL TMD_CopyContState( x, x_tmp, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
          CALL CheckError(ErrStat2,ErrMsg2)
          IF ( ErrStat >= AbortErrLev ) RETURN
-         CALL CheckError(ErrStat2,ErrMsg2)
 
       CALL TMD_CopyInput( u(1), u_interp, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
          CALL CheckError(ErrStat2,ErrMsg2)
@@ -770,64 +761,17 @@ SUBROUTINE TMD_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
       call AllocAry(F_z_otlcd_WH_N, p%NumMeshPts,'F_z_otlcd_WH_N', ErrStat2,ErrMsg2); if (Failed()) return;
 
 
-      IF (.not. p%TMD_On_Blade) THEN
+      ! Compute accelerations and velocities in local coordinates
+      do i_pt=1,p%NumMeshPts
+         a_G(:,i_pt)     = matmul(u%Mesh(i_pt)%Orientation(:,:,1),p%Gravity)
+         rddot_P(:,i_pt) = matmul(u%Mesh(i_pt)%Orientation(:,:,1),u%Mesh(i_pt)%TranslationAcc(:,1))
+         omega_P(:,i_pt) = matmul(u%Mesh(i_pt)%Orientation(:,:,1),u%Mesh(i_pt)%RotationVel(:,1))
+         alpha_P(:,i_pt) = matmul(u%Mesh(i_pt)%Orientation(:,:,1),u%Mesh(i_pt)%RotationAcc(:,1))
+      enddo
 
-         do i_pt=1,p%NumMeshPts
-            ! Compute nacelle and gravitational acceleration in nacelle coordinates
-            a_G(:,i_pt)     = matmul(u%Mesh(i_pt)%Orientation(:,:,1),p%Gravity)
-            rddot_P(:,i_pt) = matmul(u%Mesh(i_pt)%Orientation(:,:,1),u%Mesh(i_pt)%TranslationAcc(:,1))
-            omega_P(:,i_pt) = matmul(u%Mesh(i_pt)%Orientation(:,:,1),u%Mesh(i_pt)%RotationVel(:,1))
-            alpha_P(:,i_pt) = matmul(u%Mesh(i_pt)%Orientation(:,:,1),u%Mesh(i_pt)%RotationAcc(:,1))
-         enddo
-
-      ELSE IF (p%TMD_On_Blade) THEN
-
-         do i_pt=1,p%NumMeshPts
-            a_G(:,i_pt)     = matmul(u%Mesh(i_pt)%Orientation(:,:,1),p%Gravity)
-            rddot_P(:,i_pt) = matmul(u%Mesh(i_pt)%Orientation(:,:,1),u%Mesh(i_pt)%TranslationAcc(:,1))
-            omega_P(:,i_pt) = matmul(u%Mesh(i_pt)%Orientation(:,:,1),u%Mesh(i_pt)%RotationVel(:,1))
-            alpha_P(:,i_pt) = matmul(u%Mesh(i_pt)%Orientation(:,:,1),u%Mesh(i_pt)%RotationAcc(:,1))
-         enddo
-
-      ENDIF
 
          ! calculate the derivative, only to get updated values of m, which are used in the equations below
       CALL TMD_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, ErrStat2, ErrMsg2 ); if (Failed()) return;
-
-
-   IF (p%TMD_On_Blade) THEN
-
-         ! tmd external forces of dependent degrees:
-         do i_pt=1,p%NumMeshPts
-            F_x_tmdY_P(i_pt) = - p%M_Y * (a_G(1,i_pt) - rddot_P(1,i_pt) + (alpha_P(3,i_pt) - omega_P(1,i_pt)*omega_P(2,i_pt))*x%tmd_x(3,i_pt) + 2*omega_P(3,i_pt)*x%tmd_x(4,i_pt))
-            F_z_tmdY_P(i_pt) = - p%M_Y * (a_G(3,i_pt) - rddot_P(3,i_pt) - (alpha_P(1,i_pt) + omega_P(2,i_pt)*omega_P(3,i_pt))*x%tmd_x(3,i_pt) - 2*omega_P(1,i_pt)*x%tmd_x(4,i_pt))
-
-            F_y_tmdX_P(i_pt) = - p%M_X * (a_G(2,i_pt) - rddot_P(2,i_pt) - (alpha_P(3,i_pt) + omega_P(1,i_pt)*omega_P(2,i_pt))*x%tmd_x(1,i_pt) - 2*omega_P(3,i_pt)*x%tmd_x(2,i_pt))
-            F_z_tmdX_P(i_pt) = - p%M_X * (a_G(3,i_pt) - rddot_P(3,i_pt) + (alpha_P(2,i_pt) - omega_P(1,i_pt)*omega_P(3,i_pt))*x%tmd_x(1,i_pt) + 2*omega_P(2,i_pt)*x%tmd_x(2,i_pt))
-         enddo
-
-         ! forces in local coordinates
-         do i_pt=1,p%NumMeshPts
-            F_P(1,i_pt) =  p%K_X * x%tmd_x(1,i_pt) + m%C_ctrl(1) * x%tmd_x(2,i_pt) + m%C_Brake(1) * x%tmd_x(2,i_pt) - m%F_stop(1) - m%F_ext(1) - m%F_fr(1) - F_x_tmdY_P(i_pt) + m%F_table(1)
-            F_P(2,i_pt) =  p%K_Y * x%tmd_x(3,i_pt) + m%C_ctrl(2) * x%tmd_x(4,i_pt) + m%C_Brake(2) * x%tmd_x(4,i_pt) - m%F_stop(2) - m%F_ext(2) - m%F_fr(2) - F_y_tmdX_P(i_pt) + m%F_table(2)
-            F_P(3,i_pt) = - F_z_tmdX_P(i_pt) - F_z_tmdY_P(i_pt)
-         enddo
-
-         ! inertial contributions from mass of TMDs and acceleration of nacelle
-         ! Moments on nacelle in local coordinates
-         do i_pt=1,p%NumMeshPts
-            M_P(1,i_pt) =  - F_z_tmdY_P(i_pt)  * x%tmd_x(3,i_pt)
-            M_P(2,i_pt) =    F_z_tmdX_P(i_pt)  * x%tmd_x(1,i_pt)
-            M_P(3,i_pt) = (- F_x_tmdY_P(i_pt)) * x%tmd_x(3,i_pt) + (F_y_tmdX_P(i_pt)) * x%tmd_x(1,i_pt)
-         enddo
-
-         do i_pt=1,p%NumMeshPts
-            ! forces in global coordinates
-            y%Mesh(i_pt)%Force(:,1) =  matmul(transpose(u%Mesh(i_pt)%Orientation(:,:,1)),F_P(:,i_pt))
-            ! moments in global coordinates
-            y%Mesh(i_pt)%Moment(:,1) = matmul(transpose(u%Mesh(i_pt)%Orientation(:,:,1)),M_P(:,i_pt))
-         enddo
-   ELSE ! p%TMD_On_Blade
 
 
       IF (p%TMD_DOF_MODE == ControlMode_None .OR. p%TMD_DOF_MODE == DOFMode_Indept) THEN
@@ -1002,7 +946,6 @@ SUBROUTINE TMD_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
             y%Mesh(i_pt)%Moment(:,1) = matmul(transpose(u%Mesh(i_pt)%Orientation(:,:,1)), M_P(1:3,i_pt))
          enddo
       ENDIF
-   ENDIF
 
       IF ( p%TMD_DOF_MODE == DOFMode_Prescribed ) THEN
          do i=1,3
@@ -1133,35 +1076,17 @@ SUBROUTINE TMD_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
       END IF
 
 
-      IF (.not. p%TMD_On_Blade) THEN
-
-         do i_pt=1,p%NumMeshPts
-            ! Compute point and gravitational acceleration in local coordinates
-            a_G(:,i_pt)     = matmul(u%Mesh(i_pt)%Orientation(:,:,1),p%Gravity)
-            rddot_P(:,i_pt) = matmul(u%Mesh(i_pt)%Orientation(:,:,1),u%Mesh(i_pt)%TranslationAcc(:,1))
-            omega_P(:,i_pt) = matmul(u%Mesh(i_pt)%Orientation(:,:,1),u%Mesh(i_pt)%RotationVel(:,1))
-            alpha_P(:,i_pt) = matmul(u%Mesh(i_pt)%Orientation(:,:,1),u%Mesh(i_pt)%RotationAcc(:,1))
-         enddo
-
-      ELSE IF (p%TMD_On_Blade) THEN
-         do i_pt=1,p%NumMeshPts
-            a_G(:,i_pt)     = matmul(u%Mesh(i_pt)%Orientation(:,:,1),p%Gravity)
-            rddot_P(:,i_pt) = matmul(u%Mesh(i_pt)%Orientation(:,:,1),u%Mesh(i_pt)%TranslationAcc(:,1))
-            omega_P(:,i_pt) = matmul(u%Mesh(i_pt)%Orientation(:,:,1),u%Mesh(i_pt)%RotationVel(:,1))
-            alpha_P(:,i_pt) = matmul(u%Mesh(i_pt)%Orientation(:,:,1),u%Mesh(i_pt)%RotationAcc(:,1))
-         enddo
-      ENDIF
-
+      ! Compute velocities and accelerations in local coordinates
+      do i_pt=1,p%NumMeshPts
+         a_G(:,i_pt)     = matmul(u%Mesh(i_pt)%Orientation(:,:,1),p%Gravity)
+         rddot_P(:,i_pt) = matmul(u%Mesh(i_pt)%Orientation(:,:,1),u%Mesh(i_pt)%TranslationAcc(:,1))
+         omega_P(:,i_pt) = matmul(u%Mesh(i_pt)%Orientation(:,:,1),u%Mesh(i_pt)%RotationVel(:,1))
+         alpha_P(:,i_pt) = matmul(u%Mesh(i_pt)%Orientation(:,:,1),u%Mesh(i_pt)%RotationAcc(:,1))
+      enddo
 
 
       ! NOTE: m%F_stop and m%F_table are calculated earlier
-      IF (p%TMD_DOF_MODE == ControlMode_None) THEN
-         do i_pt=1,p%NumMeshPts
-            ! Compute inputs
-            B_X(i_pt) = - rddot_P(1,i_pt) + a_G(1,i_pt) + 1 / p%M_X * ( m%F_ext(1) + m%F_stop(1) - m%F_table(1) )
-            B_Y(i_pt) = - rddot_P(2,i_pt) + a_G(2,i_pt) + 1 / p%M_Y * ( m%F_ext(2) + m%F_stop(2) - m%F_table(2) )
-         enddo
-      ELSE IF (p%TMD_DOF_MODE == DOFMode_Indept) THEN
+      IF (p%TMD_DOF_MODE == ControlMode_None .or. p%TMD_DOF_MODE == DOFMode_Indept) THEN
          do i_pt=1,p%NumMeshPts
             ! Compute inputs
             B_X(i_pt) = - rddot_P(1,i_pt) + a_G(1,i_pt) + 1 / p%M_X * ( m%F_ext(1) + m%F_stop(1) - m%F_table(1) )
@@ -1186,13 +1111,6 @@ SUBROUTINE TMD_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
          enddo
 
       ENDIF
-      IF (p%TMD_On_Blade) THEN
-         do i_pt=1,p%NumMeshPts
-         ! Compute inputs
-            B_X(i_pt) = - rddot_P(1,i_pt) + a_G(1,i_pt) + 1 / p%M_X * ( m%F_ext(1) + m%F_stop(1) - m%F_table(1) )
-            B_Y(i_pt) = - rddot_P(2,i_pt) + a_G(2,i_pt) + 1 / p%M_Y * ( m%F_ext(2) + m%F_stop(2) - m%F_table(2) )
-         enddo
-      END IF
 
 
       ! Compute the first time derivatives, dxdt%tmd_x(1) and dxdt%tmd_x(3), of the continuous states,:
@@ -1224,27 +1142,6 @@ SUBROUTINE TMD_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
          END IF
 
       ENDIF
-      IF (p%TMD_On_Blade) THEN
-         IF (.NOT. p%TMD_X_DOF) THEN
-            do i_pt=1,p%NumMeshPts
-               dxdt%tmd_x(1,i_pt) = 0.0_ReKi
-            enddo
-         ELSE
-            do i_pt=1,p%NumMeshPts
-               dxdt%tmd_x(1,i_pt) = x%tmd_x(2,i_pt)
-            enddo
-         END IF
-
-         IF (.NOT. p%TMD_Y_DOF) THEN
-            do i_pt=1,p%NumMeshPts
-               dxdt%tmd_x(3,i_pt) = 0.0_ReKi
-            enddo
-         ELSE
-            do i_pt=1,p%NumMeshPts
-               dxdt%tmd_x(3,i_pt) = x%tmd_x(4,i_pt)
-            enddo
-         END IF
-      END IF
 
 
       ! compute damping for dxdt%tmd_x(2) and dxdt%tmd_x(4)
@@ -1257,34 +1154,6 @@ SUBROUTINE TMD_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
       ELSE IF (p%TMD_CMODE == CMODE_Semi) THEN ! ground hook control
          CALL TMD_GroundHookDamp(dxdt,x,u,p,m%C_ctrl,m%C_Brake,m%F_fr)
       END IF
-
-   IF (p%TMD_On_Blade) THEN
-
-      IF (p%TMD_X_DOF) THEN
-         do i_pt=1,p%NumMeshPts
-            dxdt%tmd_x(2,i_pt) =  ( omega_P(2,i_pt)**2 + omega_P(3,i_pt)**2 - K(1) / p%M_X) * x%tmd_x(1,i_pt) &
-                                - ( m%C_ctrl( 1)/p%M_X ) * x%tmd_x(2,i_pt)                                        &
-                                - ( m%C_Brake(1)/p%M_X ) * x%tmd_x(2,i_pt)                                        &
-                                + B_X(i_pt) + m%F_fr(1) / p%M_X
-         enddo
-      ELSE
-         do i_pt=1,p%NumMeshPts
-            dxdt%tmd_x(2,i_pt) = 0.0_ReKi
-         enddo
-      END IF
-      IF (p%TMD_Y_DOF) THEN
-         do i_pt=1,p%NumMeshPts
-            dxdt%tmd_x(4,i_pt) =  ( omega_P(1,i_pt)**2 + omega_P(3,i_pt)**2 - K(2) / p%M_Y) * x%tmd_x(3,i_pt) &
-                                - ( m%C_ctrl( 2)/p%M_Y ) * x%tmd_x(4,i_pt)                                        &
-                                - ( m%C_Brake(2)/p%M_Y ) * x%tmd_x(4,i_pt)                                        &
-                                + B_Y(i_pt) + m%F_fr(2) / p%M_Y
-         enddo
-      ELSE
-         do i_pt=1,p%NumMeshPts
-            dxdt%tmd_x(4,i_pt) = 0.0_ReKi
-         enddo
-      END IF
-   ELSE
 
 
       ! Compute the first time derivatives, dxdt%tmd_x(2) and dxdt%tmd_x(4), of the continuous states,:
@@ -1357,7 +1226,6 @@ SUBROUTINE TMD_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
          enddo
 
       END IF
-   END IF   ! p%TMD_On_Blade
 
 CONTAINS
    subroutine CleanUp()

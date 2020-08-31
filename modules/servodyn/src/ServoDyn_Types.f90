@@ -42,8 +42,10 @@ IMPLICIT NONE
     CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: BlPitchInit      !< Initial blade pitch [-]
     REAL(ReKi) , DIMENSION(1:3)  :: Gravity      !< Gravitational acceleration vector [m/s^2]
-    REAL(ReKi) , DIMENSION(1:3)  :: r_N_O_G      !< nacelle origin for setting up mesh [m]
-    REAL(ReKi) , DIMENSION(1:3)  :: r_TwrBase      !< tower base origin for setting up mesh [m]
+    REAL(ReKi) , DIMENSION(1:3)  :: NacPosition      !< nacelle origin for setting up mesh [m]
+    REAL(R8Ki) , DIMENSION(1:3,1:3)  :: NacOrientation      !< nacelle orientation for setting up mesh [-]
+    REAL(ReKi) , DIMENSION(1:3)  :: TwrBasePos      !< tower base origin for setting up mesh [m]
+    REAL(R8Ki) , DIMENSION(1:3,1:3)  :: TwrBaseOrient      !< tower base orientation for setting up mesh [m]
     REAL(DbKi)  :: Tmax      !< max time from glue code [s]
     REAL(ReKi)  :: AvgWindSpeed      !< average wind speed for the simulation [m/s]
     REAL(ReKi)  :: AirDens      !< air density [kg/m^3]
@@ -460,8 +462,10 @@ IF (ALLOCATED(SrcInitInputData%BlPitchInit)) THEN
     DstInitInputData%BlPitchInit = SrcInitInputData%BlPitchInit
 ENDIF
     DstInitInputData%Gravity = SrcInitInputData%Gravity
-    DstInitInputData%r_N_O_G = SrcInitInputData%r_N_O_G
-    DstInitInputData%r_TwrBase = SrcInitInputData%r_TwrBase
+    DstInitInputData%NacPosition = SrcInitInputData%NacPosition
+    DstInitInputData%NacOrientation = SrcInitInputData%NacOrientation
+    DstInitInputData%TwrBasePos = SrcInitInputData%TwrBasePos
+    DstInitInputData%TwrBaseOrient = SrcInitInputData%TwrBaseOrient
     DstInitInputData%Tmax = SrcInitInputData%Tmax
     DstInitInputData%AvgWindSpeed = SrcInitInputData%AvgWindSpeed
     DstInitInputData%AirDens = SrcInitInputData%AirDens
@@ -567,8 +571,10 @@ ENDIF
       Re_BufSz   = Re_BufSz   + SIZE(InData%BlPitchInit)  ! BlPitchInit
   END IF
       Re_BufSz   = Re_BufSz   + SIZE(InData%Gravity)  ! Gravity
-      Re_BufSz   = Re_BufSz   + SIZE(InData%r_N_O_G)  ! r_N_O_G
-      Re_BufSz   = Re_BufSz   + SIZE(InData%r_TwrBase)  ! r_TwrBase
+      Re_BufSz   = Re_BufSz   + SIZE(InData%NacPosition)  ! NacPosition
+      Db_BufSz   = Db_BufSz   + SIZE(InData%NacOrientation)  ! NacOrientation
+      Re_BufSz   = Re_BufSz   + SIZE(InData%TwrBasePos)  ! TwrBasePos
+      Db_BufSz   = Db_BufSz   + SIZE(InData%TwrBaseOrient)  ! TwrBaseOrient
       Db_BufSz   = Db_BufSz   + 1  ! Tmax
       Re_BufSz   = Re_BufSz   + 1  ! AvgWindSpeed
       Re_BufSz   = Re_BufSz   + 1  ! AirDens
@@ -645,13 +651,25 @@ ENDIF
       ReKiBuf(Re_Xferred) = InData%Gravity(i1)
       Re_Xferred = Re_Xferred + 1
     END DO
-    DO i1 = LBOUND(InData%r_N_O_G,1), UBOUND(InData%r_N_O_G,1)
-      ReKiBuf(Re_Xferred) = InData%r_N_O_G(i1)
+    DO i1 = LBOUND(InData%NacPosition,1), UBOUND(InData%NacPosition,1)
+      ReKiBuf(Re_Xferred) = InData%NacPosition(i1)
       Re_Xferred = Re_Xferred + 1
     END DO
-    DO i1 = LBOUND(InData%r_TwrBase,1), UBOUND(InData%r_TwrBase,1)
-      ReKiBuf(Re_Xferred) = InData%r_TwrBase(i1)
+    DO i2 = LBOUND(InData%NacOrientation,2), UBOUND(InData%NacOrientation,2)
+      DO i1 = LBOUND(InData%NacOrientation,1), UBOUND(InData%NacOrientation,1)
+        DbKiBuf(Db_Xferred) = InData%NacOrientation(i1,i2)
+        Db_Xferred = Db_Xferred + 1
+      END DO
+    END DO
+    DO i1 = LBOUND(InData%TwrBasePos,1), UBOUND(InData%TwrBasePos,1)
+      ReKiBuf(Re_Xferred) = InData%TwrBasePos(i1)
       Re_Xferred = Re_Xferred + 1
+    END DO
+    DO i2 = LBOUND(InData%TwrBaseOrient,2), UBOUND(InData%TwrBaseOrient,2)
+      DO i1 = LBOUND(InData%TwrBaseOrient,1), UBOUND(InData%TwrBaseOrient,1)
+        DbKiBuf(Db_Xferred) = InData%TwrBaseOrient(i1,i2)
+        Db_Xferred = Db_Xferred + 1
+      END DO
     END DO
     DbKiBuf(Db_Xferred) = InData%Tmax
     Db_Xferred = Db_Xferred + 1
@@ -781,17 +799,37 @@ ENDIF
       OutData%Gravity(i1) = ReKiBuf(Re_Xferred)
       Re_Xferred = Re_Xferred + 1
     END DO
-    i1_l = LBOUND(OutData%r_N_O_G,1)
-    i1_u = UBOUND(OutData%r_N_O_G,1)
-    DO i1 = LBOUND(OutData%r_N_O_G,1), UBOUND(OutData%r_N_O_G,1)
-      OutData%r_N_O_G(i1) = ReKiBuf(Re_Xferred)
+    i1_l = LBOUND(OutData%NacPosition,1)
+    i1_u = UBOUND(OutData%NacPosition,1)
+    DO i1 = LBOUND(OutData%NacPosition,1), UBOUND(OutData%NacPosition,1)
+      OutData%NacPosition(i1) = ReKiBuf(Re_Xferred)
       Re_Xferred = Re_Xferred + 1
     END DO
-    i1_l = LBOUND(OutData%r_TwrBase,1)
-    i1_u = UBOUND(OutData%r_TwrBase,1)
-    DO i1 = LBOUND(OutData%r_TwrBase,1), UBOUND(OutData%r_TwrBase,1)
-      OutData%r_TwrBase(i1) = ReKiBuf(Re_Xferred)
+    i1_l = LBOUND(OutData%NacOrientation,1)
+    i1_u = UBOUND(OutData%NacOrientation,1)
+    i2_l = LBOUND(OutData%NacOrientation,2)
+    i2_u = UBOUND(OutData%NacOrientation,2)
+    DO i2 = LBOUND(OutData%NacOrientation,2), UBOUND(OutData%NacOrientation,2)
+      DO i1 = LBOUND(OutData%NacOrientation,1), UBOUND(OutData%NacOrientation,1)
+        OutData%NacOrientation(i1,i2) = REAL(DbKiBuf(Db_Xferred), R8Ki)
+        Db_Xferred = Db_Xferred + 1
+      END DO
+    END DO
+    i1_l = LBOUND(OutData%TwrBasePos,1)
+    i1_u = UBOUND(OutData%TwrBasePos,1)
+    DO i1 = LBOUND(OutData%TwrBasePos,1), UBOUND(OutData%TwrBasePos,1)
+      OutData%TwrBasePos(i1) = ReKiBuf(Re_Xferred)
       Re_Xferred = Re_Xferred + 1
+    END DO
+    i1_l = LBOUND(OutData%TwrBaseOrient,1)
+    i1_u = UBOUND(OutData%TwrBaseOrient,1)
+    i2_l = LBOUND(OutData%TwrBaseOrient,2)
+    i2_u = UBOUND(OutData%TwrBaseOrient,2)
+    DO i2 = LBOUND(OutData%TwrBaseOrient,2), UBOUND(OutData%TwrBaseOrient,2)
+      DO i1 = LBOUND(OutData%TwrBaseOrient,1), UBOUND(OutData%TwrBaseOrient,1)
+        OutData%TwrBaseOrient(i1,i2) = REAL(DbKiBuf(Db_Xferred), R8Ki)
+        Db_Xferred = Db_Xferred + 1
+      END DO
     END DO
     OutData%Tmax = DbKiBuf(Db_Xferred)
     Db_Xferred = Db_Xferred + 1

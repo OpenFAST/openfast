@@ -89,8 +89,33 @@ PROGRAM SrvD_Driver
       InitInData%RootName      = OutFile(1:(len_trim(OutFile)-4))
       InitInData%NumBl         = 3
       InitInData%gravity       = 9.81 !m/s^2
-      InitInData%r_N_O_G       = (/ 90.0, 0.0, 0.0 /) ! m, position of nacelle (for NTMD)
-      InitInData%r_TwrBase     = (/  0.0, 0.0, 0.0 /) ! m, position of tower base (for TTMD)
+!FIXME: why are these hard coded!!!?
+      InitInData%NacPosition   = (/ 90.0, 0.0, 0.0 /) ! m, position of nacelle (for NTMD)
+      InitInData%NacOrientation= 0.0_R8Ki
+      do j=1,3
+         InitInData%NacOrientation(j,j) = 1.0_R8Ki
+      enddo
+      InitInData%TwrBasePos    = (/  0.0, 0.0, 0.0 /) ! m, position of tower base (for TTMD)
+      InitInData%TwrBaseOrient = 0.0_R8Ki
+      do j=1,3
+         InitInData%TwrBaseOrient(j,j) = 1.0_R8Ki
+      enddo
+      ! Fake single blade
+      call AllocAry(InitInData%BladeRootPosition,      3,1, 'InitInData%BladeRootPosition',   ErrStat,ErrMsg)
+         IF ( ErrStat /= ErrID_None ) THEN
+            CALL WrScr( ErrMsg )
+            IF (ErrStat >= AbortErrLev) call ProgAbort('')
+         END IF
+      call AllocAry(InitInData%BladeRootOrientation, 3,3,1, 'InitInData%BladeRootOrientation',ErrStat,ErrMsg)
+         IF ( ErrStat /= ErrID_None ) THEN
+            CALL WrScr( ErrMsg )
+            IF (ErrStat >= AbortErrLev) call ProgAbort('')
+         END IF
+      InitInData%BladeRootPosition(1:3,1) = (/  0.0, 0.0, 0.0 /) ! m, position of tower base (for TTMD)
+      InitInData%BladeRootOrientation = 0.0_R8Ki
+      do j=1,3
+         InitInData%BladeRootOrientation(j,j,1) = 1.0_R8Ki
+      enddo
       InitInData%TMax          = 10.0 !s
       InitInData%AirDens       = 1.225 !kg/m^3
       InitInData%AvgWindSpeed  = 10.0 !m/s
@@ -101,6 +126,7 @@ PROGRAM SrvD_Driver
       CALL AllocAry(InitInData%BlPitchInit, InitInData%NumBl, 'BlPitchInit', ErrStat, ErrMsg)
          IF ( ErrStat /= ErrID_None ) THEN
             CALL WrScr( ErrMsg )
+            IF (ErrStat >= AbortErrLev) call ProgAbort('')
          END IF
       InitInData%BlPitchInit = 5.0*pi/180.0 ! radians
    

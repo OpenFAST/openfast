@@ -115,7 +115,7 @@ SUBROUTINE BD_InputSolve( p_FAST, BD, y_AD, u_AD, y_ED, MeshMapData, ErrStat, Er
 !      IF ( p_FAST%CompServo == Module_SrvD ) THEN
 !         !Add BladeTMD
 !         DO K = 1,p_FAST%nBeams ! Loop through all blades
-!            IF (y_SrvD%BTMD%Mesh(1)%Committed) THEN
+!            IF (y_SrvD%BTMD%Mesh(K)%Committed) THEN
 !FIXME: add right mesh mapping
 !               CALL Transfer_Point_to_Point( y_SrvD%BTMD%Mesh(k), MeshMapData%u_BD_SrvDMesh, MeshMapData%SrvD_P_2_BD_P_B(k), ErrStat2, ErrMsg2, u_SrvD%BTMD%Mesh(k), y_ED%BladeLn2Mesh(k) )
 !                  CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//':u_ED%BladePtLoads' )
@@ -4115,16 +4115,15 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, M
 
    IF ( ALLOCATED(SrvD%Input(1)%BTMD%Mesh) ) THEN
 
-!FIXME: make this use MeshMapData for force collection
-!      ALLOCATE( MeshMapData%ED_L_2_SrvD_P_B(NumBl), MeshMapData%SrvD_P_2_ED_P_B(NumBl), STAT=ErrStat2 )
-!         IF ( ErrStat2 /= 0 ) THEN
-!            CALL SetErrStat( ErrID_Fatal, 'Error allocating MeshMapData%ED_L_2_SrvD_P_B and MeshMapData%SrvD_P_2_ED_P_B.', &
-!                            ErrStat, ErrMsg, RoutineName )
-!            RETURN
-!         END IF
+      IF ( p_FAST%CompElast == Module_ED ) then
+         ALLOCATE( MeshMapData%ED_L_2_SrvD_P_B(NumBl), MeshMapData%SrvD_P_2_ED_P_B(NumBl), STAT=ErrStat2 )
+            IF ( ErrStat2 /= 0 ) THEN
+               CALL SetErrStat( ErrID_Fatal, 'Error allocating MeshMapData%ED_L_2_SrvD_P_B and MeshMapData%SrvD_P_2_ED_P_B.', &
+                               ErrStat, ErrMsg, RoutineName )
+               RETURN
+            END IF
 
-      DO K = 1,NumBl
-         IF ( p_FAST%CompElast == Module_ED ) then
+         DO K = 1,NumBl
             IF ( SrvD%Input(1)%BTMD%Mesh(K)%Committed ) THEN ! ED-SrvD
                CALL MeshMapCreate( ED%y%BladeLn2Mesh(K), SrvD%Input(1)%BTMD%Mesh(K), MeshMapData%ED_L_2_SrvD_P_B(K), ErrStat2, ErrMsg2 )
                   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':ED_L_2_SrvD_P_B' )
@@ -4134,7 +4133,16 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, M
 !               CALL MeshCopy ( ED%Input(1)%BladePtLoads(K), MeshMapData%u_ED_SrvDMesh, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
 !                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':u_SrvD_B_LMesh' )
             END IF
-!         ELSEIF ( p_FAST%CompElast == Module_BD ) THEN
+         ENDDO
+!      ELSEIF ( p_FAST%CompElast == Module_BD ) THEN
+!         ALLOCATE( MeshMapData%BD_L_2_SrvD_P_B(NumBl), MeshMapData%SrvD_P_2_BD_P_B(NumBl), STAT=ErrStat2 )
+!            IF ( ErrStat2 /= 0 ) THEN
+!               CALL SetErrStat( ErrID_Fatal, 'Error allocating MeshMapData%BD_L_2_SrvD_P_B and MeshMapData%SrvD_P_2_BD_P_B.', &
+!                               ErrStat, ErrMsg, RoutineName )
+!               RETURN
+!            END IF
+!
+!         DO K = 1,NumBl
 !            IF ( SrvD%Input(1)%BTMD%Mesh(K)%Committed ) THEN ! ED-SrvD
 !               CALL MeshMapCreate( BD%y(k)%BldMotion, SrvD%Input(1)%BTMD%Mesh(K), MeshMapData%BD_L_2_SrvD_P_B(K), ErrStat2, ErrMsg2 )
 !                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':BD_L_2_SrvD_P_B' )
@@ -4144,8 +4152,8 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, M
 !               CALL MeshCopy ( BD%Input(1,k)%DistrLoad, MeshMapData%u_BD_SrvDMesh, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
 !                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':u_SrvD_B_LMesh' )
 !            END IF
-         ENDIF
-      END DO
+!         ENDDO
+      ENDIF
    ENDIF
 
 !-------------------------
