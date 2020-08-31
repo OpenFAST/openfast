@@ -1785,7 +1785,7 @@ SUBROUTINE Glue_Jacobians( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, OpFM, 
    
    !LIN-TODO: Add doc strings and look at above doc string
    IF (p_FAST%CompSub == Module_SD) THEN
-       call Linear_SD_InputSolve_dy( p_FAST, y_FAST, SD%Input(1), SD%y, ED%y, HD, MAPp, MeshMapData, dUdu, ErrStat2, ErrMsg2 )
+       call Linear_SD_InputSolve_dy( p_FAST, y_FAST, SD%Input(1), SD%y, ED%y, HD, MAPp, MeshMapData, dUdy, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    ELSE IF (p_FAST%CompSub == Module_ExtPtfm) THEN
        write(*,*)'>>> FAST_LIN: Linear_ExtPtfm_InputSolve_dy, TODO'
