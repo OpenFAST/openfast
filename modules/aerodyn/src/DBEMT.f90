@@ -61,8 +61,9 @@ subroutine DBEMT_ValidateInitInp(interval, InitInp, errStat, errMsg)
    
    if (InitInp%numBlades < 1) call SetErrStat( ErrID_Fatal, " InitInp%numBlades must set to 1 or more.", ErrStat, ErrMsg, RoutineName)
    if (InitInp%numNodes < 2) call SetErrStat( ErrID_Fatal, " InitInp%numNodes must set to 2 or more.", ErrStat, ErrMsg, RoutineName)
-  
-   if ( InitInp%DBEMT_Mod == DBEMT_tauConst .or. InitInp%DBEMT_Mod == DBEMT_cont_tauConst )then
+
+
+   if ( InitInp%DBEMT_Mod == DBEMT_tauConst .or. InitInp%DBEMT_Mod == DBEMT_cont_tauConst ) then
    
       if (InitInp%tau1_const <= 0.0_ReKi)  call SetErrStat( ErrID_Fatal, " InitInp%tau1_const must be greater than zero.", ErrStat, ErrMsg, RoutineName)
         ! Default = 0.33_ReKi
