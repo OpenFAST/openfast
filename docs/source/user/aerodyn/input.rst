@@ -65,9 +65,7 @@ improved tower clearance.
 
 The I/O SETTINGS section controls the creation of the results file. If
 ``OutFileRoot`` is specified, the results file will have the filename
-*OutFileRoot.#.out*, where the ‘\ *#*\ ’ character is an integer
-number corresponding to a test case line found in the COMBINED-CASE
-ANALYSIS section described below. If an empty string is provided for
+*OutFileRoot.out*. If an empty string is provided for
 ``OutFileRoot``, then the driver file’s root name will be used
 instead. If ``TabDel`` is ``TRUE``, a TAB character is used between
 columns in the output file; if FALSE, fixed-width is used otherwise.
@@ -114,6 +112,19 @@ introduce skewed flow. ``dT`` is the simulation time step, which must
 match the time step for the aerodynamic calculations (``DTAero``) as
 specified in the primary AeroDyn input file, and ``Tmax`` is the total
 simulation time.
+
+Note that ``dT`` should be the same for each of the cases listed in the 
+COMBINED-CASE ANALYSIS section. All of the cases will be output to the same
+file, with a ``Case`` column listed next to the ``Time`` output column 
+for help with data processing.
+
+For further debugging capability, the AeroDyn driver now also has the
+ability to read the combined case input data as a time-history file. 
+In place of a row in the COMBINED-CASE ANALYSIS table, a separate input file
+can be listed instead. The name of the file should be preceded with the ``@``
+character, to indicate the data is a time-history file in a separate text
+input file. An example is provided in 
+:numref:`ad_appendix`
 
 AeroDyn Primary Input File
 --------------------------
@@ -340,7 +351,7 @@ Specify the number of airfoil data input files to be used using
 file names should be in quotations and can contain an absolute path or a
 relative path e.g., “C:\\airfoils\\S809_CLN_298.dat” or
 “airfoils\\S809_CLN_298.dat”. If you use relative paths, it is
-relative to the location of the current working directory. The blade
+relative to the location of the file in which it is specified. The blade
 data input files will reference these airfoil data using their line
 identifier, where the first airfoil file is numbered 1 and the last
 airfoil file is numbered ``NumAFfiles``.
@@ -395,7 +406,9 @@ running AeroDyn standalone, or by the OpenFAST program when running a
 coupled simulation. See section 5.2 for summary file details.
 
 AeroDyn can output aerodynamic and kinematic quantities at up to nine
-nodes along the tower and up to nine nodes along each blade.
+nodes specified along the tower and up to nine nodes along each blade.
+For outputs at every blade node, see :numref:`AD-Nodal-Outputs`.
+
 ``NBlOuts`` specifies the number of blade nodes that output is
 requested for (0 to 9) and ``BlOutNd`` on the next line is a list
 ``NBlOuts`` long of node numbers between 1 and ``NumBlNds``
