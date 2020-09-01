@@ -635,11 +635,11 @@ input file):
    UA are disabled; if the keyword ``DEFAULT`` is entered in place of a
    numerical value, ``UACutOut`` is set to 45.
 
--  ``filtCutOff`` is the cut-off frequency (-3 dB corner frequency)
-   (in Hz) of the low-pass filter applied to the AoA input to UA, as
+-  ``filtCutOff`` is the cut-off reduced frequency
+   of the low-pass filter applied to the AoA input to UA, as
    well as to the pitch rate and pitch acceleration derived from AoA
    within UA; if the keyword ``DEFAULT`` is entered in place of a
-   numerical value, ``filtCutOff`` is set to 20.
+   numerical value, ``filtCutOff`` is set to 0.5.
 
 ``NumAlf`` is the number of distinct AoA entries and determines the
 number of rows in the subsequent table of static airfoil coefficients;
