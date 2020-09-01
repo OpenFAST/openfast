@@ -37,7 +37,7 @@ Modified in OpenFAST `dev`
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  Module        Line  Flag Name          Example Value
 ============== ==== ================== =============================================================================================================================================================================
-AirFoilTables  40\* filtCutOff         "DEFAULT"               filtCutOff        - Reduced frequency cut-off for low-pass filtering the AoA input to UA, as well as the 1st and 2nd derivatives (-)… 
+AirFoilTables  40\* filtCutOff         "DEFAULT"               filtCutOff        - Reduced frequency cut-off for low-pass filtering the AoA input to UA, as well as the 1st and 2nd derivatives (-) [default = 0.5] 
 ============== ==== ================== =============================================================================================================================================================================
 
 \*non-comment line count, excluding lines contained if NumCoords is not 0.

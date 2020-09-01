@@ -119,7 +119,7 @@ true          InclUAdata        ! Is unsteady aerodynamics data included in this
           0   k1_hat            ! Constant in the expression of Cc due to leading edge vortex effects.  [ignored if UAMod<>1]
 "Default"     x_cp_bar          ! Constant in the expression of \hat(x)_cp^v. [ignored if UAMod<>1, default = 0.2]
 "DEFAULT"     UACutout          ! Angle of attack above which unsteady aerodynamics are disabled (deg). [Specifying the string "Default" sets UACutout to 45 degrees]
-"DEFAULT"     filtCutOff        ! Reduced frequency cut-off for low-pass filtering the AoA input to UA, as well as the 1st and 2nd derivatives (-)… 
+"DEFAULT"     filtCutOff        ! Reduced frequency cut-off for low-pass filtering the AoA input to UA, as well as the 1st and 2nd derivatives (-) [default = 0.5]
 !........................................
 ! Table of aerodynamics coefficients
          63   NumAlf            ! Number of data lines in the following table
