@@ -109,7 +109,7 @@ subroutine Init_AeroDyn(iCase, DvrData, AD, dt, errStat, errMsg)
       InitInData%InputFile      = DvrData%AD_InputFile
       InitInData%NumBlades      = DvrData%numBlades
       InitInData%RootName       = DvrData%outFileData%Root
-      InitInData%Gravity        = 9.80665_ReKi                
+      InitInData%Gravity        = 9.80665_ReKi
                         
    
          ! set initialization data:
@@ -327,7 +327,9 @@ subroutine Set_AD_Inputs(iCase,nt,RotAzimuth,DvrData,AD,errStat,errMsg)
             position =  AD%u(1)%BladeMotion(k)%Position(:,j) + AD%u(1)%BladeMotion(k)%TranslationDisp(:,j) &
                       - AD%u(1)%HubMotion%Position(:,1) - AD%u(1)%HubMotion%TranslationDisp(:,1)
             AD%u(1)%BladeMotion(k)%TranslationVel( :,j) = cross_product( AD%u(1)%HubMotion%RotationVel(:,1), position )
-
+            
+            AD%u(1)%BladeMotion(k)%RotationVel(:,j) = AD%u(1)%HubMotion%Orientation(1,:,1) * DvrData%Cases(iCase)%RotSpeed(timeIndex) ! simplification (without pitch rate)
+            AD%u(1)%BladeMotion(k)%TranslationAcc(:,j) = 0.0_ReKi ! simplification
          end do !j=nnodes
                                     
       end do !k=numBlades       
@@ -818,7 +820,7 @@ subroutine ValidateInputs(DvrData, errStat, errMsg)
    
 end subroutine ValidateInputs
 !----------------------------------------------------------------------------------------------------------------------------------
-subroutine Dvr_WriteOutputLine(OutFileData, nt, RotAzimuth, output, CaseData, errStat, errMsg)
+subroutine Dvr_WriteOutputLine(OutFileData, nt, RotAzimuth, output, CaseData, iCase, errStat, errMsg)
 
    integer(IntKi)         ,  intent(in   )   :: nt                   ! simulation time step (-)
    type(Dvr_OutputFile)   ,  intent(in   )   :: OutFileData
@@ -839,6 +841,7 @@ subroutine Dvr_WriteOutputLine(OutFileData, nt, RotAzimuth, output, CaseData, er
    write( tmpStr, OutFileData%Fmt_t ) CaseData%time(nt)  ! '(F15.4)'
    call WrFileNR( OutFileData%unOutFile, tmpStr(1:OutFileData%ActualChanLen) )
    
+   call WrNumAryFileNR ( OutFileData%unOutFile, (/iCase/),  OutFileData%Fmt_i, errStat, errMsg )
    call WrNumAryFileNR ( OutFileData%unOutFile, (/CaseData%WNDSPEED(nt), CaseData%SHEAREXP(nt), RotAzimuth, CaseData%Yaw(nt)*R2D/),  OutFileData%Fmt_a, errStat, errMsg )
    call WrNumAryFileNR ( OutFileData%unOutFile, output,  OutFileData%Fmt_a, errStat, errMsg )
    if ( errStat >= AbortErrLev ) return
@@ -863,6 +866,7 @@ subroutine Dvr_InitializeOutputFile(numBlades, iCase, CaseData, OutFileData, err
       integer(IntKi)                            :: numSpaces
       integer(IntKi)                            :: numOuts
       character(ChanLen)                        :: colTxt
+      character(ChanLen)                        :: caseTxt
       
       
       
@@ -884,6 +888,7 @@ subroutine Dvr_InitializeOutputFile(numBlades, iCase, CaseData, OutFileData, err
       
       ! create format statements for time and the array outputs:
       OutFileData%Fmt_t = '(F'//trim(num2lstr(OutFileData%ActualChanLen))//'.4)'
+      OutFileData%Fmt_i = '(I'//trim(num2lstr(OutFileData%ActualChanLen))//')'
       OutFileData%Fmt_a = '"'//OutFileData%delim//'"'//trim(OutFileData%outFmt)      ! format for array elements from individual modules
       numSpaces = OutFileData%ActualChanLen - numSpaces  ! the difference between the size of the headers and what is produced by OutFmt
       if (numSpaces > 0) then
@@ -891,22 +896,14 @@ subroutine Dvr_InitializeOutputFile(numBlades, iCase, CaseData, OutFileData, err
       end if
          
       
-      call OpenFOutFile ( OutFileData%unOutFile, trim(outFileData%Root)//'.'//trim(num2lstr(iCase))//'.out', ErrStat, ErrMsg )
+!      call OpenFOutFile ( OutFileData%unOutFile, trim(outFileData%Root)//'.'//trim(num2lstr(iCase))//'.out', ErrStat, ErrMsg )
+      call OpenFOutFile ( OutFileData%unOutFile, trim(outFileData%Root)//'.out', ErrStat, ErrMsg )
          if ( ErrStat >= AbortErrLev ) return
          
       write (OutFileData%unOutFile,'(/,A)')  'Predictions were generated on '//CurDate()//' at '//CurTime()//' using '//trim( version%Name )
       write (OutFileData%unOutFile,'(1X,A)') trim(GetNVD(OutFileData%AD_ver))
       write (OutFileData%unOutFile,'()' )    !print a blank line
       write (OutFileData%unOutFile,'()' )    !print a blank line
-     ! write (OutFileData%unOutFile,'(A,11(1x,A,"=",ES11.4e2,1x,A))'   ) 'Case '//trim(num2lstr(iCase))//':' &
-!      write (OutFileData%unOutFile,'(A,11(1x,A,"=",A,1x,A))'   ) 'Case '//trim(num2lstr(iCase))//':' &
-!         , 'WndSpeed', trim(num2lstr(CaseData%WndSpeed(1))), 'm/s;' &
-!         , 'ShearExp', trim(num2lstr(CaseData%ShearExp(1))), ';' &
-!         , 'RotSpeed', trim(num2lstr(CaseData%RotSpeed(1)*RPS2RPM)),'rpm;' &
-!         , 'Pitch',    trim(num2lstr(CaseData%Pitch(1)*R2D)), 'deg;' &
-!         , 'Yaw',      trim(num2lstr(CaseData%Yaw(1)*R2D)), 'deg;' &
-!         , 'dT',       trim(num2lstr(CaseData%dT)), 's;' &
-!         , 'Tmax',     trim(num2lstr(CaseData%numSteps*CaseData%dT)),'s'
       
       write (OutFileData%unOutFile,'()' )    !print a blank line
               
@@ -917,6 +914,9 @@ subroutine Dvr_InitializeOutputFile(numBlades, iCase, CaseData, OutFileData, err
 
       colTxt = 'Time'
       call WrFileNR ( OutFileData%unOutFile, colTxt(1:OutFileData%ActualChanLen))
+      
+      colTxt = 'Case'
+      call WrFileNR ( OutFileData%unOutFile, OutFileData%delim//colTxt(1:OutFileData%ActualChanLen))
       
       colTxt = 'WindSpeed'
       call WrFileNR ( OutFileData%unOutFile, OutFileData%delim//colTxt(1:OutFileData%ActualChanLen) )
@@ -942,6 +942,9 @@ subroutine Dvr_InitializeOutputFile(numBlades, iCase, CaseData, OutFileData, err
       colTxt = '(s)'
       call WrFileNR ( OutFileData%unOutFile, colTxt(1:OutFileData%ActualChanLen))
       
+      colTxt = '(-)'
+      call WrFileNR ( OutFileData%unOutFile, OutFileData%delim//colTxt(1:OutFileData%ActualChanLen) )
+
       colTxt = '(m/s)'
       call WrFileNR ( OutFileData%unOutFile, OutFileData%delim//colTxt(1:OutFileData%ActualChanLen) )
       

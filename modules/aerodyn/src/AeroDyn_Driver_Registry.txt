@@ -33,6 +33,7 @@ typedef   ^                         ^             IntKi                  unOutFi
 typedef   ^                         ^             IntKi                  ActualChanLen    -      -     -   "Actual length of channels written to text file (less than or equal to ChanLen)" "-"
 typedef   ^                         ^             character(20)          Fmt_t            -      -     -   "Format specifier for time channel" "-"
 typedef   ^                         ^             character(25)          Fmt_a            -      -     -   "Format specifier for each column (including delimiter)" "-"
+typedef   ^                         ^             character(20)          Fmt_i            -      -     -   "Format specifier for integer column" "-"
 typedef   ^                         ^             character(1)           delim            -      -     -   "column delimiter" "-"
 typedef   ^                         ^             character(20)          outFmt           -      -     -   "Format specifier" "-"
 typedef   ^                         ^             character(1024)        Root             -      -     -   "Output file rootname" "-"

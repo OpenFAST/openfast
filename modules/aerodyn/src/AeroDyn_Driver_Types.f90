@@ -60,6 +60,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: ActualChanLen      !< Actual length of channels written to text file (less than or equal to ChanLen) [-]
     character(20)  :: Fmt_t      !< Format specifier for time channel [-]
     character(25)  :: Fmt_a      !< Format specifier for each column (including delimiter) [-]
+    character(20)  :: Fmt_i      !< Format specifier for integer column [-]
     character(1)  :: delim      !< column delimiter [-]
     character(20)  :: outFmt      !< Format specifier [-]
     character(1024)  :: Root      !< Output file rootname [-]
@@ -571,6 +572,7 @@ ENDIF
     DstDvr_OutputFileData%ActualChanLen = SrcDvr_OutputFileData%ActualChanLen
     DstDvr_OutputFileData%Fmt_t = SrcDvr_OutputFileData%Fmt_t
     DstDvr_OutputFileData%Fmt_a = SrcDvr_OutputFileData%Fmt_a
+    DstDvr_OutputFileData%Fmt_i = SrcDvr_OutputFileData%Fmt_i
     DstDvr_OutputFileData%delim = SrcDvr_OutputFileData%delim
     DstDvr_OutputFileData%outFmt = SrcDvr_OutputFileData%outFmt
     DstDvr_OutputFileData%Root = SrcDvr_OutputFileData%Root
@@ -678,6 +680,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! ActualChanLen
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%Fmt_t)  ! Fmt_t
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%Fmt_a)  ! Fmt_a
+      Int_BufSz  = Int_BufSz  + 1*LEN(InData%Fmt_i)  ! Fmt_i
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%delim)  ! delim
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%outFmt)  ! outFmt
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%Root)  ! Root
@@ -759,6 +762,10 @@ ENDIF
     END DO ! I
     DO I = 1, LEN(InData%Fmt_a)
       IntKiBuf(Int_Xferred) = ICHAR(InData%Fmt_a(I:I), IntKi)
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
+    DO I = 1, LEN(InData%Fmt_i)
+      IntKiBuf(Int_Xferred) = ICHAR(InData%Fmt_i(I:I), IntKi)
       Int_Xferred = Int_Xferred + 1
     END DO ! I
     DO I = 1, LEN(InData%delim)
@@ -894,6 +901,10 @@ ENDIF
     END DO ! I
     DO I = 1, LEN(OutData%Fmt_a)
       OutData%Fmt_a(I:I) = CHAR(IntKiBuf(Int_Xferred))
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
+    DO I = 1, LEN(OutData%Fmt_i)
+      OutData%Fmt_i(I:I) = CHAR(IntKiBuf(Int_Xferred))
       Int_Xferred = Int_Xferred + 1
     END DO ! I
     DO I = 1, LEN(OutData%delim)
