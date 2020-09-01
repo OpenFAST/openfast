@@ -86,15 +86,21 @@ typedef ^ 		OtherStateType 	Reki DummyOtherState - - - "Remove this variable if 
 
 # Define any misc data used only for efficiency purposes (indices for searching in an array, copies of previous calculations of output
 # at a given time, etc.) or other data that do not depend on time
-typedef ^ 		MiscVarType  Reki			F_stop   {2} - - "Stop forces" -
-typedef	^		MiscVarType  ReKi			F_ext	{2}	-	-	"External forces (user defined)"	-
-typedef	^		MiscVarType  ReKi			F_fr	{2}	-	-	"Friction forces"	-
-typedef	^		MiscVarType  ReKi			C_ctrl	{2}	-	-	"Controlled Damping (On/Off)"	-
-typedef	^		MiscVarType  ReKi			C_Brake	{2}	-	-	"Braking Damping"	-
-typedef	^		MiscVarType  ReKi			F_table	{2}	-	-	"Tabled Stiffness"	-
-typedef	^		MiscVarType  ReKi			F_k_x	-	-	-	"Factor for x-component stiffness force"	-
-typedef	^		MiscVarType  ReKi			F_k_y	-	-	-	"Factor for y-component stiffness force"	-
-typedef  ^     MiscVarType  IntKi      PrescribedInterpIdx - - - "Index for interpolation of Prescribed force array" -
+typedef ^ 		MiscVarType  Reki			F_stop   {:}{:} - - "Stop forces" -
+typedef	^		MiscVarType  ReKi			F_ext	{:}{:}	-	-	"External forces (user defined)"	-
+typedef	^		MiscVarType  ReKi			F_fr	{:}{:}	-	-	"Friction forces"	-
+typedef	^		MiscVarType  ReKi			C_ctrl	{:}{:}	-	-	"Controlled Damping (On/Off)"	-
+typedef	^		MiscVarType  ReKi			C_Brake	{:}{:}	-	-	"Braking Damping"	-
+typedef	^		MiscVarType  ReKi			F_table	{:}{:}	-	-	"Tabled Stiffness"	-
+typedef	^		MiscVarType  ReKi			F_k		{:}{:}	-	-	"Factor for x and y-component stiffness force"	-
+typedef	^		MiscVarType  ReKi			a_G		{:}{:}	-	-	"Gravitational acceleration vector, local coordinates for point"	m/s^2
+typedef	^		MiscVarType  ReKi			rddot_P	{:}{:}	-	-	"Translational acceleration vector, local coordinates for point"	m/s^2
+typedef	^		MiscVarType  ReKi			omega_P	{:}{:}	-	-	"Rotational		velocity		 vector, local coordinates for point"	rad/s
+typedef	^		MiscVarType  ReKi			alpha_P	{:}{:}	-	-	"Rotational    aceeleration vector, local coordinates for point"	rad/s^2
+typedef	^		MiscVarType  ReKi			F_P		{:}{:}	-	-	"TMD force  vector, local coordinates for point"	N
+typedef	^		MiscVarType  ReKi			M_P		{:}{:}	-	-	"TMD moment vector, local coordinates for point"	N-m
+typedef	^		MiscVarType  ReKi			Acc		{:}{:}	-	-	"TMD aggregated acceleration in X,Y local coordinates for point"	m/s^2
+typedef	^		MiscVarType  IntKi		PrescribedInterpIdx	-	-	-	"Index for interpolation of Prescribed force array"	-
 
 
 # ..... Parameters ................................................................................................................

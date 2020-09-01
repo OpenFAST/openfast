@@ -147,14 +147,10 @@ SUBROUTINE TMD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
    ! Initialize other states here:
    OtherState%DummyOtherState = 0
 
-   ! misc variables: external and stop forces
-   m%F_ext    = 0.0_ReKi    ! whole array initializaton
-   m%F_stop   = 0.0_ReKi    ! whole array initializaton
-   m%F_fr     = 0.0_ReKi    ! whole array initialization
-   m%C_ctrl   = 0.0_ReKi    ! whole array initialization
-   m%C_Brake  = 0.0_ReKi    ! whole array initialization
-   m%F_table  = 0.0_ReKi    ! whole array initialization
-   m%PrescribedInterpIdx = 0_IntKi ! index tracker for PrescribedForce option
+   call Init_Misc( p, m, ErrStat2, ErrMsg2 )
+      CALL CheckError( ErrStat2, ErrMsg2 )
+      IF (ErrStat >= AbortErrLev) RETURN
+
 
    ! Allocate continuous states (x)
    call AllocAry(x%tmd_x, 4, p%NumMeshPts, 'x%tmd_x',  ErrStat2,ErrMsg2)
@@ -293,10 +289,44 @@ SUBROUTINE TMD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
     !Interval = p%DT
 
    call cleanup()
-
 !................................
 CONTAINS
- SUBROUTINE CheckError(ErrID,Msg)
+   subroutine Init_Misc( p, m, ErrStat, ErrMsg )
+      type(TMD_ParameterType),intent(in   )  :: p        !< Parameters
+      type(TMD_MiscVarType),  intent(inout)  :: m        !< Misc (optimization) variables
+      integer(IntKi),         intent(  out) :: ErrStat   ! The error identifier (ErrStat)
+      character(ErrMsgLen),   intent(  out) :: ErrMsg    ! The error message (ErrMsg)
+
+      !  Accelerations, velocities, and resultant forces -- used in all TMD calcs (so we don't reallocate all the time)
+      !  Note: these variables had been allocated multiple places before and sometimes passed between routines. So
+      !        they have been moved into MiscVars so that we don so we don't reallocate all the time
+      call AllocAry(m%a_G    , 3, p%NumMeshPts,'a_G'     , ErrStat, ErrMsg);  if (ErrStat >= AbortErrLev) return;
+      call AllocAry(m%rddot_P, 3, p%NumMeshPts,'rddot_P' , ErrStat, ErrMsg);  if (ErrStat >= AbortErrLev) return;
+      call AllocAry(m%omega_P, 3, p%NumMeshPts,'omega_P' , ErrStat, ErrMsg);  if (ErrStat >= AbortErrLev) return;
+      call AllocAry(m%alpha_P, 3, p%NumMeshPts,'alpha_P' , ErrStat, ErrMsg);  if (ErrStat >= AbortErrLev) return;
+      call AllocAry(m%Acc    , 3, p%NumMeshPts,'Acc'     , ErrStat, ErrMsg);  if (ErrStat >= AbortErrLev) return;    ! Summed accelerations
+      !  Note: the following two were added to misc so that we have the option of outputting the forces and moments
+      !        from each TMD at some later point
+      call AllocAry(m%F_P    , 3, p%NumMeshPts,'F_P'     , ErrStat, ErrMsg);  if (ErrStat >= AbortErrLev) return;
+      call AllocAry(m%M_P    , 3, p%NumMeshPts,'M_P'     , ErrStat, ErrMsg);  if (ErrStat >= AbortErrLev) return;
+
+      !  External and stop forces
+      !  Note: these variables had been allocated multiple places before and sometimes passed between routines. So
+      !        they have been moved into MiscVars so that we don so we don't reallocate all the time.
+      call AllocAry(m%F_stop , 2, p%NumMeshPts, 'F_stop' , ErrStat, ErrMsg);  if (ErrStat >= AbortErrLev) return;  m%F_stop  = 0.0_ReKi
+      call AllocAry(m%F_ext  , 2, p%NumMeshPts, 'F_ext'  , ErrStat, ErrMsg);  if (ErrStat >= AbortErrLev) return;  m%F_ext   = 0.0_ReKi
+      call AllocAry(m%F_fr   , 2, p%NumMeshPts, 'F_fr'   , ErrStat, ErrMsg);  if (ErrStat >= AbortErrLev) return;  m%F_fr    = 0.0_ReKi
+      call AllocAry(m%C_ctrl , 2, p%NumMeshPts, 'C_ctrl' , ErrStat, ErrMsg);  if (ErrStat >= AbortErrLev) return;  m%C_ctrl  = 0.0_ReKi
+      call AllocAry(m%C_Brake, 2, p%NumMeshPts, 'C_Brake', ErrStat, ErrMsg);  if (ErrStat >= AbortErrLev) return;  m%C_Brake = 0.0_ReKi
+      call AllocAry(m%F_table, 2, p%NumMeshPts, 'F_table', ErrStat, ErrMsg);  if (ErrStat >= AbortErrLev) return;  m%F_table = 0.0_ReKi
+      call AllocAry(m%F_k    , 2, p%NumMeshPts, 'F_k'    , ErrStat, ErrMsg);  if (ErrStat >= AbortErrLev) return;  m%F_k     = 0.0_ReKi
+
+      ! indexing
+      m%PrescribedInterpIdx = 0_IntKi ! index tracker for PrescribedForce option
+
+   end subroutine Init_Misc
+   !.........................................
+   SUBROUTINE CheckError(ErrID,Msg)
    ! This subroutine sets the error message and level and cleans up if the error is >= AbortErrLev
    !...............................................................................................................................
 
@@ -325,9 +355,9 @@ CONTAINS
       END IF
 
 
- END SUBROUTINE CheckError
-!.........................................
- SUBROUTINE cleanup()
+   END SUBROUTINE CheckError
+   !.........................................
+   SUBROUTINE cleanup()
 
    IF ( UnEcho > 0 ) CLOSE( UnEcho )
    if (allocated(PositionP     ))   deallocate(PositionP     )
@@ -335,7 +365,7 @@ CONTAINS
    if (allocated(OrientationP  ))   deallocate(OrientationP  )
    CALL TMD_DestroyInputFile( InputFileData, ErrStat2, ErrMsg2)      ! Ignore warnings here.
 
- END SUBROUTINE cleanup
+   END SUBROUTINE cleanup
 !.........................................
 END SUBROUTINE TMD_Init
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -638,44 +668,29 @@ SUBROUTINE TMD_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
       INTEGER(IntKi),                INTENT(  OUT)  :: ErrStat     !< Error status of the operation
       CHARACTER(*),                  INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
-      ! local variables
-!FIXME: combine with blade points and moveto miscvars
-      REAL(ReKi), allocatable, dimension(:,:)    :: a_G
-      REAL(ReKi), allocatable, dimension(:,:)    :: F_P
-      REAL(ReKi), allocatable, dimension(:,:)    :: M_P
+      !  local variables for force calcualtions in X-DOF, Y-DOF, and XY-DOF
+      real(ReKi), dimension(3)   :: F_tmdX_P
+      real(ReKi), dimension(3)   :: F_tmdY_P
+      real(ReKi), dimension(3)   :: F_tmdXY_P
 
-      !nacelle movement in local coordinates
-      real(ReKi), allocatable, dimension(:,:)    :: rddot_P
-      real(ReKi), allocatable, dimension(:,:)    :: omega_P
-      real(ReKi), allocatable, dimension(:,:)    :: alpha_P
-
-!FIXME: once we generalize this, move it to miscvars
-      ! Blade motion
-      Real(ReKi), allocatable, dimension(:)      :: F_x_tmdY_P
-      Real(ReKi), allocatable, dimension(:)      :: F_z_tmdY_P
-      Real(ReKi), allocatable, dimension(:)      :: F_y_tmdX_P
-      Real(ReKi), allocatable, dimension(:)      :: F_z_tmdX_P
-
-      !dependent accelerations
-      Real(ReKi), allocatable, dimension(:)      :: F_x_tmdXY_P_N
-      Real(ReKi), allocatable, dimension(:)      :: F_z_tmdXY_P_N
-      Real(ReKi), allocatable, dimension(:)      :: F_y_tmdXY_P_N
-
+      !  NOTE: the following two sets of variables could likely be combined into arrays
+      !        that could be more easily used with array functions like MATMUL, cross_product,
+      !        dot_product etc.
       ! Fore-aft TLCD reactionary forces !MEG & SP
-      Real(ReKi), allocatable, dimension(:)       :: F_x_tlcd_WR_N
-      Real(ReKi), allocatable, dimension(:)       :: F_y_tlcd_WR_N
-      Real(ReKi), allocatable, dimension(:)       :: F_x_tlcd_WL_N
-      Real(ReKi), allocatable, dimension(:)       :: F_y_tlcd_WL_N
-      Real(ReKi), allocatable, dimension(:)       :: F_y_tlcd_WH_N
-      Real(ReKi), allocatable, dimension(:)       :: F_z_tlcd_WH_N
+      Real(ReKi)                 :: F_x_tlcd_WR_N
+      Real(ReKi)                 :: F_y_tlcd_WR_N
+      Real(ReKi)                 :: F_x_tlcd_WL_N
+      Real(ReKi)                 :: F_y_tlcd_WL_N
+      Real(ReKi)                 :: F_y_tlcd_WH_N
+      Real(ReKi)                 :: F_z_tlcd_WH_N
 
       ! Side-side orthogonal TLCD reactionary forces !MEG & SP
-      Real(ReKi), allocatable, dimension(:)       :: F_x_otlcd_WB_N
-      Real(ReKi), allocatable, dimension(:)       :: F_y_otlcd_WB_N
-      Real(ReKi), allocatable, dimension(:)       :: F_x_otlcd_WF_N
-      Real(ReKi), allocatable, dimension(:)       :: F_y_otlcd_WF_N
-      Real(ReKi), allocatable, dimension(:)       :: F_x_otlcd_WH_N
-      Real(ReKi), allocatable, dimension(:)       :: F_z_otlcd_WH_N
+      Real(ReKi)                 :: F_x_otlcd_WB_N
+      Real(ReKi)                 :: F_y_otlcd_WB_N
+      Real(ReKi)                 :: F_x_otlcd_WF_N
+      Real(ReKi)                 :: F_y_otlcd_WF_N
+      Real(ReKi)                 :: F_x_otlcd_WH_N
+      Real(ReKi)                 :: F_z_otlcd_WH_N
 
       TYPE(TMD_ContinuousStateType)              :: dxdt    ! first time derivative of continuous states
 
@@ -690,45 +705,13 @@ SUBROUTINE TMD_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
       ErrStat = ErrID_None
       ErrMsg  = ""
 
-!FIXME: move this to miscvars, or states.
-      call AllocAry(a_G,      3, p%NumMeshPts,'a_G',     ErrStat2,ErrMsg2); if (Failed()) return;
-      call AllocAry(rddot_P,  3, p%NumMeshPts,'rddot_P', ErrStat2,ErrMsg2); if (Failed()) return;
-      call AllocAry(omega_P,  3, p%NumMeshPts,'omega_P', ErrStat2,ErrMsg2); if (Failed()) return;
-      call AllocAry(alpha_P,  3, p%NumMeshPts,'alpha_P', ErrStat2,ErrMsg2); if (Failed()) return;
-      call AllocAry(F_P,      3, p%NumMeshPts,'F_P',     ErrStat2,ErrMsg2); if (Failed()) return;
-      call AllocAry(M_P,      3, p%NumMeshPts,'M_P',     ErrStat2,ErrMsg2); if (Failed()) return;
-
-      call AllocAry(F_x_tmdY_P  , p%NumMeshPts,'F_x_tmdY_P' , ErrStat2,ErrMsg2); if (Failed()) return;
-      call AllocAry(F_z_tmdY_P  , p%NumMeshPts,'F_z_tmdY_P' , ErrStat2,ErrMsg2); if (Failed()) return;
-      call AllocAry(F_y_tmdX_P  , p%NumMeshPts,'F_y_tmdX_P' , ErrStat2,ErrMsg2); if (Failed()) return;
-      call AllocAry(F_z_tmdX_P  , p%NumMeshPts,'F_z_tmdX_P' , ErrStat2,ErrMsg2); if (Failed()) return;
-
-      call AllocAry(F_x_tmdXY_P_N , p%NumMeshPts,'F_x_tmdXY_P_N', ErrStat2,ErrMsg2); if (Failed()) return;
-      call AllocAry(F_z_tmdXY_P_N , p%NumMeshPts,'F_z_tmdXY_P_N', ErrStat2,ErrMsg2); if (Failed()) return;
-      call AllocAry(F_y_tmdXY_P_N , p%NumMeshPts,'F_y_tmdXY_P_N', ErrStat2,ErrMsg2); if (Failed()) return;
-
-!FIXME: move this to miscvars, or states.
-      call AllocAry(F_x_tlcd_WR_N,  p%NumMeshPts,'F_x_tlcd_WR_N',  ErrStat2,ErrMsg2); if (Failed()) return;
-      call AllocAry(F_y_tlcd_WR_N,  p%NumMeshPts,'F_y_tlcd_WR_N',  ErrStat2,ErrMsg2); if (Failed()) return;
-      call AllocAry(F_x_tlcd_WL_N,  p%NumMeshPts,'F_x_tlcd_WL_N',  ErrStat2,ErrMsg2); if (Failed()) return;
-      call AllocAry(F_y_tlcd_WL_N,  p%NumMeshPts,'F_y_tlcd_WL_N',  ErrStat2,ErrMsg2); if (Failed()) return;
-      call AllocAry(F_y_tlcd_WH_N,  p%NumMeshPts,'F_y_tlcd_WH_N',  ErrStat2,ErrMsg2); if (Failed()) return;
-      call AllocAry(F_z_tlcd_WH_N,  p%NumMeshPts,'F_z_tlcd_WH_N',  ErrStat2,ErrMsg2); if (Failed()) return;
-
-      call AllocAry(F_x_otlcd_WB_N, p%NumMeshPts,'F_x_otlcd_WB_N', ErrStat2,ErrMsg2); if (Failed()) return;
-      call AllocAry(F_y_otlcd_WB_N, p%NumMeshPts,'F_y_otlcd_WB_N', ErrStat2,ErrMsg2); if (Failed()) return;
-      call AllocAry(F_x_otlcd_WF_N, p%NumMeshPts,'F_x_otlcd_WF_N', ErrStat2,ErrMsg2); if (Failed()) return;
-      call AllocAry(F_y_otlcd_WF_N, p%NumMeshPts,'F_y_otlcd_WF_N', ErrStat2,ErrMsg2); if (Failed()) return;
-      call AllocAry(F_x_otlcd_WH_N, p%NumMeshPts,'F_x_otlcd_WH_N', ErrStat2,ErrMsg2); if (Failed()) return;
-      call AllocAry(F_z_otlcd_WH_N, p%NumMeshPts,'F_z_otlcd_WH_N', ErrStat2,ErrMsg2); if (Failed()) return;
-
 
       ! Compute accelerations and velocities in local coordinates
       do i_pt=1,p%NumMeshPts
-         a_G(:,i_pt)     = matmul(u%Mesh(i_pt)%Orientation(:,:,1),p%Gravity)
-         rddot_P(:,i_pt) = matmul(u%Mesh(i_pt)%Orientation(:,:,1),u%Mesh(i_pt)%TranslationAcc(:,1))
-         omega_P(:,i_pt) = matmul(u%Mesh(i_pt)%Orientation(:,:,1),u%Mesh(i_pt)%RotationVel(:,1))
-         alpha_P(:,i_pt) = matmul(u%Mesh(i_pt)%Orientation(:,:,1),u%Mesh(i_pt)%RotationAcc(:,1))
+         m%a_G(:,i_pt)     = matmul(u%Mesh(i_pt)%Orientation(:,:,1),p%Gravity)
+         m%rddot_P(:,i_pt) = matmul(u%Mesh(i_pt)%Orientation(:,:,1),u%Mesh(i_pt)%TranslationAcc(:,1))
+         m%omega_P(:,i_pt) = matmul(u%Mesh(i_pt)%Orientation(:,:,1),u%Mesh(i_pt)%RotationVel(:,1))
+         m%alpha_P(:,i_pt) = matmul(u%Mesh(i_pt)%Orientation(:,:,1),u%Mesh(i_pt)%RotationAcc(:,1))
       enddo
 
 
@@ -740,230 +723,185 @@ SUBROUTINE TMD_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
 
          ! tmd external forces of dependent degrees:
          do i_pt=1,p%NumMeshPts
-            F_x_tmdY_P(i_pt) = - p%M_Y * (a_G(1,i_pt) - rddot_P(1,i_pt) + (alpha_P(3,i_pt) - omega_P(1,i_pt)*omega_P(2,i_pt))*x%tmd_x(3,i_pt) + 2*omega_P(3,i_pt)*x%tmd_x(4,i_pt))
-            F_z_tmdY_P(i_pt) = - p%M_Y * (a_G(3,i_pt) - rddot_P(3,i_pt) - (alpha_P(1,i_pt) + omega_P(2,i_pt)*omega_P(3,i_pt))*x%tmd_x(3,i_pt) - 2*omega_P(1,i_pt)*x%tmd_x(4,i_pt))
+            F_tmdX_P(2) = - p%M_X * ( m%a_G(2,i_pt) - m%rddot_P(2,i_pt) - (m%alpha_P(3,i_pt) + m%omega_P(1,i_pt)*m%omega_P(2,i_pt))*x%tmd_x(1,i_pt) - 2*m%omega_P(3,i_pt)*x%tmd_x(2,i_pt) )
+            F_tmdX_P(3) = - p%M_X * ( m%a_G(3,i_pt) - m%rddot_P(3,i_pt) + (m%alpha_P(2,i_pt) - m%omega_P(1,i_pt)*m%omega_P(3,i_pt))*x%tmd_x(1,i_pt) + 2*m%omega_P(2,i_pt)*x%tmd_x(2,i_pt) )
 
-            F_y_tmdX_P(i_pt) = - p%M_X *( a_G(2,i_pt) - rddot_P(2,i_pt) - (alpha_P(3,i_pt) + omega_P(1,i_pt)*omega_P(2,i_pt))*x%tmd_x(1,i_pt) - 2*omega_P(3,i_pt)*x%tmd_x(2,i_pt))
-            F_z_tmdX_P(i_pt) = - p%M_X * (a_G(3,i_pt) - rddot_P(3,i_pt) + (alpha_P(2,i_pt) - omega_P(1,i_pt)*omega_P(3,i_pt))*x%tmd_x(1,i_pt) + 2*omega_P(2,i_pt)*x%tmd_x(2,i_pt))
-         enddo
+            F_tmdY_P(1) = - p%M_Y * ( m%a_G(1,i_pt) - m%rddot_P(1,i_pt) + (m%alpha_P(3,i_pt) - m%omega_P(1,i_pt)*m%omega_P(2,i_pt))*x%tmd_x(3,i_pt) + 2*m%omega_P(3,i_pt)*x%tmd_x(4,i_pt) )
+            F_tmdY_P(3) = - p%M_Y * ( m%a_G(3,i_pt) - m%rddot_P(3,i_pt) - (m%alpha_P(1,i_pt) + m%omega_P(2,i_pt)*m%omega_P(3,i_pt))*x%tmd_x(3,i_pt) - 2*m%omega_P(1,i_pt)*x%tmd_x(4,i_pt) )
 
-         ! forces in local coordinates
-         do i_pt=1,p%NumMeshPts
-            F_P(1,i_pt) =  p%K_X * x%tmd_x(1,i_pt) + m%C_ctrl(1) * x%tmd_x(2,i_pt) + m%C_Brake(1) * x%tmd_x(2,i_pt) - m%F_stop(1) - m%F_ext(1) - m%F_fr(1) - F_x_tmdY_P(i_pt) + m%F_table(1)
-            F_P(2,i_pt) =  p%K_Y * x%tmd_x(3,i_pt) + m%C_ctrl(2) * x%tmd_x(4,i_pt) + m%C_Brake(2) * x%tmd_x(4,i_pt) - m%F_stop(2) - m%F_ext(2) - m%F_fr(2) - F_y_tmdX_P(i_pt) + m%F_table(2)
-            F_P(3,i_pt) = - F_z_tmdX_P(i_pt) - F_z_tmdY_P(i_pt)
-         enddo
+            ! inertial contributions from mass of TMDs and acceleration of point
+            ! forces and moments in local coordinates
+            m%F_P(1,i_pt) =  p%K_X * x%tmd_x(1,i_pt) + m%C_ctrl(1,i_pt) * x%tmd_x(2,i_pt) + m%C_Brake(1,i_pt) * x%tmd_x(2,i_pt) - m%F_stop(1,i_pt) - m%F_ext(1,i_pt) - m%F_fr(1,i_pt) - F_tmdY_P(1) + m%F_table(1,i_pt)
+            m%F_P(2,i_pt) =  p%K_Y * x%tmd_x(3,i_pt) + m%C_ctrl(2,i_pt) * x%tmd_x(4,i_pt) + m%C_Brake(2,i_pt) * x%tmd_x(4,i_pt) - m%F_stop(2,i_pt) - m%F_ext(2,i_pt) - m%F_fr(2,i_pt) - F_tmdX_P(2) + m%F_table(2,i_pt)
+            m%F_P(3,i_pt) = - F_tmdX_P(3) - F_tmdY_P(3)
 
-         ! inertial contributions from mass of TMDs and acceleration of nacelle
-         ! Moments on nacelle in local coordinates
-         do i_pt=1,p%NumMeshPts
-            M_P(1,i_pt) =  - F_z_tmdY_P(i_pt)  * x%tmd_x(3,i_pt)
-            M_P(2,i_pt) =    F_z_tmdX_P(i_pt)  * x%tmd_x(1,i_pt)
-            M_P(3,i_pt) = (- F_x_tmdY_P(i_pt)) * x%tmd_x(3,i_pt) + (F_y_tmdX_P(i_pt)) * x%tmd_x(1,i_pt)
-         enddo
+            m%M_P(1,i_pt) =  - F_tmdY_P(3)  * x%tmd_x(3,i_pt)
+            m%M_P(2,i_pt) =    F_tmdX_P(3)  * x%tmd_x(1,i_pt)
+            m%M_P(3,i_pt) =  - F_tmdY_P(1)  * x%tmd_x(3,i_pt) + F_tmdX_P(2) * x%tmd_x(1,i_pt)
 
-         do i_pt=1,p%NumMeshPts
-            ! forces in global coordinates
-            y%Mesh(i_pt)%Force(:,1) =  matmul(transpose(u%Mesh(i_pt)%Orientation(:,:,1)),F_P(1:3,i_pt))
-            ! moments in global coordinates
-            y%Mesh(i_pt)%Moment(:,1) = matmul(transpose(u%Mesh(i_pt)%Orientation(:,:,1)),M_P(1:3,i_pt))
+            ! forces and moments in global coordinates
+            y%Mesh(i_pt)%Force(:,1) =  matmul(transpose(u%Mesh(i_pt)%Orientation(:,:,1)),m%F_P(1:3,i_pt))
+            y%Mesh(i_pt)%Moment(:,1) = matmul(transpose(u%Mesh(i_pt)%Orientation(:,:,1)),m%M_P(1:3,i_pt))
          enddo
 
       ELSE IF (p%TMD_DOF_MODE == DOFMode_Omni) THEN
 
-         !note: m%F_k_x and m%F_k_y are computed earlier in TMD_CalcContStateDeriv
+         !note: m%F_k is computed earlier in TMD_CalcContStateDeriv
 
          ! tmd external forces of dependent degrees:
          do i_pt=1,p%NumMeshPts
-            F_x_tmdXY_P_N(i_pt) = 0
-            F_y_tmdXY_P_N(i_pt) = 0
-            F_z_tmdXY_P_N(i_pt) = - p%M_XY * (a_G(3,i_pt) - rddot_P(3,i_pt) - (alpha_P(1,i_pt) + omega_P(2,i_pt)*omega_P(3,i_pt))*x%tmd_x(3,i_pt) + (alpha_P(2,i_pt) - omega_P(1,i_pt)*omega_P(3,i_pt))*x%tmd_x(1,i_pt) - 2*omega_P(1,i_pt)*x%tmd_x(4,i_pt) + 2*omega_P(2,i_pt)*x%tmd_x(2,i_pt))
-         enddo
+            F_tmdXY_P(1) = 0
+            F_tmdXY_P(2) = 0
+            F_tmdXY_P(3) = - p%M_XY * (  m%a_G(3,i_pt) - m%rddot_P(3,i_pt)                                                    &
+                                                - (m%alpha_P(1,i_pt) + m%omega_P(2,i_pt)*m%omega_P(3,i_pt))*x%tmd_x(3,i_pt)   &
+                                                + (m%alpha_P(2,i_pt) - m%omega_P(1,i_pt)*m%omega_P(3,i_pt))*x%tmd_x(1,i_pt)   &
+                                                - 2*m%omega_P(1,i_pt)*x%tmd_x(4,i_pt)                                         &
+                                                + 2*m%omega_P(2,i_pt)*x%tmd_x(2,i_pt)       )
 
-         ! forces in local coordinates
-         do i_pt=1,p%NumMeshPts
-            F_P(1,i_pt) =  p%K_X * x%tmd_x(1,i_pt) + m%C_ctrl(1) * x%tmd_x(2,i_pt) + m%C_Brake(1) * x%tmd_x(2,i_pt) - m%F_stop(1) - m%F_ext(1) - m%F_fr(1) - F_x_tmdXY_P_N(i_pt) + m%F_table(1)*(m%F_k_x)
-            F_P(2,i_pt) =  p%K_Y * x%tmd_x(3,i_pt) + m%C_ctrl(2) * x%tmd_x(4,i_pt) + m%C_Brake(2) * x%tmd_x(4,i_pt) - m%F_stop(2) - m%F_ext(2) - m%F_fr(2) - F_y_tmdXY_P_N(i_pt) + m%F_table(2)*(m%F_k_y)
-            F_P(3,i_pt) = - F_z_tmdXY_P_N(i_pt)
+            ! inertial contributions from mass of TMDs and acceleration of point
+            ! forces and moments in local coordinates
+            m%F_P(1,i_pt) =  p%K_X * x%tmd_x(1,i_pt) + m%C_ctrl(1,i_pt) * x%tmd_x(2,i_pt) + m%C_Brake(1,i_pt) * x%tmd_x(2,i_pt) - m%F_stop(1,i_pt) - m%F_ext(1,i_pt) - m%F_fr(1,i_pt) - F_tmdXY_P(1) + m%F_table(1,i_pt)*(m%F_k(1,i_pt))
+            m%F_P(2,i_pt) =  p%K_Y * x%tmd_x(3,i_pt) + m%C_ctrl(2,i_pt) * x%tmd_x(4,i_pt) + m%C_Brake(2,i_pt) * x%tmd_x(4,i_pt) - m%F_stop(2,i_pt) - m%F_ext(2,i_pt) - m%F_fr(2,i_pt) - F_tmdXY_P(2) + m%F_table(2,i_pt)*(m%F_k(2,i_pt))
+            m%F_P(3,i_pt) = - F_tmdXY_P(3)
 
-            ! inertial contributions from mass of TMDs and acceleration of nacelle
-            ! Moments on nacelle in local coordinates
-            M_P(1,i_pt) = - F_z_tmdXY_P_N(i_pt) * x%tmd_x(3,i_pt)
-            M_P(2,i_pt) =   F_z_tmdXY_P_N(i_pt) * x%tmd_x(1,i_pt)
-            M_P(3,i_pt) = (- F_x_tmdXY_P_N(i_pt)) * x%tmd_x(3,i_pt) + (F_y_tmdXY_P_N(i_pt)) * x%tmd_x(1,i_pt)
-         enddo
+            m%M_P(1,i_pt) = - F_tmdXY_P(3) * x%tmd_x(3,i_pt)
+            m%M_P(2,i_pt) =   F_tmdXY_P(3) * x%tmd_x(1,i_pt)
+            m%M_P(3,i_pt) = - F_tmdXY_P(1) * x%tmd_x(3,i_pt) + F_tmdXY_P(2) * x%tmd_x(1,i_pt)
 
-         do i_pt=1,p%NumMeshPts
-            ! forces in global coordinates
-            y%Mesh(i_pt)%Force(:,1) =  matmul(transpose(u%Mesh(i_pt)%Orientation(:,:,1)),F_P(1:3,i_pt))
-            ! moments in global coordinates
-            y%Mesh(i_pt)%Moment(:,1) = matmul(transpose(u%Mesh(i_pt)%Orientation(:,:,1)),M_P(1:3,i_pt))
+            ! forces and moments in global coordinates
+            y%Mesh(i_pt)%Force(:,1) =  matmul(transpose(u%Mesh(i_pt)%Orientation(:,:,1)),m%F_P(1:3,i_pt))
+            y%Mesh(i_pt)%Moment(:,1) = matmul(transpose(u%Mesh(i_pt)%Orientation(:,:,1)),m%M_P(1:3,i_pt))
          enddo
 
       ELSE IF (p%TMD_DOF_MODE == DOFMode_TLCD) THEN
 
          do i_pt=1,p%NumMeshPts
             !fore-aft TLCD external forces of dependent degrees
-            F_x_tlcd_WR_N(i_pt) = p%rho_FA*p%area_FA*((p%L_FA-p%B_FA)/2+x%tmd_x(1,i_pt))*(                      &
-                                       rddot_P(1,i_pt)                                                          &
-                                    +2*omega_P(2,i_pt)*x%tmd_x(2,i_pt)                                          &
-                                      +alpha_P(2,i_pt)*((p%L_FA-p%B_FA)/2+x%tmd_x(1,i_pt))                      &
-                                      -omega_P(2,i_pt)*omega_P(2,i_pt)*p%B_FA*.5                                &
-                                      -omega_P(3,i_pt)*omega_P(3,i_pt)*p%B_FA*.5                                &
-                                      +omega_P(3,i_pt)*omega_P(1,i_pt)*((p%L_FA-p%B_FA)/2+x%tmd_x(1,i_pt))      &
-                                      -a_G(1,i_pt)  )
-            F_y_tlcd_WR_N(i_pt) = p%rho_FA*p%area_FA*((p%L_FA-p%B_FA)/2+x%tmd_x(1,i_pt))*(                      &
-                                       rddot_P(2,i_pt)                                                          &
-                                    -2*omega_P(1,i_pt)*x%tmd_x(2,i_pt)                                          &
-                                      +alpha_P(3,i_pt)*p%B_FA*.5                                                &
-                                      -alpha_P(1,i_pt)*((p%L_FA-p%B_FA)/2+x%tmd_x(1,i_pt))                      &
-                                      +omega_P(3,i_pt)*omega_P(2,i_pt)*((p%L_FA-p%B_FA)/2+x%tmd_x(1,i_pt))      &
-                                      +omega_P(1,i_pt)*omega_P(2,i_pt)*p%B_FA*.5                                &
-                                      -a_G(2,i_pt)  )
-            F_x_tlcd_WL_N(i_pt) = p%rho_FA*p%area_FA*((p%L_FA-p%B_FA)/2-x%tmd_x(1,i_pt))*(                      &
-                                       rddot_P(1,i_pt)                                                          &
-                                    -2*omega_P(2,i_pt)*x%tmd_x(2,i_pt)                                          &
-                                      +alpha_P(2,i_pt)*((p%L_FA-p%B_FA)/2-x%tmd_x(1,i_pt))                      &
-                                      +omega_P(2,i_pt)*omega_P(2,i_pt)*p%B_FA*.5                                &
-                                      +omega_P(3,i_pt)*omega_P(3,i_pt)*p%B_FA*.5                                &
-                                      +omega_P(3,i_pt)*omega_P(1,i_pt)*((p%L_FA-p%B_FA)/2-x%tmd_x(1,i_pt))      &
-                                      -a_G(1,i_pt)  )
-            F_y_tlcd_WL_N(i_pt) = p%rho_FA*p%area_FA*((p%L_FA-p%B_FA)/2-x%tmd_x(1,i_pt))*(                      &
-                                       rddot_P(2,i_pt)                                                          &
-                                    +2*omega_P(1,i_pt)*x%tmd_x(2,i_pt)                                          &
-                                      -alpha_P(3,i_pt)*p%B_FA*.5                                                &
-                                      -alpha_P(1,i_pt)*((p%L_FA-p%B_FA)/2-x%tmd_x(1,i_pt))                      &
-                                      +omega_P(3,i_pt)*omega_P(2,i_pt)*((p%L_FA-p%B_FA)/2-x%tmd_x(1,i_pt))      &
-                                      -omega_P(1,i_pt)*omega_P(2,i_pt)*p%B_FA*.5                                &
-                                      -a_G(2,i_pt)  )
-            F_y_tlcd_WH_N(i_pt) = p%rho_FA*p%area_FA/p%area_ratio_FA*p%B_FA*(            &
-                                       rddot_P(2,i_pt)                                   &
-                                    +2*omega_P(3,i_pt)*p%area_ratio_FA*x%tmd_x(2,i_pt)   &
-                                      -a_G(2,i_pt)  )
-            F_z_tlcd_WH_N(i_pt) = p%rho_FA*p%area_FA/p%area_ratio_FA*p%B_FA*(            &
-                                       rddot_P(3,i_pt)                                   &
-                                    -2*omega_P(2,i_pt)*p%area_ratio_FA*x%tmd_x(2,i_pt)   &
-                                      -a_G(3,i_pt)  )
+            F_x_tlcd_WR_N = p%rho_FA*p%area_FA*((p%L_FA-p%B_FA)/2+x%tmd_x(1,i_pt))*(                              &
+                                       m%rddot_P(1,i_pt)                                                          &
+                                    +2*m%omega_P(2,i_pt)*x%tmd_x(2,i_pt)                                          &
+                                      +m%alpha_P(2,i_pt)*((p%L_FA-p%B_FA)/2+x%tmd_x(1,i_pt))                      &
+                                      -m%omega_P(2,i_pt)*m%omega_P(2,i_pt)*p%B_FA*.5                              &
+                                      -m%omega_P(3,i_pt)*m%omega_P(3,i_pt)*p%B_FA*.5                              &
+                                      +m%omega_P(3,i_pt)*m%omega_P(1,i_pt)*((p%L_FA-p%B_FA)/2+x%tmd_x(1,i_pt))    &
+                                      -m%a_G(1,i_pt)  )
+            F_y_tlcd_WR_N = p%rho_FA*p%area_FA*((p%L_FA-p%B_FA)/2+x%tmd_x(1,i_pt))*(                              &
+                                       m%rddot_P(2,i_pt)                                                          &
+                                    -2*m%omega_P(1,i_pt)*x%tmd_x(2,i_pt)                                          &
+                                      +m%alpha_P(3,i_pt)*p%B_FA*.5                                                &
+                                      -m%alpha_P(1,i_pt)*((p%L_FA-p%B_FA)/2+x%tmd_x(1,i_pt))                      &
+                                      +m%omega_P(3,i_pt)*m%omega_P(2,i_pt)*((p%L_FA-p%B_FA)/2+x%tmd_x(1,i_pt))    &
+                                      +m%omega_P(1,i_pt)*m%omega_P(2,i_pt)*p%B_FA*.5                              &
+                                      -m%a_G(2,i_pt)  )
+            F_x_tlcd_WL_N = p%rho_FA*p%area_FA*((p%L_FA-p%B_FA)/2-x%tmd_x(1,i_pt))*(                              &
+                                       m%rddot_P(1,i_pt)                                                          &
+                                    -2*m%omega_P(2,i_pt)*x%tmd_x(2,i_pt)                                          &
+                                      +m%alpha_P(2,i_pt)*((p%L_FA-p%B_FA)/2-x%tmd_x(1,i_pt))                      &
+                                      +m%omega_P(2,i_pt)*m%omega_P(2,i_pt)*p%B_FA*.5                              &
+                                      +m%omega_P(3,i_pt)*m%omega_P(3,i_pt)*p%B_FA*.5                              &
+                                      +m%omega_P(3,i_pt)*m%omega_P(1,i_pt)*((p%L_FA-p%B_FA)/2-x%tmd_x(1,i_pt))    &
+                                      -m%a_G(1,i_pt)  )
+            F_y_tlcd_WL_N = p%rho_FA*p%area_FA*((p%L_FA-p%B_FA)/2-x%tmd_x(1,i_pt))*(                              &
+                                       m%rddot_P(2,i_pt)                                                          &
+                                    +2*m%omega_P(1,i_pt)*x%tmd_x(2,i_pt)                                          &
+                                      -m%alpha_P(3,i_pt)*p%B_FA*.5                                                &
+                                      -m%alpha_P(1,i_pt)*((p%L_FA-p%B_FA)/2-x%tmd_x(1,i_pt))                      &
+                                      +m%omega_P(3,i_pt)*m%omega_P(2,i_pt)*((p%L_FA-p%B_FA)/2-x%tmd_x(1,i_pt))    &
+                                      -m%omega_P(1,i_pt)*m%omega_P(2,i_pt)*p%B_FA*.5                              &
+                                      -m%a_G(2,i_pt)  )
+            F_y_tlcd_WH_N = p%rho_FA*p%area_FA/p%area_ratio_FA*p%B_FA*(                   &
+                                       m%rddot_P(2,i_pt)                                  &
+                                    +2*m%omega_P(3,i_pt)*p%area_ratio_FA*x%tmd_x(2,i_pt)  &
+                                      -m%a_G(2,i_pt)  )
+            F_z_tlcd_WH_N = p%rho_FA*p%area_FA/p%area_ratio_FA*p%B_FA*(                   &
+                                       m%rddot_P(3,i_pt)                                  &
+                                    -2*m%omega_P(2,i_pt)*p%area_ratio_FA*x%tmd_x(2,i_pt)  &
+                                      -m%a_G(3,i_pt)  )
 
             !side-to-side TLCD external forces of dependent degrees
-            F_x_otlcd_WB_N(i_pt) = p%rho_SS*p%area_SS*((p%L_SS-p%B_SS)/2+x%tmd_x(3,i_pt))*(                    &
-                                         rddot_P(1,i_pt)                                                       &
-                                      +2*omega_P(2,i_pt)*x%tmd_x(4,i_pt)                                       &
-                                        +alpha_P(2,i_pt)*((p%L_SS-p%B_SS)/2+x%tmd_x(3,i_pt))                   &
-                                        +alpha_P(3,i_pt)*p%B_SS/2-omega_P(2,i_pt)*omega_P(1,i_pt)*p%B_SS/2     &
-                                        +omega_P(3,i_pt)*omega_P(1,i_pt)*((p%L_SS-p%B_SS)/2+x%tmd_x(3,i_pt))   &
-                                        -a_G(1,i_pt)   )
-            F_y_otlcd_WB_N(i_pt) = p%rho_SS*p%area_SS*((p%L_SS-p%B_SS)/2+x%tmd_x(3,i_pt))*(                    &
-                                         rddot_P(2,i_pt)                                                       &
-                                      -2*omega_P(1,i_pt)*x%tmd_x(4,i_pt)                                       &
-                                        -alpha_P(1,i_pt)*((p%L_SS-p%B_SS)/2+x%tmd_x(3,i_pt))                   &
-                                        +omega_P(3,i_pt)*omega_P(2,i_pt)*((p%L_SS-p%B_SS)/2+x%tmd_x(3,i_pt))   &
-                                        +omega_P(3,i_pt)*omega_P(3,i_pt)*p%B_SS/2                              &
-                                        +omega_P(1,i_pt)*omega_P(1,i_pt)*p%B_SS/2                              &
-                                        -a_G(2,i_pt)   )
-            F_x_otlcd_WF_N(i_pt) = p%rho_SS*p%area_SS*((p%L_SS-p%B_SS)/2-x%tmd_x(3,i_pt))*(                    &
-                                         rddot_P(1,i_pt)                                                       &
-                                      -2*omega_P(2,i_pt)*x%tmd_x(4,i_pt)                                       &
-                                        +alpha_P(2,i_pt)*((p%L_SS-p%B_SS)/2-x%tmd_x(3,i_pt))                   &
-                                        -alpha_P(2,i_pt)*p%B_SS/2                                              &
-                                        +omega_P(2,i_pt)*omega_P(1,i_pt)*p%B_SS/2                              &
-                                        +omega_P(3,i_pt)*omega_P(1,i_pt)*((p%L_SS-p%B_SS)/2-x%tmd_x(3,i_pt))   &
-                                        -a_G(1,i_pt)   )
-            F_y_otlcd_WF_N(i_pt) = p%rho_SS*p%area_SS*((p%L_SS-p%B_SS)/2-x%tmd_x(3,i_pt))*(                    &
-                                         rddot_P(2,i_pt)                                                       &
-                                      +2*omega_P(1,i_pt)*x%tmd_x(4,i_pt)                                       &
-                                        -alpha_P(1,i_pt)*((p%L_SS-p%B_SS)/2-x%tmd_x(3,i_pt))                   &
-                                        +omega_P(3,i_pt)*omega_P(2,i_pt)*((p%L_SS-p%B_SS)/2-x%tmd_x(3,i_pt))   &
-                                        -omega_P(3,i_pt)*omega_P(3,i_pt)*p%B_SS/2                              &
-                                        -omega_P(1,i_pt)*omega_P(1,i_pt)*p%B_SS/2                              &
-                                        -a_G(2,i_pt)   )
-            F_x_otlcd_WH_N(i_pt) = p%rho_SS*p%area_SS/p%area_ratio_SS*p%B_SS*(              &
-                                          rddot_P(1,i_pt)                                   &
-                                       -2*omega_P(3,i_pt)*p%area_ratio_SS*x%tmd_x(4,i_pt)   &
-                                         -a_G(1,i_pt)  )
-            F_z_otlcd_WH_N(i_pt) = p%rho_SS*p%area_SS/p%area_ratio_SS*p%B_SS*(              &
-                                          rddot_P(3,i_pt)                                   &
-                                       +2*omega_P(1,i_pt)*p%area_ratio_SS*x%tmd_x(4,i_pt)   &
-                                         -a_G(3,i_pt)  )
-         enddo
+            F_x_otlcd_WB_N = p%rho_SS*p%area_SS*((p%L_SS-p%B_SS)/2+x%tmd_x(3,i_pt))*(                             &
+                                         m%rddot_P(1,i_pt)                                                        &
+                                      +2*m%omega_P(2,i_pt)*x%tmd_x(4,i_pt)                                        &
+                                        +m%alpha_P(2,i_pt)*((p%L_SS-p%B_SS)/2+x%tmd_x(3,i_pt))                    &
+                                        +m%alpha_P(3,i_pt)*p%B_SS/2-m%omega_P(2,i_pt)*m%omega_P(1,i_pt)*p%B_SS/2  &
+                                        +m%omega_P(3,i_pt)*m%omega_P(1,i_pt)*((p%L_SS-p%B_SS)/2+x%tmd_x(3,i_pt))  &
+                                        -m%a_G(1,i_pt)   )
+            F_y_otlcd_WB_N = p%rho_SS*p%area_SS*((p%L_SS-p%B_SS)/2+x%tmd_x(3,i_pt))*(                             &
+                                         m%rddot_P(2,i_pt)                                                        &
+                                      -2*m%omega_P(1,i_pt)*x%tmd_x(4,i_pt)                                        &
+                                        -m%alpha_P(1,i_pt)*((p%L_SS-p%B_SS)/2+x%tmd_x(3,i_pt))                    &
+                                        +m%omega_P(3,i_pt)*m%omega_P(2,i_pt)*((p%L_SS-p%B_SS)/2+x%tmd_x(3,i_pt))  &
+                                        +m%omega_P(3,i_pt)*m%omega_P(3,i_pt)*p%B_SS/2                             &
+                                        +m%omega_P(1,i_pt)*m%omega_P(1,i_pt)*p%B_SS/2                             &
+                                        -m%a_G(2,i_pt)   )
+            F_x_otlcd_WF_N = p%rho_SS*p%area_SS*((p%L_SS-p%B_SS)/2-x%tmd_x(3,i_pt))*(                             &
+                                         m%rddot_P(1,i_pt)                                                        &
+                                      -2*m%omega_P(2,i_pt)*x%tmd_x(4,i_pt)                                        &
+                                        +m%alpha_P(2,i_pt)*((p%L_SS-p%B_SS)/2-x%tmd_x(3,i_pt))                    &
+                                        -m%alpha_P(2,i_pt)*p%B_SS/2                                               &
+                                        +m%omega_P(2,i_pt)*m%omega_P(1,i_pt)*p%B_SS/2                             &
+                                        +m%omega_P(3,i_pt)*m%omega_P(1,i_pt)*((p%L_SS-p%B_SS)/2-x%tmd_x(3,i_pt))  &
+                                        -m%a_G(1,i_pt)   )
+            F_y_otlcd_WF_N = p%rho_SS*p%area_SS*((p%L_SS-p%B_SS)/2-x%tmd_x(3,i_pt))*(                             &
+                                         m%rddot_P(2,i_pt)                                                        &
+                                      +2*m%omega_P(1,i_pt)*x%tmd_x(4,i_pt)                                        &
+                                        -m%alpha_P(1,i_pt)*((p%L_SS-p%B_SS)/2-x%tmd_x(3,i_pt))                    &
+                                        +m%omega_P(3,i_pt)*m%omega_P(2,i_pt)*((p%L_SS-p%B_SS)/2-x%tmd_x(3,i_pt))  &
+                                        -m%omega_P(3,i_pt)*m%omega_P(3,i_pt)*p%B_SS/2                             &
+                                        -m%omega_P(1,i_pt)*m%omega_P(1,i_pt)*p%B_SS/2                             &
+                                        -m%a_G(2,i_pt)   )
+            F_x_otlcd_WH_N = p%rho_SS*p%area_SS/p%area_ratio_SS*p%B_SS*(                     &
+                                          m%rddot_P(1,i_pt)                                  &
+                                       -2*m%omega_P(3,i_pt)*p%area_ratio_SS*x%tmd_x(4,i_pt)  &
+                                         -m%a_G(1,i_pt)  )
+            F_z_otlcd_WH_N = p%rho_SS*p%area_SS/p%area_ratio_SS*p%B_SS*(                     &
+                                          m%rddot_P(3,i_pt)                                  &
+                                       +2*m%omega_P(1,i_pt)*p%area_ratio_SS*x%tmd_x(4,i_pt)  &
+                                         -m%a_G(3,i_pt)  )
 
-         !forces in local coordinates (from fore-aft and side-to-side TLCDs)
-         do i_pt=1,p%NumMeshPts
-            F_P(1,i_pt) = -F_x_tlcd_WR_N(i_pt) - F_x_tlcd_WL_N(i_pt) - p%rho_FA*(p%area_FA/p%area_ratio_FA)*p%B_FA*dxdt%tmd_x(2,i_pt)*p%area_ratio_FA + F_x_otlcd_WB_N(i_pt) + F_x_otlcd_WF_N(i_pt) + F_x_otlcd_WH_N(i_pt)
-            F_P(2,i_pt) = +F_y_tlcd_WR_N(i_pt) + F_y_tlcd_WL_N(i_pt) - p%rho_SS*(p%area_SS/p%area_ratio_SS)*p%B_SS*dxdt%tmd_x(4,i_pt)*p%area_ratio_SS + F_y_tlcd_WH_N(i_pt)  - F_y_otlcd_WB_N(i_pt) - F_y_otlcd_WF_N(i_pt)
-            F_P(3,i_pt) = -F_z_tlcd_WH_N(i_pt) - F_z_otlcd_WH_N(i_pt)
-         enddo
+            ! forces and moments in local coordinates (from fore-aft and side-to-side TLCDs)
+            m%F_P(1,i_pt) = -F_x_tlcd_WR_N - F_x_tlcd_WL_N - p%rho_FA*(p%area_FA/p%area_ratio_FA)*p%B_FA*dxdt%tmd_x(2,i_pt)*p%area_ratio_FA + F_x_otlcd_WB_N + F_x_otlcd_WF_N + F_x_otlcd_WH_N
+            m%F_P(2,i_pt) = +F_y_tlcd_WR_N + F_y_tlcd_WL_N - p%rho_SS*(p%area_SS/p%area_ratio_SS)*p%B_SS*dxdt%tmd_x(4,i_pt)*p%area_ratio_SS + F_y_tlcd_WH_N  - F_y_otlcd_WB_N - F_y_otlcd_WF_N
+            m%F_P(3,i_pt) = -F_z_tlcd_WH_N - F_z_otlcd_WH_N
 
-         !moments in local coordinates (from fore-aft and side-to-side TLCDs)
-         do i_pt=1,p%NumMeshPts
-            M_P(1,i_pt) =  F_y_tlcd_WR_N(i_pt)*((p%L_FA-p%B_FA)/2+x%tmd_x(1,i_pt)) + F_y_tlcd_WL_N(i_pt)*((p%L_FA-p%B_FA)/2-x%tmd_x(1,i_pt)) - F_y_otlcd_WB_N(i_pt)*((p%L_SS-p%B_SS)/2+x%tmd_x(3,i_pt)) - F_y_otlcd_WF_N(i_pt)*((p%L_SS-p%B_SS)/2-x%tmd_x(3,i_pt))
-            M_P(2,i_pt) = -F_x_tlcd_WR_N(i_pt)*((p%L_FA-p%B_FA)/2+x%tmd_x(1,i_pt)) - F_x_tlcd_WL_N(i_pt)*((p%L_FA-p%B_FA)/2-x%tmd_x(1,i_pt)) + F_x_otlcd_WB_N(i_pt)*((p%L_SS-p%B_SS)/2+x%tmd_x(3,i_pt)) + F_x_otlcd_WF_N(i_pt)*((p%L_SS-p%B_SS)/2-x%tmd_x(3,i_pt))
-            M_P(3,i_pt) =  F_y_tlcd_WR_N(i_pt)*p%B_FA*.5 - F_y_tlcd_WL_N(i_pt)*p%B_FA*.5 + F_x_otlcd_WB_N(i_pt)*p%B_SS*.5 - F_x_otlcd_WF_N(i_pt)*p%B_SS*.5
-         enddo
+            m%M_P(1,i_pt) =  F_y_tlcd_WR_N*((p%L_FA-p%B_FA)/2+x%tmd_x(1,i_pt)) + F_y_tlcd_WL_N*((p%L_FA-p%B_FA)/2-x%tmd_x(1,i_pt)) - F_y_otlcd_WB_N*((p%L_SS-p%B_SS)/2+x%tmd_x(3,i_pt)) - F_y_otlcd_WF_N*((p%L_SS-p%B_SS)/2-x%tmd_x(3,i_pt))
+            m%M_P(2,i_pt) = -F_x_tlcd_WR_N*((p%L_FA-p%B_FA)/2+x%tmd_x(1,i_pt)) - F_x_tlcd_WL_N*((p%L_FA-p%B_FA)/2-x%tmd_x(1,i_pt)) + F_x_otlcd_WB_N*((p%L_SS-p%B_SS)/2+x%tmd_x(3,i_pt)) + F_x_otlcd_WF_N*((p%L_SS-p%B_SS)/2-x%tmd_x(3,i_pt))
+            m%M_P(3,i_pt) =  F_y_tlcd_WR_N*p%B_FA*.5 - F_y_tlcd_WL_N*p%B_FA*.5 + F_x_otlcd_WB_N*p%B_SS*.5 - F_x_otlcd_WF_N*p%B_SS*.5
 
-         do i_pt=1,p%NumMeshPts
-            !forces in global coordinates
-            y%Mesh(i_pt)%Force(:,1)  = matmul(transpose(u%Mesh(i_pt)%Orientation(:,:,1)), F_P(1:3,i_pt))
-            !moments in global coordinates
-            y%Mesh(i_pt)%Moment(:,1) = matmul(transpose(u%Mesh(i_pt)%Orientation(:,:,1)), M_P(1:3,i_pt))
+            ! forces and moments in global coordinates
+            y%Mesh(i_pt)%Force(:,1)  = matmul(transpose(u%Mesh(i_pt)%Orientation(:,:,1)), m%F_P(1:3,i_pt))
+            y%Mesh(i_pt)%Moment(:,1) = matmul(transpose(u%Mesh(i_pt)%Orientation(:,:,1)), m%M_P(1:3,i_pt))
          enddo
       ENDIF
 
       IF ( p%TMD_DOF_MODE == DOFMode_Prescribed ) THEN
+         !  Note that the prescribed force is applied the same to all Mesh pts
+         !  that are passed into this instance of the TMD
          do i=1,3
             ! Get interpolated force   -- this is not in any particular coordinate system yet
-            F_P(i,:)    = InterpStp( real(Time,ReKi), p%TMD_PrescribedForce(1,:),p%TMD_PrescribedForce(i+1,:),m%PrescribedInterpIdx, size(p%TMD_PrescribedForce,2))
+            m%F_P(i,:)    = InterpStp( real(Time,ReKi), p%TMD_PrescribedForce(1,:),p%TMD_PrescribedForce(i+1,:),m%PrescribedInterpIdx, size(p%TMD_PrescribedForce,2))
             ! Get interpolated moment  -- this is not in any particular coordinate system yet
-            M_P(i,:)    = InterpStp( real(Time,ReKi), p%TMD_PrescribedForce(1,:),p%TMD_PrescribedForce(i+4,:),m%PrescribedInterpIdx, size(p%TMD_PrescribedForce,2))
+            m%M_P(i,:)    = InterpStp( real(Time,ReKi), p%TMD_PrescribedForce(1,:),p%TMD_PrescribedForce(i+4,:),m%PrescribedInterpIdx, size(p%TMD_PrescribedForce,2))
          enddo
          if (p%PrescribedForcesCoordSys == 0_IntKi) then
             ! Global coords
             do i_pt=1,p%NumMeshPts
-               y%Mesh(i_pt)%Force(1:3,1)  =  F_P(1:3,i_pt)
-               y%Mesh(i_pt)%Moment(1:3,1) =  M_P(1:3,i_pt)
+               y%Mesh(i_pt)%Force(1:3,1)  =  m%F_P(1:3,i_pt)
+               y%Mesh(i_pt)%Moment(1:3,1) =  m%M_P(1:3,i_pt)
             enddo
          elseif (p%PrescribedForcesCoordSys == 1_IntKi) then
             ! local coords
             do i_pt=1,p%NumMeshPts
-               y%Mesh(i_pt)%Force(1:3,1)  =  matmul(transpose(u%Mesh(i_pt)%Orientation(:,:,1)), F_P(1:3,i_pt))
-               y%Mesh(i_pt)%Moment(1:3,1) =  matmul(transpose(u%Mesh(i_pt)%Orientation(:,:,1)), M_P(1:3,i_pt))
+               y%Mesh(i_pt)%Force(1:3,1)  =  matmul(transpose(u%Mesh(i_pt)%Orientation(:,:,1)), m%F_P(1:3,i_pt))
+               y%Mesh(i_pt)%Moment(1:3,1) =  matmul(transpose(u%Mesh(i_pt)%Orientation(:,:,1)), m%M_P(1:3,i_pt))
             enddo
          endif
       END IF
+
+      call CleanUp()
+
 CONTAINS
    subroutine CleanUp()
-
-      if (allocated(a_G          )) deallocate(a_G          )
-      if (allocated(F_P          )) deallocate(F_P          )
-      if (allocated(M_P          )) deallocate(M_P          )
-      if (allocated(rddot_P      )) deallocate(rddot_P      )
-      if (allocated(omega_P      )) deallocate(omega_P      )
-      if (allocated(alpha_P      )) deallocate(alpha_P      )
-      if (allocated(F_x_tmdY_P   )) deallocate(F_x_tmdY_P   )
-      if (allocated(F_z_tmdY_P   )) deallocate(F_z_tmdY_P   )
-      if (allocated(F_y_tmdX_P   )) deallocate(F_y_tmdX_P   )
-      if (allocated(F_z_tmdX_P   )) deallocate(F_z_tmdX_P   )
-      if (allocated(F_x_tmdXY_P_N)) deallocate(F_x_tmdXY_P_N)
-      if (allocated(F_z_tmdXY_P_N)) deallocate(F_z_tmdXY_P_N)
-      if (allocated(F_y_tmdXY_P_N)) deallocate(F_y_tmdXY_P_N)
-
-      if (allocated(F_x_tlcd_WR_N )) deallocate(F_x_tlcd_WR_N )
-      if (allocated(F_y_tlcd_WR_N )) deallocate(F_y_tlcd_WR_N )
-      if (allocated(F_x_tlcd_WL_N )) deallocate(F_x_tlcd_WL_N )
-      if (allocated(F_y_tlcd_WL_N )) deallocate(F_y_tlcd_WL_N )
-      if (allocated(F_y_tlcd_WH_N )) deallocate(F_y_tlcd_WH_N )
-      if (allocated(F_z_tlcd_WH_N )) deallocate(F_z_tlcd_WH_N )
-      if (allocated(F_x_otlcd_WB_N)) deallocate(F_x_otlcd_WB_N)
-      if (allocated(F_y_otlcd_WB_N)) deallocate(F_y_otlcd_WB_N)
-      if (allocated(F_x_otlcd_WF_N)) deallocate(F_x_otlcd_WF_N)
-      if (allocated(F_y_otlcd_WF_N)) deallocate(F_y_otlcd_WF_N)
-      if (allocated(F_x_otlcd_WH_N)) deallocate(F_x_otlcd_WH_N)
-      if (allocated(F_z_otlcd_WH_N)) deallocate(F_z_otlcd_WH_N)
-
-
-
-
-
       call TMD_DestroyContState(dxdt,ErrStat2,ErrMsg2)    !Ignore error status
    end subroutine CleanUp
    logical function Failed()
@@ -989,14 +927,6 @@ SUBROUTINE TMD_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
       TYPE(TMD_MiscVarType),         INTENT(INOUT)  :: m           !< Misc (optimization) variables
       INTEGER(IntKi),                INTENT(  OUT)  :: ErrStat     !< Error status of the operation
       CHARACTER(*),                  INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
-!FIXME: once we generalize this, move it to miscvars
-         ! local variables
-      REAL(ReKi), allocatable, dimension(:,:)    :: a_G
-      real(ReKi), allocatable, dimension(:,:)    :: rddot_P
-      real(ReKi), allocatable, dimension(:,:)    :: omega_P
-      real(ReKi), allocatable, dimension(:,:)    :: alpha_P
-      REAL(ReKi), allocatable, dimension(:)      :: B_X
-      REAL(ReKi), allocatable, dimension(:)      :: B_Y
 
       REAL(ReKi), dimension(2)                        :: K          ! tmd stiffness
       Real(ReKi)                                      :: denom      ! denominator for omni-direction factors
@@ -1009,14 +939,6 @@ SUBROUTINE TMD_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
          ! Initialize ErrStat
       ErrStat = ErrID_None
       ErrMsg  = ""
-
-!FIXME: once we generalize this, move it to miscvars
-      call AllocAry(a_G       ,3, p%NumMeshPts,'a_G',         ErrStat2,ErrMsg2); if (Failed()) return;
-      call AllocAry(rddot_P   ,3, p%NumMeshPts,'rddot_P',     ErrStat2,ErrMsg2); if (Failed()) return;
-      call AllocAry(omega_P   ,3, p%NumMeshPts,'omega_P',     ErrStat2,ErrMsg2); if (Failed()) return;
-      call AllocAry(alpha_P   ,3, p%NumMeshPts,'alpha_P',     ErrStat2,ErrMsg2); if (Failed()) return;
-      call AllocAry(B_X         , p%NumMeshPts,'B_X',         ErrStat2,ErrMsg2); if (Failed()) return;
-      call AllocAry(B_Y         , p%NumMeshPts,'B_Y',         ErrStat2,ErrMsg2); if (Failed()) return;
 
 
       call AllocAry(dxdt%tmd_x,4, p%NumMeshPts,'dxdt%tmd_x',  ErrStat2,ErrMsg2); if (Failed()) return;
@@ -1040,36 +962,37 @@ SUBROUTINE TMD_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
 
       ! Compute velocities and accelerations in local coordinates
       do i_pt=1,p%NumMeshPts
-         a_G(:,i_pt)     = matmul(u%Mesh(i_pt)%Orientation(:,:,1),p%Gravity)
-         rddot_P(:,i_pt) = matmul(u%Mesh(i_pt)%Orientation(:,:,1),u%Mesh(i_pt)%TranslationAcc(:,1))
-         omega_P(:,i_pt) = matmul(u%Mesh(i_pt)%Orientation(:,:,1),u%Mesh(i_pt)%RotationVel(:,1))
-         alpha_P(:,i_pt) = matmul(u%Mesh(i_pt)%Orientation(:,:,1),u%Mesh(i_pt)%RotationAcc(:,1))
+         m%a_G(:,i_pt)     = matmul(u%Mesh(i_pt)%Orientation(:,:,1),p%Gravity)
+         m%rddot_P(:,i_pt) = matmul(u%Mesh(i_pt)%Orientation(:,:,1),u%Mesh(i_pt)%TranslationAcc(:,1))
+         m%omega_P(:,i_pt) = matmul(u%Mesh(i_pt)%Orientation(:,:,1),u%Mesh(i_pt)%RotationVel(:,1))
+         m%alpha_P(:,i_pt) = matmul(u%Mesh(i_pt)%Orientation(:,:,1),u%Mesh(i_pt)%RotationAcc(:,1))
       enddo
 
 
       ! NOTE: m%F_stop and m%F_table are calculated earlier
       IF (p%TMD_DOF_MODE == ControlMode_None .or. p%TMD_DOF_MODE == DOFMode_Indept) THEN
+
          do i_pt=1,p%NumMeshPts
-            ! Compute inputs
-            B_X(i_pt) = - rddot_P(1,i_pt) + a_G(1,i_pt) + 1 / p%M_X * ( m%F_ext(1) + m%F_stop(1) - m%F_table(1) )
-            B_Y(i_pt) = - rddot_P(2,i_pt) + a_G(2,i_pt) + 1 / p%M_Y * ( m%F_ext(2) + m%F_stop(2) - m%F_table(2) )
+            ! Aggregate acceleration terms
+            m%Acc(1,i_pt) = - m%rddot_P(1,i_pt) + m%a_G(1,i_pt) + 1 / p%M_X * ( m%F_ext(1,i_pt) + m%F_stop(1,i_pt) - m%F_table(1,i_pt) )
+            m%Acc(2,i_pt) = - m%rddot_P(2,i_pt) + m%a_G(2,i_pt) + 1 / p%M_Y * ( m%F_ext(2,i_pt) + m%F_stop(2,i_pt) - m%F_table(2,i_pt) )
          enddo
+
       ELSE IF (p%TMD_DOF_MODE == DOFMode_Omni) THEN
 
          do i_pt=1,p%NumMeshPts
             denom = SQRT(x%tmd_x(1,i_pt)**2+x%tmd_x(3,i_pt)**2)
             IF ( EqualRealNos( denom, 0.0_ReKi) ) THEN
-                m%F_k_x = 0.0
-                m%F_k_y = 0.0
+                m%F_k(1,i_pt) = 0.0
+                m%F_k(2,i_pt) = 0.0
             ELSE
-                  m%F_k_x = x%tmd_x(1,i_pt)/denom
-                  m%F_k_y = x%tmd_x(3,i_pt)/denom
+                  m%F_k(1,i_pt) = x%tmd_x(1,i_pt)/denom
+                  m%F_k(2,i_pt) = x%tmd_x(3,i_pt)/denom
             END IF
-         enddo
 
-         do i_pt=1,p%NumMeshPts
-            B_X(i_pt) = - rddot_P(1,i_pt) + a_G(1,i_pt) + 1 / p%M_XY * ( m%F_ext(1) + m%F_stop(1) - m%F_table(1)*(m%F_k_x) )
-            B_Y(i_pt) = - rddot_P(2,i_pt) + a_G(2,i_pt) + 1 / p%M_XY * ( m%F_ext(2) + m%F_stop(2) - m%F_table(2)*(m%F_k_y) )
+            ! Aggregate acceleration terms
+            m%Acc(1,i_pt) = - m%rddot_P(1,i_pt) + m%a_G(1,i_pt) + 1 / p%M_XY * ( m%F_ext(1,i_pt) + m%F_stop(1,i_pt) - m%F_table(1,i_pt)*(m%F_k(1,i_pt)) )
+            m%Acc(2,i_pt) = - m%rddot_P(2,i_pt) + m%a_G(2,i_pt) + 1 / p%M_XY * ( m%F_ext(2,i_pt) + m%F_stop(2,i_pt) - m%F_table(2,i_pt)*(m%F_k(2,i_pt)) )
          enddo
 
       ENDIF
@@ -1108,8 +1031,8 @@ SUBROUTINE TMD_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
 
       ! compute damping for dxdt%tmd_x(2) and dxdt%tmd_x(4)
       IF (p%TMD_CMODE == ControlMode_None) THEN
-         m%C_ctrl(1) = p%C_X
-         m%C_ctrl(2) = p%C_Y
+         m%C_ctrl(1,:) = p%C_X
+         m%C_ctrl(2,:) = p%C_Y
 
          m%C_Brake = 0.0_ReKi
          m%F_fr    = 0.0_ReKi
@@ -1123,10 +1046,10 @@ SUBROUTINE TMD_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
 
          IF (p%TMD_X_DOF) THEN
             do i_pt=1,p%NumMeshPts
-               dxdt%tmd_x(2,i_pt) =  ( omega_P(2,i_pt)**2 + omega_P(3,i_pt)**2 - K(1) / p%M_X) * x%tmd_x(1,i_pt) &
-                                   - ( m%C_ctrl( 1)/p%M_X ) * x%tmd_x(2,i_pt)                                    &
-                                   - ( m%C_Brake(1)/p%M_X ) * x%tmd_x(2,i_pt)                                    &
-                                   + B_X(i_pt) + m%F_fr(1) / p%M_X
+               dxdt%tmd_x(2,i_pt) =  ( m%omega_P(2,i_pt)**2 + m%omega_P(3,i_pt)**2 - K(1) / p%M_X) * x%tmd_x(1,i_pt) &
+                                   - ( m%C_ctrl( 1,i_pt)/p%M_X ) * x%tmd_x(2,i_pt)                                   &
+                                   - ( m%C_Brake(1,i_pt)/p%M_X ) * x%tmd_x(2,i_pt)                                   &
+                                   + m%Acc(1,i_pt) + m%F_fr(1,i_pt) / p%M_X
             enddo
          ELSE
             do i_pt=1,p%NumMeshPts
@@ -1135,10 +1058,10 @@ SUBROUTINE TMD_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
          END IF
          IF (p%TMD_Y_DOF) THEN
             do i_pt=1,p%NumMeshPts
-               dxdt%tmd_x(4,i_pt) =  ( omega_P(1,i_pt)**2 + omega_P(3,i_pt)**2 - K(2) / p%M_Y) * x%tmd_x(3,i_pt) &
-                                   - ( m%C_ctrl( 2)/p%M_Y ) * x%tmd_x(4,i_pt)                                    &
-                                   - ( m%C_Brake(2)/p%M_Y ) * x%tmd_x(4,i_pt)                                    &
-                                   + B_Y(i_pt) + m%F_fr(2) / p%M_Y
+               dxdt%tmd_x(4,i_pt) =  ( m%omega_P(1,i_pt)**2 + m%omega_P(3,i_pt)**2 - K(2) / p%M_Y) * x%tmd_x(3,i_pt) &
+                                   - ( m%C_ctrl( 2,i_pt)/p%M_Y ) * x%tmd_x(4,i_pt)                                   &
+                                   - ( m%C_Brake(2,i_pt)/p%M_Y ) * x%tmd_x(4,i_pt)                                   &
+                                   + m%Acc(2,i_pt) + m%F_fr(2,i_pt) / p%M_Y
             enddo
          ELSE
             do i_pt=1,p%NumMeshPts
@@ -1149,54 +1072,51 @@ SUBROUTINE TMD_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
       ELSE IF (p%TMD_DOF_MODE == DOFMode_Omni) THEN
                ! Compute the first time derivatives of the continuous states of Omnidirectional TMD mode by sm 2015-0904
          do i_pt=1,p%NumMeshPts
-            dxdt%tmd_x(2,i_pt) =  ( omega_P(2,i_pt)**2 + omega_P(3,i_pt)**2 - K(1) / p%M_XY) * x%tmd_x(1,i_pt) &
-                                - ( m%C_ctrl( 1)/p%M_XY ) * x%tmd_x(2,i_pt)                                    &
-                                - ( m%C_Brake(1)/p%M_XY ) * x%tmd_x(2,i_pt)                                    &
-                                +  B_X(i_pt) + 1/p%M_XY * ( m%F_fr(1) )                                        &
-                                - ( omega_P(1,i_pt)*omega_P(2,i_pt) - alpha_P(3,i_pt) ) * x%tmd_x(3,i_pt)      &
-                               +2 * omega_P(3,i_pt) * x%tmd_x(4,i_pt)
-            dxdt%tmd_x(4,i_pt) =  ( omega_P(1,i_pt)**2 + omega_P(3,i_pt)**2 - K(2) / p%M_XY) * x%tmd_x(3,i_pt) &
-                                - ( m%C_ctrl( 2)/p%M_XY ) * x%tmd_x(4,i_pt)                                    &
-                                - ( m%C_Brake(2)/p%M_XY ) * x%tmd_x(4,i_pt)                                    &
-                                +  B_Y(i_pt) + 1/p%M_XY * ( m%F_fr(2) )                                        &
-                                - ( omega_P(1,i_pt)*omega_P(2,i_pt) + alpha_P(3,i_pt) ) * x%tmd_x(1,i_pt)      &
-                               -2 * omega_P(3,i_pt) * x%tmd_x(2,i_pt)
+            dxdt%tmd_x(2,i_pt) =  ( m%omega_P(2,i_pt)**2 + m%omega_P(3,i_pt)**2 - K(1) / p%M_XY) * x%tmd_x(1,i_pt)   &
+                                - ( m%C_ctrl( 1,i_pt)/p%M_XY ) * x%tmd_x(2,i_pt)                                     &
+                                - ( m%C_Brake(1,i_pt)/p%M_XY ) * x%tmd_x(2,i_pt)                                     &
+                                +  m%Acc(1,i_pt) + 1/p%M_XY * ( m%F_fr(1,i_pt) )                                     &
+                                - ( m%omega_P(1,i_pt)*m%omega_P(2,i_pt) - m%alpha_P(3,i_pt) ) * x%tmd_x(3,i_pt)      &
+                               +2 * m%omega_P(3,i_pt) * x%tmd_x(4,i_pt)
+            dxdt%tmd_x(4,i_pt) =  ( m%omega_P(1,i_pt)**2 + m%omega_P(3,i_pt)**2 - K(2) / p%M_XY) * x%tmd_x(3,i_pt)   &
+                                - ( m%C_ctrl( 2,i_pt)/p%M_XY ) * x%tmd_x(4,i_pt)                                     &
+                                - ( m%C_Brake(2,i_pt)/p%M_XY ) * x%tmd_x(4,i_pt)                                     &
+                                +  m%Acc(2,i_pt) + 1/p%M_XY * ( m%F_fr(2,i_pt) )                                     &
+                                - ( m%omega_P(1,i_pt)*m%omega_P(2,i_pt) + m%alpha_P(3,i_pt) ) * x%tmd_x(1,i_pt)      &
+                               -2 * m%omega_P(3,i_pt) * x%tmd_x(2,i_pt)
          enddo
 
       ELSE IF (p%TMD_DOF_MODE == DOFMode_TLCD) THEN !MEG & SP
          ! Compute the first time derivatives of the continuous states of TLCD mode
          do i_pt=1,p%NumMeshPts
-            dxdt%tmd_x(2,i_pt) = (2*p%rho_FA*p%area_FA*x%tmd_x(1,i_pt)*rddot_P(3,i_pt)                                       &
-                                   +p%rho_FA*p%area_FA*p%B_FA*alpha_P(2,i_pt)*((p%L_FA-p%B_FA)/2)                            &
-                                   -p%rho_FA*p%area_FA*p%B_FA*omega_P(1,i_pt)*omega_P(3,i_pt)*((p%L_FA-p%B_FA)/2)            &
-                                 +2*p%rho_FA*p%area_FA*omega_P(1,i_pt)*omega_P(1,i_pt)*x%tmd_x(1,i_pt)*(p%L_FA-p%B_FA)       &
-                                 +2*p%rho_FA*p%area_FA*omega_P(2,i_pt)*omega_P(2,i_pt)*x%tmd_x(1,i_pt)*(p%L_FA-p%B_FA)       &
-                                 +2*p%rho_FA*p%area_FA*x%tmd_x(1,i_pt)*a_G(3,i_pt)                                           &
-                                   -p%rho_FA*p%area_FA*p%B_FA*rddot_P(1,i_pt)                                                &
-                                   +p%rho_FA*p%area_FA*p%B_FA*a_G(1,i_pt)                                                    &
-                                -.5*p%rho_FA*p%area_FA*p%headLossCoeff_FA*p%area_ratio_FA*p%area_ratio_FA*x%tmd_x(2,i_pt)    &
-                                       *ABS(x%tmd_x(2,i_pt)))/(p%rho_FA*p%area_FA*(p%L_FA-p%B_FA+p%area_ratio_FA*p%B_FA))
-            dxdt%tmd_x(4,i_pt) = (2*p%rho_SS*p%area_SS*x%tmd_x(3,i_pt)*rddot_P(3,i_pt)                                       &
-                                   +p%rho_SS*p%area_SS*p%B_SS*alpha_P(1,i_pt)*((p%L_SS-p%B_SS)/2)                            &
-                                   -p%rho_SS*p%area_SS*p%B_SS*omega_P(2,i_pt)*omega_P(3,i_pt)*((p%L_SS-p%B_SS)/2)            &
-                                 +2*p%rho_SS*p%area_SS*x%tmd_x(3,i_pt)*omega_P(1,i_pt)*omega_P(1,i_pt)*(p%L_SS-p%B_SS)       &
-                                 +2*p%rho_SS*p%area_SS*x%tmd_x(3,i_pt)*omega_P(2,i_pt)*omega_P(2,i_pt)*(p%L_SS-p%B_SS)       &
-                                 +2*p%rho_SS*p%area_SS*x%tmd_x(3,i_pt)*a_G(3,i_pt)-p%rho_SS*p%area_SS*p%B_SS*rddot_P(2,i_pt) &
-                                   +p%rho_SS*p%area_SS*p%B_SS*a_G(2,i_pt)                                                    &
-                                -.5*p%rho_SS*p%area_SS*p%headLossCoeff_SS*p%area_ratio_SS*p%area_ratio_SS*x%tmd_x(4,i_pt)    &
+            dxdt%tmd_x(2,i_pt) = (2*p%rho_FA*p%area_FA*x%tmd_x(1,i_pt)*m%rddot_P(3,i_pt)                                         &
+                                   +p%rho_FA*p%area_FA*p%B_FA*m%alpha_P(2,i_pt)*((p%L_FA-p%B_FA)/2)                              &
+                                   -p%rho_FA*p%area_FA*p%B_FA*m%omega_P(1,i_pt)*m%omega_P(3,i_pt)*((p%L_FA-p%B_FA)/2)            &
+                                 +2*p%rho_FA*p%area_FA*m%omega_P(1,i_pt)*m%omega_P(1,i_pt)*x%tmd_x(1,i_pt)*(p%L_FA-p%B_FA)       &
+                                 +2*p%rho_FA*p%area_FA*m%omega_P(2,i_pt)*m%omega_P(2,i_pt)*x%tmd_x(1,i_pt)*(p%L_FA-p%B_FA)       &
+                                 +2*p%rho_FA*p%area_FA*x%tmd_x(1,i_pt)*m%a_G(3,i_pt)                                             &
+                                   -p%rho_FA*p%area_FA*p%B_FA*m%rddot_P(1,i_pt)                                                  &
+                                   +p%rho_FA*p%area_FA*p%B_FA*m%a_G(1,i_pt)                                                      &
+                                -.5*p%rho_FA*p%area_FA*p%headLossCoeff_FA*p%area_ratio_FA*p%area_ratio_FA*x%tmd_x(2,i_pt)        &
+                                       *ABS(x%tmd_x(2,i_pt)))/(p%rho_FA*p%area_FA*(p%L_FA-p%B_FA+p%area_ratio_FA*p%B_FA))        
+            dxdt%tmd_x(4,i_pt) = (2*p%rho_SS*p%area_SS*x%tmd_x(3,i_pt)*m%rddot_P(3,i_pt)                                         &
+                                   +p%rho_SS*p%area_SS*p%B_SS*m%alpha_P(1,i_pt)*((p%L_SS-p%B_SS)/2)                              &
+                                   -p%rho_SS*p%area_SS*p%B_SS*m%omega_P(2,i_pt)*m%omega_P(3,i_pt)*((p%L_SS-p%B_SS)/2)            &
+                                 +2*p%rho_SS*p%area_SS*x%tmd_x(3,i_pt)*m%omega_P(1,i_pt)*m%omega_P(1,i_pt)*(p%L_SS-p%B_SS)       &
+                                 +2*p%rho_SS*p%area_SS*x%tmd_x(3,i_pt)*m%omega_P(2,i_pt)*m%omega_P(2,i_pt)*(p%L_SS-p%B_SS)       &
+                                 +2*p%rho_SS*p%area_SS*x%tmd_x(3,i_pt)*m%a_G(3,i_pt)-p%rho_SS*p%area_SS*p%B_SS*m%rddot_P(2,i_pt) &
+                                   +p%rho_SS*p%area_SS*p%B_SS*m%a_G(2,i_pt)                                                      &
+                                -.5*p%rho_SS*p%area_SS*p%headLossCoeff_SS*p%area_ratio_SS*p%area_ratio_SS*x%tmd_x(4,i_pt)        &
                                        *ABS(x%tmd_x(4,i_pt)))/(p%rho_SS*p%area_SS*(p%L_SS-p%B_SS+p%area_ratio_SS*p%B_SS))
          enddo
 
       END IF
 
+      call CleanUp()
+      return
+
 CONTAINS
    subroutine CleanUp()
-      if (allocated(a_G      )) deallocate(a_G      )
-      if (allocated(rddot_P  )) deallocate(rddot_P  )
-      if (allocated(omega_P  )) deallocate(omega_P  )
-      if (allocated(alpha_P  )) deallocate(alpha_P  )
-      if (allocated(B_X      )) deallocate(B_X      )
-      if (allocated(B_Y      )) deallocate(B_Y      )
    end subroutine CleanUp
    logical function Failed()
         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'TMD_CalcContStateDeriv')
@@ -1208,8 +1128,8 @@ END SUBROUTINE TMD_CalcContStateDeriv
 SUBROUTINE TMD_CalcStopForce(x,p,F_stop)
    TYPE(TMD_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at Time
    TYPE(TMD_ParameterType),       INTENT(IN   )  :: p           !< Parameters
-   Real(ReKi), dimension(2),      INTENT(INOUT)  :: F_stop      !< stop forces
-! local variables
+   Real(ReKi), dimension(:,:),    INTENT(INOUT)  :: F_stop      !< stop forces
+   ! local variables
    Real(ReKi), dimension(2)                      :: F_SK      !stop spring forces
    Real(ReKi), dimension(2)                      :: F_SD      !stop damping forces
    INTEGER(IntKi)                                :: i         ! counter
@@ -1233,7 +1153,7 @@ SUBROUTINE TMD_CalcStopForce(x,p,F_stop)
             ELSE
                F_SD(i)  = 0.0_ReKi
             ENDIF
-            F_stop(i) = F_SK(i) + F_SD(i)
+            F_stop(i,i_pt) = F_SK(i) + F_SD(i)
             j = j+2
          END IF
       END DO
@@ -1245,9 +1165,9 @@ SUBROUTINE TMD_GroundHookDamp(dxdt,x,u,p,C_ctrl,C_Brake,F_fr)
    TYPE(TMD_ContinuousStateType),         INTENT(IN   )     :: x           !< Continuous states at Time
    TYPE(TMD_InputType),                   INTENT(IN   )     :: u           !< Inputs at Time
    TYPE(TMD_ParameterType),               INTENT(IN)        :: p           !< The module's parameter data
-   REAL(ReKi), dimension(2),              INTENT(INOUT)     :: C_ctrl      !< extrapolated/interpolated stiffness values
-   REAL(ReKi), dimension(2),              INTENT(INOUT)     :: C_Brake     !< extrapolated/interpolated stiffness values
-   REAL(ReKi), dimension(2),              INTENT(INOUT)     :: F_fr        !< Friction forces
+   REAL(ReKi), dimension(:,:),            INTENT(INOUT)     :: C_ctrl      !< extrapolated/interpolated stiffness values
+   REAL(ReKi), dimension(:,:),            INTENT(INOUT)     :: C_Brake     !< extrapolated/interpolated stiffness values
+   REAL(ReKi), dimension(:,:),            INTENT(INOUT)     :: F_fr        !< Friction forces
    INTEGER(IntKi)                                           :: i_pt        !< generic counter for mesh points
 
    do i_pt=1,p%NumMeshPts
@@ -1255,205 +1175,205 @@ SUBROUTINE TMD_GroundHookDamp(dxdt,x,u,p,C_ctrl,C_Brake,F_fr)
 
          !X
          IF (dxdt%tmd_x(1,i_pt) * u%Mesh(i_pt)%TranslationVel(1,1) <= 0 ) THEN
-            C_ctrl(1) = p%TMD_X_C_HIGH
+            C_ctrl(1,i_pt) = p%TMD_X_C_HIGH
          ELSE
-            C_ctrl(1) = p%TMD_X_C_LOW
+            C_ctrl(1,i_pt) = p%TMD_X_C_LOW
          END IF
 
          !Brake X
          IF      ( (x%tmd_x(1,i_pt) > p%P_SP(1)-0.2) .AND. (x%tmd_x(2,i_pt) > 0) ) THEN
-            C_Brake(1) = p%TMD_X_C_BRAKE
+            C_Brake(1,i_pt) = p%TMD_X_C_BRAKE
          ELSE IF ( (x%tmd_x(1,i_pt) < p%N_SP(1)+0.2) .AND. (x%tmd_x(2,i_pt) < 0) ) THEN
-            C_Brake(1) = p%TMD_X_C_BRAKE
+            C_Brake(1,i_pt) = p%TMD_X_C_BRAKE
          ELSE
-            C_Brake(1) = 0
+            C_Brake(1,i_pt) = 0
          END IF
 
 
          ! Y
          IF (dxdt%tmd_x(3,i_pt) * u%Mesh(i_pt)%TranslationVel(2,1) <= 0 ) THEN
-            C_ctrl(2) = p%TMD_Y_C_HIGH
+            C_ctrl(2,i_pt) = p%TMD_Y_C_HIGH
          ELSE
-            C_ctrl(2) = p%TMD_Y_C_LOW
+            C_ctrl(2,i_pt) = p%TMD_Y_C_LOW
          END IF
 
          !Brake Y
          IF      ( (x%tmd_x(3,i_pt) > p%P_SP(2)-0.2) .AND. (x%tmd_x(4,i_pt) > 0) ) THEN
-            C_Brake(2) = p%TMD_Y_C_BRAKE
+            C_Brake(2,i_pt) = p%TMD_Y_C_BRAKE
          ELSE IF ( (x%tmd_x(3,i_pt) < p%N_SP(2)+0.2) .AND. (x%tmd_x(4,i_pt) < 0) ) THEN
-            C_Brake(2) = p%TMD_Y_C_BRAKE
+            C_Brake(2,i_pt) = p%TMD_Y_C_BRAKE
          ELSE
-            C_Brake(2) = 0
+            C_Brake(2,i_pt) = 0
          END IF
 
       ELSE IF (p%TMD_CMODE == CMODE_Semi .AND. p%TMD_SA_MODE == SA_CMODE_GH_invVel) THEN ! Inverse velocity-based ground hook control with high damping for braking
 
          ! X
          IF (dxdt%tmd_x(1,i_pt) * u%Mesh(i_pt)%TranslationVel(1,1) >= 0 ) THEN
-            C_ctrl(1) = p%TMD_X_C_HIGH
+            C_ctrl(1,i_pt) = p%TMD_X_C_HIGH
          ELSE
-            C_ctrl(1) = p%TMD_X_C_LOW
+            C_ctrl(1,i_pt) = p%TMD_X_C_LOW
          END IF
 
          !Brake X
          IF      ( (x%tmd_x(1,i_pt) > p%P_SP(1)-0.2) .AND. (x%tmd_x(2,i_pt) > 0) ) THEN
-            C_Brake(1) = p%TMD_X_C_BRAKE
+            C_Brake(1,i_pt) = p%TMD_X_C_BRAKE
          ELSE IF ( (x%tmd_x(1,i_pt) < p%N_SP(1)+0.2) .AND. (x%tmd_x(2,i_pt) < 0) ) THEN
-            C_Brake(1) = p%TMD_X_C_BRAKE
+            C_Brake(1,i_pt) = p%TMD_X_C_BRAKE
          ELSE
-            C_Brake(1) = 0
+            C_Brake(1,i_pt) = 0
          END IF
 
          ! Y
          IF (dxdt%tmd_x(3,i_pt) * u%Mesh(i_pt)%TranslationVel(2,1) >= 0 ) THEN
-            C_ctrl(2) = p%TMD_Y_C_HIGH
+            C_ctrl(2,i_pt) = p%TMD_Y_C_HIGH
          ELSE
-            C_ctrl(2) = p%TMD_Y_C_LOW
+            C_ctrl(2,i_pt) = p%TMD_Y_C_LOW
          END IF
 
          !Brake Y
          IF      ( (x%tmd_x(3,i_pt) > p%P_SP(2)-0.2) .AND. (x%tmd_x(4,i_pt) > 0) ) THEN
-            C_Brake(2) = p%TMD_Y_C_BRAKE
+            C_Brake(2,i_pt) = p%TMD_Y_C_BRAKE
          ELSE IF ( (x%tmd_x(3,i_pt) < p%N_SP(2)+0.2) .AND. (x%tmd_x(4,i_pt) < 0) ) THEN
-            C_Brake(2) = p%TMD_Y_C_BRAKE
+            C_Brake(2,i_pt) = p%TMD_Y_C_BRAKE
          ELSE
-            C_Brake(2) = 0
+            C_Brake(2,i_pt) = 0
          END IF
 
       ELSE IF (p%TMD_CMODE == CMODE_Semi .AND. p%TMD_SA_MODE == SA_CMODE_GH_disp) THEN ! displacement-based ground hook control with high damping for braking
 
          ! X
          IF (dxdt%tmd_x(1,i_pt) * u%Mesh(i_pt)%TranslationDisp(1,1) <= 0 ) THEN
-            C_ctrl(1) = p%TMD_X_C_HIGH
+            C_ctrl(1,i_pt) = p%TMD_X_C_HIGH
          ELSE
-            C_ctrl(1) = p%TMD_X_C_LOW
+            C_ctrl(1,i_pt) = p%TMD_X_C_LOW
          END IF
 
          !Brake X
          IF      ( (x%tmd_x(1,i_pt) > p%P_SP(1)-0.2) .AND. (x%tmd_x(2,i_pt) > 0) ) THEN
-            C_Brake(1) = p%TMD_X_C_BRAKE
+            C_Brake(1,i_pt) = p%TMD_X_C_BRAKE
          ELSE IF ( (x%tmd_x(1,i_pt) < p%N_SP(1)+0.2) .AND. (x%tmd_x(2,i_pt) < 0) ) THEN
-            C_Brake(1) = p%TMD_X_C_BRAKE
+            C_Brake(1,i_pt) = p%TMD_X_C_BRAKE
          ELSE
-            C_Brake(1) = 0
+            C_Brake(1,i_pt) = 0
          END IF
 
          ! Y
          IF (dxdt%tmd_x(3,i_pt) * u%Mesh(i_pt)%TranslationDisp(2,1) <= 0 ) THEN
-            C_ctrl(2) = p%TMD_Y_C_HIGH
+            C_ctrl(2,i_pt) = p%TMD_Y_C_HIGH
          ELSE
-            C_ctrl(2) = p%TMD_Y_C_LOW
+            C_ctrl(2,i_pt) = p%TMD_Y_C_LOW
          END IF
 
          !Brake Y
          IF      ( (x%tmd_x(3,i_pt) > p%P_SP(2)-0.2) .AND. (x%tmd_x(4,i_pt) > 0) ) THEN
-            C_Brake(2) = p%TMD_Y_C_BRAKE
+            C_Brake(2,i_pt) = p%TMD_Y_C_BRAKE
          ELSE IF ( (x%tmd_x(3,i_pt) < p%N_SP(2)+0.2) .AND. (x%tmd_x(4,i_pt) < 0) ) THEN
-            C_Brake(2) = p%TMD_Y_C_BRAKE
+            C_Brake(2,i_pt) = p%TMD_Y_C_BRAKE
          ELSE
-            C_Brake(2) = 0
+            C_Brake(2,i_pt) = 0
          END IF
 
       ELSE IF (p%TMD_CMODE == CMODE_Semi .AND. p%TMD_SA_MODE == SA_CMODE_Ph_FF) THEN ! Phase Difference Algorithm with Friction Force
             ! X
             ! (a)
          IF      (u%Mesh(i_pt)%TranslationDisp(1,1) > 0 .AND. u%Mesh(i_pt)%TranslationVel(1,1) < 0 .AND. x%tmd_x(1,i_pt) > 0 .AND. dxdt%tmd_x(1,i_pt) < 0) THEN
-            F_fr(1) = p%TMD_X_C_HIGH
+            F_fr(1,i_pt) = p%TMD_X_C_HIGH
             ! (b)
          ELSE IF (u%Mesh(i_pt)%TranslationDisp(1,1) < 0 .AND. u%Mesh(i_pt)%TranslationVel(1,1) > 0 .AND. x%tmd_x(1,i_pt) < 0 .AND. dxdt%tmd_x(1,i_pt) > 0) THEN
-            F_fr(1) = -p%TMD_X_C_HIGH
+            F_fr(1,i_pt) = -p%TMD_X_C_HIGH
             ! (c)
          ELSE IF (u%Mesh(i_pt)%TranslationDisp(1,1) < 0 .AND. u%Mesh(i_pt)%TranslationVel(1,1) < 0 .AND. x%tmd_x(1,i_pt) > 0 .AND. dxdt%tmd_x(1,i_pt) > 0) THEN
-            F_fr(1) = -p%TMD_X_C_HIGH
+            F_fr(1,i_pt) = -p%TMD_X_C_HIGH
          ELSE IF (u%Mesh(i_pt)%TranslationDisp(1,1) > 0 .AND. u%Mesh(i_pt)%TranslationVel(1,1) > 0 .AND. x%tmd_x(1,i_pt) < 0 .AND. dxdt%tmd_x(1,i_pt) < 0) THEN
-            F_fr(1) = p%TMD_X_C_HIGH
+            F_fr(1,i_pt) = p%TMD_X_C_HIGH
          ELSE
-            F_fr(1) = p%TMD_X_C_LOW
+            F_fr(1,i_pt) = p%TMD_X_C_LOW
          END IF
 
          !Brake X
          IF ( (x%tmd_x(1,i_pt) > p%P_SP(1)-0.2) .AND. (x%tmd_x(2,i_pt) > 0) ) THEN
-            C_Brake(1) = p%TMD_X_C_BRAKE
+            C_Brake(1,i_pt) = p%TMD_X_C_BRAKE
          ELSE IF ( (x%tmd_x(1,i_pt) < p%N_SP(1)+0.2) .AND. (x%tmd_x(2,i_pt) < 0) ) THEN
-            C_Brake(1) = p%TMD_X_C_BRAKE
+            C_Brake(1,i_pt) = p%TMD_X_C_BRAKE
          ELSE
-            C_Brake(1) = 0
+            C_Brake(1,i_pt) = 0
          END IF
 
             ! Y
             ! (a)
          IF      (u%Mesh(i_pt)%TranslationDisp(2,1) > 0 .AND. u%Mesh(i_pt)%TranslationVel(2,1) < 0 .AND. x%tmd_x(3,i_pt) > 0 .AND. dxdt%tmd_x(3,i_pt) < 0) THEN
-            F_fr(2) = p%TMD_Y_C_HIGH
+            F_fr(2,i_pt) = p%TMD_Y_C_HIGH
             ! (b)
          ELSE IF (u%Mesh(i_pt)%TranslationDisp(2,1) < 0 .AND. u%Mesh(i_pt)%TranslationVel(2,1) > 0 .AND. x%tmd_x(3,i_pt) < 0 .AND. dxdt%tmd_x(3,i_pt) > 0) THEN
-            F_fr(2) = -p%TMD_Y_C_HIGH
+            F_fr(2,i_pt) = -p%TMD_Y_C_HIGH
             ! (c)
          ELSE IF (u%Mesh(i_pt)%TranslationDisp(2,1) < 0 .AND. u%Mesh(i_pt)%TranslationVel(2,1) < 0 .AND. x%tmd_x(3,i_pt) > 0 .AND. dxdt%tmd_x(3,i_pt) > 0) THEN
-            F_fr(2) = -p%TMD_Y_C_HIGH
+            F_fr(2,i_pt) = -p%TMD_Y_C_HIGH
          ELSE IF (u%Mesh(i_pt)%TranslationDisp(2,1) > 0 .AND. u%Mesh(i_pt)%TranslationVel(2,1) > 0 .AND. x%tmd_x(3,i_pt) < 0 .AND. dxdt%tmd_x(3,i_pt) < 0) THEN
-            F_fr(2) = p%TMD_Y_C_HIGH
+            F_fr(2,i_pt) = p%TMD_Y_C_HIGH
          ELSE
-            F_fr(2) = p%TMD_Y_C_LOW
+            F_fr(2,i_pt) = p%TMD_Y_C_LOW
          END IF
 
          !Brake Y
          IF      ( (x%tmd_x(3,i_pt) > p%P_SP(2)-0.2) .AND. (x%tmd_x(4,i_pt) > 0) ) THEN
-            C_Brake(2) = p%TMD_Y_C_BRAKE
+            C_Brake(2,i_pt) = p%TMD_Y_C_BRAKE
          ELSE IF ( (x%tmd_x(3,i_pt) < p%N_SP(2)+0.2) .AND. (x%tmd_x(4,i_pt) < 0) ) THEN
-            C_Brake(2) = p%TMD_Y_C_BRAKE
+            C_Brake(2,i_pt) = p%TMD_Y_C_BRAKE
          ELSE
-            C_Brake(2) = 0
+            C_Brake(2,i_pt) = 0
          END IF
 
       ELSE IF (p%TMD_CMODE == CMODE_Semi .AND. p%TMD_SA_MODE == SA_CMODE_Ph_DF) THEN ! Phase Difference Algorithm with Damping On/Off
             ! X
             ! (a)
          IF      (u%Mesh(i_pt)%TranslationDisp(1,1) > 0 .AND. u%Mesh(i_pt)%TranslationVel(1,1) < 0 .AND. x%tmd_x(1,i_pt) > 0 .AND. dxdt%tmd_x(1,i_pt) < 0) THEN
-            C_ctrl(1) = p%TMD_X_C_HIGH
+            C_ctrl(1,i_pt) = p%TMD_X_C_HIGH
             ! (b)
          ELSE IF (u%Mesh(i_pt)%TranslationDisp(1,1) < 0 .AND. u%Mesh(i_pt)%TranslationVel(1,1) > 0 .AND. x%tmd_x(1,i_pt) < 0 .AND. dxdt%tmd_x(1,i_pt) > 0) THEN
-            C_ctrl(1) = p%TMD_X_C_HIGH
+            C_ctrl(1,i_pt) = p%TMD_X_C_HIGH
             ! (c)
          ELSE IF (u%Mesh(i_pt)%TranslationDisp(1,1) < 0 .AND. u%Mesh(i_pt)%TranslationVel(1,1) < 0 .AND. x%tmd_x(1,i_pt) > 0 .AND. dxdt%tmd_x(1,i_pt) > 0) THEN
-            C_ctrl(1) = p%TMD_X_C_HIGH
+            C_ctrl(1,i_pt) = p%TMD_X_C_HIGH
          ELSE IF (u%Mesh(i_pt)%TranslationDisp(1,1) > 0 .AND. u%Mesh(i_pt)%TranslationVel(1,1) > 0 .AND. x%tmd_x(1,i_pt) < 0 .AND. dxdt%tmd_x(1,i_pt) < 0) THEN
-            C_ctrl(1) = p%TMD_X_C_HIGH
+            C_ctrl(1,i_pt) = p%TMD_X_C_HIGH
          ELSE
-            C_ctrl(1) = p%TMD_X_C_LOW
+            C_ctrl(1,i_pt) = p%TMD_X_C_LOW
          END IF
 
          !Brake X
          IF      ( (x%tmd_x(1,i_pt) > p%P_SP(1)-0.2) .AND. (x%tmd_x(2,i_pt) > 0) ) THEN
-            C_Brake(1) = p%TMD_X_C_BRAKE
+            C_Brake(1,i_pt) = p%TMD_X_C_BRAKE
          ELSE IF ( (x%tmd_x(1,i_pt) < p%N_SP(1)+0.2) .AND. (x%tmd_x(2,i_pt) < 0) ) THEN
-            C_Brake(1) = p%TMD_X_C_BRAKE
+            C_Brake(1,i_pt) = p%TMD_X_C_BRAKE
          ELSE
-            C_Brake(1) = 0
+            C_Brake(1,i_pt) = 0
          END IF
 
             ! Y
             ! (a)
          IF      (u%Mesh(i_pt)%TranslationDisp(2,1) > 0 .AND. u%Mesh(i_pt)%TranslationVel(2,1) < 0 .AND. x%tmd_x(3,i_pt) > 0 .AND. dxdt%tmd_x(3,i_pt) < 0) THEN
-            C_ctrl(2) = p%TMD_Y_C_HIGH
+            C_ctrl(2,i_pt) = p%TMD_Y_C_HIGH
             ! (b)
          ELSE IF (u%Mesh(i_pt)%TranslationDisp(2,1) < 0 .AND. u%Mesh(i_pt)%TranslationVel(2,1) > 0 .AND. x%tmd_x(3,i_pt) < 0 .AND. dxdt%tmd_x(3,i_pt) > 0) THEN
-            C_ctrl(2) = p%TMD_Y_C_HIGH
+            C_ctrl(2,i_pt) = p%TMD_Y_C_HIGH
             ! (c)
          ELSE IF (u%Mesh(i_pt)%TranslationDisp(2,1) < 0 .AND. u%Mesh(i_pt)%TranslationVel(2,1) < 0 .AND. x%tmd_x(3,i_pt) > 0 .AND. dxdt%tmd_x(3,i_pt) > 0) THEN
-            C_ctrl(2) = p%TMD_Y_C_HIGH
+            C_ctrl(2,i_pt) = p%TMD_Y_C_HIGH
          ELSE IF (u%Mesh(i_pt)%TranslationDisp(2,1) > 0 .AND. u%Mesh(i_pt)%TranslationVel(2,1) > 0 .AND. x%tmd_x(3,i_pt) < 0 .AND. dxdt%tmd_x(3,i_pt) < 0) THEN
-            C_ctrl(2) = p%TMD_Y_C_HIGH
+            C_ctrl(2,i_pt) = p%TMD_Y_C_HIGH
          ELSE
-            C_ctrl(2) = p%TMD_Y_C_LOW
+            C_ctrl(2,i_pt) = p%TMD_Y_C_LOW
          END IF
 
          !Brake Y
          IF      ( (x%tmd_x(3,i_pt) > p%P_SP(2)-0.2) .AND. (x%tmd_x(4,i_pt) > 0) ) THEN
-            C_Brake(2) = p%TMD_Y_C_BRAKE
+            C_Brake(2,i_pt) = p%TMD_Y_C_BRAKE
          ELSE IF ( (x%tmd_x(3,i_pt) < p%N_SP(2)+0.2) .AND. (x%tmd_x(4,i_pt) < 0) ) THEN
-            C_Brake(2) = p%TMD_Y_C_BRAKE
+            C_Brake(2,i_pt) = p%TMD_Y_C_BRAKE
          ELSE
-            C_Brake(2) = 0
+            C_Brake(2,i_pt) = 0
          END IF
 
       END IF
@@ -1466,7 +1386,7 @@ END SUBROUTINE TMD_GroundHookDamp
 SUBROUTINE SpringForceExtrapInterp(x, p, F_table)
    TYPE(TMD_ContinuousStateType),         INTENT(IN   )     :: x           !< Continuous states at Time
    TYPE(TMD_ParameterType),               INTENT(IN)        :: p           !< The module's parameter data
-   REAL(ReKi), dimension(2),              INTENT(INOUT)     :: F_table     !< extrapolated/interpolated stiffness values
+   REAL(ReKi), dimension(:,:),            INTENT(INOUT)     :: F_table     !< extrapolated/interpolated stiffness values
 
    !INTEGER(IntKi),                        INTENT(OUT)      :: ErrStat        ! The error status code
    !CHARACTER(*),                          INTENT(OUT)      :: ErrMsg         ! The error message, if an error occurred
@@ -1520,7 +1440,7 @@ SUBROUTINE SpringForceExtrapInterp(x, p, F_table)
                Slope = 0
             END IF
 
-            F_table(I) = p%F_TBL(M,J(I)+1) + Slope * ( Disp(I) - p%F_TBL(M,J(I)) )
+            F_table(I,i_pt) = p%F_TBL(M,J(I)+1) + Slope * ( Disp(I) - p%F_TBL(M,J(I)) )
 
          END DO
 
