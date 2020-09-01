@@ -120,60 +120,22 @@ SUBROUTINE TMD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
 
     !............................................................................................
     ! Read the input file and validate the data
-    ! (note p%RootName must be set first!)
     !............................................................................................
-   p%RootName     =  TRIM(InitInp%RootName)     ! Already includes NTMD, TTMD, or BTMD
-   p%NumMeshPts   =  InitInp%NumMeshPts
 
-
-   CALL TMD_ReadInput( InitInp%InputFile, InputFileData, Interval, p%RootName, ErrStat2, ErrMsg2 )
+   CALL TMD_ReadInput( InitInp%InputFile, InputFileData, Interval, TRIM(InitInp%RootName), ErrStat2, ErrMsg2 )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN
 
-   !CALL ValidatePrimaryData( InputFileData, InitInp%NumMeshPts, ErrStat2, ErrMsg2 )
-   !   CALL CheckError( ErrStat2, ErrMsg2 )
-   !    IF (ErrStat >= AbortErrLev) RETURN
-
-    IF ( InputFileData%TMD_DOF_MODE /= ControlMode_None     .and. &
-         InputFileData%TMD_DOF_MODE /= DOFMode_Indept       .and. &
-         InputFileData%TMD_DOF_MODE /= DOFMode_Omni         .and. &
-         InputFileData%TMD_DOF_MODE /= DOFMode_TLCD         .and. &
-         InputFileData%TMD_DOF_MODE /= DOFMode_Prescribed) &
-      CALL SetErrStat( ErrID_Fatal, 'DOF mode (TMD_DOF_MODE) must be 0 (no DOF), 1 (two independent DOFs), or 2 (omni-directional), or 3 (TLCD), or 4 (prescribed force time-series).', ErrStat, ErrMsg, RoutineName )
-
-   IF ( InputFileData%TMD_CMODE /= ControlMode_None .and. InputFileData%TMD_CMODE /= CMODE_Semi ) &
-      CALL SetErrStat( ErrID_Fatal, 'Control mode (TMD_CMode) must be 0 (none) or 1 (semi-active) in this version of TMD.', ErrStat, ErrMsg, RoutineName )
-!   IF ( InputFileData%TMD_CMODE /= ControlMode_None .and. InputFileData%TMD_CMODE /= CMODE_Semi .and. InputFileData%TMD_CMODE /= CMODE_Active) &
-!      CALL SetErrStat( ErrID_Fatal, 'Control mode (TMD_CMode) must be 0 (none), 1 (semi-active), or 2 (active).', ErrStat, ErrMsg, RoutineName )
-
-   IF ( InputFileData%TMD_SA_MODE /= SA_CMODE_GH_vel    .and. &
-        InputFileData%TMD_SA_MODE /= SA_CMODE_GH_invVel .and. &
-        InputFileData%TMD_SA_MODE /= SA_CMODE_GH_disp   .and. &
-        InputFileData%TMD_SA_MODE /= SA_CMODE_Ph_FF     .and. &
-        InputFileData%TMD_SA_MODE /= SA_CMODE_Ph_DF     ) then
-      CALL SetErrStat( ErrID_Fatal, 'Semi-active control mode (TMD_SA_MODE) must be 1 (velocity-based ground hook control), '// &
-                   '2 (inverse velocity-based ground hook control), 3 (displacement-based ground hook control), '// &
-                   '4 (phase difference algorithm with friction force), or 5 (phase difference algorithm with damping force).', ErrStat, ErrMsg, RoutineName )
-   END IF
-
-   if (InputFileData%TMD_DOF_MODE == DOFMode_Prescribed) then
-      if (InputFileData%PrescribedForcesCoordSys /= 0_IntKi .and. InputFileData%PrescribedForcesCoordSys /= 1_IntKi) then
-         ErrStat2=ErrID_Fatal
-         ErrMsg2='PrescribedForcesCoordSys must be 0 (Global) or 1 (local)'
-      endif
-   endif
+   CALL TMD_ValidatePrimaryData( InputFileData, InitInp, ErrStat2, ErrMsg2 )
       CALL CheckError( ErrStat2, ErrMsg2 )
-      IF (ErrStat >= AbortErrLev) RETURN
+       IF (ErrStat >= AbortErrLev) RETURN
 
       !............................................................................................
       ! Define parameters here:
       !............................................................................................
-   CALL TMD_SetParameters( InputFileData, p, ErrStat2, ErrMsg2 )
+   CALL TMD_SetParameters( InputFileData, InitInp, p, Interval, ErrStat2, ErrMsg2 )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN
-
-   p%DT  = Interval
-   p%Gravity = InitInp%Gravity      ! Gravity vector pointed in negative global Z-axis (/0,0,-g/)
 
       !............................................................................................
       ! Define initial system states here:
@@ -2106,27 +2068,107 @@ CONTAINS
    END SUBROUTINE CheckError
    !...............................................................................................................................
 END SUBROUTINE ReadPrimaryFile
+
+
 !----------------------------------------------------------------------------------------------------------------------------------
-!> This subroutine sets the parameters, based on the data stored in InputFileData.
-SUBROUTINE TMD_SetParameters( InputFileData, p, ErrStat, ErrMsg )
-!..................................................................................................................................
+!> This subroutine checks the data handed in.  If all is good, no errors reported. 
+subroutine    TMD_ValidatePrimaryData( InputFileData, InitInp, ErrStat, ErrMsg )
+   TYPE(TMD_InputFile),      INTENT(IN)      :: InputFileData  !< Data stored in the module's input file
+   TYPE(TMD_InitInputType),  INTENT(IN   )   :: InitInp        !< Input data for initialization routine.
+   INTEGER(IntKi),           INTENT(  OUT)   :: ErrStat        !< The error status code
+   CHARACTER(ErrMsgLen),     INTENT(  OUT)   :: ErrMsg         !< The error message, if an error occurred
 
-   TYPE(TMD_InputFile),      INTENT(IN)       :: InputFileData  !< Data stored in the module's input file
-   TYPE(TMD_ParameterType),  INTENT(INOUT)    :: p              !< The module's parameter data
-   INTEGER(IntKi),           INTENT(OUT)      :: ErrStat        !< The error status code
-   CHARACTER(*),             INTENT(OUT)      :: ErrMsg         !< The error message, if an error occurred
-
-      ! Local variables
-   INTEGER(IntKi)                             :: ErrStat2       ! Temporary error ID
-   CHARACTER(ErrMsgLen)                       :: ErrMsg2        ! Temporary message describing error
-   CHARACTER(*), PARAMETER                    :: RoutineName = 'TMD_SetParameters'
-
+   CHARACTER(*), PARAMETER                   :: RoutineName = 'TMD_ValidatePrimaryData'
 
       ! Initialize variables
-
    ErrStat = ErrID_None
    ErrMsg  = ''
 
+      ! Check DOF modes
+   IF (  InputFileData%TMD_DOF_MODE /= ControlMode_None     .and. &
+         InputFileData%TMD_DOF_MODE /= DOFMode_Indept       .and. &
+         InputFileData%TMD_DOF_MODE /= DOFMode_Omni         .and. &
+         InputFileData%TMD_DOF_MODE /= DOFMode_TLCD         .and. &
+         InputFileData%TMD_DOF_MODE /= DOFMode_Prescribed) &
+      CALL SetErrStat( ErrID_Fatal, 'DOF mode (TMD_DOF_MODE) must be 0 (no DOF), 1 (two independent DOFs), or 2 (omni-directional), or 3 (TLCD), or 4 (prescribed force time-series).', ErrStat, ErrMsg, RoutineName )
+
+      ! Check control modes
+   IF ( InputFileData%TMD_CMODE /= ControlMode_None .and. InputFileData%TMD_CMODE /= CMODE_Semi ) &
+      CALL SetErrStat( ErrID_Fatal, 'Control mode (TMD_CMode) must be 0 (none) or 1 (semi-active) in this version of TMD.', ErrStat, ErrMsg, RoutineName )
+!   IF ( InputFileData%TMD_CMODE /= ControlMode_None .and. InputFileData%TMD_CMODE /= CMODE_Semi .and. InputFileData%TMD_CMODE /= CMODE_Active) &
+!      CALL SetErrStat( ErrID_Fatal, 'Control mode (TMD_CMode) must be 0 (none), 1 (semi-active), or 2 (active).', ErrStat, ErrMsg, RoutineName )
+
+   IF ( InputFileData%TMD_SA_MODE /= SA_CMODE_GH_vel    .and. &
+        InputFileData%TMD_SA_MODE /= SA_CMODE_GH_invVel .and. &
+        InputFileData%TMD_SA_MODE /= SA_CMODE_GH_disp   .and. &
+        InputFileData%TMD_SA_MODE /= SA_CMODE_Ph_FF     .and. &
+        InputFileData%TMD_SA_MODE /= SA_CMODE_Ph_DF     ) then
+      CALL SetErrStat( ErrID_Fatal, 'Semi-active control mode (TMD_SA_MODE) must be 1 (velocity-based ground hook control), '// &
+                   '2 (inverse velocity-based ground hook control), 3 (displacement-based ground hook control), '// &
+                   '4 (phase difference algorithm with friction force), or 5 (phase difference algorithm with damping force).', ErrStat, ErrMsg, RoutineName )
+   END IF
+
+      ! Prescribed forces
+   if (InputFileData%TMD_DOF_MODE == DOFMode_Prescribed) then
+      if (InputFileData%PrescribedForcesCoordSys /= 0_IntKi .and. InputFileData%PrescribedForcesCoordSys /= 1_IntKi) then
+         call SetErrStat( ErrID_Fatal, 'PrescribedForcesCoordSys must be 0 (Global) or 1 (local)', ErrStat, ErrMsg, RoutineName )
+      endif
+   endif
+
+
+      ! Check masses make some kind of sense
+   if (InputFileData%TMD_DOF_MODE == DOFMode_Indept .and. InputFileData%TMD_X_DOF .and. (InputFileData%TMD_X_M <= 0.0_ReKi) )    & 
+      call SetErrStat(ErrID_Fatal,'TMD_X_M must be > 0 when TMD_X_DOF is enabled', ErrStat,ErrMsg,RoutineName)
+   if (InputFileData%TMD_DOF_MODE == DOFMode_Indept .and. InputFileData%TMD_X_DOF .and. (InputFileData%TMD_X_K <= 0.0_ReKi) )    & 
+      call SetErrStat(ErrID_Fatal,'TMD_X_K must be > 0 when TMD_X_DOF is enabled', ErrStat,ErrMsg,RoutineName)
+
+   if (InputFileData%TMD_DOF_MODE == DOFMode_Indept .and. InputFileData%TMD_Y_DOF .and. (InputFileData%TMD_Y_M <= 0.0_ReKi) )    & 
+      call SetErrStat(ErrID_Fatal,'TMD_Y_M must be > 0 when TMD_Y_DOF is enabled', ErrStat,ErrMsg,RoutineName)
+   if (InputFileData%TMD_DOF_MODE == DOFMode_Indept .and. InputFileData%TMD_Y_DOF .and. (InputFileData%TMD_Y_K <= 0.0_ReKi) )    & 
+      call SetErrStat(ErrID_Fatal,'TMD_Y_K must be > 0 when TMD_Y_DOF is enabled', ErrStat,ErrMsg,RoutineName)
+
+   if (InputFileData%TMD_DOF_MODE == DOFMode_Omni .and. (InputFileData%TMD_XY_M <= 0.0_ReKi) )    & 
+      call SetErrStat(ErrID_Fatal,'TMD_XY_M must be > 0 when DOF mode 2 (omni-directional) is used', ErrStat,ErrMsg,RoutineName)
+   if (InputFileData%TMD_DOF_MODE == DOFMode_Omni .and. (InputFileData%TMD_X_K <= 0.0_ReKi) )    & 
+      call SetErrStat(ErrID_Fatal,'TMD_X_K must be > 0 when DOF mode 2 (omni-directional) is used', ErrStat,ErrMsg,RoutineName)
+   if (InputFileData%TMD_DOF_MODE == DOFMode_Omni .and. (InputFileData%TMD_Y_K <= 0.0_ReKi) )    & 
+      call SetErrStat(ErrID_Fatal,'TMD_Y_K must be > 0 when DOF mode 2 (omni-directional) is used', ErrStat,ErrMsg,RoutineName)
+
+      ! Sanity checks for the TLCD option
+!FIXME: add some sanity checks here
+
+end subroutine TMD_ValidatePrimaryData
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine sets the parameters, based on the data stored in InputFileData.
+SUBROUTINE TMD_SetParameters( InputFileData, InitInp, p, Interval, ErrStat, ErrMsg )
+!..................................................................................................................................
+
+   TYPE(TMD_InputFile),      INTENT(IN   )   :: InputFileData  !< Data stored in the module's input file
+   TYPE(TMD_InitInputType),  INTENT(IN   )   :: InitInp        !< Input data for initialization routine.
+   TYPE(TMD_ParameterType),  INTENT(INOUT)   :: p              !< The module's parameter data
+   REAL(DbKi),               INTENT(IN   )   :: Interval       !< Coupling interval in seconds: the rate that
+   INTEGER(IntKi),           INTENT(  OUT)   :: ErrStat        !< The error status code
+   CHARACTER(ErrMsgLen),     INTENT(  OUT)   :: ErrMsg         !< The error message, if an error occurred
+
+      ! Local variables
+   INTEGER(IntKi)                            :: ErrStat2       ! Temporary error ID
+   CHARACTER(ErrMsgLen)                      :: ErrMsg2        ! Temporary message describing error
+   CHARACTER(*), PARAMETER                   :: RoutineName = 'TMD_SetParameters'
+
+
+      ! Initialize variables
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+
+      ! Filenames
+   p%RootName     =  TRIM(InitInp%RootName)     ! Already includes NTMD, TTMD, or BTMD
+
+      ! Constants
+   p%DT  = Interval
+   p%Gravity = InitInp%Gravity      ! Gravity vector pointed in negative global Z-axis (/0,0,-g/)
+   p%NumMeshPts   =  InitInp%NumMeshPts
+
+      ! DOF controls
    p%TMD_DOF_MODE = InputFileData%TMD_DOF_MODE
 
    !p%DT = InputFileData%DT
@@ -2205,6 +2247,7 @@ SUBROUTINE TMD_SetParameters( InputFileData, p, ErrStat, ErrMsg )
    endif
 
    p%PrescribedForcesCoordSys =  InputFileData%PrescribedForcesCoordSys
+
 
 END SUBROUTINE TMD_SetParameters
 
