@@ -460,7 +460,7 @@ complete list of possible output parameters.
 .. _airfoil_data_input_file:
 
 Airfoil Data Input File
-~~~~~~~~~~~~~~~~~~~~~~~
+-----------------------
 
 The airfoil data input files themselves (one for each airfoil) include
 tables containing coefficients of lift force, drag force, and pitching
@@ -477,7 +477,7 @@ pitching-moment, and minimum pressure coefficients as a function of AoA.
 When ``InterpOrd`` is 1, linear interpolation is used; when
 ``InterpOrd`` is 3, the data will be interpolated with cubic splines;
 if the keyword ``DEFAULT`` is entered in place of a numerical value,
-``InterpOrd`` is set to 3.
+``InterpOrd`` is set to 1.
 
 ``NonDimArea`` is the nondimensional airfoil area (normalized by the
 local ``BlChord`` squared), but is currently unused by AeroDyn.
@@ -493,6 +493,9 @@ on the surface of the airfoil); the remaining points should define the
 exterior shape of the airfoil. The airfoil shape is currently unused by
 AeroDyn, but when AeroDyn is coupled to OpenFAST, the airfoil shape will be
 used by OpenFAST for blade surface visualization when enabled.
+
+``BL_file`` is the name of the file containing boundary-layer characteristics
+of the profile. It is ignored if the aeroacoustic module is not used.
 
 Specify the number of Reynolds number- or aerodynamic-control
 setting-dependent tables of data for the given airfoil via the
@@ -664,8 +667,13 @@ interpolate on AoA using the data provided via linear interpolation or via cubic
 splines, depending on the setting of input ``InterpOrd`` above. 
 If ``AFTabMod`` is set to ``1``, only the first airfoil table in each file
 will be used. If ``AFTabMod`` is set to ``2``, AeroDyn will find the
-airfoil table that bounds the computed Reynolds number, and linearly interpolate
-between the tables, using the logarithm of the Reynolds numbers.
+airfoil tables that bound the computed Reynolds number,
+and linearly interpolate between the tables, using the logarithm of the Reynolds numbers.
+If ``AFTabMod`` is set to ``3``, it will find the bounding airfoil 
+tables based on the ``UserProp`` field and linearly interpolate the tables
+based on it. Note that OpenFAST currently sets the ``UserProp`` input value to ``0`` 
+unless the DLL controller is used and sets the value, 
+so using this feature may require a code change.
 
 For each AoA, you must set the AoA (in degrees), ``alpha``, the lift-force
 coefficient, ``Coefs``\ (:,1), the drag-force coefficient,
@@ -688,8 +696,7 @@ minimum pressure coefficients may be absent from the file.
 .. _blade_data_input_file:
 
 Blade Data Input File
-~~~~~~~~~~~~~~~~~~~~~
-
+---------------------
 
 The blade data input file contains the nodal discretization, geometry,
 twist, chord, and airfoil identifier for a blade. Separate files are

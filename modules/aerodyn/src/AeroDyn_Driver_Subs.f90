@@ -823,6 +823,7 @@ end subroutine ValidateInputs
 subroutine Dvr_WriteOutputLine(OutFileData, nt, RotAzimuth, output, CaseData, iCase, errStat, errMsg)
 
    integer(IntKi)         ,  intent(in   )   :: nt                   ! simulation time step (-)
+   integer(IntKi)         ,  intent(in   )   :: iCase                ! case # to write to file
    type(Dvr_OutputFile)   ,  intent(in   )   :: OutFileData
    type(Dvr_Case),           intent(in   )   :: CaseData
    real(ReKi)             ,  intent(in   )   :: RotAzimuth           ! Rotor azimuth -- aligned with blade 1 (deg)
