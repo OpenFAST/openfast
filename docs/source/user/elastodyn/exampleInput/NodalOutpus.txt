@@ -1,0 +1,26 @@
+END of input file (the word "END" must appear in the first 3 columns of this last OutList line)
+---------------------- NODE OUTPUTS --------------------------------------------
+          3   BldNd_BladesOut  - Blades to output
+         99   BldNd_BlOutNd   - Blade nodes on each blade (currently unused)
+              OutList     - The next line(s) contains a list of output parameters.  See OutListParameters.xlsx, ElastoDyn_Nodes tab for a listing of available output channels, (-)
+"ALx"    -  local flapwise acceleration (absolute) of node
+"ALy"    - local flapwise acceleration (absolute) of node
+"ALz"    - local flapwise acceleration (absolute) of node
+"TDx"    - local flapwise (translational) deflection (relative to the undeflected position) of node
+"TDy"    - local edgewise (translational) deflection (relative to the undeflected position) of node
+"TDz"    - local axial (translational) deflection (relative to the undeflected position) of node
+"RDx"    - Local rotational displacement about x-axis (relative to undeflected)
+"RDy"    - Local rotational displacement about y-axis (relative to undeflected)
+"RDz"    - Local rotational displacement about z-axis (relative to undeflected)
+"MLx"    - local edgewise moment at node
+"MLy"    - local flapwise moment at node
+"MLz"    - local pitching moment at node
+"FLx"    - local flapwise shear force at node
+"FLy"    - local edgewise shear force at node
+"FLz"    - local axial force at node
+"MLxNT"  - Edgewise moment in local coordinate system (initial structural twist removed)
+"MlyNT"  - Flapwise shear moment in local coordinate system (initial structural twist removed)
+"FLxNT"  - Flapwise shear force in local coordinate system (initial structural twist removed)
+"FlyNT"  - Edgewise shear force in local coordinate system (initial structural twist removed)
+END of input file (the word "END" must appear in the first 3 columns of this last OutList line)
+---------------------------------------------------------------------------------------

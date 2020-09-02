@@ -421,7 +421,6 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, KC, BL_
    
    
    KC%dalpha0  = KC%alpha_filt_cur - BL_p%alpha0
-   
     
       ! Compute Kalpha using Eqn 1.7
   
@@ -492,9 +491,14 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, KC, BL_
    KC%Cn_q_nc       = -1.0_ReKi*KC%T_q * ( KC%Kq_f - KC%Kprime_q ) / M                                                        ! Eqn 1.19a
          
    KC%Cn_alpha_q_nc = KC%Cn_alpha_nc + KC%Cn_q_nc                                                                             ! Eqn 1.17
-   
+
+if (p%ShedEffect) then
    KC%X1            = Get_ExpEqn( KC%ds*beta_M_Sqrd*BL_p%b1, 1.0_ReKi, xd%X1_minus1(i,j), BL_p%A1*(KC%alpha_filt_cur - alpha_filt_minus1), 0.0_ReKi ) ! Eqn 1.15a
    KC%X2            = Get_ExpEqn( KC%ds*beta_M_Sqrd*BL_p%b2, 1.0_ReKi, xd%X2_minus1(i,j), BL_p%A2*(KC%alpha_filt_cur - alpha_filt_minus1), 0.0_ReKi ) ! Eqn 1.15b
+else
+   KC%X1  = 0.0_ReKi  ! u%alpha (and alpha_filt_cur) contains shed vorticity effect already 
+   KC%X2  = 0.0_ReKi  ! so that alpha_e = u%alpha-alpha0 directly
+endif
    
    KC%alpha_e       = (KC%alpha_filt_cur - BL_p%alpha0) - KC%X1 - KC%X2                                                       ! Eqn 1.14
    
@@ -502,9 +506,14 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, KC, BL_
    
    if ( p%UAMod == UA_Gonzalez ) then
          ! Compute X3 and X4 using Eqn 1.16a  and then add Cn_q_circ (Eqn 1.16) to the previously computed Cn_alpha_q_circ
+if (p%ShedEffect) then
       KC%X3              = Get_ExpEqn( KC%ds*beta_M_Sqrd*BL_p%b1, 1.0_ReKi, xd%X3_minus1(i,j), BL_p%A1*(KC%q_f_cur - q_f_minus1), 0.0_ReKi ) ! Eqn 1.16a [1]
       KC%X4              = Get_ExpEqn( KC%ds*beta_M_Sqrd*BL_p%b2, 1.0_ReKi, xd%X4_minus1(i,j), BL_p%A2*(KC%q_f_cur - q_f_minus1), 0.0_ReKi ) ! Eqn 1.16a [2]
-      
+else
+      KC%X3 = 0.0_ReKi ! Similar to X1 and X2, we assumed that this effect is already included
+      KC%X4 = 0.0_ReKi
+endif
+
       KC%Cn_q_circ       = KC%C_nalpha_circ*KC%q_f_cur/2.0 - KC%X3 - KC%X4                                                    ! Eqn 1.16
 
    else ! these aren't used (they are possibly output to UA_OUT file, though)
@@ -515,7 +524,7 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, KC, BL_
    
    K3prime_q       = Get_ExpEqn( BL_p%b5*beta_M_Sqrd*KC%ds, 1.0_ReKi, xd%K3prime_q_minus1(i,j),  BL_p%A5*(KC%q_f_cur - q_f_minus1), 0.0_ReKi )  ! Eqn 1.26
    KC%Cm_q_circ    = -BL_p%C_nalpha*(KC%q_f_cur - K3prime_q)*p%c(i,j)/(16.0_ReKi*beta_M*u%U)                                  ! Eqn 1.25
-   
+
    KC%Cn_pot       = KC%Cn_alpha_q_circ + KC%Cn_alpha_q_nc                                                                    ! Eqn 1.20 [2a]
    
    k_mq            = 7.0_ReKi / (15.0_ReKi*(1.0_ReKi-M) + 1.5_ReKi * BL_p%C_nalpha * BL_p%A5 * BL_p%b5 * beta_M * M**2)       ! Eqn 1.29 [2]      ! CHECK THAT DENOM ISN'T ZERO!
@@ -698,11 +707,11 @@ subroutine UA_SetParameters( dt, InitInp, p, ErrStat, ErrMsg )
 ! Calls  to : NONE
 !..............................................................................
    
-   real(DbKi),                             intent(inout)  :: dt          ! time step length (s)
+   real(DbKi),                   intent(in   )  :: dt          ! time step length (s)
    type(UA_InitInputType),       intent(inout)  :: InitInp     ! input data for initialization routine, needs to be inout because there is a copy of some data in InitInp in BEMT_SetParameters()
    type(UA_ParameterType),       intent(inout)  :: p           ! parameters
-   integer(IntKi),                         intent(  out)  :: ErrStat     ! error status of the operation
-   character(*),                           intent(  out)  :: ErrMsg      ! error message if ErrStat /= ErrID_None
+   integer(IntKi),               intent(  out)  :: ErrStat     ! error status of the operation
+   character(*),                 intent(  out)  :: ErrMsg      ! error message if ErrStat /= ErrID_None
 
    integer(IntKi)            :: ErrStat2
    character(*), parameter   :: RoutineName = 'UA_SetParameters'
@@ -886,7 +895,7 @@ subroutine UA_Init( InitInp, u, p, xd, OtherState, y,  m, Interval, &
    type(UA_OutputType),          intent(  out)  :: y           ! Initial system outputs (outputs are not calculated;
                                                                !   only the output mesh is initialized)
    type(UA_MiscVarType),         intent(  out)  :: m           ! Initial misc/optimization variables
-   real(DbKi),                   intent(inout)  :: interval    ! Coupling interval in seconds: the rate that
+   real(DbKi),                   intent(in   )  :: interval    ! Coupling interval in seconds: the rate that
                                                                !   (1) BEMT_UpdateStates() is called in loose coupling &
                                                                !   (2) BEMT_UpdateDiscState() is called in tight coupling.
                                                                !   Input is the suggested time from the glue code;
@@ -949,48 +958,48 @@ subroutine UA_Init( InitInp, u, p, xd, OtherState, y,  m, Interval, &
          iOffset = (i-1)*p%NumOuts + (j-1)*p%nNodesPerBlade*p%NumOuts 
                   
          chanPrefix = "B"//trim(num2lstr(j))//"N"//trim(num2lstr(i))  
-         InitOut%WriteOutputHdr(iOffset+ 1)  = 'ALPHA_filt'//chanPrefix      
-         InitOut%WriteOutputHdr(iOffset+ 2)  = 'VREL'//chanPrefix  
-         InitOut%WriteOutputHdr(iOffset+ 3)  = 'Cn'//chanPrefix      
-         InitOut%WriteOutputHdr(iOffset+ 4)  = 'Cc'//chanPrefix
-         InitOut%WriteOutputHdr(iOffset+ 5)  = 'Cl'//chanPrefix
-         InitOut%WriteOutputHdr(iOffset+ 6)  = 'Cd'//chanPrefix
-         InitOut%WriteOutputHdr(iOffset+ 7)  = 'Cm'//chanPrefix     
-         InitOut%WriteOutputHdr(iOffset+ 8)  = 'Cn_aq_circ'//chanPrefix    
-         InitOut%WriteOutputHdr(iOffset+ 9)  = 'Cn_aq_nc'//chanPrefix
-         InitOut%WriteOutputHdr(iOffset+10)  = 'Cn_pot'//chanPrefix
-         InitOut%WriteOutputHdr(iOffset+11)  = 'Dp'//chanPrefix       
-         InitOut%WriteOutputHdr(iOffset+12)  = 'Cn_prime'//chanPrefix        
-         InitOut%WriteOutputHdr(iOffset+13)  = 'fprime'//chanPrefix       
-         InitOut%WriteOutputHdr(iOffset+14)  = 'Df'//chanPrefix
-         InitOut%WriteOutputHdr(iOffset+15)  = 'Cn_v'//chanPrefix         
-         InitOut%WriteOutputHdr(iOffset+16)  = 'Tau_V'//chanPrefix
-         InitOut%WriteOutputHdr(iOffset+17)  = 'LESF'//chanPrefix
-         InitOut%WriteOutputHdr(iOffset+18)  = 'TESF'//chanPrefix 
-         InitOut%WriteOutputHdr(iOffset+19)  = 'VRTX'//chanPrefix
-         InitOut%WriteOutputHdr(iOffset+20)  = 'C_v'//chanPrefix
-         InitOut%WriteOutputHdr(iOffset+21)  = 'Cm_a_nc'//chanPrefix
-         InitOut%WriteOutputHdr(iOffset+22)  = 'Cm_q_nc'//chanPrefix
-         InitOut%WriteOutputHdr(iOffset+23)  = 'Cm_v'//chanPrefix
-         InitOut%WriteOutputHdr(iOffset+24)  = 'alpha_p_f'//chanPrefix
-         InitOut%WriteOutputHdr(iOffset+25)  = 'Dalphaf'//chanPrefix
-         InitOut%WriteOutputHdr(iOffset+26)  = 'PMC'//chanPrefix
-         InitOut%WriteOutputHdr(iOffset+27)  = 'T_f'//chanPrefix
-         InitOut%WriteOutputHdr(iOffset+28)  = 'T_V'//chanPrefix
-         InitOut%WriteOutputHdr(iOffset+29)  = 'dS'//chanPrefix
-         InitOut%WriteOutputHdr(iOffset+30)  = 'T_alpha'//chanPrefix
-         InitOut%WriteOutputHdr(iOffset+31)  = 'T_q'//chanPrefix
-         InitOut%WriteOutputHdr(iOffset+32)  = 'k_alpha'//chanPrefix
-         InitOut%WriteOutputHdr(iOffset+33)  = 'k_q'//chanPrefix
-         InitOut%WriteOutputHdr(iOffset+34)  = 'alpha_e'//chanPrefix
-         InitOut%WriteOutputHdr(iOffset+35)  = 'X1'//chanPrefix
-         InitOut%WriteOutputHdr(iOffset+36)  = 'X2'//chanPrefix
-         InitOut%WriteOutputHdr(iOffset+37)  = 'cn_q_nc'//chanPrefix
-         InitOut%WriteOutputHdr(iOffset+38)  = 'alpha_f'//chanPrefix
-         InitOut%WriteOutputHdr(iOffset+39)  = 'fprimeprime'//chanPrefix
-         InitOut%WriteOutputHdr(iOffset+40)  = 'sigma1'//chanPrefix
-         InitOut%WriteOutputHdr(iOffset+41)  = 'sigma3'//chanPrefix
-         InitOut%WriteOutputHdr(iOffset+42)  = 'T_sh'//chanPrefix                  
+         InitOut%WriteOutputHdr(iOffset+ 1)  = trim(chanPrefix)//'ALPHA_filt'      
+         InitOut%WriteOutputHdr(iOffset+ 2)  = trim(chanPrefix)//'VREL'  
+         InitOut%WriteOutputHdr(iOffset+ 3)  = trim(chanPrefix)//'Cn'      
+         InitOut%WriteOutputHdr(iOffset+ 4)  = trim(chanPrefix)//'Cc'
+         InitOut%WriteOutputHdr(iOffset+ 5)  = trim(chanPrefix)//'Cl'
+         InitOut%WriteOutputHdr(iOffset+ 6)  = trim(chanPrefix)//'Cd'
+         InitOut%WriteOutputHdr(iOffset+ 7)  = trim(chanPrefix)//'Cm'     
+         InitOut%WriteOutputHdr(iOffset+ 8)  = trim(chanPrefix)//'Cn_aq_circ'    
+         InitOut%WriteOutputHdr(iOffset+ 9)  = trim(chanPrefix)//'Cn_aq_nc'
+         InitOut%WriteOutputHdr(iOffset+10)  = trim(chanPrefix)//'Cn_pot'
+         InitOut%WriteOutputHdr(iOffset+11)  = trim(chanPrefix)//'Dp'       
+         InitOut%WriteOutputHdr(iOffset+12)  = trim(chanPrefix)//'Cn_prime'        
+         InitOut%WriteOutputHdr(iOffset+13)  = trim(chanPrefix)//'fprime'       
+         InitOut%WriteOutputHdr(iOffset+14)  = trim(chanPrefix)//'Df'
+         InitOut%WriteOutputHdr(iOffset+15)  = trim(chanPrefix)//'Cn_v'         
+         InitOut%WriteOutputHdr(iOffset+16)  = trim(chanPrefix)//'Tau_V'
+         InitOut%WriteOutputHdr(iOffset+17)  = trim(chanPrefix)//'LESF'
+         InitOut%WriteOutputHdr(iOffset+18)  = trim(chanPrefix)//'TESF' 
+         InitOut%WriteOutputHdr(iOffset+19)  = trim(chanPrefix)//'VRTX'
+         InitOut%WriteOutputHdr(iOffset+20)  = trim(chanPrefix)//'C_v'
+         InitOut%WriteOutputHdr(iOffset+21)  = trim(chanPrefix)//'Cm_a_nc'
+         InitOut%WriteOutputHdr(iOffset+22)  = trim(chanPrefix)//'Cm_q_nc'
+         InitOut%WriteOutputHdr(iOffset+23)  = trim(chanPrefix)//'Cm_v'
+         InitOut%WriteOutputHdr(iOffset+24)  = trim(chanPrefix)//'alpha_p_f'
+         InitOut%WriteOutputHdr(iOffset+25)  = trim(chanPrefix)//'Dalphaf'
+         InitOut%WriteOutputHdr(iOffset+26)  = trim(chanPrefix)//'PMC'
+         InitOut%WriteOutputHdr(iOffset+27)  = trim(chanPrefix)//'T_f'
+         InitOut%WriteOutputHdr(iOffset+28)  = trim(chanPrefix)//'T_V'
+         InitOut%WriteOutputHdr(iOffset+29)  = trim(chanPrefix)//'dS'
+         InitOut%WriteOutputHdr(iOffset+30)  = trim(chanPrefix)//'T_alpha'
+         InitOut%WriteOutputHdr(iOffset+31)  = trim(chanPrefix)//'T_q'
+         InitOut%WriteOutputHdr(iOffset+32)  = trim(chanPrefix)//'k_alpha'
+         InitOut%WriteOutputHdr(iOffset+33)  = trim(chanPrefix)//'k_q'
+         InitOut%WriteOutputHdr(iOffset+34)  = trim(chanPrefix)//'alpha_e'
+         InitOut%WriteOutputHdr(iOffset+35)  = trim(chanPrefix)//'X1'
+         InitOut%WriteOutputHdr(iOffset+36)  = trim(chanPrefix)//'X2'
+         InitOut%WriteOutputHdr(iOffset+37)  = trim(chanPrefix)//'cn_q_nc'
+         InitOut%WriteOutputHdr(iOffset+38)  = trim(chanPrefix)//'alpha_f'
+         InitOut%WriteOutputHdr(iOffset+39)  = trim(chanPrefix)//'fprimeprime'
+         InitOut%WriteOutputHdr(iOffset+40)  = trim(chanPrefix)//'sigma1'
+         InitOut%WriteOutputHdr(iOffset+41)  = trim(chanPrefix)//'sigma3'
+         InitOut%WriteOutputHdr(iOffset+42)  = trim(chanPrefix)//'T_sh'                  
                            
          
          InitOut%WriteOutputUnt(iOffset+1)  ='(deg)'                                                

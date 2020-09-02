@@ -26,6 +26,7 @@ MODULE Waves
    USE UserWaves
    USE NWTC_Library
    USE NWTC_FFTPACK
+   USE NWTC_RandomNumber
       
    IMPLICIT NONE
    
@@ -101,35 +102,28 @@ CONTAINS
    END FUNCTION WavePkShpDefault
    
 !=======================================================================
-      FUNCTION BoxMuller ( NDAmp, Phase )
-
+   FUNCTION BoxMuller ( RNGType, NDAmp, Phase )
 
          ! This FUNCTION uses the Box-Muller method to turn two uniformly
          ! distributed randoms into two unit normal randoms, which are
          ! returned as real and imaginary components.
 
-
-
-      IMPLICIT                             NONE
-
-
-         ! Passed Variables:
+      IMPLICIT NONE
 
       COMPLEX(SiKi)                     :: BoxMuller                                  ! This function
 
-      REAL(SiKi), INTENT(IN ), OPTIONAL :: Phase                                      ! Optional phase to override random phase (radians)
+         ! Passed Variables:
 
-      LOGICAL,    INTENT(IN )           :: NDAmp                                      ! Flag for normally-distributed amplitudes
-
+      INTEGER,    INTENT(IN)           :: RNGType
+      LOGICAL,    INTENT(IN)           :: NDAmp                                       ! Flag for normally-distributed amplitudes
+      REAL(SiKi), INTENT(IN), OPTIONAL :: Phase                                       ! Optional phase to override random phase (radians)
 
          ! Local Variables:
 
       REAL(SiKi)                   :: C1                                              ! Intermediate variable
       REAL(SiKi)                   :: C2                                              ! Intermediate variable
-      REAL(SiKi)                   :: U1                                              ! First  uniformly distributed random
-      REAL(SiKi)                   :: U2                                              ! Second uniformly distributed random
-
-
+      REAL(SiKi)                   :: U1(1)                                           ! First  uniformly distributed random
+      REAL(SiKi)                   :: U2(1)                                           ! Second uniformly distributed random
 
          ! Compute the two uniformly distributed randoms:
          ! NOTE: The first random, U1, cannot be zero else the LOG() function
@@ -137,16 +131,15 @@ CONTAINS
          !       second random, U2.
 
       U1 = 0.0
-      DO WHILE ( U1 == 0.0 )
-         CALL RANDOM_NUMBER(U1)
+      DO WHILE ( U1(1) == 0.0 )
+         CALL UniformRandomNumbers(RNGType, U1)
       END DO
-      CALL    RANDOM_NUMBER(U2)
-
-
+      CALL UniformRandomNumbers(RNGType, U2)
+      
          ! Compute intermediate variables:
 
       IF ( NDAmp )  THEN            ! Normally-distributed amplitudes
-         C1 = SQRT( -2.0*LOG(U1) )
+         C1 = SQRT( -2.0*LOG(U1(1)) )	
       ELSE                          ! Constant amplitudes (ignore U1); therefore, C1 = SQRT( 2.0 ) = MEAN( SQRT( -2.0*LOG(U1) ) for a uniform distribution of U1 between 0 and 1
          C1 = SQRT(  2.0         )
       END IF
@@ -154,15 +147,12 @@ CONTAINS
       IF ( PRESENT( Phase ) )  THEN ! Specified phase to replace random phase (ignore U2)
          C2 = Phase
       ELSE                          ! Uniformly-distributed phase
-         C2 = TwoPi*U2
+         C2 = TwoPi*U2(1)
       END IF
-
 
          ! Compute the unit normal randoms:
 
       BoxMuller = CMPLX( C1*COS(C2), C1*SIN(C2) )
-
-
 
       RETURN
       END FUNCTION BoxMuller
@@ -1499,7 +1489,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
          IF ( ( I == 0 ) .OR. ( I == InitOut%NStepWave2 ) )  THEN   ! .TRUE. if ( Omega == 0.0 ) or ( Omega == NStepWave2*WaveDOmega (= WaveOmegaMax) )
             WGNC = (0.0,0.0)
          ELSEIF ( InitInp%WaveMod == 10 )  THEN                     ! .TRUE. for plane progressive (regular) waves with a specified phase
-            WGNC = BoxMuller ( InitInp%WaveNDAmp, InitInp%WavePhase )
+            WGNC = BoxMuller ( InitInp%RNG%pRNG, InitInp%WaveNDAmp, InitInp%WavePhase )
                ! This scaling of WGNC is used to ensure that the Box-Muller method is only providing a random phase,
                ! not a magnitude change, at the frequency of the plane progressive wave.  The SQRT(2.0) is used to
                ! ensure that the time series WGN process has unit variance (i.e. sinusoidal with amplitude SQRT(2.0)).
@@ -1508,7 +1498,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
                !       0.0 in the Box-Muller method.
             IF (  ( I == I_WaveTp ) )  WGNC = WGNC*( SQRT(2.0)/ABS(WGNC) )
          ELSE                                               ! All other Omega
-            WGNC = BoxMuller ( InitInp%WaveNDAmp                    )
+            WGNC = BoxMuller ( InitInp%RNG%pRNG, InitInp%WaveNDAmp )
                ! This scaling of WGNC is used to ensure that the Box-Muller method is only providing a random phase,
                ! not a magnitude change, at the frequency of the plane progressive wave.  The SQRT(2.0) is used to
                ! ensure that the time series WGN process has unit variance (i.e. sinusoidal with amplitude SQRT(2.0)).
@@ -1629,7 +1619,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
          DO I = 1,WvSpreadFreqPerDir
 
                ! Populate the array with random numbers
-            CALL RANDOM_NUMBER(WvSpreadThetaIdx)
+            CALL UniformRandomNumbers(InitInp%RNG%pRNG, WvSpreadThetaIdx)
 
             DO J = 1, InitOut%WaveNDir
 
@@ -1648,7 +1638,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
             ENDDO
          ENDDO
          ! Filling last value since it is not reached by the loop above
-         CALL RANDOM_NUMBER(WvSpreadThetaIdx)
+         CALL UniformRandomNumbers(InitInp%RNG%pRNG, WvSpreadThetaIdx)
          LastInd  = MINLOC( WvSpreadThetaIdx, DIM=1 )
          InitOut%WaveDirArr(K)   =  WvTheta( LastInd )
 
@@ -2174,8 +2164,9 @@ SUBROUTINE Waves_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
          
       CALL NWTC_Init(  )
 
-  
-      
+         ! Initialize the pRNG
+      CALL RandNum_Init(InitInp%RNG, ErrStat, ErrMsg)
+      IF ( ErrStat >= AbortErrLev ) RETURN
          
          ! Define initialization-routine output here:
          
@@ -2189,7 +2180,8 @@ SUBROUTINE Waves_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
          ! subroutine calls as necessary.
       InitOut%WaveDirMin   = InitInp%WaveDir
       InitOut%WaveDirMax   = InitInp%WaveDir
-      
+      InitOut%WaveDir      = InitInp%WaveDir     ! Not sure why there are so many copies of this variable, but InitOut%WaveDir must be set, and isn't in all cases otherwise.
+
 
             ! Initialize the variables associated with the incident wave:
 

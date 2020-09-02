@@ -449,7 +449,7 @@ subroutine BEMT_Init( InitInp, u, p, x, xd, z, OtherState, AFInfo, y, misc, Inte
    type(AFI_ParameterType),        intent(in   )  :: AFInfo(:)   ! The airfoil parameter data
    type(BEMT_OutputType),          intent(  out)  :: y           ! Initial system outputs (outputs are not calculated;
                                                                  !   only the output mesh is initialized)
-   real(DbKi),                     intent(inout)  :: interval    ! Coupling interval in seconds: the rate that
+   real(DbKi),                     intent(in   )  :: interval    ! Coupling interval in seconds: the rate that
                                                                  !   (1) BEMT_UpdateStates() is called in loose coupling &
                                                                  !   (2) BEMT_UpdateDiscState() is called in tight coupling.
                                                                  !   Input is the suggested time from the glue code;
@@ -553,6 +553,8 @@ subroutine BEMT_Init( InitInp, u, p, x, xd, z, OtherState, AFInfo, y, misc, Inte
             call cleanup()
             return
          end if
+      p%UA%ShedEffect=.True. ! This should be true when coupled to BEM. True in registry as default.
+
          
       call BEMT_CheckInitUA(p, OtherState, AFInfo, ErrStat2, ErrMsg2)    
          call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
@@ -631,25 +633,6 @@ subroutine BEMT_Init( InitInp, u, p, x, xd, z, OtherState, AFInfo, y, misc, Inte
    call AllocAry(misc%AxInduction,p%numBladeNodes,p%numBlades,'misc%AxInduction', errStat2,errMsg2); call SetErrStat(errStat2,errMsg2,errStat,errMsg,RoutineName)
    call AllocAry(misc%TanInduction,p%numBladeNodes,p%numBlades,'misc%TanInduction', errStat2,errMsg2); call SetErrStat(errStat2,errMsg2,errStat,errMsg,RoutineName)
    call AllocAry(misc%Rtip,p%numBlades,'misc%Rtip', errStat2,errMsg2); call SetErrStat(errStat2,errMsg2,errStat,errMsg,RoutineName)
-
-      !............................................................................................
-      ! If you want to choose your own rate instead of using what the glue code suggests, tell the glue code the rate at which
-      !   this module must be called here:
-      !............................................................................................
-
-   Interval = p%DT
-
-
-       ! Print the summary file if requested:
-   !IF (InputFileData%SumPrint) THEN
-   !   CALL BEMT_PrintSum( p, OtherState, GetAdamsVals, ErrStat2, ErrMsg2 )
-   !   call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-   !END IF
-       
-       ! Destroy the InputFileData structure (deallocate arrays)
-
-   !CALL BEMT_DestroyInputFile(InputFileData, ErrStat2, ErrMsg2 )
-   !   call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
 
 CONTAINS
    !...............................................................................................................................

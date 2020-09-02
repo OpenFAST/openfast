@@ -114,12 +114,6 @@ Details for compiling
 `developing <http://openfast.readthedocs.io/en/latest/source/dev/index.html>`_
 OpenFAST on Unix-based and Windows machines are available at `readthedocs <http://openfast.readthedocs.io>`_.
 
-Nightly Testing
----------------
-The ``dev`` branch is automatically compiled and run through the test suite
-nightly. The results are publicly available through the
-`CDash Dashboard <http://my.cdash.org/index.php?project=OpenFAST&date=>`_.
-
 Help
 ----
 Please use `GitHub Issues <https://github.com/OpenFAST/OpenFAST/issues>`_ to:

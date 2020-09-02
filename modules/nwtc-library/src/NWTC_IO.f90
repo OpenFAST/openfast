@@ -20,9 +20,10 @@
 !> This module contains I/O-related variables and routines with non-system-specific logic.
 MODULE NWTC_IO
 
-   USE                             SysSubs
-   USE                             NWTC_Library_Types  ! ProgDesc and other types with copy and other routines for those types
-   USE                             IEEE_ARITHMETIC
+   USE SysSubs
+   USE NWTC_Library_Types  ! ProgDesc and other types with copy and other routines for those types
+   USE IEEE_ARITHMETIC
+   USE VersionInfo
 
    IMPLICIT  NONE
 
@@ -138,7 +139,7 @@ MODULE NWTC_IO
    END INTERFACE
 
       !> \copydoc nwtc_io::parsechvarwdefault
-   INTERFACE ParseVarWDefault                                                 ! Parses a character variable name and value from a string, potentially sets to a default value if "Default" is parsed.
+   INTERFACE ParseVarWDefault                                                 ! Parses a boolean variable name and value from a string, potentially sets to a default value if "Default" is parsed.
       MODULE PROCEDURE ParseChVarWDefault                                     ! Parses a character string from a string, potentially sets to a default value if "Default" is parsed.
       MODULE PROCEDURE ParseDbVarWDefault                                     ! Parses a double-precision REAL from a string, potentially sets to a default value if "Default" is parsed.
       MODULE PROCEDURE ParseInVarWDefault                                     ! Parses an INTEGER from a string, potentially sets to a default value if "Default" is parsed.
@@ -175,7 +176,7 @@ MODULE NWTC_IO
    INTERFACE ReadVarWDefault
       !MODULE PROCEDURE ReadCVar
       MODULE PROCEDURE ReadIVarWDefault
-      !MODULE PROCEDURE ReadLVar
+      MODULE PROCEDURE ReadLVarWDefault      ! Logical
       MODULE PROCEDURE ReadR4VarWDefault     ! 4-byte real
       MODULE PROCEDURE ReadR8VarWDefault     ! 8-byte real
       MODULE PROCEDURE ReadR16VarWDefault    ! 16-byte real
@@ -188,8 +189,11 @@ MODULE NWTC_IO
       MODULE PROCEDURE ReadIAry
       MODULE PROCEDURE ReadLAry
       MODULE PROCEDURE ReadR4Ary  ! read array of 4-byte reals
+      MODULE PROCEDURE ReadR4AryFromStr
       MODULE PROCEDURE ReadR8Ary  ! read array of 8-byte reals
+      MODULE PROCEDURE ReadR8AryFromStr
       MODULE PROCEDURE ReadR16Ary ! read array of 16-byte reals
+      MODULE PROCEDURE ReadR16AryFromStr
    END INTERFACE
 
       !> \copydoc nwtc_io::readcarylines   
@@ -1496,7 +1500,7 @@ CONTAINS
 
       ! Local declarations:
    INTEGER                                    :: I, J          ! Iterator variables
-   CHARACTER(1024)                            :: Arg
+   CHARACTER(1024)                            :: Arg, FlagIter
    CHARACTER(1024), DIMENSION(:), ALLOCATABLE :: ArgArray, TempArray, Flags
    LOGICAL :: FirstArgumentSet, SecondArgumentSet
 
@@ -1553,13 +1557,24 @@ CONTAINS
 
    DO I = 1, SIZE(Flags)
 
-      Flag = Flags(I)(2:) ! This results in the flag without the switch character
-      CALL Conv2UC( Flag )
+      FlagIter = Flags(I)(2:) ! This results in the flag without the switch character
+      CALL Conv2UC( FlagIter )
+      IF ( PRESENT(Flag) ) Flag = FlagIter
 
-      SELECT CASE ( TRIM(Flag) )
+      SELECT CASE ( TRIM(FlagIter) )
 
       CASE ('H')
+         CALL DispCopyrightLicense( ProgName )
+         CALL DispCompileRuntimeInfo
          CALL NWTC_DisplaySyntax( Arg1, ProgName )
+         IF ( PRESENT( ErrStat ) ) ErrStat = ErrID_None
+         CALL CLEANUP()
+         RETURN
+
+      CASE ('V', 'VERSION')
+         CALL DispCopyrightLicense( ProgName )
+         CALL DispCompileRuntimeInfo
+         IF ( PRESENT( ErrStat ) ) ErrStat = ErrID_None
          CALL CLEANUP()
          RETURN
 
@@ -1586,7 +1601,7 @@ CONTAINS
          END IF
 
       CASE DEFAULT
-         CALL INVALID_SYNTAX( 'unknown command-line argument given: '//TRIM(Flag) )
+         CALL INVALID_SYNTAX( 'unknown command-line argument given: '//TRIM(FlagIter) )
          CALL CLEANUP()
          RETURN
                                                 
@@ -1610,12 +1625,11 @@ CONTAINS
 
          CHARACTER(*), INTENT(IN) :: ErrorMessage
 
+         CALL DispCopyrightLicense( ProgName )
+         CALL DispCompileRuntimeInfo
          CALL NWTC_DisplaySyntax( Arg1, ProgName )
          CALL ProgAbort( ' Invalid syntax: '//TRIM(ErrorMessage), PRESENT(ErrStat) )
-               IF ( PRESENT(ErrStat) ) THEN
-                  ErrStat = ErrID_Fatal
-                  RETURN
-               END IF
+         IF ( PRESENT(ErrStat) ) ErrStat = ErrID_Fatal
 
       END SUBROUTINE
 
@@ -2090,38 +2104,28 @@ END SUBROUTINE CheckR16Var
    END FUNCTION CurTime
 !=======================================================================
 !> This routine displays some text about copyright and license.
-   SUBROUTINE DispCopyrightLicense( ProgInfo, AdditionalComment )
+   SUBROUTINE DispCopyrightLicense( ProgramName, AdditionalComment )
 
-
-   TYPE( ProgDesc ), INTENT(IN)           :: ProgInfo             !< Contains the name and version info of the program being run
+   CHARACTER(*),     INTENT(IN)           :: ProgramName          !< The name of the program being run
    CHARACTER(*),     INTENT(IN), OPTIONAL :: AdditionalComment    !< An additional comment displayed in the copyright notice. Typically used to describe alpha versions or one-off versions.
 
       ! local variable
-   INTEGER(IntKi)         :: DateLen   ! the trim length of the ProgInfo date field
    INTEGER(IntKi)         :: I         ! generic loop/index
-   CHARACTER(4)           :: year      ! the year, determined from ProgInfo's date field
+   CHARACTER(4)           :: Year      ! the year, determined from the FPP __DATE__ variable
    CHARACTER(MaxWrScrLen) :: Stars     ! a line of '*******' characters
 
    DO I=1,MaxWrScrLen
       Stars(I:I)='*'
    END DO
 
-
-   DateLen = LEN_TRIM(ProgInfo%date)
-   IF (  DateLen > 3 ) THEN
-      I = DateLen-4+1
-      year = ProgInfo%date(I:)
-   ELSE
-      year = ''
-   END IF
-
+   Year = __DATE__(8:11)
 
    CALL WrScr('')
    CALL WrScr(Stars)
-   CALL WrScr( TRIM(GetNVD(ProgInfo)) )
+   CALL WrScr( TRIM(ProgramName) )
    CALL WrScr('')
-   CALL WrScr( 'Copyright (C) '//TRIM(year)//' National Renewable Energy Laboratory' )
-   CALL WrScr( 'Copyright (C) '//TRIM(year)//' Envision Energy USA LTD' )
+   CALL WrScr( 'Copyright (C) '//TRIM(Year)//' National Renewable Energy Laboratory' )
+   CALL WrScr( 'Copyright (C) '//TRIM(Year)//' Envision Energy USA LTD' )
    CALL WrScr('')
    CALL WrScr( 'This program is licensed under Apache License Version 2.0 and comes with ABSOLUTELY NO WARRANTY. '//&
                'See the "LICENSE" file distributed with this software for details.')   
@@ -2237,7 +2241,51 @@ END SUBROUTINE CheckR16Var
       END IF
       
    END SUBROUTINE DLLTypeUnPack   
+!=======================================================================
+!>
+   SUBROUTINE DispCompileRuntimeInfo()
+#ifdef HAS_FORTRAN2008_FEATURES
+      USE iso_fortran_env, ONLY: compiler_version
+#endif
+      CHARACTER(200) :: compiler_version_str
+      CHARACTER(200) :: name
+      CHARACTER(200) :: git_commit, architecture, compiled_precision
+      CHARACTER(200) :: execution_date, execution_time, execution_zone
 
+      name = ProgName
+      git_commit = QueryGitVersion()
+      architecture = TRIM(Num2LStr(BITS_IN_ADDR))//' bit'
+      IF (ReKi == SiKi) THEN
+         compiled_precision = 'single'
+      ELSE IF (ReKi == R8Ki) THEN
+         compiled_precision = 'double'
+      ELSE
+         compiled_precision = 'unknown'
+      END IF
+
+#if defined(HAS_FORTRAN2008_FEATURES)
+      compiler_version_str = compiler_version()
+#elif defined(__INTEL_COMPILER)
+      compiler_version_str = 'Intel(R) Fortran Compiler '//num2lstr(__INTEL_COMPILER)
+#endif
+
+      CALL WrScr(trim(name)//'-'//trim(git_commit))
+      CALL WrScr('Compile Info:')
+      call wrscr(' - Compiler: '//trim(compiler_version_str))
+      CALL WrScr(' - Architecture: '//trim(architecture))
+      CALL WrScr(' - Precision: '//trim(compiled_precision))
+      CALL WrScr(' - Date: '//__DATE__)
+      CALL WrScr(' - Time: '//__TIME__)
+      ! call wrscr(' - Options: '//trim(compiler_options()))
+
+      CALL DATE_AND_TIME(execution_date, execution_time, execution_zone)
+
+      CALL WrScr('Execution Info:')
+      CALL WrScr(' - Date: '//TRIM(execution_date(5:6)//'/'//execution_date(7:8)//'/'//execution_date(1:4)))
+      CALL WrScr(' - Time: '//TRIM(execution_time(1:2)//':'//execution_time(3:4)//':'//execution_time(5:6))//TRIM(execution_zone))
+      CALL WrScr('')
+
+   END SUBROUTINE
 !=======================================================================
 !> This routine displays the name of the program, its version, and its release date.
 !! Use DispNVD (nwtc_io::dispnvd) instead of directly calling a specific routine in the generic interface.
@@ -2428,9 +2476,8 @@ END SUBROUTINE CheckR16Var
    END FUNCTION GetErrStr
    
 !=======================================================================
-!> This function converts the three strings contained in the ProgDesc
-!! data type into a single string listing the program name,
-!! version, and release date.
+!> This function extracts the Name field from the ProgDesc data type
+!  and return it.
    FUNCTION GetNVD ( ProgInfo )
 
       ! Argument declarations.
@@ -5615,6 +5662,56 @@ END SUBROUTINE CheckR16Var
    RETURN
    END SUBROUTINE ReadIVarWDefault
 !=======================================================================
+!> This routine reads a logical variable from the next line of the input file.
+!! Use ReadVarWDefault (nwtc_io::readvarwdefault) instead of directly calling a specific routine in the generic interface.    
+!! WARNING: this routine limits the size of the number being read to 30 characters   
+   SUBROUTINE ReadLVarWDefault ( UnIn, Fil, Var, VarName, VarDescr, VarDefault, ErrStat, ErrMsg, UnEc )
+
+      ! Argument declarations:
+
+   LOGICAL,        INTENT(OUT)         :: Var                                             !< variable being read
+   LOGICAL,        INTENT(IN)          :: VarDefault                                      !< default value of variable being read
+   INTEGER,        INTENT(IN)          :: UnIn                                            !< I/O unit for input file.
+   INTEGER,        INTENT(IN), OPTIONAL:: UnEc                                            !< I/O unit for echo file. If present and > 0, write to UnEc
+   INTEGER(IntKi), INTENT(OUT)         :: ErrStat                                         !< Error status; if present, program does not abort on error
+   CHARACTER(*),   INTENT(OUT)         :: ErrMsg                                          !< Error message
+
+   CHARACTER(*),   INTENT(IN)          :: Fil                                             !< Name of the input file.
+   CHARACTER(*),   INTENT(IN)          :: VarDescr                                        !< Text string describing the variable.
+   CHARACTER(*),   INTENT(IN)          :: VarName                                         !< Text string containing the variable name.
+
+
+      ! Local declarations:
+
+   INTEGER                             :: IOS                                             ! I/O status returned from the read statement.
+
+   CHARACTER(30)                       :: Word                                            ! String to hold the first word on the line.
+
+
+   CALL ReadNum ( UnIn, Fil, Word, VarName, ErrStat, ErrMsg )   
+   IF ( ErrStat >= AbortErrLev ) RETURN  ! If we're about to read a T/F and treat it as a number, we have a less severe ErrStat
+
+   CALL Conv2UC( Word )
+   IF ( INDEX(Word, "DEFAULT" ) /= 1 ) THEN ! If it's not "default", read this variable; otherwise use the DEFAULT value
+      READ (Word,*,IOSTAT=IOS)  Var
+
+      CALL CheckIOS ( IOS, Fil, VarName, NumType, ErrStat, ErrMsg )
+
+      IF (ErrStat >= AbortErrLev) RETURN
+   ELSE
+      Var = VarDefault
+   END IF   
+
+   IF ( PRESENT(UnEc) )  THEN
+      IF ( UnEc > 0 ) &
+         WRITE (UnEc,Ec_IntFrmt)  Var, VarName, VarDescr
+   END IF
+
+
+   RETURN
+   END SUBROUTINE ReadLVarWDefault
+!=======================================================================
+
 !> \copydoc nwtc_io::readcary
    SUBROUTINE ReadLAry ( UnIn, Fil, Ary, AryLen, AryName, AryDescr, ErrStat, ErrMsg, UnEc )
 
@@ -5925,6 +6022,50 @@ END SUBROUTINE CheckR16Var
 
    RETURN
    END SUBROUTINE ReadR4Ary
+!======================================================================
+!> This routine reads a AryLen values separated by whitespace (or other Fortran record delimiters such as commas) 
+!!  into an array (either on same line or multiple lines) from an input string
+!! Use ReadAry (nwtc_io::readary) instead of directly calling a specific routine in the generic interface.   
+   SUBROUTINE ReadR4AryFromStr ( Str, Ary, AryLen, AryName, AryDescr, ErrStat, ErrMsg, UnEc )
+
+   ! Argument declarations:
+   CHARACTER(*), INTENT(IN)     :: Str                                             !< String to read from
+   INTEGER, INTENT(IN)          :: AryLen                                          !< Length of the array.
+   INTEGER, INTENT(IN), OPTIONAL:: UnEc                                            !< I/O unit for echo file. If present and > 0, write to UnEc
+   INTEGER, INTENT(OUT)         :: ErrStat                                         !< Error status
+   CHARACTER(*), INTENT(OUT)    :: ErrMsg                                          !< Error message describing ErrStat
+   REAL(SiKi), INTENT(INOUT)    :: Ary(AryLen)                                ! Real array being read.
+   CHARACTER(*), INTENT(IN)     :: AryDescr                                        !< Text string describing the variable.
+   CHARACTER(*), INTENT(IN)     :: AryName                                         !< Text string containing the variable name.
+   ! Local declarations:
+   INTEGER                      :: Ind                                             ! Index into the string array.  Assumed to be one digit.
+   INTEGER                      :: IOS                                             ! I/O status returned from the read statement.
+
+   ! Init of output
+   do Ind=1,AryLen
+       Ary(Ind)=0.0
+   end do
+   ! Reading fields from string
+   READ (Str,*,IOSTAT=IOS)  ( Ary(Ind), Ind=1,AryLen )
+
+   ! Dedicated "CheckIOS"
+   IF ( IOS < 0 )  THEN
+      write(ErrMsg,'(A,I0,A)') 'End of line reached while trying to read ',AryLen,' value from string:`'//trim(Str)//'`'
+      ErrStat = ErrID_Fatal
+   ELSE IF ( IOS > 0 )  THEN
+      write(ErrMsg,'(A,I0,A)') 'Unexpected error while trying to read ',AryLen,' value from string:`'//trim(Str)//'`'
+   ELSE
+       ErrMsg=''
+       ErrStat = ErrID_None
+   END IF
+   IF (ErrStat >= AbortErrLev) RETURN
+   IF ( PRESENT(UnEc) )  THEN
+      IF ( UnEc > 0 ) &
+         WRITE (UnEc,Ec_ReAryFrmt)  TRIM( AryName ), AryDescr, ( Ary(Ind), Ind=1,MIN(AryLen,NWTC_MaxAryLen) )
+   END IF
+   RETURN
+   END SUBROUTINE ReadR4AryFromStr
+!=======================================================================
 !=======================================================================
 !> \copydoc nwtc_io::readcary
    SUBROUTINE ReadR8Ary ( UnIn, Fil, Ary, AryLen, AryName, AryDescr, ErrStat, ErrMsg, UnEc )
@@ -5976,6 +6117,49 @@ END SUBROUTINE CheckR16Var
 
    RETURN
    END SUBROUTINE ReadR8Ary
+!======================================================================
+!> This routine reads a AryLen values separated by whitespace (or other Fortran record delimiters such as commas) 
+!!  into an array (either on same line or multiple lines) from an input string
+!! Use ReadAry (nwtc_io::readary) instead of directly calling a specific routine in the generic interface.   
+   SUBROUTINE ReadR8AryFromStr ( Str, Ary, AryLen, AryName, AryDescr, ErrStat, ErrMsg, UnEc )
+
+   ! Argument declarations:
+   CHARACTER(*), INTENT(IN)     :: Str                                             !< String to read from
+   INTEGER, INTENT(IN)          :: AryLen                                          !< Length of the array.
+   INTEGER, INTENT(IN), OPTIONAL:: UnEc                                            !< I/O unit for echo file. If present and > 0, write to UnEc
+   INTEGER, INTENT(OUT)         :: ErrStat                                         !< Error status
+   CHARACTER(*), INTENT(OUT)    :: ErrMsg                                          !< Error message describing ErrStat
+   REAL(R8Ki), INTENT(INOUT)    :: Ary(AryLen)                                ! Real array being read.
+   CHARACTER(*), INTENT(IN)     :: AryDescr                                        !< Text string describing the variable.
+   CHARACTER(*), INTENT(IN)     :: AryName                                         !< Text string containing the variable name.
+   ! Local declarations:
+   INTEGER                      :: Ind                                             ! Index into the string array.  Assumed to be one digit.
+   INTEGER                      :: IOS                                             ! I/O status returned from the read statement.
+
+   ! Init of output
+   do Ind=1,AryLen
+       Ary(Ind)=0.0
+   end do
+   ! Reading fields from string
+   READ (Str,*,IOSTAT=IOS)  ( Ary(Ind), Ind=1,AryLen )
+
+   ! Dedicated "CheckIOS"
+   IF ( IOS < 0 )  THEN
+      write(ErrMsg,'(A,I0,A)') 'End of line reached while trying to read ',AryLen,' value from string:`'//trim(Str)//'`'
+      ErrStat = ErrID_Fatal
+   ELSE IF ( IOS > 0 )  THEN
+      write(ErrMsg,'(A,I0,A)') 'Unexpected error while trying to read ',AryLen,' value from string:`'//trim(Str)//'`'
+   ELSE
+       ErrMsg=''
+       ErrStat = ErrID_None
+   END IF
+   IF (ErrStat >= AbortErrLev) RETURN
+   IF ( PRESENT(UnEc) )  THEN
+      IF ( UnEc > 0 ) &
+         WRITE (UnEc,Ec_ReAryFrmt)  TRIM( AryName ), AryDescr, ( Ary(Ind), Ind=1,MIN(AryLen,NWTC_MaxAryLen) )
+   END IF
+   RETURN
+   END SUBROUTINE ReadR8AryFromStr
 !=======================================================================
 !> \copydoc nwtc_io::readcary
    SUBROUTINE ReadR16Ary ( UnIn, Fil, Ary, AryLen, AryName, AryDescr, ErrStat, ErrMsg, UnEc )
@@ -6028,6 +6212,49 @@ END SUBROUTINE CheckR16Var
 
    RETURN
    END SUBROUTINE ReadR16Ary
+!======================================================================
+!> This routine reads a AryLen values separated by whitespace (or other Fortran record delimiters such as commas) 
+!!  into an array (either on same line or multiple lines) from an input string
+!! Use ReadAry (nwtc_io::readary) instead of directly calling a specific routine in the generic interface.   
+   SUBROUTINE ReadR16AryFromStr ( Str, Ary, AryLen, AryName, AryDescr, ErrStat, ErrMsg, UnEc )
+
+   ! Argument declarations:
+   CHARACTER(*), INTENT(IN)     :: Str                                             !< String to read from
+   INTEGER, INTENT(IN)          :: AryLen                                          !< Length of the array.
+   INTEGER, INTENT(IN), OPTIONAL:: UnEc                                            !< I/O unit for echo file. If present and > 0, write to UnEc
+   INTEGER, INTENT(OUT)         :: ErrStat                                         !< Error status
+   CHARACTER(*), INTENT(OUT)    :: ErrMsg                                          !< Error message describing ErrStat
+   REAL(QuKi), INTENT(INOUT)   :: Ary(AryLen)                                ! Real array being read.
+   CHARACTER(*), INTENT(IN)     :: AryDescr                                        !< Text string describing the variable.
+   CHARACTER(*), INTENT(IN)     :: AryName                                         !< Text string containing the variable name.
+   ! Local declarations:
+   INTEGER                      :: Ind                                             ! Index into the string array.  Assumed to be one digit.
+   INTEGER                      :: IOS                                             ! I/O status returned from the read statement.
+
+   ! Init of output
+   do Ind=1,AryLen
+       Ary(Ind)=0.0
+   end do
+   ! Reading fields from string
+   READ (Str,*,IOSTAT=IOS)  ( Ary(Ind), Ind=1,AryLen )
+
+   ! Dedicated "CheckIOS"
+   IF ( IOS < 0 )  THEN
+      write(ErrMsg,'(A,I0,A)') 'End of line reached while trying to read ',AryLen,' value from string:`'//trim(Str)//'`'
+      ErrStat = ErrID_Fatal
+   ELSE IF ( IOS > 0 )  THEN
+      write(ErrMsg,'(A,I0,A)') 'Unexpected error while trying to read ',AryLen,' value from string:`'//trim(Str)//'`'
+   ELSE
+       ErrMsg=''
+       ErrStat = ErrID_None
+   END IF
+   IF (ErrStat >= AbortErrLev) RETURN
+   IF ( PRESENT(UnEc) )  THEN
+      IF ( UnEc > 0 ) &
+         WRITE (UnEc,Ec_ReAryFrmt)  TRIM( AryName ), AryDescr, ( Ary(Ind), Ind=1,MIN(AryLen,NWTC_MaxAryLen) )
+   END IF
+   RETURN
+   END SUBROUTINE ReadR16AryFromStr
 !=======================================================================
 !> \copydoc nwtc_io::readcarylines   
    SUBROUTINE ReadR4AryLines ( UnIn, Fil, Ary, AryLen, AryName, AryDescr, ErrStat, ErrMsg, UnEc )

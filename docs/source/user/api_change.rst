@@ -9,10 +9,11 @@ The changes are tabulated according to the module input file, line number, and f
 The line number corresponds to the resulting line number after all changes are implemented.
 Thus, be sure to implement each in order so that subsequent line numbers are correct.
 
-OpenFAST v2.3.0 to OpenFAST vTBD
-----------------------------------
- ============== ==== ================== =============================================================================================================================================================================
-Added in OpenFAST vTBD
+OpenFAST v2.3.0 to OpenFAST `dev`
+---------------------------------
+
+============== ==== ================== =============================================================================================================================================================================
+Added in OpenFAST `dev`
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  Module        Line  Flag Name          Example Value
 ============== ==== ================== =============================================================================================================================================================================
@@ -23,7 +24,19 @@ OpenFAST       46   TrimTol            0.0001   TrimTol    - Tolerance for the r
 OpenFAST       47   TrimGain            0.001   TrimGain   - Proportional gain for the rotational speed error (>0) [used only if CalcSteady=True] (rad/(rad/s) for yaw or pitch; Nm/(rad/s) for torque)
 OpenFAST       48   Twr_Kdmp                0   Twr_Kdmp   - Damping factor for the tower [used only if CalcSteady=True] (N/(m/s))
 OpenFAST       49   Bld_Kdmp                0   Bld_Kdmp   - Damping factor for the blades [used only if CalcSteady=True] (N/(m/s))
+InflowWind     48   InitPosition(x)       0.0   InitPosition(x) - Initial offset in +x direction (shift of wind box) [Only used with WindType = 5] (m)
+AeroDyn        13   CompAA             False                   CompAA             - Flag to compute AeroAcoustics calculation [only used when WakeMod=1 or 2]
+AeroDyn        14   AA_InputFile       "unused"                AA_InputFile       - Aeroacoustics input file
+AeroDyn        35   [separator line]   ======  OLAF -- cOnvecting LAgrangian Filaments (Free Vortex Wake) Theory Options  ================== [used only when WakeMod=3]
+AeroDyn        36   OLAFInputFileName  "Elliptic_OLAF.dat"     OLAFInputFileName - Input file for OLAF [used only when WakeMod=3]
+AirFoilTables  4\*  BL_file            "unused"                BL_file           - The file name including the boundary layer characteristics of the profile. Ignored if the aeroacoustic module is not called.
+
 ============== ==== ================== =============================================================================================================================================================================
+
+\*non-comment line count
+
+Additional nodal output channels added for :ref:`AeroDyn15<AD-Nodal-Outputs>`,
+:ref:`BeamDyn<BD-Nodal-Outputs>`, and :ref:`ElastoDyn<ED-Nodal-Outputs>`.
 
 OpenFAST v2.2.0 to OpenFAST v2.3.0
 ----------------------------------
@@ -45,7 +58,6 @@ Module                                        Line  Flag Name        Example Val
 AeroDyn Airfoil Input File - Airfoil Tables   2    UserProp         0   UserProp          ! User property (control) setting
 AeroDyn                                       37   AFTabMod         1   AFTabMod          - Interpolation method for multiple airfoil tables {1=1D interpolation on AoA (first table only); 2=2D interpolation on AoA and Re; 3=2D interpolation on AoA and UserProp} (-)
 ============================================= ==== =============== ========================================================================================================================================================================================================
-----------------------------------
 
 
 OpenFAST v2.1.0 to OpenFAST v2.2.0

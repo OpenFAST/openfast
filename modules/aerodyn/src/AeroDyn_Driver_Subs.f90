@@ -44,8 +44,8 @@ subroutine Dvr_Init(DvrData,errStat,errMsg )
 
    CHARACTER(1000)                             :: inputFile     ! String to hold the file name.
    CHARACTER(200)                              :: git_commit    ! String containing the current git commit hash
+   CHARACTER(20)                               :: FlagArg       ! flag argument from command line
 
-   TYPE(ProgDesc), PARAMETER                   :: version   = ProgDesc( 'AeroDyn Driver', '', '' )  ! The version number of this program.
 
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -53,30 +53,18 @@ subroutine Dvr_Init(DvrData,errStat,errMsg )
 
    DvrData%OutFileData%unOutFile   = -1
    
-   CALL NWTC_Init()
+   CALL NWTC_Init( ProgNameIN=version%Name )
+
+   InputFile = ""  ! initialize to empty string to make sure it's input from the command line
+   CALL CheckArgs( InputFile, Flag=FlagArg )
+   IF ( LEN( TRIM(FlagArg) ) > 0 ) CALL NormStop()
+
       ! Display the copyright notice
-   CALL DispCopyrightLicense( version )   
+   CALL DispCopyrightLicense( version%Name )
       ! Obtain OpenFAST git commit hash
    git_commit = QueryGitVersion()
       ! Tell our users what they're running
-   CALL WrScr( ' Running '//GetNVD( version )//' a part of OpenFAST - '//TRIM(git_Commit)//NewLine//' linked with '//TRIM( GetNVD( NWTC_Ver ))//NewLine )
-
-   InputFile = ""  ! initialize to empty string to make sure it's input from the command line
-   CALL CheckArgs( InputFile, ErrStat2 )
-   IF (LEN_TRIM(InputFile) == 0) THEN ! no input file was specified
-      call SetErrStat(ErrID_Fatal, 'The required input file was not specified on the command line.', ErrStat, ErrMsg, RoutineName) 
-      
-         !bjj:  if people have compiled themselves, they should be able to figure out the file name, right?         
-      IF (BITS_IN_ADDR==32) THEN
-         CALL NWTC_DisplaySyntax( InputFile, 'AeroDyn_Driver_Win32.exe' )
-      ELSEIF( BITS_IN_ADDR == 64) THEN
-         CALL NWTC_DisplaySyntax( InputFile, 'AeroDyn_Driver_x64.exe' )
-      ELSE
-         CALL NWTC_DisplaySyntax( InputFile, 'AeroDyn_Driver.exe' )
-      END IF
-         
-      return
-   END IF        
+   CALL WrScr( ' Running '//TRIM( version%Name )//' a part of OpenFAST - '//TRIM(git_Commit)//NewLine//' linked with '//TRIM( NWTC_Ver%Name )//NewLine )
          
       ! Read the AeroDyn driver input file
    call Dvr_ReadInputFile(inputFile, DvrData, errStat2, errMsg2 )
@@ -651,7 +639,7 @@ subroutine Dvr_InitializeOutputFile( iCase, CaseData, OutFileData, errStat, errM
       call OpenFOutFile ( OutFileData%unOutFile, trim(outFileData%Root)//'.'//trim(num2lstr(iCase))//'.out', ErrStat, ErrMsg )
          if ( ErrStat >= AbortErrLev ) return
          
-      write (OutFileData%unOutFile,'(/,A)')  'Predictions were generated on '//CurDate()//' at '//CurTime()//' using '//trim(GetNVD(version))
+      write (OutFileData%unOutFile,'(/,A)')  'Predictions were generated on '//CurDate()//' at '//CurTime()//' using '//trim( version%Name )
       write (OutFileData%unOutFile,'(1X,A)') trim(GetNVD(OutFileData%AD_ver))
       write (OutFileData%unOutFile,'()' )    !print a blank line
      ! write (OutFileData%unOutFile,'(A,11(1x,A,"=",ES11.4e2,1x,A))'   ) 'Case '//trim(num2lstr(iCase))//':' &

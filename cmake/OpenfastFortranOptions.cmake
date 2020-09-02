@@ -74,6 +74,27 @@ macro(set_fast_fortran)
 endmacro(set_fast_fortran)
 
 #
+# CHECK_F2008_FEATURES - Check if Fortran2008 features are available
+#
+macro(check_f2008_features)
+  include(CheckFortranSourceCompiles)
+  check_fortran_source_compiles(
+    "program test
+     use iso_fortran_env, only: compiler_version, real32, real64, real128
+     integer, parameter :: quki = real128
+     integer, parameter :: dbki = real64
+     integer, parameter :: reki = real32
+
+     end program test"
+     HAS_FORTRAN2008
+     SRC_EXT F90)
+   if (HAS_FORTRAN2008)
+     message(STATUS "Enabling Fortran 2008 features")
+     add_definitions(-DHAS_FORTRAN2008_FEATURES)
+   endif()
+endmacro(check_f2008_features)
+
+#
 # SET_FAST_GFORTRAN - Customizations for GNU Fortran compiler
 #
 macro(set_fast_gfortran)
@@ -83,17 +104,18 @@ macro(set_fast_gfortran)
   endif(NOT WIN32)
 
   # Fix free-form compilation for OpenFAST
+  #set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -ffree-line-length-none -cpp -fopenmp")
   set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -ffree-line-length-none -cpp")
 
   # Deal with Double/Single precision
   if (DOUBLE_PRECISION)
-    add_definitions(-DDOUBLE_PRECISION)
+    add_definitions(-DOPENFAST_DOUBLE_PRECISION)
     set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fdefault-real-8")
   endif (DOUBLE_PRECISION)
 
   # debug flags
   if(CMAKE_BUILD_TYPE MATCHES Debug)
-    set( CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -fcheck=all -pedantic -fbacktrace" )
+    set( CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -fcheck=all -pedantic -fbacktrace " )
   endif()
 
   if(CYGWIN)
@@ -102,6 +124,13 @@ macro(set_fast_gfortran)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS},--stack,${stack_size}")
   endif()
 
+  # OPENMP
+  if (OPENMP)
+     set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fopenmp")
+     set(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -fopenmp" )
+  endif()
+
+  check_f2008_features()
 endmacro(set_fast_gfortran)
 
 #
@@ -123,7 +152,7 @@ macro(set_fast_intel_fortran_posix)
   set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fpic -fpp")
   # Deal with Double/Single precision
   if (DOUBLE_PRECISION)
-    add_definitions(-DDOUBLE_PRECISION)
+    add_definitions(-DOPENFAST_DOUBLE_PRECISION)
     set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -r8 -double_size 128")
   endif (DOUBLE_PRECISION)
 
@@ -131,6 +160,14 @@ macro(set_fast_intel_fortran_posix)
   if(CMAKE_BUILD_TYPE MATCHES Debug)
     set( CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -check all -traceback" )
   endif()
+
+  # OPENMP
+  if (OPENMP)
+     set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -qopenmp")
+     set(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -qopenmp" )
+  endif()
+
+  check_f2008_features()
 endmacro(set_fast_intel_fortran_posix)
 
 #
@@ -145,7 +182,7 @@ macro(set_fast_intel_fortran_windows)
 
   # Deal with Double/Single precision
   if (DOUBLE_PRECISION)
-    add_definitions(-DDOUBLE_PRECISION)
+    add_definitions(-DOPENFAST_DOUBLE_PRECISION)
     set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} /real_size:64 /double_size:128")
   endif (DOUBLE_PRECISION)
 
@@ -157,4 +194,12 @@ macro(set_fast_intel_fortran_windows)
   if(CMAKE_BUILD_TYPE MATCHES Debug)
     set( CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} /check:all /traceback" )
   endif()
+
+  # OPENMP
+  if (OPENMP)
+     set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} /qopenmp")
+     set(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} /qopenmp" )
+  endif()
+
+  check_f2008_features()
 endmacro(set_fast_intel_fortran_windows)

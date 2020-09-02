@@ -180,6 +180,13 @@ MODULE NWTC_Num
       MODULE PROCEDURE InterpStpReal16
    END INTERFACE
 
+      !> \copydoc nwtc_num::interparrayr4
+   INTERFACE InterpArray
+      MODULE PROCEDURE InterpArrayR4
+      MODULE PROCEDURE InterpArrayR8
+      MODULE PROCEDURE InterpArrayR16
+   END INTERFACE
+
       !> \copydoc nwtc_num::interpwrappedstpreal4
    INTERFACE InterpWrappedStpReal
       MODULE PROCEDURE InterpWrappedStpReal4
@@ -258,7 +265,7 @@ CONTAINS
    
    DelAngle = OldAngle - NewAngle
 
-   DO WHILE ( ABS( DelAngle ) >= Pi_R4 )
+   DO WHILE ( ABS( DelAngle ) > Pi_R4 )
 
       NewAngle = NewAngle + SIGN( TwoPi_R4, DelAngle )
       DelAngle = OldAngle - NewAngle
@@ -288,7 +295,7 @@ CONTAINS
    
    DelAngle = OldAngle - NewAngle
 
-   DO WHILE ( ABS( DelAngle ) >= Pi_R8 )
+   DO WHILE ( ABS( DelAngle ) > Pi_R8 )
 
       NewAngle = NewAngle + SIGN( TwoPi_R8, DelAngle )
       DelAngle = OldAngle - NewAngle
@@ -318,7 +325,7 @@ CONTAINS
    
    DelAngle = OldAngle - NewAngle
 
-   DO WHILE ( ABS( DelAngle ) >= Pi_R16 )
+   DO WHILE ( ABS( DelAngle ) > Pi_R16 )
 
       NewAngle = NewAngle + SIGN( TwoPi_R16, DelAngle )
       DelAngle = OldAngle - NewAngle
@@ -3705,6 +3712,132 @@ CONTAINS
    
    
    END FUNCTION InterpWrappedStpReal16 
+!=======================================================================
+!> This subroutine calculates interpolated values for an array of input values.
+!! The size of the xknown and yknown arrays must match, and the size of the
+!! xnew and ynew arrays must match. Xknown must be in ascending order.
+!! Values outside the range of xknown are fixed to the end points.
+   SUBROUTINE InterpArrayR4( xknown, yknown, xnew, ynew )
+      REAL(SiKi), INTENT(IN   ) :: xknown(:)
+      REAL(SiKi), INTENT(IN   ) :: yknown(:)
+      REAL(SiKi), INTENT(IN   ) :: xnew(:)
+      REAL(SiKi), INTENT(  OUT) :: ynew(:)
+      integer(IntKi) i,itmp,nknown
+      nknown=size(xknown)
+      do i=1,size(xnew)
+         itmp=minloc(abs(xnew(i)-xknown),dim=1)
+         if (itmp==nknown) then
+            if (xknown(itmp)>xnew(i)) then
+               ynew(i)=interp_lin0(xnew(i),xknown(itmp-1),xknown(itmp),yknown(itmp-1),yknown(itmp))
+            else
+               ! The current x is above the max of xknown
+               ! extrapolation required, here fixed to upper bound
+               ynew(i)=yknown(nknown)
+            endif
+         elseif (xknown(itmp)<xnew(i)) then
+            ! normal case, x between itmp and itmp+1
+            ynew(i)=interp_lin0(xnew(i),xknown(itmp),xknown(itmp+1),yknown(itmp),yknown(itmp+1))
+         elseif (itmp==1) then
+            ! The current x is below the min of xknown
+            ynew(i)=yknown(1)
+         else
+            ! normal case but inverted, x between itmp-1 and itmp
+            ynew(i)=interp_lin0(xnew(i),xknown(itmp-1),xknown(itmp),yknown(itmp-1),yknown(itmp))
+         endif
+      enddo
+      CONTAINS
+         function interp_lin0(x,x0,x1,f0,f1)   ! Linear interpolation function                                     
+            real(SiKi) ::interp_lin0
+            real(SiKi),intent(in):: x,x0,x1,f0,f1
+            if (EqualRealNos(x0,x1)) then    ! to avoid division by zero
+               interp_lin0=f0
+            else
+               interp_lin0=(x-x1)/(x0-x1)*f0+(x-x0)/(x1-x0)*f1
+            endif
+         end function interp_lin0
+   END SUBROUTINE InterpArrayR4
+!=======================================================================
+!> \copydoc nwtc_num::interparrayr4
+   SUBROUTINE InterpArrayR8( xknown, yknown, xnew, ynew )
+      REAL(R8Ki), INTENT(IN   ) :: xknown(:)
+      REAL(R8Ki), INTENT(IN   ) :: yknown(:)
+      REAL(R8Ki), INTENT(IN   ) :: xnew(:)
+      REAL(R8Ki), INTENT(  OUT) :: ynew(:)
+      integer(IntKi) i,itmp,nknown
+      nknown=size(xknown)
+      do i=1,size(xnew)
+         itmp=minloc(abs(xnew(i)-xknown),dim=1)
+         if (itmp==nknown) then
+            if (xknown(itmp)>xnew(i)) then
+               ynew(i)=interp_lin0(xnew(i),xknown(itmp-1),xknown(itmp),yknown(itmp-1),yknown(itmp))
+            else
+               ! The current x is above the max of xknown
+               ! extrapolation required, here fixed to upper bound
+               ynew(i)=yknown(nknown)
+            endif
+         elseif (xknown(itmp)<xnew(i)) then
+            ! normal case, x between itmp and itmp+1
+            ynew(i)=interp_lin0(xnew(i),xknown(itmp),xknown(itmp+1),yknown(itmp),yknown(itmp+1))
+         elseif (itmp==1) then
+            ! The current x is below the min of xknown
+            ynew(i)=yknown(1)
+         else
+            ! normal case but inverted, x between itmp-1 and itmp
+            ynew(i)=interp_lin0(xnew(i),xknown(itmp-1),xknown(itmp),yknown(itmp-1),yknown(itmp))
+         endif
+      enddo
+      CONTAINS
+         function interp_lin0(x,x0,x1,f0,f1)   ! Linear interpolation function                                     
+            real(R8Ki) ::interp_lin0
+            real(R8Ki),intent(in):: x,x0,x1,f0,f1
+            if (EqualRealNos(x0,x1)) then    ! to avoid division by zero
+               interp_lin0=f0
+            else
+               interp_lin0=(x-x1)/(x0-x1)*f0+(x-x0)/(x1-x0)*f1
+            endif
+         end function interp_lin0
+   END SUBROUTINE InterpArrayR8
+!=======================================================================
+!> \copydoc nwtc_num::interparrayr4
+   SUBROUTINE InterpArrayR16( xknown, yknown, xnew, ynew )
+      REAL(QuKi), INTENT(IN   ) :: xknown(:)
+      REAL(QuKi), INTENT(IN   ) :: yknown(:)
+      REAL(QuKi), INTENT(IN   ) :: xnew(:)
+      REAL(QuKi), INTENT(  OUT) :: ynew(:)
+      integer(IntKi) i,itmp,nknown
+      nknown=size(xknown)
+      do i=1,size(xnew)
+         itmp=minloc(abs(xnew(i)-xknown),dim=1)
+         if (itmp==nknown) then
+            if (xknown(itmp)>xnew(i)) then
+               ynew(i)=interp_lin0(xnew(i),xknown(itmp-1),xknown(itmp),yknown(itmp-1),yknown(itmp))
+            else
+               ! The current x is above the max of xknown
+               ! extrapolation required, here fixed to upper bound
+               ynew(i)=yknown(nknown)
+            endif
+         elseif (xknown(itmp)<xnew(i)) then
+            ! normal case, x between itmp and itmp+1
+            ynew(i)=interp_lin0(xnew(i),xknown(itmp),xknown(itmp+1),yknown(itmp),yknown(itmp+1))
+         elseif (itmp==1) then
+            ! The current x is below the min of xknown
+            ynew(i)=yknown(1)
+         else
+            ! normal case but inverted, x between itmp-1 and itmp
+            ynew(i)=interp_lin0(xnew(i),xknown(itmp-1),xknown(itmp),yknown(itmp-1),yknown(itmp))
+         endif
+      enddo
+      CONTAINS
+         function interp_lin0(x,x0,x1,f0,f1)   ! Linear interpolation function                                     
+            real(QuKi) ::interp_lin0
+            real(QuKi),intent(in):: x,x0,x1,f0,f1
+            if (EqualRealNos(x0,x1)) then    ! to avoid division by zero
+               interp_lin0=f0
+            else
+               interp_lin0=(x-x1)/(x0-x1)*f0+(x-x0)/(x1-x0)*f1
+            endif
+         end function interp_lin0
+   END SUBROUTINE InterpArrayR16
 !=======================================================================
 !> This subroutine calculates the iosparametric coordinates, isopc, which is a value between -1 and 1 
 !! (for each dimension of a dataset), indicating where InCoord falls between posLo and posHi.

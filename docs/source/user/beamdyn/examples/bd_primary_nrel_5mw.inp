@@ -103,4 +103,6 @@ END of input file (the word "END" must appear in the first 3 columns of the last
 "RVxr, RVyr, RVzr"
 "RAxr, RAyr, RAzr"
 "Fxr, Fyr, Fzr"
-END (the word "END" must appear in the first 3 columns of this last OutList line in the optional nodal output section)
+"TipTDxr, TipTDyr, TipTDzr"  
+"TipRDxr, TipRDyr, TipRDzr"  
+END of input file (the word "END" must appear in the first 3 columns of this last OutList line)
