@@ -608,6 +608,8 @@ typedef	^	FAST_ModuleMapType	Integer	Jac_u_indx	{:}{:}	-	-	"matrix to help fill/
 # Temporary copies of input meshes (stored here so we don't have to keep allocating/destroying them)
 typedef	^	FAST_ModuleMapType	MeshType	u_ED_PlatformPtMesh	-	-	-	"copy of ED input mesh"
 typedef	^	FAST_ModuleMapType	MeshType	u_ED_PlatformPtMesh_2	-	-	-	"copy of ED input mesh (used only for temporary storage)"
+typedef	^	FAST_ModuleMapType	MeshType	u_ED_TowerPtloads	-	-	-	"copy of ED input mesh"
+typedef	^	FAST_ModuleMapType	MeshType	u_ED_BladePtLoads	{:}	-	-	"copy of ED input mesh"
 typedef	^	FAST_ModuleMapType	MeshType	u_SD_TPMesh	-	-	-	"copy of SD input mesh"
 typedef	^	FAST_ModuleMapType	MeshType	u_SD_LMesh	-	-	-	"copy of SD input mesh"
 typedef	^	FAST_ModuleMapType	MeshType	u_SD_LMesh_2	-	-	-	"copy of SD input mesh (used only for temporary storage)"
@@ -618,6 +620,7 @@ typedef	^	FAST_ModuleMapType	MeshType	u_ED_HubPtLoad	-	-	-	"copy of  ED input me
 typedef	^	FAST_ModuleMapType	MeshType	u_ED_HubPtLoad_2	-	-	-	"copy of  ED input mesh"
 typedef	^	FAST_ModuleMapType	MeshType	u_BD_RootMotion	{:}	-	-	"copy of  BD input meshes"
 typedef	^	FAST_ModuleMapType	MeshType	y_BD_BldMotion_4Loads	{:}	-	-	"BD blade motion output at locations on DistrLoad input meshes"
+typedef	^	FAST_ModuleMapType	MeshType	u_BD_Distrload	{:}	-	-	"copy of BD DistrLoad input meshes"
 typedef	^	FAST_ModuleMapType	MeshType	u_Orca_PtfmMesh	-	-	-	"copy of Orca PtfmMesh input mesh"
 typedef	^	FAST_ModuleMapType	MeshType	u_ExtPtfm_PtfmMesh	-	-	-	"copy of ExtPtfm_MCKF PtfmMesh input mesh"
 # ..... FAST_ExternalInput data .......................................................................................................
