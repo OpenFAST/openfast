@@ -1831,7 +1831,7 @@ SUBROUTINE CalculateOutput( Time, InputData, p, x, xd, z, OtherStates, y, m, Fil
 
 
 
-         CASE (BladedFF_WindNumber)
+         CASE (BladedFF_WindNumber) !also includes BladedFF_Shr_WindNumber
 
                ! InputData only contains the Position array, so we can pass that directly.
             CALL  IfW_BladedFFWind_CalcOutput(  Time, PositionXYZprime, p%BladedFFWind, &

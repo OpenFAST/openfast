@@ -30,6 +30,11 @@ AeroDyn        14   AA_InputFile       "unused"                AA_InputFile     
 AeroDyn        35   [separator line]   ======  OLAF -- cOnvecting LAgrangian Filaments (Free Vortex Wake) Theory Options  ================== [used only when WakeMod=3]
 AeroDyn        36   OLAFInputFileName  "Elliptic_OLAF.dat"     OLAFInputFileName - Input file for OLAF [used only when WakeMod=3]
 AirFoilTables  4\*  BL_file            "unused"                BL_file           - The file name including the boundary layer characteristics of the profile. Ignored if the aeroacoustic module is not called.
+IfW driver     6    [separator line]   ===================== File Conversion Options =================================
+IfW driver     7    WrHAWC             false    WrHAWC    - Convert all data to HAWC2 format? (flag)
+IfW driver     8    WrBladed           false    WrBladed  - Convert all data to Bladed format? (flag)
+IfW driver     9    WrVTK              false    WrVTK     - Convert all data to VTK format? (flag)
+
 
 ============== ==== ================== =============================================================================================================================================================================
 
