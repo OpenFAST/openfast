@@ -157,7 +157,7 @@ SUBROUTINE StC_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN
 
-   ! Define initial guess for the system inputs here:
+   ! Define initial guess for the system states here:
    do i_pt=1,p%NumMeshPts
       x%StC_x(1,i_pt) = p%X_DSP
       x%StC_x(2,i_pt) = 0
@@ -461,7 +461,9 @@ SUBROUTINE StC_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, 
       !INTEGER                                            :: nTime           ! number of inputs
 
 
-      CALL StC_RK4( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
+      IF ( p%StC_DOF_MODE /= DOFMode_Prescribed ) THEN
+         CALL StC_RK4( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
+      ENDIF
 
 END SUBROUTINE StC_UpdateStates
 !----------------------------------------------------------------------------------------------------------------------------------
