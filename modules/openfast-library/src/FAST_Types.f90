@@ -33,7 +33,7 @@ MODULE FAST_Types
 !---------------------------------------------------------------------------------------------------------------------------------
 USE ElastoDyn_Types
 USE BeamDyn_Types
-USE TMD_Types
+USE StrucCtrl_Types
 USE ServoDyn_Types
 USE IfW_UniformWind_Types
 USE IfW_FFWind_Base_Types
@@ -630,14 +630,14 @@ IMPLICIT NONE
     TYPE(MeshMapType)  :: HD_M_P_2_SD_P      !< Map HydroDyn Morison Point to SubDyn y2Mesh Point [-]
     TYPE(MeshMapType)  :: SD_P_2_HD_M_L      !< Map SubDyn y2Mesh Point to HydroDyn Morison Line2 [-]
     TYPE(MeshMapType)  :: HD_M_L_2_SD_P      !< Map HydroDyn Morison Line2 to SubDyn y2Mesh Point [-]
-    TYPE(MeshMapType)  :: ED_P_2_SrvD_P_N      !< Map ElastoDyn Nacelle point mesh to ServoDyn/TMD point mesh [-]
+    TYPE(MeshMapType)  :: ED_P_2_SrvD_P_N      !< Map ElastoDyn Nacelle point mesh to ServoDyn/StC point mesh [-]
     TYPE(MeshMapType)  :: SrvD_P_2_ED_P_N      !< Map ServoDyn nacelle point mesh to ElastoDyn point mesh on the nacelle [-]
-    TYPE(MeshMapType)  :: ED_L_2_SrvD_P_T      !< Map ElastoDyn tower line2 mesh to ServoDyn/TTMD point mesh [-]
+    TYPE(MeshMapType)  :: ED_L_2_SrvD_P_T      !< Map ElastoDyn tower line2 mesh to ServoDyn/TStC point mesh [-]
     TYPE(MeshMapType)  :: SrvD_P_2_ED_P_T      !< Map ServoDyn tower point mesh to ElastoDyn point load mesh on the tower [-]
-    TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: ED_L_2_SrvD_P_B      !< Map ElastoDyn blade line2 mesh to ServoDyn/BTMD point mesh [-]
-    TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: SrvD_P_2_ED_P_B      !< Map ServoDyn/BTMD point mesh to ElastoDyn point load mesh on the blade [-]
-    TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: BD_L_2_SrvD_P_B      !< Map BeamDyn blade line2 mesh to ServoDyn/BTMD point mesh [-]
-    TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: SrvD_P_2_BD_P_B      !< Map ServoDyn/BTMD point mesh to BeamDyn point load mesh on the blade [-]
+    TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: ED_L_2_SrvD_P_B      !< Map ElastoDyn blade line2 mesh to ServoDyn/BStC point mesh [-]
+    TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: SrvD_P_2_ED_P_B      !< Map ServoDyn/BStC point mesh to ElastoDyn point load mesh on the blade [-]
+    TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: BD_L_2_SrvD_P_B      !< Map BeamDyn blade line2 mesh to ServoDyn/BStC point mesh [-]
+    TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: SrvD_P_2_BD_P_B      !< Map ServoDyn/BStC point mesh to BeamDyn point load mesh on the blade [-]
     TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: BDED_L_2_AD_L_B      !< Map ElastoDyn BladeLn2Mesh point meshes OR BeamDyn BldMotion line2 meshes to AeroDyn14 InputMarkers OR AeroDyn BladeMotion line2 meshes [-]
     TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: AD_L_2_BDED_B      !< Map AeroDyn14 InputMarkers or AeroDyn BladeLoad line2 meshes to ElastoDyn BladePtLoad point meshes or BeamDyn BldMotion line2 meshes [-]
     TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: BD_L_2_BD_L      !< Map BeamDyn BldMotion output meshes to locations on the BD input DistrLoad mesh stored in MeshMapType%y_BD_BldMotion_4Loads (BD input and output meshes are not siblings and in fact have nodes at different locations [-]

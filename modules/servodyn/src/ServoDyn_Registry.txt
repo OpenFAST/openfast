@@ -12,7 +12,7 @@
 
 # ...... Include files (definitions from NWTC Library) ............................................................................
 include	Registry_NWTC_Library.txt
-usefrom	TMD_Registry.txt
+usefrom	StrucCtrl_Registry.txt
 
 # ..... Initialization data .......................................................................................................
 # Define inputs that the initialization routine may need here:
@@ -126,12 +126,12 @@ typedef	^	SrvD_InputFile	IntKi	DLL_NumTrq	-	-	-	"Record 26: No. of points in tor
 typedef	^	SrvD_InputFile	ReKi	GenSpd_TLU	{:}	-	-	"Records R:2:R+2*DLL_NumTrq-2: Generator speed values in look-up table [used only with DLL Interface]"	rad/s
 typedef	^	SrvD_InputFile	ReKi	GenTrq_TLU	{:}	-	-	"Records R+1:2:R+2*DLL_NumTrq-1: Generator torque values in look-up table [used only with DLL Interface]"	Nm
 typedef	^	SrvD_InputFile	LOGICAL	UseLegacyInterface	-	-	-	"Flag that determines if the legacy Bladed interface is (legacy=DISCON with avrSWAP instead of CONTROLLER)"	-
-typedef	^	SrvD_InputFile	LOGICAL	CompNTMD	-	-	-	"Compute nacelle tuned mass damper {true/false}"	-
-typedef	^	SrvD_InputFile	CHARACTER(1024)	NTMDfile	-	-	-	"File for nacelle tuned mass damper (quoted string)"	-
-typedef	^	SrvD_InputFile	LOGICAL	CompTTMD	-	-	-	"Compute tower tuned mass damper {true/false}"	-
-typedef	^	SrvD_InputFile	CHARACTER(1024)	TTMDfile	-	-	-	"File for tower tuned mass damper (quoted string)"	-
-typedef	^	SrvD_InputFile	LOGICAL	CompBTMD	-	-	-	"Compute tower tuned mass damper {true/false}"	-
-typedef	^	SrvD_InputFile	CHARACTER(1024)	BTMDfile	-	-	-	"File for blade tuned mass damper (quoted string)"	-
+typedef	^	SrvD_InputFile	LOGICAL	CompNStC	-	-	-	"Compute nacelle tuned mass damper {true/false}"	-
+typedef	^	SrvD_InputFile	CHARACTER(1024)	NStCfile	-	-	-	"File for nacelle tuned mass damper (quoted string)"	-
+typedef	^	SrvD_InputFile	LOGICAL	CompTStC	-	-	-	"Compute tower tuned mass damper {true/false}"	-
+typedef	^	SrvD_InputFile	CHARACTER(1024)	TStCfile	-	-	-	"File for tower tuned mass damper (quoted string)"	-
+typedef	^	SrvD_InputFile	LOGICAL	CompBStC	-	-	-	"Compute tower tuned mass damper {true/false}"	-
+typedef	^	SrvD_InputFile	CHARACTER(1024)	BStCfile	-	-	-	"File for blade tuned mass damper (quoted string)"	-
 
 # ..... Data for using Bladed DLLs .......................................................................................................
 typedef	^	BladedDLLType	SiKi	avrSWAP	{:}	-	-	"The swap array: used to pass data to and from the DLL controller"	"see Bladed DLL documentation"
@@ -208,22 +208,22 @@ typedef	^	BladedDLLType	IntKi	Yaw_Cntrl	-	-	-	"Yaw control: 0 = rate;  1 = torqu
 # ..... States ....................................................................................................................
 # Define continuous (differentiable) states here:
 typedef	^	ContinuousStateType	ReKi	DummyContState	-	-	-	"Remove this variable if you have continuous states"	-
-typedef	^	ContinuousStateType	TMD_ContinuousStateType	NTMD	-	-	-	"TMD module states - nacelle"	-
-typedef	^	ContinuousStateType	TMD_ContinuousStateType	TTMD	-	-	-	"TMD module states - tower"	-
-typedef	^	ContinuousStateType	TMD_ContinuousStateType	BTMD	-	-	-	"TMD module states - blade"	-
+typedef	^	ContinuousStateType	StC_ContinuousStateType	NStC	-	-	-	"StC module states - nacelle"	-
+typedef	^	ContinuousStateType	StC_ContinuousStateType	TStC	-	-	-	"StC module states - tower"	-
+typedef	^	ContinuousStateType	StC_ContinuousStateType	BStC	-	-	-	"StC module states - blade"	-
 
 # Define discrete (nondifferentiable) states here:
 typedef	^	DiscreteStateType	ReKi	CtrlOffset	-	-	-	"Controller offset parameter" N-m
 #typedef	^	DiscreteStateType	ReKi	BlPitchFilter	{:}	-	-	"blade pitch filter"	-
-typedef	^	DiscreteStateType	TMD_DiscreteStateType	NTMD	-	-	-	"TMD module states - nacelle"	-
-typedef	^	DiscreteStateType	TMD_DiscreteStateType	TTMD	-	-	-	"TMD module states - tower"	-
-typedef	^	DiscreteStateType	TMD_DiscreteStateType	BTMD	-	-	-	"TMD module states - blade"	-
+typedef	^	DiscreteStateType	StC_DiscreteStateType	NStC	-	-	-	"StC module states - nacelle"	-
+typedef	^	DiscreteStateType	StC_DiscreteStateType	TStC	-	-	-	"StC module states - tower"	-
+typedef	^	DiscreteStateType	StC_DiscreteStateType	BStC	-	-	-	"StC module states - blade"	-
 
 # Define constraint states here:
 typedef	^	ConstraintStateType	ReKi	DummyConstrState	-	-	-	"Remove this variable if you have constraint states"	-
-typedef	^	ConstraintStateType	TMD_ConstraintStateType	NTMD	-	-	-	"TMD module states - nacelle"	-
-typedef	^	ConstraintStateType	TMD_ConstraintStateType	TTMD	-	-	-	"TMD module states - tower"	-
-typedef	^	ConstraintStateType	TMD_ConstraintStateType	BTMD	-	-	-	"TMD module states - blade"	-
+typedef	^	ConstraintStateType	StC_ConstraintStateType	NStC	-	-	-	"StC module states - nacelle"	-
+typedef	^	ConstraintStateType	StC_ConstraintStateType	TStC	-	-	-	"StC module states - tower"	-
+typedef	^	ConstraintStateType	StC_ConstraintStateType	BStC	-	-	-	"StC module states - blade"	-
 
 # Define "other" states (e.g. logical states) here:
 # other states for pitch maneuver:
@@ -242,10 +242,10 @@ typedef	^	OtherStateType	DbKi	TTpBrFl	{:}	-	-	"Times at which tip brakes are ful
 # other states for generator on/off:
 typedef	^	OtherStateType	Logical	Off4Good	-	-	-	"Is the generator offline for rest of simulation?"	-
 typedef	^	OtherStateType	Logical	GenOnLine	-	-	-	"Is the generator online?"	-
-# other states for TMD sub-module:
-typedef	^	OtherStateType	TMD_OtherStateType	NTMD	-	-	-	"TMD module states - nacelle"	-
-typedef	^	OtherStateType	TMD_OtherStateType	TTMD	-	-	-	"TMD module states - tower"	-
-typedef	^	OtherStateType	TMD_OtherStateType	BTMD	-	-	-	"TMD module states - blade"	-
+# other states for StC sub-module:
+typedef	^	OtherStateType	StC_OtherStateType	NStC	-	-	-	"StC module states - nacelle"	-
+typedef	^	OtherStateType	StC_OtherStateType	TStC	-	-	-	"StC module states - tower"	-
+typedef	^	OtherStateType	StC_OtherStateType	BStC	-	-	-	"StC module states - blade"	-
 
 # ..... Misc Variables ................................................................................................................
 typedef	^	MiscVarType	DbKi	LastTimeCalled	-	-	-	"last time the CalcOutput/Bladed DLL was called"	s
@@ -253,9 +253,9 @@ typedef	^	MiscVarType	BladedDLLType	dll_data	-	-	-	"data used for Bladed DLL"	-
 typedef	^	MiscVarType	logical	FirstWarn	-	-	-	"Whether or not this is the first warning about the DLL being called without Explicit-Loose coupling."	-
 typedef	^	MiscVarType	DbKi	LastTimeFiltered	-	-	-	"last time the CalcOutput/Bladed DLL was filtered"	s
 typedef	^	MiscVarType	ReKi	xd_BlPitchFilter	{:}	-	-	"blade pitch filter"	-
-typedef	^	MiscVarType	TMD_MiscVarType	NTMD	-	-	-	"TMD module misc vars - nacelle"	-
-typedef	^	MiscVarType	TMD_MiscVarType	TTMD	-	-	-	"TMD module misc vars - tower"	-
-typedef	^	MiscVarType	TMD_MiscVarType	BTMD	-	-	-	"TMD module misc vars - blade"	-
+typedef	^	MiscVarType	StC_MiscVarType	NStC	-	-	-	"StC module misc vars - nacelle"	-
+typedef	^	MiscVarType	StC_MiscVarType	TStC	-	-	-	"StC module misc vars - tower"	-
+typedef	^	MiscVarType	StC_MiscVarType	BStC	-	-	-	"StC module misc vars - blade"	-
 
 # ..... Parameters ................................................................................................................
 # Define parameters here:
@@ -321,9 +321,9 @@ typedef	^	ParameterType	ReKi	TBDepISp	{:}	-	-	"Deployment-initiation speed for t
 typedef	^	ParameterType	ReKi	TBDrConN	-	-	-	"Tip-brake drag constant during normal operation, Cd*Area"
 typedef	^	ParameterType	ReKi	TBDrConD	-	-	-	"Tip-brake drag constant during fully-deployed operation, Cd*Area"
 typedef	^	ParameterType	IntKi	NumBl	-	-	-	"Number of blades on the turbine"	-
-typedef	^	ParameterType	LOGICAL	CompNTMD	-	-	-	"Compute nacelle tuned mass damper {true/false}"	-
-typedef	^	ParameterType	LOGICAL	CompTTMD	-	-	-	"Compute tower tuned mass damper {true/false}"	-
-typedef	^	ParameterType	LOGICAL	CompBTMD	-	-	-	"Compute blade tuned mass damper {true/false}"	-
+typedef	^	ParameterType	LOGICAL	CompNStC	-	-	-	"Compute nacelle tuned mass damper {true/false}"	-
+typedef	^	ParameterType	LOGICAL	CompTStC	-	-	-	"Compute tower tuned mass damper {true/false}"	-
+typedef	^	ParameterType	LOGICAL	CompBStC	-	-	-	"Compute blade tuned mass damper {true/false}"	-
 # parameters for output
 typedef	^	ParameterType	IntKi	NumOuts	-	-	-	"Number of parameters in the output list (number of outputs requested)"	-
 typedef	^	ParameterType	IntKi	NumOuts_DLL	-	-	-	"Number of logging channels output from the DLL (set at initialization)"	-
@@ -346,9 +346,9 @@ typedef	^	ParameterType	IntKi	TrimCase	-	-	-	"Controller parameter to be trimmed
 typedef	^	ParameterType	ReKi	TrimGain	-	-	-	"Proportional gain for the rotational speed error (>0) [used only if TrimCase>0]"	"rad/(rad/s) for yaw or pitch; Nm/(rad/s) for torque"
 typedef	^	ParameterType	ReKi	RotSpeedRef	-	-	-	"Reference rotor speed"	"rad/s"
 # parameters for other modules:
-typedef	^	ParameterType	TMD_ParameterType	NTMD	-	-	-	"TMD module parameters - nacelle"	-
-typedef	^	ParameterType	TMD_ParameterType	TTMD	-	-	-	"TMD module parameters - tower"	-
-typedef	^	ParameterType	TMD_ParameterType	BTMD	-	-	-	"TMD module parameters - blade"	-
+typedef	^	ParameterType	StC_ParameterType	NStC	-	-	-	"StC module parameters - nacelle"	-
+typedef	^	ParameterType	StC_ParameterType	TStC	-	-	-	"StC module parameters - tower"	-
+typedef	^	ParameterType	StC_ParameterType	BStC	-	-	-	"StC module parameters - blade"	-
 
 # ..... Inputs ....................................................................................................................
 # Define inputs that are not on this mesh here:
@@ -385,9 +385,9 @@ typedef	^	InputType	ReKi	NcIMURAzs	-	-	-	"Nacelle inertial measurement unit angu
 typedef	^	InputType	ReKi	RotPwr	-	-	-	"Rotor power (this is equivalent to the low-speed shaft power)"	W
 typedef	^	InputType	ReKi	HorWindV	-	-	-	"Horizontal hub-height wind velocity magnitude"	m/s
 typedef	^	InputType	ReKi	YawAngle	-	-	2pi	"Estimate of yaw (nacelle + platform)"	radians
-typedef	^	InputType	TMD_InputType	NTMD	-	-	-	"TMD module inputs - nacelle"	-
-typedef	^	InputType	TMD_InputType	TTMD	-	-	-	"TMD module inputs - tower"	-
-typedef	^	InputType	TMD_InputType	BTMD	-	-	-	"TMD module inputs - blade"	-
+typedef	^	InputType	StC_InputType	NStC	-	-	-	"StC module inputs - nacelle"	-
+typedef	^	InputType	StC_InputType	TStC	-	-	-	"StC module inputs - tower"	-
+typedef	^	InputType	StC_InputType	BStC	-	-	-	"StC module inputs - blade"	-
 typedef	^	InputType	SiKi	SuperController	{:}	-	-	"A swap array: used to pass input data to the DLL controller from the supercontroller"	-
 
 # ..... Outputs ...................................................................................................................
@@ -402,8 +402,8 @@ typedef	^	OutputType	ReKi	GenTrq	-	-	-	"Electrical generator torque"	N-m
 typedef	^	OutputType	ReKi	HSSBrTrqC	-	-	-	"Commanded HSS brake torque"	N-m
 typedef	^	OutputType	ReKi	ElecPwr	-	-	-	"Electrical power"	W
 typedef	^	OutputType	ReKi	TBDrCon	{:}	-	-	"Instantaneous tip-brake drag constant, Cd*Area"
-typedef	^	OutputType	TMD_OutputType	NTMD	-	-	-	"TMD module outputs - nacelle"	-
-typedef	^	OutputType	TMD_OutputType	TTMD	-	-	-	"TMD module outputs - tower"	-
-typedef	^	OutputType	TMD_OutputType	BTMD	-	-	-	"TMD module outputs - blade"	-
+typedef	^	OutputType	StC_OutputType	NStC	-	-	-	"StC module outputs - nacelle"	-
+typedef	^	OutputType	StC_OutputType	TStC	-	-	-	"StC module outputs - tower"	-
+typedef	^	OutputType	StC_OutputType	BStC	-	-	-	"StC module outputs - blade"	-
 typedef	^	OutputType	SiKi	SuperController	{:}	-	-	"A swap array: used to pass output data from the DLL controller to the supercontroller"	-
 

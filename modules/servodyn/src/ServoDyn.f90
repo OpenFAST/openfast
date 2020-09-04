@@ -23,7 +23,7 @@ MODULE ServoDyn
    USE ServoDyn_Types
    USE NWTC_Library
    USE BladedInterface
-   USE TMD
+   USE StrucCtrl
    
    USE UserVSCont_KP    ! <- module not in the FAST Framework!
    USE PitchCntrl_ACH   ! <- module not in the FAST Framework!
@@ -104,20 +104,20 @@ MODULE ServoDyn
    INTEGER(IntKi), PARAMETER      :: YawMomCom =  7
 
 
-     ! Nacelle Tuned Mass Damper (TMD):
+     ! Nacelle Tuned Mass Damper (StC):
 
-   INTEGER(IntKi), PARAMETER      :: NTMD_XQ   =  8
-   INTEGER(IntKi), PARAMETER      :: NTMD_XQD  =  9
-   INTEGER(IntKi), PARAMETER      :: NTMD_YQ   = 10
-   INTEGER(IntKi), PARAMETER      :: NTMD_YQD  = 11
+   INTEGER(IntKi), PARAMETER      :: NStC_XQ   =  8
+   INTEGER(IntKi), PARAMETER      :: NStC_XQD  =  9
+   INTEGER(IntKi), PARAMETER      :: NStC_YQ   = 10
+   INTEGER(IntKi), PARAMETER      :: NStC_YQD  = 11
 
 
-     ! Tower Tuned Mass Damper (TMD):
+     ! Tower Tuned Mass Damper (StC):
 
-   INTEGER(IntKi), PARAMETER      :: TTMD_XQ   = 12
-   INTEGER(IntKi), PARAMETER      :: TTMD_XQD  = 13
-   INTEGER(IntKi), PARAMETER      :: TTMD_YQ   = 14
-   INTEGER(IntKi), PARAMETER      :: TTMD_YQD  = 15
+   INTEGER(IntKi), PARAMETER      :: TStC_XQ   = 12
+   INTEGER(IntKi), PARAMETER      :: TStC_XQD  = 13
+   INTEGER(IntKi), PARAMETER      :: TStC_YQ   = 14
+   INTEGER(IntKi), PARAMETER      :: TStC_YQD  = 15
 
      ! Airfoil Control (might be used for flap actuation):
 
@@ -126,20 +126,20 @@ MODULE ServoDyn
    INTEGER(IntKi), PARAMETER      :: BlAirFlC3  = 18
    
 
-     ! Blade Tuned Mass Damper (TMD):
+     ! Blade Tuned Mass Damper (StC):
 
-   INTEGER(IntKi), PARAMETER      :: BTMD1_XQ  = 19
-   INTEGER(IntKi), PARAMETER      :: BTMD1_XQD = 20
-   INTEGER(IntKi), PARAMETER      :: BTMD1_YQ  = 21
-   INTEGER(IntKi), PARAMETER      :: BTMD1_YQD = 22
-   INTEGER(IntKi), PARAMETER      :: BTMD2_XQ  = 23
-   INTEGER(IntKi), PARAMETER      :: BTMD2_XQD = 24
-   INTEGER(IntKi), PARAMETER      :: BTMD2_YQ  = 25
-   INTEGER(IntKi), PARAMETER      :: BTMD2_YQD = 26
-   INTEGER(IntKi), PARAMETER      :: BTMD3_XQ  = 27
-   INTEGER(IntKi), PARAMETER      :: BTMD3_XQD = 28
-   INTEGER(IntKi), PARAMETER      :: BTMD3_YQ  = 29
-   INTEGER(IntKi), PARAMETER      :: BTMD3_YQD = 30
+   INTEGER(IntKi), PARAMETER      :: BStC1_XQ  = 19
+   INTEGER(IntKi), PARAMETER      :: BStC1_XQD = 20
+   INTEGER(IntKi), PARAMETER      :: BStC1_YQ  = 21
+   INTEGER(IntKi), PARAMETER      :: BStC1_YQD = 22
+   INTEGER(IntKi), PARAMETER      :: BStC2_XQ  = 23
+   INTEGER(IntKi), PARAMETER      :: BStC2_XQD = 24
+   INTEGER(IntKi), PARAMETER      :: BStC2_YQ  = 25
+   INTEGER(IntKi), PARAMETER      :: BStC2_YQD = 26
+   INTEGER(IntKi), PARAMETER      :: BStC3_XQ  = 27
+   INTEGER(IntKi), PARAMETER      :: BStC3_XQD = 28
+   INTEGER(IntKi), PARAMETER      :: BStC3_YQ  = 29
+   INTEGER(IntKi), PARAMETER      :: BStC3_YQD = 30
 
 
      ! The maximum number of output channels which can be output by the code.
@@ -225,8 +225,8 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       ! local variables
 
    TYPE(SrvD_InputFile)                           :: InputFileData  ! Data stored in the module's input file
-   TYPE(TMD_InitInputType)                        :: TMD_InitInp    ! data to initialize TMD module
-   TYPE(TMD_InitOutputType)                       :: TMD_InitOut    ! data from TMD module initialization (not used)
+   TYPE(StC_InitInputType)                        :: StC_InitInp    ! data to initialize StC module
+   TYPE(StC_InitOutputType)                       :: StC_InitOut    ! data from StC module initialization (not used)
    INTEGER(IntKi)                                 :: i              ! loop counter
    INTEGER(IntKi)                                 :: j              ! loop counter
    INTEGER(IntKi)                                 :: K              ! loop counter
@@ -489,88 +489,88 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
          
    
       !............................................................................................
-      ! Initialize the TMD module for Nacelle:
+      ! Initialize the StrucCtrl module for Nacelle:
       !............................................................................................
-   IF (p%CompNTMD) THEN
+   IF (p%CompNStC) THEN
       
-      TMD_InitInp%InputFile      =  InputFileData%NTMDfile
-      TMD_InitInp%RootName       =  TRIM(p%RootName)//'.NTMD'
-      TMD_InitInp%Gravity        =  InitInp%gravity
-      TMD_InitInp%NumMeshPts     =  1_IntKi        ! single point mesh for Nacelle 
+      StC_InitInp%InputFile      =  InputFileData%NStCfile
+      StC_InitInp%RootName       =  TRIM(p%RootName)//'.NStC'
+      StC_InitInp%Gravity        =  InitInp%gravity
+      StC_InitInp%NumMeshPts     =  1_IntKi        ! single point mesh for Nacelle 
 
-      CALL AllocAry( TMD_InitInp%InitPosition,      3, TMD_InitInp%NumMeshPts, 'TMD_InitInp%InitPosition', errStat2, ErrMsg2)
+      CALL AllocAry( StC_InitInp%InitPosition,      3, StC_InitInp%NumMeshPts, 'StC_InitInp%InitPosition', errStat2, ErrMsg2)
          CALL CheckError( ErrStat2, ErrMsg2 )
-      CALL AllocAry( TMD_InitInp%InitOrientation,3, 3, TMD_InitInp%NumMeshPts, 'TMD_InitInp%InitOrientation', errStat2, ErrMsg2)
+      CALL AllocAry( StC_InitInp%InitOrientation,3, 3, StC_InitInp%NumMeshPts, 'StC_InitInp%InitOrientation', errStat2, ErrMsg2)
          CALL CheckError( ErrStat2, ErrMsg2 )
          IF (ErrStat >= AbortErrLev) RETURN
-      TMD_InitInp%InitPosition(:,1)      = InitInp%NacPosition
-      TMD_InitInp%InitOrientation(:,:,1) = InitInp%NacOrientation
+      StC_InitInp%InitPosition(:,1)      = InitInp%NacPosition
+      StC_InitInp%InitOrientation(:,:,1) = InitInp%NacOrientation
       
-      CALL TMD_Init( TMD_InitInp, u%NTMD, p%NTMD, x%NTMD, xd%NTMD, z%NTMD, OtherState%NTMD, y%NTMD, m%NTMD, Interval, TMD_InitOut, ErrStat2, ErrMsg2 )
+      CALL StC_Init( StC_InitInp, u%NStC, p%NStC, x%NStC, xd%NStC, z%NStC, OtherState%NStC, y%NStC, m%NStC, Interval, StC_InitOut, ErrStat2, ErrMsg2 )
          CALL CheckError( ErrStat2, ErrMsg2 )
          IF (ErrStat >= AbortErrLev) RETURN
       
       IF (.NOT. EqualRealNos( Interval, p%DT ) ) THEN
-         CALL CheckError( ErrID_Fatal, "Nacelle TMD time step differs from SrvD time step." )
+         CALL CheckError( ErrID_Fatal, "Nacelle StrucCtrl time step differs from SrvD time step." )
          RETURN
       END IF      
    
    END IF
    
       !............................................................................................
-      ! Initialize the TMD module for tower:
+      ! Initialize the StrucCtrl module for tower:
       !............................................................................................
-   IF (p%CompTTMD) THEN
+   IF (p%CompTStC) THEN
       
-      TMD_InitInp%InputFile      =  InputFileData%TTMDfile
-      TMD_InitInp%RootName       =  TRIM(p%RootName)//'.TTMD'
-      TMD_InitInp%Gravity        =  InitInp%gravity
-      TMD_InitInp%NumMeshPts     =  1_IntKi        ! single point mesh for Tower 
+      StC_InitInp%InputFile      =  InputFileData%TStCfile
+      StC_InitInp%RootName       =  TRIM(p%RootName)//'.TStC'
+      StC_InitInp%Gravity        =  InitInp%gravity
+      StC_InitInp%NumMeshPts     =  1_IntKi        ! single point mesh for Tower 
 
-      CALL AllocAry( TMD_InitInp%InitPosition,      3, TMD_InitInp%NumMeshPts, 'TMD_InitInp%InitPosition', errStat2, ErrMsg2)
+      CALL AllocAry( StC_InitInp%InitPosition,      3, StC_InitInp%NumMeshPts, 'StC_InitInp%InitPosition', errStat2, ErrMsg2)
          CALL CheckError( ErrStat2, ErrMsg2 )
-      CALL AllocAry( TMD_InitInp%InitOrientation,3, 3, TMD_InitInp%NumMeshPts, 'TMD_InitInp%InitOrientation', errStat2, ErrMsg2)
+      CALL AllocAry( StC_InitInp%InitOrientation,3, 3, StC_InitInp%NumMeshPts, 'StC_InitInp%InitOrientation', errStat2, ErrMsg2)
          CALL CheckError( ErrStat2, ErrMsg2 )
          IF (ErrStat >= AbortErrLev) RETURN
-      TMD_InitInp%InitPosition(:,1)      = InitInp%TwrBasePos
-      TMD_InitInp%InitOrientation(:,:,1) = InitInp%TwrBaseOrient
+      StC_InitInp%InitPosition(:,1)      = InitInp%TwrBasePos
+      StC_InitInp%InitOrientation(:,:,1) = InitInp%TwrBaseOrient
       
-      CALL TMD_Init( TMD_InitInp, u%TTMD, p%TTMD, x%TTMD, xd%TTMD, z%TTMD, OtherState%TTMD, y%TTMD, m%TTMD, Interval, TMD_InitOut, ErrStat2, ErrMsg2 )
+      CALL StC_Init( StC_InitInp, u%TStC, p%TStC, x%TStC, xd%TStC, z%TStC, OtherState%TStC, y%TStC, m%TStC, Interval, StC_InitOut, ErrStat2, ErrMsg2 )
          CALL CheckError( ErrStat2, ErrMsg2 )
          IF (ErrStat >= AbortErrLev) RETURN
       
       IF (.NOT. EqualRealNos( Interval, p%DT ) ) THEN
-         CALL CheckError( ErrID_Fatal, "Tower TMD time step differs from SrvD time step." )
+         CALL CheckError( ErrID_Fatal, "Tower StrucCtrl time step differs from SrvD time step." )
          RETURN
       END IF      
    
    END IF
     
       !............................................................................................
-      ! Initialize the TMD module for blade:
+      ! Initialize the StrucCtrl module for blade:
       !............................................................................................
-   IF (p%CompBTMD) THEN
+   IF (p%CompBStC) THEN
       
-      TMD_InitInp%InputFile      =  InputFileData%BTMDfile
-      TMD_InitInp%RootName       =  TRIM(p%RootName)//'.BTMD'
-      TMD_InitInp%Gravity        =  InitInp%gravity
-      TMD_InitInp%NumMeshPts     =  p%NumBl        ! p%NumBl points for blades 
+      StC_InitInp%InputFile      =  InputFileData%BStCfile
+      StC_InitInp%RootName       =  TRIM(p%RootName)//'.BStC'
+      StC_InitInp%Gravity        =  InitInp%gravity
+      StC_InitInp%NumMeshPts     =  p%NumBl        ! p%NumBl points for blades 
 
-      CALL AllocAry( TMD_InitInp%InitPosition,      3, TMD_InitInp%NumMeshPts, 'TMD_InitInp%InitPosition', errStat2, ErrMsg2)
+      CALL AllocAry( StC_InitInp%InitPosition,      3, StC_InitInp%NumMeshPts, 'StC_InitInp%InitPosition', errStat2, ErrMsg2)
          CALL CheckError( ErrStat2, ErrMsg2 )
-      CALL AllocAry( TMD_InitInp%InitOrientation,3, 3, TMD_InitInp%NumMeshPts, 'TMD_InitInp%InitOrientation', errStat2, ErrMsg2)
+      CALL AllocAry( StC_InitInp%InitOrientation,3, 3, StC_InitInp%NumMeshPts, 'StC_InitInp%InitOrientation', errStat2, ErrMsg2)
          CALL CheckError( ErrStat2, ErrMsg2 )
          IF (ErrStat >= AbortErrLev) RETURN
-      do k=1,TMD_InitInp%NumMeshPts
-         TMD_InitInp%InitPosition(:,k)      = InitInp%BladeRootPosition(:,k)
-         TMD_InitInp%InitOrientation(:,:,k) = InitInp%BladeRootOrientation(:,:,k)
+      do k=1,StC_InitInp%NumMeshPts
+         StC_InitInp%InitPosition(:,k)      = InitInp%BladeRootPosition(:,k)
+         StC_InitInp%InitOrientation(:,:,k) = InitInp%BladeRootOrientation(:,:,k)
       enddo
-      CALL TMD_Init( TMD_InitInp, u%BTMD, p%BTMD, x%BTMD, xd%BTMD, z%BTMD, OtherState%BTMD, y%BTMD, m%BTMD, Interval, TMD_InitOut, ErrStat2, ErrMsg2 )
+      CALL StC_Init( StC_InitInp, u%BStC, p%BStC, x%BStC, xd%BStC, z%BStC, OtherState%BStC, y%BStC, m%BStC, Interval, StC_InitOut, ErrStat2, ErrMsg2 )
          CALL CheckError( ErrStat2, ErrMsg2 )
          IF (ErrStat >= AbortErrLev) RETURN
       
       IF (.NOT. EqualRealNos( Interval, p%DT ) ) THEN
-         CALL CheckError( ErrID_Fatal, "Blade TMD time step differs from SrvD time step." )
+         CALL CheckError( ErrID_Fatal, "Blade StrucCtrl time step differs from SrvD time step." )
          RETURN
       END IF      
    
@@ -578,7 +578,7 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    
    
       !............................................................................................
-      ! Set Init outputs for linearization (after TMD, in case we ever add the TMD to the linearization features):
+      ! Set Init outputs for linearization (after StrucCtrl, in case we ever add the StrucCtrl to the linearization features):
       !............................................................................................
    xd%CtrlOffset = 0.0_ReKi ! initialize before first use with TrimCase in linearization
    p%TrimCase    = InitInp%TrimCase
@@ -686,8 +686,8 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       ! Clean up the local variables:
       !............................................................................................
    CALL SrvD_DestroyInputFile( InputFileData, ErrStat2, ErrMsg2 )
-   CALL TMD_DestroyInitInput(TMD_InitInp, ErrStat2, ErrMsg2 )   
-   CALL TMD_DestroyInitOutput(TMD_InitOut, ErrStat2, ErrMsg2 )   
+   CALL StC_DestroyInitInput(StC_InitInp, ErrStat2, ErrMsg2 )   
+   CALL StC_DestroyInitOutput(StC_InitOut, ErrStat2, ErrMsg2 )   
    
    RETURN
    
@@ -719,8 +719,8 @@ CONTAINS
          !.........................................................................................................................
          IF ( ErrStat >= AbortErrLev ) THEN
             CALL SrvD_DestroyInputFile(InputFileData, ErrStat3, ErrMsg3 )
-            CALL TMD_DestroyInitInput(TMD_InitInp, ErrStat3, ErrMsg3 )
-            CALL TMD_DestroyInitOutput(TMD_InitOut, ErrStat3, ErrMsg3 )   
+            CALL StC_DestroyInitInput(StC_InitInp, ErrStat3, ErrMsg3 )
+            CALL StC_DestroyInitOutput(StC_InitOut, ErrStat3, ErrMsg3 )   
          END IF
 
       END IF
@@ -758,19 +758,18 @@ SUBROUTINE SrvD_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
          CALL BladedInterface_End(u, p, m, ErrStat, ErrMsg )
       END IF
       
-      IF (p%CompNTMD) THEN
-         CALL TMD_End( u%NTMD, p%NTMD, x%NTMD, xd%NTMD, z%NTMD, OtherState%NTMD, y%NTMD, m%NTMD, ErrStat, ErrMsg )
+      ! StrucCtrl
+      IF (p%CompNStC) THEN
+         CALL StC_End( u%NStC, p%NStC, x%NStC, xd%NStC, z%NStC, OtherState%NStC, y%NStC, m%NStC, ErrStat, ErrMsg )
       END IF
       
-      IF (p%CompTTMD) THEN
-         CALL TMD_End( u%TTMD, p%TTMD, x%TTMD, xd%TTMD, z%TTMD, OtherState%TTMD, y%TTMD, m%TTMD, ErrStat, ErrMsg )
+      IF (p%CompTStC) THEN
+         CALL StC_End( u%TStC, p%TStC, x%TStC, xd%TStC, z%TStC, OtherState%TStC, y%TStC, m%TStC, ErrStat, ErrMsg )
       END IF
  
-!SP_start
-      IF (p%CompBTMD) THEN
-         CALL TMD_End( u%BTMD, p%BTMD, x%BTMD, xd%BTMD, z%BTMD, OtherState%BTMD, y%BTMD, m%BTMD, ErrStat, ErrMsg )
+      IF (p%CompBStC) THEN
+         CALL StC_End( u%BStC, p%BStC, x%BStC, xd%BStC, z%BStC, OtherState%BStC, y%BStC, m%BStC, ErrStat, ErrMsg )
       END IF
-!SP_end
 
          ! Close files here:
          
@@ -830,7 +829,7 @@ SUBROUTINE SrvD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState,
    CHARACTER(*),                    INTENT(  OUT) :: ErrMsg          !< Error message if ErrStat /= ErrID_None
 
       ! Local variables
-   TYPE(TMD_InputType),ALLOCATABLE                :: u(:)            ! Inputs at t
+   TYPE(StC_InputType),ALLOCATABLE                :: u(:)            ! Inputs at t
    INTEGER(IntKi)                                 :: i               ! loop counter 
    INTEGER(IntKi)                                 :: order
    TYPE(SrvD_InputType)                           :: u_interp        ! interpolated input
@@ -848,26 +847,25 @@ SUBROUTINE SrvD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState,
    ErrMsg  = ""
                   
    !...............................................................................................................................   
-   ! update states in TMD submodule, if necessary:
+   ! update states in StrucCtrl submodule, if necessary:
    !...............................................................................................................................   
       
-      ! Convert Inputs(i)%NTMD and/or Inputs(i)%TTMD to u(:)
-!SP
-   IF (p%CompNTMD .OR. p%CompTTMD .OR. p%CompBTMD) THEN  
+      ! Convert Inputs(i)%NStC and/or Inputs(i)%TStC to u(:)
+   IF (p%CompNStC .OR. p%CompTStC .OR. p%CompBStC) THEN  
          
       order = SIZE(Inputs)
       ALLOCATE(u(order), STAT=ErrStat2)
       IF(ErrStat2 /= 0) THEN
-         CALL SetErrStat( ErrID_Fatal, 'Could not allocate TMD input array, u', ErrStat, ErrMsg, RoutineName )
+         CALL SetErrStat( ErrID_Fatal, 'Could not allocate StrucCtrl input array, u', ErrStat, ErrMsg, RoutineName )
          CALL Cleanup()
          RETURN
       END IF
          
-         ! Nacelle TMD
-      IF (p%CompNTMD) THEN
+         ! Nacelle StrucCtrl
+      IF (p%CompNStC) THEN
             
          DO i=1,order
-            CALL TMD_CopyInput( Inputs(i)%NTMD, u(i), MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+            CALL StC_CopyInput( Inputs(i)%NStC, u(i), MESH_NEWCOPY, ErrStat2, ErrMsg2 )
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          END DO
       
@@ -876,23 +874,23 @@ SUBROUTINE SrvD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState,
             RETURN
          END IF
             
-         CALL TMD_UpdateStates( t, n, u, InputTimes, p%NTMD, x%NTMD, xd%NTMD, z%NTMD, OtherState%NTMD, m%NTMD, ErrStat2, ErrMsg2 )
+         CALL StC_UpdateStates( t, n, u, InputTimes, p%NStC, x%NStC, xd%NStC, z%NStC, OtherState%NStC, m%NStC, ErrStat2, ErrMsg2 )
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          
-            ! destroy these for the next call to TMD_UpdateStates (reset for tower TMD)
+            ! destroy these for the next call to StC_UpdateStates (reset for tower StC)
          DO i=1,SIZE(u)
-            CALL TMD_DestroyInput(u(i), ErrStat2, ErrMsg2)
+            CALL StC_DestroyInput(u(i), ErrStat2, ErrMsg2)
                CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          END DO
             
       END IF
          
          
-         ! Tower TMD
-      IF (p%CompTTMD) THEN
+         ! Tower StrucCtrl
+      IF (p%CompTStC) THEN
             
          DO i=1,order
-            CALL TMD_CopyInput( Inputs(i)%TTMD, u(i), MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+            CALL StC_CopyInput( Inputs(i)%TStC, u(i), MESH_NEWCOPY, ErrStat2, ErrMsg2 )
                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          END DO
       
@@ -901,22 +899,22 @@ SUBROUTINE SrvD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState,
             RETURN
          END IF
             
-         CALL TMD_UpdateStates( t, n, u, InputTimes, p%TTMD, x%TTMD, xd%TTMD, z%TTMD, OtherState%TTMD, m%TTMD, ErrStat2, ErrMsg2 )
+         CALL StC_UpdateStates( t, n, u, InputTimes, p%TStC, x%TStC, xd%TStC, z%TStC, OtherState%TStC, m%TStC, ErrStat2, ErrMsg2 )
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-            ! destroy these for the next call to TMD_UpdateStates (reset for tower TMD)
+            ! destroy these for the next call to StC_UpdateStates (reset for tower StC)
          DO i=1,SIZE(u)
-            CALL TMD_DestroyInput(u(i), ErrStat2, ErrMsg2)
+            CALL StC_DestroyInput(u(i), ErrStat2, ErrMsg2)
                CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          END DO
 
       END IF         
 
-         ! Blade TMD !SP
-      IF (p%CompBTMD) THEN
+         ! Blade StrucCtrl
+      IF (p%CompBStC) THEN
             
          DO i=1,order
-            CALL TMD_CopyInput( Inputs(i)%BTMD, u(i), MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+            CALL StC_CopyInput( Inputs(i)%BStC, u(i), MESH_NEWCOPY, ErrStat2, ErrMsg2 )
                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          END DO
       
@@ -925,7 +923,7 @@ SUBROUTINE SrvD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState,
             RETURN
          END IF
             
-         CALL TMD_UpdateStates( t, n, u, InputTimes, p%BTMD, x%BTMD, xd%BTMD, z%BTMD, OtherState%BTMD, m%BTMD, ErrStat2, ErrMsg2 )
+         CALL StC_UpdateStates( t, n, u, InputTimes, p%BStC, x%BStC, xd%BStC, z%BStC, OtherState%BStC, m%BStC, ErrStat2, ErrMsg2 )
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
       END IF         
@@ -1021,7 +1019,7 @@ CONTAINS
    
       IF (ALLOCATED(u)) THEN
          DO i=1,SIZE(u)
-            CALL TMD_DestroyInput(u(i), ErrStat2, ErrMsg2)
+            CALL StC_DestroyInput(u(i), ErrStat2, ErrMsg2)
                CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          END DO
          DEALLOCATE(u)
@@ -1119,21 +1117,20 @@ SUBROUTINE SrvD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-   IF (p%CompNTMD) THEN 
-      CALL TMD_CalcOutput( t, u%NTMD, p%NTMD, x%NTMD, xd%NTMD, z%NTMD, OtherState%NTMD, y%NTMD, m%NTMD, ErrStat2, ErrMsg2 )
+   ! StrucCtrl
+   IF (p%CompNStC) THEN 
+      CALL StC_CalcOutput( t, u%NStC, p%NStC, x%NStC, xd%NStC, z%NStC, OtherState%NStC, y%NStC, m%NStC, ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    END IF
    
-   IF (p%CompTTMD) THEN 
-      CALL TMD_CalcOutput( t, u%TTMD, p%TTMD, x%TTMD, xd%TTMD, z%TTMD, OtherState%TTMD, y%TTMD, m%TTMD, ErrStat2, ErrMsg2 )
+   IF (p%CompTStC) THEN 
+      CALL StC_CalcOutput( t, u%TStC, p%TStC, x%TStC, xd%TStC, z%TStC, OtherState%TStC, y%TStC, m%TStC, ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    END IF
-!SP_start
-   IF (p%CompBTMD) THEN 
-      CALL TMD_CalcOutput( t, u%BTMD, p%BTMD, x%BTMD, xd%BTMD, z%BTMD, OtherState%BTMD, y%BTMD, m%BTMD, ErrStat2, ErrMsg2 )
+   IF (p%CompBStC) THEN 
+      CALL StC_CalcOutput( t, u%BStC, p%BStC, x%BStC, xd%BStC, z%BStC, OtherState%BStC, y%BStC, m%BStC, ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    END IF
-!SP_end
    
    !...............................................................................................................................   
    ! Get the demanded values from the external Bladed dynamic link library, if necessary:
@@ -1205,40 +1202,39 @@ SUBROUTINE SrvD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
    END DO
 
    AllOuts(YawMomCom) = -0.001*y%YawMom
-!SP_ should it be this????   AllOuts(YawMomCom) = y%YawMom
 
-   if (p%CompNTMD) then   
-      AllOuts(NTMD_XQ ) = x%NTMD%tmd_x(1,1)
-      AllOuts(NTMD_XQD) = x%NTMD%tmd_x(2,1)
-      AllOuts(NTMD_YQ ) = x%NTMD%tmd_x(3,1)
-      AllOuts(NTMD_YQD) = x%NTMD%tmd_x(4,1)
+   if (p%CompNStC) then   
+      AllOuts(NStC_XQ ) = x%NStC%StC_x(1,1)
+      AllOuts(NStC_XQD) = x%NStC%StC_x(2,1)
+      AllOuts(NStC_YQ ) = x%NStC%StC_x(3,1)
+      AllOuts(NStC_YQD) = x%NStC%StC_x(4,1)
    endif
         
-   if (p%CompTTMD) then
-      AllOuts(TTMD_XQ ) = x%TTMD%tmd_x(1,1)
-      AllOuts(TTMD_XQD) = x%TTMD%tmd_x(2,1)
-      AllOuts(TTMD_YQ ) = x%TTMD%tmd_x(3,1)
-      AllOuts(TTMD_YQD) = x%TTMD%tmd_x(4,1)
+   if (p%CompTStC) then
+      AllOuts(TStC_XQ ) = x%TStC%StC_x(1,1)
+      AllOuts(TStC_XQD) = x%TStC%StC_x(2,1)
+      AllOuts(TStC_YQ ) = x%TStC%StC_x(3,1)
+      AllOuts(TStC_YQD) = x%TStC%StC_x(4,1)
    endif
 
-   if (p%CompBTMD) then
+   if (p%CompBStC) then
       if (p%NumBl >= 1) then
-         AllOuts(BTMD1_XQ ) = x%BTMD%tmd_x(1,1)
-         AllOuts(BTMD1_XQD) = x%BTMD%tmd_x(2,1)
-         AllOuts(BTMD1_YQ ) = x%BTMD%tmd_x(3,1)
-         AllOuts(BTMD1_YQD) = x%BTMD%tmd_x(4,1)
+         AllOuts(BStC1_XQ ) = x%BStC%StC_x(1,1)
+         AllOuts(BStC1_XQD) = x%BStC%StC_x(2,1)
+         AllOuts(BStC1_YQ ) = x%BStC%StC_x(3,1)
+         AllOuts(BStC1_YQD) = x%BStC%StC_x(4,1)
       endif
       if (p%NumBl >= 2) then
-         AllOuts(BTMD2_XQ ) = x%BTMD%tmd_x(1,2)
-         AllOuts(BTMD2_XQD) = x%BTMD%tmd_x(2,2)
-         AllOuts(BTMD2_YQ ) = x%BTMD%tmd_x(3,2)
-         AllOuts(BTMD2_YQD) = x%BTMD%tmd_x(4,2)
+         AllOuts(BStC2_XQ ) = x%BStC%StC_x(1,2)
+         AllOuts(BStC2_XQD) = x%BStC%StC_x(2,2)
+         AllOuts(BStC2_YQ ) = x%BStC%StC_x(3,2)
+         AllOuts(BStC2_YQD) = x%BStC%StC_x(4,2)
       endif
       if (p%NumBl >= 3) then
-         AllOuts(BTMD3_XQ ) = x%BTMD%tmd_x(1,3)
-         AllOuts(BTMD3_XQD) = x%BTMD%tmd_x(2,3)
-         AllOuts(BTMD3_YQ ) = x%BTMD%tmd_x(3,3)
-         AllOuts(BTMD3_YQD) = x%BTMD%tmd_x(4,3)
+         AllOuts(BStC3_XQ ) = x%BStC%StC_x(1,3)
+         AllOuts(BStC3_XQD) = x%BStC%StC_x(2,3)
+         AllOuts(BStC3_YQ ) = x%BStC%StC_x(3,3)
+         AllOuts(BStC3_YQD) = x%BStC%StC_x(4,3)
       endif
    endif
    
@@ -1287,18 +1283,19 @@ SUBROUTINE SrvD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrS
 
       dxdt%DummyContState = 0.0_ReKi
 
-      IF (p%CompNTMD) THEN 
-         CALL TMD_CalcContStateDeriv( t, u%NTMD, p%NTMD, x%NTMD, xd%NTMD, z%NTMD, OtherState%NTMD, m%NTMD, dxdt%NTMD, ErrStat, ErrMsg )
+      ! StrucCtrl
+      IF (p%CompNStC) THEN 
+         CALL StC_CalcContStateDeriv( t, u%NStC, p%NStC, x%NStC, xd%NStC, z%NStC, OtherState%NStC, m%NStC, dxdt%NStC, ErrStat, ErrMsg )
       END IF
 
-      IF (p%CompTTMD) THEN 
-         CALL TMD_CalcContStateDeriv( t, u%TTMD, p%TTMD, x%TTMD, xd%TTMD, z%TTMD, OtherState%TTMD, m%TTMD, dxdt%TTMD, ErrStat, ErrMsg )
+      IF (p%CompTStC) THEN 
+         CALL StC_CalcContStateDeriv( t, u%TStC, p%TStC, x%TStC, xd%TStC, z%TStC, OtherState%TStC, m%TStC, dxdt%TStC, ErrStat, ErrMsg )
       END IF
-!SP_start
-      IF (p%CompTTMD) THEN 
-         CALL TMD_CalcContStateDeriv( t, u%BTMD, p%BTMD, x%BTMD, xd%BTMD, z%BTMD, OtherState%BTMD, m%BTMD, dxdt%BTMD, ErrStat, ErrMsg )
+
+      IF (p%CompTStC) THEN 
+         CALL StC_CalcContStateDeriv( t, u%BStC, p%BStC, x%BStC, xd%BStC, z%BStC, OtherState%BStC, m%BStC, dxdt%BStC, ErrStat, ErrMsg )
       END IF
-!SP_end
+
       
 END SUBROUTINE SrvD_CalcContStateDeriv
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -1354,14 +1351,19 @@ SUBROUTINE SrvD_UpdateDiscState( t, u, p, x, xd, z, OtherState, m, ErrStat, ErrM
       
 
 
-      !   ! Update discrete states here:
-      !IF (p%CompNTMD) THEN 
-      !   CALL TMD_UpdateDiscState( t, u%NTMD, p%NTMD, x%NTMD, xd%NTMD, z%NTMD, OtherState%NTMD, m%NTMD, ErrStat, ErrMsg )
+      !   ! Update discrete states here:  StrucCtrl nacelle
+      !IF (p%CompNStC) THEN 
+      !   CALL StC_UpdateDiscState( t, u%NStC, p%NStC, x%NStC, xd%NStC, z%NStC, OtherState%NStC, m%NStC, ErrStat, ErrMsg )
       !END IF
 
-      !   ! Update discrete states here:
-      !IF (p%CompTTMD) THEN 
-      !   CALL TMD_UpdateDiscState( t, u%TTMD, p%TTMD, x%TTMD, xd%TTMD, z%TTMD, OtherState%TTMD, m%TTMD, ErrStat, ErrMsg )
+      !   ! Update discrete states here:  StrucCtrl Tower
+      !IF (p%CompTStC) THEN 
+      !   CALL StC_UpdateDiscState( t, u%TStC, p%TStC, x%TStC, xd%TStC, z%TStC, OtherState%TStC, m%TStC, ErrStat, ErrMsg )
+      !END IF
+      
+      !   ! Update discrete states here:  StrucCtrl Blades
+      !IF (p%CompBStC) THEN 
+      !   CALL StC_UpdateDiscState( t, u%BStC, p%BStC, x%BStC, xd%BStC, z%BStC, OtherState%BStC, m%BStC, ErrStat, ErrMsg )
       !END IF
       
          
@@ -1392,14 +1394,18 @@ SUBROUTINE SrvD_CalcConstrStateResidual( t, u, p, x, xd, z, OtherState, m, z_res
       ErrMsg  = ""
 
       
-         ! Solve for the constraint states here:
+         ! Solve for the constraint states here:   StrucCtrl for nacelle, tower, blades
 
-      !IF (p%CompNTMD) THEN 
-      !   CALL TMD_CalcConstrStateResidual( t, u%NTMD, p%NTMD, x%NTMD, xd%NTMD, z%NTMD, OtherState%NTMD, m%NTMD, z_residual%NTMD, ErrStat, ErrMsg )
+      !IF (p%CompNStC) THEN 
+      !   CALL StC_CalcConstrStateResidual( t, u%NStC, p%NStC, x%NStC, xd%NStC, z%NStC, OtherState%NStC, m%NStC, z_residual%NStC, ErrStat, ErrMsg )
       !END IF
 
-      !IF (p%CompTTMD) THEN 
-      !   CALL TMD_CalcConstrStateResidual( t, u%TTMD, p%TTMD, x%TTMD, xd%TTMD, z%TTMD, OtherState%TTMD, m%TTMD, z_residual%TTMD, ErrStat, ErrMsg )
+      !IF (p%CompTStC) THEN 
+      !   CALL StC_CalcConstrStateResidual( t, u%TStC, p%TStC, x%TStC, xd%TStC, z%TStC, OtherState%TStC, m%TStC, z_residual%TStC, ErrStat, ErrMsg )
+      !END IF
+      
+      !IF (p%CompBStC) THEN 
+      !   CALL StC_CalcConstrStateResidual( t, u%BStC, p%BStC, x%BStC, xd%BStC, z%BStC, OtherState%BStC, m%BStC, z_residual%BStC, ErrStat, ErrMsg )
       !END IF
       
       z_residual%DummyConstrState = 0.0_ReKi
@@ -2300,40 +2306,39 @@ SUBROUTINE ReadPrimaryFile( InitInp, InputFileData, OutFileRoot, UnEc, ErrStat, 
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
                   
-      ! CompNTMD - Compute nacelle tuned mass damper {true/false} (flag):
-   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%CompNTMD, "CompNTMD", "Compute nacelle tuned mass damper {true/false} (flag)", ErrStat2, ErrMsg2, UnEc)
+      ! CompNStC - Compute nacelle tuned mass damper {true/false} (flag):
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%CompNStC, "CompNStC", "Compute nacelle tuned mass damper {true/false} (flag)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN      
       
-      ! NTMDfile - Name of the file for nacelle tuned mass damper (quoted string) [unused when CompNTMD is false]:
-   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%NTMDfile, "NTMDfile", "Name of the file for nacelle tuned mass dampe [unused when CompNTMD is false] (-)", ErrStat2, ErrMsg2, UnEc)
+      ! NStCfile - Name of the file for nacelle tuned mass damper (quoted string) [unused when CompNStC is false]:
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%NStCfile, "NStCfile", "Name of the file for nacelle tuned mass dampe [unused when CompNStC is false] (-)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
-   IF ( PathIsRelative( InputFileData%NTMDfile ) ) InputFileData%NTMDfile = TRIM(PriPath)//TRIM(InputFileData%NTMDfile)
+   IF ( PathIsRelative( InputFileData%NStCfile ) ) InputFileData%NStCfile = TRIM(PriPath)//TRIM(InputFileData%NStCfile)
       
-      ! CompTTMD - Compute tower tuned mass damper {true/false} (flag):
-   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%CompTTMD, "CompTTMD", "Compute tower tuned mass damper {true/false} (flag)", ErrStat2, ErrMsg2, UnEc)
+      ! CompTStC - Compute tower tuned mass damper {true/false} (flag):
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%CompTStC, "CompTStC", "Compute tower tuned mass damper {true/false} (flag)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN      
       
-      ! TTMDfile - Name of the file for nacelle tuned mass damper (quoted string) [unused when CompNTMD is false]:
-   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%TTMDfile, "TTMDfile", "Name of the file for tower tuned mass dampe [unused when CompTTMD is false] (-)", ErrStat2, ErrMsg2, UnEc)
+      ! TStCfile - Name of the file for nacelle tuned mass damper (quoted string) [unused when CompNStC is false]:
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%TStCfile, "TStCfile", "Name of the file for tower tuned mass dampe [unused when CompTStC is false] (-)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
-   IF ( PathIsRelative( InputFileData%TTMDfile ) ) InputFileData%TTMDfile = TRIM(PriPath)//TRIM(InputFileData%TTMDfile)
+   IF ( PathIsRelative( InputFileData%TStCfile ) ) InputFileData%TStCfile = TRIM(PriPath)//TRIM(InputFileData%TStCfile)
       
-!SP_start
-      ! CompBTMD - Compute blade tuned mass damper {true/false} (flag):
-   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%CompBTMD, "CompBTMD", "Compute blade tuned mass damper {true/false} (flag)", ErrStat2, ErrMsg2, UnEc)
+      ! CompBStC - Compute blade tuned mass damper {true/false} (flag):
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%CompBStC, "CompBStC", "Compute blade tuned mass damper {true/false} (flag)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN      
       
-      ! BTMDfile - Name of the file for blade tuned mass damper (quoted string) [unused when CompBTMD is false]:
-   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%BTMDfile, "BTMDfile", "Name of the file for blade tuned mass damper [unused when CompBTMD is false] (-)", ErrStat2, ErrMsg2, UnEc)
+      ! BStCfile - Name of the file for blade tuned mass damper (quoted string) [unused when CompBStC is false]:
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%BStCfile, "BStCfile", "Name of the file for blade tuned mass damper [unused when CompBStC is false] (-)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
-   IF ( PathIsRelative( InputFileData%BTMDfile ) ) InputFileData%BTMDfile = TRIM(PriPath)//TRIM(InputFileData%BTMDfile)
-!SP_end
+   IF ( PathIsRelative( InputFileData%BStCfile ) ) InputFileData%BStCfile = TRIM(PriPath)//TRIM(InputFileData%BStCfile)
+
    !---------------------- BLADED INTERFACE ----------------------------------------         
    CALL ReadCom( UnIn, InitInp%InputFile, 'Section Header: Bladed Interface', ErrStat2, ErrMsg2, UnEc )
       CALL CheckError( ErrStat2, ErrMsg2 )
@@ -2634,8 +2639,8 @@ SUBROUTINE ValidatePrimaryData( InitInp, InputFileData, ErrStat, ErrMsg )
       if (InputFileData%YCMode /= ControlMode_NONE) &
          call SetErrStat(ErrID_Fatal,"YCMode must be 0 for linearization.",ErrStat,ErrMsg,RoutineName)
       
-      if (InputFileData%CompNTMD .or. InputFileData%CompTTMD .or. InputFileData%CompBTMD) &
-         call SetErrStat(ErrID_Fatal,"TMD module is not currently allowed in linearization. CompNTMD and CompTTMD and CompBTMD must be FALSE.",ErrStat,ErrMsg,RoutineName)
+      if (InputFileData%CompNStC .or. InputFileData%CompTStC .or. InputFileData%CompBStC) &
+         call SetErrStat(ErrID_Fatal,"StrucCtrl module is not currently allowed in linearization. CompNStC and CompTStC and CompBStC must be FALSE.",ErrStat,ErrMsg,RoutineName)
       
       if (InitInp%TrimCase /= TrimCase_none) then
          if (InitInp%TrimCase /= TrimCase_yaw .and. InitInp%TrimCase /= TrimCase_torque .and. InitInp%TrimCase /=  TrimCase_pitch) then
@@ -3028,11 +3033,10 @@ SUBROUTINE SrvD_SetParameters( InputFileData, p, ErrStat, ErrMsg )
       !.............................................
       ! Tuned-mass damper parameters
       !.............................................   
-   p%CompNTMD = InputFileData%CompNTMD
-   p%CompTTMD = InputFileData%CompTTMD
-!SP_start
-   p%CompBTMD = InputFileData%CompBTMD
-!SP_end
+   p%CompNStC = InputFileData%CompNStC
+   p%CompTStC = InputFileData%CompTStC
+   p%CompBStC = InputFileData%CompBStC
+
       !.............................................
       ! Determine if the BladedDLL should be called
       !.............................................
@@ -3491,15 +3495,15 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
 
    CHARACTER(OutStrLenM1), PARAMETER  :: ValidParamAry(34) =  (/  &   ! This lists the names of the allowed parameters, which must be sorted alphabetically
                                "BLAIRFLC1","BLAIRFLC2","BLAIRFLC3","BLFLAP1  ","BLFLAP2  ","BLFLAP3  ","BLPITCHC1","BLPITCHC2", &
-                               "BLPITCHC3","BTMD1_XQ ","BTMD1_XQD","BTMD1_YQ ","BTMD1_YQD","BTMD2_XQ ","BTMD2_XQD","BTMD2_YQ ", &
-                               "BTMD2_YQD","BTMD3_XQ ","BTMD3_XQD","BTMD3_YQ ","BTMD3_YQD","GENPWR   ","GENTQ    ","HSSBRTQC ", &
-                               "NTMD_XQ  ","NTMD_XQD ","NTMD_YQ  ","NTMD_YQD ","TTMD_XQ  ","TTMD_XQD ","TTMD_YQ  ","TTMD_YQD ", &
+                               "BLPITCHC3","BSTC1_XQ ","BSTC1_XQD","BSTC1_YQ ","BSTC1_YQD","BSTC2_XQ ","BSTC2_XQD","BSTC2_YQ ", &
+                               "BSTC2_YQD","BSTC3_XQ ","BSTC3_XQD","BSTC3_YQ ","BSTC3_YQD","GENPWR   ","GENTQ    ","HSSBRTQC ", &
+                               "NSTC_XQ  ","NSTC_XQD ","NSTC_YQ  ","NSTC_YQD ","TSTC_XQ  ","TSTC_XQD ","TSTC_YQ  ","TSTC_YQD ", &
                                "YAWMOM   ","YAWMOMCOM"/)
    INTEGER(IntKi), PARAMETER :: ParamIndxAry(34) =  (/ &                            ! This lists the index into AllOuts(:) of the allowed parameters ValidParamAry(:)
                                 BlAirFlC1 , BlAirFlC2 , BlAirFlC3 , BlAirFlC1 , BlAirFlC2 , BlAirFlC3 , BlPitchC1 , BlPitchC2 , &
-                                BlPitchC3 , BTMD1_XQ  , BTMD1_XQD , BTMD1_YQ  , BTMD1_YQD , BTMD2_XQ  , BTMD2_XQD , BTMD2_YQ  , &
-                                BTMD2_YQD , BTMD3_XQ  , BTMD3_XQD , BTMD3_YQ  , BTMD3_YQD ,    GenPwr ,     GenTq ,  HSSBrTqC , &
-                                  NTMD_XQ ,  NTMD_XQD ,   NTMD_YQ ,  NTMD_YQD ,   TTMD_XQ ,  TTMD_XQD ,   TTMD_YQ ,  TTMD_YQD , &
+                                BlPitchC3 , BStC1_XQ  , BStC1_XQD , BStC1_YQ  , BStC1_YQD , BStC2_XQ  , BStC2_XQD , BStC2_YQ  , &
+                                BStC2_YQD , BStC3_XQ  , BStC3_XQD , BStC3_YQ  , BStC3_YQD ,    GenPwr ,     GenTq ,  HSSBrTqC , &
+                                  NStC_XQ ,  NStC_XQD ,   NStC_YQ ,  NStC_YQD ,   TStC_XQ ,  TStC_XQD ,   TStC_YQ ,  TStC_YQD , &
                                 YawMomCom , YawMomCom /)
    CHARACTER(ChanLen), PARAMETER :: ParamUnitsAry(34) =  (/  &  ! This lists the units corresponding to the allowed parameters
                                "(-)   ","(-)   ","(-)   ","(-)   ","(-)   ","(-)   ","(deg) ","(deg) ", &
@@ -3519,28 +3523,28 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
 
    InvalidOutput(BlAirFlC3) = ( p%NumBl < 3 )
    InvalidOutput(      BlPitchC3) = ( p%NumBl < 3 )
-   InvalidOutput(        NTMD_XQ) = ( .not. p%CompNTMD )
-   InvalidOutput(       NTMD_XQD) = ( .not. p%CompNTMD )
-   InvalidOutput(        NTMD_YQ) = ( .not. p%CompNTMD )
-   InvalidOutput(       NTMD_YQD) = ( .not. p%CompNTMD )
-   InvalidOutput(        TTMD_XQ) = ( .not. p%CompTTMD )
-   InvalidOutput(       TTMD_XQD) = ( .not. p%CompTTMD )
-   InvalidOutput(        TTMD_YQ) = ( .not. p%CompTTMD )
-   InvalidOutput(       TTMD_YQD) = ( .not. p%CompTTMD )
+   InvalidOutput(       NStC_XQ ) = ( .not. p%CompNStC )
+   InvalidOutput(       NStC_XQD) = ( .not. p%CompNStC )
+   InvalidOutput(       NStC_YQ ) = ( .not. p%CompNStC )
+   InvalidOutput(       NStC_YQD) = ( .not. p%CompNStC )
+   InvalidOutput(       TStC_XQ ) = ( .not. p%CompTStC )
+   InvalidOutput(       TStC_XQD) = ( .not. p%CompTStC )
+   InvalidOutput(       TStC_YQ ) = ( .not. p%CompTStC )
+   InvalidOutput(       TStC_YQD) = ( .not. p%CompTStC )
 
    ! NOTE: only the first 3 blades can be output.  If more blades exist, we can't output them here
-   InvalidOutput(      BTMD1_XQ ) = ( .not. P%CompBTMD .and. p%NumBl < 1 )
-   InvalidOutput(      BTMD1_XQD) = ( .not. P%CompBTMD .and. p%NumBl < 1 )
-   InvalidOutput(      BTMD1_YQ ) = ( .not. P%CompBTMD .and. p%NumBl < 1 )
-   InvalidOutput(      BTMD1_YQD) = ( .not. P%CompBTMD .and. p%NumBl < 1 )
-   InvalidOutput(      BTMD2_XQ ) = ( .not. P%CompBTMD .and. p%NumBl < 2 )
-   InvalidOutput(      BTMD2_XQD) = ( .not. P%CompBTMD .and. p%NumBl < 2 )
-   InvalidOutput(      BTMD2_YQ ) = ( .not. P%CompBTMD .and. p%NumBl < 2 )
-   InvalidOutput(      BTMD2_YQD) = ( .not. P%CompBTMD .and. p%NumBl < 2 )
-   InvalidOutput(      BTMD3_XQ ) = ( .not. P%CompBTMD .and. p%NumBl < 3 )
-   InvalidOutput(      BTMD3_XQD) = ( .not. P%CompBTMD .and. p%NumBl < 3 )
-   InvalidOutput(      BTMD3_YQ ) = ( .not. P%CompBTMD .and. p%NumBl < 3 )
-   InvalidOutput(      BTMD3_YQD) = ( .not. P%CompBTMD .and. p%NumBl < 3 )
+   InvalidOutput(      BStC1_XQ ) = ( .not. P%CompBStC .and. p%NumBl < 1 )
+   InvalidOutput(      BStC1_XQD) = ( .not. P%CompBStC .and. p%NumBl < 1 )
+   InvalidOutput(      BStC1_YQ ) = ( .not. P%CompBStC .and. p%NumBl < 1 )
+   InvalidOutput(      BStC1_YQD) = ( .not. P%CompBStC .and. p%NumBl < 1 )
+   InvalidOutput(      BStC2_XQ ) = ( .not. P%CompBStC .and. p%NumBl < 2 )
+   InvalidOutput(      BStC2_XQD) = ( .not. P%CompBStC .and. p%NumBl < 2 )
+   InvalidOutput(      BStC2_YQ ) = ( .not. P%CompBStC .and. p%NumBl < 2 )
+   InvalidOutput(      BStC2_YQD) = ( .not. P%CompBStC .and. p%NumBl < 2 )
+   InvalidOutput(      BStC3_XQ ) = ( .not. P%CompBStC .and. p%NumBl < 3 )
+   InvalidOutput(      BStC3_XQD) = ( .not. P%CompBStC .and. p%NumBl < 3 )
+   InvalidOutput(      BStC3_YQ ) = ( .not. P%CompBStC .and. p%NumBl < 3 )
+   InvalidOutput(      BStC3_YQD) = ( .not. P%CompBStC .and. p%NumBl < 3 )
 
 
    !-------------------------------------------------------------------------------------------------
