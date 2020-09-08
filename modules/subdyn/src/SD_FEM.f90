@@ -1012,6 +1012,7 @@ SUBROUTINE AssembleKM(Init, p, ErrStat, ErrMsg)
    CALL AllocAry( Init%K, p%nDOF, p%nDOF , 'Init%K',  ErrStat2, ErrMsg2); if(Failed()) return; ! system stiffness matrix 
    CALL AllocAry( Init%M, p%nDOF, p%nDOF , 'Init%M',  ErrStat2, ErrMsg2); if(Failed()) return; ! system mass matrix 
    CALL AllocAry( Init%FG,p%nDOF,          'Init%FG', ErrStat2, ErrMsg2); if(Failed()) return; ! system gravity force vector 
+   CALL AllocAry( p%FG_full, p%nDOF,     'p%FG_full', ErrStat2, ErrMsg2); if(Failed()) return; ! system gravity force vector 
    Init%K  = 0.0_FEKi
    Init%M  = 0.0_FEKi
    Init%FG = 0.0_FEKi
@@ -1029,6 +1030,8 @@ SUBROUTINE AssembleKM(Init, p, ErrStat, ErrMsg)
       Init%K(IDOF, IDOF) = Init%K( IDOF, IDOF) + Ke(1:12,1:12)
       Init%M(IDOF, IDOF) = Init%M( IDOF, IDOF) + Me(1:12,1:12)
    ENDDO
+   ! Copy FG to FG_full since FG will be reduced later
+   p%FG_full(1:p%nDOF) = Init%FG(1:p%nDOF)
       
    ! Add concentrated mass to mass matrix
    DO I = 1, Init%nCMass
@@ -2020,6 +2023,29 @@ SUBROUTINE InsertJointStiffDamp(p, Init, ErrStat, ErrMsg)
       endif
    enddo
 END SUBROUTINE InsertJointStiffDamp
+
+!> Returns true if the substructure can be considered "fixed bottom"
+!! This is relevant for the ExtraMoment calculation where different reference positions 
+!! are used depending if translation is fixed of free.
+!! As defined in the documentation:
+!! The structure is considered “fixed” at the sea bed if at least one reaction node has:
+!!  - the 4 degrees of freedom accounting for the x-y translation and rotation are fixed 
+!!  OR
+!!  -  an additional stiffness matrix via an SSI input file
+LOGICAL FUNCTION isFixedBottom(Init, p) result(bFixed)
+   TYPE(SD_InitType),  INTENT(IN   ) :: Init
+   TYPE(SD_ParameterType),INTENT(IN   ) :: p
+   INTEGER(IntKi) :: i, nFixed
+   nFixed=0
+   do i =1,size(p%Nodes_C,1)
+      if (ALL(p%Nodes_C(I,2:5)==idBC_Fixed)) then
+         nFixed=nFixed+1
+      elseif (Init%SSIfile(I)/='') then
+         nFixed=nFixed+1
+      endif
+   enddo
+   bFixed = nFixed >=1
+END FUNCTION isFixedBottom
 
 SUBROUTINE ElemM(ep, Me)
    TYPE(ElemPropType), INTENT(IN) :: eP        !< Element Property

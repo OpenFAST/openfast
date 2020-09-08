@@ -861,7 +861,7 @@ First, a reference undeflected position of the structure is defined, with two po
            
    Illustration for the additional moment occurring due to the distance between the deflected position of the structure and the reference position used for the finite element representation. For simplicity, the loads are assumed to act at the Guyan position instead of the true deflected position.
 
-The structure is considered "fixed" at the sea bed if the 4 degrees of freedom accounting for the x-y translation and rotation are fixed for all "reaction" nodes at the sea bed, or, if all "reaction" nodes are given an additional stiffness matrix via SSI input files (see :numref:`sd_ssi_inputfile`).
+The structure is considered "fixed" at the sea bed if at least one reaction node satisfies one of these two conditions: the 4 degrees of freedom accounting for the x-y translation and rotation are fixed at the sea bed, or, an additional stiffness matrix is given via an SSI input file (see :numref:`sd_ssi_inputfile`). 
 Second, the external loads are assumed to be applied on the "Guyan" deflected structure, instead of the fully deflected structure. The Craig-Bampton displacements are omitted to avoid the non-linear dependency between the input loads and the Craig-Bampton states.
 With this assumption, the external loads at the Guyan position are mapped to the reference position.
 
