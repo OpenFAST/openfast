@@ -467,6 +467,8 @@ If SubDyn encounters an unknown/invalid channel name, it prints an error
 message and halts execution. Please refer to :numref:`sd_appendix_C` for a complete
 list of possible output parameters and their names.
 
+.. _sd_ssi_inputfile:
+
 SSI Input File
 --------------
 

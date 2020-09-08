@@ -1,6 +1,7 @@
 # Makefile for Sphinx documentation
 #
 MAIN=SubDyn
+INKSCAPE="C:/Program Files/Inkscape/inkscape.exe"
 
 # You can set these variables from the command line.
 SPHINXOPTS    =
@@ -11,6 +12,15 @@ PAPER         =
 PAPEROPT_a4     = -D latex_paper_size=a4
 PAPEROPT_letter = -D latex_paper_size=letter
 ALLSPHINXOPTS   = -d _build/doctrees $(PAPEROPT_$(PAPER)) $(SPHINXOPTS) .
+
+
+SVGDIR=figs
+SVGOUTDIR=figs
+SVGS=$(notdir $(wildcard $(SVGDIR)/*.svg))
+SVGS2PDFS=$(patsubst %,$(SVGOUTDIR)/%,$(SVGS:.svg=.pdf))
+SVGS2PNGS=$(patsubst %,$(SVGOUTDIR)/%,$(SVGS:.svg=.png))
+#INKSCAPE=inkscape
+
 
 .PHONY: help clean html dirhtml pickle json htmlhelp qthelp latex changes linkcheck doctest
 
@@ -42,7 +52,8 @@ help:
 clean:
 	-rm -rf _build/*
 
-pdf: latex pdf-compile diff
+pdf: latex pdf-compile 
+# 	diff
 # 	cd _build/latex && make all-pdf
 
 pdf-compile: 
@@ -56,6 +67,12 @@ diff:
 	cd _build/latex  && latexdiff -p ../../LatexDiffPreamble.tex $(MAIN)-old.tex $(MAIN).tex > $(MAIN)-diff.tex
 	cd _build/latex  && cp $(MAIN).aux $(MAIN)-diff.aux
 	cd _build/latex  && pdflatex --interaction=nonstopmode $(MAIN)-diff.tex   
+
+# Rule to create pdf or png from svg
+$(SVGOUTDIR)/%.pdf:$(SVGDIR)/%.svg 
+	$(INKSCAPE) -A -D --file="$<" "$@"
+$(SVGOUTDIR)/%.png:$(SVGDIR)/%.svg 
+	$(INKSCAPE) -D --export-dpi 300  --file="$<" -e "$@"
 
 
 html:
@@ -93,7 +110,7 @@ qthelp:
 	@echo "To view the help file:"
 	@echo "# assistant -collectionFile _build/qthelp/sampledoc.qhc"
 
-latex:
+latex: $(SVGS2PNGS)
 	cp -r figs _build/latex
 	$(SPHINXBUILD) -b latex $(ALLSPHINXOPTS) _build/latex
 	@echo

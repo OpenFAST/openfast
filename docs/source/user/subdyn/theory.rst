@@ -799,35 +799,173 @@ the state-space formulation discussed in the next section.
 Loads 
 ~~~~~
 
-In this section we details the loads acting on the boundary (*R*), interior (*L*) and transition piece node (*TP*). External forces included in the FEM representation, such as the gravity forces, or the pretension forces are noted with the subscript *g*.
-The forces at the boundary nodes can be broken down into external loads (*e*, e.g., hydrodynamic
-forces, mooring forces), those transferred to and from ElastoDyn via the TP (ED), and the FEM loads:
+In this section, we detail the loads acting on the boundary (*R*) and interior (*L*) nodes, and the transition piece (*TP*) node.
+
+External loads that are accounted for by SubDyn, such as the gravity loads or the pretension loads, are noted with the subscript *g*.
+External loads acting on the substructure and coming from additional modules, constisting for instance of hydrodynamic, mooring or soil loads, are noted with the subscript *e*.
+The coupling loads that ElastoDyn would transmit to SubDyn are noted with the subscript *cpl*.
+In the modular implementation, SubDyn does not receive these coupling loads from ElastoDyn, but instead receives displacements of the transition piece, and outputs the corresponding loads. This will be relevant for the state-space formulation, but for the purpose of this section, the coupling loads can be thought to be coming from ElastoDyn.
+
+The external loads at the boundary nodes (*R*) consist of the SubDyn gravitational and cable loads (*g*), the ElastoDyn coupling loads (*cpl*), and the external loads from other modules (*e*):
 
 .. math:: :label: FR
 
-	F_R =F_{R,e} + F_{R, \text{ED}} + F_{R,g}
+	F_R =F_{R,e} + F_{R,g} + F_{R, \text{cpl}} 
 
-The forces at the internal nodes are the external loads from other modules (e.g. hydrodynamic), and the FEM loads (e.g. gravity):
+The external loads acting on the internal nodes are similarly decomposed:
 
 .. math:: :label: FL
 
 	F_L =F_{L,e} + F_{L,g}
 
-Conversely, the TP reaction force, i.e., the force applied to the substructure
-through the TP, is denoted by:
+The loads at the transition piece node (*TP*) are related to the interface boundary nodes (:math:`\bar{R}`) via the transformation matrix :math:`T_I`, which assumes that the :math:`\bar{R}` and *TP* nodes are rigidly connected:
 
 .. math:: :label: FTP1
 	
-	F_{TP} = T_I^T F_{R,\textit{ED}} 
+	F_{TP} = T_I^T \bar{F}_{R} 
+
+In particular, the coupling force exchanged between ElastoDyn and SubDyn is: 
+
+.. math:: :label: FTP1cpl
+	
+	F_{TP,cpl} = T_I^T \bar{F}_{R,\textit{cpl}} 
 
 
-The Guyan TP force, :math:`\tilde{F}_{TP}`, and the CB force, :math:`F_m`, given in Eq. :eq:`tilde_partitions0` is then given by:
+The Guyan TP force, :math:`\tilde{F}_{TP}`, and the CB force, :math:`F_m`, given in Eq. :eq:`tilde_partitions0` are then decomposed as follows:
 
 .. math:: :label: FTPtilde
 	
-       \tilde{F}_{TP} &= F_{TP} + T_I^T \left[ \bar{F}_{R,e}+ \bar{F}_{R,g} + \bar{\Phi}_{R}^T \left( F_{L,e} + F_{L,g} \right) \right]
+       \tilde{F}_{TP} &= F_{TP,cpl} + T_I^T \left[ \bar{F}_{R,e}+ \bar{F}_{R,g} + \bar{\Phi}_{R}^T \left( F_{L,e} + F_{L,g} \right) \right]
 
-       F_m & = \Phi_m^t \left(F_{L,e}  +  F_{L,g}\right)
+       F_m &= \Phi_m^t \left(F_{L,e}  +  F_{L,g}\right)
+
+
+
+.. _SD_ExtraMoment:
+
+Extra moment from deflection 
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The external loads that are applied on the substructure are computed at the location of the deflected stucture. 
+On the other hand, the finite element formulation expect loads to be provided relative to the undeflected position of the structure, or, if rigid body motions are present, relative to a reference undeflected position (see Figure :numref:`sd_fig_extramoment`).
+Nodal forces at a displaced node can be directly applied to the reference nodal position, but the mapping introduces a moment at the reference nodal position.
+The parameter **ExtraMom** in the input file is used to account for this extra nodal moment occurring due to the fact that the finite element loads are expected to be expressed at a reference position and not at the displaced position.
+
+The mapping of nodal forces is done as follows when the parameter **ExtraMom** is set to True.
+First, a reference undeflected position of the structure is defined, with two possible configurations whether the structure is "fixed" at the sea bed, or not. The two configurations are illustrated in Figure :numref:`sd_fig_extramoment`. 
+
+.. _sd_fig_extramoment:
+
+.. figure:: figs/extramoment.png
+   :width: 90%
+           
+   Illustration for the additional moment occurring due to the distance between the deflected position of the structure and the reference position used for the finite element representation. For simplicity, the loads are assumed to act at the Guyan position instead of the true deflected position.
+
+The structure is considered "fixed" at the sea bed if the 4 degrees of freedom accounting for the x-y translation and rotation are fixed for all "reaction" nodes at the sea bed, or, if all "reaction" nodes are given an additional stiffness matrix via SSI input files (see :numref:`sd_ssi_inputfile`).
+Second, the external loads are assumed to be applied on the "Guyan" deflected structure, instead of the fully deflected structure. The Craig-Bampton displacements are omitted to avoid the non-linear dependency between the input loads and the Craig-Bampton states.
+With this assumption, the external loads at the Guyan position are mapped to the reference position.
+
+The additional moment is included for all external forces, including the gravitational forces.
+For a given node :math:`i \in [R,L]`, and nodal force :math:`f_i=f_{i,g} +f_{i,e}`, the following additional moment is computed:  
+
+.. math::
+
+   \Delta m_i= \Delta u_i \times \left[ f_i,g + f_i,e  \right]
+
+with the vector :math:`\Delta u_i=\{\Delta u_{ix},\Delta u_{iy},\Delta u_{iz}\}`, defined differently depending on the reference position (fixed or free) and whether the node is an internal (*L*) or boundary node (*R*):   
+
+.. math:: :label: eqextramom
+    :nowrap:
+                 
+    \begin{align}
+          \text{(fixed bottom:)}\qquad
+          \Delta u_{ij} = [\bar{\Phi}_{R}T_I]_{ij} U_{TP} \quad \text{for } i\in L 
+          \ 
+          &\text{, and, }
+          \quad 
+          \Delta u_{ij} = [T_{I}]_{ij} U_{TP} \quad \text{for } i \in \bar{R}
+          \\
+          \text{(free/floating:)}\qquad
+          \Delta u_{ij} = [\bar{\Phi}_{R}T_I]_{ij} U_{TP} - U_{TP} \quad \text{for } i\in L 
+          \ 
+          &\text{, and, }
+          \quad 
+          \Delta u_{ij} = [T_{I}]_{ij} U_{TP} - U_{TP} \quad \text{for } i \in \bar{R}
+    \end{align}
+
+
+where :math:`j \in [x,y,z]` and the subscript :math:`ij` in :math:`[\bar{\Phi}_R T_I]_{ij}` indicates the row corresponding to node i and translational degree of freedom j.
+Boundary DOFs that are fixed have no displacements and thus no extra moment contribution. Boundary DOFs that are free are part of the internal DOF *L* in the implementation. 
+The gravitational and cable forces at each node (that were computed at the initialization and stored in the constant vector :math:`F_G`) are used to obtain :math:`f_{i,g}`. It is noted that the *g*-contribution to the moment , :math:`\Delta m_i`, is not a constant and needs to be computed at each time step.
+
+To avoid adding more notations, all the load vectors used in this document will have the additional moment implicitely included when **ExtraMom=True**.
+This applies e.g.: to :math:`F_{R,e}, F_{L,e}, F_{R,g}, F_{L,g}`, where the following replacement is implied:
+
+.. math:: 
+
+    F_{R,e} 
+    = \begin{Bmatrix}
+       \vdots\\
+       f_{ix, e}\\
+       f_{iy, e}\\
+       f_{iz, e}\\
+       m_{ix, e}\\
+       m_{iy, e}\\
+       m_{iz, e}\\
+       \vdots\\
+     \end{Bmatrix}
+     \quad
+    \longrightarrow
+     \quad
+    F_{R,e} =
+    \begin{Bmatrix}
+       \vdots\\
+       f_{ix, e}\\
+       f_{iy, e}\\
+       f_{iz, e}\\
+       m_{ix, e} + \Delta m_{ix, e}\\
+       m_{iy, e} + \Delta m_{iy, e}\\
+       m_{iz, e} + \Delta m_{iz, e}\\
+       \vdots\\
+     \end{Bmatrix}
+     \ 
+     \text{(ExtraMom=True)}
+
+
+
+The dependency of the load vectors on :math:`U_{TP}` introduces some complications for the state space representation, where for instance the :math:`B` and  :math:`F_X` matrices should be modified to account for the dependency in :math:`U_{TP}` in Eq. :eq:`ABFx`.
+The equation remains valid even if :math:`F_{L,e}` and :math:`F_{L,g}` contains a dependency in :math:`U_{TP}`, but the matrix :math:`B` shouldn't be used for the linearization (numerical differentiation is then prefered for simplicity).
+Similar considerations apply for Eq. :eq:`bigY2`.
+
+
+The coupling load :math:`F_{{TP},cpl}` given in Eq. :eq:`bigY1` corresponds to the rection force at the TP reference position. 
+In the "free boundary condition" case, there is no need to correct this output load since the reference position is at the deflected position.
+For the "fixed boundary condition" case, the reference position does not correspond to the deflected position, so the reaction moment needs to be transfered to the deflected position as follows:
+
+.. math::
+
+    F_{TP,cpl}
+    =
+   \begin{Bmatrix}
+   f_{TP,cpl} \\
+   m_{TP,cpl} \\
+   \end{Bmatrix}
+     \quad
+    \longrightarrow
+     \quad
+    F_{TP,cpl}  =
+   \begin{Bmatrix}
+   f_{TP,cpl} \\
+   m_{TP,cpl} -u_{TP} \times f_{TP,cpl} \\
+   \end{Bmatrix}
+     \ 
+     \text{(ExtraMom=True and Fixed BC)}
+
+The output equation :math:`y_1= -F_{TP,cpl}` is then modified to include this extra contribution.
+
+
+
+
 
 
 .. _SSformulation:
@@ -933,11 +1071,11 @@ leading to the following identification:
     \end{bmatrix} 
 
 
-In SubDyn, the outputs to the ElastoDyn module are the reaction forces at the transition piece :math:`F_{TP}`:
+In SubDyn, the outputs to the ElastoDyn module are the coupling (reaction) forces at the transition piece :math:`F_{TP,cpl}`:
 
 .. math:: :label: smally1
 
-	y1 = Y_1 =-F_{TP}
+	y1 = Y_1 =-F_{TP,cpl}
 
 By examining Eq. :eq:`main4` and Eq. :eq:`FTPtilde`, the force is extracted from the first block row as:
 
@@ -946,7 +1084,7 @@ By examining Eq. :eq:`main4` and Eq. :eq:`FTPtilde`, the force is extracted from
     :nowrap:
                  
     \begin{align}
-	F_{TP} =& \tilde{M}_{BB}\ddot{U}_{TP} +   \tilde{M}_{Bm} \ddot{q}_m 
+	F_{TP,cpl} =& \tilde{M}_{BB}\ddot{U}_{TP} +   \tilde{M}_{Bm} \ddot{q}_m 
             \\
            &+ \tilde{C}_{BB}\dot{U}_{TP} +  \tilde{C}_{Bm} \dot{q}_m 
             + \tilde{K}_{BB} U_{TP} 
@@ -970,11 +1108,12 @@ Inserting the expression of  :math:`\ddot{q}_m` into :math:`F_{TP}` leads to:
              + \tilde{K}_{BB} U_{TP} 
              - T_I^T \left(\bar{F}_{HDR} + \bar{F}_{Rg} + \bar{\Phi}_R(F_{L,e} + F_{L,g}) \right)
            \nonumber\\
+
 .. math:: :label: FTP3
     :nowrap:
                  
     \begin{align}
-     F_{TP} =& 
+     F_{TP,cpl} =& 
       \left[              - \tilde{M}_{Bm}\tilde{K}_{mm}  \right] q_m
      +\left[\tilde{C}_{Bm}- \tilde{M}_{Bm}\tilde{C}_{mm}  \right] \dot{q}_m
      \\ 
@@ -992,7 +1131,7 @@ The output equation for :math:`y_1` can now be identified as:
 
 .. math:: :label: bigY1
 
-	 -Y_1 = F_{TP} = C_1 x + D_1 \bar{u} + F_{Y1}
+	 -Y_1 = F_{TP,cpl} = C_1 x + D_1 \bar{u} + F_{Y1}
 	 
 where
 
@@ -1111,52 +1250,6 @@ where
 
 The expression for :math:`F_{Y2}` will be modified by the SIM method and Eq. :eq:`bigY2sim` is used instead.
 
-
-
-The above neglected the influence of the lever arm introduced by the TP
-displacements. The force and moments exchanged at the TP with ElastoDyn,
-are written :math:`F_{TP0}=\left\{f_{TP0}, m_{TP0} \right\}^{T}`. They are related to
-:math:`F_{TP}`  as:
-
-.. math::
-
-   F_{TP}=\begin{Bmatrix}
-   f_{TP} \\
-   m_{TP} \\
-   \end{Bmatrix}=\begin{bmatrix}
-    I & 0 \\
-   \left[u_{TP} \right]_{\times} & I \\
-   \end{bmatrix}\begin{Bmatrix}
-   f_{TP0} \\
-   m_{TP0} \\
-   \end{Bmatrix}
-
-where :math:`\left[u_{TP} \right]_{\times}` is the skew symmetric
-matrix representing the cross product with the vector
-:math:`u_TP`. This equation is inverted as:
-
-.. math::
-
-   F_{TP0}=\begin{Bmatrix}
-   f_{TP0} \\
-   m_{TP0} \\
-   \end{Bmatrix}\begin{bmatrix}
-    I & 0 \\
-   -\left[u_{TP} \right]_{\times}& I \\
-   \end{bmatrix}\begin{Bmatrix}
-   f_{TP} \\
-   m_{TP} \\
-   \end{Bmatrix}
-   = F_{TP}
-   +
-   \begin{Bmatrix}
-   0 \\
-   -\left[u_{TP} \right]_{\times} f_{TP} \\
-   \end{Bmatrix}
-
-The output equation is now rewritten such that :math:`y_1= -F_{TP0}`.
-The input file flag **ExtraMom** is used to include the or omit the contribution from 
-:math:`-\left[u_{TP} \right]_{\times} f_{TP}` to the output equation. 
 
 
 
