@@ -10,6 +10,7 @@
 
 # ..... Input File data .......................................................................................................
 typedef StrucCtrl/StC StC_InputFile CHARACTER(1024) StCFileName - - - "Name of the input file; remove if there is no file" -
+typedef	^		^				LOGICAL			Echo	-	-	-	"Echo input file to echo file"	-
 typedef	^		^				INTEGER			StC_CMODE	-	-	-	"control mode {0:none; 1: Semi-Active Control Mode; 2: Active Control Mode;} "	-
 typedef	^		^				INTEGER			StC_SA_MODE	-	-	-	"Semi-Active control mode {1: velocity-based ground hook control; 2: Inverse velocity-based ground hook control; 3: displacement-based ground hook control 4: Phase difference Algorithm with Friction Force 5: Phase difference Algorithm with Damping Force} "	-
 typedef	^		^				INTEGER			StC_DOF_MODE	-	-	-	"DOF mode {0: NO StC_DOF; 1: StC_X_DOF and StC_Y_DOF; 2: StC_XY_DOF; 3: TLCD; 4: Prescribed force/moment time series}"	-
@@ -66,6 +67,7 @@ typedef	^		^				ReKi			area_ratio_Y    	-	-	-	"Side-Side TLCD cross-sectional ar
 typedef	^		^				ReKi			headLossCoeff_Y   	-	-	-	"Side-Side TLCD head loss coeff" -
 typedef	^		^				ReKi			rho_Y         	-	-	-	"Side-Side TLCD liquid density"	 "kg/m^3"
 typedef	^		^				LOGICAL			USE_F_TBL	-	-	-	"use spring force from user-defined table (flag)"	-
+typedef	^		^				IntKi			NKInpSt	-	-	-	"Number of input spring force rows in table" -
 typedef	^		^				CHARACTER(1024)			StC_F_TBL_FILE	-	-	-	"user-defined spring table filename"	-
 typedef	^		^				ReKi			F_TBL		{:}{:}	-	-	"user-defined spring force"	"N"
 typedef	^		^				IntKi			PrescribedForcesCoordSys	-	-	-	"Prescribed forces coordinate system {0: global; 1: local}"	-

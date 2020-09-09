@@ -60,6 +60,8 @@ MODULE StrucCtrl
    INTEGER(IntKi), PRIVATE, PARAMETER :: SA_CMODE_Ph_FF        = 4          !< 4: Phase difference Algorithm with Friction Force
    INTEGER(IntKi), PRIVATE, PARAMETER :: SA_CMODE_Ph_DF        = 5          !< 5: Phase difference Algorithm with Damping Force
 
+   integer(IntKi), private, parameter :: PRESCRIBED_FORCE_GLOBAL  = 1_IntKi   !< Prescribed forces are in global coords
+   integer(IntKi), private, parameter :: PRESCRIBED_FORCE_LOCAL   = 2_IntKi   !< Prescribed forces are in local  coords
 
 CONTAINS
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -98,6 +100,8 @@ SUBROUTINE StC_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
       REAL(ReKi), allocatable, dimension(:,:)       :: PositionGlobal
       REAL(R8Ki), allocatable, dimension(:,:,:)     :: OrientationP
 
+      type(FileInfoType)                            :: InFileInfo    !< The derived type for holding the full input file for parsing -- we may pass this in the future
+      character(1024)                               :: EchoFileName
       INTEGER(IntKi)                                :: UnEcho        ! Unit number for the echo file
       INTEGER(IntKi)                                :: ErrStat2      ! local error status
       CHARACTER(ErrMsgLen)                          :: ErrMsg2       ! local error message
@@ -117,18 +121,34 @@ SUBROUTINE StC_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
 
       ! Display the module information
    CALL DispNVD( StC_Ver )
-
     !............................................................................................
     ! Read the input file and validate the data
     !............................................................................................
 
-   CALL StC_ReadInput( InitInp%InputFile, InputFileData, Interval, TRIM(InitInp%RootName), ErrStat2, ErrMsg2 )
+   EchoFileName =  TRIM(InitInp%RootName)
+
+!FIXME: logic for InFileInfo or InputFileData directly passed in
+      ! Read the input file into the InFileInfo structure (if inputfile data is not directly passed)
+   CALL StC_ReadInput( InitInp%InputFile, InFileInfo, ErrStat2, ErrMsg2 )
+      CALL CheckError( ErrStat2, ErrMsg2 )
+      IF (ErrStat >= AbortErrLev) RETURN
+
+!FIXME      !  If input file was read, or InFileInfo was passed directly, but not passed in as InputFileData structure
+      !  Parse the InFileInfo structure of data from the inputfile into the InitInp%InputFile structure
+   CALL StC_ParseInputFileInfo( InitInp%InputFile, EchoFileName, InputFileData, InFileInfo, ErrStat2, ErrMsg2 )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN
 
    CALL StC_ValidatePrimaryData( InputFileData, InitInp, ErrStat2, ErrMsg2 )
       CALL CheckError( ErrStat2, ErrMsg2 )
        IF (ErrStat >= AbortErrLev) RETURN
+
+      ! read in the prescribed forces file
+   if ( p%StC_DOF_MODE == DOFMode_Prescribed ) then
+      call Read_ForceTimeSeriesFile(InputFileData%PrescribedForcesFile,p%StC_PrescribedForce,ErrStat2,ErrMsg2)
+      CALL CheckError( ErrStat2, ErrMsg2 )
+       IF (ErrStat >= AbortErrLev) RETURN
+   endif
 
       !............................................................................................
       ! Define parameters here:
@@ -153,7 +173,7 @@ SUBROUTINE StC_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
 
 
    ! Allocate continuous states (x)
-   call AllocAry(x%StC_x, 4, p%NumMeshPts, 'x%StC_x',  ErrStat2,ErrMsg2)
+   call AllocAry(x%StC_x, 6, p%NumMeshPts, 'x%StC_x',  ErrStat2,ErrMsg2)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN
 
@@ -163,6 +183,8 @@ SUBROUTINE StC_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
       x%StC_x(2,i_pt) = 0
       x%StC_x(3,i_pt) = p%Y_DSP
       x%StC_x(4,i_pt) = 0
+      x%StC_x(5,i_pt) = p%Y_DSP
+      x%StC_x(6,i_pt) = 0
    enddo
 
 
@@ -313,13 +335,13 @@ CONTAINS
       !  External and stop forces
       !  Note: these variables had been allocated multiple places before and sometimes passed between routines. So
       !        they have been moved into MiscVars so that we don so we don't reallocate all the time.
-      call AllocAry(m%F_stop , 2, p%NumMeshPts, 'F_stop' , ErrStat, ErrMsg);  if (ErrStat >= AbortErrLev) return;  m%F_stop  = 0.0_ReKi
-      call AllocAry(m%F_ext  , 2, p%NumMeshPts, 'F_ext'  , ErrStat, ErrMsg);  if (ErrStat >= AbortErrLev) return;  m%F_ext   = 0.0_ReKi
-      call AllocAry(m%F_fr   , 2, p%NumMeshPts, 'F_fr'   , ErrStat, ErrMsg);  if (ErrStat >= AbortErrLev) return;  m%F_fr    = 0.0_ReKi
-      call AllocAry(m%C_ctrl , 2, p%NumMeshPts, 'C_ctrl' , ErrStat, ErrMsg);  if (ErrStat >= AbortErrLev) return;  m%C_ctrl  = 0.0_ReKi
-      call AllocAry(m%C_Brake, 2, p%NumMeshPts, 'C_Brake', ErrStat, ErrMsg);  if (ErrStat >= AbortErrLev) return;  m%C_Brake = 0.0_ReKi
-      call AllocAry(m%F_table, 2, p%NumMeshPts, 'F_table', ErrStat, ErrMsg);  if (ErrStat >= AbortErrLev) return;  m%F_table = 0.0_ReKi
-      call AllocAry(m%F_k    , 2, p%NumMeshPts, 'F_k'    , ErrStat, ErrMsg);  if (ErrStat >= AbortErrLev) return;  m%F_k     = 0.0_ReKi
+      call AllocAry(m%F_stop , 3, p%NumMeshPts, 'F_stop' , ErrStat, ErrMsg);  if (ErrStat >= AbortErrLev) return;  m%F_stop  = 0.0_ReKi
+      call AllocAry(m%F_ext  , 3, p%NumMeshPts, 'F_ext'  , ErrStat, ErrMsg);  if (ErrStat >= AbortErrLev) return;  m%F_ext   = 0.0_ReKi
+      call AllocAry(m%F_fr   , 3, p%NumMeshPts, 'F_fr'   , ErrStat, ErrMsg);  if (ErrStat >= AbortErrLev) return;  m%F_fr    = 0.0_ReKi
+      call AllocAry(m%C_ctrl , 3, p%NumMeshPts, 'C_ctrl' , ErrStat, ErrMsg);  if (ErrStat >= AbortErrLev) return;  m%C_ctrl  = 0.0_ReKi
+      call AllocAry(m%C_Brake, 3, p%NumMeshPts, 'C_Brake', ErrStat, ErrMsg);  if (ErrStat >= AbortErrLev) return;  m%C_Brake = 0.0_ReKi
+      call AllocAry(m%F_table, 3, p%NumMeshPts, 'F_table', ErrStat, ErrMsg);  if (ErrStat >= AbortErrLev) return;  m%F_table = 0.0_ReKi
+      call AllocAry(m%F_k    , 3, p%NumMeshPts, 'F_k'    , ErrStat, ErrMsg);  if (ErrStat >= AbortErrLev) return;  m%F_k     = 0.0_ReKi
 
       ! indexing
       m%PrescribedInterpIdx = 0_IntKi ! index tracker for PrescribedForce option
@@ -754,7 +776,7 @@ SUBROUTINE StC_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
          do i_pt=1,p%NumMeshPts
             F_XY_P(1) = 0
             F_XY_P(2) = 0
-            F_XY_P(3) = - p%M_XY * (  m%a_G(3,i_pt) - m%rddot_P(3,i_pt)                                                     &
+            F_XY_P(3) = - p%M_XY * (  m%a_G(3,i_pt) - m%rddot_P(3,i_pt)                                                       &
                                                 - (m%alpha_P(1,i_pt) + m%omega_P(2,i_pt)*m%omega_P(3,i_pt))*x%StC_x(3,i_pt)   &
                                                 + (m%alpha_P(2,i_pt) - m%omega_P(1,i_pt)*m%omega_P(3,i_pt))*x%StC_x(1,i_pt)   &
                                                 - 2*m%omega_P(1,i_pt)*x%StC_x(4,i_pt)                                         &
@@ -779,86 +801,86 @@ SUBROUTINE StC_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
 
          do i_pt=1,p%NumMeshPts
             !fore-aft TLCD external forces of dependent degrees
-            F_x_tlcd_WR_N = p%rho_X*p%area_X*((p%L_X-p%B_X)/2+x%StC_x(1,i_pt))*(                           &
+            F_x_tlcd_WR_N = p%rho_X*p%area_X*((p%L_X-p%B_X)/2+x%StC_x(1,i_pt))*(                               &
                                        m%rddot_P(1,i_pt)                                                       &
                                     +2*m%omega_P(2,i_pt)*x%StC_x(2,i_pt)                                       &
-                                      +m%alpha_P(2,i_pt)*((p%L_X-p%B_X)/2+x%StC_x(1,i_pt))                   &
-                                      -m%omega_P(2,i_pt)*m%omega_P(2,i_pt)*p%B_X*.5                           &
-                                      -m%omega_P(3,i_pt)*m%omega_P(3,i_pt)*p%B_X*.5                           &
-                                      +m%omega_P(3,i_pt)*m%omega_P(1,i_pt)*((p%L_X-p%B_X)/2+x%StC_x(1,i_pt)) &
+                                      +m%alpha_P(2,i_pt)*((p%L_X-p%B_X)/2+x%StC_x(1,i_pt))                     &
+                                      -m%omega_P(2,i_pt)*m%omega_P(2,i_pt)*p%B_X*.5                            &
+                                      -m%omega_P(3,i_pt)*m%omega_P(3,i_pt)*p%B_X*.5                            &
+                                      +m%omega_P(3,i_pt)*m%omega_P(1,i_pt)*((p%L_X-p%B_X)/2+x%StC_x(1,i_pt))   &
                                       -m%a_G(1,i_pt)  )
-            F_y_tlcd_WR_N = p%rho_X*p%area_X*((p%L_X-p%B_X)/2+x%StC_x(1,i_pt))*(                           &
+            F_y_tlcd_WR_N = p%rho_X*p%area_X*((p%L_X-p%B_X)/2+x%StC_x(1,i_pt))*(                               &
                                        m%rddot_P(2,i_pt)                                                       &
                                     -2*m%omega_P(1,i_pt)*x%StC_x(2,i_pt)                                       &
-                                      +m%alpha_P(3,i_pt)*p%B_X*.5                                             &
-                                      -m%alpha_P(1,i_pt)*((p%L_X-p%B_X)/2+x%StC_x(1,i_pt))                   &
-                                      +m%omega_P(3,i_pt)*m%omega_P(2,i_pt)*((p%L_X-p%B_X)/2+x%StC_x(1,i_pt)) &
-                                      +m%omega_P(1,i_pt)*m%omega_P(2,i_pt)*p%B_X*.5                           &
+                                      +m%alpha_P(3,i_pt)*p%B_X*.5                                              &
+                                      -m%alpha_P(1,i_pt)*((p%L_X-p%B_X)/2+x%StC_x(1,i_pt))                     &
+                                      +m%omega_P(3,i_pt)*m%omega_P(2,i_pt)*((p%L_X-p%B_X)/2+x%StC_x(1,i_pt))   &
+                                      +m%omega_P(1,i_pt)*m%omega_P(2,i_pt)*p%B_X*.5                            &
                                       -m%a_G(2,i_pt)  )
-            F_x_tlcd_WL_N = p%rho_X*p%area_X*((p%L_X-p%B_X)/2-x%StC_x(1,i_pt))*(                           &
+            F_x_tlcd_WL_N = p%rho_X*p%area_X*((p%L_X-p%B_X)/2-x%StC_x(1,i_pt))*(                               &
                                        m%rddot_P(1,i_pt)                                                       &
                                     -2*m%omega_P(2,i_pt)*x%StC_x(2,i_pt)                                       &
-                                      +m%alpha_P(2,i_pt)*((p%L_X-p%B_X)/2-x%StC_x(1,i_pt))                   &
-                                      +m%omega_P(2,i_pt)*m%omega_P(2,i_pt)*p%B_X*.5                           &
-                                      +m%omega_P(3,i_pt)*m%omega_P(3,i_pt)*p%B_X*.5                           &
-                                      +m%omega_P(3,i_pt)*m%omega_P(1,i_pt)*((p%L_X-p%B_X)/2-x%StC_x(1,i_pt)) &
+                                      +m%alpha_P(2,i_pt)*((p%L_X-p%B_X)/2-x%StC_x(1,i_pt))                     &
+                                      +m%omega_P(2,i_pt)*m%omega_P(2,i_pt)*p%B_X*.5                            &
+                                      +m%omega_P(3,i_pt)*m%omega_P(3,i_pt)*p%B_X*.5                            &
+                                      +m%omega_P(3,i_pt)*m%omega_P(1,i_pt)*((p%L_X-p%B_X)/2-x%StC_x(1,i_pt))   &
                                       -m%a_G(1,i_pt)  )
-            F_y_tlcd_WL_N = p%rho_X*p%area_X*((p%L_X-p%B_X)/2-x%StC_x(1,i_pt))*(                           &
+            F_y_tlcd_WL_N = p%rho_X*p%area_X*((p%L_X-p%B_X)/2-x%StC_x(1,i_pt))*(                               &
                                        m%rddot_P(2,i_pt)                                                       &
                                     +2*m%omega_P(1,i_pt)*x%StC_x(2,i_pt)                                       &
-                                      -m%alpha_P(3,i_pt)*p%B_X*.5                                             &
-                                      -m%alpha_P(1,i_pt)*((p%L_X-p%B_X)/2-x%StC_x(1,i_pt))                   &
-                                      +m%omega_P(3,i_pt)*m%omega_P(2,i_pt)*((p%L_X-p%B_X)/2-x%StC_x(1,i_pt)) &
-                                      -m%omega_P(1,i_pt)*m%omega_P(2,i_pt)*p%B_X*.5                           &
+                                      -m%alpha_P(3,i_pt)*p%B_X*.5                                              &
+                                      -m%alpha_P(1,i_pt)*((p%L_X-p%B_X)/2-x%StC_x(1,i_pt))                     &
+                                      +m%omega_P(3,i_pt)*m%omega_P(2,i_pt)*((p%L_X-p%B_X)/2-x%StC_x(1,i_pt))   &
+                                      -m%omega_P(1,i_pt)*m%omega_P(2,i_pt)*p%B_X*.5                            &
                                       -m%a_G(2,i_pt)  )
-            F_y_tlcd_WH_N = p%rho_X*p%area_X/p%area_ratio_X*p%B_X*(                   &
+            F_y_tlcd_WH_N = p%rho_X*p%area_X/p%area_ratio_X*p%B_X*(                       &
                                        m%rddot_P(2,i_pt)                                  &
-                                    +2*m%omega_P(3,i_pt)*p%area_ratio_X*x%StC_x(2,i_pt)  &
+                                    +2*m%omega_P(3,i_pt)*p%area_ratio_X*x%StC_x(2,i_pt)   &
                                       -m%a_G(2,i_pt)  )
-            F_z_tlcd_WH_N = p%rho_X*p%area_X/p%area_ratio_X*p%B_X*(                   &
+            F_z_tlcd_WH_N = p%rho_X*p%area_X/p%area_ratio_X*p%B_X*(                       &
                                        m%rddot_P(3,i_pt)                                  &
-                                    -2*m%omega_P(2,i_pt)*p%area_ratio_X*x%StC_x(2,i_pt)  &
+                                    -2*m%omega_P(2,i_pt)*p%area_ratio_X*x%StC_x(2,i_pt)   &
                                       -m%a_G(3,i_pt)  )
 
             !side-to-side TLCD external forces of dependent degrees
-            F_x_otlcd_WB_N = p%rho_Y*p%area_Y*((p%L_Y-p%B_Y)/2+x%StC_x(3,i_pt))*(                             &
-                                         m%rddot_P(1,i_pt)                                                        &
-                                      +2*m%omega_P(2,i_pt)*x%StC_x(4,i_pt)                                        &
-                                        +m%alpha_P(2,i_pt)*((p%L_Y-p%B_Y)/2+x%StC_x(3,i_pt))                    &
-                                        +m%alpha_P(3,i_pt)*p%B_Y/2-m%omega_P(2,i_pt)*m%omega_P(1,i_pt)*p%B_Y/2  &
-                                        +m%omega_P(3,i_pt)*m%omega_P(1,i_pt)*((p%L_Y-p%B_Y)/2+x%StC_x(3,i_pt))  &
+            F_x_otlcd_WB_N = p%rho_Y*p%area_Y*((p%L_Y-p%B_Y)/2+x%StC_x(3,i_pt))*(                              &
+                                         m%rddot_P(1,i_pt)                                                     &
+                                      +2*m%omega_P(2,i_pt)*x%StC_x(4,i_pt)                                     &
+                                        +m%alpha_P(2,i_pt)*((p%L_Y-p%B_Y)/2+x%StC_x(3,i_pt))                   &
+                                        +m%alpha_P(3,i_pt)*p%B_Y/2-m%omega_P(2,i_pt)*m%omega_P(1,i_pt)*p%B_Y/2 &
+                                        +m%omega_P(3,i_pt)*m%omega_P(1,i_pt)*((p%L_Y-p%B_Y)/2+x%StC_x(3,i_pt)) &
                                         -m%a_G(1,i_pt)   )
-            F_y_otlcd_WB_N = p%rho_Y*p%area_Y*((p%L_Y-p%B_Y)/2+x%StC_x(3,i_pt))*(                             &
-                                         m%rddot_P(2,i_pt)                                                        &
-                                      -2*m%omega_P(1,i_pt)*x%StC_x(4,i_pt)                                        &
-                                        -m%alpha_P(1,i_pt)*((p%L_Y-p%B_Y)/2+x%StC_x(3,i_pt))                    &
-                                        +m%omega_P(3,i_pt)*m%omega_P(2,i_pt)*((p%L_Y-p%B_Y)/2+x%StC_x(3,i_pt))  &
-                                        +m%omega_P(3,i_pt)*m%omega_P(3,i_pt)*p%B_Y/2                             &
-                                        +m%omega_P(1,i_pt)*m%omega_P(1,i_pt)*p%B_Y/2                             &
+            F_y_otlcd_WB_N = p%rho_Y*p%area_Y*((p%L_Y-p%B_Y)/2+x%StC_x(3,i_pt))*(                              &
+                                         m%rddot_P(2,i_pt)                                                     &
+                                      -2*m%omega_P(1,i_pt)*x%StC_x(4,i_pt)                                     &
+                                        -m%alpha_P(1,i_pt)*((p%L_Y-p%B_Y)/2+x%StC_x(3,i_pt))                   &
+                                        +m%omega_P(3,i_pt)*m%omega_P(2,i_pt)*((p%L_Y-p%B_Y)/2+x%StC_x(3,i_pt)) &
+                                        +m%omega_P(3,i_pt)*m%omega_P(3,i_pt)*p%B_Y/2                           &
+                                        +m%omega_P(1,i_pt)*m%omega_P(1,i_pt)*p%B_Y/2                           &
                                         -m%a_G(2,i_pt)   )
-            F_x_otlcd_WF_N = p%rho_Y*p%area_Y*((p%L_Y-p%B_Y)/2-x%StC_x(3,i_pt))*(                             &
-                                         m%rddot_P(1,i_pt)                                                        &
-                                      -2*m%omega_P(2,i_pt)*x%StC_x(4,i_pt)                                        &
-                                        +m%alpha_P(2,i_pt)*((p%L_Y-p%B_Y)/2-x%StC_x(3,i_pt))                    &
-                                        -m%alpha_P(2,i_pt)*p%B_Y/2                                               &
-                                        +m%omega_P(2,i_pt)*m%omega_P(1,i_pt)*p%B_Y/2                             &
-                                        +m%omega_P(3,i_pt)*m%omega_P(1,i_pt)*((p%L_Y-p%B_Y)/2-x%StC_x(3,i_pt))  &
+            F_x_otlcd_WF_N = p%rho_Y*p%area_Y*((p%L_Y-p%B_Y)/2-x%StC_x(3,i_pt))*(                              &
+                                         m%rddot_P(1,i_pt)                                                     &
+                                      -2*m%omega_P(2,i_pt)*x%StC_x(4,i_pt)                                     &
+                                        +m%alpha_P(2,i_pt)*((p%L_Y-p%B_Y)/2-x%StC_x(3,i_pt))                   &
+                                        -m%alpha_P(2,i_pt)*p%B_Y/2                                             &
+                                        +m%omega_P(2,i_pt)*m%omega_P(1,i_pt)*p%B_Y/2                           &
+                                        +m%omega_P(3,i_pt)*m%omega_P(1,i_pt)*((p%L_Y-p%B_Y)/2-x%StC_x(3,i_pt)) &
                                         -m%a_G(1,i_pt)   )
-            F_y_otlcd_WF_N = p%rho_Y*p%area_Y*((p%L_Y-p%B_Y)/2-x%StC_x(3,i_pt))*(                             &
-                                         m%rddot_P(2,i_pt)                                                        &
-                                      +2*m%omega_P(1,i_pt)*x%StC_x(4,i_pt)                                        &
-                                        -m%alpha_P(1,i_pt)*((p%L_Y-p%B_Y)/2-x%StC_x(3,i_pt))                    &
-                                        +m%omega_P(3,i_pt)*m%omega_P(2,i_pt)*((p%L_Y-p%B_Y)/2-x%StC_x(3,i_pt))  &
-                                        -m%omega_P(3,i_pt)*m%omega_P(3,i_pt)*p%B_Y/2                             &
-                                        -m%omega_P(1,i_pt)*m%omega_P(1,i_pt)*p%B_Y/2                             &
+            F_y_otlcd_WF_N = p%rho_Y*p%area_Y*((p%L_Y-p%B_Y)/2-x%StC_x(3,i_pt))*(                              &
+                                         m%rddot_P(2,i_pt)                                                     &
+                                      +2*m%omega_P(1,i_pt)*x%StC_x(4,i_pt)                                     &
+                                        -m%alpha_P(1,i_pt)*((p%L_Y-p%B_Y)/2-x%StC_x(3,i_pt))                   &
+                                        +m%omega_P(3,i_pt)*m%omega_P(2,i_pt)*((p%L_Y-p%B_Y)/2-x%StC_x(3,i_pt)) &
+                                        -m%omega_P(3,i_pt)*m%omega_P(3,i_pt)*p%B_Y/2                           &
+                                        -m%omega_P(1,i_pt)*m%omega_P(1,i_pt)*p%B_Y/2                           &
                                         -m%a_G(2,i_pt)   )
-            F_x_otlcd_WH_N = p%rho_Y*p%area_Y/p%area_ratio_Y*p%B_Y*(                     &
+            F_x_otlcd_WH_N = p%rho_Y*p%area_Y/p%area_ratio_Y*p%B_Y*(                         &
                                           m%rddot_P(1,i_pt)                                  &
-                                       -2*m%omega_P(3,i_pt)*p%area_ratio_Y*x%StC_x(4,i_pt)  &
+                                       -2*m%omega_P(3,i_pt)*p%area_ratio_Y*x%StC_x(4,i_pt)   &
                                          -m%a_G(1,i_pt)  )
-            F_z_otlcd_WH_N = p%rho_Y*p%area_Y/p%area_ratio_Y*p%B_Y*(                     &
+            F_z_otlcd_WH_N = p%rho_Y*p%area_Y/p%area_ratio_Y*p%B_Y*(                         &
                                           m%rddot_P(3,i_pt)                                  &
-                                       +2*m%omega_P(1,i_pt)*p%area_ratio_Y*x%StC_x(4,i_pt)  &
+                                       +2*m%omega_P(1,i_pt)*p%area_ratio_Y*x%StC_x(4,i_pt)   &
                                          -m%a_G(3,i_pt)  )
 
             ! forces and moments in local coordinates (from fore-aft and side-to-side TLCDs)
@@ -885,13 +907,13 @@ SUBROUTINE StC_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
             ! Get interpolated moment  -- this is not in any particular coordinate system yet
             m%M_P(i,:)    = InterpStp( real(Time,ReKi), p%StC_PrescribedForce(1,:),p%StC_PrescribedForce(i+4,:),m%PrescribedInterpIdx, size(p%StC_PrescribedForce,2))
          enddo
-         if (p%PrescribedForcesCoordSys == 0_IntKi) then
+         if (p%PrescribedForcesCoordSys == PRESCRIBED_FORCE_GLOBAL) then
             ! Global coords
             do i_pt=1,p%NumMeshPts
                y%Mesh(i_pt)%Force(1:3,1)  =  m%F_P(1:3,i_pt)
                y%Mesh(i_pt)%Moment(1:3,1) =  m%M_P(1:3,i_pt)
             enddo
-         elseif (p%PrescribedForcesCoordSys == 1_IntKi) then
+         elseif (p%PrescribedForcesCoordSys == PRESCRIBED_FORCE_LOCAL) then
             ! local coords
             do i_pt=1,p%NumMeshPts
                y%Mesh(i_pt)%Force(1:3,1)  =  matmul(transpose(u%Mesh(i_pt)%Orientation(:,:,1)), m%F_P(1:3,i_pt))
@@ -943,7 +965,7 @@ SUBROUTINE StC_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
       ErrMsg  = ""
 
 
-      call AllocAry(dxdt%StC_x,4, p%NumMeshPts,'dxdt%StC_x',  ErrStat2,ErrMsg2); if (Failed()) return;
+      call AllocAry(dxdt%StC_x,6, p%NumMeshPts,'dxdt%StC_x',  ErrStat2,ErrMsg2); if (Failed()) return;
 
          ! compute stop force (m%F_stop)
       IF (p%Use_F_TBL) THEN
@@ -1091,24 +1113,24 @@ SUBROUTINE StC_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
       ELSE IF (p%StC_DOF_MODE == DOFMode_TLCD) THEN !MEG & SP
          ! Compute the first time derivatives of the continuous states of TLCD mode
          do i_pt=1,p%NumMeshPts
-            dxdt%StC_x(2,i_pt) = (2*p%rho_X*p%area_X*x%StC_x(1,i_pt)*m%rddot_P(3,i_pt)                                   &
-                                   +p%rho_X*p%area_X*p%B_X*m%alpha_P(2,i_pt)*((p%L_X-p%B_X)/2)                        &
-                                   -p%rho_X*p%area_X*p%B_X*m%omega_P(1,i_pt)*m%omega_P(3,i_pt)*((p%L_X-p%B_X)/2)      &
-                                 +2*p%rho_X*p%area_X*m%omega_P(1,i_pt)*m%omega_P(1,i_pt)*x%StC_x(1,i_pt)*(p%L_X-p%B_X) &
-                                 +2*p%rho_X*p%area_X*m%omega_P(2,i_pt)*m%omega_P(2,i_pt)*x%StC_x(1,i_pt)*(p%L_X-p%B_X) &
-                                 +2*p%rho_X*p%area_X*x%StC_x(1,i_pt)*m%a_G(3,i_pt)                                       &
+            dxdt%StC_x(2,i_pt) = (2*p%rho_X*p%area_X*x%StC_x(1,i_pt)*m%rddot_P(3,i_pt)                                  &
+                                   +p%rho_X*p%area_X*p%B_X*m%alpha_P(2,i_pt)*((p%L_X-p%B_X)/2)                          &
+                                   -p%rho_X*p%area_X*p%B_X*m%omega_P(1,i_pt)*m%omega_P(3,i_pt)*((p%L_X-p%B_X)/2)        &
+                                 +2*p%rho_X*p%area_X*m%omega_P(1,i_pt)*m%omega_P(1,i_pt)*x%StC_x(1,i_pt)*(p%L_X-p%B_X)  &
+                                 +2*p%rho_X*p%area_X*m%omega_P(2,i_pt)*m%omega_P(2,i_pt)*x%StC_x(1,i_pt)*(p%L_X-p%B_X)  &
+                                 +2*p%rho_X*p%area_X*x%StC_x(1,i_pt)*m%a_G(3,i_pt)                                      &
                                    -p%rho_X*p%area_X*p%B_X*m%rddot_P(1,i_pt)                                            &
                                    +p%rho_X*p%area_X*p%B_X*m%a_G(1,i_pt)                                                &
-                                -.5*p%rho_X*p%area_X*p%headLossCoeff_X*p%area_ratio_X*p%area_ratio_X*x%StC_x(2,i_pt)  &
+                                -.5*p%rho_X*p%area_X*p%headLossCoeff_X*p%area_ratio_X*p%area_ratio_X*x%StC_x(2,i_pt)    &
                                        *ABS(x%StC_x(2,i_pt)))/(p%rho_X*p%area_X*(p%L_X-p%B_X+p%area_ratio_X*p%B_X))        
-            dxdt%StC_x(4,i_pt) = (2*p%rho_Y*p%area_Y*x%StC_x(3,i_pt)*m%rddot_P(3,i_pt)                                         &
-                                   +p%rho_Y*p%area_Y*p%B_Y*m%alpha_P(1,i_pt)*((p%L_Y-p%B_Y)/2)                              &
-                                   -p%rho_Y*p%area_Y*p%B_Y*m%omega_P(2,i_pt)*m%omega_P(3,i_pt)*((p%L_Y-p%B_Y)/2)            &
-                                 +2*p%rho_Y*p%area_Y*x%StC_x(3,i_pt)*m%omega_P(1,i_pt)*m%omega_P(1,i_pt)*(p%L_Y-p%B_Y)       &
-                                 +2*p%rho_Y*p%area_Y*x%StC_x(3,i_pt)*m%omega_P(2,i_pt)*m%omega_P(2,i_pt)*(p%L_Y-p%B_Y)       &
-                                 +2*p%rho_Y*p%area_Y*x%StC_x(3,i_pt)*m%a_G(3,i_pt)-p%rho_Y*p%area_Y*p%B_Y*m%rddot_P(2,i_pt) &
-                                   +p%rho_Y*p%area_Y*p%B_Y*m%a_G(2,i_pt)                                                      &
-                                -.5*p%rho_Y*p%area_Y*p%headLossCoeff_Y*p%area_ratio_Y*p%area_ratio_Y*x%StC_x(4,i_pt)        &
+            dxdt%StC_x(4,i_pt) = (2*p%rho_Y*p%area_Y*x%StC_x(3,i_pt)*m%rddot_P(3,i_pt)                                     &
+                                   +p%rho_Y*p%area_Y*p%B_Y*m%alpha_P(1,i_pt)*((p%L_Y-p%B_Y)/2)                             &
+                                   -p%rho_Y*p%area_Y*p%B_Y*m%omega_P(2,i_pt)*m%omega_P(3,i_pt)*((p%L_Y-p%B_Y)/2)           &
+                                 +2*p%rho_Y*p%area_Y*x%StC_x(3,i_pt)*m%omega_P(1,i_pt)*m%omega_P(1,i_pt)*(p%L_Y-p%B_Y)     &
+                                 +2*p%rho_Y*p%area_Y*x%StC_x(3,i_pt)*m%omega_P(2,i_pt)*m%omega_P(2,i_pt)*(p%L_Y-p%B_Y)     &
+                                 +2*p%rho_Y*p%area_Y*x%StC_x(3,i_pt)*m%a_G(3,i_pt)-p%rho_Y*p%area_Y*p%B_Y*m%rddot_P(2,i_pt)&
+                                   +p%rho_Y*p%area_Y*p%B_Y*m%a_G(2,i_pt)                                                   &
+                                -.5*p%rho_Y*p%area_Y*p%headLossCoeff_Y*p%area_ratio_Y*p%area_ratio_Y*x%StC_x(4,i_pt)       &
                                        *ABS(x%StC_x(4,i_pt)))/(p%rho_Y*p%area_Y*(p%L_Y-p%B_Y+p%area_ratio_Y*p%B_Y))
          enddo
 
@@ -1136,28 +1158,25 @@ SUBROUTINE StC_CalcStopForce(x,p,F_stop)
    Real(ReKi), dimension(2)                      :: F_SD      !stop damping forces
    INTEGER(IntKi)                                :: i         ! counter
    INTEGER(IntKi)                                :: i_pt      ! counter for mesh points
-   INTEGER(IntKi)                                :: j         ! counter
+   INTEGER(IntKi)                                :: j         ! counter for index into x%StC_x
    do i_pt=1,p%NumMeshPts
-      j=1
       DO i=1,2
-         IF (j < 5) THEN
-            IF ( x%StC_x(j,i_pt) > p%P_SP(i) ) THEN
-               F_SK(i) = p%K_S(i) *( p%P_SP(i) - x%StC_x(j,i_pt)  )
-            ELSEIF ( x%StC_x(j,i_pt) < p%N_SP(i) ) THEN
-               F_SK(i) = p%K_S(i) * ( p%N_SP(i) - x%StC_x(j,i_pt) )
-            ELSE
-               F_SK(i)  = 0.0_ReKi
-            ENDIF
-            IF ( (x%StC_x(j,i_pt) > p%P_SP(i)) .AND. (x%StC_x(j+1,i_pt) > 0) ) THEN
-               F_SD(i) = -p%C_S(i) *( x%StC_x(j+1,i_pt)  )
-            ELSEIF ( (x%StC_x(j,i_pt) < p%N_SP(i)) .AND. (x%StC_x(j+1,i_pt) < 0) ) THEN
-               F_SD(i) = -p%C_S(i) *( x%StC_x(j+1,i_pt)  )
-            ELSE
-               F_SD(i)  = 0.0_ReKi
-            ENDIF
-            F_stop(i,i_pt) = F_SK(i) + F_SD(i)
-            j = j+2
-         END IF
+         j=2*(i-1)+1
+         IF ( x%StC_x(j,i_pt) > p%P_SP(i) ) THEN
+            F_SK(i) = p%K_S(i) *( p%P_SP(i) - x%StC_x(j,i_pt)  )
+         ELSEIF ( x%StC_x(j,i_pt) < p%N_SP(i) ) THEN
+            F_SK(i) = p%K_S(i) * ( p%N_SP(i) - x%StC_x(j,i_pt) )
+         ELSE
+            F_SK(i)  = 0.0_ReKi
+         ENDIF
+         IF ( (x%StC_x(j,i_pt) > p%P_SP(i)) .AND. (x%StC_x(j+1,i_pt) > 0) ) THEN
+            F_SD(i) = -p%C_S(i) *( x%StC_x(j+1,i_pt)  )
+         ELSEIF ( (x%StC_x(j,i_pt) < p%N_SP(i)) .AND. (x%StC_x(j+1,i_pt) < 0) ) THEN
+            F_SD(i) = -p%C_S(i) *( x%StC_x(j+1,i_pt)  )
+         ELSE
+            F_SD(i)  = 0.0_ReKi
+         ENDIF
+         F_stop(i,i_pt) = F_SK(i) + F_SD(i)
       END DO
    enddo
 END SUBROUTINE StC_CalcStopForce
@@ -1456,544 +1475,376 @@ SUBROUTINE SpringForceExtrapInterp(x, p, F_table,ErrStat,ErrMsg)
 
 END SUBROUTINE SpringForceExtrapInterp
 !----------------------------------------------------------------------------------------------------------------------------------
-!> This subroutine reads the input file and stores all the data in the StC_InputFile structure.
-!! It does not perform data validation.
-SUBROUTINE StC_ReadInput( InputFileName, InputFileData, Default_DT, OutFileRoot, ErrStat, ErrMsg )
-!..................................................................................................................................
+!>  This allows for arbitrary comment lines in the input file.
+SUBROUTINE StC_ReadInput( InputFile, InFileInfo, ErrStat, ErrMsg )
+
+   implicit    none
 
       ! Passed variables
-   REAL(DbKi),           INTENT(IN)       :: Default_DT     !< The default DT (from glue code)
-
-   CHARACTER(*), INTENT(IN)               :: InputFileName  !< Name of the input file
-   CHARACTER(*), INTENT(IN)               :: OutFileRoot    !< The rootname of all the output files written by this routine.
-
-   TYPE(StC_InputFile),   INTENT(OUT)     :: InputFileData  !< Data stored in the module's input file
-
-   INTEGER(IntKi),       INTENT(OUT)      :: ErrStat        !< The error status code
-   CHARACTER(*),         INTENT(OUT)      :: ErrMsg         !< The error message, if an error occurred
-
-      ! local variables
-
-   INTEGER(IntKi)                         :: UnEcho         ! Unit number for the echo file
-   INTEGER(IntKi)                         :: ErrStat2       ! The error status code
-   CHARACTER(ErrMsgLen)                   :: ErrMsg2        ! The error message, if an error occurred
-
-      ! initialize values:
-
-   ErrStat = ErrID_None
-   ErrMsg  = ""
-
-  ! InputFileData%DT = Default_DT  ! the glue code's suggested DT for the module (may be overwritten in ReadPrimaryFile())
-
-      ! get the primary/platform input-file data
-
-   CALL ReadPrimaryFile( InputFileName, InputFileData, OutFileRoot, UnEcho, ErrStat2, ErrMsg2 )
-      CALL CheckError(ErrStat2,ErrMsg2)
-      IF ( ErrStat >= AbortErrLev ) RETURN
+   CHARACTER(*),                    intent(in   )  :: InputFile         !< Name of the file containing the primary input data
+   type(FileInfoType),              intent(  out)  :: InFileInfo        !< The derived type for holding the file information.
+   integer(IntKi),                  intent(  out)  :: ErrStat           !< Error status
+   CHARACTER(ErrMsgLen),            intent(  out)  :: ErrMsg            !< Error message
 
 
-      ! we may need to read additional files here
+   ! Read the entire input file, minus any comment lines, into the InFileInfo
+   ! data structure in memory for further processing.
+   call ProcessComFile( InputFile, InFileInfo, ErrStat, ErrMsg )
 
-
-      ! close any echo file that was opened
-
-   IF ( UnEcho > 0 ) CLOSE( UnEcho )
-
-CONTAINS
-   !...............................................................................................................................
-   SUBROUTINE CheckError(ErrID,Msg)
-   ! This subroutine sets the error message and level and cleans up if the error is >= AbortErrLev
-   !...............................................................................................................................
-
-         ! Passed arguments
-      INTEGER(IntKi), INTENT(IN) :: ErrID       ! The error identifier (ErrStat)
-      CHARACTER(*),   INTENT(IN) :: Msg         ! The error message (ErrMsg)
-
-
-      !............................................................................................................................
-      ! Set error status/message;
-      !............................................................................................................................
-
-      IF ( ErrID /= ErrID_None ) THEN
-
-         IF (ErrStat /= ErrID_None) ErrMsg = TRIM(ErrMsg)//NewLine
-         ErrMsg = TRIM(ErrMsg)//'StC_ReadInput:'//TRIM(Msg)
-         ErrStat = MAX(ErrStat, ErrID)
-
-         !.........................................................................................................................
-         ! Clean up if we're going to return on error: close files, deallocate local arrays
-         !.........................................................................................................................
-         IF ( ErrStat >= AbortErrLev ) THEN
-            IF ( UnEcho > 0 ) CLOSE( UnEcho )
-         END IF
-
-      END IF
-
-
-   END SUBROUTINE CheckError
+   ! For diagnostic purposes, the following can be used to display the contents
+   ! of the InFileInfo data structure.
+   !   call Print_FileInfo( CU, InFileInfo ) ! CU is the screen -- different number on different systems.
 
 END SUBROUTINE StC_ReadInput
 !----------------------------------------------------------------------------------------------------------------------------------
-!> This routine reads in the primary ServoDyn input file and places the values it reads in the InputFileData structure.
-!! It opens and prints to an echo file if requested.
-SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, OutFileRoot, UnEc, ErrStat, ErrMsg )
-!..................................................................................................................................
+!> Parse the inputfile info stored in InFileInfo.
+SUBROUTINE StC_ParseInputFileInfo( InputFile, EchoFileName, InputFileData, InFileInfo, ErrStat, ErrMsg )
 
-   IMPLICIT                        NONE
+   implicit    none
 
       ! Passed variables
-   INTEGER(IntKi),     INTENT(OUT)     :: UnEc                                !< I/O unit for echo file. If > 0, file is open for writing.
-   INTEGER(IntKi),     INTENT(OUT)     :: ErrStat                             !< Error status
-
-   CHARACTER(*),       INTENT(IN)      :: InputFile                           !< Name of the file containing the primary input data
-   CHARACTER(*),       INTENT(OUT)     :: ErrMsg                              !< Error message
-   CHARACTER(*),       INTENT(IN)      :: OutFileRoot                         !< The rootname of the echo file, possibly opened in this routine
-
-   TYPE(StC_InputFile), INTENT(INOUT)  :: InputFileData                       !< All the data in the StrucCtrl input file
+   CHARACTER(*),                    intent(in   )  :: InputFile         !< Name of the file containing the primary input data
+   CHARACTER(*),                    intent(in   )  :: EchoFileName      !< The rootname of the echo file, possibly opened in this routine
+   type(StC_InputFile),             intent(inout)  :: InputFileData     !< All the data in the StrucCtrl input file
+   type(FileInfoType),              intent(in   )  :: InFileInfo        !< The derived type for holding the file information.
+   integer(IntKi),                  intent(  out)  :: ErrStat           !< Error status
+   CHARACTER(ErrMsgLen),            intent(  out)  :: ErrMsg            !< Error message
 
       ! Local variables:
-   REAL(ReKi)                    :: TmpRAry(4)                                ! A temporary array to read a table from the input file
-   INTEGER(IntKi)                :: I                                         ! loop counter
-   INTEGER(IntKi)                :: UnIn                                      ! Unit number for reading file
-   LOGICAL                       :: Echo                                      ! Determines if an echo file should be written
-
-   INTEGER(IntKi)                :: ErrStat2                                  ! Temporary Error status
-   CHARACTER(ErrMsgLen)          :: ErrMsg2                                   ! Temporary Error message
-   CHARACTER(1024)               :: PriPath                                   ! Path name of the primary file
-   CHARACTER(1024)               :: FTitle                                    ! "File Title": the 2nd line of the input file, which contains a description of its contents
-   INTEGER(IntKi)                :: NKInpSt                                    ! Number of stiffness input stations in user table
-   INTEGER(IntKi)                :: NInputCols                                    ! Number of columns in user-defined stiffness table
-
-
-      ! Initialize some variables:
-   ErrStat = ErrID_None
-   ErrMsg  = ""
-
-   UnEc = -1
-   Echo = .FALSE.
-   CALL GetPath( InputFile, PriPath )     ! Input files will be relative to the path where the primary input file is located.
-
-
-      ! Get an available unit number for the file.
-   CALL GetNewUnit( UnIn, ErrStat2, ErrMsg2 )
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF ( ErrStat >= AbortErrLev ) RETURN
-
-
-      ! Open the Primary input file.
-   CALL OpenFInpFile ( UnIn, InputFile, ErrStat2, ErrMsg2 )
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF ( ErrStat >= AbortErrLev ) RETURN
-
-
-   ! Read the lines up/including to the "Echo" simulation control variable
-   ! If echo is FALSE, don't write these lines to the echo file.
-   ! If Echo is TRUE, rewind and write on the second try.
-
-   I = 1 !set the number of times we've read the file
-   DO
-   !-------------------------- HEADER ---------------------------------------------
-
-      CALL ReadCom( UnIn, InputFile, 'File header: Module Version (line 1)', ErrStat2, ErrMsg2, UnEc )
-         CALL CheckError( ErrStat2, ErrMsg2 )
-         IF ( ErrStat >= AbortErrLev ) RETURN
-
-      CALL ReadStr( UnIn, InputFile, FTitle, 'FTitle', 'File Header: File Description (line 2)', ErrStat2, ErrMsg2, UnEc )
-         CALL CheckError( ErrStat2, ErrMsg2 )
-         IF ( ErrStat >= AbortErrLev ) RETURN
-
-   !---------------------- SIMULATION CONTROL --------------------------------------
-
-      CALL ReadCom( UnIn, InputFile, 'Section Header: Simulation Control', ErrStat2, ErrMsg2, UnEc )
-         CALL CheckError( ErrStat2, ErrMsg2 )
-         IF ( ErrStat >= AbortErrLev ) RETURN
-
-         ! Echo - Echo input to "<RootName>.ech".
-
-      CALL ReadVar( UnIn, InputFile, Echo, 'Echo',   'Echo switch', ErrStat2, ErrMsg2, UnEc )
-         CALL CheckError( ErrStat2, ErrMsg2 )
-         IF ( ErrStat >= AbortErrLev ) RETURN
-
-
-      IF (.NOT. Echo .OR. I > 1) EXIT !exit this loop
-
-         ! Otherwise, open the echo file, then rewind the input file and echo everything we've read
-
-      I = I + 1         ! make sure we do this only once (increment counter that says how many times we've read this file)
-
-      CALL OpenEcho ( UnEc, TRIM(OutFileRoot)//'.ech', ErrStat2, ErrMsg2, StC_Ver )
-         CALL CheckError( ErrStat2, ErrMsg2 )
-         IF ( ErrStat >= AbortErrLev ) RETURN
-
-      IF ( UnEc > 0 )  WRITE (UnEc,'(/,A,/)')  'Data from '//TRIM(StC_Ver%Name)//' primary input file "'//TRIM( InputFile )//'":'
-
-      REWIND( UnIn, IOSTAT=ErrStat2 )
-         IF (ErrStat2 /= 0_IntKi ) THEN
-            CALL CheckError( ErrID_Fatal, 'Error rewinding file "'//TRIM(InputFile)//'".' )
-            RETURN
-         END IF
-
-   END DO
-
-
-   !------------------ StrucCtrl DEGREES OF FREEDOM -----------------------------
-   CALL ReadCom( UnIn, InputFile, 'Section Header: StrucCtrl DEGREES OF FREEDOM', ErrStat2, ErrMsg2, UnEc )
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF ( ErrStat >= AbortErrLev ) RETURN
-
-    ! StC_DOF_MODE:
-   CALL ReadVar( UnIn, InputFile, InputFileData%StC_DOF_MODE, "StC_DOF_MODE", "DOF mode {0: NO StC_DOF; 1: StC_X_DOF and StC_Y_DOF; 2: StC_XY_DOF; 3: TLCD} ", ErrStat2, ErrMsg2, UnEc) ! MEG & SP
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF ( ErrStat >= AbortErrLev ) RETURN
-
-      ! StC_X_DOF:
-   CALL ReadVar( UnIn, InputFile, InputFileData%StC_X_DOF, "StC_X_DOF", "DOF on or off", ErrStat2, ErrMsg2, UnEc)
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF ( ErrStat >= AbortErrLev ) RETURN
-
-      ! StC_Y_DOF:
-   CALL ReadVar( UnIn, InputFile, InputFileData%StC_Y_DOF, "StC_Y_DOF", "DOF on or off", ErrStat2, ErrMsg2, UnEc)
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF ( ErrStat >= AbortErrLev ) RETURN
-
-   !------------------ StrucCtrl INITIAL CONDITIONS -----------------------------
-   CALL ReadCom( UnIn, InputFile, 'Section Header: StrucCtrl INITIAL CONDITIONS', ErrStat2, ErrMsg2, UnEc )
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF ( ErrStat >= AbortErrLev ) RETURN
-
-      ! StC_X_DSP:
-   CALL ReadVar( UnIn, InputFile, InputFileData%StC_X_DSP, "StC_X_DSP", "StC_X initial displacement", ErrStat2, ErrMsg2, UnEc)
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF ( ErrStat >= AbortErrLev ) RETURN
-
-      ! StC_Y_DSP:
-   CALL ReadVar( UnIn, InputFile, InputFileData%StC_Y_DSP, "StC_Y_DSP", "StC_Y initial displacement", ErrStat2, ErrMsg2, UnEc)
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF ( ErrStat >= AbortErrLev ) RETURN
-
-   !------------------ StrucCtrl CONFIGURATION -----------------------------
-   CALL ReadCom( UnIn, InputFile, 'Section Header: StrucCtrl CONFIGURATION', ErrStat2, ErrMsg2, UnEc )
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF ( ErrStat >= AbortErrLev ) RETURN
-
-   ! StC_P_X:
-   CALL ReadVar(UnIn,InputFile,InputFileData%StC_P_X,"StC_P_X","at rest position of tuned mass damper (X)",ErrStat2,ErrMsg2,UnEc)
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF ( ErrStat >= AbortErrLev ) RETURN
-
-    ! StC_P_Y:
-   CALL ReadVar(UnIn,InputFile,InputFileData%StC_P_Y,"StC_P_Y","at rest position of tuned mass damper (Y)",ErrStat2,ErrMsg2,UnEc)
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF ( ErrStat >= AbortErrLev ) RETURN
-
-    ! StC_P_Z:
-   CALL ReadVar(UnIn,InputFile,InputFileData%StC_P_Z,"StC_P_Z","at rest position of tuned mass damper (Z)",ErrStat2,ErrMsg2,UnEc)
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF ( ErrStat >= AbortErrLev ) RETURN
-
-      ! StC_X_PSP:
-   CALL ReadVar( UnIn, InputFile, InputFileData%StC_X_PSP, "StC_X_PSP", "DW stop position (maximum X mass displacement)", ErrStat2, ErrMsg2, UnEc)
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF ( ErrStat >= AbortErrLev ) RETURN
-
-      ! StC_X_NSP:
-   CALL ReadVar( UnIn, InputFile, InputFileData%StC_X_NSP, "StC_X_NSP", "UW stop position (minimum X mass displacement)", ErrStat2, ErrMsg2, UnEc)
-      CALL CheckError( ErrStat2, ErrMsg2 )
-
-    ! StC_Y_PSP:
-   CALL ReadVar( UnIn, InputFile, InputFileData%StC_Y_PSP, "StC_Y_PSP", "positive lateral stop position (maximum Y mass displacement)", ErrStat2, ErrMsg2, UnEc)
-      CALL CheckError( ErrStat2, ErrMsg2 )
-
-    ! StC_Y_NSP:
-   CALL ReadVar( UnIn, InputFile, InputFileData%StC_Y_NSP, "StC_Y_NSP", "negative lateral stop position (minimum Y mass displacement)", ErrStat2, ErrMsg2, UnEc)
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF ( ErrStat >= AbortErrLev ) RETURN
-
-   !------------------ StrucCtrl MASS, STIFFNESS, & DAMPING -----------------------------
-   CALL ReadCom( UnIn, InputFile, 'Section Header: StrucCtrl MASS, STIFFNESS, & DAMPING', ErrStat2, ErrMsg2, UnEc )
-      CALL CheckError( ErrStat2, ErrMsg2 )
-
-      ! StC_X_M:
-   CALL ReadVar( UnIn, InputFile, InputFileData%StC_X_M, "StC_X_M", "X tuned mass damper - mass", ErrStat2, ErrMsg2, UnEc)
-      CALL CheckError( ErrStat2, ErrMsg2 )
-
-      ! StC_Y_M:
-   CALL ReadVar( UnIn, InputFile, InputFileData%StC_Y_M, "StC_Y_M", "Y tuned mass damper - mass", ErrStat2, ErrMsg2, UnEc)
-      CALL CheckError( ErrStat2, ErrMsg2 )
-
-      ! StC_XY_M:
-   CALL ReadVar( UnIn, InputFile, InputFileData%StC_XY_M, "StC_XY_M", "XY tuned mass damper - mass", ErrStat2, ErrMsg2, UnEc)
-      CALL CheckError( ErrStat2, ErrMsg2 )
-
-      ! StC_X_K:
-   CALL ReadVar( UnIn, InputFile, InputFileData%StC_X_K, "StC_X_K", "X tuned mass damper - stiffness", ErrStat2, ErrMsg2, UnEc)
-      CALL CheckError( ErrStat2, ErrMsg2 )
-
-      ! StC_Y_K:
-   CALL ReadVar( UnIn, InputFile, InputFileData%StC_Y_K, "StC_Y_K", "Y tuned mass damper - stiffness", ErrStat2, ErrMsg2, UnEc)
-      CALL CheckError( ErrStat2, ErrMsg2 )
-
-      ! StC_X_C:
-   CALL ReadVar( UnIn, InputFile, InputFileData%StC_X_C, "StC_X_C", "X tuned mass damper - damping", ErrStat2, ErrMsg2, UnEc)
-      CALL CheckError( ErrStat2, ErrMsg2 )
-
-      ! StC_Y_C:
-   CALL ReadVar( UnIn, InputFile, InputFileData%StC_Y_C, "StC_Y_C", "Y tuned mass damper - damping", ErrStat2, ErrMsg2, UnEc)
-      CALL CheckError( ErrStat2, ErrMsg2 )
-
-      ! StC_X_KS:
-   CALL ReadVar( UnIn, InputFile, InputFileData%StC_X_KS, "StC_X_KS", "X stop spring stiffness", ErrStat2, ErrMsg2, UnEc)
-      CALL CheckError( ErrStat2, ErrMsg2 )
-
-      ! StC_Y_KS:
-   CALL ReadVar( UnIn, InputFile, InputFileData%StC_Y_KS, "StC_Y_KS", "Y stop spring stiffness", ErrStat2, ErrMsg2, UnEc)
-      CALL CheckError( ErrStat2, ErrMsg2 )
-
-      ! StC_X_CS:
-   CALL ReadVar( UnIn, InputFile, InputFileData%StC_X_CS, "StC_X_CS", "X stop spring damping", ErrStat2, ErrMsg2, UnEc)
-      CALL CheckError( ErrStat2, ErrMsg2 )
-
-      ! StC_Y_CS:
-   CALL ReadVar(UnIn,InputFile,InputFileData%StC_Y_CS,"StC_Y_CS","Y stop spring damping",ErrStat2,ErrMsg2,UnEc)
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF ( ErrStat >= AbortErrLev ) RETURN
-
-   !-------------------------------------------------------------------------------
-   !------------------ TLCD -------------------------------------------------------
-   CALL ReadCom( UnIn, InputFile, 'Section Header: TLCD', ErrStat2, ErrMsg2, UnEc )
-      CALL CheckError( ErrStat2, ErrMsg2 )
-
-   ! --------------  FORE-AFT TLCD TOTAL LENGTH, HORIZONTAL LENGTH, VERTICAL AREA, AREA RATIO, DAMPING COEFF, & DENSITY -----
-   CALL ReadCom( UnIn, InputFile, 'Section Header: FORE-AFT TLCD TOTAL LENGTH, HORIZONTAL LENGTH, VERTICAL AREA, AREA RATIO, DAMPING COEFF, & DENSITY', ErrStat2, ErrMsg2, UnEc )
-      CALL CheckError(ErrStat2, ErrMsg2)
-      IF (ErrStat>= AbortErrLev) RETURN
-
-   !Total Length:
-   CALL ReadVar (UnIn, InputFile, InputFileData%L_X, "L_X", "Fore-Aft TLCD total length", ErrStat2, ErrMsg2, UnEc)
-      CALL CheckError(ErrStat2, ErrMsg2)
-
-   !Horizontal length:
-   CALL ReadVar (UnIn, InputFile, InputFileData%B_X, "B_X", "Fore-Aft TLCD horizontal length", ErrStat2, ErrMsg2, UnEc)
-      CALL CheckError(ErrStat2, ErrMsg2)
-
-   ! Vertical area:
-   CALL ReadVar (UnIn, InputFile, InputFileData%area_X, "area_X", "Fore-Aft TLCD cross-sectional area of vertical column", ErrStat2, ErrMsg2, UnEc)
-      CALL CheckError(ErrStat2, ErrMsg2)
-
-   ! Area ratio:
-   CALL ReadVar (UnIn, InputFile, InputFileData%area_ratio_X, "area_ratio_X", "Fore-Aft TLCD cross-sectional area ratio (vertical column area divided by horizontal column area)", ErrStat2, ErrMsg2, UnEc)
-      CALL CheckError(ErrStat2, ErrMsg2)
-
-   !Head loss coefficient
-   CALL ReadVar (UnIn, InputFile, InputFileData%headLossCoeff_X, "headLossCoeff_X", "Fore-Aft TLCD head loss coeff", ErrStat2, ErrMsg2, UnEc)
-      CALL CheckError(ErrStat2, ErrMsg2)
-
-   !Density
-   CALL ReadVar (UnIn, InputFile, InputFileData%rho_X, "rho_X", "Fore-Aft TLCD liquid density", ErrStat2, ErrMsg2, UnEc)
-      CALL CheckError(ErrStat2, ErrMsg2)
-      IF (ErrStat >= AbortErrLev) RETURN
-
-   ! -------------- SIDE-SIDE TLCD TOTAL LENGTH, HORIZONTAL LENGTH, VERTICAL AREA, AREA RATIO, HEAD LOSS COEFF, & DENSITY-----
-   CALL ReadCom( UnIn, InputFile, 'Section Header: SIDE-TO-SIDE TLCD TOTAL LENGTH, HORIZONTAL LENGTH, VERTICAL AREA, AREA RATIO, DAMPING COEFF, & DENSITY', ErrStat2, ErrMsg2, UnEc )
-   CALL CheckError(ErrStat2, ErrMsg2)
-   IF (ErrStat>= AbortErrLev) RETURN
-
-   !Total Length:
-   CALL ReadVar (UnIn, InputFile, InputFileData%L_Y, "L_Y", "Side-Side TLCD total length", ErrStat2, ErrMsg2, UnEc)
-      CALL CheckError(ErrStat2, ErrMsg2)
-
-   !Horizontal length:
-   CALL ReadVar (UnIn, InputFile, InputFileData%B_Y, "B_Y", "Side-Side TLCD horizontal length", ErrStat2, ErrMsg2, UnEc)
-      CALL CheckError(ErrStat2, ErrMsg2)
-
-   ! Vertical area:
-   CALL ReadVar (UnIn, InputFile, InputFileData%area_Y, "area_Y", "Side-Side TLCD cross-sectional area of vertical column", ErrStat2, ErrMsg2, UnEc)
-      CALL CheckError(ErrStat2, ErrMsg2)
-
-   ! Area ratio:
-   CALL ReadVar (UnIn, InputFile, InputFileData%area_ratio_Y, "area_ratio_Y", "Side-Side TLCD cross-sectional area ratio (vertical column area divided by horizontal column area)", ErrStat2, ErrMsg2, UnEc)
-      CALL CheckError(ErrStat2, ErrMsg2)
-
-   !Head loss coefficient
-   CALL ReadVar (UnIn, InputFile, InputFileData%headLossCoeff_Y, "headLossCoeff_Y", "Side-Side TLCD head loss coeff", ErrStat2, ErrMsg2, UnEc)
-      CALL CheckError(ErrStat2, ErrMsg2)
-
-   !Density
-   CALL ReadVar (UnIn, InputFile, InputFileData%rho_Y, "rho_Y", "Side-Side TLCD liquid density", ErrStat2, ErrMsg2, UnEc)
-      CALL CheckError(ErrStat2, ErrMsg2)
-      IF (ErrStat >= AbortErrLev) RETURN
-   !MEG & SP
-
-   !  -------------- StrucCtrl USER-DEFINED STIFFNESS ---------------------------------
-
-      ! Skip the comment lines.
-
-   CALL ReadCom ( UnIn,  InputFile, 'Section Header: StrucCtrl USER-DEFINED SPRING FORCE', ErrStat2, ErrMsg2, UnEc )
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF ( ErrStat >= AbortErrLev ) RETURN
-
-     ! Use_F_TBL
-   CALL ReadVar( UnIn,  InputFile, InputFileData%Use_F_TBL, "Use_F_TBL", "use spring force from user-defined table (flag)", ErrStat2, ErrMsg2, UnEc)
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF ( ErrStat >= AbortErrLev ) RETURN
-
-      ! NKInpSt
-   CALL ReadVar( UnIn, InputFile, NKInpSt, "NKInpSt", "number of spring force input stations", ErrStat2, ErrMsg2, UnEc)
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF ( ErrStat >= AbortErrLev ) RETURN
-
-   CALL ReadCom ( UnIn, InputFile, 'Section Header: StrucCtrl SPRING FORCE TABLE', ErrStat2, ErrMsg2, UnEc )
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF ( ErrStat >= AbortErrLev ) RETURN
-
-   CALL ReadCom ( UnIn,  InputFile, 'spring force table column names', ErrStat2, ErrMsg2, UnEc )
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF ( ErrStat >= AbortErrLev ) RETURN
-
-   CALL ReadCom ( UnIn,  InputFile, 'spring force table column units', ErrStat2, ErrMsg2, UnEc )
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF ( ErrStat >= AbortErrLev ) RETURN
-
-      ! Read the table.
-
-   NInputCols = 4
-
-   ! allocate data for F_TBL
-   ALLOCATE (InputFileData%F_TBL(NKInpSt,NInputCols))
-
-   DO I=1,NKInpSt
-
-      CALL ReadAry( UnIn, InputFile, TmpRAry, NInputCols, 'Line'//TRIM(Num2LStr(I)), 'Tuned Mass Damper --  Spring force Properties', &
-                    ErrStat2, ErrMsg2, UnEc )
-         CALL CheckError( ErrStat2, ErrMsg2 )
-         IF ( ErrStat >= AbortErrLev ) RETURN
-
-      InputFileData%F_TBL(I,1) = TmpRAry(1) ! X
-      InputFileData%F_TBL(I,2) = TmpRAry(2) ! K_X
-      InputFileData%F_TBL(I,3) = TmpRAry(3) ! Y
-      InputFileData%F_TBL(I,4) = TmpRAry(4) ! K_Y
-
-
-   ENDDO ! I
-   !------------------ StrucCtrl CONTROL -----------------------------
-   CALL ReadCom( UnIn, InputFile, 'Section Header: StrucCtrl CONTROL', ErrStat2, ErrMsg2, UnEc )
-      CALL CheckError( ErrStat2, ErrMsg2 )
-
-    ! StC_CMODE:
-   CALL ReadVar( UnIn, InputFile, InputFileData%StC_CMODE, "StC_CMODE", "control mode {0:none; 1: Semi-Active Control Mode; 2: Active Control Mode;} ", ErrStat2, ErrMsg2, UnEc)
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF ( ErrStat >= AbortErrLev ) RETURN
-
-    ! StC_SA_MODE:
-   CALL ReadVar( UnIn, InputFile, InputFileData%StC_SA_MODE, "StC_SA_MODE", "Semi-Active control mode {1: velocity-based ground hook control; 2: Inverse velocity-based ground hook control; 3: displacement-based ground hook control 4: Phase difference Algorithm with Friction Force 5: Phase difference Algorithm with Damping Force} ", ErrStat2, ErrMsg2, UnEc)
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF ( ErrStat >= AbortErrLev ) RETURN
-
-    ! StC_X_C_HIGH
-    CALL ReadVar( UnIn, InputFile, InputFileData%StC_X_C_HIGH, "StC_X_C_HIGH", "StrucCtrl X high damping for ground hook control", ErrStat2, ErrMsg2, UnEc)
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF ( ErrStat >= AbortErrLev ) RETURN
-
-      ! StC_X_C_LOW
-    CALL ReadVar( UnIn, InputFile, InputFileData%StC_X_C_LOW, "StC_X_C_LOW", "StrucCtrl X low damping for ground hook control", ErrStat2, ErrMsg2, UnEc)
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF ( ErrStat >= AbortErrLev ) RETURN
-
-      ! StC_Y_C_HIGH
-    CALL ReadVar( UnIn, InputFile, InputFileData%StC_Y_C_HIGH, "StC_Y_C_HIGH", "StrucCtrl Y high damping for ground hook control", ErrStat2, ErrMsg2, UnEc)
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF ( ErrStat >= AbortErrLev ) RETURN
-
-      ! StC_Y_C_HIGH
-    CALL ReadVar( UnIn, InputFile, InputFileData%StC_Y_C_LOW, "StC_Y_C_LOW", "StrucCtrl Y high damping for ground hook control", ErrStat2, ErrMsg2, UnEc)
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF ( ErrStat >= AbortErrLev ) RETURN
-
-      ! StC_X_C_BRAKE
-    CALL ReadVar( UnIn, InputFile, InputFileData%StC_X_C_BRAKE, "StC_X_C_BRAKE", "StrucCtrl X high damping for braking the StCX", ErrStat2, ErrMsg2, UnEc)
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF ( ErrStat >= AbortErrLev ) RETURN
-
-      ! StC_Y_C_BRAKE
-    CALL ReadVar( UnIn, InputFile, InputFileData%StC_Y_C_BRAKE, "StC_Y_C_BRAKE", "StrucCtrl Y high damping for braking the StCY", ErrStat2, ErrMsg2, UnEc)
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF ( ErrStat >= AbortErrLev ) RETURN
-
-
-   !------------------ StrucCtrl Prescribed Forces -------------------
-     CALL ReadCom( UnIn, InputFile, 'Section Header: StrucCtrl Prescribed Forces', ErrStat2, ErrMsg2, UnEc )
-     CALL CheckError( ErrStat2, ErrMsg2 )
-
-     CALL ReadVar( UnIn, InputFile, InputFileData%PrescribedForcesCoordSys, "PrescribedForcesCoordSys","Prescribed forces coordinate system", ErrStat2, ErrMsg2, UnEc)
-      CALL CheckError( ErrStat2, ErrMsg2 )
-
-     CALL ReadVar( UnIn, InputFile, InputFileData%PrescribedForcesFile, "PrescribedForcesFile","Prescribed input time series", ErrStat2, ErrMsg2, UnEc)
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF ( ErrStat >= AbortErrLev ) RETURN
-
-
-   !!---------------------- OUTPUT --------------------------------------------------
-   !CALL ReadCom( UnIn, InputFile, 'Section Header: Output', ErrStat2, ErrMsg2, UnEc )
-   !   CALL CheckError( ErrStat2, ErrMsg2 )
-   !   IF ( ErrStat >= AbortErrLev ) RETURN
-
-   !   ! SumPrint - Print summary data to <RootName>.sum (flag):
-   !CALL ReadVar( UnIn, InputFile, InputFileData%SumPrint, "SumPrint", "Print summary data to <RootName>.sum (flag)", ErrStat2, ErrMsg2, UnEc)
-   !   CALL CheckError( ErrStat2, ErrMsg2 )
-   !   IF ( ErrStat >= AbortErrLev ) RETURN
-
-   !!---------------------- OUTLIST  --------------------------------------------
-   !   CALL ReadCom( UnIn, InputFile, 'Section Header: OutList', ErrStat2, ErrMsg2, UnEc )
-   !   CALL CheckError( ErrStat2, ErrMsg2 )
-   !   IF ( ErrStat >= AbortErrLev ) RETURN
-
-      ! OutList - List of user-requested output channels (-):
-   !CALL ReadOutputList ( UnIn, InputFile, InputFileData%OutList, InputFileData%NumOuts, 'OutList', "List of user-requested output channels", ErrStat2, ErrMsg2, UnEc  )     ! Routine in NWTC Subroutine Library
-   !   CALL CheckError( ErrStat2, ErrMsg2 )
-   !   IF ( ErrStat >= AbortErrLev ) RETURN
-
-   !---------------------- END OF FILE -----------------------------------------
-
-   CLOSE ( UnIn )
-   RETURN
+   integer(IntKi)                                  :: i                 !< generic counter
+   integer(IntKi)                                  :: UnEcho            !< The local unit number for this module's echo file
+   integer(IntKi)                                  :: ErrStat2          !< Temporary Error status
+   character(ErrMsgLen)                            :: ErrMsg2           !< Temporary Error message
+   integer(IntKi)                                  :: CurLine           !< current entry in InFileInfo%Lines array
+   real(ReKi)                                      :: TmpRe6(6)         !< temporary 6 number array for reading values in
+
+
+   ! Initialization
+   ErrStat  =  0
+   ErrMsg   =  ""
+   UnEcho   = -1     ! Echo file unit.  >0 when used
+
+
+   !-------------------------------------------------------------------------------------------------
+   ! General settings
+   !-------------------------------------------------------------------------------------------------
+
+   CurLine = 4    ! Skip the first three lines as they are known to be header lines and separators
+   call ParseVar( InFileInfo, CurLine, 'Echo', InputFileData%Echo, ErrStat2, ErrMsg2 )
+         if (Failed()) return;
+
+   if ( InputFileData%Echo ) then
+      CALL OpenEcho ( UnEcho, TRIM(EchoFileName), ErrStat2, ErrMsg2 )
+         if (Failed()) return;
+      WRITE(UnEcho, '(A)') 'Echo file for LidarSim input file: '//trim(InputFile)
+      ! Write the first three lines into the echo file
+      WRITE(UnEcho, '(A)') InFileInfo%Lines(1)
+      WRITE(UnEcho, '(A)') InFileInfo%Lines(2)
+      WRITE(UnEcho, '(A)') InFileInfo%Lines(3)
+
+      CurLine = 4
+      call ParseVar( InFileInfo, CurLine, 'Echo', InputFileData%Echo, ErrStat2, ErrMsg2, UnEcho )
+            if (Failed()) return
+   endif
+
+   !-------------------------------------------------------------------------------------------------
+   ! StC DEGREES OF FREEDOM
+   !-------------------------------------------------------------------------------------------------
+
+   ! Section break
+   if ( InputFileData%Echo )   WRITE(UnEcho, '(A)') InFileInfo%Lines(CurLine)    ! Write section break to echo
+   CurLine = CurLine + 1
+
+      !  DOF mode (switch) {  0: No StC or TLCD DOF; 
+      !                       1: StC_X_DOF, StC_Y_DOF, and/or StC_Z_DOF (three independent StC DOFs);
+      !                       2: StC_XY_DOF (Omni-Directional StC);
+      !                       3: TLCD;
+      !                       4: Prescribed force/moment time series}
+   call ParseVar( InFileInfo, Curline, 'StC_DOF_MODE', InputFileData%StC_DOF_MODE, ErrStat2, ErrMsg2, UnEcho )
+      If (Failed()) return;
+      !  DOF on or off for StC X (flag) [Used only when StC_DOF_MODE=1]
+   call ParseVar( InFileInfo, Curline, 'StC_X_DOF', InputFileData%StC_X_DOF, ErrStat2, ErrMsg2, UnEcho )
+      If (Failed()) return;
+      !  DOF on or off for StC Y (flag) [Used only when StC_DOF_MODE=1]
+   call ParseVar( InFileInfo, Curline, 'StC_Y_DOF', InputFileData%StC_Y_DOF, ErrStat2, ErrMsg2, UnEcho )
+      If (Failed()) return;
+      !  DOF on or off for StC Z (flag) [Used only when StC_DOF_MODE=1]
+   call ParseVar( InFileInfo, Curline, 'StC_Z_DOF', InputFileData%StC_Z_DOF, ErrStat2, ErrMsg2, UnEcho )
+      If (Failed()) return;
+
+   !-------------------------------------------------------------------------------------------------
+   ! StC INITIAL CONDITIONS [used only when StC_DOF_MODE=1 or 2]
+   !-------------------------------------------------------------------------------------------------
+
+   ! Section break
+   if ( InputFileData%Echo )   WRITE(UnEcho, '(A)') InFileInfo%Lines(CurLine)    ! Write section break to echo
+   CurLine = CurLine + 1
+
+      !  StC X initial displacement (m) [relative to at rest position]
+   call ParseVar( InFileInfo, Curline, 'StC_X_DSP', InputFileData%StC_X_DSP, ErrStat2, ErrMsg2, UnEcho )
+      If (Failed()) return;
+      !  StC Y initial displacement (m) [relative to at rest position]
+   call ParseVar( InFileInfo, Curline, 'StC_Y_DSP', InputFileData%StC_Y_DSP, ErrStat2, ErrMsg2, UnEcho )
+      If (Failed()) return;
+      !  StC Z initial displacement (m) [relative to at rest position; used only when StC_DOF_MODE=1 and StC_Z_DOF=TRUE]
+   call ParseVar( InFileInfo, Curline, 'StC_Z_DSP', InputFileData%StC_Z_DSP, ErrStat2, ErrMsg2, UnEcho )
+      If (Failed()) return;
+
+   !-------------------------------------------------------------------------------------------------
+   ! StC CONFIGURATION  [used only when StC_DOF_MODE=1 or 2]
+   !-------------------------------------------------------------------------------------------------
+
+   ! Section break
+   if ( InputFileData%Echo )   WRITE(UnEcho, '(A)') InFileInfo%Lines(CurLine)    ! Write section break to echo
+   CurLine = CurLine + 1
+
+      !  At rest X position of StC(s) (m) [relative to reference origin of the component]
+   call ParseVar( InFileInfo, Curline, 'StC_P_X', InputFileData%StC_P_X, ErrStat2, ErrMsg2, UnEcho )
+      If (Failed()) return;
+      !  At rest Y position of StC(s) (m) [relative to reference origin of the component]
+   call ParseVar( InFileInfo, Curline, 'StC_P_Y', InputFileData%StC_P_Y, ErrStat2, ErrMsg2, UnEcho )
+      If (Failed()) return;
+      !  At rest Z position of StC(s) (m) [relative to reference origin of the component]
+   call ParseVar( InFileInfo, Curline, 'StC_P_Z', InputFileData%StC_P_Z, ErrStat2, ErrMsg2, UnEcho )
+      If (Failed()) return;
+      !  Positive stop position (maximum X mass displacement) (m)
+   call ParseVar( InFileInfo, Curline, 'StC_X_PSP', InputFileData%StC_X_PSP, ErrStat2, ErrMsg2, UnEcho )
+      If (Failed()) return;
+      !  Negative stop position (minimum X mass displacement) (m)
+   call ParseVar( InFileInfo, Curline, 'StC_X_NSP', InputFileData%StC_X_NSP, ErrStat2, ErrMsg2, UnEcho )
+      If (Failed()) return;
+      !  Positive stop position (maximum Y mass displacement) (m)
+   call ParseVar( InFileInfo, Curline, 'StC_Y_PSP', InputFileData%StC_Y_PSP, ErrStat2, ErrMsg2, UnEcho )
+      If (Failed()) return;
+      !  Negative stop position (minimum Y mass displacement) (m)
+   call ParseVar( InFileInfo, Curline, 'StC_Y_NSP', InputFileData%StC_Y_NSP, ErrStat2, ErrMsg2, UnEcho )
+      If (Failed()) return;
+      !  Positive stop position (maximum Z mass displacement) (m) [used only when StC_DOF_MODE=1 and StC_Z_DOF=TRUE]
+   call ParseVar( InFileInfo, Curline, 'StC_Z_PSP', InputFileData%StC_Z_PSP, ErrStat2, ErrMsg2, UnEcho )
+      If (Failed()) return;
+      !  Negative stop position (minimum Z mass displacement) (m) [used only when StC_DOF_MODE=1 and StC_Z_DOF=TRUE]
+   call ParseVar( InFileInfo, Curline, 'StC_Z_NSP', InputFileData%StC_Z_NSP, ErrStat2, ErrMsg2, UnEcho )
+      If (Failed()) return;
+
+   !-------------------------------------------------------------------------------------------------
+   ! StC MASS, STIFFNESS, & DAMPING  [used only when StC_DOF_MODE=1 or 2]
+   !-------------------------------------------------------------------------------------------------
+
+   ! Section break
+   if ( InputFileData%Echo )   WRITE(UnEcho, '(A)') InFileInfo%Lines(CurLine)    ! Write section break to echo
+   CurLine = CurLine + 1
+
+      !  StC X mass (kg) [must equal StC_Y_M for StC_DOF_MODE = 2]
+   call ParseVar( InFileInfo, Curline, 'StC_X_M', InputFileData%StC_X_M, ErrStat2, ErrMsg2, UnEcho )
+      If (Failed()) return;
+      !  StC Y mass (kg) [must equal StC_X_M for StC_DOF_MODE = 2]
+   call ParseVar( InFileInfo, Curline, 'StC_Y_M', InputFileData%StC_Y_M, ErrStat2, ErrMsg2, UnEcho )
+      If (Failed()) return;
+      !  StC Z mass (kg) [used only when StC_DOF_MODE=1 and StC_Z_DOF=TRUE]
+   call ParseVar( InFileInfo, Curline, 'StC_Z_M', InputFileData%StC_Z_M, ErrStat2, ErrMsg2, UnEcho )
+      If (Failed()) return;
+      !  StC Z mass (kg) [used only when StC_DOF_MODE=2]
+   call ParseVar( InFileInfo, Curline, 'StC_XY_M', InputFileData%StC_XY_M, ErrStat2, ErrMsg2, UnEcho )
+      If (Failed()) return;
+      !  StC X stiffness (N/m)
+   call ParseVar( InFileInfo, Curline, 'StC_X_K', InputFileData%StC_X_K, ErrStat2, ErrMsg2, UnEcho )
+      If (Failed()) return;
+      !  StC Y stiffness (N/m)
+   call ParseVar( InFileInfo, Curline, 'StC_Y_K', InputFileData%StC_Y_K, ErrStat2, ErrMsg2, UnEcho )
+      If (Failed()) return;
+      !  StC Z stiffness (N/m) [used only when StC_DOF_MODE=1 and StC_Z_DOF=TRUE]
+   call ParseVar( InFileInfo, Curline, 'StC_Z_K', InputFileData%StC_Z_K, ErrStat2, ErrMsg2, UnEcho )
+      If (Failed()) return;
+      !  StC X damping (N/(m/s))
+   call ParseVar( InFileInfo, Curline, 'StC_X_C', InputFileData%StC_X_C, ErrStat2, ErrMsg2, UnEcho )
+      If (Failed()) return;
+      !  StC Y damping (N/(m/s))
+   call ParseVar( InFileInfo, Curline, 'StC_Y_C', InputFileData%StC_Y_C, ErrStat2, ErrMsg2, UnEcho )
+      If (Failed()) return;
+      !  StC Z damping (N/(m/s)) [used only when StC_DOF_MODE=1 and StC_Z_DOF=TRUE]
+   call ParseVar( InFileInfo, Curline, 'StC_Z_C', InputFileData%StC_Z_C, ErrStat2, ErrMsg2, UnEcho )
+      If (Failed()) return;
+      !  Stop spring X stiffness (N/m)
+   call ParseVar( InFileInfo, Curline, 'StC_X_KS', InputFileData%StC_X_KS, ErrStat2, ErrMsg2, UnEcho )
+      If (Failed()) return;
+      !  Stop spring Y stiffness (N/m)
+   call ParseVar( InFileInfo, Curline, 'StC_Y_KS', InputFileData%StC_Y_KS, ErrStat2, ErrMsg2, UnEcho )
+      If (Failed()) return;
+      !  Stop spring Z stiffness (N/m) [used only when StC_DOF_MODE=1 and StC_Z_DOF=TRUE]
+   call ParseVar( InFileInfo, Curline, 'StC_Z_KS', InputFileData%StC_Z_KS, ErrStat2, ErrMsg2, UnEcho )
+      If (Failed()) return;
+      !  Stop spring X damping (N/(m/s))
+   call ParseVar( InFileInfo, Curline, 'StC_X_CS', InputFileData%StC_X_CS, ErrStat2, ErrMsg2, UnEcho )
+      If (Failed()) return;
+      !  Stop spring Y damping (N/(m/s))
+   call ParseVar( InFileInfo, Curline, 'StC_Y_CS', InputFileData%StC_Y_CS, ErrStat2, ErrMsg2, UnEcho )
+      If (Failed()) return;
+      !  Stop spring Z damping (N/(m/s)) [used only when StC_DOF_MODE=1 and StC_Z_DOF=TRUE]
+   call ParseVar( InFileInfo, Curline, 'StC_Z_CS', InputFileData%StC_Z_CS, ErrStat2, ErrMsg2, UnEcho )
+      If (Failed()) return;
+
+   !-------------------------------------------------------------------------------------------------
+   ! StC USER-DEFINED SPRING FORCES  [used only when StC_DOF_MODE=1 or 2]
+   !-------------------------------------------------------------------------------------------------
+
+   ! Section break
+   if ( InputFileData%Echo )   WRITE(UnEcho, '(A)') InFileInfo%Lines(CurLine)    ! Write section break to echo
+   CurLine = CurLine + 1
+
+      !  Use spring force from user-defined table (flag)
+   call ParseVar( InFileInfo, Curline, 'Use_F_TBL', InputFileData%Use_F_TBL, ErrStat2, ErrMsg2, UnEcho )
+      If (Failed()) return;
+
+      ! NKInpSt      - Number of spring force input stations
+   call ParseVar( InFileInfo, CurLine, 'NKInpSt', InputFileData%NKInpSt, ErrStat2, ErrMsg2, UnEcho)
+         if (Failed()) return
+
+   ! Section break --  X  K_X   Y  K_Y   Z  K_Z
+   if ( InputFileData%Echo )   WRITE(UnEcho, '(A)') '#TABLE: '//InFileInfo%Lines(CurLine)    ! Write section break to echo
+   CurLine = CurLine + 1
+   if ( InputFileData%Echo )   WRITE(UnEcho, '(A)') ' Table Header: '//InFileInfo%Lines(CurLine)    ! Write section break to echo
+   CurLine = CurLine + 1
+   if ( InputFileData%Echo )   WRITE(UnEcho, '(A)') ' Table Units: '//InFileInfo%Lines(CurLine)    ! Write section break to echo
+   CurLine = CurLine + 1
+
+   if (InputFileData%NKInpSt > 0) then
+      CALL AllocAry( InputFileData%F_TBL, InputFileData%NKInpSt, 6, 'F_TBL', ErrStat2, ErrMsg2 )
+            if (Failed()) return;
+         ! TABLE read
+      do i=1,InputFileData%NKInpSt
+         call ParseAry ( InFileInfo, CurLine, 'Coordinates', TmpRe6, 6, ErrStat2, ErrMsg2, UnEcho )
+               if (Failed()) return;
+         InputFileData%F_TBL(i,1) = TmpRe6(1) ! X
+         InputFileData%F_TBL(i,2) = TmpRe6(2) ! K_X
+         InputFileData%F_TBL(i,3) = TmpRe6(3) ! Y
+         InputFileData%F_TBL(i,4) = TmpRe6(4) ! K_Y
+         InputFileData%F_TBL(i,5) = TmpRe6(5) ! Z
+         InputFileData%F_TBL(i,6) = TmpRe6(6) ! K_Z
+      enddo
+   endif
+
+
+   !-------------------------------------------------------------------------------------------------
+   ! StructCtrl CONTROL  [used only when StC_DOF_MODE=1 or 2]
+   !-------------------------------------------------------------------------------------------------
+
+   ! Section break
+   if ( InputFileData%Echo )   WRITE(UnEcho, '(A)') InFileInfo%Lines(CurLine)    ! Write section break to echo
+   CurLine = CurLine + 1
+
+      !  Control mode (switch) {0:none; 1: Semi-Active Control Mode; 2: Active Control Mode}
+   call ParseVar( InFileInfo, Curline, 'StC_CMODE', InputFileData%StC_CMODE, ErrStat2, ErrMsg2 )
+      If (Failed()) return;
+      !  Semi-Active control mode {
+      !     1: velocity-based ground hook control; 
+      !     2: Inverse velocity-based ground hook control;
+      !     3: displacement-based ground hook control;
+      !     4: Phase difference Algorithm with Friction Force;
+      !     5: Phase difference Algorithm with Damping Force} (-)
+   call ParseVar( InFileInfo, Curline, 'StC_SA_MODE', InputFileData%StC_SA_MODE, ErrStat2, ErrMsg2 )
+      If (Failed()) return;
+      !  StC X high damping for ground hook control
+   call ParseVar( InFileInfo, Curline, 'StC_X_C_HIGH', InputFileData%StC_X_C_HIGH, ErrStat2, ErrMsg2 )
+      If (Failed()) return;
+      !  StC X low damping for ground hook control
+   call ParseVar( InFileInfo, Curline, 'StC_X_C_LOW', InputFileData%StC_X_C_LOW, ErrStat2, ErrMsg2 )
+      If (Failed()) return;
+      !  StC Y high damping for ground hook control
+   call ParseVar( InFileInfo, Curline, 'StC_Y_C_HIGH', InputFileData%StC_Y_C_HIGH, ErrStat2, ErrMsg2 )
+      If (Failed()) return;
+      !  StC Y low damping for ground hook control
+   call ParseVar( InFileInfo, Curline, 'StC_Y_C_LOW', InputFileData%StC_Y_C_LOW, ErrStat2, ErrMsg2 )
+      If (Failed()) return;
+      !  StC Z high damping for ground hook control [used only when StC_DOF_MODE=1 and StC_Z_DOF=TRUE]
+   call ParseVar( InFileInfo, Curline, 'StC_Z_C_HIGH', InputFileData%StC_Z_C_HIGH, ErrStat2, ErrMsg2 )
+      If (Failed()) return;
+      !  StC Z low damping for ground hook control  [used only when StC_DOF_MODE=1 and StC_Z_DOF=TRUE]
+   call ParseVar( InFileInfo, Curline, 'StC_Z_C_LOW', InputFileData%StC_Z_C_LOW, ErrStat2, ErrMsg2 )
+      If (Failed()) return;
+      !  StC X high damping for braking the StC (Don't use it now. should be zero)
+   call ParseVar( InFileInfo, Curline, 'StC_X_C_BRAKE', InputFileData%StC_X_C_BRAKE, ErrStat2, ErrMsg2 )
+      If (Failed()) return;
+      !  StC Y high damping for braking the StC (Don't use it now. should be zero)
+   call ParseVar( InFileInfo, Curline, 'StC_Y_C_BRAKE', InputFileData%StC_Y_C_BRAKE, ErrStat2, ErrMsg2 )
+      If (Failed()) return;
+      !  StC Z high damping for braking the StC (Don't use it now. should be zero) [used only when StC_DOF_MODE=1 and StC_Z_DOF=TRUE]
+   call ParseVar( InFileInfo, Curline, 'StC_Z_C_BRAKE', InputFileData%StC_Z_C_BRAKE, ErrStat2, ErrMsg2 )
+      If (Failed()) return;
+
+   !-------------------------------------------------------------------------------------------------
+   ! TLCD  [used only when StC_DOF_MODE=3]
+   !-------------------------------------------------------------------------------------------------
+
+   ! Section break
+   if ( InputFileData%Echo )   WRITE(UnEcho, '(A)') InFileInfo%Lines(CurLine)    ! Write section break to echo
+   CurLine = CurLine + 1
+
+      !  X TLCD total length (m)
+   call ParseVar( InFileInfo, Curline, 'L_X', InputFileData%L_X, ErrStat2, ErrMsg2 )
+      If (Failed()) return;
+      !  X TLCD horizontal length (m)
+   call ParseVar( InFileInfo, Curline, 'B_X', InputFileData%B_X, ErrStat2, ErrMsg2 )
+      If (Failed()) return;
+      !  X TLCD cross-sectional area of vertical column (m^2)
+   call ParseVar( InFileInfo, Curline, 'area_X', InputFileData%area_X, ErrStat2, ErrMsg2 )
+      If (Failed()) return;
+      !  X TLCD cross-sectional area ratio (vertical column area divided by horizontal column area) (-)
+   call ParseVar( InFileInfo, Curline, 'area_ratio_X', InputFileData%area_ratio_X, ErrStat2, ErrMsg2 )
+      If (Failed()) return;
+      !  X TLCD head loss coeff (-)
+   call ParseVar( InFileInfo, Curline, 'headLossCoeff_X', InputFileData%headLossCoeff_X, ErrStat2, ErrMsg2 )
+      If (Failed()) return;
+      !  X TLCD liquid density (kg/m^3)
+   call ParseVar( InFileInfo, Curline, 'rho_X', InputFileData%rho_X, ErrStat2, ErrMsg2 )
+      If (Failed()) return;
+      !  Y TLCD total length (m)
+   call ParseVar( InFileInfo, Curline, 'L_Y', InputFileData%L_Y, ErrStat2, ErrMsg2 )
+      If (Failed()) return;
+      !  Y TLCD horizontal length (m)
+   call ParseVar( InFileInfo, Curline, 'B_Y', InputFileData%B_Y, ErrStat2, ErrMsg2 )
+      If (Failed()) return;
+      !  Y TLCD cross-sectional area of vertical column (m^2)
+   call ParseVar( InFileInfo, Curline, 'area_Y', InputFileData%area_Y, ErrStat2, ErrMsg2 )
+      If (Failed()) return;
+      !  Y TLCD cross-sectional area ratio (vertical column area divided by horizontal column area) (-)
+   call ParseVar( InFileInfo, Curline, 'area_ratio_Y', InputFileData%area_ratio_Y, ErrStat2, ErrMsg2 )
+      If (Failed()) return;
+      !  Y TLCD head loss coeff (-)
+   call ParseVar( InFileInfo, Curline, 'headLossCoeff_Y', InputFileData%headLossCoeff_Y, ErrStat2, ErrMsg2 )
+      If (Failed()) return;
+      !  Y TLCD liquid density (kg/m^3)
+   call ParseVar( InFileInfo, Curline, 'rho_Y', InputFileData%rho_Y, ErrStat2, ErrMsg2 )
+      If (Failed()) return;
+
+   !-------------------------------------------------------------------------------------------------
+   ! PRESCRIBED TIME SERIES  [used only when StC_DOF_MODE=4]
+   !-------------------------------------------------------------------------------------------------
+
+   ! Section break
+   if ( InputFileData%Echo )   WRITE(UnEcho, '(A)') InFileInfo%Lines(CurLine)    ! Write section break to echo
+   CurLine = CurLine + 1
+
+      ! Prescribed forces coordinate system
+   call ParseVar( InFileInfo, Curline, 'PrescribedForcesCoordSys', InputFileData%PrescribedForcesCoordSys, ErrStat2, ErrMsg2 )
+      If (Failed()) return;
+      ! Prescribed input time series
+   call ParseVar( InFileInfo, Curline, 'PrescribedForcesFile', InputFileData%PrescribedForcesFile, ErrStat2, ErrMsg2 )
+      If (Failed()) return;
 
 
 CONTAINS
-   !...............................................................................................................................
-   SUBROUTINE CheckError(ErrID,Msg)
-   ! This subroutine sets the error message and level
-   !...............................................................................................................................
-
-         ! Passed arguments
-      INTEGER(IntKi), INTENT(IN) :: ErrID       ! The error identifier (ErrStat)
-      CHARACTER(*),   INTENT(IN) :: Msg         ! The error message (ErrMsg)
-
-
-      !............................................................................................................................
-      ! Set error status/message;
-      !............................................................................................................................
-
-      IF ( ErrID /= ErrID_None ) THEN
-
-         IF (ErrStat /= ErrID_None) ErrMsg = TRIM(ErrMsg)//NewLine
-         ErrMsg = TRIM(ErrMsg)//'ReadPrimaryFile:'//TRIM(Msg)
-         ErrStat = MAX(ErrStat, ErrID)
-
-         !.........................................................................................................................
-         ! Clean up if we're going to return on error: close file, deallocate local arrays
-         !.........................................................................................................................
-         IF ( ErrStat >= AbortErrLev ) THEN
-            CLOSE( UnIn )
-            IF ( UnEc > 0 ) CLOSE ( UnEc )
-         END IF
-
-      END IF
-
-
-   END SUBROUTINE CheckError
-   !...............................................................................................................................
-END SUBROUTINE ReadPrimaryFile
-
+   !-------------------------------------------------------------------------------------------------
+   logical function Failed()
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'StC_ParseInputFileInfo' )
+      Failed = ErrStat >= AbortErrLev
+      if (Failed) call Cleanup()
+   end function Failed
+   !-------------------------------------------------------------------------------------------------
+   SUBROUTINE Cleanup()
+      if (UnEcho  > -1_IntKi)     CLOSE( UnEcho  )
+   END SUBROUTINE Cleanup
+   !-------------------------------------------------------------------------------------------------
+END SUBROUTINE StC_ParseInputFileInfo
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine checks the data handed in.  If all is good, no errors reported. 
@@ -2035,8 +1886,9 @@ subroutine    StC_ValidatePrimaryData( InputFileData, InitInp, ErrStat, ErrMsg )
 
       ! Prescribed forces
    if (InputFileData%StC_DOF_MODE == DOFMode_Prescribed) then
-      if (InputFileData%PrescribedForcesCoordSys /= 0_IntKi .and. InputFileData%PrescribedForcesCoordSys /= 1_IntKi) then
-         call SetErrStat( ErrID_Fatal, 'PrescribedForcesCoordSys must be 0 (Global) or 1 (local)', ErrStat, ErrMsg, RoutineName )
+      if (InputFileData%PrescribedForcesCoordSys /= PRESCRIBED_FORCE_GLOBAL .and. InputFileData%PrescribedForcesCoordSys /= PRESCRIBED_FORCE_LOCAL) then
+         call SetErrStat( ErrID_Fatal, 'PrescribedForcesCoordSys must be '//trim(Num2LStr(PRESCRIBED_FORCE_GLOBAL))//   &
+                                 ' (Global) or '//trim(Num2LStr(PRESCRIBED_FORCE_LOCAL))//' (local)', ErrStat, ErrMsg, RoutineName )
       endif
    endif
 
@@ -2179,11 +2031,6 @@ SUBROUTINE StC_SetParameters( InputFileData, InitInp, p, Interval, ErrStat, ErrM
    END IF
 
    p%F_TBL = InputFileData%F_TBL;
-
-   if ( p%StC_DOF_MODE == DOFMode_Prescribed ) then
-      call Read_ForceTimeSeriesFile(InputFileData%PrescribedForcesFile,p%StC_PrescribedForce,ErrStat2,ErrMsg2)
-      call SetErrStat(ErrStat2,ErrMsg2, ErrStat,ErrMsg, RoutineName)
-   endif
 
    p%PrescribedForcesCoordSys =  InputFileData%PrescribedForcesCoordSys
 

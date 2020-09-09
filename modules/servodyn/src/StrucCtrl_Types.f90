@@ -36,6 +36,7 @@ IMPLICIT NONE
 ! =========  StC_InputFile  =======
   TYPE, PUBLIC :: StC_InputFile
     CHARACTER(1024)  :: StCFileName      !< Name of the input file; remove if there is no file [-]
+    LOGICAL  :: Echo      !< Echo input file to echo file [-]
     INTEGER(IntKi)  :: StC_CMODE      !< control mode {0:none; 1: Semi-Active Control Mode; 2: Active Control Mode;}  [-]
     INTEGER(IntKi)  :: StC_SA_MODE      !< Semi-Active control mode {1: velocity-based ground hook control; 2: Inverse velocity-based ground hook control; 3: displacement-based ground hook control 4: Phase difference Algorithm with Friction Force 5: Phase difference Algorithm with Damping Force}  [-]
     INTEGER(IntKi)  :: StC_DOF_MODE      !< DOF mode {0: NO StC_DOF; 1: StC_X_DOF and StC_Y_DOF; 2: StC_XY_DOF; 3: TLCD; 4: Prescribed force/moment time series} [-]
@@ -92,6 +93,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: headLossCoeff_Y      !< Side-Side TLCD head loss coeff [-]
     REAL(ReKi)  :: rho_Y      !< Side-Side TLCD liquid density [kg/m^3]
     LOGICAL  :: USE_F_TBL      !< use spring force from user-defined table (flag) [-]
+    INTEGER(IntKi)  :: NKInpSt      !< Number of input spring force rows in table [-]
     CHARACTER(1024)  :: StC_F_TBL_FILE      !< user-defined spring table filename [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: F_TBL      !< user-defined spring force [N]
     INTEGER(IntKi)  :: PrescribedForcesCoordSys      !< Prescribed forces coordinate system {0: global; 1: local} [-]
@@ -239,6 +241,7 @@ CONTAINS
    ErrStat = ErrID_None
    ErrMsg  = ""
     DstInputFileData%StCFileName = SrcInputFileData%StCFileName
+    DstInputFileData%Echo = SrcInputFileData%Echo
     DstInputFileData%StC_CMODE = SrcInputFileData%StC_CMODE
     DstInputFileData%StC_SA_MODE = SrcInputFileData%StC_SA_MODE
     DstInputFileData%StC_DOF_MODE = SrcInputFileData%StC_DOF_MODE
@@ -295,6 +298,7 @@ CONTAINS
     DstInputFileData%headLossCoeff_Y = SrcInputFileData%headLossCoeff_Y
     DstInputFileData%rho_Y = SrcInputFileData%rho_Y
     DstInputFileData%USE_F_TBL = SrcInputFileData%USE_F_TBL
+    DstInputFileData%NKInpSt = SrcInputFileData%NKInpSt
     DstInputFileData%StC_F_TBL_FILE = SrcInputFileData%StC_F_TBL_FILE
 IF (ALLOCATED(SrcInputFileData%F_TBL)) THEN
   i1_l = LBOUND(SrcInputFileData%F_TBL,1)
@@ -364,6 +368,7 @@ ENDIF
   Db_BufSz  = 0
   Int_BufSz  = 0
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%StCFileName)  ! StCFileName
+      Int_BufSz  = Int_BufSz  + 1  ! Echo
       Int_BufSz  = Int_BufSz  + 1  ! StC_CMODE
       Int_BufSz  = Int_BufSz  + 1  ! StC_SA_MODE
       Int_BufSz  = Int_BufSz  + 1  ! StC_DOF_MODE
@@ -420,6 +425,7 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! headLossCoeff_Y
       Re_BufSz   = Re_BufSz   + 1  ! rho_Y
       Int_BufSz  = Int_BufSz  + 1  ! USE_F_TBL
+      Int_BufSz  = Int_BufSz  + 1  ! NKInpSt
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%StC_F_TBL_FILE)  ! StC_F_TBL_FILE
   Int_BufSz   = Int_BufSz   + 1     ! F_TBL allocated yes/no
   IF ( ALLOCATED(InData%F_TBL) ) THEN
@@ -459,6 +465,8 @@ ENDIF
       IntKiBuf(Int_Xferred) = ICHAR(InData%StCFileName(I:I), IntKi)
       Int_Xferred = Int_Xferred + 1
     END DO ! I
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%Echo, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%StC_CMODE
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%StC_SA_MODE
@@ -571,6 +579,8 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%USE_F_TBL, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%NKInpSt
+    Int_Xferred = Int_Xferred + 1
     DO I = 1, LEN(InData%StC_F_TBL_FILE)
       IntKiBuf(Int_Xferred) = ICHAR(InData%StC_F_TBL_FILE(I:I), IntKi)
       Int_Xferred = Int_Xferred + 1
@@ -636,6 +646,8 @@ ENDIF
       OutData%StCFileName(I:I) = CHAR(IntKiBuf(Int_Xferred))
       Int_Xferred = Int_Xferred + 1
     END DO ! I
+    OutData%Echo = TRANSFER(IntKiBuf(Int_Xferred), OutData%Echo)
+    Int_Xferred = Int_Xferred + 1
     OutData%StC_CMODE = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%StC_SA_MODE = IntKiBuf(Int_Xferred)
@@ -747,6 +759,8 @@ ENDIF
     OutData%rho_Y = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%USE_F_TBL = TRANSFER(IntKiBuf(Int_Xferred), OutData%USE_F_TBL)
+    Int_Xferred = Int_Xferred + 1
+    OutData%NKInpSt = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     DO I = 1, LEN(OutData%StC_F_TBL_FILE)
       OutData%StC_F_TBL_FILE(I:I) = CHAR(IntKiBuf(Int_Xferred))
