@@ -186,6 +186,24 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    Init%g           = InitInput%g   
    Init%TP_RefPoint = InitInput%TP_RefPoint
    Init%SubRotateZ  = InitInput%SubRotateZ
+   if ((allocated(InitInput%SoilStiffness)) .and. (InitInput%SoilMesh%Initialized)) then 
+      ! Soil Mesh and Stiffness
+      !  SoilMesh has N points.  Correspond in order to the SoilStiffness matrices passed in
+      !     %RefOrientation   is the identity matrix (3,3,N)
+      !     %Position         is the reference position (3,N)
+      ! Maybe some logic to make sure these points correspond roughly to nodes -- though this may not be true for a long pile into the soil with multiple connection points
+      ! Note: F = -kx  whre k is the relevant 6x6 matrix from SoilStiffness
+      call AllocAry(Init%Soil_K, 6,6, size(InitInput%SoilStiffness,3), 'Soil_K', ErrStat2, ErrMsg2);
+      call AllocAry(Init%Soil_Points, 3, InitInput%SoilMesh%NNodes, 'Soil_Points', ErrStat2, ErrMsg2);
+      call AllocAry(Init%Soil_Nodes,     InitInput%SoilMesh%NNodes, 'Soil_Nodes' , ErrStat2, ErrMsg2);
+      Init%Soil_K = InitInput%SoilStiffness !  SoilStiffness is dimensioned (6,6,N)
+      Init%Soil_Points = InitInput%SoilMesh%Position !  SoilStiffness is dimensioned (6,6,N)
+      Init%Soil_Nodes  = -1 ! Will be determined in InsertSoilMatrices, Nodes not known yet
+      if (size(Init%Soil_K,3) /= size(Init%Soil_Points,2)) then 
+         ErrStat2=ErrID_Fatal; ErrMsg2='Number of soil points inconsistent with number of soil stiffness matrix'
+      endif
+      if (Failed()) return
+   endif
 
    !bjj added this ugly check (mostly for checking SubDyn driver). not sure if anyone would want to play with different values of gravity so I don't return an error.
    IF (Init%g < 0.0_ReKi ) CALL ProgWarn( ' SubDyn calculations use gravity assuming it is input as a positive number; the input value is negative.' ) 
@@ -200,7 +218,6 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    
    ! Parse the SubDyn inputs 
    CALL SD_Input(InitInput%SDInputFile, Init, p, ErrStat2, ErrMsg2); if(Failed()) return
-   if (p%ExtraMoment) call WrScr('   Extra moment will be included in Y1')
 
    ! --------------------------------------------------------------------------------
    ! --- Manipulation of Init and parameters
@@ -214,6 +231,9 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
 
    !Store mapping between nodes and elements      
    CALL NodeCon(Init, p, ErrStat2, ErrMsg2); if(Failed()) return
+
+   !Store mapping between controllable elements and control channels
+   CALL ControlCableMapping(Init, p, ErrStat2, ErrMsg2); if(Failed()) return
 
    ! --- Allocate DOF indices to joints and members 
    call DistributeDOF(Init, p ,ErrStat2, ErrMsg2); if(Failed()) return; 
@@ -231,10 +251,9 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    CALL InsertJointStiffDamp(p, Init, ErrStat2, ErrMsg2); if(Failed()) return
 
    ! --- Prepare for control cable load, RHS
-   if (any(Init%PropsC(:,5)>0)) then
-      print*,'Need to assemble Cable Force'
-      CALL ControlCableForceInit(Init, p, m, ErrStat2, ErrMsg2); if(Failed()) return
-      print*,'Controlable cables, feature not ready.'
+   if (size(p%CtrlElem2Channel,1)>0) then
+      CALL ControlCableForceInit(p, m, ErrStat2, ErrMsg2); if(Failed()) return
+      print*,'Controlable cables are present, this feature is not ready at the glue code level.'
       STOP
    endif
 
@@ -245,6 +264,14 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    ! Nodes into (I,C,L,R):  I=Interface ,C=Boundary (bottom), R=(I+C), L=Interior
    ! DOFs  into (B,F,L):    B=Leader (i.e. Rbar) ,F=Fixed, L=Interior
    call PartitionDOFNodes(Init, m, p, ErrStat2, ErrMsg2) ; if(Failed()) return
+   if (p%ExtraMoment) then 
+      p%FixedBottom=isFixedBottom(Init,p)
+      if (p%FixedBottom) then
+         call WrScr('   Extra moment will be included in loads (fixed-bottom case detected)')
+      else
+         call WrScr('   Extra moment will be included in loads (free/floating case detected)')
+      endif
+   endif
 
    ! --- Craig-Bampton reduction (sets many parameters)
    CALL SD_Craig_Bampton(Init, p, CBparams, ErrStat2, ErrMsg2); if(Failed()) return
@@ -289,7 +316,7 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    IF ( Init%SSSum ) THEN 
       ! note p%KBB/MBB are KBBt/MBBt
       ! Write a summary of the SubDyn Initialization                     
-      CALL OutSummary(Init, p, InitInput, CBparams,  ErrStat2, ErrMsg2); if(Failed()) return
+      CALL OutSummary(Init, p, m, InitInput, CBparams,  ErrStat2, ErrMsg2); if(Failed()) return
    ENDIF 
    
    ! Initialize the outputs & Store mapping between nodes and elements  
@@ -387,7 +414,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       INTEGER(IntKi), pointer      :: DOFList(:)
       INTEGER(IntKi)               :: startDOF
       REAL(ReKi)                   :: DCM(3,3)
-      REAL(ReKi)                   :: HydroForces(6*p%nNodes_I) !  !Forces from all interface nodes listed in one big array  ( those translated to TP ref point HydroTP(6) are implicitly calculated in the equations)
+      REAL(ReKi)                   :: F_I(6*p%nNodes_I) !  !Forces from all interface nodes listed in one big array  ( those translated to TP ref point HydroTP(6) are implicitly calculated in the equations)
       TYPE(SD_ContinuousStateType) :: dxdt        ! Continuous state derivatives at t- for output file qmdotdot purposes only
       INTEGER(IntKi)               :: ErrStat2    ! Error status of the operation (occurs after initial error)
       CHARACTER(ErrMsgLen)         :: ErrMsg2     ! Error message if ErrStat2 /= ErrID_None
@@ -403,8 +430,9 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       m%udot_TP    = (/u%TPMesh%TranslationVel( :,1), u%TPMesh%RotationVel(:,1)/)
       m%udotdot_TP = (/u%TPMesh%TranslationAcc( :,1), u%TPMesh%RotationAcc(:,1)/)
 
-      ! Inputs on interior nodes:
-      CALL GetExtForceOnInternalDOF( u, p, m, m%UFL )
+      ! External force on internal and interface nodes
+      call GetExtForceOnInternalDOF( u, p, m, m%UFL, ErrStat2, ErrMsg2 ); if(Failed()) return
+      call GetExtForceOnInterfaceDOF(p, m%Fext, F_I)
 
       !________________________________________
       ! Set motion outputs on y%Y2mesh
@@ -495,36 +523,27 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       !Y1= TP reaction Forces, i.e. force that the jacket exerts onto the TP and above  
       ! ---------------------------------------------------------------------------------
       ! Eq. 15: Y1 = -(C1*x + D1*u + FY)  [note the negative sign!!!!]
-      !NEED TO ADD HYDRODYNAMIC FORCES AT THE Interface NODES
-        !Aggregate the forces and moments at the interface nodes to the reference point
-        !TODO: where are these HydroTP, HydroForces documented?
-      DO I = 1, p%nNodes_I 
-         iSDNode = p%Nodes_I(I,1)
-         iY2Node = iSDNode
-         startDOF = (I-1)*6 + 1 ! NOTE: this works since interface is assumed to be sorted like LMesh and have 6 DOF per nodes
-         !Take care of Hydrodynamic Forces that will go into INterface Forces later
-         HydroForces(startDOF:startDOF+5) =  (/u%LMesh%Force(1:3,iY2Node),u%LMesh%Moment(1:3,iY2Node)/)  !(6,NNODES_I)
-      ENDDO
-                
-      !HydroTP =  matmul(transpose(p%TI),HydroForces) ! (6,1) calculated below
-      ! note: matmul( HydroForces, p%TI ) = matmul( transpose(p%TI), HydroForces) because HydroForces is 1-D            
+      !HydroTP =  matmul(transpose(p%TI), F_I) ! (6,1) calculated below
+      ! note: matmul( F_I, p%TI ) = matmul( transpose(p%TI), F_I) because F_I is 1-D            
       IF ( p%nDOFM > 0) THEN
          Y1 = -(   matmul(p%C1_11, x%qm) + matmul(p%C1_12,x%qmdot)                                    &  ! -(   C1(1,1)*x(1) + C1(1,2)*x(2)
                  + matmul(p%KBB,   m%u_TP) + matmul(p%D1_12, m%udot_TP) + matmul(p%D1_13, m%udotdot_TP) + matmul(p%D1_14, m%UFL)   &  !    + D1(1,1)*u(1) + 0*u(2) + D1(1,3)*u(3) + D1(1,4)*u(4)
-                 - matmul( HydroForces, p%TI )  + p%FY )                                                                            !    + D1(1,5)*u(5) + Fy(1) )
+                 - matmul( F_I, p%TI )  + p%FY )                                                                            !    + D1(1,5)*u(5) + Fy(1) )
       ELSE ! No retained modes, so there are no states
          Y1 = -( matmul(p%KBB,   m%u_TP)   + matmul(p%D1_12, m%udot_TP) + matmul(p%D1_13, m%udotdot_TP) + matmul(p%D1_14, m%UFL)   &  ! -(  0*x + D1(1,1)*u(1) + 0*u(2) + D1(1,3)*u(3) + D1(1,4)*u(4)
-                 - matmul( HydroForces, p%TI )  + p%FY )                                             !    + D1(1,5)*u(5) + Fy(1) )
+                 - matmul( F_I, p%TI )  + p%FY )                                             !    + D1(1,5)*u(5) + Fy(1) )
       END IF
       ! Computing extra moments due to lever arm introduced by interface displacement
       !               Y1(:3) = -f_TP
       !               MExtra = -u_TP x f_TP
       ! Y1_MExtra = - MExtra = -u_TP x Y1(1:3) ! NOTE: double cancelling of signs 
       if (p%ExtraMoment) then
-         Y1_ExtraMoment(1) = - m%u_TP(2) * Y1(3) + m%u_TP(3) * Y1(2)
-         Y1_ExtraMoment(2) = - m%u_TP(3) * Y1(1) + m%u_TP(1) * Y1(3)
-         Y1_ExtraMoment(3) = - m%u_TP(1) * Y1(2) + m%u_TP(2) * Y1(1)
-         Y1(4:6) = Y1(4:6) + Y1_ExtraMoment 
+         if (p%FixedBottom) then ! if Fixed, transfer from non deflected TP to u_TP 
+            Y1_ExtraMoment(1) = - m%u_TP(2) * Y1(3) + m%u_TP(3) * Y1(2)
+            Y1_ExtraMoment(2) = - m%u_TP(3) * Y1(1) + m%u_TP(1) * Y1(3)
+            Y1_ExtraMoment(3) = - m%u_TP(1) * Y1(2) + m%u_TP(2) * Y1(1)
+            Y1(4:6) = Y1(4:6) + Y1_ExtraMoment 
+         endif
       endif
       
       ! values on the interface mesh are Y1 (SubDyn forces) + Hydrodynamic forces
@@ -619,7 +638,7 @@ SUBROUTINE SD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSta
       m%udotdot_TP = (/u%TPMesh%TranslationAcc(:,1), u%TPMesh%RotationAcc(:,1)/)
       
       ! form u(4) in Eq. 10:
-      CALL GetExtForceOnInternalDOF( u, p, m, m%UFL )
+      CALL GetExtForceOnInternalDOF( u, p, m, m%UFL, ErrStat2, ErrMsg2 );
       
       !Equation 12: X=A*x + B*u + Fx (Eq 12)
       dxdt%qm= x%qmdot
@@ -1129,7 +1148,7 @@ IF ( p%NMOutputs > 0 ) THEN
                ENDIF
             ENDIF
          ENDDO
-         IF (Check (flg .EQ. 0 , ' MemberID is not in the Members list. ')) return
+         IF (Check (flg .EQ. 0 , ' MemberID '//trim(Num2LStr(p%MOutLst(I)%MemberID))//' requested for output is not in the list of Members. ')) return
 
          IF ( Echo ) THEN
             WRITE( UnEc, '(A)' ) TRIM(Line)
@@ -1612,12 +1631,12 @@ SUBROUTINE SD_AM2( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg 
    ! interpolate u to find u_interp = u(t) = u_n     
    CALL SD_Input_ExtrapInterp( u, utimes, u_interp, t, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_AM2')
    m%udotdot_TP = (/u_interp%TPMesh%TranslationAcc(:,1), u_interp%TPMesh%RotationAcc(:,1)/)
-   CALL GetExtForceOnInternalDOF( u_interp, p, m, m%UFL )     
+   CALL GetExtForceOnInternalDOF( u_interp, p, m, m%UFL, ErrStat2, ErrMsg2 );
                 
    ! extrapolate u to find u_interp = u(t + dt)=u_n+1
    CALL SD_Input_ExtrapInterp(u, utimes, u_interp, t+p%SDDeltaT, ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_AM2')
    udotdot_TP2 = (/u_interp%TPMesh%TranslationAcc(:,1), u_interp%TPMesh%RotationAcc(:,1)/)
-   CALL GetExtForceOnInternalDOF( u_interp, p, m, UFL2 )     
+   CALL GetExtForceOnInternalDOF( u_interp, p, m, UFL2, ErrStat2, ErrMsg2 );    
    
    ! calculate (u_n + u_n+1)/2
    udotdot_TP2 = 0.5_ReKi * ( udotdot_TP2 + m%udotdot_TP )
@@ -1710,9 +1729,10 @@ SUBROUTINE SD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
    IF ( PRESENT( dXdu ) ) THEN
       ! Calculate the partial derivative of the continuous state functions (X) with respect to the inputs (u) here:
       ! TODO: dXdu should be constant, in theory we dont' need to recompute it
-      if(ANALYTICAL_LIN) then
-         call StateMatrices(p, ErrStat2, ErrMsg2, BB=dXdu); if(Failed()) return ! Allocation occurs in function
-      else
+      !if(ANALYTICAL_LIN) then
+      ! Analytical lin cannot be used anymore with extra mom
+      !   call StateMatrices(p, ErrStat2, ErrMsg2, BB=dXdu); if(Failed()) return ! Allocation occurs in function
+      !else
          if (.not. allocated(dXdu)) then
             call AllocAry(dXdu, p%Jac_nx * 2, size(p%Jac_u_indx,1), 'dXdu', ErrStat2, ErrMsg2); if (Failed()) return
          endif
@@ -1733,7 +1753,7 @@ SUBROUTINE SD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
             ! get central difference:
             call SD_Compute_dX( p, x_p, x_m, delta_p, dXdu(:,i) )
          end do
-      endif ! analytical or numerical
+      !endif ! analytical or numerical
    END IF ! dXdu
    IF ( PRESENT( dXddu ) ) THEN
       if (allocated(dXddu)) deallocate(dXddu)
@@ -2539,6 +2559,7 @@ SUBROUTINE AllocMiscVars(p, Misc, ErrStat, ErrMsg)
    CALL AllocAry( Misc%UL,           p%nDOF__L,   'UL',            ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
    CALL AllocAry( Misc%UL_dot,       p%nDOF__L,   'UL_dot',        ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
    CALL AllocAry( Misc%UL_dotdot,    p%nDOF__L,   'UL_dotdot',     ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
+   CALL AllocAry( Misc%DU_full,      p%nDOF,      'DU_full',       ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
    CALL AllocAry( Misc%U_full,       p%nDOF,      'U_full',        ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
    CALL AllocAry( Misc%U_full_dot,   p%nDOF,      'U_full_dot',    ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
    CALL AllocAry( Misc%U_full_dotdot,p%nDOF,      'U_full_dotdot', ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
@@ -2809,27 +2830,87 @@ END SUBROUTINE PartitionDOFNodes
 !> Construct force vector on internal DOF (L) from the values on the input mesh 
 !! First, the full vector of external forces is built on the non-reduced DOF
 !! Then, the vector is reduced using the Tred matrix
-SUBROUTINE GetExtForceOnInternalDOF( u, p, m, UFL )
+SUBROUTINE GetExtForceOnInternalDOF( u, p, m, F_L, ErrStat, ErrMsg )
    type(SD_InputType),     intent(in   )  :: u ! Inputs
    type(SD_ParameterType), intent(in   )  :: p ! Parameters
    type(SD_MiscVarType),   intent(inout)  :: m ! Misc, for storage optimization of Fext and Fext_red
-   real(ReKi)          ,   intent(out)    :: UFL(p%nDOF__L)
-   integer :: iMeshNode, iSDNode ! indices of u-mesh nodes and SD nodes
+   real(ReKi)          ,   intent(out)    :: F_L(p%nDOF__L)  !< External force on internal nodes "L"
+   integer(IntKi),         intent(  out)  :: ErrStat     !< Error status of the operation
+   character(*),           intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+   integer :: iNode ! indices of u-mesh nodes and SD nodes
    integer :: nMembers
+   integer :: startDOF, I
+   integer :: iCC, iElem, iChannel !< Index on control cables, element, Channel
+   integer(IntKi), dimension(12) :: IDOF !  12 DOF indices in global unconstrained system
+   real(ReKi)                    :: rotations(3)
+   real(ReKi)                    :: du(3), Moment(3), Force(3) 
    real(ReKi), parameter :: myNaN = -9999998.989_ReKi 
-   ! TODO to save time, perform Tred multiplication only if Tred is not identity
 
-   ! --- Build vector of external force
+   ! --- Compute Guyan displacement for extra moment (see CalcOutput, redundancy...)
+   if (p%ExtraMoment) then
+      rotations  = GetSmllRotAngs(u%TPMesh%Orientation(:,:,1), ErrStat, Errmsg);
+      m%u_TP       = (/REAL(u%TPMesh%TranslationDisp(:,1),ReKi), rotations/)
+      m%UR_bar     =   matmul( p%TI      , m%u_TP       )  ! UR_bar
+      m%UL         =   matmul( p%PhiRb_TI, m%u_TP       )  ! UL    
+      m%U_red(p%IDI__) = m%UR_bar
+      m%U_red(p%ID__L) = m%UL     
+      m%U_red(p%IDC_Rb)= 0    ! TODO
+      m%U_red(p%ID__F) = 0
+      if (p%reduced) then
+         m%DU_full        = matmul(p%T_red, m%U_red)
+      else
+         m%DU_full        = m%U_red
+      endif
+      if (.not.p%FixedBottom) then ! if Floating, remove u_TP translation
+         do iNode = 1,p%nNodes
+            m%DU_full(p%NodesDOF(iNode)%List(1:3)) =  m%DU_full(p%NodesDOF(iNode)%List(1:3)) - m%u_TP(1:3)
+         enddo
+      endif
+   endif
+
+
+   ! --- Build vector of external forces (Moment done below)  
    m%Fext= myNaN
-   DO iMeshNode = 1,p%nNodes
-      iSDNode  = iMeshNode
-      nMembers = (size(p%NodesDOF(iSDNode)%List)-3)/3 ! Number of members deducted from Node's nDOFList
+   DO iNode = 1,p%nNodes
       ! Force - All nodes have only 3 translational DOFs 
-      m%Fext( p%NodesDOF(iSDNode)%List(1:3) ) =  u%LMesh%Force (:,iMeshNode)
+      m%Fext( p%NodesDOF(iNode)%List(1:3) ) =  u%LMesh%Force (:,iNode)
+   enddo
+
+   ! --- Adding controllable cable forces
+   if (size(p%CtrlElem2Channel,1) > 0) then
+      if (.not. allocated (u%CableTension)) then
+         call Fatal('Cable tension input not allocated but controllable cables are present'); return
+      endif
+      if (size(u%CableTension)< maxval(p%CtrlElem2Channel(:,2)) ) then
+         call Fatal('Cable tension input has length '//trim(num2lstr(size(u%CableTension)))//' but controllable cables need to access channel '//trim(num2lstr(maxval(p%CtrlElem2Channel(:,2))))); return
+      endif
+      do iCC = 1, size(p%CtrlElem2Channel,1) 
+         iElem    = p%CtrlElem2Channel(iCC,1)
+         iChannel = p%CtrlElem2Channel(iCC,2)
+         IDOF = p%ElemsDOF(1:12, iElem)
+         m%Fext(IDOF) = m%Fext(IDOF) + m%FC_unit( IDOF ) * (u%CableTension(iChannel) - p%ElemProps(iElem)%T0)
+      enddo
+   endif
+
+   ! --- Build vector of external moment
+   DO iNode = 1,p%nNodes
+      Force(1:3)  = m%Fext(p%NodesDOF(iNode)%List(1:3) ) ! Controllable cable + External Forces on LMesh
+      Moment(1:3) = u%LMesh%Moment(1:3,iNode)
+      nMembers = (size(p%NodesDOF(iNode)%List)-3)/3 ! Number of members deducted from Node's nDOFList
+
+      ! Extra moment dm = Delta u x (fe + fg)
+      if (p%ExtraMoment) then
+         Force = Force + p%FG_full(p%NodesDOF(iNode)%List(1:3)) ! Adding gravity and initial cable
+         du    =         m%DU_full(p%NodesDOF(iNode)%List(1:3)) ! Lever arm
+         Moment(1) = Moment(1) + du(2) * Force(3) - du(3) * Force(2)
+         Moment(2) = Moment(2) + du(3) * Force(1) - du(1) * Force(3)
+         Moment(3) = Moment(3) + du(1) * Force(2) - du(2) * Force(1)
+      endif
+
       ! Moment is spread equally across all rotational DOFs if more than 3 rotational DOFs
-      m%Fext( p%NodesDOF(iSDNode)%List(4::3)) =  u%LMesh%Moment(1,iMeshNode)/nMembers
-      m%Fext( p%NodesDOF(iSDNode)%List(5::3)) =  u%LMesh%Moment(2,iMeshNode)/nMembers
-      m%Fext( p%NodesDOF(iSDNode)%List(6::3)) =  u%LMesh%Moment(3,iMeshNode)/nMembers
+      m%Fext( p%NodesDOF(iNode)%List(4::3)) = Moment(1)/nMembers
+      m%Fext( p%NodesDOF(iNode)%List(5::3)) = Moment(2)/nMembers
+      m%Fext( p%NodesDOF(iNode)%List(6::3)) = Moment(3)/nMembers
    enddo
 
    ! TODO: remove test below in the future
@@ -2839,22 +2920,44 @@ SUBROUTINE GetExtForceOnInternalDOF( u, p, m, UFL )
          STOP
       endif
    endif
+
    ! --- Reduced vector of external force
    if (p%reduced) then
       m%Fext_red = matmul(transpose(p%T_red), m%Fext)
-      UFL= m%Fext_red(p%ID__L)
+      F_L= m%Fext_red(p%ID__L)
    else
-      UFL= m%Fext(p%ID__L)
+      F_L= m%Fext(p%ID__L)
    endif
 
+contains
+   subroutine Fatal(ErrMsg_in)
+      character(len=*), intent(in) :: ErrMsg_in
+      call SetErrStat(ErrID_Fatal, ErrMsg_in, ErrStat, ErrMsg, 'GetExtForce');
+   end subroutine Fatal
 END SUBROUTINE GetExtForceOnInternalDOF
 
 !------------------------------------------------------------------------------------------------------
+!> Construct force vector on interface DOF (I) 
+!! NOTE: This function should only be called after GetExtForceOnInternalDOF 
+SUBROUTINE GetExtForceOnInterfaceDOF(  p, Fext, F_I)
+   type(SD_ParameterType),   intent(in  ) :: p ! Parameters
+   real(ReKi), dimension(:), intent(in  ) :: Fext !< Vector of external forces on un-reduced DOF
+   real(ReKi)            ,   intent(out ) :: F_I(6*p%nNodes_I)          !< External force on interface DOF
+   integer :: iSDNode, startDOF, I
+   DO I = 1, p%nNodes_I 
+      iSDNode = p%Nodes_I(I,1)
+      startDOF = (I-1)*6 + 1 ! NOTE: for now we have 6 DOF per interface nodes
+      F_I(startDOF:startDOF+5) = Fext(p%NodesDOF(iSDNode)%List(1:6)) !TODO try to use Fext_red
+   ENDDO
+END SUBROUTINE GetExtForceOnInterfaceDOF
+
+!------------------------------------------------------------------------------------------------------
 !> Output the summary file    
-SUBROUTINE OutSummary(Init, p, InitInput, CBparams, ErrStat,ErrMsg)
+SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, ErrStat,ErrMsg)
    use Yaml
-   TYPE(SD_InitType),      INTENT(INOUT)  :: Init           ! Input data for initialization routine, this structure contains many variables needed for summary file
-   TYPE(SD_ParameterType), INTENT(IN)     :: p              ! Parameters,this structure contains many variables needed for summary file
+   TYPE(SD_InitType),      INTENT(INOUT)  :: Init           ! Input data for initialization routine
+   TYPE(SD_ParameterType), INTENT(IN)     :: p              ! Parameters
+   TYPE(SD_MiscVarType)  , INTENT(IN)     :: m              ! Misc
    TYPE(SD_InitInputType), INTENT(IN)     :: InitInput   !< Input data for initialization routine         
    TYPE(CB_MatArrays),     INTENT(IN)     :: CBparams       ! CB parameters that will be passed in for summary file use
    INTEGER(IntKi),         INTENT(OUT)    :: ErrStat        ! Error status of the operation
@@ -2894,7 +2997,7 @@ SUBROUTINE OutSummary(Init, p, InitInput, CBparams, ErrStat,ErrMsg)
    ! M and K are reduced matrices, but Boundary conditions are not applied
    ! We set bDOF, which is true if not a fixed Boundary conditions
    ! NOTE: we don't check for singularities/rigig body modes here
-   CALL WrScr('   Calculating Full System Modes (for summary file output)')
+   CALL WrScr('   Calculating Full System Modes for summary file (discard any [INFO] below)')
    CALL AllocAry(bDOF, p%nDOF_red, 'bDOF',  ErrStat2, ErrMsg2); if(Failed()) return
    bDOF(:)       = .true.
    bDOF(p%ID__F) = .false.
@@ -2989,9 +3092,26 @@ SUBROUTINE OutSummary(Init, p, InitInput, CBparams, ErrStat,ErrMsg)
       DummyArray(i,15) = p%ElemProps(i)%Jzz   ! Moment of inertia
       DummyArray(i,16) = p%ElemProps(i)%T0    ! Pretension [N]
    enddo
-   write(UnSum, '("#",4x,6(A9),10('//trim(SFmt)//'))') 'Elem_[#] ','Node_1','Node_2','Prop_1','Prop_2','Type','Length_[m]','Area_[m^2]','Dens._[kg/m^3]','E_[N/m2]','G_[N/m2]','shear_[-]','Ixx_[m^4]','Iyy_[m^4]','Jzz_[m^4]','T0_[N]'
+   write(UnSum, '("#",4x,6(A9),10('//SFmt//'))') 'Elem_[#] ','Node_1','Node_2','Prop_1','Prop_2','Type','Length_[m]','Area_[m^2]','Dens._[kg/m^3]','E_[N/m2]','G_[N/m2]','shear_[-]','Ixx_[m^4]','Iyy_[m^4]','Jzz_[m^4]','T0_[N]'
    call yaml_write_array(UnSum, 'Elements', DummyArray, ReFmt, ErrStat2, ErrMsg2, AllFmt='6(F8.0,","),3(F15.3,","),7(E15.6,",")') !, comment='',label=.true.)
    deallocate(DummyArray)
+
+   ! --- C
+   if(size(p%CtrlElem2Channel,1)>0) then
+      write(UnSum, '("#",2x,2(A11))') 'Elem_[#]  ','Channel_[#]'
+      call yaml_write_array(UnSum, 'CtrlElem2Channel', p%CtrlElem2Channel, IFmt, ErrStat2, ErrMsg2, comment='')
+   endif
+   if (allocated(Init%Soil_K)) then
+      call yaml_write_array(UnSum, 'Soil_Nodes', Init%Soil_Nodes, IFmt, ErrStat2, ErrMsg2, comment='')
+      CALL AllocAry( DummyArray,  3, size(Init%Soil_Points,2), 'SoilP', ErrStat2, ErrMsg2 ); if(Failed()) return
+      do i=1,size(Init%Soil_K,3)
+         DummyArray(1:3,I) = Init%Nodes(Init%Soil_Nodes(I), 2:4)
+         call yaml_write_array(UnSum, 'Soil_K'//Num2LStr(I), Init%Soil_K(:,:,I), ReFmt, ErrStat2, ErrMsg2, comment='')
+      enddo
+      call yaml_write_array(UnSum, 'Soil_Points_SoilDyn', Init%Soil_Points, ReFmt, ErrStat2, ErrMsg2, comment='')
+      call yaml_write_array(UnSum, 'Soil_Points_SubDyn', DummyArray, ReFmt, ErrStat2, ErrMsg2, comment='')
+      deallocate(DummyArray)
+   endif
    
    ! --- User inputs (less interesting, repeat of input file)
    WRITE(UnSum, '(A)') SectionDivide
@@ -3148,7 +3268,7 @@ SUBROUTINE OutSummary(Init, p, InitInput, CBparams, ErrStat,ErrMsg)
 
    ! --- write assembed GRAVITY FORCE FG VECTOR.  gravity forces applied at each node of the full system
    WRITE(UnSum, '(A)') SectionDivide
-   WRITE(UnSum, '(A)') '#Gravity force vector FG applied at each node of the full system' 
+   WRITE(UnSum, '(A)') '#Initial gravity and cable loads applied at each node of the system (after DOF elimination with T matrix)' 
    call yaml_write_array(UnSum, 'FG', Init%FG, ReFmt, ErrStat2, ErrMsg2, comment='')
       
    ! --- write CB system matrices

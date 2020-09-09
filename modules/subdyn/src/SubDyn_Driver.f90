@@ -179,6 +179,12 @@ PROGRAM TestSubDyn
    !...............................................................................................................................
    ! Force the displacement of the interface node in the global Z direction to be the sag of the column under it's own weight
    ! u(1)%UFL(3) =-12.958  !this is for testbeam3
+
+   ! TEMPORARY HACK FOR CONTROLLABLE CABLES
+   !allocate(u(1)%CableTension(5))
+   !!u(1)%CableTension= 1.0e7_ReKi
+   !u(1)%CableTension= 0.0e7_ReKi
+
    call WrScr('')
    DO n = 0,drvrInitInp%NSteps-1 ! Loop on time steps, starts at 0
 
@@ -206,6 +212,7 @@ PROGRAM TestSubDyn
             u(1)%TPMesh%RotationAcc(:,1)       = drvrInitInp%uDotDotTPInSteady(4:6) 
          END IF
       END IF   
+
 
       ! Calculate outputs at n
       CALL SD_CalcOutput( Time, u(1), p, x, xd, z, OtherState, y, m, ErrStat2, ErrMsg2); call AbortIfFailed()

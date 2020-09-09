@@ -21,6 +21,8 @@ typedef ^   InitInputType       ReKi            g            - - -       "Gravit
 typedef ^   InitInputType       ReKi            WtrDpth      - - -       "Water Depth (positive valued)"
 typedef ^   InitInputType       ReKi            TP_RefPoint  {3} - -     "global position of transition piece reference point (could also be defined in SubDyn itself)"
 typedef ^   InitInputType       ReKi            SubRotateZ   - - -       "Rotation angle in degrees about global Z"
+typedef ^   InitInputType       ReKi            SoilStiffness ::: - -    "Soil stiffness matrices from SoilDyn" '(N/m, N-m/rad)'
+typedef ^   InitInputType       MeshType        SoilMesh     - - -       "Mesh for soil stiffness locations" -
 typedef ^   InitInputType       Logical         Linearize    - .FALSE. - "Flag that tells this module if the glue code wants to linearize." -
 
 # ============================== Define Initialization outputs here: ============================================================================================================================================
@@ -104,6 +106,9 @@ typedef	^	^	LOGICAL	TabDelim	-	-	-	"Generate a tab-delimited output file in OutJ
 typedef	^	^	R8Ki	SSIK	{:}{:}	-	-	"SSI stiffness packed matrix elements (21 of them), for each reaction joint"
 typedef	^	^	R8Ki	SSIM	{:}{:}	-	-	"SSI mass packed matrix elements (21 of them), for each reaction joint"
 typedef	^	^	CHARACTER(1024)	SSIfile {:}	-	-	"Soil Structure Interaction (SSI) files to associate with each reaction node"
+typedef	^	^	ReKi	Soil_K	{:}{:}{:}	-	-	"Soil stiffness (at passed at Init, not in input file)  6x6xn"
+typedef	^	^	ReKi	Soil_Points	{:}{:} 	-	-	"Node positions where soil stiffness will be added"
+typedef	^	^	Integer	Soil_Nodes	{:}  	-	-	"Node indices where soil stiffness will be added"
 #-------------------------- arrays and variables used in the module ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 typedef	^	^	INTEGER	NElem	-	-	-	"Total number of elements"
 typedef	^	^	INTEGER	NPropB  -	-	-	"Total number of property sets for Beams"
@@ -152,20 +157,20 @@ typedef  ^            ^             ReKi                     UR_bar_dotdot {:}  
 typedef  ^            ^             ReKi                     UL            {:}  -  -  
 typedef  ^            ^             ReKi                     UL_dot        {:}  -  -  
 typedef  ^            ^             ReKi                     UL_dotdot     {:}  -  -  
+typedef  ^            ^             ReKi                     DU_full       {:}  -  -  "Delta U used for extra moment" 
 typedef  ^            ^             ReKi                     U_full        {:}  -  -  
 typedef  ^            ^             ReKi                     U_full_dot    {:}  -  -  
 typedef  ^            ^             ReKi                     U_full_dotdot {:}  -  -  
 typedef  ^            ^             ReKi                     U_red          {:}  -  -  
 typedef  ^            ^             ReKi                     U_red_dot      {:}  -  -  
 typedef  ^            ^             ReKi                     U_red_dotdot   {:}  -  -  
-typedef  ^            ^             ReKi                     FC_red        {:}   -  -   "Cable Force vector (for varying cable load)"	N
-typedef  ^            ^             ReKi                     FC_red_unit   {:}   -  -   "Cable Force vector (for varying cable load, of unit cable load)"	N
+typedef  ^            ^             ReKi                     FC_unit   {:}   -  -   "Cable Force vector (for varying cable load, of unit cable load)"	N
 ### data for writing to an output file (this data is associated with time, but saved/written in CalcOutput so not stored as an other state) ###
-typedef	^	          ^             ReKi                     SDWrOutput {:} -  -  "Data from previous step to be written to a SubDyn output file"
-typedef	^	          ^             DbKi                     LastOutTime -  -  -  "The time of the most recent stored output data"	"s"
-typedef	^	          ^             IntKi                    Decimat     -  -  -  "Current output decimation counter"	"-"
-typedef	^	          ^             ReKi                     Fext      {:} -  -  "External loads on unconstrained DOFs"	"-"
-typedef	^	          ^             ReKi                     Fext_red  {:} -  -  "External loads on constrained DOFs, Fext_red= T^t Fext"	"-"
+typedef  ^            ^             ReKi                     SDWrOutput {:} -  -  "Data from previous step to be written to a SubDyn output file"
+typedef  ^            ^             DbKi                     LastOutTime -  -  -  "The time of the most recent stored output data"	"s"
+typedef  ^            ^             IntKi                    Decimat     -  -  -  "Current output decimation counter"	"-"
+typedef  ^            ^             ReKi                     Fext      {:} -  -  "External loads on unconstrained DOFs"	"-"
+typedef  ^            ^             ReKi                     Fext_red  {:} -  -  "External loads on constrained DOFs, Fext_red= T^t Fext"	"-"
 
 
 
@@ -179,6 +184,7 @@ typedef	^	ParameterType	INTEGER	nDOF_red	-	-	-	"Total degree of freedom after co
 typedef	^	ParameterType	IntKi	Nmembers	-	-	-	"Number of members of the sub structure"
 typedef	^	ParameterType	IntKi	Elems	{:}{:}	-	-	"Element nodes connections"
 typedef	^	ParameterType	ElemPropType	ElemProps	{:}	-	-	"List of element properties"
+typedef ^   ^               R8Ki            FG_full     {:}	-	-	"Gravity force vector (with initial cable force T0), not reduced"	N
 # --- Constraints reduction
 typedef ^             ^     Logical reduced           -      -  -  "True if system has been reduced to account for constraints"  "-"
 typedef ^             ^     R8Ki    T_red             {:}{:} -  -  "Transformation matrix performing the constraint reduction x = T. xtilde"	"-"
@@ -186,10 +192,13 @@ typedef ^             ^     IList   NodesDOF          {:}    -  -  "DOF indices 
 typedef ^             ^     IList   NodesDOFred       {:}    -  -  "DOF indices of each nodes in constrained assembled system "	"-"
 typedef ^             ^     IntKi   ElemsDOF          {:}{:} -  -  "12 DOF indices of node 1 and 2 of a given member in unconstrained assembled system "	"-"
 typedef ^             ^     IntKi   DOFred2Nodes      {:}{:} -  -  "nDOFRed x 3, for each constrained DOF, col1 node index, col2 number of DOF, col3 DOF starting from 1"	"-"
+# --- Control
+typedef  ^            ^     IntKi   CtrlElem2Channel  {:}{:} - -   "nCtrlCable x 2, for each CtrlCable, Elem index, and Channel Index"
 # --- CB reduction
 typedef	^	ParameterType	IntKi	nDOFM	-	-	-	"retained degrees of freedom (modes)"
 typedef	^	ParameterType	IntKi  	SttcSolve	-	-	-	"Solve dynamics about static equilibrium point (flag)"
 typedef	^	ParameterType	Logical ExtraMoment	-	-	-	"Add Extra lever arm contribution to interface reaction outputs"
+typedef	^	ParameterType	Logical FixedBottom	-	-	-	"True if Fixed bottom"
 typedef	^	ParameterType	ReKi	KMMDiag	{:}	-	-	"Diagonal coefficients of Kmm (OmegaM squared)"
 typedef	^	ParameterType	ReKi	CMMDiag	{:}	-	-	"Diagonal coefficients of Cmm (~2 Zeta OmegaM))"
 typedef	^	ParameterType	ReKi	MMB	{:}{:}	-	-	"Matrix after C-B reduction (transpose of MBM"

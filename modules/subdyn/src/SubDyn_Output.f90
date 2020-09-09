@@ -830,7 +830,6 @@ SUBROUTINE SD_Init_Jacobian(Init, p, u, y, InitOut, ErrStat, ErrMsg)
    dy = maxval(Init%Nodes(:,3))- minval(Init%Nodes(:,3))
    dz = maxval(Init%Nodes(:,4))- minval(Init%Nodes(:,4))
    maxDim = max(dx, dy, dz)
-   print*,'dx,dy,dz', dx, dy, dz, maxDim
    
    ! --- System dimension
    call Init_Jacobian_y(); if (Failed()) return

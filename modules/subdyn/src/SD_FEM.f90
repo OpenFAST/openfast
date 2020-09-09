@@ -1012,6 +1012,7 @@ SUBROUTINE AssembleKM(Init, p, ErrStat, ErrMsg)
    CALL AllocAry( Init%K, p%nDOF, p%nDOF , 'Init%K',  ErrStat2, ErrMsg2); if(Failed()) return; ! system stiffness matrix 
    CALL AllocAry( Init%M, p%nDOF, p%nDOF , 'Init%M',  ErrStat2, ErrMsg2); if(Failed()) return; ! system mass matrix 
    CALL AllocAry( Init%FG,p%nDOF,          'Init%FG', ErrStat2, ErrMsg2); if(Failed()) return; ! system gravity force vector 
+   CALL AllocAry( p%FG_full, p%nDOF,     'p%FG_full', ErrStat2, ErrMsg2); if(Failed()) return; ! system gravity force vector 
    Init%K  = 0.0_FEKi
    Init%M  = 0.0_FEKi
    Init%FG = 0.0_FEKi
@@ -1029,6 +1030,8 @@ SUBROUTINE AssembleKM(Init, p, ErrStat, ErrMsg)
       Init%K(IDOF, IDOF) = Init%K( IDOF, IDOF) + Ke(1:12,1:12)
       Init%M(IDOF, IDOF) = Init%M( IDOF, IDOF) + Me(1:12,1:12)
    ENDDO
+   ! Copy FG to FG_full since FG will be reduced later
+   p%FG_full(1:p%nDOF) = Init%FG(1:p%nDOF)
       
    ! Add concentrated mass to mass matrix
    DO I = 1, Init%nCMass
@@ -1102,31 +1105,89 @@ CONTAINS
    
 END SUBROUTINE AssembleKM
 
+!> Map control cable index to control channel index
+subroutine ControlCableMapping(Init, p, ErrStat, ErrMsg)
+   type(SD_InitType),            intent(in   ) :: Init        !< init
+   type(SD_ParameterType),       intent(inout) :: p           !< param
+   integer(IntKi),               intent(  out) :: ErrStat     !< Error status of the operation
+   character(*),                 intent(  out) :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+   ! Local variables
+   integer(IntKi)           :: i, nCC, idCProp !< index, number of controlable cables, id of Cable Prop
+   integer(IntKi)           :: ErrStat2
+   character(ErrMsgLen)     :: ErrMsg2
+   ErrMsg  = ""
+   ErrStat = ErrID_None
+
+   ! --- Count number of Controllable cables
+   nCC = 0
+   do i = 1, size(p%ElemProps)
+      if (p%ElemProps(i)%eType==idMemberCable) then
+         idCProp= p%Elems(i,iMProp)
+         if (Init%PropsC(idCProp, 5 )>0) then
+            !print*,'Cable Element',i,'controllable with channel',Init%PropsC(idCProp, 5 )
+            nCC=nCC+1
+         endif
+      endif
+   enddo
+   if (nCC>0) then
+      call WrScr('Number of controllable cables: '//trim(num2lstr(nCC)))
+   endif
+   call AllocAry( p%CtrlElem2Channel, nCC, 2, 'p%CtrlElem2Channel', ErrStat2, ErrMsg2); if(Failed()) return; ! Constant cable force
+
+   ! --- Store mapping 
+   nCC = 0
+   do i = 1, size(p%ElemProps)
+      if (p%ElemProps(i)%eType==idMemberCable) then
+         idCProp= p%Elems(i,iMProp)
+         if (Init%PropsC(idCProp, 5 )>0) then
+            nCC=nCC+1
+            p%CtrlElem2Channel(nCC, 1) = i ! Element index (in p%Elems and p%ElemProps)
+            p%CtrlElem2Channel(nCC, 2) = Init%PropsC(idCProp,5) ! Control channel
+         endif
+      endif
+   enddo
+contains
+   logical function Failed()
+        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ControlCableMapping') 
+        Failed =  ErrStat >= AbortErrLev
+   end function Failed
+end subroutine ControlCableMapping
+
 !> Init for control Cable force
 !! The change of cable forces due to the control is linear, so we just store a "unit" force vector
 !! We will just scale this vector at each time step based on the control input (Tcontrol):
 !!   Fcontrol =  (Tcontrol-T0) * Funit
-SUBROUTINE ControlCableForceInit(Init, p, m, ErrStat, ErrMsg)
-   TYPE(SD_InitType),            INTENT(INOUT) :: Init !< Remove me, kept just in case for now
-   TYPE(SD_ParameterType),       INTENT(IN   ) :: p
-   TYPE(SD_MiscVarType),         INTENT(INOUT) :: m
+!! We store it in "non-reduced" system since it will added to the external forces
+SUBROUTINE ControlCableForceInit(p, m, ErrStat, ErrMsg)
+   TYPE(SD_ParameterType),       INTENT(IN   ) :: p  !< Parameters 
+   TYPE(SD_MiscVarType),         INTENT(INOUT) :: m  !< Misc
    INTEGER(IntKi),               INTENT(  OUT) :: ErrStat     ! Error status of the operation
    CHARACTER(*),                 INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
    ! Local variables
+   INTEGER                  :: iCC, iElem
+   REAL(FEKi)               :: FCe(12) ! Pretension force from cable element
+   integer(IntKi), dimension(12) :: IDOF !  12 DOF indices in global unconstrained system
    INTEGER(IntKi)           :: ErrStat2
    CHARACTER(ErrMsgLen)     :: ErrMsg2
    ErrMsg  = ""
    ErrStat = ErrID_None
    
    ! Allocating necessary arrays
-   CALL AllocAry( m%FC_red      , p%nDOF_red, 'm%FC0_red', ErrStat2, ErrMsg2); if(Failed()) return; ! Constant cable force
-   CALL AllocAry( m%FC_red_unit , p%nDOF_red, 'm%FC_red' , ErrStat2, ErrMsg2); if(Failed()) return; ! Control cable force
-   m%FC_red      = 0.0_ReKi
-   m%FC_red_unit = 0.0_ReKi
+   CALL AllocAry( m%FC_unit , p%nDOF, 'm%FC0' , ErrStat2, ErrMsg2); if(Failed()) return; ! Control cable force
+   m%FC_unit = 0.0_ReKi
 
-   ! Setting up unit force vector 
-   call ControlCableForce_Unit(p, m%FC_red_unit, ErrStat2, ErrMsg2);  if(Failed()) return;
-   
+   ! loop over all elements, compute element matrices and assemble into global matrices
+   DO iCC = 1, size(p%CtrlElem2Channel,1) 
+      iElem = p%CtrlElem2Channel(iCC,1)
+      CALL ElemF_Cable(1.0_ReKi, p%ElemProps(iElem)%DirCos, FCe) !< NOTE: using unitary load T0=1.0_ReKi
+      ! --- Assembly in global unconstrained system
+      IDOF = p%ElemsDOF(1:12, iElem)
+      m%FC_unit( IDOF )    = m%FC_unit( IDOF ) + FCe(1:12) 
+   ENDDO
+   ! Transforming the vector into reduced, direct elimination system:
+   !FC_red = matmul(transpose(p%T_red), FC)
+   !if(allocated(FC)) deallocate(FC)
+
 CONTAINS
    LOGICAL FUNCTION Failed()
         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ControlCableForceInit') 
@@ -1134,67 +1195,35 @@ CONTAINS
    END FUNCTION Failed
 END SUBROUTINE ControlCableForceInit
 
-!> Init for control Cable force
-!! TODO TODO Expensive implementation for now
-SUBROUTINE ControlCableForce_Unit(p, FC_red, ErrStat, ErrMsg)
-   TYPE(SD_ParameterType),       INTENT(IN   ) :: p
-   real(ReKi), DIMENSION(:),     INTENT(INOUT) :: FC_red
-   INTEGER(IntKi),               INTENT(  OUT) :: ErrStat     ! Error status of the operation
-   CHARACTER(*),                 INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
-   ! Local variables
-   INTEGER                  :: I
-   real(FEKi), DIMENSION(:), allocatable :: FC
-   REAL(FEKi)               :: FCe(12) ! Pretension force from cable element
-   INTEGER(IntKi)           :: ErrStat2
-   CHARACTER(ErrMsgLen)     :: ErrMsg2
-   integer(IntKi), dimension(12) :: IDOF !  12 DOF indices in global unconstrained system
-   ErrMsg  = ""
-   ErrStat = ErrID_None
-   CALL AllocAry(FC     ,p%nDOF    , 'FC'     , ErrStat2, ErrMsg2); if(Failed()) return; ! Control cable force
-
-   ! loop over all elements, compute element matrices and assemble into global matrices
-   DO i = 1, size(p%ElemProps) ! TODO loop on cable only
-      if (p%ElemProps(i)%eType==idMemberCable) then
-         CALL ElemF_Cable(1.0_ReKi, p%ElemProps(i)%DirCos, FCe) !< NOTE: using unitary load T0=1.0_ReKi
-         ! --- Assembly in global unconstrained system
-         IDOF = p%ElemsDOF(1:12, i)
-         FC( IDOF )    = FC( IDOF ) + FCe(1:12) ! Note: gravity and pretension cable forces
-      endif
-   ENDDO
-   ! Transforming the vector into reduced, direct elimination system:
-   FC_red = matmul(transpose(p%T_red), FC)
-   if(allocated(FC)) deallocate(FC)
-
-CONTAINS
-   LOGICAL FUNCTION Failed()
-        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ControlCableForce') 
-        Failed =  ErrStat >= AbortErrLev
-   END FUNCTION Failed
-END SUBROUTINE ControlCableForce_Unit
-
-
-
-
-
 !> Add soil stiffness and mass to global system matrices
+!! Soil stiffness can come from two sources: 
+!!   - "SSI" matrices (specified at reaction nodes)
+!!   - "Soil" matrices (specified at Initalization)
 SUBROUTINE InsertSoilMatrices(M, K, NodesDOF, Init, p, ErrStat, ErrMsg, Substract)
    real(FEKi), dimension(:,:),   intent(inout) :: M
    real(FEKi), dimension(:,:),   intent(inout) :: K
    type(IList),dimension(:),     intent(in   ) :: NodesDOF !< Map from Node Index to DOF lists
-   type(SD_InitType),            intent(in   ) :: Init
+   type(SD_InitType),            intent(inout) :: Init ! TODO look for closest indices elsewhere
    type(SD_ParameterType),       intent(in   ) :: p
    integer(IntKi),               intent(  out) :: ErrStat     ! Error status of the operation
    character(*),                 intent(  out) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
    logical, optional,            intent(in   ) :: SubStract   ! If present, and if true, substract instead of adding
-   integer                    :: I, J, iiNode
+   integer                    :: I, J, iiNode, nDOF
    integer                    :: iDOF, jDOF, iNode  !< DOF and node indices
    real(FEKi), dimension(6,6) :: K_soil, M_soil ! Auxiliary matrices for soil
+   real(ReKi)                 :: Dist
    ErrMsg  = ""
    ErrStat = ErrID_None
+   ! --- SSI matrices
    ! TODO consider doing the 21 -> 6x6 conversion while reading
    ! 6x6 matrix goes to one node of one element only
    do iiNode = 1, p%nNodes_C ! loop on constrained nodes
       iNode = p%Nodes_C(iiNode,1)
+      nDOF=size(NodesDOF(iNode)%List)
+      if (nDOF/=6) then
+         ErrMsg='SSI soil matrix is to be inserted at SubDyn node '//Num2LStr(iNode)//', but this node has '//num2lstr(nDOF)//' DOFs';
+         ErrStat=ErrID_Fatal; return
+      endif
       call Array21_to_6by6(Init%SSIK(:,iiNode), K_soil)
       call Array21_to_6by6(Init%SSIM(:,iiNode), M_soil)
       if (present(Substract)) then
@@ -1212,6 +1241,46 @@ SUBROUTINE InsertSoilMatrices(M, K, NodesDOF, Init, p, ErrStat, ErrMsg, Substrac
          enddo
       enddo
    enddo
+   ! --- "Soil" matrices
+   if (allocated(Init%Soil_K)) then
+      do iiNode = 1,size(Init%Soil_Points,2)
+         ! --- Find closest node
+         call FindClosestNodes(Init%Soil_Points(1:3,iiNode), Init%Nodes, iNode, Dist);
+         if (Dist>0.1_ReKi) then
+            ErrMsg='Closest SubDyn Node is node '//Num2LStr(iNode)//', which is more than 0.1m away from soildyn point '//num2lstr(iiNode);
+            ErrStat=ErrID_Fatal; return
+         endif
+         Init%Soil_Nodes(iiNode) = iNode
+         ! --- Insert/remove from matrices
+         nDOF=size(NodesDOF(iNode)%List)
+         if (nDOF/=6) then
+            ErrMsg='Soil matrix is to be inserted at SubDyn node '//Num2LStr(iNode)//', but this node has '//num2lstr(nDOF)//' DOFs';
+            ErrStat=ErrID_Fatal; return
+         endif
+         K_soil = Init%Soil_K(1:6,1:6,iiNode)
+         if (present(Substract)) then
+            if (Substract) then
+               K_soil = - K_soil
+            endif
+         endif
+         do I = 1, 6
+            iDOF = NodesDOF(iNode)%List(I)   ! DOF index
+            do J = 1, 6
+               jDOF = NodesDOF(iNode)%List(J)   ! DOF index
+               K(iDOF, jDOF) = K(iDOF, jDOF) + K_soil(I,J)
+            enddo
+         enddo
+         if (.not.present(Substract)) then
+            CALL WrScr('   Soil stiffness inserted at SubDyn node '//trim(Num2LStr(iNode)))
+            print*,'    ',K_Soil(1,1:6)
+            print*,'    ',K_Soil(2,1:6)
+            print*,'    ',K_Soil(3,1:6)
+            print*,'    ',K_Soil(4,1:6)
+            print*,'    ',K_Soil(5,1:6)
+            print*,'    ',K_Soil(6,1:6)
+         endif
+      enddo
+   endif
 contains
    !> Convert a flatten array of 21 values into a symmetric  6x6 matrix
    SUBROUTINE Array21_to_6by6(A21, M66)
@@ -1230,8 +1299,27 @@ contains
    END SUBROUTINE Array21_to_6by6
 END SUBROUTINE InsertSoilMatrices
 
-
-
+!------------------------------------------------------------------------------------------------------
+!> Find closest node index to a point, returns distance as well
+SUBROUTINE FindClosestNodes(Point, Nodes, iNode, Dist)
+   real(ReKi), dimension(3),     intent(IN   ) :: Point  !< Point coordinates
+   real(ReKi), dimension(:,:),   intent(IN   ) :: Nodes  !< List of nodes, Positions are in columns 2-4...
+   integer(IntKi),               intent(  OUT) :: iNode  !< Index of closest node
+   real(ReKi),                   intent(  OUT) :: Dist   !< Distance from Point to node iNode
+   integer(IntKi) :: I
+   real(ReKi) :: min_dist, loc_dist
+   ! 
+   min_dist=999999._ReKi
+   iNode=-1
+   do i = 1, size(Nodes,1)
+      loc_dist = sqrt((Point(1) - Nodes(i,2))**2 + (Point(2) - Nodes(i,3))**2+ (Point(3) - Nodes(i,4))**2) 
+      if (loc_dist<min_dist) then
+         iNode=i
+         min_dist = loc_dist
+      endif
+   enddo
+   Dist=min_dist
+END SUBROUTINE FindClosestNodes
 
 !------------------------------------------------------------------------------------------------------
 !> Build transformation matrix T, such that x= T.x~ where x~ is the reduced vector of DOF
@@ -1935,6 +2023,29 @@ SUBROUTINE InsertJointStiffDamp(p, Init, ErrStat, ErrMsg)
       endif
    enddo
 END SUBROUTINE InsertJointStiffDamp
+
+!> Returns true if the substructure can be considered "fixed bottom"
+!! This is relevant for the ExtraMoment calculation where different reference positions 
+!! are used depending if translation is fixed of free.
+!! As defined in the documentation:
+!! The structure is considered “fixed” at the sea bed if at least one reaction node has:
+!!  - the 4 degrees of freedom accounting for the x-y translation and rotation are fixed 
+!!  OR
+!!  -  an additional stiffness matrix via an SSI input file
+LOGICAL FUNCTION isFixedBottom(Init, p) result(bFixed)
+   TYPE(SD_InitType),  INTENT(IN   ) :: Init
+   TYPE(SD_ParameterType),INTENT(IN   ) :: p
+   INTEGER(IntKi) :: i, nFixed
+   nFixed=0
+   do i =1,size(p%Nodes_C,1)
+      if (ALL(p%Nodes_C(I,2:5)==idBC_Fixed)) then
+         nFixed=nFixed+1
+      elseif (Init%SSIfile(I)/='') then
+         nFixed=nFixed+1
+      endif
+   enddo
+   bFixed = nFixed >=1
+END FUNCTION isFixedBottom
 
 SUBROUTINE ElemM(ep, Me)
    TYPE(ElemPropType), INTENT(IN) :: eP        !< Element Property
