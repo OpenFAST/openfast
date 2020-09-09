@@ -1155,6 +1155,12 @@ subroutine UA_ValidateInput(InitInp, ErrStat, ErrMsg)
    ErrStat = ErrID_None
    ErrMsg  = ""
 
+   !>>> remove after this feature gets tested better:
+   if (InitInp%UAMod == UA_HGM ) then
+      call SetErrStat( ErrID_Fatal, "UAMod cannot be 4 (continuous HGM model) in this version of OpenFAST.", ErrStat, ErrMsg, RoutineName )
+   end if
+   !<<<
+
    if (InitInp%UAMod < UA_Gonzalez .or. InitInp%UAMod > UA_HGM ) call SetErrStat( ErrID_Fatal, &
       "In this version, UAMod must be 2 (Gonzalez's variant), 3 (Minnema/Pierce variant), or 4 (continuous HGM model).", ErrStat, ErrMsg, RoutineName )  ! NOTE: for later-  1 (baseline/original) 
       

@@ -75,16 +75,6 @@ program AeroDyn_Driver
    
 !      call WrScr( NewLine//'Running case '//trim(num2lstr(iCase))//' of '//trim(num2lstr(DvrData%NumCases))//'.' )
    
-!      call WrScr ('   WndSpeed='//trim(num2lstr(DvrData%Cases(iCase)%WndSpeed(1)))//&
-!               ' m/s; ShearExp='//trim(num2lstr(DvrData%Cases(iCase)%ShearExp(1)))//&
-!                   '; RotSpeed='//trim(num2lstr(DvrData%Cases(iCase)%RotSpeed(1)*RPS2RPM))//&
-!                  ' rpm; Pitch='//trim(num2lstr(DvrData%Cases(iCase)%Pitch(1)*R2D))//&
-!                    ' deg; Yaw='//trim(num2lstr(DvrData%Cases(iCase)%Yaw(1)*R2D))//&
-!                     ' deg; dT='//trim(num2lstr(DvrData%Cases(iCase)%dT))//&
-!                     ' s; Tmax='//trim(num2lstr(DvrData%Cases(iCase)%numSteps * DvrData%Cases(iCase)%dT))//&
-!                 ' s; numSteps='//trim(num2lstr(DvrData%Cases(iCase)%numSteps)) )
-      
-      
          ! Set the Initialization input data for AeroDyn based on the Driver input file data, and initialize AD
          ! (this also initializes inputs to AD for first time step)
       dT_Dvr   = DvrData%Cases(iCase)%dT
@@ -99,9 +89,8 @@ program AeroDyn_Driver
          end if
                                     
       if (iCase.eq.1) then
-      call Dvr_InitializeOutputFile(DvrData%numBlades, iCase, DvrData%Cases(iCase), DvrData%OutFileData, errStat, errMsg)
-         call CheckError()
-         
+         call Dvr_InitializeOutputFile(DvrData%numBlades, iCase, DvrData%Cases(iCase), DvrData%OutFileData, errStat, errMsg)
+            call CheckError()
       endif
       
       RotAzimuth = 0.0_ReKi
@@ -124,7 +113,7 @@ program AeroDyn_Driver
 
 
 
-         call Dvr_WriteOutputLine(DvrData%OutFileData, nt, RotAzimuth, AD%y%WriteOutput, DvrData%Cases(iCase), errStat, errMsg)
+         call Dvr_WriteOutputLine(DvrData%OutFileData, nt, RotAzimuth, AD%y%WriteOutput, DvrData%Cases(iCase), iCase, errStat, errMsg)
             call CheckError()
 
 
@@ -138,21 +127,7 @@ program AeroDyn_Driver
                   
       end do !nt=1,numSteps
       
-      if (iCase.EQ.DvrData%NumCases) then
-         call AD_End( AD%u(1), AD%p, AD%x, AD%xd, AD%z, AD%OtherState, AD%y, AD%m, errStat, errMsg )
-         AD_Initialized = .false.         
-         call CheckError()
-!         if (iCase.EQ.DvrData%NumCases) then
-         close( DvrData%OutFileData%unOutFile )
-         
-               
-      do j = 2, numInp
-         call AD_DestroyInput (AD%u(j),  errStat, errMsg)
-            call CheckError()
-      end do
-      endif   
    end do !iCase = 1, DvrData%NumCases
-   
    
    call Dvr_End()
    

@@ -820,7 +820,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, u, m, y, OtherState, Indx, ErrStat, ErrM
                   DO IdxBlade=1,p%BldNd_BladesOut
                      DO IdxNode=1,p%NumBlNds 
                         if (OtherState%BEMT%ValidPhi(IdxNode,IdxBlade)) then
-                           y%WriteOutput( OutIdx ) = 0.0_ReKi
+                           y%WriteOutput( OutIdx ) = 1.0_ReKi - m%BEMT%BEM_weight
                         else
                            y%WriteOutput( OutIdx ) = 1.0_ReKi
                         end if

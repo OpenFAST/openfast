@@ -709,6 +709,8 @@ subroutine BEMT_ReInit(p,x,xd,z,OtherState,misc,AFinfo,ErrStat,ErrMsg)
    misc%useFrozenWake = .FALSE.
    misc%FirstWarn_Skew = .true.
    misc%FirstWarn_Phi = .true.
+   misc%FirstWarn_BEMoff = .true.
+   misc%BEM_weight = 0.0_ReKi
    
    OtherState%DBEMT%tau1 = 0.0_ReKi !we're going to output this value, so let's initialize it
    
@@ -951,7 +953,7 @@ subroutine BEMT_UpdateStates( t, n, u1, u2,  p, x, xd, z, OtherState, AFInfo, m,
             !............................................
             ! If TSR is too low, (start to) turn off induction
             !............................................
-            call check_turnOffBEMT(p, u2, m%axInduction, m%tanInduction)
+            call check_turnOffBEMT(p, u2, m%BEM_weight, m%axInduction, m%tanInduction, m%FirstWarn_BEMoff)
             
       end if
    
@@ -1262,21 +1264,29 @@ subroutine calculate_Inductions_from_DBEMT(i, j, Vx, Vy, t, p, u, x, OtherState,
 
 end subroutine calculate_Inductions_from_DBEMT
 !----------------------------------------------------------------------------------------------------------------------------------
-subroutine check_turnOffBEMT(p, u, axInduction, tanInduction)
+subroutine check_turnOffBEMT(p, u, Weight, axInduction, tanInduction, FirstWarn)
 
    type(BEMT_ParameterType),        intent(in   ) :: p                  !< Parameters
    type(BEMT_InputType),            intent(in   ) :: u                  !< Inputs at t
+   real(ReKi),                      intent(  out) :: Weight             !< scaling value from BEM-to-non_BEM solution (blends inductions from BEMT and non-BEMT[zeros])
    real(ReKi),                      intent(inout) :: axInduction(:,:)   !< axial induction
    real(ReKi),                      intent(inout) :: tanInduction(:,:)  !< tangential induction
+   logical,                         intent(inout) :: FirstWarn          !< Whether BEM had a warning about being shut off
 
    integer(IntKi)                                 :: i                  !< blade node counter
    integer(IntKi)                                 :: j                  !< blade counter
 
-   real(ReKi)                                     :: Weight             !< scaling value from BEM-to-non_BEM solution (blends inductions from BEMT and non-BEMT[zeros])
-
    if( u%TSR < BEMT_upperBoundTSR ) then
    
       Weight = BlendCosine( u%TSR, BEMT_lowerBoundTSR, BEMT_upperBoundTSR )
+      
+      if (FirstWarn) then
+         if (Weight < 1.0_ReKi) then
+               call WrScr( 'The BEM solution is being turned off due to low TSR.  (TSR = ' &
+                  //TRIM(Num2Lstr(u%TSR))//'). This warning will not be repeated though the condition may persist. (See GeomPhi output channel.)' )
+            FirstWarn = .false.
+         end if
+      end if
    
       do j = 1,p%numBlades ! Loop through all blades
          do i = 1,p%numBladeNodes ! Loop through the blade nodes / elements
@@ -1286,6 +1296,8 @@ subroutine check_turnOffBEMT(p, u, axInduction, tanInduction)
          end do
       end do
       
+   else
+      Weight = 1.0_ReKi
    end if
 
 end subroutine check_turnOffBEMT
@@ -1562,7 +1574,7 @@ subroutine BEMT_CalcOutput_Inductions( InputIndex, t, CalculateDBEMTInputs, Appl
             !............................................
             ! If TSR is too low, (start to) turn off induction
             !............................................
-            call check_turnOffBEMT(p, u, axInduction, tanInduction)
+            call check_turnOffBEMT(p, u, m%BEM_weight, axInduction, tanInduction, m%FirstWarn_BEMoff)
          end if
 
       end if ! UseFrozenWake

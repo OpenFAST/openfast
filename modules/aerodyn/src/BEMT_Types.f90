@@ -101,6 +101,7 @@ IMPLICIT NONE
   TYPE, PUBLIC :: BEMT_MiscVarType
     LOGICAL  :: FirstWarn_Skew      !< flag so invalid skew warning doesn't get repeated forever [-]
     LOGICAL  :: FirstWarn_Phi      !< flag so Invalid Phi warning doesn't get repeated forever [-]
+    LOGICAL  :: FirstWarn_BEMoff      !< flag to warn the BEM was turned off [-]
     TYPE(UA_MiscVarType)  :: UA      !< misc vars for UnsteadyAero [-]
     TYPE(DBEMT_MiscVarType)  :: DBEMT      !< misc vars for DBEMT [-]
     TYPE(UA_OutputType)  :: y_UA      !< outputs from UnsteadyAero [-]
@@ -115,6 +116,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: phi      !< temp variable used in update states for returning phi (to allow computing inputs and states at multiple times) [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: chi      !< temp variable used in update states for returning chi (to allow calling same routine from CalcOutput and UpdateStates) [-]
     LOGICAL , DIMENSION(:,:), ALLOCATABLE  :: ValidPhi      !< temp variable used in calcOutput for ValidPhi (to allow calling same routine from CalcOutput and UpdateStates) [-]
+    REAL(ReKi)  :: BEM_weight 
   END TYPE BEMT_MiscVarType
 ! =======================
 ! =========  BEMT_ParameterType  =======
@@ -2160,6 +2162,7 @@ ENDIF
    ErrMsg  = ""
     DstMiscData%FirstWarn_Skew = SrcMiscData%FirstWarn_Skew
     DstMiscData%FirstWarn_Phi = SrcMiscData%FirstWarn_Phi
+    DstMiscData%FirstWarn_BEMoff = SrcMiscData%FirstWarn_BEMoff
       CALL UA_CopyMisc( SrcMiscData%UA, DstMiscData%UA, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
@@ -2320,6 +2323,7 @@ IF (ALLOCATED(SrcMiscData%ValidPhi)) THEN
   END IF
     DstMiscData%ValidPhi = SrcMiscData%ValidPhi
 ENDIF
+    DstMiscData%BEM_weight = SrcMiscData%BEM_weight
  END SUBROUTINE BEMT_CopyMisc
 
  SUBROUTINE BEMT_DestroyMisc( MiscData, ErrStat, ErrMsg )
@@ -2413,6 +2417,7 @@ ENDIF
   Int_BufSz  = 0
       Int_BufSz  = Int_BufSz  + 1  ! FirstWarn_Skew
       Int_BufSz  = Int_BufSz  + 1  ! FirstWarn_Phi
+      Int_BufSz  = Int_BufSz  + 1  ! FirstWarn_BEMoff
    ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
       Int_BufSz   = Int_BufSz + 3  ! UA: size of buffers for each call to pack subtype
       CALL UA_PackMisc( Re_Buf, Db_Buf, Int_Buf, InData%UA, ErrStat2, ErrMsg2, .TRUE. ) ! UA 
@@ -2556,6 +2561,7 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*2  ! ValidPhi upper/lower bounds for each dimension
       Int_BufSz  = Int_BufSz  + SIZE(InData%ValidPhi)  ! ValidPhi
   END IF
+      Re_BufSz   = Re_BufSz   + 1  ! BEM_weight
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -2586,6 +2592,8 @@ ENDIF
     IntKiBuf(Int_Xferred) = TRANSFER(InData%FirstWarn_Skew, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%FirstWarn_Phi, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%FirstWarn_BEMoff, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
       CALL UA_PackMisc( Re_Buf, Db_Buf, Int_Buf, InData%UA, ErrStat2, ErrMsg2, OnlySize ) ! UA 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -2920,6 +2928,8 @@ ENDIF
         END DO
       END DO
   END IF
+    ReKiBuf(Re_Xferred) = InData%BEM_weight
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE BEMT_PackMisc
 
  SUBROUTINE BEMT_UnPackMisc( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -2954,6 +2964,8 @@ ENDIF
     OutData%FirstWarn_Skew = TRANSFER(IntKiBuf(Int_Xferred), OutData%FirstWarn_Skew)
     Int_Xferred = Int_Xferred + 1
     OutData%FirstWarn_Phi = TRANSFER(IntKiBuf(Int_Xferred), OutData%FirstWarn_Phi)
+    Int_Xferred = Int_Xferred + 1
+    OutData%FirstWarn_BEMoff = TRANSFER(IntKiBuf(Int_Xferred), OutData%FirstWarn_BEMoff)
     Int_Xferred = Int_Xferred + 1
       Buf_size=IntKiBuf( Int_Xferred )
       Int_Xferred = Int_Xferred + 1
@@ -3378,6 +3390,8 @@ ENDIF
         END DO
       END DO
   END IF
+    OutData%BEM_weight = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE BEMT_UnPackMisc
 
  SUBROUTINE BEMT_CopyParam( SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg )

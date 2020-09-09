@@ -55,14 +55,23 @@ subroutine DBEMT_ValidateInitInp(interval, InitInp, errStat, errMsg)
    errMsg  = ""
    
    if ( interval <= sqrt(epsilon(1.0_ReKi)) ) call SetErrStat( ErrID_Fatal, " The timestep size for DBEMT (interval) must be larger than sqrt(epsilon).", ErrStat, ErrMsg, RoutineName)
+   
+   !>>> remove after this feature gets tested better:
+   if (InitInp%DBEMT_Mod == DBEMT_cont_tauConst ) then
+      call SetErrStat( ErrID_Fatal, "DBEMT_Mod cannot be 3 in this version of OpenFAST.", ErrStat, ErrMsg, RoutineName )
+      return
+   end if
+   !<<<
+   
    if ( (InitInp%DBEMT_Mod .ne. DBEMT_tauConst) .and. (InitInp%DBEMT_Mod .ne. DBEMT_tauVaries) .and. (InitInp%DBEMT_Mod .ne. DBEMT_cont_tauConst)) then
       call SetErrStat( ErrID_Fatal, " DBEMT_Mod must be set to 1, 2, or 3.", ErrStat, ErrMsg, RoutineName)
    end if
    
    if (InitInp%numBlades < 1) call SetErrStat( ErrID_Fatal, " InitInp%numBlades must set to 1 or more.", ErrStat, ErrMsg, RoutineName)
    if (InitInp%numNodes < 2) call SetErrStat( ErrID_Fatal, " InitInp%numNodes must set to 2 or more.", ErrStat, ErrMsg, RoutineName)
-  
-   if ( InitInp%DBEMT_Mod == DBEMT_tauConst .or. InitInp%DBEMT_Mod == DBEMT_cont_tauConst )then
+
+
+   if ( InitInp%DBEMT_Mod == DBEMT_tauConst .or. InitInp%DBEMT_Mod == DBEMT_cont_tauConst ) then
    
       if (InitInp%tau1_const <= 0.0_ReKi)  call SetErrStat( ErrID_Fatal, " InitInp%tau1_const must be greater than zero.", ErrStat, ErrMsg, RoutineName)
         ! Default = 0.33_ReKi

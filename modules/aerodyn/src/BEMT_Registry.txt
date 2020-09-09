@@ -91,6 +91,7 @@ typedef   ^                            OtherStateType                Logical    
 #   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
 typedef   ^                            MiscVarType                   Logical                  FirstWarn_Skew                  -             -         -        "flag so invalid skew warning doesn't get repeated forever" -
 typedef   ^                            MiscVarType                   Logical                  FirstWarn_Phi                   -             -         -        "flag so Invalid Phi warning doesn't get repeated forever" -
+typedef   ^                            MiscVarType                   Logical                  FirstWarn_BEMoff                -             -         -        "flag to warn the BEM was turned off" -
 typedef   ^                            MiscVarType                   UA_MiscVarType           UA                              -             -         -        "misc vars for UnsteadyAero"        -
 typedef   ^                            MiscVarType                   DBEMT_MiscVarType        DBEMT                           -             -         -        "misc vars for DBEMT"        -
 typedef   ^                            MiscVarType                   UA_OutputType            y_UA                            -             -         -        "outputs from UnsteadyAero"        -
@@ -105,6 +106,7 @@ typedef   ^                            MiscVarType                   ReKi       
 typedef   ^                            MiscVarType                   ReKi                     phi                            {:}{:}         -         -        "temp variable used in update states for returning phi (to allow computing inputs and states at multiple times)" -
 typedef   ^                            MiscVarType                   ReKi                     chi                            {:}{:}         -         -        "temp variable used in update states for returning chi (to allow calling same routine from CalcOutput and UpdateStates)" -
 typedef   ^                            MiscVarType                   Logical                  ValidPhi                       {:}{:}         -         -        "temp variable used in calcOutput for ValidPhi (to allow calling same routine from CalcOutput and UpdateStates)" -
+typedef   ^                            MiscVarType                   ReKi                     BEM_weight                                    -         -        "temp variable used to turn off BEM for low TSR and/or large skew angles" -
 
 # ..... Parameters ................................................................................................................
 # Define parameters here:

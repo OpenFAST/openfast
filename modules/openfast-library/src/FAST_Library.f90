@@ -497,13 +497,19 @@ subroutine FAST_OpFM_Init(iTurb, TMax, InputFileName_c, TurbID, NumSC2Ctrl, NumC
    ExternInitData%NumActForcePtsTower = NumActForcePtsTower
 
    CALL FAST_InitializeAll_T( t_initial, 1_IntKi, Turbine(iTurb), ErrStat, ErrMsg, InputFileName, ExternInitData )
-   
+
       ! set values for return to OpenFOAM
    AbortErrLev_c = AbortErrLev   
    dt_c          = Turbine(iTurb)%p_FAST%dt
    ErrStat_c     = ErrStat
    ErrMsg        = TRIM(ErrMsg)//C_NULL_CHAR
    ErrMsg_c      = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_c )
+
+   IF ( ErrStat >= AbortErrLev ) THEN
+      CALL WrScr( "Error in FAST_OpFM_Init:FAST_InitializeAll_T" // TRIM(ErrMsg) )
+      IF (ALLOCATED(Turbine)) DEALLOCATE(Turbine)
+      RETURN
+   END IF
    
    call SetOpenFOAM_pointers(iTurb, OpFM_Input_from_FAST, OpFM_Output_to_FAST, SC_Input_from_FAST, SC_Output_to_FAST)
                         
