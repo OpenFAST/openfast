@@ -671,9 +671,9 @@ SUBROUTINE StC_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
       CHARACTER(*),                  INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
       !  local variables for force calcualtions in X-DOF, Y-DOF, and XY-DOF
-      real(ReKi), dimension(3)   :: F_scX_P
-      real(ReKi), dimension(3)   :: F_scY_P
-      real(ReKi), dimension(3)   :: F_scXY_P
+      real(ReKi), dimension(3)   :: F_X_P
+      real(ReKi), dimension(3)   :: F_Y_P
+      real(ReKi), dimension(3)   :: F_XY_P
 
       !  NOTE: the following two sets of variables could likely be combined into arrays
       !        that could be more easily used with array functions like MATMUL, cross_product,
@@ -725,21 +725,21 @@ SUBROUTINE StC_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
 
          ! StrucCtrl external forces of dependent degrees:
          do i_pt=1,p%NumMeshPts
-            F_scX_P(2) = - p%M_X * ( m%a_G(2,i_pt) - m%rddot_P(2,i_pt) - (m%alpha_P(3,i_pt) + m%omega_P(1,i_pt)*m%omega_P(2,i_pt))*x%stc_x(1,i_pt) - 2*m%omega_P(3,i_pt)*x%stc_x(2,i_pt) )
-            F_scX_P(3) = - p%M_X * ( m%a_G(3,i_pt) - m%rddot_P(3,i_pt) + (m%alpha_P(2,i_pt) - m%omega_P(1,i_pt)*m%omega_P(3,i_pt))*x%stc_x(1,i_pt) + 2*m%omega_P(2,i_pt)*x%stc_x(2,i_pt) )
+            F_X_P(2) = - p%M_X * ( m%a_G(2,i_pt) - m%rddot_P(2,i_pt) - (m%alpha_P(3,i_pt) + m%omega_P(1,i_pt)*m%omega_P(2,i_pt))*x%StC_x(1,i_pt) - 2*m%omega_P(3,i_pt)*x%StC_x(2,i_pt) )
+            F_X_P(3) = - p%M_X * ( m%a_G(3,i_pt) - m%rddot_P(3,i_pt) + (m%alpha_P(2,i_pt) - m%omega_P(1,i_pt)*m%omega_P(3,i_pt))*x%StC_x(1,i_pt) + 2*m%omega_P(2,i_pt)*x%StC_x(2,i_pt) )
 
-            F_scY_P(1) = - p%M_Y * ( m%a_G(1,i_pt) - m%rddot_P(1,i_pt) + (m%alpha_P(3,i_pt) - m%omega_P(1,i_pt)*m%omega_P(2,i_pt))*x%stc_x(3,i_pt) + 2*m%omega_P(3,i_pt)*x%stc_x(4,i_pt) )
-            F_scY_P(3) = - p%M_Y * ( m%a_G(3,i_pt) - m%rddot_P(3,i_pt) - (m%alpha_P(1,i_pt) + m%omega_P(2,i_pt)*m%omega_P(3,i_pt))*x%stc_x(3,i_pt) - 2*m%omega_P(1,i_pt)*x%stc_x(4,i_pt) )
+            F_Y_P(1) = - p%M_Y * ( m%a_G(1,i_pt) - m%rddot_P(1,i_pt) + (m%alpha_P(3,i_pt) - m%omega_P(1,i_pt)*m%omega_P(2,i_pt))*x%StC_x(3,i_pt) + 2*m%omega_P(3,i_pt)*x%StC_x(4,i_pt) )
+            F_Y_P(3) = - p%M_Y * ( m%a_G(3,i_pt) - m%rddot_P(3,i_pt) - (m%alpha_P(1,i_pt) + m%omega_P(2,i_pt)*m%omega_P(3,i_pt))*x%StC_x(3,i_pt) - 2*m%omega_P(1,i_pt)*x%StC_x(4,i_pt) )
 
             ! inertial contributions from mass of tuned mass dampers and acceleration of point
             ! forces and moments in local coordinates
-            m%F_P(1,i_pt) =  p%K_X * x%stc_x(1,i_pt) + m%C_ctrl(1,i_pt) * x%stc_x(2,i_pt) + m%C_Brake(1,i_pt) * x%stc_x(2,i_pt) - m%F_stop(1,i_pt) - m%F_ext(1,i_pt) - m%F_fr(1,i_pt) - F_scY_P(1) + m%F_table(1,i_pt)
-            m%F_P(2,i_pt) =  p%K_Y * x%stc_x(3,i_pt) + m%C_ctrl(2,i_pt) * x%stc_x(4,i_pt) + m%C_Brake(2,i_pt) * x%stc_x(4,i_pt) - m%F_stop(2,i_pt) - m%F_ext(2,i_pt) - m%F_fr(2,i_pt) - F_scX_P(2) + m%F_table(2,i_pt)
-            m%F_P(3,i_pt) = - F_scX_P(3) - F_scY_P(3)
+            m%F_P(1,i_pt) =  p%K_X * x%StC_x(1,i_pt) + m%C_ctrl(1,i_pt) * x%StC_x(2,i_pt) + m%C_Brake(1,i_pt) * x%StC_x(2,i_pt) - m%F_stop(1,i_pt) - m%F_ext(1,i_pt) - m%F_fr(1,i_pt) - F_Y_P(1) + m%F_table(1,i_pt)
+            m%F_P(2,i_pt) =  p%K_Y * x%StC_x(3,i_pt) + m%C_ctrl(2,i_pt) * x%StC_x(4,i_pt) + m%C_Brake(2,i_pt) * x%StC_x(4,i_pt) - m%F_stop(2,i_pt) - m%F_ext(2,i_pt) - m%F_fr(2,i_pt) - F_X_P(2) + m%F_table(2,i_pt)
+            m%F_P(3,i_pt) = - F_X_P(3) - F_Y_P(3)
 
-            m%M_P(1,i_pt) =  - F_scY_P(3)  * x%stc_x(3,i_pt)
-            m%M_P(2,i_pt) =    F_scX_P(3)  * x%stc_x(1,i_pt)
-            m%M_P(3,i_pt) =  - F_scY_P(1)  * x%stc_x(3,i_pt) + F_scX_P(2) * x%stc_x(1,i_pt)
+            m%M_P(1,i_pt) =  - F_Y_P(3)  * x%StC_x(3,i_pt)
+            m%M_P(2,i_pt) =    F_X_P(3)  * x%StC_x(1,i_pt)
+            m%M_P(3,i_pt) =  - F_Y_P(1)  * x%StC_x(3,i_pt) + F_X_P(2) * x%StC_x(1,i_pt)
 
             ! forces and moments in global coordinates
             y%Mesh(i_pt)%Force(:,1) =  matmul(transpose(u%Mesh(i_pt)%Orientation(:,:,1)),m%F_P(1:3,i_pt))
@@ -752,23 +752,23 @@ SUBROUTINE StC_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
 
          ! StrucCtrl external forces of dependent degrees:
          do i_pt=1,p%NumMeshPts
-            F_scXY_P(1) = 0
-            F_scXY_P(2) = 0
-            F_scXY_P(3) = - p%M_XY * (  m%a_G(3,i_pt) - m%rddot_P(3,i_pt)                                                     &
-                                                - (m%alpha_P(1,i_pt) + m%omega_P(2,i_pt)*m%omega_P(3,i_pt))*x%stc_x(3,i_pt)   &
-                                                + (m%alpha_P(2,i_pt) - m%omega_P(1,i_pt)*m%omega_P(3,i_pt))*x%stc_x(1,i_pt)   &
-                                                - 2*m%omega_P(1,i_pt)*x%stc_x(4,i_pt)                                         &
-                                                + 2*m%omega_P(2,i_pt)*x%stc_x(2,i_pt)       )
+            F_XY_P(1) = 0
+            F_XY_P(2) = 0
+            F_XY_P(3) = - p%M_XY * (  m%a_G(3,i_pt) - m%rddot_P(3,i_pt)                                                     &
+                                                - (m%alpha_P(1,i_pt) + m%omega_P(2,i_pt)*m%omega_P(3,i_pt))*x%StC_x(3,i_pt)   &
+                                                + (m%alpha_P(2,i_pt) - m%omega_P(1,i_pt)*m%omega_P(3,i_pt))*x%StC_x(1,i_pt)   &
+                                                - 2*m%omega_P(1,i_pt)*x%StC_x(4,i_pt)                                         &
+                                                + 2*m%omega_P(2,i_pt)*x%StC_x(2,i_pt)       )
 
             ! inertial contributions from mass of tuned mass dampers and acceleration of point
             ! forces and moments in local coordinates
-            m%F_P(1,i_pt) =  p%K_X * x%stc_x(1,i_pt) + m%C_ctrl(1,i_pt) * x%stc_x(2,i_pt) + m%C_Brake(1,i_pt) * x%stc_x(2,i_pt) - m%F_stop(1,i_pt) - m%F_ext(1,i_pt) - m%F_fr(1,i_pt) - F_scXY_P(1) + m%F_table(1,i_pt)*(m%F_k(1,i_pt))
-            m%F_P(2,i_pt) =  p%K_Y * x%stc_x(3,i_pt) + m%C_ctrl(2,i_pt) * x%stc_x(4,i_pt) + m%C_Brake(2,i_pt) * x%stc_x(4,i_pt) - m%F_stop(2,i_pt) - m%F_ext(2,i_pt) - m%F_fr(2,i_pt) - F_scXY_P(2) + m%F_table(2,i_pt)*(m%F_k(2,i_pt))
-            m%F_P(3,i_pt) = - F_scXY_P(3)
+            m%F_P(1,i_pt) =  p%K_X * x%StC_x(1,i_pt) + m%C_ctrl(1,i_pt) * x%StC_x(2,i_pt) + m%C_Brake(1,i_pt) * x%StC_x(2,i_pt) - m%F_stop(1,i_pt) - m%F_ext(1,i_pt) - m%F_fr(1,i_pt) - F_XY_P(1) + m%F_table(1,i_pt)*(m%F_k(1,i_pt))
+            m%F_P(2,i_pt) =  p%K_Y * x%StC_x(3,i_pt) + m%C_ctrl(2,i_pt) * x%StC_x(4,i_pt) + m%C_Brake(2,i_pt) * x%StC_x(4,i_pt) - m%F_stop(2,i_pt) - m%F_ext(2,i_pt) - m%F_fr(2,i_pt) - F_XY_P(2) + m%F_table(2,i_pt)*(m%F_k(2,i_pt))
+            m%F_P(3,i_pt) = - F_XY_P(3)
 
-            m%M_P(1,i_pt) = - F_scXY_P(3) * x%stc_x(3,i_pt)
-            m%M_P(2,i_pt) =   F_scXY_P(3) * x%stc_x(1,i_pt)
-            m%M_P(3,i_pt) = - F_scXY_P(1) * x%stc_x(3,i_pt) + F_scXY_P(2) * x%stc_x(1,i_pt)
+            m%M_P(1,i_pt) = - F_XY_P(3) * x%StC_x(3,i_pt)
+            m%M_P(2,i_pt) =   F_XY_P(3) * x%StC_x(1,i_pt)
+            m%M_P(3,i_pt) = - F_XY_P(1) * x%StC_x(3,i_pt) + F_XY_P(2) * x%StC_x(1,i_pt)
 
             ! forces and moments in global coordinates
             y%Mesh(i_pt)%Force(:,1) =  matmul(transpose(u%Mesh(i_pt)%Orientation(:,:,1)),m%F_P(1:3,i_pt))
@@ -779,96 +779,96 @@ SUBROUTINE StC_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
 
          do i_pt=1,p%NumMeshPts
             !fore-aft TLCD external forces of dependent degrees
-            F_x_tlcd_WR_N = p%rho_FA*p%area_FA*((p%L_FA-p%B_FA)/2+x%stc_x(1,i_pt))*(                           &
+            F_x_tlcd_WR_N = p%rho_X*p%area_X*((p%L_X-p%B_X)/2+x%StC_x(1,i_pt))*(                           &
                                        m%rddot_P(1,i_pt)                                                       &
-                                    +2*m%omega_P(2,i_pt)*x%stc_x(2,i_pt)                                       &
-                                      +m%alpha_P(2,i_pt)*((p%L_FA-p%B_FA)/2+x%stc_x(1,i_pt))                   &
-                                      -m%omega_P(2,i_pt)*m%omega_P(2,i_pt)*p%B_FA*.5                           &
-                                      -m%omega_P(3,i_pt)*m%omega_P(3,i_pt)*p%B_FA*.5                           &
-                                      +m%omega_P(3,i_pt)*m%omega_P(1,i_pt)*((p%L_FA-p%B_FA)/2+x%stc_x(1,i_pt)) &
+                                    +2*m%omega_P(2,i_pt)*x%StC_x(2,i_pt)                                       &
+                                      +m%alpha_P(2,i_pt)*((p%L_X-p%B_X)/2+x%StC_x(1,i_pt))                   &
+                                      -m%omega_P(2,i_pt)*m%omega_P(2,i_pt)*p%B_X*.5                           &
+                                      -m%omega_P(3,i_pt)*m%omega_P(3,i_pt)*p%B_X*.5                           &
+                                      +m%omega_P(3,i_pt)*m%omega_P(1,i_pt)*((p%L_X-p%B_X)/2+x%StC_x(1,i_pt)) &
                                       -m%a_G(1,i_pt)  )
-            F_y_tlcd_WR_N = p%rho_FA*p%area_FA*((p%L_FA-p%B_FA)/2+x%stc_x(1,i_pt))*(                           &
+            F_y_tlcd_WR_N = p%rho_X*p%area_X*((p%L_X-p%B_X)/2+x%StC_x(1,i_pt))*(                           &
                                        m%rddot_P(2,i_pt)                                                       &
-                                    -2*m%omega_P(1,i_pt)*x%stc_x(2,i_pt)                                       &
-                                      +m%alpha_P(3,i_pt)*p%B_FA*.5                                             &
-                                      -m%alpha_P(1,i_pt)*((p%L_FA-p%B_FA)/2+x%stc_x(1,i_pt))                   &
-                                      +m%omega_P(3,i_pt)*m%omega_P(2,i_pt)*((p%L_FA-p%B_FA)/2+x%stc_x(1,i_pt)) &
-                                      +m%omega_P(1,i_pt)*m%omega_P(2,i_pt)*p%B_FA*.5                           &
+                                    -2*m%omega_P(1,i_pt)*x%StC_x(2,i_pt)                                       &
+                                      +m%alpha_P(3,i_pt)*p%B_X*.5                                             &
+                                      -m%alpha_P(1,i_pt)*((p%L_X-p%B_X)/2+x%StC_x(1,i_pt))                   &
+                                      +m%omega_P(3,i_pt)*m%omega_P(2,i_pt)*((p%L_X-p%B_X)/2+x%StC_x(1,i_pt)) &
+                                      +m%omega_P(1,i_pt)*m%omega_P(2,i_pt)*p%B_X*.5                           &
                                       -m%a_G(2,i_pt)  )
-            F_x_tlcd_WL_N = p%rho_FA*p%area_FA*((p%L_FA-p%B_FA)/2-x%stc_x(1,i_pt))*(                           &
+            F_x_tlcd_WL_N = p%rho_X*p%area_X*((p%L_X-p%B_X)/2-x%StC_x(1,i_pt))*(                           &
                                        m%rddot_P(1,i_pt)                                                       &
-                                    -2*m%omega_P(2,i_pt)*x%stc_x(2,i_pt)                                       &
-                                      +m%alpha_P(2,i_pt)*((p%L_FA-p%B_FA)/2-x%stc_x(1,i_pt))                   &
-                                      +m%omega_P(2,i_pt)*m%omega_P(2,i_pt)*p%B_FA*.5                           &
-                                      +m%omega_P(3,i_pt)*m%omega_P(3,i_pt)*p%B_FA*.5                           &
-                                      +m%omega_P(3,i_pt)*m%omega_P(1,i_pt)*((p%L_FA-p%B_FA)/2-x%stc_x(1,i_pt)) &
+                                    -2*m%omega_P(2,i_pt)*x%StC_x(2,i_pt)                                       &
+                                      +m%alpha_P(2,i_pt)*((p%L_X-p%B_X)/2-x%StC_x(1,i_pt))                   &
+                                      +m%omega_P(2,i_pt)*m%omega_P(2,i_pt)*p%B_X*.5                           &
+                                      +m%omega_P(3,i_pt)*m%omega_P(3,i_pt)*p%B_X*.5                           &
+                                      +m%omega_P(3,i_pt)*m%omega_P(1,i_pt)*((p%L_X-p%B_X)/2-x%StC_x(1,i_pt)) &
                                       -m%a_G(1,i_pt)  )
-            F_y_tlcd_WL_N = p%rho_FA*p%area_FA*((p%L_FA-p%B_FA)/2-x%stc_x(1,i_pt))*(                           &
+            F_y_tlcd_WL_N = p%rho_X*p%area_X*((p%L_X-p%B_X)/2-x%StC_x(1,i_pt))*(                           &
                                        m%rddot_P(2,i_pt)                                                       &
-                                    +2*m%omega_P(1,i_pt)*x%stc_x(2,i_pt)                                       &
-                                      -m%alpha_P(3,i_pt)*p%B_FA*.5                                             &
-                                      -m%alpha_P(1,i_pt)*((p%L_FA-p%B_FA)/2-x%stc_x(1,i_pt))                   &
-                                      +m%omega_P(3,i_pt)*m%omega_P(2,i_pt)*((p%L_FA-p%B_FA)/2-x%stc_x(1,i_pt)) &
-                                      -m%omega_P(1,i_pt)*m%omega_P(2,i_pt)*p%B_FA*.5                           &
+                                    +2*m%omega_P(1,i_pt)*x%StC_x(2,i_pt)                                       &
+                                      -m%alpha_P(3,i_pt)*p%B_X*.5                                             &
+                                      -m%alpha_P(1,i_pt)*((p%L_X-p%B_X)/2-x%StC_x(1,i_pt))                   &
+                                      +m%omega_P(3,i_pt)*m%omega_P(2,i_pt)*((p%L_X-p%B_X)/2-x%StC_x(1,i_pt)) &
+                                      -m%omega_P(1,i_pt)*m%omega_P(2,i_pt)*p%B_X*.5                           &
                                       -m%a_G(2,i_pt)  )
-            F_y_tlcd_WH_N = p%rho_FA*p%area_FA/p%area_ratio_FA*p%B_FA*(                   &
+            F_y_tlcd_WH_N = p%rho_X*p%area_X/p%area_ratio_X*p%B_X*(                   &
                                        m%rddot_P(2,i_pt)                                  &
-                                    +2*m%omega_P(3,i_pt)*p%area_ratio_FA*x%stc_x(2,i_pt)  &
+                                    +2*m%omega_P(3,i_pt)*p%area_ratio_X*x%StC_x(2,i_pt)  &
                                       -m%a_G(2,i_pt)  )
-            F_z_tlcd_WH_N = p%rho_FA*p%area_FA/p%area_ratio_FA*p%B_FA*(                   &
+            F_z_tlcd_WH_N = p%rho_X*p%area_X/p%area_ratio_X*p%B_X*(                   &
                                        m%rddot_P(3,i_pt)                                  &
-                                    -2*m%omega_P(2,i_pt)*p%area_ratio_FA*x%stc_x(2,i_pt)  &
+                                    -2*m%omega_P(2,i_pt)*p%area_ratio_X*x%StC_x(2,i_pt)  &
                                       -m%a_G(3,i_pt)  )
 
             !side-to-side TLCD external forces of dependent degrees
-            F_x_otlcd_WB_N = p%rho_SS*p%area_SS*((p%L_SS-p%B_SS)/2+x%stc_x(3,i_pt))*(                             &
+            F_x_otlcd_WB_N = p%rho_Y*p%area_Y*((p%L_Y-p%B_Y)/2+x%StC_x(3,i_pt))*(                             &
                                          m%rddot_P(1,i_pt)                                                        &
-                                      +2*m%omega_P(2,i_pt)*x%stc_x(4,i_pt)                                        &
-                                        +m%alpha_P(2,i_pt)*((p%L_SS-p%B_SS)/2+x%stc_x(3,i_pt))                    &
-                                        +m%alpha_P(3,i_pt)*p%B_SS/2-m%omega_P(2,i_pt)*m%omega_P(1,i_pt)*p%B_SS/2  &
-                                        +m%omega_P(3,i_pt)*m%omega_P(1,i_pt)*((p%L_SS-p%B_SS)/2+x%stc_x(3,i_pt))  &
+                                      +2*m%omega_P(2,i_pt)*x%StC_x(4,i_pt)                                        &
+                                        +m%alpha_P(2,i_pt)*((p%L_Y-p%B_Y)/2+x%StC_x(3,i_pt))                    &
+                                        +m%alpha_P(3,i_pt)*p%B_Y/2-m%omega_P(2,i_pt)*m%omega_P(1,i_pt)*p%B_Y/2  &
+                                        +m%omega_P(3,i_pt)*m%omega_P(1,i_pt)*((p%L_Y-p%B_Y)/2+x%StC_x(3,i_pt))  &
                                         -m%a_G(1,i_pt)   )
-            F_y_otlcd_WB_N = p%rho_SS*p%area_SS*((p%L_SS-p%B_SS)/2+x%stc_x(3,i_pt))*(                             &
+            F_y_otlcd_WB_N = p%rho_Y*p%area_Y*((p%L_Y-p%B_Y)/2+x%StC_x(3,i_pt))*(                             &
                                          m%rddot_P(2,i_pt)                                                        &
-                                      -2*m%omega_P(1,i_pt)*x%stc_x(4,i_pt)                                        &
-                                        -m%alpha_P(1,i_pt)*((p%L_SS-p%B_SS)/2+x%stc_x(3,i_pt))                    &
-                                        +m%omega_P(3,i_pt)*m%omega_P(2,i_pt)*((p%L_SS-p%B_SS)/2+x%stc_x(3,i_pt))  &
-                                        +m%omega_P(3,i_pt)*m%omega_P(3,i_pt)*p%B_SS/2                             &
-                                        +m%omega_P(1,i_pt)*m%omega_P(1,i_pt)*p%B_SS/2                             &
+                                      -2*m%omega_P(1,i_pt)*x%StC_x(4,i_pt)                                        &
+                                        -m%alpha_P(1,i_pt)*((p%L_Y-p%B_Y)/2+x%StC_x(3,i_pt))                    &
+                                        +m%omega_P(3,i_pt)*m%omega_P(2,i_pt)*((p%L_Y-p%B_Y)/2+x%StC_x(3,i_pt))  &
+                                        +m%omega_P(3,i_pt)*m%omega_P(3,i_pt)*p%B_Y/2                             &
+                                        +m%omega_P(1,i_pt)*m%omega_P(1,i_pt)*p%B_Y/2                             &
                                         -m%a_G(2,i_pt)   )
-            F_x_otlcd_WF_N = p%rho_SS*p%area_SS*((p%L_SS-p%B_SS)/2-x%stc_x(3,i_pt))*(                             &
+            F_x_otlcd_WF_N = p%rho_Y*p%area_Y*((p%L_Y-p%B_Y)/2-x%StC_x(3,i_pt))*(                             &
                                          m%rddot_P(1,i_pt)                                                        &
-                                      -2*m%omega_P(2,i_pt)*x%stc_x(4,i_pt)                                        &
-                                        +m%alpha_P(2,i_pt)*((p%L_SS-p%B_SS)/2-x%stc_x(3,i_pt))                    &
-                                        -m%alpha_P(2,i_pt)*p%B_SS/2                                               &
-                                        +m%omega_P(2,i_pt)*m%omega_P(1,i_pt)*p%B_SS/2                             &
-                                        +m%omega_P(3,i_pt)*m%omega_P(1,i_pt)*((p%L_SS-p%B_SS)/2-x%stc_x(3,i_pt))  &
+                                      -2*m%omega_P(2,i_pt)*x%StC_x(4,i_pt)                                        &
+                                        +m%alpha_P(2,i_pt)*((p%L_Y-p%B_Y)/2-x%StC_x(3,i_pt))                    &
+                                        -m%alpha_P(2,i_pt)*p%B_Y/2                                               &
+                                        +m%omega_P(2,i_pt)*m%omega_P(1,i_pt)*p%B_Y/2                             &
+                                        +m%omega_P(3,i_pt)*m%omega_P(1,i_pt)*((p%L_Y-p%B_Y)/2-x%StC_x(3,i_pt))  &
                                         -m%a_G(1,i_pt)   )
-            F_y_otlcd_WF_N = p%rho_SS*p%area_SS*((p%L_SS-p%B_SS)/2-x%stc_x(3,i_pt))*(                             &
+            F_y_otlcd_WF_N = p%rho_Y*p%area_Y*((p%L_Y-p%B_Y)/2-x%StC_x(3,i_pt))*(                             &
                                          m%rddot_P(2,i_pt)                                                        &
-                                      +2*m%omega_P(1,i_pt)*x%stc_x(4,i_pt)                                        &
-                                        -m%alpha_P(1,i_pt)*((p%L_SS-p%B_SS)/2-x%stc_x(3,i_pt))                    &
-                                        +m%omega_P(3,i_pt)*m%omega_P(2,i_pt)*((p%L_SS-p%B_SS)/2-x%stc_x(3,i_pt))  &
-                                        -m%omega_P(3,i_pt)*m%omega_P(3,i_pt)*p%B_SS/2                             &
-                                        -m%omega_P(1,i_pt)*m%omega_P(1,i_pt)*p%B_SS/2                             &
+                                      +2*m%omega_P(1,i_pt)*x%StC_x(4,i_pt)                                        &
+                                        -m%alpha_P(1,i_pt)*((p%L_Y-p%B_Y)/2-x%StC_x(3,i_pt))                    &
+                                        +m%omega_P(3,i_pt)*m%omega_P(2,i_pt)*((p%L_Y-p%B_Y)/2-x%StC_x(3,i_pt))  &
+                                        -m%omega_P(3,i_pt)*m%omega_P(3,i_pt)*p%B_Y/2                             &
+                                        -m%omega_P(1,i_pt)*m%omega_P(1,i_pt)*p%B_Y/2                             &
                                         -m%a_G(2,i_pt)   )
-            F_x_otlcd_WH_N = p%rho_SS*p%area_SS/p%area_ratio_SS*p%B_SS*(                     &
+            F_x_otlcd_WH_N = p%rho_Y*p%area_Y/p%area_ratio_Y*p%B_Y*(                     &
                                           m%rddot_P(1,i_pt)                                  &
-                                       -2*m%omega_P(3,i_pt)*p%area_ratio_SS*x%stc_x(4,i_pt)  &
+                                       -2*m%omega_P(3,i_pt)*p%area_ratio_Y*x%StC_x(4,i_pt)  &
                                          -m%a_G(1,i_pt)  )
-            F_z_otlcd_WH_N = p%rho_SS*p%area_SS/p%area_ratio_SS*p%B_SS*(                     &
+            F_z_otlcd_WH_N = p%rho_Y*p%area_Y/p%area_ratio_Y*p%B_Y*(                     &
                                           m%rddot_P(3,i_pt)                                  &
-                                       +2*m%omega_P(1,i_pt)*p%area_ratio_SS*x%stc_x(4,i_pt)  &
+                                       +2*m%omega_P(1,i_pt)*p%area_ratio_Y*x%StC_x(4,i_pt)  &
                                          -m%a_G(3,i_pt)  )
 
             ! forces and moments in local coordinates (from fore-aft and side-to-side TLCDs)
-            m%F_P(1,i_pt) = -F_x_tlcd_WR_N - F_x_tlcd_WL_N - p%rho_FA*(p%area_FA/p%area_ratio_FA)*p%B_FA*dxdt%stc_x(2,i_pt)*p%area_ratio_FA + F_x_otlcd_WB_N + F_x_otlcd_WF_N + F_x_otlcd_WH_N
-            m%F_P(2,i_pt) = +F_y_tlcd_WR_N + F_y_tlcd_WL_N - p%rho_SS*(p%area_SS/p%area_ratio_SS)*p%B_SS*dxdt%stc_x(4,i_pt)*p%area_ratio_SS + F_y_tlcd_WH_N  - F_y_otlcd_WB_N - F_y_otlcd_WF_N
+            m%F_P(1,i_pt) = -F_x_tlcd_WR_N - F_x_tlcd_WL_N - p%rho_X*(p%area_X/p%area_ratio_X)*p%B_X*dxdt%StC_x(2,i_pt)*p%area_ratio_X + F_x_otlcd_WB_N + F_x_otlcd_WF_N + F_x_otlcd_WH_N
+            m%F_P(2,i_pt) = +F_y_tlcd_WR_N + F_y_tlcd_WL_N - p%rho_Y*(p%area_Y/p%area_ratio_Y)*p%B_Y*dxdt%StC_x(4,i_pt)*p%area_ratio_Y + F_y_tlcd_WH_N  - F_y_otlcd_WB_N - F_y_otlcd_WF_N
             m%F_P(3,i_pt) = -F_z_tlcd_WH_N - F_z_otlcd_WH_N
 
-            m%M_P(1,i_pt) =  F_y_tlcd_WR_N*((p%L_FA-p%B_FA)/2+x%stc_x(1,i_pt)) + F_y_tlcd_WL_N*((p%L_FA-p%B_FA)/2-x%stc_x(1,i_pt)) - F_y_otlcd_WB_N*((p%L_SS-p%B_SS)/2+x%stc_x(3,i_pt)) - F_y_otlcd_WF_N*((p%L_SS-p%B_SS)/2-x%stc_x(3,i_pt))
-            m%M_P(2,i_pt) = -F_x_tlcd_WR_N*((p%L_FA-p%B_FA)/2+x%stc_x(1,i_pt)) - F_x_tlcd_WL_N*((p%L_FA-p%B_FA)/2-x%stc_x(1,i_pt)) + F_x_otlcd_WB_N*((p%L_SS-p%B_SS)/2+x%stc_x(3,i_pt)) + F_x_otlcd_WF_N*((p%L_SS-p%B_SS)/2-x%stc_x(3,i_pt))
-            m%M_P(3,i_pt) =  F_y_tlcd_WR_N*p%B_FA*.5 - F_y_tlcd_WL_N*p%B_FA*.5 + F_x_otlcd_WB_N*p%B_SS*.5 - F_x_otlcd_WF_N*p%B_SS*.5
+            m%M_P(1,i_pt) =  F_y_tlcd_WR_N*((p%L_X-p%B_X)/2+x%StC_x(1,i_pt)) + F_y_tlcd_WL_N*((p%L_X-p%B_X)/2-x%StC_x(1,i_pt)) - F_y_otlcd_WB_N*((p%L_Y-p%B_Y)/2+x%StC_x(3,i_pt)) - F_y_otlcd_WF_N*((p%L_Y-p%B_Y)/2-x%StC_x(3,i_pt))
+            m%M_P(2,i_pt) = -F_x_tlcd_WR_N*((p%L_X-p%B_X)/2+x%StC_x(1,i_pt)) - F_x_tlcd_WL_N*((p%L_X-p%B_X)/2-x%StC_x(1,i_pt)) + F_x_otlcd_WB_N*((p%L_Y-p%B_Y)/2+x%StC_x(3,i_pt)) + F_x_otlcd_WF_N*((p%L_Y-p%B_Y)/2-x%StC_x(3,i_pt))
+            m%M_P(3,i_pt) =  F_y_tlcd_WR_N*p%B_X*.5 - F_y_tlcd_WL_N*p%B_X*.5 + F_x_otlcd_WB_N*p%B_Y*.5 - F_x_otlcd_WF_N*p%B_Y*.5
 
             ! forces and moments in global coordinates
             y%Mesh(i_pt)%Force(:,1)  = matmul(transpose(u%Mesh(i_pt)%Orientation(:,:,1)), m%F_P(1:3,i_pt))
@@ -943,7 +943,7 @@ SUBROUTINE StC_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
       ErrMsg  = ""
 
 
-      call AllocAry(dxdt%stc_x,4, p%NumMeshPts,'dxdt%stc_x',  ErrStat2,ErrMsg2); if (Failed()) return;
+      call AllocAry(dxdt%StC_x,4, p%NumMeshPts,'dxdt%StC_x',  ErrStat2,ErrMsg2); if (Failed()) return;
 
          ! compute stop force (m%F_stop)
       IF (p%Use_F_TBL) THEN
@@ -983,13 +983,13 @@ SUBROUTINE StC_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
       ELSE IF (p%StC_DOF_MODE == DOFMode_Omni) THEN
 
          do i_pt=1,p%NumMeshPts
-            denom = SQRT(x%stc_x(1,i_pt)**2+x%stc_x(3,i_pt)**2)
+            denom = SQRT(x%StC_x(1,i_pt)**2+x%StC_x(3,i_pt)**2)
             IF ( EqualRealNos( denom, 0.0_ReKi) ) THEN
                 m%F_k(1,i_pt) = 0.0
                 m%F_k(2,i_pt) = 0.0
             ELSE
-                  m%F_k(1,i_pt) = x%stc_x(1,i_pt)/denom
-                  m%F_k(2,i_pt) = x%stc_x(3,i_pt)/denom
+                  m%F_k(1,i_pt) = x%StC_x(1,i_pt)/denom
+                  m%F_k(2,i_pt) = x%StC_x(3,i_pt)/denom
             END IF
 
             ! Aggregate acceleration terms
@@ -1000,38 +1000,38 @@ SUBROUTINE StC_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
       ENDIF
 
 
-      ! Compute the first time derivatives, dxdt%stc_x(1) and dxdt%stc_x(3), of the continuous states,:
-      ! Compute elements 1 and 3 of dxdt%stc_x so that we can compute m%C_ctrl,m%C_Brake, and m%F_fr in StC_GroundHookDamp if necessary
+      ! Compute the first time derivatives, dxdt%StC_x(1) and dxdt%StC_x(3), of the continuous states,:
+      ! Compute elements 1 and 3 of dxdt%StC_x so that we can compute m%C_ctrl,m%C_Brake, and m%F_fr in StC_GroundHookDamp if necessary
       IF (p%StC_DOF_MODE == ControlMode_None) THEN
 
-         dxdt%stc_x = 0.0_ReKi ! Whole array
+         dxdt%StC_x = 0.0_ReKi ! Whole array
 
       ELSE
 
          IF (p%StC_DOF_MODE == DOFMode_Indept .AND. .NOT. p%StC_X_DOF) THEN
             do i_pt=1,p%NumMeshPts
-               dxdt%stc_x(1,i_pt) = 0.0_ReKi
+               dxdt%StC_x(1,i_pt) = 0.0_ReKi
             enddo
          ELSE
             do i_pt=1,p%NumMeshPts
-               dxdt%stc_x(1,i_pt) = x%stc_x(2,i_pt)
+               dxdt%StC_x(1,i_pt) = x%StC_x(2,i_pt)
             enddo
          END IF
 
          IF (p%StC_DOF_MODE == DOFMode_Indept .AND. .NOT. p%StC_Y_DOF) THEN
             do i_pt=1,p%NumMeshPts
-               dxdt%stc_x(3,i_pt) = 0.0_ReKi
+               dxdt%StC_x(3,i_pt) = 0.0_ReKi
             enddo
          ELSE
             do i_pt=1,p%NumMeshPts
-               dxdt%stc_x(3,i_pt) = x%stc_x(4,i_pt)
+               dxdt%StC_x(3,i_pt) = x%StC_x(4,i_pt)
             enddo
          END IF
 
       ENDIF
 
 
-      ! compute damping for dxdt%stc_x(2) and dxdt%stc_x(4)
+      ! compute damping for dxdt%StC_x(2) and dxdt%StC_x(4)
       IF (p%StC_CMODE == ControlMode_None) THEN
          m%C_ctrl(1,:) = p%C_X
          m%C_ctrl(2,:) = p%C_Y
@@ -1043,73 +1043,73 @@ SUBROUTINE StC_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
       END IF
 
 
-      ! Compute the first time derivatives, dxdt%stc_x(2) and dxdt%stc_x(4), of the continuous states,:
+      ! Compute the first time derivatives, dxdt%StC_x(2) and dxdt%StC_x(4), of the continuous states,:
       IF (p%StC_DOF_MODE == DOFMode_Indept) THEN
 
          IF (p%StC_X_DOF) THEN
             do i_pt=1,p%NumMeshPts
-               dxdt%stc_x(2,i_pt) =  ( m%omega_P(2,i_pt)**2 + m%omega_P(3,i_pt)**2 - K(1) / p%M_X) * x%stc_x(1,i_pt) &
-                                   - ( m%C_ctrl( 1,i_pt)/p%M_X ) * x%stc_x(2,i_pt)                                   &
-                                   - ( m%C_Brake(1,i_pt)/p%M_X ) * x%stc_x(2,i_pt)                                   &
+               dxdt%StC_x(2,i_pt) =  ( m%omega_P(2,i_pt)**2 + m%omega_P(3,i_pt)**2 - K(1) / p%M_X) * x%StC_x(1,i_pt) &
+                                   - ( m%C_ctrl( 1,i_pt)/p%M_X ) * x%StC_x(2,i_pt)                                   &
+                                   - ( m%C_Brake(1,i_pt)/p%M_X ) * x%StC_x(2,i_pt)                                   &
                                    + m%Acc(1,i_pt) + m%F_fr(1,i_pt) / p%M_X
             enddo
          ELSE
             do i_pt=1,p%NumMeshPts
-               dxdt%stc_x(2,i_pt) = 0.0_ReKi
+               dxdt%StC_x(2,i_pt) = 0.0_ReKi
             enddo
          END IF
          IF (p%StC_Y_DOF) THEN
             do i_pt=1,p%NumMeshPts
-               dxdt%stc_x(4,i_pt) =  ( m%omega_P(1,i_pt)**2 + m%omega_P(3,i_pt)**2 - K(2) / p%M_Y) * x%stc_x(3,i_pt) &
-                                   - ( m%C_ctrl( 2,i_pt)/p%M_Y ) * x%stc_x(4,i_pt)                                   &
-                                   - ( m%C_Brake(2,i_pt)/p%M_Y ) * x%stc_x(4,i_pt)                                   &
+               dxdt%StC_x(4,i_pt) =  ( m%omega_P(1,i_pt)**2 + m%omega_P(3,i_pt)**2 - K(2) / p%M_Y) * x%StC_x(3,i_pt) &
+                                   - ( m%C_ctrl( 2,i_pt)/p%M_Y ) * x%StC_x(4,i_pt)                                   &
+                                   - ( m%C_Brake(2,i_pt)/p%M_Y ) * x%StC_x(4,i_pt)                                   &
                                    + m%Acc(2,i_pt) + m%F_fr(2,i_pt) / p%M_Y
             enddo
          ELSE
             do i_pt=1,p%NumMeshPts
-               dxdt%stc_x(4,i_pt) = 0.0_ReKi
+               dxdt%StC_x(4,i_pt) = 0.0_ReKi
             enddo
          END IF
 
       ELSE IF (p%StC_DOF_MODE == DOFMode_Omni) THEN
                ! Compute the first time derivatives of the continuous states of Omnidirectional tuned masse damper mode by sm 2015-0904
          do i_pt=1,p%NumMeshPts
-            dxdt%stc_x(2,i_pt) =  ( m%omega_P(2,i_pt)**2 + m%omega_P(3,i_pt)**2 - K(1) / p%M_XY) * x%stc_x(1,i_pt)   &
-                                - ( m%C_ctrl( 1,i_pt)/p%M_XY ) * x%stc_x(2,i_pt)                                     &
-                                - ( m%C_Brake(1,i_pt)/p%M_XY ) * x%stc_x(2,i_pt)                                     &
+            dxdt%StC_x(2,i_pt) =  ( m%omega_P(2,i_pt)**2 + m%omega_P(3,i_pt)**2 - K(1) / p%M_XY) * x%StC_x(1,i_pt)   &
+                                - ( m%C_ctrl( 1,i_pt)/p%M_XY ) * x%StC_x(2,i_pt)                                     &
+                                - ( m%C_Brake(1,i_pt)/p%M_XY ) * x%StC_x(2,i_pt)                                     &
                                 +  m%Acc(1,i_pt) + 1/p%M_XY * ( m%F_fr(1,i_pt) )                                     &
-                                - ( m%omega_P(1,i_pt)*m%omega_P(2,i_pt) - m%alpha_P(3,i_pt) ) * x%stc_x(3,i_pt)      &
-                               +2 * m%omega_P(3,i_pt) * x%stc_x(4,i_pt)
-            dxdt%stc_x(4,i_pt) =  ( m%omega_P(1,i_pt)**2 + m%omega_P(3,i_pt)**2 - K(2) / p%M_XY) * x%stc_x(3,i_pt)   &
-                                - ( m%C_ctrl( 2,i_pt)/p%M_XY ) * x%stc_x(4,i_pt)                                     &
-                                - ( m%C_Brake(2,i_pt)/p%M_XY ) * x%stc_x(4,i_pt)                                     &
+                                - ( m%omega_P(1,i_pt)*m%omega_P(2,i_pt) - m%alpha_P(3,i_pt) ) * x%StC_x(3,i_pt)      &
+                               +2 * m%omega_P(3,i_pt) * x%StC_x(4,i_pt)
+            dxdt%StC_x(4,i_pt) =  ( m%omega_P(1,i_pt)**2 + m%omega_P(3,i_pt)**2 - K(2) / p%M_XY) * x%StC_x(3,i_pt)   &
+                                - ( m%C_ctrl( 2,i_pt)/p%M_XY ) * x%StC_x(4,i_pt)                                     &
+                                - ( m%C_Brake(2,i_pt)/p%M_XY ) * x%StC_x(4,i_pt)                                     &
                                 +  m%Acc(2,i_pt) + 1/p%M_XY * ( m%F_fr(2,i_pt) )                                     &
-                                - ( m%omega_P(1,i_pt)*m%omega_P(2,i_pt) + m%alpha_P(3,i_pt) ) * x%stc_x(1,i_pt)      &
-                               -2 * m%omega_P(3,i_pt) * x%stc_x(2,i_pt)
+                                - ( m%omega_P(1,i_pt)*m%omega_P(2,i_pt) + m%alpha_P(3,i_pt) ) * x%StC_x(1,i_pt)      &
+                               -2 * m%omega_P(3,i_pt) * x%StC_x(2,i_pt)
          enddo
 
       ELSE IF (p%StC_DOF_MODE == DOFMode_TLCD) THEN !MEG & SP
          ! Compute the first time derivatives of the continuous states of TLCD mode
          do i_pt=1,p%NumMeshPts
-            dxdt%stc_x(2,i_pt) = (2*p%rho_FA*p%area_FA*x%stc_x(1,i_pt)*m%rddot_P(3,i_pt)                                   &
-                                   +p%rho_FA*p%area_FA*p%B_FA*m%alpha_P(2,i_pt)*((p%L_FA-p%B_FA)/2)                        &
-                                   -p%rho_FA*p%area_FA*p%B_FA*m%omega_P(1,i_pt)*m%omega_P(3,i_pt)*((p%L_FA-p%B_FA)/2)      &
-                                 +2*p%rho_FA*p%area_FA*m%omega_P(1,i_pt)*m%omega_P(1,i_pt)*x%stc_x(1,i_pt)*(p%L_FA-p%B_FA) &
-                                 +2*p%rho_FA*p%area_FA*m%omega_P(2,i_pt)*m%omega_P(2,i_pt)*x%stc_x(1,i_pt)*(p%L_FA-p%B_FA) &
-                                 +2*p%rho_FA*p%area_FA*x%stc_x(1,i_pt)*m%a_G(3,i_pt)                                       &
-                                   -p%rho_FA*p%area_FA*p%B_FA*m%rddot_P(1,i_pt)                                            &
-                                   +p%rho_FA*p%area_FA*p%B_FA*m%a_G(1,i_pt)                                                &
-                                -.5*p%rho_FA*p%area_FA*p%headLossCoeff_FA*p%area_ratio_FA*p%area_ratio_FA*x%stc_x(2,i_pt)  &
-                                       *ABS(x%stc_x(2,i_pt)))/(p%rho_FA*p%area_FA*(p%L_FA-p%B_FA+p%area_ratio_FA*p%B_FA))        
-            dxdt%stc_x(4,i_pt) = (2*p%rho_SS*p%area_SS*x%stc_x(3,i_pt)*m%rddot_P(3,i_pt)                                         &
-                                   +p%rho_SS*p%area_SS*p%B_SS*m%alpha_P(1,i_pt)*((p%L_SS-p%B_SS)/2)                              &
-                                   -p%rho_SS*p%area_SS*p%B_SS*m%omega_P(2,i_pt)*m%omega_P(3,i_pt)*((p%L_SS-p%B_SS)/2)            &
-                                 +2*p%rho_SS*p%area_SS*x%stc_x(3,i_pt)*m%omega_P(1,i_pt)*m%omega_P(1,i_pt)*(p%L_SS-p%B_SS)       &
-                                 +2*p%rho_SS*p%area_SS*x%stc_x(3,i_pt)*m%omega_P(2,i_pt)*m%omega_P(2,i_pt)*(p%L_SS-p%B_SS)       &
-                                 +2*p%rho_SS*p%area_SS*x%stc_x(3,i_pt)*m%a_G(3,i_pt)-p%rho_SS*p%area_SS*p%B_SS*m%rddot_P(2,i_pt) &
-                                   +p%rho_SS*p%area_SS*p%B_SS*m%a_G(2,i_pt)                                                      &
-                                -.5*p%rho_SS*p%area_SS*p%headLossCoeff_SS*p%area_ratio_SS*p%area_ratio_SS*x%stc_x(4,i_pt)        &
-                                       *ABS(x%stc_x(4,i_pt)))/(p%rho_SS*p%area_SS*(p%L_SS-p%B_SS+p%area_ratio_SS*p%B_SS))
+            dxdt%StC_x(2,i_pt) = (2*p%rho_X*p%area_X*x%StC_x(1,i_pt)*m%rddot_P(3,i_pt)                                   &
+                                   +p%rho_X*p%area_X*p%B_X*m%alpha_P(2,i_pt)*((p%L_X-p%B_X)/2)                        &
+                                   -p%rho_X*p%area_X*p%B_X*m%omega_P(1,i_pt)*m%omega_P(3,i_pt)*((p%L_X-p%B_X)/2)      &
+                                 +2*p%rho_X*p%area_X*m%omega_P(1,i_pt)*m%omega_P(1,i_pt)*x%StC_x(1,i_pt)*(p%L_X-p%B_X) &
+                                 +2*p%rho_X*p%area_X*m%omega_P(2,i_pt)*m%omega_P(2,i_pt)*x%StC_x(1,i_pt)*(p%L_X-p%B_X) &
+                                 +2*p%rho_X*p%area_X*x%StC_x(1,i_pt)*m%a_G(3,i_pt)                                       &
+                                   -p%rho_X*p%area_X*p%B_X*m%rddot_P(1,i_pt)                                            &
+                                   +p%rho_X*p%area_X*p%B_X*m%a_G(1,i_pt)                                                &
+                                -.5*p%rho_X*p%area_X*p%headLossCoeff_X*p%area_ratio_X*p%area_ratio_X*x%StC_x(2,i_pt)  &
+                                       *ABS(x%StC_x(2,i_pt)))/(p%rho_X*p%area_X*(p%L_X-p%B_X+p%area_ratio_X*p%B_X))        
+            dxdt%StC_x(4,i_pt) = (2*p%rho_Y*p%area_Y*x%StC_x(3,i_pt)*m%rddot_P(3,i_pt)                                         &
+                                   +p%rho_Y*p%area_Y*p%B_Y*m%alpha_P(1,i_pt)*((p%L_Y-p%B_Y)/2)                              &
+                                   -p%rho_Y*p%area_Y*p%B_Y*m%omega_P(2,i_pt)*m%omega_P(3,i_pt)*((p%L_Y-p%B_Y)/2)            &
+                                 +2*p%rho_Y*p%area_Y*x%StC_x(3,i_pt)*m%omega_P(1,i_pt)*m%omega_P(1,i_pt)*(p%L_Y-p%B_Y)       &
+                                 +2*p%rho_Y*p%area_Y*x%StC_x(3,i_pt)*m%omega_P(2,i_pt)*m%omega_P(2,i_pt)*(p%L_Y-p%B_Y)       &
+                                 +2*p%rho_Y*p%area_Y*x%StC_x(3,i_pt)*m%a_G(3,i_pt)-p%rho_Y*p%area_Y*p%B_Y*m%rddot_P(2,i_pt) &
+                                   +p%rho_Y*p%area_Y*p%B_Y*m%a_G(2,i_pt)                                                      &
+                                -.5*p%rho_Y*p%area_Y*p%headLossCoeff_Y*p%area_ratio_Y*p%area_ratio_Y*x%StC_x(4,i_pt)        &
+                                       *ABS(x%StC_x(4,i_pt)))/(p%rho_Y*p%area_Y*(p%L_Y-p%B_Y+p%area_ratio_Y*p%B_Y))
          enddo
 
       END IF
@@ -1141,17 +1141,17 @@ SUBROUTINE StC_CalcStopForce(x,p,F_stop)
       j=1
       DO i=1,2
          IF (j < 5) THEN
-            IF ( x%stc_x(j,i_pt) > p%P_SP(i) ) THEN
-               F_SK(i) = p%K_S(i) *( p%P_SP(i) - x%stc_x(j,i_pt)  )
-            ELSEIF ( x%stc_x(j,i_pt) < p%N_SP(i) ) THEN
-               F_SK(i) = p%K_S(i) * ( p%N_SP(i) - x%stc_x(j,i_pt) )
+            IF ( x%StC_x(j,i_pt) > p%P_SP(i) ) THEN
+               F_SK(i) = p%K_S(i) *( p%P_SP(i) - x%StC_x(j,i_pt)  )
+            ELSEIF ( x%StC_x(j,i_pt) < p%N_SP(i) ) THEN
+               F_SK(i) = p%K_S(i) * ( p%N_SP(i) - x%StC_x(j,i_pt) )
             ELSE
                F_SK(i)  = 0.0_ReKi
             ENDIF
-            IF ( (x%stc_x(j,i_pt) > p%P_SP(i)) .AND. (x%stc_x(j+1,i_pt) > 0) ) THEN
-               F_SD(i) = -p%C_S(i) *( x%stc_x(j+1,i_pt)  )
-            ELSEIF ( (x%stc_x(j,i_pt) < p%N_SP(i)) .AND. (x%stc_x(j+1,i_pt) < 0) ) THEN
-               F_SD(i) = -p%C_S(i) *( x%stc_x(j+1,i_pt)  )
+            IF ( (x%StC_x(j,i_pt) > p%P_SP(i)) .AND. (x%StC_x(j+1,i_pt) > 0) ) THEN
+               F_SD(i) = -p%C_S(i) *( x%StC_x(j+1,i_pt)  )
+            ELSEIF ( (x%StC_x(j,i_pt) < p%N_SP(i)) .AND. (x%StC_x(j+1,i_pt) < 0) ) THEN
+               F_SD(i) = -p%C_S(i) *( x%StC_x(j+1,i_pt)  )
             ELSE
                F_SD(i)  = 0.0_ReKi
             ENDIF
@@ -1176,16 +1176,16 @@ SUBROUTINE StC_GroundHookDamp(dxdt,x,u,p,C_ctrl,C_Brake,F_fr)
       IF (p%StC_CMODE == CMODE_Semi .AND. p%StC_SA_MODE == SA_CMODE_GH_vel) THEN ! velocity-based ground hook control with high damping for braking
 
          !X
-         IF (dxdt%stc_x(1,i_pt) * u%Mesh(i_pt)%TranslationVel(1,1) <= 0 ) THEN
+         IF (dxdt%StC_x(1,i_pt) * u%Mesh(i_pt)%TranslationVel(1,1) <= 0 ) THEN
             C_ctrl(1,i_pt) = p%StC_X_C_HIGH
          ELSE
             C_ctrl(1,i_pt) = p%StC_X_C_LOW
          END IF
 
          !Brake X
-         IF      ( (x%stc_x(1,i_pt) > p%P_SP(1)-0.2) .AND. (x%stc_x(2,i_pt) > 0) ) THEN
+         IF      ( (x%StC_x(1,i_pt) > p%P_SP(1)-0.2) .AND. (x%StC_x(2,i_pt) > 0) ) THEN
             C_Brake(1,i_pt) = p%StC_X_C_BRAKE
-         ELSE IF ( (x%stc_x(1,i_pt) < p%N_SP(1)+0.2) .AND. (x%stc_x(2,i_pt) < 0) ) THEN
+         ELSE IF ( (x%StC_x(1,i_pt) < p%N_SP(1)+0.2) .AND. (x%StC_x(2,i_pt) < 0) ) THEN
             C_Brake(1,i_pt) = p%StC_X_C_BRAKE
          ELSE
             C_Brake(1,i_pt) = 0
@@ -1193,16 +1193,16 @@ SUBROUTINE StC_GroundHookDamp(dxdt,x,u,p,C_ctrl,C_Brake,F_fr)
 
 
          ! Y
-         IF (dxdt%stc_x(3,i_pt) * u%Mesh(i_pt)%TranslationVel(2,1) <= 0 ) THEN
+         IF (dxdt%StC_x(3,i_pt) * u%Mesh(i_pt)%TranslationVel(2,1) <= 0 ) THEN
             C_ctrl(2,i_pt) = p%StC_Y_C_HIGH
          ELSE
             C_ctrl(2,i_pt) = p%StC_Y_C_LOW
          END IF
 
          !Brake Y
-         IF      ( (x%stc_x(3,i_pt) > p%P_SP(2)-0.2) .AND. (x%stc_x(4,i_pt) > 0) ) THEN
+         IF      ( (x%StC_x(3,i_pt) > p%P_SP(2)-0.2) .AND. (x%StC_x(4,i_pt) > 0) ) THEN
             C_Brake(2,i_pt) = p%StC_Y_C_BRAKE
-         ELSE IF ( (x%stc_x(3,i_pt) < p%N_SP(2)+0.2) .AND. (x%stc_x(4,i_pt) < 0) ) THEN
+         ELSE IF ( (x%StC_x(3,i_pt) < p%N_SP(2)+0.2) .AND. (x%StC_x(4,i_pt) < 0) ) THEN
             C_Brake(2,i_pt) = p%StC_Y_C_BRAKE
          ELSE
             C_Brake(2,i_pt) = 0
@@ -1211,32 +1211,32 @@ SUBROUTINE StC_GroundHookDamp(dxdt,x,u,p,C_ctrl,C_Brake,F_fr)
       ELSE IF (p%StC_CMODE == CMODE_Semi .AND. p%StC_SA_MODE == SA_CMODE_GH_invVel) THEN ! Inverse velocity-based ground hook control with high damping for braking
 
          ! X
-         IF (dxdt%stc_x(1,i_pt) * u%Mesh(i_pt)%TranslationVel(1,1) >= 0 ) THEN
+         IF (dxdt%StC_x(1,i_pt) * u%Mesh(i_pt)%TranslationVel(1,1) >= 0 ) THEN
             C_ctrl(1,i_pt) = p%StC_X_C_HIGH
          ELSE
             C_ctrl(1,i_pt) = p%StC_X_C_LOW
          END IF
 
          !Brake X
-         IF      ( (x%stc_x(1,i_pt) > p%P_SP(1)-0.2) .AND. (x%stc_x(2,i_pt) > 0) ) THEN
+         IF      ( (x%StC_x(1,i_pt) > p%P_SP(1)-0.2) .AND. (x%StC_x(2,i_pt) > 0) ) THEN
             C_Brake(1,i_pt) = p%StC_X_C_BRAKE
-         ELSE IF ( (x%stc_x(1,i_pt) < p%N_SP(1)+0.2) .AND. (x%stc_x(2,i_pt) < 0) ) THEN
+         ELSE IF ( (x%StC_x(1,i_pt) < p%N_SP(1)+0.2) .AND. (x%StC_x(2,i_pt) < 0) ) THEN
             C_Brake(1,i_pt) = p%StC_X_C_BRAKE
          ELSE
             C_Brake(1,i_pt) = 0
          END IF
 
          ! Y
-         IF (dxdt%stc_x(3,i_pt) * u%Mesh(i_pt)%TranslationVel(2,1) >= 0 ) THEN
+         IF (dxdt%StC_x(3,i_pt) * u%Mesh(i_pt)%TranslationVel(2,1) >= 0 ) THEN
             C_ctrl(2,i_pt) = p%StC_Y_C_HIGH
          ELSE
             C_ctrl(2,i_pt) = p%StC_Y_C_LOW
          END IF
 
          !Brake Y
-         IF      ( (x%stc_x(3,i_pt) > p%P_SP(2)-0.2) .AND. (x%stc_x(4,i_pt) > 0) ) THEN
+         IF      ( (x%StC_x(3,i_pt) > p%P_SP(2)-0.2) .AND. (x%StC_x(4,i_pt) > 0) ) THEN
             C_Brake(2,i_pt) = p%StC_Y_C_BRAKE
-         ELSE IF ( (x%stc_x(3,i_pt) < p%N_SP(2)+0.2) .AND. (x%stc_x(4,i_pt) < 0) ) THEN
+         ELSE IF ( (x%StC_x(3,i_pt) < p%N_SP(2)+0.2) .AND. (x%StC_x(4,i_pt) < 0) ) THEN
             C_Brake(2,i_pt) = p%StC_Y_C_BRAKE
          ELSE
             C_Brake(2,i_pt) = 0
@@ -1245,32 +1245,32 @@ SUBROUTINE StC_GroundHookDamp(dxdt,x,u,p,C_ctrl,C_Brake,F_fr)
       ELSE IF (p%StC_CMODE == CMODE_Semi .AND. p%StC_SA_MODE == SA_CMODE_GH_disp) THEN ! displacement-based ground hook control with high damping for braking
 
          ! X
-         IF (dxdt%stc_x(1,i_pt) * u%Mesh(i_pt)%TranslationDisp(1,1) <= 0 ) THEN
+         IF (dxdt%StC_x(1,i_pt) * u%Mesh(i_pt)%TranslationDisp(1,1) <= 0 ) THEN
             C_ctrl(1,i_pt) = p%StC_X_C_HIGH
          ELSE
             C_ctrl(1,i_pt) = p%StC_X_C_LOW
          END IF
 
          !Brake X
-         IF      ( (x%stc_x(1,i_pt) > p%P_SP(1)-0.2) .AND. (x%stc_x(2,i_pt) > 0) ) THEN
+         IF      ( (x%StC_x(1,i_pt) > p%P_SP(1)-0.2) .AND. (x%StC_x(2,i_pt) > 0) ) THEN
             C_Brake(1,i_pt) = p%StC_X_C_BRAKE
-         ELSE IF ( (x%stc_x(1,i_pt) < p%N_SP(1)+0.2) .AND. (x%stc_x(2,i_pt) < 0) ) THEN
+         ELSE IF ( (x%StC_x(1,i_pt) < p%N_SP(1)+0.2) .AND. (x%StC_x(2,i_pt) < 0) ) THEN
             C_Brake(1,i_pt) = p%StC_X_C_BRAKE
          ELSE
             C_Brake(1,i_pt) = 0
          END IF
 
          ! Y
-         IF (dxdt%stc_x(3,i_pt) * u%Mesh(i_pt)%TranslationDisp(2,1) <= 0 ) THEN
+         IF (dxdt%StC_x(3,i_pt) * u%Mesh(i_pt)%TranslationDisp(2,1) <= 0 ) THEN
             C_ctrl(2,i_pt) = p%StC_Y_C_HIGH
          ELSE
             C_ctrl(2,i_pt) = p%StC_Y_C_LOW
          END IF
 
          !Brake Y
-         IF      ( (x%stc_x(3,i_pt) > p%P_SP(2)-0.2) .AND. (x%stc_x(4,i_pt) > 0) ) THEN
+         IF      ( (x%StC_x(3,i_pt) > p%P_SP(2)-0.2) .AND. (x%StC_x(4,i_pt) > 0) ) THEN
             C_Brake(2,i_pt) = p%StC_Y_C_BRAKE
-         ELSE IF ( (x%stc_x(3,i_pt) < p%N_SP(2)+0.2) .AND. (x%stc_x(4,i_pt) < 0) ) THEN
+         ELSE IF ( (x%StC_x(3,i_pt) < p%N_SP(2)+0.2) .AND. (x%StC_x(4,i_pt) < 0) ) THEN
             C_Brake(2,i_pt) = p%StC_Y_C_BRAKE
          ELSE
             C_Brake(2,i_pt) = 0
@@ -1279,24 +1279,24 @@ SUBROUTINE StC_GroundHookDamp(dxdt,x,u,p,C_ctrl,C_Brake,F_fr)
       ELSE IF (p%StC_CMODE == CMODE_Semi .AND. p%StC_SA_MODE == SA_CMODE_Ph_FF) THEN ! Phase Difference Algorithm with Friction Force
             ! X
             ! (a)
-         IF      (u%Mesh(i_pt)%TranslationDisp(1,1) > 0 .AND. u%Mesh(i_pt)%TranslationVel(1,1) < 0 .AND. x%stc_x(1,i_pt) > 0 .AND. dxdt%stc_x(1,i_pt) < 0) THEN
+         IF      (u%Mesh(i_pt)%TranslationDisp(1,1) > 0 .AND. u%Mesh(i_pt)%TranslationVel(1,1) < 0 .AND. x%StC_x(1,i_pt) > 0 .AND. dxdt%StC_x(1,i_pt) < 0) THEN
             F_fr(1,i_pt) = p%StC_X_C_HIGH
             ! (b)
-         ELSE IF (u%Mesh(i_pt)%TranslationDisp(1,1) < 0 .AND. u%Mesh(i_pt)%TranslationVel(1,1) > 0 .AND. x%stc_x(1,i_pt) < 0 .AND. dxdt%stc_x(1,i_pt) > 0) THEN
+         ELSE IF (u%Mesh(i_pt)%TranslationDisp(1,1) < 0 .AND. u%Mesh(i_pt)%TranslationVel(1,1) > 0 .AND. x%StC_x(1,i_pt) < 0 .AND. dxdt%StC_x(1,i_pt) > 0) THEN
             F_fr(1,i_pt) = -p%StC_X_C_HIGH
             ! (c)
-         ELSE IF (u%Mesh(i_pt)%TranslationDisp(1,1) < 0 .AND. u%Mesh(i_pt)%TranslationVel(1,1) < 0 .AND. x%stc_x(1,i_pt) > 0 .AND. dxdt%stc_x(1,i_pt) > 0) THEN
+         ELSE IF (u%Mesh(i_pt)%TranslationDisp(1,1) < 0 .AND. u%Mesh(i_pt)%TranslationVel(1,1) < 0 .AND. x%StC_x(1,i_pt) > 0 .AND. dxdt%StC_x(1,i_pt) > 0) THEN
             F_fr(1,i_pt) = -p%StC_X_C_HIGH
-         ELSE IF (u%Mesh(i_pt)%TranslationDisp(1,1) > 0 .AND. u%Mesh(i_pt)%TranslationVel(1,1) > 0 .AND. x%stc_x(1,i_pt) < 0 .AND. dxdt%stc_x(1,i_pt) < 0) THEN
+         ELSE IF (u%Mesh(i_pt)%TranslationDisp(1,1) > 0 .AND. u%Mesh(i_pt)%TranslationVel(1,1) > 0 .AND. x%StC_x(1,i_pt) < 0 .AND. dxdt%StC_x(1,i_pt) < 0) THEN
             F_fr(1,i_pt) = p%StC_X_C_HIGH
          ELSE
             F_fr(1,i_pt) = p%StC_X_C_LOW
          END IF
 
          !Brake X
-         IF ( (x%stc_x(1,i_pt) > p%P_SP(1)-0.2) .AND. (x%stc_x(2,i_pt) > 0) ) THEN
+         IF ( (x%StC_x(1,i_pt) > p%P_SP(1)-0.2) .AND. (x%StC_x(2,i_pt) > 0) ) THEN
             C_Brake(1,i_pt) = p%StC_X_C_BRAKE
-         ELSE IF ( (x%stc_x(1,i_pt) < p%N_SP(1)+0.2) .AND. (x%stc_x(2,i_pt) < 0) ) THEN
+         ELSE IF ( (x%StC_x(1,i_pt) < p%N_SP(1)+0.2) .AND. (x%StC_x(2,i_pt) < 0) ) THEN
             C_Brake(1,i_pt) = p%StC_X_C_BRAKE
          ELSE
             C_Brake(1,i_pt) = 0
@@ -1304,24 +1304,24 @@ SUBROUTINE StC_GroundHookDamp(dxdt,x,u,p,C_ctrl,C_Brake,F_fr)
 
             ! Y
             ! (a)
-         IF      (u%Mesh(i_pt)%TranslationDisp(2,1) > 0 .AND. u%Mesh(i_pt)%TranslationVel(2,1) < 0 .AND. x%stc_x(3,i_pt) > 0 .AND. dxdt%stc_x(3,i_pt) < 0) THEN
+         IF      (u%Mesh(i_pt)%TranslationDisp(2,1) > 0 .AND. u%Mesh(i_pt)%TranslationVel(2,1) < 0 .AND. x%StC_x(3,i_pt) > 0 .AND. dxdt%StC_x(3,i_pt) < 0) THEN
             F_fr(2,i_pt) = p%StC_Y_C_HIGH
             ! (b)
-         ELSE IF (u%Mesh(i_pt)%TranslationDisp(2,1) < 0 .AND. u%Mesh(i_pt)%TranslationVel(2,1) > 0 .AND. x%stc_x(3,i_pt) < 0 .AND. dxdt%stc_x(3,i_pt) > 0) THEN
+         ELSE IF (u%Mesh(i_pt)%TranslationDisp(2,1) < 0 .AND. u%Mesh(i_pt)%TranslationVel(2,1) > 0 .AND. x%StC_x(3,i_pt) < 0 .AND. dxdt%StC_x(3,i_pt) > 0) THEN
             F_fr(2,i_pt) = -p%StC_Y_C_HIGH
             ! (c)
-         ELSE IF (u%Mesh(i_pt)%TranslationDisp(2,1) < 0 .AND. u%Mesh(i_pt)%TranslationVel(2,1) < 0 .AND. x%stc_x(3,i_pt) > 0 .AND. dxdt%stc_x(3,i_pt) > 0) THEN
+         ELSE IF (u%Mesh(i_pt)%TranslationDisp(2,1) < 0 .AND. u%Mesh(i_pt)%TranslationVel(2,1) < 0 .AND. x%StC_x(3,i_pt) > 0 .AND. dxdt%StC_x(3,i_pt) > 0) THEN
             F_fr(2,i_pt) = -p%StC_Y_C_HIGH
-         ELSE IF (u%Mesh(i_pt)%TranslationDisp(2,1) > 0 .AND. u%Mesh(i_pt)%TranslationVel(2,1) > 0 .AND. x%stc_x(3,i_pt) < 0 .AND. dxdt%stc_x(3,i_pt) < 0) THEN
+         ELSE IF (u%Mesh(i_pt)%TranslationDisp(2,1) > 0 .AND. u%Mesh(i_pt)%TranslationVel(2,1) > 0 .AND. x%StC_x(3,i_pt) < 0 .AND. dxdt%StC_x(3,i_pt) < 0) THEN
             F_fr(2,i_pt) = p%StC_Y_C_HIGH
          ELSE
             F_fr(2,i_pt) = p%StC_Y_C_LOW
          END IF
 
          !Brake Y
-         IF      ( (x%stc_x(3,i_pt) > p%P_SP(2)-0.2) .AND. (x%stc_x(4,i_pt) > 0) ) THEN
+         IF      ( (x%StC_x(3,i_pt) > p%P_SP(2)-0.2) .AND. (x%StC_x(4,i_pt) > 0) ) THEN
             C_Brake(2,i_pt) = p%StC_Y_C_BRAKE
-         ELSE IF ( (x%stc_x(3,i_pt) < p%N_SP(2)+0.2) .AND. (x%stc_x(4,i_pt) < 0) ) THEN
+         ELSE IF ( (x%StC_x(3,i_pt) < p%N_SP(2)+0.2) .AND. (x%StC_x(4,i_pt) < 0) ) THEN
             C_Brake(2,i_pt) = p%StC_Y_C_BRAKE
          ELSE
             C_Brake(2,i_pt) = 0
@@ -1330,24 +1330,24 @@ SUBROUTINE StC_GroundHookDamp(dxdt,x,u,p,C_ctrl,C_Brake,F_fr)
       ELSE IF (p%StC_CMODE == CMODE_Semi .AND. p%StC_SA_MODE == SA_CMODE_Ph_DF) THEN ! Phase Difference Algorithm with Damping On/Off
             ! X
             ! (a)
-         IF      (u%Mesh(i_pt)%TranslationDisp(1,1) > 0 .AND. u%Mesh(i_pt)%TranslationVel(1,1) < 0 .AND. x%stc_x(1,i_pt) > 0 .AND. dxdt%stc_x(1,i_pt) < 0) THEN
+         IF      (u%Mesh(i_pt)%TranslationDisp(1,1) > 0 .AND. u%Mesh(i_pt)%TranslationVel(1,1) < 0 .AND. x%StC_x(1,i_pt) > 0 .AND. dxdt%StC_x(1,i_pt) < 0) THEN
             C_ctrl(1,i_pt) = p%StC_X_C_HIGH
             ! (b)
-         ELSE IF (u%Mesh(i_pt)%TranslationDisp(1,1) < 0 .AND. u%Mesh(i_pt)%TranslationVel(1,1) > 0 .AND. x%stc_x(1,i_pt) < 0 .AND. dxdt%stc_x(1,i_pt) > 0) THEN
+         ELSE IF (u%Mesh(i_pt)%TranslationDisp(1,1) < 0 .AND. u%Mesh(i_pt)%TranslationVel(1,1) > 0 .AND. x%StC_x(1,i_pt) < 0 .AND. dxdt%StC_x(1,i_pt) > 0) THEN
             C_ctrl(1,i_pt) = p%StC_X_C_HIGH
             ! (c)
-         ELSE IF (u%Mesh(i_pt)%TranslationDisp(1,1) < 0 .AND. u%Mesh(i_pt)%TranslationVel(1,1) < 0 .AND. x%stc_x(1,i_pt) > 0 .AND. dxdt%stc_x(1,i_pt) > 0) THEN
+         ELSE IF (u%Mesh(i_pt)%TranslationDisp(1,1) < 0 .AND. u%Mesh(i_pt)%TranslationVel(1,1) < 0 .AND. x%StC_x(1,i_pt) > 0 .AND. dxdt%StC_x(1,i_pt) > 0) THEN
             C_ctrl(1,i_pt) = p%StC_X_C_HIGH
-         ELSE IF (u%Mesh(i_pt)%TranslationDisp(1,1) > 0 .AND. u%Mesh(i_pt)%TranslationVel(1,1) > 0 .AND. x%stc_x(1,i_pt) < 0 .AND. dxdt%stc_x(1,i_pt) < 0) THEN
+         ELSE IF (u%Mesh(i_pt)%TranslationDisp(1,1) > 0 .AND. u%Mesh(i_pt)%TranslationVel(1,1) > 0 .AND. x%StC_x(1,i_pt) < 0 .AND. dxdt%StC_x(1,i_pt) < 0) THEN
             C_ctrl(1,i_pt) = p%StC_X_C_HIGH
          ELSE
             C_ctrl(1,i_pt) = p%StC_X_C_LOW
          END IF
 
          !Brake X
-         IF      ( (x%stc_x(1,i_pt) > p%P_SP(1)-0.2) .AND. (x%stc_x(2,i_pt) > 0) ) THEN
+         IF      ( (x%StC_x(1,i_pt) > p%P_SP(1)-0.2) .AND. (x%StC_x(2,i_pt) > 0) ) THEN
             C_Brake(1,i_pt) = p%StC_X_C_BRAKE
-         ELSE IF ( (x%stc_x(1,i_pt) < p%N_SP(1)+0.2) .AND. (x%stc_x(2,i_pt) < 0) ) THEN
+         ELSE IF ( (x%StC_x(1,i_pt) < p%N_SP(1)+0.2) .AND. (x%StC_x(2,i_pt) < 0) ) THEN
             C_Brake(1,i_pt) = p%StC_X_C_BRAKE
          ELSE
             C_Brake(1,i_pt) = 0
@@ -1355,24 +1355,24 @@ SUBROUTINE StC_GroundHookDamp(dxdt,x,u,p,C_ctrl,C_Brake,F_fr)
 
             ! Y
             ! (a)
-         IF      (u%Mesh(i_pt)%TranslationDisp(2,1) > 0 .AND. u%Mesh(i_pt)%TranslationVel(2,1) < 0 .AND. x%stc_x(3,i_pt) > 0 .AND. dxdt%stc_x(3,i_pt) < 0) THEN
+         IF      (u%Mesh(i_pt)%TranslationDisp(2,1) > 0 .AND. u%Mesh(i_pt)%TranslationVel(2,1) < 0 .AND. x%StC_x(3,i_pt) > 0 .AND. dxdt%StC_x(3,i_pt) < 0) THEN
             C_ctrl(2,i_pt) = p%StC_Y_C_HIGH
             ! (b)
-         ELSE IF (u%Mesh(i_pt)%TranslationDisp(2,1) < 0 .AND. u%Mesh(i_pt)%TranslationVel(2,1) > 0 .AND. x%stc_x(3,i_pt) < 0 .AND. dxdt%stc_x(3,i_pt) > 0) THEN
+         ELSE IF (u%Mesh(i_pt)%TranslationDisp(2,1) < 0 .AND. u%Mesh(i_pt)%TranslationVel(2,1) > 0 .AND. x%StC_x(3,i_pt) < 0 .AND. dxdt%StC_x(3,i_pt) > 0) THEN
             C_ctrl(2,i_pt) = p%StC_Y_C_HIGH
             ! (c)
-         ELSE IF (u%Mesh(i_pt)%TranslationDisp(2,1) < 0 .AND. u%Mesh(i_pt)%TranslationVel(2,1) < 0 .AND. x%stc_x(3,i_pt) > 0 .AND. dxdt%stc_x(3,i_pt) > 0) THEN
+         ELSE IF (u%Mesh(i_pt)%TranslationDisp(2,1) < 0 .AND. u%Mesh(i_pt)%TranslationVel(2,1) < 0 .AND. x%StC_x(3,i_pt) > 0 .AND. dxdt%StC_x(3,i_pt) > 0) THEN
             C_ctrl(2,i_pt) = p%StC_Y_C_HIGH
-         ELSE IF (u%Mesh(i_pt)%TranslationDisp(2,1) > 0 .AND. u%Mesh(i_pt)%TranslationVel(2,1) > 0 .AND. x%stc_x(3,i_pt) < 0 .AND. dxdt%stc_x(3,i_pt) < 0) THEN
+         ELSE IF (u%Mesh(i_pt)%TranslationDisp(2,1) > 0 .AND. u%Mesh(i_pt)%TranslationVel(2,1) > 0 .AND. x%StC_x(3,i_pt) < 0 .AND. dxdt%StC_x(3,i_pt) < 0) THEN
             C_ctrl(2,i_pt) = p%StC_Y_C_HIGH
          ELSE
             C_ctrl(2,i_pt) = p%StC_Y_C_LOW
          END IF
 
          !Brake Y
-         IF      ( (x%stc_x(3,i_pt) > p%P_SP(2)-0.2) .AND. (x%stc_x(4,i_pt) > 0) ) THEN
+         IF      ( (x%StC_x(3,i_pt) > p%P_SP(2)-0.2) .AND. (x%StC_x(4,i_pt) > 0) ) THEN
             C_Brake(2,i_pt) = p%StC_Y_C_BRAKE
-         ELSE IF ( (x%stc_x(3,i_pt) < p%N_SP(2)+0.2) .AND. (x%stc_x(4,i_pt) < 0) ) THEN
+         ELSE IF ( (x%StC_x(3,i_pt) < p%N_SP(2)+0.2) .AND. (x%StC_x(4,i_pt) < 0) ) THEN
             C_Brake(2,i_pt) = p%StC_Y_C_BRAKE
          ELSE
             C_Brake(2,i_pt) = 0
@@ -1421,10 +1421,10 @@ SUBROUTINE SpringForceExtrapInterp(x, p, F_table,ErrStat,ErrMsg)
 
          IF (p%StC_DOF_MODE == DOFMode_Indept) THEN
             DO I = 1,2
-               Disp(I) = x%stc_x(J(I),i_pt)
+               Disp(I) = x%StC_x(J(I),i_pt)
             END DO
          ELSE !IF (p%StC_DOF_MODE == DOFMode_Omni) THEN
-            Disp = SQRT(x%stc_x(1,i_pt)**2+x%stc_x(3,i_pt)**2) ! constant assignment to vector
+            Disp = SQRT(x%StC_x(1,i_pt)**2+x%StC_x(3,i_pt)**2) ! constant assignment to vector
          END IF
 
          DO I = 1,2
@@ -1691,21 +1691,21 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, OutFileRoot, UnEc, ErrStat
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
-      ! StC_X_DWSP:
-   CALL ReadVar( UnIn, InputFile, InputFileData%StC_X_DWSP, "StC_X_DWSP", "DW stop position (maximum X mass displacement)", ErrStat2, ErrMsg2, UnEc)
+      ! StC_X_PSP:
+   CALL ReadVar( UnIn, InputFile, InputFileData%StC_X_PSP, "StC_X_PSP", "DW stop position (maximum X mass displacement)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
-      ! StC_X_UWSP:
-   CALL ReadVar( UnIn, InputFile, InputFileData%StC_X_UWSP, "StC_X_UWSP", "UW stop position (minimum X mass displacement)", ErrStat2, ErrMsg2, UnEc)
+      ! StC_X_NSP:
+   CALL ReadVar( UnIn, InputFile, InputFileData%StC_X_NSP, "StC_X_NSP", "UW stop position (minimum X mass displacement)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
 
-    ! StC_Y_PLSP:
-   CALL ReadVar( UnIn, InputFile, InputFileData%StC_Y_PLSP, "StC_Y_PLSP", "positive lateral stop position (maximum Y mass displacement)", ErrStat2, ErrMsg2, UnEc)
+    ! StC_Y_PSP:
+   CALL ReadVar( UnIn, InputFile, InputFileData%StC_Y_PSP, "StC_Y_PSP", "positive lateral stop position (maximum Y mass displacement)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
 
-    ! StC_Y_NLSP:
-   CALL ReadVar( UnIn, InputFile, InputFileData%StC_Y_NLSP, "StC_Y_NLSP", "negative lateral stop position (minimum Y mass displacement)", ErrStat2, ErrMsg2, UnEc)
+    ! StC_Y_NSP:
+   CALL ReadVar( UnIn, InputFile, InputFileData%StC_Y_NSP, "StC_Y_NSP", "negative lateral stop position (minimum Y mass displacement)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
@@ -1769,27 +1769,27 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, OutFileRoot, UnEc, ErrStat
       IF (ErrStat>= AbortErrLev) RETURN
 
    !Total Length:
-   CALL ReadVar (UnIn, InputFile, InputFileData%L_FA, "L_FA", "Fore-Aft TLCD total length", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar (UnIn, InputFile, InputFileData%L_X, "L_X", "Fore-Aft TLCD total length", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError(ErrStat2, ErrMsg2)
 
    !Horizontal length:
-   CALL ReadVar (UnIn, InputFile, InputFileData%B_FA, "B_FA", "Fore-Aft TLCD horizontal length", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar (UnIn, InputFile, InputFileData%B_X, "B_X", "Fore-Aft TLCD horizontal length", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError(ErrStat2, ErrMsg2)
 
    ! Vertical area:
-   CALL ReadVar (UnIn, InputFile, InputFileData%area_FA, "area_FA", "Fore-Aft TLCD cross-sectional area of vertical column", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar (UnIn, InputFile, InputFileData%area_X, "area_X", "Fore-Aft TLCD cross-sectional area of vertical column", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError(ErrStat2, ErrMsg2)
 
    ! Area ratio:
-   CALL ReadVar (UnIn, InputFile, InputFileData%area_ratio_FA, "area_ratio_FA", "Fore-Aft TLCD cross-sectional area ratio (vertical column area divided by horizontal column area)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar (UnIn, InputFile, InputFileData%area_ratio_X, "area_ratio_X", "Fore-Aft TLCD cross-sectional area ratio (vertical column area divided by horizontal column area)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError(ErrStat2, ErrMsg2)
 
    !Head loss coefficient
-   CALL ReadVar (UnIn, InputFile, InputFileData%headLossCoeff_FA, "headLossCoeff_FA", "Fore-Aft TLCD head loss coeff", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar (UnIn, InputFile, InputFileData%headLossCoeff_X, "headLossCoeff_X", "Fore-Aft TLCD head loss coeff", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError(ErrStat2, ErrMsg2)
 
    !Density
-   CALL ReadVar (UnIn, InputFile, InputFileData%rho_FA, "rho_FA", "Fore-Aft TLCD liquid density", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar (UnIn, InputFile, InputFileData%rho_X, "rho_X", "Fore-Aft TLCD liquid density", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError(ErrStat2, ErrMsg2)
       IF (ErrStat >= AbortErrLev) RETURN
 
@@ -1799,27 +1799,27 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, OutFileRoot, UnEc, ErrStat
    IF (ErrStat>= AbortErrLev) RETURN
 
    !Total Length:
-   CALL ReadVar (UnIn, InputFile, InputFileData%L_SS, "L_SS", "Side-Side TLCD total length", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar (UnIn, InputFile, InputFileData%L_Y, "L_Y", "Side-Side TLCD total length", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError(ErrStat2, ErrMsg2)
 
    !Horizontal length:
-   CALL ReadVar (UnIn, InputFile, InputFileData%B_SS, "B_SS", "Side-Side TLCD horizontal length", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar (UnIn, InputFile, InputFileData%B_Y, "B_Y", "Side-Side TLCD horizontal length", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError(ErrStat2, ErrMsg2)
 
    ! Vertical area:
-   CALL ReadVar (UnIn, InputFile, InputFileData%area_SS, "area_SS", "Side-Side TLCD cross-sectional area of vertical column", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar (UnIn, InputFile, InputFileData%area_Y, "area_Y", "Side-Side TLCD cross-sectional area of vertical column", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError(ErrStat2, ErrMsg2)
 
    ! Area ratio:
-   CALL ReadVar (UnIn, InputFile, InputFileData%area_ratio_SS, "area_ratio_SS", "Side-Side TLCD cross-sectional area ratio (vertical column area divided by horizontal column area)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar (UnIn, InputFile, InputFileData%area_ratio_Y, "area_ratio_Y", "Side-Side TLCD cross-sectional area ratio (vertical column area divided by horizontal column area)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError(ErrStat2, ErrMsg2)
 
    !Head loss coefficient
-   CALL ReadVar (UnIn, InputFile, InputFileData%headLossCoeff_SS, "headLossCoeff_SS", "Side-Side TLCD head loss coeff", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar (UnIn, InputFile, InputFileData%headLossCoeff_Y, "headLossCoeff_Y", "Side-Side TLCD head loss coeff", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError(ErrStat2, ErrMsg2)
 
    !Density
-   CALL ReadVar (UnIn, InputFile, InputFileData%rho_SS, "rho_SS", "Side-Side TLCD liquid density", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar (UnIn, InputFile, InputFileData%rho_Y, "rho_Y", "Side-Side TLCD liquid density", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError(ErrStat2, ErrMsg2)
       IF (ErrStat >= AbortErrLev) RETURN
    !MEG & SP
@@ -2102,6 +2102,7 @@ SUBROUTINE StC_SetParameters( InputFileData, InitInp, p, Interval, ErrStat, ErrM
 
    p%StC_X_DOF = InputFileData%StC_X_DOF
    p%StC_Y_DOF = InputFileData%StC_Y_DOF
+   p%StC_Z_DOF = InputFileData%StC_Z_DOF
 
    ! StC X parameters
    p%X_DSP = InputFileData%StC_X_DSP
@@ -2115,36 +2116,46 @@ SUBROUTINE StC_SetParameters( InputFileData, InitInp, p, Interval, ErrStat, ErrM
    p%K_Y = InputFileData%StC_Y_K
    p%C_Y = InputFileData%StC_Y_C
 
+   ! StC Z parameters
+   p%Z_DSP = InputFileData%StC_Z_DSP
+   p%M_Z = InputFileData%StC_Z_M
+   p%K_Z = InputFileData%StC_Z_K
+   p%C_Z = InputFileData%StC_Z_C
+
    p%M_XY = InputFileData%StC_XY_M
 
    ! Fore-Aft TLCD Parameters ! MEG & SP
-   p%L_FA = InputFileData%L_FA
-   p%B_FA = InputFileData%B_FA
-   p%area_FA = InputFileData%area_FA
-   p%area_ratio_FA = InputFileData%area_ratio_FA
-   p%headLossCoeff_FA = InputFileData%headLossCoeff_FA
-   p%rho_FA = InputFileData%rho_FA
+   p%L_X = InputFileData%L_X
+   p%B_X = InputFileData%B_X
+   p%area_X = InputFileData%area_X
+   p%area_ratio_X = InputFileData%area_ratio_X
+   p%headLossCoeff_X = InputFileData%headLossCoeff_X
+   p%rho_X = InputFileData%rho_X
 
    !Side-Side TLCD Parameters
-   p%L_SS = InputFileData%L_SS
-   p%B_SS = InputFileData%B_SS
-   p%area_SS = InputFileData%area_SS
-   p%area_ratio_SS = InputFileData%area_ratio_SS
-   p%headLossCoeff_SS = InputFileData%headLossCoeff_SS
-   p%rho_SS = InputFileData%rho_SS ! MEG & SP
+   p%L_Y = InputFileData%L_Y
+   p%B_Y = InputFileData%B_Y
+   p%area_Y = InputFileData%area_Y
+   p%area_ratio_Y = InputFileData%area_ratio_Y
+   p%headLossCoeff_Y = InputFileData%headLossCoeff_Y
+   p%rho_Y = InputFileData%rho_Y ! MEG & SP
 
      ! vector parameters
    ! stop positions
-   p%P_SP(1) = InputFileData%StC_X_DWSP
-   p%P_SP(2) = InputFileData%StC_Y_PLSP
-   p%N_SP(1) = InputFileData%StC_X_UWSP
-   p%N_SP(2) = InputFileData%StC_Y_NLSP
+   p%P_SP(1) = InputFileData%StC_X_PSP
+   p%P_SP(2) = InputFileData%StC_Y_PSP
+   p%P_SP(3) = InputFileData%StC_Z_PSP
+   p%N_SP(1) = InputFileData%StC_X_NSP
+   p%N_SP(2) = InputFileData%StC_Y_NSP
+   p%N_SP(3) = InputFileData%StC_Z_NSP
    ! stop force stiffness
    p%K_S(1) = InputFileData%StC_X_KS
    p%K_S(2) = InputFileData%StC_Y_KS
+   p%K_S(3) = InputFileData%StC_Z_KS
    ! stop force damping
    p%C_S(1) = InputFileData%StC_X_CS
    p%C_S(2) = InputFileData%StC_Y_CS
+   p%C_S(3) = InputFileData%StC_Z_CS
 
    ! ground hook control damping files
    p%StC_CMODE = InputFileData%StC_CMODE
@@ -2153,8 +2164,11 @@ SUBROUTINE StC_SetParameters( InputFileData, InitInp, p, Interval, ErrStat, ErrM
    p%StC_X_C_LOW = InputFileData%StC_X_C_LOW
    p%StC_Y_C_HIGH = InputFileData%StC_Y_C_HIGH
    p%StC_Y_C_LOW = InputFileData%StC_Y_C_LOW
+   p%StC_Z_C_HIGH = InputFileData%StC_Z_C_HIGH
+   p%StC_Z_C_LOW = InputFileData%StC_Z_C_LOW
    p%StC_X_C_BRAKE = InputFileData%StC_X_C_BRAKE
    p%StC_Y_C_BRAKE = InputFileData%StC_Y_C_BRAKE
+   p%StC_Z_C_BRAKE = InputFileData%StC_Z_C_BRAKE
 
    ! User Defined Stiffness Table
    p%Use_F_TBL = InputFileData%Use_F_TBL

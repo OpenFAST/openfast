@@ -41,44 +41,56 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: StC_DOF_MODE      !< DOF mode {0: NO StC_DOF; 1: StC_X_DOF and StC_Y_DOF; 2: StC_XY_DOF; 3: TLCD; 4: Prescribed force/moment time series} [-]
     LOGICAL  :: StC_X_DOF      !< DOF on or off [-]
     LOGICAL  :: StC_Y_DOF      !< DOF on or off [-]
+    LOGICAL  :: StC_Z_DOF      !< DOF on or off [-]
     REAL(ReKi)  :: StC_X_DSP      !< StC_X initial displacement [m]
     REAL(ReKi)  :: StC_Y_DSP      !< StC_Y initial displacement [m]
-    REAL(ReKi)  :: StC_X_M      !< StC mass [kg]
-    REAL(ReKi)  :: StC_Y_M      !< StC mass [kg]
-    REAL(ReKi)  :: StC_XY_M      !< StCXY mass [kg]
-    REAL(ReKi)  :: StC_X_K      !< StC stiffness [N/m]
-    REAL(ReKi)  :: StC_Y_K      !< StC stiffness [N/m]
-    REAL(ReKi)  :: StC_X_C      !< StC damping [N/(m/s)]
-    REAL(ReKi)  :: StC_Y_C      !< StC damping [N/(m/s)]
-    REAL(ReKi)  :: StC_X_DWSP      !< DW stop position (maximum X mass displacement) [m]
-    REAL(ReKi)  :: StC_X_UWSP      !< UW stop position (minimum X mass displacement) [m]
-    REAL(ReKi)  :: StC_X_KS      !< stop spring stiffness [N/m]
-    REAL(ReKi)  :: StC_X_CS      !< stop spring damping [N/(m/s)]
-    REAL(ReKi)  :: StC_Y_PLSP      !< positive lateral stop position (maximum Y mass displacement) [m]
-    REAL(ReKi)  :: StC_Y_NLSP      !< negative lateral stop position (minimum Y mass displacement) [m]
-    REAL(ReKi)  :: StC_Y_KS      !< stop spring stiffness [N/m]
-    REAL(ReKi)  :: StC_Y_CS      !< stop spring damping [N/(m/s)]
-    REAL(ReKi)  :: StC_P_X      !< rest position of StCs w.r.t. nacelle [m]
-    REAL(ReKi)  :: StC_P_Y      !< rest position of StCs w.r.t. nacelle [m]
-    REAL(ReKi)  :: StC_P_Z      !< rest position of StCs w.r.t. nacelle [m]
+    REAL(ReKi)  :: StC_Z_DSP      !< StC_Z initial displacement [m]
+    REAL(ReKi)  :: StC_X_M      !< StC X mass [kg]
+    REAL(ReKi)  :: StC_Y_M      !< StC Y mass [kg]
+    REAL(ReKi)  :: StC_Z_M      !< StC Z mass [kg]
+    REAL(ReKi)  :: StC_XY_M      !< StC XY mass [kg]
+    REAL(ReKi)  :: StC_X_K      !< StC X stiffness [N/m]
+    REAL(ReKi)  :: StC_Y_K      !< StC Y stiffness [N/m]
+    REAL(ReKi)  :: StC_Z_K      !< StC Y stiffness [N/m]
+    REAL(ReKi)  :: StC_X_C      !< StC X damping [N/(m/s)]
+    REAL(ReKi)  :: StC_Y_C      !< StC Y damping [N/(m/s)]
+    REAL(ReKi)  :: StC_Z_C      !< StC Z damping [N/(m/s)]
+    REAL(ReKi)  :: StC_X_PSP      !< Positive stop position (maximum X mass displacement) [m]
+    REAL(ReKi)  :: StC_X_NSP      !< Negative stop position (minimum X mass displacement) [m]
+    REAL(ReKi)  :: StC_Y_PSP      !< Positive stop position (maximum Y mass displacement) [m]
+    REAL(ReKi)  :: StC_Y_NSP      !< Negative stop position (minimum Y mass displacement) [m]
+    REAL(ReKi)  :: StC_Z_PSP      !< Positive stop position (maximum Z mass displacement) [m]
+    REAL(ReKi)  :: StC_Z_NSP      !< Negative stop position (minimum Z mass displacement) [m]
+    REAL(ReKi)  :: StC_X_KS      !< Stop spring X stiffness [N/m]
+    REAL(ReKi)  :: StC_X_CS      !< Stop spring X damping [N/(m/s)]
+    REAL(ReKi)  :: StC_Y_KS      !< Stop spring Y stiffness [N/m]
+    REAL(ReKi)  :: StC_Y_CS      !< Stop spring Y damping [N/(m/s)]
+    REAL(ReKi)  :: StC_Z_KS      !< Stop spring Z stiffness [used only when StC_DOF_MODE=1 and StC_Z_DOF=TRUE] [N/m]
+    REAL(ReKi)  :: StC_Z_CS      !< Stop spring Z damping   [used only when StC_DOF_MODE=1 and StC_Z_DOF=TRUE] [N/(m/s)]
+    REAL(ReKi)  :: StC_P_X      !< StC X initial displacement (m) [relative to at rest position] [m]
+    REAL(ReKi)  :: StC_P_Y      !< StC Y initial displacement (m) [relative to at rest position] [m]
+    REAL(ReKi)  :: StC_P_Z      !< StC Z initial displacement (m) [relative to at rest position; used only when StC_DOF_MODE=1 and StC_Z_DOF=TRUE] [m]
     REAL(ReKi)  :: StC_X_C_HIGH      !< StC X high damping for ground hook control [N/(m/s)]
     REAL(ReKi)  :: StC_X_C_LOW      !< StC X low damping for ground hook control [N/(m/s)]
     REAL(ReKi)  :: StC_Y_C_HIGH      !< StC Y high damping for ground hook control [N/(m/s)]
-    REAL(ReKi)  :: StC_Y_C_LOW      !< StC Y high damping for ground hook control [N/(m/s)]
+    REAL(ReKi)  :: StC_Y_C_LOW      !< StC Y low damping for ground hook control [N/(m/s)]
+    REAL(ReKi)  :: StC_Z_C_HIGH      !< StC Z high damping for ground hook control [N/(m/s)]
+    REAL(ReKi)  :: StC_Z_C_LOW      !< StC Z low damping for ground hook control [N/(m/s)]
     REAL(ReKi)  :: StC_X_C_BRAKE      !< StC X high damping for braking the StC [N/(m/s)]
-    REAL(ReKi)  :: StC_Y_C_BRAKE      !< StC X high damping for braking the StC [N/(m/s)]
-    REAL(ReKi)  :: L_FA      !< Fore-Aft TLCD total length [m]
-    REAL(ReKi)  :: B_FA      !< Fore-Aft TLCD horizontal length [m]
-    REAL(ReKi)  :: area_FA      !< Fore-Aft TLCD cross-sectional area of vertical column [m2]
-    REAL(ReKi)  :: area_ratio_FA      !< Fore-Aft TLCD cross-sectional area ratio (vertical column area divided by horizontal column area) [-]
-    REAL(ReKi)  :: headLossCoeff_FA      !< Fore-Aft TLCD head loss coeff [-]
-    REAL(ReKi)  :: rho_FA      !< Fore-Aft TLCD liquid density [kg/m3]
-    REAL(ReKi)  :: L_SS      !< Side-Side TLCD total length [m]
-    REAL(ReKi)  :: B_SS      !< Side-Side TLCD horizontal length [m]
-    REAL(ReKi)  :: area_SS      !< Side-Side TLCD cross-sectional area of vertical column [m]
-    REAL(ReKi)  :: area_ratio_SS      !< Side-Side TLCD cross-sectional area ratio (vertical column area divided by horizontal column area) [-]
-    REAL(ReKi)  :: headLossCoeff_SS      !< Side-Side TLCD head loss coeff [-]
-    REAL(ReKi)  :: rho_SS      !< Side-Side TLCD liquid density [kg/m3]
+    REAL(ReKi)  :: StC_Y_C_BRAKE      !< StC Y high damping for braking the StC [N/(m/s)]
+    REAL(ReKi)  :: StC_Z_C_BRAKE      !< StC Z high damping for braking the StC [N/(m/s)]
+    REAL(ReKi)  :: L_X      !< X TLCD total length [m]
+    REAL(ReKi)  :: B_X      !< X TLCD horizontal length [m]
+    REAL(ReKi)  :: area_X      !< X TLCD cross-sectional area of vertical column [m^2]
+    REAL(ReKi)  :: area_ratio_X      !< X TLCD cross-sectional area ratio (vertical column area divided by horizontal column area) [-]
+    REAL(ReKi)  :: headLossCoeff_X      !< X TLCD head loss coeff [-]
+    REAL(ReKi)  :: rho_X      !< X TLCD liquid density [kg/m^3]
+    REAL(ReKi)  :: L_Y      !< Y TLCD total length [m]
+    REAL(ReKi)  :: B_Y      !< Y TLCD horizontal length [m]
+    REAL(ReKi)  :: area_Y      !< Side-Side TLCD cross-sectional area of vertical column [m]
+    REAL(ReKi)  :: area_ratio_Y      !< Side-Side TLCD cross-sectional area ratio (vertical column area divided by horizontal column area) [-]
+    REAL(ReKi)  :: headLossCoeff_Y      !< Side-Side TLCD head loss coeff [-]
+    REAL(ReKi)  :: rho_Y      !< Side-Side TLCD liquid density [kg/m^3]
     LOGICAL  :: USE_F_TBL      !< use spring force from user-defined table (flag) [-]
     CHARACTER(1024)  :: StC_F_TBL_FILE      !< user-defined spring table filename [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: F_TBL      !< user-defined spring force [N]
@@ -149,40 +161,48 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: StC_DOF_MODE      !< DOF mode {0: NO StC_DOF; 1: StC_X_DOF and StC_Y_DOF; 2: StC_XY_DOF; 3: TLCD; 4: Prescribed force/moment time series} [-]
     LOGICAL  :: StC_X_DOF      !< DOF on or off [-]
     LOGICAL  :: StC_Y_DOF      !< DOF on or off [-]
+    LOGICAL  :: StC_Z_DOF      !< DOF on or off [-]
     REAL(ReKi)  :: X_DSP      !< StC_X initial displacement [m]
     REAL(ReKi)  :: Y_DSP      !< StC_Y initial displacement [m]
+    REAL(ReKi)  :: Z_DSP      !< StC_Z initial displacement [m]
     REAL(ReKi)  :: M_X      !< StC mass [kg]
     REAL(ReKi)  :: M_Y      !< StC mass [kg]
+    REAL(ReKi)  :: M_Z      !< StC mass [kg]
     REAL(ReKi)  :: M_XY      !< StCXY mass [kg]
     REAL(ReKi)  :: K_X      !< StC stiffness [N/m]
     REAL(ReKi)  :: K_Y      !< StC stiffness [N/m]
+    REAL(ReKi)  :: K_Z      !< StC stiffness [N/m]
     REAL(ReKi)  :: C_X      !< StC damping [N/(m/s)]
     REAL(ReKi)  :: C_Y      !< StC damping [N/(m/s)]
-    REAL(ReKi) , DIMENSION(1:2)  :: K_S      !< StC stop stiffness [N/m]
-    REAL(ReKi) , DIMENSION(1:2)  :: C_S      !< StC stop damping [N/(m/s)]
-    REAL(ReKi) , DIMENSION(1:2)  :: P_SP      !< Positive stop position (maximum mass displacement) [m]
-    REAL(ReKi) , DIMENSION(1:2)  :: N_SP      !< Negative stop position (minimum X mass displacement) [m]
+    REAL(ReKi)  :: C_Z      !< StC damping [N/(m/s)]
+    REAL(ReKi) , DIMENSION(1:3)  :: K_S      !< StC stop stiffness [N/m]
+    REAL(ReKi) , DIMENSION(1:3)  :: C_S      !< StC stop damping [N/(m/s)]
+    REAL(ReKi) , DIMENSION(1:3)  :: P_SP      !< Positive stop position (maximum mass displacement) [m]
+    REAL(ReKi) , DIMENSION(1:3)  :: N_SP      !< Negative stop position (minimum X mass displacement) [m]
     REAL(ReKi) , DIMENSION(1:3)  :: Gravity      !< Gravitational acceleration vector [m/s^2]
     INTEGER(IntKi)  :: StC_CMODE      !< control mode {0:none; 1: Semi-Active Control Mode; 2: Active Control Mode;}  [-]
     INTEGER(IntKi)  :: StC_SA_MODE      !< Semi-Active control mode {1: velocity-based ground hook control; 2: Inverse velocity-based ground hook control; 3: displacement-based ground hook control 4: Phase difference Algorithm with Friction Force 5: Phase difference Algorithm with Damping Force}  [-]
     REAL(ReKi)  :: StC_X_C_HIGH      !< StC X high damping for ground hook control [N/(m/s)]
     REAL(ReKi)  :: StC_X_C_LOW      !< StC X low damping for ground hook control [N/(m/s)]
     REAL(ReKi)  :: StC_Y_C_HIGH      !< StC Y high damping for ground hook control [N/(m/s)]
-    REAL(ReKi)  :: StC_Y_C_LOW      !< StC Y high damping for ground hook control [N/(m/s)]
+    REAL(ReKi)  :: StC_Y_C_LOW      !< StC Y low damping for ground hook control [N/(m/s)]
+    REAL(ReKi)  :: StC_Z_C_HIGH      !< StC Z high damping for ground hook control [N/(m/s)]
+    REAL(ReKi)  :: StC_Z_C_LOW      !< StC Z low damping for ground hook control [N/(m/s)]
     REAL(ReKi)  :: StC_X_C_BRAKE      !< StC X high damping for braking the StC [N/(m/s)]
-    REAL(ReKi)  :: StC_Y_C_BRAKE      !< StC X high damping for braking the StC [N/(m/s)]
-    REAL(ReKi)  :: L_FA      !< Fore-Aft TLCD total length [m]
-    REAL(ReKi)  :: B_FA      !< Fore-Aft TLCD horizontal length [m]
-    REAL(ReKi)  :: area_FA      !< Fore-Aft TLCD cross-sectional area of vertical column [m2]
-    REAL(ReKi)  :: area_ratio_FA      !< Fore-Aft TLCD cross-sectional area ratio (vertical column area divided by horizontal column area) [-]
-    REAL(ReKi)  :: headLossCoeff_FA      !< Fore-Aft TLCD head loss coeff [-]
-    REAL(ReKi)  :: rho_FA      !< Fore-Aft TLCD liquid density [kg/m3]
-    REAL(ReKi)  :: L_SS      !< Side-Side TLCD total length [m]
-    REAL(ReKi)  :: B_SS      !< Side-Side TLCD horizontal length [m]
-    REAL(ReKi)  :: area_SS      !< Side-Side TLCD cross-sectional area of vertical column [m]
-    REAL(ReKi)  :: area_ratio_SS      !< Side-Side TLCD cross-sectional area ratio (vertical column area divided by horizontal column area) [-]
-    REAL(ReKi)  :: headLossCoeff_SS      !< Side-Side TLCD head loss coeff [-]
-    REAL(ReKi)  :: rho_SS      !< Side-Side TLCD liquid density [kg/m3]
+    REAL(ReKi)  :: StC_Y_C_BRAKE      !< StC Y high damping for braking the StC [N/(m/s)]
+    REAL(ReKi)  :: StC_Z_C_BRAKE      !< StC Y high damping for braking the StC [N/(m/s)]
+    REAL(ReKi)  :: L_X      !< X TLCD total length [m]
+    REAL(ReKi)  :: B_X      !< X TLCD horizontal length [m]
+    REAL(ReKi)  :: area_X      !< X TLCD cross-sectional area of vertical column [m^2]
+    REAL(ReKi)  :: area_ratio_X      !< X TLCD cross-sectional area ratio (vertical column area divided by horizontal column area) [-]
+    REAL(ReKi)  :: headLossCoeff_X      !< X TLCD head loss coeff [-]
+    REAL(ReKi)  :: rho_X      !< X TLCD liquid density [kg/m^3]
+    REAL(ReKi)  :: L_Y      !< Y TLCD total length [m]
+    REAL(ReKi)  :: B_Y      !< Y TLCD horizontal length [m]
+    REAL(ReKi)  :: area_Y      !< Side-Side TLCD cross-sectional area of vertical column [m]
+    REAL(ReKi)  :: area_ratio_Y      !< Side-Side TLCD cross-sectional area ratio (vertical column area divided by horizontal column area) [-]
+    REAL(ReKi)  :: headLossCoeff_Y      !< Side-Side TLCD head loss coeff [-]
+    REAL(ReKi)  :: rho_Y      !< Side-Side TLCD liquid density [kg/m^3]
     LOGICAL  :: Use_F_TBL      !< use spring force from user-defined table (flag) [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: F_TBL      !< user-defined spring force [N]
     INTEGER(IntKi)  :: NumMeshPts      !< Number of mesh points [-]
@@ -224,23 +244,32 @@ CONTAINS
     DstInputFileData%StC_DOF_MODE = SrcInputFileData%StC_DOF_MODE
     DstInputFileData%StC_X_DOF = SrcInputFileData%StC_X_DOF
     DstInputFileData%StC_Y_DOF = SrcInputFileData%StC_Y_DOF
+    DstInputFileData%StC_Z_DOF = SrcInputFileData%StC_Z_DOF
     DstInputFileData%StC_X_DSP = SrcInputFileData%StC_X_DSP
     DstInputFileData%StC_Y_DSP = SrcInputFileData%StC_Y_DSP
+    DstInputFileData%StC_Z_DSP = SrcInputFileData%StC_Z_DSP
     DstInputFileData%StC_X_M = SrcInputFileData%StC_X_M
     DstInputFileData%StC_Y_M = SrcInputFileData%StC_Y_M
+    DstInputFileData%StC_Z_M = SrcInputFileData%StC_Z_M
     DstInputFileData%StC_XY_M = SrcInputFileData%StC_XY_M
     DstInputFileData%StC_X_K = SrcInputFileData%StC_X_K
     DstInputFileData%StC_Y_K = SrcInputFileData%StC_Y_K
+    DstInputFileData%StC_Z_K = SrcInputFileData%StC_Z_K
     DstInputFileData%StC_X_C = SrcInputFileData%StC_X_C
     DstInputFileData%StC_Y_C = SrcInputFileData%StC_Y_C
-    DstInputFileData%StC_X_DWSP = SrcInputFileData%StC_X_DWSP
-    DstInputFileData%StC_X_UWSP = SrcInputFileData%StC_X_UWSP
+    DstInputFileData%StC_Z_C = SrcInputFileData%StC_Z_C
+    DstInputFileData%StC_X_PSP = SrcInputFileData%StC_X_PSP
+    DstInputFileData%StC_X_NSP = SrcInputFileData%StC_X_NSP
+    DstInputFileData%StC_Y_PSP = SrcInputFileData%StC_Y_PSP
+    DstInputFileData%StC_Y_NSP = SrcInputFileData%StC_Y_NSP
+    DstInputFileData%StC_Z_PSP = SrcInputFileData%StC_Z_PSP
+    DstInputFileData%StC_Z_NSP = SrcInputFileData%StC_Z_NSP
     DstInputFileData%StC_X_KS = SrcInputFileData%StC_X_KS
     DstInputFileData%StC_X_CS = SrcInputFileData%StC_X_CS
-    DstInputFileData%StC_Y_PLSP = SrcInputFileData%StC_Y_PLSP
-    DstInputFileData%StC_Y_NLSP = SrcInputFileData%StC_Y_NLSP
     DstInputFileData%StC_Y_KS = SrcInputFileData%StC_Y_KS
     DstInputFileData%StC_Y_CS = SrcInputFileData%StC_Y_CS
+    DstInputFileData%StC_Z_KS = SrcInputFileData%StC_Z_KS
+    DstInputFileData%StC_Z_CS = SrcInputFileData%StC_Z_CS
     DstInputFileData%StC_P_X = SrcInputFileData%StC_P_X
     DstInputFileData%StC_P_Y = SrcInputFileData%StC_P_Y
     DstInputFileData%StC_P_Z = SrcInputFileData%StC_P_Z
@@ -248,20 +277,23 @@ CONTAINS
     DstInputFileData%StC_X_C_LOW = SrcInputFileData%StC_X_C_LOW
     DstInputFileData%StC_Y_C_HIGH = SrcInputFileData%StC_Y_C_HIGH
     DstInputFileData%StC_Y_C_LOW = SrcInputFileData%StC_Y_C_LOW
+    DstInputFileData%StC_Z_C_HIGH = SrcInputFileData%StC_Z_C_HIGH
+    DstInputFileData%StC_Z_C_LOW = SrcInputFileData%StC_Z_C_LOW
     DstInputFileData%StC_X_C_BRAKE = SrcInputFileData%StC_X_C_BRAKE
     DstInputFileData%StC_Y_C_BRAKE = SrcInputFileData%StC_Y_C_BRAKE
-    DstInputFileData%L_FA = SrcInputFileData%L_FA
-    DstInputFileData%B_FA = SrcInputFileData%B_FA
-    DstInputFileData%area_FA = SrcInputFileData%area_FA
-    DstInputFileData%area_ratio_FA = SrcInputFileData%area_ratio_FA
-    DstInputFileData%headLossCoeff_FA = SrcInputFileData%headLossCoeff_FA
-    DstInputFileData%rho_FA = SrcInputFileData%rho_FA
-    DstInputFileData%L_SS = SrcInputFileData%L_SS
-    DstInputFileData%B_SS = SrcInputFileData%B_SS
-    DstInputFileData%area_SS = SrcInputFileData%area_SS
-    DstInputFileData%area_ratio_SS = SrcInputFileData%area_ratio_SS
-    DstInputFileData%headLossCoeff_SS = SrcInputFileData%headLossCoeff_SS
-    DstInputFileData%rho_SS = SrcInputFileData%rho_SS
+    DstInputFileData%StC_Z_C_BRAKE = SrcInputFileData%StC_Z_C_BRAKE
+    DstInputFileData%L_X = SrcInputFileData%L_X
+    DstInputFileData%B_X = SrcInputFileData%B_X
+    DstInputFileData%area_X = SrcInputFileData%area_X
+    DstInputFileData%area_ratio_X = SrcInputFileData%area_ratio_X
+    DstInputFileData%headLossCoeff_X = SrcInputFileData%headLossCoeff_X
+    DstInputFileData%rho_X = SrcInputFileData%rho_X
+    DstInputFileData%L_Y = SrcInputFileData%L_Y
+    DstInputFileData%B_Y = SrcInputFileData%B_Y
+    DstInputFileData%area_Y = SrcInputFileData%area_Y
+    DstInputFileData%area_ratio_Y = SrcInputFileData%area_ratio_Y
+    DstInputFileData%headLossCoeff_Y = SrcInputFileData%headLossCoeff_Y
+    DstInputFileData%rho_Y = SrcInputFileData%rho_Y
     DstInputFileData%USE_F_TBL = SrcInputFileData%USE_F_TBL
     DstInputFileData%StC_F_TBL_FILE = SrcInputFileData%StC_F_TBL_FILE
 IF (ALLOCATED(SrcInputFileData%F_TBL)) THEN
@@ -337,23 +369,32 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! StC_DOF_MODE
       Int_BufSz  = Int_BufSz  + 1  ! StC_X_DOF
       Int_BufSz  = Int_BufSz  + 1  ! StC_Y_DOF
+      Int_BufSz  = Int_BufSz  + 1  ! StC_Z_DOF
       Re_BufSz   = Re_BufSz   + 1  ! StC_X_DSP
       Re_BufSz   = Re_BufSz   + 1  ! StC_Y_DSP
+      Re_BufSz   = Re_BufSz   + 1  ! StC_Z_DSP
       Re_BufSz   = Re_BufSz   + 1  ! StC_X_M
       Re_BufSz   = Re_BufSz   + 1  ! StC_Y_M
+      Re_BufSz   = Re_BufSz   + 1  ! StC_Z_M
       Re_BufSz   = Re_BufSz   + 1  ! StC_XY_M
       Re_BufSz   = Re_BufSz   + 1  ! StC_X_K
       Re_BufSz   = Re_BufSz   + 1  ! StC_Y_K
+      Re_BufSz   = Re_BufSz   + 1  ! StC_Z_K
       Re_BufSz   = Re_BufSz   + 1  ! StC_X_C
       Re_BufSz   = Re_BufSz   + 1  ! StC_Y_C
-      Re_BufSz   = Re_BufSz   + 1  ! StC_X_DWSP
-      Re_BufSz   = Re_BufSz   + 1  ! StC_X_UWSP
+      Re_BufSz   = Re_BufSz   + 1  ! StC_Z_C
+      Re_BufSz   = Re_BufSz   + 1  ! StC_X_PSP
+      Re_BufSz   = Re_BufSz   + 1  ! StC_X_NSP
+      Re_BufSz   = Re_BufSz   + 1  ! StC_Y_PSP
+      Re_BufSz   = Re_BufSz   + 1  ! StC_Y_NSP
+      Re_BufSz   = Re_BufSz   + 1  ! StC_Z_PSP
+      Re_BufSz   = Re_BufSz   + 1  ! StC_Z_NSP
       Re_BufSz   = Re_BufSz   + 1  ! StC_X_KS
       Re_BufSz   = Re_BufSz   + 1  ! StC_X_CS
-      Re_BufSz   = Re_BufSz   + 1  ! StC_Y_PLSP
-      Re_BufSz   = Re_BufSz   + 1  ! StC_Y_NLSP
       Re_BufSz   = Re_BufSz   + 1  ! StC_Y_KS
       Re_BufSz   = Re_BufSz   + 1  ! StC_Y_CS
+      Re_BufSz   = Re_BufSz   + 1  ! StC_Z_KS
+      Re_BufSz   = Re_BufSz   + 1  ! StC_Z_CS
       Re_BufSz   = Re_BufSz   + 1  ! StC_P_X
       Re_BufSz   = Re_BufSz   + 1  ! StC_P_Y
       Re_BufSz   = Re_BufSz   + 1  ! StC_P_Z
@@ -361,20 +402,23 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! StC_X_C_LOW
       Re_BufSz   = Re_BufSz   + 1  ! StC_Y_C_HIGH
       Re_BufSz   = Re_BufSz   + 1  ! StC_Y_C_LOW
+      Re_BufSz   = Re_BufSz   + 1  ! StC_Z_C_HIGH
+      Re_BufSz   = Re_BufSz   + 1  ! StC_Z_C_LOW
       Re_BufSz   = Re_BufSz   + 1  ! StC_X_C_BRAKE
       Re_BufSz   = Re_BufSz   + 1  ! StC_Y_C_BRAKE
-      Re_BufSz   = Re_BufSz   + 1  ! L_FA
-      Re_BufSz   = Re_BufSz   + 1  ! B_FA
-      Re_BufSz   = Re_BufSz   + 1  ! area_FA
-      Re_BufSz   = Re_BufSz   + 1  ! area_ratio_FA
-      Re_BufSz   = Re_BufSz   + 1  ! headLossCoeff_FA
-      Re_BufSz   = Re_BufSz   + 1  ! rho_FA
-      Re_BufSz   = Re_BufSz   + 1  ! L_SS
-      Re_BufSz   = Re_BufSz   + 1  ! B_SS
-      Re_BufSz   = Re_BufSz   + 1  ! area_SS
-      Re_BufSz   = Re_BufSz   + 1  ! area_ratio_SS
-      Re_BufSz   = Re_BufSz   + 1  ! headLossCoeff_SS
-      Re_BufSz   = Re_BufSz   + 1  ! rho_SS
+      Re_BufSz   = Re_BufSz   + 1  ! StC_Z_C_BRAKE
+      Re_BufSz   = Re_BufSz   + 1  ! L_X
+      Re_BufSz   = Re_BufSz   + 1  ! B_X
+      Re_BufSz   = Re_BufSz   + 1  ! area_X
+      Re_BufSz   = Re_BufSz   + 1  ! area_ratio_X
+      Re_BufSz   = Re_BufSz   + 1  ! headLossCoeff_X
+      Re_BufSz   = Re_BufSz   + 1  ! rho_X
+      Re_BufSz   = Re_BufSz   + 1  ! L_Y
+      Re_BufSz   = Re_BufSz   + 1  ! B_Y
+      Re_BufSz   = Re_BufSz   + 1  ! area_Y
+      Re_BufSz   = Re_BufSz   + 1  ! area_ratio_Y
+      Re_BufSz   = Re_BufSz   + 1  ! headLossCoeff_Y
+      Re_BufSz   = Re_BufSz   + 1  ! rho_Y
       Int_BufSz  = Int_BufSz  + 1  ! USE_F_TBL
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%StC_F_TBL_FILE)  ! StC_F_TBL_FILE
   Int_BufSz   = Int_BufSz   + 1     ! F_TBL allocated yes/no
@@ -425,13 +469,19 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%StC_Y_DOF, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%StC_Z_DOF, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%StC_X_DSP
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%StC_Y_DSP
     Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%StC_Z_DSP
+    Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%StC_X_M
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%StC_Y_M
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%StC_Z_M
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%StC_XY_M
     Re_Xferred = Re_Xferred + 1
@@ -439,25 +489,37 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%StC_Y_K
     Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%StC_Z_K
+    Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%StC_X_C
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%StC_Y_C
     Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%StC_X_DWSP
+    ReKiBuf(Re_Xferred) = InData%StC_Z_C
     Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%StC_X_UWSP
+    ReKiBuf(Re_Xferred) = InData%StC_X_PSP
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%StC_X_NSP
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%StC_Y_PSP
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%StC_Y_NSP
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%StC_Z_PSP
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%StC_Z_NSP
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%StC_X_KS
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%StC_X_CS
     Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%StC_Y_PLSP
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%StC_Y_NLSP
-    Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%StC_Y_KS
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%StC_Y_CS
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%StC_Z_KS
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%StC_Z_CS
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%StC_P_X
     Re_Xferred = Re_Xferred + 1
@@ -473,33 +535,39 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%StC_Y_C_LOW
     Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%StC_Z_C_HIGH
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%StC_Z_C_LOW
+    Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%StC_X_C_BRAKE
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%StC_Y_C_BRAKE
     Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%L_FA
+    ReKiBuf(Re_Xferred) = InData%StC_Z_C_BRAKE
     Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%B_FA
+    ReKiBuf(Re_Xferred) = InData%L_X
     Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%area_FA
+    ReKiBuf(Re_Xferred) = InData%B_X
     Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%area_ratio_FA
+    ReKiBuf(Re_Xferred) = InData%area_X
     Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%headLossCoeff_FA
+    ReKiBuf(Re_Xferred) = InData%area_ratio_X
     Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%rho_FA
+    ReKiBuf(Re_Xferred) = InData%headLossCoeff_X
     Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%L_SS
+    ReKiBuf(Re_Xferred) = InData%rho_X
     Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%B_SS
+    ReKiBuf(Re_Xferred) = InData%L_Y
     Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%area_SS
+    ReKiBuf(Re_Xferred) = InData%B_Y
     Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%area_ratio_SS
+    ReKiBuf(Re_Xferred) = InData%area_Y
     Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%headLossCoeff_SS
+    ReKiBuf(Re_Xferred) = InData%area_ratio_Y
     Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%rho_SS
+    ReKiBuf(Re_Xferred) = InData%headLossCoeff_Y
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%rho_Y
     Re_Xferred = Re_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%USE_F_TBL, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
@@ -578,13 +646,19 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     OutData%StC_Y_DOF = TRANSFER(IntKiBuf(Int_Xferred), OutData%StC_Y_DOF)
     Int_Xferred = Int_Xferred + 1
+    OutData%StC_Z_DOF = TRANSFER(IntKiBuf(Int_Xferred), OutData%StC_Z_DOF)
+    Int_Xferred = Int_Xferred + 1
     OutData%StC_X_DSP = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%StC_Y_DSP = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
+    OutData%StC_Z_DSP = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
     OutData%StC_X_M = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%StC_Y_M = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%StC_Z_M = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%StC_XY_M = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
@@ -592,25 +666,37 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%StC_Y_K = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
+    OutData%StC_Z_K = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
     OutData%StC_X_C = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%StC_Y_C = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
-    OutData%StC_X_DWSP = ReKiBuf(Re_Xferred)
+    OutData%StC_Z_C = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
-    OutData%StC_X_UWSP = ReKiBuf(Re_Xferred)
+    OutData%StC_X_PSP = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%StC_X_NSP = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%StC_Y_PSP = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%StC_Y_NSP = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%StC_Z_PSP = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%StC_Z_NSP = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%StC_X_KS = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%StC_X_CS = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
-    OutData%StC_Y_PLSP = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%StC_Y_NLSP = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
     OutData%StC_Y_KS = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%StC_Y_CS = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%StC_Z_KS = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%StC_Z_CS = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%StC_P_X = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
@@ -626,33 +712,39 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%StC_Y_C_LOW = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
+    OutData%StC_Z_C_HIGH = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%StC_Z_C_LOW = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
     OutData%StC_X_C_BRAKE = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%StC_Y_C_BRAKE = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
-    OutData%L_FA = ReKiBuf(Re_Xferred)
+    OutData%StC_Z_C_BRAKE = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
-    OutData%B_FA = ReKiBuf(Re_Xferred)
+    OutData%L_X = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
-    OutData%area_FA = ReKiBuf(Re_Xferred)
+    OutData%B_X = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
-    OutData%area_ratio_FA = ReKiBuf(Re_Xferred)
+    OutData%area_X = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
-    OutData%headLossCoeff_FA = ReKiBuf(Re_Xferred)
+    OutData%area_ratio_X = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
-    OutData%rho_FA = ReKiBuf(Re_Xferred)
+    OutData%headLossCoeff_X = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
-    OutData%L_SS = ReKiBuf(Re_Xferred)
+    OutData%rho_X = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
-    OutData%B_SS = ReKiBuf(Re_Xferred)
+    OutData%L_Y = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
-    OutData%area_SS = ReKiBuf(Re_Xferred)
+    OutData%B_Y = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
-    OutData%area_ratio_SS = ReKiBuf(Re_Xferred)
+    OutData%area_Y = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
-    OutData%headLossCoeff_SS = ReKiBuf(Re_Xferred)
+    OutData%area_ratio_Y = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
-    OutData%rho_SS = ReKiBuf(Re_Xferred)
+    OutData%headLossCoeff_Y = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%rho_Y = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%USE_F_TBL = TRANSFER(IntKiBuf(Int_Xferred), OutData%USE_F_TBL)
     Int_Xferred = Int_Xferred + 1
@@ -2815,15 +2907,20 @@ ENDIF
     DstParamData%StC_DOF_MODE = SrcParamData%StC_DOF_MODE
     DstParamData%StC_X_DOF = SrcParamData%StC_X_DOF
     DstParamData%StC_Y_DOF = SrcParamData%StC_Y_DOF
+    DstParamData%StC_Z_DOF = SrcParamData%StC_Z_DOF
     DstParamData%X_DSP = SrcParamData%X_DSP
     DstParamData%Y_DSP = SrcParamData%Y_DSP
+    DstParamData%Z_DSP = SrcParamData%Z_DSP
     DstParamData%M_X = SrcParamData%M_X
     DstParamData%M_Y = SrcParamData%M_Y
+    DstParamData%M_Z = SrcParamData%M_Z
     DstParamData%M_XY = SrcParamData%M_XY
     DstParamData%K_X = SrcParamData%K_X
     DstParamData%K_Y = SrcParamData%K_Y
+    DstParamData%K_Z = SrcParamData%K_Z
     DstParamData%C_X = SrcParamData%C_X
     DstParamData%C_Y = SrcParamData%C_Y
+    DstParamData%C_Z = SrcParamData%C_Z
     DstParamData%K_S = SrcParamData%K_S
     DstParamData%C_S = SrcParamData%C_S
     DstParamData%P_SP = SrcParamData%P_SP
@@ -2835,20 +2932,23 @@ ENDIF
     DstParamData%StC_X_C_LOW = SrcParamData%StC_X_C_LOW
     DstParamData%StC_Y_C_HIGH = SrcParamData%StC_Y_C_HIGH
     DstParamData%StC_Y_C_LOW = SrcParamData%StC_Y_C_LOW
+    DstParamData%StC_Z_C_HIGH = SrcParamData%StC_Z_C_HIGH
+    DstParamData%StC_Z_C_LOW = SrcParamData%StC_Z_C_LOW
     DstParamData%StC_X_C_BRAKE = SrcParamData%StC_X_C_BRAKE
     DstParamData%StC_Y_C_BRAKE = SrcParamData%StC_Y_C_BRAKE
-    DstParamData%L_FA = SrcParamData%L_FA
-    DstParamData%B_FA = SrcParamData%B_FA
-    DstParamData%area_FA = SrcParamData%area_FA
-    DstParamData%area_ratio_FA = SrcParamData%area_ratio_FA
-    DstParamData%headLossCoeff_FA = SrcParamData%headLossCoeff_FA
-    DstParamData%rho_FA = SrcParamData%rho_FA
-    DstParamData%L_SS = SrcParamData%L_SS
-    DstParamData%B_SS = SrcParamData%B_SS
-    DstParamData%area_SS = SrcParamData%area_SS
-    DstParamData%area_ratio_SS = SrcParamData%area_ratio_SS
-    DstParamData%headLossCoeff_SS = SrcParamData%headLossCoeff_SS
-    DstParamData%rho_SS = SrcParamData%rho_SS
+    DstParamData%StC_Z_C_BRAKE = SrcParamData%StC_Z_C_BRAKE
+    DstParamData%L_X = SrcParamData%L_X
+    DstParamData%B_X = SrcParamData%B_X
+    DstParamData%area_X = SrcParamData%area_X
+    DstParamData%area_ratio_X = SrcParamData%area_ratio_X
+    DstParamData%headLossCoeff_X = SrcParamData%headLossCoeff_X
+    DstParamData%rho_X = SrcParamData%rho_X
+    DstParamData%L_Y = SrcParamData%L_Y
+    DstParamData%B_Y = SrcParamData%B_Y
+    DstParamData%area_Y = SrcParamData%area_Y
+    DstParamData%area_ratio_Y = SrcParamData%area_ratio_Y
+    DstParamData%headLossCoeff_Y = SrcParamData%headLossCoeff_Y
+    DstParamData%rho_Y = SrcParamData%rho_Y
     DstParamData%Use_F_TBL = SrcParamData%Use_F_TBL
 IF (ALLOCATED(SrcParamData%F_TBL)) THEN
   i1_l = LBOUND(SrcParamData%F_TBL,1)
@@ -2939,15 +3039,20 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! StC_DOF_MODE
       Int_BufSz  = Int_BufSz  + 1  ! StC_X_DOF
       Int_BufSz  = Int_BufSz  + 1  ! StC_Y_DOF
+      Int_BufSz  = Int_BufSz  + 1  ! StC_Z_DOF
       Re_BufSz   = Re_BufSz   + 1  ! X_DSP
       Re_BufSz   = Re_BufSz   + 1  ! Y_DSP
+      Re_BufSz   = Re_BufSz   + 1  ! Z_DSP
       Re_BufSz   = Re_BufSz   + 1  ! M_X
       Re_BufSz   = Re_BufSz   + 1  ! M_Y
+      Re_BufSz   = Re_BufSz   + 1  ! M_Z
       Re_BufSz   = Re_BufSz   + 1  ! M_XY
       Re_BufSz   = Re_BufSz   + 1  ! K_X
       Re_BufSz   = Re_BufSz   + 1  ! K_Y
+      Re_BufSz   = Re_BufSz   + 1  ! K_Z
       Re_BufSz   = Re_BufSz   + 1  ! C_X
       Re_BufSz   = Re_BufSz   + 1  ! C_Y
+      Re_BufSz   = Re_BufSz   + 1  ! C_Z
       Re_BufSz   = Re_BufSz   + SIZE(InData%K_S)  ! K_S
       Re_BufSz   = Re_BufSz   + SIZE(InData%C_S)  ! C_S
       Re_BufSz   = Re_BufSz   + SIZE(InData%P_SP)  ! P_SP
@@ -2959,20 +3064,23 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! StC_X_C_LOW
       Re_BufSz   = Re_BufSz   + 1  ! StC_Y_C_HIGH
       Re_BufSz   = Re_BufSz   + 1  ! StC_Y_C_LOW
+      Re_BufSz   = Re_BufSz   + 1  ! StC_Z_C_HIGH
+      Re_BufSz   = Re_BufSz   + 1  ! StC_Z_C_LOW
       Re_BufSz   = Re_BufSz   + 1  ! StC_X_C_BRAKE
       Re_BufSz   = Re_BufSz   + 1  ! StC_Y_C_BRAKE
-      Re_BufSz   = Re_BufSz   + 1  ! L_FA
-      Re_BufSz   = Re_BufSz   + 1  ! B_FA
-      Re_BufSz   = Re_BufSz   + 1  ! area_FA
-      Re_BufSz   = Re_BufSz   + 1  ! area_ratio_FA
-      Re_BufSz   = Re_BufSz   + 1  ! headLossCoeff_FA
-      Re_BufSz   = Re_BufSz   + 1  ! rho_FA
-      Re_BufSz   = Re_BufSz   + 1  ! L_SS
-      Re_BufSz   = Re_BufSz   + 1  ! B_SS
-      Re_BufSz   = Re_BufSz   + 1  ! area_SS
-      Re_BufSz   = Re_BufSz   + 1  ! area_ratio_SS
-      Re_BufSz   = Re_BufSz   + 1  ! headLossCoeff_SS
-      Re_BufSz   = Re_BufSz   + 1  ! rho_SS
+      Re_BufSz   = Re_BufSz   + 1  ! StC_Z_C_BRAKE
+      Re_BufSz   = Re_BufSz   + 1  ! L_X
+      Re_BufSz   = Re_BufSz   + 1  ! B_X
+      Re_BufSz   = Re_BufSz   + 1  ! area_X
+      Re_BufSz   = Re_BufSz   + 1  ! area_ratio_X
+      Re_BufSz   = Re_BufSz   + 1  ! headLossCoeff_X
+      Re_BufSz   = Re_BufSz   + 1  ! rho_X
+      Re_BufSz   = Re_BufSz   + 1  ! L_Y
+      Re_BufSz   = Re_BufSz   + 1  ! B_Y
+      Re_BufSz   = Re_BufSz   + 1  ! area_Y
+      Re_BufSz   = Re_BufSz   + 1  ! area_ratio_Y
+      Re_BufSz   = Re_BufSz   + 1  ! headLossCoeff_Y
+      Re_BufSz   = Re_BufSz   + 1  ! rho_Y
       Int_BufSz  = Int_BufSz  + 1  ! Use_F_TBL
   Int_BufSz   = Int_BufSz   + 1     ! F_TBL allocated yes/no
   IF ( ALLOCATED(InData%F_TBL) ) THEN
@@ -3025,13 +3133,19 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%StC_Y_DOF, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%StC_Z_DOF, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%X_DSP
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%Y_DSP
     Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%Z_DSP
+    Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%M_X
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%M_Y
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%M_Z
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%M_XY
     Re_Xferred = Re_Xferred + 1
@@ -3039,9 +3153,13 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%K_Y
     Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%K_Z
+    Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%C_X
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%C_Y
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%C_Z
     Re_Xferred = Re_Xferred + 1
     DO i1 = LBOUND(InData%K_S,1), UBOUND(InData%K_S,1)
       ReKiBuf(Re_Xferred) = InData%K_S(i1)
@@ -3075,33 +3193,39 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%StC_Y_C_LOW
     Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%StC_Z_C_HIGH
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%StC_Z_C_LOW
+    Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%StC_X_C_BRAKE
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%StC_Y_C_BRAKE
     Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%L_FA
+    ReKiBuf(Re_Xferred) = InData%StC_Z_C_BRAKE
     Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%B_FA
+    ReKiBuf(Re_Xferred) = InData%L_X
     Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%area_FA
+    ReKiBuf(Re_Xferred) = InData%B_X
     Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%area_ratio_FA
+    ReKiBuf(Re_Xferred) = InData%area_X
     Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%headLossCoeff_FA
+    ReKiBuf(Re_Xferred) = InData%area_ratio_X
     Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%rho_FA
+    ReKiBuf(Re_Xferred) = InData%headLossCoeff_X
     Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%L_SS
+    ReKiBuf(Re_Xferred) = InData%rho_X
     Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%B_SS
+    ReKiBuf(Re_Xferred) = InData%L_Y
     Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%area_SS
+    ReKiBuf(Re_Xferred) = InData%B_Y
     Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%area_ratio_SS
+    ReKiBuf(Re_Xferred) = InData%area_Y
     Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%headLossCoeff_SS
+    ReKiBuf(Re_Xferred) = InData%area_ratio_Y
     Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%rho_SS
+    ReKiBuf(Re_Xferred) = InData%headLossCoeff_Y
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%rho_Y
     Re_Xferred = Re_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%Use_F_TBL, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
@@ -3191,13 +3315,19 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     OutData%StC_Y_DOF = TRANSFER(IntKiBuf(Int_Xferred), OutData%StC_Y_DOF)
     Int_Xferred = Int_Xferred + 1
+    OutData%StC_Z_DOF = TRANSFER(IntKiBuf(Int_Xferred), OutData%StC_Z_DOF)
+    Int_Xferred = Int_Xferred + 1
     OutData%X_DSP = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%Y_DSP = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
+    OutData%Z_DSP = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
     OutData%M_X = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%M_Y = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%M_Z = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%M_XY = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
@@ -3205,9 +3335,13 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%K_Y = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
+    OutData%K_Z = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
     OutData%C_X = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%C_Y = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%C_Z = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     i1_l = LBOUND(OutData%K_S,1)
     i1_u = UBOUND(OutData%K_S,1)
@@ -3251,33 +3385,39 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%StC_Y_C_LOW = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
+    OutData%StC_Z_C_HIGH = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%StC_Z_C_LOW = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
     OutData%StC_X_C_BRAKE = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%StC_Y_C_BRAKE = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
-    OutData%L_FA = ReKiBuf(Re_Xferred)
+    OutData%StC_Z_C_BRAKE = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
-    OutData%B_FA = ReKiBuf(Re_Xferred)
+    OutData%L_X = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
-    OutData%area_FA = ReKiBuf(Re_Xferred)
+    OutData%B_X = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
-    OutData%area_ratio_FA = ReKiBuf(Re_Xferred)
+    OutData%area_X = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
-    OutData%headLossCoeff_FA = ReKiBuf(Re_Xferred)
+    OutData%area_ratio_X = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
-    OutData%rho_FA = ReKiBuf(Re_Xferred)
+    OutData%headLossCoeff_X = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
-    OutData%L_SS = ReKiBuf(Re_Xferred)
+    OutData%rho_X = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
-    OutData%B_SS = ReKiBuf(Re_Xferred)
+    OutData%L_Y = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
-    OutData%area_SS = ReKiBuf(Re_Xferred)
+    OutData%B_Y = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
-    OutData%area_ratio_SS = ReKiBuf(Re_Xferred)
+    OutData%area_Y = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
-    OutData%headLossCoeff_SS = ReKiBuf(Re_Xferred)
+    OutData%area_ratio_Y = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
-    OutData%rho_SS = ReKiBuf(Re_Xferred)
+    OutData%headLossCoeff_Y = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%rho_Y = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%Use_F_TBL = TRANSFER(IntKiBuf(Int_Xferred), OutData%Use_F_TBL)
     Int_Xferred = Int_Xferred + 1

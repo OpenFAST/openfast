@@ -15,44 +15,56 @@ typedef	^		^				INTEGER			StC_SA_MODE	-	-	-	"Semi-Active control mode {1: veloci
 typedef	^		^				INTEGER			StC_DOF_MODE	-	-	-	"DOF mode {0: NO StC_DOF; 1: StC_X_DOF and StC_Y_DOF; 2: StC_XY_DOF; 3: TLCD; 4: Prescribed force/moment time series}"	-
 typedef	^		^				LOGICAL			StC_X_DOF	-	-	-	"DOF on or off"	-
 typedef	^		^				LOGICAL			StC_Y_DOF	-	-	-	"DOF on or off"	-
+typedef	^		^				LOGICAL			StC_Z_DOF	-	-	-	"DOF on or off"	-
 typedef	^		^				ReKi			StC_X_DSP	-	-	-	"StC_X initial displacement"	m
 typedef	^		^				ReKi			StC_Y_DSP	-	-	-	"StC_Y initial displacement"	m
-typedef	^		^				ReKi			StC_X_M		-	-	-	"StC mass"	kg
-typedef	^		^				ReKi			StC_Y_M		-	-	-	"StC mass"	kg
-typedef	^		^				ReKi			StC_XY_M		-	-	-	"StCXY mass"	kg
-typedef	^		^				ReKi			StC_X_K		-	-	-	"StC stiffness"	"N/m"
-typedef	^		^				ReKi			StC_Y_K		-	-	-	"StC stiffness"	"N/m"
-typedef	^		^				ReKi			StC_X_C		-	-	-	"StC damping"	"N/(m/s)"
-typedef	^		^				ReKi			StC_Y_C		-	-	-	"StC damping"	"N/(m/s)"
-typedef	^		^				ReKi			StC_X_DWSP	-	-	-	"DW stop position (maximum X mass displacement)"	m
-typedef	^		^				ReKi			StC_X_UWSP	-	-	-	"UW stop position (minimum X mass displacement)"	m
-typedef	^		^				ReKi			StC_X_KS	-	-	-	"stop spring stiffness"	"N/m"
-typedef	^		^				ReKi			StC_X_CS	-	-	-	"stop spring damping"	"N/(m/s)"
-typedef	^		^				ReKi			StC_Y_PLSP	-	-	-	"positive lateral stop position (maximum Y mass displacement)"	m
-typedef	^		^				ReKi			StC_Y_NLSP	-	-	-	"negative lateral stop position (minimum Y mass displacement)"	m
-typedef	^		^				ReKi			StC_Y_KS	-	-	-	"stop spring stiffness"	"N/m"
-typedef	^		^				ReKi			StC_Y_CS	-	-	-	"stop spring damping"	"N/(m/s)"
-typedef	^		^				ReKi			StC_P_X		-	-	-	"rest position of StCs w.r.t. nacelle"	m
-typedef	^		^				ReKi			StC_P_Y		-	-	-	"rest position of StCs w.r.t. nacelle"	m
-typedef	^		^				ReKi			StC_P_Z  	-	-	-	"rest position of StCs w.r.t. nacelle"	m
+typedef	^		^				ReKi			StC_Z_DSP	-	-	-	"StC_Z initial displacement"	m
+typedef	^		^				ReKi			StC_X_M		-	-	-	"StC X mass"	kg
+typedef	^		^				ReKi			StC_Y_M		-	-	-	"StC Y mass"	kg
+typedef	^		^				ReKi			StC_Z_M		-	-	-	"StC Z mass"	kg
+typedef	^		^				ReKi			StC_XY_M		-	-	-	"StC XY mass"	kg
+typedef	^		^				ReKi			StC_X_K		-	-	-	"StC X stiffness"	"N/m"
+typedef	^		^				ReKi			StC_Y_K		-	-	-	"StC Y stiffness"	"N/m"
+typedef	^		^				ReKi			StC_Z_K		-	-	-	"StC Y stiffness"	"N/m"
+typedef	^		^				ReKi			StC_X_C		-	-	-	"StC X damping"	"N/(m/s)"
+typedef	^		^				ReKi			StC_Y_C		-	-	-	"StC Y damping"	"N/(m/s)"
+typedef	^		^				ReKi			StC_Z_C		-	-	-	"StC Z damping"	"N/(m/s)"
+typedef	^		^				ReKi			StC_X_PSP	-	-	-	"Positive stop position (maximum X mass displacement)"	m
+typedef	^		^				ReKi			StC_X_NSP	-	-	-	"Negative stop position (minimum X mass displacement)"	m
+typedef	^		^				ReKi			StC_Y_PSP	-	-	-	"Positive stop position (maximum Y mass displacement)"	m
+typedef	^		^				ReKi			StC_Y_NSP	-	-	-	"Negative stop position (minimum Y mass displacement)"	m
+typedef	^		^				ReKi			StC_Z_PSP	-	-	-	"Positive stop position (maximum Z mass displacement)"	m
+typedef	^		^				ReKi			StC_Z_NSP	-	-	-	"Negative stop position (minimum Z mass displacement)"	m
+typedef	^		^				ReKi			StC_X_KS	-	-	-	"Stop spring X stiffness"	"N/m"
+typedef	^		^				ReKi			StC_X_CS	-	-	-	"Stop spring X damping"		"N/(m/s)"
+typedef	^		^				ReKi			StC_Y_KS	-	-	-	"Stop spring Y stiffness"	"N/m"
+typedef	^		^				ReKi			StC_Y_CS	-	-	-	"Stop spring Y damping"		"N/(m/s)"
+typedef	^		^				ReKi			StC_Z_KS	-	-	-	"Stop spring Z stiffness [used only when StC_DOF_MODE=1 and StC_Z_DOF=TRUE]"	"N/m"
+typedef	^		^				ReKi			StC_Z_CS	-	-	-	"Stop spring Z damping   [used only when StC_DOF_MODE=1 and StC_Z_DOF=TRUE]"	"N/(m/s)"
+typedef	^		^				ReKi			StC_P_X		-	-	-	"StC X initial displacement (m) [relative to at rest position]"	m
+typedef	^		^				ReKi			StC_P_Y		-	-	-	"StC Y initial displacement (m) [relative to at rest position]"	m
+typedef	^		^				ReKi			StC_P_Z  	-	-	-	"StC Z initial displacement (m) [relative to at rest position; used only when StC_DOF_MODE=1 and StC_Z_DOF=TRUE]"	m
 typedef	^		^				ReKi			StC_X_C_HIGH	-	-	-	"StC X high damping for ground hook control"	"N/(m/s)"
 typedef	^		^				ReKi			StC_X_C_LOW		-	-	-	"StC X low damping for ground hook control"	"N/(m/s)"
-typedef	^		^				ReKi			StC_Y_C_HIGH		-	-	-	"StC Y high damping for ground hook control"	"N/(m/s)"
-typedef	^		^				ReKi			StC_Y_C_LOW		-	-	-	"StC Y high damping for ground hook control"	"N/(m/s)"
+typedef	^		^				ReKi			StC_Y_C_HIGH	-	-	-	"StC Y high damping for ground hook control"	"N/(m/s)"
+typedef	^		^				ReKi			StC_Y_C_LOW		-	-	-	"StC Y low damping for ground hook control"	"N/(m/s)"
+typedef	^		^				ReKi			StC_Z_C_HIGH	-	-	-	"StC Z high damping for ground hook control"	"N/(m/s)"
+typedef	^		^				ReKi			StC_Z_C_LOW		-	-	-	"StC Z low damping for ground hook control"	"N/(m/s)"
 typedef	^		^				ReKi			StC_X_C_BRAKE	-	-	-	"StC X high damping for braking the StC"	"N/(m/s)"
-typedef	^		^				ReKi			StC_Y_C_BRAKE	-	-	-	"StC X high damping for braking the StC"	"N/(m/s)"
-typedef	^		^				ReKi			L_FA         	-	-	-	"Fore-Aft TLCD total length"	 m
-typedef	^		^				ReKi			B_FA         	-	-	-	"Fore-Aft TLCD horizontal length"	 m
-typedef	^		^				ReKi			area_FA         -	-	-	"Fore-Aft TLCD cross-sectional area of vertical column"	 m2
-typedef	^		^				ReKi			area_ratio_FA      	-	-	-	"Fore-Aft TLCD cross-sectional area ratio (vertical column area divided by horizontal column area)"	 
-typedef	^		^				ReKi			headLossCoeff_FA   	-	-	-	"Fore-Aft TLCD head loss coeff"	 
-typedef	^		^				ReKi			rho_FA         	-	-	-	"Fore-Aft TLCD liquid density"	 kg/m3
-typedef	^		^				ReKi			L_SS         	-	-	-	"Side-Side TLCD total length"	 m
-typedef	^		^				ReKi			B_SS         	-	-	-	"Side-Side TLCD horizontal length"	 m
-typedef	^		^				ReKi			area_SS         -	-	-	"Side-Side TLCD cross-sectional area of vertical column"	 m
-typedef	^		^				ReKi			area_ratio_SS    	-	-	-	"Side-Side TLCD cross-sectional area ratio (vertical column area divided by horizontal column area)"	 
-typedef	^		^				ReKi			headLossCoeff_SS   	-	-	-	"Side-Side TLCD head loss coeff"	 
-typedef	^		^				ReKi			rho_SS         	-	-	-	"Side-Side TLCD liquid density"	 kg/m3
+typedef	^		^				ReKi			StC_Y_C_BRAKE	-	-	-	"StC Y high damping for braking the StC"	"N/(m/s)"
+typedef	^		^				ReKi			StC_Z_C_BRAKE	-	-	-	"StC Z high damping for braking the StC"	"N/(m/s)"
+typedef	^		^				ReKi			L_X         	-	-	-	"X TLCD total length"	 m
+typedef	^		^				ReKi			B_X         	-	-	-	"X TLCD horizontal length"	 m
+typedef	^		^				ReKi			area_X         -	-	-	"X TLCD cross-sectional area of vertical column"	 "m^2"
+typedef	^		^				ReKi			area_ratio_X      	-	-	-	"X TLCD cross-sectional area ratio (vertical column area divided by horizontal column area)" -
+typedef	^		^				ReKi			headLossCoeff_X   	-	-	-	"X TLCD head loss coeff" -
+typedef	^		^				ReKi			rho_X         	-	-	-	"X TLCD liquid density"	 "kg/m^3"
+typedef	^		^				ReKi			L_Y         	-	-	-	"Y TLCD total length"	 m
+typedef	^		^				ReKi			B_Y         	-	-	-	"Y TLCD horizontal length"	 m
+typedef	^		^				ReKi			area_Y         -	-	-	"Side-Side TLCD cross-sectional area of vertical column"	 m
+typedef	^		^				ReKi			area_ratio_Y    	-	-	-	"Side-Side TLCD cross-sectional area ratio (vertical column area divided by horizontal column area)" -
+typedef	^		^				ReKi			headLossCoeff_Y   	-	-	-	"Side-Side TLCD head loss coeff" -
+typedef	^		^				ReKi			rho_Y         	-	-	-	"Side-Side TLCD liquid density"	 "kg/m^3"
 typedef	^		^				LOGICAL			USE_F_TBL	-	-	-	"use spring force from user-defined table (flag)"	-
 typedef	^		^				CHARACTER(1024)			StC_F_TBL_FILE	-	-	-	"user-defined spring table filename"	-
 typedef	^		^				ReKi			F_TBL		{:}{:}	-	-	"user-defined spring force"	"N"
@@ -112,40 +124,48 @@ typedef  ^     ^           CHARACTER(1024) RootName   -   -   -   "RootName for 
 typedef	^		^				INTEGER			StC_DOF_MODE	-	-	-	"DOF mode {0: NO StC_DOF; 1: StC_X_DOF and StC_Y_DOF; 2: StC_XY_DOF; 3: TLCD; 4: Prescribed force/moment time series}"	-
 typedef	^		^				LOGICAL			StC_X_DOF	-	-	-	"DOF on or off"	-
 typedef	^		^				LOGICAL			StC_Y_DOF	-	-	-	"DOF on or off"	-
+typedef	^		^				LOGICAL			StC_Z_DOF	-	-	-	"DOF on or off"	-
 typedef	^		^				ReKi			X_DSP	-	-	-	"StC_X initial displacement"	m
 typedef	^		^				ReKi			Y_DSP	-	-	-	"StC_Y initial displacement"	m
+typedef	^		^				ReKi			Z_DSP	-	-	-	"StC_Z initial displacement"	m
 typedef	^		^				ReKi			M_X		-	-	-	"StC mass"	kg
 typedef	^		^				ReKi			M_Y		-	-	-	"StC mass"	kg
+typedef	^		^				ReKi			M_Z		-	-	-	"StC mass"	kg
 typedef	^		^				ReKi			M_XY		-	-	-	"StCXY mass"	kg
 typedef	^		^				ReKi			K_X		-	-	-	"StC stiffness"	"N/m"
 typedef	^		^				ReKi			K_Y		-	-	-	"StC stiffness"	"N/m"
+typedef	^		^				ReKi			K_Z		-	-	-	"StC stiffness"	"N/m"
 typedef	^		^				ReKi			C_X		-	-	-	"StC damping"	"N/(m/s)"
 typedef	^		^				ReKi			C_Y		-	-	-	"StC damping"	"N/(m/s)"
-typedef	^		^				ReKi			K_S	{2}	-	-	"StC stop stiffness"	"N/m"
-typedef	^		^				ReKi			C_S	{2}	-	-	"StC stop damping" "N/(m/s)"
-typedef	^		^				ReKi			P_SP	{2}	-	-	"Positive stop position (maximum mass displacement)"	m
-typedef	^		^				ReKi			N_SP	{2}	-	-	"Negative stop position (minimum X mass displacement)" m
+typedef	^		^				ReKi			C_Z		-	-	-	"StC damping"	"N/(m/s)"
+typedef	^		^				ReKi			K_S	{3}	-	-	"StC stop stiffness"	"N/m"
+typedef	^		^				ReKi			C_S	{3}	-	-	"StC stop damping" "N/(m/s)"
+typedef	^		^				ReKi			P_SP	{3}	-	-	"Positive stop position (maximum mass displacement)"	m
+typedef	^		^				ReKi			N_SP	{3}	-	-	"Negative stop position (minimum X mass displacement)" m
 typedef	^		^				ReKi			Gravity	{3}	-	-	"Gravitational acceleration vector"	"m/s^2"
 typedef	^		^				INTEGER			StC_CMODE	-	-	-	"control mode {0:none; 1: Semi-Active Control Mode; 2: Active Control Mode;} "	-
 typedef	^		^				INTEGER			StC_SA_MODE	-	-	-	"Semi-Active control mode {1: velocity-based ground hook control; 2: Inverse velocity-based ground hook control; 3: displacement-based ground hook control 4: Phase difference Algorithm with Friction Force 5: Phase difference Algorithm with Damping Force} "	-
 typedef	^		^				ReKi			StC_X_C_HIGH	-	-	-	"StC X high damping for ground hook control"	"N/(m/s)"
 typedef	^		^				ReKi			StC_X_C_LOW		-	-	-	"StC X low damping for ground hook control"	"N/(m/s)"
-typedef	^		^				ReKi			StC_Y_C_HIGH		-	-	-	"StC Y high damping for ground hook control"	"N/(m/s)"
-typedef	^		^				ReKi			StC_Y_C_LOW		-	-	-	"StC Y high damping for ground hook control"	"N/(m/s)"
+typedef	^		^				ReKi			StC_Y_C_HIGH	-	-	-	"StC Y high damping for ground hook control"	"N/(m/s)"
+typedef	^		^				ReKi			StC_Y_C_LOW		-	-	-	"StC Y low damping for ground hook control"	"N/(m/s)"
+typedef	^		^				ReKi			StC_Z_C_HIGH	-	-	-	"StC Z high damping for ground hook control"	"N/(m/s)"
+typedef	^		^				ReKi			StC_Z_C_LOW		-	-	-	"StC Z low damping for ground hook control"	"N/(m/s)"
 typedef	^		^				ReKi			StC_X_C_BRAKE	-	-	-	"StC X high damping for braking the StC"	"N/(m/s)"
-typedef	^		^				ReKi			StC_Y_C_BRAKE	-	-	-	"StC X high damping for braking the StC"	"N/(m/s)"
-typedef	^		^				ReKi			L_FA         	-	-	-	"Fore-Aft TLCD total length"	 m
-typedef	^		^				ReKi			B_FA         	-	-	-	"Fore-Aft TLCD horizontal length"	 m
-typedef	^		^				ReKi			area_FA         	-	-	-	"Fore-Aft TLCD cross-sectional area of vertical column"	 m2
-typedef	^		^				ReKi			area_ratio_FA      	-	-	-	"Fore-Aft TLCD cross-sectional area ratio (vertical column area divided by horizontal column area)"	 
-typedef	^		^				ReKi			headLossCoeff_FA   	-	-	-	"Fore-Aft TLCD head loss coeff"	 
-typedef	^		^				ReKi			rho_FA         	-	-	-	"Fore-Aft TLCD liquid density"	 kg/m3
-typedef	^		^				ReKi			L_SS         	-	-	-	"Side-Side TLCD total length"	 m
-typedef	^		^				ReKi			B_SS         	-	-	-	"Side-Side TLCD horizontal length"	 m
-typedef	^		^				ReKi			area_SS         	-	-	-	"Side-Side TLCD cross-sectional area of vertical column"	 m
-typedef	^		^				ReKi			area_ratio_SS       -	-	-	"Side-Side TLCD cross-sectional area ratio (vertical column area divided by horizontal column area)"	 
-typedef	^		^				ReKi			headLossCoeff_SS    -	-	-	"Side-Side TLCD head loss coeff"	 
-typedef	^		^				ReKi			rho_SS         	-	-	-	"Side-Side TLCD liquid density"	 kg/m3
+typedef	^		^				ReKi			StC_Y_C_BRAKE	-	-	-	"StC Y high damping for braking the StC"	"N/(m/s)"
+typedef	^		^				ReKi			StC_Z_C_BRAKE	-	-	-	"StC Y high damping for braking the StC"	"N/(m/s)"
+typedef	^		^				ReKi			L_X         	-	-	-	"X TLCD total length"	 m
+typedef	^		^				ReKi			B_X         	-	-	-	"X TLCD horizontal length"	 m
+typedef	^		^				ReKi			area_X         -	-	-	"X TLCD cross-sectional area of vertical column"	 "m^2"
+typedef	^		^				ReKi			area_ratio_X      	-	-	-	"X TLCD cross-sectional area ratio (vertical column area divided by horizontal column area)" -
+typedef	^		^				ReKi			headLossCoeff_X   	-	-	-	"X TLCD head loss coeff" -
+typedef	^		^				ReKi			rho_X         	-	-	-	"X TLCD liquid density"	 "kg/m^3"
+typedef	^		^				ReKi			L_Y         	-	-	-	"Y TLCD total length"	 m
+typedef	^		^				ReKi			B_Y         	-	-	-	"Y TLCD horizontal length"	 m
+typedef	^		^				ReKi			area_Y         -	-	-	"Side-Side TLCD cross-sectional area of vertical column"	 m
+typedef	^		^				ReKi			area_ratio_Y    	-	-	-	"Side-Side TLCD cross-sectional area ratio (vertical column area divided by horizontal column area)" -
+typedef	^		^				ReKi			headLossCoeff_Y   	-	-	-	"Side-Side TLCD head loss coeff" -
+typedef	^		^				ReKi			rho_Y         	-	-	-	"Side-Side TLCD liquid density"	 "kg/m^3"
 typedef	^		^				LOGICAL			Use_F_TBL	-	-	-	"use spring force from user-defined table (flag)"	-
 typedef	^		^				ReKi			F_TBL	{:}{:} - -	"user-defined spring force"	"N"
 typedef	^	ParameterType	IntKi	NumMeshPts	-	-	-	"Number of mesh points"	-
