@@ -874,7 +874,7 @@ contains
       ! default perturbations, p%dx:
       p%dx(1) = 2.0_ReKi*D2R_D   ! deflection states in rad and rad/s
       p%dx(2) = 2.0_ReKi*D2R_D   ! deflection states in rad and rad/s
-      InitOut%RotFrame_x   = .true.
+      InitOut%RotFrame_x   = .false.
       InitOut%DerivOrder_x = 2
       ! set linearization output names:
       do i=1,p%Jac_nx
