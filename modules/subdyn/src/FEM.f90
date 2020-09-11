@@ -81,17 +81,17 @@ SUBROUTINE EigenSolve(K, M, N, bCheckSingularity, EigVect, Omega, ErrStat, ErrMs
       Omega2(I) = AlphaR(I)/Beta(I)
       if ( EqualRealNos(real(Beta(I),ReKi),0.0_ReKi) ) then
          ! --- Beta =0 
-         call WrScr('[WARN] Large eigenvalue found, system may be ill-conditioned')
+         if (bCheckSingularity) call WrScr('[WARN] Large eigenvalue found, system may be ill-conditioned')
          Omega2(I) = MAX_EIGENVALUE
       elseif ( EqualRealNos(real(AlphaI(I),ReKi),0.0_ReKi) ) THEN
          ! --- Real Eigenvalues
          IF ( AlphaR(I)<0.0_LaKi ) THEN
             if ( (AlphaR(I)/Beta(I))<1e-6_LaKi ) then
                ! Tolerating very small negative eigenvalues
-               call WrScr('[INFO] Negative eigenvalue found with small norm (system may contain rigid body mode)')
+               if (bCheckSingularity) call WrScr('[INFO] Negative eigenvalue found with small norm (system may contain rigid body mode)')
                Omega2(I)=0.0_LaKi
             else
-               call WrScr('[WARN] Negative eigenvalue found, system may be ill-conditioned.')
+               if (bCheckSingularity) call WrScr('[WARN] Negative eigenvalue found, system may be ill-conditioned.')
                Omega2(I)=AlphaR(I)/Beta(I)
             endif
          else
@@ -102,14 +102,14 @@ SUBROUTINE EigenSolve(K, M, N, bCheckSingularity, EigVect, Omega, ErrStat, ErrMs
          normA = sqrt(AlphaR(I)**2 + AlphaI(I)**2)
          if ( (normA/Beta(I))<1e-6_LaKi ) then
             ! Tolerating very small eigenvalues with imaginary part
-            call WrScr('[WARN] Complex eigenvalue found with small norm, approximating as 0')
+            if (bCheckSingularity) call WrScr('[WARN] Complex eigenvalue found with small norm, approximating as 0')
             Omega2(I) = 0.0_LaKi
          elseif ( abs(AlphaR(I))>1e3_LaKi*abs(AlphaI(I)) ) then
             ! Tolerating very small imaginary part compared to real part... (not pretty)
-            call WrScr('[WARN] Complex eigenvalue found with small Im compare to Re')
+            if (bCheckSingularity) call WrScr('[WARN] Complex eigenvalue found with small Im compare to Re')
             Omega2(I) = AlphaR(I)/Beta(I)
          else
-            call WrScr('[WARN] Complex eigenvalue found with large imaginary value)')
+            if (bCheckSingularity) call WrScr('[WARN] Complex eigenvalue found with large imaginary value)')
             Omega2(I) = MAX_EIGENVALUE
          endif
          !call Fatal('Complex eigenvalue found, system may be ill-conditioned'); return

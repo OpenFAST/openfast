@@ -3000,7 +3000,7 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, ErrStat,ErrMsg)
    ! M and K are reduced matrices, but Boundary conditions are not applied
    ! We set bDOF, which is true if not a fixed Boundary conditions
    ! NOTE: we don't check for singularities/rigig body modes here
-   CALL WrScr('   Calculating Full System Modes for summary file (discard any [INFO] below)')
+   CALL WrScr('   Calculating Full System Modes for summary file')
    CALL AllocAry(bDOF, p%nDOF_red, 'bDOF',  ErrStat2, ErrMsg2); if(Failed()) return
    bDOF(:)       = .true.
    bDOF(p%ID__F) = .false.
