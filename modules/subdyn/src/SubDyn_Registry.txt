@@ -122,8 +122,6 @@ typedef	^	^	R8Ki	K	{:}{:}	-	-	"System stiffness matrix"
 typedef	^	^	R8Ki	M	{:}{:}	-	-	"System mass matrix"
 typedef	^	^	R8Ki	FG	{:}	-	-	"Gravity force vector (include initial Cable force T0)"	N
 typedef	^	^	ReKi	ElemProps	{:}{:}	-	-	"Element properties(A, L, Ixx, Iyy, Jzz, Shear, Kappa, E, G, Rho, DirCos(1,1), DirCos(2, 1), ....., DirCos(3, 3) )"
-typedef	^	^	INTEGER	BCs	{:}{:}	-	-	"Boundary constraint degree of freedoms. First column - DOFs(rows in the system matrices), Second column - constrained(1) or not(0)"
-typedef	^	^	INTEGER	IntFc	{:}{:}	-	-	"Interface constraint degree of freedoms"
 typedef	^	^	INTEGER	MemberNodes	{:}{:}	-	-	"Member number and list of nodes making up a member (>2 if subdivided)"
 typedef	^	^	INTEGER	NodesConnN	{:}{:}	-	-	"Nodes that connect to a common node"
 typedef	^	^	INTEGER	NodesConnE	{:}{:}	-	-	"Elements that connect to a common node"
@@ -188,6 +186,7 @@ typedef ^   ^               R8Ki            FG_full     {:}	-	-	"Gravity force v
 # --- Constraints reduction
 typedef ^             ^     Logical reduced           -      -  -  "True if system has been reduced to account for constraints"  "-"
 typedef ^             ^     R8Ki    T_red             {:}{:} -  -  "Transformation matrix performing the constraint reduction x = T. xtilde"	"-"
+typedef ^             ^     R8Ki    T_red_T           {:}{:} -  -  "Transpose of T_red"	"-"
 typedef ^             ^     IList   NodesDOF          {:}    -  -  "DOF indices of each nodes in unconstrained assembled system "	"-"
 typedef ^             ^     IList   NodesDOFred       {:}    -  -  "DOF indices of each nodes in constrained assembled system "	"-"
 typedef ^             ^     IntKi   ElemsDOF          {:}{:} -  -  "12 DOF indices of node 1 and 2 of a given member in unconstrained assembled system "	"-"

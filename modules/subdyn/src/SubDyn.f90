@@ -2926,7 +2926,7 @@ SUBROUTINE GetExtForceOnInternalDOF( u, p, m, F_L, ErrStat, ErrMsg )
 
    ! --- Reduced vector of external force
    if (p%reduced) then
-      m%Fext_red = matmul(transpose(p%T_red), m%Fext)
+      m%Fext_red = matmul(p%T_red_T, m%Fext)
       F_L= m%Fext_red(p%ID__L)
    else
       F_L= m%Fext(p%ID__L)
@@ -3400,7 +3400,7 @@ SUBROUTINE StateMatrices(p, ErrStat, ErrMsg, AA, BB, CC, DD)
                   endif
                   ! Reduce and keep only "internal" DOFs L
                   if (p%reduced) then
-                     dFred_dFmeshk = matmul(transpose(p%T_red), dFext_dFmeshk)
+                     dFred_dFmeshk = matmul(p%T_red_T, dFext_dFmeshk)
                      dFL_dFmeshk= dFred_dFmeshk(p%ID__L)
                   else
                      dFL_dFmeshk= dFext_dFmeshk(p%ID__L)
