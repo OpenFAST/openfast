@@ -327,7 +327,7 @@ IMPLICIT NONE
   TYPE, PUBLIC :: SD_InputType
     TYPE(MeshType)  :: TPMesh      !< Transition piece inputs on a point mesh [-]
     TYPE(MeshType)  :: LMesh      !< Point mesh for interior node inputs [-]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: CableTension      !< Cable tension, control input [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: CableDeltaL      !< Cable tension, control input [-]
   END TYPE SD_InputType
 ! =======================
 ! =========  SD_OutputType  =======
@@ -11827,17 +11827,17 @@ ENDIF
       CALL MeshCopy( SrcInputData%LMesh, DstInputData%LMesh, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
-IF (ALLOCATED(SrcInputData%CableTension)) THEN
-  i1_l = LBOUND(SrcInputData%CableTension,1)
-  i1_u = UBOUND(SrcInputData%CableTension,1)
-  IF (.NOT. ALLOCATED(DstInputData%CableTension)) THEN 
-    ALLOCATE(DstInputData%CableTension(i1_l:i1_u),STAT=ErrStat2)
+IF (ALLOCATED(SrcInputData%CableDeltaL)) THEN
+  i1_l = LBOUND(SrcInputData%CableDeltaL,1)
+  i1_u = UBOUND(SrcInputData%CableDeltaL,1)
+  IF (.NOT. ALLOCATED(DstInputData%CableDeltaL)) THEN 
+    ALLOCATE(DstInputData%CableDeltaL(i1_l:i1_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%CableTension.', ErrStat, ErrMsg,RoutineName)
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%CableDeltaL.', ErrStat, ErrMsg,RoutineName)
       RETURN
     END IF
   END IF
-    DstInputData%CableTension = SrcInputData%CableTension
+    DstInputData%CableDeltaL = SrcInputData%CableDeltaL
 ENDIF
  END SUBROUTINE SD_CopyInput
 
@@ -11852,8 +11852,8 @@ ENDIF
   ErrMsg  = ""
   CALL MeshDestroy( InputData%TPMesh, ErrStat, ErrMsg )
   CALL MeshDestroy( InputData%LMesh, ErrStat, ErrMsg )
-IF (ALLOCATED(InputData%CableTension)) THEN
-  DEALLOCATE(InputData%CableTension)
+IF (ALLOCATED(InputData%CableDeltaL)) THEN
+  DEALLOCATE(InputData%CableDeltaL)
 ENDIF
  END SUBROUTINE SD_DestroyInput
 
@@ -11927,10 +11927,10 @@ ENDIF
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
-  Int_BufSz   = Int_BufSz   + 1     ! CableTension allocated yes/no
-  IF ( ALLOCATED(InData%CableTension) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! CableTension upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%CableTension)  ! CableTension
+  Int_BufSz   = Int_BufSz   + 1     ! CableDeltaL allocated yes/no
+  IF ( ALLOCATED(InData%CableDeltaL) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! CableDeltaL upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%CableDeltaL)  ! CableDeltaL
   END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -12015,18 +12015,18 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
-  IF ( .NOT. ALLOCATED(InData%CableTension) ) THEN
+  IF ( .NOT. ALLOCATED(InData%CableDeltaL) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
   ELSE
     IntKiBuf( Int_Xferred ) = 1
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%CableTension,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%CableTension,1)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%CableDeltaL,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%CableDeltaL,1)
     Int_Xferred = Int_Xferred + 2
 
-      DO i1 = LBOUND(InData%CableTension,1), UBOUND(InData%CableTension,1)
-        ReKiBuf(Re_Xferred) = InData%CableTension(i1)
+      DO i1 = LBOUND(InData%CableDeltaL,1), UBOUND(InData%CableDeltaL,1)
+        ReKiBuf(Re_Xferred) = InData%CableDeltaL(i1)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
@@ -12139,21 +12139,21 @@ ENDIF
       IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! CableTension not allocated
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! CableDeltaL not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
     Int_Xferred = Int_Xferred + 1
     i1_l = IntKiBuf( Int_Xferred    )
     i1_u = IntKiBuf( Int_Xferred + 1)
     Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%CableTension)) DEALLOCATE(OutData%CableTension)
-    ALLOCATE(OutData%CableTension(i1_l:i1_u),STAT=ErrStat2)
+    IF (ALLOCATED(OutData%CableDeltaL)) DEALLOCATE(OutData%CableDeltaL)
+    ALLOCATE(OutData%CableDeltaL(i1_l:i1_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%CableTension.', ErrStat, ErrMsg,RoutineName)
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%CableDeltaL.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-      DO i1 = LBOUND(OutData%CableTension,1), UBOUND(OutData%CableTension,1)
-        OutData%CableTension(i1) = ReKiBuf(Re_Xferred)
+      DO i1 = LBOUND(OutData%CableDeltaL,1), UBOUND(OutData%CableDeltaL,1)
+        OutData%CableDeltaL(i1) = ReKiBuf(Re_Xferred)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
@@ -12611,10 +12611,10 @@ ENDIF
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
       CALL MeshExtrapInterp1(u1%LMesh, u2%LMesh, tin, u_out%LMesh, tin_out, ErrStat2, ErrMsg2 )
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-IF (ALLOCATED(u_out%CableTension) .AND. ALLOCATED(u1%CableTension)) THEN
-  DO i1 = LBOUND(u_out%CableTension,1),UBOUND(u_out%CableTension,1)
-    b = -(u1%CableTension(i1) - u2%CableTension(i1))
-    u_out%CableTension(i1) = u1%CableTension(i1) + b * ScaleFactor
+IF (ALLOCATED(u_out%CableDeltaL) .AND. ALLOCATED(u1%CableDeltaL)) THEN
+  DO i1 = LBOUND(u_out%CableDeltaL,1),UBOUND(u_out%CableDeltaL,1)
+    b = -(u1%CableDeltaL(i1) - u2%CableDeltaL(i1))
+    u_out%CableDeltaL(i1) = u1%CableDeltaL(i1) + b * ScaleFactor
   END DO
 END IF ! check if allocated
  END SUBROUTINE SD_Input_ExtrapInterp1
@@ -12678,11 +12678,11 @@ END IF ! check if allocated
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
       CALL MeshExtrapInterp2(u1%LMesh, u2%LMesh, u3%LMesh, tin, u_out%LMesh, tin_out, ErrStat2, ErrMsg2 )
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-IF (ALLOCATED(u_out%CableTension) .AND. ALLOCATED(u1%CableTension)) THEN
-  DO i1 = LBOUND(u_out%CableTension,1),UBOUND(u_out%CableTension,1)
-    b = (t(3)**2*(u1%CableTension(i1) - u2%CableTension(i1)) + t(2)**2*(-u1%CableTension(i1) + u3%CableTension(i1)))* scaleFactor
-    c = ( (t(2)-t(3))*u1%CableTension(i1) + t(3)*u2%CableTension(i1) - t(2)*u3%CableTension(i1) ) * scaleFactor
-    u_out%CableTension(i1) = u1%CableTension(i1) + b  + c * t_out
+IF (ALLOCATED(u_out%CableDeltaL) .AND. ALLOCATED(u1%CableDeltaL)) THEN
+  DO i1 = LBOUND(u_out%CableDeltaL,1),UBOUND(u_out%CableDeltaL,1)
+    b = (t(3)**2*(u1%CableDeltaL(i1) - u2%CableDeltaL(i1)) + t(2)**2*(-u1%CableDeltaL(i1) + u3%CableDeltaL(i1)))* scaleFactor
+    c = ( (t(2)-t(3))*u1%CableDeltaL(i1) + t(3)*u2%CableDeltaL(i1) - t(2)*u3%CableDeltaL(i1) ) * scaleFactor
+    u_out%CableDeltaL(i1) = u1%CableDeltaL(i1) + b  + c * t_out
   END DO
 END IF ! check if allocated
  END SUBROUTINE SD_Input_ExtrapInterp2

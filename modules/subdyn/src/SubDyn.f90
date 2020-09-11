@@ -2842,11 +2842,12 @@ SUBROUTINE GetExtForceOnInternalDOF( u, p, m, F_L, ErrStat, ErrMsg )
    integer :: startDOF, I
    integer :: iCC, iElem, iChannel !< Index on control cables, element, Channel
    integer(IntKi), dimension(12) :: IDOF !  12 DOF indices in global unconstrained system
+   real(ReKi)                    :: CableTension ! Controllable Cable force
    real(ReKi)                    :: rotations(3)
    real(ReKi)                    :: du(3), Moment(3), Force(3) 
    real(ReKi), parameter :: myNaN = -9999998.989_ReKi 
 
-   ! --- Compute Guyan displacement for extra moment (see CalcOutput, redundancy...)
+   ! --- Compute Guyan displacement for extra moment (similar to CalcOutput, but wihtout CB)
    if (p%ExtraMoment) then
       rotations  = GetSmllRotAngs(u%TPMesh%Orientation(:,:,1), ErrStat, Errmsg);
       m%u_TP       = (/REAL(u%TPMesh%TranslationDisp(:,1),ReKi), rotations/)
@@ -2878,17 +2879,19 @@ SUBROUTINE GetExtForceOnInternalDOF( u, p, m, F_L, ErrStat, ErrMsg )
 
    ! --- Adding controllable cable forces
    if (size(p%CtrlElem2Channel,1) > 0) then
-      if (.not. allocated (u%CableTension)) then
+      if (.not. allocated (u%CableDeltaL)) then
          call Fatal('Cable tension input not allocated but controllable cables are present'); return
       endif
-      if (size(u%CableTension)< maxval(p%CtrlElem2Channel(:,2)) ) then
-         call Fatal('Cable tension input has length '//trim(num2lstr(size(u%CableTension)))//' but controllable cables need to access channel '//trim(num2lstr(maxval(p%CtrlElem2Channel(:,2))))); return
+      if (size(u%CableDeltaL)< maxval(p%CtrlElem2Channel(:,2)) ) then
+         call Fatal('Cable tension input has length '//trim(num2lstr(size(u%CableDeltaL)))//' but controllable cables need to access channel '//trim(num2lstr(maxval(p%CtrlElem2Channel(:,2))))); return
       endif
-      do iCC = 1, size(p%CtrlElem2Channel,1) 
+      do iCC = 1, size(p%CtrlElem2Channel,1)  ! Loop on controllable cables
          iElem    = p%CtrlElem2Channel(iCC,1)
          iChannel = p%CtrlElem2Channel(iCC,2)
          IDOF = p%ElemsDOF(1:12, iElem)
-         m%Fext(IDOF) = m%Fext(IDOF) + m%FC_unit( IDOF ) * (u%CableTension(iChannel) - p%ElemProps(iElem)%T0)
+         ! T(t) = EA * DeltaL(t) /(Le + Delta L(t))
+         CableTension =  p%ElemProps(iElem)%YoungE*p%ElemProps(iElem)%Area * u%CableDeltaL(iChannel) / (p%ElemProps(iElem)%Length + u%CableDeltaL(iChannel))
+         m%Fext(IDOF) = m%Fext(IDOF) + m%FC_unit( IDOF ) * (CableTension - p%ElemProps(iElem)%T0)
       enddo
    endif
 
@@ -2896,7 +2899,7 @@ SUBROUTINE GetExtForceOnInternalDOF( u, p, m, F_L, ErrStat, ErrMsg )
    DO iNode = 1,p%nNodes
       Force(1:3)  = m%Fext(p%NodesDOF(iNode)%List(1:3) ) ! Controllable cable + External Forces on LMesh
       Moment(1:3) = u%LMesh%Moment(1:3,iNode)
-      nMembers = (size(p%NodesDOF(iNode)%List)-3)/3 ! Number of members deducted from Node's nDOFList
+      nMembers = (size(p%NodesDOF(iNode)%List)-3)/3 ! Number of members deducted from Node's DOFList
 
       ! Extra moment dm = Delta u x (fe + fg)
       if (p%ExtraMoment) then

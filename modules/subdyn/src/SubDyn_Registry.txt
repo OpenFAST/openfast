@@ -292,7 +292,7 @@ typedef ^   ParameterType   logical RotStates         -       - - "Orient states
 # ============================== Inputs ============================================================================================================================================
 typedef ^   InputType   MeshType    TPMesh   -   -   -   "Transition piece inputs on a point mesh"
 typedef ^   InputType   MeshType    LMesh    -   -   -   "Point mesh for interior node inputs"
-typedef ^   InputType   ReKi        CableTension   {:}  -   -   "Cable tension, control input"
+typedef ^   InputType   ReKi        CableDeltaL   {:}  -   -   "Cable tension, control input"
 
 # ============================== Outputs ============================================================================================================================================
 typedef	^	OutputType	MeshType	Y1Mesh	-	-	-	"Transition piece outputs on a point mesh"
