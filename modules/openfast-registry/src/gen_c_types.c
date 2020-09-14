@@ -377,7 +377,10 @@ gen_c_module( FILE * fph, node_t * ModName )
                 fprintf(fph,"    %s * %s ; ",C_type( r->type->mapsto), r->name ) ;
                 fprintf(fph,"    int %s_Len ;",r->name ) ;
               } else {
-                char *p = r->type->mapsto, buf[10];
+                char *p = r->type->mapsto;
+                char buf[10];
+// bjj: this assumes all character strings are defined with numeric lengths
+// It should be modified to allow use of parameters, too. (and parameters defined in the registry should also be defined in the .h file)
                 while (*p) { 
                   if (isdigit(*p)) { 
                     long val = strtol(p, &p, 10); 
@@ -385,6 +388,8 @@ gen_c_module( FILE * fph, node_t * ModName )
                   } else { 
                     p++;
                   }
+
+
                 }    
                 if (strcmp(C_type(r->type->mapsto), "char") == 0 ){ // if it's a char we need to add the array size
                    if (r->ndims == 0) 

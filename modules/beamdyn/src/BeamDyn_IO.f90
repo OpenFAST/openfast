@@ -18,6 +18,7 @@
 !> This module contains the input/output parameters and routines for the BeamDyn module.
 MODULE BeamDyn_IO
 
+   USE BeamDyn_BldNdOuts_IO
    USE BeamDyn_Types
    USE BeamDyn_Subs
    USE NWTC_Library
@@ -564,6 +565,7 @@ SUBROUTINE BD_ReadPrimaryFile(InputFile,InputFileData,OutFileRoot,UnEc,ErrStat,E
    LOGICAL                      :: Echo                         ! Determines if an echo file should be written
    INTEGER(IntKi)               :: IOS                          ! Temporary Error status
    CHARACTER(ErrMsgLen)         :: ErrMsg2                      ! Temporary Error message
+   CHARACTER(ErrMsgLen)         :: ErrMsg_NoBldNdOuts           ! Temporary Error message
    character(*), parameter      :: RoutineName = 'BD_ReadPrimaryFile'
 
    CHARACTER(1024)              :: PriPath                      ! Path name of the primary file
@@ -583,6 +585,11 @@ SUBROUTINE BD_ReadPrimaryFile(InputFile,InputFileData,OutFileRoot,UnEc,ErrStat,E
    CALL GetPath( InputFile, PriPath )     ! Input files will be relative to the path where the primary input file is located.
 
    CALL AllocAry( InputFileData%OutList, MaxOutPts, "Outlist", ErrStat2, ErrMsg2 )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+
+      ! Allocate array for holding the list of node outputs
+   CALL AllocAry( InputFileData%BldNd_OutList, BldNd_MaxOutPts, "BldNd_Outlist", ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
 
@@ -965,6 +972,55 @@ SUBROUTINE BD_ReadPrimaryFile(InputFile,InputFileData,OutFileRoot,UnEc,ErrStat,E
    !---------------------- END OF FILE -----------------------------------------
 
 
+
+   !----------- OUTLIST  -----------------------------------------------------------
+      ! In case there is something ill-formed in the additional nodal outputs section, we will simply ignore it.
+   ErrMsg_NoBldNdOuts='Nodal outputs section of BeamDyn input file not found or improperly formatted.'
+   InputFileData%BldNd_NumOuts = 0     ! Just in case we don't get an error but have no nodal outputs.
+
+
+   !----------- OUTLIST for BldNd -----------------------------------------------------------
+   CALL ReadCom( UnIn, InputFile, 'Section Header: OutList for Blade node channels', ErrStat2, ErrMsg2, UnEc )
+   IF ( ErrStat2 >= AbortErrLev ) THEN
+      InputFileData%BldNd_NumOuts = 0
+      call wrscr( trim(ErrMsg_NoBldNdOuts) )
+      CALL Cleanup()
+      RETURN
+   ENDIF
+
+      ! Number of blade nodes to output:  will modify this at some point for arrays
+      ! TODO: Parse this string into an array of nodes to output at (one idea is to set an array of boolean to T/F for which nodes to output).  At present, we ignore it entirely.
+   CALL ReadVar(  UnIn, InputFile, InputFileData%BldNd_BlOutNd_Str, 'BldNd_BlOutNd_Str', 'Which nodes to output node data on.'//TRIM(Num2Lstr(I)), ErrStat2, ErrMsg2, UnEc )
+   IF ( ErrStat2 >= AbortErrLev ) THEN
+      InputFileData%BldNd_NumOuts = 0
+      call wrscr( trim(ErrMsg_NoBldNdOuts) )
+      CALL Cleanup()
+      RETURN
+   ENDIF
+
+
+      ! Section header for outlist
+   CALL ReadCom( UnIn, InputFile, 'Section Header: OutList', ErrStat2, ErrMsg2, UnEc )
+   IF ( ErrStat2 >= AbortErrLev ) THEN
+      InputFileData%BldNd_NumOuts = 0
+      CALL SetErrStat( ErrID_Warn, ErrMsg_NoBldNdOuts, ErrStat, ErrMsg, RoutineName )
+      CALL Cleanup()
+      RETURN
+   ENDIF
+
+
+      ! OutList - List of user-requested output channels at each node(-):
+   CALL ReadOutputList ( UnIn, InputFile, InputFileData%BldNd_OutList, InputFileData%BldNd_NumOuts, 'BldNd_OutList', "List of user-requested output channels", ErrStat2, ErrMsg2, UnEc  )     ! Routine in NWTC Subroutine Library
+   IF ( ErrStat2 >= AbortErrLev ) THEN
+      InputFileData%BldNd_NumOuts = 0
+      call wrscr( trim(ErrMsg_NoBldNdOuts) )
+      CALL Cleanup()
+      RETURN
+   ENDIF
+
+   !---------------------- END OF FILE -----------------------------------------
+
+
    call cleanup()
    return
 
@@ -1317,8 +1373,14 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
       InvalidOutput( PRatAct ) = .true.
       InvalidOutput( PAccAct ) = .true.
    END IF
-      
-   
+
+   if (p%BldMotionNodeLoc /= BD_MESH_FE) then
+      DO I = 1,9
+         InvalidOutput( NPFl(i,:) ) = .true.
+         InvalidOutput( NPMl(i,:) ) = .true. 
+      END DO      
+   end if
+
 !   ................. End of validity checking .................
 
 
@@ -1567,7 +1629,7 @@ SUBROUTINE BD_ValidateInputData( InitInp, InputFileData, ErrStat, ErrMsg )
 END SUBROUTINE BD_ValidateInputData
 !----------------------------------------------------------------------------------------------------------------------------------
 !> this routine fills the AllOuts array, which is used to send data to the glue code to be written to an output file.
-SUBROUTINE Calc_WriteOutput( p, AllOuts, y, m, ErrStat, ErrMsg )
+SUBROUTINE Calc_WriteOutput( p, AllOuts, y, m, ErrStat, ErrMsg, CalcWriteOutput )
 
    TYPE(BD_ParameterType),       INTENT(IN   )  :: p                                 !< The module parameters
    REAL(ReKi),                   INTENT(INOUT)  :: AllOuts(0:)                       !< array of values to potentially write to file
@@ -1575,6 +1637,7 @@ SUBROUTINE Calc_WriteOutput( p, AllOuts, y, m, ErrStat, ErrMsg )
    TYPE(BD_MiscVarType),         INTENT(INOUT)  :: m                                 !< misc/optimization variables (for computing mesh transfers)
    INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat                           !< The error status code
    CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg                            !< The error message, if an error occurred
+   LOGICAL               ,       INTENT(IN   )  :: CalcWriteOutput                   !< flag that determines if we need to compute AllOuts (or just the reaction loads that get returned to ServoDyn)
 
       ! local variables
    CHARACTER(*), PARAMETER                      :: RoutineName = 'Calc_WriteOutput'
@@ -1615,7 +1678,7 @@ SUBROUTINE Calc_WriteOutput( p, AllOuts, y, m, ErrStat, ErrMsg )
    !-------------------------
    ! we don't need to calculate the rest of these values if we don't ask for WriteOutput channels
    ! (but we did need RootMxr and RootMyr)
-   if ( p%NumOuts <= 0 ) RETURN
+   if ( p%NumOuts <= 0 .or. .not. CalcWriteOutput) RETURN
    !-------------------------
 
    
@@ -2046,6 +2109,14 @@ SUBROUTINE BD_PrintSum( p, x, m, InitInp, ErrStat, ErrMsg )
    END DO
 
 
+   WRITE (UnSu,'(15x,A)')
+   WRITE (UnSu,'(15x,A)')
+   WRITE (UnSu,'(15x,A)')  'Requested Output Channels at each blade station:'
+   WRITE (UnSu,'(15x,A)')  'Col   Parameter  Units'
+   WRITE (UnSu,'(15x,A)')  '----  ---------  -----'
+   DO I = 1,p%BldNd_NumOuts
+      WRITE (UnSu,OutPFmt)  I, p%BldNd_OutParam(I)%Name, p%BldNd_OutParam(I)%Units
+   END DO
 
 
    if ( p%analysis_type /= BD_STATIC_ANALYSIS ) then !dynamic analysis
@@ -2241,7 +2312,7 @@ SUBROUTINE Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
       ! determine how many outputs there are in the Jacobians     
    p%Jac_ny = y%ReactionForce%NNodes * 6     & ! 3 forces + 3 moments at each node
             + y%BldMotion%NNodes     * 18    & ! 6 displacements (translation, rotation) + 6 velocities + 6 accelerations at each node
-            + p%NumOuts                        ! WriteOutput values 
+            + p%NumOuts + p%BldNd_TotNumOuts   ! WriteOutput values 
    
    
       ! get the names of the linearized outputs:
@@ -2256,7 +2327,7 @@ SUBROUTINE Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
    call PackLoadMesh_Names(  y%ReactionForce, 'Reaction force', InitOut%LinNames_y, index_next)
    call PackMotionMesh_Names(y%BldMotion,     'Blade motion',   InitOut%LinNames_y, index_next)
 
-   do i=1,p%NumOuts
+   do i=1,p%NumOuts + p%BldNd_TotNumOuts
       InitOut%LinNames_y(i+index_next-1) = trim(InitOut%WriteOutputHdr(i))//', '//trim(InitOut%WriteOutputUnt(i))
    end do
    
@@ -2282,6 +2353,22 @@ SUBROUTINE Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
          InitOut%RotFrame_y(i+index_next-1) = AllOut( p%OutParam(i)%Indx )
       end if
    end do
+   
+
+      ! set outputs for all nodes out:
+   index_next = index_next + p%NumOuts
+   DO i=1,p%BldNd_NumOuts
+      ChannelName = p%BldNd_OutParam(i)%Name
+      call Conv2UC(ChannelName)
+      if ( ChannelName( LEN_TRIM(ChannelName):LEN_TRIM(ChannelName) ) == 'G') then ! channel is in global coordinate system
+         isRotating = .false.
+      else
+         isRotating = .true.
+      end if
+      InitOut%RotFrame_y(index_next : index_next+size(p%BldNd_BlOutNd)-1 ) = isRotating
+      index_next = index_next + size(p%BldNd_BlOutNd)
+   ENDDO
+
 
 END SUBROUTINE Init_Jacobian_y
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -2312,6 +2399,7 @@ SUBROUTINE Init_Jacobian_x_z( p, InitOut, ErrStat, ErrMsg)
    !call allocAry(p%dx,               p%dof_node*(p%node_total-1),     'p%dx',       ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    CALL AllocAry(InitOut%LinNames_x, p%Jac_nx*2, 'LinNames_x', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    CALL AllocAry(InitOut%RotFrame_x, p%Jac_nx*2, 'RotFrame_x', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   CALL AllocAry(InitOut%DerivOrder_x, p%Jac_nx*2, 'DerivOrder_x', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    !CALL AllocAry(InitOut%LinNames_z, p%dof_node*2, 'LinNames_z', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    !CALL AllocAry(InitOut%RotFrame_z, p%dof_node*2, 'RotFrame_z', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
@@ -2324,6 +2412,7 @@ SUBROUTINE Init_Jacobian_x_z( p, InitOut, ErrStat, ErrMsg)
    p%dx(4:6) = 0.2_BDKi*D2R_D                                     ! deflection states in rad and rad/s
    
    InitOut%RotFrame_x   = p%RotStates
+   InitOut%DerivOrder_x = 2
    
       !......................................
       ! set linearization output names:
@@ -2378,13 +2467,8 @@ SUBROUTINE Perturb_u( p, n, perturb_sign, u, du )
    
 
    ! local variables
-   integer(intKi)                                      :: ErrStat2
-   character(ErrMsgLen)                                :: ErrMsg2
-   
    INTEGER                                             :: fieldIndx
    INTEGER                                             :: node
-   REAL(R8Ki)                                          :: orientation(3,3)
-   REAL(R8Ki)                                          :: angles(3)
       
    fieldIndx = p%Jac_u_indx(n,2)
    node      = p%Jac_u_indx(n,3)
@@ -2397,10 +2481,7 @@ SUBROUTINE Perturb_u( p, n, perturb_sign, u, du )
    CASE ( 1) !Module/Mesh/Field: u%RootMotion%TranslationDisp = 1;
       u%RootMotion%TranslationDisp( fieldIndx,node) = u%RootMotion%TranslationDisp( fieldIndx,node) + du * perturb_sign
    CASE ( 2) !Module/Mesh/Field: u%RootMotion%Orientation = 2;
-      angles = 0.0_R8Ki
-      angles(fieldIndx) = du * perturb_sign
-      call SmllRotTrans( 'linearization perturbation', angles(1), angles(2), angles(3), orientation, ErrStat=ErrStat2, ErrMsg=ErrMsg2 )
-      u%RootMotion%Orientation(:,:,node) = matmul(u%RootMotion%Orientation(:,:,node), orientation)
+      CALL PerturbOrientationMatrix( u%RootMotion%Orientation(:,:,node), du * perturb_sign, fieldIndx )
    CASE ( 3) !Module/Mesh/Field: u%RootMotion%TranslationVel = 3;
       u%RootMotion%TranslationVel( fieldIndx,node) = u%RootMotion%TranslationVel( fieldIndx,node) + du * perturb_sign
    CASE ( 4) !Module/Mesh/Field: u%RootMotion%RotationVel = 4;
@@ -2442,7 +2523,7 @@ SUBROUTINE Compute_dY(p, y_p, y_m, delta, dY)
    call PackLoadMesh_dY(  y_p%ReactionForce, y_m%ReactionForce, dY, indx_first)
    call PackMotionMesh_dY(y_p%BldMotion,     y_m%BldMotion,     dY, indx_first) ! all 6 motion fields
    
-   do i=1,p%NumOuts
+   do i=1,p%NumOuts + p%BldNd_TotNumOuts
       dY(i+indx_first-1) = y_p%WriteOutput(i) - y_m%WriteOutput(i)
    end do
    
@@ -2469,9 +2550,7 @@ SUBROUTINE Perturb_x( p, fieldIndx, node, dof, perturb_sign, x, dx )
    character(ErrMsgLen)                                :: ErrMsg2
    
    REAL(R8Ki)                                          :: orientation(3,3)
-   REAL(R8Ki)                                          :: oldRotation(3,3)
-   REAL(R8Ki)                                          :: newRotation(3,3)
-   REAL(R8Ki)                                          :: angles(3)
+   REAL(R8Ki)                                          :: rotation(3,3)
    
    dx = p%dx(dof)
                
@@ -2479,16 +2558,13 @@ SUBROUTINE Perturb_x( p, fieldIndx, node, dof, perturb_sign, x, dx )
       if (dof < 4) then ! translational displacement
          x%q( dof, node ) = x%q( dof, node ) + dx * perturb_sign
       else ! w-m parameters
-         angles = 0.0_R8Ki
-         angles(dof-3) = dx * perturb_sign
-         call SmllRotTrans( 'linearization perturbation', angles(1), angles(2), angles(3), orientation, ErrStat=ErrStat2, ErrMsg=ErrMsg2 )
+         call BD_CrvMatrixR( x%q( 4:6, node ), rotation ) ! returns the rotation matrix (transpose of DCM) that was stored in the state as a w-m parameter
+         orientation = transpose(rotation)
          
-         call BD_CrvMatrixR( x%q( 4:6, node ), oldRotation ) ! returns the rotation matrix (transpose of DCM) that was stored in the state as a w-m parameter
-         
-         !newRotation = transpose( matmul(transpose(oldRotation), orientation) )
-         newRotation = matmul( transpose(orientation), oldRotation)
-         call BD_CrvExtractCrv( newRotation, x%q( 4:6, node ), ErrStat2, ErrMsg2 ) ! return the w-m parameters of the new orientation
-         
+         CALL PerturbOrientationMatrix( orientation, dx * perturb_sign, dof-3 )
+
+         rotation = transpose(orientation)
+         call BD_CrvExtractCrv( rotation, x%q( 4:6, node ), ErrStat2, ErrMsg2 ) ! return the w-m parameters of the new orientation
       end if
    else
       x%dqdt( dof, node ) = x%dqdt( dof, node ) + dx * perturb_sign

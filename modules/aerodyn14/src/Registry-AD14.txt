@@ -168,18 +168,18 @@ typedef	^	DynInflowParms	IntKi	MAXINFLO	-	2	-	#should be possible to spec with m
 typedef	^	DynInflowParms	ReKi	xMinv	{maxinfl}	-	-
 
 #Element
-typedef	^	Element	ReKi	A	{:}{:}	-	-		-
-typedef	^	Element	ReKi	AP	{:}{:}	-	-		-
-typedef	^	Element	ReKi	ALPHA	{:}{:}	-	-		-
-typedef	^	Element	ReKi	W2	{:}{:}	-	-		-
+typedef	^	Element	ReKi	A	{:}{:}	-	-		-     "Axial induction factor" -
+typedef	^	Element	ReKi	AP	{:}{:}	-	-		-     "Tangential induction factor" -
+typedef	^	Element	ReKi	ALPHA	{:}{:}	-	-		- "Angle of attack" rad
+typedef	^	Element	ReKi	W2	{:}{:}	-	-		-     "Relative velocity norm " m/s
 typedef	^	Element	ReKi	OLD_A_NS	{:}{:}	-	-		-	#allocated in VIND
 typedef	^	Element	ReKi	OLD_AP_NS	{:}{:}	-	-		-	#allocated in VIND
-typedef	^	Element	ReKi	PITNOW	-	-	-		-
-typedef	^	ElementParms	IntKi	NELM	-	-	-		-
-typedef	^	ElementParms	ReKi	TWIST	{:}	-	-		-
-typedef	^	ElementParms	ReKi	RELM	{:}	-	-		-
-typedef	^	ElementParms	ReKi	HLCNST	{:}	-	-		-
-typedef	^	ElementParms	ReKi	TLCNST	{:}	-	-		-
+typedef	^	Element	ReKi	PITNOW	:: -	-		-         "Current pitch angle - Based on blade orientation (to verify)" rad 
+typedef	^	ElementParms	IntKi	NELM	-	-	-		- "Number of elements (constant)" -
+typedef	^	ElementParms	ReKi	TWIST	{:}	-	-		- "Airfoil twist angle (constant)" - rad
+typedef	^	ElementParms	ReKi	RELM	{:}	-	-		- "Radius of element (constant)" m
+typedef	^	ElementParms	ReKi	HLCNST	{:}	-	-		- "Hub loss constant B/2*(r-rh)/rh (constant)" -
+typedef	^	ElementParms	ReKi	TLCNST	{:}	-	-		- "Tip loss constant B/2*(R-r)/R (constant) " -
 
 #ElOutParams
 typedef	^	ElOutParms	ReKi	AAA	{:}	-	-		-
@@ -196,6 +196,7 @@ typedef	^	ElOutParms	ReKi	DynPres	{:}	-	-		-
 typedef	^	ElOutParms	ReKi	PMM	{:}	-	-		-
 typedef	^	ElOutParms	ReKi	PITSAV	{:}	-	-		-
 typedef	^	ElOutParms	ReKi	ReyNum	{:}	-	-		-
+typedef	^	ElOutParms	ReKi	Gamma	{:}	-	-		- "Circulation along the span, 1/2 c Vrel Cl" m^2/s
 typedef	^	ElOutParms	ReKi	SaveVX	{:}{:}	-	-		-
 typedef	^	ElOutParms	ReKi	SaveVY	{:}{:}	-	-		-
 typedef	^	ElOutParms	ReKi	SaveVZ	{:}{:}	-	-		-
