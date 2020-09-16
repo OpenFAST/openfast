@@ -141,16 +141,18 @@ typedef  ^                       ^                 ReKi              WindViUVW  
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
 typedef  ^                    ParameterType        CHARACTER(1024)   RootFileName      -     -     -     "Root of the InflowWind input   filename"                -
 typedef  ^                       ^                 LOGICAL           CTTS_Flag         -  .FALSE.  -     "determines if coherent turbulence is used"              -
+typedef  ^                       ^                 LOGICAL           RotateWindBox     -  .FALSE.  -     "determines if wind will be rotated"              -
 typedef  ^                       ^                 DbKi              DT                -     -     -     "Time step for cont. state integration & disc. state update"   seconds
 typedef  ^                       ^                 ReKi              PropagationDir    -     -     -     "Direction of wind propagation"                          radians
 typedef  ^                       ^                 ReKi              VFlowAngle        -     -     -     "Vertical (upflow) angle"                                radians
 
 typedef  ^                       ^                 ReKi              RotToWind        {3}{3} -     -     "Rotation matrix for rotating from the global XYZ coordinate system to the wind coordinate system (wind along X')"   -
 typedef  ^                       ^                 ReKi              RotFromWind      {3}{3} -     -     "Rotation matrix for rotating from the wind coordinate system (wind along X') back to the global XYZ coordinate system.  Equal to TRANSPOSE(RotToWind)"   -
-typedef  ^                       ^                 ReKi              WindViXYZprime    ::    -     -     "List of XYZ coordinates for velocity measurements, translated to the wind coordinate system (prime coordinates).  This equals MATMUL( RotToWind, ParamData%WindViXYZ )"  meters/second
+typedef  ^                       ^                 ReKi              WindViXYZprime    ::    -     -     "List of XYZ coordinates for velocity measurements, translated to the wind coordinate system (prime coordinates).  This equals MATMUL( RotToWind, ParamData%WindViXYZ )"  meters
 
 typedef  ^                       ^                 IntKi             WindType          -     0     -     "Type of wind -- set to Undef_Wind initially"            -
 typedef  ^                       ^                 ReKi              ReferenceHeight   -     -     -     "Height of the wind turbine"                             meters
+typedef  ^                       ^                 ReKi              RefPosition       3     -     -     "Reference position (point where box is rotated)"        meters
 typedef  ^                       ^                 IntKi             NWindVel          -     -     -     "Number of points in the wind velocity list"             -
 typedef  ^                       ^                 ReKi              WindViXYZ         ::    -     -     "List of XYZ coordinates for wind velocity measurements, 3xNWindVel" meters
 typedef  ^                       ^     IfW_UniformWind_ParameterType UniformWind       -     -     -     "Parameters from UniformWind"                            -

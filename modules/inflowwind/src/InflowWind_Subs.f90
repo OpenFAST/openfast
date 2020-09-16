@@ -283,7 +283,7 @@ SUBROUTINE InflowWind_ReadInput( InputFileName, EchoFileName, InputFileData, Err
 
       ! Read PropagationDir
    CALL ReadVar( UnitInput, InputFileName, InputFileData%PropagationDir, 'PropagationDir', &
-               'Direction of wind propagation (meteoroligical direction)', TmpErrStat, TmpErrMsg, UnitEcho )
+               'Direction of wind propagation (meteorological direction) (deg)', TmpErrStat, TmpErrMsg, UnitEcho )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
    IF (ErrStat >= AbortErrLev) THEN
       CALL CleanUp()
@@ -291,6 +291,17 @@ SUBROUTINE InflowWind_ReadInput( InputFileName, EchoFileName, InputFileData, Err
    ENDIF
 
 
+   ! Read Upflow angle:
+   CALL ReadVar( UnitInput, InputFileName, InputFileData%VFlowAngle, 'VFlowAngle', &
+               'Upflow angle (deg)', TmpErrStat, TmpErrMsg, UnitEcho )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL CleanUp()
+      RETURN
+   ENDIF
+
+   
+   
       ! Read the number of points for the wind velocity output
    CALL ReadVar( UnitInput, InputFileName, InputFileData%NWindVel, 'NWindVel', &
                'Number of points to output the wind velocity (0 to 9)', &
@@ -1299,7 +1310,7 @@ SUBROUTINE InflowWind_SetParameters( InitInp, InputFileData, p, m, ErrStat, ErrM
       !! The rotation matrix _RotToWind_, (\f$ M \f$), rotates the spatial points (\f$ [ X~ Y~ Z ] \f$) into the coordinate system 
       !! the wind (\f$ [ X'~ Y'~ Z' ] \f$).  This is a rotation about the point \f$ [ 0~ 0~ H ] \f$ (H = hub reference height), first
       !! about the \f$ Y\f$-axis (in the negative direction), followed by a rotation about \f$Z\f$-axis (also in the negative direction
-      !! due to the meteorological convention used).  In the implimentation, the rotation is about the coordinate \f$ [ 0~ 0~ H ] \f$
+      !! due to the meteorological convention used).  In the implementation, the rotation is about the coordinate \f$ [ 0~ 0~ H ] \f$
       !! where \f$ H \f$ is the reference height of the turbine (hub height).
       !!
       !! \f$  [X'~ Y'~ Z'] = M \left( [X~ Y~ Z] - [ 0~ 0~ H] \right) + [ 0~ 0~ H ] \f$
@@ -1337,9 +1348,6 @@ SUBROUTINE InflowWind_SetParameters( InitInp, InputFileData, p, m, ErrStat, ErrM
       !! the upflow angle (_VFlowAngle_).
 
 
-
-
-
       ! Create the rotation matrices -- rotate from XYZ to X'Y'Z' (wind aligned along X) coordinates
       ! Included in this rotation is the wind upflow (inclination) angle (rotation about Y axis)
    p%RotToWind(1,:) = (/   COS(-p%VFlowAngle) * COS(-p%PropagationDir),   COS(-p%VFlowAngle) * SIN(-p%PropagationDir),  -SIN(-p%VFlowAngle)  /)  
@@ -1349,19 +1357,22 @@ SUBROUTINE InflowWind_SetParameters( InitInp, InputFileData, p, m, ErrStat, ErrM
       ! Create the rotation matrices -- rotate from X'Y'Z' (wind aligned along X) to global XYZ coordinates
    p%RotFromWind =  TRANSPOSE(p%RotToWind)
 
-
       ! Create the array used for holding the rotated list of WindViXYZ coordinates in the wind reference frame, and populate it
    CALL AllocAry( p%WindViXYZprime, 3, p%NWindVel, 'Array for WindViXYZ coordinates in the wind reference frame', &
                TmpErrStat, TmpErrMsg )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
    IF ( ErrStat>= AbortErrLev ) RETURN 
 
+   p%RefPosition = (/ 0.0_ReKi, 0.0_ReKi, p%ReferenceHeight /)
+   
    p%WindViXYZprime   =  0.0_ReKi
       ! set the output points. Note rotation is about the hub height at [0 0 H].  See InflowWind_SetParameters for details.
    DO I = 1,p%NWindVel
-      p%WindViXYZprime(:,I) =  MATMUL( p%RotToWind, (p%WindViXYZ(:,I) - (/ 0.0_ReKi, 0.0_ReKi, p%ReferenceHeight /) )) + (/ 0.0_ReKi, 0.0_ReKi, p%ReferenceHeight /)
+      p%WindViXYZprime(:,I) =  MATMUL( p%RotToWind, (p%WindViXYZ(:,I) - p%RefPosition )) + p%RefPosition
    ENDDO
-
+   
+   p%RotateWindBox = .not. (EqualRealNos (p%PropagationDir, 0.0_ReKi) .AND. EqualRealNos (p%VFlowAngle, 0.0_ReKi))
+   
 END SUBROUTINE InflowWind_SetParameters
 
 
@@ -1619,7 +1630,7 @@ SUBROUTINE SetAllOuts( p, y, m, ErrStat, ErrMsg )
       
    END DO
    
-      !FIXME:  Add in Wind1Dir, Wind1Mag etc.  -- allthough those can be derived outside of FAST.
+      !FIXME:  Add in Wind1Dir, Wind1Mag etc.  -- although those can be derived outside of FAST.
 
    DO I = 1,MIN(5, p%lidar%NumPulseGate )
       m%AllOuts( WindMeas(I) ) = y%lidar%lidSpeed(I)
@@ -1773,12 +1784,12 @@ SUBROUTINE CalculateOutput( Time, InputData, p, x, xd, z, OtherStates, y, m, Fil
 
          ! Apply the coordinate transformation to the PositionXYZ coordinates to get the PositionXYZprime coordinate list
          ! If the PropagationDir is zero, we don't need to apply this and will simply copy the data.  Repeat for the WindViXYZ.
-      IF ( EqualRealNos (p%PropagationDir, 0.0_ReKi) .AND. EqualRealNos (p%VFlowAngle, 0.0_ReKi) ) THEN
+      IF ( .not. p%RotateWindBox ) THEN
          PositionXYZprime  =  InputData%PositionXYZ
       ELSE
             ! NOTE: rotations are about the hub at [ 0 0 H ].  See InflowWind_SetParameters for details.
          DO I  = 1,SIZE(InputData%PositionXYZ,DIM=2)
-            PositionXYZprime(:,I)   =  MATMUL( p%RotToWind, (InputData%PositionXYZ(:,I) - (/ 0.0_ReKi, 0.0_ReKi, p%ReferenceHeight /)) ) + (/ 0.0_ReKi, 0.0_ReKi, p%ReferenceHeight /)
+            PositionXYZprime(:,I)   =  MATMUL( p%RotToWind, (InputData%PositionXYZ(:,I) - p%RefPosition) ) + p%RefPosition
          ENDDO
       ENDIF
 
@@ -1979,17 +1990,17 @@ SUBROUTINE CalculateOutput( Time, InputData, p, x, xd, z, OtherStates, y, m, Fil
          ! UVW contains the direction components of the wind at XYZ after translation from the U'V'W' wind velocity components
          ! in the X'Y'Z' (wind file) coordinate frame.
          ! NOTE: rotations are about the hub at [ 0 0 H ].  See InflowWind_SetParameters for details.
-      IF ( .NOT. (EqualRealNos (p%PropagationDir, 0.0_ReKi) .AND. EqualRealNos (p%VFlowAngle, 0.0_ReKi) )) THEN
+      IF ( p%RotateWindBox ) THEN
          DO I  = 1,SIZE(y%VelocityUVW,DIM=2)
-            y%VelocityUVW(:,I)   =  MATMUL( p%RotFromWind, (y%VelocityUVW(:,I) - (/ 0.0_ReKi, 0.0_ReKi, p%ReferenceHeight /)) ) + (/ 0.0_ReKi, 0.0_ReKi, p%ReferenceHeight /)
+            y%VelocityUVW(:,I)   =  MATMUL( p%RotFromWind, y%VelocityUVW(:,I) )
          ENDDO
       ENDIF
 
          ! We also need to rotate the reference frame for the WindViUVW array
          ! NOTE: rotations are about the hub at [ 0 0 H ].  See InflowWind_SetParameters for details.
-      IF ( .NOT. (EqualRealNos (p%PropagationDir, 0.0_ReKi)  .AND. EqualRealNos (p%VFlowAngle, 0.0_ReKi) ) .AND. FillWrOut ) THEN
+      IF ( p%RotateWindBox .AND. FillWrOut ) THEN
          DO I  = 1,SIZE(m%WindViUVW,DIM=2)
-            m%WindViUVW(:,I)   =  MATMUL( p%RotFromWind, (m%WindViUVW(:,I) - (/ 0.0_ReKi, 0.0_ReKi, p%ReferenceHeight /)) ) + (/ 0.0_ReKi, 0.0_ReKi, p%ReferenceHeight /)
+            m%WindViUVW(:,I)   =  MATMUL( p%RotFromWind, m%WindViUVW(:,I) )
          ENDDO
       ENDIF
 

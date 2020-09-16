@@ -157,14 +157,16 @@ IMPLICIT NONE
   TYPE, PUBLIC :: InflowWind_ParameterType
     CHARACTER(1024)  :: RootFileName      !< Root of the InflowWind input   filename [-]
     LOGICAL  :: CTTS_Flag = .FALSE.      !< determines if coherent turbulence is used [-]
+    LOGICAL  :: RotateWindBox = .FALSE.      !< determines if wind will be rotated [-]
     REAL(DbKi)  :: DT      !< Time step for cont. state integration & disc. state update [seconds]
     REAL(ReKi)  :: PropagationDir      !< Direction of wind propagation [radians]
     REAL(ReKi)  :: VFlowAngle      !< Vertical (upflow) angle [radians]
     REAL(ReKi) , DIMENSION(1:3,1:3)  :: RotToWind      !< Rotation matrix for rotating from the global XYZ coordinate system to the wind coordinate system (wind along X') [-]
     REAL(ReKi) , DIMENSION(1:3,1:3)  :: RotFromWind      !< Rotation matrix for rotating from the wind coordinate system (wind along X') back to the global XYZ coordinate system.  Equal to TRANSPOSE(RotToWind) [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: WindViXYZprime      !< List of XYZ coordinates for velocity measurements, translated to the wind coordinate system (prime coordinates).  This equals MATMUL( RotToWind, ParamData%WindViXYZ ) [meters/second]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: WindViXYZprime      !< List of XYZ coordinates for velocity measurements, translated to the wind coordinate system (prime coordinates).  This equals MATMUL( RotToWind, ParamData%WindViXYZ ) [meters]
     INTEGER(IntKi)  :: WindType = 0      !< Type of wind -- set to Undef_Wind initially [-]
     REAL(ReKi)  :: ReferenceHeight      !< Height of the wind turbine [meters]
+    REAL(ReKi) , DIMENSION(1:3)  :: RefPosition      !< Reference position (point where box is rotated) [meters]
     INTEGER(IntKi)  :: NWindVel      !< Number of points in the wind velocity list [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: WindViXYZ      !< List of XYZ coordinates for wind velocity measurements, 3xNWindVel [meters]
     TYPE(IfW_UniformWind_ParameterType)  :: UniformWind      !< Parameters from UniformWind [-]
@@ -3048,6 +3050,7 @@ ENDIF
    ErrMsg  = ""
     DstParamData%RootFileName = SrcParamData%RootFileName
     DstParamData%CTTS_Flag = SrcParamData%CTTS_Flag
+    DstParamData%RotateWindBox = SrcParamData%RotateWindBox
     DstParamData%DT = SrcParamData%DT
     DstParamData%PropagationDir = SrcParamData%PropagationDir
     DstParamData%VFlowAngle = SrcParamData%VFlowAngle
@@ -3069,6 +3072,7 @@ IF (ALLOCATED(SrcParamData%WindViXYZprime)) THEN
 ENDIF
     DstParamData%WindType = SrcParamData%WindType
     DstParamData%ReferenceHeight = SrcParamData%ReferenceHeight
+    DstParamData%RefPosition = SrcParamData%RefPosition
     DstParamData%NWindVel = SrcParamData%NWindVel
 IF (ALLOCATED(SrcParamData%WindViXYZ)) THEN
   i1_l = LBOUND(SrcParamData%WindViXYZ,1)
@@ -3208,6 +3212,7 @@ ENDIF
   Int_BufSz  = 0
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%RootFileName)  ! RootFileName
       Int_BufSz  = Int_BufSz  + 1  ! CTTS_Flag
+      Int_BufSz  = Int_BufSz  + 1  ! RotateWindBox
       Db_BufSz   = Db_BufSz   + 1  ! DT
       Re_BufSz   = Re_BufSz   + 1  ! PropagationDir
       Re_BufSz   = Re_BufSz   + 1  ! VFlowAngle
@@ -3220,6 +3225,7 @@ ENDIF
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! WindType
       Re_BufSz   = Re_BufSz   + 1  ! ReferenceHeight
+      Re_BufSz   = Re_BufSz   + SIZE(InData%RefPosition)  ! RefPosition
       Int_BufSz  = Int_BufSz  + 1  ! NWindVel
   Int_BufSz   = Int_BufSz   + 1     ! WindViXYZ allocated yes/no
   IF ( ALLOCATED(InData%WindViXYZ) ) THEN
@@ -3408,6 +3414,8 @@ ENDIF
     END DO ! I
     IntKiBuf(Int_Xferred) = TRANSFER(InData%CTTS_Flag, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%RotateWindBox, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
     DbKiBuf(Db_Xferred) = InData%DT
     Db_Xferred = Db_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%PropagationDir
@@ -3450,6 +3458,10 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%ReferenceHeight
     Re_Xferred = Re_Xferred + 1
+    DO i1 = LBOUND(InData%RefPosition,1), UBOUND(InData%RefPosition,1)
+      ReKiBuf(Re_Xferred) = InData%RefPosition(i1)
+      Re_Xferred = Re_Xferred + 1
+    END DO
     IntKiBuf(Int_Xferred) = InData%NWindVel
     Int_Xferred = Int_Xferred + 1
   IF ( .NOT. ALLOCATED(InData%WindViXYZ) ) THEN
@@ -3767,6 +3779,8 @@ ENDIF
     END DO ! I
     OutData%CTTS_Flag = TRANSFER(IntKiBuf(Int_Xferred), OutData%CTTS_Flag)
     Int_Xferred = Int_Xferred + 1
+    OutData%RotateWindBox = TRANSFER(IntKiBuf(Int_Xferred), OutData%RotateWindBox)
+    Int_Xferred = Int_Xferred + 1
     OutData%DT = DbKiBuf(Db_Xferred)
     Db_Xferred = Db_Xferred + 1
     OutData%PropagationDir = ReKiBuf(Re_Xferred)
@@ -3820,6 +3834,12 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     OutData%ReferenceHeight = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
+    i1_l = LBOUND(OutData%RefPosition,1)
+    i1_u = UBOUND(OutData%RefPosition,1)
+    DO i1 = LBOUND(OutData%RefPosition,1), UBOUND(OutData%RefPosition,1)
+      OutData%RefPosition(i1) = ReKiBuf(Re_Xferred)
+      Re_Xferred = Re_Xferred + 1
+    END DO
     OutData%NWindVel = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WindViXYZ not allocated

@@ -314,15 +314,8 @@ SUBROUTINE IfW_HAWCWind_CalcOutput(Time, PositionXYZ, p, Velocity, DiskVel, Misc
    INTEGER(IntKi),                           INTENT(  OUT)  :: ErrStat           !< error status
    CHARACTER(*),                             INTENT(  OUT)  :: ErrMsg            !< The error message
 
-      ! local variables
-   INTEGER(IntKi)                                           :: NumPoints      ! Number of points specified by the PositionXYZ array
-
-      ! local counters
-   INTEGER(IntKi)                                           :: PointNum       ! a loop counter for the current point
 
       ! temporary variables
-   INTEGER(IntKi)                                           :: TmpErrStat     ! temporary error status
-   CHARACTER(ErrMsgLen)                                     :: TmpErrMsg      ! temporary error message
    CHARACTER(*), PARAMETER                                  :: RoutineName = 'IfW_HAWCWind_CalcOutput'
 
 

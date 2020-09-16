@@ -338,7 +338,8 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
             p%UniformWind%RefHt            =  InputFileData%Steady_RefHt
             m%UniformWind%TimeIndex        =  1_IntKi
 
-
+            p%ReferenceHeight = p%UniformWind%RefHt
+            
                ! Store wind file metadata
             InitOutData%WindFileInfo%FileName         =  ""
             InitOutData%WindFileInfo%WindType         =  Steady_WindNumber
@@ -391,6 +392,7 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
             CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, ' IfW_Init' )
             IF ( ErrStat >= AbortErrLev ) RETURN
 
+            p%ReferenceHeight = p%UniformWind%RefHt
 
                ! Store wind file metadata
             InitOutData%WindFileInfo%FileName         =  InputFileData%Uniform_FileName
@@ -453,6 +455,7 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
             InitOutData%WindFileInfo%FileName            =  InputFileData%TSFF_FileName
             
             CALL SetFFInitOutData(p%TSFFWind%FF)
+            p%ReferenceHeight = InitOutData%WindFileInfo%RefHt
 
 
          CASE ( BladedFF_WindNumber, BladedFF_Shr_WindNumber )
@@ -487,10 +490,12 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
             
             if (InputFileData%WindType == BladedFF_Shr_WindNumber) then
                InputFileData%WindType = BladedFF_WindNumber
+               ! this overwrites the values of PropagationDir and VFlowAngle with values from the native Bladed file
                InputFileData%PropagationDir = BladedFF_InitOutData%PropagationDir
-               InputFileData%VFlowAngle     = BladedFF_InitOutData%VFlowAngle      
+               InputFileData%VFlowAngle     = BladedFF_InitOutData%VFlowAngle 
             end if
-            
+            p%ReferenceHeight = InitOutData%WindFileInfo%RefHt
+
             
          CASE ( HAWC_WindNumber )
             
@@ -520,6 +525,7 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
                ! Store wind file metadata
             CALL SetFFInitOutData(p%HAWCWind%FF)
             InitOutData%WindFileInfo%FileName            =  InputFileData%HAWC_FileName_u
+            p%ReferenceHeight = InitOutData%WindFileInfo%RefHt
 
             
          CASE (User_WindNumber)
@@ -529,14 +535,16 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
                         TimeInterval,  User_InitOutData,  TmpErrStat, TmpErrMsg)
             CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
             IF ( ErrStat >= AbortErrLev ) RETURN
-
+            
+            p%ReferenceHeight = InputFileData%Steady_RefHt ! FIXME!!!!
+            
          CASE ( FDext_WindNumber )
             
                ! Initialize the UserWind module
             CALL IfW_4Dext_Init(InitInp%FDext, p%FDext, m%FDext, TimeInterval, FDext_InitOutData, TmpErrStat, TmpErrMsg)
             CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
             IF ( ErrStat >= AbortErrLev ) RETURN
-            
+            p%ReferenceHeight = p%FDext%pZero(3) + (p%FDext%n(3)/2) * p%FDext%delta(3) ! should be middle of grid, right???? FIXME
             
          CASE DEFAULT  ! keep this check to make sure that all new wind types have been accounted for
             CALL SetErrStat(ErrID_Fatal,' Undefined wind type.',ErrStat,ErrMsg,'InflowWind_Init()')

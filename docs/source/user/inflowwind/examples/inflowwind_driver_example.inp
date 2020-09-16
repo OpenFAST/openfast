@@ -2,7 +2,7 @@ Example file
 InflowWind driver input file.
    t           echo           -- whether this input file should be echoed to a file (flag)
 ===============================================================================
-"Test005.ipt"  IfWFileName    -- Name of InflowWind input file (-)
+"inflowwind_example.dat"  IfWFileName    -- Name of InflowWind input file (-)
 ===================== File Conversion Options =================================
  false         WrHAWC         -- Convert all data to HAWC2 format? (flag)
  false         WrBladed       -- Convert all data to Bladed format? (flag)
