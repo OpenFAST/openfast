@@ -12,6 +12,7 @@
 #endif
 
 EXTERNAL_ROUTINE void FAST_AllocateTurbines(int * iTurb, int *ErrStat, char *ErrMsg);
+EXTERNAL_ROUTINE void FAST_DeallocateTurbines(int *ErrStat, char *ErrMsg);
 
 EXTERNAL_ROUTINE void FAST_OpFM_Restart(int * iTurb, const char *CheckpointRootName, int *AbortErrLev, double * dt, int * NumBl, int * NumBlElem, int * n_t_global,
    OpFM_InputType_t* OpFM_Input, OpFM_OutputType_t* OpFM_Output, SC_InputType_t* SC_Input, SC_OutputType_t* SC_Output, int *ErrStat, char *ErrMsg);
@@ -42,7 +43,7 @@ EXTERNAL_ROUTINE void FAST_CreateCheckpoint(int * iTurb, const char *CheckpointR
 
 // make sure these parameters match with FAST_Library.f90
 #define MAXIMUM_BLADES 3
-#define MAXIMUM_OUTPUTS 1000
+#define MAXIMUM_OUTPUTS 4000
 #define CHANNEL_LENGTH 10  
 #define MAXInitINPUTS 10
 

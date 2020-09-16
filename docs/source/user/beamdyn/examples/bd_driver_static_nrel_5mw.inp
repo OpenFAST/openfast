@@ -14,14 +14,15 @@ False         DynamicSolve  - Dynamic solve (false for static solve) (-)
           0   GlbPos(2)     - Component of position vector of the reference blade frame along Y direction (m)
           1   GlbPos(3)     - Component of position vector of the reference blade frame along Z direction (m)
 ---The following 3 by 3 matrix is the direction cosine matirx ,GlbDCM(3,3),
----relates global frame to reference blade frame
+---relates global frame to the initial blade root frame
 1.0000000E+00  0.0000000E+00  0.0000000E+00  
 0.0000000E+00  1.0000000E+00  0.0000000E+00  
 0.0000000E+00  0.0000000E+00  1.0000000E+00  
+True          GlbRotBladeT0 - Reference orientation for BeamDyn calculations is aligned with initial blade root?
 ---------------------- ROOT VELOCITY PARAMETER ----------------------------------
-          0   RootVel(4)     - Component of angular velocity vector of the beam root about X axis (rad/s)
-          0   RootVel(5)     - Component of angular velocity vector of the beam root about Y axis (rad/s)
-          0   RootVel(6)     - Component of angular velocity vector of the beam root about Z axis (rad/s)
+          0   RootVel(4)    - Component of angular velocity vector of the beam root about X axis (rad/s)
+          0   RootVel(5)    - Component of angular velocity vector of the beam root about Y axis (rad/s)
+          0   RootVel(6)    - Component of angular velocity vector of the beam root about Z axis (rad/s)
 ---------------------- APPLIED FORCE ----------------------------------
       10000   DistrLoad(1)  - Component of distributed force vector along X direction (N/m)
           0   DistrLoad(2)  - Component of distributed force vector along Y direction (N/m)
@@ -39,5 +40,5 @@ False         DynamicSolve  - Dynamic solve (false for static solve) (-)
 Non-dim blade-span eta   Fx          Fy            Fz           Mx           My           Mz
 (-)                      (N)         (N)           (N)          (N-m)        (N-m)        (N-m)
 ---------------------- PRIMARY INPUT FILE --------------------------------------
-"bd_primary_nrel_5mw_static.inp"    InputFile - Name of the primary BeamDyn input file
+"bd_primary_nrel_5mw.inp"    InputFile - Name of the primary BeamDyn input file
 

@@ -166,7 +166,7 @@ typedef    ^            ^                    ^                       SubModNo   
 typedef    ^            ^                    ^                       NumOuts        -    -    -    "The number of output channels" -
 typedef    ^            ^                    ^                       method         -    -    -    "integration method: 1-RK4, 2-AB4, 3-ABM4" -
 typedef    ^            ^                    ^                       TmStep         -    -    -    "Total time step" -
-typedef    ^            ^                    CHARACTER(10)           OutName       {:}  -    -     "Names of all requested output parameters" -
+typedef    ^            ^                    CHARACTER(ChanLen)      OutName       {:}  -    -     "Names of all requested output parameters" -
 typedef    ^            ^                    ^                       OutUnit       {:}  -    -     "Units of all requested output parameters" -
 typedef    ^            ^                    CHARACTER(1024)         RootName       -    -    -    "Rootname" -
 # ..... Ice Model 1 ...............................................................................................................

@@ -42,6 +42,7 @@ MODULE IfW_HAWCWind
    PUBLIC                                    :: IfW_HAWCWind_CalcOutput
 
    INTEGER(IntKi), PARAMETER  :: nc = 3                           !< number of wind components
+   INTEGER(IntKi), PARAMETER  :: WindProfileType_None     = -1    !< don't add wind profile; already included in input data
    INTEGER(IntKi), PARAMETER  :: WindProfileType_Constant = 0     !< constant wind
    INTEGER(IntKi), PARAMETER  :: WindProfileType_Log      = 1     !< logarithmic
    INTEGER(IntKi), PARAMETER  :: WindProfileType_PL       = 2     !< power law
@@ -95,8 +96,9 @@ SUBROUTINE IfW_HAWCWind_Init(InitInp, p, MiscVars, Interval, InitOut, ErrStat, E
    p%nz           = InitInp%nz   
    p%RefHt        = InitInp%RefHt
    p%URef         = InitInp%URef
-   p%InitPosition = 0.0_ReKi  ! bjj: someday we may want to let the users give an offset time/position
-   p%InitPosition(1) = InitInp%dx
+   p%InitPosition = InitInp%InitPosition
+   if (EqualRealNos(InitInp%InitPosition(1), 0.0_ReKi)) p%InitPosition(1) = InitInp%dx        ! This is the old behaviour
+
 
    p%deltaXInv   = 1.0 / InitInp%dx
    p%deltaYInv   = 1.0 / InitInp%dy
@@ -145,7 +147,7 @@ SUBROUTINE IfW_HAWCWind_Init(InitInp, p, MiscVars, Interval, InitOut, ErrStat, E
       WRITE(InitInp%SumFileUnit,'(A)', IOSTAT=TmpErrStat)    'HAWC wind type.  Read by InflowWind sub-module '//TRIM(GetNVD(IfW_HAWCWind_Ver))      
       
       WRITE(InitInp%SumFileUnit,'(A34,G12.4)',IOSTAT=TmpErrStat)    '     Reference height (m):        ',p%RefHt
-      WRITE(InitInp%SumFileUnit,'(A34,G12.4)',IOSTAT=TmpErrStat)    '     Timestep (s):                ',p%deltaXInv / p%URef
+      WRITE(InitInp%SumFileUnit,'(A34,G12.4)',IOSTAT=TmpErrStat)    '     Timestep (s):                ',1.0_ReKi / (p%deltaXInv * p%URef)
       WRITE(InitInp%SumFileUnit,'(A34,I12)',  IOSTAT=TmpErrStat)    '     Number of timesteps:         ',p%nx
       WRITE(InitInp%SumFileUnit,'(A34,G12.4)',IOSTAT=TmpErrStat)    '     Mean windspeed (m/s):        ',p%URef
       WRITE(InitInp%SumFileUnit,'(A)',        IOSTAT=TmpErrStat)    '     Time range (s):              [ '// &
@@ -213,7 +215,7 @@ SUBROUTINE ValidateInput(InitInp, ErrStat, ErrMsg)
    if (InitInp%WindProfileType == WindProfileType_Log) then
       if ( InitInp%z0 < 0.0_ReKi .or. EqualRealNos( InitInp%z0, 0.0_ReKi ) ) &
          call SetErrStat( ErrID_Fatal, 'The surface roughness length, Z0, must be greater than zero', ErrStat, ErrMsg, RoutineName )
-   elseif ( InitInp%WindProfileType < WindProfileType_Constant .or. InitInp%WindProfileType > WindProfileType_PL)  then                              
+   elseif ( InitInp%WindProfileType < WindProfileType_None .or. InitInp%WindProfileType > WindProfileType_PL)  then                              
        call SetErrStat( ErrID_Fatal, 'The WindProfile type must be 0 (constant), 1 (logarithmic) or 2 (power law).', ErrStat, ErrMsg, RoutineName )
    end if
 
@@ -532,18 +534,22 @@ SUBROUTINE IfW_HAWCWind_CalcOutput(Time, PositionXYZ, p, Velocity, DiskVel, Misc
       ! Step through all the positions and get the velocities
    DO PointNum = 1, NumPoints
 
-         ! Calculate the velocity for the position
-      Velocity(:,PointNum) = FF_Interp(Time,PositionXYZ(:,PointNum),p,MiscVars,TmpErrStat,TmpErrMsg)
+         ! If the position is (0,0,0), assume it was never set and skip calculating
+      if (  TwoNorm(PositionXYZ(1:3,PointNum)) > 0.0_ReKi ) then
+
+            ! Calculate the velocity for the position
+         Velocity(:,PointNum) = FF_Interp(Time,PositionXYZ(:,PointNum),p,MiscVars,TmpErrStat,TmpErrMsg)
 
 
-         ! Error handling
-      IF (TmpErrStat /= ErrID_None) THEN  !  adding this so we don't have to convert numbers to strings every time
-         CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName//" [position=("//   &
-                                                      TRIM(Num2LStr(PositionXYZ(1,PointNum)))//", "// &
-                                                      TRIM(Num2LStr(PositionXYZ(2,PointNum)))//", "// &
-                                                      TRIM(Num2LStr(PositionXYZ(3,PointNum)))//") in wind-file coordinates]" )
-         IF (ErrStat >= AbortErrLev) RETURN
-      END IF
+            ! Error handling
+         IF (TmpErrStat /= ErrID_None) THEN  !  adding this so we don't have to convert numbers to strings every time
+            CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName//" [position=("//   &
+                                                         TRIM(Num2LStr(PositionXYZ(1,PointNum)))//", "// &
+                                                         TRIM(Num2LStr(PositionXYZ(2,PointNum)))//", "// &
+                                                         TRIM(Num2LStr(PositionXYZ(3,PointNum)))//") in wind-file coordinates]" )
+            IF (ErrStat >= AbortErrLev) RETURN
+         END IF
+      endif
 
    ENDDO
 

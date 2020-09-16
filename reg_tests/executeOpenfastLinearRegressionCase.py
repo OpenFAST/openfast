@@ -67,7 +67,7 @@ parser.add_argument("buildDirectory", metavar="path/to/openfast_repo/build", typ
 parser.add_argument("tolerance", metavar="Test-Tolerance", type=float, nargs=1, help="Tolerance defining pass or failure in the regression test.")
 parser.add_argument("systemName", metavar="System-Name", type=str, nargs=1, help="The current system\'s name: [Darwin,Linux,Windows]")
 parser.add_argument("compilerId", metavar="Compiler-Id", type=str, nargs=1, help="The compiler\'s id: [Intel,GNU]")
-parser.add_argument("-p", "-plot", dest="plot", default=False, metavar="Plotting-Flag", type=bool, nargs="?", help="bool to include matplotlib plots in failed cases")
+parser.add_argument("-p", "-plot", dest="plot", default=False, metavar="Plotting-Flag", type=bool, nargs="?", help="bool to include plots in failed cases")
 parser.add_argument("-n", "-no-exec", dest="noExec", default=False, metavar="No-Execution", type=bool, nargs="?", help="bool to prevent execution of the test cases")
 parser.add_argument("-v", "-verbose", dest="verbose", default=False, metavar="Verbose-Flag", type=bool, nargs="?", help="bool to include verbose system output")
 
@@ -142,7 +142,7 @@ if not os.path.isdir(dst):
 else:
     names = os.listdir(src)
     for name in names:
-        if name is "ServoData":
+        if name == "ServoData":
             continue
         srcname = os.path.join(src, name)
         dstname = os.path.join(dst, name)
@@ -198,16 +198,16 @@ for i, f in enumerate(localOutFiles):
         local_handle.readline()
     
     # the next 10 lines are simulation info; save what we need
-    for i in range(10):
+    for i in range(11):
         b_line = baseline_handle.readline()
         l_line = local_handle.readline()
-        if i == 4:
+        if i == 5:
             b_num_continuous_states = int(b_line.split()[-1])
             l_num_continuous_states = int(l_line.split()[-1])
-        elif i == 7:
+        elif i == 8:
             b_num_inputs = int(b_line.split()[-1])
             l_num_inputs = int(l_line.split()[-1])
-        elif i == 8:
+        elif i == 9:
             b_num_outputs = int(b_line.split()[-1])
             l_num_outputs = int(l_line.split()[-1])
     
@@ -237,6 +237,7 @@ for i, f in enumerate(localOutFiles):
             l_float = float(l_element)
             b_float = float(b_elements[j])
             if not isclose(l_float, b_float, tolerance, tolerance):
+                print(f"Failed in Jacobian matrix comparison: {l_float} and {b_float}")
                 sys.exit(1)
 
     # skip 2 empty/header lines
@@ -258,6 +259,7 @@ for i, f in enumerate(localOutFiles):
             l_float = float(l_element)
             b_float = float(b_elements[j])
             if not isclose(l_float, b_float, tolerance, tolerance):
+                print(f"Failed in state matrix comparison: {l_float} and {b_float}")
                 sys.exit(1)
 
     local_handle.close()
