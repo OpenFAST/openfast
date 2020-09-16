@@ -535,24 +535,32 @@ SUBROUTINE IfW_UniformWind_CalcOutput(Time, PositionXYZ, p, Velocity, DiskVel, m
    CALL InterpParams(Time, p, m, op)   
    
       ! Step through all the positions and get the velocities
+   !$OMP PARALLEL default(shared) if(NumPoints>1000)
+   !$OMP do private(PointNum, TmpErrStat, TmpErrMsg ) schedule(runtime)
    DO PointNum = 1, NumPoints
 
          ! Calculate the velocity for the position
       call GetWindSpeed(PositionXYZ(:,PointNum), p, m, op, Velocity(:,PointNum), TmpErrStat, TmpErrMsg)
 
          ! Error handling
-      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-      IF (ErrStat >= AbortErrLev) THEN
-         TmpErrMsg=  " Error calculating the wind speed at position ("//   &
+      !CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+      IF (TmpErrStat >= AbortErrLev) THEN
+         TmpErrMsg=  trim(TmpErrMsg)//" Error calculating the wind speed at position ("//   &
                      TRIM(Num2LStr(PositionXYZ(1,PointNum)))//", "// &
                      TRIM(Num2LStr(PositionXYZ(2,PointNum)))//", "// &
                      TRIM(Num2LStr(PositionXYZ(3,PointNum)))//") in the wind-file coordinates"
+         !$OMP CRITICAL  ! Needed to avoid data race on ErrStat and ErrMsg
+         ErrStat = ErrID_None
+         ErrMsg  = ""
          CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-         RETURN
+         !$OMP END CRITICAL
       ENDIF
 
    ENDDO
+   !$OMP END DO 
+   !$OMP END PARALLEL
 
+   IF (ErrStat >= AbortErrLev) RETURN ! Return cannot be in parallel loop
 
       ! DiskVel term -- this represents the average across the disk -- sort of.  This changes for AeroDyn 15
    DiskVel   =  WindInf_ADhack_diskVel(Time, p, m, TmpErrStat, TmpErrMsg)
@@ -677,6 +685,7 @@ SUBROUTINE GetWindSpeed(InputPosition, p, m, op, WindSpeed, ErrStat, ErrMsg)
 
    if ( InputPosition(3) < 0.0_ReKi ) then
       call SetErrStat(ErrID_Fatal,'Height must not be negative.',ErrStat,ErrMsg,'GetWindSpeed')
+      return
    end if
       
    !> Let \f{eqnarray}{ V_h & = & V \, \left( \frac{Z}{Z_{ref}} \right) ^ {V_{shr}}                                   & \mbox{power-law wind shear} \\

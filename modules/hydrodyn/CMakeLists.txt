@@ -20,6 +20,7 @@ if (GENERATE_TYPES)
   generate_f90_types(src/HydroDyn.txt ${CMAKE_CURRENT_LIST_DIR}/src/HydroDyn_Types.f90)
   generate_f90_types(src/Morison.txt ${CMAKE_CURRENT_LIST_DIR}/src/Morison_Types.f90)
   generate_f90_types(src/SS_Radiation.txt ${CMAKE_CURRENT_LIST_DIR}/src/SS_Radiation_Types.f90)
+  generate_f90_types(src/SS_Excitation.txt ${CMAKE_CURRENT_LIST_DIR}/src/SS_Excitation_Types.f90)
   generate_f90_types(src/WAMIT.txt ${CMAKE_CURRENT_LIST_DIR}/src/WAMIT_Types.f90)
   generate_f90_types(src/WAMIT2.txt ${CMAKE_CURRENT_LIST_DIR}/src/WAMIT2_Types.f90)
   generate_f90_types(src/Waves.txt ${CMAKE_CURRENT_LIST_DIR}/src/Waves_Types.f90)
@@ -35,6 +36,7 @@ set(HYDRODYN_SOURCES
   src/Morison.f90
   src/Morison_Output.f90
   src/SS_Radiation.f90
+  src/SS_Excitation.f90
   src/UserWaves.f90
   src/WAMIT.f90
   src/WAMIT2.f90
@@ -49,6 +51,7 @@ set(HYDRODYN_SOURCES
   src/HydroDyn_Types.f90
   src/Morison_Types.f90
   src/SS_Radiation_Types.f90
+  src/SS_Excitation_Types.f90
   src/WAMIT_Types.f90
   src/WAMIT2_Types.f90
   src/Waves_Types.f90

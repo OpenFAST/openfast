@@ -57,6 +57,9 @@ script:
     # beamdyn regression tests
     - if [[ "$DOUBLE_PRECISION" == "ON" ]]; then ctest -j4 -VV -R bd_; fi
 
+    # linearization cases
+    - if [[ "$DOUBLE_PRECISION" == "ON" ]]; then ctest -L linear; fi
+
     # subset of openfast regression tests
     # do not run
     # - 3, 4, 7, 15, 16, 17 since the free yaw is not well trusted

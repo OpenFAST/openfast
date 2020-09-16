@@ -71,6 +71,10 @@ MODULE ModMesh_Types
 
    LOGICAL, PARAMETER :: mesh_debug = .FALSE.
 
+
+!   REAL(ReKi), PARAMETER            :: MIN_LINE2_ELEMENT_LENGTH = 0.001 ! 1 millimeter
+   REAL(ReKi), PARAMETER            :: MIN_LINE2_ELEMENT_LENGTH = sqrt(epsilon(1.0_ReKi)) ! old length
+   
       !> element record type: fields for a particular element
    TYPE, PUBLIC :: ElemRecType 
       ! note: any fields added to this type must be copied in Mesh_MoveAlloc_ElemRecType (modmesh_types::mesh_movealloc_elemrectype)
@@ -101,6 +105,7 @@ MODULE ModMesh_Types
       LOGICAL :: fieldmask(FIELDMASK_SIZE) = .FALSE.         !< Dimension as number of allocatable fields, below
       LOGICAL,POINTER :: RemapFlag  => NULL()                !< false=no action/ignore; true=remap required
       INTEGER :: ios                                         !< Mesh type: input (1), output(2), or state(3)
+      INTEGER :: refNode = 0                                 !< optional reference node (informational only)
       INTEGER :: Nnodes = 0                                  !< Number of nodes (vertices) in mesh
 
      ! Mesh elements

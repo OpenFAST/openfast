@@ -82,7 +82,6 @@ SUBROUTINE SS_Rad_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
     INTEGER                                :: I                                    ! Generic index
 !    INTEGER                                :: J                                    ! Generic index  
     INTEGER                                :: xx (1,6)                             ! Active DOF's on the input file .ss
-    INTEGER(IntKi)                         :: spdof (1,6)                          ! States per dof  
     INTEGER                                :: DOFs                                 ! Number of DOFS  
     INTEGER                                :: N                                    ! Number of states
     INTEGER                                :: Nlines                               ! Number of lines in the input file, used to determine N
@@ -91,7 +90,7 @@ SUBROUTINE SS_Rad_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
     !CHARACTER                              :: Line                                 ! Temp line of file
     
     integer                                :: ErrStat2
-    character(1024)                        :: ErrMsg2
+    character(ErrMsgLen)                   :: ErrMsg2
     
     ! Initialize ErrStat   
       ErrStat = ErrID_None         
@@ -118,7 +117,7 @@ SUBROUTINE SS_Rad_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')
     CALL ReadVar( UnSS,TRIM(InitInp%InputFile)//'.ss', N, 'N', 'Number of Dofs',ErrStat2, ErrMsg2) ! Reads in the third line, containing the number of states
       CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')
-    CALL ReadAry( UnSS,TRIM(InitInp%InputFile)//'.ss', spdof(1,:), 6, 'spdof', 'spdof vector containing the number of states per dofs',ErrStat2, ErrMsg2) ! Reads in the forth line, containing the state per dofs vector
+    CALL ReadAry( UnSS,TRIM(InitInp%InputFile)//'.ss', p%spdof, 6, 'spdof', 'spdof vector containing the number of states per dofs',ErrStat2, ErrMsg2) ! Reads in the forth line, containing the state per dofs vector
       CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')
       IF (ErrStat >= AbortErrLev) THEN
          CALL CleanUp()
@@ -142,7 +141,7 @@ SUBROUTINE SS_Rad_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       CALL SetErrStat(ErrID_Severe,'Error in the input file .ss: The size of the matrices does not correspond to the number of states!',ErrStat,ErrMsg,'SS_Rad_Init')
     END IF
     
-    IF ( N /= SUM(spdof)) THEN
+    IF ( N /= SUM(p%spdof)) THEN
       CALL SetErrStat(ErrID_Severe,'Error in the input file .ss: The size of the matrices does not correspond to the number of states!',ErrStat,ErrMsg,'SS_Rad_Init')
     END IF        
     
@@ -204,7 +203,7 @@ SUBROUTINE SS_Rad_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
     p%N=0
     DO I=1,6 !For each state
         IF ( InitInp%DOFs (1,I) == 1)  THEN !  True when the current DOF is active in FAST          
-            p%N = p%N + spdof(1,I) !Add the correspondent number of states to the vector
+            p%N = p%N + p%spdof(I) !Add the correspondent number of states to the vector
         END IF
     END DO
     
@@ -240,13 +239,13 @@ SUBROUTINE SS_Rad_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
         N=1 !Use as number of active states introduced
         
         DO I=1,6 !For each dof...
-            IF ( InitInp%DOFs (1,I) == 1 .AND. sum(spdof(1,1:I))<size(Rad_A(:,1)))  THEN !  That is enabled in FAST
+            IF ( InitInp%DOFs (1,I) == 1 .AND. sum(p%spdof(1:I))<size(Rad_A(:,1)))  THEN !  That is enabled in FAST
     
-                p%A (N:N+spdof(1,I),N:N+spdof(1,I)) = Rad_A (sum(spdof(1,1:I-1))+1:sum(spdof(1,1:I)),sum(spdof(1,1:I-1))+1:sum(spdof(1,1:I)))
-                p%B (N:N+spdof(1,I),:)= Rad_B (sum(spdof(1,1:I-1))+1:sum(spdof(1,1:I)),:)
-                p%C (:,N:N+spdof(1,I))= Rad_C (:,sum(spdof(1,1:I-1))+1:sum(spdof(1,1:I)))
+                p%A (N:N+p%spdof(I),N:N+p%spdof(I)) = Rad_A (sum(p%spdof(1:I-1))+1:sum(p%spdof(1:I)),sum(p%spdof(1:I-1))+1:sum(p%spdof(1:I)))
+                p%B (N:N+p%spdof(I),:)= Rad_B (sum(p%spdof(1:I-1))+1:sum(p%spdof(1:I)),:)
+                p%C (:,N:N+p%spdof(I))= Rad_C (:,sum(p%spdof(1:I-1))+1:sum(p%spdof(1:I)))
                 
-                N = N + spdof(1,I) !Number of lines added to the A and B Matrix and columns to the C Matrix
+                N = N + p%spdof(I) !Number of lines added to the A and B Matrix and columns to the C Matrix
             END IF
         END DO
     END IF
@@ -553,7 +552,7 @@ END SUBROUTINE SS_Rad_CalcConstrStateResidual
 !!
 !! For details, see:
 !! Press, W. H.; Flannery, B. P.; Teukolsky, S. A.; and Vetterling, W. T. "Runge-Kutta Method" and "Adaptive Step Size Control for 
-!!   Runge-Kutta." �16.1 and 16.2 in Numerical Recipes in FORTRAN: The Art of Scientific Computing, 2nd ed. Cambridge, England: 
+!!   Runge-Kutta."Sections 16.1 and 16.2 in Numerical Recipes in FORTRAN: The Art of Scientific Computing, 2nd ed. Cambridge, England: 
 !!   Cambridge University Press, pp. 704-716, 1992.
 !!
 SUBROUTINE SS_Rad_RK4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
@@ -665,7 +664,7 @@ CONTAINS
 
          ! local variables
       INTEGER(IntKi)             :: ErrStat3    ! The error identifier (ErrStat)
-      CHARACTER(1024)            :: ErrMsg3     ! The error message (ErrMsg)
+      CHARACTER(ErrMsgLen)       :: ErrMsg3     ! The error message (ErrMsg)
    
    
       CALL SS_Rad_DestroyContState( xdot,     ErrStat3, ErrMsg3 )
@@ -824,7 +823,7 @@ CONTAINS
 
          ! local variables
       INTEGER(IntKi)             :: ErrStat3    ! The error identifier (ErrStat)
-      CHARACTER(1024)            :: ErrMsg3     ! The error message (ErrMsg)
+      CHARACTER(ErrMsgLen)       :: ErrMsg3     ! The error message (ErrMsg)
    
    
       CALL SS_Rad_DestroyInput(     u_interp, ErrStat3, ErrMsg3 )
@@ -957,7 +956,7 @@ CONTAINS
 
          ! local variables
       INTEGER(IntKi)             :: ErrStat3    ! The error identifier (ErrStat)
-      CHARACTER(1024)            :: ErrMsg3     ! The error message (ErrMsg)
+      CHARACTER(ErrMsgLen)       :: ErrMsg3     ! The error message (ErrMsg)
    
    
       CALL SS_Rad_DestroyContState( xdot_pred,  ErrStat3, ErrMsg3 )
