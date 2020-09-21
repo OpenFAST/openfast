@@ -40933,7 +40933,7 @@ ENDIF
  END SUBROUTINE FAST_UnPackExternInputType
 
  SUBROUTINE FAST_CopyInitData( SrcInitDataData, DstInitDataData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(FAST_InitData), INTENT(IN) :: SrcInitDataData
+   TYPE(FAST_InitData), INTENT(INOUT) :: SrcInitDataData
    TYPE(FAST_InitData), INTENT(INOUT) :: DstInitDataData
    INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
