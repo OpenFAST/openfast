@@ -181,9 +181,9 @@ PROGRAM TestSubDyn
    ! u(1)%UFL(3) =-12.958  !this is for testbeam3
 
    ! TEMPORARY HACK FOR CONTROLLABLE CABLES
-   !allocate(u(1)%CableTension(5))
-   !!u(1)%CableTension= 1.0e7_ReKi
-   !u(1)%CableTension= 0.0e7_ReKi
+   !allocate(u(1)%CableDeltaL(5))
+   !!u(1)%CableDeltaL= 1.0e7_ReKi
+   !u(1)%CableDeltaL= 0.0e7_ReKi
 
    call WrScr('')
    DO n = 0,drvrInitInp%NSteps-1 ! Loop on time steps, starts at 0

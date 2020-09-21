@@ -81,17 +81,17 @@ SUBROUTINE EigenSolve(K, M, N, bCheckSingularity, EigVect, Omega, ErrStat, ErrMs
       Omega2(I) = AlphaR(I)/Beta(I)
       if ( EqualRealNos(real(Beta(I),ReKi),0.0_ReKi) ) then
          ! --- Beta =0 
-         call WrScr('[WARN] Large eigenvalue found, system may be ill-conditioned')
+         if (bCheckSingularity) call WrScr('[WARN] Large eigenvalue found, system may be ill-conditioned')
          Omega2(I) = MAX_EIGENVALUE
       elseif ( EqualRealNos(real(AlphaI(I),ReKi),0.0_ReKi) ) THEN
          ! --- Real Eigenvalues
          IF ( AlphaR(I)<0.0_LaKi ) THEN
             if ( (AlphaR(I)/Beta(I))<1e-6_LaKi ) then
                ! Tolerating very small negative eigenvalues
-               call WrScr('[INFO] Negative eigenvalue found with small norm (system may contain rigid body mode)')
+               if (bCheckSingularity) call WrScr('[INFO] Negative eigenvalue found with small norm (system may contain rigid body mode)')
                Omega2(I)=0.0_LaKi
             else
-               call WrScr('[WARN] Negative eigenvalue found, system may be ill-conditioned.')
+               if (bCheckSingularity) call WrScr('[WARN] Negative eigenvalue found, system may be ill-conditioned.')
                Omega2(I)=AlphaR(I)/Beta(I)
             endif
          else
@@ -102,14 +102,14 @@ SUBROUTINE EigenSolve(K, M, N, bCheckSingularity, EigVect, Omega, ErrStat, ErrMs
          normA = sqrt(AlphaR(I)**2 + AlphaI(I)**2)
          if ( (normA/Beta(I))<1e-6_LaKi ) then
             ! Tolerating very small eigenvalues with imaginary part
-            call WrScr('[WARN] Complex eigenvalue found with small norm, approximating as 0')
+            if (bCheckSingularity) call WrScr('[WARN] Complex eigenvalue found with small norm, approximating as 0')
             Omega2(I) = 0.0_LaKi
          elseif ( abs(AlphaR(I))>1e3_LaKi*abs(AlphaI(I)) ) then
             ! Tolerating very small imaginary part compared to real part... (not pretty)
-            call WrScr('[WARN] Complex eigenvalue found with small Im compare to Re')
+            if (bCheckSingularity) call WrScr('[WARN] Complex eigenvalue found with small Im compare to Re')
             Omega2(I) = AlphaR(I)/Beta(I)
          else
-            call WrScr('[WARN] Complex eigenvalue found with large imaginary value)')
+            if (bCheckSingularity) call WrScr('[WARN] Complex eigenvalue found with large imaginary value)')
             Omega2(I) = MAX_EIGENVALUE
          endif
          !call Fatal('Complex eigenvalue found, system may be ill-conditioned'); return
@@ -505,7 +505,7 @@ END SUBROUTINE CraigBamptonReduction
 SUBROUTINE CraigBamptonReduction_FromPartition( MRR, MLL, MRL, KRR, KLL, KRL, nR, nL, nM, nM_Out,&
                      MBB, MBM, KBB, PhiL, PhiR, OmegaL, ErrStat, ErrMsg,&
                      CRR, CLL, CRL, CBB, CBM, CMM)
-   USE NWTC_LAPACK, only: LAPACK_getrs, LAPACK_getrf
+   USE NWTC_LAPACK, only: LAPACK_getrs, LAPACK_getrf, LAPACK_gemm
    INTEGER(IntKi),         INTENT(  in)  :: nR
    INTEGER(IntKi),         INTENT(  in)  :: nL
    INTEGER(IntKi),         INTENT(  in)  :: nM_Out
@@ -561,8 +561,10 @@ SUBROUTINE CraigBamptonReduction_FromPartition( MRR, MLL, MRL, KRR, KLL, KRL, nR
       CALL AllocAry( Temp , nL    , nL , 'Temp' , ErrStat2 , ErrMsg2); if(Failed()) return
       CALL AllocAry( MU   , nM_out, nL , 'Mu'   , ErrStat2 , ErrMsg2); if(Failed()) return
       MU   = TRANSPOSE(PhiL)
-      Temp = MATMUL( MU, MLL )
-      MU(1:nM_Out,1:nM_Out) = MATMUL( Temp, PhiL )
+      !Temp = MATMUL( MU, MLL )
+      CALL LAPACK_gemm( 'N', 'N', 1.0_FeKi, MU, MLL, 0.0_FeKi, Temp  , ErrStat2, ErrMsg2); if(Failed()) return
+      !MU(1:nM_Out,1:nM_Out) = MATMUL( Temp, PhiL )
+      CALL LAPACK_gemm( 'N', 'N', 1.0_FeKi, Temp, PhiL, 0.0_FeKi, MU  , ErrStat2, ErrMsg2); if(Failed()) return
       DEALLOCATE(Temp)
       ! PhiL = MATMUL( PhiL, MU2 )  !this is the nondimensionalization (MU2 is diagonal)   
       DO I = 1, nM_out
@@ -574,8 +576,10 @@ SUBROUTINE CraigBamptonReduction_FromPartition( MRR, MLL, MRL, KRR, KLL, KRL, nR
          CALL AllocAry( Temp , nM, nL , 'Temp' , ErrStat2 , ErrMsg2); if(Failed()) return
          CALL AllocAry( MU   , nM, nL , 'Mu'   , ErrStat2 , ErrMsg2); if(Failed()) return
          MU  = TRANSPOSE(PhiL(1:nL, 1:nM))
-         Temp = MATMUL( MU, CLL )
-         CMM = MATMUL( Temp, PhiL(1:nL, 1:nM) )
+         !Temp = MATMUL( MU, CLL )
+         CALL LAPACK_gemm( 'N', 'N', 1.0_FeKi, MU, CLL, 0.0_FeKi, Temp  , ErrStat2, ErrMsg2); if(Failed()) return
+         !   CMM = MATMUL( Temp, PhiL(1:nL, 1:nM) )
+         CALL LAPACK_gemm( 'N', 'N', 1.0_FeKi, Temp, PhiL, 0.0_FeKi, CMM  , ErrStat2, ErrMsg2); if(Failed()) return
          DEALLOCATE(MU)
          DEALLOCATE(Temp)
       endif
@@ -599,7 +603,9 @@ SUBROUTINE CraigBamptonReduction_FromPartition( MRR, MLL, MRL, KRR, KLL, KRL, nR
          
       PhiR_T_MLL = TRANSPOSE(PhiR)
       PhiR_T_MLL = MATMUL(PhiR_T_MLL, MLL)
+      !CALL LAPACK_gemm( 'N', 'N', 1.0_FeKi, PhiR_T_MLL, MLL, 0.0_FeKi, PhiR_T_MLL  , ErrStat2, ErrMsg2); if(Failed()) return
       MBB = MATMUL(MRL, PhiR)
+      CALL LAPACK_gemm( 'N', 'N', 1.0_FeKi, MRL, PhiR, 0.0_FeKi, MBB  , ErrStat2, ErrMsg2); if(Failed()) return
       MBB = MRR + MBB + TRANSPOSE( MBB ) + MATMUL( PhiR_T_MLL, PhiR )
          
       IF ( nM == 0) THEN
@@ -609,7 +615,8 @@ SUBROUTINE CraigBamptonReduction_FromPartition( MRR, MLL, MRL, KRR, KLL, KRL, nR
          MBM = MATMUL( MRL, PhiL(:,1:nM) ) + MBM    !This had PhiM      
       ENDIF
       
-      KBB = MATMUL(KRL, PhiR)   
+      !KBB = MATMUL(KRL, PhiR)   
+      CALL LAPACK_gemm( 'N', 'N', 1.0_FeKi, KRL, PhiR, 0.0_FeKi, KBB  , ErrStat2, ErrMsg2); if(Failed()) return
       KBB = KBB + KRR
 
       if (present(CRR)) then

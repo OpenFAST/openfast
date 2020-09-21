@@ -156,8 +156,6 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: M      !< System mass matrix [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: FG      !< Gravity force vector (include initial Cable force T0) [N]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: ElemProps      !< Element properties(A, L, Ixx, Iyy, Jzz, Shear, Kappa, E, G, Rho, DirCos(1,1), DirCos(2, 1), ....., DirCos(3, 3) ) [-]
-    INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: BCs      !< Boundary constraint degree of freedoms. First column - DOFs(rows in the system matrices), Second column - constrained(1) or not(0) [-]
-    INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: IntFc      !< Interface constraint degree of freedoms [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: MemberNodes      !< Member number and list of nodes making up a member (>2 if subdivided) [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: NodesConnN      !< Nodes that connect to a common node [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: NodesConnE      !< Elements that connect to a common node [-]
@@ -226,6 +224,7 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: FG_full      !< Gravity force vector (with initial cable force T0), not reduced [N]
     LOGICAL  :: reduced      !< True if system has been reduced to account for constraints [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: T_red      !< Transformation matrix performing the constraint reduction x = T. xtilde [-]
+    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: T_red_T      !< Transpose of T_red [-]
     TYPE(IList) , DIMENSION(:), ALLOCATABLE  :: NodesDOF      !< DOF indices of each nodes in unconstrained assembled system  [-]
     TYPE(IList) , DIMENSION(:), ALLOCATABLE  :: NodesDOFred      !< DOF indices of each nodes in constrained assembled system  [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: ElemsDOF      !< 12 DOF indices of node 1 and 2 of a given member in unconstrained assembled system  [-]
@@ -327,7 +326,7 @@ IMPLICIT NONE
   TYPE, PUBLIC :: SD_InputType
     TYPE(MeshType)  :: TPMesh      !< Transition piece inputs on a point mesh [-]
     TYPE(MeshType)  :: LMesh      !< Point mesh for interior node inputs [-]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: CableTension      !< Cable tension, control input [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: CableDeltaL      !< Cable tension, control input [-]
   END TYPE SD_InputType
 ! =======================
 ! =========  SD_OutputType  =======
@@ -3340,34 +3339,6 @@ IF (ALLOCATED(SrcInitTypeData%ElemProps)) THEN
   END IF
     DstInitTypeData%ElemProps = SrcInitTypeData%ElemProps
 ENDIF
-IF (ALLOCATED(SrcInitTypeData%BCs)) THEN
-  i1_l = LBOUND(SrcInitTypeData%BCs,1)
-  i1_u = UBOUND(SrcInitTypeData%BCs,1)
-  i2_l = LBOUND(SrcInitTypeData%BCs,2)
-  i2_u = UBOUND(SrcInitTypeData%BCs,2)
-  IF (.NOT. ALLOCATED(DstInitTypeData%BCs)) THEN 
-    ALLOCATE(DstInitTypeData%BCs(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitTypeData%BCs.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInitTypeData%BCs = SrcInitTypeData%BCs
-ENDIF
-IF (ALLOCATED(SrcInitTypeData%IntFc)) THEN
-  i1_l = LBOUND(SrcInitTypeData%IntFc,1)
-  i1_u = UBOUND(SrcInitTypeData%IntFc,1)
-  i2_l = LBOUND(SrcInitTypeData%IntFc,2)
-  i2_u = UBOUND(SrcInitTypeData%IntFc,2)
-  IF (.NOT. ALLOCATED(DstInitTypeData%IntFc)) THEN 
-    ALLOCATE(DstInitTypeData%IntFc(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitTypeData%IntFc.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInitTypeData%IntFc = SrcInitTypeData%IntFc
-ENDIF
 IF (ALLOCATED(SrcInitTypeData%MemberNodes)) THEN
   i1_l = LBOUND(SrcInitTypeData%MemberNodes,1)
   i1_u = UBOUND(SrcInitTypeData%MemberNodes,1)
@@ -3493,12 +3464,6 @@ IF (ALLOCATED(InitTypeData%FG)) THEN
 ENDIF
 IF (ALLOCATED(InitTypeData%ElemProps)) THEN
   DEALLOCATE(InitTypeData%ElemProps)
-ENDIF
-IF (ALLOCATED(InitTypeData%BCs)) THEN
-  DEALLOCATE(InitTypeData%BCs)
-ENDIF
-IF (ALLOCATED(InitTypeData%IntFc)) THEN
-  DEALLOCATE(InitTypeData%IntFc)
 ENDIF
 IF (ALLOCATED(InitTypeData%MemberNodes)) THEN
   DEALLOCATE(InitTypeData%MemberNodes)
@@ -3689,16 +3654,6 @@ ENDIF
   IF ( ALLOCATED(InData%ElemProps) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! ElemProps upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%ElemProps)  ! ElemProps
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! BCs allocated yes/no
-  IF ( ALLOCATED(InData%BCs) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*2  ! BCs upper/lower bounds for each dimension
-      Int_BufSz  = Int_BufSz  + SIZE(InData%BCs)  ! BCs
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! IntFc allocated yes/no
-  IF ( ALLOCATED(InData%IntFc) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*2  ! IntFc upper/lower bounds for each dimension
-      Int_BufSz  = Int_BufSz  + SIZE(InData%IntFc)  ! IntFc
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! MemberNodes allocated yes/no
   IF ( ALLOCATED(InData%MemberNodes) ) THEN
@@ -4262,46 +4217,6 @@ ENDIF
         DO i1 = LBOUND(InData%ElemProps,1), UBOUND(InData%ElemProps,1)
           ReKiBuf(Re_Xferred) = InData%ElemProps(i1,i2)
           Re_Xferred = Re_Xferred + 1
-        END DO
-      END DO
-  END IF
-  IF ( .NOT. ALLOCATED(InData%BCs) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%BCs,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%BCs,1)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%BCs,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%BCs,2)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i2 = LBOUND(InData%BCs,2), UBOUND(InData%BCs,2)
-        DO i1 = LBOUND(InData%BCs,1), UBOUND(InData%BCs,1)
-          IntKiBuf(Int_Xferred) = InData%BCs(i1,i2)
-          Int_Xferred = Int_Xferred + 1
-        END DO
-      END DO
-  END IF
-  IF ( .NOT. ALLOCATED(InData%IntFc) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%IntFc,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%IntFc,1)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%IntFc,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%IntFc,2)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i2 = LBOUND(InData%IntFc,2), UBOUND(InData%IntFc,2)
-        DO i1 = LBOUND(InData%IntFc,1), UBOUND(InData%IntFc,1)
-          IntKiBuf(Int_Xferred) = InData%IntFc(i1,i2)
-          Int_Xferred = Int_Xferred + 1
         END DO
       END DO
   END IF
@@ -4997,52 +4912,6 @@ ENDIF
         DO i1 = LBOUND(OutData%ElemProps,1), UBOUND(OutData%ElemProps,1)
           OutData%ElemProps(i1,i2) = ReKiBuf(Re_Xferred)
           Re_Xferred = Re_Xferred + 1
-        END DO
-      END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! BCs not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i2_l = IntKiBuf( Int_Xferred    )
-    i2_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%BCs)) DEALLOCATE(OutData%BCs)
-    ALLOCATE(OutData%BCs(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%BCs.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i2 = LBOUND(OutData%BCs,2), UBOUND(OutData%BCs,2)
-        DO i1 = LBOUND(OutData%BCs,1), UBOUND(OutData%BCs,1)
-          OutData%BCs(i1,i2) = IntKiBuf(Int_Xferred)
-          Int_Xferred = Int_Xferred + 1
-        END DO
-      END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! IntFc not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i2_l = IntKiBuf( Int_Xferred    )
-    i2_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%IntFc)) DEALLOCATE(OutData%IntFc)
-    ALLOCATE(OutData%IntFc(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%IntFc.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i2 = LBOUND(OutData%IntFc,2), UBOUND(OutData%IntFc,2)
-        DO i1 = LBOUND(OutData%IntFc,1), UBOUND(OutData%IntFc,1)
-          OutData%IntFc(i1,i2) = IntKiBuf(Int_Xferred)
-          Int_Xferred = Int_Xferred + 1
         END DO
       END DO
   END IF
@@ -7120,6 +6989,20 @@ IF (ALLOCATED(SrcParamData%T_red)) THEN
   END IF
     DstParamData%T_red = SrcParamData%T_red
 ENDIF
+IF (ALLOCATED(SrcParamData%T_red_T)) THEN
+  i1_l = LBOUND(SrcParamData%T_red_T,1)
+  i1_u = UBOUND(SrcParamData%T_red_T,1)
+  i2_l = LBOUND(SrcParamData%T_red_T,2)
+  i2_u = UBOUND(SrcParamData%T_red_T,2)
+  IF (.NOT. ALLOCATED(DstParamData%T_red_T)) THEN 
+    ALLOCATE(DstParamData%T_red_T(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%T_red_T.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstParamData%T_red_T = SrcParamData%T_red_T
+ENDIF
 IF (ALLOCATED(SrcParamData%NodesDOF)) THEN
   i1_l = LBOUND(SrcParamData%NodesDOF,1)
   i1_u = UBOUND(SrcParamData%NodesDOF,1)
@@ -7978,6 +7861,9 @@ ENDIF
 IF (ALLOCATED(ParamData%T_red)) THEN
   DEALLOCATE(ParamData%T_red)
 ENDIF
+IF (ALLOCATED(ParamData%T_red_T)) THEN
+  DEALLOCATE(ParamData%T_red_T)
+ENDIF
 IF (ALLOCATED(ParamData%NodesDOF)) THEN
 DO i1 = LBOUND(ParamData%NodesDOF,1), UBOUND(ParamData%NodesDOF,1)
   CALL SD_Destroyilist( ParamData%NodesDOF(i1), ErrStat, ErrMsg )
@@ -8254,6 +8140,11 @@ ENDIF
   IF ( ALLOCATED(InData%T_red) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! T_red upper/lower bounds for each dimension
       Db_BufSz   = Db_BufSz   + SIZE(InData%T_red)  ! T_red
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! T_red_T allocated yes/no
+  IF ( ALLOCATED(InData%T_red_T) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! T_red_T upper/lower bounds for each dimension
+      Db_BufSz   = Db_BufSz   + SIZE(InData%T_red_T)  ! T_red_T
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! NodesDOF allocated yes/no
   IF ( ALLOCATED(InData%NodesDOF) ) THEN
@@ -8826,6 +8717,26 @@ ENDIF
         DO i1 = LBOUND(InData%T_red,1), UBOUND(InData%T_red,1)
           ReKiBuf(Re_Xferred) = InData%T_red(i1,i2)
           Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%T_red_T) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%T_red_T,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%T_red_T,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%T_red_T,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%T_red_T,2)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i2 = LBOUND(InData%T_red_T,2), UBOUND(InData%T_red_T,2)
+        DO i1 = LBOUND(InData%T_red_T,1), UBOUND(InData%T_red_T,1)
+          DbKiBuf(Db_Xferred) = InData%T_red_T(i1,i2)
+          Db_Xferred = Db_Xferred + 1
         END DO
       END DO
   END IF
@@ -10269,6 +10180,29 @@ ENDIF
         DO i1 = LBOUND(OutData%T_red,1), UBOUND(OutData%T_red,1)
           OutData%T_red(i1,i2) = ReKiBuf(Re_Xferred)
           Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! T_red_T not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%T_red_T)) DEALLOCATE(OutData%T_red_T)
+    ALLOCATE(OutData%T_red_T(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%T_red_T.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i2 = LBOUND(OutData%T_red_T,2), UBOUND(OutData%T_red_T,2)
+        DO i1 = LBOUND(OutData%T_red_T,1), UBOUND(OutData%T_red_T,1)
+          OutData%T_red_T(i1,i2) = REAL(DbKiBuf(Db_Xferred), R8Ki)
+          Db_Xferred = Db_Xferred + 1
         END DO
       END DO
   END IF
@@ -11827,17 +11761,17 @@ ENDIF
       CALL MeshCopy( SrcInputData%LMesh, DstInputData%LMesh, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
-IF (ALLOCATED(SrcInputData%CableTension)) THEN
-  i1_l = LBOUND(SrcInputData%CableTension,1)
-  i1_u = UBOUND(SrcInputData%CableTension,1)
-  IF (.NOT. ALLOCATED(DstInputData%CableTension)) THEN 
-    ALLOCATE(DstInputData%CableTension(i1_l:i1_u),STAT=ErrStat2)
+IF (ALLOCATED(SrcInputData%CableDeltaL)) THEN
+  i1_l = LBOUND(SrcInputData%CableDeltaL,1)
+  i1_u = UBOUND(SrcInputData%CableDeltaL,1)
+  IF (.NOT. ALLOCATED(DstInputData%CableDeltaL)) THEN 
+    ALLOCATE(DstInputData%CableDeltaL(i1_l:i1_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%CableTension.', ErrStat, ErrMsg,RoutineName)
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%CableDeltaL.', ErrStat, ErrMsg,RoutineName)
       RETURN
     END IF
   END IF
-    DstInputData%CableTension = SrcInputData%CableTension
+    DstInputData%CableDeltaL = SrcInputData%CableDeltaL
 ENDIF
  END SUBROUTINE SD_CopyInput
 
@@ -11852,8 +11786,8 @@ ENDIF
   ErrMsg  = ""
   CALL MeshDestroy( InputData%TPMesh, ErrStat, ErrMsg )
   CALL MeshDestroy( InputData%LMesh, ErrStat, ErrMsg )
-IF (ALLOCATED(InputData%CableTension)) THEN
-  DEALLOCATE(InputData%CableTension)
+IF (ALLOCATED(InputData%CableDeltaL)) THEN
+  DEALLOCATE(InputData%CableDeltaL)
 ENDIF
  END SUBROUTINE SD_DestroyInput
 
@@ -11927,10 +11861,10 @@ ENDIF
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
-  Int_BufSz   = Int_BufSz   + 1     ! CableTension allocated yes/no
-  IF ( ALLOCATED(InData%CableTension) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! CableTension upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%CableTension)  ! CableTension
+  Int_BufSz   = Int_BufSz   + 1     ! CableDeltaL allocated yes/no
+  IF ( ALLOCATED(InData%CableDeltaL) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! CableDeltaL upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%CableDeltaL)  ! CableDeltaL
   END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -12015,18 +11949,18 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
-  IF ( .NOT. ALLOCATED(InData%CableTension) ) THEN
+  IF ( .NOT. ALLOCATED(InData%CableDeltaL) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
   ELSE
     IntKiBuf( Int_Xferred ) = 1
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%CableTension,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%CableTension,1)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%CableDeltaL,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%CableDeltaL,1)
     Int_Xferred = Int_Xferred + 2
 
-      DO i1 = LBOUND(InData%CableTension,1), UBOUND(InData%CableTension,1)
-        ReKiBuf(Re_Xferred) = InData%CableTension(i1)
+      DO i1 = LBOUND(InData%CableDeltaL,1), UBOUND(InData%CableDeltaL,1)
+        ReKiBuf(Re_Xferred) = InData%CableDeltaL(i1)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
@@ -12139,21 +12073,21 @@ ENDIF
       IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! CableTension not allocated
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! CableDeltaL not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
     Int_Xferred = Int_Xferred + 1
     i1_l = IntKiBuf( Int_Xferred    )
     i1_u = IntKiBuf( Int_Xferred + 1)
     Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%CableTension)) DEALLOCATE(OutData%CableTension)
-    ALLOCATE(OutData%CableTension(i1_l:i1_u),STAT=ErrStat2)
+    IF (ALLOCATED(OutData%CableDeltaL)) DEALLOCATE(OutData%CableDeltaL)
+    ALLOCATE(OutData%CableDeltaL(i1_l:i1_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%CableTension.', ErrStat, ErrMsg,RoutineName)
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%CableDeltaL.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-      DO i1 = LBOUND(OutData%CableTension,1), UBOUND(OutData%CableTension,1)
-        OutData%CableTension(i1) = ReKiBuf(Re_Xferred)
+      DO i1 = LBOUND(OutData%CableDeltaL,1), UBOUND(OutData%CableDeltaL,1)
+        OutData%CableDeltaL(i1) = ReKiBuf(Re_Xferred)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
@@ -12611,10 +12545,10 @@ ENDIF
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
       CALL MeshExtrapInterp1(u1%LMesh, u2%LMesh, tin, u_out%LMesh, tin_out, ErrStat2, ErrMsg2 )
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-IF (ALLOCATED(u_out%CableTension) .AND. ALLOCATED(u1%CableTension)) THEN
-  DO i1 = LBOUND(u_out%CableTension,1),UBOUND(u_out%CableTension,1)
-    b = -(u1%CableTension(i1) - u2%CableTension(i1))
-    u_out%CableTension(i1) = u1%CableTension(i1) + b * ScaleFactor
+IF (ALLOCATED(u_out%CableDeltaL) .AND. ALLOCATED(u1%CableDeltaL)) THEN
+  DO i1 = LBOUND(u_out%CableDeltaL,1),UBOUND(u_out%CableDeltaL,1)
+    b = -(u1%CableDeltaL(i1) - u2%CableDeltaL(i1))
+    u_out%CableDeltaL(i1) = u1%CableDeltaL(i1) + b * ScaleFactor
   END DO
 END IF ! check if allocated
  END SUBROUTINE SD_Input_ExtrapInterp1
@@ -12678,11 +12612,11 @@ END IF ! check if allocated
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
       CALL MeshExtrapInterp2(u1%LMesh, u2%LMesh, u3%LMesh, tin, u_out%LMesh, tin_out, ErrStat2, ErrMsg2 )
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-IF (ALLOCATED(u_out%CableTension) .AND. ALLOCATED(u1%CableTension)) THEN
-  DO i1 = LBOUND(u_out%CableTension,1),UBOUND(u_out%CableTension,1)
-    b = (t(3)**2*(u1%CableTension(i1) - u2%CableTension(i1)) + t(2)**2*(-u1%CableTension(i1) + u3%CableTension(i1)))* scaleFactor
-    c = ( (t(2)-t(3))*u1%CableTension(i1) + t(3)*u2%CableTension(i1) - t(2)*u3%CableTension(i1) ) * scaleFactor
-    u_out%CableTension(i1) = u1%CableTension(i1) + b  + c * t_out
+IF (ALLOCATED(u_out%CableDeltaL) .AND. ALLOCATED(u1%CableDeltaL)) THEN
+  DO i1 = LBOUND(u_out%CableDeltaL,1),UBOUND(u_out%CableDeltaL,1)
+    b = (t(3)**2*(u1%CableDeltaL(i1) - u2%CableDeltaL(i1)) + t(2)**2*(-u1%CableDeltaL(i1) + u3%CableDeltaL(i1)))* scaleFactor
+    c = ( (t(2)-t(3))*u1%CableDeltaL(i1) + t(3)*u2%CableDeltaL(i1) - t(2)*u3%CableDeltaL(i1) ) * scaleFactor
+    u_out%CableDeltaL(i1) = u1%CableDeltaL(i1) + b  + c * t_out
   END DO
 END IF ! check if allocated
  END SUBROUTINE SD_Input_ExtrapInterp2

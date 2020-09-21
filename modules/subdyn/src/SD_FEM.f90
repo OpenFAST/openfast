@@ -885,11 +885,9 @@ SUBROUTINE DistributeDOF(Init, p, ErrStat, ErrMsg)
    enddo ! iNode, loop on joints
 
    ! --- Initialize boundary constraint vector - NOTE: Needs Reindexing first
-   CALL AllocAry(Init%BCs, 6*p%nNodes_C, 2, 'Init%BCs', ErrStat2, ErrMsg2); if(Failed()) return
    CALL InitBCs(Init, p)
       
    ! --- Initialize interface constraint vector - NOTE: Needs Reindexing first
-   CALL AllocAry(Init%IntFc,      6*p%nNodes_I,2,          'Init%IntFc',      ErrStat2, ErrMsg2); if(Failed()) return
    CALL InitIntFc(Init, p)
 
    ! --- Safety check
@@ -926,19 +924,14 @@ CONTAINS
       TYPE(SD_InitType     ),INTENT(INOUT) :: Init
       TYPE(SD_ParameterType),INTENT(INOUT) :: p
       INTEGER(IntKi) :: I, J, iNode
-      Init%BCs = -9999
       DO I = 1, p%nNodes_C
          iNode = p%Nodes_C(I,1) ! Node index
          DO J = 1, 6
-            Init%BCs( (I-1)*6+J, 1) = p%NodesDOF(iNode)%List(J) ! DOF number (unconstrained)
             if (p%Nodes_C(I,J+1)==1) then ! User input 1=Constrained/Fixed (should be eliminated)
-               Init%BCs( (I-1)*6+J, 2) = idBC_Fixed
                p%Nodes_C(I, J+1)       = idBC_Fixed
             else if (p%Nodes_C(I,J+1)==0) then ! User input 0=Free, fill be part of Internal DOF
-               Init%BCs( (I-1)*6+J, 2) = idBC_Internal
                p%Nodes_C(I, J+1)       = idBC_Internal
             else if (p%Nodes_C(I,J+1)==2) then ! User input 2=Leader DOF
-               Init%BCs( (I-1)*6+J, 2) = idBC_Leader
                p%Nodes_C(I, J+1)       = idBC_Leader
                print*,'BC 2 not allowed for now, node',iNode
                STOP
@@ -957,17 +950,12 @@ CONTAINS
       TYPE(SD_InitType     ),INTENT(INOUT) :: Init
       TYPE(SD_ParameterType),INTENT(INOUT) :: p
       INTEGER(IntKi) :: I, J, iNode
-      Init%IntFc = -9999
       DO I = 1, p%nNodes_I
          iNode = p%Nodes_I(I,1) ! Node index
          DO J = 1, 6 ! ItfTDXss    ItfTDYss    ItfTDZss    ItfRDXss    ItfRDYss    ItfRDZss
-            Init%IntFc( (I-1)*6+J, 1) = p%NodesDOF(iNode)%List(J) ! DOF number (unconstrained)
-
             if     (p%Nodes_I(I,J+1)==1) then ! User input 1=Leader DOF
-               Init%IntFc((I-1)*6+J, 2)  = idBC_Leader
                p%Nodes_I(I,J+1)          = idBC_Leader
             elseif (p%Nodes_I(I,J+1)==1) then ! User input 0=Fixed DOF
-               Init%IntFc( (I-1)*6+J, 2) = idBC_Fixed
                p%Nodes_I(I,J+1)          = idBC_Fixed
                print*,'Fixed boundary condition not yet supported for interface nodes, node:',iNode
                STOP
@@ -1545,6 +1533,7 @@ END SUBROUTINE BuildTMatrix
 !------------------------------------------------------------------------------------------------------
 !> Assemble stiffness and mass matrix, and gravity force vector
 SUBROUTINE DirectElimination(Init, p, ErrStat, ErrMsg)
+   use NWTC_LAPACK, only: LAPACK_GEMM
    use IntegerList, only: len
    TYPE(SD_InitType),            INTENT(INOUT) :: Init
    TYPE(SD_ParameterType),target,INTENT(INOUT) :: p
@@ -1558,8 +1547,8 @@ SUBROUTINE DirectElimination(Init, p, ErrStat, ErrMsg)
    integer(IntKi), dimension(:), allocatable :: RAm1 !< RA^-1(e) = a , for a given element give the index of a rigid assembly
    real(FEKi), dimension(:,:), allocatable :: MM, KK
    real(FEKi), dimension(:),   allocatable :: FF
-   real(FEKi), dimension(:,:), allocatable :: Temp, T_red_T
-   integer(IntKi) :: nDOF, iDOF, nDOFPerNode, iNode, iiDOF
+   real(FEKi), dimension(:,:), allocatable :: Temp
+   integer(IntKi) :: nDOF, iDOF, nDOFPerNode, iNode, iiDOF, i,j
    ErrStat = ErrID_None
    ErrMsg  = ""
 
@@ -1581,22 +1570,26 @@ SUBROUTINE DirectElimination(Init, p, ErrStat, ErrMsg)
       CALL AllocAry( Init%M,      nDOF, nDOF,       'Init%M'   ,  ErrStat2, ErrMsg2); if(Failed()) return; ! system mass matrix 
       CALL AllocAry( Init%FG,     nDOF,             'Init%FG'  ,  ErrStat2, ErrMsg2); if(Failed()) return; ! system gravity force vector 
       CALL AllocAry( Temp   ,size(MM,1), nDOF,      'Temp'     ,  ErrStat2, ErrMsg2); if(Failed()) return; 
-      CALL AllocAry( T_red_T,nDOF     , size(MM,1), 'T_red_T' ,  ErrStat2, ErrMsg2); if(Failed()) return; 
-      ! Elimination
+      CALL AllocAry( p%T_red_T,nDOF   , size(MM,1), 'T_red_T' ,  ErrStat2, ErrMsg2); if(Failed()) return; 
+      ! --- Elimination (stack expensive)
       !Init%M  = matmul(transpose(p%T_red), matmul(MM, p%T_red))
       !Init%K  = matmul(transpose(p%T_red), matmul(KK, p%T_red))
-      T_red_T = transpose(p%T_red)
-      Temp    = matmul(MM, p%T_red)
-      Init%M  = matmul(T_red_T, Temp)
-      Temp    = matmul(KK, p%T_red)
-      Init%K  = matmul(T_red_T, Temp)
-      Init%FG = matmul(T_red_T, FF)
+      !p%T_red_T = transpose(p%T_red)
+      do i = 1, size(p%T_red,1)
+         do j = 1, size(p%T_red,2)
+            p%T_red_T(j,i) = p%T_red(i,j)
+         enddo
+      enddo
+      !Temp    = matmul(MM, p%T_red)
+      CALL LAPACK_gemm( 'N', 'N', 1.0_FeKi, MM     , p%T_red, 0.0_FeKi, Temp  , ErrStat2, ErrMsg2); if(Failed()) return
+      !Init%M  = matmul(p%T_red_T, Temp)
+      CALL LAPACK_gemm( 'T', 'N', 1.0_FeKi, p%T_red, Temp   , 0.0_FeKi, Init%M, ErrStat2, ErrMsg2); if(Failed()) return
+      !Temp    = matmul(KK, p%T_red)
+      CALL LAPACK_gemm( 'N', 'N', 1.0_FeKi, KK     , p%T_red, 0.0_FeKi, Temp  , ErrStat2, ErrMsg2); if(Failed()) return
+      !Init%K  = matmul(p%T_red_T, Temp)
+      CALL LAPACK_gemm( 'T', 'N', 1.0_FeKi, p%T_red, Temp   , 0.0_FeKi, Init%K, ErrStat2, ErrMsg2); if(Failed()) return
       if (allocated(Temp))    deallocate(Temp)
-      if (allocated(T_red_T)) deallocate(T_red_T)
-
-      ! --- Triggers for storage of DOF indices, replacing with indices in constrained system
-      CALL ReInitBCs(Init, p)
-      CALL ReInitIntFc(Init, p)
+      Init%FG = matmul(p%T_red_T, FF)
    endif
    !CALL AllocAry( Init%D,      nDOF, nDOF,  'Init%D'   ,  ErrStat2, ErrMsg2); if(Failed()) return; ! system damping matrix 
    !Init%D = 0 !< Used for additional damping 
@@ -1630,34 +1623,7 @@ CONTAINS
       if (allocated(RA  )) deallocate(RA  )
       if (allocated(RAm1)) deallocate(RAm1)
       if (allocated(Temp)) deallocate(Temp)
-      if (allocated(T_red_T)) deallocate(T_red_T)
    END SUBROUTINE CleanUp_DirectElimination
-
-   !> Reset DOF indices after elimination, does not change the BC
-   SUBROUTINE ReInitBCs(Init, p)
-      TYPE(SD_InitType     ),INTENT(INOUT) :: Init
-      TYPE(SD_ParameterType),INTENT(IN   ) :: p
-      INTEGER(IntKi) :: I, J, iNode
-      DO I = 1, p%nNodes_C
-         iNode = p%Nodes_C(I,1) ! Node index
-         DO J = 1, 6 ! TODO NOTE here assumptions that 6 DOF are present
-            Init%BCs( (I-1)*6+J, 1) = p%NodesDOFred(iNode)%List(J) ! DOF number (constrained)
-         ENDDO
-      ENDDO
-   END SUBROUTINE ReInitBCs
-
-   !> Reset DOF indices after elimination
-   SUBROUTINE ReInitIntFc(Init, p)
-      TYPE(SD_InitType     ),INTENT(INOUT) :: Init
-      TYPE(SD_ParameterType),INTENT(IN   ) :: p
-      INTEGER(IntKi) :: I, J, iNode
-      DO I = 1, p%nNodes_I
-         iNode = p%Nodes_I(I,1) ! Node index
-         DO J = 1, 6 ! ItfTDXss    ItfTDYss    ItfTDZss    ItfRDXss    ItfRDYss    ItfRDZss
-            Init%IntFc( (I-1)*6+J, 1) = p%NodesDOFred(iNode)%List(J) ! DOF number (unconstrained)
-         ENDDO
-      ENDDO
-   END SUBROUTINE ReInitIntFc
 END SUBROUTINE DirectElimination
 
 !------------------------------------------------------------------------------------------------------
@@ -2013,10 +1979,10 @@ SUBROUTINE InsertJointStiffDamp(p, Init, ErrStat, ErrMsg)
          call ChessBoard(K_Add, -StifAdd, 0._ReKi, nSpace=nSpace, diagVal=(nMembers-1)*StifAdd)
          ! Ball/Pin/Universal joints
          if(StifAdd>0) then 
-            print*,'Stiffness Add, Node:',iNode,'DOF:', Ifreerot
-            do i=1,nFreeRot
-               print*,'K Add',K_Add(i,:)
-            enddo
+            !print*,'Stiffness Add, Node:',iNode,'DOF:', Ifreerot
+            !do i=1,nFreeRot
+            !   print*,'K Add',K_Add(i,:)
+            !enddo
             Init%K(Ifreerot,Ifreerot) = Init%K(Ifreerot,Ifreerot) + K_Add
          endif
          if(allocated(K_Add)) deallocate(K_Add)
