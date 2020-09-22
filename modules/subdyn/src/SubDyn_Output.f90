@@ -830,7 +830,6 @@ SUBROUTINE SD_Init_Jacobian(Init, p, u, y, InitOut, ErrStat, ErrMsg)
    dy = maxval(Init%Nodes(:,3))- minval(Init%Nodes(:,3))
    dz = maxval(Init%Nodes(:,4))- minval(Init%Nodes(:,4))
    maxDim = max(dx, dy, dz)
-   print*,'dx,dy,dz', dx, dy, dz, maxDim
    
    ! --- System dimension
    call Init_Jacobian_y(); if (Failed()) return
@@ -875,7 +874,7 @@ contains
       ! default perturbations, p%dx:
       p%dx(1) = 2.0_ReKi*D2R_D   ! deflection states in rad and rad/s
       p%dx(2) = 2.0_ReKi*D2R_D   ! deflection states in rad and rad/s
-      InitOut%RotFrame_x   = .true.
+      InitOut%RotFrame_x   = .false.
       InitOut%DerivOrder_x = 2
       ! set linearization output names:
       do i=1,p%Jac_nx
