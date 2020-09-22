@@ -493,7 +493,10 @@ CONTAINS
    subroutine ValidateStiffnessMatrix()
       call CheckWtrDepth( InputFileData%SD_locations, 'SD locations', ErrStat2, ErrMsg2)
          call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-      ! Placeholder
+      ! Notify user that damping does not yet work
+      if (maxval(abs(InputFileData%Damping)) > epsilon(1.0_ReKi)) then
+         call SetErrStat( ErrID_Severe, 'Damping matrix not supported yet with CalcOption==1 in SoilDyn.  Ignoring values entered.', ErrStat, ErrMsg, RoutineName)
+      endif
    end subroutine ValidateStiffnessMatrix
 
    subroutine ValidatePYcurves()
@@ -511,12 +514,16 @@ CONTAINS
          call CheckIOS ( IOS, "", 'DLL_model', NumType, ErrStat2, ErrMsg2 )
          call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          if ( ErrStat >= AbortErrLev ) return
-      if ( InputFileData%DLL_model > 3 .or. InputFileData%DLL_model < 1 ) then
+      if ( InputFileData%DLL_model > 3_IntKi .or. InputFileData%DLL_model < 1_IntKi ) then
          call SetErrStat( ErrID_Fatal,' DLL_Model must be 1, 2, or 3', ErrStat,ErrMsg,RoutineName)
-         if ( ErrStat >= AbortErrLev ) return
+      endif
+      ! Disable option 1 and 3
+      if ( InputFileData%DLL_model /= 2_IntKi ) then
+         call SetErrStat( ErrID_Fatal,' Only DLL_Model 2 is currently supported and validated.', ErrStat,ErrMsg,RoutineName)
+         return
       endif
       InputFileData%DLL_OnlyStiff = .false.
-      if (LEN_TRIM(InputFileData%DLL_modelChr) > 1 ) then
+      if (LEN_TRIM(InputFileData%DLL_modelChr) > 1_IntKi ) then
          if ( InputFileData%DLL_modelChr(2:2) == 'S' ) then
             InputFileData%DLL_OnlyStiff = .true.
             call SetErrStat( ErrID_Info, ' Using only the stiffness matrices from the REDWIN DLL', ErrStat,ErrMsg,RoutineName )
