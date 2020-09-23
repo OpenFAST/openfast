@@ -2342,8 +2342,10 @@ SUBROUTINE SetParameters(Init, p, MBBb, MBmb, KBBb, PhiRb, nM_out, OmegaL, PhiL,
          p%PhiLInvOmgL2(:,I) = PhiL(:,I)* (1./OmegaL(I)**2)
       enddo 
       p%KLLm1   = MATMUL(p%PhiLInvOmgL2, p%PhiL_T) ! Inverse of KLL: KLL^-1 = [PhiL] x [OmegaL^2]^-1 x [PhiL]^t
+      !CALL LAPACK_gemm( 'N', 'N', 1.0_FeKi, p%PhiLInvOmgL2, p%PhiL_T, 0.0_FeKi, p%KLLm1  , ErrStat2, ErrMsg2); if(Failed()) return
       p%FGL     = FGL  
       p%UL_st_g = MATMUL(p%KLLm1, FGL) 
+      !CALL LAPACK_gemm( 'N', 'N', 1.0_FeKi, p%KLLm1, FGL, 0.0_FeKi, p%KLLm1  , ErrStat2, ErrMsg2); if(Failed()) return
    endif     
       
    ! block element of D2 matrix (D2_21, D2_42, & part of D2_62)
@@ -2889,8 +2891,8 @@ SUBROUTINE GetExtForceOnInternalDOF( u, p, m, F_L, ErrStat, ErrMsg )
          iElem    = p%CtrlElem2Channel(iCC,1)
          iChannel = p%CtrlElem2Channel(iCC,2)
          IDOF = p%ElemsDOF(1:12, iElem)
-         ! T(t) = EA * DeltaL(t) /(Le + Delta L(t))
-         CableTension =  p%ElemProps(iElem)%YoungE*p%ElemProps(iElem)%Area * u%CableDeltaL(iChannel) / (p%ElemProps(iElem)%Length + u%CableDeltaL(iChannel))
+         ! T(t) = EA * DeltaL(t) /(Le - Delta L(t))
+         CableTension =  p%ElemProps(iElem)%YoungE*p%ElemProps(iElem)%Area * u%CableDeltaL(iChannel) / (p%ElemProps(iElem)%Length - u%CableDeltaL(iChannel))
          m%Fext(IDOF) = m%Fext(IDOF) + m%FC_unit( IDOF ) * (CableTension - p%ElemProps(iElem)%T0)
       enddo
    endif
