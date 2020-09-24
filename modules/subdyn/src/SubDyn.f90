@@ -2891,8 +2891,8 @@ SUBROUTINE GetExtForceOnInternalDOF( u, p, m, F_L, ErrStat, ErrMsg )
          iElem    = p%CtrlElem2Channel(iCC,1)
          iChannel = p%CtrlElem2Channel(iCC,2)
          IDOF = p%ElemsDOF(1:12, iElem)
-         ! T(t) = EA * DeltaL(t) /(Le - Delta L(t))
-         CableTension =  p%ElemProps(iElem)%YoungE*p%ElemProps(iElem)%Area * u%CableDeltaL(iChannel) / (p%ElemProps(iElem)%Length - u%CableDeltaL(iChannel))
+         ! T(t) = - EA * DeltaL(t) /(Le + Delta L(t)) ! NOTE DeltaL<0
+         CableTension =  -p%ElemProps(iElem)%YoungE*p%ElemProps(iElem)%Area * u%CableDeltaL(iChannel) / (p%ElemProps(iElem)%Length + u%CableDeltaL(iChannel))
          m%Fext(IDOF) = m%Fext(IDOF) + m%FC_unit( IDOF ) * (CableTension - p%ElemProps(iElem)%T0)
       enddo
    endif
