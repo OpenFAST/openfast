@@ -108,6 +108,8 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NumMeshPts      !< Number of mesh points [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: InitPosition      !< X-Y-Z reference position of point: i.e. each blade root (3 x NumBlades) [m]
     REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: InitOrientation      !< DCM reference orientation of point: i.e. each blade root (3x3 x NumBlades) [-]
+    LOGICAL  :: UseInputFile = .TRUE.      !< Read from the input file.  If false, must parse the string info passed [-]
+    CHARACTER(512) , DIMENSION(:), ALLOCATABLE  :: InputFileStringArray      !< Input file as an array of strings (one for each line exactly in form of input file).  String length from string length in FileInfoType%Lines{:} [-]
   END TYPE StC_InitInputType
 ! =======================
 ! =========  StC_InitOutputType  =======
@@ -848,6 +850,19 @@ IF (ALLOCATED(SrcInitInputData%InitOrientation)) THEN
   END IF
     DstInitInputData%InitOrientation = SrcInitInputData%InitOrientation
 ENDIF
+    DstInitInputData%UseInputFile = SrcInitInputData%UseInputFile
+IF (ALLOCATED(SrcInitInputData%InputFileStringArray)) THEN
+  i1_l = LBOUND(SrcInitInputData%InputFileStringArray,1)
+  i1_u = UBOUND(SrcInitInputData%InputFileStringArray,1)
+  IF (.NOT. ALLOCATED(DstInitInputData%InputFileStringArray)) THEN 
+    ALLOCATE(DstInitInputData%InputFileStringArray(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%InputFileStringArray.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInitInputData%InputFileStringArray = SrcInitInputData%InputFileStringArray
+ENDIF
  END SUBROUTINE StC_CopyInitInput
 
  SUBROUTINE StC_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
@@ -864,6 +879,9 @@ IF (ALLOCATED(InitInputData%InitPosition)) THEN
 ENDIF
 IF (ALLOCATED(InitInputData%InitOrientation)) THEN
   DEALLOCATE(InitInputData%InitOrientation)
+ENDIF
+IF (ALLOCATED(InitInputData%InputFileStringArray)) THEN
+  DEALLOCATE(InitInputData%InputFileStringArray)
 ENDIF
  END SUBROUTINE StC_DestroyInitInput
 
@@ -915,6 +933,12 @@ ENDIF
   IF ( ALLOCATED(InData%InitOrientation) ) THEN
     Int_BufSz   = Int_BufSz   + 2*3  ! InitOrientation upper/lower bounds for each dimension
       Db_BufSz   = Db_BufSz   + SIZE(InData%InitOrientation)  ! InitOrientation
+  END IF
+      Int_BufSz  = Int_BufSz  + 1  ! UseInputFile
+  Int_BufSz   = Int_BufSz   + 1     ! InputFileStringArray allocated yes/no
+  IF ( ALLOCATED(InData%InputFileStringArray) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! InputFileStringArray upper/lower bounds for each dimension
+      Int_BufSz  = Int_BufSz  + SIZE(InData%InputFileStringArray)*LEN(InData%InputFileStringArray)  ! InputFileStringArray
   END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -1000,6 +1024,25 @@ ENDIF
             Db_Xferred = Db_Xferred + 1
           END DO
         END DO
+      END DO
+  END IF
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%UseInputFile, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
+  IF ( .NOT. ALLOCATED(InData%InputFileStringArray) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%InputFileStringArray,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%InputFileStringArray,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%InputFileStringArray,1), UBOUND(InData%InputFileStringArray,1)
+        DO I = 1, LEN(InData%InputFileStringArray)
+          IntKiBuf(Int_Xferred) = ICHAR(InData%InputFileStringArray(i1)(I:I), IntKi)
+          Int_Xferred = Int_Xferred + 1
+        END DO ! I
       END DO
   END IF
  END SUBROUTINE StC_PackInitInput
@@ -1098,6 +1141,28 @@ ENDIF
             Db_Xferred = Db_Xferred + 1
           END DO
         END DO
+      END DO
+  END IF
+    OutData%UseInputFile = TRANSFER(IntKiBuf(Int_Xferred), OutData%UseInputFile)
+    Int_Xferred = Int_Xferred + 1
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! InputFileStringArray not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%InputFileStringArray)) DEALLOCATE(OutData%InputFileStringArray)
+    ALLOCATE(OutData%InputFileStringArray(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%InputFileStringArray.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%InputFileStringArray,1), UBOUND(OutData%InputFileStringArray,1)
+        DO I = 1, LEN(OutData%InputFileStringArray)
+          OutData%InputFileStringArray(i1)(I:I) = CHAR(IntKiBuf(Int_Xferred))
+          Int_Xferred = Int_Xferred + 1
+        END DO ! I
       END DO
   END IF
  END SUBROUTINE StC_UnPackInitInput

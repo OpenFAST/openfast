@@ -81,6 +81,8 @@ typedef	^		^				ReKi			Gravity	{3}	-	-	"Gravitational acceleration vector"	"m/s^
 typedef	^	InitInputType	IntKi			NumMeshPts	-	-	-	"Number of mesh points"	-
 typedef	^	InitInputType	ReKi	InitPosition	{:}{:}	-	-	"X-Y-Z reference position of point: i.e. each blade root (3 x NumBlades)"	m
 typedef	^	InitInputType	R8Ki	InitOrientation	{:}{:}{:}	-	-	"DCM reference orientation of point: i.e. each blade root (3x3 x NumBlades)"	-
+typedef	^	InitInputType	LOGICAL	UseInputFile	-	.TRUE.	-	"Read from the input file.  If false, must parse the string info passed"	-
+typedef	^	InitInputType	CHARACTER(512)	InputFileStringArray	{:}	-	-	"Input file as an array of strings (one for each line exactly in form of input file).  String length from string length in FileInfoType%Lines{:}"	-
 
 # Define outputs from the initialization routine here:
 typedef ^ InitOutputType SiKi DummyInitOut - - - "dummy init output" -

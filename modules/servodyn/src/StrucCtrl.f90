@@ -100,9 +100,8 @@ SUBROUTINE StC_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
       REAL(ReKi), allocatable, dimension(:,:)       :: PositionGlobal
       REAL(R8Ki), allocatable, dimension(:,:,:)     :: OrientationP
 
-      type(FileInfoType)                            :: InFileInfo    !< The derived type for holding the full input file for parsing -- we may pass this in the future
-      character(1024)                               :: EchoFileName
-      INTEGER(IntKi)                                :: UnEcho        ! Unit number for the echo file
+      type(FileInfoType)                            :: FileInfo_In   !< The derived type for holding the full input file for parsing -- we may pass this in the future
+      integer(IntKi)                                :: UnEcho
       INTEGER(IntKi)                                :: ErrStat2      ! local error status
       CHARACTER(ErrMsgLen)                          :: ErrMsg2       ! local error message
 
@@ -125,20 +124,28 @@ SUBROUTINE StC_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
     ! Read the input file and validate the data
     !............................................................................................
 
-   EchoFileName =  TRIM(InitInp%RootName)
 
-!FIXME: logic for InFileInfo or InputFileData directly passed in
-      ! Read the input file into the InFileInfo structure (if inputfile data is not directly passed)
-   CALL StC_ReadInput( InitInp%InputFile, InFileInfo, ErrStat2, ErrMsg2 )
+   if (InitInp%UseInputFile) then
+      ! Read the entire input file, minus any comment lines, into the FileInfo_In
+      ! data structure in memory for further processing.
+      call ProcessComFile( InitInp%InputFile, FileInfo_In, ErrStat, ErrMsg )
+   else
+         ! put passed string info into the FileInfo_In -- FileInfo structure
+!      call StringArray_To_FileInfo( InitInp%InputFileStringArray, FileInfo_In, ErrStat2, ErrMsg2 )
+   endif
+   CALL CheckError( ErrStat2, ErrMsg2 )
+   IF (ErrStat >= AbortErrLev) RETURN
+
+   ! For diagnostic purposes, the following can be used to display the contents
+   ! of the FileInfo_In data structure.
+   !call Print_FileInfo_Struct( CU, FileInfo_In ) ! CU is the screen -- different number on different systems.
+
+      !  Parse the FileInfo_In structure of data from the inputfile into the InitInp%InputFile structure
+   CALL StC_ParseInputFileInfo( InitInp%InputFile, TRIM(InitInp%RootName), FileInfo_In, InputFileData, UnEcho, ErrStat2, ErrMsg2 )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN
 
-!FIXME      !  If input file was read, or InFileInfo was passed directly, but not passed in as InputFileData structure
-      !  Parse the InFileInfo structure of data from the inputfile into the InitInp%InputFile structure
-   CALL StC_ParseInputFileInfo( InitInp%InputFile, EchoFileName, InputFileData, InFileInfo, ErrStat2, ErrMsg2 )
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF (ErrStat >= AbortErrLev) RETURN
-
+      ! Using the InputFileData structure, check that it makes sense
    CALL StC_ValidatePrimaryData( InputFileData, InitInp, ErrStat2, ErrMsg2 )
       CALL CheckError( ErrStat2, ErrMsg2 )
        IF (ErrStat >= AbortErrLev) RETURN
@@ -381,7 +388,6 @@ CONTAINS
    !.........................................
    SUBROUTINE cleanup()
 
-   IF ( UnEcho > 0 ) CLOSE( UnEcho )
    if (allocated(PositionP     ))   deallocate(PositionP     )
    if (allocated(PositionGlobal))   deallocate(PositionGlobal)
    if (allocated(OrientationP  ))   deallocate(OrientationP  )
@@ -1475,47 +1481,25 @@ SUBROUTINE SpringForceExtrapInterp(x, p, F_table,ErrStat,ErrMsg)
 
 END SUBROUTINE SpringForceExtrapInterp
 !----------------------------------------------------------------------------------------------------------------------------------
-!>  This allows for arbitrary comment lines in the input file.
-SUBROUTINE StC_ReadInput( InputFile, InFileInfo, ErrStat, ErrMsg )
+!> Parse the inputfile info stored in FileInfo_In.
+SUBROUTINE StC_ParseInputFileInfo( InputFile, RootName, FileInfo_In, InputFileData, UnEcho, ErrStat, ErrMsg )
 
    implicit    none
 
       ! Passed variables
    CHARACTER(*),                    intent(in   )  :: InputFile         !< Name of the file containing the primary input data
-   type(FileInfoType),              intent(  out)  :: InFileInfo        !< The derived type for holding the file information.
-   integer(IntKi),                  intent(  out)  :: ErrStat           !< Error status
-   CHARACTER(ErrMsgLen),            intent(  out)  :: ErrMsg            !< Error message
-
-
-   ! Read the entire input file, minus any comment lines, into the InFileInfo
-   ! data structure in memory for further processing.
-   call ProcessComFile( InputFile, InFileInfo, ErrStat, ErrMsg )
-
-   ! For diagnostic purposes, the following can be used to display the contents
-   ! of the InFileInfo data structure.
-   !   call Print_FileInfo( CU, InFileInfo ) ! CU is the screen -- different number on different systems.
-
-END SUBROUTINE StC_ReadInput
-!----------------------------------------------------------------------------------------------------------------------------------
-!> Parse the inputfile info stored in InFileInfo.
-SUBROUTINE StC_ParseInputFileInfo( InputFile, EchoFileName, InputFileData, InFileInfo, ErrStat, ErrMsg )
-
-   implicit    none
-
-      ! Passed variables
-   CHARACTER(*),                    intent(in   )  :: InputFile         !< Name of the file containing the primary input data
-   CHARACTER(*),                    intent(in   )  :: EchoFileName      !< The rootname of the echo file, possibly opened in this routine
+   CHARACTER(*),                    intent(in   )  :: RootName          !< The rootname of the echo file, possibly opened in this routine
    type(StC_InputFile),             intent(inout)  :: InputFileData     !< All the data in the StrucCtrl input file
-   type(FileInfoType),              intent(in   )  :: InFileInfo        !< The derived type for holding the file information.
+   type(FileInfoType),              intent(in   )  :: FileInfo_In       !< The derived type for holding the file information.
+   integer(IntKi),                  intent(  out)  :: UnEcho            !< The local unit number for this module's echo file
    integer(IntKi),                  intent(  out)  :: ErrStat           !< Error status
    CHARACTER(ErrMsgLen),            intent(  out)  :: ErrMsg            !< Error message
 
       ! Local variables:
    integer(IntKi)                                  :: i                 !< generic counter
-   integer(IntKi)                                  :: UnEcho            !< The local unit number for this module's echo file
    integer(IntKi)                                  :: ErrStat2          !< Temporary Error status
    character(ErrMsgLen)                            :: ErrMsg2           !< Temporary Error message
-   integer(IntKi)                                  :: CurLine           !< current entry in InFileInfo%Lines array
+   integer(IntKi)                                  :: CurLine           !< current entry in FileInfo_In%Lines array
    real(ReKi)                                      :: TmpRe6(6)         !< temporary 6 number array for reading values in
 
 
@@ -1530,20 +1514,20 @@ SUBROUTINE StC_ParseInputFileInfo( InputFile, EchoFileName, InputFileData, InFil
    !-------------------------------------------------------------------------------------------------
 
    CurLine = 4    ! Skip the first three lines as they are known to be header lines and separators
-   call ParseVar( InFileInfo, CurLine, 'Echo', InputFileData%Echo, ErrStat2, ErrMsg2 )
+   call ParseVar( FileInfo_In, CurLine, 'Echo', InputFileData%Echo, ErrStat2, ErrMsg2 )
          if (Failed()) return;
 
    if ( InputFileData%Echo ) then
-      CALL OpenEcho ( UnEcho, TRIM(EchoFileName), ErrStat2, ErrMsg2 )
+      CALL OpenEcho ( UnEcho, TRIM(RootName)//'.ech', ErrStat2, ErrMsg2 )
          if (Failed()) return;
       WRITE(UnEcho, '(A)') 'Echo file for LidarSim input file: '//trim(InputFile)
       ! Write the first three lines into the echo file
-      WRITE(UnEcho, '(A)') InFileInfo%Lines(1)
-      WRITE(UnEcho, '(A)') InFileInfo%Lines(2)
-      WRITE(UnEcho, '(A)') InFileInfo%Lines(3)
+      WRITE(UnEcho, '(A)') FileInfo_In%Lines(1)
+      WRITE(UnEcho, '(A)') FileInfo_In%Lines(2)
+      WRITE(UnEcho, '(A)') FileInfo_In%Lines(3)
 
       CurLine = 4
-      call ParseVar( InFileInfo, CurLine, 'Echo', InputFileData%Echo, ErrStat2, ErrMsg2, UnEcho )
+      call ParseVar( FileInfo_In, CurLine, 'Echo', InputFileData%Echo, ErrStat2, ErrMsg2, UnEcho )
             if (Failed()) return
    endif
 
@@ -1552,7 +1536,7 @@ SUBROUTINE StC_ParseInputFileInfo( InputFile, EchoFileName, InputFileData, InFil
    !-------------------------------------------------------------------------------------------------
 
    ! Section break
-   if ( InputFileData%Echo )   WRITE(UnEcho, '(A)') InFileInfo%Lines(CurLine)    ! Write section break to echo
+   if ( InputFileData%Echo )   WRITE(UnEcho, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
    CurLine = CurLine + 1
 
       !  DOF mode (switch) {  0: No StC or TLCD DOF; 
@@ -1560,16 +1544,16 @@ SUBROUTINE StC_ParseInputFileInfo( InputFile, EchoFileName, InputFileData, InFil
       !                       2: StC_XY_DOF (Omni-Directional StC);
       !                       3: TLCD;
       !                       4: Prescribed force/moment time series}
-   call ParseVar( InFileInfo, Curline, 'StC_DOF_MODE', InputFileData%StC_DOF_MODE, ErrStat2, ErrMsg2, UnEcho )
+   call ParseVar( FileInfo_In, Curline, 'StC_DOF_MODE', InputFileData%StC_DOF_MODE, ErrStat2, ErrMsg2, UnEcho )
       If (Failed()) return;
       !  DOF on or off for StC X (flag) [Used only when StC_DOF_MODE=1]
-   call ParseVar( InFileInfo, Curline, 'StC_X_DOF', InputFileData%StC_X_DOF, ErrStat2, ErrMsg2, UnEcho )
+   call ParseVar( FileInfo_In, Curline, 'StC_X_DOF', InputFileData%StC_X_DOF, ErrStat2, ErrMsg2, UnEcho )
       If (Failed()) return;
       !  DOF on or off for StC Y (flag) [Used only when StC_DOF_MODE=1]
-   call ParseVar( InFileInfo, Curline, 'StC_Y_DOF', InputFileData%StC_Y_DOF, ErrStat2, ErrMsg2, UnEcho )
+   call ParseVar( FileInfo_In, Curline, 'StC_Y_DOF', InputFileData%StC_Y_DOF, ErrStat2, ErrMsg2, UnEcho )
       If (Failed()) return;
       !  DOF on or off for StC Z (flag) [Used only when StC_DOF_MODE=1]
-   call ParseVar( InFileInfo, Curline, 'StC_Z_DOF', InputFileData%StC_Z_DOF, ErrStat2, ErrMsg2, UnEcho )
+   call ParseVar( FileInfo_In, Curline, 'StC_Z_DOF', InputFileData%StC_Z_DOF, ErrStat2, ErrMsg2, UnEcho )
       If (Failed()) return;
 
    !-------------------------------------------------------------------------------------------------
@@ -1577,17 +1561,17 @@ SUBROUTINE StC_ParseInputFileInfo( InputFile, EchoFileName, InputFileData, InFil
    !-------------------------------------------------------------------------------------------------
 
    ! Section break
-   if ( InputFileData%Echo )   WRITE(UnEcho, '(A)') InFileInfo%Lines(CurLine)    ! Write section break to echo
+   if ( InputFileData%Echo )   WRITE(UnEcho, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
    CurLine = CurLine + 1
 
       !  StC X initial displacement (m) [relative to at rest position]
-   call ParseVar( InFileInfo, Curline, 'StC_X_DSP', InputFileData%StC_X_DSP, ErrStat2, ErrMsg2, UnEcho )
+   call ParseVar( FileInfo_In, Curline, 'StC_X_DSP', InputFileData%StC_X_DSP, ErrStat2, ErrMsg2, UnEcho )
       If (Failed()) return;
       !  StC Y initial displacement (m) [relative to at rest position]
-   call ParseVar( InFileInfo, Curline, 'StC_Y_DSP', InputFileData%StC_Y_DSP, ErrStat2, ErrMsg2, UnEcho )
+   call ParseVar( FileInfo_In, Curline, 'StC_Y_DSP', InputFileData%StC_Y_DSP, ErrStat2, ErrMsg2, UnEcho )
       If (Failed()) return;
       !  StC Z initial displacement (m) [relative to at rest position; used only when StC_DOF_MODE=1 and StC_Z_DOF=TRUE]
-   call ParseVar( InFileInfo, Curline, 'StC_Z_DSP', InputFileData%StC_Z_DSP, ErrStat2, ErrMsg2, UnEcho )
+   call ParseVar( FileInfo_In, Curline, 'StC_Z_DSP', InputFileData%StC_Z_DSP, ErrStat2, ErrMsg2, UnEcho )
       If (Failed()) return;
 
    !-------------------------------------------------------------------------------------------------
@@ -1595,35 +1579,35 @@ SUBROUTINE StC_ParseInputFileInfo( InputFile, EchoFileName, InputFileData, InFil
    !-------------------------------------------------------------------------------------------------
 
    ! Section break
-   if ( InputFileData%Echo )   WRITE(UnEcho, '(A)') InFileInfo%Lines(CurLine)    ! Write section break to echo
+   if ( InputFileData%Echo )   WRITE(UnEcho, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
    CurLine = CurLine + 1
 
       !  At rest X position of StC(s) (m) [relative to reference origin of the component]
-   call ParseVar( InFileInfo, Curline, 'StC_P_X', InputFileData%StC_P_X, ErrStat2, ErrMsg2, UnEcho )
+   call ParseVar( FileInfo_In, Curline, 'StC_P_X', InputFileData%StC_P_X, ErrStat2, ErrMsg2, UnEcho )
       If (Failed()) return;
       !  At rest Y position of StC(s) (m) [relative to reference origin of the component]
-   call ParseVar( InFileInfo, Curline, 'StC_P_Y', InputFileData%StC_P_Y, ErrStat2, ErrMsg2, UnEcho )
+   call ParseVar( FileInfo_In, Curline, 'StC_P_Y', InputFileData%StC_P_Y, ErrStat2, ErrMsg2, UnEcho )
       If (Failed()) return;
       !  At rest Z position of StC(s) (m) [relative to reference origin of the component]
-   call ParseVar( InFileInfo, Curline, 'StC_P_Z', InputFileData%StC_P_Z, ErrStat2, ErrMsg2, UnEcho )
+   call ParseVar( FileInfo_In, Curline, 'StC_P_Z', InputFileData%StC_P_Z, ErrStat2, ErrMsg2, UnEcho )
       If (Failed()) return;
       !  Positive stop position (maximum X mass displacement) (m)
-   call ParseVar( InFileInfo, Curline, 'StC_X_PSP', InputFileData%StC_X_PSP, ErrStat2, ErrMsg2, UnEcho )
+   call ParseVar( FileInfo_In, Curline, 'StC_X_PSP', InputFileData%StC_X_PSP, ErrStat2, ErrMsg2, UnEcho )
       If (Failed()) return;
       !  Negative stop position (minimum X mass displacement) (m)
-   call ParseVar( InFileInfo, Curline, 'StC_X_NSP', InputFileData%StC_X_NSP, ErrStat2, ErrMsg2, UnEcho )
+   call ParseVar( FileInfo_In, Curline, 'StC_X_NSP', InputFileData%StC_X_NSP, ErrStat2, ErrMsg2, UnEcho )
       If (Failed()) return;
       !  Positive stop position (maximum Y mass displacement) (m)
-   call ParseVar( InFileInfo, Curline, 'StC_Y_PSP', InputFileData%StC_Y_PSP, ErrStat2, ErrMsg2, UnEcho )
+   call ParseVar( FileInfo_In, Curline, 'StC_Y_PSP', InputFileData%StC_Y_PSP, ErrStat2, ErrMsg2, UnEcho )
       If (Failed()) return;
       !  Negative stop position (minimum Y mass displacement) (m)
-   call ParseVar( InFileInfo, Curline, 'StC_Y_NSP', InputFileData%StC_Y_NSP, ErrStat2, ErrMsg2, UnEcho )
+   call ParseVar( FileInfo_In, Curline, 'StC_Y_NSP', InputFileData%StC_Y_NSP, ErrStat2, ErrMsg2, UnEcho )
       If (Failed()) return;
       !  Positive stop position (maximum Z mass displacement) (m) [used only when StC_DOF_MODE=1 and StC_Z_DOF=TRUE]
-   call ParseVar( InFileInfo, Curline, 'StC_Z_PSP', InputFileData%StC_Z_PSP, ErrStat2, ErrMsg2, UnEcho )
+   call ParseVar( FileInfo_In, Curline, 'StC_Z_PSP', InputFileData%StC_Z_PSP, ErrStat2, ErrMsg2, UnEcho )
       If (Failed()) return;
       !  Negative stop position (minimum Z mass displacement) (m) [used only when StC_DOF_MODE=1 and StC_Z_DOF=TRUE]
-   call ParseVar( InFileInfo, Curline, 'StC_Z_NSP', InputFileData%StC_Z_NSP, ErrStat2, ErrMsg2, UnEcho )
+   call ParseVar( FileInfo_In, Curline, 'StC_Z_NSP', InputFileData%StC_Z_NSP, ErrStat2, ErrMsg2, UnEcho )
       If (Failed()) return;
 
    !-------------------------------------------------------------------------------------------------
@@ -1631,56 +1615,56 @@ SUBROUTINE StC_ParseInputFileInfo( InputFile, EchoFileName, InputFileData, InFil
    !-------------------------------------------------------------------------------------------------
 
    ! Section break
-   if ( InputFileData%Echo )   WRITE(UnEcho, '(A)') InFileInfo%Lines(CurLine)    ! Write section break to echo
+   if ( InputFileData%Echo )   WRITE(UnEcho, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
    CurLine = CurLine + 1
 
       !  StC X mass (kg) [must equal StC_Y_M for StC_DOF_MODE = 2]
-   call ParseVar( InFileInfo, Curline, 'StC_X_M', InputFileData%StC_X_M, ErrStat2, ErrMsg2, UnEcho )
+   call ParseVar( FileInfo_In, Curline, 'StC_X_M', InputFileData%StC_X_M, ErrStat2, ErrMsg2, UnEcho )
       If (Failed()) return;
       !  StC Y mass (kg) [must equal StC_X_M for StC_DOF_MODE = 2]
-   call ParseVar( InFileInfo, Curline, 'StC_Y_M', InputFileData%StC_Y_M, ErrStat2, ErrMsg2, UnEcho )
+   call ParseVar( FileInfo_In, Curline, 'StC_Y_M', InputFileData%StC_Y_M, ErrStat2, ErrMsg2, UnEcho )
       If (Failed()) return;
       !  StC Z mass (kg) [used only when StC_DOF_MODE=1 and StC_Z_DOF=TRUE]
-   call ParseVar( InFileInfo, Curline, 'StC_Z_M', InputFileData%StC_Z_M, ErrStat2, ErrMsg2, UnEcho )
+   call ParseVar( FileInfo_In, Curline, 'StC_Z_M', InputFileData%StC_Z_M, ErrStat2, ErrMsg2, UnEcho )
       If (Failed()) return;
       !  StC Z mass (kg) [used only when StC_DOF_MODE=2]
-   call ParseVar( InFileInfo, Curline, 'StC_XY_M', InputFileData%StC_XY_M, ErrStat2, ErrMsg2, UnEcho )
+   call ParseVar( FileInfo_In, Curline, 'StC_XY_M', InputFileData%StC_XY_M, ErrStat2, ErrMsg2, UnEcho )
       If (Failed()) return;
       !  StC X stiffness (N/m)
-   call ParseVar( InFileInfo, Curline, 'StC_X_K', InputFileData%StC_X_K, ErrStat2, ErrMsg2, UnEcho )
+   call ParseVar( FileInfo_In, Curline, 'StC_X_K', InputFileData%StC_X_K, ErrStat2, ErrMsg2, UnEcho )
       If (Failed()) return;
       !  StC Y stiffness (N/m)
-   call ParseVar( InFileInfo, Curline, 'StC_Y_K', InputFileData%StC_Y_K, ErrStat2, ErrMsg2, UnEcho )
+   call ParseVar( FileInfo_In, Curline, 'StC_Y_K', InputFileData%StC_Y_K, ErrStat2, ErrMsg2, UnEcho )
       If (Failed()) return;
       !  StC Z stiffness (N/m) [used only when StC_DOF_MODE=1 and StC_Z_DOF=TRUE]
-   call ParseVar( InFileInfo, Curline, 'StC_Z_K', InputFileData%StC_Z_K, ErrStat2, ErrMsg2, UnEcho )
+   call ParseVar( FileInfo_In, Curline, 'StC_Z_K', InputFileData%StC_Z_K, ErrStat2, ErrMsg2, UnEcho )
       If (Failed()) return;
       !  StC X damping (N/(m/s))
-   call ParseVar( InFileInfo, Curline, 'StC_X_C', InputFileData%StC_X_C, ErrStat2, ErrMsg2, UnEcho )
+   call ParseVar( FileInfo_In, Curline, 'StC_X_C', InputFileData%StC_X_C, ErrStat2, ErrMsg2, UnEcho )
       If (Failed()) return;
       !  StC Y damping (N/(m/s))
-   call ParseVar( InFileInfo, Curline, 'StC_Y_C', InputFileData%StC_Y_C, ErrStat2, ErrMsg2, UnEcho )
+   call ParseVar( FileInfo_In, Curline, 'StC_Y_C', InputFileData%StC_Y_C, ErrStat2, ErrMsg2, UnEcho )
       If (Failed()) return;
       !  StC Z damping (N/(m/s)) [used only when StC_DOF_MODE=1 and StC_Z_DOF=TRUE]
-   call ParseVar( InFileInfo, Curline, 'StC_Z_C', InputFileData%StC_Z_C, ErrStat2, ErrMsg2, UnEcho )
+   call ParseVar( FileInfo_In, Curline, 'StC_Z_C', InputFileData%StC_Z_C, ErrStat2, ErrMsg2, UnEcho )
       If (Failed()) return;
       !  Stop spring X stiffness (N/m)
-   call ParseVar( InFileInfo, Curline, 'StC_X_KS', InputFileData%StC_X_KS, ErrStat2, ErrMsg2, UnEcho )
+   call ParseVar( FileInfo_In, Curline, 'StC_X_KS', InputFileData%StC_X_KS, ErrStat2, ErrMsg2, UnEcho )
       If (Failed()) return;
       !  Stop spring Y stiffness (N/m)
-   call ParseVar( InFileInfo, Curline, 'StC_Y_KS', InputFileData%StC_Y_KS, ErrStat2, ErrMsg2, UnEcho )
+   call ParseVar( FileInfo_In, Curline, 'StC_Y_KS', InputFileData%StC_Y_KS, ErrStat2, ErrMsg2, UnEcho )
       If (Failed()) return;
       !  Stop spring Z stiffness (N/m) [used only when StC_DOF_MODE=1 and StC_Z_DOF=TRUE]
-   call ParseVar( InFileInfo, Curline, 'StC_Z_KS', InputFileData%StC_Z_KS, ErrStat2, ErrMsg2, UnEcho )
+   call ParseVar( FileInfo_In, Curline, 'StC_Z_KS', InputFileData%StC_Z_KS, ErrStat2, ErrMsg2, UnEcho )
       If (Failed()) return;
       !  Stop spring X damping (N/(m/s))
-   call ParseVar( InFileInfo, Curline, 'StC_X_CS', InputFileData%StC_X_CS, ErrStat2, ErrMsg2, UnEcho )
+   call ParseVar( FileInfo_In, Curline, 'StC_X_CS', InputFileData%StC_X_CS, ErrStat2, ErrMsg2, UnEcho )
       If (Failed()) return;
       !  Stop spring Y damping (N/(m/s))
-   call ParseVar( InFileInfo, Curline, 'StC_Y_CS', InputFileData%StC_Y_CS, ErrStat2, ErrMsg2, UnEcho )
+   call ParseVar( FileInfo_In, Curline, 'StC_Y_CS', InputFileData%StC_Y_CS, ErrStat2, ErrMsg2, UnEcho )
       If (Failed()) return;
       !  Stop spring Z damping (N/(m/s)) [used only when StC_DOF_MODE=1 and StC_Z_DOF=TRUE]
-   call ParseVar( InFileInfo, Curline, 'StC_Z_CS', InputFileData%StC_Z_CS, ErrStat2, ErrMsg2, UnEcho )
+   call ParseVar( FileInfo_In, Curline, 'StC_Z_CS', InputFileData%StC_Z_CS, ErrStat2, ErrMsg2, UnEcho )
       If (Failed()) return;
 
    !-------------------------------------------------------------------------------------------------
@@ -1688,23 +1672,23 @@ SUBROUTINE StC_ParseInputFileInfo( InputFile, EchoFileName, InputFileData, InFil
    !-------------------------------------------------------------------------------------------------
 
    ! Section break
-   if ( InputFileData%Echo )   WRITE(UnEcho, '(A)') InFileInfo%Lines(CurLine)    ! Write section break to echo
+   if ( InputFileData%Echo )   WRITE(UnEcho, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
    CurLine = CurLine + 1
 
       !  Use spring force from user-defined table (flag)
-   call ParseVar( InFileInfo, Curline, 'Use_F_TBL', InputFileData%Use_F_TBL, ErrStat2, ErrMsg2, UnEcho )
+   call ParseVar( FileInfo_In, Curline, 'Use_F_TBL', InputFileData%Use_F_TBL, ErrStat2, ErrMsg2, UnEcho )
       If (Failed()) return;
 
       ! NKInpSt      - Number of spring force input stations
-   call ParseVar( InFileInfo, CurLine, 'NKInpSt', InputFileData%NKInpSt, ErrStat2, ErrMsg2, UnEcho)
+   call ParseVar( FileInfo_In, CurLine, 'NKInpSt', InputFileData%NKInpSt, ErrStat2, ErrMsg2, UnEcho)
          if (Failed()) return
 
    ! Section break --  X  K_X   Y  K_Y   Z  K_Z
-   if ( InputFileData%Echo )   WRITE(UnEcho, '(A)') '#TABLE: '//InFileInfo%Lines(CurLine)    ! Write section break to echo
+   if ( InputFileData%Echo )   WRITE(UnEcho, '(A)') '#TABLE: '//FileInfo_In%Lines(CurLine)    ! Write section break to echo
    CurLine = CurLine + 1
-   if ( InputFileData%Echo )   WRITE(UnEcho, '(A)') ' Table Header: '//InFileInfo%Lines(CurLine)    ! Write section break to echo
+   if ( InputFileData%Echo )   WRITE(UnEcho, '(A)') ' Table Header: '//FileInfo_In%Lines(CurLine)    ! Write section break to echo
    CurLine = CurLine + 1
-   if ( InputFileData%Echo )   WRITE(UnEcho, '(A)') ' Table Units: '//InFileInfo%Lines(CurLine)    ! Write section break to echo
+   if ( InputFileData%Echo )   WRITE(UnEcho, '(A)') ' Table Units: '//FileInfo_In%Lines(CurLine)    ! Write section break to echo
    CurLine = CurLine + 1
 
    if (InputFileData%NKInpSt > 0) then
@@ -1712,7 +1696,7 @@ SUBROUTINE StC_ParseInputFileInfo( InputFile, EchoFileName, InputFileData, InFil
             if (Failed()) return;
          ! TABLE read
       do i=1,InputFileData%NKInpSt
-         call ParseAry ( InFileInfo, CurLine, 'Coordinates', TmpRe6, 6, ErrStat2, ErrMsg2, UnEcho )
+         call ParseAry ( FileInfo_In, CurLine, 'Coordinates', TmpRe6, 6, ErrStat2, ErrMsg2, UnEcho )
                if (Failed()) return;
          InputFileData%F_TBL(i,1) = TmpRe6(1) ! X
          InputFileData%F_TBL(i,2) = TmpRe6(2) ! K_X
@@ -1729,11 +1713,11 @@ SUBROUTINE StC_ParseInputFileInfo( InputFile, EchoFileName, InputFileData, InFil
    !-------------------------------------------------------------------------------------------------
 
    ! Section break
-   if ( InputFileData%Echo )   WRITE(UnEcho, '(A)') InFileInfo%Lines(CurLine)    ! Write section break to echo
+   if ( InputFileData%Echo )   WRITE(UnEcho, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
    CurLine = CurLine + 1
 
       !  Control mode (switch) {0:none; 1: Semi-Active Control Mode; 2: Active Control Mode}
-   call ParseVar( InFileInfo, Curline, 'StC_CMODE', InputFileData%StC_CMODE, ErrStat2, ErrMsg2 )
+   call ParseVar( FileInfo_In, Curline, 'StC_CMODE', InputFileData%StC_CMODE, ErrStat2, ErrMsg2 )
       If (Failed()) return;
       !  Semi-Active control mode {
       !     1: velocity-based ground hook control; 
@@ -1741,34 +1725,34 @@ SUBROUTINE StC_ParseInputFileInfo( InputFile, EchoFileName, InputFileData, InFil
       !     3: displacement-based ground hook control;
       !     4: Phase difference Algorithm with Friction Force;
       !     5: Phase difference Algorithm with Damping Force} (-)
-   call ParseVar( InFileInfo, Curline, 'StC_SA_MODE', InputFileData%StC_SA_MODE, ErrStat2, ErrMsg2 )
+   call ParseVar( FileInfo_In, Curline, 'StC_SA_MODE', InputFileData%StC_SA_MODE, ErrStat2, ErrMsg2 )
       If (Failed()) return;
       !  StC X high damping for ground hook control
-   call ParseVar( InFileInfo, Curline, 'StC_X_C_HIGH', InputFileData%StC_X_C_HIGH, ErrStat2, ErrMsg2 )
+   call ParseVar( FileInfo_In, Curline, 'StC_X_C_HIGH', InputFileData%StC_X_C_HIGH, ErrStat2, ErrMsg2 )
       If (Failed()) return;
       !  StC X low damping for ground hook control
-   call ParseVar( InFileInfo, Curline, 'StC_X_C_LOW', InputFileData%StC_X_C_LOW, ErrStat2, ErrMsg2 )
+   call ParseVar( FileInfo_In, Curline, 'StC_X_C_LOW', InputFileData%StC_X_C_LOW, ErrStat2, ErrMsg2 )
       If (Failed()) return;
       !  StC Y high damping for ground hook control
-   call ParseVar( InFileInfo, Curline, 'StC_Y_C_HIGH', InputFileData%StC_Y_C_HIGH, ErrStat2, ErrMsg2 )
+   call ParseVar( FileInfo_In, Curline, 'StC_Y_C_HIGH', InputFileData%StC_Y_C_HIGH, ErrStat2, ErrMsg2 )
       If (Failed()) return;
       !  StC Y low damping for ground hook control
-   call ParseVar( InFileInfo, Curline, 'StC_Y_C_LOW', InputFileData%StC_Y_C_LOW, ErrStat2, ErrMsg2 )
+   call ParseVar( FileInfo_In, Curline, 'StC_Y_C_LOW', InputFileData%StC_Y_C_LOW, ErrStat2, ErrMsg2 )
       If (Failed()) return;
       !  StC Z high damping for ground hook control [used only when StC_DOF_MODE=1 and StC_Z_DOF=TRUE]
-   call ParseVar( InFileInfo, Curline, 'StC_Z_C_HIGH', InputFileData%StC_Z_C_HIGH, ErrStat2, ErrMsg2 )
+   call ParseVar( FileInfo_In, Curline, 'StC_Z_C_HIGH', InputFileData%StC_Z_C_HIGH, ErrStat2, ErrMsg2 )
       If (Failed()) return;
       !  StC Z low damping for ground hook control  [used only when StC_DOF_MODE=1 and StC_Z_DOF=TRUE]
-   call ParseVar( InFileInfo, Curline, 'StC_Z_C_LOW', InputFileData%StC_Z_C_LOW, ErrStat2, ErrMsg2 )
+   call ParseVar( FileInfo_In, Curline, 'StC_Z_C_LOW', InputFileData%StC_Z_C_LOW, ErrStat2, ErrMsg2 )
       If (Failed()) return;
       !  StC X high damping for braking the StC (Don't use it now. should be zero)
-   call ParseVar( InFileInfo, Curline, 'StC_X_C_BRAKE', InputFileData%StC_X_C_BRAKE, ErrStat2, ErrMsg2 )
+   call ParseVar( FileInfo_In, Curline, 'StC_X_C_BRAKE', InputFileData%StC_X_C_BRAKE, ErrStat2, ErrMsg2 )
       If (Failed()) return;
       !  StC Y high damping for braking the StC (Don't use it now. should be zero)
-   call ParseVar( InFileInfo, Curline, 'StC_Y_C_BRAKE', InputFileData%StC_Y_C_BRAKE, ErrStat2, ErrMsg2 )
+   call ParseVar( FileInfo_In, Curline, 'StC_Y_C_BRAKE', InputFileData%StC_Y_C_BRAKE, ErrStat2, ErrMsg2 )
       If (Failed()) return;
       !  StC Z high damping for braking the StC (Don't use it now. should be zero) [used only when StC_DOF_MODE=1 and StC_Z_DOF=TRUE]
-   call ParseVar( InFileInfo, Curline, 'StC_Z_C_BRAKE', InputFileData%StC_Z_C_BRAKE, ErrStat2, ErrMsg2 )
+   call ParseVar( FileInfo_In, Curline, 'StC_Z_C_BRAKE', InputFileData%StC_Z_C_BRAKE, ErrStat2, ErrMsg2 )
       If (Failed()) return;
 
    !-------------------------------------------------------------------------------------------------
@@ -1776,44 +1760,44 @@ SUBROUTINE StC_ParseInputFileInfo( InputFile, EchoFileName, InputFileData, InFil
    !-------------------------------------------------------------------------------------------------
 
    ! Section break
-   if ( InputFileData%Echo )   WRITE(UnEcho, '(A)') InFileInfo%Lines(CurLine)    ! Write section break to echo
+   if ( InputFileData%Echo )   WRITE(UnEcho, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
    CurLine = CurLine + 1
 
       !  X TLCD total length (m)
-   call ParseVar( InFileInfo, Curline, 'L_X', InputFileData%L_X, ErrStat2, ErrMsg2 )
+   call ParseVar( FileInfo_In, Curline, 'L_X', InputFileData%L_X, ErrStat2, ErrMsg2 )
       If (Failed()) return;
       !  X TLCD horizontal length (m)
-   call ParseVar( InFileInfo, Curline, 'B_X', InputFileData%B_X, ErrStat2, ErrMsg2 )
+   call ParseVar( FileInfo_In, Curline, 'B_X', InputFileData%B_X, ErrStat2, ErrMsg2 )
       If (Failed()) return;
       !  X TLCD cross-sectional area of vertical column (m^2)
-   call ParseVar( InFileInfo, Curline, 'area_X', InputFileData%area_X, ErrStat2, ErrMsg2 )
+   call ParseVar( FileInfo_In, Curline, 'area_X', InputFileData%area_X, ErrStat2, ErrMsg2 )
       If (Failed()) return;
       !  X TLCD cross-sectional area ratio (vertical column area divided by horizontal column area) (-)
-   call ParseVar( InFileInfo, Curline, 'area_ratio_X', InputFileData%area_ratio_X, ErrStat2, ErrMsg2 )
+   call ParseVar( FileInfo_In, Curline, 'area_ratio_X', InputFileData%area_ratio_X, ErrStat2, ErrMsg2 )
       If (Failed()) return;
       !  X TLCD head loss coeff (-)
-   call ParseVar( InFileInfo, Curline, 'headLossCoeff_X', InputFileData%headLossCoeff_X, ErrStat2, ErrMsg2 )
+   call ParseVar( FileInfo_In, Curline, 'headLossCoeff_X', InputFileData%headLossCoeff_X, ErrStat2, ErrMsg2 )
       If (Failed()) return;
       !  X TLCD liquid density (kg/m^3)
-   call ParseVar( InFileInfo, Curline, 'rho_X', InputFileData%rho_X, ErrStat2, ErrMsg2 )
+   call ParseVar( FileInfo_In, Curline, 'rho_X', InputFileData%rho_X, ErrStat2, ErrMsg2 )
       If (Failed()) return;
       !  Y TLCD total length (m)
-   call ParseVar( InFileInfo, Curline, 'L_Y', InputFileData%L_Y, ErrStat2, ErrMsg2 )
+   call ParseVar( FileInfo_In, Curline, 'L_Y', InputFileData%L_Y, ErrStat2, ErrMsg2 )
       If (Failed()) return;
       !  Y TLCD horizontal length (m)
-   call ParseVar( InFileInfo, Curline, 'B_Y', InputFileData%B_Y, ErrStat2, ErrMsg2 )
+   call ParseVar( FileInfo_In, Curline, 'B_Y', InputFileData%B_Y, ErrStat2, ErrMsg2 )
       If (Failed()) return;
       !  Y TLCD cross-sectional area of vertical column (m^2)
-   call ParseVar( InFileInfo, Curline, 'area_Y', InputFileData%area_Y, ErrStat2, ErrMsg2 )
+   call ParseVar( FileInfo_In, Curline, 'area_Y', InputFileData%area_Y, ErrStat2, ErrMsg2 )
       If (Failed()) return;
       !  Y TLCD cross-sectional area ratio (vertical column area divided by horizontal column area) (-)
-   call ParseVar( InFileInfo, Curline, 'area_ratio_Y', InputFileData%area_ratio_Y, ErrStat2, ErrMsg2 )
+   call ParseVar( FileInfo_In, Curline, 'area_ratio_Y', InputFileData%area_ratio_Y, ErrStat2, ErrMsg2 )
       If (Failed()) return;
       !  Y TLCD head loss coeff (-)
-   call ParseVar( InFileInfo, Curline, 'headLossCoeff_Y', InputFileData%headLossCoeff_Y, ErrStat2, ErrMsg2 )
+   call ParseVar( FileInfo_In, Curline, 'headLossCoeff_Y', InputFileData%headLossCoeff_Y, ErrStat2, ErrMsg2 )
       If (Failed()) return;
       !  Y TLCD liquid density (kg/m^3)
-   call ParseVar( InFileInfo, Curline, 'rho_Y', InputFileData%rho_Y, ErrStat2, ErrMsg2 )
+   call ParseVar( FileInfo_In, Curline, 'rho_Y', InputFileData%rho_Y, ErrStat2, ErrMsg2 )
       If (Failed()) return;
 
    !-------------------------------------------------------------------------------------------------
@@ -1821,14 +1805,14 @@ SUBROUTINE StC_ParseInputFileInfo( InputFile, EchoFileName, InputFileData, InFil
    !-------------------------------------------------------------------------------------------------
 
    ! Section break
-   if ( InputFileData%Echo )   WRITE(UnEcho, '(A)') InFileInfo%Lines(CurLine)    ! Write section break to echo
+   if ( InputFileData%Echo )   WRITE(UnEcho, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
    CurLine = CurLine + 1
 
       ! Prescribed forces coordinate system
-   call ParseVar( InFileInfo, Curline, 'PrescribedForcesCoordSys', InputFileData%PrescribedForcesCoordSys, ErrStat2, ErrMsg2 )
+   call ParseVar( FileInfo_In, Curline, 'PrescribedForcesCoordSys', InputFileData%PrescribedForcesCoordSys, ErrStat2, ErrMsg2 )
       If (Failed()) return;
       ! Prescribed input time series
-   call ParseVar( InFileInfo, Curline, 'PrescribedForcesFile', InputFileData%PrescribedForcesFile, ErrStat2, ErrMsg2 )
+   call ParseVar( FileInfo_In, Curline, 'PrescribedForcesFile', InputFileData%PrescribedForcesFile, ErrStat2, ErrMsg2 )
       If (Failed()) return;
 
 
