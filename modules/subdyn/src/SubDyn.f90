@@ -2301,8 +2301,9 @@ SUBROUTINE SetParameters(Init, p, MBBb, MBmb, KBBb, PhiRb, nM_out, OmegaL, PhiL,
    INTEGER(IntKi),           INTENT(  OUT)   :: ErrStat     ! Error status of the operation
    CHARACTER(*),             INTENT(  OUT)   :: ErrMsg      ! Error message if ErrStat /= ErrID_None
    ! local variables
-   REAL(ReKi)                                :: TI_transpose(nDOFL_TP,p%nDOFI__) !bjj: added this so we don't have to take the transpose 5+ times
-   INTEGER(IntKi)                            :: I
+   real(FEKi), allocatable                   :: Temp(:,:)
+   real(ReKi)                                :: TI_transpose(nDOFL_TP,p%nDOFI__) !bjj: added this so we don't have to take the transpose 5+ times
+   integer(IntKi)                            :: I
    integer(IntKi)                            :: n                          ! size of jacobian in AM2 calculation
    INTEGER(IntKi)                            :: ErrStat2
    CHARACTER(ErrMsgLen)                      :: ErrMsg2
@@ -2330,7 +2331,7 @@ SUBROUTINE SetParameters(Init, p, MBBb, MBmb, KBBb, PhiRb, nM_out, OmegaL, PhiL,
       else
          CALL WrScr('   Using static improvement method for gravity only')
       endif
-      ! Allocations
+      ! Allocations - NOTE: type conversion belows from FEKi to ReKi
       CALL AllocAry( p%PhiL_T,        p%nDOF__L, p%nDOF__L, 'p%PhiL_T',        ErrStat2, ErrMsg2 ); if(Failed())return
       CALL AllocAry( p%PhiLInvOmgL2,  p%nDOF__L, p%nDOF__L, 'p%PhiLInvOmgL2',  ErrStat2, ErrMsg2 ); if(Failed())return
       CALL AllocAry( p%KLLm1       ,  p%nDOF__L, p%nDOF__L, 'p%KLLm1',         ErrStat2, ErrMsg2 ); if(Failed())return
@@ -2341,11 +2342,11 @@ SUBROUTINE SetParameters(Init, p, MBBb, MBmb, KBBb, PhiRb, nM_out, OmegaL, PhiL,
       do I = 1, nM_out
          p%PhiLInvOmgL2(:,I) = PhiL(:,I)* (1./OmegaL(I)**2)
       enddo 
-      p%KLLm1   = MATMUL(p%PhiLInvOmgL2, p%PhiL_T) ! Inverse of KLL: KLL^-1 = [PhiL] x [OmegaL^2]^-1 x [PhiL]^t
-      !CALL LAPACK_gemm( 'N', 'N', 1.0_FeKi, p%PhiLInvOmgL2, p%PhiL_T, 0.0_FeKi, p%KLLm1  , ErrStat2, ErrMsg2); if(Failed()) return
+      ! KLL^-1 = [PhiL] x [OmegaL^2]^-1 x [PhiL]^t
+      !p%KLLm1   = MATMUL(p%PhiLInvOmgL2, p%PhiL_T) ! Inverse of KLL: KLL^-1 = [PhiL] x [OmegaL^2]^-1 x [PhiL]^t
+      CALL LAPACK_gemm( 'N', 'N', 1.0_ReKi, p%PhiLInvOmgL2, p%PhiL_T, 0.0_ReKi, p%KLLm1, ErrStat2, ErrMsg2); if(Failed()) return
       p%FGL     = FGL  
       p%UL_st_g = MATMUL(p%KLLm1, FGL) 
-      !CALL LAPACK_gemm( 'N', 'N', 1.0_FeKi, p%KLLm1, FGL, 0.0_FeKi, p%KLLm1  , ErrStat2, ErrMsg2); if(Failed()) return
    endif     
       
    ! block element of D2 matrix (D2_21, D2_42, & part of D2_62)
@@ -2376,7 +2377,7 @@ SUBROUTINE SetParameters(Init, p, MBBb, MBmb, KBBb, PhiRb, nM_out, OmegaL, PhiL,
    !p%D1_15=-TI_transpose  !this is 6x6NIN
    IF ( p%nDOFM > 0 ) THEN ! These values don't exist for nDOFM=0; i.e., p%nDOFM == 0
       ! TODO cant use LAPACK due to type conversions FEKi->ReKi
-      p%MBM = MATMUL( TRANSPOSE(p%TI), MBmb )    != MBMt 
+      p%MBM = MATMUL( TI_transpose, MBmb )  ! NOTE: type conversion
       !CALL LAPACK_gemm( 'T', 'N', 1.0_ReKi, p%TI, MBmb, 0.0_ReKi, p%MBM, ErrStat2, ErrMsg2); if(Failed()) return
       !p%CBM = MATMUL( TRANSPOSE(p%TI), CBMb )    != CBMt
       !CALL LAPACK_gemm( 'T', 'N', 1.0_ReKi, p%TI, CBMb, 0.0_ReKi, p%CBM, ErrStat2, ErrMsg2); if (Failed()) return
@@ -2385,16 +2386,12 @@ SUBROUTINE SetParameters(Init, p, MBBb, MBmb, KBBb, PhiRb, nM_out, OmegaL, PhiL,
       p%MMB = TRANSPOSE( p%MBM )                          != MMBt
       p%CMB = TRANSPOSE( p%CBM )                          != CMBt
 
-      p%PhiM  = PhiL(:,1:p%nDOFM)
+      p%PhiM = real( PhiL(:,1:p%nDOFM), ReKi)
       
       ! A_21=-Kmm (diagonal), A_22=-Cmm (approximated as diagonal) 
       p%KMMDiag=             OmegaL(1:p%nDOFM) * OmegaL(1:p%nDOFM)          ! OmegaM is a one-dimensional array
       p%CMMDiag = 2.0_ReKi * OmegaL(1:p%nDOFM) * Init%JDampings(1:p%nDOFM)  ! Init%JDampings is also a one-dimensional array
 
-   
-      ! B_23, B_24
-      !p%PhiM_T =  TRANSPOSE( p%PhiM  )
-   
       ! FX = matmul( transpose(PhiM), FGL ) (output of CraigBamptonReduction)
       p%FX = FGM
    
@@ -2415,9 +2412,9 @@ SUBROUTINE SetParameters(Init, p, MBBb, MBmb, KBBb, PhiRb, nM_out, OmegaL, PhiL,
       p%D1_13 = p%MBB - p%D1_13
 
       ! TODO cant use LAPACK due to type conversions FEKi->ReKi
-      !p%D1_14 = MATMUL( p%MBM, p%PhiM_T ) - MATMUL( TI_transpose, TRANSPOSE(PHiRb))  
-      p%D1_14 = MATMUL( TI_transpose, TRANSPOSE(PHiRb)) 
-      !CALL LAPACK_GEMM( 'T', 'T', 1.0_ReKi, p%TI,   PHiRb,  0.0_ReKi, p%D1_14, ErrStat2, ErrMsg2 ); if(Failed()) return   ! p%D1_14 = MATMUL( TRANSPOSE(TI), TRANSPOSE(PHiRb))  
+      !p%D1_14 = MATMUL( p%MBM, p%PhiM_T ) - MATMUL( TI_transpose, TRANSPOSE(PhiRb))  
+      p%D1_14 = MATMUL( TI_transpose, TRANSPOSE(PhiRb)) 
+      !CALL LAPACK_GEMM( 'T', 'T', 1.0_ReKi, p%TI,   PhiRb,  0.0_ReKi, p%D1_14, ErrStat2, ErrMsg2 ); if(Failed()) return   ! p%D1_14 = MATMUL( TRANSPOSE(TI), TRANSPOSE(PHiRb))  
       CALL LAPACK_GEMM( 'N', 'T', 1.0_ReKi, p%MBM, p%PhiM, -1.0_ReKi, p%D1_14, ErrStat2, ErrMsg2 ); if(Failed()) return   ! p%D1_14 = MATMUL( p%MBM, TRANSPOSE(p%PhiM) ) - p%D1_14 
 
    
@@ -2433,7 +2430,8 @@ SUBROUTINE SetParameters(Init, p, MBBb, MBmb, KBBb, PhiRb, nM_out, OmegaL, PhiL,
       ENDDO   
       
       ! D2_53, D2_63, D2_64 
-      p%D2_63 = MATMUL( p%PhiM, p%MMB )
+      !p%D2_63 = p%PhiRb_TI - MATMUL( p%PhiM, p%MMB ) 
+      CALL LAPACK_GEMM( 'N', 'N', 1.0_ReKi, p%PhiM, p%MMB, 0.0_ReKi, p%D2_63, ErrStat2, ErrMsg2 ); if(Failed()) return;
       p%D2_63 = p%PhiRb_TI - p%D2_63
 
       !p%D2_64 = MATMUL( p%PhiM, p%PhiM_T )
