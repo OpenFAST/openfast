@@ -2189,7 +2189,7 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InputFile, RootName, NumBlades, interv
          END IF
       ! AFNames - Airfoil file names (NumAFfiles lines) (quoted strings): -- NOTE: this line may not have a keyname with it
    DO I = 1,InputFileData%NumAFfiles         ! ParseChVar allows empty keynames.
-      call ParseChVar( FileInfo_In, CurLine, "", InputFileData%AFNames(I), ErrStat2, ErrMsg2, UnEc )
+      call ParseVar( FileInfo_In, CurLine, "", InputFileData%AFNames(I), ErrStat2, ErrMsg2, UnEc )
       if (Failed()) return
       IF ( PathIsRelative( InputFileData%AFNames(I) ) ) InputFileData%AFNames(I) = TRIM(PriPath)//TRIM(InputFileData%AFNames(I))
    END DO
