@@ -156,7 +156,7 @@ of_regression_linear("5MW_Land_BD_Linear"           "openfast;linear;beamdyn;ser
 of_regression_linear("5MW_OC4Semi_Linear"           "openfast;linear;hydrodyn;servodyn")
 
 # AeroDyn regression tests
-ad_regression("ad_timeseries"                "aerodyn;bem")
+ad_regression("ad_timeseries_shutdown"      "aerodyn;bem")
 
 # BeamDyn regression tests
 bd_regression("bd_5MW_dynamic"              "beamdyn;dynamic")
