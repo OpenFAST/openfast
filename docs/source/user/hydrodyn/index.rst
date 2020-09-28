@@ -2,7 +2,7 @@ HydroDyn User Guide and Theory Manual
 =====================================
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
    running_hd.rst
    input_files.rst
