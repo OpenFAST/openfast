@@ -6,16 +6,16 @@ Appendix A: OC4 Semi-submersible Input File
 The following is a HydroDyn primary input file for OC4 semi-submersible
 structure::
 
-      ------- HydroDyn v2.03.* Input File --------------------------------------------
+      ------- HydroDyn Input File ----------------------------------------------------
       NREL 5.0 MW offshore baseline floating platform HydroDyn input properties for the OC4 Semi-submersible.
       False            Echo           - Echo the input file data (flag)
       ---------------------- ENVIRONMENTAL CONDITIONS --------------------------------
             1025   WtrDens        - Water density (kg/m^3)
             200   WtrDpth        - Water depth (meters)
-                  0   MSL2SWL        - Offset between still-water level and mean sea level (meters) [positive upward; unused when WaveMod=6; must be zero if PotMod=1 or 2]
+                  0   MSL2SWL        - Offset between still-water level and mean sea level (meters) [positive upward; unused when WaveMod = 6; must be zero if PotMod=1 or 2]
       ---------------------- WAVES ---------------------------------------------------
-                  3   WaveMod        - Incident wave kinematics model {0: none=still water, 1: regular (periodic), 1P#: regular with user-specified phase, 2: JONSWAP/Pierson-Moskowitz …
-                  0   WaveStMod      - Model for stretching incident wave kinematics to instantaneous free surface {0: none=no stretching, 1: vertical stretching, 2: extrapolation …
+                  3   WaveMod        - Incident wave kinematics model {0: none=still water, 1: regular (periodic), 1P#: regular with user-specified phase, 2: JONSWAP/Pierson-Moskowitz spectrum (irregular), 3: White noise spectrum (irregular), 4: user-defined spectrum from routine UserWaveSpctrm (irregular), 5: Externally generated wave-elevation time series, 6: Externally generated full wave-kinematics time series [option 6 is invalid for PotMod/=0]} (switch)
+                  0   WaveStMod      - Model for stretching incident wave kinematics to instantaneous free surface {0: none=no stretching, 1: vertical stretching, 2: extrapolation stretching, 3: Wheeler stretching} (switch) [unused when WaveMod=0 or when PotMod/=0]
             4600   WaveTMax       - Analysis time for incident wave calculations (sec) [unused when WaveMod=0; determines WaveDOmega=2Pi/WaveTMax in the IFFT]
             0.2   WaveDT         - Time step for incident wave calculations     (sec) [unused when WaveMod=0; 0.1<=WaveDT<=1.0 recommended; determines WaveOmegaMax=Pi/WaveDT in the IFFT]
             1.2646   WaveHs         - Significant wave height of incident waves (meters) [used only when WaveMod=1, 2, or 3]
@@ -24,24 +24,24 @@ structure::
             0.314159   WvLowCOff      - Low  cut-off frequency or lower frequency limit of the wave spectrum beyond which the wave spectrum is zeroed (rad/s) [unused when WaveMod=0, 1, or 6]
             1.570796   WvHiCOff       - High cut-off frequency or upper frequency limit of the wave spectrum beyond which the wave spectrum is zeroed (rad/s) [unused when WaveMod=0, 1, or 6]
                   0   WaveDir        - Incident wave propagation heading direction                         (degrees) [unused when WaveMod=0 or 6]
-                  0   WaveDirMod     - Directional spreading function {0: none, 1: COS2S}                  (-)       [only used when WaveMod=2, 3, or 4]
-                  1   WaveDirSpread  - Wave direction spreading coefficient ( > 0 )                        (-)       [only used when WaveMod=2, 3, or 4 and WaveDirMod=1]
-                  1   WaveNDir       - Number of wave directions                                           (-)       [only used when WaveMod=2, 3, or 4 and WaveDirMod=1; odd number only, …
-                  0   WaveDirRange   - Range of wave directions (full range: WaveDir +/- 1/2*WaveDirRange) (degrees) [only used when WaveMod=2, 3, or 4 and WaveDirMod=1]
+                  0   WaveDirMod     - Directional spreading function {0: none, 1: COS2S}                  (-)       [only used when WaveMod=2,3, or 4]
+                  1   WaveDirSpread  - Wave direction spreading coefficient ( > 0 )                        (-)       [only used when WaveMod=2,3, or 4 and WaveDirMod=1]
+                  1   WaveNDir       - Number of wave directions                                           (-)       [only used when WaveMod=2,3, or 4 and WaveDirMod=1; odd number only]
+                  0   WaveDirRange   - Range of wave directions (full range: WaveDir +/- 1/2*WaveDirRange) (degrees) [only used when WaveMod=2,3,or 4 and WaveDirMod=1]
       123456789   WaveSeed(1)    - First  random seed of incident waves [-2147483648 to 2147483647]    (-)       [unused when WaveMod=0, 5, or 6]
       1011121314   WaveSeed(2)    - Second random seed of incident waves [-2147483648 to 2147483647]    (-)       [unused when WaveMod=0, 5, or 6]
-      FALSE            WaveNDAmp      - Flag for normally distributed amplitudes (flag)                               [only used when WaveMod=2,3, or 4]
-      ""               WvKinFile      - Root name of externally generated wave data file(s) (quoted string)           [used only when WaveMod=5 or 6]
+      FALSE            WaveNDAmp      - Flag for normally distributed amplitudes                            (flag)    [only used when WaveMod=2, 3, or 4]
+      ""               WvKinFile      - Root name of externally generated wave data file(s)        (quoted string)    [used only when WaveMod=5 or 6]
                   1   NWaveElev      - Number of points where the incident wave elevations can be computed (-)       [maximum of 9 output locations]
-                  0   WaveElevxi     - List of xi-coordinates for points where the incident wave elevations can be output (meters) [NWaveElev points, separated by commas or white space; …
-                  0   WaveElevyi     - List of yi-coordinates for points where the incident wave elevations can be output (meters) [NWaveElev points, separated by commas or white space; …
+                  0   WaveElevxi     - List of xi-coordinates for points where the incident wave elevations can be output (meters) [NWaveElev points, separated by commas or white space; usused if NWaveElev = 0]
+                  0   WaveElevyi     - List of yi-coordinates for points where the incident wave elevations can be output (meters) [NWaveElev points, separated by commas or white space; usused if NWaveElev = 0]
       ---------------------- 2ND-ORDER WAVES ----------------------------------------- [unused with WaveMod=0 or 6]
-      False            WvDiffQTF      - Full difference-frequency 2nd-order wave kinematics (flag)
-      False            WvSumQTF       - Full summation-frequency  2nd-order wave kinematics (flag)
+      FALSE            WvDiffQTF      - Full difference-frequency 2nd-order wave kinematics (flag)
+      FALSE            WvSumQTF       - Full summation-frequency  2nd-order wave kinematics (flag)
                   0   WvLowCOffD     - Low  frequency cutoff used in the difference-frequencies (rad/s) [Only used with a difference-frequency method]
-            500   WvHiCOffD      - High frequency cutoff used in the difference-frequencies (rad/s) [Only used with a difference-frequency method]
-                  0   WvLowCOffS     - Low  frequency cutoff used in the summation-frequencies  (rad/s) [Only used with a summation-frequency  method]
-            500   WvHiCOffS      - High frequency cutoff used in the summation-frequencies  (rad/s) [Only used with a summation-frequency  method]
+            1.256637   WvHiCOffD      - High frequency cutoff used in the difference-frequencies (rad/s) [Only used with a difference-frequency method]
+            0.618319   WvLowCOffS     - Low  frequency cutoff used in the summation-frequencies  (rad/s) [Only used with a summation-frequency  method]
+            3.141593   WvHiCOffS      - High frequency cutoff used in the summation-frequencies  (rad/s) [Only used with a summation-frequency  method]
       ---------------------- CURRENT ------------------------------------------------- [unused with WaveMod=6]
                   0   CurrMod        - Current profile model {0: none=no current, 1: standard, 2: user-defined from routine UserCurrent} (switch)
                   0   CurrSSV0       - Sub-surface current velocity at still water level  (m/s) [used only when CurrMod=1]
@@ -53,19 +53,20 @@ structure::
                   0   CurrDIDir      - Depth-independent current heading direction    (degrees) [used only when CurrMod=1]
       ---------------------- FLOATING PLATFORM --------------------------------------- [unused with WaveMod=6]
                   1   PotMod         - Potential-flow model {0: none=no potential flow, 1: frequency-to-time-domain transforms based on WAMIT output, 2: fluid-impulse theory (FIT)} (switch)
-      "HydroData/marin_semi"    PotFile      - Root name of potential-flow model data; WAMIT output files containing the linear, nondimensionalized, hydrostatic restoring matrix (.hst…
+      "HydroData/marin_semi"    PotFile        - Root name of potential-flow model data; WAMIT output files containing the linear, nondimensionalized, hydrostatic restoring matrix (.hst), frequency-dependent hydrodynamic added mass matrix and damping matrix (.1), and frequency- and direction-dependent wave excitation force vector per unit wave amplitude (.3) (quoted string) [MAKE SURE THE FREQUENCIES INHERENT IN THESE WAMIT FILES SPAN THE PHYSICALLY-SIGNIFICANT RANGE OF FREQUENCIES FOR THE GIVEN PLATFORM; THEY MUST CONTAIN THE ZERO- AND INFINITE-FREQUENCY LIMITS!]
                   1   WAMITULEN      - Characteristic body length scale used to redimensionalize WAMIT output (meters) [only used when PotMod=1]
-            13917   PtfmVol0       - Displaced volume of water when the platform is in its undisplaced position (m^3) [only used when PotMod=1; USE THE SAME VALUE COMPUTED BY WAMIT AS…
-                  0   PtfmCOBxt      - The xt offset of the center of buoyancy (COB) from the platform reference point (meters) [only used when PotMod=1]
-                  0   PtfmCOByt      - The yt offset of the center of buoyancy (COB) from the platform reference point (meters) [only used when PotMod=1]
-                  1   RdtnMod        - Radiation memory-effect model {0: no memory-effect calculation, 1: convolution, 2: state-space} (switch) [only used when PotMod=1; STATE-SPACE REQUIRES…
-                  60   RdtnTMax       - Analysis time for wave radiation kernel calculations (sec) [determines RdtnDOmega=Pi/RdtnTMax in the cosine transform] [only used when PotMod=1; MAKE…
-            0.0125   RdtnDT         - Time step for wave radiation kernel calculations (sec) [only used when PotMod=1; DT<=RdtnDT<=0.1 recommended; determines RdtnOmegaMax=Pi/RdtnDT in the…
-      ---------------------- 2ND-ORDER FLOATING PLATFORM FORCES ---------------------- [unused with WaveMod=0 or 6 or PotMod=0 or 2]
-                  0   MnDrift        - Mean-drift 2nd-order forces computed                                        {0: None; [7, 8, 9, 10, 11, or 12]: WAMIT file to use} [Only one of …
-                  0   NewmanApp      - Mean- and slow-drift 2nd-order forces computed with Newman's approximation  {0: None; [7, 8, 9, 10, 11, or 12]: WAMIT file to use} [Only one of …
-                  0   DiffQTF        - Full difference-frequency 2nd-order forces computed with full QTF           {0: None; [10, 11, or 12]: WAMIT file to use}          [Only one of …
-                  0   SumQTF         - Full summation -frequency 2nd-order forces computed with full QTF           {0: None; [10, 11, or 12]: WAMIT file to use}
+            13917   PtfmVol0       - Displaced volume of water when the platform is in its undisplaced position (m^3) [only used when PotMod=1; USE THE SAME VALUE COMPUTED BY WAMIT AS OUTPUT IN THE .OUT FILE!]
+                  0   PtfmCOBxt      - The xt offset of the center of buoyancy (COB) from the platform reference point (meters)  [only used when PotMod=1]
+                  0   PtfmCOByt      - The yt offset of the center of buoyancy (COB) from the platform reference point (meters)  [only used when PotMod=1]
+                  1   ExctnMod       - Wave Excitation model {0: None, 1: DFT, 2: state-space} (switch) [only used when PotMod=1; STATE-SPACE REQUIRES *.ssexctn INPUT FILE]   
+                  1   RdtnMod        - Radiation memory-effect model {0: no memory-effect calculation, 1: convolution, 2: state-space} (switch) [only used when PotMod=1; STATE-SPACE REQUIRES *.ss INPUT FILE]
+                  60   RdtnTMax       - Analysis time for wave radiation kernel calculations (sec) [only used when PotMod=1 and RdtnMod>0; determines RdtnDOmega=Pi/RdtnTMax in the cosine transform; MAKE SURE THIS IS LONG ENOUGH FOR THE RADIATION IMPULSE RESPONSE FUNCTIONS TO DECAY TO NEAR-ZERO FOR THE GIVEN PLATFORM!]
+      "DEFAULT"        RdtnDT         - Time step for wave radiation kernel calculations (sec) [only used when PotMod=1 and RdtnMod=1; DT<=RdtnDT<=0.1 recommended; determines RdtnOmegaMax=Pi/RdtnDT in the cosine transform]
+      ---------------------- 2ND-ORDER FLOATING PLATFORM FORCES ---------------------- [unused with WaveMod=0 or 6, or PotMod=0 or 2]
+                  0   MnDrift        - Mean-drift 2nd-order forces computed                                       {0: None; [7, 8, 9, 10, 11, or 12]: WAMIT file to use} [Only one of MnDrift, NewmanApp, or DiffQTF can be non-zero]
+                  0   NewmanApp      - Mean- and slow-drift 2nd-order forces computed with Newman's approximation {0: None; [7, 8, 9, 10, 11, or 12]: WAMIT file to use} [Only one of MnDrift, NewmanApp, or DiffQTF can be non-zero. Used only when WaveDirMod=0]
+                  0   DiffQTF        - Full difference-frequency 2nd-order forces computed with full QTF          {0: None; [10, 11, or 12]: WAMIT file to use}          [Only one of MnDrift, NewmanApp, or DiffQTF can be non-zero]
+                  0   SumQTF         - Full summation -frequency 2nd-order forces computed with full QTF          {0: None; [10, 11, or 12]: WAMIT file to use}
       ---------------------- FLOATING PLATFORM FORCE FLAGS  -------------------------- [unused with WaveMod=6]
       True             PtfmSgF        - Platform horizontal surge translation force (flag) or DEFAULT
       True             PtfmSwF        - Platform horizontal sway translation force (flag) or DEFAULT
@@ -165,37 +166,36 @@ structure::
       (m)       (-)      (-)        (-)      (-)            (-)      (-)          (-)        (-)              (-)         (-)
       ---------------------- MEMBER-BASED HYDRODYNAMIC COEFFICIENTS (model 3) --------
                   25   NCoefMembers       - Number of member-based coefficients (-)
-      MemberID    MemberCd1     MemberCd2    MemberCdMG1   MemberCdMG2    MemberCa1     MemberCa2    MemberCaMG1   MemberCaMG2    MemberCp1     MemberCp2    MemberCpMG1   MemberCpMG2   …
-      (-)         (-)           (-)           (-)           (-)           (-)           (-)           (-)           (-)           (-)           (-)           (-)           (-)       …
-      1          0.56          0.56          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00      …     
-      2          0.61          0.61          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00      …                                                               
-      3          0.61          0.61          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00      …     
-      4          0.61          0.61          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00      … 
-      5          0.68          0.68          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00      …
-
-      6          0.68          0.68          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00     …
-      7          0.68          0.68          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00     …
-      23          0.68          0.68          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00     …
-      24          0.68          0.68          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00     …
-      25          0.68          0.68          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00     …
-      8          0.63          0.63          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00     …
-      9          0.63          0.63          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00     …
-      10          0.63          0.63          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00     …
-      11          0.63          0.63          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00     …
-      12          0.63          0.63          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00     …
-      13          0.63          0.63          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00     …
-      14          0.63          0.63          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00     …
-      15          0.63          0.63          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00     …
-      16          0.63          0.63          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00     …
-      17          0.63          0.63          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00     …
-      18          0.63          0.63          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00     …
-      19          0.63          0.63          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00     …
-      20          0.63          0.63          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00     …
-      21          0.63          0.63          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00     …
-      22          0.63          0.63          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00     …
+      MemberID    MemberCd1     MemberCd2    MemberCdMG1   MemberCdMG2    MemberCa1     MemberCa2    MemberCaMG1   MemberCaMG2    MemberCp1     MemberCp2    MemberCpMG1   MemberCpMG2   MemberAxCa1   MemberAxCa2  MemberAxCaMG1 MemberAxCaMG2  MemberAxCp1  MemberAxCp2   MemberAxCpMG1   MemberAxCpMG2
+      (-)         (-)           (-)           (-)           (-)           (-)           (-)           (-)           (-)           (-)           (-)           (-)           (-)           (-)           (-)           (-)           (-)           (-)           (-)           (-)           (-)          ! Main Column
+      1          0.56          0.56          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00         ! Upper Column 1
+      2          0.61          0.61          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00         ! Upper Column 2
+      3          0.61          0.61          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00         ! Upper Column 3
+      4          0.61          0.61          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00         ! Base Column 1
+      5          0.68          0.68          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00         ! Base Column 2
+      6          0.68          0.68          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00         ! Base Column 3
+      7          0.68          0.68          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00         ! Base column cap 1
+      23          0.68          0.68          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00         ! Base column cap 2
+      24          0.68          0.68          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00         ! Base column cap 3
+      25          0.68          0.68          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00         ! Delta Pontoon, Upper 1
+      8          0.63          0.63          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00         ! Delta Pontoon, Upper 2
+      9          0.63          0.63          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00         ! Delta Pontoon, Upper 3
+      10          0.63          0.63          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00         ! Delta Pontoon, Lower 1
+      11          0.63          0.63          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00         ! Delta Pontoon, Lower 2
+      12          0.63          0.63          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00         ! Delta Pontoon, Lower 3
+      13          0.63          0.63          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00         ! Y Pontoon, Upper 1
+      14          0.63          0.63          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00         ! Y Pontoon, Upper 2
+      15          0.63          0.63          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00         ! Y Pontoon, Upper 3
+      16          0.63          0.63          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00         ! Y Pontoon, Lower 1
+      17          0.63          0.63          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00         ! Y Pontoon, Lower 2
+      18          0.63          0.63          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00         ! Y Pontoon, Lower 3
+      19          0.63          0.63          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00         ! Cross Brace 1
+      20          0.63          0.63          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00         ! Cross Brace 2
+      21          0.63          0.63          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00         ! Cross Brace 3
+      22          0.63          0.63          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00
       -------------------- MEMBERS -------------------------------------------------
                   25   NMembers       - Number of members (-)
-      MemberID  MJointID1  MJointID2  MPropSetID1  MPropSetID2  MDivSize   MCoefMod  PropPot     [MCoefMod=1: use simple coeff table, 2: use depth-based coeff table, 3: use member-based …
+      MemberID  MJointID1  MJointID2  MPropSetID1  MPropSetID2  MDivSize   MCoefMod  PropPot   [MCoefMod=1: use simple coeff table, 2: use depth-based coeff table, 3: use member-based coeff table] [ PropPot/=0 if member is modeled with potential-flow theory]
       (-)        (-)        (-)         (-)          (-)        (m)      (switch)   (flag)
       1         1          2           1            1         1.0000      3        TRUE           ! Main Column
       2         3          4           2            2         1.0000      3        TRUE           ! Upper Column 1
@@ -242,14 +242,12 @@ structure::
       ---------------------- OUTPUT --------------------------------------------------
       True             HDSum          - Output a summary file [flag]
       False            OutAll         - Output all user-specified member and joint loads (only at each member end, not interior locations) [flag]
-                  2   OutSwtch       - Output requested channels to: [1=Hydrodyn.out, 2=GlueCode.out, 3=both files]
+                  1   OutSwtch        - Output requested channels to: [1=Hydrodyn.out, 2=GlueCode.out, 3=both files]
       "ES11.4e2"       OutFmt         - Output format for numerical results (quoted string) [not checked for validity!]
       "A11"            OutSFmt        - Output format for header strings (quoted string) [not checked for validity!]
       ---------------------- OUTPUT CHANNELS -----------------------------------------
       "Wave1Elev"               - Wave elevation at the platform reference point (0,  0)
       END of output channels and end of file. (the word "END" must appear in the first 3 columns of this line)
-
-
 
 Appendix B: OC4 Semi-submersible Input File
 ===========================================
