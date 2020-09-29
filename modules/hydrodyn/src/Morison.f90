@@ -1380,8 +1380,8 @@ subroutine FlipMemberNodeData( member, nodes, doSwap, errStat, errMsg )
       ! Loop over half the interior nodes and swap their indices
       do i = 1, ceiling( (numMemNodes-2.0_ReKi)/2.0_ReKi)
          indx = member%NodeIndx(1+i)
-         member%NodeIndx(1+i) = member%NodeIndx(numMemNodes-1-i)
-         member%NodeIndx(numMemNodes-1-i) = indx
+         member%NodeIndx(1+i) = member%NodeIndx(numMemNodes-i)
+         member%NodeIndx(numMemNodes-i) = indx
       end do
       
    end if    
@@ -1616,7 +1616,7 @@ subroutine SetMemberProperties( gravity, member, MCoefMod, MmbrCoefIDIndx, MmbrF
             member%Vinner = member%Vinner + Vinner_l + Vinner_u
             member%Vouter = member%Vouter + Vouter_l + Vouter_u
             member%Vsubmerged = member%Vsubmerged + Vouter_l + Vouter_u
-         else if ((0.0 > Za) .AND. (0.0 < Zb)) then
+         else if ((0.0 > Za) .AND. (0.0 <= Zb)) then
             if (i == 1) then
                call SetErrStat(ErrID_Fatal, 'The lowest element of a member must not cross the free surface.  This is true for MemberID '//trim(num2lstr(member%MemberID)), errStat, errMsg, 'SetMemberProperties')
             end if
@@ -2153,7 +2153,7 @@ SUBROUTINE RodrigMat(a, R, errStat, errMsg)
    !
       errStat = ErrID_Fatal
       errMsg  = 'RodrigMat encountered vector of zero length'
-   else IF ( EqualRealNos(a(1), 0.0) .AND. EqualRealNos(a(2), 0.0) ) THEN    ! return identity if vertical
+   else IF ( EqualRealNos(a(1), 0.0_ReKi) .AND. EqualRealNos(a(2), 0.0_ReKi) ) THEN    ! return identity if vertical
       CALL EYE(R, errStat,errMsg)
       IF (a(3) < 0) THEN
          R = -R
