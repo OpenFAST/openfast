@@ -401,11 +401,11 @@ SUBROUTINE TaperCalc(R1, R2, H, taperV, h_c)
       taperV = abs(pi*R1*R1*H)
       h_c = H/2.0
    elseif ( EqualRealNos(R1,0.0_ReKi) ) then             ! seperate this case out because it gives a divide by zero in general formula
-      taperV = abs(1./3.*pi*R2*R2*H)                                            ! cone volume
-      h_c = 3./4.*H                                                        ! from base           
+      taperV = abs(1.0/3.0*pi*R2*R2*H)                                            ! cone volume
+      h_c = 3.0/4.0*H                                                        ! from base           
    else
      taperV = abs(pi/3/m*(R2**3 - R1**3))
-     h_c = H*(R1**2 + 2*R1*R2 + 3*R2**2)/4/(R1**2 + R1*R2 + R2**2) !( coneV*1./4.*coneH - coneVtip*(1./4.*(coneH-H) + H) )/ taperV ! from base
+     h_c = H*(R1**2 + 2*R1*R2 + 3*R2**2)/4.0/(R1**2 + R1*R2 + R2**2) !( coneV*1./4.*coneH - coneVtip*(1./4.*(coneH-H) + H) )/ taperV ! from base
    end if
    
 END SUBROUTINE TaperCalc
@@ -424,17 +424,17 @@ SUBROUTINE CylInertia(R1, R2, H, rho, Il, Ir)
    m = (R2-R1)/H
 
    if ( EqualRealNos(R1, R2) ) then             ! if just a cylinder
-      Ir = abs(1/12* rho*pi*R1*R1*H *(3*R1*R1 + 4*H*H)) ! radial inertia about node 1 
+      Ir = abs(1.0/12.0* rho*pi*R1*R1*H *(3.0*R1*R1 + 4.0*H*H)) ! radial inertia about node 1 
       Il = abs(0.5* rho*pi*R1*R1*H *R1*R1)    
    ELSEIF ( EqualRealNos(R1,0.0_ReKi) ) then        ! seperate this case out because it gives a divide by zero in general formula
-      Ir = abs(rho*pi*(1/20/m + 1/5/m**3) * R2**5)      
-      Il = abs(1/10*rho*pi/m*R2**5)            
+      Ir = abs(rho*pi*(1.0/20.0/m + 1.0/5.0/m**3) * R2**5)      
+      Il = abs(1.0/10.0*rho*pi/m*R2**5)            
    ELSE 
-     h_c = H*(R1**2 + 2*R1*R2 + 3*R2**2)/4/(R1**2 + R1*R2 + R2**2) 
+     h_c = H*(R1**2 + 2*R1*R2 + 3*R2**2)/4.0/(R1**2 + R1*R2 + R2**2) 
      !l_c = R1/M + (R2-R1)/m *(R1**2 + 2*R1*R2 + 3*R2**2)/4/(R1**2 + R1*R2 + R2**2) 
-     Ir_tip = abs(pi/20 *rho/m*(1 + 4/m**2) * (R2**5 - R1**5))                    ! radial moment of inertia about tip of cone
-     Ir = abs(Ir_tip - rho/3/m*pi*(R2**3-R1**3) * (R1/m + 2*h_c)*R1/m )  ! radial moment of inertia about node 1
-     Il = abs(1/10/m*rho*pi*(R2**5 - R1**5))  
+     Ir_tip = abs(pi/20.0 *rho/m*(1.0 + 4.0/m**2) * (R2**5 - R1**5))                    ! radial moment of inertia about tip of cone
+     Ir = abs(Ir_tip - rho/3.0/m*pi*(R2**3-R1**3) * (R1/m + 2.0*h_c)*R1/m )  ! radial moment of inertia about node 1
+     Il = abs(1.0/10.0/m*rho*pi*(R2**5 - R1**5))  
    END IF
    
 END SUBROUTINE CylInertia
@@ -1653,9 +1653,9 @@ subroutine SetMemberProperties( gravity, member, MCoefMod, MmbrCoefIDIndx, MmbrF
          ! force and moment magnitude constants
 
          
-         member%Cfl_fb(i) = TwoPi * member%dRdl_in(i) * member%FillDens * gravity * dl *( (li - member%l_fill)*member%Rin(i) + 0.5*((li - member%l_fill)* member%dRdl_in(i) + member%Rin(i))*dl + 1/3* member%dRdl_in(i)*dl**2 )
-         member%Cfr_fb(i) =    Pi *                     member%FillDens * gravity * dl *( member%Rin(i)**2 +  member%dRdl_in(i)*member%Rin(i)*dl +1/3 * member%dRdl_in(i)**2 *dl**2 )
-         member%CM0_fb(i) = TwoPi *                     member%FillDens * gravity * dl *( 0.25*dl**3* member%dRdl_in(i)**4 + 0.25*dl**3* member%dRdl_in(i)**2 + dl**2* member%dRdl_in(i)**3*member%Rin(i) + 2/3*dl**2* member%dRdl_in(i)*member%Rin(i) + 1.5*dl* member%dRdl_in(i)**2*member%Rin(i)**2 + 0.5*dl*member%Rin(i)**2 +  member%dRdl_in(i)*member%Rin(i)**3 )
+         member%Cfl_fb(i) = TwoPi * member%dRdl_in(i) * member%FillDens * gravity * dl *( (li - member%l_fill)*member%Rin(i) + 0.5*((li - member%l_fill)* member%dRdl_in(i) + member%Rin(i))*dl + 1.0/3.0* member%dRdl_in(i)*dl**2 )
+         member%Cfr_fb(i) =    Pi *                     member%FillDens * gravity * dl *( member%Rin(i)**2 +  member%dRdl_in(i)*member%Rin(i)*dl +1.0/3.0 * member%dRdl_in(i)**2 *dl**2 )
+         member%CM0_fb(i) = TwoPi *                     member%FillDens * gravity * dl *( 0.25*dl**3* member%dRdl_in(i)**4 + 0.25*dl**3* member%dRdl_in(i)**2 + dl**2* member%dRdl_in(i)**3*member%Rin(i) + 2.0/3.0*dl**2* member%dRdl_in(i)*member%Rin(i) + 1.5*dl* member%dRdl_in(i)**2*member%Rin(i)**2 + 0.5*dl*member%Rin(i)**2 +  member%dRdl_in(i)*member%Rin(i)**3 )
          
          
       ! partially filled element
@@ -1686,9 +1686,9 @@ subroutine SetMemberProperties( gravity, member, MCoefMod, MmbrCoefIDIndx, MmbrF
          member%alpha_fb_star(i) = (1 - member%alpha_fb(i))*( Za - member%FillFSLoc )**3 / ( ( (1-member%alpha_fb(i))*(Za - member%FillFSLoc))**3 - member%alpha_fb(i)*(Zb - member%FillFSLoc)**3 )
          
          ! force and moment magnitude constants
-         member%Cfl_fb(i) = TwoPi * member%dRdl_in(i) * member%FillDens * gravity * member%h_fill *( (li - member%l_fill)*member%Rin(i) + 0.5*((li - member%l_fill)*member%dRdl_in(i) + member%Rin(i))*member%h_fill + 1/3*member%dRdl_in(i)*member%h_fill**2 )
-         member%Cfr_fb(i) =    Pi * member%FillDens * gravity * member%h_fill *( member%Rin(i)**2 + member%dRdl_in(i)*member%Rin(i)*member%h_fill +1/3 *member%dRdl_in(i)**2 *member%h_fill**2 )
-         member%CM0_fb(i) = TwoPi * member%FillDens * gravity * member%h_fill *( 0.25*member%h_fill**3*member%dRdl_in(i)**4 + 0.25*member%h_fill**3*member%dRdl_in(i)**2 + member%h_fill**2*member%dRdl_in(i)**3*member%Rin(i) + 2/3*member%h_fill**2*member%dRdl_in(i)*member%Rin(i)  &
+         member%Cfl_fb(i) = TwoPi * member%dRdl_in(i) * member%FillDens * gravity * member%h_fill *( (li - member%l_fill)*member%Rin(i) + 0.5*((li - member%l_fill)*member%dRdl_in(i) + member%Rin(i))*member%h_fill + 1.0/3.0*member%dRdl_in(i)*member%h_fill**2 )
+         member%Cfr_fb(i) =    Pi * member%FillDens * gravity * member%h_fill *( member%Rin(i)**2 + member%dRdl_in(i)*member%Rin(i)*member%h_fill +1.0/3.0 *member%dRdl_in(i)**2 *member%h_fill**2 )
+         member%CM0_fb(i) = TwoPi * member%FillDens * gravity * member%h_fill *( 0.25*member%h_fill**3*member%dRdl_in(i)**4 + 0.25*member%h_fill**3*member%dRdl_in(i)**2 + member%h_fill**2*member%dRdl_in(i)**3*member%Rin(i) + 2.0/3.0*member%h_fill**2*member%dRdl_in(i)*member%Rin(i)  &
                                                                                  + 1.5*member%h_fill*member%dRdl_in(i)**2*member%Rin(i)**2 + 0.5*member%h_fill*member%Rin(i)**2 + member%dRdl_in(i)*member%Rin(i)**3 ) &
                                     -0.25 * member%FillDens * gravity * Pi * (  member%Rin(i) + member%h_fill*member%dRdl_in(i))**4
       
@@ -2185,7 +2185,7 @@ FUNCTION GetAlpha(R1,R2)
    REAL(ReKi),                     INTENT    ( IN    )  :: R2  ! interior radius of other end of part-element
    
       
-   GetAlpha = (R1*R1 + 2*R1*R2 + 3*R2*R2)/4/(R1*R1 + R1*R2 + R2*R2)
+   GetAlpha = (R1*R1 + 2.0*R1*R2 + 3.0*R2*R2)/4.0/(R1*R1 + R1*R2 + R2*R2)
 
    
 END FUNCTION GetAlpha
@@ -2706,7 +2706,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                      cl   = (0.75*a0b0*r1**2*cosPhi + 0.75*r1**4*C_1 + r1*C_1*C_2) / (dRdl_mg*C_1*C_2)
                      cr   = (0.75*a0b0*dRdl_mg*rh**2*sinPhi)/(C_1*C_2)
                      cx   = cr*cosPhi + cl*sinPhi 
-                     Vs   = pi*(a0b0*rh*cosPhi - r1**3)/(3*dRdl_mg)       
+                     Vs   = pi*(a0b0*rh*cosPhi - r1**3)/(3.0*dRdl_mg)       
                   
                      ! End per plan equations
                      !===================
@@ -2729,8 +2729,8 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
               
                   end if
 
-                  pwr = 1
-                  alpha    = (1-mem%alpha(i))*z1**pwr/(-mem%alpha(i)*z2**pwr + (1-mem%alpha(i))*z1**pwr)
+                  pwr = 3
+                  alpha    = (1.0-mem%alpha(i))*z1**pwr/(-mem%alpha(i)*z2**pwr + (1.0-mem%alpha(i))*z1**pwr)
 
                   Fb  = Vs*p%WtrDens*g       !buoyant force
                   Fr  = -Fb*sinPhi     !radial component of buoyant force
@@ -2739,7 +2739,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
 
                   ! calculate (imaginary) bottom plate forces/moment to subtract from displacement-based values
                   Fl  = Fl  + p%WtrDens*g*z1* Pi *r1*r1        
-                  Moment  = Moment  + p%WtrDens*g* sinPhi * Pi/4*r1**4       
+                  Moment  = Moment  + p%WtrDens*g* sinPhi * Pi/4.0*r1**4       
 
 
                   ! reduce taper-based moment to remove (not double count) radial force distribution to each node 
@@ -2754,17 +2754,17 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                   y%Mesh%Moment(:,mem%NodeIndx(i-1)) = y%Mesh%Moment(:,mem%NodeIndx(i-1)) + F_B2(4:6)
                else ! normal, fully submerged case
               
-                  Fl = -2.0*Pi*dRdl_mg*p%WtrDens*g*dl*( z1*r1 + 0.5*(z1*dRdl_mg + r1*cosPhi)*dl + 1/3*dRdl_mg*cosPhi*dl*dl )   ! from CylinderCalculationsR1.ipynb
+                  Fl = -2.0*Pi*dRdl_mg*p%WtrDens*g*dl*( z1*r1 + 0.5*(z1*dRdl_mg + r1*cosPhi)*dl + 1.0/3.0*(dRdl_mg*cosPhi*dl*dl) )   ! from CylinderCalculationsR1.ipynb
               
-                  Fr = -Pi*p%WtrDens*g*dl*(r1*r1 + dRdl_mg*r1*dl + 1/3*dRdl_mg**2*dl**2)*sinPhi                          ! from CylinderCalculationsR1.ipynb
-                  Moment = -Pi*dl*g*p%WtrDens*(3*dl**3*dRdl_mg**4 + 3*dl**3*dRdl_mg**2 + 12*dl**2*dRdl_mg**3*r1 + 8*dl**2*dRdl_mg*r1 + 18*dl*dRdl_mg**2*r1*r1 + 6*dl*r1*r1 + 12*dRdl_mg*r1**3)*sinPhi/12   ! latest from CylinderCalculationsR1.ipynb
+                  Fr = -Pi*p%WtrDens*g*dl*(r1*r1 + dRdl_mg*r1*dl + (dRdl_mg**2*dl**2)/3.0)*sinPhi                          ! from CylinderCalculationsR1.ipynb
+                  Moment = -Pi*dl*g*p%WtrDens*(3.0*dl**3*dRdl_mg**4 + 3.0*dl**3*dRdl_mg**2 + 12.0*dl**2*dRdl_mg**3*r1 + 8.0*dl**2*dRdl_mg*r1 + 18.0*dl*dRdl_mg**2*r1*r1 + 6.0*dl*r1*r1 + 12.0*dRdl_mg*r1**3)*sinPhi/12.0   ! latest from CylinderCalculationsR1.ipynb
 
                   ! precomputed as mem%alpha(i) ... alpha0 = (r1*r1 + 2*r1*r2 + 3*r2**2)/4/(r1*r1 + r1*r2 + r2**2)
       !TODO: Review the below alpha eqn, GJH           
                   z1d = -min(0.0_ReKi,z1)
                   z2d = -min(0.0_ReKi,z2)
                    
-                  pwr = 1
+                  pwr = 3
                   alpha = mem%alpha(i)*z2d**pwr/(mem%alpha(i)*z2d**pwr+(1-mem%alpha(i))*z1d**pwr)
                              
               
@@ -2842,7 +2842,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                lstar = dl*(i-1)
             end if
             Fl =TwoPi * mem%dRdl_in(i) * mem%FillDens * p%gravity * dl *( -( mem%Rin(i) + 0.5* mem%dRdl_in(i)*dl )*mem%z_overfill +  &
-                        ( lstar*mem%Rin(i) + 0.5*(lstar*mem%dRdl_in(i) + mem%Rin(i) )*dl + 1/3* mem%dRdl_in(i)*dl**2 )*cosphi )
+                        ( lstar*mem%Rin(i) + 0.5*(lstar*mem%dRdl_in(i) + mem%Rin(i) )*dl + mem%dRdl_in(i)*dl**2/3.0 )*cosphi )
 
             ! forces and moment in tilted coordinates about node i
             !Fl = mem%Cfl_fb(i)*cosPhi     
