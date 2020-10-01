@@ -404,7 +404,7 @@ SUBROUTINE TaperCalc(R1, R2, H, taperV, h_c)
       taperV = abs(1.0/3.0*pi*R2*R2*H)                                            ! cone volume
       h_c = 3.0/4.0*H                                                        ! from base           
    else
-     taperV = abs(pi/3/m*(R2**3 - R1**3))
+     taperV = abs(pi/3.0/m*(R2**3 - R1**3))
      h_c = H*(R1**2 + 2*R1*R2 + 3*R2**2)/4.0/(R1**2 + R1*R2 + R2**2) !( coneV*1./4.*coneH - coneVtip*(1./4.*(coneH-H) + H) )/ taperV ! from base
    end if
    
@@ -1017,6 +1017,7 @@ subroutine Morison_GenerateSimulationNodes( MSL2SWL, numJoints, inpJoints, numMe
             numNodes = numNodes + 1
             s = real(j, ReKi) / real(numDiv, ReKi)
             nodes(numNodes)%Position =  inpJoints(j1)%Position*(1-s) + inpJoints(j2)%Position*s
+            nodes(numNodes)%Position(3) = nodes(numNodes)%Position(3) - MSL2SWL  ! Correct the Z-coordinate based on the mean sea level To still water level offset value
             inpMembers(i)%NodeIndx(j+1) = numNodes
          end do 
       end if        
