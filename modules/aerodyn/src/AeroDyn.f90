@@ -1968,7 +1968,8 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
    end if   
    if (InputFileData%TwrShadow /= TwrShadow_none .and. InputFileData%TwrShadow /= TwrShadow_Powles .and. InputFileData%TwrShadow /= TwrShadow_Eames) then
       call SetErrStat ( ErrID_Fatal, 'TwrShadow must be 0 (none), 1 (Powles tower shadow modle), or 2 (Eames tower shadow model).', ErrStat, ErrMsg, RoutineName ) 
-   end if   
+   end if
+!FIXME: before PR, check if we want to tighten these limits.
    if (InputFileData%TwrShadow == TwrShadow_Eames) then
       do j=1,size(InputFileData%TwrTI)
          if (InputFileData%TwrTI(j) <= 0.0 .or. InputFileData%TwrTI(j) >= 1.0) call SetErrStat ( ErrID_Fatal, 'The turbulence intensity for the Eames tower shadow model must be greater than zero and less than 1.', ErrStat, ErrMsg, RoutineName )
