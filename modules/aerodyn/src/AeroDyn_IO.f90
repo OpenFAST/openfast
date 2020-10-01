@@ -1976,10 +1976,11 @@ CONTAINS
 END SUBROUTINE ReadInputFiles
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine parses the input file data stored in FileInfo_In and places it in the InputFileData structure for validating.
-SUBROUTINE ParsePrimaryFileInfo( InputFile, RootName, NumBlades, interval, FileInfo_In, InputFileData, UnEc, ErrStat, ErrMsg )
+SUBROUTINE ParsePrimaryFileInfo( PriPath, InputFile, RootName, NumBlades, interval, FileInfo_In, InputFileData, UnEc, ErrStat, ErrMsg )
    implicit    none
 
       ! Passed variables
+   character(*),                    intent(in   )  :: PriPath           !< primary path
    CHARACTER(*),                    intent(in   )  :: InputFile         !< Name of the file containing the primary input data
    CHARACTER(*),                    intent(in   )  :: RootName          !< The rootname of the echo file, possibly opened in this routine
    integer(IntKi),                  intent(in   )  :: NumBlades         !< Number of blades we expect -- from InitInp
@@ -1998,7 +1999,6 @@ SUBROUTINE ParsePrimaryFileInfo( InputFile, RootName, NumBlades, interval, FileI
    integer(IntKi)                                  :: CurLine           !< current entry in FileInfo_In%Lines array
    real(ReKi)                                      :: TmpRe3(3)         !< temporary 3 number array for reading values in
 
-   character(1024)                                 :: PriPath           ! Path name of the primary file
    character(1024)                                 :: FTitle            ! "File Title": the 2nd line of the input file, which contains a description of its contents
    character(*), parameter                         :: RoutineName = 'ParsePrimaryFileInfo'
 
@@ -2007,7 +2007,6 @@ SUBROUTINE ParsePrimaryFileInfo( InputFile, RootName, NumBlades, interval, FileI
    ErrMsg   =  ""
    UnEc   = -1     ! Echo file unit.  >0 when used
 
-   CALL GetPath( InputFile, PriPath )     ! Input files will be relative to the path where the primary input file is located.
 
    CALL AllocAry( InputFileData%OutList, MaxOutPts, "Outlist", ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
