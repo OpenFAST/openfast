@@ -15,6 +15,8 @@ Units
 ~~~~~
 HydroDyn uses the SI system (kg, m, s, N).
 
+.. _hd-driver-input:
+
 HydroDyn Driver Input File
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 The driver input file is only needed for the standalone version of
@@ -85,6 +87,8 @@ elevation outputs is **NWaveElev** + ( **WaveElevNX** × **WaveElevNY**
 contains the total wave elevation, which is the sum of the first- and
 second-order terms (when the second-order wave kinematics are optionally
 enabled).
+
+.. _hd-primary-input:
 
 HydroDyn Primary Input File
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

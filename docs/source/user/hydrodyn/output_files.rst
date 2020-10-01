@@ -1,3 +1,5 @@
+.. _hd-output:
+
 Output Files
 ============
 HydroDyn produces four types of output files: an echo file, a
