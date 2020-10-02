@@ -530,9 +530,7 @@ SUBROUTINE ED_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
    REAL(R8Ki)                   :: TmpVec2   (NDims)                               ! A temporary vector.
 
    REAL(ReKi)                   :: LinAccES (NDims,0:p%TipNode,p%NumBl)            ! Total linear acceleration of a point on a   blade (point S) in the inertia frame (body E for earth).
-!SP_start
-   REAL(ReKi)                   :: AngAccEK (NDims,0:p%TipNode,p%NumBl)            ! Total linear acceleration of a point on a   blade (point S) in the inertia frame (body E for earth).
-!SP_end
+   REAL(ReKi)                   :: AngAccEK (NDims,0:p%TipNode,p%NumBl)            ! Total rotational acceleration of a point on a blade (point S) in the inertia frame (body E for earth).
    REAL(ReKi)                   :: LinAccET (NDims,0:p%TwrNodes)                   ! Total linear acceleration of a point on the tower (point T) in the inertia frame (body E for earth).
    REAL(ReKi)                   :: AngAccEF (NDims,0:p%TwrNodes)                   ! Total angular acceleration of tower element J (body F) in the inertia frame (body E for earth).
    REAL(ReKi)                   :: FrcS0B   (NDims,p%NumBl)                        ! Total force at the blade root (point S(0)) due to the blade.
@@ -669,14 +667,10 @@ SUBROUTINE ED_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       DO J = 0,p%TipNode ! Loop through the blade nodes / elements
 
          LinAccES(:,J,K) = m%RtHS%LinAccESt(:,K,J)
-!SP_start
          AngAccEK(:,J,K) = m%RtHs%AngAccEKt(:,J,K)
-!SP_end
          DO I = 1,p%DOFs%NPSE(K)  ! Loop through all active (enabled) DOFs that contribute to the QD2T-related linear accelerations of blade K
             LinAccES(:,J,K) = LinAccES(:,J,K) + m%RtHS%PLinVelES(K,J,p%DOFs%PSE(K,I),0,:)*m%QD2T(p%DOFs%PSE(K,I))
-!SP_start
             AngAccEK(:,J,K) = AngAccEK(:,J,K) + m%RtHS%PAngVelEM(K,J,p%DOFs%PSE(K,I),0,:)*m%QD2T(p%DOFs%PSE(K,I))
-!SP_end
          ENDDO             ! I - All active (enabled) DOFs that contribute to the QD2T-related linear accelerations of blade K
 
       ENDDO             ! J - Blade nodes / elements
@@ -1399,16 +1393,11 @@ END IF
             y%BladeLn2Mesh(K)%TranslationAcc(1,NodeNum) =     LinAccES(1,J2,K)
             y%BladeLn2Mesh(K)%TranslationAcc(2,NodeNum) = -1.*LinAccES(3,J2,K)
             y%BladeLn2Mesh(K)%TranslationAcc(3,NodeNum) =     LinAccES(2,J2,K)  
-!SP had this: FIXME: check if valid
-!            y%BladeLn2Mesh(K)%RotationVel(1,NodeNum)     =     m%RtHS%AngVelHM(1,J2,K)
-!            y%BladeLn2Mesh(K)%RotationVel(2,NodeNum)     = -1.*m%RtHS%AngVelHM(3,J2,K)
-!            y%BladeLn2Mesh(K)%RotationVel(3,NodeNum)     =     m%RtHS%AngVelHM(2,J2,K) 
 
-!SP_start
+               ! Rotational Acceleration
             y%BladeLn2Mesh(K)%RotationAcc(1,NodeNum)     =     AngAccEK(1,J2,K)
             y%BladeLn2Mesh(K)%RotationAcc(2,NodeNum)     = -1.*AngAccEK(3,J2,K)
             y%BladeLn2Mesh(K)%RotationAcc(3,NodeNum)     =     AngAccEK(2,J2,K) 
-!SP_end
                
             
          END DO !J = 1,p%BldNodes ! Loop through the blade nodes / elements
@@ -3146,20 +3135,12 @@ SUBROUTINE Alloc_RtHS( RtHS, p, ErrStat, ErrMsg  )
       ErrMsg = ' Error allocating memory for LinAccESt.'
       RETURN
    ENDIF
-!SP_start
-   ALLOCATE ( RtHS%AngVelHM( Dims, 0:p%TipNode, p%NumBl ) , STAT=ErrStat )
-   IF ( ErrStat /= 0_IntKi )  THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg = ' Error allocating memory for AngVelHM.'
-      RETURN
-   ENDIF
    ALLOCATE ( RtHS%AngAccEKt( Dims, 0:p%TipNode, p%NumBl ) , STAT=ErrStat )
    IF ( ErrStat /= 0_IntKi )  THEN
       ErrStat = ErrID_Fatal
       ErrMsg = ' Error allocating memory for AngAccEKt.'
       RETURN
    ENDIF
-!SP_end
 
    ALLOCATE(RtHS%AngPosHM(Dims, p%NumBl, 0:p%TipNode), STAT=ErrStat )
    IF ( ErrStat /= 0_IntKi )  THEN
@@ -6977,26 +6958,13 @@ ENDIF
                                       AngVelHM  =     x%QDT(DOF_BF(K,1))*RtHSdat%PAngVelEM(K,J,DOF_BF(K,1),0,:) &
                                                     + x%QDT(DOF_BF(K,2))*RtHSdat%PAngVelEM(K,J,DOF_BF(K,2),0,:) &
                                                     + x%QDT(DOF_BE(K,1))*RtHSdat%PAngVelEM(K,J,DOF_BE(K,1),0,:)
-!SP_start: FIXME: check the math here.
-!         RtHSdat%PAngVelEM(K,J,          :,1,:) = RtHSdat%PAngVelEH(:,1,:)
-!         RtHSdat%PAngVelEM(K,J,DOF_BF(K,1),1,:) = CROSS_PRODUCT(   RtHSdat%AngVelEH, RtHSdat%PAngVelEM(K,J,DOF_BF(K,1),0,:) )
-!         RtHSdat%PAngVelEM(K,J,DOF_BF(K,2),1,:) = CROSS_PRODUCT(   RtHSdat%AngVelEH, RtHSdat%PAngVelEM(K,J,DOF_BF(K,2),0,:) )
-!         RtHSdat%PAngVelEM(K,J,DOF_BE(K,1),1,:) = CROSS_PRODUCT(   RtHSdat%AngVelEH, RtHSdat%PAngVelEM(K,J,DOF_BE(K,1),0,:) )
-!         RtHSdat%AngVelHM(:,J              ,K) =  RtHSdat%AngVelEH + x%QDT(DOF_BF(K,1))*RtHSdat%PAngVelEM(K,J,DOF_BF(K,1),0,:) & 
-!                                                                   + x%QDT(DOF_BF(K,2))*RtHSdat%PAngVelEM(K,J,DOF_BF(K,2),0,:) & 
-!                                                                   + x%QDT(DOF_BE(K,1))*RtHSdat%PAngVelEM(K,J,DOF_BE(K,1),0,:)   
-!SP_end
           RtHSdat%AngVelEM(:,J,K              ) =  RtHSdat%AngVelEH + AngVelHM
           RtHSdat%AngPosHM(:,K,J              ) =     x%QT (DOF_BF(K,1))*RtHSdat%PAngVelEM(K,J,DOF_BF(K,1),0,:) &
                                                     + x%QT (DOF_BF(K,2))*RtHSdat%PAngVelEM(K,J,DOF_BF(K,2),0,:) &
                                                     + x%QT (DOF_BE(K,1))*RtHSdat%PAngVelEM(K,J,DOF_BE(K,1),0,:)
-
-
-!SP_start
          RtHSdat%AngAccEKt(:,J              ,K) =  RtHSdat%AngAccEHt + x%QDT(DOF_BF(K,1))*RtHSdat%PAngVelEM(K,J,DOF_BF(K,1),1,:) & 
                                                                      + x%QDT(DOF_BF(K,2))*RtHSdat%PAngVelEM(K,J,DOF_BF(K,2),1,:) & 
                                                                      + x%QDT(DOF_BE(K,1))*RtHSdat%PAngVelEM(K,J,DOF_BE(K,1),1,:)   
-!SP_end
  
       ! Define the 1st derivatives of the partial angular velocities of the current node (body M(RNodes(J))) in the inertia frame:
 
