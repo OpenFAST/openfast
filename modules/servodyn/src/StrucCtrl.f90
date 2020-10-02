@@ -112,6 +112,7 @@ SUBROUTINE StC_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
       ErrStat = ErrID_None
       ErrMsg  = ''
       NumOuts = 0
+      UnEcho  = -1   ! will be > 0 if echo file is opened
 
    InitOut%dummyInitOut = 0.0_SiKi  ! initialize this so compiler doesn't warn about un-set intent(out) variables
 
@@ -128,13 +129,12 @@ SUBROUTINE StC_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
    if (InitInp%UseInputFile) then
       ! Read the entire input file, minus any comment lines, into the FileInfo_In
       ! data structure in memory for further processing.
-      call ProcessComFile( InitInp%InputFile, FileInfo_In, ErrStat, ErrMsg )
+      call ProcessComFile( InitInp%InputFile, FileInfo_In, ErrStat2, ErrMsg2 )
    else
          ! put passed string info into the FileInfo_In -- FileInfo structure
-!      call StringArray_To_FileInfo( InitInp%InputFileStringArray, FileInfo_In, ErrStat2, ErrMsg2 )
+      call NWTC_Library_CopyFileInfoType( InitInp%PassedPrimaryInputData, FileInfo_In, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
    endif
-   CALL CheckError( ErrStat2, ErrMsg2 )
-   IF (ErrStat >= AbortErrLev) RETURN
+   if (Failed())  return;
 
    ! For diagnostic purposes, the following can be used to display the contents
    ! of the FileInfo_In data structure.
@@ -142,27 +142,23 @@ SUBROUTINE StC_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
 
       !  Parse the FileInfo_In structure of data from the inputfile into the InitInp%InputFile structure
    CALL StC_ParseInputFileInfo( InitInp%InputFile, TRIM(InitInp%RootName), FileInfo_In, InputFileData, UnEcho, ErrStat2, ErrMsg2 )
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF (ErrStat >= AbortErrLev) RETURN
+   if (Failed())  return;
 
       ! Using the InputFileData structure, check that it makes sense
    CALL StC_ValidatePrimaryData( InputFileData, InitInp, ErrStat2, ErrMsg2 )
-      CALL CheckError( ErrStat2, ErrMsg2 )
-       IF (ErrStat >= AbortErrLev) RETURN
+   if (Failed())  return;
 
       ! read in the prescribed forces file
    if ( p%StC_DOF_MODE == DOFMode_Prescribed ) then
       call Read_ForceTimeSeriesFile(InputFileData%PrescribedForcesFile,p%StC_PrescribedForce,ErrStat2,ErrMsg2)
-      CALL CheckError( ErrStat2, ErrMsg2 )
-       IF (ErrStat >= AbortErrLev) RETURN
+      if (Failed())  return;
    endif
 
       !............................................................................................
       ! Define parameters here:
       !............................................................................................
    CALL StC_SetParameters( InputFileData, InitInp, p, Interval, ErrStat2, ErrMsg2 )
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF (ErrStat >= AbortErrLev) RETURN
+   if (Failed())  return;
 
       !............................................................................................
       ! Define initial system states here:
@@ -175,14 +171,12 @@ SUBROUTINE StC_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
    OtherState%DummyOtherState = 0
 
    call Init_Misc( p, m, ErrStat2, ErrMsg2 )
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF (ErrStat >= AbortErrLev) RETURN
+   if (Failed())  return;
 
 
    ! Allocate continuous states (x)
    call AllocAry(x%StC_x, 6, p%NumMeshPts, 'x%StC_x',  ErrStat2,ErrMsg2)
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF (ErrStat >= AbortErrLev) RETURN
+   if (Failed())  return;
 
    ! Define initial guess for the system states here:
    do i_pt=1,p%NumMeshPts
@@ -196,10 +190,9 @@ SUBROUTINE StC_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
 
 
    ! set positions and orientations for tuned mass dampers's
-   call AllocAry(PositionP,       3, p%NumMeshPts, 'PositionP',      ErrStat2,ErrMsg2); CALL CheckError( ErrStat2, ErrMsg2 )
-   call AllocAry(PositionGlobal,  3, p%NumMeshPts, 'PositionGlobal', ErrStat2,ErrMsg2); CALL CheckError( ErrStat2, ErrMsg2 )
-   call AllocAry(OrientationP, 3, 3, p%NumMeshPts, 'OrientationP',   ErrStat2,ErrMsg2); CALL CheckError( ErrStat2, ErrMsg2 )
-      IF (ErrStat >= AbortErrLev) RETURN
+   call AllocAry(PositionP,       3, p%NumMeshPts, 'PositionP',      ErrStat2,ErrMsg2);  if (Failed())  return;
+   call AllocAry(PositionGlobal,  3, p%NumMeshPts, 'PositionGlobal', ErrStat2,ErrMsg2);  if (Failed())  return;
+   call AllocAry(OrientationP, 3, 3, p%NumMeshPts, 'OrientationP',   ErrStat2,ErrMsg2);  if (Failed())  return;
 
    ! Set the initial positions and orietantions for each point
    do i_pt = 1,p%NumMeshPts
@@ -238,11 +231,7 @@ SUBROUTINE StC_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
                      ,RotationVel       = .TRUE.            &
                      ,TranslationAcc    = .TRUE.            &
                      ,RotationAcc       = .TRUE.)
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         IF ( ErrStat >= AbortErrLev ) THEN
-            CALL Cleanup()
-            RETURN
-         END IF
+      if (Failed())  return;
 
 
          ! Create the node on the mesh
@@ -260,11 +249,7 @@ SUBROUTINE StC_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
       CALL MeshCommit ( u%Mesh(i_pt)        &
                       , ErrStat2            &
                       , ErrMsg2             )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         IF ( ErrStat >= AbortErrLev ) THEN
-            CALL Cleanup()
-            RETURN
-         END IF
+      if (Failed())  return;
 
       CALL MeshCopy ( SrcMesh      = u%Mesh(i_pt)           &
                      ,DestMesh     = y%Mesh(i_pt)           &
@@ -275,11 +260,7 @@ SUBROUTINE StC_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
                      ,Force        = .TRUE.                 &
                      ,Moment       = .TRUE.                 )
 
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         IF ( ErrStat >= AbortErrLev ) THEN
-            CALL Cleanup()
-            RETURN
-         END IF
+      if (Failed())  return;
 
       u%Mesh(i_pt)%RemapFlag  = .TRUE.
       y%Mesh(i_pt)%RemapFlag  = .TRUE.
@@ -355,44 +336,18 @@ CONTAINS
 
    end subroutine Init_Misc
    !.........................................
-   SUBROUTINE CheckError(ErrID,Msg)
-   ! This subroutine sets the error message and level and cleans up if the error is >= AbortErrLev
-   !...............................................................................................................................
-
-         ! Passed arguments
-      INTEGER(IntKi), INTENT(IN) :: ErrID       ! The error identifier (ErrStat)
-      CHARACTER(*),   INTENT(IN) :: Msg         ! The error message (ErrMsg)
-
-
-      !............................................................................................................................
-      ! Set error status/message;
-      !............................................................................................................................
-
-      IF ( ErrID /= ErrID_None ) THEN
-
-         IF (ErrStat /= ErrID_None) ErrMsg = TRIM(ErrMsg)//NewLine
-         ErrMsg = TRIM(ErrMsg)//'StC_Init:'//TRIM(Msg)
-         ErrStat = MAX(ErrStat, ErrID)
-
-         !.........................................................................................................................
-         ! Clean up if we're going to return on error: close files, deallocate local arrays
-         !.........................................................................................................................
-         IF ( ErrStat >= AbortErrLev ) THEN
-            call cleanup()
-         END IF
-
-      END IF
-
-
-   END SUBROUTINE CheckError
+   logical function Failed()
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'StC_Init' )
+      Failed = ErrStat >= AbortErrLev
+      if (Failed)    call cleanup()
+   end function Failed
    !.........................................
    SUBROUTINE cleanup()
-
-   if (allocated(PositionP     ))   deallocate(PositionP     )
-   if (allocated(PositionGlobal))   deallocate(PositionGlobal)
-   if (allocated(OrientationP  ))   deallocate(OrientationP  )
-   CALL StC_DestroyInputFile( InputFileData, ErrStat2, ErrMsg2)      ! Ignore warnings here.
-
+      if (UnEcho > 0)                  close(UnEcho)                    ! Close echo file
+      if (allocated(PositionP     ))   deallocate(PositionP     )
+      if (allocated(PositionGlobal))   deallocate(PositionGlobal)
+      if (allocated(OrientationP  ))   deallocate(OrientationP  )
+      CALL StC_DestroyInputFile( InputFileData, ErrStat2, ErrMsg2)      ! Ignore warnings here.
    END SUBROUTINE cleanup
 !.........................................
 END SUBROUTINE StC_Init
