@@ -507,7 +507,7 @@ Frequency-dependent hydrodynamic coefficients are needed before running
 the potential-flow solution in HydroDyn using **PotMod** = 1. An
 external pre-processing tool should be used to generate the appropriate
 frequency-dependent hydrodynamic coefficients. The naming in this manual
-has focused on WAMIT [Lee, 2006], but other frequency-domain wave-body
+has focused on WAMIT :cite:`LeeNewman:2006`, but other frequency-domain wave-body
 interaction panel codes can be used that produce similar data. However,
 in the end, the WAMIT format is what is expected by HydroDyn.
 

@@ -499,7 +499,7 @@ WAMIT, if you are not using WAMIT, it is recommended that you reformat
 your data according to the WAMIT format (including
 nondimensionalization) before inputting them to HydroDyn. Information on
 the WAMIT format is available from Chapter 4 of the WAMIT User's Guide
-[Lee, 2006].
+:cite:`LeeNewman:2006`.
 
 **PtfmVol0** is the displaced volume of water when the platform is in
 its undisplaced position. This value should be set equal to the value

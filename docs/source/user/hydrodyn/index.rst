@@ -9,7 +9,7 @@ HydroDyn User Guide and Theory Manual
    output_files.rst
    modeling_considerations.rst
    future_work.rst
-   refs.rst
+   zrefs.rst
    appendix.rst
 
 HydroDyn is a time-domain hydrodynamics module that has been coupled
@@ -34,8 +34,8 @@ long-crested (unidirectional) or short-crested (wave energy spread
 across a range of directions). Wave elevations or full wave kinematics
 can also be generated externally and used within HydroDyn. Internally,
 HydroDyn generates waves analytically for finite depth using first-order
-(linear Airy) or first plus second-order wave theory [Sharma and Dean,
-1981] with the option to include directional spreading, but wave
+(linear Airy) or first plus second-order wave theory :cite:`SharmaDean:1981`
+with the option to include directional spreading, but wave
 kinematics are only computed in the domain between the flat seabed and
 still-water level (SWL) and no wave stretching or higher order wave
 theories are included. The second-order hydrodynamic implementations
