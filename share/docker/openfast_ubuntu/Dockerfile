@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-FROM ubuntu:latest
+FROM ubuntu:bionic
 
 # Install dependencies
 
