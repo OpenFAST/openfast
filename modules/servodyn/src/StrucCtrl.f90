@@ -149,7 +149,7 @@ SUBROUTINE StC_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
    if (Failed())  return;
 
       ! read in the prescribed forces file
-   if ( p%StC_DOF_MODE == DOFMode_Prescribed ) then
+   if ( InputFileData%StC_DOF_MODE == DOFMode_Prescribed ) then
       call Read_ForceTimeSeriesFile(InputFileData%PrescribedForcesFile,p%StC_PrescribedForce,ErrStat2,ErrMsg2)
       if (Failed())  return;
    endif
