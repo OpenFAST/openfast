@@ -47,22 +47,26 @@ time-series input file whose name is specified via the
 **WAMITInputsFile** parameter. The WAMIT inputs file is a text-formatted
 file. This file has no header lines. Each data row corresponds to a
 given time step, and the whitespace separated columns of floating point
-values represent the necessary motion inputs as shown in Table 1. All
-motions are specified in the global inertial-frame coordinate system.
+values represent the necessary motion inputs as shown in
+:numref:`wamit_input_table`. All motions are specified in the global
+inertial-frame coordinate system.
 
-Table 1. WAMIT Inputs Time-Series Data File Contents
+.. _wamit_input_table:
 
-============= ================================================================================ ======================================
-Column Number Input                                                                            Units
-============= ================================================================================ ======================================
-1             Time step value                                                                  .. math:: s
-2-4           Translational displacements along *X*, *Y*, and *Z*                              .. math:: m
-5-7           Rotational displacements about *X*, *Y*, and *Z* (small angle assumptions apply) .. math:: \text{radians}
-8-10          Translational velocities along *X*, *Y*, and *Z*                                 .. math:: \frac{m}{s}
-11-13         Rotational velocities about *X*, *Y*, and *Z*                                    .. math:: \frac{\text{radians}}{s}
-14-16         Translational accelerations along *X*, *Y*, and *Z*                              .. math:: \frac{m}{s^{2}}
-17-19         Rotational accelerations about *X*, *Y*, and *Z*                                 .. math:: \frac{\text{radians}}{s^{2}}
-============= ================================================================================ ======================================
+.. table:: WAMIT Inputs Time-Series Data File Contents
+   :widths: auto
+
+   ============= ================================================================================ ======================================
+   Column Number Input                                                                            Units
+   ============= ================================================================================ ======================================
+   1             Time step value                                                                  .. math:: s
+   2-4           Translational displacements along *X*, *Y*, and *Z*                              .. math:: m
+   5-7           Rotational displacements about *X*, *Y*, and *Z* (small angle assumptions apply) .. math:: \text{radians}
+   8-10          Translational velocities along *X*, *Y*, and *Z*                                 .. math:: \frac{m}{s}
+   11-13         Rotational velocities about *X*, *Y*, and *Z*                                    .. math:: \frac{\text{radians}}{s}
+   14-16         Translational accelerations along *X*, *Y*, and *Z*                              .. math:: \frac{m}{s^{2}}
+   17-19         Rotational accelerations about *X*, *Y*, and *Z*                                 .. math:: \frac{\text{radians}}{s^{2}}
+   ============= ================================================================================ ======================================
 
 In a similar fashion, the input motions for the Morison members
 (strip-theory model) are set to zero if **MorisonInputsMod** = 0. If you
@@ -72,7 +76,7 @@ STATE INPUTS section. Currently, option 2 is unavailable for the Morison
 inputs.
 
 The standalone HydroDyn does not check for physical consistency between
-motions specified for the WRP and Morison members in the driver file .
+motions specified for the WRP and Morison members in the driver file.
 
 Setting **WaveElevSeriesFlag** to TRUE enables the outputting of a grid
 of wave elevations to a text-based file with the name
@@ -110,8 +114,8 @@ interpolated for the inner nodes.
 
 The file is organized into several functional sections. Each section
 corresponds to an aspect of the hydrodynamics model or the submerged
-substructure. A sample HydroDyn primary input file is given in Appendix
-A.
+substructure. A sample HydroDyn primary input file is given in
+:ref:`hd-primary-input_example`.
 
 If this manual refers to an ID in a table entry, this is an integer
 identifier for the table entry, and these IDs do not need to be
@@ -148,7 +152,7 @@ first-order waves or the use of externally generated waves, used by both
 the strip-theory and potential-flow solutions. The wave spectrum
 settings in this section only pertain to the first-order wave frequency
 components. When second-order terms are optionally enabled—see the
-2\ :sup:`ND`-ORDER WAVES and 2\ :sup:`ND`-ORDER FLOATING PLATFORM FORCES
+:ref:`2nd_order_waves_input` and :ref:`2nd_order_floating_platform_forces_input`
 sections below—the second-order terms are calculated using the
 first-order wave-component amplitudes and extra energy is added to the
 wave spectrum (at the difference and sum frequencies).
@@ -341,6 +345,8 @@ lists of **WaveElevxi** and **WaveElevyi** determine the locations of
 these **NWaveElev** number of points on the SWL plane in the global
 inertial-frame coordinate system.
 
+.. _2nd_order_waves_input:
+
 2\ :sup:`nd`-Order Waves
 ------------------------
 The 2\ :sup:`ND`-ORDER WAVES section (unused when **WaveMod** = 0 or 6)
@@ -362,7 +368,7 @@ diffraction loads in potential-flow theory, the second-order terms
 themselves are enabled separately. The second-order wave kinematics used
 by strip theory are enabled in this section while the second-order
 diffraction loads in potential-flow theory are enabled in the
-2\ :sup:`ND`-ORDER FLOATING PLATFORM FORCES section below. While the
+:ref:`2nd_order_floating_platform_forces_input` section below. While the
 second-order effects are included when enabled, the wave elevations
 output from HydroDyn will only include the second-order terms when the
 second-order wave kinematics are enabled in this section.
@@ -529,6 +535,8 @@ this version of HydroDyn, **RdtnDT** must match the glue code
 (FAST/driver program) simulation time step; the DEFAULT keyword can be
 used for this.
 
+.. _2nd_order_floating_platform_forces_input:
+
 2\ :sup:`nd`-Order Floating Platform Forces
 -------------------------------------------
 The 2\ :sup:`ND`-ORDER FLOATING PLATFORM FORCES section of the input
@@ -544,17 +552,17 @@ real surface waves, permitting more accurate modeling of sea states and
 the associated wave loads at the expense of greater computational effort
 (mostly at HydroDyn initialization).
 
-While the cut-off frequencies in the 2\ :sup:`ND`-ORDER WAVES section
+While the cut-off frequencies in the :ref:`2nd_order_waves_input` section
 above apply to both the second-order wave kinematics used by strip
 theory and the second-order diffraction loads in potential-flow theory,
 the second-order terms themselves are enabled separately. The
 second-order wave kinematics used by strip theory are enabled in the
-2\ :sup:`ND`-ORDER WAVES section above while the second-order
+:ref:`2nd_order_waves_input` section above while the second-order
 diffraction loads in potential-flow theory are enabled in this section.
 While the second-order effects are included when enabled, the wave
 elevations output from HydroDyn will only include the second-order terms
 when the second-order wave kinematics are enabled in the
-2\ :sup:`ND`-ORDER WAVES section above.
+:ref:`2nd_order_waves_input` section above.
 
 The second-order difference-frequency potential-flow terms can be
 enabled in one of three ways. To compute only the mean-drift term, set
@@ -606,6 +614,8 @@ first-order quantities, (.*11s*) total (quadratic plus second-order
 potential) loads in all 6 DOFs derived by the indirect method, and
 (.*12s*) total (quadratic plus second-order potential) loads in all 6
 DOFs derived by the direct method, respectively.
+
+.. TODO: Remove for TCF
 
 Floating Platform Force Flags
 -----------------------------
@@ -853,6 +863,8 @@ to zero. The hydrodynamic coefficient tables contain coefficients with
 and without marine growth. If **MGThck** = 0 for a particular node, the
 coefficients not associated with marine growth are used.
 
+.. _hd-member-output-list:
+
 Member Output List
 ------------------
 HydroDyn can output distributed load and wave kinematic quantities at up
@@ -865,14 +877,16 @@ this member. **NodeLocs** specifies those locations as a normalized
 distance from the starting joint (0.0) to the ending joint (1.0) of the
 member. If the chosen location does not align with a calculation node,
 the results at the two surrounding nodes will be linearly interpolated.
-The outputs specified in the OUTPUT CHANNELS section determines which
+The outputs specified in :ref:`hd-output-channels` determines which
 quantities are actually output at these locations.
+
+.. _hd-joint-output-list:
 
 Joint Output List
 -----------------
 HydroDyn can output lumped load and wave kinematic quantities at up to 9
 different joints. **JOutLst** contains a list of **NJOutputs** number of
-**JointIDs**. The outputs specified in the OUTPUT CHANNELS section
+**JointIDs**. The outputs specified in :ref:`hd-output-channels`
 determines which quantities are actually output at these joints.
 
 Output
@@ -922,8 +936,9 @@ comments after the closing quote on any of the lines. Entering a line
 with the string “END” at the beginning of the line or at the beginning
 of a quoted string found at the beginning of the line will cause
 HydroDyn to quit scanning for more lines of channel names. Member- and
-joint-related quantities are generated for the requested MEMBER OUTPUT
-LIST and JOINT OUTPUT LIST. If HydroDyn encounters an unknown/invalid
+joint-related quantities are generated for the requested 
+:ref:`hd-member-output-list` and :ref:`hd-joint-output-list`.
+If HydroDyn encounters an unknown/invalid
 channel name, it warns the users but will remove the suspect channel
 from the output file. Please refer to Appendix C for a complete list of
 possible output parameters.

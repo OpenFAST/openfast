@@ -1,4 +1,5 @@
 
+.. _hd-primary-input_example:
 
 Appendix A: OC4 Semi-submersible Input File
 ===========================================
@@ -283,6 +284,8 @@ structure::
       5.0   5.0        WaveElevDX WaveElevDY  - WaveElevSeries spacing -- WaveElevDX WaveElevDY
       3   3            WaveElevNX WaveElevNY  - WaveElevSeries points -- WaveElevNX WaveElevNY
       END of driver input file
+
+.. _hd-output-channels:
 
 Appendix C. List of Output Channels
 ===================================
