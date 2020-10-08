@@ -64,6 +64,7 @@ REM ----------------------------------------------------------------------------
 SET CURR_LOC=%MAP_Loc%
 SET Output_Loc=%CURR_LOC%
 %REGISTRY% "%CURR_LOC%\%ModuleName%_Registry.txt"  -ccode -I "%NWTC_Lib_Loc%"  -I "%CURR_LOC%" -O "%Output_Loc%"
+%REGISTRY% "%CURR_LOC%\MAP_Fortran_Registry.txt"  -I "%NWTC_Lib_Loc%"  -I "%CURR_LOC%" -O "%Output_Loc%" -noextrap
 GOTO checkError
 
 :FAST
@@ -139,7 +140,7 @@ GOTO checkError
 :AeroDyn_Driver
 SET CURR_LOC=%AD_Loc%
 SET Output_Loc=%CURR_LOC%
-%REGISTRY% "%CURR_LOC%\AeroDyn_Driver_Registry.txt" -I %NWTC_Lib_Loc% -I %CURR_LOC%  -O %Output_Loc% -noextrap
+%REGISTRY% "%CURR_LOC%\AeroDyn_Driver_Registry.txt" -I "%NWTC_Lib_Loc%" -I "%CURR_LOC%"  -O "%Output_Loc%" -noextrap
 GOTO checkError
 
 :AFI
@@ -152,6 +153,18 @@ GOTO checkError
 SET CURR_LOC=%AD_Loc%
 SET Output_Loc=%CURR_LOC%
 %REGISTRY% "%CURR_LOC%\UnsteadyAero_Registry.txt" -I "%NWTC_Lib_Loc%" -I "%CURR_LOC%" -O "%Output_Loc%"
+GOTO checkError
+
+:FVW
+SET CURR_LOC=%AD_Loc%
+SET Output_Loc=%CURR_LOC%
+%REGISTRY% "%CURR_LOC%\FVW_Registry.txt" -I "%NWTC_Lib_Loc%" -I "%CURR_LOC%" -O "%Output_Loc%"
+GOTO checkError
+
+:AA
+SET CURR_LOC=%AD_Loc%
+SET Output_Loc=%CURR_LOC%
+%REGISTRY% "%CURR_LOC%\AeroAcoustics_Registry.txt" -I "%NWTC_Lib_Loc%" -I "%CURR_LOC%" -O "%Output_Loc%"
 GOTO checkError
 
 :AeroDyn14
@@ -185,6 +198,12 @@ SET Output_Loc=%CURR_LOC%
 GOTO checkError
 
 :Waves2
+SET CURR_LOC=%HD_Loc%
+SET Output_Loc=%CURR_LOC%
+%REGISTRY% "%CURR_LOC%\%ModuleName%.txt" -I "%NWTC_Lib_Loc%"  -I "%CURR_LOC%" -O "%Output_Loc%"
+GOTO checkError
+
+:SS_Excitation
 SET CURR_LOC=%HD_Loc%
 SET Output_Loc=%CURR_LOC%
 %REGISTRY% "%CURR_LOC%\%ModuleName%.txt" -I "%NWTC_Lib_Loc%"  -I "%CURR_LOC%" -O "%Output_Loc%"
@@ -285,6 +304,10 @@ SET CURR_LOC=%AWAE_Loc%
 SET Output_Loc=%CURR_LOC%
 %REGISTRY% "%CURR_LOC%\AWAE_Registry.txt" -I %NWTC_Lib_Loc% -I %IfW_Loc% -noextrap -O "%Output_Loc%"
 GOTO checkError
+
+:Version
+DEL "%Root_Loc%\VersionInfo.obj" "%Root_Loc%\versioninfo.mod"
+GOTO end
 
 :checkError
 ECHO.

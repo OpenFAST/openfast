@@ -233,28 +233,28 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%CurrSSV0
-      Re_Xferred   = Re_Xferred   + 1
-        DO I = 1, LEN(InData%CurrSSDirChr)
-          IntKiBuf(Int_Xferred) = ICHAR(InData%CurrSSDirChr(I:I), IntKi)
-          Int_Xferred = Int_Xferred   + 1
-        END DO ! I
-      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%CurrSSDir
-      Re_Xferred   = Re_Xferred   + 1
-      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%CurrNSRef
-      Re_Xferred   = Re_Xferred   + 1
-      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%CurrNSV0
-      Re_Xferred   = Re_Xferred   + 1
-      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%CurrNSDir
-      Re_Xferred   = Re_Xferred   + 1
-      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%CurrDIV
-      Re_Xferred   = Re_Xferred   + 1
-      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%CurrDIDir
-      Re_Xferred   = Re_Xferred   + 1
-      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%CurrMod
-      Int_Xferred   = Int_Xferred   + 1
-      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%WtrDpth
-      Re_Xferred   = Re_Xferred   + 1
+    ReKiBuf(Re_Xferred) = InData%CurrSSV0
+    Re_Xferred = Re_Xferred + 1
+    DO I = 1, LEN(InData%CurrSSDirChr)
+      IntKiBuf(Int_Xferred) = ICHAR(InData%CurrSSDirChr(I:I), IntKi)
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
+    ReKiBuf(Re_Xferred) = InData%CurrSSDir
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%CurrNSRef
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%CurrNSV0
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%CurrNSDir
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%CurrDIV
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%CurrDIDir
+    Re_Xferred = Re_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%CurrMod
+    Int_Xferred = Int_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%WtrDpth
+    Re_Xferred = Re_Xferred + 1
   IF ( .NOT. ALLOCATED(InData%MorisonNodezi) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -265,15 +265,17 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%MorisonNodezi,1)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%MorisonNodezi)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%MorisonNodezi))-1 ) = PACK(InData%MorisonNodezi,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%MorisonNodezi)
+      DO i1 = LBOUND(InData%MorisonNodezi,1), UBOUND(InData%MorisonNodezi,1)
+        ReKiBuf(Re_Xferred) = InData%MorisonNodezi(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
-      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%NMorisonNodes
-      Int_Xferred   = Int_Xferred   + 1
-        DO I = 1, LEN(InData%DirRoot)
-          IntKiBuf(Int_Xferred) = ICHAR(InData%DirRoot(I:I), IntKi)
-          Int_Xferred = Int_Xferred   + 1
-        END DO ! I
+    IntKiBuf(Int_Xferred) = InData%NMorisonNodes
+    Int_Xferred = Int_Xferred + 1
+    DO I = 1, LEN(InData%DirRoot)
+      IntKiBuf(Int_Xferred) = ICHAR(InData%DirRoot(I:I), IntKi)
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
  END SUBROUTINE Current_PackInitInput
 
  SUBROUTINE Current_UnPackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -289,12 +291,6 @@ ENDIF
   INTEGER(IntKi)                 :: Db_Xferred
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
-  LOGICAL                        :: mask0
-  LOGICAL, ALLOCATABLE           :: mask1(:)
-  LOGICAL, ALLOCATABLE           :: mask2(:,:)
-  LOGICAL, ALLOCATABLE           :: mask3(:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
@@ -309,28 +305,28 @@ ENDIF
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-      OutData%CurrSSV0 = REAL( ReKiBuf( Re_Xferred ), SiKi) 
-      Re_Xferred   = Re_Xferred + 1
-      DO I = 1, LEN(OutData%CurrSSDirChr)
-        OutData%CurrSSDirChr(I:I) = CHAR(IntKiBuf(Int_Xferred))
-        Int_Xferred = Int_Xferred   + 1
-      END DO ! I
-      OutData%CurrSSDir = REAL( ReKiBuf( Re_Xferred ), SiKi) 
-      Re_Xferred   = Re_Xferred + 1
-      OutData%CurrNSRef = REAL( ReKiBuf( Re_Xferred ), SiKi) 
-      Re_Xferred   = Re_Xferred + 1
-      OutData%CurrNSV0 = REAL( ReKiBuf( Re_Xferred ), SiKi) 
-      Re_Xferred   = Re_Xferred + 1
-      OutData%CurrNSDir = REAL( ReKiBuf( Re_Xferred ), SiKi) 
-      Re_Xferred   = Re_Xferred + 1
-      OutData%CurrDIV = REAL( ReKiBuf( Re_Xferred ), SiKi) 
-      Re_Xferred   = Re_Xferred + 1
-      OutData%CurrDIDir = REAL( ReKiBuf( Re_Xferred ), SiKi) 
-      Re_Xferred   = Re_Xferred + 1
-      OutData%CurrMod = IntKiBuf( Int_Xferred ) 
-      Int_Xferred   = Int_Xferred + 1
-      OutData%WtrDpth = REAL( ReKiBuf( Re_Xferred ), SiKi) 
-      Re_Xferred   = Re_Xferred + 1
+    OutData%CurrSSV0 = REAL(ReKiBuf(Re_Xferred), SiKi)
+    Re_Xferred = Re_Xferred + 1
+    DO I = 1, LEN(OutData%CurrSSDirChr)
+      OutData%CurrSSDirChr(I:I) = CHAR(IntKiBuf(Int_Xferred))
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
+    OutData%CurrSSDir = REAL(ReKiBuf(Re_Xferred), SiKi)
+    Re_Xferred = Re_Xferred + 1
+    OutData%CurrNSRef = REAL(ReKiBuf(Re_Xferred), SiKi)
+    Re_Xferred = Re_Xferred + 1
+    OutData%CurrNSV0 = REAL(ReKiBuf(Re_Xferred), SiKi)
+    Re_Xferred = Re_Xferred + 1
+    OutData%CurrNSDir = REAL(ReKiBuf(Re_Xferred), SiKi)
+    Re_Xferred = Re_Xferred + 1
+    OutData%CurrDIV = REAL(ReKiBuf(Re_Xferred), SiKi)
+    Re_Xferred = Re_Xferred + 1
+    OutData%CurrDIDir = REAL(ReKiBuf(Re_Xferred), SiKi)
+    Re_Xferred = Re_Xferred + 1
+    OutData%CurrMod = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%WtrDpth = REAL(ReKiBuf(Re_Xferred), SiKi)
+    Re_Xferred = Re_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! MorisonNodezi not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
@@ -344,22 +340,17 @@ ENDIF
        CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%MorisonNodezi.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask1 = .TRUE. 
-      IF (SIZE(OutData%MorisonNodezi)>0) OutData%MorisonNodezi = REAL( UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%MorisonNodezi))-1 ), mask1, 0.0_ReKi ), SiKi)
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%MorisonNodezi)
-    DEALLOCATE(mask1)
+      DO i1 = LBOUND(OutData%MorisonNodezi,1), UBOUND(OutData%MorisonNodezi,1)
+        OutData%MorisonNodezi(i1) = REAL(ReKiBuf(Re_Xferred), SiKi)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
-      OutData%NMorisonNodes = IntKiBuf( Int_Xferred ) 
-      Int_Xferred   = Int_Xferred + 1
-      DO I = 1, LEN(OutData%DirRoot)
-        OutData%DirRoot(I:I) = CHAR(IntKiBuf(Int_Xferred))
-        Int_Xferred = Int_Xferred   + 1
-      END DO ! I
+    OutData%NMorisonNodes = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    DO I = 1, LEN(OutData%DirRoot)
+      OutData%DirRoot(I:I) = CHAR(IntKiBuf(Int_Xferred))
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
  END SUBROUTINE Current_UnPackInitInput
 
  SUBROUTINE Current_CopyInitOutput( SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg )
@@ -506,8 +497,10 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%CurrVxi,1)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%CurrVxi)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%CurrVxi))-1 ) = PACK(InData%CurrVxi,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%CurrVxi)
+      DO i1 = LBOUND(InData%CurrVxi,1), UBOUND(InData%CurrVxi,1)
+        ReKiBuf(Re_Xferred) = InData%CurrVxi(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
   IF ( .NOT. ALLOCATED(InData%CurrVyi) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -519,13 +512,15 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%CurrVyi,1)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%CurrVyi)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%CurrVyi))-1 ) = PACK(InData%CurrVyi,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%CurrVyi)
+      DO i1 = LBOUND(InData%CurrVyi,1), UBOUND(InData%CurrVyi,1)
+        ReKiBuf(Re_Xferred) = InData%CurrVyi(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
-      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%PCurrVxiPz0
-      Re_Xferred   = Re_Xferred   + 1
-      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%PCurrVyiPz0
-      Re_Xferred   = Re_Xferred   + 1
+    ReKiBuf(Re_Xferred) = InData%PCurrVxiPz0
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%PCurrVyiPz0
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE Current_PackInitOutput
 
  SUBROUTINE Current_UnPackInitOutput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -541,12 +536,6 @@ ENDIF
   INTEGER(IntKi)                 :: Db_Xferred
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
-  LOGICAL                        :: mask0
-  LOGICAL, ALLOCATABLE           :: mask1(:)
-  LOGICAL, ALLOCATABLE           :: mask2(:,:)
-  LOGICAL, ALLOCATABLE           :: mask3(:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
@@ -574,15 +563,10 @@ ENDIF
        CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%CurrVxi.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask1 = .TRUE. 
-      IF (SIZE(OutData%CurrVxi)>0) OutData%CurrVxi = REAL( UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%CurrVxi))-1 ), mask1, 0.0_ReKi ), SiKi)
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%CurrVxi)
-    DEALLOCATE(mask1)
+      DO i1 = LBOUND(OutData%CurrVxi,1), UBOUND(OutData%CurrVxi,1)
+        OutData%CurrVxi(i1) = REAL(ReKiBuf(Re_Xferred), SiKi)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! CurrVyi not allocated
     Int_Xferred = Int_Xferred + 1
@@ -597,20 +581,15 @@ ENDIF
        CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%CurrVyi.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask1 = .TRUE. 
-      IF (SIZE(OutData%CurrVyi)>0) OutData%CurrVyi = REAL( UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%CurrVyi))-1 ), mask1, 0.0_ReKi ), SiKi)
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%CurrVyi)
-    DEALLOCATE(mask1)
+      DO i1 = LBOUND(OutData%CurrVyi,1), UBOUND(OutData%CurrVyi,1)
+        OutData%CurrVyi(i1) = REAL(ReKiBuf(Re_Xferred), SiKi)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
-      OutData%PCurrVxiPz0 = REAL( ReKiBuf( Re_Xferred ), SiKi) 
-      Re_Xferred   = Re_Xferred + 1
-      OutData%PCurrVyiPz0 = REAL( ReKiBuf( Re_Xferred ), SiKi) 
-      Re_Xferred   = Re_Xferred + 1
+    OutData%PCurrVxiPz0 = REAL(ReKiBuf(Re_Xferred), SiKi)
+    Re_Xferred = Re_Xferred + 1
+    OutData%PCurrVyiPz0 = REAL(ReKiBuf(Re_Xferred), SiKi)
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE Current_UnPackInitOutput
 
  SUBROUTINE Current_CopyContState( SrcContStateData, DstContStateData, CtrlCode, ErrStat, ErrMsg )
@@ -704,8 +683,8 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%DummyContState
-      Re_Xferred   = Re_Xferred   + 1
+    ReKiBuf(Re_Xferred) = InData%DummyContState
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE Current_PackContState
 
  SUBROUTINE Current_UnPackContState( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -721,12 +700,6 @@ ENDIF
   INTEGER(IntKi)                 :: Db_Xferred
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
-  LOGICAL                        :: mask0
-  LOGICAL, ALLOCATABLE           :: mask1(:)
-  LOGICAL, ALLOCATABLE           :: mask2(:,:)
-  LOGICAL, ALLOCATABLE           :: mask3(:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'Current_UnPackContState'
@@ -740,8 +713,8 @@ ENDIF
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-      OutData%DummyContState = REAL( ReKiBuf( Re_Xferred ), SiKi) 
-      Re_Xferred   = Re_Xferred + 1
+    OutData%DummyContState = REAL(ReKiBuf(Re_Xferred), SiKi)
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE Current_UnPackContState
 
  SUBROUTINE Current_CopyDiscState( SrcDiscStateData, DstDiscStateData, CtrlCode, ErrStat, ErrMsg )
@@ -835,8 +808,8 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%DummyDiscState
-      Re_Xferred   = Re_Xferred   + 1
+    ReKiBuf(Re_Xferred) = InData%DummyDiscState
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE Current_PackDiscState
 
  SUBROUTINE Current_UnPackDiscState( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -852,12 +825,6 @@ ENDIF
   INTEGER(IntKi)                 :: Db_Xferred
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
-  LOGICAL                        :: mask0
-  LOGICAL, ALLOCATABLE           :: mask1(:)
-  LOGICAL, ALLOCATABLE           :: mask2(:,:)
-  LOGICAL, ALLOCATABLE           :: mask3(:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'Current_UnPackDiscState'
@@ -871,8 +838,8 @@ ENDIF
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-      OutData%DummyDiscState = REAL( ReKiBuf( Re_Xferred ), SiKi) 
-      Re_Xferred   = Re_Xferred + 1
+    OutData%DummyDiscState = REAL(ReKiBuf(Re_Xferred), SiKi)
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE Current_UnPackDiscState
 
  SUBROUTINE Current_CopyConstrState( SrcConstrStateData, DstConstrStateData, CtrlCode, ErrStat, ErrMsg )
@@ -966,8 +933,8 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%DummyConstrState
-      Re_Xferred   = Re_Xferred   + 1
+    ReKiBuf(Re_Xferred) = InData%DummyConstrState
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE Current_PackConstrState
 
  SUBROUTINE Current_UnPackConstrState( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -983,12 +950,6 @@ ENDIF
   INTEGER(IntKi)                 :: Db_Xferred
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
-  LOGICAL                        :: mask0
-  LOGICAL, ALLOCATABLE           :: mask1(:)
-  LOGICAL, ALLOCATABLE           :: mask2(:,:)
-  LOGICAL, ALLOCATABLE           :: mask3(:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'Current_UnPackConstrState'
@@ -1002,8 +963,8 @@ ENDIF
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-      OutData%DummyConstrState = REAL( ReKiBuf( Re_Xferred ), SiKi) 
-      Re_Xferred   = Re_Xferred + 1
+    OutData%DummyConstrState = REAL(ReKiBuf(Re_Xferred), SiKi)
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE Current_UnPackConstrState
 
  SUBROUTINE Current_CopyOtherState( SrcOtherStateData, DstOtherStateData, CtrlCode, ErrStat, ErrMsg )
@@ -1097,8 +1058,8 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%DummyOtherState
-      Int_Xferred   = Int_Xferred   + 1
+    IntKiBuf(Int_Xferred) = InData%DummyOtherState
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE Current_PackOtherState
 
  SUBROUTINE Current_UnPackOtherState( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -1114,12 +1075,6 @@ ENDIF
   INTEGER(IntKi)                 :: Db_Xferred
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
-  LOGICAL                        :: mask0
-  LOGICAL, ALLOCATABLE           :: mask1(:)
-  LOGICAL, ALLOCATABLE           :: mask2(:,:)
-  LOGICAL, ALLOCATABLE           :: mask3(:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'Current_UnPackOtherState'
@@ -1133,8 +1088,8 @@ ENDIF
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-      OutData%DummyOtherState = IntKiBuf( Int_Xferred ) 
-      Int_Xferred   = Int_Xferred + 1
+    OutData%DummyOtherState = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE Current_UnPackOtherState
 
  SUBROUTINE Current_CopyMisc( SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg )
@@ -1228,8 +1183,8 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%DummyMiscVar
-      Re_Xferred   = Re_Xferred   + 1
+    ReKiBuf(Re_Xferred) = InData%DummyMiscVar
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE Current_PackMisc
 
  SUBROUTINE Current_UnPackMisc( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -1245,12 +1200,6 @@ ENDIF
   INTEGER(IntKi)                 :: Db_Xferred
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
-  LOGICAL                        :: mask0
-  LOGICAL, ALLOCATABLE           :: mask1(:)
-  LOGICAL, ALLOCATABLE           :: mask2(:,:)
-  LOGICAL, ALLOCATABLE           :: mask3(:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'Current_UnPackMisc'
@@ -1264,8 +1213,8 @@ ENDIF
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-      OutData%DummyMiscVar = ReKiBuf( Re_Xferred )
-      Re_Xferred   = Re_Xferred + 1
+    OutData%DummyMiscVar = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE Current_UnPackMisc
 
  SUBROUTINE Current_CopyParam( SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg )
@@ -1359,8 +1308,8 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-      DbKiBuf ( Db_Xferred:Db_Xferred+(1)-1 ) = InData%DT
-      Db_Xferred   = Db_Xferred   + 1
+    DbKiBuf(Db_Xferred) = InData%DT
+    Db_Xferred = Db_Xferred + 1
  END SUBROUTINE Current_PackParam
 
  SUBROUTINE Current_UnPackParam( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -1376,12 +1325,6 @@ ENDIF
   INTEGER(IntKi)                 :: Db_Xferred
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
-  LOGICAL                        :: mask0
-  LOGICAL, ALLOCATABLE           :: mask1(:)
-  LOGICAL, ALLOCATABLE           :: mask2(:,:)
-  LOGICAL, ALLOCATABLE           :: mask3(:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'Current_UnPackParam'
@@ -1395,8 +1338,8 @@ ENDIF
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-      OutData%DT = DbKiBuf( Db_Xferred ) 
-      Db_Xferred   = Db_Xferred + 1
+    OutData%DT = DbKiBuf(Db_Xferred)
+    Db_Xferred = Db_Xferred + 1
  END SUBROUTINE Current_UnPackParam
 
  SUBROUTINE Current_CopyInput( SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg )
@@ -1490,8 +1433,8 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%DummyInput
-      Re_Xferred   = Re_Xferred   + 1
+    ReKiBuf(Re_Xferred) = InData%DummyInput
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE Current_PackInput
 
  SUBROUTINE Current_UnPackInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -1507,12 +1450,6 @@ ENDIF
   INTEGER(IntKi)                 :: Db_Xferred
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
-  LOGICAL                        :: mask0
-  LOGICAL, ALLOCATABLE           :: mask1(:)
-  LOGICAL, ALLOCATABLE           :: mask2(:,:)
-  LOGICAL, ALLOCATABLE           :: mask3(:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'Current_UnPackInput'
@@ -1526,8 +1463,8 @@ ENDIF
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-      OutData%DummyInput = REAL( ReKiBuf( Re_Xferred ), SiKi) 
-      Re_Xferred   = Re_Xferred + 1
+    OutData%DummyInput = REAL(ReKiBuf(Re_Xferred), SiKi)
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE Current_UnPackInput
 
  SUBROUTINE Current_CopyOutput( SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg )
@@ -1621,8 +1558,8 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%DummyOutput
-      Re_Xferred   = Re_Xferred   + 1
+    ReKiBuf(Re_Xferred) = InData%DummyOutput
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE Current_PackOutput
 
  SUBROUTINE Current_UnPackOutput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -1638,12 +1575,6 @@ ENDIF
   INTEGER(IntKi)                 :: Db_Xferred
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
-  LOGICAL                        :: mask0
-  LOGICAL, ALLOCATABLE           :: mask1(:)
-  LOGICAL, ALLOCATABLE           :: mask2(:,:)
-  LOGICAL, ALLOCATABLE           :: mask3(:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'Current_UnPackOutput'
@@ -1657,8 +1588,8 @@ ENDIF
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-      OutData%DummyOutput = REAL( ReKiBuf( Re_Xferred ), SiKi) 
-      Re_Xferred   = Re_Xferred + 1
+    OutData%DummyOutput = REAL(ReKiBuf(Re_Xferred), SiKi)
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE Current_UnPackOutput
 
 
@@ -1736,8 +1667,8 @@ ENDIF
  REAL(DbKi)                                 :: t(2)     ! Times associated with the Inputs
  REAL(DbKi)                                 :: t_out    ! Time to which to be extrap/interpd
  CHARACTER(*),                    PARAMETER :: RoutineName = 'Current_Input_ExtrapInterp1'
- REAL(DbKi)                                 :: b0       ! temporary for extrapolation/interpolation
- REAL(DbKi)                                 :: c0       ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: b        ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: ScaleFactor ! temporary for extrapolation/interpolation
  INTEGER(IntKi)                             :: ErrStat2 ! local errors
  CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
     ! Initialize ErrStat
@@ -1752,8 +1683,10 @@ ENDIF
      CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
      RETURN
    END IF
-  b0 = -(u1%DummyInput - u2%DummyInput)/t(2)
-  u_out%DummyInput = u1%DummyInput + b0 * t_out
+
+   ScaleFactor = t_out / t(2)
+  b = -(u1%DummyInput - u2%DummyInput)
+  u_out%DummyInput = u1%DummyInput + b * ScaleFactor
  END SUBROUTINE Current_Input_ExtrapInterp1
 
 
@@ -1783,8 +1716,9 @@ ENDIF
  REAL(DbKi)                                 :: t(3)      ! Times associated with the Inputs
  REAL(DbKi)                                 :: t_out     ! Time to which to be extrap/interpd
  INTEGER(IntKi)                             :: order     ! order of polynomial fit (max 2)
- REAL(DbKi)                                 :: b0       ! temporary for extrapolation/interpolation
- REAL(DbKi)                                 :: c0       ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: b        ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: c        ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: ScaleFactor ! temporary for extrapolation/interpolation
  INTEGER(IntKi)                             :: ErrStat2 ! local errors
  CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
  CHARACTER(*),            PARAMETER         :: RoutineName = 'Current_Input_ExtrapInterp2'
@@ -1806,9 +1740,11 @@ ENDIF
      CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
      RETURN
    END IF
-  b0 = (t(3)**2*(u1%DummyInput - u2%DummyInput) + t(2)**2*(-u1%DummyInput + u3%DummyInput))/(t(2)*t(3)*(t(2) - t(3)))
-  c0 = ( (t(2)-t(3))*u1%DummyInput + t(3)*u2%DummyInput - t(2)*u3%DummyInput ) / (t(2)*t(3)*(t(2) - t(3)))
-  u_out%DummyInput = u1%DummyInput + b0 * t_out + c0 * t_out**2
+
+   ScaleFactor = t_out / (t(2) * t(3) * (t(2) - t(3)))
+  b = (t(3)**2*(u1%DummyInput - u2%DummyInput) + t(2)**2*(-u1%DummyInput + u3%DummyInput))* scaleFactor
+  c = ( (t(2)-t(3))*u1%DummyInput + t(3)*u2%DummyInput - t(2)*u3%DummyInput ) * scaleFactor
+  u_out%DummyInput = u1%DummyInput + b  + c * t_out
  END SUBROUTINE Current_Input_ExtrapInterp2
 
 
@@ -1886,8 +1822,8 @@ ENDIF
  REAL(DbKi)                                 :: t(2)     ! Times associated with the Outputs
  REAL(DbKi)                                 :: t_out    ! Time to which to be extrap/interpd
  CHARACTER(*),                    PARAMETER :: RoutineName = 'Current_Output_ExtrapInterp1'
- REAL(DbKi)                                 :: b0       ! temporary for extrapolation/interpolation
- REAL(DbKi)                                 :: c0       ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: b        ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: ScaleFactor ! temporary for extrapolation/interpolation
  INTEGER(IntKi)                             :: ErrStat2 ! local errors
  CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
     ! Initialize ErrStat
@@ -1902,8 +1838,10 @@ ENDIF
      CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
      RETURN
    END IF
-  b0 = -(y1%DummyOutput - y2%DummyOutput)/t(2)
-  y_out%DummyOutput = y1%DummyOutput + b0 * t_out
+
+   ScaleFactor = t_out / t(2)
+  b = -(y1%DummyOutput - y2%DummyOutput)
+  y_out%DummyOutput = y1%DummyOutput + b * ScaleFactor
  END SUBROUTINE Current_Output_ExtrapInterp1
 
 
@@ -1933,8 +1871,9 @@ ENDIF
  REAL(DbKi)                                 :: t(3)      ! Times associated with the Outputs
  REAL(DbKi)                                 :: t_out     ! Time to which to be extrap/interpd
  INTEGER(IntKi)                             :: order     ! order of polynomial fit (max 2)
- REAL(DbKi)                                 :: b0       ! temporary for extrapolation/interpolation
- REAL(DbKi)                                 :: c0       ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: b        ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: c        ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: ScaleFactor ! temporary for extrapolation/interpolation
  INTEGER(IntKi)                             :: ErrStat2 ! local errors
  CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
  CHARACTER(*),            PARAMETER         :: RoutineName = 'Current_Output_ExtrapInterp2'
@@ -1956,9 +1895,11 @@ ENDIF
      CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
      RETURN
    END IF
-  b0 = (t(3)**2*(y1%DummyOutput - y2%DummyOutput) + t(2)**2*(-y1%DummyOutput + y3%DummyOutput))/(t(2)*t(3)*(t(2) - t(3)))
-  c0 = ( (t(2)-t(3))*y1%DummyOutput + t(3)*y2%DummyOutput - t(2)*y3%DummyOutput ) / (t(2)*t(3)*(t(2) - t(3)))
-  y_out%DummyOutput = y1%DummyOutput + b0 * t_out + c0 * t_out**2
+
+   ScaleFactor = t_out / (t(2) * t(3) * (t(2) - t(3)))
+  b = (t(3)**2*(y1%DummyOutput - y2%DummyOutput) + t(2)**2*(-y1%DummyOutput + y3%DummyOutput))* scaleFactor
+  c = ( (t(2)-t(3))*y1%DummyOutput + t(3)*y2%DummyOutput - t(2)*y3%DummyOutput ) * scaleFactor
+  y_out%DummyOutput = y1%DummyOutput + b  + c * t_out
  END SUBROUTINE Current_Output_ExtrapInterp2
 
 END MODULE Current_Types

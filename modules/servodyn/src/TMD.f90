@@ -94,7 +94,7 @@ SUBROUTINE TMD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
                                                     
       INTEGER(IntKi)                                :: UnEcho        ! Unit number for the echo file   
       INTEGER(IntKi)                                :: ErrStat2      ! local error status
-      CHARACTER(1024)                               :: ErrMsg2       ! local error message
+      CHARACTER(ErrMsgLen)                          :: ErrMsg2       ! local error message
       
       CHARACTER(*), PARAMETER                       :: RoutineName = 'TMD_Init'
       
@@ -442,7 +442,7 @@ END SUBROUTINE TMD_UpdateStates
 !!
 !! For details, see:
 !! Press, W. H.; Flannery, B. P.; Teukolsky, S. A.; and Vetterling, W. T. "Runge-Kutta Method" and "Adaptive Step Size Control for 
-!!   Runge-Kutta." �16.1 and 16.2 in Numerical Recipes in FORTRAN: The Art of Scientific Computing, 2nd ed. Cambridge, England: 
+!!   Runge-Kutta." Sections 16.1 and 16.2 in Numerical Recipes in FORTRAN: The Art of Scientific Computing, 2nd ed. Cambridge, England: 
 !!   Cambridge University Press, pp. 704-716, 1992.
 SUBROUTINE TMD_RK4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
 !..................................................................................................................................
@@ -558,7 +558,7 @@ CONTAINS
 
          ! local variables
       INTEGER(IntKi)             :: ErrStat3    ! The error identifier (ErrStat)
-      CHARACTER(1024)            :: ErrMsg3     ! The error message (ErrMsg)
+      CHARACTER(ErrMsgLen)       :: ErrMsg3     ! The error message (ErrMsg)
    
    
       CALL TMD_DestroyContState( xdot,     ErrStat3, ErrMsg3 )

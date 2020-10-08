@@ -17,6 +17,7 @@
 !**********************************************************************************************************************************
 MODULE BeamDyn
 
+   USE BeamDyn_BldNdOuts_IO
    USE BeamDyn_IO
    USE BeamDyn_Subs
    !USE NWTC_LAPACK inherited from BeamDyn_Subs and BeamDyn_IO
@@ -156,7 +157,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
    ENDIF
 
       ! compute physical distances to set positions of p%uuN0 (FE GLL_Nodes) (depends on p%SP_Coef):
-   call InitializeNodalLocations(InputFileData, p, GLL_nodes, ErrStat2,ErrMsg2)
+   call InitializeNodalLocations(InputFileData, p, GLL_nodes, InitOut, ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       if (ErrStat >= AbortErrLev) then
          call cleanup()
@@ -493,11 +494,12 @@ CONTAINS
 
 end subroutine InitializeMassStiffnessMatrices
 !-----------------------------------------------------------------------------------------------------------------------------------
-!> This subroutine computes the positions and rotations stored in p%uuN0 (output GLL nodes).
-subroutine InitializeNodalLocations(InputFileData,p,GLL_nodes,ErrStat, ErrMsg)
+!> This subroutine computes the positions and rotations stored in p%uuN0 (output GLL nodes) and p%QuadPt (input quadrature nodes).  p%QPtN must be already set.
+subroutine InitializeNodalLocations(InputFileData,p,GLL_nodes,InitOut,ErrStat, ErrMsg)
    type(BD_InputFile),           intent(in   )  :: InputFileData     !< data from the input file
    type(BD_ParameterType),       intent(inout)  :: p                 !< Parameters
    REAL(BDKi),                   INTENT(IN   )  :: GLL_nodes(:)      !< GLL_nodes(p%nodes_per_elem): location of the (p%nodes_per_elem) p%GLL points
+   type(BD_InitOutputType),      intent(inout)  :: InitOut           !< initialization output type (for setting z_coordinate variable)
    integer(IntKi),               intent(  out)  :: ErrStat           !< Error status of the operation
    character(*),                 intent(  out)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
 
@@ -507,10 +509,8 @@ subroutine InitializeNodalLocations(InputFileData,p,GLL_nodes,ErrStat, ErrMsg)
    ! local variables
    INTEGER(IntKi)          :: i                ! do-loop counter
    INTEGER(IntKi)          :: j                ! do-loop counter
-   INTEGER(IntKi)          :: idx_qp           !< index of current quadrature point in loop
    INTEGER(IntKi)          :: member_first_kp
    INTEGER(IntKi)          :: member_last_kp
-   INTEGER(IntKi)          :: temp_id2
    REAL(BDKi)              :: eta
    REAL(BDKi)              :: temp_POS(3)
    REAL(BDKi)              :: temp_CRV(3)
@@ -550,6 +550,63 @@ subroutine InitializeNodalLocations(InputFileData,p,GLL_nodes,ErrStat, ErrMsg)
       member_first_kp = member_last_kp
 
    ENDDO
+
+
+   !!-------------------------------------------------
+   !! InitOut%z_coordinate contains the z coordinate (in meters) along the blade and will be used for naming output channels
+   !!-------------------------------------------------
+   !
+   !   
+   !SELECT CASE(p%BldMotionNodeLoc)
+   !CASE (BD_MESH_FE)
+   !   CALL AllocAry( InitOut%z_coordinate, p%nodes_per_elem*p%elem_total,'InitOut%z_coordinate',ErrStat2,ErrMsg2) ! same size as y%BldMotion%NNodes
+   !      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   !      if (ErrStat2 >= AbortErrLev) return
+   !
+   !   member_first_kp = 1 !first key point on member (element)
+   !   DO i=1,p%elem_total
+   !
+   !       member_last_kp  = member_first_kp + InputFileData%kp_member(i) - 1 !last key point of member (element)
+   !       DO j=1,p%nodes_per_elem
+   !
+   !           eta = (GLL_nodes(j) + 1.0_BDKi)/2.0_BDKi ! relative location where we are on the member (element), in range [0,1]
+   !           InitOut%z_coordinate( (i-1)*p%nodes_per_elem + j ) = Find_InitZ(InputFileData%kp_coordinate, member_first_kp, member_last_kp, eta)
+   !       ENDDO
+   !
+   !         ! set for next element:
+   !      member_first_kp = member_last_kp
+   !
+   !   ENDDO
+   !
+   !
+   !CASE (BD_MESH_QP)
+   !   CALL AllocAry( InitOut%z_coordinate, size(p%NdIndx),'InitOut%z_coordinate',ErrStat2,ErrMsg2) ! same size as y%BldMotion%NNodes
+   !      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   !      if (ErrStat2 >= AbortErrLev) return
+   !
+   !   member_first_kp = 1
+   !
+   !   DO i=1,p%elem_total
+   !      member_last_kp  = member_first_kp + InputFileData%kp_member(i) - 1
+   !
+   !      DO idx_qp=1,p%nqp(i)
+   !         eta = (p%QPtN(idx_qp,i) + 1.0_BDKi)/2.0_BDKi  ! translate quadrature points in [-1,1] to eta in [0,1]
+   !         temp_ID = SUM(p%nqp(0:i-1)) + idx_qp + p%qp_indx_offset - (i - 1)*p%qp_overlap_offset    ! indx_offset=0, overlap_offset=1 for trap
+   !         InitOut%z_coordinate( temp_ID ) = Find_InitZ(InputFileData%kp_coordinate, member_first_kp, member_last_kp, eta)
+   !      ENDDO
+   !
+   !         ! set for next element:
+   !      member_first_kp = member_last_kp
+   !   ENDDO
+   !
+   !   IF (p%quadrature .EQ. GAUSS_QUADRATURE) THEN
+   !      InitOut%z_coordinate( 1                          ) = InputFileData%kp_coordinate(1,3)
+   !      InitOut%z_coordinate( size(InitOut%z_coordinate) ) = InputFileData%kp_coordinate(InputFileData%kp_total,3)
+   !   ENDIF
+   !   
+   !END SELECT
+
+   return
 
 end subroutine InitializeNodalLocations
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -722,7 +779,7 @@ END SUBROUTINE BD_InitShpDerJaco
 !> This subroutine initializes data in the InitOut type, which is returned to the glue code.
 subroutine SetInitOut(p, InitOut, ErrStat, ErrMsg)
 
-   type(BD_InitOutputType),       intent(  out)  :: InitOut          !< output data
+   type(BD_InitOutputType),       intent(inout)  :: InitOut          !< output data (we've already set InitOut%z_coordinate)
    type(BD_ParameterType),        intent(in   )  :: p                !< Parameters
    integer(IntKi),                intent(  out)  :: ErrStat          !< Error status of the operation
    character(*),                  intent(  out)  :: ErrMsg           !< Error message if ErrStat /= ErrID_None
@@ -741,11 +798,12 @@ subroutine SetInitOut(p, InitOut, ErrStat, ErrMsg)
    errStat = ErrID_None
    errMsg  = ""
 
+      ! p%BldNd_BlOutNd  contains the list of nodes we are outputting.  At each node there are BldNd_NumOuts output channels.
 
-   call AllocAry( InitOut%WriteOutputHdr, p%numOuts, 'WriteOutputHdr', errStat2, errMsg2 )
+   call AllocAry( InitOut%WriteOutputHdr, p%numOuts + p%BldNd_TotNumOuts, 'WriteOutputHdr', errStat2, errMsg2 )
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
 
-   call AllocAry( InitOut%WriteOutputUnt, p%numOuts, 'WriteOutputUnt', errStat2, errMsg2 )
+   call AllocAry( InitOut%WriteOutputUnt, p%numOuts + p%BldNd_TotNumOuts, 'WriteOutputUnt', errStat2, errMsg2 )
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
    if (ErrStat >= AbortErrLev) return
 
@@ -756,12 +814,17 @@ subroutine SetInitOut(p, InitOut, ErrStat, ErrMsg)
 
    InitOut%Ver = BeamDyn_Ver
 
+
+      ! Set the info in WriteOutputHdr and WriteOutputUnt for BldNd sections.
+   CALL BldNdOuts_InitOut( InitOut, p, ErrStat2, ErrMsg2 )
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
 end subroutine SetInitOut
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine allocates and initializes most (not all) of the parameters used in BeamDyn.
 subroutine SetParameters(InitInp, InputFileData, p, ErrStat, ErrMsg)
    type(BD_InitInputType),       intent(in   )  :: InitInp           !< Input data for initialization routine
-   type(BD_InputFile),           intent(in   )  :: InputFileData     !< data from the input file
+   type(BD_InputFile),           intent(inout)  :: InputFileData     !< data from the input file  [we may need to shift the keypoint to match a MK matrix eta for trap multi-element]
    type(BD_ParameterType),       intent(inout)  :: p                 !< Parameters  ! intent(out) only because it changes p%NdIndx
    integer(IntKi),               intent(  out)  :: ErrStat           !< Error status of the operation
    character(*),                 intent(  out)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
@@ -786,7 +849,8 @@ subroutine SetParameters(InitInp, InputFileData, p, ErrStat, ErrMsg)
    p%GlbPos = InitInp%GlbPos
 
 
-      ! Global rotation tensor
+      ! Global rotation tensor.  What comes from the driver may not be a properly formed
+      ! DCM (may have roundoff), so recalculate it from the extracted WM parameters.
    p%GlbRot = TRANSPOSE(InitInp%GlbRot) ! matrix that now transfers from local to global (FAST's DCMs convert from global to local)
    CALL BD_CrvExtractCrv(p%GlbRot,p%Glb_crv, ErrStat2, ErrMsg2)
    CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -900,7 +964,7 @@ subroutine SetParameters(InitInp, InputFileData, p, ErrStat, ErrMsg)
    ! Set start and end node index for each elements
    !...............................................
 
-      ! Store the node number for first and last node in element
+      ! Store the node number for first and last FE node in element
       ! p%node_total  = p%elem_total*(p%nodes_per_elem-1) + 1    is the number of GLL nodes total for the beam
       ! --> This assumes that the first node of element 2 is the same as the last node of element 1.
       !     Some subroutines are looking at a single element, in which case the values stored in p%nodes_elem_idx
@@ -915,6 +979,8 @@ subroutine SetParameters(InitInp, InputFileData, p, ErrStat, ErrMsg)
    CASE (BD_MESH_FE)      
       CALL AllocAry(p%NdIndx,p%node_total,'p%NdIndx',ErrStat2,ErrMsg2)
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      CALL AllocAry(p%NdIndxInverse,p%elem_total*p%nodes_per_elem,'p%NdIndxInverse',ErrStat2,ErrMsg2) ! same size as y%BldMotion%NNodes
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       CALL AllocAry(p%OutNd2NdElem,2,p%node_total,'p%OutNd2NdElem',ErrStat2,ErrMsg2)
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          if (ErrStat >= AbortErrLev) return
@@ -923,18 +989,24 @@ subroutine SetParameters(InitInp, InputFileData, p, ErrStat, ErrMsg)
       p%OutNd2NdElem(:,1) = 1 ! note this is an array
       indx = 2
       DO i=1,p%elem_total
+         p%NdIndxInverse((i-1)*p%nodes_per_elem + 1) = indx-1  ! Index into BldMotion mesh (to number the nodes for output without using collocated nodes)
+         
          DO j=2,p%nodes_per_elem  ! GLL nodes overlap at element end points; we will skip the first node of each element (after the first one)
             p%NdIndx(indx) = (i-1)*p%nodes_per_elem + j  ! Index into BldMotion mesh (to number the nodes for output without using collocated nodes)
+            p%NdIndxInverse(p%NdIndx(indx)) = indx       ! Index from BldMotion mesh (to number of unique nodes)
             p%OutNd2NdElem(1,indx) = j                   ! Node number. To go from an output node number to a node/elem pair
             p%OutNd2NdElem(2,indx) = i                   ! Element number. To go from an output node number to a node/elem pair
             indx = indx + 1
          END DO
       ENDDO
-
+      
    CASE (BD_MESH_QP)
+
       IF (p%quadrature .EQ. GAUSS_QUADRATURE) THEN
          nUniqueQP = p%nqp*p%elem_total + 2*p%qp_indx_offset
-          
+
+         CALL AllocAry(p%NdIndxInverse, nUniqueQP,'p%NdIndxInverse',ErrStat2,ErrMsg2) ! same size as y%BldMotion%NNodes, a sibling of u%DistrLoad
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          CALL AllocAry(p%NdIndx, nUniqueQP,'p%NdIndx',ErrStat2,ErrMsg2)
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          CALL AllocAry(p%OutNd2NdElem,2,nUniqueQP,'p%OutNd2NdElem',ErrStat2,ErrMsg2)
@@ -943,6 +1015,7 @@ subroutine SetParameters(InitInp, InputFileData, p, ErrStat, ErrMsg)
             
          DO i=1,nUniqueQP ! gauss quadrature doesn't have overlapping nodes
             p%NdIndx(i) = i
+            p%NdIndxInverse(i) = i
          END DO
 
          indx = 2
@@ -960,7 +1033,9 @@ subroutine SetParameters(InitInp, InputFileData, p, ErrStat, ErrMsg)
 
       ELSEIF(p%quadrature .EQ. TRAP_QUADRATURE) THEN  ! at least one quadrature point associated with each blade station
          nUniqueQP = (p%nqp-1)*p%elem_total + 1
-          
+
+         CALL AllocAry(p%NdIndxInverse, nUniqueQP,'p%NdIndxInverse',ErrStat2,ErrMsg2) ! same size as y%BldMotion%NNodes, a sibling of u%DistrLoad
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          CALL AllocAry(p%NdIndx, nUniqueQP,'p%NdIndx',ErrStat2,ErrMsg2)
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          CALL AllocAry(p%OutNd2NdElem,2,nUniqueQP,'p%OutNd2NdElem',ErrStat2,ErrMsg2)
@@ -973,6 +1048,7 @@ subroutine SetParameters(InitInp, InputFileData, p, ErrStat, ErrMsg)
          DO i=1,p%elem_total
             DO j=2,p%nqp ! trap quadrature contains overlapping nodes at element end points; we will skip the first node of each element (after the first one) 
                p%NdIndx(indx) = (i-1)*p%nqp + j                 ! Index into BldMotion mesh (to number the nodes for output without using collocated nodes) 
+               p%NdIndxInverse(p%NdIndx(indx)) = indx           ! Index from BldMotion mesh
                p%OutNd2NdElem(1,indx) = j                       ! Node number. To go from an output node number to a node/elem pair
                p%OutNd2NdElem(2,indx) = i                       ! Element number. To go from an output node number to a node/elem pair
                indx = indx + 1;
@@ -1020,6 +1096,10 @@ subroutine SetParameters(InitInp, InputFileData, p, ErrStat, ErrMsg)
       if (ErrStat >= AbortErrLev) return
 
 
+   call BldNdOuts_SetParameters(InitInp, InputFileData, p, ErrStat2, ErrMsg2 ) ! requires p%BldNd_NumOuts, y%BldMotion
+      call setErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      if (ErrStat >= AbortErrLev) return
+   
 end subroutine SetParameters
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> this routine initializes the outputs, y, that are used in the BeamDyn interface for coupling in the FAST framework.
@@ -1156,13 +1236,16 @@ subroutine Init_y( p, u, y, ErrStat, ErrMsg)
       CALL SetErrStat(ErrID_Fatal, "Invalid p%BldMotionNodeLoc.", ErrStat, ErrMsg, RoutineName )
       
    END SELECT   
+   y%BldMotion%RefNode = 1
 
 
 
    !.................................
    ! y%WriteOutput (for writing columns to output file)
    !.................................
-   call AllocAry( y%WriteOutput, p%numOuts, 'WriteOutput', errStat2, errMsg2 )
+      !  p%BldNd_BlOutNd   contains the list of nodes we are outputting.
+
+   call AllocAry( y%WriteOutput, p%numOuts + p%BldNd_TotNumOuts, 'WriteOutput', errStat2, errMsg2 )
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
 end subroutine Init_y
@@ -1409,7 +1492,7 @@ subroutine Init_u( InitInp, p, u, ErrStat, ErrMsg )
    CALL MeshCommit ( Mesh    = u%DistrLoad     &
                     ,ErrStat = ErrStat2        &
                     ,ErrMess = ErrMsg2         )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      CALL SetErrStat( ErrStat2, 'u%DistrLoad'//ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
       ! initial guesses
    u%DistrLoad%Force  = 0.0_ReKi
@@ -1784,7 +1867,7 @@ END SUBROUTINE BD_UpdateStates
 
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> Routine for computing outputs, used in both loose and tight coupling.
-SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
+SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, NeedWriteOutput )
 
    REAL(DbKi),                   INTENT(IN   )  :: t           !< Current simulation time in seconds
    TYPE(BD_InputType),           INTENT(INOUT)  :: u           !< Inputs at t
@@ -1798,6 +1881,7 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
    TYPE(BD_MiscVarType),         INTENT(INOUT)  :: m           !< misc/optimization variables
    INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     !< Error status of the operation
    CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+   LOGICAL,          OPTIONAL,   INTENT(IN   )  :: NeedWriteOutput     !< Flag to determine if WriteOutput values need to be calculated in this call
 
    TYPE(BD_ContinuousStateType)                 :: x_tmp
    TYPE(BD_OtherStateType)                      :: OtherState_tmp
@@ -1807,13 +1891,20 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
    INTEGER(IntKi)                               :: ErrStat2                     ! Temporary Error status
    CHARACTER(ErrMsgLen)                         :: ErrMsg2                      ! Temporary Error message
    CHARACTER(*), PARAMETER                      :: RoutineName = 'BD_CalcOutput'
+   LOGICAL                                      :: CalcWriteOutput
 
-
+   
    ! Initialize ErrStat
 
    ErrStat = ErrID_None
    ErrMsg  = ""
    AllOuts = 0.0_ReKi
+   
+   if (present(NeedWriteOutput)) then
+      CalcWriteOutput = NeedWriteOutput
+   else
+      CalcWriteOutput = .true. ! by default, calculate WriteOutput unless told that we do not need it
+   end if
 
       ! Since x is passed in, but we need to update it, we must work with a copy.
    CALL BD_CopyContState(x, x_tmp, MESH_NEWCOPY, ErrStat2, ErrMsg2)
@@ -1912,19 +2003,31 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
    !  compute RootMxr and RootMyr for ServoDyn and
    !  get values to output to file:
    !-------------------------------------------------------
-   call Calc_WriteOutput( p, AllOuts, y, m, ErrStat2, ErrMsg2 )  !uses m%u2
+   call Calc_WriteOutput( p, AllOuts, y, m, ErrStat2, ErrMsg2, CalcWriteOutput )  !uses m%u2
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    y%RootMxr = AllOuts( RootMxr )
    y%RootMyr = AllOuts( RootMyr )
 
-   !...............................................................................................................................
-   ! Place the selected output channels into the WriteOutput(:) array with the proper sign:
-   !...............................................................................................................................
+   if (CalcWriteOutput) then
+      !...............................................................................................................................
+      ! Place the selected output channels into the WriteOutput(:) array with the proper sign:
+      !...............................................................................................................................
 
-   do i = 1,p%NumOuts  ! Loop through all selected output channels
-      y%WriteOutput(i) = p%OutParam(i)%SignM * AllOuts( p%OutParam(i)%Indx )
-   end do             ! i - All selected output channels
+      do i = 1,p%NumOuts  ! Loop through all selected output channels
+         y%WriteOutput(i) = p%OutParam(i)%SignM * AllOuts( p%OutParam(i)%Indx )
+      end do             ! i - All selected output channels
+
+
+      IF( p%BldNd_NumOuts > 0 ) THEN
+            ! Put the values from the nodal outputs into the writeoutput array
+         y%WriteOutput(p%NumOuts+1:) = 0.0_ReKi
+
+            ! Now we need to populate the blade node outputs here
+         call Calc_WriteBldNdOutput( p, m, y, ErrStat2, ErrMsg2 )   ! Call after normal writeoutput.  Will just postpend data on here.
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      ENDIF
+   end if
 
 
    call cleanup()
@@ -2878,7 +2981,6 @@ SUBROUTINE BD_DissipativeForce( nelem, p, m,fact )
    REAL(BDKi)                  :: b11(3,3)
    REAL(BDKi)                  :: b12(3,3)
    REAL(BDKi)                  :: alpha(3,3)
-   INTEGER(IntKi)              :: i, j
 
    INTEGER(IntKi)              :: idx_qp      !< index of current quadrature point
    
@@ -3508,7 +3610,6 @@ SUBROUTINE BD_Static(t,u,utimes,p,x,OtherState,m,ErrStat,ErrMsg)
 
    TYPE(BD_InputType)                            :: u_interp                     ! temporary copy of inputs, transferred to BD local system
    REAL(BDKi)                                    :: ScaleFactor                  ! Factor for scaling applied loads at each step
-   INTEGER(IntKi)                                :: i
    INTEGER(IntKi)                                :: j                            ! Generic counters
    INTEGER(IntKi)                                :: piter
    REAL(BDKi)                                    :: gravity_temp(3)
@@ -3751,7 +3852,6 @@ SUBROUTINE BD_FD_Stat( x, gravity, p, m )
     ! local variables
     INTEGER(IntKi)                                 :: i
     INTEGER(IntKi)                                 :: idx_dof
-    REAL(BDKi), allocatable                        :: RHS_m(:,:), RHS_p(:,:)
     CHARACTER(*), PARAMETER                        :: RoutineName = 'BD_FD_Stat'
 
     ! zero out the local matrices.
@@ -6677,7 +6777,7 @@ SUBROUTINE BD_JacobianPConstrState( t, u, p, x, xd, z, OtherState, y, m, ErrStat
 END SUBROUTINE BD_JacobianPConstrState
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 !> Routine to pack the data structures representing the operating points into arrays for linearization.
-SUBROUTINE BD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op, y_op, x_op, dx_op, xd_op, z_op )
+SUBROUTINE BD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op, y_op, x_op, dx_op, xd_op, z_op, NeedLogMap )
 
    REAL(DbKi),                           INTENT(IN   )           :: t          !< Time in seconds at operating point
    TYPE(BD_InputType),                   INTENT(INOUT)           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
@@ -6696,6 +6796,7 @@ SUBROUTINE BD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
    REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dx_op(:)   !< values of first time derivatives of linearized continuous states
    REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: xd_op(:)   !< values of linearized discrete states
    REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: z_op(:)    !< values of linearized constraint states
+   LOGICAL,                 OPTIONAL,    INTENT(IN   )           :: NeedLogMap !< whether a y_op values should contain log maps instead of full orientation matrices
 
    INTEGER(IntKi)                                                :: index, i, dof
    INTEGER(IntKi)                                                :: nu
@@ -6704,6 +6805,7 @@ SUBROUTINE BD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
    CHARACTER(ErrMsgLen)                                          :: ErrMsg2
    CHARACTER(*), PARAMETER                                       :: RoutineName = 'BD_GetOP'
    LOGICAL                                                       :: FieldMask(FIELDMASK_SIZE)
+   LOGICAL                                                       :: ReturnLogMap
    TYPE(BD_ContinuousStateType)                                  :: dx          ! derivative of continuous states at operating point
 
    
@@ -6740,10 +6842,15 @@ SUBROUTINE BD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
 
    
    IF ( PRESENT( y_op ) ) THEN
+      if (present(NeedLogMap)) then
+         ReturnLogMap = NeedLogMap
+      else
+         ReturnLogMap = .false.
+      end if
       
-      ny = p%Jac_ny + y%BldMotion%NNodes * 6  ! Jac_ny has 3 orientation angles, but the OP needs the full 9 elements of the DCM (thus 6 more per node)
-   
       if (.not. allocated(y_op)) then
+         ny = p%Jac_ny + y%BldMotion%NNodes * 6  ! Jac_ny has 3 orientation angles, but the OP needs the full 9 elements of the DCM (thus 6 more per node)
+   
          call AllocAry(y_op, ny, 'y_op', ErrStat2, ErrMsg2)
             call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
             if (ErrStat >= AbortErrLev) return
@@ -6760,10 +6867,10 @@ SUBROUTINE BD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
       FieldMask(MASKID_RotationVel)     = .true.
       FieldMask(MASKID_TranslationAcc)  = .true.
       FieldMask(MASKID_RotationAcc)     = .true.
-      call PackMotionMesh(y%BldMotion, y_op, index, FieldMask=FieldMask)
+      call PackMotionMesh(y%BldMotion, y_op, index, FieldMask=FieldMask, UseLogMaps=ReturnLogMap)
    
       index = index - 1
-      do i=1,p%NumOuts
+      do i=1,p%NumOuts + p%BldNd_TotNumOuts
          y_op(i+index) = y%WriteOutput(i)
       end do
          

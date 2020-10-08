@@ -204,16 +204,16 @@ CONTAINS
   Db_Xferred  = 1
   Int_Xferred = 1
 
-        DO I = 1, LEN(InData%InputFile)
-          IntKiBuf(Int_Xferred) = ICHAR(InData%InputFile(I:I), IntKi)
-          Int_Xferred = Int_Xferred   + 1
-        END DO ! I
-        DO I = 1, LEN(InData%RootName)
-          IntKiBuf(Int_Xferred) = ICHAR(InData%RootName(I:I), IntKi)
-          Int_Xferred = Int_Xferred   + 1
-        END DO ! I
-      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%TMax
-      Re_Xferred   = Re_Xferred   + 1
+    DO I = 1, LEN(InData%InputFile)
+      IntKiBuf(Int_Xferred) = ICHAR(InData%InputFile(I:I), IntKi)
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
+    DO I = 1, LEN(InData%RootName)
+      IntKiBuf(Int_Xferred) = ICHAR(InData%RootName(I:I), IntKi)
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
+    ReKiBuf(Re_Xferred) = InData%TMax
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE Orca_PackInitInput
 
  SUBROUTINE Orca_UnPackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -229,12 +229,6 @@ CONTAINS
   INTEGER(IntKi)                 :: Db_Xferred
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
-  LOGICAL                        :: mask0
-  LOGICAL, ALLOCATABLE           :: mask1(:)
-  LOGICAL, ALLOCATABLE           :: mask2(:,:)
-  LOGICAL, ALLOCATABLE           :: mask3(:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
   INTEGER(IntKi)                 :: ErrStat2
@@ -250,16 +244,16 @@ CONTAINS
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-      DO I = 1, LEN(OutData%InputFile)
-        OutData%InputFile(I:I) = CHAR(IntKiBuf(Int_Xferred))
-        Int_Xferred = Int_Xferred   + 1
-      END DO ! I
-      DO I = 1, LEN(OutData%RootName)
-        OutData%RootName(I:I) = CHAR(IntKiBuf(Int_Xferred))
-        Int_Xferred = Int_Xferred   + 1
-      END DO ! I
-      OutData%TMax = ReKiBuf( Re_Xferred )
-      Re_Xferred   = Re_Xferred + 1
+    DO I = 1, LEN(OutData%InputFile)
+      OutData%InputFile(I:I) = CHAR(IntKiBuf(Int_Xferred))
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
+    DO I = 1, LEN(OutData%RootName)
+      OutData%RootName(I:I) = CHAR(IntKiBuf(Int_Xferred))
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
+    OutData%TMax = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE Orca_UnPackInitInput
 
  SUBROUTINE Orca_CopyInitOutput( SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg )
@@ -452,12 +446,12 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WriteOutputHdr,1)
     Int_Xferred = Int_Xferred + 2
 
-    DO i1 = LBOUND(InData%WriteOutputHdr,1), UBOUND(InData%WriteOutputHdr,1)
+      DO i1 = LBOUND(InData%WriteOutputHdr,1), UBOUND(InData%WriteOutputHdr,1)
         DO I = 1, LEN(InData%WriteOutputHdr)
           IntKiBuf(Int_Xferred) = ICHAR(InData%WriteOutputHdr(i1)(I:I), IntKi)
-          Int_Xferred = Int_Xferred   + 1
+          Int_Xferred = Int_Xferred + 1
         END DO ! I
-    END DO !i1
+      END DO
   END IF
   IF ( .NOT. ALLOCATED(InData%WriteOutputUnt) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -469,12 +463,12 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WriteOutputUnt,1)
     Int_Xferred = Int_Xferred + 2
 
-    DO i1 = LBOUND(InData%WriteOutputUnt,1), UBOUND(InData%WriteOutputUnt,1)
+      DO i1 = LBOUND(InData%WriteOutputUnt,1), UBOUND(InData%WriteOutputUnt,1)
         DO I = 1, LEN(InData%WriteOutputUnt)
           IntKiBuf(Int_Xferred) = ICHAR(InData%WriteOutputUnt(i1)(I:I), IntKi)
-          Int_Xferred = Int_Xferred   + 1
+          Int_Xferred = Int_Xferred + 1
         END DO ! I
-    END DO !i1
+      END DO
   END IF
  END SUBROUTINE Orca_PackInitOutput
 
@@ -491,12 +485,6 @@ ENDIF
   INTEGER(IntKi)                 :: Db_Xferred
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
-  LOGICAL                        :: mask0
-  LOGICAL, ALLOCATABLE           :: mask1(:)
-  LOGICAL, ALLOCATABLE           :: mask2(:,:)
-  LOGICAL, ALLOCATABLE           :: mask3(:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
@@ -564,19 +552,12 @@ ENDIF
        CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%WriteOutputHdr.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask1 = .TRUE. 
-    DO i1 = LBOUND(OutData%WriteOutputHdr,1), UBOUND(OutData%WriteOutputHdr,1)
+      DO i1 = LBOUND(OutData%WriteOutputHdr,1), UBOUND(OutData%WriteOutputHdr,1)
         DO I = 1, LEN(OutData%WriteOutputHdr)
           OutData%WriteOutputHdr(i1)(I:I) = CHAR(IntKiBuf(Int_Xferred))
-          Int_Xferred = Int_Xferred   + 1
+          Int_Xferred = Int_Xferred + 1
         END DO ! I
-    END DO !i1
-    DEALLOCATE(mask1)
+      END DO
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WriteOutputUnt not allocated
     Int_Xferred = Int_Xferred + 1
@@ -591,19 +572,12 @@ ENDIF
        CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%WriteOutputUnt.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask1 = .TRUE. 
-    DO i1 = LBOUND(OutData%WriteOutputUnt,1), UBOUND(OutData%WriteOutputUnt,1)
+      DO i1 = LBOUND(OutData%WriteOutputUnt,1), UBOUND(OutData%WriteOutputUnt,1)
         DO I = 1, LEN(OutData%WriteOutputUnt)
           OutData%WriteOutputUnt(i1)(I:I) = CHAR(IntKiBuf(Int_Xferred))
-          Int_Xferred = Int_Xferred   + 1
+          Int_Xferred = Int_Xferred + 1
         END DO ! I
-    END DO !i1
-    DEALLOCATE(mask1)
+      END DO
   END IF
  END SUBROUTINE Orca_UnPackInitOutput
 
@@ -706,26 +680,26 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-        DO I = 1, LEN(InData%DLL_FileName)
-          IntKiBuf(Int_Xferred) = ICHAR(InData%DLL_FileName(I:I), IntKi)
-          Int_Xferred = Int_Xferred   + 1
-        END DO ! I
-        DO I = 1, LEN(InData%DLL_InitProcName)
-          IntKiBuf(Int_Xferred) = ICHAR(InData%DLL_InitProcName(I:I), IntKi)
-          Int_Xferred = Int_Xferred   + 1
-        END DO ! I
-        DO I = 1, LEN(InData%DLL_CalcProcName)
-          IntKiBuf(Int_Xferred) = ICHAR(InData%DLL_CalcProcName(I:I), IntKi)
-          Int_Xferred = Int_Xferred   + 1
-        END DO ! I
-        DO I = 1, LEN(InData%DLL_EndProcName)
-          IntKiBuf(Int_Xferred) = ICHAR(InData%DLL_EndProcName(I:I), IntKi)
-          Int_Xferred = Int_Xferred   + 1
-        END DO ! I
-        DO I = 1, LEN(InData%DirRoot)
-          IntKiBuf(Int_Xferred) = ICHAR(InData%DirRoot(I:I), IntKi)
-          Int_Xferred = Int_Xferred   + 1
-        END DO ! I
+    DO I = 1, LEN(InData%DLL_FileName)
+      IntKiBuf(Int_Xferred) = ICHAR(InData%DLL_FileName(I:I), IntKi)
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
+    DO I = 1, LEN(InData%DLL_InitProcName)
+      IntKiBuf(Int_Xferred) = ICHAR(InData%DLL_InitProcName(I:I), IntKi)
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
+    DO I = 1, LEN(InData%DLL_CalcProcName)
+      IntKiBuf(Int_Xferred) = ICHAR(InData%DLL_CalcProcName(I:I), IntKi)
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
+    DO I = 1, LEN(InData%DLL_EndProcName)
+      IntKiBuf(Int_Xferred) = ICHAR(InData%DLL_EndProcName(I:I), IntKi)
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
+    DO I = 1, LEN(InData%DirRoot)
+      IntKiBuf(Int_Xferred) = ICHAR(InData%DirRoot(I:I), IntKi)
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
  END SUBROUTINE Orca_PackInputFile
 
  SUBROUTINE Orca_UnPackInputFile( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -741,12 +715,6 @@ ENDIF
   INTEGER(IntKi)                 :: Db_Xferred
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
-  LOGICAL                        :: mask0
-  LOGICAL, ALLOCATABLE           :: mask1(:)
-  LOGICAL, ALLOCATABLE           :: mask2(:,:)
-  LOGICAL, ALLOCATABLE           :: mask3(:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'Orca_UnPackInputFile'
@@ -760,26 +728,26 @@ ENDIF
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-      DO I = 1, LEN(OutData%DLL_FileName)
-        OutData%DLL_FileName(I:I) = CHAR(IntKiBuf(Int_Xferred))
-        Int_Xferred = Int_Xferred   + 1
-      END DO ! I
-      DO I = 1, LEN(OutData%DLL_InitProcName)
-        OutData%DLL_InitProcName(I:I) = CHAR(IntKiBuf(Int_Xferred))
-        Int_Xferred = Int_Xferred   + 1
-      END DO ! I
-      DO I = 1, LEN(OutData%DLL_CalcProcName)
-        OutData%DLL_CalcProcName(I:I) = CHAR(IntKiBuf(Int_Xferred))
-        Int_Xferred = Int_Xferred   + 1
-      END DO ! I
-      DO I = 1, LEN(OutData%DLL_EndProcName)
-        OutData%DLL_EndProcName(I:I) = CHAR(IntKiBuf(Int_Xferred))
-        Int_Xferred = Int_Xferred   + 1
-      END DO ! I
-      DO I = 1, LEN(OutData%DirRoot)
-        OutData%DirRoot(I:I) = CHAR(IntKiBuf(Int_Xferred))
-        Int_Xferred = Int_Xferred   + 1
-      END DO ! I
+    DO I = 1, LEN(OutData%DLL_FileName)
+      OutData%DLL_FileName(I:I) = CHAR(IntKiBuf(Int_Xferred))
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
+    DO I = 1, LEN(OutData%DLL_InitProcName)
+      OutData%DLL_InitProcName(I:I) = CHAR(IntKiBuf(Int_Xferred))
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
+    DO I = 1, LEN(OutData%DLL_CalcProcName)
+      OutData%DLL_CalcProcName(I:I) = CHAR(IntKiBuf(Int_Xferred))
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
+    DO I = 1, LEN(OutData%DLL_EndProcName)
+      OutData%DLL_EndProcName(I:I) = CHAR(IntKiBuf(Int_Xferred))
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
+    DO I = 1, LEN(OutData%DirRoot)
+      OutData%DirRoot(I:I) = CHAR(IntKiBuf(Int_Xferred))
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
  END SUBROUTINE Orca_UnPackInputFile
 
  SUBROUTINE Orca_CopyOtherState( SrcOtherStateData, DstOtherStateData, CtrlCode, ErrStat, ErrMsg )
@@ -873,8 +841,8 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%DummyOtherState
-      Re_Xferred   = Re_Xferred   + 1
+    ReKiBuf(Re_Xferred) = InData%DummyOtherState
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE Orca_PackOtherState
 
  SUBROUTINE Orca_UnPackOtherState( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -890,12 +858,6 @@ ENDIF
   INTEGER(IntKi)                 :: Db_Xferred
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
-  LOGICAL                        :: mask0
-  LOGICAL, ALLOCATABLE           :: mask1(:)
-  LOGICAL, ALLOCATABLE           :: mask2(:,:)
-  LOGICAL, ALLOCATABLE           :: mask3(:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'Orca_UnPackOtherState'
@@ -909,8 +871,8 @@ ENDIF
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-      OutData%DummyOtherState = REAL( ReKiBuf( Re_Xferred ), SiKi) 
-      Re_Xferred   = Re_Xferred + 1
+    OutData%DummyOtherState = REAL(ReKiBuf(Re_Xferred), SiKi)
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE Orca_UnPackOtherState
 
  SUBROUTINE Orca_CopyMisc( SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg )
@@ -1032,12 +994,20 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-      ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%PtfmAM))-1 ) = PACK(InData%PtfmAM,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%PtfmAM)
-      ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%PtfmFt))-1 ) = PACK(InData%PtfmFt,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%PtfmFt)
-      ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%F_PtfmAM))-1 ) = PACK(InData%F_PtfmAM,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%F_PtfmAM)
+    DO i2 = LBOUND(InData%PtfmAM,2), UBOUND(InData%PtfmAM,2)
+      DO i1 = LBOUND(InData%PtfmAM,1), UBOUND(InData%PtfmAM,1)
+        ReKiBuf(Re_Xferred) = InData%PtfmAM(i1,i2)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+    END DO
+    DO i1 = LBOUND(InData%PtfmFt,1), UBOUND(InData%PtfmFt,1)
+      ReKiBuf(Re_Xferred) = InData%PtfmFt(i1)
+      Re_Xferred = Re_Xferred + 1
+    END DO
+    DO i1 = LBOUND(InData%F_PtfmAM,1), UBOUND(InData%F_PtfmAM,1)
+      ReKiBuf(Re_Xferred) = InData%F_PtfmAM(i1)
+      Re_Xferred = Re_Xferred + 1
+    END DO
   IF ( .NOT. ALLOCATED(InData%AllOuts) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -1048,11 +1018,13 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%AllOuts,1)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%AllOuts)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%AllOuts))-1 ) = PACK(InData%AllOuts,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%AllOuts)
+      DO i1 = LBOUND(InData%AllOuts,1), UBOUND(InData%AllOuts,1)
+        ReKiBuf(Re_Xferred) = InData%AllOuts(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
-      DbKiBuf ( Db_Xferred:Db_Xferred+(1)-1 ) = InData%LastTimeStep
-      Db_Xferred   = Db_Xferred   + 1
+    DbKiBuf(Db_Xferred) = InData%LastTimeStep
+    Db_Xferred = Db_Xferred + 1
  END SUBROUTINE Orca_PackMisc
 
  SUBROUTINE Orca_UnPackMisc( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -1068,12 +1040,6 @@ ENDIF
   INTEGER(IntKi)                 :: Db_Xferred
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
-  LOGICAL                        :: mask0
-  LOGICAL, ALLOCATABLE           :: mask1(:)
-  LOGICAL, ALLOCATABLE           :: mask2(:,:)
-  LOGICAL, ALLOCATABLE           :: mask3(:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
   INTEGER(IntKi)                 :: ErrStat2
@@ -1093,37 +1059,24 @@ ENDIF
     i1_u = UBOUND(OutData%PtfmAM,1)
     i2_l = LBOUND(OutData%PtfmAM,2)
     i2_u = UBOUND(OutData%PtfmAM,2)
-    ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask2.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask2 = .TRUE. 
-      OutData%PtfmAM = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%PtfmAM))-1 ), mask2, 0.0_ReKi )
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%PtfmAM)
-    DEALLOCATE(mask2)
+    DO i2 = LBOUND(OutData%PtfmAM,2), UBOUND(OutData%PtfmAM,2)
+      DO i1 = LBOUND(OutData%PtfmAM,1), UBOUND(OutData%PtfmAM,1)
+        OutData%PtfmAM(i1,i2) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+    END DO
     i1_l = LBOUND(OutData%PtfmFt,1)
     i1_u = UBOUND(OutData%PtfmFt,1)
-    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask1 = .TRUE. 
-      OutData%PtfmFt = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%PtfmFt))-1 ), mask1, 0.0_ReKi )
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%PtfmFt)
-    DEALLOCATE(mask1)
+    DO i1 = LBOUND(OutData%PtfmFt,1), UBOUND(OutData%PtfmFt,1)
+      OutData%PtfmFt(i1) = ReKiBuf(Re_Xferred)
+      Re_Xferred = Re_Xferred + 1
+    END DO
     i1_l = LBOUND(OutData%F_PtfmAM,1)
     i1_u = UBOUND(OutData%F_PtfmAM,1)
-    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask1 = .TRUE. 
-      OutData%F_PtfmAM = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%F_PtfmAM))-1 ), mask1, 0.0_ReKi )
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%F_PtfmAM)
-    DEALLOCATE(mask1)
+    DO i1 = LBOUND(OutData%F_PtfmAM,1), UBOUND(OutData%F_PtfmAM,1)
+      OutData%F_PtfmAM(i1) = ReKiBuf(Re_Xferred)
+      Re_Xferred = Re_Xferred + 1
+    END DO
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! AllOuts not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
@@ -1137,18 +1090,13 @@ ENDIF
        CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%AllOuts.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask1 = .TRUE. 
-      IF (SIZE(OutData%AllOuts)>0) OutData%AllOuts = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%AllOuts))-1 ), mask1, 0.0_ReKi )
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%AllOuts)
-    DEALLOCATE(mask1)
+      DO i1 = LBOUND(OutData%AllOuts,1), UBOUND(OutData%AllOuts,1)
+        OutData%AllOuts(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
-      OutData%LastTimeStep = DbKiBuf( Db_Xferred ) 
-      Db_Xferred   = Db_Xferred + 1
+    OutData%LastTimeStep = DbKiBuf(Db_Xferred)
+    Db_Xferred = Db_Xferred + 1
  END SUBROUTINE Orca_UnPackMisc
 
  SUBROUTINE Orca_CopyParam( SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg )
@@ -1314,8 +1262,8 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-      DbKiBuf ( Db_Xferred:Db_Xferred+(1)-1 ) = InData%DT
-      Db_Xferred   = Db_Xferred   + 1
+    DbKiBuf(Db_Xferred) = InData%DT
+    Db_Xferred = Db_Xferred + 1
       CALL DLLTypePack( InData%DLL_Orca, Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2, OnlySize ) ! DLL_Orca 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
@@ -1344,14 +1292,14 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
-        DO I = 1, LEN(InData%SimNamePath)
-          IntKiBuf(Int_Xferred) = ICHAR(InData%SimNamePath(I:I), IntKi)
-          Int_Xferred = Int_Xferred   + 1
-        END DO ! I
-      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%SimNamePathLen
-      Int_Xferred   = Int_Xferred   + 1
-      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%NumOuts
-      Int_Xferred   = Int_Xferred   + 1
+    DO I = 1, LEN(InData%SimNamePath)
+      IntKiBuf(Int_Xferred) = ICHAR(InData%SimNamePath(I:I), IntKi)
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
+    IntKiBuf(Int_Xferred) = InData%SimNamePathLen
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%NumOuts
+    Int_Xferred = Int_Xferred + 1
   IF ( .NOT. ALLOCATED(InData%OutParam) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -1408,12 +1356,6 @@ ENDIF
   INTEGER(IntKi)                 :: Db_Xferred
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
-  LOGICAL                        :: mask0
-  LOGICAL, ALLOCATABLE           :: mask1(:)
-  LOGICAL, ALLOCATABLE           :: mask2(:,:)
-  LOGICAL, ALLOCATABLE           :: mask3(:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
@@ -1428,8 +1370,8 @@ ENDIF
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-      OutData%DT = DbKiBuf( Db_Xferred ) 
-      Db_Xferred   = Db_Xferred + 1
+    OutData%DT = DbKiBuf(Db_Xferred)
+    Db_Xferred = Db_Xferred + 1
       Buf_size=IntKiBuf( Int_Xferred )
       Int_Xferred = Int_Xferred + 1
       IF(Buf_size > 0) THEN
@@ -1470,14 +1412,14 @@ ENDIF
       IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
-      DO I = 1, LEN(OutData%SimNamePath)
-        OutData%SimNamePath(I:I) = CHAR(IntKiBuf(Int_Xferred))
-        Int_Xferred = Int_Xferred   + 1
-      END DO ! I
-      OutData%SimNamePathLen = IntKiBuf( Int_Xferred ) 
-      Int_Xferred   = Int_Xferred + 1
-      OutData%NumOuts = IntKiBuf( Int_Xferred ) 
-      Int_Xferred   = Int_Xferred + 1
+    DO I = 1, LEN(OutData%SimNamePath)
+      OutData%SimNamePath(I:I) = CHAR(IntKiBuf(Int_Xferred))
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
+    OutData%SimNamePathLen = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%NumOuts = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! OutParam not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
@@ -1690,12 +1632,6 @@ ENDIF
   INTEGER(IntKi)                 :: Db_Xferred
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
-  LOGICAL                        :: mask0
-  LOGICAL, ALLOCATABLE           :: mask1(:)
-  LOGICAL, ALLOCATABLE           :: mask2(:,:)
-  LOGICAL, ALLOCATABLE           :: mask3(:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'Orca_UnPackInput'
@@ -1921,8 +1857,10 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WriteOutput,1)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%WriteOutput)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%WriteOutput))-1 ) = PACK(InData%WriteOutput,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%WriteOutput)
+      DO i1 = LBOUND(InData%WriteOutput,1), UBOUND(InData%WriteOutput,1)
+        ReKiBuf(Re_Xferred) = InData%WriteOutput(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
  END SUBROUTINE Orca_PackOutput
 
@@ -1939,12 +1877,6 @@ ENDIF
   INTEGER(IntKi)                 :: Db_Xferred
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
-  LOGICAL                        :: mask0
-  LOGICAL, ALLOCATABLE           :: mask1(:)
-  LOGICAL, ALLOCATABLE           :: mask2(:,:)
-  LOGICAL, ALLOCATABLE           :: mask3(:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
@@ -2012,15 +1944,10 @@ ENDIF
        CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%WriteOutput.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask1 = .TRUE. 
-      IF (SIZE(OutData%WriteOutput)>0) OutData%WriteOutput = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%WriteOutput))-1 ), mask1, 0.0_ReKi )
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%WriteOutput)
-    DEALLOCATE(mask1)
+      DO i1 = LBOUND(OutData%WriteOutput,1), UBOUND(OutData%WriteOutput,1)
+        OutData%WriteOutput(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
  END SUBROUTINE Orca_UnPackOutput
 
@@ -2115,8 +2042,8 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%Dummy
-      Re_Xferred   = Re_Xferred   + 1
+    ReKiBuf(Re_Xferred) = InData%Dummy
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE Orca_PackContState
 
  SUBROUTINE Orca_UnPackContState( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -2132,12 +2059,6 @@ ENDIF
   INTEGER(IntKi)                 :: Db_Xferred
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
-  LOGICAL                        :: mask0
-  LOGICAL, ALLOCATABLE           :: mask1(:)
-  LOGICAL, ALLOCATABLE           :: mask2(:,:)
-  LOGICAL, ALLOCATABLE           :: mask3(:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'Orca_UnPackContState'
@@ -2151,8 +2072,8 @@ ENDIF
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-      OutData%Dummy = ReKiBuf( Re_Xferred )
-      Re_Xferred   = Re_Xferred + 1
+    OutData%Dummy = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE Orca_UnPackContState
 
  SUBROUTINE Orca_CopyDiscState( SrcDiscStateData, DstDiscStateData, CtrlCode, ErrStat, ErrMsg )
@@ -2246,8 +2167,8 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%Dummy
-      Re_Xferred   = Re_Xferred   + 1
+    ReKiBuf(Re_Xferred) = InData%Dummy
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE Orca_PackDiscState
 
  SUBROUTINE Orca_UnPackDiscState( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -2263,12 +2184,6 @@ ENDIF
   INTEGER(IntKi)                 :: Db_Xferred
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
-  LOGICAL                        :: mask0
-  LOGICAL, ALLOCATABLE           :: mask1(:)
-  LOGICAL, ALLOCATABLE           :: mask2(:,:)
-  LOGICAL, ALLOCATABLE           :: mask3(:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'Orca_UnPackDiscState'
@@ -2282,8 +2197,8 @@ ENDIF
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-      OutData%Dummy = ReKiBuf( Re_Xferred )
-      Re_Xferred   = Re_Xferred + 1
+    OutData%Dummy = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE Orca_UnPackDiscState
 
  SUBROUTINE Orca_CopyConstrState( SrcConstrStateData, DstConstrStateData, CtrlCode, ErrStat, ErrMsg )
@@ -2377,8 +2292,8 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%DummyConstrState
-      Re_Xferred   = Re_Xferred   + 1
+    ReKiBuf(Re_Xferred) = InData%DummyConstrState
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE Orca_PackConstrState
 
  SUBROUTINE Orca_UnPackConstrState( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -2394,12 +2309,6 @@ ENDIF
   INTEGER(IntKi)                 :: Db_Xferred
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
-  LOGICAL                        :: mask0
-  LOGICAL, ALLOCATABLE           :: mask1(:)
-  LOGICAL, ALLOCATABLE           :: mask2(:,:)
-  LOGICAL, ALLOCATABLE           :: mask3(:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'Orca_UnPackConstrState'
@@ -2413,8 +2322,8 @@ ENDIF
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-      OutData%DummyConstrState = ReKiBuf( Re_Xferred )
-      Re_Xferred   = Re_Xferred + 1
+    OutData%DummyConstrState = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE Orca_UnPackConstrState
 
 
@@ -2492,8 +2401,8 @@ ENDIF
  REAL(DbKi)                                 :: t(2)     ! Times associated with the Inputs
  REAL(DbKi)                                 :: t_out    ! Time to which to be extrap/interpd
  CHARACTER(*),                    PARAMETER :: RoutineName = 'Orca_Input_ExtrapInterp1'
- REAL(DbKi)                                 :: b0       ! temporary for extrapolation/interpolation
- REAL(DbKi)                                 :: c0       ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: b        ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: ScaleFactor ! temporary for extrapolation/interpolation
  INTEGER(IntKi)                             :: ErrStat2 ! local errors
  CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
     ! Initialize ErrStat
@@ -2508,6 +2417,8 @@ ENDIF
      CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
      RETURN
    END IF
+
+   ScaleFactor = t_out / t(2)
       CALL MeshExtrapInterp1(u1%PtfmMesh, u2%PtfmMesh, tin, u_out%PtfmMesh, tin_out, ErrStat2, ErrMsg2 )
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
  END SUBROUTINE Orca_Input_ExtrapInterp1
@@ -2539,8 +2450,9 @@ ENDIF
  REAL(DbKi)                                 :: t(3)      ! Times associated with the Inputs
  REAL(DbKi)                                 :: t_out     ! Time to which to be extrap/interpd
  INTEGER(IntKi)                             :: order     ! order of polynomial fit (max 2)
- REAL(DbKi)                                 :: b0       ! temporary for extrapolation/interpolation
- REAL(DbKi)                                 :: c0       ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: b        ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: c        ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: ScaleFactor ! temporary for extrapolation/interpolation
  INTEGER(IntKi)                             :: ErrStat2 ! local errors
  CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
  CHARACTER(*),            PARAMETER         :: RoutineName = 'Orca_Input_ExtrapInterp2'
@@ -2562,6 +2474,8 @@ ENDIF
      CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
      RETURN
    END IF
+
+   ScaleFactor = t_out / (t(2) * t(3) * (t(2) - t(3)))
       CALL MeshExtrapInterp2(u1%PtfmMesh, u2%PtfmMesh, u3%PtfmMesh, tin, u_out%PtfmMesh, tin_out, ErrStat2, ErrMsg2 )
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
  END SUBROUTINE Orca_Input_ExtrapInterp2
@@ -2641,12 +2555,12 @@ ENDIF
  REAL(DbKi)                                 :: t(2)     ! Times associated with the Outputs
  REAL(DbKi)                                 :: t_out    ! Time to which to be extrap/interpd
  CHARACTER(*),                    PARAMETER :: RoutineName = 'Orca_Output_ExtrapInterp1'
- REAL(DbKi)                                 :: b0       ! temporary for extrapolation/interpolation
- REAL(DbKi)                                 :: c0       ! temporary for extrapolation/interpolation
- REAL(DbKi),ALLOCATABLE,DIMENSION(:)        :: b1       ! temporary for extrapolation/interpolation
- REAL(DbKi),ALLOCATABLE,DIMENSION(:)        :: c1       ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: b        ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: ScaleFactor ! temporary for extrapolation/interpolation
  INTEGER(IntKi)                             :: ErrStat2 ! local errors
  CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
+ INTEGER                                    :: i01    ! dim1 level 0 counter variable for arrays of ddts
+ INTEGER                                    :: i1    ! dim1 counter variable for arrays
     ! Initialize ErrStat
  ErrStat = ErrID_None
  ErrMsg  = ""
@@ -2659,15 +2573,15 @@ ENDIF
      CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
      RETURN
    END IF
+
+   ScaleFactor = t_out / t(2)
       CALL MeshExtrapInterp1(y1%PtfmMesh, y2%PtfmMesh, tin, y_out%PtfmMesh, tin_out, ErrStat2, ErrMsg2 )
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
 IF (ALLOCATED(y_out%WriteOutput) .AND. ALLOCATED(y1%WriteOutput)) THEN
-  ALLOCATE(b1(SIZE(y_out%WriteOutput,1)))
-  ALLOCATE(c1(SIZE(y_out%WriteOutput,1)))
-  b1 = -(y1%WriteOutput - y2%WriteOutput)/t(2)
-  y_out%WriteOutput = y1%WriteOutput + b1 * t_out
-  DEALLOCATE(b1)
-  DEALLOCATE(c1)
+  DO i1 = LBOUND(y_out%WriteOutput,1),UBOUND(y_out%WriteOutput,1)
+    b = -(y1%WriteOutput(i1) - y2%WriteOutput(i1))
+    y_out%WriteOutput(i1) = y1%WriteOutput(i1) + b * ScaleFactor
+  END DO
 END IF ! check if allocated
  END SUBROUTINE Orca_Output_ExtrapInterp1
 
@@ -2698,13 +2612,14 @@ END IF ! check if allocated
  REAL(DbKi)                                 :: t(3)      ! Times associated with the Outputs
  REAL(DbKi)                                 :: t_out     ! Time to which to be extrap/interpd
  INTEGER(IntKi)                             :: order     ! order of polynomial fit (max 2)
- REAL(DbKi)                                 :: b0       ! temporary for extrapolation/interpolation
- REAL(DbKi)                                 :: c0       ! temporary for extrapolation/interpolation
- REAL(DbKi),ALLOCATABLE,DIMENSION(:)        :: b1       ! temporary for extrapolation/interpolation
- REAL(DbKi),ALLOCATABLE,DIMENSION(:)        :: c1       ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: b        ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: c        ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: ScaleFactor ! temporary for extrapolation/interpolation
  INTEGER(IntKi)                             :: ErrStat2 ! local errors
  CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
  CHARACTER(*),            PARAMETER         :: RoutineName = 'Orca_Output_ExtrapInterp2'
+ INTEGER                                    :: i01    ! dim1 level 0 counter variable for arrays of ddts
+ INTEGER                                    :: i1    ! dim1 counter variable for arrays
     ! Initialize ErrStat
  ErrStat = ErrID_None
  ErrMsg  = ""
@@ -2723,16 +2638,16 @@ END IF ! check if allocated
      CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
      RETURN
    END IF
+
+   ScaleFactor = t_out / (t(2) * t(3) * (t(2) - t(3)))
       CALL MeshExtrapInterp2(y1%PtfmMesh, y2%PtfmMesh, y3%PtfmMesh, tin, y_out%PtfmMesh, tin_out, ErrStat2, ErrMsg2 )
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
 IF (ALLOCATED(y_out%WriteOutput) .AND. ALLOCATED(y1%WriteOutput)) THEN
-  ALLOCATE(b1(SIZE(y_out%WriteOutput,1)))
-  ALLOCATE(c1(SIZE(y_out%WriteOutput,1)))
-  b1 = (t(3)**2*(y1%WriteOutput - y2%WriteOutput) + t(2)**2*(-y1%WriteOutput + y3%WriteOutput))/(t(2)*t(3)*(t(2) - t(3)))
-  c1 = ( (t(2)-t(3))*y1%WriteOutput + t(3)*y2%WriteOutput - t(2)*y3%WriteOutput ) / (t(2)*t(3)*(t(2) - t(3)))
-  y_out%WriteOutput = y1%WriteOutput + b1 * t_out + c1 * t_out**2
-  DEALLOCATE(b1)
-  DEALLOCATE(c1)
+  DO i1 = LBOUND(y_out%WriteOutput,1),UBOUND(y_out%WriteOutput,1)
+    b = (t(3)**2*(y1%WriteOutput(i1) - y2%WriteOutput(i1)) + t(2)**2*(-y1%WriteOutput(i1) + y3%WriteOutput(i1)))* scaleFactor
+    c = ( (t(2)-t(3))*y1%WriteOutput(i1) + t(3)*y2%WriteOutput(i1) - t(2)*y3%WriteOutput(i1) ) * scaleFactor
+    y_out%WriteOutput(i1) = y1%WriteOutput(i1) + b  + c * t_out
+  END DO
 END IF ! check if allocated
  END SUBROUTINE Orca_Output_ExtrapInterp2
 

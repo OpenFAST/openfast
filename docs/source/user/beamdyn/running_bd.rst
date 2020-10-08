@@ -62,7 +62,7 @@ use of a driver file in addition to the primary and blade BeamDyn input
 files. This driver file specifies inputs normally provided to BeamDyn by
 FAST, including motions of the blade root and externally applied loads.
 Both the BeamDyn summary file and the results output file are available
-when using the stand-alone BeamDyn (see Section :ref:`output-files` for
+when using the stand-alone BeamDyn (see Section :ref:`bd-output-files` for
 more information regarding the BeamDyn output files).
 
 Run the stand-alone BeamDyn software from a DOS command prompt by

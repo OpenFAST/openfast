@@ -1,6 +1,6 @@
 [submodule "reg_tests/r-test"]
 	path = reg_tests/r-test
-	url = https://github.com/openfast/r-test.git
+	url = https://github.com/OpenFAST/r-test.git
 [submodule "unit_tests/pfunit"]
 	path = unit_tests/pfunit
 	url = https://github.com/Goddard-Fortran-Ecosystem/pFUnit.git

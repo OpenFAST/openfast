@@ -5,6 +5,10 @@ module test_NWTC_IO_CheckArgs
     
     implicit none
 
+    integer, parameter :: stdout=6
+    character(9), parameter :: nullfile="/dev/null"
+    character(11), parameter :: terminal="/dev/stdout"
+
 contains
 
     ! PASSING CASES
@@ -27,7 +31,9 @@ contains
         argument_array = (/      &
             "first_arg.txt   "   &
         /)
+        open(unit=stdout, file=nullfile, status="old")
         call CheckArgs( filename, error_status, second_argument, flag, argument_array )
+        open(unit=stdout, file=terminal, status="old")
         @assertEqual( "first_arg.txt", filename )
         @assertEqual( 0, error_status )
         @assertEqual( "", second_argument )
@@ -46,7 +52,9 @@ contains
 
         filename = "default.txt"
         allocate(argument_array(0))
+        open(unit=stdout, file=nullfile, status="old")
         call CheckArgs( filename, error_status, second_argument, flag, argument_array )
+        open(unit=stdout, file=terminal, status="old")
         @assertEqual( "default.txt", filename )
         @assertEqual( 0, error_status )
         @assertEqual( "", second_argument )
@@ -66,7 +74,9 @@ contains
         argument_array = (/      &
             "first_arg.txt   "   &
         /)
+        open(unit=stdout, file=nullfile, status="old")
         call CheckArgs( filename, error_status, second_argument, flag, argument_array )
+        open(unit=stdout, file=terminal, status="old")
         @assertEqual( "first_arg.txt", filename )
         @assertEqual( 0, error_status )
         @assertEqual( "", second_argument )
@@ -95,7 +105,9 @@ contains
             "first_arg.txt   ",  &
             "second_arg      "   &
         /)
+        open(unit=stdout, file=nullfile, status="old")
         call CheckArgs( filename, error_status, second_argument, flag, argument_array )
+        open(unit=stdout, file=terminal, status="old")
         @assertEqual( "first_arg.txt", filename )
         @assertEqual( 0, error_status )
         @assertEqual( "second_arg", second_argument )
@@ -119,7 +131,9 @@ contains
             "-restart        ",  &
             "second_arg      "   &
         /)
+        open(unit=stdout, file=nullfile, status="old")
         call CheckArgs( filename, error_status, second_argument, flag, argument_array )
+        open(unit=stdout, file=terminal, status="old")
         @assertEqual( "first_arg.txt", filename )
         @assertEqual( 0, error_status )
         @assertEqual( "second_arg", second_argument )
@@ -142,7 +156,9 @@ contains
             "-restart        ",  &
             "first_arg.txt   "   &
         /)
+        open(unit=stdout, file=nullfile, status="old")
         call CheckArgs( filename, error_status, second_argument, flag, argument_array )
+        open(unit=stdout, file=terminal, status="old")
         @assertEqual( "", filename )
         @assertEqual( 0, error_status )
         @assertEqual( "first_arg.txt", second_argument )
@@ -169,7 +185,9 @@ contains
             "first_arg.txt   ",  &
             "second_arg      "   &
         /)
+        open(unit=stdout, file=nullfile, status="old")
         call CheckArgs( filename, error_status, second_argument, flag, argument_array )
+        open(unit=stdout, file=terminal, status="old")
         @assertEqual( "first_arg.txt", filename )
         @assertEqual( 0, error_status )
         @assertEqual( "second_arg", second_argument )
@@ -196,7 +214,9 @@ contains
             "-h              ",  &
             "first_arg.txt   "   &
         /)
+        open(unit=stdout, file=nullfile, status="old")
         call CheckArgs( filename, error_status, second_argument, flag, argument_array )
+        open(unit=stdout, file=terminal, status="old")
         @assertEqual( "first_arg.txt", filename )
         @assertEqual( 0, error_status )
         @assertEqual( "", second_argument )
@@ -219,11 +239,67 @@ contains
             "first_arg.txt   ",  &
             "-h              "   &
         /)
+        open(unit=stdout, file=nullfile, status="old")
         call CheckArgs( filename, error_status, second_argument, flag, argument_array )
+        open(unit=stdout, file=terminal, status="old")
         @assertEqual( "first_arg.txt", filename )
         @assertEqual( 0, error_status )
         @assertEqual( "", second_argument )
         @assertEqual( "H", flag )
+        deallocate(argument_array)
+    end subroutine
+
+    ! ************************************************************************
+    ! The version flag in any position should show the version info and exit
+    ! normally.
+
+    @test
+    subroutine test_version1()
+
+        ! executable.exe -v FileName
+
+        character(1024) :: filename, second_argument, flag
+        integer(IntKi) :: error_status
+        character(16), dimension(:), allocatable :: argument_array
+
+        filename = ""
+        allocate(argument_array(2))
+        argument_array = (/      &
+            "-v              ",  &
+            "first_arg.txt   "   &
+        /)
+        open(unit=stdout, file=nullfile, status="old")
+        call CheckArgs( filename, error_status, second_argument, flag, argument_array )
+        open(unit=stdout, file=terminal, status="old")
+        @assertEqual( "first_arg.txt", filename )
+        @assertEqual( 0, error_status )
+        @assertEqual( "", second_argument )
+        @assertEqual( "V", flag )
+        deallocate(argument_array)
+    end subroutine
+
+    @test
+    subroutine test_version2()
+
+        ! executable.exe FileName -VERSION 
+
+        character(1024) :: filename, second_argument, flag
+        integer(IntKi) :: error_status
+        character(16), dimension(:), allocatable :: argument_array
+
+        filename = ""
+        allocate(argument_array(2))
+        argument_array = (/      &
+            "first_arg.txt   ",  &
+            "-VERSION        "   &
+        /)
+        open(unit=stdout, file=nullfile, status="old")
+        call CheckArgs( filename, error_status, second_argument, flag, argument_array )
+        open(unit=stdout, file=terminal, status="old")
+        @assertEqual( "first_arg.txt", filename )
+        @assertEqual( 0, error_status )
+        @assertEqual( "", second_argument )
+        @assertEqual( "VERSION", flag )
         deallocate(argument_array)
     end subroutine
 
@@ -241,7 +317,9 @@ contains
 
         filename = ""
         allocate(argument_array(0))
+        open(unit=stdout, file=nullfile, status="old")
         call CheckArgs( filename, error_status, second_argument, flag, argument_array )
+        open(unit=stdout, file=terminal, status="old")
         @assertEqual( "", filename )
         @assertEqual( 4, error_status )
         @assertEqual( "", second_argument )
@@ -265,7 +343,9 @@ contains
             "first_arg.txt   ",  &
             "-flag           "   &
         /)
+        open(unit=stdout, file=nullfile, status="old")
         call CheckArgs( filename, error_status, second_argument, flag, argument_array )
+        open(unit=stdout, file=terminal, status="old")
         @assertEqual( "first_arg.txt", filename )
         @assertEqual( 4, error_status )
         @assertEqual( "", second_argument )
@@ -288,7 +368,9 @@ contains
         argument_array = (/      &
             "-restart        "   &
         /)
+        open(unit=stdout, file=nullfile, status="old")
         call CheckArgs( filename, error_status, second_argument, flag, argument_array )
+        open(unit=stdout, file=terminal, status="old")
         @assertEqual( "", filename )
         @assertEqual( 4, error_status )
         @assertEqual( "", second_argument )

@@ -96,6 +96,7 @@ typedef   ^                     ^                ReKi                X_Coord    
 typedef   ^                     ^                ReKi                Y_Coord     {:}       -   -   "Y-coordinate for the airfoil shape [unused]" -
 typedef   ^                     ^                INTEGER             NumTabs      -        -   -   "The number of airfoil tables in the airfoil file" -
 typedef   ^                     ^                AFI_Table_Type      Table       {:}       -   -   "The tables of airfoil data for given Re and control setting" -
+typedef   ^                     ^                CHARACTER(1024)     BL_file      -        -   -   "The name of the file with the boundary layer data" 
 
 # ..... Inputs ....................................................................................................................
 # Define inputs that are not on this mesh here:

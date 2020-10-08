@@ -824,14 +824,24 @@ SUBROUTINE InflowWind_ReadInput( InputFileName, EchoFileName, FixedWindFileRootN
       RETURN
    END IF
 
-
-   !---------------------- OUTPUT --------------------------------------------------         
-   CALL ReadCom( UnitInput, InputFileName, 'Section Header: Output', TmpErrStat, TmpErrMsg, UnitEcho )
-   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-   IF (ErrStat >= AbortErrLev) THEN
-      CALL Cleanup()
-      RETURN
-   END IF
+      ! Read HAWC_InitPosition   (Shift of wind box)  NOTE: This an optional input!!!!
+   InputFileData%HAWC_InitPosition(2:3) = 0.0_ReKi    ! We are only using X, so only read in one.  The data can handle 3 coords
+   CALL ReadVar( UnitInput, InputFileName, InputFileData%HAWC_InitPosition(1), 'HAWC_Position', &
+               'Initial position of the HAWC wind file (shift along X usually)', TmpErrStat, TmpErrMsg, UnitEcho )
+   if (TmpErrStat == ErrID_None) then
+      !---------------------- OUTPUT --------------------------------------------------         
+      CALL ReadCom( UnitInput, InputFileName, 'Section Header: Output', TmpErrStat, TmpErrMsg, UnitEcho )
+      CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
+      IF (ErrStat >= AbortErrLev) THEN
+         CALL Cleanup()
+         RETURN
+      END IF
+   else
+      InputFileData%HAWC_InitPosition = 0.0_ReKi
+      TmpErrStat  =  ErrID_None  ! reset
+      TmpErrMsg   =  ""
+      ! NOTE: since we read in a line that wasn't a number, what we actually read was the header.
+   endif
 
       ! SumPrint - Print summary data to <RootName>.IfW.sum (flag):
    CALL ReadVar( UnitInput, InputFileName, InputFileData%SumPrint, "SumPrint", "Print summary data to <RootName>.IfW.sum (flag)", TmpErrStat, TmpErrMsg, UnitEcho)
@@ -1775,7 +1785,7 @@ SUBROUTINE InflowWind_CloseSumFile( SumFileUnit, ErrStat, ErrMsg )
 
       ! Local variables
    INTEGER(IntKi)                                  :: TmpErrStat
-   CHARACTER(1024)                                 :: TmpErrMsg
+   CHARACTER(ErrMsgLen)                            :: TmpErrMsg
 
       ! Initialize ErrStat
 
