@@ -86,11 +86,17 @@ def load_binary_output(filename):
     FileFmtID_WithTime = 1    # File identifiers used in FAST
     FileFmtID_WithoutTime = 2
     FileFmtID_NoCompressWithoutTime = 3
-    LenName = 10              # number of characters per channel name
-    LenUnit = 10              # number of characters per unit name
+    FileFmtID_ChanLen_In = 4
     
     with open(filename, 'rb') as fid:
         FileID = fread(fid, 1, 'int16')[0]       # FAST output file format, INT(2)
+        
+        if FileID == FileFmtID_ChanLen_In:
+            LenName  = fread(fid, 1, 'int16')[0] # Number of characters in channel names and units
+        else:
+            LenName = 10                         # default number of characters per channel name
+
+        
         NumOutChans = fread(fid, 1, 'int32')[0]  # The number of output channels, INT(4)
         NT = fread(fid, 1, 'int32')[0]           # The number of time steps, INT(4)
         
@@ -116,7 +122,7 @@ def load_binary_output(filename):
 
         ChanUnit = []                                     # initialize the ChanUnit cell array
         for iChan in range(NumOutChans + 1):
-            ChanUnitASCII = fread(fid, LenUnit, 'uint8')  # ChanUnit converted to numeric ASCII
+            ChanUnitASCII = fread(fid, LenName, 'uint8')  # ChanUnit converted to numeric ASCII
             ChanUnit.append("".join(map(chr, ChanUnitASCII)).strip()[1:-1])
 
         # get the channel time series

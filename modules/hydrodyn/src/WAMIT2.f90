@@ -65,8 +65,6 @@ MODULE WAMIT2
 !   INTEGER(IntKi), PARAMETER                             :: DataFormatID = 1  !< Update this value if the data types change (used in WAMIT_Pack)
    TYPE(ProgDesc), PARAMETER                             :: WAMIT2_ProgDesc = ProgDesc( 'WAMIT2', '', '' )
                                                                               !< This holds the name of the program, version info, and date.
-                                                                              !! It is used by the DispNVD routine in the library and as header
-                                                                              !! information in output files.
 
    REAL(DbKi), PARAMETER, PRIVATE                        :: OnePlusEps  = 1.0 + EPSILON(OnePlusEps)   ! The number slighty greater than unity in the precision of DbKi.
 
@@ -278,7 +276,6 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          !> Initialize the NWTC Subroutine Library and display the information about this module.
 
       CALL NWTC_Init() ! WAMIT2_ProgDesc%Name, '('//WAMIT2_ProgDesc%Ver//','//WAMIT2_ProgDesc%Date//')', EchoLibVer = .FALSE. )
-      !CALL DispNVD( WAMIT2_ProgDesc )
 
 
 

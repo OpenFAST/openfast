@@ -56,7 +56,7 @@ typedef  ^               ParameterType         IntKi           NWindVel        -
 typedef  ^               ParameterType         ReKi            WindVelX       {:}   - - "List of coordinates in the X direction for wind output [1 to NWindVel]" meters
 typedef  ^               ParameterType         ReKi            WindVelY       {:}   - - "List of coordinates in the Y direction for wind output [1 to NWindVel]" meters
 typedef  ^               ParameterType         ReKi            WindVelZ       {:}   - - "List of coordinates in the Z direction for wind output [1 to NWindVel]" meters
-typedef	^	             ParameterType	        OutParmFFType   OutParam	      {:}	- - "Names and units (and other characteristics) of all requested output parameters"	-
+typedef	^	             ParameterType	        OutParmType   OutParam	      {:}	- - "Names and units (and other characteristics) of all requested output parameters"	-
 typedef  ^               ParameterType         IntKi           NumOuts         -    - - "Number of user-requested outputs" -
 typedef	^	             ParameterType	        IntKi	         NOutSteps	    -	   - - "Maximum number of output steps" -
 typedef	^	             ParameterType	        CHARACTER(1024) FileDescLines  {3}   - - "File Description lines" -

@@ -154,7 +154,7 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
    TYPE(WD_InitInputType)                  :: WD_InitInput        ! init-input data for WakeDynamics module
    
    CHARACTER(*), PARAMETER                 :: RoutineName = 'Farm_Initialize'       
-   CHARACTER(ChanLenFF),ALLOCATABLE          :: OutList(:)             ! list of user-requested output channels
+   CHARACTER(ChanLen),ALLOCATABLE          :: OutList(:)             ! list of user-requested output channels
    INTEGER(IntKi)                          :: i
    !..........
    ErrStat = ErrID_None
@@ -336,7 +336,7 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, OutList
    CHARACTER(*),                   INTENT(IN   ) :: InputFile                       !< Name of the file containing the primary input data
    TYPE(WD_InputFileType),         INTENT(  OUT) :: WD_InitInp                      !< input-file data for WakeDynamics module
    TYPE(AWAE_InputFileType),       INTENT(  OUT) :: AWAE_InitInp                    !< input-file data for AWAE module
-   CHARACTER(ChanLenFF),ALLOCATABLE, INTENT(  OUT) :: OutList(:)                    !< list of user-requested output channels
+   CHARACTER(ChanLen),ALLOCATABLE, INTENT(  OUT) :: OutList(:)                      !< list of user-requested output channels
    INTEGER(IntKi),                 INTENT(  OUT) :: ErrStat                         !< Error status
    CHARACTER(*),                   INTENT(  OUT) :: ErrMsg                          !< Error message
 
@@ -1427,8 +1427,8 @@ SUBROUTINE Farm_ValidateInput( p, WD_InitInp, AWAE_InitInp, ErrStat, ErrMsg )
   CALL ChkRealFmtStr( p%OutFmt, 'OutFmt', p%FmtWidth, ErrStat2, ErrMsg2 ) !this sets p%FmtWidth!
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       
-   IF ( p%FmtWidth /= ChanLenFF ) CALL SetErrStat( ErrID_Warn, 'OutFmt produces a column width of '// &
-         TRIM(Num2LStr(p%FmtWidth))//' instead of '//TRIM(Num2LStr(ChanLenFF))//' characters.', ErrStat, ErrMsg, RoutineName )
+   IF ( p%FmtWidth /= ChanLen ) CALL SetErrStat( ErrID_Warn, 'OutFmt produces a column width of '// &
+         TRIM(Num2LStr(p%FmtWidth))//' instead of '//TRIM(Num2LStr(ChanLen))//' characters.', ErrStat, ErrMsg, RoutineName )
       
    
 END SUBROUTINE Farm_ValidateInput

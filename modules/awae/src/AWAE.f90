@@ -1721,11 +1721,11 @@ end subroutine AWAE_TEST_CalcOutput
 
 FUNCTION INTERP3D(p,p0,del,V,within,nX,nY,nZ,Vbox)
       !  I/O variables
+         INTEGER(IntKi), INTENT( IN) :: nX, nY, nZ      !< Size of XYZ spatial dimensions ! define these before using them below!
          Real(ReKi), INTENT( IN    ) :: p(3)            !< Position where the 3D velocity field will be interpreted (m)
          Real(ReKi), INTENT( IN    ) :: p0(3)           !< Origin of the spatial domain (m)
          Real(ReKi), INTENT( IN    ) :: del(3)          !< XYZ-components of the spatial increment of the domain (m)
          Real(SiKi), INTENT( IN    ) :: V(3,0:nX-1,0:nY-1,0:nZ-1)        !< 3D velocity field to be interpolated
-         INTEGER(IntKi), INTENT( IN) :: nX, nY, nZ      !< Size of XYZ spatial dimensions
 
          Real(SiKi) :: INTERP3D(3)     !Vint(3)         !< Interpolated velocity (m/s)
          Logical,    INTENT(   OUT ) :: within          !< Logical flag indicating weather or not the input position lies within the domain (flag)

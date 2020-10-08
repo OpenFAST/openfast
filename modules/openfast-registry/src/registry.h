@@ -23,9 +23,9 @@ enum type_type       { SIMPLE , DERIVED } ;
 enum proc_orient     { ALL_Z_ON_PROC , ALL_X_ON_PROC , ALL_Y_ON_PROC } ;
 
 /* wrapping options */
-#define WRAP_HIDDEN_FIELD      2
-#define WRAP_EXPOSED_FIELD     1
-#define WRAP_NONE              0
+#define PERIOD_2PI      2
+#define PERIOD_OTHER    1
+#define PERIOD_NONE     0
 
 
 /* node_kind  mask settings */
