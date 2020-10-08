@@ -343,22 +343,6 @@ inputs and outputs are neither set nor used.
 \State $\Call{AD\_UpdateStates}{\mathit{p\_AD},\mathit{u\_AD},\mathit{x\_AD},\mathit{xd\_AD},\mathit{z\_AD}}$
 \State $\Call{SrvD\_UpdateStates}{\mathit{p\_SrvD},\mathit{u\_SrvD},\mathit{x\_SrvD},\mathit{xd\_SrvD},\mathit{z\_SrvD}}$
 \State
-% \begin Transfer_ED_to_HD_SD_BD_Mooring
-%   \State $\mathit{u\_ED}($not platform reference point$) \gets \Call{TransferOutputsToInputs}{y\_SrvD,y\_AD}$ %\Comment{sets all but platform reference point inputs}
-
-%   \State $\mathit{u\_BD}   \gets \Call{TransferMeshMotions}{\mathit{y\_ED}}$      % only if not BD_Solve_Option1
-   \State $\mathit{u\_HD}   \gets \Call{TransferMeshMotions}{\mathit{y\_ED}}$
-   \State $\mathit{u\_SD}   \gets \Call{TransferMeshMotions}{\mathit{y\_ED}}$
-   \State $\mathit{u\_ExtPtfm}   \gets \Call{TransferMeshMotions}{\mathit{y\_ED}}$
-   \State $\mathit{u\_MAP}  \gets \Call{TransferMeshMotions}{\mathit{y\_ED}}$
-   \State $\mathit{u\_FEAM} \gets \Call{TransferMeshMotions}{\mathit{y\_ED}}$
-   \State $\mathit{u\_MD}   \gets \Call{TransferMeshMotions}{\mathit{y\_ED}}$
-   \State $\mathit{u\_Orca} \gets \Call{TransferMeshMotions}{\mathit{y\_ED}}$
-% \end Transfer_ED_to_HD_SD_BD_Mooring
-%%%%
-
-\State
-
 \State All other modules (used in Solve Option 1) advance their states
 \EndProcedure
 \end{algorithmic}
@@ -366,7 +350,6 @@ inputs and outputs are neither set nor used.
 Note that AeroDyn and ServoDyn outputs get calculated inside the ${CalcOutputs\_And\_SolveForInputs}$ routine. ElastoDyn, BeamDyn, and
 InflowWind outputs do not get recalculated in ${CalcOutputs\_And\_SolveForInputs}$ except for the first time the routine is called
 (because CalcOutput is called before UpdateStates at time 0).
-
 
 
 \section {Linearization}
