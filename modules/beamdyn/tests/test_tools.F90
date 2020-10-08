@@ -91,17 +91,27 @@ contains
         getGravityInZ = (/ 0.0, 0.0, -9.806 /)
     end function
     
-    type(BD_ParameterType) function simpleParameterType() RESULT(p)
-        
+    type(BD_ParameterType) function simpleParameterType(elem_total,nodes_per_elem,nqp,qp_indx_offset) RESULT(p)
+  
+        integer, intent(in   ) :: elem_total
+        integer, intent(in   ) :: nodes_per_elem
+        integer, intent(in   ) :: nqp
+        integer, intent(in   ) :: qp_indx_offset
+ 
         integer                :: i, j
         integer                :: ErrStat
         character(1024)        :: ErrMsg
         
         ! scalars
-        p%elem_total = 1
-        p%nodes_per_elem = 16
-        p%nqp = 16
-        p%qp_indx_offset = 0
+        !p%elem_total = 1
+        !p%nodes_per_elem = 16
+        !p%nqp = 16
+        !p%qp_indx_offset = 0
+
+        p%elem_total = elem_total
+        p%nodes_per_elem = nodes_per_elem
+        p%nqp = nqp
+        p%qp_indx_offset = qp_indx_offset
         
         ! fixed size arrays
         p%Glb_crv = (/ 0.0, 0.0, 0.0 /)
@@ -117,9 +127,11 @@ contains
         call AllocAry(p%QPtw_Shp_Jac, p%nqp, p%nodes_per_elem, p%elem_total, 'QPtw_Shp_Jac', ErrStat, ErrMsg)
         call AllocAry(p%Shp, p%nodes_per_elem, p%nqp, 'Shp', ErrStat, ErrMsg)
         call AllocAry(p%ShpDer, p%nodes_per_elem, p%nqp, 'ShpDer', ErrStat, ErrMsg)
+        call AllocAry(p%QPtN, p%nqp, 'QPtN', ErrStat, ErrMsg)
         call AllocAry(p%QPtWeight, p%nqp, 'QPtWeightShp', ErrStat, ErrMsg)
         call AllocAry(p%QPtw_ShpDer, p%nqp, p%nodes_per_elem, 'QPtw_ShpDer', ErrStat, ErrMsg)
-        call AllocAry(p%Jacobian, p%nqp, p%nodes_per_elem, 'Jacobian', ErrStat, ErrMsg)
+        call AllocAry(p%Jacobian, p%nqp, p%elem_total, 'Jacobian', ErrStat, ErrMsg)
+        call AllocAry(p%uuN0, 3, p%nodes_per_elem, p%elem_total,'uuN0', ErrStat, ErrMsg)
 
         ! construct arrays
         p%qp%mmm = 1.0
@@ -132,7 +144,27 @@ contains
         end do
         
     end function
-    
+   
+    subroutine SimpleParameterType_TearDown(p)
+
+        TYPE(BD_ParameterType), intent(inout) :: p
+
+        deallocate(p%qp%mmm)
+        deallocate(p%qp%mEta)
+        deallocate(p%Mass0_QP)
+        deallocate(p%QPtw_Shp_Shp_Jac)
+        deallocate(p%QPtw_ShpDer_ShpDer_Jac)
+        deallocate(p%QPtw_Shp_ShpDer)
+        deallocate(p%QPtw_Shp_Jac)
+        deallocate(p%Shp)
+        deallocate(p%ShpDer)
+        deallocate(p%QPtN)
+        deallocate(p%QPtWeight)
+        deallocate(p%QPtw_ShpDer)
+        deallocate(p%Jacobian)
+        deallocate(p%uuN0)
+    end subroutine
+ 
     type(BD_MiscVarType) function simpleMiscVarType(nqp, nelem) RESULT(m)
         
         integer, intent(in)  :: nqp, nelem

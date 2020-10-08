@@ -68,9 +68,9 @@ contains
         ! shpder(1,:) = -0.5, -0.5
         ! shpder(2,:) =  0.5,  0.5
         
-        parametertype = simpleParameterType()
-        parametertype%nodes_per_elem = 2
-        parametertype%nqp = 2
+        parametertype = simpleParameterType(1,2,2,0)
+        !parametertype%nodes_per_elem = 2
+        !parametertype%nqp = 2
         n = parametertype%nodes_per_elem
         
         call AllocAry(test_shape, parametertype%nodes_per_elem, parametertype%nqp, "test_shape", ErrStat, ErrMsg)
@@ -96,10 +96,11 @@ contains
        
         deallocate(test_shape) 
         deallocate(test_shapederivative) 
-        deallocate(parametertype%QPtN)
         deallocate(gll_nodes)
         deallocate(baseline_shape) 
         deallocate(baseline_shapederivative) 
+
+        call simpleparametertype_teardown(parametertype)
  
     end subroutine
 
@@ -116,9 +117,9 @@ contains
         ! --------------------------------------------------------------------------
         testname = "5-node element: evaluate shape/shapederivative at nodes and at three non-node locations"
         
-        parametertype = simpleParameterType()
-        parametertype%nodes_per_elem = 5
-        parametertype%nqp = 8  ! testing the GLL nodes and three non-nodal locations (-0.8, 0.1, 0.4)
+        parametertype = simpleParameterType(1,5,8,0)
+        !parametertype%nodes_per_elem = 5
+        !parametertype%nqp = 8  ! testing the GLL nodes and three non-nodal locations (-0.8, 0.1, 0.4)
         n = parametertype%nodes_per_elem
         
         call AllocAry(test_shape, parametertype%nodes_per_elem, parametertype%nqp, "test_shape", ErrStat, ErrMsg)
@@ -154,10 +155,11 @@ contains
 
         deallocate(test_shape) 
         deallocate(test_shapederivative) 
-        deallocate(parametertype%QPtN)
         deallocate(gll_nodes)
         deallocate(baseline_shape) 
         deallocate(baseline_shapederivative) 
+
+        call simpleparametertype_teardown(parametertype)
         
     end subroutine
 end module
