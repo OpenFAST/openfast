@@ -352,36 +352,23 @@ inputs and outputs are neither set nor used.
 \State $\Call{AD\_UpdateStates}{\mathit{p\_AD},\mathit{u\_AD},\mathit{x\_AD},\mathit{xd\_AD},\mathit{z\_AD}}$
 \State $\Call{SrvD\_UpdateStates}{\mathit{p\_SrvD},\mathit{u\_SrvD},\mathit{x\_SrvD},\mathit{xd\_SrvD},\mathit{z\_SrvD}}$
 \State
-% \begin Transfer_ED_to_HD_SD_BD_Mooring
-%   \State $\mathit{u\_ED}($not platform reference point$) \gets \Call{TransferOutputsToInputs}{y\_SrvD,y\_AD}$ %\Comment{sets all but platform reference point inputs}
-
-%   \State $\mathit{u\_BD}   \gets \Call{TransferMeshMotions}{\mathit{y\_ED}}$      % only if not BD_Solve_Option1
-   \State $\mathit{u\_HD}   \gets \Call{TransferMeshMotions}{\mathit{y\_ED}}$
-   \State $\mathit{u\_SD}   \gets \Call{TransferMeshMotions}{\mathit{y\_ED}}$
-   \State $\mathit{u\_ExtPtfm}   \gets \Call{TransferMeshMotions}{\mathit{y\_ED}}$
-   \State $\mathit{u\_MAP}  \gets \Call{TransferMeshMotions}{\mathit{y\_ED}}$
-   \State $\mathit{u\_FEAM} \gets \Call{TransferMeshMotions}{\mathit{y\_ED}}$
-   \State $\mathit{u\_MD}   \gets \Call{TransferMeshMotions}{\mathit{y\_ED}}$
-   \State $\mathit{u\_Orca} \gets \Call{TransferMeshMotions}{\mathit{y\_ED}}$
-% \end Transfer_ED_to_HD_SD_BD_Mooring
+\State $\mathit{u\_SD}   \gets \Call{TransferMeshMotions}{\mathit{y\_ED}}$
+\State $\Call{SD\_UpdateStates}{\mathit{p\_SD},\mathit{u\_SD},\mathit{x\_SD},\mathit{xd\_SD},\mathit{z\_SD}}$
 \State
-   \State $\Call{SD\_UpdateStates}{\mathit{p\_SD},\mathit{u\_SD},\mathit{x\_SD},\mathit{xd\_SD},\mathit{z\_SD}}$
+\If{CompSoil}
    \State $\mathit{y\_SD} \gets \Call{SD\_CalcOutput}{\mathit{p\_SD},\mathit{u\_SD},\mathit{x\_SD},\mathit{xd\_SD},\mathit{z\_SD}}$
    \State $\mathit{u\_SlD}  \gets \Call{TransferMeshPosition}{\mathit{y\_SD}}$
    \State $\Call{SlD\_UpdateStates}{\mathit{p\_SlD},\mathit{u\_SlD},\mathit{x\_SlD},\mathit{xd\_SlD},\mathit{z\_SlD}}$
-
-%%%%
-
+\EndIf
 \State
-
 \State All other modules (used in Solve Option 1) advance their states
 \EndProcedure
 \end{algorithmic}
+Note that SoilDyn is very sensitive to the motion of SubDyn, thus calculations of SubDyn are performed before the SoilDyn extrapolation.
 
 Note that AeroDyn and ServoDyn outputs get calculated inside the ${CalcOutputs\_And\_SolveForInputs}$ routine. ElastoDyn, BeamDyn, and
 InflowWind outputs do not get recalculated in ${CalcOutputs\_And\_SolveForInputs}$ except for the first time the routine is called
 (because CalcOutput is called before UpdateStates at time 0).
-
 
 
 \section {Linearization}
