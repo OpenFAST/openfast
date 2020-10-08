@@ -44,6 +44,7 @@
       AeroDyn            & AD                    & AD        \\
       ServoDyn           & SrvD                  & SrvD      \\
       SubDyn             & SD                    & SD        \\
+      ExtPtfm            & ExtPtfm               & ExtPtfm   \\
       HydroDyn           & HydroDyn              & HD        \\
       MAP++              & MAPp                  & MAP       \\
       FEAMooring         & FEAM                  & FEAM      \\
@@ -52,7 +53,6 @@
       InflowWind         & IfW                   & IfW       \\   
       IceFloe            & IceFloe               & IceF      \\   
       IceDyn             & IceD                  & IceD      \\   
-      SoilDyn            & SlD                   & SlD       \\
       \end{tabular}
    \caption{Abbreviations for modules in FAST v8}
    \label{tab:Abbrev}
@@ -86,10 +86,10 @@ inputs and outputs are neither set nor used.
 % SolveOption2a_Inp2BD
    \State $\mathit{y\_ED} \gets \Call{ED\_CalcOutput}{\mathit{p\_ED},\mathit{u\_ED},\mathit{x\_ED},\mathit{xd\_ED},\mathit{z\_ED}}$
    \State $\mathit{u\_BD}  \gets \Call{TransferOutputsToInputs}{\mathit{y\_ED}}$
-   \State $\mathit{y\_BD} \gets \Call{BD\_CalcOutput}{\mathit{p\_BD},\mathit{u\_BD},\mathit{x\_BD},\mathit{xd\_BD},\mathit{z\_BD}}$
 
 \State
 % SolveOption2b_Inp2IfW
+   \State $\mathit{y\_BD} \gets \Call{BD\_CalcOutput}{\mathit{p\_BD},\mathit{u\_BD},\mathit{x\_BD},\mathit{xd\_BD},\mathit{z\_BD}}$
    \State $\mathit{u\_AD}($no IfW$)  \gets \Call{TransferOutputsToInputs}{\mathit{y\_ED}}$
    \State $\mathit{u\_IfW} \gets \Call{TransferOutputsToInputs}{\mathit{y\_ED} at \mathit{u\_AD} nodes}$
 
@@ -120,6 +120,7 @@ inputs and outputs are neither set nor used.
 %   \State $\mathit{u\_BD}   \gets \Call{TransferMeshMotions}{\mathit{y\_ED}}$      % only if not BD_Solve_Option1
    \State $\mathit{u\_HD}   \gets \Call{TransferMeshMotions}{\mathit{y\_ED}}$
    \State $\mathit{u\_SD}   \gets \Call{TransferMeshMotions}{\mathit{y\_ED}}$
+   \State $\mathit{u\_ExtPtfm}   \gets \Call{TransferMeshMotions}{\mathit{y\_ED}}$
    \State $\mathit{u\_MAP}  \gets \Call{TransferMeshMotions}{\mathit{y\_ED}}$
    \State $\mathit{u\_FEAM} \gets \Call{TransferMeshMotions}{\mathit{y\_ED}}$
    \State $\mathit{u\_MD}   \gets \Call{TransferMeshMotions}{\mathit{y\_ED}}$
@@ -138,10 +139,10 @@ inputs and outputs are neither set nor used.
 \end{algorithmic}
 %\end{algorithm}
 
-Note that inputs to $ElastoDyn$ before calling CalcOutput() in the first step are not set in CalcOutputs\_And\_SolveForInputs(). 
-Instead, the $ElastoDyn$ inputs are set depending on where CalcOutputs\_And\_SolveForInputs() is called:
+Note that inputs to \emph{ElastoDyn} before calling CalcOutput() in the first step are not set in CalcOutputs\_And\_SolveForInputs(). 
+Instead, the \emph{ElastoDyn} inputs are set depending on where CalcOutputs\_And\_SolveForInputs() is called:
 \begin{itemize}[noitemsep] %i don't like the double spaces between bulleted items.
-   \item At time 0, the inputs are the initial guess from $ElastoDyn$;
+   \item At time 0, the inputs are the initial guess from \emph{ElastoDyn};
    \item On the prediction step, the inputs are extrapolated values from the time history of ElastoDyn inputs;
    \item On the first correction step, the inputs are the values calculated in the prediction step;
    \item On subsequent correction steps, the inputs are the values calculated in the previous correction step.
@@ -149,13 +150,11 @@ Instead, the $ElastoDyn$ inputs are set depending on where CalcOutputs\_And\_Sol
 
 
 %\pagebreak %break here for now so that it doesn't look so strange
-%\subsection {Input-Output Solve for $HydroDyn$, $SubDyn$, $MAP$, \\ 
-%       $FEAMooring$, $IceFloe$, and the Platform Reference Point Mesh in $ElastoDyn$}
-\subsection {Input-Output Solve for \textit{HydroDyn}, \textit{SubDyn}, \textit{MAP}, 
-       \textit{FEAMooring}, \textit{IceFloe}, and the Platform Reference Point Mesh in \textit{ElastoDyn}}
+\subsection {Input-Output Solve for \textit{HydroDyn}, \textit{SubDyn}, \textit{OrcaFlexInterface}, \textit{BeamDyn}, \textit{ExtPtfm},  \textit{MAP}, \textit{FEAMooring}, \textit{MoorDyn},  
+       \textit{FEAMooring}, \textit{IceFloe}, \textit{IceDyn}, and the Platform Reference Point Mesh in \textit{ElastoDyn}}
 
 This procedure implements Solve Option 1 for the accelerations and loads in
-$HydroDyn$, $SubDyn$, $MAP$, $FEAMooring$, and $ElastoDyn$ (at its platform reference point mesh). 
+\emph{HydroDyn},\emph{SubDyn},\emph{MAP},\emph{FEAMooring},\emph{OrcaFlexInterface},\emph{MoorDyn}, \emph{BeamDyn}, \emph{ExtPtfm}, \emph{IceFloe}, \emph{IceDyn}, and \emph{ElastoDyn} (at its platform reference point mesh). 
 The other input-output relationships for these modules are solved using Solve Option 2.
 
 %\begin{algorithm}[ht]
@@ -171,9 +170,9 @@ The other input-output relationships for these modules are solved using Solve Op
    \State $\mathit{y\_IceF}    \gets \Call{CalcOutput}{\mathit{p\_IceF},\mathit{u\_IceF},\mathit{x\_IceF},\mathit{xd\_IceF},\mathit{z\_IceF}}$
    \State $\mathit{y\_IceD(:)} \gets \Call{CalcOutput}{\mathit{p\_IceD(:)},\mathit{u\_IceD(:)},\mathit{x\_IceD(:)},\mathit{xd\_IceD(:)},\mathit{z\_IceD(:)}}$
    \State
-   \State\Comment{Form $u$ vector using loads and accelerations from $\mathit{u\_HD}$, $\mathit{u\_BD}$ $\mathit{u\_SD}$, and platform reference input from $\mathit{u\_ED}$}
+   \State\Comment{Form $u$ vector using loads and accelerations from $\mathit{u\_HD}$, $\mathit{u\_BD}$,  $\mathit{u\_SD}$, $\mathit{u\_Orca}$, $\mathit{u\_ExtPtfm}$, and platform reference input from $\mathit{u\_ED}$}
    \State
-   \State $u \gets \Call{u\_vec}{\mathit{u\_HD},\mathit{u\_SD},\mathit{u\_ED}}$
+   \State $u \gets \Call{u\_vec}{\mathit{u\_HD},\mathit{u\_SD},\mathit{u\_ED},\mathit{u\_BD},\mathit{u\_Orca},\mathit{u\_ExtPtfm}}$
    \State $k \gets 0$
    \Loop\Comment{Solve for loads and accelerations (direct feed-through terms)}
       \State $y\_ED   \gets \Call{ED\_CalcOutput}{\mathit{p\_ED},\mathit{u\_ED},\mathit{x\_ED},\mathit{xd\_ED},\mathit{z\_ED}}$
@@ -181,6 +180,7 @@ The other input-output relationships for these modules are solved using Solve Op
       \State $y\_HD   \gets \Call{HD\_CalcOutput}{\mathit{p\_HD},\mathit{u\_HD},\mathit{x\_HD},\mathit{xd\_HD},\mathit{z\_HD}}$
       \State $y\_BD   \gets \Call{BD\_CalcOutput}{\mathit{p\_BD},\mathit{u\_BD},\mathit{x\_BD},\mathit{xd\_BD},\mathit{z\_BD}}$
       \State $y\_Orca \gets \Call{Orca\_CalcOutput}{\mathit{p\_Orca},\mathit{u\_Orca},\mathit{x\_Orca},\mathit{xd\_Orca},\mathit{z\_Orca}}$
+      \State $\mathit{y\_ExtPtfm}     \gets \Call{CalcOutput}{\mathit{p\_ExtPtfm},\mathit{u\_ExtPtfm},\mathit{x\_ExtPtfm},\mathit{xd\_ExtPtfm},\mathit{z\_ExtPtfm}}$ 
    
       \If{ $k \geq k\_max$}
          \State exit loop
@@ -189,6 +189,8 @@ The other input-output relationships for these modules are solved using Solve Op
       \State$\mathit{u\_BD\_tmp}      \gets \Call{TransferMeshMotions}{y\_ED}$
       \State$\mathit{u\_MAP\_tmp}     \gets \Call{TransferMeshMotions}{y\_ED}$
       \State$\mathit{u\_FEAM\_tmp}    \gets \Call{TransferMeshMotions}{y\_ED}$
+      \State$\mathit{u\_Orca\_tmp}    \gets \Call{TransferMeshMotions}{y\_ED}$
+      \State$\mathit{u\_MD\_tmp}      \gets \Call{TransferMeshMotions}{y\_ED}$
       \State$\mathit{u\_IceF\_tmp}    \gets \Call{TransferMeshMotions}{y\_SD}$
       \State$\mathit{u\_IceD\_tmp(:)} \gets \Call{TransferMeshMotions}{y\_SD}$
       \State$\mathit{u\_HD\_tmp}      \gets \Call{TransferMeshMotions}{y\_ED,y\_SD}$
@@ -197,10 +199,10 @@ The other input-output relationships for these modules are solved using Solve Op
            & \Call{TransferMeshMotions}{\mathit{y\_ED}}  \\
                 & \cup \Call{TransferMeshLoads}{}(\!
                    \begin{aligned}[t] 
-                        & \mathit{y\_SD}, \\
-                        & \mathit{y\_HD},\mathit{u\_HD\_tmp}, \\
-                        & \mathit{y\_IceF},\mathit{u\_IceF\_tmp}) \\
-                        & \mathit{y\_IceD(:)},\mathit{u\_IceD\_tmp(:)}) \\
+                        & \mathit{y\_SD},                                  \\
+                        & \mathit{y\_HD},       \mathit{u\_HD\_tmp},       \\
+                        & \mathit{y\_IceF},     \mathit{u\_IceF\_tmp},     \\
+                        & \mathit{y\_IceD(:)},  \mathit{u\_IceD\_tmp(:)},  \\
                      \end{aligned}
          \end{aligned}$
       \State$\mathit{u\_ED\_tmp} \gets \Call{TransferMeshLoads}{}( \!
@@ -212,7 +214,7 @@ The other input-output relationships for these modules are solved using Solve Op
                      \end{aligned}$
 
       \State
-      \State$\mathit{U\_Residual} \gets u - \Call{u\_vec}{\mathit{u\_HD\_tmp},\mathit{u\_SD\_tmp},\mathit{u\_ED\_tmp}}$
+      \State$\mathit{U\_Residual} \gets u - \Call{u\_vec}{\mathit{u\_HD\_tmp},\mathit{u\_SD\_tmp},\mathit{u\_ED\_tmp},\mathit{u\_BD\_tmp},\mathit{u\_Orca\_tmp},\mathit{u\_ExtPtfm\_tmp}}$
       \State
       
       \If{ last Jacobian was calculated at least $\mathit{DT\_UJac}$ seconds ago }
@@ -235,7 +237,7 @@ The other input-output relationships for these modules are solved using Solve Op
       \EndIf
       \State
       \State $u \gets u + \Delta u$
-      \State Transfer $u$ to $\mathit{u\_HD}$, $\mathit{u\_SD}$, and $\mathit{u\_ED}$\Comment{loads and accelerations only}
+      \State Transfer $u$ to $\mathit{u\_HD}$, $\mathit{u\_SD}$, $\mathit{u\_BD}$, $\mathit{u\_Orca}$, $\mathit{u\_ExtPtfm}$, and $\mathit{u\_ED}$\Comment{loads and accelerations only}
       \State $k=k+1$
       
    \EndLoop   
@@ -243,8 +245,10 @@ The other input-output relationships for these modules are solved using Solve Op
    \State\Comment{Transfer non-acceleration fields to motion input meshes}
    \State 
    
+   \State$\mathit{u\_BD}($not accelerations$) \gets \Call{TransferMeshMotions}{\mathit{y\_ED}}$
    \State$\mathit{u\_HD}($not accelerations$) \gets \Call{TransferMeshMotions}{\mathit{y\_ED},\mathit{y\_SD}}$
    \State$\mathit{u\_SD}($not accelerations$) \gets \Call{TransferMeshMotions}{\mathit{y\_ED}}$
+   \State$\mathit{u\_Orca}($not accelerations$) \gets \Call{TransferMeshMotions}{\mathit{y\_ED}}$   \State$\mathit{u\_ExtPtfm}($not accelerations$) \gets \Call{TransferMeshMotions}{\mathit{y\_ED}}$
   \State 
    \State $\mathit{u\_MAP}     \gets \Call{TransferMeshMotions}{\mathit{y\_ED}}$
    \State $\mathit{u\_MD}      \gets \Call{TransferMeshMotions}{\mathit{y\_ED}}$
@@ -253,9 +257,8 @@ The other input-output relationships for these modules are solved using Solve Op
    \State $\mathit{u\_IceD(:)} \gets \Call{TransferMeshMotions}{\mathit{y\_SD}}$
          
 \EndProcedure
-
 \end{algorithmic}
-%\end{algorithm}
+
 
 \subsection {Implementation of line2-to-line2 loads mapping}
 The inverse-lumping of loads is computed by a block matrix solve for the distributed forces and moments, 
@@ -340,6 +343,22 @@ inputs and outputs are neither set nor used.
 \State $\Call{AD\_UpdateStates}{\mathit{p\_AD},\mathit{u\_AD},\mathit{x\_AD},\mathit{xd\_AD},\mathit{z\_AD}}$
 \State $\Call{SrvD\_UpdateStates}{\mathit{p\_SrvD},\mathit{u\_SrvD},\mathit{x\_SrvD},\mathit{xd\_SrvD},\mathit{z\_SrvD}}$
 \State
+% \begin Transfer_ED_to_HD_SD_BD_Mooring
+%   \State $\mathit{u\_ED}($not platform reference point$) \gets \Call{TransferOutputsToInputs}{y\_SrvD,y\_AD}$ %\Comment{sets all but platform reference point inputs}
+
+%   \State $\mathit{u\_BD}   \gets \Call{TransferMeshMotions}{\mathit{y\_ED}}$      % only if not BD_Solve_Option1
+   \State $\mathit{u\_HD}   \gets \Call{TransferMeshMotions}{\mathit{y\_ED}}$
+   \State $\mathit{u\_SD}   \gets \Call{TransferMeshMotions}{\mathit{y\_ED}}$
+   \State $\mathit{u\_ExtPtfm}   \gets \Call{TransferMeshMotions}{\mathit{y\_ED}}$
+   \State $\mathit{u\_MAP}  \gets \Call{TransferMeshMotions}{\mathit{y\_ED}}$
+   \State $\mathit{u\_FEAM} \gets \Call{TransferMeshMotions}{\mathit{y\_ED}}$
+   \State $\mathit{u\_MD}   \gets \Call{TransferMeshMotions}{\mathit{y\_ED}}$
+   \State $\mathit{u\_Orca} \gets \Call{TransferMeshMotions}{\mathit{y\_ED}}$
+% \end Transfer_ED_to_HD_SD_BD_Mooring
+%%%%
+
+\State
+
 \State All other modules (used in Solve Option 1) advance their states
 \EndProcedure
 \end{algorithmic}
