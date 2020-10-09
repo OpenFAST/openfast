@@ -670,6 +670,7 @@ SUBROUTINE StC_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
       !  local variables for force calcualtions in X-DOF, Y-DOF, and XY-DOF
       real(ReKi), dimension(3)   :: F_X_P
       real(ReKi), dimension(3)   :: F_Y_P
+      real(ReKi), dimension(3)   :: F_Z_P
       real(ReKi), dimension(3)   :: F_XY_P
 
       !  NOTE: the following two sets of variables could likely be combined into arrays
@@ -728,15 +729,19 @@ SUBROUTINE StC_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
             F_Y_P(1) = - p%M_Y * ( m%a_G(1,i_pt) - m%rddot_P(1,i_pt) + (m%alpha_P(3,i_pt) - m%omega_P(1,i_pt)*m%omega_P(2,i_pt))*x%StC_x(3,i_pt) + 2*m%omega_P(3,i_pt)*x%StC_x(4,i_pt) )
             F_Y_P(3) = - p%M_Y * ( m%a_G(3,i_pt) - m%rddot_P(3,i_pt) - (m%alpha_P(1,i_pt) + m%omega_P(2,i_pt)*m%omega_P(3,i_pt))*x%StC_x(3,i_pt) - 2*m%omega_P(1,i_pt)*x%StC_x(4,i_pt) )
 
+            F_Z_P(1) = - p%M_Z * ( m%a_G(1,i_pt) - m%rddot_P(1,i_pt) - (m%alpha_P(2,i_pt) + m%omega_P(1,i_pt)*m%omega_P(3,i_pt))*x%StC_x(5,i_pt) - 2*m%omega_P(2,i_pt)*x%StC_x(6,i_pt) )
+            F_Z_P(2) = - p%M_Z * ( m%a_G(2,i_pt) - m%rddot_P(2,i_pt) + (m%alpha_P(1,i_pt) - m%omega_P(2,i_pt)*m%omega_P(3,i_pt))*x%StC_x(5,i_pt) + 2*m%omega_P(1,i_pt)*x%StC_x(6,i_pt) )
+
             ! inertial contributions from mass of tuned mass dampers and acceleration of point
             ! forces and moments in local coordinates
-            m%F_P(1,i_pt) =  p%K_X * x%StC_x(1,i_pt) + m%C_ctrl(1,i_pt) * x%StC_x(2,i_pt) + m%C_Brake(1,i_pt) * x%StC_x(2,i_pt) - m%F_stop(1,i_pt) - m%F_ext(1,i_pt) - m%F_fr(1,i_pt) - F_Y_P(1) + m%F_table(1,i_pt)
-            m%F_P(2,i_pt) =  p%K_Y * x%StC_x(3,i_pt) + m%C_ctrl(2,i_pt) * x%StC_x(4,i_pt) + m%C_Brake(2,i_pt) * x%StC_x(4,i_pt) - m%F_stop(2,i_pt) - m%F_ext(2,i_pt) - m%F_fr(2,i_pt) - F_X_P(2) + m%F_table(2,i_pt)
-            m%F_P(3,i_pt) = - F_X_P(3) - F_Y_P(3)
+            m%F_P(1,i_pt) =  p%K_X * x%StC_x(1,i_pt) + m%C_ctrl(1,i_pt) * x%StC_x(2,i_pt) + m%C_Brake(1,i_pt) * x%StC_x(2,i_pt) - m%F_stop(1,i_pt) - m%F_ext(1,i_pt) - m%F_fr(1,i_pt) - F_Y_P(1) - F_Z_P(1) + m%F_table(1,i_pt)
+            m%F_P(2,i_pt) =  p%K_Y * x%StC_x(3,i_pt) + m%C_ctrl(2,i_pt) * x%StC_x(4,i_pt) + m%C_Brake(2,i_pt) * x%StC_x(4,i_pt) - m%F_stop(2,i_pt) - m%F_ext(2,i_pt) - m%F_fr(2,i_pt) - F_X_P(2) - F_Z_P(2) + m%F_table(2,i_pt)
+            m%F_P(3,i_pt) =  p%K_Z * x%StC_x(5,i_pt) + m%C_ctrl(3,i_pt) * x%StC_x(6,i_pt) + m%C_Brake(3,i_pt) * x%StC_x(6,i_pt) - m%F_stop(3,i_pt) - m%F_ext(3,i_pt) - m%F_fr(3,i_pt) - F_X_P(3) - F_Y_P(3) + m%F_table(3,i_pt)
 
-            m%M_P(1,i_pt) =  - F_Y_P(3)  * x%StC_x(3,i_pt)
-            m%M_P(2,i_pt) =    F_X_P(3)  * x%StC_x(1,i_pt)
-            m%M_P(3,i_pt) =  - F_Y_P(1)  * x%StC_x(3,i_pt) + F_X_P(2) * x%StC_x(1,i_pt)
+            m%M_P(1,i_pt) =  - F_Y_P(3)  * x%StC_x(3,i_pt)  +  F_Z_P(2) * x%StC_x(5,i_pt)
+            m%M_P(2,i_pt) =    F_X_P(3)  * x%StC_x(1,i_pt)  -  F_Z_P(1) * x%StC_x(5,i_pt)
+!FIXME: the signs on next term do not match doc. 
+            m%M_P(3,i_pt) =    F_X_P(2)  * x%StC_x(1,i_pt)  -  F_Y_P(1) * x%StC_x(3,i_pt)
 
             ! forces and moments in global coordinates
             y%Mesh(i_pt)%Force(:,1) =  matmul(transpose(u%Mesh(i_pt)%Orientation(:,:,1)),m%F_P(1:3,i_pt))
@@ -976,6 +981,7 @@ SUBROUTINE StC_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
             ! Aggregate acceleration terms
             m%Acc(1,i_pt) = - m%rddot_P(1,i_pt) + m%a_G(1,i_pt) + 1 / p%M_X * ( m%F_ext(1,i_pt) + m%F_stop(1,i_pt) - m%F_table(1,i_pt) )
             m%Acc(2,i_pt) = - m%rddot_P(2,i_pt) + m%a_G(2,i_pt) + 1 / p%M_Y * ( m%F_ext(2,i_pt) + m%F_stop(2,i_pt) - m%F_table(2,i_pt) )
+            m%Acc(3,i_pt) = - m%rddot_P(3,i_pt) + m%a_G(3,i_pt) + 1 / p%M_Z * ( m%F_ext(3,i_pt) + m%F_stop(3,i_pt) - m%F_table(3,i_pt) )
          enddo
 
       ELSE IF (p%StC_DOF_MODE == DOFMode_Omni) THEN
@@ -993,6 +999,7 @@ SUBROUTINE StC_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
             ! Aggregate acceleration terms
             m%Acc(1,i_pt) = - m%rddot_P(1,i_pt) + m%a_G(1,i_pt) + 1 / p%M_XY * ( m%F_ext(1,i_pt) + m%F_stop(1,i_pt) - m%F_table(1,i_pt)*(m%F_k(1,i_pt)) )
             m%Acc(2,i_pt) = - m%rddot_P(2,i_pt) + m%a_G(2,i_pt) + 1 / p%M_XY * ( m%F_ext(2,i_pt) + m%F_stop(2,i_pt) - m%F_table(2,i_pt)*(m%F_k(2,i_pt)) )
+            m%Acc(3,i_pt) = 0.0_ReKi
          enddo
 
       ENDIF
@@ -1079,12 +1086,12 @@ SUBROUTINE StC_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
                dxdt%StC_x(4,i_pt) = 0.0_ReKi
             enddo
          END IF
-         IF (p%StC_Y_DOF) THEN
+         IF (p%StC_Z_DOF) THEN
             do i_pt=1,p%NumMeshPts
-               dxdt%StC_x(6,i_pt) =  ( m%omega_P(1,i_pt)**2 + m%omega_P(2,i_pt)**2 - K(3) / p%M_Z) * x%StC_x(6,i_pt) &
-                                   - ( m%C_ctrl( 3,i_pt)/p%M_Y ) * x%StC_x(6,i_pt)                                   &
-                                   - ( m%C_Brake(3,i_pt)/p%M_Y ) * x%StC_x(6,i_pt)                                   &
-                                   + m%Acc(3,i_pt) + m%F_fr(3,i_pt) / p%M_Y
+               dxdt%StC_x(6,i_pt) =  ( m%omega_P(1,i_pt)**2 + m%omega_P(2,i_pt)**2 - K(3) / p%M_Z) * x%StC_x(5,i_pt) &
+                                   - ( m%C_ctrl( 3,i_pt)/p%M_Z ) * x%StC_x(6,i_pt)                                   &
+                                   - ( m%C_Brake(3,i_pt)/p%M_Z ) * x%StC_x(6,i_pt)                                   &
+                                   + m%Acc(3,i_pt) + m%F_fr(3,i_pt) / p%M_Z
             enddo
          ELSE
             do i_pt=1,p%NumMeshPts
@@ -1190,6 +1197,7 @@ SUBROUTINE StC_GroundHookDamp(dxdt,x,u,p,C_ctrl,C_Brake,F_fr)
    REAL(ReKi), dimension(:,:),            INTENT(INOUT)     :: F_fr        !< Friction forces
    INTEGER(IntKi)                                           :: i_pt        !< generic counter for mesh points
 
+!FIXME: note that the TranslationalVel is in global coords, but the StC_x values are all in local coordinates!!!!!
    do i_pt=1,p%NumMeshPts
       IF (p%StC_CMODE == CMODE_Semi .AND. p%StC_SA_MODE == SA_CMODE_GH_vel) THEN ! velocity-based ground hook control with high damping for braking
 
@@ -1234,9 +1242,9 @@ SUBROUTINE StC_GroundHookDamp(dxdt,x,u,p,C_ctrl,C_Brake,F_fr)
             C_ctrl(3,i_pt) = p%StC_Z_C_LOW
          END IF
 
-         !Brake Y
+         !Brake Z
          IF      ( (x%StC_x(5,i_pt) > p%P_SP(3)-0.2) .AND. (x%StC_x(6,i_pt) > 0) ) THEN
-            C_Brake(2,i_pt) = p%StC_Z_C_BRAKE
+            C_Brake(3,i_pt) = p%StC_Z_C_BRAKE
          ELSE IF ( (x%StC_x(5,i_pt) < p%N_SP(3)+0.2) .AND. (x%StC_x(6,i_pt) < 0) ) THEN
             C_Brake(3,i_pt) = p%StC_Z_C_BRAKE
          ELSE
@@ -1276,7 +1284,22 @@ SUBROUTINE StC_GroundHookDamp(dxdt,x,u,p,C_ctrl,C_Brake,F_fr)
          ELSE
             C_Brake(2,i_pt) = 0
          END IF
-!FIXME: do we need the Z direction here also?
+
+         ! Z
+         IF (dxdt%StC_x(5,i_pt) * u%Mesh(i_pt)%TranslationVel(3,1) >= 0 ) THEN
+            C_ctrl(3,i_pt) = p%StC_Z_C_HIGH
+         ELSE
+            C_ctrl(3,i_pt) = p%StC_Z_C_LOW
+         END IF
+
+         !Brake Z
+         IF      ( (x%StC_x(5,i_pt) > p%P_SP(3)-0.2) .AND. (x%StC_x(6,i_pt) > 0) ) THEN
+            C_Brake(3,i_pt) = p%StC_Z_C_BRAKE
+         ELSE IF ( (x%StC_x(5,i_pt) < p%N_SP(3)+0.2) .AND. (x%StC_x(6,i_pt) < 0) ) THEN
+            C_Brake(3,i_pt) = p%StC_Z_C_BRAKE
+         ELSE
+            C_Brake(3,i_pt) = 0
+         END IF
 
       ELSE IF (p%StC_CMODE == CMODE_Semi .AND. p%StC_SA_MODE == SA_CMODE_GH_disp) THEN ! displacement-based ground hook control with high damping for braking
 
@@ -1311,7 +1334,22 @@ SUBROUTINE StC_GroundHookDamp(dxdt,x,u,p,C_ctrl,C_Brake,F_fr)
          ELSE
             C_Brake(2,i_pt) = 0
          END IF
-!FIXME: do we need the Z direction here also?
+
+         ! Z
+         IF (dxdt%StC_x(5,i_pt) * u%Mesh(i_pt)%TranslationDisp(3,1) <= 0 ) THEN
+            C_ctrl(3,i_pt) = p%StC_Z_C_HIGH
+         ELSE
+            C_ctrl(3,i_pt) = p%StC_Z_C_LOW
+         END IF
+
+         !Brake Z
+         IF      ( (x%StC_x(5,i_pt) > p%P_SP(3)-0.2) .AND. (x%StC_x(6,i_pt) > 0) ) THEN
+            C_Brake(3,i_pt) = p%StC_Z_C_BRAKE
+         ELSE IF ( (x%StC_x(3,i_pt) < p%N_SP(3)+0.2) .AND. (x%StC_x(6,i_pt) < 0) ) THEN
+            C_Brake(3,i_pt) = p%StC_Z_C_BRAKE
+         ELSE
+            C_Brake(3,i_pt) = 0
+         END IF
 
       ELSE IF (p%StC_CMODE == CMODE_Semi .AND. p%StC_SA_MODE == SA_CMODE_Ph_FF) THEN ! Phase Difference Algorithm with Friction Force
             ! X
@@ -1363,7 +1401,31 @@ SUBROUTINE StC_GroundHookDamp(dxdt,x,u,p,C_ctrl,C_Brake,F_fr)
          ELSE
             C_Brake(2,i_pt) = 0
          END IF
-!FIXME: do we need the Z direction here also?
+
+            ! Z
+            ! (a)
+         IF      (u%Mesh(i_pt)%TranslationDisp(3,1) > 0 .AND. u%Mesh(i_pt)%TranslationVel(3,1) < 0 .AND. x%StC_x(5,i_pt) > 0 .AND. dxdt%StC_x(5,i_pt) < 0) THEN
+            F_fr(3,i_pt) = p%StC_Z_C_HIGH
+            ! (b)
+         ELSE IF (u%Mesh(i_pt)%TranslationDisp(3,1) < 0 .AND. u%Mesh(i_pt)%TranslationVel(3,1) > 0 .AND. x%StC_x(5,i_pt) < 0 .AND. dxdt%StC_x(5,i_pt) > 0) THEN
+            F_fr(3,i_pt) = -p%StC_Z_C_HIGH
+            ! (c)
+         ELSE IF (u%Mesh(i_pt)%TranslationDisp(3,1) < 0 .AND. u%Mesh(i_pt)%TranslationVel(3,1) < 0 .AND. x%StC_x(5,i_pt) > 0 .AND. dxdt%StC_x(5,i_pt) > 0) THEN
+            F_fr(3,i_pt) = -p%StC_Z_C_HIGH
+         ELSE IF (u%Mesh(i_pt)%TranslationDisp(3,1) > 0 .AND. u%Mesh(i_pt)%TranslationVel(3,1) > 0 .AND. x%StC_x(5,i_pt) < 0 .AND. dxdt%StC_x(5,i_pt) < 0) THEN
+            F_fr(3,i_pt) = p%StC_Z_C_HIGH
+         ELSE
+            F_fr(3,i_pt) = p%StC_Z_C_LOW
+         END IF
+
+         !Brake Z
+         IF      ( (x%StC_x(5,i_pt) > p%P_SP(3)-0.2) .AND. (x%StC_x(6,i_pt) > 0) ) THEN
+            C_Brake(3,i_pt) = p%StC_Z_C_BRAKE
+         ELSE IF ( (x%StC_x(5,i_pt) < p%N_SP(3)+0.2) .AND. (x%StC_x(6,i_pt) < 0) ) THEN
+            C_Brake(3,i_pt) = p%StC_Z_C_BRAKE
+         ELSE
+            C_Brake(3,i_pt) = 0
+         END IF
 
       ELSE IF (p%StC_CMODE == CMODE_Semi .AND. p%StC_SA_MODE == SA_CMODE_Ph_DF) THEN ! Phase Difference Algorithm with Damping On/Off
             ! X
@@ -1415,7 +1477,31 @@ SUBROUTINE StC_GroundHookDamp(dxdt,x,u,p,C_ctrl,C_Brake,F_fr)
          ELSE
             C_Brake(2,i_pt) = 0
          END IF
-!FIXME: do we need the Z direction here also?
+
+            ! Z
+            ! (a)
+         IF      (u%Mesh(i_pt)%TranslationDisp(3,1) > 0 .AND. u%Mesh(i_pt)%TranslationVel(3,1) < 0 .AND. x%StC_x(5,i_pt) > 0 .AND. dxdt%StC_x(5,i_pt) < 0) THEN
+            C_ctrl(3,i_pt) = p%StC_Z_C_HIGH
+            ! (b)
+         ELSE IF (u%Mesh(i_pt)%TranslationDisp(3,1) < 0 .AND. u%Mesh(i_pt)%TranslationVel(3,1) > 0 .AND. x%StC_x(5,i_pt) < 0 .AND. dxdt%StC_x(5,i_pt) > 0) THEN
+            C_ctrl(3,i_pt) = p%StC_Z_C_HIGH
+            ! (c)
+         ELSE IF (u%Mesh(i_pt)%TranslationDisp(3,1) < 0 .AND. u%Mesh(i_pt)%TranslationVel(3,1) < 0 .AND. x%StC_x(5,i_pt) > 0 .AND. dxdt%StC_x(5,i_pt) > 0) THEN
+            C_ctrl(3,i_pt) = p%StC_Z_C_HIGH
+         ELSE IF (u%Mesh(i_pt)%TranslationDisp(3,1) > 0 .AND. u%Mesh(i_pt)%TranslationVel(3,1) > 0 .AND. x%StC_x(5,i_pt) < 0 .AND. dxdt%StC_x(5,i_pt) < 0) THEN
+            C_ctrl(3,i_pt) = p%StC_Z_C_HIGH
+         ELSE
+            C_ctrl(3,i_pt) = p%StC_Z_C_LOW
+         END IF
+
+         !Brake Z
+         IF      ( (x%StC_x(5,i_pt) > p%P_SP(3)-0.2) .AND. (x%StC_x(6,i_pt) > 0) ) THEN
+            C_Brake(3,i_pt) = p%StC_Z_C_BRAKE
+         ELSE IF ( (x%StC_x(5,i_pt) < p%N_SP(3)+0.2) .AND. (x%StC_x(6,i_pt) < 0) ) THEN
+            C_Brake(3,i_pt) = p%StC_Z_C_BRAKE
+         ELSE
+            C_Brake(3,i_pt) = 0
+         END IF
 
       END IF
    enddo
@@ -1435,7 +1521,7 @@ SUBROUTINE SpringForceExtrapInterp(x, p, F_table,ErrStat,ErrMsg)
    ! local variables
    INTEGER(IntKi)                                           :: ErrStat2       ! error status
    INTEGER(IntKi)                                           :: I              ! Loop counter
-   INTEGER(IntKi), DIMENSION(3)                             :: J = (/1, 3, 5/) ! Index to StC_x for each dimension 
+   INTEGER(IntKi), DIMENSION(3)                             :: J = (/1, 3, 5/) ! Index to StC_x for TMD displacement in each dimension 
    INTEGER(IntKi)                                           :: M              ! location of closest table position
    INTEGER(IntKi)                                           :: Nrows          ! Number of rows in F_TBL
    REAL(ReKi)                                               :: Slope          !
@@ -1973,6 +2059,7 @@ SUBROUTINE StC_SetParameters( InputFileData, InitInp, p, Interval, ErrStat, ErrM
    p%K_Z = InputFileData%StC_Z_K
    p%C_Z = InputFileData%StC_Z_C
 
+   ! StC Omni parameters
    p%M_XY = InputFileData%StC_XY_M
 
    ! Fore-Aft TLCD Parameters ! MEG & SP
