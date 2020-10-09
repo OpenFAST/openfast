@@ -198,7 +198,7 @@ SUBROUTINE StC_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
       x%StC_x(2,i_pt) = 0
       x%StC_x(3,i_pt) = p%Y_DSP
       x%StC_x(4,i_pt) = 0
-      x%StC_x(5,i_pt) = p%Y_DSP
+      x%StC_x(5,i_pt) = p%Z_DSP
       x%StC_x(6,i_pt) = 0
    enddo
 
@@ -927,7 +927,7 @@ SUBROUTINE StC_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
       INTEGER(IntKi),                INTENT(  OUT)  :: ErrStat     !< Error status of the operation
       CHARACTER(*),                  INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
-      REAL(ReKi), dimension(2)                        :: K          ! tuned mass damper stiffness
+      REAL(ReKi), dimension(3)                        :: K          ! tuned mass damper stiffness
       Real(ReKi)                                      :: denom      ! denominator for omni-direction factors
       integer(IntKi)                                  :: i_pt       ! Generic counter for mesh point
 
@@ -956,6 +956,7 @@ SUBROUTINE StC_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
       ELSE ! use preset values
          K(1) = p%K_X
          K(2) = p%K_Y
+         K(3) = p%K_Z
       END IF
 
 
@@ -1025,13 +1026,24 @@ SUBROUTINE StC_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
             enddo
          END IF
 
+         IF (p%StC_DOF_MODE == DOFMode_Indept .AND. .NOT. p%StC_Z_DOF) THEN
+            do i_pt=1,p%NumMeshPts
+               dxdt%StC_x(5,i_pt) = 0.0_ReKi
+            enddo
+         ELSE
+            do i_pt=1,p%NumMeshPts
+               dxdt%StC_x(5,i_pt) = x%StC_x(6,i_pt)
+            enddo
+         END IF
+
       ENDIF
 
 
-      ! compute damping for dxdt%StC_x(2) and dxdt%StC_x(4)
+      ! compute damping for dxdt%StC_x(2), dxdt%StC_x(4), and dxdt%StC_x(6)
       IF (p%StC_CMODE == ControlMode_None) THEN
          m%C_ctrl(1,:) = p%C_X
          m%C_ctrl(2,:) = p%C_Y
+         m%C_ctrl(3,:) = p%C_Z
 
          m%C_Brake = 0.0_ReKi
          m%F_fr    = 0.0_ReKi
@@ -1040,7 +1052,7 @@ SUBROUTINE StC_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
       END IF
 
 
-      ! Compute the first time derivatives, dxdt%StC_x(2) and dxdt%StC_x(4), of the continuous states,:
+      ! Compute the first time derivatives, dxdt%StC_x(2), dxdt%StC_x(4), and dxdt%StC_x(6), of the continuous states,:
       IF (p%StC_DOF_MODE == DOFMode_Indept) THEN
 
          IF (p%StC_X_DOF) THEN
@@ -1067,8 +1079,20 @@ SUBROUTINE StC_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
                dxdt%StC_x(4,i_pt) = 0.0_ReKi
             enddo
          END IF
+         IF (p%StC_Y_DOF) THEN
+            do i_pt=1,p%NumMeshPts
+               dxdt%StC_x(6,i_pt) =  ( m%omega_P(1,i_pt)**2 + m%omega_P(2,i_pt)**2 - K(3) / p%M_Z) * x%StC_x(6,i_pt) &
+                                   - ( m%C_ctrl( 3,i_pt)/p%M_Y ) * x%StC_x(6,i_pt)                                   &
+                                   - ( m%C_Brake(3,i_pt)/p%M_Y ) * x%StC_x(6,i_pt)                                   &
+                                   + m%Acc(3,i_pt) + m%F_fr(3,i_pt) / p%M_Y
+            enddo
+         ELSE
+            do i_pt=1,p%NumMeshPts
+               dxdt%StC_x(6,i_pt) = 0.0_ReKi
+            enddo
+         END IF
 
-      ELSE IF (p%StC_DOF_MODE == DOFMode_Omni) THEN
+      ELSE IF (p%StC_DOF_MODE == DOFMode_Omni) THEN   ! Only includes X and Y
                ! Compute the first time derivatives of the continuous states of Omnidirectional tuned masse damper mode by sm 2015-0904
          do i_pt=1,p%NumMeshPts
             dxdt%StC_x(2,i_pt) =  ( m%omega_P(2,i_pt)**2 + m%omega_P(3,i_pt)**2 - K(1) / p%M_XY) * x%StC_x(1,i_pt)   &
@@ -1129,13 +1153,13 @@ SUBROUTINE StC_CalcStopForce(x,p,F_stop)
    TYPE(StC_ParameterType),       INTENT(IN   )  :: p           !< Parameters
    Real(ReKi), dimension(:,:),    INTENT(INOUT)  :: F_stop      !< stop forces
    ! local variables
-   Real(ReKi), dimension(2)                      :: F_SK      !stop spring forces
-   Real(ReKi), dimension(2)                      :: F_SD      !stop damping forces
+   Real(ReKi), dimension(3)                      :: F_SK      !stop spring forces
+   Real(ReKi), dimension(3)                      :: F_SD      !stop damping forces
    INTEGER(IntKi)                                :: i         ! counter
    INTEGER(IntKi)                                :: i_pt      ! counter for mesh points
    INTEGER(IntKi)                                :: j         ! counter for index into x%StC_x
    do i_pt=1,p%NumMeshPts
-      DO i=1,2
+      DO i=1,3 ! X, Y, and Z
          j=2*(i-1)+1
          IF ( x%StC_x(j,i_pt) > p%P_SP(i) ) THEN
             F_SK(i) = p%K_S(i) *( p%P_SP(i) - x%StC_x(j,i_pt)  )
@@ -1202,6 +1226,23 @@ SUBROUTINE StC_GroundHookDamp(dxdt,x,u,p,C_ctrl,C_Brake,F_fr)
             C_Brake(2,i_pt) = 0
          END IF
 
+
+         ! Z
+         IF (dxdt%StC_x(5,i_pt) * u%Mesh(i_pt)%TranslationVel(3,1) <= 0 ) THEN
+            C_ctrl(3,i_pt) = p%StC_Z_C_HIGH
+         ELSE
+            C_ctrl(3,i_pt) = p%StC_Z_C_LOW
+         END IF
+
+         !Brake Y
+         IF      ( (x%StC_x(5,i_pt) > p%P_SP(3)-0.2) .AND. (x%StC_x(6,i_pt) > 0) ) THEN
+            C_Brake(2,i_pt) = p%StC_Z_C_BRAKE
+         ELSE IF ( (x%StC_x(5,i_pt) < p%N_SP(3)+0.2) .AND. (x%StC_x(6,i_pt) < 0) ) THEN
+            C_Brake(3,i_pt) = p%StC_Z_C_BRAKE
+         ELSE
+            C_Brake(3,i_pt) = 0
+         END IF
+
       ELSE IF (p%StC_CMODE == CMODE_Semi .AND. p%StC_SA_MODE == SA_CMODE_GH_invVel) THEN ! Inverse velocity-based ground hook control with high damping for braking
 
          ! X
@@ -1235,6 +1276,7 @@ SUBROUTINE StC_GroundHookDamp(dxdt,x,u,p,C_ctrl,C_Brake,F_fr)
          ELSE
             C_Brake(2,i_pt) = 0
          END IF
+!FIXME: do we need the Z direction here also?
 
       ELSE IF (p%StC_CMODE == CMODE_Semi .AND. p%StC_SA_MODE == SA_CMODE_GH_disp) THEN ! displacement-based ground hook control with high damping for braking
 
@@ -1269,6 +1311,7 @@ SUBROUTINE StC_GroundHookDamp(dxdt,x,u,p,C_ctrl,C_Brake,F_fr)
          ELSE
             C_Brake(2,i_pt) = 0
          END IF
+!FIXME: do we need the Z direction here also?
 
       ELSE IF (p%StC_CMODE == CMODE_Semi .AND. p%StC_SA_MODE == SA_CMODE_Ph_FF) THEN ! Phase Difference Algorithm with Friction Force
             ! X
@@ -1320,6 +1363,7 @@ SUBROUTINE StC_GroundHookDamp(dxdt,x,u,p,C_ctrl,C_Brake,F_fr)
          ELSE
             C_Brake(2,i_pt) = 0
          END IF
+!FIXME: do we need the Z direction here also?
 
       ELSE IF (p%StC_CMODE == CMODE_Semi .AND. p%StC_SA_MODE == SA_CMODE_Ph_DF) THEN ! Phase Difference Algorithm with Damping On/Off
             ! X
@@ -1371,6 +1415,7 @@ SUBROUTINE StC_GroundHookDamp(dxdt,x,u,p,C_ctrl,C_Brake,F_fr)
          ELSE
             C_Brake(2,i_pt) = 0
          END IF
+!FIXME: do we need the Z direction here also?
 
       END IF
    enddo
@@ -1390,12 +1435,12 @@ SUBROUTINE SpringForceExtrapInterp(x, p, F_table,ErrStat,ErrMsg)
    ! local variables
    INTEGER(IntKi)                                           :: ErrStat2       ! error status
    INTEGER(IntKi)                                           :: I              ! Loop counter
-   INTEGER(IntKi), DIMENSION(2)                             :: J = (/1, 3/)   ! Loop counter
+   INTEGER(IntKi), DIMENSION(3)                             :: J = (/1, 3, 5/) ! Index to StC_x for each dimension 
    INTEGER(IntKi)                                           :: M              ! location of closest table position
    INTEGER(IntKi)                                           :: Nrows          ! Number of rows in F_TBL
    REAL(ReKi)                                               :: Slope          !
    REAL(ReKi)                                               :: DX             !
-   REAL(ReKi)                                               :: Disp(2)        ! Current displacement
+   REAL(ReKi)                                               :: Disp(3)        ! Current displacement
    REAL(ReKi), ALLOCATABLE                                  :: TmpRAry(:)
    INTEGER(IntKi)                                           :: i_pt           !< generic counter for mesh point
 
@@ -1414,14 +1459,15 @@ SUBROUTINE SpringForceExtrapInterp(x, p, F_table,ErrStat,ErrMsg)
          END IF
 
          IF (p%StC_DOF_MODE == DOFMode_Indept) THEN
-            DO I = 1,2
+            DO I = 1,3
                Disp(I) = x%StC_x(J(I),i_pt)
             END DO
-         ELSE !IF (p%StC_DOF_MODE == DOFMode_Omni) THEN
+         ELSE !IF (p%StC_DOF_MODE == DOFMode_Omni) THEN  ! Only X and Y
             Disp = SQRT(x%StC_x(1,i_pt)**2+x%StC_x(3,i_pt)**2) ! constant assignment to vector
          END IF
 
-         DO I = 1,2
+         
+         DO I = 1,3
             TmpRAry = p%F_TBL(:,J(I))-Disp(I)
             TmpRAry = ABS(TmpRAry)
             M = MINLOC(TmpRAry,1)
@@ -1961,7 +2007,7 @@ SUBROUTINE StC_SetParameters( InputFileData, InitInp, p, Interval, ErrStat, ErrM
    p%C_S(1) = InputFileData%StC_X_CS
    p%C_S(2) = InputFileData%StC_Y_CS
    p%C_S(3) = InputFileData%StC_Z_CS
-
+ 
    ! ground hook control damping files
    p%StC_CMODE = InputFileData%StC_CMODE
    p%StC_SA_MODE = InputFileData%StC_SA_MODE
@@ -1977,11 +2023,8 @@ SUBROUTINE StC_SetParameters( InputFileData, InitInp, p, Interval, ErrStat, ErrM
 
    ! User Defined Stiffness Table
    p%Use_F_TBL = InputFileData%Use_F_TBL
-   ALLOCATE (p%F_TBL(SIZE(InputFiledata%F_TBL,1),SIZE(InputFiledata%F_TBL,2)), STAT=ErrStat2)
-   IF (ErrStat2/=0) THEN
-      CALL SetErrStat(ErrID_Fatal,"Error allocating p%F_TBL.",ErrStat,ErrMsg,RoutineName)
-      RETURN
-   END IF
+   call AllocAry(p%F_TBL,SIZE(InputFiledata%F_TBL,1),SIZE(InputFiledata%F_TBL,2),'F_TBL', ErrStat2, ErrMsg2)
+      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
    p%F_TBL = InputFileData%F_TBL;
 
