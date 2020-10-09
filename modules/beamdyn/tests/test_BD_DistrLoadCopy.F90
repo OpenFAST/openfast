@@ -29,7 +29,7 @@ subroutine test_BD_DistrLoadCopy()
     testname = "static simple beam under gravity:"
     
     ! build the parametertype, inputtype, and miscvartype
-    parametertype = simpleParameterType(1,16,16,0)
+    parametertype = simpleParameterType(1,16,16,0,1)
     miscvartype = simpleMiscVarType(parametertype%nqp, parametertype%elem_total)
     inputtype = simpleInputType(parametertype%nqp, parametertype%elem_total)
     

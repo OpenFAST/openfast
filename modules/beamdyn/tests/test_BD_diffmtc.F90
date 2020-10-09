@@ -68,7 +68,7 @@ contains
         ! shpder(1,:) = -0.5, -0.5
         ! shpder(2,:) =  0.5,  0.5
         
-        parametertype = simpleParameterType(1,2,2,0)
+        parametertype = simpleParameterType(1,2,2,0,1)
         !parametertype%nodes_per_elem = 2
         !parametertype%nqp = 2
         n = parametertype%nodes_per_elem
@@ -117,7 +117,7 @@ contains
         ! --------------------------------------------------------------------------
         testname = "5-node element: evaluate shape/shapederivative at nodes and at three non-node locations"
         
-        parametertype = simpleParameterType(1,5,8,0)
+        parametertype = simpleParameterType(1,5,8,0,1)
         !parametertype%nodes_per_elem = 5
         !parametertype%nqp = 8  ! testing the GLL nodes and three non-nodal locations (-0.8, 0.1, 0.4)
         n = parametertype%nodes_per_elem

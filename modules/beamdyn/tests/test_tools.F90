@@ -91,12 +91,13 @@ contains
         getGravityInZ = (/ 0.0, 0.0, -9.806 /)
     end function
     
-    type(BD_ParameterType) function simpleParameterType(elem_total,nodes_per_elem,nqp,qp_indx_offset) RESULT(p)
+    type(BD_ParameterType) function simpleParameterType(elem_total,nodes_per_elem,nqp,qp_indx_offset,refine) RESULT(p)
   
         integer, intent(in   ) :: elem_total
         integer, intent(in   ) :: nodes_per_elem
         integer, intent(in   ) :: nqp
         integer, intent(in   ) :: qp_indx_offset
+        integer, intent(in   ) :: refine
  
         integer                :: i, j
         integer                :: ErrStat
@@ -112,6 +113,7 @@ contains
         p%nodes_per_elem = nodes_per_elem
         p%nqp = nqp
         p%qp_indx_offset = qp_indx_offset
+        p%refine = refine
         
         ! fixed size arrays
         p%Glb_crv = (/ 0.0, 0.0, 0.0 /)
@@ -128,7 +130,7 @@ contains
         call AllocAry(p%Shp, p%nodes_per_elem, p%nqp, 'Shp', ErrStat, ErrMsg)
         call AllocAry(p%ShpDer, p%nodes_per_elem, p%nqp, 'ShpDer', ErrStat, ErrMsg)
         call AllocAry(p%QPtN, p%nqp, 'QPtN', ErrStat, ErrMsg)
-        call AllocAry(p%QPtWeight, p%nqp, 'QPtWeightShp', ErrStat, ErrMsg)
+        call AllocAry(p%QPtWeight, p%nqp, 'QPtWeight', ErrStat, ErrMsg)
         call AllocAry(p%QPtw_ShpDer, p%nqp, p%nodes_per_elem, 'QPtw_ShpDer', ErrStat, ErrMsg)
         call AllocAry(p%Jacobian, p%nqp, p%elem_total, 'Jacobian', ErrStat, ErrMsg)
         call AllocAry(p%uuN0, 3, p%nodes_per_elem, p%elem_total,'uuN0', ErrStat, ErrMsg)
