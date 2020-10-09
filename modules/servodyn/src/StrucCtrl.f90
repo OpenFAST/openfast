@@ -100,7 +100,8 @@ SUBROUTINE StC_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
       REAL(ReKi), allocatable, dimension(:,:)       :: PositionGlobal
       REAL(R8Ki), allocatable, dimension(:,:,:)     :: OrientationP
 
-      type(FileInfoType)                            :: FileInfo_In   !< The derived type for holding the full input file for parsing -- we may pass this in the future
+      type(FileInfoType)                            :: FileInfo_In               !< The derived type for holding the full input file for parsing -- we may pass this in the future
+      type(FileInfoType)                            :: FileInfo_In_PrescribeFrc  !< The derived type for holding the prescribed forces input file for parsing -- we may pass this in the future
       integer(IntKi)                                :: UnEcho
       INTEGER(IntKi)                                :: ErrStat2      ! local error status
       CHARACTER(ErrMsgLen)                          :: ErrMsg2       ! local error message
@@ -153,6 +154,19 @@ SUBROUTINE StC_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
       call Read_ForceTimeSeriesFile(InputFileData%PrescribedForcesFile,p%StC_PrescribedForce,ErrStat2,ErrMsg2)
       if (Failed())  return;
    endif
+!FIXME: convert reading/parsing to use FileInfoType
+!      if (InitInp%UseInputFile_PrescribeFrc) then
+!         ! Read the entire input file, minus any comment lines, into the FileInfo_In
+!         ! data structure in memory for further processing.
+!         call ProcessComFile( InputFileData%PrescribedForcesFile, FileInfo_In_PrescribeFrc, ErrStat2, ErrMsg2 )
+!      else
+!            ! put passed string info into the FileInfo_In -- FileInfo structure
+!         call NWTC_Library_CopyFileInfoType( InitInp%PassedPrescribeFrcData, FileInfo_In_PrescribeFrc, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+!      endif
+!      if (Failed())  return;
+!      !  Parse the FileInfo_In_PrescribeFrc structure of data from the inputfile into the InitInp%InputFile structure
+!      CALL StC_ParseTimeSeriesFileInfo( InputFileData%PrescribedForcesFile, FileInfo_In_PrescribeFrc, InputFileData, UnEcho, ErrStat2, ErrMsg2 )
+
 
       !............................................................................................
       ! Define parameters here:
@@ -1977,7 +1991,46 @@ SUBROUTINE StC_SetParameters( InputFileData, InitInp, p, Interval, ErrStat, ErrM
 END SUBROUTINE StC_SetParameters
 
 
-
+!subroutine StC_ParseTimeSeriesFileInfo( InputFile, FileInfo_In, InputFileData, UnEcho, ErrStat, ErrMsg )
+!
+!   implicit    none
+!
+!      ! Passed variables
+!   CHARACTER(*),           intent(in   )  :: InputFile         !< Name of the file containing the primary input data
+!   type(StC_InputFile),    intent(inout)  :: InputFileData     !< All the data in the StrucCtrl input file
+!   type(FileInfoType),     intent(in   )  :: FileInfo_In       !< The derived type for holding the file information.
+!   integer(IntKi),         intent(  out)  :: UnEcho            !< The local unit number for this module's echo file
+!   integer(IntKi),         intent(  out)  :: ErrStat           !< Error status
+!   CHARACTER(ErrMsgLen),   intent(  out)  :: ErrMsg            !< Error message
+!
+!      ! Local variables:
+!   integer(IntKi)                         :: i                 !< generic counter
+!   integer(IntKi)                         :: ErrStat2          !< Temporary Error status
+!   character(ErrMsgLen)                   :: ErrMsg2           !< Temporary Error message
+!   integer(IntKi)                         :: CurLine           !< current entry in FileInfo_In%Lines array
+!   integer(IntKi)                         :: TableRows         !< Number of header lines to ignore
+!   integer(IntKi)                         :: TableCols         !< Number of header lines to ignore
+!   integer(IntKi)                         :: TableStartRow     !< starting row of table
+!   character(*), parameter                :: RoutineName='StC_ParseTimeSeriesFileInfo'
+!
+!      ! Initialization of subroutine
+!   ErrMsg      =  ''
+!   ErrMsg2     =  ''
+!   ErrStat     =  ErrID_None
+!   ErrStat2    =  ErrID_None
+!
+!call Print_FileInfo_Struct( CU, FileInfo_In ) ! CU is the screen -- different number on different systems.
+!!   call AllocAry( InputFileData%StC_PrescribedForce, 7, TableRows, "Array of Points data", ErrStat2, ErrMsg2 )
+!call SetErrStat(ErrID_Fatal,'Stopping here for testing Prescribed Force reading.',ErrStat,ErrMsg,RoutineName)
+!
+!contains
+!   !-------------------------------------------------------------------------------------------------
+!   logical function Failed()
+!      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+!      Failed = ErrStat >= AbortErrLev
+!      if (Failed) call Cleanup()
+!   end function Failed
+!end subroutine StC_ParseTimeSeriesFileInfo
 
 subroutine Read_ForceTimeSeriesFile(ForceFilename,ForceArray,ErrStat,ErrMsg)
    character(*),            intent(in   ) :: ForceFileName

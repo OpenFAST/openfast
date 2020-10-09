@@ -73,6 +73,7 @@ typedef	^		^				CHARACTER(1024)			StC_F_TBL_FILE	-	-	-	"user-defined spring tabl
 typedef	^		^				ReKi			F_TBL		{:}{:}	-	-	"user-defined spring force"	"N"
 typedef	^		^				IntKi			PrescribedForcesCoordSys	-	-	-	"Prescribed forces coordinate system {0: global; 1: local}"	-
 typedef	^		^				CHARACTER(1024)	PrescribedForcesFile	-	-	-	"Prescribed force time-series filename"	-
+typedef	^		^				ReKi			PrescribedFrc	{:}{:}	-	-	"StC prescribed force time-series info"	"(s,N,N-m)"
 # ..... Initialization data .......................................................................................................
 # Define inputs that the initialization routine may need here:
 # e.g., the name of the input file, the file root name, etc.
@@ -84,6 +85,8 @@ typedef	^	InitInputType	ReKi	InitPosition	{:}{:}	-	-	"X-Y-Z reference position o
 typedef	^	InitInputType	R8Ki	InitOrientation	{:}{:}{:}	-	-	"DCM reference orientation of point: i.e. each blade root (3x3 x NumBlades)"	-
 typedef	^	InitInputType	LOGICAL	UseInputFile	-	.TRUE.	-	"Read from the input file.  If false, must parse the string info passed"	-
 typedef	^	InitInputType	FileInfoType	PassedPrimaryInputData	-	-	-	"Primary input file as FileInfoType (set by driver/glue code)"	-
+typedef	^	InitInputType	LOGICAL	UseInputFile_PrescribeFrc	-	.TRUE.	-	"Read from the input file.  If false, must parse the string info passed"	-
+typedef	^	InitInputType	FileInfoType	PassedPrescribeFrcData	-	-	-	"Prescribed forces input file as FileInfoType (set by driver/glue code)"	-
 
 
 # Define outputs from the initialization routine here:

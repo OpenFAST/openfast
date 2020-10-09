@@ -98,6 +98,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: F_TBL      !< user-defined spring force [N]
     INTEGER(IntKi)  :: PrescribedForcesCoordSys      !< Prescribed forces coordinate system {0: global; 1: local} [-]
     CHARACTER(1024)  :: PrescribedForcesFile      !< Prescribed force time-series filename [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PrescribedFrc      !< StC prescribed force time-series info [(s,N,N-m)]
   END TYPE StC_InputFile
 ! =======================
 ! =========  StC_InitInputType  =======
@@ -110,6 +111,8 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: InitOrientation      !< DCM reference orientation of point: i.e. each blade root (3x3 x NumBlades) [-]
     LOGICAL  :: UseInputFile = .TRUE.      !< Read from the input file.  If false, must parse the string info passed [-]
     TYPE(FileInfoType)  :: PassedPrimaryInputData      !< Primary input file as FileInfoType (set by driver/glue code) [-]
+    LOGICAL  :: UseInputFile_PrescribeFrc = .TRUE.      !< Read from the input file.  If false, must parse the string info passed [-]
+    TYPE(FileInfoType)  :: PassedPrescribeFrcData      !< Prescribed forces input file as FileInfoType (set by driver/glue code) [-]
   END TYPE StC_InitInputType
 ! =======================
 ! =========  StC_InitOutputType  =======
@@ -318,6 +321,20 @@ IF (ALLOCATED(SrcInputFileData%F_TBL)) THEN
 ENDIF
     DstInputFileData%PrescribedForcesCoordSys = SrcInputFileData%PrescribedForcesCoordSys
     DstInputFileData%PrescribedForcesFile = SrcInputFileData%PrescribedForcesFile
+IF (ALLOCATED(SrcInputFileData%PrescribedFrc)) THEN
+  i1_l = LBOUND(SrcInputFileData%PrescribedFrc,1)
+  i1_u = UBOUND(SrcInputFileData%PrescribedFrc,1)
+  i2_l = LBOUND(SrcInputFileData%PrescribedFrc,2)
+  i2_u = UBOUND(SrcInputFileData%PrescribedFrc,2)
+  IF (.NOT. ALLOCATED(DstInputFileData%PrescribedFrc)) THEN 
+    ALLOCATE(DstInputFileData%PrescribedFrc(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%PrescribedFrc.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInputFileData%PrescribedFrc = SrcInputFileData%PrescribedFrc
+ENDIF
  END SUBROUTINE StC_CopyInputFile
 
  SUBROUTINE StC_DestroyInputFile( InputFileData, ErrStat, ErrMsg )
@@ -331,6 +348,9 @@ ENDIF
   ErrMsg  = ""
 IF (ALLOCATED(InputFileData%F_TBL)) THEN
   DEALLOCATE(InputFileData%F_TBL)
+ENDIF
+IF (ALLOCATED(InputFileData%PrescribedFrc)) THEN
+  DEALLOCATE(InputFileData%PrescribedFrc)
 ENDIF
  END SUBROUTINE StC_DestroyInputFile
 
@@ -436,6 +456,11 @@ ENDIF
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! PrescribedForcesCoordSys
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%PrescribedForcesFile)  ! PrescribedForcesFile
+  Int_BufSz   = Int_BufSz   + 1     ! PrescribedFrc allocated yes/no
+  IF ( ALLOCATED(InData%PrescribedFrc) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! PrescribedFrc upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%PrescribedFrc)  ! PrescribedFrc
+  END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -613,6 +638,26 @@ ENDIF
       IntKiBuf(Int_Xferred) = ICHAR(InData%PrescribedForcesFile(I:I), IntKi)
       Int_Xferred = Int_Xferred + 1
     END DO ! I
+  IF ( .NOT. ALLOCATED(InData%PrescribedFrc) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%PrescribedFrc,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%PrescribedFrc,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%PrescribedFrc,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%PrescribedFrc,2)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i2 = LBOUND(InData%PrescribedFrc,2), UBOUND(InData%PrescribedFrc,2)
+        DO i1 = LBOUND(InData%PrescribedFrc,1), UBOUND(InData%PrescribedFrc,1)
+          ReKiBuf(Re_Xferred) = InData%PrescribedFrc(i1,i2)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
  END SUBROUTINE StC_PackInputFile
 
  SUBROUTINE StC_UnPackInputFile( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -797,6 +842,29 @@ ENDIF
       OutData%PrescribedForcesFile(I:I) = CHAR(IntKiBuf(Int_Xferred))
       Int_Xferred = Int_Xferred + 1
     END DO ! I
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! PrescribedFrc not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%PrescribedFrc)) DEALLOCATE(OutData%PrescribedFrc)
+    ALLOCATE(OutData%PrescribedFrc(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%PrescribedFrc.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i2 = LBOUND(OutData%PrescribedFrc,2), UBOUND(OutData%PrescribedFrc,2)
+        DO i1 = LBOUND(OutData%PrescribedFrc,1), UBOUND(OutData%PrescribedFrc,1)
+          OutData%PrescribedFrc(i1,i2) = ReKiBuf(Re_Xferred)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
  END SUBROUTINE StC_UnPackInputFile
 
  SUBROUTINE StC_CopyInitInput( SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg )
@@ -854,6 +922,10 @@ ENDIF
       CALL NWTC_Library_Copyfileinfotype( SrcInitInputData%PassedPrimaryInputData, DstInitInputData%PassedPrimaryInputData, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
+    DstInitInputData%UseInputFile_PrescribeFrc = SrcInitInputData%UseInputFile_PrescribeFrc
+      CALL NWTC_Library_Copyfileinfotype( SrcInitInputData%PassedPrescribeFrcData, DstInitInputData%PassedPrescribeFrcData, CtrlCode, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+         IF (ErrStat>=AbortErrLev) RETURN
  END SUBROUTINE StC_CopyInitInput
 
  SUBROUTINE StC_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
@@ -872,6 +944,7 @@ IF (ALLOCATED(InitInputData%InitOrientation)) THEN
   DEALLOCATE(InitInputData%InitOrientation)
 ENDIF
   CALL NWTC_Library_Destroyfileinfotype( InitInputData%PassedPrimaryInputData, ErrStat, ErrMsg )
+  CALL NWTC_Library_Destroyfileinfotype( InitInputData%PassedPrescribeFrcData, ErrStat, ErrMsg )
  END SUBROUTINE StC_DestroyInitInput
 
  SUBROUTINE StC_PackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -939,6 +1012,24 @@ ENDIF
          DEALLOCATE(Db_Buf)
       END IF
       IF(ALLOCATED(Int_Buf)) THEN ! PassedPrimaryInputData
+         Int_BufSz = Int_BufSz + SIZE( Int_Buf )
+         DEALLOCATE(Int_Buf)
+      END IF
+      Int_BufSz  = Int_BufSz  + 1  ! UseInputFile_PrescribeFrc
+      Int_BufSz   = Int_BufSz + 3  ! PassedPrescribeFrcData: size of buffers for each call to pack subtype
+      CALL NWTC_Library_Packfileinfotype( Re_Buf, Db_Buf, Int_Buf, InData%PassedPrescribeFrcData, ErrStat2, ErrMsg2, .TRUE. ) ! PassedPrescribeFrcData 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf)) THEN ! PassedPrescribeFrcData
+         Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
+         DEALLOCATE(Re_Buf)
+      END IF
+      IF(ALLOCATED(Db_Buf)) THEN ! PassedPrescribeFrcData
+         Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
+         DEALLOCATE(Db_Buf)
+      END IF
+      IF(ALLOCATED(Int_Buf)) THEN ! PassedPrescribeFrcData
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
@@ -1031,6 +1122,36 @@ ENDIF
     IntKiBuf(Int_Xferred) = TRANSFER(InData%UseInputFile, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
       CALL NWTC_Library_Packfileinfotype( Re_Buf, Db_Buf, Int_Buf, InData%PassedPrimaryInputData, ErrStat2, ErrMsg2, OnlySize ) ! PassedPrimaryInputData 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Re_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Re_Buf) > 0) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_Buf)-1 ) = Re_Buf
+        Re_Xferred = Re_Xferred + SIZE(Re_Buf)
+        DEALLOCATE(Re_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+      IF(ALLOCATED(Db_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Db_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Db_Buf) > 0) DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_Buf)-1 ) = Db_Buf
+        Db_Xferred = Db_Xferred + SIZE(Db_Buf)
+        DEALLOCATE(Db_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+      IF(ALLOCATED(Int_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Int_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Int_Buf) > 0) IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_Buf)-1 ) = Int_Buf
+        Int_Xferred = Int_Xferred + SIZE(Int_Buf)
+        DEALLOCATE(Int_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%UseInputFile_PrescribeFrc, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
+      CALL NWTC_Library_Packfileinfotype( Re_Buf, Db_Buf, Int_Buf, InData%PassedPrescribeFrcData, ErrStat2, ErrMsg2, OnlySize ) ! PassedPrescribeFrcData 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -1192,6 +1313,48 @@ ENDIF
         Int_Xferred = Int_Xferred + Buf_size
       END IF
       CALL NWTC_Library_Unpackfileinfotype( Re_Buf, Db_Buf, Int_Buf, OutData%PassedPrimaryInputData, ErrStat2, ErrMsg2 ) ! PassedPrimaryInputData 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
+      IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
+      IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
+    OutData%UseInputFile_PrescribeFrc = TRANSFER(IntKiBuf(Int_Xferred), OutData%UseInputFile_PrescribeFrc)
+    Int_Xferred = Int_Xferred + 1
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Re_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Re_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Re_Buf = ReKiBuf( Re_Xferred:Re_Xferred+Buf_size-1 )
+        Re_Xferred = Re_Xferred + Buf_size
+      END IF
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Db_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Db_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Db_Buf = DbKiBuf( Db_Xferred:Db_Xferred+Buf_size-1 )
+        Db_Xferred = Db_Xferred + Buf_size
+      END IF
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Int_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Int_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
+        Int_Xferred = Int_Xferred + Buf_size
+      END IF
+      CALL NWTC_Library_Unpackfileinfotype( Re_Buf, Db_Buf, Int_Buf, OutData%PassedPrescribeFrcData, ErrStat2, ErrMsg2 ) ! PassedPrescribeFrcData 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
