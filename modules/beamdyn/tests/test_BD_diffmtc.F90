@@ -69,8 +69,6 @@ contains
         ! shpder(2,:) =  0.5,  0.5
         
         parametertype = simpleParameterType(1,2,2,0,1)
-        !parametertype%nodes_per_elem = 2
-        !parametertype%nqp = 2
         n = parametertype%nodes_per_elem
         
         call AllocAry(test_shape, parametertype%nodes_per_elem, parametertype%nqp, "test_shape", ErrStat, ErrMsg)

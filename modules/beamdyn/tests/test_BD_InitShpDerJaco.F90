@@ -34,10 +34,8 @@ contains
         ! --------------------------------------------------------------------------
         testname = "5 node, 1 element, curved:"
     
+        ! Let's use Gauss_Legendre Quadrature, which should be exact for intended polynomial test case
         p = simpleparametertype(1,5,5,0,1)
-        !p%elem_total = 1
-        !p%nodes_per_elem = 5
-        !p%nqp = 5  ! Let's use Gauss_Legendre Quadrature, which should be exact for intended polynomial test case
     
         ! Allocate memory for baseline results 
         call AllocAry(baseline_Shp     , p%nodes_per_elem, p%nqp, 'Reference Shp'     , ErrStat, ErrMsg)

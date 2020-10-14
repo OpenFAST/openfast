@@ -91,34 +91,28 @@ contains
         getGravityInZ = (/ 0.0, 0.0, -9.806 /)
     end function
     
-    type(BD_ParameterType) function simpleParameterType(elem_total,nodes_per_elem,nqp,qp_indx_offset,refine) RESULT(p)
+    type(BD_ParameterType) function simpleParameterType(elem_total, nodes_per_elem, nqp, qp_indx_offset, refine) RESULT(p)
   
         integer, intent(in   ) :: elem_total
         integer, intent(in   ) :: nodes_per_elem
         integer, intent(in   ) :: nqp
         integer, intent(in   ) :: qp_indx_offset
         integer, intent(in   ) :: refine
- 
+
         integer                :: i, j
         integer                :: ErrStat
         character(1024)        :: ErrMsg
-        
-        ! scalars
-        !p%elem_total = 1
-        !p%nodes_per_elem = 16
-        !p%nqp = 16
-        !p%qp_indx_offset = 0
 
         p%elem_total = elem_total
         p%nodes_per_elem = nodes_per_elem
         p%nqp = nqp
         p%qp_indx_offset = qp_indx_offset
         p%refine = refine
-        
+
         ! fixed size arrays
         p%Glb_crv = (/ 0.0, 0.0, 0.0 /)
         p%GlbRot = identity()
-        
+
         ! allocate arrays
         call AllocAry(p%qp%mmm, p%nqp, p%elem_total, 'qp_mmm', ErrStat, ErrMsg)
         call AllocAry(p%qp%mEta, 3, p%nqp, p%elem_total, 'qp_RR0mEta', ErrStat, ErrMsg)
@@ -137,14 +131,14 @@ contains
 
         ! construct arrays
         p%qp%mmm = 1.0
-        
+
         do j=1, p%elem_total
             do i=1, p%nqp
                 p%qp%mEta(:,i,j) = (/ 0.0, 0.0, 0.0 /)
                 p%Mass0_QP(:,:,(i-1)*p%elem_total+j) = getMassMatrix()
             end do
         end do
-        
+
     end function
    
     subroutine SimpleParameterType_TearDown(p)
