@@ -141,26 +141,6 @@ contains
 
     end function
    
-    subroutine SimpleParameterType_TearDown(p)
-
-        TYPE(BD_ParameterType), intent(inout) :: p
-
-        deallocate(p%qp%mmm)
-        deallocate(p%qp%mEta)
-        deallocate(p%Mass0_QP)
-        deallocate(p%QPtw_Shp_Shp_Jac)
-        deallocate(p%QPtw_ShpDer_ShpDer_Jac)
-        deallocate(p%QPtw_Shp_ShpDer)
-        deallocate(p%QPtw_Shp_Jac)
-        deallocate(p%Shp)
-        deallocate(p%ShpDer)
-        deallocate(p%QPtN)
-        deallocate(p%QPtWeight)
-        deallocate(p%QPtw_ShpDer)
-        deallocate(p%Jacobian)
-        deallocate(p%uuN0)
-    end subroutine
- 
     type(BD_MiscVarType) function simpleMiscVarType(nqp, nelem) RESULT(m)
         
         integer, intent(in)  :: nqp, nelem

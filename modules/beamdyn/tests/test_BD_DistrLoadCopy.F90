@@ -42,5 +42,5 @@ subroutine test_BD_DistrLoadCopy()
         end do
     end do
 
-    call simpleparametertype_teardown(parametertype)
+    call BD_DestroyParam(parametertype, ErrStat, ErrMsg)
 end subroutine

@@ -41,6 +41,6 @@ subroutine test_BD_GravityForce()
     ! test the values
     @assertEqual(baseline, miscvartype%qp%Fg(:,1,1), tolerance, testname)
    
-    call simpleparametertype_teardown(parametertype)
+    call BD_DestroyParam(parametertype, ErrStat, ErrMsg)
  
 end subroutine

@@ -62,7 +62,7 @@ contains
         deallocate(baseline_QPtN)
         deallocate(baseline_QPtW)
 
-        call simpleparametertype_teardown(p)
+        call BD_DestroyParam(p, ErrStat, ErrMsg)
 
     end subroutine
 
@@ -107,7 +107,7 @@ contains
         deallocate(baseline_QPtN)
         deallocate(baseline_QPtW)
 
-        call simpleparametertype_teardown(p)
+        call BD_DestroyParam(p, ErrStat, ErrMsg)
 
     end subroutine
 end module

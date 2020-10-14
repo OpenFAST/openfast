@@ -98,7 +98,7 @@ contains
         deallocate(baseline_shape) 
         deallocate(baseline_shapederivative) 
 
-        call simpleparametertype_teardown(parametertype)
+        call BD_DestroyParam(parametertype, ErrStat, ErrMsg)
  
     end subroutine
 
@@ -157,7 +157,7 @@ contains
         deallocate(baseline_shape) 
         deallocate(baseline_shapederivative) 
 
-        call simpleparametertype_teardown(parametertype)
+        call BD_DestroyParam(parametertype, ErrStat, ErrMsg)
         
     end subroutine
 end module

@@ -46,5 +46,5 @@ subroutine test_BD_QPData_mEta_rho()
             @assertEqual(baselineRR0mEta, miscvartype%qp%RR0mEta(:,i,j), tolerance, testname)
         end do
     end do
-    call simpleParameterType_teardown(parametertype)
+    call BD_DestroyParam(parametertype, ErrStat, ErrMsg)
 end subroutine

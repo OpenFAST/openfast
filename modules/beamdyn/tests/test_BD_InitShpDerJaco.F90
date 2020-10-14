@@ -167,7 +167,7 @@ contains
         deallocate(baseline_QPtw_Shp_Jac)
         deallocate(baseline_QPtw_ShpDer)
 
-        call SimpleParameterType_TearDown(p)
+        call BD_DestroyParam(p, ErrStat, ErrMsg)
     
     end subroutine
 end module
