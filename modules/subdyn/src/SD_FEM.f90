@@ -60,8 +60,8 @@ MODULE SD_FEM
   INTEGER(IntKi),   PARAMETER  :: idMemberRigid      = 3
 
   ! Types of Boundary Conditions
-  INTEGER(IntKi),   PARAMETER  :: idBC_Fixed    = 11
-  INTEGER(IntKi),   PARAMETER  :: idBC_Internal = 12
+  INTEGER(IntKi),   PARAMETER  :: idBC_Fixed    = 11 ! Fixed BC
+  INTEGER(IntKi),   PARAMETER  :: idBC_Internal = 12 ! Free BC
   INTEGER(IntKi),   PARAMETER  :: idBC_Leader   = 13 ! TODO, and maybe "BC" not appropriate here
 
   ! Types of Static Improvement Methods
@@ -2012,6 +2012,22 @@ LOGICAL FUNCTION isFixedBottom(Init, p) result(bFixed)
    enddo
    bFixed = nFixed >=1
 END FUNCTION isFixedBottom
+
+!> True if a structure is floating, no fixed BC at the bottom
+logical function isFloating(Init, p) result(bFLoating)
+   type(SD_InitType),     intent(in   ):: Init
+   type(SD_ParameterType),intent(in   ) :: p
+   integer(IntKi) :: i
+   bFloating=.True.
+   do i =1,size(p%Nodes_C,1)
+      if (all(p%Nodes_C(I,2:7)==idBC_Internal)) then
+         continue
+      else
+         bFloating=.False.
+         return
+      endif
+   enddo
+end function isFloating
 
 SUBROUTINE ElemM(ep, Me)
    TYPE(ElemPropType), INTENT(IN) :: eP        !< Element Property

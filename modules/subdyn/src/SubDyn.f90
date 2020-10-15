@@ -434,61 +434,71 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       call GetExtForceOnInternalDOF( u, p, m, m%UFL, ErrStat2, ErrMsg2 ); if(Failed()) return
       call GetExtForceOnInterfaceDOF(p, m%Fext, F_I)
 
-      !________________________________________
-      ! Set motion outputs on y%Y2mesh
-      !________________________________________
-      ! Y2 = C2*x + D2*u + F2 (Eq. 17)
-      m%UR_bar        =                                      matmul( p%TI      , m%u_TP       )  ! UR_bar         [ Y2(1) =       0*x(1) + D2(1,1)*u(1) ]      
-      m%UR_bar_dot    =                                      matmul( p%TI      , m%udot_TP    )  ! UR_bar_dot     [ Y2(3) =       0*x(1) + D2(3,2)*u(2) ]
-      m%UR_bar_dotdot =                                      matmul( p%TI      , m%udotdot_TP )  ! U_R_bar_dotdot [ Y2(5) =       0*x(2) + D2(5,3)*u(3) ] 
+      ! --------------------------------------------------------------------------------
+      ! --- Output Y2Mesh: motions on all FEM nodes (R, and L DOFs, then full DOF vector)
+      ! --------------------------------------------------------------------------------
+      m%UR_bar        = 0.0_ReKi
+      m%UR_bar_dot    = 0.0_ReKi
+      m%UR_bar_dotdot = 0.0_ReKi
+      m%UL            = 0.0_ReKi
+      m%UL_dot        = 0.0_ReKi
+      m%UL_dotdot     = 0.0_ReKi
 
+      ! --- CB modes contribution to motion (L-DOF only)
       IF ( p%nDOFM > 0) THEN
-         m%UL            = matmul( p%PhiM,  x%qm    )      + matmul( p%PhiRb_TI, m%u_TP       )  ! UL             [ Y2(2) = C2(2,1)*x(1) + D2(2,1)*u(1) ] : IT MAY BE MODIFIED LATER IF STATIC IMPROVEMENT
-         m%UL_dot        = matmul( p%PhiM,  x%qmdot )      + matmul( p%PhiRb_TI, m%udot_TP    )  ! UL_dot         [ Y2(4) = C2(2,2)*x(2) + D2(4,2)*u(2) ]      
-         m%UL_dotdot     = matmul( p%C2_61, x%qm    )      + matmul( p%C2_62   , x%qmdot )    &  ! UL_dotdot      [ Y2(6) = C2(6,1)*x(1) + C2(6,2)*x(2) ...
-                         + matmul( p%D2_63, m%udotdot_TP ) + matmul( p%D2_64,    m%UFL      ) &  !                        + D2(6,3)*u(3) + D2(6,4)*u(4) ...  ! -> bjj: this line takes up a lot of time. are any matrices sparse?
-                                  + p%F2_61                                                                                 !                        + F2(6) ]                  
-      ELSE ! There are no states when p%nDOFM=0 (i.e., no retained modes: p%nDOFM=0), so we omit those portions of the equations
-         m%UL            =                                   matmul( p%PhiRb_TI, m%u_TP       )  ! UL             [ Y2(2) =       0*x(1) + D2(2,1)*u(1) ] : IT MAY BE MODIFIED LATER IF STATIC IMPROVEMENT
-         m%UL_dot        =                                   matmul( p%PhiRb_TI, m%udot_TP    )  ! UL_dot         [ Y2(4) =       0*x(2) + D2(4,2)*u(2) ]      
-         m%UL_dotdot     =                                   matmul( p%PhiRb_TI, m%udotdot_TP )  ! UL_dotdot      [ Y2(6) =       0*x(:) + D2(6,3)*u(3) + 0*u(4) + 0]
+         m%UL            = matmul( p%PhiM,  x%qm    )
+         m%UL_dot        = matmul( p%PhiM,  x%qmdot )
+         m%UL_dotdot     = matmul( p%C2_61, x%qm    )      + matmul( p%C2_62   , x%qmdot )    & 
+                         + matmul( p%D2_63, m%udotdot_TP ) + matmul( p%D2_64,    m%UFL      ) & 
+                         + p%F2_61                                                             
       END IF
-      
-      !STATIC IMPROVEMENT METHOD  ( modify UL )
+      ! Static improvement (modify UL)
       if (p%SttcSolve/=idSIM_None) then
          if (p%SttcSolve==idSIM_Full) then
             FLt  = MATMUL(p%PhiL_T      , m%UFL + p%FGL)
-            ULS  = MATMUL(p%PhiLInvOmgL2, FLt )
-            ! TODO New
-            !ULS  = p%UL_st_g + MATMUL(p%KLLm1, m%UFL)
+            ULS  = MATMUL(p%PhiLInvOmgL2, FLt ) ! TODO consider using use a precomputed UL_st_g and KLLm1: ULS  = p%UL_st_g + MATMUL(p%KLLm1, m%UFL)
          elseif (p%SttcSolve==idSIM_GravOnly) then
             FLt  = MATMUL(p%PhiL_T      , p%FGL) 
-            ULS  = MATMUL(p%PhiLInvOmgL2, FLt )
-            ! TODO New
-            !ULS  = p%UL_st_g
+            ULS  = MATMUL(p%PhiLInvOmgL2, FLt ) ! TODO consider using use a precomputed UL_st_g and KLLm1: ULS  = p%UL_st_g
          else
             STOP ! Should never happen
          endif
          m%UL = m%UL + ULS 
          if ( p%nDOFM > 0) then
             UL0M = MATMUL(p%PhiLInvOmgL2(:,1:p%nDOFM), FLt(1:p%nDOFM)       )
-            ! TODO new
-            ! <<<
             m%UL = m%UL - UL0M 
          end if          
       endif    
+      ! --- Adding Guyan contribution to R and L DOFs
+      if (p%FixedBottom) then
+         ! Then we add the Guyan motion here
+         m%UR_bar        =                       matmul( p%TI      , m%u_TP       )
+         m%UR_bar_dot    =                       matmul( p%TI      , m%udot_TP    ) 
+         m%UR_bar_dotdot =                       matmul( p%TI      , m%udotdot_TP ) 
+         m%UL            =   m%UL            +   matmul( p%PhiRb_TI, m%u_TP       ) 
+         m%UL_dot        =   m%UL_dot        +   matmul( p%PhiRb_TI, m%udot_TP    )
+         m%UL_dotdot     =   m%UL_dotdot     +   matmul( p%PhiRb_TI, m%udotdot_TP )
+      else
+         ! We will add it in the "Full system" later
+         m%UR_bar        =                       matmul( p%TI      , m%u_TP       )
+         m%UR_bar_dot    =                       matmul( p%TI      , m%udot_TP    ) 
+         m%UR_bar_dotdot =                       matmul( p%TI      , m%udotdot_TP ) 
+         m%UL            =   m%UL            +   matmul( p%PhiRb_TI, m%u_TP       ) 
+         m%UL_dot        =   m%UL_dot        +   matmul( p%PhiRb_TI, m%udot_TP    )
+         m%UL_dotdot     =   m%UL_dotdot     +   matmul( p%PhiRb_TI, m%udotdot_TP )
+      endif
       ! --- Build original DOF vectors (DOF before the CB reduction)
       m%U_red       (p%IDI__) = m%UR_bar
       m%U_red       (p%ID__L) = m%UL     
-      m%U_red       (p%IDC_Rb)= 0    ! TODO
+      m%U_red       (p%IDC_Rb)= 0    ! NOTE: for now we don't have leader DOF at "C" (bottom)
       m%U_red       (p%ID__F) = 0
       m%U_red_dot   (p%IDI__) = m%UR_bar_dot
       m%U_red_dot   (p%ID__L) = m%UL_dot     
-      m%U_red_dot   (p%IDC_Rb)= 0    ! TODO
+      m%U_red_dot   (p%IDC_Rb)= 0    ! NOTE: for now we don't have leader DOF at "C" (bottom)
       m%U_red_dot   (p%ID__F) = 0
       m%U_red_dotdot(p%IDI__) = m%UR_bar_dotdot
       m%U_red_dotdot(p%ID__L) = m%UL_dotdot    
-      m%U_red_dotdot(p%IDC_Rb)= 0    ! TODO
+      m%U_red_dotdot(p%IDC_Rb)= 0    ! NOTE: for now we don't have leader DOF at "C" (bottom)
       m%U_red_dotdot(p%ID__F) = 0
 
       if (p%reduced) then
@@ -2432,7 +2442,7 @@ SUBROUTINE SetParameters(Init, p, MBBb, MBmb, KBBb, PhiRb, nM_out, OmegaL, PhiL,
       ! D2_53, D2_63, D2_64 
       !p%D2_63 = p%PhiRb_TI - MATMUL( p%PhiM, p%MMB ) 
       CALL LAPACK_GEMM( 'N', 'N', 1.0_ReKi, p%PhiM, p%MMB, 0.0_ReKi, p%D2_63, ErrStat2, ErrMsg2 ); if(Failed()) return;
-      p%D2_63 = p%PhiRb_TI - p%D2_63
+      p%D2_63 =  - p%D2_63 ! NOTE: removed Guyan acceleration
 
       !p%D2_64 = MATMUL( p%PhiM, p%PhiM_T )
       CALL LAPACK_GEMM( 'N', 'T', 1.0_ReKi, p%PhiM, p%PhiM, 0.0_ReKi, p%D2_64, ErrStat2, ErrMsg2 ); if(Failed()) return;

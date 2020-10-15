@@ -233,7 +233,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: nDOFM      !< retained degrees of freedom (modes) [-]
     INTEGER(IntKi)  :: SttcSolve      !< Solve dynamics about static equilibrium point (flag) [-]
     LOGICAL  :: ExtraMoment      !< Add Extra lever arm contribution to interface reaction outputs [-]
-    LOGICAL  :: FixedBottom      !< True if Fixed bottom [-]
+    LOGICAL  :: FixedBottom      !< True if Fixed bottom (the 4 x-y DOF fixed for at least one reaction node) [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: KMMDiag      !< Diagonal coefficients of Kmm (OmegaM squared) [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: CMMDiag      !< Diagonal coefficients of Cmm (~2 Zeta OmegaM)) [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: MMB      !< Matrix after C-B reduction (transpose of MBM [-]
