@@ -222,6 +222,7 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: Elems      !< Element nodes connections [-]
     TYPE(ElemPropType) , DIMENSION(:), ALLOCATABLE  :: ElemProps      !< List of element properties [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: FG_full      !< Gravity force vector (with initial cable force T0), not reduced [N]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: DP0      !< Vector from TP to a Node at t=0, used for Floating Rigid Body motion [m]
     LOGICAL  :: reduced      !< True if system has been reduced to account for constraints [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: T_red      !< Transformation matrix performing the constraint reduction x = T. xtilde [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: T_red_T      !< Transpose of T_red [-]
@@ -6974,6 +6975,18 @@ IF (ALLOCATED(SrcParamData%FG_full)) THEN
   END IF
     DstParamData%FG_full = SrcParamData%FG_full
 ENDIF
+IF (ALLOCATED(SrcParamData%DP0)) THEN
+  i1_l = LBOUND(SrcParamData%DP0,1)
+  i1_u = UBOUND(SrcParamData%DP0,1)
+  IF (.NOT. ALLOCATED(DstParamData%DP0)) THEN 
+    ALLOCATE(DstParamData%DP0(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%DP0.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstParamData%DP0 = SrcParamData%DP0
+ENDIF
     DstParamData%reduced = SrcParamData%reduced
 IF (ALLOCATED(SrcParamData%T_red)) THEN
   i1_l = LBOUND(SrcParamData%T_red,1)
@@ -7858,6 +7871,9 @@ ENDIF
 IF (ALLOCATED(ParamData%FG_full)) THEN
   DEALLOCATE(ParamData%FG_full)
 ENDIF
+IF (ALLOCATED(ParamData%DP0)) THEN
+  DEALLOCATE(ParamData%DP0)
+ENDIF
 IF (ALLOCATED(ParamData%T_red)) THEN
   DEALLOCATE(ParamData%T_red)
 ENDIF
@@ -8134,6 +8150,11 @@ ENDIF
   IF ( ALLOCATED(InData%FG_full) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! FG_full upper/lower bounds for each dimension
       Db_BufSz   = Db_BufSz   + SIZE(InData%FG_full)  ! FG_full
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! DP0 allocated yes/no
+  IF ( ALLOCATED(InData%DP0) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! DP0 upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%DP0)  ! DP0
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! reduced
   Int_BufSz   = Int_BufSz   + 1     ! T_red allocated yes/no
@@ -8696,6 +8717,21 @@ ENDIF
       DO i1 = LBOUND(InData%FG_full,1), UBOUND(InData%FG_full,1)
         DbKiBuf(Db_Xferred) = InData%FG_full(i1)
         Db_Xferred = Db_Xferred + 1
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%DP0) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%DP0,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%DP0,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%DP0,1), UBOUND(InData%DP0,1)
+        ReKiBuf(Re_Xferred) = InData%DP0(i1)
+        Re_Xferred = Re_Xferred + 1
       END DO
   END IF
     IntKiBuf(Int_Xferred) = TRANSFER(InData%reduced, IntKiBuf(1))
@@ -10156,6 +10192,24 @@ ENDIF
       DO i1 = LBOUND(OutData%FG_full,1), UBOUND(OutData%FG_full,1)
         OutData%FG_full(i1) = REAL(DbKiBuf(Db_Xferred), R8Ki)
         Db_Xferred = Db_Xferred + 1
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! DP0 not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%DP0)) DEALLOCATE(OutData%DP0)
+    ALLOCATE(OutData%DP0(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%DP0.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%DP0,1), UBOUND(OutData%DP0,1)
+        OutData%DP0(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
       END DO
   END IF
     OutData%reduced = TRANSFER(IntKiBuf(Int_Xferred), OutData%reduced)

@@ -884,12 +884,6 @@ SUBROUTINE DistributeDOF(Init, p, ErrStat, ErrMsg)
       iPrev = iPrev + len(p%NodesDOF(iNode))
    enddo ! iNode, loop on joints
 
-   ! --- Initialize boundary constraint vector - NOTE: Needs Reindexing first
-   CALL InitBCs(Init, p)
-      
-   ! --- Initialize interface constraint vector - NOTE: Needs Reindexing first
-   CALL InitIntFc(Init, p)
-
    ! --- Safety check
    if (any(p%ElemsDOF<0)) then
       ErrStat=ErrID_Fatal
@@ -917,57 +911,61 @@ CONTAINS
         Failed =  ErrStat >= AbortErrLev
    END FUNCTION Failed
 
-   !> Sets a list of DOF indices corresponding to the BC, and the value these DOF should have
-   !! NOTE: need p%Nodes_C to have an updated first column that uses indices and not JointIDs
-   !! Note: try to remove me and merge me with ApplyConstr, but used by "SelectNonBCConstraintsDOF" and "UnReduceVRdofs"
-   SUBROUTINE InitBCs(Init, p)
-      TYPE(SD_InitType     ),INTENT(INOUT) :: Init
-      TYPE(SD_ParameterType),INTENT(INOUT) :: p
-      INTEGER(IntKi) :: I, J, iNode
-      DO I = 1, p%nNodes_C
-         iNode = p%Nodes_C(I,1) ! Node index
-         DO J = 1, 6
-            if (p%Nodes_C(I,J+1)==1) then ! User input 1=Constrained/Fixed (should be eliminated)
-               p%Nodes_C(I, J+1)       = idBC_Fixed
-            else if (p%Nodes_C(I,J+1)==0) then ! User input 0=Free, fill be part of Internal DOF
-               p%Nodes_C(I, J+1)       = idBC_Internal
-            else if (p%Nodes_C(I,J+1)==2) then ! User input 2=Leader DOF
-               p%Nodes_C(I, J+1)       = idBC_Leader
-               print*,'BC 2 not allowed for now, node',iNode
-               STOP
-            else
-               print*,'Wrong boundary condition input for reaction node',iNode
-               STOP
-            endif
-         ENDDO
-      ENDDO
-   END SUBROUTINE InitBCs
-
-   !> Sets a list of DOF indices and the value these DOF should have
-   !! NOTE: need Init%Interf to have been reindexed so that first column uses indices and not JointIDs
-   !! TODO remove me and merge me with CraigBampton
-   SUBROUTINE InitIntFc(Init, p)
-      TYPE(SD_InitType     ),INTENT(INOUT) :: Init
-      TYPE(SD_ParameterType),INTENT(INOUT) :: p
-      INTEGER(IntKi) :: I, J, iNode
-      DO I = 1, p%nNodes_I
-         iNode = p%Nodes_I(I,1) ! Node index
-         DO J = 1, 6 ! ItfTDXss    ItfTDYss    ItfTDZss    ItfRDXss    ItfRDYss    ItfRDZss
-            if     (p%Nodes_I(I,J+1)==1) then ! User input 1=Leader DOF
-               p%Nodes_I(I,J+1)          = idBC_Leader
-            elseif (p%Nodes_I(I,J+1)==1) then ! User input 0=Fixed DOF
-               p%Nodes_I(I,J+1)          = idBC_Fixed
-               print*,'Fixed boundary condition not yet supported for interface nodes, node:',iNode
-               STOP
-            else
-               print*,'Wrong boundary condition input for interface node',iNode
-               STOP
-            endif
-         ENDDO
-      ENDDO
-   END SUBROUTINE InitIntFc
-
 END SUBROUTINE DistributeDOF
+
+
+!> Checks reaction BC, adn remap 0s and 1s 
+SUBROUTINE CheckBCs(p, ErrStat, ErrMsg)
+   TYPE(SD_ParameterType),INTENT(INOUT) :: p
+   INTEGER(IntKi),        INTENT(  OUT) :: ErrStat     ! Error status of the operation
+   CHARACTER(*),          INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi) :: I, J, iNode
+   ErrMsg  = ""
+   ErrStat = ErrID_None
+   DO I = 1, p%nNodes_C
+      iNode = p%Nodes_C(I,1) ! Node index
+      DO J = 1, 6
+         if (p%Nodes_C(I,J+1)==1) then ! User input 1=Constrained/Fixed (should be eliminated)
+            p%Nodes_C(I, J+1)       = idBC_Fixed
+         else if (p%Nodes_C(I,J+1)==0) then ! User input 0=Free, fill be part of Internal DOF
+            p%Nodes_C(I, J+1)       = idBC_Internal
+         else if (p%Nodes_C(I,J+1)==2) then ! User input 2=Leader DOF
+            p%Nodes_C(I, J+1)       = idBC_Leader
+            ErrStat=ErrID_Fatal
+            ErrMsg='BC 2 not allowed for now, node '//trim(Num2LStr(iNode))
+         else
+            ErrStat=ErrID_Fatal
+            ErrMsg='Wrong boundary condition input for reaction node '//trim(Num2LStr(iNode))
+         endif
+      ENDDO
+   ENDDO
+END SUBROUTINE CheckBCs
+
+!> Check interface inputs, and remap 0s and 1s 
+SUBROUTINE CheckIntf(p, ErrStat, ErrMsg)
+   TYPE(SD_ParameterType),INTENT(INOUT) :: p
+   INTEGER(IntKi),        INTENT(  OUT) :: ErrStat     ! Error status of the operation
+   CHARACTER(*),          INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi) :: I, J, iNode
+   ErrMsg  = ""
+   ErrStat = ErrID_None
+   DO I = 1, p%nNodes_I
+      iNode = p%Nodes_I(I,1) ! Node index
+      DO J = 1, 6 ! ItfTDXss    ItfTDYss    ItfTDZss    ItfRDXss    ItfRDYss    ItfRDZss
+         if     (p%Nodes_I(I,J+1)==1) then ! User input 1=Leader DOF
+            p%Nodes_I(I,J+1)          = idBC_Leader
+         elseif (p%Nodes_I(I,J+1)==0) then ! User input 0=Fixed DOF
+            p%Nodes_I(I,J+1)          = idBC_Fixed
+            ErrStat = ErrID_Fatal
+            ErrMsg  = 'Fixed boundary condition not yet supported for interface nodes, node:'//trim(Num2LStr(iNode))
+         else
+            ErrStat = ErrID_Fatal
+            ErrMsg  = 'Wrong boundary condition input for interface node'//trim(Num2LStr(iNode))
+         endif
+      ENDDO
+   ENDDO
+END SUBROUTINE CheckIntf
+
 
 !------------------------------------------------------------------------------------------------------
 !> Assemble stiffness and mass matrix, and gravity force vector

@@ -218,6 +218,11 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    
    ! Parse the SubDyn inputs 
    CALL SD_Input(InitInput%SDInputFile, Init, p, ErrStat2, ErrMsg2); if(Failed()) return
+   if (p%FixedBottom) then
+      call WrScr('   Fixed-bottom case detected')
+   else
+      call WrScr('   Free/floating case detected, Guyan modes will be rigid body modes')
+   endif
 
    ! --------------------------------------------------------------------------------
    ! --- Manipulation of Init and parameters
@@ -265,7 +270,6 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    ! DOFs  into (B,F,L):    B=Leader (i.e. Rbar) ,F=Fixed, L=Interior
    call PartitionDOFNodes(Init, m, p, ErrStat2, ErrMsg2) ; if(Failed()) return
    if (p%ExtraMoment) then 
-      p%FixedBottom=isFixedBottom(Init,p)
       if (p%FixedBottom) then
          call WrScr('   Extra moment will be included in loads (fixed-bottom case detected)')
       else
@@ -515,6 +519,14 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       DO iSDNode = 1,p%nNodes
          iY2Node = iSDNode
          DOFList => p%NodesDOF(iSDNode)%List  ! Alias to shorten notations
+         !
+         if (.not.(p%FixedBottom)) then
+            ! For floating case, we add the Guyan motion contribution
+            ! It corresponds to a rigid body motion the the TP as origin
+            ! TODO
+            !m%U_full(DOFList(1:3))
+
+         endif
          ! TODO TODO which orientation to give for joints with more than 6 dofs?
          ! Construct the direction cosine matrix given the output angles
          CALL SmllRotTrans( 'UR_bar input angles', m%U_full(DOFList(4)), m%U_full(DOFList(5)), m%U_full(DOFList(6)), DCM, '', ErrStat2, ErrMsg2)
@@ -924,15 +936,17 @@ DO I = 1, p%nNodes_C
    endif
 ENDDO
 IF (Check ( p%nNodes_C > Init%NJoints , 'NReact must be less than number of joints')) return
+call CheckBCs(p, ErrStat2, ErrMsg2); if (Failed()) return
 
-
-! Reading SSI matrices  if present
+! Trigger - Reading SSI matrices  if present
 DO I = 1, p%nNodes_C
    if ( Init%SSIfile(I)/='' .and. (ANY(p%Nodes_C(I,2:ReactCol)==0))) then
       Init%SSIfile(I) = trim(PriPath)//trim(Init%SSIfile(I))
       CALL ReadSSIfile( Init%SSIfile(I), p%Nodes_C(I,1), Init%SSIK(:,I),Init%SSIM(:,I), ErrStat, ErrMsg, UnEc ); if(Failed()) return
    endif
 enddo
+! Trigger: determine if floating/fixed  based on BCs and SSI file
+p%FixedBottom = isFixedBottom(Init,p) 
        
 
 
@@ -960,6 +974,7 @@ DO I = 1, p%nNodes_I
    endif
 ENDDO
 IF (Check( ( p%nNodes_I < 0 ) .OR. (p%nNodes_I > Init%NJoints), 'NInterf must be non-negative and less than number of joints.')) RETURN
+call CheckIntf(p, ErrStat2, ErrMsg2); if (Failed()) return
 
 !----------------------------------- MEMBERS --------------------------------------
 ! One day we will need to take care of COSMIDs for non-circular members
@@ -2515,8 +2530,6 @@ SUBROUTINE AllocParameters(p, nDOFM, ErrStat, ErrMsg)
    ErrStat = ErrID_None
    ErrMsg  = ""
       
-   ! for readability, we're going to keep track of the max ErrStat through SetErrStat() and not return until the end of this routine.
-   
    CALL AllocAry( p%KBB,           nDOFL_TP, nDOFL_TP, 'p%KBB',           ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')
    CALL AllocAry( p%CBB,           nDOFL_TP, nDOFL_TP, 'p%CBB',           ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')
    CALL AllocAry( p%MBB,           nDOFL_TP, nDOFL_TP, 'p%MBB',           ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')
@@ -2524,6 +2537,7 @@ SUBROUTINE AllocParameters(p, nDOFM, ErrStat, ErrMsg)
    CALL AllocAry( p%D1_14,         nDOFL_TP, p%nDOF__L,'p%D1_14',         ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')        
    CALL AllocAry( p%FY,            nDOFL_TP,           'p%FY',            ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')        
    CALL AllocAry( p%PhiRb_TI,      p%nDOF__L, nDOFL_TP,'p%PhiRb_TI',      ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')        
+
    
 if (p%nDOFM > 0 ) THEN  
    CALL AllocAry( p%MBM,           nDOFL_TP, nDOFM,    'p%MBM',           ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')
@@ -2535,14 +2549,14 @@ if (p%nDOFM > 0 ) THEN
    CALL AllocAry( p%FX,            nDOFM,              'p%FX',            ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')        
    CALL AllocAry( p%C1_11,         nDOFL_TP, nDOFM,    'p%C1_11',         ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')        
    CALL AllocAry( p%C1_12,         nDOFL_TP, nDOFM,    'p%C1_12',         ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')        
-   CALL AllocAry( p%PhiM,          p%nDOF__L,  nDOFM,    'p%PhiM',          ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')        
-   CALL AllocAry( p%C2_61,         p%nDOF__L,  nDOFM,    'p%C2_61',         ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')        
-   CALL AllocAry( p%C2_62,         p%nDOF__L,  nDOFM,    'p%C2_62',         ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')        
-   CALL AllocAry( p%D1_12,         nDOFL_TP, nDOFL_TP  , 'p%D1_12',         ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters') ! is p%MBB when p%nDOFM == 0        
-   CALL AllocAry( p%D1_13,         nDOFL_TP, nDOFL_TP  , 'p%D1_13',         ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters') ! is p%MBB when p%nDOFM == 0        
-   CALL AllocAry( p%D2_63,         p%nDOF__L,  nDOFL_TP, 'p%D2_63',         ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters') ! is p%PhiRb_TI when p%nDOFM == 0       
-   CALL AllocAry( p%D2_64,         p%nDOF__L,  p%nDOF__L,'p%D2_64',         ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters') ! is zero when p%nDOFM == 0       
-   CALL AllocAry( p%F2_61,         p%nDOF__L,            'p%F2_61',         ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters') ! is zero when p%nDOFM == 0
+   CALL AllocAry( p%PhiM,          p%nDOF__L,  nDOFM,    'p%PhiM',        ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')        
+   CALL AllocAry( p%C2_61,         p%nDOF__L,  nDOFM,    'p%C2_61',       ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')        
+   CALL AllocAry( p%C2_62,         p%nDOF__L,  nDOFM,    'p%C2_62',       ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')        
+   CALL AllocAry( p%D1_12,         nDOFL_TP, nDOFL_TP  , 'p%D1_12',       ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters') ! is p%MBB when p%nDOFM == 0        
+   CALL AllocAry( p%D1_13,         nDOFL_TP, nDOFL_TP  , 'p%D1_13',       ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters') ! is p%MBB when p%nDOFM == 0        
+   CALL AllocAry( p%D2_63,         p%nDOF__L,  nDOFL_TP, 'p%D2_63',       ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters') ! is p%PhiRb_TI when p%nDOFM == 0       
+   CALL AllocAry( p%D2_64,         p%nDOF__L,  p%nDOF__L,'p%D2_64',       ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters') ! is zero when p%nDOFM == 0       
+   CALL AllocAry( p%F2_61,         p%nDOF__L,            'p%F2_61',       ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters') ! is zero when p%nDOFM == 0
 end if
            
 END SUBROUTINE AllocParameters
