@@ -943,7 +943,7 @@ call CheckBCs(p, ErrStat2, ErrMsg2); if (Failed()) return
 
 ! Trigger - Reading SSI matrices  if present
 DO I = 1, p%nNodes_C
-   if ( Init%SSIfile(I)/='' .and. (ANY(p%Nodes_C(I,2:ReactCol)==0))) then
+   if ( Init%SSIfile(I)/='' .and. (ANY(p%Nodes_C(I,2:ReactCol)==idBC_Internal))) then
       Init%SSIfile(I) = trim(PriPath)//trim(Init%SSIfile(I))
       CALL ReadSSIfile( Init%SSIfile(I), p%Nodes_C(I,1), Init%SSIK(:,I),Init%SSIM(:,I), ErrStat, ErrMsg, UnEc ); if(Failed()) return
    endif
