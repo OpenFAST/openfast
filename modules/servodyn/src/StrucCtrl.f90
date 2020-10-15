@@ -325,6 +325,8 @@ CONTAINS
       !  Note: these variables had been allocated multiple places before and sometimes passed between routines. So
       !        they have been moved into MiscVars so that we don so we don't reallocate all the time
       call AllocAry(m%a_G    , 3, p%NumMeshPts,'a_G'     , ErrStat, ErrMsg);  if (ErrStat >= AbortErrLev) return;
+      call AllocAry(m%rdisp_P, 3, p%NumMeshPts,'rdisp_P' , ErrStat, ErrMsg);  if (ErrStat >= AbortErrLev) return;
+      call AllocAry(m%rdot_P , 3, p%NumMeshPts,'rdot_P'  , ErrStat, ErrMsg);  if (ErrStat >= AbortErrLev) return;
       call AllocAry(m%rddot_P, 3, p%NumMeshPts,'rddot_P' , ErrStat, ErrMsg);  if (ErrStat >= AbortErrLev) return;
       call AllocAry(m%omega_P, 3, p%NumMeshPts,'omega_P' , ErrStat, ErrMsg);  if (ErrStat >= AbortErrLev) return;
       call AllocAry(m%alpha_P, 3, p%NumMeshPts,'alpha_P' , ErrStat, ErrMsg);  if (ErrStat >= AbortErrLev) return;
@@ -709,6 +711,8 @@ SUBROUTINE StC_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
       ! Compute accelerations and velocities in local coordinates
       do i_pt=1,p%NumMeshPts
          m%a_G(:,i_pt)     = matmul(u%Mesh(i_pt)%Orientation(:,:,1),p%Gravity)
+         m%rdisp_P(:,i_pt) = matmul(u%Mesh(i_pt)%Orientation(:,:,1),u%Mesh(i_pt)%TranslationDisp(:,1))   ! for ground StC_GroundHookDamp
+         m%rdot_P(:,i_pt)  = matmul(u%Mesh(i_pt)%Orientation(:,:,1),u%Mesh(i_pt)%TranslationVel(:,1))    ! for ground StC_GroundHookDamp
          m%rddot_P(:,i_pt) = matmul(u%Mesh(i_pt)%Orientation(:,:,1),u%Mesh(i_pt)%TranslationAcc(:,1))
          m%omega_P(:,i_pt) = matmul(u%Mesh(i_pt)%Orientation(:,:,1),u%Mesh(i_pt)%RotationVel(:,1))
          m%alpha_P(:,i_pt) = matmul(u%Mesh(i_pt)%Orientation(:,:,1),u%Mesh(i_pt)%RotationAcc(:,1))
@@ -964,14 +968,15 @@ SUBROUTINE StC_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
       END IF
 
 
-      ! Compute velocities and accelerations in local coordinates
+      ! Compute accelerations and velocities in local coordinates
       do i_pt=1,p%NumMeshPts
          m%a_G(:,i_pt)     = matmul(u%Mesh(i_pt)%Orientation(:,:,1),p%Gravity)
+         m%rdisp_P(:,i_pt) = matmul(u%Mesh(i_pt)%Orientation(:,:,1),u%Mesh(i_pt)%TranslationDisp(:,1))   ! for ground StC_GroundHookDamp
+         m%rdot_P(:,i_pt)  = matmul(u%Mesh(i_pt)%Orientation(:,:,1),u%Mesh(i_pt)%TranslationVel(:,1))    ! for ground StC_GroundHookDamp
          m%rddot_P(:,i_pt) = matmul(u%Mesh(i_pt)%Orientation(:,:,1),u%Mesh(i_pt)%TranslationAcc(:,1))
          m%omega_P(:,i_pt) = matmul(u%Mesh(i_pt)%Orientation(:,:,1),u%Mesh(i_pt)%RotationVel(:,1))
          m%alpha_P(:,i_pt) = matmul(u%Mesh(i_pt)%Orientation(:,:,1),u%Mesh(i_pt)%RotationAcc(:,1))
       enddo
-
 
       ! NOTE: m%F_stop and m%F_table are calculated earlier
       IF (p%StC_DOF_MODE == ControlMode_None .or. p%StC_DOF_MODE == DOFMode_Indept) THEN
@@ -1054,7 +1059,7 @@ SUBROUTINE StC_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
          m%C_Brake = 0.0_ReKi
          m%F_fr    = 0.0_ReKi
       ELSE IF (p%StC_CMODE == CMODE_Semi) THEN ! ground hook control
-         CALL StC_GroundHookDamp(dxdt,x,u,p,m%C_ctrl,m%C_Brake,m%F_fr)
+         CALL StC_GroundHookDamp(dxdt,x,u,p,m%rdisp_P,m%rdot_P,m%C_ctrl,m%C_Brake,m%F_fr)
       END IF
 
 
@@ -1186,22 +1191,24 @@ SUBROUTINE StC_CalcStopForce(x,p,F_stop)
    enddo
 END SUBROUTINE StC_CalcStopForce
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE StC_GroundHookDamp(dxdt,x,u,p,C_ctrl,C_Brake,F_fr)
+SUBROUTINE StC_GroundHookDamp(dxdt,x,u,p,rdisp_P,rdot_P,C_ctrl,C_Brake,F_fr)
    TYPE(StC_ContinuousStateType),         INTENT(IN   )     :: dxdt        !< Derivative of continuous states at Time (needs elements 1 and 3 only)
    TYPE(StC_ContinuousStateType),         INTENT(IN   )     :: x           !< Continuous states at Time
    TYPE(StC_InputType),                   INTENT(IN   )     :: u           !< Inputs at Time
    TYPE(StC_ParameterType),               INTENT(IN)        :: p           !< The module's parameter data
+   REAL(ReKi), dimension(:,:),            INTENT(IN   )     :: rdisp_P     !< translational displacement in local coordinates
+   REAL(ReKi), dimension(:,:),            INTENT(IN   )     :: rdot_P      !< translational velocity     in local coordinates
    REAL(ReKi), dimension(:,:),            INTENT(INOUT)     :: C_ctrl      !< extrapolated/interpolated stiffness values
    REAL(ReKi), dimension(:,:),            INTENT(INOUT)     :: C_Brake     !< extrapolated/interpolated stiffness values
    REAL(ReKi), dimension(:,:),            INTENT(INOUT)     :: F_fr        !< Friction forces
    INTEGER(IntKi)                                           :: i_pt        !< generic counter for mesh points
 
-!FIXME: note that the TranslationalVel is in global coords, but the StC_x values are all in local coordinates!!!!!
+
    do i_pt=1,p%NumMeshPts
       IF (p%StC_CMODE == CMODE_Semi .AND. p%StC_SA_MODE == SA_CMODE_GH_vel) THEN ! velocity-based ground hook control with high damping for braking
 
          !X
-         IF (dxdt%StC_x(1,i_pt) * u%Mesh(i_pt)%TranslationVel(1,1) <= 0 ) THEN
+         IF (dxdt%StC_x(1,i_pt) * rdot_P(1,i_pt) <= 0 ) THEN
             C_ctrl(1,i_pt) = p%StC_X_C_HIGH
          ELSE
             C_ctrl(1,i_pt) = p%StC_X_C_LOW
@@ -1218,7 +1225,7 @@ SUBROUTINE StC_GroundHookDamp(dxdt,x,u,p,C_ctrl,C_Brake,F_fr)
 
 
          ! Y
-         IF (dxdt%StC_x(3,i_pt) * u%Mesh(i_pt)%TranslationVel(2,1) <= 0 ) THEN
+         IF (dxdt%StC_x(3,i_pt) * rdot_P(2,i_pt) <= 0 ) THEN
             C_ctrl(2,i_pt) = p%StC_Y_C_HIGH
          ELSE
             C_ctrl(2,i_pt) = p%StC_Y_C_LOW
@@ -1235,7 +1242,7 @@ SUBROUTINE StC_GroundHookDamp(dxdt,x,u,p,C_ctrl,C_Brake,F_fr)
 
 
          ! Z
-         IF (dxdt%StC_x(5,i_pt) * u%Mesh(i_pt)%TranslationVel(3,1) <= 0 ) THEN
+         IF (dxdt%StC_x(5,i_pt) * rdot_P(3,i_pt) <= 0 ) THEN
             C_ctrl(3,i_pt) = p%StC_Z_C_HIGH
          ELSE
             C_ctrl(3,i_pt) = p%StC_Z_C_LOW
@@ -1253,7 +1260,7 @@ SUBROUTINE StC_GroundHookDamp(dxdt,x,u,p,C_ctrl,C_Brake,F_fr)
       ELSE IF (p%StC_CMODE == CMODE_Semi .AND. p%StC_SA_MODE == SA_CMODE_GH_invVel) THEN ! Inverse velocity-based ground hook control with high damping for braking
 
          ! X
-         IF (dxdt%StC_x(1,i_pt) * u%Mesh(i_pt)%TranslationVel(1,1) >= 0 ) THEN
+         IF (dxdt%StC_x(1,i_pt) * rdot_P(1,i_pt) >= 0 ) THEN
             C_ctrl(1,i_pt) = p%StC_X_C_HIGH
          ELSE
             C_ctrl(1,i_pt) = p%StC_X_C_LOW
@@ -1269,7 +1276,7 @@ SUBROUTINE StC_GroundHookDamp(dxdt,x,u,p,C_ctrl,C_Brake,F_fr)
          END IF
 
          ! Y
-         IF (dxdt%StC_x(3,i_pt) * u%Mesh(i_pt)%TranslationVel(2,1) >= 0 ) THEN
+         IF (dxdt%StC_x(3,i_pt) * rdot_P(2,i_pt) >= 0 ) THEN
             C_ctrl(2,i_pt) = p%StC_Y_C_HIGH
          ELSE
             C_ctrl(2,i_pt) = p%StC_Y_C_LOW
@@ -1285,7 +1292,7 @@ SUBROUTINE StC_GroundHookDamp(dxdt,x,u,p,C_ctrl,C_Brake,F_fr)
          END IF
 
          ! Z
-         IF (dxdt%StC_x(5,i_pt) * u%Mesh(i_pt)%TranslationVel(3,1) >= 0 ) THEN
+         IF (dxdt%StC_x(5,i_pt) * rdot_P(3,i_pt) >= 0 ) THEN
             C_ctrl(3,i_pt) = p%StC_Z_C_HIGH
          ELSE
             C_ctrl(3,i_pt) = p%StC_Z_C_LOW
@@ -1303,7 +1310,7 @@ SUBROUTINE StC_GroundHookDamp(dxdt,x,u,p,C_ctrl,C_Brake,F_fr)
       ELSE IF (p%StC_CMODE == CMODE_Semi .AND. p%StC_SA_MODE == SA_CMODE_GH_disp) THEN ! displacement-based ground hook control with high damping for braking
 
          ! X
-         IF (dxdt%StC_x(1,i_pt) * u%Mesh(i_pt)%TranslationDisp(1,1) <= 0 ) THEN
+         IF (dxdt%StC_x(1,i_pt) * rdisp_P(1,i_pt) <= 0 ) THEN
             C_ctrl(1,i_pt) = p%StC_X_C_HIGH
          ELSE
             C_ctrl(1,i_pt) = p%StC_X_C_LOW
@@ -1319,7 +1326,7 @@ SUBROUTINE StC_GroundHookDamp(dxdt,x,u,p,C_ctrl,C_Brake,F_fr)
          END IF
 
          ! Y
-         IF (dxdt%StC_x(3,i_pt) * u%Mesh(i_pt)%TranslationDisp(2,1) <= 0 ) THEN
+         IF (dxdt%StC_x(3,i_pt) * rdisp_P(2,i_pt) <= 0 ) THEN
             C_ctrl(2,i_pt) = p%StC_Y_C_HIGH
          ELSE
             C_ctrl(2,i_pt) = p%StC_Y_C_LOW
@@ -1335,7 +1342,7 @@ SUBROUTINE StC_GroundHookDamp(dxdt,x,u,p,C_ctrl,C_Brake,F_fr)
          END IF
 
          ! Z
-         IF (dxdt%StC_x(5,i_pt) * u%Mesh(i_pt)%TranslationDisp(3,1) <= 0 ) THEN
+         IF (dxdt%StC_x(5,i_pt) * rdisp_P(3,i_pt) <= 0 ) THEN
             C_ctrl(3,i_pt) = p%StC_Z_C_HIGH
          ELSE
             C_ctrl(3,i_pt) = p%StC_Z_C_LOW
@@ -1353,15 +1360,15 @@ SUBROUTINE StC_GroundHookDamp(dxdt,x,u,p,C_ctrl,C_Brake,F_fr)
       ELSE IF (p%StC_CMODE == CMODE_Semi .AND. p%StC_SA_MODE == SA_CMODE_Ph_FF) THEN ! Phase Difference Algorithm with Friction Force
             ! X
             ! (a)
-         IF      (u%Mesh(i_pt)%TranslationDisp(1,1) > 0 .AND. u%Mesh(i_pt)%TranslationVel(1,1) < 0 .AND. x%StC_x(1,i_pt) > 0 .AND. dxdt%StC_x(1,i_pt) < 0) THEN
+         IF      (rdisp_P(1,i_pt) > 0 .AND. rdot_P(1,i_pt) < 0 .AND. x%StC_x(1,i_pt) > 0 .AND. dxdt%StC_x(1,i_pt) < 0) THEN
             F_fr(1,i_pt) = p%StC_X_C_HIGH
             ! (b)
-         ELSE IF (u%Mesh(i_pt)%TranslationDisp(1,1) < 0 .AND. u%Mesh(i_pt)%TranslationVel(1,1) > 0 .AND. x%StC_x(1,i_pt) < 0 .AND. dxdt%StC_x(1,i_pt) > 0) THEN
+         ELSE IF (rdisp_P(1,i_pt) < 0 .AND. rdot_P(1,i_pt) > 0 .AND. x%StC_x(1,i_pt) < 0 .AND. dxdt%StC_x(1,i_pt) > 0) THEN
             F_fr(1,i_pt) = -p%StC_X_C_HIGH
             ! (c)
-         ELSE IF (u%Mesh(i_pt)%TranslationDisp(1,1) < 0 .AND. u%Mesh(i_pt)%TranslationVel(1,1) < 0 .AND. x%StC_x(1,i_pt) > 0 .AND. dxdt%StC_x(1,i_pt) > 0) THEN
+         ELSE IF (rdisp_P(1,i_pt) < 0 .AND. rdot_P(1,i_pt) < 0 .AND. x%StC_x(1,i_pt) > 0 .AND. dxdt%StC_x(1,i_pt) > 0) THEN
             F_fr(1,i_pt) = -p%StC_X_C_HIGH
-         ELSE IF (u%Mesh(i_pt)%TranslationDisp(1,1) > 0 .AND. u%Mesh(i_pt)%TranslationVel(1,1) > 0 .AND. x%StC_x(1,i_pt) < 0 .AND. dxdt%StC_x(1,i_pt) < 0) THEN
+         ELSE IF (rdisp_P(1,i_pt) > 0 .AND. rdot_P(1,i_pt) > 0 .AND. x%StC_x(1,i_pt) < 0 .AND. dxdt%StC_x(1,i_pt) < 0) THEN
             F_fr(1,i_pt) = p%StC_X_C_HIGH
          ELSE
             F_fr(1,i_pt) = p%StC_X_C_LOW
@@ -1378,15 +1385,15 @@ SUBROUTINE StC_GroundHookDamp(dxdt,x,u,p,C_ctrl,C_Brake,F_fr)
 
             ! Y
             ! (a)
-         IF      (u%Mesh(i_pt)%TranslationDisp(2,1) > 0 .AND. u%Mesh(i_pt)%TranslationVel(2,1) < 0 .AND. x%StC_x(3,i_pt) > 0 .AND. dxdt%StC_x(3,i_pt) < 0) THEN
+         IF      (rdisp_P(2,i_pt) > 0 .AND. rdot_P(2,i_pt) < 0 .AND. x%StC_x(3,i_pt) > 0 .AND. dxdt%StC_x(3,i_pt) < 0) THEN
             F_fr(2,i_pt) = p%StC_Y_C_HIGH
             ! (b)
-         ELSE IF (u%Mesh(i_pt)%TranslationDisp(2,1) < 0 .AND. u%Mesh(i_pt)%TranslationVel(2,1) > 0 .AND. x%StC_x(3,i_pt) < 0 .AND. dxdt%StC_x(3,i_pt) > 0) THEN
+         ELSE IF (rdisp_P(2,i_pt) < 0 .AND. rdot_P(2,i_pt) > 0 .AND. x%StC_x(3,i_pt) < 0 .AND. dxdt%StC_x(3,i_pt) > 0) THEN
             F_fr(2,i_pt) = -p%StC_Y_C_HIGH
             ! (c)
-         ELSE IF (u%Mesh(i_pt)%TranslationDisp(2,1) < 0 .AND. u%Mesh(i_pt)%TranslationVel(2,1) < 0 .AND. x%StC_x(3,i_pt) > 0 .AND. dxdt%StC_x(3,i_pt) > 0) THEN
+         ELSE IF (rdisp_P(2,i_pt) < 0 .AND. rdot_P(2,i_pt) < 0 .AND. x%StC_x(3,i_pt) > 0 .AND. dxdt%StC_x(3,i_pt) > 0) THEN
             F_fr(2,i_pt) = -p%StC_Y_C_HIGH
-         ELSE IF (u%Mesh(i_pt)%TranslationDisp(2,1) > 0 .AND. u%Mesh(i_pt)%TranslationVel(2,1) > 0 .AND. x%StC_x(3,i_pt) < 0 .AND. dxdt%StC_x(3,i_pt) < 0) THEN
+         ELSE IF (rdisp_P(2,i_pt) > 0 .AND. rdot_P(2,i_pt) > 0 .AND. x%StC_x(3,i_pt) < 0 .AND. dxdt%StC_x(3,i_pt) < 0) THEN
             F_fr(2,i_pt) = p%StC_Y_C_HIGH
          ELSE
             F_fr(2,i_pt) = p%StC_Y_C_LOW
@@ -1403,15 +1410,15 @@ SUBROUTINE StC_GroundHookDamp(dxdt,x,u,p,C_ctrl,C_Brake,F_fr)
 
             ! Z
             ! (a)
-         IF      (u%Mesh(i_pt)%TranslationDisp(3,1) > 0 .AND. u%Mesh(i_pt)%TranslationVel(3,1) < 0 .AND. x%StC_x(5,i_pt) > 0 .AND. dxdt%StC_x(5,i_pt) < 0) THEN
+         IF      (rdisp_P(3,i_pt) > 0 .AND. rdot_P(3,i_pt) < 0 .AND. x%StC_x(5,i_pt) > 0 .AND. dxdt%StC_x(5,i_pt) < 0) THEN
             F_fr(3,i_pt) = p%StC_Z_C_HIGH
             ! (b)
-         ELSE IF (u%Mesh(i_pt)%TranslationDisp(3,1) < 0 .AND. u%Mesh(i_pt)%TranslationVel(3,1) > 0 .AND. x%StC_x(5,i_pt) < 0 .AND. dxdt%StC_x(5,i_pt) > 0) THEN
+         ELSE IF (rdisp_P(3,i_pt) < 0 .AND. rdot_P(3,i_pt) > 0 .AND. x%StC_x(5,i_pt) < 0 .AND. dxdt%StC_x(5,i_pt) > 0) THEN
             F_fr(3,i_pt) = -p%StC_Z_C_HIGH
             ! (c)
-         ELSE IF (u%Mesh(i_pt)%TranslationDisp(3,1) < 0 .AND. u%Mesh(i_pt)%TranslationVel(3,1) < 0 .AND. x%StC_x(5,i_pt) > 0 .AND. dxdt%StC_x(5,i_pt) > 0) THEN
+         ELSE IF (rdisp_P(3,i_pt) < 0 .AND. rdot_P(3,i_pt) < 0 .AND. x%StC_x(5,i_pt) > 0 .AND. dxdt%StC_x(5,i_pt) > 0) THEN
             F_fr(3,i_pt) = -p%StC_Z_C_HIGH
-         ELSE IF (u%Mesh(i_pt)%TranslationDisp(3,1) > 0 .AND. u%Mesh(i_pt)%TranslationVel(3,1) > 0 .AND. x%StC_x(5,i_pt) < 0 .AND. dxdt%StC_x(5,i_pt) < 0) THEN
+         ELSE IF (rdisp_P(3,i_pt) > 0 .AND. rdot_P(3,i_pt) > 0 .AND. x%StC_x(5,i_pt) < 0 .AND. dxdt%StC_x(5,i_pt) < 0) THEN
             F_fr(3,i_pt) = p%StC_Z_C_HIGH
          ELSE
             F_fr(3,i_pt) = p%StC_Z_C_LOW
@@ -1429,15 +1436,15 @@ SUBROUTINE StC_GroundHookDamp(dxdt,x,u,p,C_ctrl,C_Brake,F_fr)
       ELSE IF (p%StC_CMODE == CMODE_Semi .AND. p%StC_SA_MODE == SA_CMODE_Ph_DF) THEN ! Phase Difference Algorithm with Damping On/Off
             ! X
             ! (a)
-         IF      (u%Mesh(i_pt)%TranslationDisp(1,1) > 0 .AND. u%Mesh(i_pt)%TranslationVel(1,1) < 0 .AND. x%StC_x(1,i_pt) > 0 .AND. dxdt%StC_x(1,i_pt) < 0) THEN
+         IF      (rdisp_P(1,i_pt) > 0 .AND. rdot_P(1,i_pt) < 0 .AND. x%StC_x(1,i_pt) > 0 .AND. dxdt%StC_x(1,i_pt) < 0) THEN
             C_ctrl(1,i_pt) = p%StC_X_C_HIGH
             ! (b)
-         ELSE IF (u%Mesh(i_pt)%TranslationDisp(1,1) < 0 .AND. u%Mesh(i_pt)%TranslationVel(1,1) > 0 .AND. x%StC_x(1,i_pt) < 0 .AND. dxdt%StC_x(1,i_pt) > 0) THEN
+         ELSE IF (rdisp_P(1,i_pt) < 0 .AND. rdot_P(1,i_pt) > 0 .AND. x%StC_x(1,i_pt) < 0 .AND. dxdt%StC_x(1,i_pt) > 0) THEN
             C_ctrl(1,i_pt) = p%StC_X_C_HIGH
             ! (c)
-         ELSE IF (u%Mesh(i_pt)%TranslationDisp(1,1) < 0 .AND. u%Mesh(i_pt)%TranslationVel(1,1) < 0 .AND. x%StC_x(1,i_pt) > 0 .AND. dxdt%StC_x(1,i_pt) > 0) THEN
+         ELSE IF (rdisp_P(1,i_pt) < 0 .AND. rdot_P(1,i_pt) < 0 .AND. x%StC_x(1,i_pt) > 0 .AND. dxdt%StC_x(1,i_pt) > 0) THEN
             C_ctrl(1,i_pt) = p%StC_X_C_HIGH
-         ELSE IF (u%Mesh(i_pt)%TranslationDisp(1,1) > 0 .AND. u%Mesh(i_pt)%TranslationVel(1,1) > 0 .AND. x%StC_x(1,i_pt) < 0 .AND. dxdt%StC_x(1,i_pt) < 0) THEN
+         ELSE IF (rdisp_P(1,i_pt) > 0 .AND. rdot_P(1,i_pt) > 0 .AND. x%StC_x(1,i_pt) < 0 .AND. dxdt%StC_x(1,i_pt) < 0) THEN
             C_ctrl(1,i_pt) = p%StC_X_C_HIGH
          ELSE
             C_ctrl(1,i_pt) = p%StC_X_C_LOW
@@ -1454,15 +1461,15 @@ SUBROUTINE StC_GroundHookDamp(dxdt,x,u,p,C_ctrl,C_Brake,F_fr)
 
             ! Y
             ! (a)
-         IF      (u%Mesh(i_pt)%TranslationDisp(2,1) > 0 .AND. u%Mesh(i_pt)%TranslationVel(2,1) < 0 .AND. x%StC_x(3,i_pt) > 0 .AND. dxdt%StC_x(3,i_pt) < 0) THEN
+         IF      (rdisp_P(2,i_pt) > 0 .AND. rdot_P(2,i_pt) < 0 .AND. x%StC_x(3,i_pt) > 0 .AND. dxdt%StC_x(3,i_pt) < 0) THEN
             C_ctrl(2,i_pt) = p%StC_Y_C_HIGH
             ! (b)
-         ELSE IF (u%Mesh(i_pt)%TranslationDisp(2,1) < 0 .AND. u%Mesh(i_pt)%TranslationVel(2,1) > 0 .AND. x%StC_x(3,i_pt) < 0 .AND. dxdt%StC_x(3,i_pt) > 0) THEN
+         ELSE IF (rdisp_P(2,i_pt) < 0 .AND. rdot_P(2,i_pt) > 0 .AND. x%StC_x(3,i_pt) < 0 .AND. dxdt%StC_x(3,i_pt) > 0) THEN
             C_ctrl(2,i_pt) = p%StC_Y_C_HIGH
             ! (c)
-         ELSE IF (u%Mesh(i_pt)%TranslationDisp(2,1) < 0 .AND. u%Mesh(i_pt)%TranslationVel(2,1) < 0 .AND. x%StC_x(3,i_pt) > 0 .AND. dxdt%StC_x(3,i_pt) > 0) THEN
+         ELSE IF (rdisp_P(2,i_pt) < 0 .AND. rdot_P(2,i_pt) < 0 .AND. x%StC_x(3,i_pt) > 0 .AND. dxdt%StC_x(3,i_pt) > 0) THEN
             C_ctrl(2,i_pt) = p%StC_Y_C_HIGH
-         ELSE IF (u%Mesh(i_pt)%TranslationDisp(2,1) > 0 .AND. u%Mesh(i_pt)%TranslationVel(2,1) > 0 .AND. x%StC_x(3,i_pt) < 0 .AND. dxdt%StC_x(3,i_pt) < 0) THEN
+         ELSE IF (rdisp_P(2,i_pt) > 0 .AND. rdot_P(2,i_pt) > 0 .AND. x%StC_x(3,i_pt) < 0 .AND. dxdt%StC_x(3,i_pt) < 0) THEN
             C_ctrl(2,i_pt) = p%StC_Y_C_HIGH
          ELSE
             C_ctrl(2,i_pt) = p%StC_Y_C_LOW
@@ -1479,15 +1486,15 @@ SUBROUTINE StC_GroundHookDamp(dxdt,x,u,p,C_ctrl,C_Brake,F_fr)
 
             ! Z
             ! (a)
-         IF      (u%Mesh(i_pt)%TranslationDisp(3,1) > 0 .AND. u%Mesh(i_pt)%TranslationVel(3,1) < 0 .AND. x%StC_x(5,i_pt) > 0 .AND. dxdt%StC_x(5,i_pt) < 0) THEN
+         IF      (rdisp_P(3,i_pt) > 0 .AND. rdot_P(3,i_pt) < 0 .AND. x%StC_x(5,i_pt) > 0 .AND. dxdt%StC_x(5,i_pt) < 0) THEN
             C_ctrl(3,i_pt) = p%StC_Z_C_HIGH
             ! (b)
-         ELSE IF (u%Mesh(i_pt)%TranslationDisp(3,1) < 0 .AND. u%Mesh(i_pt)%TranslationVel(3,1) > 0 .AND. x%StC_x(5,i_pt) < 0 .AND. dxdt%StC_x(5,i_pt) > 0) THEN
+         ELSE IF (rdisp_P(3,i_pt) < 0 .AND. rdot_P(3,i_pt) > 0 .AND. x%StC_x(5,i_pt) < 0 .AND. dxdt%StC_x(5,i_pt) > 0) THEN
             C_ctrl(3,i_pt) = p%StC_Z_C_HIGH
             ! (c)
-         ELSE IF (u%Mesh(i_pt)%TranslationDisp(3,1) < 0 .AND. u%Mesh(i_pt)%TranslationVel(3,1) < 0 .AND. x%StC_x(5,i_pt) > 0 .AND. dxdt%StC_x(5,i_pt) > 0) THEN
+         ELSE IF (rdisp_P(3,i_pt) < 0 .AND. rdot_P(3,i_pt) < 0 .AND. x%StC_x(5,i_pt) > 0 .AND. dxdt%StC_x(5,i_pt) > 0) THEN
             C_ctrl(3,i_pt) = p%StC_Z_C_HIGH
-         ELSE IF (u%Mesh(i_pt)%TranslationDisp(3,1) > 0 .AND. u%Mesh(i_pt)%TranslationVel(3,1) > 0 .AND. x%StC_x(5,i_pt) < 0 .AND. dxdt%StC_x(5,i_pt) < 0) THEN
+         ELSE IF (rdisp_P(3,i_pt) > 0 .AND. rdot_P(3,i_pt) > 0 .AND. x%StC_x(5,i_pt) < 0 .AND. dxdt%StC_x(5,i_pt) < 0) THEN
             C_ctrl(3,i_pt) = p%StC_Z_C_HIGH
          ELSE
             C_ctrl(3,i_pt) = p%StC_Z_C_LOW

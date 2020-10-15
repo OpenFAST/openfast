@@ -116,6 +116,8 @@ typedef	^		MiscVarType  ReKi			C_Brake	{:}{:}	-	-	"Braking Damping"	-
 typedef	^		MiscVarType  ReKi			F_table	{:}{:}	-	-	"Tabled Stiffness"	-
 typedef	^		MiscVarType  ReKi			F_k		{:}{:}	-	-	"Factor for x and y-component stiffness force"	-
 typedef	^		MiscVarType  ReKi			a_G		{:}{:}	-	-	"Gravitational acceleration vector, local coordinates for point"	m/s^2
+typedef	^		MiscVarType  ReKi			rdisp_P	{:}{:}	-	-	"Translational displacement vector, local coordinates for point"	m
+typedef	^		MiscVarType  ReKi			rdot_P	{:}{:}	-	-	"Translational velocity     vector, local coordinates for point"	m/s
 typedef	^		MiscVarType  ReKi			rddot_P	{:}{:}	-	-	"Translational acceleration vector, local coordinates for point"	m/s^2
 typedef	^		MiscVarType  ReKi			omega_P	{:}{:}	-	-	"Rotational		velocity		 vector, local coordinates for point"	rad/s
 typedef	^		MiscVarType  ReKi			alpha_P	{:}{:}	-	-	"Rotational    aceeleration vector, local coordinates for point"	rad/s^2
