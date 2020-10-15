@@ -230,6 +230,9 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    ! Discretize the structure according to the division size 
    ! sets p%nNodes, Init%NElm
    CALL SD_Discrt(Init, p, ErrStat2, ErrMsg2); if(Failed()) return
+
+   ! Store relative distance to TP node,  for floating rigid body motion
+   CALL StoreNodesRelPos(Init, p, ErrStat2, ErrMsg2); if(Failed()) return
       
    ! Set element properties (p%ElemProps)
    CALL SetElementProperties(Init, p, ErrStat2, ErrMsg2); if(Failed()) return

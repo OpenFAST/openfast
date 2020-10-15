@@ -696,6 +696,37 @@ CONTAINS
 
 END SUBROUTINE SD_Discrt
 
+
+!> Store relative vector between nodes and TP point, to later compute Guyan rigid body motion
+subroutine StoreNodesRelPos(Init, p, ErrStat, ErrMsg)
+   type(SD_InitType),      intent(in   ) :: Init
+   type(SD_ParameterType), intent(inout) :: p
+   integer(IntKi),         intent(out)   :: ErrStat     ! Error status of the operation
+   character(*),           intent(out)   :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   integer(Intki)       :: i
+   integer(IntKi)       :: ErrStat2
+   character(ErrMsgLen) :: ErrMsg2
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+   ! NOTE: using efficient memory order
+   call AllocAry(p%DP0, 3, size(Init%Nodes,1), 'DP0', ErrStat2, ErrMsg2); if(Failed()) return
+
+   do i = 1, size(Init%Nodes,1)
+      p%DP0(1, i) = Init%Nodes(i, 2) - Init%TP_RefPoint(1)
+      p%DP0(2, i) = Init%Nodes(i, 3) - Init%TP_RefPoint(2)
+      p%DP0(3, i) = Init%Nodes(i, 4) - Init%TP_RefPoint(3)
+   enddo
+
+contains
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, Errstat, ErrMsg, 'StoreNodesRelPos') 
+      failed =  ErrStat >= AbortErrLev
+   end function Failed
+end subroutine StoreNodesRelPos
+
+
+
 !------------------------------------------------------------------------------------------------------
 !> Set Element properties p%ElemProps, different properties are set depening on element type..
 SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)

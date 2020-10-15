@@ -222,7 +222,7 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: Elems      !< Element nodes connections [-]
     TYPE(ElemPropType) , DIMENSION(:), ALLOCATABLE  :: ElemProps      !< List of element properties [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: FG_full      !< Gravity force vector (with initial cable force T0), not reduced [N]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: DP0      !< Vector from TP to a Node at t=0, used for Floating Rigid Body motion [m]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: DP0      !< Vector from TP to a Node at t=0, used for Floating Rigid Body motion [m]
     LOGICAL  :: reduced      !< True if system has been reduced to account for constraints [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: T_red      !< Transformation matrix performing the constraint reduction x = T. xtilde [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: T_red_T      !< Transpose of T_red [-]
@@ -6978,8 +6978,10 @@ ENDIF
 IF (ALLOCATED(SrcParamData%DP0)) THEN
   i1_l = LBOUND(SrcParamData%DP0,1)
   i1_u = UBOUND(SrcParamData%DP0,1)
+  i2_l = LBOUND(SrcParamData%DP0,2)
+  i2_u = UBOUND(SrcParamData%DP0,2)
   IF (.NOT. ALLOCATED(DstParamData%DP0)) THEN 
-    ALLOCATE(DstParamData%DP0(i1_l:i1_u),STAT=ErrStat2)
+    ALLOCATE(DstParamData%DP0(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
       CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%DP0.', ErrStat, ErrMsg,RoutineName)
       RETURN
@@ -8153,7 +8155,7 @@ ENDIF
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! DP0 allocated yes/no
   IF ( ALLOCATED(InData%DP0) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! DP0 upper/lower bounds for each dimension
+    Int_BufSz   = Int_BufSz   + 2*2  ! DP0 upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%DP0)  ! DP0
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! reduced
@@ -8728,10 +8730,15 @@ ENDIF
     IntKiBuf( Int_Xferred    ) = LBOUND(InData%DP0,1)
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%DP0,1)
     Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%DP0,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%DP0,2)
+    Int_Xferred = Int_Xferred + 2
 
-      DO i1 = LBOUND(InData%DP0,1), UBOUND(InData%DP0,1)
-        ReKiBuf(Re_Xferred) = InData%DP0(i1)
-        Re_Xferred = Re_Xferred + 1
+      DO i2 = LBOUND(InData%DP0,2), UBOUND(InData%DP0,2)
+        DO i1 = LBOUND(InData%DP0,1), UBOUND(InData%DP0,1)
+          ReKiBuf(Re_Xferred) = InData%DP0(i1,i2)
+          Re_Xferred = Re_Xferred + 1
+        END DO
       END DO
   END IF
     IntKiBuf(Int_Xferred) = TRANSFER(InData%reduced, IntKiBuf(1))
@@ -10201,15 +10208,20 @@ ENDIF
     i1_l = IntKiBuf( Int_Xferred    )
     i1_u = IntKiBuf( Int_Xferred + 1)
     Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
     IF (ALLOCATED(OutData%DP0)) DEALLOCATE(OutData%DP0)
-    ALLOCATE(OutData%DP0(i1_l:i1_u),STAT=ErrStat2)
+    ALLOCATE(OutData%DP0(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
        CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%DP0.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-      DO i1 = LBOUND(OutData%DP0,1), UBOUND(OutData%DP0,1)
-        OutData%DP0(i1) = ReKiBuf(Re_Xferred)
-        Re_Xferred = Re_Xferred + 1
+      DO i2 = LBOUND(OutData%DP0,2), UBOUND(OutData%DP0,2)
+        DO i1 = LBOUND(OutData%DP0,1), UBOUND(OutData%DP0,1)
+          OutData%DP0(i1,i2) = ReKiBuf(Re_Xferred)
+          Re_Xferred = Re_Xferred + 1
+        END DO
       END DO
   END IF
     OutData%reduced = TRANSFER(IntKiBuf(Int_Xferred), OutData%reduced)

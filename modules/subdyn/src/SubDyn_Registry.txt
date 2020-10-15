@@ -183,7 +183,7 @@ typedef	^	ParameterType	IntKi	Nmembers	-	-	-	"Number of members of the sub struc
 typedef	^	ParameterType	IntKi	Elems	{:}{:}	-	-	"Element nodes connections"
 typedef	^	ParameterType	ElemPropType    ElemProps   {:}   - -  "List of element properties"
 typedef ^   ^               R8Ki            FG_full     {:}   - -  "Gravity force vector (with initial cable force T0), not reduced"	N
-typedef ^   ^               ReKi            DP0         {:,:} - -  "Vector from TP to a Node at t=0, used for Floating Rigid Body motion"	m
+typedef ^   ^               ReKi            DP0        {:}{:} - -  "Vector from TP to a Node at t=0, used for Floating Rigid Body motion"	m
 # --- Constraints reduction
 typedef ^             ^     Logical reduced           -      -  -  "True if system has been reduced to account for constraints"  "-"
 typedef ^             ^     R8Ki    T_red             {:}{:} -  -  "Transformation matrix performing the constraint reduction x = T. xtilde"	"-"
