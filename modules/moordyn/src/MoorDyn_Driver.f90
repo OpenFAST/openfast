@@ -27,9 +27,10 @@ PROGRAM Main
 
    INTEGER(IntKi)                        :: UnPtfmMotIn      ! platform motion input file identifier
    CHARACTER(100)                        :: Line             ! String to temporarially hold value of read line
-   REAL(ReKi), ALLOCATABLE               :: PtfmMotIn(:,:)   ! Variable for storing time, and 6DOF platform position from motion input file
-   REAL(ReKi), ALLOCATABLE               :: PtfmMot(:,:)     ! Variable for storing interpolated 6DOF platform position
-   INTEGER(IntKi)                        :: ntIn             ! number of time steps read from motion file
+   REAL(ReKi), ALLOCATABLE               :: PtfmMotIn(:,:)   ! Variable for storing time, and DOF time series from driver input file
+   REAL(ReKi), ALLOCATABLE               :: PtfmMot(:,:)     ! Variable for storing interpolated DOF time series from driver input file
+   INTEGER(IntKi)                        :: ntIn             ! number of time steps read from driver input file
+   INTEGER(IntKi)                        :: ncIn             ! number of channels read from driver input file
    INTEGER(IntKi)                        :: nt               ! number of coupling time steps to use in simulation
 
    REAL(DbKi)                            :: t                ! current time (s)
@@ -48,127 +49,10 @@ PROGRAM Main
    
   
    ! -------------------------------------------------------------------------
-   ! Read in prescribed motions from text file if available 
-   ! (single 6DOF platform for now, plus one active tensioning command)
-   ! (to be updated for versatile coupling in future)
+   ! Initialize MoorDyn
    ! -------------------------------------------------------------------------
-   
-   CALL GetNewUnit( UnPtfmMotIn ) 
-   
-   CALL OpenFInpFile ( UnPtfmMotIn, "PtfmMotion.txt", ErrStat, ErrMsg ) 
-   
-   IF (ErrStat == 0 ) THEN
-   
-      print *, "Reading platform motion input data from PtfmMotion.txt"
-         
-      ! Read through length of file to find its length
-      i = 1  ! start counter
-      DO
-         READ(UnPtfmMotIn,'(A)',IOSTAT=ErrStat) Line      !read into a line
-         
-         
-         IF (ErrStat /= 0) EXIT            
-         
-         print *, TRIM(Line)
-         
-         i = i+1
-      END DO
-
-      ! rewind to start of input file to re-read things now that we know how long it is
-      REWIND(UnPtfmMotIn)      
-
-      ntIn = i-1     ! save number of lines of file
-      
-
-      ! allocate space for input motion array
-      ALLOCATE ( PtfmMotIn(ntIn, 8), STAT = ErrStat )
-      IF ( ErrStat /= ErrID_None ) THEN
-         ErrMsg  = '  Error allocating space for PtfmMotIn array.'
-         CALL WrScr( ErrMsg )
-      END IF 
-
-      ! read the data in from the file
-      DO i = 1, ntIn
-         READ (UnPtfmMotIn,*,IOSTAT=ErrStat) (PtfmMotIn (i,J), J=1,8)
-            
-         IF ( ErrStat /= 0 ) THEN
-            ErrMsg = '  Error reading the input time-series file. '
-            CALL WrScr( ErrMsg )
-         END IF 
-      END DO  
-
-         ! Close the inputs file 
-      CLOSE ( UnPtfmMotIn ) 
-      
-      print *, "read ", ntIn, " time steps from input file."
-      print *, PtfmMotIn
-   
-   ELSE
-      ntIn = 0   ! flag to indicate no motion input file
-   END IF
-
   
-   ! ----------------------- specify stepping details -----------------------
-
    dtC = 0.01                   ! desired coupling time step size for communicating with MoorDyn
-
-   IF (ntIn > 0) THEN
-      tMax = PtfmMotIn(ntIn, 1)    ! save last time step as total sim time
-   ELSE
-      tMax = 60
-   END IF
-   
-
-   nt = tMax/dtC - 1            ! number of coupling time steps
-
-   CALL WrScr(" ")
-   print *, "Tmax - ", tMax, " and nt=", nt
-   CALL WrScr(" ")
-   
-   ! allocate space for processed motion array
-   ALLOCATE ( PtfmMot(nt, 7), STAT = ErrStat )
-   IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = '  Error allocating space for PtfmMot array.'
-      CALL WrScr( ErrMsg )
-   END IF 
-
-
-   ! go through and interpolate inputs to new regular time steps (if nt=0 this array should be left as zeros)
-   IF (ntIn > 0) THEN
-      DO i = 1,nt
-         
-         t = dtC*(i-1)
-         
-         ! interpolation routine
-         DO iIn = 1,ntIn-1      
-            IF (PtfmMotIn(iIn+1, 1) > t) THEN
-               frac = (t - PtfmMotIn(iIn, 1) )/( PtfmMotIn(iIn+1, 1) - PtfmMotIn(iIn, 1) )
-               
- !              print *, "t=", t, ", iIn=", iIn, ", frac=", frac
-               
-               DO J=1,7
-                  PtfmMot(i, J) = PtfmMotIn(iIn, J+1) + frac*(PtfmMotIn(iIn+1, J+1) - PtfmMotIn(iIn, J+1))
-               END DO
-               
-               EXIT
-            END IF
-         END DO
-      
- !        print *, t, "s", PtfmMot(i,:)
-      
-      END DO
-      
-      
-   ELSE 
-      PtfmMot = 0.0_Reki
-   END IF
-
-   ! -------------------------------------------------------------------------
-   ! Initialize simulation
-   ! -------------------------------------------------------------------------
-
-  
-  
   
    MD_interp_order = 0
   
@@ -212,17 +96,137 @@ PROGRAM Main
    CALL MD_DestroyInitOutput ( MD_InitOutput , ErrStat, ErrMsg )
       
    CALL DispNVD( MD_InitOutput%Ver ) 
-  
-   ! set the initial input values
-   MD_Input(1)%PtFairleadDisplacement%TranslationDisp = 0.0_ReKi   ! zero the displacements to start with
-   MD_Input(1)%DeltaL = 0.0_ReKi
-   MD_Input(1)%DeltaLdot = 0.0_ReKi
    
-   IF (size(MD_Input(1)%DeltaL) .NE. 2) then
-      PRINT *, "Error: this MoorDyn Driver expects there to be two active tensioning channels"
-      STOP
+   ncIn = 6 + size(MD_Input(1)%DeltaL)   ! determine number of input channels expected from driver input file time series (DOFs including active tensioning channels)
+   
+   
+   ! -------------------------------------------------------------------------
+   ! Read in prescribed motions from text file if available 
+   ! (single 6DOF platform for now, plus one active tensioning command)
+   ! (to be updated for versatile coupling in future)
+   ! -------------------------------------------------------------------------
+   
+   CALL GetNewUnit( UnPtfmMotIn ) 
+   
+   CALL OpenFInpFile ( UnPtfmMotIn, "MoorDynDriverInputs.txt", ErrStat, ErrMsg ) 
+   
+   IF (ErrStat == 0 ) THEN
+   
+      print *, "Reading MoorDynDriverInputs.txt  expecting ", ncIn, " channels, in addition to time."
+         
+      ! Read through length of file to find its length
+      i = 1  ! start counter
+      DO
+         READ(UnPtfmMotIn,'(A)',IOSTAT=ErrStat) Line      !read into a line
+         
+         
+         IF (ErrStat /= 0) EXIT            
+         
+         print *, TRIM(Line)
+         
+         i = i+1
+      END DO
+
+      ! rewind to start of input file to re-read things now that we know how long it is
+      REWIND(UnPtfmMotIn)      
+
+      ntIn = i-1     ! save number of lines of file
+      
+
+      ! allocate space for input motion array (including time column)
+      ALLOCATE ( PtfmMotIn(ntIn, ncIn+1), STAT = ErrStat )
+      IF ( ErrStat /= ErrID_None ) THEN
+         ErrMsg  = '  Error allocating space for PtfmMotIn array.'
+         CALL WrScr( ErrMsg )
+      END IF 
+
+      ! read the data in from the file
+      DO i = 1, ntIn
+         READ (UnPtfmMotIn,*,IOSTAT=ErrStat) (PtfmMotIn (i,J), J=1,ncIn+1)
+            
+         IF ( ErrStat /= 0 ) THEN
+            ErrMsg = '  Error reading the input time-series file. Expecting '//TRIM(Int2LStr(ncIn))//' channels plus time.'
+            CALL WrScr( ErrMsg )
+         END IF 
+      END DO  
+
+         ! Close the inputs file 
+      CLOSE ( UnPtfmMotIn ) 
+      
+      print *, "Read ", ntIn, " time steps from input file."
+      print *, PtfmMotIn
+   
+   ELSE
+      print *, "Could not find MoorDynDriverInputs.txt, so using zero values."
+      ntIn = 0   ! flag to indicate no motion input file
+   END IF
+
+  
+   ! ----------------------- specify stepping details -----------------------
+
+   IF (ntIn > 0) THEN
+      tMax = PtfmMotIn(ntIn, 1)    ! save last time step as total sim time
+   ELSE
+      tMax = 60
    END IF
    
+
+   nt = tMax/dtC - 1            ! number of coupling time steps
+
+   CALL WrScr(" ")
+   print *, "Tmax - ", tMax, " and nt=", nt
+   CALL WrScr(" ")
+   
+   ! allocate space for processed motion array
+   ALLOCATE ( PtfmMot(nt, ncIn), STAT = ErrStat )
+   IF ( ErrStat /= ErrID_None ) THEN
+      ErrMsg  = '  Error allocating space for PtfmMot array.'
+      CALL WrScr( ErrMsg )
+   END IF 
+
+
+   ! go through and interpolate inputs to new regular time steps (if nt=0 this array should be left as zeros)
+   IF (ntIn > 0) THEN
+      DO i = 1,nt
+         
+         t = dtC*(i-1)
+         
+         ! interpolation routine
+         DO iIn = 1,ntIn-1      
+            IF (PtfmMotIn(iIn+1, 1) > t) THEN
+               frac = (t - PtfmMotIn(iIn, 1) )/( PtfmMotIn(iIn+1, 1) - PtfmMotIn(iIn, 1) )
+               
+ !              print *, "t=", t, ", iIn=", iIn, ", frac=", frac
+               
+               DO J=1,ncIn
+                  PtfmMot(i, J) = PtfmMotIn(iIn, J+1) + frac*(PtfmMotIn(iIn+1, J+1) - PtfmMotIn(iIn, J+1))
+               END DO
+               
+               EXIT
+            END IF
+         END DO
+      
+ !        print *, t, "s", PtfmMot(i,:)
+      
+      END DO
+      
+      
+   ELSE 
+      PtfmMot = 0.0_Reki
+   END IF
+   
+   
+   
+   
+   ! ---------------------------------------------------------------
+   ! Set the initial input values
+   ! ---------------------------------------------------------------
+   
+   ! start with zeros   >>> or should this be the initial row of DOFs? <<<
+   MD_Input(1)%PtFairleadDisplacement%TranslationDisp = 0.0_ReKi   
+   MD_Input(1)%DeltaL = 0.0_ReKi
+   MD_Input(1)%DeltaLdot = 0.0_ReKi
+      
    DO i = 2, MD_interp_order + 1  
       CALL MD_CopyInput( MD_Input(1), MD_Input(i), MESH_NEWCOPY, ErrStat, ErrMsg )
    END DO
@@ -252,16 +256,17 @@ PROGRAM Main
   
   
   ! -------------------------------------------------------------------------
-  ! BEGIN time marching
+  ! BEGIN time marching  >>> note that 3 rotational platform DOFs are currently neglected <<<
   ! -------------------------------------------------------------------------
 
    print *,"Doing time marching now..."
 
    DO i = 1,nt
 
+      ! --------------------------------- update inputs ---------------------------------
+
       t = dtC*(i-1)
 
-      !==========   NOTE   ======     <-----------------------------------------+
       MD_InputTimes(1) = t + dtC
       !MD_InputTimes(2) = MD_InputTimes(1) - dtC 
       !MD_InputTimes(3) = MD_InputTimes(2) - dtC
@@ -276,23 +281,20 @@ PROGRAM Main
       
       ! what about velocities??
       
-      ! also provide the active tensioning command on two channels (second negative) for testing
-      MD_Input(1)%DeltaL(1) =  PtfmMot(i, 7)  
-      MD_Input(1)%DeltaL(2) = -PtfmMot(i, 7)  
-      ! and the rate of change
-      IF (i>1) then
-         MD_Input(1)%DeltaLdot(1) = (PtfmMot(i, 7) - PtfmMot(i-1, 7))/dtC
-         MD_Input(1)%DeltaLdot(2) = -MD_Input(1)%DeltaLdot(1)
-      ELSE
-         MD_Input(1)%DeltaLdot(1) = 0.0_ReKi
-         MD_Input(1)%DeltaLdot(2) = 0.0_ReKi
-      END IF
+      ! also provide any active tensioning commands (just using delta L, and finite differencing to get derivative)
+      DO j = 1,ncIn-6
       
-      !===========================================================================
-
-
-      ! @bonnie & @jason: the FAST glue code will update the new fairlead position 
-      !                   based on the new platform position in the global frame.
+         MD_Input(1)%DeltaL(j) =  PtfmMot(i, 6+j)  
+         
+         IF (i>1) then
+            MD_Input(1)%DeltaLdot(j) = (PtfmMot(i, 6+j) - PtfmMot(i-1, 6+j))/dtC
+         ELSE
+            MD_Input(1)%DeltaLdot(j) = 0.0_ReKi
+         END IF
+         
+      END DO
+      
+      ! --------------------------------- update states ---------------------------------
       CALL  MD_UpdateStates(  t                  , &
                              nt                 , &
                              MD_Input           , &
@@ -314,6 +316,7 @@ PROGRAM Main
       ! update the global time step by one delta t               <<<< ??? why?
       t = t + dtC
      
+      ! --------------------------------- calculate outputs ---------------------------------
       CALL MD_CalcOutput(  t                  , &
                           MD_Input(1)        , &
                           MD_Parameter       , &
@@ -336,6 +339,8 @@ PROGRAM Main
       !WRITE(*,*) t_global
      
    END DO
+   
+   
    ! -------------------------------------------------------------------------
    ! END time marching
    ! -------------------------------------------------------------------------
@@ -363,7 +368,7 @@ PROGRAM Main
    DEALLOCATE(MD_Input)
    DEALLOCATE(MD_InputTimes)
    
-   IF (ALLOCATED(PtfmMot)  ) DEALLOCATE(PtfmMot)
+   IF (ALLOCATED(PtfmMot)  ) DEALLOCATE(PtfmMot  )
    IF (ALLOCATED(PtfmMotIn)) DEALLOCATE(PtfmMotIn)
    
    CALL WrScr( "Program has ended" )

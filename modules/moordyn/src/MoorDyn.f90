@@ -1294,6 +1294,8 @@ CONTAINS
          END DO
 
          t = t + dtM  ! update time
+         
+         !print *, " In TimeStep t=", t, ",  L1N8Pz=", M%LineList(1)%r(3,8), ", dL1=", u_interp%DeltaL(1)
 
          !----------------------------------------------------------------------------------
 
