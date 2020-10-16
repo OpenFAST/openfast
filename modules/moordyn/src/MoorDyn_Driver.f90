@@ -64,7 +64,16 @@ PROGRAM MoorDyn_Driver
    Integer(IntKi)                        :: iIn
    integer(intKi)                        :: Un
    
+   TYPE(ProgDesc), PARAMETER             :: progdesc = ProgDesc( 'MoorDyn Driver' )
   
+   CALL NWTC_Init()
+      ! Display the copyright notice
+   CALL DispCopyrightLicense( progdesc%Name )
+      ! Obtain OpenFAST git commit hash
+   git_commit = QueryGitVersion()
+      ! Tell our users what they're running
+   CALL WrScr( ' Running '//TRIM( progdesc%Name )//' a part of OpenFAST - '//TRIM(git_Commit)//NewLine//' linked with '//TRIM( NWTC_Ver%Name )//NewLine )
+
    ! -------------------------------------------------------------------------
    ! Read in prescribed motions from text file if available 
    ! (single 6DOF platform for now, plus one active tensioning command)
