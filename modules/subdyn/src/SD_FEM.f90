@@ -82,6 +82,7 @@ MODULE SD_FEM
   LOGICAL, PARAMETER :: DEV_VERSION    = .false.
   LOGICAL, PARAMETER :: BC_Before_CB   = .true.
   LOGICAL, PARAMETER :: ANALYTICAL_LIN = .true.
+  LOGICAL, PARAMETER :: GUYAN_RIGID_FLOATING = .false.
 
   INTERFACE FINDLOCI ! In the future, use FINDLOC from intrinsic
      MODULE PROCEDURE FINDLOCI_ReKi
@@ -2033,7 +2034,7 @@ LOGICAL FUNCTION isFixedBottom(Init, p) result(bFixed)
    INTEGER(IntKi) :: i, nFixed
    nFixed=0
    do i =1,size(p%Nodes_C,1)
-      if (ALL(p%Nodes_C(I,2:5)==idBC_Fixed)) then
+      if (ALL(p%Nodes_C(I,2:7)==idBC_Fixed)) then
          nFixed=nFixed+1
       elseif (Init%SSIfile(I)/='') then
          nFixed=nFixed+1
@@ -2049,7 +2050,7 @@ logical function isFloating(Init, p) result(bFLoating)
    integer(IntKi) :: i
    bFloating=.True.
    do i =1,size(p%Nodes_C,1)
-      if (all(p%Nodes_C(I,2:7)==idBC_Internal)) then
+      if ((all(p%Nodes_C(I,2:7)==idBC_Internal)) .and. (Init%SSIfile(i)=='')) then
          continue
       else
          bFloating=.False.

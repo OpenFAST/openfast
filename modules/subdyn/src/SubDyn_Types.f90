@@ -235,6 +235,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: SttcSolve      !< Solve dynamics about static equilibrium point (flag) [-]
     LOGICAL  :: ExtraMoment      !< Add Extra lever arm contribution to interface reaction outputs [-]
     LOGICAL  :: FixedBottom      !< True if Fixed bottom (the 4 x-y DOF fixed for at least one reaction node) [-]
+    LOGICAL  :: Floating      !< True if floating bottom (the 6 DOF are free at all reaction nodes) [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: KMMDiag      !< Diagonal coefficients of Kmm (OmegaM squared) [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: CMMDiag      !< Diagonal coefficients of Cmm (~2 Zeta OmegaM)) [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: MMB      !< Matrix after C-B reduction (transpose of MBM [-]
@@ -7096,6 +7097,7 @@ ENDIF
     DstParamData%SttcSolve = SrcParamData%SttcSolve
     DstParamData%ExtraMoment = SrcParamData%ExtraMoment
     DstParamData%FixedBottom = SrcParamData%FixedBottom
+    DstParamData%Floating = SrcParamData%Floating
 IF (ALLOCATED(SrcParamData%KMMDiag)) THEN
   i1_l = LBOUND(SrcParamData%KMMDiag,1)
   i1_u = UBOUND(SrcParamData%KMMDiag,1)
@@ -8234,6 +8236,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! SttcSolve
       Int_BufSz  = Int_BufSz  + 1  ! ExtraMoment
       Int_BufSz  = Int_BufSz  + 1  ! FixedBottom
+      Int_BufSz  = Int_BufSz  + 1  ! Floating
   Int_BufSz   = Int_BufSz   + 1     ! KMMDiag allocated yes/no
   IF ( ALLOCATED(InData%KMMDiag) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! KMMDiag upper/lower bounds for each dimension
@@ -8932,6 +8935,8 @@ ENDIF
     IntKiBuf(Int_Xferred) = TRANSFER(InData%ExtraMoment, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%FixedBottom, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%Floating, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
   IF ( .NOT. ALLOCATED(InData%KMMDiag) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -10460,6 +10465,8 @@ ENDIF
     OutData%ExtraMoment = TRANSFER(IntKiBuf(Int_Xferred), OutData%ExtraMoment)
     Int_Xferred = Int_Xferred + 1
     OutData%FixedBottom = TRANSFER(IntKiBuf(Int_Xferred), OutData%FixedBottom)
+    Int_Xferred = Int_Xferred + 1
+    OutData%Floating = TRANSFER(IntKiBuf(Int_Xferred), OutData%Floating)
     Int_Xferred = Int_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! KMMDiag not allocated
     Int_Xferred = Int_Xferred + 1

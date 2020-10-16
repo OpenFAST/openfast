@@ -218,10 +218,18 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    
    ! Parse the SubDyn inputs 
    CALL SD_Input(InitInput%SDInputFile, Init, p, ErrStat2, ErrMsg2); if(Failed()) return
-   if (p%FixedBottom) then
-      call WrScr('   Fixed-bottom case detected')
+   if (p%Floating) then
+      if (GUYAN_RIGID_FLOATING) then
+         call WrScr('   Floating case detected, Guyan modes will be rigid body modes')
+      else
+         call WrScr('   Floating case detected')
+      endif
    else
-      call WrScr('   Free/floating case detected, Guyan modes will be rigid body modes')
+      if (p%FixedBottom) then
+         call WrScr('   Fixed bottom case detected')
+      else
+         call WrScr('   Mixed free/fixed condary conditions (free/floating assumed)')
+      endif
    endif
 
    ! --------------------------------------------------------------------------------
@@ -423,14 +431,27 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       REAL(ReKi)                   :: DCM(3,3)
       REAL(ReKi)                   :: F_I(6*p%nNodes_I) !  !Forces from all interface nodes listed in one big array  ( those translated to TP ref point HydroTP(6) are implicitly calculated in the equations)
       TYPE(SD_ContinuousStateType) :: dxdt        ! Continuous state derivatives at t- for output file qmdotdot purposes only
+      ! Variables for Guayn rigid body motion
+      real(ReKi), dimension(3) :: Om, OmD ! Omega, OmegaDot (body rotational speed and acceleration)
+      real(ReKi), dimension(3) ::  rIP  ! Vector from TP to rotated Node
+      real(ReKi), dimension(3) ::  rIP0 ! Vector from TP to Node (undeflected)
+      real(ReKi), dimension(3) ::  Om_X_r ! Crossproduct of Omega and r
+      real(ReKi), dimension(3) ::  duP  ! Displacement of node due to rigid rotation
+      real(ReKi), dimension(3) ::  vP   ! Rigid-body velocity of node
+      real(ReKi), dimension(3) ::  aP   ! Rigid-body acceleration of node
+      real(R8Ki), dimension(3,3) :: Rot ! Rotation matrix (DCM^t) and delta Rot (DCM^t-I)
       INTEGER(IntKi)               :: ErrStat2    ! Error status of the operation (occurs after initial error)
       CHARACTER(ErrMsgLen)         :: ErrMsg2     ! Error message if ErrStat2 /= ErrID_None
       ! Initialize ErrStat
       ErrStat = ErrID_None
       ErrMsg  = ""
                                     
+      ! --- Reference coordinate system and body motion
       ! Compute the small rotation angles given the input direction cosine matrix
       rotations  = GetSmllRotAngs(u%TPMesh%Orientation(:,:,1), ErrStat2, Errmsg2); if(Failed()) return
+      Rot(1:3,1:3) = transpose(u%TPMesh%Orientation(:,:,1))
+      Om(1:3)      = u%TPMesh%RotationVel(1:3,1)
+      OmD(1:3)     = u%TPMesh%RotationAcc(1:3,1)
       
       ! Inputs at the transition piece:
       m%u_TP       = (/REAL(u%TPMesh%TranslationDisp(:,1),ReKi), rotations/)
@@ -477,7 +498,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
          end if          
       endif    
       ! --- Adding Guyan contribution to R and L DOFs
-      if (p%FixedBottom) then
+      if ((.not. p%Floating) .or. (.not. GUYAN_RIGID_FLOATING)) then
          ! Then we add the Guyan motion here
          m%UR_bar        =                       matmul( p%TI      , m%u_TP       )
          m%UR_bar_dot    =                       matmul( p%TI      , m%udot_TP    ) 
@@ -487,12 +508,12 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
          m%UL_dotdot     =   m%UL_dotdot     +   matmul( p%PhiRb_TI, m%udotdot_TP )
       else
          ! We will add it in the "Full system" later
-         m%UR_bar        =                       matmul( p%TI      , m%u_TP       )
-         m%UR_bar_dot    =                       matmul( p%TI      , m%udot_TP    ) 
-         m%UR_bar_dotdot =                       matmul( p%TI      , m%udotdot_TP ) 
-         m%UL            =   m%UL            +   matmul( p%PhiRb_TI, m%u_TP       ) 
-         m%UL_dot        =   m%UL_dot        +   matmul( p%PhiRb_TI, m%udot_TP    )
-         m%UL_dotdot     =   m%UL_dotdot     +   matmul( p%PhiRb_TI, m%udotdot_TP )
+         !m%UR_bar        =                       matmul( p%TI      , m%u_TP       )
+         !m%UR_bar_dot    =                       matmul( p%TI      , m%udot_TP    ) 
+         !m%UR_bar_dotdot =                       matmul( p%TI      , m%udotdot_TP ) 
+         !m%UL            =   m%UL            +   matmul( p%PhiRb_TI, m%u_TP       ) 
+         !m%UL_dot        =   m%UL_dot        +   matmul( p%PhiRb_TI, m%udot_TP    )
+         !m%UL_dotdot     =   m%UL_dotdot     +   matmul( p%PhiRb_TI, m%udotdot_TP )
       endif
       ! --- Build original DOF vectors (DOF before the CB reduction)
       m%U_red       (p%IDI__) = m%UR_bar
@@ -523,11 +544,23 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
          iY2Node = iSDNode
          DOFList => p%NodesDOF(iSDNode)%List  ! Alias to shorten notations
          !
-         if (.not.(p%FixedBottom)) then
+         if (p%Floating .and. GUYAN_RIGID_FLOATING) then
             ! For floating case, we add the Guyan motion contribution
             ! It corresponds to a rigid body motion the the TP as origin
-            ! TODO
-            !m%U_full(DOFList(1:3))
+            ! Rigid body motion of the point
+            rIP0(1:3)   = p%DP0(1:3, iSDNode)
+            rIP(1:3)    = matmul(Rot, rIP0)
+            duP(1:3)    = rIP - rIP0 + m%u_TP(1:3)
+            Om_X_r(1:3) = cross_product(Om, rIP)
+            vP(1:3)     = u%TPMesh%TranslationVel(1:3,1) + Om_X_r
+            aP(1:3)     = u%TPMesh%TranslationAcc(1:3,1) + cross_product(OmD, rIP)  + cross_product(Om, Om_X_r)
+
+            m%U_full       (DOFList(1:3))= m%U_full       (DOFList(1:3)) + duP(1:3)       
+            m%U_full       (DOFList(4:6))= m%U_full       (DOFList(4:6)) + rotations(1:3)
+            m%U_full_dot   (DOFList(1:3))= m%U_full_dot   (DOFList(1:3)) + vP(1:3)
+            m%U_full_dot   (DOFList(4:6))= m%U_full_dot   (DOFList(4:6)) + Om(1:3)
+            m%U_full_dotdot(DOFList(1:3))= m%U_full_dotdot(DOFList(1:3)) + aP(1:3)
+            m%U_full_dotdot(DOFList(4:6))= m%U_full_dotdot(DOFList(4:6)) + OmD(1:3)
 
          endif
          ! TODO TODO which orientation to give for joints with more than 6 dofs?
@@ -949,7 +982,8 @@ DO I = 1, p%nNodes_C
    endif
 enddo
 ! Trigger: determine if floating/fixed  based on BCs and SSI file
-p%FixedBottom = isFixedBottom(Init,p) 
+p%FixedBottom = isFixedBottom(Init,p)
+p%Floating    = isFloating(Init,p)
        
 
 
@@ -2876,23 +2910,28 @@ SUBROUTINE GetExtForceOnInternalDOF( u, p, m, F_L, ErrStat, ErrMsg )
 
    ! --- Compute Guyan displacement for extra moment (similar to CalcOutput, but wihtout CB)
    if (p%ExtraMoment) then
-      rotations  = GetSmllRotAngs(u%TPMesh%Orientation(:,:,1), ErrStat, Errmsg);
-      m%u_TP       = (/REAL(u%TPMesh%TranslationDisp(:,1),ReKi), rotations/)
-      m%UR_bar     =   matmul( p%TI      , m%u_TP       )  ! UR_bar
-      m%UL         =   matmul( p%PhiRb_TI, m%u_TP       )  ! UL    
-      m%U_red(p%IDI__) = m%UR_bar
-      m%U_red(p%ID__L) = m%UL     
-      m%U_red(p%IDC_Rb)= 0    ! TODO
-      m%U_red(p%ID__F) = 0
-      if (p%reduced) then
-         m%DU_full        = matmul(p%T_red, m%U_red)
+      if (p%Floating .and. GUYAN_RIGID_FLOATING) then
+         print*,'TODO floating extra moment'
+         STOP
       else
-         m%DU_full        = m%U_red
-      endif
-      if (.not.p%FixedBottom) then ! if Floating, remove u_TP translation
-         do iNode = 1,p%nNodes
-            m%DU_full(p%NodesDOF(iNode)%List(1:3)) =  m%DU_full(p%NodesDOF(iNode)%List(1:3)) - m%u_TP(1:3)
-         enddo
+         rotations  = GetSmllRotAngs(u%TPMesh%Orientation(:,:,1), ErrStat, Errmsg);
+         m%u_TP       = (/REAL(u%TPMesh%TranslationDisp(:,1),ReKi), rotations/)
+         m%UR_bar     =   matmul( p%TI      , m%u_TP       )  ! UR_bar
+         m%UL         =   matmul( p%PhiRb_TI, m%u_TP       )  ! UL    
+         m%U_red(p%IDI__) = m%UR_bar
+         m%U_red(p%ID__L) = m%UL     
+         m%U_red(p%IDC_Rb)= 0    ! TODO
+         m%U_red(p%ID__F) = 0
+         if (p%reduced) then
+            m%DU_full        = matmul(p%T_red, m%U_red)
+         else
+            m%DU_full        = m%U_red
+         endif
+         if (.not.p%FixedBottom) then ! if Floating, remove u_TP translation
+            do iNode = 1,p%nNodes
+               m%DU_full(p%NodesDOF(iNode)%List(1:3)) =  m%DU_full(p%NodesDOF(iNode)%List(1:3)) - m%u_TP(1:3)
+            enddo
+         endif
       endif
    endif
 
