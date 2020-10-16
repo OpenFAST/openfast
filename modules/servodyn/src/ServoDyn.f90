@@ -2360,15 +2360,6 @@ SUBROUTINE ReadPrimaryFile( InitInp, InputFileData, OutFileRoot, UnEc, ErrStat, 
 
    END DO
 
-   !---------------------- SUPERCONTROLLER -------------
-   CALL ReadCom( UnIn, InitInp%InputFile, 'Section Header: Supercontroller', ErrStat2, ErrMsg2, UnEc )
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF ( ErrStat >= AbortErrLev ) RETURN
-
-   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%ScInCutoff, "ScInCutoff", "Cut-off frequency for low-pass filter on Supercontroller Inputs (Hz)", ErrStat2, ErrMsg2, UnEc)
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF ( ErrStat >= AbortErrLev ) RETURN
-
    !---------------------- OUTPUT --------------------------------------------------
    CALL ReadCom( UnIn, InitInp%InputFile, 'Section Header: Output', ErrStat2, ErrMsg2, UnEc )
       CALL CheckError( ErrStat2, ErrMsg2 )

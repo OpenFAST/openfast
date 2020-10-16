@@ -83,9 +83,9 @@ module SuperController
          integer(C_INT),            intent(in   ) :: NumSC2Ctrl        !< number of turbine specific controller inputs [output from supercontroller]
          real(C_FLOAT),             intent(inout) :: from_SC      (*)  !< turbine specific outputs of the super controller (to the turbine controller)
          integer(C_INT),         intent(in   ) :: nStatesGlobal     !< number of global states
-         real(C_FLOAT),          intent(in   ) :: StatesGlob   (*)  !< global states at time increment, n (total of nStatesGlobal of these states)
+         real(C_FLOAT),          intent(inout) :: StatesGlob   (*)  !< global states at time increment, n (total of nStatesGlobal of these states)
          integer(C_INT),         intent(in   ) :: nStatesTurbine    !< number of states per turbine
-         real(C_FLOAT),          intent(in   ) :: StatesTurbine(*)  !< turbine-dependent states at time increment, n (total of nTurbines*nStatesTurbine of these states)
+         real(C_FLOAT),          intent(inout) :: StatesTurbine(*)  !< turbine-dependent states at time increment, n (total of nTurbines*nStatesTurbine of these states)
          integer(C_INT),            intent(inout) :: errStat             !< error status code (uses NWTC_Library error codes)
          character(kind=C_CHAR),    intent(inout) :: errMsg          (*) !< Error Message from DLL to simulation code
       end subroutine SC_DLL_GetInitData_PROC
@@ -105,9 +105,9 @@ module SuperController
          integer(C_INT),            intent(in   ) :: NumSC2Ctrl        !< number of turbine specific controller inputs [output from supercontroller]
          real(C_FLOAT),             intent(inout) :: from_SC      (*)  !< turbine specific outputs of the super controller (to the turbine controller)
          integer(C_INT),         intent(in   ) :: nStatesGlobal     !< number of global states
-         real(C_FLOAT),          intent(in   ) :: StatesGlob   (*)  !< global states at time increment, n (total of nStatesGlobal of these states)
+         real(C_FLOAT),          intent(inout) :: StatesGlob   (*)  !< global states at time increment, n (total of nStatesGlobal of these states)
          integer(C_INT),         intent(in   ) :: nStatesTurbine    !< number of states per turbine
-         real(C_FLOAT),          intent(in   ) :: StatesTurbine(*)  !< turbine-dependent states at time increment, n (total of nTurbines*nStatesTurbine of these states)
+         real(C_FLOAT),          intent(inout) :: StatesTurbine(*)  !< turbine-dependent states at time increment, n (total of nTurbines*nStatesTurbine of these states)
          integer(C_INT),            intent(inout) :: errStat             !< error status code (uses NWTC_Library error codes)
          character(kind=C_CHAR),    intent(inout) :: errMsg          (*) !< Error Message from DLL to simulation code
       end subroutine SC_DLL_GetInitData
@@ -188,9 +188,9 @@ abstract interface
          integer(C_INT),         intent(in   ) :: NumCtrl2SC        !< number of turbine controller outputs [inputs to supercontroller]
          real(C_FLOAT),          intent(in   ) :: to_SC        (*)  !< inputs to the super controller (from the turbine controller)
          integer(C_INT),         intent(in   ) :: nStatesGlobal     !< number of global states
-         real(C_FLOAT),          intent(in   ) :: StatesGlob   (*)  !< global states at time increment, n (total of nStatesGlobal of these states)
+         real(C_FLOAT),          intent(inout) :: StatesGlob   (*)  !< global states at time increment, n (total of nStatesGlobal of these states)
          integer(C_INT),         intent(in   ) :: nStatesTurbine    !< number of states per turbine
-         real(C_FLOAT),          intent(in   ) :: StatesTurbine(*)  !< turbine-dependent states at time increment, n (total of nTurbines*nStatesTurbine of these states)
+         real(C_FLOAT),          intent(inout) :: StatesTurbine(*)  !< turbine-dependent states at time increment, n (total of nTurbines*nStatesTurbine of these states)
          integer(C_INT),         intent(inout) :: errStat           !< error status code (uses NWTC_Library error codes)
          character(kind=C_CHAR), intent(inout) :: errMsg       (*)  !< Error Message from DLL to simulation code
       end subroutine SC_DLL_UpdateStates_PROC
@@ -212,9 +212,9 @@ abstract interface
          integer(C_INT),         intent(in   ) :: NumCtrl2SC        !< number of turbine controller outputs [inputs to supercontroller]
          real(C_FLOAT),          intent(in   ) :: to_SC        (*)  !< inputs to the super controller (from the turbine controller)
          integer(C_INT),         intent(in   ) :: nStatesGlobal     !< number of global states
-         real(C_FLOAT),          intent(in   ) :: StatesGlob   (*)  !< global states at time increment, n (total of nStatesGlobal of these states)
+         real(C_FLOAT),          intent(inout) :: StatesGlob   (*)  !< global states at time increment, n (total of nStatesGlobal of these states)
          integer(C_INT),         intent(in   ) :: nStatesTurbine    !< number of states per turbine
-         real(C_FLOAT),          intent(in   ) :: StatesTurbine(*)  !< turbine-dependent states at time increment, n (total of nTurbines*nStatesTurbine of these states)
+         real(C_FLOAT),          intent(inout) :: StatesTurbine(*)  !< turbine-dependent states at time increment, n (total of nTurbines*nStatesTurbine of these states)
          integer(C_INT),         intent(inout) :: errStat           !< error status code (uses NWTC_Library error codes)
          character(kind=C_CHAR), intent(inout) :: errMsg       (*)  !< Error Message from DLL to simulation code
       end subroutine SC_DLL_UpdateStates
@@ -345,11 +345,11 @@ abstract interface
       p%DLL_Trgt%FileName = InitInp%DLL_FileName
 
       p%DLL_Trgt%ProcName = "" ! initialize all procedures to empty so we try to load only one
-      p%DLL_Trgt%ProcName(1) = 'sc_init'
-      p%DLL_Trgt%ProcName(2) = 'sc_getInitData'
-      p%DLL_Trgt%ProcName(3) = 'sc_updateStates'
-      p%DLL_Trgt%ProcName(4) = 'sc_calcOutputs'
-      p%DLL_Trgt%ProcName(5) = 'sc_end'
+      p%DLL_Trgt%ProcName(1) = 'SC_Init'
+      p%DLL_Trgt%ProcName(2) = 'SC_GetInitData'
+      p%DLL_Trgt%ProcName(3) = 'SC_UpdateStates'
+      p%DLL_Trgt%ProcName(4) = 'SC_CalcOutputs'
+      p%DLL_Trgt%ProcName(5) = 'SC_End'
 
       call LoadDynamicLib ( p%DLL_Trgt, errStat2, errMsg2 )
          call SetErrStat( errStat2, errMsg2, errStat, errMsg, routineName )
@@ -393,9 +393,22 @@ abstract interface
 
       if (errStat > AbortErrLev ) return
 
+          ! allocate state arrays
+      ! TODO Fix allocations for error handling
+      allocate(xd%Global(p%NumStatesGlobal))
+            !CALL AllocAry( xd%Global,   p%nStatesGlobal, 'xd%Global', errStat2, errMsg2 )
+            !   call SetErrStat( errStat2, errMsg2, errStat, errMsg, routineName )
+      allocate(xd%Turbine(p%NumStatesTurbine*p%nTurbines) )
+            ! CALL AllocAry( xd%Turbine,   p%nStatesTurbine, 'xd%Turbine', errStat2, errMsg2 )
+            !   call SetErrStat( errStat2, errMsg2, errStat, errMsg, routineName )
+      
           ! allocate output arrays
       allocate(y%fromSCglob(p%NumSC2CtrlGlob))
       allocate(y%fromSC    (p%NumSC2Ctrl*p%nTurbines    ))
+
+         ! allocate input arrays
+      allocate(u%toSCglob(p%nInpGlobal))
+      allocate(u%toSC    (p%NumCtrl2SC*p%nTurbines))
 
          ! Copy the Parameter and Output data created by the SuperController library into the FAST-framework parameters data structure
       if ( (p%NumParamGlobal > 0) .or. (p%NumParamTurbine > 0) .or. (p%NumSC2CtrlGlob > 0) .or. (p%NumSC2Ctrl > 0) ) then
@@ -422,24 +435,8 @@ abstract interface
 
       end if          !IDEALLY THROW AN ERROR AND QUIT HERE IF THIS CRITERIA IS NOT MET
 
-
-      ! TODO Fix allocations for error handling
-      allocate(xd%Global(p%NumStatesGlobal))
-            !CALL AllocAry( xd%Global,   p%nStatesGlobal, 'xd%Global', errStat2, errMsg2 )
-            !   call SetErrStat( errStat2, errMsg2, errStat, errMsg, routineName )
-      allocate(xd%Turbine(p%NumStatesTurbine*p%nTurbines) )
-            ! CALL AllocAry( xd%Turbine,   p%nStatesTurbine, 'xd%Turbine', errStat2, errMsg2 )
-            !   call SetErrStat( errStat2, errMsg2, errStat, errMsg, routineName )
-
-      if ( p%NumStatesGlobal > 0 ) xd%Global      = 0.0_ReKi
-      if ( p%NumStatesTurbine > 0 ) xd%Turbine     = 0.0_ReKi
       p%DT          = interval
 
-
-
-         ! allocate input arrays
-      allocate(u%toSCglob(p%nInpGlobal))
-      allocate(u%toSC    (p%NumCtrl2SC*p%nTurbines))
 
          ! Set the initialization output data for the glue code so that it knows
          ! how many inputs/outputs there are
