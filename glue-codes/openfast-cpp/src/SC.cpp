@@ -1,4 +1,4 @@
-#include "SC.H"
+#include "SC.h"
 
 SuperController::SuperController():
 nCtrl2SC(0),
@@ -264,6 +264,8 @@ int SuperController::readRestartFile(int n_t_global) {
 #endif
         herr_t status = H5Fclose(restartFile);
     }
+
+    return 0;
 }
 
 

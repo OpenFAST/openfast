@@ -130,7 +130,6 @@ typedef	^	SrvD_InputFile	LOGICAL	CompNTMD	-	-	-	"Compute nacelle tuned mass damp
 typedef	^	SrvD_InputFile	CHARACTER(1024)	NTMDfile	-	-	-	"File for nacelle tuned mass damper (quoted string)"	-
 typedef	^	SrvD_InputFile	LOGICAL	CompTTMD	-	-	-	"Compute tower tuned mass damper {true/false}"	-
 typedef	^	SrvD_InputFile	CHARACTER(1024)	TTMDfile	-	-	-	"File for tower tuned mass damper (quoted string)"	-
-typedef ^       SrvD_InputFile  SiKi    ScInCutOff	-	-	-	"Cuttoff frequency for low-pass filter on Supercontroller inputs"	Hz
 
 # ..... Data for using Bladed DLLs .......................................................................................................
 typedef	^	BladedDLLType	SiKi	avrSWAP	{:}	-	-	"The swap array: used to pass data to and from the DLL controller"	"see Bladed DLL documentation"
@@ -215,8 +214,6 @@ typedef	^	DiscreteStateType	ReKi	CtrlOffset	-	-	-	"Controller offset parameter" 
 #typedef	^	DiscreteStateType	ReKi	BlPitchFilter	{:}	-	-	"blade pitch filter"	-
 typedef	^	DiscreteStateType	TMD_DiscreteStateType	NTMD	-	-	-	"TMD module states - nacelle"	-
 typedef	^	DiscreteStateType	TMD_DiscreteStateType	TTMD	-	-	-	"TMD module states - tower"	-
-typedef ^       DiscreteStateType       SiKi                    filt_fromSC    {:}     -       -       "Filtered turbine specific inputs from supercontroller" -
-typedef ^       DiscreteStateType       SiKi                    filt_fromSCglob    {:}     -       -       "Filtered global inputs from supercontroller" -
 
 # Define constraint states here:
 typedef	^	ConstraintStateType	ReKi	DummyConstrState	-	-	-	"Remove this variable if you have constraint states"	-
@@ -401,4 +398,3 @@ typedef	^	OutputType	ReKi	TBDrCon	{:}	-	-	"Instantaneous tip-brake drag constant
 typedef	^	OutputType	TMD_OutputType	NTMD	-	-	-	"TMD module outputs - nacelle"	-
 typedef	^	OutputType	TMD_OutputType	TTMD	-	-	-	"TMD module outputs - tower"	-
 typedef	^	OutputType	SiKi	toSC	{:}	-	-	"A swap array: used to pass output data from the DLL controller to the supercontroller"	-
-
