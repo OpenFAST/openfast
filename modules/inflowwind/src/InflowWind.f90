@@ -557,6 +557,7 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
             HAWC_InitData%URef               = InputFileData%HAWC_URef 
             HAWC_InitData%PLExp              = InputFileData%HAWC_PLExp
             HAWC_InitData%Z0                 = InputFileData%HAWC_Z0   
+            HAWC_InitData%InitPosition       = InputFileData%HAWC_InitPosition
                    
             
                ! Initialize the HAWCWind module

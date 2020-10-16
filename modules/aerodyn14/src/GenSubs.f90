@@ -332,6 +332,9 @@ ELSEIF (Arg(1:7) == 'ElPrint') THEN
       IF (.NOT. ALLOCATED(m%ElOut%ReyNum)) ALLOCATE ( m%ElOut%ReyNum(NumElOut) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for ReyNum array.' )
 
+      IF (.NOT. ALLOCATED(m%ElOut%Gamma)) ALLOCATE ( m%ElOut%Gamma(NumElOut) , STAT=Sttus )
+      IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for Gamma array.' )
+
       IF (.NOT. ALLOCATED(m%ElOut%ElPrNum)) ALLOCATE ( m%ElOut%ElPrNum(NumElOut) , STAT=Sttus )
       IF ( Sttus /= 0 )  CALL ProgAbort ( ' Error allocating memory for ElPrNum array.' )
       m%ElOut%ElPrNum ( : ) = 0
@@ -462,7 +465,7 @@ ENDIF
 Frmt = '( A4, 3(A1,A2,I2.2),    (: A1, A, I2.2 ) )'
 
 IF ( p%PMOMENT ) THEN
-   WRITE(Frmt(22:24), '(I3)') 14*m%ElOut%NumElOut
+   WRITE(Frmt(22:24), '(I3)') 15*m%ElOut%NumElOut
    WRITE(p%UnElem, Frmt) 'Time',                    &
                TAB,    'VX',       p%Element%NELM,          &
                TAB,    'VY',       p%Element%NELM,          &
@@ -481,10 +484,11 @@ IF ( p%PMOMENT ) THEN
                TAB,    'ForcT',    m%ElOut%ElPrNum(JE),  &
                TAB,    'Pmomt',    m%ElOut%ElPrNum(JE),  &
                TAB,    'ReNum',    m%ElOut%ElPrNum(JE),  &
+               TAB,    'Gamma',    m%ElOut%ElPrNum(JE),  &
                          JE = 1, m%ElOut%NumElOut )
 
    Frmt = '( A5, 3(A1,A8),    (: A1, A ) )'
-   WRITE(Frmt(17:19), '(I3)') 14*m%ElOut%NumElOut
+   WRITE(Frmt(17:19), '(I3)') 15*m%ElOut%NumElOut
    WRITE(p%UnElem, Frmt) '(sec)',                       &
                TAB,    '('//TRIM(Dst_Unit)//'/sec)',  &
                TAB,    '('//TRIM(Dst_Unit)//'/sec)',  &
@@ -503,10 +507,11 @@ IF ( p%PMOMENT ) THEN
                TAB,    '('//TRIM(Frc_Unit)//')',      &
                TAB,    '('//TRIM(Frc_Unit)//'-'//TRIM(Dst_Unit)//')', &
                TAB,    '(x10^6)',                     &
+               TAB,    '(m^2/sec)',                   &
                          JE = 1, m%ElOut%NumElOut )
 
 ELSE
-   WRITE(Frmt(22:24), '(I3)') 12*m%ElOut%NumElOut
+   WRITE(Frmt(22:24), '(I3)') 13*m%ElOut%NumElOut
    WRITE(p%UnElem, Frmt) 'Time',                    &
                TAB,    'VX',       p%Element%NELM,          &
                TAB,    'VY',       p%Element%NELM,          &
@@ -523,10 +528,11 @@ ELSE
                TAB,    'ForcN',    m%ElOut%ElPrNum(JE),  &
                TAB,    'ForcT',    m%ElOut%ElPrNum(JE),  &
                TAB,    'ReNum',    m%ElOut%ElPrNum(JE),  &
+               TAB,    'Gamma',    m%ElOut%ElPrNum(JE),  &
                          JE = 1, m%ElOut%NumElOut )
 
    Frmt = '( A5, 3(A1,A8),    (: A1, A ) )'
-   WRITE(Frmt(17:19), '(I3)') 12*m%ElOut%NumElOut
+   WRITE(Frmt(17:19), '(I3)') 13*m%ElOut%NumElOut
    WRITE(p%UnElem, Frmt) '(sec)',                       &
                TAB,    '('//TRIM(Dst_Unit)//'/sec)',  &
                TAB,    '('//TRIM(Dst_Unit)//'/sec)',  &
@@ -543,6 +549,7 @@ ELSE
                TAB,    '('//TRIM(Frc_Unit)//')',      &
                TAB,    '('//TRIM(Frc_Unit)//')',      &
                TAB,    '(x10^6)',                     &
+               TAB,    '(m^2/sec)',                   &
                          JE = 1, m%ElOut%NumElOut )
 ENDIF
 
@@ -596,7 +603,7 @@ IF (p%ELEMPRN) THEN
    Frmt = '( F10.3,    ( : A1, ES12.5 ) )'
 
    IF ( P%PMOMENT ) THEN
-      WRITE(Frmt(10:12), '(I3)') 14*m%ElOut%NumElOut + 3
+      WRITE(Frmt(10:12), '(I3)') 15*m%ElOut%NumElOut + 3
       WRITE(p%UnElem,Frmt) TIME,                 &
                      TAB,   m%ElOut%VXSAV,       &
                      TAB,   m%ElOut%VYSAV,       &
@@ -615,11 +622,12 @@ IF (p%ELEMPRN) THEN
                      TAB,   m%ElOut%DFTSAV (JE), &
                      TAB,   m%ElOut%PMM    (JE), &
                      TAB,   m%ElOut%ReyNum (JE), &
+                     TAB,   m%ElOut%Gamma  (JE), &
                             JE= 1, m%ElOut%NumElOut )
 
 
    ELSE
-      WRITE(Frmt(10:12), '(I3)') 12*m%ElOut%NumElOut + 3
+      WRITE(Frmt(10:12), '(I3)') 13*m%ElOut%NumElOut + 3
       WRITE(p%UnElem,Frmt) TIME,                 &
                      TAB,   m%ElOut%VXSAV,       &
                      TAB,   m%ElOut%VYSAV,       &
@@ -636,6 +644,7 @@ IF (p%ELEMPRN) THEN
                      TAB,   m%ElOut%DFNSAV (JE), &
                      TAB,   m%ElOut%DFTSAV (JE), &
                      TAB,   m%ElOut%ReyNum (JE), &
+                     TAB,   m%ElOut%Gamma  (JE), &
                             JE= 1, m%ElOut%NumElOut )
    ENDIF ! PMOMENT
 

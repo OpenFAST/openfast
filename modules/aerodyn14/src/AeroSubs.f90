@@ -385,7 +385,6 @@ SUBROUTINE AD14_GetInput(InitInp, P, x, xd, z, m, y, ErrStat, ErrMess )
 
    END IF
 
-
       ! Read in the air density
    CALL ReadVar( UnIn, InitInp%ADFileName, P%Wind%Rho, VarName='Rho', VarDescr='Air density', ErrStat=ErrStat, ErrMsg=ErrMess)
       IF (ErrStat >= AbortErrLev) THEN
@@ -1619,18 +1618,13 @@ END SUBROUTINE READFL
 
 END SUBROUTINE READTwr
 
-! Dynamics Program aerodynamics force interface gateway
- ! ****************************************************
-   SUBROUTINE ELEMFRC(P, m, ErrStat, ErrMess, &
-                      PSI, RLOCAL, J, IBlade, VNROTOR2, VT, VNW, &
-                      VNB, DFN, DFT, PMA, Initial)
-!   SUBROUTINE ELEMFRC (PSI, RLOCAL, J, IBlade, VNROTOR2, VT, VNW, &
-!                       VNB, DFN, DFT, PMA, Initial)
- ! ****************************************************
- !  calculates the aerodynamic forces on one
- !  blade element.  Inputs include all velocities.
- !  Normal and tangential forces and 'A' are returned.
 !====================================================================================================
+!> Calculates the axial and tangential induction factor for each annular segment
+! and time step (i.e. sets m%Element%A and m%Element%AP)
+   SUBROUTINE ELEM_INDUCTIONS( p, m, ErrStat, ErrMess, &
+                      PSI, RLOCAL, J, IBlade, VNROTOR2, VT, VNW, &
+                      VNB, Initial)
+
    IMPLICIT                      NONE
       ! Passed Variables:
    TYPE(AD14_ParameterType),       INTENT(IN)     :: p           ! Parameters
@@ -1638,31 +1632,15 @@ END SUBROUTINE READTwr
    INTEGER, INTENT(OUT)                   :: ErrStat
    CHARACTER(*), INTENT(OUT)              :: ErrMess
 
-   REAL(ReKi),INTENT(OUT)     :: DFN
-   REAL(ReKi),INTENT(OUT)     :: DFT
-   REAL(ReKi),INTENT(OUT)     :: PMA
    REAL(ReKi),INTENT(IN)      :: PSI
    REAL(ReKi),INTENT(IN)      :: RLOCAL
-   REAL(ReKi),INTENT(IN)      :: VNB
+   REAL(ReKi),                    INTENT(IN   ) :: VNB      ! Normal (relative) velocity of the element 
    REAL(ReKi),INTENT(IN)      :: VNROTOR2
    REAL(ReKi),INTENT(IN)      :: VNW
-   REAL(ReKi),INTENT(INOUT)   :: VT
+   REAL(ReKi),                    INTENT(IN   ) :: VT
    INTEGER, INTENT(IN)        :: J
    INTEGER, INTENT(IN)        :: IBlade
    LOGICAL,   INTENT(IN)      :: Initial
-
-   ! Local Variables:
-
-   REAL(ReKi)                 :: CDA
-   REAL(ReKi)                 :: CLA
-   REAL(ReKi)                 :: CMA
-   REAL(ReKi)                 :: CPHI
-   REAL(ReKi)                 :: PHI
-   REAL(ReKi)                 :: QA
-   REAL(ReKi)                 :: ReNum
-   REAL(ReKi)                 :: SPHI
-   REAL(ReKi)                 :: Vinduced
-   REAL(ReKi)                 :: VN
 
    INTEGER                                   :: ErrStatLcL        ! Error status returned by called routines.
    CHARACTER(ErrMsgLen)                      :: ErrMessLcl          ! Error message returned by called routines.
@@ -1670,70 +1648,81 @@ END SUBROUTINE READTwr
    ErrStat = ErrID_None
    ErrMess = ""
 
-
-   ! initialize TanInd variables
-m%Element%A (J,IBLADE) = 0.0
-m%Element%AP(J,IBLADE) = 0.0
-
-
  !-mlb  Check for being at the center of rotation.
  ! If we are at the center of rotation, the induction equations
  !  are undefined, so let's just USE zeros.
 
+! initialize AxInd and TanInd variables
+   m%Element%A (J,IBLADE) = 0.0
+   m%Element%AP(J,IBLADE) = 0.0
 
 IF ( RLOCAL < 0.01 )  THEN
-   m%Element%A (J,IBLADE) = 0.0
-   m%Element%AP(J,IBLADE) = 0.0
+    ! Already set to 0
 ELSEIF( P%DYNINFL .AND. P%Blade%R * m%Rotor%REVS < 2.0 )  THEN   !ACH 3/10/03 This block deals with dyn. inflow problems at low tip speed
-   m%Element%A (J,IBLADE) = 0.0
-   m%Element%AP(J,IBLADE) = 0.0
+    ! Already set to 0
    m%DYNINIT = .TRUE.    !Re-initialize if we begin using dynamic inflow again
 ELSE
 
  ! Turn wake off when using dynamic inflow and tip speed goes low.  Wake will remain off.
-
  ! Get induction factor = A using static airfoil coefficients
    IF ( P%WAKE .AND. .NOT. Initial) THEN
 
       IF ( P%DYNINFL ) THEN
  !       USE dynamic inflow model to find A
          CALL VINDINF( P, m, ErrStatLcl, ErrMessLcl, &
-                       J, IBlade, RLOCAL, VNW, VNB, VT, PSI ) !possibly changes VT, A, and AP
-            CALL SetErrStat ( ErrStatLcl, ErrMessLcl, ErrStat,ErrMess,'ELEMFRC' )
+                       J, IBlade, RLOCAL, VNW, VNB, VT, PSI ) !possibly changes A, and AP
+            CALL SetErrStat ( ErrStatLcl, ErrMessLcl, ErrStat,ErrMess,'ELEM_INDUCTIONS' )
             IF (ErrStat >= AbortErrLev) RETURN
       ELSE
  !       USE momentum balance to find A
          CALL VIND( P, m, ErrStatLcl, ErrMessLcl, &
-                    J, IBlade, RLOCAL, VNROTOR2, VNW, VNB, VT )  !changes VT, A, and AP
-            CALL SetErrStat ( ErrStatLcl, ErrMessLcl, ErrStat,ErrMess,'ELEMFRC' )
+                    J, IBlade, RLOCAL, VNROTOR2, VNW, VNB, VT )  !changes A, and AP
+            CALL SetErrStat ( ErrStatLcl, ErrMessLcl, ErrStat,ErrMess,'ELEM_INDUCTIONS' )
             IF (ErrStat >= AbortErrLev) RETURN
  !       Apply skewed-wake correction, if applicable
          IF( m%SKEW ) CALL VNMOD( P, m, ErrStatLcl, ErrMessLcl,&
                                   J, IBlade, RLOCAL, PSI ) !changes A
-            CALL SetErrStat ( ErrStatLcl, ErrMessLcl, ErrStat,ErrMess,'ELEMFRC' )
+            CALL SetErrStat ( ErrStatLcl, ErrMessLcl, ErrStat,ErrMess,'ELEM_INDUCTIONS' )
             IF (ErrStat >= AbortErrLev) RETURN
       ENDIF
-   ELSE
- !    Ignore the wake calculation entirely
-      m%Element%A (J,IBLADE) = 0.0
-      m%Element%AP(J,IBLADE) = 0.0
    ENDIF
-
 ENDIF
 
-Vinduced = VNW  * m%Element%A(J,IBLADE)
-VN = VNW + VNB - Vinduced
+END SUBROUTINE ELEM_INDUCTIONS
 
-m%InducedVel%SumInfl = m%InducedVel%SumInfl + Vinduced * RLOCAL * p%Blade%DR(J)
+SUBROUTINE ELEMFRC2( p, m, ErrStat, ErrMess, J, IBlade, &
+                      DFN, DFT, PMA, Initial, phi )
 
- ! Get the angle of attack
+   IMPLICIT                      NONE
+      ! Passed Variables:
+   TYPE(AD14_ParameterType),  INTENT(IN)     :: p           ! Parameters
+   TYPE(AD14_MiscVarType),    INTENT(INOUT)  :: m           ! Misc/optimization variables
+   INTEGER,                   INTENT(  OUT)  :: ErrStat
+   CHARACTER(*),              INTENT(  OUT)  :: ErrMess
 
-PHI   = ATAN2( VN, VT )
-m%Element%ALPHA(J,IBlade) = PHI - m%Element%PITNOW
+   REAL(ReKi),                INTENT(  OUT)  :: DFN
+   REAL(ReKi),                INTENT(  OUT)  :: DFT
+   REAL(ReKi),                INTENT(  OUT)  :: PMA
+   INTEGER,                   INTENT(IN)     :: J
+   INTEGER,                   INTENT(IN)     :: IBlade
+   LOGICAL,                   INTENT(IN)     :: Initial
 
-CALL MPI2PI ( m%Element%ALPHA(J,IBlade) )
+   ! Local Variables:
 
-m%Element%W2(J,IBlade) = VN * VN + VT * VT
+   REAL(ReKi)                 :: CDA
+   REAL(ReKi)                 :: CLA
+   REAL(ReKi)                 :: CMA
+   REAL(ReKi)                 :: CPHI
+   REAL(ReKi), intent(in)     :: PHI
+   REAL(ReKi)                 :: QA
+   REAL(ReKi)                 :: ReNum
+   REAL(ReKi)                 :: SPHI
+
+   INTEGER                                   :: ErrStatLcL        ! Error status returned by called routines.
+   CHARACTER(ErrMsgLen)                      :: ErrMessLcl          ! Error message returned by called routines.
+
+   ErrStat = ErrID_None
+   ErrMess = ""
 
  ! Get the Reynold's number for the element
  !  Returns Reynold's number x 10^6    !bjj: Reynold's number x 10^-6 ?
@@ -1799,22 +1788,22 @@ IF ( IBLADE == 1 ) THEN
       m%ElOut%DFNSAV ( m%ElOut%ElPrList(J) )    = DFN
       m%ElOut%DFTSAV ( m%ElOut%ElPrList(J) )    = DFT
       m%ElOut%DynPres( m%ElOut%ElPrList(J) )    = 0.5 * P%Wind%RHO * m%Element%W2(J,IBlade)
-      m%ElOut%PITSAV ( m%ElOut%ElPrList(J) )    = m%Element%PITNOW * R2D
+      m%ElOut%PITSAV ( m%ElOut%ElPrList(J) )    = m%Element%PitNow(J,IBlade) * R2D
       m%ElOut%PMM    ( m%ElOut%ElPrList(J) )    = PMA
       m%ElOut%ReyNum ( m%ElOut%ElPrList(J) )    = ReNum
+      m%ElOut%Gamma  ( m%ElOut%ElPrList(J) )    = 0.5 * P%Blade%C(J) * sqrt(m%Element%W2(J,IBlade)) * CLA ! 1/2 c Urel Cl [m^2/s]
    ENDIF
 
 ENDIF
 
 RETURN
-END SUBROUTINE ELEMFRC
+END SUBROUTINE ELEMFRC2
 
 !======================================================
-   SUBROUTINE VIND( P, m, ErrStat, ErrMess, &
+   SUBROUTINE VIND( p, m, ErrStat, ErrMess, &
                       J, IBlade, RLOCAL, VNROTOR2, VNW, VNB, VT )
-!   SUBROUTINE VIND( J, IBlade, RLOCAL, VNROTOR2, VNW, VNB, VT )
- !  calculates the axial induction factor for each
- !  annular segment and time step.
+ ! Calculates the axial and tangential induction factor for each annular segment
+ ! and time step (i.e. sets m%Element%A and m%Element%AP)
  ! ***************************************************
    IMPLICIT                      NONE
       ! Passed Variables:
@@ -1825,7 +1814,7 @@ END SUBROUTINE ELEMFRC
    REAL(ReKi),                   INTENT(IN   )  :: VNB
    REAL(ReKi),                   INTENT(IN   )  :: VNROTOR2
    REAL(ReKi),                   INTENT(IN   )  :: VNW
-   REAL(ReKi),                   INTENT(INOUT)  :: VT
+   REAL(ReKi),                   INTENT(IN   )  :: VT ! tangential velocity from relative blade motion and wind, no induction
                                  
    INTEGER,                      INTENT(IN   )  :: J
    INTEGER,                      INTENT(IN   )  :: IBlade
@@ -1912,12 +1901,12 @@ ICOUNT  = 0
 
 IF ( ABS( VNB ) > 100. ) THEN
    m%Element%A( J, IBLADE ) = 0.0
-   CALL VINDERR( P, m, ErrStat, ErrMess, &
+   CALL VINDERR( m, ErrStat, ErrMess, &
                  VNW, VNB, 'VNB', J, IBLADE )
    RETURN   
 ELSEIF ( ABS( VT ) > 400. ) THEN
    m%Element%A( J, IBLADE ) = 0.0
-   CALL VINDERR( P, m, ErrStat, ErrMess, &
+   CALL VINDERR( m, ErrStat, ErrMess, &
                  VNW, VT, 'VT', J, IBLADE )
    RETURN
 ENDIF
@@ -1926,7 +1915,7 @@ A2 = AI
 
 CALL AXIND ( P, m, ErrStat, ErrMess, &
              VNW, VNB, VNA, VTA, VT, VT2_Inv, VNROTOR2, A2, A2P, &
-             J, SOLFACT, ALPHA, PHI, CLA, CDA, CMA, RLOCAL )
+             J, IBlade, SOLFACT, ALPHA, PHI, CLA, CDA, CMA, RLOCAL )
       IF (ErrStat >= AbortErrLev) RETURN
 
 DAI = A2  - AI
@@ -1946,7 +1935,7 @@ DO WHILE ( ABS( DELAI ) > ATOLERBY10 .AND. ABS(DAI) > ATOLER2 )
 
    CALL AXIND ( P, m, ErrStatLcl, ErrMessLcl,       &
                 VNW, VNB, VNA, VTA, VT, VT2_Inv, VNROTOR2, A2, A2P, &
-                J, SOLFACT, ALPHA, PHI, CLA, CDA, CMA, RLOCAL )
+                J, IBlade, SOLFACT, ALPHA, PHI, CLA, CDA, CMA, RLOCAL )
       CALL SetErrStat(ErrStatLcl,ErrMessLcl,ErrStat,ErrMess,'VIND' )
       IF (ErrStat >= AbortErrLev) RETURN
 
@@ -1979,7 +1968,6 @@ END DO
  ! Passed test, we're done
 m%Element%A (J,IBLADE) = A2
 m%Element%AP(J,IBLADE) = A2P
-VT = VT * ( 1. + A2P )  !bjj: why are we changing the total velocity?
 m%Element%OLD_A_NS  (J,IBLADE) = A2
 m%Element%OLD_AP_NS (J,IBLADE) = A2P
 
@@ -1988,7 +1976,7 @@ END SUBROUTINE VIND
 
 
  ! ***************************************************
-   SUBROUTINE VINDERR( P, m, ErrStat, ErrMess, &
+   SUBROUTINE VINDERR( m, ErrStat, ErrMess, &
                       VNW, VX, VID, J, IBLADE )
 !   SUBROUTINE VINDERR( VNW, VX, VID, J, IBLADE )
  !  used to write warning messages to the screen
@@ -1996,7 +1984,6 @@ END SUBROUTINE VIND
  ! ***************************************************
    IMPLICIT                      NONE
       ! Passed Variables:
-   TYPE(AD14_ParameterType),       INTENT(IN)     :: p           ! Parameters
    TYPE(AD14_MiscVarType),         INTENT(INOUT)  :: m           ! Misc/optimization variables
    INTEGER, INTENT(OUT)                   :: ErrStat
    CHARACTER(*), INTENT(OUT)              :: ErrMess
@@ -2036,7 +2023,7 @@ END SUBROUTINE VINDERR
  ! ******************************************************
    SUBROUTINE  AXIND (P, m, ErrStat, ErrMess,      &
                       VNW, VNB, VNA, VTA, VT, VT2_Inv, VNROTOR2, A2,     &
-                      A2P, J, SOLFACT, ALPHA, PHI, CLA, CDA, CMA, RLOCAL )
+                      A2P, J, IBlade, SOLFACT, ALPHA, PHI, CLA, CDA, CMA, RLOCAL )
 !   SUBROUTINE AXIND ( VNW, VNB, VNA, VTA, VT, VT2_Inv, VNROTOR2, A2, &
 !                      A2P, J, SOLFACT, ALPHA, PHI, CLA, CDA, CMA, RLOCAL )
  !  calculates a new axial induction factor from
@@ -2068,6 +2055,7 @@ END SUBROUTINE VINDERR
    REAL(ReKi),INTENT(OUT)     :: VTA
 
    INTEGER   ,INTENT(IN)      :: J
+   INTEGER   ,INTENT(IN)      :: IBlade
 
    ! Local Variables:
 
@@ -2087,7 +2075,7 @@ VTA    = VT  * ( 1. + A2P )
 
  ! Get airfoil CL and CD
 PHI    = ATAN2( VNA, VTA )
-ALPHA  = PHI - m%Element%PITNOW
+ALPHA  = PHI - m%Element%PitNow(J,IBlade)
 
 CALL MPI2PI ( ALPHA )
 
@@ -4114,16 +4102,16 @@ END DO ! mode
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++
 !Suzuki's method
 !DO mode = MaxInflo+1, maxInfl
-!   m%DynInflow%RMC_SAVE(IBLADE, J, mode) = fElem * XPHI( Rzero, mode )  * COS( REAL(MRvector(mode)) * psiBar )
-!   m%DynInflow%RMS_SAVE(IBLADE, J, mode) = fElem * XPHI( Rzero, mode )  * SIN( REAL(MRvector(mode)) * psiBar )
+!   m%DynInflow%RMC_SAVE(IBLADE, J, mode) = fElem * XPHI( Rzero, mode )  * COS( REAL(MRvector(mode), ReKi) * psiBar )
+!   m%DynInflow%RMS_SAVE(IBLADE, J, mode) = fElem * XPHI( Rzero, mode )  * SIN( REAL(MRvector(mode), ReKi) * psiBar )
 !END DO ! mode
 ! Shawler's method
 DO mode = p%DynInflow%MaxInflo+1, maxInfl
-   m%DynInflow%RMC_SAVE(IBLADE, J, mode) = fElem * XPHI( Rzero, mode, ErrStatLcl, ErrMessLcl )  * COS( REAL(MRvector(mode)) * WindPsi )
+   m%DynInflow%RMC_SAVE(IBLADE, J, mode) = fElem * XPHI( Rzero, mode, ErrStatLcl, ErrMessLcl )  * COS( REAL(MRvector(mode), ReKi) * WindPsi )
       CALL SetErrStat ( ErrStatLcl, ErrMessLcl, ErrStat,ErrMess,'GetRM' )
       IF (ErrStat >= AbortErrLev) RETURN
    
-   m%DynInflow%RMS_SAVE(IBLADE, J, mode) = fElem * XPHI( Rzero, mode, ErrStatLcl, ErrMessLcl )  * SIN( REAL(MRvector(mode)) * WindPsi )
+   m%DynInflow%RMS_SAVE(IBLADE, J, mode) = fElem * XPHI( Rzero, mode, ErrStatLcl, ErrMessLcl )  * SIN( REAL(MRvector(mode), ReKi) * WindPsi )
       CALL SetErrStat ( ErrStatLcl, ErrMessLcl, ErrStat,ErrMess,'GetRM' )
       IF (ErrStat >= AbortErrLev) RETURN
 
@@ -4738,10 +4726,11 @@ RETURN
 END SUBROUTINE infdist
 
  ! *************************************************************
-   SUBROUTINE vindinf( P, m, ErrStat, ErrMess, &
+   SUBROUTINE VINDINF( P, m, ErrStat, ErrMess, &
                        iradius, iblade, rlocal, vnw, VNB, VT, psi )
- !  vindinf calculates the axial induction factor for each
- !   element position using the calculated inflow parameters.
+ ! Calculates the axial and tangential induction factor for each annular segment
+ ! and time step (i.e. sets m%Element%A and m%Element%AP)
+ ! Uses the calculated inflow parameters
  !  Called by ElemFrc for each element at a new time step.
  ! *************************************************************
 
@@ -4757,7 +4746,7 @@ END SUBROUTINE infdist
    REAL(ReKi),INTENT(IN)      :: rlocal
    REAL(ReKi),INTENT(IN)      :: VNB
    REAL(ReKi),INTENT(IN)      :: vnw
-   REAL(ReKi),INTENT(INOUT)   :: VT
+   REAL(ReKi),INTENT(IN   )   :: VT     ! Tangential velocity from relative blade motion and wind, no induction
 
    INTEGER,   INTENT(IN)      :: iradius
    INTEGER,   INTENT(IN)      :: iblade
@@ -4801,7 +4790,7 @@ m%Element%A(iRadius,iBlade) =  0.
 DO mode = 1, p%DynInflow%MaxInflo
    m%Element%A(iRadius,iBlade) = m%Element%A(iRadius,iBlade)  &
                      + xphi(Rzero,mode,ErrStatLcl, ErrMessLcl) * m%DynInflow%xAlpha(mode)
-      CALL SetErrStat ( ErrStatLcl, ErrMessLcl, ErrStat,ErrMess,'vindinf' )
+      CALL SetErrStat ( ErrStatLcl, ErrMessLcl, ErrStat,ErrMess,'VINDINF' )
       IF (ErrStat >= AbortErrLev) RETURN
    
 !  &  + phis(Rzero, MRvector(mode), NJvector(mode) )* xAlpha(mode)
@@ -4812,15 +4801,15 @@ END DO !mode
 !DO mode = MaxInflo+1, maxInfl
 !   A(iRadius,iBlade) = A(iRadius,iBlade) + xphi(Rzero,mode) *      &
 !!  &    + phis(Rzero, MRvector(mode), NJvector(mode) ) *
-!            ( xAlpha(mode) * COS( REAL(MRvector(MODE)) * psibar )  &
-!            + xBeta (mode) * SIN( REAL(MRvector(MODE)) * psibar ) )
+!            ( xAlpha(mode) * COS( REAL(MRvector(MODE), ReKi) * psibar )  &
+!            + xBeta (mode) * SIN( REAL(MRvector(MODE), ReKi) * psibar ) )
 !END DO !mode
 ! Shawler:
 DO mode = p%DynInflow%MaxInflo+1, maxInfl
    m%Element%A(iRadius,iBlade) = m%Element%A(iRadius,iBlade) + xphi(Rzero,mode,ErrStatLcl, ErrMessLcl) *      &
-            ( m%DynInflow%xAlpha(mode) * COS( REAL(MRvector(MODE)) * Windpsi )  &
-            + m%DynInflow%xBeta (mode) * SIN( REAL(MRvector(MODE)) * Windpsi ) )
-      CALL SetErrStat ( ErrStatLcl, ErrMessLcl, ErrStat,ErrMess,'vindinf' )
+            ( m%DynInflow%xAlpha(mode) * COS( REAL(MRvector(MODE), ReKi) * Windpsi )  &
+            + m%DynInflow%xBeta (mode) * SIN( REAL(MRvector(MODE), ReKi) * Windpsi ) )
+      CALL SetErrStat ( ErrStatLcl, ErrMessLcl, ErrStat,ErrMess,'VINDINF' )
       IF (ErrStat >= AbortErrLev) RETURN
    
 END DO !mode
@@ -4832,13 +4821,14 @@ m%Element%A(iRadius,iBlade) = - m%Element%A(iRadius,iBlade) * m%DynInflow%TipSpe
 
  ! Calculate induced swirl (a') if desired.
 
+m%Element%AP(iRadius,iBlade) = 0.0_ReKi ! Default value
+
 IF ( P%SWIRL ) THEN
  ! akihiro 10/26/99
    SWRLARG = 1.0 + 4.0 *  m%Element%A(iradius,iblade) * VNW * &
            ( (1.0 - m%Element%A(iradius,iblade)) * VNW + VNB ) / VT / VT
    IF ( SWRLARG > 0.0 ) THEN
       A2P = 0.5 * ( -1.0 + SQRT( SWRLARG ) )
-      VT  = VT * ( 1.0 + A2P)
 ! bjj: this value was not properly set before. We could also just replace the local A2P variable with AP() instead.
       m%Element%AP(iRadius,iBlade) = A2P
    ENDIF
@@ -4846,7 +4836,7 @@ IF ( P%SWIRL ) THEN
 ENDIF
 
 RETURN
-END SUBROUTINE vindinf
+END SUBROUTINE VINDINF
 
  ! ***********************************************************************
    SUBROUTINE ABPRECOR( F, OLDF, DFDT, DT, N, N0 )
@@ -5190,14 +5180,14 @@ INTEGER   ,INTENT(IN)       :: R
 
 IF ( MOD(R+M,2) == 0 ) THEN
    FGAMMA = (-1)**((N+J-2*R)*.5) * 2.        &
-          * SQRT( REAL( (2*N+1) * (2*J+1) ) ) &
+          * SQRT( REAL( (2*N+1) * (2*J+1), ReKi ) ) &
           / SQRT( HFUNC(M,N) * HFUNC(R,J) )   &
-          / REAL( (J+N) * (J+N+2) * ((J-N)*(J-N)-1) )
+          / REAL( (J+N) * (J+N+2) * ((J-N)*(J-N)-1), ReKi )
 
 ELSE IF ( ABS(J-N) == 1 ) THEN  !bjj: why don't we use the pi() variable? or PibyTwo
-   FGAMMA = 3.14159265 * SIGN(1., REAL(R-M) ) * .5 &
+   FGAMMA = 3.14159265 * SIGN(1., REAL(R-M, ReKi) ) * .5 &
           / SQRT( HFUNC(M,N) * HFUNC(R,J) )        &
-          / SQRT( REAL( (2*N+1) * (2*J+1) ) )
+          / SQRT( REAL( (2*N+1) * (2*J+1) , ReKi) )
 
 ELSE
    FGAMMA = 0.
@@ -5245,8 +5235,8 @@ ENDIF
 NPM = N + M
 NMM = N - M
 
-HFUNC = ( REAL( IDUBFACT(NPM-1) ) / REAL( IDUBFACT(NPM) ) ) &
-      * ( REAL( IDUBFACT(NMM-1) ) / REAL( IDUBFACT(NMM) ) )
+HFUNC = ( REAL( IDUBFACT(NPM-1), ReKi ) / REAL( IDUBFACT(NPM), ReKi ) ) &
+      * ( REAL( IDUBFACT(NMM-1), ReKi ) / REAL( IDUBFACT(NMM), ReKi ) )
 
 
 
@@ -5390,11 +5380,11 @@ phis = 0.
 
 DO q = r, j-1, 2
    phis = phis  &
-        + Rzero ** q * (-1.) **((q-r)/2) * REAL( idubfact(j+q) ) &
-        / REAL( idubfact(q-r) * idubfact(q+r) * idubfact(j-q-1) )
+        + Rzero ** q * (-1.) **((q-r)/2) * REAL( idubfact(j+q), ReKi ) &
+        / REAL( idubfact(q-r) * idubfact(q+r) * idubfact(j-q-1), ReKi )
 END DO !q
 
-phis = phis * SQRT( REAL( 2*j+1 ) * hfunc(r,j) )
+phis = phis * SQRT( REAL( 2*j+1, ReKi ) * hfunc(r,j) )
 
 
 RETURN

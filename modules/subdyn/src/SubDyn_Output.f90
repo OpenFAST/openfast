@@ -28,6 +28,7 @@ MODULE SubDyn_Output
 
         ! The maximum number of output channels which can be output by the code.
    INTEGER(IntKi),PUBLIC, PARAMETER      :: MaxOutPts = 2265
+   INTEGER(IntKi), PARAMETER             :: OutStrLenM1 = ChanLen - 1
    
    PRIVATE
 
@@ -2771,7 +2772,7 @@ INTEGER, PARAMETER             :: MNRDe (3,9,9) = reshape((/M1N1RDxe,M1N1RDye,M1
   
 
  
-   CHARACTER(10), PARAMETER  :: ValidParamAry(2265) =  (/ &                  ! This lists the names of the allowed parameters, which must be sorted alphabetically
+   CHARACTER(OutStrLenM1), PARAMETER  :: ValidParamAry(2265) =  (/ &                  ! This lists the names of the allowed parameters, which must be sorted alphabetically
                                "INTFFXSS ","INTFFYSS ","INTFFZSS ","INTFMXSS ","INTFMYSS ","INTFMZSS ","INTFRAXSS", &
                                "INTFRAYSS","INTFRAZSS","INTFRDXSS","INTFRDYSS","INTFRDZSS","INTFTAXSS","INTFTAYSS", &
                                "INTFTAZSS","INTFTDXSS","INTFTDYSS","INTFTDZSS","M1N1FKXE ","M1N1FKYE ","M1N1FKZE ", &

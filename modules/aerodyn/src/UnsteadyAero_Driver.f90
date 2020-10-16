@@ -53,8 +53,8 @@ program UnsteadyAero_Driver
    type(UA_ParameterType)                        :: p                    ! Parameters
    type(UA_InputType)                            :: u(NumInp)            ! System inputs
    type(UA_OutputType)                           :: y                    ! System outputs
-   integer(IntKi)                                :: ErrStat              ! Status of error message
-   character(1024)                               :: ErrMsg               ! Error message if ErrStat /= ErrID_None
+   integer(IntKi)                                :: ErrStat, errStat2    ! Status of error message
+   character(ErrMsgLen)                          :: ErrMsg, errMsg2     ! Error message if ErrStat /= ErrID_None
    
    integer, parameter                            :: NumAFfiles = 1
    character(1024)                               :: afNames(NumAFfiles)
@@ -82,13 +82,11 @@ program UnsteadyAero_Driver
    
    
       ! Display the copyright notice
-   CALL DispCopyrightLicense( version )   
+   CALL DispCopyrightLicense( version%Name )
       ! Obtain OpenFAST git commit hash
    git_commit = QueryGitVersion()
       ! Tell our users what they're running
-   CALL WrScr( ' Running '//GetNVD( version )//' a part of OpenFAST - '//TRIM(git_Commit)//NewLine//' linked with '//TRIM( GetNVD( NWTC_Ver ))//NewLine )
-   
-   
+   CALL WrScr( ' Running '//TRIM( version%Name )//' a part of OpenFAST - '//TRIM(git_Commit)//NewLine//' linked with '//TRIM( NWTC_Ver%Name )//NewLine )
    
    
       ! Parse the driver file if one was provided, if not, then set driver parameters using hardcoded values

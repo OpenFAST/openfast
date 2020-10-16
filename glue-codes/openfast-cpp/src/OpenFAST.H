@@ -17,8 +17,7 @@
  #define MPICH_SKIP_MPICXX
 #endif
 #include "mpi.h"
-#include "SuperController_Types.h"
-#include "SC.H"
+#include "SC.h"
 
 
 namespace fast {
@@ -47,34 +46,31 @@ enum simStartType {
   init = 0,
   trueRestart = 1,
   restartDriverInitFAST = 2,
-  simStartType_END    
+  simStartType_END
 };
 
 
 class fastInputs {
 
- public: 
+ public:
 
   MPI_Comm comm;
-  int nTurbinesGlob;  
+  int nTurbinesGlob;
   bool dryRun;
-  bool debug; 
+  bool debug;
   double tStart;
   simStartType simStart;
-  int nEveryCheckPoint;  
+  int nEveryCheckPoint;
   double tMax;
-  double dtFAST;  
+  double dtFAST;
 
   bool scStatus;
   std::string scLibFile;
-  int numScInputsTurbine, numScOutputsTurbine;
-  int numScInputsGlob, numScOutputsGlob;
-  int numScGlobStates, numScTurbineStates;  
   std::vector<globTurbineDataType>  globTurbineData;
 
-  // Constructor 
+  // Constructor
   fastInputs() ;
- 
+
   // Destructor
   ~fastInputs() {} ;
 
@@ -104,7 +100,7 @@ class OpenFAST {
   std::vector<float> nacelle_area;
   std::vector<float> air_density;
   double tStart;
-  int nt_global;           
+  int nt_global;
   int ntStart;      // The time step to start the FAST simulation
   int nEveryCheckPoint;    // Check point files will be written every 'nEveryCheckPoint' time steps
   std::vector<int> numBlades;           // Number of blades
@@ -113,26 +109,6 @@ class OpenFAST {
   std::vector<int> numVelPtsBlade;
   std::vector<int> numVelPtsTwr;
 
-  int numScOutputsTurbine;  // # outputs from the supercontroller == # inputs to the controller == NumSC2Ctrl
-  int numScInputsTurbine;   // # inputs to the supercontroller == # outputs from the controller == NumCtrl2SC
-  int numScOutputsGlob;  // # outputs from the supercontroller == # inputs to glob == NumSC2Ctrl
-  int numScInputsGlob;   // # inputs to the supercontroller == # outputs from glob == NumCtrl2SC
-  // Time 'n-1'
-  std::vector<float> scOutputsTurbine_nm1;  // # outputs from the supercontroller for turbines
-  std::vector<float> scInputsTurbine_nm1;   // # inputs to the supercontroller from turbines
-  std::vector<float> scOutputsGlob_nm1;  // # outputs from the supercontroller for glob
-  std::vector<float> scInputsGlob_nm1;   // # inputs to the supercontroller from glob
-  // Time 'n'
-  std::vector<float> scOutputsTurbine_n;  // # outputs from the supercontroller for turbines
-  std::vector<float> scInputsTurbine_n;   // # inputs to the supercontroller from turbines
-  std::vector<float> scOutputsGlob_n;  // # outputs from the supercontroller for glob
-  std::vector<float> scInputsGlob_n;   // # inputs to the supercontroller from glob
-  // Time 'n+1'
-  std::vector<float> scOutputsTurbine_np1;  // # outputs from the supercontroller for turbines
-  std::vector<float> scInputsTurbine_np1;   // # inputs to the supercontroller from turbines
-  std::vector<float> scOutputsGlob_np1;  // # outputs from the supercontroller for glob
-  std::vector<float> scInputsGlob_np1;   // # inputs to the supercontroller from glob
-
   std::vector<std::vector<std::vector<double> > > forceNodeVel; // Velocity at force nodes - Store temporarily to interpolate to the velocity nodes
   std::vector<std::vector<double> > velNodeData; // Position and velocity data at the velocity (aerodyn) nodes - (nTurbines, nTimesteps * nPoints * 6)
   hid_t velNodeDataFile; // HDF-5 tag of file containing velocity (aerodyn) node data file
@@ -140,26 +116,17 @@ class OpenFAST {
   std::vector<OpFM_InputType_t> cDriver_Input_from_FAST;
   std::vector<OpFM_OutputType_t> cDriver_Output_to_FAST;
 
-  std::vector<SC_InputType_t> scInputsTurbine_from_FAST; // At time step 'n+1'
-  std::vector<SC_OutputType_t> scOutputsTurbine_to_FAST;  // At time step 'n'
-
   // Turbine Number is DIFFERENT from TurbID. Turbine Number simply runs from 0:n-1 locally and globally.
   std::map<int, int> turbineMapGlobToProc; // Mapping global turbine number to processor number
   std::map<int, int> turbineMapProcToGlob; // Mapping local to global turbine number
   std::map<int, int> reverseTurbineMapProcToGlob; // Reverse Mapping global turbine number to local turbine number
-  std::set<int> turbineSetProcs; // Set of processors containing atleast one turbine 
+  std::set<int> turbineSetProcs; // Set of processors containing atleast one turbine
   std::vector<int> turbineProcs; // Same as the turbineSetProcs, but as an integer array
 
   //Supercontroller stuff
   bool scStatus;
-  std::string scLibFile;
-  // Dynamic load stuff copied from 'C++ dlopen mini HOWTO' on tldp.org
-  void *scLibHandle ; 
-  typedef SuperController* create_sc_t(); 
-  create_sc_t * create_SuperController;
-  typedef void destroy_sc_t(SuperController *); 
-  destroy_sc_t * destroy_SuperController;
   SuperController sc;
+  scInitOutData scio;
 
   int fastMPIGroupSize;
   MPI_Group fastMPIGroup;
@@ -173,15 +140,15 @@ class OpenFAST {
   int ErrStat;
   char ErrMsg[INTERFACE_STRING_LENGTH];  // make sure this is the same size as IntfStrLen in FAST_Library.f90
 
- public: 
+ public:
 
-  // Constructor 
+  // Constructor
   OpenFAST() ;
-  
+
   // Destructor
   ~OpenFAST() ;
 
-  void setInputs(const fastInputs &);  
+  void setInputs(const fastInputs &);
 
   void init();
   void solution0();
@@ -199,7 +166,7 @@ class OpenFAST {
                           float & fx,
                           float & fy,
                           float & fz);
-                        
+
   hid_t openVelocityDataFile(bool createFile);
   void readVelocityData(int nTimesteps);
   void writeVelocityData(hid_t h5file, int iTurb, int iTimestep, OpFM_InputType_t iData, OpFM_OutputType_t oData);
@@ -229,9 +196,9 @@ class OpenFAST {
   bool isDebug() { return debug; }
   simStartType get_simStartType() { return simStart; }
   bool isTimeZero() { return timeZero; }
-  int get_procNo(int iTurbGlob) { return turbineMapGlobToProc[iTurbGlob] ; } // Get processor number of a turbine with global id 'iTurbGlob'
+  int get_procNo(int iTurbGlob) { return turbineMapGlobToProc[iTurbGlob] ; } // Get processor nuber of a turbine with global id 'iTurbGlob'
   int get_localTurbNo(int iTurbGlob) { return reverseTurbineMapProcToGlob[iTurbGlob]; }
-  int get_nTurbinesGlob() { return nTurbinesGlob; } 
+  int get_nTurbinesGlob() { return nTurbinesGlob; }
 
   float get_nacelleArea(int iTurbGlob) { return get_nacelleAreaLoc(get_localTurbNo(iTurbGlob)); }
   float get_nacelleCd(int iTurbGlob) { return get_nacelleCdLoc(get_localTurbNo(iTurbGlob)); }
@@ -303,7 +270,7 @@ class OpenFAST {
   inline bool checkFileExists(const std::string& name);
 
   void allocateMemory();
-  
+
   float get_nacelleCdLoc(int iTurbLoc) { return nacelle_cd[iTurbLoc]; }
   float get_nacelleAreaLoc(int iTurbLoc) { return nacelle_area[iTurbLoc]; }
   float get_airDensityLoc(int iTurbLoc) { return air_density[iTurbLoc]; }
@@ -316,8 +283,6 @@ class OpenFAST {
   int get_numForcePtsLoc(int iTurbLoc) { return 1 + numBlades[iTurbLoc]*numForcePtsBlade[iTurbLoc] + numForcePtsTwr[iTurbLoc]; }
 
   void loadSuperController(const fastInputs & fi);
-  void fastScInputOutput(std::vector<SC_InputType_t> & scIT_from_FAST, std::vector<float> & scIT, std::vector<float> & scOT, std::vector<SC_OutputType_t> & scOT_to_FAST) ;
-  void scAdvanceTime() ;
 
   void setOutputsToFAST(OpFM_InputType_t cDriver_Input_from_FAST, OpFM_OutputType_t cDriver_Output_to_FAST) ; // An example to set velocities at the Aerodyn nodes
   void applyVelocityData(int iPrestart, int iTurb, OpFM_OutputType_t cDriver_Output_to_FAST, std::vector<double> & velData) ;
