@@ -64,30 +64,43 @@ PROGRAM MoorDyn_Driver
    Integer(IntKi)                        :: iIn
    integer(intKi)                        :: Un
    
-   TYPE(ProgDesc), PARAMETER             :: progdesc = ProgDesc( 'MoorDyn Driver' )
+   CHARACTER(20)                         :: FlagArg              ! flag argument from command line
+   CHARACTER(1024)                       :: PlatformInitInputFile
+   CHARACTER(200)                        :: git_commit    ! String containing the current git commit hash
+   TYPE(ProgDesc), PARAMETER             :: version = ProgDesc( 'MoorDyn Driver', '', '' )
   
-   CALL NWTC_Init()
+   CALL NWTC_Init( ProgNameIn=version%Name )
+
+   MD_InitInput%FileName = "MoorDyn.dat"  ! initialize to empty string to make sure it's input from the command line
+   CALL CheckArgs( MD_InitInput%FileName, Arg2=PlatformInitInputFile, Flag=FlagArg )
+   IF ( LEN( TRIM(FlagArg) ) > 0 ) CALL NormStop()
+
       ! Display the copyright notice
-   CALL DispCopyrightLicense( progdesc%Name )
+   CALL DispCopyrightLicense( version%Name, 'Copyright (C) 2020 Matthew Hall' )
       ! Obtain OpenFAST git commit hash
    git_commit = QueryGitVersion()
       ! Tell our users what they're running
-   CALL WrScr( ' Running '//TRIM( progdesc%Name )//' a part of OpenFAST - '//TRIM(git_Commit)//NewLine//' linked with '//TRIM( NWTC_Ver%Name )//NewLine )
+   CALL WrScr( ' Running '//TRIM( version%Name )//' a part of OpenFAST - '//TRIM(git_commit)//NewLine//' linked with '//TRIM( NWTC_Ver%Name )//NewLine )
 
    ! -------------------------------------------------------------------------
    ! Read in prescribed motions from text file if available 
    ! (single 6DOF platform for now, plus one active tensioning command)
    ! (to be updated for versatile coupling in future)
    ! -------------------------------------------------------------------------
+   IF( LEN( TRIM(PlatformInitInputFile) ) < 1 ) THEN
+      ntIn = 0   ! flag to indicate no motion input file
+
+   ELSE
+      CALL GetNewUnit( UnPtfmMotIn ) 
    
-   CALL GetNewUnit( UnPtfmMotIn ) 
+      CALL OpenFInpFile ( UnPtfmMotIn, PlatformInitInputFile, ErrStat, ErrMsg ) 
+      IF (ErrStat /= 0 ) THEN
+         print *, ErrStat, ErrMsg
+         RETURN
+      ENDIF
    
-   CALL OpenFInpFile ( UnPtfmMotIn, "PtfmMotion.txt", ErrStat, ErrMsg ) 
-   
-   IF (ErrStat == 0 ) THEN
-   
-      print *, "Reading platform motion input data from PtfmMotion.txt"
-         
+      print *, "Reading platform motion input data from ", PlatformInitInputFile
+
       ! Read through length of file to find its length
       i = 1  ! start counter
       DO
@@ -129,9 +142,6 @@ PROGRAM MoorDyn_Driver
       
       print *, "read ", ntIn, " time steps from input file."
       print *, PtfmMotIn
-   
-   ELSE
-      ntIn = 0   ! flag to indicate no motion input file
    END IF
 
   
@@ -206,7 +216,6 @@ PROGRAM MoorDyn_Driver
    Allocate(MD_Input(MD_interp_order + 1))
      
    ! set the input file name and other environment terms.
-   MD_InitInput%FileName    = "MoorDyn.dat" 
    !MD_InitInput%NStepWave   = 1        ! an arbitrary number > 0 (to set the size of the wave data, which currently contains all zero values)     
    MD_InitInput%g           = 9.81     ! This need to be according to g used in ElastoDyn 
    MD_InitInput%rhoW        = 1025     ! This needs to be set according to seawater density in HydroDyn      
