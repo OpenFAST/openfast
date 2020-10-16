@@ -1,6 +1,24 @@
-PROGRAM Main
-
-   ! A Driver Program for the MoorDyn module (first draft)
+!**********************************************************************************************************************************
+! LICENSING
+! Copyright (C) 2020 National Renewable Energy Laboratory
+! Copyright (C) 2020 Matthew Hall
+!
+!    This file is part of MoorDyn.
+!
+! Licensed under the Apache License, Version 2.0 (the "License");
+! you may not use this file except in compliance with the License.
+! You may obtain a copy of the License at
+!
+!     http://www.apache.org/licenses/LICENSE-2.0
+!
+! Unless required by applicable law or agreed to in writing, software
+! distributed under the License is distributed on an "AS IS" BASIS,
+! WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+! See the License for the specific language governing permissions and
+! limitations under the License.
+!
+!**********************************************************************************************************************************
+PROGRAM MoorDyn_Driver
 
    USE MoorDyn_Types
    USE MoorDyn
@@ -47,7 +65,24 @@ PROGRAM Main
    Integer(IntKi)                        :: iIn
    integer(intKi)                        :: Un
    
+   CHARACTER(20)                         :: FlagArg              ! flag argument from command line
+   CHARACTER(1024)                       :: PlatformInitInputFile
+   CHARACTER(200)                        :: git_commit    ! String containing the current git commit hash
+   TYPE(ProgDesc), PARAMETER             :: version = ProgDesc( 'MoorDyn Driver', '', '' )
   
+   CALL NWTC_Init( ProgNameIn=version%Name )
+
+   MD_InitInput%FileName = "MoorDyn.dat"  ! initialize to empty string to make sure it's input from the command line
+   CALL CheckArgs( MD_InitInput%FileName, Arg2=PlatformInitInputFile, Flag=FlagArg )
+   IF ( LEN( TRIM(FlagArg) ) > 0 ) CALL NormStop()
+
+      ! Display the copyright notice
+   CALL DispCopyrightLicense( version%Name, 'Copyright (C) 2020 Matthew Hall' )
+      ! Obtain OpenFAST git commit hash
+   git_commit = QueryGitVersion()
+      ! Tell our users what they're running
+   CALL WrScr( ' Running '//TRIM( version%Name )//' a part of OpenFAST - '//TRIM(git_commit)//NewLine//' linked with '//TRIM( NWTC_Ver%Name )//NewLine )
+
    ! -------------------------------------------------------------------------
    ! Initialize MoorDyn
    ! -------------------------------------------------------------------------
@@ -63,7 +98,6 @@ PROGRAM Main
    Allocate(MD_Input(MD_interp_order + 1))
      
    ! set the input file name and other environment terms.
-   MD_InitInput%FileName    = "MoorDyn.dat" 
    !MD_InitInput%NStepWave   = 1        ! an arbitrary number > 0 (to set the size of the wave data, which currently contains all zero values)     
    MD_InitInput%g           = 9.81     ! This need to be according to g used in ElastoDyn 
    MD_InitInput%rhoW        = 1025     ! This needs to be set according to seawater density in HydroDyn      
@@ -105,15 +139,21 @@ PROGRAM Main
    ! (single 6DOF platform for now, plus one active tensioning command)
    ! (to be updated for versatile coupling in future)
    ! -------------------------------------------------------------------------
+   IF( LEN( TRIM(PlatformInitInputFile) ) < 1 ) THEN
+      ntIn = 0   ! flag to indicate no motion input file
+      print *, "No MoorDyn Driver input file provided, so using zero values."
+
+   ELSE
+      CALL GetNewUnit( UnPtfmMotIn ) 
    
-   CALL GetNewUnit( UnPtfmMotIn ) 
+      CALL OpenFInpFile ( UnPtfmMotIn, PlatformInitInputFile, ErrStat, ErrMsg ) 
+      IF (ErrStat /= 0 ) THEN
+         print *, ErrStat, ErrMsg
+         STOP
+      ENDIF
    
-   CALL OpenFInpFile ( UnPtfmMotIn, "MoorDynDriverInputs.txt", ErrStat, ErrMsg ) 
-   
-   IF (ErrStat == 0 ) THEN
-   
-      print *, "Reading MoorDynDriverInputs.txt  expecting ", ncIn, " channels, in addition to time."
-         
+      print *, "Reading platform motion input data from ", PlatformInitInputFile
+
       ! Read through length of file to find its length
       i = 1  ! start counter
       DO
@@ -155,10 +195,7 @@ PROGRAM Main
       
       print *, "Read ", ntIn, " time steps from input file."
       print *, PtfmMotIn
-   
-   ELSE
-      print *, "Could not find MoorDynDriverInputs.txt, so using zero values."
-      ntIn = 0   ! flag to indicate no motion input file
+
    END IF
 
   
@@ -376,4 +413,4 @@ PROGRAM Main
   
 100 FORMAT(2(1X,F8.3),9(1X,E12.5))
      
-END PROGRAM Main
+ END PROGRAM
