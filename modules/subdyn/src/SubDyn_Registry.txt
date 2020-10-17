@@ -129,8 +129,8 @@ typedef	^	^	LOGICAL	SSSum	-	-	-	"SubDyn Summary File Flag"
 
 # ============================== States ============================================================================================================================================
 # Define continuous (differentiable) states here:
-typedef	^	ContinuousStateType	ReKi	qm	{:}	-	-	"Virtual states, Nmod elements"
-typedef	^	ContinuousStateType	ReKi	qmdot	{:}	-	-	"Derivative of states, Nmod elements"
+typedef	^	ContinuousStateType	R8Ki	qm	{:}	-	-	"Virtual states, Nmod elements"
+typedef	^	ContinuousStateType	R8Ki	qmdot	{:}	-	-	"Derivative of states, Nmod elements"
 # Define discrete (nondifferentiable) states here:
 typedef	^	DiscreteStateType	ReKi	DummyDiscState	-	-	-	"Remove this variable if you have discrete states"
 # Define constraint states here:

@@ -12,32 +12,12 @@ module mod_root1dim
    use NWTC_Library
    use AirFoilInfo_Types
    use BEMTUnCoupled, only: BEMTU_InductionWithResidual
+   use BEMT_Types
    
     implicit none
    
-   type, public :: fmin_fcnArgs 
-      real(ReKi)           :: nu
-      integer              :: numBlades
-      real(ReKi)           :: rlocal      
-      real(ReKi)           :: chord 
-      real(ReKi)           :: theta
-      real(ReKi)           :: Vx
-      real(ReKi)           :: Vy
-      real(ReKi)           :: UserProp
-      logical              :: useTanInd
-      logical              :: useAIDrag
-      logical              :: useTIDrag
-      logical              :: useHubLoss
-      logical              :: useTipLoss 
-      real(ReKi)           :: hubLossConst 
-      real(ReKi)           :: tipLossConst
-      logical              :: IsValidSolution
-      integer(IntKi)       :: errStat       ! Error status of the operation
-      character(ErrMsgLen) :: errMsg        ! Error message if ErrStat /= ErrID_None
-   end type fmin_fcnArgs
-   
    integer, parameter, private :: SolveKi = ReKi
-   real(SolveKi), parameter, private :: xtoler_def = 1d-6, toler_def = 1d-6, printmod_def = -1, maxiter_def = 100
+   real(SolveKi), parameter, private :: xtoler_def = 1d-6, printmod_def = -1
     
     
 contains
@@ -57,25 +37,30 @@ end function bracketsRoot
 !       Returns a zero x of the function f in the given interval [a,b], to within a tolerance 6macheps|x| + 2t, 
 ! where macheps is the relative machine precision and t is a positive tolerance. The procedure assumes that 
 ! f(a) and f(b) have different signs.
-subroutine sub_brent(x,a_in,b_in, toler_in,maxiter_in,fcnArgs,AFInfo,fa_in,fb_in,xtoler_in,printmod_in)
+subroutine sub_brent(bemt_parameters, bemt_inputs, iBladeNode, jBlade, x,a_in,b_in, AFInfo, IsValidSolution, ErrStat, ErrMsg, fa_in,fb_in,xtoler_in,printmod_in)
     
     implicit none 
+    type(BEMT_ParameterType), intent(in) :: bemt_parameters
+    type(BEMT_InputType),     intent(in) :: bemt_inputs        !< Inputs at t
+    integer(IntKi),           intent(in) :: iBladeNode         !< index for blade node
+    integer(IntKi),           intent(in) :: jBlade             !< index for blade
+    logical,                  intent(out):: IsValidSolution
+    integer(IntKi),           intent(out):: errStat             ! Error status of the operation
+    character(ErrMsgLen),     intent(out):: errMsg              ! Error message if ErrStat /= ErrID_None
     
     real(ReKi), intent(out) :: x !< solution
     real(ReKi), intent(in) :: a_in  !< lower bound of solution region
     real(ReKi), intent(in) :: b_in  !< upper bound of solution region
     
-    type(fmin_fcnArgs), intent(inout) :: fcnArgs !< function arguments
     TYPE (AFI_ParameterType),  INTENT(IN   ) :: AFInfo  !< The derived type for holding the constant parameters for this airfoil.
-    real(ReKi), intent(in),  optional :: toler_in !< induction tolerance
     real(ReKi), intent(in),  optional :: fa_in !< starting value for f(a), if not present, will be evaluated
     real(ReKi), intent(in),  optional :: fb_in !< starting value for f(b), if not present, will be evaluated
     real(ReKi), intent(in),  optional :: xtoler_in !< 
     integer,    intent(in),  optional :: printmod_in !< print switch; otherwise uses default printmod_deff
-    integer,    intent(in),  optional :: maxiter_in !< maximum number of iterations; otherwise uses default maxiter_def
+    
     ! local
     real(SolveKi), parameter :: machep = epsilon(0.0_SolveKi)
-    real(SolveKi) :: c,fa,fb,fc,toler,xtoler,e,d,m,p,q,tol,t,r,s
+    real(SolveKi) :: c,fa,fb,fc,toler,xtoler,e,d,m,p,q,tol,r,s
     real(ReKi) :: a,b
     integer :: maxiter,printmod,iter
     character(len=6) :: step
@@ -83,39 +68,36 @@ subroutine sub_brent(x,a_in,b_in, toler_in,maxiter_in,fcnArgs,AFInfo,fa_in,fb_in
     integer                 :: ErrStat_a
     character(ErrMsgLen)    :: ErrMsg_a
     logical                 :: ValidPhi_a
-
-    fcnArgs%errStat  = ErrID_None
-    fcnArgs%ErrMsg   = ""
-
     ! Set of get parameters
-    toler = 0.0_SolveKi; if (present(toler_in)) toler = toler_in ! Better to use custom toler here
+    toler = bemt_parameters%aTol
+    maxiter = bemt_parameters%maxIndIterations
+    
     xtoler = xtoler_def; if (present(xtoler_in)) xtoler = xtoler_in
-    maxiter = maxiter_def; if (present(maxiter_in)) maxiter = maxiter_in    
     printmod = printmod_def; if (present(printmod_in)) printmod = printmod_in
+    
+    ErrStat = ErrID_None
+    ErrMsg = ""
 
     ! Set the user chosen tolerance t to xtoler
     if (xtoler<0.0_SolveKi) then
         CALL WrScr('WARNING: xtoler must be positive. Resetting xtoler.')
         xtoler = 0.0_SolveKi
     end if
-    t = xtoler
     
     ! Get initial bracket
     a=a_in
     b=b_in
     if (present(fa_in)) then
         fa = fa_in
+        ErrStat_a = ErrID_None
+        ErrMsg_a = ""
     else
-        fa = BEMTU_InductionWithResidual( a,  fcnArgs%theta, fcnArgs%nu, fcnArgs%UserProp, fcnArgs%numBlades,  fcnArgs%rlocal, fcnArgs%chord, AFInfo, &
-                            fcnArgs%Vx, fcnArgs%Vy, fcnArgs%useTanInd, fcnArgs%useAIDrag, fcnArgs%useTIDrag, fcnArgs%useHubLoss, fcnArgs%useTipLoss,  fcnArgs%hubLossConst, fcnArgs%tipLossConst,  &
-                            ValidPhi_a, errStat_a, errMsg_a)
+        fa = BEMTU_InductionWithResidual(bemt_parameters, bemt_inputs, iBladeNode, jBlade, a, AFInfo, ValidPhi_a, errStat_a, errMsg_a)
     end if
     if (present(fb_in)) then
         fb = fb_in
     else
-        fb = BEMTU_InductionWithResidual( b,  fcnArgs%theta, fcnArgs%nu, fcnArgs%UserProp, fcnArgs%numBlades,  fcnArgs%rlocal, fcnArgs%chord, AFInfo, &
-                            fcnArgs%Vx, fcnArgs%Vy, fcnArgs%useTanInd, fcnArgs%useAIDrag, fcnArgs%useTIDrag, fcnArgs%useHubLoss, fcnArgs%useTipLoss,  fcnArgs%hubLossConst, fcnArgs%tipLossConst,  &
-                            fcnArgs%IsValidSolution, fcnArgs%errStat, fcnArgs%errMsg)
+        fb = BEMTU_InductionWithResidual(bemt_parameters, bemt_inputs, iBladeNode, jBlade, b, AFInfo, IsValidSolution, errStat, errMsg)
     end if
 
     ! Test whether root is bracketed
@@ -123,9 +105,9 @@ subroutine sub_brent(x,a_in,b_in, toler_in,maxiter_in,fcnArgs,AFInfo,fa_in,fb_in
         if (abs(fa)<abs(fb)) then
             call WrScr( 'brent: WARNING: root is not bracketed, returning best endpoint a = '//trim(Num2Lstr(a))//' fa = '//trim(Num2Lstr(fa)) )
             x = a
-            fcnArgs%IsValidSolution = ValidPhi_a
-            fcnArgs%errStat         = ErrStat_a
-            fcnArgs%errMsg          = ErrMsg_a
+            IsValidSolution = ValidPhi_a
+            errStat         = ErrStat_a
+            errMsg          = ErrMsg_a
         else
             call WrScr( 'brent: WARNING: root is not bracketed, returning best endpoint b = '//trim(Num2Lstr(b))//' fb = '//trim(Num2Lstr(fb)) )
             x = b
@@ -157,7 +139,7 @@ subroutine sub_brent(x,a_in,b_in, toler_in,maxiter_in,fcnArgs,AFInfo,fa_in,fb_in
         end if
 
         ! Set the tolerance. Note: brent is very careful with these things, so don't deviate from this.
-        tol = 2.0_SolveKi*machep*abs(b) + t
+        tol = 2.0_SolveKi*machep*abs(b) + xtoler
 
         ! Determine what half the length of the bracket [b,c] is
         m = 0.5_SolveKi*(c-b)
@@ -238,9 +220,7 @@ subroutine sub_brent(x,a_in,b_in, toler_in,maxiter_in,fcnArgs,AFInfo,fa_in,fb_in
         end if
 
         !!! Evaluate at the new point
-        fb = BEMTU_InductionWithResidual( b,  fcnArgs%theta, fcnArgs%nu, fcnArgs%UserProp, fcnArgs%numBlades,  fcnArgs%rlocal, fcnArgs%chord, AFInfo, &
-                            fcnArgs%Vx, fcnArgs%Vy, fcnArgs%useTanInd, fcnArgs%useAIDrag, fcnArgs%useTIDrag, fcnArgs%useHubLoss, fcnArgs%useTipLoss,  fcnArgs%hubLossConst, fcnArgs%tipLossConst,  &
-                            fcnArgs%IsValidSolution, fcnArgs%errStat, fcnArgs%errMsg)
+        fb = BEMTU_InductionWithResidual(bemt_parameters, bemt_inputs, iBladeNode, jBlade, b, AFInfo, IsValidSolution, errStat, errMsg)
 
         ! Check my custom tolerance 
         if (abs(fb)<toler) then

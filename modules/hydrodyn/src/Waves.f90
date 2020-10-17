@@ -328,7 +328,7 @@ CONTAINS
       ELSE                       ! Omega > 0.0; solve for the wavenumber as usual.
 
 
-         C  = Omega*Omega*h/g
+         C  = Omega*Omega*h/REAL(g,SiKi)
          CC = C*C
 
 

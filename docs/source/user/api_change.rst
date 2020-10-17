@@ -74,9 +74,18 @@ AeroDyn        13   CompAA             False                   CompAA           
 AeroDyn        14   AA_InputFile       "unused"                AA_InputFile       - Aeroacoustics input file
 AeroDyn        35   [separator line]   ======  OLAF -- cOnvecting LAgrangian Filaments (Free Vortex Wake) Theory Options  ================== [used only when WakeMod=3]
 AeroDyn        36   OLAFInputFileName  "Elliptic_OLAF.dat"     OLAFInputFileName - Input file for OLAF [used only when WakeMod=3]
-AirFoilTables  11   BL_file            "unused"                BL_file           - The file name including the boundary layer characteristics of the profile. Ignored if the aeroacoustic module is not called.
+AirFoilTables  4\*  BL_file            "unused"                BL_file           - The file name including the boundary layer characteristics of the profile. Ignored if the aeroacoustic module is not called.
+============== ==== ================== =============================================================================================================================================================================
 
 ============== ==== ================== =============================================================================================================================================================================
+Modified in OpenFAST `dev`
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Module        Line  Flag Name          Example Value
+============== ==== ================== =============================================================================================================================================================================
+AirFoilTables  40\* filtCutOff         "DEFAULT"               filtCutOff        - Reduced frequency cut-off for low-pass filtering the AoA input to UA, as well as the 1st and 2nd derivatives (-) [default = 0.5] 
+============== ==== ================== =============================================================================================================================================================================
+
+\*non-comment line count, excluding lines contained if NumCoords is not 0.
 
 Additional nodal output channels added for :ref:`AeroDyn15<AD-Nodal-Outputs>`,
 :ref:`BeamDyn<BD-Nodal-Outputs>`, and :ref:`ElastoDyn<ED-Nodal-Outputs>`.

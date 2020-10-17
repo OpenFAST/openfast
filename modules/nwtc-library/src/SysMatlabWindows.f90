@@ -27,6 +27,30 @@ MODULE SysSubs
    
 
 
+<<<<<<< HEAD:modules/nwtc-library/src/SysMatlab.f90
+   ! It contains the following routines:
+
+   !     FUNCTION    FileSize( Unit )                                         ! Returns the size (in bytes) of an open file.
+   !     SUBROUTINE  FlushOut ( Unit )
+   !     FUNCTION    NWTC_ERF( x )
+   !     FUNCTION    NWTC_gamma( x )
+   !     SUBROUTINE  GET_CWD( DirName, Status )
+   !     FUNCTION    Is_NaN( DblNum )                                         ! Please use IEEE_IS_NAN() instead
+   !     FUNCTION    NWTC_Gamma( x )                                          ! Returns the gamma value of its argument.   
+   ! per MLB, this can be removed, but only if CU is OUTPUT_UNIT:
+   !     SUBROUTINE  OpenCon     ! Actually, it can't be removed until we get Intel's FLUSH working. (mlb)
+   !     SUBROUTINE  OpenUnfInpBEFile ( Un, InFile, RecLen, Error )
+   !     SUBROUTINE  ProgExit ( StatCode )
+   !     SUBROUTINE  Set_IEEE_Constants( NaN_D, Inf_D, NaN, Inf, NaN_S, Inf_S )   
+   !     SUBROUTINE  UsrAlarm
+   !     SUBROUTINE  WrNR ( Str )
+   !     SUBROUTINE  WrOver ( Str )
+   !     SUBROUTINE  WriteScr ( Str, Frm )
+   !     SUBROUTINE LoadDynamicLib( DLL, ErrStat, ErrMsg )
+   !     SUBROUTINE FreeDynamicLib( DLL, ErrStat, ErrMsg )
+
+=======
+>>>>>>> upstream/master:modules/nwtc-library/src/SysMatlabWindows.f90
 
 
    USE                             NWTC_Base
@@ -310,20 +334,35 @@ SUBROUTINE ProgExit ( StatCode )
 
    END SUBROUTINE ProgExit ! ( StatCode )
 !=======================================================================
-!> This routine sets the values of NaN_D, Inf_D, NaN, Inf (IEEE 
-!! values for not-a-number and infinity in sindle and double 
-!! precision) This uses standard F03 intrinsic routines,  
-!! however Gnu has not yet implemented it, so we've placed this
-!! routine in the system-specific code.
-SUBROUTINE Set_IEEE_Constants( NaN_D, Inf_D, NaN, Inf )   
+SUBROUTINE Set_IEEE_Constants( NaN_D, Inf_D, NaN, Inf, NaN_S, Inf_S )   
+
+   ! routine that sets the values of NaN_D, Inf_D, NaN, Inf (IEEE 
+   ! values for not-a-number and infinity in sindle and double 
+   ! precision) This uses standard F03 intrinsic routines,  
+   ! however Gnu has not yet implemented it, so we've placed this
+   ! routine in the system-specific code.
+
 
    USE, INTRINSIC :: ieee_arithmetic  ! use this for compilers that have implemented ieee_arithmetic from F03 standard (otherwise see logic in SysGnu*.f90)
 
-   REAL(DbKi), INTENT(inout)           :: Inf_D          !< IEEE value for NaN (not-a-number) in double precision
-   REAL(DbKi), INTENT(inout)           :: NaN_D          !< IEEE value for Inf (infinity) in double precision
+   REAL(DbKi), INTENT(inout)           :: Inf_D          ! IEEE value for NaN (not-a-number) in double precision
+   REAL(DbKi), INTENT(inout)           :: NaN_D          ! IEEE value for Inf (infinity) in double precision
 
-   REAL(ReKi), INTENT(inout)           :: Inf            !< IEEE value for NaN (not-a-number)
-   REAL(ReKi), INTENT(inout)           :: NaN            !< IEEE value for Inf (infinity)
+   REAL(ReKi), INTENT(inout)           :: Inf            ! IEEE value for NaN (not-a-number)
+   REAL(ReKi), INTENT(inout)           :: NaN            ! IEEE value for Inf (infinity)
+
+   REAL(SiKi), INTENT(inout)           :: Inf_S          ! IEEE value for NaN (not-a-number) in single precision
+   REAL(SiKi), INTENT(inout)           :: NaN_S          ! IEEE value for Inf (infinity) in single precision
+
+   
+   NaN_D = ieee_value(0.0_DbKi, ieee_quiet_nan)
+   Inf_D = ieee_value(0.0_DbKi, ieee_positive_inf)
+
+   NaN   = ieee_value(0.0_ReKi, ieee_quiet_nan)
+   Inf   = ieee_value(0.0_ReKi, ieee_positive_inf)   
+
+   NaN_S = ieee_value(0.0_SiKi, ieee_quiet_nan)
+   Inf_S = ieee_value(0.0_SiKi, ieee_positive_inf)
    
    NaN_D = ieee_value(0.0_DbKi, ieee_quiet_nan)
    Inf_D = ieee_value(0.0_DbKi, ieee_positive_inf)

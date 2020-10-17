@@ -15,56 +15,59 @@
 # URL: $HeadURL$
 ###################################################################################################################################
 
-typedef SS_Excitation/SS_Exc   InitInputType       CHARACTER(1024) InputFile   -  - -   "Name of the input file" -
-typedef   ^                 	 ^                   ReKi	          WaveDir     -  - -   "Wave direction" rad
-typedef   ^                    ^                   INTEGER         NStepWave   -  - -   "Number of timesteps in the WaveTime array" -
-typedef   ^                 	 ^                   SiKi	          WaveElev0  {:} - -   "Wave elevation time history at origin" m
-typedef   ^                 	 ^                   SiKi	          WaveTime   {:} - -   "Times where wave elevation is known" s
-
-typedef   ^                    InitOutputType      CHARACTER(ChanLen)   WriteOutputHdr  {7} - -  "Header of the output" -
-typedef   ^                    InitOutputType      CHARACTER(ChanLen)   WriteOutputUnt  {7} - -  "Units of the output" -
-                               
-typedef   ^                    ContinuousStateType R8Ki            x             {:} - -  "Continuous States" -
-
-typedef   ^                    DiscreteStateType   SiKi            DummyDiscState - - -  "" -
-
-# Define constraint states here:
-typedef   ^                    ConstraintStateType SiKi            DummyConstrState - - - "" -
+typedef SS_Excitation/SS_Exc   InitInputType       CHARACTER(1024)              InputFile        -  - -   "Name of the input file" -
+typedef ^                      ^                   IntKi                        NBody            -  - -   "Number of WAMIT bodies for this State Space model" -
+typedef ^                      ^                   ReKi                         WaveDir          -  - -   "Wave direction" rad
+typedef ^                      ^                   INTEGER                      NStepWave        -  - -   "Number of timesteps in the WaveTime array" -
+typedef ^                      ^                   R8Ki                         PtfmRefztRot    {:} - -   "The rotation about zt of the body reference frame(s) from xt/yt" radians 
+typedef ^                      ^                   SiKi                         WaveElev0       {:} - -   "Wave elevation time history at origin" m
+typedef ^                      ^                   SiKi                         WaveTime        {:} - -   "Times where wave elevation is known" s
+																                
+typedef ^                      InitOutputType      CHARACTER(10)                WriteOutputHdr  {:} - -   "Header of the output" -
+typedef ^                      InitOutputType      CHARACTER(10)                WriteOutputUnt  {:} - -   "Units of the output" -
+																                
+typedef ^                      ContinuousStateType R8Ki                         x               {:} - -   "Continuous States" -
+																                
+typedef ^                      DiscreteStateType   SiKi                         DummyDiscState   -  - -   "" -
+																                
+# Define constraint states here:                                                
+typedef ^                      ConstraintStateType SiKi                         DummyConstrState -  - -   "" -
 
 # Define any data that are other states, including integer or logical states here:
-typedef   ^              OtherStateType           IntKi                        n     -  - - "Current Time step" -
-typedef   ^              ^                        SS_Exc_ContinuousStateType   xdot {4} - - "Old Values of dxdt to used by the solver (multistep method)" -
+typedef ^                      OtherStateType      IntKi                        n                -  - -   "Current Time step" -
+typedef ^                      ^                   SS_Exc_ContinuousStateType   xdot            {4} - -   "Old Values of dxdt to used by the solver (multistep method)" -
 
 
 # ..... Misc/Optimization variables.................................................................................................
 # Define any data that are used only for efficiency purposes (these variables are not associated with time):
 #   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
-typedef    ^              MiscVarType          INTEGER     LastIndWave - 1 -  "last used index in the WaveTime array" -
+typedef ^                      MiscVarType         INTEGER                      LastIndWave      -  1 -   "last used index in the WaveTime array" -
 
 
 # ..... Parameters .........................
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
 
-typedef   ^              ParameterType DbKi     DT     - - - "Time step" s
-typedef   ^               ^            INTEGER    NStepWave - - - "Number of timesteps in the WaveTime array" -
-typedef   ^               ^            IntKi    spDOF  {6}    - - "States per DOF" -
-typedef   ^               ^            ReKi     A      {:}{:} - - "A matrix" -
-typedef   ^               ^            ReKi     B      {:}    - - "B matrix" -
-typedef   ^               ^            ReKi     C      {:}{:} - - "C matrix" -
-typedef   ^               ^            INTEGER  N       -     - - "Number of states" -
-typedef   ^               ^            DbKi     Tc      -     - - "Time shift" s
-typedef   ^               ^            SiKi	   WaveElev0  {:} - -   "Wave elevation time history at origin" m
-typedef   ^               ^            SiKi	   WaveTime   {:} - -   "Times where wave elevation is known" s
+typedef ^                      ParameterType       DbKi                         DT               -     - -   "Time step" s
+typedef ^                      ^                   IntKi                        NBody            -     - -   "Number of WAMIT bodies for this State Space model" -
+typedef ^                      ^                   INTEGER                      NStepWave        -     - -   "Number of timesteps in the WaveTime array" -
+typedef ^                      ^                   IntKi                        spDOF           {6}    - -   "States per DOF" -
+typedef ^                      ^                   ReKi                         A               {:}{:} - -   "A matrix" -
+typedef ^                      ^                   ReKi                         B               {:}    - -   "B matrix" -
+typedef ^                      ^                   ReKi                         C               {:}{:} - -   "C matrix" -
+typedef ^                      ^                   INTEGER                      numStates        -     0 -   "Number of states" -
+typedef ^                      ^                   DbKi                         Tc               -     - -   "Time shift" s
+typedef ^                      ^                   SiKi                         WaveElev0       {:}    - -   "Wave elevation time history at origin" m
+typedef ^                      ^                   SiKi                         WaveTime        {:}    - -   "Times where wave elevation is known" s
 
 # ..... Inputs .............................
 # Define inputs that are contained on the mesh here:
-typedef   ^             InputType      ReKi DummyInput - - -   "Remove this variable if you have input variables" -
+typedef ^                      InputType           ReKi                         DummyInput - - -   "Remove this variable if you have input variables" -
 
 
 # ..... Outputs ............................
-typedef   ^             OutputType           ReKi y  {6} - -   "Force/Moments" -
-typedef   ^             ^                    ReKi WriteOutput {7} - -   "output Data" "kN" -
+typedef ^                      OutputType          ReKi                         y  {:} - -   "Force/Moments" -
+typedef ^                      ^                   ReKi                         WriteOutput {:} - -   "output Data" "kN" -
 
 
 

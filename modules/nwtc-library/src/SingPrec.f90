@@ -60,7 +60,7 @@ INTEGER, PARAMETER              :: BYTES_IN_QuKi = 16                           
 INTEGER, PARAMETER              :: IntKi          = B4Ki                        !< Default kind for integers
 INTEGER, PARAMETER              :: BYTES_IN_INT   = 4                           !< Number of bytes per IntKi number    - use SIZEOF()
 
-#ifndef DOUBLE_PRECISION
+#if !defined (DOUBLE_PRECISION) && !defined (OPENFAST_DOUBLE_PRECISION)
 INTEGER, PARAMETER              :: ReKi           = SiKi                        !< Default kind for floating-point numbers
 INTEGER, PARAMETER              :: DbKi           = R8Ki                        !< Default kind for double floating-point numbers
                                                   

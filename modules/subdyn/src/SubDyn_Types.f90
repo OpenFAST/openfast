@@ -164,8 +164,8 @@ IMPLICIT NONE
 ! =======================
 ! =========  SD_ContinuousStateType  =======
   TYPE, PUBLIC :: SD_ContinuousStateType
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: qm      !< Virtual states, Nmod elements [-]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: qmdot      !< Derivative of states, Nmod elements [-]
+    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: qm      !< Virtual states, Nmod elements [-]
+    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: qmdot      !< Derivative of states, Nmod elements [-]
   END TYPE SD_ContinuousStateType
 ! =======================
 ! =========  SD_DiscreteStateType  =======
@@ -5086,12 +5086,12 @@ ENDIF
   Int_BufSz   = Int_BufSz   + 1     ! qm allocated yes/no
   IF ( ALLOCATED(InData%qm) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! qm upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%qm)  ! qm
+      Db_BufSz   = Db_BufSz   + SIZE(InData%qm)  ! qm
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! qmdot allocated yes/no
   IF ( ALLOCATED(InData%qmdot) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! qmdot upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%qmdot)  ! qmdot
+      Db_BufSz   = Db_BufSz   + SIZE(InData%qmdot)  ! qmdot
   END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -5131,8 +5131,8 @@ ENDIF
     Int_Xferred = Int_Xferred + 2
 
       DO i1 = LBOUND(InData%qm,1), UBOUND(InData%qm,1)
-        ReKiBuf(Re_Xferred) = InData%qm(i1)
-        Re_Xferred = Re_Xferred + 1
+        DbKiBuf(Db_Xferred) = InData%qm(i1)
+        Db_Xferred = Db_Xferred + 1
       END DO
   END IF
   IF ( .NOT. ALLOCATED(InData%qmdot) ) THEN
@@ -5146,8 +5146,8 @@ ENDIF
     Int_Xferred = Int_Xferred + 2
 
       DO i1 = LBOUND(InData%qmdot,1), UBOUND(InData%qmdot,1)
-        ReKiBuf(Re_Xferred) = InData%qmdot(i1)
-        Re_Xferred = Re_Xferred + 1
+        DbKiBuf(Db_Xferred) = InData%qmdot(i1)
+        Db_Xferred = Db_Xferred + 1
       END DO
   END IF
  END SUBROUTINE SD_PackContState
@@ -5193,8 +5193,8 @@ ENDIF
        RETURN
     END IF
       DO i1 = LBOUND(OutData%qm,1), UBOUND(OutData%qm,1)
-        OutData%qm(i1) = ReKiBuf(Re_Xferred)
-        Re_Xferred = Re_Xferred + 1
+        OutData%qm(i1) = REAL(DbKiBuf(Db_Xferred), R8Ki)
+        Db_Xferred = Db_Xferred + 1
       END DO
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! qmdot not allocated
@@ -5211,8 +5211,8 @@ ENDIF
        RETURN
     END IF
       DO i1 = LBOUND(OutData%qmdot,1), UBOUND(OutData%qmdot,1)
-        OutData%qmdot(i1) = ReKiBuf(Re_Xferred)
-        Re_Xferred = Re_Xferred + 1
+        OutData%qmdot(i1) = REAL(DbKiBuf(Db_Xferred), R8Ki)
+        Db_Xferred = Db_Xferred + 1
       END DO
   END IF
  END SUBROUTINE SD_UnPackContState
