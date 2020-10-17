@@ -554,14 +554,12 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
             Om_X_r(1:3) = cross_product(Om, rIP)
             vP(1:3)     = u%TPMesh%TranslationVel(1:3,1) + Om_X_r
             aP(1:3)     = u%TPMesh%TranslationAcc(1:3,1) + cross_product(OmD, rIP)  + cross_product(Om, Om_X_r)
-
             m%U_full       (DOFList(1:3))= m%U_full       (DOFList(1:3)) + duP(1:3)       
             m%U_full       (DOFList(4:6))= m%U_full       (DOFList(4:6)) + rotations(1:3)
             m%U_full_dot   (DOFList(1:3))= m%U_full_dot   (DOFList(1:3)) + vP(1:3)
             m%U_full_dot   (DOFList(4:6))= m%U_full_dot   (DOFList(4:6)) + Om(1:3)
             m%U_full_dotdot(DOFList(1:3))= m%U_full_dotdot(DOFList(1:3)) + aP(1:3)
             m%U_full_dotdot(DOFList(4:6))= m%U_full_dotdot(DOFList(4:6)) + OmD(1:3)
-
          endif
          ! TODO TODO which orientation to give for joints with more than 6 dofs?
          ! Construct the direction cosine matrix given the output angles
@@ -2906,15 +2904,29 @@ SUBROUTINE GetExtForceOnInternalDOF( u, p, m, F_L, ErrStat, ErrMsg )
    real(ReKi)                    :: CableTension ! Controllable Cable force
    real(ReKi)                    :: rotations(3)
    real(ReKi)                    :: du(3), Moment(3), Force(3) 
+   ! Variables for Guyan Rigid motion
+   real(ReKi), dimension(3) ::  rIP  ! Vector from TP to rotated Node
+   real(ReKi), dimension(3) ::  rIP0 ! Vector from TP to Node (undeflected)
+   real(ReKi), dimension(3) ::  duP  ! Displacement of node due to rigid rotation
+   real(R8Ki), dimension(3,3) :: Rot ! Rotation matrix (DCM^t) and delta Rot (DCM^t-I)
+   !
    real(ReKi), parameter :: myNaN = -9999998.989_ReKi 
 
-   ! --- Compute Guyan displacement for extra moment (similar to CalcOutput, but wihtout CB)
    if (p%ExtraMoment) then
+      ! --- Compute Guyan displacement for extra moment (similar to CalcOutput, but wihtout CB)
+      rotations  = GetSmllRotAngs(u%TPMesh%Orientation(:,:,1), ErrStat, Errmsg);
       if (p%Floating .and. GUYAN_RIGID_FLOATING) then
-         print*,'TODO floating extra moment'
-         STOP
+         ! For fully floating case, we prescribe the Guyan motion as a "rigid" (non-linear) motion
+         Rot(1:3,1:3) = transpose(u%TPMesh%Orientation(:,:,1))
+         m%DU_full    = 0.0_ReKi
+         do iNode = 1,p%nNodes
+            rIP0(1:3)   = p%DP0(1:3, iNode) ! vector interface->node at t=0
+            rIP(1:3)    = matmul(Rot, rIP0)   ! vector interface->node at t
+            duP(1:3)    = rIP - rIP0  ! nodal rigid displacement (without u_TP)
+            m%DU_full(p%NodesDOF(iNode)%List(1:3)) = duP(1:3)       
+         enddo
       else
-         rotations  = GetSmllRotAngs(u%TPMesh%Orientation(:,:,1), ErrStat, Errmsg);
+         ! For other cases with use the computed (linear) Guyan motion
          m%u_TP       = (/REAL(u%TPMesh%TranslationDisp(:,1),ReKi), rotations/)
          m%UR_bar     =   matmul( p%TI      , m%u_TP       )  ! UR_bar
          m%UL         =   matmul( p%PhiRb_TI, m%u_TP       )  ! UL    

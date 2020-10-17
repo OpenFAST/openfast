@@ -74,7 +74,7 @@ MODULE SD_FEM
   INTEGER(IntKi),   PARAMETER  :: idGuyanDamp_None     = 0
   INTEGER(IntKi),   PARAMETER  :: idGuyanDamp_Rayleigh = 1
   INTEGER(IntKi),   PARAMETER  :: idGuyanDamp_66       = 2 
-  INTEGER(IntKi)               :: idGuyanDamp_Valid(3)  = (/idGuyanDamp_None, idGuyanDamp_Rayleigh, idGuyanDamp_66 /)
+  INTEGER(IntKi)               :: idGuyanDamp_Valid(3) = (/idGuyanDamp_None, idGuyanDamp_Rayleigh, idGuyanDamp_66 /)
   
   INTEGER(IntKi),   PARAMETER  :: SDMaxInpCols    = MAX(JointsCol,InterfCol,MembersCol,PropSetsBCol,PropSetsXCol,COSMsCol,CMassCol)
 
