@@ -438,9 +438,10 @@ near-surface, sub-surface, and depth-independent, as illustrated in
 Figure 1. All three currents are vector summed, along with the wave
 particle kinematics velocity.
 
-.. TODO add image here
+.. figure:: figs/current_sub_models.jpg
+   :align: center
 
-Figure 1. Standard Current Sub-Models
+   Standard Current Sub-Models
 
 The sub-surface current model follows a power law,
 
