@@ -1196,7 +1196,11 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
    if ( p_FAST%Linearize ) then      
       ! NOTE: In the following call, we use Init%OutData_AD%BladeProps(1)%NumBlNds as the number of aero nodes on EACH blade, which 
       !       is consistent with the current AD implementation, but if AD changes this, then it must be handled here, too!
-      call Init_Lin(p_FAST, y_FAST, m_FAST, AD, ED, Init%OutData_ED%NumBl, Init%OutData_AD%BladeProps(1)%NumBlNds, ErrStat2, ErrMsg2)      
+      if (p_FAST%CompAero == MODULE_AD) then
+         call Init_Lin(p_FAST, y_FAST, m_FAST, AD, ED, Init%OutData_ED%NumBl, Init%OutData_AD%BladeProps(1)%NumBlNds, ErrStat2, ErrMsg2) 
+      else
+         call Init_Lin(p_FAST, y_FAST, m_FAST, AD, ED, Init%OutData_ED%NumBl, -1, ErrStat2, ErrMsg2) 
+      endif     
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
          if (ErrStat >= AbortErrLev) then
