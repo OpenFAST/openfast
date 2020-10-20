@@ -39,16 +39,11 @@ PROGRAM HydroDynDriver
       LOGICAL                 :: Linearize
       INTEGER                 :: NSteps
       REAL(DbKi)              :: TimeInterval
-      INTEGER                 :: WAMITInputsMod
-      CHARACTER(1024)         :: WAMITInputsFile
-      REAL(ReKi)              :: uWAMITInSteady(6)
-      REAL(ReKi)              :: uDotWAMITInSteady(6)
-      REAL(ReKi)              :: uDotDotWAMITInSteady(6)
-      INTEGER                 :: MorisonInputsMod
-      CHARACTER(1024)         :: MorisonInputsFile
-      REAL(ReKi)              :: uMorisonInSteady(6)
-      REAL(ReKi)              :: uDotMorisonInSteady(6)
-      REAL(ReKi)              :: uDotDotMorisonInSteady(6)
+      INTEGER                 :: PRPInputsMod
+      CHARACTER(1024)         :: PRPInputsFile
+      REAL(ReKi)              :: uPRPInSteady(6)
+      REAL(ReKi)              :: uDotPRPInSteady(6)
+      REAL(ReKi)              :: uDotDotPRPInSteady(6)
       LOGICAL                 :: WaveElevSeriesFlag      !< Should we put together a wave elevation series and save it to file?
       REAL(ReKi)              :: WaveElevdX              !< Spacing in the X direction for wave elevation series              (m)
       REAL(ReKi)              :: WaveElevdY              !< Spacing in the Y direction for the wave elevation series          (m)
@@ -92,13 +87,13 @@ PROGRAM HydroDynDriver
    TYPE(HydroDyn_ContinuousStateType)                  :: dxdt                 ! First time derivatives of the continuous states
 
 
-   INTEGER(IntKi)                                     :: UnWAMITInp            ! WAMIT Inputs file identifier
+   INTEGER(IntKi)                                     :: UnPRPInp            ! PRP Inputs file identifier
    INTEGER(IntKi)                                     :: UnMorisonInp          ! Morison Inputs file identifier
    INTEGER(IntKi)                                     :: UnHD_Out              ! Output file identifier
-   REAL(ReKi), ALLOCATABLE                            :: WAMITin(:,:)          ! Variable for storing time, forces, and body velocities, in m/s or rad/s for WAMIT
+   REAL(ReKi), ALLOCATABLE                            :: PRPin(:,:)          ! Variable for storing time, forces, and body velocities, in m/s or rad/s for PRP
    REAL(ReKi), ALLOCATABLE                            :: Morisonin(:,:)        ! Variable for storing time, forces, and body velocities, in m/s or rad/s for Morison elements
    
-   INTEGER(IntKi)                                     :: NBody                 ! Number of WAMIT bodies to work with if prescribing kinematics on each body (WAMITInputsMod<0)
+   INTEGER(IntKi)                                     :: NBody                 ! Number of WAMIT bodies to work with if prescribing kinematics on each body (PRPInputsMod<0)
    
    INTEGER(IntKi)                                     :: I                    ! Generic loop counter
    INTEGER(IntKi)                                     :: J                    ! Generic loop counter
@@ -119,8 +114,9 @@ PROGRAM HydroDynDriver
    real(DbKi)                                     :: SttsTime                                ! Amount of time between screen status messages (sec)
    integer                                        :: n_SttsTime                              ! Number of time steps between screen status messages (-)
 
-   type(MeshType)                                 :: RefPtMesh                               ! 1-node Point mesh located at (0,0,0) in global system where all WAMIT-related driver inputs are set
+   type(MeshType)                                 :: RefPtMesh                               ! 1-node Point mesh located at (0,0,0) in global system where all PRP-related driver inputs are set
    type(MeshMapType)                              :: HD_Ref_2_WB_P                           ! Mesh mapping between Reference pt mesh and WAMIT body(ies) mesh
+   type(MeshMapType)                              :: HD_Ref_2_M_P                            ! Mesh mapping between Reference pt mesh and Morison mesh
    real(R8Ki)                                     :: theta(3)                                ! mesh creation helper data
    
    ! For testing
@@ -209,58 +205,58 @@ PROGRAM HydroDynDriver
 !-------------------------------------------------------------------------------------
    
 
-   IF ( drvrInitInp%WAMITInputsMod == 2 ) THEN
+   IF ( drvrInitInp%PRPInputsMod == 2 ) THEN
       
-         ! Open the WAMIT inputs data file
-      CALL GetNewUnit( UnWAMITInp ) 
-      CALL OpenFInpFile ( UnWAMITInp, drvrInitInp%WAMITInputsFile, ErrStat, ErrMsg ) 
+         ! Open the PRP inputs data file
+      CALL GetNewUnit( UnPRPInp ) 
+      CALL OpenFInpFile ( UnPRPInp, drvrInitInp%PRPInputsFile, ErrStat, ErrMsg ) 
          IF (ErrStat >=AbortErrLev) STOP
       
       
-      ALLOCATE ( WAMITin(drvrInitInp%NSteps, 19), STAT = ErrStat )
+      ALLOCATE ( PRPin(drvrInitInp%NSteps, 19), STAT = ErrStat )
       IF ( ErrStat /= ErrID_None ) THEN
-         ErrMsg  = '  Error allocating space for WAMITin array.'
+         ErrMsg  = '  Error allocating space for PRPin array.'
          CALL WrScr( ErrMsg )
-         CLOSE( UnWAMITInp )
+         CLOSE( UnPRPInp )
          STOP
       END IF 
       
       DO n = 1,drvrInitInp%NSteps
-         READ (UnWAMITInp,*,IOSTAT=ErrStat) (WAMITin (n,J), J=1,19)
+         READ (UnPRPInp,*,IOSTAT=ErrStat) (PRPin (n,J), J=1,19)
             
             IF ( ErrStat /= 0 ) THEN
-               ErrMsg = '  Error reading the WAMIT input time-series file. '
+               ErrMsg = '  Error reading the PRP input time-series file. '
                CALL WrScr( ErrMsg )
                STOP
             END IF 
       END DO  
       
          ! Close the inputs file 
-      CLOSE ( UnWAMITInp ) 
+      CLOSE ( UnPRPInp ) 
    END IF
    
    ! multi-body kinematics driver option (time, PRP DOFs 1-6, body1 DOFs 1-6, body2 DOFs 1-6...)
-   IF ( drvrInitInp%WAMITInputsMod < 0 ) THEN
+   IF ( drvrInitInp%PRPInputsMod < 0 ) THEN
       
-      NBODY = -drvrInitInp%WAMITInputsMod
+      NBODY = -drvrInitInp%PRPInputsMod
          ! Open the WAMIT inputs data file
-      CALL GetNewUnit( UnWAMITInp ) 
-      CALL OpenFInpFile ( UnWAMITInp, drvrInitInp%WAMITInputsFile, ErrStat, ErrMsg ) 
+      CALL GetNewUnit( UnPRPInp ) 
+      CALL OpenFInpFile ( UnPRPInp, drvrInitInp%PRPInputsFile, ErrStat, ErrMsg ) 
          IF (ErrStat >=AbortErrLev) STOP
       
       
-      ALLOCATE ( WAMITin(drvrInitInp%NSteps, 7+6*NBODY), STAT = ErrStat )
+      ALLOCATE ( PRPin(drvrInitInp%NSteps, 7+6*NBODY), STAT = ErrStat )
       IF ( ErrStat /= ErrID_None ) THEN
-         ErrMsg  = '  Error allocating space for WAMITin array.'
+         ErrMsg  = '  Error allocating space for PRPin array.'
          CALL WrScr( ErrMsg )
-         CLOSE( UnWAMITInp )
+         CLOSE( UnPRPInp )
          STOP
       END IF 
       
       PRINT *, 'NBody is '//trim(Num2LStr(NBody))//' and planning to read in  '//trim(Num2LStr(7+6*NBODY))//' columns from the input file'
       
       DO n = 1,drvrInitInp%NSteps
-         READ (UnWAMITInp,*,IOSTAT=ErrStat) (WAMITin (n,J), J=1,7+6*NBODY)
+         READ (UnPRPInp,*,IOSTAT=ErrStat) (PRPin (n,J), J=1,7+6*NBODY)
             
             IF ( ErrStat /= 0 ) THEN
                ErrMsg = '  Error reading the WAMIT input time-series file (for multiple bodies). '
@@ -270,40 +266,11 @@ PROGRAM HydroDynDriver
       END DO  
       
          ! Close the inputs file 
-      CLOSE ( UnWAMITInp ) 
+      CLOSE ( UnPRPInp ) 
    ELSE
       NBody = 0
    END IF
    
-    IF ( drvrInitInp%MorisonInputsMod == 2 ) THEN
-      
-         ! Open the Morison inputs data file
-      CALL GetNewUnit( UnMorisonInp )
-      CALL OpenFInpFile ( UnMorisonInp, drvrInitInp%MorisonInputsFile, ErrStat, ErrMsg ) 
-         IF (ErrStat >=AbortErrLev) STOP
-      
-      
-      ALLOCATE ( MorisonIn(drvrInitInp%NSteps, 19), STAT = ErrStat )
-      IF ( ErrStat /= ErrID_None ) THEN
-         ErrMsg  = '  Error allocating space for MorisonIn array.'
-         CALL WrScr( ErrMsg )
-         CLOSE( UnMorisonInp )
-         STOP
-      END IF 
-      
-      DO n = 1,drvrInitInp%NSteps
-         READ (UnMorisonInp,*,IOSTAT=ErrStat) (MorisonIn (n,J), J=1,19)
-            
-            IF ( ErrStat /= 0 ) THEN
-               ErrMsg = '  Error reading the Morison input time-series file. '
-               CALL WrScr( ErrMsg )
-               STOP
-            END IF 
-      END DO  
-      
-         ! Close the inputs file 
-      CLOSE ( UnMorisonInp ) 
-   END IF  
   
 
       ! Setup the arrays for the wave elevation timeseries if requested by the driver input file
@@ -363,70 +330,61 @@ PROGRAM HydroDynDriver
    
    
       
-      
-   IF ( u(1)%WAMITMesh%Initialized ) THEN 
-      
-      
-      ! Create mesh mappings between (0,0,0) reference point mesh and the WAMIT body(ies) mesh [ 1 node per body ] 
+   ! Set any steady-state inputs, once before the time-stepping loop   
          
-      CALL MeshMapCreate( u(1)%PRPMesh, u(1)%WAMITMesh, HD_Ref_2_WB_P, ErrStat2, ErrMsg2  ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDynDriver')   
-      if (errStat >= AbortErrLev) then
-         ! Clean up and exit
-         call HD_DvrCleanup()
-      end if   
-         
-      ! Set any steady-state inputs, once before the time-stepping loop   
-         
-      IF (( drvrInitInp%WAMITInputsMod /= 2 ) .AND. ( drvrInitInp%WAMITInputsMod >= 0 )) THEN
+   IF (( drvrInitInp%PRPInputsMod /= 2 ) .AND. ( drvrInitInp%PRPInputsMod >= 0 )) THEN
                 
-         u(1)%PRPMesh%TranslationDisp(:,1)   = drvrInitInp%uWAMITInSteady(1:3) 
+      u(1)%PRPMesh%TranslationDisp(:,1)   = drvrInitInp%uPRPInSteady(1:3) 
 
-            ! Compute direction cosine matrix from the rotation angles
-         CALL SmllRotTrans( 'InputRotation', REAL(drvrInitInp%uWAMITInSteady(4), ReKi), REAL(drvrInitInp%uWAMITInSteady(5), ReKi), REAL(drvrInitInp%uWAMITInSteady(6), ReKi), dcm, 'Junk', ErrStat, ErrMsg )            
-         u(1)%PRPMesh%Orientation(:,:,1)     = dcm
+         ! Compute direction cosine matrix from the rotation angles
+      CALL SmllRotTrans( 'InputRotation', REAL(drvrInitInp%uPRPInSteady(4), ReKi), REAL(drvrInitInp%uPRPInSteady(5), ReKi), REAL(drvrInitInp%uPRPInSteady(6), ReKi), dcm, 'Junk', ErrStat, ErrMsg )            
+      u(1)%PRPMesh%Orientation(:,:,1)     = dcm
 
-         u(1)%PRPMesh%TranslationVel(:,1)    = drvrInitInp%uDotWAMITInSteady(1:3)  
-         u(1)%PRPMesh%RotationVel(:,1)       = drvrInitInp%uDotWAMITInSteady(4:6) 
-         u(1)%PRPMesh%TranslationAcc(:,1)    = drvrInitInp%uDotDotWAMITInSteady(1:3)  
-         u(1)%PRPMesh%RotationAcc(:,1)       = drvrInitInp%uDotDotWAMITInSteady(4:6) 
+      u(1)%PRPMesh%TranslationVel(:,1)    = drvrInitInp%uDotPRPInSteady(1:3)  
+      u(1)%PRPMesh%RotationVel(:,1)       = drvrInitInp%uDotPRPInSteady(4:6) 
+      u(1)%PRPMesh%TranslationAcc(:,1)    = drvrInitInp%uDotDotPRPInSteady(1:3)  
+      u(1)%PRPMesh%RotationAcc(:,1)       = drvrInitInp%uDotDotPRPInSteady(4:6)    
+      
+      IF ( u(1)%WAMITMesh%Initialized ) THEN 
             
-            ! Map kinematics to the WAMIT mesh with 1 to NBody nodes
+         ! Create mesh mappings between (0,0,0) reference point mesh and the WAMIT body(ies) mesh [ 1 node per body ] 
+         
+         CALL MeshMapCreate( u(1)%PRPMesh, u(1)%WAMITMesh, HD_Ref_2_WB_P, ErrStat2, ErrMsg2  ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDynDriver')   
+         if (errStat >= AbortErrLev) then
+            ! Clean up and exit
+            call HD_DvrCleanup()
+         end if   
+  
+            ! Map PRP kinematics to the WAMIT mesh with 1 to NBody nodes
          CALL Transfer_Point_to_Point( u(1)%PRPMesh, u(1)%WAMITMesh, HD_Ref_2_WB_P, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDynDriver')  
          if (errStat >= AbortErrLev) then
             ! Clean up and exit
             call HD_DvrCleanup()
          end if
-      END IF
-   END IF
-     
-   IF ( drvrInitInp%MorisonInputsMod /= 2 ) THEN
-      IF ( u(1)%Morison%Mesh%Initialized ) THEN
-         u(1)%Morison%Mesh%TranslationDisp(1,:)   = drvrInitInp%uMorisonInSteady(1) 
-         u(1)%Morison%Mesh%TranslationDisp(2,:)   = drvrInitInp%uMorisonInSteady(2) 
-         u(1)%Morison%Mesh%TranslationDisp(3,:)   = drvrInitInp%uMorisonInSteady(3) 
-                      
-            ! Compute direction cosine matrix from the rotation angles
-         CALL SmllRotTrans( 'InputRotation', REAL(drvrInitInp%uMorisonInSteady(4),ReKi), REAL(drvrInitInp%uMorisonInSteady(5),ReKi), REAL(drvrInitInp%uMorisonInSteady(6),ReKi), dcm, 'Junk', ErrStat, ErrMsg )            
-         DO I = 1, u(1)%Morison%Mesh%nNodes
-            u(1)%Morison%Mesh%Orientation(:,:,I)  = dcm 
-         END DO
          
-         u(1)%Morison%Mesh%TranslationVel(1,:)    = drvrInitInp%uDotMorisonInSteady(1)
-         u(1)%Morison%Mesh%TranslationVel(2,:)    = drvrInitInp%uDotMorisonInSteady(2)
-         u(1)%Morison%Mesh%TranslationVel(3,:)    = drvrInitInp%uDotMorisonInSteady(3)
-         u(1)%Morison%Mesh%RotationVel(1,:)       = drvrInitInp%uDotMorisonInSteady(4) 
-         u(1)%Morison%Mesh%RotationVel(2,:)       = drvrInitInp%uDotMorisonInSteady(5) 
-         u(1)%Morison%Mesh%RotationVel(3,:)       = drvrInitInp%uDotMorisonInSteady(6) 
-         u(1)%Morison%Mesh%TranslationAcc(1,:)    = drvrInitInp%uDotDotMorisonInSteady(1)
-         u(1)%Morison%Mesh%TranslationAcc(2,:)    = drvrInitInp%uDotDotMorisonInSteady(2)
-         u(1)%Morison%Mesh%TranslationAcc(3,:)    = drvrInitInp%uDotDotMorisonInSteady(3)
-         u(1)%Morison%Mesh%RotationAcc(1,:)       = drvrInitInp%uDotDotMorisonInSteady(4) 
-         u(1)%Morison%Mesh%RotationAcc(2,:)       = drvrInitInp%uDotDotMorisonInSteady(5) 
-         u(1)%Morison%Mesh%RotationAcc(3,:)       = drvrInitInp%uDotDotMorisonInSteady(6) 
-      END IF
-   END IF
-   
+      END IF ! u(1)%WAMITMesh%Initialized
       
+      if ( u(1)%Morison%Mesh%Initialized ) then
+         
+         ! Create mesh mappings between (0,0,0) reference point mesh and the Morison mesh
+         
+         CALL MeshMapCreate( u(1)%PRPMesh, u(1)%Morison%Mesh, HD_Ref_2_M_P, ErrStat2, ErrMsg2  ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDynDriver')   
+         if (errStat >= AbortErrLev) then
+            ! Clean up and exit
+            call HD_DvrCleanup()
+         end if   
+  
+            ! Map PRP kinematics to the Morison mesh
+         CALL Transfer_Point_to_Point( u(1)%PRPMesh, u(1)%Morison%Mesh, HD_Ref_2_M_P, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDynDriver')  
+         if (errStat >= AbortErrLev) then
+            ! Clean up and exit
+            call HD_DvrCleanup()
+         end if
+      end if ! u(1)%Morison%Mesh%Initialized
+      
+   END IF
+
+   
    !...............................................................................................................................
    ! Routines called in loose coupling -- the glue code may implement this in various ways
    !...............................................................................................................................
@@ -440,112 +398,123 @@ PROGRAM HydroDynDriver
       InputTime(1) = Time
       
          ! Modify u (likely from the outputs of another module or a set of test conditions) here:
-         
-      IF ( u(1)%WAMITMesh%Initialized ) THEN
-
-         ! WAMITInputsMod 2: Reads time series of positions, velocities, and accelerations for the platform reference point
-         IF ( drvrInitInp%WAMITInputsMod == 2 ) THEN
+      
+      ! PRPInputsMod 2: Reads time series of positions, velocities, and accelerations for the platform reference point
+      IF ( drvrInitInp%PRPInputsMod == 2 ) THEN
                                   
-            u(1)%PRPMesh%TranslationDisp(:,1)   = WAMITin(n,2:4) 
+         u(1)%PRPMesh%TranslationDisp(:,1)   = PRPin(n,2:4) 
 
-               ! Compute direction cosine matrix from the rotation angles
+            ! Compute direction cosine matrix from the rotation angles
                
-            IF ( abs(WAMITin(n,5)) > maxAngle ) maxAngle = abs(WAMITin(n,5))
-            IF ( abs(WAMITin(n,6)) > maxAngle ) maxAngle = abs(WAMITin(n,6))
-            IF ( abs(WAMITin(n,7)) > maxAngle ) maxAngle = abs(WAMITin(n,7))
+         IF ( abs(PRPin(n,5)) > maxAngle ) maxAngle = abs(PRPin(n,5))
+         IF ( abs(PRPin(n,6)) > maxAngle ) maxAngle = abs(PRPin(n,6))
+         IF ( abs(PRPin(n,7)) > maxAngle ) maxAngle = abs(PRPin(n,7))
             
-            CALL SmllRotTrans( 'InputRotation', REAL(WAMITin(n,5),ReKi), REAL(WAMITin(n,6),ReKi), REAL(WAMITin(n,7),ReKi), dcm, 'Junk', ErrStat, ErrMsg )            
-            u(1)%PRPMesh%Orientation(:,:,1)     = dcm     
-            u(1)%PRPMesh%TranslationVel(:,1)    = WAMITin(n,8:10)  
-            u(1)%PRPMesh%RotationVel(:,1)       = WAMITin(n,11:13) 
-            u(1)%PRPMesh%TranslationAcc(:,1)    = WAMITin(n,14:16)  
-            u(1)%PRPMesh%RotationAcc(:,1)       = WAMITin(n,17:19)
+         CALL SmllRotTrans( 'InputRotation', REAL(PRPin(n,5),ReKi), REAL(PRPin(n,6),ReKi), REAL(PRPin(n,7),ReKi), dcm, 'Junk', ErrStat, ErrMsg )            
+         u(1)%PRPMesh%Orientation(:,:,1)     = dcm     
+         u(1)%PRPMesh%TranslationVel(:,1)    = PRPin(n,8:10)  
+         u(1)%PRPMesh%RotationVel(:,1)       = PRPin(n,11:13) 
+         u(1)%PRPMesh%TranslationAcc(:,1)    = PRPin(n,14:16)  
+         u(1)%PRPMesh%RotationAcc(:,1)       = PRPin(n,17:19)
             
+         IF ( u(1)%WAMITMesh%Initialized ) THEN
                ! Map kinematics to the WAMIT mesh with 1 to NBody nodes
             CALL Transfer_Point_to_Point( u(1)%PRPMesh, u(1)%WAMITMesh, HD_Ref_2_WB_P, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDynDriver')  
             if (errStat >= AbortErrLev) then
                ! Clean up and exit
                call HD_DvrCleanup()
             end if
-   
          END IF
          
-          !@mhall: new kinematics input for moving bodies individually
-          ! WAMITInputsMod < 0: Reads time series of positions for each body individually, and uses finite differences to also get velocities and accelerations.
-          ! The number of bodies is the negative of WAMITInputsMod.
-         IF ( drvrInitInp%WAMITInputsMod < 0 ) THEN
+          IF ( u(1)%Morison%Mesh%Initialized ) THEN
+               ! Map kinematics to the WAMIT mesh with 1 to NBody nodes
+            CALL Transfer_Point_to_Point( u(1)%PRPMesh, u(1)%Morison%Mesh, HD_Ref_2_M_P, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDynDriver')  
+            if (errStat >= AbortErrLev) then
+               ! Clean up and exit
+               call HD_DvrCleanup()
+            end if
+          END IF
+          
+      end if
+      
+         !@mhall: new kinematics input for moving bodies individually
+         ! PRPInputsMod < 0: Reads time series of positions for each body individually, and uses finite differences to also get velocities and accelerations.
+         ! The number of bodies is the negative of PRPInputsMod.
+      IF ( drvrInitInp%PRPInputsMod < 0 ) THEN
                
             ! platform reference point (PRP), and body 1-NBody displacements
-            u(1)%PRPMesh%TranslationDisp(:,1)   = WAMITin(n,2:4) 
+            u(1)%PRPMesh%TranslationDisp(:,1)   = PRPin(n,2:4) 
             DO I=1,NBody
-               u(1)%WAMITMesh%TranslationDisp(:,I)   = WAMITin(n, 6*I+2:6*I+4) 
+               u(1)%WAMITMesh%TranslationDisp(:,I)   = PRPin(n, 6*I+2:6*I+4) 
             END DO
                
             ! PRP and body 1-NBody orientations (skipping the maxAngle stuff)
-            CALL SmllRotTrans( 'InputRotation', REAL(WAMITin(n,5),ReKi), REAL(WAMITin(n,6),ReKi), REAL(WAMITin(n,7),ReKi), dcm, 'PRP orientation', ErrStat, ErrMsg )            
+            CALL SmllRotTrans( 'InputRotation', REAL(PRPin(n,5),ReKi), REAL(PRPin(n,6),ReKi), REAL(PRPin(n,7),ReKi), dcm, 'PRP orientation', ErrStat, ErrMsg )            
             u(1)%PRPMesh%Orientation(:,:,1)     = dcm     
             DO I=1, NBody
-               CALL SmllRotTrans( 'InputRotation', REAL(WAMITin(n,6*I+5),ReKi), REAL(WAMITin(n,6*I+6),ReKi), REAL(WAMITin(n,6*I+7),ReKi), dcm, 'body orientation', ErrStat, ErrMsg )            
+               CALL SmllRotTrans( 'InputRotation', REAL(PRPin(n,6*I+5),ReKi), REAL(PRPin(n,6*I+6),ReKi), REAL(PRPin(n,6*I+7),ReKi), dcm, 'body orientation', ErrStat, ErrMsg )            
                u(1)%PRPMesh%Orientation(:,:,1)     = dcm     
             END DO
 
             ! use finite differences for velocities and accelerations
             IF (n == 1) THEN   ! use forward differences for first time step
             
-               u(1)%PRPMesh%TranslationVel(:,1) = (WAMITin(n+1, 2:4) -   WAMITin(n  , 2:4))/drvrInitInp%TimeInterval
-               u(1)%PRPMesh%RotationVel(   :,1) = (WAMITin(n+1, 5:7) -   WAMITin(n  , 5:7))/drvrInitInp%TimeInterval
-               u(1)%PRPMesh%TranslationAcc(:,1) = (WAMITin(n+2, 2:4) - 2*WAMITin(n+1, 2:4) + WAMITin(n, 2:4))/(drvrInitInp%TimeInterval*drvrInitInp%TimeInterval)
-               u(1)%PRPMesh%RotationAcc(   :,1) = (WAMITin(n+2, 5:7) - 2*WAMITin(n+1, 5:7) + WAMITin(n, 5:7))/(drvrInitInp%TimeInterval*drvrInitInp%TimeInterval)
+               u(1)%PRPMesh%TranslationVel(:,1) = (PRPin(n+1, 2:4) -   PRPin(n  , 2:4))/drvrInitInp%TimeInterval
+               u(1)%PRPMesh%RotationVel(   :,1) = (PRPin(n+1, 5:7) -   PRPin(n  , 5:7))/drvrInitInp%TimeInterval
+               u(1)%PRPMesh%TranslationAcc(:,1) = (PRPin(n+2, 2:4) - 2*PRPin(n+1, 2:4) + PRPin(n, 2:4))/(drvrInitInp%TimeInterval*drvrInitInp%TimeInterval)
+               u(1)%PRPMesh%RotationAcc(   :,1) = (PRPin(n+2, 5:7) - 2*PRPin(n+1, 5:7) + PRPin(n, 5:7))/(drvrInitInp%TimeInterval*drvrInitInp%TimeInterval)
                
                DO I=1,NBody
-                  u(1)%WAMITMesh%TranslationVel(:,I) = (WAMITin(n+1, 6*I+2:6*I+4) -   WAMITin(n  , 6*I+2:6*I+4))/drvrInitInp%TimeInterval
-                  u(1)%WAMITMesh%RotationVel(   :,I) = (WAMITin(n+1, 6*I+5:6*I+7) -   WAMITin(n  , 6*I+5:6*I+7))/drvrInitInp%TimeInterval
-                  u(1)%WAMITMesh%TranslationAcc(:,I) = (WAMITin(n+2, 6*I+2:6*I+4) - 2*WAMITin(n+1, 6*I+2:6*I+4) + WAMITin(n, 6*I+2:6*I+4))/(drvrInitInp%TimeInterval*drvrInitInp%TimeInterval)
-                  u(1)%WAMITMesh%RotationAcc(   :,I) = (WAMITin(n+2, 6*I+5:6*I+7) - 2*WAMITin(n+1, 6*I+5:6*I+7) + WAMITin(n, 6*I+5:6*I+7))/(drvrInitInp%TimeInterval*drvrInitInp%TimeInterval)
+                  u(1)%WAMITMesh%TranslationVel(:,I) = (PRPin(n+1, 6*I+2:6*I+4) -   PRPin(n  , 6*I+2:6*I+4))/drvrInitInp%TimeInterval
+                  u(1)%WAMITMesh%RotationVel(   :,I) = (PRPin(n+1, 6*I+5:6*I+7) -   PRPin(n  , 6*I+5:6*I+7))/drvrInitInp%TimeInterval
+                  u(1)%WAMITMesh%TranslationAcc(:,I) = (PRPin(n+2, 6*I+2:6*I+4) - 2*PRPin(n+1, 6*I+2:6*I+4) + PRPin(n, 6*I+2:6*I+4))/(drvrInitInp%TimeInterval*drvrInitInp%TimeInterval)
+                  u(1)%WAMITMesh%RotationAcc(   :,I) = (PRPin(n+2, 6*I+5:6*I+7) - 2*PRPin(n+1, 6*I+5:6*I+7) + PRPin(n, 6*I+5:6*I+7))/(drvrInitInp%TimeInterval*drvrInitInp%TimeInterval)
                END DO
 
             ELSE IF (n == drvrInitInp%NSteps) THEN  ! use backward differences for last time step
             
-               u(1)%PRPMesh%TranslationVel(:,1) = (WAMITin(n, 2:4) -   WAMITin(n-1, 2:4))/drvrInitInp%TimeInterval
-               u(1)%PRPMesh%RotationVel(   :,1) = (WAMITin(n, 5:7) -   WAMITin(n-1, 5:7))/drvrInitInp%TimeInterval
-               u(1)%PRPMesh%TranslationAcc(:,1) = (WAMITin(n, 2:4) - 2*WAMITin(n-1, 2:4) + WAMITin(n-2, 2:4))/(drvrInitInp%TimeInterval*drvrInitInp%TimeInterval)
-               u(1)%PRPMesh%RotationAcc(   :,1) = (WAMITin(n, 5:7) - 2*WAMITin(n-1, 5:7) + WAMITin(n-2, 5:7))/(drvrInitInp%TimeInterval*drvrInitInp%TimeInterval)
+               u(1)%PRPMesh%TranslationVel(:,1) = (PRPin(n, 2:4) -   PRPin(n-1, 2:4))/drvrInitInp%TimeInterval
+               u(1)%PRPMesh%RotationVel(   :,1) = (PRPin(n, 5:7) -   PRPin(n-1, 5:7))/drvrInitInp%TimeInterval
+               u(1)%PRPMesh%TranslationAcc(:,1) = (PRPin(n, 2:4) - 2*PRPin(n-1, 2:4) + PRPin(n-2, 2:4))/(drvrInitInp%TimeInterval*drvrInitInp%TimeInterval)
+               u(1)%PRPMesh%RotationAcc(   :,1) = (PRPin(n, 5:7) - 2*PRPin(n-1, 5:7) + PRPin(n-2, 5:7))/(drvrInitInp%TimeInterval*drvrInitInp%TimeInterval)
                
                DO I=1,NBody
-                  u(1)%WAMITMesh%TranslationVel(:,I) = (WAMITin(n, 6*I+2:6*I+4) -   WAMITin(n-1, 6*I+2:6*I+4))/drvrInitInp%TimeInterval
-                  u(1)%WAMITMesh%RotationVel(   :,I) = (WAMITin(n, 6*I+5:6*I+7) -   WAMITin(n-1, 6*I+5:6*I+7))/drvrInitInp%TimeInterval
-                  u(1)%WAMITMesh%TranslationAcc(:,I) = (WAMITin(n, 6*I+2:6*I+4) - 2*WAMITin(n-1, 6*I+2:6*I+4) + WAMITin(n-2, 6*I+2:6*I+4))/(drvrInitInp%TimeInterval*drvrInitInp%TimeInterval)
-                  u(1)%WAMITMesh%RotationAcc(   :,I) = (WAMITin(n, 6*I+5:6*I+7) - 2*WAMITin(n-1, 6*I+5:6*I+7) + WAMITin(n-2, 6*I+5:6*I+7))/(drvrInitInp%TimeInterval*drvrInitInp%TimeInterval)
+                  u(1)%WAMITMesh%TranslationVel(:,I) = (PRPin(n, 6*I+2:6*I+4) -   PRPin(n-1, 6*I+2:6*I+4))/drvrInitInp%TimeInterval
+                  u(1)%WAMITMesh%RotationVel(   :,I) = (PRPin(n, 6*I+5:6*I+7) -   PRPin(n-1, 6*I+5:6*I+7))/drvrInitInp%TimeInterval
+                  u(1)%WAMITMesh%TranslationAcc(:,I) = (PRPin(n, 6*I+2:6*I+4) - 2*PRPin(n-1, 6*I+2:6*I+4) + PRPin(n-2, 6*I+2:6*I+4))/(drvrInitInp%TimeInterval*drvrInitInp%TimeInterval)
+                  u(1)%WAMITMesh%RotationAcc(   :,I) = (PRPin(n, 6*I+5:6*I+7) - 2*PRPin(n-1, 6*I+5:6*I+7) + PRPin(n-2, 6*I+5:6*I+7))/(drvrInitInp%TimeInterval*drvrInitInp%TimeInterval)
                END DO
             
             ELSE   ! otherwise use central differences for intermediate time steps
                      
-               u(1)%PRPMesh%TranslationVel(:,1) = (WAMITin(n+1, 2:4) - WAMITin(n-1, 2:4))*0.5/drvrInitInp%TimeInterval
-               u(1)%PRPMesh%RotationVel(   :,1) = (WAMITin(n+1, 5:7) - WAMITin(n-1, 5:7))*0.5/drvrInitInp%TimeInterval
-               u(1)%PRPMesh%TranslationAcc(:,1) = (WAMITin(n+1, 2:4) - 2*WAMITin(n, 2:4) + WAMITin(n-1, 2:4))/(drvrInitInp%TimeInterval*drvrInitInp%TimeInterval)
-               u(1)%PRPMesh%RotationAcc(   :,1) = (WAMITin(n+1, 5:7) - 2*WAMITin(n, 5:7) + WAMITin(n-1, 5:7))/(drvrInitInp%TimeInterval*drvrInitInp%TimeInterval)
+               u(1)%PRPMesh%TranslationVel(:,1) = (PRPin(n+1, 2:4) - PRPin(n-1, 2:4))*0.5/drvrInitInp%TimeInterval
+               u(1)%PRPMesh%RotationVel(   :,1) = (PRPin(n+1, 5:7) - PRPin(n-1, 5:7))*0.5/drvrInitInp%TimeInterval
+               u(1)%PRPMesh%TranslationAcc(:,1) = (PRPin(n+1, 2:4) - 2*PRPin(n, 2:4) + PRPin(n-1, 2:4))/(drvrInitInp%TimeInterval*drvrInitInp%TimeInterval)
+               u(1)%PRPMesh%RotationAcc(   :,1) = (PRPin(n+1, 5:7) - 2*PRPin(n, 5:7) + PRPin(n-1, 5:7))/(drvrInitInp%TimeInterval*drvrInitInp%TimeInterval)
                
                DO I=1,NBody
-                  u(1)%WAMITMesh%TranslationVel(:,I) = (WAMITin(n+1, 6*I+2:6*I+4) - WAMITin(n-1, 6*I+2:6*I+4))*0.5/drvrInitInp%TimeInterval
-                  u(1)%WAMITMesh%RotationVel(   :,I) = (WAMITin(n+1, 6*I+5:6*I+7) - WAMITin(n-1, 6*I+5:6*I+7))*0.5/drvrInitInp%TimeInterval
-                  u(1)%WAMITMesh%TranslationAcc(:,I) = (WAMITin(n+1, 6*I+2:6*I+4) - 2*WAMITin(n, 6*I+2:6*I+4) + WAMITin(n-1, 6*I+2:6*I+4))/(drvrInitInp%TimeInterval*drvrInitInp%TimeInterval)
-                  u(1)%WAMITMesh%RotationAcc(   :,I) = (WAMITin(n+1, 6*I+5:6*I+7) - 2*WAMITin(n, 6*I+5:6*I+7) + WAMITin(n-1, 6*I+5:6*I+7))/(drvrInitInp%TimeInterval*drvrInitInp%TimeInterval)
+                  u(1)%WAMITMesh%TranslationVel(:,I) = (PRPin(n+1, 6*I+2:6*I+4) - PRPin(n-1, 6*I+2:6*I+4))*0.5/drvrInitInp%TimeInterval
+                  u(1)%WAMITMesh%RotationVel(   :,I) = (PRPin(n+1, 6*I+5:6*I+7) - PRPin(n-1, 6*I+5:6*I+7))*0.5/drvrInitInp%TimeInterval
+                  u(1)%WAMITMesh%TranslationAcc(:,I) = (PRPin(n+1, 6*I+2:6*I+4) - 2*PRPin(n, 6*I+2:6*I+4) + PRPin(n-1, 6*I+2:6*I+4))/(drvrInitInp%TimeInterval*drvrInitInp%TimeInterval)
+                  u(1)%WAMITMesh%RotationAcc(   :,I) = (PRPin(n+1, 6*I+5:6*I+7) - 2*PRPin(n, 6*I+5:6*I+7) + PRPin(n-1, 6*I+5:6*I+7))/(drvrInitInp%TimeInterval*drvrInitInp%TimeInterval)
                END DO
                
             END IF
+            
+            IF ( u(1)%Morison%Mesh%Initialized ) THEN
+               ! Map kinematics to the WAMIT mesh with 1 to NBody nodes
+               CALL Transfer_Point_to_Point( u(1)%PRPMesh, u(1)%Morison%Mesh, HD_Ref_2_M_P, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDynDriver')  
+               if (errStat >= AbortErrLev) then
+                  ! Clean up and exit
+                  call HD_DvrCleanup()
+               end if
+             END IF
              
          END IF
         !@mhall: end of addition		 
-         
-      END IF  ! ( u(1)%WAMITMesh%Initialized )
+     
       
-      IF ( u(1)%Morison%Mesh%Initialized ) THEN
-         IF ( drvrInitInp%MorisonInputsMod == 2 ) THEN
-               ! Set the Morison Inputs from a time series input file
-         END IF
-                  
-      END IF
-      
+     
          ! Calculate outputs at n
 
       CALL HydroDyn_CalcOutput( Time, u(1), p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
@@ -890,12 +859,12 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
    
    
    !-------------------------------------------------------------------------------------------------
-   ! WAMIT INPUTS section
+   ! PRP INPUTS section
    !-------------------------------------------------------------------------------------------------
 
       ! Header
       
-   CALL ReadCom( UnIn, FileName, 'WAMIT INPUTS header', ErrStat, ErrMsg, UnEchoLocal )
+   CALL ReadCom( UnIn, FileName, 'PRP INPUTS header', ErrStat, ErrMsg, UnEchoLocal )
    
    IF ( ErrStat /= ErrID_None ) THEN
       ErrMsg  = ' Failed to read Comment line.'
@@ -907,13 +876,13 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
  
    
    
-      ! WAMITInputsMod      
+      ! PRPInputsMod      
        
-   CALL ReadVar ( UnIn, FileName, InitInp%WAMITInputsMod, 'WAMITInputsMod', &
-                                    'Model for the WAMIT inputs', ErrStat, ErrMsg, UnEchoLocal )
+   CALL ReadVar ( UnIn, FileName, InitInp%PRPInputsMod, 'PRPInputsMod', &
+                                    'Model for the PRP (principal reference point) inputs', ErrStat, ErrMsg, UnEchoLocal )
 
    IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read WAMITInputsMod parameter.'
+      ErrMsg  = ' Failed to read PRPInputsMod parameter.'
       ErrStat = ErrID_Fatal
       CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
       CLOSE( UnIn )
@@ -921,13 +890,13 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
    END IF   
    
    
-      ! WAMITInputsFile      
+      ! PRPInputsFile      
        
-   CALL ReadVar ( UnIn, FileName, InitInp%WAMITInputsFile, 'WAMITInputsFile', &
-                                    'Filename for the HydroDyn inputs', ErrStat, ErrMsg, UnEchoLocal )
+   CALL ReadVar ( UnIn, FileName, InitInp%PRPInputsFile, 'PRPInputsFile', &
+                                    'Filename for the PRP HydroDyn inputs', ErrStat, ErrMsg, UnEchoLocal )
 
    IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read WAMITInputsFile parameter.'
+      ErrMsg  = ' Failed to read PRPInputsFile parameter.'
       ErrStat = ErrID_Fatal
       CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
       CLOSE( UnIn )
@@ -936,12 +905,12 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
    
    
    !-------------------------------------------------------------------------------------------------
-   ! WAMIT STEADY STATE INPUTS section
+   ! PRP STEADY STATE INPUTS section
    !-------------------------------------------------------------------------------------------------
 
       ! Header
       
-   CALL ReadCom( UnIn, FileName, 'WAMIT STEADY STATE INPUTS header', ErrStat, ErrMsg, UnEchoLocal )
+   CALL ReadCom( UnIn, FileName, 'PRP STEADY STATE INPUTS header', ErrStat, ErrMsg, UnEchoLocal )
    
    IF ( ErrStat /= ErrID_None ) THEN
       ErrMsg  = ' Failed to read Comment line.'
@@ -953,13 +922,13 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
    
    
    
-         ! uWAMITInSteady
+         ! uPRPInSteady
          
-      CALL ReadAry ( UnIn, FileName, InitInp%uWAMITInSteady, 6, 'uWAMITInSteady', &
-                           'WAMIT Steady-state displacements and rotations.', ErrStat,  ErrMsg, UnEchoLocal)         
+      CALL ReadAry ( UnIn, FileName, InitInp%uPRPInSteady, 6, 'uPRPInSteady', &
+                           'PRP Steady-state displacements and rotations.', ErrStat,  ErrMsg, UnEchoLocal)         
        
       IF ( ErrStat /= ErrID_None ) THEN
-         ErrMsg  = ' Failed to read uWAMITInSteady parameter.'
+         ErrMsg  = ' Failed to read uPRPInSteady parameter.'
          ErrStat = ErrID_Fatal
          CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
          CLOSE( UnIn )
@@ -967,13 +936,13 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
       END IF
    
    
-         ! uDotWAMITInSteady
+         ! uDotPRPInSteady
          
-      CALL ReadAry ( UnIn, FileName, InitInp%uDotWAMITInSteady, 6, 'uDotWAMITInSteady', &
-                           'WAMIT Steady-state translational and rotational velocities.', ErrStat,  ErrMsg, UnEchoLocal)         
+      CALL ReadAry ( UnIn, FileName, InitInp%uDotPRPInSteady, 6, 'uDotPRPInSteady', &
+                           'PRP Steady-state translational and rotational velocities.', ErrStat,  ErrMsg, UnEchoLocal)         
        
       IF ( ErrStat /= ErrID_None ) THEN
-         ErrMsg  = ' Failed to read uDotWAMITInSteady parameter.'
+         ErrMsg  = ' Failed to read uDotPRPInSteady parameter.'
          ErrStat = ErrID_Fatal
          CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
          CLOSE( UnIn )
@@ -981,136 +950,136 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
       END IF
       
       
-         ! uDotDotWAMITInSteady
+         ! uDotDotPRPInSteady
          
-      CALL ReadAry ( UnIn, FileName, InitInp%uDotDotWAMITInSteady, 6, 'uDotDotWAMITInSteady', &
-                           'WAMIT Steady-state translational and rotational accelerations.', ErrStat,  ErrMsg, UnEchoLocal)         
+      CALL ReadAry ( UnIn, FileName, InitInp%uDotDotPRPInSteady, 6, 'uDotDotPRPInSteady', &
+                           'PRP Steady-state translational and rotational accelerations.', ErrStat,  ErrMsg, UnEchoLocal)         
        
       IF ( ErrStat /= ErrID_None ) THEN
-         ErrMsg  = ' Failed to read uDotDotWAMITInSteady parameter.'
+         ErrMsg  = ' Failed to read uDotDotPRPInSteady parameter.'
          ErrStat = ErrID_Fatal
          CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
          CLOSE( UnIn )
          RETURN
       END IF
       
-   IF ( InitInp%WAMITInputsMod /= 1 ) THEN
-      InitInp%uWAMITInSteady       = 0.0
-      InitInp%uDotWAMITInSteady    = 0.0
-      InitInp%uDotDotWAMITInSteady = 0.0
+   IF ( InitInp%PRPInputsMod /= 1 ) THEN
+      InitInp%uPRPInSteady       = 0.0
+      InitInp%uDotPRPInSteady    = 0.0
+      InitInp%uDotDotPRPInSteady = 0.0
    END IF
    
    
-   !-------------------------------------------------------------------------------------------------
-   ! Morison INPUTS section
-   !-------------------------------------------------------------------------------------------------
-
-      ! Header
-      
-   CALL ReadCom( UnIn, FileName, 'Morison INPUTS header', ErrStat, ErrMsg, UnEchoLocal )
-   
-   IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read Comment line.'
-      ErrStat = ErrID_Fatal
-      CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
-      CLOSE( UnIn )
-      RETURN
-   END IF
- 
-   
-   
-      ! MorisonInputsMod      
-       
-   CALL ReadVar ( UnIn, FileName, InitInp%MorisonInputsMod, 'MorisonInputsMod', &
-                                    'Model for the Morison inputs', ErrStat, ErrMsg, UnEchoLocal )
-
-   IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read MorisonInputsMod parameter.'
-      ErrStat = ErrID_Fatal
-      CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
-      CLOSE( UnIn )
-      RETURN
-   END IF   
-   
-   
-      ! MorisonInputsFile      
-       
-   CALL ReadVar ( UnIn, FileName, InitInp%MorisonInputsFile, 'MorisonInputsFile', &
-                                    'Filename for the HydroDyn inputs', ErrStat, ErrMsg, UnEchoLocal )
-
-   IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read MorisonInputsFile parameter.'
-      ErrStat = ErrID_Fatal
-      CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
-      CLOSE( UnIn )
-      RETURN
-   END IF   
-   
-   
-   !-------------------------------------------------------------------------------------------------
-   ! Morison STEADY STATE INPUTS section
-   !-------------------------------------------------------------------------------------------------
-
-      ! Header
-      
-   CALL ReadCom( UnIn, FileName, 'Morison STEADY STATE INPUTS header', ErrStat, ErrMsg, UnEchoLocal )
-   
-   IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read Comment line.'
-      ErrStat = ErrID_Fatal
-      CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
-      CLOSE( UnIn )
-      RETURN
-   END IF
-   
-   
-   
-         ! uMorisonInSteady
-         
-      CALL ReadAry ( UnIn, FileName, InitInp%uMorisonInSteady, 6, 'uMorisonInSteady', &
-                           'Morison Steady-state displacements and rotations.', ErrStat,  ErrMsg, UnEchoLocal)         
-       
-      IF ( ErrStat /= ErrID_None ) THEN
-         ErrMsg  = ' Failed to read uMorisonInSteady parameter.'
-         ErrStat = ErrID_Fatal
-         CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
-         CLOSE( UnIn )
-         RETURN
-      END IF
-   
-   
-         ! uDotMorisonInSteady
-         
-      CALL ReadAry ( UnIn, FileName, InitInp%uDotMorisonInSteady, 6, 'uDotMorisonInSteady', &
-                           'Morison Steady-state translational and rotational velocities.', ErrStat,  ErrMsg, UnEchoLocal)         
-       
-      IF ( ErrStat /= ErrID_None ) THEN
-         ErrMsg  = ' Failed to read uDotMorisonInSteady parameter.'
-         ErrStat = ErrID_Fatal
-         CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
-         CLOSE( UnIn )
-         RETURN
-      END IF
-      
-      
-         ! uDotDotMorisonInSteady
-         
-      CALL ReadAry ( UnIn, FileName, InitInp%uDotDotMorisonInSteady, 6, 'uDotDotMorisonInSteady', &
-                           'Morison Steady-state translational and rotational accelerations.', ErrStat,  ErrMsg, UnEchoLocal)         
-       
-      IF ( ErrStat /= ErrID_None ) THEN
-         ErrMsg  = ' Failed to read uDotDotMorisonInSteady parameter.'
-         ErrStat = ErrID_Fatal
-         CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
-         CLOSE( UnIn )
-         RETURN
-      END IF
-      
-   IF ( InitInp%MorisonInputsMod /= 1 ) THEN
-      InitInp%uMorisonInSteady       = 0.0
-      InitInp%uDotMorisonInSteady    = 0.0
-      InitInp%uDotDotMorisonInSteady = 0.0
-   END IF
+   !!-------------------------------------------------------------------------------------------------
+   !! Morison INPUTS section
+   !!-------------------------------------------------------------------------------------------------
+   !
+   !   ! Header
+   !   
+   !CALL ReadCom( UnIn, FileName, 'Morison INPUTS header', ErrStat, ErrMsg, UnEchoLocal )
+   !
+   !IF ( ErrStat /= ErrID_None ) THEN
+   !   ErrMsg  = ' Failed to read Comment line.'
+   !   ErrStat = ErrID_Fatal
+   !   CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
+   !   CLOSE( UnIn )
+   !   RETURN
+   !END IF
+   !
+   !
+   !
+   !   ! MorisonInputsMod      
+   !    
+   !CALL ReadVar ( UnIn, FileName, InitInp%MorisonInputsMod, 'MorisonInputsMod', &
+   !                                 'Model for the Morison inputs', ErrStat, ErrMsg, UnEchoLocal )
+   !
+   !IF ( ErrStat /= ErrID_None ) THEN
+   !   ErrMsg  = ' Failed to read MorisonInputsMod parameter.'
+   !   ErrStat = ErrID_Fatal
+   !   CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
+   !   CLOSE( UnIn )
+   !   RETURN
+   !END IF   
+   !
+   !
+   !   ! MorisonInputsFile      
+   !    
+   !CALL ReadVar ( UnIn, FileName, InitInp%MorisonInputsFile, 'MorisonInputsFile', &
+   !                                 'Filename for the HydroDyn inputs', ErrStat, ErrMsg, UnEchoLocal )
+   !
+   !IF ( ErrStat /= ErrID_None ) THEN
+   !   ErrMsg  = ' Failed to read MorisonInputsFile parameter.'
+   !   ErrStat = ErrID_Fatal
+   !   CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
+   !   CLOSE( UnIn )
+   !   RETURN
+   !END IF   
+   !
+   !
+   !!-------------------------------------------------------------------------------------------------
+   !! Morison STEADY STATE INPUTS section
+   !!-------------------------------------------------------------------------------------------------
+   !
+   !   ! Header
+   !   
+   !CALL ReadCom( UnIn, FileName, 'Morison STEADY STATE INPUTS header', ErrStat, ErrMsg, UnEchoLocal )
+   !
+   !IF ( ErrStat /= ErrID_None ) THEN
+   !   ErrMsg  = ' Failed to read Comment line.'
+   !   ErrStat = ErrID_Fatal
+   !   CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
+   !   CLOSE( UnIn )
+   !   RETURN
+   !END IF
+   !
+   !
+   !
+   !      ! uMorisonInSteady
+   !      
+   !   CALL ReadAry ( UnIn, FileName, InitInp%uMorisonInSteady, 6, 'uMorisonInSteady', &
+   !                        'Morison Steady-state displacements and rotations.', ErrStat,  ErrMsg, UnEchoLocal)         
+   !    
+   !   IF ( ErrStat /= ErrID_None ) THEN
+   !      ErrMsg  = ' Failed to read uMorisonInSteady parameter.'
+   !      ErrStat = ErrID_Fatal
+   !      CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
+   !      CLOSE( UnIn )
+   !      RETURN
+   !   END IF
+   !
+   !
+   !      ! uDotMorisonInSteady
+   !      
+   !   CALL ReadAry ( UnIn, FileName, InitInp%uDotMorisonInSteady, 6, 'uDotMorisonInSteady', &
+   !                        'Morison Steady-state translational and rotational velocities.', ErrStat,  ErrMsg, UnEchoLocal)         
+   !    
+   !   IF ( ErrStat /= ErrID_None ) THEN
+   !      ErrMsg  = ' Failed to read uDotMorisonInSteady parameter.'
+   !      ErrStat = ErrID_Fatal
+   !      CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
+   !      CLOSE( UnIn )
+   !      RETURN
+   !   END IF
+   !   
+   !   
+   !      ! uDotDotMorisonInSteady
+   !      
+   !   CALL ReadAry ( UnIn, FileName, InitInp%uDotDotMorisonInSteady, 6, 'uDotDotMorisonInSteady', &
+   !                        'Morison Steady-state translational and rotational accelerations.', ErrStat,  ErrMsg, UnEchoLocal)         
+   !    
+   !   IF ( ErrStat /= ErrID_None ) THEN
+   !      ErrMsg  = ' Failed to read uDotDotMorisonInSteady parameter.'
+   !      ErrStat = ErrID_Fatal
+   !      CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
+   !      CLOSE( UnIn )
+   !      RETURN
+   !   END IF
+   !   
+   !IF ( InitInp%MorisonInputsMod /= 1 ) THEN
+   !   InitInp%uMorisonInSteady       = 0.0
+   !   InitInp%uDotMorisonInSteady    = 0.0
+   !   InitInp%uDotDotMorisonInSteady = 0.0
+   !END IF
 
 
    !-------------------------------------------------------------------------------------------------
