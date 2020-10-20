@@ -1048,8 +1048,6 @@ SUBROUTINE AssembleKM(Init, p, ErrStat, ErrMsg)
       Init%K(IDOF, IDOF) = Init%K( IDOF, IDOF) + Ke(1:12,1:12)
       Init%M(IDOF, IDOF) = Init%M( IDOF, IDOF) + Me(1:12,1:12)
    ENDDO
-   ! Copy FG to FG_full since FG will be reduced later
-   p%FG_full(1:p%nDOF) = Init%FG(1:p%nDOF)
       
    ! Add concentrated mass to mass matrix
    DO I = 1, Init%nCMass
@@ -1087,6 +1085,9 @@ SUBROUTINE AssembleKM(Init, p, ErrStat, ErrMsg)
        iGlob = p%NodesDOF(iNode)%List(3) ! uz
        Init%FG(iGlob) = Init%FG(iGlob) - Init%CMass(I, 2)*Init%g 
    ENDDO
+
+   ! Copy FG to FG_full since FG will be reduced later
+   p%FG_full(1:p%nDOF) = Init%FG(1:p%nDOF)
    
    CALL CleanUp_AssembleKM()
    
