@@ -141,6 +141,8 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
          return
       end if
 
+   ! In the following, trapezoidalpointweight should be generalized to multi-element; likewise for gausspointweight
+
    IF(p%quadrature .EQ. GAUSS_QUADRATURE) THEN
 
        CALL BD_GaussPointWeight(p%nqp,p%QPtN,p%QPtWeight,ErrStat2,ErrMsg2) !calculates p%QPtN and p%QPtWeight
@@ -152,12 +154,12 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
 
    ELSEIF(p%quadrature .EQ. TRAP_QUADRATURE) THEN
 
-      CALL BD_TrapezoidalPointWeight(p,  InputFileData%InpBl%station_eta, InputFileData%InpBl%station_total)        ! computes p%QPtN and p%QPtWeight
+      CALL BD_TrapezoidalPointWeight(p,  InputFileData%InpBl%station_eta, InputFileData%InpBl%station_total) ! computes p%QPtN and p%QPtWeight
 
    ENDIF
 
       ! compute physical distances to set positions of p%uuN0 (FE GLL_Nodes) (depends on p%SP_Coef):
-   call InitializeNodalLocations(InputFileData, p, GLL_nodes, InitOut, ErrStat2,ErrMsg2)
+   call InitializeNodalLocations(InputFileData%member_total,InputFileData%kp_member,InputFileData%kp_coordinate,p,GLL_nodes,InitOut,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       if (ErrStat >= AbortErrLev) then
          call cleanup()
@@ -495,8 +497,11 @@ CONTAINS
 end subroutine InitializeMassStiffnessMatrices
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine computes the positions and rotations stored in p%uuN0 (output GLL nodes) and p%QuadPt (input quadrature nodes).  p%QPtN must be already set.
-subroutine InitializeNodalLocations(InputFileData,p,GLL_nodes,InitOut,ErrStat, ErrMsg)
-   type(BD_InputFile),           intent(in   )  :: InputFileData     !< data from the input file
+subroutine InitializeNodalLocations(member_total,kp_member,kp_coordinate,p,GLL_nodes,InitOut,ErrStat, ErrMsg)
+
+   INTEGER(IntKi),INTENT(IN   ):: member_total
+   INTEGER(IntKi),INTENT(IN   ):: kp_member(:)        !< Number of key points of each member, InputFileData%kp_member from BD input file
+   REAL(BDKi),    INTENT(IN   ):: kp_coordinate(:,:)  !< Keypoints coordinates, from BD input file InputFileData%kp_coordinate(member key points,1:4);
    type(BD_ParameterType),       intent(inout)  :: p                 !< Parameters
    REAL(BDKi),                   INTENT(IN   )  :: GLL_nodes(:)      !< GLL_nodes(p%nodes_per_elem): location of the (p%nodes_per_elem) p%GLL points
    type(BD_InitOutputType),      intent(inout)  :: InitOut           !< initialization output type (for setting z_coordinate variable)
@@ -524,7 +529,7 @@ subroutine InitializeNodalLocations(InputFileData,p,GLL_nodes,InitOut,ErrStat, E
    ErrMsg  = ""
 
    ! Compute segment length ratio w.r.t. member length
-   CALL BD_SegmentEta(InputFileData%member_total,InputFileData%kp_member,InputFileData%kp_coordinate,p%SP_Coef,p%segment_eta)
+   CALL BD_SegmentEta(member_total,kp_member,kp_coordinate,p%SP_Coef,p%segment_eta)
 
    !-------------------------------------------------
    ! p%uuN0 contains the initial (physical) positions and orientations of the (FE) GLL nodes
@@ -534,12 +539,12 @@ subroutine InitializeNodalLocations(InputFileData,p,GLL_nodes,InitOut,ErrStat, E
    member_first_kp = 1 !first key point on member (element)
    DO i=1,p%elem_total
 
-       member_last_kp  = member_first_kp + InputFileData%kp_member(i) - 1 !last key point of member (element)
+       member_last_kp  = member_first_kp + kp_member(i) - 1 !last key point of member (element)
        DO j=1,p%nodes_per_elem
 
            eta = (GLL_nodes(j) + 1.0_BDKi)/2.0_BDKi ! relative location where we are on the member (element), in range [0,1]
 
-           call Find_IniNode(InputFileData%kp_coordinate, p, member_first_kp, member_last_kp, eta, temp_POS, temp_CRV, ErrStat2, ErrMsg2)
+           call Find_IniNode(kp_coordinate, p, member_first_kp, member_last_kp, eta, temp_POS, temp_CRV, ErrStat2, ErrMsg2)
            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
            if (ErrStat >= AbortErrLev) return
            p%uuN0(1:3,j,i) = temp_POS
