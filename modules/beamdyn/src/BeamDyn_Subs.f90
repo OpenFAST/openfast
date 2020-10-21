@@ -866,6 +866,155 @@ SUBROUTINE Set_BldMotion_InitAcc(p, u, OtherState, m, y)
       
 END SUBROUTINE Set_BldMotion_InitAcc
 !-----------------------------------------------------------------------------------------------------------------------------------
+!> calculate Lagrangian interpolant tensor at ns points where basis
+!! functions are assumed to be associated with (np+1) GLL points on [-1,1]
+SUBROUTINE BD_diffmtc( nodes_per_elem,GLL_nodes,QPtN,nqp,Shp,ShpDer )
+
+   ! See Bauchau equations 17.1 - 17.5
+
+   INTEGER(IntKi),         INTENT(IN   )  :: nodes_per_elem !< Nodes per elemenent
+   REAL(BDKi),             INTENT(IN   )  :: GLL_nodes(:)   !< GLL_nodes(p%nodes_per_elem): location of the (p%nodes_per_elem) p%GLL points
+   REAL(BDKi),             INTENT(IN   )  :: QPtN(:)        !< Locations of quadrature points ([-1 1])
+   INTEGER(IntKi),         INTENT(IN   )  :: nqp            !< number of quadrature points to consider. Should be size of 2nd index of Shp & ShpDer
+   REAL(BDKi),             INTENT(INOUT)  :: Shp(:,:)       !< p%Shp    (or another Shp array for when we add outputs at arbitrary locations)
+   REAL(BDKi),             INTENT(INOUT)  :: ShpDer(:,:)    !< p%ShpDer (or another Shp array for when we add outputs at arbitrary locations)
+
+   REAL(BDKi)                  :: dnum
+   REAL(BDKi)                  :: den
+   REAL(BDKi),        PARAMETER:: eps = SQRT(EPSILON(eps)) !1.0D-08
+   INTEGER(IntKi)              :: l
+   INTEGER(IntKi)              :: j
+   INTEGER(IntKi)              :: i
+   INTEGER(IntKi)              :: k
+
+   ! See Bauchau equations 17.1 - 17.5
+
+   Shp(:,:)     = 0.0_BDKi
+   ShpDer(:,:)  = 0.0_BDKi
+
+
+   do j = 1,nqp
+      do l = 1,nodes_per_elem
+
+       if ((abs(QPtN(j)-1.).LE.eps).AND.(l.EQ.nodes_per_elem)) then           !adp: FIXME: do we want to compare to eps, or EqualRealNos???
+         ShpDer(l,j) = REAL((nodes_per_elem)*(nodes_per_elem-1), BDKi)/4.0_BDKi
+       elseif ((abs(QPtN(j)+1.).LE.eps).AND.(l.EQ.1)) then
+         ShpDer(l,j) = -REAL((nodes_per_elem)*(nodes_per_elem-1), BDKi)/4.0_BDKi
+       elseif (abs(QPtN(j)-GLL_nodes(l)).LE.eps) then
+         ShpDer(l,j) = 0.0_BDKi
+       else
+         ShpDer(l,j) = 0.0_BDKi
+         den = 1.0_BDKi
+         do i = 1,nodes_per_elem
+           if (i.NE.l) then
+             den = den*(GLL_nodes(l)-GLL_nodes(i))
+           endif
+           dnum = 1.0_BDKi
+           do k = 1,nodes_per_elem
+             if ((k.NE.l).AND.(k.NE.i).AND.(i.NE.l)) then
+               dnum = dnum*(QPtN(j)-GLL_nodes(k))
+             elseif (i.EQ.l) then
+               dnum = 0.0_BDKi
+             endif
+           enddo
+           ShpDer(l,j) = ShpDer(l,j) + dnum
+         enddo
+         ShpDer(l,j) = ShpDer(l,j)/den
+       endif
+     enddo
+   enddo
+
+   do j = 1,nqp
+      do l = 1,nodes_per_elem
+
+       if(abs(QPtN(j)-GLL_nodes(l)).LE.eps) then
+         Shp(l,j) = 1.0_BDKi
+       else
+         dnum = 1.0_BDKi
+         den  = 1.0_BDKi
+         do k = 1,nodes_per_elem
+           if (k.NE.l) then
+             den  = den *(GLL_nodes(l) - GLL_nodes(k))
+             dnum = dnum*(QPtN(j) - GLL_nodes(k))
+           endif
+         enddo
+         Shp(l,j) = dnum/den
+       endif
+     enddo
+   enddo
+
+
+ END SUBROUTINE BD_diffmtc
+!-----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine computes initial CRV parameters
+!! given geometry information
+SUBROUTINE BD_Interp_Pos_CRV(p, eta, POS, CRV, ErrStat, ErrMsg)
+
+   type(BD_ParameterType),       intent(in   )  :: p                   !< Parameters
+   real(BDki),                   intent(in   )  :: eta
+   real(BDki),                   intent(  out)  :: POS(3)
+   real(BDki),                   intent(  out)  :: CRV(3)
+
+   INTEGER(IntKi), INTENT(  OUT)  :: ErrStat       !< Error status of the operation
+   CHARACTER(*),   INTENT(  OUT)  :: ErrMsg        !< Error message if ErrStat /= ErrID_None
+
+   ! local variables
+
+   integer(IntKi) :: i
+   integer(IntKi) :: j
+   integer(IntKi) :: found
+   integer(IntKi) :: element
+   real(BDki)     :: eta_left
+   real(BDki)     :: eta_right
+   real(BDki)     :: eta_local(1)
+
+   real(BDki),allocatable     :: gll(:)
+   real(BDki),allocatable     :: shp(:,:)
+   real(BDki),allocatable     :: shpder(:,:)
+
+   INTEGER(IntKi)                 :: ErrStat2      ! Temporary Error status
+   CHARACTER(ErrMsgLen)           :: ErrMsg2       ! Temporary Error message
+
+   ! find element in which eta resides 
+   eta_right = 0._BDKi
+   found = 0
+   eta_left = 0._BDki
+   do i = 1, p%elem_total
+      eta_right = eta_right + p%member_eta(i)
+      if (eta .le. eta_right .and. found .eq. 0) then
+         element = i
+         found = 1
+      endif
+      if (found .eq. 0) then
+         eta_left = eta_right
+      endif
+   enddo
+
+   ! need to evaluate shp and shpder at eta in [-1,1] for the found element
+   eta_local(1) = 2._BDKi * (eta - eta_left)/p%member_eta(element) - 1._BDKi
+
+   call AllocAry(gll, p%nodes_per_elem, "local GLL nodes",ErrStat2, ErrMsg2)
+   call AllocAry(shp, p%nodes_per_elem, 1,"local shape function",ErrStat2, ErrMsg2)
+   call AllocAry(shpder, p%nodes_per_elem, 1,"local shape deriv function",ErrStat2, ErrMsg2)
+
+   call BD_GenerateGLL(p%nodes_per_elem,gll,ErrStat2,ErrMsg2)
+   call bd_diffmtc(p%nodes_per_elem, gll, eta_local, 1, shp, shpder)
+
+   pos = 0._BDki
+   crv = 0._BDki
+   do i = 1, p%nodes_per_elem
+      do j = 1, 3
+         pos(j) = pos(j) + p%uuN0(j,i,element)*shp(i,1)
+         CRV(j) = CRV(j) + p%uuN0(j+3,i,element)*shp(i,1)
+      enddo 
+   enddo
+
+   deallocate(gll)
+   deallocate(shp)
+   deallocate(shpder)
+
+END SUBROUTINE BD_Interp_Pos_CRV
+!-----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine computes initial CRV parameters
 !! given geometry information
 SUBROUTINE BD_ComputeIniNodalCrv(e1, phi, cc, ErrStat, ErrMsg)
