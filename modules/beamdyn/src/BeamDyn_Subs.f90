@@ -946,31 +946,30 @@ SUBROUTINE BD_diffmtc( nodes_per_elem,GLL_nodes,QPtN,nqp,Shp,ShpDer )
 
  END SUBROUTINE BD_diffmtc
 !-----------------------------------------------------------------------------------------------------------------------------------
-!> This subroutine computes initial CRV parameters
-!! given geometry information
+!> this routine interpolates teh POS and CRV based on the nodal values 
 SUBROUTINE BD_Interp_Pos_CRV(p, eta, POS, CRV, ErrStat, ErrMsg)
 
-   type(BD_ParameterType),       intent(in   )  :: p                   !< Parameters
-   real(BDki),                   intent(in   )  :: eta
-   real(BDki),                   intent(  out)  :: POS(3)
-   real(BDki),                   intent(  out)  :: CRV(3)
+   type(BD_ParameterType),       intent(in   )  :: p       ! BD Parameters
+   real(BDki),                   intent(in   )  :: eta     ! location to interpolate to;  0 <= eta <= 1
+   real(BDki),                   intent(  out)  :: POS(3)  ! output XYZ
+   real(BDki),                   intent(  out)  :: CRV(3)  ! output rotation parameters
 
    INTEGER(IntKi), INTENT(  OUT)  :: ErrStat       !< Error status of the operation
    CHARACTER(*),   INTENT(  OUT)  :: ErrMsg        !< Error message if ErrStat /= ErrID_None
 
    ! local variables
 
-   integer(IntKi) :: i
-   integer(IntKi) :: j
-   integer(IntKi) :: found
-   integer(IntKi) :: element
-   real(BDki)     :: eta_left
-   real(BDki)     :: eta_right
-   real(BDki)     :: eta_local(1)
+   integer(IntKi) :: i            ! do loop
+   integer(IntKi) :: j            ! do loop
+   integer(IntKi) :: found        ! marker for finding element that eta lies in
+   integer(IntKi) :: element      ! element where eta lies
+   real(BDki)     :: eta_left     ! left eta value for an element
+   real(BDki)     :: eta_right    ! right eta_value for an element
+   real(BDki)     :: eta_local(1) ! eta_local in [-1,1] for finite element space
 
-   real(BDki),allocatable     :: gll(:)
-   real(BDki),allocatable     :: shp(:,:)
-   real(BDki),allocatable     :: shpder(:,:)
+   real(BDki),allocatable     :: gll(:)      ! local gll points; ez enough to generate here
+   real(BDki),allocatable     :: shp(:,:)    ! local shape function
+   real(BDki),allocatable     :: shpder(:,:) ! local shape function deriv
 
    INTEGER(IntKi)                 :: ErrStat2      ! Temporary Error status
    CHARACTER(ErrMsgLen)           :: ErrMsg2       ! Temporary Error message
@@ -990,7 +989,7 @@ SUBROUTINE BD_Interp_Pos_CRV(p, eta, POS, CRV, ErrStat, ErrMsg)
       endif
    enddo
 
-   ! need to evaluate shp and shpder at eta in [-1,1] for the found element
+   ! need to evaluate shp and shpder at eta_local in [-1,1] for the found element
    eta_local(1) = 2._BDKi * (eta - eta_left)/p%member_eta(element) - 1._BDKi
 
    call AllocAry(gll, p%nodes_per_elem, "local GLL nodes",ErrStat2, ErrMsg2)
@@ -998,13 +997,13 @@ SUBROUTINE BD_Interp_Pos_CRV(p, eta, POS, CRV, ErrStat, ErrMsg)
    call AllocAry(shpder, p%nodes_per_elem, 1,"local shape deriv function",ErrStat2, ErrMsg2)
 
    call BD_GenerateGLL(p%nodes_per_elem,gll,ErrStat2,ErrMsg2)
-   call bd_diffmtc(p%nodes_per_elem, gll, eta_local, 1, shp, shpder)
+   call bd_diffmtc(p%nodes_per_elem, gll, eta_local, 1, shp, shpder) ! evaluate shp and shpder at single point
 
    pos = 0._BDki
    crv = 0._BDki
    do i = 1, p%nodes_per_elem
       do j = 1, 3
-         pos(j) = pos(j) + p%uuN0(j,i,element)*shp(i,1)
+         pos(j) = pos(j) + p%uuN0(j,  i,element)  *shp(i,1)
          CRV(j) = CRV(j) + p%uuN0(j+3,i,element)*shp(i,1)
       enddo 
    enddo
