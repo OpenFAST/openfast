@@ -60,8 +60,8 @@ MODULE SD_FEM
   INTEGER(IntKi),   PARAMETER  :: idMemberRigid      = 3
 
   ! Types of Boundary Conditions
-  INTEGER(IntKi),   PARAMETER  :: idBC_Fixed    = 11
-  INTEGER(IntKi),   PARAMETER  :: idBC_Internal = 12
+  INTEGER(IntKi),   PARAMETER  :: idBC_Fixed    = 11 ! Fixed BC
+  INTEGER(IntKi),   PARAMETER  :: idBC_Internal = 12 ! Free BC
   INTEGER(IntKi),   PARAMETER  :: idBC_Leader   = 13 ! TODO, and maybe "BC" not appropriate here
 
   ! Types of Static Improvement Methods
@@ -74,7 +74,7 @@ MODULE SD_FEM
   INTEGER(IntKi),   PARAMETER  :: idGuyanDamp_None     = 0
   INTEGER(IntKi),   PARAMETER  :: idGuyanDamp_Rayleigh = 1
   INTEGER(IntKi),   PARAMETER  :: idGuyanDamp_66       = 2 
-  INTEGER(IntKi)               :: idGuyanDamp_Valid(3)  = (/idGuyanDamp_None, idGuyanDamp_Rayleigh, idGuyanDamp_66 /)
+  INTEGER(IntKi)               :: idGuyanDamp_Valid(3) = (/idGuyanDamp_None, idGuyanDamp_Rayleigh, idGuyanDamp_66 /)
   
   INTEGER(IntKi),   PARAMETER  :: SDMaxInpCols    = MAX(JointsCol,InterfCol,MembersCol,PropSetsBCol,PropSetsXCol,COSMsCol,CMassCol)
 
@@ -82,6 +82,7 @@ MODULE SD_FEM
   LOGICAL, PARAMETER :: DEV_VERSION    = .false.
   LOGICAL, PARAMETER :: BC_Before_CB   = .true.
   LOGICAL, PARAMETER :: ANALYTICAL_LIN = .true.
+  LOGICAL, PARAMETER :: GUYAN_RIGID_FLOATING = .true.
 
   INTERFACE FINDLOCI ! In the future, use FINDLOC from intrinsic
      MODULE PROCEDURE FINDLOCI_ReKi
@@ -696,6 +697,37 @@ CONTAINS
 
 END SUBROUTINE SD_Discrt
 
+
+!> Store relative vector between nodes and TP point, to later compute Guyan rigid body motion
+subroutine StoreNodesRelPos(Init, p, ErrStat, ErrMsg)
+   type(SD_InitType),      intent(in   ) :: Init
+   type(SD_ParameterType), intent(inout) :: p
+   integer(IntKi),         intent(out)   :: ErrStat     ! Error status of the operation
+   character(*),           intent(out)   :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   integer(Intki)       :: i
+   integer(IntKi)       :: ErrStat2
+   character(ErrMsgLen) :: ErrMsg2
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+   ! NOTE: using efficient memory order
+   call AllocAry(p%DP0, 3, size(Init%Nodes,1), 'DP0', ErrStat2, ErrMsg2); if(Failed()) return
+
+   do i = 1, size(Init%Nodes,1)
+      p%DP0(1, i) = Init%Nodes(i, 2) - Init%TP_RefPoint(1)
+      p%DP0(2, i) = Init%Nodes(i, 3) - Init%TP_RefPoint(2)
+      p%DP0(3, i) = Init%Nodes(i, 4) - Init%TP_RefPoint(3)
+   enddo
+
+contains
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, Errstat, ErrMsg, 'StoreNodesRelPos') 
+      failed =  ErrStat >= AbortErrLev
+   end function Failed
+end subroutine StoreNodesRelPos
+
+
+
 !------------------------------------------------------------------------------------------------------
 !> Set Element properties p%ElemProps, different properties are set depening on element type..
 SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
@@ -884,12 +916,6 @@ SUBROUTINE DistributeDOF(Init, p, ErrStat, ErrMsg)
       iPrev = iPrev + len(p%NodesDOF(iNode))
    enddo ! iNode, loop on joints
 
-   ! --- Initialize boundary constraint vector - NOTE: Needs Reindexing first
-   CALL InitBCs(Init, p)
-      
-   ! --- Initialize interface constraint vector - NOTE: Needs Reindexing first
-   CALL InitIntFc(Init, p)
-
    ! --- Safety check
    if (any(p%ElemsDOF<0)) then
       ErrStat=ErrID_Fatal
@@ -917,57 +943,61 @@ CONTAINS
         Failed =  ErrStat >= AbortErrLev
    END FUNCTION Failed
 
-   !> Sets a list of DOF indices corresponding to the BC, and the value these DOF should have
-   !! NOTE: need p%Nodes_C to have an updated first column that uses indices and not JointIDs
-   !! Note: try to remove me and merge me with ApplyConstr, but used by "SelectNonBCConstraintsDOF" and "UnReduceVRdofs"
-   SUBROUTINE InitBCs(Init, p)
-      TYPE(SD_InitType     ),INTENT(INOUT) :: Init
-      TYPE(SD_ParameterType),INTENT(INOUT) :: p
-      INTEGER(IntKi) :: I, J, iNode
-      DO I = 1, p%nNodes_C
-         iNode = p%Nodes_C(I,1) ! Node index
-         DO J = 1, 6
-            if (p%Nodes_C(I,J+1)==1) then ! User input 1=Constrained/Fixed (should be eliminated)
-               p%Nodes_C(I, J+1)       = idBC_Fixed
-            else if (p%Nodes_C(I,J+1)==0) then ! User input 0=Free, fill be part of Internal DOF
-               p%Nodes_C(I, J+1)       = idBC_Internal
-            else if (p%Nodes_C(I,J+1)==2) then ! User input 2=Leader DOF
-               p%Nodes_C(I, J+1)       = idBC_Leader
-               print*,'BC 2 not allowed for now, node',iNode
-               STOP
-            else
-               print*,'Wrong boundary condition input for reaction node',iNode
-               STOP
-            endif
-         ENDDO
-      ENDDO
-   END SUBROUTINE InitBCs
-
-   !> Sets a list of DOF indices and the value these DOF should have
-   !! NOTE: need Init%Interf to have been reindexed so that first column uses indices and not JointIDs
-   !! TODO remove me and merge me with CraigBampton
-   SUBROUTINE InitIntFc(Init, p)
-      TYPE(SD_InitType     ),INTENT(INOUT) :: Init
-      TYPE(SD_ParameterType),INTENT(INOUT) :: p
-      INTEGER(IntKi) :: I, J, iNode
-      DO I = 1, p%nNodes_I
-         iNode = p%Nodes_I(I,1) ! Node index
-         DO J = 1, 6 ! ItfTDXss    ItfTDYss    ItfTDZss    ItfRDXss    ItfRDYss    ItfRDZss
-            if     (p%Nodes_I(I,J+1)==1) then ! User input 1=Leader DOF
-               p%Nodes_I(I,J+1)          = idBC_Leader
-            elseif (p%Nodes_I(I,J+1)==1) then ! User input 0=Fixed DOF
-               p%Nodes_I(I,J+1)          = idBC_Fixed
-               print*,'Fixed boundary condition not yet supported for interface nodes, node:',iNode
-               STOP
-            else
-               print*,'Wrong boundary condition input for interface node',iNode
-               STOP
-            endif
-         ENDDO
-      ENDDO
-   END SUBROUTINE InitIntFc
-
 END SUBROUTINE DistributeDOF
+
+
+!> Checks reaction BC, adn remap 0s and 1s 
+SUBROUTINE CheckBCs(p, ErrStat, ErrMsg)
+   TYPE(SD_ParameterType),INTENT(INOUT) :: p
+   INTEGER(IntKi),        INTENT(  OUT) :: ErrStat     ! Error status of the operation
+   CHARACTER(*),          INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi) :: I, J, iNode
+   ErrMsg  = ""
+   ErrStat = ErrID_None
+   DO I = 1, p%nNodes_C
+      iNode = p%Nodes_C(I,1) ! Node index
+      DO J = 1, 6
+         if (p%Nodes_C(I,J+1)==1) then ! User input 1=Constrained/Fixed (should be eliminated)
+            p%Nodes_C(I, J+1)       = idBC_Fixed
+         else if (p%Nodes_C(I,J+1)==0) then ! User input 0=Free, fill be part of Internal DOF
+            p%Nodes_C(I, J+1)       = idBC_Internal
+         else if (p%Nodes_C(I,J+1)==2) then ! User input 2=Leader DOF
+            p%Nodes_C(I, J+1)       = idBC_Leader
+            ErrStat=ErrID_Fatal
+            ErrMsg='BC 2 not allowed for now, node '//trim(Num2LStr(iNode))
+         else
+            ErrStat=ErrID_Fatal
+            ErrMsg='Wrong boundary condition input for reaction node '//trim(Num2LStr(iNode))
+         endif
+      ENDDO
+   ENDDO
+END SUBROUTINE CheckBCs
+
+!> Check interface inputs, and remap 0s and 1s 
+SUBROUTINE CheckIntf(p, ErrStat, ErrMsg)
+   TYPE(SD_ParameterType),INTENT(INOUT) :: p
+   INTEGER(IntKi),        INTENT(  OUT) :: ErrStat     ! Error status of the operation
+   CHARACTER(*),          INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi) :: I, J, iNode
+   ErrMsg  = ""
+   ErrStat = ErrID_None
+   DO I = 1, p%nNodes_I
+      iNode = p%Nodes_I(I,1) ! Node index
+      DO J = 1, 6 ! ItfTDXss    ItfTDYss    ItfTDZss    ItfRDXss    ItfRDYss    ItfRDZss
+         if     (p%Nodes_I(I,J+1)==1) then ! User input 1=Leader DOF
+            p%Nodes_I(I,J+1)          = idBC_Leader
+         elseif (p%Nodes_I(I,J+1)==0) then ! User input 0=Fixed DOF
+            p%Nodes_I(I,J+1)          = idBC_Fixed
+            ErrStat = ErrID_Fatal
+            ErrMsg  = 'Fixed boundary condition not yet supported for interface nodes, node:'//trim(Num2LStr(iNode))
+         else
+            ErrStat = ErrID_Fatal
+            ErrMsg  = 'Wrong boundary condition input for interface node'//trim(Num2LStr(iNode))
+         endif
+      ENDDO
+   ENDDO
+END SUBROUTINE CheckIntf
+
 
 !------------------------------------------------------------------------------------------------------
 !> Assemble stiffness and mass matrix, and gravity force vector
@@ -1018,8 +1048,6 @@ SUBROUTINE AssembleKM(Init, p, ErrStat, ErrMsg)
       Init%K(IDOF, IDOF) = Init%K( IDOF, IDOF) + Ke(1:12,1:12)
       Init%M(IDOF, IDOF) = Init%M( IDOF, IDOF) + Me(1:12,1:12)
    ENDDO
-   ! Copy FG to FG_full since FG will be reduced later
-   p%FG_full(1:p%nDOF) = Init%FG(1:p%nDOF)
       
    ! Add concentrated mass to mass matrix
    DO I = 1, Init%nCMass
@@ -1057,6 +1085,9 @@ SUBROUTINE AssembleKM(Init, p, ErrStat, ErrMsg)
        iGlob = p%NodesDOF(iNode)%List(3) ! uz
        Init%FG(iGlob) = Init%FG(iGlob) - Init%CMass(I, 2)*Init%g 
    ENDDO
+
+   ! Copy FG to FG_full since FG will be reduced later
+   p%FG_full(1:p%nDOF) = Init%FG(1:p%nDOF)
    
    CALL CleanUp_AssembleKM()
    
@@ -2004,7 +2035,7 @@ LOGICAL FUNCTION isFixedBottom(Init, p) result(bFixed)
    INTEGER(IntKi) :: i, nFixed
    nFixed=0
    do i =1,size(p%Nodes_C,1)
-      if (ALL(p%Nodes_C(I,2:5)==idBC_Fixed)) then
+      if (ALL(p%Nodes_C(I,2:7)==idBC_Fixed)) then
          nFixed=nFixed+1
       elseif (Init%SSIfile(I)/='') then
          nFixed=nFixed+1
@@ -2012,6 +2043,22 @@ LOGICAL FUNCTION isFixedBottom(Init, p) result(bFixed)
    enddo
    bFixed = nFixed >=1
 END FUNCTION isFixedBottom
+
+!> True if a structure is floating, no fixed BC at the bottom
+logical function isFloating(Init, p) result(bFLoating)
+   type(SD_InitType),     intent(in   ):: Init
+   type(SD_ParameterType),intent(in   ) :: p
+   integer(IntKi) :: i
+   bFloating=.True.
+   do i =1,size(p%Nodes_C,1)
+      if ((all(p%Nodes_C(I,2:7)==idBC_Internal)) .and. (Init%SSIfile(i)=='')) then
+         continue
+      else
+         bFloating=.False.
+         return
+      endif
+   enddo
+end function isFloating
 
 SUBROUTINE ElemM(ep, Me)
    TYPE(ElemPropType), INTENT(IN) :: eP        !< Element Property

@@ -222,6 +222,7 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: Elems      !< Element nodes connections [-]
     TYPE(ElemPropType) , DIMENSION(:), ALLOCATABLE  :: ElemProps      !< List of element properties [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: FG_full      !< Gravity force vector (with initial cable force T0), not reduced [N]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: DP0      !< Vector from TP to a Node at t=0, used for Floating Rigid Body motion [m]
     LOGICAL  :: reduced      !< True if system has been reduced to account for constraints [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: T_red      !< Transformation matrix performing the constraint reduction x = T. xtilde [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: T_red_T      !< Transpose of T_red [-]
@@ -233,7 +234,8 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: nDOFM      !< retained degrees of freedom (modes) [-]
     INTEGER(IntKi)  :: SttcSolve      !< Solve dynamics about static equilibrium point (flag) [-]
     LOGICAL  :: ExtraMoment      !< Add Extra lever arm contribution to interface reaction outputs [-]
-    LOGICAL  :: FixedBottom      !< True if Fixed bottom [-]
+    LOGICAL  :: FixedBottom      !< True if Fixed bottom (the 4 x-y DOF fixed for at least one reaction node) [-]
+    LOGICAL  :: Floating      !< True if floating bottom (the 6 DOF are free at all reaction nodes) [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: KMMDiag      !< Diagonal coefficients of Kmm (OmegaM squared) [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: CMMDiag      !< Diagonal coefficients of Cmm (~2 Zeta OmegaM)) [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: MMB      !< Matrix after C-B reduction (transpose of MBM [-]
@@ -3955,8 +3957,8 @@ ENDIF
 
       DO i2 = LBOUND(InData%SSIK,2), UBOUND(InData%SSIK,2)
         DO i1 = LBOUND(InData%SSIK,1), UBOUND(InData%SSIK,1)
-          ReKiBuf(Re_Xferred) = InData%SSIK(i1,i2)
-          Re_Xferred = Re_Xferred + 1
+          DbKiBuf(Db_Xferred) = InData%SSIK(i1,i2)
+          Db_Xferred = Db_Xferred + 1
         END DO
       END DO
   END IF
@@ -3975,8 +3977,8 @@ ENDIF
 
       DO i2 = LBOUND(InData%SSIM,2), UBOUND(InData%SSIM,2)
         DO i1 = LBOUND(InData%SSIM,1), UBOUND(InData%SSIM,1)
-          ReKiBuf(Re_Xferred) = InData%SSIM(i1,i2)
-          Re_Xferred = Re_Xferred + 1
+          DbKiBuf(Db_Xferred) = InData%SSIM(i1,i2)
+          Db_Xferred = Db_Xferred + 1
         END DO
       END DO
   END IF
@@ -4611,8 +4613,8 @@ ENDIF
     END IF
       DO i2 = LBOUND(OutData%SSIK,2), UBOUND(OutData%SSIK,2)
         DO i1 = LBOUND(OutData%SSIK,1), UBOUND(OutData%SSIK,1)
-          OutData%SSIK(i1,i2) = ReKiBuf(Re_Xferred)
-          Re_Xferred = Re_Xferred + 1
+          OutData%SSIK(i1,i2) = REAL(DbKiBuf(Db_Xferred), R8Ki)
+          Db_Xferred = Db_Xferred + 1
         END DO
       END DO
   END IF
@@ -4634,8 +4636,8 @@ ENDIF
     END IF
       DO i2 = LBOUND(OutData%SSIM,2), UBOUND(OutData%SSIM,2)
         DO i1 = LBOUND(OutData%SSIM,1), UBOUND(OutData%SSIM,1)
-          OutData%SSIM(i1,i2) = ReKiBuf(Re_Xferred)
-          Re_Xferred = Re_Xferred + 1
+          OutData%SSIM(i1,i2) = REAL(DbKiBuf(Db_Xferred), R8Ki)
+          Db_Xferred = Db_Xferred + 1
         END DO
       END DO
   END IF
@@ -6974,6 +6976,20 @@ IF (ALLOCATED(SrcParamData%FG_full)) THEN
   END IF
     DstParamData%FG_full = SrcParamData%FG_full
 ENDIF
+IF (ALLOCATED(SrcParamData%DP0)) THEN
+  i1_l = LBOUND(SrcParamData%DP0,1)
+  i1_u = UBOUND(SrcParamData%DP0,1)
+  i2_l = LBOUND(SrcParamData%DP0,2)
+  i2_u = UBOUND(SrcParamData%DP0,2)
+  IF (.NOT. ALLOCATED(DstParamData%DP0)) THEN 
+    ALLOCATE(DstParamData%DP0(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%DP0.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstParamData%DP0 = SrcParamData%DP0
+ENDIF
     DstParamData%reduced = SrcParamData%reduced
 IF (ALLOCATED(SrcParamData%T_red)) THEN
   i1_l = LBOUND(SrcParamData%T_red,1)
@@ -7081,6 +7097,7 @@ ENDIF
     DstParamData%SttcSolve = SrcParamData%SttcSolve
     DstParamData%ExtraMoment = SrcParamData%ExtraMoment
     DstParamData%FixedBottom = SrcParamData%FixedBottom
+    DstParamData%Floating = SrcParamData%Floating
 IF (ALLOCATED(SrcParamData%KMMDiag)) THEN
   i1_l = LBOUND(SrcParamData%KMMDiag,1)
   i1_u = UBOUND(SrcParamData%KMMDiag,1)
@@ -7858,6 +7875,9 @@ ENDIF
 IF (ALLOCATED(ParamData%FG_full)) THEN
   DEALLOCATE(ParamData%FG_full)
 ENDIF
+IF (ALLOCATED(ParamData%DP0)) THEN
+  DEALLOCATE(ParamData%DP0)
+ENDIF
 IF (ALLOCATED(ParamData%T_red)) THEN
   DEALLOCATE(ParamData%T_red)
 ENDIF
@@ -8135,6 +8155,11 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*1  ! FG_full upper/lower bounds for each dimension
       Db_BufSz   = Db_BufSz   + SIZE(InData%FG_full)  ! FG_full
   END IF
+  Int_BufSz   = Int_BufSz   + 1     ! DP0 allocated yes/no
+  IF ( ALLOCATED(InData%DP0) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! DP0 upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%DP0)  ! DP0
+  END IF
       Int_BufSz  = Int_BufSz  + 1  ! reduced
   Int_BufSz   = Int_BufSz   + 1     ! T_red allocated yes/no
   IF ( ALLOCATED(InData%T_red) ) THEN
@@ -8211,6 +8236,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! SttcSolve
       Int_BufSz  = Int_BufSz  + 1  ! ExtraMoment
       Int_BufSz  = Int_BufSz  + 1  ! FixedBottom
+      Int_BufSz  = Int_BufSz  + 1  ! Floating
   Int_BufSz   = Int_BufSz   + 1     ! KMMDiag allocated yes/no
   IF ( ALLOCATED(InData%KMMDiag) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! KMMDiag upper/lower bounds for each dimension
@@ -8698,6 +8724,26 @@ ENDIF
         Db_Xferred = Db_Xferred + 1
       END DO
   END IF
+  IF ( .NOT. ALLOCATED(InData%DP0) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%DP0,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%DP0,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%DP0,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%DP0,2)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i2 = LBOUND(InData%DP0,2), UBOUND(InData%DP0,2)
+        DO i1 = LBOUND(InData%DP0,1), UBOUND(InData%DP0,1)
+          ReKiBuf(Re_Xferred) = InData%DP0(i1,i2)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
     IntKiBuf(Int_Xferred) = TRANSFER(InData%reduced, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
   IF ( .NOT. ALLOCATED(InData%T_red) ) THEN
@@ -8715,8 +8761,8 @@ ENDIF
 
       DO i2 = LBOUND(InData%T_red,2), UBOUND(InData%T_red,2)
         DO i1 = LBOUND(InData%T_red,1), UBOUND(InData%T_red,1)
-          ReKiBuf(Re_Xferred) = InData%T_red(i1,i2)
-          Re_Xferred = Re_Xferred + 1
+          DbKiBuf(Db_Xferred) = InData%T_red(i1,i2)
+          Db_Xferred = Db_Xferred + 1
         END DO
       END DO
   END IF
@@ -8889,6 +8935,8 @@ ENDIF
     IntKiBuf(Int_Xferred) = TRANSFER(InData%ExtraMoment, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%FixedBottom, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%Floating, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
   IF ( .NOT. ALLOCATED(InData%KMMDiag) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -10158,6 +10206,29 @@ ENDIF
         Db_Xferred = Db_Xferred + 1
       END DO
   END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! DP0 not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%DP0)) DEALLOCATE(OutData%DP0)
+    ALLOCATE(OutData%DP0(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%DP0.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i2 = LBOUND(OutData%DP0,2), UBOUND(OutData%DP0,2)
+        DO i1 = LBOUND(OutData%DP0,1), UBOUND(OutData%DP0,1)
+          OutData%DP0(i1,i2) = ReKiBuf(Re_Xferred)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
     OutData%reduced = TRANSFER(IntKiBuf(Int_Xferred), OutData%reduced)
     Int_Xferred = Int_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! T_red not allocated
@@ -10178,8 +10249,8 @@ ENDIF
     END IF
       DO i2 = LBOUND(OutData%T_red,2), UBOUND(OutData%T_red,2)
         DO i1 = LBOUND(OutData%T_red,1), UBOUND(OutData%T_red,1)
-          OutData%T_red(i1,i2) = ReKiBuf(Re_Xferred)
-          Re_Xferred = Re_Xferred + 1
+          OutData%T_red(i1,i2) = REAL(DbKiBuf(Db_Xferred), R8Ki)
+          Db_Xferred = Db_Xferred + 1
         END DO
       END DO
   END IF
@@ -10394,6 +10465,8 @@ ENDIF
     OutData%ExtraMoment = TRANSFER(IntKiBuf(Int_Xferred), OutData%ExtraMoment)
     Int_Xferred = Int_Xferred + 1
     OutData%FixedBottom = TRANSFER(IntKiBuf(Int_Xferred), OutData%FixedBottom)
+    Int_Xferred = Int_Xferred + 1
+    OutData%Floating = TRANSFER(IntKiBuf(Int_Xferred), OutData%Floating)
     Int_Xferred = Int_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! KMMDiag not allocated
     Int_Xferred = Int_Xferred + 1

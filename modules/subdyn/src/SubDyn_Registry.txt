@@ -181,8 +181,9 @@ typedef	^	ParameterType	INTEGER	nDOF	    -	-	-	"Total degree of freedom"
 typedef	^	ParameterType	INTEGER	nDOF_red	-	-	-	"Total degree of freedom after constraint reduction"
 typedef	^	ParameterType	IntKi	Nmembers	-	-	-	"Number of members of the sub structure"
 typedef	^	ParameterType	IntKi	Elems	{:}{:}	-	-	"Element nodes connections"
-typedef	^	ParameterType	ElemPropType	ElemProps	{:}	-	-	"List of element properties"
-typedef ^   ^               R8Ki            FG_full     {:}	-	-	"Gravity force vector (with initial cable force T0), not reduced"	N
+typedef	^	ParameterType	ElemPropType    ElemProps   {:}   - -  "List of element properties"
+typedef ^   ^               R8Ki            FG_full     {:}   - -  "Gravity force vector (with initial cable force T0), not reduced"	N
+typedef ^   ^               ReKi            DP0        {:}{:} - -  "Vector from TP to a Node at t=0, used for Floating Rigid Body motion"	m
 # --- Constraints reduction
 typedef ^             ^     Logical reduced           -      -  -  "True if system has been reduced to account for constraints"  "-"
 typedef ^             ^     R8Ki    T_red             {:}{:} -  -  "Transformation matrix performing the constraint reduction x = T. xtilde"	"-"
@@ -197,7 +198,8 @@ typedef  ^            ^     IntKi   CtrlElem2Channel  {:}{:} - -   "nCtrlCable x
 typedef	^	ParameterType	IntKi	nDOFM	-	-	-	"retained degrees of freedom (modes)"
 typedef	^	ParameterType	IntKi  	SttcSolve	-	-	-	"Solve dynamics about static equilibrium point (flag)"
 typedef	^	ParameterType	Logical ExtraMoment	-	-	-	"Add Extra lever arm contribution to interface reaction outputs"
-typedef	^	ParameterType	Logical FixedBottom	-	-	-	"True if Fixed bottom"
+typedef	^	ParameterType	Logical FixedBottom	-	-	-	"True if Fixed bottom (the 4 x-y DOF fixed for at least one reaction node)"
+typedef	^	ParameterType	Logical Floating	-	-	-	"True if floating bottom (the 6 DOF are free at all reaction nodes)"
 typedef	^	ParameterType	ReKi	KMMDiag	{:}	-	-	"Diagonal coefficients of Kmm (OmegaM squared)"
 typedef	^	ParameterType	ReKi	CMMDiag	{:}	-	-	"Diagonal coefficients of Cmm (~2 Zeta OmegaM))"
 typedef	^	ParameterType	ReKi	MMB	{:}{:}	-	-	"Matrix after C-B reduction (transpose of MBM"
