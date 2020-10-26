@@ -16,7 +16,7 @@ MODULE IfW_FFWind_Base
 !!
 !**********************************************************************************************************************************
 ! LICENSING
-! Copyright (C) 2015-2106  National Renewable Energy Laboratory
+! Copyright (C) 2015-2016  National Renewable Energy Laboratory
 !
 !    This file is part of InflowWind.
 !
@@ -109,6 +109,7 @@ SUBROUTINE IfW_FFWind_CalcOutput(Time, PositionXYZ, p, Velocity, DiskVel, ErrSta
          ! Calculate the velocity for the position
       Velocity(:,PointNum) = FFWind_Interp(Time,PositionXYZ(:,PointNum),p,TmpErrStat,TmpErrMsg)
 
+         ! Error handling
       IF (TmpErrStat /= ErrID_None) THEN  !  adding this so we don't have to convert numbers to strings every time
          !$OMP CRITICAL  ! Needed to avoid data race on ErrStat and ErrMsg
          ErrStat = ErrID_None
@@ -244,6 +245,7 @@ FUNCTION FFWind_Interp(Time, Position, p, ErrStat, ErrMsg)
       IF ( ITLO == p%NFFSteps ) THEN
          ITHI = 1
       ELSE
+         IF (ITLO > p%NFFSteps) ITLO = 1
          ITHI = ITLO + 1
       ENDIF
 

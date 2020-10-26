@@ -243,11 +243,11 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
 
             ! Open the summary file and write some preliminary info to it
          CALL InflowWind_OpenSumFile( SumFileUnit, SumFileName, IfW_Ver, InputFileData%WindType, TmpErrStat, TmpErrMsg )
-         CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-         IF (ErrStat >= AbortErrLev) THEN
-            CALL Cleanup()
-            RETURN
-         ENDIF
+            CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+            IF (ErrStat >= AbortErrLev) THEN
+               CALL Cleanup()
+               RETURN
+            ENDIF
       ELSE
          SumFileUnit =  -1_IntKi       ! So that we don't try to write to something.  Used as indicator in submodules.
       ENDIF
@@ -303,6 +303,9 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
             CALL AllocAry( p%UniformWind%Delta, p%UniformWind%NumDataLines, 'Uniform wind direction', TmpErrStat, TmpErrMsg )
                CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
          
+            CALL AllocAry( p%UniformWind%Upflow, p%UniformWind%NumDataLines, 'Uniform wind upflow angle', TmpErrStat, TmpErrMsg )
+               CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+         
             CALL AllocAry( p%UniformWind%VZ, p%UniformWind%NumDataLines, 'Uniform vertical wind speed', TmpErrStat, TmpErrMsg )
                CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
          
@@ -317,14 +320,17 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
                
             CALL AllocAry( p%UniformWind%VGust, p%UniformWind%NumDataLines, 'Uniform gust velocity', TmpErrStat, TmpErrMsg )
                CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-            IF ( ErrStat >= AbortErrLev ) RETURN
-
+               IF (ErrStat >= AbortErrLev) THEN
+                  CALL Cleanup()
+                  RETURN
+               ENDIF
 
                ! Set the array information
             
             p%UniformWind%Tdata(  :)       = 0.0_ReKi
             p%UniformWind%V(      :)       = InputFileData%Steady_HWindSpeed
             p%UniformWind%Delta(  :)       = 0.0_ReKi
+            p%UniformWind%Upflow( :)       = 0.0_ReKi
             p%UniformWind%VZ(     :)       = 0.0_ReKi
             p%UniformWind%HShr(   :)       = 0.0_ReKi
             p%UniformWind%VShr(   :)       = InputFileData%Steady_PLexp
@@ -389,8 +395,21 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
             CALL IfW_UniformWind_Init(Uniform_InitData, p%UniformWind, &
                         m%UniformWind, Uniform_InitOutData,  TmpErrStat, TmpErrMsg)
 
-            CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, ' IfW_Init' )
-            IF ( ErrStat >= AbortErrLev ) RETURN
+               CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, ' IfW_Init' )
+               IF (ErrStat >= AbortErrLev) THEN
+                  CALL Cleanup()
+                  RETURN
+               ENDIF
+               
+            if (InitInp%Linearize) then
+                  ! we'd have to redo the math to get this correct, so for now we are disabling upflow for linearization:
+               if (any(p%UniformWind%upflow /= 0.0_ReKi) ) then
+                  call SetErrStat(ErrID_Fatal, 'Upflow in uniform wind files must be 0 for linearization analysis in InflowWind.', ErrStat, ErrMsg, RoutineName)
+                  CALL Cleanup()
+                  return
+               end if
+            end if
+
 
             p%ReferenceHeight = p%UniformWind%RefHt
 
@@ -449,7 +468,10 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
             CALL IfW_TSFFWind_Init(TSFF_InitData, p%TSFFWind, &
                            m%TSFFWind, TSFF_InitOutData,  TmpErrStat, TmpErrMsg)
             CALL SetErrSTat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-            IF ( ErrStat >= AbortErrLev ) RETURN
+               IF (ErrStat >= AbortErrLev) THEN
+                  CALL Cleanup()
+                  RETURN
+               ENDIF
 
                ! Store wind file metadata
             InitOutData%WindFileInfo%FileName            =  InputFileData%TSFF_FileName
@@ -478,7 +500,10 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
             CALL IfW_BladedFFWind_Init(BladedFF_InitData, p%BladedFFWind, m%BladedFFWind, &
                                         BladedFF_InitOutData,  TmpErrStat, TmpErrMsg)
             CALL SetErrSTat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-            IF ( ErrStat >= AbortErrLev ) RETURN
+               IF (ErrStat >= AbortErrLev) THEN
+                  CALL Cleanup()
+                  RETURN
+               ENDIF
 
                ! Store wind file metadata
             InitOutData%WindFileInfo%FileName            =  InputFileData%BladedFF_FileName
@@ -519,7 +544,10 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
             CALL IfW_HAWCWind_Init(HAWC_InitData, p%HAWCWind, m%HAWCWind, &
                                    TimeInterval,  HAWC_InitOutData,  TmpErrStat, TmpErrMsg)
             CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-            IF ( ErrStat >= AbortErrLev ) RETURN
+               IF (ErrStat >= AbortErrLev) THEN
+                  CALL Cleanup()
+                  RETURN
+               ENDIF
 
 
                ! Store wind file metadata
@@ -534,7 +562,10 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
             CALL IfW_UserWind_Init(User_InitData, p%UserWind, m%UserWind, &
                         TimeInterval,  User_InitOutData,  TmpErrStat, TmpErrMsg)
             CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-            IF ( ErrStat >= AbortErrLev ) RETURN
+               IF (ErrStat >= AbortErrLev) THEN
+                  CALL Cleanup()
+                  RETURN
+               ENDIF
             
             p%ReferenceHeight = InputFileData%Steady_RefHt ! FIXME!!!!
             
@@ -543,7 +574,10 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
                ! Initialize the UserWind module
             CALL IfW_4Dext_Init(InitInp%FDext, p%FDext, m%FDext, TimeInterval, FDext_InitOutData, TmpErrStat, TmpErrMsg)
             CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-            IF ( ErrStat >= AbortErrLev ) RETURN
+               IF (ErrStat >= AbortErrLev) THEN
+                  CALL Cleanup()
+                  RETURN
+               ENDIF
             p%ReferenceHeight = p%FDext%pZero(3) + (p%FDext%n(3)/2) * p%FDext%delta(3) ! should be middle of grid, right???? FIXME
             
          CASE DEFAULT  ! keep this check to make sure that all new wind types have been accounted for
@@ -1138,6 +1172,7 @@ SUBROUTINE InflowWind_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrSt
          do i=1,n
             ! note that p%RotToWind(1,1) = cos(p%PropagationDir) and p%RotToWind(2,1) = sin(p%PropagationDir), which are the
             ! values we need to compute the jacobian.
+!!!FIX ME with the propagation values!!!!         
             call IfW_UniformWind_JacobianPInput( t, u%PositionXYZ(:,i), p%RotToWind(1,1), p%RotToWind(2,1), p%UniformWind, m%UniformWind, local_dYdu )
             
             i_end  = 3*i
@@ -1156,6 +1191,7 @@ SUBROUTINE InflowWind_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrSt
             comp  = p%OutParamLinIndx(2,i) ! component of output node
 
             if (node > 0) then
+!!!FIX ME with the propagation values!!!!         
                call IfW_UniformWind_JacobianPInput( t, p%WindViXYZ(:,node), p%RotToWind(1,1), p%RotToWind(2,1), p%UniformWind, m%UniformWind, local_dYdu )                                                                                       
             else
                local_dYdu = 0.0_R8Ki

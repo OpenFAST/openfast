@@ -949,9 +949,9 @@ CONTAINS
    SUBROUTINE DriverCleanup()
 
 
-      if (Settings%WindGridOutputUnit  > -1_IntKi )   CLOSE( Settings%WindGridOutputUnit )
-      if (Settings%PointsOutputUnit    > -1_IntKi )   CLOSE( Settings%PointsOutputUnit )
-      if (Settings%FFTOutputUnit       > -1_IntKi )   CLOSE( Settings%FFTOutputUnit )
+      if (Settings%WindGridOutputUnit  > -1_IntKi ) CLOSE( Settings%WindGridOutputUnit )
+      if (Settings%PointsOutputUnit    > -1_IntKi ) CLOSE( Settings%PointsOutputUnit )
+      if (Settings%FFTOutputUnit       > -1_IntKi ) CLOSE( Settings%FFTOutputUnit )
 
 
          ! Find out how long this actually took

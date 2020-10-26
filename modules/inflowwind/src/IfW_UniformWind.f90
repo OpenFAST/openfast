@@ -69,7 +69,7 @@ MODULE IfW_UniformWind
    PUBLIC                                    :: IfW_UniformWind_GetOP
    
    PUBLIC                                    :: Uniform_to_FF
-
+   
 CONTAINS
 
 !====================================================================================================
@@ -106,11 +106,12 @@ SUBROUTINE IfW_UniformWind_Init(InitData, ParamData, MiscVars, InitOutData, ErrS
 
       ! local variables
 
-   INTEGER(IntKi),            PARAMETER                        :: NumCols = 8       ! Number of columns in the Uniform file
-   REAL(ReKi)                                                  :: TmpData(NumCols)  ! Temp variable for reading all columns from a line
-   REAL(ReKi)                                                  :: DelDiff           ! Temp variable for storing the direction difference
+   INTEGER(IntKi), PARAMETER                                   :: MaxNumCols = 9       ! maximum number of columns in the Uniform file
+   INTEGER(IntKi)                                              :: NumCols              ! Number of columns in the Uniform file
+   REAL(ReKi)                                                  :: TmpData(MaxNumCols)  ! Temp variable for reading all columns from a line
+   REAL(ReKi)                                                  :: DelDiff              ! Temp variable for storing the direction difference
 
-   INTEGER(IntKi)                                              :: UnitWind     ! Unit number for the InflowWind input file
+   INTEGER(IntKi)                                              :: UnitWind             ! Unit number for the InflowWind input file
    INTEGER(IntKi)                                              :: I
    INTEGER(IntKi)                                              :: NumComments
    INTEGER(IntKi)                                              :: ILine             ! Counts the line number in the file
@@ -128,7 +129,6 @@ SUBROUTINE IfW_UniformWind_Init(InitData, ParamData, MiscVars, InitOutData, ErrS
 
    ErrStat     = ErrID_None
    ErrMsg      = ""
-
 
       !-------------------------------------------------------------------------------------------------
       ! Check that it's not already initialized
@@ -191,8 +191,16 @@ SUBROUTINE IfW_UniformWind_Init(InitData, ParamData, MiscVars, InitOutData, ErrS
       !-------------------------------------------------------------------------------------------------
 
    ParamData%NumDataLines = 0
-
-   READ(LINE,*,IOSTAT=TmpErrStat) ( TmpData(I), I=1,NumCols ) ! this line was read when we were figuring out the comment lines; let's make sure it contains
+   
+   NumCols = MaxNumCols
+   READ(LINE,*,IOSTAT=TmpErrStat) ( TmpData(I), I=1,NumCols ) ! this line was read when we were figuring out the comment lines; let's see if it contains all of the columns
+   if (TmpErrStat /= 0) then
+         ! assume the upflow is 0 and try reading the rest of the files
+      CALL SetErrStat(ErrID_Info,' Could not read upflow column in uniform wind files. Assuming upflow is 0.', ErrStat, ErrMsg, RoutineName)
+      NumCols = NumCols - 1
+      READ(LINE,*,IOSTAT=TmpErrStat) ( TmpData(I), I=1,NumCols ) ! this line was read when we were figuring out the comment lines; let's make sure it contains numeric column data
+   end if
+  
 
    DO WHILE (TmpErrStat == 0)  ! read the rest of the file (until an error occurs)
       ParamData%NumDataLines = ParamData%NumDataLines + 1
@@ -246,6 +254,16 @@ SUBROUTINE IfW_UniformWind_Init(InitData, ParamData, MiscVars, InitOutData, ErrS
       ENDIF
    END IF
 
+   IF (.NOT. ALLOCATED(ParamData%Upflow) ) THEN
+      CALL AllocAry( ParamData%Upflow, ParamData%NumDataLines, 'Uniform wind upflow', TmpErrStat, TmpErrMsg )
+      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+      IF ( ErrStat >= AbortErrLev ) THEN
+         CLOSE(UnitWind)
+         RETURN
+      ENDIF
+   END IF
+   ParamData%Upflow = 0.0_ReKi
+   
    IF (.NOT. ALLOCATED(ParamData%VZ) ) THEN
       CALL AllocAry( ParamData%VZ, ParamData%NumDataLines, 'Uniform vertical wind speed', TmpErrStat, TmpErrMsg )
       CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
@@ -331,6 +349,8 @@ SUBROUTINE IfW_UniformWind_Init(InitData, ParamData, MiscVars, InitOutData, ErrS
       ParamData%VShr(   I) = TmpData(6)
       ParamData%VLinShr(I) = TmpData(7)
       ParamData%VGust(  I) = TmpData(8)
+      
+      if (NumCols > 8) ParamData%Upflow(  I) = TmpData(9)*D2R
 
    END DO !I
 
@@ -596,6 +616,7 @@ SUBROUTINE InterpParams(Time, p, m, op)
       m%TimeIndex  = 1
       op%V         = p%V      (1)
       op%Delta     = p%Delta  (1)
+      op%Upflow    = p%Upflow (1)
       op%VZ        = p%VZ     (1)
       op%HShr      = p%HShr   (1)
       op%VShr      = p%VShr   (1)
@@ -607,6 +628,7 @@ SUBROUTINE InterpParams(Time, p, m, op)
       m%TimeIndex  = p%NumDataLines - 1
       op%V         = p%V      (p%NumDataLines)
       op%Delta     = p%Delta  (p%NumDataLines)
+      op%Upflow    = p%Upflow (p%NumDataLines)
       op%VZ        = p%VZ     (p%NumDataLines)
       op%HShr      = p%HShr   (p%NumDataLines)
       op%VShr      = p%VShr   (p%NumDataLines)
@@ -633,6 +655,7 @@ SUBROUTINE InterpParams(Time, p, m, op)
             
             op%V       = ( p%V(      m%TimeIndex+1) - p%V(      m%TimeIndex) )*slope  + p%V(      m%TimeIndex)
             op%Delta   = ( p%Delta(  m%TimeIndex+1) - p%Delta(  m%TimeIndex) )*slope  + p%Delta(  m%TimeIndex)
+            op%Upflow  = ( p%Upflow( m%TimeIndex+1) - p%Upflow( m%TimeIndex) )*slope  + p%Upflow( m%TimeIndex)
             op%VZ      = ( p%VZ(     m%TimeIndex+1) - p%VZ(     m%TimeIndex) )*slope  + p%VZ(     m%TimeIndex)
             op%HShr    = ( p%HShr(   m%TimeIndex+1) - p%HShr(   m%TimeIndex) )*slope  + p%HShr(   m%TimeIndex)
             op%VShr    = ( p%VShr(   m%TimeIndex+1) - p%VShr(   m%TimeIndex) )*slope  + p%VShr(   m%TimeIndex)
@@ -668,10 +691,13 @@ SUBROUTINE GetWindSpeed(InputPosition, p, op, WindSpeed, ErrStat, ErrMsg)
 
       ! Local Variables
    REAL(ReKi)                                            :: CosDelta          ! cosine of y%Delta
-   
    REAL(ReKi)                                            :: SinDelta          ! sine of y%Delta
    REAL(ReKi)                                            :: V1                ! temporary storage for horizontal velocity
+   REAL(ReKi)                                            :: V1_rotate         ! temporary storage for rotated horizontal velocity
+   REAL(ReKi)                                            :: VZ_rotate         ! temporary storage for rotated vertical velocity
 
+   REAL(ReKi)                                            :: CosUpflow         ! cosine of y%Upflow
+   REAL(ReKi)                                            :: SinUpflow         ! sine of y%Upflow
 
    ErrStat  =  ErrID_None
    ErrMsg   =  ""
@@ -704,16 +730,60 @@ SUBROUTINE GetWindSpeed(InputPosition, p, op, WindSpeed, ErrStat, ErrMsg)
          + ( op%HShr   * ( InputPosition(2) * CosDelta + InputPosition(1) * SinDelta ) &    ! horizontal linear shear
          +  op%VLinShr * ( InputPosition(3) - p%RefHt ) )/p%RefLength  ) &                  ! vertical linear shear
          +  op%VGust                                                                        ! gust speed
+
+   ! convert global to local: Global wind = R(op%Delta) * R(op%Upflow) * [local wind] = R(op%Delta) * R(op%Upflow) * [V1, 0, op%VZ]
          
-   WindSpeed(1) =  V1 * CosDelta
-   WindSpeed(2) = -V1 * SinDelta
-   WindSpeed(3) =  op%VZ
+   ! apply upflow angle:
+   CosUpflow = COS( op%Upflow )
+   SinUpflow = SIN( op%Upflow )
+   V1_rotate = CosUpflow*V1 - SinUpflow*op%VZ
+   VZ_rotate = SinUpflow*V1 + CosUpflow*op%VZ
+         
+   ! apply wind direction:
+   WindSpeed(1) =  V1_rotate * CosDelta
+   WindSpeed(2) = -V1_rotate * SinDelta
+   WindSpeed(3) =  VZ_rotate
 
 
    RETURN
 
 END SUBROUTINE GetWindSpeed
 
+FUNCTION RotateWindSpeed(Vh, Vz, Delta, Upflow)
+   REAL(ReKi)                                            :: Vh                ! horizontal wind speed
+   REAL(ReKi)                                            :: Vz                ! vertical wind speed
+   REAL(ReKi)                                            :: Delta             ! wind direction
+   REAL(ReKi)                                            :: Upflow            ! upflow angle
+
+   REAL(R8Ki)                                            :: CosDelta          ! cosine of y%Delta
+   REAL(R8Ki)                                            :: SinDelta          ! sine of y%Delta
+   REAL(R8Ki)                                            :: V1_rotate         ! temporary storage for rotated horizontal velocity
+   REAL(R8Ki)                                            :: VZ_rotate         ! temporary storage for rotated vertical velocity
+
+   REAL(R8Ki)                                            :: CosUpflow         ! cosine of y%Upflow
+   REAL(R8Ki)                                            :: SinUpflow         ! sine of y%Upflow
+   
+   
+   REAL(R8Ki)                                            :: RotateWindSpeed(3)
+
+   
+   ! apply upflow angle:
+   CosUpflow = COS( REAL(Upflow,R8Ki) )
+   SinUpflow = SIN( REAL(Upflow,R8Ki) )
+   
+   V1_rotate = CosUpflow*Vh - SinUpflow*Vz
+   Vz_rotate = SinUpflow*Vh + CosUpflow*Vz
+         
+   
+   ! apply wind direction:
+   CosDelta = COS( REAL(Delta,R8Ki) )
+   SinDelta = SIN( REAL(Delta,R8Ki) )
+   
+   RotateWindSpeed(1) =  V1_rotate * CosDelta
+   RotateWindSpeed(2) = -V1_rotate * SinDelta
+   RotateWindSpeed(3) =  Vz_rotate
+   
+END FUNCTION RotateWindSpeed
 
 
 !> This function should be deleted ASAP.  Its purpose is to reproduce results of AeroDyn 12.57;
@@ -750,13 +820,9 @@ FUNCTION WindInf_ADhack_diskVel( t, p, m,ErrStat, ErrMsg )
       !-------------------------------------------------------------------------------------------------
       ! calculate the wind speed at this time (note that it is not the full uniform wind equation!)
       !-------------------------------------------------------------------------------------------------
+      WindInf_ADhack_diskVel = RotateWindSpeed(op%V, op%VZ, op%Delta, op%Upflow)
    
-         WindInf_ADhack_diskVel(1) =  op%V * COS( op%Delta )
-         WindInf_ADhack_diskVel(2) = -op%V * SIN( op%Delta )
-         WindInf_ADhack_diskVel(3) =  op%VZ
-      
-   
-      RETURN
+   RETURN
 
 END FUNCTION WindInf_ADhack_diskVel
 

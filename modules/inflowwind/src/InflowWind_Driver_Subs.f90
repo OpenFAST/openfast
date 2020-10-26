@@ -717,6 +717,7 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
    INTEGER(IntKi)                                     :: ErrStatTmp           !< Temporary error status for calls
    CHARACTER(1024)                                    :: ErrMsgTmp            !< Temporary error messages for calls
    CHARACTER(*), PARAMETER                            :: RoutineName = 'ReadDvrIptFile'
+   CHARACTER(1024)                                    :: PriPath                                   ! Path name of the primary file
 
       ! Initialize the echo file unit to -1 which is the default to prevent echoing, we will alter this based on user input
    UnEchoLocal = -1
@@ -735,6 +736,7 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
 
    CALL WrScr( 'Opening InflowWind Driver input file:  '//FileName )
 
+   CALL GetPath( FileName, PriPath )    ! Input files will be relative to the path where the primary input file is located.
 
    !-------------------------------------------------------------------------------------------------
    ! File header
@@ -842,6 +844,8 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
    ELSE
       DvrFlags%IfWIptFile  =  .TRUE.
    ENDIF
+   
+   IF ( PathIsRelative( DvrSettings%IfWIptFileName ) ) DvrSettings%IfWIptFileName = TRIM(PriPath)//TRIM(DvrSettings%IfWIptFileName)
 
    !-------------------------------------------------------------------------------------------------
    !  File Conversion Options section
@@ -1041,6 +1045,7 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
       ! PointsFile    -- Read a points file
    CALL ReadVar( UnIn, FileName,DvrFlags%PointsFile,'PointsFile',' Read a points file?',   &
       ErrStatTmp,ErrMsgTmp, UnEchoLocal )
+      
    IF ( ErrStatTmp /= ErrID_None ) THEN
       CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
       CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
@@ -1059,6 +1064,7 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
       RETURN
    ENDIF
 
+   IF ( PathIsRelative( DvrSettings%PointsFileName ) ) DvrSettings%PointsFileName = TRIM(PriPath)//TRIM(DvrSettings%PointsFileName)
 
 
 
@@ -2325,8 +2331,8 @@ SUBROUTINE PointsVel_OutputWrite (FileUnit, FileName, Initialized, Settings, Gri
    CHARACTER(*),                       INTENT(IN   )  :: FileName             !< Name of the current unit number
    LOGICAL,                            INTENT(INOUT)  :: Initialized          !< Was this file started before?
    TYPE(IfWDriver_Settings),           INTENT(IN   )  :: Settings             !< Settings for IfW driver
-   REAL(ReKi),          ALLOCATABLE,   INTENT(IN   )  :: GridXYZ(:,:)         !< The position grid passed in
-   REAL(ReKi),          ALLOCATABLE,   INTENT(IN   )  :: GridVel(:,:)         !< The velocity grid passed in
+   REAL(ReKi),                         INTENT(IN   )  :: GridXYZ(:,:)         !< The position grid passed in
+   REAL(ReKi),                         INTENT(IN   )  :: GridVel(:,:)         !< The velocity grid passed in
    REAL(DbKi),                         INTENT(IN   )  :: TIME                 !< The current time
    INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat              !< returns a non-zero value when an error occurs
    CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg               !< Error message if ErrStat /= ErrID_None

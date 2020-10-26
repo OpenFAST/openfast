@@ -38,6 +38,7 @@ typedef  ^                       MiscVarType          IntKi    TimeIndex        
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
 typedef  ^                    ParameterType              ReKi     TData             :     -     -     "Time array from the HH file"                                  seconds
 typedef  ^                       ^                       ReKi     DELTA             :     -     -     "HH Wind direction (angle)"                                    degrees
+typedef  ^                       ^                       ReKi     Upflow            :     -     -     "HH upflow angle"                                              degrees
 typedef  ^                       ^                       ReKi     V                 :     -     -     "HH horizontal wind speed"                                     meters/sec
 typedef  ^                       ^                       ReKi     VZ                :     -     -     "wind, including tower shadow, along the Z axis"               meters/sec
 typedef  ^                       ^                       ReKi     HSHR              :     -     -     "HH Horizontal linear shear"                                   -
@@ -53,6 +54,7 @@ typedef  ^                       ^                       IntKi    NumDataLines  
 
 # ..... Output (for extended AD inputs in linearization) ................................................................................................................
 typedef  ^            IfW_UniformWind_Intrp              ReKi     DELTA             -     -     -     "HH Wind direction (angle)"                                    degrees
+typedef  ^                       ^                       ReKi     Upflow            -     -     -     "HH upflow angle"                                              degrees
 typedef  ^                       ^                       ReKi     V                 -     -     -     "HH horizontal wind speed"                                     meters/sec
 typedef  ^                       ^                       ReKi     VZ                -     -     -     "wind, including tower shadow, along the Z axis"               meters/sec
 typedef  ^                       ^                       ReKi     HSHR              -     -     -     "HH Horizontal linear shear"                                   -
