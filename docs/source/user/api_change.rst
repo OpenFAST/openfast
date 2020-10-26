@@ -34,8 +34,7 @@ IfW driver     6    [separator line]   ===================== File Conversion Opt
 IfW driver     7    WrHAWC             false    WrHAWC    - Convert all data to HAWC2 format? (flag)
 IfW driver     8    WrBladed           false    WrBladed  - Convert all data to Bladed format? (flag)
 IfW driver     9    WrVTK              false    WrVTK     - Convert all data to VTK format? (flag)
-
-
+InflowWind     7    VFlowAng                0   VFlowAng  - Upflow angle (degrees) (not used for native Bladed format WindType=7)
 ============== ==== ================== =============================================================================================================================================================================
 
 \*non-comment line count

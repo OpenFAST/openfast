@@ -27,6 +27,12 @@ The primary InflowWind input file defines the inflow that is generated or read f
 This file includes lines that determine how to scale the non-dimensional full-field
 turbulence files from Bladed. 
 
+4) Uniform Wind Data File
+:download:`(uniform wind input file example) <examples/inflowwind_uniform_example.dat>`: 
+
+This file includes lines that define uniform (deterministic) wind data files.
+
+
 .. _ifw_output_channels:
 
 InflowWind List of Output Channels

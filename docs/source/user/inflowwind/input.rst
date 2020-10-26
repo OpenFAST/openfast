@@ -1,3 +1,4 @@
+
 .. _ifw_input:
 
 InflowWind Input Files
@@ -80,4 +81,33 @@ Limitations: - Wind file is centered on hub height ("Best fit for rotor
 and tower" not implemented) - Always allow wind file to wrap around
 (unchecked box not implemented) - Only power-law wind profile is
 implemented (not logarithmic, none, or user-defined)
+
+
+.. _ifw_angles:
+
+Angles Specified in InflowWind
+==============================
+Wind direction and upflow angles can be specified in the InflowWind input file.
+When using Native Bladed wind file support in InflowWind, the angles from the InflowWind input are overwritten
+with the values specified in the Native Bladed Input Files. 
+InflowWind rotates the wind box about the hub-height tower center line by these wind direction and upflow angles.
+
+The uniform wind files also specify wind direction and upflow angles.
+The angles specified in uniform wind files DO NOT rotate the wind box, but just convert the local wind speed into global coordinates.
+
+When converting from local ``[u v w]`` to global ``[U V W]`` reference systems, the upflow rotation, ``R(upflow)`` occurs 
+before the wind direction rotation, ``R(wind direction)``:
+
+::
+
+[U V W] = R(wind direction) * R(upflow) * [u v w]
+
+When using a combination of angles in InflowWind and UniformWind files, the UniformWind angles are applied first. 
+
+Note: This means that if you have upflow specified in InflowWind and wind direction specified in UniformWind, the rotation will 
+be performed in a different order than if both angles are specified in the same file.
+
+::
+
+[U V W] = R(wind direction: InflowWind) * R(upflow: InflowWind) * R(wind direction: UniformWind) * R(upflow: UniformWind) * [u v w]
 
