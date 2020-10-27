@@ -2491,7 +2491,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    real(ReKi)               :: omega_s2(3)
    real(ReKi)               :: pos1(3), pos2(3)   
    real(ReKi)               :: Imat(3,3)
-   real(ReKi)               :: iArm(3), iTerm(3), Ioffset, h_c, dRdl_p, dRdl_pp, f_hydro(3), am(3,3), lstar, deltal
+   real(ReKi)               :: iArm(3), iTerm(3), Ioffset, h_c, dRdl_p, dRdl_pp, f_hydro(3), Am(3,3), lstar, deltal
    real(ReKi)               :: C_1, C_2, a0b0, z1d, z2d, h
    real(ReKi)               :: F_WMG(6), F_IMG(6), F_If(6), F_A(6), F_I(6), F_D(6), F_B1(6), F_B2(6)
 
@@ -2889,8 +2889,10 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
 
        
       ! External Hydrodynamic Side Loads
+         ! NOTE: All geometry-related calculations are based on the undisplaced configuration of the structure
+      
       DO i =1,N+1    ! loop through member nodes
-         z1 = u%Mesh%TranslationDisp(3, mem%NodeIndx(i))   + u%Mesh%Position(3, mem%NodeIndx(i))
+         z1 = u%Mesh%Position(3, mem%NodeIndx(i))
          if ( i > mem%i_floor .and. z1 <= 0.0 ) then  ! node is above (or at? TODO: check) seabed and below or at free-surface)
             ! TODO: Note that for computational efficiency, we could precompute h_c and deltal for each element when we are NOT using wave stretching
             ! We would still need to test at time marching for nodes just below the free surface because that uses the current locations not the reference locations
@@ -2905,8 +2907,8 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                deltal = mem%dl/2.0_ReKi - mem%h_floor  ! TODO: h_floor is negative valued, should we be subrtracting it from dl/2? GJH
                h_c    = 0.5_ReKi*(mem%dl/2.0_ReKi + mem%h_floor)
             else
-               pos1 =  u%Mesh%TranslationDisp(:, mem%NodeIndx(i))   + u%Mesh%Position(:, mem%NodeIndx(i))
-               pos2 =  u%Mesh%TranslationDisp(:, mem%NodeIndx(i+1)) + u%Mesh%Position(:, mem%NodeIndx(i+1))
+               pos1 =   u%Mesh%Position(:, mem%NodeIndx(i))
+               pos2 =   u%Mesh%Position(:, mem%NodeIndx(i+1))
                if (pos1(3) <= 0.0 .and. 0.0 < pos2(3) ) then ! This node is just below the free surface !TODO: Needs to be augmented for wave stretching
                   !TODO: Fix this one
                   pos1 =  u%Mesh%Position(:, mem%NodeIndx(i)) ! use reference position for following equation
