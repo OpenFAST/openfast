@@ -142,7 +142,7 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       REAL(SiKi), ALLOCATABLE                :: HdroFreq  (:)                        ! Frequency components inherent in the hydrodynamic added mass matrix, hydrodynamic daming matrix, and complex wave excitation force per unit wave amplitude vector (rad/s)
       REAL(SiKi), ALLOCATABLE                :: HdroWvDir (:)                        ! Incident wave propagation heading direction components inherent in the complex wave excitation force per unit wave amplitude vector (degrees)
       REAL(ReKi)                             :: HighFreq                             ! The highest frequency component in the WAMIT file, not counting infinity.
-      REAL(ReKi)                             :: Omega                                ! Wave frequency (rad/s)
+      REAL(SiKi)                             :: Omega                                ! Wave frequency (rad/s)
       REAL(ReKi)                             :: PrvDir                               ! The value of TmpDir from the previous line (degrees)
       REAL(ReKi)                             :: PrvPer                               ! The value of TmpPer from the previous line (sec    )
       REAL(ReKi)                             :: SttcDim   (6,6)                      ! Matrix used to redimensionalize WAMIT hydrostatic  restoring              output (kg/s^2, kg-m/s^2, kg-m^2/s^2)
