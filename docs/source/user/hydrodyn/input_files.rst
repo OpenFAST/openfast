@@ -48,10 +48,10 @@ time-series input file whose name is specified via the
 file. This file has no header lines. Each data row corresponds to a
 given time step, and the whitespace separated columns of floating point
 values represent the necessary motion inputs as shown in
-:numref:`wamit_input_table`. All motions are specified in the global
+:numref:`hd-wamit_input_table`. All motions are specified in the global
 inertial-frame coordinate system.
 
-.. _wamit_input_table:
+.. _hd-wamit_input_table:
 
 .. table:: WAMIT Inputs Time-Series Data File Contents
    :widths: auto
@@ -152,7 +152,7 @@ first-order waves or the use of externally generated waves, used by both
 the strip-theory and potential-flow solutions. The wave spectrum
 settings in this section only pertain to the first-order wave frequency
 components. When second-order terms are optionally enabled—see the
-:ref:`2nd_order_waves_input` and :ref:`2nd_order_floating_platform_forces_input`
+:ref:`hd-2nd_order_waves_input` and :ref:`hd-2nd_order_floating_platform_forces_input`
 sections below—the second-order terms are calculated using the
 first-order wave-component amplitudes and extra energy is added to the
 wave spectrum (at the difference and sum frequencies).
@@ -345,7 +345,7 @@ lists of **WaveElevxi** and **WaveElevyi** determine the locations of
 these **NWaveElev** number of points on the SWL plane in the global
 inertial-frame coordinate system.
 
-.. _2nd_order_waves_input:
+.. _hd-2nd_order_waves_input:
 
 2\ :sup:`nd`-Order Waves
 ------------------------
@@ -368,7 +368,7 @@ diffraction loads in potential-flow theory, the second-order terms
 themselves are enabled separately. The second-order wave kinematics used
 by strip theory are enabled in this section while the second-order
 diffraction loads in potential-flow theory are enabled in the
-:ref:`2nd_order_floating_platform_forces_input` section below. While the
+:ref:`hd-2nd_order_floating_platform_forces_input` section below. While the
 second-order effects are included when enabled, the wave elevations
 output from HydroDyn will only include the second-order terms when the
 second-order wave kinematics are enabled in this section.
@@ -407,7 +407,7 @@ than the peak-spectral frequency of the first-order wave spectrum
 (*ω\ p* = 2\ *π*/**WaveTp**) to minimize computational expense. Setting
 a proper upper cut-off frequency (**WvHiCOffS**) also minimizes
 computational expense and is important to (1) ensure convergence of the
-second-order summations, (2) avoid unphysical “bumps” in the wave
+second-order summations, (2) avoid unphysical "bumps" in the wave
 troughs, (3) prevent nonphysical effects when approaching of the
 breaking-wave limit, and (4) avoid nonphysical wave forces at high
 frequencies (i.e., at short wavelengths) when using a strip-theory
@@ -470,8 +470,8 @@ convention as **WaveDir**.
 Floating Platform
 -----------------
 
-This and the next few sections of the input file have “Floating
-Platform” in the title, but the input parameters control the
+This and the next few sections of the input file have "Floating
+Platform" in the title, but the input parameters control the
 potential-flow model, regardless of whether the substructure is floating
 or not. The potential-flow solution cannot be used in conjunction with
 nonzero **MSL2SWL** or **WaveMod** = 6.
@@ -536,7 +536,7 @@ this version of HydroDyn, **RdtnDT** must match the glue code
 (FAST/driver program) simulation time step; the DEFAULT keyword can be
 used for this.
 
-.. _2nd_order_floating_platform_forces_input:
+.. _hd-2nd_order_floating_platform_forces_input:
 
 2\ :sup:`nd`-Order Floating Platform Forces
 -------------------------------------------
@@ -553,17 +553,17 @@ real surface waves, permitting more accurate modeling of sea states and
 the associated wave loads at the expense of greater computational effort
 (mostly at HydroDyn initialization).
 
-While the cut-off frequencies in the :ref:`2nd_order_waves_input` section
+While the cut-off frequencies in the :ref:`hd-2nd_order_waves_input` section
 above apply to both the second-order wave kinematics used by strip
 theory and the second-order diffraction loads in potential-flow theory,
 the second-order terms themselves are enabled separately. The
 second-order wave kinematics used by strip theory are enabled in the
-:ref:`2nd_order_waves_input` section above while the second-order
+:ref:`hd-2nd_order_waves_input` section above while the second-order
 diffraction loads in potential-flow theory are enabled in this section.
 While the second-order effects are included when enabled, the wave
 elevations output from HydroDyn will only include the second-order terms
 when the second-order wave kinematics are enabled in the
-:ref:`2nd_order_waves_input` section above.
+:ref:`hd-2nd_order_waves_input` section above.
 
 The second-order difference-frequency potential-flow terms can be
 enabled in one of three ways. To compute only the mean-drift term, set
@@ -644,13 +644,13 @@ time-derivative.
 
 These terms can be used, e.g., to model a linearized mooring system, to
 augment strip-theory members with a linear hydrostatic restoring matrix
-(see Section 6.8.3), or to “tune” HydroDyn to match damping to
+(see :numref:`hd-modeling-hydrostatic-restoring-strip-theory`), or to "tune" HydroDyn to match damping to
 experimental results, such as free-decay tests. While likely most useful
 for floating systems, these matrices can also be used for fixed-bottom
 systems; in both cases, the resulting load is applied at the WRP, which
 when HydroDyn is coupled to FAST, get applied to the platform in
-ElastoDyn (bypassing SubDyn for fixed-bottom systems). See Section 6 for
-addition modeling considerations where these terms are necessary.
+ElastoDyn (bypassing SubDyn for fixed-bottom systems). See :ref:`hd-modeling-considerations`
+for addition guidance for where these terms are necessary.
 
 Axial Coefficients
 ------------------
@@ -660,7 +660,7 @@ strip-theory model for both fixed-bottom and floating substructures.
 HydroDyn computes lumped viscous-drag, added-mass, fluid-inertia, and
 static pressure loads at member ends (joints). The hydrodynamic
 coefficients for the lumped the lumped loads at joints are referred to
-as “axial coefficients” and include viscous-drag coefficients, **AxCd**,
+as "axial coefficients" and include viscous-drag coefficients, **AxCd**,
 added-mass coefficients, **AxCa**, and dynamic-pressure coefficients,
 **AxCp**. **AxCa** influences both the added-mass loads and the
 scattering component of the fluid-inertia loads. Any number of separate
@@ -708,7 +708,7 @@ calculations are member outer diameter, **PropD**, and member thickness,
 distinguished by **PropSetID**, for each unique combination of these two
 properties. The member property-set table contains **NPropSets** rows.
 The member property sets are referred to by their **PropSetID** in the
-MEMBERS table, as described in Section 4.3.13 below. **PropD**
+MEMBERS table, as described in :numref:`hd-members` below. **PropD**
 determines the static buoyancy loads exterior to a member, as well as
 the area used in the viscous-drag calculation and the volume used in the
 added-mass and fluid-inertia calculations. **PropThck** determines the
@@ -732,7 +732,7 @@ element will either use the marine growth or the standard version of a
 coefficient, but never both. Note that input members are split into
 elements per Section 7.5.2, one of the splitting rules guarantees the
 previous statement is true. Which members have marine growth is defined
-by the MARINE GROWTH table of Section 4.3.15. You can specify only one
+by the MARINE GROWTH table of :numref:`hd-marine-growth`. You can specify only one
 model type, **MCoefMod**, for any given member in the MEMBERS table.
 However, different members can specify different coefficient models.
 
@@ -756,7 +756,7 @@ This table consists of a single complete set of hydrodynamic
 coefficients as follows: **SimplCd**, **SimplCdMG**, **SimplCa**,
 **SimplCaMG**, **SimplCp**, **SimplCpMG**, **SimplAxCa**,
 **SimplAxCaMG**, **SimplAxCp**, and **SimplAxCpMG**. These hydrodynamic
-coefficients are referenced in the members table of Section 4.3.13 by
+coefficients are referenced in the members table of :numref:`hd-members` by
 selecting **MCoefMod** = 1.
 
 Depth-Based Model
@@ -788,6 +788,8 @@ coefficients for a member distinguished by **MemberID** are as follows:
 **MemberAxCpMG2**, where *1* and *2* identify the starting and ending
 joint of the member, respectively. Members use these hydrodynamic
 coefficients by setting **MCoefMod** = 3.
+
+.. _hd-members:
 
 Members
 -------
@@ -836,6 +838,8 @@ list of **FillNumM** whitespace-separated **MemberID**\ s. **FillFSLoc**
 specifies the *Z*-height of the free-surface (0 for MSL). **FillDens**
 is the density of the fluid. If **FillDens** = DEFAULT, then
 **FillDens** = **WtrDens**.
+
+.. _hd-marine-growth:
 
 Marine Growth
 -------------
@@ -896,7 +900,7 @@ Specifying **HDSum** = TRUE causes HydroDyn to generate a summary file
 with name **OutRootname**\ *.HD.sum*. **OutRootName** is either
 specified in the HYDRODYN section of the driver input file when running
 HydroDyn standalone, or by the FAST program when running a coupled
-simulation. See section 5.3 for summary file details.
+simulation. See :numref:`hd-summary-file` for summary file details.
 
 For this version, **OutAll** must be set to FALSE. In future versions,
 setting **OutAll** = TRUE will cause HydroDyn to auto-generate outputs
@@ -927,14 +931,14 @@ This section controls output quantities generated by HydroDyn. Enter one
 or more lines containing quoted strings that in turn contain one or more
 output parameter names. Separate output parameter names by any
 combination of commas, semicolons, spaces, and/or tabs. If you prefix a
-parameter name with a minus sign, “-”, underscore, “_”, or the
-characters “m” or “M”, HydroDyn will multiply the value for that channel
+parameter name with a minus sign, "-", underscore, "_", or the
+characters "m" or "M", HydroDyn will multiply the value for that channel
 by –1 before writing the data. The parameters are not necessarily
 written in the order they are listed in the input file. HydroDyn allows
 you to use multiple lines so that you can break your list into
 meaningful groups and so the lines can be shorter. You may enter
 comments after the closing quote on any of the lines. Entering a line
-with the string “END” at the beginning of the line or at the beginning
+with the string "END" at the beginning of the line or at the beginning
 of a quoted string found at the beginning of the line will cause
 HydroDyn to quit scanning for more lines of channel names. Member- and
 joint-related quantities are generated for the requested 

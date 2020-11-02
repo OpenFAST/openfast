@@ -35,6 +35,8 @@ contains the total wave elevation, which is the sum of the first- and
 second-order terms (when the second-order wave kinematics are optionally
 enabled).
 
+.. _hd-summary-file:
+
 Summary File
 ~~~~~~~~~~~~
 HydroDyn generates a summary file with the naming convention,

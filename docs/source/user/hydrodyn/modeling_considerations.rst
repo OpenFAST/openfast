@@ -1,3 +1,5 @@
+.. _hd-modeling-considerations:
+
 Modeling Considerations
 =======================
 HydroDyn was designed as an extremely flexible tool for modeling a
@@ -93,7 +95,7 @@ peak-spectral frequency of the first-order wave spectrum (*ω\ p* =
 2\ *π*/**WaveTp**) to minimize computational expense. Setting a proper
 upper cut-off frequency (**WvHiCOffS**) also minimizes computational
 expense and is important to (1) ensure convergence of the second-order
-summations, (2) avoid unphysical “bumps” in the wave troughs, (3)
+summations, (2) avoid unphysical "bumps" in the wave troughs, (3)
 prevent nonphysical effects when approaching of the breaking-wave limit,
 and (4) avoid nonphysical wave forces at high frequencies (i.e., at
 short wavelengths) when using a strip-theory solution.
@@ -143,7 +145,7 @@ and analysis nodes. HydroDyn will not interpolate the data; as such,
 when HydroDyn is coupled to FAST, **WaveDT** must equal the glue code
 time step of FAST. Before generating the wave kinematics data
 externally, users should identify all of the internal analysis nodes by
-running HydroDyn and generating the summary file—see Section 5.3. The
+running HydroDyn and generating the summary file—see :numref:`hd-summary-file`. The
 fluid domain at each time step are specified by the use of numeric
 values and nonnumeric strings in the wave data input files. The wave
 kinematics data specified are not limited to the domain between a flat
@@ -180,6 +182,8 @@ below SWL), 1.0 m between 25 and 50 m depth, and 2.0 m in deeper waters.
 When HydroDyn is coupled to SubDyn through FAST for the analysis of
 fixed-bottom systems, it is recommended that the length ratio between
 elements of HydroDyn and SubDyn not exceed 10 to 1.
+
+.. _hd-domain-for-strip-theory:
 
 Domain for Strip-Theory Hydrodynamic Load Calculations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -326,7 +330,8 @@ restoring matrix (**AddCLin**), a 6x6 linear damping matrix
 (**AddBLin**), and a 6x6 quadratic drag matrix (**AddBQuad**). These
 terms can be used, e.g., to model a linearized mooring system, to
 augment strip-theory members with a linear hydrostatic restoring matrix
-(see Section 6.8.3), or to “tune” HydroDyn to match damping to
+(see :numref:`hd-modeling-hydrostatic-restoring-strip-theory`), or to
+"tune" HydroDyn to match damping to
 experimental results, such as free-decay tests. While likely most useful
 for floating systems, these matrices can also be used for fixed-bottom
 systems; in both cases, the resulting load is applied at the WRP, which
@@ -360,7 +365,8 @@ strip-theory (Morison) only, or a hybrid model containing both.
 Potential-flow theory based on frequency-to-time-domain transforms is
 enabled when **PotMod** is set to 1. In this case, you must run WAMIT
 (or equivalent) in a pre-processing step and HydroDyn will use the WAMIT
-output files—see Section 6.8.4 for guidance. For a potential-flow-only
+output files—see :nemref:`hd-modeling-floating-systems-potential-flow`
+for guidance. For a potential-flow-only
 model, do not create any strip-theory joints or members in the input
 file. The WAMIT model should account for all of the members in the
 floating substructure, and Morison’s equation is neglected in this case.
@@ -382,7 +388,7 @@ components of the strip-theory equations are applied.
 When using either the strip-theory-only or hybrid approaches, filled
 fluid (flooding or ballasting) may be added to the strip-theory members.
 Also, the hydrostatic restoring matrix must be entered manually for the
-strip-theory members—see Section 6.8.3 for guidance.
+strip-theory members—see :numref:`hd-modeling-hydrostatic-restoring-strip-theory` for guidance.
 
 Please note that current-induced water velocity only induces
 hydrodynamic loads in HydroDyn through the viscous-drag terms (both
@@ -427,10 +433,12 @@ simulation, it is suggested that the initial conditions of the model
 substructure pitch in ElastoDyn) be initialized according to the
 specific prevalent wind, wave, current, and operational conditions.
 
+.. _hd-modeling-hydrostatic-restoring-strip-theory:
+
 Hydrostatic Restoring for Strip-Theory Members of Floating Systems
 ------------------------------------------------------------------
 One notable absence from the list calculations in HydroDyn that make use
-of substructure motions—see Section 6.3—is that the substructure
+of substructure motions—see :numref:`hd-domain-for-strip-theory`—is that the substructure
 buoyancy in the strip-theory solution is not recomputed based on the
 displaced position of the substructure. While the change in buoyancy is
 likely negligible for fixed-bottom systems, for floating systems modeled
@@ -500,6 +508,8 @@ of metacentric heights. However, when HydroDyn is coupled to FAST, the
 body-weight terms (other than the marine-growth and filled-fluid mass
 within HydroDyn) are automatically accounted for by ElastoDyn, and so,
 are not included here.
+
+.. _hd-modeling-floating-systems-potential-flow:
 
 Floating Systems Modeled with Potential Flow
 --------------------------------------------
