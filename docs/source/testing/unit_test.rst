@@ -14,8 +14,8 @@ This framework provides a Fortran abstraction to the popular
 along with OpenFAST through CMake when the CMake variable ``BUILD_TESTING`` is
 turned on.
 
-The BeamDyn module has been unit tested and should serve as a reference for
-future development and testing.
+The BeamDyn and NWTC Library modules contain some sample unit tests and should
+serve as a reference for future development and testing.
 
 Dependencies
 ------------
@@ -38,7 +38,7 @@ framework named ``[module]_utest``. Then, ``make`` the target to test:
     make beamdyn_utest
 
 This creates a unit test executable at
-``openfast/build/unit_tests/beamdyn_utest``.
+``openfast/build/unit_tests/beamdyn/beamdyn_utest``.
 
 Executing
 ---------
@@ -46,7 +46,7 @@ To execute a module's unit test, simply run the unit test binary. For example:
 
 .. code-block:: bash
 
-    >>>$ ./openfast/build/unit_tests/beamdyn_utest
+    >>>$ ./openfast/build/unit_tests/beamdyn/beamdyn_utest
     .............
     Time:         0.018 seconds
 
@@ -60,7 +60,7 @@ the failure. Failure cases display the following output:
 
 .. code-block:: bash
 
-    >>>$ ./unit_tests/beamdyn_utest
+    >>>$ ./unit_tests/beamdyn/beamdyn_utest
     .....F.......
     Time:         0.008 seconds
 
@@ -91,27 +91,31 @@ or function). What is testable is the discretion of the developer, but an
 element of the pull request review process will be evaluating test coverage.
 
 New unit tests can be added to a ``tests`` directory alongside the ``src``
-directory included in each module. For example, the BeamDyn module directory is
+directory included in each module. For example, a module directory may be
 structured as
 
 ::
 
   openfast/
     └── modules/
-        └── beamdyn/
+        └── sampledyn/
             ├── src/
-            │   ├── BeamDyn.f90
-            │   └── BeamDyn_Subs.f90
+            │   ├── SampleDyn.f90
+            │   └── SampleDyn_Subs.f90
             └── tests/
-                ├── test_BD_Subroutine1.F90
-                ├── test_BD_Subroutine2.F90
-                └── test_BD_Subroutine3.F90
+                ├── test_SampleDyn_Subroutine1.F90
+                ├── test_SampleDyn_Subroutine2.F90
+                └── test_SampleDyn_Subroutine3.F90
 
 Each unit test must be contained in a unique file called
 ``test_[SUBROUTINE].F90`` where ``[SUBROUTINE]`` is the code block being
-tested. Finally, update the CMake configuration for building a module's unit
-test executable by copying the BeamDyn CMake configuration into a new module
-directory:
+tested. The new files should contain a Fortran `module` which itself
+contains a Fortran `subroutine` for each specific test case. Generally,
+multiple tests will be required to fully test one subroutine.
+
+Finally, update the CMake configuration for building a module's unit
+test executable by copying an existing unit test CMake configuration
+into a new module directory:
 
 .. code-block:: bash
 
