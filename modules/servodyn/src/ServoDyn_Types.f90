@@ -149,7 +149,6 @@ IMPLICIT NONE
     CHARACTER(1024)  :: NTMDfile      !< File for nacelle tuned mass damper (quoted string) [-]
     LOGICAL  :: CompTTMD      !< Compute tower tuned mass damper {true/false} [-]
     CHARACTER(1024)  :: TTMDfile      !< File for tower tuned mass damper (quoted string) [-]
-    REAL(SiKi)  :: ScInCutOff      !< Cuttoff frequency for low-pass filter on Supercontroller inputs [Hz]
   END TYPE SrvD_InputFile
 ! =======================
 ! =========  BladedDLLType  =======
@@ -236,8 +235,6 @@ IMPLICIT NONE
     REAL(ReKi)  :: CtrlOffset      !< Controller offset parameter [N-m]
     TYPE(TMD_DiscreteStateType)  :: NTMD      !< TMD module states - nacelle [-]
     TYPE(TMD_DiscreteStateType)  :: TTMD      !< TMD module states - tower [-]
-    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: filt_fromSC      !< Filtered turbine specific inputs from supercontroller [-]
-    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: filt_fromSCglob      !< Filtered global inputs from supercontroller [-]
   END TYPE SrvD_DiscreteStateType
 ! =======================
 ! =========  SrvD_ConstraintStateType  =======
@@ -1552,7 +1549,6 @@ ENDIF
     DstInputFileData%NTMDfile = SrcInputFileData%NTMDfile
     DstInputFileData%CompTTMD = SrcInputFileData%CompTTMD
     DstInputFileData%TTMDfile = SrcInputFileData%TTMDfile
-    DstInputFileData%ScInCutOff = SrcInputFileData%ScInCutOff
  END SUBROUTINE SrvD_CopyInputFile
 
  SUBROUTINE SrvD_DestroyInputFile( InputFileData, ErrStat, ErrMsg )
@@ -1698,7 +1694,6 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%NTMDfile)  ! NTMDfile
       Int_BufSz  = Int_BufSz  + 1  ! CompTTMD
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%TTMDfile)  ! TTMDfile
-      Re_BufSz   = Re_BufSz   + 1  ! ScInCutOff
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -1937,8 +1932,6 @@ ENDIF
       IntKiBuf(Int_Xferred) = ICHAR(InData%TTMDfile(I:I), IntKi)
       Int_Xferred = Int_Xferred + 1
     END DO ! I
-    ReKiBuf(Re_Xferred) = InData%ScInCutOff
-    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE SrvD_PackInputFile
 
  SUBROUTINE SrvD_UnPackInputFile( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -2194,8 +2187,6 @@ ENDIF
       OutData%TTMDfile(I:I) = CHAR(IntKiBuf(Int_Xferred))
       Int_Xferred = Int_Xferred + 1
     END DO ! I
-    OutData%ScInCutOff = REAL(ReKiBuf(Re_Xferred), SiKi)
-    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE SrvD_UnPackInputFile
 
  SUBROUTINE SrvD_CopyBladedDLLType( SrcBladedDLLTypeData, DstBladedDLLTypeData, CtrlCode, ErrStat, ErrMsg )
@@ -3500,7 +3491,6 @@ ENDIF
    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
 ! Local 
    INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'SrvD_CopyDiscState'
@@ -3514,30 +3504,6 @@ ENDIF
       CALL TMD_CopyDiscState( SrcDiscStateData%TTMD, DstDiscStateData%TTMD, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
-IF (ALLOCATED(SrcDiscStateData%filt_fromSC)) THEN
-  i1_l = LBOUND(SrcDiscStateData%filt_fromSC,1)
-  i1_u = UBOUND(SrcDiscStateData%filt_fromSC,1)
-  IF (.NOT. ALLOCATED(DstDiscStateData%filt_fromSC)) THEN 
-    ALLOCATE(DstDiscStateData%filt_fromSC(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstDiscStateData%filt_fromSC.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstDiscStateData%filt_fromSC = SrcDiscStateData%filt_fromSC
-ENDIF
-IF (ALLOCATED(SrcDiscStateData%filt_fromSCglob)) THEN
-  i1_l = LBOUND(SrcDiscStateData%filt_fromSCglob,1)
-  i1_u = UBOUND(SrcDiscStateData%filt_fromSCglob,1)
-  IF (.NOT. ALLOCATED(DstDiscStateData%filt_fromSCglob)) THEN 
-    ALLOCATE(DstDiscStateData%filt_fromSCglob(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstDiscStateData%filt_fromSCglob.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstDiscStateData%filt_fromSCglob = SrcDiscStateData%filt_fromSCglob
-ENDIF
  END SUBROUTINE SrvD_CopyDiscState
 
  SUBROUTINE SrvD_DestroyDiscState( DiscStateData, ErrStat, ErrMsg )
@@ -3551,12 +3517,6 @@ ENDIF
   ErrMsg  = ""
   CALL TMD_DestroyDiscState( DiscStateData%NTMD, ErrStat, ErrMsg )
   CALL TMD_DestroyDiscState( DiscStateData%TTMD, ErrStat, ErrMsg )
-IF (ALLOCATED(DiscStateData%filt_fromSC)) THEN
-  DEALLOCATE(DiscStateData%filt_fromSC)
-ENDIF
-IF (ALLOCATED(DiscStateData%filt_fromSCglob)) THEN
-  DEALLOCATE(DiscStateData%filt_fromSCglob)
-ENDIF
  END SUBROUTINE SrvD_DestroyDiscState
 
  SUBROUTINE SrvD_PackDiscState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -3630,16 +3590,6 @@ ENDIF
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
-  Int_BufSz   = Int_BufSz   + 1     ! filt_fromSC allocated yes/no
-  IF ( ALLOCATED(InData%filt_fromSC) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! filt_fromSC upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%filt_fromSC)  ! filt_fromSC
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! filt_fromSCglob allocated yes/no
-  IF ( ALLOCATED(InData%filt_fromSCglob) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! filt_fromSCglob upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%filt_fromSCglob)  ! filt_fromSCglob
-  END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -3725,36 +3675,6 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
-  IF ( .NOT. ALLOCATED(InData%filt_fromSC) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%filt_fromSC,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%filt_fromSC,1)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i1 = LBOUND(InData%filt_fromSC,1), UBOUND(InData%filt_fromSC,1)
-        ReKiBuf(Re_Xferred) = InData%filt_fromSC(i1)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( .NOT. ALLOCATED(InData%filt_fromSCglob) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%filt_fromSCglob,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%filt_fromSCglob,1)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i1 = LBOUND(InData%filt_fromSCglob,1), UBOUND(InData%filt_fromSCglob,1)
-        ReKiBuf(Re_Xferred) = InData%filt_fromSCglob(i1)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
  END SUBROUTINE SrvD_PackDiscState
 
  SUBROUTINE SrvD_UnPackDiscState( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -3770,7 +3690,6 @@ ENDIF
   INTEGER(IntKi)                 :: Db_Xferred
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
-  INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'SrvD_UnPackDiscState'
@@ -3866,42 +3785,6 @@ ENDIF
       IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! filt_fromSC not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%filt_fromSC)) DEALLOCATE(OutData%filt_fromSC)
-    ALLOCATE(OutData%filt_fromSC(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%filt_fromSC.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i1 = LBOUND(OutData%filt_fromSC,1), UBOUND(OutData%filt_fromSC,1)
-        OutData%filt_fromSC(i1) = REAL(ReKiBuf(Re_Xferred), SiKi)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! filt_fromSCglob not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%filt_fromSCglob)) DEALLOCATE(OutData%filt_fromSCglob)
-    ALLOCATE(OutData%filt_fromSCglob(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%filt_fromSCglob.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i1 = LBOUND(OutData%filt_fromSCglob,1), UBOUND(OutData%filt_fromSCglob,1)
-        OutData%filt_fromSCglob(i1) = REAL(ReKiBuf(Re_Xferred), SiKi)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
  END SUBROUTINE SrvD_UnPackDiscState
 
  SUBROUTINE SrvD_CopyConstrState( SrcConstrStateData, DstConstrStateData, CtrlCode, ErrStat, ErrMsg )

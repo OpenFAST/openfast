@@ -120,7 +120,7 @@ class OpenFAST {
   std::map<int, int> turbineMapGlobToProc; // Mapping global turbine number to processor number
   std::map<int, int> turbineMapProcToGlob; // Mapping local to global turbine number
   std::map<int, int> reverseTurbineMapProcToGlob; // Reverse Mapping global turbine number to local turbine number
-  std::set<int> turbineSetProcs; // Set of processors containing atleast one turbine
+  std::set<int> turbineSetProcs; // Set of processors containing at least one turbine
   std::vector<int> turbineProcs; // Same as the turbineSetProcs, but as an integer array
 
   //Supercontroller stuff
@@ -196,7 +196,7 @@ class OpenFAST {
   bool isDebug() { return debug; }
   simStartType get_simStartType() { return simStart; }
   bool isTimeZero() { return timeZero; }
-  int get_procNo(int iTurbGlob) { return turbineMapGlobToProc[iTurbGlob] ; } // Get processor nuber of a turbine with global id 'iTurbGlob'
+  int get_procNo(int iTurbGlob) { return turbineMapGlobToProc[iTurbGlob] ; } // Get processor number of a turbine with global id 'iTurbGlob'
   int get_localTurbNo(int iTurbGlob) { return reverseTurbineMapProcToGlob[iTurbGlob]; }
   int get_nTurbinesGlob() { return nTurbinesGlob; }
 
