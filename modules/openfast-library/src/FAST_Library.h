@@ -41,10 +41,10 @@ EXTERNAL_ROUTINE void FAST_CreateCheckpoint(int * iTurb, const char *CheckpointR
 
 #define SensorType_None -1
 
-// make sure these parameters match with FAST_Library.f90
+// make sure these parameters match with FAST_Library.f90 and NWTC_Base.f90
 #define MAXIMUM_BLADES 3
 #define MAXIMUM_OUTPUTS 4000
-#define CHANNEL_LENGTH 10  
+#define CHANNEL_LENGTH 20
 #define MAXInitINPUTS 10
 
 #define NumFixedInputs  2 + 2 + MAXIMUM_BLADES + 1
