@@ -563,7 +563,7 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, SC_Init
       end if
       
       ! DT_low - Time step for low-resolution wind data input files; will be used as the global FAST.Farm time step (s) [>0.0]:
-   CALL ReadVar( UnIn, InputFile, p%DT_low, "DT_low", "Time step for low-resolution wind data input files; will be used as the global FAST.Farm time step (s) [>0.0]", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InputFile, p%DT_low, "DT_Low-VTK", "Time step for low-resolution wind data input files; will be used as the global FAST.Farm time step (s) [>0.0]", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if ( ErrStat >= AbortErrLev ) then
          call cleanup()
@@ -571,7 +571,7 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, SC_Init
       end if
 
       ! DT_high - Time step for high-resolution wind data input files (s) [>0.0]:
-   CALL ReadVar( UnIn, InputFile, p%DT_high, "DT_high", "Time step for high-resolution wind data input files (s) [>0.0]", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InputFile, p%DT_high, "DT_High-VTK", "Time step for high-resolution wind data input files (s) [>0.0]", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if ( ErrStat >= AbortErrLev ) then
          call cleanup()
@@ -604,7 +604,7 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, SC_Init
       end if
       
       ! DT_low - Time step for low-resolution wind data input files; will be used as the global FAST.Farm time step (s) [>0.0]:
-   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%DT_low, "DT_low", "Time step for low-resolution wind data input files; will be used as the global FAST.Farm time step (s) [>0.0]", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%DT_low, "DT_Low", "Time step for low-resolution wind data input files; will be used as the global FAST.Farm time step (s) [>0.0]", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if ( ErrStat >= AbortErrLev ) then
          call cleanup()
@@ -613,7 +613,7 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, SC_Init
    if ( AWAE_InitInp%Mod_AmbWind > 1 ) p%DT_low = AWAE_InitInp%DT_low
    
       ! DT_high - Time step for high-resolution wind data input files (s) [>0.0]:
-   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%DT_high, "DT_high", "Time step for high-resolution wind data input files (s) [>0.0]", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%DT_high, "DT_High", "Time step for high-resolution wind data input files (s) [>0.0]", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if ( ErrStat >= AbortErrLev ) then
          call cleanup()
@@ -1903,7 +1903,7 @@ subroutine Farm_WriteOutput(n, t, farm, ErrStat, ErrMsg)
    INTEGER(IntKi)                          :: ErrStat2                        ! Temporary Error status
    CHARACTER(ErrMsgLen)                    :: ErrMsg2                         ! Temporary Error message
    CHARACTER(*),   PARAMETER               :: RoutineName = 'FARM_WriteOutput'
-   INTEGER(IntKi)                          :: nt, ir, iOutDist, np, iVelPt  ! Loop counters
+   INTEGER(IntKi)                          :: nt, iSC, ir, iOutDist, np, iVelPt  ! Loop counters
    REAL(ReKi)                              :: vel(3), pt(3)
    REAL(ReKi)                              :: vec_interp(3)
    REAL(ReKi)                              :: norm2_vec, delta, deltad
@@ -1919,14 +1919,32 @@ subroutine Farm_WriteOutput(n, t, farm, ErrStat, ErrMsg)
          ! Define the output channel specifying the current simulation time:
       farm%m%AllOuts(  Time) = REAL( t, ReKi )
 
+         !.......................................................................................
+         ! Super controller Outputs - Global
+         !.......................................................................................
+             
+      do iSC = 1, farm%SC%p%nInpGlobal
+         farm%m%AllOuts(SCGblIn(iSC)) = farm%SC%uInputs%toSCglob(iSC)
+      end do
+
+      do iSC = 1, farm%SC%p%NumSC2CtrlGlob
+         farm%m%AllOuts(SCGblOt(iSC)) = farm%SC%y%fromSCglob(iSC)
+      end do
+
       do nt = 1, farm%p%NOutTurb
          
          !.......................................................................................
-         ! Super controller Outputs
+         ! Super controller Outputs - Turbine Dependent
          !.......................................................................................
              
-            ! TODO: Add super controller outputs
+         do iSC = 1, farm%SC%p%NumCtrl2SC
+            farm%m%AllOuts(SCTIn(iSC,nt)) = farm%FWrap(nt)%y%toSC(iSC)
+         end do
 
+         do iSC = 1, farm%SC%p%NumSC2Ctrl
+            farm%m%AllOuts(SCTOt(iSC,nt)) = farm%FWrap(nt)%u%fromSC(iSC)
+         end do
+         
          !.......................................................................................
          ! Wind Turbine and its Inflow
          !.......................................................................................

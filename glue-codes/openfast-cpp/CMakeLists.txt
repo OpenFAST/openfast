@@ -35,7 +35,7 @@ include_directories(${CMAKE_BINARY_DIR}/modules/supercontroller/)
 include_directories(${MPI_INCLUDE_PATH})
 
 add_library(openfastcpplib
-  src/OpenFAST.cpp)
+  src/OpenFAST.cpp src/SC.cpp)
 set_property(TARGET openfastcpplib PROPERTY POSITION_INDEPENDENT_CODE ON)
 target_link_libraries(openfastcpplib
   openfastlib
@@ -50,7 +50,7 @@ add_executable(openfastcpp
   src/FAST_Prog.cpp)
 
 target_link_libraries(openfastcpp openfastcpplib openfastlib
-  ${MPI_LIBRARIES} ${YAML_LIBRARIES} 
+  ${MPI_LIBRARIES} ${YAML_LIBRARIES}
   ${HDF5_C_LIBRARIES}
   ${HDF5_HL_LIBRARIES}
   ${ZLIB_LIBRARIES}

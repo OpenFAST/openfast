@@ -17,7 +17,7 @@
  #define MPICH_SKIP_MPICXX
 #endif
 #include "mpi.h"
-#include "SC.H"
+#include "SC.h"
 
 
 namespace fast {
@@ -46,31 +46,31 @@ enum simStartType {
   init = 0,
   trueRestart = 1,
   restartDriverInitFAST = 2,
-  simStartType_END    
+  simStartType_END
 };
 
 
 class fastInputs {
 
- public: 
+ public:
 
   MPI_Comm comm;
-  int nTurbinesGlob;  
+  int nTurbinesGlob;
   bool dryRun;
-  bool debug; 
+  bool debug;
   double tStart;
   simStartType simStart;
-  int nEveryCheckPoint;  
+  int nEveryCheckPoint;
   double tMax;
-  double dtFAST;  
+  double dtFAST;
 
   bool scStatus;
   std::string scLibFile;
   std::vector<globTurbineDataType>  globTurbineData;
 
-  // Constructor 
+  // Constructor
   fastInputs() ;
- 
+
   // Destructor
   ~fastInputs() {} ;
 
@@ -100,7 +100,7 @@ class OpenFAST {
   std::vector<float> nacelle_area;
   std::vector<float> air_density;
   double tStart;
-  int nt_global;           
+  int nt_global;
   int ntStart;      // The time step to start the FAST simulation
   int nEveryCheckPoint;    // Check point files will be written every 'nEveryCheckPoint' time steps
   std::vector<int> numBlades;           // Number of blades
@@ -120,7 +120,7 @@ class OpenFAST {
   std::map<int, int> turbineMapGlobToProc; // Mapping global turbine number to processor number
   std::map<int, int> turbineMapProcToGlob; // Mapping local to global turbine number
   std::map<int, int> reverseTurbineMapProcToGlob; // Reverse Mapping global turbine number to local turbine number
-  std::set<int> turbineSetProcs; // Set of processors containing atleast one turbine 
+  std::set<int> turbineSetProcs; // Set of processors containing atleast one turbine
   std::vector<int> turbineProcs; // Same as the turbineSetProcs, but as an integer array
 
   //Supercontroller stuff
@@ -140,15 +140,15 @@ class OpenFAST {
   int ErrStat;
   char ErrMsg[INTERFACE_STRING_LENGTH];  // make sure this is the same size as IntfStrLen in FAST_Library.f90
 
- public: 
+ public:
 
-  // Constructor 
+  // Constructor
   OpenFAST() ;
-  
+
   // Destructor
   ~OpenFAST() ;
 
-  void setInputs(const fastInputs &);  
+  void setInputs(const fastInputs &);
 
   void init();
   void solution0();
@@ -166,7 +166,7 @@ class OpenFAST {
                           float & fx,
                           float & fy,
                           float & fz);
-                        
+
   hid_t openVelocityDataFile(bool createFile);
   void readVelocityData(int nTimesteps);
   void writeVelocityData(hid_t h5file, int iTurb, int iTimestep, OpFM_InputType_t iData, OpFM_OutputType_t oData);
@@ -198,7 +198,7 @@ class OpenFAST {
   bool isTimeZero() { return timeZero; }
   int get_procNo(int iTurbGlob) { return turbineMapGlobToProc[iTurbGlob] ; } // Get processor nuber of a turbine with global id 'iTurbGlob'
   int get_localTurbNo(int iTurbGlob) { return reverseTurbineMapProcToGlob[iTurbGlob]; }
-  int get_nTurbinesGlob() { return nTurbinesGlob; } 
+  int get_nTurbinesGlob() { return nTurbinesGlob; }
 
   float get_nacelleArea(int iTurbGlob) { return get_nacelleAreaLoc(get_localTurbNo(iTurbGlob)); }
   float get_nacelleCd(int iTurbGlob) { return get_nacelleCdLoc(get_localTurbNo(iTurbGlob)); }
@@ -270,7 +270,7 @@ class OpenFAST {
   inline bool checkFileExists(const std::string& name);
 
   void allocateMemory();
-  
+
   float get_nacelleCdLoc(int iTurbLoc) { return nacelle_cd[iTurbLoc]; }
   float get_nacelleAreaLoc(int iTurbLoc) { return nacelle_area[iTurbLoc]; }
   float get_airDensityLoc(int iTurbLoc) { return air_density[iTurbLoc]; }
