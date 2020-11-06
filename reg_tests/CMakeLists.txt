@@ -79,3 +79,26 @@ endforeach()
 
 # add the tests
 include(${CMAKE_CURRENT_LIST_DIR}/CTestList.cmake)
+
+set(src "${CMAKE_CURRENT_LIST_DIR}/r-test/glue-codes/openfast/5MW_Baseline/ServoData")
+set(dest "${CTEST_BINARY_DIR}/glue-codes/openfast/5MW_Baseline/ServoData/")
+add_custom_command(
+  OUTPUT "${dest}/DISCON.dll"
+  DEPENDS DISCON
+  COMMAND "${CMAKE_COMMAND}" -E copy "${src}/DISCON/build/DISCON.dll" "${dest}"
+)
+add_custom_command(
+  OUTPUT "${dest}/DISCON_ITIBarge.dll"
+  DEPENDS DISCON_ITIBarge
+  COMMAND "${CMAKE_COMMAND}" -E copy "${src}/DISCON_ITI/build/DISCON_ITIBarge.dll" "${dest}"
+  )
+add_custom_command(
+  OUTPUT "${dest}/DISCON_OC3Hywind.dll"
+  DEPENDS DISCON_OC3Hywind
+  COMMAND "${CMAKE_COMMAND}" -E copy "${src}/DISCON_OC3/build/DISCON_OC3Hywind.dll" "${dest}"
+)
+
+add_custom_target(
+  regression_tests
+  DEPENDS openfast "${dest}/DISCON.dll" "${dest}/DISCON_ITIBarge.dll" "${dest}/DISCON_OC3Hywind.dll"
+)

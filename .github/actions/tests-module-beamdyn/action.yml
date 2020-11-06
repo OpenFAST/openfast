@@ -1,0 +1,11 @@
+name: 'BeamDyn module tests'
+description: 'Run tests specific to the BeamDyn module'
+author: 'Rafael Mudafort https://github.com/rafmudaf'
+runs:
+  using: "composite"
+  steps:  
+    - run: |
+        ctest -VV -j7 -R bd_
+        ctest -VV -R beamdyn_utest
+      working-directory: "/openfast/build"
+      shell: bash
