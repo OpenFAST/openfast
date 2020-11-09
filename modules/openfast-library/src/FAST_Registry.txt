@@ -21,7 +21,6 @@ usefrom	HydroDyn.txt
 usefrom	IceFloe_FASTRegistry.inp
 usefrom	InflowWind.txt
 usefrom	OpenFOAM_Registry.txt
-#usefrom	SuperController_Registry.txt
 usefrom	SC_DataEx_Registry.txt
 usefrom	Registry_IceDyn.txt
 usefrom	FEAM_Registry.txt

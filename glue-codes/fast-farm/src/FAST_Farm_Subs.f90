@@ -50,7 +50,7 @@ MODULE FAST_Farm_Subs
 
    subroutine TrilinearInterpRegGrid(V, pt, dims, val)
    
-      real(SiKi),     intent(in   ) :: V(:,:,:,:)      !< The volume data being sampled
+      real(SiKi),     intent(in   ) :: V(:,0:,0:,0:)      !< The volume data being sampled
       real(ReKi),     intent(in   ) :: pt(3)           !< The point, in grid coordinates where we want to sample the data
       integer(IntKi), intent(in   ) :: dims(3)         !< The grid dimensions
       real(ReKi),     intent(  out) :: val(3)          !< The interpolated value of V at location, pt
@@ -61,19 +61,19 @@ MODULE FAST_Farm_Subs
       REAL(ReKi)      :: u(8)           ! array for holding the corner values for the interpolation algorithm across a cubic volume
       real(ReKi)      :: val2(3)
       
-      x0 = floor(pt(1))
+      x0 = min(max(floor(pt(1)),0),dims(1)-1)
       x1 = x0 + 1
-      if (x0 == dims(1)) x1 = x0  ! Handle case where x0 is the last index in the grid, in this case xd = 0.0, so the 2nd term in the interpolation will not contribute
+      if (x0 == (dims(1)-1)) x1 = x0  ! Handle case where x0 is the last index in the grid, in this case xd = 0.0, so the 2nd term in the interpolation will not contribute
       xd = 2.0_ReKi * (pt(1) - REAL(x0, ReKi)) - 1.0_ReKi
 
-      y0 = floor(pt(2))
+      y0 = min(max(floor(pt(2)),0),dims(2)-1)
       y1 = y0 + 1
-      if (y0 == dims(2)) y1 = y0  ! Handle case where y0 is the last index in the grid, in this case yd = 0.0, so the 2nd term in the interpolation will not contribute
+      if (y0 == (dims(2)-1)) y1 = y0  ! Handle case where y0 is the last index in the grid, in this case yd = 0.0, so the 2nd term in the interpolation will not contribute
       yd = 2.0_ReKi * (pt(2) - REAL(y0, ReKi)) - 1.0_ReKi
 
-      z0 = floor(pt(3))
+      z0 = min(max(floor(pt(3)),0),dims(3)-1)
       z1 = z0 + 1
-      if (z0 == dims(3)) z1 = z0  ! Handle case where z0 is the last index in the grid, in this case zd = 0.0, so the 2nd term in the interpolation will not contribute
+      if (z0 == (dims(3)-1)) z1 = z0  ! Handle case where z0 is the last index in the grid, in this case zd = 0.0, so the 2nd term in the interpolation will not contribute
       zd = 2.0_ReKi * (pt(3) - REAL(z0, ReKi)) - 1.0_ReKi
       
       !-------------------------------------------------------------------------------------------------
