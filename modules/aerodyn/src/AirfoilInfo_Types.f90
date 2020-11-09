@@ -38,29 +38,30 @@ IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: AFITable_2User = 3      ! 2D interpolation on AoA and UserProp [-]
 ! =========  AFI_UA_BL_Type  =======
   TYPE, PUBLIC :: AFI_UA_BL_Type
-    REAL(ReKi)  :: alpha0      !< Angle of attack for zero lift (used for Beddoes-Leishman unsteady aero) [input in degrees; stored as radians]
+    REAL(ReKi)  :: alpha0      !< Angle of attack for zero lift (also used in HGM) [input in degrees; stored as radians]
     REAL(ReKi)  :: alpha1      !< angle of attack at f = 0.7, approximately the stall angle; for alpha >= alpha0 [input in degrees; stored as radians]
     REAL(ReKi)  :: alpha2      !< angle of attack at f = 0.7, approximately the stall angle; for alpha < alpha0 [input in degrees; stored as radians]
     REAL(ReKi)  :: eta_e      !< Recovery factor in the range [0.85 - 0.95] [-]
     REAL(ReKi)  :: C_nalpha      !< Cn slope for zero lift (used for Beddoes-Leishman unsteady aero) [1/rad]
-    REAL(ReKi)  :: T_f0      !< initial value of T_f, airfoil specific, used to compute D_f and fprimeprime [-]
+    REAL(ReKi)  :: C_lalpha      !< Cl slope for zero lift (used for HGM unsteady aero only) -> calculated [1/rad]
+    REAL(ReKi)  :: T_f0      !< initial value of T_f, airfoil specific, used to compute D_f and fprimeprime (also used in HGM) [-]
     REAL(ReKi)  :: T_V0      !< initial value of T_V, airfoil specific, time parameter associated with the vortex lift decay process, used in Cn_v [-]
-    REAL(ReKi)  :: T_p      !< boundary-layer, leading edge pressure gradient time parameter; used in D_p; airfoil specific [-]
+    REAL(ReKi)  :: T_p      !< boundary-layer, leading edge pressure gradient time parameter; used in D_p; airfoil specific (also used in HGM) [-]
     REAL(ReKi)  :: T_VL      !< Initial value of the time constant associated with the vortex advection process; it represents the non-dimensional time in semi-chords, needed for a vortex to travel from LE to trailing edge (TE); it is used in the expression of Cvn. It depends on Re, M (weakly), and airfoil. [valid range = 6 - 13] [-]
-    REAL(ReKi)  :: b1      !< airfoil constant derived from experimental results, usually 0.14 [-]
-    REAL(ReKi)  :: b2      !< airfoil constant derived from experimental results, usually 0.53 [-]
+    REAL(ReKi)  :: b1      !< airfoil constant derived from experimental results (also used in HGM), usually 0.14 [-]
+    REAL(ReKi)  :: b2      !< airfoil constant derived from experimental results (also used in HGM), usually 0.53 [-]
     REAL(ReKi)  :: b5      !< airfoil constant derived from experimental results, usually 5.0 [-]
-    REAL(ReKi)  :: A1      !< airfoil constant derived from experimental results, usually 0.3 [-]
-    REAL(ReKi)  :: A2      !< airfoil constant derived from experimental results, usually 0.7 [-]
+    REAL(ReKi)  :: A1      !< airfoil constant derived from experimental results (also used in HGM), usually 0.3 [-]
+    REAL(ReKi)  :: A2      !< airfoil constant derived from experimental results (also used in HGM), usually 0.7 [-]
     REAL(ReKi)  :: A5      !< airfoil constant derived from experimental results, usually 1.0 [-]
     REAL(ReKi)  :: S1      !< Constant in the f curve best-fit for alpha0<=AOA<=alpha1 [-]
     REAL(ReKi)  :: S2      !< Constant in the f curve best-fit for         AOA> alpha1 [-]
     REAL(ReKi)  :: S3      !< Constant in the f curve best-fit for alpha2<=AOA< alpha0 [-]
     REAL(ReKi)  :: S4      !< Constant in the f curve best-fit for         AOA< alpha2 [-]
-    REAL(ReKi)  :: Cn1      !< Cn at stall value for positive angle of attack (used for Beddoes-Leishman unsteady aero) [or critical value of Cn_prime at LE separation for alpha >= alpha0] [-]
-    REAL(ReKi)  :: Cn2      !< Cn at stall value for negative angle (used for Beddoes-Leishman unsteady aero) or [critical value of Cn_prime at LE separation for alpha < alpha0] [-]
+    REAL(ReKi)  :: Cn1      !< Cn at stall value for positive angle of attack [or critical value of Cn_prime at LE separation for alpha >= alpha0] [-]
+    REAL(ReKi)  :: Cn2      !< Cn at stall value for negative angle of attack [or critical value of Cn_prime at LE separation for alpha < alpha0] [-]
     REAL(ReKi)  :: St_sh      !< Strouhal's shedding frequency constant. [-]
-    REAL(ReKi)  :: Cd0      !< Minimum Cd value (used for Beddoes-Leishman unsteady aero) [-]
+    REAL(ReKi)  :: Cd0      !< Minimum Cd value [-]
     REAL(ReKi)  :: Cm0      !< 2D pitching moment coefficient at zero lift, positive if nose is up [-]
     REAL(ReKi)  :: k0      !< airfoil parameter in the x_cp_hat curve best-fit [ignored if UAMod<>1] [-]
     REAL(ReKi)  :: k1      !< airfoil parameter in the x_cp_hat curve best-fit [ignored if UAMod<>1] [-]
@@ -69,7 +70,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: k1_hat      !< Constant in the expression of Cc due to leading edge vortex effects.  [ignored if UAMod<>1] [-]
     REAL(ReKi)  :: x_cp_bar      !< Constant in the expression of \hat(x)_cp^v [ignored if UAMod<>1, default = 0.2] [-]
     REAL(ReKi)  :: UACutout      !< Angle of attack above which unsteady aerodynamics are disabled [input in degrees; stored as radians]
-    REAL(ReKi)  :: filtCutOff      !< low pass filter cut-off frequency for the pitching rate and accelerations [Hz]
+    REAL(ReKi)  :: filtCutOff      !< Reduced frequency cutoff used to calculate the dynamic low pass filter cut-off frequency for the pitching rate and accelerations [default = 0.5] [-]
   END TYPE AFI_UA_BL_Type
 ! =======================
 ! =========  AFI_Table_Type  =======
@@ -107,6 +108,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: ColCl      !< The column in the p%Coefs arrays that contains Cl data [-]
     INTEGER(IntKi)  :: ColCm      !< The column in the p%Coefs arrays that contains Cm data [-]
     INTEGER(IntKi)  :: ColCpmin      !< The column in the p%Coefs arrays that contains Cpmin data [-]
+    INTEGER(IntKi)  :: ColUAf      !< The column in the p%Coefs arrays that contains f_st data for UA [-]
     INTEGER(IntKi)  :: AFTabMod      !< Interpolation method for multiple airfoil tables {1 = 1D on AoA (only first table is used); 2 = 2D on AoA and Re; 3 = 2D on AoA and UserProp} [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: secondVals      !< The values of the 2nd dependent variable when using multiple airfoil tables (Re or UserProp, saved in an array so that the logic in the interpolation scheme is cleaner) [-]
     INTEGER(IntKi)  :: InterpOrd      !< Interpolation order [-]
@@ -134,6 +136,8 @@ IMPLICIT NONE
     REAL(ReKi)  :: Cpmin = 0.      !< Dimensionless coefficient of minimum pressure [-]
     REAL(ReKi)  :: Cd0 = 0.      !< Minimum Cd value (used for Beddoes-Leishman unsteady aero) [-]
     REAL(ReKi)  :: Cm0 = 0.      !< 2D pitching moment coefficient at zero lift, positive if nose is up [-]
+    REAL(ReKi)  :: f_st = 0.      !< separation function (used for UA HGM model) [-]
+    REAL(ReKi)  :: cl_fs = 0.      !< fully separated polar function (used for UA HGM model) [-]
   END TYPE AFI_OutputType
 ! =======================
 CONTAINS
@@ -159,6 +163,7 @@ CONTAINS
     DstUA_BL_TypeData%alpha2 = SrcUA_BL_TypeData%alpha2
     DstUA_BL_TypeData%eta_e = SrcUA_BL_TypeData%eta_e
     DstUA_BL_TypeData%C_nalpha = SrcUA_BL_TypeData%C_nalpha
+    DstUA_BL_TypeData%C_lalpha = SrcUA_BL_TypeData%C_lalpha
     DstUA_BL_TypeData%T_f0 = SrcUA_BL_TypeData%T_f0
     DstUA_BL_TypeData%T_V0 = SrcUA_BL_TypeData%T_V0
     DstUA_BL_TypeData%T_p = SrcUA_BL_TypeData%T_p
@@ -239,6 +244,7 @@ CONTAINS
       Re_BufSz   = Re_BufSz   + 1  ! alpha2
       Re_BufSz   = Re_BufSz   + 1  ! eta_e
       Re_BufSz   = Re_BufSz   + 1  ! C_nalpha
+      Re_BufSz   = Re_BufSz   + 1  ! C_lalpha
       Re_BufSz   = Re_BufSz   + 1  ! T_f0
       Re_BufSz   = Re_BufSz   + 1  ! T_V0
       Re_BufSz   = Re_BufSz   + 1  ! T_p
@@ -302,6 +308,8 @@ CONTAINS
     ReKiBuf(Re_Xferred) = InData%eta_e
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%C_nalpha
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%C_lalpha
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%T_f0
     Re_Xferred = Re_Xferred + 1
@@ -397,6 +405,8 @@ CONTAINS
     OutData%eta_e = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%C_nalpha = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%C_lalpha = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%T_f0 = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
@@ -1287,6 +1297,7 @@ ENDIF
     DstParamData%ColCl = SrcParamData%ColCl
     DstParamData%ColCm = SrcParamData%ColCm
     DstParamData%ColCpmin = SrcParamData%ColCpmin
+    DstParamData%ColUAf = SrcParamData%ColUAf
     DstParamData%AFTabMod = SrcParamData%AFTabMod
 IF (ALLOCATED(SrcParamData%secondVals)) THEN
   i1_l = LBOUND(SrcParamData%secondVals,1)
@@ -1412,6 +1423,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! ColCl
       Int_BufSz  = Int_BufSz  + 1  ! ColCm
       Int_BufSz  = Int_BufSz  + 1  ! ColCpmin
+      Int_BufSz  = Int_BufSz  + 1  ! ColUAf
       Int_BufSz  = Int_BufSz  + 1  ! AFTabMod
   Int_BufSz   = Int_BufSz   + 1     ! secondVals allocated yes/no
   IF ( ALLOCATED(InData%secondVals) ) THEN
@@ -1491,6 +1503,8 @@ ENDIF
     IntKiBuf(Int_Xferred) = InData%ColCm
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%ColCpmin
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%ColUAf
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%AFTabMod
     Int_Xferred = Int_Xferred + 1
@@ -1628,6 +1642,8 @@ ENDIF
     OutData%ColCm = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%ColCpmin = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%ColUAf = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%AFTabMod = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
@@ -1912,6 +1928,8 @@ ENDIF
     DstOutputData%Cpmin = SrcOutputData%Cpmin
     DstOutputData%Cd0 = SrcOutputData%Cd0
     DstOutputData%Cm0 = SrcOutputData%Cm0
+    DstOutputData%f_st = SrcOutputData%f_st
+    DstOutputData%cl_fs = SrcOutputData%cl_fs
  END SUBROUTINE AFI_CopyOutput
 
  SUBROUTINE AFI_DestroyOutput( OutputData, ErrStat, ErrMsg )
@@ -1966,6 +1984,8 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! Cpmin
       Re_BufSz   = Re_BufSz   + 1  ! Cd0
       Re_BufSz   = Re_BufSz   + 1  ! Cm0
+      Re_BufSz   = Re_BufSz   + 1  ! f_st
+      Re_BufSz   = Re_BufSz   + 1  ! cl_fs
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -2004,6 +2024,10 @@ ENDIF
     ReKiBuf(Re_Xferred) = InData%Cd0
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%Cm0
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%f_st
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%cl_fs
     Re_Xferred = Re_Xferred + 1
  END SUBROUTINE AFI_PackOutput
 
@@ -2044,6 +2068,10 @@ ENDIF
     OutData%Cd0 = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%Cm0 = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%f_st = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%cl_fs = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
  END SUBROUTINE AFI_UnPackOutput
 
@@ -2152,6 +2180,10 @@ ENDIF
   y_out%Cd0 = y1%Cd0 + b * ScaleFactor
   b = -(y1%Cm0 - y2%Cm0)
   y_out%Cm0 = y1%Cm0 + b * ScaleFactor
+  b = -(y1%f_st - y2%f_st)
+  y_out%f_st = y1%f_st + b * ScaleFactor
+  b = -(y1%cl_fs - y2%cl_fs)
+  y_out%cl_fs = y1%cl_fs + b * ScaleFactor
  END SUBROUTINE AFI_Output_ExtrapInterp1
 
 
@@ -2225,6 +2257,12 @@ ENDIF
   b = (t(3)**2*(y1%Cm0 - y2%Cm0) + t(2)**2*(-y1%Cm0 + y3%Cm0))* scaleFactor
   c = ( (t(2)-t(3))*y1%Cm0 + t(3)*y2%Cm0 - t(2)*y3%Cm0 ) * scaleFactor
   y_out%Cm0 = y1%Cm0 + b  + c * t_out
+  b = (t(3)**2*(y1%f_st - y2%f_st) + t(2)**2*(-y1%f_st + y3%f_st))* scaleFactor
+  c = ( (t(2)-t(3))*y1%f_st + t(3)*y2%f_st - t(2)*y3%f_st ) * scaleFactor
+  y_out%f_st = y1%f_st + b  + c * t_out
+  b = (t(3)**2*(y1%cl_fs - y2%cl_fs) + t(2)**2*(-y1%cl_fs + y3%cl_fs))* scaleFactor
+  c = ( (t(2)-t(3))*y1%cl_fs + t(3)*y2%cl_fs - t(2)*y3%cl_fs ) * scaleFactor
+  y_out%cl_fs = y1%cl_fs + b  + c * t_out
  END SUBROUTINE AFI_Output_ExtrapInterp2
 
 
@@ -2320,16 +2358,15 @@ ENDIF
    END IF
 
    ScaleFactor = t_out / t(2)
-  b = -(u1%alpha0 - u2%alpha0)
-  u_out%alpha0 = u1%alpha0 + b * ScaleFactor
-  b = -(u1%alpha1 - u2%alpha1)
-  u_out%alpha1 = u1%alpha1 + b * ScaleFactor
-  b = -(u1%alpha2 - u2%alpha2)
-  u_out%alpha2 = u1%alpha2 + b * ScaleFactor
+  CALL Angles_ExtrapInterp( u1%alpha0, u2%alpha0, tin, u_out%alpha0, tin_out )
+  CALL Angles_ExtrapInterp( u1%alpha1, u2%alpha1, tin, u_out%alpha1, tin_out )
+  CALL Angles_ExtrapInterp( u1%alpha2, u2%alpha2, tin, u_out%alpha2, tin_out )
   b = -(u1%eta_e - u2%eta_e)
   u_out%eta_e = u1%eta_e + b * ScaleFactor
   b = -(u1%C_nalpha - u2%C_nalpha)
   u_out%C_nalpha = u1%C_nalpha + b * ScaleFactor
+  b = -(u1%C_lalpha - u2%C_lalpha)
+  u_out%C_lalpha = u1%C_lalpha + b * ScaleFactor
   b = -(u1%T_f0 - u2%T_f0)
   u_out%T_f0 = u1%T_f0 + b * ScaleFactor
   b = -(u1%T_V0 - u2%T_V0)
@@ -2439,21 +2476,18 @@ ENDIF
    END IF
 
    ScaleFactor = t_out / (t(2) * t(3) * (t(2) - t(3)))
-  b = (t(3)**2*(u1%alpha0 - u2%alpha0) + t(2)**2*(-u1%alpha0 + u3%alpha0))* scaleFactor
-  c = ( (t(2)-t(3))*u1%alpha0 + t(3)*u2%alpha0 - t(2)*u3%alpha0 ) * scaleFactor
-  u_out%alpha0 = u1%alpha0 + b  + c * t_out
-  b = (t(3)**2*(u1%alpha1 - u2%alpha1) + t(2)**2*(-u1%alpha1 + u3%alpha1))* scaleFactor
-  c = ( (t(2)-t(3))*u1%alpha1 + t(3)*u2%alpha1 - t(2)*u3%alpha1 ) * scaleFactor
-  u_out%alpha1 = u1%alpha1 + b  + c * t_out
-  b = (t(3)**2*(u1%alpha2 - u2%alpha2) + t(2)**2*(-u1%alpha2 + u3%alpha2))* scaleFactor
-  c = ( (t(2)-t(3))*u1%alpha2 + t(3)*u2%alpha2 - t(2)*u3%alpha2 ) * scaleFactor
-  u_out%alpha2 = u1%alpha2 + b  + c * t_out
+  CALL Angles_ExtrapInterp( u1%alpha0, u2%alpha0, u3%alpha0, tin, u_out%alpha0, tin_out )
+  CALL Angles_ExtrapInterp( u1%alpha1, u2%alpha1, u3%alpha1, tin, u_out%alpha1, tin_out )
+  CALL Angles_ExtrapInterp( u1%alpha2, u2%alpha2, u3%alpha2, tin, u_out%alpha2, tin_out )
   b = (t(3)**2*(u1%eta_e - u2%eta_e) + t(2)**2*(-u1%eta_e + u3%eta_e))* scaleFactor
   c = ( (t(2)-t(3))*u1%eta_e + t(3)*u2%eta_e - t(2)*u3%eta_e ) * scaleFactor
   u_out%eta_e = u1%eta_e + b  + c * t_out
   b = (t(3)**2*(u1%C_nalpha - u2%C_nalpha) + t(2)**2*(-u1%C_nalpha + u3%C_nalpha))* scaleFactor
   c = ( (t(2)-t(3))*u1%C_nalpha + t(3)*u2%C_nalpha - t(2)*u3%C_nalpha ) * scaleFactor
   u_out%C_nalpha = u1%C_nalpha + b  + c * t_out
+  b = (t(3)**2*(u1%C_lalpha - u2%C_lalpha) + t(2)**2*(-u1%C_lalpha + u3%C_lalpha))* scaleFactor
+  c = ( (t(2)-t(3))*u1%C_lalpha + t(3)*u2%C_lalpha - t(2)*u3%C_lalpha ) * scaleFactor
+  u_out%C_lalpha = u1%C_lalpha + b  + c * t_out
   b = (t(3)**2*(u1%T_f0 - u2%T_f0) + t(2)**2*(-u1%T_f0 + u3%T_f0))* scaleFactor
   c = ( (t(2)-t(3))*u1%T_f0 + t(3)*u2%T_f0 - t(2)*u3%T_f0 ) * scaleFactor
   u_out%T_f0 = u1%T_f0 + b  + c * t_out

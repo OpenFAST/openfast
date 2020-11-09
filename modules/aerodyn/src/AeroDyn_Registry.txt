@@ -22,8 +22,10 @@ param    ^              -  IntKi    WakeMod_none            -  0  -  "Wake model
 param    ^              -  IntKi    WakeMod_BEMT            -  1  -  "Wake model - BEMT (blade elememnt momentum theory)"     -
 param    ^              -  IntKi    WakeMod_DBEMT           -  2  -  "Wake model - DBEMT (dynamic elememnt momentum theory)"  -
 param    ^              -  IntKi    WakeMod_FVW             -  3  -  "Wake model - FVW (free vortex wake, OLAF)"              -
+
 param    ^              -  IntKi    AFAeroMod_steady        -  1  -  "steady model"                               -
 param    ^              -  IntKi    AFAeroMod_BL_unsteady   -  2  -  "Beddoes-Leishman unsteady model"            -
+
 param    ^              -  IntKi    TwrPotent_none          -  0  -  "no tower potential flow"                    -
 param    ^              -  IntKi    TwrPotent_baseline      -  1  -  "baseline tower potential flow"              -
 param    ^              -  IntKi    TwrPotent_Bak           -  2  -  "tower potential flow with Bak correction"   -
@@ -61,13 +63,14 @@ typedef	^	InitOutputType	ProgDesc	Ver	-	-	-	"This module's name, version, and da
 typedef	^	InitOutputType	ReKi	AirDens	-	-	-	"Air density"	kg/m^3
 typedef	^	InitOutputType	AD_BladeShape	BladeShape	{:}	-	-	"airfoil coordinates for each blade"	m
 typedef	^	InitOutputType	CHARACTER(LinChanLen)	LinNames_y	{:}	-	-	"Names of the outputs used in linearization"	-
-typedef	^	InitOutputType	CHARACTER(LinChanLen)	LinNames_z	{:}	-	-	"Names of the constraint states used in linearization"	-
+typedef	^	InitOutputType	CHARACTER(LinChanLen)	LinNames_x	{:}	-	-	"Names of the continuous states used in linearization"	-
 typedef	^	InitOutputType	CHARACTER(LinChanLen)	LinNames_u	{:}	-	-	"Names of the inputs used in linearization"	-
 typedef	^	InitOutputType	LOGICAL	RotFrame_y	{:}	-	-	"Flag that tells FAST/MBC3 if the outputs used in linearization are in the rotating frame"	-
-typedef	^	InitOutputType	LOGICAL	RotFrame_z	{:}	-	-	"Flag that tells FAST/MBC3 if the constraint states used in linearization are in the rotating frame (not used for glue)"	-
+typedef	^	InitOutputType	LOGICAL	RotFrame_x	{:}	-	-	"Flag that tells FAST/MBC3 if the continuous states used in linearization are in the rotating frame (not used for glue)"	-
 typedef	^	InitOutputType	LOGICAL	RotFrame_u	{:}	-	-	"Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame"	-
 typedef	^	InitOutputType	LOGICAL	IsLoad_u	{:}	-	-	"Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix)"	-
 typedef	^	InitOutputType	AD_BladePropsType	BladeProps	{:}	-	-	"blade property information from blade input files"	-
+typedef	^	InitOutputType	IntKi	DerivOrder_x {:}	-	-	"Integer that tells FAST/MBC3 the maximum derivative order of continuous states used in linearization"	-
 typedef	^	InitOutputType	ReKi	TwrElev	{:}	-	-	"Elevation at tower node"	m
 typedef	^	InitOutputType	ReKi	TwrDiam	{:}	-	-	"Diameter of tower at node"	m
 
@@ -124,7 +127,7 @@ typedef	^	AD_InputFile	IntKi	NTwOuts	-	-	-	"Number of tower node outputs [0 - 9]
 typedef	^	AD_InputFile	IntKi	TwOutNd	{9}	-	-	"Tower nodes whose values will be output"	-
 typedef	^	AD_InputFile	IntKi	NumOuts	-	-	-	"Number of parameters in the output list (number of outputs requested)"	-
 typedef	^	AD_InputFile	CHARACTER(ChanLen)	OutList	{:}	-	-	"List of user-requested output channels"	-
-typedef	^	AD_InputFile	ReKi	tau1_const	-	-	-	"time constant for DBEMT [used only when WakeMod=2 and DBEMT_Mod=1]"	s
+typedef	^	AD_InputFile	ReKi	tau1_const	-	-	-	"time constant for DBEMT [used only when WakeMod=2 and DBEMT_Mod/=2]"	s
 typedef	^	AD_InputFile	IntKi	DBEMT_Mod	-	-	-	"Type of dynamic BEMT (DBEMT) model {1=constant tau1, 2=time-dependent tau1}"	-
 typedef	^	AD_InputFile	IntKi	BldNd_NumOuts	-	-	-	"Number of requested output channels per blade node (AD_AllBldNdOuts)"	-
 typedef	^	AD_InputFile	CHARACTER(ChanLen)	BldNd_OutList	{:}	-	-	"List of user-requested output channels (AD_AllBldNdOuts)"	-
@@ -231,6 +234,7 @@ typedef  ^  ParameterType  IntKi BldNd_BladesOut - - - "The blades to output (AD
 
 typedef	^	ParameterType	Integer	Jac_u_indx	{:}{:}	-	-	"matrix to help fill/pack the u vector in computing the jacobian"	-
 typedef	^	ParameterType	ReKi	du	{:}	-	-	"vector that determines size of perturbation for u (inputs)"
+typedef	^	ParameterType	ReKi	dx	{:}	-	-	"vector that determines size of perturbation for x (continuous states)"
 typedef	^	ParameterType	Integer	Jac_ny	-	-	-	"number of outputs in jacobian matrix"	-
 
 # ..... Inputs ....................................................................................................................
