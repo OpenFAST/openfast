@@ -2250,10 +2250,16 @@ gen_module( FILE * fp , node_t * ModName, char * prog_ver )
 //    gen_modname_pack( fp, ModName ) ;
 //    gen_modname_unpack( fp, ModName ) ;
 //    gen_rk4( fp, ModName ) ;
+
     if (strcmp(make_lower_temp(ModName->name), "airfoilinfo") == 0) { // make interpolation routines for AirfoilInfo module
         gen_ExtrapInterp(fp, ModName, "Output", "OutputType","ReKi");
         gen_ExtrapInterp(fp, ModName, "UA_BL_Type", "UA_BL_Type", "ReKi");
     } else if (!sw_noextrap) {
+        if (strcmp(make_lower_temp(ModName->name), "dbemt") == 0) { // make interpolation routines for element-level DBEMT module
+             
+            gen_ExtrapInterp(fp, ModName, "ElementInputType", "ElementInputType", "DbKi");
+        }
+
         gen_ExtrapInterp(fp, ModName, "Input", "InputType", "DbKi");
         gen_ExtrapInterp(fp, ModName, "Output", "OutputType", "DbKi");
     }

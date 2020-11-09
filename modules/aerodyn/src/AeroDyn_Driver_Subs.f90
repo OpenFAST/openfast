@@ -97,79 +97,93 @@ subroutine Init_AeroDyn(iCase, DvrData, AD, dt, errStat, errMsg)
    ! local data                                
    type(AD_InitInputType)                      :: InitInData     ! Input data for initialization
    type(AD_InitOutputType)                     :: InitOutData    ! Output data from initialization
+   real(ReKi)                                  :: RotAzimuth    ! Rotor azimuth -- aligned with blade 1 (deg)
       
       
       
    errStat = ErrID_None
    errMsg  = ''
    
-   InitInData%InputFile      = DvrData%AD_InputFile
-   InitInData%NumBlades      = DvrData%numBlades
-   InitInData%RootName       = DvrData%outFileData%Root
-   InitInData%Gravity        = 9.80665_ReKi                
+   if (iCase.EQ.1) then
    
-      ! set initialization data:
-   call AllocAry( InitInData%BladeRootPosition, 3, InitInData%NumBlades, 'BladeRootPosition', errStat2, ErrMsg2 )
-      call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-   call AllocAry( InitInData%BladeRootOrientation, 3, 3, InitInData%NumBlades, 'BladeRootOrientation', errStat2, ErrMsg2 )
-      call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+      InitInData%InputFile      = DvrData%AD_InputFile
+      InitInData%NumBlades      = DvrData%numBlades
+      InitInData%RootName       = DvrData%outFileData%Root
+      InitInData%Gravity        = 9.80665_ReKi
+                        
+   
+         ! set initialization data:
+      call AllocAry( InitInData%BladeRootPosition, 3, InitInData%NumBlades, 'BladeRootPosition', errStat2, ErrMsg2 )
+         call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+      call AllocAry( InitInData%BladeRootOrientation, 3, 3, InitInData%NumBlades, 'BladeRootOrientation', errStat2, ErrMsg2 )
+         call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
          
-   if (ErrStat >= AbortErrLev) then
-      call Cleanup()
-      return
-   end if
+      if (ErrStat >= AbortErrLev) then
+         call Cleanup()
+         return
+      end if
       
-   InitInData%HubPosition = (/ DvrData%Overhang * cos(DvrData%shftTilt), 0.0_ReKi, DvrData%HubHt /)
-   theta(1) = 0.0_ReKi
-   theta(2) = -DvrData%shftTilt
-   theta(3) = 0.0_ReKi
-   InitInData%HubOrientation = EulerConstruct( theta )
+      InitInData%HubPosition = (/ DvrData%Overhang * cos(DvrData%shftTilt), 0.0_ReKi, DvrData%HubHt /)
+      theta(1) = 0.0_ReKi
+      theta(2) = -DvrData%shftTilt
+      theta(3) = 0.0_ReKi
+      InitInData%HubOrientation = EulerConstruct( theta )
      
    
-   do k=1,InitInData%numBlades
+      do k=1,InitInData%numBlades
                      
-      theta(1) = (k-1)*TwoPi/real(InitInData%numBlades,ReKi)
-      theta(2) = DvrData%precone
-      theta(3) = 0.0_ReKi
-      InitInData%BladeRootOrientation(:,:,k) = matmul( EulerConstruct( theta ), InitInData%HubOrientation )
+         theta(1) = (k-1)*TwoPi/real(InitInData%numBlades,ReKi)
+         theta(2) = DvrData%precone
+         theta(3) = 0.0_ReKi
+         InitInData%BladeRootOrientation(:,:,k) = matmul( EulerConstruct( theta ), InitInData%HubOrientation )
                   
-      InitInData%BladeRootPosition(:,k)   = InitInData%HubPosition + DvrData%hubRad * InitInData%BladeRootOrientation(3,:,k)      
+         InitInData%BladeRootPosition(:,k)   = InitInData%HubPosition + DvrData%hubRad * InitInData%BladeRootOrientation(3,:,k)      
       
-   end do
+      end do
       
-      
-   call AD_Init(InitInData, AD%u(1), AD%p, AD%x, AD%xd, AD%z, AD%OtherState, AD%y, AD%m, dt, InitOutData, ErrStat2, ErrMsg2 )
-      call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+    
+      call AD_Init(InitInData, AD%u(1), AD%p, AD%x, AD%xd, AD%z, AD%OtherState, AD%y, AD%m, dt, InitOutData, ErrStat2, ErrMsg2 )
+         call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
 
-   if (ErrStat >= AbortErrLev) then
-      call Cleanup()
-      return
-   end if   
+      if (ErrStat >= AbortErrLev) then
+         call Cleanup()
+         return
+      end if   
          
-   do j = 2, numInp
-      call AD_CopyInput (AD%u(1),  AD%u(j),  MESH_NEWCOPY, errStat2, errMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   end do
-   if (ErrStat >= AbortErrLev) then
-      call Cleanup()
-      return
-   end if
+      do j = 2, numInp
+         call AD_CopyInput (AD%u(1),  AD%u(j),  MESH_NEWCOPY, errStat2, errMsg2)
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      
+         ! move AD initOut data to AD Driver
+      call move_alloc( InitOutData%WriteOutputHdr, DvrData%OutFileData%WriteOutputHdr )
+      call move_alloc( InitOutData%WriteOutputUnt, DvrData%OutFileData%WriteOutputUnt )   
+     
+      DvrData%OutFileData%AD_ver = InitOutData%ver
+             
+      call cleanup() ! destroy init input/output data
+      
+   else
    
+      call AD_ReInit(AD%p, AD%x, AD%xd, AD%z, AD%OtherState, AD%m, dt, ErrStat2, ErrMsg2 )   
+         call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+         if (ErrStat >= AbortErrLev) return
+      
+   end if   
+   
+      
       ! we know exact values, so we're going to initialize inputs this way (instead of using the input guesses from AD_Init)
    AD%InputTime = -999
+   RotAzimuth = 0.0
    DO j = 1-numInp, 0
-      call Set_AD_Inputs(iCase,j,DvrData,AD,errStat2,errMsg2)   
+      call Set_AD_Inputs(iCase,j,RotAzimuth,DvrData,AD,errStat2,errMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    END DO              
    
       
-      ! move AD initOut data to AD Driver
-   call move_alloc( InitOutData%WriteOutputHdr, DvrData%OutFileData%WriteOutputHdr )
-   call move_alloc( InitOutData%WriteOutputUnt, DvrData%OutFileData%WriteOutputUnt )   
-     
-   DvrData%OutFileData%AD_ver = InitOutData%ver
    
 contains
+
    subroutine cleanup()
       call AD_DestroyInitInput( InitInData, ErrStat2, ErrMsg2 )   
       call AD_DestroyInitOutput( InitOutData, ErrStat2, ErrMsg2 )      
@@ -177,14 +191,15 @@ contains
    
 end subroutine Init_AeroDyn
 !----------------------------------------------------------------------------------------------------------------------------------
-!> this routine returns time=(nt-1) * DvrData%Cases(iCase)%dT, and cycles values in the input array AD%InputTime and AD%u.
+!> this routine cycles values in the input array AD%InputTime and AD%u.
 !! it then sets the inputs for nt * DvrData%Cases(iCase)%dT, which are index values 1 in the arrays.
-subroutine Set_AD_Inputs(iCase,nt,DvrData,AD,errStat,errMsg)
+subroutine Set_AD_Inputs(iCase,nt,RotAzimuth,DvrData,AD,errStat,errMsg)
 
    integer(IntKi)              , intent(in   ) :: iCase         ! case number 
    integer(IntKi)              , intent(in   ) :: nt            ! time step number
-   
-   type(Dvr_SimData),            intent(inout) :: DvrData       ! Driver data 
+
+   real(ReKi)                  , intent(inout) :: RotAzimuth    ! Rotor azimuth at time nt-1 -- aligned with blade 1 (deg)
+   type(Dvr_SimData),            intent(in   ) :: DvrData       ! Driver data 
    type(AeroDyn_Data),           intent(inout) :: AD            ! AeroDyn data 
    integer(IntKi)              , intent(  out) :: errStat       ! Status of error message
    character(*)                , intent(  out) :: errMsg        ! Error message if ErrStat /= ErrID_None
@@ -196,6 +211,7 @@ subroutine Set_AD_Inputs(iCase,nt,DvrData,AD,errStat,errMsg)
 
    integer(intKi)                              :: j             ! loop counter for nodes
    integer(intKi)                              :: k             ! loop counter for blades
+   integer(intKi)                              :: timeIndex     ! index for time
 
    real(ReKi)                                  :: z             ! height (m)
    !real(ReKi)                                  :: angle
@@ -211,6 +227,8 @@ subroutine Set_AD_Inputs(iCase,nt,DvrData,AD,errStat,errMsg)
       ! note that this initialization is a little different than the general algorithm in FAST because here
       ! we can get exact values, so we are going to ignore initial guesses and not extrapolate
       
+   timeIndex = min( max(1,nt+1), DvrData%Cases(iCase)%numSteps )
+   
    !................
    ! shift previous calculations:
    !................
@@ -220,7 +238,28 @@ subroutine Set_AD_Inputs(iCase,nt,DvrData,AD,errStat,errMsg)
             
       AD%InputTime(j+1) = AD%InputTime(j)
    end do
-   AD%inputTime(1) = nt * DvrData%Cases(iCase)%dT
+   
+   if (nt <= 0) then
+         ! save the azimuth at t (not t+dt) for output to file:
+         ! compare to theta(1) for calculate of HubMotion%Orientation below
+      RotAzimuth = MODULO( REAL( DvrData%Cases(iCase)%dT * (nt-1) * DvrData%Cases(iCase)%RotSpeed(1), ReKi) * R2D, 360.0_ReKi )
+
+      AD%inputTime(1) = DvrData%Cases(iCase)%time(1) + DvrData%Cases(iCase)%dT * nt ! time at nt+1
+   else
+      
+      if (nt==1) then
+         RotAzimuth = 0.0_ReKi
+      else
+         RotAzimuth = MODULO( RotAzimuth + REAL(DvrData%Cases(iCase)%dt * DvrData%Cases(iCase)%RotSpeed(nt), ReKi) * R2D, 360.0_ReKi ) ! add a delta angle to the previous azimuth
+      end if
+      
+      if (nt == DvrData%Cases(iCase)%numSteps) then
+         AD%inputTime(1) = DvrData%Cases(iCase)%time(timeIndex) + DvrData%Cases(iCase)%dT
+      else
+         AD%inputTime(1) = DvrData%Cases(iCase)%time(timeIndex)
+      end if
+
+   end if
          
    !................
    ! calculate new values
@@ -236,35 +275,34 @@ subroutine Set_AD_Inputs(iCase,nt,DvrData,AD,errStat,errMsg)
       ! Hub motions:
       theta(1) = 0.0_ReKi
       theta(2) = 0.0_ReKi
-      theta(3) = DvrData%Cases(iCase)%Yaw
+      theta(3) = DvrData%Cases(iCase)%Yaw(timeIndex)
       orientation = EulerConstruct(theta)
             
       AD%u(1)%HubMotion%TranslationDisp(:,1) = matmul( AD%u(1)%HubMotion%Position(:,1), orientation ) - AD%u(1)%HubMotion%Position(:,1) ! = matmul( transpose(orientation) - eye(3), AD%u(1)%HubMotion%Position(:,1) )
-      
-      theta(1) = AD%inputTime(1) * DvrData%Cases(iCase)%RotSpeed
+
+      theta(1) = RotAzimuth*D2R + DvrData%Cases(iCase)%dt * DvrData%Cases(iCase)%RotSpeed(timeIndex)  ! AD%inputTime(1) * DvrData%Cases(iCase)%RotSpeed
       theta(2) = 0.0_ReKi
       theta(3) = 0.0_ReKi
       AD%u(1)%HubMotion%Orientation(  :,:,1) = matmul( AD%u(1)%HubMotion%RefOrientation(:,:,1), orientation )
-      orientation = EulerConstruct( theta )      
+      orientation = EulerConstruct( theta )
       AD%u(1)%HubMotion%Orientation(  :,:,1) = matmul( orientation, AD%u(1)%HubMotion%Orientation(  :,:,1) )
       
-      AD%u(1)%HubMotion%RotationVel(    :,1) = AD%u(1)%HubMotion%Orientation(1,:,1) * DvrData%Cases(iCase)%RotSpeed
+      AD%u(1)%HubMotion%RotationVel(    :,1) = AD%u(1)%HubMotion%Orientation(1,:,1) * DvrData%Cases(iCase)%RotSpeed(timeIndex)
                   
       ! Blade motions:
       do k=1,DvrData%numBlades         
          theta(1) = (k-1)*TwoPi/real(DvrData%numBlades,ReKi)
          theta(2) =  DvrData%precone
-         theta(3) = -DvrData%Cases(iCase)%pitch
+         theta(3) = -DvrData%Cases(iCase)%pitch(timeIndex)
          orientation = EulerConstruct(theta)
          
          AD%u(1)%BladeRootMotion(k)%Orientation(  :,:,1) = matmul( orientation, AD%u(1)%HubMotion%Orientation(  :,:,1) )
-         
       end do !k=numBlades
             
       ! Blade and blade root motions:
       do k=1,DvrData%numBlades
          rotateMat = transpose( AD%u(1)%BladeRootMotion(k)%Orientation(  :,:,1) )
-         rotateMat = matmul( rotateMat, AD%u(1)%BladeRootMotion(k)%RefOrientation(  :,:,1) ) 
+         rotateMat = matmul( rotateMat, AD%u(1)%BladeRootMotion(k)%RefOrientation(  :,:,1) )
          orientation = transpose(rotateMat)
          
          rotateMat(1,1) = rotateMat(1,1) - 1.0_ReKi
@@ -289,7 +327,9 @@ subroutine Set_AD_Inputs(iCase,nt,DvrData,AD,errStat,errMsg)
             position =  AD%u(1)%BladeMotion(k)%Position(:,j) + AD%u(1)%BladeMotion(k)%TranslationDisp(:,j) &
                       - AD%u(1)%HubMotion%Position(:,1) - AD%u(1)%HubMotion%TranslationDisp(:,1)
             AD%u(1)%BladeMotion(k)%TranslationVel( :,j) = cross_product( AD%u(1)%HubMotion%RotationVel(:,1), position )
-
+            
+            AD%u(1)%BladeMotion(k)%RotationVel(:,j) = AD%u(1)%HubMotion%Orientation(1,:,1) * DvrData%Cases(iCase)%RotSpeed(timeIndex) ! simplification (without pitch rate)
+            AD%u(1)%BladeMotion(k)%TranslationAcc(:,j) = 0.0_ReKi ! simplification
          end do !j=nnodes
                                     
       end do !k=numBlades       
@@ -299,7 +339,7 @@ subroutine Set_AD_Inputs(iCase,nt,DvrData,AD,errStat,errMsg)
       do k=1,DvrData%numBlades
          do j=1,AD%u(1)%BladeMotion(k)%nnodes
             z = AD%u(1)%BladeMotion(k)%Position(3,j) + AD%u(1)%BladeMotion(k)%TranslationDisp(3,j)
-            AD%u(1)%InflowOnBlade(1,j,k) = GetU(  DvrData%Cases(iCase)%WndSpeed, DvrData%HubHt, DvrData%Cases(iCase)%ShearExp, z )
+            AD%u(1)%InflowOnBlade(1,j,k) = GetU(  DvrData%Cases(iCase)%WndSpeed(timeIndex), DvrData%HubHt, DvrData%Cases(iCase)%ShearExp(timeIndex), z )
             AD%u(1)%InflowOnBlade(2,j,k) = 0.0_ReKi !V
             AD%u(1)%InflowOnBlade(3,j,k) = 0.0_ReKi !W      
          end do !j=nnodes
@@ -308,7 +348,7 @@ subroutine Set_AD_Inputs(iCase,nt,DvrData,AD,errStat,errMsg)
       !InflowOnTower
       do j=1,AD%u(1)%TowerMotion%nnodes
          z = AD%u(1)%TowerMotion%Position(3,j) + AD%u(1)%TowerMotion%TranslationDisp(3,j)
-         AD%u(1)%InflowOnTower(1,j) = GetU(  DvrData%Cases(iCase)%WndSpeed, DvrData%HubHt, DvrData%Cases(iCase)%ShearExp, z )
+         AD%u(1)%InflowOnTower(1,j) = GetU(  DvrData%Cases(iCase)%WndSpeed(timeIndex), DvrData%HubHt, DvrData%Cases(iCase)%ShearExp(timeIndex), z )
          AD%u(1)%InflowOnTower(2,j) = 0.0_ReKi !V
          AD%u(1)%InflowOnTower(3,j) = 0.0_ReKi !W         
       end do !j=nnodes
@@ -338,9 +378,10 @@ subroutine Dvr_ReadInputFile(fileName, DvrData, errStat, errMsg )
       ! Local variables
    character(1024)              :: PriPath
    character(1024)              :: inpVersion                               ! String containing the input-version information.
-   character(1024)              :: line                                     ! String containing a line of input.
+   character(1024)              :: Line                                     ! String containing a line of input.
    integer                      :: unIn, unEc
    integer                      :: ICase
+   integer                      :: nt, Ind
    integer                      :: Sttus
    character( 11)               :: DateNow                                  ! Date shortly after the start of execution.
    character(  8)               :: TimeNow                                  ! Time of day shortly after the start of execution.
@@ -482,6 +523,7 @@ subroutine Dvr_ReadInputFile(fileName, DvrData, errStat, errMsg )
       end if
 
 
+
       ! Read the combined-case section.
 
    call ReadCom  ( unIn, fileName, 'the combined-case subtitle', errStat2, errMsg2, UnEc )
@@ -513,18 +555,68 @@ subroutine Dvr_ReadInputFile(fileName, DvrData, errStat, errMsg )
 
    do ICase=1,DvrData%NumCases
 
-      call ReadAry ( unIn, fileName, InpCase,  NumCols, 'InpCase',  'parameters for Case #' &
-                     //trim( Int2LStr( ICase ) )//'.', errStat2, errMsg2, UnEc )
-         call setErrStat( errStat2, ErrMsg2 , errStat, ErrMsg , RoutineName )
+      CALL ReadStr( UnIn, fileName, line, 'line', 'Input data for case #'//trim( Int2LStr( ICase ) ), ErrStat2, ErrMsg2, UnEc )
+         CALL setErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if ( errStat >= AbortErrLev ) then
+            call cleanup()
+            return
+         end if
+
+      Line = ADJUSTL( Line ) ! remove leading spaces
+      
+      if (Line(1:1) == '@') then
+         Line = Line(2:) ! remove leading character
+         call ReadTimeHistoryFile(Line, PriPath, DvrData%Cases(iCase), ErrStat2, ErrMsg2, UnEc )
+            call setErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            if ( errStat >= AbortErrLev ) then
+               call cleanup()
+               return
+            end if
+      else
+         
+         READ (Line,*,IOSTAT=Sttus)  InpCase ! read whole array (hopefully!)
+         
+            ! check errors
+            CALL CheckIOS ( Sttus, fileName, 'InpCase', NumType, ErrStat2, ErrMsg2 )
+               call setErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
+            DO Ind=1,NumCols
+               CALL CheckRealVar( InpCase(Ind), 'InpCase', ErrStat2, ErrMsg2)
+               CALL setErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            END DO
             
-      DvrData%Cases(iCase)%WndSpeed        = InpCase( 1)
-      DvrData%Cases(ICase)%ShearExp        = InpCase( 2)
-      DvrData%Cases(ICase)%RotSpeed        = InpCase( 3)*RPM2RPS
-      DvrData%Cases(ICase)%Pitch           = InpCase( 4)*D2R
-      DvrData%Cases(ICase)%Yaw             = InpCase( 5)*D2R
-      DvrData%Cases(iCase)%dT              = InpCase( 6)
-      DvrData%Cases(iCase)%Tmax            = InpCase( 7)
-               
+            if (ErrStat>=AbortErrLev) then
+               call cleanup()
+               return
+            end if
+            
+            IF ( UnEc > 0 ) THEN
+               WRITE( UnEc, Ec_ReAryFrmt ) TRIM( 'InpCase' ), 'Parameters for Case #'//trim( Int2LStr( ICase ) ), InpCase
+            END IF
+            
+         ! set data
+         DvrData%Cases(iCase)%numSteps = ceiling( InpCase( 7) / InpCase( 6) )
+         call AllocateCase(DvrData%Cases(iCase), ErrStat2, ErrMsg2) ! needs %numSteps set prior to call
+            if (ErrStat2>=AbortErrLev) then
+               call SetErrStat( ErrStat2, ErrMsg2 , ErrStat, ErrMsg, RoutineName )
+               call Cleanup()
+               return
+            end if
+
+         DvrData%Cases(iCase)%WndSpeed        = InpCase( 1)
+         DvrData%Cases(ICase)%ShearExp        = InpCase( 2)
+         DvrData%Cases(ICase)%RotSpeed        = InpCase( 3)*RPM2RPS
+         DvrData%Cases(ICase)%Pitch           = InpCase( 4)*D2R
+         DvrData%Cases(ICase)%Yaw             = InpCase( 5)*D2R
+         DvrData%Cases(iCase)%dT              = InpCase( 6)
+        !DvrData%Cases(iCase)%Tmax            = InpCase( 7)
+      
+         do nt = 1,DvrData%Cases(iCase)%numSteps
+            DvrData%Cases(iCase)%time(nt) = (nt-1) * DvrData%Cases(iCase)%dT
+         end do
+      
+      end if
+      
    end do ! ICase
    
    call cleanup ( )
@@ -538,9 +630,151 @@ contains
    end subroutine cleanup
 end subroutine Dvr_ReadInputFile
 !----------------------------------------------------------------------------------------------------------------------------------
+subroutine ReadTimeHistoryFile(FileName, PriPath, CaseData, ErrStat, ErrMsg, UnEc )
+   character(*),                  intent(inout) :: FileName
+   character(*),                  intent(in   ) :: PriPath
+   type(Dvr_Case),                intent(inout) :: CaseData
+   integer,                       intent(  out) :: ErrStat           ! returns a non-zero value when an error occurs  
+   character(*),                  intent(  out) :: ErrMsg            ! Error message if errStat /= ErrID_None
+   integer,                       intent(in   ) :: UnEc
+
+   integer                                      :: UnIn
+   integer                                      :: i
+   integer, parameter                           :: NumHeaderLines = 2
+   
+   character(*), parameter                      :: RoutineName = 'AllocateCase'
+   integer                                      :: ErrStat2
+   character(ErrMsgLen)                         :: ErrMsg2
+   
+   integer, parameter                           :: NumCols = 6                              ! number of columns to be read from the input file
+   real(DbKi)                                   :: InpCase(NumCols)                         ! Temporary array to hold combined-case input parameters. (note that we store in double precision so the time is read correctly)
+
+   
+   
+   ! Open the input file
+   IF ( PathIsRelative( FileName ) ) FileName = TRIM(PriPath)//TRIM(FileName)
+
+   
+   call GetNewUnit( UnIn )
+   call OpenFInpFile( UnIn, FileName, errStat2, ErrMsg2 )
+      call setErrStat( errStat2, ErrMsg2 , errStat, ErrMsg , RoutineName )
+      if ( errStat >= AbortErrLev ) then
+         call cleanup()
+         return
+      end if
+
+   
+   DO I=1,NumHeaderLines
+      call ReadCom(UnIn, FileName, 'Header', ErrStat2, ErrMsg2, UnEc)
+         call setErrStat( errStat2, ErrMsg2 , errStat, ErrMsg , RoutineName )
+         IF (ErrStat >= AbortErrLev ) THEN
+            CALL Cleanup()
+            RETURN
+         END IF
+   END DO
+   
+   
+         ! find out how many rows there are to the end of the file
+   CaseData%NumSteps   = -1
+   ErrStat2 = 0
+   DO WHILE ( ErrStat2 == 0 )
+      
+     CaseData%NumSteps = CaseData%NumSteps + 1
+     READ(UnIn, *, IOSTAT=ErrStat2) InpCase(1)
+      
+   END DO
+      
+   CALL WrScr( '   Found '//TRIM(Num2LStr(CaseData%NumSteps))//' lines of time-series data.' )
+   
+   IF (CaseData%NumSteps < 2) THEN
+      CALL SetErrStat(ErrID_Fatal, 'The user time-series input file must contain at least 2 rows of time data.', ErrStat, ErrMsg, RoutineName)
+      CALL Cleanup()
+      RETURN
+   END IF
+   
+   call AllocateCase(CaseData, ErrStat2, ErrMsg2)
+      call setErrStat( errStat2, ErrMsg2 , errStat, ErrMsg , RoutineName )
+      IF (ErrStat >= AbortErrLev ) THEN
+         CALL Cleanup()
+         RETURN
+      END IF 
+   
+      ! now rewind and skip the first few lines. 
+   REWIND( UnIn, IOSTAT=ErrStat2 )
+      IF (ErrStat2 /= 0_IntKi ) THEN
+         CALL SetErrStat( ErrID_Fatal, 'Error rewinding file "'//TRIM(FileName)//'".', ErrStat, ErrMsg, RoutineName)
+         CALL Cleanup()
+      END IF 
+
+      !IMPORTANT: any changes to the number of lines in the header must be reflected in NumHeaderLines
+   DO I=1,NumHeaderLines
+      call ReadCom(UnIn, FileName, 'Header', ErrStat2, ErrMsg2, UnEc) ! I'm going to ignore this error because we should have caught any issues the first time we read the file. 
+   END DO
+
+   
+   DO i=1,CaseData%NumSteps
+   
+      call ReadAry ( unIn, fileName, InpCase,  NumCols, 'InpCase',  'parameters for Case', errStat2, errMsg2, UnEc )
+         call setErrStat( errStat2, ErrMsg2 , errStat, ErrMsg , RoutineName )
+            
+         if (ErrStat>=AbortErrLev) then
+            call Cleanup()
+            return
+         end if
+
+         CaseData%time(i)        = InpCase( 1)
+         CaseData%WndSpeed(i)    = InpCase( 2)
+         CaseData%ShearExp(i)    = InpCase( 3)
+         CaseData%RotSpeed(i)    = InpCase( 4)*RPM2RPS
+         CaseData%Pitch(i)       = InpCase( 5)*D2R
+         CaseData%Yaw(i)         = InpCase( 6)*D2R
+
+   END DO
+   
+   CaseData%dT = CaseData%time(2) - CaseData%time(1)
+   
+   do i=3,CaseData%NumSteps
+      if (.not. EqualRealNos( CaseData%time(i), CaseData%time(i-1) + CaseData%dT ) ) then
+         call SetErrStat(ErrID_Fatal,'Time history file must contain time constant deltas in the time channel.', ErrStat, ErrMsg, RoutineName)
+         call cleanup()
+         return
+      end if
+   end do
+      
+   call cleanup()
+   
+contains
+   subroutine cleanup
+      close(UnIn)
+   end subroutine cleanup
+end subroutine ReadTimeHistoryFile
+!----------------------------------------------------------------------------------------------------------------------------------
+subroutine AllocateCase(CaseData, ErrStat, ErrMsg)
+   type(Dvr_Case),                intent(inout) :: CaseData
+   integer,                       intent(  out) :: errStat           ! returns a non-zero value when an error occurs  
+   character(*),                  intent(  out) :: errMsg            ! Error message if errStat /= ErrID_None
+   
+   character(*), parameter                      :: routineName = 'AllocateCase'
+   integer                                      :: ErrStat2
+   character(ErrMsgLen)                         :: ErrMsg2
+
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
+   CaseData%numSteps = max(1, CaseData%numSteps)
+   
+   call AllocAry( CaseData%time,     CaseData%numSteps, 'time',     ErrStat2,ErrMsg2); call setErrStat( ErrStat2, ErrMsg2 , errStat, ErrMsg , RoutineName )
+   call AllocAry( CaseData%WndSpeed, CaseData%numSteps, 'WndSpeed', ErrStat2,ErrMsg2); call setErrStat( ErrStat2, ErrMsg2 , errStat, ErrMsg , RoutineName )
+   call AllocAry( CaseData%ShearExp, CaseData%numSteps, 'ShearExp', ErrStat2,ErrMsg2); call setErrStat( ErrStat2, ErrMsg2 , errStat, ErrMsg , RoutineName )
+   call AllocAry( CaseData%RotSpeed, CaseData%numSteps, 'RotSpeed', ErrStat2,ErrMsg2); call setErrStat( ErrStat2, ErrMsg2 , errStat, ErrMsg , RoutineName )
+   call AllocAry( CaseData%Pitch,    CaseData%numSteps, 'Pitch',    ErrStat2,ErrMsg2); call setErrStat( ErrStat2, ErrMsg2 , errStat, ErrMsg , RoutineName )
+   call AllocAry( CaseData%Yaw,      CaseData%numSteps, 'Yaw',      ErrStat2,ErrMsg2); call setErrStat( ErrStat2, ErrMsg2 , errStat, ErrMsg , RoutineName )
+
+end subroutine AllocateCase
+!----------------------------------------------------------------------------------------------------------------------------------
 subroutine ValidateInputs(DvrData, errStat, errMsg)
 
-   type(Dvr_SimData),             intent(in)    :: DvrData
+   type(Dvr_SimData),             intent(inout) :: DvrData           ! intent(out) only so that we can save FmtWidth in DvrData%OutFileData%ActualChanLen
    integer,                       intent(  out) :: errStat           ! returns a non-zero value when an error occurs  
    character(*),                  intent(  out) :: errMsg            ! Error message if errStat /= ErrID_None
 
@@ -559,7 +793,7 @@ subroutine ValidateInputs(DvrData, errStat, errMsg)
    
       ! Turbine Data:
    if ( DvrData%numBlades < 1 ) call SetErrStat( ErrID_Fatal, "There must be at least 1 blade (numBlades).", ErrStat, ErrMsg, RoutineName)
-   if ( DvrData%numBlades > 3 ) call SetErrStat( ErrID_Fatal, "There can be no more than 3 blades (numBlades).", ErrStat, ErrMsg, RoutineName)
+!   if ( DvrData%numBlades > 3 ) call SetErrStat( ErrID_Fatal, "There can be no more than 3 blades (numBlades).", ErrStat, ErrMsg, RoutineName)
    if ( DvrData%HubRad < 0.0_ReKi .or. EqualRealNos(DvrData%HubRad, 0.0_ReKi) ) call SetErrStat( ErrID_Fatal, "HubRad must be a positive number.", ErrStat, ErrMsg, RoutineName)
    if ( DvrData%HubHt < DvrData%HubRad ) call SetErrStat( ErrID_Fatal, "HubHt must be at least HubRad.", ErrStat, ErrMsg, RoutineName)
    
@@ -569,14 +803,16 @@ subroutine ValidateInputs(DvrData, errStat, errMsg)
    call ChkRealFmtStr( DvrData%OutFileData%OutFmt, 'OutFmt', FmtWidth, ErrStat2, ErrMsg2 )
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-   if ( FmtWidth /= ChanLen ) call SetErrStat( ErrID_Warn, 'OutFmt produces a column width of '// &
-      TRIM(Num2LStr(FmtWidth))//' instead of '//TRIM(Num2LStr(ChanLen))//' characters.', ErrStat, ErrMsg, RoutineName )
-
+   !if ( FmtWidth /= ChanLen ) call SetErrStat( ErrID_Warn, 'OutFmt produces a column width of '// &
+   !   TRIM(Num2LStr(FmtWidth))//' instead of '//TRIM(Num2LStr(ChanLen))//' characters.', ErrStat, ErrMsg, RoutineName )
+   if ( FmtWidth < MinChanLen ) call SetErrStat( ErrID_Warn, 'OutFmt produces a column less than '//trim(num2lstr(MinChanLen))//' characters wide ('// &
+      TRIM(Num2LStr(FmtWidth))//'), which may be too small.', ErrStat, ErrMsg, RoutineName )
+   DvrData%OutFileData%ActualChanLen = FmtWidth
+   
       ! Combined-Case Analysis:
    do i=1,DvrData%NumCases
    
       if (DvrData%Cases(i)%DT < epsilon(0.0_ReKi) ) call SetErrStat(ErrID_Fatal,'dT must be larger than 0 in case '//trim(num2lstr(i))//'.',ErrStat, ErrMsg,RoutineName)
-      if (DvrData%Cases(i)%TMax < DvrData%Cases(i)%DT ) call SetErrStat(ErrID_Fatal,'TMax must be larger than dT in case '//trim(num2lstr(i))//'.',ErrStat, ErrMsg,RoutineName)
       
    end do
    
@@ -584,37 +820,40 @@ subroutine ValidateInputs(DvrData, errStat, errMsg)
    
 end subroutine ValidateInputs
 !----------------------------------------------------------------------------------------------------------------------------------
-subroutine Dvr_WriteOutputLine(OutFileData, t, output, errStat, errMsg)
+subroutine Dvr_WriteOutputLine(OutFileData, nt, RotAzimuth, output, CaseData, iCase, errStat, errMsg)
 
-   real(DbKi)             ,  intent(in   )   :: t                    ! simulation time (s)
+   integer(IntKi)         ,  intent(in   )   :: nt                   ! simulation time step (-)
+   integer(IntKi)         ,  intent(in   )   :: iCase                ! case # to write to file
    type(Dvr_OutputFile)   ,  intent(in   )   :: OutFileData
-   real(ReKi)             ,  intent(in   )   :: output(:)            ! Rootname for the output file
+   type(Dvr_Case),           intent(in   )   :: CaseData
+   real(ReKi)             ,  intent(in   )   :: RotAzimuth           ! Rotor azimuth -- aligned with blade 1 (deg)
+   real(ReKi)             ,  intent(in   )   :: output(:)            ! array of requested outputs
    integer(IntKi)         ,  intent(inout)   :: errStat              ! Status of error message
    character(*)           ,  intent(inout)   :: errMsg               ! Error message if ErrStat /= ErrID_None
       
    ! Local variables.
 
-   character(200)                   :: frmt                                      ! A string to hold a format specifier
-   character(15)                    :: tmpStr                                    ! temporary string to print the time output as text
-   integer :: numOuts
+   character(ChanLen)                    :: tmpStr                                    ! temporary string to print the time output as text
    
    errStat = ErrID_None
    errMsg  = ''
-   numOuts = size(output,1)
-   frmt = '"'//OutFileData%delim//'"'//trim(OutFileData%outFmt)      ! format for array elements from individual modules
-   
+  
       ! time
-   write( tmpStr, '(F15.4)' ) t
-   call WrFileNR( OutFileData%unOutFile, tmpStr )
-   call WrNumAryFileNR ( OutFileData%unOutFile, output,  frmt, errStat, errMsg )
-   if ( errStat >= AbortErrLev ) return
+   write( tmpStr, OutFileData%Fmt_t ) CaseData%time(nt)  ! '(F15.4)'
+   call WrFileNR( OutFileData%unOutFile, tmpStr(1:OutFileData%ActualChanLen) )
    
+   call WrNumAryFileNR ( OutFileData%unOutFile, (/iCase/),  OutFileData%Fmt_i, errStat, errMsg )
+   call WrNumAryFileNR ( OutFileData%unOutFile, (/CaseData%WNDSPEED(nt), CaseData%SHEAREXP(nt), RotAzimuth, CaseData%Yaw(nt)*R2D/),  OutFileData%Fmt_a, errStat, errMsg )
+   call WrNumAryFileNR ( OutFileData%unOutFile, output,  OutFileData%Fmt_a, errStat, errMsg )
+   if ( errStat >= AbortErrLev ) return
+
      ! write a new line (advance to the next line)
    write (OutFileData%unOutFile,'()')
       
 end subroutine Dvr_WriteOutputLine
 !----------------------------------------------------------------------------------------------------------------------------------
-subroutine Dvr_InitializeOutputFile( iCase, CaseData, OutFileData, errStat, errMsg)
+subroutine Dvr_InitializeOutputFile(numBlades, iCase, CaseData, OutFileData, errStat, errMsg)      !TODO:ADP -- how do we tell this routine that we are creating the summary file right now
+      integer(IntKi),           intent(in   )   :: numBlades              ! driver data.  neeeded for number of blades
       type(Dvr_OutputFile),     intent(inout)   :: OutFileData 
       
       integer(IntKi)         ,  intent(in   )   :: iCase                ! case number (to write in file description line and use for file name)
@@ -625,7 +864,10 @@ subroutine Dvr_InitializeOutputFile( iCase, CaseData, OutFileData, errStat, errM
 
          ! locals
       integer(IntKi)                            ::  i      
+      integer(IntKi)                            :: numSpaces
       integer(IntKi)                            :: numOuts
+      character(ChanLen)                        :: colTxt
+      character(ChanLen)                        :: caseTxt
       
       
       
@@ -635,35 +877,62 @@ subroutine Dvr_InitializeOutputFile( iCase, CaseData, OutFileData, errStat, errM
             return
          end if
          
+      numOuts = size(OutFileData%WriteOutputHdr)
 
-      call OpenFOutFile ( OutFileData%unOutFile, trim(outFileData%Root)//'.'//trim(num2lstr(iCase))//'.out', ErrStat, ErrMsg )
+      ! compute the width of the column output
+      numSpaces = OutFileData%ActualChanLen ! the size of column produced by OutFmt
+      OutFileData%ActualChanLen = max( OutFileData%ActualChanLen, MinChanLen ) ! set this to at least MinChanLen , or the size of the column produced by OutFmt
+      do i=1,NumOuts
+         OutFileData%ActualChanLen = max(OutFileData%ActualChanLen, LEN_TRIM(OutFileData%WriteOutputHdr(i)))
+         OutFileData%ActualChanLen = max(OutFileData%ActualChanLen, LEN_TRIM(OutFileData%WriteOutputUnt(i)))
+      end do
+      
+      ! create format statements for time and the array outputs:
+      OutFileData%Fmt_t = '(F'//trim(num2lstr(OutFileData%ActualChanLen))//'.4)'
+      OutFileData%Fmt_i = '(I'//trim(num2lstr(OutFileData%ActualChanLen))//')'
+      OutFileData%Fmt_a = '"'//OutFileData%delim//'"'//trim(OutFileData%outFmt)      ! format for array elements from individual modules
+      numSpaces = OutFileData%ActualChanLen - numSpaces  ! the difference between the size of the headers and what is produced by OutFmt
+      if (numSpaces > 0) then
+         OutFileData%Fmt_a = trim(OutFileData%Fmt_a)//','//trim(num2lstr(numSpaces))//'x'
+      end if
+         
+      
+!      call OpenFOutFile ( OutFileData%unOutFile, trim(outFileData%Root)//'.'//trim(num2lstr(iCase))//'.out', ErrStat, ErrMsg )
+      call OpenFOutFile ( OutFileData%unOutFile, trim(outFileData%Root)//'.out', ErrStat, ErrMsg )
          if ( ErrStat >= AbortErrLev ) return
          
       write (OutFileData%unOutFile,'(/,A)')  'Predictions were generated on '//CurDate()//' at '//CurTime()//' using '//trim( version%Name )
       write (OutFileData%unOutFile,'(1X,A)') trim(GetNVD(OutFileData%AD_ver))
       write (OutFileData%unOutFile,'()' )    !print a blank line
-     ! write (OutFileData%unOutFile,'(A,11(1x,A,"=",ES11.4e2,1x,A))'   ) 'Case '//trim(num2lstr(iCase))//':' &
-      write (OutFileData%unOutFile,'(A,11(1x,A,"=",A,1x,A))'   ) 'Case '//trim(num2lstr(iCase))//':' &
-         , 'WndSpeed', trim(num2lstr(CaseData%WndSpeed)), 'm/s;' &
-         , 'ShearExp', trim(num2lstr(CaseData%ShearExp)), ';' &
-         , 'RotSpeed', trim(num2lstr(CaseData%RotSpeed*RPS2RPM)),'rpm;' &
-         , 'Pitch',    trim(num2lstr(CaseData%Pitch*R2D)), 'deg;' &
-         , 'Yaw',      trim(num2lstr(CaseData%Yaw*R2D)), 'deg;' &
-         , 'dT',       trim(num2lstr(CaseData%dT)), 's;' &
-         , 'Tmax',     trim(num2lstr(CaseData%Tmax)),'s'
+      write (OutFileData%unOutFile,'()' )    !print a blank line
       
       write (OutFileData%unOutFile,'()' )    !print a blank line
               
 
-      numOuts = size(OutFileData%WriteOutputHdr)
          !......................................................
          ! Write the names of the output parameters on one line:
          !......................................................
 
-      call WrFileNR ( OutFileData%unOutFile, '     Time           ' )
+      colTxt = 'Time'
+      call WrFileNR ( OutFileData%unOutFile, colTxt(1:OutFileData%ActualChanLen))
+      
+      colTxt = 'Case'
+      call WrFileNR ( OutFileData%unOutFile, OutFileData%delim//colTxt(1:OutFileData%ActualChanLen))
+      
+      colTxt = 'WindSpeed'
+      call WrFileNR ( OutFileData%unOutFile, OutFileData%delim//colTxt(1:OutFileData%ActualChanLen) )
+      
+      colTxt = 'ShearExp'
+      call WrFileNR ( OutFileData%unOutFile, OutFileData%delim//colTxt(1:OutFileData%ActualChanLen) )
+
+      colTxt = 'RotAzimuth'
+      call WrFileNR ( OutFileData%unOutFile, OutFileData%delim//colTxt(1:OutFileData%ActualChanLen) )
+
+      colTxt = 'Yaw'
+      call WrFileNR ( OutFileData%unOutFile, OutFileData%delim//colTxt(1:OutFileData%ActualChanLen) )
 
       do i=1,NumOuts
-         call WrFileNR ( OutFileData%unOutFile, OutFileData%delim//OutFileData%WriteOutputHdr(i) )
+         call WrFileNR ( OutFileData%unOutFile, OutFileData%delim//OutFileData%WriteOutputHdr(i)(1:OutFileData%ActualChanLen) )
       end do ! i
 
       write (OutFileData%unOutFile,'()')
@@ -671,17 +940,30 @@ subroutine Dvr_InitializeOutputFile( iCase, CaseData, OutFileData, errStat, errM
          !......................................................
          ! Write the units of the output parameters on one line:
          !......................................................
+      colTxt = '(s)'
+      call WrFileNR ( OutFileData%unOutFile, colTxt(1:OutFileData%ActualChanLen))
+      
+      colTxt = '(-)'
+      call WrFileNR ( OutFileData%unOutFile, OutFileData%delim//colTxt(1:OutFileData%ActualChanLen) )
 
-      call WrFileNR ( OutFileData%unOutFile, '      (s)           ' )
+      colTxt = '(m/s)'
+      call WrFileNR ( OutFileData%unOutFile, OutFileData%delim//colTxt(1:OutFileData%ActualChanLen) )
+      
+      colTxt = '(-)'
+      call WrFileNR ( OutFileData%unOutFile, OutFileData%delim//colTxt(1:OutFileData%ActualChanLen) )
+
+      colTxt = '(deg)'
+      call WrFileNR ( OutFileData%unOutFile, OutFileData%delim//colTxt(1:OutFileData%ActualChanLen) )
+
+      colTxt = '(deg)'     ! Yaw
+      call WrFileNR ( OutFileData%unOutFile, OutFileData%delim//colTxt(1:OutFileData%ActualChanLen) )
 
       do i=1,NumOuts
-         call WrFileNR ( OutFileData%unOutFile, OutFileData%delim//OutFileData%WriteOutputUnt(i) )
+         call WrFileNR ( OutFileData%unOutFile, OutFileData%delim//OutFileData%WriteOutputUnt(i)(1:OutFileData%ActualChanLen) )
       end do ! i
 
-      write (OutFileData%unOutFile,'()')      
-      
+      write (OutFileData%unOutFile,'()')
 
-      
 end subroutine Dvr_InitializeOutputFile
 !----------------------------------------------------------------------------------------------------------------------------------
 end module AeroDyn_Driver_Subs
