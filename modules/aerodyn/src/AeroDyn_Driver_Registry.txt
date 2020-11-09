@@ -15,28 +15,37 @@ usefrom	AeroDyn_Registry.txt
 
 #
 # ..... Table of cases to run .......................................................................................................
-typedef   AeroDyn_Driver/AD_Dvr     Dvr_Case      ReKi                   WndSpeed         -      -     -   "Wind Speed" "m/s"
-typedef   ^                         ^             ReKi                   ShearExp         -      -     -   "Power Law Wind-Shear Exponent" "-"
-typedef   ^                         ^             ReKi                   RotSpeed         -      -     -   "Rotor Speed" "rad/s"
-typedef   ^                         ^             ReKi                   Pitch            -      -     -   "Pitch angle" "rad"
-typedef   ^                         ^             ReKi                   Yaw              -      -     -   "Yaw angle" "rad"
+typedef   AeroDyn_Driver/AD_Dvr     Dvr_Case      ReKi                   WndSpeed         {:}    -     -   "Wind Speed" "m/s"
+typedef   ^                         ^             ReKi                   ShearExp         {:}    -     -   "Power Law Wind-Shear Exponent" "-"
+typedef   ^                         ^             ReKi                   RotSpeed         {:}    -     -   "Rotor Speed" "rad/s"
+typedef   ^                         ^             ReKi                   Pitch            {:}    -     -   "Pitch angle" "rad"
+typedef   ^                         ^             ReKi                   Yaw              {:}    -     -   "Yaw angle" "rad"
+typedef   ^                         ^             DbKi                   time             {:}    -     -   "time increment" "s"
 typedef   ^                         ^             DbKi                   dT               -      -     -   "time increment" "s"
-typedef   ^                         ^             DbKi                   Tmax             -      -     -   "length of this simulation" "s"
+typedef   ^                         ^             IntKi                  numSteps         -      -     -   "number of steps in this case" "-"
+
+
 
 #
 # ..... Data for driver output file .......................................................................................................
 typedef   ^                        Dvr_OutputFile ProgDesc               AD_ver           -      -     -   "AeroDyn version information" -
 typedef   ^                         ^             IntKi                  unOutFile        -      -     -   "unit number for writing output file" "-"
+typedef   ^                         ^             IntKi                  ActualChanLen    -      -     -   "Actual length of channels written to text file (less than or equal to ChanLen)" "-"
+typedef   ^                         ^             character(20)          Fmt_t            -      -     -   "Format specifier for time channel" "-"
+typedef   ^                         ^             character(25)          Fmt_a            -      -     -   "Format specifier for each column (including delimiter)" "-"
+typedef   ^                         ^             character(20)          Fmt_i            -      -     -   "Format specifier for integer column" "-"
 typedef   ^                         ^             character(1)           delim            -      -     -   "column delimiter" "-"
 typedef   ^                         ^             character(20)          outFmt           -      -     -   "Format specifier" "-"
 typedef   ^                         ^             character(1024)        Root             -      -     -   "Output file rootname" "-"
 typedef   ^                         ^             character(1024)        runTitle         -      -     -   "Description string from input file" "-"
 typedef   ^                         ^             character(ChanLen)     WriteOutputHdr  {:}     -     -   "Channel headers" "-"
 typedef   ^                         ^             character(ChanLen)     WriteOutputUnt  {:}     -     -   "Channel units" "-"
+typedef   ^                         ^             logical                AllFiles         -      -     -   "Output file for each case" "-"
+typedef   ^                         ^             logical                SumFile          -      -     -   "Output summary file for all cases with last timestep" "-"
 
 #
 # ..... AeroDyn data .......................................................................................................
-param     ^                         -             INTEGER                numInp           -      2     -   "Usually, order of interpolation for input-output extrap (not used in driver)"
+param     ^                         -             INTEGER                numInp           -      2     -   "Determines order of interpolation for input-output extrap (2=linear;3=quadratic)"
 typedef   ^                         AeroDyn_Data  AD_ContinuousStateType x                -      -     -   "Continuous states"
 typedef   ^                         ^             AD_DiscreteStateType   xd               -      -     -   "Discrete states"
 typedef   ^                         ^             AD_ConstraintStateType z                -      -     -   "Constraint states"
@@ -61,5 +70,5 @@ typedef   ^                         ^            IntKi                   NumCase
 typedef   ^                         ^            Dvr_Case                Cases           {:}     -     -   "table of cases to run" "-"
 typedef   ^                         ^            Dvr_OutputFile          OutFileData      -      -     -   "data for driver output file" "-"
 #typedef  ^                         ^            AeroDyn_Data            AD               -      -     -   "data for the AeroDyn module"
-
+#typedef   ^                         ^            Dvr_RootInfo            RootForceMom     3      -     -   "blade root forces and moments (blade coords)" "-"
 
