@@ -189,7 +189,7 @@ SUBROUTINE FWrap_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       ! Define parameters here:
       !.................
 
-      call SetParameters(InitInp, p, m%Turbine%p_FAST%dt, Interval, ErrStat2, ErrMsg2)
+      call FWrap_SetParameters(InitInp, p, m%Turbine%p_FAST%dt, Interval, ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) 
          if (ErrStat >= AbortErrLev) then
             call cleanup()
@@ -286,7 +286,7 @@ contains
 END SUBROUTINE FWrap_Init
 !----------------------------------------------------------------------------------------------------------------------------------
 ! this routine sets the parameters for the FAST Wrapper module. It does not set p%n_FAST_low because we need to initialize FAST first.
-subroutine SetParameters(InitInp, p, dt_FAST, InitInp_dt_low, ErrStat, ErrMsg)
+subroutine FWrap_SetParameters(InitInp, p, dt_FAST, InitInp_dt_low, ErrStat, ErrMsg)
    TYPE(FWrap_InitInputType),       INTENT(IN   )  :: InitInp     !< Input data for initialization routine
    TYPE(FWrap_ParameterType),       INTENT(INOUT)  :: p           !< Parameters
    REAL(DbKi),                      INTENT(IN   )  :: dt_FAST     !< time step for FAST
@@ -340,7 +340,7 @@ subroutine SetParameters(InitInp, p, dt_FAST, InitInp_dt_low, ErrStat, ErrMsg)
 
    
     
-end subroutine SetParameters
+end subroutine FWrap_SetParameters
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine is called at the end of the simulation.
 SUBROUTINE FWrap_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
