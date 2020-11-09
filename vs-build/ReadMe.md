@@ -3,6 +3,8 @@ The following solution files are available for code development on Windows using
 
 - [OpenFAST](FAST/FAST.sln)
   This contains builds for both the command-line OpenFAST executable as well as the DLL for use with the OpenFAST-Simulink interface.
+- [FAST.Farm](FAST-farm/FAST-Farm.sln)
+  This contains the build configurations for FAST.Farm.
 - Module-level drivers:
    - AeroDynamics:
      - [AeroDyn driver](AeroDyn/AeroDyn_Driver.sln)
@@ -14,6 +16,8 @@ The following solution files are available for code development on Windows using
       - [TurbSim](TurbSim/TurbSim.sln)
       - [HydroDyn driver](HydroDyn/HydroDynDriver.sln)
 - Other:
-  - [Discon](Discon/Discon.sln) This solution file contains all 3 controllers used in the OpenFAST r-test (with the NREL 5MW model).
+  - [Discon](Discon/Discon.sln) 
+    This solution file contains all 3 controllers used in the OpenFAST r-test (with the NREL 5MW model).
+    It also contains the controller used with the FAST.Farm super-controller.
   - [OpenFAST Registry](Registry/Registry.sln)
     The Registry project is included in almost every other solution file, so this solution file is only for debugging changes to the OpenFAST Registry.
