@@ -322,7 +322,7 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
    !...............................................................................................................................  
    
       ! Set parameters for output channels:
-   CALL SetOutParam(OutList, farm, ErrStat2, ErrMsg2 ) ! requires: p%NumOuts, sets: p%OutParam.
+   CALL Farm_SetOutParam(OutList, farm, ErrStat2, ErrMsg2 ) ! requires: p%NumOuts, sets: p%OutParam.
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF (ErrStat >= AbortErrLev) THEN
          CALL Cleanup()
@@ -410,7 +410,7 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, SC_Init
          RETURN        
       end if
 
-   CALL AllocAry( OutList, MaxOutPts, "FAST.Farm's Input File's Outlist", ErrStat2, ErrMsg2 )
+   CALL AllocAry( OutList, Farm_MaxOutPts, "FAST.Farm's Input File's Outlist", ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL Cleanup()
@@ -1917,7 +1917,7 @@ subroutine Farm_WriteOutput(n, t, farm, ErrStat, ErrMsg)
     
       
          ! Define the output channel specifying the current simulation time:
-      farm%m%AllOuts(  Time) = REAL( t, ReKi )
+      farm%m%AllOuts(  Farm_Time_Indx) = REAL( t, ReKi )
 
          !.......................................................................................
          ! Super controller Outputs - Global
