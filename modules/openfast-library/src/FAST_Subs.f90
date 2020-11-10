@@ -6613,7 +6613,7 @@ SUBROUTINE FAST_RestoreFromCheckpoint_Tary(t_initial, n_t_global, Turbine, Check
 
    REAL(DbKi),               INTENT(IN   ) :: t_initial           !< initial time (for comparing with time from checkpoint file)
    INTEGER(IntKi),           INTENT(  OUT) :: n_t_global          !< loop counter
-   TYPE(FAST_TurbineType),   INTENT(  OUT) :: Turbine(:)          !< all data for one instance of a turbine
+   TYPE(FAST_TurbineType),   INTENT(INOUT) :: Turbine(:)          !< all data for one instance of a turbine (bjj: note that is intent INOUT instead of OUT only because of a gfortran compiler memory issue)
    CHARACTER(*),             INTENT(IN   ) :: CheckpointRoot      !< Rootname of checkpoint file
    INTEGER(IntKi),           INTENT(  OUT) :: ErrStat             !< Error status of the operation
    CHARACTER(*),             INTENT(  OUT) :: ErrMsg              !< Error message if ErrStat /= ErrID_None
@@ -6820,7 +6820,7 @@ END SUBROUTINE FAST_RestoreFromCheckpoint_T
 SUBROUTINE FAST_RestoreForVTKModeShape_Tary(t_initial, Turbine, InputFileName, ErrStat, ErrMsg  )
 
    REAL(DbKi),               INTENT(IN   ) :: t_initial           !< initial time (for comparing with time from checkpoint file)
-   TYPE(FAST_TurbineType),   INTENT(  OUT) :: Turbine(:)          !< all data for one instance of a turbine
+   TYPE(FAST_TurbineType),   INTENT(INOUT) :: Turbine(:)          !< all data for one instance of a turbine (bjj: note that is intent INOUT instead of OUT only because of a gfortran compiler memory issue)
    CHARACTER(*),             INTENT(IN   ) :: InputFileName       !< Name of the input file
    INTEGER(IntKi),           INTENT(  OUT) :: ErrStat             !< Error status of the operation
    CHARACTER(*),             INTENT(  OUT) :: ErrMsg              !< Error message if ErrStat /= ErrID_None
