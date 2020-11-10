@@ -53,10 +53,15 @@ subroutine FAST_AllocateTurbines(nTurbines, ErrStat_c, ErrMsg_c) BIND (C, NAME='
       call wrscr1('Proceeding anyway')
    end if
 
-   allocate(Turbine(0:NumTurbines-1)) !Allocate in C style because most of the other Turbine properties from the input file are in C style inside the C++ driver
+   allocate(Turbine(0:NumTurbines-1),Stat=ErrStat) !Allocate in C style because most of the other Turbine properties from the input file are in C style inside the C++ driver
 
-   ErrStat_c = ErrID_None
-   ErrMsg_c = ''
+   if (ErrStat /= 0) then
+      ErrStat_c = ErrID_Fatal
+      ErrMsg_c = TRANSFER( 'Error allocating turbine data.'//C_NULL_CHAR, ErrMsg_c )
+   else
+      ErrStat_c = ErrID_None
+      ErrMsg_c = C_NULL_CHAR
+   end if
    
 end subroutine FAST_AllocateTurbines
 
@@ -74,7 +79,7 @@ subroutine FAST_DeallocateTurbines(ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_Deal
    end if
 
    ErrStat_c = ErrID_None
-   ErrMsg_c = ''
+   ErrMsg_c = C_NULL_CHAR
 end subroutine
 
 subroutine FAST_Sizes(iTurb, TMax, InitInpAry, InputFileName_c, AbortErrLev_c, NumOuts_c, dt_c, ErrStat_c, ErrMsg_c, ChannelNames_c) BIND (C, NAME='FAST_Sizes')
