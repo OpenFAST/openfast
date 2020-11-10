@@ -1,17 +1,17 @@
-% make sure the FASTv8\bin directory is in the MATLAB path
+% make sure the OpenFAST directory where the FAST_SFunc.mex* file is located
+% is in the MATLAB path (also make sure any other OpenFAST library files that
+% are needed are on the MATLAB path)
 %    (relative path names are not recommended in addpath()):
-% cd ..\..\
-% FASTv8_root_directory = pwd;
-% cd Simulink\Samples
-% addpath([ FASTv8_root_directory '\bin']);
+% addpath('../../../build/bin'); % install location for Windows Visual Studio builds
+% addpath(genpath('../../../install')); % cmake default install location
 
 
 % Simple Induction Generator Example ======================================
 % To model a simple induction generator in Simulink use model Test01_SIG.mdl.  
 % The following parameters duplicate those used in Certification Test #01.  
 
-% Change Test01.fst as follows:
-% set VSContrl = 4 in ..\..\CertTest\AWT27\Test01_ServoDyn.dat
+% Change AWT_YFix_WSt.fst (formerly Test01.fst) as follows:
+% set VSContrl = 4 in ../../../reg_tests/r-test/glue-codes/openfast/AWT_YFix_WSt/AWT_YFix_WSt_ServoDyn.dat
 
 
 GenEff   =  100.0;          % - Generator efficiency [ignored by the Thevenin and user-defined generator models] (%)
@@ -28,11 +28,12 @@ SIG_Slop=SIG_RtTq/(SIG_RtSp - SIG_SySp);
 
 
 % parameters required for the S-Function block:
-FAST_InputFileName = '..\..\CertTest\Test01.fst';
+OpenFASTRoot = '../../../reg_tests/r-test/glue-codes/openfast/AWT_YFix_WSt/';
+FAST_InputFileName = [ OpenFASTRoot 'AWT_YFix_WSt.fst' ];
 TMax = 20;
 
 % run the model
 sim('Test01_SIG.mdl',[0,TMax]);
 
 % look at results:
-% PlotFASToutput({'../../CertTest/Test01.SFunc.out','../../CertTest/Test01.out'},{'SFunc','exe'});
+% PlotFASToutput({[ OpenFASTRoot 'AWT_YFix_WSt.SFunc.out'],[ OpenFASTRoot 'windows-intel/AWT_YFix_WSt.out']},{'SFunc','exe'});

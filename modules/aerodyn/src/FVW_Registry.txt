@@ -143,6 +143,8 @@ typedef FVW/FVW            ContinuousStateType  ReKi                            
 typedef     ^                   ^               ReKi                             Gamma_FW     :::   -  -  "Circulation of the far  wake panels" -
 typedef     ^                   ^               ReKi                             r_NW         ::::  -  -  "Position    of the near wake panels" -
 typedef     ^                   ^               ReKi                             r_FW         ::::  -  -  "Position    of the far  wake panels" -
+# TODO UA
+typedef   ^                      ^              UA_ContinuousStateType             UA           -  -  - "states for UnsteadyAero"        -
 
 
 #.......... DiscreteStateType ......

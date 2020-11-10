@@ -472,14 +472,15 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       if (ErrStat2 /= 0 ) then
          call SetErrStat(ErrID_Fatal, "Error allocating Lin%Modules(AD).", ErrStat, ErrMsg, RoutineName )
       else
-         if (allocated(Init%OutData_AD%LinNames_u)) call move_alloc(Init%OutData_AD%LinNames_u,y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%Names_u )
-         if (allocated(Init%OutData_AD%LinNames_y)) call move_alloc(Init%OutData_AD%LinNames_y,y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%Names_y )
-         if (allocated(Init%OutData_AD%LinNames_z)) call move_alloc(Init%OutData_AD%LinNames_z,y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%Names_z )
-         if (allocated(Init%OutData_AD%RotFrame_u)) call move_alloc(Init%OutData_AD%RotFrame_u,y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%RotFrame_u )
-         if (allocated(Init%OutData_AD%RotFrame_y)) call move_alloc(Init%OutData_AD%RotFrame_y,y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%RotFrame_y )
-         if (allocated(Init%OutData_AD%RotFrame_z)) call move_alloc(Init%OutData_AD%RotFrame_z,y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%RotFrame_z )
-         if (allocated(Init%OutData_AD%IsLoad_u  )) call move_alloc(Init%OutData_AD%IsLoad_u  ,y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%IsLoad_u   )
-         
+         if (allocated(Init%OutData_AD%LinNames_u  )) call move_alloc(Init%OutData_AD%LinNames_u  ,y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%Names_u )
+         if (allocated(Init%OutData_AD%LinNames_y  )) call move_alloc(Init%OutData_AD%LinNames_y  ,y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%Names_y )
+         if (allocated(Init%OutData_AD%LinNames_x  )) call move_alloc(Init%OutData_AD%LinNames_x  ,y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%Names_x )
+         if (allocated(Init%OutData_AD%RotFrame_u  )) call move_alloc(Init%OutData_AD%RotFrame_u  ,y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%RotFrame_u )
+         if (allocated(Init%OutData_AD%RotFrame_y  )) call move_alloc(Init%OutData_AD%RotFrame_y  ,y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%RotFrame_y )
+         if (allocated(Init%OutData_AD%RotFrame_x  )) call move_alloc(Init%OutData_AD%RotFrame_x  ,y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%RotFrame_x )
+         if (allocated(Init%OutData_AD%IsLoad_u    )) call move_alloc(Init%OutData_AD%IsLoad_u    ,y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%IsLoad_u   )
+         if (allocated(Init%OutData_AD%DerivOrder_x)) call move_alloc(Init%OutData_AD%DerivOrder_x,y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%DerivOrder_x )
+
          if (allocated(Init%OutData_AD%WriteOutputHdr)) y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%NumOutputs = size(Init%OutData_AD%WriteOutputHdr)
       end if
       
@@ -5088,8 +5089,8 @@ SUBROUTINE WrVTK_AllMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD, IfW, OpFM, H
       if (.not. p_FAST%BD_OutputSibling) then !otherwise this mesh has been put with the DistrLoad mesh
          do K=1,NumBl
                ! BeamDyn outputs
-         call MeshWrVTK(p_FAST%TurbinePos, BD%y(k)%BldMotion, trim(p_FAST%VTK_OutFileRoot)//'.BD_BldMotion'//trim(num2lstr(k)), y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth )
-      end do  
+            call MeshWrVTK(p_FAST%TurbinePos, BD%y(k)%BldMotion, trim(p_FAST%VTK_OutFileRoot)//'.BD_BldMotion'//trim(num2lstr(k)), y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth )
+         end do
       end if
       
       
