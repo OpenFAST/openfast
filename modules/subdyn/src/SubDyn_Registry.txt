@@ -159,6 +159,7 @@ typedef  ^            ^             ReKi                     DU_full       {:}  
 typedef  ^            ^             ReKi                     U_full        {:}  -  -  
 typedef  ^            ^             ReKi                     U_full_dot    {:}  -  -  
 typedef  ^            ^             ReKi                     U_full_dotdot {:}  -  -  
+typedef  ^            ^             ReKi                     U_full_elast  {:}  -  -  "Elastic displacements for computation of K ue (without rigid body mode for floating)"
 typedef  ^            ^             ReKi                     U_red          {:}  -  -  
 typedef  ^            ^             ReKi                     U_red_dot      {:}  -  -  
 typedef  ^            ^             ReKi                     U_red_dotdot   {:}  -  -  
