@@ -57,11 +57,12 @@ subroutine FAST_AllocateTurbines(nTurbines, ErrStat_c, ErrMsg_c) BIND (C, NAME='
 
    if (ErrStat /= 0) then
       ErrStat_c = ErrID_Fatal
-      ErrMsg_c = TRANSFER( 'Error allocating turbine data.'//C_NULL_CHAR, ErrMsg_c )
+      ErrMsg    = "Error allocating turbine data."//C_NULL_CHAR
    else
       ErrStat_c = ErrID_None
-      ErrMsg_c = C_NULL_CHAR
+      ErrMsg = " "/C_NULL_CHAR
    end if
+   ErrMsg_c  = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_c )
    
 end subroutine FAST_AllocateTurbines
 
@@ -189,7 +190,8 @@ subroutine FAST_Start(iTurb, NumInputs_c, NumOutputs_c, InputAry, OutputAry, Err
 #ifdef SIMULINK_DirectFeedThrough   
    IF(  NumInputs_c /= NumFixedInputs .AND. NumInputs_c /= NumFixedInputs+3 ) THEN
       ErrStat_c = ErrID_Fatal
-      ErrMsg_c  = TRANSFER( "FAST_Start:size of InputAry is invalid."//C_NULL_CHAR, ErrMsg_c )
+      ErrMsg  = "FAST_Start:size of InputAry is invalid."//C_NULL_CHAR
+      ErrMsg_c  = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_c )
       RETURN
    END IF
 
