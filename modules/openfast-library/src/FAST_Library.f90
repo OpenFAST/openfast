@@ -60,7 +60,7 @@ subroutine FAST_AllocateTurbines(nTurbines, ErrStat_c, ErrMsg_c) BIND (C, NAME='
       ErrMsg    = "Error allocating turbine data."//C_NULL_CHAR
    else
       ErrStat_c = ErrID_None
-      ErrMsg = " "/C_NULL_CHAR
+      ErrMsg = " "//C_NULL_CHAR
    end if
    ErrMsg_c  = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_c )
    
