@@ -15,12 +15,11 @@
 !                        NumSC2Ctrl, errStat, errMsg )  bind (C, NAME='sc_init')
 subroutine sc_init ( nTurbines, nInpGlobal, NumCtrl2SC, NumParamGlobal,  NumParamTurbine, &
                          NumStatesGlobal, NumStatesTurbine, NumSC2CtrlGlob, &
-                        NumSC2Ctrl, errStat, errMsg )  bind (C, NAME='sc_init')
+                        NumSC2Ctrl, errStat, errMsg )  bind (C, NAME='SC_Init')
 !subroutine sc_init ( t, nTurbines, nInpGlobal, to_SCglob, NumCtrl2SC, to_SC, &
 !                        nStatesGlobal, StatesGlob, nStatesTurbine, StatesTurbine, NumSC2CtrlGlob, from_SCglob, &
 !                        NumSC2Ctrl, from_SC, errStat, errMsg )  bind (C, NAME='sc_calcOutputs')
          
-!DEC$ ATTRIBUTES DLLEXPORT :: sc_init
 
    ! This DLL super controller is used to implement a ...
    
@@ -36,6 +35,7 @@ subroutine sc_init ( nTurbines, nInpGlobal, NumCtrl2SC, NumParamGlobal,  NumPara
 
    implicit                        none
 #ifndef IMPLICIT_DLLEXPORT
+!DEC$ ATTRIBUTES DLLEXPORT :: sc_init
 !GCC$ ATTRIBUTES DLLEXPORT :: sc_init
 #endif
    integer(C_INT),            intent(in   ) :: nTurbines         !< number of turbines connected to this supercontroller
@@ -68,12 +68,12 @@ subroutine sc_init ( nTurbines, nInpGlobal, NumCtrl2SC, NumParamGlobal,  NumPara
    
    end subroutine sc_init
 subroutine sc_getInitData(nTurbines, NumParamGlobal, NumParamTurbine, ParamGlobal, ParamTurbine, &
-                           NumSC2CtrlGlob, from_SCglob, NumSC2Ctrl, from_SC, errStat, errMsg )  bind (C, NAME='sc_getInitData')
-!DEC$ ATTRIBUTES DLLEXPORT :: sc_getInitData
+                           NumSC2CtrlGlob, from_SCglob, NumSC2Ctrl, from_SC, errStat, errMsg )  bind (C, NAME='SC_GetInitData')
 use, intrinsic :: ISO_C_Binding
 
    implicit                        none
 #ifndef IMPLICIT_DLLEXPORT
+!DEC$ ATTRIBUTES DLLEXPORT :: sc_getInitData
 !GCC$ ATTRIBUTES DLLEXPORT :: sc_getInitData
 #endif
    integer(C_INT),            intent(in   ) :: nTurbines         !< number of turbines connected to this supercontroller
@@ -124,12 +124,11 @@ use, intrinsic :: ISO_C_Binding
      
    end subroutine sc_getInitData
 !=======================================================================
-!SUBROUTINE sc_calcOutputs (  ) BIND (C, NAME='sc_calcOutputs')                      
+!SUBROUTINE sc_calcOutputs (  ) BIND (C, NAME='SC_CalcOutputs')                      
 subroutine sc_calcOutputs ( t, nTurbines, nParamGlobal, paramGlobal, nParamTurbine, paramTurbine, nInpGlobal, to_SCglob, NumCtrl2SC, to_SC, &
                         nStatesGlobal, StatesGlob, nStatesTurbine, StatesTurbine, NumSC2CtrlGlob, from_SCglob, &
-                        NumSC2Ctrl, from_SC, errStat, errMsg )  bind (C, NAME='sc_calcOutputs')
+                        NumSC2Ctrl, from_SC, errStat, errMsg )  bind (C, NAME='SC_CalcOutputs')
          
-!DEC$ ATTRIBUTES DLLEXPORT :: sc_calcOutputs
 
    ! This DLL super controller is used to implement a ...
    
@@ -145,6 +144,7 @@ subroutine sc_calcOutputs ( t, nTurbines, nParamGlobal, paramGlobal, nParamTurbi
 
    implicit                        none
 #ifndef IMPLICIT_DLLEXPORT
+!DEC$ ATTRIBUTES DLLEXPORT :: sc_calcOutputs
 !GCC$ ATTRIBUTES DLLEXPORT :: sc_calcOutputs
 #endif
    
@@ -198,11 +198,10 @@ subroutine sc_calcOutputs ( t, nTurbines, nParamGlobal, paramGlobal, nParamTurbi
 end subroutine sc_calcOutputs
 
 !=======================================================================
-!SUBROUTINE sc_updateStates (  ) BIND (C, NAME='sc_calcOutputs')
+!SUBROUTINE sc_updateStates (  ) BIND (C, NAME='SC_CalcOutputs')
 subroutine sc_updateStates ( t, nTurbines, nParamGlobal, paramGlobal, nParamTurbine, paramTurbine, nInpGlobal, to_SCglob, NumCtrl2SC, to_SC, &
-                        nStatesGlobal, StatesGlob, nStatesTurbine, StatesTurbine, errStat, errMsg )  bind (C, NAME='sc_updateStates')
+                        nStatesGlobal, StatesGlob, nStatesTurbine, StatesTurbine, errStat, errMsg )  bind (C, NAME='SC_UpdateStates')
          
-!DEC$ ATTRIBUTES DLLEXPORT :: sc_updateStates
 
    ! This DLL super controller is used to implement a ...
    
@@ -218,6 +217,7 @@ subroutine sc_updateStates ( t, nTurbines, nParamGlobal, paramGlobal, nParamTurb
 
    implicit                        none
 #ifndef IMPLICIT_DLLEXPORT
+!DEC$ ATTRIBUTES DLLEXPORT :: sc_updateStates
 !GCC$ ATTRIBUTES DLLEXPORT :: sc_updateStates
 #endif
    
@@ -282,9 +282,8 @@ subroutine sc_updateStates ( t, nTurbines, nParamGlobal, paramGlobal, nParamTurb
    return
 end subroutine sc_updateStates
 
-subroutine sc_end ( errStat, errMsg )  bind (C, NAME='sc_end')
+subroutine sc_end ( errStat, errMsg )  bind (C, NAME='SC_End')
          
-!DEC$ ATTRIBUTES DLLEXPORT :: sc_updateStates
 
    ! This DLL super controller is used to implement a ...
    

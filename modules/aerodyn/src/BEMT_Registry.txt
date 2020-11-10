@@ -64,8 +64,8 @@ typedef   ^                            InitOutputType                ProgDesc   
 # ..... States ....................................................................................................................
 # Define continuous (differentiable) states here:
 #
-typedef   ^                            ContinuousStateType           SiKi                     DummyContState           -          -        -        "Remove this variable if you have continuous states"        -
-typedef   ^                            ContinuousStateType      DBEMT_ContinuousStateType      DBEMT                    -          -        -        "DBEMT module continuous states"        -
+typedef   ^                            ContinuousStateType      UA_ContinuousStateType         UA                      -          -        -        "UA module continuous states"        -
+typedef   ^                            ContinuousStateType      DBEMT_ContinuousStateType      DBEMT                   -          -        -        "DBEMT module continuous states"        -
 #
 #
 # Define discrete (non-differentiable) states here:
@@ -91,15 +91,23 @@ typedef   ^                            OtherStateType                Logical    
 #   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
 typedef   ^                            MiscVarType                   Logical                  FirstWarn_Skew                  -             -         -        "flag so invalid skew warning doesn't get repeated forever" -
 typedef   ^                            MiscVarType                   Logical                  FirstWarn_Phi                   -             -         -        "flag so Invalid Phi warning doesn't get repeated forever" -
+typedef   ^                            MiscVarType                   Logical                  FirstWarn_BEMoff                -             -         -        "flag to warn the BEM was turned off" -
 typedef   ^                            MiscVarType                   UA_MiscVarType           UA                              -             -         -        "misc vars for UnsteadyAero"        -
 typedef   ^                            MiscVarType                   DBEMT_MiscVarType        DBEMT                           -             -         -        "misc vars for DBEMT"        -
 typedef   ^                            MiscVarType                   UA_OutputType            y_UA                            -             -         -        "outputs from UnsteadyAero"        -
+typedef   ^                            MiscVarType                   UA_InputType             u_UA                           {:}{:}{:}      -         -        "inputs to UnsteadyAero at t and t+dt"        -
+typedef   ^                            MiscVarType                   DBEMT_InputType          u_DBEMT                        {:}            -         -        "inputs to DBEMT"        -
 typedef   ^                            MiscVarType                   ReKi                     TnInd_op                       {:}{:}         -         -        "tangential induction at the operating point (for linearization with frozen wake assumption)"
 typedef   ^                            MiscVarType                   ReKi                     AxInd_op                       {:}{:}         -         -        "axial induction at the operating point (for linearization) with frozen wake assumption"
 typedef   ^                            MiscVarType                   ReKi                     AxInduction                    {:}{:}         -         -        "axial induction used for code run-time optimization" -
 typedef   ^                            MiscVarType                   ReKi                     TanInduction                   {:}{:}         -         -        "tangential induction used for code run-time optimization" -
 typedef   ^                            MiscVarType                   Logical                  UseFrozenWake                   -             -         -        "flag set to determine if frozen values of TnInd_op and AxInd_op should be used for this calculation in the linearization process"   
 typedef   ^                            MiscVarType                   ReKi                     Rtip                           {:}            -         -        "maximum rlocal value for each blade (typically the value at the tip)" m
+typedef   ^                            MiscVarType                   ReKi                     phi                            {:}{:}         -         -        "temp variable used in update states for returning phi (to allow computing inputs and states at multiple times)" -
+typedef   ^                            MiscVarType                   ReKi                     chi                            {:}{:}         -         -        "temp variable used in update states for returning chi (to allow calling same routine from CalcOutput and UpdateStates)" -
+typedef   ^                            MiscVarType                   Logical                  ValidPhi                       {:}{:}         -         -        "temp variable used in calcOutput for ValidPhi (to allow calling same routine from CalcOutput and UpdateStates)" -
+typedef   ^                            MiscVarType                   ReKi                     BEM_weight                                    -         -        "temp variable used to turn off BEM for low TSR and/or large skew angles" -
+
 # ..... Parameters ................................................................................................................
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
@@ -129,6 +137,7 @@ typedef   ^                            ^                             DBEMT_Param
 typedef   ^                            ^                             LOGICAL                  UA_Flag                         -             -         -        "logical flag indicating whether to use UnsteadyAero"        -
 typedef   ^                            ^                             IntKi                    DBEMT_Mod                       -             -         -        "DBEMT Model.  0 = constant tau1, 1 = time dependent tau1" -
 typedef   ^                            ^                             ReKi                     yawCorrFactor                   -             -         -        "constant used in Pitt/Peters skewed wake model (default is 15*pi/32)" -
+typedef   ^                            ^                             LOGICAL                  FixedInductions                 {:}{:}        -         -        "flag to determine if BEM inductions should be fixed and not modified by dbemt or skewed wake" -
 #
 
 #
@@ -139,8 +148,12 @@ typedef   ^                            InputType                     ReKi       
 typedef   ^                            ^                             ReKi                     chi0                            -              -         -         "Angle between the vector normal to the rotor plane and the wind vector (e.g., the yaw angle in the case of no tilt)" rad
 typedef   ^                            ^                             ReKi                     psi                             {:}            -         -         "Azimuth angle" rad
 typedef   ^                            ^                             ReKi                     omega                           -              -         -         "Angular velocity of rotor" rad/s
+typedef   ^                            ^                             ReKi                     TSR                             -              -         -         "Tip-speed ratio (to check if BEM should be turned off)" -
 typedef   ^                            ^                             ReKi                     Vx                              {:}{:}         -         -         "Local axial velocity at node" m/s
 typedef   ^                            ^                             ReKi                     Vy                              {:}{:}         -         -         "Local tangential velocity at node" m/s
+typedef   ^                            ^                             ReKi                     Vx_elast_dot                    {:}{:}         -         -         "Local relative axial acceleration at node (for CDBEMT)" "m/s^2"
+typedef   ^                            ^                             ReKi                     Vy_elast_dot                    {:}{:}         -         -         "Local relative tangential acceleration at node (for CDBEMT)" "m/s^2"
+typedef   ^                            ^                             ReKi                     omega_z                         {:}{:}         -         -         "rotation of no-sweep-pitch-twist coordinate system around z (for CDBEMT and CUA)" "rad/s"
 typedef   ^                            ^                             ReKi                     rLocal                          {:}{:}         -         -         "Radial distance from center-of-rotation to node" m
 typedef   ^                            InputType                     ReKi                     Un_disk                         -              -         -         "disk-averaged velocity normal to the rotor disk (for input to DBEMT)" m/s
 typedef   ^                            ^                             ReKi                     UserProp                        {:}{:}         -         -         "Optional user property for interpolating airfoils (per element per blade)" -
