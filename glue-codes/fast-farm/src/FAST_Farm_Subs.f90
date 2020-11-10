@@ -2304,8 +2304,10 @@ subroutine FARM_End(farm, ErrStat, ErrMsg)
       !--------------
       ! 3. End supercontroller
                      
-   CALL SC_End(farm%SC%uInputs, farm%SC%p, farm%SC%x, farm%SC%xd, farm%SC%z, farm%SC%OtherState, &
+   if ( farm%p%useSC ) then
+      CALL SC_End(farm%SC%uInputs, farm%SC%p, farm%SC%x, farm%SC%xd, farm%SC%z, farm%SC%OtherState, &
                      farm%SC%y, farm%SC%m, ErrStat2, ErrMsg2)
+   end if
    
       !--------------
       ! 4. End each instance of FAST (each instance of FAST can be done in parallel, too)   
