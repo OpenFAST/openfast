@@ -358,17 +358,8 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
    !$OMP END PARALLEL DO
 
    do nt = 1,p%NumTurbines
-
-      ! Warn our kind users if wake planes leave the low-resolution domain:
-         if ( minval( u%p_plane(1,0:tmpPln,nt) ) < p%Grid_Low(1,            1) ) call SetErrStat(ErrID_Warn, 'The center of a wake plane for turbine #'//trim(num2lstr(nt))//' has passed the lowest-most X boundary of the low-resolution domain.', errStat, errMsg, RoutineName)
-         if ( maxval( u%p_plane(1,0:tmpPln,nt) ) > p%Grid_Low(1,p%NumGrid_low) ) call SetErrStat(ErrID_Warn, 'The center of a wake plane for turbine #'//trim(num2lstr(nt))//' has passed the upper-most X boundary of the low-resolution domain.' , errStat, errMsg, RoutineName)
-         if ( minval( u%p_plane(2,0:tmpPln,nt) ) < p%Grid_Low(2,            1) ) call SetErrStat(ErrID_Warn, 'The center of a wake plane for turbine #'//trim(num2lstr(nt))//' has passed the lowest-most Y boundary of the low-resolution domain.', errStat, errMsg, RoutineName)
-         if ( maxval( u%p_plane(2,0:tmpPln,nt) ) > p%Grid_Low(2,p%NumGrid_low) ) call SetErrStat(ErrID_Warn, 'The center of a wake plane for turbine #'//trim(num2lstr(nt))//' has passed the upper-most Y boundary of the low-resolution domain.' , errStat, errMsg, RoutineName)
-         if ( minval( u%p_plane(3,0:tmpPln,nt) ) < p%Grid_Low(3,            1) ) call SetErrStat(ErrID_Warn, 'The center of a wake plane for turbine #'//trim(num2lstr(nt))//' has passed the lowest-most Z boundary of the low-resolution domain.', errStat, errMsg, RoutineName)
-         if ( maxval( u%p_plane(3,0:tmpPln,nt) ) > p%Grid_Low(3,p%NumGrid_low) ) call SetErrStat(ErrID_Warn, 'The center of a wake plane for turbine #'//trim(num2lstr(nt))//' has passed the upper-most Z boundary of the low-resolution domain.' , errStat, errMsg, RoutineName)
-
          
-         do np = 0,tmpPln 
+      do np = 0,tmpPln 
       
       !!Defining yhat and zhat
          xxplane = (/u%xhat_plane(1,np,nt), 0.0_ReKi, 0.0_ReKi/)
@@ -385,6 +376,16 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
 
          ELSE                                           ! All subsequent calls to AWAE_CalcOutput
 
+
+      ! Warn our kind users if wake planes leave the low-resolution domain:
+            if ( u%p_plane(1,np,nt) < p%Grid_Low(1,            1) ) call SetErrStat(ErrID_Warn, 'The center of wake plane #'//trim(num2lstr(np))//' for turbine #'//trim(num2lstr(nt))//' has passed the lowest-most X boundary of the low-resolution domain.', errStat, errMsg, RoutineName)
+            if ( u%p_plane(1,np,nt) > p%Grid_Low(1,p%NumGrid_low) ) call SetErrStat(ErrID_Warn, 'The center of wake plane #'//trim(num2lstr(np))//' for turbine #'//trim(num2lstr(nt))//' has passed the upper-most X boundary of the low-resolution domain.' , errStat, errMsg, RoutineName)
+            if ( u%p_plane(2,np,nt) < p%Grid_Low(2,            1) ) call SetErrStat(ErrID_Warn, 'The center of wake plane #'//trim(num2lstr(np))//' for turbine #'//trim(num2lstr(nt))//' has passed the lowest-most Y boundary of the low-resolution domain.', errStat, errMsg, RoutineName)
+            if ( u%p_plane(2,np,nt) > p%Grid_Low(2,p%NumGrid_low) ) call SetErrStat(ErrID_Warn, 'The center of wake plane #'//trim(num2lstr(np))//' for turbine #'//trim(num2lstr(nt))//' has passed the upper-most Y boundary of the low-resolution domain.' , errStat, errMsg, RoutineName)
+            if ( u%p_plane(3,np,nt) < p%Grid_Low(3,            1) ) call SetErrStat(ErrID_Warn, 'The center of wake plane #'//trim(num2lstr(np))//' for turbine #'//trim(num2lstr(nt))//' has passed the lowest-most Z boundary of the low-resolution domain.', errStat, errMsg, RoutineName)
+            if ( u%p_plane(3,np,nt) > p%Grid_Low(3,p%NumGrid_low) ) call SetErrStat(ErrID_Warn, 'The center of wake plane #'//trim(num2lstr(np))//' for turbine #'//trim(num2lstr(nt))//' has passed the upper-most Z boundary of the low-resolution domain.' , errStat, errMsg, RoutineName)
+         
+         
              xplane_sq = u%xhat_plane(1,np,nt)**2.0_ReKi
              yplane_sq = u%xhat_plane(2,np,nt)**2.0_ReKi
              xysq_Z = (/0.0_ReKi, 0.0_ReKi, xplane_sq+yplane_sq/)
