@@ -1627,7 +1627,7 @@ SUBROUTINE StC_ParseInputFileInfo( InputFile, RootName, FileInfo_In, InputFileDa
    if ( InputFileData%Echo ) then
       CALL OpenEcho ( UnEcho, TRIM(RootName)//'.ech', ErrStat2, ErrMsg2 )
          if (Failed()) return;
-      WRITE(UnEcho, '(A)') 'Echo file for LidarSim input file: '//trim(InputFile)
+      WRITE(UnEcho, '(A)') 'Echo file for StructCtrl input file: '//trim(InputFile)
       ! Write the first three lines into the echo file
       WRITE(UnEcho, '(A)') FileInfo_In%Lines(1)
       WRITE(UnEcho, '(A)') FileInfo_In%Lines(2)

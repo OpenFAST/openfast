@@ -576,7 +576,37 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    
    END IF
    
-   
+
+      !............................................................................................
+      ! Initialize the StrucCtrl module for hydrodynamics platform: (multiple instances will be called for multiple platform points)
+      !............................................................................................
+   IF (p%CompPtfmStC) THEN
+
+      StC_InitInp%InputFile      =  InputFileData%PtfmStCfile
+      StC_InitInp%RootName       =  TRIM(p%RootName)//'.PtfmStC'
+      StC_InitInp%Gravity        =  InitInp%gravity
+      StC_InitInp%NumMeshPts     =  1_IntKi        ! single point mesh for Platform
+
+      CALL AllocAry( StC_InitInp%InitPosition,      3, StC_InitInp%NumMeshPts, 'StC_InitInp%InitPosition', errStat2, ErrMsg2)
+         CALL CheckError( ErrStat2, ErrMsg2 )
+      CALL AllocAry( StC_InitInp%InitOrientation,3, 3, StC_InitInp%NumMeshPts, 'StC_InitInp%InitOrientation', errStat2, ErrMsg2)
+         CALL CheckError( ErrStat2, ErrMsg2 )
+         IF (ErrStat >= AbortErrLev) RETURN
+      StC_InitInp%InitPosition(:,1)      = InitInp%NacPosition
+      StC_InitInp%InitOrientation(:,:,1) = InitInp%NacOrientation
+
+      CALL StC_Init( StC_InitInp, u%PtfmStC, p%PtfmStC, x%PtfmStC, xd%PtfmStC, z%PtfmStC, OtherState%PtfmStC, y%PtfmStC, m%PtfmStC, Interval, StC_InitOut, ErrStat2, ErrMsg2 )
+         CALL CheckError( ErrStat2, ErrMsg2 )
+         IF (ErrStat >= AbortErrLev) RETURN
+
+      IF (.NOT. EqualRealNos( Interval, p%DT ) ) THEN
+         CALL CheckError( ErrID_Fatal, "Nacelle StrucCtrl time step differs from SrvD time step." )
+         RETURN
+      END IF
+
+   END IF
+
+
       !............................................................................................
       ! Set Init outputs for linearization (after StrucCtrl, in case we ever add the StrucCtrl to the linearization features):
       !............................................................................................

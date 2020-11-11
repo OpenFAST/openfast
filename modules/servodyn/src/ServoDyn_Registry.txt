@@ -132,6 +132,8 @@ typedef	^	SrvD_InputFile	LOGICAL	CompTStC	-	-	-	"Compute tower tuned mass damper
 typedef	^	SrvD_InputFile	CHARACTER(1024)	TStCfile	-	-	-	"File for tower tuned mass damper (quoted string)"	-
 typedef	^	SrvD_InputFile	LOGICAL	CompBStC	-	-	-	"Compute tower tuned mass damper {true/false}"	-
 typedef	^	SrvD_InputFile	CHARACTER(1024)	BStCfile	-	-	-	"File for blade tuned mass damper (quoted string)"	-
+typedef	^	SrvD_InputFile	LOGICAL	CompPtfmStC	-	-	-	"Compute platform tuned mass damper {true/false}"	-
+typedef	^	SrvD_InputFile	CHARACTER(1024)	PtfmStCfile	-	-	-	"File for hydrodyn platform tuned mass damper (quoted string)"	-
 
 # ..... Data for using Bladed DLLs .......................................................................................................
 typedef	^	BladedDLLType	SiKi	avrSWAP	{:}	-	-	"The swap array: used to pass data to and from the DLL controller"	"see Bladed DLL documentation"
@@ -211,6 +213,7 @@ typedef	^	ContinuousStateType	ReKi	DummyContState	-	-	-	"Remove this variable if
 typedef	^	ContinuousStateType	StC_ContinuousStateType	NStC	-	-	-	"StC module states - nacelle"	-
 typedef	^	ContinuousStateType	StC_ContinuousStateType	TStC	-	-	-	"StC module states - tower"	-
 typedef	^	ContinuousStateType	StC_ContinuousStateType	BStC	-	-	-	"StC module states - blade"	-
+typedef	^	ContinuousStateType	StC_ContinuousStateType	PtfmStC	-	-	-	"StC module inputs - hydrodyn platform"	-
 
 # Define discrete (nondifferentiable) states here:
 typedef	^	DiscreteStateType	ReKi	CtrlOffset	-	-	-	"Controller offset parameter" N-m
@@ -218,12 +221,14 @@ typedef	^	DiscreteStateType	ReKi	CtrlOffset	-	-	-	"Controller offset parameter" 
 typedef	^	DiscreteStateType	StC_DiscreteStateType	NStC	-	-	-	"StC module states - nacelle"	-
 typedef	^	DiscreteStateType	StC_DiscreteStateType	TStC	-	-	-	"StC module states - tower"	-
 typedef	^	DiscreteStateType	StC_DiscreteStateType	BStC	-	-	-	"StC module states - blade"	-
+typedef	^	DiscreteStateType	StC_DiscreteStateType	PtfmStC	-	-	-	"StC module inputs - hydrodyn platform"	-
 
 # Define constraint states here:
 typedef	^	ConstraintStateType	ReKi	DummyConstrState	-	-	-	"Remove this variable if you have constraint states"	-
 typedef	^	ConstraintStateType	StC_ConstraintStateType	NStC	-	-	-	"StC module states - nacelle"	-
 typedef	^	ConstraintStateType	StC_ConstraintStateType	TStC	-	-	-	"StC module states - tower"	-
 typedef	^	ConstraintStateType	StC_ConstraintStateType	BStC	-	-	-	"StC module states - blade"	-
+typedef	^	ConstraintStateType	StC_ConstraintStateType	PtfmStC	-	-	-	"StC module inputs - hydrodyn platform"	-
 
 # Define "other" states (e.g. logical states) here:
 # other states for pitch maneuver:
@@ -246,6 +251,7 @@ typedef	^	OtherStateType	Logical	GenOnLine	-	-	-	"Is the generator online?"	-
 typedef	^	OtherStateType	StC_OtherStateType	NStC	-	-	-	"StC module states - nacelle"	-
 typedef	^	OtherStateType	StC_OtherStateType	TStC	-	-	-	"StC module states - tower"	-
 typedef	^	OtherStateType	StC_OtherStateType	BStC	-	-	-	"StC module states - blade"	-
+typedef	^	OtherStateType	StC_OtherStateType	PtfmStC	-	-	-	"StC module inputs - hydrodyn platform"	-
 
 # ..... Misc Variables ................................................................................................................
 typedef	^	MiscVarType	DbKi	LastTimeCalled	-	-	-	"last time the CalcOutput/Bladed DLL was called"	s
@@ -256,6 +262,7 @@ typedef	^	MiscVarType	ReKi	xd_BlPitchFilter	{:}	-	-	"blade pitch filter"	-
 typedef	^	MiscVarType	StC_MiscVarType	NStC	-	-	-	"StC module misc vars - nacelle"	-
 typedef	^	MiscVarType	StC_MiscVarType	TStC	-	-	-	"StC module misc vars - tower"	-
 typedef	^	MiscVarType	StC_MiscVarType	BStC	-	-	-	"StC module misc vars - blade"	-
+typedef	^	MiscVarType	StC_MiscVarType	PtfmStC	-	-	-	"StC module inputs - hydrodyn platform"	-
 
 # ..... Parameters ................................................................................................................
 # Define parameters here:
@@ -324,6 +331,7 @@ typedef	^	ParameterType	IntKi	NumBl	-	-	-	"Number of blades on the turbine"	-
 typedef	^	ParameterType	LOGICAL	CompNStC	-	-	-	"Compute nacelle tuned mass damper {true/false}"	-
 typedef	^	ParameterType	LOGICAL	CompTStC	-	-	-	"Compute tower tuned mass damper {true/false}"	-
 typedef	^	ParameterType	LOGICAL	CompBStC	-	-	-	"Compute blade tuned mass damper {true/false}"	-
+typedef	^	ParameterType	LOGICAL	CompPtfmStC	-	-	-	"Compute platform tuned mass damper {true/false}"	-
 # parameters for output
 typedef	^	ParameterType	IntKi	NumOuts	-	-	-	"Number of parameters in the output list (number of outputs requested)"	-
 typedef	^	ParameterType	IntKi	NumOuts_DLL	-	-	-	"Number of logging channels output from the DLL (set at initialization)"	-
@@ -349,6 +357,7 @@ typedef	^	ParameterType	ReKi	RotSpeedRef	-	-	-	"Reference rotor speed"	"rad/s"
 typedef	^	ParameterType	StC_ParameterType	NStC	-	-	-	"StC module parameters - nacelle"	-
 typedef	^	ParameterType	StC_ParameterType	TStC	-	-	-	"StC module parameters - tower"	-
 typedef	^	ParameterType	StC_ParameterType	BStC	-	-	-	"StC module parameters - blade"	-
+typedef	^	ParameterType	StC_ParameterType	PtfmStC	-	-	-	"StC module inputs - hydrodyn platform"	-
 
 # ..... Inputs ....................................................................................................................
 # Define inputs that are not on this mesh here:
@@ -388,7 +397,9 @@ typedef	^	InputType	ReKi	YawAngle	-	-	2pi	"Estimate of yaw (nacelle + platform)"
 typedef	^	InputType	StC_InputType	NStC	-	-	-	"StC module inputs - nacelle"	-
 typedef	^	InputType	StC_InputType	TStC	-	-	-	"StC module inputs - tower"	-
 typedef	^	InputType	StC_InputType	BStC	-	-	-	"StC module inputs - blade"	-
+typedef	^	InputType	StC_InputType	PtfmStC	-	-	-	"StC module inputs - hydrodyn platform"	-
 typedef	^	InputType	SiKi	SuperController	{:}	-	-	"A swap array: used to pass input data to the DLL controller from the supercontroller"	-
+typedef	^	InputType	SiKi	Lidar	{:}	-	-	"A swap array: used to pass input data to the DLL controller from the Lidar"	-
 
 # ..... Outputs ...................................................................................................................
 # Define outputs that are contained on the mesh here:
@@ -405,5 +416,7 @@ typedef	^	OutputType	ReKi	TBDrCon	{:}	-	-	"Instantaneous tip-brake drag constant
 typedef	^	OutputType	StC_OutputType	NStC	-	-	-	"StC module outputs - nacelle"	-
 typedef	^	OutputType	StC_OutputType	TStC	-	-	-	"StC module outputs - tower"	-
 typedef	^	OutputType	StC_OutputType	BStC	-	-	-	"StC module outputs - blade"	-
+typedef	^	OutputType	StC_OutputType	PtfmStC	-	-	-	"StC module outputs - hydrodyn hydrodyn platformm"	-
 typedef	^	OutputType	SiKi	SuperController	{:}	-	-	"A swap array: used to pass output data from the DLL controller to the supercontroller"	-
+typedef	^	OutputType	SiKi	Lidar	{:}	-	-	"A swap array: used to pass output data from the DLL controller to the Lidar"	-
 
