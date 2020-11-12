@@ -119,11 +119,11 @@ typedef     ^                   ^               ReKi                            
 typedef     ^                   ^               ReKi                             BN_Cy         ::    -  -  "tangential force coefficient (tangential to the plane, not chord) of the jth node in the kth blade"   -
 
 # TODO UA - Should be part of AeroDyn
+typedef     ^                   ^               UA_InputType                     u_UA    {:}{:}{:} - -  "inputs to UnsteadyAero  numBlades x numNode x 2 (t and t+dt)"        -
 typedef     ^                   ^               UA_MiscVarType                   m_UA          -  -  -  "misc vars for UnsteadyAero"        -
 typedef     ^                   ^               UA_OutputType                    y_UA          -  -  -  "outputs from UnsteadyAero"        -
 typedef     ^                   ^               UA_ParameterType                 p_UA          -  -  -  "parameters for UnsteadyAero"        -
 typedef     ^                   ^               LOGICAL                          UA_Flag       -  -  -  "logical flag indicating whether to use UnsteadyAero"        -
-typedef     ^                   ^               ReKi                             Vwnd_ND       ::: - -  "InflowOnBlade (at nodes) values modified by tower influence. ONLY for UA" m/s
 
 # ........ Input ............
 # FVW_InputType
@@ -131,6 +131,9 @@ typedef  FVW/FVW           InputType            MeshType                        
 typedef     ^                   ^               ReKi                             V_wind        ::   -  - "Wind at requested points (r_wind)"  -
 typedef     ^                   ^               ReKi                             HubOrientation {3}{3} -  -  "Orientation of hub coordinate system (for output only)" -
 typedef     ^                   ^               ReKi                             HubPosition    {3}    -  -  "Origin of hub (for output only)" -
+# FOR UA
+typedef     ^                   ^               ReKi                             Vwnd_LLMP   {:}{:}{:} -  - "Disturbed wind at LL mesh points (not CP), for UA only"  -
+typedef     ^                   ^               ReKi                             omega_z        {:}{:}  -  - "rotation of no-sweep-pitch-twist coordinate system around z (for CDBEMT and CUA)" "rad/s"
 
 # ........ Output ............
 # FVW_OutputType
@@ -178,8 +181,8 @@ typedef     ^                   ^               ReKi                            
 typedef     ^                   ^               ReKi                             zLocal            :: -  - "Distance to blade node, measured along the blade" m
 typedef     ^                   ^               ReKi                             zTip              :  -  - "Distance to blade tip, measured along the blade" m
 typedef     ^                   ^               ReKi                             rLocal            :: -  - "Radial distance to blade node from the center of rotation, measured in the rotor plane, needed for DBEMT" m
-typedef     ^                   ^               IntKi                            NumBlades         -  -  - "Number of blades"          -
-typedef     ^                   ^               IntKi                            NumBladeNodes     -  -  - "Number of nodes on each blade"          -
+typedef     ^                   ^               IntKi                            numBlades         -  -  - "Number of blades"          -
+typedef     ^                   ^               IntKi                            numBladeNodes     -  -  - "Number of nodes on each blade"          -
 typedef     ^                   ^               DbKi                             DTaero            -  -  - "Time interval for calls (from AD15)"   s
 typedef     ^                   ^               ReKi                             KinVisc       -  - -   "Kinematic air viscosity"   m^2/s
 # TODO UA - Should be part of AeroDyn

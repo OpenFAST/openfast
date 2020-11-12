@@ -1393,26 +1393,41 @@ subroutine SetInputs(p, u, m, indx, errStat, errMsg)
    integer(intKi)                               :: ErrStat2
    character(ErrMsgLen)                         :: ErrMsg2
    character(*), parameter                      :: RoutineName = 'SetInputs'
-   
-   
    ErrStat = ErrID_None
    ErrMsg  = ""
    
-   if (p%TwrPotent /= TwrPotent_none .or. p%TwrShadow) then
-      call TwrInfl( p, u, m, ErrStat2, ErrMsg2 )
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   else
-      m%DisturbedInflow = u%InflowOnBlade
-   end if
+   ! Disturbed inflow on blade (if tower shadow present)
+   call SetDisturbedInflow(p, u, m, errStat, errMsg)
 
    if (p%WakeMod /= WakeMod_FVW) then
          ! This needs to extract the inputs from the AD data types (mesh) and massage them for the BEMT module
       call SetInputsForBEMT(p, u, m, indx, errStat2, errMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    endif
-
-
 end subroutine SetInputs
+
+!> Disturbed inflow on the blade if tower shadow or tower influence are enabled
+subroutine SetDisturbedInflow(p, u, m, errStat, errMsg)
+   type(AD_ParameterType),       intent(in   )  :: p                      !< AD parameters
+   type(AD_InputType),           intent(in   )  :: u                      !< AD Inputs at Time
+   type(AD_MiscVarType),         intent(inout)  :: m                      !< Misc/optimization variables
+   integer(IntKi),               intent(  out)  :: errStat                !< Error status of the operation
+   character(*),                 intent(  out)  :: errMsg                 !< Error message if ErrStat /= ErrID_None
+   ! local variables             
+   integer(intKi)                               :: errStat2
+   character(ErrMsgLen)                         :: errMsg2
+   character(*), parameter                      :: RoutineName = 'SetDisturbedInflow'
+   errStat = ErrID_None
+   errMsg  = ""
+   if (p%TwrPotent /= TwrPotent_none .or. p%TwrShadow) then
+      call TwrInfl( p, u, m, errStat2, errMsg2 ) ! NOTE: tower clearance is computed here..
+         call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
+   else
+      m%DisturbedInflow = u%InflowOnBlade
+   end if
+end subroutine SetDisturbedInflow
+
+
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine sets m%BEMT_u(indx).
 subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
@@ -1662,7 +1677,7 @@ subroutine SetInputsForFVW(p, u, m, errStat, errMsg)
    real(R8Ki)                              :: Azimuth(p%NumBlades)
    
    integer(intKi)                          :: tIndx
-   integer(intKi)                          :: k                      ! loop counter for blades
+   integer(intKi)                          :: k,j  ! loop counter for blades and nodes
    character(*), parameter                 :: RoutineName = 'SetInputsForFVW'
 
    do tIndx=1,size(u)
@@ -1687,7 +1702,14 @@ subroutine SetInputsForFVW(p, u, m, errStat, errMsg)
          m%FVW_u(tIndx)%WingsMesh(k)%TranslationVel    = u(tIndx)%BladeMotion(k)%TranslationVel
          m%FVW_u(tIndx)%HubPosition    = u(tIndx)%HubMotion%Position(:,1) + u(tIndx)%HubMotion%TranslationDisp(:,1)
          m%FVW_u(tIndx)%HubOrientation = u(tIndx)%HubMotion%Orientation(:,:,1)
-      enddo
+
+         ! Inputs for dynamic stall (see SetInputsForBEMT)
+         do j=1,p%NumBlNds         
+            ! inputs for CUA, section pitch/torsion rate
+            m%FVW_u(tIndx)%omega_z(j,k) = dot_product( u(tIndx)%BladeMotion(k)%RotationVel(   :,j), m%WithoutSweepPitchTwist(3,:,j,k) ) ! rotation of no-sweep-pitch coordinate system around z of the jth node in the kth blade
+         end do !j=nodes
+
+      enddo !k=blade
       if (ALLOCATED(m%FVW_u(tIndx)%V_wind)) then
          m%FVW_u(tIndx)%V_wind   = u(tIndx)%InflowWakeVel
          ! Applying tower shadow to V_wind based on r_wind positions
@@ -1699,8 +1721,10 @@ subroutine SetInputsForFVW(p, u, m, errStat, errMsg)
             endif
          end if
       endif
+      ! Disturbed inflow for UA on Lifting line Mesh Points
+      call SetDisturbedInflow(p, u(tIndx), m, errStat, errMsg)
+      m%FVW_u(tIndx)%Vwnd_LLMP = m%DisturbedInflow
    enddo
-   m%FVW%Vwnd_ND = m%DisturbedInflow ! Nasty transfer for UA, but this is temporary, waiting for AeroDyn to handle UA
 end subroutine SetInputsForFVW
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine sets m%AA_u.
@@ -1794,7 +1818,7 @@ subroutine SetOutputsFromFVW(u, p, OtherState, x, xd, m, y, ErrStat, ErrMsg)
    type(AD_ContinuousStateType),intent(in ) :: x           !< continuous states
    type(AD_DiscreteStateType),intent(in   ) :: xd          !< Discrete states
    type(AD_OutputType),       intent(inout) :: y           !< AD outputs
-   type(AD_MiscVarType),      intent(inout) :: m           !< Misc/optimization variables
+   type(AD_MiscVarType),target,intent(inout) :: m           !< Misc/optimization variables
    integer(IntKi),            intent(  out) :: ErrStat     !< Error status of the operation
    character(*),              intent(  out) :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
@@ -1818,7 +1842,8 @@ subroutine SetOutputsFromFVW(u, p, OtherState, x, xd, m, y, ErrStat, ErrMsg)
    real(ReKi)                             :: Cx, Cy
    real(ReKi)                             :: Cl_Static, Cd_Static, Cm_Static
    real(ReKi)                             :: Cl_dyn, Cd_dyn, Cm_dyn
-   type(UA_InputType)                     :: u_UA
+   type(UA_InputType), pointer            :: u_UA ! Alias to shorten notations
+   integer(IntKi), parameter              :: InputIndex=1      ! we will always use values at t in this routine
 
    integer(intKi)                         :: ErrStat2
    character(ErrMsgLen)                   :: ErrMsg2
@@ -1837,7 +1862,7 @@ subroutine SetOutputsFromFVW(u, p, OtherState, x, xd, m, y, ErrStat, ErrMsg)
          ! --- Computing main aero variables from induction - setting local variables
          Vind = m%FVW_y%Vind(1:3,j,k)
          Vstr = u%BladeMotion(k)%TranslationVel(1:3,j)
-         Vwnd = m%DisturbedInflow(1:3,j,k)   ! NOTE: contains tower shadow
+         Vwnd = m%DisturbedInflow(1:3,j,k)   ! NOTE: contains tower shadow ! TODO in FVW_u%Vwnd_LLMP
          theta = m%FVW%PitchAndTwist(j,k)
          call FVW_AeroOuts( m%WithoutSweepPitchTwist(1:3,1:3,j,k), u%BladeMotion(k)%Orientation(1:3,1:3,j), & ! inputs
                      theta, Vstr(1:3), Vind(1:3), VWnd(1:3), p%KinVisc, p%FVW%Chord(j,k), &               ! inputs
@@ -1850,34 +1875,25 @@ subroutine SetOutputsFromFVW(u, p, OtherState, x, xd, m, y, ErrStat, ErrMsg)
          Cd_Static = AFI_interp%Cd
          Cm_Static = AFI_interp%Cm
 
-         ! Set dynamic to the (will be same as static if UA_Flag is false)
+         ! Set dynamic coeff to the static coeff by default 
          Cl_dyn    = AFI_interp%Cl
          Cd_dyn    = AFI_interp%Cd
          Cm_dyn    = AFI_interp%Cm
-         
          if (m%FVW%UA_Flag) then
             if ((OtherState%FVW%UA_Flag(j,k)) .and. ( .not. EqualRealNos(Vrel,0.0_ReKi) ) ) then
-
-                  ! ....... compute inputs to UA ...........
-               u_UA%alpha    =  alpha
+               u_UA => m%FVW%u_UA(j,k,InputIndex) ! Alias
+               ! Making sure inputs are consistent
+               u_UA%alpha    = alpha
                u_UA%U        = Vrel
-               u_UA%Re       = Re
-               u_UA%UserProp = 0.0_ReKi ! FIX ME
-
-               ! FIX ME: this is copied 3 times!!!!
-               u_UA%v_ac(1) = sin(u_UA%alpha)*u_UA%U
-               u_UA%v_ac(2) = cos(u_UA%alpha)*u_UA%U
-               u_UA%omega = dot_product( u%BladeMotion(k)%RotationVel(   :,j), m%WithoutSweepPitchTwist(3,:,j,k) ) ! rotation of no-sweep-pitch coordinate system around z of the jth node in the kth blade
-
+               u_UA%v_ac(1)  = sin(u_UA%alpha)*u_UA%U
+               u_UA%v_ac(2)  = cos(u_UA%alpha)*u_UA%U
                call UA_CalcOutput(j, k, u_UA, m%FVW%p_UA, x%FVW%UA, xd%FVW%UA, OtherState%FVW%UA, p%AFI(p%FVW%AFindx(j,k)), m%FVW%y_UA, m%FVW%m_UA, errStat2, errMsg2 )
                   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SetOutputsFromFVW')
                Cl_dyn = m%FVW%y_UA%Cl
                Cd_dyn = m%FVW%y_UA%Cd
                Cm_dyn = m%FVW%y_UA%Cm
-               
             end if
          end if
-
          cp = cos(phi)
          sp = sin(phi)
          Cx = Cl_dyn*cp + Cd_dyn*sp
