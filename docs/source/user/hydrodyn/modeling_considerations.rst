@@ -7,9 +7,10 @@ wide-range of hydrodynamic conditions and substructures. This section
 provides some general guidance to help you construct models that are
 compatible with HydroDyn.
 
-Please refer to the theory of Section 7 for detailed information about
-HydroDyn’s coordinate systems, and the implementation approach we have
-followed in HydroDyn.
+.. TODO The Theory section does not yet exist.
+.. Please refer to the theory of Section 7 for detailed information about
+.. HydroDyn’s coordinate systems, and the implementation approach we have
+.. followed in HydroDyn.
 
 Waves
 ~~~~~
@@ -170,8 +171,10 @@ be straight circular (and possibly tapered) cylinders. Members can be
 further subdivided using **MDivSize**, which HydroDyn will internally
 use to subdivide members into multiple elements (and nodes). HydroDyn
 may further refine the geometry at the free surface, flat seabed,
-marine-growth region, and filled-fluid free surface. The rules HydroDyn
-uses for refinement may be found in Section 7.5.2.
+marine-growth region, and filled-fluid free surface.
+
+.. TODO 7.5.2 is the theory section which does not yet exist.
+The rules HydroDyn uses for refinement may be found in Section 7.5.2.
 
 Due to the exponential decay of hydrodynamic loads with depth, a higher
 resolution near the water free surface is required to capture
@@ -222,11 +225,15 @@ Lumped Loads
 ------------
 Lumped loads at member ends (axial effects) are only calculated at
 user-specified joints, and not at joints HydroDyn may automatically
-create as part its solution process (see Section 7.5.2 for differences
-between the input-file discretization and the simulation
-discretization). For example, if you want axial effects at a
+create as part its solution process.
+For example, if you want axial effects at a
 marine-growth boundary, you must explicitly set a joint at that
 location.
+
+.. TODO 7.5.2 is the theory section which does not yet exist.
+.. (see Section 7.5.2 for differences
+.. between the input-file discretization and the simulation
+.. discretization)
 
 Added Mass, Inertia, Buoyancy
 +++++++++++++++++++++++++++++
@@ -381,9 +388,12 @@ defined one or more strip-theory members. The potential-flow model
 created can consider all of the Morison members in the floating
 substructure, or just some. Specify whether certain members of the
 structure are considered in the potential-flow model by setting the
-**PropPot** flag for each member. As detailed in Section 7.5.1, the
-state of the **PropPot** flag for a given member determines which
+**PropPot** flag for each member.
+The state of the **PropPot** flag for a given member determines which
 components of the strip-theory equations are applied.
+
+.. TODO 7.5.1 is the theory section which does not yet exist.
+.. As detailed in Section 7.5.1,
 
 When using either the strip-theory-only or hybrid approaches, filled
 fluid (flooding or ballasting) may be added to the strip-theory members.

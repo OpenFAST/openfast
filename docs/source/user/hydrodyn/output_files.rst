@@ -91,8 +91,8 @@ input joint index (not to be confused with the **JointID**). If a value
 of -1 is found in this column, the node is an interior node and results
 from an input member being split somewhere along its length due to the
 requirements of the **MDivSize** parameter in the primary input file
-members table. See Section 7.5.2 for the member splitting rules used by
-HydroDyn. The third column indicates if this node is part of a Super
+members table.
+The third column indicates if this node is part of a Super
 Member (**JointOvrlp** = 1). The next column tells you the corresponding
 input member index (not to be confused with the **MemberID**). **Nxi**,
 **Nyi**, and **Nzi**, provide the (*X*,\ *Y*,\ *Z*) coordinates in the
@@ -112,6 +112,9 @@ end-effect axial viscous-drag, end-effect axial added-mass, and
 end-effect axial dynamic-pressure coefficients, respectively. **NConn**
 gives the number of elements connected to node, and **Connection List**
 is the list of element indexes attached to the node.
+
+.. TODO 7.5.2 is the theory section which does not yet exist.
+.. See Section 7.5.2 for the member splitting rules used by HydroDyn.
 
 Simulation Element Table
 ------------------------

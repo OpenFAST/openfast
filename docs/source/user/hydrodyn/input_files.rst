@@ -730,11 +730,14 @@ component of the fluid-inertia loads. There are separate set of
 hydrodynamic coefficients both with and without marine growth. A given
 element will either use the marine growth or the standard version of a
 coefficient, but never both. Note that input members are split into
-elements per Section 7.5.2, one of the splitting rules guarantees the
+elements, one of the splitting rules guarantees the
 previous statement is true. Which members have marine growth is defined
 by the MARINE GROWTH table of :numref:`hd-marine-growth`. You can specify only one
 model type, **MCoefMod**, for any given member in the MEMBERS table.
 However, different members can specify different coefficient models.
+
+.. elements per Section 7.5.2, one of the splitting rules guarantees the
+.. TODO 7.5.2 is the theory section which does not yet exist.
 
 In the hydrodynamic coefficient input parameters, **Cd**, **Ca**, and
 **Cp** refer to the viscous-drag, added-mass, and dynamic-pressure
@@ -804,9 +807,8 @@ specify the ending cross-section properties, allowing for tapered
 members. **MDivSize** determines the maximum spacing (in meters) between
 simulation nodes where the distributed loads are actually computed; the
 smaller the number, the finer the resolution and longer the
-computational time. Section 7.5.2 discusses the difference between the
-user-supplied discretization and the simulation discretization. Each
-member in your model will have hydrodynamic coefficients, which are
+computational time.
+Each member in your model will have hydrodynamic coefficients, which are
 specified using one of the three models (**MCoefMod**). Model 1 uses a
 single set of coefficients found in the SIMPLE HYDRODYNAMIC COEFFICIENTS
 section. Model 2 is depth-based, and is determined via the table found
@@ -816,6 +818,9 @@ HYDRODYNAMIC COEFFICIENTS section. The **PropPot** flag indicates
 whether the corresponding member coincides with the body represented by
 the potential-flow solution. When **PropPot** = TRUE, only viscous-drag
 loads, and ballasting loads will be computed for that member.
+
+.. TODO 7.5.2 is the theory section which does not yet exist.
+.. Section 7.5.2 discusses the difference between the user-supplied discretization and the simulation discretization.
 
 Filled Members
 --------------
