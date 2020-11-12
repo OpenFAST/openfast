@@ -59,7 +59,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: TwrHNodes      !< Location of variable-spaced tower nodes (relative to the tower rigid base height [-]
     REAL(ReKi) , DIMENSION(1:6)  :: PlatformPos      !< Initial platform position (6 DOFs) [-]
     REAL(ReKi) , DIMENSION(1:3)  :: TwrBasePos      !< initial position of the tower base (for SrvD) [m]
-    REAL(R8Ki) , DIMENSION(1:3,1:3)  :: TwrBaseOrient      !< initial position of the tower base (for SrvD) [m]
+    REAL(R8Ki) , DIMENSION(1:3,1:3)  :: TwrBaseOrient      !< initial orientation of the tower base (for SrvD) [-]
     REAL(ReKi)  :: HubRad      !< Preconed hub radius (distance from the rotor apex to the blade root) [m]
     REAL(ReKi)  :: RotSpeed      !< Initial or fixed rotor speed [rad/s]
     LOGICAL  :: isFixed_GenDOF      !< whether the generator is fixed or free [-]

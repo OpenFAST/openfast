@@ -98,7 +98,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: F_TBL      !< user-defined spring force [N]
     INTEGER(IntKi)  :: PrescribedForcesCoordSys      !< Prescribed forces coordinate system {0: global; 1: local} [-]
     CHARACTER(1024)  :: PrescribedForcesFile      !< Prescribed force time-series filename [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PrescribedFrc      !< StC prescribed force time-series info [(s,N,N-m)]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: StC_PrescribedForce      !< StC prescribed force time-series info [(s,N,N-m)]
   END TYPE StC_InputFile
 ! =======================
 ! =========  StC_InitInputType  =======
@@ -323,19 +323,19 @@ IF (ALLOCATED(SrcInputFileData%F_TBL)) THEN
 ENDIF
     DstInputFileData%PrescribedForcesCoordSys = SrcInputFileData%PrescribedForcesCoordSys
     DstInputFileData%PrescribedForcesFile = SrcInputFileData%PrescribedForcesFile
-IF (ALLOCATED(SrcInputFileData%PrescribedFrc)) THEN
-  i1_l = LBOUND(SrcInputFileData%PrescribedFrc,1)
-  i1_u = UBOUND(SrcInputFileData%PrescribedFrc,1)
-  i2_l = LBOUND(SrcInputFileData%PrescribedFrc,2)
-  i2_u = UBOUND(SrcInputFileData%PrescribedFrc,2)
-  IF (.NOT. ALLOCATED(DstInputFileData%PrescribedFrc)) THEN 
-    ALLOCATE(DstInputFileData%PrescribedFrc(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+IF (ALLOCATED(SrcInputFileData%StC_PrescribedForce)) THEN
+  i1_l = LBOUND(SrcInputFileData%StC_PrescribedForce,1)
+  i1_u = UBOUND(SrcInputFileData%StC_PrescribedForce,1)
+  i2_l = LBOUND(SrcInputFileData%StC_PrescribedForce,2)
+  i2_u = UBOUND(SrcInputFileData%StC_PrescribedForce,2)
+  IF (.NOT. ALLOCATED(DstInputFileData%StC_PrescribedForce)) THEN 
+    ALLOCATE(DstInputFileData%StC_PrescribedForce(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%PrescribedFrc.', ErrStat, ErrMsg,RoutineName)
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%StC_PrescribedForce.', ErrStat, ErrMsg,RoutineName)
       RETURN
     END IF
   END IF
-    DstInputFileData%PrescribedFrc = SrcInputFileData%PrescribedFrc
+    DstInputFileData%StC_PrescribedForce = SrcInputFileData%StC_PrescribedForce
 ENDIF
  END SUBROUTINE StC_CopyInputFile
 
@@ -351,8 +351,8 @@ ENDIF
 IF (ALLOCATED(InputFileData%F_TBL)) THEN
   DEALLOCATE(InputFileData%F_TBL)
 ENDIF
-IF (ALLOCATED(InputFileData%PrescribedFrc)) THEN
-  DEALLOCATE(InputFileData%PrescribedFrc)
+IF (ALLOCATED(InputFileData%StC_PrescribedForce)) THEN
+  DEALLOCATE(InputFileData%StC_PrescribedForce)
 ENDIF
  END SUBROUTINE StC_DestroyInputFile
 
@@ -458,10 +458,10 @@ ENDIF
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! PrescribedForcesCoordSys
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%PrescribedForcesFile)  ! PrescribedForcesFile
-  Int_BufSz   = Int_BufSz   + 1     ! PrescribedFrc allocated yes/no
-  IF ( ALLOCATED(InData%PrescribedFrc) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*2  ! PrescribedFrc upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%PrescribedFrc)  ! PrescribedFrc
+  Int_BufSz   = Int_BufSz   + 1     ! StC_PrescribedForce allocated yes/no
+  IF ( ALLOCATED(InData%StC_PrescribedForce) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! StC_PrescribedForce upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%StC_PrescribedForce)  ! StC_PrescribedForce
   END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -640,22 +640,22 @@ ENDIF
       IntKiBuf(Int_Xferred) = ICHAR(InData%PrescribedForcesFile(I:I), IntKi)
       Int_Xferred = Int_Xferred + 1
     END DO ! I
-  IF ( .NOT. ALLOCATED(InData%PrescribedFrc) ) THEN
+  IF ( .NOT. ALLOCATED(InData%StC_PrescribedForce) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
   ELSE
     IntKiBuf( Int_Xferred ) = 1
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%PrescribedFrc,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%PrescribedFrc,1)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%StC_PrescribedForce,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%StC_PrescribedForce,1)
     Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%PrescribedFrc,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%PrescribedFrc,2)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%StC_PrescribedForce,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%StC_PrescribedForce,2)
     Int_Xferred = Int_Xferred + 2
 
-      DO i2 = LBOUND(InData%PrescribedFrc,2), UBOUND(InData%PrescribedFrc,2)
-        DO i1 = LBOUND(InData%PrescribedFrc,1), UBOUND(InData%PrescribedFrc,1)
-          ReKiBuf(Re_Xferred) = InData%PrescribedFrc(i1,i2)
+      DO i2 = LBOUND(InData%StC_PrescribedForce,2), UBOUND(InData%StC_PrescribedForce,2)
+        DO i1 = LBOUND(InData%StC_PrescribedForce,1), UBOUND(InData%StC_PrescribedForce,1)
+          ReKiBuf(Re_Xferred) = InData%StC_PrescribedForce(i1,i2)
           Re_Xferred = Re_Xferred + 1
         END DO
       END DO
@@ -844,7 +844,7 @@ ENDIF
       OutData%PrescribedForcesFile(I:I) = CHAR(IntKiBuf(Int_Xferred))
       Int_Xferred = Int_Xferred + 1
     END DO ! I
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! PrescribedFrc not allocated
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! StC_PrescribedForce not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
     Int_Xferred = Int_Xferred + 1
@@ -854,15 +854,15 @@ ENDIF
     i2_l = IntKiBuf( Int_Xferred    )
     i2_u = IntKiBuf( Int_Xferred + 1)
     Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%PrescribedFrc)) DEALLOCATE(OutData%PrescribedFrc)
-    ALLOCATE(OutData%PrescribedFrc(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ALLOCATED(OutData%StC_PrescribedForce)) DEALLOCATE(OutData%StC_PrescribedForce)
+    ALLOCATE(OutData%StC_PrescribedForce(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%PrescribedFrc.', ErrStat, ErrMsg,RoutineName)
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%StC_PrescribedForce.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-      DO i2 = LBOUND(OutData%PrescribedFrc,2), UBOUND(OutData%PrescribedFrc,2)
-        DO i1 = LBOUND(OutData%PrescribedFrc,1), UBOUND(OutData%PrescribedFrc,1)
-          OutData%PrescribedFrc(i1,i2) = ReKiBuf(Re_Xferred)
+      DO i2 = LBOUND(OutData%StC_PrescribedForce,2), UBOUND(OutData%StC_PrescribedForce,2)
+        DO i1 = LBOUND(OutData%StC_PrescribedForce,1), UBOUND(OutData%StC_PrescribedForce,1)
+          OutData%StC_PrescribedForce(i1,i2) = ReKiBuf(Re_Xferred)
           Re_Xferred = Re_Xferred + 1
         END DO
       END DO

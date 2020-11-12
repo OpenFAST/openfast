@@ -73,7 +73,7 @@ typedef	^		^				CHARACTER(1024)			StC_F_TBL_FILE	-	-	-	"user-defined spring tabl
 typedef	^		^				ReKi			F_TBL		{:}{:}	-	-	"user-defined spring force"	"N"
 typedef	^		^				IntKi			PrescribedForcesCoordSys	-	-	-	"Prescribed forces coordinate system {0: global; 1: local}"	-
 typedef	^		^				CHARACTER(1024)	PrescribedForcesFile	-	-	-	"Prescribed force time-series filename"	-
-typedef	^		^				ReKi			PrescribedFrc	{:}{:}	-	-	"StC prescribed force time-series info"	"(s,N,N-m)"
+typedef	^		^				ReKi			StC_PrescribedForce	{:}{:}	-	-	"StC prescribed force time-series info"	"(s,N,N-m)"
 # ..... Initialization data .......................................................................................................
 # Define inputs that the initialization routine may need here:
 # e.g., the name of the input file, the file root name, etc.
