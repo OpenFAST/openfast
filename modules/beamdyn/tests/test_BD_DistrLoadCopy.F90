@@ -29,7 +29,7 @@ subroutine test_BD_DistrLoadCopy()
     testname = "static simple beam under gravity:"
     
     ! build the parametertype, inputtype, and miscvartype
-    parametertype = simpleParameterType()
+    parametertype = simpleParameterType(1,16,16,0,1)
     miscvartype = simpleMiscVarType(parametertype%nqp, parametertype%elem_total)
     inputtype = simpleInputType(parametertype%nqp, parametertype%elem_total)
     
@@ -41,4 +41,6 @@ subroutine test_BD_DistrLoadCopy()
             @assertEqual((/ -9*(j-1)-3*(i-1)-1, -9*(j-1)-3*(i-1)-2, -9*(j-1)-3*(i-1)-3 /), miscvartype%DistrLoad_QP(4:6,i,j))
         end do
     end do
+
+    call BD_DestroyParam(parametertype, ErrStat, ErrMsg)
 end subroutine

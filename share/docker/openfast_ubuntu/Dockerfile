@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-FROM ubuntu:latest
+FROM ubuntu:bionic
 
 # Install dependencies
 
@@ -22,14 +22,18 @@ FROM ubuntu:latest
 # RUN add-apt-repository ppa:ubuntu-toolchain-r/test -y
 # apt-get install gfortran-8
 
-RUN apt update -qq
-RUN apt install -y software-properties-common build-essential
-RUN apt install -y python3-pip
-RUN apt install -y cmake cmake-curses-gui
-RUN apt install -y gcc gfortran make
-RUN apt install -y libblas-dev liblapack-dev
-RUN apt install -y git
-RUN apt install -y nano
+ENV DEBIAN_FRONTEND=noninteractive TZ=America/Denver
+
+RUN apt update -qq && \
+    apt install -y software-properties-common build-essential && \
+    add-apt-repository ppa:git-core/ppa -y && \
+    apt install -y python3-pip && \
+    apt install -y cmake cmake-curses-gui && \
+    apt install -y gcc gfortran make && \
+    apt install -y libblas-dev liblapack-dev && \
+    apt install -y git && \
+    apt install -y nano
+
 RUN pip3 install numpy
 
 # Configure the environment
@@ -38,7 +42,6 @@ ENV FC=/usr/bin/gfortran
 # Clone the project
 RUN git clone --recursive https://github.com/openfast/openfast.git openfast
 WORKDIR /openfast
-RUN git checkout -b dev origin/dev
 
 # Build the project
 RUN mkdir build
@@ -47,5 +50,5 @@ WORKDIR /openfast/build
 # NOTE: building with optimizations on (RELEASE or RELWITHDEBINFO), the virtual machine
 # will require about 6GB of memoery. Otherwise, the gfortran compiler will exit with an
 # "internal error"
-RUN cmake .. -DBUILD_TESTING=ON -DDOUBLE_PRECISION=ON -DCMAKE_BUILD_TYPE=DEBUG
+RUN cmake .. -DBUILD_TESTING=ON -DDOUBLE_PRECISION=ON -DCMAKE_BUILD_TYPE=RELWITHDEBINFO
 RUN make -j4 install

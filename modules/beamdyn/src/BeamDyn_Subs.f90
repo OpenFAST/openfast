@@ -580,10 +580,11 @@ SUBROUTINE BD_GaussPointWeight(n, x, w, ErrStat, ErrMsg)
 END SUBROUTINE BD_GaussPointWeight
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! This subroutine computes trapezoidal quadrature points and weights, p%QPtN and p%QPtWeight
-SUBROUTINE BD_TrapezoidalPointWeight(p, InputFileData)
+SUBROUTINE BD_TrapezoidalPointWeight(p, station_eta, station_total)
 
    TYPE(BD_ParameterType),INTENT(INOUT):: p              !< BeamDyn parameters
-   TYPE(BD_InputFile),    INTENT(IN   ):: InputFileData  !< BeamDyn input-file data
+   Integer(IntKi),INTENT(IN   )        :: station_total
+   REAL(BDKi),INTENT(IN   )            :: station_eta(:)
 
    ! local variables
    REAL(BDKi)                 :: denom ! denominator for quadrature weight computations
@@ -593,20 +594,20 @@ SUBROUTINE BD_TrapezoidalPointWeight(p, InputFileData)
    INTEGER(IntKi)             :: id1, j
 
 !bjj: this assumes there is only one member
-   
+  
+ 
       ! compute the trapezoidal quadrature points, p%QPtN, and scale to range [-1,1]:
       !  If there is refinement, this will add new points between the specified ones. If p%refine == 1, can skip this.
-   p%QPtN(1) = InputFileData%InpBl%station_eta(1)
+   p%QPtN(1) = station_eta(1)
    DO j = 2,p%nqp
       indx =  1+(j-2_IntKi)/p%refine       ! note use of integer math here --> (J-2)/p%refine may not be integer.
-      p%QPtN(j) =  InputFileData%InpBl%station_eta(indx) + &
-               ((InputFileData%InpBl%station_eta(indx+1) - InputFileData%InpBl%station_eta(indx))/p%refine) * (MOD(j-2,p%refine) + 1)
+      p%QPtN(j) =  station_eta(indx) + &
+               ((station_eta(indx+1) - station_eta(indx))/p%refine) * (MOD(j-2,p%refine) + 1)
    ENDDO
    p%QPtN = 2.0_BDKi*p%QPtN - 1.0_BDKi     ! rescale range from [0, 1] to [-1,1]
 
-
       ! compute the trapezoidal quadrature weights, p%QPtWeight:
-   id1 = InputFileData%InpBl%station_total
+   id1 = station_total
    temp_id0 = (id0 - 1)*p%refine + 1            ! Starting index in QPtN --> always going to be 1
    temp_id1 = (id1 - 1)*p%refine + 1            ! ending index in QPtN --> will be  size(p%QPtN)
    denom = p%QPtN(temp_id1) - p%QPtN(temp_id0)  ! This is the range of QPtN --> for single member, is always == 2
@@ -616,8 +617,6 @@ SUBROUTINE BD_TrapezoidalPointWeight(p, InputFileData)
       p%QPtWeight(j)  =  (p%QPtN(temp_id0+j) - p%QPtN(temp_id0+j-2))/denom
    ENDDO
    p%QPtWeight(p%nqp) =  (p%QPtN(temp_id1  ) - p%QPtN(temp_id1-1  ))/denom
-
-
 
 END SUBROUTINE BD_TrapezoidalPointWeight
 
