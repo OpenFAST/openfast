@@ -36,6 +36,9 @@ typedef	^	InitInputType	ReKi	TrimGain	-	-	-	"Proportional gain for the rotationa
 typedef	^	InitInputType	ReKi	RotSpeedRef	-	-	-	"Reference rotor speed"	"rad/s"
 typedef	^	InitInputType	ReKi	BladeRootPosition	{:}{:}	-	-	"X-Y-Z reference position of each blade root (3 x NumBlades)"	m
 typedef	^	InitInputType	R8Ki	BladeRootOrientation	{:}{:}{:}	-	-	"DCM reference orientation of blade roots (3x3 x NumBlades)"	-
+typedef	^	InitInputType	LOGICAL	UseInputFile	-	.TRUE.	-	"read input from input file"	-
+typedef	^	InitInputType	FileInfoType	PassedPrimaryInputData	-	-	-	"Primary input file as FileInfoType (set by driver/glue code)"	-
+#ADD in the TMD submodule input file passing here
 
 # Define outputs from the initialization routine here:
 typedef	^	InitOutputType	CHARACTER(ChanLen)	WriteOutputHdr	{:}	-	-	"Names of the output-to-file channels"	-
@@ -53,6 +56,7 @@ typedef   ^        InitOutputType LOGICAL               IsLoad_u     {:}  -   - 
 # This is data defined in the Input File for this module (or could otherwise be passed in)
 # ..... Primary Input file data ...........................................................................................................
 typedef	ServoDyn/SrvD	SrvD_InputFile	DbKi	DT	-	-	-	"Communication interval for controllers"	s
+typedef	^	SrvD_InputFile	LOGICAL	Echo	-	-	-	"Echo the input file out" -
 typedef	^	SrvD_InputFile	IntKi	PCMode	-	-	-	"Pitch control mode"	-
 typedef	^	SrvD_InputFile	DbKi	TPCOn	-	-	-	"Time to enable active pitch control [unused when PCMode=0]"	s
 typedef	^	SrvD_InputFile	DbKi	TPitManS	3	-	-	"Time to start override pitch maneuver for blade (K) and end standard pitch control"	s

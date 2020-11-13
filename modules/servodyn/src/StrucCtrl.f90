@@ -102,6 +102,7 @@ SUBROUTINE StC_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
 
       type(FileInfoType)                            :: FileInfo_In               !< The derived type for holding the full input file for parsing -- we may pass this in the future
       type(FileInfoType)                            :: FileInfo_In_PrescribeFrc  !< The derived type for holding the prescribed forces input file for parsing -- we may pass this in the future
+      character(1024)                               :: PriPath       !< Primary path
       integer(IntKi)                                :: UnEcho
       INTEGER(IntKi)                                :: ErrStat2      ! local error status
       CHARACTER(ErrMsgLen)                          :: ErrMsg2       ! local error message
@@ -126,6 +127,7 @@ SUBROUTINE StC_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
     ! Read the input file and validate the data
     !............................................................................................
 
+   CALL GetPath( InitInp%InputFile, PriPath )     ! Input files will be relative to the path where the primary input file is located.
 
    if (InitInp%UseInputFile) then
       ! Read the entire input file, minus any comment lines, into the FileInfo_In
@@ -142,7 +144,7 @@ SUBROUTINE StC_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
    !call Print_FileInfo_Struct( CU, FileInfo_In ) ! CU is the screen -- different number on different systems.
 
       !  Parse the FileInfo_In structure of data from the inputfile into the InitInp%InputFile structure
-   CALL StC_ParseInputFileInfo( InitInp%InputFile, TRIM(InitInp%RootName), FileInfo_In, InputFileData, UnEcho, ErrStat2, ErrMsg2 )
+   CALL StC_ParseInputFileInfo( PriPath, InitInp%InputFile, TRIM(InitInp%RootName), FileInfo_In, InputFileData, UnEcho, ErrStat2, ErrMsg2 )
    if (Failed())  return;
 
       ! Using the InputFileData structure, check that it makes sense
@@ -1589,11 +1591,12 @@ SUBROUTINE SpringForceExtrapInterp(x, p, F_table,ErrStat,ErrMsg)
 END SUBROUTINE SpringForceExtrapInterp
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Parse the inputfile info stored in FileInfo_In.
-SUBROUTINE StC_ParseInputFileInfo( InputFile, RootName, FileInfo_In, InputFileData, UnEcho, ErrStat, ErrMsg )
+SUBROUTINE StC_ParseInputFileInfo( PriPath, InputFile, RootName, FileInfo_In, InputFileData, UnEcho, ErrStat, ErrMsg )
 
    implicit    none
 
       ! Passed variables
+   character(*),                    intent(in   )  :: PriPath           !< primary path
    CHARACTER(*),                    intent(in   )  :: InputFile         !< Name of the file containing the primary input data
    CHARACTER(*),                    intent(in   )  :: RootName          !< The rootname of the echo file, possibly opened in this routine
    type(StC_InputFile),             intent(inout)  :: InputFileData     !< All the data in the StrucCtrl input file
@@ -1920,7 +1923,8 @@ SUBROUTINE StC_ParseInputFileInfo( InputFile, RootName, FileInfo_In, InputFileDa
       If (Failed()) return;
       ! Prescribed input time series
    call ParseVar( FileInfo_In, Curline, 'PrescribedForcesFile', InputFileData%PrescribedForcesFile, ErrStat2, ErrMsg2 )
-      If (Failed()) return;
+      if (Failed()) return;
+      if ( PathIsRelative( InputFileData%PrescribedForcesFile ) ) InputFileData%PrescribedForcesFile = TRIM(PriPath)//TRIM(InputFileData%PrescribedForcesFile)
 
 
 CONTAINS
@@ -2149,7 +2153,7 @@ subroutine StC_ParseTimeSeriesFileInfo( InputFile, FileInfo_In, InputFileData, U
    integer(IntKi)                         :: ErrStat2          !< Temporary Error status
    character(ErrMsgLen)                   :: ErrMsg2           !< Temporary Error message
    integer(IntKi)                         :: CurLine           !< current entry in FileInfo_In%Lines array
-   real(ReKi)                             :: TmpRe7(7)         !< temporary 6 number array for reading values in
+   real(ReKi)                             :: TmpRe7(7)         !< temporary 7 number array for reading values in
    character(*), parameter                :: RoutineName='StC_ParseTimeSeriesFileInfo'
 
       ! Initialization of subroutine
