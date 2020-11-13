@@ -4470,7 +4470,7 @@ END SUBROUTINE CheckR16Var
       ALLOCATE( FileInfo%Lines(n_lines) )
       ALLOCATE( FileInfo%FileLine(n_lines) )
       ALLOCATE( FileInfo%FileIndx(n_lines) )
-      ALLOCATE( FileInfo%FileList(n_lines) )
+      ALLOCATE( FileInfo%FileList(FileInfo%NumFiles) )
 
       FileInfo%Lines = StringArray( 1:min( len( FileInfo%Lines(1) ), len(StringArray(1)) ) )
       FileInfo%FileLine = (/ (i, i = 1, FileInfo%NumLines) /)
