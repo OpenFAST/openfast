@@ -4445,14 +4445,25 @@ END SUBROUTINE CheckR16Var
    RETURN
    END SUBROUTINE PremEOF
 !=======================================================================
-   SUBROUTINE InitFileInfo( StringArray, FileInfo )
+   SUBROUTINE InitFileInfo( StringArray, FileInfo, ErrStat, ErrMsg )
 
-      CHARACTER(1024), DIMENSION(:), INTENT(IN) :: StringArray
-      TYPE(FileInfoType), INTENT(OUT) :: FileInfo
+      CHARACTER(*), DIMENSION(:), INTENT(IN   ) :: StringArray
+      TYPE(FileInfoType),         INTENT(  OUT) :: FileInfo
+      INTEGER(IntKi),             INTENT(  OUT) :: ErrStat
+      CHARACTER(*),               INTENT(  OUT) :: ErrMsg
+
+      CHARACTER(*), PARAMETER :: RoutineName = 'InitFileInfo'
       INTEGER :: i, n_lines
 
-      n_lines = size(StringArray)
+      ErrStat = ErrID_None
+      ErrMsg  = ""
 
+      IF (.NOT. ALLOCATED(StringArray)) THEN
+         CALL SetErrStat( ErrID_Fatal, 'Attempting to use StringArray before it is allocated.' , ErrStat, ErrMsg, RoutineName )
+         RETURN
+      END IF
+
+      n_lines = size(StringArray)
       FileInfo%NumLines = n_lines
       FileInfo%NumFiles = 1
 
@@ -4461,7 +4472,7 @@ END SUBROUTINE CheckR16Var
       ALLOCATE( FileInfo%FileIndx(n_lines) )
       ALLOCATE( FileInfo%FileList(n_lines) )
 
-      FileInfo%Lines = StringArray
+      FileInfo%Lines = StringArray( 1:min( len( FileInfo%Lines(1) ), len(StringArray(1)) ) )
       FileInfo%FileLine = (/ (i, i = 1, FileInfo%NumLines) /)
       FileInfo%FileIndx = (/ (1, i = 1, FileInfo%NumLines) /)
       FileInfo%FileList = (/ "passed file info" /)
