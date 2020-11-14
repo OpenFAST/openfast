@@ -374,6 +374,7 @@ SUBROUTINE FVW_SetParametersFromInputs( InitInp, p, ErrStat, ErrMsg )
    integer(IntKi),             intent(  out) :: ErrStat       !< Error status of the operation
    character(*),               intent(  out) :: ErrMsg        !< Error message if ErrStat /= ErrID_None
    ! Local variables
+   character(1024)          :: rootDir, baseName  ! Simulation root dir and basename
    !integer(IntKi)          :: ErrStat2
    !character(ErrMsgLen)    :: ErrMsg2
    character(*), parameter :: RoutineName = 'FVW_SetParametersFromInputs'
@@ -385,6 +386,9 @@ SUBROUTINE FVW_SetParametersFromInputs( InitInp, p, ErrStat, ErrMsg )
    p%DTaero       = InitInp%DTaero          ! AeroDyn Time step
    p%KinVisc      = InitInp%KinVisc         ! Kinematic air viscosity
    p%RootName     = InitInp%RootName        ! Rootname for outputs
+   call GetPath( p%RootName, rootDir, baseName ) 
+   p%VTK_OutFileRoot = trim(rootDir) // 'vtk_fvw'  ! Directory for VTK outputs
+   p%VTK_OutFileBase = trim(rootDir) // 'vtk_fvw' // PathSep // trim(baseName) ! Basename for VTK files
    ! Set indexing to AFI tables -- this is set from the AD15 calling code.
    call AllocAry(p%AFindx,size(InitInp%AFindx,1),size(InitInp%AFindx,2),'AFindx',ErrStat,ErrMsg)
    p%AFindx = InitInp%AFindx     ! Copying in case AD15 still needs these
@@ -411,7 +415,7 @@ SUBROUTINE FVW_SetParametersFromInputFile( InputFileData, p, m, ErrStat, ErrMsg 
    p%IntMethod            = InputFileData%IntMethod
    p%CirculationMethod    = InputFileData%CirculationMethod
    p%CircSolvConvCrit     = InputFileData%CircSolvConvCrit
-   p%CircSolvRelaxation   = InputFileData%CircSolvRelaxation
+   p%CircSolvRelaxation   = InputFileData%CircSolvRelaxation 
    p%CircSolvMaxIter      = InputFileData%CircSolvMaxIter
    p%FreeWakeStart        = InputFileData%FreeWakeStart
    p%CircSolvPolar        = InputFileData%CircSolvPolar
@@ -972,19 +976,19 @@ subroutine FVW_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, ErrStat,
          m%VTKStep = m%iStep+1 ! We use glue code step number for outputs
       endif
       if (m%FirstCall) then
-         call MKDIR('vtk_fvw') ! TODO TODO TODO
+         call MKDIR(p%VTK_OutFileRoot)
       endif
       if ( ( t - m%VTKlastTime ) >= p%DTvtk*OneMinusEpsilon )  then
          m%VTKlastTime = t
          if ((p%VTKCoord==2).or.(p%VTKCoord==3)) then
             ! Hub reference coordinates, for export only, ALL VTK Will be exported in this coordinate system!
             ! Note: hubOrientation and HubPosition are optional, but required for bladeFrame==TRUE
-            call WrVTK_FVW(p, x, z, m, 'vtk_fvw/'//trim(p%RootName)//'FVW_Hub', m%VTKStep, 9, bladeFrame=.TRUE.,  &
+            call WrVTK_FVW(p, x, z, m, trim(p%VTK_OutFileBase)//'FVW_Hub', m%VTKStep, 9, bladeFrame=.TRUE.,  &
                      HubOrientation=real(u%HubOrientation,ReKi),HubPosition=real(u%HubPosition,ReKi))
          endif
          if ((p%VTKCoord==1).or.(p%VTKCoord==3)) then
             ! Global coordinate system, ALL VTK will be exported in global
-            call WrVTK_FVW(p, x, z, m, 'vtk_fvw/'//trim(p%RootName)//'FVW_Glb', m%VTKStep, 9, bladeFrame=.FALSE.)
+            call WrVTK_FVW(p, x, z, m, trim(p%VTK_OutFileBase)//'FVW_Glb', m%VTKStep, 9, bladeFrame=.FALSE.)
          endif
       endif
    endif

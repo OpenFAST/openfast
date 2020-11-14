@@ -74,6 +74,8 @@ IMPLICIT NONE
     REAL(DbKi)  :: DTvtk      !< DT between vtk writes [s]
     INTEGER(IntKi)  :: VTKCoord      !< Switch for VTK outputs coordinate  system [-]
     CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
+    CHARACTER(1024)  :: VTK_OutFileRoot      !< Rootdirectory for writing VTK files [-]
+    CHARACTER(1024)  :: VTK_OutFileBase      !< Basename for writing VTK files [-]
   END TYPE FVW_ParameterType
 ! =======================
 ! =========  FVW_MiscVarType  =======
@@ -343,6 +345,8 @@ ENDIF
     DstParamData%DTvtk = SrcParamData%DTvtk
     DstParamData%VTKCoord = SrcParamData%VTKCoord
     DstParamData%RootName = SrcParamData%RootName
+    DstParamData%VTK_OutFileRoot = SrcParamData%VTK_OutFileRoot
+    DstParamData%VTK_OutFileBase = SrcParamData%VTK_OutFileBase
  END SUBROUTINE FVW_CopyParam
 
  SUBROUTINE FVW_DestroyParam( ParamData, ErrStat, ErrMsg )
@@ -449,6 +453,8 @@ ENDIF
       Db_BufSz   = Db_BufSz   + 1  ! DTvtk
       Int_BufSz  = Int_BufSz  + 1  ! VTKCoord
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%RootName)  ! RootName
+      Int_BufSz  = Int_BufSz  + 1*LEN(InData%VTK_OutFileRoot)  ! VTK_OutFileRoot
+      Int_BufSz  = Int_BufSz  + 1*LEN(InData%VTK_OutFileBase)  ! VTK_OutFileBase
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -599,6 +605,14 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     DO I = 1, LEN(InData%RootName)
       IntKiBuf(Int_Xferred) = ICHAR(InData%RootName(I:I), IntKi)
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
+    DO I = 1, LEN(InData%VTK_OutFileRoot)
+      IntKiBuf(Int_Xferred) = ICHAR(InData%VTK_OutFileRoot(I:I), IntKi)
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
+    DO I = 1, LEN(InData%VTK_OutFileBase)
+      IntKiBuf(Int_Xferred) = ICHAR(InData%VTK_OutFileBase(I:I), IntKi)
       Int_Xferred = Int_Xferred + 1
     END DO ! I
  END SUBROUTINE FVW_PackParam
@@ -765,6 +779,14 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     DO I = 1, LEN(OutData%RootName)
       OutData%RootName(I:I) = CHAR(IntKiBuf(Int_Xferred))
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
+    DO I = 1, LEN(OutData%VTK_OutFileRoot)
+      OutData%VTK_OutFileRoot(I:I) = CHAR(IntKiBuf(Int_Xferred))
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
+    DO I = 1, LEN(OutData%VTK_OutFileBase)
+      OutData%VTK_OutFileBase(I:I) = CHAR(IntKiBuf(Int_Xferred))
       Int_Xferred = Int_Xferred + 1
     END DO ! I
  END SUBROUTINE FVW_UnPackParam
