@@ -7,6 +7,30 @@ include Registry_NWTC_Library.txt
 usefrom AirfoilInfo_Registry.txt
 usefrom UnsteadyAero_Registry.txt
 
+#####################  Grid out          ###############
+typedef  FVW/FVW           GridOutType          CHARACTER(100)                   name              -  -   - "Grid name"  -
+typedef     ^                   ^               ReKi                             DTout             -  -  -  "Output frequency of grid" -
+typedef     ^                   ^               ReKi                             xStart            -  -  -  "xStart" -
+typedef     ^                   ^               ReKi                             yStart            -  -  -  "yStart" -
+typedef     ^                   ^               ReKi                             zStart            -  -  -  "zStart" -
+typedef     ^                   ^               ReKi                             xEnd              -  -  -  "xEnd" -
+typedef     ^                   ^               ReKi                             yEnd              -  -  -  "yEnd" -
+typedef     ^                   ^               ReKi                             zEnd              -  -  -  "zEnd" -
+typedef     ^                   ^               Intki                            nx                -  -  -  "nx" -
+typedef     ^                   ^               Intki                            ny                -  -  -  "ny" -
+typedef     ^                   ^               Intki                            nz                -  -  -  "nz" -
+typedef     ^                   ^               ReKi                             uGrid    {:}{:}{:}{:} - -  "Grid velocity 3 x nz x ny x nx" -
+typedef     ^                   ^               DbKi                             tLastOutput       -  -  -  "Last output time" -
+
+#####################  Segments         ###############
+typedef  FVW/FVW           T_Sgmt               ReKi                             Points     ::    -  -  "Points delimiting the segments" - 
+typedef     ^                   ^               IntKi                            Connct     ::    -  -  "Connectivity of segments" - 
+typedef     ^                   ^               ReKi                             Gamma      :     -  -  "Segment circulations" - 
+typedef     ^                   ^               ReKi                             Epsilon    :     -  -  "Segment regularization parameter" - 
+typedef     ^                   ^               IntKi                            RegFunction   -  -  -  "Type of regularizaion function (LambOseen, Vatistas, see FVW_BiotSavart)"          -
+typedef     ^                   ^               IntKi                            nAct          -  -  -  "Number of active segments"          -
+typedef     ^                   ^               IntKi                            nActP         -  -  -  "Number of active segment points"          -
+# TODO add tree, and part
 
 #####################  Registry for FVW ###############
 # ..... PARAMETERS .............
@@ -51,6 +75,7 @@ typedef     ^                   ^               IntKi                           
 typedef     ^                   ^               CHARACTER(1024)                  RootName      -  -  - "RootName for writing output files"	-
 typedef     ^                   ^               CHARACTER(1024)                  VTK_OutFileRoot - - - "Rootdirectory for writing VTK files"	-
 typedef     ^                   ^               CHARACTER(1024)                  VTK_OutFileBase - - - "Basename for writing VTK files"	-
+typedef     ^                   ^               IntKi                            nGridOut      -  - -    "Number of VTK grid to output" -
 
 # ....... MiscVars ............
 # FVW_MiscVarType
@@ -93,13 +118,10 @@ typedef     ^                   ^               ReKi                            
 typedef     ^                   ^               ReKi                             dxdt_NW        ::::    -  -  "State time derivatie, stored for subcylcing" - 
 typedef     ^                   ^               ReKi                             dxdt_FW        ::::    -  -  "State time derivatie, stored for subcylcing" - 
 # Convenient storage
-typedef     ^                   ^               Reki                             alpha_LL     ::   -  -  "Angle of attack at lifting line CP, only computed with CircPolarData method" -
-typedef     ^                   ^               Reki                             Vreln_LL        ::   -  -  "Norm of Vrel on the lifting line" -
+typedef     ^                   ^               Reki                             alpha_LL      ::   -  -  "Angle of attack at lifting line CP, only computed with CircPolarData method" -
+typedef     ^                   ^               Reki                             Vreln_LL      ::   -  -  "Norm of Vrel on the lifting line" -
 # Segment storage (buffer)
-typedef     ^                   ^               IntKi                            SegConnct     ::    -  -  "Connectivity of segments" - 
-typedef     ^                   ^               ReKi                             SegPoints     ::    -  -  "Points delimiting the segments" - 
-typedef     ^                   ^               ReKi                             SegGamma      :     -  -  "Segment circulations" - 
-typedef     ^                   ^               ReKi                             SegEpsilon    :     -  -  "Segment regularization parameter" - 
+typedef     ^                   ^               T_Sgmt                           Sgmt           -   -  -  "Segments storage" -
 # Wake rollup storage (buffer)
 typedef     ^                   ^               ReKi                             CPs           ::    -  -  "Control points used for wake rollup computation" - 
 typedef     ^                   ^               ReKi                             Uind          ::    -  -  "Induced velocities obtained at control points" -
@@ -119,6 +141,8 @@ typedef     ^                   ^               ReKi                            
 typedef     ^                   ^               ReKi                             BN_Cm         ::    -  -  "Coefficient moment, including unsteady aero effects" -
 typedef     ^                   ^               ReKi                             BN_Cx         ::    -  -  "normal force coefficient (normal to the plane, not chord) of the jth node in the kth blade"   -
 typedef     ^                   ^               ReKi                             BN_Cy         ::    -  -  "tangential force coefficient (tangential to the plane, not chord) of the jth node in the kth blade"   -
+# Outputs
+typedef     ^                   ^               GridOutType                      GridOutputs   {:}  - -    "Number of VTK grid to output" -
 
 # TODO UA - Should be part of AeroDyn
 typedef     ^                   ^               UA_InputType                     u_UA    {:}{:}{:} - -  "inputs to UnsteadyAero  numBlades x numNode x 2 (t and t+dt)"        -

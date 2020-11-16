@@ -42,6 +42,7 @@ module FVW_VortexTools
       type(T_Part)  :: Part            !< Storage for all particles
       integer       :: iStep =-1       !< Time step at which the tree was built
       logical       :: bGrown =.false. !< Is the tree build
+      real(ReKi)    :: DistanceDirect
       type(T_Node)  :: Root            !< Contains the chained-list of nodes
    end type T_Tree
 
@@ -50,6 +51,37 @@ module FVW_VortexTools
    end interface 
 
 contains
+   !> Flatten/ravel a 3D grid of vectors (each of size n)
+   subroutine FlattenValues(GridValues, FlatValues, iHeadP)
+      real(Reki), dimension(:,:,:,:),  intent(in   )  :: GridValues  !< Grid values n x nx x ny x nz
+      real(ReKi), dimension(:,:),      intent(  out)  :: FlatValues  !< Flat values n x (nx x ny x nz)
+      integer(IntKi),                  intent(inout)  :: iHeadP      !< Index indicating where to start in Values
+      integer(IntKi) :: i,j,k
+      do k = 1, size(GridValues,4)
+         do j = 1, size(GridValues,3)
+            do i = 1, size(GridValues,2)
+               FlatValues(:,iHeadP) = GridValues(:, i, j, k)
+               iHeadP=iHeadP+1
+            enddo
+         enddo
+      enddo
+   endsubroutine FlattenValues
+
+   !> Flatten a 3D grid of vectors (each of size n)
+   subroutine DeflateValues(FlatValues, GridValues, iHeadP)
+      real(ReKi), dimension(:,:),      intent(in   )  :: FlatValues  !< Flat values n x (nx x ny x nz)
+      real(Reki), dimension(:,:,:,:),  intent(  out)  :: GridValues  !< Grid values n x nx x ny x nz
+      integer(IntKi),                  intent(inout)  :: iHeadP      !< Index indicating where to start in Values
+      integer(IntKi) :: i,j,k
+      do k = 1, size(GridValues,4)
+         do j = 1, size(GridValues,3)
+            do i = 1, size(GridValues,2)
+               GridValues(:, i, j, k) = FlatValues(:,iHeadP) 
+               iHeadP=iHeadP+1
+            enddo
+         enddo
+      enddo
+   endsubroutine DeflateValues
 
    subroutine VecToLattice(PointVectors, iDepthStart, LatticeVectors, iHeadP)
       real(Reki), dimension(:,:),        intent(in   )  :: PointVectors   !< nVal x n
@@ -365,7 +397,7 @@ contains
          node%branches=>null()
          node%leaves=>null()
          node%nPart=Part%n
-         ! --- Calling grow function on subbrances
+         ! --- Calling grow function on subbranches
          call grow_tree_parallel(Tree%root, Tree%Part)
 !          call grow_tree_rec(Tree%root, Tree%Part)
       endif

@@ -415,8 +415,11 @@ subroutine SetRequestedWindPoints(r_wind, x, p, m)
    real(ReKi), dimension(:,:), allocatable,      intent(inout) :: r_wind  !< Position where wind is requested
    type(FVW_ContinuousStateType),   intent(inout)              :: x       !< States
    type(FVW_ParameterType),         intent(in   )              :: p       !< Parameters
-   type(FVW_MiscVarType),           intent(in   )              :: m       !< Initial misc/optimization variables
-   integer(IntKi)          :: iP_start,iP_end   ! Current index of point, start and end of range
+   type(FVW_MiscVarType),           intent(in   ), target      :: m       !< Initial misc/optimization variables
+   integer(IntKi) :: iP_start,iP_end   ! Current index of point, start and end of range
+   integer(IntKi) :: iGrid,i,j,k
+   real(ReKi) :: xP,yP,zP,dx,dy,dz
+   type(GridOutType), pointer :: g
 
    ! Using array reshaping to ensure a given near or far wake point is always at the same location in the array.
    ! NOTE: Maximum number of points are passed, whether they "exist" or not. 
@@ -449,6 +452,26 @@ subroutine SetRequestedWindPoints(r_wind, x, p, m)
       iP_end=iP_start-1+(FWnSpan+1)*(p%nFWMax+1)*p%nWings
       r_wind(1:3,iP_start:iP_end) = reshape( x%r_FW(1:3,1:FWnSpan+1,1:p%nFWMax+1,1:p%nWings), (/ 3, (FWnSpan+1)*(p%nFWMax+1)*p%nWings /))
    endif
+   ! --- VTK points
+   ! TODO optimize this, and do it only once
+   iP_start=iP_end+1
+   do iGrid=1,p%nGridOut
+      g => m%GridOutputs(iGrid)
+      dx = (g%xEnd- g%xStart)/max(g%nx-1,1)
+      dy = (g%yEnd- g%yStart)/max(g%ny-1,1)
+      dz = (g%zEnd- g%zStart)/max(g%nz-1,1)
+      do k=1,g%nz
+         zP = g%zStart  + (k-1)*dz
+         do j=1,g%ny
+            yP = g%yStart  + (j-1)*dy
+            do i=1,g%nx
+               xP = g%xStart  + (i-1)*dx
+               r_wind(1:3,iP_start) = (/xP,yP,zP/)
+               iP_start=iP_start+1
+            enddo
+         enddo
+      enddo ! Loop on z
+   enddo ! Loop on grids
 
    !if (DEV_VERSION) then
    !   ! Additional checks
@@ -475,8 +498,10 @@ end subroutine SetRequestedWindPoints
 subroutine DistributeRequestedWind(V_wind, p, m)
    real(ReKi), dimension(:,:),      intent(in   ) :: V_wind  !< Position where wind is requested
    type(FVW_ParameterType),         intent(in   ) :: p       !< Parameters
-   type(FVW_MiscVarType),           intent(inout) :: m       !< Initial misc/optimization variables
+   type(FVW_MiscVarType), target,   intent(inout) :: m       !< Initial misc/optimization variables
    integer(IntKi)          :: iP_start,iP_end   ! Current index of point, start and end of range
+   integer(IntKi) :: iGrid,i,j,k
+   type(GridOutType), pointer :: g
 
    ! Using array reshaping to ensure a given near or far wake point is always at the same location in the array.
    ! NOTE: Maximum number of points are passed, whether they "exist" or not. 
@@ -494,6 +519,20 @@ subroutine DistributeRequestedWind(V_wind, p, m)
       iP_end=iP_start-1+(FWnSpan+1)*(p%nFWMax+1)*p%nWings
       m%Vwnd_FW(1:3,1:FWnSpan+1,1:p%nFWMax+1,1:p%nWings) = reshape( V_wind(1:3,iP_start:iP_end), (/ 3, FWnSpan+1, p%nFWMax+1, p%nWings /))
    endif
+   ! --- VTK points
+   ! TODO optimize this
+   iP_start=iP_end+1
+   do iGrid=1,p%nGridOut
+      g => m%GridOutputs(iGrid)
+      do k=1,g%nz
+         do j=1,g%ny
+            do i=1,g%nx
+               g%uGrid(1:3,i,j,k) = V_wind(1:3,iP_start)
+               iP_start=iP_start+1
+            enddo
+         enddo
+      enddo ! Loop on x
+   enddo ! Loop on grids
 
 end subroutine DistributeRequestedWind
 
@@ -678,6 +717,7 @@ subroutine FVW_InitRegularization(p, m, ErrStat, ErrMsg)
       p%WakeRegParam       = RegParam
       p%WingRegParam       = RegParam
       p%CoreSpreadEddyVisc = 100
+      m%Sgmt%RegFunction    = p%RegFunction
       write(*,'(A)'   )   'The following regularization parameters will be used:'
       write(*,'(A,I0)'   )   'WakeRegMethod     : ', p%WakeRegMethod
       write(*,'(A,I0)'   )   'RegFunction       : ', p%RegFunction
@@ -738,6 +778,185 @@ subroutine WakeRegularization(p, x, m, SegConnct, SegPoints, SegGamma, SegEpsilo
 end subroutine WakeRegularization
 
 
+!> Compute induced velocities from all vortex elements onto nPoints
+!! In : x, x%r_NW, x%r_FW, x%Gamma_NW, x%Gamma_FW
+!! Out: Vind
+subroutine InducedVelocitiesAll_OnGrid(g, p, x, m, ErrStat, ErrMsg)
+   type(GridOutType),               intent(inout) :: g       !< Grid on whcih to compute the velocity
+   type(FVW_ParameterType),         intent(in   ) :: p       !< Parameters
+   type(FVW_ContinuousStateType),   intent(in   ) :: x       !< States
+   type(FVW_MiscVarType),           intent(inout) :: m       !< Initial misc/optimization variables
+   integer(IntKi),                  intent(  out) :: ErrStat !< Error status of the operation
+   character(*),                    intent(  out) :: ErrMsg  !< Error message if ErrStat /= ErrID_None
+   ! Local variables
+   integer(IntKi) :: nCPs, iHeadP
+   integer(IntKi) :: i,j,k
+   real(ReKi) :: xP,yP,zP,dx,dy,dz
+   ! TODO new options
+   type(T_Tree)   :: Tree
+   type(T_Part)   :: Part
+   real(ReKi), dimension(:,:), allocatable :: CPs  ! TODO get rid of me with dedicated functions
+   real(ReKi), dimension(:,:), allocatable :: Uind ! TODO get rid of me with dedicated functions
+   ErrStat= ErrID_None
+   ErrMsg =''
+
+   ! --- Packing control points
+   nCPs = g%nx * g%ny * g%nz
+   allocate(CPs(3, nCPs))
+   iHeadP=1
+   dx = (g%xEnd- g%xStart)/max(g%nx-1,1)
+   dy = (g%yEnd- g%yStart)/max(g%ny-1,1)
+   dz = (g%zEnd- g%zStart)/max(g%nz-1,1)
+   do k=1,g%nz
+      zP = g%zStart  + (k-1)*dz
+      do j=1,g%ny
+         yP = g%yStart  + (j-1)*dy
+         do i=1,g%nx
+            xP = g%xStart  + (i-1)*dx
+            CPs(1:3,iHeadP) = (/xP,yP,zP/)
+            iHeadP=iHeadP+1
+         enddo
+      enddo
+   enddo ! Loop on z
+
+   ! --- Packing Uind points
+   allocate(Uind(3, nCPs)); Uind=0.0_ReKi
+   iHeadP=1
+   call FlattenValues(g%uGrid, Uind, iHeadP); ! NOTE: Uind contains uGrid now (Uwnd)
+
+   ! --- Compute induced velocity
+   ! Convert Panels to segments, segments to particles, particles to tree
+   call InducedVelocitiesAll_Init(p, x, m, m%Sgmt, Part, Tree, ErrStat, ErrMsg)
+   call InducedVelocitiesAll_Calc(CPs, nCPs, Uind, p, m%Sgmt, Part, Tree, ErrStat, ErrMsg)
+   call InducedVelocitiesAll_End(p, m, Tree, Part, ErrStat, ErrMsg)
+
+   ! --- Unpacking induced velocity points
+   iHeadP=1
+   call DeflateValues(Uind, g%uGrid, iHeadP)
+
+   deallocate(CPs)
+   deallocate(Uind)
+
+end subroutine InducedVelocitiesAll_OnGrid
+
+
+
+!> Perform initialization steps before requesting induced velocities from All vortex elements
+!! In : x%r_NW, x%r_FW, x%Gamma_NW, x%Gamma_FW
+!! Out: Tree, Part, m
+subroutine InducedVelocitiesAll_Init(p, x, m, Sgmt, Part, Tree,  ErrStat, ErrMsg)
+   type(FVW_ParameterType),         intent(in   ) :: p       !< Parameters
+   type(FVW_ContinuousStateType),   intent(in   ) :: x       !< States
+   type(FVW_MiscVarType),           intent(in   ) :: m       !< Misc
+   type(T_Sgmt),                    intent(inout) :: Sgmt    !< Segments
+   type(T_Part),                    intent(out)   :: Part    !< Particle storage if needed
+   type(T_Tree),                    intent(out)   :: Tree    !< Tree of particles if needed
+   integer(IntKi),                  intent(  out) :: ErrStat !< Error status of the operation
+   character(*),                    intent(  out) :: ErrMsg  !< Error message if ErrStat /= ErrID_None
+   ! Local variables
+   integer(IntKi) :: iHeadP, nSeg, nSegP
+   logical        :: bMirror ! True if we mirror the vorticity wrt ground
+   integer(IntKi) :: nPart
+   ErrStat= ErrID_None
+   ErrMsg =''
+
+   bMirror = p%ShearModel==idShearMirror ! Whether or not we mirror the vorticity wrt ground
+
+   ! --- Packing all vortex elements into a list of segments
+   call PackPanelsToSegments(p, m, x, 1, bMirror, Sgmt%Connct, Sgmt%Points, Sgmt%Gamma, nSeg, nSegP)
+   Sgmt%RegFunction=p%RegFunction
+   Sgmt%nAct  = nSeg
+   Sgmt%nActP = nSegP
+
+   ! --- Setting up regularization SegEpsilon
+   call WakeRegularization(p, x, m, Sgmt%Connct, Sgmt%Points, Sgmt%Gamma, Sgmt%Epsilon(1:nSeg), ErrStat, ErrMsg)
+
+   ! --- Converting to particles
+   if ((p%VelocityMethod==idVelocityTree) .or. (p%VelocityMethod==idVelocityPart)) then
+      iHeadP=1
+      nPart = p%PartPerSegment * nSeg 
+      allocate(Part%P(3,nPart), Part%Alpha(3,nPart), Part%RegParam(nPart))
+      Part%Alpha(:,:)  = -99999.99_ReKi
+      Part%P(:,:)      = -99999.99_ReKi
+      Part%RegParam(:) = -99999.99_ReKi
+      call SegmentsToPart(Sgmt%Points, Sgmt%Connct, Sgmt%Gamma, Sgmt%Epsilon, 1, nSeg, p%PartPerSegment, Part%P, Part%Alpha, Part%RegParam, iHeadP)
+      if (p%RegFunction/=idRegNone) then
+         Part%RegFunction = idRegExp ! TODO need to find a good equivalence and potentially adapt Epsilon in SegmentsToPart
+      endif
+      if (DEV_VERSION) then
+         if (any(Part%RegParam(:)<-9999.99_ReKi)) then
+            print*,'Error in Segment to part conversion'
+            STOP
+         endif
+      endif
+   endif
+
+   ! Grow tree if needed
+   if (p%VelocityMethod==idVelocityTree) then
+      Tree%DistanceDirect = 2*sum(Part%RegParam)/size(Part%RegParam) ! 2*mean(eps), below that distance eps has a strong effect
+      call grow_tree(Tree, Part%P, Part%Alpha, Part%RegFunction, Part%RegParam, 0)
+   endif
+
+end subroutine InducedVelocitiesAll_Init
+
+!> Compute induced velocity on flat CPs 
+subroutine InducedVelocitiesAll_Calc(CPs, nCPs, Uind, p, Sgmt, Part, Tree, ErrStat, ErrMsg)
+   real(ReKi), dimension(:,:),      intent(in)    :: CPs     !< Control points (3 x nCPs++)
+   integer(IntKi)                 , intent(in)    :: nCPs    !< Number of control points on which to compute (nCPs <= size(CPs,2))
+   real(ReKi), dimension(:,: )    , intent(inout) :: Uind    !< Induced velocity vector - Side effects!!! (3 x nCPs++)
+   type(FVW_ParameterType),         intent(in   ) :: p       !< Parameters
+   type(T_Sgmt),                    intent(in   ) :: Sgmt    !< Tree of particles if needed
+   type(T_Part),                    intent(in   ) :: Part    !< Particle storage if needed
+   type(T_Tree),                    intent(inout) :: Tree    !< Tree of particles if needed
+   integer(IntKi),                  intent(  out) :: ErrStat !< Error status of the operation
+   character(*),                    intent(  out) :: ErrMsg  !< Error message if ErrStat /= ErrID_None
+   ! Local variables
+   ErrStat= ErrID_None
+   ErrMsg =''
+
+   if (p%VelocityMethod==idVelocityBasic) then
+      call ui_seg( 1, nCPs, CPs, 1, Sgmt%nAct, Sgmt%nAct, Sgmt%nActP, Sgmt%Points, Sgmt%Connct, Sgmt%Gamma, Sgmt%RegFunction, Sgmt%Epsilon, Uind)
+
+   elseif (p%VelocityMethod==idVelocityTree) then
+      ! Tree has already been grown with InducedVelocitiesAll_Init
+      !call print_tree(Tree)
+      call ui_tree(Tree, CPs, 0, 1, nCPs, p%TreeBranchFactor, Tree%DistanceDirect, Uind, ErrStat, ErrMsg)
+
+   elseif (p%VelocityMethod==idVelocityPart) then
+      call ui_part_nograd(CPs ,Part%P, Part%Alpha, Part%RegFunction, Part%RegParam, Uind, nCPs, size(Part%P,2))
+   endif
+end subroutine InducedVelocitiesAll_Calc
+
+
+!> Perform termination steps after velocity was requested from all vortex elements
+!! InOut: Tree, Part, m
+subroutine InducedVelocitiesAll_End(p, m, Tree, Part, ErrStat, ErrMsg)
+   type(FVW_ParameterType),         intent(in   ) :: p       !< Parameters
+   type(FVW_MiscVarType),           intent(inout) :: m       !< Initial misc/optimization variables
+   type(T_Tree),                    intent(inout) :: Tree    !< Tree of particles if needed
+   type(T_Part),                    intent(inout) :: Part    !< Particle storage if needed
+   integer(IntKi),                  intent(  out) :: ErrStat !< Error status of the operation
+   character(*),                    intent(  out) :: ErrMsg  !< Error message if ErrStat /= ErrID_None
+   ! Local variables
+   ErrStat= ErrID_None
+   ErrMsg =''
+
+   if (p%VelocityMethod==idVelocityBasic) then
+      ! Nothing
+
+   elseif (p%VelocityMethod==idVelocityTree) then
+      call cut_tree(Tree)
+      deallocate(Part%P, Part%Alpha, Part%RegParam)
+
+   elseif (p%VelocityMethod==idVelocityPart) then
+      deallocate(Part%P, Part%Alpha, Part%RegParam)
+   endif
+
+end subroutine InducedVelocitiesAll_End
+
+
+
+
 !> Compute induced velocities from all vortex elements onto all the vortex elements
 !! In : x%r_NW, x%r_FW, x%Gamma_NW, x%Gamma_FW
 !! Out: m%Vind_NW, m%Vind_FW
@@ -748,77 +967,29 @@ subroutine WakeInducedVelocities(p, x, m, ErrStat, ErrMsg)
    integer(IntKi),                  intent(  out) :: ErrStat !< Error status of the operation
    character(*),                    intent(  out) :: ErrMsg  !< Error message if ErrStat /= ErrID_None
    ! Local variables
-   integer(IntKi) :: iW, nSeg, nSegP, nCPs, iHeadP
+   integer(IntKi) :: iW, nCPs, iHeadP
    integer(IntKi) :: nFWEff  ! Number of farwake panels that are free at current tmie step
-   logical        :: bMirror ! True if we mirror the vorticity wrt ground
-   ! TODO new options
-   integer(IntKi) :: RegFunctionPart
-   integer(IntKi) :: nPart
-   real(ReKi)     :: DistanceDirect ! Distance under which direct evaluation of the Biot-Savart should be done for tree
    type(T_Tree)   :: Tree
-   real(ReKi), dimension(:,:), allocatable :: PartPoints !< Particle points
-   real(ReKi), dimension(:,:), allocatable :: PartAlpha  !< Particle circulation
-   real(ReKi), dimension(:)  , allocatable :: PartEpsilon !< Regularization parameter
+   type(T_Part)   :: Part
    ErrStat= ErrID_None
    ErrMsg =''
 
    nFWEff = min(m%nFW, p%nFWFree)
-   bMirror = p%ShearModel==idShearMirror ! Whether or not we mirror the vorticity wrt ground
 
-   m%Vind_NW = -9999._ReKi !< Safety
-   m%Vind_FW = -9999._ReKi !< Safety
+   ! --- Pack control points
+   call PackConvectingPoints() ! m%CPs
 
-   ! --- Packing all vortex elements into a list of segments
-   ! NOTE: modifies m%Seg* 
-   call PackPanelsToSegments(p, m, x, 1, bMirror, m%SegConnct, m%SegPoints, m%SegGamma, nSeg, nSegP)
-
-   ! --- Setting up regularization SegEpsilon
-   call WakeRegularization(p, x, m, m%SegConnct, m%SegPoints, m%SegGamma, m%SegEpsilon(1:nSeg), ErrStat, ErrMsg)
-
-   ! --- Computing induced velocity
-   call PackConvectingPoints()
-   if (DEV_VERSION) then
-      print'(A,I0,A,I0,A,I0)','Convection - nSeg:',nSeg,' - nSegP:',nSegP, ' - nCPs:',nCPs
-   endif
-
-   ! --- Converting to particles
-   if ((p%VelocityMethod==idVelocityTree) .or. (p%VelocityMethod==idVelocityPart)) then
-      iHeadP=1
-      nPart = p%PartPerSegment * nSeg 
-      allocate(PartPoints(3,nPart), PartAlpha(3,nPart), PartEpsilon(nPart))
-      PartAlpha(:,:)  = -99999.99_ReKi
-      PartPoints(:,:) = -99999.99_ReKi
-      PartEpsilon(:)  = -99999.99_ReKi
-      call SegmentsToPart(m%SegPoints, m%SegConnct, m%SegGamma, m%SegEpsilon, 1, nSeg, p%PartPerSegment, PartPoints, PartAlpha, PartEpsilon, iHeadP)
-      if (p%RegFunction/=idRegNone) then
-         RegFunctionPart = idRegExp ! TODO need to find a good equivalence and potentially adapt Epsilon in SegmentsToPart
-      endif
-      if (any(PartEpsilon(:)<-9999.99_ReKi)) then
-         print*,'Error in Segment to part conversion'
-         STOP
-      endif
-   endif
-
-   ! --- Getting induced velocity
+   ! --- Compute induced velocity
+   ! Convert Panels to segments, segments to particles, particles to tree
    m%Uind=0.0_ReKi ! very important due to side effects of ui_* methods
-   if (p%VelocityMethod==idVelocityBasic) then
-      call ui_seg( 1, nCPs, m%CPs, 1, nSeg, nSeg, nSegP, m%SegPoints, m%SegConnct, m%SegGamma, p%RegFunction, m%SegEpsilon, m%Uind)
-
-   elseif (p%VelocityMethod==idVelocityTree) then
-
-      DistanceDirect = 2*sum(PartEpsilon)/size(PartEpsilon) ! 2*mean(eps), below that distance eps has a strong effect
-      call grow_tree(Tree, PartPoints, PartAlpha, RegFunctionPart, PartEpsilon, 0)
-      !call print_tree(Tree)
-      call ui_tree(Tree, m%CPs, 0, 1, nCPs, p%TreeBranchFactor, DistanceDirect, m%Uind, ErrStat, ErrMsg)
-      call cut_tree(Tree)
-      deallocate(PartPoints, PartAlpha, PartEpsilon)
-
-   elseif (p%VelocityMethod==idVelocityPart) then
-      call ui_part_nograd(m%CPs ,PartPoints, PartAlpha, RegFunctionPart, PartEpsilon, m%Uind, nCPs, nPart)
-      deallocate(PartPoints, PartAlpha, PartEpsilon)
-   endif
+   call InducedVelocitiesAll_Init(p, x, m, m%Sgmt, Part, Tree, ErrStat, ErrMsg)
+   call InducedVelocitiesAll_Calc(m%CPs, nCPs, m%Uind, p, m%Sgmt, Part, Tree, ErrStat, ErrMsg)
+   call InducedVelocitiesAll_End(p, m, Tree, Part, ErrStat, ErrMsg)
    call UnPackInducedVelocity()
 
+   if (DEV_VERSION) then
+      print'(A,I0,A,I0,A,I0)','Convection - nSeg:',m%Sgmt%nAct,' - nSegP:',m%Sgmt%nActP, ' - nCPs:',nCPs
+   endif
 contains
    !> Pack all the points that convect 
    subroutine PackConvectingPoints()
@@ -850,6 +1021,8 @@ contains
    end subroutine
    !> Distribute the induced velocity to the proper location 
    subroutine UnPackInducedVelocity()
+      m%Vind_NW = -9999._ReKi !< Safety
+      m%Vind_FW = -9999._ReKi !< Safety
       iHeadP=1
       do iW=1,p%nWings
          CALL VecToLattice(m%Uind, 1, m%Vind_NW(:,:,1:m%nNW+1,iW), iHeadP)
@@ -873,7 +1046,7 @@ contains
       endif
    end subroutine
 
-end subroutine
+end subroutine WakeInducedVelocities
 
 !> Compute induced velocities from all vortex elements onto the lifting line control points
 !! In : x%r_NW, x%r_FW, x%Gamma_NW, x%Gamma_FW
@@ -896,7 +1069,7 @@ subroutine LiftingLineInducedVelocities(p, x, iDepthStart, m, ErrStat, ErrMsg)
    bMirror = p%ShearModel==idShearMirror ! Whether or not we mirror the vorticity wrt ground
 
    ! --- Packing all vortex elements into a list of segments
-   call PackPanelsToSegments(p, m, x, iDepthStart, bMirror, m%SegConnct, m%SegPoints, m%SegGamma, nSeg, nSegP)
+   call PackPanelsToSegments(p, m, x, iDepthStart, bMirror, m%Sgmt%Connct, m%Sgmt%Points, m%Sgmt%Gamma, nSeg, nSegP)
 
    ! --- Computing induced velocity
    if (nSegP==0) then
@@ -907,7 +1080,7 @@ subroutine LiftingLineInducedVelocities(p, x, iDepthStart, m, ErrStat, ErrMsg)
       endif
    else
       ! --- Setting up regularization
-      call WakeRegularization(p, x, m, m%SegConnct(:,1:nSeg), m%SegPoints(:,1:nSegP), m%SegGamma(1:nSeg), m%SegEpsilon(1:nSeg), ErrStat, ErrMsg)
+      call WakeRegularization(p, x, m, m%Sgmt%Connct(:,1:nSeg), m%Sgmt%Points(:,1:nSegP), m%Sgmt%Gamma(1:nSeg), m%Sgmt%Epsilon(1:nSeg), ErrStat, ErrMsg)
 
       nCPs=p%nWings * p%nSpan
       allocate(CPs (1:3,1:nCPs)) ! NOTE: here we do allocate CPs and Uind insteadof using Misc 
@@ -918,7 +1091,7 @@ subroutine LiftingLineInducedVelocities(p, x, iDepthStart, m, ErrStat, ErrMsg)
       if (DEV_VERSION) then
          print'(A,I0,A,I0,A,I0)','Induction -  nSeg:',nSeg,' - nSegP:',nSegP, ' - nCPs:',nCPs
       endif
-      call ui_seg( 1, nCPs, CPs, 1, nSeg, nSeg, nSegP, m%SegPoints, m%SegConnct, m%SegGamma, p%RegFunction, m%SegEpsilon, Uind)
+      call ui_seg( 1, nCPs, CPs, 1, nSeg, nSeg, nSegP, m%Sgmt%Points, m%Sgmt%Connct, m%Sgmt%Gamma, m%Sgmt%RegFunction, m%Sgmt%Epsilon, Uind)
       call UnPackLiftingLineVelocities()
 
       deallocate(Uind)

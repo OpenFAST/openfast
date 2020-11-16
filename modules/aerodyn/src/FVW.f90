@@ -100,7 +100,7 @@ subroutine FVW_Init(AFInfo, InitInp, u, p, x, xd, z, OtherState, y, m, Interval,
    CALL FVW_SetParametersFromInputs(InitInp, p, ErrStat2, ErrMsg2); if(Failed()) return
 
    ! Read and parse the input file here to get other parameters and info
-   CALL FVW_ReadInputFile(InitInp%FVWFileName, p, InputFileData, ErrStat2, ErrMsg2); if(Failed()) return
+   CALL FVW_ReadInputFile(InitInp%FVWFileName, p, m, InputFileData, ErrStat2, ErrMsg2); if(Failed()) return
 
    ! Trigger required before allocations
    p%nNWMax  = max(InputFileData%nNWPanels,0)+1          ! +1 since LL panel included in NW
@@ -148,6 +148,7 @@ subroutine FVW_Init(AFInfo, InitInp, u, p, x, xd, z, OtherState, y, m, Interval,
    ! Return anything in FVW_InitOutput that should be passed back to the calling code here
 
 
+
    ! --- UA 
    ! NOTE: quick and dirty since this should belong to AD
    interval = InitInp%DTAero ! important, gluecode and UA, needs proper interval
@@ -174,6 +175,7 @@ subroutine FVW_InitMiscVars( p, m, ErrStat, ErrMsg )
    integer(IntKi),                  intent(  out)  :: ErrStat        !< Error status of the operation
    character(*),                    intent(  out)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
    integer(IntKi)          :: nMax           ! Total number of wind points possible
+   integer(IntKi)          :: iGrid          ! 
    integer(IntKi)          :: ErrStat2       ! temporary error status of the operation
    character(ErrMsgLen)    :: ErrMsg2        ! temporary error message
    character(*), parameter :: RoutineName = 'FVW_InitMiscVars'
@@ -242,6 +244,12 @@ subroutine FVW_InitMiscVars( p, m, ErrStat, ErrMsg )
    nMax = nMax +  p%nSpan                   * p%nWings   ! Lifting line Control Points
    nMax = nMax + (p%nSpan+1) * (p%nNWMax+1) * p%nWings   ! Nearwake points
    nMax = nMax + (FWnSpan+1) * (p%nFWMax+1) * p%nWings   ! Far wake points
+   do iGrid=1,p%nGridOut
+      nMax = nMax + m%GridOutputs(iGrid)%nx * m%GridOutputs(iGrid)%ny * m%GridOutputs(iGrid)%nz
+      call AllocAry(m%GridOutputs(iGrid)%uGrid, 3, m%GridOutputs(iGrid)%nx,  m%GridOutputs(iGrid)%ny, m%GridOutputs(iGrid)%nz, 'uGrid', ErrStat2, ErrMsg2);
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName)
+      m%GridOutputs(iGrid)%tLastOutput = -HUGE(1.0_DbKi)
+   enddo
    call AllocAry( m%r_wind, 3, nMax, 'Requested wind points', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName )
    m%r_wind = 0.0_ReKi     ! set to zero so InflowWind can shortcut calculations
    m%OldWakeTime = -HUGE(1.0_DbKi)
@@ -275,10 +283,13 @@ subroutine FVW_InitMiscVarsPostParam( p, m, ErrStat, ErrMsg )
       nSeg  = nSeg*2
       nSegP = nSegP*2
    endif
-   call AllocAry( m%SegConnct, 4, nSeg , 'SegConnct' , ErrStat2, ErrMsg2 );call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); m%SegConnct = -999;
-   call AllocAry( m%SegPoints, 3, nSegP, 'SegPoints' , ErrStat2, ErrMsg2 );call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); m%SegPoints = -999999_ReKi;
-   call AllocAry( m%SegGamma ,    nSeg,  'SegGamma'  , ErrStat2, ErrMsg2 );call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); m%SegGamma  = -999999_ReKi;
-   call AllocAry( m%SegEpsilon,   nSeg,  'SegEpsilon', ErrStat2, ErrMsg2 );call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); m%SegEpsilon= -999999_ReKi;
+   call AllocAry( m%Sgmt%Connct, 4, nSeg , 'SegConnct' , ErrStat2, ErrMsg2 );call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); m%Sgmt%Connct = -999;
+   call AllocAry( m%Sgmt%Points, 3, nSegP, 'SegPoints' , ErrStat2, ErrMsg2 );call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); m%Sgmt%Points = -999999_ReKi;
+   call AllocAry( m%Sgmt%Gamma ,    nSeg,  'SegGamma'  , ErrStat2, ErrMsg2 );call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); m%Sgmt%Gamma  = -999999_ReKi;
+   call AllocAry( m%Sgmt%Epsilon,   nSeg,  'SegEpsilon', ErrStat2, ErrMsg2 );call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); m%Sgmt%Epsilon= -999999_ReKi;
+   m%Sgmt%nAct        = -1  ! Active segments
+   m%Sgmt%nActP       = -1
+   m%Sgmt%RegFunction = p%RegFunction
 
    call AllocAry( m%CPs      , 3,  nCPs, 'CPs'       , ErrStat2, ErrMsg2 );call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); m%CPs= -999999_ReKi;
    call AllocAry( m%Uind     , 3,  nCPs, 'Uind'      , ErrStat2, ErrMsg2 );call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); m%Uind= -999999_ReKi;
@@ -926,8 +937,9 @@ subroutine FVW_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, ErrStat,
    integer(IntKi),                  intent(  out)  :: ErrStat     !< Error status of the operation
    character(*),                    intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
    ! Local variables
-   integer(IntKi)                :: iW, n, i0, i1, i2
+   integer(IntKi)                :: iW, n, i0, i1, i2, iGrid
    integer(IntKi)                :: ErrStat2
+   logical                       :: bGridOutNeeded
    character(ErrMsgLen)          :: ErrMsg2
    character(*), parameter       :: RoutineName = 'FVW_CalcOutput'
 
@@ -969,12 +981,12 @@ subroutine FVW_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, ErrStat,
    endif
 
    ! --- Write to local VTK at fps requested
+   if (m%VTKStep==-1) then 
+      m%VTKStep = 0 ! Has never been called, special handling for init
+   else
+      m%VTKStep = m%iStep+1 ! We use glue code step number for outputs
+   endif
    if (p%WrVTK==1) then
-      if (m%VTKStep==-1) then 
-         m%VTKStep = 0 ! Has never been called, special handling for init
-      else
-         m%VTKStep = m%iStep+1 ! We use glue code step number for outputs
-      endif
       if (m%FirstCall) then
          call MKDIR(p%VTK_OutFileRoot)
       endif
@@ -991,6 +1003,22 @@ subroutine FVW_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, ErrStat,
             call WrVTK_FVW(p, x, z, m, trim(p%VTK_OutFileBase)//'FVW_Glb', m%VTKStep, 9, bladeFrame=.FALSE.)
          endif
       endif
+   endif
+   ! --- Write VTK grids
+   if (p%nGridOut>0) then
+      if (m%FirstCall) then
+         call MKDIR(p%VTK_OutFileRoot)
+      endif
+      do iGrid=1,p%nGridOut
+         if ( ( t - m%GridOutputs(iGrid)%tLastOutput) >= m%GridOutputs(iGrid)%DTout * OneMinusEpsilon )  then
+            ! Compute induced velocity on grid, TODO use the same Tree for all CalcOutput
+            call InducedVelocitiesAll_OnGrid(m%GridOutputs(iGrid), p, x, m, ErrStat2, ErrMsg2); if (Failed()) return
+
+            m%GridOutputs(iGrid)%tLastOutput = t
+            call WrVTK_FVW_Grid(p, x, z, m, iGrid, trim(p%VTK_OutFileBase)//'FVW_Grid', m%VTKStep, 9)
+         endif
+      enddo
+
    endif
 
 
