@@ -276,10 +276,12 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
 
      !  Parse the FileInfo_In structure of data from the inputfile into the InitInp%InputFile structure
    CALL ParseInputFileInfo( PriPath, InitInp%InputFile, TRIM(InitInp%RootName), FileInfo_In, InputFileData, Interval, ErrStat2, ErrMsg2 )
+!print*,'SrvD_Init: after Parse: ', ErrStat2,ErrMsg2
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN
 
    CALL ValidatePrimaryData( InitInp, InputFileData, ErrStat2, ErrMsg2 )
+!print*,'SrvD_Init: after Validate: ', ErrStat2,ErrMsg2
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN
       
@@ -526,6 +528,7 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       StC_InitInp%InitOrientation(:,:,1) = InitInp%NacOrientation
       
       CALL StC_Init( StC_InitInp, u%NStC, p%NStC, x%NStC, xd%NStC, z%NStC, OtherState%NStC, y%NStC, m%NStC, Interval, StC_InitOut, ErrStat2, ErrMsg2 )
+!print*,'SrvD_Init: after StC_Init CompNStC: ', ErrStat2,ErrMsg2
          CALL CheckError( ErrStat2, ErrMsg2 )
          IF (ErrStat >= AbortErrLev) RETURN
       
@@ -557,6 +560,7 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       StC_InitInp%InitOrientation(:,:,1) = InitInp%TwrBaseOrient
       
       CALL StC_Init( StC_InitInp, u%TStC, p%TStC, x%TStC, xd%TStC, z%TStC, OtherState%TStC, y%TStC, m%TStC, Interval, StC_InitOut, ErrStat2, ErrMsg2 )
+!print*,'SrvD_Init: after StC_Init CompTStC: ', ErrStat2,ErrMsg2
          CALL CheckError( ErrStat2, ErrMsg2 )
          IF (ErrStat >= AbortErrLev) RETURN
       
@@ -589,6 +593,7 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
          StC_InitInp%InitOrientation(:,:,k) = InitInp%BladeRootOrientation(:,:,k)
       enddo
       CALL StC_Init( StC_InitInp, u%BStC, p%BStC, x%BStC, xd%BStC, z%BStC, OtherState%BStC, y%BStC, m%BStC, Interval, StC_InitOut, ErrStat2, ErrMsg2 )
+!print*,'SrvD_Init: after StC_Init CompBStC: ', ErrStat2,ErrMsg2
          CALL CheckError( ErrStat2, ErrMsg2 )
          IF (ErrStat >= AbortErrLev) RETURN
       
@@ -621,6 +626,7 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       StC_InitInp%InitOrientation(:,:,1) = InitInp%NacOrientation
 
       CALL StC_Init( StC_InitInp, u%PtfmStC, p%PtfmStC, x%PtfmStC, xd%PtfmStC, z%PtfmStC, OtherState%PtfmStC, y%PtfmStC, m%PtfmStC, Interval, StC_InitOut, ErrStat2, ErrMsg2 )
+!print*,'SrvD_Init: after StC_Init CompPtfmStC: ', ErrStat2,ErrMsg2
          CALL CheckError( ErrStat2, ErrMsg2 )
          IF (ErrStat >= AbortErrLev) RETURN
 
@@ -745,6 +751,7 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    CALL SrvD_DestroyInputFile( InputFileData, ErrStat2, ErrMsg2 )
    CALL StC_DestroyInitOutput(StC_InitOut, ErrStat2, ErrMsg2 )   
    
+!print*,'SrvD_Init: end', ErrStat,ErrMsg
    RETURN
    
 CONTAINS
@@ -1926,7 +1933,7 @@ subroutine ParseInputFileInfo( PriPath, InputFile, OutFileRoot, FileInfo_In, Inp
    implicit    none
 
       ! Passed variables
-   character(1024),                 intent(in   )  :: PriPath           ! Path name of the primary file
+   character(*),                    intent(in   )  :: PriPath           ! Path name of the primary file
    character(*),                    intent(in   )  :: InputFile         !< Name of the file containing the primary input data
    character(*),                    intent(in   )  :: OutFileRoot       !< The rootname of the echo file, possibly opened in this routine
    type(SrvD_InputFile),            intent(  out)  :: InputFileData     !< All the data in the StrucCtrl input file
@@ -1947,12 +1954,12 @@ subroutine ParseInputFileInfo( PriPath, InputFile, OutFileRoot, FileInfo_In, Inp
 
 
    ! Initialization
-   ErrStat  =  0
+   ErrStat  =  ErrID_None
    ErrMsg   =  ""
    UnEcho   = -1     ! Echo file unit.  >0 when used
 
-
    call AllocAry( InputFileData%OutList, MaxOutPts, "ServoDyn Input File's Outlist", ErrStat2, ErrMsg2 )
+      if (Failed()) return;
 
       ! Give verbose info on what we are reading
    if (NWTC_VerboseLevel == NWTC_Verbose) THEN
@@ -1963,9 +1970,13 @@ subroutine ParseInputFileInfo( PriPath, InputFile, OutFileRoot, FileInfo_In, Inp
    !-------------------------------------------------------------------------------------------------
    ! General settings
    !-------------------------------------------------------------------------------------------------
+print*,'Before setting CurLine=4: ',ErrStat2,'     ---> ErrStat: ',ErrStat,'      ---> Curline: ',Curline
    CurLine = 4    ! Skip the first three lines as they are known to be header lines and separators
+print*,'After  setting CurLine=4: ',ErrStat2,'     ---> ErrStat: ',ErrStat,'      ---> Curline: ',Curline
    call ParseVar( FileInfo_In, CurLine, 'Echo', InputFileData%Echo, ErrStat2, ErrMsg2 )
+print*,'After  call to Parsevar:  ',ErrStat2,'     ---> ErrStat: ',ErrStat,'      ---> Curline: ',Curline
          if (Failed()) return;
+print*,'After ParseVar for Echo'
 
    if ( InputFileData%Echo ) then
       CALL OpenEcho ( UnEcho, TRIM(OutFileRoot)//'.ech', ErrStat2, ErrMsg2 )
@@ -2337,12 +2348,17 @@ subroutine ParseInputFileInfo( PriPath, InputFile, OutFileRoot, FileInfo_In, Inp
 
 
    call Cleanup()
+   return
 
 contains
    !-------------------------------------------------------------------------------------------------
    logical function Failed()
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'StC_ParseInputFileInfo' )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       Failed = ErrStat >= AbortErrLev
+      ! This fixes a strange compile issue with gfortran 9.1.0 on Mac where the CurLine and ErrStat end up sharing stack
+      ! space due to the -fstack_reuse="all" is set for any optimization.  Can workaround with -fstack_reuse="none", but
+      ! have not found any other viable workaround other than using CurLine here in the Failed function
+      CurLine = CurLine
       if (Failed) call Cleanup()
    end function Failed
    !-------------------------------------------------------------------------------------------------
