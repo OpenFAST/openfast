@@ -431,8 +431,8 @@ contains
       FirstOrSecond = pLst%ElmNds(iiNode,JJ)             ! first or second node of the element to be considered
       sgn           = NodeNumber_To_Sign(FirstOrSecond) ! Assign sign depending if it's the 1st or second node
       ElemNodes     = p%Elems(iElem,2:3)                ! first and second node ID associated with element iElem
-      X_e(1:6)      = m%U_full       (p%NodesDOF(ElemNodes(1))%List(1:6)) 
-      X_e(7:12)     = m%U_full       (p%NodesDOF(ElemNodes(2))%List(1:6)) 
+      X_e(1:6)      = m%U_full_elast (p%NodesDOF(ElemNodes(1))%List(1:6)) 
+      X_e(7:12)     = m%U_full_elast (p%NodesDOF(ElemNodes(2))%List(1:6)) 
       Xdd_e(1:6)    = m%U_full_dotdot(p%NodesDOF(ElemNodes(1))%List(1:6)) 
       Xdd_e(7:12)   = m%U_full_dotdot(p%NodesDOF(ElemNodes(2))%List(1:6)) 
       if (.not. bUseInputDirCos) then
