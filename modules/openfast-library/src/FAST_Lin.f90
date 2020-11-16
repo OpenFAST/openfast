@@ -3235,7 +3235,14 @@ SUBROUTINE Linear_HD_InputSolve_dy( p_FAST, y_FAST, u_HD, y_ED, y_SD, MeshMapDat
    
    ErrStat = ErrID_None
    ErrMsg  = ""
-               
+           
+   ! Add ED Platform mesh to HD PRP Mesh
+   !  use Indx_u_HD_PRP_Start
+   HD_Start     = Indx_u_HD_PRP_Start(u_HD, y_FAST)  ! start of u_HD%Morison%Mesh%TranslationDisp field     
+   ED_Out_Start = Indx_y_ED_Platform_Start(y_ED, y_FAST) ! start of y_ED%PlatformPtMesh%TranslationDisp field
+   call Assemble_dUdy_Motions(y_ED%PlatformPtMesh, u_HD%PRPMesh, MeshMapData%ED_P_2_HD_PRP_P, HD_Start, ED_Out_Start, dUdy, .false.)
+   
+   
    if ( p_FAST%CompSub == Module_None ) then 
       ! dU^{HD}/dy^{ED}
          !...................................
@@ -3247,8 +3254,7 @@ SUBROUTINE Linear_HD_InputSolve_dy( p_FAST, y_FAST, u_HD, y_ED, y_SD, MeshMapDat
          !!! ! while forming dUdy, too.
          !!!call Linearize_Point_to_Line2( y_ED%PlatformPtMesh, u_HD%Morison%Mesh, MeshMapData%ED_P_2_HD_M_P, ErrStat2, ErrMsg2 )
       
-         HD_Start     = Indx_u_HD_Morison_Start(u_HD, y_FAST)  ! start of u_HD%Morison%Mesh%TranslationDisp field     
-         ED_Out_Start = Indx_y_ED_Platform_Start(y_ED, y_FAST) ! start of y_ED%PlatformPtMesh%TranslationDisp field
+         HD_Start     = Indx_u_HD_Morison_Start(u_HD, y_FAST)  ! start of u_HD%Morison%Mesh%TranslationDisp field
          call Assemble_dUdy_Motions(y_ED%PlatformPtMesh, u_HD%Morison%Mesh, MeshMapData%ED_P_2_HD_M_P, HD_Start, ED_Out_Start, dUdy, .false.)
       END IF
 
@@ -3262,8 +3268,6 @@ SUBROUTINE Linear_HD_InputSolve_dy( p_FAST, y_FAST, u_HD, y_ED, y_SD, MeshMapDat
          !!!call Linearize_Point_to_Point( y_ED%PlatformPtMesh, u_HD%Mesh, MeshMapData%ED_P_2_HD_W_P, ErrStat2, ErrMsg2 )
       
          HD_Start     = Indx_u_HD_WAMIT_Start(u_HD, y_FAST)  ! start of u_HD%Mesh%TranslationDisp field
-      
-         ED_Out_Start = Indx_y_ED_Platform_Start(y_ED, y_FAST) ! start of y_ED%PlatformPtMesh%TranslationDisp field
          call Assemble_dUdy_Motions(y_ED%PlatformPtMesh, u_HD%WAMITMesh, MeshMapData%ED_P_2_HD_W_P, HD_Start, ED_Out_Start, dUdy, .false.)
       END IF
       
@@ -4244,7 +4248,7 @@ FUNCTION Indx_u_SD_LMesh_Start(u_SD, y_FAST) RESULT(SD_Start)
 
    INTEGER                                      :: SD_Start         !< starting index of this mesh in SubDyn inputs
 
-   SD_Start = Indx_u_SD_TPMesh_Start(u_SD, y_FAST) + u_SD%TPMesh%NNodes**18 ! 6 fields with 3 components 
+   SD_Start = Indx_u_SD_TPMesh_Start(u_SD, y_FAST) + u_SD%TPMesh%NNodes*18 ! 6 fields with 3 components 
 
 END FUNCTION Indx_u_SD_LMesh_Start
 !----------------------------------------------------------------------------------------------------------------------------------
