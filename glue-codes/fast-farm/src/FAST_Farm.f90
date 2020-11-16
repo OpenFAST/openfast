@@ -65,7 +65,8 @@ type(All_FastFarm_Data)               :: farm
    
 
       ! Init NWTC_Library, display copyright and version information:
-   CALL FAST_ProgStart( Farm_Ver )
+   CALL NWTC_Init() ! open console for writing
+   ProgName = Farm_Ver%Name
 
    CALL DATE_AND_TIME ( Values=ProgStrtTime )                        ! Let's time the whole simulation
    CALL CPU_TIME ( ProgStrtCPU )                                    ! Initial time (this zeros the start time when used as a MATLAB function)
@@ -74,8 +75,10 @@ type(All_FastFarm_Data)               :: farm
    t = 0
    
    InputFileName = "" ! make sure we don't think this is a "default" inputFileName if not specified on command line
-   CALL CheckArgs( InputFileName, ErrStat, Flag=FlagArg )  ! if ErrStat /= ErrID_None, we'll ignore and deal with the problem when we try to read the input file
-      
+   CALL CheckArgs( InputFileName, Flag=FlagArg )  ! if ErrStat /= ErrID_None, we'll ignore and deal with the problem when we try to read the input file
+
+   CALL FAST_ProgStart( Farm_Ver ) ! put this after CheckArgs because CheckArgs assumes we haven't called this routine, yet.
+   
    IF ( TRIM(FlagArg) == 'RESTART' ) THEN ! Restart from checkpoint file
       CheckpointRoot = InputFileName
    !   CALL FAST_RestoreFromCheckpoint_Tary(t_initial, Restart_step, Turbine, CheckpointRoot, ErrStat, ErrMsg  )
