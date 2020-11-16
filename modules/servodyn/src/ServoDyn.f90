@@ -272,16 +272,14 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
   
    ! For diagnostic purposes, the following can be used to display the contents
    ! of the FileInfo_In data structure.
-   call Print_FileInfo_Struct( CU, FileInfo_In ) ! CU is the screen -- different number on different systems.
+   ! call Print_FileInfo_Struct( CU, FileInfo_In ) ! CU is the screen -- different number on different systems.
 
      !  Parse the FileInfo_In structure of data from the inputfile into the InitInp%InputFile structure
    CALL ParseInputFileInfo( PriPath, InitInp%InputFile, TRIM(InitInp%RootName), FileInfo_In, InputFileData, Interval, ErrStat2, ErrMsg2 )
-!print*,'SrvD_Init: after Parse: ', ErrStat2,ErrMsg2
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN
 
    CALL ValidatePrimaryData( InitInp, InputFileData, ErrStat2, ErrMsg2 )
-!print*,'SrvD_Init: after Validate: ', ErrStat2,ErrMsg2
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN
       
@@ -1970,13 +1968,9 @@ subroutine ParseInputFileInfo( PriPath, InputFile, OutFileRoot, FileInfo_In, Inp
    !-------------------------------------------------------------------------------------------------
    ! General settings
    !-------------------------------------------------------------------------------------------------
-print*,'Before setting CurLine=4: ',ErrStat2,'     ---> ErrStat: ',ErrStat,'      ---> Curline: ',Curline
    CurLine = 4    ! Skip the first three lines as they are known to be header lines and separators
-print*,'After  setting CurLine=4: ',ErrStat2,'     ---> ErrStat: ',ErrStat,'      ---> Curline: ',Curline
    call ParseVar( FileInfo_In, CurLine, 'Echo', InputFileData%Echo, ErrStat2, ErrMsg2 )
-print*,'After  call to Parsevar:  ',ErrStat2,'     ---> ErrStat: ',ErrStat,'      ---> Curline: ',Curline
          if (Failed()) return;
-print*,'After ParseVar for Echo'
 
    if ( InputFileData%Echo ) then
       CALL OpenEcho ( UnEcho, TRIM(OutFileRoot)//'.ech', ErrStat2, ErrMsg2 )
