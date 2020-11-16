@@ -4447,28 +4447,30 @@ END SUBROUTINE CheckR16Var
       CHARACTER(*),               INTENT(  OUT) :: ErrMsg
 
       CHARACTER(*), PARAMETER :: RoutineName = 'InitFileInfo'
-      INTEGER :: i, n_lines
+      INTEGER :: i
 
       ErrStat = ErrID_None
       ErrMsg  = ""
 
-      IF (.NOT. ALLOCATED(StringArray)) THEN
-         CALL SetErrStat( ErrID_Fatal, 'Attempting to use StringArray before it is allocated.' , ErrStat, ErrMsg, RoutineName )
-         RETURN
-      END IF
-
-      n_lines = size(StringArray)
-      FileInfo%NumLines = n_lines
+      FileInfo%NumLines = size(StringArray)
       FileInfo%NumFiles = 1
 
-      ALLOCATE( FileInfo%Lines(n_lines) )
-      ALLOCATE( FileInfo%FileLine(n_lines) )
-      ALLOCATE( FileInfo%FileIndx(n_lines) )
+      ALLOCATE( FileInfo%Lines(FileInfo%NumLines) )
+      ALLOCATE( FileInfo%FileLine(FileInfo%NumLines) )
+      ALLOCATE( FileInfo%FileIndx(FileInfo%NumFiles) )
       ALLOCATE( FileInfo%FileList(FileInfo%NumFiles) )
 
-      FileInfo%Lines = StringArray( 1:min( len( FileInfo%Lines(1) ), len(StringArray(1)) ) )
+      DO i = 1, FileInfo%NumLines
+
+         IF ( LEN(StringArray(i)) > LEN(FileInfo%Lines(i)) ) THEN
+            CALL SetErrStat( ErrID_Fatal, 'Input string exceeds the bounds of FileInfoType.' , ErrStat, ErrMsg, RoutineName )
+            RETURN
+         END IF
+
+         FileInfo%Lines(i) = StringArray(i)
+      END DO      
       FileInfo%FileLine = (/ (i, i = 1, FileInfo%NumLines) /)
-      FileInfo%FileIndx = (/ (1, i = 1, FileInfo%NumLines) /)
+      FileInfo%FileIndx = (/ (i, i = 1, FileInfo%NumFiles) /)
       FileInfo%FileList = (/ "passed file info" /)
 
    END SUBROUTINE
