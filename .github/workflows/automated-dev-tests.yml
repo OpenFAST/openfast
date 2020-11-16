@@ -5,7 +5,7 @@ on:
   push:
 
   pull_request:
-    types: [opened, labeled, synchronize] #, assigned]
+    types: [opened, synchronize] #labeled, assigned]
 
 # runs-on: ${{ matrix.os }}
 # strategy:
