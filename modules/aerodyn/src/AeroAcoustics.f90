@@ -123,10 +123,10 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
     CHARACTER(ErrMsgLen)    :: ErrMsg2         ! temporary Error message if ErrStat /    = ErrID_None
     INTEGER(IntKi)          :: ErrStat2        ! temporary Error status of the operation
     INTEGER(IntKi)          :: simcou,coun     ! simple loop  counter
-    INTEGER(IntKi)          :: I,J,whichairfoil,K
+    INTEGER(IntKi)          :: I,J,whichairfoil,K,i1_1,i10_1,i1_2,i10_2,iLE
     character(*), parameter :: RoutineName = 'SetParameters'
-    LOGICAL                 :: tr,tri,exist
-    REAL(ReKi)              :: val1,val2,f2,f4,lefttip,rightip,jumpreg
+    LOGICAL                 :: tr,tri,exist,LE_flag
+    REAL(ReKi)              :: val1,val10,f2,f4,lefttip,rightip,jumpreg, dist1, dist10
     ! Initialize variables for this routine
     ErrStat  = ErrID_None
     ErrMsg   = ""
@@ -340,60 +340,63 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
         if(Failed()) return
     endif
 
-    ! If simplified guidati is on, calculate the airfoil thickness from input airfoil coordinates
+    ! If simplified guidati is on, calculate the airfoil thickness at 1% and at 10% chord from input airfoil coordinates
     IF (p%IInflow .EQ. 2) THEN
-        ! Calculate the Thickness @ 1% chord and  @ 10% chord (normalized thickness)
         call AllocAry(p%AFThickGuida,2,size(p%AFInfo),  'p%AFThickGuida', errStat2, errMsg2); if(Failed()) return
         p%AFThickGuida=0.0_Reki
 
         DO k=1,size(p%AFInfo) ! for each airfoil interpolation 
-            tri=.true.;tr=.true.;
-            do i=2,size(p%AFInfo(k)%X_Coord)
-                if ( (p%AFInfo(k)%X_Coord(i)+p%AFInfo(k)%Y_Coord(i)) .eq. 0) then
-                    !print*,i
-                    goto 174
-                endif
-                if ( p%AFInfo(k)%X_Coord(i) .eq. 0.1) then
-                    val1=p%AFInfo(k)%Y_Coord(i)
-                elseif (  (p%AFInfo(k)%X_Coord(i) .lt. 0.1) .and. (tri) ) then
-                    val1=(  abs(p%AFInfo(k)%X_Coord(i-1)-0.1)*p%AFInfo(k)%Y_Coord(i) + &
-                        abs(p%AFInfo(k)%X_Coord(i)-0.1)*p%AFInfo(k)%Y_Coord(i-1))/ &
-                        (abs(p%AFInfo(k)%X_Coord(i-1)-0.1)+abs(p%AFInfo(k)%X_Coord(i)-0.1))
 
-                    tri=.false.        
-                elseif (p%AFInfo(k)%X_Coord(i) .eq. 0.01) then
-                    val2=p%AFInfo(k)%Y_Coord(i)
-                elseif (  (p%AFInfo(k)%X_Coord(i) .lt. 0.01) .and.  (tr) ) then
-                    val2=(  abs(p%AFInfo(k)%X_Coord(i-1)-0.01)*p%AFInfo(k)%Y_Coord(i) + &
-                        abs(p%AFInfo(k)%X_Coord(i)-0.01)*p%AFInfo(k)%Y_Coord(i-1))/ &
-                        (abs(p%AFInfo(k)%X_Coord(i-1)-0.01)+abs(p%AFInfo(k)%X_Coord(i)-0.01))
-                    tr=.false.
-                endif 
-            enddo
+            ! IF ((MIN(p%AFInfo(k)%X_Coord) < 0.) .or. (MAX(p%AFInfo(k)%X_Coord) > 0.)) THEN
+            !     call SetErrStat ( ErrID_Fatal,'The coordinates of airfoil '//trim(num2lstr(k))//' are mot defined between x=0 and x=1. Code stops.' ,ErrStat, ErrMsg, RoutineName )
+            ! ENDIF
+            
+            ! Flip the flag when LE is found and find index
+            LE_flag = .False.
+            DO i=3,size(p%AFInfo(k)%X_Coord)
+                IF (LE_flag .eqv. .False.) THEN
+                    IF (p%AFInfo(k)%X_Coord(i) - p%AFInfo(k)%X_Coord(i-1) > 0.) THEN
+                        LE_flag = .TRUE.
+                        iLE = i
+                    ENDIF
+                ENDIF
+            ENDDO
 
-            174 tri=.true.;tr=.true.;
-            do j=i,size(p%AFInfo(k)%X_Coord)
-                if ( p%AFInfo(k)%X_Coord(j) .eq. 0.1) then
-                    val1=abs(p%AFInfo(k)%Y_Coord(j)) + abs(val1)
-                elseif (  (p%AFInfo(k)%X_Coord(j) .gt. 0.1) .and. (tri) ) then
-                    val1=abs(val1)+abs((abs(p%AFInfo(k)%X_Coord(j-1)-0.1)*p%AFInfo(k)%Y_Coord(j)+ &
-                        abs(p%AFInfo(k)%X_Coord(j)-0.1)*p%AFInfo(k)%Y_Coord(j-1))/&
-                        (abs(p%AFInfo(k)%X_Coord(j-1)-0.1)+abs(p%AFInfo(k)%X_Coord(j)-0.1)));
-                    tri=.false.        
-                elseif (p%AFInfo(k)%X_Coord(j) .eq. 0.01) then
-                    val2=abs(p%AFInfo(k)%Y_Coord(j)) + abs(val2)
-                elseif (  (p%AFInfo(k)%X_Coord(j) .gt. 0.01) .and.  (tr) ) then
-                    val2=abs(val2)+abs((abs(p%AFInfo(k)%X_Coord(j-1)-0.01)*p%AFInfo(k)%Y_Coord(j)+ &
-                        abs(p%AFInfo(k)%X_Coord(j)-0.01)*p%AFInfo(k)%Y_Coord(j-1))/&
-                        (abs(p%AFInfo(k)%X_Coord(j-1)-0.01)+abs(p%AFInfo(k)%X_Coord(j)-0.01)));
-                    tr=.false.
-                endif    
-            enddo
+            ! From LE toward TE
+            dist1  = ABS( p%AFInfo(k)%X_Coord(iLE) - 0.01)
+            dist10 = ABS( p%AFInfo(k)%X_Coord(iLE) - 0.10)
+            DO i=iLE+1,size(p%AFInfo(k)%X_Coord)
+                IF (ABS(p%AFInfo(k)%X_Coord(i) - 0.01) < dist1) THEN
+                    i1_1 = i
+                    dist1 = ABS(p%AFInfo(k)%X_Coord(i) - 0.01)
+                ENDIF
+                IF (ABS(p%AFInfo(k)%X_Coord(i) - 0.1) < dist10) THEN
+                    i10_1 = i
+                    dist10 = ABS(p%AFInfo(k)%X_Coord(i) - 0.1)
+                ENDIF
+            ENDDO
 
-            p%AFThickGuida(1,k)=val2 ! 1  % chord thickness
-            p%AFThickGuida(2,k)=val1 ! 10 % chord thickness
+            ! From TE to LE
+            dist1  = 0.99
+            dist10 = 0.90
+            DO i=1,iLE-1
+                IF (ABS(p%AFInfo(k)%X_Coord(i) - 0.01) < dist1) THEN
+                    i1_2 = i
+                    dist1 = ABS(p%AFInfo(k)%X_Coord(i) - 0.01)
+                ENDIF
+                IF (ABS(p%AFInfo(k)%X_Coord(i) - 0.1) < dist10) THEN
+                    i10_2 = i
+                    dist10 = ABS(p%AFInfo(k)%X_Coord(i) - 0.1)
+                ENDIF
+            ENDDO
+
+            val1  = p%AFInfo(k)%Y_Coord(i1_1) - p%AFInfo(k)%Y_Coord(i1_2)
+            val10 = p%AFInfo(k)%Y_Coord(i10_1) - p%AFInfo(k)%Y_Coord(i10_2)
+
+            p%AFThickGuida(1,k)=val1  ! 1  % chord thickness
+            p%AFThickGuida(2,k)=val10 ! 10  % chord thickness
         ENDDO
-    ENDIF ! If simplified guidati is on, calculate the airfoil thickness
+    ENDIF
 
     !! for turbulence intensity calculations on the fly every 5 meter the whole rotor area is divided vertically to store flow fields in each region
     jumpreg=7
@@ -1445,7 +1448,7 @@ SUBROUTINE TBLTE(ALPSTAR,C,U,THETA,PHI,L,R,p,jj,ii,kk,d99Var2,dstarVar1,dstarVar
 
     LOGICAL     :: SWITCH  !!LOGICAL FOR COMPUTATION OF ANGLE OF ATTACK CONTRIBUTION  
 
-  
+
 
     ErrStat = ErrID_None
     ErrMsg  = ""
