@@ -152,7 +152,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
 
    ELSEIF(p%quadrature .EQ. TRAP_QUADRATURE) THEN
 
-      CALL BD_TrapezoidalPointWeight(p, InputFileData)        ! computes p%QPtN and p%QPtWeight
+      CALL BD_TrapezoidalPointWeight(p,  InputFileData%InpBl%station_eta, InputFileData%InpBl%station_total)        ! computes p%QPtN and p%QPtWeight
 
    ENDIF
 
