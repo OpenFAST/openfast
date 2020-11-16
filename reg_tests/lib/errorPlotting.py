@@ -1,3 +1,4 @@
+
 #
 # Copyright 2017 National Renewable Energy Laboratory
 #
@@ -58,14 +59,14 @@ def _plotError(xseries, y1series, y2series, xlabel, title1, title2):
     p1.xaxis.axis_label = 'Time (s)'
     p1.line(xseries, y2series, color='green', line_width=3, legend_label='Baseline')
     p1.line(xseries, y1series, color='red', line_width=1, legend_label='Local')
-    p1.add_tools(HoverTool(tooltips=[('Time','$x'), ('Value', '$y')],mode='vline'))
+    p1.add_tools(HoverTool(tooltips=[('Time','@x'), ('Value', '@y')],mode='vline'))
 
     p2 = figure(title=title2, x_range=p1.x_range)
     p2.title.align = 'center'
     p2.grid.grid_line_alpha = 0
     p2.xaxis.axis_label = 'Time (s)'
     p2.line(xseries, abs(y2series - y1series), color='blue')
-    p2.add_tools(HoverTool(tooltips=[('Time','$x'), ('Error', '$y')], mode='vline'))
+    p2.add_tools(HoverTool(tooltips=[('Time','@x'), ('Error', '@y')], mode='vline'))
 
     grid = gridplot([[p1, p2]], plot_width=650, plot_height=375, sizing_mode="scale_both")
     script, div = components(grid)

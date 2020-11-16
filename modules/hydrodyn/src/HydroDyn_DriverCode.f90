@@ -125,7 +125,8 @@ PROGRAM HydroDynDriver
    CHARACTER(10)                                      :: AngleMsg             ! For debugging, a string version of the largest rotation input
    INTEGER                                            :: UnMeshDebug
    CHARACTER(50)                                      :: MeshDebugFile
-   
+
+   CHARACTER(20)                    :: FlagArg       ! Flag argument from command line
    CHARACTER(200)                   :: git_commit    ! String containing the current git commit hash
 
    TYPE(ProgDesc), PARAMETER        :: version   = ProgDesc( 'HydroDyn Driver', '', '' )  ! The version number of this program.
@@ -154,39 +155,32 @@ PROGRAM HydroDynDriver
    !          InitInp%Morison%InpMembers(k)%FillDensChr
    !          
    !          
-      ! Initialize the library which handle file echos and WrScr, for example
-   call nwtc_init()
-   
-         ! Display the copyright notice
-   CALL DispCopyrightLicense( version%Name )
-      ! Obtain OpenFAST git commit hash
-   git_commit = QueryGitVersion()
-      ! Tell our users what they're running
-   CALL WrScr( ' Running '//TRIM( version%Name )//' a part of OpenFAST - '//TRIM(git_Commit)//NewLine//' linked with '//TRIM( NWTC_Ver%Name )//NewLine )
 
-   IF ( command_argument_count() /= 1 ) THEN
-      CALL print_help()
-      STOP
-   END IF
-  
+   CALL NWTC_Init( ProgNameIn=version%Name )
+
+   drvrFilename = ''
+   CALL CheckArgs( drvrFilename, Flag=FlagArg )
+   IF ( LEN( TRIM(FlagArg) ) > 0 ) CALL NormStop()
+
+      ! Display the copyright notice
+   CALL DispCopyrightLicense( version%Name )
+     ! Obtain OpenFAST git commit hash
+   git_commit = QueryGitVersion()
+     ! Tell our users what they're running
+   CALL WrScr( ' Running '//TRIM( version%Name )//' a part of OpenFAST - '//TRIM(git_commit)//NewLine//' linked with '//TRIM( NWTC_Ver%Name )//NewLine )
    
       ! Parse the driver input file and run the simulation based on that file
-      
-   IF ( command_argument_count() == 1 ) THEN
-      
-      CALL get_command_argument(1, drvrFilename)
-      CALL ReadDriverInputFile( drvrFilename, drvrInitInp, ErrStat, ErrMsg )
-      IF ( ErrStat /= 0 ) THEN
-         CALL WrScr( ErrMsg )
-         STOP
-      END IF
-      InitInData%Gravity      = drvrInitInp%Gravity
-      InitInData%UseInputFile = .TRUE. 
-      InitInData%InputFile    = drvrInitInp%HDInputFile
-      InitInData%OutRootName  = drvrInitInp%OutRootName
-      InitInData%TMax         = drvrInitInp%NSteps * drvrInitInp%TimeInterval
-      InitInData%Linearize    = drvrInitInp%Linearize
+   CALL ReadDriverInputFile( drvrFilename, drvrInitInp, ErrStat, ErrMsg )
+   IF ( ErrStat /= 0 ) THEN
+      CALL WrScr( ErrMsg )
+      STOP
    END IF
+   InitInData%Gravity      = drvrInitInp%Gravity
+   InitInData%UseInputFile = .TRUE. 
+   InitInData%InputFile    = drvrInitInp%HDInputFile
+   InitInData%OutRootName  = drvrInitInp%OutRootName
+   InitInData%TMax         = drvrInitInp%NSteps * drvrInitInp%TimeInterval
+   InitInData%Linearize    = drvrInitInp%Linearize
   
       ! Get the current time
    call date_and_time ( Values=StrtTime )                               ! Let's time the whole simulation
@@ -296,8 +290,6 @@ PROGRAM HydroDynDriver
          ENDDO
       ENDDO
    ENDIF
-
-
 
          ! Initialize the module
    Interval = drvrInitInp%TimeInterval
