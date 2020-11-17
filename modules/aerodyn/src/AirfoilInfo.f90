@@ -95,6 +95,7 @@ CONTAINS
          ! Display the version for this module.
 
       !CALL DispNVD ( AFI_Ver )
+      p%FileName = InitInput%FileName ! store this for error messages later (e.g., in UA)
 
       CALL AFI_ValidateInitInput(InitInput, ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -804,7 +805,8 @@ p%Table(iTable)%UA_BL%C_lalpha = p%Table(iTable)%UA_BL%C_nalpha
       col_clFs = ColUAf + 1
 
       if ( p%InclUAdata )  then
-         
+         p%UA_BL%UACutout_blend = max(0.0_ReKi, p%UA_BL%UACutout - 5.0_ReKi*D2R) ! begin turning off 5 degrees before (or at 0 degrees)
+      
          if (EqualRealNos(p%UA_BL%c_lalpha,0.0_ReKi)) then
             p%Coefs(:,ColUAf)   = 0.0_ReKi                           ! Eq. 59
             p%Coefs(:,col_clFs) = p%Coefs(:,ColCl)                   ! Eq. 61

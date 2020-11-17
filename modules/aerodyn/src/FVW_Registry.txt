@@ -163,7 +163,6 @@ typedef    ^                    ^               Reki                            
 typedef  FVW/FVW           OtherStateType       IntKi                            NULL              -  -  - "Number of active near wake panels"      -
 # TODO UA
 typedef   ^                       ^             UA_OtherStateType                UA                -  -  -  "other states for UnsteadyAero"        -
-typedef   ^                       ^             Logical                          UA_Flag       {:}{:}  - -  "logical flag indicating whether to use UnsteadyAero"        -
 
 
 #.......... InitInputType ......
