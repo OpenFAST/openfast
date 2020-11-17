@@ -465,8 +465,8 @@ subroutine FAST_OpFM_Init(iTurb, TMax, InputFileName_c, TurbID, NumSC2Ctrl, NumC
    REAL(C_DOUBLE),         INTENT(  OUT) :: dt_c      
    INTEGER(C_INT),         INTENT(  OUT) :: NumBl_c      
    INTEGER(C_INT),         INTENT(  OUT) :: NumBlElem_c      
-   TYPE(OpFM_InputType_C), INTENT(  OUT) :: OpFM_Input_from_FAST
-   TYPE(OpFM_OutputType_C),INTENT(  OUT) :: OpFM_Output_to_FAST
+   TYPE(OpFM_InputType_C), INTENT(INOUT) :: OpFM_Input_from_FAST  !INTENT(INOUT) instead of INTENT(OUT) to avoid gcc compiler warnings about variable tracking sizes
+   TYPE(OpFM_OutputType_C),INTENT(INOUT) :: OpFM_Output_to_FAST   !INTENT(INOUT) instead of INTENT(OUT) to avoid gcc compiler warnings about variable tracking sizes
    TYPE(SC_InputType_C),   INTENT(INOUT) :: SC_Input_from_FAST
    TYPE(SC_OutputType_C),  INTENT(INOUT) :: SC_Output_to_FAST
    INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_c      
@@ -570,8 +570,8 @@ subroutine FAST_OpFM_Restart(iTurb, CheckpointRootName_c, AbortErrLev_c, dt_c, n
    INTEGER(C_INT),         INTENT(  OUT) :: numElementsPerBlade_c
    REAL(C_DOUBLE),         INTENT(  OUT) :: dt_c      
    INTEGER(C_INT),         INTENT(  OUT) :: n_t_global_c      
-   TYPE(OpFM_InputType_C), INTENT(  OUT) :: OpFM_Input_from_FAST
-   TYPE(OpFM_OutputType_C),INTENT(  OUT) :: OpFM_Output_to_FAST
+   TYPE(OpFM_InputType_C), INTENT(INOUT) :: OpFM_Input_from_FAST  !INTENT(INOUT) instead of INTENT(OUT) to avoid gcc compiler warnings about variable tracking sizes
+   TYPE(OpFM_OutputType_C),INTENT(INOUT) :: OpFM_Output_to_FAST   !INTENT(INOUT) instead of INTENT(OUT) to avoid gcc compiler warnings about variable tracking sizes
    TYPE(SC_InputType_C),   INTENT(INOUT) :: SC_Input_from_FAST
    TYPE(SC_OutputType_C),  INTENT(INOUT) :: SC_Output_to_FAST
    INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_c      
