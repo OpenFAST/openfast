@@ -36,18 +36,15 @@ USE NWTC_Library
 IMPLICIT NONE
 ! =========  AA_BladePropsType  =======
   TYPE, PUBLIC :: AA_BladePropsType
-    INTEGER(IntKi)  :: NumBlNds      !< Number of blade nodes used in the analysis [-]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: TEThick      !<  [-]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: StallStart      !<  [-]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: TEAngle      !<  [-]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: AerCent      !<  [-]
+    REAL(ReKi)  :: TEThick      !<  [-]
+    REAL(ReKi)  :: TEAngle      !<  [-]
   END TYPE AA_BladePropsType
 ! =======================
 ! =========  AA_InitInputType  =======
   TYPE, PUBLIC :: AA_InitInputType
     CHARACTER(1024)  :: InputFile      !< Name of the input file [-]
     INTEGER(IntKi)  :: NumBlades      !< Number of blades on the turbine [-]
-    INTEGER(IntKi)  :: NumBlNds      !< Number of blades on the turbine [-]
+    INTEGER(IntKi)  :: NumBlNds      !< Number of blade nodes [-]
     CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: BlSpn      !< Span at blade node [m]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: BlChord      !< Chord at blade node [m]
@@ -297,55 +294,8 @@ CONTAINS
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
-    DstBladePropsTypeData%NumBlNds = SrcBladePropsTypeData%NumBlNds
-IF (ALLOCATED(SrcBladePropsTypeData%TEThick)) THEN
-  i1_l = LBOUND(SrcBladePropsTypeData%TEThick,1)
-  i1_u = UBOUND(SrcBladePropsTypeData%TEThick,1)
-  IF (.NOT. ALLOCATED(DstBladePropsTypeData%TEThick)) THEN 
-    ALLOCATE(DstBladePropsTypeData%TEThick(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstBladePropsTypeData%TEThick.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
     DstBladePropsTypeData%TEThick = SrcBladePropsTypeData%TEThick
-ENDIF
-IF (ALLOCATED(SrcBladePropsTypeData%StallStart)) THEN
-  i1_l = LBOUND(SrcBladePropsTypeData%StallStart,1)
-  i1_u = UBOUND(SrcBladePropsTypeData%StallStart,1)
-  IF (.NOT. ALLOCATED(DstBladePropsTypeData%StallStart)) THEN 
-    ALLOCATE(DstBladePropsTypeData%StallStart(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstBladePropsTypeData%StallStart.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstBladePropsTypeData%StallStart = SrcBladePropsTypeData%StallStart
-ENDIF
-IF (ALLOCATED(SrcBladePropsTypeData%TEAngle)) THEN
-  i1_l = LBOUND(SrcBladePropsTypeData%TEAngle,1)
-  i1_u = UBOUND(SrcBladePropsTypeData%TEAngle,1)
-  IF (.NOT. ALLOCATED(DstBladePropsTypeData%TEAngle)) THEN 
-    ALLOCATE(DstBladePropsTypeData%TEAngle(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstBladePropsTypeData%TEAngle.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
     DstBladePropsTypeData%TEAngle = SrcBladePropsTypeData%TEAngle
-ENDIF
-IF (ALLOCATED(SrcBladePropsTypeData%AerCent)) THEN
-  i1_l = LBOUND(SrcBladePropsTypeData%AerCent,1)
-  i1_u = UBOUND(SrcBladePropsTypeData%AerCent,1)
-  IF (.NOT. ALLOCATED(DstBladePropsTypeData%AerCent)) THEN 
-    ALLOCATE(DstBladePropsTypeData%AerCent(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstBladePropsTypeData%AerCent.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstBladePropsTypeData%AerCent = SrcBladePropsTypeData%AerCent
-ENDIF
  END SUBROUTINE AA_CopyBladePropsType
 
  SUBROUTINE AA_DestroyBladePropsType( BladePropsTypeData, ErrStat, ErrMsg )
@@ -357,18 +307,6 @@ ENDIF
 ! 
   ErrStat = ErrID_None
   ErrMsg  = ""
-IF (ALLOCATED(BladePropsTypeData%TEThick)) THEN
-  DEALLOCATE(BladePropsTypeData%TEThick)
-ENDIF
-IF (ALLOCATED(BladePropsTypeData%StallStart)) THEN
-  DEALLOCATE(BladePropsTypeData%StallStart)
-ENDIF
-IF (ALLOCATED(BladePropsTypeData%TEAngle)) THEN
-  DEALLOCATE(BladePropsTypeData%TEAngle)
-ENDIF
-IF (ALLOCATED(BladePropsTypeData%AerCent)) THEN
-  DEALLOCATE(BladePropsTypeData%AerCent)
-ENDIF
  END SUBROUTINE AA_DestroyBladePropsType
 
  SUBROUTINE AA_PackBladePropsType( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -406,27 +344,8 @@ ENDIF
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
-      Int_BufSz  = Int_BufSz  + 1  ! NumBlNds
-  Int_BufSz   = Int_BufSz   + 1     ! TEThick allocated yes/no
-  IF ( ALLOCATED(InData%TEThick) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! TEThick upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%TEThick)  ! TEThick
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! StallStart allocated yes/no
-  IF ( ALLOCATED(InData%StallStart) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! StallStart upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%StallStart)  ! StallStart
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! TEAngle allocated yes/no
-  IF ( ALLOCATED(InData%TEAngle) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! TEAngle upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%TEAngle)  ! TEAngle
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! AerCent allocated yes/no
-  IF ( ALLOCATED(InData%AerCent) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! AerCent upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%AerCent)  ! AerCent
-  END IF
+      Re_BufSz   = Re_BufSz   + 1  ! TEThick
+      Re_BufSz   = Re_BufSz   + 1  ! TEAngle
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -454,68 +373,10 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-    IntKiBuf(Int_Xferred) = InData%NumBlNds
-    Int_Xferred = Int_Xferred + 1
-  IF ( .NOT. ALLOCATED(InData%TEThick) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%TEThick,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%TEThick,1)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i1 = LBOUND(InData%TEThick,1), UBOUND(InData%TEThick,1)
-        ReKiBuf(Re_Xferred) = InData%TEThick(i1)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( .NOT. ALLOCATED(InData%StallStart) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%StallStart,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%StallStart,1)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i1 = LBOUND(InData%StallStart,1), UBOUND(InData%StallStart,1)
-        ReKiBuf(Re_Xferred) = InData%StallStart(i1)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( .NOT. ALLOCATED(InData%TEAngle) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%TEAngle,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%TEAngle,1)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i1 = LBOUND(InData%TEAngle,1), UBOUND(InData%TEAngle,1)
-        ReKiBuf(Re_Xferred) = InData%TEAngle(i1)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( .NOT. ALLOCATED(InData%AerCent) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%AerCent,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%AerCent,1)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i1 = LBOUND(InData%AerCent,1), UBOUND(InData%AerCent,1)
-        ReKiBuf(Re_Xferred) = InData%AerCent(i1)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
+    ReKiBuf(Re_Xferred) = InData%TEThick
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%TEAngle
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE AA_PackBladePropsType
 
  SUBROUTINE AA_UnPackBladePropsType( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -548,80 +409,10 @@ ENDIF
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-    OutData%NumBlNds = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! TEThick not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%TEThick)) DEALLOCATE(OutData%TEThick)
-    ALLOCATE(OutData%TEThick(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%TEThick.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i1 = LBOUND(OutData%TEThick,1), UBOUND(OutData%TEThick,1)
-        OutData%TEThick(i1) = ReKiBuf(Re_Xferred)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! StallStart not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%StallStart)) DEALLOCATE(OutData%StallStart)
-    ALLOCATE(OutData%StallStart(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%StallStart.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i1 = LBOUND(OutData%StallStart,1), UBOUND(OutData%StallStart,1)
-        OutData%StallStart(i1) = ReKiBuf(Re_Xferred)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! TEAngle not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%TEAngle)) DEALLOCATE(OutData%TEAngle)
-    ALLOCATE(OutData%TEAngle(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%TEAngle.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i1 = LBOUND(OutData%TEAngle,1), UBOUND(OutData%TEAngle,1)
-        OutData%TEAngle(i1) = ReKiBuf(Re_Xferred)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! AerCent not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%AerCent)) DEALLOCATE(OutData%AerCent)
-    ALLOCATE(OutData%AerCent(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%AerCent.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i1 = LBOUND(OutData%AerCent,1), UBOUND(OutData%AerCent,1)
-        OutData%AerCent(i1) = ReKiBuf(Re_Xferred)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
+    OutData%TEThick = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%TEAngle = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE AA_UnPackBladePropsType
 
  SUBROUTINE AA_CopyInitInput( SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg )

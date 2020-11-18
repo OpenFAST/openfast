@@ -241,18 +241,19 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
     call AllocAry(p%StallStart,p%NumBlNds,p%NumBlades,'p%StallStart',ErrStat2,ErrMsg2); if(Failed()) return
     p%StallStart(:,:) = 0.0_ReKi
 
-    do i=1,p%NumBlades
-        p%TEThick(:,i) = InputFileData%BladeProps(i)%TEThick(:)    ! 
-        p%TEAngle(:,i) = InputFileData%BladeProps(i)%TEAngle(:)    ! 
+     do i=1,p%NumBlades    
         do j=1,p%NumBlNds
-           whichairfoil       = p%BlAFID(j,i)
-           if(p%AFInfo(whichairfoil)%NumTabs /=1 ) then
-              call SetErrStat(ErrID_Fatal, 'Number of airfoil tables within airfoil file different than 1, which is not supported.', ErrStat2, ErrMsg2, RoutineName )
-              if(Failed()) return
-           endif
-           p%StallStart(j,i)  = p%AFInfo(whichairfoil)%Table(1)%UA_BL%alpha1*180/PI ! approximate stall angle of attack [deg] (alpha1 in [rad])
+            whichairfoil = p%BlAFID(j,i)
+            p%TEThick(j,i) = InputFileData%BladeProps(whichairfoil)%TEThick
+            p%TEAngle(j,i) = InputFileData%BladeProps(whichairfoil)%TEAngle
+            
+            if(p%AFInfo(whichairfoil)%NumTabs /=1 ) then
+                call SetErrStat(ErrID_Fatal, 'Number of airfoil tables within airfoil file different than 1, which is not supported.', ErrStat2, ErrMsg2, RoutineName )
+                if(Failed()) return
+            endif
+            p%StallStart(j,i)  = p%AFInfo(whichairfoil)%Table(1)%UA_BL%alpha1*180/PI ! approximate stall angle of attack [deg] (alpha1 in [rad])
         enddo
-    end do
+    enddo
 
     call AllocAry(p%BlSpn,       p%NumBlNds, p%NumBlades, 'p%BlSpn'  , ErrStat2, ErrMsg2); if(Failed()) return
     call AllocAry(p%BlChord,     p%NumBlNds, p%NumBlades, 'p%BlChord', ErrStat2, ErrMsg2); if(Failed()) return
@@ -1066,8 +1067,8 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,y,errStat,errMsg)
                 !--------Turbulent Boundary Layer Trailing Edge Noise----------------------------!
                 IF (   (p%ITURB .EQ. 1) .or. (p%ITURB .EQ. 2) )   THEN
                     CALL TBLTE(AlphaNoise,p%BlChord(J,I),UNoise,m%ChordAngleTE(K,J,I),m%SpanAngleTE(K,J,I), &
-                        elementspan,m%rTEtoObserve(K,J,I), p, j,i,k,m%d99Var(2),m%dstarVar(1),m%dstarVar(2),p%StallStart(J,I), &
-                        m%SPLP,m%SPLS,m%SPLALPH,m%SPLTBL,errStat2,errMsg2 )
+                    elementspan,m%rTEtoObserve(K,J,I), p, j,i,k,m%d99Var(2),m%dstarVar(1),m%dstarVar(2),p%StallStart(J,I), &
+                    m%SPLP,m%SPLS,m%SPLALPH,m%SPLTBL,errStat2,errMsg2 )
                     CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
                     IF (p%ITURB .EQ. 2)  THEN
                         m%SPLP=0.0_ReKi;m%SPLS=0.0_ReKi;m%SPLTBL=0.0_ReKi;
@@ -1081,9 +1082,9 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,y,errStat,errMsg)
                 !--------Blunt Trailing Edge Noise----------------------------------------------!
                 IF ( p%IBLUNT .EQ. 1 )   THEN                                          
                     CALL BLUNT(AlphaNoise,p%BlChord(J,I),UNoise,m%ChordAngleTE(K,J,I),m%SpanAngleTE(K,J,I), &
-                        elementspan,m%rTEtoObserve(K,J,I),p%TEThick(J,I),p%TEAngle(J,I), &
-                        p, m%d99Var(2),m%dstarVar(1),m%dstarVar(2),m%SPLBLUNT,p%StallStart(J,I),errStat2,errMsg2 )
-                    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
+                    elementspan,m%rTEtoObserve(K,J,I),p%TEThick(J,I),p%TEAngle(J,I), &
+                    p, m%d99Var(2),m%dstarVar(1),m%dstarVar(2),m%SPLBLUNT,p%StallStart(J,I),errStat2,errMsg2 )
+                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
                 ENDIF
                 !--------Tip Noise--------------------------------------------------------------!
                 IF (  (p%ITIP .EQ. 1) .AND. (J .EQ. p%NumBlNds)  ) THEN 

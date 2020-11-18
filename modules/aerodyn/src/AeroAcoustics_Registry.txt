@@ -20,17 +20,14 @@ usefrom     AirfoilInfo_Registry.txt
 # ..... Input file data ...........................................................................................................
 # This is data defined in the Input File for this module (or could otherwise be passed in)
 # ..... Blade Input file data .....................................................................................................
-typedef     AeroAcoustics/AA    AA_BladePropsType    IntKi               NumBlNds         -     -     -     "Number of blade nodes used in the analysis"     -
-typedef     ^                   AA_BladePropsType    ReKi                TEThick         {:}    -     -     ""     -
-typedef     ^                   AA_BladePropsType    ReKi                StallStart         {:}    -     -     ""     -
-typedef     ^                   AA_BladePropsType    ReKi                TEAngle         {:}    -     -     ""     -
-typedef     ^                   AA_BladePropsType    ReKi                AerCent         {:}    -     -     ""     -
+typedef     AeroAcoustics/AA    AA_BladePropsType    ReKi                TEThick          -    -     -     ""     -
+typedef     ^                   AA_BladePropsType    ReKi                TEAngle          -    -     -     ""     -
 #
 # ..... Initialization data .......................................................................................................
 # Define inputs that the initialization routine may need here:
 typedef     AeroAcoustics/AA    InitInputType        CHARACTER(1024)     InputFile        -     -     -     "Name of the input file"     -
 typedef     ^                   InitInputType        IntKi               NumBlades        -     -     -     "Number of blades on the turbine"
-typedef     ^                   InitInputType        IntKi               NumBlNds         -     -     -     "Number of blades on the turbine"
+typedef     ^                   InitInputType        IntKi               NumBlNds         -     -     -     "Number of blade nodes"
 typedef     ^                   InitInputType        CHARACTER(1024)     RootName         -     -     -     "RootName for writing output files"     -
 typedef     ^                   InitInputType        ReKi                BlSpn           {:}{:}    -     -     "Span at blade node"     m
 typedef     ^                   InitInputType        ReKi                BlChord         {:}{:}    -     -     "Chord at blade node"     m
