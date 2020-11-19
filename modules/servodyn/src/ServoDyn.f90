@@ -340,7 +340,7 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    END IF
                   
       
-   u%BlPitch = p%BlPitchInit
+   u%BlPitch = p%BlPitchInit(1:p%NumBl)
    
    u%Yaw = p%YawNeut
    u%YawRate   = 0.0
@@ -351,7 +351,7 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    
    u%ExternalYawPosCom = p%YawNeut
    u%ExternalYawRateCom = 0.
-   u%ExternalBlPitchCom = p%BlPitchInit
+   u%ExternalBlPitchCom = p%BlPitchInit(1:p%NumBl)
    u%ExternalGenTrq = 0.
    u%ExternalElecPwr = 0.
    u%ExternalHSSBrFrac = 0.
@@ -361,11 +361,11 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    u%WindDir   = 0.
    
       !Inputs for the Bladed Interface:
-   u%RootMyc   = 0.
+   u%RootMyc(:) = 0. ! Hardcoded to 3
    u%YawBrTAxp = 0.
    u%YawBrTAyp = 0.
    u%LSSTipPxa = 0.
-   u%RootMxc   = 0.
+   u%RootMxc(:)= 0. ! Hardcoded to 3
    u%LSSTipMxa = 0.
    u%LSSTipMya = 0.
    u%LSSTipMza = 0.
@@ -535,7 +535,7 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
          CALL CheckError( ErrStat2, ErrMsg2 )
          IF (ErrStat >= AbortErrLev) RETURN
          
-      do i=1,size(SrvD_Indx_Y_BlPitchCom)
+      do i=1,size(SrvD_Indx_Y_BlPitchCom) ! NOTE: potentially limit to NumBl
          InitOut%LinNames_y(SrvD_Indx_Y_BlPitchCom(i)) = 'BlPitchCom('//trim(num2lstr(i))//'), rad'
          InitOut%RotFrame_y(SrvD_Indx_Y_BlPitchCom(i)) = .true.         
       end do
@@ -983,7 +983,7 @@ SUBROUTINE DLL_controller_call(t, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg
             m%FirstWarn = .FALSE.
          END IF
       ELSE
-         m%dll_data%PrevBlPitch(1:p%NumBl) = m%dll_data%BlPitchCom  ! used for linear ramp of delayed signal
+         m%dll_data%PrevBlPitch(1:p%NumBl) = m%dll_data%BlPitchCom(1:p%NumBl)  ! used for linear ramp of delayed signal
          m%LastTimeCalled = t
 
          CALL BladedInterface_CalcOutput( t, u, p, m, ErrStat2, ErrMsg2 )
@@ -1697,8 +1697,12 @@ SUBROUTINE SrvD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_o
       end if
       
          
-      do i=1,size(SrvD_Indx_Y_BlPitchCom)
-         y_op(SrvD_Indx_Y_BlPitchCom(i)) = y%BlPitchCom(i)
+      do i=1,size(SrvD_Indx_Y_BlPitchCom) ! Note: Potentially limit to NumBl
+         if (i<=p%NumBl) then
+            y_op(SrvD_Indx_Y_BlPitchCom(i)) = y%BlPitchCom(i)
+         else
+            y_op(SrvD_Indx_Y_BlPitchCom(i)) = 0.0_ReKI
+         endif
       end do
       y_op(SrvD_Indx_Y_YawMom)  = y%YawMom
       y_op(SrvD_Indx_Y_GenTrq)  = y%GenTrq
@@ -2773,9 +2777,9 @@ SUBROUTINE SrvD_SetParameters( InputFileData, p, ErrStat, ErrMsg )
    CALL AllocAry( p%PitManRat, p%NumBl, 'PitManRat', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       IF (ErrStat >= AbortErrLev) RETURN  
       
-   p%TPitManS  = InputFileData%TPitManS(1:p%NumBl)
-   p%BlPitchF  = InputFileData%BlPitchF(1:p%NumBl)
-   p%PitManRat = InputFileData%PitManRat(1:p%NumBl)
+   p%TPitManS (1:p%NumBl) = InputFileData%TPitManS(1:p%NumBl)
+   p%BlPitchF (1:p%NumBl) = InputFileData%BlPitchF(1:p%NumBl)
+   p%PitManRat(1:p%NumBl) = InputFileData%PitManRat(1:p%NumBl)
 
       !.............................................
       ! Set generator and torque control parameters:
@@ -3184,7 +3188,7 @@ SUBROUTINE Pitch_CalcOutput( t, u, p, x, xd, z, OtherState, BlPitchCom, ElecPwr,
 
          CASE ( ControlMode_EXTERN )              ! User-defined from Simulink or LabVIEW.
 
-            BlPitchCom = u%ExternalBlPitchCom                ! copy entire array
+            BlPitchCom = u%ExternalBlPitchCom(1:p%NumBl)
          
          CASE ( ControlMode_DLL )                                ! User-defined pitch control from Bladed-style DLL
             
@@ -3372,6 +3376,8 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
       ! Determine which inputs are not valid
 
    InvalidOutput(BlAirFlC3) = ( p%NumBl < 3 )
+   InvalidOutput(BlAirFlC2) = ( p%NumBl < 2 )
+   InvalidOutput(      BlPitchC2) = ( p%NumBl < 2 )
    InvalidOutput(      BlPitchC3) = ( p%NumBl < 3 )
    InvalidOutput(        NTMD_XQ) = ( .not. p%CompNTMD )
    InvalidOutput(       NTMD_XQD) = ( .not. p%CompNTMD )
