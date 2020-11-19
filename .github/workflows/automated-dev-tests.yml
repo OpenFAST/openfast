@@ -59,6 +59,8 @@ jobs:
         uses: ./.github/actions/tests-module-aerodyn
       - name: 'Run BeamDyn tests'
         uses: ./.github/actions/tests-module-beamdyn
+      - name: 'Run InflowWind tests'
+        uses: ./.github/actions/tests-module-inflowwind
       - name: 'Run OpenFAST tests'
         # if: contains(github.event.head_commit.message, 'Action - Test All') || contains(github.event.pull_request.labels.*.name, 'Action - Test All') 
         uses: ./.github/actions/tests-gluecode-openfast
