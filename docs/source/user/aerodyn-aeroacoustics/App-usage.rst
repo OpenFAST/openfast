@@ -97,12 +97,7 @@ models:
 -  **BluntMod** – Integer 0/1: flag to activate (**BluntMod=1**) the
    trailing-edge bluntness – vortex shedding model, see :numref:`aa-TE-vortex`. If
    the flag is set to 1, the trailing-edge geometry must be specified in
-   the file(s) listed in the field Blade Properties.
-
-Next, the field Blade Properties lists three file names, often but not
-necessarily identical, which contain the distributed properties
-describing the detailed geometry of the trailing edge. These are
-described in :numref:`aa-sec-TEgeom`.
+   the files as described in :numref:`aa-sec-BLinputs`.
 
 The field Observer Locations contains the path to the file where the
 number of observers (NrObsLoc) and the respective locations are
@@ -141,7 +136,7 @@ The file must be closed by an END command.
 
 .. _aa-sec-BLinputs:
 
-Boundary Layer Inputs
+Boundary Layer Inputs and Trailing Edge Geometry
 ---------------------
 
 When the flag **BLMod** is set equal to 2, pretabulated properties of the
@@ -188,6 +183,26 @@ outputs of XFoil.  Because it is usually impossible to obtain these values for
 the whole ranges of Reynolds numbers and angles of attack, the code is set to
 adopt the last available values and print to screen a warning.
 
+When the flag **BluntMod** is set to 1, the detailed geometry of the
+trailing edge must also be defined along the span. Two inputs must be
+provided, namely the angle, :math:`\Psi` between the suction and
+pressure sides of the profile, right before the trailing-edge point, and
+the height, :math:`h`, of the trailing edge. :math:`\Psi` must be
+defined in degrees, while :math:`h` is in meters. Note that the BPM
+trailing-edge bluntness model is very sensitive to these two parameters,
+which, however, are often not easy to determine for real blades. 
+:numref:`aa-fig:GeomParamTE` shows the two inputs.
+
+.. figure:: media/NoiseN011.png
+   :alt:    Geometric parameters of the trailing-edge bluntness
+   :name:   aa-fig:GeomParamTE
+   :width:  100.0%
+
+   Geometric parameters :math:`\mathbf{\Psi}` and
+   :math:`\mathbf{h}` of the trailing-edge bluntness
+
+One value of :math:`\Psi` and one value of :math:`h` per file must be defined.
+These values are not used if the flag **BluntMod** is set to 0.
 
 .. container::
    :name: aa-tab:AF20_BL
@@ -263,39 +278,6 @@ grid looks like the following:
       :linenos:
       :language: none
 
-
-.. _aa-sec-TEgeom:
-
-Trailing-Edge Geometry
-----------------------
-
-When the flag **BluntMod** is set to 1, the detailed geometry of the
-trailing edge must be defined along the span. Two inputs must be
-provided, namely the angle, :math:`\Psi,` between the suction and
-pressure sides of the profile, right before the trailing-edge point, and
-the height, :math:`h`, of the trailing edge. :math:`\Psi` must be
-defined in degrees, while :math:`h` is in meters. Note that the BPM
-trailing-edge bluntness model is very sensitive to these two parameters,
-which, however, are often not easy to determine for real blades. 
-:numref:`aa-fig:GeomParamTE` shows the two inputs.
-
-.. figure:: media/NoiseN011.png
-   :alt:    Geometric parameters of the trailing-edge bluntness
-   :name:   aa-fig:GeomParamTE
-   :width:  100.0%
-
-   Geometric parameters :math:`\mathbf{\Psi}` and
-   :math:`\mathbf{h}` of the trailing-edge bluntness
-
-The two distributions must be defined with the same spanwise resolution
-of the AeroDyn15 blade file, such as:
-
-.. container::
-   :name: aa-tab:BladeProp
-
-   .. literalinclude:: example/BladeProp.dat
-      :linenos:
-      :language: none
 
 .. [4]
    https://github.com/OpenFAST/python-toolbox
