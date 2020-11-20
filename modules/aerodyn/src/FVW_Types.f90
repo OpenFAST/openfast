@@ -74,6 +74,8 @@ IMPLICIT NONE
     REAL(DbKi)  :: DTvtk      !< DT between vtk writes [s]
     INTEGER(IntKi)  :: VTKCoord      !< Switch for VTK outputs coordinate  system [-]
     CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
+    CHARACTER(1024)  :: VTK_OutFileRoot      !< Rootdirectory for writing VTK files [-]
+    CHARACTER(1024)  :: VTK_OutFileBase      !< Basename for writing VTK files [-]
   END TYPE FVW_ParameterType
 ! =======================
 ! =========  FVW_MiscVarType  =======
@@ -164,6 +166,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: Gamma_FW      !< Circulation of the far  wake panels [-]
     REAL(ReKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: r_NW      !< Position    of the near wake panels [-]
     REAL(ReKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: r_FW      !< Position    of the far  wake panels [-]
+    TYPE(UA_ContinuousStateType)  :: UA      !< states for UnsteadyAero [-]
   END TYPE FVW_ContinuousStateType
 ! =======================
 ! =========  FVW_DiscreteStateType  =======
@@ -340,6 +343,8 @@ ENDIF
     DstParamData%DTvtk = SrcParamData%DTvtk
     DstParamData%VTKCoord = SrcParamData%VTKCoord
     DstParamData%RootName = SrcParamData%RootName
+    DstParamData%VTK_OutFileRoot = SrcParamData%VTK_OutFileRoot
+    DstParamData%VTK_OutFileBase = SrcParamData%VTK_OutFileBase
  END SUBROUTINE FVW_CopyParam
 
  SUBROUTINE FVW_DestroyParam( ParamData, ErrStat, ErrMsg )
@@ -446,6 +451,8 @@ ENDIF
       Db_BufSz   = Db_BufSz   + 1  ! DTvtk
       Int_BufSz  = Int_BufSz  + 1  ! VTKCoord
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%RootName)  ! RootName
+      Int_BufSz  = Int_BufSz  + 1*LEN(InData%VTK_OutFileRoot)  ! VTK_OutFileRoot
+      Int_BufSz  = Int_BufSz  + 1*LEN(InData%VTK_OutFileBase)  ! VTK_OutFileBase
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -596,6 +603,14 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     DO I = 1, LEN(InData%RootName)
       IntKiBuf(Int_Xferred) = ICHAR(InData%RootName(I:I), IntKi)
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
+    DO I = 1, LEN(InData%VTK_OutFileRoot)
+      IntKiBuf(Int_Xferred) = ICHAR(InData%VTK_OutFileRoot(I:I), IntKi)
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
+    DO I = 1, LEN(InData%VTK_OutFileBase)
+      IntKiBuf(Int_Xferred) = ICHAR(InData%VTK_OutFileBase(I:I), IntKi)
       Int_Xferred = Int_Xferred + 1
     END DO ! I
  END SUBROUTINE FVW_PackParam
@@ -762,6 +777,14 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     DO I = 1, LEN(OutData%RootName)
       OutData%RootName(I:I) = CHAR(IntKiBuf(Int_Xferred))
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
+    DO I = 1, LEN(OutData%VTK_OutFileRoot)
+      OutData%VTK_OutFileRoot(I:I) = CHAR(IntKiBuf(Int_Xferred))
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
+    DO I = 1, LEN(OutData%VTK_OutFileBase)
+      OutData%VTK_OutFileBase(I:I) = CHAR(IntKiBuf(Int_Xferred))
       Int_Xferred = Int_Xferred + 1
     END DO ! I
  END SUBROUTINE FVW_UnPackParam
@@ -5550,6 +5573,9 @@ IF (ALLOCATED(SrcContStateData%r_FW)) THEN
   END IF
     DstContStateData%r_FW = SrcContStateData%r_FW
 ENDIF
+      CALL UA_CopyContState( SrcContStateData%UA, DstContStateData%UA, CtrlCode, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+         IF (ErrStat>=AbortErrLev) RETURN
  END SUBROUTINE FVW_CopyContState
 
  SUBROUTINE FVW_DestroyContState( ContStateData, ErrStat, ErrMsg )
@@ -5573,6 +5599,7 @@ ENDIF
 IF (ALLOCATED(ContStateData%r_FW)) THEN
   DEALLOCATE(ContStateData%r_FW)
 ENDIF
+  CALL UA_DestroyContState( ContStateData%UA, ErrStat, ErrMsg )
  END SUBROUTINE FVW_DestroyContState
 
  SUBROUTINE FVW_PackContState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -5630,6 +5657,24 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*4  ! r_FW upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%r_FW)  ! r_FW
   END IF
+   ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
+      Int_BufSz   = Int_BufSz + 3  ! UA: size of buffers for each call to pack subtype
+      CALL UA_PackContState( Re_Buf, Db_Buf, Int_Buf, InData%UA, ErrStat2, ErrMsg2, .TRUE. ) ! UA 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf)) THEN ! UA
+         Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
+         DEALLOCATE(Re_Buf)
+      END IF
+      IF(ALLOCATED(Db_Buf)) THEN ! UA
+         Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
+         DEALLOCATE(Db_Buf)
+      END IF
+      IF(ALLOCATED(Int_Buf)) THEN ! UA
+         Int_BufSz = Int_BufSz + SIZE( Int_Buf )
+         DEALLOCATE(Int_Buf)
+      END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -5767,6 +5812,34 @@ ENDIF
         END DO
       END DO
   END IF
+      CALL UA_PackContState( Re_Buf, Db_Buf, Int_Buf, InData%UA, ErrStat2, ErrMsg2, OnlySize ) ! UA 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Re_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Re_Buf) > 0) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_Buf)-1 ) = Re_Buf
+        Re_Xferred = Re_Xferred + SIZE(Re_Buf)
+        DEALLOCATE(Re_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+      IF(ALLOCATED(Db_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Db_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Db_Buf) > 0) DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_Buf)-1 ) = Db_Buf
+        Db_Xferred = Db_Xferred + SIZE(Db_Buf)
+        DEALLOCATE(Db_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+      IF(ALLOCATED(Int_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Int_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Int_Buf) > 0) IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_Buf)-1 ) = Int_Buf
+        Int_Xferred = Int_Xferred + SIZE(Int_Buf)
+        DEALLOCATE(Int_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
  END SUBROUTINE FVW_PackContState
 
  SUBROUTINE FVW_UnPackContState( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -5921,6 +5994,46 @@ ENDIF
         END DO
       END DO
   END IF
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Re_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Re_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Re_Buf = ReKiBuf( Re_Xferred:Re_Xferred+Buf_size-1 )
+        Re_Xferred = Re_Xferred + Buf_size
+      END IF
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Db_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Db_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Db_Buf = DbKiBuf( Db_Xferred:Db_Xferred+Buf_size-1 )
+        Db_Xferred = Db_Xferred + Buf_size
+      END IF
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Int_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Int_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
+        Int_Xferred = Int_Xferred + Buf_size
+      END IF
+      CALL UA_UnpackContState( Re_Buf, Db_Buf, Int_Buf, OutData%UA, ErrStat2, ErrMsg2 ) ! UA 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
+      IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
+      IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
  END SUBROUTINE FVW_UnPackContState
 
  SUBROUTINE FVW_CopyDiscState( SrcDiscStateData, DstDiscStateData, CtrlCode, ErrStat, ErrMsg )

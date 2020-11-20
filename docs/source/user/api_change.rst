@@ -9,7 +9,7 @@ The changes are tabulated according to the module input file, line number, and f
 The line number corresponds to the resulting line number after all changes are implemented.
 Thus, be sure to implement each in order so that subsequent line numbers are correct.
 
-OpenFAST v2.3.0 to OpenFAST `dev`
+OpenFAST v2.4.0 to OpenFAST `dev`
 ---------------------------------
 
 ============== ==== ================== =============================================================================================================================================================================
@@ -37,7 +37,14 @@ IfW driver     9    WrVTK              false    WrVTK     - Convert all data to 
 InflowWind     7    VFlowAng                0   VFlowAng  - Upflow angle (degrees) (not used for native Bladed format WindType=7)
 ============== ==== ================== =============================================================================================================================================================================
 
-\*non-comment line count
+Modified in OpenFAST `dev`
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Module        Line  Flag Name          Example Value
+============== ==== ================== =============================================================================================================================================================================
+AirFoilTables  40\* filtCutOff         "DEFAULT"               filtCutOff        - Reduced frequency cut-off for low-pass filtering the AoA input to UA, as well as the 1st and 2nd derivatives (-) [default = 0.5] 
+============== ==== ================== =============================================================================================================================================================================
+
+\*non-comment line count, excluding lines contained if NumCoords is not 0.
 
 Additional nodal output channels added for :ref:`AeroDyn15<AD-Nodal-Outputs>`,
 :ref:`BeamDyn<BD-Nodal-Outputs>`, and :ref:`ElastoDyn<ED-Nodal-Outputs>`.
