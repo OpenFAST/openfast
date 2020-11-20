@@ -59,6 +59,8 @@ jobs:
         uses: ./.github/actions/tests-module-aerodyn
       - name: 'Run BeamDyn tests'
         uses: ./.github/actions/tests-module-beamdyn
+      - name: 'Run HydroDyn tests'
+        uses: ./.github/actions/tests-module-hydrodyn
       - name: 'Run InflowWind tests'
         uses: ./.github/actions/tests-module-inflowwind
       - name: 'Run OpenFAST tests'
@@ -71,11 +73,43 @@ jobs:
         with:
           name: test-results
           path: |
-            build/reg_tests/modules
-            build/reg_tests/glue-codes/openfast
-            !build/reg_tests/glue-codes/openfast/5MW_Baseline
-            !build/reg_tests/glue-codes/openfast/AOC
-            !build/reg_tests/glue-codes/openfast/AWT27
-            !build/reg_tests/glue-codes/openfast/SWRT
-            !build/reg_tests/glue-codes/openfast/UAE_VI
-            !build/reg_tests/glue-codes/openfast/WP_Baseline
+            /openfast/build/reg_tests/modules
+            /openfast/build/reg_tests/glue-codes/openfast
+            !/openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline
+            !/openfast/build/reg_tests/glue-codes/openfast/AOC
+            !/openfast/build/reg_tests/glue-codes/openfast/AWT27
+            !/openfast/build/reg_tests/glue-codes/openfast/SWRT
+            !/openfast/build/reg_tests/glue-codes/openfast/UAE_VI
+            !/openfast/build/reg_tests/glue-codes/openfast/WP_Baseline
+
+
+  build-single-precision:
+    # Test if single precision compile completes.
+    # Do not run the test suite.
+
+    # Do not run if:
+    # - Branch name contains "docs/"
+    if: "!contains(github.ref, 'docs/')"
+
+    runs-on: ubuntu-latest
+    container:
+      image: rafmudaf/openfast-ubuntu:dev
+    steps:
+      - name: Checkout
+        uses: actions/checkout@main
+        with:
+          submodules: recursive
+      - name: Git Update
+        uses: ./.github/actions/git-update
+        with:
+          repository: $GITHUB_REPOSITORY
+          ref: $GITHUB_REF
+      - name: Configure CMake
+        uses: ./.github/actions/cmake-config
+        with:
+          build-type: Debug
+          additional-flags: -DDOUBLE_PRECISION=OFF
+      - name: Compile OpenFAST
+        uses: ./.github/actions/compile
+        with:
+          build-target: 'all'
