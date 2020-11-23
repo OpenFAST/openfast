@@ -4457,7 +4457,7 @@ END SUBROUTINE CheckR16Var
 
       ALLOCATE( FileInfo%Lines(FileInfo%NumLines) )
       ALLOCATE( FileInfo%FileLine(FileInfo%NumLines) )
-      ALLOCATE( FileInfo%FileIndx(FileInfo%NumFiles) )
+      ALLOCATE( FileInfo%FileIndx(FileInfo%NumLines) )
       ALLOCATE( FileInfo%FileList(FileInfo%NumFiles) )
 
       DO i = 1, FileInfo%NumLines
@@ -4470,7 +4470,7 @@ END SUBROUTINE CheckR16Var
          FileInfo%Lines(i) = StringArray(i)
       END DO      
       FileInfo%FileLine = (/ (i, i = 1, FileInfo%NumLines) /)
-      FileInfo%FileIndx = (/ (i, i = 1, FileInfo%NumFiles) /)
+      FileInfo%FileIndx = FileInfo%NumFiles
       FileInfo%FileList = (/ "passed file info" /)
 
    END SUBROUTINE
