@@ -27,10 +27,10 @@ contains
         InFileInfo = getInputFileData()
         CALL InflowWind_ParseInputFileInfo(InputFileData , InFileInfo, PriPath, TmpErrStat, TmpErrMsg)
 
-        @assertEqual(TmpErrStat, 0)
-        @assertEqual(InputFileData%Uniform_FileName, trim(expected))
-        @assertEqual(InputFileData%Uniform_RefHt, 90)
-        @assertEqual(InputFileData%Uniform_RefLength, 125.88)
+        @assertEqual(0, TmpErrStat, message='Error message: '//trim(TmpErrMsg)//NewLine//'ErrStat: ')
+        @assertEqual(trim(expected), InputFileData%Uniform_FileName)
+        @assertEqual(90, InputFileData%Uniform_RefHt)
+        @assertEqual(125.88, InputFileData%Uniform_RefLength)
 
     end subroutine
 
@@ -59,9 +59,9 @@ contains
             '! Wind file for sheared 18 m/s wind with 30 degree direction.    ', &
             '! Time Wind Wind  Vert. Horiz. Vert. LinV Gust                   ', &
             '!      Speed Dir Speed Shear Shear Shear Speed                   ', &
-            ' 0.0 12.0 0.0 0.0 0.0 0.0 0.0 0.0                                ', &
-            ' 0.1 12.0 0.0 0.0 0.0 0.0 0.0 0.0                                ', &
-            ' 999.9 12.0 0.0 0.0 0.0 0.0 0.0 0.0                              ' &
+            ' 0.0   12.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0                          ', &
+            ' 0.1   12.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0                          ', &
+            ' 999.9 12.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0                          ' &
         /)
 
             ! Error handling
@@ -85,7 +85,7 @@ contains
                         InitOutData, TmpErrStat, TmpErrMsg)
 
             ! Results
-
+        @assertEqual(0, TmpErrStat, message='Error message: '//trim(TmpErrMsg)//NewLine//'ErrStat: ')
         @assertEqual(0.0, p%UniformWind%TData(1))
         @assertEqual(0.1, p%UniformWind%TData(2))
         @assertEqual(999.9, p%UniformWind%TData(3))

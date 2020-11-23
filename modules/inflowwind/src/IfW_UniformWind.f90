@@ -289,6 +289,22 @@ SUBROUTINE IfW_UniformWind_Init(InitData, ParamData, MiscVars, InitOutData, ErrS
       IF ( ErrStat >= AbortErrLev ) THEN
          RETURN
       ENDIF
+
+         ! Check if 9 columns
+      NumCols = MaxNumCols
+      LineNo = NumComments + 1
+      CALL ParseAry( InitData%PassedFileData, LineNo, "Wind type 2 line"//TRIM(Num2LStr(LineNo)), TmpData(1:NumCols), NumCols, TmpErrStat, TmpErrMsg )
+      if (TmpErrStat /= 0) then
+            ! assume the upflow is 0 and try reading the rest of the files
+         CALL SetErrStat(ErrID_Info,' Could not read upflow column in uniform wind files. Assuming upflow is 0.', ErrStat, ErrMsg, RoutineName)
+         NumCols = NumCols - 1
+         READ(LINE,*,IOSTAT=TmpErrStat) ( TmpData(I), I=1,NumCols ) ! this line was read when we were figuring out the comment lines; let's make sure it contains numeric column data
+      end if
+      DO WHILE (TmpErrStat == 0)  ! read the rest of the file (until an error occurs)
+         READ(UnitWind,*,IOSTAT=TmpErrStat) ( TmpData(I), I=1,NumCols )
+      END DO !WHILE
+
+
       DO I=1,ParamData%NumDataLines
 
          LineNo = NumComments + I
