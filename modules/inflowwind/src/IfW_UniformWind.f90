@@ -112,12 +112,9 @@ SUBROUTINE IfW_UniformWind_Init(InitData, ParamData, MiscVars, InitOutData, ErrS
    INTEGER(IntKi)                                              :: LineNo
    REAL(ReKi)                                                  :: DelDiff              ! Temp variable for storing the direction difference
 
-   INTEGER(IntKi)                                              :: UnitWind             ! Unit number for the InflowWind input file
    INTEGER(IntKi)                                              :: I
-   INTEGER(IntKi)                                              :: NumComments
    INTEGER(IntKi)                                              :: ILine             ! Counts the line number in the file
    INTEGER(IntKi),            PARAMETER                        :: MaxTries = 100
-   CHARACTER(1024)                                             :: Line              ! Temp variable for reading whole line from file
    TYPE(FileInfoType)                                          :: InFileInfo    !< The derived type for holding the full input file for parsing -- we may pass this in the future
 
       ! Temporary variables for error handling
@@ -148,185 +145,65 @@ SUBROUTINE IfW_UniformWind_Init(InitData, ParamData, MiscVars, InitOutData, ErrS
    ParamData%RefHt            =  InitData%ReferenceHeight
    ParamData%RefLength        =  InitData%RefLength
 
+      !  Read in the data from a file, or copy from the passed InFileInfo.  After this, the InFileInfo
+      !  should contain only a table -- all comments and empty lines have been stripped out
    IF ( InitData%UseInputFile ) THEN
-
-      ! Get a unit number to use
-
-      CALL GetNewUnit(UnitWind, TmpErrStat, TmpErrMsg)
-      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-      IF (ErrStat >= AbortErrLev) RETURN
-
-      !-------------------------------------------------------------------------------------------------
-      ! Open the file for reading
-      !-------------------------------------------------------------------------------------------------
-
-      CALL OpenFInpFile (UnitWind, TRIM(InitData%WindFileName), TmpErrStat, TmpErrMsg)
+      CALL ProcessComFile( InitData%WindFileName, InFileInfo, TmpErrStat, TmpErrMsg )
       CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev ) RETURN
+   ELSE
+      CALL NWTC_Library_CopyFileInfoType( InitData%PassedFileData, InFileInfo, MESH_NEWCOPY, TmpErrStat, TmpErrMsg )
+      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+      IF ( ErrStat >= AbortErrLev ) RETURN
+   ENDIF
 
-      !-------------------------------------------------------------------------------------------------
-      ! Find the number of comment lines
-      !-------------------------------------------------------------------------------------------------
+   ! For diagnostic purposes, the following can be used to display the contents
+   ! of the InFileInfo data structure.
+   ! call Print_FileInfo_Struct( CU, InFileInfo ) ! CU is the screen -- different number on different systems.
 
-      LINE = '!'                          ! Initialize the line for the DO WHILE LOOP
-      NumComments = -1                    ! the last line we read is not a comment, so we'll initialize this to -1 instead of 0
-
-      DO WHILE ( (INDEX( LINE, '!' ) > 0) .OR. (INDEX( LINE, '#' ) > 0) .OR. (INDEX( LINE, '%' ) > 0) ) ! Lines containing "!" are treated as comment lines
-         NumComments = NumComments + 1
-
-         READ(UnitWind,'( A )',IOSTAT=TmpErrStat) LINE
-
-         IF ( TmpErrStat /=0 ) THEN
-            CALL SetErrStat(ErrID_Fatal,' Error reading from uniform wind file on line '//TRIM(Num2LStr(NumComments+1))//'.',   &
-                  ErrStat, ErrMsg, RoutineName)
-            CLOSE(UnitWind)
-            RETURN
-         END IF
-
-      END DO !WHILE
-
-      !-------------------------------------------------------------------------------------------------
-      ! Find the number of data lines
-      !-------------------------------------------------------------------------------------------------
-
-      ParamData%NumDataLines = 0
-   
-      NumCols = MaxNumCols
-      READ(LINE,*,IOSTAT=TmpErrStat) ( TmpData(I), I=1,NumCols ) ! this line was read when we were figuring out the comment lines; let's see if it contains all of the columns
-      if (TmpErrStat /= 0) then
-            ! assume the upflow is 0 and try reading the rest of the files
-         CALL SetErrStat(ErrID_Info,' Could not read upflow column in uniform wind files. Assuming upflow is 0.', ErrStat, ErrMsg, RoutineName)
-         NumCols = NumCols - 1
-         READ(LINE,*,IOSTAT=TmpErrStat) ( TmpData(I), I=1,NumCols ) ! this line was read when we were figuring out the comment lines; let's make sure it contains numeric column data
-      end if
-  
-
-      DO WHILE (TmpErrStat == 0)  ! read the rest of the file (until an error occurs)
-         ParamData%NumDataLines = ParamData%NumDataLines + 1
-
-         READ(UnitWind,*,IOSTAT=TmpErrStat) ( TmpData(I), I=1,NumCols )
-
-      END DO !WHILE
-
-
-      IF (ParamData%NumDataLines < 1) THEN
-         TmpErrMsg=  'Error: '//TRIM(Num2LStr(NumComments))//' comment lines were found in the uniform wind file, '// &
-                     'but the first data line does not contain the proper format.'
-         CALL SetErrStat(ErrID_Fatal,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-         CLOSE(UnitWind)
-         RETURN
-      END IF
 
       !-------------------------------------------------------------------------------------------------
       ! Allocate the data arrays
       !-------------------------------------------------------------------------------------------------
 
-      CALL Alloc_ParamDataArrays( ParamData, TmpErrStat, TmpErrMsg)
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CLOSE(UnitWind)
-         RETURN
-      END IF
+   ParamData%NumDataLines = InFileInfo%NumLines
+   CALL Alloc_ParamDataArrays( ParamData, TmpErrStat, TmpErrMsg)
+   CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+   IF ( ErrStat >= AbortErrLev ) RETURN
+
 
       !-------------------------------------------------------------------------------------------------
-      ! Rewind the file (to the beginning) and skip the comment lines
+      ! Store the data arrays
       !-------------------------------------------------------------------------------------------------
 
-      REWIND( UnitWind )
-
-      DO I=1,NumComments
-         CALL ReadCom( UnitWind, TRIM(InitData%WindFileName), 'Header line #'//TRIM(Num2LStr(I)), TmpErrStat, TmpErrMsg )
-         CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-         IF ( ErrStat >= AbortErrLev ) THEN
-            CLOSE(UnitWind)
-            RETURN
-         ENDIF
-      END DO
-
-      !-------------------------------------------------------------------------------------------------
-      ! Read the data arrays
-      !-------------------------------------------------------------------------------------------------
-
-      DO I=1,ParamData%NumDataLines
-
-         CALL ReadAry( UnitWind, TRIM(InitData%WindFileName), TmpData(1:NumCols), NumCols, 'TmpData', &
-                  'Data from uniform wind file line '//TRIM(Num2LStr(NumComments+I)), TmpErrStat, TmpErrMsg)
-         CALL SetErrStat(TmpErrStat,'Error retrieving data from the uniform wind file line'//TRIM(Num2LStr(NumComments+I)),   &
-               ErrStat,ErrMsg,RoutineName)
-         IF ( ErrStat >= AbortErrLev ) THEN
-            CLOSE(UnitWind)
-            RETURN
-         ENDIF
-
-         ParamData%Tdata(  I) = TmpData(1)
-         ParamData%V(      I) = TmpData(2)
-         ParamData%Delta(  I) = TmpData(3)*D2R
-         ParamData%VZ(     I) = TmpData(4)
-         ParamData%HShr(   I) = TmpData(5)
-         ParamData%VShr(   I) = TmpData(6)
-         ParamData%VLinShr(I) = TmpData(7)
-         ParamData%VGust(  I) = TmpData(8)
-
-      END DO !I
-
-      !-------------------------------------------------------------------------------------------------
-      ! Close the file
-      !-------------------------------------------------------------------------------------------------
-
-      CLOSE( UnitWind )
-
-   ELSE
-
-      NumComments = 0
-      DO I=1, SIZE(InitData%PassedFileData%Lines)
-         Line = InitData%PassedFileData%Lines(I)
-         IF ( (INDEX( Line, '!' ) > 0) .OR. (INDEX( Line, '#' ) > 0) .OR. (INDEX( Line, '%' ) > 0) ) THEN
-            NumComments = NumComments + 1
-         END if
-      END DO
-
-      ParamData%NumDataLines = SIZE(InitData%PassedFileData%Lines) - NumComments
-      CALL Alloc_ParamDataArrays( ParamData, TmpErrStat, TmpErrMsg)
-      IF ( ErrStat >= AbortErrLev ) THEN
-         RETURN
-      ENDIF
-
-         ! Check if 9 columns
-      NumCols = MaxNumCols
-      LineNo = NumComments + 1
-      CALL ParseAry( InitData%PassedFileData, LineNo, "Wind type 2 line"//TRIM(Num2LStr(LineNo)), TmpData(1:NumCols), NumCols, TmpErrStat, TmpErrMsg )
-      if (TmpErrStat /= 0) then
-            ! assume the upflow is 0 and try reading the rest of the files
-         CALL SetErrStat(ErrID_Info,' Could not read upflow column in uniform wind files. Assuming upflow is 0.', ErrStat, ErrMsg, RoutineName)
-         NumCols = NumCols - 1
-         READ(LINE,*,IOSTAT=TmpErrStat) ( TmpData(I), I=1,NumCols ) ! this line was read when we were figuring out the comment lines; let's make sure it contains numeric column data
-      end if
-      DO WHILE (TmpErrStat == 0)  ! read the rest of the file (until an error occurs)
-         READ(UnitWind,*,IOSTAT=TmpErrStat) ( TmpData(I), I=1,NumCols )
-      END DO !WHILE
+      ! Check if 9 columns
+   NumCols = MaxNumCols
+   LineNo = 1     ! Start at begining
+   CALL ParseAry( InFileInfo, LineNo, "Wind type 2 line", TmpData(1:NumCols), NumCols, TmpErrStat, TmpErrMsg )
+   if (TmpErrStat /= 0) then
+         ! assume the upflow is 0 and try reading the rest of the files
+      CALL SetErrStat(ErrID_Info,' Could not read upflow column in uniform wind files. Assuming upflow is 0.', ErrStat, ErrMsg, RoutineName)
+      NumCols = NumCols - 1
+   end if
 
 
-      DO I=1,ParamData%NumDataLines
+      ! Parse the data and store it
+   LineNo = 1
+   DO I=1,ParamData%NumDataLines
+      CALL ParseAry( InFileInfo, LineNo, "Wind type 2 file line", TmpData(1:NumCols), NumCols, TmpErrStat, TmpErrMsg )
+      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+      IF ( ErrStat >= AbortErrLev ) RETURN
 
-         LineNo = NumComments + I
-         CALL ParseAry( InitData%PassedFileData, LineNo, "Wind type 2 line"//TRIM(Num2LStr(NumComments+I)), TmpData(1:NumCols), NumCols, TmpErrStat, TmpErrMsg )
-         CALL SetErrStat(TmpErrStat,'Error retrieving data from the uniform wind file line'//TRIM(Num2LStr(NumComments+I)),   &
-               ErrStat,ErrMsg,RoutineName)
-         IF ( ErrStat >= AbortErrLev ) THEN
-            RETURN
-         ENDIF
+      ParamData%Tdata(  I) = TmpData(1)
+      ParamData%V(      I) = TmpData(2)
+      ParamData%Delta(  I) = TmpData(3)*D2R
+      ParamData%VZ(     I) = TmpData(4)
+      ParamData%HShr(   I) = TmpData(5)
+      ParamData%VShr(   I) = TmpData(6)
+      ParamData%VLinShr(I) = TmpData(7)
+      ParamData%VGust(  I) = TmpData(8)
+   END DO !I
 
-         ParamData%Tdata(  I) = TmpData(1)
-         ParamData%V(      I) = TmpData(2)
-         ParamData%Delta(  I) = TmpData(3)*D2R
-         ParamData%VZ(     I) = TmpData(4)
-         ParamData%HShr(   I) = TmpData(5)
-         ParamData%VShr(   I) = TmpData(6)
-         ParamData%VLinShr(I) = TmpData(7)
-         ParamData%VGust(  I) = TmpData(8)
-
-      END DO !I
-
-   END IF
 
 
       !-------------------------------------------------------------------------------------------------

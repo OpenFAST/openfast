@@ -71,6 +71,10 @@ contains
         InFileInfo = getInputFileDataWindType2()
         CALL InitFileInfo(data, WindType2Data, ErrStat, ErrMsg)
 
+      ! For diagnostic purposes, the following can be used to display the contents
+      ! of the InFileInfo data structure.
+      ! call Print_FileInfo_Struct( CU, InFileInfo ) ! CU is the screen -- different number on different systems.
+
             ! Variable definitions
         InitInp%InputFileName = ""
         InitInp%NumWindPoints = 5
