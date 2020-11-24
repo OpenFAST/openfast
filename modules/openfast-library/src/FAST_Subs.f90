@@ -5036,6 +5036,7 @@ SUBROUTINE WrVTK_AllMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD, IfW, OpFM, H
 
    logical                                 :: outputFields        ! flag to determine if we want to output the HD mesh fields
    INTEGER(IntKi)                          :: NumBl, k
+   INTEGER(IntKi)                          :: j                   ! counter for StC instance at location
 
    INTEGER(IntKi)                          :: ErrStat2
    CHARACTER(ErrMsgLen)                    :: ErrMSg2
@@ -5120,24 +5121,29 @@ SUBROUTINE WrVTK_AllMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD, IfW, OpFM, H
             
 !  ServoDyn
    if (allocated(SrvD%Input)) then
-      IF ( ALLOCATED(SrvD%Input(1)%TStC%Mesh) ) THEN
-         IF ( SrvD%Input(1)%NStC%Mesh(1)%Committed ) THEN
-            !call MeshWrVTK(p_FAST%TurbinePos, SrvD%Input(1)%NStC%Mesh(1), trim(p_FAST%VTK_OutFileRoot)//'.SrvD_NStC_Motion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth )
-            call MeshWrVTK(p_FAST%TurbinePos, SrvD%y%NStC%Mesh(1), trim(p_FAST%VTK_OutFileRoot)//'.SrvD_NStC', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth, SrvD%Input(1)%NStC%Mesh(1) )
-         END IF
+      IF ( ALLOCATED(SrvD%Input(1)%NStC) ) THEN
+         do j=1,size(SrvD%Input(1)%NStC)
+            IF ( ALLOCATED(SrvD%Input(1)%NStC(j)%Mesh) ) THEN
+               IF ( SrvD%Input(1)%NStC(j)%Mesh(1)%Committed ) THEN
+                  !call MeshWrVTK(p_FAST%TurbinePos, SrvD%Input(1)%NStC(j)%Mesh(1), trim(p_FAST%VTK_OutFileRoot)//'.SrvD_NStC_Motion'//trim(num2lstr(j)), y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth )
+                  call MeshWrVTK(p_FAST%TurbinePos, SrvD%y%NStC(j)%Mesh(1), trim(p_FAST%VTK_OutFileRoot)//'.SrvD_NStC'//trim(num2lstr(j)), y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth, SrvD%Input(1)%NStC(j)%Mesh(1) )
+               END IF
+            ENDIF
+         enddo
       ENDIF
-      IF ( ALLOCATED(SrvD%Input(1)%TStC%Mesh) ) THEN
-         IF ( SrvD%Input(1)%TStC%Mesh(1)%Committed ) THEN
-            !call MeshWrVTK(p_FAST%TurbinePos, SrvD%Input(1)%TStC%Mesh(1), trim(p_FAST%VTK_OutFileRoot)//'.SrvD_TStC_Motion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth )
-            call MeshWrVTK(p_FAST%TurbinePos, SrvD%y%TStC%Mesh(1), trim(p_FAST%VTK_OutFileRoot)//'.SrvD_TStC', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth, SrvD%Input(1)%TStC%Mesh(1) )
-         END IF
-      ENDIF
-      IF ( ALLOCATED(SrvD%Input(1)%BStC%Mesh) ) THEN
-         DO K=1,size(SrvD%Input(1)%BStC%Mesh)
-            !call MeshWrVTK(p_FAST%TurbinePos, SrvD%Input(1)%BStC%Mesh(k), trim(p_FAST%VTK_OutFileRoot)//'.SrvD_BStC_Motion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth )
-            call MeshWrVTK(p_FAST%TurbinePos, SrvD%y%BStC%Mesh(k), trim(p_FAST%VTK_OutFileRoot)//'.SrvD_BStC'//trim(num2lstr(k)), y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth, SrvD%Input(1)%BStC%Mesh(k) )
-         ENDDO
-      END IF
+!FIXME: check size TStC BStC
+!     IF ( ALLOCATED(SrvD%Input(1)%TStC%Mesh) ) THEN
+!        IF ( SrvD%Input(1)%TStC%Mesh(1)%Committed ) THEN
+!           !call MeshWrVTK(p_FAST%TurbinePos, SrvD%Input(1)%TStC%Mesh(1), trim(p_FAST%VTK_OutFileRoot)//'.SrvD_TStC_Motion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth )
+!           call MeshWrVTK(p_FAST%TurbinePos, SrvD%y%TStC%Mesh(1), trim(p_FAST%VTK_OutFileRoot)//'.SrvD_TStC', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth, SrvD%Input(1)%TStC%Mesh(1) )
+!        END IF
+!     ENDIF
+!     IF ( ALLOCATED(SrvD%Input(1)%BStC%Mesh) ) THEN
+!        DO K=1,size(SrvD%Input(1)%BStC%Mesh)
+!           !call MeshWrVTK(p_FAST%TurbinePos, SrvD%Input(1)%BStC%Mesh(k), trim(p_FAST%VTK_OutFileRoot)//'.SrvD_BStC_Motion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth )
+!           call MeshWrVTK(p_FAST%TurbinePos, SrvD%y%BStC%Mesh(k), trim(p_FAST%VTK_OutFileRoot)//'.SrvD_BStC'//trim(num2lstr(k)), y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth, SrvD%Input(1)%BStC%Mesh(k) )
+!        ENDDO
+!     END IF
    end if
    
       
