@@ -3365,8 +3365,8 @@ END SUBROUTINE CheckR16Var
       TYPE (FileInfoType), INTENT(IN)             :: FileInfo                      !< The derived type for holding the file information.
       INTEGER(IntKi),      INTENT(INOUT)          :: LineNum                       !< The number of the line to parse.
       CHARACTER(*),        INTENT(IN)             :: AryName                       !< The array name we are trying to fill.
-      CHARACTER(*),        INTENT(OUT)            :: Ary(AryLen)                   !< The array to receive the input values.
       INTEGER,             INTENT(IN)             :: AryLen                        !< The length of the array to parse.
+      CHARACTER(*),        INTENT(OUT)            :: Ary(AryLen)                   !< The array to receive the input values.
       INTEGER(IntKi),      INTENT(OUT)            :: ErrStat                       !< The error status.
       CHARACTER(*),        INTENT(OUT)            :: ErrMsg                        !< The error message, if ErrStat /= 0.
       INTEGER,             INTENT(IN), OPTIONAL   :: UnEc                          !< I/O unit for echo file. If present and > 0, write to UnEc.
