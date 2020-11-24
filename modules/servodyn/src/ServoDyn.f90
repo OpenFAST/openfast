@@ -106,6 +106,7 @@ MODULE ServoDyn
 
      ! Nacelle Tuned Mass Damper (StC):
 
+!FIXME: need to expand this out for more NStC
    INTEGER(IntKi), PARAMETER      :: NStC_XQ   =  8
    INTEGER(IntKi), PARAMETER      :: NStC_XQD  =  9
    INTEGER(IntKi), PARAMETER      :: NStC_YQ   = 10
@@ -114,6 +115,7 @@ MODULE ServoDyn
 
      ! Tower Tuned Mass Damper (StC):
 
+!FIXME: need to expand this out for more TStC
    INTEGER(IntKi), PARAMETER      :: TStC_XQ   = 12
    INTEGER(IntKi), PARAMETER      :: TStC_XQD  = 13
    INTEGER(IntKi), PARAMETER      :: TStC_YQ   = 14
@@ -128,6 +130,7 @@ MODULE ServoDyn
 
      ! Blade Tuned Mass Damper (StC):
 
+!FIXME: need to expand this out for more BStC
    INTEGER(IntKi), PARAMETER      :: BStC1_XQ  = 19
    INTEGER(IntKi), PARAMETER      :: BStC1_XQD = 20
    INTEGER(IntKi), PARAMETER      :: BStC1_YQ  = 21
@@ -235,6 +238,7 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    INTEGER(IntKi)                                 :: ErrStat2       ! temporary Error status of the operation
    CHARACTER(ErrMsgLen)                           :: ErrMsg2        ! temporary Error message if ErrStat /= ErrID_None
    
+   character(*), parameter                        :: RoutineName = 'SrvD_Init'
 
 
       ! Initialize variables
@@ -267,8 +271,7 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
          ! put passed string info into the FileInfo_In -- FileInfo structure
       call NWTC_Library_CopyFileInfoType( InitInp%PassedPrimaryInputData, FileInfo_In, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
    endif
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF (ErrStat >= AbortErrLev) RETURN
+   if (Failed())  return;
   
    ! For diagnostic purposes, the following can be used to display the contents
    ! of the FileInfo_In data structure.
@@ -276,16 +279,15 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
 
      !  Parse the FileInfo_In structure of data from the inputfile into the InitInp%InputFile structure
    CALL ParseInputFileInfo( PriPath, InitInp%InputFile, TRIM(InitInp%RootName), FileInfo_In, InputFileData, Interval, ErrStat2, ErrMsg2 )
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF (ErrStat >= AbortErrLev) RETURN
+      if (Failed())  return;
 
    CALL ValidatePrimaryData( InitInp, InputFileData, ErrStat2, ErrMsg2 )
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF (ErrStat >= AbortErrLev) RETURN
+      if (Failed())  return;
       
    if ( (InitInp%NumCtrl2SC  > 0 .and. InitInp%NumCtrl2SC <= 0) .or. &
         (InitInp%NumSC2Ctrl <= 0 .and. InitInp%NumSC2Ctrl  > 0) ) then      
-      call CheckError( ErrID_Fatal, "If supercontroller is used, there must be at least one supercontroller input and one supercontroller output." )
+      call SetErrStat( ErrID_Fatal, "If supercontroller is used, there must be at least one supercontroller input and one supercontroller output.",ErrStat,ErrMsg,RoutineName)
+      call Cleanup()
       return
    end if
         
@@ -293,19 +295,16 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       ! Define parameters here:
       !............................................................................................
    CALL SrvD_SetParameters( InputFileData, p, ErrStat2, ErrMsg2 )
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF (ErrStat >= AbortErrLev) RETURN      
-   !p%DT  = Interval
+      if (Failed())  return;
 
       ! Set and verify BlPitchInit, which comes from InitInputData (not the inputfiledata)
    CALL AllocAry( p%BlPitchInit, p%NumBl, 'BlPitchInit', ErrStat2, ErrMsg2 )
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF (ErrStat >= AbortErrLev) RETURN
+      if (Failed())  return;
    p%BlPitchInit = InitInp%BlPitchInit
 
    IF ( ANY( p%BlPitchInit <= -pi ) .OR. ANY( p%BlPitchInit > pi ) )  THEN
-      CALL CheckError( ErrID_Fatal, 'BlPitchInit must be in the range (-pi,pi] radians (i.e., (-180,180] degrees).' )
-      IF (ErrStat >= AbortErrLev) RETURN
+      call SetErrStat( ErrID_Fatal, 'BlPitchInit must be in the range (-pi,pi] radians (i.e., (-180,180] degrees).',ErrStat,ErrMsg,RoutineName)
+      call Cleanup()
    END IF     
    
       !............................................................................................
@@ -316,26 +315,22 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    z%DummyConstrState         = 0.0_ReKi
    
    CALL AllocAry( m%xd_BlPitchFilter,  p%NumBl, 'BlPitchFilter',  ErrStat2, ErrMsg2 )
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF (ErrStat >= AbortErrLev) RETURN
-      m%xd_BlPitchFilter = p%BlPitchInit
+      if (Failed())  return;
+   m%xd_BlPitchFilter = p%BlPitchInit
    
       !.......................
       ! Other states for pitch maneuver
       !.......................
    CALL AllocAry( OtherState%BegPitMan, p%NumBl, 'BegPitMan', ErrStat2, ErrMsg2 )
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF (ErrStat >= AbortErrLev) RETURN
+      if (Failed())  return;
    OtherState%BegPitMan = .false.  ! Pitch maneuvers didn't actually start, yet   
    
    CALL AllocAry( OtherState%BlPitchI,  p%NumBl, 'BlPitchI',  ErrStat2, ErrMsg2 )
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF (ErrStat >= AbortErrLev) RETURN
+      if (Failed())  return;
    OtherState%BlPitchI = 0.0_ReKi
    
    CALL AllocAry( OtherState%TPitManE,  p%NumBl, 'TPitManE',  ErrStat2, ErrMsg2 )
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF (ErrStat >= AbortErrLev) RETURN
+      if (Failed())  return;
    OtherState%TPitManE = 0.0_DbKi
 
       !.......................
@@ -362,17 +357,14 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       !............................................................................................
 
    CALL AllocAry( u%BlPitch, p%NumBl, 'BlPitch', ErrStat2, ErrMsg2 )
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF (ErrStat >= AbortErrLev) RETURN
+      if (Failed())  return;
 
    CALL AllocAry( u%ExternalBlPitchCom, p%NumBl, 'ExternalBlPitchCom', ErrStat2, ErrMsg2 )
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF (ErrStat >= AbortErrLev) RETURN
+      if (Failed())  return;
         
    IF (InitInp%NumSC2Ctrl > 0 .and. p%UseBladedInterface) THEN
       CALL AllocAry( u%SuperController, InitInp%NumSC2Ctrl, 'u%SuperController', ErrStat2, ErrMsg2 )
-         CALL CheckError( ErrStat2, ErrMsg2 )
-         IF (ErrStat >= AbortErrLev) RETURN
+      if (Failed())  return;
       u%SuperController = 0.0_SiKi
    END IF
                   
@@ -423,26 +415,22 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       ! Define system output initializations (set up mesh) here:
       !............................................................................................
    CALL AllocAry( y%BlPitchCom, p%NumBl, 'BlPitchCom', ErrStat2, ErrMsg2 )
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF (ErrStat >= AbortErrLev) RETURN
+      if (Failed())  return;
 
       ! Commanded Airfoil UserProp for blade.  Must be same units as given in AD15 airfoil tables
       !  This is passed to AD15 to be interpolated with the airfoil table userprop column
    CALL AllocAry( y%BlAirfoilCom, p%NumBl, 'BlAirfoilCom', ErrStat2, ErrMsg2 )
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF (ErrStat >= AbortErrLev) RETURN
-      y%BlAirfoilCom = 0.0_ReKi
+      if (Failed())  return;
+   y%BlAirfoilCom = 0.0_ReKi
 
       ! tip brakes - this may be added back, later, so we'll keep these here for now
    CALL AllocAry( y%TBDrCon, p%NumBl, 'TBDrCon', ErrStat2, ErrMsg2 )
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF (ErrStat >= AbortErrLev) RETURN
+      if (Failed())  return;
 
    
    IF (InitInp%NumCtrl2SC > 0 .and. p%UseBladedInterface) THEN
       CALL AllocAry( y%SuperController, InitInp%NumCtrl2SC, 'y%SuperController', ErrStat2, ErrMsg2 )
-         CALL CheckError( ErrStat2, ErrMsg2 )
-         IF (ErrStat >= AbortErrLev) RETURN
+      if (Failed())  return;
       y%SuperController = 0.0_SiKi
    END IF
       
@@ -451,18 +439,15 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       ! tip brakes - this may be added back, later, so we'll keep these here for now
       !............................................................................................      
    CALL AllocAry( OtherState%BegTpBr,  p%NumBl, 'BegTpBr', ErrStat2, ErrMsg2 )
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF (ErrStat >= AbortErrLev) RETURN
+      if (Failed())  return;
    OtherState%BegTpBr = .FALSE.
     
    CALL AllocAry( OtherState%TTpBrDp,  p%NumBl, 'TTpBrDp', ErrStat2, ErrMsg2 )
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF (ErrStat >= AbortErrLev) RETURN
+      if (Failed())  return;
    OtherState%TTpBrDp = HUGE(OtherState%TTpBrDp) !basically never deploy them. Eventually this will be added back?
 
    CALL AllocAry( OtherState%TTpBrFl,  p%NumBl, 'TTpBrFl', ErrStat2, ErrMsg2 )
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF (ErrStat >= AbortErrLev) RETURN
+      if (Failed())  return;
    OtherState%TTpBrFl = HUGE(OtherState%TTpBrFl) !basically never deploy them. Eventually this will be added back?
    !OtherState%TTpBrFl = InputFileData%TTpBrFl + p%TpBrDT
 
@@ -491,8 +476,7 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       p%AvgWindSpeed = InitInp%AvgWindSpeed
       
       CALL BladedInterface_Init(u, p, m, y, InputFileData, InitInp, ErrStat2, ErrMsg2 )
-         CALL CheckError( ErrStat2, ErrMsg2 )
-         IF (ErrStat >= AbortErrLev) RETURN
+         if (Failed())  return;
          
       m%LastTimeCalled   = - m%dll_data%DLL_DT  ! we'll initialize the last time the DLL was called as -1 DLL_DT.
       m%LastTimeFiltered = - p%DT      ! we'll initialize the last time the DLL was filtered as -1 DT.
@@ -506,137 +490,21 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       
    END IF
          
-   
-!FIXME: split out this sectino as a subroutine.  Must allocate the spaces for each of these.
-!      !............................................................................................
-!      ! Initialize the StrucCtrl module for Nacelle:
-!      !............................................................................................
-!   IF (p%CompNStC) THEN
-!      
-!      StC_InitInp%InputFile      =  InputFileData%NStCfile
-!      StC_InitInp%RootName       =  TRIM(p%RootName)//'.NStC'
-!      StC_InitInp%Gravity        =  InitInp%gravity
-!      StC_InitInp%NumMeshPts     =  1_IntKi        ! single point mesh for Nacelle 
-!
-!      CALL AllocAry( StC_InitInp%InitPosition,      3, StC_InitInp%NumMeshPts, 'StC_InitInp%InitPosition', errStat2, ErrMsg2)
-!         CALL CheckError( ErrStat2, ErrMsg2 )
-!      CALL AllocAry( StC_InitInp%InitOrientation,3, 3, StC_InitInp%NumMeshPts, 'StC_InitInp%InitOrientation', errStat2, ErrMsg2)
-!         CALL CheckError( ErrStat2, ErrMsg2 )
-!         IF (ErrStat >= AbortErrLev) RETURN
-!      StC_InitInp%InitPosition(:,1)      = InitInp%NacPosition
-!      StC_InitInp%InitOrientation(:,:,1) = InitInp%NacOrientation
-!      
-!      CALL StC_Init( StC_InitInp, u%NStC, p%NStC, x%NStC, xd%NStC, z%NStC, OtherState%NStC, y%NStC, m%NStC, Interval, StC_InitOut, ErrStat2, ErrMsg2 )
-!!print*,'SrvD_Init: after StC_Init CompNStC: ', ErrStat2,ErrMsg2
-!         CALL CheckError( ErrStat2, ErrMsg2 )
-!         IF (ErrStat >= AbortErrLev) RETURN
-!      
-!      IF (.NOT. EqualRealNos( Interval, p%DT ) ) THEN
-!         CALL CheckError( ErrID_Fatal, "Nacelle StrucCtrl time step differs from SrvD time step." )
-!         RETURN
-!      END IF
-!
-!      CALL StC_DestroyInitInput(StC_InitInp, ErrStat2, ErrMsg2 )   
-!   
-!   END IF
-!   
-!      !............................................................................................
-!      ! Initialize the StrucCtrl module for tower:
-!      !............................................................................................
-!   IF (p%CompTStC) THEN
-!      
-!      StC_InitInp%InputFile      =  InputFileData%TStCfile
-!      StC_InitInp%RootName       =  TRIM(p%RootName)//'.TStC'
-!      StC_InitInp%Gravity        =  InitInp%gravity
-!      StC_InitInp%NumMeshPts     =  1_IntKi        ! single point mesh for Tower 
-!
-!      CALL AllocAry( StC_InitInp%InitPosition,      3, StC_InitInp%NumMeshPts, 'StC_InitInp%InitPosition', errStat2, ErrMsg2)
-!         CALL CheckError( ErrStat2, ErrMsg2 )
-!      CALL AllocAry( StC_InitInp%InitOrientation,3, 3, StC_InitInp%NumMeshPts, 'StC_InitInp%InitOrientation', errStat2, ErrMsg2)
-!         CALL CheckError( ErrStat2, ErrMsg2 )
-!         IF (ErrStat >= AbortErrLev) RETURN
-!      StC_InitInp%InitPosition(:,1)      = InitInp%TwrBasePos
-!      StC_InitInp%InitOrientation(:,:,1) = InitInp%TwrBaseOrient
-!      
-!      CALL StC_Init( StC_InitInp, u%TStC, p%TStC, x%TStC, xd%TStC, z%TStC, OtherState%TStC, y%TStC, m%TStC, Interval, StC_InitOut, ErrStat2, ErrMsg2 )
-!!print*,'SrvD_Init: after StC_Init CompTStC: ', ErrStat2,ErrMsg2
-!         CALL CheckError( ErrStat2, ErrMsg2 )
-!         IF (ErrStat >= AbortErrLev) RETURN
-!      
-!      IF (.NOT. EqualRealNos( Interval, p%DT ) ) THEN
-!         CALL CheckError( ErrID_Fatal, "Tower StrucCtrl time step differs from SrvD time step." )
-!         RETURN
-!      END IF
-!
-!      CALL StC_DestroyInitInput(StC_InitInp, ErrStat2, ErrMsg2 )   
-!   
-!   END IF
-!    
-!      !............................................................................................
-!      ! Initialize the StrucCtrl module for blade:
-!      !............................................................................................
-!   IF (p%CompBStC) THEN
-!      
-!      StC_InitInp%InputFile      =  InputFileData%BStCfile
-!      StC_InitInp%RootName       =  TRIM(p%RootName)//'.BStC'
-!      StC_InitInp%Gravity        =  InitInp%gravity
-!      StC_InitInp%NumMeshPts     =  p%NumBl        ! p%NumBl points for blades 
-!
-!      CALL AllocAry( StC_InitInp%InitPosition,      3, StC_InitInp%NumMeshPts, 'StC_InitInp%InitPosition', errStat2, ErrMsg2)
-!         CALL CheckError( ErrStat2, ErrMsg2 )
-!      CALL AllocAry( StC_InitInp%InitOrientation,3, 3, StC_InitInp%NumMeshPts, 'StC_InitInp%InitOrientation', errStat2, ErrMsg2)
-!         CALL CheckError( ErrStat2, ErrMsg2 )
-!         IF (ErrStat >= AbortErrLev) RETURN
-!      do k=1,StC_InitInp%NumMeshPts
-!         StC_InitInp%InitPosition(:,k)      = InitInp%BladeRootPosition(:,k)
-!         StC_InitInp%InitOrientation(:,:,k) = InitInp%BladeRootOrientation(:,:,k)
-!      enddo
-!      CALL StC_Init( StC_InitInp, u%BStC, p%BStC, x%BStC, xd%BStC, z%BStC, OtherState%BStC, y%BStC, m%BStC, Interval, StC_InitOut, ErrStat2, ErrMsg2 )
-!!print*,'SrvD_Init: after StC_Init CompBStC: ', ErrStat2,ErrMsg2
-!         CALL CheckError( ErrStat2, ErrMsg2 )
-!         IF (ErrStat >= AbortErrLev) RETURN
-!      
-!      IF (.NOT. EqualRealNos( Interval, p%DT ) ) THEN
-!         CALL CheckError( ErrID_Fatal, "Blade StrucCtrl time step differs from SrvD time step." )
-!         RETURN
-!      END IF
-!
-!      CALL StC_DestroyInitInput(StC_InitInp, ErrStat2, ErrMsg2 )   
-!   
-!   END IF
-!   
-!
-!      !............................................................................................
-!      ! Initialize the StrucCtrl module for hydrodynamics platform: (multiple instances will be called for multiple platform points)
-!      !............................................................................................
-!   IF (p%CompPtfmStC) THEN
-!
-!      StC_InitInp%InputFile      =  InputFileData%PtfmStCfile
-!      StC_InitInp%RootName       =  TRIM(p%RootName)//'.PtfmStC'
-!      StC_InitInp%Gravity        =  InitInp%gravity
-!      StC_InitInp%NumMeshPts     =  1_IntKi        ! single point mesh for Platform
-!
-!      CALL AllocAry( StC_InitInp%InitPosition,      3, StC_InitInp%NumMeshPts, 'StC_InitInp%InitPosition', errStat2, ErrMsg2)
-!         CALL CheckError( ErrStat2, ErrMsg2 )
-!      CALL AllocAry( StC_InitInp%InitOrientation,3, 3, StC_InitInp%NumMeshPts, 'StC_InitInp%InitOrientation', errStat2, ErrMsg2)
-!         CALL CheckError( ErrStat2, ErrMsg2 )
-!         IF (ErrStat >= AbortErrLev) RETURN
-!      StC_InitInp%InitPosition(:,1)      = InitInp%NacPosition
-!      StC_InitInp%InitOrientation(:,:,1) = InitInp%NacOrientation
-!
-!      CALL StC_Init( StC_InitInp, u%PtfmStC, p%PtfmStC, x%PtfmStC, xd%PtfmStC, z%PtfmStC, OtherState%PtfmStC, y%PtfmStC, m%PtfmStC, Interval, StC_InitOut, ErrStat2, ErrMsg2 )
-!!print*,'SrvD_Init: after StC_Init CompPtfmStC: ', ErrStat2,ErrMsg2
-!         CALL CheckError( ErrStat2, ErrMsg2 )
-!         IF (ErrStat >= AbortErrLev) RETURN
-!
-!      IF (.NOT. EqualRealNos( Interval, p%DT ) ) THEN
-!         CALL CheckError( ErrID_Fatal, "Platform StrucCtrl time step differs from SrvD time step." )
-!         RETURN
-!      END IF
-!
-!      CALL StC_DestroyInitInput(StC_InitInp, ErrStat2, ErrMsg2 )   
-!
-!   END IF
+  
+      !............................................................................................
+      ! Setup and initialize the StC submodule (possibly multiple instances at each location)
+      !............................................................................................
+   call StC_Nacelle_Setup(InitInp,p,InputFileData,u%NStC,p%NStC,x%NStC,xd%NStC,z%NStC,OtherState%NStC,y%NStC,m%NStC,ErrStat2,ErrMsg2)
+      if (Failed())  return;
+
+   call StC_Tower_Setup(InitInp,p,InputFileData,u%TStC,p%TStC,x%TStC,xd%TStC,z%TStC,OtherState%TStC,y%TStC,m%TStC,ErrStat2,ErrMsg2)
+      if (Failed())  return;
+
+   call StC_Blade_Setup(InitInp,p,InputFileData,u%BStC,p%BStC,x%BStC,xd%BStC,z%BStC,OtherState%BStC,y%BStC,m%BStC,ErrStat2,ErrMsg2)
+      if (Failed())  return;
+
+   call StC_Ptfm_Setup(InitInp,p,InputFileData,u%PtfmStC,p%PtfmStC,x%PtfmStC,xd%PtfmStC,z%PtfmStC,OtherState%PtfmStC,y%PtfmStC,m%PtfmStC,ErrStat2,ErrMsg2)
+      if (Failed())  return;
 
 
       !............................................................................................
@@ -653,12 +521,10 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       ! Allocate and set these variables: InitOut%LinNames_y, InitOut%LinNames_x, InitOut%LinNames_xd, InitOut%LinNames_z, InitOut%LinNames_u 
       
       CALL AllocAry( InitOut%RotFrame_y, SrvD_Indx_Y_WrOutput+p%NumOuts, 'RotFrame_y', ErrStat2, ErrMsg2 )
-         CALL CheckError( ErrStat2, ErrMsg2 )
-         IF (ErrStat >= AbortErrLev) RETURN
+      if (Failed())  return;
       
       CALL AllocAry( InitOut%LinNames_y, SrvD_Indx_Y_WrOutput+p%NumOuts, 'LinNames_y', ErrStat2, ErrMsg2 )
-         CALL CheckError( ErrStat2, ErrMsg2 )
-         IF (ErrStat >= AbortErrLev) RETURN
+      if (Failed())  return;
          
       do i=1,size(SrvD_Indx_Y_BlPitchCom)
          InitOut%LinNames_y(SrvD_Indx_Y_BlPitchCom(i)) = 'BlPitchCom('//trim(num2lstr(i))//'), rad'
@@ -680,16 +546,13 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
             
       
       CALL AllocAry( InitOut%RotFrame_u, 3, 'RotFrame_u', ErrStat2, ErrMsg2 )
-         CALL CheckError( ErrStat2, ErrMsg2 )
-         IF (ErrStat >= AbortErrLev) RETURN
+         if (Failed())  return;
 
       CALL AllocAry( InitOut%IsLoad_u, 3, 'IsLoad_u', ErrStat2, ErrMsg2 )
-         CALL CheckError( ErrStat2, ErrMsg2 )
-         IF (ErrStat >= AbortErrLev) RETURN
+         if (Failed())  return;
 
       CALL AllocAry( InitOut%LinNames_u, 3, 'LinNames_u', ErrStat2, ErrMsg2 )
-         CALL CheckError( ErrStat2, ErrMsg2 )
-         IF (ErrStat >= AbortErrLev) RETURN
+         if (Failed())  return;
 
       InitOut%LinNames_u(Indx_u_Yaw    ) = 'Yaw, rad'
       InitOut%LinNames_u(Indx_u_YawRate) = 'YawRate, rad/s'
@@ -708,16 +571,13 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       ! Define initialization-routine output here:
       !............................................................................................
    CALL AllocAry( y%WriteOutput, p%NumOuts+p%NumOuts_DLL, 'WriteOutput', ErrStat2, ErrMsg2 )
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF (ErrStat >= AbortErrLev) RETURN
+      if (Failed())  return;
    y%WriteOutput = 0
 
    CALL AllocAry( InitOut%WriteOutputHdr, p%NumOuts+p%NumOuts_DLL, 'WriteOutputHdr', ErrStat2, ErrMsg2 )
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF (ErrStat >= AbortErrLev) RETURN
+      if (Failed())  return;
    CALL AllocAry( InitOut%WriteOutputUnt, p%NumOuts+p%NumOuts_DLL, 'WriteOutputUnt', ErrStat2, ErrMsg2 )
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF (ErrStat >= AbortErrLev) RETURN
+      if (Failed())  return;
    
    do i=1,p%NumOuts
       InitOut%WriteOutputHdr(i) = p%OutParam(i)%Name
@@ -737,8 +597,8 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    
    IF ( p%UseBladedInterface .OR. InitOut%UseHSSBrake ) THEN
       InitOut%CouplingScheme = ExplicitLoose
-   !   CALL CheckError( ErrID_Info, 'The external dynamic-link library option being used in ServoDyn '&
-   !                    //'requires an explicit-loose coupling scheme.' )
+   !   CALL SetErrStat( ErrID_Info, 'The external dynamic-link library option being used in ServoDyn '&
+   !                    //'requires an explicit-loose coupling scheme.',ErrStat,ErrMsg,RoutineName )
    ELSE
       InitOut%CouplingScheme = ExplicitLoose
    END IF
@@ -748,48 +608,338 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       ! Clean up the local variables:
       !............................................................................................
    CALL SrvD_DestroyInputFile( InputFileData, ErrStat2, ErrMsg2 )
-   CALL StC_DestroyInitOutput(StC_InitOut, ErrStat2, ErrMsg2 )   
-   
-!print*,'SrvD_Init: end', ErrStat,ErrMsg
+   CALL StC_DestroyInitOutput(StC_InitOut, ErrStat2, ErrMsg2 )
+
    RETURN
-   
-CONTAINS
-   !...............................................................................................................................
-   SUBROUTINE CheckError(ErrID,Msg)
-   ! This subroutine sets the error message and level and cleans up if the error is >= AbortErrLev
-   !...............................................................................................................................
 
-         ! Passed arguments
-      INTEGER(IntKi), INTENT(IN) :: ErrID       ! The error identifier (ErrStat)
-      CHARACTER(*),   INTENT(IN) :: Msg         ! The error message (ErrMsg)
-
-      INTEGER(IntKi)             :: ErrStat3    ! The error identifier (ErrStat)
-      CHARACTER(ErrMsgLen)       :: ErrMsg3     ! The error message (ErrMsg)
-
-      !............................................................................................................................
-      ! Set error status/message;
-      !............................................................................................................................
-
-      IF ( ErrID /= ErrID_None ) THEN
-          
-         IF (ErrStat /= ErrID_None) ErrMsg = TRIM(ErrMsg)//NewLine
-         ErrMsg = TRIM(ErrMsg)//'SrvD_Init:'//TRIM(Msg)
-         ErrStat = MAX(ErrStat, ErrID)
-
-         !.........................................................................................................................
-         ! Clean up if we're going to return on error: close files, deallocate local arrays
-         !.........................................................................................................................
-         IF ( ErrStat >= AbortErrLev ) THEN
-            CALL SrvD_DestroyInputFile(InputFileData, ErrStat3, ErrMsg3 )
-            CALL StC_DestroyInitInput(StC_InitInp, ErrStat3, ErrMsg3 )
-            CALL StC_DestroyInitOutput(StC_InitOut, ErrStat3, ErrMsg3 )   
-         END IF
-
-      END IF
-
-   END SUBROUTINE CheckError 
-!----------------------------------------------------------------------------------------------------------------------------------
+contains
+   logical function Failed()
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      Failed = ErrStat >= AbortErrLev
+      if (Failed)    call Cleanup()
+   end function Failed
+   subroutine Cleanup()    ! Ignore any errors here
+      CALL SrvD_DestroyInputFile(InputFileData, ErrStat2, ErrMsg2 )
+      CALL StC_DestroyInitInput(StC_InitInp, ErrStat2, ErrMsg2 )
+      CALL StC_DestroyInitOutput(StC_InitOut, ErrStat2, ErrMsg2 )
+   end subroutine Cleanup
 END SUBROUTINE SrvD_Init
+!----------------------------------------------------------------------------------------------------------------------------------
+
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine sets the data structures for the structural control (StC) module -- Nacelle Instances
+subroutine StC_Nacelle_Setup(SrvD_InitInp,SrvD_p,InputFileData,u,p,x,xd,z,OtherState,y,m,ErrStat,ErrMsg)
+   type(SrvD_InitInputType),                    intent(in   )  :: SrvD_InitInp   !< Input data for initialization routine
+   type(SrvD_ParameterType),                    intent(in   )  :: SrvD_p         !< Parameters
+   TYPE(SrvD_InputFile),                        intent(in   )  :: InputFileData  ! Data stored in the module's input file
+   type(StC_InputType),             allocatable,intent(  out)  :: u(:)           !< An initial guess for the input; input mesh must be defined
+   type(StC_ParameterType),         allocatable,intent(  out)  :: p(:)           !< Parameters
+   type(StC_ContinuousStateType),   allocatable,intent(  out)  :: x(:)           !< Initial continuous states
+   type(StC_DiscreteStateType),     allocatable,intent(  out)  :: xd(:)          !< Initial discrete states
+   type(StC_ConstraintStateType),   allocatable,intent(  out)  :: z(:)           !< Initial guess of the constraint states
+   type(StC_OtherStateType),        allocatable,intent(  out)  :: OtherState(:)  !< Initial other states
+   type(StC_OutputType),            allocatable,intent(  out)  :: y(:)           !< Initial system outputs (outputs are not calculated;
+   type(StC_MiscVarType),           allocatable,intent(  out)  :: m(:)           !< Misc (optimization) variables
+   integer(IntKi),                              intent(  out)  :: ErrStat        !< Error status of the operation
+   character(*),                                intent(  out)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
+
+   integer(IntKi)             :: ErrStat2       ! temporary Error status of the operation
+   character(ErrMsgLen)       :: ErrMsg2        ! temporary Error message if ErrStat /= ErrID_None
+   integer(IntKi)             :: j              ! Counter for the instances
+   real(DbKi)                 :: Interval       !< Coupling interval in seconds from StC
+   type(StC_InitInputType)    :: StC_InitInp    !< data to initialize StC module
+   type(StC_InitOutputType)   :: StC_InitOut    !< data from StC module initialization (not currently used)
+   character(*), parameter    :: RoutineName = 'StC_Nacelle_Setup'
+
+   ErrStat  = ErrID_None
+   ErrMsg   = ""
+
+   if (SrvD_p%CompNStC > 0_IntKi) then
+      allocate(u(SrvD_p%CompNStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, u') )            return;
+      allocate(p(SrvD_p%CompNStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, p') )            return;
+      allocate(x(SrvD_p%CompNStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, x') )            return;
+      allocate(xd(SrvD_p%CompNStC),STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, xd') )           return;
+      allocate(z(SrvD_p%CompNStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, z') )            return;
+      allocate(OtherState(SrvD_p%CompNStC), STAT=ErrStat2); if ( AllErr('Could not allocate StrucCtrl input array, OtherState') )   return;
+      allocate(y(SrvD_p%CompNStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, y') )            return;
+      allocate(m(SrvD_p%CompNStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, m') )            return;
+
+      do j=1,SrvD_p%CompNStC
+         StC_InitInp%InputFile      =  InputFileData%NStCfile(j)
+         StC_InitInp%RootName       =  TRIM(SrvD_p%RootName)//'.NStC'
+         StC_InitInp%Gravity        =  SrvD_InitInp%gravity
+         StC_InitInp%NumMeshPts     =  1_IntKi        ! single point mesh for Nacelle
+
+         CALL AllocAry( StC_InitInp%InitPosition,      3, StC_InitInp%NumMeshPts, 'StC_InitInp%InitPosition',     errStat2, ErrMsg2);  if (Failed())  return;
+         CALL AllocAry( StC_InitInp%InitOrientation,3, 3, StC_InitInp%NumMeshPts, 'StC_InitInp%InitOrientation',  errStat2, ErrMsg2);  if (Failed())  return;
+         StC_InitInp%InitPosition(:,1)      = SrvD_InitInp%NacPosition
+         StC_InitInp%InitOrientation(:,:,1) = SrvD_InitInp%NacOrientation
+
+         CALL StC_Init( StC_InitInp, u(j), p(j), x(j), xd(j), z(j), OtherState(j), y(j), m(j), Interval, StC_InitOut, ErrStat2, ErrMsg2 )
+         if (Failed())  return;
+
+         IF (.NOT. EqualRealNos( Interval, SrvD_p%DT ) ) &
+            CALL SetErrStat( ErrID_Fatal, "Nacelle StrucCtrl (instance "//trim(num2lstr(j))//") time step differs from SrvD time step.",ErrStat,ErrMsg,RoutineName )
+         if (Failed())  return;
+
+         call Cleanup()
+      enddo
+   endif
+contains
+   logical function Failed()
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      Failed = ErrStat >= AbortErrLev
+      if (Failed)    call Cleanup()
+   end function Failed
+   logical function AllErr(Msg)
+      character(*), intent(in) :: Msg
+      if(ErrStat2 /= 0) then
+         CALL SetErrStat( ErrID_Fatal, Msg, ErrStat, ErrMsg, RoutineName )
+      endif
+      AllErr = ErrStat >= AbortErrLev
+      if (AllErr)    call Cleanup()
+   end function AllErr
+   subroutine Cleanup()    ! Ignore any errors here
+      CALL StC_DestroyInitInput(StC_InitInp, ErrStat2, ErrMsg2 )
+      CALL StC_DestroyInitOutput(StC_InitOut, ErrStat2, ErrMsg2 )
+   end subroutine Cleanup
+end subroutine StC_Nacelle_Setup
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine sets the data structures for the structural control (StC) module -- Tower instances
+subroutine StC_Tower_Setup(SrvD_InitInp,SrvD_p,InputFileData,u,p,x,xd,z,OtherState,y,m,ErrStat,ErrMsg)
+   type(SrvD_InitInputType),                    intent(in   )  :: SrvD_InitInp   !< Input data for initialization routine
+   type(SrvD_ParameterType),                    intent(in   )  :: SrvD_p         !< Parameters
+   TYPE(SrvD_InputFile),                        intent(in   )  :: InputFileData  ! Data stored in the module's input file
+   type(StC_InputType),             allocatable,intent(  out)  :: u(:)           !< An initial guess for the input; input mesh must be defined
+   type(StC_ParameterType),         allocatable,intent(  out)  :: p(:)           !< Parameters
+   type(StC_ContinuousStateType),   allocatable,intent(  out)  :: x(:)           !< Initial continuous states
+   type(StC_DiscreteStateType),     allocatable,intent(  out)  :: xd(:)          !< Initial discrete states
+   type(StC_ConstraintStateType),   allocatable,intent(  out)  :: z(:)           !< Initial guess of the constraint states
+   type(StC_OtherStateType),        allocatable,intent(  out)  :: OtherState(:)  !< Initial other states
+   type(StC_OutputType),            allocatable,intent(  out)  :: y(:)           !< Initial system outputs (outputs are not calculated;
+   type(StC_MiscVarType),           allocatable,intent(  out)  :: m(:)           !< Misc (optimization) variables
+   integer(IntKi),                              intent(  out)  :: ErrStat        !< Error status of the operation
+   character(*),                                intent(  out)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
+
+   integer(IntKi)             :: ErrStat2       ! temporary Error status of the operation
+   character(ErrMsgLen)       :: ErrMsg2        ! temporary Error message if ErrStat /= ErrID_None
+   integer(IntKi)             :: j              ! Counter for the instances
+   real(DbKi)                 :: Interval       !< Coupling interval in seconds from StC
+   type(StC_InitInputType)    :: StC_InitInp    !< data to initialize StC module
+   type(StC_InitOutputType)   :: StC_InitOut    !< data from StC module initialization (not currently used)
+   character(*), parameter    :: RoutineName = 'StC_Tower_Setup'
+
+   ErrStat  = ErrID_None
+   ErrMsg   = ""
+
+   if (SrvD_p%CompTStC > 0_IntKi) then
+      allocate(u(SrvD_p%CompTStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, u') )            return;
+      allocate(p(SrvD_p%CompTStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, p') )            return;
+      allocate(x(SrvD_p%CompTStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, x') )            return;
+      allocate(xd(SrvD_p%CompTStC),STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, xd') )           return;
+      allocate(z(SrvD_p%CompTStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, z') )            return;
+      allocate(OtherState(SrvD_p%CompTStC), STAT=ErrStat2); if ( AllErr('Could not allocate StrucCtrl input array, OtherState') )   return;
+      allocate(y(SrvD_p%CompTStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, y') )            return;
+      allocate(m(SrvD_p%CompTStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, m') )            return;
+
+      do j=1,SrvD_p%CompTStC
+         StC_InitInp%InputFile      =  InputFileData%TStCfile(j)
+         StC_InitInp%RootName       =  TRIM(SrvD_p%RootName)//'.TStC'
+         StC_InitInp%Gravity        =  SrvD_InitInp%gravity
+         StC_InitInp%NumMeshPts     =  1_IntKi        ! single point mesh for Tower
+
+         CALL AllocAry( StC_InitInp%InitPosition,      3, StC_InitInp%NumMeshPts, 'StC_InitInp%InitPosition',     errStat2, ErrMsg2);  if (Failed())  return;
+         CALL AllocAry( StC_InitInp%InitOrientation,3, 3, StC_InitInp%NumMeshPts, 'StC_InitInp%InitOrientation',  errStat2, ErrMsg2);  if (Failed())  return;
+         StC_InitInp%InitPosition(:,1)      = SrvD_InitInp%TwrBasePos
+         StC_InitInp%InitOrientation(:,:,1) = SrvD_InitInp%TwrBaseOrient
+
+         CALL StC_Init( StC_InitInp, u(j), p(j), x(j), xd(j), z(j), OtherState(j), y(j), m(j), Interval, StC_InitOut, ErrStat2, ErrMsg2 )
+         if (Failed())  return;
+
+         IF (.NOT. EqualRealNos( Interval, SrvD_p%DT ) ) &
+            CALL SetErrStat( ErrID_Fatal, "Tower StrucCtrl (instance "//trim(num2lstr(j))//") time step differs from SrvD time step.",ErrStat,ErrMsg,RoutineName )
+         if (Failed())  return;
+
+         call Cleanup()
+      enddo
+   endif
+contains
+   logical function Failed()
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      Failed = ErrStat >= AbortErrLev
+      if (Failed)    call Cleanup()
+   end function Failed
+   logical function AllErr(Msg)
+      character(*), intent(in) :: Msg
+      if(ErrStat2 /= 0) then
+         CALL SetErrStat( ErrID_Fatal, Msg, ErrStat, ErrMsg, RoutineName )
+      endif
+      AllErr = ErrStat >= AbortErrLev
+      if (AllErr)    call Cleanup()
+   end function AllErr
+   subroutine Cleanup()    ! Ignore any errors here
+      CALL StC_DestroyInitInput(StC_InitInp, ErrStat2, ErrMsg2 )
+      CALL StC_DestroyInitOutput(StC_InitOut, ErrStat2, ErrMsg2 )
+   end subroutine Cleanup
+end subroutine StC_Tower_Setup
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine sets the data structures for the structural control (StC) module -- Blade instances
+subroutine StC_Blade_Setup(SrvD_InitInp,SrvD_p,InputFileData,u,p,x,xd,z,OtherState,y,m,ErrStat,ErrMsg)
+   type(SrvD_InitInputType),                    intent(in   )  :: SrvD_InitInp   !< Input data for initialization routine
+   type(SrvD_ParameterType),                    intent(in   )  :: SrvD_p         !< Parameters
+   TYPE(SrvD_InputFile),                        intent(in   )  :: InputFileData  ! Data stored in the module's input file
+   type(StC_InputType),             allocatable,intent(  out)  :: u(:)           !< An initial guess for the input; input mesh must be defined
+   type(StC_ParameterType),         allocatable,intent(  out)  :: p(:)           !< Parameters
+   type(StC_ContinuousStateType),   allocatable,intent(  out)  :: x(:)           !< Initial continuous states
+   type(StC_DiscreteStateType),     allocatable,intent(  out)  :: xd(:)          !< Initial discrete states
+   type(StC_ConstraintStateType),   allocatable,intent(  out)  :: z(:)           !< Initial guess of the constraint states
+   type(StC_OtherStateType),        allocatable,intent(  out)  :: OtherState(:)  !< Initial other states
+   type(StC_OutputType),            allocatable,intent(  out)  :: y(:)           !< Initial system outputs (outputs are not calculated;
+   type(StC_MiscVarType),           allocatable,intent(  out)  :: m(:)           !< Misc (optimization) variables
+   integer(IntKi),                              intent(  out)  :: ErrStat        !< Error status of the operation
+   character(*),                                intent(  out)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
+
+   integer(IntKi)             :: ErrStat2       ! temporary Error status of the operation
+   character(ErrMsgLen)       :: ErrMsg2        ! temporary Error message if ErrStat /= ErrID_None
+   integer(IntKi)             :: j              ! Counter for the instances
+   real(DbKi)                 :: Interval       !< Coupling interval in seconds from StC
+   type(StC_InitInputType)    :: StC_InitInp    !< data to initialize StC module
+   type(StC_InitOutputType)   :: StC_InitOut    !< data from StC module initialization (not currently used)
+   character(*), parameter    :: RoutineName = 'StC_Blade_Setup'
+
+   ErrStat  = ErrID_None
+   ErrMsg   = ""
+
+   if (SrvD_p%CompBStC > 0_IntKi) then
+      allocate(u(SrvD_p%CompBStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, u') )            return;
+      allocate(p(SrvD_p%CompBStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, p') )            return;
+      allocate(x(SrvD_p%CompBStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, x') )            return;
+      allocate(xd(SrvD_p%CompBStC),STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, xd') )           return;
+      allocate(z(SrvD_p%CompBStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, z') )            return;
+      allocate(OtherState(SrvD_p%CompBStC), STAT=ErrStat2); if ( AllErr('Could not allocate StrucCtrl input array, OtherState') )   return;
+      allocate(y(SrvD_p%CompBStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, y') )            return;
+      allocate(m(SrvD_p%CompBStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, m') )            return;
+
+      do j=1,SrvD_p%CompBStC
+         StC_InitInp%InputFile      =  InputFileData%BStCfile(j)
+         StC_InitInp%RootName       =  TRIM(SrvD_p%RootName)//'.BStC'
+         StC_InitInp%Gravity        =  SrvD_InitInp%gravity
+         StC_InitInp%NumMeshPts     =  SrvD_p%NumBl        ! p%NumBl points for blades
+
+         CALL AllocAry( StC_InitInp%InitPosition,      3, StC_InitInp%NumMeshPts, 'StC_InitInp%InitPosition',     errStat2, ErrMsg2);  if (Failed())  return;
+         CALL AllocAry( StC_InitInp%InitOrientation,3, 3, StC_InitInp%NumMeshPts, 'StC_InitInp%InitOrientation',  errStat2, ErrMsg2);  if (Failed())  return;
+         StC_InitInp%InitPosition(:,1)      = SrvD_InitInp%TwrBasePos
+         StC_InitInp%InitOrientation(:,:,1) = SrvD_InitInp%TwrBaseOrient
+
+         CALL StC_Init( StC_InitInp, u(j), p(j), x(j), xd(j), z(j), OtherState(j), y(j), m(j), Interval, StC_InitOut, ErrStat2, ErrMsg2 )
+         if (Failed())  return;
+
+         IF (.NOT. EqualRealNos( Interval, SrvD_p%DT ) ) &
+            CALL SetErrStat( ErrID_Fatal, "Blade StrucCtrl (instance "//trim(num2lstr(j))//") time step differs from SrvD time step.",ErrStat,ErrMsg,RoutineName )
+         if (Failed())  return;
+
+         call Cleanup()
+      enddo
+   endif
+contains
+   logical function Failed()
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      Failed = ErrStat >= AbortErrLev
+      if (Failed)    call Cleanup()
+   end function Failed
+   logical function AllErr(Msg)
+      character(*), intent(in) :: Msg
+      if(ErrStat2 /= 0) then
+         CALL SetErrStat( ErrID_Fatal, Msg, ErrStat, ErrMsg, RoutineName )
+      endif
+      AllErr = ErrStat >= AbortErrLev
+      if (AllErr)    call Cleanup()
+   end function AllErr
+   subroutine Cleanup()    ! Ignore any errors here
+      CALL StC_DestroyInitInput(StC_InitInp, ErrStat2, ErrMsg2 )
+      CALL StC_DestroyInitOutput(StC_InitOut, ErrStat2, ErrMsg2 )
+   end subroutine Cleanup
+end subroutine StC_Blade_Setup
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine sets the data structures for the structural control (StC) module -- hydrodynamics platform instances
+subroutine StC_Ptfm_Setup(SrvD_InitInp,SrvD_p,InputFileData,u,p,x,xd,z,OtherState,y,m,ErrStat,ErrMsg)
+   type(SrvD_InitInputType),                    intent(in   )  :: SrvD_InitInp   !< Input data for initialization routine
+   type(SrvD_ParameterType),                    intent(in   )  :: SrvD_p         !< Parameters
+   TYPE(SrvD_InputFile),                        intent(in   )  :: InputFileData  ! Data stored in the module's input file
+   type(StC_InputType),             allocatable,intent(  out)  :: u(:)           !< An initial guess for the input; input mesh must be defined
+   type(StC_ParameterType),         allocatable,intent(  out)  :: p(:)           !< Parameters
+   type(StC_ContinuousStateType),   allocatable,intent(  out)  :: x(:)           !< Initial continuous states
+   type(StC_DiscreteStateType),     allocatable,intent(  out)  :: xd(:)          !< Initial discrete states
+   type(StC_ConstraintStateType),   allocatable,intent(  out)  :: z(:)           !< Initial guess of the constraint states
+   type(StC_OtherStateType),        allocatable,intent(  out)  :: OtherState(:)  !< Initial other states
+   type(StC_OutputType),            allocatable,intent(  out)  :: y(:)           !< Initial system outputs (outputs are not calculated;
+   type(StC_MiscVarType),           allocatable,intent(  out)  :: m(:)           !< Misc (optimization) variables
+   integer(IntKi),                              intent(  out)  :: ErrStat        !< Error status of the operation
+   character(*),                                intent(  out)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
+
+   integer(IntKi)             :: ErrStat2       ! temporary Error status of the operation
+   character(ErrMsgLen)       :: ErrMsg2        ! temporary Error message if ErrStat /= ErrID_None
+   integer(IntKi)             :: j              ! Counter for the instances
+   real(DbKi)                 :: Interval       !< Coupling interval in seconds from StC
+   type(StC_InitInputType)    :: StC_InitInp    !< data to initialize StC module
+   type(StC_InitOutputType)   :: StC_InitOut    !< data from StC module initialization (not currently used)
+   character(*), parameter    :: RoutineName = 'StC_Ptfm_Setup'
+
+   ErrStat  = ErrID_None
+   ErrMsg   = ""
+
+   if (SrvD_p%CompPtfmStC > 0_IntKi) then
+      allocate(u(SrvD_p%CompPtfmStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, u') )            return;
+      allocate(p(SrvD_p%CompPtfmStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, p') )            return;
+      allocate(x(SrvD_p%CompPtfmStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, x') )            return;
+      allocate(xd(SrvD_p%CompPtfmStC),STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, xd') )           return;
+      allocate(z(SrvD_p%CompPtfmStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, z') )            return;
+      allocate(OtherState(SrvD_p%CompPtfmStC), STAT=ErrStat2); if ( AllErr('Could not allocate StrucCtrl input array, OtherState') )   return;
+      allocate(y(SrvD_p%CompPtfmStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, y') )            return;
+      allocate(m(SrvD_p%CompPtfmStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, m') )            return;
+
+      do j=1,SrvD_p%CompPtfmStC
+         StC_InitInp%InputFile      =  InputFileData%PtfmStCfile(j)
+         StC_InitInp%RootName       =  TRIM(SrvD_p%RootName)//'.PtfmStC'
+         StC_InitInp%Gravity        =  SrvD_InitInp%gravity
+         StC_InitInp%NumMeshPts     =  1_IntKi        ! single point mesh for Platform
+
+         CALL AllocAry( StC_InitInp%InitPosition,      3, StC_InitInp%NumMeshPts, 'StC_InitInp%InitPosition',     errStat2, ErrMsg2);  if (Failed())  return;
+         CALL AllocAry( StC_InitInp%InitOrientation,3, 3, StC_InitInp%NumMeshPts, 'StC_InitInp%InitOrientation',  errStat2, ErrMsg2);  if (Failed())  return;
+!FIXME: this is not correct -- should be platform point or something like that.
+         StC_InitInp%InitPosition(:,1)      = SrvD_InitInp%TwrBasePos
+         StC_InitInp%InitOrientation(:,:,1) = SrvD_InitInp%TwrBaseOrient
+
+         CALL StC_Init( StC_InitInp, u(j), p(j), x(j), xd(j), z(j), OtherState(j), y(j), m(j), Interval, StC_InitOut, ErrStat2, ErrMsg2 )
+         if (Failed())  return;
+
+         IF (.NOT. EqualRealNos( Interval, SrvD_p%DT ) ) &
+            CALL SetErrStat( ErrID_Fatal, "Platform StrucCtrl (instance "//trim(num2lstr(j))//") time step differs from SrvD time step.",ErrStat,ErrMsg,RoutineName )
+         if (Failed())  return;
+
+         call Cleanup()
+      enddo
+   endif
+contains
+   logical function Failed()
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      Failed = ErrStat >= AbortErrLev
+      if (Failed)    call Cleanup()
+   end function Failed
+   logical function AllErr(Msg)
+      character(*), intent(in) :: Msg
+      if(ErrStat2 /= 0) then
+         CALL SetErrStat( ErrID_Fatal, Msg, ErrStat, ErrMsg, RoutineName )
+      endif
+      AllErr = ErrStat >= AbortErrLev
+      if (AllErr)    call Cleanup()
+   end function AllErr
+   subroutine Cleanup()    ! Ignore any errors here
+      CALL StC_DestroyInitInput(StC_InitInp, ErrStat2, ErrMsg2 )
+      CALL StC_DestroyInitOutput(StC_InitOut, ErrStat2, ErrMsg2 )
+   end subroutine Cleanup
+end subroutine StC_Ptfm_Setup
+
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine is called at the end of the simulation.
 SUBROUTINE SrvD_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
