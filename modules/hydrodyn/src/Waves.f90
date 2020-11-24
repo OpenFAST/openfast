@@ -1781,6 +1781,28 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
          END IF
       END DO                   ! J - All points where the incident wave elevations can be output
 
+      ! ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+      !@mhall: hard-coding some additional wave elevation time series output for now
+
+      ALLOCATE ( InitOut%WaveElevMD  (0:InitOut%NStepWave, 25), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElevMD.',  ErrStat,ErrMsg,'VariousWaves_Init')
+
+      DO J = 1,5     !y = -60.0 + 20.0*J
+         DO K = 1,5  !x = -60.0 + 20.0*K 
+
+            I = (J-1)*5.0 + K    ! index of actual node
+            
+            CALL WaveElevTimeSeriesAtXY( -60.0 + 20.0*K, -60.0 + 20.0*J, InitOut%WaveElevMD(:,I), ErrStatTmp, ErrMsgTmp )
+            CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to InitOut%WaveElevMD.',ErrStat,ErrMsg,'VariousWaves_Init')
+            IF ( ErrStat >= AbortErrLev ) THEN
+               CALL CleanUp()
+               RETURN
+            END IF
+         END DO
+      END DO
+      
+      ! ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
 
       ! For creating animations of the sea surface, the WaveElevXY array is passed in with a series of x,y coordinates
       ! (index 1).  The second index corresponds to the number of points passed in.  A two dimensional time series

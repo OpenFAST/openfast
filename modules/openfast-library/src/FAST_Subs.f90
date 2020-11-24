@@ -927,19 +927,29 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          CALL Cleanup()
          RETURN
       END IF   
-   ALLOCATE( FEAM%Input( p_FAST%InterpOrder+1 ), FEAM%InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat2 )
+      !@mhall: clean this up! <<<<<<<<<<<<<<<< :::::::::::::::::::::::::::::
+   if (allocated(FEAM%Input)) then
+      print *, "FEAM%Input is already allocated!!"
+   end if
+   if (allocated(FEAM%InputTimes)) then
+      print *, "FEAM%InputTimes is already allocated!!"
+   end if
+   IF (p_FAST%CompMooring == Module_FEAM) THEN   
+      ALLOCATE( FEAM%Input( p_FAST%InterpOrder+1 ), FEAM%InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat2 )
       IF (ErrStat2 /= 0) THEN
          CALL SetErrStat(ErrID_Fatal,"Error allocating FEAM%Input and FEAM%InputTimes.",ErrStat,ErrMsg,RoutineName)
          CALL Cleanup()
          RETURN
-      END IF   
-   ALLOCATE( Orca%Input( p_FAST%InterpOrder+1 ), Orca%InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat2 )
+      END IF 
+   ELSE IF (p_FAST%CompMooring == Module_Orca) THEN
+      ALLOCATE( Orca%Input( p_FAST%InterpOrder+1 ), Orca%InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat2 )
       IF (ErrStat2 /= 0) THEN
          CALL SetErrStat(ErrID_Fatal,"Error allocating Orca%Input and Orca%InputTimes.",ErrStat,ErrMsg,RoutineName)
          CALL Cleanup()
          RETURN
       END IF   
-      
+   END IF   
+   
    ! ........................
    ! initialize MAP 
    ! ........................
@@ -996,7 +1006,30 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       Init%InData_MD%g         = Init%OutData_ED%Gravity     ! This need to be according to g used in ElastoDyn 
       Init%InData_MD%rhoW      = Init%OutData_HD%WtrDens     ! This needs to be set according to seawater density in HydroDyn      
       Init%InData_MD%WtrDepth  = Init%OutData_HD%WtrDpth    ! This need to be set according to the water depth in HydroDyn
-            
+        
+      !:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+      !@mhall: for now, passing some hardcoded wave kinematics grid info from HD to MD 
+      
+         ALLOCATE ( Init%InData_MD%WaveVel  (HD%p%NStepWave, 200, 3) )
+         ALLOCATE ( Init%InData_MD%WaveAcc  (HD%p%NStepWave, 200, 3) )
+         ALLOCATE ( Init%InData_MD%WavePDyn (HD%p%NStepWave, 200) )
+         ALLOCATE ( Init%InData_MD%WaveElev (HD%p%NStepWave, 200) )
+         ALLOCATE ( Init%InData_MD%WaveTime (HD%p%NStepWave) )
+      
+      Init%InData_MD%WaveVel  = Init%OutData_HD%WaveVel 
+      Init%InData_MD%WaveAcc  = Init%OutData_HD%WaveAcc 
+      Init%InData_MD%WavePDyn = Init%OutData_HD%WaveDynP
+      Init%InData_MD%WaveElev = Init%OutData_HD%WaveElev
+      Init%InData_MD%WaveTime = Init%OutData_HD%WaveTime
+      
+     !CALL MOVE_ALLOC( Init%OutData_HD%WaveVel  , Init%InData_MD%WaveVel   )   
+     !CALL MOVE_ALLOC( Init%OutData_HD%WaveAcc  , Init%InData_MD%WaveAcc   )   
+     !CALL MOVE_ALLOC( Init%OutData_HD%WaveDynP , Init%InData_MD%WavePDyn  )   
+     !CALL MOVE_ALLOC( Init%OutData_HD%WaveElev , Init%InData_MD%WaveElev  )   
+     !CALL MOVE_ALLOC( Init%OutData_HD%WaveTime , Init%InData_MD%WaveTime  )   
+
+      !:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+          
       CALL MD_Init( Init%InData_MD, MD%Input(1), MD%p, MD%x(STATE_CURR), MD%xd(STATE_CURR), MD%z(STATE_CURR), &
                     MD%OtherSt(STATE_CURR), MD%y, MD%m, p_FAST%dt_module( MODULE_MD ), Init%OutData_MD, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -5204,8 +5237,8 @@ SUBROUTINE WrVTK_AllMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD, IfW, OpFM, H
 ! MoorDyn      
    ELSEIF ( p_FAST%CompMooring == Module_MD ) THEN
       if (allocated(MD%Input)) then
-         call MeshWrVTK(p_FAST%TurbinePos, MD%y%PtFairleadLoad, trim(p_FAST%VTK_OutFileRoot)//'.MD_PtFairlead', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth, MD%Input(1)%PtFairleadDisplacement )
-         !call MeshWrVTK(p_FAST%TurbinePos, MD%Input(1)%PtFairleadDisplacement, trim(p_FAST%VTK_OutFileRoot)//'.MD_PtFair_motion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth )
+         call MeshWrVTK(p_FAST%TurbinePos, MD%y%CoupledLoads, trim(p_FAST%VTK_OutFileRoot)//'.MD_PtFairlead', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth, MD%Input(1)%CoupledKinematics )
+         !call MeshWrVTK(p_FAST%TurbinePos, MD%Input(1)%CoupledKinematics, trim(p_FAST%VTK_OutFileRoot)//'.MD_PtFair_motion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth )
       end if
       
 ! FEAMooring                   
@@ -5338,7 +5371,7 @@ SUBROUTINE WrVTK_BasicMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD, IfW, OpFM,
 !   IF ( p_FAST%CompMooring == Module_MAP ) THEN
 !      call MeshWrVTK(p_FAST%TurbinePos, MAPp%Input(1)%PtFairDisplacement, trim(p_FAST%VTK_OutFileRoot)//'.MAP_PtFair_motion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth )
 !   ELSEIF ( p_FAST%CompMooring == Module_MD ) THEN
-!      call MeshWrVTK(p_FAST%TurbinePos, MD%Input(1)%PtFairleadDisplacement, trim(p_FAST%VTK_OutFileRoot)//'.MD_PtFair_motion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth )
+!      call MeshWrVTK(p_FAST%TurbinePos, MD%Input(1)%CoupledKinematics, trim(p_FAST%VTK_OutFileRoot)//'.MD_PtFair_motion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth )
 !   ELSEIF ( p_FAST%CompMooring == Module_FEAM ) THEN
 !      call MeshWrVTK(p_FAST%TurbinePos, FEAM%Input(1)%PtFairleadDisplacement, trim(p_FAST%VTK_OutFileRoot)//'FEAM_PtFair_motion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth )
 !   END IF
@@ -5458,7 +5491,7 @@ SUBROUTINE WrVTK_Surfaces(t_global, p_FAST, y_FAST, MeshMapData, ED, BD, AD, IfW
 !   IF ( p_FAST%CompMooring == Module_MAP ) THEN
 !      call MeshWrVTK(p_FAST%TurbinePos, MAPp%Input(1)%PtFairDisplacement, trim(p_FAST%VTK_OutFileRoot)//'.MAP_PtFair_motion', y_FAST%VTK_count, OutputFields, ErrStat2, ErrMsg2 )        
 !   ELSEIF ( p_FAST%CompMooring == Module_MD ) THEN
-!      call MeshWrVTK(p_FAST%TurbinePos, MD%Input(1)%PtFairleadDisplacement, trim(p_FAST%VTK_OutFileRoot)//'.MD_PtFair_motion', y_FAST%VTK_count, OutputFields, ErrStat2, ErrMsg2 )        
+!      call MeshWrVTK(p_FAST%TurbinePos, MD%Input(1)%CoupledKinematics, trim(p_FAST%VTK_OutFileRoot)//'.MD_PtFair_motion', y_FAST%VTK_count, OutputFields, ErrStat2, ErrMsg2 )        
 !   ELSEIF ( p_FAST%CompMooring == Module_FEAM ) THEN
 !      call MeshWrVTK(p_FAST%TurbinePos, FEAM%Input(1)%PtFairleadDisplacement, trim(p_FAST%VTK_OutFileRoot)//'FEAM_PtFair_motion', y_FAST%VTK_count, OutputFields, ErrStat2, ErrMsg2   )        
 !   END IF

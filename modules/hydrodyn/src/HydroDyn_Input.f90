@@ -2383,6 +2383,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
    INTEGER                                          :: I                    ! Generic loop counter index
    INTEGER                                          :: J                    ! Generic loop counter index
    INTEGER                                          :: K                    ! Generic loop counter index
+   INTEGER                                          :: Itemp                ! @mhall: additional temporary index
    CHARACTER(1024)                                  :: TmpPath              ! Temporary storage for relative path name
    LOGICAL                                          :: FoundID              ! Boolean flag indicating whether an ID from one tables is found in one of the other input table
    REAL(ReKi)                                       :: MinDepth             ! The minimum depth entry in the Depth-based Hydrodynamic coefficents table
@@ -4239,9 +4240,10 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
          ! Set the number and global Z locations for the X and Y components of the current velocities
-      InitInp%Current%NMorisonNodes = InitInp%Morison%NNodes
+         ! @mhall: hard-coding an extra 200 points to make a water kinematics grid
+      InitInp%Current%NMorisonNodes = InitInp%Morison%NNodes + 200
 
-      ALLOCATE ( InitInp%Current%MorisonNodezi(InitInp%Morison%NNodes), STAT = ErrStat2 )
+      ALLOCATE ( InitInp%Current%MorisonNodezi(InitInp%Current%NMorisonNodes), STAT = ErrStat2 )
       IF ( ErrStat2 /= ErrID_None ) THEN
          CALL SetErrStat( ErrID_Fatal,'Error allocating space for MorisonNodezi array.',ErrStat,ErrMsg,RoutineName)
          RETURN
@@ -4250,7 +4252,8 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
 
 
          ! Establish the number and locations where the wave kinematics will be computed
-      InitInp%Waves%NWaveKin   = InitInp%Morison%NNodes                          ! Number of points where the incident wave kinematics will be computed (-)
+         ! @mhall: hard-coding an extra 200 points to make a water kinematics grid
+      InitInp%Waves%NWaveKin   = InitInp%Morison%NNodes + 200                    ! Number of points where the incident wave kinematics will be computed (-)
       ALLOCATE ( InitInp%Waves%WaveKinxi(InitInp%Waves%NWaveKin), STAT = ErrStat2 )
       IF ( ErrStat2 /= ErrID_None ) THEN
          CALL SetErrStat( ErrID_Fatal,'Error allocating space for WaveKinxi array.',ErrStat,ErrMsg,RoutineName)
@@ -4273,7 +4276,18 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
          InitInp%Waves%WaveKinzi(I)      = InitInp%Morison%Nodes(I)%Position(3)   ! zi-coordinates for points where the incident wave kinematics will be computed; 
          InitInp%Current%MorisonNodezi(I) = InitInp%Waves%WaveKinzi(I)
       END DO
-
+      !@mhall: hard-coding the coordinates of those additional nodes for the grid (remember, must be in increasing order)
+      DO I=1,8          !z
+         DO J = 1,5     !y
+            DO K = 1,5  !x 
+               Itemp = InitInp%Morison%NNodes + (I-1)*25.0 + (J-1)*5.0 + K    ! index of actual node
+               InitInp%Waves%WaveKinzi(Itemp)      =   1.0 - 2.0**(8-I)       !  -127,  -63,  -31,  -15,   -7,   -3,   -1,    0
+               InitInp%Waves%WaveKinyi(Itemp)      = -60.0 + 20.0*J
+               InitInp%Waves%WaveKinxi(Itemp)      = -60.0 + 20.0*K 
+               InitInp%Current%MorisonNodezi(Itemp)= InitInp%Waves%WaveKinzi(I)
+            END DO
+         END DO
+      END DO
 
             ! If we are using the Waves module, the node information must be copied over.
       InitInp%Waves2%NWaveKin   = InitInp%Waves%NWaveKin                          ! Number of points where the incident wave kinematics will be computed (-)

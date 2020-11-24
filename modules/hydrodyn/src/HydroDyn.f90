@@ -1348,10 +1348,24 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                                         ErrStat, ErrMsg )  
          END IF
 
+         !:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+         !@mhall: Making sure wave info from the grid points are saved for output here...
+
+         ALLOCATE ( InitOut%WaveVel  (InitLocal%Morison%NStepWave, 200, 3) )
+         ALLOCATE ( InitOut%WaveAcc  (InitLocal%Morison%NStepWave, 200, 3) )
+         ALLOCATE ( InitOut%WaveDynP (InitLocal%Morison%NStepWave, 200) )
+         ALLOCATE ( InitOut%WaveElev (InitLocal%Morison%NStepWave, 25) ) ! unlike the above, this array is just 5x5, for the surface.
+         ALLOCATE ( InitOut%WaveTime (InitLocal%Morison%NStepWave) )
 
 
+         InitOut%WaveVel  = InitLocal%Morison%WaveVel( :,InitLocal%Morison%NNodes+1:,:)
+         InitOut%WaveAcc  = InitLocal%Morison%WaveAcc( :,InitLocal%Morison%NNodes+1:,:)
+         InitOut%WaveDynP = InitLocal%Morison%WaveDynP(:,InitLocal%Morison%NNodes+1:)
+         InitOut%WaveElev = Waves_InitOut%WaveElevMD        ! unlike the above, this array is just 5x5, for the surface.
+         InitOut%WaveTime = InitLocal%Morison%WaveTime(:)
 
-
+         !:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+         
             ! Check the output switch to see if Morison is needing to send outputs back to HydroDyn via the WriteOutput array
             
          IF ( InitLocal%OutSwtch > 0 ) THEN

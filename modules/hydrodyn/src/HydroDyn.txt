@@ -93,6 +93,12 @@ typedef   ^                            ^                             CHARACTER(L
 typedef   ^                            InitOutputType                INTEGER                  DerivOrder_x                    {:}        -        -         "Integer that tells FAST/MBC3 the maximum derivative order of continuous states used in linearization"	-
 typedef   ^                            ^                             LOGICAL                  IsLoad_u                        {:}        -        -         "Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix)" -
 
+typedef   ^                            ^                             ReKi                     WaveVel          {:}{:}{:}  -        -         "output for now just to pass to MoorDyn"    -
+typedef   ^                            ^                             ReKi                     WaveAcc          {:}{:}{:}  -        -         "output for now just to pass to MoorDyn"    -
+typedef   ^                            ^                             ReKi                     WaveDynP         {:}{:}     -        -         "output for now just to pass to MoorDyn"    -
+typedef   ^                            ^                             ReKi                     WaveElev         {:}{:}     -        -         "output for now just to pass to MoorDyn"    -
+typedef   ^                            ^                             ReKi                     WaveTime         {:}        -        -         "output for now just to pass to MoorDyn"    -
+
 
 # ..... HD_ModuleMapType ....................................................................................................................
 typedef   ^                            HD_ModuleMapType              MeshMapType              uW_P_2_PRP_P                     -         -        -         "Mesh mapping data: WAMIT body kinematics to PRP node at (0,0,0)" -
