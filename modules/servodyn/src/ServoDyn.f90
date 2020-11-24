@@ -669,6 +669,7 @@ subroutine StC_Nacelle_Setup(SrvD_InitInp,SrvD_p,InputFileData,u,p,x,xd,z,OtherS
          StC_InitInp%RootName       =  TRIM(SrvD_p%RootName)//'.NStC'
          StC_InitInp%Gravity        =  SrvD_InitInp%gravity
          StC_InitInp%NumMeshPts     =  1_IntKi        ! single point mesh for Nacelle
+         Interval                   =  SrvD_p%DT      ! Pass the ServoDyn DT
 
          CALL AllocAry( StC_InitInp%InitPosition,      3, StC_InitInp%NumMeshPts, 'StC_InitInp%InitPosition',     errStat2, ErrMsg2);  if (Failed())  return;
          CALL AllocAry( StC_InitInp%InitOrientation,3, 3, StC_InitInp%NumMeshPts, 'StC_InitInp%InitOrientation',  errStat2, ErrMsg2);  if (Failed())  return;
@@ -747,6 +748,7 @@ subroutine StC_Tower_Setup(SrvD_InitInp,SrvD_p,InputFileData,u,p,x,xd,z,OtherSta
          StC_InitInp%RootName       =  TRIM(SrvD_p%RootName)//'.TStC'
          StC_InitInp%Gravity        =  SrvD_InitInp%gravity
          StC_InitInp%NumMeshPts     =  1_IntKi        ! single point mesh for Tower
+         Interval                   =  SrvD_p%DT      ! Pass the ServoDyn DT
 
          CALL AllocAry( StC_InitInp%InitPosition,      3, StC_InitInp%NumMeshPts, 'StC_InitInp%InitPosition',     errStat2, ErrMsg2);  if (Failed())  return;
          CALL AllocAry( StC_InitInp%InitOrientation,3, 3, StC_InitInp%NumMeshPts, 'StC_InitInp%InitOrientation',  errStat2, ErrMsg2);  if (Failed())  return;
@@ -802,6 +804,7 @@ subroutine StC_Blade_Setup(SrvD_InitInp,SrvD_p,InputFileData,u,p,x,xd,z,OtherSta
    integer(IntKi)             :: ErrStat2       ! temporary Error status of the operation
    character(ErrMsgLen)       :: ErrMsg2        ! temporary Error message if ErrStat /= ErrID_None
    integer(IntKi)             :: j              ! Counter for the instances
+   integer(IntKi)             :: k              ! Counter for the blade
    real(DbKi)                 :: Interval       !< Coupling interval in seconds from StC
    type(StC_InitInputType)    :: StC_InitInp    !< data to initialize StC module
    type(StC_InitOutputType)   :: StC_InitOut    !< data from StC module initialization (not currently used)
@@ -825,11 +828,14 @@ subroutine StC_Blade_Setup(SrvD_InitInp,SrvD_p,InputFileData,u,p,x,xd,z,OtherSta
          StC_InitInp%RootName       =  TRIM(SrvD_p%RootName)//'.BStC'
          StC_InitInp%Gravity        =  SrvD_InitInp%gravity
          StC_InitInp%NumMeshPts     =  SrvD_p%NumBl        ! p%NumBl points for blades
+         Interval                   =  SrvD_p%DT      ! Pass the ServoDyn DT
 
          CALL AllocAry( StC_InitInp%InitPosition,      3, StC_InitInp%NumMeshPts, 'StC_InitInp%InitPosition',     errStat2, ErrMsg2);  if (Failed())  return;
          CALL AllocAry( StC_InitInp%InitOrientation,3, 3, StC_InitInp%NumMeshPts, 'StC_InitInp%InitOrientation',  errStat2, ErrMsg2);  if (Failed())  return;
-         StC_InitInp%InitPosition(:,1)      = SrvD_InitInp%TwrBasePos
-         StC_InitInp%InitOrientation(:,:,1) = SrvD_InitInp%TwrBaseOrient
+         do k=1,StC_InitInp%NumMeshPts
+            StC_InitInp%InitPosition(:,k)      = SrvD_InitInp%BladeRootPosition(:,k)
+            StC_InitInp%InitOrientation(:,:,k) = SrvD_InitInp%BladeRootOrientation(:,:,k)
+         enddo
 
          CALL StC_Init( StC_InitInp, u(j), p(j), x(j), xd(j), z(j), OtherState(j), y(j), m(j), Interval, StC_InitOut, ErrStat2, ErrMsg2 )
          if (Failed())  return;
@@ -903,6 +909,7 @@ subroutine StC_Ptfm_Setup(SrvD_InitInp,SrvD_p,InputFileData,u,p,x,xd,z,OtherStat
          StC_InitInp%RootName       =  TRIM(SrvD_p%RootName)//'.PtfmStC'
          StC_InitInp%Gravity        =  SrvD_InitInp%gravity
          StC_InitInp%NumMeshPts     =  1_IntKi        ! single point mesh for Platform
+         Interval                   =  SrvD_p%DT      ! Pass the ServoDyn DT
 
          CALL AllocAry( StC_InitInp%InitPosition,      3, StC_InitInp%NumMeshPts, 'StC_InitInp%InitPosition',     errStat2, ErrMsg2);  if (Failed())  return;
          CALL AllocAry( StC_InitInp%InitOrientation,3, 3, StC_InitInp%NumMeshPts, 'StC_InitInp%InitOrientation',  errStat2, ErrMsg2);  if (Failed())  return;
@@ -956,66 +963,49 @@ SUBROUTINE SrvD_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     !< Error status of the operation
       CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
-
-
-         ! Initialize ErrStat
-
-      ErrStat = ErrID_None
-      ErrMsg  = ""
+      integer(IntKi) :: j     ! loop counter for instance of StC at location
 
 
          ! Place any last minute operations or calculations here:
-
       IF ( p%UseBladedInterface ) THEN
          CALL BladedInterface_End(u, p, m, ErrStat, ErrMsg )
       END IF
       
-!FIXME: change to loop over number of instances
-!      ! StrucCtrl
-!      IF (p%CompNStC) THEN
-!         CALL StC_End( u%NStC, p%NStC, x%NStC, xd%NStC, z%NStC, OtherState%NStC, y%NStC, m%NStC, ErrStat, ErrMsg )
-!      END IF
-!      
-!      IF (p%CompTStC) THEN
-!         CALL StC_End( u%TStC, p%TStC, x%TStC, xd%TStC, z%TStC, OtherState%TStC, y%TStC, m%TStC, ErrStat, ErrMsg )
-!      END IF
-! 
-!      IF (p%CompBStC) THEN
-!         CALL StC_End( u%BStC, p%BStC, x%BStC, xd%BStC, z%BStC, OtherState%BStC, y%BStC, m%BStC, ErrStat, ErrMsg )
-!      END IF
-
-         ! Close files here:
-         
+      ! StrucCtrl
+      do j=1,p%CompNStC       ! Nacelle
+         call StC_End( u%NStC(j), p%NStC(j), x%NStC(j), xd%NStC(j), z%NStC(j), OtherState%NStC(j), y%NStC(j), m%NStC(j), ErrStat, ErrMsg )
+      enddo
+      do j=1,p%CompTStC       ! Tower
+         call StC_End( u%TStC(j), p%TStC(j), x%TStC(j), xd%TStC(j), z%TStC(j), OtherState%TStC(j), y%TStC(j), m%TStC(j), ErrStat, ErrMsg )
+      enddo
+      do j=1,p%CompBStC       ! Blades
+         call StC_End( u%BStC(j), p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), y%BStC(j), m%BStC(j), ErrStat, ErrMsg )
+      enddo
+      do j=1,p%CompPtfmStC    ! Platform
+         call StC_End( u%PtfmStC(j), p%PtfmStC(j), x%PtfmStC(j), xd%PtfmStC(j), z%PtfmStC(j), OtherState%PtfmStC(j), y%PtfmStC(j), m%PtfmStC(j), ErrStat, ErrMsg )
+      enddo
 
          ! Destroy the input data:
-
       CALL SrvD_DestroyInput( u, ErrStat, ErrMsg )
 
-
          ! Destroy the parameter data:
-
       CALL SrvD_DestroyParam( p, ErrStat, ErrMsg )
 
-
          ! Destroy the state data:
-
       CALL SrvD_DestroyContState(   x,           ErrStat, ErrMsg )
       CALL SrvD_DestroyDiscState(   xd,          ErrStat, ErrMsg )
       CALL SrvD_DestroyConstrState( z,           ErrStat, ErrMsg )
       CALL SrvD_DestroyOtherState(  OtherState,  ErrStat, ErrMsg )
-
       
          ! Destroy the misc var data:
-
       CALL SrvD_DestroyMisc( m, ErrStat, ErrMsg )
-      
 
          ! Destroy the output data:
-
       CALL SrvD_DestroyOutput( y, ErrStat, ErrMsg )
 
-
-
+         ! We are ignoring any errors from destroying data
+      ErrStat = ErrID_None
+      ErrMsg  = ""
 
 END SUBROUTINE SrvD_End
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -1044,6 +1034,7 @@ SUBROUTINE SrvD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState,
       ! Local variables
    TYPE(StC_InputType),ALLOCATABLE                :: u(:)            ! Inputs at t
    INTEGER(IntKi)                                 :: i               ! loop counter 
+   INTEGER(IntKi)                                 :: j               ! loop counter for StC instance of type
    INTEGER(IntKi)                                 :: order
    TYPE(SrvD_InputType)                           :: u_interp        ! interpolated input
       ! Local variables:
@@ -1062,101 +1053,97 @@ SUBROUTINE SrvD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState,
    !...............................................................................................................................   
    ! update states in StrucCtrl submodule, if necessary:
    !...............................................................................................................................   
+
+   IF ((p%CompNStC + p%CompTStC + p%CompBStC + p%CompPtfmStC) > 0_IntKi) THEN 
+      order = SIZE(Inputs)
+      allocate(u(order), STAT=ErrStat2)
+      if (ErrStat2 /= 0) then
+         CALL SetErrStat( ErrID_Fatal, 'Could not allocate StrucCtrl input array, u', ErrStat, ErrMsg, RoutineName )
+            if (Failed()) return;
+      endif
+   ENDIF
       
-!FIXME: change to loop over number of instances
-!      ! Convert Inputs(i)%NStC and/or Inputs(i)%TStC to u(:)
-!   IF (p%CompNStC .OR. p%CompTStC .OR. p%CompBStC) THEN  
-!         
-!      order = SIZE(Inputs)
-!      ALLOCATE(u(order), STAT=ErrStat2)
-!      IF(ErrStat2 /= 0) THEN
-!         CALL SetErrStat( ErrID_Fatal, 'Could not allocate StrucCtrl input array, u', ErrStat, ErrMsg, RoutineName )
-!         CALL Cleanup()
-!         RETURN
-!      END IF
-!         
-!         ! Nacelle StrucCtrl
-!      IF (p%CompNStC) THEN
-!            
-!         DO i=1,order
-!            CALL StC_CopyInput( Inputs(i)%NStC, u(i), MESH_NEWCOPY, ErrStat2, ErrMsg2 )
-!            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-!         END DO
-!      
-!         IF (ErrStat >= AbortErrLev) THEN
-!            CALL Cleanup()
-!            RETURN
-!         END IF
-!            
-!         CALL StC_UpdateStates( t, n, u, InputTimes, p%NStC, x%NStC, xd%NStC, z%NStC, OtherState%NStC, m%NStC, ErrStat2, ErrMsg2 )
-!            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-!         
-!            ! destroy these for the next call to StC_UpdateStates (reset for tower StC)
-!         DO i=1,SIZE(u)
-!            CALL StC_DestroyInput(u(i), ErrStat2, ErrMsg2)
-!               CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-!         END DO
-!            
-!      END IF
-!         
-!         
-!         ! Tower StrucCtrl
-!      IF (p%CompTStC) THEN
-!            
-!         DO i=1,order
-!            CALL StC_CopyInput( Inputs(i)%TStC, u(i), MESH_NEWCOPY, ErrStat2, ErrMsg2 )
-!               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-!         END DO
-!      
-!         IF (ErrStat >= AbortErrLev) THEN
-!            CALL Cleanup()
-!            RETURN
-!         END IF
-!            
-!         CALL StC_UpdateStates( t, n, u, InputTimes, p%TStC, x%TStC, xd%TStC, z%TStC, OtherState%TStC, m%TStC, ErrStat2, ErrMsg2 )
-!            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-!
-!            ! destroy these for the next call to StC_UpdateStates (reset for tower StC)
-!         DO i=1,SIZE(u)
-!            CALL StC_DestroyInput(u(i), ErrStat2, ErrMsg2)
-!               CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-!         END DO
-!
-!      END IF         
-!
-!         ! Blade StrucCtrl
-!      IF (p%CompBStC) THEN
-!            
-!         DO i=1,order
-!            CALL StC_CopyInput( Inputs(i)%BStC, u(i), MESH_NEWCOPY, ErrStat2, ErrMsg2 )
-!               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-!         END DO
-!      
-!         IF (ErrStat >= AbortErrLev) THEN
-!            CALL Cleanup()
-!            RETURN
-!         END IF
-!            
-!         CALL StC_UpdateStates( t, n, u, InputTimes, p%BStC, x%BStC, xd%BStC, z%BStC, OtherState%BStC, m%BStC, ErrStat2, ErrMsg2 )
-!            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-!
-!      END IF         
-!
-!   END IF
-      
-            
+
+      ! Nacelle StrucCtrl
+   do j=1,p%CompNStC
+      do i=1,order
+         call StC_CopyInput( Inputs(i)%NStC(j), u(i), MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+         if (Failed()) return;
+      enddo
+
+      call StC_UpdateStates( t, n, u, InputTimes, p%NStC(j), x%NStC(j), xd%NStC(j), z%NStC(j), OtherState%NStC(j), m%NStC(j), ErrStat2, ErrMsg2 )
+         if (Failed()) return;
+
+         ! destroy these for the next call to StC_UpdateStates (reset for next StC instance)
+      do i=1,SIZE(u)
+         call StC_DestroyInput(u(i), ErrStat2, ErrMsg2)
+         if (Failed()) return;
+      enddo
+   enddo
+
+
+      ! Tower StrucCtrl
+   do j=1,p%CompTStC
+      do i=1,order
+         call StC_CopyInput( Inputs(i)%TStC(j), u(i), MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+         if (Failed()) return;
+      enddo
+
+      call StC_UpdateStates( t, n, u, InputTimes, p%TStC(j), x%TStC(j), xd%TStC(j), z%TStC(j), OtherState%TStC(j), m%TStC(j), ErrStat2, ErrMsg2 )
+         if (Failed()) return;
+
+         ! destroy these for the next call to StC_UpdateStates (reset for next StC instance)
+      do i=1,SIZE(u)
+         call StC_DestroyInput(u(i), ErrStat2, ErrMsg2)
+         if (Failed()) return;
+      enddo
+   enddo
+
+
+      ! Blade StrucCtrl
+   do j=1,p%CompBStC
+      do i=1,order
+         call StC_CopyInput( Inputs(i)%BStC(j), u(i), MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+         if (Failed()) return;
+      enddo
+
+      call StC_UpdateStates( t, n, u, InputTimes, p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), m%BStC(j), ErrStat2, ErrMsg2 )
+         if (Failed()) return;
+
+         ! destroy these for the next call to StC_UpdateStates (reset for next StC instance)
+      do i=1,SIZE(u)
+         call StC_DestroyInput(u(i), ErrStat2, ErrMsg2)
+         if (Failed()) return;
+      enddo
+   enddo
+
+
+      ! Platform StrucCtrl
+   do j=1,p%CompPtfmStC
+      do i=1,order
+         call StC_CopyInput( Inputs(i)%PtfmStC(j), u(i), MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+         if (Failed()) return;
+      enddo
+
+      call StC_UpdateStates( t, n, u, InputTimes, p%PtfmStC(j), x%PtfmStC(j), xd%PtfmStC(j), z%PtfmStC(j), OtherState%PtfmStC(j), m%PtfmStC(j), ErrStat2, ErrMsg2 )
+         if (Failed()) return;
+
+         ! destroy these for the next call to StC_UpdateStates (reset for next StC instance)
+      do i=1,SIZE(u)
+         call StC_DestroyInput(u(i), ErrStat2, ErrMsg2)
+         if (Failed()) return;
+      enddo
+   enddo
+
+
    !...............................................................................................................................   
    ! get inputs at t:
    !...............................................................................................................................  
    CALL SrvD_CopyInput( Inputs(1), u_interp, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
+      if (Failed()) return;
    
    CALL SrvD_Input_ExtrapInterp( Inputs, InputTimes, u_interp, t, ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      if (Failed()) return;
       
    !...............................................................................................................................   
    ! update discrete states:
@@ -1165,7 +1152,7 @@ SUBROUTINE SrvD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState,
       ! 2. Update control offset for trim solutions
 
    CALL SrvD_UpdateDiscState( t, u_interp, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      if (Failed()) return;
       
    !...............................................................................................................................   
    ! get inputs at t+dt:
@@ -1173,16 +1160,11 @@ SUBROUTINE SrvD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState,
    t_next = t+p%dt
    
    CALL SrvD_Input_ExtrapInterp( Inputs, InputTimes, u_interp, t_next, ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      if (Failed()) return;
    
    IF (p%UseBladedInterface) THEN
       CALL DLL_controller_call(t_next, u_interp, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         
-         IF (ErrStat >= AbortErrLev) THEN
-            CALL Cleanup()
-            RETURN
-         END IF
+         if (Failed()) return;
    END IF
    
    !...............................................................................................................................   
@@ -1191,33 +1173,26 @@ SUBROUTINE SrvD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState,
       
       ! Torque control:
    CALL Torque_UpdateStates( t_next, u_interp, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      
+      if (Failed()) return;
       
       ! Pitch control:
    CALL Pitch_UpdateStates( t_next, u_interp, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      if (Failed()) return;
       
       ! Yaw control: 
    CALL Yaw_UpdateStates( t_next, u_interp, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      if (Failed()) return;
    
       ! Tip brake control:    
    CALL TipBrake_UpdateStates( t_next, u_interp, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   
-      
+      if (Failed()) return;
    
    !...................................................................
    ! Compute ElecPwr and GenTrq for controller (and DLL needs this saved):
    !...................................................................
    IF ( OtherState%GenOnLine .and. .not. OtherState%Off4Good )  THEN    ! Generator is on line.
       CALL CalculateTorque( t, u_interp, p, m, m%dll_data%GenTrq_prev, m%dll_data%ElecPwr_prev, ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         IF (ErrStat >= AbortErrLev) THEN
-            CALL Cleanup()
-            RETURN
-         END IF
+         if (Failed()) return;
    ELSE                                                                 ! Generator is off line.
       m%dll_data%GenTrq_prev  = 0.0_ReKi
       m%dll_data%ElecPwr_prev = 0.0_ReKi
@@ -1229,8 +1204,12 @@ SUBROUTINE SrvD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState,
    RETURN
       
 CONTAINS
+   logical function Failed()
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      Failed = ErrStat >= AbortErrLev
+      if (Failed)    call Cleanup()
+   end function Failed
    SUBROUTINE Cleanup()
-   
       IF (ALLOCATED(u)) THEN
          DO i=1,SIZE(u)
             CALL StC_DestroyInput(u(i), ErrStat2, ErrMsg2)
@@ -1238,10 +1217,8 @@ CONTAINS
          END DO
          DEALLOCATE(u)
       END IF      
-   
       CALL SrvD_DestroyInput(u_interp, ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         
    END SUBROUTINE Cleanup
       
 END SUBROUTINE SrvD_UpdateStates
@@ -1322,6 +1299,7 @@ SUBROUTINE SrvD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
    REAL(ReKi)                                     :: AllOuts(0:MaxOutPts)   ! All the the available output channels
    INTEGER(IntKi)                                 :: I                      ! Generic loop index
    INTEGER(IntKi)                                 :: K                      ! Blade index
+   INTEGER(IntKi)                                 :: J                      ! Structural control instance at location
    INTEGER(IntKi)                                 :: ErrStat2
    CHARACTER(ErrMsgLen)                           :: ErrMsg2
    CHARACTER(*), PARAMETER                        :: RoutineName = 'SrvD_CalcOutput'
@@ -1331,21 +1309,23 @@ SUBROUTINE SrvD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-!FIXME: change to loop over number of instances
-!   ! StrucCtrl
-!   IF (p%CompNStC) THEN 
-!      CALL StC_CalcOutput( t, u%NStC, p%NStC, x%NStC, xd%NStC, z%NStC, OtherState%NStC, y%NStC, m%NStC, ErrStat2, ErrMsg2 )
-!      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-!   END IF
-!   
-!   IF (p%CompTStC) THEN 
-!      CALL StC_CalcOutput( t, u%TStC, p%TStC, x%TStC, xd%TStC, z%TStC, OtherState%TStC, y%TStC, m%TStC, ErrStat2, ErrMsg2 )
-!      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-!   END IF
-!   IF (p%CompBStC) THEN 
-!      CALL StC_CalcOutput( t, u%BStC, p%BStC, x%BStC, xd%BStC, z%BStC, OtherState%BStC, y%BStC, m%BStC, ErrStat2, ErrMsg2 )
-!      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-!   END IF
+      ! StrucCtrl
+   do j=1,p%CompNStC       ! Nacelle
+      CALL StC_CalcOutput( t, u%NStC(j), p%NStC(j), x%NStC(j), xd%NStC(j), z%NStC(j), OtherState%NStC(j), y%NStC(j), m%NStC(j), ErrStat2, ErrMsg2 )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   enddo
+   do j=1,p%CompTStC       ! Tower
+      CALL StC_CalcOutput( t, u%TStC(j), p%TStC(j), x%TStC(j), xd%TStC(j), z%TStC(j), OtherState%TStC(j), y%TStC(j), m%TStC(j), ErrStat2, ErrMsg2 )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   enddo
+   do j=1,p%CompBStC       ! Blades
+      CALL StC_CalcOutput( t, u%BStC(j), p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), y%BStC(j), m%BStC(j), ErrStat2, ErrMsg2 )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   enddo
+   do j=1,p%CompPtfmStC    ! Platform
+      CALL StC_CalcOutput( t, u%PtfmStC(j), p%PtfmStC(j), x%PtfmStC(j), xd%PtfmStC(j), z%PtfmStC(j), OtherState%PtfmStC(j), y%PtfmStC(j), m%PtfmStC(j), ErrStat2, ErrMsg2 )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   enddo
    
    !...............................................................................................................................   
    ! Get the demanded values from the external Bladed dynamic link library, if necessary:
@@ -1418,41 +1398,41 @@ SUBROUTINE SrvD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
 
    AllOuts(YawMomCom) = -0.001*y%YawMom
 
-!FIXME: change to loop over number of instances
-!   if (p%CompNStC) then   
-!      AllOuts(NStC_XQ ) = x%NStC%StC_x(1,1)
-!      AllOuts(NStC_XQD) = x%NStC%StC_x(2,1)
-!      AllOuts(NStC_YQ ) = x%NStC%StC_x(3,1)
-!      AllOuts(NStC_YQD) = x%NStC%StC_x(4,1)
-!   endif
-!        
-!   if (p%CompTStC) then
-!      AllOuts(TStC_XQ ) = x%TStC%StC_x(1,1)
-!      AllOuts(TStC_XQD) = x%TStC%StC_x(2,1)
-!      AllOuts(TStC_YQ ) = x%TStC%StC_x(3,1)
-!      AllOuts(TStC_YQD) = x%TStC%StC_x(4,1)
-!   endif
-!
-!   if (p%CompBStC) then
-!      if (p%NumBl >= 1) then
-!         AllOuts(BStC1_XQ ) = x%BStC%StC_x(1,1)
-!         AllOuts(BStC1_XQD) = x%BStC%StC_x(2,1)
-!         AllOuts(BStC1_YQ ) = x%BStC%StC_x(3,1)
-!         AllOuts(BStC1_YQD) = x%BStC%StC_x(4,1)
-!      endif
-!      if (p%NumBl >= 2) then
-!         AllOuts(BStC2_XQ ) = x%BStC%StC_x(1,2)
-!         AllOuts(BStC2_XQD) = x%BStC%StC_x(2,2)
-!         AllOuts(BStC2_YQ ) = x%BStC%StC_x(3,2)
-!         AllOuts(BStC2_YQD) = x%BStC%StC_x(4,2)
-!      endif
-!      if (p%NumBl >= 3) then
-!         AllOuts(BStC3_XQ ) = x%BStC%StC_x(1,3)
-!         AllOuts(BStC3_XQD) = x%BStC%StC_x(2,3)
-!         AllOuts(BStC3_YQ ) = x%BStC%StC_x(3,3)
-!         AllOuts(BStC3_YQD) = x%BStC%StC_x(4,3)
-!      endif
-!   endif
+!FIXME: change to loop over instances -- 
+   if (p%CompNStC > 0) then
+      AllOuts(NStC_XQ ) = x%NStC(1)%StC_x(1,1)
+      AllOuts(NStC_XQD) = x%NStC(1)%StC_x(2,1)
+      AllOuts(NStC_YQ ) = x%NStC(1)%StC_x(3,1)
+      AllOuts(NStC_YQD) = x%NStC(1)%StC_x(4,1)
+   endif
+        
+   if (p%CompTStC > 0) then
+      AllOuts(TStC_XQ ) = x%TStC(1)%StC_x(1,1)
+      AllOuts(TStC_XQD) = x%TStC(1)%StC_x(2,1)
+      AllOuts(TStC_YQ ) = x%TStC(1)%StC_x(3,1)
+      AllOuts(TStC_YQD) = x%TStC(1)%StC_x(4,1)
+   endif
+
+   if (p%CompBStC > 0) then
+      if (p%NumBl >= 1) then
+         AllOuts(BStC1_XQ ) = x%BStC(1)%StC_x(1,1)
+         AllOuts(BStC1_XQD) = x%BStC(1)%StC_x(2,1)
+         AllOuts(BStC1_YQ ) = x%BStC(1)%StC_x(3,1)
+         AllOuts(BStC1_YQD) = x%BStC(1)%StC_x(4,1)
+      endif
+      if (p%NumBl >= 2) then
+         AllOuts(BStC2_XQ ) = x%BStC(1)%StC_x(1,2)
+         AllOuts(BStC2_XQD) = x%BStC(1)%StC_x(2,2)
+         AllOuts(BStC2_YQ ) = x%BStC(1)%StC_x(3,2)
+         AllOuts(BStC2_YQD) = x%BStC(1)%StC_x(4,2)
+      endif
+      if (p%NumBl >= 3) then
+         AllOuts(BStC3_XQ ) = x%BStC(1)%StC_x(1,3)
+         AllOuts(BStC3_XQD) = x%BStC(1)%StC_x(2,3)
+         AllOuts(BStC3_YQ ) = x%BStC(1)%StC_x(3,3)
+         AllOuts(BStC3_YQD) = x%BStC(1)%StC_x(4,3)
+      endif
+   endif
    
    !...............................................................................................................................   
    ! Place the selected output channels into the WriteOutput(:) array with the proper sign:
@@ -1488,7 +1468,10 @@ SUBROUTINE SrvD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrS
       CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
       CHARACTER(*), PARAMETER                        :: RoutineName = 'SrvD_CalcContStateDeriv'
-      
+      INTEGER(IntKi)                                 :: ErrStat2
+      CHARACTER(ErrMsgLen)                           :: ErrMsg2
+      integer(IntKi)                                 :: j           ! Index to instance of StC for location
+
          ! Initialize ErrStat
 
       ErrStat = ErrID_None
@@ -1499,23 +1482,23 @@ SUBROUTINE SrvD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrS
 
       dxdt%DummyContState = 0.0_ReKi
 
-!FIXME: change to loop over number of instances
-!      ! StrucCtrl
-!      IF (p%CompNStC) THEN 
-!         CALL StC_CalcContStateDeriv( t, u%NStC, p%NStC, x%NStC, xd%NStC, z%NStC, OtherState%NStC, m%NStC, dxdt%NStC, ErrStat, ErrMsg )
-!      END IF
-!
-!      IF (p%CompTStC) THEN 
-!         CALL StC_CalcContStateDeriv( t, u%TStC, p%TStC, x%TStC, xd%TStC, z%TStC, OtherState%TStC, m%TStC, dxdt%TStC, ErrStat, ErrMsg )
-!      END IF
-!
-!      IF (p%CompBStC) THEN 
-!         CALL StC_CalcContStateDeriv( t, u%BStC, p%BStC, x%BStC, xd%BStC, z%BStC, OtherState%BStC, m%BStC, dxdt%BStC, ErrStat, ErrMsg )
-!      END IF
-!
-!      IF (p%CompPtfmStC) THEN 
-!         CALL StC_CalcContStateDeriv( t, u%BStC, p%BStC, x%BStC, xd%BStC, z%BStC, OtherState%BStC, m%BStC, dxdt%BStC, ErrStat, ErrMsg )
-!      END IF
+         ! StrucCtrl
+      do j=1,p%CompNStC       ! Nacelle
+         CALL StC_CalcContStateDeriv( t, u%NStC(j), p%NStC(j), x%NStC(j), xd%NStC(j), z%NStC(j), OtherState%NStC(j), m%NStC(j), dxdt%NStC(j), ErrStat2, ErrMsg2 )
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      enddo
+      do j=1,p%CompTStC       ! Tower
+         CALL StC_CalcContStateDeriv( t, u%TStC(j), p%TStC(j), x%TStC(j), xd%TStC(j), z%TStC(j), OtherState%TStC(j), m%TStC(j), dxdt%TStC(j), ErrStat2, ErrMsg2 )
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      enddo
+      do j=1,p%CompBStC       ! Blade
+         CALL StC_CalcContStateDeriv( t, u%BStC(j), p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), m%BStC(j), dxdt%BStC(j), ErrStat2, ErrMsg2 )
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      enddo
+      do j=1,p%CompPtfmStC    ! Platform
+         CALL StC_CalcContStateDeriv( t, u%PtfmStC(j), p%PtfmStC(j), x%PtfmStC(j), xd%PtfmStC(j), z%PtfmStC(j), OtherState%PtfmStC(j), m%PtfmStC(j), dxdt%PtfmStC(j), ErrStat2, ErrMsg2 )
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      enddo
 
       
 END SUBROUTINE SrvD_CalcContStateDeriv
@@ -1537,7 +1520,10 @@ SUBROUTINE SrvD_UpdateDiscState( t, u, p, x, xd, z, OtherState, m, ErrStat, ErrM
       CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
       CHARACTER(*), PARAMETER                        :: RoutineName = 'SrvD_UpdateDiscState'
-      
+      INTEGER(IntKi)                                 :: ErrStat2
+      CHARACTER(ErrMsgLen)                           :: ErrMsg2
+      integer(IntKi)                                 :: j           ! Index to instance of StC for location
+
          ! Initialize ErrStat
 
       ErrStat = ErrID_None
@@ -1571,23 +1557,23 @@ SUBROUTINE SrvD_UpdateDiscState( t, u, p, x, xd, z, OtherState, m, ErrStat, ErrM
       !end if
       
 
-
-!FIXME: change to loop over number of instances
-      !   ! Update discrete states here:  StrucCtrl nacelle
-      !IF (p%CompNStC) THEN 
-      !   CALL StC_UpdateDiscState( t, u%NStC, p%NStC, x%NStC, xd%NStC, z%NStC, OtherState%NStC, m%NStC, ErrStat, ErrMsg )
-      !END IF
-
-      !   ! Update discrete states here:  StrucCtrl Tower
-      !IF (p%CompTStC) THEN 
-      !   CALL StC_UpdateDiscState( t, u%TStC, p%TStC, x%TStC, xd%TStC, z%TStC, OtherState%TStC, m%TStC, ErrStat, ErrMsg )
-      !END IF
-      
-      !   ! Update discrete states here:  StrucCtrl Blades
-      !IF (p%CompBStC) THEN 
-      !   CALL StC_UpdateDiscState( t, u%BStC, p%BStC, x%BStC, xd%BStC, z%BStC, OtherState%BStC, m%BStC, ErrStat, ErrMsg )
-      !END IF
-      
+      ! Update discrete states for StrucCtrl       --- StC does not currently support this
+!  do j=1,p%CompNStC       ! Nacelle
+!     CALL StC_UpdateDiscState( t, u%NStC(j), p%NStC(j), x%NStC(j), xd%NStC(j), z%NStC(j), OtherState%NStC(j), m%NStC(j), ErrStat, ErrMsg )
+!     call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+!  enddo
+!  do j=1,p%CompTStC       ! tower
+!     CALL StC_UpdateDiscState( t, u%TStC(j), p%TStC(j), x%TStC(j), xd%TStC(j), z%TStC(j), OtherState%TStC(j), m%TStC(j), ErrStat, ErrMsg )
+!     call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+!  enddo
+!  do j=1,p%CompBStC       ! Blade
+!     CALL StC_UpdateDiscState( t, u%BStC(j), p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), m%BStC(j), ErrStat, ErrMsg )
+!     call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+!  enddo
+!  do j=1,p%CompPtfmStC    ! Platform
+!     CALL StC_UpdateDiscState( t, u%PtfmStC(j), p%PtfmStC(j), x%PtfmStC(j), xd%PtfmStC(j), z%PtfmStC(j), OtherState%PtfmStC(j), m%PtfmStC(j), ErrStat, ErrMsg )
+!     call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+!  enddo
          
 END SUBROUTINE SrvD_UpdateDiscState
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -1609,30 +1595,36 @@ SUBROUTINE SrvD_CalcConstrStateResidual( t, u, p, x, xd, z, OtherState, m, z_res
    CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
    CHARACTER(*), PARAMETER                        :: RoutineName = 'SrvD_CalcConstrStateResidual'
+   INTEGER(IntKi)                                 :: ErrStat2
+   CHARACTER(ErrMsgLen)                           :: ErrMsg2
+   integer(IntKi)                                 :: j           ! Index to instance of StC for location
 
-         ! Initialize ErrStat
+      ! Initialize ErrStat
 
-      ErrStat = ErrID_None
-      ErrMsg  = ""
+   ErrStat = ErrID_None
+   ErrMsg  = ""
 
-      
-         ! Solve for the constraint states here:   StrucCtrl for nacelle, tower, blades
-!FIXME: change to loop over number of instances
-      !IF (p%CompNStC) THEN 
-      !   CALL StC_CalcConstrStateResidual( t, u%NStC, p%NStC, x%NStC, xd%NStC, z%NStC, OtherState%NStC, m%NStC, z_residual%NStC, ErrStat, ErrMsg )
-      !END IF
 
-      !IF (p%CompTStC) THEN 
-      !   CALL StC_CalcConstrStateResidual( t, u%TStC, p%TStC, x%TStC, xd%TStC, z%TStC, OtherState%TStC, m%TStC, z_residual%TStC, ErrStat, ErrMsg )
-      !END IF
-      
-      !IF (p%CompBStC) THEN 
-      !   CALL StC_CalcConstrStateResidual( t, u%BStC, p%BStC, x%BStC, xd%BStC, z%BStC, OtherState%BStC, m%BStC, z_residual%BStC, ErrStat, ErrMsg )
-      !END IF
-      
-      z_residual%DummyConstrState = 0.0_ReKi
+      ! Solve for the constraint states for StrucCtrl    --- StC does not currently support this
+!  do j=1,p%CompNStC       ! Nacelle
+!     CALL StC_CalcConstrStateResidual( t, u%NStC(j), p%NStC(j), x%NStC(j), xd%NStC(j), z%NStC(j), OtherState%NStC(j), m%NStC(j), z_residual%NStC(j), ErrStat, ErrMsg )
+!     call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+!  enddo
+!  do j=1,p%CompTStC       ! Tower
+!     CALL StC_CalcConstrStateResidual( t, u%TStC(j), p%TStC(j), x%TStC(j), xd%TStC(j), z%TStC(j), OtherState%TStC(j), m%TStC(j), z_residual%TStC(j), ErrStat, ErrMsg )
+!     call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+!  enddo
+!  do j=1,p%CompBStC       ! Blade
+!     CALL StC_CalcConstrStateResidual( t, u%BStC(j), p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), m%BStC(j), z_residual%BStC(j), ErrStat, ErrMsg )
+!     call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+!  enddo
+!  do j=1,p%CompPtfmStC    ! Platform
+!     CALL StC_CalcConstrStateResidual( t, u%PtfmStC(j), p%PtfmStC(j), x%PtfmStC(j), xd%PtfmStC(j), z%PtfmStC(j), OtherState%PtfmStC(j), m%PtfmStC(j), z_residual%PtfmStC(j), ErrStat, ErrMsg )
+!     call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+!  enddo
 
-      
+   z_residual%DummyConstrState = 0.0_ReKi
+
 END SUBROUTINE SrvD_CalcConstrStateResidual
 
 
@@ -2370,7 +2362,7 @@ subroutine ParseInputFileInfo( PriPath, InputFile, OutFileRoot, FileInfo_In, Inp
    call ParseAry( FileInfo_In, CurLine, 'TStCfile', InputFileData%TStCfile, InputFileData%CompTStC, ErrStat2, ErrMsg2, UnEcho )
       if (Failed())  return;
 
-      !  CompBStC  - Compute  blaed structural control damping {number of nacelle TMDs} (integer)
+      !  CompBStC  - Compute  blade structural control damping {number of nacelle tmds} (integer)
    call ParseVar( FileInfo_In, CurLine, 'CompBStC', InputFileData%CompBStC, ErrStat2, ErrMsg2, UnEcho )
       if (Failed())  return;
       !  BStCfile  - Name of the file for blade structural control damping (quoted strings) [unused when CompBStC==0]
@@ -2567,7 +2559,7 @@ SUBROUTINE ValidatePrimaryData( InitInp, InputFileData, ErrStat, ErrMsg )
    CALL Torque_ValidateData()
    CALL HSSBr_ValidateData()
 !FIXME: add validation for StC inputs
-!   CALL StC_ValidteData()
+!   CALL StC_ValidateData()
 
    !  Checks for linearization:
    if ( InitInp%Linearize ) then
@@ -3475,28 +3467,28 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
    InvalidOutput(BlAirFlC3) = ( p%NumBl < 3 )
    InvalidOutput(      BlPitchC3) = ( p%NumBl < 3 )
 !FIXME: must revise how this is done!!!!!
-!   InvalidOutput(       NStC_XQ ) = ( .not. p%CompNStC )
-!   InvalidOutput(       NStC_XQD) = ( .not. p%CompNStC )
-!   InvalidOutput(       NStC_YQ ) = ( .not. p%CompNStC )
-!   InvalidOutput(       NStC_YQD) = ( .not. p%CompNStC )
-!   InvalidOutput(       TStC_XQ ) = ( .not. p%CompTStC )
-!   InvalidOutput(       TStC_XQD) = ( .not. p%CompTStC )
-!   InvalidOutput(       TStC_YQ ) = ( .not. p%CompTStC )
-!   InvalidOutput(       TStC_YQD) = ( .not. p%CompTStC )
-!
-!   ! NOTE: only the first 3 blades can be output.  If more blades exist, we can't output them here
-!   InvalidOutput(      BStC1_XQ ) = ( .not. P%CompBStC .and. p%NumBl < 1 )
-!   InvalidOutput(      BStC1_XQD) = ( .not. P%CompBStC .and. p%NumBl < 1 )
-!   InvalidOutput(      BStC1_YQ ) = ( .not. P%CompBStC .and. p%NumBl < 1 )
-!   InvalidOutput(      BStC1_YQD) = ( .not. P%CompBStC .and. p%NumBl < 1 )
-!   InvalidOutput(      BStC2_XQ ) = ( .not. P%CompBStC .and. p%NumBl < 2 )
-!   InvalidOutput(      BStC2_XQD) = ( .not. P%CompBStC .and. p%NumBl < 2 )
-!   InvalidOutput(      BStC2_YQ ) = ( .not. P%CompBStC .and. p%NumBl < 2 )
-!   InvalidOutput(      BStC2_YQD) = ( .not. P%CompBStC .and. p%NumBl < 2 )
-!   InvalidOutput(      BStC3_XQ ) = ( .not. P%CompBStC .and. p%NumBl < 3 )
-!   InvalidOutput(      BStC3_XQD) = ( .not. P%CompBStC .and. p%NumBl < 3 )
-!   InvalidOutput(      BStC3_YQ ) = ( .not. P%CompBStC .and. p%NumBl < 3 )
-!   InvalidOutput(      BStC3_YQD) = ( .not. P%CompBStC .and. p%NumBl < 3 )
+   InvalidOutput(       NStC_XQ ) = ( p%CompNStC == 0 )
+   InvalidOutput(       NStC_XQD) = ( p%CompNStC == 0 )
+   InvalidOutput(       NStC_YQ ) = ( p%CompNStC == 0 )
+   InvalidOutput(       NStC_YQD) = ( p%CompNStC == 0 )
+   InvalidOutput(       TStC_XQ ) = ( p%CompTStC == 0 )
+   InvalidOutput(       TStC_XQD) = ( p%CompTStC == 0 )
+   InvalidOutput(       TStC_YQ ) = ( p%CompTStC == 0 )
+   InvalidOutput(       TStC_YQD) = ( p%CompTStC == 0 )
+
+   ! NOTE: only the first 3 blades can be output.  If more blades exist, we can't output them here
+   InvalidOutput(      BStC1_XQ ) = ( P%CompBStC == 0 .or. p%NumBl < 1 )
+   InvalidOutput(      BStC1_XQD) = ( P%CompBStC == 0 .or. p%NumBl < 1 )
+   InvalidOutput(      BStC1_YQ ) = ( P%CompBStC == 0 .or. p%NumBl < 1 )
+   InvalidOutput(      BStC1_YQD) = ( P%CompBStC == 0 .or. p%NumBl < 1 )
+   InvalidOutput(      BStC2_XQ ) = ( P%CompBStC == 0 .or. p%NumBl < 2 )
+   InvalidOutput(      BStC2_XQD) = ( P%CompBStC == 0 .or. p%NumBl < 2 )
+   InvalidOutput(      BStC2_YQ ) = ( P%CompBStC == 0 .or. p%NumBl < 2 )
+   InvalidOutput(      BStC2_YQD) = ( P%CompBStC == 0 .or. p%NumBl < 2 )
+   InvalidOutput(      BStC3_XQ ) = ( P%CompBStC == 0 .or. p%NumBl < 3 )
+   InvalidOutput(      BStC3_XQD) = ( P%CompBStC == 0 .or. p%NumBl < 3 )
+   InvalidOutput(      BStC3_YQ ) = ( P%CompBStC == 0 .or. p%NumBl < 3 )
+   InvalidOutput(      BStC3_YQD) = ( P%CompBStC == 0 .or. p%NumBl < 3 )
 
 
    !-------------------------------------------------------------------------------------------------

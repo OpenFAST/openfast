@@ -310,9 +310,8 @@ SUBROUTINE StC_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
 
     !bjj: need to initialize headers/units
 
-    ! If you want to choose your own rate instead of using what the glue code suggests, tell the glue code the rate at which
-    ! this module must be called here:
-    !Interval = p%DT
+      ! Set the interval value to tell ServoDyn we are using (we don't actually change this in StC)
+   Interval = p%DT
 
    call cleanup()
 !................................
