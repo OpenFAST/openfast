@@ -1924,10 +1924,6 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 
       InitOut%PWaveDynP0(:,:)   = 0.0
       InitOut%PWaveVel0 (:,:,:) = 0.0
-      InitOut%PWaveVel0 (:,:,:) = 0.0
-      InitOut%PWaveVel0 (:,:,:) = 0.0
-      InitOut%PWaveAcc0 (:,:,:) = 0.0
-      InitOut%PWaveAcc0 (:,:,:) = 0.0
       InitOut%PWaveAcc0 (:,:,:) = 0.0
       K = 1
       DO J = 1,InitInp%NWaveKin      ! Loop through all points where the incident wave kinematics will be computed
@@ -1947,9 +1943,9 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
             InitOut%WaveVel (:,J,1) = WaveVel0Hxi(:,K)
             InitOut%WaveVel (:,J,2) = WaveVel0Hyi(:,K)
             InitOut%WaveVel (:,J,3) = WaveVel0V(:,K)
-            InitOut%WaveAcc (:,J,1)  = WaveAcc0Hxi(:,K)
-            InitOut%WaveAcc (:,J,2)  = WaveAcc0Hyi(:,K)
-            InitOut%WaveAcc (:,J,3)  = WaveAcc0V(:,K)
+            InitOut%WaveAcc (:,J,1) = WaveAcc0Hxi(:,K)
+            InitOut%WaveAcc (:,J,2) = WaveAcc0Hyi(:,K)
+            InitOut%WaveAcc (:,J,3) = WaveAcc0V(:,K)
             K = K + 1
          END IF
 
