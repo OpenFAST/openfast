@@ -6,7 +6,7 @@
 !! in space.
 !!
 !! the file contains header information (rows that contain "!"), followed by numeric data stored in
-!! 8 columns:   
+!! 9 columns (if only 8 are listed, Upflow is assumed to be 0):   
 !!              |Column | Description                 | Variable Name | Units|
 !!              |-------|-----------------------------|---------------|------|  
 !!              |    1  |  Time                       | Time          | [s]  |
@@ -17,6 +17,7 @@
 !!              |    6  |  Vertical power-law shear   | VShr          | [-]  |
 !!              |    7  |  Vertical linear shear      | VLinShr       | [-]  |
 !!              |    8  |  Gust (horizontal) velocity | VGust         | [m/s]|
+!!              |    9  |  Upflow angle               | Upflow        | [deg]|
 !!
 !! The horizontal wind speed at (X, Y, Z) is then calculated using the interpolated columns by  \n
 !!  \f{eqnarray}{ V_h & = & V \, \left( \frac{Z}{Z_{Ref}} \right) ^ {VShr}                   & \mbox{power-law wind shear} \\
@@ -202,6 +203,8 @@ SUBROUTINE IfW_UniformWind_Init(InitData, ParamData, MiscVars, InitOutData, ErrS
       ParamData%VShr(   I) = TmpData(6)
       ParamData%VLinShr(I) = TmpData(7)
       ParamData%VGust(  I) = TmpData(8)
+      
+      if (NumCols > 8) ParamData%Upflow(  I) = TmpData(9)*D2R
    END DO !I
 
 
