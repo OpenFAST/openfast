@@ -49,6 +49,8 @@ typedef     ^                   ^               IntKi                           
 typedef     ^                   ^               DbKi                             DTvtk         -  - -   "DT between vtk writes" s
 typedef     ^                   ^               IntKi                            VTKCoord      -  - -    "Switch for VTK outputs coordinate  system" -
 typedef     ^                   ^               CHARACTER(1024)                  RootName      -  -  - "RootName for writing output files"	-
+typedef     ^                   ^               CHARACTER(1024)                  VTK_OutFileRoot - - - "Rootdirectory for writing VTK files"	-
+typedef     ^                   ^               CHARACTER(1024)                  VTK_OutFileBase - - - "Basename for writing VTK files"	-
 
 # ....... MiscVars ............
 # FVW_MiscVarType

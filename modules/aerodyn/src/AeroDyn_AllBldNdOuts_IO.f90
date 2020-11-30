@@ -791,7 +791,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, u, m, y, OtherState, Indx, ErrStat, ErrM
             else 
                DO IdxBlade=1,p%BldNd_BladesOut
                   DO IdxNode=1,p%NumBlNds
-                     y%WriteOutput( OutIdx )  = -m%FVW%BN_UrelWind_s(1,IdxNode,IdxBlade)
+                     y%WriteOutput( OutIdx )  = m%FVW%BN_UrelWind_s(1,IdxNode,IdxBlade)
                      OutIdx = OutIdx + 1
                   END DO
                END DO
