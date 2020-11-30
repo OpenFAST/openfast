@@ -76,7 +76,7 @@ typedef  ^                       ^                 ReKi              Uniform_Ref
 typedef  ^                       ^                 CHARACTER(1024)   TSFF_FileName     -     -     -     "TurbSim Full-Field -- filename"                         -
 typedef  ^                       ^                 CHARACTER(1024)   BladedFF_FileName -     -     -     "Bladed-style Full-Field -- filename"                    -
 typedef  ^                       ^                 LOGICAL           BladedFF_TowerFile -    -     -     "Bladed-style Full-Field -- tower file exists"           -
-typedef  ^                       ^                 LOGICAL           CTTS_CoherentTurb -     -     -     "Coherent turbulence data exists"                        -
+typedef  ^                       ^                 LOGICAL           CTTS_CoherentTurb -     .FALSE.     -     "Coherent turbulence data exists"                        -
 typedef  ^                       ^                 CHARACTER(1024)   CTTS_FileName     -     -     -     "Name of coherent turbulence file"                       -
 typedef  ^                       ^                 CHARACTER(1024)   CTTS_Path         -     -     -     "Path to coherent turbulence binary data files"          -
 typedef  ^                       ^                 CHARACTER(1024)   HAWC_FileName_u   -     -     -     "HAWC -- u component binary data file name"              -
@@ -104,8 +104,10 @@ typedef  ^                       ^                 LOGICAL           Linearize  
 typedef  ^                       ^                 LOGICAL           Use4Dext          -   .FALSE. -     "Flag that tells this module if an external module will pass it 4-D velocity grids." -
 typedef  ^                       ^                 IntKi             NumWindPoints     -     -     -     "Number of wind velocity points expected"                                     -
 typedef  ^                       ^                 LOGICAL           UseInputFile      -   .TRUE.  -     "Should we read everthing from an input file, or do we get it some other way" -
-typedef  ^                       ^                 CHARACTER(1024)   RootName          -     -     -     "RootName for writing output files"
-typedef  ^                       ^          InflowWind_InputFile     PassedFileData    -     -     -     "If we don't use the input file, pass everything through this"                -
+typedef  ^                       ^                 CHARACTER(1024)	RootName          -     -     -     "RootName for writing output files"
+typedef  ^                       ^                 FileInfoType      PassedFileData    -     -     -     "If we don't use the input file, pass everything through this"                -
+typedef  ^                       ^                 LOGICAL           WindType2UseInputFile    -     .TRUE.     -      "Flag for toggling file based IO in wind type 2."                -
+typedef  ^                       ^                 FileInfoType      WindType2Data    -     -     -      "Optional slot for wind type 2 data if file IO is not used."                -
 typedef  ^                       ^          Lidar_InitInputType      lidar             -     -     -     "InitInput for lidar data"                                             -
 typedef  ^                       ^          IfW_4Dext_InitInputType  FDext             -     -     -     "InitInput for lidar data"                                             -
 

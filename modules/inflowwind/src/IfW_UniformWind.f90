@@ -95,7 +95,7 @@ SUBROUTINE IfW_UniformWind_Init(InitData, ParamData, MiscVars, InitOutData, ErrS
       ! Passed Variables
    TYPE(IfW_UniformWind_InitInputType),         INTENT(IN   )  :: InitData          !< Input data for initialization
    TYPE(IfW_UniformWind_ParameterType),         INTENT(  OUT)  :: ParamData         !< Parameters
-   TYPE(IfW_UniformWind_MiscVarType),           INTENT(  OUT)  :: MiscVars          !< Misc variables for optimization (not copied in glue code)
+   TYPE(IfW_UniformWind_MiscVarType),           INTENT(INOUT)  :: MiscVars          !< Misc variables for optimization (not copied in glue code)
    TYPE(IfW_UniformWind_InitOutputType),        INTENT(  OUT)  :: InitOutData       !< Initial output
 
 
@@ -109,14 +109,13 @@ SUBROUTINE IfW_UniformWind_Init(InitData, ParamData, MiscVars, InitOutData, ErrS
    INTEGER(IntKi), PARAMETER                                   :: MaxNumCols = 9       ! maximum number of columns in the Uniform file
    INTEGER(IntKi)                                              :: NumCols              ! Number of columns in the Uniform file
    REAL(ReKi)                                                  :: TmpData(MaxNumCols)  ! Temp variable for reading all columns from a line
+   INTEGER(IntKi)                                              :: LineNo
    REAL(ReKi)                                                  :: DelDiff              ! Temp variable for storing the direction difference
 
-   INTEGER(IntKi)                                              :: UnitWind             ! Unit number for the InflowWind input file
    INTEGER(IntKi)                                              :: I
-   INTEGER(IntKi)                                              :: NumComments
    INTEGER(IntKi)                                              :: ILine             ! Counts the line number in the file
    INTEGER(IntKi),            PARAMETER                        :: MaxTries = 100
-   CHARACTER(1024)                                             :: Line              ! Temp variable for reading whole line from file
+   TYPE(FileInfoType)                                          :: InFileInfo    !< The derived type for holding the full input file for parsing -- we may pass this in the future
 
       ! Temporary variables for error handling
    INTEGER(IntKi)                                              :: TmpErrStat        ! Temp variable for the error status
@@ -139,14 +138,6 @@ SUBROUTINE IfW_UniformWind_Init(InitData, ParamData, MiscVars, InitOutData, ErrS
       RETURN
    END IF
 
-
-      ! Get a unit number to use
-
-   CALL GetNewUnit(UnitWind, TmpErrStat, TmpErrMsg)
-   CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-   IF (ErrStat >= AbortErrLev) RETURN
-
-
       !-------------------------------------------------------------------------------------------------
       ! Copy things from the InitData to the ParamData
       !-------------------------------------------------------------------------------------------------
@@ -154,192 +145,54 @@ SUBROUTINE IfW_UniformWind_Init(InitData, ParamData, MiscVars, InitOutData, ErrS
    ParamData%RefHt            =  InitData%ReferenceHeight
    ParamData%RefLength        =  InitData%RefLength
 
+      !  Read in the data from a file, or copy from the passed InFileInfo.  After this, the InFileInfo
+      !  should contain only a table -- all comments and empty lines have been stripped out
+   IF ( InitData%UseInputFile ) THEN
+      CALL ProcessComFile( InitData%WindFileName, InFileInfo, TmpErrStat, TmpErrMsg )
+      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+      IF ( ErrStat >= AbortErrLev ) RETURN
+   ELSE
+      CALL NWTC_Library_CopyFileInfoType( InitData%PassedFileData, InFileInfo, MESH_NEWCOPY, TmpErrStat, TmpErrMsg )
+      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+      IF ( ErrStat >= AbortErrLev ) RETURN
+   ENDIF
+
+   ! For diagnostic purposes, the following can be used to display the contents
+   ! of the InFileInfo data structure.
+   ! call Print_FileInfo_Struct( CU, InFileInfo ) ! CU is the screen -- different number on different systems.
+
 
       !-------------------------------------------------------------------------------------------------
-      ! Open the file for reading
+      ! Allocate the data arrays
       !-------------------------------------------------------------------------------------------------
 
-   CALL OpenFInpFile (UnitWind, TRIM(InitData%WindFileName), TmpErrStat, TmpErrMsg)
+   ParamData%NumDataLines = InFileInfo%NumLines
+   CALL Alloc_ParamDataArrays( ParamData, TmpErrStat, TmpErrMsg)
    CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
    IF ( ErrStat >= AbortErrLev ) RETURN
 
 
       !-------------------------------------------------------------------------------------------------
-      ! Find the number of comment lines
+      ! Store the data arrays
       !-------------------------------------------------------------------------------------------------
 
-   LINE = '!'                          ! Initialize the line for the DO WHILE LOOP
-   NumComments = -1                    ! the last line we read is not a comment, so we'll initialize this to -1 instead of 0
-
-   DO WHILE ( (INDEX( LINE, '!' ) > 0) .OR. (INDEX( LINE, '#' ) > 0) .OR. (INDEX( LINE, '%' ) > 0) ) ! Lines containing "!" are treated as comment lines
-      NumComments = NumComments + 1
-
-      READ(UnitWind,'( A )',IOSTAT=TmpErrStat) LINE
-
-      IF ( TmpErrStat /=0 ) THEN
-         CALL SetErrStat(ErrID_Fatal,' Error reading from uniform wind file on line '//TRIM(Num2LStr(NumComments+1))//'.',   &
-               ErrStat, ErrMsg, RoutineName)
-         CLOSE(UnitWind)
-         RETURN
-      END IF
-
-   END DO !WHILE
-
-
-      !-------------------------------------------------------------------------------------------------
-      ! Find the number of data lines
-      !-------------------------------------------------------------------------------------------------
-
-   ParamData%NumDataLines = 0
-   
+      ! Check if 9 columns
    NumCols = MaxNumCols
-   READ(LINE,*,IOSTAT=TmpErrStat) ( TmpData(I), I=1,NumCols ) ! this line was read when we were figuring out the comment lines; let's see if it contains all of the columns
+   LineNo = 1     ! Start at begining
+   CALL ParseAry( InFileInfo, LineNo, "Wind type 2 line", TmpData(1:NumCols), NumCols, TmpErrStat, TmpErrMsg )
    if (TmpErrStat /= 0) then
          ! assume the upflow is 0 and try reading the rest of the files
       CALL SetErrStat(ErrID_Info,' Could not read upflow column in uniform wind files. Assuming upflow is 0.', ErrStat, ErrMsg, RoutineName)
       NumCols = NumCols - 1
-      READ(LINE,*,IOSTAT=TmpErrStat) ( TmpData(I), I=1,NumCols ) ! this line was read when we were figuring out the comment lines; let's make sure it contains numeric column data
    end if
-  
-
-   DO WHILE (TmpErrStat == 0)  ! read the rest of the file (until an error occurs)
-      ParamData%NumDataLines = ParamData%NumDataLines + 1
-
-      READ(UnitWind,*,IOSTAT=TmpErrStat) ( TmpData(I), I=1,NumCols )
-
-   END DO !WHILE
 
 
-   IF (ParamData%NumDataLines < 1) THEN
-      TmpErrMsg=  'Error: '//TRIM(Num2LStr(NumComments))//' comment lines were found in the uniform wind file, '// &
-                  'but the first data line does not contain the proper format.'
-      CALL SetErrStat(ErrID_Fatal,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-      CLOSE(UnitWind)
-      RETURN
-   END IF
-
-
-      !-------------------------------------------------------------------------------------------------
-      ! Allocate arrays for the uniform wind data
-      !-------------------------------------------------------------------------------------------------
-      ! BJJ note: If the subroutine AllocAry() is called, the CVF compiler with A2AD does not work
-      !   properly.  The arrays are not properly read even though they've been allocated.
-      ! ADP note: the above note may or may not apply after conversion to the modular framework in 2013
-      !-------------------------------------------------------------------------------------------------
-
-   IF (.NOT. ALLOCATED(ParamData%Tdata) ) THEN
-      CALL AllocAry( ParamData%Tdata, ParamData%NumDataLines, 'Uniform wind time', TmpErrStat, TmpErrMsg )
-      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CLOSE(UnitWind)
-         RETURN
-      ENDIF
-   END IF
-
-   IF (.NOT. ALLOCATED(ParamData%V) ) THEN
-      CALL AllocAry( ParamData%V, ParamData%NumDataLines, 'Uniform wind horizontal wind speed', TmpErrStat, TmpErrMsg )
-      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CLOSE(UnitWind)
-         RETURN
-      ENDIF
-   END IF
-
-   IF (.NOT. ALLOCATED(ParamData%Delta) ) THEN
-      CALL AllocAry( ParamData%Delta, ParamData%NumDataLines, 'Uniform wind direction', TmpErrStat, TmpErrMsg )
-      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CLOSE(UnitWind)
-         RETURN
-      ENDIF
-   END IF
-
-   IF (.NOT. ALLOCATED(ParamData%Upflow) ) THEN
-      CALL AllocAry( ParamData%Upflow, ParamData%NumDataLines, 'Uniform wind upflow', TmpErrStat, TmpErrMsg )
-      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CLOSE(UnitWind)
-         RETURN
-      ENDIF
-   END IF
-   ParamData%Upflow = 0.0_ReKi
-   
-   IF (.NOT. ALLOCATED(ParamData%VZ) ) THEN
-      CALL AllocAry( ParamData%VZ, ParamData%NumDataLines, 'Uniform vertical wind speed', TmpErrStat, TmpErrMsg )
-      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CLOSE(UnitWind)
-         RETURN
-      ENDIF
-   END IF
-
-   IF (.NOT. ALLOCATED(ParamData%HShr) ) THEN
-      CALL AllocAry( ParamData%HShr, ParamData%NumDataLines, 'Uniform horizontal linear shear', TmpErrStat, TmpErrMsg )
-      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CLOSE(UnitWind)
-         RETURN
-      ENDIF
-   END IF
-
-   IF (.NOT. ALLOCATED(ParamData%VShr) ) THEN
-      CALL AllocAry( ParamData%VShr, ParamData%NumDataLines, 'Uniform vertical power-law shear exponent', TmpErrStat, TmpErrMsg )
-      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CLOSE(UnitWind)
-         RETURN
-      ENDIF
-   END IF
-
-   IF (.NOT. ALLOCATED(ParamData%VLinShr) ) THEN
-      CALL AllocAry( ParamData%VLinShr, ParamData%NumDataLines, 'Uniform vertical linear shear', TmpErrStat, TmpErrMsg )
-      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CLOSE(UnitWind)
-         RETURN
-      ENDIF
-   END IF
-
-   IF (.NOT. ALLOCATED(ParamData%VGust) ) THEN
-      CALL AllocAry( ParamData%VGust, ParamData%NumDataLines, 'Uniform gust velocity', TmpErrStat, TmpErrMsg )
-      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CLOSE(UnitWind)
-         RETURN
-      ENDIF
-   END IF
-
-
-      !-------------------------------------------------------------------------------------------------
-      ! Rewind the file (to the beginning) and skip the comment lines
-      !-------------------------------------------------------------------------------------------------
-
-   REWIND( UnitWind )
-
-   DO I=1,NumComments
-      CALL ReadCom( UnitWind, TRIM(InitData%WindFileName), 'Header line #'//TRIM(Num2LStr(I)), TmpErrStat, TmpErrMsg )
-      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CLOSE(UnitWind)
-         RETURN
-      ENDIF
-   END DO !I
-
-
-      !-------------------------------------------------------------------------------------------------
-      ! Read the data arrays
-      !-------------------------------------------------------------------------------------------------
-
+      ! Parse the data and store it
+   LineNo = 1
    DO I=1,ParamData%NumDataLines
-
-      CALL ReadAry( UnitWind, TRIM(InitData%WindFileName), TmpData(1:NumCols), NumCols, 'TmpData', &
-                'Data from uniform wind file line '//TRIM(Num2LStr(NumComments+I)), TmpErrStat, TmpErrMsg)
-      CALL SetErrStat(TmpErrStat,'Error retrieving data from the uniform wind file line'//TRIM(Num2LStr(NumComments+I)),   &
-            ErrStat,ErrMsg,RoutineName)
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CLOSE(UnitWind)
-         RETURN
-      ENDIF
+      CALL ParseAry( InFileInfo, LineNo, "Wind type 2 file line", TmpData(1:NumCols), NumCols, TmpErrStat, TmpErrMsg )
+      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+      IF ( ErrStat >= AbortErrLev ) RETURN
 
       ParamData%Tdata(  I) = TmpData(1)
       ParamData%V(      I) = TmpData(2)
@@ -349,10 +202,8 @@ SUBROUTINE IfW_UniformWind_Init(InitData, ParamData, MiscVars, InitOutData, ErrS
       ParamData%VShr(   I) = TmpData(6)
       ParamData%VLinShr(I) = TmpData(7)
       ParamData%VGust(  I) = TmpData(8)
-      
-      if (NumCols > 8) ParamData%Upflow(  I) = TmpData(9)*D2R
-
    END DO !I
+
 
 
       !-------------------------------------------------------------------------------------------------
@@ -385,8 +236,6 @@ SUBROUTINE IfW_UniformWind_Init(InitData, ParamData, MiscVars, InitOutData, ErrS
 
 
    END DO !I
-
-
 
       !-------------------------------------------------------------------------------------------------
       ! Find out information on the timesteps and range
@@ -422,15 +271,6 @@ SUBROUTINE IfW_UniformWind_Init(InitData, ParamData, MiscVars, InitOutData, ErrS
 
       ! Number of timesteps
    InitOutData%WindFileNumTSteps    =  ParamData%NumDataLines
-
-
-
-      !-------------------------------------------------------------------------------------------------
-      ! Close the file
-      !-------------------------------------------------------------------------------------------------
-
-   CLOSE( UnitWind )
-
 
       !-------------------------------------------------------------------------------------------------
       ! Print warnings and messages
@@ -495,6 +335,89 @@ SUBROUTINE IfW_UniformWind_Init(InitData, ParamData, MiscVars, InitOutData, ErrS
    RETURN
 
 END SUBROUTINE IfW_UniformWind_Init
+
+SUBROUTINE Alloc_ParamDataArrays( ParamData, ErrStat, ErrMsg )
+
+   IMPLICIT                                     NONE
+   CHARACTER(*),           PARAMETER                           :: RoutineName="Alloc_ParamDataArrays"
+
+   TYPE(IfW_UniformWind_ParameterType),         INTENT(INOUT)  :: ParamData         !< Parameters
+
+      ! Error handling
+   INTEGER(IntKi),                              INTENT(  OUT)  :: ErrStat           !< determines if an error has been encountered
+   CHARACTER(*),                                INTENT(  OUT)  :: ErrMsg            !< A message about the error
+
+      ! Temporary variables for error handling
+   INTEGER(IntKi)                                              :: TmpErrStat        ! Temp variable for the error status
+   CHARACTER(ErrMsgLen)                                        :: TmpErrMsg         ! Temporary error message
+
+   ErrStat     = ErrID_None
+   ErrMsg      = ""
+
+   !-------------------------------------------------------------------------------------------------
+   ! Allocate arrays for the uniform wind data
+   !-------------------------------------------------------------------------------------------------
+   ! BJJ note: If the subroutine AllocAry() is called, the CVF compiler with A2AD does not work
+   !   properly.  The arrays are not properly read even though they've been allocated.
+   ! ADP note: the above note may or may not apply after conversion to the modular framework in 2013
+   !-------------------------------------------------------------------------------------------------
+
+   IF (.NOT. ALLOCATED(ParamData%Tdata) ) THEN
+      CALL AllocAry( ParamData%Tdata, ParamData%NumDataLines, 'Uniform wind time', TmpErrStat, TmpErrMsg )
+      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+      IF ( ErrStat >= AbortErrLev ) RETURN
+   END IF
+
+   IF (.NOT. ALLOCATED(ParamData%V) ) THEN
+      CALL AllocAry( ParamData%V, ParamData%NumDataLines, 'Uniform wind horizontal wind speed', TmpErrStat, TmpErrMsg )
+      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+      IF ( ErrStat >= AbortErrLev ) RETURN
+   END IF
+
+   IF (.NOT. ALLOCATED(ParamData%Delta) ) THEN
+      CALL AllocAry( ParamData%Delta, ParamData%NumDataLines, 'Uniform wind direction', TmpErrStat, TmpErrMsg )
+      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+      IF ( ErrStat >= AbortErrLev ) RETURN
+   END IF
+
+   IF (.NOT. ALLOCATED(ParamData%VZ) ) THEN
+      CALL AllocAry( ParamData%VZ, ParamData%NumDataLines, 'Uniform vertical wind speed', TmpErrStat, TmpErrMsg )
+      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+      IF ( ErrStat >= AbortErrLev ) RETURN
+   END IF
+
+   IF (.NOT. ALLOCATED(ParamData%HShr) ) THEN
+      CALL AllocAry( ParamData%HShr, ParamData%NumDataLines, 'Uniform horizontal linear shear', TmpErrStat, TmpErrMsg )
+      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+      IF ( ErrStat >= AbortErrLev ) RETURN
+   END IF
+
+   IF (.NOT. ALLOCATED(ParamData%VShr) ) THEN
+      CALL AllocAry( ParamData%VShr, ParamData%NumDataLines, 'Uniform vertical power-law shear exponent', TmpErrStat, TmpErrMsg )
+      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+      IF ( ErrStat >= AbortErrLev ) RETURN
+   END IF
+
+   IF (.NOT. ALLOCATED(ParamData%VLinShr) ) THEN
+      CALL AllocAry( ParamData%VLinShr, ParamData%NumDataLines, 'Uniform vertical linear shear', TmpErrStat, TmpErrMsg )
+      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+      IF ( ErrStat >= AbortErrLev ) RETURN
+   END IF
+
+   IF (.NOT. ALLOCATED(ParamData%VGust) ) THEN
+      CALL AllocAry( ParamData%VGust, ParamData%NumDataLines, 'Uniform gust velocity', TmpErrStat, TmpErrMsg )
+      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+      IF ( ErrStat >= AbortErrLev ) RETURN
+   END IF
+
+   IF (.NOT. ALLOCATED(ParamData%Upflow) ) THEN
+      CALL AllocAry( ParamData%Upflow, ParamData%NumDataLines, 'Uniform wind upflow', TmpErrStat, TmpErrMsg )
+      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+      IF ( ErrStat >= AbortErrLev ) RETURN
+   END IF
+   ParamData%Upflow = 0.0_ReKi
+
+END SUBROUTINE Alloc_ParamDataArrays
 
 !====================================================================================================
 

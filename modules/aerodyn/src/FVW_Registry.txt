@@ -49,6 +49,8 @@ typedef     ^                   ^               IntKi                           
 typedef     ^                   ^               DbKi                             DTvtk         -  - -   "DT between vtk writes" s
 typedef     ^                   ^               IntKi                            VTKCoord      -  - -    "Switch for VTK outputs coordinate  system" -
 typedef     ^                   ^               CHARACTER(1024)                  RootName      -  -  - "RootName for writing output files"	-
+typedef     ^                   ^               CHARACTER(1024)                  VTK_OutFileRoot - - - "Rootdirectory for writing VTK files"	-
+typedef     ^                   ^               CHARACTER(1024)                  VTK_OutFileBase - - - "Basename for writing VTK files"	-
 
 # ....... MiscVars ............
 # FVW_MiscVarType
@@ -143,6 +145,8 @@ typedef FVW/FVW            ContinuousStateType  ReKi                            
 typedef     ^                   ^               ReKi                             Gamma_FW     :::   -  -  "Circulation of the far  wake panels" -
 typedef     ^                   ^               ReKi                             r_NW         ::::  -  -  "Position    of the near wake panels" -
 typedef     ^                   ^               ReKi                             r_FW         ::::  -  -  "Position    of the far  wake panels" -
+# TODO UA
+typedef   ^                      ^              UA_ContinuousStateType             UA           -  -  - "states for UnsteadyAero"        -
 
 
 #.......... DiscreteStateType ......

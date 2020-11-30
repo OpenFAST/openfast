@@ -97,7 +97,11 @@ PROGRAM HydroDynDriver
    INTEGER(IntKi)                                     :: UnHD_Out              ! Output file identifier
    REAL(ReKi), ALLOCATABLE                            :: WAMITin(:,:)          ! Variable for storing time, forces, and body velocities, in m/s or rad/s for WAMIT
    REAL(ReKi), ALLOCATABLE                            :: Morisonin(:,:)        ! Variable for storing time, forces, and body velocities, in m/s or rad/s for Morison elements
-   
+
+   TYPE(MeshType)                                     :: PMesh                 ! Point mesh that we will use to map to Morison and u(1)%Mesh
+   TYPE(MeshMapType)                                  :: Map_P_to_MorisonDist
+   TYPE(MeshMapType)                                  :: Map_P_to_MorisonLumped
+
    INTEGER(IntKi)                                     :: I                    ! Generic loop counter
    INTEGER(IntKi)                                     :: J                    ! Generic loop counter
    INTEGER(IntKi)                                     :: n                    ! Loop counter (for time step)
@@ -124,7 +128,8 @@ PROGRAM HydroDynDriver
    CHARACTER(10)                                      :: AngleMsg             ! For debugging, a string version of the largest rotation input
    INTEGER                                            :: UnMeshDebug
    CHARACTER(50)                                      :: MeshDebugFile
-   
+
+   CHARACTER(20)                    :: FlagArg       ! Flag argument from command line
    CHARACTER(200)                   :: git_commit    ! String containing the current git commit hash
 
    TYPE(ProgDesc), PARAMETER        :: version   = ProgDesc( 'HydroDyn Driver', '', '' )  ! The version number of this program.
@@ -153,39 +158,32 @@ PROGRAM HydroDynDriver
    !          InitInp%Morison%InpMembers(k)%FillDensChr
    !          
    !          
-      ! Initialize the library which handle file echos and WrScr, for example
-   call nwtc_init()
-   
-         ! Display the copyright notice
-   CALL DispCopyrightLicense( version%Name )
-      ! Obtain OpenFAST git commit hash
-   git_commit = QueryGitVersion()
-      ! Tell our users what they're running
-   CALL WrScr( ' Running '//TRIM( version%Name )//' a part of OpenFAST - '//TRIM(git_Commit)//NewLine//' linked with '//TRIM( NWTC_Ver%Name )//NewLine )
 
-   IF ( command_argument_count() /= 1 ) THEN
-      CALL print_help()
-      STOP
-   END IF
-  
+   CALL NWTC_Init( ProgNameIn=version%Name )
+
+   drvrFilename = ''
+   CALL CheckArgs( drvrFilename, Flag=FlagArg )
+   IF ( LEN( TRIM(FlagArg) ) > 0 ) CALL NormStop()
+
+      ! Display the copyright notice
+   CALL DispCopyrightLicense( version%Name )
+     ! Obtain OpenFAST git commit hash
+   git_commit = QueryGitVersion()
+     ! Tell our users what they're running
+   CALL WrScr( ' Running '//TRIM( version%Name )//' a part of OpenFAST - '//TRIM(git_commit)//NewLine//' linked with '//TRIM( NWTC_Ver%Name )//NewLine )
    
       ! Parse the driver input file and run the simulation based on that file
-      
-   IF ( command_argument_count() == 1 ) THEN
-      
-      CALL get_command_argument(1, drvrFilename)
-      CALL ReadDriverInputFile( drvrFilename, drvrInitInp, ErrStat, ErrMsg )
-      IF ( ErrStat /= 0 ) THEN
-         CALL WrScr( ErrMsg )
-         STOP
-      END IF
-      InitInData%Gravity      = drvrInitInp%Gravity
-      InitInData%UseInputFile = .TRUE. 
-      InitInData%InputFile    = drvrInitInp%HDInputFile
-      InitInData%OutRootName  = drvrInitInp%OutRootName
-      InitInData%TMax         = drvrInitInp%NSteps * drvrInitInp%TimeInterval
-      InitInData%Linearize    = drvrInitInp%Linearize
+   CALL ReadDriverInputFile( drvrFilename, drvrInitInp, ErrStat, ErrMsg )
+   IF ( ErrStat /= 0 ) THEN
+      CALL WrScr( ErrMsg )
+      STOP
    END IF
+   InitInData%Gravity      = drvrInitInp%Gravity
+   InitInData%UseInputFile = .TRUE. 
+   InitInData%InputFile    = drvrInitInp%HDInputFile
+   InitInData%OutRootName  = drvrInitInp%OutRootName
+   InitInData%TMax         = drvrInitInp%NSteps * drvrInitInp%TimeInterval
+   InitInData%Linearize    = drvrInitInp%Linearize
   
       ! Get the current time
    call date_and_time ( Values=StrtTime )                               ! Let's time the whole simulation
@@ -293,6 +291,46 @@ PROGRAM HydroDynDriver
    ENDIF
 
 
+      ! Setup mesh for input motions for Morison and WAMIT
+   CALL MeshCreate( BlankMesh       = PMesh             &
+                 ,IOS               = COMPONENT_INPUT   &
+                 ,Nnodes            = 1                 &
+                 ,ErrStat           = ErrStat           &
+                 ,ErrMess           = ErrMsg            &
+                 ,TranslationDisp   = .TRUE.            &
+                 ,Orientation       = .TRUE.            &
+                 ,TranslationVel    = .TRUE.            &
+                 ,RotationVel       = .TRUE.            &
+                 ,TranslationAcc    = .TRUE.            &
+                 ,RotationAcc       = .TRUE.)
+   IF ( ErrStat >= ErrID_Fatal ) THEN
+      CALL WrScr( ErrMsg )
+      STOP
+   END IF
+
+   CALL MeshPositionNode (PMesh                                 &
+                           , 1                                  &
+                           , (/0.0_ReKi, 0.0_ReKi, 0.0_ReKi/)   &
+                           , ErrStat                            &
+                           , ErrMsg                             )
+   IF ( ErrStat >= ErrID_Fatal ) THEN
+      CALL WrScr( ErrMsg )
+      STOP
+   END IF
+
+   CALL MeshConstructElement( PMesh, ELEMENT_POINT, ErrStat, ErrMsg, 1 )
+   IF ( ErrStat >= ErrID_Fatal ) THEN
+      CALL WrScr( ErrMsg )
+      STOP
+   END IF
+
+   CALL MeshCommit ( PMesh, ErrStat, ErrMsg )
+   IF ( ErrStat >= ErrID_Fatal ) THEN
+      CALL WrScr( ErrMsg )
+      STOP
+   END IF
+
+
 
          ! Initialize the module
    Interval = drvrInitInp%TimeInterval
@@ -391,7 +429,20 @@ PROGRAM HydroDynDriver
          
       END IF
    END IF
-   
+
+   ! Setup mesh mapping for Morison motion
+   IF ( drvrInitInp%MorisonInputsMod == 2 ) THEN
+      IF ( u(1)%Morison%DistribMesh%Initialized ) THEN
+         ! create mapping from PMesh (used for WAMIT mesh among others) to Morison.  This will be used to map the motions for Morison timeseries inputs
+         CALL MeshMapCreate( PMesh, u(1)%Morison%DistribMesh, Map_P_to_MorisonDist, ErrStat, ErrMsg )
+         if (errStat >= AbortErrLev) call HD_DvrCleanup()
+      ENDIF
+      IF ( u(1)%Morison%LumpedMesh%Initialized ) THEN
+         ! create mapping from PMesh (used for WAMIT mesh among others) to Morison.  This will be used to map the motions for Morison timeseries inputs
+         CALL MeshMapCreate( PMesh, u(1)%Morison%LumpedMesh, Map_P_to_MorisonLumped, ErrStat, ErrMsg )
+         if (errStat >= AbortErrLev) call HD_DvrCleanup()
+      ENDIF
+   ENDIF
       
    !...............................................................................................................................
    ! Routines called in loose coupling -- the glue code may implement this in various ways
@@ -434,11 +485,31 @@ PROGRAM HydroDynDriver
       END IF
       
           
-      IF ( u(1)%Morison%DistribMesh%Initialized ) THEN
-         IF ( drvrInitInp%MorisonInputsMod == 2 ) THEN
-               ! Set the Morison Inputs from a time series input file
+      IF ( drvrInitInp%MorisonInputsMod == 2 ) THEN
+            ! Set the Morison Inputs from a time series input file
+         PMesh%TranslationDisp(:,1)   = MorisonIn(n,2:4) 
+
+            ! Compute direction cosine matrix from the rotation angles
+         IF ( abs(MorisonIn(n,5)) > maxAngle ) maxAngle = abs(MorisonIn(n,5))
+         IF ( abs(MorisonIn(n,6)) > maxAngle ) maxAngle = abs(MorisonIn(n,6))
+         IF ( abs(MorisonIn(n,7)) > maxAngle ) maxAngle = abs(MorisonIn(n,7))
+
+         CALL SmllRotTrans( 'InputRotation', REAL(MorisonIn(n,5),ReKi), REAL(MorisonIn(n,6),ReKi), REAL(MorisonIn(n,7),ReKi), dcm, 'Junk', ErrStat, ErrMsg )
+         PMesh%Orientation(:,:,1)     = dcm
+
+         PMesh%TranslationVel(:,1)    = MorisonIn(n,8:10)
+         PMesh%RotationVel(:,1)       = MorisonIn(n,11:13)
+         PMesh%TranslationAcc(:,1)    = MorisonIn(n,14:16)
+         PMesh%RotationAcc(:,1)       = MorisonIn(n,17:19)
+
+         IF ( u(1)%Morison%DistribMesh%Initialized ) THEN
+            CALL Transfer_Point_to_Line2( PMesh, u(1)%Morison%DistribMesh, Map_P_to_MorisonDist, ErrStat, ErrMsg )
+            if (errStat >= AbortErrLev) call HD_DvrCleanup()
          END IF
-                  
+         IF ( u(1)%Morison%LumpedMesh%Initialized ) THEN
+            CALL Transfer_Point_to_Point(  PMesh, u(1)%Morison%LumpedMesh, Map_P_to_MorisonLumped, ErrStat, ErrMsg )
+            if (errStat >= AbortErrLev) call HD_DvrCleanup()
+         END IF
       END IF
       
       

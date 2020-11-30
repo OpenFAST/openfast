@@ -70,11 +70,11 @@ IMPLICIT NONE
 ! =========  FileInfoType  =======
   TYPE, PUBLIC :: FileInfoType
     INTEGER(IntKi)  :: NumLines 
-    INTEGER(IntKi)  :: NumFiles 
+    CHARACTER(1024) , DIMENSION(:), ALLOCATABLE  :: Lines 
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: FileLine 
+    INTEGER(IntKi)  :: NumFiles 
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: FileIndx 
     CHARACTER(1024) , DIMENSION(:), ALLOCATABLE  :: FileList 
-    CHARACTER(512) , DIMENSION(:), ALLOCATABLE  :: Lines 
   END TYPE FileInfoType
 ! =======================
 ! =========  Quaternion  =======
