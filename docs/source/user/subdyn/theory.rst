@@ -10,7 +10,7 @@ Overview
 This section focuses on the theory behind the SubDyn module.
 
 SubDyn relies on two main engineering approaches: (1) a linear frame
-finite-element beam model (LFEB), and (2) a dynamics system reduction
+finite-element model (LFEM), and (2) a dynamics system reduction
 via the Craig-Bampton (C-B) method together with a static-improvement
 method (SIM), greatly reducing the number of modes needed to obtain an
 accurate solution.
@@ -27,9 +27,9 @@ that varied in base geometry, load paths, sizes, supported towers, and
 turbine masses were analyzed under extreme loads using nonlinear and
 linear models. The results revealed that the nonlinear behavior was
 mainly caused by the mono-tower response and had little effect on the
-multimember support structures. Therefore, an LFEB model for the
+multimember support structures. Therefore, an LFEM model for the
 substructure is considered appropriate for wind turbine substructures.
-The LFEB can accommodate different element types, including
+The LFEM can accommodate different element types, including
 Euler-Bernoulli and Timoshenko beam elements of either constant or
 longitudinally tapered cross sections (Timoshenko beam elements account
 for shear deformation and are better suited to represent low aspect
@@ -78,7 +78,7 @@ and the number of elements for each member.
 
 The following sections discuss the integration of SubDyn within the FAST
 framework, the main coordinate systems used in the module, and the
-theory pertaining to the LFEB, the C-B reduction, and SIM. The
+theory pertaining to the LFEM, the C-B reduction, and SIM. The
 state-space formulations to be used in the time-domain simulation are
 also presented. The last section discusses the calculation of the base
 reaction calculation. For further details, see also :cite:`song2013`.
@@ -253,14 +253,117 @@ releases, the user will need to input cosine matrices to indicate the
 final orientation of the member principal axes with respect to the
 global reference frame.
 
-Linear Finite-Element Beam Model
---------------------------------
+.. _SD_FEM:
 
-In SubDyn, the LFEB can accommodate different two-node beam element
-types, including Euler-Bernoulli and Timoshenko beam elements, either of
-constant or tapered cross sections. The tapered element formulation has
-been derived, but has not been implemented in the current SubDyn
-release.
+Finite-Element Model - Elements and Constraints
+-----------------------------------------------
+
+Definitions
+~~~~~~~~~~~
+
+Figure :numref:`fig:ElementsDefinitions` is used to illustrate some of the definitions used. 
+The model of the substructure is assumed to consists of
+different members. 
+A member is delimited by two joints. 
+A joint is defined by the coordinates of a point of the
+undeflected structure and a type (*JointType*). The type of a joint defines the
+boundary condition or constraint of all the members that are attached to
+this joint.
+The following joints are supported: 
+
+- Cantilever joints (*JointType=1*)
+
+- Universal joint (*JointType=2*)
+
+- Pin joint (*JointType=3*)
+
+- Ball joint (*JointType=4*)
+
+A member is one of the three following types:
+
+- Beams (*MType=1*), Euler-Bernoulli (*FEMMod=1*) or Timoshenko (*FEMMod=3*)
+
+- Pretension cables (*MType=2*)
+
+- Rigid link (*MType=3*)
+
+Beam members may be split into several elements to increase the accuracy of the model (using
+the input parameter *NDiv*). Member of other types (rigid links and
+pretension cables) are not split. In this document, the term *element*
+refers to: a sub-division of a beam member or a member of another type
+than beam (rigid-link or pretension cable). The term *joints* refers to
+the points defining the extremities of the members. Some joints are
+defined in the input file, while others arise from the subdivision of
+beam members. The end points of an elements are called nodes and each
+node consists of 6 degrees of freedom (DOF) for the element implemented.
+In the current implementation, no geometrical offsets are assumed between a joint and the node of an
+element, or between the nodes of connected elements.
+
+.. figure:: figs/ElementsDefinitions.png
+   :alt: Definitions
+   :name: fig:ElementsDefinitions
+   :width: 80.0%
+
+   Definitions of members, element, joints, nodes and rigid assemblies.
+
+.. _SD_FEM_Process:
+
+FEM process - from elements to system matrices
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The process to obtain a FE representation of the system (performed at initialization) is as follows:
+
+- Elements: The mass and stiffness matrices of each element are computed and transformed to global coordinates using directional cosine matrices
+
+- Assembly: The element matrices are inserted into the full system matrices. The DOFs of cantilever joints are mapped to each other. The translational DOFs of the nodes linked by a joint different from a cantilever joint are mapped to each other, but the rotational DOFs of each individual nodes are retained in this system. The vector of degrees of freedom of this full system is noted :math:`\boldsymbol{x}`
+
+- Constraints elimination: A direct-elimination technique is used to apply the constraints introduced by the joints and the rigid links. The elimination consists in forming a matrix :math:`\boldsymbol{T}` and a reduced set of degrees of freedom :math:`\boldsymbol{\tilde{x}}` such that :math:`\boldsymbol{x}=\boldsymbol{T} \boldsymbol{\tilde{x}}`.
+
+- CB-reduction: The Craig-Bampton reduction technique is used to obtain a reduced set of degrees of freedom (interface DOFs and Craig-Bampton modes)
+
+- Boundary conditions: The displacements boundary conditions are then applied (e.g. for a fixed bottom foundation) 
+
+The remaining of the section focuses on the element matrices, 
+and the account of the constraints introduced by the joints and rigid links.
+The Craig-Bampton reduction is described in :numref:`GenericCBReduction`. 
+
+
+Self-Weight Loads  
+~~~~~~~~~~~~~~~~~
+The loads caused by self-weight are precomputed during initialization
+based on the undisplaced configuration. It is therefore assumed that the
+displacements will be small and that P-delta effects are small for the
+substructure. 
+The "extra" moment may be accounted for using the flag *ExtraMoment*, 
+see section :numref:`SD_Loads`.
+For a nontapered beam element, the lumped loads caused by
+gravity to be applied at the end nodes are as follows (in the global
+coordinate system):
+
+.. math::  :label: FG
+
+	\left\{ F_G \right\} = \rho A_z g 
+                       \begin{bmatrix} 0 \\
+                       0 \\
+                       -\frac{L_e}{2} \\
+		       -\frac{L_e^2}{12} D_{c2,3} \\
+		        \frac{L_e^2}{12} D_{c1,3} \\
+		       0\\
+		       0\\
+		       0\\
+                       -\frac{L_e}{2}\\
+		        \frac{L_e^2}{12} D_{c2,3}\\
+		       -\frac{L_e^2}{12} D_{c1,3}\\
+		       0
+		     \end{bmatrix}
+
+Note also that if lumped masses exist (selected by the user at
+prescribed joints), their contribution will be included as concentrated
+forces along global *Z* at the relevant nodes.
+
+
+Beam Element Formulation    
+~~~~~~~~~~~~~~~~~~~~~~~~
 
 The uniform and tapered Euler-Bernoulli beam elements are
 displacement-based and use third-order interpolation functions that
@@ -269,10 +372,6 @@ uniform Timoshenko beam element is derived by introducing the shear
 deformation into the uniform Euler-Bernoulli element, so the
 displacements are represented by third-order interpolation functions as
 well.
-
-Element Formulation    
-~~~~~~~~~~~~~~~~~~~
-
 Following the classic Timoshenko beam theory, the generic two-node
 element stiffness and consistent mass matrices can be written as follows
 (see, for instance, :cite:`panzer2009`):
@@ -392,42 +491,793 @@ system via :math:`{[ \mathbf{D_c} ]}` as shown in the following equations:
 
 where *m* and *k* are element matrices in the global coordinate system.
 
-Self-Weight Loads  
-~~~~~~~~~~~~~~~~~
-The loads caused by self-weight are precomputed during initialization
-based on the undisplaced configuration. It is therefore assumed that the
-displacements will be small and that P-delta effects are small for the
-substructure. For a nontapered beam element, the lumped loads caused by
-gravity to be applied at the end nodes are as follows (in the global
-coordinate system):
 
-.. math::  :label: FG
+.. _SD_PretensionCable:
 
-	\left\{ F_G \right\} = \rho A_z g 
-                       \begin{bmatrix} 0 \\
-                       0 \\
-                       -\frac{L_e}{2} \\
-		       -\frac{L_e^2}{12} D_{c2,3} \\
-		        \frac{L_e^2}{12} D_{c1,3} \\
-		       0\\
-		       0\\
-		       0\\
-                       -\frac{L_e}{2}\\
-		        \frac{L_e^2}{12} D_{c2,3}\\
-		       -\frac{L_e^2}{12} D_{c1,3}\\
-		       0
-		     \end{bmatrix}
+Pretension Cable Element Formulation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Note also that if lumped masses exist (selected by the user at
-prescribed joints), their contribution will be included as concentrated
-forces along global *Z* at the relevant nodes.
 
-.. _CBreduction:
+The master stiffness equations of FEM assumes that the forces vanish if
+all displacements also vanish, that is, the relation between force and
+displacement is linear,
+:math:`\boldsymbol{f}=\boldsymbol{K}\boldsymbol{u}`. This assumption
+does not hold if the material is subject to so-called initial strain,
+initial stress of prestress. Such effects may be produced by temperature
+changes and pretensions (or lack-of-fit fabrications). These effects are
+for instance discussed in the notes of
+Felippa :cite:`felippa`.
 
-Dynamic System of Equations and C-B Reduction 
----------------------------------------------
+Pretension cables may be modelled by assuming an initial elongation of a
+truss element and considering the restoring force this initial
+elongation may have in both the longitudinal and orthogonal direction.
 
-The main equations of motion of SubDyn are written as follows:
+
+Derivation
+^^^^^^^^^^
+
+A pretension cable oriented along the :math:`z`-direction is considered.
+To simplify the derivation, the left point is assumed fixed and only the
+right point deflects. The notations are illustrated in :numref:`fig:FEPreTension`.
+
+.. figure:: figs/FEPreTension.png
+   :alt: Pretension
+   :name: fig:FEPreTension
+   :width: 50.0%
+
+   Notations used for the derivation of the pretension cable equation
+
+
+The length of the element prior to the pretension is written
+:math:`L_0`, and its axial stiffness is :math:`k=EA/L_0`. In this
+equilibrium position the stress in the cable is zero. The user inputs
+for this elements are selected as: the un-displaced joint locations
+(while pre-tensioned) :math:`\boldsymbol{x}_1` and
+:math:`\boldsymbol{x}_2`, the elongation stiffness :math:`EA`, and the
+change in length :math:`\Delta L_0 = L_0-L_e` (:math:`<0`). The
+pretension force :math:`T_0` is a derived input. The following
+quantities are defined:
+
+.. math::
+
+   \begin{aligned}
+       L_e=\lVert\boldsymbol{x}_2-\boldsymbol{x}_1\rVert
+       ,\quad
+       \epsilon_0=\frac{T_0}{EA}
+       ,\quad
+       L_0=\frac{L_e}{1+\epsilon_0}\end{aligned}
+
+The different variables are defined as function of the inputs as
+follows:
+
+.. math::
+
+   \begin{aligned}
+       L_0=L_e+\Delta L_0
+       \qquad
+       T_0= - E A \frac{\Delta L_0}{L_0}
+       ,\qquad
+       \epsilon_0=\frac{T_0}{EA} = \frac{-\Delta L_0}{L_0} = \frac{-\Delta L_0}{L_e+\Delta L_0 }\end{aligned}
+
+The degrees of freedom for the deflections of the cable,
+:math:`(u_x, u_z)`, are measured from a position which is not the
+equilibrium position, but a position that is offset from the equilibrium
+position, such that the pretensioned length of the element is
+:math:`L_e>L_0`. The stress in the cable for :math:`u_z=0` is noted
+:math:`\epsilon_0=(L_e-L_0)/L_0`, or :math:`L_e=L_0(1+\epsilon_0)`. The
+initial tension in the cable is
+:math:`\boldsymbol{T}_0=-k(L_e-L_0)\,\boldsymbol{e}_z=-  E A \epsilon_0\, \boldsymbol{e}_z`.
+In its deflected position, the length of the cable is:
+
+.. math::
+
+   \begin{aligned}
+      L_d =\sqrt{(L_e+u_z)^2 + u_x^2}
+      =L_e\sqrt{1+\frac{2u_z}{L_e} + \frac{u_z^2}{L-e^2}+\frac{u_x^2}{L_e^2}}
+      \approx L_e \left(1+\frac{u_z}{L_e}\right)
+      \label{eq:PreTensionLength}\end{aligned}
+
+where the deflections are assumed small compared to the element length
+:math:`L_e`, :math:`u_x\ll L_e` and :math:`u_z\ll L_e`, and only the
+first order terms are kept. The tension force in the deflected cable is
+then :math:`\boldsymbol{T}_d=-k(L_d-L_0) \boldsymbol{e}_r` where the
+radial vector is the vector along the deflected cable such that:
+
+.. math::
+
+   \begin{aligned}
+       \boldsymbol{e}_r=\cos\theta \boldsymbol{e}_z +\sin\theta  \boldsymbol{e}_x 
+           ,\quad\text{with}\quad
+              \cos\theta=\frac{L_e+u_z}{L_d} 
+               \approx 1
+           ,\quad
+             \sin\theta= \frac{u_x}{L_d} 
+               \approx \frac{u_x}{L_e}(1-\frac{u_z}{L_e})
+               \approx \frac{u_x}{L_e}
+      \label{eq:PreTensionRadial}\end{aligned}
+
+The components of the tension force are then:
+
+.. math::
+
+   \begin{aligned}
+    T_{d,z}&= -k(L_d-L_0)\cos\theta \approx -\frac{EA}{L_0}(L_e-L_0+u_z)\,  1\,
+        = -EA\epsilon_0-\frac{EA}{L_0}u_z 
+        \nonumber
+        \\
+    T_{d,x}&= -k(L_d-L_0)\sin\theta \approx -\frac{EA}{L_0}(L_e-L_0+u_z)\frac{u_x}{L_e}
+        \approx -EA\epsilon_0\frac{u_x}{L_e}
+        = -\frac{EA\epsilon_0}{L_0(1+\epsilon_0)}u_x
+            \label{eq:PreTensionForce}\end{aligned}
+
+Finite element formulation of a pretension cable
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The rotational degrees of freedom are omitted for conciseness since
+these degrees of freedom are not considered in this cable element. The
+linear formulation from is applied to both nodes of a finite element,
+interpreting the force at each node as the internal force that the
+element exert on the nodes. Using this convention, the pretension cable
+element can be represented with an element stiffness matrix
+:math:`\boldsymbol{K}_e` and an additional nodal load vector
+:math:`\boldsymbol{f}_{e,0}` such that the static equilibrium equation
+of the element writes
+:math:`\boldsymbol{f}_e=\boldsymbol{K}_e\boldsymbol{u}+\boldsymbol{f}_{e,0}`,
+with:
+
+.. math::
+
+   \begin{aligned}
+     \begin{bmatrix} 
+       f_{x,1}\\
+       f_{y,1}\\
+       f_{z,1}\\
+       f_{x,2}\\
+       f_{y,2}\\
+       f_{z,2}\\
+     \end{bmatrix} 
+       =
+           \frac{EA}{L_0}
+     \begin{bmatrix} 
+       \frac{\epsilon_0}{1+\epsilon_0}  & 0                                & 0  & -\frac{\epsilon_0}{1+\epsilon_0} & 0                                & 0 \\
+       0                                & \frac{\epsilon_0}{1+\epsilon_0}  & 0  & 0                                & -\frac{\epsilon_0}{1+\epsilon_0} & 0 \\
+       0                                & 0                                & 1  & 0                                & 0                                & -1\\
+       -\frac{\epsilon_0}{1+\epsilon_0} & 0                                & 0  & \frac{\epsilon_0}{1+\epsilon_0}  & 0                                & 0 \\
+       0                                & -\frac{\epsilon_0}{1+\epsilon_0} & 0  & 0                                & \frac{\epsilon_0}{1+\epsilon_0}  & 0 \\
+       0                                & 0                                & -1 & 0                                & 0                                & 1 \\
+       \end{bmatrix}
+     \begin{bmatrix} 
+       u_{x,1}\\
+       u_{y,1}\\
+       u_{z,1}\\
+       u_{x,2}\\
+       u_{y,2}\\
+       u_{z,2}\\
+     \end{bmatrix} 
+       +
+           EA\epsilon_0
+     \begin{bmatrix} 
+       0\\
+       0\\
+       -1\\
+       0\\
+       0\\
+       1\\
+     \end{bmatrix} 
+       \label{eq:StiffnessMatrixCable}\end{aligned}
+
+The relation above is expressed in the element coordinate system. The
+stiffness matrix and force vector are transferred to the global system
+during the assembly process. Inserting :math:`\epsilon_0=0` in the above
+equations leads to the formulation of a truss element. The linear model
+above is only valid for :math:`L_d-L_0>0`, that is
+:math:`(L_e-L_0+u_{z,2}-u_{z,1})>0`, and the implementation should abort
+if this condition is not reached at a given time. If the cable has a
+positive mass density :math:`\rho`, the mass matrix of the element is
+given by:
+
+.. math::
+
+   \begin{aligned}
+   \boldsymbol{M}_e = \rho L_e
+   \left[
+   \begin{array}{*{12}c}
+   13/35 & 0       & 0   & &         & & 9/70  & 0       & 0   & &         & \\
+   0     & 13/35   & 0   & & \boldsymbol{0}_3 & & 0     & 9/70    & 0   & & \boldsymbol{0}_3 & \\
+   0     & 0       & 1/3 & &         & & 0     & 0       & 1/6 & &         & \\
+         &         &     & &         & &       &         &     & &         & \\
+         & \boldsymbol{0}_3 &     & & \boldsymbol{0}_3 & &       & \boldsymbol{0}_3 &     & & \boldsymbol{0}_3 & \\
+         &         &     & &         & &       &         &     & &         & \\
+   9/70  & 0       & 0   & &         & & 13/35 & 0       & 0   & &         & \\
+   0     & 9/70    & 0   & & \boldsymbol{0}_3 & & 0     & 13/35   & 0   & & \boldsymbol{0}_3 & \\
+   0     & 0       & 1/6 & &         & & 0     & 0       & 1/3 & &         & \\
+         &         &     & &         & &       &         &     & &         & \\
+         & \boldsymbol{0}_3 &     & & \boldsymbol{0}_3 & &       & \boldsymbol{0}_3 &     & & \boldsymbol{0}_3 & \\
+         &         &     & &         & &       &         &     & &         & \\
+   \end{array}
+   \right]
+   \label{eq:MassMatrixPreTension}\end{aligned}
+
+with :math:`L_e` the *undisplaced* length of the element (not
+:math:`L_0`).
+
+.. _SD_ControlCable:
+
+Controlled pretension cable
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The controller updates the value of :math:`\Delta L` at each time step,
+which effectively changes the pretension properties of the cable. The
+quantity :math:`\Delta L` is the change in restlength if the cable had
+no pretension. Since cable extension beyond the element length
+(:math:`L_e`) is not allowed in SubDyn, :math:`\Delta L` is limited to
+negative values. 
+
+At a given time, the restlength of the cable is :math:`L_r(t)` (instead
+of :math:`L_0`), and the pretension force is :math:`T(t)` (instead of
+:math:`T_0`). The pretension force is then given as:
+
+.. math::
+
+   \begin{aligned}
+       T(t)= E A \frac{-\Delta L_r(t)}{L_r(t)} = E A \frac{-\Delta L_r(t)}{L_e + \Delta L(t)}
+           ,\quad
+           T(0) =T_0= E A \frac{-\Delta L_0}{L_e + \Delta L_0}
+           ,\quad
+           \Delta L(0) = \Delta L_0\end{aligned}
+
+The “equations of motions” for a cable element are written:
+
+.. math::
+
+   \begin{aligned}
+       \boldsymbol{M}_e\boldsymbol{\ddot{u}}_e&= \boldsymbol{f}_e\end{aligned}
+
+If the pretension force is constant, equal to :math:`T_0` then the
+element force is:
+
+.. math::
+
+   \begin{aligned}
+   \boldsymbol{f}_e=\boldsymbol{f}_e (t,T_0) &=-\boldsymbol{K}_c(T_0) \boldsymbol{u}_e + \boldsymbol{f}_c(T_0)+ \boldsymbol{f}_g 
+        \label{eq:CableEqMotionT0}\end{aligned}
+
+where :math:`\boldsymbol{f}_c(T_0)` and :math:`\boldsymbol{K}_c(T_0)`
+are given in . If the pretension force is varying with time
+(:math:`T=T(t)`), then the force is:
+
+.. math::
+
+   \begin{aligned}
+    \boldsymbol{f}_e (t) =-\boldsymbol{K}_c(T) \boldsymbol{u}_e + \boldsymbol{f}_c(T)+ \boldsymbol{f}_g 
+       \label{eq:VaryingCableA}\end{aligned}
+
+where is evaluated with :math:`\epsilon=\frac{T}{EA}` and
+:math:`L=\frac{L_e}{1+\epsilon}`. We seek to express , as a correction
+term added to the equation of a constant pretension cable (i.e. , with
+:math:`T(0)=T_0`). We add :math:`\pm\boldsymbol{f}_e(t,T_0)` to ,
+leading to:
+
+.. math::
+
+   \begin{aligned}
+      \boldsymbol{f}_e (t) &= \left [-\boldsymbol{K}_c(T_0) \boldsymbol{u}_e+ \boldsymbol{f}_c(T_0) + \boldsymbol{f}_g \right] - \left [-\boldsymbol{K}_c(T_0) \boldsymbol{u}_e + \boldsymbol{f}_c(T_0) + \boldsymbol{f}_g \right]  +  \left [-\boldsymbol{K}_c(T) \boldsymbol{u}_e + \boldsymbol{f}_c(T) + \boldsymbol{f}_g\right]\nonumber  \\
+                  &= \left [-\underbrace{\boldsymbol{K}_c(T_0) \boldsymbol{u}_e}_{\text{in }CB}+ \underbrace{\boldsymbol{f}_c(T_0) + \boldsymbol{f}_g}_{\text{in } F_G} \right] +\boldsymbol{f}_{c,\text{control}}(T)\end{aligned}
+
+where :math:`\boldsymbol{f}_{c,\text{control}}` is the correction term
+accounting for the time variation of :math:`T`:
+
+.. math::
+
+   \begin{aligned}
+   \boldsymbol{f}_{c,\text{control}}(T) &= \left( \boldsymbol{K}_c(T_0)-\boldsymbol{K}_c(T)\right) \boldsymbol{u}_e + \boldsymbol{f}_c(T) - \boldsymbol{f}_c(T_0)\end{aligned}
+
+This equation is transformed to the global system using the direction
+cosine matrices of the element. The part involving
+:math:`\boldsymbol{u}` introduces non-linearities, and is currently
+neglected. Using , the additional control force for a given element is:
+
+.. math::
+
+   \begin{aligned}
+   \boldsymbol{f}_{c,\text{control}}(T) &\approx \boldsymbol{f}_c(T) - \boldsymbol{f}_c(T_0) = (T-T_0)
+     \begin{bmatrix} 
+       0\\
+       0\\
+       -1\\
+       0\\
+       0\\
+       1\\
+     \end{bmatrix} \end{aligned}
+
+
+
+
+
+
+
+
+
+
+
+Constraints introduced by Rotational Joints
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+As mentioned in :numref:`SD_FEM_Process`, the account of constraints is done via a direct elimination technique.
+The technique is implemented by computing a transformation matrix :math:`\boldsymbol{T}` 
+which gives the relationship between the reduced set of DOF (accounting for constraints)
+and the full set of DOFs.
+When no constraints are present this matrix is the identity matrix.
+This section describes how the :math:`\boldsymbol{T}` matrix is obtained for rotational joints.
+
+
+**Formulation** 
+Joints between two nodes :math:`k` and :math:`l` are
+here considered. Before accounting for the constraint introduced by the
+joints, :math:`12` degrees of freedom are present:
+:math:`(\boldsymbol{u}_k,\boldsymbol{\theta}_k,\boldsymbol{u}_l,\boldsymbol{\theta}_l)`.
+After application of the constraints, the new set of degrees of freedom
+is noted
+:math:`(\boldsymbol{\tilde{u}}_{kl},  \boldsymbol{\tilde{\theta}}_{kl})`.
+The degrees of freedom retained for each joint type is shown in the table below. The
+meaning of the different :math:`\theta`-variable will be made explicit
+in the subsequent paragraphs.
+
+.. table:: Nodal degrees of freedom (DOF) for different joint types.
+
+   ============== =================================== ===================================== =================================== =====================================================================================
+   **Joint type** :math:`\boldsymbol{n}_\text{c}`     :math:`\boldsymbol{n}_\text{DOF}`     :math:`\boldsymbol{\tilde{u}}_{kl}` :math:`\boldsymbol{\tilde{\theta}}_{kl}`
+   ============== =================================== ===================================== =================================== =====================================================================================
+   Cantilever     :math:`6`                           :math:`12 \to 6`                      :math:`u_x,u_y,u_z`                 :math:`\theta_x,\theta_y,\theta_k`
+   Pin            :math:`5`                           :math:`12 \to 7`                      :math:`u_x,u_y,u_z`                 :math:`\theta_1,\theta_2,\theta_3,\theta_4`
+   Universal      :math:`4`                           :math:`12 \to 8`                      :math:`u_x,u_y,u_z`                 :math:`\theta_1,\theta_2,\theta_3,\theta_4,\theta_5`
+   Ball           :math:`3`                           :math:`12 \to 9`                      :math:`u_x,u_y,u_z`                 :math:`\theta_{x,k},\theta_{y,k},\theta_{z,k},\theta_{x,l},\theta_{y,l},\theta_{z,l}`
+   ============== =================================== ===================================== =================================== =====================================================================================
+
+For all the joints considered, the translational DOF of the two nodes
+are made equal, which may be formally expressed as:
+
+.. math::
+
+   \begin{aligned}
+       \begin{bmatrix}
+       \boldsymbol{u}_{k} \\
+       \boldsymbol{u}_{l}
+       \end{bmatrix}
+       =
+       \begin{bmatrix}
+       \boldsymbol{I}_3 \\
+       \boldsymbol{I}_3 \\
+       \end{bmatrix}
+       \boldsymbol{\tilde u}_{kl}\end{aligned}
+
+Since this relation is the same for all the joints, the relation between
+the degrees of freedom is taken care in the assembly step. 
+The constraints of each joints will hence be expressed in the following form:
+
+.. math::
+
+   \begin{aligned}
+       \begin{bmatrix}
+       \boldsymbol{\theta}_{k} \\
+       \boldsymbol{\theta}_{l}
+       \end{bmatrix}
+       =\boldsymbol{T}_{kl}
+       \boldsymbol{\tilde\theta}_{kl}
+       \label{eq:RotationalDOFJoint}\end{aligned}
+
+**Cantilever joint** For a cantilever joint between two elements, the reduction is:
+
+.. math::
+
+   \begin{aligned}
+       \begin{bmatrix}
+       \boldsymbol{\theta}_{k} \\
+       \boldsymbol{\theta}_{l}
+       \end{bmatrix}
+       =
+       \boldsymbol{T}_{kl}
+       \boldsymbol{\tilde\theta}_{kl}
+       ,\qquad
+           \text{with}
+       \quad
+       \boldsymbol{\tilde\theta}_{kl}
+       =
+       \begin{bmatrix}
+       \boldsymbol{\theta}_{k} \\
+       \end{bmatrix}
+       ,\qquad
+       \boldsymbol{T}_{kl}=
+       \begin{bmatrix}
+       \boldsymbol{I}_3 \\
+       \boldsymbol{I}_3 \\
+       \end{bmatrix}\end{aligned}
+
+This relationship is taken care of during the assembly process directly, and readily extended to :math:`n` elements.
+
+**Ball/spherical joint** For a spherical joint between two elements, the reduction is as follows:
+
+.. math::
+
+   \begin{aligned}
+       \begin{bmatrix}
+       \boldsymbol{\theta}_{k} \\
+       \boldsymbol{\theta}_{l}
+       \end{bmatrix}
+       =
+       \boldsymbol{T}_{kl}
+       \boldsymbol{\tilde\theta}_{kl}
+       ,\qquad
+           \text{with}
+       \quad
+       \boldsymbol{\tilde\theta}_{kl}
+       =
+       \begin{bmatrix}
+       \boldsymbol{\theta}_{k} \\
+       \boldsymbol{\theta}_{l} \\
+       \end{bmatrix}
+       ,\qquad
+       \boldsymbol{T}_{kl}=
+       \begin{bmatrix}
+       \boldsymbol{I}_3 & \boldsymbol{0} \\
+       \boldsymbol{0}   &  \boldsymbol{I}_3 \\
+       \end{bmatrix}\end{aligned}
+
+For :math:`n` elements :math:`[e_1,\cdots, e_n]` connected by a ball
+joint (constraint :math:`c`), the relationship is extended as follows:
+
+.. math::
+
+   \begin{aligned}
+       \begin{bmatrix}
+       \boldsymbol{\theta}_{e_1} \\
+       \cdots\\
+       \boldsymbol{\theta}_{e_n}
+       \end{bmatrix}
+       =
+       \boldsymbol{T}^c
+       \boldsymbol{\tilde\theta}^c
+       ,\qquad
+           \text{with}
+       \quad
+       \boldsymbol{\tilde\theta}^c
+       =
+       \begin{bmatrix}
+       \boldsymbol{\theta}_{e_1} \\
+       \cdots\\
+       \boldsymbol{\theta}_{e_n} \\
+       \end{bmatrix}
+       ,\qquad
+       \boldsymbol{T}^c = 
+       \begin{bmatrix}
+       \boldsymbol{I}_3 &        & \boldsymbol{0}   \\
+       \       & \ddots &         \\
+       \boldsymbol{0}   &        & \boldsymbol{I}_3 \\
+       \end{bmatrix}
+       \label{eq:BallJointMulti}\end{aligned}
+
+**Pin/revolute joint**   A pin joint is characterized by a direction
+around which no moment is transferred. The unit vector indicating this
+direction is noted :math:`\boldsymbol{\hat{p}}`. Two orthogonal vectors
+:math:`\boldsymbol{p}_1` and :math:`\boldsymbol{p}_2` are then defined,
+forming an orthonormal base with :math:`\hat{p}`, oriented arbitrarily (see :numref:`fig:FEJointPin`).
+
+.. figure:: figs/FEJointPin.png
+   :alt: Pin joint
+   :name: fig:FEJointPin
+   :width: 40.0%
+
+   Notations used for the derivation of the pin-joint constraint
+
+
+The variables :math:`\tilde{\theta}_1..\tilde{\theta}_4` are then
+defined as:
+
+.. math::
+
+   \begin{aligned}
+   \tilde{\theta}_1&=
+       \boldsymbol{p}_1^t\cdot\boldsymbol{\theta}_k
+      =                        
+       \boldsymbol{p}_1^t\cdot\boldsymbol{\theta}_l \\
+   \tilde{\theta}_2&=
+       \boldsymbol{p}_2^t\cdot\boldsymbol{\theta}_k
+      =       
+       \boldsymbol{p}_2^t\cdot\boldsymbol{\theta}_l \\
+   \tilde{\theta}_3&=
+             \boldsymbol{\hat{p}}^t \cdot\boldsymbol{\theta}_k\\
+   \tilde{\theta}_4&=
+             \boldsymbol{\hat{p}}^t \cdot\boldsymbol{\theta}_l\end{aligned}
+
+which may be written in matrix form as:
+
+.. math::
+
+   \begin{aligned}
+   \begin{bmatrix}
+   \tilde{\theta}_1 \\
+   \tilde{\theta}_2 \\
+   \tilde{\theta}_3 \\
+   \tilde{\theta}_4 \\
+   \end{bmatrix}
+   =
+   \boldsymbol{A}
+   \begin{bmatrix}
+   \boldsymbol{\theta}_k \\
+   \boldsymbol{\theta}_l \\
+   \end{bmatrix}
+   =
+   \begin{bmatrix}
+   \boldsymbol{p}_1^t/2 & \boldsymbol{p}_1^t/2 \\
+   \boldsymbol{p}_2^t/2 & \boldsymbol{p}_2^t/2 \\
+   \boldsymbol{\hat{p}}^t & \boldsymbol{0}   \\
+   \boldsymbol{0} & \boldsymbol{\hat{p}}^t   \\
+   \end{bmatrix}
+   \begin{bmatrix}
+   \boldsymbol{\theta}_k \\
+   \boldsymbol{\theta}_l \\
+   \end{bmatrix}\end{aligned}
+
+The relations are inverted using a pseudo inverse, defined as
+:math:`\boldsymbol{A}^{-1^\ast}=\boldsymbol{A}^t(\boldsymbol{A}\boldsymbol{A}^t)^{-1}`.
+Using the pseudo-inverse, this equation is rewritten in the form of as:
+
+.. math::
+
+   \begin{aligned}
+       \begin{bmatrix}
+       \boldsymbol{\theta}_{k} \\
+       \boldsymbol{\theta}_{l}
+       \end{bmatrix}
+       =
+       \boldsymbol{T}_{kl}
+       \boldsymbol{\tilde\theta}_{kl}
+       ,\qquad
+           \text{with}
+       \quad
+       =
+       \boldsymbol{\tilde\theta}_{kl}
+       \begin{bmatrix}
+           \tilde{\theta}_1 \\
+           \tilde{\theta}_2 \\
+           \tilde{\theta}_3 \\
+           \tilde{\theta}_4 \\
+       \end{bmatrix}
+       ,\qquad
+       \boldsymbol{T}_{kl}=
+       \begin{bmatrix}
+       \boldsymbol{p}_1^t/2 & \boldsymbol{p}_1^t/2 \\
+       \boldsymbol{p}_2^t/2 & \boldsymbol{p}_2^t/2 \\
+       \boldsymbol{\hat{p}}^t & \boldsymbol{0}   \\
+       \boldsymbol{0} & \boldsymbol{\hat{p}}^t   \\
+       \end{bmatrix}^{-1^\ast}\end{aligned}
+
+If :math:`n` elements :math:`[e_1,\cdots, e_n]`, are connected at a pin
+joint (constraint :math:`c`), the relationship is extended as follows:
+
+.. math::
+
+   \begin{aligned}
+       \begin{bmatrix}
+       \boldsymbol{\theta}_{e_1} \\
+       \cdots\\
+       \boldsymbol{\theta}_{e_n}
+       \end{bmatrix}
+       =
+       \boldsymbol{T}^c
+       \boldsymbol{\tilde\theta}^c
+       ,\qquad
+           \text{with}
+       \quad
+       \boldsymbol{\tilde\theta}^c
+       =
+       \begin{bmatrix}
+           \tilde{\theta}_1 \\
+           \tilde{\theta}_2 \\
+           \tilde{\theta}_{e_1} \\
+           \cdots \\
+           \tilde{\theta}_{e_n} \\
+       \end{bmatrix}
+       ,\qquad
+       \boldsymbol{T}^c = 
+       \begin{bmatrix}
+       \boldsymbol{p}_1^t/n & \cdots &\boldsymbol{p}_1^t/n \\
+       \boldsymbol{p}_2^t/n & \cdots &\boldsymbol{p}_2^t/n \\
+       \boldsymbol{\hat{p}}^t &  & \boldsymbol{0}   \\
+                & \ddots &    \\
+       \boldsymbol{0} &  & \boldsymbol{\hat{p}}^t   \\
+       \end{bmatrix}^{-1^\ast}
+       \label{eq:PinJointMulti}\end{aligned}
+
+**Universal joint** A universal joint transfers the rotational moment
+around two misaligned axes. Such joints are connecting only two
+elements, labelled :math:`j` and :math:`k`, and the axes are taken as
+the :math:`z` axis of each element. The axis vectors are expressed in
+the global coordinates system and written :math:`\boldsymbol{\hat{z}}_j`
+and :math:`\boldsymbol{\hat{z}}_k`. Similar notations are used for the
+:math:`x` and :math:`y` axes. The DOF corresponding to the shared
+rotation between the two axes is written :math:`\tilde{\theta}_1`. Each
+element has two additional DOFs that are free to rotate, noted
+:math:`\tilde{\theta}_x` and :math:`\tilde{\theta}_y`. The constraint
+relationship between the original DOFs and the reduced DOFs is obtained
+by projecting the rotational DOFs of each element against the different
+axes. The relations are inverted using the pseudo-inverse, defined as
+:math:`\boldsymbol{A}^{-1^\ast}=\boldsymbol{A}^t(\boldsymbol{A}\boldsymbol{A}^t)^{-1}`.
+The constraints are then defined with:
+
+.. math::
+
+   \begin{aligned}
+       \boldsymbol{\tilde\theta}_c
+           =
+       \begin{bmatrix}
+           \tilde{\theta}_1 \\
+           \tilde{\theta}_{x_j} \\
+           \tilde{\theta}_{y_j} \\
+           \tilde{\theta}_{x_k} \\
+           \tilde{\theta}_{y_k} \\
+       \end{bmatrix}
+           ,\quad
+       \boldsymbol{T}_c=
+       \begin{bmatrix}
+       \boldsymbol{\hat{z}}_j/2 & \boldsymbol{\hat{z}}_k/2 \\
+       \boldsymbol{\hat{x}}_j & 0             \\
+       \boldsymbol{\hat{y}}_j & 0             \\
+       0             & \boldsymbol{\hat{x}}_k \\
+       0             & \boldsymbol{\hat{y}}_k \\
+       \end{bmatrix}^{-1^\ast}\end{aligned}
+
+.. math::
+
+   \begin{aligned}
+       \tilde{\theta}_c
+           =
+       \begin{Bmatrix}
+           \tilde{\theta}_1 \\
+           \tilde{\theta}_{x,{e_1}} \\
+           \tilde{\theta}_{y,{e_1}} \\
+           \vdots\\
+           \tilde{\theta}_{x,{e_n}} \\
+           \tilde{\theta}_{y,{e_n}} \\
+       \end{Bmatrix}
+           ,\quad
+       T_c=
+       \begin{bmatrix}
+       \hat{z}_{e_1}^t/2 & \cdots & \hat{z}_{e_n}^t/n \\
+       \hat{x}_{e_1}^t   &        & 0                     \\
+       \hat{y}_{e_1}^t   &        & 0                     \\
+       0                     & \ddots & 0                     \\
+       0                     &        & \hat{x}_{e_n}^t   \\
+       0                     & \cdots & \hat{y}_{e_n}^t   \\
+       \end{bmatrix}^{-1^\ast}\end{aligned}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.. _SD_RigidLinks:
+
+
+Rigid-links
+~~~~~~~~~~~
+
+Rigid links and rigid elements impose a relationship between several
+degrees of freedom, and as such, can be treated as *linear* *multipoint*
+constraints. Rigid members can be used to join dissimilar elements
+together or model a link of large stiffness between two elastic bodies
+(see Cook :cite:`cook`). Mass properties for
+rigid link may be provided in the input file, in which case the mass
+matrix of a beam element is used for this rigid link.
+
+A rigid link between the nodes :math:`j` and :math:`k` is considered,
+referred to as the element :math:`j-k`. The six degrees of freedom of a
+given node, three displacements and three rotations, are noted
+:math:`\boldsymbol{x}=[u_x,u_y,u_z,\theta_x,\theta_y,\theta_z]^t` in the
+global system.  The fact that the nodes :math:`j` and :math:`k` are rigidly connected is
+formally expressed as follows: 
+
+.. math::  :label: RigidLinkElem
+
+   \begin{aligned}
+      \boldsymbol{x}_k= \boldsymbol{A}_{jk} \boldsymbol{x}_j
+     ,\qquad
+      \boldsymbol{A}_{jk}=
+      \begin{bmatrix}
+       1 & 0 & 0 & 0                     & \phantom{-} (z_k-z_j) & -(y_k-y_j)            \\
+       0 & 1 & 0 & -(z_k-z_j)            & 0                     & \phantom{-} (x_k-x_j) \\
+       0 & 0 & 1 & \phantom{-} (y_k-y_j) & -(x_k-x_j)            & 0                     \\
+       0 & 0 & 0 & 1                     & 0                     & 0                     \\
+       0 & 0 & 0 & 0                     & 1                     & 0                     \\
+       0 & 0 & 0 & 0                     & 0                     & 1                     \\
+      \end{bmatrix}
+   ,\qquad
+      \begin{bmatrix}
+      \boldsymbol{x}_j\\
+      \boldsymbol{x}_k'\\
+      \end{bmatrix}
+      =
+      \boldsymbol{T}
+      \boldsymbol{x}_j
+      =
+      \begin{bmatrix}
+       \boldsymbol{I}_6\\
+       \boldsymbol{A}_{jk}'\\
+      \end{bmatrix}
+      \boldsymbol{x}_j
+          \end{aligned}
+
+where the nodal coordinates :math:`(x,y,z)` are expressed in the global
+system. The matrix :math:`\boldsymbol{T}` expresses the relation between
+the condensed coordinates and the original coordinates.
+
+In the general case, several joints may be coupled together with rigid
+links. An assembly of :math:`n` joints is here assumed with the 6-DOFs
+of each joints written :math:`\boldsymbol{x}_1,\cdots,\boldsymbol{x}_n`.
+It is further assumed that the first joint is selected as leader. For each
+joint :math:`j\in \{2,\cdots,n\}` a matrix :math:`\boldsymbol{A}_{1j}`
+is formed according to :eq:`RigidLinkElem`. 
+The matrices are built using the global coordinates of
+each joint pairs. For this given rigid assembly (or constraint
+:math:`c`), the relation between the joint DOFs and the reduced leader
+DOF is:
+
+.. math::
+
+   \begin{aligned}
+      \boldsymbol{x}^c = \boldsymbol{T}^c \boldsymbol{\tilde{x}}^c
+          \quad
+          \text{with}
+          \quad
+      \boldsymbol{x}^c=
+           \begin{bmatrix}
+           \boldsymbol{x}_1\\
+           \boldsymbol{x}_2\\
+           \cdots\\
+           \boldsymbol{x}_n\\
+           \end{bmatrix}
+      ,\quad
+       \boldsymbol{T}^c=
+          \begin{bmatrix}
+           \boldsymbol{I}_6\\
+           \boldsymbol{A}_{12}\\
+           \cdots\\
+           \boldsymbol{A}_{1n}\\
+           \end{bmatrix}
+      ,\quad
+       \boldsymbol{\tilde{x}}^c=\boldsymbol{x}_1
+      \label{eq:RigidLinkGlobMulti}\end{aligned}
+
+SubDyn detects rigid link assemblies and selects a leader node for the assembly.
+If one of the node is an interface node, it is selected as a leader node.
+The following restriction apply: the follower node cannot be a boundary node.
+
+The constraint are applied after the full system has been assembled.
+
+
+
+
+
+
+
+.. _GenericCBReduction:
+
+Craig-Bampton Reduction (theory)
+--------------------------------
+
+Full system
+~~~~~~~~~~~
+
+
+The FEM equations of motion of SubDyn are written as follows:
 
 .. math::  :label: main
 
@@ -459,11 +1309,8 @@ about 10 (user defined, see also Section :ref:`CBguide`). This system reduction 
 was first introduced by :cite:`hurty1964` and later expanded by :cite:`craig1968`.
 
 
-.. _GenericCBReduction:
-
-Craig-Bampton reduction
-~~~~~~~~~~~~~~~~~~~~~~~
-
+CB-reduced system
+~~~~~~~~~~~~~~~~~
 In this section we present the generic Craig-Bampton technique. 
 The specific application in SubDyn is presented in following sections.
 In a C-B reduction, the structure nodes are separated into two
@@ -658,6 +1505,12 @@ where
 and :math:`M_{Bm} = M_{mB}^T`, :math:`C_{Bm} =C_{mB}^T`.
 
 
+
+
+Loads and boundary nodes
+------------------------
+
+
 .. _TP2Interface:
 
 Boundary nodes: fixed DOFs and rigid connection to TP
@@ -794,7 +1647,7 @@ substructure response at each time step can then be obtained by using
 the state-space formulation discussed in the next section.
 
 
-.. _Loads:
+.. _SD_Loads:
 
 Loads 
 ~~~~~
@@ -964,6 +1817,59 @@ For the "fixed boundary condition" case, the reference position does not corresp
 The output equation :math:`y_1= -F_{TP,cpl}` is then modified to include this extra contribution.
 
 
+.. _SD_DampingSpecifications:
+
+Damping specifications
+~~~~~~~~~~~~~~~~~~~~~~
+
+
+There are three ways to specify the damping associated with the motion
+of the interface node in SubDyn: no damping, Rayleigh damping or user defined 6x6 matrix.
+
+NOTE: Damping associated with joints is not documented yet and would change the developments below.
+
+When **GuyanDampMod=0**, SubDyn assumes zero damping for the Guyan modes, and modal damping for the CB modes, with no cross couplings:
+
+.. math::  :label: dampingassumptions
+
+            C_{BB} =  \tilde{C}_{BB} &=0 
+
+        C_{Bm} =C_{mB} = \tilde{C}_{Bm}=\tilde{C}_{mB}&=0 
+
+            C_{mm} = \tilde{C}_{mm} &=  2\zeta \Omega_m                
+
+In other words, the only damping matrix term retained is the one
+associated with internal DOF damping. This assumption has implications
+on the damping at the interface with the turbine system, as discussed in
+Section :ref:`TowerTurbineCpling`. The diagonal (*m*\ ×\ *m*) :math:`\zeta` matrix contans the modal
+damping ratios corresponding to each retained internal mode. In SubDyn,
+the user provides damping ratios (in percent of critical damping
+coefficients) for the retained modes.
+
+When **GuyanDampMod=1**, SubDyn assumes Rayleigh Damping for the Guyan modes, and modal damping for the CB modes, with no cross couplings:
+
+
+.. math::  :label: dampingRayleigh
+
+        \tilde{C}_{BB}&=\alpha \tilde{M}_{BB} + \beta \tilde{K}_{BB}
+
+        \tilde{C}_{Bm}=\tilde{C}_{mB}&=0 
+
+        \tilde{C}_{mm} &=  2\zeta \Omega_m  
+
+where :math:`\alpha` and :math:`\beta` are the mass and stiffness proportional Rayleigh damping coefficients.  The damping is directly applied to the tilde matrices, that is, the matrices related to the 6 DOF of the TP node.
+
+The case **GuyanDampMod=2**, is similar to the previous case, except that the user specifies the :math:`6\times6` terms of :math:`\tilde{C}_{BB}`.
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -971,7 +1877,7 @@ The output equation :math:`y_1= -F_{TP,cpl}` is then modified to include this ex
 .. _SSformulation:
 
 State-Space Formulation    
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+-----------------------
 
 A state-space formulation of the substructure structural dynamics
 problem was devised to integrate SubDyn within the FAST modularization
@@ -1251,166 +2157,8 @@ where
 The expression for :math:`F_{Y2}` will be modified by the SIM method and Eq. :eq:`bigY2sim` is used instead.
 
 
-
-
-
-Member Force Calculation
-~~~~~~~~~~~~~~~~~~~~~~~~
-
-SubDyn can also calculate member forces by starting from the forces
-computed at the nodes of the elements that are contained in the member
-as:
-
-.. math:: :label: el_loads
-
-	\text{Element Inertia load:} ~~ F_I^e = [m] \ddot{U}_e 
-	
-	\text{Element Static load:} ~~ F_S^e = [k] U_e 
- 
-where [*k*] and [*m*] are element stiffness and mass matrices, respectively. And
-:math:`U_e` and :math:`\ddot{U}_e` are element nodal deflections and accelerations respectively,
-which can be obtained from Eq. :eq:`y2`.
-
-There is no good way to quantify the damping forces for each element, so
-the element damping forces are not calculated.
-
-Reaction Calculation
-~~~~~~~~~~~~~~~~~~~~
-
-The reactions at the base of the structure are the member forces at the
-base nodes. These are usually provided in member local reference frames.
-Additionally, the user may request an overall reaction
-:math:`\overrightarrow{R}` (six forces and moments) lumped at the center
-of the substructure (tower centerline) and mudline, i.e., at the
-reference point (0,0,-**WtrDpth**) in the global reference frame, with
-**WtrDpth** denoting the water depth. :math:`\overrightarrow{R}` is a
-six-element array that can be calculated in matrix form as follows:
-
-.. math:: :label: reaction
-
-	\overrightarrow{R} = \begin{bmatrix}
-				F_{X} \\
- 				\vdots \\
-				M_{Z} \\
-			     \end{bmatrix} = T_{\text{React}} F_{\text{React}}
-			     
-
-where :math:`F_{\text{React}}` is a (6*N\ :sub:`React`) array
-containing the forces and moments at the *N\ :sub:`react`* restrained
-nodes in the global coordinate frame, and :math:`T_{\text{React}}` is a
-( :math:`{6×6 N_{\text{React}}}` ) matrix, as follows:
-
-.. math:: :label: Treact
-
-	T_{\text{React}} = \begin{bmatrix}
-		1  & 0 & 0 & 0 & 0 & 0 & \cdots & 1 & 0 & 0 & 0 & 0 & 0 \\
-		0  & 1 & 0 & 0 & 0 & 0 & \cdots & 0 & 1 & 0 & 0 & 0 & 0 \\
-		0  & 0 & 1 & 0 & 0 & 0 & \cdots & 0 & 0 & 1 & 0 & 0 & 0 \\
-		0  & -\Delta Z_1 & \Delta Y_1   & 1 & 0 & 0 & \cdots & 0                 & -\Delta Z_{Nreact} & \Delta Y_{Nreact}   & 1 & 0 & 0 \\
-		\Delta Z_1 & 0   & -\Delta X_1  & 0 & 1 & 0 & \cdots & \Delta Z_{Nreact} & 0                  &  -\Delta X_{Nreact} & 0 & 1 & 0 \\
-		\Delta Y_1 & \Delta X_1     & 0 & 0 & 0 & 1 & \cdots & \Delta Y_{Nreact} & \Delta X_{Nreact}  & 0                   & 0 & 0 & 1 
-			\end{bmatrix}
-
-where :math:`{X_i,~Y_i}`, and :math:`Z_i` (:math:`{i = 1 .. N_{\text{React}}}`) are coordinates of
-the boundary nodes with respect to the reference point. For each element
-with a restrained node, :math:`F_{\text{React}}` is calculated starting
-from :math:`F_S^e` --- see Eq. :eq:`el_loads` --- subtracting out the contributions of gravity --- :math:`F_G`, see Eq. :eq:`FG`
-and hydrodynamic loads (:math:`F_{HDR}`) at the restrained node. No direct
-element-level inertial or damping effect is therefore included in the
-reaction calculation.
-
-
-
-.. _TimeIntegration:
-
-Time Integration  
-~~~~~~~~~~~~~~~~~
-
-At time :math:`{t=0}`, the initial states are specified as initial conditions (all
-assumed to be zero in SubDyn) and the initial inputs are supplied to
-SubDyn. During each subsequent time step, the inputs and states are
-known values, with the inputs :math:`u(t)` coming from ElastoDyn and HydroDyn, and
-the states :math:`x(t)` known from the previous time-step integration. All of the
-parameter matrices are calculated in the SubDyn initiation module. With
-known :math:`u(t)` and :math:`x(t)`, :math:`{\dot{x}(t)}` can be calculated using the state equation :math:`{\dot{x}(t)=X(u,x,t)}` (see Eq. :eq:`state_eq`), and
-the outputs :math:`y_1(t)` and :math:`y_2(t)` can be calculated solving Eqs. :eq:`bigY1` and :eq:`bigY2`. The element forces
-can also be calculated using Eq. :eq:`el_loads`. The next time-step states :math:`{x(t + \Delta t)}` are
-obtained by integration:
-
-.. math:: :label: integration
-
-	\left [ u(t), \dot{x}(t), x(t) \right ] \xrightarrow[]{\text{Integrate}}  x(t + \Delta t)
-	
-	
-For loose coupling, SubDyn uses its own integrator, whereas for tight
-coupling, the states from all the modules will be integrated
-simultaneously using an integrator in the glue-code. SubDyn’s built-in
-time integrator options for loose coupling are:
-
--  Fourth-order explicit Runge-Kutta
-
--  Fourth-order explicit Adams-Bashforth predictor
-
--  Fourth-order explicit Adams-Bashforth-Moulton predictor-corrector
-
--  Implicit second-order Adams-Moulton.
-
-For more information, consult any numerical methods reference, e.g.,
-:cite:`chapra2010`.
-
-
-.. _SD_DampingSpecifications:
-
-Damping specifications
-~~~~~~~~~~~~~~~~~~~~~~
-
-
-There are three ways to specify the damping associated with the motion
-of the interface node in SubDyn: no damping, Rayleigh damping or user defined 6x6 matrix.
-
-NOTE: Damping associated with joints is not documented yet and would change the developments below.
-
-When **GuyanDampMod=0**, SubDyn assumes zero damping for the Guyan modes, and modal damping for the CB modes, with no cross couplings:
-
-.. math::  :label: dampingassumptions
-
-            C_{BB} =  \tilde{C}_{BB} &=0 
-
-        C_{Bm} =C_{mB} = \tilde{C}_{Bm}=\tilde{C}_{mB}&=0 
-
-            C_{mm} = \tilde{C}_{mm} &=  2\zeta \Omega_m                
-
-In other words, the only damping matrix term retained is the one
-associated with internal DOF damping. This assumption has implications
-on the damping at the interface with the turbine system, as discussed in
-Section :ref:`TowerTurbineCpling`. The diagonal (*m*\ ×\ *m*) :math:`\zeta` matrix contans the modal
-damping ratios corresponding to each retained internal mode. In SubDyn,
-the user provides damping ratios (in percent of critical damping
-coefficients) for the retained modes.
-
-When **GuyanDampMod=1**, SubDyn assumes Rayleigh Damping for the Guyan modes, and modal damping for the CB modes, with no cross couplings:
-
-
-.. math::  :label: dampingRayleigh
-
-        \tilde{C}_{BB}&=\alpha \tilde{M}_{BB} + \beta \tilde{K}_{BB}
-
-        \tilde{C}_{Bm}=\tilde{C}_{mB}&=0 
-
-        \tilde{C}_{mm} &=  2\zeta \Omega_m  
-
-where :math:`\alpha` and :math:`\beta` are the mass and stiffness proportional Rayleigh damping coefficients.  The damping is directly applied to the tilde matrices, that is, the matrices related to the 6 DOF of the TP node.
-
-The case **GuyanDampMod=2**, is similar to the previous case, except that the user specifies the :math:`6\times6` terms of :math:`\tilde{C}_{BB}`.
-
-
-
-
-
-
-
-
 .. _sim:
+.. _SD_SIM:
 
 Static-Improvement Method
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1545,6 +2293,126 @@ with the element node DOFs expressed as:
 where the SIM decomposition is still used with :math:`\hat{U}_e` denoting the
 time-varying components of the elements nodes' displacements, and :math:`U_{L0,e}` and :math:`U_{L0m,e}` are
 derived from the parent :math:`U_{L0}` and :math:`U_{L0m}` arrays of displacements, respectively.
+
+
+
+
+
+
+
+
+
+
+
+Outputs and Time Integration
+----------------------------
+
+
+
+Member Force Calculation
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+SubDyn can also calculate member forces by starting from the forces
+computed at the nodes of the elements that are contained in the member
+as:
+
+.. math:: :label: el_loads
+
+	\text{Element Inertia load:} ~~ F_I^e = [m] \ddot{U}_e 
+	
+	\text{Element Static load:} ~~ F_S^e = [k] U_e 
+ 
+where [*k*] and [*m*] are element stiffness and mass matrices, respectively. And
+:math:`U_e` and :math:`\ddot{U}_e` are element nodal deflections and accelerations respectively,
+which can be obtained from Eq. :eq:`y2`.
+
+There is no good way to quantify the damping forces for each element, so
+the element damping forces are not calculated.
+
+Reaction Calculation
+~~~~~~~~~~~~~~~~~~~~
+
+The reactions at the base of the structure are the member forces at the
+base nodes. These are usually provided in member local reference frames.
+Additionally, the user may request an overall reaction
+:math:`\overrightarrow{R}` (six forces and moments) lumped at the center
+of the substructure (tower centerline) and mudline, i.e., at the
+reference point (0,0,-**WtrDpth**) in the global reference frame, with
+**WtrDpth** denoting the water depth. :math:`\overrightarrow{R}` is a
+six-element array that can be calculated in matrix form as follows:
+
+.. math:: :label: reaction
+
+	\overrightarrow{R} = \begin{bmatrix}
+				F_{X} \\
+ 				\vdots \\
+				M_{Z} \\
+			     \end{bmatrix} = T_{\text{React}} F_{\text{React}}
+			     
+
+where :math:`F_{\text{React}}` is a (6*N\ :sub:`React`) array
+containing the forces and moments at the *N\ :sub:`react`* restrained
+nodes in the global coordinate frame, and :math:`T_{\text{React}}` is a
+( :math:`{6×6 N_{\text{React}}}` ) matrix, as follows:
+
+.. math:: :label: Treact
+
+	T_{\text{React}} = \begin{bmatrix}
+		1  & 0 & 0 & 0 & 0 & 0 & \cdots & 1 & 0 & 0 & 0 & 0 & 0 \\
+		0  & 1 & 0 & 0 & 0 & 0 & \cdots & 0 & 1 & 0 & 0 & 0 & 0 \\
+		0  & 0 & 1 & 0 & 0 & 0 & \cdots & 0 & 0 & 1 & 0 & 0 & 0 \\
+		0  & -\Delta Z_1 & \Delta Y_1   & 1 & 0 & 0 & \cdots & 0                 & -\Delta Z_{Nreact} & \Delta Y_{Nreact}   & 1 & 0 & 0 \\
+		\Delta Z_1 & 0   & -\Delta X_1  & 0 & 1 & 0 & \cdots & \Delta Z_{Nreact} & 0                  &  -\Delta X_{Nreact} & 0 & 1 & 0 \\
+		\Delta Y_1 & \Delta X_1     & 0 & 0 & 0 & 1 & \cdots & \Delta Y_{Nreact} & \Delta X_{Nreact}  & 0                   & 0 & 0 & 1 
+			\end{bmatrix}
+
+where :math:`{X_i,~Y_i}`, and :math:`Z_i` (:math:`{i = 1 .. N_{\text{React}}}`) are coordinates of
+the boundary nodes with respect to the reference point. For each element
+with a restrained node, :math:`F_{\text{React}}` is calculated starting
+from :math:`F_S^e` --- see Eq. :eq:`el_loads` --- subtracting out the contributions of gravity --- :math:`F_G`, see Eq. :eq:`FG`
+and hydrodynamic loads (:math:`F_{HDR}`) at the restrained node. No direct
+element-level inertial or damping effect is therefore included in the
+reaction calculation.
+
+
+
+.. _TimeIntegration:
+
+Time Integration  
+~~~~~~~~~~~~~~~~~
+
+At time :math:`{t=0}`, the initial states are specified as initial conditions (all
+assumed to be zero in SubDyn) and the initial inputs are supplied to
+SubDyn. During each subsequent time step, the inputs and states are
+known values, with the inputs :math:`u(t)` coming from ElastoDyn and HydroDyn, and
+the states :math:`x(t)` known from the previous time-step integration. All of the
+parameter matrices are calculated in the SubDyn initiation module. With
+known :math:`u(t)` and :math:`x(t)`, :math:`{\dot{x}(t)}` can be calculated using the state equation :math:`{\dot{x}(t)=X(u,x,t)}` (see Eq. :eq:`state_eq`), and
+the outputs :math:`y_1(t)` and :math:`y_2(t)` can be calculated solving Eqs. :eq:`bigY1` and :eq:`bigY2`. The element forces
+can also be calculated using Eq. :eq:`el_loads`. The next time-step states :math:`{x(t + \Delta t)}` are
+obtained by integration:
+
+.. math:: :label: integration
+
+	\left [ u(t), \dot{x}(t), x(t) \right ] \xrightarrow[]{\text{Integrate}}  x(t + \Delta t)
+	
+	
+For loose coupling, SubDyn uses its own integrator, whereas for tight
+coupling, the states from all the modules will be integrated
+simultaneously using an integrator in the glue-code. SubDyn’s built-in
+time integrator options for loose coupling are:
+
+-  Fourth-order explicit Runge-Kutta
+
+-  Fourth-order explicit Adams-Bashforth predictor
+
+-  Fourth-order explicit Adams-Bashforth-Moulton predictor-corrector
+
+-  Implicit second-order Adams-Moulton.
+
+For more information, consult any numerical methods reference, e.g.,
+:cite:`chapra2010`.
+
 
 
 
