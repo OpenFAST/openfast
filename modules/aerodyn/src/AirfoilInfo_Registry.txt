@@ -23,29 +23,30 @@ param     AirfoilInfo/AFI       -                INTEGER           AFITable_2Use
 
 # ..... Airfoil data ...............................................................................................................
 # The following derived type stores Beddoes-Leishman unsteady-aero data for an airfoil at a single combination of Re and control setting. The data can be computed internally of not read from the input file.
-typedef   AirfoilInfo/AFI       AFI_UA_BL_Type   ReKi                alpha0       -        -   -   "Angle of attack for zero lift (used for Beddoes-Leishman unsteady aero)"  "input in degrees; stored as radians"
-typedef   ^                     ^                ReKi                alpha1       -        -   -   "angle of attack at f = 0.7, approximately the stall angle; for alpha >= alpha0" "input in degrees; stored as radians"
-typedef   ^                     ^                ReKi                alpha2       -        -   -   "angle of attack at f = 0.7, approximately the stall angle; for alpha < alpha0" "input in degrees; stored as radians"
+typedef   AirfoilInfo/AFI       AFI_UA_BL_Type   ReKi                alpha0       -        -  2pi  "Angle of attack for zero lift (also used in HGM)"  "input in degrees; stored as radians"
+typedef   ^                     ^                ReKi                alpha1       -        -  2pi  "angle of attack at f = 0.7, approximately the stall angle; for alpha >= alpha0" "input in degrees; stored as radians"
+typedef   ^                     ^                ReKi                alpha2       -        -  2pi  "angle of attack at f = 0.7, approximately the stall angle; for alpha < alpha0" "input in degrees; stored as radians"
 typedef   ^                     ^                ReKi                eta_e        -        -   -   "Recovery factor in the range [0.85 - 0.95]" -
 typedef   ^                     ^                ReKi                C_nalpha     -        -   -   "Cn slope for zero lift (used for Beddoes-Leishman unsteady aero)" 1/rad 
-typedef   ^                     ^                ReKi                T_f0         -        -   -   "initial value of T_f, airfoil specific, used to compute D_f and fprimeprime" -
+typedef   ^                     ^                ReKi                C_lalpha     -        -   -   "Cl slope for zero lift (used for HGM unsteady aero only) -> calculated" 1/rad 
+typedef   ^                     ^                ReKi                T_f0         -        -   -   "initial value of T_f, airfoil specific, used to compute D_f and fprimeprime (also used in HGM)" -
 typedef   ^                     ^                ReKi                T_V0         -        -   -   "initial value of T_V, airfoil specific, time parameter associated with the vortex lift decay process, used in Cn_v" -
-typedef   ^                     ^                ReKi                T_p          -        -   -   "boundary-layer, leading edge pressure gradient time parameter; used in D_p; airfoil specific" -
+typedef   ^                     ^                ReKi                T_p          -        -   -   "boundary-layer, leading edge pressure gradient time parameter; used in D_p; airfoil specific (also used in HGM)" -
 typedef   ^                     ^                ReKi                T_VL         -        -   -   "Initial value of the time constant associated with the vortex advection process; it represents the non-dimensional time in semi-chords, needed for a vortex to travel from LE to trailing edge (TE); it is used in the expression of Cvn. It depends on Re, M (weakly), and airfoil. [valid range = 6 - 13]" -
-typedef   ^                     ^                ReKi                b1           -        -   -   "airfoil constant derived from experimental results, usually 0.14" -
-typedef   ^                     ^                ReKi                b2           -        -   -   "airfoil constant derived from experimental results, usually 0.53" -
+typedef   ^                     ^                ReKi                b1           -        -   -   "airfoil constant derived from experimental results (also used in HGM), usually 0.14" -
+typedef   ^                     ^                ReKi                b2           -        -   -   "airfoil constant derived from experimental results (also used in HGM), usually 0.53" -
 typedef   ^                     ^                ReKi                b5           -        -   -   "airfoil constant derived from experimental results, usually 5.0" -
-typedef   ^                     ^                ReKi                A1           -        -   -   "airfoil constant derived from experimental results, usually 0.3" -
-typedef   ^                     ^                ReKi                A2           -        -   -   "airfoil constant derived from experimental results, usually 0.7" -
+typedef   ^                     ^                ReKi                A1           -        -   -   "airfoil constant derived from experimental results (also used in HGM), usually 0.3" -
+typedef   ^                     ^                ReKi                A2           -        -   -   "airfoil constant derived from experimental results (also used in HGM), usually 0.7" -
 typedef   ^                     ^                ReKi                A5           -        -   -   "airfoil constant derived from experimental results, usually 1.0" -
 typedef   ^                     ^                ReKi                S1           -        -   -   "Constant in the f curve best-fit for alpha0<=AOA<=alpha1" -
 typedef   ^                     ^                ReKi                S2           -        -   -   "Constant in the f curve best-fit for         AOA> alpha1" -
 typedef   ^                     ^                ReKi                S3           -        -   -   "Constant in the f curve best-fit for alpha2<=AOA< alpha0" -
 typedef   ^                     ^                ReKi                S4           -        -   -   "Constant in the f curve best-fit for         AOA< alpha2" -
-typedef   ^                     ^                ReKi                Cn1          -        -   -   "Cn at stall value for positive angle of attack (used for Beddoes-Leishman unsteady aero) [or critical value of Cn_prime at LE separation for alpha >= alpha0]"    -
-typedef   ^                     ^                ReKi                Cn2          -        -   -   "Cn at stall value for negative angle (used for Beddoes-Leishman unsteady aero) or [critical value of Cn_prime at LE separation for alpha < alpha0]"   -
+typedef   ^                     ^                ReKi                Cn1          -        -   -   "Cn at stall value for positive angle of attack [or critical value of Cn_prime at LE separation for alpha >= alpha0]"    -
+typedef   ^                     ^                ReKi                Cn2          -        -   -   "Cn at stall value for negative angle of attack [or critical value of Cn_prime at LE separation for alpha < alpha0]"   -
 typedef   ^                     ^                ReKi                St_sh        -        -   -   "Strouhal's shedding frequency constant." - 
-typedef   ^                     ^                ReKi                Cd0          -        -   -   "Minimum Cd value (used for Beddoes-Leishman unsteady aero)"   -
+typedef   ^                     ^                ReKi                Cd0          -        -   -   "Minimum Cd value"   -
 typedef   ^                     ^                ReKi                Cm0          -        -   -   "2D pitching moment coefficient at zero lift, positive if nose is up" -
 typedef   ^                     ^                ReKi                k0           -        -   -   "airfoil parameter in the x_cp_hat curve best-fit [ignored if UAMod<>1]" -
 typedef   ^                     ^                ReKi                k1           -        -   -   "airfoil parameter in the x_cp_hat curve best-fit [ignored if UAMod<>1]" -
@@ -54,7 +55,7 @@ typedef   ^                     ^                ReKi                k3         
 typedef   ^                     ^                ReKi                k1_hat       -        -   -   "Constant in the expression of Cc due to leading edge vortex effects.  [ignored if UAMod<>1]" -
 typedef   ^                     ^                ReKi                x_cp_bar     -        -   -   "Constant in the expression of \hat(x)_cp^v [ignored if UAMod<>1, default = 0.2]" -
 typedef   ^                     ^                ReKi                UACutout     -        -   -   "Angle of attack above which unsteady aerodynamics are disabled" "input in degrees; stored as radians"
-typedef   ^                     ^                ReKi                filtCutOff   -        -   -   "low pass filter cut-off frequency for the pitching rate and accelerations"       Hz
+typedef   ^                     ^                ReKi                filtCutOff   -        -   -   "Reduced frequency cutoff used to calculate the dynamic low pass filter cut-off frequency for the pitching rate and accelerations [default = 0.5]"       -
 
 # The following derived type stores data for an airfoil at a single combination of Re and control setting.
 typedef   ^                     AFI_Table_Type   ReKi                Alpha       {:}       -   -   "Angle-of-attack vector that matches the Coefs matrix" rad
@@ -87,6 +88,7 @@ typedef   ^                     ParameterType    INTEGER             ColCd      
 typedef   ^                     ^                INTEGER             ColCl        -        -   -   "The column in the p%Coefs arrays that contains Cl data"    -
 typedef   ^                     ^                INTEGER             ColCm        -        -   -   "The column in the p%Coefs arrays that contains Cm data"    -
 typedef   ^                     ^                INTEGER             ColCpmin     -        -   -   "The column in the p%Coefs arrays that contains Cpmin data" -
+typedef   ^                     ^                INTEGER             ColUAf       -        -   -   "The column in the p%Coefs arrays that contains f_st data for UA" -
 typedef   ^                     ^                INTEGER             AFTabMod     -        -   -   "Interpolation method for multiple airfoil tables {1 = 1D on AoA (only first table is used); 2 = 2D on AoA and Re; 3 = 2D on AoA and UserProp}" -
 typedef   ^                     ^                ReKi                secondVals  {:}       -   -   "The values of the 2nd dependent variable when using multiple airfoil tables (Re or UserProp, saved in an array so that the logic in the interpolation scheme is cleaner)" -
 typedef   ^                     ^                IntKi               InterpOrd    -        -   -   "Interpolation order"   -
@@ -100,7 +102,7 @@ typedef   ^                     ^                CHARACTER(1024)     BL_file    
 
 # ..... Inputs ....................................................................................................................
 # Define inputs that are not on this mesh here:
-typedef   ^                     InputType        ReKi                AoA          -        -   -   "The angle of attack"   radians
+typedef   ^                     InputType        ReKi                AoA          -        -  2pi  "The angle of attack"   radians
 typedef   ^                     ^                ReKi                UserProp     -        -   -   "The user-defined control setting"  -
 typedef   ^                     ^                ReKi                Re           -        -   -   "Reynolds number"   -
 
@@ -112,5 +114,7 @@ typedef   ^                     ^                ReKi                Cm         
 typedef   ^                     ^                ReKi                Cpmin        -        0.  -   "Dimensionless coefficient of minimum pressure" -
 typedef   ^                     ^                ReKi                Cd0          -        0.  -   "Minimum Cd value (used for Beddoes-Leishman unsteady aero)"   -
 typedef   ^                     ^                ReKi                Cm0          -        0.  -   "2D pitching moment coefficient at zero lift, positive if nose is up"   -
+typedef   ^                     ^                ReKi                f_st         -        0.  -   "separation function (used for UA HGM model)" -
+typedef   ^                     ^                ReKi                cl_fs        -        0.  -   "fully separated polar function (used for UA HGM model)" -
 
 
