@@ -345,11 +345,11 @@ abstract interface
       p%DLL_Trgt%FileName = InitInp%DLL_FileName
 
       p%DLL_Trgt%ProcName = "" ! initialize all procedures to empty so we try to load only one
-      p%DLL_Trgt%ProcName(1) = 'SC_Init'
-      p%DLL_Trgt%ProcName(2) = 'SC_GetInitData'
-      p%DLL_Trgt%ProcName(3) = 'SC_UpdateStates'
-      p%DLL_Trgt%ProcName(4) = 'SC_CalcOutputs'
-      p%DLL_Trgt%ProcName(5) = 'SC_End'
+      p%DLL_Trgt%ProcName(1) = 'sc_init'
+      p%DLL_Trgt%ProcName(2) = 'sc_getInitData'
+      p%DLL_Trgt%ProcName(3) = 'sc_updateStates'
+      p%DLL_Trgt%ProcName(4) = 'sc_calcOutputs'
+      p%DLL_Trgt%ProcName(5) = 'sc_end'
 
       call LoadDynamicLib ( p%DLL_Trgt, errStat2, errMsg2 )
          call SetErrStat( errStat2, errMsg2, errStat, errMsg, routineName )
