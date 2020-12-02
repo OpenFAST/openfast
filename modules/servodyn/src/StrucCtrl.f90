@@ -1665,6 +1665,25 @@ SUBROUTINE StC_ParseInputFileInfo( PriPath, InputFile, RootName, FileInfo_In, In
    call ParseVar( FileInfo_In, Curline, 'StC_Z_DOF', InputFileData%StC_Z_DOF, ErrStat2, ErrMsg2, UnEcho )
       If (Failed()) return;
 
+
+   !-------------------------------------------------------------------------------------------------
+   ! StC LOCATION [relative to the reference origin of component attached to]
+   !-------------------------------------------------------------------------------------------------
+
+   ! Section break
+   if ( InputFileData%Echo )   WRITE(UnEcho, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
+   CurLine = CurLine + 1
+
+      !  At rest X position of StC(s) (m) [relative to reference origin of the component]
+   call ParseVar( FileInfo_In, Curline, 'StC_P_X', InputFileData%StC_P_X, ErrStat2, ErrMsg2, UnEcho )
+      If (Failed()) return;
+      !  At rest Y position of StC(s) (m) [relative to reference origin of the component]
+   call ParseVar( FileInfo_In, Curline, 'StC_P_Y', InputFileData%StC_P_Y, ErrStat2, ErrMsg2, UnEcho )
+      If (Failed()) return;
+      !  At rest Z position of StC(s) (m) [relative to reference origin of the component]
+   call ParseVar( FileInfo_In, Curline, 'StC_P_Z', InputFileData%StC_P_Z, ErrStat2, ErrMsg2, UnEcho )
+      If (Failed()) return;
+
    !-------------------------------------------------------------------------------------------------
    ! StC INITIAL CONDITIONS [used only when StC_DOF_MODE=1 or 2]
    !-------------------------------------------------------------------------------------------------
@@ -1691,15 +1710,6 @@ SUBROUTINE StC_ParseInputFileInfo( PriPath, InputFile, RootName, FileInfo_In, In
    if ( InputFileData%Echo )   WRITE(UnEcho, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
    CurLine = CurLine + 1
 
-      !  At rest X position of StC(s) (m) [relative to reference origin of the component]
-   call ParseVar( FileInfo_In, Curline, 'StC_P_X', InputFileData%StC_P_X, ErrStat2, ErrMsg2, UnEcho )
-      If (Failed()) return;
-      !  At rest Y position of StC(s) (m) [relative to reference origin of the component]
-   call ParseVar( FileInfo_In, Curline, 'StC_P_Y', InputFileData%StC_P_Y, ErrStat2, ErrMsg2, UnEcho )
-      If (Failed()) return;
-      !  At rest Z position of StC(s) (m) [relative to reference origin of the component]
-   call ParseVar( FileInfo_In, Curline, 'StC_P_Z', InputFileData%StC_P_Z, ErrStat2, ErrMsg2, UnEcho )
-      If (Failed()) return;
       !  Positive stop position (maximum X mass displacement) (m)
    call ParseVar( FileInfo_In, Curline, 'StC_X_PSP', InputFileData%StC_X_PSP, ErrStat2, ErrMsg2, UnEcho )
       If (Failed()) return;
