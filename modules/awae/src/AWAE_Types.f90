@@ -223,6 +223,8 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NOutDisWindXZ      !< Number of XZ planes for output of disturbed wind data across the low-resolution domain to <WindFilePath>/Low/DisXZ.<n_out>.t<n>.vtk [0 to 9] [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: OutDisWindY      !< Y coordinates of XZ planes for output of disturbed wind data across the low-resolution domain [1 to NOutDisWindXZ] [meters]
     CHARACTER(1024)  :: OutFileRoot      !< The root name derived from the primary FAST.Farm input file [-]
+    CHARACTER(1024)  :: OutFileVTKRoot      !< The root name for VTK outputs [-]
+    INTEGER(IntKi)  :: VTK_tWidth      !< Number of characters for VTK timestamp outputs [-]
   END TYPE AWAE_ParameterType
 ! =======================
 ! =========  AWAE_OutputType  =======
@@ -5456,6 +5458,8 @@ IF (ALLOCATED(SrcParamData%OutDisWindY)) THEN
     DstParamData%OutDisWindY = SrcParamData%OutDisWindY
 ENDIF
     DstParamData%OutFileRoot = SrcParamData%OutFileRoot
+    DstParamData%OutFileVTKRoot = SrcParamData%OutFileVTKRoot
+    DstParamData%VTK_tWidth = SrcParamData%VTK_tWidth
  END SUBROUTINE AWAE_CopyParam
 
  SUBROUTINE AWAE_DestroyParam( ParamData, ErrStat, ErrMsg )
@@ -5672,6 +5676,8 @@ ENDIF
       Re_BufSz   = Re_BufSz   + SIZE(InData%OutDisWindY)  ! OutDisWindY
   END IF
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%OutFileRoot)  ! OutFileRoot
+      Int_BufSz  = Int_BufSz  + 1*LEN(InData%OutFileVTKRoot)  ! OutFileVTKRoot
+      Int_BufSz  = Int_BufSz  + 1  ! VTK_tWidth
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -6029,6 +6035,12 @@ ENDIF
       IntKiBuf(Int_Xferred) = ICHAR(InData%OutFileRoot(I:I), IntKi)
       Int_Xferred = Int_Xferred + 1
     END DO ! I
+    DO I = 1, LEN(InData%OutFileVTKRoot)
+      IntKiBuf(Int_Xferred) = ICHAR(InData%OutFileVTKRoot(I:I), IntKi)
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
+    IntKiBuf(Int_Xferred) = InData%VTK_tWidth
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE AWAE_PackParam
 
  SUBROUTINE AWAE_UnPackParam( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -6446,6 +6458,12 @@ ENDIF
       OutData%OutFileRoot(I:I) = CHAR(IntKiBuf(Int_Xferred))
       Int_Xferred = Int_Xferred + 1
     END DO ! I
+    DO I = 1, LEN(OutData%OutFileVTKRoot)
+      OutData%OutFileVTKRoot(I:I) = CHAR(IntKiBuf(Int_Xferred))
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
+    OutData%VTK_tWidth = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE AWAE_UnPackParam
 
  SUBROUTINE AWAE_CopyOutput( SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg )

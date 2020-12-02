@@ -98,25 +98,30 @@ subroutine WriteDisWindFiles( n, WrDisSkp1, p, y, m, errStat, errMsg )
    CHARACTER(*),   PARAMETER               :: RoutineName = 'WriteDisWindFiles'
    INTEGER(IntKi)                          :: nt, n_out 
    REAL(ReKi)                              :: t_out
+   character(p%VTK_tWidth)                 :: Tstr  ! string for current VTK write-out step (padded with zeros)
    
    n_out = n/WrDisSkp1
    t_out = n*p%DT_low
-   FileName = trim(p%OutFileRoot)//".Low.Dis.t"//trim(num2lstr(n_out))//".vtk"
+
+   ! TimeStamp
+   write(Tstr, '(i' // trim(Num2LStr(p%VTK_tWidth)) //'.'// trim(Num2LStr(p%VTK_tWidth)) // ')') n_out ! TODO use n instead..
+
+   FileName = trim(p%OutFileVTKRoot)//".Low.Dis."//trim(Tstr)//".vtk"
    call WrVTK_SP_header( FileName, "Low resolution disturbed wind for time = "//trim(num2lstr(t_out))//" seconds.", Un, errStat2, errMsg2 )
       call SetErrStat(errStat2, errMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
-   call WrVTK_SP_vectors3D( Un, "LowDis", (/p%nX_low,p%nY_low,p%nZ_low/), (/p%X0_low,p%Y0_low,p%Z0_low/), (/p%dX_low,p%dY_low,p%dZ_low/), m%Vdist_low, errStat2, errMsg2 )
+   call WrVTK_SP_vectors3D( Un, "Velocity", (/p%nX_low,p%nY_low,p%nZ_low/), (/p%X0_low,p%Y0_low,p%Z0_low/), (/p%dX_low,p%dY_low,p%dZ_low/), m%Vdist_low, errStat2, errMsg2 )
       call SetErrStat(errStat2, errMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
     
    do nt= 1,p%NumTurbines
        ! We are only writing out the first of the high res data for a given low res time step
       
-      FileName = trim(p%OutFileRoot)//".HighT"//trim(num2lstr(nt))//".Dis.t"//trim(num2lstr(n_out))//".vtk"
+      FileName = trim(p%OutFileVTKRoot)//".HighT"//trim(num2lstr(nt))//".Dis."//trim(Tstr)//".vtk"
       call WrVTK_SP_header( FileName, "High resolution disturbed wind for time = "//trim(num2lstr(t_out))//" seconds.", Un, errStat2, errMsg2 )
          call SetErrStat(errStat2, errMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
-      call WrVTK_SP_vectors3D( Un, "HighDis", (/p%nX_high,p%nY_high,p%nZ_high/), (/p%X0_high(nt),p%Y0_high(nt),p%Z0_high(nt)/), (/p%dX_high(nt),p%dY_high(nt),p%dZ_high(nt)/), y%Vdist_high(nt)%data(:,:,:,:,0), errStat2, errMsg2 )
+      call WrVTK_SP_vectors3D( Un, "Velocity", (/p%nX_high,p%nY_high,p%nZ_high/), (/p%X0_high(nt),p%Y0_high(nt),p%Z0_high(nt)/), (/p%dX_high(nt),p%dY_high(nt),p%dZ_high(nt)/), y%Vdist_high(nt)%data(:,:,:,:,0), errStat2, errMsg2 )
          call SetErrStat(ErrStat2, errMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
        
