@@ -1,8 +1,8 @@
 @ECHO OFF
 
-SET REG_Loc=C:\Users\bjonkman\Documents\DATA\DesignCodes\miscellaneous\FAST_Registry\bin
-SET Registry=%REG_Loc%\Registry_Win32.exe
-:: SET Registry=%REG_Loc%\Registry.exe
+SET REG_Loc=..\..\..\build\bin
+::SET Registry=%REG_Loc%\Registry_Win32.exe
+SET Registry=%REG_Loc%\Registry.exe
 
 SET ModuleName=%1
 
