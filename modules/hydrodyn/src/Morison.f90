@@ -189,167 +189,8 @@ SUBROUTINE    FindInterpFactor( p, p1, p2, s )
          
 END SUBROUTINE FindInterpFactor
 !=======================================================================
-FUNCTION InterpWrappedStpInt( XValIn, XAry, YAry, Ind, AryLen )
 
-
-      ! This funtion returns a y-value that corresponds to an input x-value which is wrapped back
-      ! into the range [1-XAry(AryLen).  It finds a x-value which corresponds to a value in the XAry where XAry(Ind-1) < MOD(XValIn, XAry(AryLen)) <= XAry(Ind)
-      ! It is assumed that XAry is sorted in ascending order.
-      ! It uses the passed index as the starting point and does a stepwise interpolation from there.  This is
-      ! especially useful when the calling routines save the value from the last time this routine was called
-      ! for a given case where XVal does not change much from call to call.  .
-      ! 
-      ! This routine assumes YAry is INTEGER.
-
-
-      ! Function declaration.
-
-   INTEGER                  :: InterpWrappedStpInt                                  ! This function.
-
-
-      ! Argument declarations.
-
-   INTEGER, INTENT(IN)          :: AryLen                                          ! Length of the arrays.
-   INTEGER, INTENT(INOUT)       :: Ind                                             ! Initial and final index into the arrays.
-
-   REAL(SiKi), INTENT(IN)       :: XAry    (AryLen)                                ! Array of X values to be interpolated.
-   REAL(SiKi), INTENT(IN)       :: XValIn                                          ! X value to be interpolated.
-   INTEGER, INTENT(IN)          :: YAry    (AryLen)                                ! Array of Y values to be interpolated.
-
-   REAL(SiKi)                   :: XVal                                            ! X value to be interpolated.
-   
-   
-   
-      ! Wrap XValIn into the range XAry(1) to XAry(AryLen)
-   XVal = MOD(XValIn, XAry(AryLen))
-
-      ! Set the Ind to the first index if we are at the beginning of XAry
-   IF ( XVal <= XAry(2) )  THEN  
-      Ind           = 1
-   END IF
-   
-   
-        ! Let's check the limits first.
-
-   IF ( XVal <= XAry(1) )  THEN
-      InterpWrappedStpInt = YAry(1)
-      Ind           = 1
-      RETURN
-   ELSE IF ( XVal >= XAry(AryLen) )  THEN
-      InterpWrappedStpInt = YAry(AryLen)
-      Ind           = MAX(AryLen - 1, 1)
-      RETURN
-   END IF
-
-
-     ! Let's interpolate!
-
-   Ind = MAX( MIN( Ind, AryLen-1 ), 1 )
-
-   DO
-
-      IF ( XVal < XAry(Ind) )  THEN
-
-         Ind = Ind - 1
-
-      ELSE IF ( XVal >= XAry(Ind+1) )  THEN
-
-         Ind = Ind + 1
-
-      ELSE
-
-         InterpWrappedStpInt = YAry(Ind) 
-         RETURN
-
-      END IF
-
-   END DO
-
-   RETURN
-END FUNCTION InterpWrappedStpInt ! ( XVal, XAry, YAry, Ind, AryLen )
-   
-   
 !=======================================================================
-FUNCTION InterpWrappedStpLogical( XValIn, XAry, YAry, Ind, AryLen )
-
-
-      ! This funtion returns a y-value that corresponds to an input x-value which is wrapped back
-      ! into the range [0-XAry(AryLen) by interpolating into the arrays.  
-      ! It is assumed that XAry is sorted in ascending order.
-      ! It uses the passed index as the starting point and does a stepwise interpolation from there.  This is
-      ! especially useful when the calling routines save the value from the last time this routine was called
-      ! for a given case where XVal does not change much from call to call.  When there is no correlation
-      ! from one interpolation to another, InterpBin() may be a better choice.
-      ! It returns the first or last YAry() value if XVal is outside the limits of XAry().
-      ! This routine assumes YAry is REAL.
-
-
-      ! Function declaration.
-
-   LOGICAL                  :: InterpWrappedStpLogical                                  ! This function.
-
-
-      ! Argument declarations.
-
-   INTEGER, INTENT(IN)          :: AryLen                                          ! Length of the arrays.
-   INTEGER, INTENT(INOUT)       :: Ind                                             ! Initial and final index into the arrays.
-
-   REAL(SiKi), INTENT(IN)       :: XAry    (AryLen)                                ! Array of X values to be interpolated.
-   REAL(SiKi), INTENT(IN)       :: XValIn                                           ! X value to be interpolated.
-   LOGICAL, INTENT(IN)          :: YAry    (AryLen)                                ! Array of Y values to be interpolated.
-
-   REAL(SiKi)                   :: XVal                                           ! X value to be interpolated.
-   
-   
-   
-      ! Wrap XValIn into the range XAry(1) to XAry(AryLen)
-   XVal = MOD(XValIn, XAry(AryLen))
-
-      ! Set the Ind to the first index if we are at the beginning of XAry
-   IF ( XVal <= XAry(2) )  THEN  
-      Ind           = 1
-   END IF
-   
-   
-        ! Let's check the limits first.
-
-   IF ( XVal <= XAry(1) )  THEN
-      InterpWrappedStpLogical = YAry(1)
-      Ind           = 1
-      RETURN
-   ELSE IF ( XVal >= XAry(AryLen) )  THEN
-      InterpWrappedStpLogical = YAry(AryLen)
-      Ind           = MAX(AryLen - 1, 1)
-      RETURN
-   END IF
-
-
-     ! Let's interpolate!
-
-   Ind = MAX( MIN( Ind, AryLen-1 ), 1 )
-
-   DO
-
-      IF ( XVal < XAry(Ind) )  THEN
-
-         Ind = Ind - 1
-
-      ELSE IF ( XVal >= XAry(Ind+1) )  THEN
-
-         Ind = Ind + 1
-
-      ELSE
-
-         InterpWrappedStpLogical = YAry(Ind) 
-         RETURN
-
-      END IF
-
-   END DO
-
-   RETURN
-END FUNCTION InterpWrappedStpLogical ! ( XVal, XAry, YAry, Ind, AryLen )
-
 SUBROUTINE DistrBuoyancy( densWater, R, tMG, dRdz, Z, C, g, F_B  ) 
    ! This calculates the distributed buoyancy forces and moments on a given node
 
@@ -4510,7 +4351,67 @@ SUBROUTINE Morison_UpdateStates( Time, u, p, x, xd, z, OtherState, m, ErrStat, E
 
       
 END SUBROUTINE Morison_UpdateStates
+!> This routine is similar to InterpWrappedStpReal, except it returns only the slope for the interpolation.
+!! By returning the slope based on Time, we don't have to calculate this for every variable (Yary) we want to interpolate.
+FUNCTION GetInterpolationSlope(Time, p, m, IntWrapIndx) RESULT( InterpSlope )
+      REAL(DbKi),                        INTENT(IN   )  :: Time        !< Current simulation time in seconds
+      TYPE(Morison_ParameterType),       INTENT(IN   )  :: p           !< Parameters
+      TYPE(Morison_MiscVarType),         INTENT(INOUT)  :: m           !< Misc/optimization variables            
+      INTEGER, OPTIONAL,                 INTENT(  OUT)  :: IntWrapIndx
 
+      REAL(SiKi)                                        :: Time_SiKi
+      REAL(SiKi)                                        :: TimeMod
+      REAL(ReKi)                                        :: InterpSlope
+
+      Time_SiKi = REAL(Time, SiKi)
+      TimeMod = MOD(Time_SiKi, p%WaveTime(p%NStepWave + 1))
+      IF ( TimeMod <= p%WaveTime(2) )  THEN
+         m%LastIndWave = 1
+      END IF
+      
+      IF ( TimeMod <= p%WaveTime(1) )  THEN
+         m%LastIndWave = 1
+         InterpSlope = 0.0_ReKi  ! returns values at m%LastIndWave
+         IF(PRESENT(IntWrapIndx)) IntWrapIndx = 1
+      ELSE IF ( TimeMod >= p%WaveTime(p%NStepWave + 1) )  THEN
+         m%LastIndWave = p%NStepWave
+         InterpSlope = 1.0_ReKi  ! returns values at p%NStepWave + 1
+         IF(PRESENT(IntWrapIndx)) IntWrapIndx = p%NStepWave + 1
+      ELSE
+         m%LastIndWave = MAX( MIN( m%LastIndWave, p%NStepWave-1 ), 1 )
+
+         DO
+
+            IF ( TimeMod < p%WaveTime(m%LastIndWave) )  THEN
+
+               m%LastIndWave = m%LastIndWave - 1
+
+            ELSE IF ( TimeMod >= p%WaveTime(m%LastIndWave+1) )  THEN
+
+               m%LastIndWave = m%LastIndWave + 1
+
+            ELSE
+               IF(PRESENT(IntWrapIndx)) IntWrapIndx = m%LastIndWave
+               
+               InterpSlope = ( TimeMod - p%WaveTime(m%LastIndWave) )/( p%WaveTime(m%LastIndWave+1) - p%WaveTime(m%LastIndWave) )
+               RETURN ! stop checking DO loop
+            END IF
+
+         END DO
+   
+      END IF
+      
+END FUNCTION GetInterpolationSlope
+!> Use in conjunction with GetInterpolationSlope, to replace InterpWrappedStpReal here.
+FUNCTION InterpolateWithSlope(InterpSlope, Ind, YAry)
+      REAL(ReKi), INTENT(IN)                            :: InterpSlope
+      INTEGER(IntKi), INTENT(IN )                       :: Ind           !< Misc/optimization variables
+      REAL(ReKi), INTENT(IN)                            :: YAry(:)
+      REAL(ReKi)                                        :: InterpolateWithSlope
+
+      InterpolateWithSlope = ( YAry(Ind+1) - YAry(Ind) )*InterpSlope + YAry(Ind)
+
+END FUNCTION InterpolateWithSlope
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine for computing outputs, used in both loose and tight coupling.
 SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )   
@@ -4530,7 +4431,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, 
       CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
       REAL(ReKi)                                        :: F_D(6), F_DP(6), D_F_I(3), kvec(3), v(3),  vf(3), vrel(3), vmag
-      INTEGER                                           :: I, J, K, nodeIndx
+      INTEGER                                           :: I, J, K, nodeIndx, IntWrapIndx
       REAL(ReKi)                                        :: elementWaterState
       REAL(ReKi)                                        :: AllOuts(MaxMrsnOutputs)  ! TODO: think about adding to OtherState
       REAL(ReKi)                                        :: qdotdot(6) ,qdotdot2(3)     ! The structural acceleration of a mesh node
@@ -4543,11 +4444,14 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, 
       REAL(ReKi)                                        :: D_AM_M(6,6)
       REAL(ReKi)                                        :: nodeInWater
       REAL(ReKi)                                        :: D_dragConst     ! The distributed drag factor
+      REAL(ReKi)                                        :: InterpolationSlope 
+      
          ! Initialize ErrStat
          
       ErrStat = ErrID_None         
       ErrMsg  = ""               
       
+      InterpolationSlope = GetInterpolationSlope(Time, p, m, IntWrapIndx)
       
          ! Compute outputs here:
       
@@ -4564,25 +4468,20 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, 
             ! NOTE: This will find the closest WaveTime index (wvIndx) which is has waveTime(wvIndx) > = Time.  If WaveDT = DT then waveTime(wvIndx) will equal Time
             ! For WaveMod = 6 or WaveMod = 5 WaveDT must equal DT for the returned value of elementWaterState to be meaningful, for other WaveMod, 
             ! elementWaterState is the same for all time for a given node, J.
-        elementWaterState = REAL( InterpWrappedStpInt( REAL(Time, SiKi), p%WaveTime(:), p%elementWaterState(:,J), m%LastIndWave, p%NStepWave + 1 ), ReKi )
-       
+        elementWaterState = REAL(p%elementWaterState(IntWrapIndx,J), ReKi)
          
          ! Determine the dynamic pressure at the marker
-         m%D_FDynP(J) = InterpWrappedStpReal ( REAL(Time, SiKi), p%WaveTime(:), p%WaveDynP(:,nodeIndx), &
-                                    m%LastIndWave, p%NStepWave + 1 )
+         m%D_FDynP(J) = InterpolateWithSlope(InterpolationSlope, m%LastIndWave, p%WaveDynP(:,nodeIndx))
          
             
          DO I=1,3
                ! Determine the fluid acceleration and velocity at the marker
-            m%D_FA(I,J) = InterpWrappedStpReal ( REAL(Time, SiKi), p%WaveTime(:), p%WaveAcc(:,nodeIndx,I), &
-                                    m%LastIndWave, p%NStepWave + 1       )
-            m%D_FV(I,J) = InterpWrappedStpReal ( REAL(Time, SiKi), p%WaveTime(:), p%WaveVel(:,nodeIndx,I), &
-                                    m%LastIndWave, p%NStepWave + 1       )
+            m%D_FA(I,J) = InterpolateWithSlope(InterpolationSlope, m%LastIndWave, p%WaveAcc(:,nodeIndx,I))
+            m%D_FV(I,J) = InterpolateWithSlope(InterpolationSlope, m%LastIndWave, p%WaveVel(:,nodeIndx,I))
             
             vrel(I) =  m%D_FV(I,J) - u%DistribMesh%TranslationVel(I,J)
             
-            m%D_F_I(I,J) = elementWaterState * InterpWrappedStpReal ( REAL(Time, SiKi), p%WaveTime(:), p%D_F_I(:,I,J), &
-                                    m%LastIndWave, p%NStepWave + 1       )
+            m%D_F_I(I,J) = elementWaterState * InterpolateWithSlope(InterpolationSlope, m%LastIndWave, p%D_F_I(:,I,J) )
          END DO
          
             ! (k x vrel x k)
@@ -4627,19 +4526,16 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, 
             ! Obtain the node index because WaveVel, WaveAcc, and WaveDynP are defined in the node indexing scheme, not the markers
 
          nodeIndx = p%lumpedToNodeIndx(J)
-         nodeInWater = REAL( InterpWrappedStpInt( REAL(Time, SiKi), p%WaveTime(:), p%nodeInWater(:,nodeIndx), m%LastIndWave, p%NStepWave + 1 ), ReKi )
+         nodeInWater = REAL(p%nodeInWater(IntWrapIndx,nodeIndx), ReKi)
             ! Determine the dynamic pressure at the marker
-         m%L_FDynP(J) = InterpWrappedStpReal ( REAL(Time, SiKi), p%WaveTime(:), p%WaveDynP(:,nodeIndx), &
-                                    m%LastIndWave, p%NStepWave + 1       )
+         m%L_FDynP(J) = InterpolateWithSlope(InterpolationSlope, m%LastIndWave, p%WaveDynP(:,nodeIndx))
          
          
          DO I=1,3
                ! Determine the fluid acceleration and velocity at the marker
-            m%L_FA(I,J) = InterpWrappedStpReal ( REAL(Time, SiKi), p%WaveTime(:), p%WaveAcc(:,nodeIndx,I), &
-                                    m%LastIndWave, p%NStepWave + 1       )
+            m%L_FA(I,J) = InterpolateWithSlope(InterpolationSlope, m%LastIndWave, p%WaveAcc(:,nodeIndx,I))
                
-            m%L_FV(I,J) = InterpWrappedStpReal ( REAL(Time, SiKi), p%WaveTime(:), p%WaveVel(:,nodeIndx,I), &
-                                    m%LastIndWave, p%NStepWave + 1       )
+            m%L_FV(I,J) = InterpolateWithSlope(InterpolationSlope, m%LastIndWave, p%WaveVel(:,nodeIndx,I))
             vrel(I)     = m%L_FV(I,J) - u%LumpedMesh%TranslationVel(I,J)
          END DO
          
@@ -4665,8 +4561,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, 
          DO I=1,6
                         
             ! We are now combining the dynamic pressure term into the inertia term
-            m%L_F_I(I,J) = InterpWrappedStpReal ( REAL(Time, SiKi), p%WaveTime(:), p%L_F_I(:,I,J), &
-                                    m%LastIndWave, p%NStepWave + 1       ) 
+            m%L_F_I(I,J) = InterpolateWithSlope(InterpolationSlope, m%LastIndWave, p%L_F_I(:,I,J))
             
             IF (I < 4 ) THEN
       
