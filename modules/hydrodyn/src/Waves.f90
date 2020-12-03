@@ -1939,13 +1939,13 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
          ELSE
             ! The elevation of the point defined by WaveKinzi(J) must lie between the seabed and the mean sea level (inclusive)
 
-            InitOut%WaveDynP(:,J  ) = WaveDynP0B(:,K)
-            InitOut%WaveVel (:,J,1) = WaveVel0Hxi(:,K)
-            InitOut%WaveVel (:,J,2) = WaveVel0Hyi(:,K)
-            InitOut%WaveVel (:,J,3) = WaveVel0V(:,K)
-            InitOut%WaveAcc (:,J,1) = WaveAcc0Hxi(:,K)
-            InitOut%WaveAcc (:,J,2) = WaveAcc0Hyi(:,K)
-            InitOut%WaveAcc (:,J,3) = WaveAcc0V(:,K)
+            InitOut%WaveDynP(0:InitOut%NStepWave-1,J  ) = WaveDynP0B( 0:InitOut%NStepWave-1,K)
+            InitOut%WaveVel (0:InitOut%NStepWave-1,J,1) = WaveVel0Hxi(0:InitOut%NStepWave-1,K)
+            InitOut%WaveVel (0:InitOut%NStepWave-1,J,2) = WaveVel0Hyi(0:InitOut%NStepWave-1,K)
+            InitOut%WaveVel (0:InitOut%NStepWave-1,J,3) = WaveVel0V(  0:InitOut%NStepWave-1,K)
+            InitOut%WaveAcc (0:InitOut%NStepWave-1,J,1) = WaveAcc0Hxi(0:InitOut%NStepWave-1,K)
+            InitOut%WaveAcc (0:InitOut%NStepWave-1,J,2) = WaveAcc0Hyi(0:InitOut%NStepWave-1,K)
+            InitOut%WaveAcc (0:InitOut%NStepWave-1,J,3) = WaveAcc0V(  0:InitOut%NStepWave-1,K)
             K = K + 1
          END IF
 
