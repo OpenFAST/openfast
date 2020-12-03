@@ -913,9 +913,8 @@ subroutine StC_Ptfm_Setup(SrvD_InitInp,SrvD_p,InputFileData,u,p,x,xd,z,OtherStat
 
          CALL AllocAry( StC_InitInp%InitPosition,      3, StC_InitInp%NumMeshPts, 'StC_InitInp%InitPosition',     errStat2, ErrMsg2);  if (Failed())  return;
          CALL AllocAry( StC_InitInp%InitOrientation,3, 3, StC_InitInp%NumMeshPts, 'StC_InitInp%InitOrientation',  errStat2, ErrMsg2);  if (Failed())  return;
-!FIXME: this is not correct -- should be platform point or something like that.
-         StC_InitInp%InitPosition(:,1)      = SrvD_InitInp%TwrBasePos
-         StC_InitInp%InitOrientation(:,:,1) = SrvD_InitInp%TwrBaseOrient
+         StC_InitInp%InitPosition(1:3,1)    = SrvD_InitInp%PlatformPos(1:3)
+         StC_InitInp%InitOrientation(:,:,1) = SrvD_InitInp%PlatformOrient
 
          CALL StC_Init( StC_InitInp, u(j), p(j), x(j), xd(j), z(j), OtherState(j), y(j), m(j), Interval, StC_InitOut, ErrStat2, ErrMsg2 )
          if (Failed())  return;

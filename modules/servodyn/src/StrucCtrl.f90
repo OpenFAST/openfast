@@ -164,7 +164,7 @@ SUBROUTINE StC_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
       if (Failed())  return;
       ! For diagnostic purposes, the following can be used to display the contents
       ! of the FileInfo_In data structure.
-      call Print_FileInfo_Struct( CU, FileInfo_In_PrescribeFrc ) ! CU is the screen -- different number on different systems.
+      !call Print_FileInfo_Struct( CU, FileInfo_In_PrescribeFrc ) ! CU is the screen -- different number on different systems.
       !  Parse the FileInfo_In_PrescribeFrc structure of data from the inputfile into the InitInp%InputFile structure
       CALL StC_ParseTimeSeriesFileInfo( InputFileData%PrescribedForcesFile, FileInfo_In_PrescribeFrc, InputFileData, UnEcho, ErrStat2, ErrMsg2 )
       if (Failed())  return;

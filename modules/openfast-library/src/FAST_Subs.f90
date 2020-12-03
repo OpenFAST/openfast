@@ -671,7 +671,9 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       Init%InData_SrvD%NacPosition(1:3)        = ED%Input(1)%NacelleLoads%Position(1:3,1)
       Init%InData_SrvD%NacOrientation(1:3,1:3) = ED%Input(1)%NacelleLoads%RefOrientation(1:3,1:3,1)  ! R8Ki
       Init%InData_SrvD%TwrBasePos    = Init%OutData_ED%TwrBasePos
-      Init%InData_SrvD%TwrBaseOrient = Init%OutData_ED%TwrBaseOrient                ! R8Ki
+      Init%InData_SrvD%TwrBaseOrient = Init%OutData_ED%TwrBaseOrient                      ! R8Ki
+      Init%InData_SrvD%PlatformPos(1:3)        = ED%y%PlatformPtMesh%Position(1:3,1)
+      Init%InData_SrvD%PlatformOrient(1:3,1:3) = ED%y%PlatformPtMesh%Orientation(1:3,1:3,1)  ! R8Ki
       Init%InData_SrvD%TMax          = p_FAST%TMax
       Init%InData_SrvD%AirDens       = AirDens
       Init%InData_SrvD%AvgWindSpeed  = Init%OutData_IfW%WindFileInfo%MWS
@@ -5151,7 +5153,16 @@ SUBROUTINE WrVTK_AllMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD, IfW, OpFM, H
            END IF
          enddo
       ENDIF
-!FIXME add PtfmStC
+      IF ( ALLOCATED(SrvD%Input(1)%PtfmStC) ) THEN
+         do j=1,size(SrvD%Input(1)%PtfmStC)
+            IF ( ALLOCATED(SrvD%Input(1)%PtfmStC(j)%Mesh) ) THEN
+               IF ( SrvD%Input(1)%PtfmStC(j)%Mesh(1)%Committed ) THEN
+                  !call MeshWrVTK(p_FAST%TurbinePos, SrvD%Input(1)%PtfmStC(j)%Mesh(1), trim(p_FAST%VTK_OutFileRoot)//'.SrvD_PtfmStC_Motion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth )
+                  call MeshWrVTK(p_FAST%TurbinePos, SrvD%y%PtfmStC(j)%Mesh(1), trim(p_FAST%VTK_OutFileRoot)//'.SrvD_PtfmStC'//trim(num2lstr(j)), y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth, SrvD%Input(1)%PtfmStC(j)%Mesh(1) )
+               ENDIF
+            ENDIF
+         enddo
+     ENDIF
    end if
    
       
