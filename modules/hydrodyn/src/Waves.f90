@@ -139,7 +139,7 @@ CONTAINS
          ! Compute intermediate variables:
 
       IF ( NDAmp )  THEN            ! Normally-distributed amplitudes
-         C1 = SQRT( -2.0*LOG(U1(1)) )	
+         C1 = SQRT( -2.0*LOG(U1(1)) )
       ELSE                          ! Constant amplitudes (ignore U1); therefore, C1 = SQRT( 2.0 ) = MEAN( SQRT( -2.0*LOG(U1) ) for a uniform distribution of U1 between 0 and 1
          C1 = SQRT(  2.0         )
       END IF
