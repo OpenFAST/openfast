@@ -724,7 +724,12 @@ SUBROUTINE StC_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
       CALL StC_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, ErrStat2, ErrMsg2 ); if (Failed()) return;
 
 
-      IF (p%StC_DOF_MODE == ControlMode_None .OR. p%StC_DOF_MODE == DOFMode_Indept) THEN
+      IF (p%StC_DOF_MODE == ControlMode_None) THEN
+         do i_pt=1,p%NumMeshPts
+            y%Mesh(i_pt)%Force(:,1)  = 0.0_ReKi
+            y%Mesh(i_pt)%Moment(:,1) = 0.0_ReKi
+         enddo
+      ELSEIF (p%StC_DOF_MODE == DOFMode_Indept) THEN
 
          ! StrucCtrl external forces of dependent degrees:
          do i_pt=1,p%NumMeshPts
@@ -880,9 +885,7 @@ SUBROUTINE StC_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
             y%Mesh(i_pt)%Force(:,1)  = matmul(transpose(u%Mesh(i_pt)%Orientation(:,:,1)), m%F_P(1:3,i_pt))
             y%Mesh(i_pt)%Moment(:,1) = matmul(transpose(u%Mesh(i_pt)%Orientation(:,:,1)), m%M_P(1:3,i_pt))
          enddo
-      ENDIF
-
-      IF ( p%StC_DOF_MODE == DOFMode_Prescribed ) THEN
+      ELSEIF ( p%StC_DOF_MODE == DOFMode_Prescribed ) THEN
          !  Note that the prescribed force is applied the same to all Mesh pts
          !  that are passed into this instance of the StC
          do i=1,3
@@ -980,7 +983,13 @@ SUBROUTINE StC_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
       enddo
 
       ! NOTE: m%F_stop and m%F_table are calculated earlier
-      IF (p%StC_DOF_MODE == ControlMode_None .or. p%StC_DOF_MODE == DOFMode_Indept) THEN
+      IF (p%StC_DOF_MODE == ControlMode_None) THEN
+         do i_pt=1,p%NumMeshPts
+            ! Aggregate acceleration terms
+            m%Acc(1:3,i_pt) = 0.0_ReKi 
+         enddo
+
+      ELSEIF (p%StC_DOF_MODE == DOFMode_Indept) THEN
 
          do i_pt=1,p%NumMeshPts
             ! Aggregate acceleration terms
