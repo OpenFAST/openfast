@@ -19,7 +19,7 @@ module FVW_SUBS
    integer(IntKi), parameter :: idABM4     = 3
    integer(IntKi), parameter :: idPredictor= 4
    integer(IntKi), parameter :: idEuler1   = 5
-   integer(IntKi), parameter, dimension(1) :: idIntMethodVALID      = (/idEuler1 /)
+   integer(IntKi), parameter, dimension(2) :: idIntMethodVALID      = (/idEuler1, idRK4 /)
    ! Diffusion method
    integer(IntKi), parameter :: idDiffusionNone       = 0
    integer(IntKi), parameter :: idDiffusionCoreSpread = 1
