@@ -207,49 +207,51 @@ subroutine NearWakeCorrection( Ct_azavg_filt, Vx_rel_disk_filt, p, m, Vx_wake, D
    real(ReKi),                   intent(inout) :: Vx_wake(0:)       !< Axial wake velocity deficit at first plane
    integer(IntKi),               intent(  out) :: errStat           !< Error status of the operation
    character(*),                 intent(  out) :: errMsg            !< Error message if errStat /= ErrID_None
-   real(ReKi)     :: Ct_max, alpha
+   real(ReKi) :: Ct_max, alpha
+   real(ReKi) :: Ct_avg            ! Average Cr
    integer(IntKi) :: j, errStat2
-   character(*), parameter            :: RoutineName = 'NearWakeCorrection'
-   real(ReKi), parameter              :: Ct_low = 0.96_ReKi, Ct_high = 1.2_ReKi ! Limits for blending
+   character(*), parameter  :: RoutineName = 'NearWakeCorrection'
+   real(ReKi), parameter    :: Ct_low = 0.96_ReKi, Ct_high = 1.20_ReKi ! Limits for blending
    real(ReKi), allocatable  :: Vx_low(:), Vx_high(:)    !< Axial wake velocity deficit at wake planes, distributed radially
    
    errStat = ErrID_None
    errMsg  = ''
 
    Ct_max = MAXVAL(Ct_azavg_filt)
+   ! Computing average Ct = \int r Ct dr / \int r dr = 2/R^2 \int r Ct dr using trapz
+   ! NOTE: r goes beyond the rotor (works since Ct=0 beyond that)
+   Ct_avg = 0
+   do j=1,p%NumRadii-1
+      Ct_avg = Ct_avg + 0.5_ReKi * (p%r(j) * Ct_azavg_filt(j) + p%r(j-1) * Ct_azavg_filt(j-1)) * (p%r(j)-p%r(j-1))
+   enddo
+   Ct_avg = 2*Ct_avg/((D_rotor/2)**2)
 
-   !Ct_avg = sum(r*Ct_azavg_filt)/sum(r)
-
-   !Ct_max=1.3_ReKi ! HACK
-   print*,'Ct_max: ', Ct_max
-  if (Ct_max > 2.0_ReKi ) then
-     ! THROW ERROR because we are in the prop-brake region
-         ! TEST: E5
-         call SetErrStat(ErrID_FATAL, 'Wake model is not valid in the propeller-brake region, i.e., Ct_azavg_filt(j) > 2.0.', errStat, errMsg, RoutineName)
+   if (Ct_avg > 2.0_ReKi ) then
+      ! THROW ERROR because we are in the prop-brake region
+      ! TEST: E5
+      call SetErrStat(ErrID_FATAL, 'Wake model is not valid in the propeller-brake region, i.e., Ct_azavg_filt(j) > 2.0.', errStat, errMsg, RoutineName)
       return
 
-   else if ( Ct_max < Ct_low ) then
+   else if ( Ct_avg < Ct_low ) then
       ! Low Ct region
-      print*,'Low ct'
-      call Vx_low_Ct(Vx_wake, m%r_wake) ! Set Vx_wake and r_wake
+      call Vx_low_Ct(Vx_wake, p%r) ! Compute Vx_wake at p%r
 
-   else if ( Ct_max >= Ct_high ) then
+   else if ( Ct_avg >= Ct_high ) then
       ! high Ct region
-      print*,'High ct'
-      call Vx_high_Ct(Vx_wake, p%r, Ct_max)
-      m%r_wake = p%r ! No distinction between r_w and r
+      call Vx_high_Ct(Vx_wake, p%r, Ct_avg) ! Compute Vx_wake at p%r
+      ! m%r_wake = p%r ! No distinction between r_wake and r, r_wake is just a temp variable anyway
+      ! m%a =... ! Does this need to be defined?
 
-  else if ( Ct_max < Ct_high ) then
+   else if ( Ct_avg < Ct_high ) then
       ! Blending Ct region between Ct_low and Ct_high
       allocate(Vx_high(0:p%NumRadii-1), STAT=errStat2); if(errStat2/=0) call SetErrStat(ErrID_Fatal, 'Could not allocate memory for Vx_high', errStat, errMsg, RoutineName)
 
-      call Vx_low_Ct (Vx_wake , m%r_wake)        ! r_wake is defined using low
-      call Vx_high_Ct(Vx_high, m%r_wake, Ct_max) ! r_wake from low is used (otherwise blending would need interpolation on rw)
+      call Vx_low_Ct (Vx_wake, p%r)         ! Evaluate Vx_wake (Ct_low)  at p%r
+      call Vx_high_Ct(Vx_high, p%r, Ct_avg) ! Evaluate Vx_high (Ct_high) at p%r
 
-      alpha = 1.0_ReKi - (Ct_max - Ct_low) / (Ct_high-Ct_low)   !! For linear blending
-      print*,'Blending region', alpha
-        do j=0,p%NumRadii-1
-         Vx_wake(j) = alpha*Vx_wake(j)+(1.0_ReKi-alpha)*Vx_high(j)  !! Blended CT velocity
+      alpha = 1.0_ReKi - (Ct_avg - Ct_low) / (Ct_high-Ct_low) ! linear blending coefficient
+      do j=0,p%NumRadii-1
+         Vx_wake(j) = alpha*Vx_wake(j)+(1.0_ReKi-alpha)*Vx_high(j)  ! Blended CT velocity
       end do
       if (allocated(Vx_high)) deallocate(Vx_high)
    end if   
@@ -257,53 +259,49 @@ subroutine NearWakeCorrection( Ct_azavg_filt, Vx_rel_disk_filt, p, m, Vx_wake, D
 contains
 
    !> Compute the induced velocity distribution in the wake for low thrust region 
-   subroutine Vx_low_Ct(Vx, rw)
-      real(ReKi), dimension(0:), intent(out) :: Vx !< induced velocity <0
-      real(ReKi), dimension(0:), intent(out) :: rw !< wake radial coordinate 
+   subroutine Vx_low_Ct(Vx, r_eval)
+      real(ReKi), dimension(0:), intent(out) :: Vx     !< Wake induced velocity (<0)
+      real(ReKi), dimension(0:), intent(in ) :: r_eval !< Radial position where velocity is to be evaluated
       integer(IntKi) :: ILo ! index for interpolation
       real(ReKi) :: a_interp
-      rw(0) = 0.0_ReKi
-      ! compute rw and m%a using Ct_azavg_filt
+
+      ! compute r_wake and m%a using Ct_azavg_filt
+      m%r_wake(0) = 0.0_ReKi
       do j=0,p%NumRadii-1
-         if ( Ct_azavg_filt(j) >= 24.0_ReKi/25.0_ReKi ) then !!Should this be removed?
-            m%a(j) = (2.0_ReKi + 3.0_ReKi*sqrt(14.0_ReKi*Ct_azavg_filt(j)-12.0_ReKi))/14.0_ReKi
-         else
-                m%a(j) =  0.5_ReKi - 0.5_ReKi*sqrt( 1.0_ReKi-Ct_azavg_filt(j))
+         ! NOTE: Ct clipped instead of (2.0_ReKi + 3.0_ReKi*sqrt(14.0_ReKi*Ct_azavg_filt(j)-12.0_ReKi))/14.0_ReKi
+         m%a(j) =  0.5_ReKi - 0.5_ReKi*sqrt( 1.0_ReKi-min(Ct_azavg_filt(j),24.0_ReKi/25.0_ReKi))
+         if (j > 0) then
+            m%r_wake(j)  = sqrt(m%r_wake(j-1)**2.0_ReKi + p%dr*( ((1.0_ReKi - m%a(j))*p%r(j)) / (1.0_ReKi-p%C_NearWake*m%a(j)) + ((1.0_ReKi - m%a(j-1))*p%r(j-1)) / (1.0_ReKi-p%C_NearWake*m%a(j-1)) ) )
          end if
-            if (j > 0) then
-            rw(j)  = sqrt(rw(j-1)**2.0_ReKi + p%dr*( ((1.0_ReKi - m%a(j))*p%r(j)) / (1.0_ReKi-p%C_NearWake*m%a(j)) + ((1.0_ReKi - m%a(j-1))*p%r(j-1)) / (1.0_ReKi-p%C_NearWake*m%a(j-1)) ) )
-            end if
-        end do
+      end do
       ! Use a and rw to determine Vx
       Vx(0) = -Vx_rel_disk_filt*p%C_Nearwake*m%a(0)
-        ILo = 0
-        do j=1, p%NumRadii-1
+      ILo = 0
+      do j=1, size(r_eval)-1
          ! given r_wake and m%a at p%dr increments, find value of m%a(r_wake) using interpolation 
-            a_interp = InterpBin( p%r(j),m%r_wake, m%a, ILo, p%NumRadii ) !( XVal, XAry, YAry, ILo, AryLen )
+         a_interp = InterpBin( r_eval(j), m%r_wake, m%a, ILo, p%NumRadii ) !( XVal, XAry, YAry, ILo, AryLen )
          Vx(j) = -Vx_rel_disk_filt*p%C_NearWake*a_interp !! Low CT velocity
       end do
    end subroutine Vx_low_Ct
 
    !> Compute the induced velocity distribution in the wake for high thrust region 
-   subroutine Vx_high_Ct(Vx, rw, Ct_max)
-      real(ReKi), dimension(0:), intent(out) :: Vx !< induced velocity <0
-      real(ReKi), dimension(0:), intent(in ) :: rw !< wake radial coordinate ! NOTE: intent in!
-      real(ReKi),                intent(in ) :: Ct_max ! < maximum Ct along the span
+   subroutine Vx_high_Ct(Vx, r_eval, Ct_avg)
+      real(ReKi), dimension(0:), intent(out) :: Vx     !< Wake induced velocity (<0)
+      real(ReKi), dimension(0:), intent(in ) :: r_eval !< Wake radial coordinate 
+      real(ReKi),                intent(in ) :: Ct_avg ! < Maximum Ct along the span
       real(ReKi) :: mu, sigma ! Gaussian shape parameters for high thrust region
-      real(ReKi) :: Ct_avg    ! Approximate Ct_avg based on Ct_max
       real(ReKi), parameter :: x_bar=4._ReKi ! dimensionless downstream distance used to tune the model
-      !mu     = 0.30
-      !sigma = 108.36
-      Ct_avg = Ct_max-0.44
-      mu     = (3._ReKi/(2._ReKi*Ct_avg**2-1._ReKi)  + 4._ReKi -x_bar/2) /10._ReKi
-      sigma = D_rotor* (0.5_ReKi*Ct_avg + x_bar/(25._ReKi))
-
-      print*,'mu',mu
-      print*,'sigma',sigma
-
-      do j=0,p%NumRadii-1
-         Vx(j) = -Vx_rel_disk_filt*mu*EXP(-rw(j)**2.0_ReKi/sigma**2.0_ReKi) !! High CT Velocity
-      END DO
+      ! Mu and sigma, clipped for low Ct (will not happen)
+      if (Ct_avg<1.0_ReKi) then
+         mu    = 0.5_Reki
+         sigma = 0.68_Reki*D_Rotor
+      else
+         mu    = (3._ReKi/(2._ReKi*Ct_avg**2-1._ReKi)  + 4._ReKi -x_bar/2) /10._ReKi
+         sigma = D_rotor*  (0.5_ReKi*Ct_avg + x_bar/(25._ReKi))
+      endif
+      do j=0,size(r_eval)-1
+         Vx(j) = -Vx_rel_disk_filt*mu*exp(-r_eval(j)**2.0_ReKi/sigma**2.0_ReKi) !! High CT Velocity
+      end do
    end subroutine Vx_high_Ct
    
 end subroutine NearWakeCorrection
