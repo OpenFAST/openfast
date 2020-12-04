@@ -100,6 +100,7 @@ SUBROUTINE ED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    INTEGER(IntKi)                               :: i                       ! loop counters
    LOGICAL, PARAMETER                           :: GetAdamsVals = .FALSE.  ! Determines if we should read Adams values and create (update) an Adams model
    CHARACTER(ErrMsgLen)                         :: ErrMsg2                 ! temporary Error message if ErrStat /= ErrID_None
+   REAL(R8Ki)                                   :: TransMat(3,3)            ! Initial rotation matrix at Platform Refz
 
 
       ! Initialize variables for this routine
@@ -240,7 +241,14 @@ SUBROUTINE ED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    InitOut%BladeLength = p%TipRad - p%HubRad
    InitOut%TowerHeight = p%TwrFlexL
    InitOut%TowerBaseHeight = p%TowerBsHt
+
+   ! Platform reference point wrt to global origin (0,0,0)
    InitOut%PlatformPos = x%QT(1:6)
+   CALL SmllRotTrans('initial platform rotation', x%QT(4), x%QT(5), x%QT(6), TransMat, '', ErrStat2, ErrMsg2)
+   InitOut%PlatformPos(1) = InitOut%PlatformPos(1) - TransMat(3,1)*p%PtfmRefzt
+   InitOut%PlatformPos(2) = InitOut%PlatformPos(2) - TransMat(3,2)*p%PtfmRefzt
+   InitOut%PlatformPos(3) = InitOut%PlatformPos(3) - TransMat(3,3)*p%PtfmRefzt + p%PtfmRefzt
+
    InitOut%HubHt       = p%HubHt
    InitOut%TwrBasePos  = y%TowerLn2Mesh%Position(:,p%TwrNodes + 2)
    InitOut%HubRad      = p%HubRad
