@@ -994,7 +994,7 @@ SUBROUTINE FVW_RK4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg
 
       x_tmp%r_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)  = x%r_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)  + 0.5 * k1%r_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)
       if ( m%nFW>0) then
-      x_tmp%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)  = x%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)  + 0.5 * k1%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)
+         x_tmp%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)  = x%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)  + 0.5 * k1%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)
       endif
 
       ! interpolate u to find u_interp = u(t + dt/2)
@@ -1011,12 +1011,12 @@ SUBROUTINE FVW_RK4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg
 
       k2%r_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)  = dt * m%dxdt_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)
       if ( m%nFW>0) then
-      k2%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)  = dt * m%dxdt_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)
+         k2%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)  = dt * m%dxdt_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)
       endif
 
       x_tmp%r_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)  = x%r_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)  + 0.5 * k2%r_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)
       if ( m%nFW>0) then
-      x_tmp%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)  = x%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)  + 0.5 * k2%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)
+         x_tmp%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)  = x%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)  + 0.5 * k2%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)
       endif
 
       ! find dxdt at t + dt/2       
@@ -1028,12 +1028,12 @@ SUBROUTINE FVW_RK4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg
 
       k3%r_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)  = dt * m%dxdt_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)
       if ( m%nFW>0) then
-      k3%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)  = dt * m%dxdt_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)
+         k3%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)  = dt * m%dxdt_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)
       endif
 
       x_tmp%r_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)  = x%r_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)  + k3%r_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)
       if ( m%nFW>0) then
-      x_tmp%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)  = x%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)  + k3%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)
+         x_tmp%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)  = x%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)  + k3%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)
       endif
 
       ! interpolate u to find u_interp = u(t + dt)
@@ -1051,7 +1051,7 @@ SUBROUTINE FVW_RK4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg
 
       k4%r_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)  = dt * m%dxdt_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)
       if ( m%nFW>0) then
-      k4%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)  = dt * m%dxdt_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)
+         k4%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)  = dt * m%dxdt_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)
       endif
 
       !update positions
