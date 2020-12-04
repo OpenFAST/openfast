@@ -786,7 +786,7 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    call GetPath( p%OutFileRoot, rootDir, baseName ) 
    OutFileVTKDir    = trim(rootDir) // 'vtk_ff'  ! Directory for VTK outputs
    p%OutFileVTKRoot = trim(rootDir) // 'vtk_ff' // PathSep // trim(baseName) ! Basename for VTK files
-   p%VTK_tWidth = CEILING( log10( real(p%NumDT, ReKi) ) + 1) ! Length for time stamp
+   p%VTK_tWidth = CEILING( log10( real(p%NumDT, ReKi)/real(p%WrDisSkp1, ReKi) ) + 1) ! Length for time stamp
    if (p%WrDisWind .or. p%NOutDisWindXY>0 .or. p%NOutDisWindYZ>0 .or. p%NOutDisWindXZ>0) then
       call MKDIR(OutFileVTKDir) ! creating output directory
    end if
