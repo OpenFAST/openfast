@@ -251,7 +251,10 @@ CONTAINS
       CALL ElemM(p%ElemProps(iElem),         pLst%Me(:,:,iiNode,iStore))
       CALL ElemK(p%ElemProps(iElem),         pLst%Ke(:,:,iiNode,iStore))
       CALL ElemF(p%ElemProps(iElem), Init%g, pLst%Fg(:,iiNode,iStore), FCe)
-      pLst%Fg(:,iiNode,iStore) = pLst%Fg(:,iiNode,iStore) + FCe(1:12) ! Adding cable element force 
+      ! NOTE: Removing this force contribution for now (maybe put Tension only?)
+      ! The output of subdyn will just be the "Kx" part for now
+      !pLst%Fg(:,iiNode,iStore) = pLst%Fg(:,iiNode,iStore) + FCe(1:12) ! Adding cable element force 
+      pLst%Fg(:,iiNode,iStore) = 0.0_ReKi
    END SUBROUTINE ConfigOutputNode_MKF_ID
 
 
@@ -459,7 +462,7 @@ contains
 
       FM_glb = matmul(Me,Udotdot)   ! GLOBAL REFERENCE
       FF_glb = matmul(Ke,Y2)        ! GLOBAL REFERENCE
-      FF_glb = FF_glb - Fg          ! GLOBAL REFERENCE
+      FF_glb = FF_glb - Fg          ! GLOBAL REFERENCE ! NOTE: Fg is now 0, only the "Kx" part in Fk
       DO L=1,4 ! Transforming coordinates 3 at a time
          FM_elm((L-1)*3+1:L*3) =  matmul(DIRCOS, FM_glb( (L-1)*3+1:L*3 ) )
          FF_elm((L-1)*3+1:L*3) =  matmul(DIRCOS, FF_glb( (L-1)*3+1:L*3 ) ) 
