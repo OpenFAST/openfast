@@ -1305,7 +1305,7 @@ SUBROUTINE Transfer_ED_to_HD_SD_BD_Mooring( p_FAST, y_ED, u_HD, u_SD, u_ExtPtfm,
    END IF
    
 
-!FIXME: add in the Srvd%Ptfm transfer here
+      ! Map motions for ServodDyn Structural control (TMD) if used.
    IF ( p_FAST%CompServo == Module_SrvD .and. p_FAST%CompSub /= Module_SD ) THEN
       call Transfer_ED_to_PtfmStC( u_SrvD, y_ED, MeshMapData, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//'u_SrvD%PtfmStC%Mesh')
@@ -2012,7 +2012,7 @@ CONTAINS
       END IF
 
 
-!FIXME: add SrvD%PtfmStC here
+      ! Map motions for ServodDyn Structural control (TMD) if used and forces from the TMD to the platform
       IF ( p_FAST%CompServo == Module_SrvD .and. p_FAST%CompSub /= Module_SD ) THEN
          call Transfer_ED_to_PtfmStC( u_SrvD, y_ED, MeshMapData, ErrStat2, ErrMsg2 )
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//'u_SrvD%PtfmStC%Mesh')
@@ -2958,7 +2958,6 @@ CONTAINS
    ! Set motions for the ServoDyn Structural control for platform inputs (this has accelerations, but we assume the loads generated are small)
    ! Note that these values get overwritten at the completion of this routine.)
    !..................
-!FIXME: SrvD%PtfmStc here
       IF ( p_FAST%CompServo == Module_SrvD .and. p_FAST%CompSub == Module_SD ) THEN
          call Transfer_SD_to_PtfmStC( u_SrvD, y_SD2, MeshMapData, ErrStat2, ErrMsg2 )
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -3212,7 +3211,8 @@ CONTAINS
          MeshMapData%u_ED_PlatformPtMesh%Moment = MeshMapData%u_ED_PlatformPtMesh%Moment + MeshMapData%u_ED_PlatformPtMesh_2%Moment            
       END IF
                                                    
-!FIXME doe we put in SrvD here???
+
+         ! Map the forces from the platform mounted TMD (from ServoDyn) to the platform reference point
       IF ( p_FAST%CompServo == Module_SrvD .and. p_FAST%CompSub /= Module_SD .and. allocated(y_SrvD%PtfmStC)) THEN
          do j=1,size(y_SrvD%PtfmStC)
             IF ( ALLOCATED(y_SrvD%PtfmStC(j)%Mesh) ) THEN
@@ -5165,9 +5165,10 @@ SUBROUTINE SolveOption1(this_time, this_state, calcJacobian, p_FAST, ED, BD, HD,
          
    END IF
       
-      
-!FIXME: add SrvD%PtfmStC here
-   IF ( p_FAST%CompServo == Module_SrvD .and. allocated(SrvD%Input(1)%PtfmStc)  .and. p_FAST%CompSub /= Module_SD ) THEN
+
+   ! the Structural control (TMD) from ServoDyn requires recalculating SrvD if we are using it.  While it uses accelerations,
+   ! the masses involved are small enough compared to the platform that we don't need to account for them in the jacobian
+   IF ( p_FAST%CompServo == Module_SrvD .and. allocated(SrvD%Input(1)%PtfmStc) ) THEN
       ! need loads from SrvD%y%PtfmStC%Mesh
       CALL SrvD_CalcOutput( this_time, SrvD%Input(1), SrvD%p, SrvD%x(this_state), SrvD%xd(this_state), SrvD%z(this_state), &
                             SrvD%OtherSt(this_state), SrvD%y, SrvD%m, ErrStat2, ErrMsg2 )
@@ -5247,10 +5248,16 @@ SUBROUTINE SolveOption1(this_time, this_state, calcJacobian, p_FAST, ED, BD, HD,
          
    END IF        
 
-!FIXME: SrvD%PtfmStC
-   IF ( p_FAST%CompServo == Module_SrvD .and. p_FAST%CompSub /= Module_SD ) THEN
-      call Transfer_ED_to_PtfmStC( SrvD%Input(1), ED%y, MeshMapData, ErrStat2, ErrMsg2 )
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+      ! Map motions for ServodDyn Structural control (TMD) if used.
+   IF ( p_FAST%CompServo == Module_SrvD ) THEN
+      IF ( p_FAST%CompSub /= Module_SD ) THEN
+         call Transfer_ED_to_PtfmStC( SrvD%Input(1), ED%y, MeshMapData, ErrStat2, ErrMsg2 )
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      ELSEIF ( p_FAST%CompSub == Module_SD ) THEN
+         call Transfer_SD_to_PtfmStC( SrvD%Input(1), SD%y, MeshMapData, ErrStat2, ErrMsg2 )
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      ENDIF
    END IF
 
       
