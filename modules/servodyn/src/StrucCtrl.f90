@@ -728,6 +728,8 @@ SUBROUTINE StC_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
          do i_pt=1,p%NumMeshPts
             y%Mesh(i_pt)%Force(:,1)  = 0.0_ReKi
             y%Mesh(i_pt)%Moment(:,1) = 0.0_ReKi
+            m%F_P(1:3,i_pt)          = 0.0_ReKi
+            m%M_P(1:3,i_pt)          = 0.0_ReKi
          enddo
       ELSEIF (p%StC_DOF_MODE == DOFMode_Indept) THEN
 
@@ -1009,6 +1011,7 @@ SUBROUTINE StC_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
                   m%F_k(1,i_pt) = x%StC_x(1,i_pt)/denom
                   m%F_k(2,i_pt) = x%StC_x(3,i_pt)/denom
             END IF
+            m%F_k(3,i_pt) = 0.0
 
             ! Aggregate acceleration terms
             m%Acc(1,i_pt) = - m%rddot_P(1,i_pt) + m%a_G(1,i_pt) + 1 / p%M_XY * ( m%F_ext(1,i_pt) + m%F_stop(1,i_pt) - m%F_table(1,i_pt)*(m%F_k(1,i_pt)) )
@@ -1128,6 +1131,7 @@ SUBROUTINE StC_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
                                 +  m%Acc(2,i_pt) + 1/p%M_XY * ( m%F_fr(2,i_pt) )                                     &
                                 - ( m%omega_P(1,i_pt)*m%omega_P(2,i_pt) + m%alpha_P(3,i_pt) ) * x%StC_x(1,i_pt)      &
                                -2 * m%omega_P(3,i_pt) * x%StC_x(2,i_pt)
+            dxdt%StC_x(6,i_pt) = 0.0_ReKi ! Z is off
          enddo
 
       ELSE IF (p%StC_DOF_MODE == DOFMode_TLCD) THEN !MEG & SP
@@ -1152,6 +1156,7 @@ SUBROUTINE StC_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
                                    +p%rho_Y*p%area_Y*p%B_Y*m%a_G(2,i_pt)                                                   &
                                 -.5*p%rho_Y*p%area_Y*p%headLossCoeff_Y*p%area_ratio_Y*p%area_ratio_Y*x%StC_x(4,i_pt)       &
                                        *ABS(x%StC_x(4,i_pt)))/(p%rho_Y*p%area_Y*(p%L_Y-p%B_Y+p%area_ratio_Y*p%B_Y))
+            dxdt%StC_x(6,i_pt) = 0.0_ReKi ! Z is off
          enddo
 
       END IF
