@@ -136,9 +136,6 @@ typedef	^		^				INTEGER			StC_DOF_MODE	-	-	-	"DOF mode {0: NO StC_DOF; 1: StC_X_
 typedef	^		^				LOGICAL			StC_X_DOF	-	-	-	"DOF on or off"	-
 typedef	^		^				LOGICAL			StC_Y_DOF	-	-	-	"DOF on or off"	-
 typedef	^		^				LOGICAL			StC_Z_DOF	-	-	-	"DOF on or off"	-
-typedef	^		^				ReKi			X_DSP	-	-	-	"StC_X initial displacement"	m
-typedef	^		^				ReKi			Y_DSP	-	-	-	"StC_Y initial displacement"	m
-typedef	^		^				ReKi			Z_DSP	-	-	-	"StC_Z initial displacement"	m
 typedef	^		^				ReKi			M_X		-	-	-	"StC mass"	kg
 typedef	^		^				ReKi			M_Y		-	-	-	"StC mass"	kg
 typedef	^		^				ReKi			M_Z		-	-	-	"StC mass"	kg

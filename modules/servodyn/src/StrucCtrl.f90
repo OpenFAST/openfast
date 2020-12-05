@@ -196,11 +196,11 @@ SUBROUTINE StC_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
 
    ! Define initial guess for the system states here:
    do i_pt=1,p%NumMeshPts
-      x%StC_x(1,i_pt) = p%X_DSP
+      x%StC_x(1,i_pt) = InputFileData%StC_X_DSP
       x%StC_x(2,i_pt) = 0
-      x%StC_x(3,i_pt) = p%Y_DSP
+      x%StC_x(3,i_pt) = InputFileData%StC_Y_DSP
       x%StC_x(4,i_pt) = 0
-      x%StC_x(5,i_pt) = p%Z_DSP
+      x%StC_x(5,i_pt) = InputFileData%StC_Z_DSP
       x%StC_x(6,i_pt) = 0
    enddo
 
@@ -2075,19 +2075,16 @@ SUBROUTINE StC_SetParameters( InputFileData, InitInp, p, Interval, ErrStat, ErrM
    p%StC_Z_DOF = InputFileData%StC_Z_DOF
 
    ! StC X parameters
-   p%X_DSP = InputFileData%StC_X_DSP
    p%M_X = InputFileData%StC_X_M
    p%K_X = InputFileData%StC_X_K
    p%C_X = InputFileData%StC_X_C
 
    ! StC Y parameters
-   p%Y_DSP = InputFileData%StC_Y_DSP
    p%M_Y = InputFileData%StC_Y_M
    p%K_Y = InputFileData%StC_Y_K
    p%C_Y = InputFileData%StC_Y_C
 
    ! StC Z parameters
-   p%Z_DSP = InputFileData%StC_Z_DSP
    p%M_Z = InputFileData%StC_Z_M
    p%K_Z = InputFileData%StC_Z_K
    p%C_Z = InputFileData%StC_Z_C

@@ -171,9 +171,6 @@ IMPLICIT NONE
     LOGICAL  :: StC_X_DOF      !< DOF on or off [-]
     LOGICAL  :: StC_Y_DOF      !< DOF on or off [-]
     LOGICAL  :: StC_Z_DOF      !< DOF on or off [-]
-    REAL(ReKi)  :: X_DSP      !< StC_X initial displacement [m]
-    REAL(ReKi)  :: Y_DSP      !< StC_Y initial displacement [m]
-    REAL(ReKi)  :: Z_DSP      !< StC_Z initial displacement [m]
     REAL(ReKi)  :: M_X      !< StC mass [kg]
     REAL(ReKi)  :: M_Y      !< StC mass [kg]
     REAL(ReKi)  :: M_Z      !< StC mass [kg]
@@ -3315,9 +3312,6 @@ ENDIF
     DstParamData%StC_X_DOF = SrcParamData%StC_X_DOF
     DstParamData%StC_Y_DOF = SrcParamData%StC_Y_DOF
     DstParamData%StC_Z_DOF = SrcParamData%StC_Z_DOF
-    DstParamData%X_DSP = SrcParamData%X_DSP
-    DstParamData%Y_DSP = SrcParamData%Y_DSP
-    DstParamData%Z_DSP = SrcParamData%Z_DSP
     DstParamData%M_X = SrcParamData%M_X
     DstParamData%M_Y = SrcParamData%M_Y
     DstParamData%M_Z = SrcParamData%M_Z
@@ -3447,9 +3441,6 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! StC_X_DOF
       Int_BufSz  = Int_BufSz  + 1  ! StC_Y_DOF
       Int_BufSz  = Int_BufSz  + 1  ! StC_Z_DOF
-      Re_BufSz   = Re_BufSz   + 1  ! X_DSP
-      Re_BufSz   = Re_BufSz   + 1  ! Y_DSP
-      Re_BufSz   = Re_BufSz   + 1  ! Z_DSP
       Re_BufSz   = Re_BufSz   + 1  ! M_X
       Re_BufSz   = Re_BufSz   + 1  ! M_Y
       Re_BufSz   = Re_BufSz   + 1  ! M_Z
@@ -3542,12 +3533,6 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%StC_Z_DOF, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%X_DSP
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%Y_DSP
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%Z_DSP
-    Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%M_X
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%M_Y
@@ -3724,12 +3709,6 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     OutData%StC_Z_DOF = TRANSFER(IntKiBuf(Int_Xferred), OutData%StC_Z_DOF)
     Int_Xferred = Int_Xferred + 1
-    OutData%X_DSP = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%Y_DSP = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%Z_DSP = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
     OutData%M_X = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%M_Y = ReKiBuf(Re_Xferred)
