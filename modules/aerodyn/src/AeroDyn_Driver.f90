@@ -34,7 +34,6 @@ program AeroDyn_Driver
    integer(IntKi)                                 :: iCase                ! loop counter (for driver case)
    integer(IntKi)                                 :: nt                   ! loop counter (for time step)
    integer(IntKi)                                 :: j                    ! loop counter (for array of inputs)
-   integer(IntKi)                                 :: numSteps             ! number of time steps in the simulation
    integer(IntKi)                                 :: errStat              ! Status of error message
    character(ErrMsgLen)                           :: errMsg               ! Error message if ErrStat /= ErrID_None
 
@@ -48,7 +47,11 @@ program AeroDyn_Driver
    !real(DbKi)                                     :: SttsTime                                ! Amount of time between screen status messages (sec)
    !integer                                        :: n_SttsTime                              ! Number of time steps between screen status messages (-)
    logical                                        :: AD_Initialized
-   
+
+   real(ReKi)                                      :: RotAzimuth                             ! Rotor Azimuth (aligned with blade 1)
+   !real(ReKi)                                      :: TeetAng                                ! Teeter angle
+   !real(ReKi)                                      :: TeetAngVel                             ! Teeter angular velocity
+
                             
 
    errStat     = ErrID_None
@@ -69,26 +72,12 @@ program AeroDyn_Driver
    
    
    do iCase = 1, DvrData%NumCases
-      call WrScr( NewLine//'Running case '//trim(num2lstr(iCase))//' of '//trim(num2lstr(DvrData%NumCases))//'.' )
    
-      
-      !dT = TwoPi/DvrData%Cases(iCase)%RotSpeed / DvrData%NumSect ! sec
-      
-      numSteps = ceiling( DvrData%Cases(iCase)%TMax / DvrData%Cases(iCase)%dT)      
-      dT_Dvr   = DvrData%Cases(iCase)%dT
-      
-      call WrScr ('   WndSpeed='//trim(num2lstr(DvrData%Cases(iCase)%WndSpeed))//&
-               ' m/s; ShearExp='//trim(num2lstr(DvrData%Cases(iCase)%ShearExp))//&
-                   '; RotSpeed='//trim(num2lstr(DvrData%Cases(iCase)%RotSpeed*RPS2RPM))//&
-                  ' rpm; Pitch='//trim(num2lstr(DvrData%Cases(iCase)%Pitch*R2D))//&
-                    ' deg; Yaw='//trim(num2lstr(DvrData%Cases(iCase)%Yaw*R2D))//&
-                     ' deg; dT='//trim(num2lstr(DvrData%Cases(iCase)%dT))//&
-                     ' s; Tmax='//trim(num2lstr(DvrData%Cases(iCase)%Tmax))//&
-                 ' s; numSteps='//trim(num2lstr(numSteps)) )
-      
-      
+!      call WrScr( NewLine//'Running case '//trim(num2lstr(iCase))//' of '//trim(num2lstr(DvrData%NumCases))//'.' )
+   
          ! Set the Initialization input data for AeroDyn based on the Driver input file data, and initialize AD
          ! (this also initializes inputs to AD for first time step)
+      dT_Dvr   = DvrData%Cases(iCase)%dT
       call Init_AeroDyn(iCase, DvrData, AD, dT_Dvr, errStat, errMsg)
          call CheckError()
          AD_Initialized = .true.
@@ -99,18 +88,19 @@ program AeroDyn_Driver
             call CheckError()
          end if
                                     
+      if (iCase.eq.1) then
+         call Dvr_InitializeOutputFile(DvrData%numBlades, iCase, DvrData%Cases(iCase), DvrData%OutFileData, errStat, errMsg)
+            call CheckError()
+      endif
       
-      call Dvr_InitializeOutputFile( iCase, DvrData%Cases(iCase), DvrData%OutFileData, errStat, errMsg)
-         call CheckError()
-      
-      
-      do nt = 1, numSteps
+      RotAzimuth = 0.0_ReKi
+      do nt = 1, DvrData%Cases(iCase)%numSteps
          
          !...............................
          ! set AD inputs for nt (and keep values at nt-1 as well)
          !...............................
          
-         call Set_AD_Inputs(iCase,nt,DvrData,AD,errStat,errMsg)
+         call Set_AD_Inputs(iCase,nt,RotAzimuth,DvrData,AD,errStat,errMsg) ! u(1) is at nt+1, u(2) is at nt
             call CheckError()
    
          time = AD%InputTime(2)
@@ -119,9 +109,14 @@ program AeroDyn_Driver
 
          call AD_CalcOutput( time, AD%u(2), AD%p, AD%x, AD%xd, AD%z, AD%OtherState, AD%y, AD%m, errStat, errMsg )
             call CheckError()
-   
-         call Dvr_WriteOutputLine(DvrData%OutFileData, time, AD%y%WriteOutput, errStat, errMsg)
+  
+
+
+
+         call Dvr_WriteOutputLine(DvrData%OutFileData, nt, RotAzimuth, AD%y%WriteOutput, DvrData%Cases(iCase), iCase, errStat, errMsg)
             call CheckError()
+
+
             
             
             ! Get state variables at next step: INPUT at step nt - 1, OUTPUT at step nt
@@ -132,18 +127,7 @@ program AeroDyn_Driver
                   
       end do !nt=1,numSteps
       
-      call AD_End( AD%u(1), AD%p, AD%x, AD%xd, AD%z, AD%OtherState, AD%y, AD%m, errStat, errMsg )
-         AD_Initialized = .false.         
-         call CheckError()
-         close( DvrData%OutFileData%unOutFile )
-               
-      do j = 2, numInp
-         call AD_DestroyInput (AD%u(j),  errStat, errMsg)
-            call CheckError()
-      end do
-         
    end do !iCase = 1, DvrData%NumCases
-   
    
    call Dvr_End()
    
