@@ -14,8 +14,8 @@
 # limitations under the License.
 #
 
-add_executable(openfast
-  src/FAST_Prog.f90)
+add_executable(openfast src/FAST_Prog.f90)
+set_source_files_properties(src/FAST_Prog.f90 PROPERTIES COMPILE_FLAGS "-fno-var-tracking -fno-var-tracking-assignments")
 target_link_libraries(openfast openfast_postlib foamfastlib)
 set_property(TARGET openfast PROPERTY LINKER_LANGUAGE Fortran)
 

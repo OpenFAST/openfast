@@ -23,6 +23,8 @@ if (GENERATE_TYPES)
 endif()
 
 add_library(openfast_prelib src/FAST_Types.f90)
+set_source_files_properties(src/FAST_Types.f90 PROPERTIES COMPILE_FLAGS "-fno-var-tracking -fno-var-tracking-assignments")
+
 target_link_libraries(openfast_prelib
   nwtclibs
   ifwlib
@@ -50,9 +52,11 @@ add_library(openfast_postlib
   src/FAST_Subs.f90
   src/FAST_Solver.f90
   )
+set_source_files_properties(src/FAST_Subs.f90 PROPERTIES COMPILE_FLAGS "-fno-var-tracking -fno-var-tracking-assignments")
 target_link_libraries(openfast_postlib openfast_prelib scfastlib foamfastlib versioninfolib)
 
 add_library(openfastlib src/FAST_Library.f90)
+set_source_files_properties(src/FAST_Library.f90 PROPERTIES COMPILE_FLAGS "-fno-var-tracking -fno-var-tracking-assignments")
 target_link_libraries(openfastlib openfast_postlib openfast_prelib scfastlib foamfastlib)
 
 install(TARGETS openfastlib openfast_prelib openfast_postlib
