@@ -26,6 +26,7 @@ set(SrvD_SOURCES
   src/StrucCtrl.f90
   src/UserVSCont_KP.f90
   src/ServoDyn.f90
+  src/ServoDyn_IO.f90
   src/StrucCtrl_Types.f90
   src/ServoDyn_Types.f90
 )

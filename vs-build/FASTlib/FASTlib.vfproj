@@ -2151,6 +2151,7 @@
 		<File RelativePath="..\..\modules\servodyn\src\BladedInterface.F90"/>
 		<File RelativePath="..\..\modules\servodyn\src\PitchCntrl_ACH.f90"/>
 		<File RelativePath="..\..\modules\servodyn\src\ServoDyn.f90"/>
+		<File RelativePath="..\..\modules\servodyn\src\ServoDyn_IO.f90"/>
 		<File RelativePath="..\..\modules\servodyn\src\StructCtrl.f90"/>
 		<File RelativePath="..\..\modules\servodyn\src\UserSubs.f90"/>
 		<File RelativePath="..\..\modules\servodyn\src\UserVSCont_KP.f90"/></Filter>
