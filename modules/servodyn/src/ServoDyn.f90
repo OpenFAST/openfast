@@ -1281,6 +1281,8 @@ SUBROUTINE SrvD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
    ! Place the selected output channels into the WriteOutput(:) array with the proper sign:
    !...............................................................................................................................   
       
+   AllOuts=0.0_ReKi
+
    call Set_SrvD_Outs( p, y, m, AllOuts )
 
    if (p%CompNStC>0)    call Set_NStC_Outs(     p, x%NStC,     m%NStC,     y%NStC,     AllOuts )

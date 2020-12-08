@@ -725,19 +725,19 @@ MODULE ServoDyn_IO
                                          BStC1_B1_Fyn, BStC2_B1_Fyn, BStC3_B1_Fyn, BStC4_B1_Fyn  /),(/4,MaxBlOuts/))
    INTEGER(IntKi), PARAMETER      :: BStC_Fzn(MaxStC,MaxBlOuts)= reshape((/ &
                                          BStC1_B1_Fzn, BStC2_B1_Fzn, BStC3_B1_Fzn, BStC4_B1_Fzn, &
-                                                                   BStC1_B2_Fzn, BStC2_B2_Fzn, BStC3_B2_Fzn, BStC4_B2_Fzn, &
-                                                                   BStC1_B3_Fzn, BStC2_B3_Fzn, BStC3_B3_Fzn, BStC4_B3_Fzn, &
-                                                                   BStC1_B4_Fzn, BStC2_B4_Fzn, BStC3_B4_Fzn, BStC4_B4_Fzn  /),(/4,MaxBlOuts/))
+                                         BStC1_B2_Fzn, BStC2_B2_Fzn, BStC3_B2_Fzn, BStC4_B2_Fzn, &
+                                         BStC1_B3_Fzn, BStC2_B3_Fzn, BStC3_B3_Fzn, BStC4_B3_Fzn, &
+                                         BStC1_B4_Fzn, BStC2_B4_Fzn, BStC3_B4_Fzn, BStC4_B4_Fzn  /),(/4,MaxBlOuts/))
    INTEGER(IntKi), PARAMETER      :: BStC_Mxn(MaxStC,MaxBlOuts)= reshape((/ &
                                          BStC1_B1_Mxn, BStC2_B1_Mxn, BStC3_B1_Mxn, BStC4_B1_Mxn, &
-                                                                   BStC1_B2_Mxn, BStC2_B2_Mxn, BStC3_B2_Mxn, BStC4_B2_Mxn, &
-                                                                   BStC1_B3_Mxn, BStC2_B3_Mxn, BStC3_B3_Mxn, BStC4_B3_Mxn, &
-                                                                   BStC1_B4_Mxn, BStC2_B4_Mxn, BStC3_B4_Mxn, BStC4_B4_Mxn  /),(/4,MaxBlOuts/))
+                                         BStC1_B2_Mxn, BStC2_B2_Mxn, BStC3_B2_Mxn, BStC4_B2_Mxn, &
+                                         BStC1_B3_Mxn, BStC2_B3_Mxn, BStC3_B3_Mxn, BStC4_B3_Mxn, &
+                                         BStC1_B4_Mxn, BStC2_B4_Mxn, BStC3_B4_Mxn, BStC4_B4_Mxn  /),(/4,MaxBlOuts/))
    INTEGER(IntKi), PARAMETER      :: BStC_Myn(MaxStC,MaxBlOuts)= reshape((/ &
                                          BStC1_B1_Myn, BStC2_B1_Myn, BStC3_B1_Myn, BStC4_B1_Myn, &
-                                                                   BStC1_B2_Myn, BStC2_B2_Myn, BStC3_B2_Myn, BStC4_B2_Myn, &
-                                                                   BStC1_B3_Myn, BStC2_B3_Myn, BStC3_B3_Myn, BStC4_B3_Myn, &
-                                                                   BStC1_B4_Myn, BStC2_B4_Myn, BStC3_B4_Myn, BStC4_B4_Myn  /),(/4,MaxBlOuts/))
+                                         BStC1_B2_Myn, BStC2_B2_Myn, BStC3_B2_Myn, BStC4_B2_Myn, &
+                                         BStC1_B3_Myn, BStC2_B3_Myn, BStC3_B3_Myn, BStC4_B3_Myn, &
+                                         BStC1_B4_Myn, BStC2_B4_Myn, BStC3_B4_Myn, BStC4_B4_Myn  /),(/4,MaxBlOuts/))
    INTEGER(IntKi), PARAMETER      :: BStC_Mzn(MaxStC,MaxBlOuts)= reshape((/ &
                                          BStC1_B1_Mzn, BStC2_B1_Mzn, BStC3_B1_Mzn, BStC4_B1_Mzn, &
                                          BStC1_B2_Mzn, BStC2_B2_Mzn, BStC3_B2_Mzn, BStC4_B2_Mzn, &
@@ -771,7 +771,7 @@ subroutine Set_SrvD_Outs( p, y, m, AllOuts )
    type(SrvD_ParameterType),                    intent(in   )  :: p           !< Parameters
    type(SrvD_OutputType),                       intent(in   )  :: y           !< Outputs computed at Time
    type(SrvD_MiscVarType),                      intent(inout)  :: m           !< Misc (optimization) variables
-   real(ReKi),                                  intent(inout)  :: AllOuts(:)  ! All the the available output channels
+   real(ReKi),                                  intent(inout)  :: AllOuts(0:MaxOutPts)  ! All the the available output channels
    integer  :: K
 
    !...............................................................................................................................   
@@ -801,11 +801,11 @@ subroutine Set_SrvD_Outs( p, y, m, AllOuts )
 end subroutine Set_Srvd_Outs
 !---------------------------
 subroutine Set_NStC_Outs( p_SrvD, x, m, y, AllOuts )     ! Nacelle
-   type(SrvD_ParameterType),                    intent(in   )  :: p_SrvD      !< Parameters
-   type(StC_ContinuousStateType),   allocatable,intent(in   )  :: x(:)        !< Continuous states at t
-   type(StC_MiscVarType),           allocatable,intent(in   )  :: m(:)        !< Misc (optimization) variables
-   type(StC_OutputType),            allocatable,intent(in   )  :: y(:)        !< Outputs computed at Time
-   real(ReKi),                                  intent(inout)  :: AllOuts(:)  ! All the the available output channels
+   type(SrvD_ParameterType),                    intent(in   )  :: p_SrvD               !< Parameters
+   type(StC_ContinuousStateType),   allocatable,intent(in   )  :: x(:)                 !< Continuous states at t
+   type(StC_MiscVarType),           allocatable,intent(in   )  :: m(:)                 !< Misc (optimization) variables
+   type(StC_OutputType),            allocatable,intent(in   )  :: y(:)                 !< Outputs computed at Time
+   real(ReKi),                                  intent(inout)  :: AllOuts(0:MaxOutPts) ! All the the available output channels
    integer  :: i,j
    j=1
    if (allocated(x) .and. allocated(m) .and. allocated(y)) then
@@ -833,11 +833,11 @@ subroutine Set_NStC_Outs( p_SrvD, x, m, y, AllOuts )     ! Nacelle
 end subroutine Set_NStC_Outs
 !---------------------------
 subroutine Set_TStC_Outs( p_SrvD, x, m, y, AllOuts )     ! Tower
-   type(SrvD_ParameterType),                    intent(in   )  :: p_SrvD      !< Parameters
-   type(StC_ContinuousStateType),   allocatable,intent(in   )  :: x(:)        !< Continuous states at t
-   type(StC_MiscVarType),           allocatable,intent(in   )  :: m(:)        !< Misc (optimization) variables
-   type(StC_OutputType),            allocatable,intent(in   )  :: y(:)        !< Outputs computed at Time
-   real(ReKi),                                  intent(inout)  :: AllOuts(:)  ! All the the available output channels
+   type(SrvD_ParameterType),                    intent(in   )  :: p_SrvD               !< Parameters
+   type(StC_ContinuousStateType),   allocatable,intent(in   )  :: x(:)                 !< Continuous states at t
+   type(StC_MiscVarType),           allocatable,intent(in   )  :: m(:)                 !< Misc (optimization) variables
+   type(StC_OutputType),            allocatable,intent(in   )  :: y(:)                 !< Outputs computed at Time
+   real(ReKi),                                  intent(inout)  :: AllOuts(0:MaxOutPts) ! All the the available output channels
    integer  :: i,j
    j=1
    if (allocated(x) .and. allocated(m) .and. allocated(y)) then
@@ -865,11 +865,11 @@ subroutine Set_TStC_Outs( p_SrvD, x, m, y, AllOuts )     ! Tower
 end subroutine Set_TStC_Outs
 !---------------------------
 subroutine Set_BStC_Outs( p_SrvD, x, m, y, AllOuts )        ! Blades
-   type(SrvD_ParameterType),                    intent(in   )  :: p_SrvD      !< Parameters
-   type(StC_ContinuousStateType),   allocatable,intent(in   )  :: x(:)        !< Continuous states at t
-   type(StC_MiscVarType),           allocatable,intent(in   )  :: m(:)        !< Misc (optimization) variables
-   type(StC_OutputType),            allocatable,intent(in   )  :: y(:)        !< Outputs computed at Time
-   real(ReKi),                                  intent(inout)  :: AllOuts(:)  ! All the the available output channels
+   type(SrvD_ParameterType),                    intent(in   )  :: p_SrvD               !< Parameters
+   type(StC_ContinuousStateType),   allocatable,intent(in   )  :: x(:)                 !< Continuous states at t
+   type(StC_MiscVarType),           allocatable,intent(in   )  :: m(:)                 !< Misc (optimization) variables
+   type(StC_OutputType),            allocatable,intent(in   )  :: y(:)                 !< Outputs computed at Time
+   real(ReKi),                                  intent(inout)  :: AllOuts(0:MaxOutPts) ! All the the available output channels
    integer  :: i,j
    if (allocated(x) .and. allocated(m) .and. allocated(y)) then
       do j=1,min(p_SrvD%NumBl,MaxBlOuts)
@@ -898,11 +898,11 @@ subroutine Set_BStC_Outs( p_SrvD, x, m, y, AllOuts )        ! Blades
 end subroutine Set_BStC_Outs
 !---------------------------
 subroutine Set_PtfmStC_Outs( p_SrvD, x, m, y, AllOuts )     ! Platform 
-   type(SrvD_ParameterType),                    intent(in   )  :: p_SrvD      !< Parameters
-   type(StC_ContinuousStateType),   allocatable,intent(in   )  :: x(:)        !< Continuous states at t
-   type(StC_MiscVarType),           allocatable,intent(in   )  :: m(:)        !< Misc (optimization) variables
-   type(StC_OutputType),            allocatable,intent(in   )  :: y(:)        !< Outputs computed at Time
-   real(ReKi),                                  intent(inout)  :: AllOuts(:)  ! All the the available output channels
+   type(SrvD_ParameterType),                    intent(in   )  :: p_SrvD               !< Parameters
+   type(StC_ContinuousStateType),   allocatable,intent(in   )  :: x(:)                 !< Continuous states at t
+   type(StC_MiscVarType),           allocatable,intent(in   )  :: m(:)                 !< Misc (optimization) variables
+   type(StC_OutputType),            allocatable,intent(in   )  :: y(:)                 !< Outputs computed at Time
+   real(ReKi),                                  intent(inout)  :: AllOuts(0:MaxOutPts) ! All the the available output channels
    integer  :: i,j
    j=1
    if (allocated(x) .and. allocated(m) .and. allocated(y)) then
