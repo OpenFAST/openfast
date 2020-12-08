@@ -4406,12 +4406,22 @@ END FUNCTION GetInterpolationSlope
 FUNCTION InterpolateWithSlope(InterpSlope, Ind, YAry)
       REAL(ReKi), INTENT(IN)                            :: InterpSlope
       INTEGER(IntKi), INTENT(IN )                       :: Ind           !< Misc/optimization variables
-      REAL(ReKi), INTENT(IN)                            :: YAry(:)
+      REAL(SiKi), INTENT(IN)                            :: YAry(:)
       REAL(ReKi)                                        :: InterpolateWithSlope
 
       InterpolateWithSlope = ( YAry(Ind+1) - YAry(Ind) )*InterpSlope + YAry(Ind)
 
 END FUNCTION InterpolateWithSlope
+!> Use in conjunction with GetInterpolationSlope, to replace InterpWrappedStpReal here.
+FUNCTION InterpolateWithSlopeR(InterpSlope, Ind, YAry)
+      REAL(ReKi), INTENT(IN)                            :: InterpSlope
+      INTEGER(IntKi), INTENT(IN )                       :: Ind           !< Misc/optimization variables
+      REAL(ReKi), INTENT(IN)                            :: YAry(:)
+      REAL(ReKi)                                        :: InterpolateWithSlopeR
+
+      InterpolateWithSlopeR = ( YAry(Ind+1) - YAry(Ind) )*InterpSlope + YAry(Ind)
+
+END FUNCTION InterpolateWithSlopeR
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine for computing outputs, used in both loose and tight coupling.
 SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )   
@@ -4481,7 +4491,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, 
             
             vrel(I) =  m%D_FV(I,J) - u%DistribMesh%TranslationVel(I,J)
             
-            m%D_F_I(I,J) = elementWaterState * InterpolateWithSlope(InterpolationSlope, m%LastIndWave, p%D_F_I(:,I,J) )
+            m%D_F_I(I,J) = elementWaterState * InterpolateWithSlopeR(InterpolationSlope, m%LastIndWave, p%D_F_I(:,I,J) )
          END DO
          
             ! (k x vrel x k)
@@ -4561,7 +4571,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, 
          DO I=1,6
                         
             ! We are now combining the dynamic pressure term into the inertia term
-            m%L_F_I(I,J) = InterpolateWithSlope(InterpolationSlope, m%LastIndWave, p%L_F_I(:,I,J))
+            m%L_F_I(I,J) = InterpolateWithSlopeR(InterpolationSlope, m%LastIndWave, p%L_F_I(:,I,J))
             
             IF (I < 4 ) THEN
       
