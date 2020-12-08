@@ -2249,6 +2249,9 @@ END SUBROUTINE CheckR16Var
 !=======================================================================
 !>
    SUBROUTINE DispCompileRuntimeInfo()
+#ifdef _OPENMP    
+      USE OMP_LIB 
+#endif
 #ifdef HAS_FORTRAN2008_FEATURES
       USE iso_fortran_env, ONLY: compiler_version
 #endif
@@ -2279,6 +2282,17 @@ END SUBROUTINE CheckR16Var
       call wrscr(' - Compiler: '//trim(compiler_version_str))
       CALL WrScr(' - Architecture: '//trim(architecture))
       CALL WrScr(' - Precision: '//trim(compiled_precision))
+#ifdef _OPENMP   
+      !$OMP PARALLEL default(shared)
+      if (omp_get_thread_num()==0) then
+         call WrScr(' - OpenMP: Yes, number of threads: '//trim(Num2LStr(omp_get_num_threads()))//'/'//trim(Num2LStr(omp_get_max_threads())))
+      else
+         call WrScr(' - OpenMP: Yes, number of threads cannot be retrieved.') ! will likely never happen
+      endif
+      !$OMP END PARALLEL 
+#else
+   call WrScr(' - OpenMP: No')
+#endif
       CALL WrScr(' - Date: '//__DATE__)
       CALL WrScr(' - Time: '//__TIME__)
       ! call wrscr(' - Options: '//trim(compiler_options()))
