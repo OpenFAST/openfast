@@ -1234,19 +1234,6 @@ SUBROUTINE WaveElevGrid_Output (drvrInitInp, HDynInitInp, HDynInitOut, HDyn_p, E
    CLOSE (WaveElevFileUn) 
 
 END SUBROUTINE WaveElevGrid_Output
- 
-
-
-subroutine print_help()
-    print '(a)', 'usage: '
-    print '(a)', ''
-    print '(a)', 'HydroDyn.exe driverfilename'
-    print '(a)', ''
-    print '(a)', 'Where driverfilename is the name of the HydroDyn driver input file.'
-    print '(a)', ''
-
-end subroutine print_help
-
 
 !----------------------------------------------------------------------------------------------------------------------------------
 
