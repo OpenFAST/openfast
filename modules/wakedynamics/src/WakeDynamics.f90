@@ -207,7 +207,7 @@ subroutine NearWakeCorrection( Ct_azavg_filt, Vx_rel_disk_filt, p, m, Vx_wake, D
    real(ReKi),                   intent(inout) :: Vx_wake(0:)       !< Axial wake velocity deficit at first plane
    integer(IntKi),               intent(  out) :: errStat           !< Error status of the operation
    character(*),                 intent(  out) :: errMsg            !< Error message if errStat /= ErrID_None
-   real(ReKi) :: Ct_max, alpha
+   real(ReKi) :: alpha
    real(ReKi) :: Ct_avg            ! Average Cr
    integer(IntKi) :: j, errStat2
    character(*), parameter  :: RoutineName = 'NearWakeCorrection'
@@ -217,7 +217,6 @@ subroutine NearWakeCorrection( Ct_azavg_filt, Vx_rel_disk_filt, p, m, Vx_wake, D
    errStat = ErrID_None
    errMsg  = ''
 
-   Ct_max = MAXVAL(Ct_azavg_filt)
    ! Computing average Ct = \int r Ct dr / \int r dr = 2/R^2 \int r Ct dr using trapz
    ! NOTE: r goes beyond the rotor (works since Ct=0 beyond that)
    Ct_avg = 0
