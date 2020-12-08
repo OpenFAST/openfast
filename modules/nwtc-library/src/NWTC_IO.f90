@@ -2286,8 +2286,6 @@ END SUBROUTINE CheckR16Var
       !$OMP PARALLEL default(shared)
       if (omp_get_thread_num()==0) then
          call WrScr(' - OpenMP: Yes, number of threads: '//trim(Num2LStr(omp_get_num_threads()))//'/'//trim(Num2LStr(omp_get_max_threads())))
-      else
-         call WrScr(' - OpenMP: Yes, number of threads cannot be retrieved.') ! will likely never happen
       endif
       !$OMP END PARALLEL 
 #else
