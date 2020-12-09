@@ -809,25 +809,25 @@ subroutine Set_NStC_Outs( p_SrvD, x, m, y, AllOuts )     ! Nacelle
    integer  :: i,j
    j=1
    if (allocated(x) .and. allocated(m) .and. allocated(y)) then
-      do i=1,min(p_SrvD%CompNStC,MaxStC)                 ! in case we have more Nacelle StCs than the outputs are set for
-         AllOuts(NStC_XQ( i)) = x(i)%StC_x(1,1)          ! x
-         AllOuts(NStC_XQD(i)) = x(i)%StC_x(2,1)          ! x-dot
-         AllOuts(NStC_YQ( i)) = x(i)%StC_x(3,1)          ! y
-         AllOuts(NStC_YQD(i)) = x(i)%StC_x(4,1)          ! y-dot
-         AllOuts(NStC_ZQ( i)) = x(i)%StC_x(5,1)          ! z
-         AllOuts(NStC_ZQD(i)) = x(i)%StC_x(6,1)          ! z-dot
-         AllOuts(NStC_Fxi(i)) = y(i)%Mesh(j)%Force(1,1)  ! only one mesh per NStC instance
-         AllOuts(NStC_Fyi(i)) = y(i)%Mesh(j)%Force(2,1)  ! only one mesh per NStC instance
-         AllOuts(NStC_Fzi(i)) = y(i)%Mesh(j)%Force(3,1)  ! only one mesh per NStC instance
-         AllOuts(NStC_Mxi(i)) = y(i)%Mesh(j)%Moment(1,1) ! only one mesh per NStC instance
-         AllOuts(NStC_Myi(i)) = y(i)%Mesh(j)%Moment(2,1) ! only one mesh per NStC instance
-         AllOuts(NStC_Mzi(i)) = y(i)%Mesh(j)%Moment(3,1) ! only one mesh per NStC instance
-         AllOuts(NStC_Fxn(i)) = m(i)%F_P(1,j)
-         AllOuts(NStC_Fyn(i)) = m(i)%F_P(2,j)
-         AllOuts(NStC_Fzn(i)) = m(i)%F_P(3,j)
-         AllOuts(NStC_Mxn(i)) = m(i)%M_P(1,j)
-         AllOuts(NStC_Myn(i)) = m(i)%M_P(2,j)
-         AllOuts(NStC_Mzn(i)) = m(i)%M_P(3,j)
+      do i=1,min(p_SrvD%CompNStC,MaxStC)                       ! in case we have more Nacelle StCs than the outputs are set for
+         AllOuts(NStC_XQ( i)) = x(i)%StC_x(1,1)                ! x
+         AllOuts(NStC_XQD(i)) = x(i)%StC_x(2,1)                ! x-dot
+         AllOuts(NStC_YQ( i)) = x(i)%StC_x(3,1)                ! y
+         AllOuts(NStC_YQD(i)) = x(i)%StC_x(4,1)                ! y-dot
+         AllOuts(NStC_ZQ( i)) = x(i)%StC_x(5,1)                ! z
+         AllOuts(NStC_ZQD(i)) = x(i)%StC_x(6,1)                ! z-dot
+         AllOuts(NStC_Fxi(i)) = 0.001*y(i)%Mesh(j)%Force(1,1)  ! only one mesh per NStC instance
+         AllOuts(NStC_Fyi(i)) = 0.001*y(i)%Mesh(j)%Force(2,1)  ! only one mesh per NStC instance
+         AllOuts(NStC_Fzi(i)) = 0.001*y(i)%Mesh(j)%Force(3,1)  ! only one mesh per NStC instance
+         AllOuts(NStC_Mxi(i)) = 0.001*y(i)%Mesh(j)%Moment(1,1) ! only one mesh per NStC instance
+         AllOuts(NStC_Myi(i)) = 0.001*y(i)%Mesh(j)%Moment(2,1) ! only one mesh per NStC instance
+         AllOuts(NStC_Mzi(i)) = 0.001*y(i)%Mesh(j)%Moment(3,1) ! only one mesh per NStC instance
+         AllOuts(NStC_Fxn(i)) = 0.001*m(i)%F_P(1,j)
+         AllOuts(NStC_Fyn(i)) = 0.001*m(i)%F_P(2,j)
+         AllOuts(NStC_Fzn(i)) = 0.001*m(i)%F_P(3,j)
+         AllOuts(NStC_Mxn(i)) = 0.001*m(i)%M_P(1,j)
+         AllOuts(NStC_Myn(i)) = 0.001*m(i)%M_P(2,j)
+         AllOuts(NStC_Mzn(i)) = 0.001*m(i)%M_P(3,j)
       enddo
    endif
 end subroutine Set_NStC_Outs
@@ -841,25 +841,25 @@ subroutine Set_TStC_Outs( p_SrvD, x, m, y, AllOuts )     ! Tower
    integer  :: i,j
    j=1
    if (allocated(x) .and. allocated(m) .and. allocated(y)) then
-      do i=1,min(p_SrvD%CompTStC,MaxStC)                 ! in case we have more Nacelle StCs than the outputs are set for
-         AllOuts(TStC_XQ( i)) = x(i)%StC_x(1,1)          ! x
-         AllOuts(TStC_XQD(i)) = x(i)%StC_x(2,1)          ! x-dot
-         AllOuts(TStC_YQ( i)) = x(i)%StC_x(3,1)          ! y
-         AllOuts(TStC_YQD(i)) = x(i)%StC_x(4,1)          ! y-dot
-         AllOuts(TStC_ZQ( i)) = x(i)%StC_x(5,1)          ! z
-         AllOuts(TStC_ZQD(i)) = x(i)%StC_x(6,1)          ! z-dot
-         AllOuts(TStC_Fxi(i)) = y(i)%Mesh(j)%Force(1,1)  ! only one mesh per TStC instance
-         AllOuts(TStC_Fyi(i)) = y(i)%Mesh(j)%Force(2,1)  ! only one mesh per TStC instance
-         AllOuts(TStC_Fzi(i)) = y(i)%Mesh(j)%Force(3,1)  ! only one mesh per TStC instance
-         AllOuts(TStC_Mxi(i)) = y(i)%Mesh(j)%Moment(1,1) ! only one mesh per TStC instance
-         AllOuts(TStC_Myi(i)) = y(i)%Mesh(j)%Moment(2,1) ! only one mesh per TStC instance
-         AllOuts(TStC_Mzi(i)) = y(i)%Mesh(j)%Moment(3,1) ! only one mesh per TStC instance
-         AllOuts(TStC_Fxn(i)) = m(i)%F_P(1,j)
-         AllOuts(TStC_Fyn(i)) = m(i)%F_P(2,j)
-         AllOuts(TStC_Fzn(i)) = m(i)%F_P(3,j)
-         AllOuts(TStC_Mxn(i)) = m(i)%M_P(1,j)
-         AllOuts(TStC_Myn(i)) = m(i)%M_P(2,j)
-         AllOuts(TStC_Mzn(i)) = m(i)%M_P(3,j)
+      do i=1,min(p_SrvD%CompTStC,MaxStC)                       ! in case we have more Nacelle StCs than the outputs are set for
+         AllOuts(TStC_XQ( i)) = x(i)%StC_x(1,1)                ! x
+         AllOuts(TStC_XQD(i)) = x(i)%StC_x(2,1)                ! x-dot
+         AllOuts(TStC_YQ( i)) = x(i)%StC_x(3,1)                ! y
+         AllOuts(TStC_YQD(i)) = x(i)%StC_x(4,1)                ! y-dot
+         AllOuts(TStC_ZQ( i)) = x(i)%StC_x(5,1)                ! z
+         AllOuts(TStC_ZQD(i)) = x(i)%StC_x(6,1)                ! z-dot
+         AllOuts(TStC_Fxi(i)) = 0.001*y(i)%Mesh(j)%Force(1,1)  ! only one mesh per TStC instance
+         AllOuts(TStC_Fyi(i)) = 0.001*y(i)%Mesh(j)%Force(2,1)  ! only one mesh per TStC instance
+         AllOuts(TStC_Fzi(i)) = 0.001*y(i)%Mesh(j)%Force(3,1)  ! only one mesh per TStC instance
+         AllOuts(TStC_Mxi(i)) = 0.001*y(i)%Mesh(j)%Moment(1,1) ! only one mesh per TStC instance
+         AllOuts(TStC_Myi(i)) = 0.001*y(i)%Mesh(j)%Moment(2,1) ! only one mesh per TStC instance
+         AllOuts(TStC_Mzi(i)) = 0.001*y(i)%Mesh(j)%Moment(3,1) ! only one mesh per TStC instance
+         AllOuts(TStC_Fxn(i)) = 0.001*m(i)%F_P(1,j)
+         AllOuts(TStC_Fyn(i)) = 0.001*m(i)%F_P(2,j)
+         AllOuts(TStC_Fzn(i)) = 0.001*m(i)%F_P(3,j)
+         AllOuts(TStC_Mxn(i)) = 0.001*m(i)%M_P(1,j)
+         AllOuts(TStC_Myn(i)) = 0.001*m(i)%M_P(2,j)
+         AllOuts(TStC_Mzn(i)) = 0.001*m(i)%M_P(3,j)
       enddo
    endif
 end subroutine Set_TStC_Outs
@@ -873,25 +873,25 @@ subroutine Set_BStC_Outs( p_SrvD, x, m, y, AllOuts )        ! Blades
    integer  :: i,j
    if (allocated(x) .and. allocated(m) .and. allocated(y)) then
       do j=1,min(p_SrvD%NumBl,MaxBlOuts)
-         do i=1,min(p_SrvD%CompBStC,MaxStC)                 ! in case we have more Nacelle StCs than the outputs are set for
-            AllOuts(BStC_XQ( i,j)) = x(i)%StC_x(1,j)          ! x
-            AllOuts(BStC_XQD(i,j)) = x(i)%StC_x(2,j)          ! x-dot
-            AllOuts(BStC_YQ( i,j)) = x(i)%StC_x(3,j)          ! y
-            AllOuts(BStC_YQD(i,j)) = x(i)%StC_x(4,j)          ! y-dot
-            AllOuts(BStC_ZQ( i,j)) = x(i)%StC_x(5,j)          ! z
-            AllOuts(BStC_ZQD(i,j)) = x(i)%StC_x(6,j)          ! z-dot
-            AllOuts(BStC_Fxi(i,j)) = y(i)%Mesh(j)%Force(1,1)  ! only one mesh per BStC instance
-            AllOuts(BStC_Fyi(i,j)) = y(i)%Mesh(j)%Force(2,1)  ! only one mesh per BStC instance
-            AllOuts(BStC_Fzi(i,j)) = y(i)%Mesh(j)%Force(3,1)  ! only one mesh per BStC instance
-            AllOuts(BStC_Mxi(i,j)) = y(i)%Mesh(j)%Moment(1,1) ! only one mesh per BStC instance
-            AllOuts(BStC_Myi(i,j)) = y(i)%Mesh(j)%Moment(2,1) ! only one mesh per BStC instance
-            AllOuts(BStC_Mzi(i,j)) = y(i)%Mesh(j)%Moment(3,1) ! only one mesh per BStC instance
-            AllOuts(BStC_Fxn(i,j)) = m(i)%F_P(1,j)
-            AllOuts(BStC_Fyn(i,j)) = m(i)%F_P(2,j)
-            AllOuts(BStC_Fzn(i,j)) = m(i)%F_P(3,j)
-            AllOuts(BStC_Mxn(i,j)) = m(i)%M_P(1,j)
-            AllOuts(BStC_Myn(i,j)) = m(i)%M_P(2,j)
-            AllOuts(BStC_Mzn(i,j)) = m(i)%M_P(3,j)
+         do i=1,min(p_SrvD%CompBStC,MaxStC)                         ! in case we have more Nacelle StCs than the outputs are set for
+            AllOuts(BStC_XQ( i,j)) = x(i)%StC_x(1,j)                ! x
+            AllOuts(BStC_XQD(i,j)) = x(i)%StC_x(2,j)                ! x-dot
+            AllOuts(BStC_YQ( i,j)) = x(i)%StC_x(3,j)                ! y
+            AllOuts(BStC_YQD(i,j)) = x(i)%StC_x(4,j)                ! y-dot
+            AllOuts(BStC_ZQ( i,j)) = x(i)%StC_x(5,j)                ! z
+            AllOuts(BStC_ZQD(i,j)) = x(i)%StC_x(6,j)                ! z-dot
+            AllOuts(BStC_Fxi(i,j)) = 0.001*y(i)%Mesh(j)%Force(1,1)  ! only one mesh per BStC instance
+            AllOuts(BStC_Fyi(i,j)) = 0.001*y(i)%Mesh(j)%Force(2,1)  ! only one mesh per BStC instance
+            AllOuts(BStC_Fzi(i,j)) = 0.001*y(i)%Mesh(j)%Force(3,1)  ! only one mesh per BStC instance
+            AllOuts(BStC_Mxi(i,j)) = 0.001*y(i)%Mesh(j)%Moment(1,1) ! only one mesh per BStC instance
+            AllOuts(BStC_Myi(i,j)) = 0.001*y(i)%Mesh(j)%Moment(2,1) ! only one mesh per BStC instance
+            AllOuts(BStC_Mzi(i,j)) = 0.001*y(i)%Mesh(j)%Moment(3,1) ! only one mesh per BStC instance
+            AllOuts(BStC_Fxn(i,j)) = 0.001*m(i)%F_P(1,j)
+            AllOuts(BStC_Fyn(i,j)) = 0.001*m(i)%F_P(2,j)
+            AllOuts(BStC_Fzn(i,j)) = 0.001*m(i)%F_P(3,j)
+            AllOuts(BStC_Mxn(i,j)) = 0.001*m(i)%M_P(1,j)
+            AllOuts(BStC_Myn(i,j)) = 0.001*m(i)%M_P(2,j)
+            AllOuts(BStC_Mzn(i,j)) = 0.001*m(i)%M_P(3,j)
          enddo
       enddo
    endif
@@ -906,25 +906,25 @@ subroutine Set_PtfmStC_Outs( p_SrvD, x, m, y, AllOuts )     ! Platform
    integer  :: i,j
    j=1
    if (allocated(x) .and. allocated(m) .and. allocated(y)) then
-      do i=1,min(p_SrvD%CompPtfmStC,MaxStC)                 ! in case we have more Nacelle StCs than the outputs are set for
-         AllOuts(PtfmStC_XQ( i)) = x(i)%StC_x(1,1)          ! x
-         AllOuts(PtfmStC_XQD(i)) = x(i)%StC_x(2,1)          ! x-dot
-         AllOuts(PtfmStC_YQ( i)) = x(i)%StC_x(3,1)          ! y
-         AllOuts(PtfmStC_YQD(i)) = x(i)%StC_x(4,1)          ! y-dot
-         AllOuts(PtfmStC_ZQ( i)) = x(i)%StC_x(5,1)          ! z
-         AllOuts(PtfmStC_ZQD(i)) = x(i)%StC_x(6,1)          ! z-dot
-         AllOuts(PtfmStC_Fxi(i)) = y(i)%Mesh(j)%Force(1,1)  ! only one mesh per PtfmStC instance
-         AllOuts(PtfmStC_Fyi(i)) = y(i)%Mesh(j)%Force(2,1)  ! only one mesh per PtfmStC instance
-         AllOuts(PtfmStC_Fzi(i)) = y(i)%Mesh(j)%Force(3,1)  ! only one mesh per PtfmStC instance
-         AllOuts(PtfmStC_Mxi(i)) = y(i)%Mesh(j)%Moment(1,1) ! only one mesh per PtfmStC instance
-         AllOuts(PtfmStC_Myi(i)) = y(i)%Mesh(j)%Moment(2,1) ! only one mesh per PtfmStC instance
-         AllOuts(PtfmStC_Mzi(i)) = y(i)%Mesh(j)%Moment(3,1) ! only one mesh per PtfmStC instance
-         AllOuts(PtfmStC_Fxn(i)) = m(i)%F_P(1,j)
-         AllOuts(PtfmStC_Fyn(i)) = m(i)%F_P(2,j)
-         AllOuts(PtfmStC_Fzn(i)) = m(i)%F_P(3,j)
-         AllOuts(PtfmStC_Mxn(i)) = m(i)%M_P(1,j)
-         AllOuts(PtfmStC_Myn(i)) = m(i)%M_P(2,j)
-         AllOuts(PtfmStC_Mzn(i)) = m(i)%M_P(3,j)
+      do i=1,min(p_SrvD%CompPtfmStC,MaxStC)                       ! in case we have more Nacelle StCs than the outputs are set for
+         AllOuts(PtfmStC_XQ( i)) = x(i)%StC_x(1,1)                ! x
+         AllOuts(PtfmStC_XQD(i)) = x(i)%StC_x(2,1)                ! x-dot
+         AllOuts(PtfmStC_YQ( i)) = x(i)%StC_x(3,1)                ! y
+         AllOuts(PtfmStC_YQD(i)) = x(i)%StC_x(4,1)                ! y-dot
+         AllOuts(PtfmStC_ZQ( i)) = x(i)%StC_x(5,1)                ! z
+         AllOuts(PtfmStC_ZQD(i)) = x(i)%StC_x(6,1)                ! z-dot
+         AllOuts(PtfmStC_Fxi(i)) = 0.001*y(i)%Mesh(j)%Force(1,1)  ! only one mesh per PtfmStC instance
+         AllOuts(PtfmStC_Fyi(i)) = 0.001*y(i)%Mesh(j)%Force(2,1)  ! only one mesh per PtfmStC instance
+         AllOuts(PtfmStC_Fzi(i)) = 0.001*y(i)%Mesh(j)%Force(3,1)  ! only one mesh per PtfmStC instance
+         AllOuts(PtfmStC_Mxi(i)) = 0.001*y(i)%Mesh(j)%Moment(1,1) ! only one mesh per PtfmStC instance
+         AllOuts(PtfmStC_Myi(i)) = 0.001*y(i)%Mesh(j)%Moment(2,1) ! only one mesh per PtfmStC instance
+         AllOuts(PtfmStC_Mzi(i)) = 0.001*y(i)%Mesh(j)%Moment(3,1) ! only one mesh per PtfmStC instance
+         AllOuts(PtfmStC_Fxn(i)) = 0.001*m(i)%F_P(1,j)
+         AllOuts(PtfmStC_Fyn(i)) = 0.001*m(i)%F_P(2,j)
+         AllOuts(PtfmStC_Fzn(i)) = 0.001*m(i)%F_P(3,j)
+         AllOuts(PtfmStC_Mxn(i)) = 0.001*m(i)%M_P(1,j)
+         AllOuts(PtfmStC_Myn(i)) = 0.001*m(i)%M_P(2,j)
+         AllOuts(PtfmStC_Mzn(i)) = 0.001*m(i)%M_P(3,j)
       enddo
    endif
 end subroutine Set_PtfmStC_Outs
