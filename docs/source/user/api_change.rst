@@ -9,7 +9,7 @@ The changes are tabulated according to the module input file, line number, and f
 The line number corresponds to the resulting line number after all changes are implemented.
 Thus, be sure to implement each in order so that subsequent line numbers are correct.
 
-OpenFAST v2.3.0 to OpenFAST `dev`
+OpenFAST v2.4.0 to OpenFAST `dev`
 ---------------------------------
 
 ============== ==== ================== =============================================================================================================================================================================
@@ -30,9 +30,13 @@ AeroDyn        14   AA_InputFile       "unused"                AA_InputFile     
 AeroDyn        35   [separator line]   ======  OLAF cOnvecting LAgrangian Filaments (Free Vortex Wake) Theory Options  ================== [used only when WakeMod=3]
 AeroDyn        36   OLAFInputFileName  "Elliptic_OLAF.dat"     OLAFInputFileName - Input file for OLAF [used only when WakeMod=3]
 AirFoilTables  4\*  BL_file            "unused"                BL_file           - The file name including the boundary layer characteristics of the profile. Ignored if the aeroacoustic module is not called.
+IfW driver     6    [separator line]   ===================== File Conversion Options =================================
+IfW driver     7    WrHAWC             false    WrHAWC    - Convert all data to HAWC2 format? (flag)
+IfW driver     8    WrBladed           false    WrBladed  - Convert all data to Bladed format? (flag)
+IfW driver     9    WrVTK              false    WrVTK     - Convert all data to VTK format? (flag)
+InflowWind     7    VFlowAng                0   VFlowAng  - Upflow angle (degrees) (not used for native Bladed format WindType=7)
 ============== ==== ================== =============================================================================================================================================================================
 
-============== ==== ================== =============================================================================================================================================================================
 Modified in OpenFAST `dev`
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  Module        Line  Flag Name          Example Value
