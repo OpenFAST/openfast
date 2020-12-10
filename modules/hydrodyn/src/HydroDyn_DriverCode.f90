@@ -450,6 +450,8 @@ PROGRAM HydroDynDriver
    Time = 0.0
    CALL SimStatus_FirstTime( TiLstPrn, PrevClockTime, SimStrtTime, UsrTime2, time, InitInData%TMax )
 
+   maxAngle = 0.0
+   
    DO n = 1, drvrInitInp%NSteps
 
       Time = (n-1) * drvrInitInp%TimeInterval

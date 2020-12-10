@@ -826,36 +826,36 @@ END SUBROUTINE GetMaxSimQuantities
 
 SUBROUTINE WriteSummaryFile( UnSum, MSL2SWL, WtrDpth, numNodes, nodes, numElements, elements, NOutputs, OutParam, NMOutputs, MOutLst, distribToNodeIndx, NJOutputs, JOutLst, inLumpedMesh, outLumpedMesh, inDistribMesh, outDistribMesh, L_F_B, L_F_BF, D_F_B, D_F_BF, D_F_MG, g, ErrStat, ErrMsg )  !, numDistribMarkers, distribMarkers, numLumpedMarkers, lumpedMarkers
 
-   REAL(ReKi),               INTENT ( IN    )  :: MSL2SWL
-   REAL(ReKi),               INTENT ( IN    )  :: WtrDpth
-   INTEGER,                  INTENT ( IN    )  :: UnSum
-   INTEGER,                  INTENT ( IN    )  :: numNodes
-   TYPE(Morison_NodeType),   INTENT ( IN    )  :: nodes(:)  
-   INTEGER,                  INTENT ( IN    )  :: numElements
-   TYPE(Morison_MemberType), INTENT ( IN    )  :: elements(:)
-   INTEGER,                  INTENT ( IN    )  :: NOutputs
-   TYPE(OutParmType),        INTENT ( IN    )  :: OutParam(:)
-   INTEGER,                  INTENT ( IN    )  :: NMOutputs
-   TYPE(Morison_MOutput),    INTENT ( IN    )  :: MOutLst(:)
-   INTEGER,                  INTENT ( IN    )  :: distribToNodeIndx(:)
-   INTEGER,                  INTENT ( IN    )  :: NJOutputs
-   TYPE(Morison_JOutput),    INTENT ( IN    )  :: JOutLst(:)
-   TYPE(MeshType),           INTENT ( INOUT )  :: inLumpedMesh
-   TYPE(MeshType),           INTENT ( INOUT )  :: outLumpedMesh
-   TYPE(MeshType),           INTENT ( INOUT )  :: inDistribMesh
-   TYPE(MeshType),           INTENT ( INOUT )  :: outDistribMesh
-   REAL(ReKi),               INTENT ( IN    )  :: L_F_B(:,:)           ! Lumped buoyancy force associated with the member
-   REAL(ReKi),               INTENT ( IN    )  :: L_F_BF(:,:)          ! Lumped buoyancy force associated flooded/filled fluid within the member
-   REAL(ReKi),               INTENT ( IN    )  :: D_F_B(:,:)           ! Lumped buoyancy force associated with the member
-   REAL(ReKi),               INTENT ( IN    )  :: D_F_BF(:,:)          ! Lumped buoyancy force associated flooded/filled fluid within the member
-   REAL(ReKi),               INTENT ( IN    )  :: D_F_MG(:,:)
-   REAL(ReKi),               INTENT ( IN    )  :: g                    ! gravity
-   !INTEGER,                  INTENT ( IN    )  :: numDistribMarkers
-   !TYPE(Morison_NodeType),   INTENT ( IN    )  :: distribMarkers(:)
-   !INTEGER,                  INTENT ( IN    )  :: numLumpedMarkers
-   !TYPE(Morison_NodeType),   INTENT ( IN    )  :: lumpedMarkers(:)
-   INTEGER,                  INTENT (   OUT )  :: ErrStat             ! returns a non-zero value when an error occurs  
-   CHARACTER(*),             INTENT (   OUT )  :: ErrMsg              ! Error message if ErrStat /= ErrID_None
+   REAL(ReKi),                         INTENT ( IN    )  :: MSL2SWL
+   REAL(ReKi),                         INTENT ( IN    )  :: WtrDpth
+   INTEGER,                            INTENT ( IN    )  :: UnSum
+   INTEGER,                            INTENT ( IN    )  :: numNodes
+   TYPE(Morison_NodeType),             INTENT ( IN    )  :: nodes(:)  
+   INTEGER,                            INTENT ( IN    )  :: numElements
+   TYPE(Morison_MemberType),           INTENT ( IN    )  :: elements(:)
+   INTEGER,                            INTENT ( IN    )  :: NOutputs
+   TYPE(OutParmType),     allocatable, INTENT ( IN    )  :: OutParam(:)
+   INTEGER,                            INTENT ( IN    )  :: NMOutputs
+   TYPE(Morison_MOutput), allocatable, INTENT ( IN    )  :: MOutLst(:)
+   INTEGER,                            INTENT ( IN    )  :: distribToNodeIndx(:)
+   INTEGER,                            INTENT ( IN    )  :: NJOutputs
+   TYPE(Morison_JOutput), allocatable, INTENT ( IN    )  :: JOutLst(:)
+   TYPE(MeshType),                     INTENT ( INOUT )  :: inLumpedMesh
+   TYPE(MeshType),                     INTENT ( INOUT )  :: outLumpedMesh
+   TYPE(MeshType),                     INTENT ( INOUT )  :: inDistribMesh
+   TYPE(MeshType),                     INTENT ( INOUT )  :: outDistribMesh
+   REAL(ReKi),                         INTENT ( IN    )  :: L_F_B(:,:)           ! Lumped buoyancy force associated with the member
+   REAL(ReKi),                         INTENT ( IN    )  :: L_F_BF(:,:)          ! Lumped buoyancy force associated flooded/filled fluid within the member
+   REAL(ReKi),                         INTENT ( IN    )  :: D_F_B(:,:)           ! Lumped buoyancy force associated with the member
+   REAL(ReKi),                         INTENT ( IN    )  :: D_F_BF(:,:)          ! Lumped buoyancy force associated flooded/filled fluid within the member
+   REAL(ReKi),                         INTENT ( IN    )  :: D_F_MG(:,:)
+   REAL(ReKi),                         INTENT ( IN    )  :: g                    ! gravity
+   !INTEGER,                      INTENT ( IN    )  :: numDistribMarkers
+   !TYPE(Morison_NodeType),       INTENT ( IN    )  :: distribMarkers(:)
+   !INTEGER,                      INTENT ( IN    )  :: numLumpedMarkers
+   !TYPE(Morison_NodeType),       INTENT ( IN    )  :: lumpedMarkers(:)
+   INTEGER,                            INTENT (   OUT )  :: ErrStat             ! returns a non-zero value when an error occurs  
+   CHARACTER(*),                       INTENT (   OUT )  :: ErrMsg              ! Error message if ErrStat /= ErrID_None
 
    INTEGER                                     :: I, J
    REAL(ReKi)                                  :: l                   ! length of an element
@@ -4353,6 +4353,8 @@ SUBROUTINE Morison_UpdateStates( Time, u, p, x, xd, z, OtherState, m, ErrStat, E
 END SUBROUTINE Morison_UpdateStates
 !> This routine is similar to InterpWrappedStpReal, except it returns only the slope for the interpolation.
 !! By returning the slope based on Time, we don't have to calculate this for every variable (Yary) we want to interpolate.
+!! NOTE: p%WaveTime (and most arrays here) start with index of 0 instead of 1, so we will subtract 1 from "normal" interpolation
+!! schemes.
 FUNCTION GetInterpolationSlope(Time, p, m, IntWrapIndx) RESULT( InterpSlope )
       REAL(DbKi),                        INTENT(IN   )  :: Time        !< Current simulation time in seconds
       TYPE(Morison_ParameterType),       INTENT(IN   )  :: p           !< Parameters
@@ -4364,21 +4366,21 @@ FUNCTION GetInterpolationSlope(Time, p, m, IntWrapIndx) RESULT( InterpSlope )
       REAL(ReKi)                                        :: InterpSlope
 
       Time_SiKi = REAL(Time, SiKi)
-      TimeMod = MOD(Time_SiKi, p%WaveTime(p%NStepWave + 1))
-      IF ( TimeMod <= p%WaveTime(2) )  THEN
-         m%LastIndWave = 1
+      TimeMod = MOD(Time_SiKi, p%WaveTime(p%NStepWave)) !p%WaveTime starts at index 0, so it has p%NStepWave+1 elements
+      IF ( TimeMod <= p%WaveTime(1) )  THEN !second element
+         m%LastIndWave = 0
       END IF
       
-      IF ( TimeMod <= p%WaveTime(1) )  THEN
-         m%LastIndWave = 1
+      IF ( TimeMod <= p%WaveTime(0) )  THEN
+         m%LastIndWave = 0
          InterpSlope = 0.0_ReKi  ! returns values at m%LastIndWave
-         IF(PRESENT(IntWrapIndx)) IntWrapIndx = 1
-      ELSE IF ( TimeMod >= p%WaveTime(p%NStepWave + 1) )  THEN
-         m%LastIndWave = p%NStepWave
-         InterpSlope = 1.0_ReKi  ! returns values at p%NStepWave + 1
-         IF(PRESENT(IntWrapIndx)) IntWrapIndx = p%NStepWave + 1
+         IF(PRESENT(IntWrapIndx)) IntWrapIndx = 0
+      ELSE IF ( TimeMod >= p%WaveTime(p%NStepWave) )  THEN
+         m%LastIndWave = p%NStepWave-1
+         InterpSlope = 1.0_ReKi  ! returns values at p%NStepWave
+         IF(PRESENT(IntWrapIndx)) IntWrapIndx = p%NStepWave
       ELSE
-         m%LastIndWave = MAX( MIN( m%LastIndWave, p%NStepWave-1 ), 1 )
+         m%LastIndWave = MAX( MIN( m%LastIndWave, p%NStepWave-1 ), 0 )
 
          DO
 
@@ -4406,7 +4408,7 @@ END FUNCTION GetInterpolationSlope
 FUNCTION InterpolateWithSlope(InterpSlope, Ind, YAry)
       REAL(ReKi), INTENT(IN)                            :: InterpSlope
       INTEGER(IntKi), INTENT(IN )                       :: Ind           !< Misc/optimization variables
-      REAL(SiKi), INTENT(IN)                            :: YAry(:)
+      REAL(SiKi), INTENT(IN)                            :: YAry(0:)
       REAL(ReKi)                                        :: InterpolateWithSlope
 
       InterpolateWithSlope = ( YAry(Ind+1) - YAry(Ind) )*InterpSlope + YAry(Ind)
@@ -4416,7 +4418,7 @@ END FUNCTION InterpolateWithSlope
 FUNCTION InterpolateWithSlopeR(InterpSlope, Ind, YAry)
       REAL(ReKi), INTENT(IN)                            :: InterpSlope
       INTEGER(IntKi), INTENT(IN )                       :: Ind           !< Misc/optimization variables
-      REAL(ReKi), INTENT(IN)                            :: YAry(:)
+      REAL(ReKi), INTENT(IN)                            :: YAry(0:)
       REAL(ReKi)                                        :: InterpolateWithSlopeR
 
       InterpolateWithSlopeR = ( YAry(Ind+1) - YAry(Ind) )*InterpSlope + YAry(Ind)
