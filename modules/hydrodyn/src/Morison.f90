@@ -641,7 +641,7 @@ SUBROUTINE GetMaxSimQuantities( numMGDepths, MGTop, MGBottom, MSL2SWL, Zseabed, 
    REAL(ReKi),                     INTENT    ( IN    )  :: MGBottom                 ! Global Z-value of the lower marine growth boundary
    REAL(ReKi),                     INTENT    ( IN    )  :: MSL2SWL                  ! Global Z-value of mean sea level
    REAL(ReKi),                     INTENT    ( IN    )  :: Zseabed                  ! Global Z-value of the top of the seabed
-   TYPE(Morison_FilledGroupType),  INTENT    ( IN    )  :: filledGroups(:)
+   TYPE(Morison_FilledGroupType), allocatable, INTENT    ( IN    )  :: filledGroups(:) ! this might not be allocated, so add the allocatable type here
    INTEGER,                        INTENT    ( IN    )  :: numJoints                ! number of joints specified in the inputs
    TYPE(Morison_JointType),        INTENT    ( IN    )  :: joints(:)                ! array of input joint data structures
    INTEGER,                        INTENT    ( IN    )  :: numMembers               ! number of members specified in the inputs
@@ -2078,23 +2078,23 @@ SUBROUTINE SetElementCoefs( SimplCd, SimplCdMG, SimplCa, SimplCaMG, SimplCp, Sim
 !     the input data.  
 !---------------------------------------------------------------------------------------------------- 
 
-   REAL(ReKi),                INTENT( IN    )  :: SimplCd 
-   REAL(ReKi),                INTENT( IN    )  :: SimplCdMG
-   REAL(ReKi),                INTENT( IN    )  :: SimplCa
-   REAL(ReKi),                INTENT( IN    )  :: SimplCaMG 
-   REAL(ReKi),                INTENT( IN    )  :: SimplCp
-   REAL(ReKi),                INTENT( IN    )  :: SimplCpMG 
-   REAL(ReKi),                INTENT( IN    )  :: SimplAxCa
-   REAL(ReKi),                INTENT( IN    )  :: SimplAxCaMG 
-   REAL(ReKi),                INTENT( IN    )  :: SimplAxCp
-   REAL(ReKi),                INTENT( IN    )  :: SimplAxCpMG 
-   TYPE(Morison_CoefMembers), INTENT( IN    )  :: CoefMembers(:)
-   INTEGER,                   INTENT( IN    )  :: NCoefDpth
-   TYPE(Morison_CoefDpths),   INTENT( IN    )  :: CoefDpths(:)
-   INTEGER,                   INTENT( IN    )  :: numNodes
-   INTEGER,                   INTENT( IN    )  :: numElements
-   TYPE(Morison_MemberType),  INTENT( INOUT )  :: elements(:)
-   TYPE(Morison_NodeType),    INTENT( IN    )  :: nodes(:)
+   REAL(ReKi),                             INTENT( IN    )  :: SimplCd 
+   REAL(ReKi),                             INTENT( IN    )  :: SimplCdMG
+   REAL(ReKi),                             INTENT( IN    )  :: SimplCa
+   REAL(ReKi),                             INTENT( IN    )  :: SimplCaMG 
+   REAL(ReKi),                             INTENT( IN    )  :: SimplCp
+   REAL(ReKi),                             INTENT( IN    )  :: SimplCpMG 
+   REAL(ReKi),                             INTENT( IN    )  :: SimplAxCa
+   REAL(ReKi),                             INTENT( IN    )  :: SimplAxCaMG 
+   REAL(ReKi),                             INTENT( IN    )  :: SimplAxCp
+   REAL(ReKi),                             INTENT( IN    )  :: SimplAxCpMG 
+   TYPE(Morison_CoefMembers), allocatable, INTENT( IN    )  :: CoefMembers(:)
+   INTEGER,                                INTENT( IN    )  :: NCoefDpth
+   TYPE(Morison_CoefDpths),   allocatable, INTENT( IN    )  :: CoefDpths(:)
+   INTEGER,                                INTENT( IN    )  :: numNodes
+   INTEGER,                                INTENT( IN    )  :: numElements
+   TYPE(Morison_MemberType),               INTENT( INOUT )  :: elements(:)
+   TYPE(Morison_NodeType),                 INTENT( IN    )  :: nodes(:)
    
    TYPE(Morison_NodeType)                      :: node1, node2
    
@@ -2227,10 +2227,10 @@ END SUBROUTINE SetAxialCoefs
 
 SUBROUTINE SetNodeMG( numMGDepths, MGDepths, numNodes, nodes )
 
-   INTEGER,                      INTENT( IN    )  :: numMGDepths
-   TYPE(Morison_MGDepthsType),   INTENT( IN    )  :: MGDepths(:)
-   INTEGER,                      INTENT( IN    )  :: numNodes
-   TYPE(Morison_NodeType),       INTENT( INOUT )  :: nodes(:)
+   INTEGER,                                  INTENT( IN    )  :: numMGDepths
+   TYPE(Morison_MGDepthsType), allocatable,  INTENT( IN    )  :: MGDepths(:)
+   INTEGER,                                  INTENT( IN    )  :: numNodes
+   TYPE(Morison_NodeType),                   INTENT( INOUT )  :: nodes(:)
 
    INTEGER                                     :: I, J
    REAL(ReKi)              :: z
@@ -2286,7 +2286,7 @@ END SUBROUTINE SetNodeMG
 SUBROUTINE SetElementFillProps( numFillGroups, filledGroups, numElements, elements )
 
    INTEGER,                       INTENT( IN    )  :: numFillGroups
-   TYPE(Morison_FilledGroupType), INTENT( IN    )  :: filledGroups(:)
+   TYPE(Morison_FilledGroupType), allocatable, INTENT( IN    )  :: filledGroups(:) ! this might not be allocated on entry
    INTEGER,                       INTENT( IN    )  :: numElements
    TYPE(Morison_MemberType),      INTENT( INOUT )  :: elements(:)  
    
