@@ -113,3 +113,6 @@ jobs:
         uses: ./.github/actions/compile
         with:
           build-target: 'all'
+      - name: simple-test
+        working-directory: /openfast/build
+        run: ./glue-codes/openfast/openfast -v
