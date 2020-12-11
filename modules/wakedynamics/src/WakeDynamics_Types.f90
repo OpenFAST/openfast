@@ -118,6 +118,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: c      !<  [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: d      !<  [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: r_wake      !<  [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Vx_high      !<  [-]
   END TYPE WD_MiscVarType
 ! =======================
 ! =========  WD_ParameterType  =======
@@ -2250,6 +2251,18 @@ IF (ALLOCATED(SrcMiscData%r_wake)) THEN
   END IF
     DstMiscData%r_wake = SrcMiscData%r_wake
 ENDIF
+IF (ALLOCATED(SrcMiscData%Vx_high)) THEN
+  i1_l = LBOUND(SrcMiscData%Vx_high,1)
+  i1_u = UBOUND(SrcMiscData%Vx_high,1)
+  IF (.NOT. ALLOCATED(DstMiscData%Vx_high)) THEN 
+    ALLOCATE(DstMiscData%Vx_high(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%Vx_high.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstMiscData%Vx_high = SrcMiscData%Vx_high
+ENDIF
  END SUBROUTINE WD_CopyMisc
 
  SUBROUTINE WD_DestroyMisc( MiscData, ErrStat, ErrMsg )
@@ -2290,6 +2303,9 @@ IF (ALLOCATED(MiscData%d)) THEN
 ENDIF
 IF (ALLOCATED(MiscData%r_wake)) THEN
   DEALLOCATE(MiscData%r_wake)
+ENDIF
+IF (ALLOCATED(MiscData%Vx_high)) THEN
+  DEALLOCATE(MiscData%Vx_high)
 ENDIF
  END SUBROUTINE WD_DestroyMisc
 
@@ -2377,6 +2393,11 @@ ENDIF
   IF ( ALLOCATED(InData%r_wake) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! r_wake upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%r_wake)  ! r_wake
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! Vx_high allocated yes/no
+  IF ( ALLOCATED(InData%Vx_high) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! Vx_high upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%Vx_high)  ! Vx_high
   END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -2567,6 +2588,21 @@ ENDIF
 
       DO i1 = LBOUND(InData%r_wake,1), UBOUND(InData%r_wake,1)
         ReKiBuf(Re_Xferred) = InData%r_wake(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%Vx_high) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vx_high,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vx_high,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%Vx_high,1), UBOUND(InData%Vx_high,1)
+        ReKiBuf(Re_Xferred) = InData%Vx_high(i1)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
@@ -2792,6 +2828,24 @@ ENDIF
     END IF
       DO i1 = LBOUND(OutData%r_wake,1), UBOUND(OutData%r_wake,1)
         OutData%r_wake(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Vx_high not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%Vx_high)) DEALLOCATE(OutData%Vx_high)
+    ALLOCATE(OutData%Vx_high(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vx_high.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%Vx_high,1), UBOUND(OutData%Vx_high,1)
+        OutData%Vx_high(i1) = ReKiBuf(Re_Xferred)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF

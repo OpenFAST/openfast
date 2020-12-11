@@ -211,8 +211,8 @@ subroutine NearWakeCorrection( Ct_azavg_filt, Vx_rel_disk_filt, p, m, Vx_wake, D
    real(ReKi) :: Ct_avg            ! Average Cr
    integer(IntKi) :: j, errStat2
    character(*), parameter  :: RoutineName = 'NearWakeCorrection'
-   real(ReKi), parameter    :: Ct_low = 0.96_ReKi, Ct_high = 1.20_ReKi ! Limits for blending
-   real(ReKi), allocatable  :: Vx_low(:), Vx_high(:)    !< Axial wake velocity deficit at wake planes, distributed radially
+   real(ReKi), parameter    :: Ct_low = 0.96_ReKi, Ct_high = 1.10_ReKi ! Limits for blending
+   real(ReKi), allocatable  :: Vx_low(:)       !< Axial wake velocity deficit at wake planes, distributed radially
    
    errStat = ErrID_None
    errMsg  = ''
@@ -243,16 +243,13 @@ subroutine NearWakeCorrection( Ct_azavg_filt, Vx_rel_disk_filt, p, m, Vx_wake, D
 
    else if ( Ct_avg < Ct_high ) then
       ! Blending Ct region between Ct_low and Ct_high
-      allocate(Vx_high(0:p%NumRadii-1), STAT=errStat2); if(errStat2/=0) call SetErrStat(ErrID_Fatal, 'Could not allocate memory for Vx_high', errStat, errMsg, RoutineName)
-
       call Vx_low_Ct (Vx_wake, p%r)         ! Evaluate Vx_wake (Ct_low)  at p%r
-      call Vx_high_Ct(Vx_high, p%r, Ct_avg) ! Evaluate Vx_high (Ct_high) at p%r
+      call Vx_high_Ct(m%Vx_high, p%r, Ct_avg) ! Evaluate Vx_high (Ct_high) at p%r
 
       alpha = 1.0_ReKi - (Ct_avg - Ct_low) / (Ct_high-Ct_low) ! linear blending coefficient
       do j=0,p%NumRadii-1
-         Vx_wake(j) = alpha*Vx_wake(j)+(1.0_ReKi-alpha)*Vx_high(j)  ! Blended CT velocity
+         Vx_wake(j) = alpha*Vx_wake(j)+(1.0_ReKi-alpha)*m%Vx_high(j)  ! Blended CT velocity
       end do
-      if (allocated(Vx_high)) deallocate(Vx_high)
    end if   
 
 contains
@@ -290,14 +287,8 @@ contains
       real(ReKi),                intent(in ) :: Ct_avg ! < Maximum Ct along the span
       real(ReKi) :: mu, sigma ! Gaussian shape parameters for high thrust region
       real(ReKi), parameter :: x_bar=4._ReKi ! dimensionless downstream distance used to tune the model
-      ! Mu and sigma, clipped for low Ct (will not happen)
-      if (Ct_avg<1.0_ReKi) then
-         mu    = 0.5_Reki
-         sigma = 0.68_Reki*D_Rotor
-      else
-         mu    = (3._ReKi/(2._ReKi*Ct_avg**2-1._ReKi)  + 4._ReKi -x_bar/2) /10._ReKi
-         sigma = D_rotor*  (0.5_ReKi*Ct_avg + x_bar/(25._ReKi))
-      endif
+      mu    = (3._ReKi/(2._ReKi*Ct_avg**2-1._ReKi)  + 4._ReKi -x_bar/2) /10._ReKi
+      sigma = D_rotor*  (0.5_ReKi*Ct_avg + x_bar/(25._ReKi))
       do j=0,size(r_eval)-1
          Vx(j) = -Vx_rel_disk_filt*mu*exp(-r_eval(j)**2.0_ReKi/sigma**2.0_ReKi) !! High CT Velocity
       end do
@@ -541,6 +532,8 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%d.', errStat, errMsg, RoutineName )  
    allocate (    m%r_wake(0:p%NumRadii-1 ) , STAT=ErrStat2 )
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%r_wake.', errStat, errMsg, RoutineName )  
+   allocate (    m%Vx_high(0:p%NumRadii-1 ) , STAT=ErrStat2 )
+      if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%Vx_high.', errStat, errMsg, RoutineName )  
    if (errStat /= ErrID_None) return
    
       !............................................................................................

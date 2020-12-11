@@ -93,6 +93,7 @@ typedef   ^         MiscVarType   ReKi  b       {:}    - -   ""
 typedef   ^         MiscVarType   ReKi  c       {:}    - -   ""     
 typedef   ^         MiscVarType   ReKi  d       {:}    - -   "" 
 typedef   ^         MiscVarType   ReKi  r_wake  {:}    - -   ""    
+typedef   ^         MiscVarType   ReKi  Vx_high {:}    - -   ""    
  
 
 # ..... Parameters ................................................................................................................
