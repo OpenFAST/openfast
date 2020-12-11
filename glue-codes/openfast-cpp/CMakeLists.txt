@@ -49,11 +49,10 @@ target_link_libraries(openfastcpplib
   ${MPI_LIBRARIES}
   ${CMAKE_DL_LIBS})
 
-add_executable(openfastcpp
-  src/FAST_Prog.cpp)
-
+add_executable(openfastcpp src/FAST_Prog.cpp)
 target_link_libraries(openfastcpp openfastcpplib openfastlib
-  ${MPI_LIBRARIES} ${YAML_LIBRARIES} 
+  ${MPI_LIBRARIES}
+  ${YAML_LIBRARIES} 
   ${HDF5_C_LIBRARIES}
   ${HDF5_HL_LIBRARIES}
   ${ZLIB_LIBRARIES}
