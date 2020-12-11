@@ -199,66 +199,100 @@ end function WakeDiam
 
 !----------------------------------------------------------------------------------------------------------------------------------   
 !> This subroutine computes the near wake correction : Vx_wake  
-subroutine NearWakeCorrection( Ct_azavg_filt, Vx_rel_disk_filt, p, m, Vx_wake, errStat, errMsg )
-   real(ReKi),                   intent(in   ) :: Ct_azavg_filt(0:) !< Time-filtered azimuthally averaged thrust force coefficient (normal to disk), distributed radially
+subroutine NearWakeCorrection( Ct_azavg_filt, Vx_rel_disk_filt, p, m, Vx_wake, D_rotor,errStat, errMsg )
+   real(ReKi),                   intent(in   ) :: D_rotor, Ct_azavg_filt(0:) !< Rotor diameter; Time-filtered azimuthally averaged thrust force coefficient (normal to disk), distributed radially
    real(ReKi),                   intent(in   ) :: Vx_rel_disk_filt  !< Time-filtered rotor-disk-averaged relative wind speed (ambient + deficits + motion), normal to disk
    type(WD_ParameterType),       intent(in   ) :: p                 !< Parameters
    type(WD_MiscVarType),         intent(inout) :: m                 !< Initial misc/optimization variables
-   real(ReKi),                   intent(inout) :: Vx_wake(0:,0:)    !< Axial wake velocity deficit at wake planes, distributed radially
+   real(ReKi),                   intent(inout) :: Vx_wake(0:)       !< Axial wake velocity deficit at first plane
    integer(IntKi),               intent(  out) :: errStat           !< Error status of the operation
    character(*),                 intent(  out) :: errMsg            !< Error message if errStat /= ErrID_None
-   real(ReKi)     :: a_interp
-   integer(IntKi) :: j, ILo
-   character(*), parameter            :: RoutineName = 'NearWakeCorrection'
+   real(ReKi) :: alpha
+   real(ReKi) :: Ct_avg            ! Average Cr
+   integer(IntKi) :: j, errStat2
+   character(*), parameter  :: RoutineName = 'NearWakeCorrection'
+   real(ReKi), parameter    :: Ct_low = 0.96_ReKi, Ct_high = 1.10_ReKi ! Limits for blending
+   real(ReKi), allocatable  :: Vx_low(:)       !< Axial wake velocity deficit at wake planes, distributed radially
    
    errStat = ErrID_None
    errMsg  = ''
-   
-   m%r_wake(0) = 0.0_ReKi
-   
-   do j=0,p%NumRadii-1
-         
-         ! compute m%a using the [n+1] values of Ct_azavg_filt
-      if ( Ct_azavg_filt(j) > 2.0_ReKi ) then
-         ! THROW ERROR because we are in the prop-brake region
-         ! TEST: E5
-         call SetErrStat(ErrID_FATAL, 'Wake model is not valid in the propeller-brake region, i.e., Ct_azavg_filt(j) > 2.0.', errStat, errMsg, RoutineName) 
-         
-         return
-      else if ( Ct_azavg_filt(j) >= 24.0_ReKi/25.0_ReKi ) then
-         m%a(j) = (2.0_ReKi + 3.0_ReKi*sqrt(14.0_ReKi*Ct_azavg_filt(j)-12.0_ReKi))/14.0_ReKi
-      else
-         m%a(j) =  0.5_ReKi - 0.5_ReKi*sqrt( 1.0_ReKi-Ct_azavg_filt(j))
-      end if
-      
-      if ( EqualRealNos(m%a(j),(1.0_ReKi / p%C_NearWake)) .or.  (m%a(j) > (1.0_ReKi / p%C_NearWake)) ) then
-         ! TEST: E6
-         call SetErrStat(ErrID_FATAL, 'Local induction is high enough to invalidate the near-wake correction, i.e., m%a(i) >= 1.0_ReKi / p%C_NearWake.', errStat, errMsg, RoutineName) 
-        
-         return
-      end if
-      
-      if (j > 0) then
-         m%r_wake(j) = sqrt(m%r_wake(j-1)**2 + p%dr*( ((1.0_ReKi - m%a(j))*p%r(j)) / (1.0_ReKi-p%C_NearWake*m%a(j)) + ((1.0_ReKi - m%a(j-1))*p%r(j-1)) / (1.0_ReKi-p%C_NearWake*m%a(j-1)) ) )
-      end if
-      
-   end do
-   
-   ! NOTE: We need another loop over NumRadii because we need the complete m%a() vector so that we can interpolate into m%a() using the value of r_wake
-   
-      ! Use the [n+1] version of Vx_rel_disk_filt to determine the [n+1] version of Vx_wake(:,0)
-   Vx_wake(0,0) = -Vx_rel_disk_filt*p%C_Nearwake*m%a(0)
-   
-   ILo = 0
-   do j=1, p%NumRadii-1     
-     
-      ! given r_wake and m%a at p%dr increments, find value of m%a(r_wake) using interpolation 
-      a_interp = InterpBin( p%r(j),m%r_wake, m%a, ILo, p%NumRadii ) !( XVal, XAry, YAry, ILo, AryLen )
-      
-         !                 [n+1] 
-      Vx_wake(j,0) = -Vx_rel_disk_filt*p%C_NearWake*a_interp
 
-   end do
+   ! Computing average Ct = \int r Ct dr / \int r dr = 2/R^2 \int r Ct dr using trapz
+   ! NOTE: r goes beyond the rotor (works since Ct=0 beyond that)
+   Ct_avg = 0
+   do j=1,p%NumRadii-1
+      Ct_avg = Ct_avg + 0.5_ReKi * (p%r(j) * Ct_azavg_filt(j) + p%r(j-1) * Ct_azavg_filt(j-1)) * (p%r(j)-p%r(j-1))
+   enddo
+   Ct_avg = 2*Ct_avg/((D_rotor/2)**2)
+
+   if (Ct_avg > 2.0_ReKi ) then
+      ! THROW ERROR because we are in the prop-brake region
+      ! TEST: E5
+      call SetErrStat(ErrID_FATAL, 'Wake model is not valid in the propeller-brake region, i.e., Ct_azavg_filt(j) > 2.0.', errStat, errMsg, RoutineName)
+      return
+
+   else if ( Ct_avg < Ct_low ) then
+      ! Low Ct region
+      call Vx_low_Ct(Vx_wake, p%r) ! Compute Vx_wake at p%r
+
+   else if ( Ct_avg >= Ct_high ) then
+      ! high Ct region
+      call Vx_high_Ct(Vx_wake, p%r, Ct_avg) ! Compute Vx_wake at p%r
+      ! m%r_wake = p%r ! No distinction between r_wake and r, r_wake is just a temp variable anyway
+      ! m%a =... ! Does this need to be defined?
+
+   else if ( Ct_avg < Ct_high ) then
+      ! Blending Ct region between Ct_low and Ct_high
+      call Vx_low_Ct (Vx_wake, p%r)         ! Evaluate Vx_wake (Ct_low)  at p%r
+      call Vx_high_Ct(m%Vx_high, p%r, Ct_avg) ! Evaluate Vx_high (Ct_high) at p%r
+
+      alpha = 1.0_ReKi - (Ct_avg - Ct_low) / (Ct_high-Ct_low) ! linear blending coefficient
+      do j=0,p%NumRadii-1
+         Vx_wake(j) = alpha*Vx_wake(j)+(1.0_ReKi-alpha)*m%Vx_high(j)  ! Blended CT velocity
+      end do
+   end if   
+
+contains
+
+   !> Compute the induced velocity distribution in the wake for low thrust region 
+   subroutine Vx_low_Ct(Vx, r_eval)
+      real(ReKi), dimension(0:), intent(out) :: Vx     !< Wake induced velocity (<0)
+      real(ReKi), dimension(0:), intent(in ) :: r_eval !< Radial position where velocity is to be evaluated
+      integer(IntKi) :: ILo ! index for interpolation
+      real(ReKi) :: a_interp
+
+      ! compute r_wake and m%a using Ct_azavg_filt
+      m%r_wake(0) = 0.0_ReKi
+      do j=0,p%NumRadii-1
+         ! NOTE: Ct clipped instead of (2.0_ReKi + 3.0_ReKi*sqrt(14.0_ReKi*Ct_azavg_filt(j)-12.0_ReKi))/14.0_ReKi
+         m%a(j) =  0.5_ReKi - 0.5_ReKi*sqrt( 1.0_ReKi-min(Ct_azavg_filt(j),24.0_ReKi/25.0_ReKi))
+         if (j > 0) then
+            m%r_wake(j)  = sqrt(m%r_wake(j-1)**2.0_ReKi + p%dr*( ((1.0_ReKi - m%a(j))*p%r(j)) / (1.0_ReKi-p%C_NearWake*m%a(j)) + ((1.0_ReKi - m%a(j-1))*p%r(j-1)) / (1.0_ReKi-p%C_NearWake*m%a(j-1)) ) )
+         end if
+      end do
+      ! Use a and rw to determine Vx
+      Vx(0) = -Vx_rel_disk_filt*p%C_Nearwake*m%a(0)
+      ILo = 0
+      do j=1, size(r_eval)-1
+         ! given r_wake and m%a at p%dr increments, find value of m%a(r_wake) using interpolation 
+         a_interp = InterpBin( r_eval(j), m%r_wake, m%a, ILo, p%NumRadii ) !( XVal, XAry, YAry, ILo, AryLen )
+         Vx(j) = -Vx_rel_disk_filt*p%C_NearWake*a_interp !! Low CT velocity
+      end do
+   end subroutine Vx_low_Ct
+
+   !> Compute the induced velocity distribution in the wake for high thrust region 
+   subroutine Vx_high_Ct(Vx, r_eval, Ct_avg)
+      real(ReKi), dimension(0:), intent(out) :: Vx     !< Wake induced velocity (<0)
+      real(ReKi), dimension(0:), intent(in ) :: r_eval !< Wake radial coordinate 
+      real(ReKi),                intent(in ) :: Ct_avg ! < Maximum Ct along the span
+      real(ReKi) :: mu, sigma ! Gaussian shape parameters for high thrust region
+      real(ReKi), parameter :: x_bar=4._ReKi ! dimensionless downstream distance used to tune the model
+      mu    = (3._ReKi/(2._ReKi*Ct_avg**2-1._ReKi)  + 4._ReKi -x_bar/2) /10._ReKi
+      sigma = D_rotor*  (0.5_ReKi*Ct_avg + x_bar/(25._ReKi))
+      do j=0,size(r_eval)-1
+         Vx(j) = -Vx_rel_disk_filt*mu*exp(-r_eval(j)**2.0_ReKi/sigma**2.0_ReKi) !! High CT Velocity
+      end do
+   end subroutine Vx_high_Ct
    
 end subroutine NearWakeCorrection
 
@@ -498,6 +532,8 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%d.', errStat, errMsg, RoutineName )  
    allocate (    m%r_wake(0:p%NumRadii-1 ) , STAT=ErrStat2 )
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%r_wake.', errStat, errMsg, RoutineName )  
+   allocate (    m%Vx_high(0:p%NumRadii-1 ) , STAT=ErrStat2 )
+      if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%Vx_high.', errStat, errMsg, RoutineName )  
    if (errStat /= ErrID_None) return
    
       !............................................................................................
@@ -835,7 +871,7 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
       !  filtered, azimuthally-averaged Ct values at each radial station
    xd%Ct_azavg_filt (:) = xd%Ct_azavg_filt(:)*p%filtParam + u%Ct_azavg(:)*p%oneMinusFiltParam
    
-   call NearWakeCorrection( xd%Ct_azavg_filt, xd%Vx_rel_disk_filt, p, m, xd%Vx_wake, errStat, errMsg )
+   call NearWakeCorrection( xd%Ct_azavg_filt, xd%Vx_rel_disk_filt, p, m, xd%Vx_wake(:,0), u%D_rotor, errStat, errMsg )
    
    !Used for debugging: write(51,'(I5,100(1x,ES10.2E2))') n, xd%x_plane(n), xd%x_plane(n)/xd%D_rotor_filt(n), xd%Vx_wind_disk_filt(n) + xd%Vx_wake(:,n), xd%Vr_wake(:,n)    
    
@@ -908,7 +944,7 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
       end do
      
          ! Initialze Vx_wake; Vr_wake is already initialized to zero, so, we don't need to do that here.
-      call NearWakeCorrection( u%Ct_azavg, u%Vx_rel_disk, p, m, y%Vx_wake, errStat, errMsg )
+      call NearWakeCorrection( u%Ct_azavg, u%Vx_rel_disk, p, m, y%Vx_wake(:,0), u%D_rotor, errStat, errMsg )
          if (errStat > AbortErrLev)  return
       y%Vx_wake(:,1) = y%Vx_wake(:,0) 
  
@@ -1016,7 +1052,7 @@ subroutine InitStatesWithInputs(numPlanes, numRadii, u, p, xd, m, errStat, errMs
       ! Initialze Ct_azavg_filt and Vx_wake; Vr_wake is already initialized to zero, so, we don't need to do that here.
    xd%Ct_azavg_filt (:) = u%Ct_azavg(:) 
    
-   call NearWakeCorrection( xd%Ct_azavg_filt, xd%Vx_rel_disk_filt, p, m, xd%Vx_wake, errStat, errMsg )
+   call NearWakeCorrection( xd%Ct_azavg_filt, xd%Vx_rel_disk_filt, p, m, xd%Vx_wake(:,0), u%D_rotor, errStat, errMsg )
    xd%Vx_wake(:,1) = xd%Vx_wake(:,0)
       
 end subroutine InitStatesWithInputs
