@@ -1086,7 +1086,7 @@ SUBROUTINE ValidateInitInputData( DT_low, InitInp, InputFileData, errStat, errMs
    if (  InputFileData%NumRadii    <   2  )  call SetErrStat ( ErrID_Fatal, 'Number of radii in the radial finite-difference grid must be greater than one.', ErrSTat, errMsg, RoutineName )
    if (  InputFileData%dr          <=  0.0)  call SetErrStat ( ErrID_Fatal, 'dr must be greater than zero.', errStat, errMsg, RoutineName ) 
    if (  InputFileData%f_c         <=  0.0)  call SetErrStat ( ErrID_Fatal, 'f_c must be greater than or equal to zero.', errStat, errMsg, RoutineName ) 
-   if (  InputFileData%C_NearWake  <=  1.0)  call SetErrStat ( ErrID_Fatal, 'C_NearWake must be greater than 1.0.', errStat, errMsg, RoutineName ) 
+   if ( (InputFileData%C_NearWake  <=  1.0)  .or. (InputFileData%C_NearWake  >= 2.5)) call SetErrStat ( ErrID_Fatal, 'C_NearWake must be greater than 1.0 and less than 2.5.', errStat, errMsg, RoutineName ) 
    if (  InputFileData%k_vAmb      <   0.0)  call SetErrStat ( ErrID_Fatal, 'k_vAmb must be greater than or equal to zero.', errStat, errMsg, RoutineName ) 
    if (  InputFileData%k_vShr      <   0.0)  call SetErrStat ( ErrID_Fatal, 'k_vShr must be greater than or equal to zero.', errStat, errMsg, RoutineName ) 
    if (  InputFileData%C_vAmb_DMin <   0.0)  call SetErrStat ( ErrID_Fatal, 'C_vAmb_DMin must be greater than or equal to zero.', errStat, errMsg, RoutineName ) 
