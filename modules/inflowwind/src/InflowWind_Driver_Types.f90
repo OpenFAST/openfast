@@ -66,6 +66,10 @@ MODULE InflowWind_Driver_Types
       LOGICAL                 :: FFTOutputInit        = .FALSE.      !< Is the FFT output file initialized
       LOGICAL                 :: Verbose              = .FALSE.      !< Verbose error reporting
       LOGICAL                 :: VVerbose             = .FALSE.      !< Very Verbose error reporting
+
+      LOGICAL                 :: WrHAWC               = .FALSE.      !< Requested file conversion to HAWC2 format?
+      LOGICAL                 :: WrBladed             = .FALSE.      !< Requested file conversion to Bladed format?
+      LOGICAL                 :: WrVTK                = .FALSE.      !< Requested file output as VTK?
    END TYPE    IfWDriver_Flags
 
 

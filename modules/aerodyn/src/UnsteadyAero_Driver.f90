@@ -41,20 +41,21 @@ program UnsteadyAero_Driver
    
    
     ! Variables
-   integer(IntKi), parameter                     :: NumInp = 1           ! Number of inputs sent to HydroDyn_UpdateStates
+   integer(IntKi), parameter                     :: NumInp = 2           ! Number of inputs sent to UA_UpdateStates (must be at least 2)
    
-   real(DbKi)  :: dt, t
-   integer     :: i, j, k, n 
+   real(DbKi)  :: dt, t, uTimes(NumInp)
+   integer     :: i, j, k, n, iu
    type(UA_InitInputType)                        :: InitInData           ! Input data for initialization
    type(UA_InitOutputType)                       :: InitOutData          ! Output data from initialization
+   type(UA_ContinuousStateType)                  :: x                    ! Continuous states
    type(UA_DiscreteStateType)                    :: xd                   ! Discrete states
    type(UA_OtherStateType)                       :: OtherState           ! Other/optimization states
    type(UA_MiscVarType)                          :: m                    ! Misc/optimization variables
    type(UA_ParameterType)                        :: p                    ! Parameters
    type(UA_InputType)                            :: u(NumInp)            ! System inputs
    type(UA_OutputType)                           :: y                    ! System outputs
-   integer(IntKi)                                :: ErrStat, errStat2    ! Status of error message
-   character(ErrMsgLen)                          :: ErrMsg, errMsg2     ! Error message if ErrStat /= ErrID_None
+   integer(IntKi)                                :: ErrStat              ! Status of error message
+   character(ErrMsgLen)                          :: ErrMsg               ! Error message if ErrStat /= ErrID_None
    
    integer, parameter                            :: NumAFfiles = 1
    character(1024)                               :: afNames(NumAFfiles)
@@ -70,7 +71,9 @@ program UnsteadyAero_Driver
    character(*), parameter                       :: RoutineName = 'UnsteadyAero_Driver'
    real(DbKi), allocatable                       :: timeArr(:)
    real(ReKi), allocatable                       :: AOAarr(:)
-   real(ReKi), allocatable                       :: Uarr(:) !RRD
+   real(ReKi), allocatable                       :: Uarr(:)
+   real(ReKi), allocatable                       :: OmegaArr(:)
+   
    CHARACTER(200)                                :: git_commit
    TYPE(ProgDesc), PARAMETER   :: version   = ProgDesc( 'UnsteadyAero Driver', '', '' )  ! The version number of this program.
       ! Initialize the NWTC library
@@ -134,10 +137,9 @@ program UnsteadyAero_Driver
       InitInData%Flookup      = .FALSE.
       InitInData%a_s          = 340.29 ! m/s  
       InitInData%c(1,1)       = 1.0
+      
       dvrInitInp%InflowVel    = 30.0 ! m/s
       dvrInitInp%Re           = 75  ! million
-      dvrInitInp%UAMod        = 1
-      dvrInitInp%Flookup      = .FALSE.
       dvrInitInp%AirFoil1     = './OSU075_FAST.txt'
       dvrInitInp%SimMod       = 1
       dvrInitInp%NCycles      = 3.0
@@ -153,28 +155,27 @@ program UnsteadyAero_Driver
    if ( dvrInitInp%SimMod == 1 ) then
          ! Using the frequency and NCycles, determine how long the simulation needs to run
       simTime   = dvrInitInp%NCycles/dvrInitInp%Frequency
-      nSimSteps = dvrInitInp%StepsPerCycle*dvrInitInp%NCycles
+      nSimSteps = dvrInitInp%StepsPerCycle*dvrInitInp%NCycles  ! we could add 1 here to make this a complete cycle
       dt        = simTime / nSimSteps
       
    else
          ! Read time-series data file with a 1 line header and then each row contains time-step data with 4, white-space-separated columns
-         ! time  Angle-fo-attack  
-      call ReadTimeSeriesData( dvrInitInp%InputsFile, nSimSteps, timeArr, AOAarr, Uarr, errStat, errMsg )
+         ! time,  Angle-of-attack, Vrel, omega 
+      call ReadTimeSeriesData( dvrInitInp%InputsFile, nSimSteps, timeArr, AOAarr, Uarr, OmegaArr, errStat, errMsg )
          call checkError()
-      dt = (timeArr(nSimSteps) - timeArr(1)) / nSimSteps
-   end if
+      dt = (timeArr(nSimSteps) - timeArr(1)) / (nSimSteps-1)
+      nSimSteps = nSimSteps-NumInp + 1
       
+   end if
      
-      ! All nodes/blades are using the same 2D airfoil
-   afNames(1)  = dvrInitInp%AirFoil1
-   AFIndx(1,1) = 1
-   
-      ! Initialize the Airfoil Info Params
-   call Init_AFI( NumAFfiles, afNames, InitInData%Flookup, dvrInitInp%UseCm, AFI_Params, errStat, errMsg )
-      call checkError()
-   
     ! Initialize UnsteadyAero
-   call UA_Init( InitInData, u(1), p, xd, OtherState, y, m, dt, InitOutData, errStat, errMsg ) 
+   call UA_Init( InitInData, u(1), p, x, xd, OtherState, y, m, dt, InitOutData, errStat, errMsg ) 
+      call checkError()
+
+      ! Initialize the Airfoil Info Params
+   afNames(1)  = dvrInitInp%AirFoil1 ! All nodes/blades are using the same 2D airfoil
+   AFIndx(1,1) = 1
+   call Init_AFI( p, NumAFfiles, afNames, dvrInitInp%UseCm, AFI_Params, errStat, errMsg )
       call checkError()
    
    if (p%NumOuts > 0) then
@@ -185,7 +186,6 @@ program UnsteadyAero_Driver
    
       call OpenFOutFile ( unOutFile, outFileName, errStat, errMsg ) 
          call checkError()
-      
       
          ! Write the output file header
       p%OutSFmt = 'A19'
@@ -211,51 +211,47 @@ program UnsteadyAero_Driver
       Frmt     = '('//trim(Int2LStr(p%NumOuts*p%numBlades*p%nNodesPerBlade))//'(:,A,'//trim( p%OutFmt )//'))'
    end if
    
+   
+      ! set inputs:
+      DO iu = 1, NumInp
+         call setUAinputs(-iu+2,  u(iu), uTimes(iu), dt, dvrInitInp, timeArr, AOAarr, Uarr, OmegaArr)
+      END DO
+   
       ! Set inputs which do not vary with node or time
-   u(1)%U  = dvrInitInp%InflowVel  ! m/s
-   u(1)%Re = dvrInitInp%Re  ! not used at the moment
-            
+
       ! time marching loop
    do n = 1, nSimSteps
-      if ( dvrInitInp%SimMod == 1 ) then
-         t            = (n-1)*dt
-         u(1)%alpha =   (dvrInitInp%Amplitude * sin((n+dvrInitInp%Phase-1)*2*pi/dvrInitInp%StepsPerCycle) + dvrInitInp%Mean)*pi/180.0   ! This needs to be in radians
-      
-      else
-         ! Load timestep data from the time-series inputs which were previous read from input file
-         t            = timeArr(n)
-         u(1)%alpha   = AOAarr (n)*pi/180.0   ! This needs to be in radians
-         u(1)%U       = Uarr(n)
-      end if
-      
-         ! set the inputs for the node
-      
-      
-      do j = 1,InitInData%numBlades
-         do i = 1,InitInData%nNodesPerBlade
+
+      i = 1 ! nodes per blade
+      j = 1 ! number of blades
      
-               ! Need to use MiscVar to store which element we are operating on
-            m%iBladeNode = i
-            m%iBlade     = j
+      ! set inputs:
+      DO iu = NumInp-1, 1, -1
+         u(     iu+1) = u(     iu)
+         uTimes(iu+1) = uTimes(iu)
+      END DO
+  
+      ! first value of uTimes/u contain inputs at t+dt
+      call setUAinputs(n+1,  u(1), uTimes(1), dt, dvrInitInp, timeArr, AOAarr, Uarr, OmegaArr)
+
+      t = uTimes(2)
+
+         ! Use existing states to compute the outputs
+      call UA_CalcOutput(i, j, u(2),  p, x, xd, OtherState, AFI_Params(AFIndx(i,j)), y, m, errStat, errMsg )
+         call checkError()
             
-               ! Use existing states to compute the outputs
-            call UA_CalcOutput(u(1),  p, xd, OtherState, AFI_Params(AFIndx(i,j)), y, m, errStat, errMsg )
-               call checkError()
-            
- 
-               ! Prepare states for next time step
-            call UA_UpdateStates(i,j,u(1), p, xd, OtherState, AFI_Params(AFIndx(i,j)), m, errStat, errMsg )
-               call checkError()
-               
-         end do
-      end do
-      
          ! Generate file outputs
       if (p%NumOuts > 0) then
-         write (unOutFile,TimeFrmt,ADVANCE='no')  t  
+         write (unOutFile,TimeFrmt,ADVANCE='no')  t
          write (unOutFile,Frmt,ADVANCE='no')   ( p%Delim,  y%WriteOutput(k)  , k=1,p%NumOuts*p%numBlades*p%nNodesPerBlade )   
          write (unOutFile,'()', IOSTAT=ErrStat)          ! write the line return
-      end if      
+      end if
+      
+         ! Prepare states for next time step
+      call UA_UpdateStates(i, j, t, n, u, uTimes, p, x, xd, OtherState, AFI_Params(AFIndx(i,j)), m, errStat, errMsg )
+         call checkError()
+               
+      
    end do
    
   ! write (unOutFile,'(/,A/)', IOSTAT=ErrStat)  'This output file was closed on '//CurDate()//' at '//CurTime()//'.'
@@ -296,6 +292,48 @@ program UnsteadyAero_Driver
       end if
       
    end subroutine checkError
+   !----------------------------------------------------------------------------------------------------  
+   subroutine setUAinputs(n,u,t,dt,dvrInitInp,timeArr,AOAarr,Uarr,OmegaArr)
+   
+   integer,                intent(in)           :: n
+   type(UA_InputType),     intent(inout)        :: u            ! System inputs
+   real(DbKi),             intent(  out)        :: t
+   real(DbKi),             intent(in)           :: dt
+   TYPE(UA_Dvr_InitInput), intent(in)           :: dvrInitInp           ! Initialization data for the driver program
+   real(DbKi),             intent(in)           :: timeArr(:)
+   real(ReKi),             intent(in)           :: AOAarr(:)
+   real(ReKi),             intent(in)           :: Uarr(:)
+   real(ReKi),             intent(in)           :: OmegaArr(:)
+   integer                                      :: indx
+   real(ReKi)                                   :: phase
+
+      u%UserProp = 0
+      u%Re       = dvrInitInp%Re
+   
+      if ( dvrInitInp%SimMod == 1 ) then
+         t       = (n-1)*dt
+         phase = (n+dvrInitInp%Phase-1)*2*pi/dvrInitInp%StepsPerCycle
+         u%alpha = (dvrInitInp%Amplitude * sin(phase) + dvrInitInp%Mean)*D2R   ! This needs to be in radians
+ !        u%omega =  dvrInitInp%Amplitude * cos(phase) * dvrInitInp%Frequency * pi**2 / 90.0   ! This needs to be in radians derivative: d_alpha /d_t
+         u%omega =  dvrInitInp%Amplitude * cos(phase) * 2*pi/dvrInitInp%StepsPerCycle / dt * D2R  ! This needs to be in radians derivative: d_alpha /d_t
+         
+         u%U     = dvrInitInp%InflowVel  ! m/s
+      else
+         indx = min(n,size(timeArr))
+         
+         ! Load timestep data from the time-series inputs which were previous read from input file
+         t       = timeArr(indx)
+         u%alpha = AOAarr(indx)*pi/180.0   ! This needs to be in radians
+         u%omega = OmegaArr(indx)
+         u%U     = Uarr(indx)
+         if (n> size(timeArr)) then
+            t = t + dt*(n - size(timeArr) ) ! update for NumInp>1;
+         end if
+      end if
+      u%v_ac(1) = sin(u%alpha)*u%U
+      u%v_ac(2) = cos(u%alpha)*u%U
+   
+   end subroutine setUAinputs
    !----------------------------------------------------------------------------------------------------  
    
    subroutine print_help()

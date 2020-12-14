@@ -23,6 +23,7 @@ if (GENERATE_TYPES)
   generate_f90_types(src/IfW_TSFFWind.txt ${CMAKE_CURRENT_LIST_DIR}/src/IfW_TSFFWind_Types.f90 -noextrap)
   generate_f90_types(src/IfW_UniformWind.txt ${CMAKE_CURRENT_LIST_DIR}/src/IfW_UniformWind_Types.f90 -noextrap)
   generate_f90_types(src/IfW_UserWind.txt ${CMAKE_CURRENT_LIST_DIR}/src/IfW_UserWind_Types.f90 -noextrap)
+  generate_f90_types(src/IfW_FFWind_Base.txt ${CMAKE_CURRENT_LIST_DIR}/src/IfW_FFWind_Base_Types.f90 -noextrap)
 endif()
 
 set(IFW_SOURCES
@@ -35,6 +36,8 @@ set(IFW_SOURCES
   src/InflowWind_Subs.f90
   src/InflowWind.f90
   src/Lidar.f90
+  src/IfW_FFWind_Base.f90
+  src/IfW_FFWind_Base_Types.f90
   src/IfW_BladedFFWind_Types.f90
   src/IfW_4Dext_Types.f90
   src/IfW_HAWCWind_Types.f90

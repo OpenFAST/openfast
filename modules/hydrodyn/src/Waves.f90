@@ -1922,44 +1922,34 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       !   the mean sea level are left unchanged; below the seabed or above the
       !   mean sea level, the wave kinematics are zero:
 
-        
-         DO I = 0,InitOut%NStepWave-1       ! Loop through all time steps
-            K = 1
-            DO J = 1,InitInp%NWaveKin      ! Loop through all points where the incident wave kinematics will be computed
-               
-               InitOut%PWaveDynP0(I,J  )  = 0.0 ! PWaveDynP0BPz0 (I,J)
-               InitOut%PWaveVel0 (I,J,1)  = 0.0 !PWaveVel0HxiPz0(I,J)
-               InitOut%PWaveVel0 (I,J,2)  = 0.0 !PWaveVel0HyiPz0(I,J)
-               InitOut%PWaveVel0 (I,J,3)  = 0.0 !PWaveVel0VPz0  (I,J)
-               InitOut%PWaveAcc0 (I,J,1)  = 0.0 !PWaveAcc0HxiPz0(I,J)
-               InitOut%PWaveAcc0 (I,J,2)  = 0.0 !PWaveAcc0HyiPz0(I,J)
-               InitOut%PWaveAcc0 (I,J,3)  = 0.0 !PWaveAcc0VPz0  (I,J)
-                  
-                  
-                  ! NOTE: We test to 0 instead of MSL2SWL because the locations of WaveKinzi and WtrDpth have already been adjusted using MSL2SWL
-               IF (   ( InitInp%WaveKinzi(J) < -InitInp%WtrDpth ) .OR. ( InitInp%WaveKinzi(J) > 0.0          ) )  THEN   ! .TRUE. if the elevation of the point defined by WaveKinzi(J) lies below the seabed or above mean sea level (exclusive)
+      InitOut%PWaveDynP0(:,:)   = 0.0
+      InitOut%PWaveVel0 (:,:,:) = 0.0
+      InitOut%PWaveAcc0 (:,:,:) = 0.0
+      K = 1
+      DO J = 1,InitInp%NWaveKin      ! Loop through all points where the incident wave kinematics will be computed
 
-                  InitOut%WaveDynP(I,J  )  = 0.0
-                  InitOut%WaveVel (I,J,:)  = 0.0
-                  InitOut%WaveAcc (I,J,:)  = 0.0        
+         IF (   ( InitInp%WaveKinzi(J) < -InitInp%WtrDpth ) .OR. ( InitInp%WaveKinzi(J) > 0.0 ) ) THEN
+            ! .TRUE. if the elevation of the point defined by WaveKinzi(J) lies below the seabed or above mean sea level (exclusive)
+            ! NOTE: We test to 0 instead of MSL2SWL because the locations of WaveKinzi and WtrDpth have already been adjusted using MSL2SWL
 
-               ELSE                                                                                 ! The elevation of the point defined by WaveKinzi(J) must lie between the seabed and the mean sea level (inclusive)
+            InitOut%WaveDynP(:,J  )  = 0.0
+            InitOut%WaveVel (:,J,:)  = 0.0
+            InitOut%WaveAcc (:,J,:)  = 0.0        
 
-                  InitOut%WaveDynP(I,J  )  = WaveDynP0B (I,K)
-                  InitOut%WaveVel (I,J,1)  = WaveVel0Hxi(I,K)
-                  InitOut%WaveVel (I,J,2)  = WaveVel0Hyi(I,K)
-                  InitOut%WaveVel (I,J,3)  = WaveVel0V  (I,K)
-                  InitOut%WaveAcc (I,J,1)  = WaveAcc0Hxi(I,K)
-                  InitOut%WaveAcc (I,J,2)  = WaveAcc0Hyi(I,K)
-                  InitOut%WaveAcc (I,J,3)  = WaveAcc0V  (I,K)
-                  
-                  K = K + 1
-               END IF
+         ELSE
+            ! The elevation of the point defined by WaveKinzi(J) must lie between the seabed and the mean sea level (inclusive)
 
-            END DO                   ! J - All points where the incident wave kinematics will be computed
+            InitOut%WaveDynP(0:InitOut%NStepWave-1,J  ) = WaveDynP0B( 0:InitOut%NStepWave-1,K)
+            InitOut%WaveVel (0:InitOut%NStepWave-1,J,1) = WaveVel0Hxi(0:InitOut%NStepWave-1,K)
+            InitOut%WaveVel (0:InitOut%NStepWave-1,J,2) = WaveVel0Hyi(0:InitOut%NStepWave-1,K)
+            InitOut%WaveVel (0:InitOut%NStepWave-1,J,3) = WaveVel0V(  0:InitOut%NStepWave-1,K)
+            InitOut%WaveAcc (0:InitOut%NStepWave-1,J,1) = WaveAcc0Hxi(0:InitOut%NStepWave-1,K)
+            InitOut%WaveAcc (0:InitOut%NStepWave-1,J,2) = WaveAcc0Hyi(0:InitOut%NStepWave-1,K)
+            InitOut%WaveAcc (0:InitOut%NStepWave-1,J,3) = WaveAcc0V(  0:InitOut%NStepWave-1,K)
+            K = K + 1
+         END IF
 
-         END DO                      ! I - All time steps
-
+      END DO                   ! J - All points where the incident wave kinematics will be computed
 
     !  CASE ( 1 )                 ! Vertical stretching.
 

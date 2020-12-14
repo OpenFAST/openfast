@@ -8,6 +8,7 @@
 ###################################################################################################################################
 
 include Registry_NWTC_Library.txt
+usefrom IfW_FFWind_Base.txt
 
 
 #########################
@@ -23,32 +24,10 @@ typedef  ^                       InitOutputType       ProgDesc    Ver           
 # ..... Misc/Optimization variables.................................................................................................
 # Define any data that are used only for efficiency purposes (these variables are not associated with time):
 #   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
-typedef  ^                       MiscVarType          IntKi    TimeIndex         -     0     -     "An Index into the TData array"                                -
+typedef  ^                       MiscVarType          IntKi    dummy         -     0     -     "An Index into the TData array"                                -
 
 # ..... Parameters ................................................................................................................
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
-typedef  ^                    ParameterType              DbKi     DT                -     -     -     "Time step for cont. state integration & disc. state update"   seconds
-typedef  ^                       ^                       Logical  TowerDataExist    -  .FALSE.  -     "Data exists for the tower"                                    -
-typedef  ^                       ^                       Logical  Periodic          -  .FALSE.  -     "Flag to indicate if the wind file is periodic"                -
-typedef  ^                       ^                       SiKi     FFData            ::::  -     -     "Array of FF data"                                             -
-typedef  ^                       ^                       SiKi     FFTower           :::   -     -     "Array of data along tower, below FF array"                    -
-typedef  ^                       ^                       ReKi     FFDTime           -     0     -     "Delta time"                                                   seconds
-typedef  ^                       ^                       ReKi     FFRate            -     0     -     "Data rate (1/FFTime)"                                         Hertz
-typedef  ^                       ^                       ReKi     FFYHWid           -     0     -     "Half the grid width"                                          meters
-typedef  ^                       ^                       ReKi     FFZHWid           -     0     -     "Half the grid height"                                         meters
-typedef  ^                       ^                       ReKi     RefHt             -     0     -     "Reference (hub) height of the grid"                           meters
-typedef  ^                       ^                       ReKi     GridBase          -     0     -     "the height of the bottom of the grid"                         meters
-typedef  ^                       ^                       ReKi     InitXPosition     -     0     -     "the initial x position of grid (distance in FF is offset)"    meters
-typedef  ^                       ^                       ReKi     InvFFYD           -     0     -     "reciprocal of delta y"                                        1/meters
-typedef  ^                       ^                       ReKi     InvFFZD           -     0     -     "reciprocal of delta z"                                        1/meters
-typedef  ^                       ^                       ReKi     InvMFFWS          -     0     -     "reciprocal of mean wind speed (MeanFFWS)"                     seconds/meter
-typedef  ^                       ^                       ReKi     MeanFFWS          -     0     -     "Mean wind speed (as defined in FF file), not necessarily of the portion used"  meters/second
-typedef  ^                       ^                       ReKi     TotalTime         -     0     -     "The total time of the simulation"                             seconds
-typedef  ^                       ^                       IntKi    NFFComp           -     3     -     "Number of wind components"                                    -
-typedef  ^                       ^                       IntKi    NFFSteps          -     0     -     "Number of time steps in the FF array"                         -
-typedef  ^                       ^                       IntKi    NYGrids           -     0     -     "Number of points in the lateral (y) direction of the grids"   -
-typedef  ^                       ^                       IntKi    NZGrids           -     0     -     "Number of points in the vertical (z) direction of the grids"  -
-typedef  ^                       ^                       IntKi    NTGrids           -     0     -     "Number of points in the vertical (z) direction on the tower (below the grids)"  -
-typedef  ^                       ^                       IntKi    WindFileFormat    -     -     -     "Binary file format description number"                        -
+typedef  ^                    ParameterType              IfW_FFWind_ParameterType  FF                -  -        -     "Parameters used in all full-field wind types"                 -
 

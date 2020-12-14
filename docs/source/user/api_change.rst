@@ -9,7 +9,7 @@ The changes are tabulated according to the module input file, line number, and f
 The line number corresponds to the resulting line number after all changes are implemented.
 Thus, be sure to implement each in order so that subsequent line numbers are correct.
 
-OpenFAST v2.3.0 to OpenFAST `dev`
+OpenFAST v2.4.0 to OpenFAST `dev`
 ---------------------------------
 
 ============== ==== ================== =============================================================================================================================================================================
@@ -27,11 +27,26 @@ OpenFAST       49   Bld_Kdmp                0   Bld_Kdmp   - Damping factor for 
 InflowWind     48   InitPosition(x)       0.0   InitPosition(x) - Initial offset in +x direction (shift of wind box) [Only used with WindType = 5] (m)
 AeroDyn        13   CompAA             False                   CompAA             - Flag to compute AeroAcoustics calculation [only used when WakeMod=1 or 2]
 AeroDyn        14   AA_InputFile       "unused"                AA_InputFile       - Aeroacoustics input file
-AeroDyn        35   [separator line]   ======  OLAF -- cOnvecting LAgrangian Filaments (Free Vortex Wake) Theory Options  ================== [used only when WakeMod=3]
+AeroDyn        35   [separator line]   ======  OLAF cOnvecting LAgrangian Filaments (Free Vortex Wake) Theory Options  ================== [used only when WakeMod=3]
 AeroDyn        36   OLAFInputFileName  "Elliptic_OLAF.dat"     OLAFInputFileName - Input file for OLAF [used only when WakeMod=3]
-AirFoilTables  11   BL_file            "unused"                BL_file           - The file name including the boundary layer characteristics of the profile. Ignored if the aeroacoustic module is not called.
+AirFoilTables  4\*  BL_file            "unused"                BL_file           - The file name including the boundary layer characteristics of the profile. Ignored if the aeroacoustic module is not called.
+IfW driver     6    [separator line]   ===================== File Conversion Options =================================
+IfW driver     7    WrHAWC             false    WrHAWC    - Convert all data to HAWC2 format? (flag)
+IfW driver     8    WrBladed           false    WrBladed  - Convert all data to Bladed format? (flag)
+IfW driver     9    WrVTK              false    WrVTK     - Convert all data to VTK format? (flag)
+InflowWind     7    VFlowAng                0   VFlowAng  - Upflow angle (degrees) (not used for native Bladed format WindType=7)
+============== ==== ================== =============================================================================================================================================================================
+
+Modified in OpenFAST `dev`
+--------------------------
 
 ============== ==== ================== =============================================================================================================================================================================
+ Module        Line  Flag Name          Example Value
+============== ==== ================== =============================================================================================================================================================================
+AirFoilTables  40\* filtCutOff         "DEFAULT"               filtCutOff        - Reduced frequency cut-off for low-pass filtering the AoA input to UA, as well as the 1st and 2nd derivatives (-) [default = 0.5] 
+============== ==== ================== =============================================================================================================================================================================
+
+\*non-comment line count, excluding lines contained if NumCoords is not 0.
 
 Additional nodal output channels added for :ref:`AeroDyn15<AD-Nodal-Outputs>`,
 :ref:`BeamDyn<BD-Nodal-Outputs>`, and :ref:`ElastoDyn<ED-Nodal-Outputs>`.

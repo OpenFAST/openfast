@@ -32,6 +32,7 @@
 MODULE InflowWind_Types
 !---------------------------------------------------------------------------------------------------------------------------------
 USE IfW_UniformWind_Types
+USE IfW_FFWind_Base_Types
 USE IfW_TSFFWind_Types
 USE IfW_BladedFFWind_Types
 USE IfW_HAWCWind_Types
@@ -47,8 +48,9 @@ IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: BladedFF_WindNumber = 4      ! Bladed style binary full-field file.  Includes native bladed format [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: HAWC_WindNumber = 5      ! HAWC wind file. [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: User_WindNumber = 6      ! User defined wind. [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: FDext_WindNumber = 7      ! 4D wind from external souce (i.e., FAST.Farm). [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: Highest_WindNumber = 7      ! Highest wind number supported. [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: BladedFF_Shr_WindNumber = 7      ! Native Bladed binary full-field file. [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: FDext_WindNumber = 8      ! 4D wind from external souce (i.e., FAST.Farm). [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Highest_WindNumber = 8      ! Highest wind number supported. [-]
 ! =========  WindFileMetaData  =======
   TYPE, PUBLIC :: WindFileMetaData
     CHARACTER(1024)  :: FileName      !< Name of the windfile retrieved [-]
@@ -76,6 +78,7 @@ IMPLICIT NONE
     LOGICAL  :: EchoFlag      !< Echo the input file [-]
     INTEGER(IntKi)  :: WindType = 0      !< Type of windfile [-]
     REAL(ReKi)  :: PropagationDir      !< Direction of wind propagation (meteorological direction) [(degrees)]
+    REAL(ReKi)  :: VFlowAngle      !< Vertical (upflow) angle [degrees]
     INTEGER(IntKi)  :: NWindVel      !< Number of points to output the wind velocity (0 to 9) [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: WindVxiList      !< List of X coordinates for wind velocity measurements [meters]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: WindVyiList      !< List of Y coordinates for wind velocity measurements [meters]
@@ -89,7 +92,7 @@ IMPLICIT NONE
     CHARACTER(1024)  :: TSFF_FileName      !< TurbSim Full-Field -- filename [-]
     CHARACTER(1024)  :: BladedFF_FileName      !< Bladed-style Full-Field -- filename [-]
     LOGICAL  :: BladedFF_TowerFile      !< Bladed-style Full-Field -- tower file exists [-]
-    LOGICAL  :: CTTS_CoherentTurb      !< Coherent turbulence data exists [-]
+    LOGICAL  :: CTTS_CoherentTurb = .FALSE.      !< Coherent turbulence data exists [-]
     CHARACTER(1024)  :: CTTS_FileName      !< Name of coherent turbulence file [-]
     CHARACTER(1024)  :: CTTS_Path      !< Path to coherent turbulence binary data files [-]
     CHARACTER(1024)  :: HAWC_FileName_u      !< HAWC -- u component binary data file name [-]
@@ -101,21 +104,6 @@ IMPLICIT NONE
     REAL(ReKi)  :: HAWC_dx      !< HAWC -- distance between points in x direction [meters]
     REAL(ReKi)  :: HAWC_dy      !< HAWC -- distance between points in y direction [meters]
     REAL(ReKi)  :: HAWC_dz      !< HAWC -- distance between points in z direction [meters]
-    REAL(ReKi)  :: HAWC_RefHt      !< HAWC -- reference height [meters]
-    INTEGER(IntKi)  :: HAWC_ScaleMethod      !< HAWC -- scale method [-]
-    REAL(ReKi)  :: HAWC_SFx      !< HAWC -- turbulence scaling factor x direction [-]
-    REAL(ReKi)  :: HAWC_SFy      !< HAWC -- turbulence scaling factor y direction [-]
-    REAL(ReKi)  :: HAWC_SFz      !< HAWC -- turbulence scaling factor z direction [-]
-    REAL(ReKi)  :: HAWC_SigmaFx      !< HAWC -- turbulence standard deviation x direction [-]
-    REAL(ReKi)  :: HAWC_SigmaFy      !< HAWC -- turbulence standard deviation y direction [-]
-    REAL(ReKi)  :: HAWC_SigmaFz      !< HAWC -- turbulence standard deviation z direction [-]
-    REAL(ReKi)  :: HAWC_TStart      !< HAWC -- start time for turbulence scaling [seconds]
-    REAL(ReKi)  :: HAWC_TEnd      !< HAWC -- end time for turbulence scaling [seconds]
-    REAL(ReKi)  :: HAWC_URef      !< HAWC -- Mean u-component wind speed at the reference height [meters]
-    INTEGER(IntKi)  :: HAWC_ProfileType      !< HAWC -- Wind profile type (0=constant;1=logarithmic;2=power law) [-]
-    REAL(ReKi)  :: HAWC_PLExp      !< HAWC -- Power law exponent (used for PL wind profile type only) [-]
-    REAL(ReKi)  :: HAWC_Z0      !< HAWC -- Surface roughness length (used for LOG wind profile type only) [-]
-    REAL(ReKi) , DIMENSION(1:3)  :: HAWC_InitPosition      !< HAWC -- initial position (offset for wind file box) [meters]
     LOGICAL  :: SumPrint      !< Write summary info to a file <ROOTNAME>.IfW.Sum [-]
     INTEGER(IntKi)  :: NumOuts      !< Number of parameters in the output list (number of outputs requested) [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: OutList      !< List of user-requested output channels [-]
@@ -123,6 +111,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NumPulseGate      !< the number of range gates to return wind speeds at [-]
     REAL(ReKi) , DIMENSION(1:3)  :: RotorApexOffsetPos      !< position of the lidar unit relative to the rotor apex of rotation [m]
     LOGICAL  :: LidRadialVel      !< TRUE => return radial component, FALSE => return 'x' direction estimate [-]
+    TYPE(IfW_FFWind_InitInputType)  :: FF      !< scaling data [-]
   END TYPE InflowWind_InputFile
 ! =======================
 ! =========  InflowWind_InitInputType  =======
@@ -133,7 +122,9 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NumWindPoints      !< Number of wind velocity points expected [-]
     LOGICAL  :: UseInputFile = .TRUE.      !< Should we read everthing from an input file, or do we get it some other way [-]
     CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
-    TYPE(InflowWind_InputFile)  :: PassedFileData      !< If we don't use the input file, pass everything through this [-]
+    TYPE(FileInfoType)  :: PassedFileData      !< If we don't use the input file, pass everything through this [-]
+    LOGICAL  :: WindType2UseInputFile = .TRUE.      !< Flag for toggling file based IO in wind type 2. [-]
+    TYPE(FileInfoType)  :: WindType2Data      !< Optional slot for wind type 2 data if file IO is not used. [-]
     TYPE(Lidar_InitInputType)  :: lidar      !< InitInput for lidar data [-]
     TYPE(IfW_4Dext_InitInputType)  :: FDext      !< InitInput for lidar data [-]
   END TYPE InflowWind_InitInputType
@@ -168,13 +159,16 @@ IMPLICIT NONE
   TYPE, PUBLIC :: InflowWind_ParameterType
     CHARACTER(1024)  :: RootFileName      !< Root of the InflowWind input   filename [-]
     LOGICAL  :: CTTS_Flag = .FALSE.      !< determines if coherent turbulence is used [-]
+    LOGICAL  :: RotateWindBox = .FALSE.      !< determines if wind will be rotated [-]
     REAL(DbKi)  :: DT      !< Time step for cont. state integration & disc. state update [seconds]
     REAL(ReKi)  :: PropagationDir      !< Direction of wind propagation [radians]
+    REAL(ReKi)  :: VFlowAngle      !< Vertical (upflow) angle [radians]
     REAL(ReKi) , DIMENSION(1:3,1:3)  :: RotToWind      !< Rotation matrix for rotating from the global XYZ coordinate system to the wind coordinate system (wind along X') [-]
     REAL(ReKi) , DIMENSION(1:3,1:3)  :: RotFromWind      !< Rotation matrix for rotating from the wind coordinate system (wind along X') back to the global XYZ coordinate system.  Equal to TRANSPOSE(RotToWind) [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: WindViXYZprime      !< List of XYZ coordinates for velocity measurements, translated to the wind coordinate system (prime coordinates).  This equals MATMUL( RotToWind, ParamData%WindViXYZ ) [meters/second]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: WindViXYZprime      !< List of XYZ coordinates for velocity measurements, translated to the wind coordinate system (prime coordinates).  This equals MATMUL( RotToWind, ParamData%WindViXYZ ) [meters]
     INTEGER(IntKi)  :: WindType = 0      !< Type of wind -- set to Undef_Wind initially [-]
     REAL(ReKi)  :: ReferenceHeight      !< Height of the wind turbine [meters]
+    REAL(ReKi) , DIMENSION(1:3)  :: RefPosition      !< Reference position (point where box is rotated) [meters]
     INTEGER(IntKi)  :: NWindVel      !< Number of points in the wind velocity list [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: WindViXYZ      !< List of XYZ coordinates for wind velocity measurements, 3xNWindVel [meters]
     TYPE(IfW_UniformWind_ParameterType)  :: UniformWind      !< Parameters from UniformWind [-]
@@ -501,6 +495,7 @@ CONTAINS
     DstInputFileData%EchoFlag = SrcInputFileData%EchoFlag
     DstInputFileData%WindType = SrcInputFileData%WindType
     DstInputFileData%PropagationDir = SrcInputFileData%PropagationDir
+    DstInputFileData%VFlowAngle = SrcInputFileData%VFlowAngle
     DstInputFileData%NWindVel = SrcInputFileData%NWindVel
 IF (ALLOCATED(SrcInputFileData%WindVxiList)) THEN
   i1_l = LBOUND(SrcInputFileData%WindVxiList,1)
@@ -559,21 +554,6 @@ ENDIF
     DstInputFileData%HAWC_dx = SrcInputFileData%HAWC_dx
     DstInputFileData%HAWC_dy = SrcInputFileData%HAWC_dy
     DstInputFileData%HAWC_dz = SrcInputFileData%HAWC_dz
-    DstInputFileData%HAWC_RefHt = SrcInputFileData%HAWC_RefHt
-    DstInputFileData%HAWC_ScaleMethod = SrcInputFileData%HAWC_ScaleMethod
-    DstInputFileData%HAWC_SFx = SrcInputFileData%HAWC_SFx
-    DstInputFileData%HAWC_SFy = SrcInputFileData%HAWC_SFy
-    DstInputFileData%HAWC_SFz = SrcInputFileData%HAWC_SFz
-    DstInputFileData%HAWC_SigmaFx = SrcInputFileData%HAWC_SigmaFx
-    DstInputFileData%HAWC_SigmaFy = SrcInputFileData%HAWC_SigmaFy
-    DstInputFileData%HAWC_SigmaFz = SrcInputFileData%HAWC_SigmaFz
-    DstInputFileData%HAWC_TStart = SrcInputFileData%HAWC_TStart
-    DstInputFileData%HAWC_TEnd = SrcInputFileData%HAWC_TEnd
-    DstInputFileData%HAWC_URef = SrcInputFileData%HAWC_URef
-    DstInputFileData%HAWC_ProfileType = SrcInputFileData%HAWC_ProfileType
-    DstInputFileData%HAWC_PLExp = SrcInputFileData%HAWC_PLExp
-    DstInputFileData%HAWC_Z0 = SrcInputFileData%HAWC_Z0
-    DstInputFileData%HAWC_InitPosition = SrcInputFileData%HAWC_InitPosition
     DstInputFileData%SumPrint = SrcInputFileData%SumPrint
     DstInputFileData%NumOuts = SrcInputFileData%NumOuts
 IF (ALLOCATED(SrcInputFileData%OutList)) THEN
@@ -592,6 +572,9 @@ ENDIF
     DstInputFileData%NumPulseGate = SrcInputFileData%NumPulseGate
     DstInputFileData%RotorApexOffsetPos = SrcInputFileData%RotorApexOffsetPos
     DstInputFileData%LidRadialVel = SrcInputFileData%LidRadialVel
+      CALL IfW_FFWind_CopyInitInput( SrcInputFileData%FF, DstInputFileData%FF, CtrlCode, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+         IF (ErrStat>=AbortErrLev) RETURN
  END SUBROUTINE InflowWind_CopyInputFile
 
  SUBROUTINE InflowWind_DestroyInputFile( InputFileData, ErrStat, ErrMsg )
@@ -615,6 +598,7 @@ ENDIF
 IF (ALLOCATED(InputFileData%OutList)) THEN
   DEALLOCATE(InputFileData%OutList)
 ENDIF
+  CALL IfW_FFWind_DestroyInitInput( InputFileData%FF, ErrStat, ErrMsg )
  END SUBROUTINE InflowWind_DestroyInputFile
 
  SUBROUTINE InflowWind_PackInputFile( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -655,6 +639,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! EchoFlag
       Int_BufSz  = Int_BufSz  + 1  ! WindType
       Re_BufSz   = Re_BufSz   + 1  ! PropagationDir
+      Re_BufSz   = Re_BufSz   + 1  ! VFlowAngle
       Int_BufSz  = Int_BufSz  + 1  ! NWindVel
   Int_BufSz   = Int_BufSz   + 1     ! WindVxiList allocated yes/no
   IF ( ALLOCATED(InData%WindVxiList) ) THEN
@@ -692,21 +677,6 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! HAWC_dx
       Re_BufSz   = Re_BufSz   + 1  ! HAWC_dy
       Re_BufSz   = Re_BufSz   + 1  ! HAWC_dz
-      Re_BufSz   = Re_BufSz   + 1  ! HAWC_RefHt
-      Int_BufSz  = Int_BufSz  + 1  ! HAWC_ScaleMethod
-      Re_BufSz   = Re_BufSz   + 1  ! HAWC_SFx
-      Re_BufSz   = Re_BufSz   + 1  ! HAWC_SFy
-      Re_BufSz   = Re_BufSz   + 1  ! HAWC_SFz
-      Re_BufSz   = Re_BufSz   + 1  ! HAWC_SigmaFx
-      Re_BufSz   = Re_BufSz   + 1  ! HAWC_SigmaFy
-      Re_BufSz   = Re_BufSz   + 1  ! HAWC_SigmaFz
-      Re_BufSz   = Re_BufSz   + 1  ! HAWC_TStart
-      Re_BufSz   = Re_BufSz   + 1  ! HAWC_TEnd
-      Re_BufSz   = Re_BufSz   + 1  ! HAWC_URef
-      Int_BufSz  = Int_BufSz  + 1  ! HAWC_ProfileType
-      Re_BufSz   = Re_BufSz   + 1  ! HAWC_PLExp
-      Re_BufSz   = Re_BufSz   + 1  ! HAWC_Z0
-      Re_BufSz   = Re_BufSz   + SIZE(InData%HAWC_InitPosition)  ! HAWC_InitPosition
       Int_BufSz  = Int_BufSz  + 1  ! SumPrint
       Int_BufSz  = Int_BufSz  + 1  ! NumOuts
   Int_BufSz   = Int_BufSz   + 1     ! OutList allocated yes/no
@@ -718,6 +688,24 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! NumPulseGate
       Re_BufSz   = Re_BufSz   + SIZE(InData%RotorApexOffsetPos)  ! RotorApexOffsetPos
       Int_BufSz  = Int_BufSz  + 1  ! LidRadialVel
+   ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
+      Int_BufSz   = Int_BufSz + 3  ! FF: size of buffers for each call to pack subtype
+      CALL IfW_FFWind_PackInitInput( Re_Buf, Db_Buf, Int_Buf, InData%FF, ErrStat2, ErrMsg2, .TRUE. ) ! FF 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf)) THEN ! FF
+         Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
+         DEALLOCATE(Re_Buf)
+      END IF
+      IF(ALLOCATED(Db_Buf)) THEN ! FF
+         Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
+         DEALLOCATE(Db_Buf)
+      END IF
+      IF(ALLOCATED(Int_Buf)) THEN ! FF
+         Int_BufSz = Int_BufSz + SIZE( Int_Buf )
+         DEALLOCATE(Int_Buf)
+      END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -750,6 +738,8 @@ ENDIF
     IntKiBuf(Int_Xferred) = InData%WindType
     Int_Xferred = Int_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%PropagationDir
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%VFlowAngle
     Re_Xferred = Re_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%NWindVel
     Int_Xferred = Int_Xferred + 1
@@ -856,38 +846,6 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%HAWC_dz
     Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%HAWC_RefHt
-    Re_Xferred = Re_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%HAWC_ScaleMethod
-    Int_Xferred = Int_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%HAWC_SFx
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%HAWC_SFy
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%HAWC_SFz
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%HAWC_SigmaFx
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%HAWC_SigmaFy
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%HAWC_SigmaFz
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%HAWC_TStart
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%HAWC_TEnd
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%HAWC_URef
-    Re_Xferred = Re_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%HAWC_ProfileType
-    Int_Xferred = Int_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%HAWC_PLExp
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%HAWC_Z0
-    Re_Xferred = Re_Xferred + 1
-    DO i1 = LBOUND(InData%HAWC_InitPosition,1), UBOUND(InData%HAWC_InitPosition,1)
-      ReKiBuf(Re_Xferred) = InData%HAWC_InitPosition(i1)
-      Re_Xferred = Re_Xferred + 1
-    END DO
     IntKiBuf(Int_Xferred) = TRANSFER(InData%SumPrint, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%NumOuts
@@ -919,6 +877,34 @@ ENDIF
     END DO
     IntKiBuf(Int_Xferred) = TRANSFER(InData%LidRadialVel, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
+      CALL IfW_FFWind_PackInitInput( Re_Buf, Db_Buf, Int_Buf, InData%FF, ErrStat2, ErrMsg2, OnlySize ) ! FF 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Re_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Re_Buf) > 0) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_Buf)-1 ) = Re_Buf
+        Re_Xferred = Re_Xferred + SIZE(Re_Buf)
+        DEALLOCATE(Re_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+      IF(ALLOCATED(Db_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Db_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Db_Buf) > 0) DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_Buf)-1 ) = Db_Buf
+        Db_Xferred = Db_Xferred + SIZE(Db_Buf)
+        DEALLOCATE(Db_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+      IF(ALLOCATED(Int_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Int_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Int_Buf) > 0) IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_Buf)-1 ) = Int_Buf
+        Int_Xferred = Int_Xferred + SIZE(Int_Buf)
+        DEALLOCATE(Int_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
  END SUBROUTINE InflowWind_PackInputFile
 
  SUBROUTINE InflowWind_UnPackInputFile( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -953,6 +939,8 @@ ENDIF
     OutData%WindType = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%PropagationDir = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%VFlowAngle = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%NWindVel = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
@@ -1068,40 +1056,6 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%HAWC_dz = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
-    OutData%HAWC_RefHt = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%HAWC_ScaleMethod = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
-    OutData%HAWC_SFx = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%HAWC_SFy = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%HAWC_SFz = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%HAWC_SigmaFx = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%HAWC_SigmaFy = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%HAWC_SigmaFz = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%HAWC_TStart = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%HAWC_TEnd = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%HAWC_URef = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%HAWC_ProfileType = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
-    OutData%HAWC_PLExp = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%HAWC_Z0 = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    i1_l = LBOUND(OutData%HAWC_InitPosition,1)
-    i1_u = UBOUND(OutData%HAWC_InitPosition,1)
-    DO i1 = LBOUND(OutData%HAWC_InitPosition,1), UBOUND(OutData%HAWC_InitPosition,1)
-      OutData%HAWC_InitPosition(i1) = ReKiBuf(Re_Xferred)
-      Re_Xferred = Re_Xferred + 1
-    END DO
     OutData%SumPrint = TRANSFER(IntKiBuf(Int_Xferred), OutData%SumPrint)
     Int_Xferred = Int_Xferred + 1
     OutData%NumOuts = IntKiBuf(Int_Xferred)
@@ -1138,6 +1092,46 @@ ENDIF
     END DO
     OutData%LidRadialVel = TRANSFER(IntKiBuf(Int_Xferred), OutData%LidRadialVel)
     Int_Xferred = Int_Xferred + 1
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Re_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Re_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Re_Buf = ReKiBuf( Re_Xferred:Re_Xferred+Buf_size-1 )
+        Re_Xferred = Re_Xferred + Buf_size
+      END IF
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Db_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Db_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Db_Buf = DbKiBuf( Db_Xferred:Db_Xferred+Buf_size-1 )
+        Db_Xferred = Db_Xferred + Buf_size
+      END IF
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Int_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Int_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
+        Int_Xferred = Int_Xferred + Buf_size
+      END IF
+      CALL IfW_FFWind_UnpackInitInput( Re_Buf, Db_Buf, Int_Buf, OutData%FF, ErrStat2, ErrMsg2 ) ! FF 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
+      IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
+      IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
  END SUBROUTINE InflowWind_UnPackInputFile
 
  SUBROUTINE InflowWind_CopyInitInput( SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg )
@@ -1160,7 +1154,11 @@ ENDIF
     DstInitInputData%NumWindPoints = SrcInitInputData%NumWindPoints
     DstInitInputData%UseInputFile = SrcInitInputData%UseInputFile
     DstInitInputData%RootName = SrcInitInputData%RootName
-      CALL InflowWind_Copyinputfile( SrcInitInputData%PassedFileData, DstInitInputData%PassedFileData, CtrlCode, ErrStat2, ErrMsg2 )
+      CALL NWTC_Library_Copyfileinfotype( SrcInitInputData%PassedFileData, DstInitInputData%PassedFileData, CtrlCode, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+         IF (ErrStat>=AbortErrLev) RETURN
+    DstInitInputData%WindType2UseInputFile = SrcInitInputData%WindType2UseInputFile
+      CALL NWTC_Library_Copyfileinfotype( SrcInitInputData%WindType2Data, DstInitInputData%WindType2Data, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
       CALL Lidar_CopyInitInput( SrcInitInputData%lidar, DstInitInputData%lidar, CtrlCode, ErrStat2, ErrMsg2 )
@@ -1180,7 +1178,8 @@ ENDIF
 ! 
   ErrStat = ErrID_None
   ErrMsg  = ""
-  CALL InflowWind_Destroyinputfile( InitInputData%PassedFileData, ErrStat, ErrMsg )
+  CALL NWTC_Library_Destroyfileinfotype( InitInputData%PassedFileData, ErrStat, ErrMsg )
+  CALL NWTC_Library_Destroyfileinfotype( InitInputData%WindType2Data, ErrStat, ErrMsg )
   CALL Lidar_DestroyInitInput( InitInputData%lidar, ErrStat, ErrMsg )
   CALL IfW_4Dext_DestroyInitInput( InitInputData%FDext, ErrStat, ErrMsg )
  END SUBROUTINE InflowWind_DestroyInitInput
@@ -1228,7 +1227,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%RootName)  ! RootName
    ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
       Int_BufSz   = Int_BufSz + 3  ! PassedFileData: size of buffers for each call to pack subtype
-      CALL InflowWind_Packinputfile( Re_Buf, Db_Buf, Int_Buf, InData%PassedFileData, ErrStat2, ErrMsg2, .TRUE. ) ! PassedFileData 
+      CALL NWTC_Library_Packfileinfotype( Re_Buf, Db_Buf, Int_Buf, InData%PassedFileData, ErrStat2, ErrMsg2, .TRUE. ) ! PassedFileData 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -1241,6 +1240,24 @@ ENDIF
          DEALLOCATE(Db_Buf)
       END IF
       IF(ALLOCATED(Int_Buf)) THEN ! PassedFileData
+         Int_BufSz = Int_BufSz + SIZE( Int_Buf )
+         DEALLOCATE(Int_Buf)
+      END IF
+      Int_BufSz  = Int_BufSz  + 1  ! WindType2UseInputFile
+      Int_BufSz   = Int_BufSz + 3  ! WindType2Data: size of buffers for each call to pack subtype
+      CALL NWTC_Library_Packfileinfotype( Re_Buf, Db_Buf, Int_Buf, InData%WindType2Data, ErrStat2, ErrMsg2, .TRUE. ) ! WindType2Data 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf)) THEN ! WindType2Data
+         Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
+         DEALLOCATE(Re_Buf)
+      END IF
+      IF(ALLOCATED(Db_Buf)) THEN ! WindType2Data
+         Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
+         DEALLOCATE(Db_Buf)
+      END IF
+      IF(ALLOCATED(Int_Buf)) THEN ! WindType2Data
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
@@ -1321,7 +1338,37 @@ ENDIF
       IntKiBuf(Int_Xferred) = ICHAR(InData%RootName(I:I), IntKi)
       Int_Xferred = Int_Xferred + 1
     END DO ! I
-      CALL InflowWind_Packinputfile( Re_Buf, Db_Buf, Int_Buf, InData%PassedFileData, ErrStat2, ErrMsg2, OnlySize ) ! PassedFileData 
+      CALL NWTC_Library_Packfileinfotype( Re_Buf, Db_Buf, Int_Buf, InData%PassedFileData, ErrStat2, ErrMsg2, OnlySize ) ! PassedFileData 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Re_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Re_Buf) > 0) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_Buf)-1 ) = Re_Buf
+        Re_Xferred = Re_Xferred + SIZE(Re_Buf)
+        DEALLOCATE(Re_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+      IF(ALLOCATED(Db_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Db_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Db_Buf) > 0) DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_Buf)-1 ) = Db_Buf
+        Db_Xferred = Db_Xferred + SIZE(Db_Buf)
+        DEALLOCATE(Db_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+      IF(ALLOCATED(Int_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Int_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Int_Buf) > 0) IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_Buf)-1 ) = Int_Buf
+        Int_Xferred = Int_Xferred + SIZE(Int_Buf)
+        DEALLOCATE(Int_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%WindType2UseInputFile, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
+      CALL NWTC_Library_Packfileinfotype( Re_Buf, Db_Buf, Int_Buf, InData%WindType2Data, ErrStat2, ErrMsg2, OnlySize ) ! WindType2Data 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -1482,7 +1529,49 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL InflowWind_Unpackinputfile( Re_Buf, Db_Buf, Int_Buf, OutData%PassedFileData, ErrStat2, ErrMsg2 ) ! PassedFileData 
+      CALL NWTC_Library_Unpackfileinfotype( Re_Buf, Db_Buf, Int_Buf, OutData%PassedFileData, ErrStat2, ErrMsg2 ) ! PassedFileData 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
+      IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
+      IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
+    OutData%WindType2UseInputFile = TRANSFER(IntKiBuf(Int_Xferred), OutData%WindType2UseInputFile)
+    Int_Xferred = Int_Xferred + 1
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Re_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Re_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Re_Buf = ReKiBuf( Re_Xferred:Re_Xferred+Buf_size-1 )
+        Re_Xferred = Re_Xferred + Buf_size
+      END IF
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Db_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Db_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Db_Buf = DbKiBuf( Db_Xferred:Db_Xferred+Buf_size-1 )
+        Db_Xferred = Db_Xferred + Buf_size
+      END IF
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Int_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Int_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
+        Int_Xferred = Int_Xferred + Buf_size
+      END IF
+      CALL NWTC_Library_Unpackfileinfotype( Re_Buf, Db_Buf, Int_Buf, OutData%WindType2Data, ErrStat2, ErrMsg2 ) ! WindType2Data 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -3058,8 +3147,10 @@ ENDIF
    ErrMsg  = ""
     DstParamData%RootFileName = SrcParamData%RootFileName
     DstParamData%CTTS_Flag = SrcParamData%CTTS_Flag
+    DstParamData%RotateWindBox = SrcParamData%RotateWindBox
     DstParamData%DT = SrcParamData%DT
     DstParamData%PropagationDir = SrcParamData%PropagationDir
+    DstParamData%VFlowAngle = SrcParamData%VFlowAngle
     DstParamData%RotToWind = SrcParamData%RotToWind
     DstParamData%RotFromWind = SrcParamData%RotFromWind
 IF (ALLOCATED(SrcParamData%WindViXYZprime)) THEN
@@ -3078,6 +3169,7 @@ IF (ALLOCATED(SrcParamData%WindViXYZprime)) THEN
 ENDIF
     DstParamData%WindType = SrcParamData%WindType
     DstParamData%ReferenceHeight = SrcParamData%ReferenceHeight
+    DstParamData%RefPosition = SrcParamData%RefPosition
     DstParamData%NWindVel = SrcParamData%NWindVel
 IF (ALLOCATED(SrcParamData%WindViXYZ)) THEN
   i1_l = LBOUND(SrcParamData%WindViXYZ,1)
@@ -3217,8 +3309,10 @@ ENDIF
   Int_BufSz  = 0
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%RootFileName)  ! RootFileName
       Int_BufSz  = Int_BufSz  + 1  ! CTTS_Flag
+      Int_BufSz  = Int_BufSz  + 1  ! RotateWindBox
       Db_BufSz   = Db_BufSz   + 1  ! DT
       Re_BufSz   = Re_BufSz   + 1  ! PropagationDir
+      Re_BufSz   = Re_BufSz   + 1  ! VFlowAngle
       Re_BufSz   = Re_BufSz   + SIZE(InData%RotToWind)  ! RotToWind
       Re_BufSz   = Re_BufSz   + SIZE(InData%RotFromWind)  ! RotFromWind
   Int_BufSz   = Int_BufSz   + 1     ! WindViXYZprime allocated yes/no
@@ -3228,6 +3322,7 @@ ENDIF
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! WindType
       Re_BufSz   = Re_BufSz   + 1  ! ReferenceHeight
+      Re_BufSz   = Re_BufSz   + SIZE(InData%RefPosition)  ! RefPosition
       Int_BufSz  = Int_BufSz  + 1  ! NWindVel
   Int_BufSz   = Int_BufSz   + 1     ! WindViXYZ allocated yes/no
   IF ( ALLOCATED(InData%WindViXYZ) ) THEN
@@ -3416,9 +3511,13 @@ ENDIF
     END DO ! I
     IntKiBuf(Int_Xferred) = TRANSFER(InData%CTTS_Flag, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%RotateWindBox, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
     DbKiBuf(Db_Xferred) = InData%DT
     Db_Xferred = Db_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%PropagationDir
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%VFlowAngle
     Re_Xferred = Re_Xferred + 1
     DO i2 = LBOUND(InData%RotToWind,2), UBOUND(InData%RotToWind,2)
       DO i1 = LBOUND(InData%RotToWind,1), UBOUND(InData%RotToWind,1)
@@ -3456,6 +3555,10 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%ReferenceHeight
     Re_Xferred = Re_Xferred + 1
+    DO i1 = LBOUND(InData%RefPosition,1), UBOUND(InData%RefPosition,1)
+      ReKiBuf(Re_Xferred) = InData%RefPosition(i1)
+      Re_Xferred = Re_Xferred + 1
+    END DO
     IntKiBuf(Int_Xferred) = InData%NWindVel
     Int_Xferred = Int_Xferred + 1
   IF ( .NOT. ALLOCATED(InData%WindViXYZ) ) THEN
@@ -3773,9 +3876,13 @@ ENDIF
     END DO ! I
     OutData%CTTS_Flag = TRANSFER(IntKiBuf(Int_Xferred), OutData%CTTS_Flag)
     Int_Xferred = Int_Xferred + 1
+    OutData%RotateWindBox = TRANSFER(IntKiBuf(Int_Xferred), OutData%RotateWindBox)
+    Int_Xferred = Int_Xferred + 1
     OutData%DT = DbKiBuf(Db_Xferred)
     Db_Xferred = Db_Xferred + 1
     OutData%PropagationDir = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%VFlowAngle = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     i1_l = LBOUND(OutData%RotToWind,1)
     i1_u = UBOUND(OutData%RotToWind,1)
@@ -3824,6 +3931,12 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     OutData%ReferenceHeight = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
+    i1_l = LBOUND(OutData%RefPosition,1)
+    i1_u = UBOUND(OutData%RefPosition,1)
+    DO i1 = LBOUND(OutData%RefPosition,1), UBOUND(OutData%RefPosition,1)
+      OutData%RefPosition(i1) = ReKiBuf(Re_Xferred)
+      Re_Xferred = Re_Xferred + 1
+    END DO
     OutData%NWindVel = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WindViXYZ not allocated

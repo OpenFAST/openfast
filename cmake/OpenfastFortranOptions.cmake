@@ -107,9 +107,14 @@ macro(set_fast_gfortran)
   #set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -ffree-line-length-none -cpp -fopenmp")
   set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -ffree-line-length-none -cpp")
 
+  # Disable stack reuse within routines: issues seen with gfortran 9.x, but others may also exhibit
+  #   see section 3.16 of https://gcc.gnu.org/onlinedocs/gcc-9.2.0/gcc.pdf
+  #   and https://github.com/OpenFAST/openfast/pull/595
+  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fstack-reuse='none'")
+
   # Deal with Double/Single precision
   if (DOUBLE_PRECISION)
-    add_definitions(-DDOUBLE_PRECISION)
+    add_definitions(-DOPENFAST_DOUBLE_PRECISION)
     set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fdefault-real-8")
   endif (DOUBLE_PRECISION)
 
@@ -152,7 +157,7 @@ macro(set_fast_intel_fortran_posix)
   set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fpic -fpp")
   # Deal with Double/Single precision
   if (DOUBLE_PRECISION)
-    add_definitions(-DDOUBLE_PRECISION)
+    add_definitions(-DOPENFAST_DOUBLE_PRECISION)
     set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -r8 -double_size 128")
   endif (DOUBLE_PRECISION)
 
@@ -168,6 +173,22 @@ macro(set_fast_intel_fortran_posix)
   endif()
 
   check_f2008_features()
+
+  ### Intel profiling flags
+
+  # https://software.intel.com/content/www/us/en/develop/documentation/fortran-compiler-developer-guide-and-reference/top/compiler-reference/compiler-options/compiler-option-details/optimization-report-options/qopt-report-qopt-report.html
+  # phases: vec, par, openmp
+  # set(CMAKE_Fortran_FLAGS_RELWITHDEBINFO "${CMAKE_Fortran_FLAGS_RELWITHDEBINFO} -qopt-report-phase=vec,openmp -qopt-report=5")
+  # set(CMAKE_Fortran_FLAGS_RELWITHDEBINFO "${CMAKE_Fortran_FLAGS_RELWITHDEBINFO} -qopt-report-routine=Create_Augmented_Ln2_Src_Mesh") # Create_Augmented_Ln2_Src_Mesh, Morison_CalcOutput, VariousWaves_Init
+
+  # https://software.intel.com/content/www/us/en/develop/documentation/fortran-compiler-developer-guide-and-reference/top/compiler-reference/compiler-options/compiler-option-details/output-debug-and-precompiled-header-pch-options/debug-linux-and-macos.html
+  # set(CMAKE_Fortran_FLAGS_RELWITHDEBINFO "${CMAKE_Fortran_FLAGS_RELWITHDEBINFO} -debug all")
+  # set(CMAKE_Fortran_FLAGS_RELWITHDEBINFO "${CMAKE_Fortran_FLAGS_RELWITHDEBINFO} -debug inline-debug-info")
+
+  # Intel processor feature sets
+  # https://software.intel.com/content/www/us/en/develop/documentation/fortran-compiler-developer-guide-and-reference/top/compiler-reference/compiler-options/compiler-option-details/code-generation-options/xhost-qxhost.html
+  # set(CMAKE_Fortran_FLAGS_RELWITHDEBINFO "${CMAKE_Fortran_FLAGS_RELWITHDEBINFO} -xHOST")   # Use feature set for CPU used to compile
+  # set(CMAKE_Fortran_FLAGS_RELWITHDEBINFO "${CMAKE_Fortran_FLAGS_RELWITHDEBINFO} -xSKYLAKE-AVX512")   # Use Eagle processor feature set
 endmacro(set_fast_intel_fortran_posix)
 
 #
@@ -182,7 +203,7 @@ macro(set_fast_intel_fortran_windows)
 
   # Deal with Double/Single precision
   if (DOUBLE_PRECISION)
-    add_definitions(-DDOUBLE_PRECISION)
+    add_definitions(-DOPENFAST_DOUBLE_PRECISION)
     set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} /real_size:64 /double_size:128")
   endif (DOUBLE_PRECISION)
 

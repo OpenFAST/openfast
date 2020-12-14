@@ -21,8 +21,25 @@ doing active software development is given in :ref:`vs_windows`.
 
 Download binaries
 ~~~~~~~~~~~~~~~~~
-Each tagged release is accompanied by precompiled binaries for Windows
-systems. DLL's for MAP and the DISCON controllers are also included.
+OpenFAST releases are distributed through the `Anaconda <https://anaconda.org/>`_
+package manager via the `conda forge <https://conda-forge.org/>`_ channel for
+macOS and Linux. The OpenFAST glue-code executable as well as the available
+module drivers are included in the installation. The following commands
+describe how to create a new environment and install OpenFAST.
+
+.. code-block:: bash
+
+    # Create a new conda environment
+    conda create -n openfast_env
+
+    # Install OpenFAST through the Conda Forge channel
+    conda install -c conda-forge openfast
+
+    # Test OpenFAST
+    openfast -v
+
+For Windows users, each tagged release is accompanied by precompiled binaries.
+DLL's for MAP and the DISCON controllers are also included.
 The following architecture and precision combinations are currently
 available:
 
@@ -31,17 +48,20 @@ available:
 - 64 bit double precision
 
 All precompiled binaries can be found in the ``Assets`` dropdown in the
-`GitHub Releases <https://github.com/openfast/openfast/releases>`__. Click
-`here <https://github.com/OpenFAST/openfast/releases/latest/download/windows_openfast_binaries.zip>`__
-to download the latest binaries.
+`GitHub Releases <https://github.com/openfast/openfast/releases>`__.
+To download the latest binaries, click
+`here <https://github.com/OpenFAST/openfast/releases/latest/download/windows_openfast_binaries.zip>`__.
 
-Note that the precompiled binaries require either the Intel fortran
-compiler or the Intel MKL redistributable libraries, which are not by
-default included with the binaries. To configure the libraries, download the
-installers from `here <https://software.intel.com/sites/default/files/managed/bb/e0/ww_ifort_redist_msi_2017.8.275.zip>`__
-and run the MSI file(s) to install the libraries. Note that if you have a
-Command Prompt open, you will need to close it after installing the libraries
-in order for the changes to take effect.
+
+.. important::
+
+    The precompiled binaries require either the Intel fortran
+    compiler or the Intel MKL redistributable libraries, which are not by
+    default included with the binaries. To configure the libraries, download the
+    installers from `here <https://software.intel.com/sites/default/files/managed/bb/e0/ww_ifort_redist_msi_2017.8.275.zip>`__
+    and run the MSI file(s) to install the libraries. If you have a
+    Command Prompt open, you will need to close it after installing the libraries
+    in order for the changes to take effect.
 
 Compile from source
 ~~~~~~~~~~~~~~~~~~~

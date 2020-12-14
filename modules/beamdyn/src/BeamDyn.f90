@@ -141,6 +141,8 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
          return
       end if
 
+   ! In the following, trapezoidalpointweight should be generalized to multi-element; likewise for gausspointweight
+
    IF(p%quadrature .EQ. GAUSS_QUADRATURE) THEN
 
        CALL BD_GaussPointWeight(p%nqp,p%QPtN,p%QPtWeight,ErrStat2,ErrMsg2) !calculates p%QPtN and p%QPtWeight
@@ -152,12 +154,12 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
 
    ELSEIF(p%quadrature .EQ. TRAP_QUADRATURE) THEN
 
-      CALL BD_TrapezoidalPointWeight(p, InputFileData)        ! computes p%QPtN and p%QPtWeight
+      CALL BD_TrapezoidalPointWeight(p,  InputFileData%InpBl%station_eta, InputFileData%InpBl%station_total) ! computes p%QPtN and p%QPtWeight
 
    ENDIF
 
       ! compute physical distances to set positions of p%uuN0 (FE GLL_Nodes) (depends on p%SP_Coef):
-   call InitializeNodalLocations(InputFileData, p, GLL_nodes, InitOut, ErrStat2,ErrMsg2)
+   call InitializeNodalLocations(InputFileData%member_total,InputFileData%kp_member,InputFileData%kp_coordinate,p,GLL_nodes,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       if (ErrStat >= AbortErrLev) then
          call cleanup()
@@ -495,26 +497,44 @@ CONTAINS
 end subroutine InitializeMassStiffnessMatrices
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine computes the positions and rotations stored in p%uuN0 (output GLL nodes) and p%QuadPt (input quadrature nodes).  p%QPtN must be already set.
-subroutine InitializeNodalLocations(InputFileData,p,GLL_nodes,InitOut,ErrStat, ErrMsg)
-   type(BD_InputFile),           intent(in   )  :: InputFileData     !< data from the input file
+subroutine InitializeNodalLocations(member_total,kp_member,kp_coordinate,p,GLL_nodes,ErrStat, ErrMsg)
+
+   INTEGER(IntKi),INTENT(IN   ):: member_total
+   INTEGER(IntKi),INTENT(IN   ):: kp_member(:)        !< Number of key points of each member, InputFileData%kp_member from BD input file
+   REAL(BDKi),    INTENT(IN   ):: kp_coordinate(:,:)  !< Keypoints coordinates, from BD input file InputFileData%kp_coordinate(member key points,1:4);
    type(BD_ParameterType),       intent(inout)  :: p                 !< Parameters
    REAL(BDKi),                   INTENT(IN   )  :: GLL_nodes(:)      !< GLL_nodes(p%nodes_per_elem): location of the (p%nodes_per_elem) p%GLL points
-   type(BD_InitOutputType),      intent(inout)  :: InitOut           !< initialization output type (for setting z_coordinate variable)
+   !type(BD_InitOutputType),      intent(inout)  :: InitOut           !< initialization output type (for setting z_coordinate variable)
    integer(IntKi),               intent(  out)  :: ErrStat           !< Error status of the operation
    character(*),                 intent(  out)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
 
    REAL(BDKi),PARAMETER    :: EPS = 1.0D-10
 
-
+   ! ----------------------------------------
    ! local variables
-   INTEGER(IntKi)          :: i                ! do-loop counter
-   INTEGER(IntKi)          :: j                ! do-loop counter
-   INTEGER(IntKi)          :: member_first_kp
-   INTEGER(IntKi)          :: member_last_kp
-   REAL(BDKi)              :: eta
+   INTEGER(IntKi)             :: elem             ! do-loop counter
+   INTEGER(IntKi)             :: i                ! do-loop counter
+   INTEGER(IntKi)             :: j                ! do-loop counter
+   INTEGER(IntKi)             :: k                ! do-loop counter
+   INTEGER(IntKi)             :: kp               ! do-loop counter
+   integer(IntKi)             :: nkp ! number keypoints for an element
+   integer(IntKi)             :: qfit ! polynomial order used for first fit
+   REAL(BDKi),allocatable     :: least_sq_mat(:,:) 
+   REAL(BDKi),allocatable     :: least_sq_rhs(:,:) ! RHS for X,Y,Z,Twist
+   integer(IntKi),allocatable :: least_sq_indx(:) 
+   REAL(BDKi),allocatable     :: least_sq_gll(:) 
+   REAL(BDKi)                 :: twist 
+   REAL(BDKi)                 :: tangent(3)
+
+   REAL(BDKi),allocatable     :: least_sq_shp(:,:) 
+   REAL(BDKi),allocatable     :: least_sq_shpder(:,:) 
+
+   REAL(BDKi),allocatable     :: kp_param(:) 
+  
+   INTEGER(IntKi)          :: first_kp
+   INTEGER(IntKi)          :: last_kp
    REAL(BDKi)              :: temp_POS(3)
    REAL(BDKi)              :: temp_CRV(3)
-
 
    integer(intKi)                               :: ErrStat2          ! temporary Error status
    character(ErrMsgLen)                         :: ErrMsg2           ! temporary Error message
@@ -523,88 +543,144 @@ subroutine InitializeNodalLocations(InputFileData,p,GLL_nodes,InitOut,ErrStat, E
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-   ! Compute segment length ratio w.r.t. member length
-   CALL BD_SegmentEta(InputFileData%member_total,InputFileData%kp_member,InputFileData%kp_coordinate,p%SP_Coef,p%segment_eta)
+   !MIKE
 
    !-------------------------------------------------
    ! p%uuN0 contains the initial (physical) positions and orientations of the (FE) GLL nodes
    !-------------------------------------------------
    p%uuN0(:,:,:) = 0.0_BDKi
 
-   member_first_kp = 1 !first key point on member (element)
-   DO i=1,p%elem_total
+   first_kp = 1 !first key point on member (element)
+   DO elem=1,p%elem_total
 
-       member_last_kp  = member_first_kp + InputFileData%kp_member(i) - 1 !last key point of member (element)
-       DO j=1,p%nodes_per_elem
+       last_kp  = first_kp + kp_member(elem) - 1 !last key point of member (element)
 
-           eta = (GLL_nodes(j) + 1.0_BDKi)/2.0_BDKi ! relative location where we are on the member (element), in range [0,1]
+       nkp = kp_member(elem)  ! number of keypoints in this element
 
-           call Find_IniNode(InputFileData%kp_coordinate, p, member_first_kp, member_last_kp, eta, temp_POS, temp_CRV, ErrStat2, ErrMsg2)
-           CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-           if (ErrStat >= AbortErrLev) return
-           p%uuN0(1:3,j,i) = temp_POS
-           p%uuN0(4:6,j,i) = temp_CRV
-       ENDDO
+       if (p%nodes_per_elem .le. nkp) then
+          qfit = p%nodes_per_elem  ! if LSFE points-per-element is less than number of keypoints fit to final poly
+       else
+          qfit = nkp ! if points-per-element more that number of keypoints, fit to LSFE with order (nkp-1)
+       endif 
 
-         ! set for next element:
-      member_first_kp = member_last_kp
+       call AllocAry(least_sq_gll, qfit, "least-squares GLL nodes",ErrStat2, ErrMsg2)
+
+       call BD_GenerateGLL(qfit,least_sq_gll,ErrStat2,ErrMsg2)
+
+       CALL AllocAry(least_sq_Shp,qfit,nkp,'least-squares fit shp',ErrStat2,ErrMsg2)
+           CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+       CALL AllocAry(least_sq_ShpDer,qfit,nkp,'ShpDer',ErrStat2,ErrMsg2)
+           CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+       CALL AllocAry(kp_param,nkp,'parameterization of keypoints',ErrStat2,ErrMsg2)
+           CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+       ! parameterize the keypoint data to [-1,1] based on z-coordinate
+       kp = first_kp
+       do j = 1, nkp
+          kp_param(j) = 2._BDki*(kp_coordinate(kp,3)-kp_coordinate(first_kp,3))/(kp_coordinate(last_kp,3)-kp_coordinate(first_kp,3)) - 1._BDKi
+          kp = kp + 1
+       enddo
+
+       ! Create shape functions evaluated at the kp positions
+       call BD_diffmtc(qfit,least_sq_gll,kp_param,nkp,least_sq_Shp,least_sq_ShpDer)
+
+       CALL AllocAry(least_sq_mat,qfit,qfit,'matrix for least-squares fit',ErrStat2,ErrMsg2)
+           CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+       CALL AllocAry(least_sq_indx,qfit,'indx solving least-squares fit',ErrStat2,ErrMsg2)
+           CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+       CALL AllocAry(least_sq_rhs,qfit,4,'indx solving least-squares fit',ErrStat2,ErrMsg2)
+           CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+       ! build the least-squares-fit matrix and RHS vectors
+       least_sq_mat = 0._BDKi
+       do i = 1, qfit
+          do j = 1, qfit
+             do k = 1, nkp
+                least_sq_mat(i,j) = least_sq_mat(i,j) + least_sq_shp(i,k)*least_sq_shp(j,k)
+             enddo
+          enddo  
+       enddo  
+
+       least_sq_rhs = 0._BDKi
+       do j = 1, 4 
+          do i = 1, qfit
+            kp = first_kp
+            do k = 1, nkp
+               least_sq_rhs(i,j) = least_sq_rhs(i,j) + least_sq_shp(i,k)*kp_coordinate(kp,j)
+               kp = kp+1
+            enddo
+         enddo  
+       enddo
+   
+      ! modify linear system so that fitted function captures keypoint endpoints
+      do i = 1, qfit
+        least_sq_mat(1,i) = 0._BDKi
+        least_sq_mat(qfit,i) = 0._BDKi
+      enddo 
+      least_sq_mat(1,1) = 1._BDKi
+      least_sq_mat(qfit,qfit) = 1._BDKi
+
+      do j = 1,4
+         least_sq_rhs(1,j) = kp_coordinate(first_kp,j)
+         least_sq_rhs(qfit,j) = kp_coordinate(last_kp,j)
+      enddo
+
+      ! factor matrix system
+
+       CALL LAPACK_getrf( qfit, qfit, least_sq_mat, least_sq_indx, ErrStat2, ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+      ! solve the linear system
+      CALL LAPACK_getrs( 'N', qfit, least_sq_mat, least_sq_indx, least_sq_rhs, ErrStat2, ErrMsg2)
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+      ! we now have qfit LSFE coefficent that are a least squares fit to the keypoint data for XYZT
+      ! next, we calculate the coefficent of the p%nodes_per_elem LSFE for this element
+
+      ! need to re-evalate qfit-node shape functions at the p%nodes_per_elem GLL points
+      deallocate(least_sq_shp)
+      deallocate(least_sq_shpder)
+      CALL AllocAry(least_sq_Shp,qfit,p%nodes_per_elem,'least-squares fit shp',ErrStat2,ErrMsg2)
+          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      CALL AllocAry(least_sq_ShpDer,qfit,p%nodes_per_elem,'ShpDer',ErrStat2,ErrMsg2)
+          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+          ! BD_diffmtc( nodes_per_elem,GLL_nodes,QPtN,nqp,Shp,ShpDer )
+      call BD_diffmtc(qfit,least_sq_gll,gll_nodes,p%nodes_per_elem,least_sq_Shp,least_sq_ShpDer)
+
+      do i = 1, p%nodes_per_elem
+
+        ! start with XYZ
+        twist = 0._BDKi
+        tangent = 0._BDKi
+        do k = 1, qfit    
+           do j = 1, 3 
+               p%uuN0(j,i,elem) = p%uuN0(j,i,elem) + least_sq_rhs(k,j)*least_sq_shp(k,i)
+               tangent(j) = tangent(j) + least_sq_rhs(k,j)*least_sq_shpder(k,i)
+           enddo
+           twist = twist + least_sq_rhs(k,4)*least_sq_shp(k,i)
+        enddo
+
+        tangent = tangent / TwoNorm(tangent)
+
+        CALL BD_ComputeIniNodalCrv(tangent, twist, temp_CRV, ErrStat, ErrMsg)
+        p%uuN0(4:6,i,elem) = temp_CRV
+
+      enddo
+
+      ! set for next element:
+      first_kp = last_kp
+
+      deallocate(least_sq_gll)
+      deallocate(least_sq_Shp)
+      deallocate(least_sq_ShpDer)
+      deallocate(kp_param)
+      deallocate(least_sq_mat)
+      deallocate(least_sq_indx)
+      deallocate(least_sq_rhs)
 
    ENDDO
-
-
-   !!-------------------------------------------------
-   !! InitOut%z_coordinate contains the z coordinate (in meters) along the blade and will be used for naming output channels
-   !!-------------------------------------------------
-   !
-   !   
-   !SELECT CASE(p%BldMotionNodeLoc)
-   !CASE (BD_MESH_FE)
-   !   CALL AllocAry( InitOut%z_coordinate, p%nodes_per_elem*p%elem_total,'InitOut%z_coordinate',ErrStat2,ErrMsg2) ! same size as y%BldMotion%NNodes
-   !      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   !      if (ErrStat2 >= AbortErrLev) return
-   !
-   !   member_first_kp = 1 !first key point on member (element)
-   !   DO i=1,p%elem_total
-   !
-   !       member_last_kp  = member_first_kp + InputFileData%kp_member(i) - 1 !last key point of member (element)
-   !       DO j=1,p%nodes_per_elem
-   !
-   !           eta = (GLL_nodes(j) + 1.0_BDKi)/2.0_BDKi ! relative location where we are on the member (element), in range [0,1]
-   !           InitOut%z_coordinate( (i-1)*p%nodes_per_elem + j ) = Find_InitZ(InputFileData%kp_coordinate, member_first_kp, member_last_kp, eta)
-   !       ENDDO
-   !
-   !         ! set for next element:
-   !      member_first_kp = member_last_kp
-   !
-   !   ENDDO
-   !
-   !
-   !CASE (BD_MESH_QP)
-   !   CALL AllocAry( InitOut%z_coordinate, size(p%NdIndx),'InitOut%z_coordinate',ErrStat2,ErrMsg2) ! same size as y%BldMotion%NNodes
-   !      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   !      if (ErrStat2 >= AbortErrLev) return
-   !
-   !   member_first_kp = 1
-   !
-   !   DO i=1,p%elem_total
-   !      member_last_kp  = member_first_kp + InputFileData%kp_member(i) - 1
-   !
-   !      DO idx_qp=1,p%nqp(i)
-   !         eta = (p%QPtN(idx_qp,i) + 1.0_BDKi)/2.0_BDKi  ! translate quadrature points in [-1,1] to eta in [0,1]
-   !         temp_ID = SUM(p%nqp(0:i-1)) + idx_qp + p%qp_indx_offset - (i - 1)*p%qp_overlap_offset    ! indx_offset=0, overlap_offset=1 for trap
-   !         InitOut%z_coordinate( temp_ID ) = Find_InitZ(InputFileData%kp_coordinate, member_first_kp, member_last_kp, eta)
-   !      ENDDO
-   !
-   !         ! set for next element:
-   !      member_first_kp = member_last_kp
-   !   ENDDO
-   !
-   !   IF (p%quadrature .EQ. GAUSS_QUADRATURE) THEN
-   !      InitOut%z_coordinate( 1                          ) = InputFileData%kp_coordinate(1,3)
-   !      InitOut%z_coordinate( size(InitOut%z_coordinate) ) = InputFileData%kp_coordinate(InputFileData%kp_total,3)
-   !   ENDIF
-   !   
-   !END SELECT
 
    return
 
@@ -1069,16 +1145,6 @@ subroutine SetParameters(InitInp, InputFileData, p, ErrStat, ErrMsg)
    ! set parameters for pitch actuator:
    !...............................................
 
-
-   !...............................................
-   ! Compute p%SP_Coef, coefficients for cubic spline fit, clamped at two ends
-   !...............................................
-
-   call ComputeSplineCoeffs(InputFileData, p%SP_Coef, ErrStat2, ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      if (ErrStat >= AbortErrLev) then
-         return
-      end if
 
    !...............................................
    ! set parameters for File I/O data:
@@ -3235,164 +3301,6 @@ END SUBROUTINE BD_GyroForce
 
 
 !-----------------------------------------------------------------------------------------------------------------------------------
-!> calculate Lagrangian interpolant tensor at ns points where basis
-!! functions are assumed to be associated with (np+1) GLL points on [-1,1]
-SUBROUTINE BD_diffmtc( nodes_per_elem,GLL_nodes,QPtN,nqp,Shp,ShpDer )
-
-   ! See Bauchau equations 17.1 - 17.5
-   
-   INTEGER(IntKi),         INTENT(IN   )  :: nodes_per_elem !< Nodes per elemenent
-   REAL(BDKi),             INTENT(IN   )  :: GLL_nodes(:)   !< GLL_nodes(p%nodes_per_elem): location of the (p%nodes_per_elem) p%GLL points
-   REAL(BDKi),             INTENT(IN   )  :: QPtN(:)        !< Locations of quadrature points ([-1 1])
-   INTEGER(IntKi),         INTENT(IN   )  :: nqp            !< number of quadrature points to consider. Should be size of 2nd index of Shp & ShpDer
-   REAL(BDKi),             INTENT(INOUT)  :: Shp(:,:)       !< p%Shp    (or another Shp array for when we add outputs at arbitrary locations)
-   REAL(BDKi),             INTENT(INOUT)  :: ShpDer(:,:)    !< p%ShpDer (or another Shp array for when we add outputs at arbitrary locations)
-
-   REAL(BDKi)                  :: dnum
-   REAL(BDKi)                  :: den
-   REAL(BDKi),        PARAMETER:: eps = SQRT(EPSILON(eps)) !1.0D-08
-   INTEGER(IntKi)              :: l
-   INTEGER(IntKi)              :: j
-   INTEGER(IntKi)              :: i
-   INTEGER(IntKi)              :: k
-
-   ! See Bauchau equations 17.1 - 17.5
-   
-   Shp(:,:)     = 0.0_BDKi
-   ShpDer(:,:)  = 0.0_BDKi
-   
-
-   do j = 1,nqp
-      do l = 1,nodes_per_elem
-
-       if ((abs(QPtN(j)-1.).LE.eps).AND.(l.EQ.nodes_per_elem)) then           !adp: FIXME: do we want to compare to eps, or EqualRealNos???
-         ShpDer(l,j) = REAL((nodes_per_elem)*(nodes_per_elem-1), BDKi)/4.0_BDKi
-       elseif ((abs(QPtN(j)+1.).LE.eps).AND.(l.EQ.1)) then
-         ShpDer(l,j) = -REAL((nodes_per_elem)*(nodes_per_elem-1), BDKi)/4.0_BDKi
-       elseif (abs(QPtN(j)-GLL_nodes(l)).LE.eps) then
-         ShpDer(l,j) = 0.0_BDKi
-       else
-         ShpDer(l,j) = 0.0_BDKi
-         den = 1.0_BDKi
-         do i = 1,nodes_per_elem
-           if (i.NE.l) then
-             den = den*(GLL_nodes(l)-GLL_nodes(i))
-           endif
-           dnum = 1.0_BDKi
-           do k = 1,nodes_per_elem
-             if ((k.NE.l).AND.(k.NE.i).AND.(i.NE.l)) then
-               dnum = dnum*(QPtN(j)-GLL_nodes(k))
-             elseif (i.EQ.l) then
-               dnum = 0.0_BDKi
-             endif
-           enddo
-           ShpDer(l,j) = ShpDer(l,j) + dnum
-         enddo
-         ShpDer(l,j) = ShpDer(l,j)/den
-       endif
-     enddo
-   enddo
-
-   do j = 1,nqp
-      do l = 1,nodes_per_elem
-
-       if(abs(QPtN(j)-GLL_nodes(l)).LE.eps) then
-         Shp(l,j) = 1.0_BDKi
-       else
-         dnum = 1.0_BDKi
-         den  = 1.0_BDKi
-         do k = 1,nodes_per_elem
-           if (k.NE.l) then
-             den  = den *(GLL_nodes(l) - GLL_nodes(k))
-             dnum = dnum*(QPtN(j) - GLL_nodes(k))
-           endif
-         enddo
-         Shp(l,j) = dnum/den
-       endif
-     enddo
-   enddo
-
-
- END SUBROUTINE BD_diffmtc
-
-
-!-----------------------------------------------------------------------------------------------------------------------------------
-!> This subroutine computes the segment ratio between the segment and member length.
-!! Segment: defined by two adjacent key points
-SUBROUTINE BD_SegmentEta(member_total, kp_member, kp_coordinate, SP_Coef, segment_eta)
-
-   INTEGER(IntKi),INTENT(IN   ):: member_total        !< number of total members that make up the beam, InputFileData%member_total from BD input file
-   INTEGER(IntKi),INTENT(IN   ):: kp_member(:)        !< Number of key points of each member, InputFileData%kp_member from BD input file
-   REAL(BDKi),    INTENT(IN   ):: kp_coordinate(:,:)  !< Keypoints coordinates, from BD input file InputFileData%kp_coordinate(member key points,1:4);
-                                                      !! The last index refers to [1=x;2=y;3=z;4=-twist] compared to what was entered in the input file
-   REAL(BDKi),    INTENT(IN   ):: SP_Coef(:,:,:)      !< cubic spline coefficients; index 1 = [1, kp_member-1];
-                                                      !! index 2 = [1,4] (index of cubic-spline coefficient 1=constant;2=linear;3=quadratic;4=cubic terms);
-                                                      !! index 3 = [1,4] (each column of kp_coord)
-   REAL(BDKi),    INTENT(  OUT):: segment_eta(:)      !< ratio of segment length to element length of a beam's member - computed based on Spline basis
-
-   REAL(BDKi)                  :: eta0
-   REAL(BDKi)                  :: eta1
-   REAL(BDKi)                  :: temp_pos0(3)
-   REAL(BDKi)                  :: temp_pos1(3)
-   REAL(BDKi)                  :: sample_step
-   REAL(BDKi)                  :: dist_to_member_start
-   REAL(BDKi)                  :: segment_length(size(kp_coordinate,1)-1) ! segment length using spline basis
-   REAL(BDKi)                  :: member_length(member_total) ! member length using spline basis or FE quadrature
-   INTEGER(IntKi), parameter   :: sample_total = 3
-
-   INTEGER(IntKi)              :: i
-   INTEGER(IntKi)              :: j
-   INTEGER(IntKi)              :: k
-   INTEGER(IntKi)              :: m
-   INTEGER(IntKi)              :: temp_id
-   INTEGER(IntKi)              :: id0
-   INTEGER(IntKi)              :: id1
-
-
-   member_length  = 0.0_BDKi ! initialize to zero
-   segment_length = 0.0_BDKi ! initialize to zero
-
-   temp_id = 0
-   DO i=1,member_total
-       IF(i .EQ. 1) THEN
-           id0 = 1
-           id1 = kp_member(i)
-       ELSE
-           id0 = id1
-           id1 = id0 + kp_member(i) - 1
-       ENDIF
-
-       DO m=1,kp_member(i)-1
-           temp_id = temp_id + 1
-           sample_step = (kp_coordinate(id0+m,3) - kp_coordinate(id0+m-1,3))/(sample_total-1)
-           DO j=1,sample_total-1
-               eta0 = kp_coordinate(temp_id,3) + (j-1)*sample_step
-               eta1 = kp_coordinate(temp_id,3) +     j*sample_step
-               DO k=1,3 ! x-y-z coordinate
-                   temp_pos0(k) = SP_Coef(temp_id,1,k) + SP_Coef(temp_id,2,k)*eta0 + SP_Coef(temp_id,3,k)*eta0**2 + SP_Coef(temp_id,4,k)*eta0**3
-                   temp_pos1(k) = SP_Coef(temp_id,1,k) + SP_Coef(temp_id,2,k)*eta1 + SP_Coef(temp_id,3,k)*eta1**2 + SP_Coef(temp_id,4,k)*eta1**3
-               ENDDO
-               temp_pos1 = temp_pos1 - temp_pos0 ! array of length 3
-               segment_length(temp_id) = segment_length(temp_id) + TwoNorm(temp_pos1)
-           ENDDO
-           member_length(i) = member_length(i) + segment_length(temp_id)
-       ENDDO
-   ENDDO
-
-   ! ratio of segment's length compared to member length
-   temp_id = 0
-   DO i=1,member_total
-       dist_to_member_start = 0.0_BDKi
-       DO j=1,kp_member(i)-1
-           temp_id = temp_id + 1
-           dist_to_member_start = dist_to_member_start + segment_length(temp_id)
-           segment_eta(temp_id) = dist_to_member_start/member_length(i)
-       ENDDO
-   ENDDO
-
-END SUBROUTINE BD_SegmentEta
-
-!-----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine computes the member length ratio w.r.t. length of a beam.
 !! It also computes the total length.
 !! Member: FE element
@@ -3414,7 +3322,7 @@ SUBROUTINE BD_MemberEta(member_total, QPtW, Jac, member_eta, total_length)
    member_eta    = 0.0_BDKi ! initialize to zero
 
    ! total beam length
-   DO i=1,member_total
+   DO i=1,member_total  ! mas: why not call these elements? 
        DO j=1,size(Jac,1) ! loop over number of quadrature points
            member_length(i) = member_length(i) + QPtW(j)*Jac(j,i)
        ENDDO
@@ -3425,176 +3333,6 @@ SUBROUTINE BD_MemberEta(member_total, QPtW, Jac, member_eta, total_length)
    member_eta = member_length/total_length
 
 END SUBROUTINE BD_MemberEta
-
-
-!-----------------------------------------------------------------------------------------------------------------------------------
-!> This subroutine computes the coefficients for cubic-spline fit of all members given key point locations.
-subroutine ComputeSplineCoeffs(InputFileData, SP_Coef, ErrStat, ErrMsg)
-   type(BD_InputFile),      intent(in   ) :: InputFileData   !< data from the input file
-   REAL(BDKi), ALLOCATABLE, INTENT(  OUT) :: SP_Coef(:,:,:)  !< Coefficients for cubic spline interpolation;
-                                                             !! index 1 = [1, kp_member-1];
-                                                             !! index 2 = [1,4] (index of cubic-spline coefficient 1=constant;2=linear;3=quadratic;4=cubic terms);
-                                                             !! index 3 = [1,4] (each column of kp_coord)
-   INTEGER(IntKi),          INTENT(  OUT) :: ErrStat         !< Error status of the operation
-   CHARACTER(*),            INTENT(  OUT) :: ErrMsg          !< Error message if ErrStat /= ErrID_None
-
-   INTEGER(IntKi)              :: i                          ! loop counter for members
-   INTEGER(IntKi)              :: MemberFirstKP              ! first key point in the member
-   INTEGER(IntKi)              :: MemberLastKP               ! last key point in the member
-
-   INTEGER(IntKi)              :: ErrStat2                   ! Temporary Error status
-   CHARACTER(ErrMsgLen)        :: ErrMsg2                    ! Temporary Error message
-   CHARACTER(*), PARAMETER     :: RoutineName = 'ComputeSplineCoeffs'
-
-
-
-   ErrStat = ErrID_None
-   ErrMsg  = ""
-
-   CALL AllocAry(SP_Coef,InputFileData%kp_total-1,4,4,'Spline coefficient matrix',ErrStat2,ErrMsg2)
-   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   if (ErrStat >= AbortErrLev) return
-
-   ! compute the spline coefficients, SP_Coef
-   MemberFirstKP = 1
-   DO i=1,InputFileData%member_total
-       MemberLastKP = MemberFirstKP + InputFileData%kp_member(i) - 1
-       CALL BD_ComputeIniCoef(InputFileData%kp_member(i),InputFileData%kp_coordinate(MemberFirstKP:MemberLastKP,:),&
-                              SP_Coef(MemberFirstKP:MemberLastKP-1,:,:), ErrStat2, ErrMsg2)
-                              
-       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-       if (ErrStat >= AbortErrLev) return
-       
-       MemberFirstKP = MemberLastKP ! if we have multiple members, there is an overlapping key point, thus we start at the previous end point
-   ENDDO
-
-END SUBROUTINE ComputeSplineCoeffs
-
-
-!-----------------------------------------------------------------------------------------------------------------------------------
-!> This subroutine computes the coefficients for cubic-spline fit
-!! given key point locations of a single member. Clamped conditions are used at the
-!! two end nodes: f''(0) = f''(1) = 0
-SUBROUTINE BD_ComputeIniCoef(kp_member,kp_coordinate,SP_Coef,ErrStat,ErrMsg)
-
-   REAL(BDKi),    INTENT(IN   ):: kp_coordinate(:,:)  !< Keypoints coordinates, from BD input file InputFileData%kp_coordinate(member key points,1:4);
-                                                      !! The last index refers to [1=x;2=y;3=z;4=-twist] compared to what was entered in the input file
-   INTEGER(IntKi),INTENT(IN   ):: kp_member           !< Number of key points of each member, InputFileData%kp_member(i) from BD input file
-   REAL(BDKi),    INTENT(INOUT):: SP_Coef(:,:,:)      !< Coefficients for cubic spline interpolation (intent "inout" instead of "out" only because this is a portion of an allocatable array, which sometimes does weird stuff in gfortran);
-                                                      !! index 1 = [1, kp_member-1];
-                                                      !! index 2 = [1,4] (index of cubic-spline coefficient 1=constant;2=linear;3=quadratic;4=cubic terms);
-                                                      !! index 3 = [1,4] (each column of kp_coord)
-   INTEGER(IntKi),INTENT(  OUT):: ErrStat             !< Error status of the operation
-   CHARACTER(*),  INTENT(  OUT):: ErrMsg              !< Error message if ErrStat /= ErrID_None
-
-   REAL(BDKi),      ALLOCATABLE:: K(:,:)              ! coefficient matrix
-   REAL(BDKi),      ALLOCATABLE:: RHS(:)              ! right hand side of equation we're solving to get the cubic-spline coefficients
-   INTEGER(IntKi),  ALLOCATABLE:: indx(:)
-   INTEGER(IntKi)              :: i
-   INTEGER(IntKi)              :: j                   ! loop over key points in this member
-   INTEGER(IntKi)              :: m
-   INTEGER(IntKi)              :: n                   ! size of matrices = 4*(kp_member-1)
-   INTEGER(IntKi)              :: temp_id1
-   INTEGER(IntKi)              :: ErrStat2                     ! Temporary Error status
-   CHARACTER(ErrMsgLen)        :: ErrMsg2                      ! Temporary Error message
-   CHARACTER(*), PARAMETER     :: RoutineName = 'BD_ComputeIniCoef'
-
-   ErrStat = ErrID_None
-   ErrMsg  = ""
-
-   n = 4*(kp_member-1)
-   CALL AllocAry( K, n, n, 'Coefficient matrix', ErrStat2, ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL AllocAry( RHS, n,  'RHS', ErrStat2, ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL AllocAry( indx, n,  'IPIV', ErrStat2, ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
-   if (ErrStat < AbortErrLev) then ! do these calculations only if we could allocate space
-     ! note that if we return here instead, we could have a memory leak unless we deallocate the local arrays
-   
-      ! compute K, the coefficient matrix, based on the z-component of the entered key points:
-      ! all of the coefficients will depend on kp_zr
-      K(:,:) = 0.0_BDKi
-
-      K(1,3) = 2.0_BDKi
-      K(1,4) = 6.0_BDKi*kp_coordinate(1,3)
-      DO j=1,kp_member-1
-         temp_id1 = (j-1)*4
-
-         K(temp_id1+2,temp_id1+1) = 1.0_BDKi
-         K(temp_id1+2,temp_id1+2) = kp_coordinate(j,3)
-         K(temp_id1+2,temp_id1+3) = kp_coordinate(j,3)**2
-         K(temp_id1+2,temp_id1+4) = kp_coordinate(j,3)**3
-
-         K(temp_id1+3,temp_id1+1) = 1.0_BDKi
-         K(temp_id1+3,temp_id1+2) = kp_coordinate(j+1,3)
-         K(temp_id1+3,temp_id1+3) = kp_coordinate(j+1,3)**2
-         K(temp_id1+3,temp_id1+4) = kp_coordinate(j+1,3)**3
-      END DO
-
-       DO j=1,kp_member-2
-          temp_id1 = (j-1)*4
-
-          K(temp_id1+4,temp_id1+2) = 1.0_BDKi
-          K(temp_id1+4,temp_id1+3) = 2.0_BDKi*kp_coordinate(j+1,3)
-          K(temp_id1+4,temp_id1+4) = 3.0_BDKi*kp_coordinate(j+1,3)**2
-
-          K(temp_id1+4,temp_id1+6) = -1.0_BDKi
-          K(temp_id1+4,temp_id1+7) = -2.0_BDKi*kp_coordinate(j+1,3)
-          K(temp_id1+4,temp_id1+8) = -3.0_BDKi*kp_coordinate(j+1,3)**2
-
-          K(temp_id1+5,temp_id1+3) = 2.0_BDKi
-          K(temp_id1+5,temp_id1+4) = 6.0_BDKi*kp_coordinate(j+1,3)
-
-          K(temp_id1+5,temp_id1+7) = -2.0_BDKi
-          K(temp_id1+5,temp_id1+8) = -6.0_BDKi*kp_coordinate(j+1,3)
-       ENDDO
-
-       temp_id1 = (kp_member-2)*4
-       K(n,temp_id1+3) = 2.0_BDKi
-       K(n,temp_id1+4) = 6.0_BDKi*kp_coordinate(kp_member,3)
-
-          ! compute the factored K matrix so we can use it to solve for the coefficients later
-
-       CALL LAPACK_getrf( n, n, K,indx, ErrStat2, ErrMsg2)
-          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
-
-       DO i=1,4 ! one for each column of kp_coordinate
-
-             ! compute the right hand side for the cubic spline fit
-          RHS(:) = 0.0_BDKi
-          DO j=1,kp_member-1
-             temp_id1 = (j-1)*4
-
-             RHS(temp_id1+2) = kp_coordinate(j,i)
-             RHS(temp_id1+3) = kp_coordinate(j+1,i)
-          ENDDO
-
-             ! solve for the cubic-spline coefficients
-          CALL LAPACK_getrs( 'N', n, K, indx, RHS, ErrStat2, ErrMsg2)
-             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
-             ! convert cubic-spline coefficients in RHS to output array, Coef
-          DO j=1,kp_member-1
-             DO m=1,4
-                SP_Coef(j,m,i) = RHS( (j-1)*4 + m )
-             ENDDO
-          ENDDO
-       ENDDO
-
-   end if ! temp arrays are allocated
-
-      ! this is the cleanup() routine:
-   if (allocated(K   )) deallocate(K)
-   if (allocated(RHS )) deallocate(RHS)
-   if (allocated(indx)) deallocate(indx)
-
-END SUBROUTINE BD_ComputeIniCoef
-
-
-
 !-----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE BD_Static(t,u,utimes,p,x,OtherState,m,ErrStat,ErrMsg)
 

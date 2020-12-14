@@ -338,8 +338,15 @@ END SUBROUTINE WrNR ! ( Str )
 SUBROUTINE WrOver ( Str )
 
    CHARACTER(*), INTENT(IN)     :: Str                                          !< The string to write to the screen.
+   
+   INTEGER                      :: MaxLen                                       !< maximum length of string to be written to the screen (cannot exceed ConRecL here)
 
-   WRITE (CU,'(''+'',A)')  Str
+   ! When the file is opened using CARRIAGECONTROL='FORTRAN', the "+" character allows writing over the previous line. However, the Fortran carriage control has been deleted from the Fortran standard.
+   
+   MaxLen = min(ConRecL-1, len(Str))
+   if (MaxLen > 0) then
+      WRITE (CU,'("+",A)')  Str(1:MaxLen)
+   end if
 
    RETURN
 END SUBROUTINE WrOver ! ( Str )
