@@ -357,11 +357,11 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth, bladeFrame, Hub
       write(Label,'(A,A)') 'NW.Bld', i2ABC(iW)
       Filename = TRIM(FileRootName)//'.'//trim(Label)//'.'//Tstr//'.vtk'
       if (m%FirstCall) then ! Small Hack - At t=0, NW not set, but first NW panel is the LL panel
-         allocate(dxdt_0(3, size(m%dxdt_NW,2) , m%nNW+1)); dxdt_0=0.0_ReKi
+         allocate(dxdt_0(3, size(m%dxdt%r_NW,2) , m%nNW+1)); dxdt_0=0.0_ReKi
          call WrVTK_Lattice(FileName, mvtk, m%r_LL(1:3,:,1:2,iW), m%Gamma_LL(:,iW:iW),dxdt_0, bladeFrame=bladeFrame)
          deallocate(dxdt_0)
       else
-         call WrVTK_Lattice(FileName, mvtk, x%r_NW(1:3,:,1:m%nNW+1,iW), x%Gamma_NW(:,1:m%nNW,iW), m%dxdt_NW(:,:,1:m%nNW+1,iW), bladeFrame=bladeFrame)
+         call WrVTK_Lattice(FileName, mvtk, x%r_NW(1:3,:,1:m%nNW+1,iW), x%Gamma_NW(:,1:m%nNW,iW), m%dxdt%r_NW(:,:,1:m%nNW+1,iW), bladeFrame=bladeFrame)
       endif
    enddo
    ! --------------------------------------------------------------------------------}
@@ -371,7 +371,7 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth, bladeFrame, Hub
    do iW=1,p%VTKBlades
       write(Label,'(A,A)') 'FW.Bld', i2ABC(iW)
       Filename = TRIM(FileRootName)//'.'//trim(Label)//'.'//Tstr//'.vtk'
-      call WrVTK_Lattice(FileName, mvtk, x%r_FW(1:3,1:FWnSpan+1,1:m%nFW+1,iW), x%Gamma_FW(1:FWnSpan,1:m%nFW,iW),m%dxdt_FW(:,:,1:m%nFW+1,iW), bladeFrame=bladeFrame)
+      call WrVTK_Lattice(FileName, mvtk, x%r_FW(1:3,1:FWnSpan+1,1:m%nFW+1,iW), x%Gamma_FW(1:FWnSpan,1:m%nFW,iW),m%dxdt%r_FW(:,:,1:m%nFW+1,iW), bladeFrame=bladeFrame)
    enddo
    ! --------------------------------------------------------------------------------}
    ! --- All Segments

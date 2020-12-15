@@ -49,7 +49,7 @@ module FVW_SUBS
    ! Implementation 
    integer(IntKi), parameter :: iNWStart=2 !< Index in r%NW where the near wake start (if >1 then the Wing panels are included in r_NW)
    integer(IntKi), parameter :: FWnSpan=1  !< Number of spanwise far wake panels ! TODO make it an input later
-   logical       , parameter :: DEV_VERSION=.False.
+   logical       , parameter :: DEV_VERSION=.True.
 contains
 
 !==========================================================================
@@ -243,6 +243,7 @@ subroutine Map_NW_FW(p, m, z, x, ErrStat, ErrMsg)
    character(*),                    intent(  out)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
    integer(IntKi)            :: iW, iRoot
    real(ReKi), dimension(p%nWings) :: FWGamma
+   real(ReKi), dimension(3):: FWEps
    integer(IntKi), parameter :: iAgeFW=1   !< we update the first FW panel
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -252,10 +253,18 @@ subroutine Map_NW_FW(p, m, z, x, ErrStat, ErrMsg)
       FWGamma(:)=0.0_ReKi
       if (m%nNW==p%nNWMax) then
          ! First circulation of Farwake is taken as the max circulation of last NW column
+         ! Regularization of far wake is TODO, for now taken as max but should be ramped up
          do iW=1,p%nWings
             !FWGamma = sum(x%Gamma_NW(:,p%nNWMax,iW))/p%nSpan
             FWGamma(iW) = maxval(x%Gamma_NW(:,p%nNWMax,iW))
             x%Gamma_FW(1:FWnSpan,iAgeFW,iW) = FWGamma(iW)
+            ! Regularization TODO (should be increased to account for the concentration of vorticity to 1 panel only
+            FWEps(1) = maxval(x%Eps_NW(1,:,p%nNWMax,iW))
+            FWEps(2) = maxval(x%Eps_NW(2,:,p%nNWMax,iW))
+            FWEps(3) = maxval(x%Eps_NW(3,:,p%nNWMax,iW))
+            x%Eps_FW(1,1:FWnSpan,iAgeFW,iW) = FWEps(1)
+            x%Eps_FW(2,1:FWnSpan,iAgeFW,iW) = FWEps(2)
+            x%Eps_FW(3,1:FWnSpan,iAgeFW,iW) = FWEps(3)
          enddo
       endif
 
@@ -309,9 +318,11 @@ subroutine PropagateWake(p, m, z, x, ErrStat, ErrMsg)
          do iAge=p%nFWMax,2,-1
             do iSpan=1,FWnSpan
                x%Gamma_FW(iSpan,iAge,iW) = x%Gamma_FW(iSpan,iAge-1,iW)
+               x%Eps_FW(:,iSpan,iAge,iW) = x%Eps_FW(:,iSpan,iAge-1,iW)
             enddo
          enddo
          x%Gamma_FW(1,1:FWnSpan-1,iW) = -999.9_ReKi ! Nullified
+         !x%Gamma_FW(:,1,iW) = -999.9_ReKi ! Nullified  ! TODO TODO TODO FIX BUG
       enddo
    endif
    ! --- Propagate near wake
@@ -328,18 +339,21 @@ subroutine PropagateWake(p, m, z, x, ErrStat, ErrMsg)
          do iAge=p%nNWMax,iNWStart+1,-1
             do iSpan=1,p%nSpan
                x%Gamma_NW(iSpan,iAge,iW) = x%Gamma_NW(iSpan,iAge-1,iW)
+               x%Eps_NW(:,iSpan,iAge,iW) = x%Eps_NW(:,iSpan,iAge-1,iW)
             enddo
          enddo
          x%Gamma_NW(:,1:iNWStart,iW) = -999.9_ReKi ! Nullified
       enddo
    endif
+   x%Eps_NW(1:3,:,iNWStart,:) = p%WakeRegParam ! Second age is always WakeRegParam
+   x%Eps_NW(1:3,:,1:iNWStart-1,:) = p%WingRegParam ! First age is always WingRegParam (LL)
 
    ! Temporary hack for sub-cycling since straight after wkae computation, the wake size will increase
    ! So we do a "fake" propagation here
    do iW=1,p%nWings
       do iAge=p%nFWMax+1,2,-1 ! 
          do iSpan=1,FWnSpan+1
-            m%dxdt_FW(1:3,iSpan,iAge,iW) = m%dxdt_FW(1:3,iSpan,iAge-1,iW)
+            m%dxdt%r_FW(1:3,iSpan,iAge,iW) = m%dxdt%r_FW(1:3,iSpan,iAge-1,iW)
          enddo
       enddo
       !m%dxdt_FW(1:3,1:FWnSpan+1,1,iW) = -999999_ReKi ! Important not nullified. The best would be to map the last NW convection velocity for this first row.
@@ -347,10 +361,10 @@ subroutine PropagateWake(p, m, z, x, ErrStat, ErrMsg)
    do iW=1,p%nWings
       do iAge=p%nNWMax+1,iNWStart+1,-1 
          do iSpan=1,p%nSpan+1
-            m%dxdt_NW(1:3,iSpan,iAge,iW) = m%dxdt_NW(1:3,iSpan,iAge-1,iW)
+            m%dxdt%r_NW(1:3,iSpan,iAge,iW) = m%dxdt%r_NW(1:3,iSpan,iAge-1,iW)
          enddo
       enddo
-      m%dxdt_NW(1:3,:,1:iNWStart,iW) = 0.0_ReKi ! Nullified, wing do no convect, handled by LL,NW mapping
+      m%dxdt%r_NW(1:3,:,1:iNWStart,iW) = 0.0_ReKi ! Nullified, wing do no convect, handled by LL,NW mapping
    enddo
 
    if (.false.) print*,m%nNW,z%Gamma_LL(1,1) ! Just to avoid unused var warning
@@ -582,7 +596,7 @@ pure integer(IntKi) function CountCPs(p, nNW, nFWEff) result(nCPs)
 end function CountCPs
 
 
-subroutine PackPanelsToSegments(p, m, x, iDepthStart, bMirror, SegConnct, SegPoints, SegGamma, nSeg, nSegP)
+subroutine PackPanelsToSegments(p, m, x, iDepthStart, bMirror, SegConnct, SegPoints, SegGamma, SegEpsilon, nSeg, nSegP)
    type(FVW_ParameterType),         intent(in   ) :: p       !< Parameters
    type(FVW_MiscVarType),           intent(in   ) :: m       !< Initial misc/optimization variables
    type(FVW_ContinuousStateType),   intent(in   ) :: x       !< States
@@ -591,6 +605,7 @@ subroutine PackPanelsToSegments(p, m, x, iDepthStart, bMirror, SegConnct, SegPoi
    integer(IntKi),dimension(:,:), intent(inout) :: SegConnct !< Segment connectivity
    real(ReKi),    dimension(:,:), intent(inout) :: SegPoints !< Segment Points
    real(ReKi),    dimension(:)  , intent(inout) :: SegGamma  !< Segment Circulation
+   real(ReKi),    dimension(:)  , intent(inout) :: SegEpsilon  !< Segment Circulation
    integer(IntKi), intent(out)                :: nSeg      !< Total number of segments after packing
    integer(IntKi), intent(out)                :: nSegP     !< Total number of segments points after packing
    ! Local
@@ -615,13 +630,13 @@ subroutine PackPanelsToSegments(p, m, x, iDepthStart, bMirror, SegConnct, SegPoi
       iHeadC=1
       if (nCNW>0) then
          do iW=1,p%nWings
-            CALL LatticeToSegments(x%r_NW(1:3,:,1:m%nNW+1,iW), x%Gamma_NW(:,1:m%nNW,iW), iDepthStart, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC, .True., LastNWShed )
+            call LatticeToSegments(x%r_NW(1:3,:,1:m%nNW+1,iW), x%Gamma_NW(:,1:m%nNW,iW), x%Eps_NW(1:3,:,1:m%nNW,iW), iDepthStart, SegPoints, SegConnct, SegGamma, SegEpsilon, iHeadP, iHeadC, .True., LastNWShed )
          enddo
       endif
       if (m%nFW>0) then
          iHeadC_bkp = iHeadC
          do iW=1,p%nWings
-            CALL LatticeToSegments(x%r_FW(1:3,:,1:m%nFW+1,iW), x%Gamma_FW(:,1:m%nFW,iW), 1, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC , p%FWShedVorticity, p%FWShedVorticity)
+            call LatticeToSegments(x%r_FW(1:3,:,1:m%nFW+1,iW), x%Gamma_FW(:,1:m%nFW,iW), x%Eps_FW(1:3,:,1:m%nFW,iW), 1, SegPoints, SegConnct, SegGamma, SegEpsilon, iHeadP, iHeadC , p%FWShedVorticity, p%FWShedVorticity)
          enddo
          SegConnct(3,iHeadC_bkp:) = SegConnct(3,iHeadC_bkp:) + m%nNW ! Increasing iDepth (or age) to account for NW
       endif
@@ -670,7 +685,8 @@ end subroutine PackPanelsToSegments
 
 !> Set up regularization parameter based on diffusion method and regularization method
 !! NOTE: this should preferably be done at the "panel"/vortex sheet level
-subroutine FVW_InitRegularization(p, m, ErrStat, ErrMsg)
+subroutine FVW_InitRegularization(x, p, m, ErrStat, ErrMsg)
+   type(FVW_ContinuousStateType),   intent(inout) :: x       !< States
    type(FVW_ParameterType),         intent(inout) :: p       !< Parameters
    type(FVW_MiscVarType),           intent(inout) :: m       !< Initial misc/optimization variables
    integer(IntKi),                  intent(  out) :: ErrStat    !< Error status of the operation
@@ -712,20 +728,29 @@ subroutine FVW_InitRegularization(p, m, ErrStat, ErrMsg)
       print*,'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
       print*,'!!! NOTE: using optmized wake regularization parameters is still a beta feature!'
       print*,'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
-      p%WakeRegMethod      = idRegConstant
+      p%WakeRegMethod      = idRegAge
       p%RegFunction        = idRegVatistas
       p%WakeRegParam       = RegParam
       p%WingRegParam       = RegParam
-      p%CoreSpreadEddyVisc = 100
+      p%CoreSpreadEddyVisc = 1000
       m%Sgmt%RegFunction    = p%RegFunction
       write(*,'(A)'   )   'The following regularization parameters will be used:'
       write(*,'(A,I0)'   )   'WakeRegMethod     : ', p%WakeRegMethod
       write(*,'(A,I0)'   )   'RegFunction       : ', p%RegFunction
       write(*,'(A,1F8.4)')   'WakeRegParam      : ', p%WakeRegParam
       write(*,'(A,1F8.4)')   'WingRegParam      : ', p%WingRegParam
-      write(*,'(A,1F8.4)')   'CoreSpreadEddyVisc: ', p%CoreSpreadEddyVisc
+      write(*,'(A,1F9.4)')   'CoreSpreadEddyVisc: ', p%CoreSpreadEddyVisc
    endif
-   ! KEEP ME: potentially perform pre-computation here
+   ! Default init of reg param
+   x%Eps_NW(1:3,:,:,:) = 0.0_ReKi
+   x%Eps_FW(1:3,:,:,:) = 0.0_ReKi
+   ! Set reg param on wing and first NW
+   ! NOTE: setting the same in all three directions for now, TODO!
+   x%Eps_NW(1:3,:,1,:) = p%WingRegParam ! First age is always WingRegParam (LL)
+   if (p%nNWMax>1) then
+      x%Eps_NW(1:3,:,2,:) = p%WakeRegParam ! Second age is always WakeRegParam
+   endif
+   ! KEEP: potentially perform pre-computation here
    !if (p%WakeRegMethod==idRegConstant) then
    !else if (p%WakeRegMethod==idRegStretching) then
    !else if (p%WakeRegMethod==idRegAge) then
@@ -863,13 +888,13 @@ subroutine InducedVelocitiesAll_Init(p, x, m, Sgmt, Part, Tree,  ErrStat, ErrMsg
    bMirror = p%ShearModel==idShearMirror ! Whether or not we mirror the vorticity wrt ground
 
    ! --- Packing all vortex elements into a list of segments
-   call PackPanelsToSegments(p, m, x, 1, bMirror, Sgmt%Connct, Sgmt%Points, Sgmt%Gamma, nSeg, nSegP)
+   call PackPanelsToSegments(p, m, x, 1, bMirror, Sgmt%Connct, Sgmt%Points, Sgmt%Gamma, Sgmt%Epsilon, nSeg, nSegP)
    Sgmt%RegFunction=p%RegFunction
    Sgmt%nAct  = nSeg
    Sgmt%nActP = nSegP
 
    ! --- Setting up regularization SegEpsilon
-   call WakeRegularization(p, x, m, Sgmt%Connct, Sgmt%Points, Sgmt%Gamma, Sgmt%Epsilon(1:nSeg), ErrStat, ErrMsg)
+   !call WakeRegularization(p, x, m, Sgmt%Connct, Sgmt%Points, Sgmt%Gamma, Sgmt%Epsilon(1:nSeg), ErrStat, ErrMsg)
 
    ! --- Converting to particles
    if ((p%VelocityMethod==idVelocityTree) .or. (p%VelocityMethod==idVelocityPart)) then
@@ -1069,7 +1094,7 @@ subroutine LiftingLineInducedVelocities(p, x, iDepthStart, m, ErrStat, ErrMsg)
    bMirror = p%ShearModel==idShearMirror ! Whether or not we mirror the vorticity wrt ground
 
    ! --- Packing all vortex elements into a list of segments
-   call PackPanelsToSegments(p, m, x, iDepthStart, bMirror, m%Sgmt%Connct, m%Sgmt%Points, m%Sgmt%Gamma, nSeg, nSegP)
+   call PackPanelsToSegments(p, m, x, iDepthStart, bMirror, m%Sgmt%Connct, m%Sgmt%Points, m%Sgmt%Gamma, m%Sgmt%Epsilon, nSeg, nSegP)
 
    ! --- Computing induced velocity
    if (nSegP==0) then
@@ -1080,7 +1105,7 @@ subroutine LiftingLineInducedVelocities(p, x, iDepthStart, m, ErrStat, ErrMsg)
       endif
    else
       ! --- Setting up regularization
-      call WakeRegularization(p, x, m, m%Sgmt%Connct(:,1:nSeg), m%Sgmt%Points(:,1:nSegP), m%Sgmt%Gamma(1:nSeg), m%Sgmt%Epsilon(1:nSeg), ErrStat, ErrMsg)
+      !call WakeRegularization(p, x, m, m%Sgmt%Connct(:,1:nSeg), m%Sgmt%Points(:,1:nSegP), m%Sgmt%Gamma(1:nSeg), m%Sgmt%Epsilon(1:nSeg), ErrStat, ErrMsg)
 
       nCPs=p%nWings * p%nSpan
       allocate(CPs (1:3,1:nCPs)) ! NOTE: here we do allocate CPs and Uind insteadof using Misc 

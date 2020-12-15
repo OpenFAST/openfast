@@ -121,13 +121,15 @@ contains
 
    endsubroutine LatticeToPoints
 
-   subroutine LatticeToSegments(LatticePoints, LatticeGamma, iDepthStart, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC, bShedVorticity, bShedLastVorticity )
-      real(Reki), dimension(:,:,:),    intent(in   )  :: LatticePoints  !< Points 3 x nSpan x nDepth
-      real(Reki), dimension(:,:),      intent(in   )  :: LatticeGamma   !< GammaPanl  nSpan x nDepth
+   subroutine LatticeToSegments(LatticePoints, LatticeGamma, LatticeEpsilon, iDepthStart, SegPoints, SegConnct, SegGamma, SegEpsilon, iHeadP, iHeadC, bShedVorticity, bShedLastVorticity )
+      real(Reki), dimension(:,:,:),    intent(in   )  :: LatticePoints  !< Points  3 x nSpan x nDepth
+      real(Reki), dimension(:,:),      intent(in   )  :: LatticeGamma   !< GammaPanl   nSpan x nDepth
+      real(Reki), dimension(:,:,:),    intent(in   )  :: LatticeEpsilon !< EpsPanl 3 x nSpan x nDepth (one per dimension)
       integer(IntKi),                  intent(in   )  :: iDepthStart    !< Start index for depth dimension
       real(ReKi), dimension(:,:),      intent(inout)  :: SegPoints      !< 
       integer(IntKi), dimension(:,:),  intent(inout)  :: SegConnct      !< 
       real(ReKi),     dimension(:),    intent(inout)  :: SegGamma       !< 
+      real(ReKi),     dimension(:),    intent(inout)  :: SegEpsilon     !< 
       integer(IntKi),                  intent(inout)  :: iHeadP         !< Index indicating where to start in SegPoints
       integer(IntKi),                  intent(inout)  :: iHeadC         !< Index indicating where to start in SegConnct
       logical       ,                  intent(in   )  :: bShedVorticity !< Shed vorticity is included if true
@@ -136,8 +138,8 @@ contains
       integer(IntKi) :: nSpan, nDepth
       integer(IntKi) :: iSpan, iDepth
       integer(IntKi) :: iHeadP0, iseg1, iseg2, iseg3 ,iseg4  !< Index indicating where to start in SegPoints
-      real(ReKi) :: Gamma12
-      real(ReKi) :: Gamma41
+      real(ReKi) :: Gamma12, Eps12
+      real(ReKi) :: Gamma41, Eps41
 
       nSpan = size(LatticePoints,2)
       nDepth= size(LatticePoints,3)
@@ -170,13 +172,17 @@ contains
             iseg4 = iHeadP0 + (iSpan-1) +(iDepth  -iDepthStart+1)*nSpan  ! Point 4
             if (iDepth==iDepthStart) then
                Gamma12 = LatticeGamma(iSpan,iDepth)
+               Eps12   = LatticeEpsilon(1,iSpan,iDepth) ! Using epsilon x for seg12&43. TODO might change in the future
             else
                Gamma12 = LatticeGamma(iSpan,iDepth)-LatticeGamma(iSpan,iDepth-1)
+               Eps12   = (LatticeEpsilon(1,iSpan,iDepth)+LatticeEpsilon(1,iSpan,iDepth-1))/2.0_ReKi
             endif
             if (iSpan==1) then
                Gamma41 = LatticeGamma(iSpan,iDepth)
+               Eps41   = LatticeEpsilon(3,iSpan,iDepth) ! Using epsilon z for seg23&41. TODO might change in the future
             else
                Gamma41 = LatticeGamma(iSpan,iDepth)-LatticeGamma(iSpan-1,iDepth)
+               Eps41   = (LatticeEpsilon(3,iSpan,iDepth)+LatticeEpsilon(3,iSpan-1,iDepth))/2.0_ReKi
             endif
             ! Segment 1-2
             if (bShedVorticity) then
@@ -184,7 +190,8 @@ contains
                SegConnct(2,iHeadC) = iseg2
                SegConnct(3,iHeadC) = iDepth
                SegConnct(4,iHeadC) = iSpan
-               SegGamma (iHeadC  ) = Gamma12
+               SegGamma  (iHeadC ) = Gamma12
+               SegEpsilon(iHeadC ) = Eps12
                iHeadC=iHeadC+1
             endif
             ! Segment 1-4
@@ -193,6 +200,7 @@ contains
             SegConnct(3,iHeadC) = iDepth
             SegConnct(4,iHeadC) = iSpan
             SegGamma (iHeadC  ) = -Gamma41
+            SegEpsilon(iHeadC ) = Eps41
             iHeadC=iHeadC+1
             ! Segment 4-3
             if (iDepth==nDepth-1) then
@@ -202,6 +210,7 @@ contains
                   SegConnct(3,iHeadC) = iDepth
                   SegConnct(4,iHeadC) = iSpan
                   SegGamma (iHeadC  ) = - LatticeGamma(iSpan,iDepth)
+                  SegEpsilon(iHeadC ) = LatticeEpsilon(1,iSpan,iDepth) ! Using epsilon x 
                   iHeadC=iHeadC+1
                endif
             endif
@@ -212,6 +221,7 @@ contains
                SegConnct(3,iHeadC) = iDepth
                SegConnct(4,iHeadC) = iSpan
                SegGamma (iHeadC  ) = LatticeGamma(iSpan,iDepth)
+               SegEpsilon(iHeadC ) = LatticeEpsilon(3,iSpan,iDepth) ! Using epsilon z
                iHeadC=iHeadC+1
             endif
          enddo

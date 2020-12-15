@@ -77,6 +77,18 @@ typedef     ^                   ^               CHARACTER(1024)                 
 typedef     ^                   ^               CHARACTER(1024)                  VTK_OutFileBase - - - "Basename for writing VTK files"	-
 typedef     ^                   ^               IntKi                            nGridOut      -  - -    "Number of VTK grid to output" -
 
+#.......... ContinuousStateType ......
+# FVW_ContinuousStateType
+typedef FVW/FVW            ContinuousStateType  ReKi                             Gamma_NW     :::   -  -  "Circulation of the near wake panels (    nSpan     x nNW   x nWings)" -
+typedef     ^                   ^               ReKi                             Gamma_FW     :::   -  -  "Circulation of the far  wake panels (    nFWSpan   x nFW   x nWings)" -
+typedef     ^                   ^               ReKi                             Eps_NW       ::::  -  -  "Reg param   of the near wake panels (3 x nSpan     x nNW   x nWings)" -
+typedef     ^                   ^               ReKi                             Eps_FW       ::::  -  -  "Reg param   of the far  wake panels (3 x nFWSpan   x nFW   x nWings)" -
+typedef     ^                   ^               ReKi                             r_NW         ::::  -  -  "Position    of the near wake panels (3 x nSpan+1   x nNW+1 x nWings) " -
+typedef     ^                   ^               ReKi                             r_FW         ::::  -  -  "Position    of the far  wake panels (3 x nFWSpan+1 x nFW+1 x nWings)" -
+# TODO UA
+typedef   ^                      ^              UA_ContinuousStateType             UA           -  -  - "states for UnsteadyAero"        -
+
+
 # ....... MiscVars ............
 # FVW_MiscVarType
 typedef  FVW/FVW           MiscVarType          Logical                          FirstCall      -  - - "True if this is the first call to update state (used in CalcOutput)" -
@@ -115,8 +127,7 @@ typedef     ^                   ^               ReKi                            
 typedef     ^                   ^               Logical                          ComputeWakeInduced - - - "Compute induced velocities on this timestep" -
 typedef     ^                   ^               DbKi                             OldWakeTime   -   -   -  "Time the wake induction velocities were last calculated" s
 typedef     ^                   ^               ReKi                             tSpent        -   -  -  "Time spent in expensive Biot-Savart computation" s
-typedef     ^                   ^               ReKi                             dxdt_NW        ::::    -  -  "State time derivatie, stored for subcylcing" - 
-typedef     ^                   ^               ReKi                             dxdt_FW        ::::    -  -  "State time derivatie, stored for subcylcing" - 
+typedef     ^                   ^               FVW_ContinuousStateType          dxdt          -   -  -  "State time derivatie, stored for subcycling and convenience" - 
 # Convenient storage
 typedef     ^                   ^               Reki                             alpha_LL      ::   -  -  "Angle of attack at lifting line CP, only computed with CircPolarData method" -
 typedef     ^                   ^               Reki                             Vreln_LL      ::   -  -  "Norm of Vrel on the lifting line" -
@@ -126,13 +137,13 @@ typedef     ^                   ^               T_Sgmt                          
 typedef     ^                   ^               ReKi                             CPs           ::    -  -  "Control points used for wake rollup computation" - 
 typedef     ^                   ^               ReKi                             Uind          ::    -  -  "Induced velocities obtained at control points" -
 # for calculating outputs at blade nodes
-typedef     ^                   ^               ReKi                             BN_AxInd      ::    -  -  "Axial induction [size: (NumBlNds,numBlades)]" -
-typedef     ^                   ^               ReKi                             BN_TanInd     ::    -  -  "Tangential induction [size: (NumBlNds,numBlades)]" -
-typedef     ^                   ^               ReKi                             BN_Vrel       ::    -  -  "Relative velocity [size: (NumBlNds,numBlades)]" m/s
-typedef     ^                   ^               ReKi                             BN_alpha      ::    -  -  "Angle of attack [size: (NumBlNds,numBlades)]" rad
-typedef     ^                   ^               ReKi                             BN_phi        ::    -  -  "angle between the plane of rotation and the direction of the local wind [size: (NumBlNds,numBlades)]" rad
-typedef     ^                   ^               ReKi                             BN_Re         ::    -  -  "Reynolds number [size: (NumBlNds,numBlades)]" -
-typedef     ^                   ^               ReKi                             BN_URelWind_s :::   -  -  "Relative wind velocity in section coordinates [size: (3,NumBlNds,numBlades)]" m/s
+typedef     ^                   ^               ReKi                             BN_AxInd      ::    -  -  "Axial induction [size (NumBlNds,numBlades)]" -
+typedef     ^                   ^               ReKi                             BN_TanInd     ::    -  -  "Tangential induction [size (NumBlNds,numBlades)]" -
+typedef     ^                   ^               ReKi                             BN_Vrel       ::    -  -  "Relative velocity [size (NumBlNds,numBlades)]" m/s
+typedef     ^                   ^               ReKi                             BN_alpha      ::    -  -  "Angle of attack [size (NumBlNds,numBlades)]" rad
+typedef     ^                   ^               ReKi                             BN_phi        ::    -  -  "angle between the plane of rotation and the direction of the local wind [size (NumBlNds,numBlades)]" rad
+typedef     ^                   ^               ReKi                             BN_Re         ::    -  -  "Reynolds number [size (NumBlNds,numBlades)]" -
+typedef     ^                   ^               ReKi                             BN_URelWind_s :::   -  -  "Relative wind velocity in section coordinates [size (3,NumBlNds,numBlades)]" m/s
 typedef     ^                   ^               ReKi                             BN_Cl_Static  ::    -  -  "Coefficient lift,   excluding unsteady aero effects" - 
 typedef     ^                   ^               ReKi                             BN_Cd_Static  ::    -  -  "Coefficient drag.   excluding unsteady aero effects" -
 typedef     ^                   ^               ReKi                             BN_Cm_Static  ::    -  -  "Coefficient moment, excluding unsteady aero effects" -
@@ -165,15 +176,6 @@ typedef     ^                   ^               ReKi                            
 # FVW_OutputType
 typedef  FVW/FVW           OutputType           ReKi                             Vind      :::   - - "TODO mesh  - Induced velocity vector. "  -
 typedef     ^                   ^               ReKi                             Cl_KJ      ::   - - "Lift coefficient from circulation (Kutta-Joukowski)"  -
-
-#.......... ContinuousStateType ......
-# FVW_ContinuousStateType
-typedef FVW/FVW            ContinuousStateType  ReKi                             Gamma_NW     :::   -  -  "Circulation of the near wake panels" -
-typedef     ^                   ^               ReKi                             Gamma_FW     :::   -  -  "Circulation of the far  wake panels" -
-typedef     ^                   ^               ReKi                             r_NW         ::::  -  -  "Position    of the near wake panels" -
-typedef     ^                   ^               ReKi                             r_FW         ::::  -  -  "Position    of the far  wake panels" -
-# TODO UA
-typedef   ^                      ^              UA_ContinuousStateType             UA           -  -  - "states for UnsteadyAero"        -
 
 
 #.......... DiscreteStateType ......

@@ -133,7 +133,7 @@ subroutine FVW_Init(AFInfo, InitInp, u, p, x, xd, z, OtherState, y, m, Interval,
    ! Panelling wings based on initial input mesh provided
    ! This mesh is now a cousin of the BladeMotion mesh from AD.
    CALL Wings_Panelling     (u%WingsMesh, p, m, ErrStat2, ErrMsg2); if(Failed()) return
-   CALL FVW_InitRegularization(p, m, ErrStat2, ErrMsg2); if(Failed()) return
+   CALL FVW_InitRegularization(x, p, m, ErrStat2, ErrMsg2); if(Failed()) return
    CALL FVW_ToString(p, m) ! Print to screen
 
    ! Mapping NW and FW (purely for esthetics, and maybe wind) ! TODO, just points
@@ -219,8 +219,6 @@ subroutine FVW_InitMiscVars( p, m, ErrStat, ErrMsg )
    call AllocAry( m%Vwnd_FW , 3   ,  FWnSpan+1  ,p%nFWMax+1,  p%nWings, 'Wind on FW ', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%Vwnd_FW= -999_ReKi;
    call AllocAry( m%Vind_NW , 3   ,  p%nSpan+1  ,p%nNWMax+1,  p%nWings, 'Vind on NW ', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%Vind_NW= -999_ReKi;
    call AllocAry( m%Vind_FW , 3   ,  FWnSpan+1  ,p%nFWMax+1,  p%nWings, 'Vind on FW ', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%Vind_FW= -999_ReKi;
-   call AllocAry( m%dxdt_NW , 3   ,  p%nSpan+1 , p%nNWMax+1,  p%nWings, 'NW dxdt'    , ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%dxdt_NW = -999999_ReKi;
-   call AllocAry( m%dxdt_FW , 3   ,  FWnSpan+1 , p%nFWMax+1,  p%nWings, 'FW dxdt'    , ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%dxdt_FW = -999999_ReKi;
    ! Variables for optimizing outputs at blade nodes
    call AllocAry( m%BN_UrelWind_s, 3, p%nSpan+1 , p%nWings, 'Relative wind in section coordinates',   ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%BN_UrelWind_s= -999999_ReKi;
    call AllocAry( m%BN_AxInd   ,      p%nSpan+1 , p%nWings, 'Axial induction',                        ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%BN_AxInd     = -999999_ReKi;
@@ -238,6 +236,12 @@ subroutine FVW_InitMiscVars( p, m, ErrStat, ErrMsg )
    call AllocAry( m%BN_Cx        ,    p%nSpan+1 , p%nWings, 'Coefficient normal (to plane)',          ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%BN_Cx        = -999999_ReKi;
    call AllocAry( m%BN_Cy        ,    p%nSpan+1 , p%nWings, 'Coefficient tangential (to plane)',      ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%BN_Cy        = -999999_ReKi;
 
+
+   ! dxdt, to avoid realloc all the time, and storage for subcycling 
+   call AllocAry( m%dxdt%r_NW , 3   ,  p%nSpan+1 , p%nNWMax+1,  p%nWings, 'r NW dxdt'  , ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); m%dxdt%r_NW = -999999_ReKi;
+   call AllocAry( m%dxdt%r_FW , 3   ,  FWnSpan+1 , p%nFWMax+1,  p%nWings, 'r FW dxdt'  , ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); m%dxdt%r_FW = -999999_ReKi;
+   call AllocAry( m%dxdt%Eps_NW, 3  ,  p%nSpan    ,p%nNWMax  ,  p%nWings, 'Eps NW dxdt', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); m%dxdt%Eps_NW = -999999_ReKi;
+   call AllocAry( m%dxdt%Eps_FW, 3  ,  FWnSpan    ,p%nFWMax  ,  p%nWings, 'Eps FW dxdt', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); m%dxdt%Eps_FW = -999999_ReKi;
 
    ! Wind request points
    nMax = 0
@@ -310,21 +314,18 @@ subroutine FVW_InitStates( x, p, ErrStat, ErrMsg )
 
    call AllocAry( x%Gamma_NW,    p%nSpan   , p%nNWMax  , p%nWings, 'NW Panels Circulation', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitStates' ); 
    call AllocAry( x%Gamma_FW,    FWnSpan   , p%nFWMax  , p%nWings, 'FW Panels Circulation', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitStates' ); 
+   call AllocAry( x%Eps_NW  , 3, p%nSpan   , p%nNWMax  , p%nWings, 'NW Panels Reg Param'  , ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitStates' );
+   call AllocAry( x%Eps_FW  , 3, FWnSpan   , p%nFWMax  , p%nWings, 'FW Panels Reg Param'  , ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitStates' );
    ! set x%r_NW and x%r_FW to (0,0,0) so that InflowWind can shortcut the calculations
    call AllocAry( x%r_NW    , 3, p%nSpan+1 , p%nNWMax+1, p%nWings, 'NW Panels Points'     , ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitStates' );
    call AllocAry( x%r_FW    , 3, FWnSpan+1 , p%nFWMax+1, p%nWings, 'FW Panels Points'     , ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitStates' );
-   !if (DEV_VERSION) then
-   !   x%r_NW     = -9999999_ReKi;
-   !   x%r_FW     = -9999999_ReKi;
-   !   x%Gamma_NW = -999999_ReKi;
-   !   x%Gamma_FW = -999999_ReKi;
-   !else
+   if (ErrStat >= AbortErrLev) return
    x%r_NW     = 0.0_ReKi
    x%r_FW     = 0.0_ReKi
    x%Gamma_NW = 0.0_ReKi ! First call of calcoutput, states might not be set 
    x%Gamma_FW = 0.0_ReKi ! NOTE, these values might be mapped from z%Gamma_LL at init
-   !endif
-   if (ErrStat >= AbortErrLev) return
+   x%Eps_NW   = 0.0_ReKi 
+   x%Eps_FW   = 0.0_ReKi 
 end subroutine FVW_InitStates
 ! ==============================================================================
 subroutine FVW_InitConstraint( z, p, m, ErrStat, ErrMsg )
@@ -724,7 +725,7 @@ subroutine FVW_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSt
    type(FVW_ConstraintStateType), intent(in   ) :: z          !< Constraint states at t
    type(FVW_OtherStateType),      intent(in   ) :: OtherState !< Other states at t
    type(FVW_MiscVarType),         intent(inout) :: m          !< Misc variables for optimization (not copied in glue code)
-   type(FVW_ContinuousStateType), intent(  out) :: dxdt       !< Continuous state derivatives at t
+   type(FVW_ContinuousStateType), intent(inout) :: dxdt       !< Continuous state derivatives at t
    integer(IntKi),                intent(  out) :: ErrStat    !< Error status of the operation
    character(*),                  intent(  out) :: ErrMsg     !< Error message if ErrStat /= ErrID_None
    ! Local variables
@@ -732,14 +733,17 @@ subroutine FVW_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSt
    character(ErrMsgLen) :: ErrMsg2        ! temporary error message
    integer(IntKi)       :: nFWEff ! Number of farwake panels that are free at current time step
    integer(IntKi)       :: i,j,k
+   real(ReKi)           :: visc_fact, age  ! Viscosity factor for diffusion of reg param
    real(ReKi), dimension(3) :: VmeanFW, VmeanNW ! Mean velocity of the near wake and far wake
 
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-   call AllocAry( dxdt%r_NW , 3   ,  p%nSpan+1  ,p%nNWMax+1,  p%nWings, 'Wind on NW ', ErrStat2, ErrMsg2); dxdt%r_NW= -999999_ReKi;
-   call AllocAry( dxdt%r_FW , 3   ,  FWnSpan+1  ,p%nFWMax+1,  p%nWings, 'Wind on FW ', ErrStat2, ErrMsg2); dxdt%r_FW= -999999_ReKi;
-   if(Failed()) return
+   if (.not.allocated(dxdt%r_NW)) then
+      call AllocAry( dxdt%r_NW , 3   ,  p%nSpan+1  ,p%nNWMax+1,  p%nWings, 'Wind on NW ', ErrStat2, ErrMsg2); dxdt%r_NW= -999999_ReKi;
+      call AllocAry( dxdt%r_FW , 3   ,  FWnSpan+1  ,p%nFWMax+1,  p%nWings, 'Wind on FW ', ErrStat2, ErrMsg2); dxdt%r_FW= -999999_ReKi;
+      if(Failed()) return
+   endif
 
    ! Only calculate freewake after start time and if on a timestep when it should be calculated.
    if ((t>= p%FreeWakeStart)) then
@@ -806,10 +810,34 @@ subroutine FVW_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSt
       dxdt%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings) = m%Vwnd_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)
    endif
    ! First NW point does not convect (bound to LL)
-   dxdt%r_NW(1:3, :, 1:iNWStart-1, :)=0
+   dxdt%r_NW(1:3, :, 1:iNWStart-1, :)=0.0_ReKi
    ! First FW point always convects (even if bound to NW)
    ! This is done for subcycling
    !dxdt%r_FW(1:3, :, 1, :)=0
+
+   ! --- Regularization
+   if (.not.allocated(dxdt%r_NW)) then
+      call AllocAry( dxdt%Eps_NW , 3   ,  p%nSpan    ,p%nNWMax  ,  p%nWings, 'Eps NW ', ErrStat2, ErrMsg2); 
+      call AllocAry( dxdt%Eps_FW , 3   ,  FWnSpan    ,p%nFWMax  ,  p%nWings, 'Eps FW ', ErrStat2, ErrMsg2); 
+      if(Failed()) return
+   endif
+   if (p%WakeRegMethod==idRegConstant) then
+      !SegEpsilon=p%WakeRegParam 
+      dxdt%Eps_NW(1:3, :, :, :)=0.0_ReKi
+      dxdt%Eps_FW(1:3, :, :, :)=0.0_ReKi
+
+   else if (p%WakeRegMethod==idRegStretching) then
+      ! TODO
+   else if (p%WakeRegMethod==idRegAge) then
+      visc_fact = 2.0_ReKi * CoreSpreadAlpha * p%CoreSpreadEddyVisc * p%KinVisc
+      visc_fact=visc_fact/sqrt(p%WakeRegParam**2 + 2*visc_fact*p%DTfvw) ! Might need to be adjusted
+      dxdt%Eps_NW(1:3, :, :, :) = visc_fact
+      dxdt%Eps_FW(1:3, :, :, :) = visc_fact
+   else
+      ErrStat = ErrID_Fatal
+      ErrMsg ='Regularization method not implemented'
+   endif
+
 contains
    logical function Failed()
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'FVW_CalcContStateDeriv') 
@@ -830,7 +858,6 @@ subroutine FVW_Euler1( t, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
    integer(IntKi),                intent(  out) :: ErrStat    !< Error status of the operation
    character(*),                  intent(  out) :: ErrMsg     !< Error message if ErrStat /= ErrID_None
    ! local variables
-   type(FVW_ContinuousStateType) :: dxdt ! time derivatives of continuous states
    real(ReKi)     :: dt
    integer(IntKi)       :: ErrStat2      ! temporary error status of the operation
    character(ErrMsgLen) :: ErrMsg2       ! temporary error message
@@ -841,37 +868,47 @@ subroutine FVW_Euler1( t, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
    dt = real(p%DTaero,ReKi) ! NOTE: this is DTaero not DTfvw since we integrate at each sub time step
    ! Compute "right hand side"
    if (m%ComputeWakeInduced) then
-      CALL FVW_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrStat2, ErrMsg2); if (Failed()) return
-      ! Storage of convection velocity, purely for sub-cycling for now
-      ! Since Euler1 is linear we use partial increments of dtaero<dtfvw
-      m%dxdt_NW = dxdt%r_NW
-      m%dxdt_FW = dxdt%r_FW
+      CALL FVW_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, m%dxdt, ErrStat2, ErrMsg2); if (Failed()) return
+   endif
+
+   ! Update of positions
+   x%r_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) = x%r_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) +  dt * m%dxdt%r_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)
+   if ( m%nFW>0) then
+      x%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings) = x%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings) +  dt * m%dxdt%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)
+   endif
+   ! Update of Gamma
+   ! TODO, viscous diffusion, stretching
+
+   ! Update of Reg param
+   x%Eps_NW(1:3, 1:p%nSpan, 1:m%nNW, 1:p%nWings) = x%Eps_NW(1:3, 1:p%nSpan, 1:m%nNW, 1:p%nWings) +  dt * m%dxdt%Eps_NW(1:3, 1:p%nSpan, 1:m%nNW, 1:p%nWings)
+   if ( m%nFW>0) then
+      x%Eps_FW(1:3, 1:FWnSpan, 1:m%nFW, 1:p%nWings) = x%Eps_FW(1:3, 1:FWnSpan, 1:m%nFW, 1:p%nWings) +  dt * m%dxdt%Eps_FW(1:3, 1:FWnSpan, 1:m%nFW, 1:p%nWings)
    endif
 
    if (DEV_VERSION) then
       ! Additional checks
-      if (any(m%dxdt_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)<-999)) then
+      if (any(m%dxdt%r_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)<-999)) then
          print*,'FVW_Euler1: Attempting to convect NW with a wrong velocity'
          STOP
       endif
       if ( m%nFW>0) then
-         if (any(m%dxdt_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)<-999)) then
+         if (any(m%dxdt%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)<-999)) then
             call print_x_NW_FW(p, m, x, 'STP')
             print*,'FVW_Euler1: Attempting to convect FW with a wrong velocity'
             STOP
          endif
       endif
+      if (any(m%dxdt%Eps_NW(1:3, 1:p%nSpan, 1:m%nNW, 1:p%nWings)<-0)) then
+         print*,'FVW_Euler1: Wrong Epsilon NW'
+         STOP
+      endif
+      if ( m%nFW>0) then
+         if (any(m%dxdt%Eps_FW(1:3, 1:FWnSpan, 1:m%nFW, 1:p%nWings)<-999)) then
+            print*,'FVW_Euler1: Wrong Epsilon FW'
+            STOP
+         endif
+      endif
    endif
-
-   ! Update of positions
-   x%r_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) = x%r_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) +  dt * m%dxdt_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)
-   if ( m%nFW>0) then
-      x%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings) = x%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings) +  dt * m%dxdt_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)
-   endif
-   ! Update of Gamma
-   ! TODO, viscous diffusion, stretching
-
-   call FVW_DestroyContState(dxdt, ErrStat2, ErrMsg2); if(Failed()) return
 contains
    logical function Failed()
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'FVW_Euler1') 
