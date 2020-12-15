@@ -22,7 +22,32 @@ IfW driver     7    WrHAWC             false    WrHAWC    - Convert all data to 
 IfW driver     8    WrBladed           false    WrBladed  - Convert all data to Bladed format? (flag)
 IfW driver     9    WrVTK              false    WrVTK     - Convert all data to VTK format? (flag)
 InflowWind     7    VFlowAng                0   VFlowAng  - Upflow angle (degrees) (not used for native Bladed format WindType=7)
+ServoDyn       61   CompNStC                0   CompNStC    - Compute nacelle structural control damping {number of nacelle TMDs} (integer)
+ServoDyn       62   CompNStC         "unused"   NStCfile    - Name of the file for nacelle structural control damping (quoted strings) [unused when CompNStC==0]
+ServoDyn       63   CompNStC                0   CompTStC    - Compute tower structural control damping {number of nacelle TMDs} (integer)
+ServoDyn       64   CompNStC         "unused"   TStCfile    - Name of the file for tower structural control damping (quoted strings) [unused when CompTStC==0]
+ServoDyn       65   CompNStC                0   CompBStC    - Compute  blade structural control damping {number of nacelle tmds} (integer)
+ServoDyn       66   CompNStC         "unused"   BStCfile    - Name of the file for blade structural control damping (quoted strings) [unused when CompBStC==0]
+ServoDyn       67   CompNStC                0   CompPtfmStC - Compute platform structural control damping {number of nacelle TMDs} (integer)
+ServoDyn       68   CompNStC         "unused"   PtfmStCfile - Name of the file for blade structural control damping (quoted strings) [unused when CompPtfmStC==0]
 ============== ==== ================== =============================================================================================================================================================================
+
+-  ServoDyn
+
+   -  The input file parser is updated to a keyword/value pair based input.
+      Each entry must have a corresponding keyword with the same spelling as
+      expected
+   -  The TMD submodule of ServoDyn is replaced by an updated Structural Control
+      module (StC) with updated capabilities and input file.
+
+-  InflowWind
+
+   -  The input file parser is updated to a keyword/value pair based input.
+      Each entry must have a corresponding keyword with the same spelling as
+      expected
+   -  Driver code includes ability to convert between wind types
+
+
 
 
 OpenFAST v2.3.0 to OpenFAST v2.4.0
