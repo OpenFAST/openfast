@@ -234,7 +234,6 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: nDOFM      !< retained degrees of freedom (modes) [-]
     INTEGER(IntKi)  :: SttcSolve      !< Solve dynamics about static equilibrium point (flag) [-]
     LOGICAL  :: ExtraMoment      !< Add Extra lever arm contribution to interface reaction outputs [-]
-    LOGICAL  :: FixedBottom      !< True if Fixed bottom (the 4 x-y DOF fixed for at least one reaction node) [-]
     LOGICAL  :: Floating      !< True if floating bottom (the 6 DOF are free at all reaction nodes) [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: KMMDiag      !< Diagonal coefficients of Kmm (OmegaM squared) [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: CMMDiag      !< Diagonal coefficients of Cmm (~2 Zeta OmegaM)) [-]
@@ -7091,7 +7090,6 @@ ENDIF
     DstParamData%nDOFM = SrcParamData%nDOFM
     DstParamData%SttcSolve = SrcParamData%SttcSolve
     DstParamData%ExtraMoment = SrcParamData%ExtraMoment
-    DstParamData%FixedBottom = SrcParamData%FixedBottom
     DstParamData%Floating = SrcParamData%Floating
 IF (ALLOCATED(SrcParamData%KMMDiag)) THEN
   i1_l = LBOUND(SrcParamData%KMMDiag,1)
@@ -8155,7 +8153,6 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! nDOFM
       Int_BufSz  = Int_BufSz  + 1  ! SttcSolve
       Int_BufSz  = Int_BufSz  + 1  ! ExtraMoment
-      Int_BufSz  = Int_BufSz  + 1  ! FixedBottom
       Int_BufSz  = Int_BufSz  + 1  ! Floating
   Int_BufSz   = Int_BufSz   + 1     ! KMMDiag allocated yes/no
   IF ( ALLOCATED(InData%KMMDiag) ) THEN
@@ -8828,8 +8825,6 @@ ENDIF
     IntKiBuf(Int_Xferred) = InData%SttcSolve
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%ExtraMoment, IntKiBuf(1))
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = TRANSFER(InData%FixedBottom, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%Floating, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
@@ -10283,8 +10278,6 @@ ENDIF
     OutData%SttcSolve = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%ExtraMoment = TRANSFER(IntKiBuf(Int_Xferred), OutData%ExtraMoment)
-    Int_Xferred = Int_Xferred + 1
-    OutData%FixedBottom = TRANSFER(IntKiBuf(Int_Xferred), OutData%FixedBottom)
     Int_Xferred = Int_Xferred + 1
     OutData%Floating = TRANSFER(IntKiBuf(Int_Xferred), OutData%Floating)
     Int_Xferred = Int_Xferred + 1

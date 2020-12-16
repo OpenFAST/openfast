@@ -2023,39 +2023,34 @@ SUBROUTINE InsertJointStiffDamp(p, Init, ErrStat, ErrMsg)
 END SUBROUTINE InsertJointStiffDamp
 
 !> Returns true if the substructure can be considered "fixed bottom"
-!! This is relevant for the ExtraMoment calculation where different reference positions 
-!! are used depending if translation is fixed of free.
-!! As defined in the documentation:
-!! The structure is considered “fixed” at the sea bed if at least one reaction node has:
-!!  - the 4 degrees of freedom accounting for the x-y translation and rotation are fixed 
-!!  OR
-!!  -  an additional stiffness matrix via an SSI input file
-LOGICAL FUNCTION isFixedBottom(Init, p) result(bFixed)
+LOGICAL FUNCTION isFixedBottom(Init, p)
    TYPE(SD_InitType),  INTENT(IN   ) :: Init
    TYPE(SD_ParameterType),INTENT(IN   ) :: p
-   INTEGER(IntKi) :: i, nFixed
-   nFixed=0
-   do i =1,size(p%Nodes_C,1)
-      if (ALL(p%Nodes_C(I,2:7)==idBC_Fixed)) then
-         nFixed=nFixed+1
-      elseif (Init%SSIfile(I)/='') then
-         nFixed=nFixed+1
-      endif
-   enddo
-   bFixed = nFixed >=1
+   isFixedBottom=.not.isFloating(Init,p)
+   !INTEGER(IntKi) :: i, nFixed
+   !nFixed=0
+   !do i =1,size(p%Nodes_C,1)
+   !   if (ALL(p%Nodes_C(I,2:7)==idBC_Fixed)) then
+   !      nFixed=nFixed+1
+   !   elseif (Init%SSIfile(I)/='') then
+   !      nFixed=nFixed+1
+   !   endif
+   !enddo
+   !bFixed = nFixed >=1
 END FUNCTION isFixedBottom
 
 !> True if a structure is floating, no fixed BC at the bottom
-logical function isFloating(Init, p) result(bFLoating)
+logical function isFloating(Init, p) 
    type(SD_InitType),     intent(in   ):: Init
    type(SD_ParameterType),intent(in   ) :: p
    integer(IntKi) :: i
-   bFloating=.True.
+   !isFloating=size(p%Nodes_C)>0
+   isFloating=.True.
    do i =1,size(p%Nodes_C,1)
       if ((all(p%Nodes_C(I,2:7)==idBC_Internal)) .and. (Init%SSIfile(i)=='')) then
          continue
       else
-         bFloating=.False.
+         isFloating=.False.
          return
       endif
    enddo

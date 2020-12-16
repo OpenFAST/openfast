@@ -219,17 +219,9 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    ! Parse the SubDyn inputs 
    CALL SD_Input(InitInput%SDInputFile, Init, p, ErrStat2, ErrMsg2); if(Failed()) return
    if (p%Floating) then
-      if (GUYAN_RIGID_FLOATING) then
-         call WrScr('   Floating case detected, Guyan modes will be rigid body modes')
-      else
-         call WrScr('   Floating case detected')
-      endif
+      call WrScr('   Floating case detected, Guyan modes will be rigid body modes')
    else
-      if (p%FixedBottom) then
-         call WrScr('   Fixed bottom case detected')
-      else
-         call WrScr('   Mixed free/fixed condary conditions (free/floating assumed)')
-      endif
+      call WrScr('   Fixed bottom case detected')
    endif
 
    ! --------------------------------------------------------------------------------
@@ -281,10 +273,11 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    ! DOFs  into (B,F,L):    B=Leader (i.e. Rbar) ,F=Fixed, L=Interior
    call PartitionDOFNodes(Init, m, p, ErrStat2, ErrMsg2) ; if(Failed()) return
    if (p%ExtraMoment) then 
-      if (p%FixedBottom) then
-         call WrScr('   Extra moment will be included in loads (fixed-bottom case detected)')
-      else
+      if (p%Floating) then
+         ! TODO disallow
          call WrScr('   Extra moment will be included in loads (free/floating case detected)')
+      else
+         call WrScr('   Extra moment will be included in loads (fixed-bottom case detected)')
       endif
    endif
 
@@ -490,7 +483,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
          end if          
       endif    
       ! --- Adding Guyan contribution to R and L DOFs
-      if ((.not. p%Floating) .or. (.not. GUYAN_RIGID_FLOATING)) then
+      if (.not.p%Floating) then
          ! Then we add the Guyan motion here
          m%UR_bar        =                       matmul( p%TI      , m%u_TP       )
          m%UR_bar_dot    =                       matmul( p%TI      , m%udot_TP    ) 
@@ -530,15 +523,14 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       m%U_full_elast  = m%U_full
                                                             
       ! --- Place displacement/velocity/acceleration into Y2 output mesh        
-      DO iSDNode = 1,p%nNodes
-         iY2Node = iSDNode
-         DOFList => p%NodesDOF(iSDNode)%List  ! Alias to shorten notations
-         !
-         if (p%Floating .and. GUYAN_RIGID_FLOATING) then
+      if (p%Floating) then
+         do iSDNode = 1,p%nNodes
+            iY2Node = iSDNode
+            DOFList => p%NodesDOF(iSDNode)%List  ! Alias to shorten notations
             ! For floating case, we add the Guyan motion contribution
             ! This accounts for "rotations" effects, where the bottom node should "go up", and not just translate horizontally
-            ! It corresponds to a rigid body motion the the TP as origin
-            ! Rigid body motion of the point
+            ! It corresponds to a rigid body motion with the TP as origin
+            ! --- Guyan (rigid body) motion in global coordinates
             rIP0(1:3)   = p%DP0(1:3, iSDNode)
             rIP(1:3)    = matmul(Rot, rIP0)
             duP(1:3)    = rIP - rIP0 + m%u_TP(1:3)
@@ -551,18 +543,34 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
             m%U_full_dot   (DOFList(4:6))= m%U_full_dot   (DOFList(4:6)) + Om(1:3)
             m%U_full_dotdot(DOFList(1:3))= m%U_full_dotdot(DOFList(1:3)) + aP(1:3)
             m%U_full_dotdot(DOFList(4:6))= m%U_full_dotdot(DOFList(4:6)) + OmD(1:3)
-         endif
          ! TODO TODO which orientation to give for joints with more than 6 dofs?
          ! Construct the direction cosine matrix given the output angles
-         CALL SmllRotTrans( 'UR_bar input angles', m%U_full(DOFList(4)), m%U_full(DOFList(5)), m%U_full(DOFList(6)), DCM, '', ErrStat2, ErrMsg2)
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SD_CalcOutput')
-         y%Y2mesh%Orientation     (:,:,iY2Node)   = DCM
-         y%Y2mesh%TranslationDisp (:,iY2Node)     = m%U_full        (DOFList(1:3))
-         y%Y2mesh%TranslationVel  (:,iY2Node)     = m%U_full_dot    (DOFList(1:3))
-         y%Y2mesh%TranslationAcc  (:,iY2Node)     = m%U_full_dotdot (DOFList(1:3))
-         y%Y2mesh%RotationVel     (:,iY2Node)     = m%U_full_dot    (DOFList(4:6))
-         y%Y2mesh%RotationAcc     (:,iY2Node)     = m%U_full_dotdot (DOFList(4:6))
-      enddo
+            CALL SmllRotTrans( 'UR_bar input angles', m%U_full(DOFList(4)), m%U_full(DOFList(5)), m%U_full(DOFList(6)), DCM, '', ErrStat2, ErrMsg2)
+            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SD_CalcOutput')
+            y%Y2mesh%Orientation     (:,:,iY2Node)   = DCM
+            y%Y2mesh%TranslationDisp (:,iY2Node)     = m%U_full        (DOFList(1:3))
+            y%Y2mesh%TranslationVel  (:,iY2Node)     = m%U_full_dot    (DOFList(1:3))
+            y%Y2mesh%TranslationAcc  (:,iY2Node)     = m%U_full_dotdot (DOFList(1:3))
+            y%Y2mesh%RotationVel     (:,iY2Node)     = m%U_full_dot    (DOFList(4:6))
+            y%Y2mesh%RotationAcc     (:,iY2Node)     = m%U_full_dotdot (DOFList(4:6))
+         enddo
+      else
+         ! --- Fixed bottom
+         do iSDNode = 1,p%nNodes
+            iY2Node = iSDNode
+            DOFList => p%NodesDOF(iSDNode)%List  ! Alias to shorten notations
+            ! TODO TODO which orientation to give for joints with more than 6 dofs?
+            ! Construct the direction cosine matrix given the output angles
+            CALL SmllRotTrans( 'UR_bar input angles', m%U_full(DOFList(4)), m%U_full(DOFList(5)), m%U_full(DOFList(6)), DCM, '', ErrStat2, ErrMsg2)
+            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SD_CalcOutput')
+            y%Y2mesh%Orientation     (:,:,iY2Node)   = DCM
+            y%Y2mesh%TranslationDisp (:,iY2Node)     = m%U_full        (DOFList(1:3))
+            y%Y2mesh%TranslationVel  (:,iY2Node)     = m%U_full_dot    (DOFList(1:3))
+            y%Y2mesh%TranslationAcc  (:,iY2Node)     = m%U_full_dotdot (DOFList(1:3))
+            y%Y2mesh%RotationVel     (:,iY2Node)     = m%U_full_dot    (DOFList(4:6))
+            y%Y2mesh%RotationAcc     (:,iY2Node)     = m%U_full_dotdot (DOFList(4:6))
+         enddo
+      endif
       !________________________________________
       ! Set loads outputs on y%Y1Mesh
       !________________________________________
@@ -585,7 +593,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       !               MExtra = -u_TP x f_TP
       ! Y1_MExtra = - MExtra = -u_TP x Y1(1:3) ! NOTE: double cancelling of signs 
       if (p%ExtraMoment) then
-         if (p%FixedBottom) then ! if Fixed, transfer from non deflected TP to u_TP 
+         if (.not.p%floating) then ! if Fixed, transfer from non deflected TP to u_TP 
             Y1_ExtraMoment(1) = - m%u_TP(2) * Y1(3) + m%u_TP(3) * Y1(2)
             Y1_ExtraMoment(2) = - m%u_TP(3) * Y1(1) + m%u_TP(1) * Y1(3)
             Y1_ExtraMoment(3) = - m%u_TP(1) * Y1(2) + m%u_TP(2) * Y1(1)
@@ -945,7 +953,7 @@ Init%SSIfile(:) = ''
 Init%SSIK       = 0.0_ReKi ! Important init TODO: read these matrices on the fly in SD_FEM maybe?
 Init%SSIM       = 0.0_ReKi ! Important init
 ! Reading reaction lines one by one, allowing for 1, 7 or 8 columns, with col8 being a string for the SSIfile
-DO I = 1, p%nNodes_C
+do I = 1, p%nNodes_C
    READ(UnIn, FMT='(A)', IOSTAT=ErrStat2) Line; ErrMsg2='Error reading reaction line'; if (Failed()) return
    call ReadIAryFromStr(Line, p%Nodes_C(I,:), 8, nColValid, nColNumeric, Init%SSIfile(I:I));
    if (nColValid==1 .and. nColNumeric==1) then
@@ -954,10 +962,10 @@ DO I = 1, p%nNodes_C
    else if (nColNumeric==7 .and.(nColValid==7.or.nColValid==8)) then
       ! This is fine.
    else
-      CALL Fatal(' Error in file "'//TRIM(SDInputFile)//'": Reaction lines must consist of 7 numerical values, followed by an optional string. Problematic line: "'//trim(Line)//'"')
+      call Fatal(' Error in file "'//TRIM(SDInputFile)//'": Reaction lines must consist of 7 numerical values, followed by an optional string. Problematic line: "'//trim(Line)//'"')
       return
    endif
-ENDDO
+enddo
 IF (Check ( p%nNodes_C > Init%NJoints , 'NReact must be less than number of joints')) return
 call CheckBCs(p, ErrStat2, ErrMsg2); if (Failed()) return
 
@@ -969,8 +977,11 @@ DO I = 1, p%nNodes_C
    endif
 enddo
 ! Trigger: determine if floating/fixed  based on BCs and SSI file
-p%FixedBottom = isFixedBottom(Init,p)
-p%Floating    = isFloating(Init,p)
+p%Floating  = isFloating(Init,p)
+!if (p%ExtraMoment .and. p%Floating) then
+!   call Fatal(' Error in file "'//TRIM(SDInputFile)//'": `ExtraMoment` cannot be true in a floating case')
+!   return
+!endif
        
 
 
@@ -2865,9 +2876,11 @@ SUBROUTINE GetExtForceOnInternalDOF( u, p, m, F_L, ErrStat, ErrMsg )
    real(ReKi), parameter :: myNaN = -9999998.989_ReKi 
 
    if (p%ExtraMoment) then
+      ! TODO modify for floating 
+
       ! --- Compute Guyan displacement for extra moment (similar to CalcOutput, but wihtout CB)
       rotations  = GetSmllRotAngs(u%TPMesh%Orientation(:,:,1), ErrStat, Errmsg);
-      if (p%Floating .and. GUYAN_RIGID_FLOATING) then
+      if (p%Floating) then
          ! For fully floating case, we prescribe the Guyan motion as a "rigid" (non-linear) motion
          Rot(1:3,1:3) = transpose(u%TPMesh%Orientation(:,:,1))
          m%DU_full    = 0.0_ReKi
@@ -2891,15 +2904,8 @@ SUBROUTINE GetExtForceOnInternalDOF( u, p, m, F_L, ErrStat, ErrMsg )
          else
             m%DU_full        = m%U_red
          endif
-         if (.not.p%FixedBottom) then ! if Floating, remove u_TP translation
-            do iNode = 1,p%nNodes
-               m%DU_full(p%NodesDOF(iNode)%List(1:3)) =  m%DU_full(p%NodesDOF(iNode)%List(1:3)) - m%u_TP(1:3)
-            enddo
-         endif
       endif
    endif
-
-
    ! --- Build vector of external forces (including gravity) (Moment done below)  
    m%Fext= myNaN
    do iNode = 1,p%nNodes
@@ -2926,8 +2932,9 @@ SUBROUTINE GetExtForceOnInternalDOF( u, p, m, F_L, ErrStat, ErrMsg )
    endif
 
    ! --- Build vector of external moment
-   dO iNode = 1,p%nNodes
+   do iNode = 1,p%nNodes
       Force(1:3)  = m%Fext(p%NodesDOF(iNode)%List(1:3) ) ! Controllable cable + External Forces on LMesh
+      ! Moment ext + gravity
       Moment(1:3) = u%LMesh%Moment(1:3,iNode) + p%FG(p%NodesDOF(iNode)%List(4:6))
       nMembers = (size(p%NodesDOF(iNode)%List)-3)/3 ! Number of members deducted from Node's DOFList
 
