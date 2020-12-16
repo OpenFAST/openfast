@@ -680,7 +680,7 @@ SUBROUTINE SD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSta
       IF ( p%nDOFM == 0 ) RETURN
       
       ! 6-vectors 
-      !m%udot_TP    = (/u%TPMesh%TranslationVel( :,1),u%TPMesh%RotationVel(:,1)/) ! TODO TODO TODO missing
+      m%udot_TP    = (/u%TPMesh%TranslationVel( :,1),u%TPMesh%RotationVel(:,1)/) ! TODO TODO TODO missing
       m%udotdot_TP = (/u%TPMesh%TranslationAcc(:,1), u%TPMesh%RotationAcc(:,1)/)
       ! Compute F_L, force on internal DOF
       CALL GetExtForceOnInternalDOF( u, p, m, .false., m%UFL, ErrStat2, ErrMsg2 );
@@ -688,7 +688,7 @@ SUBROUTINE SD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSta
       ! State equation
       dxdt%qm= x%qmdot
       ! NOTE: matmul( TRANSPOSE(p%PhiM), m%UFL ) = matmul( m%UFL, p%PhiM ) because UFL is 1-D
-      dxdt%qmdot = -p%KMMDiag*x%qm - p%CMMDiag*x%qmdot  - matmul(p%CMB,m%udot_TP)   - matmul(p%MMB,m%udotdot_TP)  + matmul(m%UFL, p%PhiM)
+      dxdt%qmdot = -p%KMMDiag*x%qm - p%CMMDiag*x%qmdot - matmul(p%MMB,m%udotdot_TP)  + matmul(m%UFL, p%PhiM)
 
 END SUBROUTINE SD_CalcContStateDeriv
 
@@ -2404,12 +2404,8 @@ SUBROUTINE SetParameters(Init, p, MBBb, MBmb, KBBb, PhiRb, nM_out, OmegaL, PhiL,
       ! TODO cant use LAPACK due to type conversions FEKi->ReKi
       p%MBM = MATMUL( TI_transpose, MBmb )  ! NOTE: type conversion
       !CALL LAPACK_gemm( 'T', 'N', 1.0_ReKi, p%TI, MBmb, 0.0_ReKi, p%MBM, ErrStat2, ErrMsg2); if(Failed()) return
-      !p%CBM = MATMUL( TRANSPOSE(p%TI), CBMb )    != CBMt
-      !CALL LAPACK_gemm( 'T', 'N', 1.0_ReKi, p%TI, CBMb, 0.0_ReKi, p%CBM, ErrStat2, ErrMsg2); if (Failed()) return
-      p%CBM = 0.0_ReKi ! TODO no cross couplings
       
       p%MMB = TRANSPOSE( p%MBM )                          != MMBt
-      p%CMB = TRANSPOSE( p%CBM )                          != CMBt
 
       p%PhiM = real( PhiL(:,1:p%nDOFM), ReKi)
       
@@ -2419,15 +2415,13 @@ SUBROUTINE SetParameters(Init, p, MBBb, MBmb, KBBb, PhiRb, nM_out, OmegaL, PhiL,
 
       ! C1_11, C1_12  ( see eq 15 [multiply columns by diagonal matrix entries for diagonal multiply on the left])   
       DO I = 1, p%nDOFM ! if (p%nDOFM=p%nDOFM=nDOFM == 0), this loop is skipped
-         p%C1_11(:, I) =            -p%MBM(:, I)*p%KMMDiag(I)              
-         p%C1_12(:, I) = p%CBM(:,I) -p%MBM(:, I)*p%CMMDiag(I)  
+         p%C1_11(:, I) =  -p%MBM(:, I)*p%KMMDiag(I)              
+         p%C1_12(:, I) =  -p%MBM(:, I)*p%CMMDiag(I)  
       ENDDO   
    
       ! D1 Matrices 
       ! D1_12 = CBBt - MBmt*CmBt
-      !CALL LAPACK_GEMM( 'N', 'T', 1.0_ReKi, p%MBM,   p%CBM,  0.0_ReKi, p%D1_13, ErrStat2, ErrMsg2 ); if(Failed()) return  ! p%D1_12 = MATMUL( p%MBM, p%CMB )
-      p%D1_12 = MATMUL( p%MBM, p%CMB )
-      p%D1_12 = p%CBB - p%D1_12
+      p%D1_12 = p%CBB 
       ! D1_13 = MBBt - MBmt*MmBt
       !p%D1_13 = p%MBB - MATMUL( p%MBM, p%MMB )
       CALL LAPACK_GEMM( 'N', 'T', 1.0_ReKi, p%MBM,   p%MBM,  0.0_ReKi, p%D1_13, ErrStat2, ErrMsg2 ); if(Failed()) return  ! p%D1_13 = MATMUL( p%MBM, p%MMB )
@@ -2530,8 +2524,6 @@ if (p%nDOFM > 0 ) THEN
    CALL AllocAry( p%MMB,           nDOFM,    nDOFL_TP, 'p%MMB',           ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')
    CALL AllocAry( p%KMMDiag,       nDOFM,              'p%KMMDiag',       ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')
    CALL AllocAry( p%CMMDiag,       nDOFM,              'p%CMMDiag',       ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')
-   CALL AllocAry( p%CMB,           nDOFM,    nDOFL_TP, 'p%CMB',           ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')
-   CALL AllocAry( p%CBM,           nDOFL_TP, nDOFM,    'p%CBM',           ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')
    CALL AllocAry( p%C1_11,         nDOFL_TP, nDOFM,    'p%C1_11',         ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')        
    CALL AllocAry( p%C1_12,         nDOFL_TP, nDOFM,    'p%C1_12',         ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')        
    CALL AllocAry( p%PhiM,          p%nDOF__L,  nDOFM,    'p%PhiM',        ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')        
@@ -3327,8 +3319,6 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, ErrStat,ErrMsg)
    call yaml_write_array(UnSum, 'MBB ',CBparams%MBB, ReFmt, ErrStat2, ErrMsg2, comment='')
    call yaml_write_array(UnSum, 'MBM', CBparams%MBM, ReFmt, ErrStat2, ErrMsg2, comment='')
    !call yaml_write_array(UnSum, 'CBB', CBparams%CBB, ReFmt, ErrStat2, ErrMsg2, comment='')
-   !call yaml_write_array(UnSum, 'CBM', CBparams%CBM, ReFmt, ErrStat2, ErrMsg2, comment='')
-   !call yaml_write_array(UnSum, 'CBMt',p%CBM, ReFmt, ErrStat2, ErrMsg2, comment='(at TP)')
    !call yaml_write_array(UnSum, 'CMM', CBparams%CMM, ReFmt, ErrStat2, ErrMsg2, comment='')
    !call yaml_write_array(UnSum, 'CMMdiag_zeta',2.0_ReKi * CBparams%OmegaL(1:p%nDOFM) * Init%JDampings(1:p%nDOFM) , ReFmt, ErrStat2, ErrMsg2, comment='(2ZetaOmegaM)')
    call yaml_write_array(UnSum, 'CMMdiag',p%CMMDiag, ReFmt, ErrStat2, ErrMsg2, comment='(2 Zeta OmegaM)')
@@ -3422,7 +3412,6 @@ SUBROUTINE StateMatrices(p, ErrStat, ErrMsg, AA, BB, CC, DD)
       call AllocAry(BB, nX, nU, 'BB',    ErrStat2, ErrMsg2 ); if(Failed()) return; BB(:,:) = 0.0_ReKi
       if(nCB>0) then
          BB(nCB+1:nX, 1 :6  ) = 0.0_ReKi
-         BB(nCB+1:nX, 7:12  ) = -p%CMB(1:nCB,1:6)
          BB(nCB+1:nX, 13:18 ) = -p%MMB(1:nCB,1:6)
          call AllocAry(dFext_dFmeshk, p%nDOF              , 'dFext',    ErrStat2, ErrMsg2 ); if(Failed()) return
          call AllocAry(dFred_dFmeshk, p%nDOF_red          , 'dFred',    ErrStat2, ErrMsg2 ); if(Failed()) return

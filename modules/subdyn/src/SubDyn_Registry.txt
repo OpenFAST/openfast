@@ -205,8 +205,6 @@ typedef  ^  ParameterType  ReKi    D2_64  {:}{:}   -  -  "Coefficient of u in Y2
 typedef  ^  ParameterType  ReKi    MBB  {:}{:}     -  -  "Guyan Mass Matrix after C-B reduction"
 typedef  ^  ParameterType  ReKi    KBB  {:}{:}     -  -  "Guyan Stiffness Matrix after C-B reduction"
 typedef  ^  ParameterType  ReKi    CBB  {:}{:}     -  -  "Guyan Damping Matrix after C-B reduction"
-typedef  ^  ParameterType  ReKi    CMB  {:}{:}     -  -  "Cross coupling Guyan-CB damping matrix"
-typedef  ^  ParameterType  ReKi    CBM  {:}{:}     -  -  "Cross coupling Guyan-CB damping matrix"
 typedef  ^  ParameterType  ReKi    CMM  {:}{:}     -  -  "CB damping matrix"
 typedef  ^  ParameterType  ReKi    MBM  {:}{:}     -  -  "Matrix after C-B reduction"
 typedef  ^  ParameterType  ReKi    PhiL_T  {:}{:}  -  -  "Transpose of Matrix of C-B  modes"
