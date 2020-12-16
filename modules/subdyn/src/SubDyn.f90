@@ -449,16 +449,16 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       ! --------------------------------------------------------------------------------
       ! --- Outputs 1, Y1=-F_TP, reaction force from SubDyn to ElastoDyn (stored in y%Y1Mesh)
       ! --------------------------------------------------------------------------------
-      ! Compute external force on internal (UFL) and interface nodes (F_I)
-      call GetExtForceOnInternalDOF(u, p, m, .false., m%UFL, ErrStat2, ErrMsg2); if(Failed()) return
+      ! Compute external force on internal (F_L) and interface nodes (F_I)
+      call GetExtForceOnInternalDOF(u, p, m, .false., m%F_L, ErrStat2, ErrMsg2); if(Failed()) return
       call GetExtForceOnInterfaceDOF(p, m%Fext, F_I)
       ! Compute reaction/coupling force at TP
       if ( p%nDOFM > 0) then
          Y1 = -(   matmul(p%C1_11, x%qm)   + matmul(p%C1_12,x%qmdot)                                    &
-                 + matmul(p%KBB,   m%u_TP) + matmul(p%D1_12, m%udot_TP) + matmul(p%D1_13, m%udotdot_TP) + matmul(p%D1_14, m%UFL)   & 
+                 + matmul(p%KBB,   m%u_TP) + matmul(p%D1_12, m%udot_TP) + matmul(p%D1_13, m%udotdot_TP) + matmul(p%D1_14, m%F_L)   & 
                  - matmul( F_I, p%TI )    )                                                                          
       else ! No retained modes, so there are no states
-         Y1 = -(   matmul(p%KBB,   m%u_TP) + matmul(p%D1_12, m%udot_TP) + matmul(p%D1_13, m%udotdot_TP) + matmul(p%D1_14, m%UFL)   &  
+         Y1 = -(   matmul(p%KBB,   m%u_TP) + matmul(p%D1_12, m%udot_TP) + matmul(p%D1_13, m%udotdot_TP) + matmul(p%D1_14, m%F_L)   &  
                  - matmul( F_I, p%TI ) ) 
       end if
       ! Computing extra moments due to lever arm introduced by interface displacement
@@ -478,8 +478,8 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       ! --------------------------------------------------------------------------------
       ! --- Output 2, Y2Mesh: motions on all FEM nodes (R, and L DOFs, then full DOF vector)
       ! --------------------------------------------------------------------------------
-      ! External force on internal nodes (UFL)
-      call GetExtForceOnInternalDOF(u, p, m, .false., m%UFL, ErrStat2, ErrMsg2); if(Failed()) return
+      ! External force on internal nodes (F_L)
+      call GetExtForceOnInternalDOF(u, p, m, .false., m%F_L, ErrStat2, ErrMsg2); if(Failed()) return
       m%UR_bar        = 0.0_ReKi
       m%UR_bar_dot    = 0.0_ReKi
       m%UR_bar_dotdot = 0.0_ReKi
@@ -491,11 +491,11 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
          m%UL            = matmul( p%PhiM,  x%qm    )
          m%UL_dot        = matmul( p%PhiM,  x%qmdot )
          m%UL_dotdot     = matmul( p%C2_61, x%qm    )      + matmul( p%C2_62   , x%qmdot )    & 
-                         + matmul( p%D2_63, m%udotdot_TP ) + matmul( p%D2_64,    m%UFL   )
+                         + matmul( p%D2_63, m%udotdot_TP ) + matmul( p%D2_64,    m%F_L   )
       END IF
       ! Static improvement (modify UL)
       if (p%SttcSolve/=idSIM_None) then
-         FLt  = MATMUL(p%PhiL_T      , m%UFL) ! NOTE: Gravity in UFL
+         FLt  = MATMUL(p%PhiL_T      , m%F_L) ! NOTE: Gravity in F_L
          ULS  = MATMUL(p%PhiLInvOmgL2, FLt ) 
          m%UL = m%UL + ULS 
          if ( p%nDOFM > 0) then
@@ -607,7 +607,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
          ! call CalcContStateDeriv one more time to store these qmdotdot for debugging purposes in the output file
          !find xdot at t
          IF ( p%nDOFM > 0 ) THEN
-            ! note that this re-sets m%udotdot_TP and m%UFL, but they are the same values as earlier in this routine so it doesn't change results in SDOut_MapOutputs()
+            ! note that this re-sets m%udotdot_TP and m%F_L, but they are the same values as earlier in this routine so it doesn't change results in SDOut_MapOutputs()
             CALL SD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrStat2, ErrMsg2 ); if(Failed()) return
             !Assign the acceleration to the x variable since it will be used for output file purposes for SSqmdd01-99, and dxdt will disappear
             m%qmdotdot=dxdt%qmdot
@@ -653,7 +653,7 @@ END SUBROUTINE SD_CalcOutput
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Tight coupling routine for computing derivatives of continuous states
-!! note that this also sets m%UFL and m%udotdot_TP
+!! note that this also sets m%F_L and m%udotdot_TP
 SUBROUTINE SD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrStat, ErrMsg )
       REAL(DbKi),                   INTENT(IN   )  :: t           !< Current simulation time in seconds
       TYPE(SD_InputType),           INTENT(IN   )  :: u           !< Inputs at t
@@ -683,12 +683,12 @@ SUBROUTINE SD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSta
       m%udot_TP    = (/u%TPMesh%TranslationVel( :,1),u%TPMesh%RotationVel(:,1)/) ! TODO TODO TODO missing
       m%udotdot_TP = (/u%TPMesh%TranslationAcc(:,1), u%TPMesh%RotationAcc(:,1)/)
       ! Compute F_L, force on internal DOF
-      CALL GetExtForceOnInternalDOF( u, p, m, .false., m%UFL, ErrStat2, ErrMsg2 );
+      CALL GetExtForceOnInternalDOF( u, p, m, .false., m%F_L, ErrStat2, ErrMsg2 );
       
       ! State equation
       dxdt%qm= x%qmdot
-      ! NOTE: matmul( TRANSPOSE(p%PhiM), m%UFL ) = matmul( m%UFL, p%PhiM ) because UFL is 1-D
-      dxdt%qmdot = -p%KMMDiag*x%qm - p%CMMDiag*x%qmdot - matmul(p%MMB,m%udotdot_TP)  + matmul(m%UFL, p%PhiM)
+      ! NOTE: matmul( TRANSPOSE(p%PhiM), m%F_L ) = matmul( m%F_L, p%PhiM ) because F_L is 1-D
+      dxdt%qmdot = -p%KMMDiag*x%qm - p%CMMDiag*x%qmdot - matmul(p%MMB,m%udotdot_TP)  + matmul(m%F_L, p%PhiM)
 
 END SUBROUTINE SD_CalcContStateDeriv
 
@@ -1666,7 +1666,7 @@ SUBROUTINE SD_AM2( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg 
    TYPE(SD_InputType)                              :: u_interp       ! interpolated value of inputs 
    REAL(ReKi)                                      :: xq(2*p%nDOFM) !temporary states (qm and qmdot only)
    REAL(ReKi)                                      :: udotdot_TP2(6) ! temporary copy of udotdot_TP
-   REAL(ReKi)                                      :: UFL2(p%nDOF__L)   ! temporary copy of UFL
+   REAL(ReKi)                                      :: F_L2(p%nDOF__L)   ! temporary copy of F_L
    INTEGER(IntKi)                                  :: ErrStat2
    CHARACTER(ErrMsgLen)                            :: ErrMsg2
 
@@ -1680,21 +1680,21 @@ SUBROUTINE SD_AM2( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg 
    ! interpolate u to find u_interp = u(t) = u_n     
    CALL SD_Input_ExtrapInterp( u, utimes, u_interp, t, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_AM2')
    m%udotdot_TP = (/u_interp%TPMesh%TranslationAcc(:,1), u_interp%TPMesh%RotationAcc(:,1)/)
-   CALL GetExtForceOnInternalDOF(u_interp, p, m, .false., m%UFL, ErrStat2, ErrMsg2);
+   CALL GetExtForceOnInternalDOF(u_interp, p, m, .false., m%F_L, ErrStat2, ErrMsg2);
                 
    ! extrapolate u to find u_interp = u(t + dt)=u_n+1
    CALL SD_Input_ExtrapInterp(u, utimes, u_interp, t+p%SDDeltaT, ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_AM2')
    udotdot_TP2 = (/u_interp%TPMesh%TranslationAcc(:,1), u_interp%TPMesh%RotationAcc(:,1)/)
-   CALL GetExtForceOnInternalDOF(u_interp, p, m, .false., UFL2, ErrStat2, ErrMsg2);    
+   CALL GetExtForceOnInternalDOF(u_interp, p, m, .false., F_L2, ErrStat2, ErrMsg2);    
    
    ! calculate (u_n + u_n+1)/2
    udotdot_TP2 = 0.5_ReKi * ( udotdot_TP2 + m%udotdot_TP )
-   UFL2        = 0.5_ReKi * ( UFL2        + m%UFL        )
+   F_L2        = 0.5_ReKi * ( F_L2        + m%F_L        )
           
    ! set xq = dt * ( A*x_n +  B *(u_n + u_n+1)/2 + Fx)   
    xq(      1:  p%nDOFM)=p%SDDeltaT * x%qmdot                                                                                                   !upper portion of array
-   xq(1+p%nDOFM:2*p%nDOFM)=p%SDDeltaT * (-p%KMMDiag*x%qm - p%CMMDiag*x%qmdot - matmul(p%MMB, udotdot_TP2)  + matmul(UFL2,p%PhiM ))  !lower portion of array
-   ! note: matmul(UFL2,p%PhiM  ) = matmul(p%PhiM_T,UFL2) because UFL2 is 1-D
+   xq(1+p%nDOFM:2*p%nDOFM)=p%SDDeltaT * (-p%KMMDiag*x%qm - p%CMMDiag*x%qmdot - matmul(p%MMB, udotdot_TP2)  + matmul(F_L2,p%PhiM ))  !lower portion of array
+   ! note: matmul(F_L2,p%PhiM  ) = matmul(p%PhiM_T,F_L2) because F_L2 is 1-D
              
    !....................................................
    ! Solve for xq: (equivalent to xq= matmul(p%AM2InvJac,xq)
@@ -2552,7 +2552,7 @@ SUBROUTINE AllocMiscVars(p, Misc, ErrStat, ErrMsg)
    ErrMsg  = ""
       
    ! for readability, we're going to keep track of the max ErrStat through SetErrStat() and not return until the end of this routine.
-   CALL AllocAry( Misc%UFL,          p%nDOF__L,   'UFL',           ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
+   CALL AllocAry( Misc%F_L,          p%nDOF__L,   'F_L',           ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
    CALL AllocAry( Misc%UR_bar,       p%nDOFI__,   'UR_bar',        ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars') !TODO Rb
    CALL AllocAry( Misc%UR_bar_dot,   p%nDOFI__,   'UR_bar_dot',    ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars') !TODO Rb
    CALL AllocAry( Misc%UR_bar_dotdot,p%nDOFI__,   'UR_bar_dotdot', ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars') !TODO Rb

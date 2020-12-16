@@ -138,7 +138,7 @@ typedef  ^    MiscVarType    ReKi           qmdotdot      {:}  -  -  "2nd Deriva
 typedef  ^    MiscVarType    ReKi           u_TP           6   -  -  
 typedef  ^    MiscVarType    ReKi           udot_TP        6   -  -  
 typedef  ^    MiscVarType    ReKi           udotdot_TP     6   -  -  
-typedef  ^    MiscVarType    ReKi           UFL           {:}  -  -  
+typedef  ^    MiscVarType    ReKi           F_L           {:}  -  -  
 typedef  ^    MiscVarType    ReKi           UR_bar        {:}  -  -  
 typedef  ^    MiscVarType    ReKi           UR_bar_dot    {:}  -  -  
 typedef  ^    MiscVarType    ReKi           UR_bar_dotdot {:}  -  -  
