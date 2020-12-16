@@ -67,8 +67,7 @@ MODULE SD_FEM
   ! Types of Static Improvement Methods
   INTEGER(IntKi),   PARAMETER  :: idSIM_None     = 0
   INTEGER(IntKi),   PARAMETER  :: idSIM_Full     = 1
-  INTEGER(IntKi),   PARAMETER  :: idSIM_GravOnly = 2 
-  INTEGER(IntKi)               :: idSIM_Valid(3)  = (/idSIM_None, idSIM_Full, idSIM_GravOnly /)
+  INTEGER(IntKi)               :: idSIM_Valid(2)  = (/idSIM_None, idSIM_Full/)
 
   ! Types of Guyan Damping
   INTEGER(IntKi),   PARAMETER  :: idGuyanDamp_None     = 0
@@ -1029,11 +1028,10 @@ SUBROUTINE AssembleKM(Init, p, ErrStat, ErrMsg)
 
    CALL AllocAry( Init%K, p%nDOF, p%nDOF , 'Init%K',  ErrStat2, ErrMsg2); if(Failed()) return; ! system stiffness matrix 
    CALL AllocAry( Init%M, p%nDOF, p%nDOF , 'Init%M',  ErrStat2, ErrMsg2); if(Failed()) return; ! system mass matrix 
-   CALL AllocAry( Init%FG,p%nDOF,          'Init%FG', ErrStat2, ErrMsg2); if(Failed()) return; ! system gravity force vector 
-   CALL AllocAry( p%FG_full, p%nDOF,     'p%FG_full', ErrStat2, ErrMsg2); if(Failed()) return; ! system gravity force vector 
+   CALL AllocAry( p%FG,   p%nDOF,          'p%FG'  ,  ErrStat2, ErrMsg2); if(Failed()) return; ! system gravity force vector 
    Init%K  = 0.0_FEKi
    Init%M  = 0.0_FEKi
-   Init%FG = 0.0_FEKi
+   p%FG    = 0.0_FEKi
 
    ! loop over all elements, compute element matrices and assemble into global matrices
    DO i = 1, Init%NElem
@@ -1044,7 +1042,7 @@ SUBROUTINE AssembleKM(Init, p, ErrStat, ErrMsg)
 
       ! --- Assembly in global unconstrained system
       IDOF = p%ElemsDOF(1:12, i)
-      Init%FG( IDOF )    = Init%FG( IDOF )     + FGe(1:12)+ FCe(1:12) ! Note: gravity and pretension cable forces
+      p%FG     ( IDOF )  = p%FG( IDOF )   + FGe(1:12)+ FCe(1:12) ! Note: gravity and pretension cable forces
       Init%K(IDOF, IDOF) = Init%K( IDOF, IDOF) + Ke(1:12,1:12)
       Init%M(IDOF, IDOF) = Init%M( IDOF, IDOF) + Me(1:12,1:12)
    ENDDO
@@ -1083,11 +1081,8 @@ SUBROUTINE AssembleKM(Init, p, ErrStat, ErrMsg)
    DO I = 1, Init%nCMass
        iNode = NINT(Init%CMass(I, 1)) ! Note index where concentrated mass is to be added
        iGlob = p%NodesDOF(iNode)%List(3) ! uz
-       Init%FG(iGlob) = Init%FG(iGlob) - Init%CMass(I, 2)*Init%g 
+       p%FG(iGlob) = p%FG(iGlob) - Init%CMass(I, 2)*Init%g 
    ENDDO
-
-   ! Copy FG to FG_full since FG will be reduced later
-   p%FG_full(1:p%nDOF) = Init%FG(1:p%nDOF)
    
    CALL CleanUp_AssembleKM()
    
@@ -1588,7 +1583,6 @@ SUBROUTINE DirectElimination(Init, p, ErrStat, ErrMsg)
    type(IList), dimension(:), allocatable    :: RA       !< RA(a) = [e1,..,en]  list of elements forming a rigid link assembly
    integer(IntKi), dimension(:), allocatable :: RAm1 !< RA^-1(e) = a , for a given element give the index of a rigid assembly
    real(FEKi), dimension(:,:), allocatable :: MM, KK
-   real(FEKi), dimension(:),   allocatable :: FF
    real(FEKi), dimension(:,:), allocatable :: Temp
    integer(IntKi) :: nDOF, iDOF, nDOFPerNode, iNode, iiDOF, i,j
    ErrStat = ErrID_None
@@ -1606,11 +1600,9 @@ SUBROUTINE DirectElimination(Init, p, ErrStat, ErrMsg)
       ! Temporary backup of M and K of full system
       call move_alloc(Init%M,  MM)
       call move_alloc(Init%K,  KK)
-      call move_alloc(Init%FG, FF)
       !  Reallocating
       CALL AllocAry( Init%K,      nDOF, nDOF,       'Init%K'   ,  ErrStat2, ErrMsg2); if(Failed()) return; ! system stiffness matrix 
       CALL AllocAry( Init%M,      nDOF, nDOF,       'Init%M'   ,  ErrStat2, ErrMsg2); if(Failed()) return; ! system mass matrix 
-      CALL AllocAry( Init%FG,     nDOF,             'Init%FG'  ,  ErrStat2, ErrMsg2); if(Failed()) return; ! system gravity force vector 
       CALL AllocAry( Temp   ,size(MM,1), nDOF,      'Temp'     ,  ErrStat2, ErrMsg2); if(Failed()) return; 
       CALL AllocAry( p%T_red_T,nDOF   , size(MM,1), 'T_red_T' ,  ErrStat2, ErrMsg2); if(Failed()) return; 
       ! --- Elimination (stack expensive)
@@ -1631,7 +1623,6 @@ SUBROUTINE DirectElimination(Init, p, ErrStat, ErrMsg)
       !Init%K  = matmul(p%T_red_T, Temp)
       CALL LAPACK_gemm( 'T', 'N', 1.0_FeKi, p%T_red, Temp   , 0.0_FeKi, Init%K, ErrStat2, ErrMsg2); if(Failed()) return
       if (allocated(Temp))    deallocate(Temp)
-      Init%FG = matmul(p%T_red_T, FF)
    endif
    !CALL AllocAry( Init%D,      nDOF, nDOF,  'Init%D'   ,  ErrStat2, ErrMsg2); if(Failed()) return; ! system damping matrix 
    !Init%D = 0 !< Used for additional damping 
@@ -1661,7 +1652,6 @@ CONTAINS
       ! Cleaning up memory
       if (allocated(MM  )) deallocate(MM  )
       if (allocated(KK  )) deallocate(KK  )
-      if (allocated(FF  )) deallocate(FF  )
       if (allocated(RA  )) deallocate(RA  )
       if (allocated(RAm1)) deallocate(RAm1)
       if (allocated(Temp)) deallocate(Temp)
