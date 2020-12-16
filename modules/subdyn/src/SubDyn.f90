@@ -280,6 +280,16 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
          call WrScr('   Extra moment will be included in loads (fixed-bottom case detected)')
       endif
    endif
+   if (p%RotateLoads) then 
+      if (p%Floating) then
+         call WrScr('   >>> Loads will be rotated (floating and OutCosM=True))')
+      else
+         call WrScr('   >>> Loads will not be rotated (fixed bottom)')
+         p%RotateLoads=.false.
+      endif
+   else
+      call WrScr('   >>> Loads will not be rotated (OutCosM=False)')
+   endif
 
    ! --- Craig-Bampton reduction (sets many parameters)
    CALL SD_Craig_Bampton(Init, p, CBparams, ErrStat2, ErrMsg2); if(Failed()) return
@@ -479,7 +489,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       ! --- Output 2, Y2Mesh: motions on all FEM nodes (R, and L DOFs, then full DOF vector)
       ! --------------------------------------------------------------------------------
       ! External force on internal nodes (F_L)
-      call GetExtForceOnInternalDOF(u, p, m, .false., m%F_L, ErrStat2, ErrMsg2); if(Failed()) return
+      call GetExtForceOnInternalDOF(u, p, m, p%RotateLoads, m%F_L, ErrStat2, ErrMsg2); if(Failed()) return
       m%UR_bar        = 0.0_ReKi
       m%UR_bar_dot    = 0.0_ReKi
       m%UR_bar_dotdot = 0.0_ReKi
@@ -683,7 +693,7 @@ SUBROUTINE SD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSta
       m%udot_TP    = (/u%TPMesh%TranslationVel( :,1),u%TPMesh%RotationVel(:,1)/) ! TODO TODO TODO missing
       m%udotdot_TP = (/u%TPMesh%TranslationAcc(:,1), u%TPMesh%RotationAcc(:,1)/)
       ! Compute F_L, force on internal DOF
-      CALL GetExtForceOnInternalDOF( u, p, m, .false., m%F_L, ErrStat2, ErrMsg2 );
+      CALL GetExtForceOnInternalDOF( u, p, m, p%RotateLoads, m%F_L, ErrStat2, ErrMsg2 );
       
       ! State equation
       dxdt%qm= x%qmdot
@@ -1122,6 +1132,8 @@ CALL ReadCom (UnIn, SDInputFile,               'OUTPUT'                         
 CALL ReadLVar(UnIn, SDInputFile, Init%SSSum  , 'SSSum'  , 'Summary File Logic Variable'            ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL ReadLVar(UnIn, SDInputFile, Init%OutCOSM, 'OutCOSM', 'Cosine Matrix Logic Variable'           ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return !bjj: TODO: OutCOSM isn't used anywhere else.
 CALL ReadLVar(UnIn, SDInputFile, p%OutAll    , 'OutAll' , 'Output all Member Forces Logic Variable',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+! TEMPORARY HACK
+p%RotateLoads=Init%OutCOSM
 !Store an integer version of it
 p%OutAllInt= 1
 IF ( .NOT. p%OutAll ) p%OutAllInt= 0
@@ -1680,12 +1692,12 @@ SUBROUTINE SD_AM2( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg 
    ! interpolate u to find u_interp = u(t) = u_n     
    CALL SD_Input_ExtrapInterp( u, utimes, u_interp, t, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_AM2')
    m%udotdot_TP = (/u_interp%TPMesh%TranslationAcc(:,1), u_interp%TPMesh%RotationAcc(:,1)/)
-   CALL GetExtForceOnInternalDOF(u_interp, p, m, .false., m%F_L, ErrStat2, ErrMsg2);
+   CALL GetExtForceOnInternalDOF(u_interp, p, m, p%RotateLoads, m%F_L, ErrStat2, ErrMsg2);
                 
    ! extrapolate u to find u_interp = u(t + dt)=u_n+1
    CALL SD_Input_ExtrapInterp(u, utimes, u_interp, t+p%SDDeltaT, ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_AM2')
    udotdot_TP2 = (/u_interp%TPMesh%TranslationAcc(:,1), u_interp%TPMesh%RotationAcc(:,1)/)
-   CALL GetExtForceOnInternalDOF(u_interp, p, m, .false., F_L2, ErrStat2, ErrMsg2);    
+   CALL GetExtForceOnInternalDOF(u_interp, p, m, p%RotateLoads, F_L2, ErrStat2, ErrMsg2);    
    
    ! calculate (u_n + u_n+1)/2
    udotdot_TP2 = 0.5_ReKi * ( udotdot_TP2 + m%udotdot_TP )
@@ -2863,11 +2875,11 @@ SUBROUTINE GetExtForceOnInternalDOF( u, p, m, rotateLoads, F_L, ErrStat, ErrMsg 
    endif
 
    if (p%ExtraMoment) then
-      ! TODO modify for floating 
       if (p%Floating) then
+         ! TODO deactivate for floating 
          ! For fully floating case, we prescribe the Guyan motion as a "rigid" (non-linear) motion
-         Rot(1:3,1:3) = transpose(u%TPMesh%Orientation(:,:,1))
          m%DU_full    = 0.0_ReKi
+         Rot(1:3,1:3) = transpose(u%TPMesh%Orientation(:,:,1))
          do iNode = 1,p%nNodes
             rIP0(1:3)   = p%DP0(1:3, iNode) ! vector interface->node at t=0
             rIP(1:3)    = matmul(Rot, rIP0)   ! vector interface->node at t
