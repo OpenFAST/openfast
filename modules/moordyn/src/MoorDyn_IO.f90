@@ -729,7 +729,7 @@ CONTAINS
           p%OutParam(I)%OType = 1                ! Line object type
           ! for now we'll just assume the next character(s) are "n" to represent node number:
           READ (OutListTmp(i3:i4-1),*) nID
-          p%OutParam%NodeID = nID
+          p%OutParam(I)%NodeID = nID
           qVal = OutListTmp(i4:)                 ! isolate quantity type string
         ! Connect case                                     ... C?xxx or Con?xxx
         ELSE IF (OutListTmp(1:1) == 'C') THEN
