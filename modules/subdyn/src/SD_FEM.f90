@@ -1110,11 +1110,11 @@ SUBROUTINE AssembleKM(Init, p, ErrStat, ErrMsg)
 
       if (p%Elems(ie, 2)==iNode) then
          p%Nodes_I2(1) = p%Elems(ie, 3)
-         p%K_I2 = Ke(7:12,7:12)
+         p%K_I2 = Ke(1:6,7:12)
 
       else if (p%Elems(ie, 3)==iNode) then
          p%Nodes_I2(1) = p%Elems(ie, 2)
-         p%K_I2 = Ke(1:6,1:6)
+         p%K_I2 = Ke(7:12,1:6)
       else
          print*,'>>> One of the two nodes should be ',iNode
          STOP
@@ -1133,8 +1133,6 @@ SUBROUTINE AssembleKM(Init, p, ErrStat, ErrMsg)
 
    endif
 
-
-   
    CALL CleanUp_AssembleKM()
    
 CONTAINS

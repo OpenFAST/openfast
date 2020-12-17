@@ -603,6 +603,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
                  + matmul(p%D1_141, m%F_L) + matmul(p%D1_142, m%F_L)  - matmul( F_I, p%TI ) ) 
       end if
       print*,'-----------------------'
+      print*,'t        ',t
       print*,'UTP      ',m%u_TP
       print*,'-----------------------'
       print*,'Y1 old2  ',Y1
@@ -627,36 +628,49 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       print*,'Y1 old   ',Y1
 
       if (p%RotateLoads.and.p%SttcSolve/=idSIM_None) then
-         m%U_red(:) = 0.0_ReKi
-         m%U_red(p%ID__L) = ULS  
-
+         ! --- Going from flatten DOFs to reduced DOFs, to full DOFs...
+         ! NOTE: this is only needed for the few DOFs below the interface
+         !       so this could be greatly optimized with the mapping computed at init only..
+         !       TODO...
+         m%U_red_SIM(:) = 0.0_ReKi
+         m%U_red_SIM(p%ID__L) = ULS   ! Only the static contribution
+         if (p%reduced) then
+            m%U_full_SIM = matmul(p%T_red, m%U_red_SIM)
+         else
+            m%U_full_SIM = m%U_red_SIM
+         endif
          iSDNode = p%Nodes_I2(1) ! Second node of interface element
          DOFList => p%NodesDOF(iSDNode)%List
-         ULS_I2 = m%U_red(p%ID__L)
-
-
-         Y1_Guy_L =    matmul( p%K_I2 , ULS_I2)
-         print*,'ULS    ',ULS_I2
+         ULS_I2 = m%U_full_SIM(DOFList(1:6))
+         !print*,'NODE',iSDNode
+         !print*,'DOFLIST',DOFLIST
+         !print*,'DOFLIST', p%NodesDOF(p%Elems(1,2))%List(1:6) 
+         !print*,'DOFLIST', p%NodesDOF(p%Elems(1,3))%List(1:6) 
+         Y1_Guy_L =  - matmul( p%K_I2 , ULS_I2)
+         print*,'ULs    ',ULS_I2
+         print*,'ULe    ',m%U_full_elast(DOFList)
+         if (any(ULS_I2>2)) then
+            STOP
+         endif
          print*,'-----------------------'
          print*,'Split terms (new)'
          print*,'Y1 UtP   ',Y1_Utp
          print*,'Y1 GR    ',Y1_Guy_R
          print*,'Y1 CB    ',Y1_CB
          print*,'Y1 CBL   ',Y1_CB_L
-         print*,'Y1 GL new ',Y1_Guy_L
+         print*,'Y1 GL new',Y1_Guy_L
          Y1_Guy_L(1:3) = matmul(Rb2g,Y1_Guy_L(1:3))
          Y1_Guy_L(4:6) = matmul(Rb2g,Y1_Guy_L(4:6))
-
          Y1_CB(1:3)   = matmul(Rb2g,Y1_CB(1:3))
          Y1_CB(4:6)   = matmul(Rb2g,Y1_CB(4:6))
          Y1_CB_L(1:3) = matmul(Rb2g,Y1_CB_L(1:3))
          Y1_CB_L(4:6) = matmul(Rb2g,Y1_CB_L(4:6))
-         print*,'Y1 GL rot ',Y1_Guy_L
+         print*,'Y1 GL rot',Y1_Guy_L
          print*,'Y1 CB rot',Y1_CB
          print*,'Y1 CBLrot',Y1_CB_L
 
          Y1 = Y1_CB + Y1_Utp + Y1_CB_L+ Y1_Guy_L + Y1_Guy_R 
-         print*,'Y1 new',Y1
+         print*,'Y1    new',Y1
       else
 
          Y1_Guy_L = - matmul(p%D1_142, m%F_L) 
@@ -670,7 +684,8 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
          !           + matmul(p%D1_141, m%F_L) + matmul(p%D1_142, m%F_L)  - matmul( F_I, p%TI ) ) 
          !end if
       endif
-      print*,''
+      print*,'-----------------------'
+      print*,'FileOutputs'
       !if ( p%nDOFM > 0) then
       !   Y1 = -(   matmul(p%C1_11, x%qm)   + matmul(p%C1_12,x%qmdot)                                    &
       !           + matmul(p%KBB,   m%u_TP) + matmul(p%D1_12, m%udot_TP) + matmul(p%D1_13, m%udotdot_TP) &
@@ -737,7 +752,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
          END DO
          m%LastOutTime   = t
       ENDIF           
-  
+      print*,''
 CONTAINS
    LOGICAL FUNCTION Failed()
         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SD_CalcOutput') 
@@ -2675,9 +2690,14 @@ SUBROUTINE AllocMiscVars(p, Misc, ErrStat, ErrMsg)
    CALL AllocAry( Misc%U_full_elast, p%nDOF,      'U_full_elast',  ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
    CALL AllocAry( Misc%U_full_dot,   p%nDOF,      'U_full_dot',    ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
    CALL AllocAry( Misc%U_full_dotdot,p%nDOF,      'U_full_dotdot', ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
-   CALL AllocAry( Misc%U_red,        p%nDOF_red,'U_red',         ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
-   CALL AllocAry( Misc%U_red_dot,    p%nDOF_red,'U_red_dot',     ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
-   CALL AllocAry( Misc%U_red_dotdot, p%nDOF_red,'U_red_dotdot',  ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
+   CALL AllocAry( Misc%U_red,        p%nDOF_red,  'U_red',         ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
+   CALL AllocAry( Misc%U_red_dot,    p%nDOF_red,  'U_red_dot',     ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
+   CALL AllocAry( Misc%U_red_dotdot, p%nDOF_red,  'U_red_dotdot',  ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
+
+if (p%RotateLoads.and.p%SttcSolve/=idSIM_None) then
+   CALL AllocAry( Misc%U_full_SIM,   p%nDOF,      'U_full_SIM',    ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
+   CALL AllocAry( Misc%U_red_SIM,    p%nDOF_red,  'U_red_SIM',     ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
+endif
 
    CALL AllocAry( Misc%Fext,      p%nDOF     , 'm%Fext    ', ErrStat2, ErrMsg2 );CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')
    CALL AllocAry( Misc%Fext_red,  p%nDOF_red , 'm%Fext_red', ErrStat2, ErrMsg2 );CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')
