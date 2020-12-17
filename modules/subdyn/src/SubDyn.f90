@@ -427,7 +427,13 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       REAL(ReKi)                   :: AllOuts(0:MaxOutPts+p%OutAllInt*p%OutAllDims)
       REAL(ReKi)                   :: rotations(3)
       REAL(ReKi)                   :: ULS(p%nDOF__L),  UL0m(p%nDOF__L),  FLt(p%nDOF__L)  ! Temporary values in static improvement method
+      REAL(ReKi)                   :: ULS_I2(6) ! TODO 6*nDOFI
       REAL(ReKi)                   :: Y1(6)
+      REAL(ReKi)                   :: Y1_CB(6)
+      REAL(ReKi)                   :: Y1_CB_L(6)
+      REAL(ReKi)                   :: Y1_Guy_R(6)
+      REAL(ReKi)                   :: Y1_Guy_L(6)
+      REAL(ReKi)                   :: Y1_Utp(6)
       REAL(ReKi)                   :: Y1_ExtraMoment(3) ! Lever arm moment contributions due to interface displacement
       INTEGER(IntKi), pointer      :: DOFList(:)
       INTEGER(IntKi)               :: startDOF
@@ -443,6 +449,8 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       real(ReKi), dimension(3) ::  vP   ! Rigid-body velocity of node
       real(ReKi), dimension(3) ::  aP   ! Rigid-body acceleration of node
       real(R8Ki), dimension(3,3) :: Rot ! Rotation matrix (DCM^t) and delta Rot (DCM^t-I)
+      real(R8Ki), dimension(3,3) :: Rg2b ! Rotation matrix global 2 body coordinates
+      real(R8Ki), dimension(3,3) :: Rb2g !
       INTEGER(IntKi)               :: ErrStat2    ! Error status of the operation (occurs after initial error)
       CHARACTER(ErrMsgLen)         :: ErrMsg2     ! Error message if ErrStat2 /= ErrID_None
       ! Initialize ErrStat
@@ -455,35 +463,8 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       m%u_TP       = (/REAL(u%TPMesh%TranslationDisp(:,1),ReKi), rotations/)
       m%udot_TP    = (/u%TPMesh%TranslationVel( :,1), u%TPMesh%RotationVel(:,1)/)
       m%udotdot_TP = (/u%TPMesh%TranslationAcc( :,1), u%TPMesh%RotationAcc(:,1)/)
-                                    
-      ! --------------------------------------------------------------------------------
-      ! --- Outputs 1, Y1=-F_TP, reaction force from SubDyn to ElastoDyn (stored in y%Y1Mesh)
-      ! --------------------------------------------------------------------------------
-      ! Compute external force on internal (F_L) and interface nodes (F_I)
-      call GetExtForceOnInternalDOF(u, p, m, .false., m%F_L, ErrStat2, ErrMsg2); if(Failed()) return
-      call GetExtForceOnInterfaceDOF(p, m%Fext, F_I)
-      ! Compute reaction/coupling force at TP
-      if ( p%nDOFM > 0) then
-         Y1 = -(   matmul(p%C1_11, x%qm)   + matmul(p%C1_12,x%qmdot)                                    &
-                 + matmul(p%KBB,   m%u_TP) + matmul(p%D1_12, m%udot_TP) + matmul(p%D1_13, m%udotdot_TP) + matmul(p%D1_14, m%F_L)   & 
-                 - matmul( F_I, p%TI )    )                                                                          
-      else ! No retained modes, so there are no states
-         Y1 = -(   matmul(p%KBB,   m%u_TP) + matmul(p%D1_12, m%udot_TP) + matmul(p%D1_13, m%udotdot_TP) + matmul(p%D1_14, m%F_L)   &  
-                 - matmul( F_I, p%TI ) ) 
-      end if
-      ! Computing extra moments due to lever arm introduced by interface displacement
-      ! Y1_MExtra = - MExtra = -u_TP x Y1(1:3) ! NOTE: double cancellation of signs 
-      if (p%ExtraMoment) then
-         if (.not.p%floating) then ! if Fixed, transfer from non deflected TP to u_TP 
-            Y1_ExtraMoment(1) = - m%u_TP(2) * Y1(3) + m%u_TP(3) * Y1(2)
-            Y1_ExtraMoment(2) = - m%u_TP(3) * Y1(1) + m%u_TP(1) * Y1(3)
-            Y1_ExtraMoment(3) = - m%u_TP(1) * Y1(2) + m%u_TP(2) * Y1(1)
-            Y1(4:6) = Y1(4:6) + Y1_ExtraMoment 
-         endif
-      endif
-      ! values on the interface mesh are Y1 (SubDyn forces) + Hydrodynamic forces
-      y%Y1Mesh%Force (:,1) = Y1(1:3) 
-      y%Y1Mesh%Moment(:,1) = Y1(4:6)
+      Rg2b(1:3,1:3) = u%TPMesh%Orientation(:,:,1)  ! global 2 body coordinates
+      Rb2g(1:3,1:3) = transpose(u%TPMesh%Orientation(:,:,1))
 
       ! --------------------------------------------------------------------------------
       ! --- Output 2, Y2Mesh: motions on all FEM nodes (R, and L DOFs, then full DOF vector)
@@ -497,21 +478,21 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       m%UL_dot        = 0.0_ReKi
       m%UL_dotdot     = 0.0_ReKi
       ! --- CB modes contribution to motion (L-DOF only)
-      IF ( p%nDOFM > 0) THEN
+      if ( p%nDOFM > 0) then
          m%UL            = matmul( p%PhiM,  x%qm    )
          m%UL_dot        = matmul( p%PhiM,  x%qmdot )
          m%UL_dotdot     = matmul( p%C2_61, x%qm    )      + matmul( p%C2_62   , x%qmdot )    & 
                          + matmul( p%D2_63, m%udotdot_TP ) + matmul( p%D2_64,    m%F_L   )
-      END IF
+      end if
       ! Static improvement (modify UL)
       if (p%SttcSolve/=idSIM_None) then
          FLt  = MATMUL(p%PhiL_T      , m%F_L) ! NOTE: Gravity in F_L
          ULS  = MATMUL(p%PhiLInvOmgL2, FLt ) 
-         m%UL = m%UL + ULS 
          if ( p%nDOFM > 0) then
             UL0M = MATMUL(p%PhiLInvOmgL2(:,1:p%nDOFM), FLt(1:p%nDOFM)       )
-            m%UL = m%UL - UL0M 
+            ULS = ULS-UL0M
          end if          
+         m%UL = m%UL + ULS 
       endif    
       ! --- Adding Guyan contribution to R and L DOFs
       if (.not.p%Floating) then
@@ -604,6 +585,115 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
             y%Y2mesh%RotationAcc     (:,iY2Node)     = m%U_full_dotdot (DOFList(4:6))
          enddo
       endif
+
+                                    
+      ! --------------------------------------------------------------------------------
+      ! --- Outputs 1, Y1=-F_TP, reaction force from SubDyn to ElastoDyn (stored in y%Y1Mesh)
+      ! --------------------------------------------------------------------------------
+      ! Compute external force on internal (F_L) and interface nodes (F_I)
+      call GetExtForceOnInternalDOF(u, p, m, .false., m%F_L, ErrStat2, ErrMsg2); if(Failed()) return
+      call GetExtForceOnInterfaceDOF(p, m%Fext, F_I)
+      ! Compute reaction/coupling force at TP
+      if ( p%nDOFM > 0) then
+         Y1 = -(   matmul(p%C1_11, x%qm)   + matmul(p%C1_12,x%qmdot)                                    &
+                 + matmul(p%KBB,   m%u_TP) + matmul(p%D1_12, m%udot_TP) + matmul(p%D1_13, m%udotdot_TP) &
+                 + matmul(p%D1_141, m%F_L) + matmul(p%D1_142, m%F_L)  - matmul( F_I, p%TI ) )                                                                          
+      else ! No retained modes, so there are no states
+         Y1 = -(   matmul(p%KBB,   m%u_TP) + matmul(p%D1_12, m%udot_TP) + matmul(p%D1_13, m%udotdot_TP) &
+                 + matmul(p%D1_141, m%F_L) + matmul(p%D1_142, m%F_L)  - matmul( F_I, p%TI ) ) 
+      end if
+      print*,'-----------------------'
+      print*,'UTP      ',m%u_TP
+      print*,'-----------------------'
+      print*,'Y1 old2  ',Y1
+
+      Y1_Utp  = - (matmul(p%KBB,   m%u_TP) + matmul(p%D1_12, m%udot_TP) + matmul(p%D1_13, m%udotdot_TP) )
+      Y1_CB_L = - (matmul(p%D1_141, m%F_L))
+      if ( p%nDOFM > 0) then
+         Y1_CB = -( matmul(p%C1_11, x%qm)   + matmul(p%C1_12,x%qmdot))
+      else
+         Y1_CB = 0.0_ReKi
+      endif
+      Y1_Guy_R =   matmul( F_I, p%TI )
+      Y1_Guy_L = - matmul(p%D1_142, m%F_L) 
+      Y1 = Y1_CB + Y1_Utp + Y1_CB_L+ Y1_Guy_L + Y1_Guy_R 
+      print*,'-----------------------'
+      print*,'Split terms (old)'
+      print*,'Y1 UtP   ',Y1_Utp
+      print*,'Y1 GR    ',Y1_Guy_R
+      print*,'Y1 CB    ',Y1_CB
+      print*,'Y1 CBL   ',Y1_CB_L
+      print*,'Y1 GL old',Y1_Guy_L
+      print*,'Y1 old   ',Y1
+
+      if (p%RotateLoads.and.p%SttcSolve/=idSIM_None) then
+         m%U_red(:) = 0.0_ReKi
+         m%U_red(p%ID__L) = ULS  
+
+         iSDNode = p%Nodes_I2(1) ! Second node of interface element
+         DOFList => p%NodesDOF(iSDNode)%List
+         ULS_I2 = m%U_red(p%ID__L)
+
+
+         Y1_Guy_L =    matmul( p%K_I2 , ULS_I2)
+         print*,'ULS    ',ULS_I2
+         print*,'-----------------------'
+         print*,'Split terms (new)'
+         print*,'Y1 UtP   ',Y1_Utp
+         print*,'Y1 GR    ',Y1_Guy_R
+         print*,'Y1 CB    ',Y1_CB
+         print*,'Y1 CBL   ',Y1_CB_L
+         print*,'Y1 GL new ',Y1_Guy_L
+         Y1_Guy_L(1:3) = matmul(Rb2g,Y1_Guy_L(1:3))
+         Y1_Guy_L(4:6) = matmul(Rb2g,Y1_Guy_L(4:6))
+
+         Y1_CB(1:3)   = matmul(Rb2g,Y1_CB(1:3))
+         Y1_CB(4:6)   = matmul(Rb2g,Y1_CB(4:6))
+         Y1_CB_L(1:3) = matmul(Rb2g,Y1_CB_L(1:3))
+         Y1_CB_L(4:6) = matmul(Rb2g,Y1_CB_L(4:6))
+         print*,'Y1 GL rot ',Y1_Guy_L
+         print*,'Y1 CB rot',Y1_CB
+         print*,'Y1 CBLrot',Y1_CB_L
+
+         Y1 = Y1_CB + Y1_Utp + Y1_CB_L+ Y1_Guy_L + Y1_Guy_R 
+         print*,'Y1 new',Y1
+      else
+
+         Y1_Guy_L = - matmul(p%D1_142, m%F_L) 
+         Y1 = Y1_CB + Y1_Utp + Y1_CB_L+ Y1_Guy_L + Y1_Guy_R 
+         !if ( p%nDOFM > 0) then
+         !   Y1 = -(   matmul(p%C1_11, x%qm)   + matmul(p%C1_12,x%qmdot)                                    &
+         !           + matmul(p%KBB,   m%u_TP) + matmul(p%D1_12, m%udot_TP) + matmul(p%D1_13, m%udotdot_TP) &
+         !           + matmul(p%D1_141, m%F_L) + matmul(p%D1_142, m%F_L)  - matmul( F_I, p%TI ) )                                                                          
+         !else ! No retained modes, so there are no states
+         !   Y1 = -(   matmul(p%KBB,   m%u_TP) + matmul(p%D1_12, m%udot_TP) + matmul(p%D1_13, m%udotdot_TP) &
+         !           + matmul(p%D1_141, m%F_L) + matmul(p%D1_142, m%F_L)  - matmul( F_I, p%TI ) ) 
+         !end if
+      endif
+      print*,''
+      !if ( p%nDOFM > 0) then
+      !   Y1 = -(   matmul(p%C1_11, x%qm)   + matmul(p%C1_12,x%qmdot)                                    &
+      !           + matmul(p%KBB,   m%u_TP) + matmul(p%D1_12, m%udot_TP) + matmul(p%D1_13, m%udotdot_TP) &
+      !           + matmul(p%D1_141, m%F_L) + matmul(p%D1_142, m%F_L)  - matmul( F_I, p%TI ) )                                                                          
+      !else ! No retained modes, so there are no states
+      !   Y1 = -(   matmul(p%KBB,   m%u_TP) + matmul(p%D1_12, m%udot_TP) + matmul(p%D1_13, m%udotdot_TP) &
+      !           + matmul(p%D1_141, m%F_L) + matmul(p%D1_142, m%F_L)  - matmul( F_I, p%TI ) ) 
+      !end if
+
+      ! Computing extra moments due to lever arm introduced by interface displacement
+      ! Y1_MExtra = - MExtra = -u_TP x Y1(1:3) ! NOTE: double cancellation of signs 
+      if (p%ExtraMoment) then
+         if (.not.p%floating) then ! if Fixed, transfer from non deflected TP to u_TP 
+            Y1_ExtraMoment(1) = - m%u_TP(2) * Y1(3) + m%u_TP(3) * Y1(2)
+            Y1_ExtraMoment(2) = - m%u_TP(3) * Y1(1) + m%u_TP(1) * Y1(3)
+            Y1_ExtraMoment(3) = - m%u_TP(1) * Y1(2) + m%u_TP(2) * Y1(1)
+            Y1(4:6) = Y1(4:6) + Y1_ExtraMoment 
+         endif
+      endif
+      ! values on the interface mesh are Y1 (SubDyn forces) + Hydrodynamic forces
+      y%Y1Mesh%Force (:,1) = Y1(1:3) 
+      y%Y1Mesh%Moment(:,1) = Y1(4:6)
+
             
      !________________________________________
      ! CALCULATE OUTPUT TO BE WRITTEN TO FILE 
@@ -2445,6 +2535,11 @@ SUBROUTINE SetParameters(Init, p, MBBb, MBmb, KBBb, PhiRb, nM_out, OmegaL, PhiL,
       !CALL LAPACK_GEMM( 'T', 'T', 1.0_ReKi, p%TI,   PhiRb,  0.0_ReKi, p%D1_14, ErrStat2, ErrMsg2 ); if(Failed()) return   ! p%D1_14 = MATMUL( TRANSPOSE(TI), TRANSPOSE(PHiRb))  
       CALL LAPACK_GEMM( 'N', 'T', 1.0_ReKi, p%MBM, p%PhiM, -1.0_ReKi, p%D1_14, ErrStat2, ErrMsg2 ); if(Failed()) return   ! p%D1_14 = MATMUL( p%MBM, TRANSPOSE(p%PhiM) ) - p%D1_14 
 
+      ! --- Intermediates D1_14 = D1_141 + D1_142
+      p%D1_141 = MATMUL(p%MBM, TRANSPOSE(p%PhiM)) 
+      !CALL LAPACK_GEMM( 'N', 'T', 1.0_ReKi, p%MBM, p%PhiM, 0.0_ReKi, p%D1_141, ErrStat2, ErrMsg2 ); if(Failed()) return 
+      p%D1_142 =- MATMUL(TI_transpose, TRANSPOSE(PhiRb)) 
+
       
       ! C2_21, C2_42
       ! C2_61, C2_62
@@ -2499,6 +2594,8 @@ SUBROUTINE SetParameters(Init, p, MBBb, MBmb, KBBb, PhiRb, nM_out, OmegaL, PhiL,
       p%D1_12 = p%CBB ! No cross couplings
       p%D1_13 = p%MBB ! No cross couplings 
       p%D1_14 = - MATMUL( TI_transpose, TRANSPOSE(PHiRb))  
+      p%D1_141 = 0.0_ReKi
+      p%D1_142 = - MATMUL(TI_transpose, TRANSPOSE(PhiRb)) 
    END IF
 
 CONTAINS
@@ -2528,6 +2625,8 @@ SUBROUTINE AllocParameters(p, nDOFM, ErrStat, ErrMsg)
    CALL AllocAry( p%MBB,           nDOFL_TP, nDOFL_TP, 'p%MBB',           ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')
    CALL AllocAry( p%TI,            p%nDOFI__,  6,      'p%TI',            ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')
    CALL AllocAry( p%D1_14,         nDOFL_TP, p%nDOF__L,'p%D1_14',         ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')        
+   CALL AllocAry( p%D1_141,        nDOFL_TP, p%nDOF__L,'p%D1_141',        ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')        
+   CALL AllocAry( p%D1_142,        nDOFL_TP, p%nDOF__L,'p%D1_142',        ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')        
    CALL AllocAry( p%PhiRb_TI,      p%nDOF__L, nDOFL_TP,'p%PhiRb_TI',      ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')        
 
    
