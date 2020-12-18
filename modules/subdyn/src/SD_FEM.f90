@@ -1006,7 +1006,7 @@ SUBROUTINE AssembleKM(Init, p, ErrStat, ErrMsg)
    INTEGER(IntKi),               INTENT(  OUT) :: ErrStat     ! Error status of the operation
    CHARACTER(*),                 INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
    ! Local variables
-   INTEGER                  :: I, J, K, ie
+   INTEGER                  :: I, J, K
    INTEGER                  :: iGlob
    REAL(FEKi)               :: Ke(12,12), Me(12, 12), FGe(12) ! element stiffness and mass matrices gravity force vector
    REAL(FEKi)               :: FCe(12) ! Pretension force from cable element
@@ -1083,55 +1083,6 @@ SUBROUTINE AssembleKM(Init, p, ErrStat, ErrMsg)
        iGlob = p%NodesDOF(iNode)%List(3) ! uz
        p%FG(iGlob) = p%FG(iGlob) - Init%CMass(I, 2)*Init%g 
    ENDDO
-
-   ! --- Compute Stiffness matrix of interface nodes
-   ! TODO TODO for now only one node
-   if (p%RotateLoads.and.p%SttcSolve/=idSIM_None) then
-      CALL AllocAry( p%K_I2,   6, 6 , 'p%K_I2'  ,  ErrStat2, ErrMsg2); if(Failed()) return;
-      CALL AllocAry( p%Nodes_I2,   1, 'p%Nodes_I2'  ,  ErrStat2, ErrMsg2); if(Failed()) return;
-      !DO I = 1, p%nNodes_I
-      i=1
-      print*,'---------------------------------------------------'
-      if (size(p%Nodes_I,1)>1) then
-         print*,'>>> Cannot have more than one interface node for now'
-         STOP
-      endif
-      print*,'Interface Node',p%Nodes_I(1,1)
-      iNode = INT(p%Nodes_I(i, 1)) 
-      if ( Init%NodesConnE(iNode, 1)>1 ) then
-         print*,'>>> Cannot have more than one member connected to interface node'
-         STOP
-      endif
-      print*,'Elements connected to interface Node',Init%NodesConnE(iNode, 2:4)
-      ie = Init%NodesConnE(iNode, 2)
-      print*,'Interface Element      ',ie
-      print*,'Interface Element Nodes',p%Elems(ie,2:3)
-      CALL ElemK(p%ElemProps(ie), Ke)
-
-      if (p%Elems(ie, 2)==iNode) then
-         p%Nodes_I2(1) = p%Elems(ie, 3)
-         p%K_I2 = Ke(1:6,7:12)
-
-      else if (p%Elems(ie, 3)==iNode) then
-         p%Nodes_I2(1) = p%Elems(ie, 2)
-         p%K_I2 = Ke(7:12,1:6)
-      else
-         print*,'>>> One of the two nodes should be ',iNode
-         STOP
-      endif
-      print*,'Interface Node        ',iNode
-      print*,'Interface Second Node ',p%Nodes_I2(1)
-      print*,'Interface elemprop',p%ElemProps(ie)%rho, p%ElemProps(ie)%Length
-      print*,'Stiffness matrix for second interface node (first element) '
-      print*,'K ',p%K_I2(1,:)
-      print*,'K ',p%K_I2(2,:)
-      print*,'K ',p%K_I2(3,:)
-      print*,'K ',p%K_I2(4,:)
-      print*,'K ',p%K_I2(5,:)
-      print*,'K ',p%K_I2(6,:)
-      print*,'---------------------------------------------------'
-
-   endif
 
    CALL CleanUp_AssembleKM()
    

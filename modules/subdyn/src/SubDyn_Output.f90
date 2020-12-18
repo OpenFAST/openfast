@@ -277,7 +277,7 @@ SUBROUTINE SDOut_MapOutputs(u,p,x, y, m, AllOuts, ErrStat, ErrMsg )
    !locals
    integer(IntKi)                 :: iMemberOutput, iiNode, iSDNode, iMeshNode, I, J, L, L2      ! Counters
    integer(IntKi)                 :: maxOutModes  ! maximum modes to output, the minimum of 99 or p%nDOFM
-   real(ReKi), dimension (6)      :: FM_elm, FK_elm, FK_elm1, FK_elm3, Fext  !output static and dynamic forces and moments
+   real(ReKi), dimension (6)      :: FM_elm, FK_elm, Fext  !output static and dynamic forces and moments
    real(ReKi), dimension (6)      :: FM_elm2, FK_elm2      !output static and dynamic forces and moments
    real(FEKi), dimension (3,3)    :: DIRCOS    !direction cosice matrix (global to local) (3x3)
    real(ReKi), allocatable        :: ReactNs(:)    !6*Nreact reactions
@@ -300,28 +300,18 @@ SUBROUTINE SDOut_MapOutputs(u,p,x, y, m, AllOuts, ErrStat, ErrMsg )
          pLst=>p%MOutLst(iMemberOutput) ! List for a given member-output 
          DO iiNode=1,pLst%NOutCnt !Iterate on requested nodes for that member 
             ! --- Forces (potentially averaged on 2 elements) 
-            FK_elm1=0
-            FK_elm2=0
-            FK_elm3=0
-            call ElementForce(pLst, iiNode, 1, FM_elm, FK_elm1, sgn, DIRCOS, .false.)
+            call ElementForce(pLst, iiNode, 1, FM_elm, FK_elm, sgn, DIRCOS, .false.)
             FM_elm2=sgn*FM_elm
-            FK_elm1=sgn*FK_elm1
+            FK_elm2=sgn*FK_elm
             IF (pLst%ElmIDs(iiNode,2) .NE. 0) THEN  ! Second element exist
                ! NOTE: forces are computed in the coordinate system of the first element for averaging
-               call ElementForce(pLst, iiNode, 2, FM_elm, FK_elm2, sgn, DIRCOS, .true.) ! True= we use DIRCOS from element above
+               call ElementForce(pLst, iiNode, 2, FM_elm, FK_elm, sgn, DIRCOS, .true.) ! True= we use DIRCOS from element above
                FM_elm2=0.5*( FM_elm2 + sgn*FM_elm ) ! Now Average
-               FK_elm3=0.5*( FK_elm1 + sgn*FK_elm2)  ! Now Average
-            else
-               FK_elm3=FK_elm1
+               FK_elm2=0.5*( FK_elm2 + sgn*FK_elm)  ! Now Average
             ENDIF
             ! Static (elastic) component of reaction forces and moments at MαNβ along local member coordinate system
             !    "MαNβFKxe, MαNβFKye, MαNβFKze, MαNβMKxe, MαNβMKye, MαNβMKze"
-            AllOuts(MNfmKe  (:,iiNode,iMemberOutput)) = FK_elm3  !static forces and moments (6) Local Ref
-            if (pLst%ElmIDs(iiNode,1)==1) then
-               print*,'CalcO FK1',FK_elm1
-               print*,'CalcO FK2',FK_elm2
-               print*,'CalcO FK3',FK_elm3
-            endif
+            AllOuts(MNfmKe  (:,iiNode,iMemberOutput)) = FK_elm2  !static forces and moments (6) Local Ref
             ! Dynamic (inertial) component of reaction forces and moments at MαNβ along local member coordinate system
             !    "MαNβFMxe, MαNβFMye, MαNβFMze, MαNβMMxe, MαNβMMye, MαNβMMze"
             AllOuts(MNfmMe  (:,iiNode,iMemberOutput)) = FM_elm2  !dynamic forces and moments (6) Local Ref
@@ -452,21 +442,6 @@ contains
          DIRCOS=transpose(p%ElemProps(iElem)%DirCos)! global to local
       endif
       CALL CALC_NODE_FORCES( DIRCOS, pLst%Me(:,:,iiNode,JJ),pLst%Ke(:,:,iiNode,JJ), Xdd_e, X_e, pLst%Fg(:,iiNode,JJ), FirstOrSecond, FM_elm, FK_elm) 
-      if (iElem==1) then
-      !   print*,'K',pLst%Ke(1,7:12,iiNode,JJ)
-      !   print*,'K',pLst%Ke(2,7:12,iiNode,JJ)
-      !   print*,'K',pLst%Ke(3,7:12,iiNode,JJ)
-      !   print*,'K',pLst%Ke(4,7:12,iiNode,JJ)
-      !   print*,'K',pLst%Ke(5,7:12,iiNode,JJ)
-      !   print*,'K',pLst%Ke(6,7:12,iiNode,JJ)
-         print*,'CalcODC1',DIRCOS(1,:)
-         print*,'CalcODC2',DIRCOS(2,:)
-         print*,'CalcODC3',DIRCOS(3,:)
-         print*,'First  ?', FirstOrSecond,sgn
-         print*,'CalcO  U ',X_e(1:6)
-         print*,'CalcO  U ',X_e(7:12)
-         print*,'ClacO FK',FK_elm
-      endif
    end subroutine ElementForce
 
    !====================================================================================================

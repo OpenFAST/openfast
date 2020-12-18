@@ -274,21 +274,10 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    call PartitionDOFNodes(Init, m, p, ErrStat2, ErrMsg2) ; if(Failed()) return
    if (p%ExtraMoment) then 
       if (p%Floating) then
-         ! TODO disallow
-         call WrScr('   Extra moment will be included in loads (free/floating case detected)')
+         call WrScr('   Extra moment for Guyan loads and rotated CB-frame will be used (floating case detected)')
       else
          call WrScr('   Extra moment will be included in loads (fixed-bottom case detected)')
       endif
-   endif
-   if (p%RotateLoads) then 
-      if (p%Floating) then
-         call WrScr('   >>> Loads will be rotated (floating and OutCosM=True))')
-      else
-         call WrScr('   >>> Loads will not be rotated (fixed bottom)')
-         p%RotateLoads=.false.
-      endif
-   else
-      call WrScr('   >>> Loads will not be rotated (OutCosM=False)')
    endif
 
    ! --- Craig-Bampton reduction (sets many parameters)
@@ -427,7 +416,6 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       REAL(ReKi)                   :: AllOuts(0:MaxOutPts+p%OutAllInt*p%OutAllDims)
       REAL(ReKi)                   :: rotations(3)
       REAL(ReKi)                   :: ULS(p%nDOF__L),  UL0m(p%nDOF__L),  FLt(p%nDOF__L)  ! Temporary values in static improvement method
-      REAL(ReKi)                   :: ULS_I2(6) ! TODO 6*nDOFI
       REAL(ReKi)                   :: Y1(6)
       REAL(ReKi)                   :: Y1_CB(6)
       REAL(ReKi)                   :: Y1_CB_L(6)
@@ -470,7 +458,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       ! --- Output 2, Y2Mesh: motions on all FEM nodes (R, and L DOFs, then full DOF vector)
       ! --------------------------------------------------------------------------------
       ! External force on internal nodes (F_L)
-      call GetExtForceOnInternalDOF(u, p, m, p%RotateLoads, m%F_L, ErrStat2, ErrMsg2); if(Failed()) return
+      call GetExtForceOnInternalDOF(u, p, m, m%F_L, ErrStat2, ErrMsg2, ExtraMoment=(p%ExtraMoment.and..not.p%Floating), RotateLoads=(p%ExtraMoment.and.p%Floating)); if(Failed()) return
       m%UR_bar        = 0.0_ReKi
       m%UR_bar_dot    = 0.0_ReKi
       m%UR_bar_dotdot = 0.0_ReKi
@@ -585,109 +573,33 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
             y%Y2mesh%RotationAcc     (:,iY2Node)     = m%U_full_dotdot (DOFList(4:6))
          enddo
       endif
-
                                     
       ! --------------------------------------------------------------------------------
       ! --- Outputs 1, Y1=-F_TP, reaction force from SubDyn to ElastoDyn (stored in y%Y1Mesh)
       ! --------------------------------------------------------------------------------
-
-      Y1_CB_L = - (matmul(p%D1_141, m%F_L))
+      ! --- Special case for floating with extramoment
+      if (p%ExtraMoment.and.p%Floating) then
+         Y1_CB_L = - (matmul(p%D1_141, m%F_L)) ! Uses rotated loads
+      endif
 
       ! Compute external force on internal (F_L) and interface nodes (F_I)
-      call GetExtForceOnInternalDOF(u, p, m, .false., m%F_L, ErrStat2, ErrMsg2, DoExtraMoment=.True.); if(Failed()) return
+      call GetExtForceOnInternalDOF(u, p, m, m%F_L, ErrStat2, ErrMsg2, ExtraMoment=(p%ExtraMoment), RotateLoads=.False.); if(Failed()) return
       call GetExtForceOnInterfaceDOF(p, m%Fext, F_I)
-      ! Compute reaction/coupling force at TP
-      if ( p%nDOFM > 0) then
-         Y1 = -(   matmul(p%C1_11, x%qm)   + matmul(p%C1_12,x%qmdot)                                    &
-                 + matmul(p%KBB,   m%u_TP) + matmul(p%D1_12, m%udot_TP) + matmul(p%D1_13, m%udotdot_TP) &
-                 + matmul(p%D1_141, m%F_L) + matmul(p%D1_142, m%F_L)  - matmul( F_I, p%TI ) )                                                                          
-      else ! No retained modes, so there are no states
-         Y1 = -(   matmul(p%KBB,   m%u_TP) + matmul(p%D1_12, m%udot_TP) + matmul(p%D1_13, m%udotdot_TP) &
-                 + matmul(p%D1_141, m%F_L) + matmul(p%D1_142, m%F_L)  - matmul( F_I, p%TI ) ) 
-      end if
-      print*,'t        ',t
-      print*,'UTP      ',m%u_TP
-      print*,'-----------------------'
-      print*,'Y1 old2  ',Y1
 
+      ! Compute reaction/coupling force at TP
       Y1_Utp  = - (matmul(p%KBB,   m%u_TP) + matmul(p%D1_12, m%udot_TP) + matmul(p%D1_13, m%udotdot_TP) )
-      Y1_Guy_L = - matmul(p%D1_142, m%F_L) 
       if ( p%nDOFM > 0) then
          Y1_CB = -( matmul(p%C1_11, x%qm)   + matmul(p%C1_12,x%qmdot))
       else
          Y1_CB = 0.0_ReKi
       endif
       Y1_Guy_R =   matmul( F_I, p%TI )
-      Y1 = Y1_CB + Y1_Utp + Y1_CB_L+ Y1_Guy_L + Y1_Guy_R 
-      print*,'-----------------------'
-      print*,'Split terms (old)'
-      print*,'Y1 UtP   ',Y1_Utp
-      print*,'Y1 GR    ',Y1_Guy_R
-      print*,'Y1 CB    ',Y1_CB
-      print*,'Y1 CBL   ',Y1_CB_L
-      print*,'Y1 GL old',Y1_Guy_L
-      print*,'Y1 old   ',Y1
-
-      if (p%RotateLoads.and.p%SttcSolve/=idSIM_None) then
-         ! --- Going from flatten DOFs to reduced DOFs, to full DOFs...
-         ! NOTE: this is only needed for the few DOFs below the interface
-         !       so this could be greatly optimized with the mapping computed at init only..
-         !       TODO...
-!          m%U_red_SIM(:) = 0.0_ReKi
-!          m%U_red_SIM(p%ID__L) = ULS   ! Only the static contribution
-!          !m%U_red_SIM(p%ID__L) = m%UL   ! Only the static contribution
-!          if (p%reduced) then
-!             m%U_full_SIM = matmul(p%T_red, m%U_red_SIM)
-!          else
-!             m%U_full_SIM = m%U_red_SIM
-!          endif
-!          iSDNode = p%Nodes_I2(1) ! Second node of interface element
-!          DOFList => p%NodesDOF(iSDNode)%List
-!          ULS_I2 = m%U_full_SIM(DOFList(1:6))
-!          !print*,'NODE',iSDNode
-!          !print*,'DOFLIST',DOFLIST
-!          !print*,'DOFLIST', p%NodesDOF(p%Elems(1,2))%List(1:6) 
-!          !print*,'DOFLIST', p%NodesDOF(p%Elems(1,3))%List(1:6) 
-!          Y1_Guy_L =  - matmul( p%K_I2 , ULS_I2)
-!          print*,'ULs    ',ULS_I2
-!          print*,'ULe    ',m%U_full_elast(DOFList)
-!          if (any(ULS_I2>2)) then
-!             STOP
-!          endif
-!          print*,'-----------------------'
-!          print*,'Split terms (new)'
-!          print*,'Y1 UtP   ',Y1_Utp
-!          print*,'Y1 GR    ',Y1_Guy_R
-!          print*,'Y1 CB    ',Y1_CB
-!          print*,'Y1 CBL   ',Y1_CB_L
-!          print*,'Y1 GL new',Y1_Guy_L
-!          Y1_Guy_L(1:3) = matmul(Rb2g,Y1_Guy_L(1:3))
-!          Y1_Guy_L(4:6) = matmul(Rb2g,Y1_Guy_L(4:6))
-!          Y1_CB(1:3)    = matmul(Rb2g,Y1_CB(1:3))
-!          Y1_CB(4:6)    = matmul(Rb2g,Y1_CB(4:6))
-!          Y1_CB_L(1:3)  = matmul(Rb2g,Y1_CB_L(1:3))
-!          Y1_CB_L(4:6)  = matmul(Rb2g,Y1_CB_L(4:6))
-!          print*,'Y1 GL rot',Y1_Guy_L
-!          print*,'Y1 CB rot',Y1_CB
-!          print*,'Y1 CBLrot',Y1_CB_L
-
-         Y1 = Y1_CB + Y1_Utp + Y1_CB_L+ Y1_Guy_L + Y1_Guy_R 
-         print*,'Y1    new',Y1
-      else
-
-         Y1_Guy_L = - matmul(p%D1_142, m%F_L) 
-         Y1 = Y1_CB + Y1_Utp + Y1_CB_L+ Y1_Guy_L + Y1_Guy_R 
-         !if ( p%nDOFM > 0) then
-         !   Y1 = -(   matmul(p%C1_11, x%qm)   + matmul(p%C1_12,x%qmdot)                                    &
-         !           + matmul(p%KBB,   m%u_TP) + matmul(p%D1_12, m%udot_TP) + matmul(p%D1_13, m%udotdot_TP) &
-         !           + matmul(p%D1_141, m%F_L) + matmul(p%D1_142, m%F_L)  - matmul( F_I, p%TI ) )                                                                          
-         !else ! No retained modes, so there are no states
-         !   Y1 = -(   matmul(p%KBB,   m%u_TP) + matmul(p%D1_12, m%udot_TP) + matmul(p%D1_13, m%udotdot_TP) &
-         !           + matmul(p%D1_141, m%F_L) + matmul(p%D1_142, m%F_L)  - matmul( F_I, p%TI ) ) 
-         !end if
+      Y1_Guy_L = - matmul(p%D1_142, m%F_L) 
+      if (.not.(p%ExtraMoment.and.p%Floating)) then
+         Y1_CB_L = - (matmul(p%D1_141, m%F_L)) ! Uses non rotated loads
       endif
-      print*,'-----------------------'
-      print*,'FileOutputs'
+      Y1 = Y1_CB + Y1_Utp + Y1_CB_L+ Y1_Guy_L + Y1_Guy_R 
+      ! KEEP ME
       !if ( p%nDOFM > 0) then
       !   Y1 = -(   matmul(p%C1_11, x%qm)   + matmul(p%C1_12,x%qmdot)                                    &
       !           + matmul(p%KBB,   m%u_TP) + matmul(p%D1_12, m%udot_TP) + matmul(p%D1_13, m%udotdot_TP) &
@@ -710,7 +622,6 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       ! values on the interface mesh are Y1 (SubDyn forces) + Hydrodynamic forces
       y%Y1Mesh%Force (:,1) = Y1(1:3) 
       y%Y1Mesh%Moment(:,1) = Y1(4:6)
-
             
      !________________________________________
      ! CALCULATE OUTPUT TO BE WRITTEN TO FILE 
@@ -754,7 +665,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
          END DO
          m%LastOutTime   = t
       ENDIF           
-      print*,''
+  
 CONTAINS
    LOGICAL FUNCTION Failed()
         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SD_CalcOutput') 
@@ -800,7 +711,7 @@ SUBROUTINE SD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSta
       m%udot_TP    = (/u%TPMesh%TranslationVel( :,1),u%TPMesh%RotationVel(:,1)/) ! TODO TODO TODO missing
       m%udotdot_TP = (/u%TPMesh%TranslationAcc(:,1), u%TPMesh%RotationAcc(:,1)/)
       ! Compute F_L, force on internal DOF
-      CALL GetExtForceOnInternalDOF( u, p, m, p%RotateLoads, m%F_L, ErrStat2, ErrMsg2 );
+      CALL GetExtForceOnInternalDOF( u, p, m, m%F_L, ErrStat2, ErrMsg2, ExtraMoment=(p%ExtraMoment.and..not.p%Floating), RotateLoads=(p%ExtraMoment.and.p%Floating))
       
       ! State equation
       dxdt%qm= x%qmdot
@@ -1084,11 +995,6 @@ DO I = 1, p%nNodes_C
 enddo
 ! Trigger: determine if floating/fixed  based on BCs and SSI file
 p%Floating  = isFloating(Init,p)
-!if (p%ExtraMoment .and. p%Floating) then
-!   call Fatal(' Error in file "'//TRIM(SDInputFile)//'": `ExtraMoment` cannot be true in a floating case')
-!   return
-!endif
-       
 
 
 !------- INTERFACE JOINTS: T/F for Locked (to the TP)/Free DOF @each Interface Joint (only Locked-to-TP implemented thus far (=rigid TP)) ---------
@@ -1239,8 +1145,6 @@ CALL ReadCom (UnIn, SDInputFile,               'OUTPUT'                         
 CALL ReadLVar(UnIn, SDInputFile, Init%SSSum  , 'SSSum'  , 'Summary File Logic Variable'            ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL ReadLVar(UnIn, SDInputFile, Init%OutCOSM, 'OutCOSM', 'Cosine Matrix Logic Variable'           ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return !bjj: TODO: OutCOSM isn't used anywhere else.
 CALL ReadLVar(UnIn, SDInputFile, p%OutAll    , 'OutAll' , 'Output all Member Forces Logic Variable',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
-! TEMPORARY HACK
-p%RotateLoads=Init%OutCOSM
 !Store an integer version of it
 p%OutAllInt= 1
 IF ( .NOT. p%OutAll ) p%OutAllInt= 0
@@ -1799,12 +1703,12 @@ SUBROUTINE SD_AM2( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg 
    ! interpolate u to find u_interp = u(t) = u_n     
    CALL SD_Input_ExtrapInterp( u, utimes, u_interp, t, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_AM2')
    m%udotdot_TP = (/u_interp%TPMesh%TranslationAcc(:,1), u_interp%TPMesh%RotationAcc(:,1)/)
-   CALL GetExtForceOnInternalDOF(u_interp, p, m, p%RotateLoads, m%F_L, ErrStat2, ErrMsg2);
+   CALL GetExtForceOnInternalDOF(u_interp, p, m, m%F_L, ErrStat2, ErrMsg2, ExtraMoment=(p%ExtraMoment.and..not.p%Floating), RotateLoads=(p%ExtraMoment.and.p%Floating))
                 
    ! extrapolate u to find u_interp = u(t + dt)=u_n+1
    CALL SD_Input_ExtrapInterp(u, utimes, u_interp, t+p%SDDeltaT, ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_AM2')
    udotdot_TP2 = (/u_interp%TPMesh%TranslationAcc(:,1), u_interp%TPMesh%RotationAcc(:,1)/)
-   CALL GetExtForceOnInternalDOF(u_interp, p, m, p%RotateLoads, F_L2, ErrStat2, ErrMsg2);    
+   CALL GetExtForceOnInternalDOF(u_interp, p, m, F_L2, ErrStat2, ErrMsg2, ExtraMoment=(p%ExtraMoment.and..not.p%Floating), RotateLoads=(p%ExtraMoment.and.p%Floating))
    
    ! calculate (u_n + u_n+1)/2
    udotdot_TP2 = 0.5_ReKi * ( udotdot_TP2 + m%udotdot_TP )
@@ -2546,15 +2450,10 @@ SUBROUTINE SetParameters(Init, p, MBBb, MBmb, KBBb, PhiRb, nM_out, OmegaL, PhiL,
       CALL LAPACK_GEMM( 'N', 'T', 1.0_ReKi, p%MBM,   p%MBM,  0.0_ReKi, p%D1_13, ErrStat2, ErrMsg2 ); if(Failed()) return  ! p%D1_13 = MATMUL( p%MBM, p%MMB )
       p%D1_13 = p%MBB - p%D1_13
 
-      ! TODO cant use LAPACK due to type conversions FEKi->ReKi
-      !p%D1_14 = MATMUL( p%MBM, p%PhiM_T ) - MATMUL( TI_transpose, TRANSPOSE(PhiRb))  
-      p%D1_14 = MATMUL( TI_transpose, TRANSPOSE(PhiRb)) 
-      !CALL LAPACK_GEMM( 'T', 'T', 1.0_ReKi, p%TI,   PhiRb,  0.0_ReKi, p%D1_14, ErrStat2, ErrMsg2 ); if(Failed()) return   ! p%D1_14 = MATMUL( TRANSPOSE(TI), TRANSPOSE(PHiRb))  
-      CALL LAPACK_GEMM( 'N', 'T', 1.0_ReKi, p%MBM, p%PhiM, -1.0_ReKi, p%D1_14, ErrStat2, ErrMsg2 ); if(Failed()) return   ! p%D1_14 = MATMUL( p%MBM, TRANSPOSE(p%PhiM) ) - p%D1_14 
-
       ! --- Intermediates D1_14 = D1_141 + D1_142
-      p%D1_141 = MATMUL(p%MBM, TRANSPOSE(p%PhiM)) 
-      !CALL LAPACK_GEMM( 'N', 'T', 1.0_ReKi, p%MBM, p%PhiM, 0.0_ReKi, p%D1_141, ErrStat2, ErrMsg2 ); if(Failed()) return 
+      !p%D1_141 = MATMUL(p%MBM, TRANSPOSE(p%PhiM)) 
+      CALL LAPACK_GEMM( 'N', 'T', 1.0_ReKi, p%MBM, p%PhiM, 0.0_ReKi, p%D1_141, ErrStat2, ErrMsg2 ); if(Failed()) return 
+      ! NOTE: cant use LAPACK due to type conversions FEKi->ReKi
       p%D1_142 =- MATMUL(TI_transpose, TRANSPOSE(PhiRb)) 
 
       
@@ -2610,7 +2509,6 @@ SUBROUTINE SetParameters(Init, p, MBBb, MBmb, KBBb, PhiRb, nM_out, OmegaL, PhiL,
       ! p%D2_63 = p%PhiRb_TI in this case so we simplify the equations in the code, omitting storage of this variable
       p%D1_12 = p%CBB ! No cross couplings
       p%D1_13 = p%MBB ! No cross couplings 
-      p%D1_14 = - MATMUL( TI_transpose, TRANSPOSE(PHiRb))  
       p%D1_141 = 0.0_ReKi
       p%D1_142 = - MATMUL(TI_transpose, TRANSPOSE(PhiRb)) 
    END IF
@@ -2641,7 +2539,6 @@ SUBROUTINE AllocParameters(p, nDOFM, ErrStat, ErrMsg)
    CALL AllocAry( p%CBB,           nDOFL_TP, nDOFL_TP, 'p%CBB',           ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')
    CALL AllocAry( p%MBB,           nDOFL_TP, nDOFL_TP, 'p%MBB',           ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')
    CALL AllocAry( p%TI,            p%nDOFI__,  6,      'p%TI',            ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')
-   CALL AllocAry( p%D1_14,         nDOFL_TP, p%nDOF__L,'p%D1_14',         ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')        
    CALL AllocAry( p%D1_141,        nDOFL_TP, p%nDOF__L,'p%D1_141',        ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')        
    CALL AllocAry( p%D1_142,        nDOFL_TP, p%nDOF__L,'p%D1_142',        ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')        
    CALL AllocAry( p%PhiRb_TI,      p%nDOF__L, nDOFL_TP,'p%PhiRb_TI',      ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')        
@@ -2695,11 +2592,6 @@ SUBROUTINE AllocMiscVars(p, Misc, ErrStat, ErrMsg)
    CALL AllocAry( Misc%U_red,        p%nDOF_red,  'U_red',         ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
    CALL AllocAry( Misc%U_red_dot,    p%nDOF_red,  'U_red_dot',     ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
    CALL AllocAry( Misc%U_red_dotdot, p%nDOF_red,  'U_red_dotdot',  ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
-
-if (p%RotateLoads.and.p%SttcSolve/=idSIM_None) then
-   CALL AllocAry( Misc%U_full_SIM,   p%nDOF,      'U_full_SIM',    ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
-   CALL AllocAry( Misc%U_red_SIM,    p%nDOF_red,  'U_red_SIM',     ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
-endif
 
    CALL AllocAry( Misc%Fext,      p%nDOF     , 'm%Fext    ', ErrStat2, ErrMsg2 );CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')
    CALL AllocAry( Misc%Fext_red,  p%nDOF_red , 'm%Fext_red', ErrStat2, ErrMsg2 );CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')
@@ -2964,15 +2856,15 @@ END SUBROUTINE PartitionDOFNodes
 !> Construct force vector on internal DOF (L) from the values on the input mesh 
 !! First, the full vector of external forces is built on the non-reduced DOF
 !! Then, the vector is reduced using the Tred matrix
-SUBROUTINE GetExtForceOnInternalDOF( u, p, m, rotateLoads, F_L, ErrStat, ErrMsg, DoExtraMoment )
+SUBROUTINE GetExtForceOnInternalDOF( u, p, m, F_L, ErrStat, ErrMsg, ExtraMoment, RotateLoads)
    type(SD_InputType),     intent(in   )  :: u ! Inputs
    type(SD_ParameterType), intent(in   )  :: p ! Parameters
-   logical               , intent(in   )  :: rotateLoads ! If true, loads are rotated to body coordinate 
+   logical               , intent(in   )  :: ExtraMoment ! If true add extra moment
+   logical               , intent(in   )  :: RotateLoads ! If true, loads are rotated to body coordinate 
    type(SD_MiscVarType),   intent(inout)  :: m ! Misc, for storage optimization of Fext and Fext_red
    real(ReKi)          ,   intent(out)    :: F_L(p%nDOF__L)  !< External force on internal nodes "L"
    integer(IntKi),         intent(  out)  :: ErrStat     !< Error status of the operation
    character(*),           intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
-   logical, intent(in   ) ,optional :: DoExtraMoment
    integer :: iNode ! indices of u-mesh nodes and SD nodes
    integer :: nMembers
    integer :: startDOF, I
@@ -2992,16 +2884,15 @@ SUBROUTINE GetExtForceOnInternalDOF( u, p, m, rotateLoads, F_L, ErrStat, ErrMsg,
    real(ReKi), parameter :: myNaN = -9999998.989_ReKi 
 
    ! --- Rotation matrix from body to global
-   if (rotateLoads) then
+   if (RotateLoads) then
       Rg2b(1:3,1:3) = u%TPMesh%Orientation(:,:,1)  ! global 2 body coordinates
    endif
 
-   if (p%ExtraMoment .or. present(DoExtraMoment)) then
+   if (ExtraMoment) then
       if (p%Floating) then
-         ! TODO deactivate for floating 
          ! For fully floating case, we prescribe the Guyan motion as a "rigid" (non-linear) motion
-         m%DU_full    = 0.0_ReKi
          Rot(1:3,1:3) = transpose(u%TPMesh%Orientation(:,:,1))
+         m%DU_full    = 0.0_ReKi
          do iNode = 1,p%nNodes
             rIP0(1:3)   = p%DP0(1:3, iNode) ! vector interface->node at t=0
             rIP(1:3)    = matmul(Rot, rIP0)   ! vector interface->node at t
@@ -3029,7 +2920,7 @@ SUBROUTINE GetExtForceOnInternalDOF( u, p, m, rotateLoads, F_L, ErrStat, ErrMsg,
 
    ! --- Build vector of external forces (including gravity) (Moment done below)  
    m%Fext= myNaN
-   if (rotateLoads) then ! Forces in body coordinates 
+   if (RotateLoads) then ! Forces in body coordinates 
       do iNode = 1,p%nNodes
          m%Fext( p%NodesDOF(iNode)%List(1:3) ) =  matmul(Rg2b, u%LMesh%Force(:,iNode) + p%FG(p%NodesDOF(iNode)%List(1:3)))
       enddo
@@ -3055,7 +2946,7 @@ SUBROUTINE GetExtForceOnInternalDOF( u, p, m, rotateLoads, F_L, ErrStat, ErrMsg,
          CableTension =  -p%ElemProps(iElem)%YoungE*p%ElemProps(iElem)%Area * u%CableDeltaL(iChannel) / (p%ElemProps(iElem)%Length + u%CableDeltaL(iChannel))
          print*,'TODO, Controllable pretension cable needs thinking for moment'
          STOP
-         !if (rotateLoads) then ! in body coordinate
+         !if (RotateLoads) then ! in body coordinate
          !   m%Fext(IDOF) = m%Fext(IDOF) + matmul(Rg2b,m%FC_unit( IDOF ) * (CableTension - p%ElemProps(iElem)%T0))
          !else ! in global
          !   m%Fext(IDOF) = m%Fext(IDOF) +             m%FC_unit( IDOF ) * (CableTension - p%ElemProps(iElem)%T0)
@@ -3067,7 +2958,7 @@ SUBROUTINE GetExtForceOnInternalDOF( u, p, m, rotateLoads, F_L, ErrStat, ErrMsg,
    do iNode = 1,p%nNodes
       Force(1:3)  = m%Fext(p%NodesDOF(iNode)%List(1:3) ) ! Controllable cable + External Forces on LMesh
       ! Moment ext + gravity
-      if (rotateLoads) then
+      if (RotateLoads) then
          ! In body coordinates
          Moment(1:3) = matmul(Rg2b, u%LMesh%Moment(1:3,iNode) + p%FG(p%NodesDOF(iNode)%List(4:6)))
       else
@@ -3075,7 +2966,7 @@ SUBROUTINE GetExtForceOnInternalDOF( u, p, m, rotateLoads, F_L, ErrStat, ErrMsg,
       endif
 
       ! Extra moment dm = Delta u x (fe + fg)
-      if (p%ExtraMoment .or. present(DoExtraMoment)) then
+      if (ExtraMoment) then
          du = m%DU_full(p%NodesDOF(iNode)%List(1:3)) ! Lever arm
          Moment(1) = Moment(1) + du(2) * Force(3) - du(3) * Force(2)
          Moment(2) = Moment(2) + du(3) * Force(1) - du(1) * Force(3)

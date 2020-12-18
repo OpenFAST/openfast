@@ -153,8 +153,6 @@ typedef  ^    MiscVarType    ReKi           U_full_elast  {:}  -  -  "Elastic di
 typedef  ^    MiscVarType    ReKi           U_red          {:}  -  -  
 typedef  ^    MiscVarType    ReKi           U_red_dot      {:}  -  -  
 typedef  ^    MiscVarType    ReKi           U_red_dotdot   {:}  -  -  
-typedef  ^    MiscVarType    ReKi           U_red_SIM      {:}  -  - "Static Solve contribution to U, reduced system"
-typedef  ^    MiscVarType    ReKi           U_full_SIM     {:}  -  - "Static Solve contribution to U, full system"
 typedef  ^    MiscVarType    ReKi           FC_unit   {:}   -  -   "Cable Force vector (for varying cable load, of unit cable load)"  N
 typedef  ^    MiscVarType    ReKi           SDWrOutput {:} -  -    "Data from previous step to be written to a SubDyn output file"
 typedef  ^    MiscVarType    DbKi           LastOutTime -  -  -    "The time of the most recent stored output data"  "s"
@@ -190,7 +188,6 @@ typedef  ^  ParameterType  IntKi   nDOFM        -  -  -  "retained degrees of fr
 typedef  ^  ParameterType  IntKi   SttcSolve    -  -  -  "Solve dynamics about static equilibrium point (flag)"
 typedef  ^  ParameterType  Logical ExtraMoment  -  -  -  "Add Extra lever arm contribution to interface reaction outputs"
 typedef  ^  ParameterType  Logical Floating     -  -  -  "True if floating bottom (the 6 DOF are free at all reaction nodes)"
-typedef  ^  ParameterType  Logical RotateLoads  -  -  -  "Temporary, rotate loads"
 typedef  ^  ParameterType  ReKi    KMMDiag  {:}    -  -  "Diagonal coefficients of Kmm (OmegaM squared)"
 typedef  ^  ParameterType  ReKi    CMMDiag  {:}    -  -  "Diagonal coefficients of Cmm (~2 Zeta OmegaM))"
 typedef  ^  ParameterType  ReKi    MMB  {:}{:}     -  -  "Matrix after C-B reduction (transpose of MBM"
@@ -198,11 +195,8 @@ typedef  ^  ParameterType  ReKi    C1_11  {:}{:}   -  -  "Coefficient of x in Y1
 typedef  ^  ParameterType  ReKi    C1_12  {:}{:}   -  -  "Coefficient of x in Y1"
 typedef  ^  ParameterType  ReKi    D1_12  {:}{:}   -  -  "Coefficient of uTPdot in Y1"
 typedef  ^  ParameterType  ReKi    D1_13  {:}{:}   -  -  "Coefficient of uTPdotdot in Y1"
-typedef  ^  ParameterType  ReKi    D1_14  {:}{:}   -  -  "Coefficient of Fle in Y1"
 typedef  ^  ParameterType  ReKi    D1_141 {:}{:}  -  -   "MBm PhiM^T"
 typedef  ^  ParameterType  ReKi    D1_142 {:}{:}  -  -   "TI^T PhiR^T"
-typedef  ^  ParameterType  R8Ki    K_I2  {:}{:}    -  -  "Stiffness matrix of I2 nodes"
-typedef  ^  ParameterType  IntKi   Nodes_I2 {:}    -  -  "I2 node indices"
 typedef  ^  ParameterType  ReKi    PhiM  {:}{:}    -  -  "Coefficient of x in Y2"
 typedef  ^  ParameterType  ReKi    C2_61  {:}{:}   -  -  "Coefficient of x in Y2 (URdotdot ULdotdot)"
 typedef  ^  ParameterType  ReKi    C2_62  {:}{:}   -  -  "Coefficient of x in Y2 (URdotdot ULdotdot)"
