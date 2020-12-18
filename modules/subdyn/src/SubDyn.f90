@@ -590,8 +590,11 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       ! --------------------------------------------------------------------------------
       ! --- Outputs 1, Y1=-F_TP, reaction force from SubDyn to ElastoDyn (stored in y%Y1Mesh)
       ! --------------------------------------------------------------------------------
+
+      Y1_CB_L = - (matmul(p%D1_141, m%F_L))
+
       ! Compute external force on internal (F_L) and interface nodes (F_I)
-      call GetExtForceOnInternalDOF(u, p, m, .false., m%F_L, ErrStat2, ErrMsg2); if(Failed()) return
+      call GetExtForceOnInternalDOF(u, p, m, .false., m%F_L, ErrStat2, ErrMsg2, DoExtraMoment=.True.); if(Failed()) return
       call GetExtForceOnInterfaceDOF(p, m%Fext, F_I)
       ! Compute reaction/coupling force at TP
       if ( p%nDOFM > 0) then
@@ -602,21 +605,19 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
          Y1 = -(   matmul(p%KBB,   m%u_TP) + matmul(p%D1_12, m%udot_TP) + matmul(p%D1_13, m%udotdot_TP) &
                  + matmul(p%D1_141, m%F_L) + matmul(p%D1_142, m%F_L)  - matmul( F_I, p%TI ) ) 
       end if
-      print*,'-----------------------'
       print*,'t        ',t
       print*,'UTP      ',m%u_TP
       print*,'-----------------------'
       print*,'Y1 old2  ',Y1
 
       Y1_Utp  = - (matmul(p%KBB,   m%u_TP) + matmul(p%D1_12, m%udot_TP) + matmul(p%D1_13, m%udotdot_TP) )
-      Y1_CB_L = - (matmul(p%D1_141, m%F_L))
+      Y1_Guy_L = - matmul(p%D1_142, m%F_L) 
       if ( p%nDOFM > 0) then
          Y1_CB = -( matmul(p%C1_11, x%qm)   + matmul(p%C1_12,x%qmdot))
       else
          Y1_CB = 0.0_ReKi
       endif
       Y1_Guy_R =   matmul( F_I, p%TI )
-      Y1_Guy_L = - matmul(p%D1_142, m%F_L) 
       Y1 = Y1_CB + Y1_Utp + Y1_CB_L+ Y1_Guy_L + Y1_Guy_R 
       print*,'-----------------------'
       print*,'Split terms (old)'
@@ -632,42 +633,43 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
          ! NOTE: this is only needed for the few DOFs below the interface
          !       so this could be greatly optimized with the mapping computed at init only..
          !       TODO...
-         m%U_red_SIM(:) = 0.0_ReKi
-         m%U_red_SIM(p%ID__L) = ULS   ! Only the static contribution
-         if (p%reduced) then
-            m%U_full_SIM = matmul(p%T_red, m%U_red_SIM)
-         else
-            m%U_full_SIM = m%U_red_SIM
-         endif
-         iSDNode = p%Nodes_I2(1) ! Second node of interface element
-         DOFList => p%NodesDOF(iSDNode)%List
-         ULS_I2 = m%U_full_SIM(DOFList(1:6))
-         !print*,'NODE',iSDNode
-         !print*,'DOFLIST',DOFLIST
-         !print*,'DOFLIST', p%NodesDOF(p%Elems(1,2))%List(1:6) 
-         !print*,'DOFLIST', p%NodesDOF(p%Elems(1,3))%List(1:6) 
-         Y1_Guy_L =  - matmul( p%K_I2 , ULS_I2)
-         print*,'ULs    ',ULS_I2
-         print*,'ULe    ',m%U_full_elast(DOFList)
-         if (any(ULS_I2>2)) then
-            STOP
-         endif
-         print*,'-----------------------'
-         print*,'Split terms (new)'
-         print*,'Y1 UtP   ',Y1_Utp
-         print*,'Y1 GR    ',Y1_Guy_R
-         print*,'Y1 CB    ',Y1_CB
-         print*,'Y1 CBL   ',Y1_CB_L
-         print*,'Y1 GL new',Y1_Guy_L
-         Y1_Guy_L(1:3) = matmul(Rb2g,Y1_Guy_L(1:3))
-         Y1_Guy_L(4:6) = matmul(Rb2g,Y1_Guy_L(4:6))
-         Y1_CB(1:3)   = matmul(Rb2g,Y1_CB(1:3))
-         Y1_CB(4:6)   = matmul(Rb2g,Y1_CB(4:6))
-         Y1_CB_L(1:3) = matmul(Rb2g,Y1_CB_L(1:3))
-         Y1_CB_L(4:6) = matmul(Rb2g,Y1_CB_L(4:6))
-         print*,'Y1 GL rot',Y1_Guy_L
-         print*,'Y1 CB rot',Y1_CB
-         print*,'Y1 CBLrot',Y1_CB_L
+!          m%U_red_SIM(:) = 0.0_ReKi
+!          m%U_red_SIM(p%ID__L) = ULS   ! Only the static contribution
+!          !m%U_red_SIM(p%ID__L) = m%UL   ! Only the static contribution
+!          if (p%reduced) then
+!             m%U_full_SIM = matmul(p%T_red, m%U_red_SIM)
+!          else
+!             m%U_full_SIM = m%U_red_SIM
+!          endif
+!          iSDNode = p%Nodes_I2(1) ! Second node of interface element
+!          DOFList => p%NodesDOF(iSDNode)%List
+!          ULS_I2 = m%U_full_SIM(DOFList(1:6))
+!          !print*,'NODE',iSDNode
+!          !print*,'DOFLIST',DOFLIST
+!          !print*,'DOFLIST', p%NodesDOF(p%Elems(1,2))%List(1:6) 
+!          !print*,'DOFLIST', p%NodesDOF(p%Elems(1,3))%List(1:6) 
+!          Y1_Guy_L =  - matmul( p%K_I2 , ULS_I2)
+!          print*,'ULs    ',ULS_I2
+!          print*,'ULe    ',m%U_full_elast(DOFList)
+!          if (any(ULS_I2>2)) then
+!             STOP
+!          endif
+!          print*,'-----------------------'
+!          print*,'Split terms (new)'
+!          print*,'Y1 UtP   ',Y1_Utp
+!          print*,'Y1 GR    ',Y1_Guy_R
+!          print*,'Y1 CB    ',Y1_CB
+!          print*,'Y1 CBL   ',Y1_CB_L
+!          print*,'Y1 GL new',Y1_Guy_L
+!          Y1_Guy_L(1:3) = matmul(Rb2g,Y1_Guy_L(1:3))
+!          Y1_Guy_L(4:6) = matmul(Rb2g,Y1_Guy_L(4:6))
+!          Y1_CB(1:3)    = matmul(Rb2g,Y1_CB(1:3))
+!          Y1_CB(4:6)    = matmul(Rb2g,Y1_CB(4:6))
+!          Y1_CB_L(1:3)  = matmul(Rb2g,Y1_CB_L(1:3))
+!          Y1_CB_L(4:6)  = matmul(Rb2g,Y1_CB_L(4:6))
+!          print*,'Y1 GL rot',Y1_Guy_L
+!          print*,'Y1 CB rot',Y1_CB
+!          print*,'Y1 CBLrot',Y1_CB_L
 
          Y1 = Y1_CB + Y1_Utp + Y1_CB_L+ Y1_Guy_L + Y1_Guy_R 
          print*,'Y1    new',Y1
@@ -2962,7 +2964,7 @@ END SUBROUTINE PartitionDOFNodes
 !> Construct force vector on internal DOF (L) from the values on the input mesh 
 !! First, the full vector of external forces is built on the non-reduced DOF
 !! Then, the vector is reduced using the Tred matrix
-SUBROUTINE GetExtForceOnInternalDOF( u, p, m, rotateLoads, F_L, ErrStat, ErrMsg )
+SUBROUTINE GetExtForceOnInternalDOF( u, p, m, rotateLoads, F_L, ErrStat, ErrMsg, DoExtraMoment )
    type(SD_InputType),     intent(in   )  :: u ! Inputs
    type(SD_ParameterType), intent(in   )  :: p ! Parameters
    logical               , intent(in   )  :: rotateLoads ! If true, loads are rotated to body coordinate 
@@ -2970,6 +2972,7 @@ SUBROUTINE GetExtForceOnInternalDOF( u, p, m, rotateLoads, F_L, ErrStat, ErrMsg 
    real(ReKi)          ,   intent(out)    :: F_L(p%nDOF__L)  !< External force on internal nodes "L"
    integer(IntKi),         intent(  out)  :: ErrStat     !< Error status of the operation
    character(*),           intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+   logical, intent(in   ) ,optional :: DoExtraMoment
    integer :: iNode ! indices of u-mesh nodes and SD nodes
    integer :: nMembers
    integer :: startDOF, I
@@ -2993,7 +2996,7 @@ SUBROUTINE GetExtForceOnInternalDOF( u, p, m, rotateLoads, F_L, ErrStat, ErrMsg 
       Rg2b(1:3,1:3) = u%TPMesh%Orientation(:,:,1)  ! global 2 body coordinates
    endif
 
-   if (p%ExtraMoment) then
+   if (p%ExtraMoment .or. present(DoExtraMoment)) then
       if (p%Floating) then
          ! TODO deactivate for floating 
          ! For fully floating case, we prescribe the Guyan motion as a "rigid" (non-linear) motion
@@ -3072,7 +3075,7 @@ SUBROUTINE GetExtForceOnInternalDOF( u, p, m, rotateLoads, F_L, ErrStat, ErrMsg 
       endif
 
       ! Extra moment dm = Delta u x (fe + fg)
-      if (p%ExtraMoment) then
+      if (p%ExtraMoment .or. present(DoExtraMoment)) then
          du = m%DU_full(p%NodesDOF(iNode)%List(1:3)) ! Lever arm
          Moment(1) = Moment(1) + du(2) * Force(3) - du(3) * Force(2)
          Moment(2) = Moment(2) + du(3) * Force(1) - du(1) * Force(3)
