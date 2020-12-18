@@ -17,6 +17,22 @@ Added in OpenFAST `dev`
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  Module        Line  Flag Name          Example Value
 ============== ==== ================== =============================================================================================================================================================================
+IfW driver     6    [separator line]   ===================== File Conversion Options =================================
+IfW driver     7    WrHAWC             false    WrHAWC    - Convert all data to HAWC2 format? (flag)
+IfW driver     8    WrBladed           false    WrBladed  - Convert all data to Bladed format? (flag)
+IfW driver     9    WrVTK              false    WrVTK     - Convert all data to VTK format? (flag)
+InflowWind     7    VFlowAng                0   VFlowAng  - Upflow angle (degrees) (not used for native Bladed format WindType=7)
+============== ==== ================== =============================================================================================================================================================================
+
+
+OpenFAST v2.3.0 to OpenFAST v2.4.0
+----------------------------------
+
+============== ==== ================== =============================================================================================================================================================================
+Added in OpenFAST v2.4.0
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Module        Line  Flag Name          Example Value
+============== ==== ================== =============================================================================================================================================================================
 HydroDyn       53   ExctnMod                0   ExctnMod   - Wave Excitation model {0: None, 1: DFT, 2: state-space} (-) 
 OpenFAST       44   CalcSteady         true     CalcSteady - Calculate a steady-state periodic operating point before linearization? [unused if Linearize=False] (flag)
 OpenFAST       45   TrimCase                3   TrimCase   - Controller parameter to be trimmed {1:yaw; 2:torque; 3:pitch} [used only if CalcSteady=True] (-)
@@ -30,15 +46,12 @@ AeroDyn        14   AA_InputFile       "unused"                AA_InputFile     
 AeroDyn        35   [separator line]   ======  OLAF cOnvecting LAgrangian Filaments (Free Vortex Wake) Theory Options  ================== [used only when WakeMod=3]
 AeroDyn        36   OLAFInputFileName  "Elliptic_OLAF.dat"     OLAFInputFileName - Input file for OLAF [used only when WakeMod=3]
 AirFoilTables  4\*  BL_file            "unused"                BL_file           - The file name including the boundary layer characteristics of the profile. Ignored if the aeroacoustic module is not called.
-IfW driver     6    [separator line]   ===================== File Conversion Options =================================
-IfW driver     7    WrHAWC             false    WrHAWC    - Convert all data to HAWC2 format? (flag)
-IfW driver     8    WrBladed           false    WrBladed  - Convert all data to Bladed format? (flag)
-IfW driver     9    WrVTK              false    WrVTK     - Convert all data to VTK format? (flag)
-InflowWind     7    VFlowAng                0   VFlowAng  - Upflow angle (degrees) (not used for native Bladed format WindType=7)
 ============== ==== ================== =============================================================================================================================================================================
 
-Modified in OpenFAST `dev`
---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Modified in OpenFAST v2.4.0
+---------------------------
+
+============== ==== ================== =============================================================================================================================================================================
  Module        Line  Flag Name          Example Value
 ============== ==== ================== =============================================================================================================================================================================
 AirFoilTables  40\* filtCutOff         "DEFAULT"               filtCutOff        - Reduced frequency cut-off for low-pass filtering the AoA input to UA, as well as the 1st and 2nd derivatives (-) [default = 0.5] 
