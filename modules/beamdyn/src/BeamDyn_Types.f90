@@ -183,7 +183,6 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: uu0      !< Initial Disp/Rot value at quadrature point (at T=0) [-]
     REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: rrN0      !< Initial relative rotation array, relative to root (at T=0) (index 1=rot DOF; index 2=FE nodes; index 3=element) [-]
     REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: E10      !< Initial E10 at quadrature point [-]
-    REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: SP_Coef      !< Coefficients for cubic spline interpolation; index 1 = [1, kp_member-1]; index 2 = [1,4] (index of cubic-spline coefficient 1=constant;2=linear;3=quadratic;4=cubic terms); index 3 = [1,4] (each column of kp_coord) [-]
     INTEGER(IntKi)  :: nodes_per_elem      !< Finite element (GLL) nodes per element [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: node_elem_idx      !< Index to first and last nodes of element in p%node_total sized arrays [-]
     INTEGER(IntKi)  :: refine      !< FE mesh refinement factor for trapezoidal quadrature [-]
@@ -3764,22 +3763,6 @@ IF (ALLOCATED(SrcParamData%E10)) THEN
   END IF
     DstParamData%E10 = SrcParamData%E10
 ENDIF
-IF (ALLOCATED(SrcParamData%SP_Coef)) THEN
-  i1_l = LBOUND(SrcParamData%SP_Coef,1)
-  i1_u = UBOUND(SrcParamData%SP_Coef,1)
-  i2_l = LBOUND(SrcParamData%SP_Coef,2)
-  i2_u = UBOUND(SrcParamData%SP_Coef,2)
-  i3_l = LBOUND(SrcParamData%SP_Coef,3)
-  i3_u = UBOUND(SrcParamData%SP_Coef,3)
-  IF (.NOT. ALLOCATED(DstParamData%SP_Coef)) THEN 
-    ALLOCATE(DstParamData%SP_Coef(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%SP_Coef.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstParamData%SP_Coef = SrcParamData%SP_Coef
-ENDIF
     DstParamData%nodes_per_elem = SrcParamData%nodes_per_elem
 IF (ALLOCATED(SrcParamData%node_elem_idx)) THEN
   i1_l = LBOUND(SrcParamData%node_elem_idx,1)
@@ -4089,9 +4072,6 @@ ENDIF
 IF (ALLOCATED(ParamData%E10)) THEN
   DEALLOCATE(ParamData%E10)
 ENDIF
-IF (ALLOCATED(ParamData%SP_Coef)) THEN
-  DEALLOCATE(ParamData%SP_Coef)
-ENDIF
 IF (ALLOCATED(ParamData%node_elem_idx)) THEN
   DEALLOCATE(ParamData%node_elem_idx)
 ENDIF
@@ -4258,11 +4238,6 @@ ENDIF
   IF ( ALLOCATED(InData%E10) ) THEN
     Int_BufSz   = Int_BufSz   + 2*3  ! E10 upper/lower bounds for each dimension
       Db_BufSz   = Db_BufSz   + SIZE(InData%E10)  ! E10
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! SP_Coef allocated yes/no
-  IF ( ALLOCATED(InData%SP_Coef) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*3  ! SP_Coef upper/lower bounds for each dimension
-      Db_BufSz   = Db_BufSz   + SIZE(InData%SP_Coef)  ! SP_Coef
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! nodes_per_elem
   Int_BufSz   = Int_BufSz   + 1     ! node_elem_idx allocated yes/no
@@ -4769,31 +4744,6 @@ ENDIF
         DO i2 = LBOUND(InData%E10,2), UBOUND(InData%E10,2)
           DO i1 = LBOUND(InData%E10,1), UBOUND(InData%E10,1)
             DbKiBuf(Db_Xferred) = InData%E10(i1,i2,i3)
-            Db_Xferred = Db_Xferred + 1
-          END DO
-        END DO
-      END DO
-  END IF
-  IF ( .NOT. ALLOCATED(InData%SP_Coef) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%SP_Coef,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%SP_Coef,1)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%SP_Coef,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%SP_Coef,2)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%SP_Coef,3)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%SP_Coef,3)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i3 = LBOUND(InData%SP_Coef,3), UBOUND(InData%SP_Coef,3)
-        DO i2 = LBOUND(InData%SP_Coef,2), UBOUND(InData%SP_Coef,2)
-          DO i1 = LBOUND(InData%SP_Coef,1), UBOUND(InData%SP_Coef,1)
-            DbKiBuf(Db_Xferred) = InData%SP_Coef(i1,i2,i3)
             Db_Xferred = Db_Xferred + 1
           END DO
         END DO
@@ -5667,34 +5617,6 @@ ENDIF
         DO i2 = LBOUND(OutData%E10,2), UBOUND(OutData%E10,2)
           DO i1 = LBOUND(OutData%E10,1), UBOUND(OutData%E10,1)
             OutData%E10(i1,i2,i3) = REAL(DbKiBuf(Db_Xferred), R8Ki)
-            Db_Xferred = Db_Xferred + 1
-          END DO
-        END DO
-      END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! SP_Coef not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i2_l = IntKiBuf( Int_Xferred    )
-    i2_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i3_l = IntKiBuf( Int_Xferred    )
-    i3_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%SP_Coef)) DEALLOCATE(OutData%SP_Coef)
-    ALLOCATE(OutData%SP_Coef(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%SP_Coef.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i3 = LBOUND(OutData%SP_Coef,3), UBOUND(OutData%SP_Coef,3)
-        DO i2 = LBOUND(OutData%SP_Coef,2), UBOUND(OutData%SP_Coef,2)
-          DO i1 = LBOUND(OutData%SP_Coef,1), UBOUND(OutData%SP_Coef,1)
-            OutData%SP_Coef(i1,i2,i3) = REAL(DbKiBuf(Db_Xferred), R8Ki)
             Db_Xferred = Db_Xferred + 1
           END DO
         END DO

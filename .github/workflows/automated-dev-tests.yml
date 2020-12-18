@@ -3,9 +3,17 @@ name: 'Development Pipeline'
 
 on:
   push:
+    paths-ignore:
+      - 'docs/**'
+      - 'share/**'
+      - 'vs-build/**'
 
   pull_request:
     types: [opened, synchronize] #labeled, assigned]
+    paths-ignore:
+      - 'docs/**'
+      - 'share/**'
+      - 'vs-build/**'
 
 # runs-on: ${{ matrix.os }}
 # strategy:
@@ -14,10 +22,6 @@ on:
 
 jobs:
   build-and-test:
-
-    # Do not run if:
-    # - Branch name contains "docs/"
-    if: "!contains(github.ref, 'docs/')"
 
     runs-on: ubuntu-latest
     container:
@@ -87,10 +91,6 @@ jobs:
     # Test if single precision compile completes.
     # Do not run the test suite.
 
-    # Do not run if:
-    # - Branch name contains "docs/"
-    if: "!contains(github.ref, 'docs/')"
-
     runs-on: ubuntu-latest
     container:
       image: rafmudaf/openfast-ubuntu:dev
@@ -113,3 +113,6 @@ jobs:
         uses: ./.github/actions/compile
         with:
           build-target: 'all'
+      - name: simple-test
+        working-directory: /openfast/build
+        run: ./glue-codes/openfast/openfast -v
