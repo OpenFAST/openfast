@@ -97,27 +97,27 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: AnchConnect      !< IdNum of Connection at anchor [-]
     INTEGER(IntKi)  :: PropsIdNum      !< the IdNum of the associated line properties [-]
     INTEGER(IntKi)  :: N      !< The number of elements in the line [-]
-    REAL(ReKi)  :: UnstrLen      !< unstretched length of the line [-]
-    REAL(ReKi)  :: BA      !< internal damping coefficient times area for this line only [[N-s]]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: r      !< node positions [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: rd      !< node velocities [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: q      !< node tangent vectors [-]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: l      !< segment unstretched length [[m]]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: ld      !< segment unstretched length rate of change (used in active tensioning) [[m]]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: lstr      !< segment stretched length [[m]]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: lstrd      !< segment change in stretched length [[m/s]]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: V      !< segment volume [[m^3]]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: T      !< segment tension vectors [[N]]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Td      !< segment internal damping force vectors [[N]]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: W      !< weight/buoyancy vectors [[N]]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Dp      !< node drag (transverse) [[N]]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Dq      !< node drag (axial) [[N]]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Ap      !< node added mass forcing (transverse) [[N]]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Aq      !< node added mass forcing (axial) [[N]]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: B      !< node bottom contact force [[N]]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: F      !< total force on node [[N]]
-    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: S      !< node inverse mass matrix [[kg]]
-    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: M      !< node mass matrix [[kg]]
+    REAL(DbKi)  :: UnstrLen      !< unstretched length of the line [-]
+    REAL(DbKi)  :: BA      !< internal damping coefficient times area for this line only [[N-s]]
+    REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: r      !< node positions [-]
+    REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: rd      !< node velocities [-]
+    REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: q      !< node tangent vectors [-]
+    REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: l      !< segment unstretched length [[m]]
+    REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: ld      !< segment unstretched length rate of change (used in active tensioning) [[m]]
+    REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: lstr      !< segment stretched length [[m]]
+    REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: lstrd      !< segment change in stretched length [[m/s]]
+    REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: V      !< segment volume [[m^3]]
+    REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: T      !< segment tension vectors [[N]]
+    REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: Td      !< segment internal damping force vectors [[N]]
+    REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: W      !< weight/buoyancy vectors [[N]]
+    REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: Dp      !< node drag (transverse) [[N]]
+    REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: Dq      !< node drag (axial) [[N]]
+    REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: Ap      !< node added mass forcing (transverse) [[N]]
+    REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: Aq      !< node added mass forcing (axial) [[N]]
+    REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: B      !< node bottom contact force [[N]]
+    REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: F      !< total force on node [[N]]
+    REAL(DbKi) , DIMENSION(:,:,:), ALLOCATABLE  :: S      !< node inverse mass matrix [[kg]]
+    REAL(DbKi) , DIMENSION(:,:,:), ALLOCATABLE  :: M      !< node mass matrix [[kg]]
     INTEGER(IntKi)  :: LineUnOut      !< unit number of line output file [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: LineWrOutput      !< one row of output data for this line [-]
   END TYPE MD_Line
@@ -1450,102 +1450,102 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! AnchConnect
       Int_BufSz  = Int_BufSz  + 1  ! PropsIdNum
       Int_BufSz  = Int_BufSz  + 1  ! N
-      Re_BufSz   = Re_BufSz   + 1  ! UnstrLen
-      Re_BufSz   = Re_BufSz   + 1  ! BA
+      Db_BufSz   = Db_BufSz   + 1  ! UnstrLen
+      Db_BufSz   = Db_BufSz   + 1  ! BA
   Int_BufSz   = Int_BufSz   + 1     ! r allocated yes/no
   IF ( ALLOCATED(InData%r) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! r upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%r)  ! r
+      Db_BufSz   = Db_BufSz   + SIZE(InData%r)  ! r
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! rd allocated yes/no
   IF ( ALLOCATED(InData%rd) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! rd upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%rd)  ! rd
+      Db_BufSz   = Db_BufSz   + SIZE(InData%rd)  ! rd
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! q allocated yes/no
   IF ( ALLOCATED(InData%q) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! q upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%q)  ! q
+      Db_BufSz   = Db_BufSz   + SIZE(InData%q)  ! q
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! l allocated yes/no
   IF ( ALLOCATED(InData%l) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! l upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%l)  ! l
+      Db_BufSz   = Db_BufSz   + SIZE(InData%l)  ! l
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! ld allocated yes/no
   IF ( ALLOCATED(InData%ld) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! ld upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%ld)  ! ld
+      Db_BufSz   = Db_BufSz   + SIZE(InData%ld)  ! ld
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! lstr allocated yes/no
   IF ( ALLOCATED(InData%lstr) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! lstr upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%lstr)  ! lstr
+      Db_BufSz   = Db_BufSz   + SIZE(InData%lstr)  ! lstr
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! lstrd allocated yes/no
   IF ( ALLOCATED(InData%lstrd) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! lstrd upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%lstrd)  ! lstrd
+      Db_BufSz   = Db_BufSz   + SIZE(InData%lstrd)  ! lstrd
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! V allocated yes/no
   IF ( ALLOCATED(InData%V) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! V upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%V)  ! V
+      Db_BufSz   = Db_BufSz   + SIZE(InData%V)  ! V
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! T allocated yes/no
   IF ( ALLOCATED(InData%T) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! T upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%T)  ! T
+      Db_BufSz   = Db_BufSz   + SIZE(InData%T)  ! T
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! Td allocated yes/no
   IF ( ALLOCATED(InData%Td) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! Td upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%Td)  ! Td
+      Db_BufSz   = Db_BufSz   + SIZE(InData%Td)  ! Td
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! W allocated yes/no
   IF ( ALLOCATED(InData%W) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! W upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%W)  ! W
+      Db_BufSz   = Db_BufSz   + SIZE(InData%W)  ! W
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! Dp allocated yes/no
   IF ( ALLOCATED(InData%Dp) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! Dp upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%Dp)  ! Dp
+      Db_BufSz   = Db_BufSz   + SIZE(InData%Dp)  ! Dp
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! Dq allocated yes/no
   IF ( ALLOCATED(InData%Dq) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! Dq upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%Dq)  ! Dq
+      Db_BufSz   = Db_BufSz   + SIZE(InData%Dq)  ! Dq
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! Ap allocated yes/no
   IF ( ALLOCATED(InData%Ap) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! Ap upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%Ap)  ! Ap
+      Db_BufSz   = Db_BufSz   + SIZE(InData%Ap)  ! Ap
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! Aq allocated yes/no
   IF ( ALLOCATED(InData%Aq) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! Aq upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%Aq)  ! Aq
+      Db_BufSz   = Db_BufSz   + SIZE(InData%Aq)  ! Aq
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! B allocated yes/no
   IF ( ALLOCATED(InData%B) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! B upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%B)  ! B
+      Db_BufSz   = Db_BufSz   + SIZE(InData%B)  ! B
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! F allocated yes/no
   IF ( ALLOCATED(InData%F) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! F upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%F)  ! F
+      Db_BufSz   = Db_BufSz   + SIZE(InData%F)  ! F
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! S allocated yes/no
   IF ( ALLOCATED(InData%S) ) THEN
     Int_BufSz   = Int_BufSz   + 2*3  ! S upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%S)  ! S
+      Db_BufSz   = Db_BufSz   + SIZE(InData%S)  ! S
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! M allocated yes/no
   IF ( ALLOCATED(InData%M) ) THEN
     Int_BufSz   = Int_BufSz   + 2*3  ! M upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%M)  ! M
+      Db_BufSz   = Db_BufSz   + SIZE(InData%M)  ! M
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! LineUnOut
   Int_BufSz   = Int_BufSz   + 1     ! LineWrOutput allocated yes/no
@@ -1600,10 +1600,10 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%N
     Int_Xferred = Int_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%UnstrLen
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%BA
-    Re_Xferred = Re_Xferred + 1
+    DbKiBuf(Db_Xferred) = InData%UnstrLen
+    Db_Xferred = Db_Xferred + 1
+    DbKiBuf(Db_Xferred) = InData%BA
+    Db_Xferred = Db_Xferred + 1
   IF ( .NOT. ALLOCATED(InData%r) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -1619,8 +1619,8 @@ ENDIF
 
       DO i2 = LBOUND(InData%r,2), UBOUND(InData%r,2)
         DO i1 = LBOUND(InData%r,1), UBOUND(InData%r,1)
-          ReKiBuf(Re_Xferred) = InData%r(i1,i2)
-          Re_Xferred = Re_Xferred + 1
+          DbKiBuf(Db_Xferred) = InData%r(i1,i2)
+          Db_Xferred = Db_Xferred + 1
         END DO
       END DO
   END IF
@@ -1639,8 +1639,8 @@ ENDIF
 
       DO i2 = LBOUND(InData%rd,2), UBOUND(InData%rd,2)
         DO i1 = LBOUND(InData%rd,1), UBOUND(InData%rd,1)
-          ReKiBuf(Re_Xferred) = InData%rd(i1,i2)
-          Re_Xferred = Re_Xferred + 1
+          DbKiBuf(Db_Xferred) = InData%rd(i1,i2)
+          Db_Xferred = Db_Xferred + 1
         END DO
       END DO
   END IF
@@ -1659,8 +1659,8 @@ ENDIF
 
       DO i2 = LBOUND(InData%q,2), UBOUND(InData%q,2)
         DO i1 = LBOUND(InData%q,1), UBOUND(InData%q,1)
-          ReKiBuf(Re_Xferred) = InData%q(i1,i2)
-          Re_Xferred = Re_Xferred + 1
+          DbKiBuf(Db_Xferred) = InData%q(i1,i2)
+          Db_Xferred = Db_Xferred + 1
         END DO
       END DO
   END IF
@@ -1675,8 +1675,8 @@ ENDIF
     Int_Xferred = Int_Xferred + 2
 
       DO i1 = LBOUND(InData%l,1), UBOUND(InData%l,1)
-        ReKiBuf(Re_Xferred) = InData%l(i1)
-        Re_Xferred = Re_Xferred + 1
+        DbKiBuf(Db_Xferred) = InData%l(i1)
+        Db_Xferred = Db_Xferred + 1
       END DO
   END IF
   IF ( .NOT. ALLOCATED(InData%ld) ) THEN
@@ -1690,8 +1690,8 @@ ENDIF
     Int_Xferred = Int_Xferred + 2
 
       DO i1 = LBOUND(InData%ld,1), UBOUND(InData%ld,1)
-        ReKiBuf(Re_Xferred) = InData%ld(i1)
-        Re_Xferred = Re_Xferred + 1
+        DbKiBuf(Db_Xferred) = InData%ld(i1)
+        Db_Xferred = Db_Xferred + 1
       END DO
   END IF
   IF ( .NOT. ALLOCATED(InData%lstr) ) THEN
@@ -1705,8 +1705,8 @@ ENDIF
     Int_Xferred = Int_Xferred + 2
 
       DO i1 = LBOUND(InData%lstr,1), UBOUND(InData%lstr,1)
-        ReKiBuf(Re_Xferred) = InData%lstr(i1)
-        Re_Xferred = Re_Xferred + 1
+        DbKiBuf(Db_Xferred) = InData%lstr(i1)
+        Db_Xferred = Db_Xferred + 1
       END DO
   END IF
   IF ( .NOT. ALLOCATED(InData%lstrd) ) THEN
@@ -1720,8 +1720,8 @@ ENDIF
     Int_Xferred = Int_Xferred + 2
 
       DO i1 = LBOUND(InData%lstrd,1), UBOUND(InData%lstrd,1)
-        ReKiBuf(Re_Xferred) = InData%lstrd(i1)
-        Re_Xferred = Re_Xferred + 1
+        DbKiBuf(Db_Xferred) = InData%lstrd(i1)
+        Db_Xferred = Db_Xferred + 1
       END DO
   END IF
   IF ( .NOT. ALLOCATED(InData%V) ) THEN
@@ -1735,8 +1735,8 @@ ENDIF
     Int_Xferred = Int_Xferred + 2
 
       DO i1 = LBOUND(InData%V,1), UBOUND(InData%V,1)
-        ReKiBuf(Re_Xferred) = InData%V(i1)
-        Re_Xferred = Re_Xferred + 1
+        DbKiBuf(Db_Xferred) = InData%V(i1)
+        Db_Xferred = Db_Xferred + 1
       END DO
   END IF
   IF ( .NOT. ALLOCATED(InData%T) ) THEN
@@ -1754,8 +1754,8 @@ ENDIF
 
       DO i2 = LBOUND(InData%T,2), UBOUND(InData%T,2)
         DO i1 = LBOUND(InData%T,1), UBOUND(InData%T,1)
-          ReKiBuf(Re_Xferred) = InData%T(i1,i2)
-          Re_Xferred = Re_Xferred + 1
+          DbKiBuf(Db_Xferred) = InData%T(i1,i2)
+          Db_Xferred = Db_Xferred + 1
         END DO
       END DO
   END IF
@@ -1774,8 +1774,8 @@ ENDIF
 
       DO i2 = LBOUND(InData%Td,2), UBOUND(InData%Td,2)
         DO i1 = LBOUND(InData%Td,1), UBOUND(InData%Td,1)
-          ReKiBuf(Re_Xferred) = InData%Td(i1,i2)
-          Re_Xferred = Re_Xferred + 1
+          DbKiBuf(Db_Xferred) = InData%Td(i1,i2)
+          Db_Xferred = Db_Xferred + 1
         END DO
       END DO
   END IF
@@ -1794,8 +1794,8 @@ ENDIF
 
       DO i2 = LBOUND(InData%W,2), UBOUND(InData%W,2)
         DO i1 = LBOUND(InData%W,1), UBOUND(InData%W,1)
-          ReKiBuf(Re_Xferred) = InData%W(i1,i2)
-          Re_Xferred = Re_Xferred + 1
+          DbKiBuf(Db_Xferred) = InData%W(i1,i2)
+          Db_Xferred = Db_Xferred + 1
         END DO
       END DO
   END IF
@@ -1814,8 +1814,8 @@ ENDIF
 
       DO i2 = LBOUND(InData%Dp,2), UBOUND(InData%Dp,2)
         DO i1 = LBOUND(InData%Dp,1), UBOUND(InData%Dp,1)
-          ReKiBuf(Re_Xferred) = InData%Dp(i1,i2)
-          Re_Xferred = Re_Xferred + 1
+          DbKiBuf(Db_Xferred) = InData%Dp(i1,i2)
+          Db_Xferred = Db_Xferred + 1
         END DO
       END DO
   END IF
@@ -1834,8 +1834,8 @@ ENDIF
 
       DO i2 = LBOUND(InData%Dq,2), UBOUND(InData%Dq,2)
         DO i1 = LBOUND(InData%Dq,1), UBOUND(InData%Dq,1)
-          ReKiBuf(Re_Xferred) = InData%Dq(i1,i2)
-          Re_Xferred = Re_Xferred + 1
+          DbKiBuf(Db_Xferred) = InData%Dq(i1,i2)
+          Db_Xferred = Db_Xferred + 1
         END DO
       END DO
   END IF
@@ -1854,8 +1854,8 @@ ENDIF
 
       DO i2 = LBOUND(InData%Ap,2), UBOUND(InData%Ap,2)
         DO i1 = LBOUND(InData%Ap,1), UBOUND(InData%Ap,1)
-          ReKiBuf(Re_Xferred) = InData%Ap(i1,i2)
-          Re_Xferred = Re_Xferred + 1
+          DbKiBuf(Db_Xferred) = InData%Ap(i1,i2)
+          Db_Xferred = Db_Xferred + 1
         END DO
       END DO
   END IF
@@ -1874,8 +1874,8 @@ ENDIF
 
       DO i2 = LBOUND(InData%Aq,2), UBOUND(InData%Aq,2)
         DO i1 = LBOUND(InData%Aq,1), UBOUND(InData%Aq,1)
-          ReKiBuf(Re_Xferred) = InData%Aq(i1,i2)
-          Re_Xferred = Re_Xferred + 1
+          DbKiBuf(Db_Xferred) = InData%Aq(i1,i2)
+          Db_Xferred = Db_Xferred + 1
         END DO
       END DO
   END IF
@@ -1894,8 +1894,8 @@ ENDIF
 
       DO i2 = LBOUND(InData%B,2), UBOUND(InData%B,2)
         DO i1 = LBOUND(InData%B,1), UBOUND(InData%B,1)
-          ReKiBuf(Re_Xferred) = InData%B(i1,i2)
-          Re_Xferred = Re_Xferred + 1
+          DbKiBuf(Db_Xferred) = InData%B(i1,i2)
+          Db_Xferred = Db_Xferred + 1
         END DO
       END DO
   END IF
@@ -1914,8 +1914,8 @@ ENDIF
 
       DO i2 = LBOUND(InData%F,2), UBOUND(InData%F,2)
         DO i1 = LBOUND(InData%F,1), UBOUND(InData%F,1)
-          ReKiBuf(Re_Xferred) = InData%F(i1,i2)
-          Re_Xferred = Re_Xferred + 1
+          DbKiBuf(Db_Xferred) = InData%F(i1,i2)
+          Db_Xferred = Db_Xferred + 1
         END DO
       END DO
   END IF
@@ -1938,8 +1938,8 @@ ENDIF
       DO i3 = LBOUND(InData%S,3), UBOUND(InData%S,3)
         DO i2 = LBOUND(InData%S,2), UBOUND(InData%S,2)
           DO i1 = LBOUND(InData%S,1), UBOUND(InData%S,1)
-            ReKiBuf(Re_Xferred) = InData%S(i1,i2,i3)
-            Re_Xferred = Re_Xferred + 1
+            DbKiBuf(Db_Xferred) = InData%S(i1,i2,i3)
+            Db_Xferred = Db_Xferred + 1
           END DO
         END DO
       END DO
@@ -1963,8 +1963,8 @@ ENDIF
       DO i3 = LBOUND(InData%M,3), UBOUND(InData%M,3)
         DO i2 = LBOUND(InData%M,2), UBOUND(InData%M,2)
           DO i1 = LBOUND(InData%M,1), UBOUND(InData%M,1)
-            ReKiBuf(Re_Xferred) = InData%M(i1,i2,i3)
-            Re_Xferred = Re_Xferred + 1
+            DbKiBuf(Db_Xferred) = InData%M(i1,i2,i3)
+            Db_Xferred = Db_Xferred + 1
           END DO
         END DO
       END DO
@@ -2039,10 +2039,10 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     OutData%N = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
-    OutData%UnstrLen = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%BA = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
+    OutData%UnstrLen = DbKiBuf(Db_Xferred)
+    Db_Xferred = Db_Xferred + 1
+    OutData%BA = DbKiBuf(Db_Xferred)
+    Db_Xferred = Db_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! r not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
@@ -2061,8 +2061,8 @@ ENDIF
     END IF
       DO i2 = LBOUND(OutData%r,2), UBOUND(OutData%r,2)
         DO i1 = LBOUND(OutData%r,1), UBOUND(OutData%r,1)
-          OutData%r(i1,i2) = ReKiBuf(Re_Xferred)
-          Re_Xferred = Re_Xferred + 1
+          OutData%r(i1,i2) = DbKiBuf(Db_Xferred)
+          Db_Xferred = Db_Xferred + 1
         END DO
       END DO
   END IF
@@ -2084,8 +2084,8 @@ ENDIF
     END IF
       DO i2 = LBOUND(OutData%rd,2), UBOUND(OutData%rd,2)
         DO i1 = LBOUND(OutData%rd,1), UBOUND(OutData%rd,1)
-          OutData%rd(i1,i2) = ReKiBuf(Re_Xferred)
-          Re_Xferred = Re_Xferred + 1
+          OutData%rd(i1,i2) = DbKiBuf(Db_Xferred)
+          Db_Xferred = Db_Xferred + 1
         END DO
       END DO
   END IF
@@ -2107,8 +2107,8 @@ ENDIF
     END IF
       DO i2 = LBOUND(OutData%q,2), UBOUND(OutData%q,2)
         DO i1 = LBOUND(OutData%q,1), UBOUND(OutData%q,1)
-          OutData%q(i1,i2) = ReKiBuf(Re_Xferred)
-          Re_Xferred = Re_Xferred + 1
+          OutData%q(i1,i2) = DbKiBuf(Db_Xferred)
+          Db_Xferred = Db_Xferred + 1
         END DO
       END DO
   END IF
@@ -2126,8 +2126,8 @@ ENDIF
        RETURN
     END IF
       DO i1 = LBOUND(OutData%l,1), UBOUND(OutData%l,1)
-        OutData%l(i1) = ReKiBuf(Re_Xferred)
-        Re_Xferred = Re_Xferred + 1
+        OutData%l(i1) = DbKiBuf(Db_Xferred)
+        Db_Xferred = Db_Xferred + 1
       END DO
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! ld not allocated
@@ -2144,8 +2144,8 @@ ENDIF
        RETURN
     END IF
       DO i1 = LBOUND(OutData%ld,1), UBOUND(OutData%ld,1)
-        OutData%ld(i1) = ReKiBuf(Re_Xferred)
-        Re_Xferred = Re_Xferred + 1
+        OutData%ld(i1) = DbKiBuf(Db_Xferred)
+        Db_Xferred = Db_Xferred + 1
       END DO
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! lstr not allocated
@@ -2162,8 +2162,8 @@ ENDIF
        RETURN
     END IF
       DO i1 = LBOUND(OutData%lstr,1), UBOUND(OutData%lstr,1)
-        OutData%lstr(i1) = ReKiBuf(Re_Xferred)
-        Re_Xferred = Re_Xferred + 1
+        OutData%lstr(i1) = DbKiBuf(Db_Xferred)
+        Db_Xferred = Db_Xferred + 1
       END DO
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! lstrd not allocated
@@ -2180,8 +2180,8 @@ ENDIF
        RETURN
     END IF
       DO i1 = LBOUND(OutData%lstrd,1), UBOUND(OutData%lstrd,1)
-        OutData%lstrd(i1) = ReKiBuf(Re_Xferred)
-        Re_Xferred = Re_Xferred + 1
+        OutData%lstrd(i1) = DbKiBuf(Db_Xferred)
+        Db_Xferred = Db_Xferred + 1
       END DO
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! V not allocated
@@ -2198,8 +2198,8 @@ ENDIF
        RETURN
     END IF
       DO i1 = LBOUND(OutData%V,1), UBOUND(OutData%V,1)
-        OutData%V(i1) = ReKiBuf(Re_Xferred)
-        Re_Xferred = Re_Xferred + 1
+        OutData%V(i1) = DbKiBuf(Db_Xferred)
+        Db_Xferred = Db_Xferred + 1
       END DO
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! T not allocated
@@ -2220,8 +2220,8 @@ ENDIF
     END IF
       DO i2 = LBOUND(OutData%T,2), UBOUND(OutData%T,2)
         DO i1 = LBOUND(OutData%T,1), UBOUND(OutData%T,1)
-          OutData%T(i1,i2) = ReKiBuf(Re_Xferred)
-          Re_Xferred = Re_Xferred + 1
+          OutData%T(i1,i2) = DbKiBuf(Db_Xferred)
+          Db_Xferred = Db_Xferred + 1
         END DO
       END DO
   END IF
@@ -2243,8 +2243,8 @@ ENDIF
     END IF
       DO i2 = LBOUND(OutData%Td,2), UBOUND(OutData%Td,2)
         DO i1 = LBOUND(OutData%Td,1), UBOUND(OutData%Td,1)
-          OutData%Td(i1,i2) = ReKiBuf(Re_Xferred)
-          Re_Xferred = Re_Xferred + 1
+          OutData%Td(i1,i2) = DbKiBuf(Db_Xferred)
+          Db_Xferred = Db_Xferred + 1
         END DO
       END DO
   END IF
@@ -2266,8 +2266,8 @@ ENDIF
     END IF
       DO i2 = LBOUND(OutData%W,2), UBOUND(OutData%W,2)
         DO i1 = LBOUND(OutData%W,1), UBOUND(OutData%W,1)
-          OutData%W(i1,i2) = ReKiBuf(Re_Xferred)
-          Re_Xferred = Re_Xferred + 1
+          OutData%W(i1,i2) = DbKiBuf(Db_Xferred)
+          Db_Xferred = Db_Xferred + 1
         END DO
       END DO
   END IF
@@ -2289,8 +2289,8 @@ ENDIF
     END IF
       DO i2 = LBOUND(OutData%Dp,2), UBOUND(OutData%Dp,2)
         DO i1 = LBOUND(OutData%Dp,1), UBOUND(OutData%Dp,1)
-          OutData%Dp(i1,i2) = ReKiBuf(Re_Xferred)
-          Re_Xferred = Re_Xferred + 1
+          OutData%Dp(i1,i2) = DbKiBuf(Db_Xferred)
+          Db_Xferred = Db_Xferred + 1
         END DO
       END DO
   END IF
@@ -2312,8 +2312,8 @@ ENDIF
     END IF
       DO i2 = LBOUND(OutData%Dq,2), UBOUND(OutData%Dq,2)
         DO i1 = LBOUND(OutData%Dq,1), UBOUND(OutData%Dq,1)
-          OutData%Dq(i1,i2) = ReKiBuf(Re_Xferred)
-          Re_Xferred = Re_Xferred + 1
+          OutData%Dq(i1,i2) = DbKiBuf(Db_Xferred)
+          Db_Xferred = Db_Xferred + 1
         END DO
       END DO
   END IF
@@ -2335,8 +2335,8 @@ ENDIF
     END IF
       DO i2 = LBOUND(OutData%Ap,2), UBOUND(OutData%Ap,2)
         DO i1 = LBOUND(OutData%Ap,1), UBOUND(OutData%Ap,1)
-          OutData%Ap(i1,i2) = ReKiBuf(Re_Xferred)
-          Re_Xferred = Re_Xferred + 1
+          OutData%Ap(i1,i2) = DbKiBuf(Db_Xferred)
+          Db_Xferred = Db_Xferred + 1
         END DO
       END DO
   END IF
@@ -2358,8 +2358,8 @@ ENDIF
     END IF
       DO i2 = LBOUND(OutData%Aq,2), UBOUND(OutData%Aq,2)
         DO i1 = LBOUND(OutData%Aq,1), UBOUND(OutData%Aq,1)
-          OutData%Aq(i1,i2) = ReKiBuf(Re_Xferred)
-          Re_Xferred = Re_Xferred + 1
+          OutData%Aq(i1,i2) = DbKiBuf(Db_Xferred)
+          Db_Xferred = Db_Xferred + 1
         END DO
       END DO
   END IF
@@ -2381,8 +2381,8 @@ ENDIF
     END IF
       DO i2 = LBOUND(OutData%B,2), UBOUND(OutData%B,2)
         DO i1 = LBOUND(OutData%B,1), UBOUND(OutData%B,1)
-          OutData%B(i1,i2) = ReKiBuf(Re_Xferred)
-          Re_Xferred = Re_Xferred + 1
+          OutData%B(i1,i2) = DbKiBuf(Db_Xferred)
+          Db_Xferred = Db_Xferred + 1
         END DO
       END DO
   END IF
@@ -2404,8 +2404,8 @@ ENDIF
     END IF
       DO i2 = LBOUND(OutData%F,2), UBOUND(OutData%F,2)
         DO i1 = LBOUND(OutData%F,1), UBOUND(OutData%F,1)
-          OutData%F(i1,i2) = ReKiBuf(Re_Xferred)
-          Re_Xferred = Re_Xferred + 1
+          OutData%F(i1,i2) = DbKiBuf(Db_Xferred)
+          Db_Xferred = Db_Xferred + 1
         END DO
       END DO
   END IF
@@ -2431,8 +2431,8 @@ ENDIF
       DO i3 = LBOUND(OutData%S,3), UBOUND(OutData%S,3)
         DO i2 = LBOUND(OutData%S,2), UBOUND(OutData%S,2)
           DO i1 = LBOUND(OutData%S,1), UBOUND(OutData%S,1)
-            OutData%S(i1,i2,i3) = ReKiBuf(Re_Xferred)
-            Re_Xferred = Re_Xferred + 1
+            OutData%S(i1,i2,i3) = DbKiBuf(Db_Xferred)
+            Db_Xferred = Db_Xferred + 1
           END DO
         END DO
       END DO
@@ -2459,8 +2459,8 @@ ENDIF
       DO i3 = LBOUND(OutData%M,3), UBOUND(OutData%M,3)
         DO i2 = LBOUND(OutData%M,2), UBOUND(OutData%M,2)
           DO i1 = LBOUND(OutData%M,1), UBOUND(OutData%M,1)
-            OutData%M(i1,i2,i3) = ReKiBuf(Re_Xferred)
-            Re_Xferred = Re_Xferred + 1
+            OutData%M(i1,i2,i3) = DbKiBuf(Db_Xferred)
+            Db_Xferred = Db_Xferred + 1
           END DO
         END DO
       END DO
