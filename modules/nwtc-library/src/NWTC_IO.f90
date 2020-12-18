@@ -2128,16 +2128,12 @@ END SUBROUTINE CheckR16Var
    CALL WrScr( 'Copyright (C) '//TRIM(Year)//' National Renewable Energy Laboratory' )
    CALL WrScr( 'Copyright (C) '//TRIM(Year)//' Envision Energy USA LTD' )
    CALL WrScr('')
-   CALL WrScr( 'This program is licensed under Apache License Version 2.0 and comes with ABSOLUTELY NO WARRANTY. '//&
-               'See the "LICENSE" file distributed with this software for details.')   
-
    IF (PRESENT(AdditionalComment)) THEN
-      CALL WrScr(Stars)
-      CALL WrScr(Stars)
       CALL WrScr( AdditionalComment )
       CALL WrScr('')       
    END IF
-   
+   CALL WrScr( 'This program is licensed under Apache License Version 2.0 and comes with ABSOLUTELY NO WARRANTY. '//&
+               'See the "LICENSE" file distributed with this software for details.')   
    CALL WrScr(Stars)
    CALL WrScr('')
 
