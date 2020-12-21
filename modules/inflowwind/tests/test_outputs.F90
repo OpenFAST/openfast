@@ -23,11 +23,11 @@ contains
         InFileInfo = getInputFileData()
         CALL InflowWind_ParseInputFileInfo(InputFileData , InFileInfo, PriPath, TmpErrStat, TmpErrMsg)
 
-        @assertEqual(TmpErrStat, 0)
-        @assertEqual(InputFileData%SumPrint, .FALSE.)
-        @assertEqual(InputFileData%OutList(1), "Wind1VelX")
-        @assertEqual(InputFileData%OutList(2), "Wind1VelY")
-        @assertEqual(InputFileData%OutList(3), "Wind1VelZ")
+        @assertEqual(0, TmpErrStat, message='Error message: '//trim(TmpErrMsg)//NewLine//'ErrStat: ')
+        @assertEqual(.FALSE.,     InputFileData%SumPrint)
+        @assertEqual("Wind1VelX", InputFileData%OutList(1))
+        @assertEqual("Wind1VelY", InputFileData%OutList(2))
+        @assertEqual("Wind1VelZ", InputFileData%OutList(3))
 
     end subroutine
 
@@ -44,7 +44,7 @@ contains
         PriPath = ""
 
         InFileInfo = getInputFileData()
-        InFileInfo%Lines(50:52) = (/ &
+        InFileInfo%Lines(51:53) = (/ &
             'True          SumPrint     - Print summary data to <RootName>.IfW.sum (flag)                                                                                   ', &
             '              OutList      - The next line(s) contains a list of output parameters.  See OutListParameters.xlsx for a listing of available output channels, (-)', &
             '"Wind1VelX,Wind1VelY"      - Wind velocity at point WindVxiList(1),WindVyiList(1),WindVziList(1).  X, Y, and Z direction components.                           ' &
@@ -52,10 +52,10 @@ contains
 
         CALL InflowWind_ParseInputFileInfo(InputFileData , InFileInfo, PriPath, TmpErrStat, TmpErrMsg)
 
-        @assertEqual(TmpErrStat, 0)
-        @assertEqual(InputFileData%SumPrint, .TRUE.)
-        @assertEqual(InputFileData%OutList(1), "Wind1VelX")
-        @assertEqual(InputFileData%OutList(2), "Wind1VelY")
+        @assertEqual(0, TmpErrStat, message='Error message: '//trim(TmpErrMsg)//NewLine//'ErrStat: ')
+        @assertEqual(.TRUE.,      InputFileData%SumPrint)
+        @assertEqual("Wind1VelX", InputFileData%OutList(1))
+        @assertEqual("Wind1VelY", InputFileData%OutList(2))
 
     end subroutine
 

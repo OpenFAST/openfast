@@ -153,7 +153,7 @@ CONTAINS
        END IF
 
 
-    !CALL WrScr( '  MD_Init: Opening MoorDyn input file:  '//FileName )
+    CALL WrScr( '  MD_Init: Opening MoorDyn input file:  '//FileName )
 
 
     !-------------------------------------------------------------------------------------------------
@@ -236,8 +236,6 @@ CONTAINS
       !print *, 'at end of echo if statement'
 
     END IF
-
-   !print *, 'past echo bit'
 
 
     !-------------------------------------------------------------------------------------------------
@@ -357,6 +355,7 @@ CONTAINS
        CALL CleanUp()
        RETURN
     END IF
+    
 
     ! read each line
     DO I = 1,p%NConnects
@@ -448,7 +447,7 @@ CONTAINS
 
        IF (ErrStat2 == 0) THEN
           READ(Line,*,IOSTAT=ErrStat2) m%LineList(I)%IdNum, m%LineList(I)%type, m%LineList(I)%UnstrLen, &
-            m%LineList(I)%N, m%LineList(I)%AnchConnect, m%LineList(I)%FairConnect, LineOutString
+            m%LineList(I)%N, m%LineList(I)%AnchConnect, m%LineList(I)%FairConnect, LineOutString, m%LineList(I)%CtrlChan
        END IF
 
        IF ( ErrStat2 /= 0 ) THEN
@@ -486,6 +485,7 @@ CONTAINS
        IF ( scan( LineOutString, 'c') > 0 )  m%LineList(I)%OutFlagList(7) = 1
        IF ( scan( LineOutString, 's') > 0 )  m%LineList(I)%OutFlagList(8) = 1
        IF ( scan( LineOutString, 'd') > 0 )  m%LineList(I)%OutFlagList(9) = 1
+       IF ( scan( LineOutString, 'l') > 0 )  m%LineList(I)%OutFlagList(10)= 1
        IF (SUM(m%LineList(I)%OutFlagList) > 0)   m%LineList(I)%OutFlagList(1) = 1  ! this first entry signals whether to create any output file at all
        ! the above letter-index combinations define which OutFlagList entry corresponds to which output type
        
@@ -855,7 +855,7 @@ CONTAINS
 
       ! allocate output array in each Line
       DO I=1,p%NLines
-         ALLOCATE(m%LineList(I)%LineWrOutput( 1 + 3*(m%LineList(I)%N + 1)*SUM(m%LineList(I)%OutFlagList(2:5)) + m%LineList(I)%N*SUM(m%LineList(I)%OutFlagList(6:9)) ), STAT = ErrStat)  
+         ALLOCATE(m%LineList(I)%LineWrOutput( 1 + 3*(m%LineList(I)%N + 1)*SUM(m%LineList(I)%OutFlagList(2:5)) + m%LineList(I)%N*SUM(m%LineList(I)%OutFlagList(6:10)) ), STAT = ErrStat)  
          IF ( ErrStat /= ErrID_None ) THEN
             ErrMsg  = ' Error allocating space for a LineWrOutput array'
             ErrStat = ErrID_Fatal
@@ -976,7 +976,7 @@ CONTAINS
 
                         
             ! calculate number of output entries (including time) to write for this line
-            LineNumOuts = 1 + 3*(m%LineList(I)%N + 1)*SUM(m%LineList(I)%OutFlagList(2:5)) + m%LineList(I)%N*SUM(m%LineList(I)%OutFlagList(6:9))
+            LineNumOuts = 1 + 3*(m%LineList(I)%N + 1)*SUM(m%LineList(I)%OutFlagList(2:5)) + m%LineList(I)%N*SUM(m%LineList(I)%OutFlagList(6:10))
 
             Frmt = '(A10,'//TRIM(Int2LStr(LineNumOuts))//'(A1,A10))'   ! should evenutally use user specified format?
             !Frmt = '(A10,'//TRIM(Int2LStr(3+3*m%LineList(I)%N))//'(A1,A10))'
@@ -1016,6 +1016,10 @@ CONTAINS
                WRITE(m%LineList(I)%LineUnOut,'('//TRIM(Int2LStr((m%LineList(I)%N)))//'(A1,A10))', advance='no', IOSTAT=ErrStat2) &
                   ( p%Delim, 'Seg'//TRIM(Int2Lstr(J))//'SRt', J=1,(m%LineList(I)%N) )
             END IF
+            IF (m%LineList(I)%OutFlagList(10)== 1) THEN
+               WRITE(m%LineList(I)%LineUnOut,'('//TRIM(Int2LStr((m%LineList(I)%N)))//'(A1,A10))', advance='no', IOSTAT=ErrStat2) &
+                  ( p%Delim, 'Seg'//TRIM(Int2Lstr(J))//'Lst', J=1,(m%LineList(I)%N) )
+            END IF
             
             WRITE(m%LineList(I)%LineUnOut,'(A1)', IOSTAT=ErrStat2) ' '  ! make line break at the end
             
@@ -1053,6 +1057,10 @@ CONTAINS
             IF (m%LineList(I)%OutFlagList(9) == 1) THEN
                WRITE(m%LineList(I)%LineUnOut,'('//TRIM(Int2LStr((m%LineList(I)%N)))//'(A1,A10))', advance='no', IOSTAT=ErrStat2) &
                   ( p%Delim, '(1/s)', J=1,(m%LineList(I)%N) )
+            END IF
+            IF (m%LineList(I)%OutFlagList(10)== 1) THEN
+               WRITE(m%LineList(I)%LineUnOut,'('//TRIM(Int2LStr((m%LineList(I)%N)))//'(A1,A10))', advance='no', IOSTAT=ErrStat2) &
+                  ( p%Delim, '(m)', J=1,(m%LineList(I)%N) )
             END IF
             
             WRITE(m%LineList(I)%LineUnOut,'(A1)', IOSTAT=ErrStat2) ' '  ! make line break at the end
@@ -1226,7 +1234,7 @@ CONTAINS
         IF (m%LineList(I)%OutFlagList(1) == 1) THEN    ! only proceed if the line is flagged to output a file
            
            ! calculate number of output entries to write for this line
-           LineNumOuts = 3*(m%LineList(I)%N + 1)*SUM(m%LineList(I)%OutFlagList(2:5)) + m%LineList(I)%N*SUM(m%LineList(I)%OutFlagList(6:9))
+           LineNumOuts = 3*(m%LineList(I)%N + 1)*SUM(m%LineList(I)%OutFlagList(2:5)) + m%LineList(I)%N*SUM(m%LineList(I)%OutFlagList(6:10))
            
            
            Frmt = '(F10.4,'//TRIM(Int2LStr(LineNumOuts))//'(A1,e10.4))'   ! should evenutally use user specified format?
@@ -1312,6 +1320,14 @@ CONTAINS
            IF (m%LineList(I)%OutFlagList(9) == 1) THEN
               DO J = 1,m%LineList(I)%N  
                 m%LineList(I)%LineWrOutput(L) = m%LineList(I)%lstrd(J)/m%LineList(I)%l(J)
+                L = L+1
+              END DO
+           END IF
+           
+           ! Segment length
+           IF (m%LineList(I)%OutFlagList(10) == 1) THEN
+              DO J = 1,m%LineList(I)%N  
+                m%LineList(I)%LineWrOutput(L) = m%LineList(I)%lstr(J)
                 L = L+1
               END DO
            END IF
