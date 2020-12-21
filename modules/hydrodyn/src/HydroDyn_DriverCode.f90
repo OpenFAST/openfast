@@ -198,6 +198,7 @@ PROGRAM HydroDynDriver
 !       Begin Simulation Setup
 !-------------------------------------------------------------------------------------
    
+print*,'PRP inputs file'
 
    IF ( drvrInitInp%PRPInputsMod == 2 ) THEN
       
@@ -320,6 +321,25 @@ PROGRAM HydroDynDriver
    CALL HydroDyn_DestroyInitInput(  InitInData,  ErrStat, ErrMsg )
    CALL HydroDyn_DestroyInitOutput( InitOutData, ErrStat, ErrMsg )
    
+
+   ! Create Mesh mappings
+   if ( u(1)%WAMITMesh%Initialized ) then
+      ! Create mesh mappings between (0,0,0) reference point mesh and the WAMIT body(ies) mesh [ 1 node per body ]
+      CALL MeshMapCreate( u(1)%PRPMesh, u(1)%WAMITMesh, HD_Ref_2_WB_P, ErrStat2, ErrMsg2  ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDynDriver')
+      if (errStat >= AbortErrLev) then
+         ! Clean up and exit
+         call HD_DvrCleanup()
+      end if
+   endif
+   if ( u(1)%Morison%Mesh%Initialized ) then
+      ! Create mesh mappings between (0,0,0) reference point mesh and the Morison mesh
+      CALL MeshMapCreate( u(1)%PRPMesh, u(1)%Morison%Mesh, HD_Ref_2_M_P, ErrStat2, ErrMsg2  ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDynDriver')
+      if (errStat >= AbortErrLev) then
+         ! Clean up and exit
+         call HD_DvrCleanup()
+      end if
+   endif
+
    
       
    ! Set any steady-state inputs, once before the time-stepping loop   
@@ -339,14 +359,6 @@ PROGRAM HydroDynDriver
       
       IF ( u(1)%WAMITMesh%Initialized ) THEN 
             
-         ! Create mesh mappings between (0,0,0) reference point mesh and the WAMIT body(ies) mesh [ 1 node per body ] 
-         
-         CALL MeshMapCreate( u(1)%PRPMesh, u(1)%WAMITMesh, HD_Ref_2_WB_P, ErrStat2, ErrMsg2  ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDynDriver')   
-         if (errStat >= AbortErrLev) then
-            ! Clean up and exit
-            call HD_DvrCleanup()
-         end if   
-  
             ! Map PRP kinematics to the WAMIT mesh with 1 to NBody nodes
          CALL Transfer_Point_to_Point( u(1)%PRPMesh, u(1)%WAMITMesh, HD_Ref_2_WB_P, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDynDriver')  
          if (errStat >= AbortErrLev) then
@@ -358,14 +370,6 @@ PROGRAM HydroDynDriver
       
       if ( u(1)%Morison%Mesh%Initialized ) then
          
-         ! Create mesh mappings between (0,0,0) reference point mesh and the Morison mesh
-         
-         CALL MeshMapCreate( u(1)%PRPMesh, u(1)%Morison%Mesh, HD_Ref_2_M_P, ErrStat2, ErrMsg2  ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDynDriver')   
-         if (errStat >= AbortErrLev) then
-            ! Clean up and exit
-            call HD_DvrCleanup()
-         end if   
-  
             ! Map PRP kinematics to the Morison mesh
          CALL Transfer_Point_to_Point( u(1)%PRPMesh, u(1)%Morison%Mesh, HD_Ref_2_M_P, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDynDriver')  
          if (errStat >= AbortErrLev) then
