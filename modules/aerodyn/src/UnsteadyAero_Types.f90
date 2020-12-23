@@ -44,7 +44,6 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: UAMod      !< Model for the dynamic stall equations [1 = Leishman/Beddoes, 2 = Gonzalez, 3 = Minnema] [-]
     REAL(ReKi)  :: a_s      !< speed of sound [m/s]
     LOGICAL  :: Flookup      !< Use table lookup for f' and f''  [-]
-    INTEGER(IntKi)  :: NumOuts      !< The number of outputs for this module as requested in the input file [-]
     LOGICAL  :: ShedEffect = .True.      !< Include the effect of shed vorticity. If False, the input alpha is assumed to already contain this effect (e.g. vortex methods) [-]
   END TYPE UA_InitInputType
 ! =======================
@@ -193,12 +192,12 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: UAMod      !< Model for the dynamic stall equations [1 = Leishman/Beddoes, 2 = Gonzalez, 3 = Minnema] [-]
     LOGICAL  :: Flookup      !< Use table lookup for f' and f''  [-]
     REAL(ReKi)  :: a_s      !< speed of sound [m/s]
-    INTEGER(IntKi)  :: NumOuts      !< Number of outputs [-]
+    INTEGER(IntKi)  :: NumOuts = 0      !< Number of outputs [-]
     INTEGER(IntKi)  :: OutSwtch      !< Output requested channels to: [1=Unsteady.out 2=GlueCode.out  3=both files] [-]
     CHARACTER(20)  :: OutFmt      !< Output format for numerical results [-]
     CHARACTER(20)  :: OutSFmt      !< Output format for header strings [-]
     CHARACTER(1)  :: Delim      !< Delimiter string for outputs, defaults to tab-delimiters [-]
-    INTEGER(IntKi)  :: UnOutFile      !< File unit for the UnsteadyAero outputs [-]
+    INTEGER(IntKi)  :: UnOutFile = 0      !< File unit for the UnsteadyAero outputs [-]
     LOGICAL  :: ShedEffect      !< Include the effect of shed vorticity. If False, the input alpha is assumed to already contain this effect (e.g. vortex methods) [-]
     INTEGER(IntKi)  :: lin_nx = 0      !< Number of continuous states for linearization [-]
   END TYPE UA_ParameterType
@@ -261,7 +260,6 @@ ENDIF
     DstInitInputData%UAMod = SrcInitInputData%UAMod
     DstInitInputData%a_s = SrcInitInputData%a_s
     DstInitInputData%Flookup = SrcInitInputData%Flookup
-    DstInitInputData%NumOuts = SrcInitInputData%NumOuts
     DstInitInputData%ShedEffect = SrcInitInputData%ShedEffect
  END SUBROUTINE UA_CopyInitInput
 
@@ -326,7 +324,6 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! UAMod
       Re_BufSz   = Re_BufSz   + 1  ! a_s
       Int_BufSz  = Int_BufSz  + 1  ! Flookup
-      Int_BufSz  = Int_BufSz  + 1  ! NumOuts
       Int_BufSz  = Int_BufSz  + 1  ! ShedEffect
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -390,8 +387,6 @@ ENDIF
     ReKiBuf(Re_Xferred) = InData%a_s
     Re_Xferred = Re_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%Flookup, IntKiBuf(1))
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%NumOuts
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%ShedEffect, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
@@ -463,8 +458,6 @@ ENDIF
     OutData%a_s = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%Flookup = TRANSFER(IntKiBuf(Int_Xferred), OutData%Flookup)
-    Int_Xferred = Int_Xferred + 1
-    OutData%NumOuts = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%ShedEffect = TRANSFER(IntKiBuf(Int_Xferred), OutData%ShedEffect)
     Int_Xferred = Int_Xferred + 1

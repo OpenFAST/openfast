@@ -1030,7 +1030,12 @@ subroutine AD_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
          ! End the FVW submodule
       if (p%WakeMod == WakeMod_FVW ) then
          call FVW_End( m%FVW_u, p%FVW, x%FVW, xd%FVW, z%FVW, OtherState%FVW, m%FVW_y, m%FVW, ErrStat, ErrMsg )
+      
+         if ( m%FVW%UA_Flag ) then
+            call UA_End(m%FVW%p_UA)
+         end if
       endif
+      
 
          ! Close files here:
 
@@ -1199,11 +1204,6 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-#ifdef UA_OUTS
-  ! if ( mod(REAL(t,ReKi),.1) < p%dt) then
-   if (allocated(m%FVW%y_UA%WriteOutput)) m%FVW%y_UA%WriteOutput = 0.0 !reset to zero in case UA shuts off mid-simulation
-  ! endif
-#endif            
 
    if (present(NeedWriteOutput)) then
       CalcWriteOutput = NeedWriteOutput
@@ -1241,7 +1241,7 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
       CALL FVW_CalcOutput( t, m%FVW_u(1), p%FVW, x%FVW, xd%FVW, z%FVW, OtherState%FVW, p%AFI, m%FVW_y, m%FVW, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
-      call SetOutputsFromFVW( u, p, OtherState, x, xd, m, y, ErrStat2, ErrMsg2 )
+      call SetOutputsFromFVW( t, u, p, OtherState, x, xd, m, y, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    endif
 
@@ -1297,14 +1297,6 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
       call Calc_WriteAllBldNdOutput( p, u, m, y, OtherState, indx, ErrStat2, ErrMsg2 )   ! Call after normal writeoutput.  Will just postpend data on here.
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    end if
-      
-   
-#ifdef UA_OUTS
-  ! if ( mod(REAL(t,ReKi),.1) < p%dt) then
-   if (allocated(m%FVW%y_UA%WriteOutput)) &
-            WRITE (UA_OUT_UNIT, '(F20.6,'//trim(num2lstr(size(m%FVW%y_UA%WriteOutput)))//'(:,1x,ES19.5E3))') t, ( m%FVW%y_UA%WriteOutput(i), i=1,size(m%FVW%y_UA%WriteOutput))
-  ! end if              
-#endif 
    
    
 end subroutine AD_CalcOutput
@@ -1801,7 +1793,8 @@ end subroutine SetOutputsFromBEMT
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine converts outputs from FVW (stored in m%FVW_y) into values on the AeroDyn BladeLoad output mesh.
-subroutine SetOutputsFromFVW(u, p, OtherState, x, xd, m, y, ErrStat, ErrMsg)
+subroutine SetOutputsFromFVW(t, u, p, OtherState, x, xd, m, y, ErrStat, ErrMsg)
+   REAL(DbKi),                intent(in   ) :: t
    TYPE(AD_InputType),        intent(in   ) :: u           !< Inputs at Time t
    type(AD_ParameterType),    intent(in   ) :: p           !< AD parameters
    type(AD_OtherStateType),   intent(in   ) :: OtherState  !< OtherState
@@ -1894,7 +1887,7 @@ subroutine SetOutputsFromFVW(u, p, OtherState, x, xd, m, y, ErrStat, ErrMsg)
          Cx = Cl_dyn*cp + Cd_dyn*sp
          Cy = Cl_dyn*sp - Cd_dyn*cp
 
-         q = 0.5 * p%airDens * Vrel**2                         ! dynamic pressure of the jth node in the kth blade
+         q = 0.5 * p%airDens * Vrel**2                ! dynamic pressure of the jth node in the kth blade
          force(1) =  Cx * q * p%FVW%Chord(j,k)        ! X = normal force per unit length (normal to the plane, not chord) of the jth node in the kth blade
          force(2) = -Cy * q * p%FVW%Chord(j,k)        ! Y = tangential force per unit length (tangential to the plane, not chord) of the jth node in the kth blade
          moment(3)=  Cm_dyn * q * p%FVW%Chord(j,k)**2 ! M = pitching moment per unit length of the jth node in the kth blade
@@ -1928,7 +1921,14 @@ subroutine SetOutputsFromFVW(u, p, OtherState, x, xd, m, y, ErrStat, ErrMsg)
       end do !j=nodes
    end do !k=blades
 
+   
 
+   if ( m%FVW%UA_Flag ) then
+      ! if ( mod(REAL(t,ReKi),.1) < p%dt) then
+      call UA_WriteOutputToFile(t, m%FVW%p_UA, m%FVW%y_UA)
+      ! end if
+   end if
+   
 end subroutine SetOutputsFromFVW
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine validates the inputs from the AeroDyn input files.

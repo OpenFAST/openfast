@@ -28,7 +28,6 @@ typedef   ^                            ^                             INTEGER    
 typedef   ^                            ^                             INTEGER                  UAMod                           -             -         -        "Model for the dynamic stall equations [1 = Leishman/Beddoes, 2 = Gonzalez, 3 = Minnema]"    -
 typedef   ^                            ^                             ReKi                     a_s                             -             -         -        "speed of sound"        m/s
 typedef   ^                            ^                             LOGICAL                  Flookup                         -             -         -        "Use table lookup for f' and f'' "    -
-typedef   ^                            ^                             INTEGER                  NumOuts                         -             -         -        "The number of outputs for this module as requested in the input file"    -
 typedef   ^                            ^                             Logical                  ShedEffect                      -             .True.    -        "Include the effect of shed vorticity. If False, the input alpha is assumed to already contain this effect (e.g. vortex methods)"        -
 
 #
@@ -172,12 +171,12 @@ typedef   ^                            ^                             INTEGER    
 typedef   ^                            ^                             INTEGER                  UAMod                           -             -         -        "Model for the dynamic stall equations [1 = Leishman/Beddoes, 2 = Gonzalez, 3 = Minnema]"    -
 typedef   ^                            ^                             LOGICAL                  Flookup                         -             -         -        "Use table lookup for f' and f'' "    -
 typedef   ^                            ^                             ReKi                     a_s                             -             -         -        "speed of sound"        m/s
-typedef   ^                            ^                             INTEGER                  NumOuts                         -             -         -        "Number of outputs"        -
+typedef   ^                            ^                             INTEGER                  NumOuts                         -             0         -        "Number of outputs"        -
 typedef   ^                            ^                             INTEGER                  OutSwtch                        -             -         -        "Output requested channels to: [1=Unsteady.out 2=GlueCode.out  3=both files]"    -
 typedef   ^                            ^                             CHARACTER(20)            OutFmt                          -             -         -        "Output format for numerical results"    -
 typedef   ^                            ^                             CHARACTER(20)            OutSFmt                         -             -         -        "Output format for header strings"    -
 typedef   ^                            ^                             CHARACTER(1)             Delim                           -             -         -        "Delimiter string for outputs, defaults to tab-delimiters"        -
-typedef   ^                            ^                             INTEGER                  UnOutFile                       -             -         -        "File unit for the UnsteadyAero outputs"        -
+typedef   ^                            ^                             INTEGER                  UnOutFile                       -             0         -        "File unit for the UnsteadyAero outputs"        -
 typedef   ^                            ^                             Logical                  ShedEffect                      -             -         -        "Include the effect of shed vorticity. If False, the input alpha is assumed to already contain this effect (e.g. vortex methods)"        -
 typedef   ^                            ParameterType                 IntKi                    lin_nx                          -             0         -        "Number of continuous states for linearization"            -
 
