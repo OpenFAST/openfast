@@ -195,7 +195,7 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
          ! Error handling
       CHARACTER(ErrMsgLen)                   :: ErrMsg2                              ! Temporary error message for calls
       INTEGER(IntKi)                         :: ErrStat2                             ! Temporary error status for calls
-      real(SiKi)                             :: tmp1, tmp2, tmp4, tmp5               ! Temporary transformation terms
+      COMPLEX(SiKi)                          :: Ctmp1, Ctmp2, Ctmp4, Ctmp5           ! Temporary COMPLEX transformation terms
 
 
          ! Initialize data
@@ -1046,16 +1046,15 @@ end if
                   do J = 1, NInpWvDir  
                      do I = 1, NInpFreq
 
-                        tmp1 = ( HdroExctn(I,J,1)*cos(InitInp%PtfmRefztRot(1)) -  HdroExctn(I,J,2)*sin(InitInp%PtfmRefztRot(1)) )
-                        tmp2 = ( HdroExctn(I,J,1)*sin(InitInp%PtfmRefztRot(1)) +  HdroExctn(I,J,2)*cos(InitInp%PtfmRefztRot(1)) )  
-                        tmp4 = ( HdroExctn(I,J,4)*cos(InitInp%PtfmRefztRot(1)) -  HdroExctn(I,J,5)*sin(InitInp%PtfmRefztRot(1)) )
-                        tmp5 = ( HdroExctn(I,J,4)*sin(InitInp%PtfmRefztRot(1)) +  HdroExctn(I,J,5)*cos(InitInp%PtfmRefztRot(1)) )
+                        Ctmp1 = ( HdroExctn(I,J,1)*cos(InitInp%PtfmRefztRot(1)) ) - ( HdroExctn(I,J,2)*sin(InitInp%PtfmRefztRot(1)) )
+                        Ctmp2 = ( HdroExctn(I,J,1)*sin(InitInp%PtfmRefztRot(1)) ) + ( HdroExctn(I,J,2)*cos(InitInp%PtfmRefztRot(1)) )  
+                        Ctmp4 = ( HdroExctn(I,J,4)*cos(InitInp%PtfmRefztRot(1)) ) - ( HdroExctn(I,J,5)*sin(InitInp%PtfmRefztRot(1)) )
+                        Ctmp5 = ( HdroExctn(I,J,4)*sin(InitInp%PtfmRefztRot(1)) ) + ( HdroExctn(I,J,5)*cos(InitInp%PtfmRefztRot(1)) )
 
-                        HdroExctn(I,J,1) = tmp1
-                        HdroExctn(I,J,2) = tmp2
-                        HdroExctn(I,J,4) = tmp4
-                        HdroExctn(I,J,5) = tmp5
-
+                        HdroExctn(I,J,1) = Ctmp1
+                        HdroExctn(I,J,2) = Ctmp2
+                        HdroExctn(I,J,4) = Ctmp4
+                        HdroExctn(I,J,5) = Ctmp5
                      end do
                   end do  
                   
