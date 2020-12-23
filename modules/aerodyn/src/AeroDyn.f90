@@ -928,6 +928,8 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
    p%TwrShadow        = InputFileData%TwrShadow
    p%TwrAero          = InputFileData%TwrAero
    p%CavitCheck       = InputFileData%CavitCheck
+   p%AddedMass        = InputFileData%AddedMass
+   p%Buoyancy         = InputFileData%Buoyancy
    p%Gravity          = InitInp%Gravity
    
 
@@ -1960,9 +1962,9 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
    if (InputFileData%AirDens <= 0.0) call SetErrStat ( ErrID_Fatal, 'The air density (AirDens) must be greater than zero.', ErrStat, ErrMsg, RoutineName )
    if (InputFileData%KinVisc <= 0.0) call SetErrStat ( ErrID_Fatal, 'The kinesmatic viscosity (KinVisc) must be greater than zero.', ErrStat, ErrMsg, RoutineName )
    if (InputFileData%SpdSound <= 0.0) call SetErrStat ( ErrID_Fatal, 'The speed of sound (SpdSound) must be greater than zero.', ErrStat, ErrMsg, RoutineName )
-   if (InputFileData%Pvap <= 0.0) call SetErrStat ( ErrID_Fatal, 'The vapour pressure (Pvap) must be greater than zero.', ErrStat, ErrMsg, RoutineName )
-   if (InputFileData%Patm <= 0.0) call SetErrStat ( ErrID_Fatal, 'The atmospheric pressure (Patm)  must be greater than zero.', ErrStat, ErrMsg, RoutineName )
-   if (InputFileData%FluidDepth <= 0.0) call SetErrStat ( ErrID_Fatal, 'Fluid depth (FluidDepth) must be greater than zero', ErrStat, ErrMsg, RoutineName )
+   if (InputFileData%CavitCheck .and. InputFileData%Pvap <= 0.0) call SetErrStat ( ErrID_Fatal, 'The vapour pressure (Pvap) must be greater than zero.', ErrStat, ErrMsg, RoutineName )
+   if (InputFileData%CavitCheck .and. InputFileData%Patm <= 0.0) call SetErrStat ( ErrID_Fatal, 'The atmospheric pressure (Patm)  must be greater than zero.', ErrStat, ErrMsg, RoutineName )
+   if (InputFileData%CavitCheck .and. InputFileData%FluidDepth <= 0.0) call SetErrStat ( ErrID_Fatal, 'Fluid depth (FluidDepth) must be greater than zero', ErrStat, ErrMsg, RoutineName )
 
       
    
@@ -2029,6 +2031,48 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
          end if
       end do ! j=nodes
    end do ! k=blades
+
+      ! If the AddedMass flag is True, check that the added mass coefficients are > 0.
+   if ( InputFileData%AddedMass )  then
+      do k=1,NumBl
+         do j=1,InputFileData%BladeProps(k)%NumBlNds
+            if ( InputFileData%BladeProps(k)%BlCaX(j) <= 0.0_ReKi )  then
+               call SetErrStat( ErrID_Fatal, 'The X-direction added mass coefficient for blade '//trim(Num2LStr(k))//' node '//trim(Num2LStr(j)) &
+                                //' must be greater than 0.', ErrStat, ErrMsg, RoutineName )
+            endif
+         end do ! j=nodes
+      end do ! k=blades
+
+      do k=1,NumBl
+         do j=1,InputFileData%BladeProps(k)%NumBlNds
+            if ( InputFileData%BladeProps(k)%BlCaY(j) <= 0.0_ReKi )  then
+               call SetErrStat( ErrID_Fatal, 'The Y-direction added mass coefficient for blade '//trim(Num2LStr(k))//' node '//trim(Num2LStr(j)) &
+                                //' must be greater than 0.', ErrStat, ErrMsg, RoutineName )
+            endif
+         end do ! j=nodes
+      end do ! k=blades
+
+      do k=1,NumBl
+         do j=1,InputFileData%BladeProps(k)%NumBlNds
+            if ( InputFileData%BladeProps(k)%BlCaZ(j) <= 0.0_ReKi )  then
+               call SetErrStat( ErrID_Fatal, 'The Z-direction added mass coefficient for blade '//trim(Num2LStr(k))//' node '//trim(Num2LStr(j)) &
+                                //' must be greater than 0.', ErrStat, ErrMsg, RoutineName )
+            endif
+         end do ! j=nodes
+      end do ! k=blades
+   end if
+
+      ! If the Buoyancy flag is True, check that the buoyancy coefficients are > 0.
+   if ( InputFileData%Buoyancy )  then
+      do k=1,NumBl
+         do j=1,InputFileData%BladeProps(k)%NumBlNds
+            if ( InputFileData%BladeProps(k)%BlCb(j) <= 0.0_ReKi )  then
+               call SetErrStat( ErrID_Fatal, 'The buoyancy coefficient for blade '//trim(Num2LStr(k))//' node '//trim(Num2LStr(j)) &
+                                //' must be greater than 0.', ErrStat, ErrMsg, RoutineName )
+            endif
+         end do ! j=nodes
+      end do ! k=blades
+   end if
    
       ! .............................
       ! check tower mesh data:

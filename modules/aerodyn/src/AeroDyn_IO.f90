@@ -2152,9 +2152,13 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, ADBlFile, OutFileRoot, UnE
    CALL ReadVar( UnIn, InputFile, InputFileData%CavitCheck, "CavitCheck", "Perform cavitation check? (flag)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       
-       ! AddedMass - Include added mass effects? (flag):
-!   CALL ReadVar( UnIn, InputFile, InputFileData%AddedMass, "AddedMass", "Include added mass effects? (flag)", ErrStat2, ErrMsg2, UnEc)
-     ! CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      ! AddedMass - Include added mass effects? (flag):
+   CALL ReadVar( UnIn, InputFile, InputFileData%AddedMass, "AddedMass", "Include added mass effects? (flag)", ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+      ! Buoyancy - Include buoyancy effects? (flag):
+   CALL ReadVar( UnIn, InputFile, InputFileData%Buoyancy, "Buoyancy", "Include buoyancy effects? (flag)", ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       
       ! CompAA - Compute AeroAcoustics? (flag):
    CALL ReadVar( UnIn, InputFile, InputFileData%CompAA, "CompAA", "Compute AeroAcoustics? (flag)", ErrStat2, ErrMsg2, UnEc)
@@ -2690,6 +2694,14 @@ SUBROUTINE ReadBladeInputs ( ADBlFile, BladeKInputFileData, UnEc, ErrStat, ErrMs
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL AllocAry( BladeKInputFileData%BlAFID,  BladeKInputFileData%NumBlNds, 'BlAFID',  ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL AllocAry( BladeKInputFileData%BlCaX, BladeKInputFileData%NumBlNds, 'BlCaX', ErrStat2, ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL AllocAry( BladeKInputFileData%BlCaY, BladeKInputFileData%NumBlNds, 'BlCaY', ErrStat2, ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL AllocAry( BladeKInputFileData%BlCaZ, BladeKInputFileData%NumBlNds, 'BlCaZ', ErrStat2, ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL AllocAry( BladeKInputFileData%BlCb, BladeKInputFileData%NumBlNds, 'BlCb', ErrStat2, ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       
       ! Return on error if we didn't allocate space for the next inputs
    IF ( ErrStat >= AbortErrLev ) THEN
@@ -2700,7 +2712,8 @@ SUBROUTINE ReadBladeInputs ( ADBlFile, BladeKInputFileData, UnEc, ErrStat, ErrMs
    DO I=1,BladeKInputFileData%NumBlNds
       READ( UnIn, *, IOStat=IOS ) BladeKInputFileData%BlSpn(I), BladeKInputFileData%BlCrvAC(I), BladeKInputFileData%BlSwpAC(I), &
                                   BladeKInputFileData%BlCrvAng(I), BladeKInputFileData%BlTwist(I), BladeKInputFileData%BlChord(I), &
-                                  BladeKInputFileData%BlAFID(I)  
+                                  BladeKInputFileData%BlAFID(I), BladeKInputFileData%BlCaX(I), BladeKInputFileData%BlCaY(I), &
+                                  BladeKInputFileData%BlCaZ(I), BladeKInputFileData%BlCb(I)
          CALL CheckIOS( IOS, ADBlFile, 'Blade properties row '//TRIM(Num2LStr(I)), NumType, ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                ! Return on error if we couldn't read this line
@@ -2710,9 +2723,10 @@ SUBROUTINE ReadBladeInputs ( ADBlFile, BladeKInputFileData, UnEc, ErrStat, ErrMs
             END IF
          
          IF (UnEc > 0) THEN
-            WRITE( UnEc, "(6(F9.4,1x),I9)", IOStat=IOS) BladeKInputFileData%BlSpn(I), BladeKInputFileData%BlCrvAC(I), BladeKInputFileData%BlSwpAC(I), &
+            WRITE( UnEc, "(6(F9.4,1x),I9,4(F9.4,1x))", IOStat=IOS) BladeKInputFileData%BlSpn(I), BladeKInputFileData%BlCrvAC(I), BladeKInputFileData%BlSwpAC(I), &
                                   BladeKInputFileData%BlCrvAng(I), BladeKInputFileData%BlTwist(I), BladeKInputFileData%BlChord(I), &
-                                  BladeKInputFileData%BlAFID(I)
+                                  BladeKInputFileData%BlAFID(I), BladeKInputFileData%BlCaX(I), BladeKInputFileData%BlCaY(I), &
+                                  BladeKInputFileData%BlCaZ(I), BladeKInputFileData%BlCb(I)
          END IF         
    END DO
    BladeKInputFileData%BlCrvAng = BladeKInputFileData%BlCrvAng*D2R

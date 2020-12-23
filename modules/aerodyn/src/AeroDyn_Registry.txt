@@ -53,6 +53,10 @@ typedef	^	AD_BladePropsType	ReKi	BlCrvAng	{:}	-	-	"Curve angle at blade node"	ra
 typedef	^	AD_BladePropsType	ReKi	BlTwist	{:}	-	-	"Twist at blade node"	radians
 typedef	^	AD_BladePropsType	ReKi	BlChord	{:}	-	-	"Chord at blade node"	m
 typedef	^	AD_BladePropsType	IntKi	BlAFID	{:}	-	-	"ID of Airfoil at blade node"	-
+typedef ^   AD_BladePropsType   ReKi    BlCaX   {:} -   -   "X-direction added mass coefficient"   -
+typedef ^   AD_BladePropsType   ReKi    BlCaY   {:} -   -   "Y-direction added mass coefficient"   -
+typedef ^   AD_BladePropsType   ReKi    BlCaZ   {:} -   -   "Z-direction added mass coefficient"   -
+typedef ^   AD_BladePropsType   ReKi    BlCb    {:} -   -   "Buoyancy coefficient"   -
 
 # Define outputs from the initialization routine here:
 typedef	^	AD_BladeShape	SiKi	AirfoilCoords	{:}{:}{:}	-	-	"x-y coordinates for airfoils, relative to node"	m
@@ -85,6 +89,8 @@ typedef	^	AD_InputFile	LOGICAL	TwrShadow	-	-	-	"Calculate tower influence on win
 typedef	^	AD_InputFile	LOGICAL	TwrAero	-	-	-	"Calculate tower aerodynamic loads?"	flag
 typedef	^	AD_InputFile	Logical	FrozenWake	-	-	-	"Flag that tells this module it should assume a frozen wake during linearization."	-
 typedef	^	AD_InputFile	Logical	CavitCheck	-	-	-	"Flag that tells us if we want to check for cavitation" -
+typedef ^   AD_InputFile    Logical AddedMass   -   -   -   "Include added mass effects?" flag
+typedef ^   AD_InputFile    Logical Buoyancy    -   -   -   "Include buoyancy effects?" flag
 typedef	^	AD_InputFile	Logical	CompAA   -  -  -  "Compute AeroAcoustic noise" flag
 typedef	^	AD_InputFile	CHARACTER(1024)	AA_InputFile	-	-	-	"AeroAcoustics input file name"	"quoted strings"
 typedef	^	AD_InputFile	ReKi	AirDens	-	-	-	"Air density"	kg/m^3
@@ -199,6 +205,8 @@ typedef	^	ParameterType	LOGICAL	TwrShadow	-	-	-	"Calculate tower influence on wi
 typedef	^	ParameterType	LOGICAL	TwrAero	-	-	-	"Calculate tower aerodynamic loads?"	flag
 typedef	^	ParameterType	Logical	FrozenWake	-	-	-	"Flag that tells this module it should assume a frozen wake during linearization."	-
 typedef	^	ParameterType	Logical	CavitCheck	-	-	-	"Flag that tells us if we want to check for cavitation" -
+typedef ^   ParameterType   Logical AddedMass   -   -   -   "Include added mass effects?" flag
+typedef ^   ParameterType   Logical Buoyancy    -   -   -   "Include buoyancy effects?" flag
 typedef	^	ParameterType	Logical	CompAA   -  -  -  "Compute AeroAcoustic noise" flag
 typedef	^	ParameterType	IntKi	NumBlades	-	-	-	"Number of blades on the turbine"	-
 typedef	^	ParameterType	IntKi	NumBlNds	-	-	-	"Number of nodes on each blade"	-
