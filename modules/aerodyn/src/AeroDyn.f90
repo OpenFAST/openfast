@@ -2040,20 +2040,10 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
                call SetErrStat( ErrID_Fatal, 'The X-direction added mass coefficient for blade '//trim(Num2LStr(k))//' node '//trim(Num2LStr(j)) &
                                 //' must be greater than 0.', ErrStat, ErrMsg, RoutineName )
             endif
-         end do ! j=nodes
-      end do ! k=blades
-
-      do k=1,NumBl
-         do j=1,InputFileData%BladeProps(k)%NumBlNds
             if ( InputFileData%BladeProps(k)%BlCaY(j) <= 0.0_ReKi )  then
                call SetErrStat( ErrID_Fatal, 'The Y-direction added mass coefficient for blade '//trim(Num2LStr(k))//' node '//trim(Num2LStr(j)) &
                                 //' must be greater than 0.', ErrStat, ErrMsg, RoutineName )
             endif
-         end do ! j=nodes
-      end do ! k=blades
-
-      do k=1,NumBl
-         do j=1,InputFileData%BladeProps(k)%NumBlNds
             if ( InputFileData%BladeProps(k)%BlCaZ(j) <= 0.0_ReKi )  then
                call SetErrStat( ErrID_Fatal, 'The Z-direction added mass coefficient for blade '//trim(Num2LStr(k))//' node '//trim(Num2LStr(j)) &
                                 //' must be greater than 0.', ErrStat, ErrMsg, RoutineName )
