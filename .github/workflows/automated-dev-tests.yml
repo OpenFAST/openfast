@@ -22,7 +22,6 @@ on:
 
 jobs:
   regression-test:
-
     runs-on: ubuntu-latest
     container:
       image: rafmudaf/openfast-ubuntu:dev
@@ -51,7 +50,7 @@ jobs:
         # if: contains(github.event.head_commit.message, 'Action - Test All') || contains(github.event.pull_request.labels.*.name, 'Action - Test All') 
         uses: ./.github/actions/compile
         with:
-          build-target: 'install'
+          build-target: 'regression_tests'
 
       - name: 'Run BeamDyn tests'
         uses: ./.github/actions/tests-module-beamdyn
@@ -115,7 +114,7 @@ jobs:
       - name: 'Run InflowWind tests'
         uses: ./.github/actions/tests-module-inflowwind
 
-  build-single-precision:
+  compile-all-single-precision:
     # Test if single precision compile completes.
     # Do not run the test suite.
 
