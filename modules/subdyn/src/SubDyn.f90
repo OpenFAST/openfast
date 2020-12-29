@@ -438,7 +438,8 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       real(ReKi), dimension(3) ::  aP   ! Rigid-body acceleration of node
       real(R8Ki), dimension(3,3) :: Rot ! Rotation matrix (DCM^t) and delta Rot (DCM^t-I)
       real(R8Ki), dimension(3,3) :: Rg2b ! Rotation matrix global 2 body coordinates
-      real(R8Ki), dimension(3,3) :: Rb2g !
+      real(R8Ki), dimension(3,3) :: Rb2g ! Rotation matrix body 2 global coordinates
+      real(R8Ki), dimension(6,6) :: RRb2g ! Rotation matrix global 2 body coordinates, acts on a 6-vector
       INTEGER(IntKi)               :: ErrStat2    ! Error status of the operation (occurs after initial error)
       CHARACTER(ErrMsgLen)         :: ErrMsg2     ! Error message if ErrStat2 /= ErrID_None
       ! Initialize ErrStat
@@ -453,7 +454,10 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       m%udotdot_TP = (/u%TPMesh%TranslationAcc( :,1), u%TPMesh%RotationAcc(:,1)/)
       Rg2b(1:3,1:3) = u%TPMesh%Orientation(:,:,1)  ! global 2 body coordinates
       Rb2g(1:3,1:3) = transpose(u%TPMesh%Orientation(:,:,1))
-
+      RRb2g(:,:) = 0.0_ReKi
+      RRb2g(1:3,1:3) = Rb2g
+      RRb2g(4:6,4:6) = Rb2g
+     
       ! --------------------------------------------------------------------------------
       ! --- Output 2, Y2Mesh: motions on all FEM nodes (R, and L DOFs, then full DOF vector)
       ! --------------------------------------------------------------------------------
@@ -580,6 +584,8 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       ! --- Special case for floating with extramoment
       if (p%ExtraMoment.and.p%Floating) then
          Y1_CB_L = - (matmul(p%D1_141, m%F_L)) ! Uses rotated loads
+         !
+         !Y1_CB_L = matmul(RRb2g, Y1_CB_L) !>>> New
       endif
 
       ! Compute external force on internal (F_L) and interface nodes (F_I)
@@ -587,9 +593,21 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       call GetExtForceOnInterfaceDOF(p, m%Fext, F_I)
 
       ! Compute reaction/coupling force at TP
-      Y1_Utp  = - (matmul(p%KBB,   m%u_TP) + matmul(p%D1_12, m%udot_TP) + matmul(p%D1_13, m%udotdot_TP) )
+      !Y1_Utp  = - (matmul(p%KBB,   m%u_TP) + matmul(p%CBB, m%udot_TP) + matmul(p%MBB, m%udotdot_TP) )
+      Y1_Utp  = - (matmul(p%KBB,   m%u_TP) + matmul(p%CBB, m%udot_TP) + matmul(p%MBB, m%udotdot_TP) )
+      if (p%nDOFM>0) then
+         Y1_Utp  = Y1_Utp + matmul(p%MBmmB, m%udotdot_TP)  
+      endif
+      !if (p%Floating) then
+         !Y1_Utp  = Y1_Utp + matmul(RRb2g, matmul(p%MBmmB, matmul(transpose(RRb2g), m%udotdot_TP)))  !>>> New
+      !else
+      !   !
+      !endif
       if ( p%nDOFM > 0) then
          Y1_CB = -( matmul(p%C1_11, x%qm)   + matmul(p%C1_12,x%qmdot))
+         if (p%Floating) then
+            !Y1_CB = matmul(RRb2g, Y1_CB) !>>> New 
+         endif
       else
          Y1_CB = 0.0_ReKi
       endif
@@ -602,10 +620,10 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       ! KEEP ME
       !if ( p%nDOFM > 0) then
       !   Y1 = -(   matmul(p%C1_11, x%qm)   + matmul(p%C1_12,x%qmdot)                                    &
-      !           + matmul(p%KBB,   m%u_TP) + matmul(p%D1_12, m%udot_TP) + matmul(p%D1_13, m%udotdot_TP) &
+      !           + matmul(p%KBB,   m%u_TP) + matmul(p%CBB, m%udot_TP) + matmul(p%MBB - p%MBmmB, m%udotdot_TP) &
       !           + matmul(p%D1_141, m%F_L) + matmul(p%D1_142, m%F_L)  - matmul( F_I, p%TI ) )                                                                          
       !else ! No retained modes, so there are no states
-      !   Y1 = -(   matmul(p%KBB,   m%u_TP) + matmul(p%D1_12, m%udot_TP) + matmul(p%D1_13, m%udotdot_TP) &
+      !   Y1 = -(   matmul(p%KBB,   m%u_TP) + matmul(p%CBB, m%udot_TP) + matmul(p%MBB - p%MBmmB, m%udotdot_TP) &
       !           + matmul(p%D1_141, m%F_L) + matmul(p%D1_142, m%F_L)  - matmul( F_I, p%TI ) ) 
       !end if
 
@@ -622,7 +640,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       ! values on the interface mesh are Y1 (SubDyn forces) + Hydrodynamic forces
       y%Y1Mesh%Force (:,1) = Y1(1:3) 
       y%Y1Mesh%Moment(:,1) = Y1(4:6)
-            
+       
      !________________________________________
      ! CALCULATE OUTPUT TO BE WRITTEN TO FILE 
      !________________________________________
@@ -642,6 +660,9 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
             ! Destroy dxdt because it is not necessary for the rest of the subroutine
             CALL SD_DestroyContState( dxdt, ErrStat2, ErrMsg2); if(Failed()) return
          END IF
+         ! 6-vectors (making sure they are up to date for outputs
+         m%udot_TP    = (/u%TPMesh%TranslationVel( :,1),u%TPMesh%RotationVel(:,1)/) 
+         m%udotdot_TP = (/u%TPMesh%TranslationAcc(:,1), u%TPMesh%RotationAcc(:,1)/)
           
          ! Write the previous output data into the output file           
          IF ( ( p%OutSwtch == 1 .OR. p%OutSwtch == 3 ) .AND. ( t > m%LastOutTime ) ) THEN
@@ -694,6 +715,7 @@ SUBROUTINE SD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSta
       TYPE(SD_ContinuousStateType), INTENT(  OUT)  :: dxdt        !< Continuous state derivatives at t
       INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     !< Error status of the operation
       CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+      REAL(ReKi) :: udotdot_TP(6)
       INTEGER(IntKi)       :: ErrStat2
       CHARACTER(ErrMsgLen) :: ErrMsg2
       ! Initialize ErrStat
@@ -704,19 +726,22 @@ SUBROUTINE SD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSta
       CALL AllocAry(dxdt%qm,    p%nDOFM, 'dxdt%qm',    ErrStat2, ErrMsg2 ); CALL SetErrStat ( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SD_CalcContStateDeriv' )
       CALL AllocAry(dxdt%qmdot, p%nDOFM, 'dxdt%qmdot', ErrStat2, ErrMsg2 ); CALL SetErrStat ( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SD_CalcContStateDeriv' )
       IF ( ErrStat >= AbortErrLev ) RETURN
-         
       IF ( p%nDOFM == 0 ) RETURN
-      
-      ! 6-vectors 
-      m%udot_TP    = (/u%TPMesh%TranslationVel( :,1),u%TPMesh%RotationVel(:,1)/) ! TODO TODO TODO missing
-      m%udotdot_TP = (/u%TPMesh%TranslationAcc(:,1), u%TPMesh%RotationAcc(:,1)/)
+
       ! Compute F_L, force on internal DOF
       CALL GetExtForceOnInternalDOF( u, p, m, m%F_L, ErrStat2, ErrMsg2, ExtraMoment=(p%ExtraMoment.and..not.p%Floating), RotateLoads=(p%ExtraMoment.and.p%Floating))
+
+      udotdot_TP = (/u%TPMesh%TranslationAcc(:,1), u%TPMesh%RotationAcc(:,1)/)
+      if (p%Floating) then
+         ! >>> New udotdot_TP to body coordinates
+         !udotdot_TP(1:3) = matmul( u%TPMesh%Orientation(:,:,1), udotdot_TP(1:3) ) 
+         !udotdot_TP(4:6) = matmul( u%TPMesh%Orientation(:,:,1), udotdot_TP(4:6) ) 
+      endif
       
       ! State equation
       dxdt%qm= x%qmdot
       ! NOTE: matmul( TRANSPOSE(p%PhiM), m%F_L ) = matmul( m%F_L, p%PhiM ) because F_L is 1-D
-      dxdt%qmdot = -p%KMMDiag*x%qm - p%CMMDiag*x%qmdot - matmul(p%MMB,m%udotdot_TP)  + matmul(m%F_L, p%PhiM)
+      dxdt%qmdot = -p%KMMDiag*x%qm - p%CMMDiag*x%qmdot - matmul(p%MMB,udotdot_TP)  + matmul(m%F_L, p%PhiM)
 
 END SUBROUTINE SD_CalcContStateDeriv
 
@@ -1713,6 +1738,11 @@ SUBROUTINE SD_AM2( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg 
    ! calculate (u_n + u_n+1)/2
    udotdot_TP2 = 0.5_ReKi * ( udotdot_TP2 + m%udotdot_TP )
    F_L2        = 0.5_ReKi * ( F_L2        + m%F_L        )
+   if (p%Floating) then
+      ! >>> New udotdot_TP to body coordinates
+      !udotdot_TP(1:3) = matmul( u%TPMesh%Orientation(:,:,1), udotdot_TP(1:3) ) 
+      !udotdot_TP(4:6) = matmul( u%TPMesh%Orientation(:,:,1), udotdot_TP(4:6) ) 
+   endif
           
    ! set xq = dt * ( A*x_n +  B *(u_n + u_n+1)/2 + Fx)   
    xq(      1:  p%nDOFM)=p%SDDeltaT * x%qmdot                                                                                                   !upper portion of array
@@ -2443,12 +2473,8 @@ SUBROUTINE SetParameters(Init, p, MBBb, MBmb, KBBb, PhiRb, nM_out, OmegaL, PhiL,
       ENDDO   
    
       ! D1 Matrices 
-      ! D1_12 = CBBt - MBmt*CmBt
-      p%D1_12 = p%CBB 
-      ! D1_13 = MBBt - MBmt*MmBt
-      !p%D1_13 = p%MBB - MATMUL( p%MBM, p%MMB )
-      CALL LAPACK_GEMM( 'N', 'T', 1.0_ReKi, p%MBM,   p%MBM,  0.0_ReKi, p%D1_13, ErrStat2, ErrMsg2 ); if(Failed()) return  ! p%D1_13 = MATMUL( p%MBM, p%MMB )
-      p%D1_13 = p%MBB - p%D1_13
+      ! MBmt*MmBt
+      CALL LAPACK_GEMM( 'N', 'T', 1.0_ReKi, p%MBM,   p%MBM,  0.0_ReKi, p%MBmmB, ErrStat2, ErrMsg2 ); if(Failed()) return  ! MATMUL( p%MBM, p%MMB )
 
       ! --- Intermediates D1_14 = D1_141 + D1_142
       !p%D1_141 = MATMUL(p%MBM, TRANSPOSE(p%PhiM)) 
@@ -2507,8 +2533,6 @@ SUBROUTINE SetParameters(Init, p, MBBb, MBmb, KBBb, PhiRb, nM_out, OmegaL, PhiL,
       ! OmegaM, JDampings, PhiM, MBM, MMB,  x don't exist in this case
       ! p%D2_64 are zero in this case so we simplify the equations in the code, omitting these variables
       ! p%D2_63 = p%PhiRb_TI in this case so we simplify the equations in the code, omitting storage of this variable
-      p%D1_12 = p%CBB ! No cross couplings
-      p%D1_13 = p%MBB ! No cross couplings 
       p%D1_141 = 0.0_ReKi
       p%D1_142 = - MATMUL(TI_transpose, TRANSPOSE(PhiRb)) 
    END IF
@@ -2554,8 +2578,7 @@ if (p%nDOFM > 0 ) THEN
    CALL AllocAry( p%PhiM,          p%nDOF__L,  nDOFM,    'p%PhiM',        ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')        
    CALL AllocAry( p%C2_61,         p%nDOF__L,  nDOFM,    'p%C2_61',       ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')        
    CALL AllocAry( p%C2_62,         p%nDOF__L,  nDOFM,    'p%C2_62',       ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')        
-   CALL AllocAry( p%D1_12,         nDOFL_TP, nDOFL_TP  , 'p%D1_12',       ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters') ! is p%MBB when p%nDOFM == 0        
-   CALL AllocAry( p%D1_13,         nDOFL_TP, nDOFL_TP  , 'p%D1_13',       ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters') ! is p%MBB when p%nDOFM == 0        
+   CALL AllocAry( p%MBmmB,         nDOFL_TP, nDOFL_TP  , 'p%MBmmB',       ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters') ! is p%MBB when p%nDOFM == 0        
    CALL AllocAry( p%D2_63,         p%nDOF__L,  nDOFL_TP, 'p%D2_63',       ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters') ! is p%PhiRb_TI when p%nDOFM == 0       
    CALL AllocAry( p%D2_64,         p%nDOF__L,  p%nDOF__L,'p%D2_64',       ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters') ! is zero when p%nDOFM == 0       
 end if
@@ -3482,6 +3505,11 @@ SUBROUTINE StateMatrices(p, ErrStat, ErrMsg, AA, BB, CC, DD)
       if (nCB>0) then
          CC(1:nY,1:nCB )   = - p%C1_11
          CC(1:nY,nCB+1:nX) = - p%C1_12
+         ! TODO rotate
+         if (p%Floating) then
+            !CC(1:3,:) = matmul(Rb2g, CC(1:3,:) !>>> New 
+            !CC(4:6,:) = matmul(Rb2g, CC(1:3,:) !>>> New 
+         endif
       endif
    endif
 
@@ -3491,8 +3519,12 @@ SUBROUTINE StateMatrices(p, ErrStat, ErrMsg, AA, BB, CC, DD)
       if(allocated(DD)) deallocate(DD)
       call AllocAry(DD, nY, nU, 'DD',    ErrStat2, ErrMsg2 ); if(Failed()) return; DD(:,:) = 0.0_ReKi
       DD(1:nY,1:6   ) = - p%KBB
-      DD(1:nY,7:12  ) = - p%D1_12
-      DD(1:nY,13:18 ) = - p%D1_13
+      DD(1:nY,7:12  ) = - p%CBB
+      DD(1:nY,13:18 ) = - p%MBB
+      if (p%nDOFM>0) then
+         DD(1:nY,13:18 ) = DD(1:nY,13:18 )+ p%MBmmB
+         ! TODO TODO rotate it A MBmmB A^t
+      endif
    endif
    
    call CleanUp()
