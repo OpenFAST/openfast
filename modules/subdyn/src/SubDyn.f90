@@ -470,12 +470,12 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       m%UL_dotdot     = 0.0_ReKi
       ! --- CB modes contribution to motion (L-DOF only)
       if ( p%nDOFM > 0) then
-         !if (p%Floating) then ! >>> New
-         !   udotdot_TP(1:3) = matmul(Rg2b, u%TPMesh%TranslationAcc( :,1))
-         !   udotdot_TP(4:6) = matmul(Rg2b, u%TPMesh%RotationAcc(:,1)    )
-         !else
+         if (p%Floating) then ! >>> New
+            udotdot_TP(1:3) = matmul(Rg2b, u%TPMesh%TranslationAcc( :,1))
+            udotdot_TP(4:6) = matmul(Rg2b, u%TPMesh%RotationAcc(:,1)    )
+         else
             udotdot_TP = (/u%TPMesh%TranslationAcc( :,1), u%TPMesh%RotationAcc(:,1)/)
-         !endif
+         endif
          m%UL            = matmul( p%PhiM,  x%qm    )
          m%UL_dot        = matmul( p%PhiM,  x%qmdot )
          m%UL_dotdot     = matmul( p%C2_61, x%qm    )    + matmul( p%C2_62   , x%qmdot )    & 
@@ -562,7 +562,6 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
             m%U_full_dotdot(DOFList(1:3)) = matmul(Rb2g, m%U_full_dotdot(DOFList(1:3))) + aP(1:3)
             m%U_full_dotdot(DOFList(4:6)) = matmul(Rb2g, m%U_full_dotdot(DOFList(4:6))) + OmD(1:3)
 
-
             !m%U_full       (DOFList(1:3)) =                                               duP(1:3)       
             !m%U_full       (DOFList(4:6)) =                                               rotations(1:3)
             !m%U_full_dot   (DOFList(1:3)) =                                               vP(1:3)
@@ -614,17 +613,20 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       Y1_Utp  = - (matmul(p%KBB, m%u_TP) + matmul(p%CBB, m%udot_TP) + matmul(p%MBB, m%udotdot_TP) )
       if (p%nDOFM>0) then
          !>>> New
+         ! NOTE: this introduces some hysteresis
          !if (p%Floating) then
-         !   Y1_Utp  = Y1_Utp + matmul(RRb2g, matmul(p%MBmmB, matmul(transpose(RRb2g), m%udotdot_TP)))  
+         !   udotdot_TP(1:3) = matmul(Rg2b, u%TPMesh%TranslationAcc( :,1))
+         !   udotdot_TP(4:6) = matmul(Rg2b, u%TPMesh%RotationAcc(:,1)    )
+         !   Y1_Utp  = Y1_Utp + matmul(RRb2g, matmul(p%MBmmB, udotdot_TP))  
          !else
             Y1_Utp  = Y1_Utp + matmul(p%MBmmB, m%udotdot_TP)  
          !endif
       endif
       if ( p%nDOFM > 0) then
          Y1_CB = -( matmul(p%C1_11, x%qm) + matmul(p%C1_12, x%qmdot) )
-         !if (p%Floating) then
-         !   Y1_CB = matmul(RRb2g, Y1_CB) !>>> New 
-         !endif
+         if (p%Floating) then
+            Y1_CB = matmul(RRb2g, Y1_CB) !>>> New 
+         endif
       else
          Y1_CB = 0.0_ReKi
       endif
@@ -634,7 +636,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
          Y1_CB_L = - (matmul(p%D1_141, m%F_L)) ! Uses non rotated loads
       endif
       if (p%Floating) then
-         !Y1_CB_L = matmul(RRb2g, Y1_CB_L) !>>> New
+         Y1_CB_L = matmul(RRb2g, Y1_CB_L) !>>> New
       endif
 
       Y1 = Y1_CB + Y1_Utp + Y1_CB_L+ Y1_Guy_L + Y1_Guy_R 
@@ -755,8 +757,8 @@ SUBROUTINE SD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSta
       udotdot_TP = (/u%TPMesh%TranslationAcc(:,1), u%TPMesh%RotationAcc(:,1)/)
       if (p%Floating) then
          ! >>> New udotdot_TP to body coordinates
-         !udotdot_TP(1:3) = matmul( u%TPMesh%Orientation(:,:,1), udotdot_TP(1:3) ) 
-         !udotdot_TP(4:6) = matmul( u%TPMesh%Orientation(:,:,1), udotdot_TP(4:6) ) 
+         udotdot_TP(1:3) = matmul( u%TPMesh%Orientation(:,:,1), udotdot_TP(1:3) ) 
+         udotdot_TP(4:6) = matmul( u%TPMesh%Orientation(:,:,1), udotdot_TP(4:6) ) 
       endif
       
       ! State equation
@@ -1752,8 +1754,8 @@ SUBROUTINE SD_AM2( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg 
    m%udotdot_TP = (/u_interp%TPMesh%TranslationAcc(:,1), u_interp%TPMesh%RotationAcc(:,1)/)
    if (p%Floating) then
       ! >>> New udotdot_TP to body coordinates
-      !m%udotdot_TP(1:3) = matmul(u_interp%TPMesh%Orientation(:,:,1), m%udotdot_TP(1:3)) 
-      !m%udotdot_TP(4:6) = matmul(u_interp%TPMesh%Orientation(:,:,1), m%udotdot_TP(4:6)) 
+      m%udotdot_TP(1:3) = matmul(u_interp%TPMesh%Orientation(:,:,1), m%udotdot_TP(1:3)) 
+      m%udotdot_TP(4:6) = matmul(u_interp%TPMesh%Orientation(:,:,1), m%udotdot_TP(4:6)) 
    endif
                 
    ! extrapolate u to find u_interp = u(t + dt)=u_n+1
@@ -1762,8 +1764,8 @@ SUBROUTINE SD_AM2( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg 
    udotdot_TP2 = (/u_interp%TPMesh%TranslationAcc(:,1), u_interp%TPMesh%RotationAcc(:,1)/)
    if (p%Floating) then
       ! >>> New udotdot_TP to body coordinates
-      !udotdot_TP2(1:3) = matmul(u_interp%TPMesh%Orientation(:,:,1), udotdot_TP2(1:3)) 
-      !udotdot_TP2(4:6) = matmul(u_interp%TPMesh%Orientation(:,:,1), udotdot_TP2(4:6)) 
+      udotdot_TP2(1:3) = matmul(u_interp%TPMesh%Orientation(:,:,1), udotdot_TP2(1:3)) 
+      udotdot_TP2(4:6) = matmul(u_interp%TPMesh%Orientation(:,:,1), udotdot_TP2(4:6)) 
    endif
    
    ! calculate (u_n + u_n+1)/2
@@ -2903,14 +2905,14 @@ END SUBROUTINE PartitionDOFNodes
 
 !> Compute displacements of all nodes in global system (Guyan + Rotated CB)
 !! 
-SUBROUTINE Displacements(u, p, x, m, U_full, bGuyan, bElastic)
+SUBROUTINE LeverArm(u, p, x, m, DU_full, bGuyan, bElastic)
    TYPE(SD_InputType),           INTENT(IN   )  :: u           !< Inputs at t
    TYPE(SD_ParameterType),target,INTENT(IN   )  :: p           !< Parameters
    TYPE(SD_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at t
    TYPE(SD_MiscVarType),         INTENT(INOUT)  :: m           !< Misc/optimization variables
    LOGICAL,                      INTENT(IN   )  :: bGuyan      !< include Guyan Contribution
    LOGICAL,                      INTENT(IN   )  :: bElastic    !< include Elastic contribution
-   REAL(ReKi), DIMENSION(:),     INTENT(  OUT)  :: U_full      !< Displacements in full system
+   REAL(ReKi), DIMENSION(:),     INTENT(  OUT)  :: DU_full      !< LeverArm in full system
    !locals
    INTEGER(IntKi)               :: iSDNode
    REAL(ReKi)                   :: rotations(3)
@@ -2960,9 +2962,9 @@ SUBROUTINE Displacements(u, p, x, m, U_full, bGuyan, bElastic)
    m%U_red       (p%IDC_Rb)= 0    ! NOTE: for now we don't have leader DOF at "C" (bottom)
    m%U_red       (p%ID__F) = 0
    if (p%reduced) then
-      U_full        = matmul(p%T_red, m%U_red)
+      DU_full        = matmul(p%T_red, m%U_red)
    else
-      U_full        = m%U_red
+      DU_full        = m%U_red
    endif
    ! --- Adding Guyan contribution for rigid body
    if (bGuyan .and. p%Floating) then
@@ -2974,14 +2976,14 @@ SUBROUTINE Displacements(u, p, x, m, U_full, bGuyan, bElastic)
          ! --- Guyan (rigid body) motion in global coordinates
          rIP0(1:3)   = p%DP0(1:3, iSDNode)
          rIP(1:3)    = matmul(Rb2g, rIP0)
-         duP(1:3)    = rIP - rIP0 + m%u_TP(1:3)
+         duP(1:3)    = rIP - rIP0 ! NOTE: without m%u_TP(1:3)
          !U_full(DOFList(1:3)) = U_full(DOFList(1:3)) + duP(1:3)       
          ! >>> New
-         U_full(DOFList(1:3)) = matmul(Rb2g, U_full(DOFList(1:3))) + duP(1:3)       
-         U_full(DOFList(4:6)) = matmul(Rb2g, U_full(DOFList(4:6))) + rotations(1:3)
+         DU_full(DOFList(1:3)) = matmul(Rb2g, DU_full(DOFList(1:3))) + duP(1:3)       
+         DU_full(DOFList(4:6)) = matmul(Rb2g, DU_full(DOFList(4:6))) + rotations(1:3)
       enddo
    endif 
-END SUBROUTINE Displacements
+END SUBROUTINE LeverArm
 
 !------------------------------------------------------------------------------------------------------
 !> Construct force vector on internal DOF (L) from the values on the input mesh 
@@ -3017,12 +3019,7 @@ SUBROUTINE GetExtForceOnInternalDOF(u, p, x, m, F_L, ErrStat, ErrMsg, ExtraMomen
 
    if (ExtraMoment) then
       ! Compute node displacements for lever arm
-      call Displacements(u, p, x, m, m%DU_full, bGuyan=.True., bElastic=.False.)
-      if (p%Floating) then ! remove u_TP
-         do iNode = 1,p%nNodes
-            m%DU_full(p%NodesDOF(iNode)%List(1:3)) =m%DU_full(p%NodesDOF(iNode)%List(1:3)) - m%u_TP(1:3)
-         enddo
-      endif
+      call LeverArm(u, p, x, m, m%DU_full, bGuyan=.True., bElastic=.True.)
    endif
 
    ! --- Build vector of external forces (including gravity) (Moment done below)  
