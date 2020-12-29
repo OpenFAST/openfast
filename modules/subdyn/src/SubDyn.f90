@@ -422,6 +422,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       REAL(ReKi)                   :: Y1_Guy_R(6)
       REAL(ReKi)                   :: Y1_Guy_L(6)
       REAL(ReKi)                   :: Y1_Utp(6)
+      REAL(ReKi)                   :: udotdot_TP(6)
       REAL(ReKi)                   :: Y1_ExtraMoment(3) ! Lever arm moment contributions due to interface displacement
       INTEGER(IntKi), pointer      :: DOFList(:)
       INTEGER(IntKi)               :: startDOF
@@ -471,10 +472,15 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       m%UL_dotdot     = 0.0_ReKi
       ! --- CB modes contribution to motion (L-DOF only)
       if ( p%nDOFM > 0) then
+         if (p%Floating) then
+            udotdot_TP = matmul(transpose(RRb2g), (/u%TPMesh%TranslationAcc( :,1), u%TPMesh%RotationAcc(:,1)/))
+         else
+            udotdot_TP = (/u%TPMesh%TranslationAcc( :,1), u%TPMesh%RotationAcc(:,1)/)
+         endif
          m%UL            = matmul( p%PhiM,  x%qm    )
          m%UL_dot        = matmul( p%PhiM,  x%qmdot )
          m%UL_dotdot     = matmul( p%C2_61, x%qm    )      + matmul( p%C2_62   , x%qmdot )    & 
-                         + matmul( p%D2_63, m%udotdot_TP ) + matmul( p%D2_64,    m%F_L   )
+                         + matmul( p%D2_63, udotdot_TP ) + matmul( p%D2_64,    m%F_L   )
       end if
       ! Static improvement (modify UL)
       if (p%SttcSolve/=idSIM_None) then
@@ -549,6 +555,12 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
             m%U_full_dot   (DOFList(4:6)) = m%U_full_dot   (DOFList(4:6)) + Om(1:3)
             m%U_full_dotdot(DOFList(1:3)) = m%U_full_dotdot(DOFList(1:3)) + aP(1:3)
             m%U_full_dotdot(DOFList(4:6)) = m%U_full_dotdot(DOFList(4:6)) + OmD(1:3)
+            !m%U_full       (DOFList(1:3)) = matmul(Rb2g, m%U_full       (DOFList(1:3))) + duP(1:3)       
+            !m%U_full       (DOFList(4:6)) = matmul(Rb2g, m%U_full       (DOFList(4:6))) + rotations(1:3)
+            !m%U_full_dot   (DOFList(1:3)) = matmul(Rb2g, m%U_full_dot   (DOFList(1:3))) + vP(1:3)
+            !m%U_full_dot   (DOFList(4:6)) = matmul(Rb2g, m%U_full_dot   (DOFList(4:6))) + Om(1:3)
+            !m%U_full_dotdot(DOFList(1:3)) = matmul(Rb2g, m%U_full_dotdot(DOFList(1:3))) + aP(1:3)
+            !m%U_full_dotdot(DOFList(4:6)) = matmul(Rb2g, m%U_full_dotdot(DOFList(4:6))) + OmD(1:3)
             ! TODO TODO which orientation to give for joints with more than 6 dofs?
             ! Construct the direction cosine matrix given the output angles
             call SmllRotTrans( 'UR_bar input angles', m%U_full(DOFList(4)), m%U_full(DOFList(5)), m%U_full(DOFList(6)), DCM, '', ErrStat2, ErrMsg2)
@@ -584,8 +596,6 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       ! --- Special case for floating with extramoment
       if (p%ExtraMoment.and.p%Floating) then
          Y1_CB_L = - (matmul(p%D1_141, m%F_L)) ! Uses rotated loads
-         !
-         !Y1_CB_L = matmul(RRb2g, Y1_CB_L) !>>> New
       endif
 
       ! Compute external force on internal (F_L) and interface nodes (F_I)
@@ -593,20 +603,18 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       call GetExtForceOnInterfaceDOF(p, m%Fext, F_I)
 
       ! Compute reaction/coupling force at TP
-      !Y1_Utp  = - (matmul(p%KBB,   m%u_TP) + matmul(p%CBB, m%udot_TP) + matmul(p%MBB, m%udotdot_TP) )
       Y1_Utp  = - (matmul(p%KBB,   m%u_TP) + matmul(p%CBB, m%udot_TP) + matmul(p%MBB, m%udotdot_TP) )
       if (p%nDOFM>0) then
-         Y1_Utp  = Y1_Utp + matmul(p%MBmmB, m%udotdot_TP)  
+         if (p%Floating) then
+            Y1_Utp  = Y1_Utp + matmul(RRb2g, matmul(p%MBmmB, matmul(transpose(RRb2g), m%udotdot_TP)))  !>>> New
+         else
+            Y1_Utp  = Y1_Utp + matmul(p%MBmmB, m%udotdot_TP)  
+         endif
       endif
-      !if (p%Floating) then
-         !Y1_Utp  = Y1_Utp + matmul(RRb2g, matmul(p%MBmmB, matmul(transpose(RRb2g), m%udotdot_TP)))  !>>> New
-      !else
-      !   !
-      !endif
       if ( p%nDOFM > 0) then
          Y1_CB = -( matmul(p%C1_11, x%qm)   + matmul(p%C1_12,x%qmdot))
          if (p%Floating) then
-            !Y1_CB = matmul(RRb2g, Y1_CB) !>>> New 
+            Y1_CB = matmul(RRb2g, Y1_CB) !>>> New 
          endif
       else
          Y1_CB = 0.0_ReKi
@@ -616,6 +624,10 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       if (.not.(p%ExtraMoment.and.p%Floating)) then
          Y1_CB_L = - (matmul(p%D1_141, m%F_L)) ! Uses non rotated loads
       endif
+      if (p%Floating) then
+         Y1_CB_L = matmul(RRb2g, Y1_CB_L) !>>> New
+      endif
+
       Y1 = Y1_CB + Y1_Utp + Y1_CB_L+ Y1_Guy_L + Y1_Guy_R 
       ! KEEP ME
       !if ( p%nDOFM > 0) then
@@ -734,8 +746,8 @@ SUBROUTINE SD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSta
       udotdot_TP = (/u%TPMesh%TranslationAcc(:,1), u%TPMesh%RotationAcc(:,1)/)
       if (p%Floating) then
          ! >>> New udotdot_TP to body coordinates
-         !udotdot_TP(1:3) = matmul( u%TPMesh%Orientation(:,:,1), udotdot_TP(1:3) ) 
-         !udotdot_TP(4:6) = matmul( u%TPMesh%Orientation(:,:,1), udotdot_TP(4:6) ) 
+         udotdot_TP(1:3) = matmul( u%TPMesh%Orientation(:,:,1), udotdot_TP(1:3) ) 
+         udotdot_TP(4:6) = matmul( u%TPMesh%Orientation(:,:,1), udotdot_TP(4:6) ) 
       endif
       
       ! State equation
@@ -1727,25 +1739,30 @@ SUBROUTINE SD_AM2( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg 
    !Start by getting u_n and u_n+1 
    ! interpolate u to find u_interp = u(t) = u_n     
    CALL SD_Input_ExtrapInterp( u, utimes, u_interp, t, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_AM2')
-   m%udotdot_TP = (/u_interp%TPMesh%TranslationAcc(:,1), u_interp%TPMesh%RotationAcc(:,1)/)
    CALL GetExtForceOnInternalDOF(u_interp, p, m, m%F_L, ErrStat2, ErrMsg2, ExtraMoment=(p%ExtraMoment.and..not.p%Floating), RotateLoads=(p%ExtraMoment.and.p%Floating))
+   m%udotdot_TP = (/u_interp%TPMesh%TranslationAcc(:,1), u_interp%TPMesh%RotationAcc(:,1)/)
+   if (p%Floating) then
+      ! >>> New udotdot_TP to body coordinates
+      m%udotdot_TP(1:3) = matmul(u_interp%TPMesh%Orientation(:,:,1), m%udotdot_TP(1:3)) 
+      m%udotdot_TP(4:6) = matmul(u_interp%TPMesh%Orientation(:,:,1), m%udotdot_TP(4:6)) 
+   endif
                 
    ! extrapolate u to find u_interp = u(t + dt)=u_n+1
    CALL SD_Input_ExtrapInterp(u, utimes, u_interp, t+p%SDDeltaT, ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_AM2')
-   udotdot_TP2 = (/u_interp%TPMesh%TranslationAcc(:,1), u_interp%TPMesh%RotationAcc(:,1)/)
    CALL GetExtForceOnInternalDOF(u_interp, p, m, F_L2, ErrStat2, ErrMsg2, ExtraMoment=(p%ExtraMoment.and..not.p%Floating), RotateLoads=(p%ExtraMoment.and.p%Floating))
+   udotdot_TP2 = (/u_interp%TPMesh%TranslationAcc(:,1), u_interp%TPMesh%RotationAcc(:,1)/)
+   if (p%Floating) then
+      ! >>> New udotdot_TP to body coordinates
+      udotdot_TP2(1:3) = matmul(u_interp%TPMesh%Orientation(:,:,1), udotdot_TP2(1:3)) 
+      udotdot_TP2(4:6) = matmul(u_interp%TPMesh%Orientation(:,:,1), udotdot_TP2(4:6)) 
+   endif
    
    ! calculate (u_n + u_n+1)/2
    udotdot_TP2 = 0.5_ReKi * ( udotdot_TP2 + m%udotdot_TP )
    F_L2        = 0.5_ReKi * ( F_L2        + m%F_L        )
-   if (p%Floating) then
-      ! >>> New udotdot_TP to body coordinates
-      !udotdot_TP(1:3) = matmul( u%TPMesh%Orientation(:,:,1), udotdot_TP(1:3) ) 
-      !udotdot_TP(4:6) = matmul( u%TPMesh%Orientation(:,:,1), udotdot_TP(4:6) ) 
-   endif
           
    ! set xq = dt * ( A*x_n +  B *(u_n + u_n+1)/2 + Fx)   
-   xq(      1:  p%nDOFM)=p%SDDeltaT * x%qmdot                                                                                                   !upper portion of array
+   xq(        1:  p%nDOFM)=p%SDDeltaT * x%qmdot                                                                                     !upper portion of array
    xq(1+p%nDOFM:2*p%nDOFM)=p%SDDeltaT * (-p%KMMDiag*x%qm - p%CMMDiag*x%qmdot - matmul(p%MMB, udotdot_TP2)  + matmul(F_L2,p%PhiM ))  !lower portion of array
    ! note: matmul(F_L2,p%PhiM  ) = matmul(p%PhiM_T,F_L2) because F_L2 is 1-D
              
@@ -3416,7 +3433,7 @@ contains
    END SUBROUTINE CleanUp
 END SUBROUTINE OutSummary
 
-SUBROUTINE StateMatrices(p, ErrStat, ErrMsg, AA, BB, CC, DD)
+SUBROUTINE StateMatrices(p, ErrStat, ErrMsg, AA, BB, CC, DD, u)
    type(SD_ParameterType),                 intent(in)  :: p       !< Parameters
    integer(IntKi),                         intent(out) :: ErrStat !< Error status of the operation
    character(*),                           intent(out) :: ErrMsg  !< Error message if ErrStat /= ErrID_None
@@ -3424,6 +3441,7 @@ SUBROUTINE StateMatrices(p, ErrStat, ErrMsg, AA, BB, CC, DD)
    real(R8Ki), dimension(:,:), allocatable, optional   :: BB      !<
    real(R8Ki), dimension(:,:), allocatable, optional   :: CC      !<
    real(R8Ki), dimension(:,:), allocatable, optional   :: DD      !<
+   type(SD_InputType),  intent(in), optional           :: u       !< Inputs
    integer(IntKi)             :: nU, nX, nY, nCB, i, j, iNode, iOff, k, nMembers, iField
    real(R8Ki), dimension(:), allocatable   :: dFext_dFmeshk
    real(R8Ki), dimension(:), allocatable   :: dFred_dFmeshk
@@ -3460,7 +3478,7 @@ SUBROUTINE StateMatrices(p, ErrStat, ErrMsg, AA, BB, CC, DD)
       call AllocAry(BB, nX, nU, 'BB',    ErrStat2, ErrMsg2 ); if(Failed()) return; BB(:,:) = 0.0_ReKi
       if(nCB>0) then
          BB(nCB+1:nX, 1 :6  ) = 0.0_ReKi
-         BB(nCB+1:nX, 13:18 ) = -p%MMB(1:nCB,1:6)
+         BB(nCB+1:nX, 13:18 ) = -p%MMB(1:nCB,1:6) ! TODO rotate
          call AllocAry(dFext_dFmeshk, p%nDOF              , 'dFext',    ErrStat2, ErrMsg2 ); if(Failed()) return
          call AllocAry(dFred_dFmeshk, p%nDOF_red          , 'dFred',    ErrStat2, ErrMsg2 ); if(Failed()) return
          call AllocAry(dFL_dFmeshk  , p%nDOF__L           , 'dFl'  ,    ErrStat2, ErrMsg2 ); if(Failed()) return
@@ -3505,10 +3523,9 @@ SUBROUTINE StateMatrices(p, ErrStat, ErrMsg, AA, BB, CC, DD)
       if (nCB>0) then
          CC(1:nY,1:nCB )   = - p%C1_11
          CC(1:nY,nCB+1:nX) = - p%C1_12
-         ! TODO rotate
-         if (p%Floating) then
-            !CC(1:3,:) = matmul(Rb2g, CC(1:3,:) !>>> New 
-            !CC(4:6,:) = matmul(Rb2g, CC(1:3,:) !>>> New 
+         if (p%Floating .and. present(u)) then
+            CC(1:3,:) = matmul(transpose(u%TPMesh%Orientation(:,:,1)), CC(1:3,:)) !>>> New 
+            CC(4:6,:) = matmul(transpose(u%TPMesh%Orientation(:,:,1)), CC(4:6,:)) !>>> New 
          endif
       endif
    endif
@@ -3522,8 +3539,13 @@ SUBROUTINE StateMatrices(p, ErrStat, ErrMsg, AA, BB, CC, DD)
       DD(1:nY,7:12  ) = - p%CBB
       DD(1:nY,13:18 ) = - p%MBB
       if (p%nDOFM>0) then
-         DD(1:nY,13:18 ) = DD(1:nY,13:18 )+ p%MBmmB
-         ! TODO TODO rotate it A MBmmB A^t
+         if (p%Floating .and. present(u)) then
+            ! TODO TODO rotate it A MBmmB A^t
+            !DD(1:3,:) = DD(1:3,:) + matmul(transpose(u%TPMesh%Orientation(:,:,1)), p%MBmmB(1:3,:) !>>> New 
+            DD(1:nY,13:18 ) = DD(1:nY,13:18 )+ p%MBmmB
+         else
+            DD(1:nY,13:18 ) = DD(1:nY,13:18 )+ p%MBmmB
+         endif
       endif
    endif
    
