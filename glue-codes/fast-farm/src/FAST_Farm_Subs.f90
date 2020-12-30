@@ -536,6 +536,14 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, SC_Init
          RETURN        
       end if
       
+       ! Mod_WaveField - Wave field handling (-) (switch) {1: use individual HydroDyn inputs without adjustment, 2: adjust wave phases based on turbine offsets from farm origin}
+   CALL ReadVar( UnIn, InputFile, p%WaveFieldMod, "Mod_WaveField", "Wave field handling (-) (switch) {1: use individual HydroDyn inputs without adjustment, 2: adjust wave phases based on turbine offsets from farm origin}", ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if ( ErrStat >= AbortErrLev ) then
+         call cleanup()
+         RETURN        
+      end if
+      
    !---------------------- SUPER CONTROLLER ------------------------------------------------------------------
    CALL ReadCom( UnIn, InputFile, 'Section Header: Super Controller', ErrStat2, ErrMsg2, UnEc )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1589,6 +1597,7 @@ SUBROUTINE Farm_InitFAST( farm, WD_InitInp, AWAE_InitOutput, SC_InitOutput, SC_y
          
          FWrap_InitInp%FASTInFile    = farm%p%WT_FASTInFile(nt)
          FWrap_InitInp%p_ref_Turbine = farm%p%WT_Position(:,nt)
+         FWrap_InitInp%WaveFieldMod  = farm%p%WaveFieldMod
          FWrap_InitInp%TurbNum       = nt
          FWrap_InitInp%RootName      = trim(farm%p%OutFileRoot)//'.T'//num2lstr(nt)
          

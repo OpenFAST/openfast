@@ -140,6 +140,7 @@ SUBROUTINE FWrap_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
          !.... multi-turbine options ....
       ExternInitData%TurbineID = InitInp%TurbNum
       ExternInitData%TurbinePos = InitInp%p_ref_Turbine
+      ExternInitData%WaveFieldMod = InitInp%WaveFieldMod
       
       ExternInitData%FarmIntegration = .true.
       ExternInitData%RootName = InitInp%RootName

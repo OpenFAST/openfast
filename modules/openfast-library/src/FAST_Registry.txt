@@ -115,6 +115,8 @@ typedef	^	FAST_ParameterType	IntKi	CompMooring	-	-	-	"Compute mooring system (sw
 typedef	^	FAST_ParameterType	IntKi	CompIce	-	-	-	"Compute ice loading (switch) {Module_None; Module_IceF, Module_IceD}"	-
 typedef	^	FAST_ParameterType	LOGICAL	UseDWM	-	-	-	"Use the DWM module in AeroDyn"	-
 typedef	^	FAST_ParameterType	LOGICAL	Linearize	-	-	-	"Linearization analysis (flag)"	-
+typedef ^   FAST_ParameterType  IntKi   WaveFieldMod -  -   -   "Wave field handling (-) (switch) 0: use individual HydroDyn inputs without adjustment, 1: adjust wave phases based on turbine offsets from farm origin"   -
+
 # Input file names:
 typedef	^	FAST_ParameterType	CHARACTER(1024)	EDFile	-	-	-	"The name of the ElastoDyn input file"	-
 typedef	^	FAST_ParameterType	CHARACTER(1024)	BDBldFile	{MaxNBlades}	-	-	"Name of files containing BeamDyn inputs for each blade"	-
@@ -681,7 +683,8 @@ typedef	^	FAST_ExternInitType	DbKi	Tmax	-	-1	-	"External code specified Tmax"	s
 typedef	^	FAST_ExternInitType	IntKi	SensorType	-	SensorType_None	-	"lidar sensor type, which should not be pulsed at the moment; this input should be replaced with a section in the InflowWind input file"	-
 typedef	^	FAST_ExternInitType	LOGICAL	LidRadialVel	-	-	-	"TRUE => return radial component, FALSE => return 'x' direction estimate"	-
 typedef	^	FAST_ExternInitType	IntKi	TurbineID	-	0	-	"ID number for turbine (used to create output file naming convention)"	-
-typedef	^	FAST_ExternInitType	ReKi	TurbinePos	{3}	-	-	"Initial position of turbine base (origin used in future for graphics)"	m
+typedef	^	FAST_ExternInitType	ReKi	TurbinePos	{3}	-	-	"Initial position of turbine base (origin used for graphics or in FAST.Farm)"	m
+typedef ^   FAST_ExternInitType IntKi   WaveFieldMod -  -   -   "Wave field handling (-) (switch) 0: use individual HydroDyn inputs without adjustment, 1: adjust wave phases based on turbine offsets from farm origin"   -
 typedef	^	FAST_ExternInitType	IntKi	NumSC2CtrlGlob	-	-	-	"number of global controller inputs [from supercontroller]"	-
 typedef	^	FAST_ExternInitType	IntKi	NumSC2Ctrl	-	-	-	"number of turbine specific controller inputs [from supercontroller]"	-
 typedef	^	FAST_ExternInitType	IntKi	NumCtrl2SC	-	-	-	"number of controller outputs [to supercontroller]"	-

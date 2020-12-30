@@ -33,6 +33,7 @@ typedef  ^               ParameterType         CHARACTER(1024) WindFilePath    -
 typedef  ^               ParameterType         CHARACTER(1024) SC_FileName    -    - -  "Name/location of the dynamic library {.dll [Windows] or .so [Linux]} containing the Super Controller algorithms" -
 typedef	^	             ParameterType	        LOGICAL	      UseSC 	       -	   - - "Use a super controller?"	-
 typedef  ^               ParameterType         ReKi            WT_Position   {:}{:} - - "X-Y-Z position of each wind turbine; index 1 = XYZ; index 2 = turbine number" meters
+typedef  ^               ParameterType         IntKi           WaveFieldMod    -    - - "Wave field handling (-) (switch) 0: use individual HydroDyn inputs without adjustment, 1: adjust wave phases based on turbine offsets from farm origin"   -
 typedef  ^               ParameterType         CHARACTER(1024) WT_FASTInFile {:}    - - "Name of input file for each turbine" -
 typedef  ^               ParameterType         CHARACTER(1024) FTitle          -    - - "The description line from the primary FAST.Farm input file" -
 typedef  ^               ParameterType         CHARACTER(1024) OutFileRoot     -    - - "The root name derived from the primary FAST.Farm input file" -

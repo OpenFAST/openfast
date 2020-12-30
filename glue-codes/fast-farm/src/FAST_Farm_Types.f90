@@ -97,6 +97,7 @@ IMPLICIT NONE
     CHARACTER(1024)  :: SC_FileName      !< Name/location of the dynamic library {.dll [Windows] or .so [Linux]} containing the Super Controller algorithms [-]
     LOGICAL  :: UseSC      !< Use a super controller? [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: WT_Position      !< X-Y-Z position of each wind turbine; index 1 = XYZ; index 2 = turbine number [meters]
+    INTEGER(IntKi)  :: WaveFieldMod      !< Wave field handling (-) (switch) 1: use individual HydroDyn inputs without adjustment, 2: adjust wave phases based on turbine offsets from farm origin [-]
     CHARACTER(1024) , DIMENSION(:), ALLOCATABLE  :: WT_FASTInFile      !< Name of input file for each turbine [-]
     CHARACTER(1024)  :: FTitle      !< The description line from the primary FAST.Farm input file [-]
     CHARACTER(1024)  :: OutFileRoot      !< The root name derived from the primary FAST.Farm input file [-]
@@ -247,6 +248,7 @@ IF (ALLOCATED(SrcParamData%WT_Position)) THEN
   END IF
     DstParamData%WT_Position = SrcParamData%WT_Position
 ENDIF
+    DstParamData%WaveFieldMod = SrcParamData%WaveFieldMod
 IF (ALLOCATED(SrcParamData%WT_FASTInFile)) THEN
   i1_l = LBOUND(SrcParamData%WT_FASTInFile,1)
   i1_u = UBOUND(SrcParamData%WT_FASTInFile,1)
@@ -461,6 +463,7 @@ ENDDO
     Int_BufSz   = Int_BufSz   + 2*2  ! WT_Position upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%WT_Position)  ! WT_Position
   END IF
+      Int_BufSz  = Int_BufSz  + 1  ! WaveFieldMod
   Int_BufSz   = Int_BufSz   + 1     ! WT_FASTInFile allocated yes/no
   IF ( ALLOCATED(InData%WT_FASTInFile) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! WT_FASTInFile upper/lower bounds for each dimension
@@ -631,6 +634,8 @@ ENDDO
         END DO
       END DO
   END IF
+    IntKiBuf(Int_Xferred) = InData%WaveFieldMod
+    Int_Xferred = Int_Xferred + 1
   IF ( .NOT. ALLOCATED(InData%WT_FASTInFile) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -941,6 +946,8 @@ ENDDO
         END DO
       END DO
   END IF
+    OutData%WaveFieldMod = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WT_FASTInFile not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE

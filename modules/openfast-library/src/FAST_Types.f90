@@ -159,6 +159,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: CompIce      !< Compute ice loading (switch) {Module_None; Module_IceF, Module_IceD} [-]
     LOGICAL  :: UseDWM      !< Use the DWM module in AeroDyn [-]
     LOGICAL  :: Linearize      !< Linearization analysis (flag) [-]
+    INTEGER(IntKi)  :: WaveFieldMod      !< Wave field handling (-) (switch) 1: use individual HydroDyn inputs without adjustment, 2: adjust wave phases based on turbine offsets from farm origin [-]
     CHARACTER(1024)  :: EDFile      !< The name of the ElastoDyn input file [-]
     CHARACTER(1024) , DIMENSION(MaxNBlades)  :: BDBldFile      !< Name of files containing BeamDyn inputs for each blade [-]
     CHARACTER(1024)  :: InflowFile      !< Name of file containing inflow wind input parameters [-]
@@ -732,7 +733,8 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: SensorType = SensorType_None      !< lidar sensor type, which should not be pulsed at the moment; this input should be replaced with a section in the InflowWind input file [-]
     LOGICAL  :: LidRadialVel      !< TRUE => return radial component, FALSE => return 'x' direction estimate [-]
     INTEGER(IntKi)  :: TurbineID = 0      !< ID number for turbine (used to create output file naming convention) [-]
-    REAL(ReKi) , DIMENSION(1:3)  :: TurbinePos      !< Initial position of turbine base (origin used in future for graphics) [m]
+    REAL(ReKi) , DIMENSION(1:3)  :: TurbinePos      !< Initial position of turbine base (origin used for graphics or in FAST.Farm) [m]
+    INTEGER(IntKi)  :: WaveFieldMod      !< Wave field handling (-) (switch) 1: use individual HydroDyn inputs without adjustment, 2: adjust wave phases based on turbine offsets from farm origin [-]
     INTEGER(IntKi)  :: NumSC2CtrlGlob      !< number of global controller inputs [from supercontroller] [-]
     INTEGER(IntKi)  :: NumSC2Ctrl      !< number of turbine specific controller inputs [from supercontroller] [-]
     INTEGER(IntKi)  :: NumCtrl2SC      !< number of controller outputs [to supercontroller] [-]
@@ -2107,6 +2109,7 @@ ENDIF
     DstParamData%CompIce = SrcParamData%CompIce
     DstParamData%UseDWM = SrcParamData%UseDWM
     DstParamData%Linearize = SrcParamData%Linearize
+    DstParamData%WaveFieldMod = SrcParamData%WaveFieldMod
     DstParamData%EDFile = SrcParamData%EDFile
     DstParamData%BDBldFile = SrcParamData%BDBldFile
     DstParamData%InflowFile = SrcParamData%InflowFile
@@ -2240,6 +2243,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! CompIce
       Int_BufSz  = Int_BufSz  + 1  ! UseDWM
       Int_BufSz  = Int_BufSz  + 1  ! Linearize
+      Int_BufSz  = Int_BufSz  + 1  ! WaveFieldMod
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%EDFile)  ! EDFile
       Int_BufSz  = Int_BufSz  + SIZE(InData%BDBldFile)*LEN(InData%BDBldFile)  ! BDBldFile
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%InflowFile)  ! InflowFile
@@ -2411,6 +2415,8 @@ ENDIF
     IntKiBuf(Int_Xferred) = TRANSFER(InData%UseDWM, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%Linearize, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%WaveFieldMod
     Int_Xferred = Int_Xferred + 1
     DO I = 1, LEN(InData%EDFile)
       IntKiBuf(Int_Xferred) = ICHAR(InData%EDFile(I:I), IntKi)
@@ -2704,6 +2710,8 @@ ENDIF
     OutData%UseDWM = TRANSFER(IntKiBuf(Int_Xferred), OutData%UseDWM)
     Int_Xferred = Int_Xferred + 1
     OutData%Linearize = TRANSFER(IntKiBuf(Int_Xferred), OutData%Linearize)
+    Int_Xferred = Int_Xferred + 1
+    OutData%WaveFieldMod = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     DO I = 1, LEN(OutData%EDFile)
       OutData%EDFile(I:I) = CHAR(IntKiBuf(Int_Xferred))
@@ -44116,6 +44124,7 @@ ENDIF
     DstExternInitTypeData%LidRadialVel = SrcExternInitTypeData%LidRadialVel
     DstExternInitTypeData%TurbineID = SrcExternInitTypeData%TurbineID
     DstExternInitTypeData%TurbinePos = SrcExternInitTypeData%TurbinePos
+    DstExternInitTypeData%WaveFieldMod = SrcExternInitTypeData%WaveFieldMod
     DstExternInitTypeData%NumSC2CtrlGlob = SrcExternInitTypeData%NumSC2CtrlGlob
     DstExternInitTypeData%NumSC2Ctrl = SrcExternInitTypeData%NumSC2Ctrl
     DstExternInitTypeData%NumCtrl2SC = SrcExternInitTypeData%NumCtrl2SC
@@ -44209,6 +44218,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! LidRadialVel
       Int_BufSz  = Int_BufSz  + 1  ! TurbineID
       Re_BufSz   = Re_BufSz   + SIZE(InData%TurbinePos)  ! TurbinePos
+      Int_BufSz  = Int_BufSz  + 1  ! WaveFieldMod
       Int_BufSz  = Int_BufSz  + 1  ! NumSC2CtrlGlob
       Int_BufSz  = Int_BufSz  + 1  ! NumSC2Ctrl
       Int_BufSz  = Int_BufSz  + 1  ! NumCtrl2SC
@@ -44268,6 +44278,8 @@ ENDIF
       ReKiBuf(Re_Xferred) = InData%TurbinePos(i1)
       Re_Xferred = Re_Xferred + 1
     END DO
+    IntKiBuf(Int_Xferred) = InData%WaveFieldMod
+    Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%NumSC2CtrlGlob
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%NumSC2Ctrl
@@ -44369,6 +44381,8 @@ ENDIF
       OutData%TurbinePos(i1) = ReKiBuf(Re_Xferred)
       Re_Xferred = Re_Xferred + 1
     END DO
+    OutData%WaveFieldMod = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
     OutData%NumSC2CtrlGlob = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%NumSC2Ctrl = IntKiBuf(Int_Xferred)

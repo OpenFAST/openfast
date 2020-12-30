@@ -190,6 +190,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
    p_FAST%UseSC = .FALSE.
    if (PRESENT(ExternInitData)) then
       p_FAST%TurbinePos = ExternInitData%TurbinePos
+      p_FAST%WaveFieldMod = ExternInitData%WaveFieldMod
       if( (ExternInitData%NumSC2CtrlGlob .gt. 0) .or. (ExternInitData%NumSC2Ctrl .gt. 0) .or. (ExternInitData%NumCtrl2SC .gt. 0)) then
          p_FAST%UseSC = .TRUE.
       end if
@@ -202,6 +203,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
 
    else
       p_FAST%TurbinePos = 0.0_ReKi
+      p_FAST%WaveFieldMod = 0
       CALL FAST_Init( p_FAST, m_FAST, y_FAST, t_initial, InputFile, ErrStat2, ErrMsg2 )                       ! We have the name of the input file from somewhere else (e.g. Simulink)
    end if
 
@@ -801,7 +803,8 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       Init%InData_HD%hasIce        = p_FAST%CompIce /= Module_None
       Init%InData_HD%Linearize     = p_FAST%Linearize
 
-         ! if wave field needs an offset, modify these values (added at request of SOWFA developers):
+         ! these values support wave field handling
+      Init%InData_HD%WaveFieldMod  = p_FAST%WaveFieldMod
       Init%InData_HD%PtfmLocationX = p_FAST%TurbinePos(1)
       Init%InData_HD%PtfmLocationY = p_FAST%TurbinePos(2)
 

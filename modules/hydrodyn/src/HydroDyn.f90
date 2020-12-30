@@ -443,8 +443,12 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
          
       InitLocal%Waves%UnSum           = InitLocal%UnSum
       InitLocal%WAMIT%Conv_Rdtn%UnSum = InitLocal%UnSum
-      InitLocal%Morison%UnSum         = InitLocal%UnSum      
-    
+      InitLocal%Morison%UnSum         = InitLocal%UnSum
+
+         ! distribute wave field and turbine location variables as needed to submodule initInputs
+      InitLocal%Waves%WaveFieldMod  = InitLocal%WaveFieldMod
+      InitLocal%Waves%PtfmLocationX = InitLocal%PtfmLocationX
+      InitLocal%Waves%PtfmLocationY = InitLocal%PtfmLocationY
       
          ! Now call each sub-module's *_Init subroutine
          ! to fully initialize each sub-module based on the necessary initialization data
@@ -694,7 +698,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
          
                InitLocal%Waves2%NWaveElev  = InitLocal%Waves2%NWaveKin
                InitLocal%Waves2%WaveElevxi = InitLocal%Waves2%WaveKinxi
-               InitLocal%Waves2%WaveElevyi = InitLocal%Waves2%WaveKinyi                        
+               InitLocal%Waves2%WaveElevyi = InitLocal%Waves2%WaveKinyi
                   
                CALL Waves2_Init(InitLocal%Waves2, m%u_Waves2, p%Waves2, x%Waves2, xd%Waves2, z%Waves2, OtherState%Waves2, &
                                           y%Waves2, m%Waves2, Interval, InitOut%Waves2, ErrStat2, ErrMsg2 )
