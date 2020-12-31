@@ -614,13 +614,13 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       if (p%nDOFM>0) then
          !>>> New
          ! NOTE: this introduces some hysteresis
-         !if (p%Floating) then
-         !   udotdot_TP(1:3) = matmul(Rg2b, u%TPMesh%TranslationAcc( :,1))
-         !   udotdot_TP(4:6) = matmul(Rg2b, u%TPMesh%RotationAcc(:,1)    )
-         !   Y1_Utp  = Y1_Utp + matmul(RRb2g, matmul(p%MBmmB, udotdot_TP))  
-         !else
+         if (p%Floating) then
+            udotdot_TP(1:3) = matmul(Rg2b, u%TPMesh%TranslationAcc( :,1))
+            udotdot_TP(4:6) = matmul(Rg2b, u%TPMesh%RotationAcc(:,1)    )
+            Y1_Utp  = Y1_Utp + matmul(RRb2g, matmul(p%MBmmB, udotdot_TP))  
+         else
             Y1_Utp  = Y1_Utp + matmul(p%MBmmB, m%udotdot_TP)  
-         !endif
+         endif
       endif
       if ( p%nDOFM > 0) then
          Y1_CB = -( matmul(p%C1_11, x%qm) + matmul(p%C1_12, x%qmdot) )
