@@ -61,6 +61,7 @@ IMPLICIT NONE
   TYPE, PUBLIC :: IfW_UniformWind_ParameterType
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: TData      !< Time array from the HH file [seconds]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: DELTA      !< HH Wind direction (angle) [degrees]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Upflow      !< HH upflow angle [degrees]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: V      !< HH horizontal wind speed [meters/sec]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: VZ      !< wind, including tower shadow, along the Z axis [meters/sec]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: HSHR      !< HH Horizontal linear shear [-]
@@ -75,6 +76,7 @@ IMPLICIT NONE
 ! =========  IfW_UniformWind_Intrp  =======
   TYPE, PUBLIC :: IfW_UniformWind_Intrp
     REAL(ReKi)  :: DELTA      !< HH Wind direction (angle) [degrees]
+    REAL(ReKi)  :: Upflow      !< HH upflow angle [degrees]
     REAL(ReKi)  :: V      !< HH horizontal wind speed [meters/sec]
     REAL(ReKi)  :: VZ      !< wind, including tower shadow, along the Z axis [meters/sec]
     REAL(ReKi)  :: HSHR      !< HH Horizontal linear shear [-]
@@ -734,6 +736,18 @@ IF (ALLOCATED(SrcParamData%DELTA)) THEN
   END IF
     DstParamData%DELTA = SrcParamData%DELTA
 ENDIF
+IF (ALLOCATED(SrcParamData%Upflow)) THEN
+  i1_l = LBOUND(SrcParamData%Upflow,1)
+  i1_u = UBOUND(SrcParamData%Upflow,1)
+  IF (.NOT. ALLOCATED(DstParamData%Upflow)) THEN 
+    ALLOCATE(DstParamData%Upflow(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%Upflow.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstParamData%Upflow = SrcParamData%Upflow
+ENDIF
 IF (ALLOCATED(SrcParamData%V)) THEN
   i1_l = LBOUND(SrcParamData%V,1)
   i1_u = UBOUND(SrcParamData%V,1)
@@ -826,6 +840,9 @@ ENDIF
 IF (ALLOCATED(ParamData%DELTA)) THEN
   DEALLOCATE(ParamData%DELTA)
 ENDIF
+IF (ALLOCATED(ParamData%Upflow)) THEN
+  DEALLOCATE(ParamData%Upflow)
+ENDIF
 IF (ALLOCATED(ParamData%V)) THEN
   DEALLOCATE(ParamData%V)
 ENDIF
@@ -890,6 +907,11 @@ ENDIF
   IF ( ALLOCATED(InData%DELTA) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! DELTA upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%DELTA)  ! DELTA
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! Upflow allocated yes/no
+  IF ( ALLOCATED(InData%Upflow) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! Upflow upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%Upflow)  ! Upflow
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! V allocated yes/no
   IF ( ALLOCATED(InData%V) ) THEN
@@ -978,6 +1000,21 @@ ENDIF
 
       DO i1 = LBOUND(InData%DELTA,1), UBOUND(InData%DELTA,1)
         ReKiBuf(Re_Xferred) = InData%DELTA(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%Upflow) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Upflow,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Upflow,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%Upflow,1), UBOUND(InData%Upflow,1)
+        ReKiBuf(Re_Xferred) = InData%Upflow(i1)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
@@ -1142,6 +1179,24 @@ ENDIF
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Upflow not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%Upflow)) DEALLOCATE(OutData%Upflow)
+    ALLOCATE(OutData%Upflow(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%Upflow.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%Upflow,1), UBOUND(OutData%Upflow,1)
+        OutData%Upflow(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! V not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
@@ -1273,6 +1328,7 @@ ENDIF
    ErrStat = ErrID_None
    ErrMsg  = ""
     DstIntrpData%DELTA = SrcIntrpData%DELTA
+    DstIntrpData%Upflow = SrcIntrpData%Upflow
     DstIntrpData%V = SrcIntrpData%V
     DstIntrpData%VZ = SrcIntrpData%VZ
     DstIntrpData%HSHR = SrcIntrpData%HSHR
@@ -1328,6 +1384,7 @@ ENDIF
   Db_BufSz  = 0
   Int_BufSz  = 0
       Re_BufSz   = Re_BufSz   + 1  ! DELTA
+      Re_BufSz   = Re_BufSz   + 1  ! Upflow
       Re_BufSz   = Re_BufSz   + 1  ! V
       Re_BufSz   = Re_BufSz   + 1  ! VZ
       Re_BufSz   = Re_BufSz   + 1  ! HSHR
@@ -1362,6 +1419,8 @@ ENDIF
   Int_Xferred = 1
 
     ReKiBuf(Re_Xferred) = InData%DELTA
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%Upflow
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%V
     Re_Xferred = Re_Xferred + 1
@@ -1404,6 +1463,8 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred  = 1
     OutData%DELTA = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%Upflow = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%V = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1

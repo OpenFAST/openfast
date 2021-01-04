@@ -274,7 +274,7 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    call PartitionDOFNodes(Init, m, p, ErrStat2, ErrMsg2) ; if(Failed()) return
    if (p%ExtraMoment) then 
       if (p%Floating) then
-         call WrScr('   Extra moment for Guyan loads and rotated CB-frame will be used (floating case detected)')
+         call WrScr('   Extra moment and rotated CB-frame will be used (floating case detected)')
       else
          call WrScr('   Extra moment will be included in loads (fixed-bottom case detected)')
       endif

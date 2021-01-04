@@ -20,15 +20,15 @@ contains
 
         CHARACTER(16)                   :: expected
 
-        expected = "unused.wnd"
+        expected = "unused"
         PriPath = ""
 
         InFileInfo = getInputFileData()
         CALL InflowWind_ParseInputFileInfo(InputFileData , InFileInfo, PriPath, TmpErrStat, TmpErrMsg)
 
-        @assertEqual(TmpErrStat, 0)
-        @assertEqual(InputFileData%BladedFF_FileName, trim(expected))
-        @assertEqual(InputFileData%BladedFF_TowerFile, .FALSE.)
+        @assertEqual(0, TmpErrStat, message='Error message: '//trim(TmpErrMsg)//NewLine//'ErrStat: ')
+        @assertEqual(trim(expected), InputFileData%BladedFF_FileName)
+        @assertEqual(.FALSE.,        InputFileData%BladedFF_TowerFile)
 
     end subroutine
 

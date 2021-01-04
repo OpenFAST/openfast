@@ -26,8 +26,8 @@ contains
         InFileInfo = getInputFileData()
         CALL InflowWind_ParseInputFileInfo(InputFileData , InFileInfo, PriPath, TmpErrStat, TmpErrMsg)
 
-        @assertEqual(TmpErrStat, 0)
-        @assertEqual(InputFileData%TSFF_FileName, trim(expected))
+        @assertEqual(0, TmpErrStat, message='Error message: '//trim(TmpErrMsg)//NewLine//'ErrStat: ')
+        @assertEqual(trim(expected), InputFileData%TSFF_FileName)
 
     end subroutine
 

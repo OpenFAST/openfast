@@ -126,6 +126,7 @@ CONTAINS
 
       ! cycle through Connects and identify Connect types
       DO I = 1, p%NConnects
+               
          TempString = m%ConnectList(I)%type
          CALL Conv2UC(TempString)
          if (TempString == 'FIXED') then
@@ -328,11 +329,30 @@ CONTAINS
 
 
       ! --------------------------------------------------------------------
+      ! size active tensioning inputs arrays based on highest channel number read from input file for now <<<<<<<
+      ! --------------------------------------------------------------------
+      
+      ! find the highest channel number
+      N = 0
+      DO I = 1, p%NLines
+         IF ( m%LineList(I)%CtrlChan > N ) then
+            N = m%LineList(I)%CtrlChan       
+         END IF
+      END DO   
+      
+      ! allocate the input arrays
+      ALLOCATE ( u%DeltaL(N), u%DeltaLdot(N), STAT = ErrStat2 )
+      
+
+      ! --------------------------------------------------------------------
       ! go through lines and initialize internal node positions using Catenary()
       ! --------------------------------------------------------------------
       DO I = 1, p%NLines
 
          N = m%LineList(I)%N ! for convenience
+         
+         !TODO: apply any initial adjustment of line length from active tensioning <<<<<<<<<<<<
+         ! >>> maybe this should be skipped <<<<
 
          ! set end node positions and velocities from connect objects
          m%LineList(I)%r(:,N) = m%ConnectList(m%LineList(I)%FairConnect)%r
@@ -729,6 +749,33 @@ CONTAINS
          END DO
       END DO
 
+      ! apply line length changes from active tensioning if applicable
+      DO L = 1, p%NLines
+         IF (m%LineList(L)%CtrlChan > 0) then
+            
+            ! do a bounds check to prohibit excessive segment length changes (until a method to add/remove segments is created)
+            IF ( u%DeltaL(m%LineList(L)%CtrlChan) > m%LineList(L)%UnstrLen / m%LineList(L)%N ) then
+                ErrStat = ErrID_Fatal
+                ErrMsg  = ' Active tension command will make a segment longer than the limit of twice its original length.'
+                print *, u%DeltaL(m%LineList(L)%CtrlChan), " is an increase of more than ", (m%LineList(L)%UnstrLen / m%LineList(L)%N)
+                print *, u%DeltaL
+                print*, m%LineList(L)%CtrlChan
+                RETURN
+            END IF
+            IF ( u%DeltaL(m%LineList(L)%CtrlChan) < -0.5 * m%LineList(L)%UnstrLen / m%LineList(L)%N ) then
+             ErrStat = ErrID_Fatal
+                ErrMsg  = ' Active tension command will make a segment shorter than the limit of half its original length.'
+                print *, u%DeltaL(m%LineList(L)%CtrlChan), " is a reduction of more than half of ", (m%LineList(L)%UnstrLen / m%LineList(L)%N)
+                print *, u%DeltaL
+                print*, m%LineList(L)%CtrlChan
+                RETURN
+            END IF                
+            
+            ! for now this approach only acts on the fairlead end segment, and assumes all segment lengths are otherwise equal size
+            m%LineList(L)%l( m%LineList(L)%N) = m%LineList(L)%UnstrLen/m%LineList(L)%N + u%DeltaL(m%LineList(L)%CtrlChan)       
+            m%LineList(L)%ld(m%LineList(L)%N) =                                       u%DeltaLdot(m%LineList(L)%CtrlChan)       
+         END IF
+      END DO      
 
       ! do Line force and acceleration calculations, also add end masses/forces to respective Connects
       DO L = 1, p%NLines
@@ -832,7 +879,7 @@ CONTAINS
             DO J = 1, 3
                Sum1 = Sum1 + (Line%r(J,I) - Line%r(J,I-1))*(Line%rd(J,I) - Line%rd(J,I-1))
             END DO
-            Line%lstrd(I) = Sum1/Line%lstr(I)                          ! strain rate of segment
+            Line%lstrd(I) = Sum1/Line%lstr(I)                          ! segment stretched length rate of change
 
     !       Line%V(I) = Pi/4.0 * d*d*Line%l(I)                        !volume attributed to segment
          END DO
@@ -880,7 +927,7 @@ CONTAINS
          ! loop through the segments
          DO I = 1, N
 
-            ! line tension
+            ! line tension, inherently including possibility of dynamic length changes in l term
             IF (Line%lstr(I)/Line%l(I) > 1.0) THEN
                DO J = 1, 3
                   Line%T(J,I) = LineProp%EA *( 1.0/Line%l(I) - 1.0/Line%lstr(I) ) * (Line%r(J,I)-Line%r(J,I-1))
@@ -891,9 +938,9 @@ CONTAINS
                END DO
             END if
 
-            ! line internal damping force  (this now uses a line-specific BA value (Line%BA vs. LineProp%BA), to support calculation of individual line BAs based on desired damping ratio)
+            ! line internal damping force based on line-specific BA value, including possibility of dynamic length changes in l and ld terms
             DO J = 1, 3
-               Line%Td(J,I) = Line%BA* ( Line%lstrd(I) / Line%l(I) ) * (Line%r(J,I)-Line%r(J,I-1)) / Line%lstr(I)  ! note new form of damping coefficient, BA rather than Cint
+               Line%Td(J,I) = Line%BA* ( Line%lstrd(I) -  Line%lstr(I)*Line%ld(I)/Line%l(I) )/Line%l(I)  * (Line%r(J,I)-Line%r(J,I-1)) / Line%lstr(I)
             END DO
          END DO
 
@@ -1247,6 +1294,8 @@ CONTAINS
          END DO
 
          t = t + dtM  ! update time
+         
+         !print *, " In TimeStep t=", t, ",  L1N8Pz=", M%LineList(1)%r(3,8), ", dL1=", u_interp%DeltaL(1)
 
          !----------------------------------------------------------------------------------
 
@@ -1288,7 +1337,7 @@ CONTAINS
 
    !=======================================================================
    SUBROUTINE SetupLine (Line, LineProp, rhoW, ErrStat, ErrMsg)
-      ! calculate initial profile of the line using quasi-static model
+      ! allocate arrays in line object
 
       TYPE(MD_Line), INTENT(INOUT)       :: Line          ! the single line object of interest
       TYPE(MD_LineProp), INTENT(INOUT)   :: LineProp      ! the single line property set for the line of interest
@@ -1319,7 +1368,7 @@ CONTAINS
       END IF
 
       ! allocate segment scalar quantities
-      ALLOCATE ( Line%l(N), Line%lstr(N), Line%lstrd(N), Line%V(N), STAT = ErrStat )
+      ALLOCATE ( Line%l(N), Line%ld(N), Line%lstr(N), Line%lstrd(N), Line%V(N), STAT = ErrStat )
       IF ( ErrStat /= ErrID_None ) THEN
          ErrMsg  = ' Error allocating segment scalar quantity arrays.'
          !CALL CleanUp()
@@ -1329,6 +1378,7 @@ CONTAINS
       ! assign values for l and V
       DO J=1,N
          Line%l(J) = Line%UnstrLen/REAL(N, DbKi)
+         Line%ld(J)= 0.0_DbKi
          Line%V(J) = Line%l(J)*0.25*Pi*LineProp%d*LineProp%d
       END DO
 

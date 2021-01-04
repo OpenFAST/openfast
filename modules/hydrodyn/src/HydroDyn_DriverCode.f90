@@ -198,6 +198,7 @@ PROGRAM HydroDynDriver
 !       Begin Simulation Setup
 !-------------------------------------------------------------------------------------
    
+print*,'PRP inputs file'
 
    IF ( drvrInitInp%PRPInputsMod == 2 ) THEN
       
@@ -320,6 +321,25 @@ PROGRAM HydroDynDriver
    CALL HydroDyn_DestroyInitInput(  InitInData,  ErrStat, ErrMsg )
    CALL HydroDyn_DestroyInitOutput( InitOutData, ErrStat, ErrMsg )
    
+
+   ! Create Mesh mappings
+   if ( u(1)%WAMITMesh%Initialized ) then
+      ! Create mesh mappings between (0,0,0) reference point mesh and the WAMIT body(ies) mesh [ 1 node per body ]
+      CALL MeshMapCreate( u(1)%PRPMesh, u(1)%WAMITMesh, HD_Ref_2_WB_P, ErrStat2, ErrMsg2  ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDynDriver')
+      if (errStat >= AbortErrLev) then
+         ! Clean up and exit
+         call HD_DvrCleanup()
+      end if
+   endif
+   if ( u(1)%Morison%Mesh%Initialized ) then
+      ! Create mesh mappings between (0,0,0) reference point mesh and the Morison mesh
+      CALL MeshMapCreate( u(1)%PRPMesh, u(1)%Morison%Mesh, HD_Ref_2_M_P, ErrStat2, ErrMsg2  ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDynDriver')
+      if (errStat >= AbortErrLev) then
+         ! Clean up and exit
+         call HD_DvrCleanup()
+      end if
+   endif
+
    
       
    ! Set any steady-state inputs, once before the time-stepping loop   
@@ -339,14 +359,6 @@ PROGRAM HydroDynDriver
       
       IF ( u(1)%WAMITMesh%Initialized ) THEN 
             
-         ! Create mesh mappings between (0,0,0) reference point mesh and the WAMIT body(ies) mesh [ 1 node per body ] 
-         
-         CALL MeshMapCreate( u(1)%PRPMesh, u(1)%WAMITMesh, HD_Ref_2_WB_P, ErrStat2, ErrMsg2  ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDynDriver')   
-         if (errStat >= AbortErrLev) then
-            ! Clean up and exit
-            call HD_DvrCleanup()
-         end if   
-  
             ! Map PRP kinematics to the WAMIT mesh with 1 to NBody nodes
          CALL Transfer_Point_to_Point( u(1)%PRPMesh, u(1)%WAMITMesh, HD_Ref_2_WB_P, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDynDriver')  
          if (errStat >= AbortErrLev) then
@@ -358,14 +370,6 @@ PROGRAM HydroDynDriver
       
       if ( u(1)%Morison%Mesh%Initialized ) then
          
-         ! Create mesh mappings between (0,0,0) reference point mesh and the Morison mesh
-         
-         CALL MeshMapCreate( u(1)%PRPMesh, u(1)%Morison%Mesh, HD_Ref_2_M_P, ErrStat2, ErrMsg2  ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDynDriver')   
-         if (errStat >= AbortErrLev) then
-            ! Clean up and exit
-            call HD_DvrCleanup()
-         end if   
-  
             ! Map PRP kinematics to the Morison mesh
          CALL Transfer_Point_to_Point( u(1)%PRPMesh, u(1)%Morison%Mesh, HD_Ref_2_M_P, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDynDriver')  
          if (errStat >= AbortErrLev) then
@@ -962,118 +966,6 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
    END IF
    
    
-   !!-------------------------------------------------------------------------------------------------
-   !! Morison INPUTS section
-   !!-------------------------------------------------------------------------------------------------
-   !
-   !   ! Header
-   !   
-   !CALL ReadCom( UnIn, FileName, 'Morison INPUTS header', ErrStat, ErrMsg, UnEchoLocal )
-   !
-   !IF ( ErrStat /= ErrID_None ) THEN
-   !   ErrMsg  = ' Failed to read Comment line.'
-   !   ErrStat = ErrID_Fatal
-   !   CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
-   !   CLOSE( UnIn )
-   !   RETURN
-   !END IF
-   !
-   !
-   !
-   !   ! MorisonInputsMod      
-   !    
-   !CALL ReadVar ( UnIn, FileName, InitInp%MorisonInputsMod, 'MorisonInputsMod', &
-   !                                 'Model for the Morison inputs', ErrStat, ErrMsg, UnEchoLocal )
-   !
-   !IF ( ErrStat /= ErrID_None ) THEN
-   !   ErrMsg  = ' Failed to read MorisonInputsMod parameter.'
-   !   ErrStat = ErrID_Fatal
-   !   CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
-   !   CLOSE( UnIn )
-   !   RETURN
-   !END IF   
-   !
-   !
-   !   ! MorisonInputsFile      
-   !    
-   !CALL ReadVar ( UnIn, FileName, InitInp%MorisonInputsFile, 'MorisonInputsFile', &
-   !                                 'Filename for the HydroDyn inputs', ErrStat, ErrMsg, UnEchoLocal )
-   !
-   !IF ( ErrStat /= ErrID_None ) THEN
-   !   ErrMsg  = ' Failed to read MorisonInputsFile parameter.'
-   !   ErrStat = ErrID_Fatal
-   !   CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
-   !   CLOSE( UnIn )
-   !   RETURN
-   !END IF   
-   !
-   !
-   !!-------------------------------------------------------------------------------------------------
-   !! Morison STEADY STATE INPUTS section
-   !!-------------------------------------------------------------------------------------------------
-   !
-   !   ! Header
-   !   
-   !CALL ReadCom( UnIn, FileName, 'Morison STEADY STATE INPUTS header', ErrStat, ErrMsg, UnEchoLocal )
-   !
-   !IF ( ErrStat /= ErrID_None ) THEN
-   !   ErrMsg  = ' Failed to read Comment line.'
-   !   ErrStat = ErrID_Fatal
-   !   CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
-   !   CLOSE( UnIn )
-   !   RETURN
-   !END IF
-   !
-   !
-   !
-   !      ! uMorisonInSteady
-   !      
-   !   CALL ReadAry ( UnIn, FileName, InitInp%uMorisonInSteady, 6, 'uMorisonInSteady', &
-   !                        'Morison Steady-state displacements and rotations.', ErrStat,  ErrMsg, UnEchoLocal)         
-   !    
-   !   IF ( ErrStat /= ErrID_None ) THEN
-   !      ErrMsg  = ' Failed to read uMorisonInSteady parameter.'
-   !      ErrStat = ErrID_Fatal
-   !      CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
-   !      CLOSE( UnIn )
-   !      RETURN
-   !   END IF
-   !
-   !
-   !      ! uDotMorisonInSteady
-   !      
-   !   CALL ReadAry ( UnIn, FileName, InitInp%uDotMorisonInSteady, 6, 'uDotMorisonInSteady', &
-   !                        'Morison Steady-state translational and rotational velocities.', ErrStat,  ErrMsg, UnEchoLocal)         
-   !    
-   !   IF ( ErrStat /= ErrID_None ) THEN
-   !      ErrMsg  = ' Failed to read uDotMorisonInSteady parameter.'
-   !      ErrStat = ErrID_Fatal
-   !      CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
-   !      CLOSE( UnIn )
-   !      RETURN
-   !   END IF
-   !   
-   !   
-   !      ! uDotDotMorisonInSteady
-   !      
-   !   CALL ReadAry ( UnIn, FileName, InitInp%uDotDotMorisonInSteady, 6, 'uDotDotMorisonInSteady', &
-   !                        'Morison Steady-state translational and rotational accelerations.', ErrStat,  ErrMsg, UnEchoLocal)         
-   !    
-   !   IF ( ErrStat /= ErrID_None ) THEN
-   !      ErrMsg  = ' Failed to read uDotDotMorisonInSteady parameter.'
-   !      ErrStat = ErrID_Fatal
-   !      CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
-   !      CLOSE( UnIn )
-   !      RETURN
-   !   END IF
-   !   
-   !IF ( InitInp%MorisonInputsMod /= 1 ) THEN
-   !   InitInp%uMorisonInSteady       = 0.0
-   !   InitInp%uDotMorisonInSteady    = 0.0
-   !   InitInp%uDotDotMorisonInSteady = 0.0
-   !END IF
-
-
    !-------------------------------------------------------------------------------------------------
    !> ### Waves elevation series section
    !-------------------------------------------------------------------------------------------------
