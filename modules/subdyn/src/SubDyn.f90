@@ -606,7 +606,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       endif
 
       ! Compute external force on internal (F_L) and interface nodes (F_I)
-      call GetExtForceOnInternalDOF(u, p, x, m, m%F_L, ErrStat2, ErrMsg2, ExtraMoment=(p%ExtraMoment), RotateLoads=.False.); if(Failed()) return
+      call GetExtForceOnInternalDOF(u, p, x, m, m%F_L, ErrStat2, ErrMsg2, ExtraMoment=(p%ExtraMoment), RotateLoads=.False., U_full=m%U_full); if(Failed()) return
       call GetExtForceOnInterfaceDOF(p, m%Fext, F_I)
 
       ! Compute reaction/coupling force at TP
@@ -2905,7 +2905,7 @@ END SUBROUTINE PartitionDOFNodes
 
 !> Compute displacements of all nodes in global system (Guyan + Rotated CB)
 !! 
-SUBROUTINE LeverArm(u, p, x, m, DU_full, bGuyan, bElastic)
+SUBROUTINE LeverArm(u, p, x, m, DU_full, bGuyan, bElastic, U_full)
    TYPE(SD_InputType),           INTENT(IN   )  :: u           !< Inputs at t
    TYPE(SD_ParameterType),target,INTENT(IN   )  :: p           !< Parameters
    TYPE(SD_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at t
@@ -2913,10 +2913,10 @@ SUBROUTINE LeverArm(u, p, x, m, DU_full, bGuyan, bElastic)
    LOGICAL,                      INTENT(IN   )  :: bGuyan      !< include Guyan Contribution
    LOGICAL,                      INTENT(IN   )  :: bElastic    !< include Elastic contribution
    REAL(ReKi), DIMENSION(:),     INTENT(  OUT)  :: DU_full      !< LeverArm in full system
+   REAL(ReKi), DIMENSION(:), OPTIONAL,   INTENT(IN   )  :: U_full  !< Displacements in full system
    !locals
    INTEGER(IntKi)               :: iSDNode
    REAL(ReKi)                   :: rotations(3)
-   !REAL(ReKi)                   :: ULS(p%nDOF__L),  UL0m(p%nDOF__L),  FLt(p%nDOF__L)  ! Temporary values in static improvement method
    INTEGER(IntKi), pointer      :: DOFList(:)
    ! Variables for Guayn rigid body motion
    real(ReKi), dimension(3)   ::  rIP  ! Vector from TP to rotated Node
@@ -2928,74 +2928,74 @@ SUBROUTINE LeverArm(u, p, x, m, DU_full, bGuyan, bElastic)
    ! --- Convert inputs to FEM DOFs and convenient 6-vector storage
    ! Compute the small rotation angles given the input direction cosine matrix
    rotations  = GetSmllRotAngs(u%TPMesh%Orientation(:,:,1), ErrStat2, Errmsg2);
-   m%u_TP       = (/REAL(u%TPMesh%TranslationDisp(:,1),ReKi), rotations/)
+   m%u_TP     = (/REAL(u%TPMesh%TranslationDisp(:,1),ReKi), rotations/)
 
-   m%UR_bar        = 0.0_ReKi
-   m%UL            = 0.0_ReKi
-   ! --- CB modes contribution to motion (L-DOF only)
-   if (bElastic .and. p%nDOFM > 0) then
-      m%UL = matmul( p%PhiM,  x%qm    )
-   end if
-   ! Static improvement (modify UL)
-   ! TODO
-   !if (p%SttcSolve/=idSIM_None) then
-   !   ! External force on internal nodes (F_L)
-   !   call GetExtForceOnInternalDOF(u, p, x, m, m%F_L, ErrStat2, ErrMsg2, ExtraMoment=(p%ExtraMoment.and..not.p%Floating), RotateLoads=(p%ExtraMoment.and.p%Floating)); if(Failed()) return
-   !   FLt  = MATMUL(p%PhiL_T      , m%F_L) ! NOTE: Gravity in F_L
-   !   ULS  = MATMUL(p%PhiLInvOmgL2, FLt ) 
-   !   if ( p%nDOFM > 0) then
-   !      UL0M = MATMUL(p%PhiLInvOmgL2(:,1:p%nDOFM), FLt(1:p%nDOFM)       )
-   !      ULS = ULS-UL0M
-   !   end if          
-   !   m%UL = m%UL + ULS 
-   !endif    
-   ! --- Adding Guyan contribution to R and L DOFs
-   if (bGuyan .and. .not.p%Floating) then
-      m%UR_bar        =                       matmul( p%TI      , m%u_TP       )
-      m%UL            =   m%UL            +   matmul( p%PhiRb_TI, m%u_TP       ) 
+   if (present(U_full)) then
+      ! Then we use it directly, U_full may contain Static improvement
+      DU_full=U_full
+      ! We remove u_TP for floating
+      if (p%Floating) then
+         do iSDNode = 1,p%nNodes
+            DOFList => p%NodesDOF(iSDNode)%List  ! Alias to shorten notations
+            DU_full(DOFList(1:3)) = DU_full(DOFList(1:3)) - m%u_TP(1:3)
+         enddo
+      endif 
    else
-      ! Guyan modes are rigid body modes, we will add them in the "Full system" later
-   endif
-   ! --- Build original DOF vectors (DOF before the CB reduction)
-   m%U_red       (p%IDI__) = m%UR_bar
-   m%U_red       (p%ID__L) = m%UL     
-   m%U_red       (p%IDC_Rb)= 0    ! NOTE: for now we don't have leader DOF at "C" (bottom)
-   m%U_red       (p%ID__F) = 0
-   if (p%reduced) then
-      DU_full        = matmul(p%T_red, m%U_red)
-   else
-      DU_full        = m%U_red
-   endif
-   ! --- Adding Guyan contribution for rigid body
-   if (bGuyan .and. p%Floating) then
-      ! For floating, we compute the Guyan motion directly (rigid body motion with TP as origin)
-      ! This introduce non-linear "rotations" effects, where the bottom node should "go up", and not just translate horizontally
-      Rb2g(1:3,1:3) = transpose(u%TPMesh%Orientation(:,:,1))
-      do iSDNode = 1,p%nNodes
-         DOFList => p%NodesDOF(iSDNode)%List  ! Alias to shorten notations
-         ! --- Guyan (rigid body) motion in global coordinates
-         rIP0(1:3)   = p%DP0(1:3, iSDNode)
-         rIP(1:3)    = matmul(Rb2g, rIP0)
-         duP(1:3)    = rIP - rIP0 ! NOTE: without m%u_TP(1:3)
-         !U_full(DOFList(1:3)) = U_full(DOFList(1:3)) + duP(1:3)       
-         ! >>> New
-         DU_full(DOFList(1:3)) = matmul(Rb2g, DU_full(DOFList(1:3))) + duP(1:3)       
-         DU_full(DOFList(4:6)) = matmul(Rb2g, DU_full(DOFList(4:6))) + rotations(1:3)
-      enddo
-   endif 
+      m%UR_bar        = 0.0_ReKi
+      m%UL            = 0.0_ReKi
+      ! --- CB modes contribution to motion (L-DOF only), NO STATIC IMPROVEMENT
+      if (bElastic .and. p%nDOFM > 0) then
+         m%UL = matmul( p%PhiM,  x%qm    )
+      end if
+      ! --- Adding Guyan contribution to R and L DOFs
+      if (bGuyan .and. .not.p%Floating) then
+         m%UR_bar        =                       matmul( p%TI      , m%u_TP       )
+         m%UL            =   m%UL            +   matmul( p%PhiRb_TI, m%u_TP       ) 
+      else
+         ! Guyan modes are rigid body modes, we will add them in the "Full system" later
+      endif
+      ! --- Build original DOF vectors (DOF before the CB reduction)
+      m%U_red       (p%IDI__) = m%UR_bar
+      m%U_red       (p%ID__L) = m%UL     
+      m%U_red       (p%IDC_Rb)= 0    ! NOTE: for now we don't have leader DOF at "C" (bottom)
+      m%U_red       (p%ID__F) = 0
+      if (p%reduced) then
+         DU_full        = matmul(p%T_red, m%U_red)
+      else
+         DU_full        = m%U_red
+      endif
+      ! --- Adding Guyan contribution for rigid body
+      if (bGuyan .and. p%Floating) then
+         ! For floating, we compute the Guyan motion directly (rigid body motion with TP as origin)
+         ! This introduce non-linear "rotations" effects, where the bottom node should "go up", and not just translate horizontally
+         Rb2g(1:3,1:3) = transpose(u%TPMesh%Orientation(:,:,1))
+         do iSDNode = 1,p%nNodes
+            DOFList => p%NodesDOF(iSDNode)%List  ! Alias to shorten notations
+            ! --- Guyan (rigid body) motion in global coordinates
+            rIP0(1:3)   = p%DP0(1:3, iSDNode)
+            rIP(1:3)    = matmul(Rb2g, rIP0)
+            duP(1:3)    = rIP - rIP0 ! NOTE: without m%u_TP(1:3)
+            !U_full(DOFList(1:3)) = U_full(DOFList(1:3)) + duP(1:3)       
+            ! >>> New
+            DU_full(DOFList(1:3)) = matmul(Rb2g, DU_full(DOFList(1:3))) + duP(1:3)       
+            DU_full(DOFList(4:6)) = matmul(Rb2g, DU_full(DOFList(4:6))) + rotations(1:3)
+         enddo
+      endif 
+   endif ! U_full no provided
 END SUBROUTINE LeverArm
 
 !------------------------------------------------------------------------------------------------------
 !> Construct force vector on internal DOF (L) from the values on the input mesh 
 !! First, the full vector of external forces is built on the non-reduced DOF
 !! Then, the vector is reduced using the Tred matrix
-SUBROUTINE GetExtForceOnInternalDOF(u, p, x, m, F_L, ErrStat, ErrMsg, ExtraMoment, RotateLoads)
+SUBROUTINE GetExtForceOnInternalDOF(u, p, x, m, F_L, ErrStat, ErrMsg, ExtraMoment, RotateLoads, U_full)
    type(SD_InputType),     intent(in   )  :: u ! Inputs
    type(SD_ParameterType), intent(in   )  :: p ! Parameters
    type(SD_ContinuousStateType), intent(in   )  :: x  !< Continuous states at t
    type(SD_MiscVarType),   intent(inout)  :: m ! Misc, for storage optimization of Fext and Fext_red
    logical               , intent(in   )  :: ExtraMoment ! If true add extra moment
    logical               , intent(in   )  :: RotateLoads ! If true, loads are rotated to body coordinate 
+   real(Reki), optional,   intent(in   )  :: U_full(:)      ! DOF displacements (Guyan + CB)
    real(ReKi)          ,   intent(out)    :: F_L(p%nDOF__L)  !< External force on internal nodes "L"
    integer(IntKi),         intent(  out)  :: ErrStat     !< Error status of the operation
    character(*),           intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
@@ -3018,8 +3018,8 @@ SUBROUTINE GetExtForceOnInternalDOF(u, p, x, m, F_L, ErrStat, ErrMsg, ExtraMomen
    real(ReKi), parameter :: myNaN = -9999998.989_ReKi 
 
    if (ExtraMoment) then
-      ! Compute node displacements for lever arm
-      call LeverArm(u, p, x, m, m%DU_full, bGuyan=.True., bElastic=.True.)
+      ! Compute node displacements "DU_full" for lever arm
+      call LeverArm(u, p, x, m, m%DU_full, bGuyan=.True., bElastic=.True., U_full=U_full)
    endif
 
    ! --- Build vector of external forces (including gravity) (Moment done below)  
