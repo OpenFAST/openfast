@@ -547,14 +547,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
             vP(1:3)     = u%TPMesh%TranslationVel(1:3,1) + Om_X_r
             aP(1:3)     = u%TPMesh%TranslationAcc(1:3,1) + cross_product(OmD, rIP)  + cross_product(Om, Om_X_r)
 
-            !m%U_full       (DOFList(1:3)) = m%U_full       (DOFList(1:3)) + duP(1:3)       
-            !m%U_full       (DOFList(4:6)) = m%U_full       (DOFList(4:6)) + rotations(1:3)
-            !m%U_full_dot   (DOFList(1:3)) = m%U_full_dot   (DOFList(1:3)) + vP(1:3)
-            !m%U_full_dot   (DOFList(4:6)) = m%U_full_dot   (DOFList(4:6)) + Om(1:3)
-            !m%U_full_dotdot(DOFList(1:3)) = m%U_full_dotdot(DOFList(1:3)) + aP(1:3)
-            !m%U_full_dotdot(DOFList(4:6)) = m%U_full_dotdot(DOFList(4:6)) + OmD(1:3)
-
-            ! >>> New
+            ! Full displacements CB-rotated + Guyan (KEEP ME)
             m%U_full       (DOFList(1:3)) = matmul(Rb2g, m%U_full       (DOFList(1:3))) + duP(1:3)       
             m%U_full       (DOFList(4:6)) = matmul(Rb2g, m%U_full       (DOFList(4:6))) + rotations(1:3)
             m%U_full_dot   (DOFList(1:3)) = matmul(Rb2g, m%U_full_dot   (DOFList(1:3))) + vP(1:3)
@@ -562,19 +555,14 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
             m%U_full_dotdot(DOFList(1:3)) = matmul(Rb2g, m%U_full_dotdot(DOFList(1:3))) + aP(1:3)
             m%U_full_dotdot(DOFList(4:6)) = matmul(Rb2g, m%U_full_dotdot(DOFList(4:6))) + OmD(1:3)
 
-            !m%U_full       (DOFList(1:3)) =                                               duP(1:3)       
-            !m%U_full       (DOFList(4:6)) =                                               rotations(1:3)
-            !m%U_full_dot   (DOFList(1:3)) =                                               vP(1:3)
-            !m%U_full_dot   (DOFList(4:6)) =                                               Om(1:3)
-            !m%U_full_dotdot(DOFList(1:3)) =                                               aP(1:3)
-            !m%U_full_dotdot(DOFList(4:6)) =                                               OmD(1:3)
-
-            ! TODO TODO which orientation to give for joints with more than 6 dofs?
+            ! NOTE: For now, displacements passed to HydroDyn are Guyan only!
             ! Construct the direction cosine matrix given the output angles
-            call SmllRotTrans( 'UR_bar input angles', m%U_full(DOFList(4)), m%U_full(DOFList(5)), m%U_full(DOFList(6)), DCM, '', ErrStat2, ErrMsg2)
+            !call SmllRotTrans( 'UR_bar input angles', m%U_full(DOFList(4)), m%U_full(DOFList(5)), m%U_full(DOFList(6)), DCM, '', ErrStat2, ErrMsg2)
+            call SmllRotTrans( 'UR_bar input angles', rotations(1), rotations(2), rotations(3), DCM, '', ErrStat2, ErrMsg2) ! NOTE: using only Guyan rotations
             call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SD_CalcOutput')
             y%Y2mesh%Orientation     (:,:,iSDNode)   = DCM
-            y%Y2mesh%TranslationDisp (:,iSDNode)     = m%U_full        (DOFList(1:3))
+            !y%Y2mesh%TranslationDisp (:,iSDNode)     = m%U_full        (DOFList(1:3)
+            y%Y2mesh%TranslationDisp (:,iSDNode)     = duP(1:3)                       ! NOTE: using only the Guyan Displacements
             y%Y2mesh%TranslationVel  (:,iSDNode)     = m%U_full_dot    (DOFList(1:3))
             y%Y2mesh%TranslationAcc  (:,iSDNode)     = m%U_full_dotdot (DOFList(1:3))
             y%Y2mesh%RotationVel     (:,iSDNode)     = m%U_full_dot    (DOFList(4:6))
@@ -606,7 +594,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       endif
 
       ! Compute external force on internal (F_L) and interface nodes (F_I)
-      call GetExtForceOnInternalDOF(u, p, x, m, m%F_L, ErrStat2, ErrMsg2, ExtraMoment=(p%ExtraMoment), RotateLoads=.False., U_full=m%U_full); if(Failed()) return
+      call GetExtForceOnInternalDOF(u, p, x, m, m%F_L, ErrStat2, ErrMsg2, ExtraMoment=(p%ExtraMoment), RotateLoads=.False.); if(Failed()) return
       call GetExtForceOnInterfaceDOF(p, m%Fext, F_I)
 
       ! Compute reaction/coupling force at TP
@@ -2912,13 +2900,13 @@ SUBROUTINE LeverArm(u, p, x, m, DU_full, bGuyan, bElastic, U_full)
    TYPE(SD_MiscVarType),         INTENT(INOUT)  :: m           !< Misc/optimization variables
    LOGICAL,                      INTENT(IN   )  :: bGuyan      !< include Guyan Contribution
    LOGICAL,                      INTENT(IN   )  :: bElastic    !< include Elastic contribution
-   REAL(ReKi), DIMENSION(:),     INTENT(  OUT)  :: DU_full      !< LeverArm in full system
+   REAL(ReKi), DIMENSION(:),     INTENT(  OUT)  :: DU_full     !< LeverArm in full system
    REAL(ReKi), DIMENSION(:), OPTIONAL,   INTENT(IN   )  :: U_full  !< Displacements in full system
    !locals
    INTEGER(IntKi)               :: iSDNode
    REAL(ReKi)                   :: rotations(3)
    INTEGER(IntKi), pointer      :: DOFList(:)
-   ! Variables for Guayn rigid body motion
+   ! Variables for Guyan rigid body motion
    real(ReKi), dimension(3)   ::  rIP  ! Vector from TP to rotated Node
    real(ReKi), dimension(3)   ::  rIP0 ! Vector from TP to Node (undeflected)
    real(ReKi), dimension(3)   ::  duP  ! Displacement of node due to rigid rotation
@@ -2941,28 +2929,29 @@ SUBROUTINE LeverArm(u, p, x, m, DU_full, bGuyan, bElastic, U_full)
          enddo
       endif 
    else
-      m%UR_bar        = 0.0_ReKi
-      m%UL            = 0.0_ReKi
       ! --- CB modes contribution to motion (L-DOF only), NO STATIC IMPROVEMENT
       if (bElastic .and. p%nDOFM > 0) then
          m%UL = matmul( p%PhiM,  x%qm    )
+      else
+         m%UL = 0.0_ReKi
       end if
       ! --- Adding Guyan contribution to R and L DOFs
       if (bGuyan .and. .not.p%Floating) then
-         m%UR_bar        =                       matmul( p%TI      , m%u_TP       )
-         m%UL            =   m%UL            +   matmul( p%PhiRb_TI, m%u_TP       ) 
+         m%UR_bar =         matmul( p%TI      , m%u_TP       )
+         m%UL     = m%UL +  matmul( p%PhiRb_TI, m%u_TP       ) 
       else
          ! Guyan modes are rigid body modes, we will add them in the "Full system" later
+         m%UR_bar = 0.0_ReKi
       endif
       ! --- Build original DOF vectors (DOF before the CB reduction)
-      m%U_red       (p%IDI__) = m%UR_bar
-      m%U_red       (p%ID__L) = m%UL     
-      m%U_red       (p%IDC_Rb)= 0    ! NOTE: for now we don't have leader DOF at "C" (bottom)
-      m%U_red       (p%ID__F) = 0
+      m%U_red(p%IDI__) = m%UR_bar
+      m%U_red(p%ID__L) = m%UL     
+      m%U_red(p%IDC_Rb)= 0    ! NOTE: for now we don't have leader DOF at "C" (bottom)
+      m%U_red(p%ID__F) = 0
       if (p%reduced) then
-         DU_full        = matmul(p%T_red, m%U_red)
+         DU_full = matmul(p%T_red, m%U_red)
       else
-         DU_full        = m%U_red
+         DU_full = m%U_red
       endif
       ! --- Adding Guyan contribution for rigid body
       if (bGuyan .and. p%Floating) then
@@ -2975,8 +2964,7 @@ SUBROUTINE LeverArm(u, p, x, m, DU_full, bGuyan, bElastic, U_full)
             rIP0(1:3)   = p%DP0(1:3, iSDNode)
             rIP(1:3)    = matmul(Rb2g, rIP0)
             duP(1:3)    = rIP - rIP0 ! NOTE: without m%u_TP(1:3)
-            !U_full(DOFList(1:3)) = U_full(DOFList(1:3)) + duP(1:3)       
-            ! >>> New
+            ! Full diplacements Guyan + rotated CB (if asked)
             DU_full(DOFList(1:3)) = matmul(Rb2g, DU_full(DOFList(1:3))) + duP(1:3)       
             DU_full(DOFList(4:6)) = matmul(Rb2g, DU_full(DOFList(4:6))) + rotations(1:3)
          enddo
@@ -3019,7 +3007,7 @@ SUBROUTINE GetExtForceOnInternalDOF(u, p, x, m, F_L, ErrStat, ErrMsg, ExtraMomen
 
    if (ExtraMoment) then
       ! Compute node displacements "DU_full" for lever arm
-      call LeverArm(u, p, x, m, m%DU_full, bGuyan=.True., bElastic=.True., U_full=U_full)
+      call LeverArm(u, p, x, m, m%DU_full, bGuyan=.True., bElastic=.False.)!, U_full=U_full)
    endif
 
    ! --- Build vector of external forces (including gravity) (Moment done below)  
