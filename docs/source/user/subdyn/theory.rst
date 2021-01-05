@@ -216,7 +216,7 @@ are the start and end joints of the member (or nodes of the element of interest)
 
 If :math:`{X_E = X_S}` and :math:`{Z_E = Z_S}`, the :math:`{[ \mathbf{D_c} ]}` matrix can be found as follows:
 
-if :math:`{Z_E < Z_S}` then
+if :math:`{Z_E >= Z_S}` then
 
  .. math:: 	:label: Dc_spec1
    
