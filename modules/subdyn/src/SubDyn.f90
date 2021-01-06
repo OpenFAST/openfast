@@ -470,12 +470,12 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       m%UL_dotdot     = 0.0_ReKi
       ! --- CB modes contribution to motion (L-DOF only)
       if ( p%nDOFM > 0) then
-         if (p%Floating) then ! >>> New
-            udotdot_TP(1:3) = matmul(Rg2b, u%TPMesh%TranslationAcc( :,1))
-            udotdot_TP(4:6) = matmul(Rg2b, u%TPMesh%RotationAcc(:,1)    )
-         else
-            udotdot_TP = (/u%TPMesh%TranslationAcc( :,1), u%TPMesh%RotationAcc(:,1)/)
-         endif
+         !if (p%Floating) then ! >>> Rotate All
+         !   udotdot_TP(1:3) = matmul(Rg2b, u%TPMesh%TranslationAcc( :,1))
+         !   udotdot_TP(4:6) = matmul(Rg2b, u%TPMesh%RotationAcc(:,1)    )
+         !else
+         udotdot_TP = (/u%TPMesh%TranslationAcc( :,1), u%TPMesh%RotationAcc(:,1)/)
+         !endif
          m%UL            = matmul( p%PhiM,  x%qm    )
          m%UL_dot        = matmul( p%PhiM,  x%qmdot )
          m%UL_dotdot     = matmul( p%C2_61, x%qm    )    + matmul( p%C2_62   , x%qmdot )    & 
@@ -600,21 +600,21 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       ! Compute reaction/coupling force at TP
       Y1_Utp  = - (matmul(p%KBB, m%u_TP) + matmul(p%CBB, m%udot_TP) + matmul(p%MBB, m%udotdot_TP) )
       if (p%nDOFM>0) then
-         !>>> New
+         !>>> Rotate All
          ! NOTE: this introduces some hysteresis
-         if (p%Floating) then
-            udotdot_TP(1:3) = matmul(Rg2b, u%TPMesh%TranslationAcc( :,1))
-            udotdot_TP(4:6) = matmul(Rg2b, u%TPMesh%RotationAcc(:,1)    )
-            Y1_Utp  = Y1_Utp + matmul(RRb2g, matmul(p%MBmmB, udotdot_TP))  
-         else
-            Y1_Utp  = Y1_Utp + matmul(p%MBmmB, m%udotdot_TP)  
-         endif
+         !if (p%Floating) then
+         !   udotdot_TP(1:3) = matmul(Rg2b, u%TPMesh%TranslationAcc( :,1))
+         !   udotdot_TP(4:6) = matmul(Rg2b, u%TPMesh%RotationAcc(:,1)    )
+         !   Y1_Utp  = Y1_Utp + matmul(RRb2g, matmul(p%MBmmB, udotdot_TP))  
+         !else
+         Y1_Utp  = Y1_Utp + matmul(p%MBmmB, m%udotdot_TP)  
+         !endif
       endif
       if ( p%nDOFM > 0) then
          Y1_CB = -( matmul(p%C1_11, x%qm) + matmul(p%C1_12, x%qmdot) )
-         if (p%Floating) then
-            Y1_CB = matmul(RRb2g, Y1_CB) !>>> New 
-         endif
+         !if (p%Floating) then
+         !   Y1_CB = matmul(RRb2g, Y1_CB) !>>> Rotate All
+         !endif
       else
          Y1_CB = 0.0_ReKi
       endif
@@ -623,9 +623,9 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       if (.not.(p%ExtraMoment.and.p%Floating)) then
          Y1_CB_L = - (matmul(p%D1_141, m%F_L)) ! Uses non rotated loads
       endif
-      if (p%Floating) then
-         Y1_CB_L = matmul(RRb2g, Y1_CB_L) !>>> New
-      endif
+      !if (p%Floating) then
+      !   Y1_CB_L = matmul(RRb2g, Y1_CB_L) !>>> Rotate All
+      !endif
 
       Y1 = Y1_CB + Y1_Utp + Y1_CB_L+ Y1_Guy_L + Y1_Guy_R 
       ! KEEP ME
@@ -743,11 +743,11 @@ SUBROUTINE SD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSta
       CALL GetExtForceOnInternalDOF(u, p, x, m, m%F_L, ErrStat2, ErrMsg2, ExtraMoment=(p%ExtraMoment.and..not.p%Floating), RotateLoads=(p%ExtraMoment.and.p%Floating))
 
       udotdot_TP = (/u%TPMesh%TranslationAcc(:,1), u%TPMesh%RotationAcc(:,1)/)
-      if (p%Floating) then
-         ! >>> New udotdot_TP to body coordinates
-         udotdot_TP(1:3) = matmul( u%TPMesh%Orientation(:,:,1), udotdot_TP(1:3) ) 
-         udotdot_TP(4:6) = matmul( u%TPMesh%Orientation(:,:,1), udotdot_TP(4:6) ) 
-      endif
+      !if (p%Floating) then
+      !   ! >>> Rotate All - udotdot_TP to body coordinates
+      !   udotdot_TP(1:3) = matmul( u%TPMesh%Orientation(:,:,1), udotdot_TP(1:3) ) 
+      !   udotdot_TP(4:6) = matmul( u%TPMesh%Orientation(:,:,1), udotdot_TP(4:6) ) 
+      !endif
       
       ! State equation
       dxdt%qm= x%qmdot
@@ -1740,21 +1740,21 @@ SUBROUTINE SD_AM2( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg 
    CALL SD_Input_ExtrapInterp( u, utimes, u_interp, t, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_AM2')
    CALL GetExtForceOnInternalDOF(u_interp, p, x, m, m%F_L, ErrStat2, ErrMsg2, ExtraMoment=(p%ExtraMoment.and..not.p%Floating), RotateLoads=(p%ExtraMoment.and.p%Floating))
    m%udotdot_TP = (/u_interp%TPMesh%TranslationAcc(:,1), u_interp%TPMesh%RotationAcc(:,1)/)
-   if (p%Floating) then
-      ! >>> New udotdot_TP to body coordinates
-      m%udotdot_TP(1:3) = matmul(u_interp%TPMesh%Orientation(:,:,1), m%udotdot_TP(1:3)) 
-      m%udotdot_TP(4:6) = matmul(u_interp%TPMesh%Orientation(:,:,1), m%udotdot_TP(4:6)) 
-   endif
+   !if (p%Floating) then
+   !   ! >>> Rotate All - udotdot_TP to body coordinates
+   !   m%udotdot_TP(1:3) = matmul(u_interp%TPMesh%Orientation(:,:,1), m%udotdot_TP(1:3)) 
+   !   m%udotdot_TP(4:6) = matmul(u_interp%TPMesh%Orientation(:,:,1), m%udotdot_TP(4:6)) 
+   !endif
                 
    ! extrapolate u to find u_interp = u(t + dt)=u_n+1
    CALL SD_Input_ExtrapInterp(u, utimes, u_interp, t+p%SDDeltaT, ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_AM2')
    CALL GetExtForceOnInternalDOF(u_interp, p, x, m, F_L2, ErrStat2, ErrMsg2, ExtraMoment=(p%ExtraMoment.and..not.p%Floating), RotateLoads=(p%ExtraMoment.and.p%Floating))
    udotdot_TP2 = (/u_interp%TPMesh%TranslationAcc(:,1), u_interp%TPMesh%RotationAcc(:,1)/)
-   if (p%Floating) then
-      ! >>> New udotdot_TP to body coordinates
-      udotdot_TP2(1:3) = matmul(u_interp%TPMesh%Orientation(:,:,1), udotdot_TP2(1:3)) 
-      udotdot_TP2(4:6) = matmul(u_interp%TPMesh%Orientation(:,:,1), udotdot_TP2(4:6)) 
-   endif
+   !if (p%Floating) then
+   !   ! >>> Rotate All - udotdot_TP to body coordinates
+   !   udotdot_TP2(1:3) = matmul(u_interp%TPMesh%Orientation(:,:,1), udotdot_TP2(1:3)) 
+   !   udotdot_TP2(4:6) = matmul(u_interp%TPMesh%Orientation(:,:,1), udotdot_TP2(4:6)) 
+   !endif
    
    ! calculate (u_n + u_n+1)/2
    udotdot_TP2 = 0.5_ReKi * ( udotdot_TP2 + m%udotdot_TP )
@@ -3576,10 +3576,10 @@ SUBROUTINE StateMatrices(p, ErrStat, ErrMsg, AA, BB, CC, DD, u)
       if (nCB>0) then
          CC(1:nY,1:nCB )   = - p%C1_11
          CC(1:nY,nCB+1:nX) = - p%C1_12
-         if (p%Floating .and. present(u)) then
-            CC(1:3,:) = matmul(transpose(u%TPMesh%Orientation(:,:,1)), CC(1:3,:)) ! >>> New 
-            CC(4:6,:) = matmul(transpose(u%TPMesh%Orientation(:,:,1)), CC(4:6,:)) ! >>> New 
-         endif
+         !if (p%Floating .and. present(u)) then
+         !   CC(1:3,:) = matmul(transpose(u%TPMesh%Orientation(:,:,1)), CC(1:3,:)) ! >>> Rotate All
+         !   CC(4:6,:) = matmul(transpose(u%TPMesh%Orientation(:,:,1)), CC(4:6,:)) ! >>> Rotate All
+         !endif
       endif
    endif
 
@@ -3594,7 +3594,7 @@ SUBROUTINE StateMatrices(p, ErrStat, ErrMsg, AA, BB, CC, DD, u)
       if (p%nDOFM>0) then
          if (p%Floating .and. present(u)) then
             ! TODO TODO rotate it A MBmmB A^t
-            !DD(1:3,:) = DD(1:3,:) + matmul(transpose(u%TPMesh%Orientation(:,:,1)), p%MBmmB(1:3,:) ! >>> New 
+            !DD(1:3,:) = DD(1:3,:) + matmul(transpose(u%TPMesh%Orientation(:,:,1)), p%MBmmB(1:3,:) ! >>> Rotate All
             DD(1:nY,13:18 ) = DD(1:nY,13:18 )+ p%MBmmB
          else
             DD(1:nY,13:18 ) = DD(1:nY,13:18 )+ p%MBmmB
