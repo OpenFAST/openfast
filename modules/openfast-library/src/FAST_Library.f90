@@ -53,10 +53,16 @@ subroutine FAST_AllocateTurbines(nTurbines, ErrStat_c, ErrMsg_c) BIND (C, NAME='
       call wrscr1('Proceeding anyway')
    end if
 
-   allocate(Turbine(0:NumTurbines-1)) !Allocate in C style because most of the other Turbine properties from the input file are in C style inside the C++ driver
+   allocate(Turbine(0:NumTurbines-1),Stat=ErrStat) !Allocate in C style because most of the other Turbine properties from the input file are in C style inside the C++ driver
 
-   ErrStat_c = ErrID_None
-   ErrMsg_c = ''
+   if (ErrStat /= 0) then
+      ErrStat_c = ErrID_Fatal
+      ErrMsg    = "Error allocating turbine data."//C_NULL_CHAR
+   else
+      ErrStat_c = ErrID_None
+      ErrMsg = " "//C_NULL_CHAR
+   end if
+   ErrMsg_c  = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_c )
    
 end subroutine FAST_AllocateTurbines
 
@@ -74,7 +80,7 @@ subroutine FAST_DeallocateTurbines(ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_Deal
    end if
 
    ErrStat_c = ErrID_None
-   ErrMsg_c = ''
+   ErrMsg_c = C_NULL_CHAR
 end subroutine
 
 subroutine FAST_Sizes(iTurb, TMax, InitInpAry, InputFileName_c, AbortErrLev_c, NumOuts_c, dt_c, ErrStat_c, ErrMsg_c, ChannelNames_c) BIND (C, NAME='FAST_Sizes')
@@ -184,7 +190,8 @@ subroutine FAST_Start(iTurb, NumInputs_c, NumOutputs_c, InputAry, OutputAry, Err
 #ifdef SIMULINK_DirectFeedThrough   
    IF(  NumInputs_c /= NumFixedInputs .AND. NumInputs_c /= NumFixedInputs+3 ) THEN
       ErrStat_c = ErrID_Fatal
-      ErrMsg_c  = TRANSFER( "FAST_Start:size of InputAry is invalid."//C_NULL_CHAR, ErrMsg_c )
+      ErrMsg  = "FAST_Start:size of InputAry is invalid."//C_NULL_CHAR
+      ErrMsg_c  = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_c )
       RETURN
    END IF
 
