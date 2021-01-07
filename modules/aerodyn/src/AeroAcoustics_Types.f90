@@ -97,7 +97,8 @@ IMPLICIT NONE
     CHARACTER(1024)  :: TICalcTabFile      !< Name of the file containing the table for incident turbulence intensity [-]
     CHARACTER(1024)  :: FTitle      !< File Title: the 2nd line of the input file, which contains a description of its contents [-]
     REAL(DbKi)  :: AAStart      !< Time after which to calculate AA [s]
-    REAL(ReKi)  :: z0_AA      !< Surface roughness [-]
+    REAL(ReKi)  :: Lturb      !< Turbulent lengthscale in Amiet model [-]
+    REAL(ReKi)  :: AvgV      !< Average wind speed to compute incident turbulence intensity [m]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: ReListBL      !<  [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: AoAListBL      !<  [deg]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: Pres_DispThick      !<  [-]
@@ -210,7 +211,8 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: total_sampleTI      !< Total FFT Sample amount for dissipation calculation [-]
     INTEGER(IntKi)  :: AA_Bl_Prcntge      !< The Percentage of the Blade which the noise is calculated [%]
     INTEGER(IntKi)  :: startnode      !< Corersponding node to the noise calculation percentage of the blade [-]
-    REAL(ReKi)  :: z0_aa      !< Surface roughness [m]
+    REAL(ReKi)  :: Lturb      !< Turbulent lengthscale in Amiet model [m]
+    REAL(ReKi)  :: AvgV      !< Average wind speed to compute incident turbulence intensity [m]
     REAL(ReKi)  :: dz_turb_in      !<  [m]
     REAL(ReKi)  :: dy_turb_in      !<  [m]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: TI_Grid_In      !<  [-]
@@ -1715,7 +1717,8 @@ ENDIF
     DstInputFileData%TICalcTabFile = SrcInputFileData%TICalcTabFile
     DstInputFileData%FTitle = SrcInputFileData%FTitle
     DstInputFileData%AAStart = SrcInputFileData%AAStart
-    DstInputFileData%z0_AA = SrcInputFileData%z0_AA
+    DstInputFileData%Lturb = SrcInputFileData%Lturb
+    DstInputFileData%AvgV = SrcInputFileData%AvgV
 IF (ALLOCATED(SrcInputFileData%ReListBL)) THEN
   i1_l = LBOUND(SrcInputFileData%ReListBL,1)
   i1_u = UBOUND(SrcInputFileData%ReListBL,1)
@@ -2046,7 +2049,8 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%TICalcTabFile)  ! TICalcTabFile
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%FTitle)  ! FTitle
       Db_BufSz   = Db_BufSz   + 1  ! AAStart
-      Re_BufSz   = Re_BufSz   + 1  ! z0_AA
+      Re_BufSz   = Re_BufSz   + 1  ! Lturb
+      Re_BufSz   = Re_BufSz   + 1  ! AvgV
   Int_BufSz   = Int_BufSz   + 1     ! ReListBL allocated yes/no
   IF ( ALLOCATED(InData%ReListBL) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! ReListBL upper/lower bounds for each dimension
@@ -2276,7 +2280,9 @@ ENDIF
     END DO ! I
     DbKiBuf(Db_Xferred) = InData%AAStart
     Db_Xferred = Db_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%z0_AA
+    ReKiBuf(Re_Xferred) = InData%Lturb
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%AvgV
     Re_Xferred = Re_Xferred + 1
   IF ( .NOT. ALLOCATED(InData%ReListBL) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -2735,7 +2741,9 @@ ENDIF
     END DO ! I
     OutData%AAStart = DbKiBuf(Db_Xferred)
     Db_Xferred = Db_Xferred + 1
-    OutData%z0_AA = ReKiBuf(Re_Xferred)
+    OutData%Lturb = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%AvgV = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! ReListBL not allocated
     Int_Xferred = Int_Xferred + 1
@@ -5842,7 +5850,8 @@ ENDIF
     DstParamData%total_sampleTI = SrcParamData%total_sampleTI
     DstParamData%AA_Bl_Prcntge = SrcParamData%AA_Bl_Prcntge
     DstParamData%startnode = SrcParamData%startnode
-    DstParamData%z0_aa = SrcParamData%z0_aa
+    DstParamData%Lturb = SrcParamData%Lturb
+    DstParamData%AvgV = SrcParamData%AvgV
     DstParamData%dz_turb_in = SrcParamData%dz_turb_in
     DstParamData%dy_turb_in = SrcParamData%dy_turb_in
 IF (ALLOCATED(SrcParamData%TI_Grid_In)) THEN
@@ -6425,7 +6434,8 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! total_sampleTI
       Int_BufSz  = Int_BufSz  + 1  ! AA_Bl_Prcntge
       Int_BufSz  = Int_BufSz  + 1  ! startnode
-      Re_BufSz   = Re_BufSz   + 1  ! z0_aa
+      Re_BufSz   = Re_BufSz   + 1  ! Lturb
+      Re_BufSz   = Re_BufSz   + 1  ! AvgV
       Re_BufSz   = Re_BufSz   + 1  ! dz_turb_in
       Re_BufSz   = Re_BufSz   + 1  ! dy_turb_in
   Int_BufSz   = Int_BufSz   + 1     ! TI_Grid_In allocated yes/no
@@ -6811,7 +6821,9 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%startnode
     Int_Xferred = Int_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%z0_aa
+    ReKiBuf(Re_Xferred) = InData%Lturb
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%AvgV
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%dz_turb_in
     Re_Xferred = Re_Xferred + 1
@@ -7647,7 +7659,9 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     OutData%startnode = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
-    OutData%z0_aa = ReKiBuf(Re_Xferred)
+    OutData%Lturb = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%AvgV = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%dz_turb_in = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1

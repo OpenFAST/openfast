@@ -156,7 +156,7 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
     p%KinVisc          = InitInp%KinVisc
     p%SpdSound         = InitInp%SpdSound
     p%HubHeight        = InitInp%HubHeight
-    p%z0_AA            = InputFileData%z0_AA
+    p%Lturb            = InputFileData%Lturb
     p%dy_turb_in       = InputFileData%dy_turb_in
     p%dz_turb_in       = InputFileData%dz_turb_in
     p%NrObsLoc         = InputFileData%NrObsLoc
@@ -164,6 +164,7 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
 
     call AllocAry(p%TI_Grid_In,size(InputFileData%TI_Grid_In,1), size(InputFileData%TI_Grid_In,2),  'p%TI_Grid_In', errStat2, errMsg2); if(Failed()) return
     p%TI_Grid_In=InputFileData%TI_Grid_In
+    p%AvgV=InputFileData%AvgV
 
     ! Copy AFInfo into AA module
     ! TODO Allocate AFInfo   and AFindx variables (DONE AND DONE) 
@@ -652,7 +653,7 @@ subroutine AA_UpdateStates( t, n, m, u, p,  xd,  errStat, errMsg )
    character(ErrMsgLen)                         :: ErrMsg2           ! temporary Error message
    character(*), parameter                      :: RoutineName = 'AA_UpdateStates'
    REAL(ReKi),DIMENSION(p%NumBlNds,p%numBlades) :: TEMPSTD  ! temporary standard deviation variable
-   REAL(ReKi)                                   :: tempsingle,tempmean,angletemp,abs_le_x  ! temporary standard deviation variable
+   REAL(ReKi)                                   :: tempsingle,tempmean,angletemp,abs_le_x,ti_vx,U1,U2   ! temporary standard deviation variable
    integer(intKi)                               :: i,j,k,rco, y0_a,y1_a,z0_a,z1_a
    logical    :: exist
    REAL(ReKi) :: yi_a,zi_a,yd_a,zd_a,c00_a,c10_a
@@ -724,8 +725,16 @@ subroutine AA_UpdateStates( t, n, m, u, p,  xd,  errStat, errMsg )
                yd_a=yi_a-y0_a
                c00_a=(1.0_ReKi-yd_a)*p%TI_Grid_In(z0_a+1,y0_a+1)+yd_a*p%TI_Grid_In(z0_a+1,y1_a+1)
                c10_a=(1.0_ReKi-yd_a)*p%TI_Grid_In(z1_a+1,y0_a+1)+yd_a*p%TI_Grid_In(z1_a+1,y1_a+1)
-               ! 2 points
-               xd%TIVx(j,i)=(1.0_ReKi-zd_a)*c00_a+zd_a*c10_a
+               
+               ! This is the turbulence intensity of the wind at the location of the blade i at node j
+               ti_vx = (1.0_ReKi-zd_a)*c00_a+zd_a*c10_a
+               ! With some velocity triangles, we convert it into the incident turbulence intensity, i.e. the TI used by the Amiet model
+               U1 = u%Vrel(J,I) 
+               U2 = SQRT((p%AvgV*(1.+ti_vx))**2. + U1**2. - p%AvgV**2.)
+               ! xd%TIVx(j,i)=(U2-U1)/U1
+               xd%TIVx(j,i)=p%AvgV*ti_vx/U1
+               
+               
                if (i.eq.p%NumBlades) then 
                    if (j.eq.p%NumBlNds) then 
                    endif
@@ -1686,7 +1695,6 @@ SUBROUTINE InflowNoise(AlphaNoise,Chord,U,THETA,PHI,d,RObs,MeanVNoise,TINoise,LE
   REAL(ReKi)                   :: Directivity                                     ! Directivity correction factor
   REAL(ReKi)                   :: Frequency_cutoff                                ! Cutoff frequency between
   REAL(ReKi)                   :: LFC                                             ! low-frequency correction factor
-  REAL(ReKi)                   :: LTurb                                           ! turbulence length scale (isotropic integral scale parameter from IEC standard (Von Karman))
   REAL(ReKi)                   :: Mach                                            ! local mach number
   REAL(ReKi)                   :: Sears                                           ! Sears function
   REAL(ReKi)                   :: SPLhigh                                         ! predicted high frequency sound pressure level
@@ -1709,7 +1717,7 @@ SUBROUTINE InflowNoise(AlphaNoise,Chord,U,THETA,PHI,d,RObs,MeanVNoise,TINoise,LE
    
    ! This part is recently added for height and surface roughness dependent estimation of turbulence intensity and turbulence scales
    !%Lturb=300*(Z/300)^(0.46+0.074*log(p%z0_aa));              !% Gives larger  length scale
-   Lturb=25.d0*LE_Location**(0.35)*p%z0_aa**(-0.063)               !% Gives smaller length scale        ! Wei Jun Zhu, Modeling of Aerodynamically generated Noise From Wind Turbines
+   ! Lturb=25.d0*LE_Location**(0.35)*p%z0_aa**(-0.063)               !% Gives smaller length scale        ! Wei Jun Zhu, Modeling of Aerodynamically generated Noise From Wind Turbines
    ! L_Gammas=0.24+0.096*log10(p%z0_aa)+0.016*(log10(p%z0_aa))**2;   !% Can be computed or just give it a value.    ! Wei Jun Zhu, Modeling of Aerodynamically generated Noise From Wind Turbines
    !tinooisess=L_Gammas*log(30.d0/p%z0_aa)/log(LE_Location/p%z0_aa) !% F.E. 16% is 0.16 which is the correct input for SPLhIgh, no need to divide 100   ! ! Wei Jun Zhu, Modeling of Aerodynamically generated Noise From Wind Turbines
    tinooisess=TINoise
@@ -1733,7 +1741,7 @@ SUBROUTINE InflowNoise(AlphaNoise,Chord,U,THETA,PHI,d,RObs,MeanVNoise,TINoise,LE
    !*********************************************** Model 1:
    !!! Nafnoise source code version see below 
    Frequency_cutoff = 10*U/PI/Chord
-   Ke = 3.0/(4.0*LTurb) 
+   Ke = 3.0/(4.0*p%Lturb) 
    Beta2 = 1-Mach*Mach
    ALPSTAR = AlphaNoise*PI/180.
 
@@ -1749,10 +1757,10 @@ SUBROUTINE InflowNoise(AlphaNoise,Chord,U,THETA,PHI,d,RObs,MeanVNoise,TINoise,LE
       Khat = WaveNumber/Ke
       ! mu = Mach*WaveNumber*Chord/2.0/Beta2
 
-      SPLhigh = 10.*LOG10(p%AirDens*p%AirDens*p%SpdSound**4*LTurb*(d/2.)/ &
+      SPLhigh = 10.*LOG10(p%AirDens*p%AirDens*p%SpdSound**4*p%Lturb*(d/2.)/ &
                (RObs*RObs)*(Mach**5)*tinooisess*tinooisess*(Khat**3)* &
                (1+Khat**2)**(-7./3.)*Directivity) + 78.4   ! ref a)
-   !!!   SPLhigh = 10.*LOG10(LTurb*(d/2.)/ &
+   !!!   SPLhigh = 10.*LOG10(p%Lturb*(d/2.)/ &
    !!!                  (RObs*RObs)*(Mach**5)*tinooisess*tinooisess*(WaveNumber**3) &
    !!!                  *(1+WaveNumber**2)**(-7./3.)*Directivity) + 181.3  
    
@@ -1784,7 +1792,7 @@ SUBROUTINE InflowNoise(AlphaNoise,Chord,U,THETA,PHI,d,RObs,MeanVNoise,TINoise,LE
 !     ! corresponding line: Ssq = (2.d0*pi*K/Bsq + (1.d0+2.4d0*K/Bsq)**(-1))**(-1);
 !        LFC = 10.d0 * Sears*Mach*WaveNumber**2*Beta2**(-1);
 !      ! corresponding line:  LFC = 10.d0 * Ssq*Ma*K**2*Bsq**(-1);
-!     SPLti(I)=(p%AirDens*p%AirDens*p%SpdSound*p%SpdSound*Lturb*d)/(2*RObs*RObs)
+!     SPLti(I)=(p%AirDens*p%AirDens*p%SpdSound*p%SpdSound*p%Lturb*d)/(2*RObs*RObs)
 !  !   SPLti(I)=SPLti(I)*(Mach**3)*(MeanVnoise**2)*(tinooisess**2)  
 !     SPLti(I)=SPLti(I)*(Mach**3)*(tinooisess**2)                 
 !  !   SPLti(I)=SPLti(I)*(Mach**3)*ufluct**2
@@ -1792,14 +1800,14 @@ SUBROUTINE InflowNoise(AlphaNoise,Chord,U,THETA,PHI,d,RObs,MeanVNoise,TINoise,LE
 !     SPLti(I)=SPLti(I)*DBARH
 !     SPLti(I)=10*log10(SPLti(I))+58.4
 !      SPLti(I) = SPLti(I) + 10.*LOG10(LFC/(1+LFC))
-!  ! SPLti(I)=10.d0*log10(DBARH*p%AirDens**2*p%SpdSound**2*Lturb*d/2.0*Mach**3*tinooisess**2* &
+!  ! SPLti(I)=10.d0*log10(DBARH*p%AirDens**2*p%SpdSound**2*p%Lturb*d/2.0*Mach**3*tinooisess**2* &
 !  !WaveNumber**3*(1.d0+WaveNumber**2)**(-7.d0/3.d0)/RObs**2)+58.4d0 + 10.d0*log10(LFC/(1+LFC))
 !  ! corresponding line:    SPLti(i)=10.d0*log10(Di_hi_fr*Density**2*co**2*Tbscale*L/2.0*Ma
 !  !     & **3*Tbinten**2*K**3*(1.d0+K**2)**(-7.d0/3.d0)/Distance**2)+58.4d0
 !  !     &    + 10.d0*log10(LFC/(1+LFC));  
 !  !            !% ver2.!
-!  !    Kh = 8.d0*pi*p%FreqList(i)*Lturb/(3.d0*U);
-!  !          SPLti(i) = 10*log10(DBARH*Lturb*0.5*d*Mach**5*tinooisess**2*Kh**3*(1+Kh**2)**(-7/3)/RObs**2) +&
+!  !    Kh = 8.d0*pi*p%FreqList(i)*p%Lturb/(3.d0*U);
+!  !          SPLti(i) = 10*log10(DBARH*p%Lturb*0.5*d*Mach**5*tinooisess**2*Kh**3*(1+Kh**2)**(-7/3)/RObs**2) +&
 !  !              10*log10(10**18.13) + 10*log10(DBARH*LFC/(1+LFC));   
 !  
 !  ENDDO
@@ -1816,7 +1824,7 @@ SUBROUTINE InflowNoise(AlphaNoise,Chord,U,THETA,PHI,d,RObs,MeanVNoise,TINoise,LE
 !!!!     ! corresponding line: Ssq = (2.d0*pi*K/Bsq + (1.d0+2.4d0*K/Bsq)**(-1))**(-1);
 !!!!        LFC = 10.d0 * Sears*Mach*WaveNumber**2*Beta2**(-1);
 !!!!      ! corresponding line:  LFC = 10.d0 * Ssq*Ma*K**2*Bsq**(-1);
-!!!!     SPLti(I)=(p%AirDens*p%AirDens*p%SpdSound*p%SpdSound*Lturb*d)/(2*RObs*RObs)
+!!!!     SPLti(I)=(p%AirDens*p%AirDens*p%SpdSound*p%SpdSound*p%Lturb*d)/(2*RObs*RObs)
 !!!!     SPLti(I)=SPLti(I)*(Mach**3)*(MeanVnoise**2)*(tinooisess**2)  
 !!!!     SPLti(I)=(SPLti(I)*(WaveNumber**3)) / ((1+WaveNumber**2)**(7./3.))
 !!!!     SPLti(I)=SPLti(I)*DBARH
@@ -1892,7 +1900,7 @@ SUBROUTINE InflowNoise(AlphaNoise,Chord,U,THETA,PHI,d,RObs,MeanVNoise,TINoise,LE
 !!   ENDIF
 !!   WaveNumber = PI*p%FreqList(I)*Chord/U
 !!  Beta2 = 1-Mach*Mach
-!!   SPLhigh = 10.*LOG10(p%AirDens*p%AirDens*p%SpdSound*p%SpdSound*LTurb*(d/2.)/(RObs*RObs)*(Mach**3)*Ums* &
+!!   SPLhigh = 10.*LOG10(p%AirDens*p%AirDens*p%SpdSound*p%SpdSound*p%Lturb*(d/2.)/(RObs*RObs)*(Mach**3)*Ums* &
 !!             (WaveNumber**3)*(1+WaveNumber**2)**(-7./3.)*Directivity) + 58.4
 !!   Sears = 1/(2*PI*WaveNumber/Beta2+1/(1+2.4*WaveNumber/Beta2))
 !!   LFC = 10*Sears*Mach*WaveNumber*WaveNumber/Beta2

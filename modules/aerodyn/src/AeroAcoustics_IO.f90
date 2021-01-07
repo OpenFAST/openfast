@@ -213,7 +213,7 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, Default_DT, OutFileRoot, U
     CALL ReadVar(UnIn,InputFile,InputFileData%IInflow      ,"InflowMod"    ,"" ,ErrStat2,ErrMsg2,UnEc); call check
     CALL ReadVar(UnIn,InputFile,InputFileData%TICalcMeth   ,"TICalcMeth"   ,"" ,ErrStat2,ErrMsg2,UnEc); call check
     CALL ReadVAr(UnIn,InputFile,InputFileData%TICalcTabFile,"TICalcTabFile","" ,ErrStat2,ErrMsg2,UnEc); call check
-    CALL ReadVar(UnIn,InputFile,InputFileData%z0_AA        ,"SurfRoughness","" ,ErrStat2,ErrMsg2,UnEc); call check
+    CALL ReadVar(UnIn,InputFile,InputFileData%Lturb        ,"Lturb"        ,"" ,ErrStat2,ErrMsg2,UnEc); call check
     CALL ReadVar(UnIn,InputFile,InputFileData%ITURB        ,"TurbMod"      ,"" ,ErrStat2,ErrMsg2,UnEc); call check ! ITURB - TBLTE NOISE
     CALL ReadVar(UnIn,InputFile,InputFileData%X_BLMethod   ,"BLMod"        ,"" ,ErrStat2,ErrMsg2,UnEc); call check
     CALL ReadVar(UnIn,InputFile,InputFileData%ITRIP        ,"TripMod"      ,"" ,ErrStat2,ErrMsg2,UnEc); call check
@@ -464,7 +464,8 @@ SUBROUTINE ReadTICalcTables(InputFile, InputFileData, ErrStat, ErrMsg)
 
     CALL GetNewUnit( UnIn, ErrStat2, ErrMsg2); call check()
     CALL OpenFInpFile ( UnIn, FileName, ErrStat2, ErrMsg2 ); if(Failed()) return
-
+    CALL ReadCom(UnIn, FileName, 'Text Line', ErrStat2, ErrMsg2); call check
+    CALL ReadVar(UnIn, FileName, InputFileData%AvgV, 'AvgV',   'Echo flag', ErrStat2, ErrMsg2); call check
     CALL ReadCom(UnIn, FileName, 'Text Line', ErrStat2, ErrMsg2); call check
     CALL ReadVar(UnIn, FileName, GridY, 'GridY',   'Echo flag', ErrStat2, ErrMsg2); call check
     CALL ReadCom(UnIn, FileName, 'Text Line', ErrStat2, ErrMsg2);call check
