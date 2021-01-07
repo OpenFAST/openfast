@@ -547,13 +547,19 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
             vP(1:3)     = u%TPMesh%TranslationVel(1:3,1) + Om_X_r
             aP(1:3)     = u%TPMesh%TranslationAcc(1:3,1) + cross_product(OmD, rIP)  + cross_product(Om, Om_X_r)
 
-            ! Full displacements CB-rotated + Guyan (KEEP ME)
-            m%U_full       (DOFList(1:3)) = matmul(Rb2g, m%U_full       (DOFList(1:3))) + duP(1:3)       
-            m%U_full       (DOFList(4:6)) = matmul(Rb2g, m%U_full       (DOFList(4:6))) + rotations(1:3)
-            m%U_full_dot   (DOFList(1:3)) = matmul(Rb2g, m%U_full_dot   (DOFList(1:3))) + vP(1:3)
-            m%U_full_dot   (DOFList(4:6)) = matmul(Rb2g, m%U_full_dot   (DOFList(4:6))) + Om(1:3)
-            m%U_full_dotdot(DOFList(1:3)) = matmul(Rb2g, m%U_full_dotdot(DOFList(1:3))) + aP(1:3)
-            m%U_full_dotdot(DOFList(4:6)) = matmul(Rb2g, m%U_full_dotdot(DOFList(4:6))) + OmD(1:3)
+            ! Full displacements CB-rotated + Guyan (KEEP ME) >>> Rotate All
+            !m%U_full       (DOFList(1:3)) = matmul(Rb2g, m%U_full       (DOFList(1:3))) + duP(1:3)       
+            !m%U_full       (DOFList(4:6)) = matmul(Rb2g, m%U_full       (DOFList(4:6))) + rotations(1:3)
+            !m%U_full_dot   (DOFList(1:3)) = matmul(Rb2g, m%U_full_dot   (DOFList(1:3))) + vP(1:3)
+            !m%U_full_dot   (DOFList(4:6)) = matmul(Rb2g, m%U_full_dot   (DOFList(4:6))) + Om(1:3)
+            !m%U_full_dotdot(DOFList(1:3)) = matmul(Rb2g, m%U_full_dotdot(DOFList(1:3))) + aP(1:3)
+            !m%U_full_dotdot(DOFList(4:6)) = matmul(Rb2g, m%U_full_dotdot(DOFList(4:6))) + OmD(1:3)
+            m%U_full       (DOFList(1:3)) = m%U_full       (DOFList(1:3)) + duP(1:3)       
+            m%U_full       (DOFList(4:6)) = m%U_full       (DOFList(4:6)) + rotations(1:3)
+            m%U_full_dot   (DOFList(1:3)) = m%U_full_dot   (DOFList(1:3)) + vP(1:3)
+            m%U_full_dot   (DOFList(4:6)) = m%U_full_dot   (DOFList(4:6)) + Om(1:3)
+            m%U_full_dotdot(DOFList(1:3)) = m%U_full_dotdot(DOFList(1:3)) + aP(1:3)
+            m%U_full_dotdot(DOFList(4:6)) = m%U_full_dotdot(DOFList(4:6)) + OmD(1:3)
 
             ! NOTE: For now, displacements passed to HydroDyn are Guyan only!
             ! Construct the direction cosine matrix given the output angles
@@ -2964,9 +2970,11 @@ SUBROUTINE LeverArm(u, p, x, m, DU_full, bGuyan, bElastic, U_full)
             rIP0(1:3)   = p%DP0(1:3, iSDNode)
             rIP(1:3)    = matmul(Rb2g, rIP0)
             duP(1:3)    = rIP - rIP0 ! NOTE: without m%u_TP(1:3)
-            ! Full diplacements Guyan + rotated CB (if asked)
-            DU_full(DOFList(1:3)) = matmul(Rb2g, DU_full(DOFList(1:3))) + duP(1:3)       
-            DU_full(DOFList(4:6)) = matmul(Rb2g, DU_full(DOFList(4:6))) + rotations(1:3)
+            DU_full(DOFList(1:3)) = DU_full(DOFList(1:3)) + duP(1:3)       
+            DU_full(DOFList(4:6)) = DU_full(DOFList(4:6)) + rotations(1:3)
+            ! Full diplacements Guyan + rotated CB (if asked) >>> Rotate All
+            !DU_full(DOFList(1:3)) = matmul(Rb2g, DU_full(DOFList(1:3))) + duP(1:3)       
+            !DU_full(DOFList(4:6)) = matmul(Rb2g, DU_full(DOFList(4:6))) + rotations(1:3)
          enddo
       endif 
    endif ! U_full no provided
