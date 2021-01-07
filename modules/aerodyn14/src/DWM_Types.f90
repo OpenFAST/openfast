@@ -32,6 +32,7 @@
 MODULE DWM_Types
 !---------------------------------------------------------------------------------------------------------------------------------
 USE IfW_UniformWind_Types
+USE IfW_FFWind_Base_Types
 USE IfW_TSFFWind_Types
 USE IfW_BladedFFWind_Types
 USE IfW_HAWCWind_Types
