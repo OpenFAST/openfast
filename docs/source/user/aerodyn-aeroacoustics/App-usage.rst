@@ -62,8 +62,8 @@ models:
 -  **TICalcTabFile** – String: name of the text file with the user-defined
    turbulence intensity grid; see :numref:`aa-sec-TIgrid`.
 
--  **SurfRoughness** – Float: value of :math:`z_{0}` used to estimate
-   :math:`L_{t}` in the Amiet model.
+-  **Lturb** – Float: value of :math:`L_{turb}` used to estimate the turbulent
+   lengthscale used in the Amiet model.
 
 -  **TBLTEMod** – Integer 0/1/2: flag to set the TBL-TE noise model; 0 turns
    off the model, 1 uses the Brooks-Pope-Marcolini (BPM) airfoil noise
@@ -259,15 +259,17 @@ is shown here:
 Turbulence Grid
 ---------------
 
-When the flag **TICalcMeth** is set equal to 1, the grid of incident
-turbulent intensity :math:`I_{1}` must be defined by the user. This is
+When the flag **TICalcMeth** is set equal to 1, the grid of turbulence
+intensity of the wind :math:`TI` must be defined by the user. This is
 done by creating a file called **TIGrid_In.txt**, which mimics a TurbSim
 output file and contains a grid of turbulence intensity, which is
 defined as a fraction value. The file defines a grid centered at hub
 height and oriented with the OpenFAST global inertial frame coordinate
 system; see :numref:`aa-fig:ObsRefSys`. A user-defined number of lateral and vertical
 points equally spaced by a user-defined number of meters must be
-specified. An example file for a 160 (lateral) by 180 (vertical) meters
+specified. Note that an average wind speed must be defined to convert
+the turbulence intensity of the wind to the incident turbulent intensity :math:`I_{1}`.
+An example file for a 160 (lateral) by 180 (vertical) meters
 grid looks like the following:
 
 
