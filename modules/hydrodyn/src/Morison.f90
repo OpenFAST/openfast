@@ -787,12 +787,12 @@ SUBROUTINE WriteSummaryFile( UnSum, g, MSL2SWL, WtrDpth, numJoints, numNodes, no
       WRITE( UnSum,  '(//)' ) 
       WRITE( UnSum,  '(A14,I4,A44)' ) 'Nodes (first [',numJoints,'] are joints, remainder are internal nodes)'
       WRITE( UnSum,  '(/)' ) 
-      WRITE( UnSum, '(1X,A5,19(2X,A10))' ) '  i  ', '  MbrIndx ', '   Nxi    ', '   Nyi    ', '   Nzi    ', '     R    ', '    t     ', '   tMG    ', '  MGDens  ', ' PropPot  ', 'FilledFlag', '    Cd    ', '    Ca    ', '    Cp    ', '   AxCd   ',  '   AxCa   ', '   AxCp   ', '   JAxCd  ', '   JAxCa  ', '   JAxCp  '
-      WRITE( UnSum, '(1X,A5,19(2X,A10))' ) ' (-) ', '    (-)   ', '   (m)    ', '   (m)    ', '   (m)    ', '    (m)   ', '   (m)    ', '   (m)    ', ' (kg/m^3) ', '   (-)    ', '   (-)    ', '    (-)   ', '    (-)   ', '    (-)   ', '    (-)   ',  '    (-)   ', '    (-)   ', '    (-)   ', '    (-)   ', '    (-)   '
+      WRITE( UnSum, '(1X,A5,20(2X,A10))' ) '  i  ', '  MbrIndx ', '   Nxi    ', '   Nyi    ', '   Nzi    ', '     R    ', '    t     ', '   tMG    ', '  MGDens  ', ' PropPot  ', 'FilledFlag', 'FilledMass', '    Cd    ', '    Ca    ', '    Cp    ', '   AxCd   ',  '   AxCa   ', '   AxCp   ', '   JAxCd  ', '   JAxCa  ', '   JAxCp  '
+      WRITE( UnSum, '(1X,A5,20(2X,A10))' ) ' (-) ', '    (-)   ', '   (m)    ', '   (m)    ', '   (m)    ', '    (m)   ', '   (m)    ', '   (m)    ', ' (kg/m^3) ', '   (-)    ', '   (-)    ', '  (kg)    ', '    (-)   ', '    (-)   ', '    (-)   ', '    (-)   ',  '    (-)   ', '    (-)   ', '    (-)   ', '    (-)   ', '    (-)   '
       
          ! Write the node data
       do I = 1,numJoints   
-         write( UnSum, '(1X,I5,(2X,A10),3(2X,F10.4),2(2X,A10),2(2X,ES10.3),8(2X,A10),3(2X,ES10.3))' ) i,'    -     ', nodes(i)%Position, '    -     ',  '    -     ',  nodes(i)%tMG,  nodes(i)%MGdensity,  '    -     ',  '    -     ', '    -     ',  '    -     ',  '    -     ',  '    -     ',  '    -     ',  '    -     ',  nodes(i)%JAxCd,  nodes(i)%JAxCa, nodes(i)%JAxCp
+         write( UnSum, '(1X,I5,(2X,A10),3(2X,F10.4),2(2X,A10),2(2X,ES10.3),9(2X,A10),3(2X,ES10.3))' ) i,'    -     ', nodes(i)%Position, '    -     ',  '    -     ',  nodes(i)%tMG,  nodes(i)%MGdensity,  '    -     ',  '    -     ',  '    -     ', '    -     ',  '    -     ',  '    -     ',  '    -     ',  '    -     ',  '    -     ',  nodes(i)%JAxCd,  nodes(i)%JAxCa, nodes(i)%JAxCp
       end do
       c = numJoints
       do j= 1, numMembers
@@ -803,7 +803,7 @@ SUBROUTINE WriteSummaryFile( UnSum, g, MSL2SWL, WtrDpth, numJoints, numNodes, no
             else
                fillFlag = .false.
             end if
-            write( UnSum, '(1X,I5,(2X,I10),3(2X,F10.4),4(2X,ES10.3),2(6X,L6),6(2X,ES10.3),3(7x,A5))' ) c, members(j)%MemberID, nodes(c)%Position, members(j)%R(i),  members(j)%R(i)-members(j)%Rin(i),  members(j)%tMG(i),  members(j)%MGdensity(i),  members(j)%PropPot,  fillFlag,  members(j)%Cd(i),  members(j)%Ca(i),  members(j)%Cp(i),  members(j)%AxCd(i),  members(j)%AxCa(i),  members(j)%AxCp(i), '  -  ',  '  -  ',  '  -  '
+            write( UnSum, '(1X,I5,(2X,I10),3(2X,F10.4),4(2X,ES10.3),2(6X,L6),7(2X,ES10.3),3(7x,A5))' ) c, members(j)%MemberID, nodes(c)%Position, members(j)%R(i),  members(j)%R(i)-members(j)%Rin(i),  members(j)%tMG(i),  members(j)%MGdensity(i),  members(j)%PropPot,  fillFlag,  members(j)%m_fb_u(i)+members(j)%m_fb_l(i),  members(j)%Cd(i),  members(j)%Ca(i),  members(j)%Cp(i),  members(j)%AxCd(i),  members(j)%AxCa(i),  members(j)%AxCp(i), '  -  ',  '  -  ',  '  -  '
          end do
       end do
       
@@ -1569,42 +1569,75 @@ subroutine SetMemberProperties( gravity, member, MCoefMod, MmbrCoefIDIndx, MmbrF
       Za = InitInp%Nodes(member%NodeIndx(  i))%Position(3)   ! z location of node i
       Zb = InitInp%Nodes(member%NodeIndx(i+1))%Position(3)   ! z location of node i+1
       
-      ! ------------------ marine growth weight and inertia, and flooded ballast inertia--------------------
+      ! ------------------ marine growth weight and inertia ------------------------------------------------
       Vinner_l   = 0.0
       Vouter_l   = 0.0
       Vinner_U   = 0.0
       Vouter_U   = 0.0
-      Vballast_l = 0.0
-      Vballast_U = 0.0
       if (i > member%i_floor) then         
          ! full marine growth: get the properties for each half-element lumped to the appropriate node
                   
          Rmid   = 0.5*(member%R(  i)+member%R(  i+1))  ! radius at middle of segment, where division occurs
          RmidMG = 0.5*(member%RMG(i)+member%RMG(i+1))  ! radius with marine growth at middle of segment, where division occurs
-         Rmidin = 0.5*(member%Rin(i)+member%Rin(i+1))  ! radius of member interior at middle of segment, where division occurs
          Lmid   = 0.5*dl   ! = 0.5*(R2-R1)/m  half-length of segment
 
-         CALL MarineGrowthPartSegment(member%R(i  ), Rmid, member%RMG(i  ),RmidMG, Lmid, member%MGDensity(i),  Vinner_l, Vouter_l, member%m_mg_l(i), member%h_cmg_l(i), member%I_lmg_l(i), member%I_rmg_l(i))   ! get precomupted quantities for lower half-segment
-         CALL MarineGrowthPartSegment(member%R(i+1), Rmid, member%RMG(i+1),RmidMG,-Lmid, member%MGDensity(i),  Vinner_u, Vouter_u, member%m_mg_u(i), member%h_cmg_u(i), member%I_lmg_u(i), member%I_rmg_u(i))   ! get precomupted quantities for upper half-segment
-         CALL FloodedBallastPartSegment(member%Rin(i  ), Rmidin,  Lmid, member%FillDens, Vballast_l,  member%m_fb_l(i), member%h_cfb_l(i), member%I_lfb_l(i), member%I_rfb_l(i))   ! get precomupted quantities for lower half-segment
-         CALL FloodedBallastPartSegment(member%Rin(i+1), Rmidin, -Lmid, member%FillDens, Vballast_u, member%m_fb_u(i), member%h_cfb_u(i), member%I_lfb_u(i), member%I_rfb_u(i))   ! get precomupted quantities for upper half-segment
-         
+         CALL MarineGrowthPartSegment(member%R(i  ), Rmid, member%RMG(i  ),RmidMG, Lmid, member%MGDensity(i),  Vinner_l, Vouter_l, member%m_mg_l(i), member%h_cmg_l(i), member%I_lmg_l(i), member%I_rmg_l(i))   ! get precomputed quantities for lower half-segment
+         CALL MarineGrowthPartSegment(member%R(i+1), Rmid, member%RMG(i+1),RmidMG,-Lmid, member%MGDensity(i),  Vinner_u, Vouter_u, member%m_mg_u(i), member%h_cmg_u(i), member%I_lmg_u(i), member%I_rmg_u(i))   ! get precomputed quantities for upper half-segment
          
       else if (i == member%i_floor) then         
          ! crossing seabed: get the properties for part-element above the seabed and lump to the upper node      
 
          Rmid   = (-member%h_floor*member%R(  i) +(dl+member%h_floor)*member%R(  i+1))/dl
          RmidMG = (-member%h_floor*member%RMG(i) +(dl+member%h_floor)*member%RMG(i+1))/dl
-         Rmidin = (-member%h_floor*member%Rin(i) +(dl+member%h_floor)*member%Rin(i+1))/dl
          Lmid   = -member%h_floor
 
-         CALL MarineGrowthPartSegment(member%R(i+1), Rmid, member%RMG(i+1),RmidMG, -Lmid, member%MGDensity(i),  Vinner_u, Vouter_u, member%m_mg_u(i), member%h_cmg_u(i), member%I_lmg_u(i), member%I_rmg_u(i))   ! get precomupted quantities for upper half-segment
-         CALL FloodedBallastPartSegment(member%Rin(i+1), Rmidin, -Lmid, member%FillDens,  Vballast_u, member%m_fb_u(i), member%h_cfb_u(i), member%I_lfb_u(i), member%I_rfb_u(i))   ! get precomupted quantities for upper half-segment
+         CALL MarineGrowthPartSegment(member%R(i+1), Rmid, member%RMG(i+1),RmidMG, -Lmid, member%MGDensity(i),  Vinner_u, Vouter_u, member%m_mg_u(i), member%h_cmg_u(i), member%I_lmg_u(i), member%I_rmg_u(i))   ! get precomputed quantities for upper half-segment
          Vinner_l   = 0.0
          Vouter_l   = 0.0
-         Vballast_l = 0.0
       end if
+
+      ! ------------------ flooded ballast inertia ---------------------------------------------------------
+      Vballast_l = 0.0
+      Vballast_U = 0.0
+      if (member%memfloodstatus > 0 .and. (member%FillFSLoc > Za)) then
+         ! Fully filled element, so split in middle
+         if ((i > member%i_floor) .and. (member%FillFSLoc >= Zb)) then
+
+            ! get the properties for each half-element lumped to the appropriate node
+            Rmidin = 0.5*(member%Rin(i)+member%Rin(i+1))  ! radius of member interior at middle of segment, where division occurs
+            Lmid   = 0.5*dl   ! = 0.5*(R2-R1)/m  half-length of segment
+            CALL FloodedBallastPartSegment(member%Rin(i  ), Rmidin,  Lmid, member%FillDens, Vballast_l, member%m_fb_l(i), member%h_cfb_l(i), member%I_lfb_l(i), member%I_rfb_l(i))   ! get precomputed quantities for lower half-segment
+            CALL FloodedBallastPartSegment(member%Rin(i+1), Rmidin, -Lmid, member%FillDens, Vballast_u, member%m_fb_u(i), member%h_cfb_u(i), member%I_lfb_u(i), member%I_rfb_u(i))   ! get precomputed quantities for upper half-segment
+ 
+         ! partially filled element, so split at FillFSLoc
+         else if ((i > member%i_floor)  .AND. (member%FillFSLoc < Zb)) then
+
+            ! get the properties for each partial-element lumped to the appropriate node
+            Lmid   = member%FillFSLoc - Za 
+            Rmidin = member%Rin(i)+(Lmid/(Zb-Za))*(member%Rin(i+1)-member%Rin(i))  ! radius of member interior at middle of segment, where division occurs
+            CALL FloodedBallastPartSegment(member%Rin(i  ), Rmidin,  Lmid, member%FillDens, Vballast_l, member%m_fb_l(i), member%h_cfb_l(i), member%I_lfb_l(i), member%I_rfb_l(i))   ! get precomputed quantities for lower half-segment
+            CALL FloodedBallastPartSegment(member%Rin(i+1), Rmidin, -Lmid, 0.0, Vballast_u, member%m_fb_u(i), member%h_cfb_u(i), member%I_lfb_u(i), member%I_rfb_u(i))   ! get precomputed quantities for upper half-segment
+ 
+         else if (i == member%i_floor) then     ! Hopefully we don't have a partially filled element crossing the seabed.
+ 
+            ! crossing seabed: get the properties for part-element above the seabed and lump to the upper node
+            RmidMG = (-member%h_floor*member%RMG(i) +(dl+member%h_floor)*member%RMG(i+1))/dl
+            Rmidin = (-member%h_floor*member%Rin(i) +(dl+member%h_floor)*member%Rin(i+1))/dl
+            Lmid   = -member%h_floor
+            CALL FloodedBallastPartSegment(member%Rin(i+1), Rmidin, -Lmid, member%FillDens,  Vballast_u, member%m_fb_u(i), member%h_cfb_u(i), member%I_lfb_u(i), member%I_rfb_u(i))   ! get precomputed quantities for upper half-segment
+            Vballast_l = 0.0
+ 
+         end if
+      else  ! Either no ballast flooding in member, or this particular element isn't flooded at all
+         Vballast_u        = 0.0
+         Vballast_l        = 0.0
+         member%m_fb_u(i)  = 0.0
+         member%h_cfb_u(i) = 0.0
+         member%I_lfb_u(i) = 0.0
+         member%I_rfb_u(i) = 0.0
+      endif
          
+
       
       ! Determine volumes to add to Non-WAMIT modeled members, etc.
       if (.not. member%PropPot) then
@@ -1638,6 +1671,7 @@ subroutine SetMemberProperties( gravity, member, MCoefMod, MmbrCoefIDIndx, MmbrF
       end if
       
       ! ------------------ flooded ballast weight (done) --------------------
+      ! NOTE: this section of code is somewhat redundant with "flooded ballast inertia" section above
 
       li = dl*(i-1)
       ! fully buried element
@@ -1680,7 +1714,7 @@ subroutine SetMemberProperties( gravity, member, MCoefMod, MmbrCoefIDIndx, MmbrF
          !Since this element is only partially flooded/ballasted, compute the Volume fraction which is filled
          call TaperCalc( member%Rin(i), member%Rin(i)+member%h_fill*member%dRdl_in(i), member%h_fill, Vballast_l, h_c)
          Vballast_u = 0.0
-         member%Vballast = member%Vballast + Vballast_l + Vballast_u ! TODO: Determine how to add only fraction of volume
+         member%Vballast = member%Vballast + Vballast_l + Vballast_u ! Note: Vballast_l will match calculations above
        
          
          ! depth-adjusted force distribution constant
@@ -2788,6 +2822,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       
          ! ------------------ flooded ballast inertia: sides: Section 6.1.1 : Always compute regardless of PropPot setting ---------------------
 
+!FIXME: these calculations use the mass of the fully filled volume and do not account for FillFSLoc... yet
          ! lower node
          Ioffset   = mem%h_cfb_l(i)*mem%h_cfb_l(i)*mem%m_fb_l(i)
          Imat(1,1) = mem%I_rfb_l(i) - Ioffset
