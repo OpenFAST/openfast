@@ -1645,6 +1645,7 @@ print *, "output"
       
          ! time
          WRITE(UnOut,"(F10.4)", IOSTAT=ErrStat2, advance="no") (l-1)*p%dtWave
+         !WRITE(UnOut,"(F10.4)", IOSTAT=ErrStat2, advance="no") InitInp%WaveTime(l)
       
          ! wave elevation (all slices for now, to check)
          DO J = 1,5     !y
@@ -4599,6 +4600,8 @@ print *, "output"
       Rod%Cat   = RodProp%Cat
       Rod%Cdn   = RodProp%Cdn
       Rod%Cdt   = RodProp%Cdt      
+      Rod%CaEnd = RodProp%CaEnd      
+      Rod%CdEnd = RodProp%CdEnd      
       
 
       ! allocate node positions and velocities (NOTE: these arrays start at ZERO)
@@ -5352,6 +5355,12 @@ print *, "output"
          
             ! axial drag
             Rod%Dq(:,I) = Rod%Dq(:,I) + VOF * 0.25* Pi*Rod%d*Rod%d * p%rhoW*Rod%CdEnd * MagVq * Vq
+            
+if ((Rod%time >= 1.0) .and. (Rod%time < 1.001)) then
+   print *, "at Dq end 0 of rod:"
+   print *, "CdEnd is  on position vector:"
+   print *, Rod%CdEnd
+end if
             
             ! >>> what about rotational drag?? <<<   eqn will be  Pi* Rod%d**4/16.0 omega_rel?^2...  *0.5 * Cd...
 
