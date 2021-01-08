@@ -1894,7 +1894,6 @@ subroutine UA_CalcContStateDeriv( i, j, t, u_in, p, x, OtherState, AFInfo, m, dx
    real(ReKi)                                   :: Clp
    real(R8Ki)                                   :: x4
    real(ReKi)                                   :: alpha_34
-   real(ReKi)                                   :: tau_chord
    real(ReKi), parameter                        :: U_dot = 0.0_ReKi ! at some point we may add this term
    TYPE(UA_InputType)                           :: u        ! Inputs at t
   
@@ -1925,10 +1924,9 @@ subroutine UA_CalcContStateDeriv( i, j, t, u_in, p, x, OtherState, AFInfo, m, dx
     
    Clp = BL_p%c_lalpha * (alphaE - BL_p%alpha0) + pi * Tu * u%omega   ! Eq. 13
    
-      ! fix definitions of T_f0 and T_p
-   tau_chord = 2.0_ReKi * Tu !p%c(i,j)/abs(u%u)
-   BL_p%T_f0 = BL_p%T_f0 * tau_chord
-   BL_p%T_p  = BL_p%T_p  * tau_chord
+      ! fix definitions of T_f0 and T_p (based on email from Emmanuel 12-28-20 regarding HAWC2 default values)
+   BL_p%T_f0 = BL_p%T_f0 * 2.0_ReKi * Tu
+   BL_p%T_p  = BL_p%T_p  * Tu
       
 
       ! calculate fs_aF (stored in AFI_interp%f_st):
