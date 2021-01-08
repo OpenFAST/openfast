@@ -18,29 +18,34 @@ Many changes were applied to SubDyn input file format. You may consult the follo
 and the online SubDyn documentation.
 
 ============================================= ==== =============== ========================================================================================================================================================================================================
-Added in OpenFAST v2.4.0
+Added in OpenFAST dev 
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 Module                                        Line  Flag Name        Example Value
 ============================================= ==== =============== ========================================================================================================================================================================================================
-SubDyn                                        8    ExtraMom         False  ExtraMoment  - Include extra moment from lever arm at interface in interface reactions.
-SubDyn                                        15   GuyanDampMod     0      GuyanDampMod - Guyan damping {0=none, 1=Rayleigh Damping, 2=user specified 6x6 matrix}
-SubDyn                                        16   RayleighDamp     0.001, 0.003   RayleighDamp - Mass and stiffness proportional damping  coefficients (Rayleigh Damping) [only if GuyanDampMod=1]
-SubDyn                                        17   GuyanDampSize    6      GuyanDampSize - Guyan damping matrix size (square, 6x6) [only if GuyanDampMod=2]
-SubDyn                                        18   GuyanDampMat     0.0000e+00   0.0000e+00   0.0000e+00   0.0000e+00   0.0000e+00   0.0000e+00 
-SubDyn                                        -23  GuyanDampMat     0.0000e+00   0.0000e+00   0.0000e+00   0.0000e+00   0.0000e+00   0.0000e+00 
-SubDyn                                        na   CablesSection    -------------------------- CABLE PROPERTIES  -------------------------------------
-SubDyn                                        na   CablesSection    0   NCablePropSets   - Number of cable cable properties
-SubDyn                                        na   CablesSection    PropSetID     EA          MatDens       T0 
-SubDyn                                        na   CablesSection       (-)        (N)         (kg/m)        (N) 
-SubDyn                                        na   RigidSection     ---------------------- RIGID LINK PROPERTIES ------------------------------------
-SubDyn                                        na   RigidSection     0   NRigidPropSets - Number of rigid link properties
-SubDyn                                        na   RigidSection     PropSetID   MatDens   
-SubDyn                                        na   RigidSection       (-)       (kg/m)
+IfW driver                                     6    [separator line]   ===================== File Conversion Options =================================
+IfW driver                                     7    WrHAWC             false    WrHAWC    - Convert all data to HAWC2 format? (flag)
+IfW driver                                     8    WrBladed           false    WrBladed  - Convert all data to Bladed format? (flag)
+IfW driver                                     9    WrVTK              false    WrVTK     - Convert all data to VTK format? (flag)
+InflowWind                                     7    VFlowAng                0   VFlowAng  - Upflow angle (degrees) (not used for native Bladed format WindType=7)
+SubDyn                                         8    ExtraMom            False   ExtraMoment  - Include extra moment from lever arm at interface in interface reactions.
+SubDyn                                        15   GuyanDampMod         0       GuyanDampMod - Guyan damping {0=none, 1=Rayleigh Damping, 2=user specified 6x6 matrix}
+SubDyn                                        16   RayleighDamp         0.001, 0.003   RayleighDamp - Mass and stiffness proportional damping  coefficients (Rayleigh Damping) [only if GuyanDampMod=1]
+SubDyn                                        17   GuyanDampSize        6       GuyanDampSize - Guyan damping matrix size (square, 6x6) [only if GuyanDampMod=2]
+SubDyn                                        18   GuyanDampMat         0.0000e+00   0.0000e+00   0.0000e+00   0.0000e+00   0.0000e+00   0.0000e+00 
+SubDyn                                        -23  GuyanDampMat         0.0000e+00   0.0000e+00   0.0000e+00   0.0000e+00   0.0000e+00   0.0000e+00 
+SubDyn                                        na   CablesSection        -------------------------- CABLE PROPERTIES  -------------------------------------
+SubDyn                                        na   CablesSection        0   NCablePropSets   - Number of cable cable properties
+SubDyn                                        na   CablesSection        PropSetID     EA          MatDens       T0 
+SubDyn                                        na   CablesSection           (-)        (N)         (kg/m)        (N) 
+SubDyn                                        na   RigidSection         ---------------------- RIGID LINK PROPERTIES ------------------------------------
+SubDyn                                        na   RigidSection         0   NRigidPropSets - Number of rigid link properties
+SubDyn                                        na   RigidSection         PropSetID   MatDens   
+SubDyn                                        na   RigidSection           (-)       (kg/m)
 ============================================= ==== =============== ========================================================================================================================================================================================================
 
 
 ============================================= ==== =============== ========================================================================================================================================================================================================
-Changed in OpenFAST v2.4.0
+Changed in OpenFAST dev
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 Module                                        Line  Flag Name        Example Value
 ============================================= ==== =============== ========================================================================================================================================================================================================
@@ -54,11 +59,11 @@ SubDyn                                        na   ConcentratedM      (-)      (
 
 
 
-OpenFAST v2.3.0 to OpenFAST `dev`
----------------------------------
+OpenFAST v2.3.0 to OpenFAST v2.4.0
+----------------------------------
 
 ============== ==== ================== =============================================================================================================================================================================
-Added in OpenFAST `dev`
+Added in OpenFAST v2.4.0
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  Module        Line  Flag Name          Example Value
 ============== ==== ================== =============================================================================================================================================================================
@@ -72,14 +77,15 @@ OpenFAST       49   Bld_Kdmp                0   Bld_Kdmp   - Damping factor for 
 InflowWind     48   InitPosition(x)       0.0   InitPosition(x) - Initial offset in +x direction (shift of wind box) [Only used with WindType = 5] (m)
 AeroDyn        13   CompAA             False                   CompAA             - Flag to compute AeroAcoustics calculation [only used when WakeMod=1 or 2]
 AeroDyn        14   AA_InputFile       "unused"                AA_InputFile       - Aeroacoustics input file
-AeroDyn        35   [separator line]   ======  OLAF -- cOnvecting LAgrangian Filaments (Free Vortex Wake) Theory Options  ================== [used only when WakeMod=3]
+AeroDyn        35   [separator line]   ======  OLAF cOnvecting LAgrangian Filaments (Free Vortex Wake) Theory Options  ================== [used only when WakeMod=3]
 AeroDyn        36   OLAFInputFileName  "Elliptic_OLAF.dat"     OLAFInputFileName - Input file for OLAF [used only when WakeMod=3]
 AirFoilTables  4\*  BL_file            "unused"                BL_file           - The file name including the boundary layer characteristics of the profile. Ignored if the aeroacoustic module is not called.
 ============== ==== ================== =============================================================================================================================================================================
 
+Modified in OpenFAST v2.4.0
+---------------------------
+
 ============== ==== ================== =============================================================================================================================================================================
-Modified in OpenFAST `dev`
---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  Module        Line  Flag Name          Example Value
 ============== ==== ================== =============================================================================================================================================================================
 AirFoilTables  40\* filtCutOff         "DEFAULT"               filtCutOff        - Reduced frequency cut-off for low-pass filtering the AoA input to UA, as well as the 1st and 2nd derivatives (-) [default = 0.5] 

@@ -31,7 +31,8 @@ frame finite-element beam model (LFEB), and (2) a dynamics system
 reduction via the Craig-Bampton(C-B) method, together with a
 static-improvement method (SIM), greatly reducing the number of modes
 needed to obtain an accurate solution. More details can be found in
-Section 6, and in :cite:`song2013`, :cite:`damiani2013`, :cite:`damiani2013omae`.
+Section 6, and in :cite:`song2013`, :cite:`damiani2013`, 
+:cite:`damiani2013omae`, :cite:`jonkmantcf`.
 
 In SubDyn, the substructure is considered to be either clamped or
 supported by springs at the seabed, and rigidly connected to the

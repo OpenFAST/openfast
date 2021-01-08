@@ -1125,13 +1125,14 @@ CONTAINS
 END SUBROUTINE AssembleKM
 
 !> Map control cable index to control channel index
-subroutine ControlCableMapping(Init, p, ErrStat, ErrMsg)
+subroutine ControlCableMapping(Init, uInit, p, ErrStat, ErrMsg)
    type(SD_InitType),            intent(in   ) :: Init        !< init
+   type(SD_InputType),           intent(inout) :: uInit       !< init input guess
    type(SD_ParameterType),       intent(inout) :: p           !< param
    integer(IntKi),               intent(  out) :: ErrStat     !< Error status of the operation
    character(*),                 intent(  out) :: ErrMsg      !< Error message if ErrStat /= ErrID_None
    ! Local variables
-   integer(IntKi)           :: i, nCC, idCProp !< index, number of controlable cables, id of Cable Prop
+   integer(IntKi)           :: i, nCC, idCProp, iElem !< index, number of controlable cables, id of Cable Prop
    integer(IntKi)           :: ErrStat2
    character(ErrMsgLen)     :: ErrMsg2
    ErrMsg  = ""
@@ -1165,6 +1166,16 @@ subroutine ControlCableMapping(Init, p, ErrStat, ErrMsg)
          endif
       endif
    enddo
+
+   ! --- DeltaL Guess for inputs
+   if (allocated(uInit%CableDeltaL)) deallocate(uInit%CableDeltaL)
+   call AllocAry(uInit%CableDeltaL, nCC, 'uInit%CableDeltaL', ErrStat2, ErrMsg2); if(Failed()) return;
+   do i = 1, nCC
+       iElem    = p%CtrlElem2Channel(i,1)
+       ! DeltaL 0 = - Le T0 / (EA + T0) = - Le eps0 / (1+eps0)
+       uInit%CableDeltaL(i) = - p%ElemProps(iElem)%Length * p%ElemProps(iElem)%T0  / (p%ElemProps(iElem)%YoungE*p%ElemProps(iElem)%Area   +  p%ElemProps(iElem)%T0)
+   enddo
+
 contains
    logical function Failed()
         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ControlCableMapping') 

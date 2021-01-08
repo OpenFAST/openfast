@@ -12,10 +12,12 @@ include Registry_NWTC_Library.txt
 
 #########################
 
-typedef IfW_UniformWind/IfW_UniformWind InitInputType CHARACTER(1024) WindFileName  -     -     -     "Name of the wind file to use"                                 -
-typedef  ^                       ^                       ReKi     ReferenceHeight   -     -     -     "Hub height of the turbine"                                    meters
-typedef  ^                       ^                       ReKi     RefLength         -     -     -     "RefLength of the wind field to use"                           meters
-typedef  ^                       ^                       IntKi    SumFileUnit       -     -     -     "Unit number for the summary file (-1 for none).  Provided by IfW." -
+typedef IfW_UniformWind/IfW_UniformWind InitInputType CHARACTER(1024) WindFileName      -     -     -     "Name of the wind file to use"                                 -
+typedef  ^                       ^                       ReKi         ReferenceHeight   -     -     -     "Hub height of the turbine"                                    meters
+typedef  ^                       ^                       ReKi         RefLength         -     -     -     "RefLength of the wind field to use"                           meters
+typedef  ^                       ^                       IntKi        SumFileUnit       -     -     -     "Unit number for the summary file (-1 for none).  Provided by IfW." -
+typedef  ^                       ^                       LOGICAL      UseInputFile      -   .TRUE.  -     "Flag for toggling file based IO in wind type 2."                -
+typedef  ^                       ^                       FileInfoType   PassedFileData  -     -     -     "Optional slot for wind type 2 data if file IO is not used."                -
 
 
 
@@ -30,7 +32,7 @@ typedef  ^                       ^                       LOGICAL  WindFileConsta
 # ..... Misc/Optimization variables.................................................................................................
 # Define any data that are used only for efficiency purposes (these variables are not associated with time):
 #   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
-typedef  ^                       MiscVarType          IntKi    TimeIndex         -     -     -     "An Index into the TData array"                                -
+typedef  ^                       MiscVarType          IntKi    TimeIndex         -     0     -     "An Index into the TData array"                                -
 
 
 # ..... Parameters ................................................................................................................
@@ -38,6 +40,7 @@ typedef  ^                       MiscVarType          IntKi    TimeIndex        
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
 typedef  ^                    ParameterType              ReKi     TData             :     -     -     "Time array from the HH file"                                  seconds
 typedef  ^                       ^                       ReKi     DELTA             :     -     -     "HH Wind direction (angle)"                                    degrees
+typedef  ^                       ^                       ReKi     Upflow            :     -     -     "HH upflow angle"                                              degrees
 typedef  ^                       ^                       ReKi     V                 :     -     -     "HH horizontal wind speed"                                     meters/sec
 typedef  ^                       ^                       ReKi     VZ                :     -     -     "wind, including tower shadow, along the Z axis"               meters/sec
 typedef  ^                       ^                       ReKi     HSHR              :     -     -     "HH Horizontal linear shear"                                   -
@@ -53,6 +56,7 @@ typedef  ^                       ^                       IntKi    NumDataLines  
 
 # ..... Output (for extended AD inputs in linearization) ................................................................................................................
 typedef  ^            IfW_UniformWind_Intrp              ReKi     DELTA             -     -     -     "HH Wind direction (angle)"                                    degrees
+typedef  ^                       ^                       ReKi     Upflow            -     -     -     "HH upflow angle"                                              degrees
 typedef  ^                       ^                       ReKi     V                 -     -     -     "HH horizontal wind speed"                                     meters/sec
 typedef  ^                       ^                       ReKi     VZ                -     -     -     "wind, including tower shadow, along the Z axis"               meters/sec
 typedef  ^                       ^                       ReKi     HSHR              -     -     -     "HH Horizontal linear shear"                                   -

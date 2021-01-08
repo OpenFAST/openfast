@@ -31,6 +31,8 @@ V1.04.00 (September 2020)
 
 - Inclusion of soil-structure interaction (SSI) via flexible degrees of fixity at the restrained nodes and a new input file that allows for 6x6 stiffness and mass matrices that simulate boundary conditions at those nodes.
 
+- Controllable pretension cable elements
+
 
 V1.03.00a-rrd (September 2017)
 ------------------------------

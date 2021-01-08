@@ -252,8 +252,8 @@ COSMID    COSM11    COSM12    COSM13    COSM21    COSM22    COSM23    COSM31    
  (-)       (-)       (-)       (-)       (-)       (-)       (-)       (-)       (-)       (-)
 ------------------------ JOINT ADDITIONAL CONCENTRATED MASSES--------------------------
              0   NCmass      - Number of joints with concentrated masses; Global Coordinate System
-CMJointID       JMass            JMXX             JMYY             JMZZ
-  (-)            (kg)          (kg*m^2)         (kg*m^2)         (kg*m^2)
+CMJointID       JMass            JMXX             JMYY             JMZZ          JMXY        JMXZ         JMYZ        MCGX      MCGY        MCGZ   
+  (-)            (kg)          (kg*m^2)         (kg*m^2)         (kg*m^2)      (kg*m^2)    (kg*m^2)     (kg*m^2)       (m)      (m)          (m)
 ---------------------------- OUTPUT: SUMMARY & OUTFILE ------------------------------
 True             SumPrint    - Output a Summary File (flag).It contains: matrices K,M  and C-B reduced M_BB, M-BM, K_BB, K_MM(OMG^2), PHI_R, PHI_L. IT can also …
 False            OutCOSM     - Output cosine matrices with the selected output member forces (flag)

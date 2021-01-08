@@ -42,7 +42,7 @@ USE WAMIT2_Types
 USE Morison_Types
 USE NWTC_Library
 IMPLICIT NONE
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: MaxHDOutputs = 519      ! The maximum number of output channels supported by this module [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: MaxHDOutputs = 537      ! The maximum number of output channels supported by this module [-]
 ! =========  HydroDyn_InitInputType  =======
   TYPE, PUBLIC :: HydroDyn_InitInputType
     CHARACTER(1024)  :: InputFile      !< Supplied by Driver:  full path and filename for the HydroDyn module [-]

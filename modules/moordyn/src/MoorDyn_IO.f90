@@ -386,7 +386,6 @@ CONTAINS
           ! for now we'll just assume the next character(s) are "n" to represent node number or "s" to represent segment number
           READ (num2,*) nID                      ! node or segment ID
           p%OutParam%NodeID = nID
-
           qVal = let3                            ! quantity type string
         
         ! Connect case                            

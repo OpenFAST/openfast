@@ -199,8 +199,11 @@ typedef  ^            ^                IntKi              CtrlChan      -       
 typedef  ^            ^                IntKi              FairConnect   -        -  -   "IdNum of Connection at fairlead"
 typedef  ^            ^                IntKi              AnchConnect   -        -  -   "IdNum of Connection at anchor"
 typedef  ^            ^                IntKi              N             -        -  -   "The number of elements in the line"              -
+<<<<<<< HEAD
 typedef  ^            ^                IntKi              endTypeA      -        -  -   "type of connection at end A: 0=pinned to Connection, 1=cantilevered to Rod."  -
 typedef  ^            ^                IntKi              endTypeB      -        -  -   "type of connection at end B: 0=pinned to Connection, 1=cantilevered to Rod."  -
+=======
+>>>>>>> fbd7494e4438ca20d383f6eb6afe640438b6ca1c
 typedef  ^            ^                DbKi               UnstrLen      -        -  -   "unstretched length of the line"   -
 typedef  ^            ^                DbKi               rho           -        -  -   "density"   "[kg/m3]"
 typedef  ^            ^                DbKi               d             -        -  -   "volume-equivalent diameter"   "[m]"
@@ -216,7 +219,7 @@ typedef  ^            ^                DbKi               r            {:}{:}   
 typedef  ^            ^                DbKi               rd           {:}{:}    -  -   "node velocities"  -
 typedef  ^            ^                DbKi               q            {:}{:}    -  -   "node tangent vectors"  -
 typedef  ^            ^                DbKi               l            {:}       -  -   "segment unstretched length"  "[m]"
-typedef  ^            ^                ReKi               ld           {:}       -  -   "segment unstretched length rate of change (used in active tensioning)"  "[m]"
+typedef  ^            ^                DbKi               ld           {:}       -  -   "segment unstretched length rate of change (used in active tensioning)"  "[m]"
 typedef  ^            ^                DbKi               lstr         {:}       -  -   "segment stretched length"  "[m]"
 typedef  ^            ^                DbKi               lstrd        {:}       -  -   "segment change in stretched length"  "[m/s]"
 typedef  ^            ^                DbKi               V            {:}       -  -   "segment volume"  "[m^3]"

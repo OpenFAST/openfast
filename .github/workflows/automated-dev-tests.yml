@@ -1,0 +1,118 @@
+  
+name: 'Development Pipeline'
+
+on:
+  push:
+    paths-ignore:
+      - 'docs/**'
+      - 'share/**'
+      - 'vs-build/**'
+
+  pull_request:
+    types: [opened, synchronize] #labeled, assigned]
+    paths-ignore:
+      - 'docs/**'
+      - 'share/**'
+      - 'vs-build/**'
+
+# runs-on: ${{ matrix.os }}
+# strategy:
+#   matrix:
+#     os: [macOS-10.14, ubuntu-18.04]
+
+jobs:
+  build-and-test:
+
+    runs-on: ubuntu-latest
+    container:
+      image: rafmudaf/openfast-ubuntu:dev
+    steps:
+      - name: Checkout
+        uses: actions/checkout@main
+        with:
+          submodules: recursive
+      - name: Git Update
+        uses: ./.github/actions/git-update
+        with:
+          repository: $GITHUB_REPOSITORY
+          ref: $GITHUB_REF
+
+      - name: Configure CMake
+        uses: ./.github/actions/cmake-config
+        with:
+          build-type: RelWithDebInfo
+          additional-flags: -DBUILD_TESTING=ON -DCTEST_PLOT_ERRORS=ON
+
+      - name: Compile Unit Tests
+        uses: ./.github/actions/compile
+        with:
+          build-target: 'unit_tests'
+      - name: Compile Drivers
+        uses: ./.github/actions/compile
+        with:
+          build-target: 'beamdyn_driver hydrodyn_driver'
+      - name: Compile OpenFAST
+        # if: contains(github.event.head_commit.message, 'Action - Test All') || contains(github.event.pull_request.labels.*.name, 'Action - Test All') 
+        uses: ./.github/actions/compile
+        with:
+          build-target: 'install'
+
+      - name: 'Run NWTC Library tests'
+        uses: ./.github/actions/tests-module-nwtclibrary
+      - name: 'Run AeroDyn tests'
+        uses: ./.github/actions/tests-module-aerodyn
+      - name: 'Run BeamDyn tests'
+        uses: ./.github/actions/tests-module-beamdyn
+      - name: 'Run HydroDyn tests'
+        uses: ./.github/actions/tests-module-hydrodyn
+      - name: 'Run InflowWind tests'
+        uses: ./.github/actions/tests-module-inflowwind
+      - name: 'Run OpenFAST tests'
+        # if: contains(github.event.head_commit.message, 'Action - Test All') || contains(github.event.pull_request.labels.*.name, 'Action - Test All') 
+        uses: ./.github/actions/tests-gluecode-openfast
+
+      - name: 'If failure, post test files'
+        uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+          name: test-results
+          path: |
+            /openfast/build/reg_tests/modules
+            /openfast/build/reg_tests/glue-codes/openfast
+            !/openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline
+            !/openfast/build/reg_tests/glue-codes/openfast/AOC
+            !/openfast/build/reg_tests/glue-codes/openfast/AWT27
+            !/openfast/build/reg_tests/glue-codes/openfast/SWRT
+            !/openfast/build/reg_tests/glue-codes/openfast/UAE_VI
+            !/openfast/build/reg_tests/glue-codes/openfast/WP_Baseline
+
+
+  build-single-precision:
+    # Test if single precision compile completes.
+    # Do not run the test suite.
+
+    runs-on: ubuntu-latest
+    container:
+      image: rafmudaf/openfast-ubuntu:dev
+    steps:
+      - name: Checkout
+        uses: actions/checkout@main
+        with:
+          submodules: recursive
+      - name: Git Update
+        uses: ./.github/actions/git-update
+        with:
+          repository: $GITHUB_REPOSITORY
+          ref: $GITHUB_REF
+      - name: Configure CMake
+        uses: ./.github/actions/cmake-config
+        with:
+          build-type: Debug
+          additional-flags: -DDOUBLE_PRECISION=OFF
+      - name: Compile OpenFAST
+        uses: ./.github/actions/compile
+        with:
+          build-target: 'all'
+      - name: simple-test
+        working-directory: /openfast/build
+        run: ./glue-codes/openfast/openfast -v

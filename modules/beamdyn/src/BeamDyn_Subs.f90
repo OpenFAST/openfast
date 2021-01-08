@@ -580,10 +580,11 @@ SUBROUTINE BD_GaussPointWeight(n, x, w, ErrStat, ErrMsg)
 END SUBROUTINE BD_GaussPointWeight
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! This subroutine computes trapezoidal quadrature points and weights, p%QPtN and p%QPtWeight
-SUBROUTINE BD_TrapezoidalPointWeight(p, InputFileData)
+SUBROUTINE BD_TrapezoidalPointWeight(p, station_eta, station_total)
 
    TYPE(BD_ParameterType),INTENT(INOUT):: p              !< BeamDyn parameters
-   TYPE(BD_InputFile),    INTENT(IN   ):: InputFileData  !< BeamDyn input-file data
+   Integer(IntKi),INTENT(IN   )        :: station_total
+   REAL(BDKi),INTENT(IN   )            :: station_eta(:)
 
    ! local variables
    REAL(BDKi)                 :: denom ! denominator for quadrature weight computations
@@ -593,20 +594,20 @@ SUBROUTINE BD_TrapezoidalPointWeight(p, InputFileData)
    INTEGER(IntKi)             :: id1, j
 
 !bjj: this assumes there is only one member
-   
+  
+ 
       ! compute the trapezoidal quadrature points, p%QPtN, and scale to range [-1,1]:
       !  If there is refinement, this will add new points between the specified ones. If p%refine == 1, can skip this.
-   p%QPtN(1) = InputFileData%InpBl%station_eta(1)
+   p%QPtN(1) = station_eta(1)
    DO j = 2,p%nqp
       indx =  1+(j-2_IntKi)/p%refine       ! note use of integer math here --> (J-2)/p%refine may not be integer.
-      p%QPtN(j) =  InputFileData%InpBl%station_eta(indx) + &
-               ((InputFileData%InpBl%station_eta(indx+1) - InputFileData%InpBl%station_eta(indx))/p%refine) * (MOD(j-2,p%refine) + 1)
+      p%QPtN(j) =  station_eta(indx) + &
+               ((station_eta(indx+1) - station_eta(indx))/p%refine) * (MOD(j-2,p%refine) + 1)
    ENDDO
    p%QPtN = 2.0_BDKi*p%QPtN - 1.0_BDKi     ! rescale range from [0, 1] to [-1,1]
 
-
       ! compute the trapezoidal quadrature weights, p%QPtWeight:
-   id1 = InputFileData%InpBl%station_total
+   id1 = station_total
    temp_id0 = (id0 - 1)*p%refine + 1            ! Starting index in QPtN --> always going to be 1
    temp_id1 = (id1 - 1)*p%refine + 1            ! ending index in QPtN --> will be  size(p%QPtN)
    denom = p%QPtN(temp_id1) - p%QPtN(temp_id0)  ! This is the range of QPtN --> for single member, is always == 2
@@ -616,8 +617,6 @@ SUBROUTINE BD_TrapezoidalPointWeight(p, InputFileData)
       p%QPtWeight(j)  =  (p%QPtN(temp_id0+j) - p%QPtN(temp_id0+j-2))/denom
    ENDDO
    p%QPtWeight(p%nqp) =  (p%QPtN(temp_id1  ) - p%QPtN(temp_id1-1  ))/denom
-
-
 
 END SUBROUTINE BD_TrapezoidalPointWeight
 
@@ -867,81 +866,153 @@ SUBROUTINE Set_BldMotion_InitAcc(p, u, OtherState, m, y)
       
 END SUBROUTINE Set_BldMotion_InitAcc
 !-----------------------------------------------------------------------------------------------------------------------------------
-!> This subroutine finds the (initial) nodal position and curvature based on a relative position, eta, along the blade.
-!! The key points are used to obtain the z coordinate of the physical distance along the blade, and POS and CRV vectors are returned
-!! from that location.
-subroutine Find_IniNode(kp_coordinate, p, member_first_kp, member_last_kp, eta, POS, CRV, ErrStat, ErrMsg)
+!> calculate Lagrangian interpolant tensor at ns points where basis
+!! functions are assumed to be associated with (np+1) GLL points on [-1,1]
+SUBROUTINE BD_diffmtc( nodes_per_elem,GLL_nodes,QPtN,nqp,Shp,ShpDer )
 
-   REAL(BDKi),                   intent(in   )  :: kp_coordinate(:,:)  !< Key Point coordinates
-   type(BD_ParameterType),       intent(in   )  :: p                   !< Parameters
-   INTEGER(IntKi),               intent(in   )  :: member_first_kp     !< index of the first key point on a particular member
-   INTEGER(IntKi),               intent(in   )  :: member_last_kp      !< index of the last key point on a particular member
-   REAL(BDKi),                   intent(in   )  :: eta                 !< relative position of desired node, [0,1]
-   REAL(BDKi),                   intent(  out)  :: POS(3)              !< position of node (in BD coordinates)
-   REAL(BDKi),                   intent(  out)  :: CRV(3)              !< curvature of node (in BD coordinates)
-   integer(IntKi),               intent(  out)  :: ErrStat             !< Error status of the operation
-   character(*),                 intent(  out)  :: ErrMsg              !< Error message if ErrStat /= ErrID_None
+   ! See Bauchau equations 17.1 - 17.5
 
-   REAL(BDKi),PARAMETER    :: EPS = 1.0D-10
+   INTEGER(IntKi),         INTENT(IN   )  :: nodes_per_elem !< Nodes per elemenent
+   REAL(BDKi),             INTENT(IN   )  :: GLL_nodes(:)   !< GLL_nodes(p%nodes_per_elem): location of the (p%nodes_per_elem) p%GLL points
+   REAL(BDKi),             INTENT(IN   )  :: QPtN(:)        !< Locations of quadrature points ([-1 1])
+   INTEGER(IntKi),         INTENT(IN   )  :: nqp            !< number of quadrature points to consider. Should be size of 2nd index of Shp & ShpDer
+   REAL(BDKi),             INTENT(INOUT)  :: Shp(:,:)       !< p%Shp    (or another Shp array for when we add outputs at arbitrary locations)
+   REAL(BDKi),             INTENT(INOUT)  :: ShpDer(:,:)    !< p%ShpDer (or another Shp array for when we add outputs at arbitrary locations)
 
+   REAL(BDKi)                  :: dnum
+   REAL(BDKi)                  :: den
+   REAL(BDKi),        PARAMETER:: eps = SQRT(EPSILON(eps)) !1.0D-08
+   INTEGER(IntKi)              :: l
+   INTEGER(IntKi)              :: j
+   INTEGER(IntKi)              :: i
+   INTEGER(IntKi)              :: k
+
+   ! See Bauchau equations 17.1 - 17.5
+
+   Shp(:,:)     = 0.0_BDKi
+   ShpDer(:,:)  = 0.0_BDKi
+
+
+   do j = 1,nqp
+      do l = 1,nodes_per_elem
+
+       if ((abs(QPtN(j)-1.).LE.eps).AND.(l.EQ.nodes_per_elem)) then           !adp: FIXME: do we want to compare to eps, or EqualRealNos???
+         ShpDer(l,j) = REAL((nodes_per_elem)*(nodes_per_elem-1), BDKi)/4.0_BDKi
+       elseif ((abs(QPtN(j)+1.).LE.eps).AND.(l.EQ.1)) then
+         ShpDer(l,j) = -REAL((nodes_per_elem)*(nodes_per_elem-1), BDKi)/4.0_BDKi
+       elseif (abs(QPtN(j)-GLL_nodes(l)).LE.eps) then
+         ShpDer(l,j) = 0.0_BDKi
+       else
+         ShpDer(l,j) = 0.0_BDKi
+         den = 1.0_BDKi
+         do i = 1,nodes_per_elem
+           if (i.NE.l) then
+             den = den*(GLL_nodes(l)-GLL_nodes(i))
+           endif
+           dnum = 1.0_BDKi
+           do k = 1,nodes_per_elem
+             if ((k.NE.l).AND.(k.NE.i).AND.(i.NE.l)) then
+               dnum = dnum*(QPtN(j)-GLL_nodes(k))
+             elseif (i.EQ.l) then
+               dnum = 0.0_BDKi
+             endif
+           enddo
+           ShpDer(l,j) = ShpDer(l,j) + dnum
+         enddo
+         ShpDer(l,j) = ShpDer(l,j)/den
+       endif
+     enddo
+   enddo
+
+   do j = 1,nqp
+      do l = 1,nodes_per_elem
+
+       if(abs(QPtN(j)-GLL_nodes(l)).LE.eps) then
+         Shp(l,j) = 1.0_BDKi
+       else
+         dnum = 1.0_BDKi
+         den  = 1.0_BDKi
+         do k = 1,nodes_per_elem
+           if (k.NE.l) then
+             den  = den *(GLL_nodes(l) - GLL_nodes(k))
+             dnum = dnum*(QPtN(j) - GLL_nodes(k))
+           endif
+         enddo
+         Shp(l,j) = dnum/den
+       endif
+     enddo
+   enddo
+
+
+ END SUBROUTINE BD_diffmtc
+!-----------------------------------------------------------------------------------------------------------------------------------
+!> this routine interpolates teh POS and CRV based on the nodal values 
+SUBROUTINE BD_Interp_Pos_CRV(p, eta, POS, CRV, ErrStat, ErrMsg)
+
+   type(BD_ParameterType),       intent(in   )  :: p       ! BD Parameters
+   real(BDki),                   intent(in   )  :: eta     ! location to interpolate to;  0 <= eta <= 1
+   real(BDki),                   intent(  out)  :: POS(3)  ! output XYZ
+   real(BDki),                   intent(  out)  :: CRV(3)  ! output rotation parameters
+
+   INTEGER(IntKi), INTENT(  OUT)  :: ErrStat       !< Error status of the operation
+   CHARACTER(*),   INTENT(  OUT)  :: ErrMsg        !< Error message if ErrStat /= ErrID_None
 
    ! local variables
-   INTEGER(IntKi)          :: kp                ! key point
-   REAL(BDKi)              :: etaD              ! distance (in z coordinate) associated with eta along this member, in meters
-   REAL(BDKi)              :: temp_twist
-   REAL(BDKi)              :: temp_e1(3)
 
-   integer(intKi)                               :: ErrStat2          ! temporary Error status
-   character(ErrMsgLen)                         :: ErrMsg2           ! temporary Error message
-   character(*), parameter                      :: RoutineName = 'Find_IniNode'
+   integer(IntKi) :: i            ! do loop
+   integer(IntKi) :: j            ! do loop
+   integer(IntKi) :: found        ! marker for finding element that eta lies in
+   integer(IntKi) :: element      ! element where eta lies
+   real(BDki)     :: eta_left     ! left eta value for an element
+   real(BDki)     :: eta_right    ! right eta_value for an element
+   real(BDki)     :: eta_local(1) ! eta_local in [-1,1] for finite element space
 
-   ! Initialize ErrStat
-   ErrStat = ErrID_None
-   ErrMsg  = ""
+   real(BDki),allocatable     :: gll(:)      ! local gll points; ez enough to generate here
+   real(BDki),allocatable     :: shp(:,:)    ! local shape function
+   real(BDki),allocatable     :: shpder(:,:) ! local shape function deriv
 
-   ! compute the dimensional distance along the full beam
-   etaD = kp_coordinate(member_first_kp,3) + &
-          eta * (kp_coordinate(member_last_kp ,3) - kp_coordinate(member_first_kp,3)) 
+   INTEGER(IntKi)                 :: ErrStat2      ! Temporary Error status
+   CHARACTER(ErrMsgLen)           :: ErrMsg2       ! Temporary Error message
 
-   ! find the first key point that is beyond where this node is on the member (element)
-   ! note that this is the index for p%SP_Coef, so the upper bound is member_last_kp-1 instead of member_last_kp 
-   ! bjj: to be more efficient, we could probably just start at the kp we found for the previous eta
-   kp = member_first_kp
-   DO WHILE ( (eta > p%segment_eta(kp) + EPS) .and. kp < (member_last_kp-1) )
-      kp = kp + 1
-   END DO
+   ! find element in which eta resides 
+   eta_right = 0._BDKi
+   found = 0
+   eta_left = 0._BDki
+   do i = 1, p%elem_total
+      eta_right = eta_right + p%member_eta(i)
+      if (eta .le. eta_right .and. found .eq. 0) then
+         element = i
+         found = 1
+      endif
+      if (found .eq. 0) then
+         eta_left = eta_right
+      endif
+   enddo
 
-   ! using the spline coefficients at this key point, compute the position and orientation of the node
-   CALL BD_ComputeIniNodalPosition(p%SP_Coef(kp,:,:),etaD,POS,temp_e1,temp_twist) ! Compute point physical coordinates (POS) in blade frame                   
-   CALL BD_ComputeIniNodalCrv(temp_e1, temp_twist, CRV, ErrStat2, ErrMsg2)        ! Compute initial rotation parameters (CRV) in blade frame
-      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if (ErrStat >= AbortErrLev) return
+   ! need to evaluate shp and shpder at eta_local in [-1,1] for the found element
+   eta_local(1) = 2._BDKi * (eta - eta_left)/p%member_eta(element) - 1._BDKi
 
+   call AllocAry(gll, p%nodes_per_elem, "local GLL nodes",ErrStat2, ErrMsg2)
+   call AllocAry(shp, p%nodes_per_elem, 1,"local shape function",ErrStat2, ErrMsg2)
+   call AllocAry(shpder, p%nodes_per_elem, 1,"local shape deriv function",ErrStat2, ErrMsg2)
 
-end subroutine Find_IniNode
-!-----------------------------------------------------------------------------------------------------------------------------------
-!> This subroutine computes the initial nodal locations given the coefficients for
-!! cubic spline fit. It also computes the unit tangent vector e1 for further use.
-SUBROUTINE BD_ComputeIniNodalPosition(SP_Coef,eta,PosiVec,e1,Twist_Angle)
+   call BD_GenerateGLL(p%nodes_per_elem,gll,ErrStat2,ErrMsg2)
+   call bd_diffmtc(p%nodes_per_elem, gll, eta_local, 1, shp, shpder) ! evaluate shp and shpder at single point
 
-   REAL(BDKi),    INTENT(IN   ):: SP_Coef(:,:)  !< Coefficients for cubic spline interpolation
-   REAL(BDKi),    INTENT(IN   ):: eta           !< z-component of nodal location (that's how SP_Coef was computed), in meters
-   REAL(BDKi),    INTENT(  OUT):: PosiVec(:)    !< Physical coordinates of points in blade frame
-   REAL(BDKi),    INTENT(  OUT):: e1(:)         !< Tangent vector, normalized
-   REAL(BDKi),    INTENT(  OUT):: Twist_Angle   !< Twist angle at PosiVec
+   pos = 0._BDki
+   crv = 0._BDki
+   do i = 1, p%nodes_per_elem
+      do j = 1, 3
+         pos(j) = pos(j) + p%uuN0(j,  i,element)  *shp(i,1)
+         CRV(j) = CRV(j) + p%uuN0(j+3,i,element)*shp(i,1)
+      enddo 
+   enddo
 
-   INTEGER(IntKi)              :: i
+   deallocate(gll)
+   deallocate(shp)
+   deallocate(shpder)
 
-
-   DO i=1,3
-       PosiVec(i) = SP_Coef(1,i) + SP_Coef(2,i)*eta +          SP_Coef(3,i)*eta**2 +          SP_Coef(4,i)*eta**3 !position
-       e1(i)      =                SP_Coef(2,i)     + 2.0_BDKi*SP_Coef(3,i)*eta    + 3.0_BDKi*SP_Coef(4,i)*eta**2 !tangent (derivative w.r.t. eta)
-   ENDDO
-   e1 = e1/TwoNorm(e1) ! normalize tangent vector
-
-   Twist_Angle = SP_Coef(1,4) + SP_Coef(2,4)*eta + SP_Coef(3,4)*eta**2 + SP_Coef(4,4)*eta**3
-
-END SUBROUTINE BD_ComputeIniNodalPosition
+END SUBROUTINE BD_Interp_Pos_CRV
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine computes initial CRV parameters
 !! given geometry information
