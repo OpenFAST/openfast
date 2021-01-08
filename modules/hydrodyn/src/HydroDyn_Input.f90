@@ -33,6 +33,8 @@ MODULE HydroDyn_Input
 
    PRIVATE :: CleanupEchoFile
    PRIVATE :: CheckMeshOutput
+   
+   !>>> put parameters here (in waves)  nx,ny,nz...  and discretization coefficients, with unique names, it's like a global<<<
 
 CONTAINS
    
@@ -4276,14 +4278,14 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
          InitInp%Waves%WaveKinzi(I)      = InitInp%Morison%Nodes(I)%Position(3)   ! zi-coordinates for points where the incident wave kinematics will be computed; 
          InitInp%Current%MorisonNodezi(I) = InitInp%Waves%WaveKinzi(I)
       END DO
-      !@mhall: hard-coding the coordinates of those additional nodes for the grid (remember, must be in increasing order)
+      !@mhall: hard-coding the coordinates of those additional nodes for the grid (remember, must be in increasing order) <<< move these to module global parameters<<<<
       DO I=1,8          !z
          DO J = 1,5     !y
             DO K = 1,5  !x 
                Itemp = InitInp%Morison%NNodes + (I-1)*25.0 + (J-1)*5.0 + K    ! index of actual node
                InitInp%Waves%WaveKinzi(Itemp)      =   1.0 - 2.0**(8-I)       !  -127,  -63,  -31,  -15,   -7,   -3,   -1,    0
                InitInp%Waves%WaveKinyi(Itemp)      = -60.0 + 20.0*J
-               InitInp%Waves%WaveKinxi(Itemp)      = -60.0 + 20.0*K 
+               InitInp%Waves%WaveKinxi(Itemp)      = -60.0 + 20.0*K
                InitInp%Current%MorisonNodezi(Itemp)= InitInp%Waves%WaveKinzi(I)
             END DO
          END DO
