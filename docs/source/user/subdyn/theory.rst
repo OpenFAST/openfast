@@ -2442,7 +2442,9 @@ For more information, consult any numerical methods reference, e.g.,
 Summary of the formulation implemented 
 --------------------------------------
 
-This section summarizes the equations currently implemented in SubDyn.
+This section summarizes the equations currently implemented in SubDyn, with the distinction between floating and fixed bottom cases.
+We introduce the operators :math:`R_{g2b}` (rotation global to body) and :math:`R_{b2g}` (rotation body to global), which act on the array on the right of the operator. The operators rotate the individual 3-vectors present in an array. When applied to load vectors (e.g. :math:`F_L`), the rotations actually is applied to the loads on the full system, before the loads are transferred to the reduced system by use of the :math:`\boldsymbol{T}` matrix.
+
 
 State equation
 ~~~~~~~~~~~~~~
@@ -2468,7 +2470,7 @@ Note: :math:`F_L` contains the "extra moment" if user-requested.
                  
     \begin{align}
     \ddot{q}_m =  \Phi_m^T F_L 
-                - \tilde{M}_{mB} \ddot{U}_{TP}
+                - \tilde{M}_{mB} R_{g2b} \ddot{U}_{TP}
                 - \tilde{C}_{mm} \dot{q}_m
                 - \tilde{K}_{mm} q_m
      \end{align}
@@ -2483,12 +2485,12 @@ Notes: :math:`F_L` *does not* contain the "extra moment".
                  
     \begin{align}
     \ddot{q}_m =  \Phi_m^T R_{g2b} F_L 
-                - \tilde{M}_{mB} \ddot{U}_{TP}
+                - \tilde{M}_{mB} R_{g2b} \ddot{U}_{TP}
                 - \tilde{C}_{mm} \dot{q}_m
                 - \tilde{K}_{mm} q_m
      \end{align}
 
-Notes: :math:`F_L` *does not* contain the "extra moment". The (external + gravity) loads are rotated to the body coordinate system using the matrix :math:`R_{g2b}` (global to body).
+Notes: :math:`F_L` *does not* contain the "extra moment". The (external + gravity) loads and the acceleration of the TP are rotated to the body coordinate system.
 
 
 Output: interface reaction
@@ -2531,19 +2533,20 @@ If this is the case, the following additional term is added to the moment part o
                  
     \begin{align}
      -Y_1 =F_{TP,cpl} =& 
-      \left[              - \tilde{M}_{Bm}\tilde{K}_{mm}  \right] q_m
-     +\left[- \tilde{M}_{Bm}\tilde{C}_{mm}  \right] \dot{q}_m
+      R_{b2g}\left[              - \tilde{M}_{Bm}\tilde{K}_{mm}  \right] q_m
+     + R_{b2g}\left[- \tilde{M}_{Bm}\tilde{C}_{mm}  \right] \dot{q}_m
      \\ 
      &+\left[\tilde{K}_{BB}                                \right]  U_{TP} 
      +\left[\tilde{C}_{BB} \right] \dot{U}_{TP}            
      +\left[\tilde{M}_{BB} -\tilde{M}_{Bm} \tilde{M}_{mB} \right] \ddot{U}_{TP}            
     \nonumber \\ 
-     &+\left[\tilde{M}_{Bm}\Phi_m^T\right] F_L  +\left[- T_I^T \bar{\Phi}_R^T \right] F_{L}
+     &+ R_{b2g}\left[\tilde{M}_{Bm}\Phi_m^T\right] F_L  +\left[- T_I^T \bar{\Phi}_R^T \right] F_{L}
      +\left[-T_I^T \right] \bar{F}_R
     \nonumber
     \end{align}
 
-Note: :math:`F_L` and :math:`\bar{F}_R` *do not* contain the "extra moment".
+Notes: 1) :math:`F_L` and :math:`\bar{F}_R` *do not* contain the "extra moment";
+2) The rotation :math:`R_{b2g}\tilde{M}_{Bm} \tilde{M}_{mB}R_{g2b}` is not carried out since it introduced stability issues.
 
 **Floating case with "Extra moment"**
 
@@ -2552,21 +2555,20 @@ Note: :math:`F_L` and :math:`\bar{F}_R` *do not* contain the "extra moment".
                  
     \begin{align}
      -Y_1 =F_{TP,cpl} =& 
-      \left[              - \tilde{M}_{Bm}\tilde{K}_{mm}  \right] q_m
-     +\left[- \tilde{M}_{Bm}\tilde{C}_{mm}  \right] \dot{q}_m
+       R_{b2g}\left[              - \tilde{M}_{Bm}\tilde{K}_{mm}  \right] q_m
+     + R_{b2g}\left[- \tilde{M}_{Bm}\tilde{C}_{mm}  \right] \dot{q}_m
      \\ 
      &+\left[\tilde{K}_{BB}                                \right]  U_{TP} 
      +\left[\tilde{C}_{BB} \right] \dot{U}_{TP}            
      +\left[\tilde{M}_{BB} -\tilde{M}_{Bm} \tilde{M}_{mB} \right] \ddot{U}_{TP}            
     \nonumber \\ 
-     &+\left[\tilde{M}_{Bm}\Phi_m^T\right] R_{b2g} F_L  +\left[- T_I^T \bar{\Phi}_R^T \right] F_{L,\text{extra}}
+     &+ R_{b2g}\left[\tilde{M}_{Bm}\Phi_m^T\right] R_{b2g} F_L  +\left[- T_I^T \bar{\Phi}_R^T \right] F_{L,\text{extra}}
      +\left[-T_I^T \right] \bar{F}_{R,\text{extra}}
     \nonumber
     \end{align}
 
 
-Note: :math:`F_{L,\text{extra}}` and :math:`F_{R,\text{extra}}` contain the "extra moment" in the Guyan contribution. For the Craig-Bampton contribution, the loads are rotated to the body coordinate system using the matrix :math:`R_{g2b}` (global to body).
-
+Notes: 1) :math:`F_{L,\text{extra}}` and :math:`F_{R,\text{extra}}` contain the "extra moment" in the Guyan contribution; 2) For the Craig-Bampton contribution, the loads are rotated to the body coordinate system using the operator :math:`R_{g2b}` (global to body); 3) The rotation :math:`R_{b2g}\tilde{M}_{Bm} \tilde{M}_{mB}R_{g2b}` is not carried out since it introduced stability issues.
 
 Output: nodal motions
 ~~~~~~~~~~~~~~~~~~~~~
@@ -2602,20 +2604,20 @@ Note: :math:`F_L` contains the "extra moment" if user-requested.
 
         \bar{U}_R  &= U_{R,\text{rigid}}
         ,\qquad
-        \bar{U}_L  = U_{L,\text{rigid}} + 0\cdot \Phi_m q_m +  0\cdot U_{L,\text{SIM}}
+        \bar{U}_L  = U_{L,\text{rigid}} + 0\cdot R_{b2g} \left(\Phi_m q_m +  U_{L,\text{SIM}}\right)
 
         \dot{\bar{U}}_R  &= \dot{U}_{R,\text{rigid}} 
         ,\qquad
-        \dot{\bar{U}}_L  = \dot{U}_{L,\text{rigid}} + \Phi_m \dot{q}_m
+        \dot{\bar{U}}_L  = \dot{U}_{L,\text{rigid}} + R_{b2g} \Phi_m \dot{q}_m
 
         \ddot{\bar{U}}_R  &= \ddot{U}_{R,\text{rigid}}
         ,\qquad
-        \ddot{\bar{U}}_L  = \ddot{U}_{L,\text{rigid}}  + \Phi_m\left[\Phi_m^T R_{g2b} F_L
-                - \tilde{M}_{mB} \ddot{U}_{TP}
+        \ddot{\bar{U}}_L  = \ddot{U}_{L,\text{rigid}}  + R_{b2g}\Phi_m\left[\Phi_m^T R_{g2b} F_L
+                - \tilde{M}_{mB} R_{g2b}\ddot{U}_{TP}
                 - \tilde{C}_{mm} \dot{q}_m
                 - \tilde{K}_{mm} q_m \right]
 
-where: 1) :math:`F_L` does not contain the extra moment, 2) the matrix :math:`R_{g2b}` is only used if ExtraMoment is True,  3) the elastic displacements were set to 0 for stability purposes (assuming that these are small) 4) the Guyan motion is computed using the exact rigid body motions. For a given node :math:`P`, located at the position :math:`r_{IP,0}` from the interface in the undisplaced configuration, the position (from the interface point), displacement, translational velocity and acceleration due to the rigid body motion are:
+where: 1) :math:`F_L` does not contain the extra moment, 2) the operator :math:`R_{g2b}` is only used on :math:`F_L` if ExtraMoment is True,  3) the elastic displacements were set to 0 for stability purposes (assuming that these are small) 4) the Guyan motion is computed using the exact rigid body motions. For a given node :math:`P`, located at the position :math:`r_{IP,0}` from the interface in the undisplaced configuration, the position (from the interface point), displacement, translational velocity and acceleration due to the rigid body motion are:
 
 
 .. math::
