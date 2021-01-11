@@ -3166,6 +3166,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
       RETURN
    END IF
 
+
    if ( InitInp%NBody > 1 .and. InitInp%WAMIT2%MnDrift == 8 ) then
       call SetErrStat( ErrID_Fatal,'MnDrift cannot equal 8 when NBody > 1.',ErrStat,ErrMsg,RoutineName)
       return
@@ -3176,6 +3177,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
       return
    end if
    
+
       ! Check MnDrift and set the flag indicating WAMIT2 should perform the mean drift calculation.
       ! Also make sure we have a valid input value for the file extension
 
@@ -3183,7 +3185,12 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
       InitInp%WAMIT2%MnDriftF = .FALSE.
    ELSE IF ( InitInp%WAMIT2%MnDrift == 7  .OR. InitInp%WAMIT2%MnDrift == 8  .OR. InitInp%WAMIT2%MnDrift == 9 .OR. &
              InitInp%WAMIT2%MnDrift == 10 .OR. InitInp%WAMIT2%MnDrift == 11 .OR. InitInp%WAMIT2%MnDrift == 12 ) THEN   ! Valid values for MnDrift
-      InitInp%WAMIT2%MnDriftF = .TRUE.
+      IF ( InitInp%PotMod /= 1 ) THEN
+         CALL SetErrStat( ErrID_warn,'MnDrift can only be used with PotMod==1.  Turning off',ErrStat,ErrMsg,RoutineName)
+         InitInp%WAMIT2%MnDriftF = .FALSE.
+      ELSE
+         InitInp%WAMIT2%MnDriftF = .TRUE.
+      ENDIF
    ELSE     ! Must have received an invalid value
       CALL SetErrStat( ErrID_Fatal,'MnDrift can only have values of 0, 7, 8, 9, 10, 11, or 12.',ErrStat,ErrMsg,RoutineName)
       RETURN
@@ -3197,7 +3204,12 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
       InitInp%WAMIT2%NewmanAppF = .FALSE.
    ELSE IF ( InitInp%WAMIT2%NewmanApp == 7  .OR. InitInp%WAMIT2%NewmanApp == 8  .OR. InitInp%WAMIT2%NewmanApp == 9 .OR. &
              InitInp%WAMIT2%NewmanApp == 10 .OR. InitInp%WAMIT2%NewmanApp == 11 .OR. InitInp%WAMIT2%NewmanApp == 12 ) THEN ! Valid values for NewmanApp
-      InitInp%WAMIT2%NewmanAppF = .TRUE.
+      IF ( InitInp%PotMod /= 1 ) THEN
+         CALL SetErrStat( ErrID_warn,'NewmanApp can only be used with PotMod==1.  Turning off',ErrStat,ErrMsg,RoutineName)
+         InitInp%WAMIT2%NewmanAppF = .FALSE.
+      ELSE
+         InitInp%WAMIT2%NewmanAppF = .TRUE.
+      ENDIF
    ELSE     ! Must have received an invalid value
       CALL SetErrStat( ErrID_Fatal,'NewmanApp can only have values of 0, 7, 8, 9, 10, 11, or 12.',ErrStat,ErrMsg,RoutineName)
       RETURN
@@ -3210,7 +3222,12 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
    IF ( InitInp%WAMIT2%DiffQTF == 0 ) THEN      ! not using DiffQTF method
        InitInp%WAMIT2%DiffQTFF = .FALSE.
    ELSE IF ( InitInp%WAMIT2%DiffQTF == 10 .OR. InitInp%WAMIT2%DiffQTF == 11 .OR. InitInp%WAMIT2%DiffQTF == 12 ) THEN    ! Valid values for DiffQTF
-      InitInp%WAMIT2%DiffQTFF = .TRUE.
+      IF ( InitInp%PotMod /= 1 ) THEN
+         CALL SetErrStat( ErrID_warn,'DiffQTF can only be used with PotMod==1.  Turning off',ErrStat,ErrMsg,RoutineName)
+         InitInp%WAMIT2%DiffQTFF = .FALSE.
+      ELSE
+         InitInp%WAMIT2%DiffQTFF = .TRUE.
+      ENDIF
    ELSE
       CALL SetErrStat( ErrID_Fatal,'DiffQTF can only have values of 0, 10, 11, or 12.',ErrStat,ErrMsg,RoutineName)
       RETURN
@@ -3223,7 +3240,12 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
    IF ( InitInp%WAMIT2%SumQTF == 0 ) THEN       ! not using SumQTF method
       InitInp%WAMIT2%SumQTFF = .FALSE.
    ELSE IF ( InitInp%WAMIT2%SumQTF == 10 .OR. InitInp%WAMIT2%SumQTF == 11 .OR. InitInp%WAMIT2%SumQTF == 12 ) THEN       ! Valid values for SumQTF
-      InitInp%WAMIT2%SumQTFF = .TRUE.
+      IF ( InitInp%PotMod /= 1 ) THEN
+         CALL SetErrStat( ErrID_warn,'SumQTF can only be used with PotMod==1.  Turning off',ErrStat,ErrMsg,RoutineName)
+         InitInp%WAMIT2%SumQTFF = .FALSE.
+      ELSE
+         InitInp%WAMIT2%SumQTFF = .TRUE.
+      ENDIF
    ELSE
       CALL SetErrStat( ErrID_Fatal,'SumQTF can only have values of 0, 10, 11, or 12.',ErrStat,ErrMsg,RoutineName)
       RETURN
@@ -3256,7 +3278,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
 
       ! now that it has been established that the input parameters for second order are good, we check to make sure that the WAMIT files actually exist.
       ! Check MnDrift file
-   IF ( InitInp%WAMIT2%MnDrift /= 0) THEN
+   IF ( InitInp%WAMIT2%MnDriftF ) THEN
       ! Check if using QTF file types (10d, 11d, 12d) or not (7,8,9)
       IF ( InitInp%WAMIT2%MnDrift <= 9 ) THEN
          TmpExtension = TRIM(Num2LStr(InitInp%WAMIT2%MnDrift))
@@ -3273,7 +3295,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
    END IF
 
       ! Check existence of NewmanApp file
-   IF ( InitInp%WAMIT2%NewmanApp /= 0) THEN
+   IF ( InitInp%WAMIT2%NewmanAppF ) THEN
       ! Check if using QTF file types (10d, 11d, 12d) or not (7,8,9)
       IF ( InitInp%WAMIT2%NewmanApp <= 9 ) THEN
          TmpExtension = TRIM(Num2LStr(InitInp%WAMIT2%NewmanApp))
@@ -3289,7 +3311,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
       END IF
    END IF
 
-   IF ( InitInp%WAMIT2%DiffQTF /= 0) THEN
+   IF ( InitInp%WAMIT2%DiffQTFF ) THEN
       TmpExtension = TRIM(Num2LStr(InitInp%WAMIT2%DiffQTF))//'d'
       INQUIRE( file=TRIM(InitInp%WAMIT2%WAMITFile)//'.'//TRIM(TmpExtension), exist=TmpFileExist )
       IF ( .not. TmpFileExist ) THEN
@@ -3299,7 +3321,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
       END IF
    END IF
 
-   IF ( InitInp%WAMIT2%SumQTF /= 0) THEN
+   IF ( InitInp%WAMIT2%SumQTFF ) THEN
       TmpExtension = TRIM(Num2LStr(InitInp%WAMIT2%SumQTF))//'s'
       INQUIRE( file=TRIM(InitInp%WAMIT2%WAMITFile)//'.'//TRIM(TmpExtension), exist=TmpFileExist )
       IF ( .not. TmpFileExist ) THEN

@@ -198,14 +198,16 @@ PROGRAM HydroDynDriver
 !       Begin Simulation Setup
 !-------------------------------------------------------------------------------------
    
-print*,'PRP inputs file'
 
    IF ( drvrInitInp%PRPInputsMod == 2 ) THEN
       
          ! Open the PRP inputs data file
       CALL GetNewUnit( UnPRPInp ) 
       CALL OpenFInpFile ( UnPRPInp, drvrInitInp%PRPInputsFile, ErrStat, ErrMsg ) 
-         IF (ErrStat >=AbortErrLev) STOP
+         IF (ErrStat >=AbortErrLev) THEN
+            call WrScr( ErrMsg )
+            STOP
+         ENDIF
       
       
       ALLOCATE ( PRPin(drvrInitInp%NSteps, 19), STAT = ErrStat )
@@ -237,7 +239,10 @@ print*,'PRP inputs file'
          ! Open the WAMIT inputs data file
       CALL GetNewUnit( UnPRPInp ) 
       CALL OpenFInpFile ( UnPRPInp, drvrInitInp%PRPInputsFile, ErrStat, ErrMsg ) 
-         IF (ErrStat >=AbortErrLev) STOP
+         IF (ErrStat >=AbortErrLev) THEN
+            call WrScr( ErrMsg )
+            STOP
+         ENDIF
       
       
       ALLOCATE ( PRPin(drvrInitInp%NSteps, 7+6*NBODY), STAT = ErrStat )
@@ -647,7 +652,10 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
    
    CALL GetNewUnit( UnIn ) 
    CALL OpenFInpFile ( UnIn, FileName, ErrStat, ErrMsg ) 
-      IF (ErrStat >=AbortErrLev) RETURN
+      IF (ErrStat >=AbortErrLev) THEN
+         call WrScr( ErrMsg )
+         STOP
+      ENDIF
 
    
    CALL WrScr( 'Opening HydroDyn Driver input file:  '//FileName )
