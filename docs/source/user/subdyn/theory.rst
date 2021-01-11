@@ -2562,7 +2562,7 @@ Notes: 1) :math:`F_L` and :math:`\bar{F}_R` *do not* contain the "extra moment";
      +\left[\tilde{C}_{BB} \right] \dot{U}_{TP}            
      +\left[\tilde{M}_{BB} -\tilde{M}_{Bm} \tilde{M}_{mB} \right] \ddot{U}_{TP}            
     \nonumber \\ 
-     &+ R_{b2g}\left[\tilde{M}_{Bm}\Phi_m^T\right] R_{b2g} F_L  +\left[- T_I^T \bar{\Phi}_R^T \right] F_{L,\text{extra}}
+     &+ R_{b2g}\left[\tilde{M}_{Bm}\Phi_m^T\right] R_{g2b} F_L  +\left[- T_I^T \bar{\Phi}_R^T \right] F_{L,\text{extra}}
      +\left[-T_I^T \right] \bar{F}_{R,\text{extra}}
     \nonumber
     \end{align}
