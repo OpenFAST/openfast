@@ -216,7 +216,7 @@ are the start and end joints of the member (or nodes of the element of interest)
 
 If :math:`{X_E = X_S}` and :math:`{Z_E = Z_S}`, the :math:`{[ \mathbf{D_c} ]}` matrix can be found as follows:
 
-if :math:`{Z_E < Z_S}` then
+if :math:`{Z_E >= Z_S}` then
 
  .. math:: 	:label: Dc_spec1
    
@@ -1305,7 +1305,7 @@ DOFs). For this reason, a C-B methodology was used to recharacterize the
 substructure finite-element model into a reduced DOF model that
 maintains the fundamental low-frequency response modes of the structure.
 With the C-B method, the DOFs of the substructure can be reduced to
-about 10 (user defined, see also Section :ref:`CBguide`). This system reduction method
+about 10 (user defined, see also Section :numref:`CBguide`). This system reduction method
 was first introduced by :cite:`hurty1964` and later expanded by :cite:`craig1968`.
 
 
@@ -1647,6 +1647,17 @@ substructure response at each time step can then be obtained by using
 the state-space formulation discussed in the next section.
 
 
+Floating or fixed-bottom structure
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Different formulations are used in SubDyn depending if the structure is "fixed-bottom" or "floating". 
+
+The structure is considered to be "floating" if there is no reaction nodes.
+
+The structure is considered to be "fixed-bottom" in any other case.
+
+
+
 .. _SD_Loads:
 
 Loads 
@@ -1694,6 +1705,16 @@ The Guyan TP force, :math:`\tilde{F}_{TP}`, and the CB force, :math:`F_m`, given
 
 
 
+.. _SD_Rotated Loads:
+
+Rotation of loads for floating
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+In the floating case, the loads acting on the FEM degrees of freedom need to be rotated to the body frame. In the current implementation, this is done when evaluating  :math:`F_{L}` for the time evolution of the CB degrees of freedom, and the determination of the static improvement displacements.
+More details on this special case is found in section :numref:`SD_summary`.
+
+
+
 .. _SD_ExtraMoment:
 
 Extra moment from deflection 
@@ -1714,7 +1735,6 @@ First, a reference undeflected position of the structure is defined, with two po
            
    Illustration for the additional moment occurring due to the distance between the deflected position of the structure and the reference position used for the finite element representation. For simplicity, the loads are assumed to act at the Guyan position instead of the true deflected position.
 
-The structure is considered "fixed" at the sea bed if at least one reaction node satisfies one of these two conditions: the 4 degrees of freedom accounting for the x-y translation and rotation are fixed at the sea bed, or, an additional stiffness matrix is given via an SSI input file (see :numref:`sd_ssi_inputfile`). 
 Second, the external loads are assumed to be applied on the "Guyan" deflected structure, instead of the fully deflected structure. The Craig-Bampton displacements are omitted to avoid the non-linear dependency between the input loads and the Craig-Bampton states.
 With this assumption, the external loads at the Guyan position are mapped to the reference position.
 
@@ -2001,20 +2021,6 @@ By examining Eq. :eq:`main4` and Eq. :eq:`FTPtilde`, the force is extracted from
 
 Inserting the expression of  :math:`\ddot{q}_m` into :math:`F_{TP}` leads to:
 
-..     F_{TP} =& \tilde{M}_{BB}\ddot{U}_{TP} 
-             +   \tilde{M}_{Bm} \left[
-                       \Phi_m^T(F_L + F_{L,g})
-                     - \tilde{M}_{mB} \ddot{U}_{TP}
-                     - \tilde{C}_{mB} \dot{U}_{TP}            
-                     - \tilde{C}_{mm} \dot{q}_m          
-                     - \tilde{K}_{mm} q_m
-                       \right] 
-                       \nonumber\\
-             &+ \tilde{C}_{BB}\dot{U}_{TP} +  \tilde{C}_{Bm} \dot{q}_m
-             + \tilde{K}_{BB} U_{TP} 
-             - T_I^T \left(\bar{F}_{HDR} + \bar{F}_{Rg} + \bar{\Phi}_R(F_{L,e} + F_{L,g}) \right)
-           \nonumber\\
-
 .. math:: :label: FTP3
     :nowrap:
                  
@@ -2102,7 +2108,7 @@ From the CB coordinate transformation (Eq. :eq:`CB3`), and the link between boun
         ,\qquad
         \ddot{\bar{U}}_L  = \bar{\Phi}_R \ddot{\bar{U}}_R + \Phi_m \ddot{q}_m
 
-Using the expression of :math:`\ddot{q}m` from Eq. :eq:`ddotqm`, the internal accelerations are:
+Using the expression of :math:`\ddot{q}_m` from Eq. :eq:`ddotqm`, the internal accelerations are:
 
 
 .. math:: :label: y2internalacc
@@ -2114,6 +2120,7 @@ Using the expression of :math:`\ddot{q}m` from Eq. :eq:`ddotqm`, the internal ac
                 - \tilde{K}_{mm} q_m \right]
 
 
+In the floating case, the Guyan part of the motion are replaced by the analytical rigid body motion (se details in section :numref:`SD_summary`). 
 
 
 The output equation for :math:`y_2`: can then be written as:
@@ -2157,6 +2164,7 @@ where
 The expression for :math:`F_{Y2}` will be modified by the SIM method and Eq. :eq:`bigY2sim` is used instead.
 
 
+
 .. _sim:
 .. _SD_SIM:
 
@@ -2186,7 +2194,7 @@ with C-B modes (:math:`U_{L0m}`), as cast in :eq:`SIM` :
 
 .. math::   :label: SIM
 
-   U_L = \hat{U}_L + U_{L0} - U_{L0m} = \underbrace{\Phi_R U_R + \Phi_m q_m}_{\hat{U}_L}  +  \underbrace{\Phi_L q_{L0}}_{U_{L0}} - \underbrace{\Phi_m q_{m0}}_{U_{L0m}} 
+   U_L = \hat{U}_L + U_{L,\text{SIM}} =\hat{U}+  \underbrace{U_{L0} - U_{L0m}}_{U_{L,\text{SIM}}} = \underbrace{\Phi_R U_R + \Phi_m q_m}_{\hat{U}_L}  +  \underbrace{\Phi_L q_{L0}}_{U_{L0}} - \underbrace{\Phi_m q_{m0}}_{U_{L0m}} 
  
 
 .. where the expression for :math:`U_{L0}` and :math:`U_{L0m}` will be derived in the next paragraph.
@@ -2234,12 +2242,13 @@ Similarly:
 with :math:`\tilde{F}_m =\Phi_m^T(F_{L,e} + F_{L,g})`.
 Note that: :math:`{ \dot{U}_{L0} = \dot{q}_{L0} = \dot{U}_{L0m} = \dot{q}_{m0} =0 }` and :math:`{ \ddot{U}_{L0} = \ddot{q}_{L0} = \ddot{U}_{L0m} = \ddot{q}_{m0} =0 }`.
 
+In the floating case the loads :math:`F_L` is rotated to the body coordinate system when "ExtraMoment" is True (see :numref:`SD_summary` for more details).
+
 The dynamic component :math:`{ \hat{U} = \begin{bmatrix} \hat{U}_R \\ \hat{U}_R \end{bmatrix} }` is calculated following the usual procedure
 described in :numref:`SSformulation` to :numref:`TimeIntegration`. For example, states are still
 calculated and integrated as in Eq. :eq:`state_eq`, and the output to ElastoDyn, i.e.,
 the reaction provided by the substructure at the TP interface, is also
 calculated as it was done previously in Eqs. :eq:`smally1` and :eq:`bigY1`.
-
 However, the state-space formulation is slightly modified  
 (simply adding the contribution :math:`U_{L0}-U_{L0m}` to :math:`F_{Y2}` 
 when computing the outputs to HydroDyn as:
@@ -2255,7 +2264,7 @@ when computing the outputs to HydroDyn as:
            	\ddot{U}_L \\
 	     \end{bmatrix} = \begin{bmatrix}  
 	     	\bar{U}_R \\
-	     	\hat{U}_L + \boldsymbol{U_{L0} - U_{L0m}} \\
+	     	\hat{U}_L + \boldsymbol{U_{L,\text{SIM}}} \\
 	     	\dot{\bar{U}}_R  \\
 		\dot{U}_L \\
 		\ddot{\bar{U}}_R  \\
@@ -2268,38 +2277,12 @@ The array :math:`F_{Y2}` from Eq. :eq:`bigY2` is now defined as follows:
 
 	F_{Y2} &= \begin{bmatrix}
 	       0 \\
-	       \boldsymbol{U_{L0} - U_{L0m}} \\
+	       \boldsymbol{U_{L,\text{SIM}}} \\
 	       0 \\
 	       0 \\
 	       0 \\
 	       \Phi_m \Phi_m^T F_{L,g} 
 	      \end{bmatrix}
-
-
-Finally, the element forces can be calculated as:
-
-.. math:: :label: el_loads_sim
-
-	\text{Element Inertia load:} ~~ F_I^e &= [m] \ddot{U}_e 
-	
-	\text{Element Static load:} ~~ F_S^e &= [k] U_e = [k] \left[ \hat{U}_e + U_{L0,e} - U_{L0m,e} \right] 
-	
-with the element node DOFs expressed as:
-
-.. math::  :label: Uesim
-
-	U_e = \hat{U}_e + U_{L0,e} - U_{L0m,e}
-
-where the SIM decomposition is still used with :math:`\hat{U}_e` denoting the
-time-varying components of the elements nodes' displacements, and :math:`U_{L0,e}` and :math:`U_{L0m,e}` are
-derived from the parent :math:`U_{L0}` and :math:`U_{L0m}` arrays of displacements, respectively.
-
-
-
-
-
-
-
 
 
 
@@ -2309,37 +2292,82 @@ Outputs and Time Integration
 
 
 
-Member Force Calculation
+.. _SD_MemberForce:
+
+Nodal Loads Calculation
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-SubDyn can also calculate member forces by starting from the forces
-computed at the nodes of the elements that are contained in the member
-as:
+We start by introducing how element loads are computed, before detailling how nodal loads are obtained.
+
+**Element Loads**: 
+
+SubDyn calculates 12-vector element loads in the element coordinate system using the global motion of the element:
+
 
 .. math:: :label: el_loads
 
-	\text{Element Inertia load:} ~~ F_I^e = [m] \ddot{U}_e 
+	\text{Element Inertia load:} ~~ F_{I,12}^e   &= [D_{c,12}]^T [m] \ddot{U}_{e,12}
 	
-	\text{Element Static load:} ~~ F_S^e = [k] U_e 
+	\text{Element Stiffness load:} ~~ F_{S,12}^e &= [D_{c,12}]^T [k] \left[ \hat{U}_e + U_{L,\text{SIM}} \right]_{12}
  
-where [*k*] and [*m*] are element stiffness and mass matrices, respectively. And
-:math:`U_e` and :math:`\ddot{U}_e` are element nodal deflections and accelerations respectively,
-which can be obtained from Eq. :eq:`y2`.
-
-There is no good way to quantify the damping forces for each element, so
+where [*k*] and [*m*] are element stiffness and mass matrices expressed in the global frame, 
+:math:`D_{c,12}` is a 12x12 matrix of DCM for a given element, 
+the subscript 12 indicates that the 12 degrees of freedom of the element are considered,
+and :math:`U_e` and :math:`\ddot{U}_e` are element nodal deflections and accelerations respectively,
+which can be obtained from Eq. :eq:`y2` and may contain the static displacement contribution :math:`U_{L,\text{SIM}}`.  There is no good way to quantify the damping forces for each element, so
 the element damping forces are not calculated.
+
+**Nodal loads**
+
+For a given element node, the loads are the 6-vector with index 1-6 or 7-12 for the first or second node respectively. By convention, the 6-vector is multiplied by -1 for the first node and +1 for the second node of the element:
+
+.. math:: :label: nd_loads
+
+         F_{6}^{n_1}  = - F_{12}^e(1:6)
+         ,\quad
+         F_{6}^{n_2}  = + F_{12}^e(7:12)
+
+The above applies for the inertial and stiffness loads.
+ 
+
+**Member nodal loads requested by the user**
+
+The user can output nodal loads for a set of members (see :numref:`SD_Member_Output`).
+
+For the user requested member nodal outputs, the loads are either: 1) the appropriate 6-vector at the member end nodes, or, 2) the average of the 6-vectors from the two elements surrounding a node for the nodes in the middle of a member. When averaging is done, the 12-vectors of both surrounding elements are expressed using the DCM of the member where outputs are requested.
+
+
+**"AllOuts" nodal loads**
+
+For "AllOuts" nodal outputs, the loads are not averaged and the 6-vector (with the appropriate signs) are directly written to file.
+
+**Reaction nodal loads**
+(See :numref:`SD_Reaction`)
+
+
+
+
+.. _SD_Reaction:
 
 Reaction Calculation
 ~~~~~~~~~~~~~~~~~~~~
 
-The reactions at the base of the structure are the member forces at the
-base nodes. These are usually provided in member local reference frames.
+The reactions at the base of the structure are the nodal loads at the
+base nodes. 
+
+
+
+
 Additionally, the user may request an overall reaction
 :math:`\overrightarrow{R}` (six forces and moments) lumped at the center
 of the substructure (tower centerline) and mudline, i.e., at the
 reference point (0,0,-**WtrDpth**) in the global reference frame, with
-**WtrDpth** denoting the water depth. :math:`\overrightarrow{R}` is a
-six-element array that can be calculated in matrix form as follows:
+**WtrDpth** denoting the water depth. 
+
+To obtain this overall reaction, the forces and moments at the :math:`N_\text{React}` restrained
+nodes are expressed in the global coordinate frame and gathered into the vector :math:`F_{\text{React}}`, which is a (6*N\ :sub:`React`) array.
+For a given reaction node, the 6-vector of loads is obtained by summing the nodal load contributions from all the elements connected to that node expressed in the global frame (no account of the sign is done here), and subtracting the external loads (:math:`F_{HDR}`) applied on this node.
+The loads from all nodes, :math:`F_{\text{React}}`, are then rigidly-transferred to :math:`(0,0,-\text{WtrDpth})` to obtain the overall six-element array :math:`\overrightarrow{R}`:
 
 .. math:: :label: reaction
 
@@ -2349,10 +2377,7 @@ six-element array that can be calculated in matrix form as follows:
 				M_{Z} \\
 			     \end{bmatrix} = T_{\text{React}} F_{\text{React}}
 			     
-
-where :math:`F_{\text{React}}` is a (6*N\ :sub:`React`) array
-containing the forces and moments at the *N\ :sub:`react`* restrained
-nodes in the global coordinate frame, and :math:`T_{\text{React}}` is a
+where :math:`T_{\text{React}}` is a
 ( :math:`{6×6 N_{\text{React}}}` ) matrix, as follows:
 
 .. math:: :label: Treact
@@ -2367,12 +2392,7 @@ nodes in the global coordinate frame, and :math:`T_{\text{React}}` is a
 			\end{bmatrix}
 
 where :math:`{X_i,~Y_i}`, and :math:`Z_i` (:math:`{i = 1 .. N_{\text{React}}}`) are coordinates of
-the boundary nodes with respect to the reference point. For each element
-with a restrained node, :math:`F_{\text{React}}` is calculated starting
-from :math:`F_S^e` --- see Eq. :eq:`el_loads` --- subtracting out the contributions of gravity --- :math:`F_G`, see Eq. :eq:`FG`
-and hydrodynamic loads (:math:`F_{HDR}`) at the restrained node. No direct
-element-level inertial or damping effect is therefore included in the
-reaction calculation.
+the boundary nodes with respect to the reference point. 
 
 
 
@@ -2417,8 +2437,218 @@ For more information, consult any numerical methods reference, e.g.,
 
 
 
+.. _SD_summary:
+
+Summary of the formulation implemented 
+--------------------------------------
+
+This section summarizes the equations currently implemented in SubDyn, with the distinction between floating and fixed bottom cases.
+We introduce the operators :math:`R_{g2b}` (rotation global to body) and :math:`R_{b2g}` (rotation body to global), which act on the array on the right of the operator. The operators rotate the individual 3-vectors present in an array. When applied to load vectors (e.g. :math:`F_L`), the rotations actually is applied to the loads on the full system, before the loads are transferred to the reduced system by use of the :math:`\boldsymbol{T}` matrix.
+
+
+State equation
+~~~~~~~~~~~~~~
+
+**Fixed-bottom case**
+
+.. math:: 
+    :nowrap:
+                 
+    \begin{align}
+    \ddot{q}_m =  \Phi_m^T F_L
+                - \tilde{M}_{mB} \ddot{U}_{TP}
+                - \tilde{C}_{mm} \dot{q}_m
+                - \tilde{K}_{mm} q_m
+     \end{align}
+
+Note: :math:`F_L` contains the "extra moment" if user-requested.
+
+**Floating case without "Extra Moment"**
+
+.. math:: 
+    :nowrap:
+                 
+    \begin{align}
+    \ddot{q}_m =  \Phi_m^T F_L 
+                - \tilde{M}_{mB} R_{g2b} \ddot{U}_{TP}
+                - \tilde{C}_{mm} \dot{q}_m
+                - \tilde{K}_{mm} q_m
+     \end{align}
+
+Notes: :math:`F_L` *does not* contain the "extra moment".
+
+
+**Floating case with "Extra Moment"**
+
+.. math:: 
+    :nowrap:
+                 
+    \begin{align}
+    \ddot{q}_m =  \Phi_m^T R_{g2b} F_L 
+                - \tilde{M}_{mB} R_{g2b} \ddot{U}_{TP}
+                - \tilde{C}_{mm} \dot{q}_m
+                - \tilde{K}_{mm} q_m
+     \end{align}
+
+Notes: :math:`F_L` *does not* contain the "extra moment". The (external + gravity) loads and the acceleration of the TP are rotated to the body coordinate system.
+
+
+Output: interface reaction
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Fixed bottom case**
+
+.. math:: 
+    :nowrap:
+                 
+    \begin{align}
+     -Y_1 =F_{TP,cpl} =
+       \begin{Bmatrix}
+       f_{TP,cpl} \\
+       m_{TP,cpl} \\
+       \end{Bmatrix}
+     & =
+      \left[              - \tilde{M}_{Bm}\tilde{K}_{mm}  \right] q_m
+     +\left[- \tilde{M}_{Bm}\tilde{C}_{mm}  \right] \dot{q}_m
+     \\ 
+     &+\left[\tilde{K}_{BB}                                \right]  U_{TP} 
+     +\left[\tilde{C}_{BB} \right] \dot{U}_{TP}            
+     +\left[\tilde{M}_{BB} -\tilde{M}_{Bm} \tilde{M}_{mB} \right] \ddot{U}_{TP}            
+    \nonumber \\ 
+     &+\left[\tilde{M}_{Bm}\Phi_m^T\right] F_L  +\left[- T_I^T \bar{\Phi}_R^T \right] F_{L}
+     +\left[ -T_I^T \right] \bar{F}_R
+    \nonumber
+    \end{align}
+
+Note: :math:`F_L` and :math:`\bar{F}_R` contains the "extra moment" if user-requested.
+If this is the case, the following additional term is added to the moment part of :math:`Y_1`, 
+:math:`m_{Y_1,\text{extra}}=u_{TP} \times f_{TP,cpl}`.
+
+
+
+**Floating case without "Extra moment"**
+
+.. math:: 
+    :nowrap:
+                 
+    \begin{align}
+     -Y_1 =F_{TP,cpl} =& 
+      R_{b2g}\left[              - \tilde{M}_{Bm}\tilde{K}_{mm}  \right] q_m
+     + R_{b2g}\left[- \tilde{M}_{Bm}\tilde{C}_{mm}  \right] \dot{q}_m
+     \\ 
+     &+\left[\tilde{K}_{BB}                                \right]  U_{TP} 
+     +\left[\tilde{C}_{BB} \right] \dot{U}_{TP}            
+     +\left[\tilde{M}_{BB} -\tilde{M}_{Bm} \tilde{M}_{mB} \right] \ddot{U}_{TP}            
+    \nonumber \\ 
+     &+ R_{b2g}\left[\tilde{M}_{Bm}\Phi_m^T\right] F_L  +\left[- T_I^T \bar{\Phi}_R^T \right] F_{L}
+     +\left[-T_I^T \right] \bar{F}_R
+    \nonumber
+    \end{align}
+
+Notes: 1) :math:`F_L` and :math:`\bar{F}_R` *do not* contain the "extra moment";
+2) The rotation :math:`R_{b2g}\tilde{M}_{Bm} \tilde{M}_{mB}R_{g2b}` is not carried out since it introduced stability issues.
+
+**Floating case with "Extra moment"**
+
+.. math:: 
+    :nowrap:
+                 
+    \begin{align}
+     -Y_1 =F_{TP,cpl} =& 
+       R_{b2g}\left[              - \tilde{M}_{Bm}\tilde{K}_{mm}  \right] q_m
+     + R_{b2g}\left[- \tilde{M}_{Bm}\tilde{C}_{mm}  \right] \dot{q}_m
+     \\ 
+     &+\left[\tilde{K}_{BB}                                \right]  U_{TP} 
+     +\left[\tilde{C}_{BB} \right] \dot{U}_{TP}            
+     +\left[\tilde{M}_{BB} -\tilde{M}_{Bm} \tilde{M}_{mB} \right] \ddot{U}_{TP}            
+    \nonumber \\ 
+     &+ R_{b2g}\left[\tilde{M}_{Bm}\Phi_m^T\right] R_{g2b} F_L  +\left[- T_I^T \bar{\Phi}_R^T \right] F_{L,\text{extra}}
+     +\left[-T_I^T \right] \bar{F}_{R,\text{extra}}
+    \nonumber
+    \end{align}
+
+
+Notes: 1) :math:`F_{L,\text{extra}}` and :math:`F_{R,\text{extra}}` contain the "extra moment" in the Guyan contribution; 2) For the Craig-Bampton contribution, the loads are rotated to the body coordinate system using the operator :math:`R_{g2b}` (global to body); 3) The rotation :math:`R_{b2g}\tilde{M}_{Bm} \tilde{M}_{mB}R_{g2b}` is not carried out since it introduced stability issues.
+
+Output: nodal motions
+~~~~~~~~~~~~~~~~~~~~~
+
+**Fixed-bottom case**
+
+.. math:: :label:
+
+        \bar{U}_R  &= T_I U_{TP} 
+        ,\qquad
+        \bar{U}_L  = \bar{\Phi}_R \bar{U}_R + \Phi_m q_m + U_{L,\text{SIM}}
+
+        \dot{\bar{U}}_R  &= T_I \dot{U}_{TP} 
+        ,\qquad
+        \dot{\bar{U}}_L  = \bar{\Phi}_R \dot{\bar{U}}_R + \Phi_m \dot{q}_m
+
+        \ddot{\bar{U}}_R  &= T_I \ddot{U}_{TP} 
+        ,\qquad
+        \ddot{\bar{U}}_L  = \bar{\Phi}_R \ddot{\bar{U}}_R  + \Phi_m\left[\Phi_m^T F_L
+                - \tilde{M}_{mB} \ddot{U}_{TP}
+                - \tilde{C}_{mm} \dot{q}_m
+                - \tilde{K}_{mm} q_m \right]
+
+
+Note: :math:`F_L` contains the "extra moment" if user-requested.
 
 
 
 
+**Floating case**
+
+.. math:: :label:
+
+        \bar{U}_R  &= U_{R,\text{rigid}}
+        ,\qquad
+        \bar{U}_L  = U_{L,\text{rigid}} + 0\cdot R_{b2g} \left(\Phi_m q_m +  U_{L,\text{SIM}}\right)
+
+        \dot{\bar{U}}_R  &= \dot{U}_{R,\text{rigid}} 
+        ,\qquad
+        \dot{\bar{U}}_L  = \dot{U}_{L,\text{rigid}} + R_{b2g} \Phi_m \dot{q}_m
+
+        \ddot{\bar{U}}_R  &= \ddot{U}_{R,\text{rigid}}
+        ,\qquad
+        \ddot{\bar{U}}_L  = \ddot{U}_{L,\text{rigid}}  + R_{b2g}\Phi_m\left[\Phi_m^T R_{g2b} F_L
+                - \tilde{M}_{mB} R_{g2b}\ddot{U}_{TP}
+                - \tilde{C}_{mm} \dot{q}_m
+                - \tilde{K}_{mm} q_m \right]
+
+where: 1) :math:`F_L` does not contain the extra moment, 2) the operator :math:`R_{g2b}` is only used on :math:`F_L` if ExtraMoment is True,  3) the elastic displacements were set to 0 for stability purposes (assuming that these are small) 4) the Guyan motion is computed using the exact rigid body motions. For a given node :math:`P`, located at the position :math:`r_{IP,0}` from the interface in the undisplaced configuration, the position (from the interface point), displacement, translational velocity and acceleration due to the rigid body motion are:
+
+
+.. math::
+        r_{IP} &=  R_{b2g} r_{IP,0}
+        ,\quad
+        u_P = r_{IP} - r_{IP,0} + u_{TP}
+          ,\quad
+
+       \dot{u}_P &= \dot{u}_{TP} + \omega_{TP} \times r_{IP} 
+       ,\quad
+       \ddot{u}_P= \ddot{u}_{TP} + \dot{\omega}_{TP} \times r_{IP}  + \omega_{TP} \times (\omega_{TP} \times r_{IP})
+
+where :math:`\omega_{TP}` is the angular velocity at the transition piece. The small angle rotations, angular velocities and accelerations of each nodes, due to the rigid body rotation, are the same as the interface values, :math:`\theta_{TP}`, :math:`\omega_{TP}` and :math:`\dot{\omega}_{TP}`, so that:
+
+.. math::
+      U_{P,\text{rigid}} = \{u_P \ ;  \theta_{TP}\}^T
+      ,\quad
+      \dot{U}_{P,\text{rigid}} = \{\dot{u}_P \ ;  \omega_{TP}\}^T
+      ,\quad
+      \ddot{U}_{P,\text{rigid}} = \{\ddot{u}_P \ ;  \dot{\omega}_{TP}\}^T
+
+where :math:`P` is a point belonging to the R- or L-set of nodes.
+
+
+Outputs to file:
+~~~~~~~~~~~~~~~~
+
+**Motions**: nodal motions written to file are in global coordinates, and for the floating case they contain the elastic motion :math:`\bar{U}_L  = U_{L,\text{rigid}} + \Phi_m q_m +  U_{L,\text{SIM}}` (whereas these elastic motions are not returned to the glue code)
+
+
+**Loads**: 
+
+Nodal loads are written to file in the element coordinate system. The procedure are the same for fixed-bottom and floating cases. 
 
