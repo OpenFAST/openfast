@@ -817,7 +817,7 @@ subroutine FVW_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSt
    !dxdt%r_FW(1:3, :, 1, :)=0
 
    ! --- Regularization
-   if (.not.allocated(dxdt%r_NW)) then
+   if (.not.allocated(dxdt%Eps_NW)) then
       call AllocAry( dxdt%Eps_NW , 3   ,  p%nSpan    ,p%nNWMax  ,  p%nWings, 'Eps NW ', ErrStat2, ErrMsg2); 
       call AllocAry( dxdt%Eps_FW , 3   ,  FWnSpan    ,p%nFWMax  ,  p%nWings, 'Eps FW ', ErrStat2, ErrMsg2); 
       if(Failed()) return
@@ -916,7 +916,7 @@ contains
       Failed =  ErrStat >= AbortErrLev
    end function Failed
 end subroutine FVW_Euler1
-!----------------------------------------------------------------------------------------------------------------------------------
+
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine implements the fourth-order Runge-Kutta Method (RK4) for
 !numerically integrating ordinary differential equations:
@@ -938,8 +938,6 @@ end subroutine FVW_Euler1
 !Art of Scientific Computing, 2nd ed. Cambridge, England: 
 !!   Cambridge University Press, pp. 704-716, 1992.
 SUBROUTINE FVW_RK4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg)
-!..................................................................................................................................
-
       REAL(DbKi),                   INTENT(IN   )  :: t           !< Current simulation time in seconds
       INTEGER(IntKi),               INTENT(IN   )  :: n           !< time step number
       TYPE(FVW_InputType),           INTENT(INOUT)  :: u(:)        !< Inputs at t (out only for mesh record-keeping in ExtrapInterp routine)
@@ -952,10 +950,7 @@ SUBROUTINE FVW_RK4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg
       TYPE(FVW_MiscVarType),         INTENT(INOUT)  :: m           !< misc/optimization variables
       INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     !< Error status of the operation
       CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
-
       ! local variables
-
-      TYPE(FVW_ContinuousStateType)                 :: dxdt        ! time derivatives of continuous states
       real(ReKi)                                    :: dt   
       TYPE(FVW_ContinuousStateType)                 :: k1 ! RK4 constant; see above
       TYPE(FVW_ContinuousStateType)                 :: k2 ! RK4 constant; see above 
@@ -963,60 +958,37 @@ SUBROUTINE FVW_RK4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg
       TYPE(FVW_ContinuousStateType)                 :: k4 ! RK4 constant; see above 
       TYPE(FVW_ContinuousStateType)                 :: x_tmp       ! Holds temporary modification to x
       TYPE(FVW_InputType)                           :: u_interp    ! interpolated value of inputs 
-
       INTEGER(IntKi)                               :: ErrStat2    ! local error status
       CHARACTER(ErrMsgLen)                         :: ErrMsg2     ! local error message (ErrMsg)
-
-
       ! Initialize ErrStat
-
       ErrStat = ErrID_None
       ErrMsg  = ""
 
       dt = real(p%DTaero,ReKi) ! NOTE: this is DTaero not DTfvw since we integrate at each sub time step
 
-      if (m%ComputeWakeInduced) then
-         CALL FVW_CopyContState( x, k1, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
-            CALL CheckError(ErrStat2,ErrMsg2)
-         CALL FVW_CopyContState( x, k2, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
-            CALL CheckError(ErrStat2,ErrMsg2)
-         CALL FVW_CopyContState( x, k3, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
-            CALL CheckError(ErrStat2,ErrMsg2)
-         CALL FVW_CopyContState( x, k4,    MESH_NEWCOPY, ErrStat2, ErrMsg2 )
-            CALL CheckError(ErrStat2,ErrMsg2)
-         CALL FVW_CopyContState( x, x_tmp, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
-            CALL CheckError(ErrStat2,ErrMsg2)
-         CALL FVW_CopyContState( x, x_tmp, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
-            CALL CheckError(ErrStat2,ErrMsg2)
-            IF ( ErrStat >= AbortErrLev ) RETURN
+      CALL FVW_CopyContState( x, k1, MESH_NEWCOPY, ErrStat2, ErrMsg2 ); CALL CheckError(ErrStat2,ErrMsg2)
+      CALL FVW_CopyContState( x, k2, MESH_NEWCOPY, ErrStat2, ErrMsg2 ); CALL CheckError(ErrStat2,ErrMsg2)
+      CALL FVW_CopyContState( x, k3, MESH_NEWCOPY, ErrStat2, ErrMsg2 ); CALL CheckError(ErrStat2,ErrMsg2)
+      CALL FVW_CopyContState( x, k4,    MESH_NEWCOPY, ErrStat2, ErrMsg2 ); CALL CheckError(ErrStat2,ErrMsg2)
+      CALL FVW_CopyContState( x, x_tmp, MESH_NEWCOPY, ErrStat2, ErrMsg2 ); CALL CheckError(ErrStat2,ErrMsg2)
+         IF ( ErrStat >= AbortErrLev ) RETURN
 
+      CALL FVW_CopyInput( u(1), u_interp, MESH_NEWCOPY, ErrStat2, ErrMsg2 ); CALL CheckError(ErrStat2,ErrMsg2); IF ( ErrStat >= AbortErrLev ) RETURN
 
-         CALL FVW_CopyInput( u(1), u_interp, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
-            CALL CheckError(ErrStat2,ErrMsg2)
-            IF ( ErrStat >= AbortErrLev ) RETURN
+      ! interpolate u to find u_interp = u(t)
+      CALL FVW_Input_ExtrapInterp( u(1:size(utimes)),utimes(:),u_interp, t, ErrStat2, ErrMsg2 ); CALL CheckError(ErrStat2,ErrMsg2); IF ( ErrStat >= AbortErrLev ) RETURN        
 
-         ! interpolate u to find u_interp = u(t)
-         CALL FVW_Input_ExtrapInterp( u(1:size(utimes)),utimes(:),u_interp, t, ErrStat2, ErrMsg2 )
-            CALL CheckError(ErrStat2,ErrMsg2)
-            IF ( ErrStat >= AbortErrLev ) RETURN        
-
-         ! find dxdt at t
-         CALL FVW_CalcContStateDeriv( t, u_interp, p, x, xd, z, OtherState, m, dxdt, ErrStat2, ErrMsg2 )
-            CALL CheckError(ErrStat2,ErrMsg2)
-            IF ( ErrStat >= AbortErrLev ) RETURN
-
-         m%dxdt_NW = dxdt%r_NW
-         m%dxdt_FW = dxdt%r_FW
-      end if
+      ! find dxdt at t
+      CALL FVW_CalcContStateDeriv( t, u_interp, p, x, xd, z, OtherState, m, m%dxdt, ErrStat2, ErrMsg2 ); CALL CheckError(ErrStat2,ErrMsg2); IF ( ErrStat >= AbortErrLev ) RETURN
 
       if (DEV_VERSION) then
          ! Additional checks
-         if (any(m%dxdt_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)<-999)) then
+         if (any(m%dxdt%r_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)<-999)) then
             print*,'FVW_RK4: Attempting to convect NW with a wrong velocity'
             STOP
          endif
          if ( m%nFW>0) then
-            if (any(m%dxdt_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)<-999)) then
+            if (any(m%dxdt%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)<-999)) then
                call print_x_NW_FW(p, m, x, 'STP')
                print*,'FVW_RK4: Attempting to convect FW with a wrong velocity'
                STOP
@@ -1024,139 +996,122 @@ SUBROUTINE FVW_RK4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg
          endif
       endif
 
-      k1%r_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)  = dt * m%dxdt_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) 
+      k1%r_NW  (1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) = dt * m%dxdt%r_NW  (1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) 
+      k1%Eps_NW(1:3, 1:p%nSpan  , 1:m%nNW,   1:p%nWings) = dt * m%dxdt%Eps_NW(1:3, 1:p%nSpan,   1:m%nNW,   1:p%nWings)
       if ( m%nFW>0) then   
-         k1%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)  = dt * m%dxdt_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)
+         k1%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings) = dt * m%dxdt%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)
+         k1%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW,   1:p%nWings) = dt * m%dxdt%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW,   1:p%nWings)
       endif
 
-      x_tmp%r_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)  = x%r_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)  + 0.5 * k1%r_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)
+      x_tmp%r_NW  (1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) = x%r_NW  (1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) + 0.5 * k1%r_NW  (1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)
+      x_tmp%Eps_NW(1:3, 1:p%nSpan  , 1:m%nNW,   1:p%nWings) = x%Eps_NW(1:3, 1:p%nSpan  , 1:m%nNW,   1:p%nWings) + 0.5 * k1%Eps_NW(1:3, 1:p%nSpan,   1:m%nNW,   1:p%nWings)
       if ( m%nFW>0) then
-         x_tmp%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)  = x%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)  + 0.5 * k1%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)
+         x_tmp%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings) = x%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)  + 0.5 * k1%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)
+         x_tmp%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW,   1:p%nWings) = x%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW,   1:p%nWings)  + 0.5 * k1%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW,   1:p%nWings)
       endif
 
       ! interpolate u to find u_interp = u(t + dt/2)
-      CALL FVW_Input_ExtrapInterp(u(1:size(utimes)),utimes(:),u_interp, t+0.5*dt, ErrStat2, ErrMsg2)
-         CALL CheckError(ErrStat2,ErrMsg2)
-         IF ( ErrStat >= AbortErrLev ) RETURN        
+      CALL FVW_Input_ExtrapInterp(u(1:size(utimes)),utimes(:),u_interp, t+0.5*dt, ErrStat2, ErrMsg2); CALL CheckError(ErrStat2,ErrMsg2); IF ( ErrStat >= AbortErrLev ) RETURN        
 
       ! find dxdt at t + dt/2
-      CALL FVW_CalcContStateDeriv( t + 0.5*dt, u_interp, p, x_tmp, xd, z, OtherState, m, dxdt, ErrStat2, ErrMsg2 )
-         CALL CheckError(ErrStat2,ErrMsg2)
-         IF ( ErrStat >= AbortErrLev ) RETURN
-      m%dxdt_NW = dxdt%r_NW
-      m%dxdt_FW = dxdt%r_FW
+      CALL FVW_CalcContStateDeriv( t + 0.5*dt, u_interp, p, x_tmp, xd, z, OtherState, m, m%dxdt, ErrStat2, ErrMsg2 ); CALL CheckError(ErrStat2,ErrMsg2); IF ( ErrStat >= AbortErrLev ) RETURN
 
-      k2%r_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)  = dt * m%dxdt_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)
+      k2%r_NW  (1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) = dt * m%dxdt%r_NW  (1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)
+      k2%Eps_NW(1:3, 1:p%nSpan  , 1:m%nNW,   1:p%nWings) = dt * m%dxdt%Eps_NW(1:3, 1:p%nSpan,   1:m%nNW,   1:p%nWings)
       if ( m%nFW>0) then
-         k2%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)  = dt * m%dxdt_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)
+         k2%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings) = dt * m%dxdt%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)
+         k2%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW,   1:p%nWings) = dt * m%dxdt%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW,   1:p%nWings)
       endif
 
-      x_tmp%r_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)  = x%r_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)  + 0.5 * k2%r_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)
+      x_tmp%r_NW  (1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) = x%r_NW  (1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) + 0.5 * k2%r_NW  (1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)
+      x_tmp%Eps_NW(1:3, 1:p%nSpan  , 1:m%nNW,   1:p%nWings) = x%Eps_NW(1:3, 1:p%nSpan  , 1:m%nNW,   1:p%nWings) + 0.5 * k2%Eps_NW(1:3, 1:p%nSpan,   1:m%nNW,   1:p%nWings)
       if ( m%nFW>0) then
-         x_tmp%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)  = x%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)  + 0.5 * k2%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)
+         x_tmp%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings) = x%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)  + 0.5 * k2%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)
+         x_tmp%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW,   1:p%nWings) = x%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW,   1:p%nWings)  + 0.5 * k2%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW,   1:p%nWings)
       endif
 
       ! find dxdt at t + dt/2       
-      CALL FVW_CalcContStateDeriv( t + 0.5*dt, u_interp, p, x_tmp, xd, z, OtherState, m, dxdt, ErrStat2, ErrMsg2 )
-         CALL CheckError(ErrStat2,ErrMsg2)
-         IF ( ErrStat >= AbortErrLev ) RETURN
-      m%dxdt_NW = dxdt%r_NW
-      m%dxdt_FW = dxdt%r_FW
+      CALL FVW_CalcContStateDeriv( t + 0.5*dt, u_interp, p, x_tmp, xd, z, OtherState, m, m%dxdt, ErrStat2, ErrMsg2 ); CALL CheckError(ErrStat2,ErrMsg2); IF ( ErrStat >= AbortErrLev ) RETURN
 
-      k3%r_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)  = dt * m%dxdt_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)
+      k3%r_NW  (1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) = dt * m%dxdt%r_NW  (1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)
+      k3%Eps_NW(1:3, 1:p%nSpan  , 1:m%nNW,   1:p%nWings) = dt * m%dxdt%Eps_NW(1:3, 1:p%nSpan,   1:m%nNW,   1:p%nWings)
       if ( m%nFW>0) then
-         k3%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)  = dt * m%dxdt_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)
+         k3%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings) = dt * m%dxdt%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)
+         k3%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW,   1:p%nWings) = dt * m%dxdt%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW,   1:p%nWings)
       endif
 
-      x_tmp%r_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)  = x%r_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)  + k3%r_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)
+      x_tmp%r_NW  (1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) = x%r_NW  (1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) + k3%r_NW  (1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)
+      x_tmp%Eps_NW(1:3, 1:p%nSpan  , 1:m%nNW,   1:p%nWings) = x%Eps_NW(1:3, 1:p%nSpan  , 1:m%nNW,   1:p%nWings) + k3%Eps_NW(1:3, 1:p%nSpan,   1:m%nNW,   1:p%nWings)
       if ( m%nFW>0) then
-         x_tmp%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)  = x%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)  + k3%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)
+         x_tmp%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings) = x%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)  + k3%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)
+         x_tmp%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW,   1:p%nWings) = x%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW,   1:p%nWings)  + k3%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW,   1:p%nWings)
       endif
 
       ! interpolate u to find u_interp = u(t + dt)
-      CALL FVW_Input_ExtrapInterp(u(1:size(utimes)),utimes(:),u_interp, t + dt, ErrStat2, ErrMsg2)
-         CALL CheckError(ErrStat2,ErrMsg2)
-         IF ( ErrStat >= AbortErrLev ) RETURN
-
+      CALL FVW_Input_ExtrapInterp(u(1:size(utimes)),utimes(:),u_interp, t + dt, ErrStat2, ErrMsg2); CALL CheckError(ErrStat2,ErrMsg2); IF ( ErrStat >= AbortErrLev ) RETURN
 
       ! find dxdt at t + dt
-      CALL FVW_CalcContStateDeriv( t + dt, u_interp, p, x_tmp, xd, z, OtherState, m, dxdt, ErrStat2, ErrMsg2 )
-         CALL CheckError(ErrStat2,ErrMsg2)
-         IF ( ErrStat >= AbortErrLev ) RETURN
-      m%dxdt_NW = dxdt%r_NW
-      m%dxdt_FW = dxdt%r_FW
+      CALL FVW_CalcContStateDeriv( t + dt, u_interp, p, x_tmp, xd, z, OtherState, m, m%dxdt, ErrStat2, ErrMsg2 ); CALL CheckError(ErrStat2,ErrMsg2); IF ( ErrStat >= AbortErrLev ) RETURN
 
-      k4%r_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)  = dt * m%dxdt_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)
+      k4%r_NW  (1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) = dt * m%dxdt%r_NW  (1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)
+      k4%Eps_NW(1:3, 1:p%nSpan  , 1:m%nNW,   1:p%nWings) = dt * m%dxdt%Eps_NW(1:3, 1:p%nSpan,   1:m%nNW,   1:p%nWings)
       if ( m%nFW>0) then
-         k4%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)  = dt * m%dxdt_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)
+         k4%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings) = dt * m%dxdt%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)
+         k4%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW,   1:p%nWings) = dt * m%dxdt%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW,   1:p%nWings)
+      endif
+
+      ! Compute and store combined dx = (k1/6 + k2/3 + k3/3 + k4/6) ! NOTE: this has dt, it's not a true dxdt yet
+      m%dxdt%r_NW  (1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) = ( k1%r_NW  (1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) + 2._ReKi * k2%r_NW  (1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) + 2._ReKi * k3%r_NW  (1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) + k4%r_NW  (1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)  ) / 6._ReKi
+      m%dxdt%Eps_NW(1:3, 1:p%nSpan  , 1:m%nNW  , 1:p%nWings) = ( k1%Eps_NW(1:3, 1:p%nSpan  , 1:m%nNW  , 1:p%nWings) + 2._ReKi * k2%Eps_NW(1:3, 1:p%nSpan  , 1:m%nNW  , 1:p%nWings) + 2._ReKi * k3%Eps_NW(1:3, 1:p%nSpan  , 1:m%nNW  , 1:p%nWings) + k4%Eps_NW(1:3, 1:p%nSpan  , 1:m%nNW  , 1:p%nWings)  ) / 6._ReKi
+      if ( m%nFW>0) then         
+         m%dxdt%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings) = ( k1%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings) + 2._ReKi * k2%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings) + 2._ReKi * k3%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings) + k4%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)  ) / 6._ReKi
+         m%dxdt%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW,   1:p%nWings) = ( k1%Eps_FW(1:3, 1:FWnSpan  , 1:m%nFW  , 1:p%nWings) + 2._ReKi * k2%Eps_FW(1:3, 1:FWnSpan  , 1:m%nFW  , 1:p%nWings) + 2._ReKi * k3%Eps_FW(1:3, 1:FWnSpan  , 1:m%nFW  , 1:p%nWings) + k4%Eps_FW(1:3, 1:FWnSpan  , 1:m%nFW  , 1:p%nWings)  ) / 6._ReKi
       endif
 
       !update positions
-      x%r_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)  = x%r_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)  +  ( k1%r_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)  + 2. * k2%r_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)  + 2. * k3%r_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)  + k4%r_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)  ) / 6.
+      x%r_NW  (1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) = x%r_NW  (1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) + m%dxdt%r_NW  (1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) 
+      x%Eps_NW(1:3, 1:p%nSpan  , 1:m%nNW  , 1:p%nWings) = x%Eps_NW(1:3, 1:p%nSpan  , 1:m%nNW  , 1:p%nWings) + m%dxdt%Eps_NW(1:3, 1:p%nSpan  , 1:m%nNW  , 1:p%nWings) 
       if ( m%nFW>0) then         
-         x%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)  = x%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)  +  ( k1%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)  + 2. * k2%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)  + 2. * k3%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)  + k4%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)  ) / 6.
+         x%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings) = x%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings) + m%dxdt%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)
+         x%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW,   1:p%nWings) = x%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW,   1:p%nWings) + m%dxdt%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW,   1:p%nWings)
       endif
 
-         ! clean up local variables:
+      ! Store true dxdt =  (k1/6 + k2/3 + k3/3 + k4/6)/dt 
+      m%dxdt%r_NW  (1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) = m%dxdt%r_NW  (1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)/dt
+      m%dxdt%Eps_NW(1:3, 1:p%nSpan  , 1:m%nNW  , 1:p%nWings) = m%dxdt%Eps_NW(1:3, 1:p%nSpan  , 1:m%nNW  , 1:p%nWings)/dt
+      if ( m%nFW>0) then         
+         m%dxdt%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings) = m%dxdt%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)/dt
+         m%dxdt%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW,   1:p%nWings) = m%dxdt%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW,   1:p%nWings)/dt
+      endif
+
+      ! clean up local variables:
       CALL ExitThisRoutine(  )
 
 CONTAINS
-   !...............................................................................................................................
+   !> This subroutine destroys all the local variables
    SUBROUTINE ExitThisRoutine()
-   ! This subroutine destroys all the local variables
-   !...............................................................................................................................
-
-         ! local variables
       INTEGER(IntKi)             :: ErrStat3    ! The error identifier (ErrStat)
       CHARACTER(ErrMsgLen)       :: ErrMsg3     ! The error message (ErrMsg)
-
-
-      CALL FVW_DestroyContState( dxdt,     ErrStat3, ErrMsg3 )
       CALL FVW_DestroyContState( k1,       ErrStat3, ErrMsg3 )
       CALL FVW_DestroyContState( k2,       ErrStat3, ErrMsg3 )
       CALL FVW_DestroyContState( k3,       ErrStat3, ErrMsg3 )
       CALL FVW_DestroyContState( k4,       ErrStat3, ErrMsg3 )
       CALL FVW_DestroyContState( x_tmp,    ErrStat3, ErrMsg3 )
-
       CALL FVW_DestroyInput(     u_interp, ErrStat3, ErrMsg3 )
-
    END SUBROUTINE ExitThisRoutine
-   !...............................................................................................................................
+   !> This subroutine sets the error message and level and cleans up if the error is >= AbortErrLev
    SUBROUTINE CheckError(ErrID,Msg)
-   ! This subroutine sets the error message and level and cleans up if the error
-   ! is >= AbortErrLev
-   !...............................................................................................................................
-
-         ! Passed arguments
       INTEGER(IntKi), INTENT(IN) :: ErrID       ! The error identifier (ErrStat)
       CHARACTER(*),   INTENT(IN) :: Msg         ! The error message (ErrMsg)
-
-         ! local variables
       INTEGER(IntKi)             :: ErrStat3    ! The error identifier (ErrStat)
       CHARACTER(ErrMsgLen)       :: ErrMsg3     ! The error message (ErrMsg)
-
-      !............................................................................................................................
-      ! Set error status/message;
-      !............................................................................................................................
-
       IF ( ErrID /= ErrID_None ) THEN
-
          IF (ErrStat /= ErrID_None) ErrMsg = TRIM(ErrMsg)//NewLine
          ErrMsg = TRIM(ErrMsg)//'FVW_RK4:'//TRIM(Msg)
          ErrStat = MAX(ErrStat,ErrID)
-
-         !.........................................................................................................................
-         ! Clean up if we're going to return on error: close files, deallocate
-         ! local arrays
-         !.........................................................................................................................
-
          IF ( ErrStat >= AbortErrLev ) CALL ExitThisRoutine( )
-
-
       END IF
-
    END SUBROUTINE CheckError
-
 END SUBROUTINE FVW_RK4
 
 
