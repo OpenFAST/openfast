@@ -759,7 +759,7 @@ p%Table(iTable)%UA_BL%C_lalpha = p%Table(iTable)%UA_BL%C_nalpha
       ENDDO ! iTable
 
       DO iTable=1,p%NumTabs
-         if ( .not. Table(iTable)%InclUAdata )  then
+         if ( .not. p%Table(iTable)%InclUAdata )  then
             p%ColUAf = 0 ! in case some tables have UA data and others don't; this is not set on a per-table basis
             exit ! exit loop
          end if
