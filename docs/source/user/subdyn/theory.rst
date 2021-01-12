@@ -334,8 +334,8 @@ The loads caused by self-weight are precomputed during initialization
 based on the undisplaced configuration. It is therefore assumed that the
 displacements will be small and that P-delta effects are small for the
 substructure. 
-The "extra" moment may be accounted for using the flag *ExtraMoment*, 
-see section :numref:`SD_Loads`.
+The "extra" moment may be accounted for using the flag **GuyanLoadCorrection**, 
+see section :numref:`SD_ExtraMoment`.
 For a nontapered beam element, the lumped loads caused by
 gravity to be applied at the end nodes are as follows (in the global
 coordinate system):
@@ -1506,9 +1506,8 @@ and :math:`M_{Bm} = M_{mB}^T`, :math:`C_{Bm} =C_{mB}^T`.
 
 
 
-
-Loads and boundary nodes
-------------------------
+FEM formulation in SubDyn
+-------------------------
 
 
 .. _TP2Interface:
@@ -1705,27 +1704,35 @@ The Guyan TP force, :math:`\tilde{F}_{TP}`, and the CB force, :math:`F_m`, given
 
 
 
+
+
+
+
 .. _SD_Rotated Loads:
-
-Rotation of loads for floating
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-In the floating case, the loads acting on the FEM degrees of freedom need to be rotated to the body frame. In the current implementation, this is done when evaluating  :math:`F_{L}` for the time evolution of the CB degrees of freedom, and the determination of the static improvement displacements.
-More details on this special case is found in section :numref:`SD_summary`.
-
-
-
 .. _SD_ExtraMoment:
 
-Extra moment from deflection 
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Corrections to the baseline formulation ("GuyanLoadCorrection")
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The baseline FEM implementation needs to be corrected to account for the fact that loads are provided to SubDyn at the displaced positions, and to account for the rigid body motions in the floating case.
+The corrections are activated by setting the parameter **GuyanLoadCorrection** to True.
+
+
+
+**Rotation of coordinate system for floating**
+
+In the floating case, the FEM formulation needs to be rotated to the body frame. This is done  when **GuyanLoadCorrection** is set to True. The CB and static modes are solved in a rotating frame of reference, that follows the rigid-body rotation of the Guyan modes. More details on this special case is found in section :numref:`SD_summary`.
+
+
+**Additional lever arm from external loads**
 
 The external loads that are applied on the substructure are computed at the location of the deflected stucture. 
 On the other hand, the finite element formulation expect loads to be provided relative to the undeflected position of the structure, or, if rigid body motions are present, relative to a reference undeflected position (see Figure :numref:`sd_fig_extramoment`).
 Nodal forces at a displaced node can be directly applied to the reference nodal position, but the mapping introduces a moment at the reference nodal position.
-The parameter **ExtraMom** in the input file is used to account for this extra nodal moment occurring due to the fact that the finite element loads are expected to be expressed at a reference position and not at the displaced position.
 
-The mapping of nodal forces is done as follows when the parameter **ExtraMom** is set to True.
+The parameter **GuyanLoadCorrection** in the input file is used to account for this extra nodal moment occurring due to the fact that the finite element loads are expected to be expressed at a reference position and not at the displaced position.
+
+The mapping of nodal forces is done as follows when the parameter **GuyanLoadCorrection** is set to True.
 First, a reference undeflected position of the structure is defined, with two possible configurations whether the structure is "fixed" at the sea bed, or not. The two configurations are illustrated in Figure :numref:`sd_fig_extramoment`. 
 
 .. _sd_fig_extramoment:
@@ -1771,7 +1778,7 @@ where :math:`j \in [x,y,z]` and the subscript :math:`ij` in :math:`[\bar{\Phi}_R
 Boundary DOFs that are fixed have no displacements and thus no extra moment contribution. Boundary DOFs that are free are part of the internal DOF *L* in the implementation. 
 The gravitational and cable forces at each node (that were computed at the initialization and stored in the constant vector :math:`F_G`) are used to obtain :math:`f_{i,g}`. It is noted that the *g*-contribution to the moment , :math:`\Delta m_i`, is not a constant and needs to be computed at each time step.
 
-To avoid adding more notations, all the load vectors used in this document will have the additional moment implicitely included when **ExtraMom=True**.
+To avoid adding more notations, all the load vectors used in this document will have the additional moment implicitely included when **GuyanLoadCorrection=True**.
 This applies e.g.: to :math:`F_{R,e}, F_{L,e}, F_{R,g}, F_{L,g}`, where the following replacement is implied:
 
 .. math:: 
@@ -1802,7 +1809,7 @@ This applies e.g.: to :math:`F_{R,e}, F_{L,e}, F_{R,g}, F_{L,g}`, where the foll
        \vdots\\
      \end{Bmatrix}
      \ 
-     \text{(ExtraMom=True)}
+     \text{(GuyanLoadCorrection=True)}
 
 
 
@@ -1832,7 +1839,7 @@ For the "fixed boundary condition" case, the reference position does not corresp
    m_{TP,cpl} -u_{TP} \times f_{TP,cpl} \\
    \end{Bmatrix}
      \ 
-     \text{(ExtraMom=True and Fixed BC)}
+     \text{(GuyanLoadCorrection=True and Fixed BC)}
 
 The output equation :math:`y_1= -F_{TP,cpl}` is then modified to include this extra contribution.
 
@@ -1883,9 +1890,84 @@ The case **GuyanDampMod=2**, is similar to the previous case, except that the us
 
 
 
+.. _sim:
+.. _SD_SIM:
+
+Static-Improvement Method
+~~~~~~~~~~~~~~~~~~~~~~~~~
+To account for the effects of static gravity (member self-weight) and
+buoyancy forces, one would have to include all of the structural axial
+modes in the C-B reduction. This inclusion often translates into
+hundreds of modes to be retained for practical problems. An alternative
+method is thus promoted to reduce this limitation and speed up SubDyn.
+This method is denoted as SIM, and computes two static solutions at each
+time step: one based on the full system stiffness matrix and one based
+on the reduced stiffness matrix. The dynamic solution then proceeds as
+described in the previous sections, and at each time step the
+time-varying dynamic solution is superimposed on the difference between
+the two static solutions, which amounts to quasi-statically accounting
+for the contribution of those modes not directly included within the
+dynamic solution.
+
+The SIM formulation provides a correction for the displacements of the
+internal nodes. The uncorrected displacements are now noted :math:`{\hat{U}}_{L}`, while
+the corrected displacements are noted :math:`U_L`. The SIM correction
+consists in an additional term :math:`U_L` obtained by adding the total
+static deflection of all the internal
+DOFs (:math:`U_{L0}`), and subtracting the static deflection associated
+with C-B modes (:math:`U_{L0m}`), as cast in :eq:`SIM` :
+
+.. math::   :label: SIM
+
+   U_L = \hat{U}_L + U_{L,\text{SIM}} =\hat{U}_L+  \underbrace{U_{L0} - U_{L0m}}_{U_{L,\text{SIM}}} = \underbrace{\Phi_R U_R + \Phi_m q_m}_{\hat{U}_L}  +  \underbrace{\Phi_L q_{L0}}_{U_{L0}} - \underbrace{\Phi_m q_{m0}}_{U_{L0m}} 
+ 
+
+.. where the expression for :math:`U_{L0}` and :math:`U_{L0m}` will be derived in the next paragraph.
+   will be derived in the next paragraph. Eq. :eq:`SIM` can be rewritten as:
+            \begin{bmatrix} 
+                U_R \\ 
+                    U_L 
+            \end{bmatrix} =
+          \begin{bmatrix} 
+                I & 0 & 0 & 0 \\
+               \Phi_R & \Phi_m & \Phi_L & -\Phi_m 
+            \end{bmatrix} 
+            \begin{bmatrix} 
+                U_R \\ 
+                    q_m \\
+                    q_{L0} \\
+                    q_{m0}
+            \end{bmatrix}
+    with:
+        U_{L0} = \Phi_L q_{L0}, \qquad U_{L0m} = \Phi_m q_{m0}
+
+where :math:`{q_{m0}}` and :math:`{q_{L0}}` are the *m* and *L* modal coefficients that are assumed to be
+operating in a static fashion. These coefficients are
+calculated under the C-B hypothesis that the boundary nodes are fixed.
+The static displacement vectors can be calculated as follows:
 
 
+.. math::  :label: SIM3
+	
+	K_{LL} U_{L0} = F_{L,e} + F_{L,g}
 
+By pre-multiplying both sides times , Eq. :eq:`SIM3` can be
+rewritten as: :math:`{\Phi_L^T K_{LL} \Phi_L q_{L0} = \Phi_L^T  \left( F_{L,e} + F_{L,g} \right) = \tilde{F}_L }` or, recalling that :math:`{\Phi_L^T K_{LL} \Phi_L = \Omega_L^2}`, as: :math:`{\Omega_L^2 q_{L0} =\tilde{F}_L }`, or equivalently in terms of :math:`U_{L0}`:
+
+.. math::  :label: UL02
+
+	U_{L0} = \Phi_L \left[ \Omega_L^2 \right]^{-1} \tilde{F}_L 
+
+Similarly:
+
+.. math::  :label: UL0m2
+
+   K_{LL} U_{L0m} = F_{L,e} + F_{L,g} \quad\rightarrow \quad U_{L0m} = \Phi_m \left[ \Omega_m^2 \right]^{-1} \tilde{F}_m 
+
+with :math:`\tilde{F}_m =\Phi_m^T(F_{L,e} + F_{L,g})`.
+Note that: :math:`{ \dot{U}_{L0} = \dot{q}_{L0} = \dot{U}_{L0m} = \dot{q}_{m0} =0 }` and :math:`{ \ddot{U}_{L0} = \ddot{q}_{L0} = \ddot{U}_{L0m} = \ddot{q}_{m0} =0 }`.
+
+In the floating case the loads :math:`F_L` is rotated to the body coordinate system when "GuyanLoadCorrection" is True (see :numref:`SD_ExtraMoment` for more details and :numref:`SD_summary` for the final equations used).
 
 
 
@@ -2098,7 +2180,7 @@ From the CB coordinate transformation (Eq. :eq:`CB3`), and the link between boun
 
         \bar{U}_R  &= T_I U_{TP} 
         ,\qquad
-        \bar{U}_L  = \bar{\Phi}_R \bar{U}_R + \Phi_m q_m
+        \bar{U}_L  = \bar{\Phi}_R \bar{U}_R + \Phi_m q_m + \boldsymbol{U_{L,SIM}}
 
         \dot{\bar{U}}_R  &= T_I \dot{U}_{TP} 
         ,\qquad
@@ -2108,6 +2190,7 @@ From the CB coordinate transformation (Eq. :eq:`CB3`), and the link between boun
         ,\qquad
         \ddot{\bar{U}}_L  = \bar{\Phi}_R \ddot{\bar{U}}_R + \Phi_m \ddot{q}_m
 
+The expression for :math:`y2motions` contains the optional SIM contribution (see :numref:`SD_SIM`).
 Using the expression of :math:`\ddot{q}_m` from Eq. :eq:`ddotqm`, the internal accelerations are:
 
 
@@ -2120,7 +2203,7 @@ Using the expression of :math:`\ddot{q}_m` from Eq. :eq:`ddotqm`, the internal a
                 - \tilde{K}_{mm} q_m \right]
 
 
-In the floating case, the Guyan part of the motion are replaced by the analytical rigid body motion (se details in section :numref:`SD_summary`). 
+In the floating case, the Guyan part of the motion are replaced by the analytical rigid body motion (see details in section :numref:`SD_summary`). 
 
 
 The output equation for :math:`y_2`: can then be written as:
@@ -2154,6 +2237,7 @@ where
 
     F_{Y2}& = \begin{bmatrix}
            0 \\
+	       \boldsymbol{U_{L,\text{SIM}}} \\
            0 \\
            0 \\
            0 \\
@@ -2161,128 +2245,7 @@ where
            \Phi_m \Phi_m^T F_{L,g} 
           \end{bmatrix}
 
-The expression for :math:`F_{Y2}` will be modified by the SIM method and Eq. :eq:`bigY2sim` is used instead.
 
-
-
-.. _sim:
-.. _SD_SIM:
-
-Static-Improvement Method
-~~~~~~~~~~~~~~~~~~~~~~~~~
-To account for the effects of static gravity (member self-weight) and
-buoyancy forces, one would have to include all of the structural axial
-modes in the C-B reduction. This inclusion often translates into
-hundreds of modes to be retained for practical problems. An alternative
-method is thus promoted to reduce this limitation and speed up SubDyn.
-This method is denoted as SIM, and computes two static solutions at each
-time step: one based on the full system stiffness matrix and one based
-on the reduced stiffness matrix. The dynamic solution then proceeds as
-described in the previous sections, and at each time step the
-time-varying dynamic solution is superimposed on the difference between
-the two static solutions, which amounts to quasi-statically accounting
-for the contribution of those modes not directly included within the
-dynamic solution.
-
-The SIM formulation provides a correction for the displacements of the
-internal nodes. The uncorrected displacements, as obtained from the
-previous C-B formulation , are now noted :math:`{\hat{U}}_{L}`, while
-the corrected displacements are noted :math:`_{}`. The SIM correction
-consists in and adding the total static deflection of all the internal
-DOFs (:math:`U_{L0}`), and subtracting the static deflection associated
-with C-B modes (:math:`U_{L0m}`), as cast in :eq:`SIM` :
-
-.. math::   :label: SIM
-
-   U_L = \hat{U}_L + U_{L,\text{SIM}} =\hat{U}+  \underbrace{U_{L0} - U_{L0m}}_{U_{L,\text{SIM}}} = \underbrace{\Phi_R U_R + \Phi_m q_m}_{\hat{U}_L}  +  \underbrace{\Phi_L q_{L0}}_{U_{L0}} - \underbrace{\Phi_m q_{m0}}_{U_{L0m}} 
- 
-
-.. where the expression for :math:`U_{L0}` and :math:`U_{L0m}` will be derived in the next paragraph.
-   will be derived in the next paragraph. Eq. :eq:`SIM` can be rewritten as:
-            \begin{bmatrix} 
-                U_R \\ 
-                    U_L 
-            \end{bmatrix} =
-          \begin{bmatrix} 
-                I & 0 & 0 & 0 \\
-               \Phi_R & \Phi_m & \Phi_L & -\Phi_m 
-            \end{bmatrix} 
-            \begin{bmatrix} 
-                U_R \\ 
-                    q_m \\
-                    q_{L0} \\
-                    q_{m0}
-            \end{bmatrix}
-    with:
-        U_{L0} = \Phi_L q_{L0}, \qquad U_{L0m} = \Phi_m q_{m0}
-
-where :math:`{q_{m0}}` and :math:`{q_{L0}}` are the *m* and *L* modal coefficients that are assumed to be
-operating in a static fashion. These coefficients are
-calculated under the C-B hypothesis that the boundary nodes are fixed.
-The static displacement vectors can be calculated as follows:
-
-
-.. math::  :label: SIM3
-	
-	K_{LL} U_{L0} = F_{L,e} + F_{L,g}
-
-By pre-multiplying both sides times , Eq. :eq:`SIM3` can be
-rewritten as: :math:`{\Phi_L^T K_{LL} \Phi_L q_{L0} = \Phi_L^T  \left( F_{L,e} + F_{L,g} \right) = \tilde{F}_L }` or, recalling that :math:`{\Phi_L^T K_{LL} \Phi_L = \Omega_L^2}`, as: :math:`{\Omega_L^2 q_{L0} =\tilde{F}_L }`, or equivalently in terms of :math:`U_{L0}`:
-
-.. math::  :label: UL02
-
-	U_{L0} = \Phi_L \left[ \Omega_L^2 \right]^{-1} \tilde{F}_L 
-
-Similarly:
-
-.. math::  :label: UL0m2
-
-   K_{LL} U_{L0m} = F_{L,e} + F_{L,g} \quad\rightarrow \quad U_{L0m} = \Phi_m \left[ \Omega_m^2 \right]^{-1} \tilde{F}_m 
-
-with :math:`\tilde{F}_m =\Phi_m^T(F_{L,e} + F_{L,g})`.
-Note that: :math:`{ \dot{U}_{L0} = \dot{q}_{L0} = \dot{U}_{L0m} = \dot{q}_{m0} =0 }` and :math:`{ \ddot{U}_{L0} = \ddot{q}_{L0} = \ddot{U}_{L0m} = \ddot{q}_{m0} =0 }`.
-
-In the floating case the loads :math:`F_L` is rotated to the body coordinate system when "ExtraMoment" is True (see :numref:`SD_summary` for more details).
-
-The dynamic component :math:`{ \hat{U} = \begin{bmatrix} \hat{U}_R \\ \hat{U}_R \end{bmatrix} }` is calculated following the usual procedure
-described in :numref:`SSformulation` to :numref:`TimeIntegration`. For example, states are still
-calculated and integrated as in Eq. :eq:`state_eq`, and the output to ElastoDyn, i.e.,
-the reaction provided by the substructure at the TP interface, is also
-calculated as it was done previously in Eqs. :eq:`smally1` and :eq:`bigY1`.
-However, the state-space formulation is slightly modified  
-(simply adding the contribution :math:`U_{L0}-U_{L0m}` to :math:`F_{Y2}` 
-when computing the outputs to HydroDyn as:
-
-.. math:: :label: y2sim
-
-	y_2= \begin{bmatrix}
-        	\bar{U}_R \\
-                     U_L  \\
-           	\dot{\bar{U}}_R  \\
-           	\dot{U}_L \\
-           	\ddot{\bar{U}}_R  \\
-           	\ddot{U}_L \\
-	     \end{bmatrix} = \begin{bmatrix}  
-	     	\bar{U}_R \\
-	     	\hat{U}_L + \boldsymbol{U_{L,\text{SIM}}} \\
-	     	\dot{\bar{U}}_R  \\
-		\dot{U}_L \\
-		\ddot{\bar{U}}_R  \\
-           	\ddot{U}_L \\
-	     \end{bmatrix}
-
-The array :math:`F_{Y2}` from Eq. :eq:`bigY2` is now defined as follows:
-
-.. math:: :label: bigY2sim
-
-	F_{Y2} &= \begin{bmatrix}
-	       0 \\
-	       \boldsymbol{U_{L,\text{SIM}}} \\
-	       0 \\
-	       0 \\
-	       0 \\
-	       \Phi_m \Phi_m^T F_{L,g} 
-	      \end{bmatrix}
 
 
 
@@ -2461,16 +2424,16 @@ State equation
                 - \tilde{K}_{mm} q_m
      \end{align}
 
-Note: :math:`F_L` contains the "extra moment" if user-requested.
+Note: :math:`F_L` contains the "extra moment" if user-requested with **GuyanLoadCorrection**.
 
-**Floating case without "Extra Moment"**
+**Floating case without "GuyanLoadCorrection"**
 
 .. math:: 
     :nowrap:
                  
     \begin{align}
     \ddot{q}_m =  \Phi_m^T F_L 
-                - \tilde{M}_{mB} R_{g2b} \ddot{U}_{TP}
+                - \tilde{M}_{mB} \ddot{U}_{TP}
                 - \tilde{C}_{mm} \dot{q}_m
                 - \tilde{K}_{mm} q_m
      \end{align}
@@ -2478,7 +2441,7 @@ Note: :math:`F_L` contains the "extra moment" if user-requested.
 Notes: :math:`F_L` *does not* contain the "extra moment".
 
 
-**Floating case with "Extra Moment"**
+**Floating case with "GuyanLoadCorrection"**
 
 .. math:: 
     :nowrap:
@@ -2526,29 +2489,29 @@ If this is the case, the following additional term is added to the moment part o
 
 
 
-**Floating case without "Extra moment"**
+**Floating case without "GuyanLoadCorrection"**
 
 .. math:: 
     :nowrap:
                  
     \begin{align}
      -Y_1 =F_{TP,cpl} =& 
-      R_{b2g}\left[              - \tilde{M}_{Bm}\tilde{K}_{mm}  \right] q_m
-     + R_{b2g}\left[- \tilde{M}_{Bm}\tilde{C}_{mm}  \right] \dot{q}_m
+      \left[              - \tilde{M}_{Bm}\tilde{K}_{mm}  \right] q_m
+     + \left[- \tilde{M}_{Bm}\tilde{C}_{mm}  \right] \dot{q}_m
      \\ 
      &+\left[\tilde{K}_{BB}                                \right]  U_{TP} 
      +\left[\tilde{C}_{BB} \right] \dot{U}_{TP}            
      +\left[\tilde{M}_{BB} -\tilde{M}_{Bm} \tilde{M}_{mB} \right] \ddot{U}_{TP}            
     \nonumber \\ 
-     &+ R_{b2g}\left[\tilde{M}_{Bm}\Phi_m^T\right] F_L  +\left[- T_I^T \bar{\Phi}_R^T \right] F_{L}
+     &+ \left[\tilde{M}_{Bm}\Phi_m^T\right] F_L  +\left[- T_I^T \bar{\Phi}_R^T \right] F_{L}
      +\left[-T_I^T \right] \bar{F}_R
     \nonumber
     \end{align}
 
-Notes: 1) :math:`F_L` and :math:`\bar{F}_R` *do not* contain the "extra moment";
-2) The rotation :math:`R_{b2g}\tilde{M}_{Bm} \tilde{M}_{mB}R_{g2b}` is not carried out since it introduced stability issues.
+Note: :math:`F_L` and :math:`\bar{F}_R` *do not* contain the "extra moment".
 
-**Floating case with "Extra moment"**
+
+**Floating case with "GuyanLoadCorrection"**
 
 .. math:: 
     :nowrap:
@@ -2593,8 +2556,7 @@ Output: nodal motions
                 - \tilde{K}_{mm} q_m \right]
 
 
-Note: :math:`F_L` contains the "extra moment" if user-requested.
-
+Note: :math:`F_L` contains the "extra moment" if user-requested with **GuyanLoadCorrection**.
 
 
 
@@ -2617,7 +2579,7 @@ Note: :math:`F_L` contains the "extra moment" if user-requested.
                 - \tilde{C}_{mm} \dot{q}_m
                 - \tilde{K}_{mm} q_m \right]
 
-where: 1) :math:`F_L` does not contain the extra moment, 2) the operator :math:`R_{g2b}` is only used on :math:`F_L` if ExtraMoment is True,  3) the elastic displacements were set to 0 for stability purposes (assuming that these are small) 4) the Guyan motion is computed using the exact rigid body motions. For a given node :math:`P`, located at the position :math:`r_{IP,0}` from the interface in the undisplaced configuration, the position (from the interface point), displacement, translational velocity and acceleration due to the rigid body motion are:
+where: 1) :math:`F_L` does not contain the extra moment, 2) the operators :math:`R_{g2b}` and :math:`R_{b2g}` are when GuyanLoadCorrection is True,  3) the elastic displacements were set to 0 for stability purposes (assuming that these are small) 4) the Guyan motion is computed using the exact rigid body motions. For a given node :math:`P`, located at the position :math:`r_{IP,0}` from the interface in the undisplaced configuration, the position (from the interface point), displacement, translational velocity and acceleration due to the rigid body motion are:
 
 
 .. math::

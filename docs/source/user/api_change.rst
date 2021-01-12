@@ -27,7 +27,7 @@ IfW driver                                     7    WrHAWC             false    
 IfW driver                                     8    WrBladed           false    WrBladed  - Convert all data to Bladed format? (flag)
 IfW driver                                     9    WrVTK              false    WrVTK     - Convert all data to VTK format? (flag)
 InflowWind                                     7    VFlowAng               0   VFlowAng  - Upflow angle (degrees) (not used for native Bladed format WindType=7)
-SubDyn                                         8    ExtraMom           False   ExtraMoment  - Include extra moment from lever arm at interface in interface reactions.
+SubDyn                                         8   GuyanLoadCorr.      False   GuyanLoadCorection  - Include extra moment from lever arm at interface and rotate FEM for floating
 SubDyn                                        15   GuyanDampMod        0       GuyanDampMod - Guyan damping {0=none, 1=Rayleigh Damping, 2=user specified 6x6 matrix}
 SubDyn                                        16   RayleighDamp        0.001, 0.003   RayleighDamp - Mass and stiffness proportional damping  coefficients (Rayleigh Damping) [only if GuyanDampMod=1]
 SubDyn                                        17   GuyanDampSize       6       GuyanDampSize - Guyan damping matrix size (square, 6x6) [only if GuyanDampMod=2]

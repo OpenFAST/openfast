@@ -233,7 +233,7 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: CtrlElem2Channel      !< nCtrlCable x 2, for each CtrlCable, Elem index, and Channel Index [-]
     INTEGER(IntKi)  :: nDOFM      !< retained degrees of freedom (modes) [-]
     INTEGER(IntKi)  :: SttcSolve      !< Solve dynamics about static equilibrium point (flag) [-]
-    LOGICAL  :: ExtraMoment      !< Add Extra lever arm contribution to interface reaction outputs [-]
+    LOGICAL  :: GuyanLoadCorrection      !< Add Extra lever arm contribution to interface reaction outputs [-]
     LOGICAL  :: Floating      !< True if floating bottom (the 6 DOF are free at all reaction nodes) [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: KMMDiag      !< Diagonal coefficients of Kmm (OmegaM squared) [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: CMMDiag      !< Diagonal coefficients of Cmm (~2 Zeta OmegaM)) [-]
@@ -7087,7 +7087,7 @@ IF (ALLOCATED(SrcParamData%CtrlElem2Channel)) THEN
 ENDIF
     DstParamData%nDOFM = SrcParamData%nDOFM
     DstParamData%SttcSolve = SrcParamData%SttcSolve
-    DstParamData%ExtraMoment = SrcParamData%ExtraMoment
+    DstParamData%GuyanLoadCorrection = SrcParamData%GuyanLoadCorrection
     DstParamData%Floating = SrcParamData%Floating
 IF (ALLOCATED(SrcParamData%KMMDiag)) THEN
   i1_l = LBOUND(SrcParamData%KMMDiag,1)
@@ -8116,7 +8116,7 @@ ENDIF
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! nDOFM
       Int_BufSz  = Int_BufSz  + 1  ! SttcSolve
-      Int_BufSz  = Int_BufSz  + 1  ! ExtraMoment
+      Int_BufSz  = Int_BufSz  + 1  ! GuyanLoadCorrection
       Int_BufSz  = Int_BufSz  + 1  ! Floating
   Int_BufSz   = Int_BufSz   + 1     ! KMMDiag allocated yes/no
   IF ( ALLOCATED(InData%KMMDiag) ) THEN
@@ -8778,7 +8778,7 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%SttcSolve
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = TRANSFER(InData%ExtraMoment, IntKiBuf(1))
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%GuyanLoadCorrection, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%Floating, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
@@ -10191,7 +10191,7 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     OutData%SttcSolve = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
-    OutData%ExtraMoment = TRANSFER(IntKiBuf(Int_Xferred), OutData%ExtraMoment)
+    OutData%GuyanLoadCorrection = TRANSFER(IntKiBuf(Int_Xferred), OutData%GuyanLoadCorrection)
     Int_Xferred = Int_Xferred + 1
     OutData%Floating = TRANSFER(IntKiBuf(Int_Xferred), OutData%Floating)
     Int_Xferred = Int_Xferred + 1

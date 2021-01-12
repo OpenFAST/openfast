@@ -268,11 +268,11 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    ! Nodes into (I,C,L,R):  I=Interface ,C=Boundary (bottom), R=(I+C), L=Interior
    ! DOFs  into (B,F,L):    B=Leader (i.e. Rbar) ,F=Fixed, L=Interior
    call PartitionDOFNodes(Init, m, p, ErrStat2, ErrMsg2) ; if(Failed()) return
-   if (p%ExtraMoment) then 
+   if (p%GuyanLoadCorrection) then 
       if (p%Floating) then
-         call WrScr('   Extra moment and rotated CB-frame will be used (floating case detected)')
+         call WrScr('   Guyan extra moment and rotated CB-frame will be used (floating case detected)')
       else
-         call WrScr('   Extra moment will be included in loads (fixed-bottom case detected)')
+         call WrScr('   Guyan extra moment will be included in loads (fixed-bottom case detected)')
       endif
    endif
 
@@ -418,7 +418,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       REAL(ReKi)                   :: Y1_Guy_R(6)
       REAL(ReKi)                   :: Y1_Guy_L(6)
       REAL(ReKi)                   :: Y1_Utp(6)
-      REAL(ReKi)                   :: Y1_ExtraMoment(3) ! Lever arm moment contributions due to interface displacement
+      REAL(ReKi)                   :: Y1_GuyanLoadCorrection(3) ! Lever arm moment contributions due to interface displacement
       REAL(ReKi)                   :: udotdot_TP(6)
       INTEGER(IntKi), pointer      :: DOFList(:)
       REAL(ReKi)                   :: DCM(3,3)
@@ -457,7 +457,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       ! --- Output 2, Y2Mesh: motions on all FEM nodes (R, and L DOFs, then full DOF vector)
       ! --------------------------------------------------------------------------------
       ! External force on internal nodes (F_L)
-      call GetExtForceOnInternalDOF(u, p, x, m, m%F_L, ErrStat2, ErrMsg2, ExtraMoment=(p%ExtraMoment.and..not.p%Floating), RotateLoads=(p%ExtraMoment.and.p%Floating)); if(Failed()) return
+      call GetExtForceOnInternalDOF(u, p, x, m, m%F_L, ErrStat2, ErrMsg2, GuyanLoadCorrection=(p%GuyanLoadCorrection.and..not.p%Floating), RotateLoads=(p%GuyanLoadCorrection.and.p%Floating)); if(Failed()) return
       m%UR_bar        = 0.0_ReKi
       m%UR_bar_dot    = 0.0_ReKi
       m%UR_bar_dotdot = 0.0_ReKi
@@ -466,7 +466,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       m%UL_dotdot     = 0.0_ReKi
       ! --- CB modes contribution to motion (L-DOF only)
       if ( p%nDOFM > 0) then
-         if (p%Floating) then ! >>> Rotate All
+         if (p%GuyanLoadCorrection.and.p%Floating) then ! >>> Rotate All
             udotdot_TP(1:3) = matmul(Rg2b, u%TPMesh%TranslationAcc( :,1))
             udotdot_TP(4:6) = matmul(Rg2b, u%TPMesh%RotationAcc(:,1)    )
          else
@@ -544,18 +544,21 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
             aP(1:3)     = u%TPMesh%TranslationAcc(1:3,1) + cross_product(OmD, rIP)  + cross_product(Om, Om_X_r)
 
             ! Full displacements CB-rotated + Guyan (KEEP ME) >>> Rotate All
-            m%U_full       (DOFList(1:3)) = matmul(Rb2g, m%U_full       (DOFList(1:3))) + duP(1:3)       
-            m%U_full       (DOFList(4:6)) = matmul(Rb2g, m%U_full       (DOFList(4:6))) + rotations(1:3)
-            m%U_full_dot   (DOFList(1:3)) = matmul(Rb2g, m%U_full_dot   (DOFList(1:3))) + vP(1:3)
-            m%U_full_dot   (DOFList(4:6)) = matmul(Rb2g, m%U_full_dot   (DOFList(4:6))) + Om(1:3)
-            m%U_full_dotdot(DOFList(1:3)) = matmul(Rb2g, m%U_full_dotdot(DOFList(1:3))) + aP(1:3)
-            m%U_full_dotdot(DOFList(4:6)) = matmul(Rb2g, m%U_full_dotdot(DOFList(4:6))) + OmD(1:3)
-            !m%U_full       (DOFList(1:3)) = m%U_full       (DOFList(1:3)) + duP(1:3)       
-            !m%U_full       (DOFList(4:6)) = m%U_full       (DOFList(4:6)) + rotations(1:3)
-            !m%U_full_dot   (DOFList(1:3)) = m%U_full_dot   (DOFList(1:3)) + vP(1:3)
-            !m%U_full_dot   (DOFList(4:6)) = m%U_full_dot   (DOFList(4:6)) + Om(1:3)
-            !m%U_full_dotdot(DOFList(1:3)) = m%U_full_dotdot(DOFList(1:3)) + aP(1:3)
-            !m%U_full_dotdot(DOFList(4:6)) = m%U_full_dotdot(DOFList(4:6)) + OmD(1:3)
+            if (p%GuyanLoadCorrection) then
+               m%U_full       (DOFList(1:3)) = matmul(Rb2g, m%U_full       (DOFList(1:3))) + duP(1:3)       
+               m%U_full       (DOFList(4:6)) = matmul(Rb2g, m%U_full       (DOFList(4:6))) + rotations(1:3)
+               m%U_full_dot   (DOFList(1:3)) = matmul(Rb2g, m%U_full_dot   (DOFList(1:3))) + vP(1:3)
+               m%U_full_dot   (DOFList(4:6)) = matmul(Rb2g, m%U_full_dot   (DOFList(4:6))) + Om(1:3)
+               m%U_full_dotdot(DOFList(1:3)) = matmul(Rb2g, m%U_full_dotdot(DOFList(1:3))) + aP(1:3)
+               m%U_full_dotdot(DOFList(4:6)) = matmul(Rb2g, m%U_full_dotdot(DOFList(4:6))) + OmD(1:3)
+            else
+               m%U_full       (DOFList(1:3)) = m%U_full       (DOFList(1:3)) + duP(1:3)       
+               m%U_full       (DOFList(4:6)) = m%U_full       (DOFList(4:6)) + rotations(1:3)
+               m%U_full_dot   (DOFList(1:3)) = m%U_full_dot   (DOFList(1:3)) + vP(1:3)
+               m%U_full_dot   (DOFList(4:6)) = m%U_full_dot   (DOFList(4:6)) + Om(1:3)
+               m%U_full_dotdot(DOFList(1:3)) = m%U_full_dotdot(DOFList(1:3)) + aP(1:3)
+               m%U_full_dotdot(DOFList(4:6)) = m%U_full_dotdot(DOFList(4:6)) + OmD(1:3)
+            endif
 
             ! NOTE: For now, displacements passed to HydroDyn are Guyan only!
             ! Construct the direction cosine matrix given the output angles
@@ -591,12 +594,12 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       ! --- Outputs 1, Y1=-F_TP, reaction force from SubDyn to ElastoDyn (stored in y%Y1Mesh)
       ! --------------------------------------------------------------------------------
       ! --- Special case for floating with extramoment
-      if (p%ExtraMoment.and.p%Floating) then
+      if (p%GuyanLoadCorrection.and.p%Floating) then
          Y1_CB_L = - (matmul(p%D1_141, m%F_L)) ! Uses rotated loads
       endif
 
       ! Compute external force on internal (F_L) and interface nodes (F_I)
-      call GetExtForceOnInternalDOF(u, p, x, m, m%F_L, ErrStat2, ErrMsg2, ExtraMoment=(p%ExtraMoment), RotateLoads=.False.); if(Failed()) return
+      call GetExtForceOnInternalDOF(u, p, x, m, m%F_L, ErrStat2, ErrMsg2, GuyanLoadCorrection=(p%GuyanLoadCorrection), RotateLoads=.False.); if(Failed()) return
       call GetExtForceOnInterfaceDOF(p, m%Fext, F_I)
 
       ! Compute reaction/coupling force at TP
@@ -614,7 +617,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       endif
       if ( p%nDOFM > 0) then
          Y1_CB = -( matmul(p%C1_11, x%qm) + matmul(p%C1_12, x%qmdot) )
-         if (p%Floating) then
+         if (p%GuyanLoadCorrection.and.p%Floating) then
             Y1_CB = matmul(RRb2g, Y1_CB) !>>> Rotate All
          endif
       else
@@ -622,10 +625,10 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       endif
       Y1_Guy_R =   matmul( F_I, p%TI )
       Y1_Guy_L = - matmul(p%D1_142, m%F_L)  ! non rotated loads
-      if (.not.(p%ExtraMoment.and.p%Floating)) then
+      if (.not.(p%GuyanLoadCorrection.and.p%Floating)) then
          Y1_CB_L = - (matmul(p%D1_141, m%F_L)) ! Uses non rotated loads
       endif
-      if (p%Floating) then
+      if (p%GuyanLoadCorrection.and.p%Floating) then
          Y1_CB_L = matmul(RRb2g, Y1_CB_L) !>>> Rotate All
       endif
 
@@ -642,12 +645,12 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 
       ! Computing extra moments due to lever arm introduced by interface displacement
       ! Y1_MExtra = - MExtra = -u_TP x Y1(1:3) ! NOTE: double cancellation of signs 
-      if (p%ExtraMoment) then
+      if (p%GuyanLoadCorrection) then
          if (.not.p%floating) then ! if Fixed, transfer from non deflected TP to u_TP 
-            Y1_ExtraMoment(1) = - m%u_TP(2) * Y1(3) + m%u_TP(3) * Y1(2)
-            Y1_ExtraMoment(2) = - m%u_TP(3) * Y1(1) + m%u_TP(1) * Y1(3)
-            Y1_ExtraMoment(3) = - m%u_TP(1) * Y1(2) + m%u_TP(2) * Y1(1)
-            Y1(4:6) = Y1(4:6) + Y1_ExtraMoment 
+            Y1_GuyanLoadCorrection(1) = - m%u_TP(2) * Y1(3) + m%u_TP(3) * Y1(2)
+            Y1_GuyanLoadCorrection(2) = - m%u_TP(3) * Y1(1) + m%u_TP(1) * Y1(3)
+            Y1_GuyanLoadCorrection(3) = - m%u_TP(1) * Y1(2) + m%u_TP(2) * Y1(1)
+            Y1(4:6) = Y1(4:6) + Y1_GuyanLoadCorrection 
          endif
       endif
       ! values on the interface mesh are Y1 (SubDyn forces) + Hydrodynamic forces
@@ -742,10 +745,10 @@ SUBROUTINE SD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSta
       IF ( p%nDOFM == 0 ) RETURN
 
       ! Compute F_L, force on internal DOF
-      CALL GetExtForceOnInternalDOF(u, p, x, m, m%F_L, ErrStat2, ErrMsg2, ExtraMoment=(p%ExtraMoment.and..not.p%Floating), RotateLoads=(p%ExtraMoment.and.p%Floating))
+      CALL GetExtForceOnInternalDOF(u, p, x, m, m%F_L, ErrStat2, ErrMsg2, GuyanLoadCorrection=(p%GuyanLoadCorrection.and..not.p%Floating), RotateLoads=(p%GuyanLoadCorrection.and.p%Floating))
 
       udotdot_TP = (/u%TPMesh%TranslationAcc(:,1), u%TPMesh%RotationAcc(:,1)/)
-      if (p%Floating) then
+      if (p%GuyanLoadCorrection.and.p%Floating) then
          ! >>> Rotate All - udotdot_TP to body coordinates
          udotdot_TP(1:3) = matmul( u%TPMesh%Orientation(:,:,1), udotdot_TP(1:3) ) 
          udotdot_TP(4:6) = matmul( u%TPMesh%Orientation(:,:,1), udotdot_TP(4:6) ) 
@@ -854,15 +857,15 @@ else
 endif
 IF (Check(.not.(any(idSIM_Valid==p%SttcSolve)), 'Invalid value entered for SttcSolve')) return
 
-! ExtraMoment  - For legacy, allowing this line to be a comment
-CALL ReadVar (UnIn, SDInputFile, Dummy_Str, 'ExtraMoment', 'Add extra lever arm contribution to interface loads', ErrStat2, ErrMsg2, UnEc); if(Failed()) return
+! GuyanLoadCorrection  - For legacy, allowing this line to be a comment
+CALL ReadVar (UnIn, SDInputFile, Dummy_Str, 'GuyanLoadCorrection', 'Add extra lever arm contribution to interface loads', ErrStat2, ErrMsg2, UnEc); if(Failed()) return
 if (is_logical(Dummy_Str, Dummy_Bool)) then ! the parameter was present
-   p%ExtraMoment=Dummy_Bool
+   p%GuyanLoadCorrection=Dummy_Bool
    ! We still need to read the comment on the next line 
    CALL ReadCom  ( UnIn, SDInputFile, ' FEA and CRAIG-BAMPTON PARAMETERS ', ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 else ! we have a actually read a comment line, we do nothing. 
    call LegacyWarning('ExtraMom line missing from input file. Assuming no extra moment.')
-   p%ExtraMoment=.False.  ! For Legacy, ExtraMoment is False
+   p%GuyanLoadCorrection=.False.  ! For Legacy, GuyanLoadCorrection is False
 endif
 
 !-------------------- FEA and CRAIG-BAMPTON PARAMETERS---------------------------
@@ -1740,9 +1743,9 @@ SUBROUTINE SD_AM2( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg 
    !Start by getting u_n and u_n+1 
    ! interpolate u to find u_interp = u(t) = u_n     
    CALL SD_Input_ExtrapInterp( u, utimes, u_interp, t, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_AM2')
-   CALL GetExtForceOnInternalDOF(u_interp, p, x, m, m%F_L, ErrStat2, ErrMsg2, ExtraMoment=(p%ExtraMoment.and..not.p%Floating), RotateLoads=(p%ExtraMoment.and.p%Floating))
+   CALL GetExtForceOnInternalDOF(u_interp, p, x, m, m%F_L, ErrStat2, ErrMsg2, GuyanLoadCorrection=(p%GuyanLoadCorrection.and..not.p%Floating), RotateLoads=(p%GuyanLoadCorrection.and.p%Floating))
    m%udotdot_TP = (/u_interp%TPMesh%TranslationAcc(:,1), u_interp%TPMesh%RotationAcc(:,1)/)
-   if (p%Floating) then
+   if (p%GuyanLoadCorrection.and.p%Floating) then
       ! >>> Rotate All - udotdot_TP to body coordinates
       m%udotdot_TP(1:3) = matmul(u_interp%TPMesh%Orientation(:,:,1), m%udotdot_TP(1:3)) 
       m%udotdot_TP(4:6) = matmul(u_interp%TPMesh%Orientation(:,:,1), m%udotdot_TP(4:6)) 
@@ -1750,9 +1753,9 @@ SUBROUTINE SD_AM2( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg 
                 
    ! extrapolate u to find u_interp = u(t + dt)=u_n+1
    CALL SD_Input_ExtrapInterp(u, utimes, u_interp, t+p%SDDeltaT, ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_AM2')
-   CALL GetExtForceOnInternalDOF(u_interp, p, x, m, F_L2, ErrStat2, ErrMsg2, ExtraMoment=(p%ExtraMoment.and..not.p%Floating), RotateLoads=(p%ExtraMoment.and.p%Floating))
+   CALL GetExtForceOnInternalDOF(u_interp, p, x, m, F_L2, ErrStat2, ErrMsg2, GuyanLoadCorrection=(p%GuyanLoadCorrection.and..not.p%Floating), RotateLoads=(p%GuyanLoadCorrection.and.p%Floating))
    udotdot_TP2 = (/u_interp%TPMesh%TranslationAcc(:,1), u_interp%TPMesh%RotationAcc(:,1)/)
-   if (p%Floating) then
+   if (p%GuyanLoadCorrection.and.p%Floating) then
       ! >>> Rotate All - udotdot_TP to body coordinates
       udotdot_TP2(1:3) = matmul(u_interp%TPMesh%Orientation(:,:,1), udotdot_TP2(1:3)) 
       udotdot_TP2(4:6) = matmul(u_interp%TPMesh%Orientation(:,:,1), udotdot_TP2(4:6)) 
@@ -2966,11 +2969,14 @@ SUBROUTINE LeverArm(u, p, x, m, DU_full, bGuyan, bElastic, U_full)
             rIP0(1:3)   = p%DP0(1:3, iSDNode)
             rIP(1:3)    = matmul(Rb2g, rIP0)
             duP(1:3)    = rIP - rIP0 ! NOTE: without m%u_TP(1:3)
-            !DU_full(DOFList(1:3)) = DU_full(DOFList(1:3)) + duP(1:3)       
-            !DU_full(DOFList(4:6)) = DU_full(DOFList(4:6)) + rotations(1:3)
             ! Full diplacements Guyan + rotated CB (if asked) >>> Rotate All
-            DU_full(DOFList(1:3)) = matmul(Rb2g, DU_full(DOFList(1:3))) + duP(1:3)       
-            DU_full(DOFList(4:6)) = matmul(Rb2g, DU_full(DOFList(4:6))) + rotations(1:3)
+            if (p%GuyanLoadCorrection) then
+               DU_full(DOFList(1:3)) = matmul(Rb2g, DU_full(DOFList(1:3))) + duP(1:3)       
+               DU_full(DOFList(4:6)) = matmul(Rb2g, DU_full(DOFList(4:6))) + rotations(1:3)
+            else
+               DU_full(DOFList(1:3)) = DU_full(DOFList(1:3)) + duP(1:3)       
+               DU_full(DOFList(4:6)) = DU_full(DOFList(4:6)) + rotations(1:3)
+            endif
          enddo
       endif 
    endif ! U_full no provided
@@ -2980,12 +2986,12 @@ END SUBROUTINE LeverArm
 !> Construct force vector on internal DOF (L) from the values on the input mesh 
 !! First, the full vector of external forces is built on the non-reduced DOF
 !! Then, the vector is reduced using the Tred matrix
-SUBROUTINE GetExtForceOnInternalDOF(u, p, x, m, F_L, ErrStat, ErrMsg, ExtraMoment, RotateLoads, U_full)
+SUBROUTINE GetExtForceOnInternalDOF(u, p, x, m, F_L, ErrStat, ErrMsg, GuyanLoadCorrection, RotateLoads, U_full)
    type(SD_InputType),     intent(in   )  :: u ! Inputs
    type(SD_ParameterType), intent(in   )  :: p ! Parameters
    type(SD_ContinuousStateType), intent(in   )  :: x  !< Continuous states at t
    type(SD_MiscVarType),   intent(inout)  :: m ! Misc, for storage optimization of Fext and Fext_red
-   logical               , intent(in   )  :: ExtraMoment ! If true add extra moment
+   logical               , intent(in   )  :: GuyanLoadCorrection ! If true add extra moment
    logical               , intent(in   )  :: RotateLoads ! If true, loads are rotated to body coordinate 
    real(Reki), optional,   intent(in   )  :: U_full(:)      ! DOF displacements (Guyan + CB)
    real(ReKi)          ,   intent(out)    :: F_L(p%nDOF__L)  !< External force on internal nodes "L"
@@ -3009,7 +3015,7 @@ SUBROUTINE GetExtForceOnInternalDOF(u, p, x, m, F_L, ErrStat, ErrMsg, ExtraMomen
    !
    real(ReKi), parameter :: myNaN = -9999998.989_ReKi 
 
-   if (ExtraMoment) then
+   if (GuyanLoadCorrection) then
       ! Compute node displacements "DU_full" for lever arm
       call LeverArm(u, p, x, m, m%DU_full, bGuyan=.True., bElastic=.False., U_full=U_full)
    endif
@@ -3063,7 +3069,7 @@ SUBROUTINE GetExtForceOnInternalDOF(u, p, x, m, F_L, ErrStat, ErrMsg, ExtraMomen
       endif
 
       ! Extra moment dm = Delta u x (fe + fg)
-      if (ExtraMoment) then
+      if (GuyanLoadCorrection) then
          du = m%DU_full(p%NodesDOF(iNode)%List(1:3)) ! Lever arm
          Moment(1) = Moment(1) + du(2) * Force(3) - du(3) * Force(2)
          Moment(2) = Moment(2) + du(3) * Force(1) - du(1) * Force(3)
@@ -3580,7 +3586,7 @@ SUBROUTINE StateMatrices(p, ErrStat, ErrMsg, AA, BB, CC, DD, u)
       if (nCB>0) then
          CC(1:nY,1:nCB )   = - p%C1_11
          CC(1:nY,nCB+1:nX) = - p%C1_12
-         if (p%Floating .and. present(u)) then
+         if (p%GuyanLoadCorrection .and. p%Floating .and. present(u)) then
             CC(1:3,:) = matmul(transpose(u%TPMesh%Orientation(:,:,1)), CC(1:3,:)) ! >>> Rotate All
             CC(4:6,:) = matmul(transpose(u%TPMesh%Orientation(:,:,1)), CC(4:6,:)) ! >>> Rotate All
          endif
@@ -3596,7 +3602,7 @@ SUBROUTINE StateMatrices(p, ErrStat, ErrMsg, AA, BB, CC, DD, u)
       DD(1:nY,7:12  ) = - p%CBB
       DD(1:nY,13:18 ) = - p%MBB
       if (p%nDOFM>0) then
-         if (p%Floating .and. present(u)) then
+         if (p%GuyanLoadCorrection .and. p%Floating .and. present(u)) then
             ! TODO TODO rotate it A MBmmB A^t
             !DD(1:3,:) = DD(1:3,:) + matmul(transpose(u%TPMesh%Orientation(:,:,1)), p%MBmmB(1:3,:) ! >>> Rotate All
             DD(1:nY,13:18 ) = DD(1:nY,13:18 )+ p%MBmmB

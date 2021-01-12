@@ -5,7 +5,7 @@ False            Echo        - Echo input data to "<rootname>.SD.ech" (flag)
 "DEFAULT"        SDdeltaT    - Local Integration Step. If "default", the glue-code integration step will be used.
              3   IntMethod   - Integration Method [1/2/3/4 = RK4/AB4/ABM4/AM2].
 True             SttcSolve   - Solve dynamics about static equilibrium point
-True             ExtraMoment - Include extra moment from lever arm at interface in interface reactions. 
+True             GuyanLoadCorrection - Include extra moment from lever arm at interface and rotate FEM for floating.
 -------------------- FEA and CRAIG-BAMPTON PARAMETERS---------------------------
              3   FEMMod      - FEM switch: element model in the FEM. [1= Euler-Bernoulli(E-B) ; 2=Tapered E-B (unavailable); 3= 2-node Timoshenko;  4= 2-node tapered Timoshenko (unavailable)]
              2   NDiv        - Number of sub-elements per member
