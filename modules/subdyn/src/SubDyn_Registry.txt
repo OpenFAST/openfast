@@ -186,7 +186,7 @@ typedef  ^  ParameterType  IntKi   CtrlElem2Channel  {:}{:} - -   "nCtrlCable x 
 # --- Parameters - CB reduction
 typedef  ^  ParameterType  IntKi   nDOFM        -  -  -  "retained degrees of freedom (modes)"
 typedef  ^  ParameterType  IntKi   SttcSolve    -  -  -  "Solve dynamics about static equilibrium point (flag)"
-typedef  ^  ParameterType  Logical ExtraMoment  -  -  -  "Add Extra lever arm contribution to interface reaction outputs"
+typedef  ^  ParameterType  Logical GuyanLoadCorrection  -  -  -  "Add Extra lever arm contribution to interface reaction outputs"
 typedef  ^  ParameterType  Logical Floating     -  -  -  "True if floating bottom (the 6 DOF are free at all reaction nodes)"
 typedef  ^  ParameterType  ReKi    KMMDiag  {:}    -  -  "Diagonal coefficients of Kmm (OmegaM squared)"
 typedef  ^  ParameterType  ReKi    CMMDiag  {:}    -  -  "Diagonal coefficients of Cmm (~2 Zeta OmegaM))"
