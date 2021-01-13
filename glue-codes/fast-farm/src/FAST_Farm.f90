@@ -75,7 +75,13 @@ type(All_FastFarm_Data)               :: farm
    t = 0
    
    InputFileName = "" ! make sure we don't think this is a "default" inputFileName if not specified on command line
-   CALL CheckArgs( InputFileName, Flag=FlagArg )  ! if ErrStat /= ErrID_None, we'll ignore and deal with the problem when we try to read the input file
+   CALL CheckArgs( InputFileName, ErrStat=ErrStat, Flag=FlagArg )
+
+   if (ErrStat/=0) then
+      call ProgAbort('', TrapErrors=.FALSE., TimeWait=3._ReKi )
+   else if ( len( trim(FlagArg) ) > 0 ) then ! Any other flag (-v,-h) end normally
+      call NormStop()
+   endif
 
    CALL FAST_ProgStart( Farm_Ver ) ! put this after CheckArgs because CheckArgs assumes we haven't called this routine, yet.
    
