@@ -1330,7 +1330,7 @@ SUBROUTINE LBLVS(ALPSTAR,C,U,THETA,PHI,L,R,p,d99Var2,dstarVar1,dstarVar2,SPLLAM,
         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
     ENDIF
     ! compute directivity function
-    CALL DIRECTH(M,THETA,PHI,DBARH,errStat2,errMsg2)
+    CALL DIRECTH_TE(M,THETA,PHI,DBARH,errStat2,errMsg2)
     CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
 
     IF (DBARH <= 0) THEN
@@ -1477,7 +1477,7 @@ SUBROUTINE TBLTE(ALPSTAR,C,U,THETA,PHI,L,R,p,jj,ii,kk,d99Var2,dstarVar1,dstarVar
     ! Compute directivity function
     CALL DIRECTL(M,THETA,PHI,DBARL,errStat2,errMsg2)
     CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )   
-    CALL DIRECTH(M,THETA,PHI,DBARH,errStat2,errMsg2)
+    CALL DIRECTH_TE(M,THETA,PHI,DBARH,errStat2,errMsg2)
     CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
     !      IF (DBARH <= 0) THEN
     !          SPLP = 0.
@@ -1631,7 +1631,7 @@ SUBROUTINE TIPNOIS(ALPHTIP,ALPRAT2,C,U ,THETA,PHI, R,p,SPLTIP, errStat, errMsg)
     ALPTIPP = ABS(ALPHTIP) * ALPRAT2
     M          = U  / p%SpdSound ! MACH NUMBER
     ! Compute directivity function
-    CALL DIRECTH(M,THETA,PHI,DBARH,errStat2,errMsg2)
+    CALL DIRECTH_TE(M,THETA,PHI,DBARH,errStat2,errMsg2)
     CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
     IF (p%ROUND) THEN
         L = .008 * ALPTIPP * C                                    ! Eq 63 from BPM Airfoil Self-noise and Prediction paper   
@@ -1725,9 +1725,9 @@ SUBROUTINE InflowNoise(AlphaNoise,Chord,U,THETA,PHI,d,RObs,MeanVNoise,TINoise,LE
    !tinooisess=0.1
    !Ums = (tinooisess*U)**2
    !Ums = (tinooisess*8)**2
-   CALL DIRECTL(Mach,THETA,PHI,DBARL,errStat2,errMsg2) !yes, assume that noise is low-freq in nature because turbulence length scale is large
+   CALL DIRECTL(Mach,THETA,PHI,DBARL,errStat2,errMsg2) ! assume that noise is low-freq in nature because turbulence length scale is large
    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )   
-   CALL DIRECTH(Mach,THETA,PHI,DBARH,errStat2,errMsg2)
+   CALL DIRECTH_LE(Mach,THETA,PHI,DBARH,errStat2,errMsg2) ! Directivity for the leading edge at high frequencies
    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
    IF (DBARH <= 0) THEN
       SPLti = 0.
@@ -1878,7 +1878,7 @@ SUBROUTINE InflowNoise(AlphaNoise,Chord,U,THETA,PHI,d,RObs,MeanVNoise,TINoise,LE
 !!!!!     ----------------------------
 !!      CALL DIRECTL(Mach,THETA,PHI,DBARL,errStat2,errMsg2) !yes, assume that noise is low-freq in nature because turbulence length scale is large
 !!    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )   
-!!      CALL DIRECTH(Mach,THETA,PHI,DBARH,errStat2,errMsg2)
+!!      CALL DIRECTH_LE(Mach,THETA,PHI,DBARH,errStat2,errMsg2)
 !!    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
 !!      IF (DBARH <= 0) THEN
 !!    SPLti = 0.
@@ -1977,7 +1977,7 @@ SUBROUTINE BLUNT(ALPSTAR,C,U ,THETA,PHI,L,R,H,PSI,p,d99Var2,dstarVar1,dstarVar2,
     HDSTAR  = H / DSTRAVG
     DSTARH = 1. /HDSTAR
     ! Compute directivity function
-    CALL DIRECTH(M,THETA,PHI,DBARH,errStat2,errMsg2)
+    CALL DIRECTH_TE(M,THETA,PHI,DBARH,errStat2,errMsg2)
     CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
     IF (DBARH <= 0) THEN
         SPLBLUNT = 0.
@@ -2176,8 +2176,8 @@ SUBROUTINE THICK(C,M,RC,ALPSTAR,p,DELTAP,DSTRS,DSTRP,StallVal,errStat,errMsg)
     ENDIF
 END SUBROUTINE Thick
 !====================================================================================================
-!> This subroutine computes the high frequency directivity function for the input observer location
-SUBROUTINE DIRECTH(M,THETA,PHI,DBAR, errStat, errMsg)
+!> This subroutine computes the high frequency directivity function for the trailing edge
+SUBROUTINE DIRECTH_TE(M,THETA,PHI,DBAR, errStat, errMsg)
     REAL(ReKi),        INTENT(IN   ) :: THETA      !
     REAL(ReKi),        INTENT(IN   ) :: PHI        !
     REAL(ReKi),        INTENT(IN   ) :: M          !
@@ -2185,7 +2185,7 @@ SUBROUTINE DIRECTH(M,THETA,PHI,DBAR, errStat, errMsg)
     INTEGER(IntKi),    INTENT(  OUT) :: errStat    ! Error status of the operation
     character(*),      INTENT(  OUT) :: errMsg     ! Error message if ErrStat /= ErrID_None
     ! Local variables
-    character(*), parameter :: RoutineName = 'Directh'
+    character(*), parameter :: RoutineName = 'Directh_te'
     real(ReKi)              :: MC
     real(ReKi)              :: DEGRAD
     real(ReKi)              :: PHIR
@@ -2197,7 +2197,30 @@ SUBROUTINE DIRECTH(M,THETA,PHI,DBAR, errStat, errMsg)
     THETAR = THETA * DEGRAD
     PHIR   = PHI * DEGRAD
     DBAR   = 2.*SIN(THETAR/2.)**2.*SIN(PHIR)**2./((1.+M*COS(THETAR))* (1.+(M-MC)*COS(THETAR))**2.)    ! eq B1 in BPM Airfoil Self-noise and Prediction paper
-END SUBROUTINE DirectH
+END SUBROUTINE DIRECTH_TE
+
+!====================================================================================================
+!> This subroutine computes the high frequency directivity function for the leading edge
+SUBROUTINE DIRECTH_LE(M,THETA,PHI,DBAR, errStat, errMsg)
+    REAL(ReKi),        INTENT(IN   ) :: THETA      !
+    REAL(ReKi),        INTENT(IN   ) :: PHI        !
+    REAL(ReKi),        INTENT(IN   ) :: M          !
+    REAL(ReKi),        INTENT(  OUT) :: DBAR       !
+    INTEGER(IntKi),    INTENT(  OUT) :: errStat    ! Error status of the operation
+    character(*),      INTENT(  OUT) :: errMsg     ! Error message if ErrStat /= ErrID_None
+    ! Local variables
+    character(*), parameter :: RoutineName = 'Directh_le'
+    real(ReKi)              :: DEGRAD
+    real(ReKi)              :: PHIR
+    real(ReKi)              :: THETAR
+    ErrStat = ErrID_None
+    ErrMsg  = ""
+    DEGRAD = .017453
+    THETAR = THETA * DEGRAD
+    PHIR   = PHI * DEGRAD
+    DBAR   = 2.*COS(THETAR/2.)**2.*SIN(PHIR)**2./(1.+M*COS(THETAR))**3. 
+END SUBROUTINE DIRECTH_LE
+
 !====================================================================================================
 !> This subroutine computes the high frequency directivity function for the input observer location
 ! Paper: 
@@ -2222,7 +2245,7 @@ SUBROUTINE DIRECTL(M,THETA,PHI,DBAR, errStat, errMsg)
     THETAR = THETA * DEGRAD
     PHIR   = PHI * DEGRAD
     DBAR = (SIN(THETAR)*SIN(PHIR))**2/(1.+M*COS(THETAR))**4                   ! eq B2 in BPM Airfoil Self-noise and Prediction paper
-END SUBROUTINE DirectL
+END SUBROUTINE DIRECTL
 !==================================================================================================================================!
 !===============================  Simplified Guidati Inflow Turbulence Noise Addition =============================================!
 !==================================================================================================================================!
@@ -2306,7 +2329,7 @@ SUBROUTINE TBLTE_TNO(ALPSTAR,C,U,THETA,PHI,D,R,Cfall,d99all,EdgeVelAll,p,SPLP,SP
     Mach = U  / p%SpdSound
 
     ! Directivity function
-    CALL DIRECTH(REAL(Mach),THETA,PHI,DBARH,errStat2,errMsg2)
+    CALL DIRECTH_TE(REAL(Mach),THETA,PHI,DBARH,errStat2,errMsg2)
     CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsgn, RoutineName )
  
     do i_omega = 1,n_freq
