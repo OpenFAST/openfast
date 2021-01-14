@@ -23,6 +23,8 @@ MODULE FAST_Subs
 
    USE FAST_Solver
    USE FAST_Linear
+   
+   USE Waves, ONLY : WaveGrid_n
 
    IMPLICIT NONE
 
@@ -1010,10 +1012,10 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       !:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
       !@mhall: for now, passing some hardcoded wave kinematics grid info from HD to MD 
       
-         ALLOCATE ( Init%InData_MD%WaveVel  (HD%p%NStepWave, 200, 3) )
-         ALLOCATE ( Init%InData_MD%WaveAcc  (HD%p%NStepWave, 200, 3) )
-         ALLOCATE ( Init%InData_MD%WavePDyn (HD%p%NStepWave, 200) )
-         ALLOCATE ( Init%InData_MD%WaveElev (HD%p%NStepWave, 200) )
+         ALLOCATE ( Init%InData_MD%WaveVel  (HD%p%NStepWave, WaveGrid_n, 3) )
+         ALLOCATE ( Init%InData_MD%WaveAcc  (HD%p%NStepWave, WaveGrid_n, 3) )
+         ALLOCATE ( Init%InData_MD%WavePDyn (HD%p%NStepWave, WaveGrid_n) )
+         ALLOCATE ( Init%InData_MD%WaveElev (HD%p%NStepWave, WaveGrid_n) )
          ALLOCATE ( Init%InData_MD%WaveTime (HD%p%NStepWave) )
       
       Init%InData_MD%WaveVel  = Init%OutData_HD%WaveVel 

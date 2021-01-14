@@ -2556,7 +2556,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
 
       ! WaveTMax - Analysis time for incident wave calculations.
 
-   IF ( InitInp%Waves%WaveMod == 0 )  THEN   ! .TRUE if we have incident waves.
+   IF ( InitInp%Waves%WaveMod == 0 )  THEN   ! .TRUE if we DO NOT HAVE have incident waves.
       
       ! TODO: Issue warning if WaveTMax was not already 0.0 in this case.
       IF ( .NOT. EqualRealNos(InitInp%Waves%WaveTMax, 0.0_DbKi) ) THEN
@@ -4264,8 +4264,8 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
          ! Set the number and global Z locations for the X and Y components of the current velocities
-         ! @mhall: hard-coding an extra 200 points to make a water kinematics grid
-      InitInp%Current%NMorisonNodes = InitInp%Morison%NNodes + 200
+         ! @mhall: hard-coding an extra WaveGrid_n points to make a water kinematics grid
+      InitInp%Current%NMorisonNodes = InitInp%Morison%NNodes + WaveGrid_n
 
       ALLOCATE ( InitInp%Current%MorisonNodezi(InitInp%Current%NMorisonNodes), STAT = ErrStat2 )
       IF ( ErrStat2 /= ErrID_None ) THEN
@@ -4276,8 +4276,8 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
 
 
          ! Establish the number and locations where the wave kinematics will be computed
-         ! @mhall: hard-coding an extra 200 points to make a water kinematics grid
-      InitInp%Waves%NWaveKin   = InitInp%Morison%NNodes + 200                    ! Number of points where the incident wave kinematics will be computed (-)
+         ! @mhall: hard-coding an extra WaveGrid_n points to make a water kinematics grid
+      InitInp%Waves%NWaveKin   = InitInp%Morison%NNodes + WaveGrid_n                    ! Number of points where the incident wave kinematics will be computed (-)
       ALLOCATE ( InitInp%Waves%WaveKinxi(InitInp%Waves%NWaveKin), STAT = ErrStat2 )
       IF ( ErrStat2 /= ErrID_None ) THEN
          CALL SetErrStat( ErrID_Fatal,'Error allocating space for WaveKinxi array.',ErrStat,ErrMsg,RoutineName)
@@ -4301,13 +4301,13 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
          InitInp%Current%MorisonNodezi(I) = InitInp%Waves%WaveKinzi(I)
       END DO
       !@mhall: hard-coding the coordinates of those additional nodes for the grid (remember, must be in increasing order) <<< move these to module global parameters<<<<
-      DO I=1,8          !z
-         DO J = 1,5     !y
-            DO K = 1,5  !x 
-               Itemp = InitInp%Morison%NNodes + (I-1)*25.0 + (J-1)*5.0 + K    ! index of actual node
-               InitInp%Waves%WaveKinzi(Itemp)      =   1.0 - 2.0**(8-I)       !  -127,  -63,  -31,  -15,   -7,   -3,   -1,    0
-               InitInp%Waves%WaveKinyi(Itemp)      = -60.0 + 20.0*J
-               InitInp%Waves%WaveKinxi(Itemp)      = -60.0 + 20.0*K
+      DO I=1,WaveGrid_nz          !z
+         DO J = 1,WaveGrid_ny     !y
+            DO K = 1,WaveGrid_nx  !x
+               Itemp = InitInp%Morison%NNodes + (I-1)*WaveGrid_nx*WaveGrid_ny + (J-1)*WaveGrid_nx + K    ! index of actual node
+               InitInp%Waves%WaveKinzi(Itemp)      =   1.0 - 2.0**(WaveGrid_nz-I)       !  -127,  -63,  -31,  -15,   -7,   -3,   -1,    0
+               InitInp%Waves%WaveKinyi(Itemp)      = WaveGrid_y0 + WaveGrid_dy*J
+               InitInp%Waves%WaveKinxi(Itemp)      = WaveGrid_x0 + WaveGrid_dx*K
                InitInp%Current%MorisonNodezi(Itemp)= InitInp%Waves%WaveKinzi(I)
             END DO
          END DO

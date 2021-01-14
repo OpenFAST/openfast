@@ -33,6 +33,7 @@ MODULE HydroDyn
    USE HydroDyn_Input
    USE HydroDyn_Output
    USE Current
+          USE Waves
    USE Waves2
 #ifdef USE_FIT
    USE FIT_MODULES
@@ -1351,10 +1352,10 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
          !:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
          !@mhall: Making sure wave info from the grid points are saved for output here...
 
-         ALLOCATE ( InitOut%WaveVel  (InitLocal%Morison%NStepWave, 200, 3) )
-         ALLOCATE ( InitOut%WaveAcc  (InitLocal%Morison%NStepWave, 200, 3) )
-         ALLOCATE ( InitOut%WaveDynP (InitLocal%Morison%NStepWave, 200) )
-         ALLOCATE ( InitOut%WaveElev (InitLocal%Morison%NStepWave, 25) ) ! unlike the above, this array is just 5x5, for the surface.
+         ALLOCATE ( InitOut%WaveVel  (InitLocal%Morison%NStepWave, WaveGrid_n, 3) )
+         ALLOCATE ( InitOut%WaveAcc  (InitLocal%Morison%NStepWave, WaveGrid_n, 3) )
+         ALLOCATE ( InitOut%WaveDynP (InitLocal%Morison%NStepWave, WaveGrid_n) )
+         ALLOCATE ( InitOut%WaveElev (InitLocal%Morison%NStepWave, WaveGrid_nx*WaveGrid_ny) ) ! unlike the above, this array is just 5x5, for the surface.
          ALLOCATE ( InitOut%WaveTime (InitLocal%Morison%NStepWave) )
 
 

@@ -34,6 +34,21 @@ MODULE Waves
 
    TYPE(ProgDesc), PARAMETER            :: Waves_ProgDesc = ProgDesc( 'Waves', '', '' )
 
+
+      ! ..... @mhall: Public variables for hard-coded wave kinematics grid (temporary solution) ...........................
+
+   INTEGER,    PUBLIC         :: WaveGrid_n  = 150      ! Number of wave kinematics grid points = nx*ny*nz
+   
+   REAL(SiKi), PUBLIC         :: WaveGrid_x0 = -45.0    ! first grid point in x direction   
+   REAL(SiKi), PUBLIC         :: WaveGrid_dx = 15.0     ! step size in x direction
+   INTEGER,    PUBLIC         :: WaveGrid_nx = 10       ! Number of wave kinematics grid points in x
+   
+   REAL(SiKi), PUBLIC         :: WaveGrid_y0 = -35.0    ! same for y
+   REAL(SiKi), PUBLIC         :: WaveGrid_dy = 35.0
+   INTEGER,    PUBLIC         :: WaveGrid_ny = 3        
+   
+   INTEGER,    PUBLIC         :: WaveGrid_nz = 5        ! Number of wave kinematics grid points in z (locations decided by 1.0 - 2.0**(WaveGrid_nz-I))
+
    
       ! ..... Public Subroutines ...................................................................................................
    PUBLIC :: WavePkShpDefault                     ! Return the default value of the peak shape parameter of the incident wave spectrum
@@ -1784,15 +1799,15 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       ! ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
       !@mhall: hard-coding some additional wave elevation time series output for now
 
-      ALLOCATE ( InitOut%WaveElevMD  (0:InitOut%NStepWave, 25), STAT=ErrStatTmp )
+      ALLOCATE ( InitOut%WaveElevMD  (0:InitOut%NStepWave, WaveGrid_nx*WaveGrid_ny), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElevMD.',  ErrStat,ErrMsg,'VariousWaves_Init')
 
-      DO J = 1,5     !y = -60.0 + 20.0*J
-         DO K = 1,5  !x = -60.0 + 20.0*K 
+      DO J = 1,WaveGrid_ny     !y = -60.0 + 20.0*J
+         DO K = 1,WaveGrid_nx  !x = -60.0 + 20.0*K 
 
-            I = (J-1)*5.0 + K    ! index of actual node
+            I = (J-1)*WaveGrid_nx + K    ! index of actual node
             
-            CALL WaveElevTimeSeriesAtXY( -60.0 + 20.0*K, -60.0 + 20.0*J, InitOut%WaveElevMD(:,I), ErrStatTmp, ErrMsgTmp )
+            CALL WaveElevTimeSeriesAtXY( WaveGrid_x0 + WaveGrid_dx*K, WaveGrid_y0 + WaveGrid_dy*J, InitOut%WaveElevMD(:,I), ErrStatTmp, ErrMsgTmp )
             CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to InitOut%WaveElevMD.',ErrStat,ErrMsg,'VariousWaves_Init')
             IF ( ErrStat >= AbortErrLev ) THEN
                CALL CleanUp()
@@ -2201,6 +2216,10 @@ SUBROUTINE Waves_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       
 
       CASE ( 0 )              ! None=still water.
+
+         !@mhall:  :::: ensure all arrays needed for the wave grid to MoorDyn are allocated in the WaveMod=0 case too ::::
+         ALLOCATE ( InitOut%WaveElevMD  (0:InitOut%NStepWave, WaveGrid_nx*WaveGrid_ny), STAT=ErrStatTmp )
+         ! ::::: end :::::
 
          CALL StillWaterWaves_Init( InitInp, InitOut, ErrStatTmp, ErrMsgTmp )
          CALL  SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,'Waves_Init')

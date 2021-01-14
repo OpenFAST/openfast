@@ -22,6 +22,8 @@ MODULE MoorDyn
    USE MoorDyn_Types
    USE MoorDyn_IO
    USE NWTC_Library
+   
+   USE WAVES  ! seeing if I can get waves data here directly...
 
    IMPLICIT NONE
 
@@ -1426,6 +1428,10 @@ print *, "output"
                       CtrlCode = MESH_SIBLING,             IOS      = COMPONENT_OUTPUT, &
                       Force=.TRUE.,  Moment=.TRUE.,  ErrStat  = ErrStat2, ErrMess=ErrMsg2 )
 
+      CALL MeshCommit ( y%CoupledLoads, ErrStat, ErrMsg )
+         CALL CheckError( ErrStat2, ErrMsg2 )
+         IF (ErrStat >= AbortErrLev) RETURN
+
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN
 
@@ -1507,35 +1513,35 @@ print *, "output"
       ! :::::::::::::::: the above will be used eventually. For now, let's store wave info grids within this module :::::::::::::::::
       ! allocate arrays
       I = SIZE(InitInp%WaveTime)
-      ALLOCATE ( p%ux  (I,8,5,5), STAT = ErrStat2 )
-      ALLOCATE ( p%uy  (I,8,5,5), STAT = ErrStat2 )
-      ALLOCATE ( p%uz  (I,8,5,5), STAT = ErrStat2 )
-      ALLOCATE ( p%ax  (I,8,5,5), STAT = ErrStat2 )
-      ALLOCATE ( p%ay  (I,8,5,5), STAT = ErrStat2 )
-      ALLOCATE ( p%az  (I,8,5,5), STAT = ErrStat2 )
-      ALLOCATE ( p%PDyn(I,8,5,5), STAT = ErrStat2 )
-      ALLOCATE ( p%zeta(I,5,5), STAT = ErrStat2 )    ! 2D grid over x and y only
-      ALLOCATE ( p%px(5), STAT = ErrStat2 )
-      ALLOCATE ( p%py(5), STAT = ErrStat2 )
-      ALLOCATE ( p%pz(8), STAT = ErrStat2 )
+      ALLOCATE ( p%ux  (I,WaveGrid_nz,WaveGrid_ny,WaveGrid_nx), STAT = ErrStat2 )
+      ALLOCATE ( p%uy  (I,WaveGrid_nz,WaveGrid_ny,WaveGrid_nx), STAT = ErrStat2 )
+      ALLOCATE ( p%uz  (I,WaveGrid_nz,WaveGrid_ny,WaveGrid_nx), STAT = ErrStat2 )
+      ALLOCATE ( p%ax  (I,WaveGrid_nz,WaveGrid_ny,WaveGrid_nx), STAT = ErrStat2 )
+      ALLOCATE ( p%ay  (I,WaveGrid_nz,WaveGrid_ny,WaveGrid_nx), STAT = ErrStat2 )
+      ALLOCATE ( p%az  (I,WaveGrid_nz,WaveGrid_ny,WaveGrid_nx), STAT = ErrStat2 )
+      ALLOCATE ( p%PDyn(I,WaveGrid_nz,WaveGrid_ny,WaveGrid_nx), STAT = ErrStat2 )
+      ALLOCATE ( p%zeta(I,WaveGrid_ny,WaveGrid_nx), STAT = ErrStat2 )    ! 2D grid over x and y only
+      ALLOCATE ( p%px(WaveGrid_nx), STAT = ErrStat2 )
+      ALLOCATE ( p%py(WaveGrid_ny), STAT = ErrStat2 )
+      ALLOCATE ( p%pz(WaveGrid_nz), STAT = ErrStat2 )
       
       ! get grid and time info (currenltly this is hard-coded to match what's in HydroDyn_Input
-      DO I=1,8
-         p%pz(I) =  1.0 - 2.0**(8-I)       !  -127,  -63,  -31,  -15,   -7,   -3,   -1,    0
+      DO I=1,WaveGrid_nz
+         p%pz(I) =  1.0 - 2.0**(WaveGrid_nz-I)       !  -127,  -63,  -31,  -15,   -7,   -3,   -1,    0
       END DO
-      DO J = 1,5
-         p%py(J) = -60.0 + 20.0*J
+      DO J = 1,WaveGrid_ny
+         p%py(J) = WaveGrid_y0 + WaveGrid_dy*J
       END DO
-      DO K = 1,5   
-         p%px(K) = -60.0 + 20.0*K
+      DO K = 1,WaveGrid_nx
+         p%px(K) = WaveGrid_x0 + WaveGrid_dx*K
       END DO
       p%dtWave = InitInp%WaveTime(2) - InitInp%WaveTime(1)
       
       ! fill in the grid data (the for loops match those in HydroDyn_Input)
-      DO I=1,8
-         DO J = 1,5
-            DO K = 1,5   
-               Itemp = (I-1)*25.0 + (J-1)*5.0 + K    ! index of actual node on 3D grid
+      DO I=1,WaveGrid_nz
+         DO J = 1,WaveGrid_ny
+            DO K = 1,WaveGrid_nx 
+               Itemp = (I-1)*WaveGrid_nx*WaveGrid_ny + (J-1)*WaveGrid_nx + K    ! index of actual node on 3D grid
                
                p%ux  (:,I,J,K) = InitInp%WaveVel( :,Itemp,1)  ! note: indices are t, z, y, x
                p%uy  (:,I,J,K) = InitInp%WaveVel( :,Itemp,2)
@@ -1549,9 +1555,9 @@ print *, "output"
       END DO
       
       ! fill in the grid data (the for loops match those in HydroDyn_Input)      
-      DO J = 1,5
-         DO K = 1,5   
-            Itemp = (J-1)*5.0 + K    ! index of actual node on surface 2D grid   
+      DO J = 1,WaveGrid_ny
+         DO K = 1,WaveGrid_nx
+            Itemp = (J-1)*WaveGrid_nx + K    ! index of actual node on surface 2D grid   
             p%zeta(:,J,K) = InitInp%WaveElev(:,Itemp)
          END DO
       END DO
@@ -1574,15 +1580,15 @@ print *, "output"
       
       WRITE(UnOut,*, IOSTAT=ErrStat2)  TRIM( '1  - X input type (0: not used; 1: list values in ascending order; 2: uniform specified by -xlim, xlim, num)' )
       Frmt = '('//TRIM(Int2LStr(5))//'(A1,e10.4))'      
-      WRITE(UnOut,*, IOSTAT=ErrStat2)  ( " ", TRIM(Num2LStr(p%px(I))), I=1,5 )
+      WRITE(UnOut,*, IOSTAT=ErrStat2)  ( " ", TRIM(Num2LStr(p%px(I))), I=1,WaveGrid_nx )
       
       WRITE(UnOut,*, IOSTAT=ErrStat2)  TRIM( '1  - Y input type (0: not used; 1: list values in ascending order; 2: uniform specified by -xlim, xlim, num)' )
       Frmt = '('//TRIM(Int2LStr(5))//'(A1,e10.4))'      
-      WRITE(UnOut,*, IOSTAT=ErrStat2)  ( " ", TRIM(Num2LStr(p%py(I))), I=1,5 )
+      WRITE(UnOut,*, IOSTAT=ErrStat2)  ( " ", TRIM(Num2LStr(p%py(I))), I=1,WaveGrid_ny )
       
       WRITE(UnOut,*, IOSTAT=ErrStat2)  TRIM( '1  - Z input type (0: not used; 1: list values in ascending order; 2: uniform specified by -xlim, xlim, num)' )
       Frmt = '('//TRIM(Int2LStr(8))//'(A1,e10.4))'      
-      WRITE(UnOut,*, IOSTAT=ErrStat2)  ( " ", TRIM(Num2LStr(p%pz(I))), I=1,8 )
+      WRITE(UnOut,*, IOSTAT=ErrStat2)  ( " ", TRIM(Num2LStr(p%pz(I))), I=1,WaveGrid_nz )
       
       CLOSE(UnOut, IOSTAT = ErrStat )
       IF ( ErrStat /= 0 ) THEN
@@ -1605,32 +1611,32 @@ print *, "output"
       ! time
       WRITE(UnOut,"(A10)", IOSTAT=ErrStat2, advance="no") "Time"
    
-      DO J = 1,5     !y
-         DO K = 1,5  !x 
+      DO J = 1,WaveGrid_ny     !y
+         DO K = 1,WaveGrid_nx  !x 
             WRITE(UnOut,"(A3,A8)", IOSTAT=ErrStat2, advance="no") " ze0", Num2Lstr(J+10*K)
          END DO
       END DO
-      DO I=1,8          !z
-         DO J = 1,5     !y
-            DO K = 1,5  !x 
+      DO I=1,WaveGrid_nz          !z
+         DO J = 1,WaveGrid_ny     !y
+            DO K = 1,WaveGrid_nx  !x 
                WRITE(UnOut,"(A3,A8)", IOSTAT=ErrStat2, advance="no") " ux", Num2Lstr(I+10*J+100*K)
                WRITE(UnOut,"(A3,A8)", IOSTAT=ErrStat2, advance="no") " uy", Num2Lstr(I+10*J+100*K)
                WRITE(UnOut,"(A3,A8)", IOSTAT=ErrStat2, advance="no") " uz", Num2Lstr(I+10*J+100*K)
             END DO
          END DO
       END DO
-      DO I=1,8          !z
-         DO J = 1,5     !y
-            DO K = 1,5  !x 
+      DO I=1,WaveGrid_nz          !z
+         DO J = 1,WaveGrid_ny     !y
+            DO K = 1,WaveGrid_nx  !x 
                WRITE(UnOut,"(A3,A8)", IOSTAT=ErrStat2, advance="no") " ax", Num2Lstr(I+10*J+100*K)
                WRITE(UnOut,"(A3,A8)", IOSTAT=ErrStat2, advance="no") " ay", Num2Lstr(I+10*J+100*K)
                WRITE(UnOut,"(A3,A8)", IOSTAT=ErrStat2, advance="no") " az", Num2Lstr(I+10*J+100*K)
             END DO
          END DO
       END DO
-      DO I=1,8          !z
-         DO J = 1,5     !y
-            DO K = 1,5  !x 
+      DO I=1,WaveGrid_nz          !z
+         DO J = 1,WaveGrid_ny     !y
+            DO K = 1,WaveGrid_nx  !x 
                WRITE(UnOut,"(A3,A8)", IOSTAT=ErrStat2, advance="no") " pd", Num2Lstr(I+10*J+100*K)
             END DO
          END DO
@@ -1648,19 +1654,19 @@ print *, "output"
          !WRITE(UnOut,"(F10.4)", IOSTAT=ErrStat2, advance="no") InitInp%WaveTime(l)
       
          ! wave elevation (all slices for now, to check)
-         DO J = 1,5     !y
-            DO K = 1,5  !x 
-               Itemp = (J-1)*5.0 + K    ! index of actual node
+         DO J = 1,WaveGrid_ny     !y
+            DO K = 1,WaveGrid_nx  !x 
+               Itemp = (J-1)*WaveGrid_nx + K    ! index of actual node
                
                WRITE(UnOut,"(A1,e10.3)", IOSTAT=ErrStat2, advance="no") " ", p%zeta(l,J,K)
             END DO
          END DO
       
          ! wave velocities
-         DO I=1,8          !z
-            DO J = 1,5     !y
-               DO K = 1,5  !x 
-                  Itemp = (I-1)*25.0 + (J-1)*5.0 + K    ! index of actual node
+         DO I=1,WaveGrid_nz          !z
+            DO J = 1,WaveGrid_ny     !y
+               DO K = 1,WaveGrid_nx  !x 
+                  Itemp = (I-1)*WaveGrid_nx*WaveGrid_ny + (J-1)*WaveGrid_nx + K    ! index of actual node
                   
                   WRITE(UnOut,"(A1,e10.3)", IOSTAT=ErrStat2, advance="no") " ", p%ux(l,I,J,K)
                   WRITE(UnOut,"(A1,e10.3)", IOSTAT=ErrStat2, advance="no") " ", p%uy(l,I,J,K)
@@ -1670,10 +1676,10 @@ print *, "output"
          END DO
          
          ! wave accelerations
-         DO I=1,8          !z
-            DO J = 1,5     !y
-               DO K = 1,5  !x 
-                  Itemp = (I-1)*25.0 + (J-1)*5.0 + K    ! index of actual node
+         DO I=1,WaveGrid_nz          !z
+            DO J = 1,WaveGrid_ny     !y
+               DO K = 1,WaveGrid_nx  !x 
+                  Itemp = (I-1)*WaveGrid_nx*WaveGrid_ny + (J-1)*WaveGrid_nx + K    ! index of actual node
                   
                   WRITE(UnOut,"(A1,e10.3)", IOSTAT=ErrStat2, advance="no") " ", p%ax(l,I,J,K)
                   WRITE(UnOut,"(A1,e10.3)", IOSTAT=ErrStat2, advance="no") " ", p%ay(l,I,J,K)
@@ -1683,10 +1689,10 @@ print *, "output"
          END DO
       
          ! dynamic pressure
-         DO I=1,8          !z
-            DO J = 1,5     !y
-               DO K = 1,5  !x 
-                  Itemp = (I-1)*25.0 + (J-1)*5.0 + K    ! index of actual node
+         DO I=1,WaveGrid_nz          !z
+            DO J = 1,WaveGrid_ny     !y
+               DO K = 1,WaveGrid_nx  !x 
+                  Itemp = (I-1)*WaveGrid_nx*WaveGrid_ny + (J-1)*WaveGrid_nx + K    ! index of actual node
                   
                   WRITE(UnOut,"(A1,e10.3)", IOSTAT=ErrStat2, advance="no") " ", p%PDyn(l,I,J,K)
                END DO
