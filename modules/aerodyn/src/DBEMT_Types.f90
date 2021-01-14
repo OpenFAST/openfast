@@ -36,19 +36,13 @@ IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: DBEMT_none = 0      ! use BEMT instead (not DBEMT) [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: DBEMT_tauConst = 1      ! use constant tau1 [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: DBEMT_tauVaries = 2      ! use time-dependent tau1 [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: DBEMT_cont_tauConst = 3      ! use continuous formulation with constant tau1 [-]
 ! =========  DBEMT_InitInputType  =======
   TYPE, PUBLIC :: DBEMT_InitInputType
     INTEGER(IntKi)  :: NumBlades      !< Number of blades on the turbine [-]
     INTEGER(IntKi)  :: NumNodes      !< Number of nodes on each blade [-]
-    REAL(ReKi)  :: k_0ye      !< Filter dynamics constant [default = 0.6 ] [-]
-    REAL(ReKi)  :: c5      !< Filter dynamics constant [default = 1.1 ] [-]
-    REAL(ReKi)  :: c6      !< Filter dynamics constant [default = 1.0 ] [-]
-    REAL(ReKi)  :: c7      !< Filter dynamics constant [default = 1.3 ] [-]
-    REAL(ReKi)  :: c8      !< Filter dynamics constant [default = 0.39] [-]
-    REAL(ReKi)  :: c9      !< Filter dynamics constant [default = 0.26] [-]
     REAL(ReKi)  :: tau1_const      !< delay value based on disk-averaged quantities [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: spanRatio      !< static span ratio of each blade node [-]
-    INTEGER(IntKi)  :: DBEMT_Mod      !< DBEMT Model.  0 = constant tau1, 1 = time dependent tau1 [-]
+    INTEGER(IntKi)  :: DBEMT_Mod      !< DBEMT Model.  1 = constant tau1, 2 = time dependent tau1, 3=continuous form with constant tau1 [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: rLocal      !< Radial distance to blade node from the center of rotation, measured in the rotor plane, needed for DBEMT [m]
   END TYPE DBEMT_InitInputType
 ! =======================
@@ -57,26 +51,35 @@ IMPLICIT NONE
     TYPE(ProgDesc)  :: Ver      !< This module's name, version, and date [-]
   END TYPE DBEMT_InitOutputType
 ! =======================
+! =========  DBEMT_ElementContinuousStateType  =======
+  TYPE, PUBLIC :: DBEMT_ElementContinuousStateType
+    REAL(R8Ki) , DIMENSION(1:2)  :: vind      !< The filtered induced velocity, [1,i,j] is the axial induced velocity (-Vx*a) at node i on blade j and [2,i,j] is the tantential induced velocity (Vy*a') [m/s]
+    REAL(R8Ki) , DIMENSION(1:2)  :: vind_dot      !< Time derivative of the filtered induced velocity, x%vind in CCSD [m/s^2]
+    REAL(R8Ki) , DIMENSION(1:2)  :: vind_1      !< The filtered intermediate induced velocity [m/s]
+  END TYPE DBEMT_ElementContinuousStateType
+! =======================
 ! =========  DBEMT_ContinuousStateType  =======
   TYPE, PUBLIC :: DBEMT_ContinuousStateType
-    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: vind      !< The filtered induced velocity, [1,i,j] is the axial induced velocity (-Vx*a) at node i on blade j and [2,i,j] is the tantential induced velocity (Vy*a') at node i on blade j [m/s]
-    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: vind_1      !< The filtered intermediate induced velocity, [1,i,j] is the axial induced velocity (-Vx*a) at node i on blade j and [2,i,j] is the tantential induced velocity (Vy*a') at node i on blade j [m/s]
+    TYPE(DBEMT_ElementContinuousStateType) , DIMENSION(:,:), ALLOCATABLE  :: element      !< The filtered induced velocity [1,i,j] is the axial induced velocity (-Vx*a) at node i on blade j and [2,i,j] is the tantential induced velocity (Vy*a') at node i on blade j [m/s]
   END TYPE DBEMT_ContinuousStateType
 ! =======================
 ! =========  DBEMT_DiscreteStateType  =======
   TYPE, PUBLIC :: DBEMT_DiscreteStateType
-    REAL(SiKi)  :: DummyDiscreteState      !< Remove this variable if you have continuous states [-]
+    REAL(SiKi)  :: DummyState      !< Remove this variable if you have continuous states [-]
   END TYPE DBEMT_DiscreteStateType
 ! =======================
 ! =========  DBEMT_ConstraintStateType  =======
   TYPE, PUBLIC :: DBEMT_ConstraintStateType
-    REAL(SiKi)  :: DummyContState      !< Remove this variable if you have constraint states [-]
+    REAL(SiKi)  :: DummyState      !< Remove this variable if you have constraint states [-]
   END TYPE DBEMT_ConstraintStateType
 ! =======================
 ! =========  DBEMT_OtherStateType  =======
   TYPE, PUBLIC :: DBEMT_OtherStateType
     LOGICAL , DIMENSION(:,:), ALLOCATABLE  :: areStatesInitialized      !< Flag indicating whether the module's states have been initialized properly [-]
     REAL(ReKi)  :: tau1      !< value of tau1 used in updateStates (for output-to-file only) [-]
+    REAL(ReKi)  :: tau2      !< value of tau2 used in updateStates (equal to k_tau * tau1, not used between time steps) [-]
+    INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: n      !< time step   value used for continuous state integrator [-]
+    TYPE(DBEMT_ContinuousStateType) , DIMENSION(1:4)  :: xdot      !< derivative history for continuous state integrators [-]
   END TYPE DBEMT_OtherStateType
 ! =======================
 ! =========  DBEMT_MiscVarType  =======
@@ -87,26 +90,33 @@ IMPLICIT NONE
 ! =========  DBEMT_ParameterType  =======
   TYPE, PUBLIC :: DBEMT_ParameterType
     REAL(DbKi)  :: DT      !< Time step for continuous state integration & discrete state update [seconds]
+    INTEGER(IntKi)  :: lin_nx = 0      !< Number of continuous states for linearization [-]
     INTEGER(IntKi)  :: NumBlades      !< Number of blades on the turbine [-]
     INTEGER(IntKi)  :: NumNodes      !< Number of nodes on each blade [-]
     REAL(ReKi)  :: k_0ye      !< Filter dynamics constant [default = 0.6 ] [-]
     REAL(ReKi)  :: tau1_const      !< constant version of the delay value [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: spanRatio      !< static span ratio of each blade node [-]
-    INTEGER(IntKi)  :: DBEMT_Mod      !< DBEMT Model.  0 = constant tau1, 1 = time dependent tau1 [-]
+    INTEGER(IntKi)  :: DBEMT_Mod      !< DBEMT Model.  1 = constant tau1, 2 = time dependent tau1, 3=continuous form of constant tau1 [-]
   END TYPE DBEMT_ParameterType
+! =======================
+! =========  DBEMT_ElementInputType  =======
+  TYPE, PUBLIC :: DBEMT_ElementInputType
+    REAL(ReKi) , DIMENSION(1:2)  :: vind_s      !< The unfiltered induced velocity, [1] is the axial induced velocity (-Vx*a) and [2] is the tangential induced velocity (Vy*a') at node i on blade j. Note that the inputs are used only operated on at a particular node and blade, so we don't store all elements [m/s]
+    REAL(ReKi) , DIMENSION(1:2)  :: vind_s_dot      !< The first time derivative of the unfiltered induced velocity, u%vind_s [m/s^2]
+    REAL(ReKi)  :: spanRatio      !< Normalized span location of blade node [-]
+  END TYPE DBEMT_ElementInputType
 ! =======================
 ! =========  DBEMT_InputType  =======
   TYPE, PUBLIC :: DBEMT_InputType
     REAL(ReKi)  :: AxInd_disk      !< Disk-averaged axial induction (for time-varying tau) [-]
     REAL(ReKi)  :: Un_disk      !< Disk-averaged normal relative inflow velocity (for time-varying tau) [m/s]
     REAL(ReKi)  :: R_disk      !< Disk-averaged rotor radius (for time-varying tau) [m]
-    REAL(ReKi) , DIMENSION(1:2)  :: vind_s      !< The unfiltered induced velocity, [1,i,j] is the axial induced velocity (-Vx*a) at node i on blade j and [2,i,j] is the tantential induced velocity (Vy*a') at node i on blade j [m/s]
-    REAL(ReKi)  :: spanRatio      !< Normalized span location of blade node [-]
+    TYPE(DBEMT_ElementInputType) , DIMENSION(:,:), ALLOCATABLE  :: element      !< The element-level inputs at each blade node [-]
   END TYPE DBEMT_InputType
 ! =======================
 ! =========  DBEMT_OutputType  =======
   TYPE, PUBLIC :: DBEMT_OutputType
-    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: vind      !< The filtered induced velocity, [1,i,j] is the axial induced velocity (-Vx*a) at node i on blade j and [2,i,j] is the tantential induced velocity (Vy*a') at node i on blade j [m/s]
+    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: vind      !< The filtered induced velocity, [1,i,j] is the axial induced velocity (-Vx*a) at node i on blade j and [2,i,j] is the tangential induced velocity (Vy*a') at node i on blade j [m/s]
   END TYPE DBEMT_OutputType
 ! =======================
 CONTAINS
@@ -129,27 +139,7 @@ CONTAINS
    ErrMsg  = ""
     DstInitInputData%NumBlades = SrcInitInputData%NumBlades
     DstInitInputData%NumNodes = SrcInitInputData%NumNodes
-    DstInitInputData%k_0ye = SrcInitInputData%k_0ye
-    DstInitInputData%c5 = SrcInitInputData%c5
-    DstInitInputData%c6 = SrcInitInputData%c6
-    DstInitInputData%c7 = SrcInitInputData%c7
-    DstInitInputData%c8 = SrcInitInputData%c8
-    DstInitInputData%c9 = SrcInitInputData%c9
     DstInitInputData%tau1_const = SrcInitInputData%tau1_const
-IF (ALLOCATED(SrcInitInputData%spanRatio)) THEN
-  i1_l = LBOUND(SrcInitInputData%spanRatio,1)
-  i1_u = UBOUND(SrcInitInputData%spanRatio,1)
-  i2_l = LBOUND(SrcInitInputData%spanRatio,2)
-  i2_u = UBOUND(SrcInitInputData%spanRatio,2)
-  IF (.NOT. ALLOCATED(DstInitInputData%spanRatio)) THEN 
-    ALLOCATE(DstInitInputData%spanRatio(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%spanRatio.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInitInputData%spanRatio = SrcInitInputData%spanRatio
-ENDIF
     DstInitInputData%DBEMT_Mod = SrcInitInputData%DBEMT_Mod
 IF (ALLOCATED(SrcInitInputData%rLocal)) THEN
   i1_l = LBOUND(SrcInitInputData%rLocal,1)
@@ -176,9 +166,6 @@ ENDIF
 ! 
   ErrStat = ErrID_None
   ErrMsg  = ""
-IF (ALLOCATED(InitInputData%spanRatio)) THEN
-  DEALLOCATE(InitInputData%spanRatio)
-ENDIF
 IF (ALLOCATED(InitInputData%rLocal)) THEN
   DEALLOCATE(InitInputData%rLocal)
 ENDIF
@@ -221,18 +208,7 @@ ENDIF
   Int_BufSz  = 0
       Int_BufSz  = Int_BufSz  + 1  ! NumBlades
       Int_BufSz  = Int_BufSz  + 1  ! NumNodes
-      Re_BufSz   = Re_BufSz   + 1  ! k_0ye
-      Re_BufSz   = Re_BufSz   + 1  ! c5
-      Re_BufSz   = Re_BufSz   + 1  ! c6
-      Re_BufSz   = Re_BufSz   + 1  ! c7
-      Re_BufSz   = Re_BufSz   + 1  ! c8
-      Re_BufSz   = Re_BufSz   + 1  ! c9
       Re_BufSz   = Re_BufSz   + 1  ! tau1_const
-  Int_BufSz   = Int_BufSz   + 1     ! spanRatio allocated yes/no
-  IF ( ALLOCATED(InData%spanRatio) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*2  ! spanRatio upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%spanRatio)  ! spanRatio
-  END IF
       Int_BufSz  = Int_BufSz  + 1  ! DBEMT_Mod
   Int_BufSz   = Int_BufSz   + 1     ! rLocal allocated yes/no
   IF ( ALLOCATED(InData%rLocal) ) THEN
@@ -270,40 +246,8 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%NumNodes
     Int_Xferred = Int_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%k_0ye
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%c5
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%c6
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%c7
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%c8
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%c9
-    Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%tau1_const
     Re_Xferred = Re_Xferred + 1
-  IF ( .NOT. ALLOCATED(InData%spanRatio) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%spanRatio,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%spanRatio,1)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%spanRatio,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%spanRatio,2)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i2 = LBOUND(InData%spanRatio,2), UBOUND(InData%spanRatio,2)
-        DO i1 = LBOUND(InData%spanRatio,1), UBOUND(InData%spanRatio,1)
-          ReKiBuf(Re_Xferred) = InData%spanRatio(i1,i2)
-          Re_Xferred = Re_Xferred + 1
-        END DO
-      END DO
-  END IF
     IntKiBuf(Int_Xferred) = InData%DBEMT_Mod
     Int_Xferred = Int_Xferred + 1
   IF ( .NOT. ALLOCATED(InData%rLocal) ) THEN
@@ -361,43 +305,8 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     OutData%NumNodes = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
-    OutData%k_0ye = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%c5 = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%c6 = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%c7 = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%c8 = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%c9 = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
     OutData%tau1_const = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! spanRatio not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i2_l = IntKiBuf( Int_Xferred    )
-    i2_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%spanRatio)) DEALLOCATE(OutData%spanRatio)
-    ALLOCATE(OutData%spanRatio(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%spanRatio.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i2 = LBOUND(OutData%spanRatio,2), UBOUND(OutData%spanRatio,2)
-        DO i1 = LBOUND(OutData%spanRatio,1), UBOUND(OutData%spanRatio,1)
-          OutData%spanRatio(i1,i2) = ReKiBuf(Re_Xferred)
-          Re_Xferred = Re_Xferred + 1
-        END DO
-      END DO
-  END IF
     OutData%DBEMT_Mod = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! rLocal not allocated
@@ -634,6 +543,163 @@ ENDIF
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
  END SUBROUTINE DBEMT_UnPackInitOutput
 
+ SUBROUTINE DBEMT_CopyElementContinuousStateType( SrcElementContinuousStateTypeData, DstElementContinuousStateTypeData, CtrlCode, ErrStat, ErrMsg )
+   TYPE(DBEMT_ElementContinuousStateType), INTENT(IN) :: SrcElementContinuousStateTypeData
+   TYPE(DBEMT_ElementContinuousStateType), INTENT(INOUT) :: DstElementContinuousStateTypeData
+   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
+   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+! Local 
+   INTEGER(IntKi)                 :: i,j,k
+   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+   INTEGER(IntKi)                 :: ErrStat2
+   CHARACTER(ErrMsgLen)           :: ErrMsg2
+   CHARACTER(*), PARAMETER        :: RoutineName = 'DBEMT_CopyElementContinuousStateType'
+! 
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+    DstElementContinuousStateTypeData%vind = SrcElementContinuousStateTypeData%vind
+    DstElementContinuousStateTypeData%vind_dot = SrcElementContinuousStateTypeData%vind_dot
+    DstElementContinuousStateTypeData%vind_1 = SrcElementContinuousStateTypeData%vind_1
+ END SUBROUTINE DBEMT_CopyElementContinuousStateType
+
+ SUBROUTINE DBEMT_DestroyElementContinuousStateType( ElementContinuousStateTypeData, ErrStat, ErrMsg )
+  TYPE(DBEMT_ElementContinuousStateType), INTENT(INOUT) :: ElementContinuousStateTypeData
+  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+  CHARACTER(*),    PARAMETER :: RoutineName = 'DBEMT_DestroyElementContinuousStateType'
+  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
+! 
+  ErrStat = ErrID_None
+  ErrMsg  = ""
+ END SUBROUTINE DBEMT_DestroyElementContinuousStateType
+
+ SUBROUTINE DBEMT_PackElementContinuousStateType( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
+  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
+  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
+  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
+  TYPE(DBEMT_ElementContinuousStateType),  INTENT(IN) :: InData
+  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
+  CHARACTER(*),     INTENT(  OUT) :: ErrMsg
+  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
+    ! Local variables
+  INTEGER(IntKi)                 :: Re_BufSz
+  INTEGER(IntKi)                 :: Re_Xferred
+  INTEGER(IntKi)                 :: Db_BufSz
+  INTEGER(IntKi)                 :: Db_Xferred
+  INTEGER(IntKi)                 :: Int_BufSz
+  INTEGER(IntKi)                 :: Int_Xferred
+  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
+  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*), PARAMETER        :: RoutineName = 'DBEMT_PackElementContinuousStateType'
+ ! buffers to store subtypes, if any
+  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
+  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
+  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
+
+  OnlySize = .FALSE.
+  IF ( PRESENT(SizeOnly) ) THEN
+    OnlySize = SizeOnly
+  ENDIF
+    !
+  ErrStat = ErrID_None
+  ErrMsg  = ""
+  Re_BufSz  = 0
+  Db_BufSz  = 0
+  Int_BufSz  = 0
+      Db_BufSz   = Db_BufSz   + SIZE(InData%vind)  ! vind
+      Db_BufSz   = Db_BufSz   + SIZE(InData%vind_dot)  ! vind_dot
+      Db_BufSz   = Db_BufSz   + SIZE(InData%vind_1)  ! vind_1
+  IF ( Re_BufSz  .GT. 0 ) THEN 
+     ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
+     IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+     END IF
+  END IF
+  IF ( Db_BufSz  .GT. 0 ) THEN 
+     ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
+     IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+     END IF
+  END IF
+  IF ( Int_BufSz  .GT. 0 ) THEN 
+     ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
+     IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+     END IF
+  END IF
+  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
+
+  Re_Xferred  = 1
+  Db_Xferred  = 1
+  Int_Xferred = 1
+
+    DO i1 = LBOUND(InData%vind,1), UBOUND(InData%vind,1)
+      DbKiBuf(Db_Xferred) = InData%vind(i1)
+      Db_Xferred = Db_Xferred + 1
+    END DO
+    DO i1 = LBOUND(InData%vind_dot,1), UBOUND(InData%vind_dot,1)
+      DbKiBuf(Db_Xferred) = InData%vind_dot(i1)
+      Db_Xferred = Db_Xferred + 1
+    END DO
+    DO i1 = LBOUND(InData%vind_1,1), UBOUND(InData%vind_1,1)
+      DbKiBuf(Db_Xferred) = InData%vind_1(i1)
+      Db_Xferred = Db_Xferred + 1
+    END DO
+ END SUBROUTINE DBEMT_PackElementContinuousStateType
+
+ SUBROUTINE DBEMT_UnPackElementContinuousStateType( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
+  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
+  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
+  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
+  TYPE(DBEMT_ElementContinuousStateType), INTENT(INOUT) :: OutData
+  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+    ! Local variables
+  INTEGER(IntKi)                 :: Buf_size
+  INTEGER(IntKi)                 :: Re_Xferred
+  INTEGER(IntKi)                 :: Db_Xferred
+  INTEGER(IntKi)                 :: Int_Xferred
+  INTEGER(IntKi)                 :: i
+  INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*), PARAMETER        :: RoutineName = 'DBEMT_UnPackElementContinuousStateType'
+ ! buffers to store meshes, if any
+  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
+  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
+  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
+    !
+  ErrStat = ErrID_None
+  ErrMsg  = ""
+  Re_Xferred  = 1
+  Db_Xferred  = 1
+  Int_Xferred  = 1
+    i1_l = LBOUND(OutData%vind,1)
+    i1_u = UBOUND(OutData%vind,1)
+    DO i1 = LBOUND(OutData%vind,1), UBOUND(OutData%vind,1)
+      OutData%vind(i1) = REAL(DbKiBuf(Db_Xferred), R8Ki)
+      Db_Xferred = Db_Xferred + 1
+    END DO
+    i1_l = LBOUND(OutData%vind_dot,1)
+    i1_u = UBOUND(OutData%vind_dot,1)
+    DO i1 = LBOUND(OutData%vind_dot,1), UBOUND(OutData%vind_dot,1)
+      OutData%vind_dot(i1) = REAL(DbKiBuf(Db_Xferred), R8Ki)
+      Db_Xferred = Db_Xferred + 1
+    END DO
+    i1_l = LBOUND(OutData%vind_1,1)
+    i1_u = UBOUND(OutData%vind_1,1)
+    DO i1 = LBOUND(OutData%vind_1,1), UBOUND(OutData%vind_1,1)
+      OutData%vind_1(i1) = REAL(DbKiBuf(Db_Xferred), R8Ki)
+      Db_Xferred = Db_Xferred + 1
+    END DO
+ END SUBROUTINE DBEMT_UnPackElementContinuousStateType
+
  SUBROUTINE DBEMT_CopyContState( SrcContStateData, DstContStateData, CtrlCode, ErrStat, ErrMsg )
    TYPE(DBEMT_ContinuousStateType), INTENT(IN) :: SrcContStateData
    TYPE(DBEMT_ContinuousStateType), INTENT(INOUT) :: DstContStateData
@@ -644,44 +710,31 @@ ENDIF
    INTEGER(IntKi)                 :: i,j,k
    INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
    INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-   INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'DBEMT_CopyContState'
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
-IF (ALLOCATED(SrcContStateData%vind)) THEN
-  i1_l = LBOUND(SrcContStateData%vind,1)
-  i1_u = UBOUND(SrcContStateData%vind,1)
-  i2_l = LBOUND(SrcContStateData%vind,2)
-  i2_u = UBOUND(SrcContStateData%vind,2)
-  i3_l = LBOUND(SrcContStateData%vind,3)
-  i3_u = UBOUND(SrcContStateData%vind,3)
-  IF (.NOT. ALLOCATED(DstContStateData%vind)) THEN 
-    ALLOCATE(DstContStateData%vind(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
+IF (ALLOCATED(SrcContStateData%element)) THEN
+  i1_l = LBOUND(SrcContStateData%element,1)
+  i1_u = UBOUND(SrcContStateData%element,1)
+  i2_l = LBOUND(SrcContStateData%element,2)
+  i2_u = UBOUND(SrcContStateData%element,2)
+  IF (.NOT. ALLOCATED(DstContStateData%element)) THEN 
+    ALLOCATE(DstContStateData%element(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstContStateData%vind.', ErrStat, ErrMsg,RoutineName)
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstContStateData%element.', ErrStat, ErrMsg,RoutineName)
       RETURN
     END IF
   END IF
-    DstContStateData%vind = SrcContStateData%vind
-ENDIF
-IF (ALLOCATED(SrcContStateData%vind_1)) THEN
-  i1_l = LBOUND(SrcContStateData%vind_1,1)
-  i1_u = UBOUND(SrcContStateData%vind_1,1)
-  i2_l = LBOUND(SrcContStateData%vind_1,2)
-  i2_u = UBOUND(SrcContStateData%vind_1,2)
-  i3_l = LBOUND(SrcContStateData%vind_1,3)
-  i3_u = UBOUND(SrcContStateData%vind_1,3)
-  IF (.NOT. ALLOCATED(DstContStateData%vind_1)) THEN 
-    ALLOCATE(DstContStateData%vind_1(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstContStateData%vind_1.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstContStateData%vind_1 = SrcContStateData%vind_1
+    DO i2 = LBOUND(SrcContStateData%element,2), UBOUND(SrcContStateData%element,2)
+    DO i1 = LBOUND(SrcContStateData%element,1), UBOUND(SrcContStateData%element,1)
+      CALL DBEMT_Copyelementcontinuousstatetype( SrcContStateData%element(i1,i2), DstContStateData%element(i1,i2), CtrlCode, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+         IF (ErrStat>=AbortErrLev) RETURN
+    ENDDO
+    ENDDO
 ENDIF
  END SUBROUTINE DBEMT_CopyContState
 
@@ -694,11 +747,13 @@ ENDIF
 ! 
   ErrStat = ErrID_None
   ErrMsg  = ""
-IF (ALLOCATED(ContStateData%vind)) THEN
-  DEALLOCATE(ContStateData%vind)
-ENDIF
-IF (ALLOCATED(ContStateData%vind_1)) THEN
-  DEALLOCATE(ContStateData%vind_1)
+IF (ALLOCATED(ContStateData%element)) THEN
+DO i2 = LBOUND(ContStateData%element,2), UBOUND(ContStateData%element,2)
+DO i1 = LBOUND(ContStateData%element,1), UBOUND(ContStateData%element,1)
+  CALL DBEMT_Destroyelementcontinuousstatetype( ContStateData%element(i1,i2), ErrStat, ErrMsg )
+ENDDO
+ENDDO
+  DEALLOCATE(ContStateData%element)
 ENDIF
  END SUBROUTINE DBEMT_DestroyContState
 
@@ -737,15 +792,31 @@ ENDIF
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
-  Int_BufSz   = Int_BufSz   + 1     ! vind allocated yes/no
-  IF ( ALLOCATED(InData%vind) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*3  ! vind upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%vind)  ! vind
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! vind_1 allocated yes/no
-  IF ( ALLOCATED(InData%vind_1) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*3  ! vind_1 upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%vind_1)  ! vind_1
+  Int_BufSz   = Int_BufSz   + 1     ! element allocated yes/no
+  IF ( ALLOCATED(InData%element) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! element upper/lower bounds for each dimension
+   ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
+    DO i2 = LBOUND(InData%element,2), UBOUND(InData%element,2)
+    DO i1 = LBOUND(InData%element,1), UBOUND(InData%element,1)
+      Int_BufSz   = Int_BufSz + 3  ! element: size of buffers for each call to pack subtype
+      CALL DBEMT_Packelementcontinuousstatetype( Re_Buf, Db_Buf, Int_Buf, InData%element(i1,i2), ErrStat2, ErrMsg2, .TRUE. ) ! element 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf)) THEN ! element
+         Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
+         DEALLOCATE(Re_Buf)
+      END IF
+      IF(ALLOCATED(Db_Buf)) THEN ! element
+         Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
+         DEALLOCATE(Db_Buf)
+      END IF
+      IF(ALLOCATED(Int_Buf)) THEN ! element
+         Int_BufSz = Int_BufSz + SIZE( Int_Buf )
+         DEALLOCATE(Int_Buf)
+      END IF
+    END DO
+    END DO
   END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -774,55 +845,51 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-  IF ( .NOT. ALLOCATED(InData%vind) ) THEN
+  IF ( .NOT. ALLOCATED(InData%element) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
   ELSE
     IntKiBuf( Int_Xferred ) = 1
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%vind,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%vind,1)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%element,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%element,1)
     Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%vind,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%vind,2)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%vind,3)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%vind,3)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%element,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%element,2)
     Int_Xferred = Int_Xferred + 2
 
-      DO i3 = LBOUND(InData%vind,3), UBOUND(InData%vind,3)
-        DO i2 = LBOUND(InData%vind,2), UBOUND(InData%vind,2)
-          DO i1 = LBOUND(InData%vind,1), UBOUND(InData%vind,1)
-            ReKiBuf(Re_Xferred) = InData%vind(i1,i2,i3)
-            Re_Xferred = Re_Xferred + 1
-          END DO
-        END DO
-      END DO
-  END IF
-  IF ( .NOT. ALLOCATED(InData%vind_1) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%vind_1,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%vind_1,1)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%vind_1,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%vind_1,2)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%vind_1,3)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%vind_1,3)
-    Int_Xferred = Int_Xferred + 2
+    DO i2 = LBOUND(InData%element,2), UBOUND(InData%element,2)
+    DO i1 = LBOUND(InData%element,1), UBOUND(InData%element,1)
+      CALL DBEMT_Packelementcontinuousstatetype( Re_Buf, Db_Buf, Int_Buf, InData%element(i1,i2), ErrStat2, ErrMsg2, OnlySize ) ! element 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
 
-      DO i3 = LBOUND(InData%vind_1,3), UBOUND(InData%vind_1,3)
-        DO i2 = LBOUND(InData%vind_1,2), UBOUND(InData%vind_1,2)
-          DO i1 = LBOUND(InData%vind_1,1), UBOUND(InData%vind_1,1)
-            ReKiBuf(Re_Xferred) = InData%vind_1(i1,i2,i3)
-            Re_Xferred = Re_Xferred + 1
-          END DO
-        END DO
-      END DO
+      IF(ALLOCATED(Re_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Re_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Re_Buf) > 0) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_Buf)-1 ) = Re_Buf
+        Re_Xferred = Re_Xferred + SIZE(Re_Buf)
+        DEALLOCATE(Re_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+      IF(ALLOCATED(Db_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Db_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Db_Buf) > 0) DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_Buf)-1 ) = Db_Buf
+        Db_Xferred = Db_Xferred + SIZE(Db_Buf)
+        DEALLOCATE(Db_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+      IF(ALLOCATED(Int_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Int_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Int_Buf) > 0) IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_Buf)-1 ) = Int_Buf
+        Int_Xferred = Int_Xferred + SIZE(Int_Buf)
+        DEALLOCATE(Int_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+    END DO
+    END DO
   END IF
  END SUBROUTINE DBEMT_PackContState
 
@@ -841,7 +908,6 @@ ENDIF
   INTEGER(IntKi)                 :: i
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-  INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'DBEMT_UnPackContState'
@@ -855,7 +921,7 @@ ENDIF
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! vind not allocated
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! element not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
     Int_Xferred = Int_Xferred + 1
@@ -865,51 +931,56 @@ ENDIF
     i2_l = IntKiBuf( Int_Xferred    )
     i2_u = IntKiBuf( Int_Xferred + 1)
     Int_Xferred = Int_Xferred + 2
-    i3_l = IntKiBuf( Int_Xferred    )
-    i3_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%vind)) DEALLOCATE(OutData%vind)
-    ALLOCATE(OutData%vind(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
+    IF (ALLOCATED(OutData%element)) DEALLOCATE(OutData%element)
+    ALLOCATE(OutData%element(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%vind.', ErrStat, ErrMsg,RoutineName)
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%element.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-      DO i3 = LBOUND(OutData%vind,3), UBOUND(OutData%vind,3)
-        DO i2 = LBOUND(OutData%vind,2), UBOUND(OutData%vind,2)
-          DO i1 = LBOUND(OutData%vind,1), UBOUND(OutData%vind,1)
-            OutData%vind(i1,i2,i3) = ReKiBuf(Re_Xferred)
-            Re_Xferred = Re_Xferred + 1
-          END DO
-        END DO
-      END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! vind_1 not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i2_l = IntKiBuf( Int_Xferred    )
-    i2_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i3_l = IntKiBuf( Int_Xferred    )
-    i3_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%vind_1)) DEALLOCATE(OutData%vind_1)
-    ALLOCATE(OutData%vind_1(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%vind_1.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i3 = LBOUND(OutData%vind_1,3), UBOUND(OutData%vind_1,3)
-        DO i2 = LBOUND(OutData%vind_1,2), UBOUND(OutData%vind_1,2)
-          DO i1 = LBOUND(OutData%vind_1,1), UBOUND(OutData%vind_1,1)
-            OutData%vind_1(i1,i2,i3) = ReKiBuf(Re_Xferred)
-            Re_Xferred = Re_Xferred + 1
-          END DO
-        END DO
-      END DO
+    DO i2 = LBOUND(OutData%element,2), UBOUND(OutData%element,2)
+    DO i1 = LBOUND(OutData%element,1), UBOUND(OutData%element,1)
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Re_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Re_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Re_Buf = ReKiBuf( Re_Xferred:Re_Xferred+Buf_size-1 )
+        Re_Xferred = Re_Xferred + Buf_size
+      END IF
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Db_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Db_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Db_Buf = DbKiBuf( Db_Xferred:Db_Xferred+Buf_size-1 )
+        Db_Xferred = Db_Xferred + Buf_size
+      END IF
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Int_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Int_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
+        Int_Xferred = Int_Xferred + Buf_size
+      END IF
+      CALL DBEMT_Unpackelementcontinuousstatetype( Re_Buf, Db_Buf, Int_Buf, OutData%element(i1,i2), ErrStat2, ErrMsg2 ) ! element 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
+      IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
+      IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
+    END DO
+    END DO
   END IF
  END SUBROUTINE DBEMT_UnPackContState
 
@@ -927,7 +998,7 @@ ENDIF
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
-    DstDiscStateData%DummyDiscreteState = SrcDiscStateData%DummyDiscreteState
+    DstDiscStateData%DummyState = SrcDiscStateData%DummyState
  END SUBROUTINE DBEMT_CopyDiscState
 
  SUBROUTINE DBEMT_DestroyDiscState( DiscStateData, ErrStat, ErrMsg )
@@ -976,7 +1047,7 @@ ENDIF
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
-      Re_BufSz   = Re_BufSz   + 1  ! DummyDiscreteState
+      Re_BufSz   = Re_BufSz   + 1  ! DummyState
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -1004,7 +1075,7 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-    ReKiBuf(Re_Xferred) = InData%DummyDiscreteState
+    ReKiBuf(Re_Xferred) = InData%DummyState
     Re_Xferred = Re_Xferred + 1
  END SUBROUTINE DBEMT_PackDiscState
 
@@ -1034,7 +1105,7 @@ ENDIF
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-    OutData%DummyDiscreteState = REAL(ReKiBuf(Re_Xferred), SiKi)
+    OutData%DummyState = REAL(ReKiBuf(Re_Xferred), SiKi)
     Re_Xferred = Re_Xferred + 1
  END SUBROUTINE DBEMT_UnPackDiscState
 
@@ -1052,7 +1123,7 @@ ENDIF
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
-    DstConstrStateData%DummyContState = SrcConstrStateData%DummyContState
+    DstConstrStateData%DummyState = SrcConstrStateData%DummyState
  END SUBROUTINE DBEMT_CopyConstrState
 
  SUBROUTINE DBEMT_DestroyConstrState( ConstrStateData, ErrStat, ErrMsg )
@@ -1101,7 +1172,7 @@ ENDIF
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
-      Re_BufSz   = Re_BufSz   + 1  ! DummyContState
+      Re_BufSz   = Re_BufSz   + 1  ! DummyState
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -1129,7 +1200,7 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-    ReKiBuf(Re_Xferred) = InData%DummyContState
+    ReKiBuf(Re_Xferred) = InData%DummyState
     Re_Xferred = Re_Xferred + 1
  END SUBROUTINE DBEMT_PackConstrState
 
@@ -1159,7 +1230,7 @@ ENDIF
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-    OutData%DummyContState = REAL(ReKiBuf(Re_Xferred), SiKi)
+    OutData%DummyState = REAL(ReKiBuf(Re_Xferred), SiKi)
     Re_Xferred = Re_Xferred + 1
  END SUBROUTINE DBEMT_UnPackConstrState
 
@@ -1194,6 +1265,26 @@ IF (ALLOCATED(SrcOtherStateData%areStatesInitialized)) THEN
     DstOtherStateData%areStatesInitialized = SrcOtherStateData%areStatesInitialized
 ENDIF
     DstOtherStateData%tau1 = SrcOtherStateData%tau1
+    DstOtherStateData%tau2 = SrcOtherStateData%tau2
+IF (ALLOCATED(SrcOtherStateData%n)) THEN
+  i1_l = LBOUND(SrcOtherStateData%n,1)
+  i1_u = UBOUND(SrcOtherStateData%n,1)
+  i2_l = LBOUND(SrcOtherStateData%n,2)
+  i2_u = UBOUND(SrcOtherStateData%n,2)
+  IF (.NOT. ALLOCATED(DstOtherStateData%n)) THEN 
+    ALLOCATE(DstOtherStateData%n(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstOtherStateData%n.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstOtherStateData%n = SrcOtherStateData%n
+ENDIF
+    DO i1 = LBOUND(SrcOtherStateData%xdot,1), UBOUND(SrcOtherStateData%xdot,1)
+      CALL DBEMT_CopyContState( SrcOtherStateData%xdot(i1), DstOtherStateData%xdot(i1), CtrlCode, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+         IF (ErrStat>=AbortErrLev) RETURN
+    ENDDO
  END SUBROUTINE DBEMT_CopyOtherState
 
  SUBROUTINE DBEMT_DestroyOtherState( OtherStateData, ErrStat, ErrMsg )
@@ -1208,6 +1299,12 @@ ENDIF
 IF (ALLOCATED(OtherStateData%areStatesInitialized)) THEN
   DEALLOCATE(OtherStateData%areStatesInitialized)
 ENDIF
+IF (ALLOCATED(OtherStateData%n)) THEN
+  DEALLOCATE(OtherStateData%n)
+ENDIF
+DO i1 = LBOUND(OtherStateData%xdot,1), UBOUND(OtherStateData%xdot,1)
+  CALL DBEMT_DestroyContState( OtherStateData%xdot(i1), ErrStat, ErrMsg )
+ENDDO
  END SUBROUTINE DBEMT_DestroyOtherState
 
  SUBROUTINE DBEMT_PackOtherState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -1251,6 +1348,32 @@ ENDIF
       Int_BufSz  = Int_BufSz  + SIZE(InData%areStatesInitialized)  ! areStatesInitialized
   END IF
       Re_BufSz   = Re_BufSz   + 1  ! tau1
+      Re_BufSz   = Re_BufSz   + 1  ! tau2
+  Int_BufSz   = Int_BufSz   + 1     ! n allocated yes/no
+  IF ( ALLOCATED(InData%n) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! n upper/lower bounds for each dimension
+      Int_BufSz  = Int_BufSz  + SIZE(InData%n)  ! n
+  END IF
+   ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
+    DO i1 = LBOUND(InData%xdot,1), UBOUND(InData%xdot,1)
+      Int_BufSz   = Int_BufSz + 3  ! xdot: size of buffers for each call to pack subtype
+      CALL DBEMT_PackContState( Re_Buf, Db_Buf, Int_Buf, InData%xdot(i1), ErrStat2, ErrMsg2, .TRUE. ) ! xdot 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf)) THEN ! xdot
+         Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
+         DEALLOCATE(Re_Buf)
+      END IF
+      IF(ALLOCATED(Db_Buf)) THEN ! xdot
+         Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
+         DEALLOCATE(Db_Buf)
+      END IF
+      IF(ALLOCATED(Int_Buf)) THEN ! xdot
+         Int_BufSz = Int_BufSz + SIZE( Int_Buf )
+         DEALLOCATE(Int_Buf)
+      END IF
+    END DO
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -1300,6 +1423,58 @@ ENDIF
   END IF
     ReKiBuf(Re_Xferred) = InData%tau1
     Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%tau2
+    Re_Xferred = Re_Xferred + 1
+  IF ( .NOT. ALLOCATED(InData%n) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%n,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%n,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%n,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%n,2)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i2 = LBOUND(InData%n,2), UBOUND(InData%n,2)
+        DO i1 = LBOUND(InData%n,1), UBOUND(InData%n,1)
+          IntKiBuf(Int_Xferred) = InData%n(i1,i2)
+          Int_Xferred = Int_Xferred + 1
+        END DO
+      END DO
+  END IF
+    DO i1 = LBOUND(InData%xdot,1), UBOUND(InData%xdot,1)
+      CALL DBEMT_PackContState( Re_Buf, Db_Buf, Int_Buf, InData%xdot(i1), ErrStat2, ErrMsg2, OnlySize ) ! xdot 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Re_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Re_Buf) > 0) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_Buf)-1 ) = Re_Buf
+        Re_Xferred = Re_Xferred + SIZE(Re_Buf)
+        DEALLOCATE(Re_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+      IF(ALLOCATED(Db_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Db_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Db_Buf) > 0) DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_Buf)-1 ) = Db_Buf
+        Db_Xferred = Db_Xferred + SIZE(Db_Buf)
+        DEALLOCATE(Db_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+      IF(ALLOCATED(Int_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Int_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Int_Buf) > 0) IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_Buf)-1 ) = Int_Buf
+        Int_Xferred = Int_Xferred + SIZE(Int_Buf)
+        DEALLOCATE(Int_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+    END DO
  END SUBROUTINE DBEMT_PackOtherState
 
  SUBROUTINE DBEMT_UnPackOtherState( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -1355,6 +1530,75 @@ ENDIF
   END IF
     OutData%tau1 = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
+    OutData%tau2 = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! n not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%n)) DEALLOCATE(OutData%n)
+    ALLOCATE(OutData%n(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%n.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i2 = LBOUND(OutData%n,2), UBOUND(OutData%n,2)
+        DO i1 = LBOUND(OutData%n,1), UBOUND(OutData%n,1)
+          OutData%n(i1,i2) = IntKiBuf(Int_Xferred)
+          Int_Xferred = Int_Xferred + 1
+        END DO
+      END DO
+  END IF
+    i1_l = LBOUND(OutData%xdot,1)
+    i1_u = UBOUND(OutData%xdot,1)
+    DO i1 = LBOUND(OutData%xdot,1), UBOUND(OutData%xdot,1)
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Re_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Re_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Re_Buf = ReKiBuf( Re_Xferred:Re_Xferred+Buf_size-1 )
+        Re_Xferred = Re_Xferred + Buf_size
+      END IF
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Db_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Db_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Db_Buf = DbKiBuf( Db_Xferred:Db_Xferred+Buf_size-1 )
+        Db_Xferred = Db_Xferred + Buf_size
+      END IF
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Int_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Int_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
+        Int_Xferred = Int_Xferred + Buf_size
+      END IF
+      CALL DBEMT_UnpackContState( Re_Buf, Db_Buf, Int_Buf, OutData%xdot(i1), ErrStat2, ErrMsg2 ) ! xdot 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
+      IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
+      IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
+    END DO
  END SUBROUTINE DBEMT_UnPackOtherState
 
  SUBROUTINE DBEMT_CopyMisc( SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg )
@@ -1499,6 +1743,7 @@ ENDIF
    ErrStat = ErrID_None
    ErrMsg  = ""
     DstParamData%DT = SrcParamData%DT
+    DstParamData%lin_nx = SrcParamData%lin_nx
     DstParamData%NumBlades = SrcParamData%NumBlades
     DstParamData%NumNodes = SrcParamData%NumNodes
     DstParamData%k_0ye = SrcParamData%k_0ye
@@ -1570,6 +1815,7 @@ ENDIF
   Db_BufSz  = 0
   Int_BufSz  = 0
       Db_BufSz   = Db_BufSz   + 1  ! DT
+      Int_BufSz  = Int_BufSz  + 1  ! lin_nx
       Int_BufSz  = Int_BufSz  + 1  ! NumBlades
       Int_BufSz  = Int_BufSz  + 1  ! NumNodes
       Re_BufSz   = Re_BufSz   + 1  ! k_0ye
@@ -1609,6 +1855,8 @@ ENDIF
 
     DbKiBuf(Db_Xferred) = InData%DT
     Db_Xferred = Db_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%lin_nx
+    Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%NumBlades
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%NumNodes
@@ -1671,6 +1919,8 @@ ENDIF
   Int_Xferred  = 1
     OutData%DT = DbKiBuf(Db_Xferred)
     Db_Xferred = Db_Xferred + 1
+    OutData%lin_nx = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
     OutData%NumBlades = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%NumNodes = IntKiBuf(Int_Xferred)
@@ -1706,6 +1956,157 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE DBEMT_UnPackParam
 
+ SUBROUTINE DBEMT_CopyElementInputType( SrcElementInputTypeData, DstElementInputTypeData, CtrlCode, ErrStat, ErrMsg )
+   TYPE(DBEMT_ElementInputType), INTENT(IN) :: SrcElementInputTypeData
+   TYPE(DBEMT_ElementInputType), INTENT(INOUT) :: DstElementInputTypeData
+   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
+   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+! Local 
+   INTEGER(IntKi)                 :: i,j,k
+   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+   INTEGER(IntKi)                 :: ErrStat2
+   CHARACTER(ErrMsgLen)           :: ErrMsg2
+   CHARACTER(*), PARAMETER        :: RoutineName = 'DBEMT_CopyElementInputType'
+! 
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+    DstElementInputTypeData%vind_s = SrcElementInputTypeData%vind_s
+    DstElementInputTypeData%vind_s_dot = SrcElementInputTypeData%vind_s_dot
+    DstElementInputTypeData%spanRatio = SrcElementInputTypeData%spanRatio
+ END SUBROUTINE DBEMT_CopyElementInputType
+
+ SUBROUTINE DBEMT_DestroyElementInputType( ElementInputTypeData, ErrStat, ErrMsg )
+  TYPE(DBEMT_ElementInputType), INTENT(INOUT) :: ElementInputTypeData
+  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+  CHARACTER(*),    PARAMETER :: RoutineName = 'DBEMT_DestroyElementInputType'
+  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
+! 
+  ErrStat = ErrID_None
+  ErrMsg  = ""
+ END SUBROUTINE DBEMT_DestroyElementInputType
+
+ SUBROUTINE DBEMT_PackElementInputType( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
+  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
+  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
+  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
+  TYPE(DBEMT_ElementInputType),  INTENT(IN) :: InData
+  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
+  CHARACTER(*),     INTENT(  OUT) :: ErrMsg
+  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
+    ! Local variables
+  INTEGER(IntKi)                 :: Re_BufSz
+  INTEGER(IntKi)                 :: Re_Xferred
+  INTEGER(IntKi)                 :: Db_BufSz
+  INTEGER(IntKi)                 :: Db_Xferred
+  INTEGER(IntKi)                 :: Int_BufSz
+  INTEGER(IntKi)                 :: Int_Xferred
+  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
+  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*), PARAMETER        :: RoutineName = 'DBEMT_PackElementInputType'
+ ! buffers to store subtypes, if any
+  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
+  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
+  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
+
+  OnlySize = .FALSE.
+  IF ( PRESENT(SizeOnly) ) THEN
+    OnlySize = SizeOnly
+  ENDIF
+    !
+  ErrStat = ErrID_None
+  ErrMsg  = ""
+  Re_BufSz  = 0
+  Db_BufSz  = 0
+  Int_BufSz  = 0
+      Re_BufSz   = Re_BufSz   + SIZE(InData%vind_s)  ! vind_s
+      Re_BufSz   = Re_BufSz   + SIZE(InData%vind_s_dot)  ! vind_s_dot
+      Re_BufSz   = Re_BufSz   + 1  ! spanRatio
+  IF ( Re_BufSz  .GT. 0 ) THEN 
+     ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
+     IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+     END IF
+  END IF
+  IF ( Db_BufSz  .GT. 0 ) THEN 
+     ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
+     IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+     END IF
+  END IF
+  IF ( Int_BufSz  .GT. 0 ) THEN 
+     ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
+     IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+     END IF
+  END IF
+  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
+
+  Re_Xferred  = 1
+  Db_Xferred  = 1
+  Int_Xferred = 1
+
+    DO i1 = LBOUND(InData%vind_s,1), UBOUND(InData%vind_s,1)
+      ReKiBuf(Re_Xferred) = InData%vind_s(i1)
+      Re_Xferred = Re_Xferred + 1
+    END DO
+    DO i1 = LBOUND(InData%vind_s_dot,1), UBOUND(InData%vind_s_dot,1)
+      ReKiBuf(Re_Xferred) = InData%vind_s_dot(i1)
+      Re_Xferred = Re_Xferred + 1
+    END DO
+    ReKiBuf(Re_Xferred) = InData%spanRatio
+    Re_Xferred = Re_Xferred + 1
+ END SUBROUTINE DBEMT_PackElementInputType
+
+ SUBROUTINE DBEMT_UnPackElementInputType( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
+  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
+  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
+  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
+  TYPE(DBEMT_ElementInputType), INTENT(INOUT) :: OutData
+  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+    ! Local variables
+  INTEGER(IntKi)                 :: Buf_size
+  INTEGER(IntKi)                 :: Re_Xferred
+  INTEGER(IntKi)                 :: Db_Xferred
+  INTEGER(IntKi)                 :: Int_Xferred
+  INTEGER(IntKi)                 :: i
+  INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*), PARAMETER        :: RoutineName = 'DBEMT_UnPackElementInputType'
+ ! buffers to store meshes, if any
+  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
+  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
+  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
+    !
+  ErrStat = ErrID_None
+  ErrMsg  = ""
+  Re_Xferred  = 1
+  Db_Xferred  = 1
+  Int_Xferred  = 1
+    i1_l = LBOUND(OutData%vind_s,1)
+    i1_u = UBOUND(OutData%vind_s,1)
+    DO i1 = LBOUND(OutData%vind_s,1), UBOUND(OutData%vind_s,1)
+      OutData%vind_s(i1) = ReKiBuf(Re_Xferred)
+      Re_Xferred = Re_Xferred + 1
+    END DO
+    i1_l = LBOUND(OutData%vind_s_dot,1)
+    i1_u = UBOUND(OutData%vind_s_dot,1)
+    DO i1 = LBOUND(OutData%vind_s_dot,1), UBOUND(OutData%vind_s_dot,1)
+      OutData%vind_s_dot(i1) = ReKiBuf(Re_Xferred)
+      Re_Xferred = Re_Xferred + 1
+    END DO
+    OutData%spanRatio = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+ END SUBROUTINE DBEMT_UnPackElementInputType
+
  SUBROUTINE DBEMT_CopyInput( SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg )
    TYPE(DBEMT_InputType), INTENT(IN) :: SrcInputData
    TYPE(DBEMT_InputType), INTENT(INOUT) :: DstInputData
@@ -1715,6 +2116,7 @@ ENDIF
 ! Local 
    INTEGER(IntKi)                 :: i,j,k
    INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'DBEMT_CopyInput'
@@ -1724,8 +2126,26 @@ ENDIF
     DstInputData%AxInd_disk = SrcInputData%AxInd_disk
     DstInputData%Un_disk = SrcInputData%Un_disk
     DstInputData%R_disk = SrcInputData%R_disk
-    DstInputData%vind_s = SrcInputData%vind_s
-    DstInputData%spanRatio = SrcInputData%spanRatio
+IF (ALLOCATED(SrcInputData%element)) THEN
+  i1_l = LBOUND(SrcInputData%element,1)
+  i1_u = UBOUND(SrcInputData%element,1)
+  i2_l = LBOUND(SrcInputData%element,2)
+  i2_u = UBOUND(SrcInputData%element,2)
+  IF (.NOT. ALLOCATED(DstInputData%element)) THEN 
+    ALLOCATE(DstInputData%element(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%element.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DO i2 = LBOUND(SrcInputData%element,2), UBOUND(SrcInputData%element,2)
+    DO i1 = LBOUND(SrcInputData%element,1), UBOUND(SrcInputData%element,1)
+      CALL DBEMT_Copyelementinputtype( SrcInputData%element(i1,i2), DstInputData%element(i1,i2), CtrlCode, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+         IF (ErrStat>=AbortErrLev) RETURN
+    ENDDO
+    ENDDO
+ENDIF
  END SUBROUTINE DBEMT_CopyInput
 
  SUBROUTINE DBEMT_DestroyInput( InputData, ErrStat, ErrMsg )
@@ -1737,6 +2157,14 @@ ENDIF
 ! 
   ErrStat = ErrID_None
   ErrMsg  = ""
+IF (ALLOCATED(InputData%element)) THEN
+DO i2 = LBOUND(InputData%element,2), UBOUND(InputData%element,2)
+DO i1 = LBOUND(InputData%element,1), UBOUND(InputData%element,1)
+  CALL DBEMT_Destroyelementinputtype( InputData%element(i1,i2), ErrStat, ErrMsg )
+ENDDO
+ENDDO
+  DEALLOCATE(InputData%element)
+ENDIF
  END SUBROUTINE DBEMT_DestroyInput
 
  SUBROUTINE DBEMT_PackInput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -1777,8 +2205,32 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! AxInd_disk
       Re_BufSz   = Re_BufSz   + 1  ! Un_disk
       Re_BufSz   = Re_BufSz   + 1  ! R_disk
-      Re_BufSz   = Re_BufSz   + SIZE(InData%vind_s)  ! vind_s
-      Re_BufSz   = Re_BufSz   + 1  ! spanRatio
+  Int_BufSz   = Int_BufSz   + 1     ! element allocated yes/no
+  IF ( ALLOCATED(InData%element) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! element upper/lower bounds for each dimension
+   ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
+    DO i2 = LBOUND(InData%element,2), UBOUND(InData%element,2)
+    DO i1 = LBOUND(InData%element,1), UBOUND(InData%element,1)
+      Int_BufSz   = Int_BufSz + 3  ! element: size of buffers for each call to pack subtype
+      CALL DBEMT_Packelementinputtype( Re_Buf, Db_Buf, Int_Buf, InData%element(i1,i2), ErrStat2, ErrMsg2, .TRUE. ) ! element 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf)) THEN ! element
+         Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
+         DEALLOCATE(Re_Buf)
+      END IF
+      IF(ALLOCATED(Db_Buf)) THEN ! element
+         Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
+         DEALLOCATE(Db_Buf)
+      END IF
+      IF(ALLOCATED(Int_Buf)) THEN ! element
+         Int_BufSz = Int_BufSz + SIZE( Int_Buf )
+         DEALLOCATE(Int_Buf)
+      END IF
+    END DO
+    END DO
+  END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -1812,12 +2264,52 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%R_disk
     Re_Xferred = Re_Xferred + 1
-    DO i1 = LBOUND(InData%vind_s,1), UBOUND(InData%vind_s,1)
-      ReKiBuf(Re_Xferred) = InData%vind_s(i1)
-      Re_Xferred = Re_Xferred + 1
+  IF ( .NOT. ALLOCATED(InData%element) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%element,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%element,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%element,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%element,2)
+    Int_Xferred = Int_Xferred + 2
+
+    DO i2 = LBOUND(InData%element,2), UBOUND(InData%element,2)
+    DO i1 = LBOUND(InData%element,1), UBOUND(InData%element,1)
+      CALL DBEMT_Packelementinputtype( Re_Buf, Db_Buf, Int_Buf, InData%element(i1,i2), ErrStat2, ErrMsg2, OnlySize ) ! element 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Re_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Re_Buf) > 0) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_Buf)-1 ) = Re_Buf
+        Re_Xferred = Re_Xferred + SIZE(Re_Buf)
+        DEALLOCATE(Re_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+      IF(ALLOCATED(Db_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Db_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Db_Buf) > 0) DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_Buf)-1 ) = Db_Buf
+        Db_Xferred = Db_Xferred + SIZE(Db_Buf)
+        DEALLOCATE(Db_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+      IF(ALLOCATED(Int_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Int_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Int_Buf) > 0) IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_Buf)-1 ) = Int_Buf
+        Int_Xferred = Int_Xferred + SIZE(Int_Buf)
+        DEALLOCATE(Int_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
     END DO
-    ReKiBuf(Re_Xferred) = InData%spanRatio
-    Re_Xferred = Re_Xferred + 1
+    END DO
+  END IF
  END SUBROUTINE DBEMT_PackInput
 
  SUBROUTINE DBEMT_UnPackInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -1834,6 +2326,7 @@ ENDIF
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+  INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'DBEMT_UnPackInput'
@@ -1853,14 +2346,67 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%R_disk = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
-    i1_l = LBOUND(OutData%vind_s,1)
-    i1_u = UBOUND(OutData%vind_s,1)
-    DO i1 = LBOUND(OutData%vind_s,1), UBOUND(OutData%vind_s,1)
-      OutData%vind_s(i1) = ReKiBuf(Re_Xferred)
-      Re_Xferred = Re_Xferred + 1
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! element not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%element)) DEALLOCATE(OutData%element)
+    ALLOCATE(OutData%element(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%element.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    DO i2 = LBOUND(OutData%element,2), UBOUND(OutData%element,2)
+    DO i1 = LBOUND(OutData%element,1), UBOUND(OutData%element,1)
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Re_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Re_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Re_Buf = ReKiBuf( Re_Xferred:Re_Xferred+Buf_size-1 )
+        Re_Xferred = Re_Xferred + Buf_size
+      END IF
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Db_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Db_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Db_Buf = DbKiBuf( Db_Xferred:Db_Xferred+Buf_size-1 )
+        Db_Xferred = Db_Xferred + Buf_size
+      END IF
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Int_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Int_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
+        Int_Xferred = Int_Xferred + Buf_size
+      END IF
+      CALL DBEMT_Unpackelementinputtype( Re_Buf, Db_Buf, Int_Buf, OutData%element(i1,i2), ErrStat2, ErrMsg2 ) ! element 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
+      IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
+      IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
     END DO
-    OutData%spanRatio = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
+    END DO
+  END IF
  END SUBROUTINE DBEMT_UnPackInput
 
  SUBROUTINE DBEMT_CopyOutput( SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg )
@@ -2066,6 +2612,183 @@ ENDIF
  END SUBROUTINE DBEMT_UnPackOutput
 
 
+ SUBROUTINE DBEMT_ElementInputType_ExtrapInterp(u, t, u_out, t_out, ErrStat, ErrMsg )
+!
+! This subroutine calculates a extrapolated (or interpolated) ElementInputType u_out at time t_out, from previous/future time
+! values of u (which has values associated with times in t).  Order of the interpolation is given by the size of u
+!
+!  expressions below based on either
+!
+!  f(t) = a
+!  f(t) = a + b * t, or
+!  f(t) = a + b * t + c * t**2
+!
+!  where a, b and c are determined as the solution to
+!  f(t1) = u1, f(t2) = u2, f(t3) = u3  (as appropriate)
+!
+!..................................................................................................................................
+
+ TYPE(DBEMT_ElementInputType), INTENT(IN)  :: u(:) ! ElementInputType at t1 > t2 > t3
+ REAL(DbKi),                 INTENT(IN   )  :: t(:)           ! Times associated with the ElementInputTypes
+ TYPE(DBEMT_ElementInputType), INTENT(INOUT)  :: u_out ! ElementInputType at tin_out
+ REAL(DbKi),                 INTENT(IN   )  :: t_out           ! time to be extrap/interp'd to
+ INTEGER(IntKi),             INTENT(  OUT)  :: ErrStat         ! Error status of the operation
+ CHARACTER(*),               INTENT(  OUT)  :: ErrMsg          ! Error message if ErrStat /= ErrID_None
+   ! local variables
+ INTEGER(IntKi)                             :: order           ! order of polynomial fit (max 2)
+ INTEGER(IntKi)                             :: ErrStat2        ! local errors
+ CHARACTER(ErrMsgLen)                       :: ErrMsg2         ! local errors
+ CHARACTER(*),    PARAMETER                 :: RoutineName = 'DBEMT_ElementInputType_ExtrapInterp'
+    ! Initialize ErrStat
+ ErrStat = ErrID_None
+ ErrMsg  = ""
+ if ( size(t) .ne. size(u)) then
+    CALL SetErrStat(ErrID_Fatal,'size(t) must equal size(u)',ErrStat,ErrMsg,RoutineName)
+    RETURN
+ endif
+ order = SIZE(u) - 1
+ IF ( order .eq. 0 ) THEN
+   CALL DBEMT_CopyElementInputType(u(1), u_out, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+ ELSE IF ( order .eq. 1 ) THEN
+   CALL DBEMT_ElementInputType_ExtrapInterp1(u(1), u(2), t, u_out, t_out, ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+ ELSE IF ( order .eq. 2 ) THEN
+   CALL DBEMT_ElementInputType_ExtrapInterp2(u(1), u(2), u(3), t, u_out, t_out, ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+ ELSE 
+   CALL SetErrStat(ErrID_Fatal,'size(u) must be less than 4 (order must be less than 3).',ErrStat,ErrMsg,RoutineName)
+   RETURN
+ ENDIF 
+ END SUBROUTINE DBEMT_ElementInputType_ExtrapInterp
+
+
+ SUBROUTINE DBEMT_ElementInputType_ExtrapInterp1(u1, u2, tin, u_out, tin_out, ErrStat, ErrMsg )
+!
+! This subroutine calculates a extrapolated (or interpolated) ElementInputType u_out at time t_out, from previous/future time
+! values of u (which has values associated with times in t).  Order of the interpolation is 1.
+!
+!  f(t) = a + b * t, or
+!
+!  where a and b are determined as the solution to
+!  f(t1) = u1, f(t2) = u2
+!
+!..................................................................................................................................
+
+ TYPE(DBEMT_ElementInputType), INTENT(IN)  :: u1    ! ElementInputType at t1 > t2
+ TYPE(DBEMT_ElementInputType), INTENT(IN)  :: u2    ! ElementInputType at t2 
+ REAL(DbKi),         INTENT(IN   )          :: tin(2)   ! Times associated with the ElementInputTypes
+ TYPE(DBEMT_ElementInputType), INTENT(INOUT)  :: u_out ! ElementInputType at tin_out
+ REAL(DbKi),         INTENT(IN   )          :: tin_out  ! time to be extrap/interp'd to
+ INTEGER(IntKi),     INTENT(  OUT)          :: ErrStat  ! Error status of the operation
+ CHARACTER(*),       INTENT(  OUT)          :: ErrMsg   ! Error message if ErrStat /= ErrID_None
+   ! local variables
+ REAL(DbKi)                                 :: t(2)     ! Times associated with the ElementInputTypes
+ REAL(DbKi)                                 :: t_out    ! Time to which to be extrap/interpd
+ CHARACTER(*),                    PARAMETER :: RoutineName = 'DBEMT_ElementInputType_ExtrapInterp1'
+ REAL(DbKi)                                 :: b        ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: ScaleFactor ! temporary for extrapolation/interpolation
+ INTEGER(IntKi)                             :: ErrStat2 ! local errors
+ CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
+ INTEGER                                    :: i01    ! dim1 level 0 counter variable for arrays of ddts
+ INTEGER                                    :: i1    ! dim1 counter variable for arrays
+    ! Initialize ErrStat
+ ErrStat = ErrID_None
+ ErrMsg  = ""
+    ! we'll subtract a constant from the times to resolve some 
+    ! numerical issues when t gets large (and to simplify the equations)
+ t = tin - tin(1)
+ t_out = tin_out - tin(1)
+
+   IF ( EqualRealNos( t(1), t(2) ) ) THEN
+     CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
+     RETURN
+   END IF
+
+   ScaleFactor = t_out / t(2)
+  DO i1 = LBOUND(u_out%vind_s,1),UBOUND(u_out%vind_s,1)
+    b = -(u1%vind_s(i1) - u2%vind_s(i1))
+    u_out%vind_s(i1) = u1%vind_s(i1) + b * ScaleFactor
+  END DO
+  DO i1 = LBOUND(u_out%vind_s_dot,1),UBOUND(u_out%vind_s_dot,1)
+    b = -(u1%vind_s_dot(i1) - u2%vind_s_dot(i1))
+    u_out%vind_s_dot(i1) = u1%vind_s_dot(i1) + b * ScaleFactor
+  END DO
+  b = -(u1%spanRatio - u2%spanRatio)
+  u_out%spanRatio = u1%spanRatio + b * ScaleFactor
+ END SUBROUTINE DBEMT_ElementInputType_ExtrapInterp1
+
+
+ SUBROUTINE DBEMT_ElementInputType_ExtrapInterp2(u1, u2, u3, tin, u_out, tin_out, ErrStat, ErrMsg )
+!
+! This subroutine calculates a extrapolated (or interpolated) ElementInputType u_out at time t_out, from previous/future time
+! values of u (which has values associated with times in t).  Order of the interpolation is 2.
+!
+!  expressions below based on either
+!
+!  f(t) = a + b * t + c * t**2
+!
+!  where a, b and c are determined as the solution to
+!  f(t1) = u1, f(t2) = u2, f(t3) = u3
+!
+!..................................................................................................................................
+
+ TYPE(DBEMT_ElementInputType), INTENT(IN)  :: u1      ! ElementInputType at t1 > t2 > t3
+ TYPE(DBEMT_ElementInputType), INTENT(IN)  :: u2      ! ElementInputType at t2 > t3
+ TYPE(DBEMT_ElementInputType), INTENT(IN)  :: u3      ! ElementInputType at t3
+ REAL(DbKi),                 INTENT(IN   )  :: tin(3)    ! Times associated with the ElementInputTypes
+ TYPE(DBEMT_ElementInputType), INTENT(INOUT)  :: u_out     ! ElementInputType at tin_out
+ REAL(DbKi),                 INTENT(IN   )  :: tin_out   ! time to be extrap/interp'd to
+ INTEGER(IntKi),             INTENT(  OUT)  :: ErrStat   ! Error status of the operation
+ CHARACTER(*),               INTENT(  OUT)  :: ErrMsg    ! Error message if ErrStat /= ErrID_None
+   ! local variables
+ REAL(DbKi)                                 :: t(3)      ! Times associated with the ElementInputTypes
+ REAL(DbKi)                                 :: t_out     ! Time to which to be extrap/interpd
+ INTEGER(IntKi)                             :: order     ! order of polynomial fit (max 2)
+ REAL(DbKi)                                 :: b        ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: c        ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: ScaleFactor ! temporary for extrapolation/interpolation
+ INTEGER(IntKi)                             :: ErrStat2 ! local errors
+ CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
+ CHARACTER(*),            PARAMETER         :: RoutineName = 'DBEMT_ElementInputType_ExtrapInterp2'
+ INTEGER                                    :: i01    ! dim1 level 0 counter variable for arrays of ddts
+ INTEGER                                    :: i1    ! dim1 counter variable for arrays
+    ! Initialize ErrStat
+ ErrStat = ErrID_None
+ ErrMsg  = ""
+    ! we'll subtract a constant from the times to resolve some 
+    ! numerical issues when t gets large (and to simplify the equations)
+ t = tin - tin(1)
+ t_out = tin_out - tin(1)
+
+   IF ( EqualRealNos( t(1), t(2) ) ) THEN
+     CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
+     RETURN
+   ELSE IF ( EqualRealNos( t(2), t(3) ) ) THEN
+     CALL SetErrStat(ErrID_Fatal, 't(2) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
+     RETURN
+   ELSE IF ( EqualRealNos( t(1), t(3) ) ) THEN
+     CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
+     RETURN
+   END IF
+
+   ScaleFactor = t_out / (t(2) * t(3) * (t(2) - t(3)))
+  DO i1 = LBOUND(u_out%vind_s,1),UBOUND(u_out%vind_s,1)
+    b = (t(3)**2*(u1%vind_s(i1) - u2%vind_s(i1)) + t(2)**2*(-u1%vind_s(i1) + u3%vind_s(i1)))* scaleFactor
+    c = ( (t(2)-t(3))*u1%vind_s(i1) + t(3)*u2%vind_s(i1) - t(2)*u3%vind_s(i1) ) * scaleFactor
+    u_out%vind_s(i1) = u1%vind_s(i1) + b  + c * t_out
+  END DO
+  DO i1 = LBOUND(u_out%vind_s_dot,1),UBOUND(u_out%vind_s_dot,1)
+    b = (t(3)**2*(u1%vind_s_dot(i1) - u2%vind_s_dot(i1)) + t(2)**2*(-u1%vind_s_dot(i1) + u3%vind_s_dot(i1)))* scaleFactor
+    c = ( (t(2)-t(3))*u1%vind_s_dot(i1) + t(3)*u2%vind_s_dot(i1) - t(2)*u3%vind_s_dot(i1) ) * scaleFactor
+    u_out%vind_s_dot(i1) = u1%vind_s_dot(i1) + b  + c * t_out
+  END DO
+  b = (t(3)**2*(u1%spanRatio - u2%spanRatio) + t(2)**2*(-u1%spanRatio + u3%spanRatio))* scaleFactor
+  c = ( (t(2)-t(3))*u1%spanRatio + t(3)*u2%spanRatio - t(2)*u3%spanRatio ) * scaleFactor
+  u_out%spanRatio = u1%spanRatio + b  + c * t_out
+ END SUBROUTINE DBEMT_ElementInputType_ExtrapInterp2
+
+
  SUBROUTINE DBEMT_Input_ExtrapInterp(u, t, u_out, t_out, ErrStat, ErrMsg )
 !
 ! This subroutine calculates a extrapolated (or interpolated) Input u_out at time t_out, from previous/future time
@@ -2145,7 +2868,9 @@ ENDIF
  INTEGER(IntKi)                             :: ErrStat2 ! local errors
  CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
  INTEGER                                    :: i01    ! dim1 level 0 counter variable for arrays of ddts
+ INTEGER                                    :: i02    ! dim2 level 0 counter variable for arrays of ddts
  INTEGER                                    :: i1    ! dim1 counter variable for arrays
+ INTEGER                                    :: i2    ! dim2 counter variable for arrays
     ! Initialize ErrStat
  ErrStat = ErrID_None
  ErrMsg  = ""
@@ -2166,12 +2891,30 @@ ENDIF
   u_out%Un_disk = u1%Un_disk + b * ScaleFactor
   b = -(u1%R_disk - u2%R_disk)
   u_out%R_disk = u1%R_disk + b * ScaleFactor
-  DO i1 = LBOUND(u_out%vind_s,1),UBOUND(u_out%vind_s,1)
-    b = -(u1%vind_s(i1) - u2%vind_s(i1))
-    u_out%vind_s(i1) = u1%vind_s(i1) + b * ScaleFactor
+IF (ALLOCATED(u_out%element) .AND. ALLOCATED(u1%element)) THEN
+  DO i02 = LBOUND(u_out%element,2),UBOUND(u_out%element,2)
+  DO i01 = LBOUND(u_out%element,1),UBOUND(u_out%element,1)
+  DO i1 = LBOUND(u_out%element(i01,i02)%vind_s,1),UBOUND(u_out%element(i01,i02)%vind_s,1)
+    b = -(u1%element(i01,i02)%vind_s(i1) - u2%element(i01,i02)%vind_s(i1))
+    u_out%element(i01,i02)%vind_s(i1) = u1%element(i01,i02)%vind_s(i1) + b * ScaleFactor
   END DO
-  b = -(u1%spanRatio - u2%spanRatio)
-  u_out%spanRatio = u1%spanRatio + b * ScaleFactor
+  ENDDO
+  ENDDO
+  DO i02 = LBOUND(u_out%element,2),UBOUND(u_out%element,2)
+  DO i01 = LBOUND(u_out%element,1),UBOUND(u_out%element,1)
+  DO i1 = LBOUND(u_out%element(i01,i02)%vind_s_dot,1),UBOUND(u_out%element(i01,i02)%vind_s_dot,1)
+    b = -(u1%element(i01,i02)%vind_s_dot(i1) - u2%element(i01,i02)%vind_s_dot(i1))
+    u_out%element(i01,i02)%vind_s_dot(i1) = u1%element(i01,i02)%vind_s_dot(i1) + b * ScaleFactor
+  END DO
+  ENDDO
+  ENDDO
+  DO i02 = LBOUND(u_out%element,2),UBOUND(u_out%element,2)
+  DO i01 = LBOUND(u_out%element,1),UBOUND(u_out%element,1)
+  b = -(u1%element(i01,i02)%spanRatio - u2%element(i01,i02)%spanRatio)
+  u_out%element(i01,i02)%spanRatio = u1%element(i01,i02)%spanRatio + b * ScaleFactor
+  ENDDO
+  ENDDO
+END IF ! check if allocated
  END SUBROUTINE DBEMT_Input_ExtrapInterp1
 
 
@@ -2208,7 +2951,9 @@ ENDIF
  CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
  CHARACTER(*),            PARAMETER         :: RoutineName = 'DBEMT_Input_ExtrapInterp2'
  INTEGER                                    :: i01    ! dim1 level 0 counter variable for arrays of ddts
+ INTEGER                                    :: i02    ! dim2 level 0 counter variable for arrays of ddts
  INTEGER                                    :: i1    ! dim1 counter variable for arrays
+ INTEGER                                    :: i2    ! dim2 counter variable for arrays
     ! Initialize ErrStat
  ErrStat = ErrID_None
  ErrMsg  = ""
@@ -2238,14 +2983,33 @@ ENDIF
   b = (t(3)**2*(u1%R_disk - u2%R_disk) + t(2)**2*(-u1%R_disk + u3%R_disk))* scaleFactor
   c = ( (t(2)-t(3))*u1%R_disk + t(3)*u2%R_disk - t(2)*u3%R_disk ) * scaleFactor
   u_out%R_disk = u1%R_disk + b  + c * t_out
-  DO i1 = LBOUND(u_out%vind_s,1),UBOUND(u_out%vind_s,1)
-    b = (t(3)**2*(u1%vind_s(i1) - u2%vind_s(i1)) + t(2)**2*(-u1%vind_s(i1) + u3%vind_s(i1)))* scaleFactor
-    c = ( (t(2)-t(3))*u1%vind_s(i1) + t(3)*u2%vind_s(i1) - t(2)*u3%vind_s(i1) ) * scaleFactor
-    u_out%vind_s(i1) = u1%vind_s(i1) + b  + c * t_out
+IF (ALLOCATED(u_out%element) .AND. ALLOCATED(u1%element)) THEN
+  DO i02 = LBOUND(u_out%element,2),UBOUND(u_out%element,2)
+  DO i01 = LBOUND(u_out%element,1),UBOUND(u_out%element,1)
+  DO i1 = LBOUND(u_out%element(i01,i02)%vind_s,1),UBOUND(u_out%element(i01,i02)%vind_s,1)
+    b = (t(3)**2*(u1%element(i01,i02)%vind_s(i1) - u2%element(i01,i02)%vind_s(i1)) + t(2)**2*(-u1%element(i01,i02)%vind_s(i1) + u3%element(i01,i02)%vind_s(i1)))* scaleFactor
+    c = ( (t(2)-t(3))*u1%element(i01,i02)%vind_s(i1) + t(3)*u2%element(i01,i02)%vind_s(i1) - t(2)*u3%element(i01,i02)%vind_s(i1) ) * scaleFactor
+    u_out%element(i01,i02)%vind_s(i1) = u1%element(i01,i02)%vind_s(i1) + b  + c * t_out
   END DO
-  b = (t(3)**2*(u1%spanRatio - u2%spanRatio) + t(2)**2*(-u1%spanRatio + u3%spanRatio))* scaleFactor
-  c = ( (t(2)-t(3))*u1%spanRatio + t(3)*u2%spanRatio - t(2)*u3%spanRatio ) * scaleFactor
-  u_out%spanRatio = u1%spanRatio + b  + c * t_out
+  ENDDO
+  ENDDO
+  DO i02 = LBOUND(u_out%element,2),UBOUND(u_out%element,2)
+  DO i01 = LBOUND(u_out%element,1),UBOUND(u_out%element,1)
+  DO i1 = LBOUND(u_out%element(i01,i02)%vind_s_dot,1),UBOUND(u_out%element(i01,i02)%vind_s_dot,1)
+    b = (t(3)**2*(u1%element(i01,i02)%vind_s_dot(i1) - u2%element(i01,i02)%vind_s_dot(i1)) + t(2)**2*(-u1%element(i01,i02)%vind_s_dot(i1) + u3%element(i01,i02)%vind_s_dot(i1)))* scaleFactor
+    c = ( (t(2)-t(3))*u1%element(i01,i02)%vind_s_dot(i1) + t(3)*u2%element(i01,i02)%vind_s_dot(i1) - t(2)*u3%element(i01,i02)%vind_s_dot(i1) ) * scaleFactor
+    u_out%element(i01,i02)%vind_s_dot(i1) = u1%element(i01,i02)%vind_s_dot(i1) + b  + c * t_out
+  END DO
+  ENDDO
+  ENDDO
+  DO i02 = LBOUND(u_out%element,2),UBOUND(u_out%element,2)
+  DO i01 = LBOUND(u_out%element,1),UBOUND(u_out%element,1)
+  b = (t(3)**2*(u1%element(i01,i02)%spanRatio - u2%element(i01,i02)%spanRatio) + t(2)**2*(-u1%element(i01,i02)%spanRatio + u3%element(i01,i02)%spanRatio))* scaleFactor
+  c = ( (t(2)-t(3))*u1%element(i01,i02)%spanRatio + t(3)*u2%element(i01,i02)%spanRatio - t(2)*u3%element(i01,i02)%spanRatio ) * scaleFactor
+  u_out%element(i01,i02)%spanRatio = u1%element(i01,i02)%spanRatio + b  + c * t_out
+  ENDDO
+  ENDDO
+END IF ! check if allocated
  END SUBROUTINE DBEMT_Input_ExtrapInterp2
 
 

@@ -176,8 +176,8 @@ SUBROUTINE IfW_UserWind_CalcOutput(Time, PositionXYZ, ParamData, Velocity, DiskV
    INTEGER(IntKi)                                              :: NumPoints         ! Number of points passed in
 
       ! temporary variables
-   INTEGER(IntKi)                                              :: TmpErrStat        ! temporary error status
-   CHARACTER(ErrMsgLen)                                        :: TmpErrMsg         ! temporary error message
+   !INTEGER(IntKi)                                              :: TmpErrStat        ! temporary error status
+   !CHARACTER(ErrMsgLen)                                        :: TmpErrMsg         ! temporary error message
 
 
 

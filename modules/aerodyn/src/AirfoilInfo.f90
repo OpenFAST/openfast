@@ -36,8 +36,9 @@ MODULE AirfoilInfo
    PUBLIC                                       :: AFI_ComputeAirfoilCoefs   ! routine to perform 1D (AOA) or 2D (AOA, Re) or (AOA, UserProp) lookup of the airfoil coefs
    TYPE(ProgDesc), PARAMETER                    :: AFI_Ver = ProgDesc( 'AirfoilInfo', '', '')    ! The name, version, and date of AirfoilInfo.
 
+   integer, parameter                           :: MaxNumAFCoeffs = 6 !cl,cd,cm,cpMin, UA_HGM:f_st, UA_HGM:cl_fs
 
-   CONTAINS
+CONTAINS
 
 
    function CheckValuesAreUniqueMonotonicIncreasing(secondVals)
@@ -65,6 +66,8 @@ MODULE AirfoilInfo
 
 
          ! This routine initializes AirfoilInfo by reading the airfoil files and generating the spline coefficients.
+
+
          ! Argument declarations.
 
       INTEGER(IntKi), INTENT(OUT)               :: ErrStat                    ! Error status.
@@ -112,6 +115,7 @@ MODULE AirfoilInfo
       p%ColCd    = 2  
       p%ColCm    = 0 ! These may or may not be used; initialize to zero in case they aren't used
       p%ColCpmin = 0 ! These may or may not be used; initialize to zero in case they aren't used
+      p%ColUAf   = 0 ! These may or may not be used; initialize to zero in case they aren't used
       
       IF ( InitInput%InCol_Cm > 0 )  THEN
          p%ColCm = 3
@@ -142,7 +146,6 @@ MODULE AirfoilInfo
          ENDIF
 
 
-      
          ! Make sure that all the tables meet the current restrictions.
          
       IF ( p%NumTabs > 1 )  THEN
@@ -239,6 +242,7 @@ MODULE AirfoilInfo
          p%AFTabMod   = AFITable_1
       ENDIF ! ( p%NumTabs > 1 )
 
+      
 ! We need to deal with constant data.
 
 
@@ -253,6 +257,16 @@ MODULE AirfoilInfo
             return
          end if
 
+            ! Check that the second dimensions of the SplineCoefs table and the Coefs table match.  If they don't, it may indicate
+            ! that the number of columns in each table in the AF input file are different.  This will result in array bounds issues
+            ! in the CubicSplineInitM routine.
+         if ( size(p%Table(iTable)%SplineCoefs, DIM=2) /= size(p%Table(iTable)%Coefs, DIM=2) ) then
+            call SetErrStat ( ErrID_Fatal, 'Number of columns in the SplineCoefs table and Coefs tables do not match in size.'// &
+                  ' Check that all tables in airfoil input file "'//TRIM( InitInput%FileName )//'" have the same number of columns.', &
+                  ErrStat, ErrMsg, RoutineName ) 
+            call Cleanup()
+            return
+         end if
             
             ! Compute the one set of coefficients of the piecewise polynomials for the irregularly-spaced data.
             ! Unlike the 2-D interpolation in which we use diffent knots for each airfoil coefficient, we can do
@@ -375,7 +389,7 @@ MODULE AirfoilInfo
       INTEGER(IntKi),    INTENT(IN)           :: InCol_Cm                      ! The airfoil-table input column for pitching-moment coefficient.
       INTEGER(IntKi),    INTENT(IN)           :: InCol_Cpmin                   ! The airfoil-table input column for minimum pressure coefficient.
       INTEGER(IntKi),    INTENT(  OUT)        :: ErrStat                       ! Error status.
-      INTEGER(IntKi),    INTENT(IN)           :: NumCoefs                      ! The number of aerodynamic coefficients to be stored.
+      INTEGER(IntKi),    INTENT(INOUT)        :: NumCoefs                      ! The number of aerodynamic coefficients to be stored.
 
       INTEGER,           INTENT(IN)           :: UnEc                          ! I/O unit for echo file. If present and > 0, write to UnEc.      CHARACTER(*), INTENT(IN)               :: AFfile                        ! The file to be read.
 
@@ -400,6 +414,8 @@ MODULE AirfoilInfo
       LOGICAL                                 :: BadVals                       ! A flag that indicates if the values in a table are invalid.
 
       TYPE (FileInfoType)                     :: FileInfo                      ! The derived type for holding the file information.
+      INTEGER(IntKi)                          :: NumCoefsIn                    ! The number of aerodynamic coefficients input to routine 
+      INTEGER(IntKi)                          :: NumCoefsTab                   ! The number of aerodynamic coefficients to be stored for this table.
 
       INTEGER(IntKi)                          :: DefaultInterpOrd              ! value of default interp order
       INTEGER(IntKi)                          :: ErrStat2                      ! Error status local to this routine.
@@ -411,6 +427,10 @@ MODULE AirfoilInfo
       ErrStat = ErrID_None
       ErrMsg  = ""
       defaultStr = ""
+
+      ! store NumCoefs passed in
+      NumCoefsIn = NumCoefs
+
       ! Getting parent folder of airfoils data (e.g. "Arifoils/")
       CALL GetPath( AFFile, PriPath )
          ! Process the (possibly) nested set of files.  This copies the decommented contents of
@@ -519,6 +539,7 @@ MODULE AirfoilInfo
       ENDIF
 
       DO iTable=1,p%NumTabs
+         NumCoefsTab = NumCoefsIn  ! Reset this counter for each table
 
          CALL ParseVar ( FileInfo, CurLine, 'Re', p%Table(iTable)%Re, ErrStat2, ErrMsg2, UnEc )
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -571,6 +592,14 @@ MODULE AirfoilInfo
 
                CALL ParseVar ( FileInfo, CurLine, 'C_nalpha', p%Table(iTable)%UA_BL%C_nalpha, ErrStat2, ErrMsg2, UnEc )
                   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+            
+!>>> add after this feature gets tested better:
+!               CALL ParseVar ( FileInfo, CurLine, 'C_lalpha', p%Table(iTable)%UA_BL%C_lalpha, ErrStat2, ErrMsg2, UnEc )
+!                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+!<<<
+!>>> remove after this feature gets tested better:
+p%Table(iTable)%UA_BL%C_lalpha = p%Table(iTable)%UA_BL%C_nalpha
+!<<<
             
                CALL ParseVarWDefault ( FileInfo, CurLine, 'T_f0', p%Table(iTable)%UA_BL%T_f0, 3.0_ReKi, ErrStat2, ErrMsg2, UnEc )
                   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -651,9 +680,12 @@ MODULE AirfoilInfo
                   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                p%Table(iTable)%UA_BL%UACutout = p%Table(iTable)%UA_BL%UACutout*D2R
 
-               CALL ParseVarWDefault ( FileInfo, CurLine, 'filtCutOff', p%Table(iTable)%UA_BL%filtCutOff, 20.0_ReKi, ErrStat2, ErrMsg2, UnEc )
+               CALL ParseVarWDefault ( FileInfo, CurLine, 'filtCutOff', p%Table(iTable)%UA_BL%filtCutOff, 0.5_ReKi, ErrStat2, ErrMsg2, UnEc )
                   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                   
+               p%ColUAf    = NumCoefsTab + 1 ! column for f_st
+               NumCoefsTab = p%ColUAf    + 1 ! precompute f_st and cl_fs for the HGM model
+               
                IF (ErrStat >= AbortErrLev) THEN
                   CALL Cleanup()
                   RETURN
@@ -697,7 +729,7 @@ MODULE AirfoilInfo
             RETURN
          ENDIF
 
-         ALLOCATE ( p%Table(iTable)%Coefs( p%Table(iTable)%NumAlf, NumCoefs ), STAT=ErrStat2 )
+         ALLOCATE ( p%Table(iTable)%Coefs( p%Table(iTable)%NumAlf, NumCoefsTab ), STAT=ErrStat2 )
          IF ( ErrStat2 /= 0 )  THEN
             CALL SetErrStat( ErrID_Fatal, 'Error allocating memory for p%Table%Coefs.', ErrStat, ErrMsg, RoutineName )
             CALL Cleanup()
@@ -713,20 +745,16 @@ MODULE AirfoilInfo
                   RETURN
                END IF
 
-            p%Table(iTable)%Alpha(Row  ) = SiAry(InCol_Alfa)*D2R
-           !p%Table(iTable)%Alpha(Row  ) = SiAry(InCol_Alfa)
-            p%Table(iTable)%Coefs(Row,1) = SiAry(InCol_Cl  )
-            p%Table(iTable)%Coefs(Row,2) = SiAry(InCol_Cd  )
+            p%Table(iTable)%Alpha(Row        ) = SiAry(InCol_Alfa)*D2R
+            p%Table(iTable)%Coefs(Row,p%ColCl) = SiAry(InCol_Cl  )
+            p%Table(iTable)%Coefs(Row,p%ColCd) = SiAry(InCol_Cd  )
 
-            IF ( InCol_Cm > 0 )  THEN
-               p%Table(iTable)%Coefs(Row,3) = SiAry(InCol_Cm)
-               IF ( InCol_Cpmin > 0 )  p%Table(iTable)%Coefs(Row,4) = SiAry(InCol_Cpmin)
-            ELSE
-               IF ( InCol_Cpmin > 0 )  p%Table(iTable)%Coefs(Row,3) = SiAry(InCol_Cpmin)
-            ENDIF ! IF ( Col_Cm > 0 )  THEN
+            IF ( InCol_Cm    > 0 ) p%Table(iTable)%Coefs(Row,p%ColCm   ) = SiAry(InCol_Cm)
+            IF ( InCol_Cpmin > 0 ) p%Table(iTable)%Coefs(Row,p%ColCpmin) = SiAry(InCol_Cpmin)
 
          ENDDO ! Row
 
+         call CalculateUACoeffs(p%Table(iTable), p%ColCl, p%ColUAf)
 
             ! Let's make sure that the data go from -Pi to Pi and that the values are the same for both
             ! unless there is only one point.
@@ -735,14 +763,12 @@ MODULE AirfoilInfo
             NumAlf  = p%Table(iTable)%NumAlf
             BadVals = .FALSE.
             IF ( .NOT. EqualRealNos( p%Table(iTable)%Alpha(1), -Pi ) )  THEN
-            !IF ( .NOT. EqualRealNos( p%Table(iTable)%Alpha(1), -180.0_ReKi ) )  THEN
                BadVals = .TRUE.
             ENDIF
             IF ( .NOT. EqualRealNos( p%Table(iTable)%Alpha(NumAlf), Pi ) )  THEN
-            !IF ( .NOT. EqualRealNos( p%Table(iTable)%Alpha(NumAlf), 180.0_ReKi ) )  THEN
                BadVals = .TRUE.
             ENDIF
-            DO Coef=1,NumCoefs
+            DO Coef=1,NumCoefsTab
                IF ( .NOT. EqualRealNos( p%Table(iTable)%Coefs(1,Coef), p%Table(iTable)%Coefs(NumAlf,Coef) ) )  THEN
                   BadVals = .TRUE.
                ENDIF
@@ -755,6 +781,9 @@ MODULE AirfoilInfo
                RETURN
             ENDIF
          ENDIF ! ( .NOT. p%Table(iTable)%ConstData )
+
+         ! Set the NumCoefs value we return based on tables so far
+         NumCoefs = max(NumCoefs, NumCoefsTab)
 
       ENDDO ! iTable
 
@@ -778,6 +807,100 @@ MODULE AirfoilInfo
 
 
    END SUBROUTINE ReadAFfile
+!----------------------------------------------------------------------------------------------------------------------------------  
+   SUBROUTINE CalculateUACoeffs(p,ColCl,ColUAf)
+      TYPE (AFI_Table_Type),    intent(inout) :: p                             ! This structure stores all the module parameters that are set by AirfoilInfo during the initialization phase.
+      integer(IntKi),           intent(in   ) :: ColCl                         ! column for cl
+      integer(IntKi),           intent(in   ) :: ColUAf                        ! column for UA f_st
+   
+      INTEGER(IntKi)                          :: Row                           ! The row of a table to be parsed in the FileInfo structure.
+      INTEGER(IntKi)                          :: col_clFs                      ! column for UA cl_fs
+      
+      REAL(ReKi)                              :: cl_ratio, cl_inv
+      REAL(ReKi)                              :: f_st, cl_fs
+      REAL(ReKi)                              :: f_iHigh, f_iLow
+      INTEGER(IntKi)                          :: iHigh, iLow
+
+      col_clFs = ColUAf + 1
+
+      if ( p%InclUAdata )  then
+         
+         if (EqualRealNos(p%UA_BL%c_lalpha,0.0_ReKi)) then
+            p%Coefs(:,ColUAf)   = 0.0_ReKi                           ! Eq. 59
+            p%Coefs(:,col_clFs) = p%Coefs(:,ColCl)                   ! Eq. 61
+         else
+         
+            f_iHigh = huge(f_iHigh)
+            f_iLow  = f_iHigh
+            iHigh = 0
+            iLow = 0
+         
+            do Row=1,p%NumAlf
+            
+               if (EqualRealNos( p%alpha(Row), p%UA_BL%alpha0)) then
+                  f_st  = 1.0_ReKi                                         ! Eq. 59
+                  p%Coefs(Row,col_clFs) = p%Coefs(Row,ColCl) / 2.0_ReKi    ! Eq. 61 (which should be very close to 0 because definition of alpha0 says cl(alpha0) = 0 )
+               else
+            
+                  cl_ratio = p%Coefs(Row,ColCl) / ( p%UA_BL%c_lalpha*(p%alpha(Row) - p%UA_BL%alpha0))
+                  cl_ratio = max(0.0_ReKi, cl_ratio)
+
+                  f_st = ( 2.0_ReKi * sqrt(cl_ratio) - 1.0_ReKi )**2
+                  
+                  if (f_st < 1.0_ReKi) then 
+                     ! Region where f_st<1, merge
+                     f_st  = max(0.0_ReKi, f_st) ! make sure it is not negative
+                     cl_fs = (p%Coefs(Row,ColCl) - p%UA_BL%c_lalpha* (p%alpha(Row) - p%UA_BL%alpha0)*f_st) / (1.0_ReKi - f_st) ! Eq 61
+                  else
+                     ! Initialize to linear region (in fact only at singularity, where f_st=1)
+                     f_st = 1.0_ReKi
+                     cl_fs = p%Coefs(Row,ColCl) / 2.0_ReKi                      ! Eq. 61
+                  end if
+                  
+                  if (p%alpha(Row) < p%UA_BL%alpha0) then
+                     if (f_st <= f_iLow) then
+                        f_iLow = f_st
+                        iLow = Row
+                     end if
+                  else !p%alpha(Row) > p%UA_BL%alpha0 (note that they can't be equal)
+                     if (f_st < f_iHigh) then
+                        f_iHigh = f_st
+                        iHigh = Row
+                     end if
+                  end if
+               end if
+               
+               p%Coefs(Row,ColUAf)   = f_st
+               p%Coefs(Row,col_clFs) = cl_fs
+            end do
+            if (iLow >0) p%Coefs(1:iLow,col_clFs) = p%Coefs(1:iLow,ColCl)
+            if (iHigh>0) p%Coefs(iHigh:,col_clFs) = p%Coefs(iHigh:,ColCl)
+            
+            
+            ! Ensuring everything is in harmony 
+            do Row=1,p%NumAlf
+               cl_fs = p%Coefs(Row,col_clFs)
+               
+               cl_inv = p%UA_BL%c_lalpha*(p%alpha(Row) - p%UA_BL%alpha0)     ! Eq. 64
+               if (.not. EqualRealNos(cl_inv, cl_fs)) then
+                  f_st=(p%Coefs(Row,ColCl) - cl_fs) / (cl_inv-cl_fs);        ! Eq. 60
+                  f_st = max(0.0_ReKi, f_st)
+                  f_st = min(1.0_ReKi, f_st)
+                  
+                  p%Coefs(Row,ColUAf) = f_st
+               else 
+                  p%Coefs(Row,ColUAf) = 1.0_ReKi
+               end if
+
+            end do
+         end if ! c_lalpha == 0
+         
+      end if
+
+            
+
+      
+   END SUBROUTINE CalculateUACoeffs
 !----------------------------------------------------------------------------------------------------------------------------------  
 subroutine FindBoundingTables(p, secondaryDepVal, lowerTable, upperTable, xVals)
 
@@ -918,7 +1041,7 @@ subroutine AFI_ComputeAirfoilCoefs1D( AOA, p, AFI_interp, errStat, errMsg, Table
    integer(IntKi), optional, intent(in   ) :: TableNum
    
    
-   real                                    :: IntAFCoefs(4)                ! The interpolated airfoil coefficients.
+   real                                    :: IntAFCoefs(MaxNumAFCoeffs)                ! The interpolated airfoil coefficients.
    real(reki)                              :: Alpha
    integer                                 :: s1
    integer                                 :: iTab
@@ -933,7 +1056,7 @@ subroutine AFI_ComputeAirfoilCoefs1D( AOA, p, AFI_interp, errStat, errMsg, Table
       iTab = 1
    end if
    
-   IntAFCoefs = 0.0_ReKi ! initialize in case we only don't have 4 columns in the airfoil data (i.e., so cm is zero if not in the file)
+   IntAFCoefs = 0.0_ReKi ! initialize in case we only don't have MaxNumAFCoeffs columns in the airfoil data (e.g., so cm is zero if not in the file)
  
    s1 = size(p%Table(iTab)%Coefs,2)
    
@@ -965,6 +1088,13 @@ subroutine AFI_ComputeAirfoilCoefs1D( AOA, p, AFI_interp, errStat, errMsg, Table
       AFI_interp%Cpmin = 0.0_Reki
    end if
 
+   if ( p%ColUAf > 0 ) then
+      AFI_interp%f_st = IntAFCoefs(p%ColUAf)
+      AFI_interp%cl_fs = IntAFCoefs(p%ColUAf+1)
+   else
+      AFI_interp%f_st = 0.0_ReKi
+      AFI_interp%cl_fs = 0.0_ReKi
+   end if
    
       ! needed if using UnsteadyAero:
    if (p%Table(iTab)%InclUAdata) then
@@ -1027,6 +1157,7 @@ subroutine AFI_ComputeUACoefs( p, Re, UserProp, UA_BL, errMsg, errStat )
    
    if ( p%AFTabMod == AFITable_1 ) then 
       call AFI_CopyUA_BL_Type( p%Table(1)%UA_BL, UA_BL, MESH_NEWCOPY, errStat, errMsg )  ! this doesn't have a mesh, so the control code is irrelevant
+      return
    elseif ( p%AFTabMod == AFITable_2Re ) then
 #ifndef AFI_USE_LINEAR_RE
       ReInterp = log( Re )
@@ -1037,6 +1168,10 @@ subroutine AFI_ComputeUACoefs( p, Re, UserProp, UA_BL, errMsg, errStat )
    else !if ( p%AFTabMod == AFITable_2User ) then
       call AFI_ComputeUACoefs2D( UserProp, p, UA_BL, errStat, errMsg )
    end if
+   
+   call MPi2Pi( UA_BL%alpha0 )
+   call MPi2Pi( UA_BL%alpha1 )
+   call MPi2Pi( UA_BL%alpha2 )
    
    ! Cn1=1.9 Tp=1.7 Tf=3., Tv=6 Tvl=11, Cd0=0.012
    

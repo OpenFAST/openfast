@@ -30,7 +30,7 @@ subroutine test_BD_GravityForce()
     baseline(4:6) = (/ 0.0, 0.0, 0.0 /)
     
     ! allocate and build the custom types
-    parametertype = simpleParameterType()
+    parametertype = simpleParameterType(1,16,16,0,1)
     miscvartype = simpleMiscVarType(parametertype%nqp, parametertype%elem_total)
     
     gravity = getGravityInZ()
@@ -40,5 +40,7 @@ subroutine test_BD_GravityForce()
     
     ! test the values
     @assertEqual(baseline, miscvartype%qp%Fg(:,1,1), tolerance, testname)
-    
+   
+    call BD_DestroyParam(parametertype, ErrStat, ErrMsg)
+ 
 end subroutine
