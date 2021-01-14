@@ -2973,8 +2973,8 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
             vec = matmul( mem%Ak,m%vrel(:,mem%NodeIndx(i)) )
             f_hydro = mem%Cd(i)*p%WtrDens*mem%RMG(i)*TwoNorm(vec)*vec  +  &
                       0.5*mem%AxCd(i)*p%WtrDens*pi*mem%RMG(i)*dRdl_p * matmul( dot_product( mem%k, m%vrel(:,mem%NodeIndx(i)) )*mem%kkt, m%vrel(:,mem%NodeIndx(i)) )
-!            call LumpDistrHydroLoads( f_hydro, mem%k, mem%dl, h_c, m%F_D(:, mem%NodeIndx(i)) )
-            call LumpDistrHydroLoads( f_hydro, mem%k, mem%dl, h_c, m%memberLoads(im)%F_D(:, i) )
+!            call LumpDistrHydroLoads( f_hydro, mem%k, deltal, h_c, m%F_D(:, mem%NodeIndx(i)) )
+            call LumpDistrHydroLoads( f_hydro, mem%k, deltal, h_c, m%memberLoads(im)%F_D(:, i) )
             y%Mesh%Force (:,mem%NodeIndx(i)) = y%Mesh%Force (:,mem%NodeIndx(i)) + m%memberLoads(im)%F_D(1:3, i)
             y%Mesh%Moment(:,mem%NodeIndx(i)) = y%Mesh%Moment(:,mem%NodeIndx(i)) + m%memberLoads(im)%F_D(4:6, i)
             
@@ -2982,8 +2982,8 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                ! ------------------- hydrodynamic added mass loads: sides: Section 7.1.3 ------------------------
                Am = mem%Ca(i)*p%WtrDens*pi*mem%RMG(i)*mem%RMG(i)*mem%Ak + 2.0*mem%AxCa(i)*p%WtrDens*pi*mem%RMG(i)*mem%RMG(i)*dRdl_p*mem%kkt
                f_hydro = -matmul( Am, u%Mesh%TranslationAcc(:,mem%NodeIndx(i)) )
-               !call LumpDistrHydroLoads( f_hydro, mem%k, mem%dl, h_c, m%F_A(:, mem%NodeIndx(i)) )
-               call LumpDistrHydroLoads( f_hydro, mem%k, mem%dl, h_c, m%memberLoads(im)%F_A(:, i) )
+               !call LumpDistrHydroLoads( f_hydro, mem%k, deltal, h_c, m%F_A(:, mem%NodeIndx(i)) )
+               call LumpDistrHydroLoads( f_hydro, mem%k, deltal, h_c, m%memberLoads(im)%F_A(:, i) )
                y%Mesh%Force (:,mem%NodeIndx(i)) = y%Mesh%Force (:,mem%NodeIndx(i)) + m%memberLoads(im)%F_A(1:3, i)
                y%Mesh%Moment(:,mem%NodeIndx(i)) = y%Mesh%Moment(:,mem%NodeIndx(i)) + m%memberLoads(im)%F_A(4:6, i)
          
@@ -2991,8 +2991,8 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                f_hydro=(mem%Ca(i)+mem%Cp(i))*p%WtrDens*pi*mem%RMG(i)*mem%RMG(i)       * matmul( mem%Ak,  m%FA(:,mem%NodeIndx(i)) ) + &
                             2.0*mem%AxCa(i)*p%WtrDens*pi*mem%RMG(i)*mem%RMG(i)*dRdl_p * matmul( mem%kkt, m%FA(:,mem%NodeIndx(i)) ) + &
                             2.0*m%FDynP(mem%NodeIndx(i))*mem%AxCp(i)*pi*mem%RMG(i)*dRdl_pp*mem%k 
-               !call LumpDistrHydroLoads( f_hydro, mem%k, mem%dl, h_c, m%F_I(:, mem%NodeIndx(i)) )
-               call LumpDistrHydroLoads( f_hydro, mem%k, mem%dl, h_c, m%memberLoads(im)%F_I(:, i) )
+               !call LumpDistrHydroLoads( f_hydro, mem%k, deltal, h_c, m%F_I(:, mem%NodeIndx(i)) )
+               call LumpDistrHydroLoads( f_hydro, mem%k, deltal, h_c, m%memberLoads(im)%F_I(:, i) )
                y%Mesh%Force (:,mem%NodeIndx(i)) = y%Mesh%Force (:,mem%NodeIndx(i)) + m%memberLoads(im)%F_I(1:3, i)
                y%Mesh%Moment(:,mem%NodeIndx(i)) = y%Mesh%Moment(:,mem%NodeIndx(i)) + m%memberLoads(im)%F_I(4:6, i)
             end if

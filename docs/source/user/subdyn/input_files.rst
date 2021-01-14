@@ -175,12 +175,14 @@ that are not considered by the C-B reduction are treated
 quasi-statically. This treatment helps
 minimize the number of retained modes needed to capture effects such as
 static gravity and buoyancy loads, and high-frequency loads transferred
-from the turbine.
+from the turbine. Recommended to set to True.
 
 
-**ExtraMoment** is a flag to specify whether the extra moment due to 
-the lever arm from the deflection of the structure is to be added to the loads passed to SubDyn.
-See section :numref:`SD_Loads` for details.
+**GuyanLoadCorrection** is a flag to specify whether the extra moment due to 
+the lever arm from the Guyan deflection of the structure is to be added to the loads
+passed to SubDyn, and, whether the FEM representation should be expressed in the rotating 
+frame in the floating case (the rotation is induced by the rigid body Guyan modes).
+See section :numref:`SD_Loads` for details. Recommended to set to True.
 
 
 FEA and Craig-Bampton Parameters
@@ -592,6 +594,9 @@ to align properly, the width specification should match. For example:
 
 | "ES11.4" OutFmt
 | "A11" OutSFmt.
+
+
+.. _SD_Member_Output:
 
 Member Output List
 ~~~~~~~~~~~~~~~~~~
