@@ -10,7 +10,7 @@ The line number corresponds to the resulting line number after all changes are i
 Thus, be sure to implement each in order so that subsequent line numbers are correct.
 
 
-OpenFAST v2.4.0 to OpenFAST `dev`
+OpenFAST v2.5.0 to OpenFAST `dev`
 ---------------------------------
 
 Many changes were applied to SubDyn input file format. You may consult the following example:
@@ -22,11 +22,6 @@ Added in OpenFAST dev
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 Module                                        Line  Flag Name        Example Value
 ============================================= ==== =============== ========================================================================================================================================================================================================
-IfW driver                                     6    [sep. line]        ===================== File Conversion Options =================================
-IfW driver                                     7    WrHAWC             false    WrHAWC    - Convert all data to HAWC2 format? (flag)
-IfW driver                                     8    WrBladed           false    WrBladed  - Convert all data to Bladed format? (flag)
-IfW driver                                     9    WrVTK              false    WrVTK     - Convert all data to VTK format? (flag)
-InflowWind                                     7    VFlowAng               0   VFlowAng  - Upflow angle (degrees) (not used for native Bladed format WindType=7)
 SubDyn                                         8   GuyanLoadCorr.      False   GuyanLoadCorection  - Include extra moment from lever arm at interface and rotate FEM for floating
 SubDyn                                        15   GuyanDampMod        0       GuyanDampMod - Guyan damping {0=none, 1=Rayleigh Damping, 2=user specified 6x6 matrix}
 SubDyn                                        16   RayleighDamp        0.001, 0.003   RayleighDamp - Mass and stiffness proportional damping  coefficients (Rayleigh Damping) [only if GuyanDampMod=1]
@@ -57,6 +52,21 @@ SubDyn                                        na   ConcentratedM    CMJointID  J
 SubDyn                                        na   ConcentratedM      (-)      (kg)    (kg*m^2)  (kg*m^2)  (kg*m^2)  (kg*m^2)  (kg*m^2) (kg*m^2)  (m)  (m)   (m)
 ============================================= ==== =============== ========================================================================================================================================================================================================
 
+
+OpenFAST v2.4.0 to OpenFAST v2.5.0
+----------------------------------
+
+============== ==== ================== =============================================================================================================================================================================
+Added in OpenFAST v2.5.0
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Module        Line  Flag Name          Example Value
+============== ==== ================== =============================================================================================================================================================================
+IfW driver     6    [separator line]   ===================== File Conversion Options =================================
+IfW driver     7    WrHAWC             false    WrHAWC    - Convert all data to HAWC2 format? (flag)
+IfW driver     8    WrBladed           false    WrBladed  - Convert all data to Bladed format? (flag)
+IfW driver     9    WrVTK              false    WrVTK     - Convert all data to VTK format? (flag)
+InflowWind     7    VFlowAng                0   VFlowAng  - Upflow angle (degrees) (not used for native Bladed format WindType=7)
+============== ==== ================== =============================================================================================================================================================================
 
 
 OpenFAST v2.3.0 to OpenFAST v2.4.0

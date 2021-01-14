@@ -197,8 +197,9 @@ static void mdlInitializeSizes(SimStruct *S)
     /*  ---------------------------------------------  */
     //   strcpy(InputFileName, "../../CertTest/Test01.fst");
        FAST_AllocateTurbines(&nTurbines, &ErrStat, ErrMsg);
-       FAST_Sizes(&iTurb, &TMax, InitInputAry, InputFileName, &AbortErrLev, &NumOutputs, &dt, &ErrStat, ErrMsg, ChannelNames);
+       if (checkError(S)) return;
 
+       FAST_Sizes(&iTurb, &TMax, InitInputAry, InputFileName, &AbortErrLev, &NumOutputs, &dt, &ErrStat, ErrMsg, ChannelNames);
        n_t_global = -1;
        if (checkError(S)) return;
 
@@ -447,6 +448,7 @@ static void mdlTerminate(SimStruct *S)
       FAST_End(&iTurb, &tr);
       n_t_global = -2;
    }  
+   FAST_DeallocateTurbines(&ErrStat, ErrMsg);
 
 }
 
