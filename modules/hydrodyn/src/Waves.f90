@@ -39,8 +39,8 @@ MODULE Waves
 
    INTEGER,    PUBLIC         :: WaveGrid_n  = 150      ! Number of wave kinematics grid points = nx*ny*nz
    
-   REAL(SiKi), PUBLIC         :: WaveGrid_x0 = -45.0    ! first grid point in x direction   
-   REAL(SiKi), PUBLIC         :: WaveGrid_dx = 15.0     ! step size in x direction
+   REAL(SiKi), PUBLIC         :: WaveGrid_x0 = -35.0    ! first grid point in x direction   
+   REAL(SiKi), PUBLIC         :: WaveGrid_dx = 10.0     ! step size in x direction
    INTEGER,    PUBLIC         :: WaveGrid_nx = 10       ! Number of wave kinematics grid points in x
    
    REAL(SiKi), PUBLIC         :: WaveGrid_y0 = -35.0    ! same for y
@@ -1807,7 +1807,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 
             I = (J-1)*WaveGrid_nx + K    ! index of actual node
             
-            CALL WaveElevTimeSeriesAtXY( WaveGrid_x0 + WaveGrid_dx*K, WaveGrid_y0 + WaveGrid_dy*J, InitOut%WaveElevMD(:,I), ErrStatTmp, ErrMsgTmp )
+            CALL WaveElevTimeSeriesAtXY( WaveGrid_x0 + WaveGrid_dx*(K-1), WaveGrid_y0 + WaveGrid_dy*(J-1), InitOut%WaveElevMD(:,I), ErrStatTmp, ErrMsgTmp )
             CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to InitOut%WaveElevMD.',ErrStat,ErrMsg,'VariousWaves_Init')
             IF ( ErrStat >= AbortErrLev ) THEN
                CALL CleanUp()

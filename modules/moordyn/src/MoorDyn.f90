@@ -29,7 +29,7 @@ MODULE MoorDyn
 
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER            :: MD_ProgDesc = ProgDesc( 'MoorDyn-F', 'v2.a1', '5 Jan. 2020' )
+   TYPE(ProgDesc), PARAMETER            :: MD_ProgDesc = ProgDesc( 'MoorDyn-F', 'v2.a2', '13 Jan. 2020' )
 
 
    PUBLIC :: MD_Init
@@ -182,7 +182,7 @@ CONTAINS
 		! ----------------- go through file contents a first time, counting each entry -----------------------
 		
       i = 0
-      read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1; print*,i       !read a line
+      read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1       !read a line
       
       do while ( ErrStat2 == 0 ) 
       
@@ -190,81 +190,81 @@ CONTAINS
          if (INDEX(Line, "---") > 0) then ! look for a header line
 
             if ( ( INDEX(Line, "LINE DICTIONARY") > 0) .or. ( INDEX(Line, "LINE TYPES") > 0) ) then ! if line dictionary header
-print *, "line dictionary"
+
                ! skip following two lines (label line and unit line)
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1; print*,i
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1; print*,i
+               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
                
                ! find how many elements of this type there are
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1; print*,i
+               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
                DO while (INDEX(Line, "---") == 0) ! while we DON'T find another header line
                   p%nLineTypes = p%nLineTypes + 1
-                  read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1; print*,i," linetype on prev line"
+                  read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
                END DO
 
             else if ( (INDEX(Line, "ROD DICTIONARY") > 0) .or. ( INDEX(Line, "ROD TYPES") > 0) ) then ! if rod dictionary header
-print *, "rod dictionary"
+
                ! skip following two lines (label line and unit line)
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1; print*,i
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1; print*,i
+               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
                
                ! find how many elements of this type there are
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1; print*,i
+               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
                DO while (INDEX(Line, "---") == 0) ! while we DON'T find another header line
                   p%nRodTypes = p%nRodTypes + 1
-                  read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1; print*,i," rod type on prev line"
+                  read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
                END DO	
 
             else if ((INDEX(Line, "BODY LIST") > 0 ) .or. (INDEX(Line, "BODY PROPERTIES") > 0 )) then
-print *, "body list"
+
                ! skip following two lines (label line and unit line)
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1; print*,i
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1; print*,i
+               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
                
                ! find how many elements of this type there are
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1; print*,i
+               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
                DO while (INDEX(Line, "---") == 0) ! while we DON'T find another header line
                   p%nBodies = p%nBodies + 1
-                  read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1; print*,i," body on prev line"
+                  read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
                END DO		
 
             else if ((INDEX(Line, "ROD LIST") > 0) .or. (INDEX(Line, "ROD PROPERTIES") > 0)) then ! if rod properties header
-print *, "rod list"
+
                ! skip following two lines (label line and unit line)
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1; print*,i
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1; print*,i
+               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
                
                ! find how many elements of this type there are
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1; print*,i
+               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
                DO while (INDEX(Line, "---") == 0) ! while we DON'T find another header line
                   p%nRods = p%nRods + 1
-                  read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1; print*,i," rod on prev line"
+                  read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
                END DO	
 
             else if ( (INDEX(Line, "CONNECTION PROPERTIES") > 0) .or. (INDEX(Line, "NODE PROPERTIES") > 0) ) then ! if node properties header
-print *, "connections"
+
                ! skip following two lines (label line and unit line)
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1; print*,i
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1; print*,i
+               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
                
                ! find how many elements of this type there are
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1; print*,i
+               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
                DO while (INDEX(Line, "---") == 0) ! while we DON'T find another header line
                   p%nConnects = p%nConnects + 1
-                  read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1; print*,i," con on prev line"
+                  read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
                END DO
 
             else if (INDEX(Line, "LINE PROPERTIES") > 0) then ! if line properties header
-print *, "lines"
+
                ! skip following two lines (label line and unit line)
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1; print*,i
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1; print*,i
+               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
                
                ! find how many elements of this type there are
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1; print*,i
+               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
                DO while (INDEX(Line, "---") == 0) ! while we DON'T find another header line
                   p%nLines = p%nLines + 1
-                  read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1; print*,i," line on prev line"
+                  read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
                END DO
 
             else if (INDEX(Line, "FAILURE") > 0) then ! if failure conditions header
@@ -272,42 +272,42 @@ print *, "lines"
                print *, "   Reading failure conditions: ";
                
                ! skip following two lines (label line and unit line)
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1; print*,i
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1; print*,i
+               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
                
                ! find how many elements of this type there are
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1; print*,i
+               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
                DO while (INDEX(Line, "---") == 0) ! while we DON'T find another header line
                   p%nFails = p%nFails + 1
-                  read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1; print*,i
+                  read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
                END DO
                
                
             else if (INDEX(Line, "OPTIONS") > 0) then ! if options header
-print *, "options"
+
                ! don't skip any lines (no column headers for the options section)
 
                ! find how many options have been specified
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1; print*,i
+               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
                DO while (INDEX(Line, "---") == 0) ! while we DON'T find another header line
                   nOpts = nOpts + 1
-                  read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1; print*,i," option on prev line"
+                  read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
                END DO
                
 
             else if (INDEX(Line, "OUTPUT") > 0) then ! if output header
-print *, "output"
+
                ! we don't need to count this section...
 
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1; print*,i
+               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
 
 
             else  ! otherwise ignore this line that isn't a recognized header line and read the next line
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1; print*,i," --- unrecognized header"
+               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
             end if
 			
          else ! otherwise ignore this line, which doesn't have the "---" or header line and read the next line
-            read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1; print*,i, " .."
+            read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
          end if
      
       end do
@@ -380,7 +380,7 @@ print *, "output"
       Nx = 0  ! set state counter to zero
       i  = 0  ! set line number counter to zero
       
-      read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1; print*,i       !read a line
+      read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1       !read a line
       
       do while ( ErrStat2 == 0 ) 
       
@@ -392,14 +392,14 @@ print *, "output"
                print *, "Reading line types"
                
                ! skip following two lines (label line and unit line)
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1; print*,i
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1; print*,i
+               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
                
                 ! process each line
                 DO l = 1,p%nLineTypes
                    
                    !read into a line
-                   READ(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1; print*,i
+                   read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
 
                    ! parse out entries: Name  Diam MassDenInAir EA cIntDamp >>EI(new)<<  Can  Cat Cdn  Cdt 
                    READ(Line,*,IOSTAT=ErrStat2) m%LineTypeList(l)%name, m%LineTypeList(l)%d,  &
@@ -445,14 +445,14 @@ print *, "output"
                print *, "Reading rod types"
                
                ! skip following two lines (label line and unit line)
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1; print*,i
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1; print*,i
+               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
                
                 ! process each line
                 DO l = 1,p%nRodTypes
                    
                    !read into a line
-                   READ(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1; print*,i
+                   read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
 
                    ! parse out entries: Name  Diam MassDenInAir Can  Cat Cdn  Cdt 
                    IF (ErrStat2 == 0) THEN
@@ -478,14 +478,14 @@ print *, "output"
             else if ((INDEX(Line, "BODY LIST") > 0 ) .or. (INDEX(Line, "BODY PROPERTIES") > 0 )) then
 
                ! skip following two lines (label line and unit line)
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1; print*,i
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1; print*,i
+               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
                
                ! process each body
                DO l = 1,p%nBodies
                   
                   !read into a line
-                  READ(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1; print*,i
+                  read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
 
                   ! parse out entries: Node Type X Y Z M V FX FY FZ CdA Ca 
                   IF (ErrStat2 == 0) THEN
@@ -572,14 +572,14 @@ print *, "output"
                print *, "Reading rods"
                
                ! skip following two lines (label line and unit line)
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1; print*,i
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1; print*,i
+               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
                
                ! process each rod
                DO l = 1,p%nRods
                   
                   !read into a line
-                  READ(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1; print*,i
+                  read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
 
                   ! parse out entries: RodID  Type/BodyID  RodType  Xa   Ya   Za   Xb   Yb   Zb  NumSegs  Flags/Outputs
                   IF (ErrStat2 == 0) THEN
@@ -645,11 +645,14 @@ print *, "output"
                          return
                   end if
                   
-                  else if ((let1 == "VESSEL") .or. (let1 == "VES")) then    ! if a rigid fairlead, add to list and add 
-                     m%RodList(l)%typeNum = -2                     
-                     m%CpldRodIs(p%nCpldRods) = l;  p%nCpldRods=p%nCpldRods+1  ! add this rod to coupled list                 				 	
+                  else if ((let1 == "VESSEL") .or. (let1 == "VES")) then    ! if a rigidly coupled rod, add to list and add 
+                     m%RodList(l)%typeNum = -2            
+
+                     p%nCpldRods=p%nCpldRods+1     ! add this rod to coupled list                 				 	
+                     
+                     m%CpldRodIs(p%nCpldRods) = l
                  
-                  else if ((let1 == "VESSELPINNED") .or. (let1 == "VESPIN")) then  ! if a pinned fairlead, add to list and add 
+                  else if ((let1 == "VESSELPINNED") .or. (let1 == "VESPIN")) then  ! if a pinned coupled rod, add to list and add 
                      m%RodList(l)%typeNum = -1
                      
                      p%nCpldRods=p%nCpldRods+1  ! add
@@ -749,14 +752,14 @@ print *, "output"
                print *, "Reading connections"
                
                ! skip following two lines (label line and unit line)
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1; print*,i
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1; print*,i
+               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
                
                ! process each point
                DO l = 1,p%nConnects
                   
                   !read into a line
-                  READ(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1; print*,i
+                  read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
 
                   ! parse out entries: Node Type X Y Z M V FX FY FZ CdA Ca 
                   IF (ErrStat2 == 0) THEN
@@ -879,14 +882,14 @@ print *, "output"
                print *, "Reading lines"
                
                ! skip following two lines (label line and unit line)
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1; print*,i
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1; print*,i
+               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
                
                ! process each line
                DO l = 1,p%nLines
                   
                   !read into a line
-                  READ(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1; print*,i
+                  read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
 
                    ! parse out entries: LineID  LineType  UnstrLen  NumSegs  NodeA  NodeB  Flags/Outputs
                   IF (ErrStat2 == 0) THEN
@@ -1051,14 +1054,14 @@ print *, "output"
                ! TODO: add stuff <<<<<<<<
 
                ! skip following two lines (label line and unit line)
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1; print*,i
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1; print*,i
+               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
                
                ! process each line
                DO l = 1,p%nFails
                   
                   !read into a line
-                  READ(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1; print*,i
+                  READ(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
                   
                END DO
 
@@ -1073,7 +1076,7 @@ print *, "output"
                DO l = 1,nOpts
                   
                   !read into a line
-                  READ(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1; print*,i      
+                  READ(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
 
                   ! parse out entries:  value, option keyword
                   READ(Line,*,IOSTAT=ErrStat2) OptValue, OptString  ! look at first two entries, ignore remaining words in line, which should be comments
@@ -1140,7 +1143,7 @@ print *, "output"
                ! Read in all of the lines containing output parameters and store them in OutList(:)
                DO
                   ! read a line
-                  READ(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1; print*,i
+                  READ(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
 
                   CALL Conv2UC(Line)   ! convert to uppercase for easy string matching
 
@@ -1172,13 +1175,13 @@ print *, "output"
 
             !-------------------------------------------------------------------------------------------
             else  ! otherwise ignore this line that isn't a recognized header line and read the next line
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1; print*,i," --- unrecognized header"
+               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
             end if
 			
             !-------------------------------------------------------------------------------------------
          
          else ! otherwise ignore this line, which doesn't have the "---" or header line and read the next line
-            read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1; print*,i, " .."
+            read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
          end if
      
       end do
@@ -1530,10 +1533,10 @@ print *, "output"
          p%pz(I) =  1.0 - 2.0**(WaveGrid_nz-I)       !  -127,  -63,  -31,  -15,   -7,   -3,   -1,    0
       END DO
       DO J = 1,WaveGrid_ny
-         p%py(J) = WaveGrid_y0 + WaveGrid_dy*J
+         p%py(J) = WaveGrid_y0 + WaveGrid_dy*(J-1)
       END DO
       DO K = 1,WaveGrid_nx
-         p%px(K) = WaveGrid_x0 + WaveGrid_dx*K
+         p%px(K) = WaveGrid_x0 + WaveGrid_dx*(K-1)
       END DO
       p%dtWave = InitInp%WaveTime(2) - InitInp%WaveTime(1)
       
@@ -2388,6 +2391,8 @@ print *, "output"
       INTEGER(IntKi)                                     :: Istart  ! start index of line/connect in state vector
       INTEGER(IntKi)                                     :: Iend    ! end index of line/connect in state vector
 
+      REAL(DbKi)                                         :: temp(3) ! temporary for passing kinematics
+      
       REAL(DbKi)                                         :: r6_in(6) ! temporary for passing kinematics
       REAL(DbKi)                                         :: v6_in(6) ! temporary for passing kinematics
       REAL(DbKi)                                         :: a6_in(6) ! temporary for passing kinematics
@@ -2439,18 +2444,6 @@ print *, "output"
          a6_in(1:3) = u%CoupledKinematics%TranslationAcc(:,J)
          a6_in(4:6) = u%CoupledKinematics%RotationAcc(:,J)
       
-      
-         if ((t >= 1.0) .and. (t < 1.001)) then
-            print *, "orientation matrix from mesh:"
-            print *, u%CoupledKinematics%Orientation(:,:,J)
-            print *, "Euler extract:"
-            print *, EulerExtract( u%CoupledKinematics%Orientation(:,:,J) )
-            print *, "Euler extract of transpose"
-            print *, EulerExtract( transpose(u%CoupledKinematics%Orientation(:,:,J) ))
-            
-            print *, "done"
-         end if
-      
          CALL Body_SetKinematics(m%BodyList(m%CpldBodyIs(l)), r6_in, v6_in, a6_in, t, m)
       END DO
       
@@ -2459,22 +2452,11 @@ print *, "output"
          J = J + 1
 
          r6_in(1:3) = u%CoupledKinematics%Position(:,J) + u%CoupledKinematics%TranslationDisp(:,J)
-         r6_in(4:6) = EulerExtract( TRANSPOSE( u%CoupledKinematics%Orientation(:,:,J) ) )  ! <<<< should make sure this works <<<
+         r6_in(4:6) = MATMUL( u%CoupledKinematics%Orientation(:,:,J) , (/0.0, 0.0, 1.0/) ) ! <<<< CHECK ! adjustment because rod's rotational entries are a unit vector, q
          v6_in(1:3) = u%CoupledKinematics%TranslationVel(:,J)
          v6_in(4:6) = u%CoupledKinematics%RotationVel(:,J)
          a6_in(1:3) = u%CoupledKinematics%TranslationAcc(:,J)
          a6_in(4:6) = u%CoupledKinematics%RotationAcc(:,J)
-         
-         if ((t >= 1.0) .and. (t < 1.001)) then
-            print *, "orientation matrix from mesh:"
-            print *, u%CoupledKinematics%Orientation(:,:,J)
-            print *, "Euler extract:"
-            print *, EulerExtract( u%CoupledKinematics%Orientation(:,:,J) )
-            print *, "Euler extract of transpose"
-            print *, EulerExtract( transpose(u%CoupledKinematics%Orientation(:,:,J) ))
-            
-            print *, "done"
-         end if
       
          CALL Rod_SetKinematics(m%RodList(m%CpldRodIs(l)), r6_in, v6_in, a6_in, t, m%LineList)
  		
@@ -4738,10 +4720,6 @@ print *, "output"
       
       ! note: this may also be called by a coupled rod (type = -1) in which case states will be empty
       
-      print *, "    states: ", states
-      print *, "    r0: ", Rod%r(:,0)
-      print *, "    q : ", Rod%q     
-
       
    END SUBROUTINE Rod_Initialize
    !--------------------------------------------------------------
@@ -5215,7 +5193,7 @@ print *, "output"
       if ((Rod%r(3,0) < zeta) .and. (Rod%r(3,N) > zeta)) then    ! check if it's crossing the water plane (should also add some limits to avoid near-horizontals at some point)
          h0 = (zeta - Rod%r(3,0))/Rod%q(3)                       ! distance along rod centerline from end A to the waterplane
       else if (Rod%r(3,0) < zeta) then
-         h0 = 2.0*Rod%UnstrLen                                   ! fully submerged case
+         h0 = 2.0*Rod%UnstrLen                                   ! fully submerged case   <<<<<< remove the 2.0 and double check there are no if statements that get changed <<<<
       else
          h0 = 0.0_DbKi                                           ! fully unsubmerged case (ever applicable?)
       end if
@@ -5361,13 +5339,8 @@ print *, "output"
          
             ! axial drag
             Rod%Dq(:,I) = Rod%Dq(:,I) + VOF * 0.25* Pi*Rod%d*Rod%d * p%rhoW*Rod%CdEnd * MagVq * Vq
-            
-if ((Rod%time >= 1.0) .and. (Rod%time < 1.001)) then
-   print *, "at Dq end 0 of rod:"
-   print *, "CdEnd is  on position vector:"
-   print *, Rod%CdEnd
-end if
-            
+         
+         
             ! >>> what about rotational drag?? <<<   eqn will be  Pi* Rod%d**4/16.0 omega_rel?^2...  *0.5 * Cd...
 
             ! Froud-Krylov force
@@ -5857,13 +5830,6 @@ end if
       !CALL SmllRotTrans('', Body%r6(4), Body%r6(5), Body%r6(6), Body%TransMat, '', ErrStat2, ErrMsg2)
       Body%OrMat = EulerConstruct( Body%r6(4:6) )  ! full Euler angle approach <<<< need to check order 
   
-if ((t >= 1.0) .and. (t < 1.001)) then
-   print *, "orientation matrix OrMat of Body:"
-   print *, Body%OrMat
-   print *, "based on position vector:"
-   print *, Body%r6
-end if
-
       ! set kinematics of any dependent connections
       do l = 1,Body%nAttachedC
       
@@ -6146,14 +6112,12 @@ end if
    
    SUBROUTINE getInterpNums(xlist, xin, i, fout)
       
-      Real(DbKi),    INTENT (IN   )            :: xlist(:)
-      Real(DbKi),    INTENT (IN   )            :: xin
-      Integer(IntKi),INTENT (  OUT)            :: i
-      Real(DbKi),    INTENT (  OUT)            :: fout
+      Real(DbKi),    INTENT (IN   )            :: xlist(:)      ! list of x values
+      Real(DbKi),    INTENT (IN   )            :: xin           ! x value to be interpolated
+      Integer(IntKi),INTENT (  OUT)            :: i             ! lower index to interpolate from
+      Real(DbKi),    INTENT (  OUT)            :: fout          ! fraction to return   such that y* = y[i] + fout*(y[i+1]-y[i])
       
       Integer(IntKi)                           :: nx
-      ! Parameters: list of x values, number of x values, x value to be interpolated, fraction to return
-      ! Returns the lower index to interpolate from.  such that  y* = y[i] + fout*(y[i+1]-y[i])
       
       nx = SIZE(xlist)
       
@@ -6180,7 +6144,7 @@ end if
    SUBROUTINE calculate4Dinterpolation(f, ix0, iy0, iz0, it0, fx, fy, fz, ft, c)
 
       Real(DbKi),     INTENT (IN   )        :: f(:,:,:,:)                ! data array
-      INTEGER(IntKi), INTENT (IN   )        :: ix0, iy0, iz0, it0        ! indeces for interpolation
+      INTEGER(IntKi), INTENT (IN   )        :: ix0, iy0, iz0, it0        ! indices for interpolation
       Real(DbKi),     INTENT (IN   )        :: fx, fy, fz, ft            ! interpolation fractions
       Real(DbKi),     INTENT (  OUT)        :: c                         ! the output value
                                          
@@ -6213,24 +6177,24 @@ end if
          it1 = it0+1
       end if
       
-      c000 = f(it0,iz0,iy0,ix0)*(1-ft) + f(it1,iz0,iy0,ix0)*ft
-      c001 = f(it0,iz1,iy0,ix0)*(1-ft) + f(it1,iz1,iy0,ix0)*ft
-      c010 = f(it0,iz0,iy1,ix0)*(1-ft) + f(it1,iz0,iy1,ix0)*ft
-      c011 = f(it0,iz1,iy1,ix0)*(1-ft) + f(it1,iz1,iy1,ix0)*ft
-      c100 = f(it0,iz0,iy0,ix1)*(1-ft) + f(it1,iz0,iy0,ix1)*ft
-      c101 = f(it0,iz1,iy0,ix1)*(1-ft) + f(it1,iz1,iy0,ix1)*ft
-      c110 = f(it0,iz0,iy1,ix1)*(1-ft) + f(it1,iz0,iy1,ix1)*ft
-      c111 = f(it0,iz1,iy1,ix1)*(1-ft) + f(it1,iz1,iy1,ix1)*ft
+      c000 = f(it0,iz0,iy0,ix0)*(1.0-ft) + f(it1,iz0,iy0,ix0)*ft
+      c001 = f(it0,iz1,iy0,ix0)*(1.0-ft) + f(it1,iz1,iy0,ix0)*ft
+      c010 = f(it0,iz0,iy1,ix0)*(1.0-ft) + f(it1,iz0,iy1,ix0)*ft
+      c011 = f(it0,iz1,iy1,ix0)*(1.0-ft) + f(it1,iz1,iy1,ix0)*ft
+      c100 = f(it0,iz0,iy0,ix1)*(1.0-ft) + f(it1,iz0,iy0,ix1)*ft
+      c101 = f(it0,iz1,iy0,ix1)*(1.0-ft) + f(it1,iz1,iy0,ix1)*ft
+      c110 = f(it0,iz0,iy1,ix1)*(1.0-ft) + f(it1,iz0,iy1,ix1)*ft
+      c111 = f(it0,iz1,iy1,ix1)*(1.0-ft) + f(it1,iz1,iy1,ix1)*ft
       
-      c00 = c000*(1-fx) + c100*fx
-      c01 = c001*(1-fx) + c101*fx
-      c10 = c010*(1-fx) + c110*fx
-      c11 = c011*(1-fx) + c111*fx
+      c00 = c000*(1.0-fx) + c100*fx
+      c01 = c001*(1.0-fx) + c101*fx
+      c10 = c010*(1.0-fx) + c110*fx
+      c11 = c011*(1.0-fx) + c111*fx
 
-      c0  = c00 *(1-fy) + c10 *fy
-      c1  = c01 *(1-fy) + c11 *fy
+      c0  = c00 *(1.0-fy) + c10 *fy
+      c1  = c01 *(1.0-fy) + c11 *fy
 
-      c   = c0  *(1-fz) + c1  *fz
+      c   = c0  *(1.0-fz) + c1  *fz
             
    END SUBROUTINE
 
@@ -6238,7 +6202,7 @@ end if
    SUBROUTINE calculate3Dinterpolation(f, ix0, iy0, iz0, fx, fy, fz, c)
 
          Real(DbKi),     INTENT (IN   )        :: f(:,:,:)                  ! data array
-         INTEGER(IntKi), INTENT (IN   )        :: ix0, iy0, iz0             ! indeces for interpolation
+         INTEGER(IntKi), INTENT (IN   )        :: ix0, iy0, iz0             ! indices for interpolation
          Real(DbKi),     INTENT (IN   )        :: fx, fy, fz                ! interpolation fractions
          Real(DbKi),     INTENT (  OUT)        :: c                         ! the output value
          
@@ -6276,15 +6240,15 @@ end if
       c110 = f(iz0,iy1,ix1)
       c111 = f(iz1,iy1,ix1)
       
-      c00 = c000*(1-fx) + c100*fx
-      c01 = c001*(1-fx) + c101*fx
-      c10 = c010*(1-fx) + c110*fx
-      c11 = c011*(1-fx) + c111*fx
+      c00 = c000*(1.0-fx) + c100*fx
+      c01 = c001*(1.0-fx) + c101*fx
+      c10 = c010*(1.0-fx) + c110*fx
+      c11 = c011*(1.0-fx) + c111*fx
 
-      c0  = c00 *(1-fy) + c10 *fy
-      c1  = c01 *(1-fy) + c11 *fy
+      c0  = c00 *(1.0-fy) + c10 *fy
+      c1  = c01 *(1.0-fy) + c11 *fy
 
-      c   = c0  *(1-fz) + c1  *fz
+      c   = c0  *(1.0-fz) + c1  *fz
 
    END SUBROUTINE
 

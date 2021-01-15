@@ -4306,8 +4306,8 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
             DO K = 1,WaveGrid_nx  !x
                Itemp = InitInp%Morison%NNodes + (I-1)*WaveGrid_nx*WaveGrid_ny + (J-1)*WaveGrid_nx + K    ! index of actual node
                InitInp%Waves%WaveKinzi(Itemp)      =   1.0 - 2.0**(WaveGrid_nz-I)       !  -127,  -63,  -31,  -15,   -7,   -3,   -1,    0
-               InitInp%Waves%WaveKinyi(Itemp)      = WaveGrid_y0 + WaveGrid_dy*J
-               InitInp%Waves%WaveKinxi(Itemp)      = WaveGrid_x0 + WaveGrid_dx*K
+               InitInp%Waves%WaveKinyi(Itemp)      = WaveGrid_y0 + WaveGrid_dy*(J-1)
+               InitInp%Waves%WaveKinxi(Itemp)      = WaveGrid_x0 + WaveGrid_dx*(K-1)
                InitInp%Current%MorisonNodezi(Itemp)= InitInp%Waves%WaveKinzi(I)
             END DO
          END DO
