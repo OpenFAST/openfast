@@ -180,7 +180,7 @@ SUBROUTINE InflowWind_ParseInputFileInfo( InputFileData, InFileInfo, PriPath, In
    INTEGER(IntKi)                                     :: TmpErrStat
    CHARACTER(ErrMsgLen)                               :: TmpErrMsg
 
-      ! Initializatio
+      ! Initialization
    ErrStat                 = ErrID_None
    ErrMsg                  = ""
    InputFileData%EchoFlag  = .FALSE.         ! initialize for error handling (cleanup() routine)
@@ -201,7 +201,7 @@ SUBROUTINE InflowWind_ParseInputFileInfo( InputFileData, InFileInfo, PriPath, In
    if (Failed()) return
 
    if ( InputFileData%EchoFlag ) then
-      CALL OpenEcho ( UnEc, TRIM(EchoFileName)//'.ech', TmpErrStat, TmpErrMsg )
+      CALL OpenEcho ( UnEc, TRIM(EchoFileName), TmpErrStat, TmpErrMsg )
          if (Failed()) return;
       WRITE(UnEc, '(A)') 'Echo file for InflowWind input file: '//trim(InputFileName)
       ! Write the first three lines into the echo file
