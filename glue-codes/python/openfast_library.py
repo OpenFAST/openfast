@@ -38,6 +38,7 @@ class FastLibAPI(CDLL):
         self._inp_array = (c_double * 1)(0.0, )
 
         self.output_values = None
+        self.ended = False
 
     def _initialize_routines(self):
         self.FAST_AllocateTurbines.argtypes = [
@@ -156,11 +157,13 @@ class FastLibAPI(CDLL):
             self.output_values[i] = self.output_array[:]
         
     def fast_end(self):
-        self.FAST_DeallocateTurbines(
-            byref(self.error_status),
-            self.error_message
-        )
-        self._error_check(self.error_status, self.error_message)
+        if not self.ended:
+            self.FAST_DeallocateTurbines(
+                byref(self.error_status),
+                self.error_message
+            )
+            self._error_check(self.error_status, self.error_message)
+            self.ended = True
 
         # StopTheProgram = c_bool(True)
         # openfastlib.FAST_End(
