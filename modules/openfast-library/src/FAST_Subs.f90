@@ -929,28 +929,18 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          CALL Cleanup()
          RETURN
       END IF   
-      !@mhall: clean this up! <<<<<<<<<<<<<<<< :::::::::::::::::::::::::::::
-   if (allocated(FEAM%Input)) then
-      print *, "FEAM%Input is already allocated!!"
-   end if
-   if (allocated(FEAM%InputTimes)) then
-      print *, "FEAM%InputTimes is already allocated!!"
-   end if
-   IF (p_FAST%CompMooring == Module_FEAM) THEN   
-      ALLOCATE( FEAM%Input( p_FAST%InterpOrder+1 ), FEAM%InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat2 )
+   ALLOCATE( FEAM%Input( p_FAST%InterpOrder+1 ), FEAM%InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat2 )
       IF (ErrStat2 /= 0) THEN
          CALL SetErrStat(ErrID_Fatal,"Error allocating FEAM%Input and FEAM%InputTimes.",ErrStat,ErrMsg,RoutineName)
          CALL Cleanup()
          RETURN
       END IF 
-   ELSE IF (p_FAST%CompMooring == Module_Orca) THEN
-      ALLOCATE( Orca%Input( p_FAST%InterpOrder+1 ), Orca%InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat2 )
+   ALLOCATE( Orca%Input( p_FAST%InterpOrder+1 ), Orca%InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat2 )
       IF (ErrStat2 /= 0) THEN
          CALL SetErrStat(ErrID_Fatal,"Error allocating Orca%Input and Orca%InputTimes.",ErrStat,ErrMsg,RoutineName)
          CALL Cleanup()
          RETURN
       END IF   
-   END IF   
    
    ! ........................
    ! initialize MAP 
