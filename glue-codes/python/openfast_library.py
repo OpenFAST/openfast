@@ -34,7 +34,8 @@ class FastLibAPI(CDLL):
         # The inputs are meant to be from Simulink.
         # If < 8, FAST_SetExternalInputs simply returns,
         # but this behavior may change to an error
-        self._num_inputs = c_int(1)
+        ### MAKE THIS 8 OR 11
+        self._num_inputs = c_int(8)
         self._inp_array = (c_double * 1)(0.0, )
 
         self.output_values = None
