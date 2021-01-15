@@ -96,7 +96,8 @@ class FastLibAPI(CDLL):
         self.FAST_End.restype = c_int
 
     def _error_check(self, error_status, error_message):
-        if error_status.value > self.abort_error_level.value:
+        # print(error_status.value, error_message.value, self.abort_error_level.value)
+        if error_status.value >= self.abort_error_level.value:
             print(f"Error {error_status.value}: {error_message.value}")
             self.fast_end()
             exit
@@ -166,18 +167,18 @@ class FastLibAPI(CDLL):
         _error_status = c_int(0)
 
         if not self.ended:
+            self.ended = True
+
             self.FAST_DeallocateTurbines(
                 byref(_error_status),
                 _error_message
             )
             self._error_check(_error_status, _error_message)
-            self.ended = True
 
-        # StopTheProgram = c_bool(True)
-        # openfastlib.FAST_End(
-        #     byref(i_turb),
-        #     byref(StopTheProgram)
-        # )
+            # self.FAST_End(
+            #     byref(self.i_turb),
+            #     byref(c_bool(True))
+            # )
 
     def fast_run(self):
         self.fast_init()
