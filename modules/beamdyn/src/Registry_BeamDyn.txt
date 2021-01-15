@@ -190,7 +190,6 @@ typedef   ^        ParameterType  ^             Jacobian         {:}{:}    - -  
 typedef   ^        ParameterType  ^             uu0              {:}{:}{:} - -  "Initial Disp/Rot value at quadrature point (at T=0)" -
 typedef   ^        ParameterType  ^             rrN0             {:}{:}{:} - -  "Initial relative rotation array, relative to root (at T=0) (index 1=rot DOF; index 2=FE nodes; index 3=element)" -
 typedef   ^        ParameterType  ^             E10              {:}{:}{:} - -  "Initial E10 at quadrature point" -
-typedef   ^        ParameterType  ^             SP_Coef          {:}{:}{:} - -  "Coefficients for cubic spline interpolation; index 1 = [1, kp_member-1]; index 2 = [1,4] (index of cubic-spline coefficient 1=constant;2=linear;3=quadratic;4=cubic terms); index 3 = [1,4] (each column of kp_coord)" -
 #end of BDKi-type variables
 #^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 typedef   ^        ParameterType IntKi          nodes_per_elem   -         - -  "Finite element (GLL) nodes per element" -

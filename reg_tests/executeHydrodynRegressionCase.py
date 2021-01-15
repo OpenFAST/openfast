@@ -28,6 +28,7 @@ basepath = os.path.sep.join(sys.argv[0].split(os.path.sep)[:-1]) if os.path.sep 
 sys.path.insert(0, os.path.sep.join([basepath, "lib"]))
 import argparse
 import shutil
+import glob
 import subprocess
 import rtestlib as rtl
 import openfastDrivers
@@ -90,8 +91,12 @@ if not os.path.isdir(inputsDirectory):
 # and initialize it with input files for all test cases
 if not os.path.isdir(testBuildDirectory):
     os.makedirs(testBuildDirectory)
-    shutil.copy(os.path.join(inputsDirectory,"hd_driver.inp"), os.path.join(testBuildDirectory,"hd_driver.inp"))
-    shutil.copy(os.path.join(inputsDirectory,"hd_primary.inp"), os.path.join(testBuildDirectory,"hd_primary.inp"))
+    for file in glob.glob(os.path.join(inputsDirectory,"hd_*inp")):
+        filename = file.split(os.path.sep)[-1]
+        shutil.copy(os.path.join(inputsDirectory,filename), os.path.join(testBuildDirectory,filename))
+    for file in glob.glob(os.path.join(inputsDirectory,"*dat")):
+        filename = file.split(os.path.sep)[-1]
+        shutil.copy(os.path.join(inputsDirectory,filename), os.path.join(testBuildDirectory,filename))
     
 ### Run HydroDyn on the test case
 if not noExec:

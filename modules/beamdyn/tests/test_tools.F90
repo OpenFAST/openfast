@@ -109,6 +109,8 @@ contains
         p%qp_indx_offset = qp_indx_offset
         p%refine = refine
 
+        p%dof_node = 6
+
         ! fixed size arrays
         p%Glb_crv = (/ 0.0, 0.0, 0.0 /)
         p%GlbRot = identity()
@@ -127,7 +129,7 @@ contains
         call AllocAry(p%QPtWeight, p%nqp, 'QPtWeight', ErrStat, ErrMsg)
         call AllocAry(p%QPtw_ShpDer, p%nqp, p%nodes_per_elem, 'QPtw_ShpDer', ErrStat, ErrMsg)
         call AllocAry(p%Jacobian, p%nqp, p%elem_total, 'Jacobian', ErrStat, ErrMsg)
-        call AllocAry(p%uuN0, 3, p%nodes_per_elem, p%elem_total,'uuN0', ErrStat, ErrMsg)
+        call AllocAry(p%uuN0, p%dof_node, p%nodes_per_elem, p%elem_total,'uuN0', ErrStat, ErrMsg)
 
         ! construct arrays
         p%qp%mmm = 1.0
