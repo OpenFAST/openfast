@@ -164,6 +164,9 @@ if not noExec:
 
 ### Get a list of all the files in the baseline directory
 baselineOutFiles = os.listdir(targetOutputDirectory)
+# Drop the log file, if its listed
+if caseName + '.log' in baselineOutFiles:
+    baselineOutFiles.remove(caseName + '.log')
 
 # these should all exist in the local outputs directory
 localFiles = os.listdir(testBuildDirectory)
