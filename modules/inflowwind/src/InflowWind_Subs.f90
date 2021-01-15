@@ -156,7 +156,7 @@ CONTAINS
 
 !====================================================================================================
 !>  This public subroutine parses the array of strings in InputFileData for the input parameters.
-SUBROUTINE InflowWind_ParseInputFileInfo( InputFileData, EchoFileName, InFileInfo, PriPath, ErrStat, ErrMsg )
+SUBROUTINE InflowWind_ParseInputFileInfo( InputFileData, InFileInfo, PriPath, InputFileName, EchoFileName,  ErrStat, ErrMsg )
 !----------------------------------------------------------------------------------------------------
 
    IMPLICIT NONE
@@ -164,9 +164,10 @@ SUBROUTINE InflowWind_ParseInputFileInfo( InputFileData, EchoFileName, InFileInf
 
       ! Passed variables
    TYPE(InflowWind_InputFile),         INTENT(INOUT)  :: InputFileData        !< Data of the InflowWind Input File
-   CHARACTER(*),                       intent(in   )  :: EchoFileName         !< The name of the echo file, possibly opened in this routine
    TYPE(FileInfoType),                 INTENT(IN   )  :: InFileInfo           !< The derived type for holding the file information
    CHARACTER(*),                       INTENT(IN   )  :: PriPath              !< Path to InflowWind input files
+   CHARACTER(*),                       intent(in   )  :: InputFileName        !< The name of the input file
+   CHARACTER(*),                       intent(in   )  :: EchoFileName         !< The name of the echo file, possibly opened in this routine
 
    INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat              !< Returned error status from this subroutine
    CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg               !< Returned error message from this subroutine
@@ -186,7 +187,7 @@ SUBROUTINE InflowWind_ParseInputFileInfo( InputFileData, EchoFileName, InFileInf
    UnEc                    = -1
 
       ! Allocate the array for the OutList
-   CALL AllocAry( InputFileData%OutList, MaxOutPts, "InflowWind Input File's OutList", TmpErrStat, TmpErrMsg, UnEc )
+   CALL AllocAry( InputFileData%OutList, MaxOutPts, "InflowWind Input File's OutList", TmpErrStat, TmpErrMsg )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
    if (Failed()) return
 
@@ -199,17 +200,17 @@ SUBROUTINE InflowWind_ParseInputFileInfo( InputFileData, EchoFileName, InFileInf
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
    if (Failed()) return
 
-   if ( InputFileData%Echo ) then
-      CALL OpenEcho ( UnEc, TRIM(EchoFileName)//'.ech', ErrStat2, ErrMsg2 )
+   if ( InputFileData%EchoFlag ) then
+      CALL OpenEcho ( UnEc, TRIM(EchoFileName)//'.ech', TmpErrStat, TmpErrMsg )
          if (Failed()) return;
-      WRITE(UnEc, '(A)') 'Echo file for InflowWind input file: '//trim(InputFile)
+      WRITE(UnEc, '(A)') 'Echo file for InflowWind input file: '//trim(InputFileName)
       ! Write the first three lines into the echo file
-      WRITE(UnEc, '(A)') FileInfo_In%Lines(1)
-      WRITE(UnEc, '(A)') FileInfo_In%Lines(2)
-      WRITE(UnEc, '(A)') FileInfo_In%Lines(3)
+      WRITE(UnEc, '(A)') InFileInfo%Lines(1)
+      WRITE(UnEc, '(A)') InFileInfo%Lines(2)
+      WRITE(UnEc, '(A)') InFileInfo%Lines(3)
 
       CurLine = 4
-      call ParseVar( FileInfo_In, CurLine, 'Echo', InputFileData%Echo, ErrStat2, ErrMsg2, UnEc )
+      CALL ParseVar( InFileInfo, CurLine, "Echo", InputFileData%EchoFlag, TmpErrStat, TmpErrMsg, UnEc )
          if (Failed()) return
    endif
 
@@ -242,11 +243,11 @@ SUBROUTINE InflowWind_ParseInputFileInfo( InputFileData, EchoFileName, InFileInf
    ELSE
 
       ! Allocate space for the output location arrays:
-      CALL AllocAry( InputFileData%WindVxiList, InputFileData%NWindVel, 'WindVxiList', TmpErrStat, TmpErrMsg, UnEc )
+      CALL AllocAry( InputFileData%WindVxiList, InputFileData%NWindVel, 'WindVxiList', TmpErrStat, TmpErrMsg )
       CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-      CALL AllocAry( InputFileData%WindVyiList, InputFileData%NWindVel, 'WindVyiList', TmpErrStat, TmpErrMsg, UnEc )
+      CALL AllocAry( InputFileData%WindVyiList, InputFileData%NWindVel, 'WindVyiList', TmpErrStat, TmpErrMsg )
       CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-      CALL AllocAry( InputFileData%WindVziList, InputFileData%NWindVel, 'WindVziList', TmpErrStat, TmpErrMsg, UnEc )
+      CALL AllocAry( InputFileData%WindVziList, InputFileData%NWindVel, 'WindVziList', TmpErrStat, TmpErrMsg )
       CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
       if (Failed()) return
    ENDIF
@@ -484,7 +485,7 @@ SUBROUTINE InflowWind_ParseInputFileInfo( InputFileData, EchoFileName, InFileInf
    CONTAINS
    !-------------------------------------------------------------------------------------------------
       logical function Failed()
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
          Failed = ErrStat >= AbortErrLev
          if (Failed) then
             if (UnEc  > -1_IntKi)      CLOSE( UnEc )
