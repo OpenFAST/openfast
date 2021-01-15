@@ -26,7 +26,7 @@ class FastLibAPI(CDLL):
         self.dt = c_double(0.0)
         self.abort_error_level = c_int(0)
         self.num_outs = c_int(0)
-        self.channel_names = create_string_buffer(20 * 4000)
+        self._channel_names = create_string_buffer(20 * 4000)
         self.output_array = None
         self.error_status = c_int(0)
         self.error_message = create_string_buffer(1025)
@@ -119,7 +119,7 @@ class FastLibAPI(CDLL):
             byref(self.dt),
             byref(self.error_status),
             self.error_message,
-            self.channel_names
+            self._channel_names
         )
         self._error_check(self.error_status, self.error_message)
 
@@ -179,6 +179,6 @@ class FastLibAPI(CDLL):
 
     @property
     def output_channel_names(self):
-        output_channel_names = self.channel_names.value.split()
+        output_channel_names = self._channel_names.value.split()
         output_channel_names = [n.decode('UTF-8') for n in output_channel_names]        
         return output_channel_names
