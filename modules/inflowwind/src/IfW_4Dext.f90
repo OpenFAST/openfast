@@ -240,9 +240,11 @@ FUNCTION Interp4D( Time, Position, p, m, ErrStat, ErrMsg )
       Tmp = (Time - m%TgridStart) / p%delta(i)
       Indx_Lo(i) = INT( Tmp ) + 1     ! convert REAL to INTEGER, then add one since our grid indices start at 1, not 0
       isopc(i) = 2.0_ReKi * (Tmp - REAL(Indx_Lo(i) - 1_IntKi, ReKi)) - 1.0_ReKi  ! convert to value between -1 and 1
-      IF ( ( Indx_Lo(i) == p%n(i) ) .AND. ( EqualRealNos( isopc(i), -1.0_SiKi ) ) ) THEN    ! Allow for the special case where Time = TgridStart + deltat*( n_high_low - 1 ) 
-         Indx_Lo(i) = Indx_Lo(i) - 1
-         isopc(i) = 1.0_SiKi
+      IF ( ( Indx_Lo(i) == p%n(i) ) ) then
+         if ( abs(isopc(i) + 1.0_SiKi) < 0.001_SiKi ) THEN    ! Allow for the special case where Time = TgridStart + deltat*( n_high_low - 1 ) 
+            Indx_Lo(i) = Indx_Lo(i) - 1
+            isopc(i) = 1.0_SiKi
+         end if
       END IF 
       
    !-------------------------------------------------------------------------------------------------

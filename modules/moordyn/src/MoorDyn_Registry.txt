@@ -68,6 +68,7 @@ typedef  ^            ^                ReKi               rd             {3}    
 typedef  ^            MD_Line          IntKi              IdNum         -        -  -   "integer identifier of this Line"
 typedef  ^            ^                CHARACTER(10)      type          -        -  -   "type of line.  should match one of LineProp names"
 typedef  ^            ^                IntKi              OutFlagList   {20}     -  -   "array specifying what line quantities should be output (1 vs 0)"   -
+typedef  ^            ^                IntKi              CtrlChan      -        -  -   "index of control channel that will drive line active tensioning (0 for none)"   -
 typedef  ^            ^                IntKi              FairConnect   -        -  -   "IdNum of Connection at fairlead"
 typedef  ^            ^                IntKi              AnchConnect   -        -  -   "IdNum of Connection at anchor"
 typedef  ^            ^                IntKi              PropsIdNum    -        -  -   "the IdNum of the associated line properties"     -
@@ -78,6 +79,7 @@ typedef  ^            ^                ReKi               r            {:}{:}   
 typedef  ^            ^                ReKi               rd           {:}{:}    -  -   "node velocities"  -
 typedef  ^            ^                ReKi               q            {:}{:}    -  -   "node tangent vectors"  -
 typedef  ^            ^                ReKi               l            {:}       -  -   "segment unstretched length"  "[m]"
+typedef  ^            ^                ReKi               ld           {:}       -  -   "segment unstretched length rate of change (used in active tensioning)"  "[m]"
 typedef  ^            ^                ReKi               lstr         {:}       -  -   "segment stretched length"  "[m]"
 typedef  ^            ^                ReKi               lstrd        {:}       -  -   "segment change in stretched length"  "[m/s]"
 typedef  ^            ^                ReKi               V            {:}       -  -   "segment volume"  "[m^3]"
@@ -162,6 +164,8 @@ typedef   ^       ^                    IntKi               MDUnOut        -     
 # ============================== Inputs ============================================================================================================================================
 typedef   ^       InputType            MeshType     PtFairleadDisplacement  -    -    -   "mesh for position AND VELOCITY of each fairlead in X,Y,Z"  "[m, m/s]"
 # typedef ^       ^                    MeshType     HydroForceLineMesh      -    -    -   "Meshed input data"            -
+typedef   ^       ^                    ReKi         DeltaL                  {:}  -    -   "change in line length command for each channel"       "[m]"
+typedef   ^       ^                    ReKi         DeltaLdot               {:}  -    -   "rate of change of line length command for each channel"       "[m]"
 
 
 ## ============================== Outputs ============================================================================================================================================

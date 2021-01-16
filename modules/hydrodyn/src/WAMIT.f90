@@ -1643,15 +1643,18 @@ SUBROUTINE WAMIT_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, 
       
       
             ! Compute the first time derivatives of the continuous states here:
-      m%SS_Rdtn_u%dq(1:3) = u%Mesh%TranslationVel(:,1) 
-      m%SS_Rdtn_u%dq(4:6) = u%Mesh%RotationVel(:,1) 
+      if (p%RdtnMod == 2) then
+         m%SS_Rdtn_u%dq(1:3) = u%Mesh%TranslationVel(:,1) 
+         m%SS_Rdtn_u%dq(4:6) = u%Mesh%RotationVel(:,1) 
     
-      CALL SS_Rad_CalcContStateDeriv( Time, m%SS_Rdtn_u, p%SS_Rdtn, x%SS_Rdtn, xd%SS_Rdtn, z%SS_Rdtn, OtherState%SS_Rdtn, m%SS_Rdtn, dxdt%SS_Rdtn, ErrStat, ErrMsg )      
+         CALL SS_Rad_CalcContStateDeriv( Time, m%SS_Rdtn_u, p%SS_Rdtn, x%SS_Rdtn, xd%SS_Rdtn, z%SS_Rdtn, OtherState%SS_Rdtn, m%SS_Rdtn, dxdt%SS_Rdtn, ErrStat, ErrMsg )
+      end if
       
          ! NOTE: The input below (0.0) will only work as part of a linearization Get_OP call! If this routine (WAMIT_CalcContStateDeriv) is called in another context, then the following
          ! input needs to be implemented generically.
-      CALL SS_Exc_CalcContStateDeriv( Time, 0.0_SiKi, p%SS_Exctn, x%SS_Exctn, xd%SS_Exctn, z%SS_Exctn, OtherState%SS_Exctn, m%SS_Exctn, dxdt%SS_Exctn, ErrStat, ErrMsg )      
-       
+      if (p%ExctnMod == 2) then
+         CALL SS_Exc_CalcContStateDeriv( Time, 0.0_SiKi, p%SS_Exctn, x%SS_Exctn, xd%SS_Exctn, z%SS_Exctn, OtherState%SS_Exctn, m%SS_Exctn, dxdt%SS_Exctn, ErrStat, ErrMsg )      
+       end if
 
 END SUBROUTINE WAMIT_CalcContStateDeriv
 !----------------------------------------------------------------------------------------------------------------------------------

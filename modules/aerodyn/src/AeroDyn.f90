@@ -4710,10 +4710,12 @@ SUBROUTINE Init_Jacobian_x( p, InitOut, ErrStat, ErrMsg)
    
    
    nx = p%BEMT%DBEMT%lin_nx + p%BEMT%UA%lin_nx
-   if (nx==0) return
    
       ! allocate space for the row/column names and for perturbation sizes
+   ! always allocate this in case it is size zero ... (we use size(p%dx) for many calculations)
    CALL AllocAry(p%dx,                 nx, 'p%dx',         ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (nx==0) return
+   
    CALL AllocAry(InitOut%LinNames_x,   nx, 'LinNames_x',   ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    CALL AllocAry(InitOut%RotFrame_x,   nx, 'RotFrame_x',   ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    CALL AllocAry(InitOut%DerivOrder_x, nx, 'DerivOrder_x', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)

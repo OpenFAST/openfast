@@ -32,6 +32,7 @@ include_directories(
 
 set(testlist
     test_NWTC_IO_CheckArgs
+    test_NWTC_IO_FileInfo
     test_NWTC_RandomNumber
 )
 foreach(test ${testlist})
