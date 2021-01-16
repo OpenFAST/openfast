@@ -190,6 +190,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: FillFSLoc      !< Z-location of the filled free-surface [m]
     REAL(ReKi)  :: FillDens      !< Filled fluid density [kg/m^3]
     LOGICAL  :: PropPot      !< Is this element/member modeled with potential flow theory T/F [-]
+    LOGICAL  :: Flipped      !< Was the member flipped in a reordering event?  Need to know this to get the correct normal vector to the ends [-]
   END TYPE Morison_MemberType
 ! =======================
 ! =========  Morison_MemberLoads  =======
@@ -2238,6 +2239,7 @@ ENDIF
     DstMemberTypeData%FillFSLoc = SrcMemberTypeData%FillFSLoc
     DstMemberTypeData%FillDens = SrcMemberTypeData%FillDens
     DstMemberTypeData%PropPot = SrcMemberTypeData%PropPot
+    DstMemberTypeData%Flipped = SrcMemberTypeData%Flipped
  END SUBROUTINE Morison_CopyMemberType
 
  SUBROUTINE Morison_DestroyMemberType( MemberTypeData, ErrStat, ErrMsg )
@@ -2609,6 +2611,7 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! FillFSLoc
       Re_BufSz   = Re_BufSz   + 1  ! FillDens
       Int_BufSz  = Int_BufSz  + 1  ! PropPot
+      Int_BufSz  = Int_BufSz  + 1  ! Flipped
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -3254,6 +3257,8 @@ ENDIF
     ReKiBuf(Re_Xferred) = InData%FillDens
     Re_Xferred = Re_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%PropPot, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%Flipped, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE Morison_PackMemberType
 
@@ -4024,6 +4029,8 @@ ENDIF
     OutData%FillDens = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%PropPot = TRANSFER(IntKiBuf(Int_Xferred), OutData%PropPot)
+    Int_Xferred = Int_Xferred + 1
+    OutData%Flipped = TRANSFER(IntKiBuf(Int_Xferred), OutData%Flipped)
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE Morison_UnPackMemberType
 
