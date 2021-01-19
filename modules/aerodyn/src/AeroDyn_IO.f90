@@ -2306,7 +2306,7 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InputFile, RootName, NumBlades, interv
 CONTAINS
    !-------------------------------------------------------------------------------------------------
    logical function Failed()
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'StC_ParseInputFileInfo' )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ParsePrimaryFileInfo' )
       Failed = ErrStat >= AbortErrLev
       if (Failed) then
          if (UnEc  > -1_IntKi)      CLOSE( UnEc )
