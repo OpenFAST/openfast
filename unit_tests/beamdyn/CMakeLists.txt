@@ -31,6 +31,7 @@ include_directories(
 
 set(testlist
     test_tools
+    test_BD_ComputeIniNodalCrv
     test_BD_CrvCompose
     test_BD_CheckRotMat
     test_BD_CrvExtractCrv
