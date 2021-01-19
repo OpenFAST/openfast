@@ -2128,16 +2128,12 @@ END SUBROUTINE CheckR16Var
    CALL WrScr( 'Copyright (C) '//TRIM(Year)//' National Renewable Energy Laboratory' )
    CALL WrScr( 'Copyright (C) '//TRIM(Year)//' Envision Energy USA LTD' )
    CALL WrScr('')
-   CALL WrScr( 'This program is licensed under Apache License Version 2.0 and comes with ABSOLUTELY NO WARRANTY. '//&
-               'See the "LICENSE" file distributed with this software for details.')   
-
    IF (PRESENT(AdditionalComment)) THEN
-      CALL WrScr(Stars)
-      CALL WrScr(Stars)
       CALL WrScr( AdditionalComment )
       CALL WrScr('')       
    END IF
-   
+   CALL WrScr( 'This program is licensed under Apache License Version 2.0 and comes with ABSOLUTELY NO WARRANTY. '//&
+               'See the "LICENSE" file distributed with this software for details.')   
    CALL WrScr(Stars)
    CALL WrScr('')
 
@@ -3362,11 +3358,11 @@ END SUBROUTINE CheckR16Var
 
          ! Arguments declarations.
 
+      INTEGER,             INTENT(IN)             :: AryLen                        !< The length of the array to parse.
       TYPE (FileInfoType), INTENT(IN)             :: FileInfo                      !< The derived type for holding the file information.
       INTEGER(IntKi),      INTENT(INOUT)          :: LineNum                       !< The number of the line to parse.
       CHARACTER(*),        INTENT(IN)             :: AryName                       !< The array name we are trying to fill.
       CHARACTER(*),        INTENT(OUT)            :: Ary(AryLen)                   !< The array to receive the input values.
-      INTEGER,             INTENT(IN)             :: AryLen                        !< The length of the array to parse.
       INTEGER(IntKi),      INTENT(OUT)            :: ErrStat                       !< The error status.
       CHARACTER(*),        INTENT(OUT)            :: ErrMsg                        !< The error message, if ErrStat /= 0.
       INTEGER,             INTENT(IN), OPTIONAL   :: UnEc                          !< I/O unit for echo file. If present and > 0, write to UnEc.
@@ -4446,31 +4442,59 @@ END SUBROUTINE CheckR16Var
       INTEGER(IntKi),             INTENT(  OUT) :: ErrStat
       CHARACTER(*),               INTENT(  OUT) :: ErrMsg
 
+      character(len=len(StringArray))  :: TmpStringArray(size(StringArray))
+      character(len=len(StringArray))  :: Line
+      integer                          :: TmpFileLine(size(StringArray))
+
       CHARACTER(*), PARAMETER :: RoutineName = 'InitFileInfo'
-      INTEGER :: i
+      INTEGER :: i, NumLines, IC, NumCommChars, LineLen, FirstComm, CommLoc
 
       ErrStat = ErrID_None
       ErrMsg  = ""
+      NumLines = 0      ! Initialize counter for non-comment populated lines
+      TmpFileLine = 0   ! Line number that was passed in 
+      NumCommChars = LEN_TRIM( CommChars )   ! Number of globally specified CommChars
 
-      FileInfo%NumLines = size(StringArray)
+         ! Find how many non-comment lines we have
+      do i=1,size(StringArray)
+         Line=StringArray(i)
+         LineLen      = LEN_TRIM( Line )
+         IF ( ( NumCommChars == 0 ) .OR. ( LineLen == 0 ) ) CYCLE 
+ 
+         FirstComm = MIN( LEN( Line ), LineLen + 1 )
+ 
+         DO IC=1,NumCommChars
+            CommLoc = INDEX( Line, CommChars(IC:IC) )
+            IF ( CommLoc > 0 )  THEN
+               FirstComm = MIN( CommLoc, FirstComm )
+            ENDIF
+         END DO
+
+            ! Only keep lines with no comments and some sort of length
+         if ( LEN_TRIM( Line(:FirstComm-1) ) > 0 ) then
+            NumLines=NumLines+1
+            TmpStringArray(NumLines) = Line(:FirstComm-1)   ! Store non-comment line
+            TmpFileLine(NumLines) = i                        ! Corresponding line number of passed in info
+         endif
+      enddo
+
+         ! Now save the FileInfo
+      FileInfo%NumLines = NumLines        ! only lines that contained anything 
       FileInfo%NumFiles = 1
-
       ALLOCATE( FileInfo%Lines(FileInfo%NumLines) )
       ALLOCATE( FileInfo%FileLine(FileInfo%NumLines) )
-      ALLOCATE( FileInfo%FileIndx(FileInfo%NumFiles) )
+      ALLOCATE( FileInfo%FileIndx(FileInfo%NumLines) )
       ALLOCATE( FileInfo%FileList(FileInfo%NumFiles) )
 
       DO i = 1, FileInfo%NumLines
-
-         IF ( LEN(StringArray(i)) > LEN(FileInfo%Lines(i)) ) THEN
+         IF ( LEN(TmpStringArray(i)) > LEN(FileInfo%Lines(i)) ) THEN
             CALL SetErrStat( ErrID_Fatal, 'Input string exceeds the bounds of FileInfoType.' , ErrStat, ErrMsg, RoutineName )
             RETURN
          END IF
-
-         FileInfo%Lines(i) = StringArray(i)
+         FileInfo%Lines(i)    = TmpStringArray(i)
+         FileInfo%FileLine(i) = TmpFileLine(i)
       END DO      
-      FileInfo%FileLine = (/ (i, i = 1, FileInfo%NumLines) /)
-      FileInfo%FileIndx = (/ (i, i = 1, FileInfo%NumFiles) /)
+      FileInfo%FileIndx = FileInfo%NumFiles
       FileInfo%FileList = (/ "passed file info" /)
 
    END SUBROUTINE

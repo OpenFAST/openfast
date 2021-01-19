@@ -23,10 +23,10 @@ contains
         InFileInfo = getInputFileData()
         CALL InflowWind_ParseInputFileInfo(InputFileData , InFileInfo, PriPath, TmpErrStat, TmpErrMsg)
 
-        @assertEqual(TmpErrStat, 0)
-        @assertEqual(InputFileData%WindType, 1)
-        @assertEqual(InputFileData%NWindVel, 1)
-        @assertEqual(InputFileData%WindVziList(1), 90)
+        @assertEqual(0, TmpErrStat, message='Error message: '//trim(TmpErrMsg)//NewLine//'ErrStat: ')
+        @assertEqual(1, InputFileData%WindType)
+        @assertEqual(1, InputFileData%NWindVel)
+        @assertEqual(90, InputFileData%WindVziList(1))
 
     end subroutine
 
@@ -43,20 +43,20 @@ contains
         PriPath = ""
 
         InFileInfo = getInputFileData()
-        InFileInfo%Lines(7:10) = (/ &
-            '          2   NWindVel       - Number of points to output the wind velocity    (0 to 9)                                                                        ', &
-            '        0,0   WindVxiList    - List of coordinates in the inertial X direction (m)                                                                             ', &
-            '        0,0   WindVyiList    - List of coordinates in the inertial Y direction (m)                                                                             ', &
-            '     80,100   WindVziList    - List of coordinates in the inertial Z direction (m)                                                                             ' &
+        InFileInfo%Lines(8:11) = (/ &
+            '          2   NWindVel       - Number of points to output the wind velocity    (0 to 9)                                                                                            ', &
+            '        0,0   WindVxiList    - List of coordinates in the inertial X direction (m)                                                                                                 ', &
+            '        0,0   WindVyiList    - List of coordinates in the inertial Y direction (m)                                                                                                 ', &
+            '     80,100   WindVziList    - List of coordinates in the inertial Z direction (m)                                                                                                 ' &
         /)
 
         CALL InflowWind_ParseInputFileInfo(InputFileData , InFileInfo, PriPath, TmpErrStat, TmpErrMsg)
 
-        @assertEqual(TmpErrStat, 0)
-        @assertEqual(InputFileData%WindType, 1)
-        @assertEqual(InputFileData%NWindVel, 2)
-        @assertEqual(InputFileData%WindVziList(1), 80)
-        @assertEqual(InputFileData%WindVziList(2), 100)
+        @assertEqual(0, TmpErrStat, message='Error message: '//trim(TmpErrMsg)//NewLine//'ErrStat: ')
+        @assertEqual(1, InputFileData%WindType)
+        @assertEqual(2, InputFileData%NWindVel)
+        @assertEqual(80, InputFileData%WindVziList(1))
+        @assertEqual(100, InputFileData%WindVziList(2))
 
     end subroutine
 
