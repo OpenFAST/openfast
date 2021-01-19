@@ -27,7 +27,7 @@ subroutine test_BD_ComputeIniNodalCrv()
     
     ! --------------------------------------------------------------------------
     testname = "Tangent aligned with z-axis and 0 degree twist:"
-    n = (/ 0.0_BDKi, 0.0_BDKi, 1.0_BDKi /) ! tangent axis
+    n = (/ real(0.0, BDKi), real(0.0, BDKi), real(1.0, BDKi) /) ! tangent axis
     angle = 0
 
     ! Baseline Wiener-Milenkovic parameters
@@ -45,7 +45,7 @@ subroutine test_BD_ComputeIniNodalCrv()
 
     ! Baseline Wiener-Milenkovic parameters
     param = 4*tan((Pi_D/4)/4)
-    baseline_wmparams = (/ 0.0, param, 0.0 /)
+    baseline_wmparams = (/ real(0.0, BDKi), param, real(0.0, BDKi) /)
 
     call BD_ComputeIniNodalCrv(n, angle, test_wmparams, ErrStat, ErrMsg)
 
@@ -59,7 +59,7 @@ subroutine test_BD_ComputeIniNodalCrv()
 
     ! Baseline Wiener-Milenkovic parameters
     param = 4*tan((-Pi_D/4)/4)
-    baseline_wmparams = (/ param, 0.0, 0.0 /)
+    baseline_wmparams = (/ param, real(0.0, BDKi), real(0.0, BDKi) /)
 
     call BD_ComputeIniNodalCrv(n, angle, test_wmparams, ErrStat, ErrMsg)
 
@@ -68,12 +68,12 @@ subroutine test_BD_ComputeIniNodalCrv()
 
     ! --------------------------------------------------------------------------
     testname = "Tangent along z-axis with 45 degree twist:"
-    n = (/ 0.0_BDKi, 0.0, 1.0_BDKi /) ! tangent axis
+    n = (/ real(0.0, BDKi), real(0.0, BDKi), 1.0_BDKi /) ! tangent axis
     angle = 45.0_BDKi
 
     ! Baseline Wiener-Milenkovic parameters
     param = 4*tan((Pi_D/4)/4)
-    baseline_wmparams = (/ 0.0, 0.0, param /)
+    baseline_wmparams = (/ real(0.0, BDKi), real(0.0, BDKi), param /)
 
     call BD_ComputeIniNodalCrv(n, angle, test_wmparams, ErrStat, ErrMsg)
 
