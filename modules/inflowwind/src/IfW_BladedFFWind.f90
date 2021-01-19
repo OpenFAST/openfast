@@ -525,6 +525,7 @@ END SUBROUTINE ReadFiles
       RefHt                = 0.0
       Periodic             = .FALSE.
       LHR                  = .FALSE.
+      CWise                = .FALSE.  ! default value, in case it is not in this file
 
          !----------------------------------------------------------------------------------------------
          ! Open summary file.
@@ -540,7 +541,7 @@ END SUBROUTINE ReadFiles
          !----------------------------------------------------------------------------------------------
 
       ! Here are the strings we're looking for, in this order:
-      ! 1) 'CLOCKWISE'
+      ! 1) 'CLOCKWISE' (optional)
       ! 2) 'HUB HEIGHT'
       ! 3)     (unused; decided we didn't need to read data also stored in the binary file)
       ! 4) 'UBAR'
@@ -557,7 +558,8 @@ END SUBROUTINE ReadFiles
          IF ( TmpErrStat /= 0 ) THEN
 
                ! the "HEIGHT OFFSET", "PERIODIC", and "BLADED LEFT-HAND RULE" parameters are not necessary.  We'll assume they are zero/false if we didn't find it.
-            IF ( StrNeeded(1) .OR. StrNeeded(2) .OR. StrNeeded(4)  ) THEN
+               ! We will also assume "CLOCKWISE" is false if we didn't find it.
+            IF ( StrNeeded(2) .OR. StrNeeded(4)  ) THEN
                CALL SetErrStat( ErrID_Fatal, ' Error reading line #'//TRIM(Num2LStr(LineCount))//' of the summary file, "'// &
                            TRIM(FileName)//'". Could not find all of the required parameters.', ErrStat, ErrMsg, RoutineName )                  
                RETURN
@@ -570,36 +572,39 @@ END SUBROUTINE ReadFiles
          CALL Conv2UC ( LINE )
 
 
-         IF ( StrNeeded(1) ) THEN
+         IF ( StrNeeded(2) ) THEN ! if "CLOCKWISE" (StrNeeded(1)) is in the file, we would have already read it. If not, it's not in this file.
 
-            !-------------------------------------------------------------------------------------------
-            ! #1: Get the rotation direction, using the string "CLOCKWISE"
-            !-------------------------------------------------------------------------------------------
+            IF ( StrNeeded(1) ) THEN 
 
-            IF ( INDEX( LINE, 'CLOCKWISE' ) > 0 ) THEN
+               !-------------------------------------------------------------------------------------------
+               ! #1: Get the rotation direction, using the string "CLOCKWISE"
+               !-------------------------------------------------------------------------------------------
 
-               READ (LINE, *, IOSTAT = TmpErrStat)  CWise          ! Look for True/False values
+               IF ( INDEX( LINE, 'CLOCKWISE' ) > 0 ) THEN
 
-               IF ( TmpErrStat /= 0 ) THEN                         ! Look for Yes/No values instead
+                  READ (LINE, *, IOSTAT = TmpErrStat)  CWise          ! Look for True/False values
 
-                  LINE = ADJUSTL ( LINE )                      ! Remove leading spaces from input line
+                  IF ( TmpErrStat /= 0 ) THEN                         ! Look for Yes/No values instead
 
-                  SELECT CASE (LINE(1:1) )
-                     CASE ('Y')
-                        CWise = .TRUE.
-                     CASE ('N')
-                        CWise = .FALSE.
-                     CASE DEFAULT
-                        CALL SetErrStat( ErrID_Fatal, ' Error reading rotation direction (CLOCKWISE) from FF summary file.', ErrStat, ErrMsg, RoutineName )                  
-                        RETURN
-                  END SELECT
+                     LINE = ADJUSTL ( LINE )                      ! Remove leading spaces from input line
 
-               ENDIF ! TmpErrStat /= 0
-               StrNeeded(1) = .FALSE.
+                     SELECT CASE (LINE(1:1) )
+                        CASE ('Y')
+                           CWise = .TRUE.
+                        CASE ('N')
+                           CWise = .FALSE.
+                        CASE DEFAULT
+                           CALL SetErrStat( ErrID_Fatal, ' Error reading rotation direction (CLOCKWISE) from FF summary file.', ErrStat, ErrMsg, RoutineName )                  
+                           RETURN
+                     END SELECT
+                     CYCLE
 
-            ENDIF   ! INDEX for "CLOCKWISE"
+                  ENDIF ! TmpErrStat /= 0
+                  StrNeeded(1) = .FALSE.
 
-         ELSEIF ( StrNeeded(2) ) THEN
+               ENDIF   ! INDEX for "CLOCKWISE"
+
+            END IF
 
             !-------------------------------------------------------------------------------------------
             ! #2: Get the hub height, using the strings "HUB HEIGHT" or "ZHUB"
@@ -614,7 +619,7 @@ END SUBROUTINE ReadFiles
                   RETURN
                ENDIF
                StrNeeded(2) = .FALSE.
-
+               
             ENDIF !INDEX for "HUB HEIGHT" or "ZHUB"
 
    !      ELSEIF ( StrNeeded(3) ) THEN
