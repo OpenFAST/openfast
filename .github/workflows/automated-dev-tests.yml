@@ -15,104 +15,134 @@ on:
       - 'share/**'
       - 'vs-build/**'
 
+env:
+  FORTRAN_COMPILER: gfortran-10
+  NUM_PROCS: 8
+
 # runs-on: ${{ matrix.os }}
 # strategy:
 #   matrix:
 #     os: [macOS-10.14, ubuntu-18.04]
 
 jobs:
-  build-and-test:
-
-    runs-on: ubuntu-latest
-    container:
-      image: rafmudaf/openfast-ubuntu:dev
+  regression-test:
+    runs-on: ubuntu-20.04
     steps:
       - name: Checkout
         uses: actions/checkout@main
         with:
           submodules: recursive
-      - name: Git Update
-        uses: ./.github/actions/git-update
-        with:
-          repository: $GITHUB_REPOSITORY
-          ref: $GITHUB_REF
 
-      - name: Configure CMake
-        uses: ./.github/actions/cmake-config
+      - name: Setup Python
+        uses: actions/setup-python@v2
         with:
-          build-type: RelWithDebInfo
-          additional-flags: -DBUILD_TESTING=ON -DCTEST_PLOT_ERRORS=ON
+          python-version: '3.7'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy Bokeh==1.4
 
-      - name: Compile Unit Tests
-        uses: ./.github/actions/compile
-        with:
-          build-target: 'unit_tests'
-      - name: Compile Drivers
-        uses: ./.github/actions/compile
-        with:
-          build-target: 'beamdyn_driver hydrodyn_driver'
-      - name: Compile OpenFAST
+      - name: Setup Workspace
+        run: cmake -E make_directory ${{runner.workspace}}/build
+      - name: Configure Build
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          cmake \
+            -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/install \
+            -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
+            -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo \
+            -DBUILD_TESTING:BOOL=ON \
+            -DCTEST_PLOT_ERRORS:BOOL=ON \
+            ${GITHUB_WORKSPACE}
+      - name: Build OpenFAST
         # if: contains(github.event.head_commit.message, 'Action - Test All') || contains(github.event.pull_request.labels.*.name, 'Action - Test All') 
-        uses: ./.github/actions/compile
-        with:
-          build-target: 'install'
+        working-directory: ${{runner.workspace}}/build
+        run: cmake --build . --target install -- -j ${{env.NUM_PROCS}}
 
-      - name: 'Run NWTC Library tests'
-        uses: ./.github/actions/tests-module-nwtclibrary
-      - name: 'Run AeroDyn tests'
-        uses: ./.github/actions/tests-module-aerodyn
-      - name: 'Run BeamDyn tests'
+      - name: Run BeamDyn tests
         uses: ./.github/actions/tests-module-beamdyn
-      - name: 'Run HydroDyn tests'
+        with:
+          test-target: regression
+      - name: Run HydroDyn tests
         uses: ./.github/actions/tests-module-hydrodyn
-      - name: 'Run InflowWind tests'
-        uses: ./.github/actions/tests-module-inflowwind
-      - name: 'Run OpenFAST tests'
+      - name: Run OpenFAST tests
         # if: contains(github.event.head_commit.message, 'Action - Test All') || contains(github.event.pull_request.labels.*.name, 'Action - Test All') 
         uses: ./.github/actions/tests-gluecode-openfast
 
-      - name: 'If failure, post test files'
+      - name: Failing test artifacts
         uses: actions/upload-artifact@v2
         if: failure()
         with:
           name: test-results
           path: |
-            /openfast/build/reg_tests/modules
-            /openfast/build/reg_tests/glue-codes/openfast
-            !/openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline
-            !/openfast/build/reg_tests/glue-codes/openfast/AOC
-            !/openfast/build/reg_tests/glue-codes/openfast/AWT27
-            !/openfast/build/reg_tests/glue-codes/openfast/SWRT
-            !/openfast/build/reg_tests/glue-codes/openfast/UAE_VI
-            !/openfast/build/reg_tests/glue-codes/openfast/WP_Baseline
+            ${{runner.workspace}}/build/reg_tests/modules
+            ${{runner.workspace}}/build/reg_tests/glue-codes/openfast
+            !${{runner.workspace}}/build/reg_tests/glue-codes/openfast/5MW_Baseline
+            !${{runner.workspace}}/build/reg_tests/glue-codes/openfast/AOC
+            !${{runner.workspace}}/build/reg_tests/glue-codes/openfast/AWT27
+            !${{runner.workspace}}/build/reg_tests/glue-codes/openfast/SWRT
+            !${{runner.workspace}}/build/reg_tests/glue-codes/openfast/UAE_VI
+            !${{runner.workspace}}/build/reg_tests/glue-codes/openfast/WP_Baseline
 
-
-  build-single-precision:
-    # Test if single precision compile completes.
-    # Do not run the test suite.
-
-    runs-on: ubuntu-latest
-    container:
-      image: rafmudaf/openfast-ubuntu:dev
+  unit-test:
+    runs-on: ubuntu-20.04
     steps:
       - name: Checkout
         uses: actions/checkout@main
         with:
           submodules: recursive
-      - name: Git Update
-        uses: ./.github/actions/git-update
+      - name: Setup
+        run: cmake -E make_directory ${{runner.workspace}}/build
+      - name: Configure
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          cmake \
+            -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/install \
+            -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
+            -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo \
+            -DBUILD_TESTING:BOOL=ON \
+            ${GITHUB_WORKSPACE}
+
+      - name: Build unit tests
+        working-directory: ${{runner.workspace}}/build
+        run: cmake --build . --target unit_tests -- -j ${{env.NUM_PROCS}}
+
+      - name: Run NWTC Library tests
+        uses: ./.github/actions/tests-module-nwtclibrary
+      - name: Run AeroDyn tests
+        uses: ./.github/actions/tests-module-aerodyn
+      - name: Run BeamDyn tests
+        uses: ./.github/actions/tests-module-beamdyn
         with:
-          repository: $GITHUB_REPOSITORY
-          ref: $GITHUB_REF
-      - name: Configure CMake
-        uses: ./.github/actions/cmake-config
+          test-target: unit
+      - name: Run InflowWind tests
+        uses: ./.github/actions/tests-module-inflowwind
+
+  compile-all-single-precision:
+    # Test if single precision compile completes.
+    # Compiles all targets excluding tests.
+    # Do not run the test suite.
+
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@main
         with:
-          build-type: Debug
-          additional-flags: -DDOUBLE_PRECISION=OFF
-      - name: Compile OpenFAST
-        uses: ./.github/actions/compile
-        with:
-          build-target: 'all'
-      - name: simple-test
-        working-directory: /openfast/build
+          submodules: recursive
+      - name: Setup
+        run: cmake -E make_directory ${{runner.workspace}}/build
+      - name: Configure
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          cmake \
+            -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/install \
+            -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
+            -DCMAKE_BUILD_TYPE:STRING=Debug \
+            -DDOUBLE_PRECISION:BOOL=OFF \
+            ${GITHUB_WORKSPACE}
+      - name: Build all
+        working-directory: ${{runner.workspace}}/build
+        run: cmake --build . --target all -- -j ${{env.NUM_PROCS}}
+      - name: Test
+        working-directory: ${{runner.workspace}}/build
         run: ./glue-codes/openfast/openfast -v
