@@ -819,9 +819,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          if (allocated(Init%OutData_HD%LinNames_y)) call move_alloc(Init%OutData_HD%LinNames_y,y_FAST%Lin%Modules(MODULE_HD)%Instance(1)%Names_y )
          if (allocated(Init%OutData_HD%LinNames_u)) call move_alloc(Init%OutData_HD%LinNames_u,y_FAST%Lin%Modules(MODULE_HD)%Instance(1)%Names_u )
          if (allocated(Init%OutData_HD%LinNames_x)) call move_alloc(Init%OutData_HD%LinNames_x, y_FAST%Lin%Modules(MODULE_HD)%Instance(1)%Names_x )
-! LIN-TODO: Determine if we need to create this data even though we don't have rotating frames in HD
-         !if (allocated(Init%OutData_HD%RotFrame_y)) call move_alloc(Init%OutData_HD%RotFrame_y,y_FAST%Lin%Modules(MODULE_HD)%Instance(1)%RotFrame_y )
-         !if (allocated(Init%OutData_HD%RotFrame_u)) call move_alloc(Init%OutData_HD%RotFrame_u,y_FAST%Lin%Modules(MODULE_HD)%Instance(1)%RotFrame_u )
          if (allocated(Init%OutData_HD%DerivOrder_x)) call move_alloc(Init%OutData_HD%DerivOrder_x,y_FAST%Lin%Modules(MODULE_HD)%Instance(1)%DerivOrder_x)
          if (allocated(Init%OutData_HD%IsLoad_u  )) call move_alloc(Init%OutData_HD%IsLoad_u  ,y_FAST%Lin%Modules(MODULE_HD)%Instance(1)%IsLoad_u   )
 
@@ -859,12 +856,13 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          Init%InData_SD%WtrDpth = 0.0_ReKi
       END IF
             
+      Init%InData_SD%Linearize     = p_FAST%Linearize
       Init%InData_SD%g             = Init%OutData_ED%Gravity     
-      !Init%InData_SD%UseInputFile = .TRUE. 
+      !Ini%tInData_SD%UseInputFile = .TRUE. 
       Init%InData_SD%SDInputFile   = p_FAST%SubFile
       Init%InData_SD%RootName      = p_FAST%OutFileRoot
-      Init%InData_SD%TP_RefPoint   = ED%y%PlatformPtMesh%Position(:,1)  ! bjj: not sure what this is supposed to be 
-      Init%InData_SD%SubRotateZ    = 0.0                                ! bjj: not sure what this is supposed to be 
+      Init%InData_SD%TP_RefPoint   = ED%y%PlatformPtMesh%Position(:,1)  ! "Interface point" where loads will be transferred to
+      Init%InData_SD%SubRotateZ    = 0.0                                        ! Used by driver to rotate structure around z
       
             
       CALL SD_Init( Init%InData_SD, SD%Input(1), SD%p,  SD%x(STATE_CURR), SD%xd(STATE_CURR), SD%z(STATE_CURR),  &
@@ -874,6 +872,21 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       p_FAST%ModuleInitialized(Module_SD) = .TRUE.
       CALL SetModuleSubstepTime(Module_SD, p_FAST, y_FAST, ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+      allocate( y_FAST%Lin%Modules(MODULE_SD)%Instance(1), stat=ErrStat2)
+      if (ErrStat2 /= 0 ) then
+         call SetErrStat(ErrID_Fatal, "Error allocating Lin%Modules(SD).", ErrStat, ErrMsg, RoutineName )
+      else
+         if (allocated(Init%OutData_SD%LinNames_y)) call move_alloc(Init%OutData_SD%LinNames_y,y_FAST%Lin%Modules(MODULE_SD)%Instance(1)%Names_y)
+         if (allocated(Init%OutData_SD%LinNames_x)) call move_alloc(Init%OutData_SD%LinNames_x,y_FAST%Lin%Modules(MODULE_SD)%Instance(1)%Names_x)
+         if (allocated(Init%OutData_SD%LinNames_u)) call move_alloc(Init%OutData_SD%LinNames_u,y_FAST%Lin%Modules(MODULE_SD)%Instance(1)%Names_u)
+         if (allocated(Init%OutData_SD%RotFrame_y)) call move_alloc(Init%OutData_SD%RotFrame_y,y_FAST%Lin%Modules(MODULE_SD)%Instance(1)%RotFrame_y)
+         if (allocated(Init%OutData_SD%RotFrame_x)) call move_alloc(Init%OutData_SD%RotFrame_x,y_FAST%Lin%Modules(MODULE_SD)%Instance(1)%RotFrame_x)
+         if (allocated(Init%OutData_SD%RotFrame_u)) call move_alloc(Init%OutData_SD%RotFrame_u,y_FAST%Lin%Modules(MODULE_SD)%Instance(1)%RotFrame_u)
+         if (allocated(Init%OutData_SD%IsLoad_u  )) call move_alloc(Init%OutData_SD%IsLoad_u  ,y_FAST%Lin%Modules(MODULE_SD)%Instance(1)%IsLoad_u  )
+         if (allocated(Init%OutData_SD%WriteOutputHdr)) y_FAST%Lin%Modules(MODULE_SD)%Instance(1)%NumOutputs = size(Init%OutData_SD%WriteOutputHdr)
+         if (allocated(Init%OutData_SD%DerivOrder_x)) call move_alloc(Init%OutData_SD%DerivOrder_x,y_FAST%Lin%Modules(MODULE_SD)%Instance(1)%DerivOrder_x)
+      end if
                
       IF (ErrStat >= AbortErrLev) THEN
          CALL Cleanup()
@@ -907,6 +920,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          if (allocated(Init%OutData_ExtPtfm%RotFrame_u)) call move_alloc(Init%OutData_ExtPtfm%RotFrame_u,y_FAST%Lin%Modules(MODULE_ExtPtfm)%Instance(1)%RotFrame_u)
          if (allocated(Init%OutData_ExtPtfm%IsLoad_u  )) call move_alloc(Init%OutData_ExtPtfm%IsLoad_u  ,y_FAST%Lin%Modules(MODULE_ExtPtfm)%Instance(1)%IsLoad_u  )
          if (allocated(Init%OutData_ExtPtfm%WriteOutputHdr)) y_FAST%Lin%Modules(MODULE_ExtPtfm)%Instance(1)%NumOutputs = size(Init%OutData_ExtPtfm%WriteOutputHdr)
+         if (allocated(Init%OutData_ExtPtfm%DerivOrder_x)) call move_alloc(Init%OutData_ExtPtfm%DerivOrder_x,y_FAST%Lin%Modules(MODULE_ExtPtfm)%Instance(1)%DerivOrder_x)
       end if
                
       IF (ErrStat >= AbortErrLev) THEN
@@ -979,9 +993,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       else
          if (allocated(Init%OutData_MAP%LinInitOut%LinNames_y)) call move_alloc(Init%OutData_MAP%LinInitOut%LinNames_y,y_FAST%Lin%Modules(Module_MAP)%Instance(1)%Names_y )
          if (allocated(Init%OutData_MAP%LinInitOut%LinNames_u)) call move_alloc(Init%OutData_MAP%LinInitOut%LinNames_u,y_FAST%Lin%Modules(Module_MAP)%Instance(1)%Names_u )
-! LIN-TODO: Determine if we need to create this data even though we don't have rotating frames in MAP
-         !if (allocated(Init%OutData_MAP%LinInitOut%RotFrame_y)) call move_alloc(Init%OutData_MAP%LinInitOut%RotFrame_y,y_FAST%Lin%Modules(Module_MAP)%Instance(1)%RotFrame_y )
-         !if (allocated(Init%OutData_MAP%LinInitOut%RotFrame_u)) call move_alloc(Init%OutData_MAP%LinInitOut%RotFrame_u,y_FAST%Lin%Modules(Module_MAP)%Instance(1)%RotFrame_u )
          if (allocated(Init%OutData_MAP%LinInitOut%IsLoad_u  )) call move_alloc(Init%OutData_MAP%LinInitOut%IsLoad_u  ,y_FAST%Lin%Modules(Module_MAP)%Instance(1)%IsLoad_u   )
 
          if (allocated(Init%OutData_MAP%WriteOutputHdr)) y_FAST%Lin%Modules(Module_MAP)%Instance(1)%NumOutputs = size(Init%OutData_MAP%WriteOutputHdr)
@@ -1213,7 +1224,13 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
    ! Initialize for linearization:
    ! -------------------------------------------------------------------------
    if ( p_FAST%Linearize ) then      
-      call Init_Lin(p_FAST, y_FAST, m_FAST, AD, ED, Init%OutData_ED%NumBl, ErrStat2, ErrMsg2)      
+      ! NOTE: In the following call, we use Init%OutData_AD%BladeProps(1)%NumBlNds as the number of aero nodes on EACH blade, which 
+      !       is consistent with the current AD implementation, but if AD changes this, then it must be handled here, too!
+      if (p_FAST%CompAero == MODULE_AD) then
+         call Init_Lin(p_FAST, y_FAST, m_FAST, AD, ED, Init%OutData_ED%NumBl, Init%OutData_AD%BladeProps(1)%NumBlNds, ErrStat2, ErrMsg2) 
+      else
+         call Init_Lin(p_FAST, y_FAST, m_FAST, AD, ED, Init%OutData_ED%NumBl, -1, ErrStat2, ErrMsg2) 
+      endif     
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
          if (ErrStat >= AbortErrLev) then
@@ -1617,6 +1634,8 @@ SUBROUTINE ValidateInputData(p, m_FAST, ErrStat, ErrMsg)
          CALL SetErrStat( ErrID_Fatal, 'HydroDyn must be used when MAP is used. Set CompHydro > 0 or CompMooring = 0 in the FAST input file.', ErrStat, ErrMsg, RoutineName )
       ELSEIF (p%CompMooring == Module_FEAM) THEN
          CALL SetErrStat( ErrID_Fatal, 'HydroDyn must be used when FEAMooring is used. Set CompHydro > 0 or CompMooring = 0 in the FAST input file.', ErrStat, ErrMsg, RoutineName )
+      ELSEIF (p%CompMooring == Module_MD) THEN
+         CALL SetErrStat( ErrID_Fatal, 'HydroDyn must be used when MoorDyn is used. Set CompHydro > 0 or CompMooring = 0 in the FAST input file.', ErrStat, ErrMsg, RoutineName )
       END IF
    ELSE
       IF (p%CompMooring == Module_Orca) CALL SetErrStat( ErrID_Fatal, 'HydroDyn cannot be used if OrcaFlex is used. Set CompHydro = 0 or CompMooring < 4 in the FAST input file.', ErrStat, ErrMsg, RoutineName )
@@ -1700,7 +1719,7 @@ SUBROUTINE ValidateInputData(p, m_FAST, ErrStat, ErrMsg)
       if (p%CompInflow == MODULE_OpFM) call SetErrStat(ErrID_Fatal,'Linearization is not implemented for the OpenFOAM coupling.',ErrStat, ErrMsg, RoutineName)
       if (p%CompAero == MODULE_AD14) call SetErrStat(ErrID_Fatal,'Linearization is not implemented for the AeroDyn v14 module.',ErrStat, ErrMsg, RoutineName)
       !if (p%CompSub   == MODULE_SD) call SetErrStat(ErrID_Fatal,'Linearization is not implemented for the SubDyn module.',ErrStat, ErrMsg, RoutineName)
-      if (p%CompSub /= MODULE_None) call SetErrStat(ErrID_Fatal,'Linearization is not implemented for the any of the substructure modules.',ErrStat, ErrMsg, RoutineName)
+      if (p%CompSub /= MODULE_None .and. p%CompSub /= MODULE_SD )     call SetErrStat(ErrID_Fatal,'Linearization is not implemented for the ExtPtfm_MCKF substructure module.',ErrStat, ErrMsg, RoutineName)
       if (p%CompMooring /= MODULE_None .and. p%CompMooring /= MODULE_MAP) call SetErrStat(ErrID_Fatal,'Linearization is not implemented for the FEAMooring or MoorDyn mooring modules.',ErrStat, ErrMsg, RoutineName)
       if (p%CompIce /= MODULE_None) call SetErrStat(ErrID_Fatal,'Linearization is not implemented for any of the ice loading modules.',ErrStat, ErrMsg, RoutineName)
                   
@@ -3185,9 +3204,9 @@ SUBROUTINE SetVTKParameters(p_FAST, InitOutData_ED, InitOutData_AD, InitInData_H
    ! morison surfaces
    !.......................
    
-   IF ( HD%Input(1)%Morison%DistribMesh%Committed ) THEN      
-      
-      call move_alloc(InitOutData_HD%Morison%Morison_Rad, p_FAST%VTK_Surface%MorisonRad)
+   IF ( HD%Input(1)%Morison%Mesh%Committed ) THEN      
+    !TODO: FIX for visualization GJH 4/23/20  
+    !  call move_alloc(InitOutData_HD%Morison%Morison_Rad, p_FAST%VTK_Surface%MorisonRad)
       
    END IF
    
@@ -5200,22 +5219,23 @@ SUBROUTINE WrVTK_AllMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD, IfW, OpFM, H
    END IF
    
 ! HydroDyn            
-   IF ( p_FAST%CompHydro == Module_HD .and. allocated(HD%Input)) THEN       
+   IF ( p_FAST%CompHydro == Module_HD .and. allocated(HD%Input)) THEN     
+      !TODO: Fix for Visualizaton GJH 4/23/20
       !call MeshWrVTK(p_FAST%TurbinePos, HD%Input(1)%Mesh, trim(p_FAST%VTK_OutFileRoot)//'.HD_Mesh_motion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2 )     
-      !call MeshWrVTK(p_FAST%TurbinePos, HD%Input(1)%Morison%LumpedMesh, trim(p_FAST%VTK_OutFileRoot)//'.HD_MorisonLumped_motion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2 )     
-      !call MeshWrVTK(p_FAST%TurbinePos, HD%Input(1)%Morison%DistribMesh, trim(p_FAST%VTK_OutFileRoot)//'.HD_MorisonDistrib_motion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2 )     
+      call MeshWrVTK(p_FAST%TurbinePos, HD%Input(1)%Morison%Mesh, trim(p_FAST%VTK_OutFileRoot)//'.HD_Morison_Motion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth )
       
-      if (p_FAST%CompSub == Module_NONE) then
-         call MeshWrVTK(p_FAST%TurbinePos, HD%y%AllHdroOrigin, trim(p_FAST%VTK_OutFileRoot)//'.HD_AllHdroOrigin', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth, HD%Input(1)%Mesh )
-         outputFields = .false.
-      else         
-         call MeshWrVTK(p_FAST%TurbinePos, HD%y%Mesh, trim(p_FAST%VTK_OutFileRoot)//'.HD_Mesh', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth, HD%Input(1)%Mesh )
-         outputFields = p_FAST%VTK_fields
-      end if
-      call MeshWrVTK(p_FAST%TurbinePos, HD%y%Morison%LumpedMesh, trim(p_FAST%VTK_OutFileRoot)//'.HD_MorisonLumped', y_FAST%VTK_count, outputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth, HD%Input(1)%Morison%LumpedMesh )
-      call MeshWrVTK(p_FAST%TurbinePos, HD%y%Morison%DistribMesh, trim(p_FAST%VTK_OutFileRoot)//'.HD_MorisonDistrib', y_FAST%VTK_count, outputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth, HD%Input(1)%Morison%DistribMesh )
-      
-                  
+      if (HD%y%WamitMesh%Committed) then
+!         if (p_FAST%CompSub == Module_NONE) then
+!TODO         call MeshWrVTK(p_FAST%TurbinePos, HD%y%WamitMesh, trim(p_FAST%VTK_OutFileRoot)//'.HD_Mesh', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth, HD%Input(1)%WAMITMesh )
+!            outputFields = .false.
+!         else
+            call MeshWrVTK(p_FAST%TurbinePos, HD%y%WamitMesh, trim(p_FAST%VTK_OutFileRoot)//'.HD_Mesh', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth, HD%Input(1)%WAMITMesh )
+!            outputFields = p_FAST%VTK_fields
+!         end if
+      endif
+      if (HD%y%Morison%Mesh%Committed) then
+         call MeshWrVTK(p_FAST%TurbinePos, HD%y%Morison%Mesh, trim(p_FAST%VTK_OutFileRoot)//'.HD_Morison', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth, HD%Input(1)%Morison%Mesh )
+      endif
    END IF
    
 ! SubDyn   
@@ -5358,14 +5378,14 @@ SUBROUTINE WrVTK_BasicMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD, IfW, OpFM,
    IF ( p_FAST%CompHydro == Module_HD ) THEN 
       
       if (p_FAST%CompSub == Module_NONE) then
-         call MeshWrVTK(p_FAST%TurbinePos, HD%y%AllHdroOrigin, trim(p_FAST%VTK_OutFileRoot)//'.HD_AllHdroOrigin', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth, HD%Input(1)%Mesh )
+         call MeshWrVTK(p_FAST%TurbinePos, HD%y%WAMITMesh, trim(p_FAST%VTK_OutFileRoot)//'.HD_AllHdroOrigin', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth, HD%Input(1)%WAMITMesh )
          outputFields = .false.
       else         
          OutputFields = p_FAST%VTK_fields
       end if
-      
-      call MeshWrVTK(p_FAST%TurbinePos, HD%Input(1)%Morison%DistribMesh, trim(p_FAST%VTK_OutFileRoot)//'.HD_MorisonDistrib', &
-                     y_FAST%VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth, Sib=HD%y%Morison%DistribMesh )
+     !TODO: Fix for Visualization GJH 4/23/20 
+     call MeshWrVTK(p_FAST%TurbinePos, HD%Input(1)%Morison%Mesh, trim(p_FAST%VTK_OutFileRoot)//'.HD_Morison', &
+                    y_FAST%VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth, Sib=HD%y%Morison%Mesh )
    END IF
    
    
@@ -5473,19 +5493,20 @@ SUBROUTINE WrVTK_Surfaces(t_global, p_FAST, y_FAST, MeshMapData, ED, BD, AD, IfW
 !   IF ( p_FAST%CompSub == Module_SD ) THEN
 !     call MeshWrVTK(p_FAST%TurbinePos, SD%Input(1)%TPMesh, trim(p_FAST%VTK_OutFileRoot)//'.SD_TPMesh_motion', y_FAST%VTK_count, OutputFields, ErrStat2, ErrMsg2 )     
 !      call MeshWrVTK(p_FAST%TurbinePos, SD%y%y2Mesh, trim(p_FAST%VTK_OutFileRoot)//'.SD_y2Mesh_motion', y_FAST%VTK_count, OutputFields, ErrStat2, ErrMsg2 )        
-!   END IF     
-      
-   IF ( HD%Input(1)%Morison%DistribMesh%Committed ) THEN 
-      !if ( p_FAST%CompSub == Module_NONE ) then ! floating
-      !   OutputFields = .false.
-      !else
-      !   OutputFields = p_FAST%VTK_fields
-      !end if
-         
-      call MeshWrVTK_Ln2Surface (p_FAST%TurbinePos, HD%Input(1)%Morison%DistribMesh, trim(p_FAST%VTK_OutFileRoot)//'.MorisonSurface', &
-                                 y_FAST%VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth, p_FAST%VTK_Surface%NumSectors, &
-                                 p_FAST%VTK_Surface%MorisonRad, Sib=HD%y%Morison%DistribMesh )
-   END IF
+!   END IF 
+!TODO: Fix below section for new Morison GJH 4/23/20
+   !   
+   !IF ( HD%Input(1)%Morison%Mesh%Committed ) THEN 
+   !   !if ( p_FAST%CompSub == Module_NONE ) then ! floating
+   !   !   OutputFields = .false.
+   !   !else
+   !   !   OutputFields = p_FAST%VTK_fields
+   !   !end if
+   !      
+   !   call MeshWrVTK_Ln2Surface (p_FAST%TurbinePos, HD%Input(1)%Morison%Mesh, trim(p_FAST%VTK_OutFileRoot)//'.MorisonSurface', &
+   !                              y_FAST%VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth, p_FAST%VTK_Surface%NumSectors, &
+   !                              p_FAST%VTK_Surface%MorisonRad, Sib=HD%y%Morison%Mesh )
+   !END IF
    
    
 ! Mooring Lines?            
@@ -5699,9 +5720,8 @@ SUBROUTINE WriteInputMeshesToFile(u_ED, u_AD, u_SD, u_HD, u_MAP, u_BD, FileName,
    CALL MeshWrBin( unOut, u_ED%PlatformPtMesh,          ErrStat, ErrMsg )
    CALL MeshWrBin( unOut, u_SD%TPMesh,                  ErrStat, ErrMsg )
    CALL MeshWrBin( unOut, u_SD%LMesh,                   ErrStat, ErrMsg )
-   CALL MeshWrBin( unOut, u_HD%Morison%distribMesh,     ErrStat, ErrMsg )
-   CALL MeshWrBin( unOut, u_HD%Morison%lumpedMesh,      ErrStat, ErrMsg )
-   CALL MeshWrBin( unOut, u_HD%Mesh,                    ErrStat, ErrMsg )
+   CALL MeshWrBin( unOut, u_HD%Morison%Mesh,      ErrStat, ErrMsg )
+   CALL MeshWrBin( unOut, u_HD%WAMITMesh,                    ErrStat, ErrMsg )
    CALL MeshWrBin( unOut, u_MAP%PtFairDisplacement,     ErrStat, ErrMsg )
       ! Add how many BD blade meshes there are:
    NumBl =  SIZE(u_BD,1)   ! Note that NumBl is B4Ki 
@@ -5782,9 +5802,8 @@ SUBROUTINE WriteMotionMeshesToFile(time, y_ED, u_SD, y_SD, u_HD, u_MAP, y_BD, u_
    CALL MeshWrBin( unOut, y_ED%PlatformPtMesh,          ErrStat, ErrMsg )
    CALL MeshWrBin( unOut, u_SD%TPMesh,                  ErrStat, ErrMsg )
    CALL MeshWrBin( unOut, y_SD%y2Mesh,                  ErrStat, ErrMsg )
-   CALL MeshWrBin( unOut, u_HD%Morison%distribMesh,     ErrStat, ErrMsg )
-   CALL MeshWrBin( unOut, u_HD%Morison%lumpedMesh,      ErrStat, ErrMsg )
-   CALL MeshWrBin( unOut, u_HD%Mesh,                    ErrStat, ErrMsg )
+   CALL MeshWrBin( unOut, u_HD%Morison%Mesh,      ErrStat, ErrMsg )
+   CALL MeshWrBin( unOut, u_HD%WAMITMesh,                    ErrStat, ErrMsg )
    CALL MeshWrBin( unOut, u_MAP%PtFairDisplacement,     ErrStat, ErrMsg )
    DO K_local = 1,SIZE(y_BD,1)
       CALL MeshWrBin( unOut, u_BD(K_local)%RootMotion, ErrStat, ErrMsg )

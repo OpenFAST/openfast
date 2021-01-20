@@ -27,6 +27,7 @@ MODULE HydroDyn
 
    USE HydroDyn_Types   
    USE NWTC_Library
+   use Morison
    USE WAMIT
    USE WAMIT2
    USE HydroDyn_Input
@@ -86,7 +87,7 @@ SUBROUTINE WvStretch_Init(WaveStMod, WtrDpth, NStepWave, NNodes,  &
    INTEGER,          INTENT(IN   )  :: WaveStMod
    REAL(SiKi),       INTENT(IN   )  :: WtrDpth
    INTEGER,          INTENT(IN   )  :: NStepWave
-   INTEGER,          INTENT(IN   )  :: NNodes              !< TODO: WHY are there both NNodes and NWaveElev ??? GJH 2/1/2016
+   INTEGER,          INTENT(IN   )  :: NNodes
    INTEGER,          INTENT(IN   )  :: NWaveElev
    REAL(SiKi),       INTENT(IN   )  :: WaveElev(0:,:)
    REAL(SiKi),       INTENT(IN   )  :: WaveKinzi(:)
@@ -224,7 +225,7 @@ END SUBROUTINE WvStretch_Init
 SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-      TYPE(HydroDyn_InitInputType),       INTENT(IN   )  :: InitInp     !< Input data for initialization routine. TODO: This does not follow the template due to the interface of HydroDyn_CopyInitInput()
+      TYPE(HydroDyn_InitInputType),       INTENT(IN   )  :: InitInp     !< Input data for initialization routine.
       TYPE(HydroDyn_InputType),           INTENT(  OUT)  :: u           !< An initial guess for the input; input mesh must be defined
       TYPE(HydroDyn_ParameterType),       INTENT(  OUT)  :: p           !< Parameters      
       TYPE(HydroDyn_ContinuousStateType), INTENT(  OUT)  :: x           !< Initial continuous states
@@ -255,7 +256,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
 !      LOGICAL                                :: hasWAMITOuts                        ! Are there any WAMIT-related outputs
 !      LOGICAL                                :: hasMorisonOuts                      ! Are there any Morison-related outputs
 !      INTEGER                                :: numHydroOuts                        ! total number of WAMIT and Morison outputs
-      INTEGER                                :: I, J                                ! Generic counters
+      INTEGER                                :: I, J, k, iBody                                ! Generic counters
       REAL(SiKi)                             :: WaveNmbr                            ! Wavenumber of the current frequency component (1/meter)
          ! These are dummy variables to satisfy the framework, but are not used 
          
@@ -296,6 +297,9 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
       Real(ReKi)                             :: dftreal
       Real(ReKi)                             :: dftimag 
    
+         ! WAMIT Mesh
+      real(R8Ki)                             :: theta(3), orientation(3,3)        
+      
          ! Wave Stretching Data
       REAL(SiKi), ALLOCATABLE  :: tmpWaveKinzi(:    )
       INTEGER                  :: tmpNWaveElev
@@ -352,7 +356,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
       
       
       
-      IF ( InitInp%UseInputFile ) THEN
+      IF ( InitLocal%UseInputFile ) THEN
          
                   
          ! Parse all HydroDyn-related input files and populate the *_InitInputType derived types
@@ -660,9 +664,6 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
             CALL MOVE_ALLOC(Waves_InitOut%WaveElevC0, InitLocal%Waves2%WaveElevC0)
             CALL MOVE_ALLOC(Waves_InitOut%WaveDirArr, InitLocal%Waves2%WaveDirArr)
    
-   !bjj: note that this doesn't get called if .not. (InitLocal%Waves2%WvDiffQTFF .OR. InitLocal%Waves2%WvSumQTFF), so p%waves2%* never get set
-   ! however, they get queried later in the code!!!! I've set these parameters in an "else" statement, below
-
 !==========================================================================
 ! Initialize Wave Stretching data for 2nd Order Waves
 !==========================================================================
@@ -770,6 +771,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
             
             
             
+!FIXME: why is this called again? I'm either not remembering something, or I don't undestand the wave stretching above.  -- ADP
             CALL Waves2_Init(InitLocal%Waves2, m%u_Waves2, p%Waves2, x%Waves2, xd%Waves2, z%Waves2, OtherState%Waves2, &
                                     y%Waves2, m%Waves2, Interval, InitOut%Waves2, ErrStat2, ErrMsg2 )
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -824,6 +826,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                         p%WaveElev(I,J)  =  p%Waves2%WaveElev2(I,J) + p%WaveElev(I,J)
                      ENDDO
                   ENDDO
+                  CALL MOVE_ALLOC(p%Waves2%WaveElev2,p%WaveElev2)
                ENDIF
             ENDIF
    
@@ -836,7 +839,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                p%Waves2%WvSumQTFF  = .FALSE.
                p%Waves2%NumOuts    = 0
                
-         ENDIF
+         ENDIF ! InitLocal%Waves2%WvDiffQTFF .OR. InitLocal%Waves2%WvSumQTFF 
    
    
    
@@ -844,107 +847,277 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
             ! Is there a WAMIT body? 
          
          IF ( InitLocal%PotMod == 1 ) THEN
+            p%nWAMITObj              = InitLocal%nWAMITObj      ! All the data for the various WAMIT bodies are stored in a single WAMIT file
+            p%vecMultiplier          = InitLocal%vecMultiplier  ! Multiply all vectors and matrices row/column lengths by NBody
+            InitLocal%WAMIT%NBodyMod = InitLocal%NBodyMod
+            InitLocal%WAMIT%Gravity  = InitLocal%Gravity
+            InitLocal%WAMIT%WtrDpth  = InitLocal%Morison%WtrDpth ! The data in InitLocal%Morison%WtrDpth was directly placed there when we parsed the HydroDyn input file
+            p%NBody                  = InitLocal%NBody
+            p%NBodyMod               = InitLocal%NBodyMod
             
-               ! Copy Waves initialization output into the initialization input type for the WAMIT module
+            call AllocAry( m%F_PtfmAdd, 6*InitLocal%NBody, "m%F_PtfmAdd", ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+            call AllocAry( m%F_Waves  , 6*InitLocal%NBody, "m%F_Waves"  , ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+            
+               ! Determine how many WAMIT modules we need based on NBody and NBodyMod
+            if (p%NBodyMod == 1) then
+               InitLocal%WAMIT%NBody    = InitLocal%NBody   ! The WAMIT object will contain all NBody WAMIT bodies
+               
+                  ! Allocate WAMIT InitInp arrays based on NBodyMod and copy the inputfile data into the WAMIT init data (entire arrays' worth for NBodyMod=1
+               call AllocAry( InitLocal%WAMIT%PtfmVol0    , InitLocal%NBody, "PtfmVol0"    , ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+               call AllocAry( InitLocal%WAMIT%PtfmRefxt   , InitLocal%NBody, "PtfmRefxt"   , ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+               call AllocAry( InitLocal%WAMIT%PtfmRefyt   , InitLocal%NBody, "PtfmRefyt"   , ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+               call AllocAry( InitLocal%WAMIT%PtfmRefzt   , InitLocal%NBody, "PtfmRefzt"   , ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+               call AllocAry( InitLocal%WAMIT%PtfmRefztRot, InitLocal%NBody, "PtfmRefztRot", ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+               call AllocAry( InitLocal%WAMIT%PtfmCOBxt   , InitLocal%NBody, "PtfmCOBxt"   , ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+               call AllocAry( InitLocal%WAMIT%PtfmCOByt   , InitLocal%NBody, "PtfmCOByt"   , ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+               allocate( p%WAMIT(         1), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array p%WAMIT.', ErrStat, ErrMsg, RoutineName )
+               allocate( x%WAMIT(         1), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array x%WAMIT.', ErrStat, ErrMsg, RoutineName )
+               allocate( xd%WAMIT(        1), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array xd%WAMIT.', ErrStat, ErrMsg, RoutineName )
+               allocate( OtherState%WAMIT(1), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array OtherState%WAMIT.', ErrStat, ErrMsg, RoutineName )
+               allocate( y%WAMIT(         1), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array y%WAMIT.', ErrStat, ErrMsg, RoutineName )
+               allocate( m%WAMIT(         1), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array m%WAMIT.', ErrStat, ErrMsg, RoutineName )
+               allocate( m%u_WAMIT(       1), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array m%u_WAMIT.', ErrStat, ErrMsg, RoutineName )
+               allocate( InitOut%WAMIT(   1), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array InitOut%WAMIT.', ErrStat, ErrMsg, RoutineName )
+                     
+               InitLocal%WAMIT%PtfmVol0       = InitLocal%PtfmVol0    
+               InitLocal%WAMIT%WAMITULEN      = InitLocal%WAMITULEN(1)   
+               InitLocal%WAMIT%PtfmRefxt      = InitLocal%PtfmRefxt   
+               InitLocal%WAMIT%PtfmRefyt      = InitLocal%PtfmRefyt   
+               InitLocal%WAMIT%PtfmRefzt      = InitLocal%PtfmRefzt   
+               InitLocal%WAMIT%PtfmRefztRot   = InitLocal%PtfmRefztRot
+               InitLocal%WAMIT%PtfmCOBxt      = InitLocal%PtfmCOBxt   
+               InitLocal%WAMIT%PtfmCOByt      = InitLocal%PtfmCOByt   
+            else
+               InitLocal%WAMIT%NBody    = 1    ! Each WAMIT object will only contain one of the NBody WAMIT bodies
+
+                  ! Allocate WAMIT InitInp arrays based on NBodyMod and copy the inputfile data into the 1st WAMIT body init data for NBodyMod > 1
+               call AllocAry( InitLocal%WAMIT%PtfmVol0    , 1, "PtfmVol0"    , ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+               call AllocAry( InitLocal%WAMIT%PtfmRefxt   , 1, "PtfmRefxt"   , ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+               call AllocAry( InitLocal%WAMIT%PtfmRefyt   , 1, "PtfmRefyt"   , ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+               call AllocAry( InitLocal%WAMIT%PtfmRefzt   , 1, "PtfmRefzt"   , ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+               call AllocAry( InitLocal%WAMIT%PtfmRefztRot, 1, "PtfmRefztRot", ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+               call AllocAry( InitLocal%WAMIT%PtfmCOBxt   , 1, "PtfmCOBxt"   , ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+               call AllocAry( InitLocal%WAMIT%PtfmCOByt   , 1, "PtfmCOByt"   , ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+               allocate( p%WAMIT(         InitLocal%NBody), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array p%WAMIT.', ErrStat, ErrMsg, RoutineName )
+               allocate( x%WAMIT(         InitLocal%NBody), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array x%WAMIT.', ErrStat, ErrMsg, RoutineName )
+               allocate( xd%WAMIT(        InitLocal%NBody), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array xd%WAMIT.', ErrStat, ErrMsg, RoutineName )
+               allocate( OtherState%WAMIT(InitLocal%NBody), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array OtherState%WAMIT.', ErrStat, ErrMsg, RoutineName )
+               allocate( y%WAMIT(         InitLocal%NBody), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array y%WAMIT.', ErrStat, ErrMsg, RoutineName )
+               allocate( m%WAMIT(         InitLocal%NBody), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array m%WAMIT.', ErrStat, ErrMsg, RoutineName )
+               allocate( m%u_WAMIT(       InitLocal%NBody), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array m%u_WAMIT.', ErrStat, ErrMsg, RoutineName )
+               allocate( InitOut%WAMIT(   InitLocal%NBody), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array InitOut%WAMIT.', ErrStat, ErrMsg, RoutineName )
+               InitLocal%WAMIT%PtfmVol0    (1)  = InitLocal%PtfmVol0    (1)
+               InitLocal%WAMIT%WAMITULEN        = InitLocal%WAMITULEN   (1)
+               InitLocal%WAMIT%PtfmRefxt   (1)  = InitLocal%PtfmRefxt   (1)
+               InitLocal%WAMIT%PtfmRefyt   (1)  = InitLocal%PtfmRefyt   (1)
+               InitLocal%WAMIT%PtfmRefzt   (1)  = InitLocal%PtfmRefzt   (1)
+               InitLocal%WAMIT%PtfmRefztRot(1)  = InitLocal%PtfmRefztRot(1)
+               InitLocal%WAMIT%PtfmCOBxt   (1)  = InitLocal%PtfmCOBxt   (1)
+               InitLocal%WAMIT%PtfmCOByt   (1)  = InitLocal%PtfmCOByt   (1)
+  
+            end if
+            
+            if ( ErrStat >= AbortErrLev ) then
+               call CleanUp()
+               return
+            end if
+            
+                ! Copy Waves initialization output into the initialization input type for the WAMIT module
                   
             InitLocal%WAMIT%RhoXg        = Waves_InitOut%RhoXg
             InitLocal%WAMIT%NStepWave    = Waves_InitOut%NStepWave
             InitLocal%WAMIT%NStepWave2   = Waves_InitOut%NStepWave2
             InitLocal%WAMIT%WaveDirMin   = Waves_InitOut%WaveDirMin
             InitLocal%WAMIT%WaveDirMax   = Waves_InitOut%WaveDirMax
-            InitLocal%WAMIT%WaveDOmega   = Waves_InitOut%WaveDOmega  
-           
-            
+            InitLocal%WAMIT%WaveDOmega   = Waves_InitOut%WaveDOmega   
+
                ! Init inputs for the SS_Excitation model (set this just in case it will be used)
             InitLocal%WAMIT%WaveDir = Waves_InitOut%WaveDir
-            CALL MOVE_ALLOC(Waves_InitOut%WaveElev0, InitLocal%WAMIT%WaveElev0) 
-            
-               ! Temporarily move arrays to init input for WAMIT (save some space)
+            CALL MOVE_ALLOC(Waves_InitOut%WaveElev0, InitLocal%WAMIT%WaveElev0)          
+               
+                ! Temporarily move arrays to init input for WAMIT (save some space)
             CALL MOVE_ALLOC(p%WaveTime,               InitLocal%WAMIT%WaveTime) 
             CALL MOVE_ALLOC(Waves_InitOut%WaveElevC0, InitLocal%WAMIT%WaveElevC0) 
             CALL MOVE_ALLOC(Waves_InitOut%WaveDirArr, InitLocal%WAMIT%WaveDirArr) 
                
-               !-----------------------------------------
-               ! Initialize the WAMIT Calculations 
-               !-----------------------------------------
-              
-            CALL WAMIT_Init(InitLocal%WAMIT, m%u_WAMIT, p%WAMIT, x%WAMIT, xd%WAMIT, z%WAMIT, OtherState%WAMIT, &
-                                    y%WAMIT, m%WAMIT, Interval, InitOut%WAMIT, ErrStat2, ErrMsg2 )
+            CALL WAMIT_Init(InitLocal%WAMIT, m%u_WAMIT(1), p%WAMIT(1), x%WAMIT(1), xd%WAMIT(1), z%WAMIT, OtherState%WAMIT(1), &
+                                    y%WAMIT(1), m%WAMIT(1), Interval, InitOut%WAMIT(1), ErrStat2, ErrMsg2 )
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
             IF ( ErrStat >= AbortErrLev ) THEN
-               CALL CleanUp()
-               RETURN
+                CALL CleanUp()
+                RETURN
             END IF
-            
-            
-            
-            ! Generate Summary file information for WAMIT module
-                ! Compute the load contribution from hydrostatics:
-            IF ( InitLocal%UnSum > 0 ) THEN
                
-               WRITE( InitLocal%UnSum, '(A11)')          'WAMIT Model'
-               WRITE( InitLocal%UnSum, '(A11)')          '-----------'
-               WRITE( InitLocal%UnSum, '(A42,2X,ES15.6)') 'Displaced volume (m^3)                 :', p%WAMIT%PtfmVol0
-               WRITE( InitLocal%UnSum, '(A42,2X,ES15.6)') 'X-offset of the center of buoyancy (m) :', p%WAMIT%PtfmCOBxt
-               WRITE( InitLocal%UnSum, '(A42,2X,ES15.6)') 'Y-offset of the center of buoyancy (m) :', p%WAMIT%PtfmCOByt
-               WRITE( InitLocal%UnSum,  '(/)' ) 
-               WRITE( InitLocal%UnSum, '(A81)' ) 'Buoyancy loads from members modelled with WAMIT, summed about ( 0.0, 0.0, 0.0 )'
-               WRITE( InitLocal%UnSum, '(18x,6(2X,A20))' ) ' BuoyFxi ', ' BuoyFyi ', ' BuoyFzi ', ' BuoyMxi ', ' BuoyMyi ', ' BuoyMzi '
-               WRITE( InitLocal%UnSum, '(18x,6(2X,A20))' ) '   (N)   ', '   (N)   ', '   (N)   ', '  (N-m)  ', '  (N-m)  ', '  (N-m)  '
-               WRITE( InitLocal%UnSum, '(A18,6(2X,ES20.6))') '  External:       ',0.0,0.0,p%WAMIT%RhoXg*p%WAMIT%PtfmVol0,p%WAMIT%RhoXg*p%WAMIT%PtfmVol0*p%WAMIT%PtfmCOByt, -p%WAMIT%RhoXg*p%WAMIT%PtfmVol0*p%WAMIT%PtfmCOBxt, 0.0   ! and the moment about Y due to the COB being offset from the WAMIT reference point
-            
+               
+                  ! For NBodyMod > 1 and NBody > 1, set the body info and init the WAMIT body
+            do i = 2, p%nWAMITObj
+                !-----------------------------------------
+                ! Initialize the WAMIT Calculations 
+                !-----------------------------------------
+                InitLocal%WAMIT%WAMITFile        = InitLocal%PotFile     (i)
+                InitLocal%WAMIT%PtfmVol0    (1)  = InitLocal%PtfmVol0    (i)
+                InitLocal%WAMIT%WAMITULEN        = InitLocal%WAMITULEN   (i)
+                InitLocal%WAMIT%PtfmRefxt   (1)  = InitLocal%PtfmRefxt   (i)
+                InitLocal%WAMIT%PtfmRefyt   (1)  = InitLocal%PtfmRefyt   (i)
+                InitLocal%WAMIT%PtfmRefzt   (1)  = InitLocal%PtfmRefzt   (i)
+                InitLocal%WAMIT%PtfmRefztRot(1)  = InitLocal%PtfmRefztRot(i)
+                InitLocal%WAMIT%PtfmCOBxt   (1)  = InitLocal%PtfmCOBxt   (i)
+                InitLocal%WAMIT%PtfmCOByt   (1)  = InitLocal%PtfmCOByt   (i)
+ 
+                CALL WAMIT_Init(InitLocal%WAMIT, m%u_WAMIT(i), p%WAMIT(i), x%WAMIT(i), xd%WAMIT(i), z%WAMIT, OtherState%WAMIT(i), &
+                                        y%WAMIT(i), m%WAMIT(i), Interval, InitOut%WAMIT(i), ErrStat2, ErrMsg2 )
+                CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+                IF ( ErrStat >= AbortErrLev ) THEN
+                    CALL CleanUp()
+                    RETURN
+                END IF
+            end do
+               
+               ! Generate Summary file information for WAMIT module
+                   ! Compute the load contribution from hydrostatics:
+            IF ( InitLocal%UnSum > 0 ) THEN
+                do iBody = 1, InitLocal%NBody
+                    WRITE( InitLocal%UnSum, '(A18,I5)')          'WAMIT Model - Body',iBody
+                    WRITE( InitLocal%UnSum, '(A18)')             '------------------'
+                    WRITE( InitLocal%UnSum, '(A42,2X,ES15.6)') 'Displaced volume (m^3)                 :', InitLocal%PtfmVol0(iBody)
+                    WRITE( InitLocal%UnSum, '(A42,2X,ES15.6)') 'X-offset of the center of buoyancy (m) :', InitLocal%PtfmCOBxt(iBody)
+                    WRITE( InitLocal%UnSum, '(A42,2X,ES15.6)') 'Y-offset of the center of buoyancy (m) :', InitLocal%PtfmCOByt(iBody)
+                    WRITE( InitLocal%UnSum,  '(/)' ) 
+                    WRITE( InitLocal%UnSum, '(A81)' ) 'Buoyancy loads from members modelled with WAMIT, summed about ( 0.0, 0.0, 0.0 )'
+                    WRITE( InitLocal%UnSum, '(18x,6(2X,A20))' ) ' BuoyFxi ', ' BuoyFyi ', ' BuoyFzi ', ' BuoyMxi ', ' BuoyMyi ', ' BuoyMzi '
+                    WRITE( InitLocal%UnSum, '(18x,6(2X,A20))' ) '   (N)   ', '   (N)   ', '   (N)   ', '  (N-m)  ', '  (N-m)  ', '  (N-m)  '
+                    WRITE( InitLocal%UnSum, '(A18,6(2X,ES20.6))') '  External:       ',0.0,0.0,InitLocal%WAMIT%RhoXg*InitLocal%PtfmVol0(iBody),InitLocal%WAMIT%RhoXg*InitLocal%PtfmVol0(iBody)*InitLocal%PtfmCOByt(iBody), -InitLocal%WAMIT%RhoXg*InitLocal%PtfmVol0(iBody)*InitLocal%PtfmCOBxt(iBody), 0.0   ! and the moment about Y due to the COB being offset from the WAMIT reference point
+                end do
             END IF
             
             
-               ! Verify that WAMIT_Init() did not request a different Interval!
+                ! Verify that WAMIT_Init() did not request a different Interval!
          
             IF ( p%DT /= Interval ) THEN
-               CALL SetErrStat(ErrID_Fatal,'WAMIT Module attempted to change timestep interval, but this is not allowed.  WAMIT Module must use the HydroDyn Interval.',ErrStat,ErrMsg,RoutineName)
-               CALL CleanUp()
-               RETURN
+                CALL SetErrStat(ErrID_Fatal,'WAMIT Module attempted to change timestep interval, but this is not allowed.  WAMIT Module must use the HydroDyn Interval.',ErrStat,ErrMsg,RoutineName)
+                CALL CleanUp()
+                RETURN
             END IF
-   
+
+            
                ! move arrays back
             CALL MOVE_ALLOC(InitLocal%WAMIT%WaveTime,               p%WaveTime  ) 
             CALL MOVE_ALLOC(InitLocal%WAMIT%WaveElevC0, Waves_InitOut%WaveElevC0) 
             CALL MOVE_ALLOC(InitLocal%WAMIT%WaveDirArr, Waves_InitOut%WaveDirArr) 
                
-   
+
                !-----------------------------------------
                ! Initialize the WAMIT2 Calculations
                !-----------------------------------------
-   
+
                ! Only call the WAMIT2_Init if one of the flags is set for a calculation
             IF ( InitLocal%WAMIT2%MnDriftF .OR. InitLocal%WAMIT2%NewmanAppF .OR. InitLocal%WAMIT2%DiffQTFF .OR. InitLocal%WAMIT2%SumQTFF ) THEN
-   
-               
+
+                  ! Flag required for indicating when to try using arrays that are allocated
+               p%WAMIT2used   = .TRUE.
+
+                  ! Temporarily move arrays to init input for WAMIT2 (save some space)
+               CALL MOVE_ALLOC(p%WaveTime, InitLocal%WAMIT2%WaveTime)
+               CALL MOVE_ALLOC(Waves_InitOut%WaveElevC0, InitLocal%WAMIT2%WaveElevC0)
+               CALL MOVE_ALLOC(Waves_InitOut%WaveDirArr, InitLocal%WAMIT2%WaveDirArr)
+
+                  ! Copy Waves initialization output into the initialization input type for the WAMIT module
                InitLocal%WAMIT2%RhoXg       = Waves_InitOut%RhoXg
                InitLocal%WAMIT2%NStepWave   = Waves_InitOut%NStepWave
                InitLocal%WAMIT2%NStepWave2  = Waves_InitOut%NStepWave2
                InitLocal%WAMIT2%WaveDirMin  = Waves_InitOut%WaveDirMin
                InitLocal%WAMIT2%WaveDirMax  = Waves_InitOut%WaveDirMax
                InitLocal%WAMIT2%WaveDOmega  = Waves_InitOut%WaveDOmega
-               
-                  ! Temporarily move arrays to init input for WAMIT2 (save some space)
-               CALL MOVE_ALLOC(p%WaveTime, InitLocal%WAMIT2%WaveTime) 
-               CALL MOVE_ALLOC(Waves_InitOut%WaveElevC0, InitLocal%WAMIT2%WaveElevC0) 
-               CALL MOVE_ALLOC(Waves_InitOut%WaveDirArr, InitLocal%WAMIT2%WaveDirArr) 
-               
-               
-               CALL WAMIT2_Init(InitLocal%WAMIT2, m%u_WAMIT2, p%WAMIT2, x%WAMIT2, xd%WAMIT2, z%WAMIT2, OtherState%WAMIT2, &
-                                       y%WAMIT2, m%WAMIT2, Interval, InitOut%WAMIT2, ErrStat2, ErrMsg2 )
+               InitLocal%WAMIT2%Gravity     = InitLocal%Gravity
+               InitLocal%WAMIT2%WtrDpth     = InitLocal%Morison%WtrDpth ! The data in InitLocal%Morison%WtrDpth was directly placed there when we parsed the HydroDyn input file
+
+                  ! Set values for all NBodyMods
+               InitLocal%WAMIT2%NBodyMod    = InitLocal%NBodyMod        ! There are restrictions in WAMIT2 on which files may be used for MnDriftF or NewmanAppF for BodyMod > 1
+               InitLocal%WAMIT2%WAMITULEN   = InitLocal%WAMITULEN(1)
+
+                  ! Determine how many WAMIT2 modules we need based on NBody and NBodyMod
+               if (p%NBodyMod == 1) then
+                  InitLocal%WAMIT2%NBody     = InitLocal%NBody    ! The WAMIT2 object will contain all NBody WAMIT2 bodies
+
+                     ! Allocate WAMIT2 InitInp arrays based on NBodyMod and copy the inputfile data into the WAMIT2 init data (entire arrays' worth for NBodyMod=1
+                  call AllocAry( InitLocal%WAMIT2%PtfmRefxt   , InitLocal%NBody, "PtfmRefxt"   , ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+                  call AllocAry( InitLocal%WAMIT2%PtfmRefyt   , InitLocal%NBody, "PtfmRefyt"   , ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+                  call AllocAry( InitLocal%WAMIT2%PtfmRefzt   , InitLocal%NBody, "PtfmRefzt"   , ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+                  call AllocAry( InitLocal%WAMIT2%PtfmRefztRot, InitLocal%NBody, "PtfmRefztRot", ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+                  allocate( p%WAMIT2(         1), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array p%WAMIT2.', ErrStat, ErrMsg, RoutineName )
+                  allocate( x%WAMIT2(         1), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array x%WAMIT2.', ErrStat, ErrMsg, RoutineName )
+                  allocate( xd%WAMIT2(        1), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array xd%WAMIT2.', ErrStat, ErrMsg, RoutineName )
+                  allocate( OtherState%WAMIT2(1), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array OtherState%WAMIT2.', ErrStat, ErrMsg, RoutineName )
+                  allocate( y%WAMIT2(         1), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array y%WAMIT2.', ErrStat, ErrMsg, RoutineName )
+                  allocate( m%WAMIT2(         1), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array m%WAMIT2.', ErrStat, ErrMsg, RoutineName )
+                  allocate( m%u_WAMIT2(       1), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array m%u_WAMIT2.', ErrStat, ErrMsg, RoutineName )
+                  allocate( InitOut%WAMIT2(   1), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array InitOut%WAMIT2.', ErrStat, ErrMsg, RoutineName )
+                  InitLocal%WAMIT2%PtfmRefxt     = InitLocal%PtfmRefxt
+                  InitLocal%WAMIT2%PtfmRefyt     = InitLocal%PtfmRefyt
+                  InitLocal%WAMIT2%PtfmRefzt     = InitLocal%PtfmRefzt
+                  InitLocal%WAMIT2%PtfmRefztRot  = InitLocal%PtfmRefztRot
+
+               else
+                  InitLocal%WAMIT2%NBody  = 1_IntKi               ! The WAMIT2 object will contain all NBody WAMIT2 bodies
+
+                     ! Allocate WAMIT2 InitInp arrays based on NBodyMod and copy the inputfile data into the 1st WAMIT body init data for NBodyMod > 1
+                  call AllocAry( InitLocal%WAMIT2%PtfmRefxt   , 1, "PtfmRefxt"   , ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+                  call AllocAry( InitLocal%WAMIT2%PtfmRefyt   , 1, "PtfmRefyt"   , ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+                  call AllocAry( InitLocal%WAMIT2%PtfmRefzt   , 1, "PtfmRefzt"   , ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+                  call AllocAry( InitLocal%WAMIT2%PtfmRefztRot, 1, "PtfmRefztRot", ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+                  allocate( p%WAMIT2(         InitLocal%NBody), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array p%WAMIT2.', ErrStat, ErrMsg, RoutineName )
+                  allocate( x%WAMIT2(         InitLocal%NBody), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array x%WAMIT2.', ErrStat, ErrMsg, RoutineName )
+                  allocate( xd%WAMIT2(        InitLocal%NBody), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array xd%WAMIT2.', ErrStat, ErrMsg, RoutineName )
+                  allocate( OtherState%WAMIT2(InitLocal%NBody), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array OtherState%WAMIT2.', ErrStat, ErrMsg, RoutineName )
+                  allocate( y%WAMIT2(         InitLocal%NBody), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array y%WAMIT2.', ErrStat, ErrMsg, RoutineName )
+                  allocate( m%WAMIT2(         InitLocal%NBody), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array m%WAMIT2.', ErrStat, ErrMsg, RoutineName )
+                  allocate( m%u_WAMIT2(       InitLocal%NBody), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array m%u_WAMIT2.', ErrStat, ErrMsg, RoutineName )
+                  allocate( InitOut%WAMIT2(   InitLocal%NBody), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array InitOut%WAMIT2.', ErrStat, ErrMsg, RoutineName )
+                  InitLocal%WAMIT2%PtfmRefxt   (1)  = InitLocal%PtfmRefxt   (1)
+                  InitLocal%WAMIT2%PtfmRefyt   (1)  = InitLocal%PtfmRefyt   (1)
+                  InitLocal%WAMIT2%PtfmRefzt   (1)  = InitLocal%PtfmRefzt   (1)
+                  InitLocal%WAMIT2%PtfmRefztRot(1)  = InitLocal%PtfmRefztRot(1)
+
+               endif
+
+                if ( ErrStat >= AbortErrLev ) then
+                   call CleanUp()
+                   return
+                end if
+
+               CALL WAMIT2_Init(InitLocal%WAMIT2, m%u_WAMIT2(1), p%WAMIT2(1), x%WAMIT2(1), xd%WAMIT2(1), z%WAMIT2, OtherState%WAMIT2(1), &
+                                       y%WAMIT2(1), m%WAMIT2(1), Interval, InitOut%WAMIT2(1), ErrStat2, ErrMsg2 )
                CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
                IF ( ErrStat >= AbortErrLev ) THEN
                   CALL CleanUp()
                   RETURN
                END IF
-   
+
+                     ! For NBodyMod > 1 and NBody > 1, set the body info and init the WAMIT2 body
+               do i = 2, p%nWAMITObj
+                   InitLocal%WAMIT2%WAMITFile        = InitLocal%PotFile     (i)
+                   InitLocal%WAMIT2%WAMITULEN        = InitLocal%WAMITULEN   (i)
+                   InitLocal%WAMIT2%PtfmRefxt   (1)  = InitLocal%PtfmRefxt   (i)
+                   InitLocal%WAMIT2%PtfmRefyt   (1)  = InitLocal%PtfmRefyt   (i)
+                   InitLocal%WAMIT2%PtfmRefzt   (1)  = InitLocal%PtfmRefzt   (i)
+                   InitLocal%WAMIT2%PtfmRefztRot(1)  = InitLocal%PtfmRefztRot(i)
+
+                   CALL WAMIT2_Init(InitLocal%WAMIT2, m%u_WAMIT2(i), p%WAMIT2(i), x%WAMIT2(i), xd%WAMIT2(i), z%WAMIT2, OtherState%WAMIT2(i), &
+                                           y%WAMIT2(i), m%WAMIT2(i), Interval, InitOut%WAMIT2(i), ErrStat2, ErrMsg2 )
+                   CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+                   IF ( ErrStat >= AbortErrLev ) THEN
+                       CALL CleanUp()
+                       RETURN
+                   END IF
+               end do
+
+
                   ! move arrays back
-               CALL MOVE_ALLOC(InitLocal%WAMIT2%WaveTime,               p%WaveTime  ) 
-               CALL MOVE_ALLOC(InitLocal%WAMIT2%WaveElevC0, Waves_InitOut%WaveElevC0) 
-               CALL MOVE_ALLOC(InitLocal%WAMIT2%WaveDirArr, Waves_InitOut%WaveDirArr) 
-   
-               
+               CALL MOVE_ALLOC(InitLocal%WAMIT2%WaveTime,               p%WaveTime  )
+               CALL MOVE_ALLOC(InitLocal%WAMIT2%WaveElevC0, Waves_InitOut%WaveElevC0)
+               CALL MOVE_ALLOC(InitLocal%WAMIT2%WaveDirArr, Waves_InitOut%WaveDirArr)
+ 
+
                   ! Verify that WAMIT2_Init() did not request a different Interval!
    
                IF ( p%DT /= Interval ) THEN
@@ -953,11 +1126,16 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                   CALL CleanUp()
                   RETURN
                END IF
-               
+
             ELSE
-               
-               p%WAMIT2%NumOuts = 0  !This doesn't get initialized if we don't call WAMIT2_Init
-   
+                  ! Flag used in output handling to indicate when to ignore WAMIT2 outputs.
+               p%WAMIT2used   = .FALSE.
+               allocate( p%WAMIT2(1), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array p%WAMIT2.', ErrStat, ErrMsg, RoutineName )
+               allocate( m%WAMIT2(1), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array m%WAMIT2.', ErrStat, ErrMsg, RoutineName )
+               p%WAMIT2%MnDriftF    = .FALSE.
+               p%WAMIT2%NewmanAppF  = .FALSE.
+               p%WAMIT2%DiffQTFF    = .FALSE.
+               p%WAMIT2%SumQTFF     = .FALSE.
             ENDIF
 
 #ifdef USE_FIT 
@@ -1142,7 +1320,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
          ! TODO: 1/29/2016 GJH
          ! This is where we need to perform Wave Stretching, now that the wave kinematics have been combined.
          ! We will call a new subroutine to perform this work. 
-         ! As an input, this code need the kinematics at the (X,Y,0) location which in a Z-line above/below all the nodes where kinematics are computed.
+         ! As an input, this code needs the kinematics at the (X,Y,0) location which in a Z-line above/below all the nodes where kinematics are computed.
          ! This code will alter the kinematics for stretching AND alter the nodeInWater array based on the combined wave elevation information
          IF (InitLocal%Waves%WaveStMod > 0 ) THEN
             call WvStretch_Init( InitLocal%Waves%WaveStMod, InitLocal%Waves%WtrDpth, InitLocal%Morison%NStepWave, InitLocal%Morison%NNodes,  &
@@ -1196,43 +1374,25 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
          CALL MOVE_ALLOC( InitLocal%Morison%WaveTime, p%WaveTime  )
          
          
-         IF ( u%Morison%DistribMesh%Committed ) THEN
+         IF ( u%Morison%Mesh%Committed ) THEN
                   ! we need the translation displacement mesh for loads transfer:
-            CALL MeshCopy ( SrcMesh  = u%Morison%DistribMesh            &
-                    , DestMesh = m%MrsnDistribMesh_position   &
+            CALL MeshCopy ( SrcMesh  = u%Morison%Mesh            &
+                    , DestMesh = m%MrsnMesh_position   &
                     , CtrlCode = MESH_NEWCOPY        &
                     , IOS      = COMPONENT_INPUT     &
                     , TranslationDisp = .TRUE.       &
                     , ErrStat  = ErrStat2            &
                     , ErrMess  = ErrMsg2              )  ! automatically sets    DestMesh%RemapFlag = .TRUE.
                     
-               CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDyn_Init:m%MrsnDistribMesh_position')
+               CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDyn_Init:m%MrsnMesh_position')
                IF ( ErrStat >= AbortErrLev ) THEN
                   CALL CleanUp()
                   RETURN
                END IF
-            m%MrsnDistribMesh_position%TranslationDisp = 0.0  ! bjj: this is actually initialized in the ModMesh module, but I'll do it here anyway.
+            m%MrsnMesh_position%TranslationDisp = 0.0  ! bjj: this is actually initialized in the ModMesh module, but I'll do it here anyway.
             
          END IF
          
-         IF ( u%Morison%LumpedMesh%Committed ) THEN
-                  ! we need the translation displacement mesh for loads transfer:
-            CALL MeshCopy ( SrcMesh  = u%Morison%LumpedMesh           &
-                    , DestMesh = m%MrsnLumpedMesh_position   &
-                    , CtrlCode = MESH_NEWCOPY        &
-                    , IOS      = COMPONENT_INPUT     &
-                    , TranslationDisp = .TRUE.       &
-                    , ErrStat  = ErrStat2            &
-                    , ErrMess  = ErrMsg2             )  ! automatically sets    DestMesh%RemapFlag = .TRUE.
-                    
-            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDyn_Init:m%MrsnLumpedMesh_position')
-            IF ( ErrStat >= AbortErrLev ) THEN
-               CALL CleanUp()
-               RETURN
-            END IF
-            m%MrsnLumpedMesh_position%TranslationDisp = 0.0  ! bjj: this is actually initialized in the ModMesh module, but I'll do it here anyway.
-            
-         END IF
             ! Verify that Morison_Init() did not request a different Interval!
       
          IF ( p%DT /= Interval ) THEN
@@ -1267,19 +1427,74 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
          
          
          IF ( InitLocal%PotMod == 1 .AND.  InitLocal%WAMIT%RdtnMod == 1) THEN
-            ! Write the header for this section
-            WRITE( InitLocal%UnSum,  '(//)' ) 
-            WRITE( InitLocal%UnSum,  '(A)' ) 'Radiation memory effect kernel'
-            WRITE( InitLocal%UnSum,  '(//)' ) 
-            WRITE( InitLocal%UnSum, '(1X,A10,2X,A10,21(2X,A16))' )    '    n    ' , '     t    ', '   K11    ', '   K12    ', '    K13   ', '    K14    ', '    K15    ', '    K16    ', '    K22   ', '    K23   ', '    K24    ', '    K25    ', '    K26    ', '    K33    ', '    K34    ', '    K35    ',     'K36    ', '    K44    ', '    K45    ', '    K46    ', '    K55    ', '    K56    ', '    K66    '
-            WRITE( InitLocal%UnSum, '(1X,A10,2X,A10,21(2X,A16))' )    '   (-)   ' , '    (s)   ', ' (kg/s^2) ', ' (kg/s^2) ', ' (kg/s^2) ', ' (kgm/s^2) ', ' (kgm/s^2) ', ' (kgm/s^2) ', ' (kg/s^2) ', ' (kg/s^2) ', ' (kgm/s^2) ', ' (kgm/s^2) ', ' (kgm/s^2) ', ' (kg/s^2)  ', ' (kgm/s^2) ', ' (kgm/s^2) ', ' (kgm/s^2) ', '(kgm^2/s^2)', '(kgm^2/s^2)', '(kgm^2/s^2)', '(kgm^2/s^2)', '(kgm^2/s^2)', '(kgm^2/s^2)'
+            ! Write the header for this section:  Note: When NBodyMod = 1 the kernel is now 6*NBody by 6*Nbody in size,
+            !   and we have NBody 6 by 6 kernels for NBodyMod=2 or 3
+            if (p%NBodyMod == 1) then
+               ! NBodyMod=1 kernel printout which is 6*NBody x 6*NBody long
+               WRITE( InitLocal%UnSum,  '(//)' ) 
+               WRITE( InitLocal%UnSum,  '(A)' ) 'Radiation memory effect kernel'
+               WRITE( InitLocal%UnSum,  '(//)' ) 
+               
+               WRITE( InitLocal%UnSum, '(1X,A10,2X,A10)',ADVANCE='no' )    '    n    ' , '     t    '
+               do i = 1,6*p%NBody
+                  do j = 1,6*p%NBody
+                     WRITE( InitLocal%UnSum, '(2X,A16)',ADVANCE='no' ) 'K'//trim(num2lstr(i))//trim(num2lstr(j))
+                  end do
+               end do
+               write(InitLocal%UnSum,'()')  ! end of line character
+               
+             
+               WRITE( InitLocal%UnSum, '(1X,A10,2X,A10)',ADVANCE='no' )    '   (-)   ' , '    (s)   ' 
+               do i = 1,6*p%NBody
+                  do j = 1,6*p%NBody
+                     if ( mod(i-1,6)+1 < 4 ) then
+                        if ( mod(j-1,6)+1 < 4  ) then  
+                           WRITE( InitLocal%UnSum, '(2X,A16)',ADVANCE='no' ) ' (kg/s^2) '
+                        else
+                           WRITE( InitLocal%UnSum, '(2X,A16)',ADVANCE='no' ) ' (kgm/s^2) '
+                        end if  
+                     else
+                        if  ( mod(j-1,6)+1 < 4 )  then
+                           WRITE( InitLocal%UnSum, '(2X,A16)',ADVANCE='no' ) ' (kgm/s^2) '
+                        else
+                           WRITE( InitLocal%UnSum, '(2X,A16)',ADVANCE='no' ) '(kgm^2/s^2)'
+                        end if                      
+                     end if
+                  end do
+               end do
+               write(InitLocal%UnSum,'()')  ! end of line character
+                 
+               do k= 0,p%WAMIT(1)%Conv_Rdtn%NStepRdtn-1
+                  WRITE( InitLocal%UnSum, '(1X,I10,2X,E12.5)',ADVANCE='no' ) K, K*p%WAMIT(1)%Conv_Rdtn%RdtnDT
+                  do i = 1,6*p%NBody
+                     do j = 1,6*p%NBody
+                        WRITE( InitLocal%UnSum, '(2X,ES16.5)',ADVANCE='no' ) p%WAMIT(1)%Conv_Rdtn%RdtnKrnl(k,i,j)
+                     end do
+                  end do
+                  write(InitLocal%UnSum,'()')  ! end of line character
+               end do
+               
+            else
+               do j = 1,p%nWAMITObj
+                  WRITE( InitLocal%UnSum,  '(//)' ) 
+                  WRITE( InitLocal%UnSum,  '(A)' ) 'Radiation memory effect kernel'
+                  WRITE( InitLocal%UnSum,  '(//)' ) 
+                  WRITE( InitLocal%UnSum, '(1X,A10,2X,A10,21(2X,A16))' )    '    n    ' , '     t    ', '   K11    ', '   K12    ', '    K13   ', '    K14    ', '    K15    ', '    K16    ', '    K22   ', '    K23   ', '    K24    ', '    K25    ', '    K26    ', '    K33    ', '    K34    ', '    K35    ',     'K36    ', '    K44    ', '    K45    ', '    K46    ', '    K55    ', '    K56    ', '    K66    '
+                  WRITE( InitLocal%UnSum, '(1X,A10,2X,A10,21(2X,A16))' )    '   (-)   ' , '    (s)   ', ' (kg/s^2) ', ' (kg/s^2) ', ' (kg/s^2) ', ' (kgm/s^2) ', ' (kgm/s^2) ', ' (kgm/s^2) ', ' (kg/s^2) ', ' (kg/s^2) ', ' (kgm/s^2) ', ' (kgm/s^2) ', ' (kgm/s^2) ', ' (kg/s^2)  ', ' (kgm/s^2) ', ' (kgm/s^2) ', ' (kgm/s^2) ', '(kgm^2/s^2)', '(kgm^2/s^2)', '(kgm^2/s^2)', '(kgm^2/s^2)', '(kgm^2/s^2)', '(kgm^2/s^2)'
 
                ! Write the data
-            DO I = 0,p%WAMIT%Conv_Rdtn%NStepRdtn-1
-   
-               WRITE( InitLocal%UnSum, '(1X,I10,2X,E12.5,21(2X,ES16.5))' ) I, I*p%WAMIT%Conv_Rdtn%RdtnDT, p%WAMIT%Conv_Rdtn%RdtnKrnl(I,1,1), p%WAMIT%Conv_Rdtn%RdtnKrnl(I,1,2), p%WAMIT%Conv_Rdtn%RdtnKrnl(I,1,3), p%WAMIT%Conv_Rdtn%RdtnKrnl(I,1,4), p%WAMIT%Conv_Rdtn%RdtnKrnl(I,1,5), p%WAMIT%Conv_Rdtn%RdtnKrnl(I,1,6), p%WAMIT%Conv_Rdtn%RdtnKrnl(I,2,2), p%WAMIT%Conv_Rdtn%RdtnKrnl(I,2,3), p%WAMIT%Conv_Rdtn%RdtnKrnl(I,2,4), p%WAMIT%Conv_Rdtn%RdtnKrnl(I,2,5), p%WAMIT%Conv_Rdtn%RdtnKrnl(I,2,6), p%WAMIT%Conv_Rdtn%RdtnKrnl(I,3,3), p%WAMIT%Conv_Rdtn%RdtnKrnl(I,3,4), p%WAMIT%Conv_Rdtn%RdtnKrnl(I,3,5), p%WAMIT%Conv_Rdtn%RdtnKrnl(I,3,6), p%WAMIT%Conv_Rdtn%RdtnKrnl(I,4,4), p%WAMIT%Conv_Rdtn%RdtnKrnl(I,4,5), p%WAMIT%Conv_Rdtn%RdtnKrnl(I,4,6), p%WAMIT%Conv_Rdtn%RdtnKrnl(I,5,5), p%WAMIT%Conv_Rdtn%RdtnKrnl(I,5,6), p%WAMIT%Conv_Rdtn%RdtnKrnl(I,6,6)
-      
-            END DO
+                  DO I = 0,p%WAMIT(j)%Conv_Rdtn%NStepRdtn-1
+                     WRITE( InitLocal%UnSum, '(1X,I10,2X,E12.5,21(2X,ES16.5))' ) I, I*p%WAMIT(j)%Conv_Rdtn%RdtnDT, &
+                        p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(I,1,1), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(I,1,2), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(I,1,3), &
+                        p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(I,1,4), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(I,1,5), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(I,1,6), &
+                        p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(I,2,2), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(I,2,3), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(I,2,4), &
+                        p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(I,2,5), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(I,2,6), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(I,3,3), &
+                        p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(I,3,4), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(I,3,5), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(I,3,6), &
+                        p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(I,4,4), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(I,4,5), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(I,4,6), &
+                        p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(I,5,5), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(I,5,6), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(I,6,6)
+                  END DO
+               end do
+            end if
          END IF
          
       END IF
@@ -1305,12 +1520,8 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
             END IF
       END IF
       
-      ! Define system output initializations (set up mesh) here:
-      
-      
-          ! Create the input and output meshes associated with lumped load at the WAMIT reference point (WRP)
-      
-      CALL MeshCreate( BlankMesh        = u%Mesh            &
+   ! Create the input mesh associated with kinematics of the platform reference point       
+      CALL MeshCreate( BlankMesh        = u%PRPMesh         &
                      ,IOS               = COMPONENT_INPUT   &
                      ,Nnodes            = 1                 &
                      ,ErrStat           = ErrStat2          &
@@ -1320,106 +1531,138 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                      ,TranslationVel    = .TRUE.            &
                      ,RotationVel       = .TRUE.            &
                      ,TranslationAcc    = .TRUE.            &
-                     ,RotationAcc       = .TRUE.)
-         ! Create the node on the mesh
-            
+                     ,RotationAcc       = .TRUE.            )    
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+          
+      CALL MeshPositionNode (u%PRPMesh                             &
+                              , 1                                  &
+                              , (/0.0_ReKi, 0.0_ReKi, 0.0_ReKi/)   &  
+                              , ErrStat2                           &
+                              , ErrMsg2                            )
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)    
+
+      CALL MeshConstructElement (  u%PRPMesh             &
+                                    , ELEMENT_POINT      &                         
+                                    , ErrStat2           &
+                                    , ErrMsg2            &
+                                    , 1                  )
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   
+      CALL MeshCommit ( u%PRPMesh             &
+                        , ErrStat2            &
+                        , ErrMsg2             )
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         
+      IF ( ErrStat >= AbortErrLev ) THEN
+         CALL CleanUp()
+         RETURN
+      END IF
+      
+      u%PRPMesh%RemapFlag  = .TRUE.
+
+
+      ! Create the input mesh associated with kinematics of the various WAMIT bodies
+      IF (p%PotMod >= 1) THEN
+         CALL MeshCreate( BlankMesh        = u%WAMITMesh       &
+                        ,IOS               = COMPONENT_INPUT   &
+                        ,Nnodes            = p%NBody           &
+                        ,ErrStat           = ErrStat2          &
+                        ,ErrMess           = ErrMsg2           &
+                        ,TranslationDisp   = .TRUE.            &
+                        ,Orientation       = .TRUE.            &
+                        ,TranslationVel    = .TRUE.            &
+                        ,RotationVel       = .TRUE.            &
+                        ,TranslationAcc    = .TRUE.            &
+                        ,RotationAcc       = .TRUE.            )
+            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+         do iBody = 1, p%NBody
+            theta = (/ 0.0_R8Ki, 0.0_R8Ki, InitLocal%PtfmRefztRot(iBody)/)
+            orientation = EulerConstruct(theta)
+
+            CALL MeshPositionNode (u%WAMITMesh                                                                              &
+                                 , iBody                                                                                    &
+                                 , (/InitLocal%PtfmRefxt(iBody), InitLocal%PtfmRefyt(iBody), InitLocal%PtfmRefzt(iBody)/)   &
+                                 , ErrStat2                                                                                 &
+                                 , ErrMsg2                                                                                  &
+                                 , orientation )
+               CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+            CALL MeshConstructElement (  u%WAMITMesh        &
+                                       , ELEMENT_POINT      &
+                                       , ErrStat2           &
+                                       , ErrMsg2            &
+                                       , iBody              )
+               CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         end do
+
+         CALL MeshCommit ( u%WAMITMesh           &
+                           , ErrStat2            &
+                           , ErrMsg2             )
+            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
          IF ( ErrStat >= AbortErrLev ) THEN
             CALL CleanUp()
             RETURN
          END IF
-         
-      CALL MeshPositionNode (u%Mesh                                &
+
+
+      ! Output mesh for loads at each WAMIT body
+         CALL MeshCopy (   SrcMesh    = u%WAMITMesh            &
+                        ,DestMesh     = y%WAMITMesh            &
+                        ,CtrlCode     = MESH_SIBLING           &
+                        ,IOS          = COMPONENT_OUTPUT       &
+                        ,ErrStat      = ErrStat2               &
+                        ,ErrMess      = ErrMsg2                &
+                        ,Force        = .TRUE.                 &
+                        ,Moment       = .TRUE.                 )
+            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDyn_Init:y%WAMITMesh')
+         IF ( ErrStat >= AbortErrLev ) THEN
+            CALL CleanUp()
+            RETURN
+         END IF
+         u%WAMITMesh%RemapFlag  = .TRUE.
+         y%WAMITMesh%RemapFlag  = .TRUE.
+      ENDIF    ! PotMod > 1
+
+
+   ! Create helper mesh to map all Hydrodynamics loads to the platform reference point to (0,0,0)
+      CALL MeshCreate (  BlankMesh      = m%AllHdroOrigin   &
+                     ,IOS               = COMPONENT_OUTPUT  &
+                     ,Nnodes            = 1                 &
+                     ,ErrStat           = ErrStat2          &
+                     ,ErrMess           = ErrMsg2           &
+                     ,Force             = .TRUE.            &
+                     ,Moment            = .TRUE.            )
+
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDyn_Init:m%AllHdroOrigin')
+
+      CALL MeshPositionNode (m%AllHdroOrigin                       &
                               , 1                                  &
                               , (/0.0_ReKi, 0.0_ReKi, 0.0_ReKi/)   &  
                               , ErrStat2                           &
                               , ErrMsg2                            )
       
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         IF ( ErrStat >= AbortErrLev ) THEN
-            CALL CleanUp()
-            RETURN
-         END IF
-       
-      
-         ! Create the mesh element
-      CALL MeshConstructElement (  u%Mesh              &
-                                  , ELEMENT_POINT      &                         
-                                  , ErrStat2           &
-                                  , ErrMsg2            &
-                                  , 1                  &
-                                              )
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         IF ( ErrStat >= AbortErrLev ) THEN
-            CALL CleanUp()
-            RETURN
-         END IF
-      
-      
-      CALL MeshCommit ( u%Mesh   &
-                      , ErrStat2            &
-                      , ErrMsg2             )
-   
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         IF ( ErrStat >= AbortErrLev ) THEN
-            CALL CleanUp()
-            RETURN
-         END IF
-      
 
-         
-      CALL MeshCopy (   SrcMesh      = u%Mesh               &
-                     ,DestMesh     = y%Mesh                 &
-                     ,CtrlCode     = MESH_SIBLING           &
-                     ,IOS          = COMPONENT_OUTPUT       &
-                     ,ErrStat      = ErrStat2               &
-                     ,ErrMess      = ErrMsg2                &
-                     ,Force        = .TRUE.                 &
-                     ,Moment       = .TRUE.                 )
-     
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDyn_Init:y%Mesh')
-         IF ( ErrStat >= AbortErrLev ) THEN
-            CALL CleanUp()
-            RETURN
-         END IF      
-      u%Mesh%RemapFlag  = .TRUE.
-      y%Mesh%RemapFlag  = .TRUE.
-     
-     CALL MeshCopy (   SrcMesh     = y%Mesh                 &
-                     ,DestMesh     = y%AllHdroOrigin        &
-                     ,CtrlCode     = MESH_NEWCOPY           &
-                     ,IOS          = COMPONENT_OUTPUT       &
-                     ,ErrStat      = ErrStat2               &
-                     ,ErrMess      = ErrMsg2                &
-                     ,Force        = .TRUE.                 &
-                     ,Moment       = .TRUE.                 )
-     
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDyn_Init:y%AllHdroOrigin')
-         IF ( ErrStat >= AbortErrLev ) THEN
-            CALL CleanUp()
-            RETURN
-         END IF      
-      y%AllHdroOrigin%RemapFlag  = .TRUE.
-      
-         ! we need the translation displacement mesh for loads transfer:
-      CALL MeshCopy ( SrcMesh  = u%Mesh            &
-                    , DestMesh = m%AllHdroOrigin_position   &
-                    , CtrlCode = MESH_NEWCOPY        &
-                    , IOS      = COMPONENT_INPUT     &
-                    , TranslationDisp = .TRUE.       &
-                    , ErrStat  = ErrStat2            &
-                    , ErrMess  = ErrMsg2             )  ! automatically sets    DestMesh%RemapFlag = .TRUE.
-                    
+      CALL MeshConstructElement (  m%AllHdroOrigin       &
+                                    , ELEMENT_POINT      &                         
+                                    , ErrStat2           &
+                                    , ErrMsg2            &
+                                    , 1                  )
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         IF ( ErrStat >= AbortErrLev ) THEN
-            CALL CleanUp()
-            RETURN
-         END IF
-      m%AllHdroOrigin_position%TranslationDisp = 0.0  ! bjj: this is actually initialized in the ModMesh module, but I'll do it here anyway.
-      
-     
-         ! Create the Output file if requested
-      
+
+      CALL MeshCommit ( m%AllHdroOrigin     &
+                        , ErrStat2            &
+                        , ErrMsg2             )
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      IF ( ErrStat >= AbortErrLev ) THEN
+         CALL CleanUp()
+         RETURN
+      END IF
+      m%AllHdroOrigin%RemapFlag  = .TRUE.
+
+         ! Create the Output file if requested      
       p%OutSwtch      = InitLocal%OutSwtch 
       p%Delim         = ''
       !p%Morison%Delim = p%Delim  ! Need to set this from within Morison to follow framework
@@ -1428,39 +1671,24 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
       p%OutSFmt       = InitLocal%OutSFmt
       p%NumOuts       = InitLocal%NumOuts
       
-      CALL HDOUT_Init( HydroDyn_ProgDesc, InitLocal, y,  p, m, InitOut, ErrStat2, ErrMsg2 )
-      
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      CALL HDOUT_Init( HydroDyn_ProgDesc, InitLocal, y,  p, m, InitOut, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          IF ( ErrStat >= AbortErrLev ) THEN
             CALL CleanUp()
             RETURN
          END IF
+
+      if ( y%WAMITMesh%Committed ) then 
+         call MeshMapCreate( y%WAMITMesh,    m%AllHdroOrigin, m%HD_MeshMap%W_P_2_PRP_P, ErrStat2, ErrMsg2  );CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      end if
       
-         ! Create some mesh mapping data
-      CALL MeshCopy ( SrcMesh      = y%Mesh                 &
-                     ,DestMesh     = m%y_mapped             &
-                     ,CtrlCode     = MESH_NEWCOPY           &
-                     ,IOS          = COMPONENT_OUTPUT       &
-                     ,ErrStat      = ErrStat2               &
-                     ,ErrMess      = ErrMsg2                &
-                     ,Force        = .TRUE.                 &
-                     ,Moment       = .TRUE.                 )
-          
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      m%y_mapped%RemapFlag  = .TRUE.
- 
-      CALL MeshMapCreate( y%Mesh,                m%y_mapped, m%HD_MeshMap%HD_P_2_WRP_P, ErrStat2, ErrMsg2  );CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      IF ( y%Morison%LumpedMesh%Committed ) THEN 
-         CALL MeshMapCreate( y%Morison%LumpedMesh,  m%y_mapped, m%HD_MeshMap%M_P_2_WRP_P,  ErrStat2, ErrMsg2  );CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      ENDIF
-      IF ( y%Morison%DistribMesh%Committed ) THEN 
-         CALL MeshMapCreate( y%Morison%DistribMesh, m%y_mapped, m%HD_MeshMap%M_L_2_WRP_P,  ErrStat2, ErrMsg2  );CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      IF ( y%Morison%Mesh%Committed ) THEN 
+         CALL MeshMapCreate( y%Morison%Mesh, m%AllHdroOrigin, m%HD_MeshMap%M_P_2_PRP_P,  ErrStat2, ErrMsg2  );CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       ENDIF
       
-         IF ( ErrStat >= AbortErrLev ) THEN
-            CALL CleanUp()
-            RETURN
-         END IF         
+      IF ( ErrStat >= AbortErrLev ) THEN
+         CALL CleanUp()
+         RETURN
+      END IF         
          
       ! Define initialization-routine output here:
       InitOut%Ver = HydroDyn_ProgDesc         
@@ -1468,10 +1696,9 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
       InitOut%WtrDens = InitLocal%Morison%WtrDens
       InitOut%WtrDpth = InitLocal%Morison%WtrDpth
       InitOut%MSL2SWL = InitLocal%Morison%MSL2SWL
-                                  
-      p%WtrDpth = InitOut%WtrDpth
+      p%WtrDpth       = InitOut%WtrDpth  
          
-      IF ( InitInp%hasIce ) THEN
+      IF ( InitLocal%hasIce ) THEN
          IF ((InitLocal%Waves%WaveMod /= 0) .OR. (InitLocal%Current%CurrMod /= 0) ) THEN
             CALL SetErrStat(ErrID_Fatal,'Waves and Current must be turned off in HydroDyn when ice loading is computed. Set WaveMod=0 and CurrMod=0.',ErrStat,ErrMsg,RoutineName)
          END IF
@@ -1618,7 +1845,7 @@ SUBROUTINE HydroDyn_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherSt
       CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg          !< Error message if ErrStat /= ErrID_None
 
          ! Local variables
-      INTEGER                                            :: I               ! Generic loop counter
+      INTEGER                                            :: I, iWAMIT, iBody ! Generic loop counters
       TYPE(HydroDyn_ContinuousStateType)                 :: dxdt            ! Continuous state derivatives at t
       TYPE(HydroDyn_DiscreteStateType)                   :: xd_t            ! Discrete states at t (copy)
       TYPE(HydroDyn_ConstraintStateType)                 :: z_Residual      ! Residual of the constraint state functions (Z)
@@ -1656,44 +1883,66 @@ SUBROUTINE HydroDyn_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherSt
       
       
          ! Allocate array of WAMIT inputs
-         ! TODO: We should avoid allocating this at each time step if we can!
          
 !FIXME: Error handling appears to be broken here
 
    IF ( p%PotMod == 1 ) THEN
+       
       ALLOCATE( Inputs_WAMIT(nTime), STAT = ErrStat2 )
       IF (ErrStat2 /=0) THEN
          CALL SetErrStat( ErrID_Fatal, 'Failed to allocate array Inputs_WAMIT.', ErrStat, ErrMsg, RoutineName )
          RETURN
       END IF
 
+      if ( p%NBodyMod == 1 .or. p%NBody == 1 ) then
+         ! For this NBodyMod or NBody=1, there is only one WAMIT object, so copy the necessary inputs and then call WAMIT_UpdateStates
+         do I=1,nTime
+               ! Copy the inputs from the HD mesh into the WAMIT mesh         
+            call MeshCopy( Inputs(I)%WAMITMesh, Inputs_WAMIT(I)%Mesh, MESH_NEWCOPY, ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )   
+         end do
          
-         ! Loop over number of inputs and copy them into an array of WAMIT inputs
+         if (ErrStat < AbortErrLev) then    ! if there was an error copying the input meshes, we'll skip this step and then cleanup the temporary input meshes     
+               ! Update the WAMIT module states
       
-      DO I=1,nTime
-                  
-            ! Copy the inputs from the HD mesh into the WAMIT mesh         
-         CALL MeshCopy( Inputs(I)%Mesh, Inputs_WAMIT(I)%Mesh, MESH_NEWCOPY, ErrStat2, ErrMsg2 )   
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )                  
+            call WAMIT_UpdateStates( t, n, Inputs_WAMIT, InputTimes, p%WAMIT(1), x%WAMIT(1), xd%WAMIT(1), z%WAMIT, OtherState%WAMIT(1), m%WAMIT(1), ErrStat2, ErrMsg2 )
+               call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )         
+
+         end if
          
-      END DO
-      
+      else
          
-      IF (ErrStat < AbortErrLev) THEN    ! if there was an error copying the input meshes, we'll skip this step and then cleanup the temporary input meshes     
-            ! Update the WAMIT module states
-      
-         CALL WAMIT_UpdateStates( t, n, Inputs_WAMIT, InputTimes, p%WAMIT, x%WAMIT, xd%WAMIT, z%WAMIT, OtherState%WAMIT, m%WAMIT, ErrStat2, ErrMsg2 )
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )         
-     
-      END IF
-      
+         ! We have multiple WAMIT objects
+
+            ! Loop over number of inputs and copy them into an array of WAMIT inputs
+         do iWAMIT = 1, p%nWAMITObj
+            
+            do I=1,nTime
+                  ! We need to create to valid mesh data structures in our Inputs_WAMIT(I)%Mesh using the miscvar version as a template, but the actually data will be generated below      
+               call MeshCopy( m%u_WAMIT(iWAMIT)%Mesh, Inputs_WAMIT(I)%Mesh, MESH_NEWCOPY, ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )   
+                  ! We need to copy the iWAMIT-th node data from the Inputs(I)%WAMITMesh onto the 1st node of the Inputs_WAMIT(I)%Mesh
+               Inputs_WAMIT(I)%Mesh%TranslationDisp(:,1)  = Inputs(I)%WAMITMesh%TranslationDisp(:,iWAMIT)
+               Inputs_WAMIT(I)%Mesh%Orientation    (:,:,1)= Inputs(I)%WAMITMesh%Orientation    (:,:,iWAMIT)
+               Inputs_WAMIT(I)%Mesh%TranslationVel (:,1)  = Inputs(I)%WAMITMesh%TranslationVel (:,iWAMIT)
+               Inputs_WAMIT(I)%Mesh%RotationVel    (:,1)  = Inputs(I)%WAMITMesh%RotationVel    (:,iWAMIT)
+               Inputs_WAMIT(I)%Mesh%TranslationAcc (:,1)  = Inputs(I)%WAMITMesh%TranslationAcc (:,iWAMIT)
+               Inputs_WAMIT(I)%Mesh%RotationAcc    (:,1)  = Inputs(I)%WAMITMesh%RotationAcc    (:,iWAMIT)               
+            end do
+            
+               ! UpdateStates for the iWAMIT-th body
+            call WAMIT_UpdateStates( t, n, Inputs_WAMIT, InputTimes, p%WAMIT(iWAMIT), x%WAMIT(iWAMIT), xd%WAMIT(iWAMIT), z%WAMIT, OtherState%WAMIT(iWAMIT), m%WAMIT(iWAMIT), ErrStat2, ErrMsg2 )
+               call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )     
+               if (ErrStat > AbortErrLev) exit
+               
+         end do
+         
+      end if
+       
          ! deallocate temporary inputs
-      DO I=1,nTime
-         CALL WAMIT_DestroyInput( Inputs_WAMIT(I), ErrStat2, ErrMsg2 )     
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )         
-      END DO
+      do I=1,nTime
+         call WAMIT_DestroyInput( Inputs_WAMIT(I), ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )         
+      end do
       
-      DEALLOCATE(Inputs_WAMIT)
+      deallocate(Inputs_WAMIT)
 
 #ifdef USE_FIT      
    ELSE IF ( p%PotMod == 2 ) THEN  ! FIT
@@ -1712,13 +1961,13 @@ SUBROUTINE HydroDyn_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherSt
             ! Copy the inputs from the HD mesh into the FIT input variables
          
             ! Determine the rotational angles from the direction-cosine matrix
-         rotdisp = GetSmllRotAngs ( Inputs(I)%Mesh%Orientation(:,:,1), ErrStat2, ErrMsg2 )
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDyn_CalcOutput' )   
+         rotdisp = GetSmllRotAngs ( Inputs(I)%WAMITMesh%Orientation(:,:,1), ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDyn_UpdateStates' )   
          Inputs_FIT(I)%roll     = rotdisp(1)
          Inputs_FIT(I)%pitch    = rotdisp(2)
          Inputs_FIT(I)%yaw      = rotdisp(3)
-         Inputs_FIT(I)%si_t(:)  = Inputs(I)%Mesh%TranslationDisp(:,1)             
-         Inputs_FIT(I)%vel_t(:) = Inputs(I)%Mesh%TranslationVel (:,1)  
+         Inputs_FIT(I)%si_t(:)  = Inputs(I)%WAMITMesh%TranslationDisp(:,1)             
+         Inputs_FIT(I)%vel_t(:) = Inputs(I)%WAMITMesh%TranslationVel (:,1)  
       END DO
       
          
@@ -1749,7 +1998,7 @@ END SUBROUTINE HydroDyn_UpdateStates
 SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )   
    
       REAL(DbKi),                         INTENT(IN   )  :: Time        !< Current simulation time in seconds
-      TYPE(HydroDyn_InputType),           INTENT(INOUT)  :: u           !< Inputs at Time (note that this is intent out because we're copying the u%mesh into m%u_wamit%mesh)
+      TYPE(HydroDyn_InputType),           INTENT(INOUT)  :: u           !< Inputs at Time (note that this is intent out because we're copying the u%WAMITMesh into m%u_wamit%mesh)
       TYPE(HydroDyn_ParameterType),       INTENT(IN   )  :: p           !< Parameters
       TYPE(HydroDyn_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at Time
       TYPE(HydroDyn_DiscreteStateType),   INTENT(IN   )  :: xd          !< Discrete states at Time
@@ -1773,16 +2022,19 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat,
 #endif      
       REAL(ReKi)                           :: WaveElev (p%NWaveElev) ! Instantaneous total elevation of incident waves at each of the NWaveElev points where the incident wave elevations can be output (meters)
       REAL(ReKi)                           :: WaveElev1(p%NWaveElev)    ! Instantaneous first order elevation of incident waves at each of the NWaveElev points where the incident wave elevations can be output (meters)
+      REAL(ReKi)                           :: WaveElev2(p%NWaveElev)    ! Instantaneous first order elevation of incident waves at each of the NWaveElev points where the incident wave elevations can be output (meters)
       
-      REAL(ReKi)                           :: q(6), qdot(6), qdotsq(6), qdotdot(6)
+      REAL(ReKi)                           :: q(6*p%NBody), qdot(6*p%NBody), qdotsq(6*p%NBody), qdotdot(6*p%NBody)
       REAL(ReKi)                           :: rotdisp(3)                              ! small angle rotational displacements
       REAL(ReKi)                           :: AllOuts(MaxHDOutputs)  
-      
+      integer(IntKi)                       :: iBody, indxStart, indxEnd, iWAMIT  ! Counters
       
          ! Initialize ErrStat
          
       ErrStat = ErrID_None         
-      ErrMsg  = ""               
+      ErrMsg  = ""
+      WaveElev1 = 0.0_ReKi
+      WaveElev2 = 0.0_ReKi    ! In case we don't use 2nd order waves
       
       
          ! Compute outputs here:
@@ -1792,7 +2044,6 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat,
          ! Additional stiffness, damping forces.  These need to be placed on a point mesh which is located at the WAMIT reference point (WRP).
          ! This mesh will need to get mapped by the glue code for use by either ElastoDyn or SubDyn.
          !-------------------------------------------------------------------
-!bjj: if these are false in the input file, the parameter verions of these variables don't get set:
 
          ! Deal with any output from the Waves2 module....
       IF (p%Waves2%WvDiffQTFF .OR. p%Waves2%WvSumQTFF ) THEN
@@ -1804,105 +2055,178 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat,
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDyn_CalcOutput' )                  
       END IF
 
-!FIXME: Error handling appears to be broken here.
 
-         ! Determine the rotational angles from the direction-cosine matrix
-      rotdisp = GetSmllRotAngs ( u%Mesh%Orientation(:,:,1), ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDyn_CalcOutput' )                  
+      if ( p%PotMod == 1 ) then
+         do iBody = 1, p%NBody
+               ! Determine the rotational angles from the direction-cosine matrix
+            rotdisp = GetSmllRotAngs ( u%WAMITMesh%Orientation(:,:,iBody), ErrStat2, ErrMsg2 )
+               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDyn_CalcOutput' )                  
+            indxStart = (iBody-1)*6+1
+            indxEnd   = indxStart+5
+            q      (indxStart:indxEnd)   = reshape((/real(u%WAMITMesh%TranslationDisp(:,iBody),ReKi),rotdisp(:)/),(/6/))
+            qdot   (indxStart:indxEnd)   = reshape((/u%WAMITMesh%TranslationVel(:,iBody),u%WAMITMesh%RotationVel(:,iBody)/),(/6/))
+            qdotsq (indxStart:indxEnd)   = abs(qdot(indxStart:indxEnd))*qdot(indxStart:indxEnd)
+            qdotdot(indxStart:indxEnd)   = reshape((/u%WAMITMesh%TranslationAcc(:,iBody),u%WAMITMesh%RotationAcc(:,iBody)/),(/6/))
+         end do
+   !FIXME: Error handling appears to be broken here.
+         if ( p%NBodyMod == 1 ) then
+              
+                  ! Compute the load contirbution from user-supplied added stiffness and damping        
+               m%F_PtfmAdd = p%AddF0(:,1) - matmul(p%AddCLin(:,:,1), q) - matmul(p%AddBLin(:,:,1), qdot) - matmul(p%AddBQuad(:,:,1), qdotsq)
+            do iBody = 1, p%NBody
+               indxStart = (iBody-1)*6+1
+               indxEnd   = indxStart+5
+                  ! Attach to the output point mesh
+               y%WAMITMesh%Force (:,iBody) = m%F_PtfmAdd(indxStart:indxStart+2)
+               y%WAMITMesh%Moment(:,iBody) = m%F_PtfmAdd(indxStart+3:indxEnd)
+            end do
+         
+         else
+            do iBody = 1, p%NBody
+               indxStart = (iBody-1)*6+1
+               indxEnd   = indxStart+5
+  
+               m%F_PtfmAdd(indxStart:indxEnd) = p%AddF0(:,1) - matmul(p%AddCLin(:,:,iBody), q(indxStart:indxEnd)) - matmul(p%AddBLin(:,:,iBody), qdot(indxStart:indxEnd)) - matmul(p%AddBQuad(:,:,iBody), qdotsq(indxStart:indxEnd))
+      
+                  ! Attach to the output point mesh
+               y%WAMITMesh%Force (:,iBody) = m%F_PtfmAdd(indxStart:indxStart+2)
+               y%WAMITMesh%Moment(:,iBody) = m%F_PtfmAdd(indxStart+3:indxEnd)
+            end do
+         
+         end if
+       
+         m%F_Waves = 0.0_ReKi
 
-      q         = reshape((/REAL(u%Mesh%TranslationDisp(:,1),ReKi),rotdisp(:)/),(/6/))
-      qdot      = reshape((/u%Mesh%TranslationVel(:,1),u%Mesh%RotationVel(:,1)/),(/6/))
-      qdotsq    = abs(qdot)*qdot
-      qdotdot   = reshape((/u%Mesh%TranslationAcc(:,1),u%Mesh%RotationAcc(:,1)/),(/6/))
-      
-      
-         ! Compute the load contirbution from user-supplied added stiffness and damping
-         
-      m%F_PtfmAdd = p%AddF0 - matmul(p%AddCLin, q) - matmul(p%AddBLin, qdot) - matmul(p%AddBQuad, qdotsq)
-      
-         ! Attach to the output point mesh
-      y%Mesh%Force (:,1) = m%F_PtfmAdd(1:3)
-      y%Mesh%Moment(:,1) = m%F_PtfmAdd(4:6)
-      
-      IF ( p%PotMod == 1 ) THEN
-         IF ( m%u_WAMIT%Mesh%Committed ) THEN  ! Make sure we are using WAMIT / there is a valid mesh
-         
-               ! Copy the inputs from the HD mesh into the WAMIT mesh
-            CALL MeshCopy( u%Mesh, m%u_WAMIT%Mesh, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )   
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDyn_CalcOutput' )                  
-               IF ( ErrStat >= AbortErrLev ) RETURN
-         
-         
-            CALL WAMIT_CalcOutput( Time, m%u_WAMIT, p%WAMIT, x%WAMIT, xd%WAMIT,  &
-                                   z%WAMIT, OtherState%WAMIT, y%WAMIT, m%WAMIT, ErrStat2, ErrMsg2 )
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDyn_CalcOutput' )                  
-         
-               ! Add WAMIT forces to the HydroDyn output mesh
-            y%Mesh%Force (:,1) = y%Mesh%Force (:,1) + y%WAMIT%Mesh%Force (:,1)
-            y%Mesh%Moment(:,1) = y%Mesh%Moment(:,1) + y%WAMIT%Mesh%Moment(:,1)
-         
+         if (allocated(m%u_WAMIT)) then               ! Check that we allocated u_WAMIT, otherwise there is an error checking the mesh
+            if ( m%u_WAMIT(1)%Mesh%Committed ) then  ! Make sure we are using WAMIT / there is a valid mesh
 
-               ! Copy the F_Waves1 information to the HydroDyn level so we can combine it with the 2nd order
-            m%F_Waves   = m%WAMIT%F_Waves1
+               if ( p%NBodyMod == 1 .or. p%NBody == 1 ) then
+                     ! Copy the inputs from the HD mesh into the WAMIT mesh
+                  call MeshCopy( u%WAMITMesh, m%u_WAMIT(1)%Mesh, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
+                     call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDyn_CalcOutput' )
+                        if ( ErrStat >= AbortErrLev ) return
 
-         
-         END IF
-        
+                  call WAMIT_CalcOutput( Time, p%WaveTime, m%u_WAMIT(1), p%WAMIT(1), x%WAMIT(1), xd%WAMIT(1),  &
+                                          z%WAMIT, OtherState%WAMIT(1), y%WAMIT(1), m%WAMIT(1), ErrStat2, ErrMsg2 )
+                     call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDyn_CalcOutput' )
+                  do iBody=1,p%NBody
+                     y%WAMITMesh%Force (:,iBody) = y%WAMITMesh%Force (:,iBody) + y%WAMIT(1)%Mesh%Force (:,iBody)
+                     y%WAMITMesh%Moment(:,iBody) = y%WAMITMesh%Moment(:,iBody) + y%WAMIT(1)%Mesh%Moment(:,iBody)
+
+                  end do
+                     ! Copy the F_Waves1 information to the HydroDyn level so we can combine it with the 2nd order
+                  m%F_Waves   = m%F_Waves + m%WAMIT(1)%F_Waves1
+               else
+                  do iBody=1,p%NBody
+
+                        ! We need to copy the iWAMIT-th node data from the Inputs(I)%WAMITMesh onto the 1st node of the Inputs_WAMIT(I)%Mesh
+                     m%u_WAMIT(iBody)%Mesh%TranslationDisp(:,1)  = u%WAMITMesh%TranslationDisp(:,iBody)
+                     m%u_WAMIT(iBody)%Mesh%Orientation    (:,:,1)= u%WAMITMesh%Orientation    (:,:,iBody)
+                     m%u_WAMIT(iBody)%Mesh%TranslationVel (:,1)  = u%WAMITMesh%TranslationVel (:,iBody)
+                     m%u_WAMIT(iBody)%Mesh%RotationVel    (:,1)  = u%WAMITMesh%RotationVel    (:,iBody)
+                     m%u_WAMIT(iBody)%Mesh%TranslationAcc (:,1)  = u%WAMITMesh%TranslationAcc (:,iBody)
+                     m%u_WAMIT(iBody)%Mesh%RotationAcc    (:,1)  = u%WAMITMesh%RotationAcc    (:,iBody)
+
+                     call WAMIT_CalcOutput( Time, p%WaveTime, m%u_WAMIT(iBody), p%WAMIT(iBody), x%WAMIT(iBody), xd%WAMIT(iBody),  &
+                                          z%WAMIT, OtherState%WAMIT(iBody), y%WAMIT(iBody), m%WAMIT(iBody), ErrStat2, ErrMsg2 )
+                        call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDyn_CalcOutput' )
+                     y%WAMITMesh%Force (:,iBody) = y%WAMITMesh%Force (:,iBody) + y%WAMIT(iBody)%Mesh%Force (:,1)
+                     y%WAMITMesh%Moment(:,iBody) = y%WAMITMesh%Moment(:,iBody) + y%WAMIT(iBody)%Mesh%Moment(:,1)
+
+                        ! Copy the F_Waves1 information to the HydroDyn level so we can combine it with the 2nd order
+                     indxStart = (iBody-1)*6+1
+                     indxEnd   = indxStart+5
+                     m%F_Waves(indxStart:indxEnd) = m%F_Waves(indxStart:indxEnd) + m%WAMIT(iBody)%F_Waves1
+                  end do
+               end if
+            end if   ! m%u_WAMIT(1)%Mesh%Committed
+         end if      ! m%u_WAMIT is allocated
+
+
+
+            ! Second order
+         if (p%WAMIT2used) then
+
+            if ( p%NBodyMod == 1 .or. p%NBody == 1 ) then
+                  ! Copy the inputs from the HD mesh into the WAMIT mesh
+               call MeshCopy( u%WAMITMesh, m%u_WAMIT2(1)%Mesh, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
+                  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDyn_CalcOutput' )
+                     if ( ErrStat >= AbortErrLev ) return
+               call WAMIT2_CalcOutput( Time, p%WaveTime, m%u_WAMIT2(1), p%WAMIT2(1), x%WAMIT2(1), xd%WAMIT2(1),  &
+                                       z%WAMIT2, OtherState%WAMIT2(1), y%WAMIT2(1), m%WAMIT2(1), ErrStat2, ErrMsg2 )
+                  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDyn_CalcOutput' )
+               do iBody=1,p%NBody
+                  y%WAMITMesh%Force (:,iBody) = y%WAMITMesh%Force (:,iBody) + y%WAMIT2(1)%Mesh%Force (:,iBody)
+                  y%WAMITMesh%Moment(:,iBody) = y%WAMITMesh%Moment(:,iBody) + y%WAMIT2(1)%Mesh%Moment(:,iBody)
+               end do
+                  ! Add F_Waves2 to m%F_Waves
+               m%F_Waves  = m%F_Waves + m%WAMIT2(1)%F_Waves2
+            else
+               do iBody=1,p%NBody
+
+                     ! We need to copy the iWAMIT2-th node data from the Inputs(I)%WAMIT2Mesh onto the 1st node of the Inputs_WAMIT2(I)%Mesh
+                  m%u_WAMIT2(iBody)%Mesh%TranslationDisp(:,1)  = u%WAMITMesh%TranslationDisp(:,iBody)
+                  m%u_WAMIT2(iBody)%Mesh%Orientation    (:,:,1)= u%WAMITMesh%Orientation    (:,:,iBody)
+                  m%u_WAMIT2(iBody)%Mesh%TranslationVel (:,1)  = u%WAMITMesh%TranslationVel (:,iBody)
+                  m%u_WAMIT2(iBody)%Mesh%RotationVel    (:,1)  = u%WAMITMesh%RotationVel    (:,iBody)
+                  m%u_WAMIT2(iBody)%Mesh%TranslationAcc (:,1)  = u%WAMITMesh%TranslationAcc (:,iBody)
+                  m%u_WAMIT2(iBody)%Mesh%RotationAcc    (:,1)  = u%WAMITMesh%RotationAcc    (:,iBody)
+
+                  call WAMIT2_CalcOutput( Time, p%WaveTime, m%u_WAMIT2(iBody), p%WAMIT2(iBody), x%WAMIT2(iBody), xd%WAMIT2(iBody),  &
+                                       z%WAMIT2, OtherState%WAMIT2(iBody), y%WAMIT2(iBody), m%WAMIT2(iBody), ErrStat2, ErrMsg2 )
+                     call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDyn_CalcOutput' )
+                  y%WAMITMesh%Force (:,iBody) = y%WAMITMesh%Force (:,iBody) + y%WAMIT2(iBody)%Mesh%Force (:,1)
+                  y%WAMITMesh%Moment(:,iBody) = y%WAMITMesh%Moment(:,iBody) + y%WAMIT2(iBody)%Mesh%Moment(:,1)
+
+                     ! Copy the F_Waves1 information to the HydroDyn level so we can combine it with the 2nd order
+                  indxStart = (iBody-1)*6+1
+                  indxEnd   = indxStart+5
+                  m%F_Waves(indxStart:indxEnd) = m%F_Waves(indxStart:indxEnd) + m%WAMIT2(iBody)%F_Waves2
+               end do
+            end if
+         end if         !  p%WAMIT2used
+
 #ifdef USE_FIT          
       ELSE IF ( p%PotMod ==2 ) THEN !FIT
          Inputs_FIT%roll     = rotdisp(1)
          Inputs_FIT%pitch    = rotdisp(2)
          Inputs_FIT%yaw      = rotdisp(3)
-         Inputs_FIT%si_t(:)  = u%Mesh%TranslationDisp(:,1)             
-         Inputs_FIT%vel_t(:) = u%Mesh%TranslationVel (:,1)  
+         Inputs_FIT%si_t(:)  = u%WAMITMesh%TranslationDisp(:,1)             
+         Inputs_FIT%vel_t(:) = u%WAMITMesh%TranslationVel (:,1)  
          CALL FIT_CalcOutput( Time, Inputs_FIT, p%FIT, FIT_x, xd%FIT, FIT_z, OtherState%FIT, y%FIT, ErrStat2, ErrMsg2 ) 
          
             ! Add FIT forces to the HydroDyn output mesh
-         y%Mesh%Force (:,1) = y%Mesh%Force (:,1) + y%FIT%F(:)
-         y%Mesh%Moment(:,1) = y%Mesh%Moment(:,1) + y%FIT%M(:)
+         y%WAMITMesh%Force (:,1) = y%WAMITMesh%Force (:,1) + y%FIT%F(:)
+         y%WAMITMesh%Moment(:,1) = y%WAMITMesh%Moment(:,1) + y%FIT%M(:)
 #endif  
          
       END IF
       
 
-      IF ( m%u_WAMIT2%Mesh%Committed ) THEN  ! Make sure we are using WAMIT2 / there is a valid mesh
 
-            ! Copy the inputs from the HD mesh into the WAMIT2 mesh
-         CALL MeshCopy( u%Mesh, m%u_WAMIT2%Mesh, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDyn_CalcOutput' )                  
-            IF ( ErrStat >= AbortErrLev ) RETURN
-
-
-         CALL WAMIT2_CalcOutput( Time, m%u_WAMIT2, p%WAMIT2, x%WAMIT2, xd%WAMIT2,  &
-                                z%WAMIT2, OtherState%WAMIT2, y%WAMIT2, m%WAMIT2, ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDyn_CalcOutput' )                  
-
-            ! Add WAMIT2 forces to the HydroDyn output mesh
-         y%Mesh%Force (:,1) = y%Mesh%Force (:,1) + y%WAMIT2%Mesh%Force (:,1)
-         y%Mesh%Moment(:,1) = y%Mesh%Moment(:,1) + y%WAMIT2%Mesh%Moment(:,1)
-
-            ! Add the second order WAMIT forces to the first order WAMIT forces for the total (this is just to make the mesh match this misc var)
-         m%F_Waves   =  m%F_Waves   +  m%WAMIT2%F_Waves2
-
-      END IF
-
-
-
-      IF ( u%Morison%LumpedMesh%Committed ) THEN  ! Make sure we are using Morison / there is a valid mesh
+      IF ( u%Morison%Mesh%Committed ) THEN  ! Make sure we are using Morison / there is a valid mesh
          CALL Morison_CalcOutput( Time, u%Morison, p%Morison, x%Morison, xd%Morison,  &
                                 z%Morison, OtherState%Morison, y%Morison, m%Morison, ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDyn_CalcOutput' )                  
       END IF
       
       
-         ! Integrate all the mesh loads onto the WAMIT reference Point (WRP) at (0,0,0)
-      m%F_Hydro = CalcLoadsAtWRP( y, u, m%y_mapped, m%AllHdroOrigin_position, m%MrsnLumpedMesh_position, m%MrsnDistribMesh_position, m%HD_MeshMap, ErrStat2, ErrMsg2 )
+         ! Integrate all the mesh loads onto the platfrom reference Point (PRP) at (0,0,0)
+      m%F_Hydro = CalcLoadsAtWRP( y, u, m%AllHdroOrigin, u%PRPMesh, m%MrsnMesh_position, m%HD_MeshMap, ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDyn_CalcOutput' )                  
       
       
          ! Compute the wave elevations at the requested output locations for this time.  Note that p%WaveElev has the second order added to it already.
          
-      DO I=1,p%NWaveElev   
+         ! Second order wave elevation, if calculated (This array is split out for speed because of the if)
+      if (allocated(p%WaveElev2)) then
+         DO I=1,p%NWaveElev
+            WaveElev2(I)   = InterpWrappedStpReal ( REAL(Time, SiKi), p%WaveTime(:), p%WaveElev2(:,I),          &
+                                       m%LastIndWave, p%NStepWave + 1       )
+         END DO
+      endif
+
+      DO I=1,p%NWaveElev
          WaveElev1(I)   = InterpWrappedStpReal ( REAL(Time, SiKi), p%WaveTime(:), p%WaveElev1(:,I),          &
                                     m%LastIndWave, p%NStepWave + 1       )                      
          WaveElev(I)    = InterpWrappedStpReal ( REAL(Time, SiKi), p%WaveTime(:), p%WaveElev(:,I), &
@@ -1923,7 +2247,7 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat,
       
       
          ! Map calculated results into the AllOuts Array
-      CALL HDOut_MapOutputs( Time, y, p%NWaveElev, WaveElev, WaveElev1, m%F_PtfmAdd, m%F_Waves, m%F_Hydro, q, qdot, qdotdot, AllOuts, ErrStat2, ErrMsg2 )
+      CALL HDOut_MapOutputs( Time, p, y, m%WAMIT, m%WAMIT2, p%NWaveElev, WaveElev, WaveElev1, WaveElev2, m%F_PtfmAdd, m%F_Waves, m%F_Hydro, u%PRPMesh, q, qdot, qdotdot, AllOuts, ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDyn_CalcOutput' )                  
       
       DO I = 1,p%NumOuts
@@ -1936,23 +2260,9 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat,
          
          J = p%NumOuts + 1        
          
-         IF (ALLOCATED( p%WAMIT%OutParam ) .AND. p%WAMIT%NumOuts > 0) THEN
-            DO I=1, p%WAMIT%NumOuts
-               y%WriteOutput(J) = y%WAMIT%WriteOutput(I)
-               J = J + 1
-            END DO
-         END IF
-         
          IF (ALLOCATED( p%Waves2%OutParam ) .AND. p%Waves2%NumOuts > 0) THEN
             DO I=1, p%Waves2%NumOuts
                y%WriteOutput(J) = y%Waves2%WriteOutput(I)
-               J = J + 1
-            END DO
-         END IF
-
-         IF (ALLOCATED( p%WAMIT2%OutParam ) .AND. p%WAMIT2%NumOuts > 0) THEN
-            DO I=1, p%WAMIT2%NumOuts
-               y%WriteOutput(J) = y%WAMIT2%WriteOutput(I)
                J = J + 1
             END DO
          END IF
@@ -1986,7 +2296,7 @@ SUBROUTINE HydroDyn_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxd
       TYPE(HydroDyn_ContinuousStateType), INTENT(  OUT)  :: dxdt        !< Continuous state derivatives at Time
       INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat     !< Error status of the operation     
       CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
-
+      integer(IntKi)             :: iWAMIT        ! loop counter
       CHARACTER(*), PARAMETER    :: RoutineName = 'HydroDyn_CalcContStateDeriv'
                
          ! Initialize ErrStat
@@ -1996,58 +2306,41 @@ SUBROUTINE HydroDyn_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxd
       
       
          ! Compute the first time derivatives of the continuous states here:
-      
-   IF ( m%u_WAMIT%Mesh%Committed ) THEN  ! Make sure we are using WAMIT / there is a valid mesh
-         
-         ! Copy the inputs from the HD mesh into the WAMIT mesh
-      CALL MeshCopy( u%Mesh, m%u_WAMIT%Mesh, MESH_UPDATECOPY, ErrStat, ErrMsg )   
-         IF ( ErrStat >= AbortErrLev ) RETURN
-      
-      CALL WAMIT_CalcContStateDeriv( Time, m%u_WAMIT, p%WAMIT, x%WAMIT, xd%WAMIT, z%WAMIT, OtherState%WAMIT, m%WAMIT, dxdt%WAMIT, ErrStat, ErrMsg ) 
+   if ( .not. m%u_WAMIT(1)%Mesh%Committed ) return  ! Make sure we are using WAMIT / there is a valid mesh 
 
-   END IF
+   
+   if ( p%NBodyMod == 1 .or. p%NBody == 1 ) then
+         ! Copy the inputs from the HD mesh into the WAMIT mesh
+      call MeshCopy( u%WAMITMesh, m%u_WAMIT(1)%Mesh, MESH_UPDATECOPY, ErrStat, ErrMsg )   
+         if ( ErrStat >= AbortErrLev ) return
+      
+      call WAMIT_CalcContStateDeriv( Time, m%u_WAMIT(1), p%WAMIT(1), x%WAMIT(1), xd%WAMIT(1), z%WAMIT, OtherState%WAMIT(1), m%WAMIT(1), dxdt%WAMIT(1), ErrStat, ErrMsg ) 
+   else
+           
+      ! We have multiple WAMIT objects
+         
+         ! Loop over number of inputs and copy them into an array of WAMIT inputs
+      do iWAMIT = 1, p%nWAMITObj
+    
+            ! We need to copy the iWAMIT-th node data from the Inputs(I)%WAMITMesh onto the 1st node of the Inputs_WAMIT(I)%Mesh
+         m%u_WAMIT(iWAMIT)%Mesh%TranslationDisp(:,1)  = u%WAMITMesh%TranslationDisp(:,iWAMIT)
+         m%u_WAMIT(iWAMIT)%Mesh%Orientation    (:,:,1)= u%WAMITMesh%Orientation    (:,:,iWAMIT)
+         m%u_WAMIT(iWAMIT)%Mesh%TranslationVel (:,1)  = u%WAMITMesh%TranslationVel (:,iWAMIT)
+         m%u_WAMIT(iWAMIT)%Mesh%RotationVel    (:,1)  = u%WAMITMesh%RotationVel    (:,iWAMIT)
+         m%u_WAMIT(iWAMIT)%Mesh%TranslationAcc (:,1)  = u%WAMITMesh%TranslationAcc (:,iWAMIT)
+         m%u_WAMIT(iWAMIT)%Mesh%RotationAcc    (:,1)  = u%WAMITMesh%RotationAcc    (:,iWAMIT)               
+
+            ! UpdateStates for the iWAMIT-th body
+         call WAMIT_CalcContStateDeriv( Time, m%u_WAMIT(iWAMIT), p%WAMIT(iWAMIT), x%WAMIT(iWAMIT), xd%WAMIT(iWAMIT), z%WAMIT, OtherState%WAMIT(iWAMIT), m%WAMIT(iWAMIT), dxdt%WAMIT(iWAMIT), ErrStat, ErrMsg ) 
+            if (ErrStat > AbortErrLev) exit
+               
+      end do
+         
+   end if
    
 END SUBROUTINE HydroDyn_CalcContStateDeriv
 
 
-!----------------------------------------------------------------------------------------------------------------------------------
-! Tight coupling routine for updating discrete states. Note that the WAMIT_UpdateDiscState violates the framework by having OtherStates
-! be intent in/out. If/when this is fixed we can uncomment this routine.
-!SUBROUTINE HydroDyn_UpdateDiscState( Time, n, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )   
-!   
-!   REAL(DbKi),                         INTENT(IN   )  :: Time        !< Current simulation time in seconds   
-!   INTEGER(IntKi),                     INTENT(IN   )  :: n           !< Current step of the simulation: t = n*Interval
-!   TYPE(HydroDyn_InputType),           INTENT(IN   )  :: u           !< Inputs at Time                       
-!   TYPE(HydroDyn_ParameterType),       INTENT(IN   )  :: p           !< Parameters                                 
-!   TYPE(HydroDyn_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at Time
-!   TYPE(HydroDyn_DiscreteStateType),   INTENT(INOUT)  :: xd          !< Input: Discrete states at Time; 
-!                                                                     !!   Output: Discrete states at Time + Interval
-!   TYPE(HydroDyn_ConstraintStateType), INTENT(IN   )  :: z           !< Constraint states at Time
-!   TYPE(HydroDyn_OtherStateType),      INTENT(IN   )  :: OtherState  !< Other/optimization states           
-!   TYPE(HydroDyn_MiscVarType),         INTENT(INOUT)  :: m           !< Initial misc/optimization variables           
-!   INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat     !< Error status of the operation
-!   CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
-!         
-!   
-!      ! Initialize ErrStat
-!      
-!   ErrStat = ErrID_None         
-!   ErrMsg  = ""               
-!      
-!      
-!         ! Update discrete states 
-!         
-!   IF ( m%u_WAMIT%Mesh%Committed ) THEN  ! Make sure we are using WAMIT / there is a valid mesh
-!         
-!         ! Copy the inputs from the HD mesh into the WAMIT mesh
-!      CALL MeshCopy( u%Mesh, m%u_WAMIT%Mesh, MESH_UPDATECOPY, ErrStat, ErrMsg )   
-!         IF ( ErrStat >= AbortErrLev ) RETURN
-!      
-!     CALL WAMIT_UpdateDiscState( Time, n, m%u_WAMIT, p%WAMIT, x%WAMIT, xd%WAMIT, z%WAMIT, OtherState%WAMIT, m%WAMIT, ErrStat, ErrMsg )          
-!         IF ( ErrStat >= AbortErrLev ) RETURN
-!  END IF
-!
-!END SUBROUTINE HydroDyn_UpdateDiscState
 
 
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -2073,110 +2366,59 @@ SUBROUTINE HydroDyn_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, m
    ErrStat = ErrID_None         
    ErrMsg  = ""               
       
-      
+   ! Nothing to do here since none of the sub-modules have contraint states
+   z_residual = z  
+    
          ! Solve for the constraint states here:
-      
-   IF ( m%u_WAMIT%Mesh%Committed ) THEN  ! Make sure we are using WAMIT / there is a valid mesh
-         
-         ! Copy the inputs from the HD mesh into the WAMIT mesh
-      CALL MeshCopy( u%Mesh, m%u_WAMIT%Mesh, MESH_UPDATECOPY, ErrStat, ErrMsg )   
-         IF ( ErrStat >= AbortErrLev ) RETURN
-      
-      call WAMIT_CalcConstrStateResidual( Time, m%u_WAMIT, p%WAMIT, x%WAMIT, xd%WAMIT, z%WAMIT, OtherState%WAMIT, m%WAMIT, z_residual%WAMIT, ErrStat, ErrMsg )
-
-   END IF
 
 
 END SUBROUTINE HydroDyn_CalcConstrStateResidual
 
 
 !----------------------------------------------------------------------------------------------------------------------------------
-FUNCTION CalcLoadsAtWRP( y, u, y_mapped, AllHdroOrigin_position, MrsnLumpedMesh_Postion, MrsnDistribMesh_Position, MeshMapData, ErrStat, ErrMsg )
+function CalcLoadsAtWRP( y, u, AllHdroOrigin, PRP_Position,  MrsnMesh_Position, MeshMapData, ErrStat, ErrMsg )
 
-   TYPE(HydroDyn_OutputType),  INTENT(INOUT)  :: y                   ! Hydrodyn outputs
-   TYPE(HydroDyn_InputType),   INTENT(IN   )  :: u                   ! Hydrodyn inputs
-   TYPE(MeshType),             INTENT(INOUT)  :: y_mapped            ! This is the mesh which data is mapped onto.  We pass it in to avoid allocating it at each call
-   TYPE(MeshType),             INTENT(IN   )  :: AllHdroOrigin_position            ! This is the mesh which data is mapped onto.  We pass it in to avoid allocating it at each call
-   TYPE(MeshType),             INTENT(IN   )  :: MrsnLumpedMesh_Postion            ! This is the mesh which data is mapped onto.  We pass it in to avoid allocating it at each call 
-   TYPE(MeshType),             INTENT(IN   )  :: MrsnDistribMesh_Position            ! This is the mesh which data is mapped onto.  We pass it in to avoid allocating it at each call
-   TYPE(HD_ModuleMapType),     INTENT(INOUT)  :: MeshMapData         ! Map  data structures 
-   INTEGER(IntKi),             INTENT(  OUT)  :: ErrStat             ! Error status of the operation
-   CHARACTER(*),               INTENT(  OUT)  :: ErrMsg              ! Error message if ErrStat /= ErrID_None                                                         
-   REAL(ReKi)                                 :: CalcLoadsAtWRP(6)
+   type(HydroDyn_OutputType),  intent(inout)  :: y                        ! Hydrodyn outputs
+   type(HydroDyn_InputType),   intent(in   )  :: u                        ! Hydrodyn inputs
+   type(MeshType),             intent(inout)  :: AllHdroOrigin            ! This is the mesh which data is mapped onto.  We pass it in to avoid allocating it at each call
+   type(MeshType),             intent(inout)  :: PRP_Position             ! These are the kinematics associated the PRP at (0,0,0).  We pass it in to avoid allocating it at each call
+   type(MeshType),             intent(in   )  :: MrsnMesh_Position        ! These are the kinematics associated with the Morison loads mesh.  We pass it in to avoid allocating it at each call
+   type(HD_ModuleMapType),     intent(inout)  :: MeshMapData              ! Mesh mapping data structures 
+   integer(IntKi),             intent(  out)  :: ErrStat                  ! Error status of the operation
+   character(*),               intent(  out)  :: ErrMsg                   ! Error message if ErrStat /= ErrID_None                                                         
+   real(ReKi)                                 :: CalcLoadsAtWRP(6)
 
       ! local variables
-   INTEGER(IntKi)                                 :: ErrStat2                  ! temporary Error status of the operation
-   CHARACTER(ErrMsgLen)                           :: ErrMsg2                   ! temporary Error message if ErrStat /= ErrID_None
+   integer(IntKi)                                 :: ErrStat2             ! temporary Error status of the operation
+   character(ErrMsgLen)                           :: ErrMsg2              ! temporary Error message if ErrStat /= ErrID_None
    
-   y%AllHdroOrigin%Force = 0.0
-   y%AllHdroOrigin%Moment= 0.0
+   CalcLoadsAtWRP = 0.0_ReKi
    
-   IF ( y%Mesh%Committed  ) THEN
+   if ( y%WAMITMesh%Committed  ) then
 
       ! Just transfer the loads because the meshes are at the same location (0,0,0)
-
-      y%AllHdroOrigin%Force  =  y%Mesh%Force
-      y%AllHdroOrigin%Moment =  y%Mesh%Moment
-
-   END IF      
-      
-   IF ( y%Morison%LumpedMesh%Committed ) THEN 
-
-         ! This is viscous drag associate with the WAMIT body and/or filled/flooded forces of the WAMIT body
-
-      CALL Transfer_Point_to_Point( y%Morison%LumpedMesh, y_mapped, MeshMapData%M_P_2_WRP_P, ErrStat2, ErrMsg2, MrsnLumpedMesh_Postion, AllHdroOrigin_position )
-         CALL CheckError( ErrStat2, ErrMsg2 )
-         IF (ErrStat >= AbortErrLev) RETURN
+      call Transfer_Point_to_Point( y%WAMITMesh, AllHdroOrigin, MeshMapData%W_P_2_PRP_P, ErrStat2, ErrMsg2, u%WAMITMesh, PRP_Position )
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CalcLoadsAtWRP')
+            if (ErrStat >= AbortErrLev) return
             
-      y%AllHdroOrigin%Force  = y%AllHdroOrigin%Force  + y_mapped%Force
-      y%AllHdroOrigin%Moment = y%AllHdroOrigin%Moment + y_mapped%Moment
+      CalcLoadsAtWRP(1:3)  = CalcLoadsAtWRP(1:3)  + AllHdroOrigin%Force(:,1)
+      CalcLoadsAtWRP(4:6)  = CalcLoadsAtWRP(4:6)  + AllHdroOrigin%Moment(:,1)
 
-   END IF
-   
-   IF ( y%Morison%DistribMesh%Committed ) THEN 
-
-      CALL Transfer_Line2_to_Point( y%Morison%DistribMesh, y_mapped, MeshMapData%M_L_2_WRP_P, ErrStat2, ErrMsg2,  MrsnDistribMesh_Position, AllHdroOrigin_position )
-         CALL CheckError( ErrStat2, ErrMsg2 )
-         IF (ErrStat >= AbortErrLev) RETURN
- 
-      y%AllHdroOrigin%Force  = y%AllHdroOrigin%Force  + y_mapped%Force
-      y%AllHdroOrigin%Moment = y%AllHdroOrigin%Moment + y_mapped%Moment
-         
-   END IF
-   
-   CalcLoadsAtWRP(1:3) = y%AllHdroOrigin%Force(:,1)
-   CalcLoadsAtWRP(4:6) = y%AllHdroOrigin%Moment(:,1)
-
-CONTAINS   
-   !...............................................................................................................................
-   SUBROUTINE CheckError(ErrID,Msg)
-   ! This subroutine sets the error message and level and cleans up if the error is >= AbortErrLev
-   !...............................................................................................................................
-
-         ! Passed arguments
-      INTEGER(IntKi), INTENT(IN) :: ErrID       ! The error identifier (ErrStat)
-      CHARACTER(*),   INTENT(IN) :: Msg         ! The error message (ErrMsg)
-
-      INTEGER(IntKi)             :: ErrStat3    ! The error identifier (ErrStat)
-      CHARACTER(ErrMsgLen)       :: ErrMsg3     ! The error message (ErrMsg)
-
-      !............................................................................................................................
-      ! Set error status/message;
-      !............................................................................................................................
+   end if      
       
-      IF ( ErrID /= ErrID_None ) THEN
+   
+   if ( y%Morison%Mesh%Committed ) then 
 
-         IF ( LEN_TRIM(ErrMsg) > 0 ) ErrMsg = TRIM(ErrMsg)//NewLine
-         ErrMsg = TRIM(ErrMsg)//' CalcLoadsAtWRP:'//TRIM(Msg)
-         ErrStat = MAX(ErrStat, ErrID)
+      call Transfer_Point_to_Point( y%Morison%Mesh, AllHdroOrigin, MeshMapData%M_P_2_PRP_P, ErrStat2, ErrMsg2,  u%Morison%Mesh, PRP_Position )
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CalcLoadsAtWRP')
+            if (ErrStat >= AbortErrLev) return
+ 
+      CalcLoadsAtWRP(1:3)  = CalcLoadsAtWRP(1:3) + AllHdroOrigin%Force(:,1)
+      CalcLoadsAtWRP(4:6)  = CalcLoadsAtWRP(4:6) + AllHdroOrigin%Moment(:,1)
          
-         !.........................................................................................................................
-         ! Clean up if we're going to return on error: close files, deallocate local arrays
-         !.........................................................................................................................
-      END IF
-
-   END SUBROUTINE CheckError
-END FUNCTION CalcLoadsAtWRP
+   end if
+   
+end function CalcLoadsAtWRP
  
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! ###### The following four routines are Jacobian routines for linearization capabilities #######
@@ -2218,7 +2460,7 @@ SUBROUTINE HD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
    TYPE(HydroDyn_ContinuousStateType)                      :: x_m
    TYPE(HydroDyn_InputType)                                :: u_perturb
    REAL(R8Ki)                                        :: delta        ! delta change in input or state
-   INTEGER(IntKi)                                    :: i, j, NN, offsetI, offsetJ
+   INTEGER(IntKi)                                    :: i, j, k, startingI, startingJ, bOffset, offsetI, offsetJ, n_du_plus1
    
    INTEGER(IntKi)                                    :: ErrStat2
    CHARACTER(ErrMsgLen)                              :: ErrMsg2
@@ -2230,8 +2472,7 @@ SUBROUTINE HD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
    ErrStat = ErrID_None
    ErrMsg  = ''
    
-   ! LIN_TODO: We need to deal with the case where either RdtnMod=0, and/or ExtcnMod=0 and hence %SS_Rdtn data or %SS_Exctn data is not valid
-   NN = p%WAMIT%SS_Rdtn%N + p%WAMIT%SS_Exctn%N
+   n_du_plus1 = size(p%Jac_u_indx,1)+1
    
       ! make a copy of the inputs to perturb
    call HydroDyn_CopyInput( u, u_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2)
@@ -2249,7 +2490,7 @@ SUBROUTINE HD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
 
       ! allocate dYdu if necessary
       if (.not. allocated(dYdu)) then
-         call AllocAry(dYdu, p%Jac_ny, size(p%Jac_u_indx,1)+1, 'dYdu', ErrStat2, ErrMsg2)
+         call AllocAry(dYdu, p%Jac_ny, n_du_plus1, 'dYdu', ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          if (ErrStat>=AbortErrLev) then
             call cleanup()
@@ -2295,7 +2536,7 @@ SUBROUTINE HD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
       end do
       
          ! p%WaveElev0 column
-      dYdu(:,size(p%Jac_u_indx,1)+1) = 0
+      dYdu(:,n_du_plus1) = 0
       
 
       if (ErrStat>=AbortErrLev) then
@@ -2311,11 +2552,16 @@ SUBROUTINE HD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
 
    IF ( PRESENT( dXdu ) ) THEN
 
+      ! For the case where either RdtnMod=0 and ExtcnMod=0 and hence %SS_Rdtn data or %SS_Exctn data is not valid then we do not have states, so simply return
+      ! The key here is to never allocate the dXdu and related state Jacobian arrays because then the glue-code will behave properly
+      
+      if ( p%totalStates == 0 ) return
+   
       ! Calculate the partial derivative of the continuous state functions (X) with respect to the inputs (u) here:
 
       ! allocate dXdu if necessary
       if (.not. allocated(dXdu)) then
-         call AllocAry(dXdu, NN, size(p%Jac_u_indx,1)+1, 'dXdu', ErrStat2, ErrMsg2)
+         call AllocAry(dXdu, p%totalStates, n_du_plus1, 'dXdu', ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          if (ErrStat>=AbortErrLev) then
             call cleanup()
@@ -2326,22 +2572,90 @@ SUBROUTINE HD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
       offsetI = 0
       dXdu = 0.0_R8Ki
       
-   
-      do i = 1,p%WAMIT%SS_Exctn%N
-         dXdu(offsetI+i,size(p%Jac_u_indx,1)+1) = p%WAMIT%SS_Exctn%B(i)
-      end do
-
-
-      offsetI = NN - p%WAMIT%SS_Rdtn%N
-      offsetJ = size(p%Jac_u_indx,1)+1 - 13
-      do j = 1, 6
-         do i = 1,p%WAMIT%SS_Rdtn%N
-            dXdu(offsetI+i,offsetJ+j) = p%WAMIT%SS_Rdtn%B(i,j)
+      do j = 1,p%nWAMITObj
+         do i = 1,p%WAMIT(j)%SS_Exctn%numStates
+            dXdu(offsetI+i,n_du_plus1) = p%WAMIT(j)%SS_Exctn%B(i) ! B is numStates by 1
          end do
+         offsetI = offsetI + p%WAMIT(j)%SS_Exctn%numStates
       end do
-     
-     
-      
+
+      startingI = p%totalStates - p%totalRdtnStates
+      startingJ = n_du_plus1 - 1 - 18 - 4*3*p%NBody !  subtract 1 for WaveElev0, then 6*3 for PRPMesh and then 4*3*NBody to place us at the beginning of the velocity inputs
+      ! B is numStates by 6*NBody where NBody =1 if NBodyMod=2 or 3, but could be >1 for NBodyMod=1
+      if ( p%NBodyMod == 1 ) then
+         ! Example for NBodyMod=1 and NBody = 2,
+         ! dXdu(:,startingIndx + 1) = p%WAMIT(1)%SS_Rdtn%B(:,1)
+         ! dXdu(:,startingIndx + 2) = p%WAMIT(1)%SS_Rdtn%B(:,2)
+         ! dXdu(:,startingIndx + 3) = p%WAMIT(1)%SS_Rdtn%B(:,3)
+         ! dXdu(:,startingIndx + 4) = p%WAMIT(1)%SS_Rdtn%B(:,7)
+         ! dXdu(:,startingIndx + 5) = p%WAMIT(1)%SS_Rdtn%B(:,8)
+         ! dXdu(:,startingIndx + 6) = p%WAMIT(1)%SS_Rdtn%B(:,9)
+         ! dXdu(:,startingIndx + 7) = p%WAMIT(1)%SS_Rdtn%B(:,4)   ! start of rotationalVel
+         ! dXdu(:,startingIndx + 8) = p%WAMIT(1)%SS_Rdtn%B(:,5)
+         ! dXdu(:,startingIndx + 9) = p%WAMIT(1)%SS_Rdtn%B(:,6)
+         ! dXdu(:,startingIndx +10) = p%WAMIT(1)%SS_Rdtn%B(:,10)
+         ! dXdu(:,startingIndx +11) = p%WAMIT(1)%SS_Rdtn%B(:,11)
+         ! dXdu(:,startingIndx +12) = p%WAMIT(1)%SS_Rdtn%B(:,12)
+
+         do i = 1,p%WAMIT(1)%SS_Rdtn%numStates
+            k=0
+            ! First set all translationalVel components
+            do j = 1, p%WAMIT(1)%NBody
+               bOffset = (j-1)*6
+               dXdu(startingI+i,startingJ+k+1) = p%WAMIT(1)%SS_Rdtn%B(i,bOffset+1) 
+               dXdu(startingI+i,startingJ+k+2) = p%WAMIT(1)%SS_Rdtn%B(i,bOffset+2)
+               dXdu(startingI+i,startingJ+k+3) = p%WAMIT(1)%SS_Rdtn%B(i,bOffset+3)   
+               k = k + 3
+            end do
+            ! Now set all rotationalVel components
+            do j = 1, p%WAMIT(1)%NBody
+               bOffset = (j-1)*6
+               dXdu(startingI+i,startingJ+k+1) = p%WAMIT(1)%SS_Rdtn%B(i,bOffset+4)
+               dXdu(startingI+i,startingJ+k+2) = p%WAMIT(1)%SS_Rdtn%B(i,bOffset+5)
+               dXdu(startingI+i,startingJ+k+3) = p%WAMIT(1)%SS_Rdtn%B(i,bOffset+6)   
+               k = k + 3
+            end do
+         end do         
+      else
+         ! Example NBodyMod=2or3 and NBody = 2,
+         ! dXdu(:,startingIndx + 1) = p%WAMIT(1)%SS_Rdtn%B(:,1)
+         ! dXdu(:,startingIndx + 2) = p%WAMIT(1)%SS_Rdtn%B(:,2)
+         ! dXdu(:,startingIndx + 3) = p%WAMIT(1)%SS_Rdtn%B(:,3)
+         ! dXdu(:,startingIndx + 4) = p%WAMIT(2)%SS_Rdtn%B(:,1)
+         ! dXdu(:,startingIndx + 5) = p%WAMIT(2)%SS_Rdtn%B(:,2)
+         ! dXdu(:,startingIndx + 6) = p%WAMIT(2)%SS_Rdtn%B(:,3)
+         ! dXdu(:,startingIndx + 7) = p%WAMIT(1)%SS_Rdtn%B(:,4)   ! start of rotationalVel
+         ! dXdu(:,startingIndx + 8) = p%WAMIT(1)%SS_Rdtn%B(:,5)
+         ! dXdu(:,startingIndx + 9) = p%WAMIT(1)%SS_Rdtn%B(:,6)
+         ! dXdu(:,startingIndx +10) = p%WAMIT(2)%SS_Rdtn%B(:,4)
+         ! dXdu(:,startingIndx +11) = p%WAMIT(2)%SS_Rdtn%B(:,5)
+         ! dXdu(:,startingIndx +12) = p%WAMIT(2)%SS_Rdtn%B(:,6)
+
+         
+         k=0
+         offsetI=0
+         ! First set all translationalVel components
+         do j = 1, p%nWAMITObj
+            do i = 1,p%WAMIT(j)%SS_Rdtn%numStates
+               dXdu(startingI+offsetI+i,startingJ+k+1) = p%WAMIT(j)%SS_Rdtn%B(i,1) 
+               dXdu(startingI+offsetI+i,startingJ+k+2) = p%WAMIT(j)%SS_Rdtn%B(i,2)
+               dXdu(startingI+offsetI+i,startingJ+k+3) = p%WAMIT(j)%SS_Rdtn%B(i,3) 
+            end do
+            k = k + 3
+            offsetI = offsetI + p%WAMIT(j)%SS_Rdtn%numStates
+         end do
+         ! Now set all rotationalVel components
+         offsetI=0
+         do j = 1, p%nWAMITObj
+            do i = 1,p%WAMIT(j)%SS_Rdtn%numStates
+               dXdu(startingI+offsetI+i,startingJ+k+1) = p%WAMIT(1)%SS_Rdtn%B(i,4)
+               dXdu(startingI+offsetI+i,startingJ+k+2) = p%WAMIT(1)%SS_Rdtn%B(i,5)
+               dXdu(startingI+offsetI+i,startingJ+k+3) = p%WAMIT(1)%SS_Rdtn%B(i,6)   
+            end do
+            k = k + 3
+            offsetI = offsetI + p%WAMIT(j)%SS_Rdtn%numStates
+         end do
+      end if   
       
    END IF
 
@@ -2403,7 +2717,7 @@ SUBROUTINE HD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
    TYPE(HydroDyn_ContinuousStateType)                      :: x_m
    TYPE(HydroDyn_ContinuousStateType)                      :: x_perturb
    REAL(R8Ki)                                        :: delta        ! delta change in input or state
-   INTEGER(IntKi)                                    :: i, j, NN
+   INTEGER(IntKi)                                    :: i, j, k, sOffset
    
    INTEGER(IntKi)                                    :: ErrStat2
    CHARACTER(ErrMsgLen)                              :: ErrMsg2
@@ -2415,9 +2729,10 @@ SUBROUTINE HD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
    ErrStat = ErrID_None
    ErrMsg  = ''
 
+   if ( p%totalStates == 0 ) return
    
    ! Calculate the partial derivative of the output functions (Y) with respect to the continuous states (x) here:
-   NN = p%WAMIT%SS_Exctn%N+p%WAMIT%SS_Rdtn%N
+   
       
       ! make a copy of the continuous states to perturb
    call HydroDyn_CopyContState( x, x_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2)
@@ -2432,7 +2747,7 @@ SUBROUTINE HD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
       
       ! allocate dYdx if necessary
       if (.not. allocated(dYdx)) then
-         call AllocAry(dYdx, p%Jac_ny, NN, 'dYdx', ErrStat2, ErrMsg2)
+         call AllocAry(dYdx, p%Jac_ny, p%totalStates, 'dYdx', ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          if (ErrStat>=AbortErrLev) then
             call cleanup()
@@ -2451,7 +2766,7 @@ SUBROUTINE HD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
          end if
          
          
-      do i=1,NN
+      do i=1,p%totalStates
 
             ! get x_op + delta x
          call HydroDyn_CopyContState( x, x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
@@ -2493,7 +2808,7 @@ SUBROUTINE HD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
 
       ! allocate dXdu if necessary
       if (.not. allocated(dXdx)) then
-         call AllocAry(dXdx, NN, NN, 'dXdx', ErrStat2, ErrMsg2)
+         call AllocAry(dXdx, p%totalStates, p%totalStates, 'dXdx', ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          if (ErrStat>=AbortErrLev) then
             call cleanup()
@@ -2503,18 +2818,26 @@ SUBROUTINE HD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
       dXdx = 0.0_R8Ki
       
       ! Analytical Jacobians from State-space models
-      if ( p%WAMIT%SS_Exctn%N > 0 ) then
-         do j=1,p%WAMIT%SS_Exctn%N   
-            do i=1,p%WAMIT%SS_Exctn%N ! Loop through all active (enabled) DOFs
-               dXdx(i, j) = p%WAMIT%SS_Exctn%A(i,j)
+      if ( p%totalExctnStates > 0 ) then
+         sOffset = 0
+         do k=1,p%nWAMITObj
+            do j=1,p%WAMIT(k)%SS_Exctn%numStates   
+               do i=1,p%WAMIT(k)%SS_Exctn%numStates ! Loop through all active (enabled) DOFs
+                  dXdx(i+sOffset, j+sOffset) = p%WAMIT(k)%SS_Exctn%A(i,j)
+               end do
             end do
+            sOffset = sOffset + p%WAMIT(k)%SS_Exctn%numStates
          end do
       end if
-      if ( p%WAMIT%SS_Rdtn%N > 0 ) then
-         do j=1,p%WAMIT%SS_Rdtn%N   
-            do i=1,p%WAMIT%SS_Rdtn%N ! Loop through all active (enabled) DOFs
-               dXdx(i+p%WAMIT%SS_Exctn%N, j+p%WAMIT%SS_Exctn%N) = p%WAMIT%SS_Rdtn%A(i,j)
+      if ( p%totalRdtnStates > 0 ) then
+         sOffset = 0
+         do k=1,p%nWAMITObj
+            do j=1,p%WAMIT(k)%SS_Rdtn%numStates   
+               do i=1,p%WAMIT(k)%SS_Rdtn%numStates ! Loop through all active (enabled) DOFs
+                  dXdx(i+p%totalExctnStates+sOffset, j+p%totalExctnStates+sOffset) = p%WAMIT(k)%SS_Rdtn%A(i,j)
+               end do
             end do
+            sOffset = sOffset + p%WAMIT(k)%SS_Rdtn%numStates
          end do
       end if
       
@@ -2712,13 +3035,13 @@ SUBROUTINE HD_Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
    
       ! determine how many outputs there are in the Jacobians      
    p%Jac_ny = 0         
-   if ( y%Morison%DistribMesh%Committed ) then
-      p%Jac_ny = p%Jac_ny + y%Morison%DistribMesh%NNodes * 6    ! 3 Force, Moment, at each node on the distributed loads mesh     
-      p%Jac_ny = p%Jac_ny + y%Morison%LumpedMesh%NNodes * 6     ! 3 Force, Moment, at each node on the lumped loads mesh      
+   if ( y%Morison%Mesh%Committed ) then
+      p%Jac_ny = p%Jac_ny + y%Morison%Mesh%NNodes * 6        ! 3 Force, Moment, at each node on the morison mesh       
    end if
-
-   p%Jac_ny = p%Jac_ny + y%Mesh%NNodes * 6                   ! 3 Force, Moment, at the WAMIT reference Point 
-   p%Jac_ny = p%Jac_ny + y%AllHdroOrigin%NNodes * 6          ! 3 Force, Moment, of all HD loads integrated to the origin (0,0,0) 
+   if ( y%WAMITMesh%Committed ) then
+      p%Jac_ny = p%Jac_ny + y%WAMITMesh%NNodes    * 6        ! 3 Force, Moment, at the WAMIT reference Point(s)
+   end if
+   
    p%Jac_ny = p%Jac_ny + p%NumTotalOuts                      ! WriteOutput values 
       
 
@@ -2726,7 +3049,8 @@ SUBROUTINE HD_Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
       ! set linearization output names:
       !.................   
    CALL AllocAry(InitOut%LinNames_y, p%Jac_ny, 'LinNames_y', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   ! LIN-TODO: Do we need RotFrame_y for this module?
+   ! We do not need RotFrame_y for this module and the glue code with handle the fact that we did not allocate the array and hence set all values to false at the glue-code level
+   ! Same with RotFrame_x
    !CALL AllocAry(InitOut%RotFrame_y, p%Jac_ny, 'RotFrame_y', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    
@@ -2734,19 +3058,15 @@ SUBROUTINE HD_Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
       
    
    index_next = 1
-   if ( y%Morison%DistribMesh%Committed ) then
+   if ( y%Morison%Mesh%Committed ) then
       index_last = index_next
-      call PackLoadMesh_Names(y%Morison%DistribMesh, 'DistribLoads', InitOut%LinNames_y, index_next)
-      index_last = index_next
-      call PackLoadMesh_Names(y%Morison%LumpedMesh, 'LumpedLoads', InitOut%LinNames_y, index_next)
+      call PackLoadMesh_Names(y%Morison%Mesh, 'MorisonLoads', InitOut%LinNames_y, index_next)
    end if
 
-
-   index_last = index_next
-   call PackLoadMesh_Names(y%Mesh, 'PlatformRefPtLoads', InitOut%LinNames_y, index_next)
-   
-   index_last = index_next
-   call PackLoadMesh_Names(y%AllHdroOrigin, 'AllHdroOrigin', InitOut%LinNames_y, index_next)
+   if ( y%WAMITMesh%Committed ) then
+      index_last = index_next
+      call PackLoadMesh_Names(y%WAMITMesh, 'WAMITLoads', InitOut%LinNames_y, index_next)
+   end if
    
    index_last = index_next
          
@@ -2773,54 +3093,76 @@ SUBROUTINE HD_Init_Jacobian_x( p, InitOut, ErrStat, ErrMsg)
    CHARACTER(*), PARAMETER                           :: RoutineName = 'HD_Init_Jacobian_x'
    
       ! local variables:
-   INTEGER(IntKi)                :: i, j, k, NN, spdof, indx
+   INTEGER(IntKi)                :: i, j, k, l, spdof, indx
    CHARACTER(10)                 :: modLabels(2), dofLabels(6)
    ErrStat = ErrID_None
    ErrMsg  = ""
    indx = 1
-   NN = p%WAMIT%SS_Rdtn%N + p%WAMIT%SS_Exctn%N
-   if ( NN == 0 ) return
+   
+   ! Need to determine how many wamit body objects there are
+   p%totalExctnStates = 0
+   p%totalRdtnStates = 0
+   do j = 1, p%nWAMITObj
+      p%totalExctnStates = p%totalExctnStates + p%WAMIT(j)%SS_Exctn%numStates  !numStates defaults to zero in the case where ExctnMod = 0 instead of 2
+      p%totalRdtnStates  = p%totalRdtnStates  + p%WAMIT(j)%SS_Rdtn%numStates   !numStates defaults to zero in the case where RdtnMod  = 0 instead of 2
+   end do
+   p%totalStates = p%totalExctnStates + p%totalRdtnStates
+   
+   if ( p%totalStates == 0 ) return  ! No states, so return and do not allocate the following arrays.  This lets the glue-code know that the module does not have states
+   
       ! allocate space for the row/column names and for perturbation sizes
-   call allocAry(p%dx,               NN, 'p%dx',       ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call AllocAry(InitOut%LinNames_x, NN, 'LinNames_x', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   CALL AllocAry(InitOut%DerivOrder_x, NN, 'DerivOrder_x', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call allocAry(p%dx,                 p%totalStates, 'p%dx',         ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AllocAry(InitOut%LinNames_x,   p%totalStates, 'LinNames_x'  , ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   CALL AllocAry(InitOut%DerivOrder_x, p%totalStates, 'DerivOrder_x', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    
       ! All Hydrodyn continuous states are max order = 1
    if ( allocated(InitOut%DerivOrder_x) ) InitOut%DerivOrder_x = 1
    
    ! set perturbation sizes: p%dx
-   
-   do i = 1, p%WAMIT%SS_Exctn%N    
-      p%dx(i)  = 20000.0_R8Ki * D2R_D 
+   k = 1
+   do j = 1, p%nWAMITObj
+      do i = 1, p%WAMIT(j)%SS_Exctn%numStates    
+         p%dx(k)  = 20000.0_R8Ki * D2R_D 
+         k=k+1
+      end do
    end do
-   
-   do i = 1, p%WAMIT%SS_Rdtn%N
-      p%dx(i+p%WAMIT%SS_Exctn%N)  = 2.0_R8Ki * D2R_D 
+   do j = 1, p%nWAMITObj
+      do i = 1, p%WAMIT(j)%SS_Rdtn%numStates
+         p%dx(k)  = 2.0_R8Ki * D2R_D 
+         k=k+1
+      end do
    end do
    
    modLabels = (/'Exctn     ','Rdtn      '/)
    dofLabels = (/'PtfmSg    ','PtfmSw    ','PtfmHv    ','PtfmR     ','PtfmP     ','PtfmY     '/)
-   
-      ! set linearization state names:
    do k = 1, 2   ! 1 = Excitation,  2 = Radiation
-      
-        
-      do j = 1, 6
+      do l=1,p%nWAMITObj
          
-         if (k == 1) then
-            spdof = p%WAMIT%SS_Exctn%spdof(j)
-         else 
-            spdof = p%WAMIT%SS_Rdtn%spdof(j)
-         end if
+         ! set linearization state names:   
+         do j = 1, 6
          
-         do i = 1,spdof
-            InitOut%LinNames_x(indx) = trim(modLabels(k))//trim(dofLabels(j))//trim(num2lstr(i))
-            indx = indx + 1
+            if (k == 1) then
+               spdof = p%WAMIT(l)%SS_Exctn%spdof(j)
+            else 
+               spdof = p%WAMIT(l)%SS_Rdtn%spdof(j)
+            end if
+         
+            if ( p%NBodyMod == 1 ) then
+               do i = 1,spdof
+                  InitOut%LinNames_x(indx) = trim(modLabels(k))//trim(dofLabels(j))//trim(num2lstr(i))
+                  indx = indx + 1
+               end do
+            else  
+               do i = 1,spdof
+                  InitOut%LinNames_x(indx) = 'B'//trim(num2lstr(l))//trim(modLabels(k))//trim(dofLabels(j))//trim(num2lstr(i))
+                  indx = indx + 1
+               end do
+            end if
+            
          end do
       end do
    end do
-   
 END SUBROUTINE HD_Init_Jacobian_x
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine initializes the array that maps rows/columns of the Jacobian to specific mesh fields.
@@ -2860,12 +3202,14 @@ SUBROUTINE HD_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
       
       ! determine how many inputs there are in the Jacobians
    nu = 0;
-   if ( u%Morison%DistribMesh%Committed ) then
-      nu = nu + u%Morison%DistribMesh%NNodes   * 18   ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, and RotationAcc at each node     
-      nu = nu + u%Morison%LumpedMesh%NNodes    * 18   ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, and RotationAcc at each node     
+   if ( u%Morison%Mesh%Committed ) then
+      nu = u%Morison%Mesh%NNodes   * 18   ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, and RotationAcc at each node     
+   end if
+   if ( u%WAMITMesh%Committed ) then
+      nu = nu + u%WAMITMesh%NNodes * 18   ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, and RotationAcc at each node     
    end if
    
-   nu = nu + u%Mesh%NNodes * 18   ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, and RotationAcc at each node     
+   nu = nu + u%PRPMesh%NNodes * 18   ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, and RotationAcc at each node
    
    ! DO NOT Add the extended input WaveElev0 when computing the size of p%Jac_u_indx
       
@@ -2889,56 +3233,39 @@ SUBROUTINE HD_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
      
    index = 1
    meshFieldCount = 0
-   if ( u%Morison%DistribMesh%Committed ) then
-      !Module/Mesh/Field: u%Morison%DistribMesh%TranslationDisp  = 1;
-      !Module/Mesh/Field: u%Morison%DistribMesh%Orientation      = 2;
-      !Module/Mesh/Field: u%Morison%DistribMesh%TranslationVel   = 3;
-      !Module/Mesh/Field: u%Morison%DistribMesh%RotationVel      = 4;
-      !Module/Mesh/Field: u%Morison%DistribMesh%TranslationAcc   = 5;
-      !Module/Mesh/Field: u%Morison%DistribMesh%RotationAcc      = 6;
-         
-         do i_meshField = 1,6
-            do i=1,u%Morison%DistribMesh%NNodes
-               do j=1,3
-                  p%Jac_u_indx(index,1) =  i_meshField  !Module/Mesh/Field: u%Morison%DistribMesh%{TranslationDisp/Orientation/TranslationVel/RotationVel/TranslationAcc/RotationAcc} = m
-                  p%Jac_u_indx(index,2) =  j !index:  j
-                  p%Jac_u_indx(index,3) =  i !Node:   i
-                  index = index + 1
-               end do !j      
-            end do !i   
-            
-         end do !i_meshField                                             
-         meshFieldCount = 6 
-      !Module/Mesh/Field: u%Morison%LumpedMesh%TranslationDisp  =  7;
-      !Module/Mesh/Field: u%Morison%LumpedMesh%Orientation      =  8;
-      !Module/Mesh/Field: u%Morison%LumpedMesh%TranslationVel   =  9;
-      !Module/Mesh/Field: u%Morison%LumpedMesh%RotationVel      = 10;
-      !Module/Mesh/Field: u%Morison%LumpedMesh%TranslationAcc   = 11;
-      !Module/Mesh/Field: u%Morison%LumpedMesh%RotationAcc      = 12;
-         
-         do i_meshField = 1,6
-            do i=1,u%Morison%LumpedMesh%NNodes
-               do j=1,3
-                  p%Jac_u_indx(index,1) =  meshFieldCount + i_meshField  !if this mesh is allocated, then the previous DistribMesh would have been allocated
-                  p%Jac_u_indx(index,2) =  j !index:  j
-                  p%Jac_u_indx(index,3) =  i !Node:   i
-                  index = index + 1
-               end do !j      
-            end do !i     
-           
-         end do !i_meshField 
-          meshFieldCount = meshFieldCount + 6
-   end if
    
-   !Module/Mesh/Field: u%Mesh%TranslationDisp  = 13  or 1;
-   !Module/Mesh/Field: u%Mesh%Orientation      = 14  or 2;
-   !Module/Mesh/Field: u%Mesh%TranslationVel   = 15  or 3;
-   !Module/Mesh/Field: u%Mesh%RotationVel      = 16  or 4;
-   !Module/Mesh/Field: u%Mesh%TranslationAcc   = 17  or 5;
-   !Module/Mesh/Field: u%Mesh%RotationAcc      = 18  or 6;
+   if ( u%Morison%Mesh%Committed ) then
+      !Module/Mesh/Field: u%Morison%Mesh%TranslationDisp  = 1;
+      !Module/Mesh/Field: u%Morison%Mesh%Orientation      = 2;
+      !Module/Mesh/Field: u%Morison%Mesh%TranslationVel   = 3;
+      !Module/Mesh/Field: u%Morison%Mesh%RotationVel      = 4;
+      !Module/Mesh/Field: u%Morison%Mesh%TranslationAcc   = 5;
+      !Module/Mesh/Field: u%Morison%Mesh%RotationAcc      = 6;
          
       do i_meshField = 1,6
-         do i=1,u%Mesh%NNodes
+         do i=1,u%Morison%Mesh%NNodes
+            do j=1,3
+               p%Jac_u_indx(index,1) =  i_meshField  !Module/Mesh/Field: u%Morison%Mesh%{TranslationDisp/Orientation/TranslationVel/RotationVel/TranslationAcc/RotationAcc} = m
+               p%Jac_u_indx(index,2) =  j !index:  j
+               p%Jac_u_indx(index,3) =  i !Node:   i
+               index = index + 1
+            end do !j      
+         end do !i   
+            
+      end do !i_meshField                                             
+      meshFieldCount = 6 
+         
+   end if
+   
+   if ( u%WAMITMesh%Committed ) then      
+      !Module/Mesh/Field: u%WAMITMesh%TranslationDisp  = 7   or 1;
+      !Module/Mesh/Field: u%WAMITMesh%Orientation      = 8   or 2;
+      !Module/Mesh/Field: u%WAMITMesh%TranslationVel   = 9   or 3;
+      !Module/Mesh/Field: u%WAMITMesh%RotationVel      = 10  or 4;
+      !Module/Mesh/Field: u%WAMITMesh%TranslationAcc   = 11  or 5;
+      !Module/Mesh/Field: u%WAMITMesh%RotationAcc      = 12  or 6;
+      do i_meshField = 1,6
+         do i=1,u%WAMITMesh%NNodes
             do j=1,3
                p%Jac_u_indx(index,1) =  meshFieldCount + i_meshField 
                p%Jac_u_indx(index,2) =  j !index:  j
@@ -2946,69 +3273,82 @@ SUBROUTINE HD_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
                index = index + 1
             end do !j      
          end do !i         
-      end do !i_meshField                                             
-
+      end do !i_meshField   
+      meshFieldCount = meshFieldCount + 6 
+   end if
+   
+   !Module/Mesh/Field: u%PRPMesh%TranslationDisp  = 13 or 7  or 1;
+   !Module/Mesh/Field: u%PRPMesh%Orientation      = 14 or 8  or 2;
+   !Module/Mesh/Field: u%PRPMesh%TranslationVel   = 15 or 9  or 3;
+   !Module/Mesh/Field: u%PRPMesh%RotationVel      = 16 or 10 or 4;
+   !Module/Mesh/Field: u%PRPMesh%TranslationAcc   = 17 or 11 or 5;
+   !Module/Mesh/Field: u%PRPMesh%RotationAcc      = 18 or 12 or 6;
+   do i_meshField = 1,6
+      do i=1,u%PRPMesh%NNodes
+         do j=1,3
+            p%Jac_u_indx(index,1) =  meshFieldCount + i_meshField 
+            p%Jac_u_indx(index,2) =  j !index:  j
+            p%Jac_u_indx(index,3) =  i !Node:   i
+            index = index + 1
+         end do !j      
+      end do !i         
+   end do !i_meshField  
+   meshFieldCount = meshFieldCount + 6 
    
    !................
    ! input perturbations, du:
    !................
-   if ( u%Morison%DistribMesh%Committed ) then
-      call AllocAry(p%du, 18, 'p%du', ErrStat2, ErrMsg2) ! number of unique values in p%Jac_u_indx(:,1)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)      
-      if (ErrStat >= AbortErrLev) return
-   else
-      call AllocAry(p%du, 6, 'p%du', ErrStat2, ErrMsg2) ! number of unique values in p%Jac_u_indx(:,1)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)      
-      if (ErrStat >= AbortErrLev) return
-
-   end if
    
-   perturb_t = 0.02_ReKi*D2R * max(p%WtrDpth,1.0_ReKi) ! translation input scaling  ! LIN-TODO What about MSL offset?  
+   call AllocAry(p%du, meshFieldCount, 'p%du', ErrStat2, ErrMsg2) ! number of unique values in p%Jac_u_indx(:,1)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)      
+   if (ErrStat >= AbortErrLev) return
+  
+   
+   perturb_t = 0.02_ReKi*D2R * max(p%WtrDpth,1.0_ReKi) ! translation input scaling  
    perturb   = 2*D2R                 ! rotational input scaling
    
    index = 0
-   if ( u%Morison%DistribMesh%Committed ) then     
-      p%du(1) = perturb_t                    ! u%Morison%DistribMesh%TranslationDisp 
-      p%du(2) = perturb                      ! u%Morison%DistribMesh%Orientation     
-      p%du(3) = perturb_t                    ! u%Morison%DistribMesh%TranslationVel  
-      p%du(4) = perturb                      ! u%Morison%DistribMesh%RotationVel
-      p%du(5) = perturb_t                    ! u%Morison%DistribMesh%TranslationAcc      
-      p%du(6) = perturb                      ! u%Morison%DistribMesh%RotationAcc    
+   if ( u%Morison%Mesh%Committed ) then     
+      p%du(1) = perturb_t                    ! u%Morison%Mesh%TranslationDisp 
+      p%du(2) = perturb                      ! u%Morison%Mesh%Orientation     
+      p%du(3) = perturb_t                    ! u%Morison%Mesh%TranslationVel  
+      p%du(4) = perturb                      ! u%Morison%Mesh%RotationVel
+      p%du(5) = perturb_t                    ! u%Morison%Mesh%TranslationAcc      
+      p%du(6) = perturb                      ! u%Morison%Mesh%RotationAcc    
       index = 6     
-      p%du(index + 1) = perturb_t                    ! u%Morison%LumpedMesh%TranslationDisp 
-      p%du(index + 2) = perturb                      ! u%Morison%LumpedMesh%Orientation     
-      p%du(index + 3) = perturb_t                    ! u%Morison%LumpedMesh%TranslationVel  
-      p%du(index + 4) = perturb                      ! u%Morison%LumpedMesh%RotationVel
-      p%du(index + 5) = perturb_t                    ! u%Morison%LumpedMesh%TranslationAcc      
-      p%du(index + 6) = perturb                      ! u%Morison%LumpedMesh%RotationAcc    
+   end if
+   
+   if ( u%WAMITMesh%Committed ) then    
+      p%du(index + 1) = perturb_t            ! u%WAMITMesh%TranslationDisp 
+      p%du(index + 2) = perturb              ! u%WAMITMesh%Orientation     
+      p%du(index + 3) = perturb_t            ! u%WAMITMesh%TranslationVel  
+      p%du(index + 4) = perturb              ! u%WAMITMesh%RotationVel
+      p%du(index + 5) = perturb_t            ! u%WAMITMesh%TranslationAcc   
+      p%du(index + 6) = perturb              ! u%WAMITMesh%RotationAcc    
       index = index + 6
    end if
    
-      
-   p%du(index + 1) = perturb_t                    ! u%Mesh%TranslationDisp 
-   p%du(index + 2) = perturb                      ! u%Mesh%Orientation     
-   p%du(index + 3) = perturb_t                    ! u%Mesh%TranslationVel  
-   p%du(index + 4) = perturb                      ! u%Mesh%RotationVel
-   p%du(index + 5) = perturb_t                    ! u%Mesh%TranslationAcc   
-   p%du(index + 6) = perturb                      ! u%Mesh%RotationAcc    
-   index = index + 6
-
-   
+   p%du(index + 1) = perturb_t               ! u%PRPMesh%TranslationDisp 
+   p%du(index + 2) = perturb                 ! u%PRPMesh%Orientation     
+   p%du(index + 3) = perturb_t               ! u%PRPMesh%TranslationVel  
+   p%du(index + 4) = perturb                 ! u%PRPMesh%RotationVel
+   p%du(index + 5) = perturb_t               ! u%PRPMesh%TranslationAcc   
+   p%du(index + 6) = perturb                 ! u%PRPMesh%RotationAcc    
    
    !................
    ! names of the columns, InitOut%LinNames_u:
    !................
    call AllocAry(InitOut%LinNames_u, nu+1, 'LinNames_u', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   !LIN-TODO: We do not need any RotFrame info, right?
+   ! We do not need RotFrame_u for this module and the glue code with handle the fact that we did not allocate the array and hence set all values to false at the glue-code level
    !call AllocAry(InitOut%RotFrame_u, nu+1, 'RotFrame_u', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   ! LIN-TODO: have we implemented IsLoad_u ?
+   
    call AllocAry(InitOut%IsLoad_u,   nu+1, 'IsLoad_u',   ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
       
    InitOut%IsLoad_u   = .false.  ! HD's inputs are NOT loads
 
    index = 1
-   if ( u%Morison%DistribMesh%Committed ) then
+   if ( u%Morison%Mesh%Committed ) then
       FieldMask = .false.
       FieldMask(MASKID_TRANSLATIONDISP) = .true.
       FieldMask(MASKID_Orientation) = .true.
@@ -3016,8 +3356,11 @@ SUBROUTINE HD_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
       FieldMask(MASKID_ROTATIONVEL) = .true.
       FieldMask(MASKID_TRANSLATIONACC) = .true.
       FieldMask(MASKID_ROTATIONACC) = .true.
-      call PackMotionMesh_Names(u%Morison%DistribMesh, 'Morison-Distrib', InitOut%LinNames_u, index, FieldMask=FieldMask)
+      call PackMotionMesh_Names(u%Morison%Mesh, 'Morison', InitOut%LinNames_u, index, FieldMask=FieldMask)
    
+   end if
+
+   if ( u%WAMITMesh%Committed ) then
       FieldMask = .false.
       FieldMask(MASKID_TRANSLATIONDISP) = .true.
       FieldMask(MASKID_Orientation) = .true.
@@ -3025,9 +3368,9 @@ SUBROUTINE HD_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
       FieldMask(MASKID_ROTATIONVel) = .true.
       FieldMask(MASKID_TRANSLATIONACC) = .true.
       FieldMask(MASKID_ROTATIONACC) = .true.
-      call PackMotionMesh_Names(u%Morison%LumpedMesh, 'Morison-Lumped', InitOut%LinNames_u, index, FieldMask=FieldMask)
+      call PackMotionMesh_Names(u%WAMITMesh, 'WAMIT', InitOut%LinNames_u, index, FieldMask=FieldMask)
    end if
-
+   
    FieldMask = .false.
    FieldMask(MASKID_TRANSLATIONDISP) = .true.
    FieldMask(MASKID_Orientation) = .true.
@@ -3035,8 +3378,8 @@ SUBROUTINE HD_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
    FieldMask(MASKID_ROTATIONVel) = .true.
    FieldMask(MASKID_TRANSLATIONACC) = .true.
    FieldMask(MASKID_ROTATIONACC) = .true.
-   call PackMotionMesh_Names(u%Mesh, 'Platform-RefPt', InitOut%LinNames_u, index, FieldMask=FieldMask)
-
+   call PackMotionMesh_Names(u%PRPMesh, 'Platform-RefPt', InitOut%LinNames_u, index, FieldMask=FieldMask)
+   
    InitOut%LinNames_u(index) = 'Extended input: wave elevation at platform ref point, m'
    
 END SUBROUTINE HD_Init_Jacobian
@@ -3054,9 +3397,9 @@ SUBROUTINE HD_Perturb_u( p, n, perturb_sign, u, du )
 
    ! local variables
    integer                                             :: fieldIndx
-   integer                                             :: node
+   integer                                             :: node, index
 
-      
+   index = 0  
    fieldIndx = p%Jac_u_indx(n,2) 
    node      = p%Jac_u_indx(n,3) 
    
@@ -3065,68 +3408,111 @@ SUBROUTINE HD_Perturb_u( p, n, perturb_sign, u, du )
       ! determine which mesh we're trying to perturb and perturb the input:
    
       ! If we do not have Morison meshes, then the following select cases will vary
-   if ( u%Morison%DistribMesh%Committed ) then
-      
+   if ( u%Morison%Mesh%Committed ) then
       SELECT CASE( p%Jac_u_indx(n,1) )
-         CASE ( 1) !Module/Mesh/Field: u%Morison%DistribMesh%TranslationDisp = 1      
-            u%Morison%DistribMesh%TranslationDisp (fieldIndx,node) = u%Morison%DistribMesh%TranslationDisp (fieldIndx,node) + du * perturb_sign       
-         CASE ( 2) !Module/Mesh/Field: u%Morison%DistribMesh%Orientation = 2
-            CALL PerturbOrientationMatrix( u%Morison%DistribMesh%Orientation(:,:,node), du * perturb_sign, fieldIndx )
-         CASE ( 3) !Module/Mesh/Field: u%Morison%DistribMesh%TranslationVel = 3
-            u%Morison%DistribMesh%TranslationVel( fieldIndx,node) = u%Morison%DistribMesh%TranslationVel( fieldIndx,node) + du * perturb_sign         
-         CASE ( 4) !Module/Mesh/Field: u%Morison%DistribMesh%RotationVel = 4
-            u%Morison%DistribMesh%RotationVel (fieldIndx,node) = u%Morison%DistribMesh%RotationVel (fieldIndx,node) + du * perturb_sign               
-         CASE ( 5) !Module/Mesh/Field: u%Morison%DistribMesh%TranslationAcc = 5
-            u%Morison%DistribMesh%TranslationAcc( fieldIndx,node) = u%Morison%DistribMesh%TranslationAcc( fieldIndx,node) + du * perturb_sign       
-         CASE ( 6) !Module/Mesh/Field: u%Morison%DistribMesh%RotationAcc = 6
-            u%Morison%DistribMesh%RotationAcc(fieldIndx,node) = u%Morison%DistribMesh%RotationAcc(fieldIndx,node) + du * perturb_sign            
-               
-         CASE ( 7) !Module/Mesh/Field: u%Morison%LumpedMesh%TranslationDisp = 7      
-            u%Morison%LumpedMesh%TranslationDisp (fieldIndx,node) = u%Morison%LumpedMesh%TranslationDisp (fieldIndx,node) + du * perturb_sign       
-         CASE ( 8) !Module/Mesh/Field: u%Morison%LumpedMesh%Orientation = 8
-            CALL PerturbOrientationMatrix( u%Morison%LumpedMesh%Orientation(:,:,node), du * perturb_sign, fieldIndx )
-         CASE ( 9) !Module/Mesh/Field: u%Morison%LumpedMesh%TranslationVel = 9
-            u%Morison%LumpedMesh%TranslationVel( fieldIndx,node) = u%Morison%LumpedMesh%TranslationVel( fieldIndx,node) + du * perturb_sign         
-         CASE (10) !Module/Mesh/Field: u%Morison%LumpedMesh%RotationVel = 10
-            u%Morison%LumpedMesh%RotationVel (fieldIndx,node) = u%Morison%LumpedMesh%RotationVel (fieldIndx,node) + du * perturb_sign               
-         CASE (11) !Module/Mesh/Field: u%Morison%LumpedMesh%TranslationAcc = 11
-            u%Morison%LumpedMesh%TranslationAcc( fieldIndx,node) = u%Morison%LumpedMesh%TranslationAcc( fieldIndx,node) + du * perturb_sign       
-         CASE (12) !Module/Mesh/Field: u%Morison%LumpedMesh%RotationAcc = 12
-            u%Morison%LumpedMesh%RotationAcc(fieldIndx,node) = u%Morison%LumpedMesh%RotationAcc(fieldIndx,node) + du * perturb_sign            
-
-         CASE (13) !Module/Mesh/Field: u%Mesh%TranslationDisp = 13     
-            u%Mesh%TranslationDisp (fieldIndx,node) = u%Mesh%TranslationDisp (fieldIndx,node) + du * perturb_sign       
-         CASE (14) !Module/Mesh/Field: u%Mesh%Orientation = 14
-            CALL PerturbOrientationMatrix( u%Mesh%Orientation(:,:,node), du * perturb_sign, fieldIndx )
-         CASE (15) !Module/Mesh/Field: u%Mesh%TranslationVel = 15
-            u%Mesh%TranslationVel( fieldIndx,node) = u%Mesh%TranslationVel( fieldIndx,node) + du * perturb_sign         
-         CASE (16) !Module/Mesh/Field: u%Mesh%RotationVel = 16
-            u%Mesh%RotationVel (fieldIndx,node) = u%Mesh%RotationVel (fieldIndx,node) + du * perturb_sign               
-         CASE (17) !Module/Mesh/Field: u%Mesh%TranslationAcc = 17
-            u%Mesh%TranslationAcc( fieldIndx,node) = u%Mesh%TranslationAcc( fieldIndx,node) + du * perturb_sign       
-         CASE (18) !Module/Mesh/Field: u%Mesh%RotationAcc = 18
-            u%Mesh%RotationAcc(fieldIndx,node) = u%Mesh%RotationAcc(fieldIndx,node) + du * perturb_sign            
-         
-      
+         CASE ( 1) !Module/Mesh/Field: u%Morison%Mesh%TranslationDisp = 1      
+            u%Morison%Mesh%TranslationDisp (fieldIndx,node) = u%Morison%Mesh%TranslationDisp (fieldIndx,node) + du * perturb_sign       
+         CASE ( 2) !Module/Mesh/Field: u%Morison%Mesh%Orientation = 2
+            CALL PerturbOrientationMatrix( u%Morison%Mesh%Orientation(:,:,node), du * perturb_sign, fieldIndx )
+         CASE ( 3) !Module/Mesh/Field: u%Morison%Mesh%TranslationVel = 3
+            u%Morison%Mesh%TranslationVel( fieldIndx,node) = u%Morison%Mesh%TranslationVel( fieldIndx,node) + du * perturb_sign         
+         CASE ( 4) !Module/Mesh/Field: u%Morison%Mesh%RotationVel = 4
+            u%Morison%Mesh%RotationVel (fieldIndx,node) = u%Morison%Mesh%RotationVel (fieldIndx,node) + du * perturb_sign               
+         CASE ( 5) !Module/Mesh/Field: u%Morison%Mesh%TranslationAcc = 5
+            u%Morison%Mesh%TranslationAcc( fieldIndx,node) = u%Morison%Mesh%TranslationAcc( fieldIndx,node) + du * perturb_sign       
+         CASE ( 6) !Module/Mesh/Field: u%Morison%Mesh%RotationAcc = 6
+            u%Morison%Mesh%RotationAcc(fieldIndx,node) = u%Morison%Mesh%RotationAcc(fieldIndx,node) + du * perturb_sign    
+      end select  
+      if ( u%WAMITMesh%Committed ) then    
+         SELECT CASE( p%Jac_u_indx(n,1) )      
+            CASE ( 7) !Module/Mesh/Field: u%WAMITMesh%TranslationDisp = 7     
+               u%WAMITMesh%TranslationDisp (fieldIndx,node) = u%WAMITMesh%TranslationDisp (fieldIndx,node) + du * perturb_sign       
+            CASE ( 8) !Module/Mesh/Field: u%WAMITMesh%Orientation = 8
+               CALL PerturbOrientationMatrix( u%WAMITMesh%Orientation(:,:,node), du * perturb_sign, fieldIndx )
+            CASE ( 9) !Module/Mesh/Field: u%WAMITMesh%TranslationVel = 9
+               u%WAMITMesh%TranslationVel( fieldIndx,node) = u%WAMITMesh%TranslationVel( fieldIndx,node) + du * perturb_sign         
+            CASE (10) !Module/Mesh/Field: u%WAMITMesh%RotationVel = 10
+               u%WAMITMesh%RotationVel (fieldIndx,node) = u%WAMITMesh%RotationVel (fieldIndx,node) + du * perturb_sign               
+            CASE (11) !Module/Mesh/Field: u%WAMITMesh%TranslationAcc = 11
+               u%WAMITMesh%TranslationAcc( fieldIndx,node) = u%WAMITMesh%TranslationAcc( fieldIndx,node) + du * perturb_sign       
+            CASE (12) !Module/Mesh/Field: u%WAMITMesh%RotationAcc = 12
+               u%WAMITMesh%RotationAcc(fieldIndx,node) = u%WAMITMesh%RotationAcc(fieldIndx,node) + du * perturb_sign               
          END SELECT
-   else
+         SELECT CASE( p%Jac_u_indx(n,1) )     
+            CASE (13) !Module/Mesh/Field: u%PRPMesh%TranslationDisp = 13    
+               u%PRPMesh%TranslationDisp (fieldIndx,node) = u%PRPMesh%TranslationDisp (fieldIndx,node) + du * perturb_sign       
+            CASE (14) !Module/Mesh/Field: u%PRPMesh%Orientation = 14
+               CALL PerturbOrientationMatrix( u%PRPMesh%Orientation(:,:,node), du * perturb_sign, fieldIndx )
+            CASE (15) !Module/Mesh/Field: u%PRPMesh%TranslationVel = 15
+               u%PRPMesh%TranslationVel( fieldIndx,node) = u%PRPMesh%TranslationVel( fieldIndx,node) + du * perturb_sign         
+            CASE (16) !Module/Mesh/Field: u%PRPMesh%RotationVel = 16
+               u%PRPMesh%RotationVel (fieldIndx,node) = u%PRPMesh%RotationVel (fieldIndx,node) + du * perturb_sign               
+            CASE (17) !Module/Mesh/Field: u%PRPMesh%TranslationAcc = 17
+               u%PRPMesh%TranslationAcc( fieldIndx,node) = u%PRPMesh%TranslationAcc( fieldIndx,node) + du * perturb_sign       
+            CASE (18) !Module/Mesh/Field: u%PRPMesh%RotationAcc = 18
+               u%PRPMesh%RotationAcc(fieldIndx,node) = u%PRPMesh%RotationAcc(fieldIndx,node) + du * perturb_sign 
+         END SELECT
+      else
+         SELECT CASE( p%Jac_u_indx(n,1) )     
+            CASE ( 7) !Module/Mesh/Field: u%PRPMesh%TranslationDisp = 7     
+               u%PRPMesh%TranslationDisp (fieldIndx,node) = u%PRPMesh%TranslationDisp (fieldIndx,node) + du * perturb_sign       
+            CASE ( 8) !Module/Mesh/Field: u%PRPMesh%Orientation = 8
+               CALL PerturbOrientationMatrix( u%PRPMesh%Orientation(:,:,node), du * perturb_sign, fieldIndx )
+            CASE ( 9) !Module/Mesh/Field: u%PRPMesh%TranslationVel = 9
+               u%PRPMesh%TranslationVel( fieldIndx,node) = u%PRPMesh%TranslationVel( fieldIndx,node) + du * perturb_sign         
+            CASE (10) !Module/Mesh/Field: u%PRPMesh%RotationVel = 10
+               u%PRPMesh%RotationVel (fieldIndx,node) = u%PRPMesh%RotationVel (fieldIndx,node) + du * perturb_sign               
+            CASE (11) !Module/Mesh/Field: u%PRPMesh%TranslationAcc = 11
+               u%PRPMesh%TranslationAcc( fieldIndx,node) = u%PRPMesh%TranslationAcc( fieldIndx,node) + du * perturb_sign       
+            CASE (12) !Module/Mesh/Field: u%PRPMesh%RotationAcc = 12
+               u%PRPMesh%RotationAcc(fieldIndx,node) = u%PRPMesh%RotationAcc(fieldIndx,node) + du * perturb_sign 
+         END SELECT
+      end if
+   else if ( u%WAMITMesh%Committed ) then   
       SELECT CASE( p%Jac_u_indx(n,1) )
-         CASE (1) !Module/Mesh/Field: u%Mesh%TranslationDisp = 13     
-            u%Mesh%TranslationDisp (fieldIndx,node) = u%Mesh%TranslationDisp (fieldIndx,node) + du * perturb_sign       
-         CASE (2) !Module/Mesh/Field: u%Mesh%Orientation = 14
-            CALL PerturbOrientationMatrix( u%Mesh%Orientation(:,:,node), du * perturb_sign, fieldIndx )
-         CASE (3) !Module/Mesh/Field: u%Mesh%TranslationVel = 15
-            u%Mesh%TranslationVel( fieldIndx,node) = u%Mesh%TranslationVel( fieldIndx,node) + du * perturb_sign         
-         CASE (4) !Module/Mesh/Field: u%Mesh%RotationVel = 16
-            u%Mesh%RotationVel (fieldIndx,node) = u%Mesh%RotationVel (fieldIndx,node) + du * perturb_sign               
-         CASE (5) !Module/Mesh/Field: u%Mesh%TranslationAcc = 17
-            u%Mesh%TranslationAcc( fieldIndx,node) = u%Mesh%TranslationAcc( fieldIndx,node) + du * perturb_sign       
-         CASE (6) !Module/Mesh/Field: u%Mesh%RotationAcc = 18
-            u%Mesh%RotationAcc(fieldIndx,node) = u%Mesh%RotationAcc(fieldIndx,node) + du * perturb_sign            
-       
-       END SELECT
+         CASE (1) !Module/Mesh/Field: u%WAMITMesh%TranslationDisp = 1     
+            u%WAMITMesh%TranslationDisp (fieldIndx,node) = u%WAMITMesh%TranslationDisp (fieldIndx,node) + du * perturb_sign       
+         CASE (2) !Module/Mesh/Field: u%WAMITMesh%Orientation = 2
+            CALL PerturbOrientationMatrix( u%WAMITMesh%Orientation(:,:,node), du * perturb_sign, fieldIndx )
+         CASE (3) !Module/Mesh/Field: u%WAMITMesh%TranslationVel = 3
+            u%WAMITMesh%TranslationVel( fieldIndx,node) = u%WAMITMesh%TranslationVel( fieldIndx,node) + du * perturb_sign         
+         CASE (4) !Module/Mesh/Field: u%WAMITMesh%RotationVel = 4
+            u%WAMITMesh%RotationVel (fieldIndx,node) = u%WAMITMesh%RotationVel (fieldIndx,node) + du * perturb_sign               
+         CASE (5) !Module/Mesh/Field: u%WAMITMesh%TranslationAcc = 5
+            u%WAMITMesh%TranslationAcc( fieldIndx,node) = u%WAMITMesh%TranslationAcc( fieldIndx,node) + du * perturb_sign       
+         CASE (6) !Module/Mesh/Field: u%WAMITMesh%RotationAcc = 6
+            u%WAMITMesh%RotationAcc(fieldIndx,node) = u%WAMITMesh%RotationAcc(fieldIndx,node) + du * perturb_sign            
+      END SELECT
+      SELECT CASE( p%Jac_u_indx(n,1) )      
+         CASE ( 7) !Module/Mesh/Field: u%PRPMesh%TranslationDisp = 7     
+            u%PRPMesh%TranslationDisp (fieldIndx,node) = u%PRPMesh%TranslationDisp (fieldIndx,node) + du * perturb_sign       
+         CASE ( 8) !Module/Mesh/Field: u%PRPMesh%Orientation = 8
+            CALL PerturbOrientationMatrix( u%PRPMesh%Orientation(:,:,node), du * perturb_sign, fieldIndx )
+         CASE ( 9) !Module/Mesh/Field: u%PRPMesh%TranslationVel = 9
+            u%PRPMesh%TranslationVel( fieldIndx,node) = u%PRPMesh%TranslationVel( fieldIndx,node) + du * perturb_sign         
+         CASE (10) !Module/Mesh/Field: u%PRPMesh%RotationVel = 10
+            u%PRPMesh%RotationVel (fieldIndx,node) = u%PRPMesh%RotationVel (fieldIndx,node) + du * perturb_sign               
+         CASE (11) !Module/Mesh/Field: u%PRPMesh%TranslationAcc = 11
+            u%PRPMesh%TranslationAcc( fieldIndx,node) = u%PRPMesh%TranslationAcc( fieldIndx,node) + du * perturb_sign       
+         CASE (12) !Module/Mesh/Field: u%PRPMesh%RotationAcc = 12
+            u%PRPMesh%RotationAcc(fieldIndx,node) = u%PRPMesh%RotationAcc(fieldIndx,node) + du * perturb_sign               
+      END SELECT
+   else
+      SELECT CASE( p%Jac_u_indx(n,1) )      
+         CASE ( 1) !Module/Mesh/Field: u%PRPMesh%TranslationDisp = 1     
+            u%PRPMesh%TranslationDisp (fieldIndx,node) = u%PRPMesh%TranslationDisp (fieldIndx,node) + du * perturb_sign       
+         CASE ( 2) !Module/Mesh/Field: u%PRPMesh%Orientation = 2
+            CALL PerturbOrientationMatrix( u%PRPMesh%Orientation(:,:,node), du * perturb_sign, fieldIndx )
+         CASE ( 3) !Module/Mesh/Field: u%PRPMesh%TranslationVel = 3
+            u%PRPMesh%TranslationVel( fieldIndx,node) = u%PRPMesh%TranslationVel( fieldIndx,node) + du * perturb_sign         
+         CASE ( 4) !Module/Mesh/Field: u%PRPMesh%RotationVel = 4
+            u%PRPMesh%RotationVel (fieldIndx,node) = u%PRPMesh%RotationVel (fieldIndx,node) + du * perturb_sign               
+         CASE ( 5) !Module/Mesh/Field: u%PRPMesh%TranslationAcc = 5
+            u%PRPMesh%TranslationAcc( fieldIndx,node) = u%PRPMesh%TranslationAcc( fieldIndx,node) + du * perturb_sign       
+         CASE ( 6) !Module/Mesh/Field: u%PRPMesh%RotationAcc = 6
+            u%PRPMesh%RotationAcc(fieldIndx,node) = u%PRPMesh%RotationAcc(fieldIndx,node) + du * perturb_sign               
+      END SELECT   
    end if
-   
                                              
 END SUBROUTINE HD_Perturb_u
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -3142,16 +3528,38 @@ SUBROUTINE HD_Perturb_x( p, n, perturb_sign, x, dx )
    
 
    ! local variables
-   integer(intKi)                                      :: indx
+   integer(intKi)                                      :: i, offset1, offset2, n2
+  
+   if ( p%totalStates == 0 ) return
    
+   !Note: All excitation states for all bodies are stored 1st, then all radiation states
    dx = p%dx(n)
+   offset1 = 1
+   if ( n <= p%totalExctnStates ) then
       
-   if (n > p%WAMIT%SS_Exctn%N) then
-      indx = n - p%WAMIT%SS_Exctn%N
-      x%WAMIT%SS_Rdtn%x( indx ) = x%WAMIT%SS_Rdtn%x( indx ) + dx * perturb_sign 
+      ! Find body index for exctn states
+      do i=1,p%nWAMITObj 
+         offset2 = offset1 + p%WAMIT(i)%SS_Exctn%numStates
+         if ( n >= offset1 .and. n < offset2) then
+            n2 = n - offset1 + 1
+            x%WAMIT(i)%SS_Exctn%x( n2 ) = x%WAMIT(i)%SS_Exctn%x( n2 ) + dx * perturb_sign 
+            exit
+         end if
+         offset1 = offset2
+      end do
+      
    else
-      indx = n
-      x%WAMIT%SS_Exctn%x( indx ) = x%WAMIT%SS_Exctn%x( indx ) + dx * perturb_sign 
+      offset1 = p%totalExctnStates + 1
+      ! Find body index for rdtn states
+      do i=1,p%nWAMITObj 
+         offset2 = offset1 + p%WAMIT(i)%SS_Exctn%numStates
+         if ( n >= offset1 .and. n < offset2) then
+            n2 = n - offset1 + 1
+            x%WAMIT(i)%SS_Rdtn%x( n2 ) = x%WAMIT(i)%SS_Rdtn%x( n2 ) + dx * perturb_sign 
+            exit
+         end if
+         offset1 = offset2
+      end do
    end if
                                                 
 END SUBROUTINE HD_Perturb_x
@@ -3177,13 +3585,12 @@ SUBROUTINE Compute_dY(p, y_p, y_m, delta, dY)
    
    
    indx_first = 1     
-   if ( y_p%Morison%DistribMesh%Committed ) then
-      call PackLoadMesh_dY(y_p%Morison%DistribMesh, y_m%Morison%DistribMesh, dY, indx_first)   
-      call PackLoadMesh_dY(y_p%Morison%LumpedMesh , y_m%Morison%LumpedMesh , dY, indx_first)   
+   if ( y_p%Morison%Mesh%Committed ) then
+      call PackLoadMesh_dY(y_p%Morison%Mesh, y_m%Morison%Mesh, dY, indx_first)   
    end if
-
-   call PackLoadMesh_dY(y_p%Mesh, y_m%Mesh, dY, indx_first)   
-   call PackLoadMesh_dY(y_p%AllHdroOrigin, y_m%AllHdroOrigin, dY, indx_first) 
+   if ( y_p%WAMITMesh%Committed ) then
+      call PackLoadMesh_dY(y_p%WAMITMesh, y_m%WAMITMesh, dY, indx_first)   
+   end if
    
    do k=1,p%NumTotalOuts
       dY(k+indx_first-1) = y_p%WriteOutput(k) - y_m%WriteOutput(k)
@@ -3219,7 +3626,7 @@ SUBROUTINE HD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
 
 
 
-   INTEGER(IntKi)                                    :: i, k, index, nu
+   INTEGER(IntKi)                                    :: i, j, k, index, nu
    INTEGER(IntKi)                                    :: ny
    INTEGER(IntKi)                                    :: ErrStat2
    CHARACTER(ErrMsgLen)                              :: ErrMsg2
@@ -3241,15 +3648,15 @@ SUBROUTINE HD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
          nu = size(p%Jac_u_indx,1)
          
              ! our operating point includes DCM (orientation) matrices, not just small angles like the perturbation matrices do
-         if ( u%Morison%DistribMesh%Committed ) then          
-            nu = nu + u%Morison%DistribMesh%NNodes * 6 & ! p%Jac_u_indx has 3 for Orientation, but we need 9 at each node
-                    + u%Morison%LumpedMesh%NNodes  * 6 & ! p%Jac_u_indx has 3 for Orientation, but we need 9 at each node 
-                    + u%Mesh%NNodes                * 6   ! p%Jac_u_indx has 3 for Orientation, but we need 9 at each node
-            nu = nu + 1   ! Extended input
-         else
-            nu = nu + u%Mesh%NNodes                * 6   ! p%Jac_u_indx has 3 for Orientation, but we need 9 at each node
-            nu = nu + 1   ! Extended input
+         if ( u%Morison%Mesh%Committed ) then          
+            nu = nu + u%Morison%Mesh%NNodes  * 6   ! p%Jac_u_indx has 3 for Orientation, but we need 9 at each node
          end if
+         if ( u%WAMITMesh%Committed ) then
+            nu = nu + u%WAMITMesh%NNodes     * 6   ! p%Jac_u_indx has 3 for Orientation, but we need 9 at each node
+         end if
+         
+         nu = nu + u%PRPMesh%NNodes          * 6   ! p%Jac_u_indx has 3 for Orientation, but we need 9 at each node
+         nu = nu + 1   ! Extended input
          
          call AllocAry(u_op, nu,'u_op',ErrStat2,ErrMsg2) ! 
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -3266,13 +3673,16 @@ SUBROUTINE HD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
       Mask(MASKID_ROTATIONACC)     = .true.
       
       index = 1
-      if ( u%Morison%DistribMesh%Committed ) then
-         call PackMotionMesh(u%Morison%DistribMesh, u_op, index, FieldMask=Mask)   
-         call PackMotionMesh(u%Morison%LumpedMesh , u_op, index, FieldMask=Mask)   
+      if ( u%Morison%Mesh%Committed ) then
+         call PackMotionMesh(u%Morison%Mesh, u_op, index, FieldMask=Mask)    
       end if
 
-      call PackMotionMesh(u%Mesh, u_op, index, FieldMask=Mask)   
-   
+      if ( u%WAMITMesh%Committed ) then
+         call PackMotionMesh(u%WAMITMesh, u_op, index, FieldMask=Mask)   
+      end if
+      
+      call PackMotionMesh(u%PRPMesh, u_op, index, FieldMask=Mask) 
+      
          ! extended input:
       u_op(index) = 0.0_R8Ki !u%WaveElev0
           
@@ -3289,13 +3699,12 @@ SUBROUTINE HD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
       end if
          
       index = 1               
-      if ( y%Morison%DistribMesh%Committed ) then
-         call PackLoadMesh(y%Morison%DistribMesh, y_op, index)   
-         call PackLoadMesh(y%Morison%LumpedMesh , y_op, index)   
+      if ( y%Morison%Mesh%Committed ) then
+         call PackLoadMesh(y%Morison%Mesh, y_op, index)   
       end if
-
-      call PackLoadMesh(y%Mesh, y_op, index) 
-      call PackLoadMesh(y%AllHdroOrigin, y_op, index)
+      if ( y%WAMITMesh%Committed ) then
+         call PackLoadMesh(y%WAMITMesh, y_op, index)
+      end if
       
       index = index - 1
       do i=1,p%NumTotalOuts
@@ -3306,47 +3715,64 @@ SUBROUTINE HD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
 
    !..................................
    IF ( PRESENT( x_op ) ) THEN
-
-      if (.not. allocated(x_op)) then                           
-         call AllocAry(x_op, p%WAMIT%SS_Exctn%N+p%WAMIT%SS_Rdtn%N,'x_op',ErrStat2,ErrMsg2)
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         if (ErrStat>=AbortErrLev) return
+      
+      if ( p%totalStates == 0 ) return
+      
+      if ( y%WAMITMesh%Committed ) then
+         if (.not. allocated(x_op)) then 
+            call AllocAry(x_op, p%totalStates,'x_op',ErrStat2,ErrMsg2)
+               call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+            if (ErrStat>=AbortErrLev) return
+         end if
+         index = 1
+         do j=1, p%nWAMITObj
+            do i=1,p%WAMIT(j)%SS_Exctn%numStates ! Loop through all DOFs
+               x_op(index) = x%WAMIT(j)%SS_Exctn%x(i)
+               index = index + 1
+            end do
+         end do
+         do j=1, p%nWAMITObj
+            do i=1,p%WAMIT(j)%SS_Rdtn%numStates ! Loop through all DOFs
+               x_op(index) = x%WAMIT(j)%SS_Rdtn%x(i)
+               index = index + 1
+            end do
+         end do
       end if
-      
-      do i=1,p%WAMIT%SS_Exctn%N ! Loop through all DOFs
-         x_op(i) = x%WAMIT%SS_Exctn%x(i)
-      end do
-      do i=1,p%WAMIT%SS_Rdtn%N ! Loop through all DOFs
-         x_op(i+p%WAMIT%SS_Exctn%N) = x%WAMIT%SS_Rdtn%x(i)
-      end do                               
-      
    END IF
 
    !..................................
    IF ( PRESENT( dx_op ) ) THEN
-
-      if (.not. allocated(dx_op)) then                           
-         call AllocAry(dx_op, p%WAMIT%SS_Exctn%N+p%WAMIT%SS_Rdtn%N,'dx_op',ErrStat2,ErrMsg2)
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         if (ErrStat>=AbortErrLev) return
-      end if
       
-      call HydroDyn_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dx, ErrStat2, ErrMsg2 ) 
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) 
-         if (ErrStat>=AbortErrLev) then
-            call HydroDyn_DestroyContState( dx, ErrStat2, ErrMsg2)
-            return
+      if ( p%totalStates == 0 ) return
+      
+      if ( y%WAMITMesh%Committed ) then
+         if (.not. allocated(dx_op)) then 
+            call AllocAry(dx_op, p%totalStates,'dx_op',ErrStat2,ErrMsg2)
+               call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+            if (ErrStat>=AbortErrLev) return
          end if
-                     
-      do i=1,p%WAMIT%SS_Exctn%N ! Loop through all DOFs
-         dx_op(i) = dx%WAMIT%SS_Exctn%x(i)
-      end do
-      do i=1,p%WAMIT%SS_Rdtn%N ! Loop through all DOFs
-         dx_op(i+p%WAMIT%SS_Exctn%N) = dx%WAMIT%SS_Rdtn%x(i)
-      end do                                 
       
-      call HydroDyn_DestroyContState( dx, ErrStat2, ErrMsg2)
-            
+         call HydroDyn_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dx, ErrStat2, ErrMsg2 ) 
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) 
+            if (ErrStat>=AbortErrLev) then
+               call HydroDyn_DestroyContState( dx, ErrStat2, ErrMsg2)
+               return
+            end if
+         index = 1
+         do j=1, p%nWAMITObj            
+            do i=1,p%WAMIT(j)%SS_Exctn%numStates ! Loop through all DOFs
+               dx_op(index) = dx%WAMIT(j)%SS_Exctn%x(i)
+               index = index + 1
+            end do
+         end do
+         do j=1, p%nWAMITObj
+            do i=1,p%WAMIT(j)%SS_Rdtn%numStates ! Loop through all DOFs
+               dx_op(index) = dx%WAMIT(j)%SS_Rdtn%x(i)
+               index = index + 1
+            end do                                 
+         end do
+         call HydroDyn_DestroyContState( dx, ErrStat2, ErrMsg2)
+      end if    
    END IF
 
    !..................................

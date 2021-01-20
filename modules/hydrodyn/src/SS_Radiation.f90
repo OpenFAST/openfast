@@ -45,7 +45,45 @@ MODULE SS_Radiation
    PUBLIC :: SS_Rad_UpdateDiscState                ! Tight coupling routine for updating discrete states
          
    
-CONTAINS
+   CONTAINS
+   
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine transforms  the State Space input file data from a local (heading-angle, based) coordinate system to the global system. 
+!> NOTE: This routine ONLY works if all the DOFs are enabled!!!!!!!!!!
+subroutine TransformStateSpaceMatrices( NBody, RotZ, B, C )
+!..................................................................................................................................
+   integer(IntKi), intent( in    ) :: NBody   ! Number of WAMIT bodies in this WAMIT object ( = 1 if NBodyMod > 1)
+   real(R8Ki),     intent( in    ) :: RotZ(:) ! NBody heading angles (radians)
+   real(ReKi),     intent( inout ) :: B(:,:)  ! Matrix data to be transformed, if NBodyMOD = 1 and NBody > 1 then we will be transforming the individual sub 6x6 matrices
+   real(ReKi),     intent( inout ) :: C(:,:)  ! Matrix data to be transformed, if NBodyMOD = 1 and NBody > 1 then we will be transforming the individual sub 6x6 matrices
+      
+   integer(IntKi)   :: i,j,indx
+   real(R8Ki)       :: R(3,3)
+   real(R8Ki)       :: Rt(3,3)
+      
+   !do j = 1, NBody
+   !   Rj(1,:) = (/ cos(RotZ(j)), sin(RotZ(j)), 0.0_R8Ki/)
+   !   Rj(2,:) = (/-sin(RotZ(j)), cos(RotZ(j)), 0.0_R8Ki/)
+   !   Rj(3,:) = (/ 0.0_R8Ki    , 0.0_R8Ki    , 1.0_R8Ki/)
+      do i = 1, NBody
+         if ( .not. EqualRealNos(RotZ(i), 0.0_R8Ki)  ) then
+            R(1,:) = (/ cos(RotZ(i)), sin(RotZ(i)), 0.0_R8Ki/)
+            R(2,:) = (/-sin(RotZ(i)), cos(RotZ(i)), 0.0_R8Ki/)
+            R(3,:) = (/ 0.0_R8Ki    , 0.0_R8Ki    , 1.0_R8Ki/)
+            Rt     = transpose(R)
+            do j = 1,2  ! Need to do this twice, since a single R (3x3) matrix is used to transform all 6 DOFs associated with the ith Body data
+               indx = (i-1)*6 + (j-1)*3 + 1 
+               ! Create sub matrix which is all rows of B but only necessary columns for transformation work, NOTE: B is numStates X (6*NBody)
+               B(:,indx:indx+2) = matmul(     B(:,indx:indx+2), R ) 
+               ! Create sub matrix which is all columns of C but only necessary rows for transformation work, NOTE: c is (6*NBody) X numStates 
+               C(indx:indx+2,:) = matmul( Rt, C(indx:indx+2,:)    ) 
+            end do 
+         end if
+      end do
+
+  ! end do
+end subroutine TransformStateSpaceMatrices
+   
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine is called at the start of the simulation to perform initialization steps. 
 !! The parameters are set here and not changed during the simulation.
@@ -80,15 +118,14 @@ SUBROUTINE SS_Rad_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
     REAL(ReKi), ALLOCATABLE                :: Rad_C (:,:)                          ! C matrix of the radiation state-space system on the input file ss
 
     INTEGER                                :: I                                    ! Generic index
-!    INTEGER                                :: J                                    ! Generic index  
-    INTEGER                                :: xx (1,6)                             ! Active DOF's on the input file .ss
-    INTEGER                                :: DOFs                                 ! Number of DOFS  
-    INTEGER                                :: N                                    ! Number of states
+    INTEGER, allocatable                   :: xx (:)                               ! Active DOF's on the input file .ss
+    INTEGER                                :: numDOFs                              ! Number of DOFS  
+    INTEGER                                :: numStates                            ! Number of states
+    integer(IntKi)                         :: N                                    ! Counter
     INTEGER                                :: Nlines                               ! Number of lines in the input file, used to determine N
     INTEGER                                :: UnSS                                 ! I/O unit number for the WAMIT output file with the .ss extension; this file contains the state-space matrices.
     INTEGER                                :: Sttus                                ! Error in reading .ss file
-    !CHARACTER                              :: Line                                 ! Temp line of file
-    
+    character(3)                           :: bodystr
     integer                                :: ErrStat2
     character(ErrMsgLen)                   :: ErrMsg2
     
@@ -98,7 +135,9 @@ SUBROUTINE SS_Rad_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       
     UnSS  = -1
     N     =  0
-      
+    numStates = 0
+    p%NBody = InitInp%NBody  ! Number of WAMIT bodies: =1 if WAMIT is using NBodyMod > 1,  >=1 if NBodyMod=1
+    
     ! Open the .ss input file!
     CALL GetNewUnit( UnSS )
     CALL OpenFInpFile ( UnSS, TRIM(InitInp%InputFile)//'.ss', ErrStat2, ErrMsg2 )  ! Open file.
@@ -112,12 +151,14 @@ SUBROUTINE SS_Rad_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
     Nlines = 1
     
     CALL ReadCom ( UnSS, TRIM(InitInp%InputFile)//'.ss', 'Header',ErrStat2, ErrMsg2  )! Reads the first entire line (Title header)
-      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')    
-    CALL ReadAry( UnSS,TRIM(InitInp%InputFile)//'.ss', xx(1,:), 6, 'xx', 'xx vector containing the enabled dofs',ErrStat2, ErrMsg2) ! Reads in the second line, containing the active dofs vector
+      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')  
+    call AllocAry( xx, 6*p%NBody, 'xx', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')
+    CALL ReadAry( UnSS,TRIM(InitInp%InputFile)//'.ss', xx(:), 6*p%NBody, 'xx', 'xx vector containing the enabled dofs',ErrStat2, ErrMsg2) ! Reads in the second line, containing the active dofs vector
       CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')
-    CALL ReadVar( UnSS,TRIM(InitInp%InputFile)//'.ss', N, 'N', 'Number of Dofs',ErrStat2, ErrMsg2) ! Reads in the third line, containing the number of states
+    CALL ReadVar( UnSS,TRIM(InitInp%InputFile)//'.ss', numStates, 'numStates', 'Number of States',ErrStat2, ErrMsg2) ! Reads in the third line, containing the number of states
       CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')
-    CALL ReadAry( UnSS,TRIM(InitInp%InputFile)//'.ss', p%spdof, 6, 'spdof', 'spdof vector containing the number of states per dofs',ErrStat2, ErrMsg2) ! Reads in the forth line, containing the state per dofs vector
+    call AllocAry( p%spdof, 6*p%NBody, 'p%spdof', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')
+    CALL ReadAry( UnSS,TRIM(InitInp%InputFile)//'.ss', p%spdof, 6*p%NBody, 'spdof', 'spdof vector containing the number of states per dofs',ErrStat2, ErrMsg2) ! Reads in the forth line, containing the state per dofs vector
       CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')
       IF (ErrStat >= AbortErrLev) THEN
          CALL CleanUp()
@@ -133,28 +174,28 @@ SUBROUTINE SS_Rad_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
         END IF
     END DO
 
-    ! The input file contains the matrices A [NxN], B [Nx6] and C [6xN], so
-    !p%N = ( Nlines - 6 ) / 2 ! this is the number of states
+    ! The input file contains the matrices A [NxN], B [N x 6*NBody] and C [6*NBody x N], so
+    !p%numStates = ( Nlines - 6*p%NBody ) / 2 ! this is the number of states
     
     !Verifications on the input file
-    IF ( ( Nlines - 6 ) / 2 /= N) THEN
+    IF ( ( Nlines - 6*p%NBody ) / 2 /= numStates) THEN
       CALL SetErrStat(ErrID_Severe,'Error in the input file .ss: The size of the matrices does not correspond to the number of states!',ErrStat,ErrMsg,'SS_Rad_Init')
     END IF
     
-    IF ( N /= SUM(p%spdof)) THEN
+    IF ( numStates /= SUM(p%spdof)) THEN
       CALL SetErrStat(ErrID_Severe,'Error in the input file .ss: The size of the matrices does not correspond to the number of states!',ErrStat,ErrMsg,'SS_Rad_Init')
     END IF        
     
     !Verify if the DOFs active in the input file correspond to the ones active by FAST in this run
-    DO I=1,6 !Loop through all 6 DOFs           
-        IF ( InitInp%DOFs (1,I) == 1)  THEN !  True when the current DOF is active in FAST                   
-            IF ( xx (1,I) /= 1) THEN ! True if a DOF enabled by FAST is not available in the INPUT File
+    DO I=1,6*p%NBody !Loop through all 6 DOFs           
+        IF ( InitInp%enabledDOFs (I) == 1)  THEN !  True when the current DOF is active in FAST                   
+            IF ( xx (I) /= 1) THEN ! True if a DOF enabled by FAST is not available in the INPUT File
                CALL SetErrStat(ErrID_Severe,'Error in the input file .ss: The enabled DOFs in the current FAST Simulation don`t match the ones on the input file .ss!',ErrStat,ErrMsg,'SS_Rad_Init')
             END IF           
         END IF
     END DO
     
-    DOFs = SUM (xx) !Number of DOFS in the input file
+    numDOFs = SUM (xx) !Number of DOFS in the input file
     
       IF (ErrStat >= AbortErrLev) THEN
          CALL CleanUp()
@@ -163,9 +204,9 @@ SUBROUTINE SS_Rad_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
     
     ! Now we can allocate the temporary matrices A, B and C
     
-    CALL AllocAry( Rad_A, N,    N,    'Rad_A', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')
-    CALL AllocAry( Rad_B, N,    DOFs, 'Rad_B', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')
-    CALL AllocAry( Rad_C, DOFs, N,    'Rad_C', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')
+    CALL AllocAry( Rad_A, numStates,    numStates,    'Rad_A', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')
+    CALL AllocAry( Rad_B, numStates,    numDOFs, 'Rad_B', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')
+    CALL AllocAry( Rad_C, numDOFs, numStates,    'Rad_C', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')
     
       IF (ErrStat >= AbortErrLev) THEN
          CALL CleanUp()
@@ -178,41 +219,45 @@ SUBROUTINE SS_Rad_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
     ! Skip the first 4 lines:  (NOTE: no error handling here because we would have caught it the first time through)
     CALL ReadCom ( UnSS, TRIM(InitInp%InputFile)//'.ss', 'Header', ErrStat2, ErrMsg2  )! Reads the first entire line (Title header)
     CALL ReadCom ( UnSS, TRIM(InitInp%InputFile)//'.ss', 'Enabled dofs', ErrStat2, ErrMsg2  )! Reads the first entire line (Title header)
-    CALL ReadCom ( UnSS, TRIM(InitInp%InputFile)//'.ss', 'N', ErrStat2, ErrMsg2  )! Reads the first entire line (Title header)
-    CALL ReadCom ( UnSS, TRIM(InitInp%InputFile)//'.ss', 'N per dofs', ErrStat2, ErrMsg2  )! Reads the first entire line (Title header)   
+    CALL ReadCom ( UnSS, TRIM(InitInp%InputFile)//'.ss', 'numStates', ErrStat2, ErrMsg2  )! Reads the first entire line (Title header)
+    CALL ReadCom ( UnSS, TRIM(InitInp%InputFile)//'.ss', 'numStates per dofs', ErrStat2, ErrMsg2  )! Reads the first entire line (Title header)   
     
-    DO I = 1,N !Read A MatriX
-        CALL ReadAry( UnSS,TRIM(InitInp%InputFile)//'.ss', Rad_A(I,:), N, 'Rad_A', 'A_Matrix',ErrStat2, ErrMsg2)
+    DO I = 1,numStates !Read A MatriX
+        CALL ReadAry( UnSS,TRIM(InitInp%InputFile)//'.ss', Rad_A(I,:), numStates, 'Rad_A', 'A_Matrix',ErrStat2, ErrMsg2)
           CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')
     END DO
     
-    DO I = 1,N !Read B Matrix
-        CALL ReadAry( UnSS, TRIM(InitInp%InputFile)//'.ss', Rad_B(I,:), 6, 'Rad_B', 'B_Matrix',ErrStat2, ErrMsg2) 
+    DO I = 1,numStates !Read B Matrix
+        CALL ReadAry( UnSS, TRIM(InitInp%InputFile)//'.ss', Rad_B(I,:), 6*p%NBody, 'Rad_B', 'B_Matrix',ErrStat2, ErrMsg2) 
           CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')
     END DO
     
-    DO I = 1,6 !Read C Matrix
-        CALL ReadAry( UnSS, TRIM(InitInp%InputFile)//'.ss', Rad_C(I,:), N, 'Rad_C', 'C_Matrix',ErrStat2, ErrMsg2)
+    DO I = 1,6*p%NBody !Read C Matrix
+        CALL ReadAry( UnSS, TRIM(InitInp%InputFile)//'.ss', Rad_C(I,:), numStates, 'Rad_C', 'C_Matrix',ErrStat2, ErrMsg2)
           CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')
     END DO
     
     CLOSE ( UnSS ) !Close .ss input file
     UnSS = -1        ! Indicate the file is closed
     
+    ! Transform the SS matrices using the heading angles
+    ! NOTE: This transformation routine ONLY works if all the DOFs are enabled so we will do it on Rad_B and Rad_C which have all DOFs !!!!!!!!!!
+         call TransformStateSpaceMatrices( p%NBody, InitInp%PtfmRefztRot, Rad_B, Rad_C )    
+         
     !Now we are ready to reduce the matrices to the correspondent active dofs in FAST
-    p%N=0
-    DO I=1,6 !For each state
-        IF ( InitInp%DOFs (1,I) == 1)  THEN !  True when the current DOF is active in FAST          
-            p%N = p%N + p%spdof(I) !Add the correspondent number of states to the vector
+    p%numStates=0
+    DO I=1,6*p%NBody !For each state
+        IF ( InitInp%enabledDOFs (I) == 1)  THEN !  True when the current DOF is active in FAST          
+            p%numStates = p%numStates + p%spdof(I) !Add the correspondent number of states to the vector
         END IF
     END DO
     
-    CALL WrScr1 ( 'Using SS_Radiation Module, with '//TRIM( Num2LStr(p%N ))//' of '//TRIM( Num2LStr(N ))// ' radiation states' )
+    CALL WrScr1 ( 'Using SS_Radiation Module, with '//TRIM( Num2LStr(p%numStates ))//' of '//TRIM( Num2LStr(numStates ))// ' radiation states' )
     
     !Now we can allocate the final size of the SS matrices
-    CALL AllocAry( p%A, p%N, p%N,    'p%A', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')
-    CALL AllocAry( p%B, p%N, 6,      'p%B', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')
-    CALL AllocAry( p%c, 6,   p%N,    'p%C', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')
+    CALL AllocAry( p%A, p%numStates, p%numStates,    'p%A', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')
+    CALL AllocAry( p%B, p%numStates, 6*p%NBody,      'p%B', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')
+    CALL AllocAry( p%C, 6*p%NBody,   p%numStates,    'p%C', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')
       
     ! if these arrays weren't allocated, return before a seg fault occurs:      
       IF (ErrStat >= AbortErrLev) THEN
@@ -223,12 +268,12 @@ SUBROUTINE SS_Rad_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
                     
     !Finaly we write the ss matrices, based on the ones on the input file and on the active dofs
         
-    IF ( p%N == N ) THEN !The matrices are the same
+    IF ( p%numStates == numStates ) THEN !The matrices are the same
         
         p%A = Rad_A
         p%B = Rad_B
         p%C = Rad_C
-            
+        
     ELSE !We need to cut some of the lines and columns
        
         p%A = 0
@@ -238,8 +283,8 @@ SUBROUTINE SS_Rad_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
        
         N=1 !Use as number of active states introduced
         
-        DO I=1,6 !For each dof...
-            IF ( InitInp%DOFs (1,I) == 1 .AND. sum(p%spdof(1:I))<size(Rad_A(:,1)))  THEN !  That is enabled in FAST
+        DO I=1,6*p%NBody !For each dof...
+            IF ( InitInp%enabledDOFs (I) == 1 .AND. sum(p%spdof(1:I))<size(Rad_A(:,1)))  THEN !  That is enabled in FAST
     
                 p%A (N:N+p%spdof(I),N:N+p%spdof(I)) = Rad_A (sum(p%spdof(1:I-1))+1:sum(p%spdof(1:I)),sum(p%spdof(1:I-1))+1:sum(p%spdof(1:I)))
                 p%B (N:N+p%spdof(I),:)= Rad_B (sum(p%spdof(1:I-1))+1:sum(p%spdof(1:I)),:)
@@ -255,45 +300,57 @@ SUBROUTINE SS_Rad_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       p%DT  = Interval
        
     ! Define initial system states here:
-    CALL AllocAry( x%x, p%N,  'x%x', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')      
+    CALL AllocAry( x%x, p%numStates,  'x%x', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')      
       IF (ErrStat >= AbortErrLev) THEN
          CALL CleanUp()
          RETURN
       END IF
 
-      x%x = 0
+   x%x = 0
      
-      xd%DummyDiscState          = 0 !TD: SS doesn't have disc states
-      z%DummyConstrState         = 0 !TD: SS doesn't have constr states
+   xd%DummyDiscState          = 0 !TD: SS doesn't have disc states
+   z%DummyConstrState         = 0 !TD: SS doesn't have constr states
       
-    ! Define other States: 
-      DO I=1,SIZE(OtherState%xdot)
-         CALL SS_Rad_CopyContState( x, OtherState%xdot(i), MESH_NEWCOPY, ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')
-      END DO
-      OtherState%n = -1
+   ! Define other States: 
+   DO I=1,SIZE(OtherState%xdot)
+      CALL SS_Rad_CopyContState( x, OtherState%xdot(i), MESH_NEWCOPY, ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')
+   END DO
+   OtherState%n = -1
 
-   ! misc vars:
-      m%DummyMiscVar = 0
+! misc vars:
+   m%DummyMiscVar = 0
       
-     !Inputs     
-      u%dq = 0 !6 DoF's velocities
+   !Inputs    
+   call AllocAry( u%dq, 6*p%NBody, 'u%dq', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')
+   u%dq = 0 !All DoF's velocities
 
-         ! Define system output initializations (set up mesh) here:
-         
-      y%y = 0         
-      y%WriteOutput = 0
+      ! Define system output initializations (set up mesh) here:
+   call AllocAry( y%y,           6*p%NBody+1, 'y%y',           ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')
+   call AllocAry( y%WriteOutput, 6*p%NBody+1, 'y%WriteOutput', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')
+   y%y = 0         
+   y%WriteOutput = 0
       
          
-         ! Define initialization-routine output here:
+   ! Define initialization-routine output here:
+   
+   ! This output channels are only used by the stand-alone driver program and not by the OpenFAST coupled version.  
+   !  For OpenFAST, these outputs are attached (via HydroDyn) to the Radiation Force/Moment channels within HydroDyn
+   
+   call AllocAry( InitOut%WriteOutputHdr, 6*p%NBody+1, 'InitOut%WriteOutputHdr', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')
+   call AllocAry( InitOut%WriteOutputUnt, 6*p%NBody+1, 'InitOut%WriteOutputUnt', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')
+
+   InitOut%WriteOutputHdr(1) = 'Time'
+   InitOut%WriteOutputUnt(1) = '(s) '
+   do i = 1, p%NBody
+      bodystr = 'B'//trim(num2lstr(i))
+      InitOut%WriteOutputHdr( (i-1)*6+2: (i-1)*6+7 ) = (/ trim(bodystr)//'FX  ' , trim(bodystr)//'FY  ' , trim(bodystr)//'FZ  ' , trim(bodystr)//'MX  ' , trim(bodystr)//'MY  ' , trim(bodystr)//'MZ  ' /)
+      InitOut%WriteOutputUnt( (i-1)*6+2: (i-1)*6+7 ) = (/ '(N) ' , '(N) ' , '(N) ' , '(Nm)' , '(Nm)' , '(Nm)' /)     
+   end do   
+      ! If you want to choose your own rate instead of using what the glue code suggests, tell the glue code the rate at which
+      !   this module must be called here:
          
-      InitOut%WriteOutputHdr = (/ 'Time', 'F1  ' , 'F2  ' , 'F3  ' , 'F4  ' , 'F5  ' , 'F6  ' /)
-      InitOut%WriteOutputUnt = (/ '(s) ', '(N) ' , '(N) ' , '(N) ' , '(Nm)' , '(Nm)' , '(Nm)' /)     
-      
-         ! If you want to choose your own rate instead of using what the glue code suggests, tell the glue code the rate at which
-         !   this module must be called here:
-         
-       !p%DT=Interval
-       
+      !p%DT=Interval
+   
    CALL CleanUp() ! deallocate local arrays
 
 CONTAINS
@@ -443,7 +500,7 @@ SUBROUTINE SS_Rad_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, E
       ! Compute outputs here:
       
       y%WriteOutput(1)   = REAL(Time,ReKi)
-      y%WriteOutput(2:7) = y%y
+      y%WriteOutput(2:6*p%NBody+1) = y%y
                    
 END SUBROUTINE SS_Rad_CalcOutput
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -468,8 +525,8 @@ SUBROUTINE SS_Rad_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt,
       ErrStat = ErrID_None         
       ErrMsg  = ""               
       
-      
-      CALL AllocAry( dxdt%x, p%N, 'SS_Rad_CalcContStateDeriv:dxdt%x', ErrStat, ErrMsg)
+     
+      CALL AllocAry( dxdt%x, p%numStates, 'SS_Rad_CalcContStateDeriv:dxdt%x', ErrStat, ErrMsg)
       IF ( ErrStat >= AbortErrLev) RETURN
             
       ! Compute the first time derivatives of the continuous states here:

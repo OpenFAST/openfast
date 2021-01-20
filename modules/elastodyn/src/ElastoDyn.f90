@@ -100,6 +100,7 @@ SUBROUTINE ED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    INTEGER(IntKi)                               :: i, K                    ! loop counters
    LOGICAL, PARAMETER                           :: GetAdamsVals = .FALSE.  ! Determines if we should read Adams values and create (update) an Adams model
    CHARACTER(ErrMsgLen)                         :: ErrMsg2                 ! temporary Error message if ErrStat /= ErrID_None
+   REAL(R8Ki)                                   :: TransMat(3,3)            ! Initial rotation matrix at Platform Refz
 
 
       ! Initialize variables for this routine
@@ -240,7 +241,14 @@ SUBROUTINE ED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    InitOut%BladeLength = p%TipRad - p%HubRad
    InitOut%TowerHeight = p%TwrFlexL
    InitOut%TowerBaseHeight = p%TowerBsHt
+
+   ! Platform reference point wrt to global origin (0,0,0)
    InitOut%PlatformPos = x%QT(1:6)
+   CALL SmllRotTrans('initial platform rotation', x%QT(4), x%QT(5), x%QT(6), TransMat, '', ErrStat2, ErrMsg2)
+   InitOut%PlatformPos(1) = InitOut%PlatformPos(1) - TransMat(3,1)*p%PtfmRefzt
+   InitOut%PlatformPos(2) = InitOut%PlatformPos(2) - TransMat(3,2)*p%PtfmRefzt
+   InitOut%PlatformPos(3) = InitOut%PlatformPos(3) - TransMat(3,3)*p%PtfmRefzt + p%PtfmRefzt
+
    InitOut%HubHt       = p%HubHt
    InitOut%TwrBasePos    = y%TowerLn2Mesh%Position(:,p%TwrNodes + 2)
    InitOut%TwrBaseOrient = y%TowerLn2Mesh%Orientation(:,:,p%TwrNodes + 2)
@@ -5269,10 +5277,18 @@ SUBROUTINE Coeff(p,InputFileData, ErrStat, ErrMsg)
       ! Calculate the tower natural frequencies:
 
    DO I = 1,2     ! Loop through all tower DOFs in one direction
-      p%FreqTFA(I,1) = Inv2Pi*SQRT(   p%KTFA(I,I)                  /( MTFA(I,I) - p%TwrTpMass ) )  ! Natural tower I-fore-aft frequency w/o gravitational destiffening nor tower-top mass effects
-      p%FreqTFA(I,2) = Inv2Pi*SQRT( ( p%KTFA(I,I) + KTFAGrav(I,I) )/  MTFA(I,I)               )  ! Natural tower I-fore-aft frequency w/  gravitational destiffening and tower-top mass effects
-      p%FreqTSS(I,1) = Inv2Pi*SQRT(   p%KTSS(I,I)                  /( MTSS(I,I) - p%TwrTpMass ) )  ! Natural tower I-side-to-side frequency w/o gravitational destiffening nor tower-top mass effects
-      p%FreqTSS(I,2) = Inv2Pi*SQRT( ( p%KTSS(I,I) + KTSSGrav(I,I) )/  MTSS(I,I)               )  ! Natural tower I-side-to-side frequency w/  gravitational destiffening and tower-top mass effects
+      if ( EqualRealNos(( MTFA(I,I) - p%TwrTpMass ), 0.0_ReKi) ) then
+         p%FreqTFA(I,1) = NaN ! Avoid creating a divide by zero signal, but set p%FreqTFA(I,1) = NaN
+      else        
+         p%FreqTFA(I,1) = Inv2Pi*SQRT(   p%KTFA(I,I)/( MTFA(I,I) - p%TwrTpMass ) )  ! Natural tower I-fore-aft frequency w/o gravitational destiffening nor tower-top mass effects
+      end if
+      if ( EqualRealNos(( MTSS(I,I) - p%TwrTpMass ), 0.0_ReKi) ) then
+         p%FreqTSS(I,1) = NaN ! Avoid creating a divide by zero signal, but set p%FreqTFS(I,1) = NaN
+      else
+         p%FreqTSS(I,1) = Inv2Pi*SQRT(   p%KTSS(I,I)/( MTSS(I,I) - p%TwrTpMass ) )  ! Natural tower I-side-to-side frequency w/o gravitational destiffening nor tower-top mass effects
+      end if
+      p%FreqTFA(I,2) = Inv2Pi*SQRT( ( p%KTFA(I,I) + KTFAGrav(I,I) )/MTFA(I,I)               )  ! Natural tower I-fore-aft frequency w/  gravitational destiffening and tower-top mass effects
+      p%FreqTSS(I,2) = Inv2Pi*SQRT( ( p%KTSS(I,I) + KTSSGrav(I,I) )/MTSS(I,I)               )  ! Natural tower I-side-to-side frequency w/  gravitational destiffening and tower-top mass effects
    ENDDO          ! I - All tower DOFs in one direction
 
 
