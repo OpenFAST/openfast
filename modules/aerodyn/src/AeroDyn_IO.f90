@@ -1949,6 +1949,7 @@ SUBROUTINE ReadInputFiles( InputFileName, InputFileData, Default_DT, OutFileRoot
       RETURN
    END IF
       
+!FIXME: add options for passing the blade files.  This routine will need restructuring to handle that.
    DO I=1,NumBlades
       CALL ReadBladeInputs ( InputFileData%ADBlFile(I), InputFileData%BladeProps(I), UnEcho, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName//TRIM(':Blade')//TRIM(Num2LStr(I)))
@@ -2188,7 +2189,7 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InputFile, RootName, NumBlades, interv
          END IF
       ! AFNames - Airfoil file names (NumAFfiles lines) (quoted strings): -- NOTE: this line may not have a keyname with it
    DO I = 1,InputFileData%NumAFfiles         ! ParseChVar allows empty keynames.
-      call ParseVar( FileInfo_In, CurLine, "", InputFileData%AFNames(I), ErrStat2, ErrMsg2, UnEc )
+      call ParseChVar( FileInfo_In, CurLine, "", InputFileData%AFNames(I), ErrStat2, ErrMsg2, UnEc )
       if (Failed()) return
       IF ( PathIsRelative( InputFileData%AFNames(I) ) ) InputFileData%AFNames(I) = TRIM(PriPath)//TRIM(InputFileData%AFNames(I))
    END DO
