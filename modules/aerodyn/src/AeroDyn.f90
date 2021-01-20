@@ -1969,11 +1969,25 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
    if (InputFileData%TwrShadow /= TwrShadow_none .and. InputFileData%TwrShadow /= TwrShadow_Powles .and. InputFileData%TwrShadow /= TwrShadow_Eames) then
       call SetErrStat ( ErrID_Fatal, 'TwrShadow must be 0 (none), 1 (Powles tower shadow modle), or 2 (Eames tower shadow model).', ErrStat, ErrMsg, RoutineName ) 
    end if
-!FIXME: before PR, check if we want to tighten these limits.
+
+      ! The following limits are recommended by Juliet Simpson (University of Virginia)
+      !  E-mail recommendation:
+      !     To test the limits of the model, I've been running steady simulations
+      !     with a range of TI inputs. It looks like the model starts to break down
+      !     (or at least break the trend of higher TI's) when the TI drops below
+      !     0.05. On the other end, the model seems to work up to TI~1 without
+      !     breaking down (I checked up to TI=0.99). However, the results aren't
+      !     very physically realistic after ~0.35 because it approaches a constant
+      !     velocity deficit across the rotor plane, rather than returning to zero
+      !     deficit a short distance laterally from the tower. I'm not sure what
+      !     the goal of the limits would be, so it's hard for me to say what the
+      !     upper cut off should be. If you want it to be physical, perhaps a low
+      !     cut off (around 0.4?). If you want it to just not break, and let people
+      !     interpret for themselves if it's physical for their scenario, then it
+      !     could go to TI~1. I'd recommend imposing limits of 0.05<TI<1, personally.
    if (InputFileData%TwrShadow == TwrShadow_Eames) then
-      do j=1,size(InputFileData%TwrTI)
-         if (InputFileData%TwrTI(j) <= 0.0 .or. InputFileData%TwrTI(j) >= 1.0) call SetErrStat ( ErrID_Fatal, 'The turbulence intensity for the Eames tower shadow model must be greater than zero and less than 1.', ErrStat, ErrMsg, RoutineName )
-      enddo
+      if ( minval(InputFileData%TwrTI) <= 0.05 .or. maxval(InputFileData%TwrTI) >= 1.0) call SetErrStat ( ErrID_Fatal, 'The turbulence intensity for the Eames tower shadow model must be greater than 0.05 and less than 1.', ErrStat, ErrMsg, RoutineName )
+      if ( maxval(InputFileData%TwrTI) >  0.4 .and. maxval(InputFileData%TwrTI) <  1.0) call SetErrStat ( ErrID_Warn,  'The turbulence intensity for the Eames tower shadow model above 0.4 may return unphysical results.  Interpret with caution.', ErrStat, ErrMsg, RoutineName )
    endif
    
    if (InputFileData%AirDens <= 0.0) call SetErrStat ( ErrID_Fatal, 'The air density (AirDens) must be greater than zero.', ErrStat, ErrMsg, RoutineName )
