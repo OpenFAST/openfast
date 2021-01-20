@@ -850,10 +850,10 @@ SUBROUTINE WriteSummaryFile( UnSum, g, MSL2SWL, WtrDpth, numJoints, numNodes, no
          AxCp2 = members(i)%AxCp(N+1)
      
          JAxCd1 = nodes(members(i)%NodeIndx(1  ))%JAxCd
-         JAxCd2 = nodes(members(i)%NodeIndx(1+N))%JAxCa
-         JAxCa1 = nodes(members(i)%NodeIndx(1  ))%JAxCp
-         JAxCa2 = nodes(members(i)%NodeIndx(1+N))%JAxCd
-         JAxCp1 = nodes(members(i)%NodeIndx(1  ))%JAxCa
+         JAxCd2 = nodes(members(i)%NodeIndx(1+N))%JAxCd
+         JAxCa1 = nodes(members(i)%NodeIndx(1  ))%JAxCa
+         JAxCa2 = nodes(members(i)%NodeIndx(1+N))%JAxCa
+         JAxCp1 = nodes(members(i)%NodeIndx(1  ))%JAxCp
          JAxCp2 = nodes(members(i)%NodeIndx(1+N))%JAxCp
        
          
@@ -1374,6 +1374,8 @@ subroutine FlipMemberNodeData( member, nodes, doSwap, errStat, errMsg )
       doSwap = .TRUE.                                ! Z1 > Z2  
    END IF
          
+   ! If we swap the the nodes, we need know this later when calculating the normal vector to the ends
+   member%Flipped = doSwap
    IF ( doSwap ) THEN
       member%NodeIndx(1) = j2
       member%NodeIndx(numMemNodes) = j1
@@ -2049,7 +2051,7 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
                MemberEndIndx = 1
             ELSE     
                ! set up for end node N+1
-      !TODO: I am not sure about the negative sign,  is %ConnectionList(J) ever negative valued?
+               ! NOTE:  %ConnectionList(J) is negative valued if InitInp%Morison%InpMembers(I)%MJointID2 == InitInp%Morison%InpJoints(J)%JointID.  See HydroDynInput_ProcessInitData, members section
                member = p%Members(-InitInp%InpJoints(I)%ConnectionList(J))
                MemberEndIndx = member%NElements + 1
             END IF
@@ -2062,6 +2064,9 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
             ELSE
                sgn = 1.0                                 ! Local coord sys points out of member at ending node, so leave sign of local z vector
             END IF
+
+            ! Account for reordering of what the original node for the end was -- This affects the sign of the An term which can pose a problem for members crossing the waterline
+            if (member%Flipped)   sgn = -1.0 * sgn
                
             ! Compute the signed quantities for this member end (for drag regardless of PropPot value), and add them to the joint values
             An_drag = An_drag + sgn* member%k*Pi*(member%RMG(MemberEndIndx))**2     ! area-weighted normal vector

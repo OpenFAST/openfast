@@ -145,6 +145,7 @@ typedef   ^                            ^                             INTEGER    
 typedef   ^                            ^                             ReKi             FillFSLoc                -          -        -         "Z-location of the filled free-surface"    m
 typedef   ^                            ^                             ReKi             FillDens                 -          -        -         "Filled fluid density"    kg/m^3
 typedef   ^                            ^                             LOGICAL          PropPot                  -          -        -         "Is this element/member modeled with potential flow theory T/F"    -
+typedef   ^                            ^                             LOGICAL        Flipped                    -          -        -         "Was the member flipped in a reordering event?  Need to know this to get the correct normal vector to the ends" -
 #
 typedef   ^                            Morison_MemberLoads           ReKi                     F_D                           {:}{:}         -         -         "Member-based (side-effects) Nodal viscous drag loads at time t"   -
 typedef   ^                            ^                             ReKi                     F_I                           {:}{:}         -         -         "Member-based (side-effects) Nodal inertial loads at time t"   -
