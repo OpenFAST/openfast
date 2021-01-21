@@ -347,7 +347,7 @@ typedef   ^       ^                    DbKi         zeta               {:}{:}{:}
 typedef   ^       ^                    DbKi         px                 {:}          -  -   ""            -
 typedef   ^       ^                    DbKi         py                 {:}          -  -   ""            -
 typedef   ^       ^                    DbKi         pz                 {:}          -  -   ""            -
-typedef   ^       ^                    DbKi         dtWave              -           -  -   ""            -
+typedef   ^       ^                    DbKi         tWave              {:}          -  -   "wave data time step array"            -
 
 
 # ============================== Inputs ============================================================================================================================================

@@ -376,7 +376,7 @@ IMPLICIT NONE
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: px      !<  [-]
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: py      !<  [-]
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: pz      !<  [-]
-    REAL(DbKi)  :: dtWave      !<  [-]
+    REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: tWave      !< wave data time step array [-]
   END TYPE MD_ParameterType
 ! =======================
 ! =========  MD_InputType  =======
@@ -9203,7 +9203,18 @@ IF (ALLOCATED(SrcParamData%pz)) THEN
   END IF
     DstParamData%pz = SrcParamData%pz
 ENDIF
-    DstParamData%dtWave = SrcParamData%dtWave
+IF (ALLOCATED(SrcParamData%tWave)) THEN
+  i1_l = LBOUND(SrcParamData%tWave,1)
+  i1_u = UBOUND(SrcParamData%tWave,1)
+  IF (.NOT. ALLOCATED(DstParamData%tWave)) THEN 
+    ALLOCATE(DstParamData%tWave(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%tWave.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstParamData%tWave = SrcParamData%tWave
+ENDIF
  END SUBROUTINE MD_CopyParam
 
  SUBROUTINE MD_DestroyParam( ParamData, ErrStat, ErrMsg )
@@ -9253,6 +9264,9 @@ IF (ALLOCATED(ParamData%py)) THEN
 ENDIF
 IF (ALLOCATED(ParamData%pz)) THEN
   DEALLOCATE(ParamData%pz)
+ENDIF
+IF (ALLOCATED(ParamData%tWave)) THEN
+  DEALLOCATE(ParamData%tWave)
 ENDIF
  END SUBROUTINE MD_DestroyParam
 
@@ -9398,7 +9412,11 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*1  ! pz upper/lower bounds for each dimension
       Db_BufSz   = Db_BufSz   + SIZE(InData%pz)  ! pz
   END IF
-      Db_BufSz   = Db_BufSz   + 1  ! dtWave
+  Int_BufSz   = Int_BufSz   + 1     ! tWave allocated yes/no
+  IF ( ALLOCATED(InData%tWave) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! tWave upper/lower bounds for each dimension
+      Db_BufSz   = Db_BufSz   + SIZE(InData%tWave)  ! tWave
+  END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -9807,8 +9825,21 @@ ENDIF
         Db_Xferred = Db_Xferred + 1
       END DO
   END IF
-    DbKiBuf(Db_Xferred) = InData%dtWave
-    Db_Xferred = Db_Xferred + 1
+  IF ( .NOT. ALLOCATED(InData%tWave) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%tWave,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%tWave,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%tWave,1), UBOUND(InData%tWave,1)
+        DbKiBuf(Db_Xferred) = InData%tWave(i1)
+        Db_Xferred = Db_Xferred + 1
+      END DO
+  END IF
  END SUBROUTINE MD_PackParam
 
  SUBROUTINE MD_UnPackParam( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -10270,8 +10301,24 @@ ENDIF
         Db_Xferred = Db_Xferred + 1
       END DO
   END IF
-    OutData%dtWave = DbKiBuf(Db_Xferred)
-    Db_Xferred = Db_Xferred + 1
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! tWave not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%tWave)) DEALLOCATE(OutData%tWave)
+    ALLOCATE(OutData%tWave(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%tWave.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%tWave,1), UBOUND(OutData%tWave,1)
+        OutData%tWave(i1) = DbKiBuf(Db_Xferred)
+        Db_Xferred = Db_Xferred + 1
+      END DO
+  END IF
  END SUBROUTINE MD_UnPackParam
 
  SUBROUTINE MD_CopyInput( SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg )

@@ -2217,14 +2217,14 @@ SUBROUTINE Waves_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
 
       CASE ( 0 )              ! None=still water.
 
+         CALL StillWaterWaves_Init( InitInp, InitOut, ErrStatTmp, ErrMsgTmp )
+         CALL  SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,'Waves_Init')
+
          !@mhall:  :::: ensure all arrays needed for the wave grid to MoorDyn are allocated in the WaveMod=0 case too ::::
          ALLOCATE ( InitOut%WaveElevMD  (0:InitOut%NStepWave, WaveGrid_nx*WaveGrid_ny), STAT=ErrStatTmp )
          ! ::::: end :::::
-
-         CALL StillWaterWaves_Init( InitInp, InitOut, ErrStatTmp, ErrMsgTmp )
-         CALL  SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,'Waves_Init')
+         
          IF ( ErrStat >= AbortErrLev ) RETURN
-            
                
                
       CASE ( 1, 2, 3, 4, 10 )       ! 1, 10: Plane progressive (regular) wave, 2: JONSWAP/Pierson-Moskowitz spectrum (irregular) wave, 3: white-noise, or 4: user-defined spectrum (irregular) wave.

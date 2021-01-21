@@ -33,7 +33,6 @@ MODULE HydroDyn
    USE HydroDyn_Input
    USE HydroDyn_Output
    USE Current
-          USE Waves
    USE Waves2
 #ifdef USE_FIT
    USE FIT_MODULES

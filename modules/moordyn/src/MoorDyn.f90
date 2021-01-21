@@ -23,13 +23,13 @@ MODULE MoorDyn
    USE MoorDyn_IO
    USE NWTC_Library
    
-   USE WAVES  ! seeing if I can get waves data here directly...
+   USE WAVES, only: WaveGrid_n, WaveGrid_x0, WaveGrid_dx, WaveGrid_nx, WaveGrid_y0, WaveGrid_dy, WaveGrid_ny, WaveGrid_nz  ! seeing if I can get waves data here directly...
 
    IMPLICIT NONE
 
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER            :: MD_ProgDesc = ProgDesc( 'MoorDyn-F', 'v2.a2', '13 Jan. 2020' )
+   TYPE(ProgDesc), PARAMETER            :: MD_ProgDesc = ProgDesc( 'MoorDyn-F', 'v2.a3', '20 Jan. 2020' )
 
 
    PUBLIC :: MD_Init
@@ -77,6 +77,7 @@ CONTAINS
       
       REAL(DbKi)                                      :: dtM         ! actual mooring dynamics time step
       INTEGER(IntKi)                                  :: NdtM        ! number of time steps to integrate through with RK2
+      INTEGER(IntKi)                                  :: ntWave      ! number of time steps of wave data
       
       TYPE(MD_InputType)    :: u_array(1)    ! a size-one array for u to make call to TimeStep happy
       REAL(DbKi)            :: t_array(1)    ! a size-one array saying time is 0 to make call to TimeStep happy  
@@ -1431,9 +1432,9 @@ CONTAINS
                       CtrlCode = MESH_SIBLING,             IOS      = COMPONENT_OUTPUT, &
                       Force=.TRUE.,  Moment=.TRUE.,  ErrStat  = ErrStat2, ErrMess=ErrMsg2 )
 
-      CALL MeshCommit ( y%CoupledLoads, ErrStat, ErrMsg )
-         CALL CheckError( ErrStat2, ErrMsg2 )
-         IF (ErrStat >= AbortErrLev) RETURN
+      !CALL MeshCommit ( y%CoupledLoads, ErrStat, ErrMsg )
+      !   CALL CheckError( ErrStat2, ErrMsg2 )
+      !   IF (ErrStat >= AbortErrLev) RETURN
 
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN
@@ -1513,20 +1514,21 @@ CONTAINS
   !      END DO
   !   END DO  
       
-      ! :::::::::::::::: the above will be used eventually. For now, let's store wave info grids within this module :::::::::::::::::
+      ! :::::::::::::::: the above might be used eventually. For now, let's store wave info grids within this module :::::::::::::::::
       ! allocate arrays
-      I = SIZE(InitInp%WaveTime)
-      ALLOCATE ( p%ux  (I,WaveGrid_nz,WaveGrid_ny,WaveGrid_nx), STAT = ErrStat2 )
-      ALLOCATE ( p%uy  (I,WaveGrid_nz,WaveGrid_ny,WaveGrid_nx), STAT = ErrStat2 )
-      ALLOCATE ( p%uz  (I,WaveGrid_nz,WaveGrid_ny,WaveGrid_nx), STAT = ErrStat2 )
-      ALLOCATE ( p%ax  (I,WaveGrid_nz,WaveGrid_ny,WaveGrid_nx), STAT = ErrStat2 )
-      ALLOCATE ( p%ay  (I,WaveGrid_nz,WaveGrid_ny,WaveGrid_nx), STAT = ErrStat2 )
-      ALLOCATE ( p%az  (I,WaveGrid_nz,WaveGrid_ny,WaveGrid_nx), STAT = ErrStat2 )
-      ALLOCATE ( p%PDyn(I,WaveGrid_nz,WaveGrid_ny,WaveGrid_nx), STAT = ErrStat2 )
-      ALLOCATE ( p%zeta(I,WaveGrid_ny,WaveGrid_nx), STAT = ErrStat2 )    ! 2D grid over x and y only
+      ntWave = SIZE(InitInp%WaveTime)      
+      ALLOCATE ( p%ux  (ntWave,WaveGrid_nz,WaveGrid_ny,WaveGrid_nx), STAT = ErrStat2 )
+      ALLOCATE ( p%uy  (ntWave,WaveGrid_nz,WaveGrid_ny,WaveGrid_nx), STAT = ErrStat2 )
+      ALLOCATE ( p%uz  (ntWave,WaveGrid_nz,WaveGrid_ny,WaveGrid_nx), STAT = ErrStat2 )
+      ALLOCATE ( p%ax  (ntWave,WaveGrid_nz,WaveGrid_ny,WaveGrid_nx), STAT = ErrStat2 )
+      ALLOCATE ( p%ay  (ntWave,WaveGrid_nz,WaveGrid_ny,WaveGrid_nx), STAT = ErrStat2 )
+      ALLOCATE ( p%az  (ntWave,WaveGrid_nz,WaveGrid_ny,WaveGrid_nx), STAT = ErrStat2 )
+      ALLOCATE ( p%PDyn(ntWave,WaveGrid_nz,WaveGrid_ny,WaveGrid_nx), STAT = ErrStat2 )
+      ALLOCATE ( p%zeta(ntWave,WaveGrid_ny,WaveGrid_nx), STAT = ErrStat2 )    ! 2D grid over x and y only
       ALLOCATE ( p%px(WaveGrid_nx), STAT = ErrStat2 )
       ALLOCATE ( p%py(WaveGrid_ny), STAT = ErrStat2 )
       ALLOCATE ( p%pz(WaveGrid_nz), STAT = ErrStat2 )
+      ALLOCATE ( p%tWave(ntWave), STAT = ErrStat2 )
       
       ! get grid and time info (currenltly this is hard-coded to match what's in HydroDyn_Input
       DO I=1,WaveGrid_nz
@@ -1538,7 +1540,8 @@ CONTAINS
       DO K = 1,WaveGrid_nx
          p%px(K) = WaveGrid_x0 + WaveGrid_dx*(K-1)
       END DO
-      p%dtWave = InitInp%WaveTime(2) - InitInp%WaveTime(1)
+
+      p%tWave = InitInp%WaveTime
       
       ! fill in the grid data (the for loops match those in HydroDyn_Input)
       DO I=1,WaveGrid_nz
@@ -1653,7 +1656,7 @@ CONTAINS
       DO l=1, SIZE(InitInp%WaveTime)  ! loop through all time steps
       
          ! time
-         WRITE(UnOut,"(F10.4)", IOSTAT=ErrStat2, advance="no") (l-1)*p%dtWave
+         WRITE(UnOut,"(F10.4)", IOSTAT=ErrStat2, advance="no") p%tWave(l)
          !WRITE(UnOut,"(F10.4)", IOSTAT=ErrStat2, advance="no") InitInp%WaveTime(l)
       
          ! wave elevation (all slices for now, to check)
@@ -3341,7 +3344,7 @@ CONTAINS
 
          ELSEIF ( ZF <  0.0_DbKi )  THEN   ! .TRUE. if the fairlead has passed below its anchor
            ErrStat = ErrID_Warn
-           ErrMsg =  ' A fairlead has passed below its anchor.'
+           ErrMsg =  " A line's fairlead is defined as below its anchor. You may need to swap a line's fairlead and anchor end nodes."
            return
 
          ELSEIF ( L  <= 0.0_DbKi )  THEN   ! .TRUE. when the unstretched line length is specified incorrectly
@@ -5287,12 +5290,12 @@ CONTAINS
             aq = DOT_PRODUCT(Rod%Ud(:,I), Rod%q) * Rod%q  ! tangential component of fluid acceleration
             ap = Rod%Ud(:,I) - aq                         ! normal component of fluid acceleration
             ! transverse Froude-Krylov force
-            Rod%Ap(:,I) = VOF * p%rhoW*(1.0+Rod%Can)*0.5* v_i * ap  ! <<< are these equations right??
+            Rod%Ap(:,I) = VOF * p%rhoW*(1.0+Rod%Can)* v_i * ap  ! 
             ! axial Froude-Krylov force	
-            Rod%Aq(:,I) = 0.0_DbKi  ! p%rhoW*(1.0+Rod%Cat)*0.5* v_i * aq  ! <<< are these equations right??
+            Rod%Aq(:,I) = 0.0_DbKi  ! p%rhoW*(1.0+Rod%Cat)* v_i * aq  ! <<< just put a taper-based term here eventually?
 
             ! dynamic pressure
-            Rod%Pd(:,I) = 0.0_DbKi  ! assuming zero for sides
+            Rod%Pd(:,I) = 0.0_DbKi  ! assuming zero for sides for now, until taper comes into play
             
             ! bottom contact (stiffness and damping, vertical-only for now)  - updated Nov 24 for general case where anchor and fairlead ends may deal with bottom contact forces
             IF (Rod%r(3,I) < -p%WtrDpth) THEN
@@ -6088,13 +6091,10 @@ CONTAINS
       Real(DbKi)                 :: qt                    ! used in time step interpolation
    
       
-      CALL getInterpNums(p%px, x, ix, fx)
-      CALL getInterpNums(p%py, y, iy, fy)
-      CALL getInterpNums(p%pz, z, iz, fz)
-      
-      qt = t / real(p%dtWave, DbKi)
-      it = floor(qt) + 1   ! adjust by 1 for fortran's indexing starting at 1
-      ft = qt - it + 1.0; !(t-(it*dtWave))/dtWave  ! //remainder(t,dtWave)/dtWave;	
+      CALL getInterpNums(p%px   , x, ix, fx)
+      CALL getInterpNums(p%py   , y, iy, fy)
+      CALL getInterpNums(p%pz   , z, iz, fz)
+      CALL getInterpNums(p%tWave, t, it, ft)
       
       CALL calculate3Dinterpolation(p%zeta, ix, iy, it, fx, fy, ft, zeta)
       
