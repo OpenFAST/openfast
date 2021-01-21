@@ -24,7 +24,7 @@ where :math:`\overline{r} = \sqrt{ \overline{x}^2 + \overline{y}^2 }`.
 Eames tower shadow model (**TwrShadow=2**) is given by:
 
 .. math::
-   u_{TwrShadow} = -\frac{C_d}{ TI \overline{x} \sqrt{2 \pi }  }
-               \exp{ -1/2 \frac{ \overline{y}}{TI \overline{x} \right)^2 }
+   u_{TwrShadow} = -\frac{C_d}{ TI \: \overline{x} \, \sqrt{2 \pi }  }
+               \exp{\left(  -\frac{1}{2}  \left(\frac{ \overline{y}}{ TI \: \overline{x} } \right)^2 \right) }
 
 where :math:`TI` is the turbulence intensity at the tower node. 
