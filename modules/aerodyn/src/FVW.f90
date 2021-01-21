@@ -550,7 +550,6 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-      
    ! --- Handling of time step, and time compared to previous call
    m%iStep = n
    ! Reevaluation: two repetitive calls starting from the same time, we will roll back the wake emission
@@ -574,13 +573,9 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
       call date_and_time(values=time1)
    endif
 
-
    nP = p%nWings * (  (p%nSpan+1)*(m%nNW-1+2) +(FWnSpan+1)*(m%nFW+1) )
    nFWEff = min(m%nFW, p%nFWFree)
    ! --- Display some status to screen
-!FIXME: this conflicts with the SimStatus WrOver from the FAST_Subs.f90.  Leaving out for now.
-!     Ideally we put this into a log file.
-!   if (mod(n,10)==0) print'(A,F10.3,A,I0,A,I0,A,I0,A,I0,A,I0,A,I0,A,I0,A,I0,A,F7.2,A)','FVW status - t:',t,'  n:',n,'  nNW:',m%nNW-1,'/',p%nNWMax-1,'  nFW:',nFWEff, '+',m%nFW-nFWEff,'=',m%nFW,'/',p%nFWMax,'  nP:',nP,'  spent:', m%tSpent, 's'
    if (DEV_VERSION)  print'(A,F10.3,A,I0,A,I0,A,I0,A,I0,A,I0,A,I0,A,I0,A,I0,A,F7.2,A,L1)','FVW status - t:',t,'  n:',n,'  nNW:',m%nNW-1,'/',p%nNWMax-1,'  nFW:',nFWEff, '+',m%nFW-nFWEff,'=',m%nFW,'/',p%nFWMax,'  nP:',nP,'  spent:', m%tSpent, 's Comp:',m%ComputeWakeInduced
 
    ! --- Evaluation at t
@@ -593,6 +588,7 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    CALL DistributeRequestedWind(u(1)%V_wind, p, m)
 
    ! --- Solve for quasi steady circulation at t
+   ! TODO: this shouldn't be necessary
    ! Returns: z%Gamma_LL (at t)
    call AllocAry( z_guess%Gamma_LL,  p%nSpan, p%nWings, 'Lifting line Circulation', ErrStat, ErrMsg );
    z_guess%Gamma_LL = m%Gamma_LL
@@ -606,6 +602,7 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    end if
 
    ! Map circulation and positions between LL and NW  and then NW and FW
+   ! TODO this shouldn't be necessary
    ! Changes: x only
    ShedScale = 1.0_ReKi
    call Map_LL_NW(p, m, z, x, ShedScale, ErrStat2, ErrMsg2); if(Failed()) return
@@ -618,7 +615,7 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    if (p%IntMethod .eq. idEuler1) then 
      call FVW_Euler1( t, uInterp, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2); if(Failed()) return
    elseif (p%IntMethod .eq. idRK4) then 
-      call FVW_RK4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg ); if(Failed()) return
+      call FVW_RK4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2); if(Failed()) return
    !elseif (p%IntMethod .eq. idAB4) then
    !   call FVW_AB4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
    !elseif (p%IntMethod .eq. idABM4) then
@@ -655,8 +652,6 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    ! Returns: z%Gamma_LL (at t+p%DTaero)
    z_guess%Gamma_LL = z%Gamma_LL ! We use as guess the circulation from the previous time step (see above)
    call FVW_CalcConstrStateResidual(t+p%DTaero, uInterp, p, x, xd, z_guess, OtherState, m, z, AFInfo, ErrStat2, ErrMsg2, 2); if(Failed()) return
-!    print*,'US: z_Gamma',x%Gamma_NW(1,1,1)
-!    print*,'US: x_Gamma',z%Gamma_LL(1,1)
    ! Compute UA inputs at t+DTaero and integrate UA states between t and t+dtAero
    if (m%UA_Flag) then
       call CalculateInputsAndOtherStatesForUA(2, uInterp, p, x, xd, z, OtherState, AFInfo, m, ErrStat2, ErrMsg2); if(Failed()) return
@@ -870,21 +865,19 @@ subroutine FVW_Euler1( t, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
    ! Compute "right hand side"
    if (m%ComputeWakeInduced) then
       CALL FVW_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, m%dxdt, ErrStat2, ErrMsg2); if (Failed()) return
+   else
+      ! Potentially used something better than the "constant" dxdt being used
    endif
 
-   ! Update of positions
-   x%r_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) = x%r_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) +  dt * m%dxdt%r_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)
+   ! Update of positions and reg param
+   x%r_NW  (1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) = x%r_NW  (1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) + dt * m%dxdt%r_NW  (1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)
+   x%Eps_NW(1:3, 1:p%nSpan  , 1:m%nNW  , 1:p%nWings) = x%Eps_NW(1:3, 1:p%nSpan  , 1:m%nNW  , 1:p%nWings) + dt * m%dxdt%Eps_NW(1:3, 1:p%nSpan  , 1:m%nNW  , 1:p%nWings)
    if ( m%nFW>0) then
-      x%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings) = x%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings) +  dt * m%dxdt%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)
+      x%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings) = x%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings) + dt * m%dxdt%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)
+      x%Eps_FW(1:3, 1:FWnSpan  , 1:m%nFW  , 1:p%nWings) = x%Eps_FW(1:3, 1:FWnSpan  , 1:m%nFW  , 1:p%nWings) + dt * m%dxdt%Eps_FW(1:3, 1:FWnSpan  , 1:m%nFW  , 1:p%nWings)
    endif
-   ! Update of Gamma
-   ! TODO, viscous diffusion, stretching
+   ! Update of Gamma TODO (viscous diffusion, stretching)
 
-   ! Update of Reg param
-   x%Eps_NW(1:3, 1:p%nSpan, 1:m%nNW, 1:p%nWings) = x%Eps_NW(1:3, 1:p%nSpan, 1:m%nNW, 1:p%nWings) +  dt * m%dxdt%Eps_NW(1:3, 1:p%nSpan, 1:m%nNW, 1:p%nWings)
-   if ( m%nFW>0) then
-      x%Eps_FW(1:3, 1:FWnSpan, 1:m%nFW, 1:p%nWings) = x%Eps_FW(1:3, 1:FWnSpan, 1:m%nFW, 1:p%nWings) +  dt * m%dxdt%Eps_FW(1:3, 1:FWnSpan, 1:m%nFW, 1:p%nWings)
-   endif
 
    if (DEV_VERSION) then
       ! Additional checks
