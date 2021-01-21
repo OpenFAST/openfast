@@ -24,7 +24,7 @@ class FastLibAPI(CDLL):
         self.n_turbines = c_int(1)
         self.i_turb = c_int(0)
         self.dt = c_double(0.0)
-        self.abort_error_level = c_int(0)
+        self.abort_error_level = c_int(99)
         self.num_outs = c_int(0)
         self._channel_names = create_string_buffer(20 * 4000)
         self.output_array = None
@@ -34,7 +34,7 @@ class FastLibAPI(CDLL):
         # but this behavior may change to an error
         ### MAKE THIS 8 OR 11
         self._num_inputs = c_int(8)
-        self._inp_array = (c_double * 1)(0.0, )
+        self._inp_array = (c_double * 10)(0.0, )  # 10 is hard-coded in FAST_Library as MAXInitINPUTS
 
         self.output_values = None
         self.ended = False
