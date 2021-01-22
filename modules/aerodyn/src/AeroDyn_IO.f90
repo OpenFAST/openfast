@@ -1636,7 +1636,7 @@ SUBROUTINE Calc_WriteOutput( p, u, m, y, OtherState, xd, indx, ErrStat, ErrMsg )
    endif
 
    ! blade node tower clearance (requires tower influence calculation):
-   if (p%TwrPotent /= TwrPotent_none .and. p%TwrShadow /= TwrShadow_none) then
+   if (p%TwrPotent /= TwrPotent_none .or. p%TwrShadow /= TwrShadow_none) then
       do k=1,p%numBlades
          do beta=1,p%NBlOuts
             j=p%BlOutNd(beta)
