@@ -546,12 +546,15 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    integer, dimension(8) :: time1, time2, time_diff
    real(ReKi) :: ShedScale !< Scaling factor for shed vorticity (for sub-cycling), 1 if no subcycling
    logical :: bReevaluation
+   logical :: bOverCycling
 
    ErrStat = ErrID_None
    ErrMsg  = ""
 
    ! --- Handling of time step, and time compared to previous call
    m%iStep = n
+   ! OverCycling DTfvw> DTaero
+   bOverCycling = p%DTfvw > p%DTaero
    ! Reevaluation: two repetitive calls starting from the same time, we will roll back the wake emission
    bReevaluation=.False.
    if (abs(t-m%OldWakeTime)<0.25_ReKi* p%DTaero) then
@@ -609,30 +612,41 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    call Map_NW_FW(p, m, z, x, ErrStat2, ErrMsg2); if(Failed()) return
    !call print_x_NW_FW(p, m, x,'Map_')
 
-   ! --- Integration between t and t+DTaero
-   ! NOTE: when sub-cycling, the previous convection velocity is used
-   ! If dtfvw = n dtaero, we assume xdot_local dtaero = xdot_stored * dtfvw/n
-   if (p%IntMethod .eq. idEuler1) then 
-     call FVW_Euler1( t, uInterp, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2); if(Failed()) return
-   elseif (p%IntMethod .eq. idRK4) then 
-      call FVW_RK4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2); if(Failed()) return
-   !elseif (p%IntMethod .eq. idAB4) then
-   !   call FVW_AB4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
-   !elseif (p%IntMethod .eq. idABM4) then
-   !   call FVW_ABM4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
-   else  
-      call SetErrStat(ErrID_Fatal,'Invalid time integration method:'//Num2LStr(p%IntMethod),ErrStat,ErrMsg,'FVW_UpdateState') 
-   end IF
-   !call print_x_NW_FW(p, m, x,'Conv')
-
+   ! --- Integration between t and t+DTfvw
    if (m%ComputeWakeInduced) then
+      if (bOverCycling) then
+          call FVW_CopyContState(x, m%x1, 0, ErrStat2, ErrMsg2) ! Backup current state at t
+          m%t1=t
+      endif
+      if (p%IntMethod .eq. idEuler1) then 
+        call FVW_Euler1( t, uInterp, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2); if(Failed()) return
+      elseif (p%IntMethod .eq. idRK4) then 
+         call FVW_RK4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2); if(Failed()) return
+      !elseif (p%IntMethod .eq. idAB4) then
+      !   call FVW_AB4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
+      !elseif (p%IntMethod .eq. idABM4) then
+      !   call FVW_ABM4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
+      else  
+         call SetErrStat(ErrID_Fatal,'Invalid time integration method:'//Num2LStr(p%IntMethod),ErrStat,ErrMsg,'FVW_UpdateState') 
+      end if
+
       ! We extend the wake length, i.e. we emit a new panel of vorticity at the TE
       ! NOTE: this will be rolled back if UpdateState is called at the same starting time again
       call PrepareNextTimeStep()
-      ! --- t+DTaero
+      ! --- t+DTfvw
       ! Propagation/creation of new layer of panels
       call PropagateWake(p, m, z, x, ErrStat2, ErrMsg2); if(Failed()) return
-      !call print_x_NW_FW(p, m, x,'Prop_')
+
+      if (bOverCycling) then
+         call PropagateWake(p, m, z, m%x1, ErrStat2, ErrMsg2); if(Failed()) return
+         call FVW_CopyContState(x, m%x2, 0, ErrStat2, ErrMsg2) ! Backup current state at t+DTfvw
+         m%t2=t+p%DTfvw
+      endif
+   endif
+   ! --- Integration between t and t+DTaero if DTaero/=DTfvw
+   if (bOverCycling) then
+      ! Linear interpolation of states between t and dtaero
+      call FVW_ContStates_Interp(t+p%DTaero, (/m%x1, m%x2/), (/m%t1, m%t2/), p, m, x, ErrStat2, ErrMsg2); if(Failed()) return
    endif
 
    ! Inputs at t+DTaero
@@ -808,7 +822,7 @@ subroutine FVW_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSt
    ! First NW point does not convect (bound to LL)
    dxdt%r_NW(1:3, :, 1:iNWStart-1, :)=0.0_ReKi
    ! First FW point always convects (even if bound to NW)
-   ! This is done for subcycling
+   ! This is done for overcycling
    !dxdt%r_FW(1:3, :, 1, :)=0
 
    ! --- Regularization
@@ -841,6 +855,42 @@ contains
    end function Failed
 end subroutine FVW_CalcContStateDeriv
 
+
+!> Interpolate states to the current time
+!! For now: linear interpolation, two states, with t1<t2
+subroutine FVW_ContStates_Interp(t, states, times, p, m, x, ErrStat, ErrMsg )
+   real(DbKi),                      intent(in   )  :: t         !< Current simulation time in seconds
+   type(FVW_ContinuousStateType),   intent(in   )  :: states(:) !< States at times
+   real(DbKi),                      intent(in   )  :: times(:)  !< Times associated with states(:), in seconds
+   type(FVW_ParameterType),         intent(in   ) :: p          !< Parameters
+   type(FVW_MiscVarType),           intent(inout) :: m          !< Misc/optimization variables
+   type(FVW_ContinuousStateType),   intent(inout) :: x          !< Continuous states at t on input at t + dt on output
+   integer(IntKi),                  intent(  out) :: ErrStat    !< Error status of the operation
+   character(*),                    intent(  out) :: ErrMsg     !< Error message if ErrStat /= ErrID_None
+   real(ReKi) :: fact
+   ErrStat = ErrID_None
+   ErrMsg  = "" 
+   if (size(times)/=2) then
+      ErrStat = ErrID_Fatal
+      ErrMsg  = "FVW_ContStates_Interp: Times must be of size 2 " 
+   endif
+   if (times(1)>=times(2)) then
+      ErrStat = ErrID_Fatal
+      ErrMsg  = "FVW_ContStates_Interp: t1 must be < t2" 
+   endif
+
+   fact = (t-times(1))/(times(2)-times(1))
+   !print*,'Fact',fact, 't',t
+
+   x%r_NW     = (1_ReKi-fact) * states(1)%r_NW     + fact * states(2)%r_NW
+   x%r_FW     = (1_ReKi-fact) * states(1)%r_FW     + fact * states(2)%r_FW
+   x%Eps_NW   = (1_ReKi-fact) * states(1)%Eps_NW   + fact * states(2)%Eps_NW
+   x%Eps_FW   = (1_ReKi-fact) * states(1)%Eps_FW   + fact * states(2)%Eps_FW
+   x%Gamma_NW = (1_ReKi-fact) * states(1)%Gamma_NW + fact * states(2)%Gamma_NW
+   x%Gamma_FW = (1_ReKi-fact) * states(1)%Gamma_FW + fact * states(2)%Gamma_FW
+
+end subroutine FVW_ContStates_Interp
+
 !----------------------------------------------------------------------------------------------------------------------------------
 subroutine FVW_Euler1( t, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
    real(DbKi),                    intent(in   ) :: t          !< Current simulation time in seconds
@@ -861,13 +911,9 @@ subroutine FVW_Euler1( t, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
    ErrStat = ErrID_None
    ErrMsg  = "" 
 
-   dt = real(p%DTaero,ReKi) ! NOTE: this is DTaero not DTfvw since we integrate at each sub time step
+   dt = real(p%DTfvw,ReKi)  ! NOTE: this is DTfvw
    ! Compute "right hand side"
-   if (m%ComputeWakeInduced) then
-      CALL FVW_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, m%dxdt, ErrStat2, ErrMsg2); if (Failed()) return
-   else
-      ! Potentially used something better than the "constant" dxdt being used
-   endif
+   CALL FVW_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, m%dxdt, ErrStat2, ErrMsg2); if (Failed()) return
 
    ! Update of positions and reg param
    x%r_NW  (1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) = x%r_NW  (1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) + dt * m%dxdt%r_NW  (1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)
@@ -957,7 +1003,7 @@ SUBROUTINE FVW_RK4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg
       ErrStat = ErrID_None
       ErrMsg  = ""
 
-      dt = real(p%DTaero,ReKi) ! NOTE: this is DTaero not DTfvw since we integrate at each sub time step
+      dt = real(p%DTfvw,ReKi) ! NOTE: this is DTfvw
 
       CALL FVW_CopyContState( x, k1, MESH_NEWCOPY, ErrStat2, ErrMsg2 ); CALL CheckError(ErrStat2,ErrMsg2)
       CALL FVW_CopyContState( x, k2, MESH_NEWCOPY, ErrStat2, ErrMsg2 ); CALL CheckError(ErrStat2,ErrMsg2)
@@ -1140,12 +1186,6 @@ end subroutine FVW_CalcConstrStateResidual
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine for computing outputs, used in both loose and tight coupling.
-!! This subroutine is used to compute the output channels (motions and loads) and place them in the WriteOutput() array.
-!! The descriptions of the output channels are not given here. Please see the included OutListParameters.xlsx sheet for
-!! for a complete description of each output parameter.
-! NOTE: no matter how many channels are selected for output, all of the outputs are calculated
-! All of the calculated output channels are placed into the m%AllOuts(:), while the channels selected for outputs are
-! placed in the y%WriteOutput(:) array.
 subroutine FVW_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, ErrStat, ErrMsg )
    use FVW_VTK, only: set_vtk_coordinate_transform
    use FVW_VortexTools, only: interpextrap_cp2node
@@ -1169,6 +1209,7 @@ subroutine FVW_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, ErrStat,
    logical                       :: bGridOutNeeded
    character(ErrMsgLen)          :: ErrMsg2
    character(*), parameter       :: RoutineName = 'FVW_CalcOutput'
+   logical :: bOverCycling
 
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -1177,6 +1218,9 @@ subroutine FVW_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, ErrStat,
       print'(A,F10.3,A,L1,A,I0,A,I0)','CalcOutput     t:',t,'   ',m%FirstCall,'                                nNW:',m%nNW,' nFW:',m%nFW
    endif
 
+   ! OverCycling DTfvw> DTaero
+   bOverCycling = p%DTfvw > p%DTaero
+
    ! Set the wind velocity at vortex
    CALL DistributeRequestedWind(u%V_wind, p, m)
 
@@ -1184,13 +1228,12 @@ subroutine FVW_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, ErrStat,
    ! Compute m%Gamma_LL
    CALL Wings_ComputeCirculation(t, m%Gamma_LL, z%Gamma_LL, u, p, x, m, AFInfo, ErrStat2, ErrMsg2, 0); if(Failed()) return ! For plotting only
 
-
    ! Induction on the lifting line control point
    ! Set m%Vind_LL
    m%Vind_LL=-9999.0_ReKi
    call LiftingLineInducedVelocities(p, x, 1, m, ErrStat2, ErrMsg2); if(Failed()) return
 
-   !  Induction on the mesh points (AeroDyn nodes)
+   ! Induction on the mesh points (AeroDyn nodes)
    n=p%nSpan
    y%Vind(1:3,:,:) = 0.0_ReKi
    do iW=1,p%nWings

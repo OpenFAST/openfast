@@ -114,10 +114,6 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, m, Inp, ErrStat, ErrMsg )
    if (Check(.not.(ANY(idVelocityVALID ==Inp%VelocityMethod    )), 'Velocity method (VelocityMethod) not valid: '//trim(Num2LStr(Inp%VelocityMethod)))) return
 
    if (Check( Inp%DTfvw < p%DTaero, 'DTfvw must be >= DTaero from AD15.')) return
-   if (abs(Inp%DTfvw-p%DTaero)>epsilon(1.0_ReKi)) then
-      ! subcycling
-      if (Check(Inp%IntMethod/=idEuler1 , 'Sub-cycling (DTfvw>DTaro) is only possible with Forward Euler `IntMethod`')) return
-   endif
    if (Inp%CirculationMethod == idCircPolarData) then
       if (Check( Inp%nNWPanels<1 , 'Number of near wake panels (`nNWPanels`) must be >=1 when using circulation solving with polar data (`CircSolvingMethod=1`)')) return
    endif

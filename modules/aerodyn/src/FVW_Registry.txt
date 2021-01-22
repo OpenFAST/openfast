@@ -127,7 +127,12 @@ typedef     ^                   ^               ReKi                            
 typedef     ^                   ^               Logical                          ComputeWakeInduced - - - "Compute induced velocities on this timestep" -
 typedef     ^                   ^               DbKi                             OldWakeTime   -   -   -  "Time the wake induction velocities were last calculated" s
 typedef     ^                   ^               ReKi                             tSpent        -   -  -  "Time spent in expensive Biot-Savart computation" s
-typedef     ^                   ^               FVW_ContinuousStateType          dxdt          -   -  -  "State time derivatie, stored for subcycling and convenience" - 
+typedef     ^                   ^               FVW_ContinuousStateType          dxdt          -   -  -  "State time derivatie, stored for overcycling and convenience" - 
+typedef     ^                   ^               FVW_ContinuousStateType          x1            -  -  -   "States at t (for overcycling) "        -
+typedef     ^                   ^               FVW_ContinuousStateType          x2            -  -  -   "States at t+DTFVW (for overcycling)"        -
+typedef     ^                   ^               DbKi                             t1            -  -  -   "Time of x1 (for overcycling) "        -
+typedef     ^                   ^               DbKi                             t2            -  -  -   "Time of x2 t+DTFVW (for overcycling)"        -
+
 # Convenient storage
 typedef     ^                   ^               Reki                             alpha_LL      ::   -  -  "Angle of attack at lifting line CP, only computed with CircPolarData method" -
 typedef     ^                   ^               Reki                             Vreln_LL      ::   -  -  "Norm of Vrel on the lifting line" -

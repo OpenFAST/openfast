@@ -49,7 +49,7 @@ module FVW_SUBS
    ! Implementation 
    integer(IntKi), parameter :: iNWStart=2 !< Index in r%NW where the near wake start (if >1 then the Wing panels are included in r_NW)
    integer(IntKi), parameter :: FWnSpan=1  !< Number of spanwise far wake panels ! TODO make it an input later
-   logical       , parameter :: DEV_VERSION=.True.
+   logical       , parameter :: DEV_VERSION=.False.
 contains
 
 !==========================================================================
