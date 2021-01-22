@@ -395,8 +395,10 @@ local tower drag-force coefficient, and ``TwrTI`` specifiest the
 turbulence intensity used in the Eames tower shadow model
 (``TwrShadow`` = 2). ``TwrElev`` must be entered in monotonically
 increasing order—from the lowest (tower-base) to the highest 
-(tower-top) elevation. *The values of ``TwrTI`` must be greater than 0
-and less than 1. Update this statement after testing!!!!!!*
+(tower-top) elevation. Values of ``TwrTI`` between 0.05 and 0.4 are
+recommended.  Values larger than 0.4 up to 1 will trigger a warning
+that the results will need to be interpretted carefully, but the code
+will allow such values for scientific investigation purposes.
 See :numref:`fig:TwrGeom`.
 
 
