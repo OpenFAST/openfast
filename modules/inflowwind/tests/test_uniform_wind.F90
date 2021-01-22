@@ -25,7 +25,7 @@ contains
         PriPath = ""
 
         InFileInfo = getInputFileData()
-        CALL InflowWind_ParseInputFileInfo(InputFileData , InFileInfo, PriPath, TmpErrStat, TmpErrMsg)
+        CALL InflowWind_ParseInputFileInfo(InputFileData , InFileInfo, PriPath, "inputFile.inp", "test.ech", TmpErrStat, TmpErrMsg)
 
         @assertEqual(0, TmpErrStat, message='Error message: '//trim(TmpErrMsg)//NewLine//'ErrStat: ')
         @assertEqual(trim(expected), InputFileData%Uniform_FileName)
