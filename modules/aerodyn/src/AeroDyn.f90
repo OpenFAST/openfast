@@ -517,7 +517,7 @@ subroutine Init_MiscVars(m, p, u, y, errStat, errMsg)
    call AllocAry( m%Y_Twr, p%NumTwrNds, 'm%Y_Twr', ErrStat2, ErrMsg2 )
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
       ! save blade calculations for output:
-if (p%TwrPotent /= TwrPotent_none .or. p%TwrShadow) then
+if (p%TwrPotent /= TwrPotent_none .or. p%TwrShadow /= TwrShadow_none) then
    call AllocAry( m%TwrClrnc, p%NumBlNds, p%NumBlades, 'm%TwrClrnc', ErrStat2, ErrMsg2 )
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
 end if            
@@ -942,13 +942,14 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
    
  ! p%numBlades        = InitInp%numBlades    ! this was set earlier because it was necessary
    p%NumBlNds         = InputFileData%BladeProps(1)%NumBlNds
-   if (p%TwrPotent == TwrPotent_none .and. .not. p%TwrShadow .and. .not. p%TwrAero) then
+   if (p%TwrPotent == TwrPotent_none .and. p%TwrShadow == TwrShadow_none .and. .not. p%TwrAero) then
       p%NumTwrNds     = 0
    else
       p%NumTwrNds     = InputFileData%NumTwrNds
       
       call move_alloc( InputFileData%TwrDiam, p%TwrDiam )
       call move_alloc( InputFileData%TwrCd,   p%TwrCd )      
+      call move_alloc( InputFileData%TwrTI,   p%TwrTI )      
    end if
    
    p%AirDens          = InputFileData%AirDens          
@@ -1398,7 +1399,7 @@ subroutine SetInputs(p, u, m, indx, errStat, errMsg)
    ErrStat = ErrID_None
    ErrMsg  = ""
    
-   if (p%TwrPotent /= TwrPotent_none .or. p%TwrShadow) then
+   if (p%TwrPotent /= TwrPotent_none .or. p%TwrShadow /= TwrShadow_none) then
       call TwrInfl( p, u, m, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    else
@@ -1692,7 +1693,7 @@ subroutine SetInputsForFVW(p, u, m, errStat, errMsg)
          m%FVW_u(tIndx)%V_wind   = u(tIndx)%InflowWakeVel
          ! Applying tower shadow to V_wind based on r_wind positions
          ! NOTE: m%DisturbedInflow also contains tower shadow and we need it for CalcOutput
-         if (p%TwrPotent /= TwrPotent_none .or. p%TwrShadow) then
+         if (p%TwrPotent /= TwrPotent_none .or. p%TwrShadow /= TwrShadow_none) then
             if (p%FVW%TwrShadowOnWake) then
                call TwrInflArray( p, u(tIndx), m, m%FVW%r_wind, m%FVW_u(tIndx)%V_wind, ErrStat, ErrMsg )
                if (ErrStat >= AbortErrLev) return
@@ -1965,6 +1966,29 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
    if (InputFileData%TwrPotent /= TwrPotent_none .and. InputFileData%TwrPotent /= TwrPotent_baseline .and. InputFileData%TwrPotent /= TwrPotent_Bak) then
       call SetErrStat ( ErrID_Fatal, 'TwrPotent must be 0 (none), 1 (baseline potential flow), or 2 (potential flow with Bak correction).', ErrStat, ErrMsg, RoutineName ) 
    end if   
+   if (InputFileData%TwrShadow /= TwrShadow_none .and. InputFileData%TwrShadow /= TwrShadow_Powles .and. InputFileData%TwrShadow /= TwrShadow_Eames) then
+      call SetErrStat ( ErrID_Fatal, 'TwrShadow must be 0 (none), 1 (Powles tower shadow modle), or 2 (Eames tower shadow model).', ErrStat, ErrMsg, RoutineName ) 
+   end if
+
+      ! The following limits are recommended by Juliet Simpson (University of Virginia)
+      !  E-mail recommendation:
+      !     To test the limits of the model, I've been running steady simulations
+      !     with a range of TI inputs. It looks like the model starts to break down
+      !     (or at least break the trend of higher TI's) when the TI drops below
+      !     0.05. On the other end, the model seems to work up to TI~1 without
+      !     breaking down (I checked up to TI=0.99). However, the results aren't
+      !     very physically realistic after ~0.35 because it approaches a constant
+      !     velocity deficit across the rotor plane, rather than returning to zero
+      !     deficit a short distance laterally from the tower. I'm not sure what
+      !     the goal of the limits would be, so it's hard for me to say what the
+      !     upper cut off should be. If you want it to be physical, perhaps a low
+      !     cut off (around 0.4?). If you want it to just not break, and let people
+      !     interpret for themselves if it's physical for their scenario, then it
+      !     could go to TI~1. I'd recommend imposing limits of 0.05<TI<1, personally.
+   if (InputFileData%TwrShadow == TwrShadow_Eames) then
+      if ( minval(InputFileData%TwrTI) <= 0.05 .or. maxval(InputFileData%TwrTI) >= 1.0) call SetErrStat ( ErrID_Fatal, 'The turbulence intensity for the Eames tower shadow model must be greater than 0.05 and less than 1.', ErrStat, ErrMsg, RoutineName )
+      if ( maxval(InputFileData%TwrTI) >  0.4 .and. maxval(InputFileData%TwrTI) <  1.0) call SetErrStat ( ErrID_Warn,  'The turbulence intensity for the Eames tower shadow model above 0.4 may return unphysical results.  Interpret with caution.', ErrStat, ErrMsg, RoutineName )
+   endif
    
    if (InputFileData%AirDens <= 0.0) call SetErrStat ( ErrID_Fatal, 'The air density (AirDens) must be greater than zero.', ErrStat, ErrMsg, RoutineName )
    if (InputFileData%KinVisc <= 0.0) call SetErrStat ( ErrID_Fatal, 'The kinesmatic viscosity (KinVisc) must be greater than zero.', ErrStat, ErrMsg, RoutineName )
@@ -2042,7 +2066,7 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
       ! .............................
       ! check tower mesh data:
       ! .............................
-   if (InputFileData%TwrPotent /= TwrPotent_none .or. InputFileData%TwrShadow .or. InputFileData%TwrAero ) then
+   if (InputFileData%TwrPotent /= TwrPotent_none .or. InputFileData%TwrShadow /= TwrShadow_none .or. InputFileData%TwrAero ) then
       
       if (InputFileData%NumTwrNds < 2) call SetErrStat( ErrID_Fatal, 'There must be at least two nodes on the tower.',ErrStat, ErrMsg, RoutineName )
          
@@ -2730,6 +2754,7 @@ SUBROUTINE TwrInfl( p, u, m, ErrStat, ErrMsg )
    real(ReKi)                                   :: zbar                    ! local z^ component of r_TowerBlade (distance from tower to blade) normalized by tower radius
    real(ReKi)                                   :: theta_tower_trans(3,3)  ! transpose of local tower orientation expressed as a DCM
    real(ReKi)                                   :: TwrCd                   ! local tower drag coefficient
+   real(ReKi)                                   :: TwrTI                   ! local tower TI (for Eames tower shadow model) 
    real(ReKi)                                   :: W_tower                 ! local relative wind speed normal to the tower
 
    real(ReKi)                                   :: BladeNodePosition(3)    ! local blade node position
@@ -2740,6 +2765,7 @@ SUBROUTINE TwrInfl( p, u, m, ErrStat, ErrMsg )
    real(ReKi)                                   :: v_TwrPotent             ! transverse velocity deficit fraction from tower potential flow
    
    real(ReKi)                                   :: denom                   ! denominator
+   real(ReKi)                                   :: exponential             ! exponential term
    real(ReKi)                                   :: v(3)                    ! temp vector
    
    integer(IntKi)                               :: j, k                    ! loop counters for elements, blades
@@ -2765,7 +2791,7 @@ SUBROUTINE TwrInfl( p, u, m, ErrStat, ErrMsg )
          
          BladeNodePosition = u%BladeMotion(k)%Position(:,j) + u%BladeMotion(k)%TranslationDisp(:,j)
          
-         call getLocalTowerProps(p, u, BladeNodePosition, theta_tower_trans, W_tower, xbar, ybar, zbar, TwrCd, m%TwrClrnc(j,k), ErrStat2, ErrMsg2)
+         call getLocalTowerProps(p, u, BladeNodePosition, theta_tower_trans, W_tower, xbar, ybar, zbar, TwrCd, TwrTI, m%TwrClrnc(j,k), ErrStat2, ErrMsg2)
             call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
             if (ErrStat >= AbortErrLev) return
          
@@ -2797,16 +2823,22 @@ SUBROUTINE TwrInfl( p, u, m, ErrStat, ErrMsg )
             v_TwrPotent = 0.0_ReKi
          end if
          
-         if ( p%TwrShadow .and. xbar > 0.0_ReKi .and. abs(zbar) < 1.0_ReKi) then
-            denom = sqrt( sqrt( xbar**2 + ybar**2 ) )
-            if ( abs(ybar) < denom ) then
-               u_TwrShadow = -TwrCd / denom * cos( PiBy2*ybar / denom )**2
-            else
-               u_TwrShadow = 0.0_ReKi
-            end if
-         else            
-            u_TwrShadow = 0.0_ReKi
-         end if
+         u_TwrShadow = 0.0_ReKi
+         select case (p%TwrShadow)
+            case (TwrShadow_Powles)
+               if ( xbar > 0.0_ReKi .and. abs(zbar) < 1.0_ReKi) then
+                  denom = sqrt( sqrt( xbar**2 + ybar**2 ) )
+                  if ( abs(ybar) < denom ) then
+                     u_TwrShadow = -TwrCd / denom * cos( PiBy2*ybar / denom )**2
+                  end if
+               end if
+             case (TwrShadow_Eames)
+               if ( xbar > 0.0_ReKi .and. abs(zbar) < 1.0_ReKi) then
+                  exponential = ( ybar / (TwrTI * xbar) )**2
+                  denom = TwrTI * xbar * sqrt( TwoPi )
+                  u_TwrShadow = -TwrCd / denom * exp ( -0.5_ReKi * exponential ) 
+               end if
+         end select
                      
          v(1) = (u_TwrPotent + u_TwrShadow)*W_tower
          v(2) = v_TwrPotent*W_tower
@@ -2837,12 +2869,14 @@ SUBROUTINE TwrInflArray( p, u, m, Positions, Inflow, ErrStat, ErrMsg )
    real(ReKi)                                   :: zbar                    ! local z^ component of r_TowerBlade (distance from tower to blade) normalized by tower radius
    real(ReKi)                                   :: theta_tower_trans(3,3)  ! transpose of local tower orientation expressed as a DCM
    real(ReKi)                                   :: TwrCd                   ! local tower drag coefficient
+   real(ReKi)                                   :: TwrTI                   ! local tower TI (for Eames tower shadow model)
    real(ReKi)                                   :: W_tower                 ! local relative wind speed normal to the tower
    real(ReKi)                                   :: Pos(3)                  ! current point
    real(ReKi)                                   :: u_TwrShadow             ! axial velocity deficit fraction from tower shadow
    real(ReKi)                                   :: u_TwrPotent             ! axial velocity deficit fraction from tower potential flow
    real(ReKi)                                   :: v_TwrPotent             ! transverse velocity deficit fraction from tower potential flow
    real(ReKi)                                   :: denom                   ! denominator
+   real(ReKi)                                   :: exponential             ! exponential term
    real(ReKi)                                   :: v(3)                    ! temp vector
    integer(IntKi)                               :: i                       ! loop counters for points
    real(ReKi)                                   :: TwrClrnc                ! local tower clearance
@@ -2859,17 +2893,17 @@ SUBROUTINE TwrInflArray( p, u, m, Positions, Inflow, ErrStat, ErrMsg )
    call CheckTwrInfl( u, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ); if (ErrStat >= AbortErrLev) return
 
    !$OMP PARALLEL default(shared)
-   !$OMP do private(i,Pos,r_TowerBlade,theta_tower_trans,W_tower,xbar,ybar,zbar,TwrCd,TwrClrnc,TwrDiam,found,denom,u_TwrPotent,v_TwrPotent,u_TwrShadow,v) schedule(runtime)
+   !$OMP do private(i,Pos,r_TowerBlade,theta_tower_trans,W_tower,xbar,ybar,zbar,TwrCd,TwrTI,TwrClrnc,TwrDiam,found,denom,u_TwrPotent,v_TwrPotent,u_TwrShadow,v) schedule(runtime)
    do i = 1, size(Positions,2)
       Pos=Positions(1:3,i)
          
       ! Find nearest line2 element or node of the tower  (see getLocalTowerProps)
       ! values are found for the deflected tower, returning theta_tower, W_tower, xbar, ybar, zbar, and TowerCd:
       ! option 1: nearest line2 element
-      call TwrInfl_NearestLine2Element(p, u, Pos, r_TowerBlade, theta_tower_trans, W_tower, xbar, ybar, zbar, TwrCd, TwrDiam, found)
+      call TwrInfl_NearestLine2Element(p, u, Pos, r_TowerBlade, theta_tower_trans, W_tower, xbar, ybar, zbar, TwrCd, TwrTI, TwrDiam, found)
       if ( .not. found) then 
          ! option 2: nearest node
-         call TwrInfl_NearestPoint(p, u, Pos, r_TowerBlade, theta_tower_trans, W_tower, xbar, ybar, zbar, TwrCd, TwrDiam)
+         call TwrInfl_NearestPoint(p, u, Pos, r_TowerBlade, theta_tower_trans, W_tower, xbar, ybar, zbar, TwrCd, TwrTI, TwrDiam)
       end if
       TwrClrnc = TwoNorm(r_TowerBlade) - 0.5_ReKi*TwrDiam
 
@@ -2902,16 +2936,22 @@ SUBROUTINE TwrInflArray( p, u, m, Positions, Inflow, ErrStat, ErrMsg )
             v_TwrPotent = 0.0_ReKi
          end if
          
-         if ( p%TwrShadow .and. xbar > 0.0_ReKi .and. abs(zbar) < 1.0_ReKi) then
-            denom = sqrt( sqrt( xbar**2 + ybar**2 ) )
-            if ( abs(ybar) < denom ) then
-               u_TwrShadow = -TwrCd / denom * cos( PiBy2*ybar / denom )**2
-            else
-               u_TwrShadow = 0.0_ReKi
-            end if
-         else            
-            u_TwrShadow = 0.0_ReKi
-         end if
+         u_TwrShadow = 0.0_ReKi
+         select case (p%TwrShadow)
+            case (TwrShadow_Powles)
+               if ( xbar > 0.0_ReKi .and. abs(zbar) < 1.0_ReKi) then
+                  denom = sqrt( sqrt( xbar**2 + ybar**2 ) )
+                  if ( abs(ybar) < denom ) then
+                     u_TwrShadow = -TwrCd / denom * cos( PiBy2*ybar / denom )**2
+                  end if
+               end if
+             case (TwrShadow_Eames)
+               if ( xbar > 0.0_ReKi .and. abs(zbar) < 1.0_ReKi) then
+                  exponential = ( ybar / (TwrTI * xbar) )**2
+                  denom = TwrTI * xbar * sqrt( TwoPi )
+                  u_TwrShadow = -TwrCd / denom * exp ( -0.5_ReKi * exponential ) 
+               end if
+         end select
                      
          v(1) = (u_TwrPotent + u_TwrShadow)*W_tower
          v(2) = v_TwrPotent*W_tower
@@ -2926,7 +2966,7 @@ END SUBROUTINE TwrInflArray
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine returns the tower constants necessary to compute the tower influence. 
 !! if u%TowerMotion does not have any nodes there will be serious problems. I assume that has been checked earlier.
-SUBROUTINE getLocalTowerProps(p, u, BladeNodePosition, theta_tower_trans, W_tower, xbar, ybar, zbar, TwrCd, TwrClrnc, ErrStat, ErrMsg)
+SUBROUTINE getLocalTowerProps(p, u, BladeNodePosition, theta_tower_trans, W_tower, xbar, ybar, zbar, TwrCd, TwrTI, TwrClrnc, ErrStat, ErrMsg)
 !..................................................................................................................................
    TYPE(AD_InputType),           INTENT(IN   )  :: u                       !< Inputs at Time t
    TYPE(AD_ParameterType),       INTENT(IN   )  :: p                       !< Parameters
@@ -2937,6 +2977,7 @@ SUBROUTINE getLocalTowerProps(p, u, BladeNodePosition, theta_tower_trans, W_towe
    REAL(ReKi)                   ,INTENT(  OUT)  :: ybar                    !< local y^ component of r_TowerBlade normalized by tower radius
    REAL(ReKi)                   ,INTENT(  OUT)  :: zbar                    !< local z^ component of r_TowerBlade normalized by tower radius
    REAL(ReKi)                   ,INTENT(  OUT)  :: TwrCd                   !< local tower drag coefficient
+   REAL(ReKi)                   ,INTENT(  OUT)  :: TwrTI                   !< local tower TI (for Eames tower shadow model)
    REAL(ReKi)                   ,INTENT(  OUT)  :: TwrClrnc                !< tower clearance for potential output 
    INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat                 !< Error status of the operation
    CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg                  !< Error message if ErrStat /= ErrID_None
@@ -2954,13 +2995,13 @@ SUBROUTINE getLocalTowerProps(p, u, BladeNodePosition, theta_tower_trans, W_towe
    ! ..............................................
    ! option 1: nearest line2 element
    ! ..............................................
-   call TwrInfl_NearestLine2Element(p, u, BladeNodePosition, r_TowerBlade, theta_tower_trans, W_tower, xbar, ybar, zbar, TwrCd, TwrDiam, found)
+   call TwrInfl_NearestLine2Element(p, u, BladeNodePosition, r_TowerBlade, theta_tower_trans, W_tower, xbar, ybar, zbar, TwrCd, TwrTI, TwrDiam, found)
    
    if ( .not. found) then 
       ! ..............................................
       ! option 2: nearest node
       ! ..............................................
-      call TwrInfl_NearestPoint(p, u, BladeNodePosition, r_TowerBlade, theta_tower_trans, W_tower, xbar, ybar, zbar, TwrCd, TwrDiam)
+      call TwrInfl_NearestPoint(p, u, BladeNodePosition, r_TowerBlade, theta_tower_trans, W_tower, xbar, ybar, zbar, TwrCd, TwrTI, TwrDiam)
          
    end if
    
@@ -2977,7 +3018,7 @@ END SUBROUTINE getLocalTowerProps
 !!   That is, for each node of the blade mesh, an orthogonal projection is made onto all possible Line2 elements of the tower mesh and 
 !!   the line2 element of the tower mesh that is the minimum distance away is found.
 !! Adapted from modmesh_mapping::createmapping_projecttoline2()
-SUBROUTINE TwrInfl_NearestLine2Element(p, u, BladeNodePosition, r_TowerBlade, theta_tower_trans, W_tower, xbar, ybar, zbar, TwrCd, TwrDiam, found)
+SUBROUTINE TwrInfl_NearestLine2Element(p, u, BladeNodePosition, r_TowerBlade, theta_tower_trans, W_tower, xbar, ybar, zbar, TwrCd, TwrTI, TwrDiam, found)
 !..................................................................................................................................
    TYPE(AD_InputType),              INTENT(IN   )  :: u                             !< Inputs at Time t
    TYPE(AD_ParameterType),          INTENT(IN   )  :: p                             !< Parameters
@@ -2989,6 +3030,7 @@ SUBROUTINE TwrInfl_NearestLine2Element(p, u, BladeNodePosition, r_TowerBlade, th
    REAL(ReKi)                      ,INTENT(  OUT)  :: ybar                          !< local y^ component of r_TowerBlade normalized by tower radius
    REAL(ReKi)                      ,INTENT(  OUT)  :: zbar                          !< local z^ component of r_TowerBlade normalized by tower radius
    REAL(ReKi)                      ,INTENT(  OUT)  :: TwrCd                         !< local tower drag coefficient
+   REAL(ReKi)                      ,INTENT(  OUT)  :: TwrTI                         !< local tower TI (Eames tower shadow model) 
    REAL(ReKi)                      ,INTENT(  OUT)  :: TwrDiam                       !< local tower diameter
    logical                         ,INTENT(  OUT)  :: found                         !< whether a mapping was found with this option 
       
@@ -3070,6 +3112,7 @@ SUBROUTINE TwrInfl_NearestLine2Element(p, u, BladeNodePosition, r_TowerBlade, th
             
             TwrDiam     = elem_position2*p%TwrDiam(n1) + elem_position*p%TwrDiam(n2)
             TwrCd       = elem_position2*p%TwrCd(  n1) + elem_position*p%TwrCd(  n2)
+            TwrTI       = elem_position2*p%TwrTI(  n1) + elem_position*p%TwrTI(  n2)
             
             
             ! z_hat
@@ -3113,7 +3156,7 @@ END SUBROUTINE TwrInfl_NearestLine2Element
 !!  Find the nearest-neighbor node in the tower Line2-element domain (following an approach similar to the point_to_point mapping
 !!  search for motion and scalar quantities). That is, for each node of the blade mesh, the node of the tower mesh that is the minimum 
 !!  distance away is found.
-SUBROUTINE TwrInfl_NearestPoint(p, u, BladeNodePosition, r_TowerBlade, theta_tower_trans, W_tower, xbar, ybar, zbar, TwrCd, TwrDiam)
+SUBROUTINE TwrInfl_NearestPoint(p, u, BladeNodePosition, r_TowerBlade, theta_tower_trans, W_tower, xbar, ybar, zbar, TwrCd, TwrTI, TwrDiam)
 !..................................................................................................................................
    TYPE(AD_InputType),              INTENT(IN   )  :: u                             !< Inputs at Time t
    TYPE(AD_ParameterType),          INTENT(IN   )  :: p                             !< Parameters
@@ -3125,6 +3168,7 @@ SUBROUTINE TwrInfl_NearestPoint(p, u, BladeNodePosition, r_TowerBlade, theta_tow
    REAL(ReKi)                      ,INTENT(  OUT)  :: ybar                          !< local y^ component of r_TowerBlade normalized by tower radius
    REAL(ReKi)                      ,INTENT(  OUT)  :: zbar                          !< local z^ component of r_TowerBlade normalized by tower radius
    REAL(ReKi)                      ,INTENT(  OUT)  :: TwrCd                         !< local tower drag coefficient
+   REAL(ReKi)                      ,INTENT(  OUT)  :: TwrTI                         !< local tower TI (for Eeames tower shadow model)
    REAL(ReKi)                      ,INTENT(  OUT)  :: TwrDiam                       !< local tower diameter
       
       ! local variables
@@ -3181,6 +3225,7 @@ SUBROUTINE TwrInfl_NearestPoint(p, u, BladeNodePosition, r_TowerBlade, theta_tow
    V_rel_tower  = u%InflowOnTower(:,n1) - u%TowerMotion%TranslationVel(:,n1)
    TwrDiam      = p%TwrDiam(n1) 
    TwrCd        = p%TwrCd(  n1) 
+   TwrTI        = p%TwrTI(  n1) 
                            
    ! z_hat
    theta_tower_trans(:,3) = u%TowerMotion%Orientation(3,:,n1)

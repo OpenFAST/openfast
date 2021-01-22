@@ -61,7 +61,7 @@ the blade tip. Aerodynamic imbalances are possible through the use of
 geometrical differences between each blade.
 
 When the tower potential-flow (``TwrPotent > 0``), tower shadow
-(``TwrShadow = TRUE``), and/or the tower aerodynamic load
+(``TwrShadow > 0``), and/or the tower aerodynamic load
 (``TwrAero = TRUE``) models are enabled, we also recommend that
 ``NumTwrNds`` be between 10 and 20 to balance accuracy with
 computational expense. Normally the local elevation of the tower node
@@ -117,7 +117,7 @@ speed, in which case we recommend that ``TwrAero = TRUE``. Otherwise,
 We recommend to include the influence of the tower on the fluid local to
 the blade for both operational and parked/idling rotors. We recommend
 that ``TwrPotent > 0`` for upwind rotors and that ``TwrPotent = 2``
-or ``TwrShadow = TRUE`` for downwind rotors.
+or ``TwrShadow > 0`` for downwind rotors.
 
 Linearization
 -------------
