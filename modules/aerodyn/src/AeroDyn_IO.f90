@@ -2064,6 +2064,12 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InputFile, RootName, NumBlades, interv
       ! CavitCheck - Perform cavitation check? (flag) [AFAeroMod must be 1 when CavitCheck=true]
    call ParseVar( FileInfo_In, CurLine, "CavitCheck", InputFileData%CavitCheck, ErrStat2, ErrMsg2, UnEc )
       if (Failed()) return
+      ! AddedMass - Include added mass effects? (flag)
+   call ParseVar( FileInfo_In, CurLine, "AddedMass", InputFileData%AddedMass, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
+      ! Buoyancy - Include buoyancy effects? (flag)
+   call ParseVar( FileInfo_In, CurLine, "Buoyancy", InputFileData%Buoyancy, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
       ! CompAA - Flag to compute AeroAcoustics calculation [only used when WakeMod=1 or 2]
    call ParseVar( FileInfo_In, CurLine, "CompAA", InputFileData%CompAA, ErrStat2, ErrMsg2, UnEc )
       if (Failed()) return
