@@ -225,9 +225,12 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    integer(IntKi)                              :: errStat2      ! temporary error status of the operation
    character(ErrMsgLen)                        :: errMsg2       ! temporary error message 
       
-   type(AD_InputFile)                          :: InputFileData ! Data stored in the module's input file
+   type(FileInfoType)                          :: FileInfo_In   !< The derived type for holding the full input file for parsing -- we may pass this in the future
+   type(AD_InputFile)                          :: InputFileData ! Data stored in the module's input file after parsing
+   character(1024)                             :: PriPath       !< Primary path
+   character(1024)                             :: EchoFileName
    integer(IntKi)                              :: UnEcho        ! Unit number for the echo file
-   
+
    character(*), parameter                     :: RoutineName = 'AD_Init'
    
    
@@ -245,27 +248,46 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
 
    call DispNVD( AD_Ver )
    
-   
-   p%NumBlades = InitInp%NumBlades ! need this before reading the AD input file so that we know how many blade files to read
-   !bjj: note that we haven't validated p%NumBlades before using it below!
+
+      ! set a few parameters needed while reading the input file
+   call ValidateNumBlades( InitInp%NumBlades, ErrStat2, ErrMsg2 )
+   if (Failed()) return;
+   p%NumBlades = InitInp%NumBlades
    p%RootName  = TRIM(InitInp%RootName)//'.AD'
-   
-      ! Read the primary AeroDyn input file
-   call ReadInputFiles( InitInp%InputFile, InputFileData, interval, p%RootName, p%NumBlades, UnEcho, ErrStat2, ErrMsg2 )   
-      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
-      if (ErrStat >= AbortErrLev) then
-         call Cleanup()
-         return
-      end if
-         
-      
+
+   CALL GetPath( InitInp%InputFile, PriPath )     ! Input files will be relative to the path where the primary input file is located.
+
+      ! -----------------------------------------------------------------
+      ! Read the primary AeroDyn input file, or copy from passed input
+   if (InitInp%UsePrimaryInputFile) then
+      ! Read the entire input file, minus any comment lines, into the FileInfo_In
+      ! data structure in memory for further processing.
+      call ProcessComFile( InitInp%InputFile, FileInfo_In, ErrStat2, ErrMsg2 )
+   else
+      call NWTC_Library_CopyFileInfoType( InitInp%PassedPrimaryInputData, FileInfo_In, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+   endif
+   if (Failed()) return;
+
+
+   ! For diagnostic purposes, the following can be used to display the contents
+   ! of the FileInfo_In data structure.
+   ! call Print_FileInfo_Struct( CU, FileInfo_In ) ! CU is the screen -- different number on different systems.
+
+      !  Parse the FileInfo_In structure of data from the inputfile into the InitInp%InputFile structure
+   CALL ParsePrimaryFileInfo( PriPath, InitInp%InputFile, p%RootName, p%NumBlades, interval, FileInfo_In, InputFileData, UnEcho, ErrStat2, ErrMsg2 )
+      if (Failed()) return;
+
+
+      ! -----------------------------------------------------------------
+      ! Read the AeroDyn blade files, or copy from passed input
+!FIXME: add handling for passing of blade files and other types of files.
+   call ReadInputFiles( InitInp%InputFile, InputFileData, interval, p%RootName, p%NumBlades, UnEcho, ErrStat2, ErrMsg2 )
+      if (Failed()) return;
+
+
       ! Validate the inputs
    call ValidateInputData( InitInp, InputFileData, p%NumBlades, ErrStat2, ErrMsg2 )
-      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
-      if (ErrStat >= AbortErrLev) then
-         call Cleanup()
-         return
-      end if
+   if (Failed()) return;
       
       !............................................................................................
       ! Define parameters
@@ -273,33 +295,20 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       
       ! Initialize AFI module (read Airfoil tables)
    call Init_AFIparams( InputFileData, p%AFI, UnEcho, p%NumBlades, ErrStat2, ErrMsg2 )
-      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
-      if (ErrStat >= AbortErrLev) then
-         call Cleanup()
-         return
-      end if
+   if (Failed()) return;
          
       
       ! set the rest of the parameters
    call SetParameters( InitInp, InputFileData, p, ErrStat2, ErrMsg2 )
-      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
-      if (ErrStat >= AbortErrLev) then
-         call Cleanup()
-         return
-      end if
+   if (Failed()) return;
   
       !............................................................................................
       ! Define and initialize inputs here 
       !............................................................................................
    
    call Init_u( u, p, InputFileData, InitInp, errStat2, errMsg2 ) 
-      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
-      if (ErrStat >= AbortErrLev) then
-         call Cleanup()
-         return
-      end if
+   if (Failed()) return;
 
-      ! 
 
       !............................................................................................
       ! Initialize the BEMT module (also sets other variables for sub module)
@@ -311,11 +320,7 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    if (p%WakeMod /= WakeMod_FVW) then
       call Init_BEMTmodule( InputFileData, u, m%BEMT_u(1), p, x%BEMT, xd%BEMT, z%BEMT, &
                               OtherState%BEMT, m%BEMT_y, m%BEMT, ErrStat2, ErrMsg2 )
-         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         if (ErrStat >= AbortErrLev) then
-            call Cleanup()
-            return
-         end if
+      if (Failed()) return;
 
       call BEMT_CopyInput( m%BEMT_u(1), m%BEMT_u(2), MESH_NEWCOPY, ErrStat2, ErrMsg2 )
          call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -326,7 +331,7 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
          !............................................................................................
       if (p%CompAA) then
          call Init_AAmodule( InitInp, InputFileData, u, m%AA_u, p, x%AA, xd%AA, z%AA, OtherState%AA, m%AA_y, m%AA, ErrStat2, ErrMsg2 )
-            call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
+         if (Failed()) return;
       end if   
    endif
 
@@ -341,15 +346,11 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       if (.not. allocated(m%FVW_u))   Allocate(m%FVW_u(3))  !size(u)))
       call Init_FVWmodule( InputFileData, u, m%FVW_u(1), p, x%FVW, xd%FVW, z%FVW, &
                               OtherState%FVW, m%FVW_y, m%FVW, ErrStat2, ErrMsg2 )
-         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         if (ErrStat >= AbortErrLev) then
-            call Cleanup()
-            return
-         end if
+      if (Failed()) return;
          ! populate the rest of the FVW_u so that extrap-interp will work
       do i=2,3 !size(u)
          call FVW_CopyInput( m%FVW_u(1), m%FVW_u(i), MESH_NEWCOPY, ErrStat2, ErrMsg2 )
-            call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         if (Failed()) return;
       enddo
    endif
     
@@ -358,11 +359,7 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       ! Define outputs here
       !............................................................................................
    call Init_y(y, u, p, errStat2, errMsg2) ! do this after input meshes have been initialized
-      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
-      if (ErrStat >= AbortErrLev) then
-         call Cleanup()
-         return
-      end if
+   if (Failed()) return;
    
    
       !............................................................................................
@@ -372,20 +369,20 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       ! many states are in the BEMT module, which were initialized in BEMT_Init()
       
    call Init_MiscVars(m, p, u, y, errStat2, errMsg2)
-      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
+   if (Failed()) return;
       
       !............................................................................................
       ! Initialize other states
       !............................................................................................
       ! The wake from FVW is stored in other states.  This may not be the best place to put it!
    call Init_OtherStates(m, p, OtherState, errStat2, errMsg2)
-      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
+   if (Failed()) return;
 
       !............................................................................................
       ! Define initialization output here
       !............................................................................................
    call AD_SetInitOut(p, InputFileData, InitOut, errStat2, errMsg2)
-      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
+   if (Failed()) return;
    
       ! after setting InitOut variables, we really don't need the airfoil coordinates taking up
       ! space in AeroDyn
@@ -401,7 +398,7 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       !............................................................................................
    if (InitInp%Linearize) then      
       call Init_Jacobian(InputFileData, p, u, y, m, InitOut, ErrStat2, ErrMsg2)
-      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      if (Failed()) return;
    end if
    
       !............................................................................................
@@ -409,7 +406,7 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       !............................................................................................
    if (InputFileData%SumPrint) then
       call AD_PrintSum( InputFileData, p, u, y, ErrStat2, ErrMsg2 )
-         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      if (Failed()) return;
    end if
       
       !............................................................................................
@@ -423,11 +420,14 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    call Cleanup() 
       
 contains
+   logical function Failed()
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      Failed = ErrStat >= AbortErrLev
+      if (Failed)    call Cleanup()
+   end function Failed
    subroutine Cleanup()
-
       CALL AD_DestroyInputFile( InputFileData, ErrStat2, ErrMsg2 )
       IF ( UnEcho > 0 ) CLOSE( UnEcho )
-      
    end subroutine Cleanup
 
 end subroutine AD_Init
@@ -1923,6 +1923,16 @@ subroutine SetOutputsFromFVW(u, p, OtherState, x, xd, m, y, ErrStat, ErrMsg)
 end subroutine SetOutputsFromFVW
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine validates the inputs from the AeroDyn input files.
+SUBROUTINE ValidateNumBlades( NumBl, ErrStat, ErrMsg )
+   integer(IntKi),           intent(in)     :: NumBl                             !< Number of blades
+   integer(IntKi),           intent(out)    :: ErrStat                           !< Error status
+   character(*),             intent(out)    :: ErrMsg                            !< Error message
+   ErrStat  = ErrID_None
+   ErrMsg   = ''
+   if (NumBl > MaxBl .or. NumBl < 1) call SetErrStat( ErrID_Fatal, 'Number of blades must be between 1 and '//trim(num2lstr(MaxBl))//'.', ErrStat, ErrMsg, 'ValidateNumBlades' )
+END SUBROUTINE ValidateNumBlades
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine validates the inputs from the AeroDyn input files.
 SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
 !..................................................................................................................................
       
@@ -1944,7 +1954,6 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
    ErrMsg  = ""
    
    
-   if (NumBl > MaxBl .or. NumBl < 1) call SetErrStat( ErrID_Fatal, 'Number of blades must be between 1 and '//trim(num2lstr(MaxBl))//'.', ErrSTat, ErrMsg, RoutineName )
    if (InputFileData%DTAero <= 0.0)  call SetErrStat ( ErrID_Fatal, 'DTAero must be greater than zero.', ErrStat, ErrMsg, RoutineName )
    if (InputFileData%WakeMod /= WakeMod_None .and. InputFileData%WakeMod /= WakeMod_BEMT .and. InputFileData%WakeMod /= WakeMod_DBEMT .and. InputFileData%WakeMod /= WakeMod_FVW) then
       call SetErrStat ( ErrID_Fatal, 'WakeMod must be '//trim(num2lstr(WakeMod_None))//' (none), '//trim(num2lstr(WakeMod_BEMT))//' (BEMT), '// &
@@ -2188,6 +2197,7 @@ SUBROUTINE Init_AFIparams( InputFileData, p_AFI, UnEc, NumBl, ErrStat, ErrMsg )
    AFI_InitInputs%InCol_Cl    = InputFileData%InCol_Cl
    AFI_InitInputs%InCol_Cd    = InputFileData%InCol_Cd
    AFI_InitInputs%InCol_Cm    = InputFileData%InCol_Cm
+   IF (.not. InputFileData%UseBlCm) AFI_InitInputs%InCol_Cm = 0      ! Don't try to use Cm if flag set to false
    AFI_InitInputs%InCol_Cpmin = InputFileData%InCol_Cpmin
    AFI_InitInputs%AFTabMod    = InputFileData%AFTabMod !AFITable_1
    
