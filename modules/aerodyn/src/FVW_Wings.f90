@@ -186,7 +186,6 @@ contains
             m%diag_LL(iSpan, iW) = TwoNorm(DP3)
          end do
       enddo
-!FIXME: does it make sense to use the position mesh for this info?
       ! --- Lifting Line/ Bound Circulation panel
       ! For now: goes from 1/4 chord to TE
       ! More panelling options may be considered in the future
@@ -342,7 +341,7 @@ contains
       call AllocAry(Vcst,  3, p%nSpan, p%nWings, 'Vcst',  ErrStat2, ErrMsg2);  if(Failed()) return;
 
       ! Set m%Vind_LL Induced velocity from Known wake only (after iNWStart+1)
-      call LiftingLineInducedVelocities(p, x, iNWStart+1, m, ErrStat2, ErrMsg2);  if(Failed()) return;
+      call LiftingLineInducedVelocities(m%CP_LL, p, x, iNWStart+1, m, m%Vind_LL, ErrStat2, ErrMsg2);  if(Failed()) return;
 
       Vcst = m%Vind_LL + m%Vwnd_LL - m%Vstr_ll
 

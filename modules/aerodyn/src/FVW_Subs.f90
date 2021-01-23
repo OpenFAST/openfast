@@ -617,12 +617,12 @@ pure integer(IntKi) function CountCPs(p, nNW, nFWEff) result(nCPs)
 end function CountCPs
 
 
-subroutine PackPanelsToSegments(p, m, x, iDepthStart, bMirror, SegConnct, SegPoints, SegGamma, SegEpsilon, nSeg, nSegP)
+subroutine PackPanelsToSegments(p, x, iDepthStart, bMirror, nNW, nFW, SegConnct, SegPoints, SegGamma, SegEpsilon, nSeg, nSegP)
    type(FVW_ParameterType),         intent(in   ) :: p       !< Parameters
-   type(FVW_MiscVarType),           intent(in   ) :: m       !< Initial misc/optimization variables
    type(FVW_ContinuousStateType),   intent(in   ) :: x       !< States
    integer(IntKi),                  intent(in   ) :: iDepthStart !< Index where we start packing for NW panels
    logical,                         intent(in   ) :: bMirror !< Mirror the vorticity wrt the ground
+   integer(IntKi),                  intent(in   ) :: nNW, NFW !< Number of near/far wake panels
    integer(IntKi),dimension(:,:), intent(inout) :: SegConnct !< Segment connectivity
    real(ReKi),    dimension(:,:), intent(inout) :: SegPoints !< Segment Points
    real(ReKi),    dimension(:)  , intent(inout) :: SegGamma  !< Segment Circulation
@@ -635,11 +635,11 @@ subroutine PackPanelsToSegments(p, m, x, iDepthStart, bMirror, SegConnct, SegPoi
 
    ! If the FW contains Shed vorticity, we include the last shed vorticity form the NW, orhtwerise, we don't!
    ! It's important not to include it, otherwise a strong vortex will be present there with no compensating vorticity from the FW
-   LastNWShed = (p%FWShedVorticity ) .or. ((.not.p%FWShedVorticity) .and. (m%nNW<p%nNWMax))
+   LastNWShed = (p%FWShedVorticity ) .or. ((.not.p%FWShedVorticity) .and. (nNW<p%nNWMax))
 
    ! Counting total number of segments
    ! Returns nC, nP, nCNW, number of segments (without accounting for mirroring)
-   call CountSegments(p, m%nNW, m%nFW, iDepthStart, nC, nP, nCNW)
+   call CountSegments(p, nNW, nFW, iDepthStart, nC, nP, nCNW)
 
    if (nP>0) then
       ! Nullifying for safety
@@ -651,15 +651,15 @@ subroutine PackPanelsToSegments(p, m, x, iDepthStart, bMirror, SegConnct, SegPoi
       iHeadC=1
       if (nCNW>0) then
          do iW=1,p%nWings
-            call LatticeToSegments(x%r_NW(1:3,:,1:m%nNW+1,iW), x%Gamma_NW(:,1:m%nNW,iW), x%Eps_NW(1:3,:,1:m%nNW,iW), iDepthStart, SegPoints, SegConnct, SegGamma, SegEpsilon, iHeadP, iHeadC, .True., LastNWShed )
+            call LatticeToSegments(x%r_NW(1:3,:,1:nNW+1,iW), x%Gamma_NW(:,1:nNW,iW), x%Eps_NW(1:3,:,1:nNW,iW), iDepthStart, SegPoints, SegConnct, SegGamma, SegEpsilon, iHeadP, iHeadC, .True., LastNWShed )
          enddo
       endif
-      if (m%nFW>0) then
+      if (nFW>0) then
          iHeadC_bkp = iHeadC
          do iW=1,p%nWings
-            call LatticeToSegments(x%r_FW(1:3,:,1:m%nFW+1,iW), x%Gamma_FW(:,1:m%nFW,iW), x%Eps_FW(1:3,:,1:m%nFW,iW), 1, SegPoints, SegConnct, SegGamma, SegEpsilon, iHeadP, iHeadC , p%FWShedVorticity, p%FWShedVorticity)
+            call LatticeToSegments(x%r_FW(1:3,:,1:nFW+1,iW), x%Gamma_FW(:,1:nFW,iW), x%Eps_FW(1:3,:,1:nFW,iW), 1, SegPoints, SegConnct, SegGamma, SegEpsilon, iHeadP, iHeadC , p%FWShedVorticity, p%FWShedVorticity)
          enddo
-         SegConnct(3,iHeadC_bkp:) = SegConnct(3,iHeadC_bkp:) + m%nNW ! Increasing iDepth (or age) to account for NW
+         SegConnct(3,iHeadC_bkp:) = SegConnct(3,iHeadC_bkp:) + nNW ! Increasing iDepth (or age) to account for NW
       endif
       if (DEV_VERSION) then
          ! Safety checks
@@ -672,7 +672,6 @@ subroutine PackPanelsToSegments(p, m, x, iDepthStart, bMirror, SegConnct, SegPoi
             STOP ! Keep me. The check will be removed once the code is well established
          endif
          if (any(SegPoints(3,:)<-99._ReKi)) then
-            call print_x_NW_FW(p,m,x,'pack')
             print*,'PackPanelsToSegments: some segments are NAN'
             STOP ! Keep me. The check will be removed once the code is well established
          endif
@@ -909,7 +908,7 @@ subroutine InducedVelocitiesAll_Init(p, x, m, Sgmt, Part, Tree,  ErrStat, ErrMsg
    bMirror = p%ShearModel==idShearMirror ! Whether or not we mirror the vorticity wrt ground
 
    ! --- Packing all vortex elements into a list of segments
-   call PackPanelsToSegments(p, m, x, 1, bMirror, Sgmt%Connct, Sgmt%Points, Sgmt%Gamma, Sgmt%Epsilon, nSeg, nSegP)
+   call PackPanelsToSegments(p, x, 1, bMirror, m%nNW, m%nFW, Sgmt%Connct, Sgmt%Points, Sgmt%Gamma, Sgmt%Epsilon, nSeg, nSegP)
    Sgmt%RegFunction=p%RegFunction
    Sgmt%nAct  = nSeg
    Sgmt%nActP = nSegP
@@ -1097,11 +1096,13 @@ end subroutine WakeInducedVelocities
 !> Compute induced velocities from all vortex elements onto the lifting line control points
 !! In : x%r_NW, x%r_FW, x%Gamma_NW, x%Gamma_FW
 !! Out: m%Vind_LL
-subroutine LiftingLineInducedVelocities(p, x, iDepthStart, m, ErrStat, ErrMsg)
+subroutine LiftingLineInducedVelocities(CP_LL, p, x, iDepthStart, m, Vind_LL, ErrStat, ErrMsg)
+   real(ReKi), dimension(:,:,:),    intent(in   ) :: CP_LL   !< Control points where velocity is to be evaluated
    type(FVW_ParameterType),         intent(in   ) :: p       !< Parameters
    type(FVW_ContinuousStateType),   intent(in   ) :: x       !< States
    integer(IntKi),                  intent(in   ) :: iDepthStart !< Index where we start packing for NW panels
    type(FVW_MiscVarType),           intent(inout) :: m       !< Initial misc/optimization variables
+   real(ReKi), dimension(:,:,:),    intent(  out) :: Vind_LL !< Control points where velocity is to be evaluated
    ! Local variables
    integer(IntKi) :: iW, nSeg, nSegP, nCPs, iHeadP
    real(ReKi),    dimension(:,:), allocatable :: CPs   !< ControlPoints
@@ -1111,16 +1112,16 @@ subroutine LiftingLineInducedVelocities(p, x, iDepthStart, m, ErrStat, ErrMsg)
    logical ::  bMirror 
    ErrStat = ErrID_None
    ErrMsg  = ""
-   m%Vind_LL = -9999._ReKi !< Safety
+   Vind_LL = -9999._ReKi !< Safety
    bMirror = p%ShearModel==idShearMirror ! Whether or not we mirror the vorticity wrt ground
 
    ! --- Packing all vortex elements into a list of segments
-   call PackPanelsToSegments(p, m, x, iDepthStart, bMirror, m%Sgmt%Connct, m%Sgmt%Points, m%Sgmt%Gamma, m%Sgmt%Epsilon, nSeg, nSegP)
+   call PackPanelsToSegments(p, x, iDepthStart, bMirror, m%nNW, m%nFW, m%Sgmt%Connct, m%Sgmt%Points, m%Sgmt%Gamma, m%Sgmt%Epsilon, nSeg, nSegP)
 
    ! --- Computing induced velocity
    if (nSegP==0) then
       nCPs=0
-      m%Vind_LL = 0.0_ReKi
+      Vind_LL = 0.0_ReKi
       if (DEV_VERSION) then
          print'(A,I0,A,I0,A,I0,A)','Induction -  nSeg:',nSeg,' - nSegP:',nSegP, ' - nCPs:',nCPs, ' -> No induction'
       endif
@@ -1145,7 +1146,7 @@ contains
    subroutine PackLiftingLinePoints()
       iHeadP=1
       do iW=1,p%nWings
-         CALL LatticeToPoints(m%CP_LL(1:3,:,iW:iW), 1, CPs, iHeadP)
+         CALL LatticeToPoints(CP_LL(1:3,:,iW:iW), 1, CPs, iHeadP)
       enddo
       if (DEV_VERSION) then
          if ((iHeadP-1)/=size(CPs,2)) then
@@ -1160,7 +1161,7 @@ contains
    subroutine UnPackLiftingLineVelocities()
       iHeadP=1
       do iW=1,p%nWings
-         CALL VecToLattice(Uind, 1, m%Vind_LL(1:3,:,iW:iW), iHeadP)
+         CALL VecToLattice(Uind, 1, Vind_LL(1:3,:,iW:iW), iHeadP)
       enddo
       if (DEV_VERSION) then
          if ((iHeadP-1)/=size(Uind,2)) then

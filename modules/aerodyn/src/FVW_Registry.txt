@@ -93,6 +93,10 @@ typedef     ^                   ^               ReKi                            
 # TODO UA
 typedef   ^                      ^              UA_ContinuousStateType             UA           -  -  - "states for UnsteadyAero"        -
 
+# ........ Output ............
+# FVW_OutputType
+typedef  FVW/FVW           OutputType           ReKi                             Vind      :::   - - "TODO mesh  - Induced velocity vector at AeroDyn nodes. "  -
+
 
 # ....... MiscVars ............
 # FVW_MiscVarType
@@ -177,11 +181,6 @@ typedef     ^                   ^               ReKi                            
 # FOR UA
 typedef     ^                   ^               ReKi                             Vwnd_LLMP   {:}{:}{:} -  - "Disturbed wind at LL mesh points (not CP), for UA only"  -
 typedef     ^                   ^               ReKi                             omega_z        {:}{:}  -  - "rotation of no-sweep-pitch-twist coordinate system around z (for CDBEMT and CUA)" "rad/s"
-
-# ........ Output ............
-# FVW_OutputType
-typedef  FVW/FVW           OutputType           ReKi                             Vind      :::   - - "TODO mesh  - Induced velocity vector. "  -
-typedef     ^                   ^               ReKi                             Cl_KJ      ::   - - "Lift coefficient from circulation (Kutta-Joukowski)"  -
 
 
 #.......... DiscreteStateType ......

@@ -141,7 +141,7 @@ subroutine FVW_Init(AFInfo, InitInp, u, p, x, xd, z, OtherState, y, m, Interval,
    call Map_NW_FW(p, m, z, x, ErrStat2, ErrMsg2); if(Failed()) return
 
    ! Initialize input guess and output
-   CALL FVW_Init_U_Y( p, u, y, ErrStat2, ErrMsg2); if(Failed()) return
+   CALL FVW_Init_U_Y( p, u, y, m, ErrStat2, ErrMsg2); if(Failed()) return
 
    ! Returned guessed locations where wind will be required
    CALL SetRequestedWindPoints(m%r_wind, x, p, m )
@@ -344,9 +344,10 @@ subroutine FVW_InitConstraint( z, p, m, ErrStat, ErrMsg )
 end subroutine FVW_InitConstraint
 ! ==============================================================================
 !> Init/allocate inputs and outputs
-subroutine FVW_Init_U_Y( p, u, y, ErrStat, ErrMsg )
+subroutine FVW_Init_U_Y( p, u, y, m, ErrStat, ErrMsg )
    type(FVW_ParameterType),         intent(in   )  :: p              !< Parameters
    type(FVW_InputType),             intent(inout)  :: u              !< An initial guess for the input; input mesh must be defined
+   type(FVW_MiscVarType),           intent(inout)  :: m              !< Initial misc/optimization variables
    type(FVW_OutputType),            intent(  out)  :: y              !< Constraints
    integer(IntKi),                  intent(  out)  :: ErrStat        !< Error status of the operation
    character(*),                    intent(  out)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
@@ -367,7 +368,7 @@ subroutine FVW_Init_U_Y( p, u, y, ErrStat, ErrMsg )
    call AllocAry( y%Vind ,    3, p%nSpan+1, p%nWings, 'Induced velocity vector', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName)
    call AllocAry( u%omega_z,     p%nSpan+1, p%nWings, 'Section torsion rate'   , ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName)
    call AllocAry( u%Vwnd_LLMP,3, p%nSpan+1, p%nWings, 'Dist. wind at LL nodes',  ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName)
-   y%Vind    = 0.0_ReKi    ! TODO check if 0 is somehow required?
+   y%Vind    = -9999.9_ReKi  
    u%V_wind  = -9999.9_ReKi
    u%Vwnd_LLMP = -9999.9_ReKi
    u%omega_z = -9999.9_ReKi
@@ -595,10 +596,10 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    ! --- Integration between t and t+DTfvw
    if (m%ComputeWakeInduced) then
       if (bOverCycling) then
-          call FVW_CopyContState(x, m%x1, 0, ErrStat2, ErrMsg2) ! Backup current state at t
-          m%t1=t
+         ! Store states at t, and use this opportunity to store outputs at t
+         call FVW_CopyContState(x, m%x1, 0, ErrStat2, ErrMsg2) ! Backup current state at t
+         m%t1=t
       endif
-      print*,'t',t,'t+dt',t+p%DTfvw,'ut',utimes
       if (p%IntMethod .eq. idEuler1) then 
         call FVW_Euler1( t, uInterp, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2); if(Failed()) return
       elseif (p%IntMethod .eq. idRK4) then 
@@ -619,13 +620,35 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
       call PropagateWake(p, m, z, x, ErrStat2, ErrMsg2); if(Failed()) return
 
       if (bOverCycling) then
-         ! NOTE:l
+         ! States x1 
          ! - we need to propagate the states at t to match the memory of state t+DTfvw
          ! - the positions and intensities for the LL and 1st NW panels are NaN for x1 and x2,
-         !  but that's fine since these are always overwritten by the mapping 
+         !   so we need to remap them
          call PropagateWake(p, m, z, m%x1, ErrStat2, ErrMsg2); if(Failed()) return
+         !call Map_LL_NW(p, m, z, m%x1, ShedScale, ErrStat2, ErrMsg2); if(Failed()) return
+         !call Map_NW_FW(p, m, z, m%x1, ErrStat2, ErrMsg2); if(Failed()) return
+
+         ! States x2
          call FVW_CopyContState(x, m%x2, 0, ErrStat2, ErrMsg2) ! Backup current state at t+DTfvw
          m%t2=t+p%DTfvw
+         !! Inputs at t+DTfvw (Wings Panelling updates CP_LL, and Vstr_LL) 
+         !call FVW_Input_ExtrapInterp(u(1:size(utimes)),utimes,uInterp,t+p%DTfvw, ErrStat2, ErrMsg2); if(Failed()) return
+         !call Wings_Panelling(uInterp%WingsMesh, p, m, ErrStat2, ErrMsg2); if(Failed()) return
+         !! Updating positions of first NW and FW panels (Circulation also updated but irrelevant)
+         !call Map_LL_NW(p, m, z, m%x2, 1.0, ErrStat2, ErrMsg2); if(Failed()) return
+         !call Map_NW_FW(p, m, z, m%x2, ErrStat2, ErrMsg2); if(Failed()) return
+         !! --- Solve for quasi steady circulation at t+p%DTfvw
+         !! Returns: z%Gamma_LL (at t+p%DTfvw)
+         !z_guess%Gamma_LL = z%Gamma_LL ! We use as guess the circulation from the previous time step (see above)
+         !call FVW_CalcConstrStateResidual(t+p%DTfvw, uInterp, p, m%x2, xd, z_guess, OtherState, m, z, AFInfo, ErrStat2, ErrMsg2, 2); if(Failed()) return
+         !! Compute UA inputs at t+DTfvw and integrate UA states between t and t+dtAero
+         !if (m%UA_Flag) then
+         !   call CalculateInputsAndOtherStatesForUA(2, uInterp, p, m%x2, xd, z, OtherState, AFInfo, m, ErrStat2, ErrMsg2); if(Failed()) return
+         !   call UA_UpdateState_Wrapper(AFInfo, t, n, (/t,t+p%DTfvw/), p, m%x2, xd, OtherState, m, ErrStat2, ErrMsg2); if(Failed()) return
+         !end if
+         !! Updating circulation of near wake panel (and position but irrelevant)
+         !call Map_LL_NW(p, m, z, m%x2, ShedScale, ErrStat2, ErrMsg2); if(Failed()) return
+         !call Map_NW_FW(p, m, z, m%x2, ErrStat2, ErrMsg2); if(Failed()) return
       endif
    endif
    ! --- Integration between t and t+DTaero if DTaero/=DTfvw
@@ -634,10 +657,8 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
       call FVW_ContStates_Interp(t+p%DTaero, (/m%x1, m%x2/), (/m%t1, m%t2/), p, m, x, ErrStat2, ErrMsg2); if(Failed()) return
    endif
 
-   ! Inputs at t+DTaero
+   ! Inputs at t+DTaero (Wings Panelling updates CP_LL, and Vstr_LL) 
    call FVW_Input_ExtrapInterp(u(1:size(utimes)),utimes,uInterp,t+p%DTaero, ErrStat2, ErrMsg2); if(Failed()) return
-
-   ! Panelling wings based on input mesh at t+p%DTaero
    call Wings_Panelling(uInterp%WingsMesh, p, m, ErrStat2, ErrMsg2); if(Failed()) return
 
    ! Updating positions of first NW and FW panels (Circulation also updated but irrelevant)
@@ -829,7 +850,7 @@ subroutine FVW_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSt
       ! TODO
    else if (p%WakeRegMethod==idRegAge) then
       visc_fact = 2.0_ReKi * CoreSpreadAlpha * p%CoreSpreadEddyVisc * p%KinVisc
-      visc_fact=visc_fact/sqrt(p%WakeRegParam**2 + 2*visc_fact*p%DTfvw) ! Might need to be adjusted
+      visc_fact=visc_fact/sqrt(p%WakeRegParam**2 + 2*visc_fact*p%DTaero) ! NOTE: using DTaero to be consisten with OverCycling
       dxdt%Eps_NW(1:3, :, :, :) = visc_fact
       dxdt%Eps_FW(1:3, :, :, :) = visc_fact
    else
@@ -876,6 +897,8 @@ subroutine FVW_ContStates_Interp(t, states, times, p, m, x, ErrStat, ErrMsg )
    x%Eps_FW   = (1_ReKi-fact) * states(1)%Eps_FW   + fact * states(2)%Eps_FW
    x%Gamma_NW = (1_ReKi-fact) * states(1)%Gamma_NW + fact * states(2)%Gamma_NW
    x%Gamma_FW = (1_ReKi-fact) * states(1)%Gamma_FW + fact * states(2)%Gamma_FW
+   !print*,'fact',fact,states(1)%Gamma_NW(29,iNWStart+1,1),x%Gamma_NW(29,iNWStart+1,1),states(2)%Gamma_NW(29,iNWStart+1,1)
+   !print*,'fact',fact,states(1)%r_NW(1,29,iNWStart+1,1),x%r_NW(1,29,iNWStart+1,1),states(2)%r_NW(1,29,iNWStart+1,1)
 
 end subroutine FVW_ContStates_Interp
 
@@ -1177,9 +1200,57 @@ subroutine FVW_CalcConstrStateResidual( t, u, p, x, xd, z_guess, OtherState, m, 
 
 end subroutine FVW_CalcConstrStateResidual
 
+
+subroutine CalcOutputForAD(t, u, p, x, y, m, AFInfo, ErrStat, ErrMsg)
+   real(DbKi),                      intent(in   )  :: t           !< Current simulation time in seconds
+   type(FVW_InputType),             intent(in   )  :: u           !< Inputs at Time t
+   type(FVW_ParameterType),         intent(in   )  :: p           !< Parameters
+   type(FVW_ContinuousStateType),   intent(in   )  :: x           !< Continuous states at t
+   type(FVW_OutputType),            intent(inout)  :: y           !< Outputs computed at t (Input only so that mesh con-
+   type(FVW_MiscVarType),           intent(inout)  :: m           !< Misc/optimization variables
+   type(AFI_ParameterType),         intent(in   )  :: AFInfo(:)   !< The airfoil parameter data
+   integer(IntKi),                  intent(  out)  :: ErrStat     !< Error status of the operation
+   character(*),                    intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+   integer(IntKi) :: iW, n
+   integer(IntKi)                :: ErrStat2
+   character(ErrMsgLen)          :: ErrMsg2
+   character(*), parameter       :: RoutineName = 'FVW_CalcOutput'
+
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+!       ! --- NOTE: this below might not be needed
+!       ! Distribute the Wind we requested to Inflow wind to storage Misc arrays
+!       ! TODO ANDY: replace with direct call to inflow wind at m%CP_LL location
+!       CALL DistributeRequestedWind_LL(u%V_wind, p, m%Vwnd_LL)
+! 
+!       ! Control points location and structrual velocity
+   call Wings_Panelling(u%WingsMesh, p, m, ErrStat2, ErrMsg2);
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+! 
+!    ! if we are on a correction step, CalcOutput may be called again with different inputs
+!    ! Compute m%Gamma_LL
+!    CALL Wings_ComputeCirculation(t, m%Gamma_LL, z%Gamma_LL, u, p, x, m, AFInfo, ErrStat2, ErrMsg2, 0); if(Failed()) return ! For plotting only
+   !---
+
+   ! Induction on the lifting line control point
+   ! Compute m%Vind_LL
+   m%Vind_LL=-9999.0_ReKi
+   call LiftingLineInducedVelocities(m%CP_LL, p, x, 1, m, m%Vind_LL, ErrStat2, ErrMsg2); 
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
+   ! Induction on the mesh points (AeroDyn nodes)
+   n=p%nSpan
+   y%Vind(1:3,:,:) = 0.0_ReKi
+   do iW=1,p%nWings
+      ! --- Linear interpolation for interior points and extrapolations at boundaries
+      call interpextrap_cp2node(p%s_CP_LL(:,iW), m%Vind_LL(1,:,iW), p%s_LL(:,iW), y%Vind(1,:,iW))
+      call interpextrap_cp2node(p%s_CP_LL(:,iW), m%Vind_LL(2,:,iW), p%s_LL(:,iW), y%Vind(2,:,iW))
+      call interpextrap_cp2node(p%s_CP_LL(:,iW), m%Vind_LL(3,:,iW), p%s_LL(:,iW), y%Vind(3,:,iW))
+   enddo
+end subroutine CalcOutputForAD
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine for computing outputs, used in both loose and tight coupling.
-subroutine FVW_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, ErrStat, ErrMsg )
+subroutine FVW_CalcOutput(t, u, p, x, xd, z, OtherState, AFInfo, y, m, ErrStat, ErrMsg)
    use FVW_VTK, only: set_vtk_coordinate_transform
    use FVW_VortexTools, only: interpextrap_cp2node
    real(DbKi),                      intent(in   )  :: t           !< Current simulation time in seconds
@@ -1197,16 +1268,13 @@ subroutine FVW_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, ErrStat,
    integer(IntKi),                  intent(  out)  :: ErrStat     !< Error status of the operation
    character(*),                    intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
    ! Local variables
-   integer(IntKi)                :: iW, n, i0, i1, i2, iGrid
    integer(IntKi)                :: ErrStat2
-   logical                       :: bGridOutNeeded
    character(ErrMsgLen)          :: ErrMsg2
    character(*), parameter       :: RoutineName = 'FVW_CalcOutput'
    logical :: bOverCycling
-
+   real(ReKi) :: fact
    ErrStat = ErrID_None
    ErrMsg  = ""
-
    if (DEV_VERSION) then
       print'(A,F10.3,A,L1,A,I0,A,I0)','CalcOutput     t:',t,'   ',m%FirstCall,'                                nNW:',m%nNW,' nFW:',m%nFW
    endif
@@ -1214,89 +1282,68 @@ subroutine FVW_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, ErrStat,
    ! OverCycling DTfvw> DTaero
    bOverCycling = p%DTfvw > p%DTaero
 
-   ! Distribute the Wind we requested to Inflow wind to storage Misc arrays
-   ! TODO ANDY: replace with direct call to inflow wind at m%CP_LL location
-   CALL DistributeRequestedWind_LL(u%V_wind, p, m%Vwnd_LL)
-
-   ! Control points location and structrual velocity
-   CALL Wings_Panelling(u%WingsMesh, p, m, ErrStat2, ErrMsg2); if(Failed()) return
-
-   ! if we are on a correction step, CalcOutput may be called again with different inputs
-   ! Compute m%Gamma_LL
-   CALL Wings_ComputeCirculation(t, m%Gamma_LL, z%Gamma_LL, u, p, x, m, AFInfo, ErrStat2, ErrMsg2, 0); if(Failed()) return ! For plotting only
-
-   ! Induction on the lifting line control point
-   ! Set m%Vind_LL
-   m%Vind_LL=-9999.0_ReKi
-   call LiftingLineInducedVelocities(p, x, 1, m, ErrStat2, ErrMsg2); if(Failed()) return
-
-   ! Induction on the mesh points (AeroDyn nodes)
-   n=p%nSpan
-   y%Vind(1:3,:,:) = 0.0_ReKi
-   do iW=1,p%nWings
-      ! --- Linear interpolation for interior points and extrapolations at boundaries
-      call interpextrap_cp2node(p%s_CP_LL(:,iW), m%Vind_LL(1,:,iW), p%s_LL(:,iW), y%Vind(1,:,iW))
-      call interpextrap_cp2node(p%s_CP_LL(:,iW), m%Vind_LL(2,:,iW), p%s_LL(:,iW), y%Vind(2,:,iW))
-      call interpextrap_cp2node(p%s_CP_LL(:,iW), m%Vind_LL(3,:,iW), p%s_LL(:,iW), y%Vind(3,:,iW))
-   enddo
-
-   ! --- Write to local VTK at fps requested
-   if (m%VTKStep==-1) then 
-      m%VTKStep = 0 ! Has never been called, special handling for init
-   else
-      m%VTKStep = m%iStep+1 ! We use glue code step number for outputs
-   endif
-   if (p%WrVTK==1) then
-      if (m%FirstCall) then
-         call MKDIR(p%VTK_OutFileRoot)
-      endif
-      ! For plotting only
-      m%Vtot_LL = m%Vind_LL + m%Vwnd_LL - m%Vstr_LL
-      if (DEV_VERSION) then
-         call print_mean_3d(m%Vind_LL,'Mean induced vel. LL')
-         call print_mean_3d(m%Vtot_LL,'Mean relativevel. LL')
-      endif
-      if ( ( t - m%VTKlastTime ) >= p%DTvtk*OneMinusEpsilon )  then
-         m%VTKlastTime = t
-         if ((p%VTKCoord==2).or.(p%VTKCoord==3)) then
-            ! Hub reference coordinates, for export only, ALL VTK Will be exported in this coordinate system!
-            ! Note: hubOrientation and HubPosition are optional, but required for bladeFrame==TRUE
-            call WrVTK_FVW(p, x, z, m, trim(p%VTK_OutFileBase)//'FVW_Hub', m%VTKStep, 9, bladeFrame=.TRUE.,  &
-                     HubOrientation=real(u%HubOrientation,ReKi),HubPosition=real(u%HubPosition,ReKi))
-         endif
-         if ((p%VTKCoord==1).or.(p%VTKCoord==3)) then
-            ! Global coordinate system, ALL VTK will be exported in global
-            call WrVTK_FVW(p, x, z, m, trim(p%VTK_OutFileBase)//'FVW_Glb', m%VTKStep, 9, bladeFrame=.FALSE.)
-         endif
-      endif
-   endif
-   ! --- Write VTK grids
-   if (p%nGridOut>0) then
-      if (m%FirstCall) then
-         call MKDIR(p%VTK_OutFileRoot)
-      endif
-      ! Distribute the Wind we requested to Inflow wind to storage Misc arrays
-      ! TODO ANDY: replace with direct call to inflow wind at Grid points
-      CALL DistributeRequestedWind_Grid(u%V_wind, p, m)
-      do iGrid=1,p%nGridOut
-         if ( ( t - m%GridOutputs(iGrid)%tLastOutput) >= m%GridOutputs(iGrid)%DTout * OneMinusEpsilon )  then
-            ! Compute induced velocity on grid, TODO use the same Tree for all CalcOutput
-            call InducedVelocitiesAll_OnGrid(m%GridOutputs(iGrid), p, x, m, ErrStat2, ErrMsg2); if (Failed()) return
-
-            m%GridOutputs(iGrid)%tLastOutput = t
-            call WrVTK_FVW_Grid(p, x, z, m, iGrid, trim(p%VTK_OutFileBase)//'FVW_Grid', m%VTKStep, 9)
-         endif
-      enddo
-
-   endif
-
+   ! Compute induced velocity at AD nodes
+   call CalcOutputForAD(t,u,p,x,y,m,AFInfo, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   
+   ! Export to VTK
+   call WriteVTKOutputs()
 
 contains
 
-   logical function Failed()
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'FVW_CalcOutput') 
-      Failed =  ErrStat >= AbortErrLev
-   end function Failed
+   !> Write to local VTK at fps requested
+   subroutine WriteVTKOutputs()
+      logical :: bGridOutNeeded
+      integer(IntKi) :: iW, iGrid
+      integer(IntKi) :: nSeg, nSegP
+      if (m%VTKStep==-1) then 
+         m%VTKStep = 0 ! Has never been called, special handling for init
+      else
+         m%VTKStep = m%iStep+1 ! We use glue code step number for outputs
+      endif
+      if (p%WrVTK==1) then
+         if (m%FirstCall) then
+            call MKDIR(p%VTK_OutFileRoot)
+         endif
+         ! For plotting only
+         call PackPanelsToSegments(p, x, 1, (p%ShearModel==idShearMirror), m%nNW, m%nFW, m%Sgmt%Connct, m%Sgmt%Points, m%Sgmt%Gamma, m%Sgmt%Epsilon, nSeg, nSegP)
+         m%Vtot_LL = m%Vind_LL + m%Vwnd_LL - m%Vstr_LL
+         if (DEV_VERSION) then
+            call print_mean_3d(m%Vind_LL,'Mean induced vel. LL')
+            call print_mean_3d(m%Vtot_LL,'Mean relativevel. LL')
+         endif
+         if ( ( t - m%VTKlastTime ) >= p%DTvtk*OneMinusEpsilon )  then
+            m%VTKlastTime = t
+            if ((p%VTKCoord==2).or.(p%VTKCoord==3)) then
+               ! Hub reference coordinates, for export only, ALL VTK Will be exported in this coordinate system!
+               ! Note: hubOrientation and HubPosition are optional, but required for bladeFrame==TRUE
+               call WrVTK_FVW(p, x, z, m, trim(p%VTK_OutFileBase)//'FVW_Hub', m%VTKStep, 9, bladeFrame=.TRUE.,  &
+                        HubOrientation=real(u%HubOrientation,ReKi),HubPosition=real(u%HubPosition,ReKi))
+            endif
+            if ((p%VTKCoord==1).or.(p%VTKCoord==3)) then
+               ! Global coordinate system, ALL VTK will be exported in global
+               call WrVTK_FVW(p, x, z, m, trim(p%VTK_OutFileBase)//'FVW_Glb', m%VTKStep, 9, bladeFrame=.FALSE.)
+            endif
+         endif
+      endif
+      ! --- Write VTK grids
+      if (p%nGridOut>0) then
+         if (m%FirstCall) then
+            call MKDIR(p%VTK_OutFileRoot)
+         endif
+         ! Distribute the Wind we requested to Inflow wind to storage Misc arrays
+         ! TODO ANDY: replace with direct call to inflow wind at Grid points
+         CALL DistributeRequestedWind_Grid(u%V_wind, p, m)
+         do iGrid=1,p%nGridOut
+            if ( ( t - m%GridOutputs(iGrid)%tLastOutput) >= m%GridOutputs(iGrid)%DTout * OneMinusEpsilon )  then
+               ! Compute induced velocity on grid, TODO use the same Tree for all CalcOutput
+               call InducedVelocitiesAll_OnGrid(m%GridOutputs(iGrid), p, x, m, ErrStat2, ErrMsg2);
+               m%GridOutputs(iGrid)%tLastOutput = t
+               call WrVTK_FVW_Grid(p, x, z, m, iGrid, trim(p%VTK_OutFileBase)//'FVW_Grid', m%VTKStep, 9)
+            endif
+         enddo
+      endif
+   end subroutine WriteVTKOutputs
 
 end subroutine FVW_CalcOutput
 !----------------------------------------------------------------------------------------------------------------------------------   
@@ -1414,7 +1461,7 @@ subroutine CalculateInputsAndOtherStatesForUA(InputIndex, u, p, x, xd, z, OtherS
    ! NOTE: this is expensive since it's an output for FVW but here we have to use it for UA
    ! Set m%Vind_LL
    m%Vind_LL=-9999.0_ReKi
-   call LiftingLineInducedVelocities(p, x, 1, m, ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'UA_UpdateState_Wrapper'); if (ErrStat >= AbortErrLev) return
+   call LiftingLineInducedVelocities(m%CP_LL, p, x, 1, m, m%Vind_LL, ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'UA_UpdateState_Wrapper'); if (ErrStat >= AbortErrLev) return
    allocate(Vind_node(3,1:p%nSpan+1))
 
    do j = 1,p%nWings  
