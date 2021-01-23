@@ -509,29 +509,50 @@ end subroutine SetRequestedWindPoints
 
 
 !> Set the requested wind into the correponding misc variables
-subroutine DistributeRequestedWind(V_wind, p, m)
-   real(ReKi), dimension(:,:),      intent(in   ) :: V_wind  !< Position where wind is requested
+subroutine DistributeRequestedWind_LL(V_wind, p, Vwnd_LL)
+   real(ReKi), dimension(:,:),      intent(in   ) :: V_wind  !< Requested wind, packed
    type(FVW_ParameterType),         intent(in   ) :: p       !< Parameters
-   type(FVW_MiscVarType), target,   intent(inout) :: m       !< Initial misc/optimization variables
+   real(ReKi), dimension(:,:,:),    intent(inout) :: Vwnd_LL !< Wind on lifting line
    integer(IntKi)          :: iP_start,iP_end   ! Current index of point, start and end of range
-   integer(IntKi) :: iGrid,i,j,k
-   type(GridOutType), pointer :: g
-
    ! Using array reshaping to ensure a given near or far wake point is always at the same location in the array.
    ! NOTE: Maximum number of points are passed, whether they "exist" or not. 
    ! --- LL CP
    iP_start=1
    iP_end=p%nWings*p%nSpan
-   m%Vwnd_LL(1:3,1:p%nSpan,1:p%nWings) = reshape( V_wind(1:3,iP_start:iP_end), (/ 3, p%nSpan, p%nWings /))
+   Vwnd_LL(1:3,1:p%nSpan,1:p%nWings) = reshape( V_wind(1:3,iP_start:iP_end), (/ 3, p%nSpan, p%nWings /))
+end subroutine DistributeRequestedWind_LL
+
+subroutine DistributeRequestedWind_NWFW(V_wind, p, Vwnd_NW, Vwnd_FW)
+   real(ReKi), dimension(:,:),      intent(in   ) :: V_wind  !< Requested wind, packed
+   type(FVW_ParameterType),         intent(in   ) :: p       !< Parameters
+   real(ReKi), dimension(:,:,:,:),  intent(inout) :: Vwnd_NW !< Wind on near wake panels
+   real(ReKi), dimension(:,:,:,:),  intent(inout) :: Vwnd_FW !< Wind on near wake panels
+   integer(IntKi)          :: iP_start,iP_end   ! Current index of point, start and end of range
    ! --- NW points
-   iP_start=iP_end+1
+   iP_start=p%nWings*p%nSpan+1
    iP_end=iP_start-1+(p%nSpan+1)*(p%nNWMax+1)*p%nWings
-   m%Vwnd_NW(1:3,1:p%nSpan+1,1:p%nNWMax+1,1:p%nWings) = reshape( V_wind(1:3,iP_start:iP_end), (/ 3, p%nSpan+1, p%nNWMax+1, p%nWings/))
+   Vwnd_NW(1:3,1:p%nSpan+1,1:p%nNWMax+1,1:p%nWings) = reshape( V_wind(1:3,iP_start:iP_end), (/ 3, p%nSpan+1, p%nNWMax+1, p%nWings/))
    ! --- FW points
    if (p%nFWMax>0) then
       iP_start=iP_end+1
       iP_end=iP_start-1+(FWnSpan+1)*(p%nFWMax+1)*p%nWings
-      m%Vwnd_FW(1:3,1:FWnSpan+1,1:p%nFWMax+1,1:p%nWings) = reshape( V_wind(1:3,iP_start:iP_end), (/ 3, FWnSpan+1, p%nFWMax+1, p%nWings /))
+      Vwnd_FW(1:3,1:FWnSpan+1,1:p%nFWMax+1,1:p%nWings) = reshape( V_wind(1:3,iP_start:iP_end), (/ 3, FWnSpan+1, p%nFWMax+1, p%nWings /))
+   endif
+end subroutine DistributeRequestedWind_NWFW
+
+!> Set the requested wind into the correponding misc variables
+subroutine DistributeRequestedWind_Grid(V_wind, p, m)
+   real(ReKi), dimension(:,:),      intent(in   ) :: V_wind  !< Requested wind, packed
+   type(FVW_ParameterType),         intent(in   ) :: p       !< Parameters
+   type(FVW_MiscVarType), target,   intent(inout) :: m       !< Initial misc/optimization variables
+   integer(IntKi)          :: iP_start,iP_end   ! Current index of point, start and end of range
+   integer(IntKi) :: iGrid,i,j,k
+   type(GridOutType), pointer :: g
+   ! --- LL CP
+   iP_end  =p%nWings*p%nSpan+1-1+(p%nSpan+1)*(p%nNWMax+1)*p%nWings
+   ! --- FW points
+   if (p%nFWMax>0) then
+      iP_end=iP_end+1-1+(FWnSpan+1)*(p%nFWMax+1)*p%nWings
    endif
    ! --- VTK points
    ! TODO optimize this
@@ -547,8 +568,8 @@ subroutine DistributeRequestedWind(V_wind, p, m)
          enddo
       enddo ! Loop on x
    enddo ! Loop on grids
+end subroutine DistributeRequestedWind_Grid
 
-end subroutine DistributeRequestedWind
 
 
 !> Count how many segments are needed to represent the Near wake and far wakes, starting at a given depth
@@ -702,16 +723,16 @@ subroutine FVW_InitRegularization(x, p, m, ErrStat, ErrMsg)
    ErrMsg  = ""
    ! --- Compute min max and mean spanwise section lengths
    iW =1
-   ds_min  = minval(m%s_ll(2:p%nSpan+1,iW)-m%s_ll(1:p%nSpan,iW))
-   ds_max  = maxval(m%s_ll(2:p%nSpan+1,iW)-m%s_ll(1:p%nSpan,iW))
-   ds_mean = sum(m%s_ll(2:p%nSpan+1,iW)-m%s_ll(1:p%nSpan,iW))/(p%nSpan+1)
-   c_min  = minval(m%chord_LL(:,iW))
-   c_max  = maxval(m%chord_LL(:,iW))
-   c_mean = sum   (m%chord_LL(:,iW))/(p%nSpan+1)
+   ds_min  = minval(p%s_LL(2:p%nSpan+1,iW)-p%s_LL(1:p%nSpan,iW))
+   ds_max  = maxval(p%s_LL(2:p%nSpan+1,iW)-p%s_LL(1:p%nSpan,iW))
+   ds_mean = sum(p%s_LL(2:p%nSpan+1,iW)-p%s_LL(1:p%nSpan,iW))/(p%nSpan+1)
+   c_min  = minval(p%chord_LL(:,iW))
+   c_max  = maxval(p%chord_LL(:,iW))
+   c_mean = sum   (p%chord_LL(:,iW))/(p%nSpan+1)
    d_min  = minval(m%diag_LL(:,iW))
    d_max  = maxval(m%diag_LL(:,iW))
    d_mean = sum   (m%diag_LL(:,iW))/(p%nSpan+1)
-   Span    = m%s_ll(p%nSpan+1,iW)-m%s_ll(1,iW)
+   Span    = p%s_LL(p%nSpan+1,iW)-p%s_LL(1,iW)
    RegParam = ds_mean*2
    if (DEV_VERSION) then
       write(*,'(A)')'-----------------------------------------------------------------------------------------'
@@ -1104,9 +1125,6 @@ subroutine LiftingLineInducedVelocities(p, x, iDepthStart, m, ErrStat, ErrMsg)
          print'(A,I0,A,I0,A,I0,A)','Induction -  nSeg:',nSeg,' - nSegP:',nSegP, ' - nCPs:',nCPs, ' -> No induction'
       endif
    else
-      ! --- Setting up regularization
-      !call WakeRegularization(p, x, m, m%Sgmt%Connct(:,1:nSeg), m%Sgmt%Points(:,1:nSegP), m%Sgmt%Gamma(1:nSeg), m%Sgmt%Epsilon(1:nSeg), ErrStat, ErrMsg)
-
       nCPs=p%nWings * p%nSpan
       allocate(CPs (1:3,1:nCPs)) ! NOTE: here we do allocate CPs and Uind insteadof using Misc 
       allocate(Uind(1:3,1:nCPs)) !       The size is reasonably small, and m%Uind then stay filled with "rollup velocities" (for export)

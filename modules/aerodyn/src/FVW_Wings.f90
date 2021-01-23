@@ -65,7 +65,7 @@ contains
    !!  - chord_LL_CP: chord on LL cp  
    subroutine Wings_Panelling_Init(Meshes, p, m, ErrStat, ErrMsg )
       type(MeshType), dimension(:),    intent(in   )  :: Meshes         !< Wings mesh
-      type(FVW_ParameterType),         intent(in   )  :: p              !< Parameters
+      type(FVW_ParameterType),         intent(inout)  :: p              !< Parameters
       type(FVW_MiscVarType),           intent(inout)  :: m              !< Initial misc/optimization variables
       integer(IntKi),                  intent(  out)  :: ErrStat        !< Error status of the operation
       character(*),                    intent(  out)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
@@ -100,15 +100,15 @@ contains
             ErrMsg ='TODO different discretization InputMesh / vortex code'; ErrStat=ErrID_Fatal; return
          endif
          do iSpan = 1, p%nSpan+1
-            m%s_LL    (iSpan, iW) = s_in(iSpan)
-            m%chord_LL(iSpan, iW) = p%chord(iSpan,iW)
+            p%s_LL    (iSpan, iW) = s_in(iSpan)
+            p%chord_LL(iSpan, iW) = p%chord(iSpan,iW)
          enddo
          ! --- Control points spanwise location
          ! NOTE: we use the cos approximation of VanGarrel. For equispacing, it returns mid point
          !       otherwise, points are slightly closer to panels that are shorter
-         !call Meshing('middle'           , m%s_LL(:,iW), p%nSpan, m%s_CP_LL(:,iW))
-         call Meshing('fullcosineapprox' , m%s_LL(:,iW), p%nSpan, m%s_CP_LL(:,iW))
-         call InterpArray(m%s_LL(:,iW), m%chord_LL(:,iW), m%s_CP_LL(:,iW), m%chord_CP_LL(:,iW))
+         !call Meshing('middle'           , p%s_LL(:,iW), p%nSpan, p%s_CP_LL(:,iW))
+         call Meshing('fullcosineapprox' , p%s_LL(:,iW), p%nSpan, p%s_CP_LL(:,iW))
+         call InterpArray(p%s_LL(:,iW), p%chord_LL(:,iW), p%s_CP_LL(:,iW), p%chord_CP_LL(:,iW))
       enddo
    end subroutine Wings_Panelling_Init
    !----------------------------------------------------------------------------------------------------------------------------------
@@ -144,9 +144,9 @@ contains
          do iSpan = 1,p%nSpan+1
             P_ref = Meshes(iW)%Position(1:3, iSpan )+Meshes(iW)%TranslationDisp(1:3, iSpan)
             DP_LE(1:3) =  0.0
-            DP_LE(1)   = -m%chord_LL(iSpan,iW)/4.
+            DP_LE(1)   = -p%chord_LL(iSpan,iW)/4.
             DP_TE(1:3) =  0.0
-            DP_TE(1)   = +3.*m%chord_LL(iSpan,iW)/4. 
+            DP_TE(1)   = +3.*p%chord_LL(iSpan,iW)/4. 
             m%LE(1:3, iSpan, iW) = P_ref + DP_LE(1)*Meshes(iW)%Orientation(2,1:3,iSpan)
             m%TE(1:3, iSpan, iW) = P_ref + DP_TE(1)*Meshes(iW)%Orientation(2,1:3,iSpan)
          enddo         
@@ -201,17 +201,17 @@ contains
       ! For now: placed exactly on the LL panel
       ! NOTE: separated from other loops just in case a special discretization is used
       do iW = 1,p%nWings
-         call InterpArray(m%s_LL(:,iW), m%r_LL(1,:,1,iW), m%s_CP_LL(:,iW), m%CP_LL(1,:,iW))
-         call InterpArray(m%s_LL(:,iW), m%r_LL(2,:,1,iW), m%s_CP_LL(:,iW), m%CP_LL(2,:,iW))
-         call InterpArray(m%s_LL(:,iW), m%r_LL(3,:,1,iW), m%s_CP_LL(:,iW), m%CP_LL(3,:,iW))
+         call InterpArray(p%s_LL(:,iW), m%r_LL(1,:,1,iW), p%s_CP_LL(:,iW), m%CP_LL(1,:,iW))
+         call InterpArray(p%s_LL(:,iW), m%r_LL(2,:,1,iW), p%s_CP_LL(:,iW), m%CP_LL(2,:,iW))
+         call InterpArray(p%s_LL(:,iW), m%r_LL(3,:,1,iW), p%s_CP_LL(:,iW), m%CP_LL(3,:,iW))
       enddo
 
       ! --- Structural velocity on LL
       ! TODO: difference meshes in/LL
       do iW = 1,p%nWings
-         call InterpArray(m%s_LL(:,iW), Meshes(iW)%TranslationVel(1,:) ,m%s_CP_LL(:,iW), m%Vstr_LL(1,:,iW))
-         call InterpArray(m%s_LL(:,iW), Meshes(iW)%TranslationVel(2,:) ,m%s_CP_LL(:,iW), m%Vstr_LL(2,:,iW))
-         call InterpArray(m%s_LL(:,iW), Meshes(iW)%TranslationVel(3,:) ,m%s_CP_LL(:,iW), m%Vstr_LL(3,:,iW))
+         call InterpArray(p%s_LL(:,iW), Meshes(iW)%TranslationVel(1,:) ,p%s_CP_LL(:,iW), m%Vstr_LL(1,:,iW))
+         call InterpArray(p%s_LL(:,iW), Meshes(iW)%TranslationVel(2,:) ,p%s_CP_LL(:,iW), m%Vstr_LL(2,:,iW))
+         call InterpArray(p%s_LL(:,iW), Meshes(iW)%TranslationVel(3,:) ,p%s_CP_LL(:,iW), m%Vstr_LL(3,:,iW))
       enddo
    end subroutine Wings_Panelling
 

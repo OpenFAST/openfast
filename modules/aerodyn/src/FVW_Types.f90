@@ -97,6 +97,10 @@ IMPLICIT NONE
     REAL(DbKi)  :: DTaero      !< Time interval for calls calculations [s]
     REAL(DbKi)  :: DTfvw      !< Time interval for calculating wake induced velocities [s]
     REAL(ReKi)  :: KinVisc      !< Kinematic air viscosity [m^2/s]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: s_LL      !< Spanwise coordinate of LL elements [m]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: s_CP_LL      !< Spanwise coordinate of LL CP [m]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: chord_LL      !< chord on LL nodes  [m]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: chord_CP_LL      !< chord on LL cp  [m]
     INTEGER(IntKi)  :: WrVTK      !< Outputs VTK at each calcoutput call, even if main fst doesnt do it [-]
     INTEGER(IntKi)  :: VTKBlades      !< Outputs VTk for each blade 0=no blade, 1=Bld 1 [-]
     REAL(DbKi)  :: DTvtk      !< DT between vtk writes [s]
@@ -124,10 +128,6 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: LE      !< Leading edge points [-]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: TE      !< Trailing edge points [-]
     REAL(ReKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: r_LL      !< Position    of the Lifting line panels [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: s_LL      !< Spanwise coordinate of LL elements [m]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: chord_LL      !< chord on LL nodes  [m]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: s_CP_LL      !< Spanwise coordinate of LL CP [m]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: chord_CP_LL      !< chord on LL cp  [m]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: CP_LL      !< Coordinates of LL CP [-]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: Tang      !< Unit Tangential vector on LL CP [-]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: Norm      !< Unit Normal vector on LL CP     [-]
@@ -1039,6 +1039,62 @@ ENDIF
     DstParamData%DTaero = SrcParamData%DTaero
     DstParamData%DTfvw = SrcParamData%DTfvw
     DstParamData%KinVisc = SrcParamData%KinVisc
+IF (ALLOCATED(SrcParamData%s_LL)) THEN
+  i1_l = LBOUND(SrcParamData%s_LL,1)
+  i1_u = UBOUND(SrcParamData%s_LL,1)
+  i2_l = LBOUND(SrcParamData%s_LL,2)
+  i2_u = UBOUND(SrcParamData%s_LL,2)
+  IF (.NOT. ALLOCATED(DstParamData%s_LL)) THEN 
+    ALLOCATE(DstParamData%s_LL(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%s_LL.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstParamData%s_LL = SrcParamData%s_LL
+ENDIF
+IF (ALLOCATED(SrcParamData%s_CP_LL)) THEN
+  i1_l = LBOUND(SrcParamData%s_CP_LL,1)
+  i1_u = UBOUND(SrcParamData%s_CP_LL,1)
+  i2_l = LBOUND(SrcParamData%s_CP_LL,2)
+  i2_u = UBOUND(SrcParamData%s_CP_LL,2)
+  IF (.NOT. ALLOCATED(DstParamData%s_CP_LL)) THEN 
+    ALLOCATE(DstParamData%s_CP_LL(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%s_CP_LL.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstParamData%s_CP_LL = SrcParamData%s_CP_LL
+ENDIF
+IF (ALLOCATED(SrcParamData%chord_LL)) THEN
+  i1_l = LBOUND(SrcParamData%chord_LL,1)
+  i1_u = UBOUND(SrcParamData%chord_LL,1)
+  i2_l = LBOUND(SrcParamData%chord_LL,2)
+  i2_u = UBOUND(SrcParamData%chord_LL,2)
+  IF (.NOT. ALLOCATED(DstParamData%chord_LL)) THEN 
+    ALLOCATE(DstParamData%chord_LL(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%chord_LL.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstParamData%chord_LL = SrcParamData%chord_LL
+ENDIF
+IF (ALLOCATED(SrcParamData%chord_CP_LL)) THEN
+  i1_l = LBOUND(SrcParamData%chord_CP_LL,1)
+  i1_u = UBOUND(SrcParamData%chord_CP_LL,1)
+  i2_l = LBOUND(SrcParamData%chord_CP_LL,2)
+  i2_u = UBOUND(SrcParamData%chord_CP_LL,2)
+  IF (.NOT. ALLOCATED(DstParamData%chord_CP_LL)) THEN 
+    ALLOCATE(DstParamData%chord_CP_LL(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%chord_CP_LL.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstParamData%chord_CP_LL = SrcParamData%chord_CP_LL
+ENDIF
     DstParamData%WrVTK = SrcParamData%WrVTK
     DstParamData%VTKBlades = SrcParamData%VTKBlades
     DstParamData%DTvtk = SrcParamData%DTvtk
@@ -1066,6 +1122,18 @@ IF (ALLOCATED(ParamData%Chord)) THEN
 ENDIF
 IF (ALLOCATED(ParamData%PrescribedCirculation)) THEN
   DEALLOCATE(ParamData%PrescribedCirculation)
+ENDIF
+IF (ALLOCATED(ParamData%s_LL)) THEN
+  DEALLOCATE(ParamData%s_LL)
+ENDIF
+IF (ALLOCATED(ParamData%s_CP_LL)) THEN
+  DEALLOCATE(ParamData%s_CP_LL)
+ENDIF
+IF (ALLOCATED(ParamData%chord_LL)) THEN
+  DEALLOCATE(ParamData%chord_LL)
+ENDIF
+IF (ALLOCATED(ParamData%chord_CP_LL)) THEN
+  DEALLOCATE(ParamData%chord_CP_LL)
 ENDIF
  END SUBROUTINE FVW_DestroyParam
 
@@ -1148,6 +1216,26 @@ ENDIF
       Db_BufSz   = Db_BufSz   + 1  ! DTaero
       Db_BufSz   = Db_BufSz   + 1  ! DTfvw
       Re_BufSz   = Re_BufSz   + 1  ! KinVisc
+  Int_BufSz   = Int_BufSz   + 1     ! s_LL allocated yes/no
+  IF ( ALLOCATED(InData%s_LL) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! s_LL upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%s_LL)  ! s_LL
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! s_CP_LL allocated yes/no
+  IF ( ALLOCATED(InData%s_CP_LL) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! s_CP_LL upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%s_CP_LL)  ! s_CP_LL
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! chord_LL allocated yes/no
+  IF ( ALLOCATED(InData%chord_LL) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! chord_LL upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%chord_LL)  ! chord_LL
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! chord_CP_LL allocated yes/no
+  IF ( ALLOCATED(InData%chord_CP_LL) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! chord_CP_LL upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%chord_CP_LL)  ! chord_CP_LL
+  END IF
       Int_BufSz  = Int_BufSz  + 1  ! WrVTK
       Int_BufSz  = Int_BufSz  + 1  ! VTKBlades
       Db_BufSz   = Db_BufSz   + 1  ! DTvtk
@@ -1296,6 +1384,86 @@ ENDIF
     Db_Xferred = Db_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%KinVisc
     Re_Xferred = Re_Xferred + 1
+  IF ( .NOT. ALLOCATED(InData%s_LL) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%s_LL,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%s_LL,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%s_LL,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%s_LL,2)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i2 = LBOUND(InData%s_LL,2), UBOUND(InData%s_LL,2)
+        DO i1 = LBOUND(InData%s_LL,1), UBOUND(InData%s_LL,1)
+          ReKiBuf(Re_Xferred) = InData%s_LL(i1,i2)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%s_CP_LL) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%s_CP_LL,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%s_CP_LL,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%s_CP_LL,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%s_CP_LL,2)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i2 = LBOUND(InData%s_CP_LL,2), UBOUND(InData%s_CP_LL,2)
+        DO i1 = LBOUND(InData%s_CP_LL,1), UBOUND(InData%s_CP_LL,1)
+          ReKiBuf(Re_Xferred) = InData%s_CP_LL(i1,i2)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%chord_LL) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%chord_LL,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%chord_LL,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%chord_LL,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%chord_LL,2)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i2 = LBOUND(InData%chord_LL,2), UBOUND(InData%chord_LL,2)
+        DO i1 = LBOUND(InData%chord_LL,1), UBOUND(InData%chord_LL,1)
+          ReKiBuf(Re_Xferred) = InData%chord_LL(i1,i2)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%chord_CP_LL) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%chord_CP_LL,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%chord_CP_LL,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%chord_CP_LL,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%chord_CP_LL,2)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i2 = LBOUND(InData%chord_CP_LL,2), UBOUND(InData%chord_CP_LL,2)
+        DO i1 = LBOUND(InData%chord_CP_LL,1), UBOUND(InData%chord_CP_LL,1)
+          ReKiBuf(Re_Xferred) = InData%chord_CP_LL(i1,i2)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
     IntKiBuf(Int_Xferred) = InData%WrVTK
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%VTKBlades
@@ -1470,6 +1638,98 @@ ENDIF
     Db_Xferred = Db_Xferred + 1
     OutData%KinVisc = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! s_LL not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%s_LL)) DEALLOCATE(OutData%s_LL)
+    ALLOCATE(OutData%s_LL(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%s_LL.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i2 = LBOUND(OutData%s_LL,2), UBOUND(OutData%s_LL,2)
+        DO i1 = LBOUND(OutData%s_LL,1), UBOUND(OutData%s_LL,1)
+          OutData%s_LL(i1,i2) = ReKiBuf(Re_Xferred)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! s_CP_LL not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%s_CP_LL)) DEALLOCATE(OutData%s_CP_LL)
+    ALLOCATE(OutData%s_CP_LL(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%s_CP_LL.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i2 = LBOUND(OutData%s_CP_LL,2), UBOUND(OutData%s_CP_LL,2)
+        DO i1 = LBOUND(OutData%s_CP_LL,1), UBOUND(OutData%s_CP_LL,1)
+          OutData%s_CP_LL(i1,i2) = ReKiBuf(Re_Xferred)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! chord_LL not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%chord_LL)) DEALLOCATE(OutData%chord_LL)
+    ALLOCATE(OutData%chord_LL(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%chord_LL.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i2 = LBOUND(OutData%chord_LL,2), UBOUND(OutData%chord_LL,2)
+        DO i1 = LBOUND(OutData%chord_LL,1), UBOUND(OutData%chord_LL,1)
+          OutData%chord_LL(i1,i2) = ReKiBuf(Re_Xferred)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! chord_CP_LL not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%chord_CP_LL)) DEALLOCATE(OutData%chord_CP_LL)
+    ALLOCATE(OutData%chord_CP_LL(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%chord_CP_LL.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i2 = LBOUND(OutData%chord_CP_LL,2), UBOUND(OutData%chord_CP_LL,2)
+        DO i1 = LBOUND(OutData%chord_CP_LL,1), UBOUND(OutData%chord_CP_LL,1)
+          OutData%chord_CP_LL(i1,i2) = ReKiBuf(Re_Xferred)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
     OutData%WrVTK = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%VTKBlades = IntKiBuf(Int_Xferred)
@@ -2290,62 +2550,6 @@ IF (ALLOCATED(SrcMiscData%r_LL)) THEN
   END IF
     DstMiscData%r_LL = SrcMiscData%r_LL
 ENDIF
-IF (ALLOCATED(SrcMiscData%s_LL)) THEN
-  i1_l = LBOUND(SrcMiscData%s_LL,1)
-  i1_u = UBOUND(SrcMiscData%s_LL,1)
-  i2_l = LBOUND(SrcMiscData%s_LL,2)
-  i2_u = UBOUND(SrcMiscData%s_LL,2)
-  IF (.NOT. ALLOCATED(DstMiscData%s_LL)) THEN 
-    ALLOCATE(DstMiscData%s_LL(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%s_LL.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstMiscData%s_LL = SrcMiscData%s_LL
-ENDIF
-IF (ALLOCATED(SrcMiscData%chord_LL)) THEN
-  i1_l = LBOUND(SrcMiscData%chord_LL,1)
-  i1_u = UBOUND(SrcMiscData%chord_LL,1)
-  i2_l = LBOUND(SrcMiscData%chord_LL,2)
-  i2_u = UBOUND(SrcMiscData%chord_LL,2)
-  IF (.NOT. ALLOCATED(DstMiscData%chord_LL)) THEN 
-    ALLOCATE(DstMiscData%chord_LL(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%chord_LL.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstMiscData%chord_LL = SrcMiscData%chord_LL
-ENDIF
-IF (ALLOCATED(SrcMiscData%s_CP_LL)) THEN
-  i1_l = LBOUND(SrcMiscData%s_CP_LL,1)
-  i1_u = UBOUND(SrcMiscData%s_CP_LL,1)
-  i2_l = LBOUND(SrcMiscData%s_CP_LL,2)
-  i2_u = UBOUND(SrcMiscData%s_CP_LL,2)
-  IF (.NOT. ALLOCATED(DstMiscData%s_CP_LL)) THEN 
-    ALLOCATE(DstMiscData%s_CP_LL(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%s_CP_LL.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstMiscData%s_CP_LL = SrcMiscData%s_CP_LL
-ENDIF
-IF (ALLOCATED(SrcMiscData%chord_CP_LL)) THEN
-  i1_l = LBOUND(SrcMiscData%chord_CP_LL,1)
-  i1_u = UBOUND(SrcMiscData%chord_CP_LL,1)
-  i2_l = LBOUND(SrcMiscData%chord_CP_LL,2)
-  i2_u = UBOUND(SrcMiscData%chord_CP_LL,2)
-  IF (.NOT. ALLOCATED(DstMiscData%chord_CP_LL)) THEN 
-    ALLOCATE(DstMiscData%chord_CP_LL(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%chord_CP_LL.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstMiscData%chord_CP_LL = SrcMiscData%chord_CP_LL
-ENDIF
 IF (ALLOCATED(SrcMiscData%CP_LL)) THEN
   i1_l = LBOUND(SrcMiscData%CP_LL,1)
   i1_u = UBOUND(SrcMiscData%CP_LL,1)
@@ -2992,18 +3196,6 @@ ENDIF
 IF (ALLOCATED(MiscData%r_LL)) THEN
   DEALLOCATE(MiscData%r_LL)
 ENDIF
-IF (ALLOCATED(MiscData%s_LL)) THEN
-  DEALLOCATE(MiscData%s_LL)
-ENDIF
-IF (ALLOCATED(MiscData%chord_LL)) THEN
-  DEALLOCATE(MiscData%chord_LL)
-ENDIF
-IF (ALLOCATED(MiscData%s_CP_LL)) THEN
-  DEALLOCATE(MiscData%s_CP_LL)
-ENDIF
-IF (ALLOCATED(MiscData%chord_CP_LL)) THEN
-  DEALLOCATE(MiscData%chord_CP_LL)
-ENDIF
 IF (ALLOCATED(MiscData%CP_LL)) THEN
   DEALLOCATE(MiscData%CP_LL)
 ENDIF
@@ -3190,26 +3382,6 @@ ENDIF
   IF ( ALLOCATED(InData%r_LL) ) THEN
     Int_BufSz   = Int_BufSz   + 2*4  ! r_LL upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%r_LL)  ! r_LL
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! s_LL allocated yes/no
-  IF ( ALLOCATED(InData%s_LL) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*2  ! s_LL upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%s_LL)  ! s_LL
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! chord_LL allocated yes/no
-  IF ( ALLOCATED(InData%chord_LL) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*2  ! chord_LL upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%chord_LL)  ! chord_LL
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! s_CP_LL allocated yes/no
-  IF ( ALLOCATED(InData%s_CP_LL) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*2  ! s_CP_LL upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%s_CP_LL)  ! s_CP_LL
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! chord_CP_LL allocated yes/no
-  IF ( ALLOCATED(InData%chord_CP_LL) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*2  ! chord_CP_LL upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%chord_CP_LL)  ! chord_CP_LL
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! CP_LL allocated yes/no
   IF ( ALLOCATED(InData%CP_LL) ) THEN
@@ -3683,86 +3855,6 @@ ENDIF
               Re_Xferred = Re_Xferred + 1
             END DO
           END DO
-        END DO
-      END DO
-  END IF
-  IF ( .NOT. ALLOCATED(InData%s_LL) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%s_LL,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%s_LL,1)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%s_LL,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%s_LL,2)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i2 = LBOUND(InData%s_LL,2), UBOUND(InData%s_LL,2)
-        DO i1 = LBOUND(InData%s_LL,1), UBOUND(InData%s_LL,1)
-          ReKiBuf(Re_Xferred) = InData%s_LL(i1,i2)
-          Re_Xferred = Re_Xferred + 1
-        END DO
-      END DO
-  END IF
-  IF ( .NOT. ALLOCATED(InData%chord_LL) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%chord_LL,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%chord_LL,1)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%chord_LL,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%chord_LL,2)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i2 = LBOUND(InData%chord_LL,2), UBOUND(InData%chord_LL,2)
-        DO i1 = LBOUND(InData%chord_LL,1), UBOUND(InData%chord_LL,1)
-          ReKiBuf(Re_Xferred) = InData%chord_LL(i1,i2)
-          Re_Xferred = Re_Xferred + 1
-        END DO
-      END DO
-  END IF
-  IF ( .NOT. ALLOCATED(InData%s_CP_LL) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%s_CP_LL,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%s_CP_LL,1)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%s_CP_LL,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%s_CP_LL,2)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i2 = LBOUND(InData%s_CP_LL,2), UBOUND(InData%s_CP_LL,2)
-        DO i1 = LBOUND(InData%s_CP_LL,1), UBOUND(InData%s_CP_LL,1)
-          ReKiBuf(Re_Xferred) = InData%s_CP_LL(i1,i2)
-          Re_Xferred = Re_Xferred + 1
-        END DO
-      END DO
-  END IF
-  IF ( .NOT. ALLOCATED(InData%chord_CP_LL) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%chord_CP_LL,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%chord_CP_LL,1)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%chord_CP_LL,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%chord_CP_LL,2)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i2 = LBOUND(InData%chord_CP_LL,2), UBOUND(InData%chord_CP_LL,2)
-        DO i1 = LBOUND(InData%chord_CP_LL,1), UBOUND(InData%chord_CP_LL,1)
-          ReKiBuf(Re_Xferred) = InData%chord_CP_LL(i1,i2)
-          Re_Xferred = Re_Xferred + 1
         END DO
       END DO
   END IF
@@ -5026,98 +5118,6 @@ ENDIF
               Re_Xferred = Re_Xferred + 1
             END DO
           END DO
-        END DO
-      END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! s_LL not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i2_l = IntKiBuf( Int_Xferred    )
-    i2_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%s_LL)) DEALLOCATE(OutData%s_LL)
-    ALLOCATE(OutData%s_LL(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%s_LL.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i2 = LBOUND(OutData%s_LL,2), UBOUND(OutData%s_LL,2)
-        DO i1 = LBOUND(OutData%s_LL,1), UBOUND(OutData%s_LL,1)
-          OutData%s_LL(i1,i2) = ReKiBuf(Re_Xferred)
-          Re_Xferred = Re_Xferred + 1
-        END DO
-      END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! chord_LL not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i2_l = IntKiBuf( Int_Xferred    )
-    i2_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%chord_LL)) DEALLOCATE(OutData%chord_LL)
-    ALLOCATE(OutData%chord_LL(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%chord_LL.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i2 = LBOUND(OutData%chord_LL,2), UBOUND(OutData%chord_LL,2)
-        DO i1 = LBOUND(OutData%chord_LL,1), UBOUND(OutData%chord_LL,1)
-          OutData%chord_LL(i1,i2) = ReKiBuf(Re_Xferred)
-          Re_Xferred = Re_Xferred + 1
-        END DO
-      END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! s_CP_LL not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i2_l = IntKiBuf( Int_Xferred    )
-    i2_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%s_CP_LL)) DEALLOCATE(OutData%s_CP_LL)
-    ALLOCATE(OutData%s_CP_LL(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%s_CP_LL.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i2 = LBOUND(OutData%s_CP_LL,2), UBOUND(OutData%s_CP_LL,2)
-        DO i1 = LBOUND(OutData%s_CP_LL,1), UBOUND(OutData%s_CP_LL,1)
-          OutData%s_CP_LL(i1,i2) = ReKiBuf(Re_Xferred)
-          Re_Xferred = Re_Xferred + 1
-        END DO
-      END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! chord_CP_LL not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i2_l = IntKiBuf( Int_Xferred    )
-    i2_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%chord_CP_LL)) DEALLOCATE(OutData%chord_CP_LL)
-    ALLOCATE(OutData%chord_CP_LL(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%chord_CP_LL.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i2 = LBOUND(OutData%chord_CP_LL,2), UBOUND(OutData%chord_CP_LL,2)
-        DO i1 = LBOUND(OutData%chord_CP_LL,1), UBOUND(OutData%chord_CP_LL,1)
-          OutData%chord_CP_LL(i1,i2) = ReKiBuf(Re_Xferred)
-          Re_Xferred = Re_Xferred + 1
         END DO
       END DO
   END IF

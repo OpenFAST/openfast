@@ -147,8 +147,6 @@ subroutine FVW_Init(AFInfo, InitInp, u, p, x, xd, z, OtherState, y, m, Interval,
    CALL SetRequestedWindPoints(m%r_wind, x, p, m )
    ! Return anything in FVW_InitOutput that should be passed back to the calling code here
 
-
-
    ! --- UA 
    ! NOTE: quick and dirty since this should belong to AD
    interval = InitInp%DTAero ! important, gluecode and UA, needs proper interval
@@ -193,15 +191,11 @@ subroutine FVW_InitMiscVars( p, m, ErrStat, ErrMsg )
 
    call AllocAry( m%LE      ,  3  ,  p%nSpan+1  , p%nWings, 'Leading Edge Points', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%LE = -999999_ReKi;
    call AllocAry( m%TE      ,  3  ,  p%nSpan+1  , p%nWings, 'TrailingEdge Points', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%TE = -999999_ReKi;
-   call AllocAry( m%s_LL          ,  p%nSpan+1  , p%nWings, 'Spanwise coord LL  ', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%s_LL= -999999_ReKi;
-   call AllocAry( m%chord_LL      ,  p%nSpan+1  , p%nWings, 'Chord on LL        ', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%chord_LL= -999999_ReKi;
    call AllocAry( m%PitchAndTwist ,  p%nSpan+1  , p%nWings, 'Pitch and twist    ', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%PitchAndTwist= -999999_ReKi;
    call AllocAry( m%alpha_LL,        p%nSpan    , p%nWings, 'Wind on CP ll      ', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%alpha_LL= -999999_ReKi;
    call AllocAry( m%Vreln_LL,        p%nSpan    , p%nWings, 'Wind on CP ll      ', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%Vreln_LL = -999999_ReKi;
    ! Variables at control points/elements
    call AllocAry( m%Gamma_LL,        p%nSpan    , p%nWings, 'Lifting line Circulation', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%Gamma_LL = -999999_ReKi;
-   call AllocAry( m%chord_CP_LL   ,  p%nSpan    , p%nWings, 'Chord on CP LL     ', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%chord_CP_LL= -999999_ReKi;
-   call AllocAry( m%s_CP_LL       ,  p%nSpan    , p%nWings, 'Spanwise coord CPll', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%s_CP_LL= -999999_ReKi;
    call AllocAry( m%CP_LL   , 3   ,  p%nSpan    , p%nWings, 'Control points LL  ', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%CP_LL= -999999_ReKi;
    call AllocAry( m%Tang    , 3   ,  p%nSpan    , p%nWings, 'Tangential vector  ', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%Tang= -999999_ReKi;
    call AllocAry( m%Norm    , 3   ,  p%nSpan    , p%nWings, 'Normal     vector  ', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%Norm= -999999_ReKi;
@@ -387,8 +381,8 @@ SUBROUTINE FVW_SetParametersFromInputs( InitInp, p, ErrStat, ErrMsg )
    character(*),               intent(  out) :: ErrMsg        !< Error message if ErrStat /= ErrID_None
    ! Local variables
    character(1024)          :: rootDir, baseName  ! Simulation root dir and basename
-   !integer(IntKi)          :: ErrStat2
-   !character(ErrMsgLen)    :: ErrMsg2
+   integer(IntKi)          :: ErrStat2
+   character(ErrMsgLen)    :: ErrMsg2
    character(*), parameter :: RoutineName = 'FVW_SetParametersFromInputs'
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -407,6 +401,10 @@ SUBROUTINE FVW_SetParametersFromInputs( InitInp, p, ErrStat, ErrMsg )
 
    ! Set the Chord values
    call move_alloc(InitInp%Chord, p%Chord)
+   call AllocAry(p%s_LL          ,  p%nSpan+1  , p%nWings, 'Spanwise coord LL  ', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); p%s_LL= -999999_ReKi;
+   call AllocAry(p%s_CP_LL       ,  p%nSpan    , p%nWings, 'Spanwise coord CPll', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); p%s_CP_LL= -999999_ReKi;
+   call AllocAry(p%chord_LL      ,  p%nSpan+1  , p%nWings, 'Chord on LL        ', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); p%chord_LL= -999999_ReKi;
+   call AllocAry(p%chord_CP_LL   ,  p%nSpan    , p%nWings, 'Chord on CP LL     ', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); p%chord_CP_LL= -999999_ReKi;
 
 end subroutine FVW_SetParametersFromInputs
 ! ==============================================================================
@@ -452,12 +450,12 @@ SUBROUTINE FVW_SetParametersFromInputFile( InputFileData, p, m, ErrStat, ErrMsg 
    if (allocated(p%PrescribedCirculation)) deallocate(p%PrescribedCirculation)
    if (InputFileData%CirculationMethod==idCircPrescribed) then 
       call AllocAry( p%PrescribedCirculation,  p%nSpan, 'Prescribed Circulation', ErrStat2, ErrMsg2 ); call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_SetParameters' );    p%PrescribedCirculation = -999999_ReKi;
-      if (.not. allocated(m%s_CP_LL)) then
+      if (.not. allocated(p%s_CP_LL)) then
          ErrMsg  = 'Spanwise coordinate not allocated.'
          ErrStat = ErrID_Fatal
          return
       endif
-      call ReadAndInterpGamma(trim(InputFileData%CirculationFile), m%s_CP_LL(1:p%nSpan,1), m%s_LL(p%nSpan+1,1), p%PrescribedCirculation, ErrStat2, ErrMsg2)
+      call ReadAndInterpGamma(trim(InputFileData%CirculationFile), p%s_CP_LL(1:p%nSpan,1), p%s_LL(p%nSpan+1,1), p%PrescribedCirculation, ErrStat2, ErrMsg2)
       call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_SetParameters' ); 
    endif
 
@@ -587,16 +585,6 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    call FVW_Input_ExtrapInterp(u(1:size(utimes)),utimes(:),uInterp,t, ErrStat2, ErrMsg2); if(Failed()) return
    call Wings_Panelling(uInterp%WingsMesh, p, m, ErrStat2, ErrMsg2); if(Failed()) return
    
-   ! Distribute the Wind we requested to Inflow wind to storage Misc arrays
-   CALL DistributeRequestedWind(u(1)%V_wind, p, m)
-
-   ! --- Solve for quasi steady circulation at t
-   ! TODO: this shouldn't be necessary
-   ! Returns: z%Gamma_LL (at t)
-   call AllocAry( z_guess%Gamma_LL,  p%nSpan, p%nWings, 'Lifting line Circulation', ErrStat, ErrMsg );
-   z_guess%Gamma_LL = m%Gamma_LL
-   call FVW_CalcConstrStateResidual(t, uInterp, p, x, xd, z_guess, OtherState, m, z, AFInfo, ErrStat2, ErrMsg2, 1); if(Failed()) return
-
    !  TODO convert quasi steady Gamma to unsteady gamma with UA states
 
    ! Compute UA inputs at t
@@ -604,20 +592,13 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
       call CalculateInputsAndOtherStatesForUA(1, uInterp, p, x, xd, z, OtherState, AFInfo, m, ErrStat2, ErrMsg2); if(Failed()) return
    end if
 
-   ! Map circulation and positions between LL and NW  and then NW and FW
-   ! TODO this shouldn't be necessary
-   ! Changes: x only
-   ShedScale = 1.0_ReKi
-   call Map_LL_NW(p, m, z, x, ShedScale, ErrStat2, ErrMsg2); if(Failed()) return
-   call Map_NW_FW(p, m, z, x, ErrStat2, ErrMsg2); if(Failed()) return
-   !call print_x_NW_FW(p, m, x,'Map_')
-
    ! --- Integration between t and t+DTfvw
    if (m%ComputeWakeInduced) then
       if (bOverCycling) then
           call FVW_CopyContState(x, m%x1, 0, ErrStat2, ErrMsg2) ! Backup current state at t
           m%t1=t
       endif
+      print*,'t',t,'t+dt',t+p%DTfvw,'ut',utimes
       if (p%IntMethod .eq. idEuler1) then 
         call FVW_Euler1( t, uInterp, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2); if(Failed()) return
       elseif (p%IntMethod .eq. idRK4) then 
@@ -638,6 +619,10 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
       call PropagateWake(p, m, z, x, ErrStat2, ErrMsg2); if(Failed()) return
 
       if (bOverCycling) then
+         ! NOTE:l
+         ! - we need to propagate the states at t to match the memory of state t+DTfvw
+         ! - the positions and intensities for the LL and 1st NW panels are NaN for x1 and x2,
+         !  but that's fine since these are always overwritten by the mapping 
          call PropagateWake(p, m, z, m%x1, ErrStat2, ErrMsg2); if(Failed()) return
          call FVW_CopyContState(x, m%x2, 0, ErrStat2, ErrMsg2) ! Backup current state at t+DTfvw
          m%t2=t+p%DTfvw
@@ -724,7 +709,7 @@ end subroutine FVW_UpdateStates
 
 
 !----------------------------------------------------------------------------------------------------------------------------------
-!> This is a tight coupling routine for computing derivatives of continuous states.
+!> This is a tight coupling routine for computing derivatives of continuous states. (CCSD)
 subroutine FVW_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrStat, ErrMsg )
 !..................................................................................................................................
    real(DbKi),                    intent(in   ) :: t          !< Current simulation time in seconds
@@ -754,6 +739,10 @@ subroutine FVW_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSt
       call AllocAry( dxdt%r_FW , 3   ,  FWnSpan+1  ,p%nFWMax+1,  p%nWings, 'Wind on FW ', ErrStat2, ErrMsg2); dxdt%r_FW= -999999_ReKi;
       if(Failed()) return
    endif
+
+   ! Distribute the Wind we requested to Inflow wind to storage Misc arrays
+   ! TODO ANDY: replace with direct call to inflow wind at r_NW and r_FW locations
+   CALL DistributeRequestedWind_NWFW(u%V_wind, p, m%Vwnd_NW, m%Vwnd_FW)
 
    ! Only calculate freewake after start time and if on a timestep when it should be calculated.
    if ((t>= p%FreeWakeStart)) then
@@ -880,7 +869,6 @@ subroutine FVW_ContStates_Interp(t, states, times, p, m, x, ErrStat, ErrMsg )
    endif
 
    fact = (t-times(1))/(times(2)-times(1))
-   !print*,'Fact',fact, 't',t
 
    x%r_NW     = (1_ReKi-fact) * states(1)%r_NW     + fact * states(2)%r_NW
    x%r_FW     = (1_ReKi-fact) * states(1)%r_FW     + fact * states(2)%r_FW
@@ -1174,6 +1162,11 @@ subroutine FVW_CalcConstrStateResidual( t, u, p, x, xd, z_guess, OtherState, m, 
    ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ""
+
+   ! Distribute the Wind we requested to Inflow wind to storage Misc arrays
+   ! TODO ANDY: replace with direct call to inflow wind at m%CP_LL location
+   CALL DistributeRequestedWind_LL(u%V_wind, p, m%Vwnd_LL)
+
    ! Solve for the residual of the constraint state functions here:
    !z%residual = 0.0_ReKi
    !z%Gamma_LL = 0.0_ReKi
@@ -1221,8 +1214,12 @@ subroutine FVW_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, ErrStat,
    ! OverCycling DTfvw> DTaero
    bOverCycling = p%DTfvw > p%DTaero
 
-   ! Set the wind velocity at vortex
-   CALL DistributeRequestedWind(u%V_wind, p, m)
+   ! Distribute the Wind we requested to Inflow wind to storage Misc arrays
+   ! TODO ANDY: replace with direct call to inflow wind at m%CP_LL location
+   CALL DistributeRequestedWind_LL(u%V_wind, p, m%Vwnd_LL)
+
+   ! Control points location and structrual velocity
+   CALL Wings_Panelling(u%WingsMesh, p, m, ErrStat2, ErrMsg2); if(Failed()) return
 
    ! if we are on a correction step, CalcOutput may be called again with different inputs
    ! Compute m%Gamma_LL
@@ -1238,17 +1235,10 @@ subroutine FVW_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, ErrStat,
    y%Vind(1:3,:,:) = 0.0_ReKi
    do iW=1,p%nWings
       ! --- Linear interpolation for interior points and extrapolations at boundaries
-      call interpextrap_cp2node(m%s_CP_LL(:,iW), m%Vind_LL(1,:,iW), m%s_LL(:,iW), y%Vind(1,:,iW))
-      call interpextrap_cp2node(m%s_CP_LL(:,iW), m%Vind_LL(2,:,iW), m%s_LL(:,iW), y%Vind(2,:,iW))
-      call interpextrap_cp2node(m%s_CP_LL(:,iW), m%Vind_LL(3,:,iW), m%s_LL(:,iW), y%Vind(3,:,iW))
+      call interpextrap_cp2node(p%s_CP_LL(:,iW), m%Vind_LL(1,:,iW), p%s_LL(:,iW), y%Vind(1,:,iW))
+      call interpextrap_cp2node(p%s_CP_LL(:,iW), m%Vind_LL(2,:,iW), p%s_LL(:,iW), y%Vind(2,:,iW))
+      call interpextrap_cp2node(p%s_CP_LL(:,iW), m%Vind_LL(3,:,iW), p%s_LL(:,iW), y%Vind(3,:,iW))
    enddo
-
-   ! For plotting only
-   m%Vtot_ll = m%Vind_LL + m%Vwnd_LL - m%Vstr_ll
-   if (DEV_VERSION) then
-      call print_mean_3d(m%Vind_LL,'Mean induced vel. LL')
-      call print_mean_3d(m%Vtot_LL,'Mean relativevel. LL')
-   endif
 
    ! --- Write to local VTK at fps requested
    if (m%VTKStep==-1) then 
@@ -1259,6 +1249,12 @@ subroutine FVW_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, ErrStat,
    if (p%WrVTK==1) then
       if (m%FirstCall) then
          call MKDIR(p%VTK_OutFileRoot)
+      endif
+      ! For plotting only
+      m%Vtot_LL = m%Vind_LL + m%Vwnd_LL - m%Vstr_LL
+      if (DEV_VERSION) then
+         call print_mean_3d(m%Vind_LL,'Mean induced vel. LL')
+         call print_mean_3d(m%Vtot_LL,'Mean relativevel. LL')
       endif
       if ( ( t - m%VTKlastTime ) >= p%DTvtk*OneMinusEpsilon )  then
          m%VTKlastTime = t
@@ -1279,6 +1275,9 @@ subroutine FVW_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, ErrStat,
       if (m%FirstCall) then
          call MKDIR(p%VTK_OutFileRoot)
       endif
+      ! Distribute the Wind we requested to Inflow wind to storage Misc arrays
+      ! TODO ANDY: replace with direct call to inflow wind at Grid points
+      CALL DistributeRequestedWind_Grid(u%V_wind, p, m)
       do iGrid=1,p%nGridOut
          if ( ( t - m%GridOutputs(iGrid)%tLastOutput) >= m%GridOutputs(iGrid)%DTout * OneMinusEpsilon )  then
             ! Compute induced velocity on grid, TODO use the same Tree for all CalcOutput
@@ -1421,9 +1420,9 @@ subroutine CalculateInputsAndOtherStatesForUA(InputIndex, u, p, x, xd, z, OtherS
    do j = 1,p%nWings  
       ! Induced velocity at Nodes (NOTE: we rely on storage done when computing Circulation)
       if (m%nNW>1) then
-         call interpextrap_cp2node(m%s_CP_LL(:,j), m%Vind_LL(1,:,j), m%s_LL(:,j), Vind_node(1,:))
-         call interpextrap_cp2node(m%s_CP_LL(:,j), m%Vind_LL(2,:,j), m%s_LL(:,j), Vind_node(2,:))
-         call interpextrap_cp2node(m%s_CP_LL(:,j), m%Vind_LL(3,:,j), m%s_LL(:,j), Vind_node(3,:))
+         call interpextrap_cp2node(p%s_CP_LL(:,j), m%Vind_LL(1,:,j), p%s_LL(:,j), Vind_node(1,:))
+         call interpextrap_cp2node(p%s_CP_LL(:,j), m%Vind_LL(2,:,j), p%s_LL(:,j), Vind_node(2,:))
+         call interpextrap_cp2node(p%s_CP_LL(:,j), m%Vind_LL(3,:,j), p%s_LL(:,j), Vind_node(3,:))
       else
          Vind_node=0.0_ReKi
       endif
