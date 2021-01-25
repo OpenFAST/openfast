@@ -309,9 +309,10 @@ markers are the end points of the vortex filaments. The Lagrangian convection of
 the filaments stretches the filaments and thus automatically accounts for strain
 in the vorticity equation.
 
-At present, a first-order forward Euler method is used to numerically solve the
-left-hand side of Eq. :eq:`VortFilCart` for the vortex filament location
-(**IntMethod=[5]**). This is an explicit method solved using
+At present, the Runge-Kutta 4th order (**IntMethod=[1]**) or first order forward Euler
+(**IntMethod=[5]**) methods are implemented to numerically solve the
+left-hand side of Eq. :eq:`VortFilCart` for the vortex filament location.
+In the case of the first order Euler method, the convection is then simply:
 Eq. :eq:`eq:Euler`. 
 
 .. math::
@@ -341,14 +342,6 @@ where :math:`d\psi/dt=\Omega` and
 :math:`\vec{r}(\psi,\zeta)` is the position vector of a Lagrangian
 marker, and :math:`\vec{V}[\vec{r}(\psi,\zeta)]` is the velocity.
 
-..
-   At present, first-order forward Euler method is used to numerically solve the
-   left-hand side of Eq. :eq:`VortFil_expanded` for the vortex-filament location
-   [**IntMethod=5**]. This is an explicit method solved using Eq. :eq:`Euler`.
-
-   .. math::
-      \vec{r}(\psi+\Delta\psi_i,\zeta+\Delta\zeta)  = \vec{r}(\psi,\zeta) + \vec{V}(\psi,\zeta) \Delta t
-      :label: Euler
 
 Induced Velocity and Velocity Field
 -----------------------------------
