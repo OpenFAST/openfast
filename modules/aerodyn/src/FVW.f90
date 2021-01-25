@@ -595,6 +595,10 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
 
    ! --- Integration between t and t+DTfvw
    if (m%ComputeWakeInduced) then
+
+      ! TODO TODO: this should be in CCSD, but memory is changing between time steps, so for now we have to use u(1)..
+      CALL DistributeRequestedWind_NWFW(u(1)%V_wind, p, m%Vwnd_NW, m%Vwnd_FW)
+
       if (bOverCycling) then
          ! Store states at t, and use this opportunity to store outputs at t
          call FVW_CopyContState(x, m%x1, 0, ErrStat2, ErrMsg2) ! Backup current state at t
@@ -763,7 +767,9 @@ subroutine FVW_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSt
 
    ! Distribute the Wind we requested to Inflow wind to storage Misc arrays
    ! TODO ANDY: replace with direct call to inflow wind at r_NW and r_FW locations
-   CALL DistributeRequestedWind_NWFW(u%V_wind, p, m%Vwnd_NW, m%Vwnd_FW)
+   ! NOTE: this has been commented out due to some information missing at some times (and memoery reindexing)
+   !       Call to inflow wind sould be done here at actual positions.
+   !CALL DistributeRequestedWind_NWFW(u%V_wind, p, m%Vwnd_NW, m%Vwnd_FW)
 
    ! Only calculate freewake after start time and if on a timestep when it should be calculated.
    if ((t>= p%FreeWakeStart)) then
