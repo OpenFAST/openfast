@@ -65,7 +65,7 @@ subroutine FAST_AllocateTurbines(nTurbines, ErrStat_c, ErrMsg_c) BIND (C, NAME='
    ErrMsg_c  = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_c )
    
 end subroutine FAST_AllocateTurbines
-
+!==================================================================================================================================
 subroutine FAST_DeallocateTurbines(ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_DeallocateTurbines')
    IMPLICIT NONE
 #ifndef IMPLICIT_DLLEXPORT
@@ -82,7 +82,7 @@ subroutine FAST_DeallocateTurbines(ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_Deal
    ErrStat_c = ErrID_None
    ErrMsg_c = C_NULL_CHAR
 end subroutine
-
+!==================================================================================================================================
 subroutine FAST_Sizes(iTurb, TMax, InitInpAry, InputFileName_c, AbortErrLev_c, NumOuts_c, dt_c, ErrStat_c, ErrMsg_c, ChannelNames_c) BIND (C, NAME='FAST_Sizes')
    IMPLICIT NONE 
 #ifndef IMPLICIT_DLLEXPORT

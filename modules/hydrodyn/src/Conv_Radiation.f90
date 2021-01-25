@@ -58,7 +58,7 @@ CONTAINS
 SUBROUTINE ShiftValuesLeft(XDHistory, NSteps)
 ! This routine shifts every entry in XDHistory such that XDHistory(K+1,I) is now stored in XDHistory(K,I)
 !
-      REAL(ReKi),      INTENT(INOUT)  :: XDHistory (:,:)                        ! The time history of the 3 components of the translational velocity        (in m/s)        of the WAMIT reference and the 3 components of the rotational (angular) velocity  (in rad/s)        of the platform relative to the inertial frame
+      REAL(ReKi),      INTENT(INOUT)  :: XDHistory (0:,:)                       ! The time history of the 3 components of the translational velocity        (in m/s)        of the WAMIT reference and the 3 components of the rotational (angular) velocity  (in rad/s)        of the platform relative to the inertial frame
       INTEGER(IntKi),  INTENT(IN   )  :: NSteps                                 ! Number of elements in the array
       
       INTEGER(IntKi)                  :: I
