@@ -1636,7 +1636,7 @@ SUBROUTINE Calc_WriteOutput( p, u, m, y, OtherState, xd, indx, ErrStat, ErrMsg )
    endif
 
    ! blade node tower clearance (requires tower influence calculation):
-   if (p%TwrPotent /= TwrPotent_none .or. p%TwrShadow) then
+   if (p%TwrPotent /= TwrPotent_none .or. p%TwrShadow /= TwrShadow_none) then
       do k=1,p%numBlades
          do beta=1,p%NBlOuts
             j=p%BlOutNd(beta)
@@ -1998,7 +1998,7 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InputFile, RootName, NumBlades, interv
    character(ErrMsgLen)                            :: ErrMsg2           !< Temporary Error message
    character(ErrMsgLen)                            :: ErrMsg_NoAllBldNdOuts
    integer(IntKi)                                  :: CurLine           !< current entry in FileInfo_In%Lines array
-   real(ReKi)                                      :: TmpRe3(3)         !< temporary 3 number array for reading values in
+   real(ReKi)                                      :: TmpRe4(4)         !< temporary 4 number array for reading values in
 
    character(1024)                                 :: FTitle            ! "File Title": the 2nd line of the input file, which contains a description of its contents
    character(*), parameter                         :: RoutineName = 'ParsePrimaryFileInfo'
@@ -2052,7 +2052,7 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InputFile, RootName, NumBlades, interv
       ! TwrPotent - Type tower influence on wind based on potential flow around the tower (switch) {0=none, 1=baseline potential flow, 2=potential flow with Bak correction}
    call ParseVar( FileInfo_In, CurLine, "TwrPotent", InputFileData%TwrPotent, ErrStat2, ErrMsg2, UnEc )
       if (Failed()) return
-      ! TwrShadow - Calculate tower influence on wind based on downstream tower shadow? (flag)
+      ! TwrShadow - Calculate tower influence on wind based on downstream tower shadow {0=none, 1=Powles model, 2=Eames model}
    call ParseVar( FileInfo_In, CurLine, "TwrShadow", InputFileData%TwrShadow, ErrStat2, ErrMsg2, UnEc )
       if (Failed()) return
       ! TwrAero - Calculate tower aerodynamic loads? (flag)
@@ -2195,7 +2195,7 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InputFile, RootName, NumBlades, interv
          END IF
       ! AFNames - Airfoil file names (NumAFfiles lines) (quoted strings): -- NOTE: this line may not have a keyname with it
    DO I = 1,InputFileData%NumAFfiles         ! ParseChVar allows empty keynames.
-      call ParseChVar( FileInfo_In, CurLine, "", InputFileData%AFNames(I), ErrStat2, ErrMsg2, UnEc )
+      call ParseVar( FileInfo_In, CurLine, "", InputFileData%AFNames(I), ErrStat2, ErrMsg2, UnEc )
       if (Failed()) return
       IF ( PathIsRelative( InputFileData%AFNames(I) ) ) InputFileData%AFNames(I) = TRIM(PriPath)//TRIM(InputFileData%AFNames(I))
    END DO
@@ -2215,10 +2215,10 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InputFile, RootName, NumBlades, interv
       IF ( PathIsRelative( InputFileData%ADBlFile(I) ) ) InputFileData%ADBlFile(I) = TRIM(PriPath)//TRIM(InputFileData%ADBlFile(I))
    enddo
 
-   !======  Tower Influence and Aerodynamics ============================================================= [used only when TwrPotent/=0, TwrShadow=True, or TwrAero=True]
+   !======  Tower Influence and Aerodynamics ============================================================= [used only when TwrPotent/=0, TwrShadow/=0, or TwrAero=True]
    if ( InputFileData%Echo )   WRITE(UnEc, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
    CurLine = CurLine + 1
-      ! NumTwrNds - Number of tower nodes used in the analysis  (-) [used only when TwrPotent/=0, TwrShadow=True, or TwrAero=True]
+      ! NumTwrNds - Number of tower nodes used in the analysis  (-) [used only when TwrPotent/=0, TwrShadow/=0, or TwrAero=True]
    call ParseVar( FileInfo_In, CurLine, "NumTwrNds", InputFileData%NumTwrNds, ErrStat2, ErrMsg2, UnEc )
       if (Failed()) return
       !TwrElev        TwrDiam        TwrCd
@@ -2234,13 +2234,16 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InputFile, RootName, NumBlades, interv
       if (Failed()) return
    CALL AllocAry( InputFileData%TwrCd, InputFileData%NumTwrNds, 'TwrCd', ErrStat2, ErrMsg2)
       if (Failed()) return
+   CALL AllocAry( InputFileData%TwrTI, InputFileData%NumTwrNds, 'TwrTI', ErrStat2, ErrMsg2)
+      if (Failed()) return
 
    do I=1,InputFileData%NumTwrNds
-      call ParseAry ( FileInfo_In, CurLine, 'Properties for tower node '//trim( Int2LStr( I ) )//'.', TmpRe3, 3, ErrStat2, ErrMsg2, UnEc )
+      call ParseAry ( FileInfo_In, CurLine, 'Properties for tower node '//trim( Int2LStr( I ) )//'.', TmpRe4, 4, ErrStat2, ErrMsg2, UnEc )
          if (Failed()) return;
-      InputFileData%TwrElev(I) = TmpRe3( 1)
-      InputFileData%TwrDiam(I) = TmpRe3( 2)
-      InputFileData%TwrCd(I)   = TmpRe3( 3)
+      InputFileData%TwrElev(I) = TmpRe4( 1)
+      InputFileData%TwrDiam(I) = TmpRe4( 2)
+      InputFileData%TwrCd(I)   = TmpRe4( 3)
+      InputFileData%TwrTI(I)   = TmpRe4( 4)
    end do
 
    !======  Outputs  ====================================================================================
@@ -2553,13 +2556,18 @@ SUBROUTINE AD_PrintSum( InputFileData, p, u, y, ErrStat, ErrMsg )
    
    
    ! TwrShadow
-   if (p%TwrShadow) then
-      Msg = 'Yes'
-   else
-      Msg = 'No'
-   end if   
-   WRITE (UnSu,Ec_LgFrmt) p%TwrShadow, 'TwrShadow', 'Calculate tower influence on wind based on downstream tower shadow? '//TRIM(Msg)
-   
+   select case (p%TwrShadow)
+      case (TwrShadow_Powles)
+         Msg = 'Powles tower shadow model'
+      case (TwrShadow_Eames)
+         Msg = 'Eames tower shadow model with TI values from the table' 
+      case (TwrShadow_none)
+         Msg = 'none'      
+      case default      
+         Msg = 'unknown'      
+   end select
+   WRITE (UnSu,Ec_IntFrmt) p%TwrShadow, 'TwrShadow', 'Calculate tower influence on wind based on downstream tower shadow: '//TRIM(Msg)
+    
    
    ! TwrAero
    if (p%TwrAero) then
@@ -3241,7 +3249,7 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
 !   ..... Developer must add checking for invalid inputs here: .....
    !bjj: do we want to avoid outputting this if we haven't used tower aero?
    
-   if ( p%TwrPotent == TwrPotent_none .and. .not. p%TwrShadow ) then
+   if ( p%TwrPotent == TwrPotent_none .and. p%TwrShadow == TwrShadow_none ) then
       
          ! BNClrnc is set only when we're computing the tower influence
       do i = 1,size(BNClrnc,2)  ! all blades (need to do this in a loop because we need the index of InvalidOutput to be an array of rank one)
