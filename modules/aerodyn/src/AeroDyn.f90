@@ -2548,8 +2548,6 @@ SUBROUTINE Init_FVWmodule( InputFileData, u_AD, u, p, x, xd, z, OtherState, y, m
    InitInp%UAMod      = InputFileData%UAMod
    InitInp%Flookup    = InputFileData%Flookup
    InitInp%a_s        = InputFileData%SpdSound
-call WrScr('AFAeroMod='//trim(num2lstr(InputFileData%AFAeroMod)))
-print *, InputFileData%AFAeroMod, AFAeroMod_BL_unsteady
 
       ! Copy the mesh over for InitInp to FVW.  We would not need to copy this if we decided to break the Framework
       !  by passing u_AD%BladeMotion directly into FVW_Init, but nothing is really gained by doing that.

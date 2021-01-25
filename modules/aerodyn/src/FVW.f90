@@ -1014,7 +1014,8 @@ subroutine UA_Init_Wrapper(AFInfo, InitInp, interval, p, x, xd, OtherState, m, E
    character(ErrMsgLen)   :: ErrMsg2
    ErrStat = ErrID_None
    ErrMsg  = ""
-
+   
+   m%UA_Flag=InitInp%UA_Flag
    ! --- Condensed version of BEMT_Init_Otherstate
    if ( m%UA_Flag ) then
       ErrMsg2='Unsteady aerodynamic (`AFAeroMod>1`) cannot be used with the free wake code (`WakeMod=3`) for now.'; ErrStat2=ErrID_Fatal;
