@@ -175,9 +175,13 @@ contains
             DP1                   = P6-P8
             DP2                   = P10-P9
             DP3                   = P7-P5
+
+            ! NOTE: The denominator below has seg-faulted with Intel Fortran in Release mode, possibly due to nuances in copmiler optimizations.
+            !       This code was previously after the m%Norm calculations, but moving it up "fixes" the bug.
+            m%Tang(1:3,iSpan,iW)  = (DP1)/TwoNorm(DP1)                       ! tangential unit vector, along chord
+
             m%Norm(1:3,iSpan,iW)  = cross_product(DP1,DP2)
             m%Norm(1:3,iSpan,iW)  = m%Norm(1:3,iSpan,iW)/TwoNorm(m%Norm(1:3,iSpan,iW))
-            m%Tang(1:3,iSpan,iW)  = (DP1)/TwoNorm(DP1)                       ! tangential unit vector, along chord
             ! m%Tscoord(1:3,iSpan) = (DP3)/norm2(DP3)                      ! tangential unit vector, along span, follows ref line
             m%dl  (1:3,iSpan,iW)  = DP2
             m%Orth(1:3,iSpan,iW)  = cross_product(m%Norm(1:3,iSpan,iW),m%Tang(1:3,iSpan,iW)) ! orthogonal vector to N and T

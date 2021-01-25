@@ -31,6 +31,7 @@ include_directories(
 
 set(testlist
     test_tools
+    test_BD_ComputeIniNodalCrv
     test_BD_CrvCompose
     test_BD_CheckRotMat
     test_BD_CrvExtractCrv
@@ -47,6 +48,7 @@ set(testlist
     test_BD_InitShpDerJaco
     test_BD_MemberEta
     test_BD_TrapezoidalPointWeight
+    test_InitializeNodalLocations
 )
 foreach(test ${testlist})
     set(test_dependency pfunit ${source_modulesdirectory}/${module_directory}/tests/${test}.F90)

@@ -6,6 +6,7 @@
 !**********************************************************************************************************************************
 ! LICENSING
 ! Copyright (C) 2015-2016  National Renewable Energy Laboratory
+! Copyright (C) 2017 Envision Energy USA
 !
 !    This file is part of InflowWind.
 !
@@ -73,6 +74,9 @@ SUBROUTINE DispHelpText( ErrStat, ErrMsg )
    CALL WrScr("                                    white space delimited FILE")
    CALL WrScr("                  "//SwChar//"v             -- verbose output ")
    CALL WrScr("                  "//SwChar//"vv            -- very verbose output ")
+   CALL WrScr("                  "//SwChar//"HAWC          -- convert contents of <filename> to HAWC format ")
+   CALL WrScr("                  "//SwChar//"Bladed        -- convert contents of <filename> to Bladed format ")
+   CALL WrScr("                  "//SwChar//"vtk           -- convert contents of <filename> to vtk format ")
    CALL WrScr("                  "//SwChar//"help          -- print this help menu and exit")
    CALL WrScr("")
    CALL WrScr("   Notes:")
@@ -246,7 +250,7 @@ SUBROUTINE RetrieveArgs( CLSettings, CLFlags, ErrStat, ErrMsg )
       IMPLICIT NONE
 
          ! Storing the arguments
-      TYPE( IfWDriver_Flags ),            INTENT(INOUT)  :: CLFlags      ! Flags indicating which arguments were specified
+      TYPE( IfWDriver_Flags ),            INTENT(INOUT)  :: CLFlags              ! Flags indicating which arguments were specified
       TYPE( IfWDriver_Settings ),         INTENT(INOUT)  :: CLSettings           ! Arguments passed in
 
       CHARACTER(*),                       INTENT(IN   )  :: ThisArgUC            ! The current argument (upper case for testing)
@@ -299,17 +303,26 @@ SUBROUTINE RetrieveArgs( CLSettings, CLFlags, ErrStat, ErrMsg )
          ! If no delimeters were given, than this option is simply a flag
       IF ( Delim1 == 0_IntKi ) THEN
             ! check to see if the filename is the name of the IfW input file
-         IF       ( ThisArgUC(1:3) == "IFW" )   THEN
+         IF       ( TRIM(ThisArgUC) == "IFW" )   THEN
             ifwFlagSet              = .TRUE.             ! More logic in the routine that calls this one to set things.
             RETURN
-         ELSEIF   ( ThisArgUC(1:3) == "SUM" )   THEN
+         ELSEIF   ( TRIM(ThisArgUC) == "SUM" )   THEN
             CLFlags%Summary         = .TRUE.
             RETURN
-         ELSEIF   ( ThisArgUC(1:2) == "VV"  )   THEN
+         ELSEIF   ( TRIM(ThisArgUC) == "VV"  )   THEN
             CLFlags%VVerbose        = .TRUE.
             RETURN
-         ELSEIF   ( ThisArgUC(1:1) == "V"   )   THEN
+         ELSEIF   ( TRIM(ThisArgUC) == "V"   )   THEN
             CLFlags%Verbose         = .TRUE.
+            RETURN
+         ELSEIF   ( TRIM(ThisArgUC) == "HAWC"   )   THEN
+            CLFlags%WrHAWC       = .TRUE.
+            RETURN
+         ELSEIF   ( TRIM(ThisArgUC) == "BLADED"   )   THEN
+            CLFlags%WrBladed     = .TRUE.
+            RETURN
+         ELSEIF   ( TRIM(ThisArgUC) == "VTK"   )   THEN
+            CLFlags%WrVTK        = .TRUE.
             RETURN
          ELSE
             CALL SetErrStat( ErrID_Warn," Unrecognized option '"//SwChar//TRIM(ThisArg)//"'. Ignoring. Use option "//SwChar//"help for list of options.",  &
@@ -703,7 +716,8 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
    INTEGER(IntKi)                                     :: ios                  !< I/O status
    INTEGER(IntKi)                                     :: ErrStatTmp           !< Temporary error status for calls
    CHARACTER(1024)                                    :: ErrMsgTmp            !< Temporary error messages for calls
-
+   CHARACTER(*), PARAMETER                            :: RoutineName = 'ReadDvrIptFile'
+   CHARACTER(1024)                                    :: PriPath                                   ! Path name of the primary file
 
       ! Initialize the echo file unit to -1 which is the default to prevent echoing, we will alter this based on user input
    UnEchoLocal = -1
@@ -714,7 +728,7 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
    CALL OpenFInpFile( UnIn, FileName, ErrStatTmp, ErrMsgTmp )
    IF ( ErrStatTmp /= ErrID_None ) THEN
       CALL SetErrStat(ErrID_Fatal,' Failed to open InflowWind Driver input file: '//FileName,   &
-         ErrStat,ErrMsg,'ReadDvrIptFile')
+         ErrStat,ErrMsg,RoutineName)
       CLOSE( UnIn )
       RETURN
    ENDIF
@@ -722,6 +736,7 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
 
    CALL WrScr( 'Opening InflowWind Driver input file:  '//FileName )
 
+   CALL GetPath( FileName, PriPath )    ! Input files will be relative to the path where the primary input file is located.
 
    !-------------------------------------------------------------------------------------------------
    ! File header
@@ -729,7 +744,7 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
 
    CALL ReadCom( UnIn, FileName,' InflowWind Driver input file header line 1', ErrStatTmp, ErrMsgTmp )
    IF ( ErrStatTmp /= ErrID_None ) THEN
-      CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
+      CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
       CLOSE( UnIn )
       RETURN
    ENDIF
@@ -737,7 +752,7 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
 
    CALL ReadCom( UnIn, FileName, 'InflowWind Driver input file header line 2', ErrStatTmp, ErrMsgTmp )
    IF ( ErrStatTmp /= ErrID_None ) THEN
-      CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
+      CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
       CLOSE( UnIn )
       RETURN
    ENDIF
@@ -746,7 +761,7 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
      ! Echo Input Files.
    CALL ReadVar ( UnIn, FileName, EchoFileContents, 'Echo', 'Echo Input', ErrStatTmp, ErrMsgTmp )
    IF ( ErrStatTmp /= ErrID_None ) THEN
-      CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
+      CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
       CLOSE( UnIn )
       RETURN
    ENDIF
@@ -762,7 +777,7 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
       CALL GetNewUnit( UnEchoLocal )
       CALL OpenEcho ( UnEchoLocal, EchoFileName, ErrStatTmp, ErrMsgTmp, ProgInfo )
       IF ( ErrStatTmp /= ErrID_None ) THEN
-         CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
+         CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
          CLOSE( UnIn )
          RETURN
       ENDIF
@@ -774,7 +789,7 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
          ! Reread and echo
       CALL ReadCom( UnIn, FileName,' InflowWind Driver input file header line 1', ErrStatTmp, ErrMsgTmp, UnEchoLocal )
       IF ( ErrStatTmp /= ErrID_None ) THEN
-         CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
+         CALL SetErrStat(ErrID_Fatal, ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
          CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
          CLOSE( UnIn )
          RETURN
@@ -783,7 +798,7 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
 
       CALL ReadCom( UnIn, FileName, 'InflowWind Driver input file header line 2', ErrStatTmp, ErrMsgTmp, UnEchoLocal )
       IF ( ErrStatTmp /= ErrID_None ) THEN
-         CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
+         CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
          CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
          CLOSE( UnIn )
          RETURN
@@ -793,7 +808,7 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
         ! Echo Input Files.
       CALL ReadVar ( UnIn, FileName, EchoFileContents, 'Echo', 'Echo Input', ErrStatTmp, ErrMsgTmp, UnEchoLocal )
       IF ( ErrStatTmp /= ErrID_None ) THEN
-         CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
+         CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
          CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
          CLOSE( UnIn )
          RETURN
@@ -811,31 +826,66 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
       ! Header
    CALL ReadCom( UnIn, FileName,' Driver setup section, comment line', ErrStatTmp, ErrMsgTmp, UnEchoLocal )
    IF ( ErrStatTmp /= ErrID_None ) THEN
-      CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
+      CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
       CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
       CLOSE( UnIn )
       RETURN
    ENDIF
 
 
-      ! InflowWind input file
+      ! Name of InflowWind input file
    CALL ReadVar( UnIn, FileName,DvrSettings%IfWIptFileName,'IfWIptFileName',' InflowWind input filename',   &
       ErrStatTmp,ErrMsgTmp, UnEchoLocal )
    IF ( ErrStatTmp /= ErrID_None ) THEN
-      CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
+      CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
       CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
       CLOSE( UnIn )
       RETURN
    ELSE
       DvrFlags%IfWIptFile  =  .TRUE.
    ENDIF
+   
+   IF ( PathIsRelative( DvrSettings%IfWIptFileName ) ) DvrSettings%IfWIptFileName = TRIM(PriPath)//TRIM(DvrSettings%IfWIptFileName)
+
+   !-------------------------------------------------------------------------------------------------
+   !  File Conversion Options section
+   !-------------------------------------------------------------------------------------------------
+
+      ! Header
+   CALL ReadCom( UnIn, FileName,'File Conversion Options Section Header', ErrStatTmp, ErrMsgTmp, UnEchoLocal )
+      CALL SetErrStat(ErrStatTmp, ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
+
+      ! WrHAWC
+   CALL ReadVar( UnIn, FileName, DvrFlags%WrHAWC, 'WrHAWC', 'Convert wind data to HAWC2 format?', ErrStatTmp, ErrMsgTmp, UnEchoLocal )
+      CALL SetErrStat(ErrStatTmp, ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
+      
+      ! WrBladed
+   CALL ReadVar( UnIn, FileName, DvrFlags%WrBladed, 'WrBladed', 'Convert wind data to Bladed format?', ErrStatTmp, ErrMsgTmp, UnEchoLocal )
+      CALL SetErrStat(ErrStatTmp, ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
+
+      ! WrVTK
+   CALL ReadVar( UnIn, FileName, DvrFlags%WrVTK, 'WrVTK', 'Convert wind data to VTK format?', ErrStatTmp, ErrMsgTmp, UnEchoLocal )
+      CALL SetErrStat(ErrStatTmp, ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
+
+   IF ( ErrStat >= AbortErrLev ) THEN
+      CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
+      CLOSE( UnIn )
+      RETURN
+   ENDIF
 
 
+   !-------------------------------------------------------------------------------------------------
+   !  Tests of Interpolation Options section
+   !-------------------------------------------------------------------------------------------------
+   CALL ReadCom( UnIn, FileName,'Tests of Interpolation Options Section Header', ErrStatTmp, ErrMsgTmp, UnEchoLocal )
+      CALL SetErrStat(ErrStatTmp, ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
+
+   
       ! Number of timesteps
    CALL ReadVar( UnIn, FileName,NumTimeStepsChr,'NumTimeStepsChr',' Character string for number of timesteps to read.',   &
       ErrStatTmp,ErrMsgTmp, UnEchoLocal )
    IF ( ErrStatTmp /= ErrID_None ) THEN
-      CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
+      CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
       CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
       CLOSE( UnIn )
       RETURN
@@ -864,7 +914,7 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
    CALL ReadVar( UnIn, FileName,DvrSettings%TStart,'TStart',' Time in wind file to start parsing.',   &
       ErrStatTmp,ErrMsgTmp, UnEchoLocal )
    IF ( ErrStatTmp /= ErrID_None ) THEN
-      CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
+      CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
       CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
       CLOSE( UnIn )
       RETURN
@@ -873,51 +923,11 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
    ENDIF
 
 
-      ! Summarize the extents in the windfile
-   CALL ReadVar( UnIn, FileName,DvrFlags%Summary,'Summary',' Summarize data extents in the windfile', &
-      ErrStatTmp,ErrMsgTmp, UnEchoLocal )
-   IF ( ErrStatTmp /= ErrID_None ) THEN
-      CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
-      CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
-      CLOSE( UnIn )
-      RETURN
-!   ELSE
-!      DvrFlags%Summary  =  .TRUE.
-   ENDIF
-
-
-      ! Summarize everything in a summary file/
-   CALL ReadVar( UnIn, FileName,DvrFlags%SummaryFile,'SummaryFile',' Summarize the results in a .sum file', &
-      ErrStatTmp,ErrMsgTmp, UnEchoLocal )
-   IF ( ErrStatTmp /= ErrID_None ) THEN
-      CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
-      CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
-      CLOSE( UnIn )
-      RETURN
-!   ELSE
-!      DvrFlags%SummaryFile =  .TRUE.
-   ENDIF
-
-
-   !-------------------------------------------------------------------------------------------------
-   !  InflowWind setup section
-   !-------------------------------------------------------------------------------------------------
-
-      ! Header
-   CALL ReadCom( UnIn, FileName,' InflowWind setup section, comment line', ErrStatTmp, ErrMsgTmp, UnEchoLocal )
-   IF ( ErrStatTmp /= ErrID_None ) THEN
-      CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
-      CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
-      CLOSE( UnIn )
-      RETURN
-   ENDIF
-
-
       ! DT    -- Timestep size for the driver to take (or DEFAULT for what the file contains)
    CALL ReadVar( UnIn, FileName,DTChr,'DTChr',' Character string for Timestep size for the driver to take (or DEFAULT for what the file contains).',  &
       ErrStatTmp,ErrMsgTmp, UnEchoLocal )
    IF ( ErrStatTmp /= ErrID_None ) THEN
-      CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
+      CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
       CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
       CLOSE( UnIn )
       RETURN
@@ -940,6 +950,33 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
          DvrFlags%DTDefault  =  .FALSE.
       ENDIF
    ENDIF
+   
+   
+      ! Summarize the extents in the windfile
+   CALL ReadVar( UnIn, FileName,DvrFlags%Summary,'Summary',' Summarize data extents in the windfile', &
+      ErrStatTmp,ErrMsgTmp, UnEchoLocal )
+   IF ( ErrStatTmp /= ErrID_None ) THEN
+      CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
+      CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
+      CLOSE( UnIn )
+      RETURN
+!   ELSE
+!      DvrFlags%Summary  =  .TRUE.
+   ENDIF
+
+
+      ! Summarize everything in a summary file/
+   CALL ReadVar( UnIn, FileName,DvrFlags%SummaryFile,'SummaryFile',' Summarize the results in a .sum file', &
+      ErrStatTmp,ErrMsgTmp, UnEchoLocal )
+   IF ( ErrStatTmp /= ErrID_None ) THEN
+      CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
+      CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
+      CLOSE( UnIn )
+      RETURN
+!   ELSE
+!      DvrFlags%SummaryFile =  .TRUE.
+   ENDIF
+
 
 
 #ifdef UNUSED_INPUTFILE_LINES
@@ -950,7 +987,7 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
       ! Header
    CALL ReadCom( UnIn, FileName,' FFT calculations, comment line', ErrStatTmp, ErrMsgTmp, UnEchoLocal )
    IF ( ErrStatTmp /= ErrID_None ) THEN
-      CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
+      CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
       CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
       CLOSE( UnIn )
       RETURN
@@ -961,7 +998,7 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
    CALL ReadVar( UnIn, FileName,DvrFlags%FFTcalc,'FFTcalc',' Perform an FFT?',   &
       ErrStatTmp,ErrMsgTmp, UnEchoLocal )
    IF ( ErrStatTmp /= ErrID_None ) THEN
-      CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
+      CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
       CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
       CLOSE( UnIn )
       RETURN
@@ -974,7 +1011,7 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
       CALL ReadAry ( UnIn, FileName, DvrSettings%FFTcoord, 3, 'FFTcoord', &
          'FFT coordinate', ErrStatTmp, ErrMsgTmp, UnEchoLocal)
       IF ( ErrStat /= ErrID_None ) THEN
-         CALL SetErrStat( ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
+         CALL SetErrStat( ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
          CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
          CLOSE( UnIn )
          RETURN
@@ -982,7 +1019,7 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
    ELSE
       CALL ReadCom( UnIn, FileName,' Skipping the FFT coordinate since not doint an FFT.', ErrStatTmp, ErrMsgTmp, UnEchoLocal )
       IF ( ErrStatTmp /= ErrID_None ) THEN
-         CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
+         CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
          CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
          CLOSE( UnIn )
         RETURN
@@ -998,7 +1035,7 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
       ! Header line
    CALL ReadCom( UnIn, FileName,' Points file input, comment line', ErrStatTmp, ErrMsgTmp, UnEchoLocal )
    IF ( ErrStatTmp /= ErrID_None ) THEN
-      CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
+      CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
       CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
       CLOSE( UnIn )
       RETURN
@@ -1008,34 +1045,26 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
       ! PointsFile    -- Read a points file
    CALL ReadVar( UnIn, FileName,DvrFlags%PointsFile,'PointsFile',' Read a points file?',   &
       ErrStatTmp,ErrMsgTmp, UnEchoLocal )
+      
    IF ( ErrStatTmp /= ErrID_None ) THEN
-      CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
+      CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
       CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
       CLOSE( UnIn )
       RETURN
    ENDIF
 
 
-   IF ( DvrFlags%PointsFile ) THEN
-         ! Points input file
-      CALL ReadVar( UnIn, FileName,DvrSettings%PointsFileName,'PointsFileName',' Points file input filename',   &
-         ErrStatTmp,ErrMsgTmp, UnEchoLocal )
-      IF ( ErrStatTmp /= ErrID_None ) THEN
-         CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
-         CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
-         CLOSE( UnIn )
-         RETURN
-      ENDIF
-   ELSE
-         ! Skip the next entry points file section.
-      CALL ReadCom( UnIn, FileName,' Skipping the points filename since not using it.', ErrStatTmp, ErrMsgTmp, UnEchoLocal )
-      IF ( ErrStatTmp /= ErrID_None ) THEN
-         CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
-         CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
-         CLOSE( UnIn )
-         RETURN
-      ENDIF
+      ! Points input file (unused if .not. DvrFlags%PointsFile)
+   CALL ReadVar( UnIn, FileName,DvrSettings%PointsFileName,'PointsFileName',' Points file input filename',   &
+      ErrStatTmp,ErrMsgTmp, UnEchoLocal )
+   IF ( ErrStatTmp /= ErrID_None ) THEN
+      CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
+      CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
+      CLOSE( UnIn )
+      RETURN
    ENDIF
+
+   IF ( PathIsRelative( DvrSettings%PointsFileName ) ) DvrSettings%PointsFileName = TRIM(PriPath)//TRIM(DvrSettings%PointsFileName)
 
 
 
@@ -1046,7 +1075,7 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
       ! Header
    CALL ReadCom( UnIn, FileName,' Gridded data output, comment line', ErrStatTmp, ErrMsgTmp, UnEchoLocal )
    IF ( ErrStatTmp /= ErrID_None ) THEN
-      CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
+      CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
       CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
       CLOSE( UnIn )
       RETURN
@@ -1057,7 +1086,7 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
    CALL ReadVar( UnIn, FileName,DvrFlags%WindGrid,'WindGrid',' Output a grid of data?',   &
       ErrStatTmp,ErrMsgTmp, UnEchoLocal )
    IF ( ErrStatTmp /= ErrID_None ) THEN
-      CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
+      CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
       CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
       CLOSE( UnIn )
       RETURN
@@ -1071,7 +1100,7 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
       CALL ReadAry ( UnIn, FileName, GridCtrCoord, 3, 'GridCtrCoord', &
          'Coordinate of the center of the gridded data', ErrStatTmp, ErrMsgTmp, UnEchoLocal)
       IF ( ErrStat /= ErrID_None ) THEN
-         CALL SetErrStat( ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
+         CALL SetErrStat( ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
          CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
          CLOSE( UnIn )
          RETURN
@@ -1081,7 +1110,7 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
       CALL ReadAry ( UnIn, FileName, TmpRealAr3, 3, 'GridDX, GridDY, GridDZ', &
          'GridDX, GridDY, GridDZ', ErrStatTmp, ErrMsgTmp, UnEchoLocal)
       IF ( ErrStat /= ErrID_None ) THEN
-         CALL SetErrStat( ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
+         CALL SetErrStat( ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
          CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
          CLOSE( UnIn )
          RETURN
@@ -1100,7 +1129,7 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
       CALL ReadAry ( UnIn, FileName, TmpIntAr3, 3, 'GridNx, GridNY, GridNZ', &
          'GridNx, GridNY, GridNZ', ErrStatTmp, ErrMsgTmp, UnEchoLocal)
       IF ( ErrStat /= ErrID_None ) THEN
-         CALL SetErrStat( ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
+         CALL SetErrStat( ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
          CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
          CLOSE( UnIn )
          RETURN
@@ -1114,120 +1143,135 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
       DvrFlags%YRange            =  .TRUE.               ! read in value for the Y direction gridding
       DvrFlags%ZRange            =  .TRUE.               ! read in value for the Z direction gridding
 
-   ELSE
+      
+      
+         ! Check that valid values of Dx, Dy, and Dz were read in.
+         ! Check GridDx
+      IF ( EqualRealNos(DvrSettings%GridDelta(1), 0.0_ReKi) ) THEN
+         DvrFlags%Dx                =  .FALSE.
+         DvrFlags%XRange            =  .FALSE.
+         DvrSettings%GridDelta(1)   = 0.0_ReKi
+         CALL SetErrStat(ErrID_Warn,' Grid spacing in X direction is 0.  Ignoring.',ErrStat,ErrMsg,RoutineName)
+      ENDIF
+
+         ! Check GridDy
+      IF ( EqualRealNos(DvrSettings%GridDelta(2), 0.0_ReKi) ) THEN
+         DvrFlags%Dy                =  .FALSE.
+         DvrFlags%YRange            =  .FALSE.
+         DvrSettings%GridDelta(2)   = 0.0_ReKi
+         CALL SetErrStat(ErrID_Warn,' Grid spacing in Y direction is 0.  Ignoring.',ErrStat,ErrMsg,RoutineName)
+      ENDIF
+
+         ! Check GridDz
+      IF ( EqualRealNos(DvrSettings%GridDelta(3), 0.0_ReKi) ) THEN
+         DvrFlags%Dz                =  .FALSE.
+         DvrFlags%ZRange            =  .FALSE.
+         DvrSettings%GridDelta(3)   = 0.0_ReKi
+         CALL SetErrStat(ErrID_Warn,' Grid spacing in Z direction is 0.  Ignoring.',ErrStat,ErrMsg,RoutineName)
+      ENDIF
+      
+      
+         ! Now need to set the XRange, YRange, and ZRange values based on what we read in
+         ! For XRange, check that we have an actual value for the number of points
+      IF ( (DvrSettings%GridN(1) <= 0) .OR. (.NOT. DvrFlags%XRange) ) THEN
+         DvrSettings%XRange   =  GridCtrCoord(1)
+         DvrFlags%Dx          =  .FALSE.
+         DvrFlags%XRange      =  .FALSE.
+
+         IF ( DvrSettings%GridN(1) < 0 )  THEN
+            CALL SetErrStat(ErrID_Warn,' Negative number for number of grid points along X direction.  Ignoring.',ErrStat,ErrMsg, RoutineName)
+         ELSE
+            CALL SetErrStat(ErrID_Warn,' No points along X direction.  Ignoring.',ErrStat,ErrMsg, RoutineName)
+         ENDIF
+
+         DvrSettings%GridN(1) =  1_IntKi              ! Set to 1 for easier indexing.
+
+      ELSE
+            ! Set the XRange values
+         DvrSettings%XRange(1)   =  GridCtrCoord(1) - (REAL(DvrSettings%GridN(1) - 1_IntKi ) / 2.0_ReKi ) * DvrSettings%GridDelta(1)
+         DvrSettings%XRange(2)   =  GridCtrCoord(1) + (REAL(DvrSettings%GridN(1) - 1_IntKi ) / 2.0_ReKi ) * DvrSettings%GridDelta(1)
+         DvrFlags%XRange         =  .TRUE.
+      ENDIF
+
+
+         ! For YRange, check that we have an actual value for the number of points
+      IF ( (DvrSettings%GridN(2) <= 0) .OR. (.NOT. DvrFlags%YRange) ) THEN
+         DvrSettings%YRange   =  GridCtrCoord(2)
+         DvrFlags%Dy          =  .FALSE.
+         DvrFlags%YRange      =  .FALSE.
+
+         IF ( DvrSettings%GridN(2) < 0 )  THEN
+            CALL SetErrStat(ErrID_Warn,' Negative number for number of grid points along Y direction.  Ignoring.',ErrStat,ErrMsg, RoutineName)
+         ELSE
+            CALL SetErrStat(ErrID_Warn,' No points along Y direction.  Ignoring.',ErrStat,ErrMsg, RoutineName)
+         ENDIF
+
+         DvrSettings%GridN(2) =  1_IntKi              ! Set to 1 for easier indexing.
+
+      ELSE
+            ! Set the YRange values
+         DvrSettings%YRange(1)   =  GridCtrCoord(2) - (REAL(DvrSettings%GridN(2) - 1_IntKi ) / 2.0_ReKi ) * DvrSettings%GridDelta(2)
+         DvrSettings%YRange(2)   =  GridCtrCoord(2) + (REAL(DvrSettings%GridN(2) - 1_IntKi ) / 2.0_ReKi ) * DvrSettings%GridDelta(2)
+         DvrFlags%YRange         =  .TRUE.
+      ENDIF
+
+         ! For ZRange, check that we have an actual value for the number of points, set to ctr point if negative or zero.
+      IF ( (DvrSettings%GridN(3) <= 0) .OR. (.NOT. DvrFlags%ZRange) ) THEN
+         DvrSettings%ZRange   =  abs(GridCtrCoord(3))       ! shouldn't have a negative value anyhow
+         DvrFlags%Dz          =  .FALSE.
+         DvrFlags%ZRange      =  .FALSE.
+
+         IF ( DvrSettings%GridN(3) < 0 )  THEN
+            CALL SetErrStat(ErrID_Warn,' Negative number for number of grid points along Z direction.  Ignoring.',ErrStat,ErrMsg, RoutineName)
+         ELSE
+            CALL SetErrStat(ErrID_Warn,' No points along Z direction.  Ignoring.',ErrStat,ErrMsg, 'ReadDvrIptFile')
+         ENDIF
+
+         DvrSettings%GridN(3) =  1_IntKi              ! Set to 1 for easier indexing.
+
+      ELSE
+            ! Set the ZRange values
+         DvrSettings%ZRange(1)   =  GridCtrCoord(3) - (REAL(DvrSettings%GridN(3) - 1_IntKi ) / 2.0_ReKi ) * DvrSettings%GridDelta(3)
+         DvrSettings%ZRange(2)   =  GridCtrCoord(3) + (REAL(DvrSettings%GridN(3) - 1_IntKi ) / 2.0_ReKi ) * DvrSettings%GridDelta(3)
+         DvrFlags%ZRange         =  .TRUE.
+      ENDIF
+   
+      
+   ELSE ! read these lines as comments (actually, we don't need to read them)
+      
+      
+      DvrSettings%GridDelta = 0.0_ReKi
+      DvrFlags%Dx                =  .FALSE.
+      DvrFlags%Dy                =  .FALSE.
+      DvrFlags%Dz                =  .FALSE.
+      
+      DvrSettings%GridN = 0.0_ReKi
+      DvrFlags%XRange            =  .FALSE.
+      DvrFlags%YRange            =  .FALSE.
+      DvrFlags%ZRange            =  .FALSE.
+      
          ! Skip the next three entries of the gridded data section.
       CALL ReadCom( UnIn, FileName,' Skipping the gridded data section since not calculating it.', ErrStatTmp, ErrMsgTmp, UnEchoLocal )
       IF ( ErrStatTmp /= ErrID_None ) THEN
-         CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
+         CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
          CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
          CLOSE( UnIn )
          RETURN
       ENDIF
       CALL ReadCom( UnIn, FileName,' Skipping the gridded data section since not calculating it.', ErrStatTmp, ErrMsgTmp, UnEchoLocal )
       IF ( ErrStatTmp /= ErrID_None ) THEN
-         CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
+         CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
          CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
          CLOSE( UnIn )
          RETURN
       ENDIF
       CALL ReadCom( UnIn, FileName,' Skipping the gridded data section since not calculating it.', ErrStatTmp, ErrMsgTmp, UnEchoLocal )
       IF ( ErrStatTmp /= ErrID_None ) THEN
-         CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
+         CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
          CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
          CLOSE( UnIn )
          RETURN
       ENDIF
-   ENDIF
-
-      ! Check that valid values of Dx, Dy, and Dz were read in.
-      ! Check GridDx
-   IF ( EqualRealNos(DvrSettings%GridDelta(1), 0.0_ReKi) ) THEN
-      DvrFlags%Dx                =  .FALSE.
-      DvrFlags%XRange            =  .FALSE.
-      DvrSettings%GridDelta(1)   = 0.0_ReKi
-      CALL SetErrStat(ErrID_Warn,' Grid spacing in X direction is 0.  Ignoring.',ErrStat,ErrMsg,'ReadDvrIptFile')
-   ENDIF
-
-      ! Check GridDy
-   IF ( EqualRealNos(DvrSettings%GridDelta(2), 0.0_ReKi) ) THEN
-      DvrFlags%Dy                =  .FALSE.
-      DvrFlags%YRange            =  .FALSE.
-      DvrSettings%GridDelta(2)   = 0.0_ReKi
-      CALL SetErrStat(ErrID_Warn,' Grid spacing in Y direction is 0.  Ignoring.',ErrStat,ErrMsg,'ReadDvrIptFile')
-   ENDIF
-
-      ! Check GridDz
-   IF ( EqualRealNos(DvrSettings%GridDelta(3), 0.0_ReKi) ) THEN
-      DvrFlags%Dz                =  .FALSE.
-      DvrFlags%ZRange            =  .FALSE.
-      DvrSettings%GridDelta(3)   = 0.0_ReKi
-      CALL SetErrStat(ErrID_Warn,' Grid spacing in Z direction is 0.  Ignoring.',ErrStat,ErrMsg,'ReadDvrIptFile')
-   ENDIF
-
-
-      ! Now need to set the XRange, YRange, and ZRange values based on what we read in
-      ! For XRange, check that we have an actual value for the number of points
-   IF ( (DvrSettings%GridN(1) <= 0) .OR. (.NOT. DvrFlags%XRange) ) THEN
-      DvrSettings%XRange   =  GridCtrCoord(1)
-      DvrFlags%Dx          =  .FALSE.
-      DvrFlags%XRange      =  .FALSE.
-
-      IF ( DvrSettings%GridN(1) < 0 )  THEN
-         CALL SetErrStat(ErrID_Warn,' Negative number for number of grid points along X direction.  Ignoring.',ErrStat,ErrMsg, 'ReadDvrIptFile')
-      ELSE
-         CALL SetErrStat(ErrID_Warn,' No points along X direction.  Ignoring.',ErrStat,ErrMsg, 'ReadDvrIptFile')
-      ENDIF
-
-      DvrSettings%GridN(1) =  1_IntKi              ! Set to 1 for easier indexing.
-
-   ELSE
-         ! Set the XRange values
-      DvrSettings%XRange(1)   =  GridCtrCoord(1) - (REAL(DvrSettings%GridN(1) - 1_IntKi ) / 2.0_ReKi ) * DvrSettings%GridDelta(1)
-      DvrSettings%XRange(2)   =  GridCtrCoord(1) + (REAL(DvrSettings%GridN(1) - 1_IntKi ) / 2.0_ReKi ) * DvrSettings%GridDelta(1)
-      DvrFlags%XRange         =  .TRUE.
-   ENDIF
-
-
-      ! For YRange, check that we have an actual value for the number of points
-   IF ( (DvrSettings%GridN(2) <= 0) .OR. (.NOT. DvrFlags%YRange) ) THEN
-      DvrSettings%YRange   =  GridCtrCoord(2)
-      DvrFlags%Dy          =  .FALSE.
-      DvrFlags%YRange      =  .FALSE.
-
-      IF ( DvrSettings%GridN(2) < 0 )  THEN
-         CALL SetErrStat(ErrID_Warn,' Negative number for number of grid points along Y direction.  Ignoring.',ErrStat,ErrMsg, 'ReadDvrIptFile')
-      ELSE
-         CALL SetErrStat(ErrID_Warn,' No points along Y direction.  Ignoring.',ErrStat,ErrMsg, 'ReadDvrIptFile')
-      ENDIF
-
-      DvrSettings%GridN(2) =  1_IntKi              ! Set to 1 for easier indexing.
-
-   ELSE
-         ! Set the YRange values
-      DvrSettings%YRange(1)   =  GridCtrCoord(2) - (REAL(DvrSettings%GridN(2) - 1_IntKi ) / 2.0_ReKi ) * DvrSettings%GridDelta(2)
-      DvrSettings%YRange(2)   =  GridCtrCoord(2) + (REAL(DvrSettings%GridN(2) - 1_IntKi ) / 2.0_ReKi ) * DvrSettings%GridDelta(2)
-      DvrFlags%YRange         =  .TRUE.
-   ENDIF
-
-      ! For ZRange, check that we have an actual value for the number of points, set to ctr point if negative or zero.
-   IF ( (DvrSettings%GridN(3) <= 0) .OR. (.NOT. DvrFlags%ZRange) ) THEN
-      DvrSettings%ZRange   =  abs(GridCtrCoord(3))       ! shouldn't have a negative value anyhow
-      DvrFlags%Dz          =  .FALSE.
-      DvrFlags%ZRange      =  .FALSE.
-
-      IF ( DvrSettings%GridN(3) < 0 )  THEN
-         CALL SetErrStat(ErrID_Warn,' Negative number for number of grid points along Z direction.  Ignoring.',ErrStat,ErrMsg, 'ReadDvrIptFile')
-      ELSE
-         CALL SetErrStat(ErrID_Warn,' No points along Z direction.  Ignoring.',ErrStat,ErrMsg, 'ReadDvrIptFile')
-      ENDIF
-
-      DvrSettings%GridN(3) =  1_IntKi              ! Set to 1 for easier indexing.
-
-   ELSE
-         ! Set the ZRange values
-      DvrSettings%ZRange(1)   =  GridCtrCoord(3) - (REAL(DvrSettings%GridN(3) - 1_IntKi ) / 2.0_ReKi ) * DvrSettings%GridDelta(3)
-      DvrSettings%ZRange(2)   =  GridCtrCoord(3) + (REAL(DvrSettings%GridN(3) - 1_IntKi ) / 2.0_ReKi ) * DvrSettings%GridDelta(3)
-      DvrFlags%ZRange         =  .TRUE.
    ENDIF
 
 
@@ -1284,6 +1328,10 @@ SUBROUTINE UpdateSettingsWithCL( DvrFlags, DvrSettings, CLFlags, CLSettings, DVR
    ErrStatTmp  =  ErrID_None
    ErrMsgTmp   =  ''
 
+
+   DvrFlags%WrHAWC   = DvrFlags%WrHAWC   .or. CLFlags%WrHAWC      ! create file if specified in either place
+   DvrFlags%WrBladed = DvrFlags%WrBladed .or. CLFlags%WrBladed    ! create file if specified in either place
+   DvrFlags%WrVTK    = DvrFlags%WrVTK .or. CLFlags%WrVTK          ! create file if specified in either place
 
 !      ! Due to the complexity, we are handling overwriting driver input file settings with
 !      ! command line settings and the instance where no driver input file is read separately.
@@ -2227,7 +2275,7 @@ SUBROUTINE WindGridVel_OutputWrite (FileUnit, FileName, Initialized, Settings, G
    INTEGER(IntKi)                                     :: I                    !< generic counter
 
 
-   WindVelFmt = "(F14.7,3x,F14.7,3x,F14.7,3x,F14.7,3x,F14.7,3x,F14.7)"
+   WindVelFmt = "(3(F14.7,3x),3(F10.3,3x))"
 
    ErrMsg      = ''
    ErrStat     = ErrID_None
@@ -2283,8 +2331,8 @@ SUBROUTINE PointsVel_OutputWrite (FileUnit, FileName, Initialized, Settings, Gri
    CHARACTER(*),                       INTENT(IN   )  :: FileName             !< Name of the current unit number
    LOGICAL,                            INTENT(INOUT)  :: Initialized          !< Was this file started before?
    TYPE(IfWDriver_Settings),           INTENT(IN   )  :: Settings             !< Settings for IfW driver
-   REAL(ReKi),          ALLOCATABLE,   INTENT(IN   )  :: GridXYZ(:,:)         !< The position grid passed in
-   REAL(ReKi),          ALLOCATABLE,   INTENT(IN   )  :: GridVel(:,:)         !< The velocity grid passed in
+   REAL(ReKi),                         INTENT(IN   )  :: GridXYZ(:,:)         !< The position grid passed in
+   REAL(ReKi),                         INTENT(IN   )  :: GridVel(:,:)         !< The velocity grid passed in
    REAL(DbKi),                         INTENT(IN   )  :: TIME                 !< The current time
    INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat              !< returns a non-zero value when an error occurs
    CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg               !< Error message if ErrStat /= ErrID_None
@@ -2367,6 +2415,14 @@ SUBROUTINE  printSettings( DvrFlags, DvrSettings )
    ELSE
       CALL WrScr(' NumTimeSteps:        '//FLAG(DvrFlags%NumTimeSteps)//      '      '//TRIM(Num2LStr(DvrSettings%NumTimeSteps)))
    ENDIF
+   CALL WrScr(' FFTcalc:             '//FLAG(DvrFlags%FFTcalc)//           '     ['//TRIM(Num2LStr(DvrSettings%FFTcoord(1)))//', '&
+                                                                                   //TRIM(Num2LStr(DvrSettings%FFTcoord(2)))//', '&
+                                                                                   //TRIM(Num2LStr(DvrSettings%FFTcoord(3)))//']')
+   CALL WrScr(' WindGrid:            '//FLAG(DvrFlags%WindGrid))
+if (DvrFlags%WindGrid) then
+   CALL WrScr(' GridN:                      '                                      //TRIM(Num2LStr(DvrSettings%GridN(1)))//' x '   &
+                                                                                   //TRIM(Num2LStr(DvrSettings%GridN(2)))//' x '   &
+                                                                                   //TRIM(Num2LStr(DvrSettings%GridN(3))))
    CALL WrScr(' XRange:              '//FLAG(DvrFlags%XRange)//            '      '//TRIM(Num2LStr(DvrSettings%XRange(1)))//' -- ' &
                                                                                    //TRIM(Num2LStr(DvrSettings%XRange(2))))
    CALL WrScr(' YRange:              '//FLAG(DvrFlags%YRange)//            '      '//TRIM(Num2LStr(DvrSettings%YRange(1)))//' -- ' &
@@ -2376,14 +2432,8 @@ SUBROUTINE  printSettings( DvrFlags, DvrSettings )
    CALL WrScr(' Dx:                  '//FLAG(DvrFlags%Dx)//                '      '//TRIM(Num2LStr(DvrSettings%GridDelta(1))))
    CALL WrScr(' Dy:                  '//FLAG(DvrFlags%Dy)//                '      '//TRIM(Num2LStr(DvrSettings%GridDelta(2))))
    CALL WrScr(' Dz:                  '//FLAG(DvrFlags%Dz)//                '      '//TRIM(Num2LStr(DvrSettings%GridDelta(3))))
-   CALL WrScr(' FFTcalc:             '//FLAG(DvrFlags%FFTcalc)//           '     ['//TRIM(Num2LStr(DvrSettings%FFTcoord(1)))//', '&
-                                                                                   //TRIM(Num2LStr(DvrSettings%FFTcoord(2)))//', '&
-                                                                                   //TRIM(Num2LStr(DvrSettings%FFTcoord(3)))//']')
-   CALL WrScr(' WindGrid:            '//FLAG(DvrFlags%WindGrid))
-   CALL WrScr(' GridN:                      '                                      //TRIM(Num2LStr(DvrSettings%GridN(1)))//' x '   &
-                                                                                   //TRIM(Num2LStr(DvrSettings%GridN(2)))//' x '   &
-                                                                                   //TRIM(Num2LStr(DvrSettings%GridN(3))))
    CALL WrScr(' WindGridOutputInit:  '//FLAG(DvrFlags%WindGridOutputInit)//'      Unit #:  '//TRIM(Num2LStr(DvrSettings%WindGridOutputUnit)))
+end if
    CALL WrScr(' FFTOutputInit:       '//FLAG(DvrFlags%FFTOutputInit)//     '      Unit #:  '//TRIM(Num2LStr(DvrSettings%FFTOutputUnit)))
    CALL WrScr(' PointsOutputInit:    '//FLAG(DvrFlags%PointsOutputInit)//  '      Unit #:  '//TRIM(Num2LStr(DvrSettings%PointsOutputUnit)))
    RETURN

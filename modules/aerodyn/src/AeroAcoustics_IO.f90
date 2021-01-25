@@ -474,6 +474,7 @@ type(AA_InputFile), intent(inout)   :: InputFileData                       ! All
                     InputFileData%AoAListBL(iAoA)= Buffer(iAoA, 1) ! AoA
                 enddo
         endif
+        if (UnIn > 0) CLOSE(UnIn)
 
     enddo
     CALL Cleanup( )
