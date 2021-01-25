@@ -848,7 +848,6 @@ subroutine FVW_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSt
       if(Failed()) return
    endif
    if (p%WakeRegMethod==idRegConstant) then
-      !SegEpsilon=p%WakeRegParam 
       dxdt%Eps_NW(1:3, :, :, :)=0.0_ReKi
       dxdt%Eps_FW(1:3, :, :, :)=0.0_ReKi
 
@@ -863,6 +862,7 @@ subroutine FVW_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSt
       ErrStat = ErrID_Fatal
       ErrMsg ='Regularization method not implemented'
    endif
+   dxdt%Eps_NW(1:3,:,1:iNWStart,:) = 0.0_ReKi ! LL and First NW panel epsilon does not change
 
 contains
    logical function Failed()

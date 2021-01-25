@@ -31,9 +31,11 @@ module FVW_SUBS
    integer(IntKi), parameter :: idRegAge        = 3
    integer(IntKi), parameter, dimension(2) :: idRegMethodVALID      = (/idRegConstant,idRegAge/)
    ! Regularization determination method
-   integer(IntKi), parameter :: idRegDeterManual  = 0
+   integer(IntKi), parameter :: idRegDeterConstant  = 0
    integer(IntKi), parameter :: idRegDeterAuto    = 1
-   integer(IntKi), parameter, dimension(2) :: idRegDeterVALID      = (/idRegDeterManual, idRegDeterAuto /)
+   integer(IntKi), parameter :: idRegDeterChord     = 2
+   integer(IntKi), parameter :: idRegDeterSpan      = 3
+   integer(IntKi), parameter, dimension(4) :: idRegDeterVALID      = (/idRegDeterConstant, idRegDeterAuto, idRegDeterChord, idRegDeterSpan /)
    ! Shear model
    integer(IntKi), parameter :: idShearNone   = 0
    integer(IntKi), parameter :: idShearMirror = 1
@@ -345,8 +347,6 @@ subroutine PropagateWake(p, m, z, x, ErrStat, ErrMsg)
          x%Gamma_NW(:,1:iNWStart,iW) = -999.9_ReKi ! Nullified
       enddo
    endif
-   x%Eps_NW(1:3,:,iNWStart,:) = p%WakeRegParam ! Second age is always WakeRegParam
-   x%Eps_NW(1:3,:,1:iNWStart-1,:) = p%WingRegParam ! First age is always WingRegParam (LL)
 
    ! Temporary hack for sub-cycling since straight after wkae computation, the wake size will increase
    ! So we do a "fake" propagation here
@@ -712,12 +712,12 @@ subroutine FVW_InitRegularization(x, p, m, ErrStat, ErrMsg)
    integer(IntKi),                  intent(  out) :: ErrStat    !< Error status of the operation
    character(*),                    intent(  out) :: ErrMsg     !< Error message if ErrStat /= ErrID_None
    ! Local variables
-   real(ReKi) :: ds_min, ds_max, ds_mean !< min,max and mean of spanwise sections
+   real(ReKi) :: ds_min, ds_max, ds_mean, ds !< min,max and mean of spanwise sections
    real(ReKi) :: c_min, c_max, c_mean !< min,max and mean of chord
    real(ReKi) :: d_min, d_max, d_mean !< min,max and mean of panel diagonal
    real(ReKi) :: RegParam
    real(ReKi) :: Span !< "Blade span"
-   integer :: iW
+   integer :: iW, iSpan
    ErrStat = ErrID_None
    ErrMsg  = ""
    ! --- Compute min max and mean spanwise section lengths
@@ -733,6 +733,10 @@ subroutine FVW_InitRegularization(x, p, m, ErrStat, ErrMsg)
    d_mean = sum   (m%diag_LL(:,iW))/(p%nSpan+1)
    Span    = p%s_LL(p%nSpan+1,iW)-p%s_LL(1,iW)
    RegParam = ds_mean*2
+
+   ! Default init of reg param
+   x%Eps_NW(1:3,:,:,:) = 0.0_ReKi
+   x%Eps_FW(1:3,:,:,:) = 0.0_ReKi
    if (DEV_VERSION) then
       write(*,'(A)')'-----------------------------------------------------------------------------------------'
       write(*,'(A)')'Regularization Info'
@@ -743,10 +747,19 @@ subroutine FVW_InitRegularization(x, p, m, ErrStat, ErrMsg)
       write(*,'(A,1F8.4)')   'RegParam (Recommended) : ',RegParam
       write(*,'(A,1F8.4)')   'RegParam (Input      ) : ',p%WakeRegParam
    endif
-   if (p%RegDeterMethod==idRegDeterAuto) then
+
+   if (p%RegDeterMethod==idRegDeterConstant) then
+      ! Set reg param on wing and first NW
+      ! NOTE: setting the same in all three directions for now, TODO!
+      x%Eps_NW(1:3,:,1,:) = p%WingRegParam ! First age is always WingRegParam (LL)
+      if (p%nNWMax>1) then
+         x%Eps_NW(1:3,:,2,:) = p%WakeRegParam ! Second age is always WakeRegParam
+      endif
+
+   else if (p%RegDeterMethod==idRegDeterAuto) then
       ! TODO this is beta
       print*,'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
-      print*,'!!! NOTE: using optmized wake regularization parameters is still a beta feature!'
+      print*,'!!! NOTE: using optimized wake regularization parameters is still a beta feature!'
       print*,'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
       p%WakeRegMethod      = idRegAge
       p%RegFunction        = idRegVatistas
@@ -758,69 +771,47 @@ subroutine FVW_InitRegularization(x, p, m, ErrStat, ErrMsg)
       write(*,'(A,I0)'   )   'WakeRegMethod     : ', p%WakeRegMethod
       write(*,'(A,I0)'   )   'RegFunction       : ', p%RegFunction
       write(*,'(A,1F8.4)')   'WakeRegParam      : ', p%WakeRegParam
-      write(*,'(A,1F8.4)')   'WingRegParam      : ', p%WingRegParam
+      write(*,'(A,1F8.4)')   'BladeRegParam     : ', p%WingRegParam
       write(*,'(A,1F9.4)')   'CoreSpreadEddyVisc: ', p%CoreSpreadEddyVisc
-   endif
-   ! Default init of reg param
-   x%Eps_NW(1:3,:,:,:) = 0.0_ReKi
-   x%Eps_FW(1:3,:,:,:) = 0.0_ReKi
    ! Set reg param on wing and first NW
    ! NOTE: setting the same in all three directions for now, TODO!
    x%Eps_NW(1:3,:,1,:) = p%WingRegParam ! First age is always WingRegParam (LL)
    if (p%nNWMax>1) then
       x%Eps_NW(1:3,:,2,:) = p%WakeRegParam ! Second age is always WakeRegParam
    endif
-   ! KEEP: potentially perform pre-computation here
-   !if (p%WakeRegMethod==idRegConstant) then
-   !else if (p%WakeRegMethod==idRegStretching) then
-   !else if (p%WakeRegMethod==idRegAge) then
-   !else
-   !   ErrStat = ErrID_Fatal
-   !   ErrMsg ='Regularization method not implemented'
-   !endif
-end subroutine FVW_InitRegularization
 
-
-!> Set up regularization parameter based on diffusion method and regularization method
-!! NOTE: this should preferably be done at the "panel"/vortex sheet level
-subroutine WakeRegularization(p, x, m, SegConnct, SegPoints, SegGamma, SegEpsilon, ErrStat, ErrMsg)
-   type(FVW_ParameterType),         intent(in   ) :: p       !< Parameters
-   type(FVW_ContinuousStateType),   intent(in   ) :: x       !< States
-   type(FVW_MiscVarType),           intent(in   ) :: m       !< Initial misc/optimization variables
-   integer(IntKi),dimension(:,:)  , intent(in   ) :: SegConnct  !< Segment connectivity
-   real(ReKi),    dimension(:,:)  , intent(in   ) :: SegPoints  !< Segment Points
-   real(ReKi),    dimension(:)    , intent(in   ) :: SegGamma   !< Segment Circulation
-   real(ReKi),    dimension(:)    , intent(  out) :: SegEpsilon !< Segment regularization parameter
-   integer(IntKi),                  intent(  out) :: ErrStat    !< Error status of the operation
-   character(*),                    intent(  out) :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-   ! Local variables
-   integer(IntKi) :: iSeg
-   real(ReKi) :: time
-   ErrStat = ErrID_None
-   ErrMsg  = ""
-
-   ! 
-   if (p%WakeRegMethod==idRegConstant) then
-      SegEpsilon=p%WakeRegParam 
-
-   else if (p%WakeRegMethod==idRegStretching) then
-      ! TODO
-      ErrStat = ErrID_Fatal
-      ErrMsg ='Regularization method not implemented'
-      if (.false.) print*,m%nNW,x%r_NW(1,1,1,1),SegPoints(1,1),SegGamma(1) ! Needed in the future, Just to avoid unused var warning
-
-   else if (p%WakeRegMethod==idRegAge) then
-      do iSeg=1,size(SegEpsilon,1) ! loop on segments
-         time = (SegConnct(3, iSeg)-1) * p%DTfvw ! column 3 contains "iDepth", or "iAge", from 1 to nSteps
-         SegEpsilon(iSeg) = sqrt( 4._ReKi * CoreSpreadAlpha * p%CoreSpreadEddyVisc * p%KinVisc* time  + p%WakeRegParam**2 )
+   else if (p%RegDeterMethod==idRegDeterChord) then
+      ! Using chord to scale the reg param
+      do iW=1,p%nWings
+         do iSpan=1,p%nSpan
+            x%Eps_NW(1:3, iSpan, 1, iW) = p%WingRegParam * p%chord_CP_LL(iSpan, iW)
+            if (p%nNWMax>1) then
+               x%Eps_NW(1:3, iSpan, 2, iW) = p%WakeRegParam * p%chord_CP_LL(iSpan, iW)
+            endif
+         enddo
       enddo
 
-   else
+   else if (p%RegDeterMethod==idRegDeterSpan) then
+      ! Using dr to scale the reg param
+      do iW=1,p%nWings
+         do iSpan=1,p%nSpan
+            ds = p%s_LL(iSpan+1,iW)-p%s_LL(iSpan,iW)
+            x%Eps_NW(1:3, iSpan, 1, iW) = p%WingRegParam * ds
+            if (p%nNWMax>1) then
+               x%Eps_NW(1:3, iSpan, 2, iW) = p%WakeRegParam * ds
+            endif
+         enddo
+      enddo
+   else ! Should never happen (caught earlier)
       ErrStat = ErrID_Fatal
-      ErrMsg ='Regularization method not implemented'
+      ErrMsg ='Regularization determination method not implemented' 
    endif
 
-end subroutine WakeRegularization
+   write(*,'(A,2F8.4)')    '   WakeReg (min/max) : ', minval(x%Eps_NW(:,:, 1, :)), maxval(x%Eps_NW(:,:, 1, :))
+   if (p%nNWMax>1) then
+      write(*,'(A,2F8.4)') '   BladeReg (min/max): ', minval(x%Eps_NW(:, :, 2, :)), maxval(x%Eps_NW(:, :, 2, :))
+   endif
+end subroutine FVW_InitRegularization
 
 
 !> Compute induced velocities from all vortex elements onto nPoints
@@ -912,9 +903,6 @@ subroutine InducedVelocitiesAll_Init(p, x, m, Sgmt, Part, Tree,  ErrStat, ErrMsg
    Sgmt%RegFunction=p%RegFunction
    Sgmt%nAct  = nSeg
    Sgmt%nActP = nSegP
-
-   ! --- Setting up regularization SegEpsilon
-   !call WakeRegularization(p, x, m, Sgmt%Connct, Sgmt%Points, Sgmt%Gamma, Sgmt%Epsilon(1:nSeg), ErrStat, ErrMsg)
 
    ! --- Converting to particles
    if ((p%VelocityMethod==idVelocityTree) .or. (p%VelocityMethod==idVelocityPart)) then
