@@ -180,11 +180,12 @@ potential-flow influence of the tower on the fluid flow local to the
 blade, 1 to enable the standard potential-flow model, or 2 to include
 the Bak correction in the potential-flow model. 
 
-Set the ``TwrShadow``
-flag to TRUE to include the influence of the tower on the flow local to
-the blade based on the downstream tower shadow model or FALSE to disable
-these effects. If the tower influence from potential flow and tower
-shadow are both enabled, the two influences will be superimposed. 
+Set the ``TwrShadow`` to 0 to disable to the tower shadow model,
+1 to enable the Powles tower shadow model, or 2 to use the Eames tower
+shadow model. These models calculate the influence of the tower on the 
+flow local to the blade based on the downstream tower shadow model. If
+the tower influence from potential flow and tower shadow are both
+enabled, the two influences will be superimposed. 
 
 Set the ``TwrAero`` flag to TRUE to calculate fluid drag loads on the
 tower or FALSE to disable these effects. 
@@ -379,7 +380,7 @@ Tower Influence and Aerodynamics
 
 The input parameters in this section pertain to the tower influence
 and/or tower drag calculations and are only used when ``TwrPotent`` >
-0, ``TwrShadow = TRUE``, or ``TwrAero = TRUE``.
+0, ``TwrShadow`` > 0, or ``TwrAero = TRUE``.
 
 ``NumTwrNds`` is the user-specified number of tower analysis nodes and
 determines the number of rows in the subsequent table (after two table
@@ -389,10 +390,17 @@ time; we recommend that ``NumTwrNds`` be between 10 and 20 to balance
 accuracy with computational expense. For each node, ``TwrElev``
 specifies the local elevation of the tower node above ground (or above
 MSL for offshore wind turbines or above the seabed for MHK turbines),
-``TwrDiam`` specifies the local tower diameter, and ``TwrCd``
-specifies the local tower drag-force coefficient. ``TwrElev`` must be
-entered in monotonically increasing order—from the lowest (tower-base)
-to the highest (tower-top) elevation. See Figure 2.
+``TwrDiam`` specifies the local tower diameter, ``TwrCd`` specifies the
+local tower drag-force coefficient, and ``TwrTI`` specifiest the
+turbulence intensity used in the Eames tower shadow model
+(``TwrShadow`` = 2). ``TwrElev`` must be entered in monotonically
+increasing order—from the lowest (tower-base) to the highest 
+(tower-top) elevation. Values of ``TwrTI`` between 0.05 and 0.4 are
+recommended.  Values larger than 0.4 up to 1 will trigger a warning
+that the results will need to be interpretted carefully, but the code
+will allow such values for scientific investigation purposes.
+See :numref:`fig:TwrGeom`.
+
 
 .. _AD-Outputs:
 
@@ -403,7 +411,7 @@ Specifying ``SumPrint`` to TRUE causes AeroDyn to generate a summary
 file with name ``OutFileRoot**.AD.sum*. ``OutFileRoot`` is either
 specified in the I/O SETTINGS section of the driver input file when
 running AeroDyn standalone, or by the OpenFAST program when running a
-coupled simulation. See section 5.2 for summary file details.
+coupled simulation. See :numref:`sec:ad_SumFile` for summary file details.
 
 AeroDyn can output aerodynamic and kinematic quantities at up to nine
 nodes specified along the tower and up to nine nodes along each blade.
@@ -427,6 +435,7 @@ quantities are actually output at these nodes.
 
 .. figure:: figs/ad_tower_geom.png
    :width: 60%
+   :name: fig:TwrGeom
    :align: center
 
    AeroDyn Tower Geometry

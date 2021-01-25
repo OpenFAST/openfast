@@ -1697,28 +1697,40 @@ CONTAINS
       CALL Conv2UC ( ExpUCVarName )
 
 
-         ! See which word is the variable name.  Generate an error if it is neither.
-         ! If it is the first word, check to make sure the second word is not empty.
+         !  Allow for an empty variable name to be passed.  This occurs when we have
+         !  multiple lines of items that may not have variable keys associated.  In
+         !  this case, we will assume the first word has the value and return that.
+         !  Otherwise, we will check which is the variable keyname.
+      IF ( LEN_TRIM(ExpVarName) == 0 ) THEN
+         !  There isn't actually a variable name passed in, but this satisfies the
+         !  logic for retrieving the value in the calling routine
+         NameIndx = 2
 
-      IF ( TRIM( FndUCVarName ) == TRIM( ExpUCVarName ) )  THEN
-         NameIndx = 1
-         IF ( LEN_TRIM( Words(2) ) == 0 )  THEN
-            CALL ExitThisRoutine ( ErrID_Fatal, NewLine//' >> A fatal error occurred when parsing data from "'//TRIM( FileName ) &
-                      //'".'//NewLine//' >> The variable "'//TRIM( Words(1) )//'" was not assigned a value on line #' &
-                      //TRIM( Num2LStr( FileLineNum ) )//'.' )
-            RETURN
-         ENDIF
       ELSE
-         FndUCVarName = Words(2)
-         CALL Conv2UC ( FndUCVarName )
+            ! See which word is the variable name.  Generate an error if it is neither.
+            ! If it is the first word, check to make sure the second word is not empty.
+ 
          IF ( TRIM( FndUCVarName ) == TRIM( ExpUCVarName ) )  THEN
-            NameIndx = 2
+            NameIndx = 1
+            IF ( LEN_TRIM( Words(2) ) == 0 )  THEN
+               CALL ExitThisRoutine ( ErrID_Fatal, NewLine//' >> A fatal error occurred when parsing data from "'//TRIM( FileName ) &
+                         //'".'//NewLine//' >> The variable "'//TRIM( Words(1) )//'" was not assigned a value on line #' &
+                         //TRIM( Num2LStr( FileLineNum ) )//'.' )
+               RETURN
+            ENDIF
          ELSE
-            CALL ExitThisRoutine ( ErrID_Fatal, NewLine//' >> A fatal error occurred when parsing data from "'//TRIM( FileName ) &
-                     //'".'//NewLine//' >> The variable "'//TRIM( ExpVarName )//'" was not found on line #' &
-                     //TRIM( Num2LStr( FileLineNum ) )//'.' )
-            RETURN
+            FndUCVarName = Words(2)
+            CALL Conv2UC ( FndUCVarName )
+            IF ( TRIM( FndUCVarName ) == TRIM( ExpUCVarName ) )  THEN
+               NameIndx = 2
+            ELSE
+               CALL ExitThisRoutine ( ErrID_Fatal, NewLine//' >> A fatal error occurred when parsing data from "'//TRIM( FileName ) &
+                        //'".'//NewLine//' >> The variable "'//TRIM( ExpVarName )//'" was not found on line #' &
+                        //TRIM( Num2LStr( FileLineNum ) )//'.' )
+               RETURN
+            ENDIF
          ENDIF
+
       ENDIF
 
 
@@ -3454,7 +3466,7 @@ END SUBROUTINE CheckR16Var
       
       
       CALL GetWords ( FileInfo%Lines(LineNum), Words, 2 )                     ! Read the first two words in Line.
-      IF ( Words(2) == '' )  THEN
+      IF ( Words(2) == '' .and. (LEN_TRIM(ExpVarName) > 0) )  THEN
          CALL SetErrStat ( ErrID_Fatal, 'A fatal error occurred when parsing data from "' &
                    //TRIM( FileInfo%FileList(FileInfo%FileIndx(LineNum)) )//'".'//NewLine//  &
                    ' >> The variable "'//TRIM( ExpVarName )//'" was not assigned valid string value on line #' &
