@@ -1015,9 +1015,9 @@ subroutine UA_Init( InitInp, u, p, x, xd, OtherState, y,  m, Interval, &
 
       ! Allocate and set the InitOut data
    if (p%UAMod == UA_HGM) then
-      p%NumOuts = 18
+      p%NumOuts = 19
    else
-      p%NumOuts = 43
+      p%NumOuts = 45
    end if
       
    allocate(InitOut%WriteOutputHdr(p%NumOuts*p%numBlades*p%nNodesPerBlade),STAT=ErrStat2)
@@ -1037,6 +1037,7 @@ subroutine UA_Init( InitInp, u, p, x, xd, OtherState, y,  m, Interval, &
                   
          chanPrefix = "B"//trim(num2lstr(j))//"N"//trim(num2lstr(i))
          
+         InitOut%WriteOutputHdr(iOffset+ 1)  = trim(chanPrefix)//'ALPHA'
          InitOut%WriteOutputHdr(iOffset+ 2)  = trim(chanPrefix)//'VREL'
          InitOut%WriteOutputHdr(iOffset+ 3)  = trim(chanPrefix)//'Cn'
          InitOut%WriteOutputHdr(iOffset+ 4)  = trim(chanPrefix)//'Cc'
@@ -1044,6 +1045,7 @@ subroutine UA_Init( InitInp, u, p, x, xd, OtherState, y,  m, Interval, &
          InitOut%WriteOutputHdr(iOffset+ 6)  = trim(chanPrefix)//'Cd'
          InitOut%WriteOutputHdr(iOffset+ 7)  = trim(chanPrefix)//'Cm'
          
+         InitOut%WriteOutputUnt(iOffset+ 1)  ='(deg)'
          InitOut%WriteOutputUnt(iOffset+ 2)  ='(m/s)'
          InitOut%WriteOutputUnt(iOffset+ 3)  ='(-)'
          InitOut%WriteOutputUnt(iOffset+ 4)  ='(-)'
@@ -1052,7 +1054,6 @@ subroutine UA_Init( InitInp, u, p, x, xd, OtherState, y,  m, Interval, &
          InitOut%WriteOutputUnt(iOffset+ 7)  ='(-)'
          
          if (p%UAmod == UA_HGM) then
-            InitOut%WriteOutputHdr(iOffset+ 1)  = trim(chanPrefix)//'ALPHA'
             
             InitOut%WriteOutputHdr(iOffset+ 8)  = trim(chanPrefix)//'omega'
             InitOut%WriteOutputHdr(iOffset+ 9)  = trim(chanPrefix)//'alphaE'
@@ -1066,9 +1067,8 @@ subroutine UA_Init( InitInp, u, p, x, xd, OtherState, y,  m, Interval, &
             InitOut%WriteOutputHdr(iOffset+16)  = trim(chanPrefix)//'x3'
             InitOut%WriteOutputHdr(iOffset+17)  = trim(chanPrefix)//'x4'
             InitOut%WriteOutputHdr(iOffset+18)  = trim(chanPrefix)//'k'
-
+            InitOut%WriteOutputHdr(iOffset+19)  = trim(chanPrefix)//'weight'
             
-            InitOut%WriteOutputUnt(iOffset+ 1)  ='(deg)'
 
             InitOut%WriteOutputUnt(iOffset+ 8)  = '(deg/sec)'
             InitOut%WriteOutputUnt(iOffset+ 9)  = '(deg)'
@@ -1082,10 +1082,9 @@ subroutine UA_Init( InitInp, u, p, x, xd, OtherState, y,  m, Interval, &
             InitOut%WriteOutputUnt(iOffset+16)  = '(-)'
             InitOut%WriteOutputUnt(iOffset+17)  = '(-)'
             InitOut%WriteOutputUnt(iOffset+18)  = '(-)'
+            InitOut%WriteOutputUnt(iOffset+19)  = '(-)'
 
          else
-            InitOut%WriteOutputHdr(iOffset+ 1)  = trim(chanPrefix)//'ALPHA_filt'
-         
             InitOut%WriteOutputHdr(iOffset+ 8)  = trim(chanPrefix)//'Cn_aq_circ'
             InitOut%WriteOutputHdr(iOffset+ 9)  = trim(chanPrefix)//'Cn_aq_nc'
             InitOut%WriteOutputHdr(iOffset+10)  = trim(chanPrefix)//'Cn_pot'
@@ -1122,10 +1121,10 @@ subroutine UA_Init( InitInp, u, p, x, xd, OtherState, y,  m, Interval, &
             InitOut%WriteOutputHdr(iOffset+41)  = trim(chanPrefix)//'sigma3'
             InitOut%WriteOutputHdr(iOffset+42)  = trim(chanPrefix)//'T_sh'
             InitOut%WriteOutputHdr(iOffset+43)  = trim(chanPrefix)//'k'
+            InitOut%WriteOutputHdr(iOffset+44)  = trim(chanPrefix)//'ALPHA_filt'
+            InitOut%WriteOutputHdr(iOffset+44)  = trim(chanPrefix)//'weight'
 
             
-            InitOut%WriteOutputUnt(iOffset+1)  ='(deg)'
-
             InitOut%WriteOutputUnt(iOffset+8)  ='(-)'
             InitOut%WriteOutputUnt(iOffset+9)  ='(-)'
             InitOut%WriteOutputUnt(iOffset+10) ='(-)'
@@ -1162,6 +1161,8 @@ subroutine UA_Init( InitInp, u, p, x, xd, OtherState, y,  m, Interval, &
             InitOut%WriteOutputUnt(iOffset+41) ='(-)'
             InitOut%WriteOutputUnt(iOffset+42) ='(-)'
             InitOut%WriteOutputUnt(iOffset+43) ='(-)'
+            InitOut%WriteOutputUnt(iOffset+44)  ='(deg)'
+            InitOut%WriteOutputUnt(iOffset+45) ='(-)'
          end if
          
       end do
@@ -2368,7 +2369,7 @@ subroutine UA_CalcOutput( i, j, u_in, p, x, xd, OtherState, AFInfo, y, misc, Err
       KC%Dalphaf           = 0.0_ReKi
       KC%T_f               = 0.0_ReKi
       KC%T_V               = 0.0_ReKi
-      KC%alpha_filt_cur    = 0.0_ReKi
+      KC%alpha_filt_cur    = u%alpha
       KC%ds                = 2.0_ReKi*u%U*p%dt/p%c(i, j)
       
       alphaE   = 0.0
@@ -2572,6 +2573,7 @@ subroutine UA_CalcOutput( i, j, u_in, p, x, xd, OtherState, AFInfo, y, misc, Err
    iOffset = (i-1)*p%NumOuts + (j-1)*p%nNodesPerBlade*p%NumOuts
    if (allocated(y%WriteOutput)) then  !bjj: because BEMT uses local variables for UA output, y%WriteOutput is not necessarially allocated. Need to figure out a better solution.
    
+      y%WriteOutput(iOffset+ 1)    = u%alpha*R2D
       y%WriteOutput(iOffset+ 2)    = u%U
       y%WriteOutput(iOffset+ 3)    = y%Cn
       y%WriteOutput(iOffset+ 4)    = y%Cc
@@ -2580,8 +2582,6 @@ subroutine UA_CalcOutput( i, j, u_in, p, x, xd, OtherState, AFInfo, y, misc, Err
       y%WriteOutput(iOffset+ 7)    = y%Cm
    
       if (p%UAMod == UA_HGM) then
-
-         y%WriteOutput(iOffset+ 1)    = u%alpha*R2D
 
          y%WriteOutput(iOffset+ 8)    = u%omega*R2D
          y%WriteOutput(iOffset+ 9)    = alphaE*R2D
@@ -2595,10 +2595,9 @@ subroutine UA_CalcOutput( i, j, u_in, p, x, xd, OtherState, AFInfo, y, misc, Err
          y%WriteOutput(iOffset+16)    = x%element(i,j)%x(3)
          y%WriteOutput(iOffset+17)    = x%element(i,j)%x(4)
          y%WriteOutput(iOffset+18)    = k
+         y%WriteOutput(iOffset+19)    = misc%weight(i,j)
 
       else
-         y%WriteOutput(iOffset+ 1)    = KC%alpha_filt_cur*R2D
-         
          y%WriteOutput(iOffset+ 8)    = KC%Cn_alpha_q_circ               ! CNCP in ADv14
          y%WriteOutput(iOffset+ 9)    = KC%Cn_alpha_q_nc                 ! CNIQ in ADv14
          y%WriteOutput(iOffset+10)    = KC%Cn_pot
@@ -2649,6 +2648,8 @@ subroutine UA_CalcOutput( i, j, u_in, p, x, xd, OtherState, AFInfo, y, misc, Err
          y%WriteOutput(iOffset+41)    = OtherState%sigma3(i, j)
          y%WriteOutput(iOffset+42)    = misc%T_sh(i, j)
          y%WriteOutput(iOffset+43)    = k
+         y%WriteOutput(iOffset+44)    = KC%alpha_filt_cur*R2D
+         y%WriteOutput(iOffset+45)    = misc%weight(i,j)
       end if
    end if
 #endif
