@@ -30,7 +30,7 @@ We recommend to set OLAF's time step (**DTfvw**) such that it corresponds to :ma
 .. math::
    
     \Delta t
-    = \frac{\Delta \psi_\text{rad}}{\times \Omega_\text{rad/s}}
+    = \frac{\Delta \psi_\text{rad}}{\Omega_\text{rad/s}}
     = \frac{\Delta \psi_\text{deg}}{6 \times \Omega_\text{RPM}}
 
 If the structural solver requires a smaller time step, the time step for the glue code can be set to a different value than **DTfvw** as long as **DTfvw** is a multiple of the glue code time step.
@@ -90,7 +90,7 @@ We also recommend to have the regularization increasing with downstream distance
 **WakeRegMethod=3**. 
 
 The factor with which the regularization parameter will increase with downstream distance can be set as
-**CoreSpreadEddyVisc=1000** for modern multi-MW turbines. Further guidelines will follow on this parameter in the future. 
+**CoreSpreadEddyVisc=1000** for modern multi-MW turbines. Further guidelines will follow for this parameter in the future. 
 
 
 
