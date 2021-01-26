@@ -2440,7 +2440,79 @@ SUBROUTINE Morison_UpdateStates( Time, u, p, x, xd, z, OtherState, m, errStat, e
 
       
 END SUBROUTINE Morison_UpdateStates
+!> This routine is similar to InterpWrappedStpReal, except it returns only the slope for the interpolation.
+!! By returning the slope based on Time, we don't have to calculate this for every variable (Yary) we want to interpolate.
+!! NOTE: p%WaveTime (and most arrays here) start with index of 0 instead of 1, so we will subtract 1 from "normal" interpolation
+!! schemes.
+FUNCTION GetInterpolationSlope(Time, p, m, IntWrapIndx) RESULT( InterpSlope )
+      REAL(DbKi),                        INTENT(IN   )  :: Time        !< Current simulation time in seconds
+      TYPE(Morison_ParameterType),       INTENT(IN   )  :: p           !< Parameters
+      TYPE(Morison_MiscVarType),         INTENT(INOUT)  :: m           !< Misc/optimization variables            
+      INTEGER, OPTIONAL,                 INTENT(  OUT)  :: IntWrapIndx
 
+      REAL(SiKi)                                        :: Time_SiKi
+      REAL(SiKi)                                        :: TimeMod
+      REAL(ReKi)                                        :: InterpSlope
+
+      Time_SiKi = REAL(Time, SiKi)
+      TimeMod = MOD(Time_SiKi, p%WaveTime(p%NStepWave)) !p%WaveTime starts at index 0, so it has p%NStepWave+1 elements
+      IF ( TimeMod <= p%WaveTime(1) )  THEN !second element
+         m%LastIndWave = 0
+      END IF
+      
+      IF ( TimeMod <= p%WaveTime(0) )  THEN
+         m%LastIndWave = 0
+         InterpSlope = 0.0_ReKi  ! returns values at m%LastIndWave
+         IF(PRESENT(IntWrapIndx)) IntWrapIndx = 0
+      ELSE IF ( TimeMod >= p%WaveTime(p%NStepWave) )  THEN
+         m%LastIndWave = p%NStepWave-1
+         InterpSlope = 1.0_ReKi  ! returns values at p%NStepWave
+         IF(PRESENT(IntWrapIndx)) IntWrapIndx = p%NStepWave
+      ELSE
+         m%LastIndWave = MAX( MIN( m%LastIndWave, p%NStepWave-1 ), 0 )
+
+         DO
+
+            IF ( TimeMod < p%WaveTime(m%LastIndWave) )  THEN
+
+               m%LastIndWave = m%LastIndWave - 1
+
+            ELSE IF ( TimeMod >= p%WaveTime(m%LastIndWave+1) )  THEN
+
+               m%LastIndWave = m%LastIndWave + 1
+
+            ELSE
+               IF(PRESENT(IntWrapIndx)) IntWrapIndx = m%LastIndWave
+               
+               InterpSlope = ( TimeMod - p%WaveTime(m%LastIndWave) )/( p%WaveTime(m%LastIndWave+1) - p%WaveTime(m%LastIndWave) )
+               RETURN ! stop checking DO loop
+            END IF
+
+         END DO
+   
+      END IF
+      
+END FUNCTION GetInterpolationSlope
+!> Use in conjunction with GetInterpolationSlope, to replace InterpWrappedStpReal here.
+FUNCTION InterpolateWithSlope(InterpSlope, Ind, YAry)
+      REAL(ReKi), INTENT(IN)                            :: InterpSlope
+      INTEGER(IntKi), INTENT(IN )                       :: Ind           !< Misc/optimization variables
+      REAL(SiKi), INTENT(IN)                            :: YAry(0:)
+      REAL(ReKi)                                        :: InterpolateWithSlope
+
+      InterpolateWithSlope = ( YAry(Ind+1) - YAry(Ind) )*InterpSlope + YAry(Ind)
+
+END FUNCTION InterpolateWithSlope
+!> Use in conjunction with GetInterpolationSlope, to replace InterpWrappedStpReal here.
+FUNCTION InterpolateWithSlopeR(InterpSlope, Ind, YAry)
+      REAL(ReKi), INTENT(IN)                            :: InterpSlope
+      INTEGER(IntKi), INTENT(IN )                       :: Ind           !< Misc/optimization variables
+      REAL(ReKi), INTENT(IN)                            :: YAry(0:)
+      REAL(ReKi)                                        :: InterpolateWithSlopeR
+
+      InterpolateWithSlopeR = ( YAry(Ind+1) - YAry(Ind) )*InterpSlope + YAry(Ind)
+
+END FUNCTION InterpolateWithSlopeR
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine for computing outputs, used in both loose and tight coupling.
 SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )   
@@ -2465,7 +2537,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    CHARACTER(errMsgLen)                              :: errMsg2     ! Error message if errStat2 /= ErrID_None
       
    REAL(ReKi)                                        :: F_DP(6), kvec(3), v(3),  vf(3), vrel(3), vmag
-   INTEGER                                           :: I, J, K, nodeIndx
+   INTEGER                                           :: I, J, K, nodeIndx, IntWrapIndx
    REAL(ReKi)                                        :: AllOuts(MaxMrsnOutputs)
    REAL(ReKi)                                        :: qdotdot(6) ,qdotdot2(3)     ! The structural acceleration of a mesh node
    !REAL(ReKi)                                        :: accel_fluid(6) ! Acceleration of fluid at the mesh node
@@ -2476,7 +2548,9 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    REAL(ReKi)                                        :: D_AM_M(6,6)
    REAL(ReKi)                                        :: nodeInWater
    REAL(ReKi)                                        :: D_dragConst     ! The distributed drag factor
-      
+   REAL(ReKi)                                        :: InterpolationSlope 
+
+
       
    TYPE(Morison_MemberType) :: mem     ! the current member
    INTEGER                  :: N       ! Number of elements within a given member
@@ -2541,22 +2615,21 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    Imat    = 0.0_ReKi   
    g       = p%Gravity
    
+   InterpolationSlope = GetInterpolationSlope(Time, p, m, IntWrapIndx)
+
    !===============================================================================================
    ! Calculate the fluid kinematics at all mesh nodes and store for use in the equations below
    
    do j = 1, p%NNodes
-      m%nodeInWater(j) = REAL( InterpWrappedStpInt( REAL(Time, SiKi), p%WaveTime(:), p%nodeInWater(:,j), m%LastIndWave, p%NStepWave + 1 ), ReKi )
+      m%nodeInWater(j) = REAL( p%nodeInWater(IntWrapIndx,j), ReKi )
       
          ! Determine the dynamic pressure at the node
-      m%FDynP(j) = InterpWrappedStpReal ( REAL(Time, SiKi), p%WaveTime(:), p%WaveDynP(:,j), &
-                                 m%LastIndWave, p%NStepWave + 1       )
+      m%FDynP(j) = InterpolateWithSlope(InterpolationSlope, m%LastIndWave, p%WaveDynP(:,j))
       do i=1,3
             ! Determine the fluid acceleration and velocity and relative structural velocity at the node
-         m%FA(i,j) = InterpWrappedStpReal ( REAL(Time, SiKi), p%WaveTime(:), p%WaveAcc(:,j,i), &
-                                 m%LastIndWave, p%NStepWave + 1       )
+         m%FA(i,j) = InterpolateWithSlope(InterpolationSlope, m%LastIndWave, p%WaveAcc(:,j,i)) 
                
-         m%FV(i,j) = InterpWrappedStpReal ( REAL(Time, SiKi), p%WaveTime(:), p%WaveVel(:,j,i), &
-                                 m%LastIndWave, p%NStepWave + 1       )
+         m%FV(i,j) = InterpolateWithSlope(InterpolationSlope, m%LastIndWave, p%WaveVel(:,j,i)) 
          m%vrel(i,j) = m%FV(i,j) - u%Mesh%TranslationVel(i,j)
       end do
    end do
@@ -2827,7 +2900,6 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       
          ! ------------------ flooded ballast inertia: sides: Section 6.1.1 : Always compute regardless of PropPot setting ---------------------
 
-!FIXME: these calculations use the mass of the fully filled volume and do not account for FillFSLoc... yet
          ! lower node
          Ioffset   = mem%h_cfb_l(i)*mem%h_cfb_l(i)*mem%m_fb_l(i)
          Imat(1,1) = mem%I_rfb_l(i) - Ioffset
