@@ -798,7 +798,7 @@ subroutine Set_SrvD_Outs( p, y, m, AllOuts )
 
    AllOuts(YawMomCom) = -0.001*y%YawMom
 
-end subroutine Set_Srvd_Outs
+end subroutine Set_SrvD_Outs
 !---------------------------
 subroutine Set_NStC_Outs( p_SrvD, x, m, y, AllOuts )     ! Nacelle
    type(SrvD_ParameterType),                    intent(in   )  :: p_SrvD               !< Parameters
@@ -1023,6 +1023,7 @@ subroutine ParseInputFileInfo( PriPath, InputFile, OutFileRoot, FileInfo_In, Inp
       call ParseVar( FileInfo_In, CurLine, trim(TmpChr), InputFileData%PitManRat(i), ErrStat2, ErrMsg2, UnEcho )
          if (Failed())  return;
    enddo
+   InputFileData%PitManRat = InputFileData%PitManRat*D2R
 
       !  BlPitchF       - Blade 1 final pitch for pitch maneuvers (degrees)
    do i=1,size(InputFileData%BlPitchF)
