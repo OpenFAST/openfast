@@ -294,7 +294,7 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       !............................................................................................
       
       ! Initialize AFI module (read Airfoil tables)
-   call Init_AFIparams( InputFileData, p%AFI, UnEcho, p%NumBlades, ErrStat2, ErrMsg2 )
+   call Init_AFIparams( InputFileData, p%AFI, UnEcho, ErrStat2, ErrMsg2 )
    if (Failed()) return;
          
       
@@ -333,7 +333,8 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
          call Init_AAmodule( InitInp, InputFileData, u, m%AA_u, p, x%AA, xd%AA, z%AA, OtherState%AA, m%AA_y, m%AA, ErrStat2, ErrMsg2 )
          if (Failed()) return;
       end if   
-   endif
+
+   else ! if (p%WakeMod == WakeMod_FVW) then
 
       !-------------------------------------------------------------------------------------------------
       ! Initialize FVW module if it is used
@@ -342,7 +343,7 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       ! so we can't size things exactly.  This means that we either must size too big here, or we must
       ! resize in the FVW code at the first CalcOutput call.  This is a bit problematic for efficiency
       ! but not a complete deal-breaker.
-   if (p%WakeMod == WakeMod_FVW) then
+   
       if (.not. allocated(m%FVW_u))   Allocate(m%FVW_u(3))  !size(u)))
       call Init_FVWmodule( InputFileData, u, m%FVW_u(1), p, x%FVW, xd%FVW, z%FVW, &
                               OtherState%FVW, m%FVW_y, m%FVW, ErrStat2, ErrMsg2 )
@@ -451,6 +452,8 @@ subroutine AD_ReInit(p, x, xd, z, OtherState, m, Interval, ErrStat, ErrMsg )
    integer(IntKi),               intent(  out) :: errStat       !< Error status of the operation
    character(*),                 intent(  out) :: errMsg        !< Error message if ErrStat /= ErrID_None
 
+   integer(IntKi)                              :: ErrStat2
+   character(ErrMsgLen)                        :: ErrMsg2
    character(*), parameter                     :: RoutineName = 'AD_ReInit'
 
    
@@ -463,9 +466,16 @@ subroutine AD_ReInit(p, x, xd, z, OtherState, m, Interval, ErrStat, ErrMsg )
       ! we could get around this by figuring out what needs to change when we modify the dt parameter... probably just some unused-parameters
       ! and the UA filter
    end if
+      
+   if (p%WakeMod /= WakeMod_FVW) then
+      call BEMT_ReInit(p%BEMT,x%BEMT,xd%BEMT,z%BEMT,OtherState%BEMT,m%BEMT,ErrStat,ErrMsg)
 
-   if (p%WakeMod /= WakeMod_FVW) &
-      call BEMT_ReInit(p%BEMT,x%BEMT,xd%BEMT,z%BEMT,OtherState%BEMT,m%BEMT,p%AFI,ErrStat,ErrMsg)
+      if (p%BEMT%UA_Flag) then
+         call UA_ReInit( p%BEMT%UA, p%AFI, p%BEMT%AFIndx, x%BEMT%UA, xd%BEMT%UA, OtherState%BEMT%UA, m%BEMT%UA, ErrStat2, ErrMsg2 )
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      end if
+   end if
+
       
 end subroutine AD_ReInit
 !----------------------------------------------------------------------------------------------------------------------------------   
@@ -755,147 +765,151 @@ subroutine Init_u( u, p, InputFileData, InitInp, errStat, errMsg )
       
    end if ! we compute tower loads
    
-         !................
-         ! hub
-         !................
+      !................
+      ! hub
+      !................
    
-      call MeshCreate ( BlankMesh = u%HubMotion     &
-                       ,IOS       = COMPONENT_INPUT &
-                       ,Nnodes    = 1               &
-                       ,ErrStat   = ErrStat2        &
-                       ,ErrMess   = ErrMsg2         &
-                       ,Orientation     = .true.    &
-                       ,TranslationDisp = .true.    &
-                       ,RotationVel     = .true.    &
-                      )
+   call MeshCreate ( BlankMesh  = u%HubMotion     &
+                     ,IOS       = COMPONENT_INPUT &
+                     ,Nnodes    = 1               &
+                     ,ErrStat   = ErrStat2        &
+                     ,ErrMess   = ErrMsg2         &
+                     ,Orientation     = .true.    &
+                     ,TranslationDisp = .true.    &
+                     ,RotationVel     = .true.    &
+                     )
+         call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+
+   if (errStat >= AbortErrLev) return
+                     
+   call MeshPositionNode(u%HubMotion, 1, InitInp%HubPosition, errStat2, errMsg2, InitInp%HubOrientation)
+      call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+         
+   call MeshConstructElement( u%HubMotion, ELEMENT_POINT, errStat2, errMsg2, p1=1 )
+      call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+            
+   call MeshCommit(u%HubMotion, errStat2, errMsg2 )
+      call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+            
+   if (errStat >= AbortErrLev) return
+
+         
+   u%HubMotion%Orientation     = u%HubMotion%RefOrientation
+   u%HubMotion%TranslationDisp = 0.0_R8Ki
+   u%HubMotion%RotationVel     = 0.0_ReKi   
+      
+   
+      !................
+      ! blade roots
+      !................
+         
+   allocate( u%BladeRootMotion(p%NumBlades), STAT = ErrStat2 )
+   if (ErrStat2 /= 0) then
+      call SetErrStat( ErrID_Fatal, 'Error allocating u%BladeRootMotion array.', ErrStat, ErrMsg, RoutineName )
+      return
+   end if      
+      
+   do k=1,p%NumBlades
+      call MeshCreate ( BlankMesh = u%BladeRootMotion(k)                  &
+                        ,IOS       = COMPONENT_INPUT                       &
+                        ,Nnodes    = 1                                     &
+                        ,ErrStat   = ErrStat2                              &
+                        ,ErrMess   = ErrMsg2                               &
+                        ,Orientation     = .true.                          &
+                        )
             call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
 
       if (errStat >= AbortErrLev) return
-                     
-      call MeshPositionNode(u%HubMotion, 1, InitInp%HubPosition, errStat2, errMsg2, InitInp%HubOrientation)
+            
+      call MeshPositionNode(u%BladeRootMotion(k), 1, InitInp%BladeRootPosition(:,k), errStat2, errMsg2, InitInp%BladeRootOrientation(:,:,k))
          call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-         
-      call MeshConstructElement( u%HubMotion, ELEMENT_POINT, errStat2, errMsg2, p1=1 )
+                     
+      call MeshConstructElement( u%BladeRootMotion(k), ELEMENT_POINT, errStat2, errMsg2, p1=1 )
          call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
             
-      call MeshCommit(u%HubMotion, errStat2, errMsg2 )
+      call MeshCommit(u%BladeRootMotion(k), errStat2, errMsg2 )
          call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
             
       if (errStat >= AbortErrLev) return
 
-         
-      u%HubMotion%Orientation     = u%HubMotion%RefOrientation
-      u%HubMotion%TranslationDisp = 0.0_R8Ki
-      u%HubMotion%RotationVel     = 0.0_ReKi   
       
-   
-         !................
-         ! blade roots
-         !................
-         
-      allocate( u%BladeRootMotion(p%NumBlades), STAT = ErrStat2 )
-      if (ErrStat2 /= 0) then
-         call SetErrStat( ErrID_Fatal, 'Error allocating u%BladeRootMotion array.', ErrStat, ErrMsg, RoutineName )
-         return
-      end if      
-      
-      do k=1,p%NumBlades
-         call MeshCreate ( BlankMesh = u%BladeRootMotion(k)                  &
-                          ,IOS       = COMPONENT_INPUT                       &
-                          ,Nnodes    = 1                                     &
-                          ,ErrStat   = ErrStat2                              &
-                          ,ErrMess   = ErrMsg2                               &
-                          ,Orientation     = .true.                          &
-                         )
-               call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-
-         if (errStat >= AbortErrLev) return
-            
-         call MeshPositionNode(u%BladeRootMotion(k), 1, InitInp%BladeRootPosition(:,k), errStat2, errMsg2, InitInp%BladeRootOrientation(:,:,k))
-            call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-                     
-         call MeshConstructElement( u%BladeRootMotion(k), ELEMENT_POINT, errStat2, errMsg2, p1=1 )
-            call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-            
-         call MeshCommit(u%BladeRootMotion(k), errStat2, errMsg2 )
-            call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-            
-         if (errStat >= AbortErrLev) return
-
-      
-         u%BladeRootMotion(k)%Orientation     = u%BladeRootMotion(k)%RefOrientation
+      u%BladeRootMotion(k)%Orientation     = u%BladeRootMotion(k)%RefOrientation
    
    end do !k=numBlades      
       
       
-         !................
-         ! blades
-         !................
+      !................
+      ! blades
+      !................
    
-      allocate( u%BladeMotion(p%NumBlades), STAT = ErrStat2 )
-      if (ErrStat2 /= 0) then
-         call SetErrStat( ErrID_Fatal, 'Error allocating u%BladeMotion array.', ErrStat, ErrMsg, RoutineName )
-         return
-      end if
+   allocate( u%BladeMotion(p%NumBlades), STAT = ErrStat2 )
+   if (ErrStat2 /= 0) then
+      call SetErrStat( ErrID_Fatal, 'Error allocating u%BladeMotion array.', ErrStat, ErrMsg, RoutineName )
+      return
+   end if
       
-      do k=1,p%NumBlades
-         call MeshCreate ( BlankMesh = u%BladeMotion(k)                     &
-                          ,IOS       = COMPONENT_INPUT                      &
-                          ,Nnodes    = InputFileData%BladeProps(k)%NumBlNds &
-                          ,ErrStat   = ErrStat2                             &
-                          ,ErrMess   = ErrMsg2                              &
-                          ,Orientation     = .true.                         &
-                          ,TranslationDisp = .true.                         &
-                          ,TranslationVel  = .true.                         &
-                          ,RotationVel     = .true.                         &
-                          ,TranslationAcc  = .true.                         &
-                         )
-               call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+   do k=1,p%NumBlades
+      call MeshCreate ( BlankMesh = u%BladeMotion(k)                     &
+                        ,IOS       = COMPONENT_INPUT                      &
+                        ,Nnodes    = InputFileData%BladeProps(k)%NumBlNds &
+                        ,ErrStat   = ErrStat2                             &
+                        ,ErrMess   = ErrMsg2                              &
+                        ,Orientation     = .true.                         &
+                        ,TranslationDisp = .true.                         &
+                        ,TranslationVel  = .true.                         &
+                        ,RotationVel     = .true.                         &
+                        ,TranslationAcc  = .true.                         &
+                        )
+            call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
 
-         if (errStat >= AbortErrLev) return
+      if (errStat >= AbortErrLev) return
             
                         
-         do j=1,InputFileData%BladeProps(k)%NumBlNds
+      do j=1,InputFileData%BladeProps(k)%NumBlNds
 
-               ! reference position of the jth node in the kth blade, relative to the root in the local blade coordinate system:
-            positionL(1) = InputFileData%BladeProps(k)%BlCrvAC(j)
-            positionL(2) = InputFileData%BladeProps(k)%BlSwpAC(j)
-            positionL(3) = InputFileData%BladeProps(k)%BlSpn(  j)
+            ! reference position of the jth node in the kth blade, relative to the root in the local blade coordinate system:
+         positionL(1) = InputFileData%BladeProps(k)%BlCrvAC(j)
+         positionL(2) = InputFileData%BladeProps(k)%BlSwpAC(j)
+         positionL(3) = InputFileData%BladeProps(k)%BlSpn(  j)
             
-               ! reference position of the jth node in the kth blade:
-            position = u%BladeRootMotion(k)%Position(:,1) + matmul(positionL,u%BladeRootMotion(k)%RefOrientation(:,:,1))  ! note that because positionL is a 1-D array, we're doing the transpose of matmul(transpose(u%BladeRootMotion(k)%RefOrientation),positionL)
+            ! reference position of the jth node in the kth blade:
+         position = u%BladeRootMotion(k)%Position(:,1) + matmul(positionL,u%BladeRootMotion(k)%RefOrientation(:,:,1))  ! note that because positionL is a 1-D array, we're doing the transpose of matmul(transpose(u%BladeRootMotion(k)%RefOrientation),positionL)
 
             
-               ! reference orientation of the jth node in the kth blade, relative to the root in the local blade coordinate system:
-            theta(1)     =  0.0_R8Ki
-            theta(2)     =  InputFileData%BladeProps(k)%BlCrvAng(j)
-            theta(3)     = -InputFileData%BladeProps(k)%BlTwist( j)            
-            orientationL = EulerConstruct( theta )
+            ! reference orientation of the jth node in the kth blade, relative to the root in the local blade coordinate system:
+         theta(1)     =  0.0_R8Ki
+         theta(2)     =  InputFileData%BladeProps(k)%BlCrvAng(j)
+         theta(3)     = -InputFileData%BladeProps(k)%BlTwist( j)            
+         orientationL = EulerConstruct( theta )
                                  
-               ! reference orientation of the jth node in the kth blade
-            orientation = matmul( orientationL, u%BladeRootMotion(k)%RefOrientation(:,:,1) )
+            ! reference orientation of the jth node in the kth blade
+         orientation = matmul( orientationL, u%BladeRootMotion(k)%RefOrientation(:,:,1) )
 
             
-            call MeshPositionNode(u%BladeMotion(k), j, position, errStat2, errMsg2, orientation)
-               call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-               
-         end do ! j=blade nodes
-         
-            ! create line2 elements
-         do j=1,InputFileData%BladeProps(k)%NumBlNds-1
-            call MeshConstructElement( u%BladeMotion(k), ELEMENT_LINE2, errStat2, errMsg2, p1=j, p2=j+1 )
-               call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-         end do !j
-            
-         call MeshCommit(u%BladeMotion(k), errStat2, errMsg2 )
+         call MeshPositionNode(u%BladeMotion(k), j, position, errStat2, errMsg2, orientation)
             call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+               
+      end do ! j=blade nodes
+         
+         ! create line2 elements
+      do j=1,InputFileData%BladeProps(k)%NumBlNds-1
+         call MeshConstructElement( u%BladeMotion(k), ELEMENT_LINE2, errStat2, errMsg2, p1=j, p2=j+1 )
+            call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+      end do !j
             
-         if (errStat >= AbortErrLev) return
+      call MeshCommit(u%BladeMotion(k), errStat2, errMsg2 )
+         call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+            
+      if (errStat >= AbortErrLev) return
 
       
-         u%BladeMotion(k)%Orientation     = u%BladeMotion(k)%RefOrientation
-         u%BladeMotion(k)%TranslationDisp = 0.0_R8Ki
-         u%BladeMotion(k)%TranslationVel  = 0.0_ReKi
+      u%BladeMotion(k)%Orientation     = u%BladeMotion(k)%RefOrientation
+      u%BladeMotion(k)%TranslationDisp = 0.0_R8Ki
+      u%BladeMotion(k)%TranslationVel  = 0.0_ReKi
+      u%BladeMotion(k)%RotationVel     = 0.0_ReKi
+      u%BladeMotion(k)%TranslationAcc  = 0.0_ReKi
+         
+               
    
    end do !k=numBlades
    
@@ -983,7 +997,7 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
 
 
       ! Set the nodal output parameters.  Note there is some validation in this, so we might get an error from here.
-   CALL AllBldNdOuts_SetParameters( InitInp, InputFileData, p, ErrStat2, ErrMsg2 )
+   CALL AllBldNdOuts_SetParameters( InputFileData, p, ErrStat2, ErrMsg2 )
       call setErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
 
@@ -1017,7 +1031,12 @@ subroutine AD_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
          ! End the FVW submodule
       if (p%WakeMod == WakeMod_FVW ) then
          call FVW_End( m%FVW_u, p%FVW, x%FVW, xd%FVW, z%FVW, OtherState%FVW, m%FVW_y, m%FVW, ErrStat, ErrMsg )
+      
+         if ( m%FVW%UA_Flag ) then
+            call UA_End(m%FVW%p_UA)
+         end if
       endif
+      
 
          ! Close files here:
 
@@ -1186,11 +1205,6 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-#ifdef UA_OUTS
-  ! if ( mod(REAL(t,ReKi),.1) < p%dt) then
-   if (allocated(m%FVW%y_UA%WriteOutput)) m%FVW%y_UA%WriteOutput = 0.0 !reset to zero in case UA shuts off mid-simulation
-  ! endif
-#endif            
 
    if (present(NeedWriteOutput)) then
       CalcWriteOutput = NeedWriteOutput
@@ -1209,7 +1223,7 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
       call BEMT_CalcOutput(t, m%BEMT_u(indx), p%BEMT, x%BEMT, xd%BEMT, z%BEMT, OtherState%BEMT, p%AFI, m%BEMT_y, m%BEMT, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
-      call SetOutputsFromBEMT(p, m, y )
+      call SetOutputsFromBEMT( p, m, y ) 
         
       if ( p%CompAA ) then
          ! We need the outputs from BEMT as inputs to AeroAcoustics module
@@ -1228,7 +1242,7 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
       CALL FVW_CalcOutput( t, m%FVW_u(1), p%FVW, x%FVW, xd%FVW, z%FVW, OtherState%FVW, p%AFI, m%FVW_y, m%FVW, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
-      call SetOutputsFromFVW( u, p, OtherState, x, xd, m, y, ErrStat2, ErrMsg2 )
+      call SetOutputsFromFVW( t, u, p, OtherState, x, xd, m, y, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    endif
 
@@ -1284,14 +1298,6 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
       call Calc_WriteAllBldNdOutput( p, u, m, y, OtherState, indx, ErrStat2, ErrMsg2 )   ! Call after normal writeoutput.  Will just postpend data on here.
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    end if
-      
-   
-#ifdef UA_OUTS
-  ! if ( mod(REAL(t,ReKi),.1) < p%dt) then
-   if (allocated(m%FVW%y_UA%WriteOutput)) &
-            WRITE (69, '(F20.6,'//trim(num2lstr(size(m%FVW%y_UA%WriteOutput)))//'(:,1x,ES19.5E3))') t, ( m%FVW%y_UA%WriteOutput(i), i=1,size(m%FVW%y_UA%WriteOutput))
-  ! end if              
-#endif 
    
    
 end subroutine AD_CalcOutput
@@ -1813,7 +1819,8 @@ end subroutine SetOutputsFromBEMT
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine converts outputs from FVW (stored in m%FVW_y) into values on the AeroDyn BladeLoad output mesh.
-subroutine SetOutputsFromFVW(u, p, OtherState, x, xd, m, y, ErrStat, ErrMsg)
+subroutine SetOutputsFromFVW(t, u, p, OtherState, x, xd, m, y, ErrStat, ErrMsg)
+   REAL(DbKi),                intent(in   ) :: t
    TYPE(AD_InputType),        intent(in   ) :: u           !< Inputs at Time t
    type(AD_ParameterType),    intent(in   ) :: p           !< AD parameters
    type(AD_OtherStateType),   intent(in   ) :: OtherState  !< OtherState
@@ -1882,26 +1889,24 @@ subroutine SetOutputsFromFVW(u, p, OtherState, x, xd, m, y, ErrStat, ErrMsg)
          Cd_dyn    = AFI_interp%Cd
          Cm_dyn    = AFI_interp%Cm
          if (m%FVW%UA_Flag) then
-            if ((OtherState%FVW%UA_Flag(j,k)) .and. ( .not. EqualRealNos(Vrel,0.0_ReKi) ) ) then
-               u_UA => m%FVW%u_UA(j,k,InputIndex) ! Alias
-               ! Making sure inputs are consistent
-               u_UA%alpha    = alpha
-               u_UA%U        = Vrel
-               u_UA%v_ac(1)  = sin(u_UA%alpha)*u_UA%U
-               u_UA%v_ac(2)  = cos(u_UA%alpha)*u_UA%U
-               call UA_CalcOutput(j, k, u_UA, m%FVW%p_UA, x%FVW%UA, xd%FVW%UA, OtherState%FVW%UA, p%AFI(p%FVW%AFindx(j,k)), m%FVW%y_UA, m%FVW%m_UA, errStat2, errMsg2 )
-                  call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SetOutputsFromFVW')
-               Cl_dyn = m%FVW%y_UA%Cl
-               Cd_dyn = m%FVW%y_UA%Cd
-               Cm_dyn = m%FVW%y_UA%Cm
-            end if
+            u_UA => m%FVW%u_UA(j,k,InputIndex) ! Alias
+            ! ....... compute inputs to UA ...........
+            u_UA%alpha    = alpha
+            u_UA%U        = Vrel
+            u_UA%v_ac(1)  = sin(u_UA%alpha)*u_UA%U
+            u_UA%v_ac(2)  = cos(u_UA%alpha)*u_UA%U
+            call UA_CalcOutput(j, k, u_UA, m%FVW%p_UA, x%FVW%UA, xd%FVW%UA, OtherState%FVW%UA, p%AFI(p%FVW%AFindx(j,k)), m%FVW%y_UA, m%FVW%m_UA, errStat2, errMsg2 )
+               call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SetOutputsFromFVW')
+            Cl_dyn = m%FVW%y_UA%Cl
+            Cd_dyn = m%FVW%y_UA%Cd
+            Cm_dyn = m%FVW%y_UA%Cm
          end if
          cp = cos(phi)
          sp = sin(phi)
          Cx = Cl_dyn*cp + Cd_dyn*sp
          Cy = Cl_dyn*sp - Cd_dyn*cp
 
-         q = 0.5 * p%airDens * Vrel**2                         ! dynamic pressure of the jth node in the kth blade
+         q = 0.5 * p%airDens * Vrel**2                ! dynamic pressure of the jth node in the kth blade
          force(1) =  Cx * q * p%FVW%Chord(j,k)        ! X = normal force per unit length (normal to the plane, not chord) of the jth node in the kth blade
          force(2) = -Cy * q * p%FVW%Chord(j,k)        ! Y = tangential force per unit length (tangential to the plane, not chord) of the jth node in the kth blade
          moment(3)=  Cm_dyn * q * p%FVW%Chord(j,k)**2 ! M = pitching moment per unit length of the jth node in the kth blade
@@ -1935,7 +1940,14 @@ subroutine SetOutputsFromFVW(u, p, OtherState, x, xd, m, y, ErrStat, ErrMsg)
       end do !j=nodes
    end do !k=blades
 
+   
 
+   if ( m%FVW%UA_Flag ) then
+      ! if ( mod(REAL(t,ReKi),.1) < p%dt) then
+      call UA_WriteOutputToFile(t, m%FVW%p_UA, m%FVW%y_UA)
+      ! end if
+   end if
+   
 end subroutine SetOutputsFromFVW
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine validates the inputs from the AeroDyn input files.
@@ -2165,24 +2177,20 @@ END SUBROUTINE ValidateInputData
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine sets up the data structures and initializes AirfoilInfo to get the necessary AFI parameters. It then verifies 
 !! that the UA parameters are included in the AFI tables if UA is being used.
-SUBROUTINE Init_AFIparams( InputFileData, p_AFI, UnEc, NumBl, ErrStat, ErrMsg )
+SUBROUTINE Init_AFIparams( InputFileData, p_AFI, UnEc,  ErrStat, ErrMsg )
 
 
       ! Passed variables
    type(AD_InputFile),                   intent(inout) :: InputFileData      !< All the data in the AeroDyn input file (intent(out) only because of the call to MOVE_ALLOC)
    type(AFI_ParameterType), allocatable, intent(  out) :: p_AFI(:)           !< parameters returned from the AFI (airfoil info) module
    integer(IntKi),                       intent(in   ) :: UnEc               !< I/O unit for echo file. If > 0, file is open for writing.
-   integer(IntKi),                       intent(in   ) :: NumBl              !< number of blades (for performing check on valid airfoil data read in)
    integer(IntKi),                       intent(  out) :: ErrStat            !< Error status
    character(*),                         intent(  out) :: ErrMsg             !< Error message
 
       ! local variables
    type(AFI_InitInputType)                             :: AFI_InitInputs     ! initialization data for the AFI routines
    
-   integer(IntKi)                                      :: j                  ! loop counter for nodes
-   integer(IntKi)                                      :: k                  ! loop counter for blades
    integer(IntKi)                                      :: File               ! loop counter for airfoil files
-   logical, allocatable                                :: fileUsed(:)
    
    integer(IntKi)                                      :: ErrStat2
    character(ErrMsgLen)                                :: ErrMsg2
@@ -2223,37 +2231,6 @@ SUBROUTINE Init_AFIparams( InputFileData, p_AFI, UnEc, NumBl, ErrStat, ErrMsg )
       
    call AFI_DestroyInitInput( AFI_InitInputs, ErrStat2, ErrMsg2 )
    if (ErrStat >= AbortErrLev) return
-   
-   
-      ! check that we read the correct airfoil parameters for UA:      
-   if ( InputFileData%AFAeroMod == AFAeroMod_BL_unsteady ) then
-      
-         ! determine which airfoil files will be used
-      call AllocAry( fileUsed, InputFileData%NumAFfiles, 'fileUsed', errStat2, errMsg2 )
-         call SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)   
-         if (errStat >= AbortErrLev) return
-      fileUsed = .false.
-            
-      do k=1,NumBl
-         do j=1,InputFileData%BladeProps(k)%NumBlNds
-            fileUsed ( InputFileData%BladeProps(k)%BlAFID(j) ) = .true.
-         end do ! j=nodes
-      end do ! k=blades
-      
-         ! make sure all files in use have proper UA input parameters:
-      do File = 1,InputFileData%NumAFfiles
-         
-         if (fileUsed(File)) then
-            call UA_ValidateAFI(InputFileData%UAMod, p_AFI(File), InputFileData%AFNames(File), ErrStat2, ErrMsg2)
-               call SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
-               if (errStat >= AbortErrLev) return
-         end if
-         
-      end do
-      
-      if ( allocated(fileUsed) ) deallocate(fileUsed)
-      
-   end if
    
    
 END SUBROUTINE Init_AFIparams
@@ -2819,20 +2796,30 @@ SUBROUTINE TwrInfl( p, u, m, ErrStat, ErrMsg )
                
                denom = (xbar**2 + ybar**2)**2
                
-               u_TwrPotent = ( -1.0*xbar**2 + ybar**2 ) / denom
-               v_TwrPotent = ( -2.0*xbar    * ybar    ) / denom      
+               if (equalRealNos(denom,0.0_ReKi)) then
+                  u_TwrPotent = 0.0_ReKi
+                  v_TwrPotent = 0.0_ReKi
+               else
+                  u_TwrPotent = ( -1.0*xbar**2 + ybar**2 ) / denom
+                  v_TwrPotent = ( -2.0*xbar    * ybar    ) / denom
+               end if
                
             elseif (p%TwrPotent == TwrPotent_Bak) then
                
                xbar = xbar + 0.1
                
-               denom = (xbar**2 + ybar**2)**2               
-               u_TwrPotent = ( -1.0*xbar**2 + ybar**2 ) / denom
-               v_TwrPotent = ( -2.0*xbar    * ybar    ) / denom        
+               denom = (xbar**2 + ybar**2)**2
+               if (equalRealNos(denom,0.0_ReKi)) then
+                  u_TwrPotent = 0.0_ReKi
+                  v_TwrPotent = 0.0_ReKi
+               else
+                  u_TwrPotent = ( -1.0*xbar**2 + ybar**2 ) / denom
+                  v_TwrPotent = ( -2.0*xbar    * ybar    ) / denom
                
-               denom = TwoPi*(xbar**2 + ybar**2)               
-               u_TwrPotent = u_TwrPotent + TwrCd*xbar / denom
-               v_TwrPotent = v_TwrPotent + TwrCd*ybar / denom                       
+                  denom = TwoPi*(xbar**2 + ybar**2)
+                  u_TwrPotent = u_TwrPotent + TwrCd*xbar / denom
+                  v_TwrPotent = v_TwrPotent + TwrCd*ybar / denom
+               end if
                
             end if
          else
@@ -3606,7 +3593,7 @@ SUBROUTINE AD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
    TYPE(AD_ContinuousStateType)                                  :: x_init
    TYPE(AD_OtherStateType)                                       :: OtherState_init
    REAL(R8Ki)                                                    :: delta_p, delta_m  ! delta change in state
-   INTEGER(IntKi)                                                :: i, k
+   INTEGER(IntKi)                                                :: i
    
    integer, parameter                                            :: indx = 1      ! m%BEMT_u(1) is at t; m%BEMT_u(2) is t+dt
    integer(intKi)                                                :: ErrStat2
@@ -4375,12 +4362,12 @@ SUBROUTINE AD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
       end if
       
    
-      index = 1      
+      index = 1
       do k=1,p%NumBlades ! size(z%BEMT%Phi,2)
          do i=1,p%NumBlNds ! size(z%BEMT%Phi,1)
             z_op(index) = z%BEMT%phi(i,k)
             index = index + 1
-         end do            
+         end do
       end do
       
    END IF

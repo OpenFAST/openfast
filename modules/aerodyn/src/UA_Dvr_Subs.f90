@@ -571,17 +571,6 @@ module UA_Dvr_Subs
             return
          end if
    end do
-   
-   
-
-   do i=1,NumAFfiles
-
-      call UA_ValidateAFI(p%UAMod, AFI_Params(i), afNames(i), ErrStat2, ErrMsg2)
-         call SetErrStat(errStat2, errMsg2, ErrStat, ErrMsg, RoutineName )
-         
-      call UA_TurnOff_param(p, AFI_Params(i), ErrStat2, ErrMsg2)
-         call SetErrStat(errStat2, errMsg2, ErrStat, ErrMsg, RoutineName )
-   end do
 
    call Cleanup()
    
