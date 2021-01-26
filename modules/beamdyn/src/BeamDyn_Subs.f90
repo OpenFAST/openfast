@@ -973,7 +973,11 @@ SUBROUTINE BD_Interp_Pos_CRV(p, eta, POS, CRV, ErrStat, ErrMsg)
 
    INTEGER(IntKi)                 :: ErrStat2      ! Temporary Error status
    CHARACTER(ErrMsgLen)           :: ErrMsg2       ! Temporary Error message
+   character(*), parameter        :: RoutineName = 'BD_Interp_Pos_CRV'
 
+   ErrStat = ErrID_None
+   ErrMsg = ""
+   
    ! find element in which eta resides 
    eta_right = 0._BDKi
    found = 0
@@ -993,24 +997,32 @@ SUBROUTINE BD_Interp_Pos_CRV(p, eta, POS, CRV, ErrStat, ErrMsg)
    eta_local(1) = 2._BDKi * (eta - eta_left)/p%member_eta(element) - 1._BDKi
 
    call AllocAry(gll, p%nodes_per_elem, "local GLL nodes",ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call AllocAry(shp, p%nodes_per_elem, 1,"local shape function",ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call AllocAry(shpder, p%nodes_per_elem, 1,"local shape deriv function",ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
-   call BD_GenerateGLL(p%nodes_per_elem,gll,ErrStat2,ErrMsg2)
-   call bd_diffmtc(p%nodes_per_elem, gll, eta_local, 1, shp, shpder) ! evaluate shp and shpder at single point
+   if (ErrStat < AbortErrLev) then
+      call BD_GenerateGLL(p%nodes_per_elem,gll,ErrStat2,ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         
+      call bd_diffmtc(p%nodes_per_elem, gll, eta_local, 1, shp, shpder) ! evaluate shp and shpder at single point
 
-   pos = 0._BDki
-   crv = 0._BDki
-   do i = 1, p%nodes_per_elem
-      do j = 1, 3
-         pos(j) = pos(j) + p%uuN0(j,  i,element)  *shp(i,1)
-         CRV(j) = CRV(j) + p%uuN0(j+3,i,element)*shp(i,1)
-      enddo 
-   enddo
+      pos = 0._BDki
+      crv = 0._BDki
+      do i = 1, p%nodes_per_elem
+         do j = 1, 3
+            pos(j) = pos(j) + p%uuN0(j,  i,element)  *shp(i,1)
+            CRV(j) = CRV(j) + p%uuN0(j+3,i,element)*shp(i,1)
+         enddo 
+      enddo
 
-   deallocate(gll)
-   deallocate(shp)
-   deallocate(shpder)
+   end if
+   
+   if (allocated(gll)) deallocate(gll)
+   if (allocated(shp)) deallocate(shp)
+   if (allocated(shpder)) deallocate(shpder)
 
 END SUBROUTINE BD_Interp_Pos_CRV
 !-----------------------------------------------------------------------------------------------------------------------------------

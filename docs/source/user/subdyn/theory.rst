@@ -1,11 +1,11 @@
 .. _subdyn-theory:
 
 SubDyn Theory
-==============
+=============
 
 
 Overview
-------------------
+--------
 
 This section focuses on the theory behind the SubDyn module.
 
@@ -1712,7 +1712,7 @@ The Guyan TP force, :math:`\tilde{F}_{TP}`, and the CB force, :math:`F_m`, given
 .. _SD_ExtraMoment:
 
 Corrections to the baseline formulation ("GuyanLoadCorrection")
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The baseline FEM implementation needs to be corrected to account for the fact that loads are provided to SubDyn at the displaced positions, and to account for the rigid body motions in the floating case.
 The corrections are activated by setting the parameter **GuyanLoadCorrection** to True.

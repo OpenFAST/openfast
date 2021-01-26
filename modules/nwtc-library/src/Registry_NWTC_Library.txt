@@ -15,8 +15,8 @@ usefrom     ^             ^                 CHARACTER(1024)          Descr
 usefrom     ^             ^                 IntKi                    NumChans
 usefrom     ^             ^                 IntKi                    NumRecs
 usefrom     ^             ^                 DbKi                     TimeStep
-usefrom     ^             ^                 CHARACTER(20)            ChanNames {:}
-usefrom     ^             ^                 CHARACTER(20)            ChanUnits {:}
+usefrom     ^             ^                 CHARACTER(ChanLen)       ChanNames {:}
+usefrom     ^             ^                 CHARACTER(ChanLen)       ChanUnits {:}
 usefrom     ^             ^                 ReKi                     Data      {:}{:}
 
 usefrom   NWTC_Library  OutParmType         IntKi                    Indx
@@ -25,14 +25,19 @@ usefrom     ^             ^                 CHARACTER(ChanLen)       Units
 usefrom     ^             ^                 IntKi                    SignM
 
 usefrom   NWTC_Library  FileInfoType        IntKi                    NumLines
-usefrom     ^             ^                 CHARACTER(1024)          Lines     {:}
-usefrom     ^             ^                 IntKi                    FileLine  {:}
 usefrom     ^             ^                 IntKi                    NumFiles
+usefrom     ^             ^                 IntKi                    FileLine  {:}
 usefrom     ^             ^                 IntKi                    FileIndx  {:}
 usefrom     ^             ^                 CHARACTER(1024)          FileList  {:}
+usefrom     ^             ^                 CHARACTER(1024)          Lines     {:}
 
 usefrom   NWTC_Library  Quaternion          ReKi                     q0
 usefrom     ^             ^                 ReKi                     v  {3}
+
+usefrom   NWTC_Library  NWTC_RandomNumber_ParameterType   IntKi                pRNG
+usefrom     ^             ^                     IntKi                RandSeed          {3}
+usefrom     ^             ^                     IntKi                RandSeedAry       {:}
+usefrom     ^             ^              CHARACTER(6)                RNG_type
 
 #BJJ: the following three types will actually be placed in the ModMesh_Mapping.f90 file instead of NWTC_Library_Types.f90
 usefrom   NWTC_Library  MapType             IntKi                    OtherMesh_Element
@@ -63,9 +68,4 @@ usefrom     ^             ^                 R8Ki                     LoadLn2_A_M
 usefrom     ^             ^                 R8Ki                     LoadLn2_F         {:}{:}
 usefrom     ^             ^                 R8Ki                     LoadLn2_M         {:}{:}
 usefrom     ^             ^                 MeshMapLinearizationType dM
-
-usefrom   NWTC_Library  NWTC_RandomNumber_ParameterType   IntKi                pRNG
-usefrom     ^             ^                     IntKi                RandSeed          {3}
-usefrom     ^             ^                     IntKi                RandSeedAry       {:}
-usefrom     ^             ^              CHARACTER(6)                RNG_type
 

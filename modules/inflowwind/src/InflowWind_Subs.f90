@@ -156,7 +156,7 @@ CONTAINS
 
 !====================================================================================================
 !>  This public subroutine parses the array of strings in InputFileData for the input parameters.
-SUBROUTINE InflowWind_ParseInputFileInfo( InputFileData, InFileInfo, PriPath, ErrStat, ErrMsg )
+SUBROUTINE InflowWind_ParseInputFileInfo( InputFileData, InFileInfo, PriPath, InputFileName, EchoFileName,  ErrStat, ErrMsg )
 !----------------------------------------------------------------------------------------------------
 
    IMPLICIT NONE
@@ -166,55 +166,74 @@ SUBROUTINE InflowWind_ParseInputFileInfo( InputFileData, InFileInfo, PriPath, Er
    TYPE(InflowWind_InputFile),         INTENT(INOUT)  :: InputFileData        !< Data of the InflowWind Input File
    TYPE(FileInfoType),                 INTENT(IN   )  :: InFileInfo           !< The derived type for holding the file information
    CHARACTER(*),                       INTENT(IN   )  :: PriPath              !< Path to InflowWind input files
+   CHARACTER(*),                       intent(in   )  :: InputFileName        !< The name of the input file
+   CHARACTER(*),                       intent(in   )  :: EchoFileName         !< The name of the echo file, possibly opened in this routine
 
    INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat              !< Returned error status from this subroutine
    CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg               !< Returned error message from this subroutine
 
       ! Local variables
    INTEGER(IntKi)                                     :: CurLine              !< Current entry in InFileInfo%Lines array
+   INTEGER(IntKi)                                     :: UnEc                 !< local echo unit
 
       ! Temoporary messages
    INTEGER(IntKi)                                     :: TmpErrStat
    CHARACTER(ErrMsgLen)                               :: TmpErrMsg
 
-      ! Initializatio
+      ! Initialization
    ErrStat                 = ErrID_None
    ErrMsg                  = ""
    InputFileData%EchoFlag  = .FALSE.         ! initialize for error handling (cleanup() routine)
+   UnEc                    = -1
 
       ! Allocate the array for the OutList
    CALL AllocAry( InputFileData%OutList, MaxOutPts, "InflowWind Input File's OutList", TmpErrStat, TmpErrMsg )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-   IF (ErrStat >= AbortErrLev) RETURN
+   if (Failed()) return
 
    !---------------------------------------------------------------------------------------------
    ! General settings with wind type, direction and output point list (applies to all wind types)
    !---------------------------------------------------------------------------------------------
 
    CurLine = 4
-   CALL ParseVar( InFileInfo, CurLine, "Echo", InputFileData%EchoFlag, TmpErrStat, TmpErrMsg )
+   CALL ParseVar( InFileInfo, CurLine, "Echo", InputFileData%EchoFlag, TmpErrStat, TmpErrMsg, UnEc )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-   IF (ErrStat >= AbortErrLev) RETURN
+   if (Failed()) return
+
+   if ( InputFileData%EchoFlag ) then
+      CALL OpenEcho ( UnEc, TRIM(EchoFileName), TmpErrStat, TmpErrMsg )
+         if (Failed()) return;
+      WRITE(UnEc, '(A)') 'Echo file for InflowWind input file: '//trim(InputFileName)
+      ! Write the first three lines into the echo file
+      WRITE(UnEc, '(A)') InFileInfo%Lines(1)
+      WRITE(UnEc, '(A)') InFileInfo%Lines(2)
+      WRITE(UnEc, '(A)') InFileInfo%Lines(3)
+
+      CurLine = 4
+      CALL ParseVar( InFileInfo, CurLine, "Echo", InputFileData%EchoFlag, TmpErrStat, TmpErrMsg, UnEc )
+         if (Failed()) return
+   endif
+
 
       ! switch for wind file type (1=steady; 2=uniform; 3=binary TurbSim FF; 4=binary Bladed-style FF; 5=HAWC format; 6=User defined; 7=native Bladed FF)
-   CALL ParseVar( InFileInfo, CurLine, "WindType", InputFileData%WindType, TmpErrStat, TmpErrMsg )
+   CALL ParseVar( InFileInfo, CurLine, "WindType", InputFileData%WindType, TmpErrStat, TmpErrMsg, UnEc )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-   IF (ErrStat >= AbortErrLev) RETURN
+   if (Failed()) return
 
       ! Direction of wind propagation (meteorological direction) (deg)
-   CALL ParseVar( InFileInfo, CurLine, "PropagationDir", InputFileData%PropagationDir, TmpErrStat, TmpErrMsg )
+   CALL ParseVar( InFileInfo, CurLine, "PropagationDir", InputFileData%PropagationDir, TmpErrStat, TmpErrMsg, UnEc )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-   IF (ErrStat >= AbortErrLev) RETURN
+   if (Failed()) return
 
       ! VFlowAngle: Upflow angle (deg)
-   CALL ParseVarWDefault( InFileInfo, CurLine, "VFlowAng", InputFileData%VFlowAngle, 0.0_ReKi, TmpErrStat, TmpErrMsg )
+   CALL ParseVarWDefault( InFileInfo, CurLine, "VFlowAng", InputFileData%VFlowAngle, 0.0_ReKi, TmpErrStat, TmpErrMsg, UnEc )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-   IF (ErrStat >= AbortErrLev) RETURN
+   if (Failed()) return
 
       ! NWindVel: Number of points to output the wind velocity (0 to 9)
-   CALL ParseVar( InFileInfo, CurLine, "NWindVel", InputFileData%NWindVel, TmpErrStat, TmpErrMsg )
+   CALL ParseVar( InFileInfo, CurLine, "NWindVel", InputFileData%NWindVel, TmpErrStat, TmpErrMsg, UnEc )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-   IF (ErrStat >= AbortErrLev) RETURN
+   if (Failed()) return
 
       ! Before proceeding, make sure that NWindVel makes sense
    IF ( InputFileData%NWindVel < 0 .OR. InputFileData%NwindVel > 9 ) THEN
@@ -230,64 +249,64 @@ SUBROUTINE InflowWind_ParseInputFileInfo( InputFileData, InFileInfo, PriPath, Er
       CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
       CALL AllocAry( InputFileData%WindVziList, InputFileData%NWindVel, 'WindVziList', TmpErrStat, TmpErrMsg )
       CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-      IF (ErrStat >= AbortErrLev) RETURN
+      if (Failed()) return
    ENDIF
 
-   CALL ParseAry( InFileInfo, CurLine, 'WindVxiList', InputFileData%WindVxiList, InputFileData%NWindVel, TmpErrStat, TmpErrMsg )
+   CALL ParseAry( InFileInfo, CurLine, 'WindVxiList', InputFileData%WindVxiList, InputFileData%NWindVel, TmpErrStat, TmpErrMsg, UnEc )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-   IF (ErrStat >= AbortErrLev) RETURN
+   if (Failed()) return
 
-   CALL ParseAry( InFileInfo, CurLine, 'WindVyiList', InputFileData%WindVyiList, InputFileData%NWindVel, TmpErrStat, TmpErrMsg )
+   CALL ParseAry( InFileInfo, CurLine, 'WindVyiList', InputFileData%WindVyiList, InputFileData%NWindVel, TmpErrStat, TmpErrMsg, UnEc )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-   IF (ErrStat >= AbortErrLev) RETURN
+   if (Failed()) return
 
-   CALL ParseAry( InFileInfo, CurLine, 'WindVziList', InputFileData%WindVziList, InputFileData%NWindVel, TmpErrStat, TmpErrMsg )
+   CALL ParseAry( InFileInfo, CurLine, 'WindVziList', InputFileData%WindVziList, InputFileData%NWindVel, TmpErrStat, TmpErrMsg, UnEc )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-   IF (ErrStat >= AbortErrLev) RETURN
+   if (Failed()) return
 
    !-------------------------------------------------------------------------------------------------
    !> Read the _Parameters for Steady Wind Conditions [used only for WindType = 1]_ section
    !-------------------------------------------------------------------------------------------------
 
    CurLine = CurLine + 1  ! Skip section break
-   CALL ParseVar( InFileInfo, CurLine, "HWindSpeed", InputFileData%Steady_HWindSpeed, TmpErrStat, TmpErrMsg )
+   CALL ParseVar( InFileInfo, CurLine, "HWindSpeed", InputFileData%Steady_HWindSpeed, TmpErrStat, TmpErrMsg, UnEc )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-   IF (ErrStat >= AbortErrLev) RETURN
+   if (Failed()) return
 
-   CALL ParseVar( InFileInfo, CurLine, "RefHt", InputFileData%Steady_RefHt, TmpErrStat, TmpErrMsg )
+   CALL ParseVar( InFileInfo, CurLine, "RefHt", InputFileData%Steady_RefHt, TmpErrStat, TmpErrMsg, UnEc )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-   IF (ErrStat >= AbortErrLev) RETURN
+   if (Failed()) return
 
-   CALL ParseVar( InFileInfo, CurLine, "PLexp", InputFileData%Steady_PLexp, TmpErrStat, TmpErrMsg )
+   CALL ParseVar( InFileInfo, CurLine, "PLexp", InputFileData%Steady_PLexp, TmpErrStat, TmpErrMsg, UnEc )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-   IF (ErrStat >= AbortErrLev) RETURN
+   if (Failed()) return
 
    !-------------------------------------------------------------------------------------------------
    !> Read the _Parameters for Uniform wind file [used only for WindType = 2]_ section
    !-------------------------------------------------------------------------------------------------
 
    CurLine = CurLine + 1  ! Skip section break
-   CALL ParseVar( InFileInfo, CurLine, "FileName_Uni", InputFileData%Uniform_FileName, TmpErrStat, TmpErrMsg )
+   CALL ParseVar( InFileInfo, CurLine, "FileName_Uni", InputFileData%Uniform_FileName, TmpErrStat, TmpErrMsg, UnEc )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-   IF (ErrStat >= AbortErrLev) RETURN
+   if (Failed()) return
    IF ( PathIsRelative( InputFileData%Uniform_FileName ) ) InputFileData%Uniform_FileName = TRIM(PriPath)//TRIM(InputFileData%Uniform_FileName)
 
-   CALL ParseVar( InFileInfo, CurLine, "RefHt_Uni", InputFileData%Uniform_RefHt, TmpErrStat, TmpErrMsg )
+   CALL ParseVar( InFileInfo, CurLine, "RefHt_Uni", InputFileData%Uniform_RefHt, TmpErrStat, TmpErrMsg, UnEc )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-   IF (ErrStat >= AbortErrLev) RETURN
+   if (Failed()) return
 
-   CALL ParseVar( InFileInfo, CurLine, "RefLength", InputFileData%Uniform_RefLength, TmpErrStat, TmpErrMsg )
+   CALL ParseVar( InFileInfo, CurLine, "RefLength", InputFileData%Uniform_RefLength, TmpErrStat, TmpErrMsg, UnEc )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-   IF (ErrStat >= AbortErrLev) RETURN
+   if (Failed()) return
 
    !-------------------------------------------------------------------------------------------------
    !> Read the _Parameters for Binary TurbSim Full-Field files [used only for WindType = 3]_ section
    !-------------------------------------------------------------------------------------------------
 
    CurLine = CurLine + 1  ! Skip section break
-   CALL ParseVar( InFileInfo, CurLine, "FileName_BTS", InputFileData%TSFF_FileName, TmpErrStat, TmpErrMsg )
+   CALL ParseVar( InFileInfo, CurLine, "FileName_BTS", InputFileData%TSFF_FileName, TmpErrStat, TmpErrMsg, UnEc )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-   IF (ErrStat >= AbortErrLev) RETURN
+   if (Failed()) return
    IF ( PathIsRelative( InputFileData%TSFF_FileName ) ) InputFileData%TSFF_FileName = TRIM(PriPath)//TRIM(InputFileData%TSFF_FileName)
 
    !-------------------------------------------------------------------------------------------------
@@ -295,32 +314,32 @@ SUBROUTINE InflowWind_ParseInputFileInfo( InputFileData, InFileInfo, PriPath, Er
    !-------------------------------------------------------------------------------------------------
 
    CurLine = CurLine + 1  ! Skip section break
-   CALL ParseVar( InFileInfo, CurLine, "FilenameRoot", InputFileData%BladedFF_FileName, TmpErrStat, TmpErrMsg )
+   CALL ParseVar( InFileInfo, CurLine, "FilenameRoot", InputFileData%BladedFF_FileName, TmpErrStat, TmpErrMsg, UnEc )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-   IF (ErrStat >= AbortErrLev) RETURN
+   if (Failed()) return
    IF ( PathIsRelative( InputFileData%BladedFF_FileName ) ) InputFileData%BladedFF_FileName = TRIM(PriPath)//TRIM(InputFileData%BladedFF_FileName)
 
-   CALL ParseVar( InFileInfo, CurLine, "TowerFile", InputFileData%BladedFF_TowerFile, TmpErrStat, TmpErrMsg )
+   CALL ParseVar( InFileInfo, CurLine, "TowerFile", InputFileData%BladedFF_TowerFile, TmpErrStat, TmpErrMsg, UnEc )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-   IF (ErrStat >= AbortErrLev) RETURN
+   if (Failed()) return
 
    !-------------------------------------------------------------------------------------------------
    !> Read the _Parameters for coherent turbulence [used only for WindType = 3 or 4]_ section
    !-------------------------------------------------------------------------------------------------
 
    ! CurLine = CurLine + 1  ! Skip section break
-   ! CALL ParseVar( InFileInfo, CurLine, "CTTS_CoherentTurbFlag", InputFileData%CTTS_CoherentTurb, TmpErrStat, TmpErrMsg )
+   ! CALL ParseVar( InFileInfo, CurLine, "CTTS_CoherentTurbFlag", InputFileData%CTTS_CoherentTurb, TmpErrStat, TmpErrMsg, UnEc )
    ! CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-   ! IF (ErrStat >= AbortErrLev) RETURN
+   ! if (Failed()) return
 
-   ! CALL ParseVar( InFileInfo, CurLine, "CTTS_FileName", InputFileData%CTTS_FileName, TmpErrStat, TmpErrMsg )
+   ! CALL ParseVar( InFileInfo, CurLine, "CTTS_FileName", InputFileData%CTTS_FileName, TmpErrStat, TmpErrMsg, UnEc )
    ! CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-   ! IF (ErrStat >= AbortErrLev) RETURN
+   ! if (Failed()) return
    ! IF ( PathIsRelative( InputFileData%CTTS_FileName ) ) InputFileData%CTTS_FileName = TRIM(PriPath)//TRIM(InputFileData%CTTS_FileName)
 
-   ! CALL ParseVar( InFileInfo, CurLine, "CTTS_Path", InputFileData%CTTS_Path, TmpErrStat, TmpErrMsg )
+   ! CALL ParseVar( InFileInfo, CurLine, "CTTS_Path", InputFileData%CTTS_Path, TmpErrStat, TmpErrMsg, UnEc )
    ! CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-   ! IF (ErrStat >= AbortErrLev) RETURN
+   ! if (Failed()) return
    ! IF ( PathIsRelative( InputFileData%CTTS_Path ) ) InputFileData%CTTS_Path = TRIM(PriPath)//TRIM(InputFileData%CTTS_Path)
 
    !-------------------------------------------------------------------------------------------------
@@ -328,48 +347,48 @@ SUBROUTINE InflowWind_ParseInputFileInfo( InputFileData, InFileInfo, PriPath, Er
    !-------------------------------------------------------------------------------------------------
 
    CurLine = CurLine + 1  ! Skip section break
-   CALL ParseVar( InFileInfo, CurLine, "FileName_u", InputFileData%HAWC_FileName_u, TmpErrStat, TmpErrMsg )
+   CALL ParseVar( InFileInfo, CurLine, "FileName_u", InputFileData%HAWC_FileName_u, TmpErrStat, TmpErrMsg, UnEc )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-   IF (ErrStat >= AbortErrLev) RETURN
+   if (Failed()) return
    IF ( PathIsRelative( InputFileData%HAWC_FileName_u ) ) InputFileData%HAWC_FileName_u = TRIM(PriPath)//TRIM(InputFileData%HAWC_FileName_u)
 
-   CALL ParseVar( InFileInfo, CurLine, "FileName_v", InputFileData%HAWC_FileName_v, TmpErrStat, TmpErrMsg )
+   CALL ParseVar( InFileInfo, CurLine, "FileName_v", InputFileData%HAWC_FileName_v, TmpErrStat, TmpErrMsg, UnEc )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-   IF (ErrStat >= AbortErrLev) RETURN
+   if (Failed()) return
    IF ( PathIsRelative( InputFileData%HAWC_FileName_v ) ) InputFileData%HAWC_FileName_v = TRIM(PriPath)//TRIM(InputFileData%HAWC_FileName_v)
 
-   CALL ParseVar( InFileInfo, CurLine, "FileName_w", InputFileData%HAWC_FileName_w, TmpErrStat, TmpErrMsg )
+   CALL ParseVar( InFileInfo, CurLine, "FileName_w", InputFileData%HAWC_FileName_w, TmpErrStat, TmpErrMsg, UnEc )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-   IF (ErrStat >= AbortErrLev) RETURN
+   if (Failed()) return
    IF ( PathIsRelative( InputFileData%HAWC_FileName_w ) ) InputFileData%HAWC_FileName_w = TRIM(PriPath)//TRIM(InputFileData%HAWC_FileName_w)
 
-   CALL ParseVar( InFileInfo, CurLine, "nx", InputFileData%HAWC_nx, TmpErrStat, TmpErrMsg )
+   CALL ParseVar( InFileInfo, CurLine, "nx", InputFileData%HAWC_nx, TmpErrStat, TmpErrMsg, UnEc )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-   IF (ErrStat >= AbortErrLev) RETURN
+   if (Failed()) return
 
-   CALL ParseVar( InFileInfo, CurLine, "ny", InputFileData%HAWC_ny, TmpErrStat, TmpErrMsg )
+   CALL ParseVar( InFileInfo, CurLine, "ny", InputFileData%HAWC_ny, TmpErrStat, TmpErrMsg, UnEc )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-   IF (ErrStat >= AbortErrLev) RETURN
+   if (Failed()) return
 
-   CALL ParseVar( InFileInfo, CurLine, "nz", InputFileData%HAWC_nz, TmpErrStat, TmpErrMsg )
+   CALL ParseVar( InFileInfo, CurLine, "nz", InputFileData%HAWC_nz, TmpErrStat, TmpErrMsg, UnEc )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-   IF (ErrStat >= AbortErrLev) RETURN
+   if (Failed()) return
 
-   CALL ParseVar( InFileInfo, CurLine, "dx", InputFileData%HAWC_dx, TmpErrStat, TmpErrMsg )
+   CALL ParseVar( InFileInfo, CurLine, "dx", InputFileData%HAWC_dx, TmpErrStat, TmpErrMsg, UnEc )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-   IF (ErrStat >= AbortErrLev) RETURN
+   if (Failed()) return
 
-   CALL ParseVar( InFileInfo, CurLine, "dy", InputFileData%HAWC_dy, TmpErrStat, TmpErrMsg )
+   CALL ParseVar( InFileInfo, CurLine, "dy", InputFileData%HAWC_dy, TmpErrStat, TmpErrMsg, UnEc )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-   IF (ErrStat >= AbortErrLev) RETURN
+   if (Failed()) return
 
-   CALL ParseVar( InFileInfo, CurLine, "dz", InputFileData%HAWC_dz, TmpErrStat, TmpErrMsg )
+   CALL ParseVar( InFileInfo, CurLine, "dz", InputFileData%HAWC_dz, TmpErrStat, TmpErrMsg, UnEc )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-   IF (ErrStat >= AbortErrLev) RETURN
+   if (Failed()) return
 
-   CALL ParseVar( InFileInfo, CurLine, "RefHt_HAWC", InputFileData%FF%RefHt, TmpErrStat, TmpErrMsg )
+   CALL ParseVar( InFileInfo, CurLine, "RefHt_HAWC", InputFileData%FF%RefHt, TmpErrStat, TmpErrMsg, UnEc )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-   IF (ErrStat >= AbortErrLev) RETURN
+   if (Failed()) return
 
    !----------------------------------------------------------------------------------------------
    !> Read the _Scaling parameters for turbulence (HAWC-format files) [used only for WindType = 5]_ subsection
@@ -377,41 +396,41 @@ SUBROUTINE InflowWind_ParseInputFileInfo( InputFileData, InFileInfo, PriPath, Er
 
    CurLine = CurLine + 1  ! Skip section break
       ! ScaleMethod: Turbulence scaling method [0=none, 1=direct scaling, 2= calculate scaling factor based on a desired standard deviation]
-   CALL ParseVar( InFileInfo, CurLine, "ScaleMethod", InputFileData%FF%ScaleMethod, TmpErrStat, TmpErrMsg )
+   CALL ParseVar( InFileInfo, CurLine, "ScaleMethod", InputFileData%FF%ScaleMethod, TmpErrStat, TmpErrMsg, UnEc )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-   IF (ErrStat >= AbortErrLev) RETURN
+   if (Failed()) return
 
-   CALL ParseVar( InFileInfo, CurLine, "SFx", InputFileData%FF%SF(1), TmpErrStat, TmpErrMsg )
+   CALL ParseVar( InFileInfo, CurLine, "SFx", InputFileData%FF%SF(1), TmpErrStat, TmpErrMsg, UnEc )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-   IF (ErrStat >= AbortErrLev) RETURN
+   if (Failed()) return
 
-   CALL ParseVar( InFileInfo, CurLine, "SFy", InputFileData%FF%SF(2), TmpErrStat, TmpErrMsg )
+   CALL ParseVar( InFileInfo, CurLine, "SFy", InputFileData%FF%SF(2), TmpErrStat, TmpErrMsg, UnEc )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-   IF (ErrStat >= AbortErrLev) RETURN
+   if (Failed()) return
 
-   CALL ParseVar( InFileInfo, CurLine, "SFz", InputFileData%FF%SF(3), TmpErrStat, TmpErrMsg )
+   CALL ParseVar( InFileInfo, CurLine, "SFz", InputFileData%FF%SF(3), TmpErrStat, TmpErrMsg, UnEc )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-   IF (ErrStat >= AbortErrLev) RETURN
+   if (Failed()) return
 
-   CALL ParseVar( InFileInfo, CurLine, "SigmaFx", InputFileData%FF%SigmaF(1), TmpErrStat, TmpErrMsg )
+   CALL ParseVar( InFileInfo, CurLine, "SigmaFx", InputFileData%FF%SigmaF(1), TmpErrStat, TmpErrMsg, UnEc )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-   IF (ErrStat >= AbortErrLev) RETURN
+   if (Failed()) return
 
-   CALL ParseVar( InFileInfo, CurLine, "SigmaFy", InputFileData%FF%SigmaF(2), TmpErrStat, TmpErrMsg )
+   CALL ParseVar( InFileInfo, CurLine, "SigmaFy", InputFileData%FF%SigmaF(2), TmpErrStat, TmpErrMsg, UnEc )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-   IF (ErrStat >= AbortErrLev) RETURN
+   if (Failed()) return
 
-   CALL ParseVar( InFileInfo, CurLine, "SigmaFz", InputFileData%FF%SigmaF(3), TmpErrStat, TmpErrMsg )
+   CALL ParseVar( InFileInfo, CurLine, "SigmaFz", InputFileData%FF%SigmaF(3), TmpErrStat, TmpErrMsg, UnEc )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-   IF (ErrStat >= AbortErrLev) RETURN
+   if (Failed()) return
 
-   ! CALL ParseVar( InFileInfo, CurLine, "HAWC_TStart", InputFileData%FF%TStart, TmpErrStat, TmpErrMsg )
+   ! CALL ParseVar( InFileInfo, CurLine, "HAWC_TStart", InputFileData%FF%TStart, TmpErrStat, TmpErrMsg, UnEc )
    ! CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
    ! IF (ErrStat >= AbortErrLev) THEN
    !    RETURN
    ! ENDIF
 
-   ! CALL ParseVar( InFileInfo, CurLine, "HAWC_TEnd", InputFileData%FF%TEnd, TmpErrStat, TmpErrMsg )
+   ! CALL ParseVar( InFileInfo, CurLine, "HAWC_TEnd", InputFileData%FF%TEnd, TmpErrStat, TmpErrMsg, UnEc )
    ! CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
    ! IF (ErrStat >= AbortErrLev) THEN
    !    RETURN
@@ -422,48 +441,56 @@ SUBROUTINE InflowWind_ParseInputFileInfo( InputFileData, InFileInfo, PriPath, Er
    !----------------------------------------------------------------------------------------------
 
    CurLine = CurLine + 1  ! Skip section break
-   CALL ParseVar( InFileInfo, CurLine, "URef", InputFileData%FF%URef, TmpErrStat, TmpErrMsg )
+   CALL ParseVar( InFileInfo, CurLine, "URef", InputFileData%FF%URef, TmpErrStat, TmpErrMsg, UnEc )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-   IF (ErrStat >= AbortErrLev) RETURN
+   if (Failed()) return
 
       ! WindProfileType: Wind profile type (0=constant;1=logarithmic;2=power law)
-   CALL ParseVar( InFileInfo, CurLine, "WindProfile", InputFileData%FF%WindProfileType, TmpErrStat, TmpErrMsg )
+   CALL ParseVar( InFileInfo, CurLine, "WindProfile", InputFileData%FF%WindProfileType, TmpErrStat, TmpErrMsg, UnEc )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-   IF (ErrStat >= AbortErrLev) RETURN
+   if (Failed()) return
 
-   CALL ParseVar( InFileInfo, CurLine, "PLExp_HAWC", InputFileData%FF%PLExp, TmpErrStat, TmpErrMsg )
+   CALL ParseVar( InFileInfo, CurLine, "PLExp_HAWC", InputFileData%FF%PLExp, TmpErrStat, TmpErrMsg, UnEc )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-   IF (ErrStat >= AbortErrLev) RETURN
+   if (Failed()) return
 
-   CALL ParseVar( InFileInfo, CurLine, "Z0", InputFileData%FF%Z0, TmpErrStat, TmpErrMsg )
+   CALL ParseVar( InFileInfo, CurLine, "Z0", InputFileData%FF%Z0, TmpErrStat, TmpErrMsg, UnEc )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-   IF (ErrStat >= AbortErrLev) RETURN
+   if (Failed()) return
 
-   CALL ParseVarWDefault( InFileInfo, CurLine, "XOffset", InputFileData%FF%XOffset, 0.0_ReKi, TmpErrStat, TmpErrMsg )
+   CALL ParseVarWDefault( InFileInfo, CurLine, "XOffset", InputFileData%FF%XOffset, 0.0_ReKi, TmpErrStat, TmpErrMsg, UnEc )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-   IF (ErrStat >= AbortErrLev) RETURN
+   if (Failed()) return
 
    !----------------------------------------------------------------------------------------------
    !> Read the _OUTPUT_ subsection
    !----------------------------------------------------------------------------------------------
    CurLine = CurLine + 1  ! Skip section break
-   CALL ParseVar( InFileInfo, CurLine, "SumPrint", InputFileData%SumPrint, TmpErrStat, TmpErrMsg )
+   CALL ParseVar( InFileInfo, CurLine, "SumPrint", InputFileData%SumPrint, TmpErrStat, TmpErrMsg, UnEc )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-   IF (ErrStat >= AbortErrLev) RETURN
+   if (Failed()) return
 
    !---------------------- OUTLIST  --------------------------------------------
    CurLine = CurLine + 1  ! Skip comment line
    CALL ReadOutputListFromFileInfo( InFileInfo, CurLine, InputFileData%OutList, &
-            InputFileData%NumOuts, "OutList", "List of user-requested output channels", TmpErrStat, TmpErrMsg )
+            InputFileData%NumOuts, "OutList", "List of user-requested output channels", TmpErrStat, TmpErrMsg, UnEc )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-   IF (ErrStat >= AbortErrLev) RETURN
+   if (Failed()) return
 
    !-------------------------------------------------------------------------------------------------
    ! This is the end of the input file
    !-------------------------------------------------------------------------------------------------
 
    RETURN
-
+   CONTAINS
+   !-------------------------------------------------------------------------------------------------
+      logical function Failed()
+         CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
+         Failed = ErrStat >= AbortErrLev
+         if (Failed) then
+            if (UnEc  > -1_IntKi)      CLOSE( UnEc )
+         endif
+      end function Failed
    END SUBROUTINE InflowWind_ParseInputFileInfo
 
 !====================================================================================================
