@@ -373,7 +373,7 @@ contains
                    P4=x%r_NW(1:3,iSpan  ,iDepth+1,iW)
                    Gamm=GammaLastIter(iSpan, iW)
                    do iWCP=1,p%nWings
-                      call ui_quad_n1(m%CP_LL(1:3,1:p%nSpan,iWCP), nCPs, P1, P2, P3, P4, Gamm, p%RegFunction, p%WingRegParam, Vvar(1:3,1:p%nSpan,iWCP))
+                      call ui_quad_n1(m%CP_LL(1:3,1:p%nSpan,iWCP), nCPs, P1, P2, P3, P4, Gamm, p%RegFunction, x%Eps_NW(1,iSpan,iDepth,iW), Vvar(1:3,1:p%nSpan,iWCP))
                    enddo
                 enddo
              enddo

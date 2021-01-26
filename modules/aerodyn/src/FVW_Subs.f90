@@ -704,7 +704,8 @@ subroutine PackPanelsToSegments(p, x, iDepthStart, bMirror, nNW, nFW, SegConnct,
 end subroutine PackPanelsToSegments
 
 !> Set up regularization parameter based on diffusion method and regularization method
-!! NOTE: this should preferably be done at the "panel"/vortex sheet level
+!! NOTE: - reg param is now stored at panel level
+!!       - continuous variables are used, only the LL and NW panel needs to be set at t=0
 subroutine FVW_InitRegularization(x, p, m, ErrStat, ErrMsg)
    type(FVW_ContinuousStateType),   intent(inout) :: x       !< States
    type(FVW_ParameterType),         intent(inout) :: p       !< Parameters
@@ -735,8 +736,8 @@ subroutine FVW_InitRegularization(x, p, m, ErrStat, ErrMsg)
    RegParam = ds_mean*2
 
    ! Default init of reg param
-   x%Eps_NW(1:3,:,:,:) = 0.0_ReKi
-   x%Eps_FW(1:3,:,:,:) = 0.0_ReKi
+   x%Eps_NW(1:3,:,:,:) = 0.001_ReKi
+   x%Eps_FW(1:3,:,:,:) = 0.001_ReKi
    if (DEV_VERSION) then
       write(*,'(A)')'-----------------------------------------------------------------------------------------'
       write(*,'(A)')'Regularization Info'
@@ -749,6 +750,12 @@ subroutine FVW_InitRegularization(x, p, m, ErrStat, ErrMsg)
    endif
 
    if (p%RegDeterMethod==idRegDeterConstant) then
+      ! Constant reg param throughout the wake
+      if (p%WakeRegMethod==idRegAge) then ! NOTE: age method implies a division by rc
+         p%WingRegParam=max(0.01, p%WingRegParam)
+         p%WakeRegParam=max(0.01, p%WakeRegParam)
+      endif
+
       ! Set reg param on wing and first NW
       ! NOTE: setting the same in all three directions for now, TODO!
       x%Eps_NW(1:3,:,1,:) = p%WingRegParam ! First age is always WingRegParam (LL)
@@ -807,10 +814,13 @@ subroutine FVW_InitRegularization(x, p, m, ErrStat, ErrMsg)
       ErrMsg ='Regularization determination method not implemented' 
    endif
 
-   write(*,'(A,2F8.4)')    '   WakeReg (min/max) : ', minval(x%Eps_NW(:,:, 1, :)), maxval(x%Eps_NW(:,:, 1, :))
+   call WrScr(' - Regularization parameters:')
+   write(*,'(A,2F8.4)') '    BladeReg (min/max): ', minval(x%Eps_NW(:, :, 1, :)), maxval(x%Eps_NW(:, :, 1, :))
    if (p%nNWMax>1) then
-      write(*,'(A,2F8.4)') '   BladeReg (min/max): ', minval(x%Eps_NW(:, :, 2, :)), maxval(x%Eps_NW(:, :, 2, :))
+      write(*,'(A,2F8.4)')    '    WakeReg (min/max) : ', minval(x%Eps_NW(:,:, 2, :)), maxval(x%Eps_NW(:,:, 2, :))
    endif
+   write(*,'(A,2F8.4)') '    k = alpha delta nu: ', CoreSpreadAlpha * p%CoreSpreadEddyVisc * p%KinVisc
+
 end subroutine FVW_InitRegularization
 
 

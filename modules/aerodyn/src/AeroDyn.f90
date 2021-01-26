@@ -2910,7 +2910,7 @@ SUBROUTINE TwrInflArray( p, u, m, Positions, Inflow, ErrStat, ErrMsg )
    call CheckTwrInfl( u, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ); if (ErrStat >= AbortErrLev) return
 
    !$OMP PARALLEL default(shared)
-   !$OMP do private(i,Pos,r_TowerBlade,theta_tower_trans,W_tower,xbar,ybar,zbar,TwrCd,TwrTI,TwrClrnc,TwrDiam,found,denom,u_TwrPotent,v_TwrPotent,u_TwrShadow,v) schedule(runtime)
+   !$OMP do private(i,Pos,r_TowerBlade,theta_tower_trans,W_tower,xbar,ybar,zbar,TwrCd,TwrTI,TwrClrnc,TwrDiam,found,denom,exponential,u_TwrPotent,v_TwrPotent,u_TwrShadow,v) schedule(runtime)
    do i = 1, size(Positions,2)
       Pos=Positions(1:3,i)
          

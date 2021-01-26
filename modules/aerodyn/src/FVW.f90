@@ -318,8 +318,8 @@ subroutine FVW_InitStates( x, p, ErrStat, ErrMsg )
    x%r_FW     = 0.0_ReKi
    x%Gamma_NW = 0.0_ReKi ! First call of calcoutput, states might not be set 
    x%Gamma_FW = 0.0_ReKi ! NOTE, these values might be mapped from z%Gamma_LL at init
-   x%Eps_NW   = 0.0_ReKi 
-   x%Eps_FW   = 0.0_ReKi 
+   x%Eps_NW   = 0.001_ReKi 
+   x%Eps_FW   = 0.001_ReKi 
 end subroutine FVW_InitStates
 ! ==============================================================================
 subroutine FVW_InitConstraint( z, p, m, ErrStat, ErrMsg )
@@ -857,14 +857,17 @@ subroutine FVW_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSt
       ! TODO
    else if (p%WakeRegMethod==idRegAge) then
       visc_fact = 2.0_ReKi * CoreSpreadAlpha * p%CoreSpreadEddyVisc * p%KinVisc
-      visc_fact=visc_fact/sqrt(p%WakeRegParam**2 + 2*visc_fact*p%DTaero) ! NOTE: using DTaero to be consisten with OverCycling
-      dxdt%Eps_NW(1:3, :, :, :) = visc_fact
-      dxdt%Eps_FW(1:3, :, :, :) = visc_fact
+      ! --- Method 1, use d(rc^2)/dt = 4 k 
+      dxdt%Eps_NW(1:3, :, iNWStart:, :) = visc_fact/x%Eps_NW(1:3, :, iNWStart:, :)
+      dxdt%Eps_FW(1:3, :,         :, :) = visc_fact/x%Eps_FW(1:3, :, :, :)
+      ! --- Method 2, use rc(tau) = 2k/sqrt(r_c^2(tau=0) + 4 k tau)
+      !dxdt%Eps_NW(1:3, :, :, :) = (visc_fact)/sqrt(x%Eps_NW(1:3, :, :, :)**2 + 2*visc_fact*p%DTaero)
+      !dxdt%Eps_FW(1:3, :, :, :) = (visc_fact)/sqrt(x%Eps_FW(1:3, :, :, :)**2 + 4*visc_fact*p%DTaero)
    else
       ErrStat = ErrID_Fatal
       ErrMsg ='Regularization method not implemented'
    endif
-   dxdt%Eps_NW(1:3,:,1:iNWStart,:) = 0.0_ReKi ! LL and First NW panel epsilon does not change
+   dxdt%Eps_NW(1:3,:,1:iNWStart,:) = 0.0_ReKi ! Important! LL and First NW panel epsilon does not change
 
 contains
    logical function Failed()

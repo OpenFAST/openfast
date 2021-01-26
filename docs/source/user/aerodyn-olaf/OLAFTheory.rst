@@ -570,6 +570,8 @@ Here, :math:`\epsilon` is the vortex-filament strain, :math:`l` is the filament
 length, and :math:`\Delta l` is the change of length between two time steps. The
 integral in Eq. :eq:`stretch` represents strain effects.
 
+This option is not yet implemented.
+
 Wake Age / Core-Spreading
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -592,6 +594,16 @@ vorticity itself or between the wake vorticity and the background flow. It is
 often referred to as the core-spreading method. Setting **DiffusionMethod=[1]**
 is the same as using the wake age method (**WakeRegMethod=[3]**).
 
+The time evolution of the core radius is implemented as:
+
+.. math::
+
+    \frac{d r_c}{dt} = \frac{2\alpha\delta\nu}{r_c(t)}
+
+and :math:`\frac{d r_c}{dt}=0` on the blades.
+
+
+
 Stretching and Wake Age
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -602,6 +614,8 @@ Eq. :eq:`stretchandage`.
 .. math::
    r_c(\zeta,\epsilon) = \sqrt{r_{c0}^2 + 4\alpha\delta\nu \zeta  \big(1+\epsilon\big)^{-1} }
    :label: stretchandage
+
+This option is not yet implemented.
 
 .. _sec:diffusion:
 
