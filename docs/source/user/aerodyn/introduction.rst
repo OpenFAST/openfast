@@ -3,17 +3,23 @@
 Introduction
 ============
 
-AeroDyn is a time-domain wind turbine aerodynamics module that is coupled in the OpenFAST multi-physics engineering tool to enable aero-elastic simulation of horizontal-axis turbines. 
-AeroDyn can also be driven as a standalone code to compute wind turbine aerodynamic response uncoupled from OpenFAST. 
-When coupled to OpenFAST, AeroDyn can also be linearized as part of the linearization of the full coupled solution (linearization is not available in standalone mode). 
-AeroDyn was originally developed for modeling wind turbine aerodynamics. 
+AeroDyn is a time-domain wind turbine aerodynamics module that is coupled in the
+OpenFAST multi-physics engineering tool to enable aero-elastic simulation of
+horizontal-axis turbines.  AeroDyn can also be driven as a standalone code to
+compute wind turbine aerodynamic response uncoupled from OpenFAST.  When coupled
+to OpenFAST, AeroDyn can also be linearized as part of the linearization of the
+full coupled solution (linearization is not available in standalone mode).
+AeroDyn was originally developed for modeling wind turbine aerodynamics.
 However, the module equally applies to the hydrodynamics of marine hydrokinetic
-(MHK) turbines (the terms “wind turbine”, “tower”, “aerodynamics” etc.  in this document imply “MHK turbine”, “MHK support structure”, “hydrodynamics” etc. for MHK turbines). 
-Additional physics important for MHK turbines, not applicable to wind turbines, computed by AeroDyn include a cavitation check. 
-This documentation pertains version of AeroDyn in the OpenFAST github repository.  
-The AeroDyn version released of OpenFAST 1.0.0 is most closely related to AeroDyn version 15 in the legacy version numbering. 
-AeroDyn version 15 was a complete overhaul from earlier version of AeroDyn. 
-AeroDyn version 15 and newer follows the requirements of the FAST modularization framework. 
+(MHK) turbines (the terms “wind turbine”, “tower”, “aerodynamics” etc.  in this
+document imply “MHK turbine”, “MHK support structure”, “hydrodynamics” etc. for
+MHK turbines).  Additional physics important for MHK turbines, not applicable to
+wind turbines, computed by AeroDyn include a cavitation check.  This
+documentation pertains version of AeroDyn in the OpenFAST github repository.
+The AeroDyn version released of OpenFAST 1.0.0 is most closely related to
+AeroDyn version 15 in the legacy version numbering.  AeroDyn version 15 was a
+complete overhaul from earlier version of AeroDyn.  AeroDyn version 15 and newer
+follows the requirements of the FAST modularization framework. 
 
 AeroDyn calculates aerodynamic loads on both the blades and tower.
 Aerodynamic calculations within AeroDyn are based on the principles of

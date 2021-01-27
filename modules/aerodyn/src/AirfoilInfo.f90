@@ -257,6 +257,16 @@ CONTAINS
             return
          end if
 
+            ! Check that the second dimensions of the SplineCoefs table and the Coefs table match.  If they don't, it may indicate
+            ! that the number of columns in each table in the AF input file are different.  This will result in array bounds issues
+            ! in the CubicSplineInitM routine.
+         if ( size(p%Table(iTable)%SplineCoefs, DIM=2) /= size(p%Table(iTable)%Coefs, DIM=2) ) then
+            call SetErrStat ( ErrID_Fatal, 'Number of columns in the SplineCoefs table and Coefs tables do not match in size.'// &
+                  ' Check that all tables in airfoil input file "'//TRIM( InitInput%FileName )//'" have the same number of columns.', &
+                  ErrStat, ErrMsg, RoutineName ) 
+            call Cleanup()
+            return
+         end if
             
             ! Compute the one set of coefficients of the piecewise polynomials for the irregularly-spaced data.
             ! Unlike the 2-D interpolation in which we use diffent knots for each airfoil coefficient, we can do
@@ -404,6 +414,8 @@ CONTAINS
       LOGICAL                                 :: BadVals                       ! A flag that indicates if the values in a table are invalid.
 
       TYPE (FileInfoType)                     :: FileInfo                      ! The derived type for holding the file information.
+      INTEGER(IntKi)                          :: NumCoefsIn                    ! The number of aerodynamic coefficients input to routine 
+      INTEGER(IntKi)                          :: NumCoefsTab                   ! The number of aerodynamic coefficients to be stored for this table.
 
       INTEGER(IntKi)                          :: DefaultInterpOrd              ! value of default interp order
       INTEGER(IntKi)                          :: ErrStat2                      ! Error status local to this routine.
@@ -415,6 +427,10 @@ CONTAINS
       ErrStat = ErrID_None
       ErrMsg  = ""
       defaultStr = ""
+
+      ! store NumCoefs passed in
+      NumCoefsIn = NumCoefs
+
       ! Getting parent folder of airfoils data (e.g. "Arifoils/")
       CALL GetPath( AFFile, PriPath )
          ! Process the (possibly) nested set of files.  This copies the decommented contents of
@@ -523,6 +539,7 @@ CONTAINS
       ENDIF
 
       DO iTable=1,p%NumTabs
+         NumCoefsTab = NumCoefsIn  ! Reset this counter for each table
 
          CALL ParseVar ( FileInfo, CurLine, 'Re', p%Table(iTable)%Re, ErrStat2, ErrMsg2, UnEc )
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -666,8 +683,8 @@ p%Table(iTable)%UA_BL%C_lalpha = p%Table(iTable)%UA_BL%C_nalpha
                CALL ParseVarWDefault ( FileInfo, CurLine, 'filtCutOff', p%Table(iTable)%UA_BL%filtCutOff, 0.5_ReKi, ErrStat2, ErrMsg2, UnEc )
                   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                   
-               p%ColUAf = NumCoefs + 1 ! column for f_st
-               NumCoefs = p%ColUAf + 1 ! precompute f_st and cl_fs for the HGM model
+               p%ColUAf    = NumCoefsTab + 1 ! column for f_st
+               NumCoefsTab = p%ColUAf    + 1 ! precompute f_st and cl_fs for the HGM model
                
                IF (ErrStat >= AbortErrLev) THEN
                   CALL Cleanup()
@@ -712,7 +729,7 @@ p%Table(iTable)%UA_BL%C_lalpha = p%Table(iTable)%UA_BL%C_nalpha
             RETURN
          ENDIF
 
-         ALLOCATE ( p%Table(iTable)%Coefs( p%Table(iTable)%NumAlf, NumCoefs ), STAT=ErrStat2 )
+         ALLOCATE ( p%Table(iTable)%Coefs( p%Table(iTable)%NumAlf, NumCoefsTab ), STAT=ErrStat2 )
          IF ( ErrStat2 /= 0 )  THEN
             CALL SetErrStat( ErrID_Fatal, 'Error allocating memory for p%Table%Coefs.', ErrStat, ErrMsg, RoutineName )
             CALL Cleanup()
@@ -751,7 +768,7 @@ p%Table(iTable)%UA_BL%C_lalpha = p%Table(iTable)%UA_BL%C_nalpha
             IF ( .NOT. EqualRealNos( p%Table(iTable)%Alpha(NumAlf), Pi ) )  THEN
                BadVals = .TRUE.
             ENDIF
-            DO Coef=1,NumCoefs
+            DO Coef=1,NumCoefsTab
                IF ( .NOT. EqualRealNos( p%Table(iTable)%Coefs(1,Coef), p%Table(iTable)%Coefs(NumAlf,Coef) ) )  THEN
                   BadVals = .TRUE.
                ENDIF
@@ -764,6 +781,9 @@ p%Table(iTable)%UA_BL%C_lalpha = p%Table(iTable)%UA_BL%C_nalpha
                RETURN
             ENDIF
          ENDIF ! ( .NOT. p%Table(iTable)%ConstData )
+
+         ! Set the NumCoefs value we return based on tables so far
+         NumCoefs = max(NumCoefs, NumCoefsTab)
 
       ENDDO ! iTable
 

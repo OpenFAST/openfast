@@ -110,7 +110,7 @@ macro(set_fast_gfortran)
   # Disable stack reuse within routines: issues seen with gfortran 9.x, but others may also exhibit
   #   see section 3.16 of https://gcc.gnu.org/onlinedocs/gcc-9.2.0/gcc.pdf
   #   and https://github.com/OpenFAST/openfast/pull/595
-  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fstack-reuse='none'")
+  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fstack-reuse=none")
 
   # Deal with Double/Single precision
   if (DOUBLE_PRECISION)
@@ -158,7 +158,11 @@ macro(set_fast_intel_fortran_posix)
   # Deal with Double/Single precision
   if (DOUBLE_PRECISION)
     add_definitions(-DOPENFAST_DOUBLE_PRECISION)
-    set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -r8 -double_size 128")
+    if("${CMAKE_Fortran_COMPILER_VERSION}" VERSION_GREATER "19")
+      set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -r8 -double-size 128")
+    else()
+      set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -r8 -double_size 128")
+    endif()
   endif (DOUBLE_PRECISION)
 
   # debug flags
@@ -204,7 +208,11 @@ macro(set_fast_intel_fortran_windows)
   # Deal with Double/Single precision
   if (DOUBLE_PRECISION)
     add_definitions(-DOPENFAST_DOUBLE_PRECISION)
-    set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} /real_size:64 /double_size:128")
+    if("${CMAKE_Fortran_COMPILER_VERSION}" VERSION_GREATER "19")
+      set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} /real-size:64 /double-size:128")
+    else()
+      set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} /real_size:64 /double_size:128")
+    endif()
   endif (DOUBLE_PRECISION)
 
   # increase the default 2MB stack size to 16 MB
