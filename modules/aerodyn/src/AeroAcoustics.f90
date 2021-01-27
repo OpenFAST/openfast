@@ -162,8 +162,11 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
     p%NrObsLoc         = InputFileData%NrObsLoc
     p%FTitle           = InputFileData%FTitle
 
-    call AllocAry(p%TI_Grid_In,size(InputFileData%TI_Grid_In,1), size(InputFileData%TI_Grid_In,2),  'p%TI_Grid_In', errStat2, errMsg2); if(Failed()) return
-    p%TI_Grid_In=InputFileData%TI_Grid_In
+    IF ((InputFileData%TICalcMeth==1)) THEN
+        call AllocAry(p%TI_Grid_In,size(InputFileData%TI_Grid_In,1), size(InputFileData%TI_Grid_In,2),  'p%TI_Grid_In', errStat2, errMsg2); if(Failed()) return
+        p%TI_Grid_In=InputFileData%TI_Grid_In
+    ENDIF
+
     p%AvgV=InputFileData%AvgV
 
     ! Copy AFInfo into AA module
