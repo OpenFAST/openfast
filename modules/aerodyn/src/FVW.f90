@@ -188,6 +188,8 @@ subroutine FVW_InitMiscVars( p, m, ErrStat, ErrMsg )
    m%VTKStep   = -1            ! Counter of VTK outputs
    m%VTKlastTime = -HUGE(1.0_DbKi)
    m%tSpent    = 0
+   m%iTip  = -1  ! Index where tip vorticity will be placed
+   m%iRoot = -1  ! Index where root vorticity will be placed
 
    call AllocAry( m%LE      ,  3  ,  p%nSpan+1  , p%nWings, 'Leading Edge Points', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%LE = -999999_ReKi;
    call AllocAry( m%TE      ,  3  ,  p%nSpan+1  , p%nWings, 'TrailingEdge Points', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%TE = -999999_ReKi;

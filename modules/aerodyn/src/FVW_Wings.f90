@@ -109,7 +109,10 @@ contains
          !call Meshing('middle'           , p%s_LL(:,iW), p%nSpan, p%s_CP_LL(:,iW))
          call Meshing('fullcosineapprox' , p%s_LL(:,iW), p%nSpan, p%s_CP_LL(:,iW))
          call InterpArray(p%s_LL(:,iW), p%chord_LL(:,iW), p%s_CP_LL(:,iW), p%chord_CP_LL(:,iW))
+
+         deallocate(s_in)
       enddo
+
    end subroutine Wings_Panelling_Init
    !----------------------------------------------------------------------------------------------------------------------------------
    !> Based on an input mesh, sets the following:

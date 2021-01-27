@@ -238,57 +238,53 @@ end subroutine Map_LL_NW
 !>  Map the last NW panel with the first FW panel
 subroutine Map_NW_FW(p, m, z, x, ErrStat, ErrMsg)
    type(FVW_ParameterType),         intent(in   )  :: p              !< Parameters
-   type(FVW_MiscVarType),           intent(in   )  :: m              !< Initial misc/optimization variables
+   type(FVW_MiscVarType),           intent(inout)  :: m              !< Initial misc/optimization variables
    type(FVW_ConstraintStateType),   intent(in   )  :: z              !< Constraints states
    type(FVW_ContinuousStateType),   intent(inout)  :: x              !< Continuous states
    integer(IntKi),                  intent(  out)  :: ErrStat        !< Error status of the operation
    character(*),                    intent(  out)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
-   integer(IntKi)            :: iW, iRoot
+   integer(IntKi)            :: iW, iRoot, iTip, iMax
    real(ReKi), dimension(p%nWings) :: FWGamma
-   real(ReKi), dimension(3):: FWEps
+   real(ReKi), dimension(p%nSpan+1) :: Gamma_t
+   real(ReKi), dimension(p%nSpan) :: sCoord
+   real(ReKi) :: FWEpsTip, FWEpsRoot
+   real(ReKi) :: ltip, rTip, Gamma_max
    integer(IntKi), parameter :: iAgeFW=1   !< we update the first FW panel
    ErrStat = ErrID_None
    ErrMsg  = ""
    
    ! First Panel of Farwake has coordinates of last panel of near wake always
    if (p%nFWMax>0) then
-      FWGamma(:)=0.0_ReKi
       if (m%nNW==p%nNWMax) then
          ! First circulation of Farwake is taken as the max circulation of last NW column
-         ! Regularization of far wake is TODO, for now taken as max but should be ramped up
+         FWGamma(:)=0.0_ReKi
          do iW=1,p%nWings
-            !FWGamma = sum(x%Gamma_NW(:,p%nNWMax,iW))/p%nSpan
-            FWGamma(iW) = maxval(x%Gamma_NW(:,p%nNWMax,iW))
+            ! NOTE: on the first pass, m%iTip and m%iRoot are computed, TODO per blade
+            call PlaceTipRoot(p%nSpan, x%Gamma_NW(:,m%nNW,iW), x%r_NW(1:3,:,m%nNW,iW), x%Eps_NW(1:3,:,m%nNW,iW),& ! inputs
+               m%iRoot, m%iTip, FWGamma(iW), FWEpsTip, FWEpsRoot) ! outputs
             x%Gamma_FW(1:FWnSpan,iAgeFW,iW) = FWGamma(iW)
-            ! Regularization TODO (should be increased to account for the concentration of vorticity to 1 panel only
-            FWEps(1) = maxval(x%Eps_NW(1,:,p%nNWMax,iW))
-            FWEps(2) = maxval(x%Eps_NW(2,:,p%nNWMax,iW))
-            FWEps(3) = maxval(x%Eps_NW(3,:,p%nNWMax,iW))
-            x%Eps_FW(1,1:FWnSpan,iAgeFW,iW) = FWEps(1)
-            x%Eps_FW(2,1:FWnSpan,iAgeFW,iW) = FWEps(2)
-            x%Eps_FW(3,1:FWnSpan,iAgeFW,iW) = FWEps(3)
+            x%Eps_FW(3,1:FWnSpan,iAgeFW,iW) = FWEpsTip  ! HACK tip put in third
+            x%Eps_FW(2,1:FWnSpan,iAgeFW,iW) = FWEpsRoot ! HACK root put in second
+            x%Eps_FW(1,1:FWnSpan,iAgeFW,iW) = FWEpsTip  ! For shed vorticity..
          enddo
-      endif
-
-      do iW=1,p%nWings
-         ! Find first point (in half span) where circulation is more than 0.1% of MaxGamma, call it the root
+         iTip  = m%iTip 
+         iRoot = m%iRoot
+      else
          iRoot=1
-         ! NOTE: this below won't work for a wing
-         ! Need to go from maxgamma location, and integrate spanwise position on both side to find location of tip and root vortex
-         !do while ((iRoot<int(p%nSpan/2)) .and. (x%Gamma_NW(iRoot, p%nNWMax,iW)< 0.001*FWGamma(iW) ))
-         !   iRoot=iRoot+1
-         !enddo
-
-         x%r_FW(1:3,1        ,iAgeFW,iW) =  x%r_NW(1:3,iRoot     ,p%nNWMax+1,iW) ! Point 1 (root)
-         x%r_FW(1:3,FWnSpan+1,iAgeFW,iW) =  x%r_NW(1:3,p%nSpan+1 ,p%nNWMax+1,iW) ! Point FWnSpan (tip)
-         if ((FWnSpan==2)) then
-            ! in between point
-            x%r_FW(1:3,2,iAgeFW,iW) =  x%r_NW(1:3,int(p%nSpan+1)/4 ,p%nNWMax+1,iW) ! Point (mid)
-         else if ((FWnSpan>2)) then
-            ErrMsg='Error: FWnSpan>2 not implemented.'
-            ErrStat=ErrID_Fatal
-            return
-         endif
+         iTip=p%nSpan+1
+      endif
+      ! Far wake point always mapped to last near wake
+      do iW=1,p%nWings
+         x%r_FW(1:3,1        ,iAgeFW,iW) =  x%r_NW(1:3,iRoot,p%nNWMax+1,iW) ! Point 1 (root)
+         x%r_FW(1:3,FWnSpan+1,iAgeFW,iW) =  x%r_NW(1:3,iTip ,p%nNWMax+1,iW) ! Point FWnSpan (tip)
+         !if ((FWnSpan==2)) then
+         !   ! in between point
+         !   x%r_FW(1:3,2,iAgeFW,iW) =  x%r_NW(1:3,int(p%nSpan+1)/4 ,p%nNWMax+1,iW) ! Point (mid)
+         !else if ((FWnSpan>2)) then
+         !   ErrMsg='Error: FWnSpan>2 not implemented.'
+         !   ErrStat=ErrID_Fatal
+         !   return
+         !endif
       enddo
    endif
    if (.false.) print*,z%Gamma_LL(1,1) ! Just to avoid unused var warning
@@ -651,13 +647,13 @@ subroutine PackPanelsToSegments(p, x, iDepthStart, bMirror, nNW, nFW, SegConnct,
       iHeadC=1
       if (nCNW>0) then
          do iW=1,p%nWings
-            call LatticeToSegments(x%r_NW(1:3,:,1:nNW+1,iW), x%Gamma_NW(:,1:nNW,iW), x%Eps_NW(1:3,:,1:nNW,iW), iDepthStart, SegPoints, SegConnct, SegGamma, SegEpsilon, iHeadP, iHeadC, .True., LastNWShed )
+            call LatticeToSegments(x%r_NW(1:3,:,1:nNW+1,iW), x%Gamma_NW(:,1:nNW,iW), x%Eps_NW(1:3,:,1:nNW,iW), iDepthStart, SegPoints, SegConnct, SegGamma, SegEpsilon, iHeadP, iHeadC, .True., LastNWShed, .false.)
          enddo
       endif
       if (nFW>0) then
          iHeadC_bkp = iHeadC
          do iW=1,p%nWings
-            call LatticeToSegments(x%r_FW(1:3,:,1:nFW+1,iW), x%Gamma_FW(:,1:nFW,iW), x%Eps_FW(1:3,:,1:nFW,iW), 1, SegPoints, SegConnct, SegGamma, SegEpsilon, iHeadP, iHeadC , p%FWShedVorticity, p%FWShedVorticity)
+            call LatticeToSegments(x%r_FW(1:3,:,1:nFW+1,iW), x%Gamma_FW(:,1:nFW,iW), x%Eps_FW(1:3,:,1:nFW,iW), 1, SegPoints, SegConnct, SegGamma, SegEpsilon, iHeadP, iHeadC , p%FWShedVorticity, p%FWShedVorticity, .true.)
          enddo
          SegConnct(3,iHeadC_bkp:) = SegConnct(3,iHeadC_bkp:) + nNW ! Increasing iDepth (or age) to account for NW
       endif

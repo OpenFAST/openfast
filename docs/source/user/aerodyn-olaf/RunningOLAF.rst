@@ -37,7 +37,7 @@ If the structural solver requires a smaller time step, the time step for the glu
 
 
 We recommend to set the near wake length to the number of time steps needed to reach two rotor revolutions. For the far wake, we recommend 10 rotor revolutions. 
-The the far wake distance that is free, we recommend to set it to a value somewhere between 25% and 50% of the far wake length, (e.g. 3 revolutions).
+For the free far-wake, we recommend to set the distance to a value somewhere between 25% and 50% of the far wake length, (e.g. 3 revolutions).
 
 The following python script computes the parameters according to these guidelines.
 
@@ -63,9 +63,9 @@ The following python script computes the parameters according to these guideline
        omega = omega_rpm*2*np.pi/60
        T = 2*np.pi/omega
        if nPerAzimuth is not None:
-           dt_wanted    = np.around(T/nPerAzimuth,2)
+           dt_wanted    = np.around(T/nPerAzimuth,3)
        else:
-           dt_wanted    = np.around(deltaPsiDeg/(6*omega_rpm))
+           dt_wanted    = np.around(deltaPsiDeg/(6*omega_rpm),3)
            nPerAzimuth = int(2*np.pi /(deltaPsiDeg*np.pi/180))
 
        nNWPanel     = nNWrot*nPerAzimuth

@@ -51,6 +51,86 @@ module FVW_VortexTools
    end interface 
 
 contains
+
+   !> Returns the discrete trailed vorticity (\Delta Gamma) based on a "bound" circulation Gamma
+   !!    \Delta\Gamma_i  = \int_{r i-1}^{r i+1} d\Gamma/dr *dr  [m^2/s]
+   !! NOTE: this is not gamma = d\Gamma/dr  \approx \Delta\Gamma /\Delta r 
+   subroutine GammaTrailed(n, Gamma_b, Gamma_t)
+      integer(IntKi),             intent(in)    :: n       !< number of points along the span
+      real(Reki), dimension(n),   intent(in   ) :: Gamma_b !< Bound circulation
+      real(ReKi), dimension(n+1), intent(out)   :: Gamma_t !< Trailed circulation
+      integer(IntKi) :: i
+      Gamma_t(1)   =   Gamma_b(1)
+      Gamma_t(n+1) = - Gamma_b(n)
+      do i = 2, n
+         Gamma_t(i) = Gamma_b(i)-Gamma_b(i-1)
+      enddo
+   endsubroutine 
+
+   !> Curvilinear distance along a set of connected points.
+   subroutine CurvilinearDist(n, P, s)
+      integer(IntKi),             intent(in)    :: n !< number of points 
+      real(Reki), dimension(3,n), intent(in)    :: P !< Point cordinates
+      real(ReKi), dimension(n),   intent(out)   :: s !< Curvilinear coordinate
+      integer(IntKi) :: i
+      s(1) = 0
+      do i = 2, n
+         s(i) = s(i-1) + sqrt((P(1,i)-P(1,i-1))**2 + (P(2,i)-P(2,i-1))**2 + (P(3,i)-P(3,i-1))**2)
+      enddo
+   endsubroutine 
+
+   !> Place Tip and Root vorticity according to Gamma distribution
+   !! Attempts to preserve the first moment of vorticity in the 15% region of tip and root
+   !! Estimtes the regularization parameters based on the length of the tip region..
+   subroutine PlaceTipRoot(n, Gamma_b, xV, Eps, iRoot, iTip, Gamma_max, EpsTip, EpsRoot)
+      integer(IntKi),               intent(in)  :: n           !< number of vortex points
+      real(ReKi), dimension(n)    , intent(in)  :: Gamma_b     !< Wake panel circulation
+      real(Reki), dimension(3,n+1), intent(in)  :: xV          !< Vortex point nodal coordinates
+      real(Reki), dimension(3,n  ), intent(in)  :: Eps         !< Vortex panels epsilon
+      integer(IntKi),               intent(inout) :: iRoot, iTip !< Index of tip and root vortex, if <0, they are computed
+      real(ReKi),                   intent(out) :: Gamma_max
+      real(Reki),                   intent(out) :: EpsTip      !< Regularization of tip
+      real(Reki),                   intent(out) :: EpsRoot     !< Regularization of root
+      real(ReKi), dimension(n+1) :: Gamma_t
+      real(ReKi), dimension(n+1) :: s
+      real(ReKi) :: rRoot, rTip, lTip, lRoot
+      integer(IntKi) :: i10, i90
+
+      if ((n<=2)) then
+         iTip =n+1
+         iRoot=1
+         EpsTip   = Eps(1,iTip)
+         EpsRoot  = Eps(1,iRoot)
+      else
+         Gamma_max = maxval(Gamma_b,1)
+         call CurvilinearDist(n+1, xV, s)
+         if (iTip<0) then
+            ! Find position of tip and root
+            call GammaTrailed(n, Gamma_b, Gamma_t)
+
+            i10 = minloc(abs(s(:)-0.15*s(n+1)),1)
+            i90 = minloc(abs(s(:)-0.85*s(n+1)),1)
+
+            rTip  = sum(Gamma_t(i90:)  * (s(i90:)))/ sum(Gamma_t(i90:))
+            rRoot = sum(Gamma_t(1:i10) * s(1:i10)) / sum(Gamma_t(1:i10))
+            iTip  = minloc(abs(rTip - s), 1)
+            iRoot = minloc(abs(rRoot - s), 1)
+         endif
+         rTip  = s(iTip)
+         rRoot = s(iRoot)
+
+         ! Mean regularization at the tip and root
+         EpsTip  = sum(Eps(1,iTip:))  /(n-iTip+1)
+         EpsRoot = sum(Eps(1,1:iRoot))/(iRoot)
+         ! Scaling based on the "length" of the vortex, this will need further tuning
+         lTip  = (s(n+1)-rTip )/3.14 ! Approximate radius if the tip has done half a turn
+         lRoot = (rRoot       )/3.14
+         EpsTip  = 1.3*(lTip+EpsTip) ! Tuning factors
+         EpsRoot = 1.7*(lRoot+EpsRoot)
+      endif
+   endsubroutine PlaceTipRoot
+
+
    !> Flatten/ravel a 3D grid of vectors (each of size n)
    subroutine FlattenValues(GridValues, FlatValues, iHeadP)
       real(Reki), dimension(:,:,:,:),  intent(in   )  :: GridValues  !< Grid values n x nx x ny x nz
@@ -121,7 +201,7 @@ contains
 
    endsubroutine LatticeToPoints
 
-   subroutine LatticeToSegments(LatticePoints, LatticeGamma, LatticeEpsilon, iDepthStart, SegPoints, SegConnct, SegGamma, SegEpsilon, iHeadP, iHeadC, bShedVorticity, bShedLastVorticity )
+   subroutine LatticeToSegments(LatticePoints, LatticeGamma, LatticeEpsilon, iDepthStart, SegPoints, SegConnct, SegGamma, SegEpsilon, iHeadP, iHeadC, bShedVorticity, bShedLastVorticity, bHackEpsilon )
       real(Reki), dimension(:,:,:),    intent(in   )  :: LatticePoints  !< Points  3 x nSpan x nDepth
       real(Reki), dimension(:,:),      intent(in   )  :: LatticeGamma   !< GammaPanl   nSpan x nDepth
       real(Reki), dimension(:,:,:),    intent(in   )  :: LatticeEpsilon !< EpsPanl 3 x nSpan x nDepth (one per dimension)
@@ -134,6 +214,7 @@ contains
       integer(IntKi),                  intent(inout)  :: iHeadC         !< Index indicating where to start in SegConnct
       logical       ,                  intent(in   )  :: bShedVorticity !< Shed vorticity is included if true
       logical       ,                  intent(in   )  :: bShedLastVorticity !< Shed the last vorticity segment if true
+      logical       ,                  intent(in   )  :: bHackEpsilon   !< Unfortunate fix so that tip and root vortex have different epsilon for FW
       ! Local
       integer(IntKi) :: nSpan, nDepth
       integer(IntKi) :: iSpan, iDepth
@@ -179,7 +260,11 @@ contains
             endif
             if (iSpan==1) then
                Gamma41 = LatticeGamma(iSpan,iDepth)
-               Eps41   = LatticeEpsilon(3,iSpan,iDepth) ! Using epsilon z for seg23&41. TODO might change in the future
+               if (bHackEpsilon) then
+                  Eps41   = LatticeEpsilon(2,iSpan,iDepth) ! Using epsilon y for seg41 hacked
+               else
+                  Eps41   = LatticeEpsilon(3,iSpan,iDepth) ! Using epsilon z for seg23&41. TODO might change in the future
+               endif
             else
                Gamma41 = LatticeGamma(iSpan,iDepth)-LatticeGamma(iSpan-1,iDepth)
                Eps41   = (LatticeEpsilon(3,iSpan,iDepth)+LatticeEpsilon(3,iSpan-1,iDepth))/2.0_ReKi
