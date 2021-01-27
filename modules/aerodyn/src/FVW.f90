@@ -587,6 +587,8 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    call FVW_CopyInput( u(2), uInterp, MESH_NEWCOPY, ErrStat2, ErrMsg2); if(Failed()) return
    call FVW_Input_ExtrapInterp(u(1:size(utimes)),utimes(:),uInterp,t, ErrStat2, ErrMsg2); if(Failed()) return
    call Wings_Panelling(uInterp%WingsMesh, p, m, ErrStat2, ErrMsg2); if(Failed()) return
+   call Map_LL_NW(p, m, z, x, 1.0_ReKi, ErrStat2, ErrMsg2); if(Failed()) return ! needed at t=0 if wing moved after init
+   call Map_NW_FW(p, m, z, x, ErrStat2, ErrMsg2); if(Failed()) return
    
    !  TODO convert quasi steady Gamma to unsteady gamma with UA states
 
