@@ -164,7 +164,7 @@ class FastLibAPI(CDLL):
                 byref(self.error_status),
                 self.error_message
             )
-            self.output_values[0] = self.output_array[:]
+            self.output_values[i] = self.output_array[:]
             if self.fatal_error:
                 self.fast_deinit()
                 print(f"Error {self.error_status.value}: {self.error_message.value}")
