@@ -110,7 +110,7 @@ macro(set_fast_gfortran)
   # Disable stack reuse within routines: issues seen with gfortran 9.x, but others may also exhibit
   #   see section 3.16 of https://gcc.gnu.org/onlinedocs/gcc-9.2.0/gcc.pdf
   #   and https://github.com/OpenFAST/openfast/pull/595
-  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fstack-reuse='none'")
+  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fstack-reuse=none")
 
   # Deal with Double/Single precision
   if (DOUBLE_PRECISION)
