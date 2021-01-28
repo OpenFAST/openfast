@@ -174,6 +174,14 @@ class FastLibAPI(CDLL):
         if not self.ended:
             self.ended = True
 
+            # Deallocate all the internal variables and allocatable arrays
+            # Despite the name, this does not actually end the program
+            self.FAST_End(
+                byref(self.i_turb),
+                byref(c_bool(False))
+            )
+
+            # Deallocate the Turbine array
             self.FAST_DeallocateTurbines(
                 byref(self.error_status),
                 self.error_message
@@ -181,11 +189,6 @@ class FastLibAPI(CDLL):
             if self.fatal_error:
                 print(f"Error {self.error_status.value}: {self.error_message.value}")
                 return
-
-            self.FAST_End(
-                byref(self.i_turb),
-                byref(c_bool(False))
-            )
 
     def fast_run(self):
         self.fast_init()
