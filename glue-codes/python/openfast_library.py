@@ -150,7 +150,7 @@ class FastLibAPI(CDLL):
         )
         self.output_values[0] = self.output_array[:]
         if self.fatal_error:
-            self.fast_end()
+            self.fast_deinit()
             print(f"Error {self.error_status.value}: {self.error_message.value}")
             return
 
@@ -166,11 +166,11 @@ class FastLibAPI(CDLL):
             )
             self.output_values[0] = self.output_array[:]
             if self.fatal_error:
-                self.fast_end()
+                self.fast_deinit()
                 print(f"Error {self.error_status.value}: {self.error_message.value}")
                 return
         
-    def fast_end(self):
+    def fast_deinit(self):
         if not self.ended:
             self.ended = True
 
@@ -192,7 +192,7 @@ class FastLibAPI(CDLL):
         if self.fatal_error: return
         self.fast_sim()
         if self.fatal_error: return
-        # self.fast_end()
+        self.fast_deinit()
 
     @property
     def total_time_steps(self):
