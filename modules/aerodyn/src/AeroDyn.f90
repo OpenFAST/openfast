@@ -940,7 +940,8 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
 
    p%CompAA = InputFileData%CompAA
    
- ! p%numBlades        = InitInp%numBlades    ! this was set earlier because it was necessary
+   ! NOTE: In the following we use InputFileData%BladeProps(1)%NumBlNds as the number of aero nodes on EACH blade, 
+   !       but if AD changes this, then it must be handled in the Glue-code linearization code, too (and elsewhere?) !
    p%NumBlNds         = InputFileData%BladeProps(1)%NumBlNds
    if (p%TwrPotent == TwrPotent_none .and. p%TwrShadow == TwrShadow_none .and. .not. p%TwrAero) then
       p%NumTwrNds     = 0
@@ -4219,7 +4220,15 @@ SUBROUTINE AD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
             index = index + 1
          end do            
       end do
+
+      do k=1,p%NumBlades
+         do j = 1, size(u%UserProp,1) ! Number of nodes for a blade
+            u_op(index) = u%UserProp(j,k)
+            index = index + 1
+         end do
+      end do
       
+         
    END IF
 
    IF ( PRESENT( y_op ) ) THEN
@@ -4514,7 +4523,8 @@ SUBROUTINE Init_Jacobian_u( InputFileData, p, u, InitOut, ErrStat, ErrMsg)
    nu = u%TowerMotion%NNodes * 9            & ! 3 Translation Displacements + 3 orientations + 3 Translation velocities at each node
       + u%hubMotion%NNodes   * 9            & ! 3 Translation Displacements + 3 orientations + 3 Rotation velocities at each node
       + size( u%InflowOnBlade)              &
-      + size( u%InflowOnTower)
+      + size( u%InflowOnTower)              &
+      + size( u%UserProp)
 
    do i=1,p%NumBlades
       nu = nu + u%BladeMotion(i)%NNodes * 15 & ! 3 Translation Displacements + 3 orientations + 3 Translation velocities + 3 Rotation velocities + 3 TranslationAcc at each node
@@ -4642,11 +4652,20 @@ SUBROUTINE Init_Jacobian_u( InputFileData, p, u, InitOut, ErrStat, ErrMsg)
       end do !j      
    end do !i
    
+   !Module/Mesh/Field: u%UserProp(:,:) = 29,30,31;
    
+   do k=1,size(u%UserProp,2) ! p%NumBlades         
+      do i=1,size(u%UserProp,1) ! numNodes
+            p%Jac_u_indx(index,1) =  28 + k
+            p%Jac_u_indx(index,2) =  1 !component index:  this is a scalar, so 1, but is never used
+            p%Jac_u_indx(index,3) =  i !Node:   i
+            index = index + 1     
+      end do !i
+   end do !k
       !......................................
       ! default perturbations, p%du:
       !......................................
-   call allocAry( p%du, 28, 'p%du', ErrStat2, ErrMsg2) ! 28 = number of unique values in p%Jac_u_indx(:,1)
+   call allocAry( p%du, 31, 'p%du', ErrStat2, ErrMsg2) ! 31 = number of unique values in p%Jac_u_indx(:,1)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
    perturb = 2*D2R
@@ -4680,9 +4699,10 @@ SUBROUTINE Init_Jacobian_u( InputFileData, p, u, InitOut, ErrStat, ErrMsg)
    do k=1,p%NumBlades
       p%du(24 + k) = perturb_b(k)         ! u%InflowOnBlade(:,:,k) = 24 + k
    end do      
-   p%du(28) = perturb_t                   ! u%InflowOnTower(:,:) = 22
-  
-         
+   p%du(28) = perturb_t                   ! u%InflowOnTower(:,:) = 28
+   do k=1,p%NumBlades 
+      p%du(28+k) = perturb                ! u%UserProp(:,:) = 29,30,31
+   end do      
       !.....................
       ! get names of linearized inputs
       !.....................
@@ -4696,7 +4716,9 @@ SUBROUTINE Init_Jacobian_u( InputFileData, p, u, InitOut, ErrStat, ErrMsg)
 
    InitOut%IsLoad_u   = .false. ! None of AeroDyn's inputs are loads
    InitOut%RotFrame_u = .false.
-      
+   do k=0,p%NumBlades*p%NumBlNds-1
+      InitOut%RotFrame_u(nu - k ) = .true.   ! UserProp(:,:)
+   end do  
    index = 1
    FieldMask = .false.
    FieldMask(MASKID_TRANSLATIONDISP) = .true.
@@ -4958,7 +4980,12 @@ SUBROUTINE Perturb_u( p, n, perturb_sign, u, du )
       
    CASE (28) !Module/Mesh/Field: u%InflowOnTower(:,:)   = 28;
       u%InflowOnTower(fieldIndx,node) = u%InflowOnTower(fieldIndx,node) + du * perturb_sign
-      
+   CASE (29) !Module/Mesh/Field: u%UserProp(:,1)   = 29; 
+      u%UserProp(node,1) = u%UserProp(node,1) + du * perturb_sign
+   CASE (30) !Module/Mesh/Field: u%UserProp(:,2)   = 30; 
+      u%UserProp(node,2) = u%UserProp(node,2) + du * perturb_sign
+   CASE (31) !Module/Mesh/Field: u%UserProp(:,3)   = 31; 
+      u%UserProp(node,3) = u%UserProp(node,3) + du * perturb_sign
    END SELECT
       
 END SUBROUTINE Perturb_u
