@@ -17,6 +17,7 @@ Details on the transition from FAST v8 to OpenFAST may be found in :numref:`fast
    aerodyn-olaf/index.rst
    aerodyn-aeroacoustics/index.rst
    beamdyn/index.rst
+   subdyn/index.rst
    elastodyn/index.rst
    inflowwind/index.rst
    fast_to_openfast.rst

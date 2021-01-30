@@ -46,6 +46,38 @@ MODULE SS_Excitation
          
    
 CONTAINS
+   
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine transforms  the State Space input file data from a local (heading-angle, based) coordinate system to the global system. 
+!> NOTE: This routine ONLY works if all the DOFs are enabled!!!!!!!!!!
+subroutine TransformStateSpaceMatrices( NBody, RotZ, C )
+!..................................................................................................................................
+   integer(IntKi), intent( in    ) :: NBody   ! Number of WAMIT bodies in this WAMIT object ( = 1 if NBodyMod > 1)
+   real(R8Ki),     intent( in    ) :: RotZ(:) ! NBody heading angles (radians)
+   real(ReKi),     intent( inout ) :: C(:,:)  ! Matrix data to be transformed, if NBodyMOD = 1 and NBody > 1 then we will be transforming the individual sub 6x6 matrices
+      
+   integer(IntKi)   :: i,j,indx
+   real(R8Ki)       :: R(3,3)
+   real(R8Ki)       :: Rt(3,3)
+      
+   do i = 1, NBody
+      if ( .not. EqualRealNos(RotZ(i), 0.0_R8Ki)  ) then
+         R(1,:) = (/ cos(RotZ(i)), sin(RotZ(i)), 0.0_R8Ki/)
+         R(2,:) = (/-sin(RotZ(i)), cos(RotZ(i)), 0.0_R8Ki/)
+         R(3,:) = (/ 0.0_R8Ki    , 0.0_R8Ki    , 1.0_R8Ki/)
+         Rt     = transpose(R)
+         
+         do j = 1,2  ! Need to do this twice, since a single R (3x3) matrix is used to transform all 6 DOFs associated with the ith Body data
+            indx = (i-1)*6 + (j-1)*3 + 1 
+
+            ! Create sub matrix which is all columns of C but only necessary rows for transformation work, NOTE: c is (6*NBody) X numStates 
+            C(indx:indx+2,:) = matmul( Rt, C(indx:indx+2,:)    ) 
+         end do 
+      end if
+   end do
+
+end subroutine TransformStateSpaceMatrices
+   
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine is called at the start of the simulation to perform initialization steps. 
 !! The parameters are set here and not changed during the simulation.
@@ -76,13 +108,11 @@ SUBROUTINE SS_Exc_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
     ! Local Variables:
          
     INTEGER                                :: I                                    ! Generic index
-!    INTEGER                                :: J                                    ! Generic index  
-    INTEGER                                :: xx (1,6)                             ! Active DOF's on the input file .ss
     INTEGER                                :: Nlines                               ! Number of lines in the input file, used to determine N
     INTEGER                                :: UnSS                                 ! I/O unit number for the WAMIT output file with the .ss extension; this file contains the state-space matrices.
     INTEGER                                :: Sttus                                ! Error in reading .ssexctn file
-    !CHARACTER                              :: Line                                 ! Temp line of file
     real(ReKi)                             :: WaveDir                              ! Temp wave direction angle (deg)
+    character(3)                           :: bodystr
     integer                                :: ErrStat2
     character(ErrMsgLen)                   :: ErrMsg2
     
@@ -93,8 +123,9 @@ SUBROUTINE SS_Exc_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
     u%DummyInput = 0.0_ReKi
       
     UnSS  = -1
-    p%N     =  0
-      
+    p%numStates     =  0
+    p%NBody = InitInp%NBody  ! Number of WAMIT bodies: =1 if WAMIT is using NBodyMod > 1,  >=1 if NBodyMod=1
+  
     ! Open the .ss input file!
     CALL GetNewUnit( UnSS )
     CALL OpenFInpFile ( UnSS, TRIM(InitInp%InputFile)//'.ssexctn', ErrStat2, ErrMsg2 )  ! Open file.
@@ -119,10 +150,10 @@ SUBROUTINE SS_Exc_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
    CALL ReadVar( UnSS,TRIM(InitInp%InputFile)//'.ssexctn', p%Tc, 'p%Tc', 'Time offset (s)',ErrStat2, ErrMsg2) ! Reads in the third line, containing the number of states
       CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Exc_Init')
             
-    CALL ReadVar( UnSS,TRIM(InitInp%InputFile)//'.ssexctn', p%N, 'p%N', 'Number of states',ErrStat2, ErrMsg2) ! Reads in the third line, containing the number of states
+    CALL ReadVar( UnSS,TRIM(InitInp%InputFile)//'.ssexctn', p%numStates, 'p%numStates', 'Number of states',ErrStat2, ErrMsg2) ! Reads in the third line, containing the number of states
       CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Exc_Init')
             
-   CALL ReadAry( UnSS,TRIM(InitInp%InputFile)//'.ssexctn', p%spDOF, 6, 'p%spDOF', 'States per DOF',ErrStat2, ErrMsg2)
+   CALL ReadAry( UnSS,TRIM(InitInp%InputFile)//'.ssexctn', p%spDOF, 6*p%NBody, 'p%spDOF', 'States per DOF',ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Exc_Init')
           
       IF (ErrStat >= AbortErrLev) THEN
@@ -139,11 +170,10 @@ SUBROUTINE SS_Exc_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
         END IF
     END DO
 
-    ! The input file contains the matrices A [NxN], B [Nx1] and C [6xN], so
-    !p%N = ( Nlines - 1 ) / 2 ! this is the number of states
+    ! The input file contains the matrices A [NxN], B [Nx1] and C [6*NBodyxN], so
     
     !Verifications on the input file
-    IF ( ( Nlines - 6 ) / 2 /= p%N) THEN
+    IF ( ( Nlines - 6*p%NBody ) / 2 /= p%numStates) THEN
       CALL SetErrStat(ErrID_Severe,'Error in the input file .ssexctn: The size of the matrices does not correspond to the number of states!',ErrStat,ErrMsg,'SS_Exc_Init')
     END IF
         
@@ -155,9 +185,9 @@ SUBROUTINE SS_Exc_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
     
     ! Now we can allocate the temporary matrices A, B and C
     
-    CALL AllocAry( p%A, p%N,    p%N,    'p%A', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Exc_Init')
-    CALL AllocAry( p%B, p%N,            'p%B', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Exc_Init')
-    CALL AllocAry( p%C,   6,    p%N,    'p%C', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Exc_Init')
+    CALL AllocAry( p%A, p%numStates,    p%numStates,    'p%A', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Exc_Init')
+    CALL AllocAry( p%B, p%numStates,                    'p%B', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Exc_Init')
+    CALL AllocAry( p%C,   6*p%NBody,    p%numStates,    'p%C', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Exc_Init')
     
       IF (ErrStat >= AbortErrLev) THEN
          CALL CleanUp()
@@ -174,25 +204,27 @@ SUBROUTINE SS_Exc_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
     CALL ReadCom ( UnSS, TRIM(InitInp%InputFile)//'.ssexctn', 'Number of Excitation States', ErrStat2, ErrMsg2  )! Reads the first entire line (Title header)
     CALL ReadCom ( UnSS, TRIM(InitInp%InputFile)//'.ssexctn', 'Number of states per dofs', ErrStat2, ErrMsg2  )! Reads the first entire line (Title header)   
     
-    DO I = 1,p%N !Read A MatriX
-        CALL ReadAry( UnSS,TRIM(InitInp%InputFile)//'.ssexctn', p%A(I,:), p%N, 'p%A', 'A_Matrix',ErrStat2, ErrMsg2)
+    DO I = 1,p%numStates !Read A MatriX
+        CALL ReadAry( UnSS,TRIM(InitInp%InputFile)//'.ssexctn', p%A(I,:), p%numStates, 'p%A', 'A_Matrix',ErrStat2, ErrMsg2)
           CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Exc_Init')
     END DO
     
-    DO I = 1,p%N !Read B Matrix
+    DO I = 1,p%numStates !Read B Matrix
         CALL ReadVar( UnSS, TRIM(InitInp%InputFile)//'.ssexctn', p%B(I), 'p%B', 'B_Matrix',ErrStat2, ErrMsg2) 
           CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Exc_Init')
     END DO
     
-   DO I = 1,6 !Read C Matrix
-      CALL ReadAry( UnSS, TRIM(InitInp%InputFile)//'.ssexctn', p%C(I,:), p%N, 'p%C', 'C_Matrix',ErrStat2, ErrMsg2)
+   DO I = 1,6*p%NBody !Read C Matrix
+      CALL ReadAry( UnSS, TRIM(InitInp%InputFile)//'.ssexctn', p%C(I,:), p%numStates, 'p%C', 'C_Matrix',ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Exc_Init')
    END DO 
-    CLOSE ( UnSS ) !Close .ss input file
-    UnSS = -1        ! Indicate the file is closed
+   CLOSE ( UnSS ) !Close .ss input file
+   UnSS = -1        ! Indicate the file is closed
     
-    
-    CALL WrScr1 ( 'Using SS_Excitation Module, with '//TRIM( Num2LStr(p%N ))//' excitation states' )
+   ! Transform the SS c matriX using the heading angles
+   call TransformStateSpaceMatrices( p%NBody, InitInp%PtfmRefztRot, p%C )    
+   
+    CALL WrScr1 ( 'Using SS_Excitation Module, with '//TRIM( Num2LStr(p%numStates ))//' excitation states' )
   
     ! Define parameters here:
          
@@ -201,17 +233,25 @@ SUBROUTINE SS_Exc_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          ! Allocate Wave-elevation related arrays
       p%NStepWave = InitInp%NStepWave
       allocate ( p%WaveElev0(0:p%NStepWave) , STAT=ErrStat2 )
+      IF (ErrStat2 /= 0) THEN
+         CALL SetErrStat(ErrID_Fatal,'Error allocating p%WaveElev0 array',ErrStat,ErrMsg,'SS_Exc_Init')
+      end if
       allocate ( p%WaveTime (0:p%NStepWave) , STAT=ErrStat2 )
-!TODO: Error Handling
+      IF (ErrStat2 /= 0) THEN
+         CALL SetErrStat(ErrID_Fatal,'Error allocating p%WaveTime array',ErrStat,ErrMsg,'SS_Exc_Init')
+      end if
+      
       IF (ErrStat >= AbortErrLev) THEN
          CALL CleanUp()
          RETURN
       END IF
-      p%WaveTime = InitInp%WaveTime
+      
+      p%WaveTime  = InitInp%WaveTime  
       p%WaveElev0 = InitInp%WaveElev0
-       
+      
+      
     ! Define initial system states here:
-    CALL AllocAry( x%x, p%N,  'x%x', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Exc_Init')      
+    CALL AllocAry( x%x, p%numStates,  'x%x', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Exc_Init')      
       IF (ErrStat >= AbortErrLev) THEN
          CALL CleanUp()
          RETURN
@@ -231,21 +271,28 @@ SUBROUTINE SS_Exc_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
    ! misc vars:
 
       
-     ! Inputs     
-     ! no inputs
+   ! Inputs     
+   ! no inputs
 
-         ! Define system output initializations (set up mesh) here:
-         
-      y%y = 0         
-      y%WriteOutput = 0
+   ! Define system output initializations (set up mesh) here:
+   call AllocAry( y%y, p%NBody*6,  'y%y', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Exc_Init')        
+   y%y = 0  
+   call AllocAry( y%WriteOutput, 6*p%NBody+1, 'y%WriteOutput', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')
+   y%WriteOutput = 0
       
          
-         ! Define initialization-routine output here:
-         
-      InitOut%WriteOutputHdr = (/ 'Time', 'FX  ' , 'FY  ' , 'FZ  ' , 'MX  ' , 'MY  ' , 'MZ  ' /)
-      InitOut%WriteOutputUnt = (/ '(s) ', '(N) ' , '(N) ' , '(N) ' , '(Nm)' , '(Nm)' , '(Nm)' /)     
-      
-       
+   ! Define initialization-routine output here:
+   
+   !  For OpenFAST, these outputs are attached (via HydroDyn) to the Radiation Force/Moment channels within HydroDyn
+   call AllocAry( InitOut%WriteOutputHdr, 6*p%NBody+1, 'InitOut%WriteOutputHdr', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')
+   call AllocAry( InitOut%WriteOutputUnt, 6*p%NBody+1, 'InitOut%WriteOutputUnt', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')   
+   InitOut%WriteOutputHdr(1) = 'Time'
+   InitOut%WriteOutputUnt(1) = '(s) '
+   do i = 1, p%NBody
+      bodystr = 'B'//trim(num2lstr(i))
+      InitOut%WriteOutputHdr( (i-1)*6+2: (i-1)*6+7 ) = (/ trim(bodystr)//'FX  ' , trim(bodystr)//'FY  ' , trim(bodystr)//'FZ  ' , trim(bodystr)//'MX  ' , trim(bodystr)//'MY  ' , trim(bodystr)//'MZ  ' /)
+      InitOut%WriteOutputUnt( (i-1)*6+2: (i-1)*6+7 ) = (/ '(N) ' , '(N) ' , '(N) ' , '(Nm)' , '(Nm)' , '(Nm)' /)     
+   end do         
    CALL CleanUp() ! deallocate local arrays
 
 CONTAINS
@@ -377,8 +424,7 @@ SUBROUTINE SS_Exc_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, E
       TYPE(SS_Exc_MiscVarType),         INTENT(INOUT)   :: m           !< Initial misc/optimization variables            
       INTEGER(IntKi),                   INTENT(  OUT)   :: ErrStat     !< Error status of the operation
       CHARACTER(*),                     INTENT(  OUT)   :: ErrMsg      !< Error message if ErrStat /= ErrID_None
-!      REAL(DbKi)  :: test(6,1)
-      
+     
       ! Initialize ErrStat    
       ErrStat = ErrID_None         
       ErrMsg  = ""                   
@@ -391,7 +437,7 @@ SUBROUTINE SS_Exc_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, E
       ! Compute outputs here:
       
       y%WriteOutput(1)   = REAL(Time,ReKi)
-      y%WriteOutput(2:7) = y%y
+      y%WriteOutput(2:6*p%NBody+1) = y%y
                    
 END SUBROUTINE SS_Exc_CalcOutput
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -417,7 +463,7 @@ SUBROUTINE SS_Exc_CalcContStateDeriv( Time, waveElev0, p, x, xd, z, OtherState, 
       ErrMsg  = ""               
       
       
-      CALL AllocAry( dxdt%x, p%N, 'SS_Exc_CalcContStateDeriv:dxdt%x', ErrStat, ErrMsg)
+      CALL AllocAry( dxdt%x, p%numStates, 'SS_Exc_CalcContStateDeriv:dxdt%x', ErrStat, ErrMsg)
       IF ( ErrStat >= AbortErrLev) RETURN
             
       ! Compute the first time derivatives of the continuous states here:
