@@ -2850,6 +2850,7 @@ CONTAINS
    REAL(ReKi)                        , INTENT(  OUT) :: U_Resid(:)
 
    INTEGER(IntKi)                                    :: i                      ! counter for ice leg and beamdyn loops
+   INTEGER(IntKi)                                    :: k                      ! counter for SrvD TMD instances
    TYPE(MeshType), POINTER                           :: PlatformMotions
    
    PlatformMotions => y_ED2%PlatformPtMesh
@@ -3033,10 +3034,10 @@ CONTAINS
       !..................
 
          IF ( p_FAST%CompServo == Module_SrvD .and. allocated(y_SrvD%PtfmStC) ) THEN
-            do j=1,size(y_SrvD%PtfmStC)
-               IF ( ALLOCATED(y_SrvD%PtfmStC(j)%Mesh) ) THEN
-                  IF (y_SrvD%PtfmStC(j)%Mesh(1)%Committed) THEN      ! size 1 only for PtfmStC
-                     CALL Transfer_Point_to_Point( y_SrvD%PtfmStC(j)%Mesh(1), MeshMapData%u_SD_LMesh_2, MeshMapData%SrvD_P_P_2_SD_P(j), ErrStat2, ErrMsg2, u_SrvD%PtfmStC(j)%Mesh(1), y_SD2%Y2Mesh )
+            do k=1,size(y_SrvD%PtfmStC)
+               IF ( ALLOCATED(y_SrvD%PtfmStC(k)%Mesh) ) THEN
+                  IF (y_SrvD%PtfmStC(k)%Mesh(1)%Committed) THEN      ! size 1 only for PtfmStC
+                     CALL Transfer_Point_to_Point( y_SrvD%PtfmStC(k)%Mesh(1), MeshMapData%u_SD_LMesh_2, MeshMapData%SrvD_P_P_2_SD_P(k), ErrStat2, ErrMsg2, u_SrvD%PtfmStC(k)%Mesh(1), y_SD2%Y2Mesh )
                         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName )
                      MeshMapData%u_SD_LMesh%Force  = MeshMapData%u_SD_LMesh%Force  + MeshMapData%u_SD_LMesh_2%Force
                      MeshMapData%u_SD_LMesh%Moment = MeshMapData%u_SD_LMesh%Moment + MeshMapData%u_SD_LMesh_2%Moment    
@@ -3204,10 +3205,10 @@ CONTAINS
 
          ! Map the forces from the platform mounted TMD (from ServoDyn) to the platform reference point
       IF ( p_FAST%CompServo == Module_SrvD .and. p_FAST%CompSub /= Module_SD .and. allocated(y_SrvD%PtfmStC)) THEN
-         do j=1,size(y_SrvD%PtfmStC)
-            IF ( ALLOCATED(y_SrvD%PtfmStC(j)%Mesh) ) THEN
-               IF (y_SrvD%PtfmStC(j)%Mesh(1)%Committed) THEN      ! size 1 only for PtfmStC
-                  CALL Transfer_Point_to_Point( y_SrvD%PtfmStC(j)%Mesh(1), MeshMapData%u_ED_PlatformPtMesh_2, MeshMapData%SrvD_P_P_2_ED_P(j), ErrStat2, ErrMsg2, u_SrvD%PtfmStC(j)%Mesh(1), PlatformMotions )
+         do k=1,size(y_SrvD%PtfmStC)
+            IF ( ALLOCATED(y_SrvD%PtfmStC(k)%Mesh) ) THEN
+               IF (y_SrvD%PtfmStC(k)%Mesh(1)%Committed) THEN      ! size 1 only for PtfmStC
+                  CALL Transfer_Point_to_Point( y_SrvD%PtfmStC(k)%Mesh(1), MeshMapData%u_ED_PlatformPtMesh_2, MeshMapData%SrvD_P_P_2_ED_P(k), ErrStat2, ErrMsg2, u_SrvD%PtfmStC(k)%Mesh(1), PlatformMotions )
                      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//':u_ED%PlatformPtMesh' )
                   MeshMapData%u_ED_PlatformPtMesh%Force  = MeshMapData%u_ED_PlatformPtMesh%Force  + MeshMapData%u_ED_PlatformPtMesh_2%Force
                   MeshMapData%u_ED_PlatformPtMesh%Moment = MeshMapData%u_ED_PlatformPtMesh%Moment + MeshMapData%u_ED_PlatformPtMesh_2%Moment
