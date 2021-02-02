@@ -14,9 +14,6 @@ This document was edited by Jason M. Jonkman of NREL
 to include an independent vertically oriented TMD in OpenFAST.
 ``jason.jonkman@nrel.gov``
 
-.. role:: raw-latex(raw)
-   :format: latex
-..
 
 This manual describes updated functionality in OpenFAST that simulates
 the addition of tuned mass dampers (TMDs) for structural control. The
@@ -847,9 +844,6 @@ Acknowledgements
 
 The authors would like to thank Dr. Jason Jonkman for reviewing this
 manual.
-
-References
-==========
 
 .. [1]
    Note that :math:`( R a ) \times ( Rb ) = R( a \times b )`.

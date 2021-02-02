@@ -23,5 +23,5 @@ Structural Control (SrvD)
 
    StC_input.rst
    StC_Theory.rst
-   StC_Refs.rst
+   zrefs.rst
 
