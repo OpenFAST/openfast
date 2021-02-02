@@ -95,12 +95,12 @@ MODULE ServoDyn_IO
    INTEGER(IntKi), PARAMETER      :: NStC1_Mxi    =  20
    INTEGER(IntKi), PARAMETER      :: NStC1_Myi    =  21
    INTEGER(IntKi), PARAMETER      :: NStC1_Mzi    =  22
-   INTEGER(IntKi), PARAMETER      :: NStC1_Fxn    =  23
-   INTEGER(IntKi), PARAMETER      :: NStC1_Fyn    =  24
-   INTEGER(IntKi), PARAMETER      :: NStC1_Fzn    =  25
-   INTEGER(IntKi), PARAMETER      :: NStC1_Mxn    =  26
-   INTEGER(IntKi), PARAMETER      :: NStC1_Myn    =  27
-   INTEGER(IntKi), PARAMETER      :: NStC1_Mzn    =  28
+   INTEGER(IntKi), PARAMETER      :: NStC1_Fxl    =  23
+   INTEGER(IntKi), PARAMETER      :: NStC1_Fyl    =  24
+   INTEGER(IntKi), PARAMETER      :: NStC1_Fzl    =  25
+   INTEGER(IntKi), PARAMETER      :: NStC1_Mxl    =  26
+   INTEGER(IntKi), PARAMETER      :: NStC1_Myl    =  27
+   INTEGER(IntKi), PARAMETER      :: NStC1_Mzl    =  28
    INTEGER(IntKi), PARAMETER      :: NStC2_XQ     =  29
    INTEGER(IntKi), PARAMETER      :: NStC2_XQD    =  30
    INTEGER(IntKi), PARAMETER      :: NStC2_YQ     =  31
@@ -113,12 +113,12 @@ MODULE ServoDyn_IO
    INTEGER(IntKi), PARAMETER      :: NStC2_Mxi    =  38
    INTEGER(IntKi), PARAMETER      :: NStC2_Myi    =  39
    INTEGER(IntKi), PARAMETER      :: NStC2_Mzi    =  40
-   INTEGER(IntKi), PARAMETER      :: NStC2_Fxn    =  41
-   INTEGER(IntKi), PARAMETER      :: NStC2_Fyn    =  42
-   INTEGER(IntKi), PARAMETER      :: NStC2_Fzn    =  43
-   INTEGER(IntKi), PARAMETER      :: NStC2_Mxn    =  44
-   INTEGER(IntKi), PARAMETER      :: NStC2_Myn    =  45
-   INTEGER(IntKi), PARAMETER      :: NStC2_Mzn    =  46
+   INTEGER(IntKi), PARAMETER      :: NStC2_Fxl    =  41
+   INTEGER(IntKi), PARAMETER      :: NStC2_Fyl    =  42
+   INTEGER(IntKi), PARAMETER      :: NStC2_Fzl    =  43
+   INTEGER(IntKi), PARAMETER      :: NStC2_Mxl    =  44
+   INTEGER(IntKi), PARAMETER      :: NStC2_Myl    =  45
+   INTEGER(IntKi), PARAMETER      :: NStC2_Mzl    =  46
    INTEGER(IntKi), PARAMETER      :: NStC3_XQ     =  47
    INTEGER(IntKi), PARAMETER      :: NStC3_XQD    =  48
    INTEGER(IntKi), PARAMETER      :: NStC3_YQ     =  49
@@ -131,12 +131,12 @@ MODULE ServoDyn_IO
    INTEGER(IntKi), PARAMETER      :: NStC3_Mxi    =  56
    INTEGER(IntKi), PARAMETER      :: NStC3_Myi    =  57
    INTEGER(IntKi), PARAMETER      :: NStC3_Mzi    =  58
-   INTEGER(IntKi), PARAMETER      :: NStC3_Fxn    =  59
-   INTEGER(IntKi), PARAMETER      :: NStC3_Fyn    =  60
-   INTEGER(IntKi), PARAMETER      :: NStC3_Fzn    =  61
-   INTEGER(IntKi), PARAMETER      :: NStC3_Mxn    =  62
-   INTEGER(IntKi), PARAMETER      :: NStC3_Myn    =  63
-   INTEGER(IntKi), PARAMETER      :: NStC3_Mzn    =  64
+   INTEGER(IntKi), PARAMETER      :: NStC3_Fxl    =  59
+   INTEGER(IntKi), PARAMETER      :: NStC3_Fyl    =  60
+   INTEGER(IntKi), PARAMETER      :: NStC3_Fzl    =  61
+   INTEGER(IntKi), PARAMETER      :: NStC3_Mxl    =  62
+   INTEGER(IntKi), PARAMETER      :: NStC3_Myl    =  63
+   INTEGER(IntKi), PARAMETER      :: NStC3_Mzl    =  64
    INTEGER(IntKi), PARAMETER      :: NStC4_XQ     =  65
    INTEGER(IntKi), PARAMETER      :: NStC4_XQD    =  66
    INTEGER(IntKi), PARAMETER      :: NStC4_YQ     =  67
@@ -149,12 +149,12 @@ MODULE ServoDyn_IO
    INTEGER(IntKi), PARAMETER      :: NStC4_Mxi    =  74
    INTEGER(IntKi), PARAMETER      :: NStC4_Myi    =  75
    INTEGER(IntKi), PARAMETER      :: NStC4_Mzi    =  76
-   INTEGER(IntKi), PARAMETER      :: NStC4_Fxn    =  77
-   INTEGER(IntKi), PARAMETER      :: NStC4_Fyn    =  78
-   INTEGER(IntKi), PARAMETER      :: NStC4_Fzn    =  79
-   INTEGER(IntKi), PARAMETER      :: NStC4_Mxn    =  80
-   INTEGER(IntKi), PARAMETER      :: NStC4_Myn    =  81
-   INTEGER(IntKi), PARAMETER      :: NStC4_Mzn    =  82
+   INTEGER(IntKi), PARAMETER      :: NStC4_Fxl    =  77
+   INTEGER(IntKi), PARAMETER      :: NStC4_Fyl    =  78
+   INTEGER(IntKi), PARAMETER      :: NStC4_Fzl    =  79
+   INTEGER(IntKi), PARAMETER      :: NStC4_Mxl    =  80
+   INTEGER(IntKi), PARAMETER      :: NStC4_Myl    =  81
+   INTEGER(IntKi), PARAMETER      :: NStC4_Mzl    =  82
 
 
      ! Tower Structural Control  (StC):
@@ -171,12 +171,12 @@ MODULE ServoDyn_IO
    INTEGER(IntKi), PARAMETER      :: TStC1_Mxi    =  92
    INTEGER(IntKi), PARAMETER      :: TStC1_Myi    =  93
    INTEGER(IntKi), PARAMETER      :: TStC1_Mzi    =  94
-   INTEGER(IntKi), PARAMETER      :: TStC1_Fxn    =  95
-   INTEGER(IntKi), PARAMETER      :: TStC1_Fyn    =  96
-   INTEGER(IntKi), PARAMETER      :: TStC1_Fzn    =  97
-   INTEGER(IntKi), PARAMETER      :: TStC1_Mxn    =  98
-   INTEGER(IntKi), PARAMETER      :: TStC1_Myn    =  99
-   INTEGER(IntKi), PARAMETER      :: TStC1_Mzn    = 100
+   INTEGER(IntKi), PARAMETER      :: TStC1_Fxl    =  95
+   INTEGER(IntKi), PARAMETER      :: TStC1_Fyl    =  96
+   INTEGER(IntKi), PARAMETER      :: TStC1_Fzl    =  97
+   INTEGER(IntKi), PARAMETER      :: TStC1_Mxl    =  98
+   INTEGER(IntKi), PARAMETER      :: TStC1_Myl    =  99
+   INTEGER(IntKi), PARAMETER      :: TStC1_Mzl    = 100
    INTEGER(IntKi), PARAMETER      :: TStC2_XQ     = 101
    INTEGER(IntKi), PARAMETER      :: TStC2_XQD    = 102
    INTEGER(IntKi), PARAMETER      :: TStC2_YQ     = 103
@@ -189,12 +189,12 @@ MODULE ServoDyn_IO
    INTEGER(IntKi), PARAMETER      :: TStC2_Mxi    = 110
    INTEGER(IntKi), PARAMETER      :: TStC2_Myi    = 111
    INTEGER(IntKi), PARAMETER      :: TStC2_Mzi    = 112
-   INTEGER(IntKi), PARAMETER      :: TStC2_Fxn    = 113
-   INTEGER(IntKi), PARAMETER      :: TStC2_Fyn    = 114
-   INTEGER(IntKi), PARAMETER      :: TStC2_Fzn    = 115
-   INTEGER(IntKi), PARAMETER      :: TStC2_Mxn    = 116
-   INTEGER(IntKi), PARAMETER      :: TStC2_Myn    = 117
-   INTEGER(IntKi), PARAMETER      :: TStC2_Mzn    = 118
+   INTEGER(IntKi), PARAMETER      :: TStC2_Fxl    = 113
+   INTEGER(IntKi), PARAMETER      :: TStC2_Fyl    = 114
+   INTEGER(IntKi), PARAMETER      :: TStC2_Fzl    = 115
+   INTEGER(IntKi), PARAMETER      :: TStC2_Mxl    = 116
+   INTEGER(IntKi), PARAMETER      :: TStC2_Myl    = 117
+   INTEGER(IntKi), PARAMETER      :: TStC2_Mzl    = 118
    INTEGER(IntKi), PARAMETER      :: TStC3_XQ     = 119
    INTEGER(IntKi), PARAMETER      :: TStC3_XQD    = 120
    INTEGER(IntKi), PARAMETER      :: TStC3_YQ     = 121
@@ -207,12 +207,12 @@ MODULE ServoDyn_IO
    INTEGER(IntKi), PARAMETER      :: TStC3_Mxi    = 128
    INTEGER(IntKi), PARAMETER      :: TStC3_Myi    = 129
    INTEGER(IntKi), PARAMETER      :: TStC3_Mzi    = 130
-   INTEGER(IntKi), PARAMETER      :: TStC3_Fxn    = 131
-   INTEGER(IntKi), PARAMETER      :: TStC3_Fyn    = 132
-   INTEGER(IntKi), PARAMETER      :: TStC3_Fzn    = 133
-   INTEGER(IntKi), PARAMETER      :: TStC3_Mxn    = 134
-   INTEGER(IntKi), PARAMETER      :: TStC3_Myn    = 135
-   INTEGER(IntKi), PARAMETER      :: TStC3_Mzn    = 136
+   INTEGER(IntKi), PARAMETER      :: TStC3_Fxl    = 131
+   INTEGER(IntKi), PARAMETER      :: TStC3_Fyl    = 132
+   INTEGER(IntKi), PARAMETER      :: TStC3_Fzl    = 133
+   INTEGER(IntKi), PARAMETER      :: TStC3_Mxl    = 134
+   INTEGER(IntKi), PARAMETER      :: TStC3_Myl    = 135
+   INTEGER(IntKi), PARAMETER      :: TStC3_Mzl    = 136
    INTEGER(IntKi), PARAMETER      :: TStC4_XQ     = 137
    INTEGER(IntKi), PARAMETER      :: TStC4_XQD    = 138
    INTEGER(IntKi), PARAMETER      :: TStC4_YQ     = 139
@@ -225,12 +225,12 @@ MODULE ServoDyn_IO
    INTEGER(IntKi), PARAMETER      :: TStC4_Mxi    = 146
    INTEGER(IntKi), PARAMETER      :: TStC4_Myi    = 147
    INTEGER(IntKi), PARAMETER      :: TStC4_Mzi    = 148
-   INTEGER(IntKi), PARAMETER      :: TStC4_Fxn    = 149
-   INTEGER(IntKi), PARAMETER      :: TStC4_Fyn    = 150
-   INTEGER(IntKi), PARAMETER      :: TStC4_Fzn    = 151
-   INTEGER(IntKi), PARAMETER      :: TStC4_Mxn    = 152
-   INTEGER(IntKi), PARAMETER      :: TStC4_Myn    = 153
-   INTEGER(IntKi), PARAMETER      :: TStC4_Mzn    = 154
+   INTEGER(IntKi), PARAMETER      :: TStC4_Fxl    = 149
+   INTEGER(IntKi), PARAMETER      :: TStC4_Fyl    = 150
+   INTEGER(IntKi), PARAMETER      :: TStC4_Fzl    = 151
+   INTEGER(IntKi), PARAMETER      :: TStC4_Mxl    = 152
+   INTEGER(IntKi), PARAMETER      :: TStC4_Myl    = 153
+   INTEGER(IntKi), PARAMETER      :: TStC4_Mzl    = 154
 
 
      ! Blade  Structural Control  (StC):
@@ -247,12 +247,12 @@ MODULE ServoDyn_IO
    INTEGER(IntKi), PARAMETER      :: BStC1_B1_Mxi = 164
    INTEGER(IntKi), PARAMETER      :: BStC1_B1_Myi = 165
    INTEGER(IntKi), PARAMETER      :: BStC1_B1_Mzi = 166
-   INTEGER(IntKi), PARAMETER      :: BStC1_B1_Fxn = 167
-   INTEGER(IntKi), PARAMETER      :: BStC1_B1_Fyn = 168
-   INTEGER(IntKi), PARAMETER      :: BStC1_B1_Fzn = 169
-   INTEGER(IntKi), PARAMETER      :: BStC1_B1_Mxn = 170
-   INTEGER(IntKi), PARAMETER      :: BStC1_B1_Myn = 171
-   INTEGER(IntKi), PARAMETER      :: BStC1_B1_Mzn = 172
+   INTEGER(IntKi), PARAMETER      :: BStC1_B1_Fxl = 167
+   INTEGER(IntKi), PARAMETER      :: BStC1_B1_Fyl = 168
+   INTEGER(IntKi), PARAMETER      :: BStC1_B1_Fzl = 169
+   INTEGER(IntKi), PARAMETER      :: BStC1_B1_Mxl = 170
+   INTEGER(IntKi), PARAMETER      :: BStC1_B1_Myl = 171
+   INTEGER(IntKi), PARAMETER      :: BStC1_B1_Mzl = 172
    INTEGER(IntKi), PARAMETER      :: BStC2_B1_XQ  = 173
    INTEGER(IntKi), PARAMETER      :: BStC2_B1_XQD = 174
    INTEGER(IntKi), PARAMETER      :: BStC2_B1_YQ  = 175
@@ -265,12 +265,12 @@ MODULE ServoDyn_IO
    INTEGER(IntKi), PARAMETER      :: BStC2_B1_Mxi = 182
    INTEGER(IntKi), PARAMETER      :: BStC2_B1_Myi = 183
    INTEGER(IntKi), PARAMETER      :: BStC2_B1_Mzi = 184
-   INTEGER(IntKi), PARAMETER      :: BStC2_B1_Fxn = 185
-   INTEGER(IntKi), PARAMETER      :: BStC2_B1_Fyn = 186
-   INTEGER(IntKi), PARAMETER      :: BStC2_B1_Fzn = 187
-   INTEGER(IntKi), PARAMETER      :: BStC2_B1_Mxn = 188
-   INTEGER(IntKi), PARAMETER      :: BStC2_B1_Myn = 189
-   INTEGER(IntKi), PARAMETER      :: BStC2_B1_Mzn = 190
+   INTEGER(IntKi), PARAMETER      :: BStC2_B1_Fxl = 185
+   INTEGER(IntKi), PARAMETER      :: BStC2_B1_Fyl = 186
+   INTEGER(IntKi), PARAMETER      :: BStC2_B1_Fzl = 187
+   INTEGER(IntKi), PARAMETER      :: BStC2_B1_Mxl = 188
+   INTEGER(IntKi), PARAMETER      :: BStC2_B1_Myl = 189
+   INTEGER(IntKi), PARAMETER      :: BStC2_B1_Mzl = 190
    INTEGER(IntKi), PARAMETER      :: BStC3_B1_XQ  = 191
    INTEGER(IntKi), PARAMETER      :: BStC3_B1_XQD = 192
    INTEGER(IntKi), PARAMETER      :: BStC3_B1_YQ  = 193
@@ -283,12 +283,12 @@ MODULE ServoDyn_IO
    INTEGER(IntKi), PARAMETER      :: BStC3_B1_Mxi = 200
    INTEGER(IntKi), PARAMETER      :: BStC3_B1_Myi = 201
    INTEGER(IntKi), PARAMETER      :: BStC3_B1_Mzi = 202
-   INTEGER(IntKi), PARAMETER      :: BStC3_B1_Fxn = 203
-   INTEGER(IntKi), PARAMETER      :: BStC3_B1_Fyn = 204
-   INTEGER(IntKi), PARAMETER      :: BStC3_B1_Fzn = 205
-   INTEGER(IntKi), PARAMETER      :: BStC3_B1_Mxn = 206
-   INTEGER(IntKi), PARAMETER      :: BStC3_B1_Myn = 207
-   INTEGER(IntKi), PARAMETER      :: BStC3_B1_Mzn = 208
+   INTEGER(IntKi), PARAMETER      :: BStC3_B1_Fxl = 203
+   INTEGER(IntKi), PARAMETER      :: BStC3_B1_Fyl = 204
+   INTEGER(IntKi), PARAMETER      :: BStC3_B1_Fzl = 205
+   INTEGER(IntKi), PARAMETER      :: BStC3_B1_Mxl = 206
+   INTEGER(IntKi), PARAMETER      :: BStC3_B1_Myl = 207
+   INTEGER(IntKi), PARAMETER      :: BStC3_B1_Mzl = 208
    INTEGER(IntKi), PARAMETER      :: BStC4_B1_XQ  = 209
    INTEGER(IntKi), PARAMETER      :: BStC4_B1_XQD = 210
    INTEGER(IntKi), PARAMETER      :: BStC4_B1_YQ  = 211
@@ -301,12 +301,12 @@ MODULE ServoDyn_IO
    INTEGER(IntKi), PARAMETER      :: BStC4_B1_Mxi = 218
    INTEGER(IntKi), PARAMETER      :: BStC4_B1_Myi = 219
    INTEGER(IntKi), PARAMETER      :: BStC4_B1_Mzi = 220
-   INTEGER(IntKi), PARAMETER      :: BStC4_B1_Fxn = 221
-   INTEGER(IntKi), PARAMETER      :: BStC4_B1_Fyn = 222
-   INTEGER(IntKi), PARAMETER      :: BStC4_B1_Fzn = 223
-   INTEGER(IntKi), PARAMETER      :: BStC4_B1_Mxn = 224
-   INTEGER(IntKi), PARAMETER      :: BStC4_B1_Myn = 225
-   INTEGER(IntKi), PARAMETER      :: BStC4_B1_Mzn = 226
+   INTEGER(IntKi), PARAMETER      :: BStC4_B1_Fxl = 221
+   INTEGER(IntKi), PARAMETER      :: BStC4_B1_Fyl = 222
+   INTEGER(IntKi), PARAMETER      :: BStC4_B1_Fzl = 223
+   INTEGER(IntKi), PARAMETER      :: BStC4_B1_Mxl = 224
+   INTEGER(IntKi), PARAMETER      :: BStC4_B1_Myl = 225
+   INTEGER(IntKi), PARAMETER      :: BStC4_B1_Mzl = 226
    INTEGER(IntKi), PARAMETER      :: BStC1_B2_XQ  = 227
    INTEGER(IntKi), PARAMETER      :: BStC1_B2_XQD = 228
    INTEGER(IntKi), PARAMETER      :: BStC1_B2_YQ  = 229
@@ -319,12 +319,12 @@ MODULE ServoDyn_IO
    INTEGER(IntKi), PARAMETER      :: BStC1_B2_Mxi = 236
    INTEGER(IntKi), PARAMETER      :: BStC1_B2_Myi = 237
    INTEGER(IntKi), PARAMETER      :: BStC1_B2_Mzi = 238
-   INTEGER(IntKi), PARAMETER      :: BStC1_B2_Fxn = 239
-   INTEGER(IntKi), PARAMETER      :: BStC1_B2_Fyn = 240
-   INTEGER(IntKi), PARAMETER      :: BStC1_B2_Fzn = 241
-   INTEGER(IntKi), PARAMETER      :: BStC1_B2_Mxn = 242
-   INTEGER(IntKi), PARAMETER      :: BStC1_B2_Myn = 243
-   INTEGER(IntKi), PARAMETER      :: BStC1_B2_Mzn = 244
+   INTEGER(IntKi), PARAMETER      :: BStC1_B2_Fxl = 239
+   INTEGER(IntKi), PARAMETER      :: BStC1_B2_Fyl = 240
+   INTEGER(IntKi), PARAMETER      :: BStC1_B2_Fzl = 241
+   INTEGER(IntKi), PARAMETER      :: BStC1_B2_Mxl = 242
+   INTEGER(IntKi), PARAMETER      :: BStC1_B2_Myl = 243
+   INTEGER(IntKi), PARAMETER      :: BStC1_B2_Mzl = 244
    INTEGER(IntKi), PARAMETER      :: BStC2_B2_XQ  = 245
    INTEGER(IntKi), PARAMETER      :: BStC2_B2_XQD = 246
    INTEGER(IntKi), PARAMETER      :: BStC2_B2_YQ  = 247
@@ -337,12 +337,12 @@ MODULE ServoDyn_IO
    INTEGER(IntKi), PARAMETER      :: BStC2_B2_Mxi = 254
    INTEGER(IntKi), PARAMETER      :: BStC2_B2_Myi = 255
    INTEGER(IntKi), PARAMETER      :: BStC2_B2_Mzi = 256
-   INTEGER(IntKi), PARAMETER      :: BStC2_B2_Fxn = 257
-   INTEGER(IntKi), PARAMETER      :: BStC2_B2_Fyn = 258
-   INTEGER(IntKi), PARAMETER      :: BStC2_B2_Fzn = 259
-   INTEGER(IntKi), PARAMETER      :: BStC2_B2_Mxn = 260
-   INTEGER(IntKi), PARAMETER      :: BStC2_B2_Myn = 261
-   INTEGER(IntKi), PARAMETER      :: BStC2_B2_Mzn = 262
+   INTEGER(IntKi), PARAMETER      :: BStC2_B2_Fxl = 257
+   INTEGER(IntKi), PARAMETER      :: BStC2_B2_Fyl = 258
+   INTEGER(IntKi), PARAMETER      :: BStC2_B2_Fzl = 259
+   INTEGER(IntKi), PARAMETER      :: BStC2_B2_Mxl = 260
+   INTEGER(IntKi), PARAMETER      :: BStC2_B2_Myl = 261
+   INTEGER(IntKi), PARAMETER      :: BStC2_B2_Mzl = 262
    INTEGER(IntKi), PARAMETER      :: BStC3_B2_XQ  = 263
    INTEGER(IntKi), PARAMETER      :: BStC3_B2_XQD = 264
    INTEGER(IntKi), PARAMETER      :: BStC3_B2_YQ  = 265
@@ -355,12 +355,12 @@ MODULE ServoDyn_IO
    INTEGER(IntKi), PARAMETER      :: BStC3_B2_Mxi = 272
    INTEGER(IntKi), PARAMETER      :: BStC3_B2_Myi = 273
    INTEGER(IntKi), PARAMETER      :: BStC3_B2_Mzi = 274
-   INTEGER(IntKi), PARAMETER      :: BStC3_B2_Fxn = 275
-   INTEGER(IntKi), PARAMETER      :: BStC3_B2_Fyn = 276
-   INTEGER(IntKi), PARAMETER      :: BStC3_B2_Fzn = 277
-   INTEGER(IntKi), PARAMETER      :: BStC3_B2_Mxn = 278
-   INTEGER(IntKi), PARAMETER      :: BStC3_B2_Myn = 279
-   INTEGER(IntKi), PARAMETER      :: BStC3_B2_Mzn = 280
+   INTEGER(IntKi), PARAMETER      :: BStC3_B2_Fxl = 275
+   INTEGER(IntKi), PARAMETER      :: BStC3_B2_Fyl = 276
+   INTEGER(IntKi), PARAMETER      :: BStC3_B2_Fzl = 277
+   INTEGER(IntKi), PARAMETER      :: BStC3_B2_Mxl = 278
+   INTEGER(IntKi), PARAMETER      :: BStC3_B2_Myl = 279
+   INTEGER(IntKi), PARAMETER      :: BStC3_B2_Mzl = 280
    INTEGER(IntKi), PARAMETER      :: BStC4_B2_XQ  = 281
    INTEGER(IntKi), PARAMETER      :: BStC4_B2_XQD = 282
    INTEGER(IntKi), PARAMETER      :: BStC4_B2_YQ  = 283
@@ -373,12 +373,12 @@ MODULE ServoDyn_IO
    INTEGER(IntKi), PARAMETER      :: BStC4_B2_Mxi = 290
    INTEGER(IntKi), PARAMETER      :: BStC4_B2_Myi = 291
    INTEGER(IntKi), PARAMETER      :: BStC4_B2_Mzi = 292
-   INTEGER(IntKi), PARAMETER      :: BStC4_B2_Fxn = 293
-   INTEGER(IntKi), PARAMETER      :: BStC4_B2_Fyn = 294
-   INTEGER(IntKi), PARAMETER      :: BStC4_B2_Fzn = 295
-   INTEGER(IntKi), PARAMETER      :: BStC4_B2_Mxn = 296
-   INTEGER(IntKi), PARAMETER      :: BStC4_B2_Myn = 297
-   INTEGER(IntKi), PARAMETER      :: BStC4_B2_Mzn = 298
+   INTEGER(IntKi), PARAMETER      :: BStC4_B2_Fxl = 293
+   INTEGER(IntKi), PARAMETER      :: BStC4_B2_Fyl = 294
+   INTEGER(IntKi), PARAMETER      :: BStC4_B2_Fzl = 295
+   INTEGER(IntKi), PARAMETER      :: BStC4_B2_Mxl = 296
+   INTEGER(IntKi), PARAMETER      :: BStC4_B2_Myl = 297
+   INTEGER(IntKi), PARAMETER      :: BStC4_B2_Mzl = 298
    INTEGER(IntKi), PARAMETER      :: BStC1_B3_XQ  = 299
    INTEGER(IntKi), PARAMETER      :: BStC1_B3_XQD = 300
    INTEGER(IntKi), PARAMETER      :: BStC1_B3_YQ  = 301
@@ -391,12 +391,12 @@ MODULE ServoDyn_IO
    INTEGER(IntKi), PARAMETER      :: BStC1_B3_Mxi = 308
    INTEGER(IntKi), PARAMETER      :: BStC1_B3_Myi = 309
    INTEGER(IntKi), PARAMETER      :: BStC1_B3_Mzi = 310
-   INTEGER(IntKi), PARAMETER      :: BStC1_B3_Fxn = 311
-   INTEGER(IntKi), PARAMETER      :: BStC1_B3_Fyn = 312
-   INTEGER(IntKi), PARAMETER      :: BStC1_B3_Fzn = 313
-   INTEGER(IntKi), PARAMETER      :: BStC1_B3_Mxn = 314
-   INTEGER(IntKi), PARAMETER      :: BStC1_B3_Myn = 315
-   INTEGER(IntKi), PARAMETER      :: BStC1_B3_Mzn = 316
+   INTEGER(IntKi), PARAMETER      :: BStC1_B3_Fxl = 311
+   INTEGER(IntKi), PARAMETER      :: BStC1_B3_Fyl = 312
+   INTEGER(IntKi), PARAMETER      :: BStC1_B3_Fzl = 313
+   INTEGER(IntKi), PARAMETER      :: BStC1_B3_Mxl = 314
+   INTEGER(IntKi), PARAMETER      :: BStC1_B3_Myl = 315
+   INTEGER(IntKi), PARAMETER      :: BStC1_B3_Mzl = 316
    INTEGER(IntKi), PARAMETER      :: BStC2_B3_XQ  = 317
    INTEGER(IntKi), PARAMETER      :: BStC2_B3_XQD = 318
    INTEGER(IntKi), PARAMETER      :: BStC2_B3_YQ  = 319
@@ -409,12 +409,12 @@ MODULE ServoDyn_IO
    INTEGER(IntKi), PARAMETER      :: BStC2_B3_Mxi = 326
    INTEGER(IntKi), PARAMETER      :: BStC2_B3_Myi = 327
    INTEGER(IntKi), PARAMETER      :: BStC2_B3_Mzi = 328
-   INTEGER(IntKi), PARAMETER      :: BStC2_B3_Fxn = 329
-   INTEGER(IntKi), PARAMETER      :: BStC2_B3_Fyn = 330
-   INTEGER(IntKi), PARAMETER      :: BStC2_B3_Fzn = 331
-   INTEGER(IntKi), PARAMETER      :: BStC2_B3_Mxn = 332
-   INTEGER(IntKi), PARAMETER      :: BStC2_B3_Myn = 333
-   INTEGER(IntKi), PARAMETER      :: BStC2_B3_Mzn = 334
+   INTEGER(IntKi), PARAMETER      :: BStC2_B3_Fxl = 329
+   INTEGER(IntKi), PARAMETER      :: BStC2_B3_Fyl = 330
+   INTEGER(IntKi), PARAMETER      :: BStC2_B3_Fzl = 331
+   INTEGER(IntKi), PARAMETER      :: BStC2_B3_Mxl = 332
+   INTEGER(IntKi), PARAMETER      :: BStC2_B3_Myl = 333
+   INTEGER(IntKi), PARAMETER      :: BStC2_B3_Mzl = 334
    INTEGER(IntKi), PARAMETER      :: BStC3_B3_XQ  = 335
    INTEGER(IntKi), PARAMETER      :: BStC3_B3_XQD = 336
    INTEGER(IntKi), PARAMETER      :: BStC3_B3_YQ  = 337
@@ -427,12 +427,12 @@ MODULE ServoDyn_IO
    INTEGER(IntKi), PARAMETER      :: BStC3_B3_Mxi = 344
    INTEGER(IntKi), PARAMETER      :: BStC3_B3_Myi = 345
    INTEGER(IntKi), PARAMETER      :: BStC3_B3_Mzi = 346
-   INTEGER(IntKi), PARAMETER      :: BStC3_B3_Fxn = 347
-   INTEGER(IntKi), PARAMETER      :: BStC3_B3_Fyn = 348
-   INTEGER(IntKi), PARAMETER      :: BStC3_B3_Fzn = 349
-   INTEGER(IntKi), PARAMETER      :: BStC3_B3_Mxn = 350
-   INTEGER(IntKi), PARAMETER      :: BStC3_B3_Myn = 351
-   INTEGER(IntKi), PARAMETER      :: BStC3_B3_Mzn = 352
+   INTEGER(IntKi), PARAMETER      :: BStC3_B3_Fxl = 347
+   INTEGER(IntKi), PARAMETER      :: BStC3_B3_Fyl = 348
+   INTEGER(IntKi), PARAMETER      :: BStC3_B3_Fzl = 349
+   INTEGER(IntKi), PARAMETER      :: BStC3_B3_Mxl = 350
+   INTEGER(IntKi), PARAMETER      :: BStC3_B3_Myl = 351
+   INTEGER(IntKi), PARAMETER      :: BStC3_B3_Mzl = 352
    INTEGER(IntKi), PARAMETER      :: BStC4_B3_XQ  = 353
    INTEGER(IntKi), PARAMETER      :: BStC4_B3_XQD = 354
    INTEGER(IntKi), PARAMETER      :: BStC4_B3_YQ  = 355
@@ -445,12 +445,12 @@ MODULE ServoDyn_IO
    INTEGER(IntKi), PARAMETER      :: BStC4_B3_Mxi = 362
    INTEGER(IntKi), PARAMETER      :: BStC4_B3_Myi = 363
    INTEGER(IntKi), PARAMETER      :: BStC4_B3_Mzi = 364
-   INTEGER(IntKi), PARAMETER      :: BStC4_B3_Fxn = 365
-   INTEGER(IntKi), PARAMETER      :: BStC4_B3_Fyn = 366
-   INTEGER(IntKi), PARAMETER      :: BStC4_B3_Fzn = 367
-   INTEGER(IntKi), PARAMETER      :: BStC4_B3_Mxn = 368
-   INTEGER(IntKi), PARAMETER      :: BStC4_B3_Myn = 369
-   INTEGER(IntKi), PARAMETER      :: BStC4_B3_Mzn = 370
+   INTEGER(IntKi), PARAMETER      :: BStC4_B3_Fxl = 365
+   INTEGER(IntKi), PARAMETER      :: BStC4_B3_Fyl = 366
+   INTEGER(IntKi), PARAMETER      :: BStC4_B3_Fzl = 367
+   INTEGER(IntKi), PARAMETER      :: BStC4_B3_Mxl = 368
+   INTEGER(IntKi), PARAMETER      :: BStC4_B3_Myl = 369
+   INTEGER(IntKi), PARAMETER      :: BStC4_B3_Mzl = 370
    INTEGER(IntKi), PARAMETER      :: BStC1_B4_XQ  = 371
    INTEGER(IntKi), PARAMETER      :: BStC1_B4_XQD = 372
    INTEGER(IntKi), PARAMETER      :: BStC1_B4_YQ  = 373
@@ -463,12 +463,12 @@ MODULE ServoDyn_IO
    INTEGER(IntKi), PARAMETER      :: BStC1_B4_Mxi = 380
    INTEGER(IntKi), PARAMETER      :: BStC1_B4_Myi = 381
    INTEGER(IntKi), PARAMETER      :: BStC1_B4_Mzi = 382
-   INTEGER(IntKi), PARAMETER      :: BStC1_B4_Fxn = 383
-   INTEGER(IntKi), PARAMETER      :: BStC1_B4_Fyn = 384
-   INTEGER(IntKi), PARAMETER      :: BStC1_B4_Fzn = 385
-   INTEGER(IntKi), PARAMETER      :: BStC1_B4_Mxn = 386
-   INTEGER(IntKi), PARAMETER      :: BStC1_B4_Myn = 387
-   INTEGER(IntKi), PARAMETER      :: BStC1_B4_Mzn = 388
+   INTEGER(IntKi), PARAMETER      :: BStC1_B4_Fxl = 383
+   INTEGER(IntKi), PARAMETER      :: BStC1_B4_Fyl = 384
+   INTEGER(IntKi), PARAMETER      :: BStC1_B4_Fzl = 385
+   INTEGER(IntKi), PARAMETER      :: BStC1_B4_Mxl = 386
+   INTEGER(IntKi), PARAMETER      :: BStC1_B4_Myl = 387
+   INTEGER(IntKi), PARAMETER      :: BStC1_B4_Mzl = 388
    INTEGER(IntKi), PARAMETER      :: BStC2_B4_XQ  = 389
    INTEGER(IntKi), PARAMETER      :: BStC2_B4_XQD = 390
    INTEGER(IntKi), PARAMETER      :: BStC2_B4_YQ  = 391
@@ -481,12 +481,12 @@ MODULE ServoDyn_IO
    INTEGER(IntKi), PARAMETER      :: BStC2_B4_Mxi = 398
    INTEGER(IntKi), PARAMETER      :: BStC2_B4_Myi = 399
    INTEGER(IntKi), PARAMETER      :: BStC2_B4_Mzi = 400
-   INTEGER(IntKi), PARAMETER      :: BStC2_B4_Fxn = 401
-   INTEGER(IntKi), PARAMETER      :: BStC2_B4_Fyn = 402
-   INTEGER(IntKi), PARAMETER      :: BStC2_B4_Fzn = 403
-   INTEGER(IntKi), PARAMETER      :: BStC2_B4_Mxn = 404
-   INTEGER(IntKi), PARAMETER      :: BStC2_B4_Myn = 405
-   INTEGER(IntKi), PARAMETER      :: BStC2_B4_Mzn = 406
+   INTEGER(IntKi), PARAMETER      :: BStC2_B4_Fxl = 401
+   INTEGER(IntKi), PARAMETER      :: BStC2_B4_Fyl = 402
+   INTEGER(IntKi), PARAMETER      :: BStC2_B4_Fzl = 403
+   INTEGER(IntKi), PARAMETER      :: BStC2_B4_Mxl = 404
+   INTEGER(IntKi), PARAMETER      :: BStC2_B4_Myl = 405
+   INTEGER(IntKi), PARAMETER      :: BStC2_B4_Mzl = 406
    INTEGER(IntKi), PARAMETER      :: BStC3_B4_XQ  = 407
    INTEGER(IntKi), PARAMETER      :: BStC3_B4_XQD = 408
    INTEGER(IntKi), PARAMETER      :: BStC3_B4_YQ  = 409
@@ -499,12 +499,12 @@ MODULE ServoDyn_IO
    INTEGER(IntKi), PARAMETER      :: BStC3_B4_Mxi = 416
    INTEGER(IntKi), PARAMETER      :: BStC3_B4_Myi = 417
    INTEGER(IntKi), PARAMETER      :: BStC3_B4_Mzi = 418
-   INTEGER(IntKi), PARAMETER      :: BStC3_B4_Fxn = 419
-   INTEGER(IntKi), PARAMETER      :: BStC3_B4_Fyn = 420
-   INTEGER(IntKi), PARAMETER      :: BStC3_B4_Fzn = 421
-   INTEGER(IntKi), PARAMETER      :: BStC3_B4_Mxn = 422
-   INTEGER(IntKi), PARAMETER      :: BStC3_B4_Myn = 423
-   INTEGER(IntKi), PARAMETER      :: BStC3_B4_Mzn = 424
+   INTEGER(IntKi), PARAMETER      :: BStC3_B4_Fxl = 419
+   INTEGER(IntKi), PARAMETER      :: BStC3_B4_Fyl = 420
+   INTEGER(IntKi), PARAMETER      :: BStC3_B4_Fzl = 421
+   INTEGER(IntKi), PARAMETER      :: BStC3_B4_Mxl = 422
+   INTEGER(IntKi), PARAMETER      :: BStC3_B4_Myl = 423
+   INTEGER(IntKi), PARAMETER      :: BStC3_B4_Mzl = 424
    INTEGER(IntKi), PARAMETER      :: BStC4_B4_XQ  = 425
    INTEGER(IntKi), PARAMETER      :: BStC4_B4_XQD = 426
    INTEGER(IntKi), PARAMETER      :: BStC4_B4_YQ  = 427
@@ -517,12 +517,12 @@ MODULE ServoDyn_IO
    INTEGER(IntKi), PARAMETER      :: BStC4_B4_Mxi = 434
    INTEGER(IntKi), PARAMETER      :: BStC4_B4_Myi = 435
    INTEGER(IntKi), PARAMETER      :: BStC4_B4_Mzi = 436
-   INTEGER(IntKi), PARAMETER      :: BStC4_B4_Fxn = 437
-   INTEGER(IntKi), PARAMETER      :: BStC4_B4_Fyn = 438
-   INTEGER(IntKi), PARAMETER      :: BStC4_B4_Fzn = 439
-   INTEGER(IntKi), PARAMETER      :: BStC4_B4_Mxn = 440
-   INTEGER(IntKi), PARAMETER      :: BStC4_B4_Myn = 441
-   INTEGER(IntKi), PARAMETER      :: BStC4_B4_Mzn = 442
+   INTEGER(IntKi), PARAMETER      :: BStC4_B4_Fxl = 437
+   INTEGER(IntKi), PARAMETER      :: BStC4_B4_Fyl = 438
+   INTEGER(IntKi), PARAMETER      :: BStC4_B4_Fzl = 439
+   INTEGER(IntKi), PARAMETER      :: BStC4_B4_Mxl = 440
+   INTEGER(IntKi), PARAMETER      :: BStC4_B4_Myl = 441
+   INTEGER(IntKi), PARAMETER      :: BStC4_B4_Mzl = 442
 
 
      ! Platform  Structural Control  (StC):
@@ -539,12 +539,12 @@ MODULE ServoDyn_IO
    INTEGER(IntKi), PARAMETER      :: PtfmStC1_Mxi = 452
    INTEGER(IntKi), PARAMETER      :: PtfmStC1_Myi = 453
    INTEGER(IntKi), PARAMETER      :: PtfmStC1_Mzi = 454
-   INTEGER(IntKi), PARAMETER      :: PtfmStC1_Fxn = 455
-   INTEGER(IntKi), PARAMETER      :: PtfmStC1_Fyn = 456
-   INTEGER(IntKi), PARAMETER      :: PtfmStC1_Fzn = 457
-   INTEGER(IntKi), PARAMETER      :: PtfmStC1_Mxn = 458
-   INTEGER(IntKi), PARAMETER      :: PtfmStC1_Myn = 459
-   INTEGER(IntKi), PARAMETER      :: PtfmStC1_Mzn = 460
+   INTEGER(IntKi), PARAMETER      :: PtfmStC1_Fxl = 455
+   INTEGER(IntKi), PARAMETER      :: PtfmStC1_Fyl = 456
+   INTEGER(IntKi), PARAMETER      :: PtfmStC1_Fzl = 457
+   INTEGER(IntKi), PARAMETER      :: PtfmStC1_Mxl = 458
+   INTEGER(IntKi), PARAMETER      :: PtfmStC1_Myl = 459
+   INTEGER(IntKi), PARAMETER      :: PtfmStC1_Mzl = 460
    INTEGER(IntKi), PARAMETER      :: PtfmStC2_XQ  = 461
    INTEGER(IntKi), PARAMETER      :: PtfmStC2_XQD = 462
    INTEGER(IntKi), PARAMETER      :: PtfmStC2_YQ  = 463
@@ -557,12 +557,12 @@ MODULE ServoDyn_IO
    INTEGER(IntKi), PARAMETER      :: PtfmStC2_Mxi = 470
    INTEGER(IntKi), PARAMETER      :: PtfmStC2_Myi = 471
    INTEGER(IntKi), PARAMETER      :: PtfmStC2_Mzi = 472
-   INTEGER(IntKi), PARAMETER      :: PtfmStC2_Fxn = 473
-   INTEGER(IntKi), PARAMETER      :: PtfmStC2_Fyn = 474
-   INTEGER(IntKi), PARAMETER      :: PtfmStC2_Fzn = 475
-   INTEGER(IntKi), PARAMETER      :: PtfmStC2_Mxn = 476
-   INTEGER(IntKi), PARAMETER      :: PtfmStC2_Myn = 477
-   INTEGER(IntKi), PARAMETER      :: PtfmStC2_Mzn = 478
+   INTEGER(IntKi), PARAMETER      :: PtfmStC2_Fxl = 473
+   INTEGER(IntKi), PARAMETER      :: PtfmStC2_Fyl = 474
+   INTEGER(IntKi), PARAMETER      :: PtfmStC2_Fzl = 475
+   INTEGER(IntKi), PARAMETER      :: PtfmStC2_Mxl = 476
+   INTEGER(IntKi), PARAMETER      :: PtfmStC2_Myl = 477
+   INTEGER(IntKi), PARAMETER      :: PtfmStC2_Mzl = 478
    INTEGER(IntKi), PARAMETER      :: PtfmStC3_XQ  = 479
    INTEGER(IntKi), PARAMETER      :: PtfmStC3_XQD = 480
    INTEGER(IntKi), PARAMETER      :: PtfmStC3_YQ  = 481
@@ -575,12 +575,12 @@ MODULE ServoDyn_IO
    INTEGER(IntKi), PARAMETER      :: PtfmStC3_Mxi = 488
    INTEGER(IntKi), PARAMETER      :: PtfmStC3_Myi = 489
    INTEGER(IntKi), PARAMETER      :: PtfmStC3_Mzi = 490
-   INTEGER(IntKi), PARAMETER      :: PtfmStC3_Fxn = 491
-   INTEGER(IntKi), PARAMETER      :: PtfmStC3_Fyn = 492
-   INTEGER(IntKi), PARAMETER      :: PtfmStC3_Fzn = 493
-   INTEGER(IntKi), PARAMETER      :: PtfmStC3_Mxn = 494
-   INTEGER(IntKi), PARAMETER      :: PtfmStC3_Myn = 495
-   INTEGER(IntKi), PARAMETER      :: PtfmStC3_Mzn = 496
+   INTEGER(IntKi), PARAMETER      :: PtfmStC3_Fxl = 491
+   INTEGER(IntKi), PARAMETER      :: PtfmStC3_Fyl = 492
+   INTEGER(IntKi), PARAMETER      :: PtfmStC3_Fzl = 493
+   INTEGER(IntKi), PARAMETER      :: PtfmStC3_Mxl = 494
+   INTEGER(IntKi), PARAMETER      :: PtfmStC3_Myl = 495
+   INTEGER(IntKi), PARAMETER      :: PtfmStC3_Mzl = 496
    INTEGER(IntKi), PARAMETER      :: PtfmStC4_XQ  = 497
    INTEGER(IntKi), PARAMETER      :: PtfmStC4_XQD = 498
    INTEGER(IntKi), PARAMETER      :: PtfmStC4_YQ  = 499
@@ -593,12 +593,12 @@ MODULE ServoDyn_IO
    INTEGER(IntKi), PARAMETER      :: PtfmStC4_Mxi = 506
    INTEGER(IntKi), PARAMETER      :: PtfmStC4_Myi = 507
    INTEGER(IntKi), PARAMETER      :: PtfmStC4_Mzi = 508
-   INTEGER(IntKi), PARAMETER      :: PtfmStC4_Fxn = 509
-   INTEGER(IntKi), PARAMETER      :: PtfmStC4_Fyn = 510
-   INTEGER(IntKi), PARAMETER      :: PtfmStC4_Fzn = 511
-   INTEGER(IntKi), PARAMETER      :: PtfmStC4_Mxn = 512
-   INTEGER(IntKi), PARAMETER      :: PtfmStC4_Myn = 513
-   INTEGER(IntKi), PARAMETER      :: PtfmStC4_Mzn = 514
+   INTEGER(IntKi), PARAMETER      :: PtfmStC4_Fxl = 509
+   INTEGER(IntKi), PARAMETER      :: PtfmStC4_Fyl = 510
+   INTEGER(IntKi), PARAMETER      :: PtfmStC4_Fzl = 511
+   INTEGER(IntKi), PARAMETER      :: PtfmStC4_Mxl = 512
+   INTEGER(IntKi), PARAMETER      :: PtfmStC4_Myl = 513
+   INTEGER(IntKi), PARAMETER      :: PtfmStC4_Mzl = 514
 
 
      ! The maximum number of output channels which can be output by the code.
@@ -627,12 +627,12 @@ MODULE ServoDyn_IO
    INTEGER(IntKi), PARAMETER      :: NStC_Mxi(MaxStC)   = (/ NStC1_Mxi, NStC2_Mxi, NStC3_Mxi, NStC4_Mxi /)
    INTEGER(IntKi), PARAMETER      :: NStC_Myi(MaxStC)   = (/ NStC1_Myi, NStC2_Myi, NStC3_Myi, NStC4_Myi /)
    INTEGER(IntKi), PARAMETER      :: NStC_Mzi(MaxStC)   = (/ NStC1_Mzi, NStC2_Mzi, NStC3_Mzi, NStC4_Mzi /)
-   INTEGER(IntKi), PARAMETER      :: NStC_Fxn(MaxStC)   = (/ NStC1_Fxn, NStC2_Fxn, NStC3_Fxn, NStC4_Fxn /)
-   INTEGER(IntKi), PARAMETER      :: NStC_Fyn(MaxStC)   = (/ NStC1_Fyn, NStC2_Fyn, NStC3_Fyn, NStC4_Fyn /)
-   INTEGER(IntKi), PARAMETER      :: NStC_Fzn(MaxStC)   = (/ NStC1_Fzn, NStC2_Fzn, NStC3_Fzn, NStC4_Fzn /)
-   INTEGER(IntKi), PARAMETER      :: NStC_Mxn(MaxStC)   = (/ NStC1_Mxn, NStC2_Mxn, NStC3_Mxn, NStC4_Mxn /)
-   INTEGER(IntKi), PARAMETER      :: NStC_Myn(MaxStC)   = (/ NStC1_Myn, NStC2_Myn, NStC3_Myn, NStC4_Myn /)
-   INTEGER(IntKi), PARAMETER      :: NStC_Mzn(MaxStC)   = (/ NStC1_Mzn, NStC2_Mzn, NStC3_Mzn, NStC4_Mzn /)
+   INTEGER(IntKi), PARAMETER      :: NStC_Fxl(MaxStC)   = (/ NStC1_Fxl, NStC2_Fxl, NStC3_Fxl, NStC4_Fxl /)
+   INTEGER(IntKi), PARAMETER      :: NStC_Fyl(MaxStC)   = (/ NStC1_Fyl, NStC2_Fyl, NStC3_Fyl, NStC4_Fyl /)
+   INTEGER(IntKi), PARAMETER      :: NStC_Fzl(MaxStC)   = (/ NStC1_Fzl, NStC2_Fzl, NStC3_Fzl, NStC4_Fzl /)
+   INTEGER(IntKi), PARAMETER      :: NStC_Mxl(MaxStC)   = (/ NStC1_Mxl, NStC2_Mxl, NStC3_Mxl, NStC4_Mxl /)
+   INTEGER(IntKi), PARAMETER      :: NStC_Myl(MaxStC)   = (/ NStC1_Myl, NStC2_Myl, NStC3_Myl, NStC4_Myl /)
+   INTEGER(IntKi), PARAMETER      :: NStC_Mzl(MaxStC)   = (/ NStC1_Mzl, NStC2_Mzl, NStC3_Mzl, NStC4_Mzl /)
    ! StC tower outputs -- maximum of 4 for now.  Expand if more needed
    INTEGER(IntKi), PARAMETER      :: TStC_XQ(MaxStC)    = (/ TStC1_XQ,  TStC2_XQ,  TStC3_XQ,  TStC4_XQ  /)
    INTEGER(IntKi), PARAMETER      :: TStC_XQD(MaxStC)   = (/ TStC1_XQD, TStC2_XQD, TStC3_XQD, TStC4_XQD /)
@@ -646,12 +646,12 @@ MODULE ServoDyn_IO
    INTEGER(IntKi), PARAMETER      :: TStC_Mxi(MaxStC)   = (/ TStC1_Mxi, TStC2_Mxi, TStC3_Mxi, TStC4_Mxi /)
    INTEGER(IntKi), PARAMETER      :: TStC_Myi(MaxStC)   = (/ TStC1_Myi, TStC2_Myi, TStC3_Myi, TStC4_Myi /)
    INTEGER(IntKi), PARAMETER      :: TStC_Mzi(MaxStC)   = (/ TStC1_Mzi, TStC2_Mzi, TStC3_Mzi, TStC4_Mzi /)
-   INTEGER(IntKi), PARAMETER      :: TStC_Fxn(MaxStC)   = (/ TStC1_Fxn, TStC2_Fxn, TStC3_Fxn, TStC4_Fxn /)
-   INTEGER(IntKi), PARAMETER      :: TStC_Fyn(MaxStC)   = (/ TStC1_Fyn, TStC2_Fyn, TStC3_Fyn, TStC4_Fyn /)
-   INTEGER(IntKi), PARAMETER      :: TStC_Fzn(MaxStC)   = (/ TStC1_Fzn, TStC2_Fzn, TStC3_Fzn, TStC4_Fzn /)
-   INTEGER(IntKi), PARAMETER      :: TStC_Mxn(MaxStC)   = (/ TStC1_Mxn, TStC2_Mxn, TStC3_Mxn, TStC4_Mxn /)
-   INTEGER(IntKi), PARAMETER      :: TStC_Myn(MaxStC)   = (/ TStC1_Myn, TStC2_Myn, TStC3_Myn, TStC4_Myn /)
-   INTEGER(IntKi), PARAMETER      :: TStC_Mzn(MaxStC)   = (/ TStC1_Mzn, TStC2_Mzn, TStC3_Mzn, TStC4_Mzn /)
+   INTEGER(IntKi), PARAMETER      :: TStC_Fxl(MaxStC)   = (/ TStC1_Fxl, TStC2_Fxl, TStC3_Fxl, TStC4_Fxl /)
+   INTEGER(IntKi), PARAMETER      :: TStC_Fyl(MaxStC)   = (/ TStC1_Fyl, TStC2_Fyl, TStC3_Fyl, TStC4_Fyl /)
+   INTEGER(IntKi), PARAMETER      :: TStC_Fzl(MaxStC)   = (/ TStC1_Fzl, TStC2_Fzl, TStC3_Fzl, TStC4_Fzl /)
+   INTEGER(IntKi), PARAMETER      :: TStC_Mxl(MaxStC)   = (/ TStC1_Mxl, TStC2_Mxl, TStC3_Mxl, TStC4_Mxl /)
+   INTEGER(IntKi), PARAMETER      :: TStC_Myl(MaxStC)   = (/ TStC1_Myl, TStC2_Myl, TStC3_Myl, TStC4_Myl /)
+   INTEGER(IntKi), PARAMETER      :: TStC_Mzl(MaxStC)   = (/ TStC1_Mzl, TStC2_Mzl, TStC3_Mzl, TStC4_Mzl /)
    ! StC blade outputs -- maximum of 4 for now.  Expand if more needed
    INTEGER(IntKi), PARAMETER      :: BStC_XQ(MaxStC,MaxBlOuts) = reshape((/ &
                                          BStC1_B1_XQ,  BStC2_B1_XQ,  BStC3_B1_XQ,  BStC4_B1_XQ,  &
@@ -713,36 +713,36 @@ MODULE ServoDyn_IO
                                          BStC1_B2_Mzi, BStC2_B2_Mzi, BStC3_B2_Mzi, BStC4_B2_Mzi, &
                                          BStC1_B3_Mzi, BStC2_B3_Mzi, BStC3_B3_Mzi, BStC4_B3_Mzi, &
                                          BStC1_B4_Mzi, BStC2_B4_Mzi, BStC3_B4_Mzi, BStC4_B4_Mzi  /),(/4,MaxBlOuts/))
-   INTEGER(IntKi), PARAMETER      :: BStC_Fxn(MaxStC,MaxBlOuts)= reshape((/ &
-                                         BStC1_B1_Fxn, BStC2_B1_Fxn, BStC3_B1_Fxn, BStC4_B1_Fxn, &
-                                         BStC1_B2_Fxn, BStC2_B2_Fxn, BStC3_B2_Fxn, BStC4_B2_Fxn, &
-                                         BStC1_B3_Fxn, BStC2_B3_Fxn, BStC3_B3_Fxn, BStC4_B3_Fxn, &
-                                         BStC1_B4_Fxn, BStC2_B4_Fxn, BStC3_B4_Fxn, BStC4_B4_Fxn  /),(/4,MaxBlOuts/))
-   INTEGER(IntKi), PARAMETER      :: BStC_Fyn(MaxStC,MaxBlOuts)= reshape((/ &
-                                         BStC1_B1_Fyn, BStC2_B1_Fyn, BStC3_B1_Fyn, BStC4_B1_Fyn, &
-                                         BStC1_B2_Fyn, BStC2_B2_Fyn, BStC3_B2_Fyn, BStC4_B2_Fyn, &
-                                         BStC1_B3_Fyn, BStC2_B3_Fyn, BStC3_B3_Fyn, BStC4_B3_Fyn, &
-                                         BStC1_B1_Fyn, BStC2_B1_Fyn, BStC3_B1_Fyn, BStC4_B1_Fyn  /),(/4,MaxBlOuts/))
-   INTEGER(IntKi), PARAMETER      :: BStC_Fzn(MaxStC,MaxBlOuts)= reshape((/ &
-                                         BStC1_B1_Fzn, BStC2_B1_Fzn, BStC3_B1_Fzn, BStC4_B1_Fzn, &
-                                         BStC1_B2_Fzn, BStC2_B2_Fzn, BStC3_B2_Fzn, BStC4_B2_Fzn, &
-                                         BStC1_B3_Fzn, BStC2_B3_Fzn, BStC3_B3_Fzn, BStC4_B3_Fzn, &
-                                         BStC1_B4_Fzn, BStC2_B4_Fzn, BStC3_B4_Fzn, BStC4_B4_Fzn  /),(/4,MaxBlOuts/))
-   INTEGER(IntKi), PARAMETER      :: BStC_Mxn(MaxStC,MaxBlOuts)= reshape((/ &
-                                         BStC1_B1_Mxn, BStC2_B1_Mxn, BStC3_B1_Mxn, BStC4_B1_Mxn, &
-                                         BStC1_B2_Mxn, BStC2_B2_Mxn, BStC3_B2_Mxn, BStC4_B2_Mxn, &
-                                         BStC1_B3_Mxn, BStC2_B3_Mxn, BStC3_B3_Mxn, BStC4_B3_Mxn, &
-                                         BStC1_B4_Mxn, BStC2_B4_Mxn, BStC3_B4_Mxn, BStC4_B4_Mxn  /),(/4,MaxBlOuts/))
-   INTEGER(IntKi), PARAMETER      :: BStC_Myn(MaxStC,MaxBlOuts)= reshape((/ &
-                                         BStC1_B1_Myn, BStC2_B1_Myn, BStC3_B1_Myn, BStC4_B1_Myn, &
-                                         BStC1_B2_Myn, BStC2_B2_Myn, BStC3_B2_Myn, BStC4_B2_Myn, &
-                                         BStC1_B3_Myn, BStC2_B3_Myn, BStC3_B3_Myn, BStC4_B3_Myn, &
-                                         BStC1_B4_Myn, BStC2_B4_Myn, BStC3_B4_Myn, BStC4_B4_Myn  /),(/4,MaxBlOuts/))
-   INTEGER(IntKi), PARAMETER      :: BStC_Mzn(MaxStC,MaxBlOuts)= reshape((/ &
-                                         BStC1_B1_Mzn, BStC2_B1_Mzn, BStC3_B1_Mzn, BStC4_B1_Mzn, &
-                                         BStC1_B2_Mzn, BStC2_B2_Mzn, BStC3_B2_Mzn, BStC4_B2_Mzn, &
-                                         BStC1_B3_Mzn, BStC2_B3_Mzn, BStC3_B3_Mzn, BStC4_B3_Mzn, &
-                                         BStC1_B4_Mzn, BStC2_B4_Mzn, BStC3_B4_Mzn, BStC4_B4_Mzn  /),(/4,MaxBlOuts/))
+   INTEGER(IntKi), PARAMETER      :: BStC_Fxl(MaxStC,MaxBlOuts)= reshape((/ &
+                                         BStC1_B1_Fxl, BStC2_B1_Fxl, BStC3_B1_Fxl, BStC4_B1_Fxl, &
+                                         BStC1_B2_Fxl, BStC2_B2_Fxl, BStC3_B2_Fxl, BStC4_B2_Fxl, &
+                                         BStC1_B3_Fxl, BStC2_B3_Fxl, BStC3_B3_Fxl, BStC4_B3_Fxl, &
+                                         BStC1_B4_Fxl, BStC2_B4_Fxl, BStC3_B4_Fxl, BStC4_B4_Fxl  /),(/4,MaxBlOuts/))
+   INTEGER(IntKi), PARAMETER      :: BStC_Fyl(MaxStC,MaxBlOuts)= reshape((/ &
+                                         BStC1_B1_Fyl, BStC2_B1_Fyl, BStC3_B1_Fyl, BStC4_B1_Fyl, &
+                                         BStC1_B2_Fyl, BStC2_B2_Fyl, BStC3_B2_Fyl, BStC4_B2_Fyl, &
+                                         BStC1_B3_Fyl, BStC2_B3_Fyl, BStC3_B3_Fyl, BStC4_B3_Fyl, &
+                                         BStC1_B1_Fyl, BStC2_B1_Fyl, BStC3_B1_Fyl, BStC4_B1_Fyl  /),(/4,MaxBlOuts/))
+   INTEGER(IntKi), PARAMETER      :: BStC_Fzl(MaxStC,MaxBlOuts)= reshape((/ &
+                                         BStC1_B1_Fzl, BStC2_B1_Fzl, BStC3_B1_Fzl, BStC4_B1_Fzl, &
+                                         BStC1_B2_Fzl, BStC2_B2_Fzl, BStC3_B2_Fzl, BStC4_B2_Fzl, &
+                                         BStC1_B3_Fzl, BStC2_B3_Fzl, BStC3_B3_Fzl, BStC4_B3_Fzl, &
+                                         BStC1_B4_Fzl, BStC2_B4_Fzl, BStC3_B4_Fzl, BStC4_B4_Fzl  /),(/4,MaxBlOuts/))
+   INTEGER(IntKi), PARAMETER      :: BStC_Mxl(MaxStC,MaxBlOuts)= reshape((/ &
+                                         BStC1_B1_Mxl, BStC2_B1_Mxl, BStC3_B1_Mxl, BStC4_B1_Mxl, &
+                                         BStC1_B2_Mxl, BStC2_B2_Mxl, BStC3_B2_Mxl, BStC4_B2_Mxl, &
+                                         BStC1_B3_Mxl, BStC2_B3_Mxl, BStC3_B3_Mxl, BStC4_B3_Mxl, &
+                                         BStC1_B4_Mxl, BStC2_B4_Mxl, BStC3_B4_Mxl, BStC4_B4_Mxl  /),(/4,MaxBlOuts/))
+   INTEGER(IntKi), PARAMETER      :: BStC_Myl(MaxStC,MaxBlOuts)= reshape((/ &
+                                         BStC1_B1_Myl, BStC2_B1_Myl, BStC3_B1_Myl, BStC4_B1_Myl, &
+                                         BStC1_B2_Myl, BStC2_B2_Myl, BStC3_B2_Myl, BStC4_B2_Myl, &
+                                         BStC1_B3_Myl, BStC2_B3_Myl, BStC3_B3_Myl, BStC4_B3_Myl, &
+                                         BStC1_B4_Myl, BStC2_B4_Myl, BStC3_B4_Myl, BStC4_B4_Myl  /),(/4,MaxBlOuts/))
+   INTEGER(IntKi), PARAMETER      :: BStC_Mzl(MaxStC,MaxBlOuts)= reshape((/ &
+                                         BStC1_B1_Mzl, BStC2_B1_Mzl, BStC3_B1_Mzl, BStC4_B1_Mzl, &
+                                         BStC1_B2_Mzl, BStC2_B2_Mzl, BStC3_B2_Mzl, BStC4_B2_Mzl, &
+                                         BStC1_B3_Mzl, BStC2_B3_Mzl, BStC3_B3_Mzl, BStC4_B3_Mzl, &
+                                         BStC1_B4_Mzl, BStC2_B4_Mzl, BStC3_B4_Mzl, BStC4_B4_Mzl  /),(/4,MaxBlOuts/))
    ! StC Platform outputs -- maximum of 4 for now.  Expand if more needed
    INTEGER(IntKi), PARAMETER      :: PtfmStC_XQ(MaxStC)    = (/ PtfmStC1_XQ,  PtfmStC2_XQ,  PtfmStC3_XQ,  PtfmStC4_XQ  /)
    INTEGER(IntKi), PARAMETER      :: PtfmStC_XQD(MaxStC)   = (/ PtfmStC1_XQD, PtfmStC2_XQD, PtfmStC3_XQD, PtfmStC4_XQD /)
@@ -756,12 +756,12 @@ MODULE ServoDyn_IO
    INTEGER(IntKi), PARAMETER      :: PtfmStC_Mxi(MaxStC)   = (/ PtfmStC1_Mxi, PtfmStC2_Mxi, PtfmStC3_Mxi, PtfmStC4_Mxi /)
    INTEGER(IntKi), PARAMETER      :: PtfmStC_Myi(MaxStC)   = (/ PtfmStC1_Myi, PtfmStC2_Myi, PtfmStC3_Myi, PtfmStC4_Myi /)
    INTEGER(IntKi), PARAMETER      :: PtfmStC_Mzi(MaxStC)   = (/ PtfmStC1_Mzi, PtfmStC2_Mzi, PtfmStC3_Mzi, PtfmStC4_Mzi /)
-   INTEGER(IntKi), PARAMETER      :: PtfmStC_Fxn(MaxStC)   = (/ PtfmStC1_Fxn, PtfmStC2_Fxn, PtfmStC3_Fxn, PtfmStC4_Fxn /)
-   INTEGER(IntKi), PARAMETER      :: PtfmStC_Fyn(MaxStC)   = (/ PtfmStC1_Fyn, PtfmStC2_Fyn, PtfmStC3_Fyn, PtfmStC4_Fyn /)
-   INTEGER(IntKi), PARAMETER      :: PtfmStC_Fzn(MaxStC)   = (/ PtfmStC1_Fzn, PtfmStC2_Fzn, PtfmStC3_Fzn, PtfmStC4_Fzn /)
-   INTEGER(IntKi), PARAMETER      :: PtfmStC_Mxn(MaxStC)   = (/ PtfmStC1_Mxn, PtfmStC2_Mxn, PtfmStC3_Mxn, PtfmStC4_Mxn /)
-   INTEGER(IntKi), PARAMETER      :: PtfmStC_Myn(MaxStC)   = (/ PtfmStC1_Myn, PtfmStC2_Myn, PtfmStC3_Myn, PtfmStC4_Myn /)
-   INTEGER(IntKi), PARAMETER      :: PtfmStC_Mzn(MaxStC)   = (/ PtfmStC1_Mzn, PtfmStC2_Mzn, PtfmStC3_Mzn, PtfmStC4_Mzn /)
+   INTEGER(IntKi), PARAMETER      :: PtfmStC_Fxl(MaxStC)   = (/ PtfmStC1_Fxl, PtfmStC2_Fxl, PtfmStC3_Fxl, PtfmStC4_Fxl /)
+   INTEGER(IntKi), PARAMETER      :: PtfmStC_Fyl(MaxStC)   = (/ PtfmStC1_Fyl, PtfmStC2_Fyl, PtfmStC3_Fyl, PtfmStC4_Fyl /)
+   INTEGER(IntKi), PARAMETER      :: PtfmStC_Fzl(MaxStC)   = (/ PtfmStC1_Fzl, PtfmStC2_Fzl, PtfmStC3_Fzl, PtfmStC4_Fzl /)
+   INTEGER(IntKi), PARAMETER      :: PtfmStC_Mxl(MaxStC)   = (/ PtfmStC1_Mxl, PtfmStC2_Mxl, PtfmStC3_Mxl, PtfmStC4_Mxl /)
+   INTEGER(IntKi), PARAMETER      :: PtfmStC_Myl(MaxStC)   = (/ PtfmStC1_Myl, PtfmStC2_Myl, PtfmStC3_Myl, PtfmStC4_Myl /)
+   INTEGER(IntKi), PARAMETER      :: PtfmStC_Mzl(MaxStC)   = (/ PtfmStC1_Mzl, PtfmStC2_Mzl, PtfmStC3_Mzl, PtfmStC4_Mzl /)
 
 
 
@@ -822,12 +822,12 @@ subroutine Set_NStC_Outs( p_SrvD, x, m, y, AllOuts )     ! Nacelle
          AllOuts(NStC_Mxi(i)) = 0.001*y(i)%Mesh(j)%Moment(1,1) ! only one mesh per NStC instance
          AllOuts(NStC_Myi(i)) = 0.001*y(i)%Mesh(j)%Moment(2,1) ! only one mesh per NStC instance
          AllOuts(NStC_Mzi(i)) = 0.001*y(i)%Mesh(j)%Moment(3,1) ! only one mesh per NStC instance
-         AllOuts(NStC_Fxn(i)) = 0.001*m(i)%F_P(1,j)
-         AllOuts(NStC_Fyn(i)) = 0.001*m(i)%F_P(2,j)
-         AllOuts(NStC_Fzn(i)) = 0.001*m(i)%F_P(3,j)
-         AllOuts(NStC_Mxn(i)) = 0.001*m(i)%M_P(1,j)
-         AllOuts(NStC_Myn(i)) = 0.001*m(i)%M_P(2,j)
-         AllOuts(NStC_Mzn(i)) = 0.001*m(i)%M_P(3,j)
+         AllOuts(NStC_Fxl(i)) = 0.001*m(i)%F_P(1,j)
+         AllOuts(NStC_Fyl(i)) = 0.001*m(i)%F_P(2,j)
+         AllOuts(NStC_Fzl(i)) = 0.001*m(i)%F_P(3,j)
+         AllOuts(NStC_Mxl(i)) = 0.001*m(i)%M_P(1,j)
+         AllOuts(NStC_Myl(i)) = 0.001*m(i)%M_P(2,j)
+         AllOuts(NStC_Mzl(i)) = 0.001*m(i)%M_P(3,j)
       enddo
    endif
 end subroutine Set_NStC_Outs
@@ -854,12 +854,12 @@ subroutine Set_TStC_Outs( p_SrvD, x, m, y, AllOuts )     ! Tower
          AllOuts(TStC_Mxi(i)) = 0.001*y(i)%Mesh(j)%Moment(1,1) ! only one mesh per TStC instance
          AllOuts(TStC_Myi(i)) = 0.001*y(i)%Mesh(j)%Moment(2,1) ! only one mesh per TStC instance
          AllOuts(TStC_Mzi(i)) = 0.001*y(i)%Mesh(j)%Moment(3,1) ! only one mesh per TStC instance
-         AllOuts(TStC_Fxn(i)) = 0.001*m(i)%F_P(1,j)
-         AllOuts(TStC_Fyn(i)) = 0.001*m(i)%F_P(2,j)
-         AllOuts(TStC_Fzn(i)) = 0.001*m(i)%F_P(3,j)
-         AllOuts(TStC_Mxn(i)) = 0.001*m(i)%M_P(1,j)
-         AllOuts(TStC_Myn(i)) = 0.001*m(i)%M_P(2,j)
-         AllOuts(TStC_Mzn(i)) = 0.001*m(i)%M_P(3,j)
+         AllOuts(TStC_Fxl(i)) = 0.001*m(i)%F_P(1,j)
+         AllOuts(TStC_Fyl(i)) = 0.001*m(i)%F_P(2,j)
+         AllOuts(TStC_Fzl(i)) = 0.001*m(i)%F_P(3,j)
+         AllOuts(TStC_Mxl(i)) = 0.001*m(i)%M_P(1,j)
+         AllOuts(TStC_Myl(i)) = 0.001*m(i)%M_P(2,j)
+         AllOuts(TStC_Mzl(i)) = 0.001*m(i)%M_P(3,j)
       enddo
    endif
 end subroutine Set_TStC_Outs
@@ -886,12 +886,12 @@ subroutine Set_BStC_Outs( p_SrvD, x, m, y, AllOuts )        ! Blades
             AllOuts(BStC_Mxi(i,j)) = 0.001*y(i)%Mesh(j)%Moment(1,1) ! only one mesh per BStC instance
             AllOuts(BStC_Myi(i,j)) = 0.001*y(i)%Mesh(j)%Moment(2,1) ! only one mesh per BStC instance
             AllOuts(BStC_Mzi(i,j)) = 0.001*y(i)%Mesh(j)%Moment(3,1) ! only one mesh per BStC instance
-            AllOuts(BStC_Fxn(i,j)) = 0.001*m(i)%F_P(1,j)
-            AllOuts(BStC_Fyn(i,j)) = 0.001*m(i)%F_P(2,j)
-            AllOuts(BStC_Fzn(i,j)) = 0.001*m(i)%F_P(3,j)
-            AllOuts(BStC_Mxn(i,j)) = 0.001*m(i)%M_P(1,j)
-            AllOuts(BStC_Myn(i,j)) = 0.001*m(i)%M_P(2,j)
-            AllOuts(BStC_Mzn(i,j)) = 0.001*m(i)%M_P(3,j)
+            AllOuts(BStC_Fxl(i,j)) = 0.001*m(i)%F_P(1,j)
+            AllOuts(BStC_Fyl(i,j)) = 0.001*m(i)%F_P(2,j)
+            AllOuts(BStC_Fzl(i,j)) = 0.001*m(i)%F_P(3,j)
+            AllOuts(BStC_Mxl(i,j)) = 0.001*m(i)%M_P(1,j)
+            AllOuts(BStC_Myl(i,j)) = 0.001*m(i)%M_P(2,j)
+            AllOuts(BStC_Mzl(i,j)) = 0.001*m(i)%M_P(3,j)
          enddo
       enddo
    endif
@@ -919,12 +919,12 @@ subroutine Set_PtfmStC_Outs( p_SrvD, x, m, y, AllOuts )     ! Platform
          AllOuts(PtfmStC_Mxi(i)) = 0.001*y(i)%Mesh(j)%Moment(1,1) ! only one mesh per PtfmStC instance
          AllOuts(PtfmStC_Myi(i)) = 0.001*y(i)%Mesh(j)%Moment(2,1) ! only one mesh per PtfmStC instance
          AllOuts(PtfmStC_Mzi(i)) = 0.001*y(i)%Mesh(j)%Moment(3,1) ! only one mesh per PtfmStC instance
-         AllOuts(PtfmStC_Fxn(i)) = 0.001*m(i)%F_P(1,j)
-         AllOuts(PtfmStC_Fyn(i)) = 0.001*m(i)%F_P(2,j)
-         AllOuts(PtfmStC_Fzn(i)) = 0.001*m(i)%F_P(3,j)
-         AllOuts(PtfmStC_Mxn(i)) = 0.001*m(i)%M_P(1,j)
-         AllOuts(PtfmStC_Myn(i)) = 0.001*m(i)%M_P(2,j)
-         AllOuts(PtfmStC_Mzn(i)) = 0.001*m(i)%M_P(3,j)
+         AllOuts(PtfmStC_Fxl(i)) = 0.001*m(i)%F_P(1,j)
+         AllOuts(PtfmStC_Fyl(i)) = 0.001*m(i)%F_P(2,j)
+         AllOuts(PtfmStC_Fzl(i)) = 0.001*m(i)%F_P(3,j)
+         AllOuts(PtfmStC_Mxl(i)) = 0.001*m(i)%M_P(1,j)
+         AllOuts(PtfmStC_Myl(i)) = 0.001*m(i)%M_P(2,j)
+         AllOuts(PtfmStC_Mzl(i)) = 0.001*m(i)%M_P(3,j)
       enddo
    endif
 end subroutine Set_PtfmStC_Outs
@@ -1427,178 +1427,178 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
 
    CHARACTER(OutStrLenM1), PARAMETER  :: ValidParamAry(518) =  (/  &   ! This lists the names of the allowed parameters, which must be sorted alphabetically
                                "BLAIRFLC1   ","BLAIRFLC2   ","BLAIRFLC3   ","BLFLAP1     ","BLFLAP2     ","BLFLAP3     ", &
-                               "BLPITCHC1   ","BLPITCHC2   ","BLPITCHC3   ","BSTC1_B1_FXI","BSTC1_B1_FXN","BSTC1_B1_FYI", &
-                               "BSTC1_B1_FYN","BSTC1_B1_FZI","BSTC1_B1_FZN","BSTC1_B1_MXI","BSTC1_B1_MXN","BSTC1_B1_MYI", &
-                               "BSTC1_B1_MYN","BSTC1_B1_MZI","BSTC1_B1_MZN","BSTC1_B1_XQ ","BSTC1_B1_XQD","BSTC1_B1_YQ ", &
-                               "BSTC1_B1_YQD","BSTC1_B1_ZQ ","BSTC1_B1_ZQD","BSTC1_B2_FXI","BSTC1_B2_FXN","BSTC1_B2_FYI", &
-                               "BSTC1_B2_FYN","BSTC1_B2_FZI","BSTC1_B2_FZN","BSTC1_B2_MXI","BSTC1_B2_MXN","BSTC1_B2_MYI", &
-                               "BSTC1_B2_MYN","BSTC1_B2_MZI","BSTC1_B2_MZN","BSTC1_B2_XQ ","BSTC1_B2_XQD","BSTC1_B2_YQ ", &
-                               "BSTC1_B2_YQD","BSTC1_B2_ZQ ","BSTC1_B2_ZQD","BSTC1_B3_FXI","BSTC1_B3_FXN","BSTC1_B3_FYI", &
-                               "BSTC1_B3_FYN","BSTC1_B3_FZI","BSTC1_B3_FZN","BSTC1_B3_MXI","BSTC1_B3_MXN","BSTC1_B3_MYI", &
-                               "BSTC1_B3_MYN","BSTC1_B3_MZI","BSTC1_B3_MZN","BSTC1_B3_XQ ","BSTC1_B3_XQD","BSTC1_B3_YQ ", &
-                               "BSTC1_B3_YQD","BSTC1_B3_ZQ ","BSTC1_B3_ZQD","BSTC1_B4_FXI","BSTC1_B4_FXN","BSTC1_B4_FYI", &
-                               "BSTC1_B4_FYN","BSTC1_B4_FZI","BSTC1_B4_FZN","BSTC1_B4_MXI","BSTC1_B4_MXN","BSTC1_B4_MYI", &
-                               "BSTC1_B4_MYN","BSTC1_B4_MZI","BSTC1_B4_MZN","BSTC1_B4_XQ ","BSTC1_B4_XQD","BSTC1_B4_YQ ", &
-                               "BSTC1_B4_YQD","BSTC1_B4_ZQ ","BSTC1_B4_ZQD","BSTC2_B1_FXI","BSTC2_B1_FXN","BSTC2_B1_FYI", &
-                               "BSTC2_B1_FYN","BSTC2_B1_FZI","BSTC2_B1_FZN","BSTC2_B1_MXI","BSTC2_B1_MXN","BSTC2_B1_MYI", &
-                               "BSTC2_B1_MYN","BSTC2_B1_MZI","BSTC2_B1_MZN","BSTC2_B1_XQ ","BSTC2_B1_XQD","BSTC2_B1_YQ ", &
-                               "BSTC2_B1_YQD","BSTC2_B1_ZQ ","BSTC2_B1_ZQD","BSTC2_B2_FXI","BSTC2_B2_FXN","BSTC2_B2_FYI", &
-                               "BSTC2_B2_FYN","BSTC2_B2_FZI","BSTC2_B2_FZN","BSTC2_B2_MXI","BSTC2_B2_MXN","BSTC2_B2_MYI", &
-                               "BSTC2_B2_MYN","BSTC2_B2_MZI","BSTC2_B2_MZN","BSTC2_B2_XQ ","BSTC2_B2_XQD","BSTC2_B2_YQ ", &
-                               "BSTC2_B2_YQD","BSTC2_B2_ZQ ","BSTC2_B2_ZQD","BSTC2_B3_FXI","BSTC2_B3_FXN","BSTC2_B3_FYI", &
-                               "BSTC2_B3_FYN","BSTC2_B3_FZI","BSTC2_B3_FZN","BSTC2_B3_MXI","BSTC2_B3_MXN","BSTC2_B3_MYI", &
-                               "BSTC2_B3_MYN","BSTC2_B3_MZI","BSTC2_B3_MZN","BSTC2_B3_XQ ","BSTC2_B3_XQD","BSTC2_B3_YQ ", &
-                               "BSTC2_B3_YQD","BSTC2_B3_ZQ ","BSTC2_B3_ZQD","BSTC2_B4_FXI","BSTC2_B4_FXN","BSTC2_B4_FYI", &
-                               "BSTC2_B4_FYN","BSTC2_B4_FZI","BSTC2_B4_FZN","BSTC2_B4_MXI","BSTC2_B4_MXN","BSTC2_B4_MYI", &
-                               "BSTC2_B4_MYN","BSTC2_B4_MZI","BSTC2_B4_MZN","BSTC2_B4_XQ ","BSTC2_B4_XQD","BSTC2_B4_YQ ", &
-                               "BSTC2_B4_YQD","BSTC2_B4_ZQ ","BSTC2_B4_ZQD","BSTC3_B1_FXI","BSTC3_B1_FXN","BSTC3_B1_FYI", &
-                               "BSTC3_B1_FYN","BSTC3_B1_FZI","BSTC3_B1_FZN","BSTC3_B1_MXI","BSTC3_B1_MXN","BSTC3_B1_MYI", &
-                               "BSTC3_B1_MYN","BSTC3_B1_MZI","BSTC3_B1_MZN","BSTC3_B1_XQ ","BSTC3_B1_XQD","BSTC3_B1_YQ ", &
-                               "BSTC3_B1_YQD","BSTC3_B1_ZQ ","BSTC3_B1_ZQD","BSTC3_B2_FXI","BSTC3_B2_FXN","BSTC3_B2_FYI", &
-                               "BSTC3_B2_FYN","BSTC3_B2_FZI","BSTC3_B2_FZN","BSTC3_B2_MXI","BSTC3_B2_MXN","BSTC3_B2_MYI", &
-                               "BSTC3_B2_MYN","BSTC3_B2_MZI","BSTC3_B2_MZN","BSTC3_B2_XQ ","BSTC3_B2_XQD","BSTC3_B2_YQ ", &
-                               "BSTC3_B2_YQD","BSTC3_B2_ZQ ","BSTC3_B2_ZQD","BSTC3_B3_FXI","BSTC3_B3_FXN","BSTC3_B3_FYI", &
-                               "BSTC3_B3_FYN","BSTC3_B3_FZI","BSTC3_B3_FZN","BSTC3_B3_MXI","BSTC3_B3_MXN","BSTC3_B3_MYI", &
-                               "BSTC3_B3_MYN","BSTC3_B3_MZI","BSTC3_B3_MZN","BSTC3_B3_XQ ","BSTC3_B3_XQD","BSTC3_B3_YQ ", &
-                               "BSTC3_B3_YQD","BSTC3_B3_ZQ ","BSTC3_B3_ZQD","BSTC3_B4_FXI","BSTC3_B4_FXN","BSTC3_B4_FYI", &
-                               "BSTC3_B4_FYN","BSTC3_B4_FZI","BSTC3_B4_FZN","BSTC3_B4_MXI","BSTC3_B4_MXN","BSTC3_B4_MYI", &
-                               "BSTC3_B4_MYN","BSTC3_B4_MZI","BSTC3_B4_MZN","BSTC3_B4_XQ ","BSTC3_B4_XQD","BSTC3_B4_YQ ", &
-                               "BSTC3_B4_YQD","BSTC3_B4_ZQ ","BSTC3_B4_ZQD","BSTC4_B1_FXI","BSTC4_B1_FXN","BSTC4_B1_FYI", &
-                               "BSTC4_B1_FYN","BSTC4_B1_FZI","BSTC4_B1_FZN","BSTC4_B1_MXI","BSTC4_B1_MXN","BSTC4_B1_MYI", &
-                               "BSTC4_B1_MYN","BSTC4_B1_MZI","BSTC4_B1_MZN","BSTC4_B1_XQ ","BSTC4_B1_XQD","BSTC4_B1_YQ ", &
-                               "BSTC4_B1_YQD","BSTC4_B1_ZQ ","BSTC4_B1_ZQD","BSTC4_B2_FXI","BSTC4_B2_FXN","BSTC4_B2_FYI", &
-                               "BSTC4_B2_FYN","BSTC4_B2_FZI","BSTC4_B2_FZN","BSTC4_B2_MXI","BSTC4_B2_MXN","BSTC4_B2_MYI", &
-                               "BSTC4_B2_MYN","BSTC4_B2_MZI","BSTC4_B2_MZN","BSTC4_B2_XQ ","BSTC4_B2_XQD","BSTC4_B2_YQ ", &
-                               "BSTC4_B2_YQD","BSTC4_B2_ZQ ","BSTC4_B2_ZQD","BSTC4_B3_FXI","BSTC4_B3_FXN","BSTC4_B3_FYI", &
-                               "BSTC4_B3_FYN","BSTC4_B3_FZI","BSTC4_B3_FZN","BSTC4_B3_MXI","BSTC4_B3_MXN","BSTC4_B3_MYI", &
-                               "BSTC4_B3_MYN","BSTC4_B3_MZI","BSTC4_B3_MZN","BSTC4_B3_XQ ","BSTC4_B3_XQD","BSTC4_B3_YQ ", &
-                               "BSTC4_B3_YQD","BSTC4_B3_ZQ ","BSTC4_B3_ZQD","BSTC4_B4_FXI","BSTC4_B4_FXN","BSTC4_B4_FYI", &
-                               "BSTC4_B4_FYN","BSTC4_B4_FZI","BSTC4_B4_FZN","BSTC4_B4_MXI","BSTC4_B4_MXN","BSTC4_B4_MYI", &
-                               "BSTC4_B4_MYN","BSTC4_B4_MZI","BSTC4_B4_MZN","BSTC4_B4_XQ ","BSTC4_B4_XQD","BSTC4_B4_YQ ", &
+                               "BLPITCHC1   ","BLPITCHC2   ","BLPITCHC3   ","BSTC1_B1_FXI","BSTC1_B1_FXL","BSTC1_B1_FYI", &
+                               "BSTC1_B1_FYL","BSTC1_B1_FZI","BSTC1_B1_FZL","BSTC1_B1_MXI","BSTC1_B1_MXL","BSTC1_B1_MYI", &
+                               "BSTC1_B1_MYL","BSTC1_B1_MZI","BSTC1_B1_MZL","BSTC1_B1_XQ ","BSTC1_B1_XQD","BSTC1_B1_YQ ", &
+                               "BSTC1_B1_YQD","BSTC1_B1_ZQ ","BSTC1_B1_ZQD","BSTC1_B2_FXI","BSTC1_B2_FXL","BSTC1_B2_FYI", &
+                               "BSTC1_B2_FYL","BSTC1_B2_FZI","BSTC1_B2_FZL","BSTC1_B2_MXI","BSTC1_B2_MXL","BSTC1_B2_MYI", &
+                               "BSTC1_B2_MYL","BSTC1_B2_MZI","BSTC1_B2_MZL","BSTC1_B2_XQ ","BSTC1_B2_XQD","BSTC1_B2_YQ ", &
+                               "BSTC1_B2_YQD","BSTC1_B2_ZQ ","BSTC1_B2_ZQD","BSTC1_B3_FXI","BSTC1_B3_FXL","BSTC1_B3_FYI", &
+                               "BSTC1_B3_FYL","BSTC1_B3_FZI","BSTC1_B3_FZL","BSTC1_B3_MXI","BSTC1_B3_MXL","BSTC1_B3_MYI", &
+                               "BSTC1_B3_MYL","BSTC1_B3_MZI","BSTC1_B3_MZL","BSTC1_B3_XQ ","BSTC1_B3_XQD","BSTC1_B3_YQ ", &
+                               "BSTC1_B3_YQD","BSTC1_B3_ZQ ","BSTC1_B3_ZQD","BSTC1_B4_FXI","BSTC1_B4_FXL","BSTC1_B4_FYI", &
+                               "BSTC1_B4_FYL","BSTC1_B4_FZI","BSTC1_B4_FZL","BSTC1_B4_MXI","BSTC1_B4_MXL","BSTC1_B4_MYI", &
+                               "BSTC1_B4_MYL","BSTC1_B4_MZI","BSTC1_B4_MZL","BSTC1_B4_XQ ","BSTC1_B4_XQD","BSTC1_B4_YQ ", &
+                               "BSTC1_B4_YQD","BSTC1_B4_ZQ ","BSTC1_B4_ZQD","BSTC2_B1_FXI","BSTC2_B1_FXL","BSTC2_B1_FYI", &
+                               "BSTC2_B1_FYL","BSTC2_B1_FZI","BSTC2_B1_FZL","BSTC2_B1_MXI","BSTC2_B1_MXL","BSTC2_B1_MYI", &
+                               "BSTC2_B1_MYL","BSTC2_B1_MZI","BSTC2_B1_MZL","BSTC2_B1_XQ ","BSTC2_B1_XQD","BSTC2_B1_YQ ", &
+                               "BSTC2_B1_YQD","BSTC2_B1_ZQ ","BSTC2_B1_ZQD","BSTC2_B2_FXI","BSTC2_B2_FXL","BSTC2_B2_FYI", &
+                               "BSTC2_B2_FYL","BSTC2_B2_FZI","BSTC2_B2_FZL","BSTC2_B2_MXI","BSTC2_B2_MXL","BSTC2_B2_MYI", &
+                               "BSTC2_B2_MYL","BSTC2_B2_MZI","BSTC2_B2_MZL","BSTC2_B2_XQ ","BSTC2_B2_XQD","BSTC2_B2_YQ ", &
+                               "BSTC2_B2_YQD","BSTC2_B2_ZQ ","BSTC2_B2_ZQD","BSTC2_B3_FXI","BSTC2_B3_FXL","BSTC2_B3_FYI", &
+                               "BSTC2_B3_FYL","BSTC2_B3_FZI","BSTC2_B3_FZL","BSTC2_B3_MXI","BSTC2_B3_MXL","BSTC2_B3_MYI", &
+                               "BSTC2_B3_MYL","BSTC2_B3_MZI","BSTC2_B3_MZL","BSTC2_B3_XQ ","BSTC2_B3_XQD","BSTC2_B3_YQ ", &
+                               "BSTC2_B3_YQD","BSTC2_B3_ZQ ","BSTC2_B3_ZQD","BSTC2_B4_FXI","BSTC2_B4_FXL","BSTC2_B4_FYI", &
+                               "BSTC2_B4_FYL","BSTC2_B4_FZI","BSTC2_B4_FZL","BSTC2_B4_MXI","BSTC2_B4_MXL","BSTC2_B4_MYI", &
+                               "BSTC2_B4_MYL","BSTC2_B4_MZI","BSTC2_B4_MZL","BSTC2_B4_XQ ","BSTC2_B4_XQD","BSTC2_B4_YQ ", &
+                               "BSTC2_B4_YQD","BSTC2_B4_ZQ ","BSTC2_B4_ZQD","BSTC3_B1_FXI","BSTC3_B1_FXL","BSTC3_B1_FYI", &
+                               "BSTC3_B1_FYL","BSTC3_B1_FZI","BSTC3_B1_FZL","BSTC3_B1_MXI","BSTC3_B1_MXL","BSTC3_B1_MYI", &
+                               "BSTC3_B1_MYL","BSTC3_B1_MZI","BSTC3_B1_MZL","BSTC3_B1_XQ ","BSTC3_B1_XQD","BSTC3_B1_YQ ", &
+                               "BSTC3_B1_YQD","BSTC3_B1_ZQ ","BSTC3_B1_ZQD","BSTC3_B2_FXI","BSTC3_B2_FXL","BSTC3_B2_FYI", &
+                               "BSTC3_B2_FYL","BSTC3_B2_FZI","BSTC3_B2_FZL","BSTC3_B2_MXI","BSTC3_B2_MXL","BSTC3_B2_MYI", &
+                               "BSTC3_B2_MYL","BSTC3_B2_MZI","BSTC3_B2_MZL","BSTC3_B2_XQ ","BSTC3_B2_XQD","BSTC3_B2_YQ ", &
+                               "BSTC3_B2_YQD","BSTC3_B2_ZQ ","BSTC3_B2_ZQD","BSTC3_B3_FXI","BSTC3_B3_FXL","BSTC3_B3_FYI", &
+                               "BSTC3_B3_FYL","BSTC3_B3_FZI","BSTC3_B3_FZL","BSTC3_B3_MXI","BSTC3_B3_MXL","BSTC3_B3_MYI", &
+                               "BSTC3_B3_MYL","BSTC3_B3_MZI","BSTC3_B3_MZL","BSTC3_B3_XQ ","BSTC3_B3_XQD","BSTC3_B3_YQ ", &
+                               "BSTC3_B3_YQD","BSTC3_B3_ZQ ","BSTC3_B3_ZQD","BSTC3_B4_FXI","BSTC3_B4_FXL","BSTC3_B4_FYI", &
+                               "BSTC3_B4_FYL","BSTC3_B4_FZI","BSTC3_B4_FZL","BSTC3_B4_MXI","BSTC3_B4_MXL","BSTC3_B4_MYI", &
+                               "BSTC3_B4_MYL","BSTC3_B4_MZI","BSTC3_B4_MZL","BSTC3_B4_XQ ","BSTC3_B4_XQD","BSTC3_B4_YQ ", &
+                               "BSTC3_B4_YQD","BSTC3_B4_ZQ ","BSTC3_B4_ZQD","BSTC4_B1_FXI","BSTC4_B1_FXL","BSTC4_B1_FYI", &
+                               "BSTC4_B1_FYL","BSTC4_B1_FZI","BSTC4_B1_FZL","BSTC4_B1_MXI","BSTC4_B1_MXL","BSTC4_B1_MYI", &
+                               "BSTC4_B1_MYL","BSTC4_B1_MZI","BSTC4_B1_MZL","BSTC4_B1_XQ ","BSTC4_B1_XQD","BSTC4_B1_YQ ", &
+                               "BSTC4_B1_YQD","BSTC4_B1_ZQ ","BSTC4_B1_ZQD","BSTC4_B2_FXI","BSTC4_B2_FXL","BSTC4_B2_FYI", &
+                               "BSTC4_B2_FYL","BSTC4_B2_FZI","BSTC4_B2_FZL","BSTC4_B2_MXI","BSTC4_B2_MXL","BSTC4_B2_MYI", &
+                               "BSTC4_B2_MYL","BSTC4_B2_MZI","BSTC4_B2_MZL","BSTC4_B2_XQ ","BSTC4_B2_XQD","BSTC4_B2_YQ ", &
+                               "BSTC4_B2_YQD","BSTC4_B2_ZQ ","BSTC4_B2_ZQD","BSTC4_B3_FXI","BSTC4_B3_FXL","BSTC4_B3_FYI", &
+                               "BSTC4_B3_FYL","BSTC4_B3_FZI","BSTC4_B3_FZL","BSTC4_B3_MXI","BSTC4_B3_MXL","BSTC4_B3_MYI", &
+                               "BSTC4_B3_MYL","BSTC4_B3_MZI","BSTC4_B3_MZL","BSTC4_B3_XQ ","BSTC4_B3_XQD","BSTC4_B3_YQ ", &
+                               "BSTC4_B3_YQD","BSTC4_B3_ZQ ","BSTC4_B3_ZQD","BSTC4_B4_FXI","BSTC4_B4_FXL","BSTC4_B4_FYI", &
+                               "BSTC4_B4_FYL","BSTC4_B4_FZI","BSTC4_B4_FZL","BSTC4_B4_MXI","BSTC4_B4_MXL","BSTC4_B4_MYI", &
+                               "BSTC4_B4_MYL","BSTC4_B4_MZI","BSTC4_B4_MZL","BSTC4_B4_XQ ","BSTC4_B4_XQD","BSTC4_B4_YQ ", &
                                "BSTC4_B4_YQD","BSTC4_B4_ZQ ","BSTC4_B4_ZQD","GENPWR      ","GENTQ       ","HSSBRTQC    ", &
-                               "NSTC1_FXI   ","NSTC1_FXN   ","NSTC1_FYI   ","NSTC1_FYN   ","NSTC1_FZI   ","NSTC1_FZN   ", &
-                               "NSTC1_MXI   ","NSTC1_MXN   ","NSTC1_MYI   ","NSTC1_MYN   ","NSTC1_MZI   ","NSTC1_MZN   ", &
+                               "NSTC1_FXI   ","NSTC1_FXL   ","NSTC1_FYI   ","NSTC1_FYL   ","NSTC1_FZI   ","NSTC1_FZL   ", &
+                               "NSTC1_MXI   ","NSTC1_MXL   ","NSTC1_MYI   ","NSTC1_MYL   ","NSTC1_MZI   ","NSTC1_MZL   ", &
                                "NSTC1_XQ    ","NSTC1_XQD   ","NSTC1_YQ    ","NSTC1_YQD   ","NSTC1_ZQ    ","NSTC1_ZQD   ", &
-                               "NSTC2_FXI   ","NSTC2_FXN   ","NSTC2_FYI   ","NSTC2_FYN   ","NSTC2_FZI   ","NSTC2_FZN   ", &
-                               "NSTC2_MXI   ","NSTC2_MXN   ","NSTC2_MYI   ","NSTC2_MYN   ","NSTC2_MZI   ","NSTC2_MZN   ", &
+                               "NSTC2_FXI   ","NSTC2_FXL   ","NSTC2_FYI   ","NSTC2_FYL   ","NSTC2_FZI   ","NSTC2_FZL   ", &
+                               "NSTC2_MXI   ","NSTC2_MXL   ","NSTC2_MYI   ","NSTC2_MYL   ","NSTC2_MZI   ","NSTC2_MZL   ", &
                                "NSTC2_XQ    ","NSTC2_XQD   ","NSTC2_YQ    ","NSTC2_YQD   ","NSTC2_ZQ    ","NSTC2_ZQD   ", &
-                               "NSTC3_FXI   ","NSTC3_FXN   ","NSTC3_FYI   ","NSTC3_FYN   ","NSTC3_FZI   ","NSTC3_FZN   ", &
-                               "NSTC3_MXI   ","NSTC3_MXN   ","NSTC3_MYI   ","NSTC3_MYN   ","NSTC3_MZI   ","NSTC3_MZN   ", &
+                               "NSTC3_FXI   ","NSTC3_FXL   ","NSTC3_FYI   ","NSTC3_FYL   ","NSTC3_FZI   ","NSTC3_FZL   ", &
+                               "NSTC3_MXI   ","NSTC3_MXL   ","NSTC3_MYI   ","NSTC3_MYL   ","NSTC3_MZI   ","NSTC3_MZL   ", &
                                "NSTC3_XQ    ","NSTC3_XQD   ","NSTC3_YQ    ","NSTC3_YQD   ","NSTC3_ZQ    ","NSTC3_ZQD   ", &
-                               "NSTC4_FXI   ","NSTC4_FXN   ","NSTC4_FYI   ","NSTC4_FYN   ","NSTC4_FZI   ","NSTC4_FZN   ", &
-                               "NSTC4_MXI   ","NSTC4_MXN   ","NSTC4_MYI   ","NSTC4_MYN   ","NSTC4_MZI   ","NSTC4_MZN   ", &
+                               "NSTC4_FXI   ","NSTC4_FXL   ","NSTC4_FYI   ","NSTC4_FYL   ","NSTC4_FZI   ","NSTC4_FZL   ", &
+                               "NSTC4_MXI   ","NSTC4_MXL   ","NSTC4_MYI   ","NSTC4_MYL   ","NSTC4_MZI   ","NSTC4_MZL   ", &
                                "NSTC4_XQ    ","NSTC4_XQD   ","NSTC4_YQ    ","NSTC4_YQD   ","NSTC4_ZQ    ","NSTC4_ZQD   ", &
-                               "PTFMSTC1_FXI","PTFMSTC1_FXN","PTFMSTC1_FYI","PTFMSTC1_FYN","PTFMSTC1_FZI","PTFMSTC1_FZN", &
-                               "PTFMSTC1_MXI","PTFMSTC1_MXN","PTFMSTC1_MYI","PTFMSTC1_MYN","PTFMSTC1_MZI","PTFMSTC1_MZN", &
+                               "PTFMSTC1_FXI","PTFMSTC1_FXL","PTFMSTC1_FYI","PTFMSTC1_FYL","PTFMSTC1_FZI","PTFMSTC1_FZL", &
+                               "PTFMSTC1_MXI","PTFMSTC1_MXL","PTFMSTC1_MYI","PTFMSTC1_MYL","PTFMSTC1_MZI","PTFMSTC1_MZL", &
                                "PTFMSTC1_XQ ","PTFMSTC1_XQD","PTFMSTC1_YQ ","PTFMSTC1_YQD","PTFMSTC1_ZQ ","PTFMSTC1_ZQD", &
-                               "PTFMSTC2_FXI","PTFMSTC2_FXN","PTFMSTC2_FYI","PTFMSTC2_FYN","PTFMSTC2_FZI","PTFMSTC2_FZN", &
-                               "PTFMSTC2_MXI","PTFMSTC2_MXN","PTFMSTC2_MYI","PTFMSTC2_MYN","PTFMSTC2_MZI","PTFMSTC2_MZN", &
+                               "PTFMSTC2_FXI","PTFMSTC2_FXL","PTFMSTC2_FYI","PTFMSTC2_FYL","PTFMSTC2_FZI","PTFMSTC2_FZL", &
+                               "PTFMSTC2_MXI","PTFMSTC2_MXL","PTFMSTC2_MYI","PTFMSTC2_MYL","PTFMSTC2_MZI","PTFMSTC2_MZL", &
                                "PTFMSTC2_XQ ","PTFMSTC2_XQD","PTFMSTC2_YQ ","PTFMSTC2_YQD","PTFMSTC2_ZQ ","PTFMSTC2_ZQD", &
-                               "PTFMSTC3_FXI","PTFMSTC3_FXN","PTFMSTC3_FYI","PTFMSTC3_FYN","PTFMSTC3_FZI","PTFMSTC3_FZN", &
-                               "PTFMSTC3_MXI","PTFMSTC3_MXN","PTFMSTC3_MYI","PTFMSTC3_MYN","PTFMSTC3_MZI","PTFMSTC3_MZN", &
+                               "PTFMSTC3_FXI","PTFMSTC3_FXL","PTFMSTC3_FYI","PTFMSTC3_FYL","PTFMSTC3_FZI","PTFMSTC3_FZL", &
+                               "PTFMSTC3_MXI","PTFMSTC3_MXL","PTFMSTC3_MYI","PTFMSTC3_MYL","PTFMSTC3_MZI","PTFMSTC3_MZL", &
                                "PTFMSTC3_XQ ","PTFMSTC3_XQD","PTFMSTC3_YQ ","PTFMSTC3_YQD","PTFMSTC3_ZQ ","PTFMSTC3_ZQD", &
-                               "PTFMSTC4_FXI","PTFMSTC4_FXN","PTFMSTC4_FYI","PTFMSTC4_FYN","PTFMSTC4_FZI","PTFMSTC4_FZN", &
-                               "PTFMSTC4_MXI","PTFMSTC4_MXN","PTFMSTC4_MYI","PTFMSTC4_MYN","PTFMSTC4_MZI","PTFMSTC4_MZN", &
+                               "PTFMSTC4_FXI","PTFMSTC4_FXL","PTFMSTC4_FYI","PTFMSTC4_FYL","PTFMSTC4_FZI","PTFMSTC4_FZL", &
+                               "PTFMSTC4_MXI","PTFMSTC4_MXL","PTFMSTC4_MYI","PTFMSTC4_MYL","PTFMSTC4_MZI","PTFMSTC4_MZL", &
                                "PTFMSTC4_XQ ","PTFMSTC4_XQD","PTFMSTC4_YQ ","PTFMSTC4_YQD","PTFMSTC4_ZQ ","PTFMSTC4_ZQD", &
-                               "TSTC1_FXI   ","TSTC1_FXN   ","TSTC1_FYI   ","TSTC1_FYN   ","TSTC1_FZI   ","TSTC1_FZN   ", &
-                               "TSTC1_MXI   ","TSTC1_MXN   ","TSTC1_MYI   ","TSTC1_MYN   ","TSTC1_MZI   ","TSTC1_MZN   ", &
+                               "TSTC1_FXI   ","TSTC1_FXL   ","TSTC1_FYI   ","TSTC1_FYL   ","TSTC1_FZI   ","TSTC1_FZL   ", &
+                               "TSTC1_MXI   ","TSTC1_MXL   ","TSTC1_MYI   ","TSTC1_MYL   ","TSTC1_MZI   ","TSTC1_MZL   ", &
                                "TSTC1_XQ    ","TSTC1_XQD   ","TSTC1_YQ    ","TSTC1_YQD   ","TSTC1_ZQ    ","TSTC1_ZQD   ", &
-                               "TSTC2_FXI   ","TSTC2_FXN   ","TSTC2_FYI   ","TSTC2_FYN   ","TSTC2_FZI   ","TSTC2_FZN   ", &
-                               "TSTC2_MXI   ","TSTC2_MXN   ","TSTC2_MYI   ","TSTC2_MYN   ","TSTC2_MZI   ","TSTC2_MZN   ", &
+                               "TSTC2_FXI   ","TSTC2_FXL   ","TSTC2_FYI   ","TSTC2_FYL   ","TSTC2_FZI   ","TSTC2_FZL   ", &
+                               "TSTC2_MXI   ","TSTC2_MXL   ","TSTC2_MYI   ","TSTC2_MYL   ","TSTC2_MZI   ","TSTC2_MZL   ", &
                                "TSTC2_XQ    ","TSTC2_XQD   ","TSTC2_YQ    ","TSTC2_YQD   ","TSTC2_ZQ    ","TSTC2_ZQD   ", &
-                               "TSTC3_FXI   ","TSTC3_FXN   ","TSTC3_FYI   ","TSTC3_FYN   ","TSTC3_FZI   ","TSTC3_FZN   ", &
-                               "TSTC3_MXI   ","TSTC3_MXN   ","TSTC3_MYI   ","TSTC3_MYN   ","TSTC3_MZI   ","TSTC3_MZN   ", &
+                               "TSTC3_FXI   ","TSTC3_FXL   ","TSTC3_FYI   ","TSTC3_FYL   ","TSTC3_FZI   ","TSTC3_FZL   ", &
+                               "TSTC3_MXI   ","TSTC3_MXL   ","TSTC3_MYI   ","TSTC3_MYL   ","TSTC3_MZI   ","TSTC3_MZL   ", &
                                "TSTC3_XQ    ","TSTC3_XQD   ","TSTC3_YQ    ","TSTC3_YQD   ","TSTC3_ZQ    ","TSTC3_ZQD   ", &
-                               "TSTC4_FXI   ","TSTC4_FXN   ","TSTC4_FYI   ","TSTC4_FYN   ","TSTC4_FZI   ","TSTC4_FZN   ", &
-                               "TSTC4_MXI   ","TSTC4_MXN   ","TSTC4_MYI   ","TSTC4_MYN   ","TSTC4_MZI   ","TSTC4_MZN   ", &
+                               "TSTC4_FXI   ","TSTC4_FXL   ","TSTC4_FYI   ","TSTC4_FYL   ","TSTC4_FZI   ","TSTC4_FZL   ", &
+                               "TSTC4_MXI   ","TSTC4_MXL   ","TSTC4_MYI   ","TSTC4_MYL   ","TSTC4_MZI   ","TSTC4_MZL   ", &
                                "TSTC4_XQ    ","TSTC4_XQD   ","TSTC4_YQ    ","TSTC4_YQD   ","TSTC4_ZQ    ","TSTC4_ZQD   ", &
                                "YAWMOM      ","YAWMOMCOM   "/)
    INTEGER(IntKi), PARAMETER :: ParamIndxAry(518) =  (/ &                            ! This lists the index into AllOuts(:) of the allowed parameters ValidParamAry(:)
                                    BlAirFlC1 ,    BlAirFlC2 ,    BlAirFlC3 ,    BlAirFlC1 ,    BlAirFlC2 ,    BlAirFlC3 , &
-                                   BlPitchC1 ,    BlPitchC2 ,    BlPitchC3 , BStC1_B1_Fxi , BStC1_B1_Fxn , BStC1_B1_Fyi , &
-                                BStC1_B1_Fyn , BStC1_B1_Fzi , BStC1_B1_Fzn , BStC1_B1_Mxi , BStC1_B1_Mxn , BStC1_B1_Myi , &
-                                BStC1_B1_Myn , BStC1_B1_Mzi , BStC1_B1_Mzn ,  BStC1_B1_XQ , BStC1_B1_XQD ,  BStC1_B1_YQ , &
-                                BStC1_B1_YQD ,  BStC1_B1_ZQ , BStC1_B1_ZQD , BStC1_B2_Fxi , BStC1_B2_Fxn , BStC1_B2_Fyi , &
-                                BStC1_B2_Fyn , BStC1_B2_Fzi , BStC1_B2_Fzn , BStC1_B2_Mxi , BStC1_B2_Mxn , BStC1_B2_Myi , &
-                                BStC1_B2_Myn , BStC1_B2_Mzi , BStC1_B2_Mzn ,  BStC1_B2_XQ , BStC1_B2_XQD ,  BStC1_B2_YQ , &
-                                BStC1_B2_YQD ,  BStC1_B2_ZQ , BStC1_B2_ZQD , BStC1_B3_Fxi , BStC1_B3_Fxn , BStC1_B3_Fyi , &
-                                BStC1_B3_Fyn , BStC1_B3_Fzi , BStC1_B3_Fzn , BStC1_B3_Mxi , BStC1_B3_Mxn , BStC1_B3_Myi , &
-                                BStC1_B3_Myn , BStC1_B3_Mzi , BStC1_B3_Mzn ,  BStC1_B3_XQ , BStC1_B3_XQD ,  BStC1_B3_YQ , &
-                                BStC1_B3_YQD ,  BStC1_B3_ZQ , BStC1_B3_ZQD , BStC1_B4_Fxi , BStC1_B4_Fxn , BStC1_B4_Fyi , &
-                                BStC1_B4_Fyn , BStC1_B4_Fzi , BStC1_B4_Fzn , BStC1_B4_Mxi , BStC1_B4_Mxn , BStC1_B4_Myi , &
-                                BStC1_B4_Myn , BStC1_B4_Mzi , BStC1_B4_Mzn ,  BStC1_B4_XQ , BStC1_B4_XQD ,  BStC1_B4_YQ , &
-                                BStC1_B4_YQD ,  BStC1_B4_ZQ , BStC1_B4_ZQD , BStC2_B1_Fxi , BStC2_B1_Fxn , BStC2_B1_Fyi , &
-                                BStC2_B1_Fyn , BStC2_B1_Fzi , BStC2_B1_Fzn , BStC2_B1_Mxi , BStC2_B1_Mxn , BStC2_B1_Myi , &
-                                BStC2_B1_Myn , BStC2_B1_Mzi , BStC2_B1_Mzn ,  BStC2_B1_XQ , BStC2_B1_XQD ,  BStC2_B1_YQ , &
-                                BStC2_B1_YQD ,  BStC2_B1_ZQ , BStC2_B1_ZQD , BStC2_B2_Fxi , BStC2_B2_Fxn , BStC2_B2_Fyi , &
-                                BStC2_B2_Fyn , BStC2_B2_Fzi , BStC2_B2_Fzn , BStC2_B2_Mxi , BStC2_B2_Mxn , BStC2_B2_Myi , &
-                                BStC2_B2_Myn , BStC2_B2_Mzi , BStC2_B2_Mzn ,  BStC2_B2_XQ , BStC2_B2_XQD ,  BStC2_B2_YQ , &
-                                BStC2_B2_YQD ,  BStC2_B2_ZQ , BStC2_B2_ZQD , BStC2_B3_Fxi , BStC2_B3_Fxn , BStC2_B3_Fyi , &
-                                BStC2_B3_Fyn , BStC2_B3_Fzi , BStC2_B3_Fzn , BStC2_B3_Mxi , BStC2_B3_Mxn , BStC2_B3_Myi , &
-                                BStC2_B3_Myn , BStC2_B3_Mzi , BStC2_B3_Mzn ,  BStC2_B3_XQ , BStC2_B3_XQD ,  BStC2_B3_YQ , &
-                                BStC2_B3_YQD ,  BStC2_B3_ZQ , BStC2_B3_ZQD , BStC2_B4_Fxi , BStC2_B4_Fxn , BStC2_B4_Fyi , &
-                                BStC2_B4_Fyn , BStC2_B4_Fzi , BStC2_B4_Fzn , BStC2_B4_Mxi , BStC2_B4_Mxn , BStC2_B4_Myi , &
-                                BStC2_B4_Myn , BStC2_B4_Mzi , BStC2_B4_Mzn ,  BStC2_B4_XQ , BStC2_B4_XQD ,  BStC2_B4_YQ , &
-                                BStC2_B4_YQD ,  BStC2_B4_ZQ , BStC2_B4_ZQD , BStC3_B1_Fxi , BStC3_B1_Fxn , BStC3_B1_Fyi , &
-                                BStC3_B1_Fyn , BStC3_B1_Fzi , BStC3_B1_Fzn , BStC3_B1_Mxi , BStC3_B1_Mxn , BStC3_B1_Myi , &
-                                BStC3_B1_Myn , BStC3_B1_Mzi , BStC3_B1_Mzn ,  BStC3_B1_XQ , BStC3_B1_XQD ,  BStC3_B1_YQ , &
-                                BStC3_B1_YQD ,  BStC3_B1_ZQ , BStC3_B1_ZQD , BStC3_B2_Fxi , BStC3_B2_Fxn , BStC3_B2_Fyi , &
-                                BStC3_B2_Fyn , BStC3_B2_Fzi , BStC3_B2_Fzn , BStC3_B2_Mxi , BStC3_B2_Mxn , BStC3_B2_Myi , &
-                                BStC3_B2_Myn , BStC3_B2_Mzi , BStC3_B2_Mzn ,  BStC3_B2_XQ , BStC3_B2_XQD ,  BStC3_B2_YQ , &
-                                BStC3_B2_YQD ,  BStC3_B2_ZQ , BStC3_B2_ZQD , BStC3_B3_Fxi , BStC3_B3_Fxn , BStC3_B3_Fyi , &
-                                BStC3_B3_Fyn , BStC3_B3_Fzi , BStC3_B3_Fzn , BStC3_B3_Mxi , BStC3_B3_Mxn , BStC3_B3_Myi , &
-                                BStC3_B3_Myn , BStC3_B3_Mzi , BStC3_B3_Mzn ,  BStC3_B3_XQ , BStC3_B3_XQD ,  BStC3_B3_YQ , &
-                                BStC3_B3_YQD ,  BStC3_B3_ZQ , BStC3_B3_ZQD , BStC3_B4_Fxi , BStC3_B4_Fxn , BStC3_B4_Fyi , &
-                                BStC3_B4_Fyn , BStC3_B4_Fzi , BStC3_B4_Fzn , BStC3_B4_Mxi , BStC3_B4_Mxn , BStC3_B4_Myi , &
-                                BStC3_B4_Myn , BStC3_B4_Mzi , BStC3_B4_Mzn ,  BStC3_B4_XQ , BStC3_B4_XQD ,  BStC3_B4_YQ , &
-                                BStC3_B4_YQD ,  BStC3_B4_ZQ , BStC3_B4_ZQD , BStC4_B1_Fxi , BStC4_B1_Fxn , BStC4_B1_Fyi , &
-                                BStC4_B1_Fyn , BStC4_B1_Fzi , BStC4_B1_Fzn , BStC4_B1_Mxi , BStC4_B1_Mxn , BStC4_B1_Myi , &
-                                BStC4_B1_Myn , BStC4_B1_Mzi , BStC4_B1_Mzn ,  BStC4_B1_XQ , BStC4_B1_XQD ,  BStC4_B1_YQ , &
-                                BStC4_B1_YQD ,  BStC4_B1_ZQ , BStC4_B1_ZQD , BStC4_B2_Fxi , BStC4_B2_Fxn , BStC4_B2_Fyi , &
-                                BStC4_B2_Fyn , BStC4_B2_Fzi , BStC4_B2_Fzn , BStC4_B2_Mxi , BStC4_B2_Mxn , BStC4_B2_Myi , &
-                                BStC4_B2_Myn , BStC4_B2_Mzi , BStC4_B2_Mzn ,  BStC4_B2_XQ , BStC4_B2_XQD ,  BStC4_B2_YQ , &
-                                BStC4_B2_YQD ,  BStC4_B2_ZQ , BStC4_B2_ZQD , BStC4_B3_Fxi , BStC4_B3_Fxn , BStC4_B3_Fyi , &
-                                BStC4_B3_Fyn , BStC4_B3_Fzi , BStC4_B3_Fzn , BStC4_B3_Mxi , BStC4_B3_Mxn , BStC4_B3_Myi , &
-                                BStC4_B3_Myn , BStC4_B3_Mzi , BStC4_B3_Mzn ,  BStC4_B3_XQ , BStC4_B3_XQD ,  BStC4_B3_YQ , &
-                                BStC4_B3_YQD ,  BStC4_B3_ZQ , BStC4_B3_ZQD , BStC4_B4_Fxi , BStC4_B4_Fxn , BStC4_B4_Fyi , &
-                                BStC4_B4_Fyn , BStC4_B4_Fzi , BStC4_B4_Fzn , BStC4_B4_Mxi , BStC4_B4_Mxn , BStC4_B4_Myi , &
-                                BStC4_B4_Myn , BStC4_B4_Mzi , BStC4_B4_Mzn ,  BStC4_B4_XQ , BStC4_B4_XQD ,  BStC4_B4_YQ , &
+                                   BlPitchC1 ,    BlPitchC2 ,    BlPitchC3 , BStC1_B1_Fxi , BStC1_B1_Fxl , BStC1_B1_Fyi , &
+                                BStC1_B1_Fyl , BStC1_B1_Fzi , BStC1_B1_Fzl , BStC1_B1_Mxi , BStC1_B1_Mxl , BStC1_B1_Myi , &
+                                BStC1_B1_Myl , BStC1_B1_Mzi , BStC1_B1_Mzl ,  BStC1_B1_XQ , BStC1_B1_XQD ,  BStC1_B1_YQ , &
+                                BStC1_B1_YQD ,  BStC1_B1_ZQ , BStC1_B1_ZQD , BStC1_B2_Fxi , BStC1_B2_Fxl , BStC1_B2_Fyi , &
+                                BStC1_B2_Fyl , BStC1_B2_Fzi , BStC1_B2_Fzl , BStC1_B2_Mxi , BStC1_B2_Mxl , BStC1_B2_Myi , &
+                                BStC1_B2_Myl , BStC1_B2_Mzi , BStC1_B2_Mzl ,  BStC1_B2_XQ , BStC1_B2_XQD ,  BStC1_B2_YQ , &
+                                BStC1_B2_YQD ,  BStC1_B2_ZQ , BStC1_B2_ZQD , BStC1_B3_Fxi , BStC1_B3_Fxl , BStC1_B3_Fyi , &
+                                BStC1_B3_Fyl , BStC1_B3_Fzi , BStC1_B3_Fzl , BStC1_B3_Mxi , BStC1_B3_Mxl , BStC1_B3_Myi , &
+                                BStC1_B3_Myl , BStC1_B3_Mzi , BStC1_B3_Mzl ,  BStC1_B3_XQ , BStC1_B3_XQD ,  BStC1_B3_YQ , &
+                                BStC1_B3_YQD ,  BStC1_B3_ZQ , BStC1_B3_ZQD , BStC1_B4_Fxi , BStC1_B4_Fxl , BStC1_B4_Fyi , &
+                                BStC1_B4_Fyl , BStC1_B4_Fzi , BStC1_B4_Fzl , BStC1_B4_Mxi , BStC1_B4_Mxl , BStC1_B4_Myi , &
+                                BStC1_B4_Myl , BStC1_B4_Mzi , BStC1_B4_Mzl ,  BStC1_B4_XQ , BStC1_B4_XQD ,  BStC1_B4_YQ , &
+                                BStC1_B4_YQD ,  BStC1_B4_ZQ , BStC1_B4_ZQD , BStC2_B1_Fxi , BStC2_B1_Fxl , BStC2_B1_Fyi , &
+                                BStC2_B1_Fyl , BStC2_B1_Fzi , BStC2_B1_Fzl , BStC2_B1_Mxi , BStC2_B1_Mxl , BStC2_B1_Myi , &
+                                BStC2_B1_Myl , BStC2_B1_Mzi , BStC2_B1_Mzl ,  BStC2_B1_XQ , BStC2_B1_XQD ,  BStC2_B1_YQ , &
+                                BStC2_B1_YQD ,  BStC2_B1_ZQ , BStC2_B1_ZQD , BStC2_B2_Fxi , BStC2_B2_Fxl , BStC2_B2_Fyi , &
+                                BStC2_B2_Fyl , BStC2_B2_Fzi , BStC2_B2_Fzl , BStC2_B2_Mxi , BStC2_B2_Mxl , BStC2_B2_Myi , &
+                                BStC2_B2_Myl , BStC2_B2_Mzi , BStC2_B2_Mzl ,  BStC2_B2_XQ , BStC2_B2_XQD ,  BStC2_B2_YQ , &
+                                BStC2_B2_YQD ,  BStC2_B2_ZQ , BStC2_B2_ZQD , BStC2_B3_Fxi , BStC2_B3_Fxl , BStC2_B3_Fyi , &
+                                BStC2_B3_Fyl , BStC2_B3_Fzi , BStC2_B3_Fzl , BStC2_B3_Mxi , BStC2_B3_Mxl , BStC2_B3_Myi , &
+                                BStC2_B3_Myl , BStC2_B3_Mzi , BStC2_B3_Mzl ,  BStC2_B3_XQ , BStC2_B3_XQD ,  BStC2_B3_YQ , &
+                                BStC2_B3_YQD ,  BStC2_B3_ZQ , BStC2_B3_ZQD , BStC2_B4_Fxi , BStC2_B4_Fxl , BStC2_B4_Fyi , &
+                                BStC2_B4_Fyl , BStC2_B4_Fzi , BStC2_B4_Fzl , BStC2_B4_Mxi , BStC2_B4_Mxl , BStC2_B4_Myi , &
+                                BStC2_B4_Myl , BStC2_B4_Mzi , BStC2_B4_Mzl ,  BStC2_B4_XQ , BStC2_B4_XQD ,  BStC2_B4_YQ , &
+                                BStC2_B4_YQD ,  BStC2_B4_ZQ , BStC2_B4_ZQD , BStC3_B1_Fxi , BStC3_B1_Fxl , BStC3_B1_Fyi , &
+                                BStC3_B1_Fyl , BStC3_B1_Fzi , BStC3_B1_Fzl , BStC3_B1_Mxi , BStC3_B1_Mxl , BStC3_B1_Myi , &
+                                BStC3_B1_Myl , BStC3_B1_Mzi , BStC3_B1_Mzl ,  BStC3_B1_XQ , BStC3_B1_XQD ,  BStC3_B1_YQ , &
+                                BStC3_B1_YQD ,  BStC3_B1_ZQ , BStC3_B1_ZQD , BStC3_B2_Fxi , BStC3_B2_Fxl , BStC3_B2_Fyi , &
+                                BStC3_B2_Fyl , BStC3_B2_Fzi , BStC3_B2_Fzl , BStC3_B2_Mxi , BStC3_B2_Mxl , BStC3_B2_Myi , &
+                                BStC3_B2_Myl , BStC3_B2_Mzi , BStC3_B2_Mzl ,  BStC3_B2_XQ , BStC3_B2_XQD ,  BStC3_B2_YQ , &
+                                BStC3_B2_YQD ,  BStC3_B2_ZQ , BStC3_B2_ZQD , BStC3_B3_Fxi , BStC3_B3_Fxl , BStC3_B3_Fyi , &
+                                BStC3_B3_Fyl , BStC3_B3_Fzi , BStC3_B3_Fzl , BStC3_B3_Mxi , BStC3_B3_Mxl , BStC3_B3_Myi , &
+                                BStC3_B3_Myl , BStC3_B3_Mzi , BStC3_B3_Mzl ,  BStC3_B3_XQ , BStC3_B3_XQD ,  BStC3_B3_YQ , &
+                                BStC3_B3_YQD ,  BStC3_B3_ZQ , BStC3_B3_ZQD , BStC3_B4_Fxi , BStC3_B4_Fxl , BStC3_B4_Fyi , &
+                                BStC3_B4_Fyl , BStC3_B4_Fzi , BStC3_B4_Fzl , BStC3_B4_Mxi , BStC3_B4_Mxl , BStC3_B4_Myi , &
+                                BStC3_B4_Myl , BStC3_B4_Mzi , BStC3_B4_Mzl ,  BStC3_B4_XQ , BStC3_B4_XQD ,  BStC3_B4_YQ , &
+                                BStC3_B4_YQD ,  BStC3_B4_ZQ , BStC3_B4_ZQD , BStC4_B1_Fxi , BStC4_B1_Fxl , BStC4_B1_Fyi , &
+                                BStC4_B1_Fyl , BStC4_B1_Fzi , BStC4_B1_Fzl , BStC4_B1_Mxi , BStC4_B1_Mxl , BStC4_B1_Myi , &
+                                BStC4_B1_Myl , BStC4_B1_Mzi , BStC4_B1_Mzl ,  BStC4_B1_XQ , BStC4_B1_XQD ,  BStC4_B1_YQ , &
+                                BStC4_B1_YQD ,  BStC4_B1_ZQ , BStC4_B1_ZQD , BStC4_B2_Fxi , BStC4_B2_Fxl , BStC4_B2_Fyi , &
+                                BStC4_B2_Fyl , BStC4_B2_Fzi , BStC4_B2_Fzl , BStC4_B2_Mxi , BStC4_B2_Mxl , BStC4_B2_Myi , &
+                                BStC4_B2_Myl , BStC4_B2_Mzi , BStC4_B2_Mzl ,  BStC4_B2_XQ , BStC4_B2_XQD ,  BStC4_B2_YQ , &
+                                BStC4_B2_YQD ,  BStC4_B2_ZQ , BStC4_B2_ZQD , BStC4_B3_Fxi , BStC4_B3_Fxl , BStC4_B3_Fyi , &
+                                BStC4_B3_Fyl , BStC4_B3_Fzi , BStC4_B3_Fzl , BStC4_B3_Mxi , BStC4_B3_Mxl , BStC4_B3_Myi , &
+                                BStC4_B3_Myl , BStC4_B3_Mzi , BStC4_B3_Mzl ,  BStC4_B3_XQ , BStC4_B3_XQD ,  BStC4_B3_YQ , &
+                                BStC4_B3_YQD ,  BStC4_B3_ZQ , BStC4_B3_ZQD , BStC4_B4_Fxi , BStC4_B4_Fxl , BStC4_B4_Fyi , &
+                                BStC4_B4_Fyl , BStC4_B4_Fzi , BStC4_B4_Fzl , BStC4_B4_Mxi , BStC4_B4_Mxl , BStC4_B4_Myi , &
+                                BStC4_B4_Myl , BStC4_B4_Mzi , BStC4_B4_Mzl ,  BStC4_B4_XQ , BStC4_B4_XQD ,  BStC4_B4_YQ , &
                                 BStC4_B4_YQD ,  BStC4_B4_ZQ , BStC4_B4_ZQD ,       GenPwr ,        GenTq ,     HSSBrTqC , &
-                                   NStC1_Fxi ,    NStC1_Fxn ,    NStC1_Fyi ,    NStC1_Fyn ,    NStC1_Fzi ,    NStC1_Fzn , &
-                                   NStC1_Mxi ,    NStC1_Mxn ,    NStC1_Myi ,    NStC1_Myn ,    NStC1_Mzi ,    NStC1_Mzn , &
+                                   NStC1_Fxi ,    NStC1_Fxl ,    NStC1_Fyi ,    NStC1_Fyl ,    NStC1_Fzi ,    NStC1_Fzl , &
+                                   NStC1_Mxi ,    NStC1_Mxl ,    NStC1_Myi ,    NStC1_Myl ,    NStC1_Mzi ,    NStC1_Mzl , &
                                     NStC1_XQ ,    NStC1_XQD ,     NStC1_YQ ,    NStC1_YQD ,     NStC1_ZQ ,    NStC1_ZQD , &
-                                   NStC2_Fxi ,    NStC2_Fxn ,    NStC2_Fyi ,    NStC2_Fyn ,    NStC2_Fzi ,    NStC2_Fzn , &
-                                   NStC2_Mxi ,    NStC2_Mxn ,    NStC2_Myi ,    NStC2_Myn ,    NStC2_Mzi ,    NStC2_Mzn , &
+                                   NStC2_Fxi ,    NStC2_Fxl ,    NStC2_Fyi ,    NStC2_Fyl ,    NStC2_Fzi ,    NStC2_Fzl , &
+                                   NStC2_Mxi ,    NStC2_Mxl ,    NStC2_Myi ,    NStC2_Myl ,    NStC2_Mzi ,    NStC2_Mzl , &
                                     NStC2_XQ ,    NStC2_XQD ,     NStC2_YQ ,    NStC2_YQD ,     NStC2_ZQ ,    NStC2_ZQD , &
-                                   NStC3_Fxi ,    NStC3_Fxn ,    NStC3_Fyi ,    NStC3_Fyn ,    NStC3_Fzi ,    NStC3_Fzn , &
-                                   NStC3_Mxi ,    NStC3_Mxn ,    NStC3_Myi ,    NStC3_Myn ,    NStC3_Mzi ,    NStC3_Mzn , &
+                                   NStC3_Fxi ,    NStC3_Fxl ,    NStC3_Fyi ,    NStC3_Fyl ,    NStC3_Fzi ,    NStC3_Fzl , &
+                                   NStC3_Mxi ,    NStC3_Mxl ,    NStC3_Myi ,    NStC3_Myl ,    NStC3_Mzi ,    NStC3_Mzl , &
                                     NStC3_XQ ,    NStC3_XQD ,     NStC3_YQ ,    NStC3_YQD ,     NStC3_ZQ ,    NStC3_ZQD , &
-                                   NStC4_Fxi ,    NStC4_Fxn ,    NStC4_Fyi ,    NStC4_Fyn ,    NStC4_Fzi ,    NStC4_Fzn , &
-                                   NStC4_Mxi ,    NStC4_Mxn ,    NStC4_Myi ,    NStC4_Myn ,    NStC4_Mzi ,    NStC4_Mzn , &
+                                   NStC4_Fxi ,    NStC4_Fxl ,    NStC4_Fyi ,    NStC4_Fyl ,    NStC4_Fzi ,    NStC4_Fzl , &
+                                   NStC4_Mxi ,    NStC4_Mxl ,    NStC4_Myi ,    NStC4_Myl ,    NStC4_Mzi ,    NStC4_Mzl , &
                                     NStC4_XQ ,    NStC4_XQD ,     NStC4_YQ ,    NStC4_YQD ,     NStC4_ZQ ,    NStC4_ZQD , &
-                                PtfmStC1_Fxi , PtfmStC1_Fxn , PtfmStC1_Fyi , PtfmStC1_Fyn , PtfmStC1_Fzi , PtfmStC1_Fzn , &
-                                PtfmStC1_Mxi , PtfmStC1_Mxn , PtfmStC1_Myi , PtfmStC1_Myn , PtfmStC1_Mzi , PtfmStC1_Mzn , &
+                                PtfmStC1_Fxi , PtfmStC1_Fxl , PtfmStC1_Fyi , PtfmStC1_Fyl , PtfmStC1_Fzi , PtfmStC1_Fzl , &
+                                PtfmStC1_Mxi , PtfmStC1_Mxl , PtfmStC1_Myi , PtfmStC1_Myl , PtfmStC1_Mzi , PtfmStC1_Mzl , &
                                  PtfmStC1_XQ , PtfmStC1_XQD ,  PtfmStC1_YQ , PtfmStC1_YQD ,  PtfmStC1_ZQ , PtfmStC1_ZQD , &
-                                PtfmStC2_Fxi , PtfmStC2_Fxn , PtfmStC2_Fyi , PtfmStC2_Fyn , PtfmStC2_Fzi , PtfmStC2_Fzn , &
-                                PtfmStC2_Mxi , PtfmStC2_Mxn , PtfmStC2_Myi , PtfmStC2_Myn , PtfmStC2_Mzi , PtfmStC2_Mzn , &
+                                PtfmStC2_Fxi , PtfmStC2_Fxl , PtfmStC2_Fyi , PtfmStC2_Fyl , PtfmStC2_Fzi , PtfmStC2_Fzl , &
+                                PtfmStC2_Mxi , PtfmStC2_Mxl , PtfmStC2_Myi , PtfmStC2_Myl , PtfmStC2_Mzi , PtfmStC2_Mzl , &
                                  PtfmStC2_XQ , PtfmStC2_XQD ,  PtfmStC2_YQ , PtfmStC2_YQD ,  PtfmStC2_ZQ , PtfmStC2_ZQD , &
-                                PtfmStC3_Fxi , PtfmStC3_Fxn , PtfmStC3_Fyi , PtfmStC3_Fyn , PtfmStC3_Fzi , PtfmStC3_Fzn , &
-                                PtfmStC3_Mxi , PtfmStC3_Mxn , PtfmStC3_Myi , PtfmStC3_Myn , PtfmStC3_Mzi , PtfmStC3_Mzn , &
+                                PtfmStC3_Fxi , PtfmStC3_Fxl , PtfmStC3_Fyi , PtfmStC3_Fyl , PtfmStC3_Fzi , PtfmStC3_Fzl , &
+                                PtfmStC3_Mxi , PtfmStC3_Mxl , PtfmStC3_Myi , PtfmStC3_Myl , PtfmStC3_Mzi , PtfmStC3_Mzl , &
                                  PtfmStC3_XQ , PtfmStC3_XQD ,  PtfmStC3_YQ , PtfmStC3_YQD ,  PtfmStC3_ZQ , PtfmStC3_ZQD , &
-                                PtfmStC4_Fxi , PtfmStC4_Fxn , PtfmStC4_Fyi , PtfmStC4_Fyn , PtfmStC4_Fzi , PtfmStC4_Fzn , &
-                                PtfmStC4_Mxi , PtfmStC4_Mxn , PtfmStC4_Myi , PtfmStC4_Myn , PtfmStC4_Mzi , PtfmStC4_Mzn , &
+                                PtfmStC4_Fxi , PtfmStC4_Fxl , PtfmStC4_Fyi , PtfmStC4_Fyl , PtfmStC4_Fzi , PtfmStC4_Fzl , &
+                                PtfmStC4_Mxi , PtfmStC4_Mxl , PtfmStC4_Myi , PtfmStC4_Myl , PtfmStC4_Mzi , PtfmStC4_Mzl , &
                                  PtfmStC4_XQ , PtfmStC4_XQD ,  PtfmStC4_YQ , PtfmStC4_YQD ,  PtfmStC4_ZQ , PtfmStC4_ZQD , &
-                                   TStC1_Fxi ,    TStC1_Fxn ,    TStC1_Fyi ,    TStC1_Fyn ,    TStC1_Fzi ,    TStC1_Fzn , &
-                                   TStC1_Mxi ,    TStC1_Mxn ,    TStC1_Myi ,    TStC1_Myn ,    TStC1_Mzi ,    TStC1_Mzn , &
+                                   TStC1_Fxi ,    TStC1_Fxl ,    TStC1_Fyi ,    TStC1_Fyl ,    TStC1_Fzi ,    TStC1_Fzl , &
+                                   TStC1_Mxi ,    TStC1_Mxl ,    TStC1_Myi ,    TStC1_Myl ,    TStC1_Mzi ,    TStC1_Mzl , &
                                     TStC1_XQ ,    TStC1_XQD ,     TStC1_YQ ,    TStC1_YQD ,     TStC1_ZQ ,    TStC1_ZQD , &
-                                   TStC2_Fxi ,    TStC2_Fxn ,    TStC2_Fyi ,    TStC2_Fyn ,    TStC2_Fzi ,    TStC2_Fzn , &
-                                   TStC2_Mxi ,    TStC2_Mxn ,    TStC2_Myi ,    TStC2_Myn ,    TStC2_Mzi ,    TStC2_Mzn , &
+                                   TStC2_Fxi ,    TStC2_Fxl ,    TStC2_Fyi ,    TStC2_Fyl ,    TStC2_Fzi ,    TStC2_Fzl , &
+                                   TStC2_Mxi ,    TStC2_Mxl ,    TStC2_Myi ,    TStC2_Myl ,    TStC2_Mzi ,    TStC2_Mzl , &
                                     TStC2_XQ ,    TStC2_XQD ,     TStC2_YQ ,    TStC2_YQD ,     TStC2_ZQ ,    TStC2_ZQD , &
-                                   TStC3_Fxi ,    TStC3_Fxn ,    TStC3_Fyi ,    TStC3_Fyn ,    TStC3_Fzi ,    TStC3_Fzn , &
-                                   TStC3_Mxi ,    TStC3_Mxn ,    TStC3_Myi ,    TStC3_Myn ,    TStC3_Mzi ,    TStC3_Mzn , &
+                                   TStC3_Fxi ,    TStC3_Fxl ,    TStC3_Fyi ,    TStC3_Fyl ,    TStC3_Fzi ,    TStC3_Fzl , &
+                                   TStC3_Mxi ,    TStC3_Mxl ,    TStC3_Myi ,    TStC3_Myl ,    TStC3_Mzi ,    TStC3_Mzl , &
                                     TStC3_XQ ,    TStC3_XQD ,     TStC3_YQ ,    TStC3_YQD ,     TStC3_ZQ ,    TStC3_ZQD , &
-                                   TStC4_Fxi ,    TStC4_Fxn ,    TStC4_Fyi ,    TStC4_Fyn ,    TStC4_Fzi ,    TStC4_Fzn , &
-                                   TStC4_Mxi ,    TStC4_Mxn ,    TStC4_Myi ,    TStC4_Myn ,    TStC4_Mzi ,    TStC4_Mzn , &
+                                   TStC4_Fxi ,    TStC4_Fxl ,    TStC4_Fyi ,    TStC4_Fyl ,    TStC4_Fzi ,    TStC4_Fzl , &
+                                   TStC4_Mxi ,    TStC4_Mxl ,    TStC4_Myi ,    TStC4_Myl ,    TStC4_Mzi ,    TStC4_Mzl , &
                                     TStC4_XQ ,    TStC4_XQD ,     TStC4_YQ ,    TStC4_YQD ,     TStC4_ZQ ,    TStC4_ZQD , &
                                    YawMomCom ,    YawMomCom /)
    CHARACTER(ChanLen), PARAMETER :: ParamUnitsAry(518) =  (/  &  ! This lists the units corresponding to the allowed parameters
@@ -1713,12 +1713,12 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
    InvalidOutput(   NStC1_Mxi) = ( p%CompNStC<1 )
    InvalidOutput(   NStC1_Myi) = ( p%CompNStC<1 )
    InvalidOutput(   NStC1_Mzi) = ( p%CompNStC<1 )
-   InvalidOutput(   NStC1_Fxn) = ( p%CompNStC<1 )
-   InvalidOutput(   NStC1_Fyn) = ( p%CompNStC<1 )
-   InvalidOutput(   NStC1_Fzn) = ( p%CompNStC<1 )
-   InvalidOutput(   NStC1_Mxn) = ( p%CompNStC<1 )
-   InvalidOutput(   NStC1_Myn) = ( p%CompNStC<1 )
-   InvalidOutput(   NStC1_Mzn) = ( p%CompNStC<1 )
+   InvalidOutput(   NStC1_Fxl) = ( p%CompNStC<1 )
+   InvalidOutput(   NStC1_Fyl) = ( p%CompNStC<1 )
+   InvalidOutput(   NStC1_Fzl) = ( p%CompNStC<1 )
+   InvalidOutput(   NStC1_Mxl) = ( p%CompNStC<1 )
+   InvalidOutput(   NStC1_Myl) = ( p%CompNStC<1 )
+   InvalidOutput(   NStC1_Mzl) = ( p%CompNStC<1 )
    InvalidOutput(    NStC2_XQ) = ( p%CompNStC<2 )
    InvalidOutput(   NStC2_XQD) = ( p%CompNStC<2 )
    InvalidOutput(    NStC2_YQ) = ( p%CompNStC<2 )
@@ -1731,12 +1731,12 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
    InvalidOutput(   NStC2_Mxi) = ( p%CompNStC<2 )
    InvalidOutput(   NStC2_Myi) = ( p%CompNStC<2 )
    InvalidOutput(   NStC2_Mzi) = ( p%CompNStC<2 )
-   InvalidOutput(   NStC2_Fxn) = ( p%CompNStC<2 )
-   InvalidOutput(   NStC2_Fyn) = ( p%CompNStC<2 )
-   InvalidOutput(   NStC2_Fzn) = ( p%CompNStC<2 )
-   InvalidOutput(   NStC2_Mxn) = ( p%CompNStC<2 )
-   InvalidOutput(   NStC2_Myn) = ( p%CompNStC<2 )
-   InvalidOutput(   NStC2_Mzn) = ( p%CompNStC<2 )
+   InvalidOutput(   NStC2_Fxl) = ( p%CompNStC<2 )
+   InvalidOutput(   NStC2_Fyl) = ( p%CompNStC<2 )
+   InvalidOutput(   NStC2_Fzl) = ( p%CompNStC<2 )
+   InvalidOutput(   NStC2_Mxl) = ( p%CompNStC<2 )
+   InvalidOutput(   NStC2_Myl) = ( p%CompNStC<2 )
+   InvalidOutput(   NStC2_Mzl) = ( p%CompNStC<2 )
    InvalidOutput(    NStC3_XQ) = ( p%CompNStC<3 )
    InvalidOutput(   NStC3_XQD) = ( p%CompNStC<3 )
    InvalidOutput(    NStC3_YQ) = ( p%CompNStC<3 )
@@ -1749,12 +1749,12 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
    InvalidOutput(   NStC3_Mxi) = ( p%CompNStC<3 )
    InvalidOutput(   NStC3_Myi) = ( p%CompNStC<3 )
    InvalidOutput(   NStC3_Mzi) = ( p%CompNStC<3 )
-   InvalidOutput(   NStC3_Fxn) = ( p%CompNStC<3 )
-   InvalidOutput(   NStC3_Fyn) = ( p%CompNStC<3 )
-   InvalidOutput(   NStC3_Fzn) = ( p%CompNStC<3 )
-   InvalidOutput(   NStC3_Mxn) = ( p%CompNStC<3 )
-   InvalidOutput(   NStC3_Myn) = ( p%CompNStC<3 )
-   InvalidOutput(   NStC3_Mzn) = ( p%CompNStC<3 )
+   InvalidOutput(   NStC3_Fxl) = ( p%CompNStC<3 )
+   InvalidOutput(   NStC3_Fyl) = ( p%CompNStC<3 )
+   InvalidOutput(   NStC3_Fzl) = ( p%CompNStC<3 )
+   InvalidOutput(   NStC3_Mxl) = ( p%CompNStC<3 )
+   InvalidOutput(   NStC3_Myl) = ( p%CompNStC<3 )
+   InvalidOutput(   NStC3_Mzl) = ( p%CompNStC<3 )
    InvalidOutput(    NStC4_XQ) = ( p%CompNStC<4 )
    InvalidOutput(   NStC4_XQD) = ( p%CompNStC<4 )
    InvalidOutput(    NStC4_YQ) = ( p%CompNStC<4 )
@@ -1767,12 +1767,12 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
    InvalidOutput(   NStC4_Mxi) = ( p%CompNStC<4 )
    InvalidOutput(   NStC4_Myi) = ( p%CompNStC<4 )
    InvalidOutput(   NStC4_Mzi) = ( p%CompNStC<4 )
-   InvalidOutput(   NStC4_Fxn) = ( p%CompNStC<4 )
-   InvalidOutput(   NStC4_Fyn) = ( p%CompNStC<4 )
-   InvalidOutput(   NStC4_Fzn) = ( p%CompNStC<4 )
-   InvalidOutput(   NStC4_Mxn) = ( p%CompNStC<4 )
-   InvalidOutput(   NStC4_Myn) = ( p%CompNStC<4 )
-   InvalidOutput(   NStC4_Mzn) = ( p%CompNStC<4 )
+   InvalidOutput(   NStC4_Fxl) = ( p%CompNStC<4 )
+   InvalidOutput(   NStC4_Fyl) = ( p%CompNStC<4 )
+   InvalidOutput(   NStC4_Fzl) = ( p%CompNStC<4 )
+   InvalidOutput(   NStC4_Mxl) = ( p%CompNStC<4 )
+   InvalidOutput(   NStC4_Myl) = ( p%CompNStC<4 )
+   InvalidOutput(   NStC4_Mzl) = ( p%CompNStC<4 )
    InvalidOutput(    TStC1_XQ) = ( p%CompTStC<1 )
    InvalidOutput(   TStC1_XQD) = ( p%CompTStC<1 )
    InvalidOutput(    TStC1_YQ) = ( p%CompTStC<1 )
@@ -1785,12 +1785,12 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
    InvalidOutput(   TStC1_Mxi) = ( p%CompTStC<1 )
    InvalidOutput(   TStC1_Myi) = ( p%CompTStC<1 )
    InvalidOutput(   TStC1_Mzi) = ( p%CompTStC<1 )
-   InvalidOutput(   TStC1_Fxn) = ( p%CompTStC<1 )
-   InvalidOutput(   TStC1_Fyn) = ( p%CompTStC<1 )
-   InvalidOutput(   TStC1_Fzn) = ( p%CompTStC<1 )
-   InvalidOutput(   TStC1_Mxn) = ( p%CompTStC<1 )
-   InvalidOutput(   TStC1_Myn) = ( p%CompTStC<1 )
-   InvalidOutput(   TStC1_Mzn) = ( p%CompTStC<1 )
+   InvalidOutput(   TStC1_Fxl) = ( p%CompTStC<1 )
+   InvalidOutput(   TStC1_Fyl) = ( p%CompTStC<1 )
+   InvalidOutput(   TStC1_Fzl) = ( p%CompTStC<1 )
+   InvalidOutput(   TStC1_Mxl) = ( p%CompTStC<1 )
+   InvalidOutput(   TStC1_Myl) = ( p%CompTStC<1 )
+   InvalidOutput(   TStC1_Mzl) = ( p%CompTStC<1 )
    InvalidOutput(    TStC2_XQ) = ( p%CompTStC<2 )
    InvalidOutput(   TStC2_XQD) = ( p%CompTStC<2 )
    InvalidOutput(    TStC2_YQ) = ( p%CompTStC<2 )
@@ -1803,12 +1803,12 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
    InvalidOutput(   TStC2_Mxi) = ( p%CompTStC<2 )
    InvalidOutput(   TStC2_Myi) = ( p%CompTStC<2 )
    InvalidOutput(   TStC2_Mzi) = ( p%CompTStC<2 )
-   InvalidOutput(   TStC2_Fxn) = ( p%CompTStC<2 )
-   InvalidOutput(   TStC2_Fyn) = ( p%CompTStC<2 )
-   InvalidOutput(   TStC2_Fzn) = ( p%CompTStC<2 )
-   InvalidOutput(   TStC2_Mxn) = ( p%CompTStC<2 )
-   InvalidOutput(   TStC2_Myn) = ( p%CompTStC<2 )
-   InvalidOutput(   TStC2_Mzn) = ( p%CompTStC<2 )
+   InvalidOutput(   TStC2_Fxl) = ( p%CompTStC<2 )
+   InvalidOutput(   TStC2_Fyl) = ( p%CompTStC<2 )
+   InvalidOutput(   TStC2_Fzl) = ( p%CompTStC<2 )
+   InvalidOutput(   TStC2_Mxl) = ( p%CompTStC<2 )
+   InvalidOutput(   TStC2_Myl) = ( p%CompTStC<2 )
+   InvalidOutput(   TStC2_Mzl) = ( p%CompTStC<2 )
    InvalidOutput(    TStC3_XQ) = ( p%CompTStC<3 )
    InvalidOutput(   TStC3_XQD) = ( p%CompTStC<3 )
    InvalidOutput(    TStC3_YQ) = ( p%CompTStC<3 )
@@ -1821,12 +1821,12 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
    InvalidOutput(   TStC3_Mxi) = ( p%CompTStC<3 )
    InvalidOutput(   TStC3_Myi) = ( p%CompTStC<3 )
    InvalidOutput(   TStC3_Mzi) = ( p%CompTStC<3 )
-   InvalidOutput(   TStC3_Fxn) = ( p%CompTStC<3 )
-   InvalidOutput(   TStC3_Fyn) = ( p%CompTStC<3 )
-   InvalidOutput(   TStC3_Fzn) = ( p%CompTStC<3 )
-   InvalidOutput(   TStC3_Mxn) = ( p%CompTStC<3 )
-   InvalidOutput(   TStC3_Myn) = ( p%CompTStC<3 )
-   InvalidOutput(   TStC3_Mzn) = ( p%CompTStC<3 )
+   InvalidOutput(   TStC3_Fxl) = ( p%CompTStC<3 )
+   InvalidOutput(   TStC3_Fyl) = ( p%CompTStC<3 )
+   InvalidOutput(   TStC3_Fzl) = ( p%CompTStC<3 )
+   InvalidOutput(   TStC3_Mxl) = ( p%CompTStC<3 )
+   InvalidOutput(   TStC3_Myl) = ( p%CompTStC<3 )
+   InvalidOutput(   TStC3_Mzl) = ( p%CompTStC<3 )
    InvalidOutput(    TStC4_XQ) = ( p%CompTStC<4 )
    InvalidOutput(   TStC4_XQD) = ( p%CompTStC<4 )
    InvalidOutput(    TStC4_YQ) = ( p%CompTStC<4 )
@@ -1839,12 +1839,12 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
    InvalidOutput(   TStC4_Mxi) = ( p%CompTStC<4 )
    InvalidOutput(   TStC4_Myi) = ( p%CompTStC<4 )
    InvalidOutput(   TStC4_Mzi) = ( p%CompTStC<4 )
-   InvalidOutput(   TStC4_Fxn) = ( p%CompTStC<4 )
-   InvalidOutput(   TStC4_Fyn) = ( p%CompTStC<4 )
-   InvalidOutput(   TStC4_Fzn) = ( p%CompTStC<4 )
-   InvalidOutput(   TStC4_Mxn) = ( p%CompTStC<4 )
-   InvalidOutput(   TStC4_Myn) = ( p%CompTStC<4 )
-   InvalidOutput(   TStC4_Mzn) = ( p%CompTStC<4 )
+   InvalidOutput(   TStC4_Fxl) = ( p%CompTStC<4 )
+   InvalidOutput(   TStC4_Fyl) = ( p%CompTStC<4 )
+   InvalidOutput(   TStC4_Fzl) = ( p%CompTStC<4 )
+   InvalidOutput(   TStC4_Mxl) = ( p%CompTStC<4 )
+   InvalidOutput(   TStC4_Myl) = ( p%CompTStC<4 )
+   InvalidOutput(   TStC4_Mzl) = ( p%CompTStC<4 )
    InvalidOutput( BStC1_B1_XQ) = ( p%CompBStC<1 .or. p%NumBl<1 )
    InvalidOutput(BStC1_B1_XQD) = ( p%CompBStC<1 .or. p%NumBl<1 )
    InvalidOutput( BStC1_B1_YQ) = ( p%CompBStC<1 .or. p%NumBl<1 )
@@ -1857,12 +1857,12 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
    InvalidOutput(BStC1_B1_Mxi) = ( p%CompBStC<1 .or. p%NumBl<1 )
    InvalidOutput(BStC1_B1_Myi) = ( p%CompBStC<1 .or. p%NumBl<1 )
    InvalidOutput(BStC1_B1_Mzi) = ( p%CompBStC<1 .or. p%NumBl<1 )
-   InvalidOutput(BStC1_B1_Fxn) = ( p%CompBStC<1 .or. p%NumBl<1 )
-   InvalidOutput(BStC1_B1_Fyn) = ( p%CompBStC<1 .or. p%NumBl<1 )
-   InvalidOutput(BStC1_B1_Fzn) = ( p%CompBStC<1 .or. p%NumBl<1 )
-   InvalidOutput(BStC1_B1_Mxn) = ( p%CompBStC<1 .or. p%NumBl<1 )
-   InvalidOutput(BStC1_B1_Myn) = ( p%CompBStC<1 .or. p%NumBl<1 )
-   InvalidOutput(BStC1_B1_Mzn) = ( p%CompBStC<1 .or. p%NumBl<1 )
+   InvalidOutput(BStC1_B1_Fxl) = ( p%CompBStC<1 .or. p%NumBl<1 )
+   InvalidOutput(BStC1_B1_Fyl) = ( p%CompBStC<1 .or. p%NumBl<1 )
+   InvalidOutput(BStC1_B1_Fzl) = ( p%CompBStC<1 .or. p%NumBl<1 )
+   InvalidOutput(BStC1_B1_Mxl) = ( p%CompBStC<1 .or. p%NumBl<1 )
+   InvalidOutput(BStC1_B1_Myl) = ( p%CompBStC<1 .or. p%NumBl<1 )
+   InvalidOutput(BStC1_B1_Mzl) = ( p%CompBStC<1 .or. p%NumBl<1 )
    InvalidOutput( BStC2_B1_XQ) = ( p%CompBStC<2 .or. p%NumBl<1 )
    InvalidOutput(BStC2_B1_XQD) = ( p%CompBStC<2 .or. p%NumBl<1 )
    InvalidOutput( BStC2_B1_YQ) = ( p%CompBStC<2 .or. p%NumBl<1 )
@@ -1875,12 +1875,12 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
    InvalidOutput(BStC2_B1_Mxi) = ( p%CompBStC<2 .or. p%NumBl<1 )
    InvalidOutput(BStC2_B1_Myi) = ( p%CompBStC<2 .or. p%NumBl<1 )
    InvalidOutput(BStC2_B1_Mzi) = ( p%CompBStC<2 .or. p%NumBl<1 )
-   InvalidOutput(BStC2_B1_Fxn) = ( p%CompBStC<2 .or. p%NumBl<1 )
-   InvalidOutput(BStC2_B1_Fyn) = ( p%CompBStC<2 .or. p%NumBl<1 )
-   InvalidOutput(BStC2_B1_Fzn) = ( p%CompBStC<2 .or. p%NumBl<1 )
-   InvalidOutput(BStC2_B1_Mxn) = ( p%CompBStC<2 .or. p%NumBl<1 )
-   InvalidOutput(BStC2_B1_Myn) = ( p%CompBStC<2 .or. p%NumBl<1 )
-   InvalidOutput(BStC2_B1_Mzn) = ( p%CompBStC<2 .or. p%NumBl<1 )
+   InvalidOutput(BStC2_B1_Fxl) = ( p%CompBStC<2 .or. p%NumBl<1 )
+   InvalidOutput(BStC2_B1_Fyl) = ( p%CompBStC<2 .or. p%NumBl<1 )
+   InvalidOutput(BStC2_B1_Fzl) = ( p%CompBStC<2 .or. p%NumBl<1 )
+   InvalidOutput(BStC2_B1_Mxl) = ( p%CompBStC<2 .or. p%NumBl<1 )
+   InvalidOutput(BStC2_B1_Myl) = ( p%CompBStC<2 .or. p%NumBl<1 )
+   InvalidOutput(BStC2_B1_Mzl) = ( p%CompBStC<2 .or. p%NumBl<1 )
    InvalidOutput( BStC3_B1_XQ) = ( p%CompBStC<3 .or. p%NumBl<1 )
    InvalidOutput(BStC3_B1_XQD) = ( p%CompBStC<3 .or. p%NumBl<1 )
    InvalidOutput( BStC3_B1_YQ) = ( p%CompBStC<3 .or. p%NumBl<1 )
@@ -1893,12 +1893,12 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
    InvalidOutput(BStC3_B1_Mxi) = ( p%CompBStC<3 .or. p%NumBl<1 )
    InvalidOutput(BStC3_B1_Myi) = ( p%CompBStC<3 .or. p%NumBl<1 )
    InvalidOutput(BStC3_B1_Mzi) = ( p%CompBStC<3 .or. p%NumBl<1 )
-   InvalidOutput(BStC3_B1_Fxn) = ( p%CompBStC<3 .or. p%NumBl<1 )
-   InvalidOutput(BStC3_B1_Fyn) = ( p%CompBStC<3 .or. p%NumBl<1 )
-   InvalidOutput(BStC3_B1_Fzn) = ( p%CompBStC<3 .or. p%NumBl<1 )
-   InvalidOutput(BStC3_B1_Mxn) = ( p%CompBStC<3 .or. p%NumBl<1 )
-   InvalidOutput(BStC3_B1_Myn) = ( p%CompBStC<3 .or. p%NumBl<1 )
-   InvalidOutput(BStC3_B1_Mzn) = ( p%CompBStC<3 .or. p%NumBl<1 )
+   InvalidOutput(BStC3_B1_Fxl) = ( p%CompBStC<3 .or. p%NumBl<1 )
+   InvalidOutput(BStC3_B1_Fyl) = ( p%CompBStC<3 .or. p%NumBl<1 )
+   InvalidOutput(BStC3_B1_Fzl) = ( p%CompBStC<3 .or. p%NumBl<1 )
+   InvalidOutput(BStC3_B1_Mxl) = ( p%CompBStC<3 .or. p%NumBl<1 )
+   InvalidOutput(BStC3_B1_Myl) = ( p%CompBStC<3 .or. p%NumBl<1 )
+   InvalidOutput(BStC3_B1_Mzl) = ( p%CompBStC<3 .or. p%NumBl<1 )
    InvalidOutput( BStC4_B1_XQ) = ( p%CompBStC<4 .or. p%NumBl<1 )
    InvalidOutput(BStC4_B1_XQD) = ( p%CompBStC<4 .or. p%NumBl<1 )
    InvalidOutput( BStC4_B1_YQ) = ( p%CompBStC<4 .or. p%NumBl<1 )
@@ -1911,12 +1911,12 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
    InvalidOutput(BStC4_B1_Mxi) = ( p%CompBStC<4 .or. p%NumBl<1 )
    InvalidOutput(BStC4_B1_Myi) = ( p%CompBStC<4 .or. p%NumBl<1 )
    InvalidOutput(BStC4_B1_Mzi) = ( p%CompBStC<4 .or. p%NumBl<1 )
-   InvalidOutput(BStC4_B1_Fxn) = ( p%CompBStC<4 .or. p%NumBl<1 )
-   InvalidOutput(BStC4_B1_Fyn) = ( p%CompBStC<4 .or. p%NumBl<1 )
-   InvalidOutput(BStC4_B1_Fzn) = ( p%CompBStC<4 .or. p%NumBl<1 )
-   InvalidOutput(BStC4_B1_Mxn) = ( p%CompBStC<4 .or. p%NumBl<1 )
-   InvalidOutput(BStC4_B1_Myn) = ( p%CompBStC<4 .or. p%NumBl<1 )
-   InvalidOutput(BStC4_B1_Mzn) = ( p%CompBStC<4 .or. p%NumBl<1 )
+   InvalidOutput(BStC4_B1_Fxl) = ( p%CompBStC<4 .or. p%NumBl<1 )
+   InvalidOutput(BStC4_B1_Fyl) = ( p%CompBStC<4 .or. p%NumBl<1 )
+   InvalidOutput(BStC4_B1_Fzl) = ( p%CompBStC<4 .or. p%NumBl<1 )
+   InvalidOutput(BStC4_B1_Mxl) = ( p%CompBStC<4 .or. p%NumBl<1 )
+   InvalidOutput(BStC4_B1_Myl) = ( p%CompBStC<4 .or. p%NumBl<1 )
+   InvalidOutput(BStC4_B1_Mzl) = ( p%CompBStC<4 .or. p%NumBl<1 )
    InvalidOutput( BStC1_B2_XQ) = ( p%CompBStC<1 .or. p%NumBl<2 )
    InvalidOutput(BStC1_B2_XQD) = ( p%CompBStC<1 .or. p%NumBl<2 )
    InvalidOutput( BStC1_B2_YQ) = ( p%CompBStC<1 .or. p%NumBl<2 )
@@ -1929,12 +1929,12 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
    InvalidOutput(BStC1_B2_Mxi) = ( p%CompBStC<1 .or. p%NumBl<2 )
    InvalidOutput(BStC1_B2_Myi) = ( p%CompBStC<1 .or. p%NumBl<2 )
    InvalidOutput(BStC1_B2_Mzi) = ( p%CompBStC<1 .or. p%NumBl<2 )
-   InvalidOutput(BStC1_B2_Fxn) = ( p%CompBStC<1 .or. p%NumBl<2 )
-   InvalidOutput(BStC1_B2_Fyn) = ( p%CompBStC<1 .or. p%NumBl<2 )
-   InvalidOutput(BStC1_B2_Fzn) = ( p%CompBStC<1 .or. p%NumBl<2 )
-   InvalidOutput(BStC1_B2_Mxn) = ( p%CompBStC<1 .or. p%NumBl<2 )
-   InvalidOutput(BStC1_B2_Myn) = ( p%CompBStC<1 .or. p%NumBl<2 )
-   InvalidOutput(BStC1_B2_Mzn) = ( p%CompBStC<1 .or. p%NumBl<2 )
+   InvalidOutput(BStC1_B2_Fxl) = ( p%CompBStC<1 .or. p%NumBl<2 )
+   InvalidOutput(BStC1_B2_Fyl) = ( p%CompBStC<1 .or. p%NumBl<2 )
+   InvalidOutput(BStC1_B2_Fzl) = ( p%CompBStC<1 .or. p%NumBl<2 )
+   InvalidOutput(BStC1_B2_Mxl) = ( p%CompBStC<1 .or. p%NumBl<2 )
+   InvalidOutput(BStC1_B2_Myl) = ( p%CompBStC<1 .or. p%NumBl<2 )
+   InvalidOutput(BStC1_B2_Mzl) = ( p%CompBStC<1 .or. p%NumBl<2 )
    InvalidOutput( BStC2_B2_XQ) = ( p%CompBStC<2 .or. p%NumBl<2 )
    InvalidOutput(BStC2_B2_XQD) = ( p%CompBStC<2 .or. p%NumBl<2 )
    InvalidOutput( BStC2_B2_YQ) = ( p%CompBStC<2 .or. p%NumBl<2 )
@@ -1947,12 +1947,12 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
    InvalidOutput(BStC2_B2_Mxi) = ( p%CompBStC<2 .or. p%NumBl<2 )
    InvalidOutput(BStC2_B2_Myi) = ( p%CompBStC<2 .or. p%NumBl<2 )
    InvalidOutput(BStC2_B2_Mzi) = ( p%CompBStC<2 .or. p%NumBl<2 )
-   InvalidOutput(BStC2_B2_Fxn) = ( p%CompBStC<2 .or. p%NumBl<2 )
-   InvalidOutput(BStC2_B2_Fyn) = ( p%CompBStC<2 .or. p%NumBl<2 )
-   InvalidOutput(BStC2_B2_Fzn) = ( p%CompBStC<2 .or. p%NumBl<2 )
-   InvalidOutput(BStC2_B2_Mxn) = ( p%CompBStC<2 .or. p%NumBl<2 )
-   InvalidOutput(BStC2_B2_Myn) = ( p%CompBStC<2 .or. p%NumBl<2 )
-   InvalidOutput(BStC2_B2_Mzn) = ( p%CompBStC<2 .or. p%NumBl<2 )
+   InvalidOutput(BStC2_B2_Fxl) = ( p%CompBStC<2 .or. p%NumBl<2 )
+   InvalidOutput(BStC2_B2_Fyl) = ( p%CompBStC<2 .or. p%NumBl<2 )
+   InvalidOutput(BStC2_B2_Fzl) = ( p%CompBStC<2 .or. p%NumBl<2 )
+   InvalidOutput(BStC2_B2_Mxl) = ( p%CompBStC<2 .or. p%NumBl<2 )
+   InvalidOutput(BStC2_B2_Myl) = ( p%CompBStC<2 .or. p%NumBl<2 )
+   InvalidOutput(BStC2_B2_Mzl) = ( p%CompBStC<2 .or. p%NumBl<2 )
    InvalidOutput( BStC3_B2_XQ) = ( p%CompBStC<3 .or. p%NumBl<2 )
    InvalidOutput(BStC3_B2_XQD) = ( p%CompBStC<3 .or. p%NumBl<2 )
    InvalidOutput( BStC3_B2_YQ) = ( p%CompBStC<3 .or. p%NumBl<2 )
@@ -1965,12 +1965,12 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
    InvalidOutput(BStC3_B2_Mxi) = ( p%CompBStC<3 .or. p%NumBl<2 )
    InvalidOutput(BStC3_B2_Myi) = ( p%CompBStC<3 .or. p%NumBl<2 )
    InvalidOutput(BStC3_B2_Mzi) = ( p%CompBStC<3 .or. p%NumBl<2 )
-   InvalidOutput(BStC3_B2_Fxn) = ( p%CompBStC<3 .or. p%NumBl<2 )
-   InvalidOutput(BStC3_B2_Fyn) = ( p%CompBStC<3 .or. p%NumBl<2 )
-   InvalidOutput(BStC3_B2_Fzn) = ( p%CompBStC<3 .or. p%NumBl<2 )
-   InvalidOutput(BStC3_B2_Mxn) = ( p%CompBStC<3 .or. p%NumBl<2 )
-   InvalidOutput(BStC3_B2_Myn) = ( p%CompBStC<3 .or. p%NumBl<2 )
-   InvalidOutput(BStC3_B2_Mzn) = ( p%CompBStC<3 .or. p%NumBl<2 )
+   InvalidOutput(BStC3_B2_Fxl) = ( p%CompBStC<3 .or. p%NumBl<2 )
+   InvalidOutput(BStC3_B2_Fyl) = ( p%CompBStC<3 .or. p%NumBl<2 )
+   InvalidOutput(BStC3_B2_Fzl) = ( p%CompBStC<3 .or. p%NumBl<2 )
+   InvalidOutput(BStC3_B2_Mxl) = ( p%CompBStC<3 .or. p%NumBl<2 )
+   InvalidOutput(BStC3_B2_Myl) = ( p%CompBStC<3 .or. p%NumBl<2 )
+   InvalidOutput(BStC3_B2_Mzl) = ( p%CompBStC<3 .or. p%NumBl<2 )
    InvalidOutput( BStC4_B2_XQ) = ( p%CompBStC<4 .or. p%NumBl<2 )
    InvalidOutput(BStC4_B2_XQD) = ( p%CompBStC<4 .or. p%NumBl<2 )
    InvalidOutput( BStC4_B2_YQ) = ( p%CompBStC<4 .or. p%NumBl<2 )
@@ -1983,12 +1983,12 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
    InvalidOutput(BStC4_B2_Mxi) = ( p%CompBStC<4 .or. p%NumBl<2 )
    InvalidOutput(BStC4_B2_Myi) = ( p%CompBStC<4 .or. p%NumBl<2 )
    InvalidOutput(BStC4_B2_Mzi) = ( p%CompBStC<4 .or. p%NumBl<2 )
-   InvalidOutput(BStC4_B2_Fxn) = ( p%CompBStC<4 .or. p%NumBl<2 )
-   InvalidOutput(BStC4_B2_Fyn) = ( p%CompBStC<4 .or. p%NumBl<2 )
-   InvalidOutput(BStC4_B2_Fzn) = ( p%CompBStC<4 .or. p%NumBl<2 )
-   InvalidOutput(BStC4_B2_Mxn) = ( p%CompBStC<4 .or. p%NumBl<2 )
-   InvalidOutput(BStC4_B2_Myn) = ( p%CompBStC<4 .or. p%NumBl<2 )
-   InvalidOutput(BStC4_B2_Mzn) = ( p%CompBStC<4 .or. p%NumBl<2 )
+   InvalidOutput(BStC4_B2_Fxl) = ( p%CompBStC<4 .or. p%NumBl<2 )
+   InvalidOutput(BStC4_B2_Fyl) = ( p%CompBStC<4 .or. p%NumBl<2 )
+   InvalidOutput(BStC4_B2_Fzl) = ( p%CompBStC<4 .or. p%NumBl<2 )
+   InvalidOutput(BStC4_B2_Mxl) = ( p%CompBStC<4 .or. p%NumBl<2 )
+   InvalidOutput(BStC4_B2_Myl) = ( p%CompBStC<4 .or. p%NumBl<2 )
+   InvalidOutput(BStC4_B2_Mzl) = ( p%CompBStC<4 .or. p%NumBl<2 )
    InvalidOutput( BStC1_B3_XQ) = ( p%CompBStC<1 .or. p%NumBl<3 )
    InvalidOutput(BStC1_B3_XQD) = ( p%CompBStC<1 .or. p%NumBl<3 )
    InvalidOutput( BStC1_B3_YQ) = ( p%CompBStC<1 .or. p%NumBl<3 )
@@ -2001,12 +2001,12 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
    InvalidOutput(BStC1_B3_Mxi) = ( p%CompBStC<1 .or. p%NumBl<3 )
    InvalidOutput(BStC1_B3_Myi) = ( p%CompBStC<1 .or. p%NumBl<3 )
    InvalidOutput(BStC1_B3_Mzi) = ( p%CompBStC<1 .or. p%NumBl<3 )
-   InvalidOutput(BStC1_B3_Fxn) = ( p%CompBStC<1 .or. p%NumBl<3 )
-   InvalidOutput(BStC1_B3_Fyn) = ( p%CompBStC<1 .or. p%NumBl<3 )
-   InvalidOutput(BStC1_B3_Fzn) = ( p%CompBStC<1 .or. p%NumBl<3 )
-   InvalidOutput(BStC1_B3_Mxn) = ( p%CompBStC<1 .or. p%NumBl<3 )
-   InvalidOutput(BStC1_B3_Myn) = ( p%CompBStC<1 .or. p%NumBl<3 )
-   InvalidOutput(BStC1_B3_Mzn) = ( p%CompBStC<1 .or. p%NumBl<3 )
+   InvalidOutput(BStC1_B3_Fxl) = ( p%CompBStC<1 .or. p%NumBl<3 )
+   InvalidOutput(BStC1_B3_Fyl) = ( p%CompBStC<1 .or. p%NumBl<3 )
+   InvalidOutput(BStC1_B3_Fzl) = ( p%CompBStC<1 .or. p%NumBl<3 )
+   InvalidOutput(BStC1_B3_Mxl) = ( p%CompBStC<1 .or. p%NumBl<3 )
+   InvalidOutput(BStC1_B3_Myl) = ( p%CompBStC<1 .or. p%NumBl<3 )
+   InvalidOutput(BStC1_B3_Mzl) = ( p%CompBStC<1 .or. p%NumBl<3 )
    InvalidOutput( BStC2_B3_XQ) = ( p%CompBStC<2 .or. p%NumBl<3 )
    InvalidOutput(BStC2_B3_XQD) = ( p%CompBStC<2 .or. p%NumBl<3 )
    InvalidOutput( BStC2_B3_YQ) = ( p%CompBStC<2 .or. p%NumBl<3 )
@@ -2019,12 +2019,12 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
    InvalidOutput(BStC2_B3_Mxi) = ( p%CompBStC<2 .or. p%NumBl<3 )
    InvalidOutput(BStC2_B3_Myi) = ( p%CompBStC<2 .or. p%NumBl<3 )
    InvalidOutput(BStC2_B3_Mzi) = ( p%CompBStC<2 .or. p%NumBl<3 )
-   InvalidOutput(BStC2_B3_Fxn) = ( p%CompBStC<2 .or. p%NumBl<3 )
-   InvalidOutput(BStC2_B3_Fyn) = ( p%CompBStC<2 .or. p%NumBl<3 )
-   InvalidOutput(BStC2_B3_Fzn) = ( p%CompBStC<2 .or. p%NumBl<3 )
-   InvalidOutput(BStC2_B3_Mxn) = ( p%CompBStC<2 .or. p%NumBl<3 )
-   InvalidOutput(BStC2_B3_Myn) = ( p%CompBStC<2 .or. p%NumBl<3 )
-   InvalidOutput(BStC2_B3_Mzn) = ( p%CompBStC<2 .or. p%NumBl<3 )
+   InvalidOutput(BStC2_B3_Fxl) = ( p%CompBStC<2 .or. p%NumBl<3 )
+   InvalidOutput(BStC2_B3_Fyl) = ( p%CompBStC<2 .or. p%NumBl<3 )
+   InvalidOutput(BStC2_B3_Fzl) = ( p%CompBStC<2 .or. p%NumBl<3 )
+   InvalidOutput(BStC2_B3_Mxl) = ( p%CompBStC<2 .or. p%NumBl<3 )
+   InvalidOutput(BStC2_B3_Myl) = ( p%CompBStC<2 .or. p%NumBl<3 )
+   InvalidOutput(BStC2_B3_Mzl) = ( p%CompBStC<2 .or. p%NumBl<3 )
    InvalidOutput( BStC3_B3_XQ) = ( p%CompBStC<3 .or. p%NumBl<3 )
    InvalidOutput(BStC3_B3_XQD) = ( p%CompBStC<3 .or. p%NumBl<3 )
    InvalidOutput( BStC3_B3_YQ) = ( p%CompBStC<3 .or. p%NumBl<3 )
@@ -2037,12 +2037,12 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
    InvalidOutput(BStC3_B3_Mxi) = ( p%CompBStC<3 .or. p%NumBl<3 )
    InvalidOutput(BStC3_B3_Myi) = ( p%CompBStC<3 .or. p%NumBl<3 )
    InvalidOutput(BStC3_B3_Mzi) = ( p%CompBStC<3 .or. p%NumBl<3 )
-   InvalidOutput(BStC3_B3_Fxn) = ( p%CompBStC<3 .or. p%NumBl<3 )
-   InvalidOutput(BStC3_B3_Fyn) = ( p%CompBStC<3 .or. p%NumBl<3 )
-   InvalidOutput(BStC3_B3_Fzn) = ( p%CompBStC<3 .or. p%NumBl<3 )
-   InvalidOutput(BStC3_B3_Mxn) = ( p%CompBStC<3 .or. p%NumBl<3 )
-   InvalidOutput(BStC3_B3_Myn) = ( p%CompBStC<3 .or. p%NumBl<3 )
-   InvalidOutput(BStC3_B3_Mzn) = ( p%CompBStC<3 .or. p%NumBl<3 )
+   InvalidOutput(BStC3_B3_Fxl) = ( p%CompBStC<3 .or. p%NumBl<3 )
+   InvalidOutput(BStC3_B3_Fyl) = ( p%CompBStC<3 .or. p%NumBl<3 )
+   InvalidOutput(BStC3_B3_Fzl) = ( p%CompBStC<3 .or. p%NumBl<3 )
+   InvalidOutput(BStC3_B3_Mxl) = ( p%CompBStC<3 .or. p%NumBl<3 )
+   InvalidOutput(BStC3_B3_Myl) = ( p%CompBStC<3 .or. p%NumBl<3 )
+   InvalidOutput(BStC3_B3_Mzl) = ( p%CompBStC<3 .or. p%NumBl<3 )
    InvalidOutput( BStC4_B3_XQ) = ( p%CompBStC<4 .or. p%NumBl<3 )
    InvalidOutput(BStC4_B3_XQD) = ( p%CompBStC<4 .or. p%NumBl<3 )
    InvalidOutput( BStC4_B3_YQ) = ( p%CompBStC<4 .or. p%NumBl<3 )
@@ -2055,12 +2055,12 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
    InvalidOutput(BStC4_B3_Mxi) = ( p%CompBStC<4 .or. p%NumBl<3 )
    InvalidOutput(BStC4_B3_Myi) = ( p%CompBStC<4 .or. p%NumBl<3 )
    InvalidOutput(BStC4_B3_Mzi) = ( p%CompBStC<4 .or. p%NumBl<3 )
-   InvalidOutput(BStC4_B3_Fxn) = ( p%CompBStC<4 .or. p%NumBl<3 )
-   InvalidOutput(BStC4_B3_Fyn) = ( p%CompBStC<4 .or. p%NumBl<3 )
-   InvalidOutput(BStC4_B3_Fzn) = ( p%CompBStC<4 .or. p%NumBl<3 )
-   InvalidOutput(BStC4_B3_Mxn) = ( p%CompBStC<4 .or. p%NumBl<3 )
-   InvalidOutput(BStC4_B3_Myn) = ( p%CompBStC<4 .or. p%NumBl<3 )
-   InvalidOutput(BStC4_B3_Mzn) = ( p%CompBStC<4 .or. p%NumBl<3 )
+   InvalidOutput(BStC4_B3_Fxl) = ( p%CompBStC<4 .or. p%NumBl<3 )
+   InvalidOutput(BStC4_B3_Fyl) = ( p%CompBStC<4 .or. p%NumBl<3 )
+   InvalidOutput(BStC4_B3_Fzl) = ( p%CompBStC<4 .or. p%NumBl<3 )
+   InvalidOutput(BStC4_B3_Mxl) = ( p%CompBStC<4 .or. p%NumBl<3 )
+   InvalidOutput(BStC4_B3_Myl) = ( p%CompBStC<4 .or. p%NumBl<3 )
+   InvalidOutput(BStC4_B3_Mzl) = ( p%CompBStC<4 .or. p%NumBl<3 )
    InvalidOutput( BStC1_B4_XQ) = ( p%CompBStC<1 .or. p%NumBl<4 )
    InvalidOutput(BStC1_B4_XQD) = ( p%CompBStC<1 .or. p%NumBl<4 )
    InvalidOutput( BStC1_B4_YQ) = ( p%CompBStC<1 .or. p%NumBl<4 )
@@ -2073,12 +2073,12 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
    InvalidOutput(BStC1_B4_Mxi) = ( p%CompBStC<1 .or. p%NumBl<4 )
    InvalidOutput(BStC1_B4_Myi) = ( p%CompBStC<1 .or. p%NumBl<4 )
    InvalidOutput(BStC1_B4_Mzi) = ( p%CompBStC<1 .or. p%NumBl<4 )
-   InvalidOutput(BStC1_B4_Fxn) = ( p%CompBStC<1 .or. p%NumBl<4 )
-   InvalidOutput(BStC1_B4_Fyn) = ( p%CompBStC<1 .or. p%NumBl<4 )
-   InvalidOutput(BStC1_B4_Fzn) = ( p%CompBStC<1 .or. p%NumBl<4 )
-   InvalidOutput(BStC1_B4_Mxn) = ( p%CompBStC<1 .or. p%NumBl<4 )
-   InvalidOutput(BStC1_B4_Myn) = ( p%CompBStC<1 .or. p%NumBl<4 )
-   InvalidOutput(BStC1_B4_Mzn) = ( p%CompBStC<1 .or. p%NumBl<4 )
+   InvalidOutput(BStC1_B4_Fxl) = ( p%CompBStC<1 .or. p%NumBl<4 )
+   InvalidOutput(BStC1_B4_Fyl) = ( p%CompBStC<1 .or. p%NumBl<4 )
+   InvalidOutput(BStC1_B4_Fzl) = ( p%CompBStC<1 .or. p%NumBl<4 )
+   InvalidOutput(BStC1_B4_Mxl) = ( p%CompBStC<1 .or. p%NumBl<4 )
+   InvalidOutput(BStC1_B4_Myl) = ( p%CompBStC<1 .or. p%NumBl<4 )
+   InvalidOutput(BStC1_B4_Mzl) = ( p%CompBStC<1 .or. p%NumBl<4 )
    InvalidOutput( BStC2_B4_XQ) = ( p%CompBStC<2 .or. p%NumBl<4 )
    InvalidOutput(BStC2_B4_XQD) = ( p%CompBStC<2 .or. p%NumBl<4 )
    InvalidOutput( BStC2_B4_YQ) = ( p%CompBStC<2 .or. p%NumBl<4 )
@@ -2091,12 +2091,12 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
    InvalidOutput(BStC2_B4_Mxi) = ( p%CompBStC<2 .or. p%NumBl<4 )
    InvalidOutput(BStC2_B4_Myi) = ( p%CompBStC<2 .or. p%NumBl<4 )
    InvalidOutput(BStC2_B4_Mzi) = ( p%CompBStC<2 .or. p%NumBl<4 )
-   InvalidOutput(BStC2_B4_Fxn) = ( p%CompBStC<2 .or. p%NumBl<4 )
-   InvalidOutput(BStC2_B4_Fyn) = ( p%CompBStC<2 .or. p%NumBl<4 )
-   InvalidOutput(BStC2_B4_Fzn) = ( p%CompBStC<2 .or. p%NumBl<4 )
-   InvalidOutput(BStC2_B4_Mxn) = ( p%CompBStC<2 .or. p%NumBl<4 )
-   InvalidOutput(BStC2_B4_Myn) = ( p%CompBStC<2 .or. p%NumBl<4 )
-   InvalidOutput(BStC2_B4_Mzn) = ( p%CompBStC<2 .or. p%NumBl<4 )
+   InvalidOutput(BStC2_B4_Fxl) = ( p%CompBStC<2 .or. p%NumBl<4 )
+   InvalidOutput(BStC2_B4_Fyl) = ( p%CompBStC<2 .or. p%NumBl<4 )
+   InvalidOutput(BStC2_B4_Fzl) = ( p%CompBStC<2 .or. p%NumBl<4 )
+   InvalidOutput(BStC2_B4_Mxl) = ( p%CompBStC<2 .or. p%NumBl<4 )
+   InvalidOutput(BStC2_B4_Myl) = ( p%CompBStC<2 .or. p%NumBl<4 )
+   InvalidOutput(BStC2_B4_Mzl) = ( p%CompBStC<2 .or. p%NumBl<4 )
    InvalidOutput( BStC3_B4_XQ) = ( p%CompBStC<3 .or. p%NumBl<4 )
    InvalidOutput(BStC3_B4_XQD) = ( p%CompBStC<3 .or. p%NumBl<4 )
    InvalidOutput( BStC3_B4_YQ) = ( p%CompBStC<3 .or. p%NumBl<4 )
@@ -2109,12 +2109,12 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
    InvalidOutput(BStC3_B4_Mxi) = ( p%CompBStC<3 .or. p%NumBl<4 )
    InvalidOutput(BStC3_B4_Myi) = ( p%CompBStC<3 .or. p%NumBl<4 )
    InvalidOutput(BStC3_B4_Mzi) = ( p%CompBStC<3 .or. p%NumBl<4 )
-   InvalidOutput(BStC3_B4_Fxn) = ( p%CompBStC<3 .or. p%NumBl<4 )
-   InvalidOutput(BStC3_B4_Fyn) = ( p%CompBStC<3 .or. p%NumBl<4 )
-   InvalidOutput(BStC3_B4_Fzn) = ( p%CompBStC<3 .or. p%NumBl<4 )
-   InvalidOutput(BStC3_B4_Mxn) = ( p%CompBStC<3 .or. p%NumBl<4 )
-   InvalidOutput(BStC3_B4_Myn) = ( p%CompBStC<3 .or. p%NumBl<4 )
-   InvalidOutput(BStC3_B4_Mzn) = ( p%CompBStC<3 .or. p%NumBl<4 )
+   InvalidOutput(BStC3_B4_Fxl) = ( p%CompBStC<3 .or. p%NumBl<4 )
+   InvalidOutput(BStC3_B4_Fyl) = ( p%CompBStC<3 .or. p%NumBl<4 )
+   InvalidOutput(BStC3_B4_Fzl) = ( p%CompBStC<3 .or. p%NumBl<4 )
+   InvalidOutput(BStC3_B4_Mxl) = ( p%CompBStC<3 .or. p%NumBl<4 )
+   InvalidOutput(BStC3_B4_Myl) = ( p%CompBStC<3 .or. p%NumBl<4 )
+   InvalidOutput(BStC3_B4_Mzl) = ( p%CompBStC<3 .or. p%NumBl<4 )
    InvalidOutput( BStC4_B4_XQ) = ( p%CompBStC<4 .or. p%NumBl<4 )
    InvalidOutput(BStC4_B4_XQD) = ( p%CompBStC<4 .or. p%NumBl<4 )
    InvalidOutput( BStC4_B4_YQ) = ( p%CompBStC<4 .or. p%NumBl<4 )
@@ -2127,12 +2127,12 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
    InvalidOutput(BStC4_B4_Mxi) = ( p%CompBStC<4 .or. p%NumBl<4 )
    InvalidOutput(BStC4_B4_Myi) = ( p%CompBStC<4 .or. p%NumBl<4 )
    InvalidOutput(BStC4_B4_Mzi) = ( p%CompBStC<4 .or. p%NumBl<4 )
-   InvalidOutput(BStC4_B4_Fxn) = ( p%CompBStC<4 .or. p%NumBl<4 )
-   InvalidOutput(BStC4_B4_Fyn) = ( p%CompBStC<4 .or. p%NumBl<4 )
-   InvalidOutput(BStC4_B4_Fzn) = ( p%CompBStC<4 .or. p%NumBl<4 )
-   InvalidOutput(BStC4_B4_Mxn) = ( p%CompBStC<4 .or. p%NumBl<4 )
-   InvalidOutput(BStC4_B4_Myn) = ( p%CompBStC<4 .or. p%NumBl<4 )
-   InvalidOutput(BStC4_B4_Mzn) = ( p%CompBStC<4 .or. p%NumBl<4 )
+   InvalidOutput(BStC4_B4_Fxl) = ( p%CompBStC<4 .or. p%NumBl<4 )
+   InvalidOutput(BStC4_B4_Fyl) = ( p%CompBStC<4 .or. p%NumBl<4 )
+   InvalidOutput(BStC4_B4_Fzl) = ( p%CompBStC<4 .or. p%NumBl<4 )
+   InvalidOutput(BStC4_B4_Mxl) = ( p%CompBStC<4 .or. p%NumBl<4 )
+   InvalidOutput(BStC4_B4_Myl) = ( p%CompBStC<4 .or. p%NumBl<4 )
+   InvalidOutput(BStC4_B4_Mzl) = ( p%CompBStC<4 .or. p%NumBl<4 )
    InvalidOutput( PtfmStC1_XQ) = ( p%CompPtfmStC<1 )
    InvalidOutput(PtfmStC1_XQD) = ( p%CompPtfmStC<1 )
    InvalidOutput( PtfmStC1_YQ) = ( p%CompPtfmStC<1 )
@@ -2145,12 +2145,12 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
    InvalidOutput(PtfmStC1_Mxi) = ( p%CompPtfmStC<1 )
    InvalidOutput(PtfmStC1_Myi) = ( p%CompPtfmStC<1 )
    InvalidOutput(PtfmStC1_Mzi) = ( p%CompPtfmStC<1 )
-   InvalidOutput(PtfmStC1_Fxn) = ( p%CompPtfmStC<1 )
-   InvalidOutput(PtfmStC1_Fyn) = ( p%CompPtfmStC<1 )
-   InvalidOutput(PtfmStC1_Fzn) = ( p%CompPtfmStC<1 )
-   InvalidOutput(PtfmStC1_Mxn) = ( p%CompPtfmStC<1 )
-   InvalidOutput(PtfmStC1_Myn) = ( p%CompPtfmStC<1 )
-   InvalidOutput(PtfmStC1_Mzn) = ( p%CompPtfmStC<1 )
+   InvalidOutput(PtfmStC1_Fxl) = ( p%CompPtfmStC<1 )
+   InvalidOutput(PtfmStC1_Fyl) = ( p%CompPtfmStC<1 )
+   InvalidOutput(PtfmStC1_Fzl) = ( p%CompPtfmStC<1 )
+   InvalidOutput(PtfmStC1_Mxl) = ( p%CompPtfmStC<1 )
+   InvalidOutput(PtfmStC1_Myl) = ( p%CompPtfmStC<1 )
+   InvalidOutput(PtfmStC1_Mzl) = ( p%CompPtfmStC<1 )
    InvalidOutput( PtfmStC2_XQ) = ( p%CompPtfmStC<2 )
    InvalidOutput(PtfmStC2_XQD) = ( p%CompPtfmStC<2 )
    InvalidOutput( PtfmStC2_YQ) = ( p%CompPtfmStC<2 )
@@ -2163,12 +2163,12 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
    InvalidOutput(PtfmStC2_Mxi) = ( p%CompPtfmStC<2 )
    InvalidOutput(PtfmStC2_Myi) = ( p%CompPtfmStC<2 )
    InvalidOutput(PtfmStC2_Mzi) = ( p%CompPtfmStC<2 )
-   InvalidOutput(PtfmStC2_Fxn) = ( p%CompPtfmStC<2 )
-   InvalidOutput(PtfmStC2_Fyn) = ( p%CompPtfmStC<2 )
-   InvalidOutput(PtfmStC2_Fzn) = ( p%CompPtfmStC<2 )
-   InvalidOutput(PtfmStC2_Mxn) = ( p%CompPtfmStC<2 )
-   InvalidOutput(PtfmStC2_Myn) = ( p%CompPtfmStC<2 )
-   InvalidOutput(PtfmStC2_Mzn) = ( p%CompPtfmStC<2 )
+   InvalidOutput(PtfmStC2_Fxl) = ( p%CompPtfmStC<2 )
+   InvalidOutput(PtfmStC2_Fyl) = ( p%CompPtfmStC<2 )
+   InvalidOutput(PtfmStC2_Fzl) = ( p%CompPtfmStC<2 )
+   InvalidOutput(PtfmStC2_Mxl) = ( p%CompPtfmStC<2 )
+   InvalidOutput(PtfmStC2_Myl) = ( p%CompPtfmStC<2 )
+   InvalidOutput(PtfmStC2_Mzl) = ( p%CompPtfmStC<2 )
    InvalidOutput( PtfmStC3_XQ) = ( p%CompPtfmStC<3 )
    InvalidOutput(PtfmStC3_XQD) = ( p%CompPtfmStC<3 )
    InvalidOutput( PtfmStC3_YQ) = ( p%CompPtfmStC<3 )
@@ -2181,12 +2181,12 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
    InvalidOutput(PtfmStC3_Mxi) = ( p%CompPtfmStC<3 )
    InvalidOutput(PtfmStC3_Myi) = ( p%CompPtfmStC<3 )
    InvalidOutput(PtfmStC3_Mzi) = ( p%CompPtfmStC<3 )
-   InvalidOutput(PtfmStC3_Fxn) = ( p%CompPtfmStC<3 )
-   InvalidOutput(PtfmStC3_Fyn) = ( p%CompPtfmStC<3 )
-   InvalidOutput(PtfmStC3_Fzn) = ( p%CompPtfmStC<3 )
-   InvalidOutput(PtfmStC3_Mxn) = ( p%CompPtfmStC<3 )
-   InvalidOutput(PtfmStC3_Myn) = ( p%CompPtfmStC<3 )
-   InvalidOutput(PtfmStC3_Mzn) = ( p%CompPtfmStC<3 )
+   InvalidOutput(PtfmStC3_Fxl) = ( p%CompPtfmStC<3 )
+   InvalidOutput(PtfmStC3_Fyl) = ( p%CompPtfmStC<3 )
+   InvalidOutput(PtfmStC3_Fzl) = ( p%CompPtfmStC<3 )
+   InvalidOutput(PtfmStC3_Mxl) = ( p%CompPtfmStC<3 )
+   InvalidOutput(PtfmStC3_Myl) = ( p%CompPtfmStC<3 )
+   InvalidOutput(PtfmStC3_Mzl) = ( p%CompPtfmStC<3 )
    InvalidOutput( PtfmStC4_XQ) = ( p%CompPtfmStC<4 )
    InvalidOutput(PtfmStC4_XQD) = ( p%CompPtfmStC<4 )
    InvalidOutput( PtfmStC4_YQ) = ( p%CompPtfmStC<4 )
@@ -2199,12 +2199,12 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
    InvalidOutput(PtfmStC4_Mxi) = ( p%CompPtfmStC<4 )
    InvalidOutput(PtfmStC4_Myi) = ( p%CompPtfmStC<4 )
    InvalidOutput(PtfmStC4_Mzi) = ( p%CompPtfmStC<4 )
-   InvalidOutput(PtfmStC4_Fxn) = ( p%CompPtfmStC<4 )
-   InvalidOutput(PtfmStC4_Fyn) = ( p%CompPtfmStC<4 )
-   InvalidOutput(PtfmStC4_Fzn) = ( p%CompPtfmStC<4 )
-   InvalidOutput(PtfmStC4_Mxn) = ( p%CompPtfmStC<4 )
-   InvalidOutput(PtfmStC4_Myn) = ( p%CompPtfmStC<4 )
-   InvalidOutput(PtfmStC4_Mzn) = ( p%CompPtfmStC<4 )
+   InvalidOutput(PtfmStC4_Fxl) = ( p%CompPtfmStC<4 )
+   InvalidOutput(PtfmStC4_Fyl) = ( p%CompPtfmStC<4 )
+   InvalidOutput(PtfmStC4_Fzl) = ( p%CompPtfmStC<4 )
+   InvalidOutput(PtfmStC4_Mxl) = ( p%CompPtfmStC<4 )
+   InvalidOutput(PtfmStC4_Myl) = ( p%CompPtfmStC<4 )
+   InvalidOutput(PtfmStC4_Mzl) = ( p%CompPtfmStC<4 )
 
 
    !-------------------------------------------------------------------------------------------------
