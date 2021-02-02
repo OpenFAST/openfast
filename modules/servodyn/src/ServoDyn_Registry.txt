@@ -147,6 +147,8 @@ typedef	^	SrvD_InputFile	ReKi	AfC_Mean	-	-	-	"Mean level for cosine cycling or s
 typedef	^	SrvD_InputFile	ReKi	AfC_Amp	-	-	-	"Amplitude for for cosine cycling of flap signal (-) [used only with AfCmode==1]"	-
 typedef	^	SrvD_InputFile	ReKi	AfC_Phase	-	-	-	"Phase relative to the blade azimuth (0 is vertical) for for cosine cycling of flap signal (deg) [used only with AfCmode==1]"	deg
 
+typedef	^	SrvD_InputFile	Logical	EXavrSWAP	-	-	-	"Use extendend AVR swap"	-
+
 # ..... Data for using Bladed DLLs .......................................................................................................
 typedef	^	BladedDLLType	SiKi	avrSWAP	{:}	-	-	"The swap array: used to pass data to and from the DLL controller"	"see Bladed DLL documentation"
 typedef	^	BladedDLLType	ReKi	HSSBrTrqDemand	-	-	-	"Demanded braking torque - from Bladed DLL"	-
@@ -219,6 +221,11 @@ typedef	^	BladedDLLType	IntKi	DLL_NumTrq	-	-	-	"No. of points in torque-speed lo
 typedef	^	BladedDLLType	ReKi	GenSpd_TLU	{:}	-	-	"Table (array) containing DLL_NumTrq generator speeds  for the torque-speed table look-up (TLU) -- this should be defined using an array constructor; for example,  if DLL_NumTrq = 3,  GenSpd_TLU(DLL_NumTrq)    = (/ 0.0, 99.9,  999.9 /)"	rad/s
 typedef	^	BladedDLLType	ReKi	GenTrq_TLU	{:}	-	-	"Table (array) containing DLL_NumTrq generator torques for the torque-speed table look-up (TLU) -- this should be defined using an array constructor, for example,  if DLL_NumTrq = 3,  GenTrq_TLU(DLL_NumTrq)    = (/ 0.0, 10,  200.0 /)"	Nm
 typedef	^	BladedDLLType	IntKi	Yaw_Cntrl	-	-	-	"Yaw control: 0 = rate;  1 = torque"	-
+
+typedef	^	BladedDLLType	SiKi	EXavrSWAP_Lidar       	{:}	-	-	"The swap array: used to pass data from the DLL controller for Lidar            using extended avrSWAP"	"see EXavrSWAP documentation in BladededInterface"
+typedef	^	BladedDLLType	SiKi	EXavrSWAP_CableTension 	{:}	-	-	"The swap array: used to pass data from the DLL controller for cable tensioning using extended avrSWAP"	"see EXavrSWAP documentation in BladededInterface"
+typedef	^	BladedDLLType	SiKi	EXavrSWAP_StCControls  	{:}	-	-	"The swap array: used to pass data from the DLL controller for StCControls      using extended avrSWAP"	"see EXavrSWAP documentation in BladededInterface"
+typedef	^	BladedDLLType	SiKi	EXavrSWAP_AeroControls	{:}	-	-	"The swap array: used to pass data from the DLL controller for AeroControls     using extended avrSWAP"	"see EXavrSWAP documentation in BladededInterface"
 
 # ..... States ....................................................................................................................
 # Define continuous (differentiable) states here:
@@ -375,6 +382,7 @@ typedef	^	ParameterType	StC_ParameterType	BStC	{:}	-	-	"StC module parameters - 
 typedef	^	ParameterType	StC_ParameterType	NStC	{:}	-	-	"StC module parameters - nacelle"	-
 typedef	^	ParameterType	StC_ParameterType	TStC	{:}	-	-	"StC module parameters - tower"	-
 typedef	^	ParameterType	StC_ParameterType	SStC	{:}	-	-	"StC module parameters - substructure"	-
+typedef	^	ParameterType	Logical	EXavrSWAP	-	-	-	"Use extendend avr SWAP"	-
 
 # ..... Inputs ....................................................................................................................
 # Define inputs that are not on this mesh here:

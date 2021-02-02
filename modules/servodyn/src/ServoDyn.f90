@@ -1288,6 +1288,7 @@ SUBROUTINE SrvD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF (ErrStat >= AbortErrLev) RETURN
 
+!FIXME: add the hooks here for copying data from the various EXavrSWAP_<mod> sections to the appropriate y so they can be passed out to the correct modules
 
    !...............................................................................................................................   
    ! Place the selected output channels into the WriteOutput(:) array with the proper sign:
@@ -2012,6 +2013,9 @@ SUBROUTINE ValidatePrimaryData( InitInp, InputFileData, ErrStat, ErrMsg )
       IF (InputFileData%HSSBrMode /= ControlMode_EXTERN) CALL SetErrStat( ErrID_Info, 'HSS brake is not commanded from Simulink model.', ErrStat, ErrMsg, RoutineName )
    END IF
    
+
+!FIXME: add checks on the EXavrSWAP entries
+
    RETURN
    
 CONTAINS

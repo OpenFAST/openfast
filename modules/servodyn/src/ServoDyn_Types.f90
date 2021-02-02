@@ -163,6 +163,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: AfC_Mean      !< Mean level for cosine cycling or steady value [used only with AfCmode==1] [-]
     REAL(ReKi)  :: AfC_Amp      !< Amplitude for for cosine cycling of flap signal (-) [used only with AfCmode==1] [-]
     REAL(ReKi)  :: AfC_Phase      !< Phase relative to the blade azimuth (0 is vertical) for for cosine cycling of flap signal (deg) [used only with AfCmode==1] [deg]
+    LOGICAL  :: EXavrSWAP      !< Use extendend AVR swap [-]
   END TYPE SrvD_InputFile
 ! =======================
 ! =========  BladedDLLType  =======
@@ -236,6 +237,10 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: GenSpd_TLU      !< Table (array) containing DLL_NumTrq generator speeds  for the torque-speed table look-up (TLU) -- this should be defined using an array constructor; for example,  if DLL_NumTrq = 3,  GenSpd_TLU(DLL_NumTrq)    = (/ 0.0, 99.9,  999.9 /) [rad/s]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: GenTrq_TLU      !< Table (array) containing DLL_NumTrq generator torques for the torque-speed table look-up (TLU) -- this should be defined using an array constructor, for example,  if DLL_NumTrq = 3,  GenTrq_TLU(DLL_NumTrq)    = (/ 0.0, 10,  200.0 /) [Nm]
     INTEGER(IntKi)  :: Yaw_Cntrl      !< Yaw control: 0 = rate;  1 = torque [-]
+    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: EXavrSWAP_Lidar      !< The swap array: used to pass data from the DLL controller for Lidar            using extended avrSWAP [see EXavrSWAP documentation in BladededInterface]
+    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: EXavrSWAP_CableTension      !< The swap array: used to pass data from the DLL controller for cable tensioning using extended avrSWAP [see EXavrSWAP documentation in BladededInterface]
+    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: EXavrSWAP_StCControls      !< The swap array: used to pass data from the DLL controller for StCControls      using extended avrSWAP [see EXavrSWAP documentation in BladededInterface]
+    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: EXavrSWAP_AeroControls      !< The swap array: used to pass data from the DLL controller for AeroControls     using extended avrSWAP [see EXavrSWAP documentation in BladededInterface]
   END TYPE BladedDLLType
 ! =======================
 ! =========  SrvD_ContinuousStateType  =======
@@ -391,6 +396,7 @@ IMPLICIT NONE
     TYPE(StC_ParameterType) , DIMENSION(:), ALLOCATABLE  :: NStC      !< StC module parameters - nacelle [-]
     TYPE(StC_ParameterType) , DIMENSION(:), ALLOCATABLE  :: TStC      !< StC module parameters - tower [-]
     TYPE(StC_ParameterType) , DIMENSION(:), ALLOCATABLE  :: SStC      !< StC module parameters - substructure [-]
+    LOGICAL  :: EXavrSWAP      !< Use extendend avr SWAP [-]
   END TYPE SrvD_ParameterType
 ! =======================
 ! =========  SrvD_InputType  =======
@@ -1841,6 +1847,7 @@ ENDIF
     DstInputFileData%AfC_Mean = SrcInputFileData%AfC_Mean
     DstInputFileData%AfC_Amp = SrcInputFileData%AfC_Amp
     DstInputFileData%AfC_Phase = SrcInputFileData%AfC_Phase
+    DstInputFileData%EXavrSWAP = SrcInputFileData%EXavrSWAP
  END SUBROUTINE SrvD_CopyInputFile
 
  SUBROUTINE SrvD_DestroyInputFile( InputFileData, ErrStat, ErrMsg )
@@ -2023,6 +2030,7 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! AfC_Mean
       Re_BufSz   = Re_BufSz   + 1  ! AfC_Amp
       Re_BufSz   = Re_BufSz   + 1  ! AfC_Phase
+      Int_BufSz  = Int_BufSz  + 1  ! EXavrSWAP
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -2335,6 +2343,8 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%AfC_Phase
     Re_Xferred = Re_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%EXavrSWAP, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE SrvD_PackInputFile
 
  SUBROUTINE SrvD_UnPackInputFile( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -2676,6 +2686,8 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%AfC_Phase = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
+    OutData%EXavrSWAP = TRANSFER(IntKiBuf(Int_Xferred), OutData%EXavrSWAP)
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE SrvD_UnPackInputFile
 
  SUBROUTINE SrvD_CopyBladedDLLType( SrcBladedDLLTypeData, DstBladedDLLTypeData, CtrlCode, ErrStat, ErrMsg )
@@ -2843,6 +2855,54 @@ IF (ALLOCATED(SrcBladedDLLTypeData%GenTrq_TLU)) THEN
     DstBladedDLLTypeData%GenTrq_TLU = SrcBladedDLLTypeData%GenTrq_TLU
 ENDIF
     DstBladedDLLTypeData%Yaw_Cntrl = SrcBladedDLLTypeData%Yaw_Cntrl
+IF (ALLOCATED(SrcBladedDLLTypeData%EXavrSWAP_Lidar)) THEN
+  i1_l = LBOUND(SrcBladedDLLTypeData%EXavrSWAP_Lidar,1)
+  i1_u = UBOUND(SrcBladedDLLTypeData%EXavrSWAP_Lidar,1)
+  IF (.NOT. ALLOCATED(DstBladedDLLTypeData%EXavrSWAP_Lidar)) THEN 
+    ALLOCATE(DstBladedDLLTypeData%EXavrSWAP_Lidar(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstBladedDLLTypeData%EXavrSWAP_Lidar.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstBladedDLLTypeData%EXavrSWAP_Lidar = SrcBladedDLLTypeData%EXavrSWAP_Lidar
+ENDIF
+IF (ALLOCATED(SrcBladedDLLTypeData%EXavrSWAP_CableTension)) THEN
+  i1_l = LBOUND(SrcBladedDLLTypeData%EXavrSWAP_CableTension,1)
+  i1_u = UBOUND(SrcBladedDLLTypeData%EXavrSWAP_CableTension,1)
+  IF (.NOT. ALLOCATED(DstBladedDLLTypeData%EXavrSWAP_CableTension)) THEN 
+    ALLOCATE(DstBladedDLLTypeData%EXavrSWAP_CableTension(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstBladedDLLTypeData%EXavrSWAP_CableTension.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstBladedDLLTypeData%EXavrSWAP_CableTension = SrcBladedDLLTypeData%EXavrSWAP_CableTension
+ENDIF
+IF (ALLOCATED(SrcBladedDLLTypeData%EXavrSWAP_StCControls)) THEN
+  i1_l = LBOUND(SrcBladedDLLTypeData%EXavrSWAP_StCControls,1)
+  i1_u = UBOUND(SrcBladedDLLTypeData%EXavrSWAP_StCControls,1)
+  IF (.NOT. ALLOCATED(DstBladedDLLTypeData%EXavrSWAP_StCControls)) THEN 
+    ALLOCATE(DstBladedDLLTypeData%EXavrSWAP_StCControls(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstBladedDLLTypeData%EXavrSWAP_StCControls.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstBladedDLLTypeData%EXavrSWAP_StCControls = SrcBladedDLLTypeData%EXavrSWAP_StCControls
+ENDIF
+IF (ALLOCATED(SrcBladedDLLTypeData%EXavrSWAP_AeroControls)) THEN
+  i1_l = LBOUND(SrcBladedDLLTypeData%EXavrSWAP_AeroControls,1)
+  i1_u = UBOUND(SrcBladedDLLTypeData%EXavrSWAP_AeroControls,1)
+  IF (.NOT. ALLOCATED(DstBladedDLLTypeData%EXavrSWAP_AeroControls)) THEN 
+    ALLOCATE(DstBladedDLLTypeData%EXavrSWAP_AeroControls(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstBladedDLLTypeData%EXavrSWAP_AeroControls.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstBladedDLLTypeData%EXavrSWAP_AeroControls = SrcBladedDLLTypeData%EXavrSWAP_AeroControls
+ENDIF
  END SUBROUTINE SrvD_CopyBladedDLLType
 
  SUBROUTINE SrvD_DestroyBladedDLLType( BladedDLLTypeData, ErrStat, ErrMsg )
@@ -2877,6 +2937,18 @@ IF (ALLOCATED(BladedDLLTypeData%GenSpd_TLU)) THEN
 ENDIF
 IF (ALLOCATED(BladedDLLTypeData%GenTrq_TLU)) THEN
   DEALLOCATE(BladedDLLTypeData%GenTrq_TLU)
+ENDIF
+IF (ALLOCATED(BladedDLLTypeData%EXavrSWAP_Lidar)) THEN
+  DEALLOCATE(BladedDLLTypeData%EXavrSWAP_Lidar)
+ENDIF
+IF (ALLOCATED(BladedDLLTypeData%EXavrSWAP_CableTension)) THEN
+  DEALLOCATE(BladedDLLTypeData%EXavrSWAP_CableTension)
+ENDIF
+IF (ALLOCATED(BladedDLLTypeData%EXavrSWAP_StCControls)) THEN
+  DEALLOCATE(BladedDLLTypeData%EXavrSWAP_StCControls)
+ENDIF
+IF (ALLOCATED(BladedDLLTypeData%EXavrSWAP_AeroControls)) THEN
+  DEALLOCATE(BladedDLLTypeData%EXavrSWAP_AeroControls)
 ENDIF
  END SUBROUTINE SrvD_DestroyBladedDLLType
 
@@ -3031,6 +3103,26 @@ ENDIF
       Re_BufSz   = Re_BufSz   + SIZE(InData%GenTrq_TLU)  ! GenTrq_TLU
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! Yaw_Cntrl
+  Int_BufSz   = Int_BufSz   + 1     ! EXavrSWAP_Lidar allocated yes/no
+  IF ( ALLOCATED(InData%EXavrSWAP_Lidar) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! EXavrSWAP_Lidar upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%EXavrSWAP_Lidar)  ! EXavrSWAP_Lidar
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! EXavrSWAP_CableTension allocated yes/no
+  IF ( ALLOCATED(InData%EXavrSWAP_CableTension) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! EXavrSWAP_CableTension upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%EXavrSWAP_CableTension)  ! EXavrSWAP_CableTension
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! EXavrSWAP_StCControls allocated yes/no
+  IF ( ALLOCATED(InData%EXavrSWAP_StCControls) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! EXavrSWAP_StCControls upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%EXavrSWAP_StCControls)  ! EXavrSWAP_StCControls
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! EXavrSWAP_AeroControls allocated yes/no
+  IF ( ALLOCATED(InData%EXavrSWAP_AeroControls) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! EXavrSWAP_AeroControls upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%EXavrSWAP_AeroControls)  ! EXavrSWAP_AeroControls
+  END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -3331,6 +3423,66 @@ ENDIF
   END IF
     IntKiBuf(Int_Xferred) = InData%Yaw_Cntrl
     Int_Xferred = Int_Xferred + 1
+  IF ( .NOT. ALLOCATED(InData%EXavrSWAP_Lidar) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%EXavrSWAP_Lidar,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%EXavrSWAP_Lidar,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%EXavrSWAP_Lidar,1), UBOUND(InData%EXavrSWAP_Lidar,1)
+        ReKiBuf(Re_Xferred) = InData%EXavrSWAP_Lidar(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%EXavrSWAP_CableTension) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%EXavrSWAP_CableTension,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%EXavrSWAP_CableTension,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%EXavrSWAP_CableTension,1), UBOUND(InData%EXavrSWAP_CableTension,1)
+        ReKiBuf(Re_Xferred) = InData%EXavrSWAP_CableTension(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%EXavrSWAP_StCControls) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%EXavrSWAP_StCControls,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%EXavrSWAP_StCControls,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%EXavrSWAP_StCControls,1), UBOUND(InData%EXavrSWAP_StCControls,1)
+        ReKiBuf(Re_Xferred) = InData%EXavrSWAP_StCControls(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%EXavrSWAP_AeroControls) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%EXavrSWAP_AeroControls,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%EXavrSWAP_AeroControls,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%EXavrSWAP_AeroControls,1), UBOUND(InData%EXavrSWAP_AeroControls,1)
+        ReKiBuf(Re_Xferred) = InData%EXavrSWAP_AeroControls(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
  END SUBROUTINE SrvD_PackBladedDLLType
 
  SUBROUTINE SrvD_UnPackBladedDLLType( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -3678,6 +3830,78 @@ ENDIF
   END IF
     OutData%Yaw_Cntrl = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! EXavrSWAP_Lidar not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%EXavrSWAP_Lidar)) DEALLOCATE(OutData%EXavrSWAP_Lidar)
+    ALLOCATE(OutData%EXavrSWAP_Lidar(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%EXavrSWAP_Lidar.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%EXavrSWAP_Lidar,1), UBOUND(OutData%EXavrSWAP_Lidar,1)
+        OutData%EXavrSWAP_Lidar(i1) = REAL(ReKiBuf(Re_Xferred), SiKi)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! EXavrSWAP_CableTension not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%EXavrSWAP_CableTension)) DEALLOCATE(OutData%EXavrSWAP_CableTension)
+    ALLOCATE(OutData%EXavrSWAP_CableTension(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%EXavrSWAP_CableTension.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%EXavrSWAP_CableTension,1), UBOUND(OutData%EXavrSWAP_CableTension,1)
+        OutData%EXavrSWAP_CableTension(i1) = REAL(ReKiBuf(Re_Xferred), SiKi)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! EXavrSWAP_StCControls not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%EXavrSWAP_StCControls)) DEALLOCATE(OutData%EXavrSWAP_StCControls)
+    ALLOCATE(OutData%EXavrSWAP_StCControls(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%EXavrSWAP_StCControls.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%EXavrSWAP_StCControls,1), UBOUND(OutData%EXavrSWAP_StCControls,1)
+        OutData%EXavrSWAP_StCControls(i1) = REAL(ReKiBuf(Re_Xferred), SiKi)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! EXavrSWAP_AeroControls not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%EXavrSWAP_AeroControls)) DEALLOCATE(OutData%EXavrSWAP_AeroControls)
+    ALLOCATE(OutData%EXavrSWAP_AeroControls(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%EXavrSWAP_AeroControls.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%EXavrSWAP_AeroControls,1), UBOUND(OutData%EXavrSWAP_AeroControls,1)
+        OutData%EXavrSWAP_AeroControls(i1) = REAL(ReKiBuf(Re_Xferred), SiKi)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
  END SUBROUTINE SrvD_UnPackBladedDLLType
 
  SUBROUTINE SrvD_CopyContState( SrcContStateData, DstContStateData, CtrlCode, ErrStat, ErrMsg )
@@ -7898,6 +8122,7 @@ IF (ALLOCATED(SrcParamData%SStC)) THEN
          IF (ErrStat>=AbortErrLev) RETURN
     ENDDO
 ENDIF
+    DstParamData%EXavrSWAP = SrcParamData%EXavrSWAP
  END SUBROUTINE SrvD_CopyParam
 
  SUBROUTINE SrvD_DestroyParam( ParamData, ErrStat, ErrMsg )
@@ -8230,6 +8455,7 @@ ENDIF
       END IF
     END DO
   END IF
+      Int_BufSz  = Int_BufSz  + 1  ! EXavrSWAP
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -8729,6 +8955,8 @@ ENDIF
       ENDIF
     END DO
   END IF
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%EXavrSWAP, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE SrvD_PackParam
 
  SUBROUTINE SrvD_UnPackParam( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -9332,6 +9560,8 @@ ENDIF
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
     END DO
   END IF
+    OutData%EXavrSWAP = TRANSFER(IntKiBuf(Int_Xferred), OutData%EXavrSWAP)
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE SrvD_UnPackParam
 
  SUBROUTINE SrvD_CopyInput( SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg )

@@ -20,8 +20,8 @@
 MODULE BladedInterface
 
    USE NWTC_Library  
-   
    USE ServoDyn_Types
+   USE BladedInterface_EX
    
    USE, INTRINSIC :: ISO_C_Binding
    
@@ -361,11 +361,17 @@ SUBROUTINE BladedInterface_Init(u, p, m, y, InputFileData, InitInp, ErrStat, Err
 
    IF ( ErrStat >= AbortErrLev ) RETURN
    
-   
+   ! Set the Extended AVRswap flag
+   p%EXavrSWAP = InputFileData%EXavrSWAP
+
     ! Set status flag and initialize avrSWAP:
    m%dll_data%SimStatus = GH_DISCON_STATUS_INITIALISING
    
-   CALL AllocAry( m%dll_data%avrSwap,   R+(2*m%dll_data%DLL_NumTrq)-1 + MaxLoggingChannels, 'avrSwap', ErrStat2, ErrMsg2 )
+   if ( p%EXavrSWAP ) then
+      CALL AllocAry( m%dll_data%avrSwap,   EXavrSWAP_Size, 'avrSwap', ErrStat2, ErrMsg2 )
+   else
+      CALL AllocAry( m%dll_data%avrSwap,   R+(2*m%dll_data%DLL_NumTrq)-1 + MaxLoggingChannels, 'avrSwap', ErrStat2, ErrMsg2 )
+   endif
       CALL CheckError(ErrStat2,ErrMsg2)
       IF ( ErrStat >= AbortErrLev ) RETURN
    m%dll_data%avrSWAP = 0.0
@@ -887,6 +893,11 @@ SUBROUTINE Fill_CONTROL_vars( t, u, p, ErrMsgSz, dll_data )
    end if
    
    call Fill_avrSWAP( t, u, p, ErrMsgSz, dll_data ) ! we'll set the avrSWAP variable, for the legacy version of the DLL, too.
+
+   ! set the values for the Extended avrSWAP variable, if using
+   if ( p%EXavrSWAP ) then
+      call Fill_EXavrSWAP( t, u, p, dll_data )
+   endif
    
    !> The following are values ServoDyn sends to the Bladed DLL.
    !! For variables returned from the DLL, see bladedinterface::retrieve_control_vars.
@@ -1073,6 +1084,12 @@ SUBROUTINE CheckDLLReturnValues( p, dll_data, ErrStat, ErrMsg )
    if (p%UseLegacyInterface) then
       CALL Retrieve_avrSWAP( p, dll_data, ErrStat, ErrMsg )
       if (ErrStat >= AbortErrLev) return
+
+      if (p%EXavrSWAP ) then
+         CALL Retrieve_EXavrSWAP( p, dll_data, ErrStat, ErrMsg )
+         if (ErrStat >= AbortErrLev) return
+      endif
+
    end if
 
 

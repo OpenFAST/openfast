@@ -285,8 +285,8 @@ Nacelle-yaw Control
 
 .. _SrvD-AfC-inputs:
 
- Aerodynamic Flow Control
- ~~~~~~~~~~~~~~~~~~~~~~~~
+Aerodynamic Flow Control
+~~~~~~~~~~~~~~~~~~~~~~~~
  
 **AfCmode**       [switch]
 
@@ -311,6 +311,7 @@ Nacelle-yaw Control
 When **AfCmode==1**, the signal for the airfoil flow control is set by the
 expression *AfC_Mean + p%AfC_Amp*cos( Azimuth + AfC_phase)* where the azimuth
 is the azimuth of that particular blade (azimuth=0 is considered vertical).
+
 
 .. _SrvD-StC-inputs:
 
