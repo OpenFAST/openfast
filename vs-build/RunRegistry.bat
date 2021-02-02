@@ -63,6 +63,12 @@ SET Output_Loc=%CURR_LOC%
 %REGISTRY% "%CURR_LOC%\MAP_Fortran_Registry.txt"  -I "%NWTC_Lib_Loc%"  -I "%CURR_LOC%" -O "%Output_Loc%" -noextrap
 GOTO checkError
 
+:MAP_Fortran
+SET CURR_LOC=%MAP_Loc%
+SET Output_Loc=%CURR_LOC%
+%REGISTRY% "%CURR_LOC%\%ModuleName%_Registry.txt" -I "%NWTC_Lib_Loc%"  -I "%CURR_LOC%" -O "%Output_Loc%" -noextrap 
+GOTO checkError
+
 :FAST
 SET CURR_LOC=%FAST_Loc%
 SET Output_Loc=%CURR_LOC%

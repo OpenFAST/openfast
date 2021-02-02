@@ -55,6 +55,18 @@ MODULE NWTC_Num
    REAL(ReKi)                                :: TwoByPi                       !< 2/Pi
    REAL(ReKi)                                :: TwoPi                         !< 2*Pi
 
+   REAL(SiKi)                                :: D2R_S                         !< Factor to convert degrees to radians in single precision
+   REAL(SiKi)                                :: Inf_S                         !< IEEE value for NaN (not-a-number) in single precision
+   REAL(SiKi)                                :: Inv2Pi_S                      !< 0.5/Pi (1/(2*Pi)) in single precision
+   REAL(SiKi)                                :: NaN_S                         !< IEEE value for Inf (infinity) in single precision
+   REAL(SiKi)                                :: Pi_S                          !< Ratio of a circle's circumference to its diameter in single precision
+   REAL(SiKi)                                :: PiBy2_S                       !< Pi/2 in single precision
+   REAL(SiKi)                                :: R2D_S                         !< Factor to convert radians to degrees in single precision
+   REAL(SiKi)                                :: RPM2RPS_S                     !< Factor to convert revolutions per minute to radians per second in single precision
+   REAL(SiKi)                                :: RPS2RPM_S                     !< Factor to convert radians per second to revolutions per minute in single precision
+   REAL(SiKi)                                :: TwoByPi_S                     !< 2/Pi in single precision
+   REAL(SiKi)                                :: TwoPi_S                       !< 2*Pi in single precision
+
    REAL(SiKi)                                :: Pi_R4                         !< Ratio of a circle's circumference to its diameter in 4-byte precision
    REAL(R8Ki)                                :: Pi_R8                         !< Ratio of a circle's circumference to its diameter in 8-byte precision
    REAL(QuKi)                                :: Pi_R16                        !< Ratio of a circle's circumference to its diameter in 16-byte precision
@@ -5357,6 +5369,15 @@ end function Rad2M180to180Deg
       TwoPi   =  2.0_ReKi*Pi
       Inv2Pi  =  0.5_ReKi/Pi        ! 1.0/TwoPi
 
+      Pi_S      = ACOS( -1.0_SiKi )
+      D2R_S     = Pi_S/180.0_SiKi
+      R2D_S     = 180.0_SiKi/Pi_S
+      PiBy2_S   = Pi_S/2.0_SiKi
+      RPM2RPS_S = Pi_S/30.0_SiKi
+      RPS2RPM_S = 30.0_SiKi/Pi_S
+      TwoByPi_S =  2.0_SiKi/Pi_S
+      TwoPi_S   =  2.0_SiKi*Pi_S
+      Inv2Pi_S  =  0.5_SiKi/Pi_S    ! 1.0_SiKi/TwoPi_S
       Pi_R4   = ACOS( -1.0_SiKi )
       Pi_R8   = ACOS( -1.0_R8Ki )
       Pi_R16  = ACOS( -1.0_QuKi )
@@ -5366,7 +5387,7 @@ end function Rad2M180to180Deg
       TwoPi_R16 = Pi_R16*2.0_QuKi
       
          ! IEEE constants:
-      CALL Set_IEEE_Constants( NaN_D, Inf_D, NaN, Inf )
+      CALL Set_IEEE_Constants( NaN_D, Inf_D, NaN, Inf, NaN_S, Inf_S )
       
 
    RETURN
