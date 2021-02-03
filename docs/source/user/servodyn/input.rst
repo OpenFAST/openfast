@@ -291,41 +291,41 @@ Structural Control
 See :numref:`StC-Locations` for descriptions of the mounting locations for each
 of the following options.
 
-**CompNStC**      [integer]
+**NumBStC**      [integer]
 
-   Compute nacelle structural control damping {number of nacelle TMDs}
+   Number of blade structural controllers
 
-**NStCfile**      [-]
+**BStCfiles**      [-]
 
-   Names of the file for nacelle structural control damping (quoted strings on
-   one line) *[unused when* **CompNStC==0** *]*
+   Name of the files for blade structural controllers (quoted strings on one
+   line) *[unused when* **NumBStC==0** *]*
 
-**CompTStC**      [integer]
+**NumNStC**      [integer]
 
-   Compute tower structural control damping {number of nacelle TMDs}
+   Number of nacelle structural controllers
 
-**TStCfile**      [-]
+**NStCfiles**      [-]
+
+   Name of the files for nacelle structural controllers (quoted strings on one
+   line) *[unused when* **NumNStC==0** *]*
+
+**NumTStC**      [integer]
+
+   Number of tower structural controllers 
+
+**TStCfiles**      [-]
 
    Names of the file for tower structural control damping (quoted strings on one
-   line) *[unused when* **CompTStC==0** *]*
+   line) *[unused when* **NumTStC==0** *]*
 
-**CompBStC**      [integer]
+**NumPtfmStC**   [integer]
 
-   Compute  blade structural control damping {number of nacelle tmds}
+   Number of platform structural controllers
 
-**BStCfile**      [-]
+**PtfmStCfiles**   [-]
 
-   Names of the file for blade structural control damping (quoted strings on one
-   line) *[unused when* **CompBStC==0** *]*
-
-**CompPtfmStC**   [integer]
-
-   Compute platform structural control damping {number of nacelle TMDs}
-
-**PtfmStCfile**   [-]
-
-   Names of the file for blade structural control damping (quoted strings on one
-   line) *[unused when* **CompPtfmStC==0** *]*
+   Name of the files for blade structural controllers (quoted strings on one
+   line) *[unused when* **NumPtfmStC==0** *]*
 
 
 Bladed Controller Interface

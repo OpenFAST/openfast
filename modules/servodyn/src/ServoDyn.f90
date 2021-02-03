@@ -558,18 +558,18 @@ subroutine StC_Nacelle_Setup(SrvD_InitInp,SrvD_p,InputFileData,u,p,x,xd,z,OtherS
    ErrStat  = ErrID_None
    ErrMsg   = ""
 
-   if (SrvD_p%CompNStC > 0_IntKi) then
-      allocate(u(SrvD_p%CompNStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, u') )            return;
-      allocate(p(SrvD_p%CompNStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, p') )            return;
-      allocate(x(SrvD_p%CompNStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, x') )            return;
-      allocate(xd(SrvD_p%CompNStC),STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, xd') )           return;
-      allocate(z(SrvD_p%CompNStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, z') )            return;
-      allocate(OtherState(SrvD_p%CompNStC), STAT=ErrStat2); if ( AllErr('Could not allocate StrucCtrl input array, OtherState') )   return;
-      allocate(y(SrvD_p%CompNStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, y') )            return;
-      allocate(m(SrvD_p%CompNStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, m') )            return;
+   if (SrvD_p%NumNStC > 0_IntKi) then
+      allocate(u(SrvD_p%NumNStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, u') )            return;
+      allocate(p(SrvD_p%NumNStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, p') )            return;
+      allocate(x(SrvD_p%NumNStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, x') )            return;
+      allocate(xd(SrvD_p%NumNStC),STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, xd') )           return;
+      allocate(z(SrvD_p%NumNStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, z') )            return;
+      allocate(OtherState(SrvD_p%NumNStC), STAT=ErrStat2); if ( AllErr('Could not allocate StrucCtrl input array, OtherState') )   return;
+      allocate(y(SrvD_p%NumNStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, y') )            return;
+      allocate(m(SrvD_p%NumNStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, m') )            return;
 
-      do j=1,SrvD_p%CompNStC
-         StC_InitInp%InputFile      =  InputFileData%NStCfile(j)
+      do j=1,SrvD_p%NumNStC
+         StC_InitInp%InputFile      =  InputFileData%NStCfiles(j)
          StC_InitInp%RootName       =  TRIM(SrvD_p%RootName)//'.NStC'
          StC_InitInp%Gravity        =  SrvD_InitInp%gravity
          StC_InitInp%NumMeshPts     =  1_IntKi        ! single point mesh for Nacelle
@@ -637,18 +637,18 @@ subroutine StC_Tower_Setup(SrvD_InitInp,SrvD_p,InputFileData,u,p,x,xd,z,OtherSta
    ErrStat  = ErrID_None
    ErrMsg   = ""
 
-   if (SrvD_p%CompTStC > 0_IntKi) then
-      allocate(u(SrvD_p%CompTStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, u') )            return;
-      allocate(p(SrvD_p%CompTStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, p') )            return;
-      allocate(x(SrvD_p%CompTStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, x') )            return;
-      allocate(xd(SrvD_p%CompTStC),STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, xd') )           return;
-      allocate(z(SrvD_p%CompTStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, z') )            return;
-      allocate(OtherState(SrvD_p%CompTStC), STAT=ErrStat2); if ( AllErr('Could not allocate StrucCtrl input array, OtherState') )   return;
-      allocate(y(SrvD_p%CompTStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, y') )            return;
-      allocate(m(SrvD_p%CompTStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, m') )            return;
+   if (SrvD_p%NumTStC > 0_IntKi) then
+      allocate(u(SrvD_p%NumTStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, u') )            return;
+      allocate(p(SrvD_p%NumTStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, p') )            return;
+      allocate(x(SrvD_p%NumTStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, x') )            return;
+      allocate(xd(SrvD_p%NumTStC),STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, xd') )           return;
+      allocate(z(SrvD_p%NumTStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, z') )            return;
+      allocate(OtherState(SrvD_p%NumTStC), STAT=ErrStat2); if ( AllErr('Could not allocate StrucCtrl input array, OtherState') )   return;
+      allocate(y(SrvD_p%NumTStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, y') )            return;
+      allocate(m(SrvD_p%NumTStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, m') )            return;
 
-      do j=1,SrvD_p%CompTStC
-         StC_InitInp%InputFile      =  InputFileData%TStCfile(j)
+      do j=1,SrvD_p%NumTStC
+         StC_InitInp%InputFile      =  InputFileData%TStCfiles(j)
          StC_InitInp%RootName       =  TRIM(SrvD_p%RootName)//'.TStC'
          StC_InitInp%Gravity        =  SrvD_InitInp%gravity
          StC_InitInp%NumMeshPts     =  1_IntKi        ! single point mesh for Tower
@@ -717,18 +717,18 @@ subroutine StC_Blade_Setup(SrvD_InitInp,SrvD_p,InputFileData,u,p,x,xd,z,OtherSta
    ErrStat  = ErrID_None
    ErrMsg   = ""
 
-   if (SrvD_p%CompBStC > 0_IntKi) then
-      allocate(u(SrvD_p%CompBStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, u') )            return;
-      allocate(p(SrvD_p%CompBStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, p') )            return;
-      allocate(x(SrvD_p%CompBStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, x') )            return;
-      allocate(xd(SrvD_p%CompBStC),STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, xd') )           return;
-      allocate(z(SrvD_p%CompBStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, z') )            return;
-      allocate(OtherState(SrvD_p%CompBStC), STAT=ErrStat2); if ( AllErr('Could not allocate StrucCtrl input array, OtherState') )   return;
-      allocate(y(SrvD_p%CompBStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, y') )            return;
-      allocate(m(SrvD_p%CompBStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, m') )            return;
+   if (SrvD_p%NumBStC > 0_IntKi) then
+      allocate(u(SrvD_p%NumBStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, u') )            return;
+      allocate(p(SrvD_p%NumBStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, p') )            return;
+      allocate(x(SrvD_p%NumBStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, x') )            return;
+      allocate(xd(SrvD_p%NumBStC),STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, xd') )           return;
+      allocate(z(SrvD_p%NumBStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, z') )            return;
+      allocate(OtherState(SrvD_p%NumBStC), STAT=ErrStat2); if ( AllErr('Could not allocate StrucCtrl input array, OtherState') )   return;
+      allocate(y(SrvD_p%NumBStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, y') )            return;
+      allocate(m(SrvD_p%NumBStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, m') )            return;
 
-      do j=1,SrvD_p%CompBStC
-         StC_InitInp%InputFile      =  InputFileData%BStCfile(j)
+      do j=1,SrvD_p%NumBStC
+         StC_InitInp%InputFile      =  InputFileData%BStCfiles(j)
          StC_InitInp%RootName       =  TRIM(SrvD_p%RootName)//'.BStC'
          StC_InitInp%Gravity        =  SrvD_InitInp%gravity
          StC_InitInp%NumMeshPts     =  SrvD_p%NumBl        ! p%NumBl points for blades
@@ -798,18 +798,18 @@ subroutine StC_Ptfm_Setup(SrvD_InitInp,SrvD_p,InputFileData,u,p,x,xd,z,OtherStat
    ErrStat  = ErrID_None
    ErrMsg   = ""
 
-   if (SrvD_p%CompPtfmStC > 0_IntKi) then
-      allocate(u(SrvD_p%CompPtfmStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, u') )            return;
-      allocate(p(SrvD_p%CompPtfmStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, p') )            return;
-      allocate(x(SrvD_p%CompPtfmStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, x') )            return;
-      allocate(xd(SrvD_p%CompPtfmStC),STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, xd') )           return;
-      allocate(z(SrvD_p%CompPtfmStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, z') )            return;
-      allocate(OtherState(SrvD_p%CompPtfmStC), STAT=ErrStat2); if ( AllErr('Could not allocate StrucCtrl input array, OtherState') )   return;
-      allocate(y(SrvD_p%CompPtfmStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, y') )            return;
-      allocate(m(SrvD_p%CompPtfmStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, m') )            return;
+   if (SrvD_p%NumPtfmStC > 0_IntKi) then
+      allocate(u(SrvD_p%NumPtfmStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, u') )            return;
+      allocate(p(SrvD_p%NumPtfmStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, p') )            return;
+      allocate(x(SrvD_p%NumPtfmStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, x') )            return;
+      allocate(xd(SrvD_p%NumPtfmStC),STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, xd') )           return;
+      allocate(z(SrvD_p%NumPtfmStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, z') )            return;
+      allocate(OtherState(SrvD_p%NumPtfmStC), STAT=ErrStat2); if ( AllErr('Could not allocate StrucCtrl input array, OtherState') )   return;
+      allocate(y(SrvD_p%NumPtfmStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, y') )            return;
+      allocate(m(SrvD_p%NumPtfmStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, m') )            return;
 
-      do j=1,SrvD_p%CompPtfmStC
-         StC_InitInp%InputFile      =  InputFileData%PtfmStCfile(j)
+      do j=1,SrvD_p%NumPtfmStC
+         StC_InitInp%InputFile      =  InputFileData%PtfmStCfiles(j)
          StC_InitInp%RootName       =  TRIM(SrvD_p%RootName)//'.PtfmStC'
          StC_InitInp%Gravity        =  SrvD_InitInp%gravity
          StC_InitInp%NumMeshPts     =  1_IntKi        ! single point mesh for Platform
@@ -875,16 +875,16 @@ SUBROUTINE SrvD_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       END IF
       
       ! StrucCtrl
-      do j=1,p%CompNStC       ! Nacelle
+      do j=1,p%NumNStC       ! Nacelle
          call StC_End( u%NStC(j), p%NStC(j), x%NStC(j), xd%NStC(j), z%NStC(j), OtherState%NStC(j), y%NStC(j), m%NStC(j), ErrStat, ErrMsg )
       enddo
-      do j=1,p%CompTStC       ! Tower
+      do j=1,p%NumTStC       ! Tower
          call StC_End( u%TStC(j), p%TStC(j), x%TStC(j), xd%TStC(j), z%TStC(j), OtherState%TStC(j), y%TStC(j), m%TStC(j), ErrStat, ErrMsg )
       enddo
-      do j=1,p%CompBStC       ! Blades
+      do j=1,p%NumBStC       ! Blades
          call StC_End( u%BStC(j), p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), y%BStC(j), m%BStC(j), ErrStat, ErrMsg )
       enddo
-      do j=1,p%CompPtfmStC    ! Platform
+      do j=1,p%NumPtfmStC    ! Platform
          call StC_End( u%PtfmStC(j), p%PtfmStC(j), x%PtfmStC(j), xd%PtfmStC(j), z%PtfmStC(j), OtherState%PtfmStC(j), y%PtfmStC(j), m%PtfmStC(j), ErrStat, ErrMsg )
       enddo
 
@@ -957,7 +957,7 @@ SUBROUTINE SrvD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState,
    ! update states in StrucCtrl submodule, if necessary:
    !...............................................................................................................................   
 
-   IF ((p%CompNStC + p%CompTStC + p%CompBStC + p%CompPtfmStC) > 0_IntKi) THEN 
+   IF ((p%NumNStC + p%NumTStC + p%NumBStC + p%NumPtfmStC) > 0_IntKi) THEN 
       order = SIZE(Inputs)
       allocate(u(order), STAT=ErrStat2)
       if (ErrStat2 /= 0) then
@@ -968,7 +968,7 @@ SUBROUTINE SrvD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState,
       
 
       ! Nacelle StrucCtrl
-   do j=1,p%CompNStC
+   do j=1,p%NumNStC
       do i=1,order
          call StC_CopyInput( Inputs(i)%NStC(j), u(i), MESH_NEWCOPY, ErrStat2, ErrMsg2 )
          if (Failed()) return;
@@ -986,7 +986,7 @@ SUBROUTINE SrvD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState,
 
 
       ! Tower StrucCtrl
-   do j=1,p%CompTStC
+   do j=1,p%NumTStC
       do i=1,order
          call StC_CopyInput( Inputs(i)%TStC(j), u(i), MESH_NEWCOPY, ErrStat2, ErrMsg2 )
          if (Failed()) return;
@@ -1004,7 +1004,7 @@ SUBROUTINE SrvD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState,
 
 
       ! Blade StrucCtrl
-   do j=1,p%CompBStC
+   do j=1,p%NumBStC
       do i=1,order
          call StC_CopyInput( Inputs(i)%BStC(j), u(i), MESH_NEWCOPY, ErrStat2, ErrMsg2 )
          if (Failed()) return;
@@ -1022,7 +1022,7 @@ SUBROUTINE SrvD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState,
 
 
       ! Platform StrucCtrl
-   do j=1,p%CompPtfmStC
+   do j=1,p%NumPtfmStC
       do i=1,order
          call StC_CopyInput( Inputs(i)%PtfmStC(j), u(i), MESH_NEWCOPY, ErrStat2, ErrMsg2 )
          if (Failed()) return;
@@ -1213,19 +1213,19 @@ SUBROUTINE SrvD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
    ErrMsg  = ""
 
       ! StrucCtrl
-   do j=1,p%CompNStC       ! Nacelle
+   do j=1,p%NumNStC       ! Nacelle
       CALL StC_CalcOutput( t, u%NStC(j), p%NStC(j), x%NStC(j), xd%NStC(j), z%NStC(j), OtherState%NStC(j), y%NStC(j), m%NStC(j), ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    enddo
-   do j=1,p%CompTStC       ! Tower
+   do j=1,p%NumTStC       ! Tower
       CALL StC_CalcOutput( t, u%TStC(j), p%TStC(j), x%TStC(j), xd%TStC(j), z%TStC(j), OtherState%TStC(j), y%TStC(j), m%TStC(j), ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    enddo
-   do j=1,p%CompBStC       ! Blades
+   do j=1,p%NumBStC       ! Blades
       CALL StC_CalcOutput( t, u%BStC(j), p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), y%BStC(j), m%BStC(j), ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    enddo
-   do j=1,p%CompPtfmStC    ! Platform
+   do j=1,p%NumPtfmStC    ! Platform
       CALL StC_CalcOutput( t, u%PtfmStC(j), p%PtfmStC(j), x%PtfmStC(j), xd%PtfmStC(j), z%PtfmStC(j), OtherState%PtfmStC(j), y%PtfmStC(j), m%PtfmStC(j), ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    enddo
@@ -1285,10 +1285,10 @@ SUBROUTINE SrvD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
 
    call Set_SrvD_Outs( p, y, m, AllOuts )
 
-   if (p%CompNStC>0)    call Set_NStC_Outs(     p, x%NStC,     m%NStC,     y%NStC,     AllOuts )
-   if (p%CompTStC>0)    call Set_TStC_Outs(     p, x%TStC,     m%TStC,     y%TStC,     AllOuts )
-   if (p%CompBStC>0)    call Set_BStC_Outs(     p, x%BStC,     m%BStC,     y%BStC,     AllOuts )
-   if (p%CompPtfmStC>0) call Set_PtfmStC_Outs(  p, x%PtfmStC,  m%PtfmStC,  y%PtfmStC,  AllOuts )
+   if (p%NumNStC>0)    call Set_NStC_Outs(     p, x%NStC,     m%NStC,     y%NStC,     AllOuts )
+   if (p%NumTStC>0)    call Set_TStC_Outs(     p, x%TStC,     m%TStC,     y%TStC,     AllOuts )
+   if (p%NumBStC>0)    call Set_BStC_Outs(     p, x%BStC,     m%BStC,     y%BStC,     AllOuts )
+   if (p%NumPtfmStC>0) call Set_PtfmStC_Outs(  p, x%PtfmStC,  m%PtfmStC,  y%PtfmStC,  AllOuts )
   
    DO I = 1,p%NumOuts  ! Loop through all selected output channels
       y%WriteOutput(I) = p%OutParam(I)%SignM * AllOuts( p%OutParam(I)%Indx )
@@ -1333,19 +1333,19 @@ SUBROUTINE SrvD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrS
       dxdt%DummyContState = 0.0_ReKi
 
          ! StrucCtrl
-      do j=1,p%CompNStC       ! Nacelle
+      do j=1,p%NumNStC       ! Nacelle
          CALL StC_CalcContStateDeriv( t, u%NStC(j), p%NStC(j), x%NStC(j), xd%NStC(j), z%NStC(j), OtherState%NStC(j), m%NStC(j), dxdt%NStC(j), ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       enddo
-      do j=1,p%CompTStC       ! Tower
+      do j=1,p%NumTStC       ! Tower
          CALL StC_CalcContStateDeriv( t, u%TStC(j), p%TStC(j), x%TStC(j), xd%TStC(j), z%TStC(j), OtherState%TStC(j), m%TStC(j), dxdt%TStC(j), ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       enddo
-      do j=1,p%CompBStC       ! Blade
+      do j=1,p%NumBStC       ! Blade
          CALL StC_CalcContStateDeriv( t, u%BStC(j), p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), m%BStC(j), dxdt%BStC(j), ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       enddo
-      do j=1,p%CompPtfmStC    ! Platform
+      do j=1,p%NumPtfmStC    ! Platform
          CALL StC_CalcContStateDeriv( t, u%PtfmStC(j), p%PtfmStC(j), x%PtfmStC(j), xd%PtfmStC(j), z%PtfmStC(j), OtherState%PtfmStC(j), m%PtfmStC(j), dxdt%PtfmStC(j), ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       enddo
@@ -1408,19 +1408,19 @@ SUBROUTINE SrvD_UpdateDiscState( t, u, p, x, xd, z, OtherState, m, ErrStat, ErrM
       
 
       ! Update discrete states for StrucCtrl       --- StC does not currently support this
-!  do j=1,p%CompNStC       ! Nacelle
+!  do j=1,p%NumNStC       ! Nacelle
 !     CALL StC_UpdateDiscState( t, u%NStC(j), p%NStC(j), x%NStC(j), xd%NStC(j), z%NStC(j), OtherState%NStC(j), m%NStC(j), ErrStat, ErrMsg )
 !     call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 !  enddo
-!  do j=1,p%CompTStC       ! tower
+!  do j=1,p%NumTStC       ! tower
 !     CALL StC_UpdateDiscState( t, u%TStC(j), p%TStC(j), x%TStC(j), xd%TStC(j), z%TStC(j), OtherState%TStC(j), m%TStC(j), ErrStat, ErrMsg )
 !     call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 !  enddo
-!  do j=1,p%CompBStC       ! Blade
+!  do j=1,p%NumBStC       ! Blade
 !     CALL StC_UpdateDiscState( t, u%BStC(j), p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), m%BStC(j), ErrStat, ErrMsg )
 !     call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 !  enddo
-!  do j=1,p%CompPtfmStC    ! Platform
+!  do j=1,p%NumPtfmStC    ! Platform
 !     CALL StC_UpdateDiscState( t, u%PtfmStC(j), p%PtfmStC(j), x%PtfmStC(j), xd%PtfmStC(j), z%PtfmStC(j), OtherState%PtfmStC(j), m%PtfmStC(j), ErrStat, ErrMsg )
 !     call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 !  enddo
@@ -1456,19 +1456,19 @@ SUBROUTINE SrvD_CalcConstrStateResidual( t, u, p, x, xd, z, OtherState, m, z_res
 
 
       ! Solve for the constraint states for StrucCtrl    --- StC does not currently support this
-!  do j=1,p%CompNStC       ! Nacelle
+!  do j=1,p%NumNStC       ! Nacelle
 !     CALL StC_CalcConstrStateResidual( t, u%NStC(j), p%NStC(j), x%NStC(j), xd%NStC(j), z%NStC(j), OtherState%NStC(j), m%NStC(j), z_residual%NStC(j), ErrStat, ErrMsg )
 !     call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 !  enddo
-!  do j=1,p%CompTStC       ! Tower
+!  do j=1,p%NumTStC       ! Tower
 !     CALL StC_CalcConstrStateResidual( t, u%TStC(j), p%TStC(j), x%TStC(j), xd%TStC(j), z%TStC(j), OtherState%TStC(j), m%TStC(j), z_residual%TStC(j), ErrStat, ErrMsg )
 !     call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 !  enddo
-!  do j=1,p%CompBStC       ! Blade
+!  do j=1,p%NumBStC       ! Blade
 !     CALL StC_CalcConstrStateResidual( t, u%BStC(j), p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), m%BStC(j), z_residual%BStC(j), ErrStat, ErrMsg )
 !     call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 !  enddo
-!  do j=1,p%CompPtfmStC    ! Platform
+!  do j=1,p%NumPtfmStC    ! Platform
 !     CALL StC_CalcConstrStateResidual( t, u%PtfmStC(j), p%PtfmStC(j), x%PtfmStC(j), xd%PtfmStC(j), z%PtfmStC(j), OtherState%PtfmStC(j), m%PtfmStC(j), z_residual%PtfmStC(j), ErrStat, ErrMsg )
 !     call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 !  enddo
@@ -1977,8 +1977,8 @@ SUBROUTINE ValidatePrimaryData( InitInp, InputFileData, ErrStat, ErrMsg )
       if (InputFileData%YCMode /= ControlMode_NONE) &
          call SetErrStat(ErrID_Fatal,"YCMode must be 0 for linearization.",ErrStat,ErrMsg,RoutineName)
       
-      if ((InputFileData%CompNStC + InputFileData%CompTStC + InputFileData%CompBStC + InputFileData%CompPtfmStC) > 0_IntKi) &
-         call SetErrStat(ErrID_Fatal,"StrucCtrl module is not currently allowed in linearization. CompNStC, CompTStC, CompBStC, and CompPtfmStC must all be ZERO.",ErrStat,ErrMsg,RoutineName)
+      if ((InputFileData%NumNStC + InputFileData%NumTStC + InputFileData%NumBStC + InputFileData%NumPtfmStC) > 0_IntKi) &
+         call SetErrStat(ErrID_Fatal,"StrucCtrl module is not currently allowed in linearization. NumNStC, NumTStC, NumBStC, and NumPtfmStC must all be ZERO.",ErrStat,ErrMsg,RoutineName)
       
       if (InitInp%TrimCase /= TrimCase_none) then
          if (InitInp%TrimCase /= TrimCase_yaw .and. InitInp%TrimCase /= TrimCase_torque .and. InitInp%TrimCase /=  TrimCase_pitch) then
@@ -2371,10 +2371,10 @@ SUBROUTINE SrvD_SetParameters( InputFileData, p, ErrStat, ErrMsg )
       !.............................................
       ! Tuned-mass damper parameters
       !.............................................   
-   p%CompNStC     = InputFileData%CompNStC
-   p%CompTStC     = InputFileData%CompTStC
-   p%CompBStC     = InputFileData%CompBStC
-   p%CompPtfmStC  = InputFileData%CompPtfmStC
+   p%NumBStC     = InputFileData%NumBStC
+   p%NumNStC     = InputFileData%NumNStC
+   p%NumTStC     = InputFileData%NumTStC
+   p%NumPtfmStC  = InputFileData%NumPtfmStC
 
       !.............................................
       ! Determine if the BladedDLL should be called

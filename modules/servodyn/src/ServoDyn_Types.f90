@@ -151,14 +151,14 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: GenSpd_TLU      !< Records R:2:R+2*DLL_NumTrq-2: Generator speed values in look-up table [used only with DLL Interface] [rad/s]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: GenTrq_TLU      !< Records R+1:2:R+2*DLL_NumTrq-1: Generator torque values in look-up table [used only with DLL Interface] [Nm]
     LOGICAL  :: UseLegacyInterface      !< Flag that determines if the legacy Bladed interface is (legacy=DISCON with avrSWAP instead of CONTROLLER) [-]
-    INTEGER(IntKi)  :: CompNStC      !< Compute nacelle tuned mass damper {number of nacelle TMDs} [-]
-    CHARACTER(1024) , DIMENSION(:), ALLOCATABLE  :: NStCfile      !< File for nacelle tuned mass damper (quoted strings) [-]
-    INTEGER(IntKi)  :: CompTStC      !< Compute tower tuned mass damper {number of tower TMDs} [-]
-    CHARACTER(1024) , DIMENSION(:), ALLOCATABLE  :: TStCfile      !< File for tower tuned mass damper (quoted strings) [-]
-    INTEGER(IntKi)  :: CompBStC      !< Compute tower tuned mass damper {number of blade TMD sets} [-]
-    CHARACTER(1024) , DIMENSION(:), ALLOCATABLE  :: BStCfile      !< File for blade tuned mass damper (quoted strings) [-]
-    INTEGER(IntKi)  :: CompPtfmStC      !< Compute platform tuned mass damper {number of platform TMDs} [-]
-    CHARACTER(1024) , DIMENSION(:), ALLOCATABLE  :: PtfmStCfile      !< File for hydrodyn platform tuned mass damper (quoted strings) [-]
+    INTEGER(IntKi)  :: NumBStC      !< Number of blade structural controllers (integer) [-]
+    CHARACTER(1024) , DIMENSION(:), ALLOCATABLE  :: BStCfiles      !< Name of the files for blade structural controllers (quoted strings) [unused when NumBStC==0] [-]
+    INTEGER(IntKi)  :: NumNStC      !< Number of nacelle structural controllers (integer) [-]
+    CHARACTER(1024) , DIMENSION(:), ALLOCATABLE  :: NStCfiles      !< Name of the files for nacelle structural controllers (quoted strings) [unused when NumNStC==0] [-]
+    INTEGER(IntKi)  :: NumTStC      !< Number of tower structural controllers (integer) [-]
+    CHARACTER(1024) , DIMENSION(:), ALLOCATABLE  :: TStCfiles      !< Name of the files for tower structural controllers (quoted strings) [unused when NumTStC==0] [-]
+    INTEGER(IntKi)  :: NumPtfmStC      !< Number of platform structural controllers (integer) [-]
+    CHARACTER(1024) , DIMENSION(:), ALLOCATABLE  :: PtfmStCfiles      !< Name of the files for blade structural controllers (quoted strings) [unused when NumPtfmStC==0] [-]
   END TYPE SrvD_InputFile
 ! =======================
 ! =========  BladedDLLType  =======
@@ -356,10 +356,10 @@ IMPLICIT NONE
     REAL(ReKi)  :: TBDrConN      !< Tip-brake drag constant during normal operation, Cd*Area [-]
     REAL(ReKi)  :: TBDrConD      !< Tip-brake drag constant during fully-deployed operation, Cd*Area [-]
     INTEGER(IntKi)  :: NumBl      !< Number of blades on the turbine [-]
-    INTEGER(IntKi)  :: CompNStC      !< Compute nacelle tuned mass damper {true/false} [-]
-    INTEGER(IntKi)  :: CompTStC      !< Compute tower tuned mass damper {true/false} [-]
-    INTEGER(IntKi)  :: CompBStC      !< Compute blade tuned mass damper {true/false} [-]
-    INTEGER(IntKi)  :: CompPtfmStC      !< Compute platform tuned mass damper {true/false} [-]
+    INTEGER(IntKi)  :: NumBStC      !< Number of blade structural controllers (integer) [-]
+    INTEGER(IntKi)  :: NumNStC      !< Number of nacelle structural controllers (integer) [-]
+    INTEGER(IntKi)  :: NumTStC      !< Number of tower structural controllers (integer) [-]
+    INTEGER(IntKi)  :: NumPtfmStC      !< Number of platform structural controllers (integer) [-]
     INTEGER(IntKi)  :: NumOuts      !< Number of parameters in the output list (number of outputs requested) [-]
     INTEGER(IntKi)  :: NumOuts_DLL      !< Number of logging channels output from the DLL (set at initialization) [-]
     CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
@@ -1775,57 +1775,57 @@ IF (ALLOCATED(SrcInputFileData%GenTrq_TLU)) THEN
     DstInputFileData%GenTrq_TLU = SrcInputFileData%GenTrq_TLU
 ENDIF
     DstInputFileData%UseLegacyInterface = SrcInputFileData%UseLegacyInterface
-    DstInputFileData%CompNStC = SrcInputFileData%CompNStC
-IF (ALLOCATED(SrcInputFileData%NStCfile)) THEN
-  i1_l = LBOUND(SrcInputFileData%NStCfile,1)
-  i1_u = UBOUND(SrcInputFileData%NStCfile,1)
-  IF (.NOT. ALLOCATED(DstInputFileData%NStCfile)) THEN 
-    ALLOCATE(DstInputFileData%NStCfile(i1_l:i1_u),STAT=ErrStat2)
+    DstInputFileData%NumBStC = SrcInputFileData%NumBStC
+IF (ALLOCATED(SrcInputFileData%BStCfiles)) THEN
+  i1_l = LBOUND(SrcInputFileData%BStCfiles,1)
+  i1_u = UBOUND(SrcInputFileData%BStCfiles,1)
+  IF (.NOT. ALLOCATED(DstInputFileData%BStCfiles)) THEN 
+    ALLOCATE(DstInputFileData%BStCfiles(i1_l:i1_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%NStCfile.', ErrStat, ErrMsg,RoutineName)
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%BStCfiles.', ErrStat, ErrMsg,RoutineName)
       RETURN
     END IF
   END IF
-    DstInputFileData%NStCfile = SrcInputFileData%NStCfile
+    DstInputFileData%BStCfiles = SrcInputFileData%BStCfiles
 ENDIF
-    DstInputFileData%CompTStC = SrcInputFileData%CompTStC
-IF (ALLOCATED(SrcInputFileData%TStCfile)) THEN
-  i1_l = LBOUND(SrcInputFileData%TStCfile,1)
-  i1_u = UBOUND(SrcInputFileData%TStCfile,1)
-  IF (.NOT. ALLOCATED(DstInputFileData%TStCfile)) THEN 
-    ALLOCATE(DstInputFileData%TStCfile(i1_l:i1_u),STAT=ErrStat2)
+    DstInputFileData%NumNStC = SrcInputFileData%NumNStC
+IF (ALLOCATED(SrcInputFileData%NStCfiles)) THEN
+  i1_l = LBOUND(SrcInputFileData%NStCfiles,1)
+  i1_u = UBOUND(SrcInputFileData%NStCfiles,1)
+  IF (.NOT. ALLOCATED(DstInputFileData%NStCfiles)) THEN 
+    ALLOCATE(DstInputFileData%NStCfiles(i1_l:i1_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%TStCfile.', ErrStat, ErrMsg,RoutineName)
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%NStCfiles.', ErrStat, ErrMsg,RoutineName)
       RETURN
     END IF
   END IF
-    DstInputFileData%TStCfile = SrcInputFileData%TStCfile
+    DstInputFileData%NStCfiles = SrcInputFileData%NStCfiles
 ENDIF
-    DstInputFileData%CompBStC = SrcInputFileData%CompBStC
-IF (ALLOCATED(SrcInputFileData%BStCfile)) THEN
-  i1_l = LBOUND(SrcInputFileData%BStCfile,1)
-  i1_u = UBOUND(SrcInputFileData%BStCfile,1)
-  IF (.NOT. ALLOCATED(DstInputFileData%BStCfile)) THEN 
-    ALLOCATE(DstInputFileData%BStCfile(i1_l:i1_u),STAT=ErrStat2)
+    DstInputFileData%NumTStC = SrcInputFileData%NumTStC
+IF (ALLOCATED(SrcInputFileData%TStCfiles)) THEN
+  i1_l = LBOUND(SrcInputFileData%TStCfiles,1)
+  i1_u = UBOUND(SrcInputFileData%TStCfiles,1)
+  IF (.NOT. ALLOCATED(DstInputFileData%TStCfiles)) THEN 
+    ALLOCATE(DstInputFileData%TStCfiles(i1_l:i1_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%BStCfile.', ErrStat, ErrMsg,RoutineName)
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%TStCfiles.', ErrStat, ErrMsg,RoutineName)
       RETURN
     END IF
   END IF
-    DstInputFileData%BStCfile = SrcInputFileData%BStCfile
+    DstInputFileData%TStCfiles = SrcInputFileData%TStCfiles
 ENDIF
-    DstInputFileData%CompPtfmStC = SrcInputFileData%CompPtfmStC
-IF (ALLOCATED(SrcInputFileData%PtfmStCfile)) THEN
-  i1_l = LBOUND(SrcInputFileData%PtfmStCfile,1)
-  i1_u = UBOUND(SrcInputFileData%PtfmStCfile,1)
-  IF (.NOT. ALLOCATED(DstInputFileData%PtfmStCfile)) THEN 
-    ALLOCATE(DstInputFileData%PtfmStCfile(i1_l:i1_u),STAT=ErrStat2)
+    DstInputFileData%NumPtfmStC = SrcInputFileData%NumPtfmStC
+IF (ALLOCATED(SrcInputFileData%PtfmStCfiles)) THEN
+  i1_l = LBOUND(SrcInputFileData%PtfmStCfiles,1)
+  i1_u = UBOUND(SrcInputFileData%PtfmStCfiles,1)
+  IF (.NOT. ALLOCATED(DstInputFileData%PtfmStCfiles)) THEN 
+    ALLOCATE(DstInputFileData%PtfmStCfiles(i1_l:i1_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%PtfmStCfile.', ErrStat, ErrMsg,RoutineName)
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%PtfmStCfiles.', ErrStat, ErrMsg,RoutineName)
       RETURN
     END IF
   END IF
-    DstInputFileData%PtfmStCfile = SrcInputFileData%PtfmStCfile
+    DstInputFileData%PtfmStCfiles = SrcInputFileData%PtfmStCfiles
 ENDIF
  END SUBROUTINE SrvD_CopyInputFile
 
@@ -1847,17 +1847,17 @@ ENDIF
 IF (ALLOCATED(InputFileData%GenTrq_TLU)) THEN
   DEALLOCATE(InputFileData%GenTrq_TLU)
 ENDIF
-IF (ALLOCATED(InputFileData%NStCfile)) THEN
-  DEALLOCATE(InputFileData%NStCfile)
+IF (ALLOCATED(InputFileData%BStCfiles)) THEN
+  DEALLOCATE(InputFileData%BStCfiles)
 ENDIF
-IF (ALLOCATED(InputFileData%TStCfile)) THEN
-  DEALLOCATE(InputFileData%TStCfile)
+IF (ALLOCATED(InputFileData%NStCfiles)) THEN
+  DEALLOCATE(InputFileData%NStCfiles)
 ENDIF
-IF (ALLOCATED(InputFileData%BStCfile)) THEN
-  DEALLOCATE(InputFileData%BStCfile)
+IF (ALLOCATED(InputFileData%TStCfiles)) THEN
+  DEALLOCATE(InputFileData%TStCfiles)
 ENDIF
-IF (ALLOCATED(InputFileData%PtfmStCfile)) THEN
-  DEALLOCATE(InputFileData%PtfmStCfile)
+IF (ALLOCATED(InputFileData%PtfmStCfiles)) THEN
+  DEALLOCATE(InputFileData%PtfmStCfiles)
 ENDIF
  END SUBROUTINE SrvD_DestroyInputFile
 
@@ -1981,29 +1981,29 @@ ENDIF
       Re_BufSz   = Re_BufSz   + SIZE(InData%GenTrq_TLU)  ! GenTrq_TLU
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! UseLegacyInterface
-      Int_BufSz  = Int_BufSz  + 1  ! CompNStC
-  Int_BufSz   = Int_BufSz   + 1     ! NStCfile allocated yes/no
-  IF ( ALLOCATED(InData%NStCfile) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! NStCfile upper/lower bounds for each dimension
-      Int_BufSz  = Int_BufSz  + SIZE(InData%NStCfile)*LEN(InData%NStCfile)  ! NStCfile
+      Int_BufSz  = Int_BufSz  + 1  ! NumBStC
+  Int_BufSz   = Int_BufSz   + 1     ! BStCfiles allocated yes/no
+  IF ( ALLOCATED(InData%BStCfiles) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! BStCfiles upper/lower bounds for each dimension
+      Int_BufSz  = Int_BufSz  + SIZE(InData%BStCfiles)*LEN(InData%BStCfiles)  ! BStCfiles
   END IF
-      Int_BufSz  = Int_BufSz  + 1  ! CompTStC
-  Int_BufSz   = Int_BufSz   + 1     ! TStCfile allocated yes/no
-  IF ( ALLOCATED(InData%TStCfile) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! TStCfile upper/lower bounds for each dimension
-      Int_BufSz  = Int_BufSz  + SIZE(InData%TStCfile)*LEN(InData%TStCfile)  ! TStCfile
+      Int_BufSz  = Int_BufSz  + 1  ! NumNStC
+  Int_BufSz   = Int_BufSz   + 1     ! NStCfiles allocated yes/no
+  IF ( ALLOCATED(InData%NStCfiles) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! NStCfiles upper/lower bounds for each dimension
+      Int_BufSz  = Int_BufSz  + SIZE(InData%NStCfiles)*LEN(InData%NStCfiles)  ! NStCfiles
   END IF
-      Int_BufSz  = Int_BufSz  + 1  ! CompBStC
-  Int_BufSz   = Int_BufSz   + 1     ! BStCfile allocated yes/no
-  IF ( ALLOCATED(InData%BStCfile) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! BStCfile upper/lower bounds for each dimension
-      Int_BufSz  = Int_BufSz  + SIZE(InData%BStCfile)*LEN(InData%BStCfile)  ! BStCfile
+      Int_BufSz  = Int_BufSz  + 1  ! NumTStC
+  Int_BufSz   = Int_BufSz   + 1     ! TStCfiles allocated yes/no
+  IF ( ALLOCATED(InData%TStCfiles) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! TStCfiles upper/lower bounds for each dimension
+      Int_BufSz  = Int_BufSz  + SIZE(InData%TStCfiles)*LEN(InData%TStCfiles)  ! TStCfiles
   END IF
-      Int_BufSz  = Int_BufSz  + 1  ! CompPtfmStC
-  Int_BufSz   = Int_BufSz   + 1     ! PtfmStCfile allocated yes/no
-  IF ( ALLOCATED(InData%PtfmStCfile) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! PtfmStCfile upper/lower bounds for each dimension
-      Int_BufSz  = Int_BufSz  + SIZE(InData%PtfmStCfile)*LEN(InData%PtfmStCfile)  ! PtfmStCfile
+      Int_BufSz  = Int_BufSz  + 1  ! NumPtfmStC
+  Int_BufSz   = Int_BufSz   + 1     ! PtfmStCfiles allocated yes/no
+  IF ( ALLOCATED(InData%PtfmStCfiles) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! PtfmStCfiles upper/lower bounds for each dimension
+      Int_BufSz  = Int_BufSz  + SIZE(InData%PtfmStCfiles)*LEN(InData%PtfmStCfiles)  ! PtfmStCfiles
   END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -2233,78 +2233,78 @@ ENDIF
   END IF
     IntKiBuf(Int_Xferred) = TRANSFER(InData%UseLegacyInterface, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%CompNStC
+    IntKiBuf(Int_Xferred) = InData%NumBStC
     Int_Xferred = Int_Xferred + 1
-  IF ( .NOT. ALLOCATED(InData%NStCfile) ) THEN
+  IF ( .NOT. ALLOCATED(InData%BStCfiles) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
   ELSE
     IntKiBuf( Int_Xferred ) = 1
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%NStCfile,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%NStCfile,1)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%BStCfiles,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%BStCfiles,1)
     Int_Xferred = Int_Xferred + 2
 
-      DO i1 = LBOUND(InData%NStCfile,1), UBOUND(InData%NStCfile,1)
-        DO I = 1, LEN(InData%NStCfile)
-          IntKiBuf(Int_Xferred) = ICHAR(InData%NStCfile(i1)(I:I), IntKi)
+      DO i1 = LBOUND(InData%BStCfiles,1), UBOUND(InData%BStCfiles,1)
+        DO I = 1, LEN(InData%BStCfiles)
+          IntKiBuf(Int_Xferred) = ICHAR(InData%BStCfiles(i1)(I:I), IntKi)
           Int_Xferred = Int_Xferred + 1
         END DO ! I
       END DO
   END IF
-    IntKiBuf(Int_Xferred) = InData%CompTStC
+    IntKiBuf(Int_Xferred) = InData%NumNStC
     Int_Xferred = Int_Xferred + 1
-  IF ( .NOT. ALLOCATED(InData%TStCfile) ) THEN
+  IF ( .NOT. ALLOCATED(InData%NStCfiles) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
   ELSE
     IntKiBuf( Int_Xferred ) = 1
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%TStCfile,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%TStCfile,1)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%NStCfiles,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%NStCfiles,1)
     Int_Xferred = Int_Xferred + 2
 
-      DO i1 = LBOUND(InData%TStCfile,1), UBOUND(InData%TStCfile,1)
-        DO I = 1, LEN(InData%TStCfile)
-          IntKiBuf(Int_Xferred) = ICHAR(InData%TStCfile(i1)(I:I), IntKi)
+      DO i1 = LBOUND(InData%NStCfiles,1), UBOUND(InData%NStCfiles,1)
+        DO I = 1, LEN(InData%NStCfiles)
+          IntKiBuf(Int_Xferred) = ICHAR(InData%NStCfiles(i1)(I:I), IntKi)
           Int_Xferred = Int_Xferred + 1
         END DO ! I
       END DO
   END IF
-    IntKiBuf(Int_Xferred) = InData%CompBStC
+    IntKiBuf(Int_Xferred) = InData%NumTStC
     Int_Xferred = Int_Xferred + 1
-  IF ( .NOT. ALLOCATED(InData%BStCfile) ) THEN
+  IF ( .NOT. ALLOCATED(InData%TStCfiles) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
   ELSE
     IntKiBuf( Int_Xferred ) = 1
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%BStCfile,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%BStCfile,1)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%TStCfiles,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%TStCfiles,1)
     Int_Xferred = Int_Xferred + 2
 
-      DO i1 = LBOUND(InData%BStCfile,1), UBOUND(InData%BStCfile,1)
-        DO I = 1, LEN(InData%BStCfile)
-          IntKiBuf(Int_Xferred) = ICHAR(InData%BStCfile(i1)(I:I), IntKi)
+      DO i1 = LBOUND(InData%TStCfiles,1), UBOUND(InData%TStCfiles,1)
+        DO I = 1, LEN(InData%TStCfiles)
+          IntKiBuf(Int_Xferred) = ICHAR(InData%TStCfiles(i1)(I:I), IntKi)
           Int_Xferred = Int_Xferred + 1
         END DO ! I
       END DO
   END IF
-    IntKiBuf(Int_Xferred) = InData%CompPtfmStC
+    IntKiBuf(Int_Xferred) = InData%NumPtfmStC
     Int_Xferred = Int_Xferred + 1
-  IF ( .NOT. ALLOCATED(InData%PtfmStCfile) ) THEN
+  IF ( .NOT. ALLOCATED(InData%PtfmStCfiles) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
   ELSE
     IntKiBuf( Int_Xferred ) = 1
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%PtfmStCfile,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%PtfmStCfile,1)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%PtfmStCfiles,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%PtfmStCfiles,1)
     Int_Xferred = Int_Xferred + 2
 
-      DO i1 = LBOUND(InData%PtfmStCfile,1), UBOUND(InData%PtfmStCfile,1)
-        DO I = 1, LEN(InData%PtfmStCfile)
-          IntKiBuf(Int_Xferred) = ICHAR(InData%PtfmStCfile(i1)(I:I), IntKi)
+      DO i1 = LBOUND(InData%PtfmStCfiles,1), UBOUND(InData%PtfmStCfiles,1)
+        DO I = 1, LEN(InData%PtfmStCfiles)
+          IntKiBuf(Int_Xferred) = ICHAR(InData%PtfmStCfiles(i1)(I:I), IntKi)
           Int_Xferred = Int_Xferred + 1
         END DO ! I
       END DO
@@ -2554,90 +2554,90 @@ ENDIF
   END IF
     OutData%UseLegacyInterface = TRANSFER(IntKiBuf(Int_Xferred), OutData%UseLegacyInterface)
     Int_Xferred = Int_Xferred + 1
-    OutData%CompNStC = IntKiBuf(Int_Xferred)
+    OutData%NumBStC = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! NStCfile not allocated
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! BStCfiles not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
     Int_Xferred = Int_Xferred + 1
     i1_l = IntKiBuf( Int_Xferred    )
     i1_u = IntKiBuf( Int_Xferred + 1)
     Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%NStCfile)) DEALLOCATE(OutData%NStCfile)
-    ALLOCATE(OutData%NStCfile(i1_l:i1_u),STAT=ErrStat2)
+    IF (ALLOCATED(OutData%BStCfiles)) DEALLOCATE(OutData%BStCfiles)
+    ALLOCATE(OutData%BStCfiles(i1_l:i1_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%NStCfile.', ErrStat, ErrMsg,RoutineName)
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%BStCfiles.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-      DO i1 = LBOUND(OutData%NStCfile,1), UBOUND(OutData%NStCfile,1)
-        DO I = 1, LEN(OutData%NStCfile)
-          OutData%NStCfile(i1)(I:I) = CHAR(IntKiBuf(Int_Xferred))
+      DO i1 = LBOUND(OutData%BStCfiles,1), UBOUND(OutData%BStCfiles,1)
+        DO I = 1, LEN(OutData%BStCfiles)
+          OutData%BStCfiles(i1)(I:I) = CHAR(IntKiBuf(Int_Xferred))
           Int_Xferred = Int_Xferred + 1
         END DO ! I
       END DO
   END IF
-    OutData%CompTStC = IntKiBuf(Int_Xferred)
+    OutData%NumNStC = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! TStCfile not allocated
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! NStCfiles not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
     Int_Xferred = Int_Xferred + 1
     i1_l = IntKiBuf( Int_Xferred    )
     i1_u = IntKiBuf( Int_Xferred + 1)
     Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%TStCfile)) DEALLOCATE(OutData%TStCfile)
-    ALLOCATE(OutData%TStCfile(i1_l:i1_u),STAT=ErrStat2)
+    IF (ALLOCATED(OutData%NStCfiles)) DEALLOCATE(OutData%NStCfiles)
+    ALLOCATE(OutData%NStCfiles(i1_l:i1_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%TStCfile.', ErrStat, ErrMsg,RoutineName)
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%NStCfiles.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-      DO i1 = LBOUND(OutData%TStCfile,1), UBOUND(OutData%TStCfile,1)
-        DO I = 1, LEN(OutData%TStCfile)
-          OutData%TStCfile(i1)(I:I) = CHAR(IntKiBuf(Int_Xferred))
+      DO i1 = LBOUND(OutData%NStCfiles,1), UBOUND(OutData%NStCfiles,1)
+        DO I = 1, LEN(OutData%NStCfiles)
+          OutData%NStCfiles(i1)(I:I) = CHAR(IntKiBuf(Int_Xferred))
           Int_Xferred = Int_Xferred + 1
         END DO ! I
       END DO
   END IF
-    OutData%CompBStC = IntKiBuf(Int_Xferred)
+    OutData%NumTStC = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! BStCfile not allocated
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! TStCfiles not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
     Int_Xferred = Int_Xferred + 1
     i1_l = IntKiBuf( Int_Xferred    )
     i1_u = IntKiBuf( Int_Xferred + 1)
     Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%BStCfile)) DEALLOCATE(OutData%BStCfile)
-    ALLOCATE(OutData%BStCfile(i1_l:i1_u),STAT=ErrStat2)
+    IF (ALLOCATED(OutData%TStCfiles)) DEALLOCATE(OutData%TStCfiles)
+    ALLOCATE(OutData%TStCfiles(i1_l:i1_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%BStCfile.', ErrStat, ErrMsg,RoutineName)
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%TStCfiles.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-      DO i1 = LBOUND(OutData%BStCfile,1), UBOUND(OutData%BStCfile,1)
-        DO I = 1, LEN(OutData%BStCfile)
-          OutData%BStCfile(i1)(I:I) = CHAR(IntKiBuf(Int_Xferred))
+      DO i1 = LBOUND(OutData%TStCfiles,1), UBOUND(OutData%TStCfiles,1)
+        DO I = 1, LEN(OutData%TStCfiles)
+          OutData%TStCfiles(i1)(I:I) = CHAR(IntKiBuf(Int_Xferred))
           Int_Xferred = Int_Xferred + 1
         END DO ! I
       END DO
   END IF
-    OutData%CompPtfmStC = IntKiBuf(Int_Xferred)
+    OutData%NumPtfmStC = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! PtfmStCfile not allocated
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! PtfmStCfiles not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
     Int_Xferred = Int_Xferred + 1
     i1_l = IntKiBuf( Int_Xferred    )
     i1_u = IntKiBuf( Int_Xferred + 1)
     Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%PtfmStCfile)) DEALLOCATE(OutData%PtfmStCfile)
-    ALLOCATE(OutData%PtfmStCfile(i1_l:i1_u),STAT=ErrStat2)
+    IF (ALLOCATED(OutData%PtfmStCfiles)) DEALLOCATE(OutData%PtfmStCfiles)
+    ALLOCATE(OutData%PtfmStCfiles(i1_l:i1_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%PtfmStCfile.', ErrStat, ErrMsg,RoutineName)
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%PtfmStCfiles.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-      DO i1 = LBOUND(OutData%PtfmStCfile,1), UBOUND(OutData%PtfmStCfile,1)
-        DO I = 1, LEN(OutData%PtfmStCfile)
-          OutData%PtfmStCfile(i1)(I:I) = CHAR(IntKiBuf(Int_Xferred))
+      DO i1 = LBOUND(OutData%PtfmStCfiles,1), UBOUND(OutData%PtfmStCfiles,1)
+        DO I = 1, LEN(OutData%PtfmStCfiles)
+          OutData%PtfmStCfiles(i1)(I:I) = CHAR(IntKiBuf(Int_Xferred))
           Int_Xferred = Int_Xferred + 1
         END DO ! I
       END DO
@@ -7747,10 +7747,10 @@ ENDIF
     DstParamData%TBDrConN = SrcParamData%TBDrConN
     DstParamData%TBDrConD = SrcParamData%TBDrConD
     DstParamData%NumBl = SrcParamData%NumBl
-    DstParamData%CompNStC = SrcParamData%CompNStC
-    DstParamData%CompTStC = SrcParamData%CompTStC
-    DstParamData%CompBStC = SrcParamData%CompBStC
-    DstParamData%CompPtfmStC = SrcParamData%CompPtfmStC
+    DstParamData%NumBStC = SrcParamData%NumBStC
+    DstParamData%NumNStC = SrcParamData%NumNStC
+    DstParamData%NumTStC = SrcParamData%NumTStC
+    DstParamData%NumPtfmStC = SrcParamData%NumPtfmStC
     DstParamData%NumOuts = SrcParamData%NumOuts
     DstParamData%NumOuts_DLL = SrcParamData%NumOuts_DLL
     DstParamData%RootName = SrcParamData%RootName
@@ -8023,10 +8023,10 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! TBDrConN
       Re_BufSz   = Re_BufSz   + 1  ! TBDrConD
       Int_BufSz  = Int_BufSz  + 1  ! NumBl
-      Int_BufSz  = Int_BufSz  + 1  ! CompNStC
-      Int_BufSz  = Int_BufSz  + 1  ! CompTStC
-      Int_BufSz  = Int_BufSz  + 1  ! CompBStC
-      Int_BufSz  = Int_BufSz  + 1  ! CompPtfmStC
+      Int_BufSz  = Int_BufSz  + 1  ! NumBStC
+      Int_BufSz  = Int_BufSz  + 1  ! NumNStC
+      Int_BufSz  = Int_BufSz  + 1  ! NumTStC
+      Int_BufSz  = Int_BufSz  + 1  ! NumPtfmStC
       Int_BufSz  = Int_BufSz  + 1  ! NumOuts
       Int_BufSz  = Int_BufSz  + 1  ! NumOuts_DLL
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%RootName)  ! RootName
@@ -8390,13 +8390,13 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%NumBl
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%CompNStC
+    IntKiBuf(Int_Xferred) = InData%NumBStC
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%CompTStC
+    IntKiBuf(Int_Xferred) = InData%NumNStC
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%CompBStC
+    IntKiBuf(Int_Xferred) = InData%NumTStC
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%CompPtfmStC
+    IntKiBuf(Int_Xferred) = InData%NumPtfmStC
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%NumOuts
     Int_Xferred = Int_Xferred + 1
@@ -8898,13 +8898,13 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%NumBl = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
-    OutData%CompNStC = IntKiBuf(Int_Xferred)
+    OutData%NumBStC = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
-    OutData%CompTStC = IntKiBuf(Int_Xferred)
+    OutData%NumNStC = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
-    OutData%CompBStC = IntKiBuf(Int_Xferred)
+    OutData%NumTStC = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
-    OutData%CompPtfmStC = IntKiBuf(Int_Xferred)
+    OutData%NumPtfmStC = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%NumOuts = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1

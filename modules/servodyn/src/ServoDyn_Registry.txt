@@ -132,14 +132,15 @@ typedef	^	SrvD_InputFile	IntKi	DLL_NumTrq	-	-	-	"Record 26: No. of points in tor
 typedef	^	SrvD_InputFile	ReKi	GenSpd_TLU	{:}	-	-	"Records R:2:R+2*DLL_NumTrq-2: Generator speed values in look-up table [used only with DLL Interface]"	rad/s
 typedef	^	SrvD_InputFile	ReKi	GenTrq_TLU	{:}	-	-	"Records R+1:2:R+2*DLL_NumTrq-1: Generator torque values in look-up table [used only with DLL Interface]"	Nm
 typedef	^	SrvD_InputFile	LOGICAL	UseLegacyInterface	-	-	-	"Flag that determines if the legacy Bladed interface is (legacy=DISCON with avrSWAP instead of CONTROLLER)"	-
-typedef	^	SrvD_InputFile	IntKi	CompNStC	-	-	-	"Compute nacelle tuned mass damper {number of nacelle TMDs}"	-
-typedef	^	SrvD_InputFile	CHARACTER(1024)	NStCfile	{:}	-	-	"File for nacelle tuned mass damper (quoted strings)"	-
-typedef	^	SrvD_InputFile	IntKi	CompTStC	-	-	-	"Compute tower tuned mass damper {number of tower TMDs}"	-
-typedef	^	SrvD_InputFile	CHARACTER(1024)	TStCfile	{:}	-	-	"File for tower tuned mass damper (quoted strings)"	-
-typedef	^	SrvD_InputFile	IntKi	CompBStC	-	-	-	"Compute tower tuned mass damper {number of blade TMD sets}"	-
-typedef	^	SrvD_InputFile	CHARACTER(1024)	BStCfile	{:}	-	-	"File for blade tuned mass damper (quoted strings)"	-
-typedef	^	SrvD_InputFile	IntKi	CompPtfmStC	-	-	-	"Compute platform tuned mass damper {number of platform TMDs}"	-
-typedef	^	SrvD_InputFile	CHARACTER(1024)	PtfmStCfile	{:}	-	-	"File for hydrodyn platform tuned mass damper (quoted strings)"	-
+
+typedef	^	SrvD_InputFile	IntKi	NumBStC	-	-	-	"Number of blade structural controllers (integer)"	-
+typedef	^	SrvD_InputFile	CHARACTER(1024)	BStCfiles	{:}	-	-	"Name of the files for blade structural controllers (quoted strings) [unused when NumBStC==0]"	-
+typedef	^	SrvD_InputFile	IntKi	NumNStC	-	-	-	"Number of nacelle structural controllers (integer)"	-
+typedef	^	SrvD_InputFile	CHARACTER(1024)	NStCfiles	{:}	-	-	"Name of the files for nacelle structural controllers (quoted strings) [unused when NumNStC==0]"	-
+typedef	^	SrvD_InputFile	IntKi	NumTStC	-	-	-	"Number of tower structural controllers (integer)"	-
+typedef	^	SrvD_InputFile	CHARACTER(1024)	TStCfiles	{:}	-	-	"Name of the files for tower structural controllers (quoted strings) [unused when NumTStC==0]"	-
+typedef	^	SrvD_InputFile	IntKi	NumPtfmStC	-	-	-	"Number of platform structural controllers (integer)"	-
+typedef	^	SrvD_InputFile	CHARACTER(1024)	PtfmStCfiles	{:}	-	-	"Name of the files for blade structural controllers (quoted strings) [unused when NumPtfmStC==0]"	-
 
 # ..... Data for using Bladed DLLs .......................................................................................................
 typedef	^	BladedDLLType	SiKi	avrSWAP	{:}	-	-	"The swap array: used to pass data to and from the DLL controller"	"see Bladed DLL documentation"
@@ -334,10 +335,10 @@ typedef	^	ParameterType	ReKi	TBDepISp	{:}	-	-	"Deployment-initiation speed for t
 typedef	^	ParameterType	ReKi	TBDrConN	-	-	-	"Tip-brake drag constant during normal operation, Cd*Area"
 typedef	^	ParameterType	ReKi	TBDrConD	-	-	-	"Tip-brake drag constant during fully-deployed operation, Cd*Area"
 typedef	^	ParameterType	IntKi	NumBl	-	-	-	"Number of blades on the turbine"	-
-typedef	^	ParameterType	IntKi	CompNStC	-	-	-	"Compute nacelle tuned mass damper {true/false}"	-
-typedef	^	ParameterType	IntKi	CompTStC	-	-	-	"Compute tower tuned mass damper {true/false}"	-
-typedef	^	ParameterType	IntKi	CompBStC	-	-	-	"Compute blade tuned mass damper {true/false}"	-
-typedef	^	ParameterType	IntKi	CompPtfmStC	-	-	-	"Compute platform tuned mass damper {true/false}"	-
+typedef	^	ParameterType	IntKi	NumBStC	-	-	-	"Number of blade structural controllers (integer)"	-
+typedef	^	ParameterType	IntKi	NumNStC	-	-	-	"Number of nacelle structural controllers (integer)"	-
+typedef	^	ParameterType	IntKi	NumTStC	-	-	-	"Number of tower structural controllers (integer)"	-
+typedef	^	ParameterType	IntKi	NumPtfmStC	-	-	-	"Number of platform structural controllers (integer)"	-
 # parameters for output
 typedef	^	ParameterType	IntKi	NumOuts	-	-	-	"Number of parameters in the output list (number of outputs requested)"	-
 typedef	^	ParameterType	IntKi	NumOuts_DLL	-	-	-	"Number of logging channels output from the DLL (set at initialization)"	-
