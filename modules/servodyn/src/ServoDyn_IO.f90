@@ -1207,6 +1207,9 @@ subroutine ParseInputFileInfo( PriPath, InputFile, OutFileRoot, FileInfo_In, Inp
       if (Failed())  return;
    call ParseAry( FileInfo_In, CurLine, 'BStCfile', InputFileData%BStCfiles, InputFileData%NumBStC, ErrStat2, ErrMsg2, UnEcho )
       if (Failed())  return;
+   do i=1,InputFileData%NumBStC
+      if ( PathIsRelative( InputFileData%BStCfiles(i) ) ) InputFileData%BStCfiles(i) = TRIM(PriPath)//TRIM(InputFileData%BStCfiles(i))   
+   enddo
 
       !  NumNStC      - Number of nacelle structural controllers (integer)
    call ParseVar( FileInfo_In, CurLine, 'NumNStC', InputFileData%NumNStC, ErrStat2, ErrMsg2, UnEcho )
@@ -1216,6 +1219,9 @@ subroutine ParseInputFileInfo( PriPath, InputFile, OutFileRoot, FileInfo_In, Inp
       if (Failed())  return;
    call ParseAry( FileInfo_In, CurLine, 'NStCfile', InputFileData%NStCfiles, InputFileData%NumNStC, ErrStat2, ErrMsg2, UnEcho )
       if (Failed())  return;
+   do i=1,InputFileData%NumNStC
+      if ( PathIsRelative( InputFileData%NStCfiles(i) ) ) InputFileData%NStCfiles(i) = TRIM(PriPath)//TRIM(InputFileData%NStCfiles(i))   
+   enddo
 
       !  NumTStC      - Number of tower structural controllers (integer)
    call ParseVar( FileInfo_In, CurLine, 'NumTStC', InputFileData%NumTStC, ErrStat2, ErrMsg2, UnEcho )
@@ -1225,6 +1231,9 @@ subroutine ParseInputFileInfo( PriPath, InputFile, OutFileRoot, FileInfo_In, Inp
       if (Failed())  return;
    call ParseAry( FileInfo_In, CurLine, 'TStCfile', InputFileData%TStCfiles, InputFileData%NumTStC, ErrStat2, ErrMsg2, UnEcho )
       if (Failed())  return;
+   do i=1,InputFileData%NumTStC
+      if ( PathIsRelative( InputFileData%TStCfiles(i) ) ) InputFileData%TStCfiles(i) = TRIM(PriPath)//TRIM(InputFileData%TStCfiles(i))   
+   enddo
 
       !  NumPtfmStC   - Number of platform structural controllers (integer)
    call ParseVar( FileInfo_In, CurLine, 'NumPtfmStC', InputFileData%NumPtfmStC, ErrStat2, ErrMsg2, UnEcho )
@@ -1234,6 +1243,9 @@ subroutine ParseInputFileInfo( PriPath, InputFile, OutFileRoot, FileInfo_In, Inp
       if (Failed())  return;
    call ParseAry( FileInfo_In, CurLine, 'PtfmStCfile', InputFileData%PtfmStCfiles, InputFileData%NumPtfmStC, ErrStat2, ErrMsg2, UnEcho )
       if (Failed())  return;
+   do i=1,InputFileData%NumPtfmStC
+      if ( PathIsRelative( InputFileData%PtfmStCfiles(i) ) ) InputFileData%PtfmStCfiles(i) = TRIM(PriPath)//TRIM(InputFileData%PtfmStCfiles(i))   
+   enddo
 
 
    !---------------------- BLADED INTERFACE ----------------------------------------         

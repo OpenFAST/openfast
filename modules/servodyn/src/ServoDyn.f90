@@ -874,19 +874,27 @@ SUBROUTINE SrvD_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
          CALL BladedInterface_End(u, p, m, ErrStat, ErrMsg )
       END IF
       
-      ! StrucCtrl
-      do j=1,p%NumNStC       ! Nacelle
-         call StC_End( u%NStC(j), p%NStC(j), x%NStC(j), xd%NStC(j), z%NStC(j), OtherState%NStC(j), y%NStC(j), m%NStC(j), ErrStat, ErrMsg )
-      enddo
-      do j=1,p%NumTStC       ! Tower
-         call StC_End( u%TStC(j), p%TStC(j), x%TStC(j), xd%TStC(j), z%TStC(j), OtherState%TStC(j), y%TStC(j), m%TStC(j), ErrStat, ErrMsg )
-      enddo
-      do j=1,p%NumBStC       ! Blades
-         call StC_End( u%BStC(j), p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), y%BStC(j), m%BStC(j), ErrStat, ErrMsg )
-      enddo
-      do j=1,p%NumPtfmStC    ! Platform
-         call StC_End( u%PtfmStC(j), p%PtfmStC(j), x%PtfmStC(j), xd%PtfmStC(j), z%PtfmStC(j), OtherState%PtfmStC(j), y%PtfmStC(j), m%PtfmStC(j), ErrStat, ErrMsg )
-      enddo
+      ! StrucCtrl -- since all StC data is stored in SrvD types, we don't technically need to call StC_End directly
+      if (allocated(u%NStC)) then
+         do j=1,p%NumNStC       ! Nacelle
+            call StC_End( u%NStC(j), p%NStC(j), x%NStC(j), xd%NStC(j), z%NStC(j), OtherState%NStC(j), y%NStC(j), m%NStC(j), ErrStat, ErrMsg )
+         enddo
+      endif
+      if (allocated(u%TStC)) then
+         do j=1,p%NumTStC       ! Tower
+            call StC_End( u%TStC(j), p%TStC(j), x%TStC(j), xd%TStC(j), z%TStC(j), OtherState%TStC(j), y%TStC(j), m%TStC(j), ErrStat, ErrMsg )
+         enddo
+      endif
+      if (allocated(u%BStC)) then
+         do j=1,p%NumBStC       ! Blades
+            call StC_End( u%BStC(j), p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), y%BStC(j), m%BStC(j), ErrStat, ErrMsg )
+         enddo
+      endif
+      if (allocated(u%PtfmStC)) then
+         do j=1,p%NumPtfmStC    ! Platform
+            call StC_End( u%PtfmStC(j), p%PtfmStC(j), x%PtfmStC(j), xd%PtfmStC(j), z%PtfmStC(j), OtherState%PtfmStC(j), y%PtfmStC(j), m%PtfmStC(j), ErrStat, ErrMsg )
+         enddo
+      endif
 
          ! Destroy the input data:
       CALL SrvD_DestroyInput( u, ErrStat, ErrMsg )
