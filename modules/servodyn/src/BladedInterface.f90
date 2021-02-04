@@ -1043,7 +1043,7 @@ SUBROUTINE Retrieve_avrSWAP( p, dll_data, ErrStat, ErrMsg )
    !  (might be used for airfoil flap angles for example)
    dll_data%BlAirfoilCom(1)       = dll_data%avrSWAP(120)
    dll_data%BlAirfoilCom(2)       = dll_data%avrSWAP(121)
-   dll_data%BlAirFoilCom(3)       = dll_data%avrSWAP(122)
+   dll_data%BlAirfoilCom(3)       = dll_data%avrSWAP(122)
 
 !> * Records 130-142: Reserved
 

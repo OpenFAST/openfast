@@ -283,6 +283,35 @@ Nacelle-yaw Control
    Final yaw angle for override yaw maneuvers
 
 
+.. _SrvD-AfC-inputs:
+
+ Aerodynamic Flow Control
+ ~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+**AfCmode**       [switch]
+
+   Airfoil control mode {0: none, 1: sine wave cycle, 4: user-defined from
+   Simulink/Labview, 5: user-defined from Bladed-style DLL}
+
+**AfC_Mean**      [-]
+
+   Mean level for cosine cycling or steady value *[used only with*
+   **AfCmode==1** *]*
+
+**AfC_Amp**       [-]
+
+   Amplitude for for cosine cycling of flap signal *[used only with*
+   **AfCmode==1** *]*
+
+**AfC_Phase**     [deg]
+
+   Phase relative to the blade azimuth (0 is vertical) for for cosine cycling of
+   flap signal *[used only with* **AfCmode==1** *]*
+
+When **AfCmode==1**, the signal for the airfoil flow control is set by the
+expression *AfC_Mean + p%AfC_Amp*cos( Azimuth + AfC_phase)* where the azimuth
+is the azimuth of that particular blade (azimuth=0 is considered vertical).
+
 .. _SrvD-StC-inputs:
 
 Structural Control

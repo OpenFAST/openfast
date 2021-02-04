@@ -271,7 +271,10 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       if (Failed())  return;
       u%SuperController = 0.0_SiKi
    END IF
-                  
+
+   CALL AllocAry( u%ExternalBlAirfoilCom, p%NumBl, 'ExternalBlAirfoilCom', ErrStat2, ErrMsg2 )
+      if (Failed())  return;
+        
       
    u%BlPitch = p%BlPitchInit
    
@@ -288,7 +291,8 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    u%ExternalGenTrq = 0.
    u%ExternalElecPwr = 0.
    u%ExternalHSSBrFrac = 0.
-   
+   u%ExternalBlAirfoilCom = 0.
+
    u%TwrAccel  = 0.
    u%YawErr    = 0.   
    u%WindDir   = 0.
@@ -1249,11 +1253,6 @@ SUBROUTINE SrvD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END IF
       
-      !  Commanded Airfoil UserProp for blade (must be same units as given in AD15 airfoil tables)
-      !  This is passed to AD15 to be interpolated with the airfoil table userprop column
-      !  (might be used for airfoil flap angles for example)
-      y%BlAirfoilCom(1:p%NumBl) = m%dll_data%BlAirfoilCom(1:p%NumBl)
-      
       IF (ALLOCATED(y%SuperController)) THEN
          y%SuperController = m%dll_data%SCoutput
       END IF
@@ -1284,6 +1283,11 @@ SUBROUTINE SrvD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF (ErrStat >= AbortErrLev) RETURN
    
+      ! Pitch control:
+   CALL AirfoilControl_CalcOutput( t, u, p, x, xd, z, OtherState, y%BlAirfoilCom, m, ErrStat, ErrMsg )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      IF (ErrStat >= AbortErrLev) RETURN
+
 
    !...............................................................................................................................   
    ! Place the selected output channels into the WriteOutput(:) array with the proper sign:
@@ -1964,6 +1968,7 @@ SUBROUTINE ValidatePrimaryData( InitInp, InputFileData, ErrStat, ErrMsg )
    CALL HSSBr_ValidateData()
 !FIXME: add validation for StC inputs
 !   CALL StC_ValidateData()
+   CALL AfC_ValidateData()     ! Airfoil controls
 
    !  Checks for linearization:
    if ( InitInp%Linearize ) then
@@ -2219,7 +2224,21 @@ CONTAINS
       IF ( InputFileData%HSSBrTqF < 0.0_ReKi )  CALL SetErrStat( ErrID_Fatal, 'HSSBrTqF must not be negative.', ErrStat, ErrMsg, RoutineName )
             
    END SUBROUTINE HSSBr_ValidateData
+
    !-------------------------------------------------------------------------------------------------------------------------------
+   !> This routine performs the checks on inputs for the flap control.
+   SUBROUTINE AfC_ValidateData( )
+      IF ( InputFileData%AfCMode /= ControlMode_NONE      .and. InputFileData%AfCMode /= ControlMode_Simple   .and. &
+           InputFileData%AfCMode /= ControlMode_EXTERN    .and. InputFileData%AfCMode /= ControlMode_DLL )  THEN
+         CALL SetErrStat( ErrID_Fatal, 'AfCMode must be 0, 1, 4, or 5.', ErrStat, ErrMsg, RoutineName )
+      ENDIF
+      if ( InputFileData%AfCMode == ControlMode_Simple ) then
+         if ( InputFileData%AfC_phase < -TwoPi .and. InputFileData%AfC_phase > TwoPi ) then
+            call SetErrStat( ErrID_Fatal, 'AfC_phase must be between -360 and 360 degrees.', ErrStat, ErrMsg, RoutineName)
+         endif
+      endif
+   END SUBROUTINE AfC_ValidateData
+
 END SUBROUTINE ValidatePrimaryData
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine sets the parameters, based on the data stored in InputFileData.
@@ -2414,7 +2433,15 @@ SUBROUTINE SrvD_SetParameters( InputFileData, p, ErrStat, ErrMsg )
    ELSE
       p%Delim = ' '
    END IF           
-             
+
+      !.............................................
+      ! Save values for AfCmode - Airfoil control
+      !.............................................
+   p%AfCmode      =  InputFileData%AfCmode
+   p%AfC_Mean     =  InputFileData%AfC_Mean
+   p%AfC_Amp      =  InputFileData%AfC_Amp
+   p%AfC_phase    =  InputFileData%AfC_phase
+
 
 END SUBROUTINE SrvD_SetParameters
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -3547,7 +3574,54 @@ SUBROUTINE CalculateTorqueJacobian( t, u, p, m, GenTrq_du, ElecPwr_du, ErrStat, 
 END SUBROUTINE CalculateTorqueJacobian
 !----------------------------------------------------------------------------------------------------------------------------------
 
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Routine for computing the airfoil commands 
+!  Commanded Airfoil UserProp for blade (must be same units as given in AD15 airfoil tables)
+!  This is passed to AD15 to be interpolated with the airfoil table userprop column
+!  (might be used for airfoil flap angles for example)
+SUBROUTINE AirfoilControl_CalcOutput( t, u, p, x, xd, z, OtherState, BlAirfoilCom, m, ErrStat, ErrMsg )
+   REAL(DbKi),                     INTENT(IN   )  :: t               !< Current simulation time in seconds
+   TYPE(SrvD_InputType),           INTENT(IN   )  :: u               !< Inputs at t
+   TYPE(SrvD_ParameterType),       INTENT(IN   )  :: p               !< Parameters
+   TYPE(SrvD_ContinuousStateType), INTENT(IN   )  :: x               !< Continuous states at t
+   TYPE(SrvD_DiscreteStateType),   INTENT(IN   )  :: xd              !< Discrete states at t
+   TYPE(SrvD_ConstraintStateType), INTENT(IN   )  :: z               !< Constraint states at t
+   TYPE(SrvD_OtherStateType),      INTENT(IN   )  :: OtherState      !< Other states at t
+   REAL(ReKi),                     INTENT(INOUT)  :: BlAirfoilCom(:) !< Airfoil command signals
+   TYPE(SrvD_MiscVarType),         INTENT(INOUT)  :: m               !< Misc (optimization) variables
+   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat         !< Error status of the operation
+   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg          !< Error message if ErrStat /= ErrID_None
+   REAL(ReKi)                                     :: factor
+   REAL(ReKi)                                     :: Azimuth         !< Azimuth of this blade for simple control
+   INTEGER(IntKi)                                 :: i
 
+         ! Initialize ErrStat -- This isn't curently needed, but if a user routine is created, it might be wanted then
+      ErrStat = ErrID_None
+      ErrMsg  = ""
+
+      !...................................................................
+      ! Calculate the airfoil commands:
+      !...................................................................
+      SELECT CASE ( p%AfCmode )  ! Which pitch control mode are we using?
+         CASE ( ControlMode_NONE )                    ! Static value
+            BlAirfoilCom(1:p%NumBl) = 0.0_ReKi 
+         CASE ( ControlMode_SIMPLE )                  ! Simple, built-in sine wave control routine.
+            do i=1,p%NumBl
+               Azimuth = u%LSSTipPxa + TwoPi*(i-1)/p%NumBl       ! assuming all blades evenly spaced on rotor
+               BlAirfoilCom(i) = p%AfC_Mean + p%AfC_Amp*cos( Azimuth + p%AfC_phase)
+            enddo
+         CASE ( ControlMode_EXTERN )                  ! User-defined from Simulink or LabVIEW.
+            BlAirfoilCom = u%ExternalBlAirfoilCom   ! copy entire array
+         CASE ( ControlMode_DLL )                     ! User-defined pitch control from Bladed-style DLL
+            if (p%DLL_Ramp) then
+               factor = (t - m%LastTimeCalled) / m%dll_data%DLL_DT
+               BlAirfoilCom(1:p%NumBl) = m%dll_data%PrevBlAirfoilCom(1:p%NumBl) + &
+                                 factor * ( m%dll_data%BlAirfoilCom(1:p%NumBl) - m%dll_data%PrevBlAirfoilCom(1:p%NumBl) )
+            else
+               BlAirfoilCom(1:p%NumBl) = m%dll_data%BlAirfoilCom(1:p%NumBl)
+            end if
+      END SELECT
+END SUBROUTINE AirfoilControl_CalcOutput
 
 END MODULE ServoDyn
 !**********************************************************************************************************************************

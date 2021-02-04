@@ -1196,6 +1196,28 @@ subroutine ParseInputFileInfo( PriPath, InputFile, OutFileRoot, FileInfo_In, Inp
    InputFileData%NacYawF = InputFileData%NacYawF*D2R
 
 
+   !---------------------- Aerodynamic Flow Control --------------------------------
+   if ( InputFileData%Echo )   WRITE(UnEcho, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
+   CurLine = CurLine + 1
+      ! AfCmode - Airfoil control mode {
+      !                       0: none
+      !                       1: cosine wave cycle
+      !                       4: user-defined from Simulink/Labview
+      !                       5: user-defined from Bladed-style DLL}
+   call ParseVar( FileInfo_In, CurLine, 'AfCmode', InputFileData%AfCmode, ErrStat2, ErrMsg2, UnEcho )
+      if (Failed())  return;
+      ! AfC_Mean - Mean level for sinusoidal cycling or steady value (-) [used only with AfCmode==1]
+   call ParseVar( FileInfo_In, CurLine, 'AfC_Mean', InputFileData%AfC_mean, ErrStat2, ErrMsg2, UnEcho )
+      if (Failed())  return;
+      ! AfC_amplitude - Amplitude for for cosine cycling of flap signal (AfC = AfC_Amp*cos(Azimuth+phase)+AfC_mean) (-) [used only with AfCmode==1]
+   call ParseVar( FileInfo_In, CurLine, 'AfC_Amp', InputFileData%AfC_Amp, ErrStat2, ErrMsg2, UnEcho )
+      if (Failed())  return;
+      ! AfC_phase - Phase relative to the blade azimuth (0 is vertical) for for cosine cycling of flap signal (deg) [used only with AfCmode==1]
+   call ParseVar( FileInfo_In, CurLine, 'AfC_Phase', InputFileData%AfC_Phase, ErrStat2, ErrMsg2, UnEcho )
+      if (Failed())  return;
+   InputFileData%AfC_phase = InputFileData%AfC_phase*D2R
+
+
    !---------------------- TUNED MASS DAMPER ----------------------------------------         
    if ( InputFileData%Echo )   WRITE(UnEcho, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
    CurLine = CurLine + 1
@@ -1346,7 +1368,6 @@ subroutine ParseInputFileInfo( PriPath, InputFile, OutFileRoot, FileInfo_In, Inp
          InputFileData%GenTrq_TLU(i) = TmpRe2(2)          ! GenTrq_TLU - Records R+1:2:R+2*DLL_NumTrq-1: Generator torque values in look-up table (Nm)
       enddo
    endif
-
 
 
    !---------------------- OUTPUT --------------------------------------------------         

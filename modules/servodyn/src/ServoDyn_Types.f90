@@ -159,6 +159,10 @@ IMPLICIT NONE
     CHARACTER(1024) , DIMENSION(:), ALLOCATABLE  :: TStCfiles      !< Name of the files for tower structural controllers (quoted strings) [unused when NumTStC==0] [-]
     INTEGER(IntKi)  :: NumSStC      !< Number of substructure structural controllers (integer) [-]
     CHARACTER(1024) , DIMENSION(:), ALLOCATABLE  :: SStCfiles      !< Name of the files for subtructure structural controllers (quoted strings) [unused when NumSStC==0] [-]
+    INTEGER(IntKi)  :: AfCmode      !< Airfoil control mode {0: none, 1: sine wave cycle, 4: user-defined from Simulink/Labview, 5: user-defined from Bladed-style DLL} [-]
+    REAL(ReKi)  :: AfC_Mean      !< Mean level for cosine cycling or steady value [used only with AfCmode==1] [-]
+    REAL(ReKi)  :: AfC_Amp      !< Amplitude for for cosine cycling of flap signal (-) [used only with AfCmode==1] [-]
+    REAL(ReKi)  :: AfC_Phase      !< Phase relative to the blade azimuth (0 is vertical) for for cosine cycling of flap signal (deg) [used only with AfCmode==1] [deg]
   END TYPE SrvD_InputFile
 ! =======================
 ! =========  BladedDLLType  =======
@@ -171,6 +175,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(1:3)  :: BlPitchCom      !< Commanded blade pitch angles [radians]
     REAL(ReKi) , DIMENSION(1:3)  :: PrevBlPitch      !< Previously commanded blade pitch angles [radians]
     REAL(ReKi) , DIMENSION(1:3)  :: BlAirfoilCom      !< Commanded Airfoil UserProp for blade.  Passed to AD15 for airfoil interpolation (must be same units as given in AD15 airfoil tables) [-]
+    REAL(ReKi) , DIMENSION(1:3)  :: PrevBlAirfoilCom      !< Previously commanded Airfoil UserProp for blade.  Passed to AD15 for airfoil interpolation (must be same units as given in AD15 airfoil tables) [-]
     REAL(ReKi)  :: ElecPwr_prev      !< Electrical power (from previous step), sent to Bladed DLL [W]
     REAL(ReKi)  :: GenTrq_prev      !< Electrical generator torque (from previous step), sent to Bladed DLL [N-m]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: SCoutput      !< controller output to supercontroller [-]
@@ -360,6 +365,10 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NumNStC      !< Number of nacelle structural controllers (integer) [-]
     INTEGER(IntKi)  :: NumTStC      !< Number of tower structural controllers (integer) [-]
     INTEGER(IntKi)  :: NumSStC      !< Number of substructure structural controllers (integer) [-]
+    INTEGER(IntKi)  :: AfCmode      !< Airfoil control mode {0: none, 1: sine wave cycle, 4: user-defined from Simulink/Labview, 5: user-defined from Bladed-style DLL} [-]
+    REAL(ReKi)  :: AfC_Mean      !< Mean level for cosine cycling or steady value [used only with AfCmode==1] [-]
+    REAL(ReKi)  :: AfC_Amp      !< Amplitude for for cosine cycling of flap signal (-) [used only with AfCmode==1] [-]
+    REAL(ReKi)  :: AfC_Phase      !< Phase relative to the blade azimuth (0 is vertical) for for cosine cycling of flap signal (deg) [used only with AfCmode==1] [deg]
     INTEGER(IntKi)  :: NumOuts      !< Number of parameters in the output list (number of outputs requested) [-]
     INTEGER(IntKi)  :: NumOuts_DLL      !< Number of logging channels output from the DLL (set at initialization) [-]
     CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
@@ -398,6 +407,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: ExternalGenTrq      !< Electrical generator torque from Simulink or LabVIEW [N-m]
     REAL(ReKi)  :: ExternalElecPwr      !< Electrical power from Simulink or LabVIEW [W]
     REAL(ReKi)  :: ExternalHSSBrFrac      !< Fraction of full braking torque: 0 (off) <= HSSBrFrac <= 1 (full) from Simulink or LabVIEW [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: ExternalBlAirfoilCom      !< Commanded Airfoil UserProp for blade.  Passed to AD15 for airfoil interpolation (must be same units as given in AD15 airfoil tables) [-]
     REAL(ReKi)  :: TwrAccel      !< Tower acceleration for tower feedback control (user routine only) [m/s^2]
     REAL(ReKi)  :: YawErr      !< Yaw error [radians]
     REAL(ReKi)  :: WindDir      !< Wind direction [radians]
@@ -1827,6 +1837,10 @@ IF (ALLOCATED(SrcInputFileData%SStCfiles)) THEN
   END IF
     DstInputFileData%SStCfiles = SrcInputFileData%SStCfiles
 ENDIF
+    DstInputFileData%AfCmode = SrcInputFileData%AfCmode
+    DstInputFileData%AfC_Mean = SrcInputFileData%AfC_Mean
+    DstInputFileData%AfC_Amp = SrcInputFileData%AfC_Amp
+    DstInputFileData%AfC_Phase = SrcInputFileData%AfC_Phase
  END SUBROUTINE SrvD_CopyInputFile
 
  SUBROUTINE SrvD_DestroyInputFile( InputFileData, ErrStat, ErrMsg )
@@ -2005,6 +2019,10 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*1  ! SStCfiles upper/lower bounds for each dimension
       Int_BufSz  = Int_BufSz  + SIZE(InData%SStCfiles)*LEN(InData%SStCfiles)  ! SStCfiles
   END IF
+      Int_BufSz  = Int_BufSz  + 1  ! AfCmode
+      Re_BufSz   = Re_BufSz   + 1  ! AfC_Mean
+      Re_BufSz   = Re_BufSz   + 1  ! AfC_Amp
+      Re_BufSz   = Re_BufSz   + 1  ! AfC_Phase
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -2309,6 +2327,14 @@ ENDIF
         END DO ! I
       END DO
   END IF
+    IntKiBuf(Int_Xferred) = InData%AfCmode
+    Int_Xferred = Int_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%AfC_Mean
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%AfC_Amp
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%AfC_Phase
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE SrvD_PackInputFile
 
  SUBROUTINE SrvD_UnPackInputFile( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -2642,6 +2668,14 @@ ENDIF
         END DO ! I
       END DO
   END IF
+    OutData%AfCmode = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%AfC_Mean = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%AfC_Amp = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%AfC_Phase = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE SrvD_UnPackInputFile
 
  SUBROUTINE SrvD_CopyBladedDLLType( SrcBladedDLLTypeData, DstBladedDLLTypeData, CtrlCode, ErrStat, ErrMsg )
@@ -2678,6 +2712,7 @@ ENDIF
     DstBladedDLLTypeData%BlPitchCom = SrcBladedDLLTypeData%BlPitchCom
     DstBladedDLLTypeData%PrevBlPitch = SrcBladedDLLTypeData%PrevBlPitch
     DstBladedDLLTypeData%BlAirfoilCom = SrcBladedDLLTypeData%BlAirfoilCom
+    DstBladedDLLTypeData%PrevBlAirfoilCom = SrcBladedDLLTypeData%PrevBlAirfoilCom
     DstBladedDLLTypeData%ElecPwr_prev = SrcBladedDLLTypeData%ElecPwr_prev
     DstBladedDLLTypeData%GenTrq_prev = SrcBladedDLLTypeData%GenTrq_prev
 IF (ALLOCATED(SrcBladedDLLTypeData%SCoutput)) THEN
@@ -2892,6 +2927,7 @@ ENDIF
       Re_BufSz   = Re_BufSz   + SIZE(InData%BlPitchCom)  ! BlPitchCom
       Re_BufSz   = Re_BufSz   + SIZE(InData%PrevBlPitch)  ! PrevBlPitch
       Re_BufSz   = Re_BufSz   + SIZE(InData%BlAirfoilCom)  ! BlAirfoilCom
+      Re_BufSz   = Re_BufSz   + SIZE(InData%PrevBlAirfoilCom)  ! PrevBlAirfoilCom
       Re_BufSz   = Re_BufSz   + 1  ! ElecPwr_prev
       Re_BufSz   = Re_BufSz   + 1  ! GenTrq_prev
   Int_BufSz   = Int_BufSz   + 1     ! SCoutput allocated yes/no
@@ -3055,6 +3091,10 @@ ENDIF
     END DO
     DO i1 = LBOUND(InData%BlAirfoilCom,1), UBOUND(InData%BlAirfoilCom,1)
       ReKiBuf(Re_Xferred) = InData%BlAirfoilCom(i1)
+      Re_Xferred = Re_Xferred + 1
+    END DO
+    DO i1 = LBOUND(InData%PrevBlAirfoilCom,1), UBOUND(InData%PrevBlAirfoilCom,1)
+      ReKiBuf(Re_Xferred) = InData%PrevBlAirfoilCom(i1)
       Re_Xferred = Re_Xferred + 1
     END DO
     ReKiBuf(Re_Xferred) = InData%ElecPwr_prev
@@ -3362,6 +3402,12 @@ ENDIF
     i1_u = UBOUND(OutData%BlAirfoilCom,1)
     DO i1 = LBOUND(OutData%BlAirfoilCom,1), UBOUND(OutData%BlAirfoilCom,1)
       OutData%BlAirfoilCom(i1) = ReKiBuf(Re_Xferred)
+      Re_Xferred = Re_Xferred + 1
+    END DO
+    i1_l = LBOUND(OutData%PrevBlAirfoilCom,1)
+    i1_u = UBOUND(OutData%PrevBlAirfoilCom,1)
+    DO i1 = LBOUND(OutData%PrevBlAirfoilCom,1), UBOUND(OutData%PrevBlAirfoilCom,1)
+      OutData%PrevBlAirfoilCom(i1) = ReKiBuf(Re_Xferred)
       Re_Xferred = Re_Xferred + 1
     END DO
     OutData%ElecPwr_prev = ReKiBuf(Re_Xferred)
@@ -7751,6 +7797,10 @@ ENDIF
     DstParamData%NumNStC = SrcParamData%NumNStC
     DstParamData%NumTStC = SrcParamData%NumTStC
     DstParamData%NumSStC = SrcParamData%NumSStC
+    DstParamData%AfCmode = SrcParamData%AfCmode
+    DstParamData%AfC_Mean = SrcParamData%AfC_Mean
+    DstParamData%AfC_Amp = SrcParamData%AfC_Amp
+    DstParamData%AfC_Phase = SrcParamData%AfC_Phase
     DstParamData%NumOuts = SrcParamData%NumOuts
     DstParamData%NumOuts_DLL = SrcParamData%NumOuts_DLL
     DstParamData%RootName = SrcParamData%RootName
@@ -8027,6 +8077,10 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! NumNStC
       Int_BufSz  = Int_BufSz  + 1  ! NumTStC
       Int_BufSz  = Int_BufSz  + 1  ! NumSStC
+      Int_BufSz  = Int_BufSz  + 1  ! AfCmode
+      Re_BufSz   = Re_BufSz   + 1  ! AfC_Mean
+      Re_BufSz   = Re_BufSz   + 1  ! AfC_Amp
+      Re_BufSz   = Re_BufSz   + 1  ! AfC_Phase
       Int_BufSz  = Int_BufSz  + 1  ! NumOuts
       Int_BufSz  = Int_BufSz  + 1  ! NumOuts_DLL
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%RootName)  ! RootName
@@ -8398,6 +8452,14 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%NumSStC
     Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%AfCmode
+    Int_Xferred = Int_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%AfC_Mean
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%AfC_Amp
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%AfC_Phase
+    Re_Xferred = Re_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%NumOuts
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%NumOuts_DLL
@@ -8906,6 +8968,14 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     OutData%NumSStC = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
+    OutData%AfCmode = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%AfC_Mean = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%AfC_Amp = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%AfC_Phase = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
     OutData%NumOuts = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%NumOuts_DLL = IntKiBuf(Int_Xferred)
@@ -9313,6 +9383,18 @@ ENDIF
     DstInputData%ExternalGenTrq = SrcInputData%ExternalGenTrq
     DstInputData%ExternalElecPwr = SrcInputData%ExternalElecPwr
     DstInputData%ExternalHSSBrFrac = SrcInputData%ExternalHSSBrFrac
+IF (ALLOCATED(SrcInputData%ExternalBlAirfoilCom)) THEN
+  i1_l = LBOUND(SrcInputData%ExternalBlAirfoilCom,1)
+  i1_u = UBOUND(SrcInputData%ExternalBlAirfoilCom,1)
+  IF (.NOT. ALLOCATED(DstInputData%ExternalBlAirfoilCom)) THEN 
+    ALLOCATE(DstInputData%ExternalBlAirfoilCom(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%ExternalBlAirfoilCom.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInputData%ExternalBlAirfoilCom = SrcInputData%ExternalBlAirfoilCom
+ENDIF
     DstInputData%TwrAccel = SrcInputData%TwrAccel
     DstInputData%YawErr = SrcInputData%YawErr
     DstInputData%WindDir = SrcInputData%WindDir
@@ -9439,6 +9521,9 @@ ENDIF
 IF (ALLOCATED(InputData%ExternalBlPitchCom)) THEN
   DEALLOCATE(InputData%ExternalBlPitchCom)
 ENDIF
+IF (ALLOCATED(InputData%ExternalBlAirfoilCom)) THEN
+  DEALLOCATE(InputData%ExternalBlAirfoilCom)
+ENDIF
 IF (ALLOCATED(InputData%BStC)) THEN
 DO i1 = LBOUND(InputData%BStC,1), UBOUND(InputData%BStC,1)
   CALL StC_DestroyInput( InputData%BStC(i1), ErrStat, ErrMsg )
@@ -9526,6 +9611,11 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! ExternalGenTrq
       Re_BufSz   = Re_BufSz   + 1  ! ExternalElecPwr
       Re_BufSz   = Re_BufSz   + 1  ! ExternalHSSBrFrac
+  Int_BufSz   = Int_BufSz   + 1     ! ExternalBlAirfoilCom allocated yes/no
+  IF ( ALLOCATED(InData%ExternalBlAirfoilCom) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! ExternalBlAirfoilCom upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%ExternalBlAirfoilCom)  ! ExternalBlAirfoilCom
+  END IF
       Re_BufSz   = Re_BufSz   + 1  ! TwrAccel
       Re_BufSz   = Re_BufSz   + 1  ! YawErr
       Re_BufSz   = Re_BufSz   + 1  ! WindDir
@@ -9727,6 +9817,21 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%ExternalHSSBrFrac
     Re_Xferred = Re_Xferred + 1
+  IF ( .NOT. ALLOCATED(InData%ExternalBlAirfoilCom) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%ExternalBlAirfoilCom,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%ExternalBlAirfoilCom,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%ExternalBlAirfoilCom,1), UBOUND(InData%ExternalBlAirfoilCom,1)
+        ReKiBuf(Re_Xferred) = InData%ExternalBlAirfoilCom(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
     ReKiBuf(Re_Xferred) = InData%TwrAccel
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%YawErr
@@ -10052,6 +10157,24 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%ExternalHSSBrFrac = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! ExternalBlAirfoilCom not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%ExternalBlAirfoilCom)) DEALLOCATE(OutData%ExternalBlAirfoilCom)
+    ALLOCATE(OutData%ExternalBlAirfoilCom(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%ExternalBlAirfoilCom.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%ExternalBlAirfoilCom,1), UBOUND(OutData%ExternalBlAirfoilCom,1)
+        OutData%ExternalBlAirfoilCom(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
     OutData%TwrAccel = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%YawErr = ReKiBuf(Re_Xferred)
@@ -11519,6 +11642,12 @@ END IF ! check if allocated
   u_out%ExternalElecPwr = u1%ExternalElecPwr + b * ScaleFactor
   b = -(u1%ExternalHSSBrFrac - u2%ExternalHSSBrFrac)
   u_out%ExternalHSSBrFrac = u1%ExternalHSSBrFrac + b * ScaleFactor
+IF (ALLOCATED(u_out%ExternalBlAirfoilCom) .AND. ALLOCATED(u1%ExternalBlAirfoilCom)) THEN
+  DO i1 = LBOUND(u_out%ExternalBlAirfoilCom,1),UBOUND(u_out%ExternalBlAirfoilCom,1)
+    b = -(u1%ExternalBlAirfoilCom(i1) - u2%ExternalBlAirfoilCom(i1))
+    u_out%ExternalBlAirfoilCom(i1) = u1%ExternalBlAirfoilCom(i1) + b * ScaleFactor
+  END DO
+END IF ! check if allocated
   b = -(u1%TwrAccel - u2%TwrAccel)
   u_out%TwrAccel = u1%TwrAccel + b * ScaleFactor
   CALL Angles_ExtrapInterp( u1%YawErr, u2%YawErr, tin, u_out%YawErr, tin_out )
@@ -11691,6 +11820,13 @@ END IF ! check if allocated
   b = (t(3)**2*(u1%ExternalHSSBrFrac - u2%ExternalHSSBrFrac) + t(2)**2*(-u1%ExternalHSSBrFrac + u3%ExternalHSSBrFrac))* scaleFactor
   c = ( (t(2)-t(3))*u1%ExternalHSSBrFrac + t(3)*u2%ExternalHSSBrFrac - t(2)*u3%ExternalHSSBrFrac ) * scaleFactor
   u_out%ExternalHSSBrFrac = u1%ExternalHSSBrFrac + b  + c * t_out
+IF (ALLOCATED(u_out%ExternalBlAirfoilCom) .AND. ALLOCATED(u1%ExternalBlAirfoilCom)) THEN
+  DO i1 = LBOUND(u_out%ExternalBlAirfoilCom,1),UBOUND(u_out%ExternalBlAirfoilCom,1)
+    b = (t(3)**2*(u1%ExternalBlAirfoilCom(i1) - u2%ExternalBlAirfoilCom(i1)) + t(2)**2*(-u1%ExternalBlAirfoilCom(i1) + u3%ExternalBlAirfoilCom(i1)))* scaleFactor
+    c = ( (t(2)-t(3))*u1%ExternalBlAirfoilCom(i1) + t(3)*u2%ExternalBlAirfoilCom(i1) - t(2)*u3%ExternalBlAirfoilCom(i1) ) * scaleFactor
+    u_out%ExternalBlAirfoilCom(i1) = u1%ExternalBlAirfoilCom(i1) + b  + c * t_out
+  END DO
+END IF ! check if allocated
   b = (t(3)**2*(u1%TwrAccel - u2%TwrAccel) + t(2)**2*(-u1%TwrAccel + u3%TwrAccel))* scaleFactor
   c = ( (t(2)-t(3))*u1%TwrAccel + t(3)*u2%TwrAccel - t(2)*u3%TwrAccel ) * scaleFactor
   u_out%TwrAccel = u1%TwrAccel + b  + c * t_out
