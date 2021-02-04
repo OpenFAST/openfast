@@ -407,7 +407,7 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    call StC_Blade_Setup(InitInp,p,InputFileData,u%BStC,p%BStC,x%BStC,xd%BStC,z%BStC,OtherState%BStC,y%BStC,m%BStC,ErrStat2,ErrMsg2)
       if (Failed())  return;
 
-   call StC_Ptfm_Setup(InitInp,p,InputFileData,u%PtfmStC,p%PtfmStC,x%PtfmStC,xd%PtfmStC,z%PtfmStC,OtherState%PtfmStC,y%PtfmStC,m%PtfmStC,ErrStat2,ErrMsg2)
+   call StC_S_Setup(InitInp,p,InputFileData,u%SStC,p%SStC,x%SStC,xd%SStC,z%SStC,OtherState%SStC,y%SStC,m%SStC,ErrStat2,ErrMsg2)
       if (Failed())  return;
 
 
@@ -772,7 +772,7 @@ contains
 end subroutine StC_Blade_Setup
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine sets the data structures for the structural control (StC) module -- hydrodynamics platform instances
-subroutine StC_Ptfm_Setup(SrvD_InitInp,SrvD_p,InputFileData,u,p,x,xd,z,OtherState,y,m,ErrStat,ErrMsg)
+subroutine StC_S_Setup(SrvD_InitInp,SrvD_p,InputFileData,u,p,x,xd,z,OtherState,y,m,ErrStat,ErrMsg)
    type(SrvD_InitInputType),                    intent(in   )  :: SrvD_InitInp   !< Input data for initialization routine
    type(SrvD_ParameterType),                    intent(in   )  :: SrvD_p         !< Parameters
    TYPE(SrvD_InputFile),                        intent(in   )  :: InputFileData  ! Data stored in the module's input file
@@ -793,24 +793,24 @@ subroutine StC_Ptfm_Setup(SrvD_InitInp,SrvD_p,InputFileData,u,p,x,xd,z,OtherStat
    real(DbKi)                 :: Interval       !< Coupling interval in seconds from StC
    type(StC_InitInputType)    :: StC_InitInp    !< data to initialize StC module
    type(StC_InitOutputType)   :: StC_InitOut    !< data from StC module initialization (not currently used)
-   character(*), parameter    :: RoutineName = 'StC_Ptfm_Setup'
+   character(*), parameter    :: RoutineName = 'StC_S_Setup'
 
    ErrStat  = ErrID_None
    ErrMsg   = ""
 
-   if (SrvD_p%NumPtfmStC > 0_IntKi) then
-      allocate(u(SrvD_p%NumPtfmStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, u') )            return;
-      allocate(p(SrvD_p%NumPtfmStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, p') )            return;
-      allocate(x(SrvD_p%NumPtfmStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, x') )            return;
-      allocate(xd(SrvD_p%NumPtfmStC),STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, xd') )           return;
-      allocate(z(SrvD_p%NumPtfmStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, z') )            return;
-      allocate(OtherState(SrvD_p%NumPtfmStC), STAT=ErrStat2); if ( AllErr('Could not allocate StrucCtrl input array, OtherState') )   return;
-      allocate(y(SrvD_p%NumPtfmStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, y') )            return;
-      allocate(m(SrvD_p%NumPtfmStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, m') )            return;
+   if (SrvD_p%NumSStC > 0_IntKi) then
+      allocate(u(SrvD_p%NumSStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, u') )            return;
+      allocate(p(SrvD_p%NumSStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, p') )            return;
+      allocate(x(SrvD_p%NumSStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, x') )            return;
+      allocate(xd(SrvD_p%NumSStC),STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, xd') )           return;
+      allocate(z(SrvD_p%NumSStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, z') )            return;
+      allocate(OtherState(SrvD_p%NumSStC), STAT=ErrStat2); if ( AllErr('Could not allocate StrucCtrl input array, OtherState') )   return;
+      allocate(y(SrvD_p%NumSStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, y') )            return;
+      allocate(m(SrvD_p%NumSStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, m') )            return;
 
-      do j=1,SrvD_p%NumPtfmStC
-         StC_InitInp%InputFile      =  InputFileData%PtfmStCfiles(j)
-         StC_InitInp%RootName       =  TRIM(SrvD_p%RootName)//'.PtfmStC'
+      do j=1,SrvD_p%NumSStC
+         StC_InitInp%InputFile      =  InputFileData%SStCfiles(j)
+         StC_InitInp%RootName       =  TRIM(SrvD_p%RootName)//'.SStC'
          StC_InitInp%Gravity        =  SrvD_InitInp%gravity
          StC_InitInp%NumMeshPts     =  1_IntKi        ! single point mesh for Platform
          Interval                   =  SrvD_p%DT      ! Pass the ServoDyn DT
@@ -848,7 +848,7 @@ contains
       CALL StC_DestroyInitInput(StC_InitInp, ErrStat2, ErrMsg2 )
       CALL StC_DestroyInitOutput(StC_InitOut, ErrStat2, ErrMsg2 )
    end subroutine Cleanup
-end subroutine StC_Ptfm_Setup
+end subroutine StC_S_Setup
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine is called at the end of the simulation.
@@ -890,9 +890,9 @@ SUBROUTINE SrvD_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
             call StC_End( u%BStC(j), p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), y%BStC(j), m%BStC(j), ErrStat, ErrMsg )
          enddo
       endif
-      if (allocated(u%PtfmStC)) then
-         do j=1,p%NumPtfmStC    ! Platform
-            call StC_End( u%PtfmStC(j), p%PtfmStC(j), x%PtfmStC(j), xd%PtfmStC(j), z%PtfmStC(j), OtherState%PtfmStC(j), y%PtfmStC(j), m%PtfmStC(j), ErrStat, ErrMsg )
+      if (allocated(u%SStC)) then
+         do j=1,p%NumSStC    ! Platform
+            call StC_End( u%SStC(j), p%SStC(j), x%SStC(j), xd%SStC(j), z%SStC(j), OtherState%SStC(j), y%SStC(j), m%SStC(j), ErrStat, ErrMsg )
          enddo
       endif
 
@@ -965,7 +965,7 @@ SUBROUTINE SrvD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState,
    ! update states in StrucCtrl submodule, if necessary:
    !...............................................................................................................................   
 
-   IF ((p%NumNStC + p%NumTStC + p%NumBStC + p%NumPtfmStC) > 0_IntKi) THEN 
+   IF ((p%NumNStC + p%NumTStC + p%NumBStC + p%NumSStC) > 0_IntKi) THEN 
       order = SIZE(Inputs)
       allocate(u(order), STAT=ErrStat2)
       if (ErrStat2 /= 0) then
@@ -1030,13 +1030,13 @@ SUBROUTINE SrvD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState,
 
 
       ! Platform StrucCtrl
-   do j=1,p%NumPtfmStC
+   do j=1,p%NumSStC
       do i=1,order
-         call StC_CopyInput( Inputs(i)%PtfmStC(j), u(i), MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+         call StC_CopyInput( Inputs(i)%SStC(j), u(i), MESH_NEWCOPY, ErrStat2, ErrMsg2 )
          if (Failed()) return;
       enddo
 
-      call StC_UpdateStates( t, n, u, InputTimes, p%PtfmStC(j), x%PtfmStC(j), xd%PtfmStC(j), z%PtfmStC(j), OtherState%PtfmStC(j), m%PtfmStC(j), ErrStat2, ErrMsg2 )
+      call StC_UpdateStates( t, n, u, InputTimes, p%SStC(j), x%SStC(j), xd%SStC(j), z%SStC(j), OtherState%SStC(j), m%SStC(j), ErrStat2, ErrMsg2 )
          if (Failed()) return;
 
          ! destroy these for the next call to StC_UpdateStates (reset for next StC instance)
@@ -1233,8 +1233,8 @@ SUBROUTINE SrvD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
       CALL StC_CalcOutput( t, u%BStC(j), p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), y%BStC(j), m%BStC(j), ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    enddo
-   do j=1,p%NumPtfmStC    ! Platform
-      CALL StC_CalcOutput( t, u%PtfmStC(j), p%PtfmStC(j), x%PtfmStC(j), xd%PtfmStC(j), z%PtfmStC(j), OtherState%PtfmStC(j), y%PtfmStC(j), m%PtfmStC(j), ErrStat2, ErrMsg2 )
+   do j=1,p%NumSStC    ! Platform
+      CALL StC_CalcOutput( t, u%SStC(j), p%SStC(j), x%SStC(j), xd%SStC(j), z%SStC(j), OtherState%SStC(j), y%SStC(j), m%SStC(j), ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    enddo
    
@@ -1296,7 +1296,7 @@ SUBROUTINE SrvD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
    if (p%NumNStC>0)    call Set_NStC_Outs(     p, x%NStC,     m%NStC,     y%NStC,     AllOuts )
    if (p%NumTStC>0)    call Set_TStC_Outs(     p, x%TStC,     m%TStC,     y%TStC,     AllOuts )
    if (p%NumBStC>0)    call Set_BStC_Outs(     p, x%BStC,     m%BStC,     y%BStC,     AllOuts )
-   if (p%NumPtfmStC>0) call Set_PtfmStC_Outs(  p, x%PtfmStC,  m%PtfmStC,  y%PtfmStC,  AllOuts )
+   if (p%NumSStC>0) call Set_SStC_Outs(  p, x%SStC,  m%SStC,  y%SStC,  AllOuts )
   
    DO I = 1,p%NumOuts  ! Loop through all selected output channels
       y%WriteOutput(I) = p%OutParam(I)%SignM * AllOuts( p%OutParam(I)%Indx )
@@ -1353,8 +1353,8 @@ SUBROUTINE SrvD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrS
          CALL StC_CalcContStateDeriv( t, u%BStC(j), p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), m%BStC(j), dxdt%BStC(j), ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       enddo
-      do j=1,p%NumPtfmStC    ! Platform
-         CALL StC_CalcContStateDeriv( t, u%PtfmStC(j), p%PtfmStC(j), x%PtfmStC(j), xd%PtfmStC(j), z%PtfmStC(j), OtherState%PtfmStC(j), m%PtfmStC(j), dxdt%PtfmStC(j), ErrStat2, ErrMsg2 )
+      do j=1,p%NumSStC    ! Platform
+         CALL StC_CalcContStateDeriv( t, u%SStC(j), p%SStC(j), x%SStC(j), xd%SStC(j), z%SStC(j), OtherState%SStC(j), m%SStC(j), dxdt%SStC(j), ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       enddo
 
@@ -1428,8 +1428,8 @@ SUBROUTINE SrvD_UpdateDiscState( t, u, p, x, xd, z, OtherState, m, ErrStat, ErrM
 !     CALL StC_UpdateDiscState( t, u%BStC(j), p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), m%BStC(j), ErrStat, ErrMsg )
 !     call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 !  enddo
-!  do j=1,p%NumPtfmStC    ! Platform
-!     CALL StC_UpdateDiscState( t, u%PtfmStC(j), p%PtfmStC(j), x%PtfmStC(j), xd%PtfmStC(j), z%PtfmStC(j), OtherState%PtfmStC(j), m%PtfmStC(j), ErrStat, ErrMsg )
+!  do j=1,p%NumSStC    ! Platform
+!     CALL StC_UpdateDiscState( t, u%SStC(j), p%SStC(j), x%SStC(j), xd%SStC(j), z%SStC(j), OtherState%SStC(j), m%SStC(j), ErrStat, ErrMsg )
 !     call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 !  enddo
          
@@ -1476,8 +1476,8 @@ SUBROUTINE SrvD_CalcConstrStateResidual( t, u, p, x, xd, z, OtherState, m, z_res
 !     CALL StC_CalcConstrStateResidual( t, u%BStC(j), p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), m%BStC(j), z_residual%BStC(j), ErrStat, ErrMsg )
 !     call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 !  enddo
-!  do j=1,p%NumPtfmStC    ! Platform
-!     CALL StC_CalcConstrStateResidual( t, u%PtfmStC(j), p%PtfmStC(j), x%PtfmStC(j), xd%PtfmStC(j), z%PtfmStC(j), OtherState%PtfmStC(j), m%PtfmStC(j), z_residual%PtfmStC(j), ErrStat, ErrMsg )
+!  do j=1,p%NumSStC    ! Platform
+!     CALL StC_CalcConstrStateResidual( t, u%SStC(j), p%SStC(j), x%SStC(j), xd%SStC(j), z%SStC(j), OtherState%SStC(j), m%SStC(j), z_residual%SStC(j), ErrStat, ErrMsg )
 !     call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 !  enddo
 
@@ -1985,8 +1985,8 @@ SUBROUTINE ValidatePrimaryData( InitInp, InputFileData, ErrStat, ErrMsg )
       if (InputFileData%YCMode /= ControlMode_NONE) &
          call SetErrStat(ErrID_Fatal,"YCMode must be 0 for linearization.",ErrStat,ErrMsg,RoutineName)
       
-      if ((InputFileData%NumNStC + InputFileData%NumTStC + InputFileData%NumBStC + InputFileData%NumPtfmStC) > 0_IntKi) &
-         call SetErrStat(ErrID_Fatal,"StrucCtrl module is not currently allowed in linearization. NumNStC, NumTStC, NumBStC, and NumPtfmStC must all be ZERO.",ErrStat,ErrMsg,RoutineName)
+      if ((InputFileData%NumNStC + InputFileData%NumTStC + InputFileData%NumBStC + InputFileData%NumSStC) > 0_IntKi) &
+         call SetErrStat(ErrID_Fatal,"StrucCtrl module is not currently allowed in linearization. NumNStC, NumTStC, NumBStC, and NumSStC must all be ZERO.",ErrStat,ErrMsg,RoutineName)
       
       if (InitInp%TrimCase /= TrimCase_none) then
          if (InitInp%TrimCase /= TrimCase_yaw .and. InitInp%TrimCase /= TrimCase_torque .and. InitInp%TrimCase /=  TrimCase_pitch) then
@@ -2382,7 +2382,7 @@ SUBROUTINE SrvD_SetParameters( InputFileData, p, ErrStat, ErrMsg )
    p%NumBStC     = InputFileData%NumBStC
    p%NumNStC     = InputFileData%NumNStC
    p%NumTStC     = InputFileData%NumTStC
-   p%NumPtfmStC  = InputFileData%NumPtfmStC
+   p%NumSStC  = InputFileData%NumSStC
 
       !.............................................
       ! Determine if the BladedDLL should be called

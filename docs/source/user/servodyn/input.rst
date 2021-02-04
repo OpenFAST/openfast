@@ -318,14 +318,14 @@ of the following options.
    Names of the file for tower structural control damping (quoted strings on one
    line) *[unused when* **NumTStC==0** *]*
 
-**NumPtfmStC**   [integer]
+**NumSStC**   [integer]
 
-   Number of platform structural controllers
+   Number of substructure structural controllers
 
-**PtfmStCfiles**   [-]
+**SStCfiles**   [-]
 
-   Name of the files for blade structural controllers (quoted strings on one
-   line) *[unused when* **NumPtfmStC==0** *]*
+   Name of the files for substructure structural controllers (quoted strings on one
+   line) *[unused when* **NumSStC==0** *]*
 
 
 Bladed Controller Interface

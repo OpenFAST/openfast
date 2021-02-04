@@ -343,11 +343,11 @@ SUBROUTINE ED_InputSolve( p_FAST, u_ED, y_ED, p_AD14, y_AD14, y_AD, y_SrvD, u_AD
       ENDIF
 
       IF ( p_FAST%CompSub /= Module_SD ) THEN         ! Platform loads if not SD
-         IF ( ALLOCATED(y_SrvD%PtfmStC) ) THEN        ! Platform
-            do j=1,size(y_SrvD%PtfmStC)
-               IF ( ALLOCATED(y_SrvD%PtfmStC(j)%Mesh) ) THEN
-                  IF (y_SrvD%PtfmStC(j)%Mesh(1)%Committed) THEN      ! size 1 only for PtfmStC
-                     CALL Transfer_Point_to_Point( y_SrvD%PtfmStC(j)%Mesh(1), MeshMapData%u_ED_PlatformPtMesh, MeshMapData%SrvD_P_P_2_ED_P(j), ErrStat2, ErrMsg2, u_SrvD%PtfmStC(j)%Mesh(1), y_ED%PlatformPtMesh )
+         IF ( ALLOCATED(y_SrvD%SStC) ) THEN        ! Platform
+            do j=1,size(y_SrvD%SStC)
+               IF ( ALLOCATED(y_SrvD%SStC(j)%Mesh) ) THEN
+                  IF (y_SrvD%SStC(j)%Mesh(1)%Committed) THEN      ! size 1 only for SStC
+                     CALL Transfer_Point_to_Point( y_SrvD%SStC(j)%Mesh(1), MeshMapData%u_ED_PlatformPtMesh, MeshMapData%SrvD_P_P_2_ED_P(j), ErrStat2, ErrMsg2, u_SrvD%SStC(j)%Mesh(1), y_ED%PlatformPtMesh )
                         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//':u_ED%PlatformPtMesh' )
                      u_ED%PlatformPtMesh%Force  = u_ED%PlatformPtMesh%Force  + MeshMapData%u_ED_PlatformPtMesh%Force
                      u_ED%PlatformPtMesh%Moment = u_ED%PlatformPtMesh%Moment + MeshMapData%u_ED_PlatformPtMesh%Moment
@@ -1030,10 +1030,10 @@ SUBROUTINE SrvD_InputSolve( p_FAST, m_FAST, u_SrvD, y_ED, y_IfW, y_OpFM, y_BD, y
 
    ! Platform
    IF ( p_FAST%CompServo == Module_SrvD .and. p_FAST%CompSub /= Module_SD ) THEN
-      call Transfer_ED_to_PtfmStC( u_SrvD, y_ED, MeshMapData, ErrStat2, ErrMsg2 )
+      call Transfer_ED_to_SStC( u_SrvD, y_ED, MeshMapData, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    ELSE
-      call Transfer_SD_to_PtfmStC( u_SrvD, y_SD, MeshMapData, ErrStat2, ErrMsg2 )
+      call Transfer_SD_to_SStC( u_SrvD, y_SD, MeshMapData, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    ENDIF
 
@@ -1045,8 +1045,8 @@ SUBROUTINE SrvD_InputSolve( p_FAST, m_FAST, u_SrvD, y_ED, y_IfW, y_OpFM, y_BD, y
                         
 END SUBROUTINE SrvD_InputSolve
 !----------------------------------------------------------------------------------------------------------------------------------
-!> This routine sets the inputs for the SrvD%PtfmStC mesh motion from ElastoDyn
-SUBROUTINE Transfer_ED_to_PtfmStC( u_SrvD, y_ED, MeshMapData, ErrStat, ErrMsg )
+!> This routine sets the inputs for the SrvD%SStC mesh motion from ElastoDyn
+SUBROUTINE Transfer_ED_to_SStC( u_SrvD, y_ED, MeshMapData, ErrStat, ErrMsg )
 !..................................................................................................................................
    TYPE(SrvD_InputType),        INTENT(INOUT) :: u_SrvD              !< ServoDyn input
    TYPE(ED_OutputType),         INTENT(IN   ) :: y_ED                !< The outputs of the structural dynamics module
@@ -1060,23 +1060,23 @@ SUBROUTINE Transfer_ED_to_PtfmStC( u_SrvD, y_ED, MeshMapData, ErrStat, ErrMsg )
    ErrStat  =  ErrID_None
    ErrMsg   =  ''
       !----------------------------------------------------------------------------------------------------
-      !  Map ElastoDyn platform point mesh motion to ServoDyn/PtfmStC point mesh -- motions
+      !  Map ElastoDyn platform point mesh motion to ServoDyn/SStC point mesh -- motions
       !----------------------------------------------------------------------------------------------------
       ! motions:
-   IF ( ALLOCATED(u_SrvD%PtfmStC) ) THEN
-      do j=1,size(u_SrvD%PtfmStC)
-         IF ( ALLOCATED(u_SrvD%PtfmStC(j)%Mesh) ) THEN
-            IF (u_SrvD%PtfmStC(j)%Mesh(1)%Committed) THEN
-               CALL Transfer_Point_to_Point( y_ED%PlatformPtMesh, u_SrvD%PtfmStC(j)%Mesh(1), MeshMapData%ED_P_2_SrvD_P_P(j), ErrStat2, ErrMsg2 )
-                  call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'Transfer_ED_to_PtfmStC')
+   IF ( ALLOCATED(u_SrvD%SStC) ) THEN
+      do j=1,size(u_SrvD%SStC)
+         IF ( ALLOCATED(u_SrvD%SStC(j)%Mesh) ) THEN
+            IF (u_SrvD%SStC(j)%Mesh(1)%Committed) THEN
+               CALL Transfer_Point_to_Point( y_ED%PlatformPtMesh, u_SrvD%SStC(j)%Mesh(1), MeshMapData%ED_P_2_SrvD_P_P(j), ErrStat2, ErrMsg2 )
+                  call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'Transfer_ED_to_SStC')
             ENDIF
          END IF
       enddo
    ENDIF
-END SUBROUTINE Transfer_ED_to_PtfmStC
+END SUBROUTINE Transfer_ED_to_SStC
 !----------------------------------------------------------------------------------------------------------------------------------
-!> This routine sets the inputs for the SrvD%PtfmStC mesh motion from SubDyn
-SUBROUTINE Transfer_SD_to_PtfmStC( u_SrvD, y_SD, MeshMapData, ErrStat, ErrMsg )
+!> This routine sets the inputs for the SrvD%SStC mesh motion from SubDyn
+SUBROUTINE Transfer_SD_to_SStC( u_SrvD, y_SD, MeshMapData, ErrStat, ErrMsg )
 !..................................................................................................................................
    TYPE(SrvD_InputType),        INTENT(INOUT) :: u_SrvD              !< ServoDyn input
    TYPE(SD_OutputType),         INTENT(IN   ) :: y_SD                !< The outputs of the structural dynamics module
@@ -1090,20 +1090,20 @@ SUBROUTINE Transfer_SD_to_PtfmStC( u_SrvD, y_SD, MeshMapData, ErrStat, ErrMsg )
    ErrStat  =  ErrID_None
    ErrMsg   =  ''
       !----------------------------------------------------------------------------------------------------
-      !  Map SubDyn platform point mesh motion to ServoDyn/PtfmStC point mesh -- motions
+      !  Map SubDyn platform point mesh motion to ServoDyn/SStC point mesh -- motions
       !----------------------------------------------------------------------------------------------------
       ! motions:
-   IF ( ALLOCATED(u_SrvD%PtfmStC) ) THEN
-      do j=1,size(u_SrvD%PtfmStC)
-         IF ( ALLOCATED(u_SrvD%PtfmStC(j)%Mesh) ) THEN
-            IF (u_SrvD%PtfmStC(j)%Mesh(1)%Committed) THEN
-               CALL Transfer_Point_to_Point( y_SD%y2Mesh, u_SrvD%PtfmStC(j)%Mesh(1), MeshMapData%SD_P_2_SrvD_P_P(j), ErrStat2, ErrMsg2 )
-                  call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'Transfer_SD_to_PtfmStC')
+   IF ( ALLOCATED(u_SrvD%SStC) ) THEN
+      do j=1,size(u_SrvD%SStC)
+         IF ( ALLOCATED(u_SrvD%SStC(j)%Mesh) ) THEN
+            IF (u_SrvD%SStC(j)%Mesh(1)%Committed) THEN
+               CALL Transfer_Point_to_Point( y_SD%y2Mesh, u_SrvD%SStC(j)%Mesh(1), MeshMapData%SD_P_2_SrvD_P_P(j), ErrStat2, ErrMsg2 )
+                  call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'Transfer_SD_to_SStC')
             ENDIF
          END IF
       enddo
    ENDIF
-END SUBROUTINE Transfer_SD_to_PtfmStC
+END SUBROUTINE Transfer_SD_to_SStC
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine sets the inputs required for ServoDyn from an external source (Simulink)
 SUBROUTINE SrvD_SetExternalInputs( p_FAST, m_FAST, u_SrvD )
@@ -1312,8 +1312,8 @@ SUBROUTINE Transfer_ED_to_HD_SD_BD_Mooring( p_FAST, y_ED, u_HD, u_SD, u_ExtPtfm,
 
       ! Map motions for ServodDyn Structural control (TMD) if used.
    IF ( p_FAST%CompServo == Module_SrvD .and. p_FAST%CompSub /= Module_SD ) THEN
-      call Transfer_ED_to_PtfmStC( u_SrvD, y_ED, MeshMapData, ErrStat2, ErrMsg2 )
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//'u_SrvD%PtfmStC%Mesh')
+      call Transfer_ED_to_SStC( u_SrvD, y_ED, MeshMapData, ErrStat2, ErrMsg2 )
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//'u_SrvD%SStC%Mesh')
   ENDIF
 
 contains
@@ -1969,14 +1969,14 @@ CONTAINS
 
       ! Map motions for ServodDyn Structural control (TMD) if used and forces from the TMD to the platform
       IF ( p_FAST%CompServo == Module_SrvD .and. p_FAST%CompSub /= Module_SD ) THEN
-         call Transfer_ED_to_PtfmStC( u_SrvD, y_ED, MeshMapData, ErrStat2, ErrMsg2 )
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//'u_SrvD%PtfmStC%Mesh')
+         call Transfer_ED_to_SStC( u_SrvD, y_ED, MeshMapData, ErrStat2, ErrMsg2 )
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//'u_SrvD%SStC%Mesh')
             ! we're mapping loads, so we also need the sibling meshes' displacements:
-          IF ( ALLOCATED(y_SrvD%PtfmStC) ) THEN        ! Platform
-            do j=1,size(y_SrvD%PtfmStC)
-               IF ( ALLOCATED(y_SrvD%PtfmStC(j)%Mesh) ) THEN
-                  IF (y_SrvD%PtfmStC(j)%Mesh(1)%Committed) THEN      ! size 1 only for PtfmStC
-                     CALL Transfer_Point_to_Point( y_SrvD%PtfmStC(j)%Mesh(1), MeshMapData%u_ED_PlatformPtMesh_3, MeshMapData%SrvD_P_P_2_ED_P(j), ErrStat2, ErrMsg2, u_SrvD%PtfmStC(j)%Mesh(1), PlatformMotions )
+          IF ( ALLOCATED(y_SrvD%SStC) ) THEN        ! Platform
+            do j=1,size(y_SrvD%SStC)
+               IF ( ALLOCATED(y_SrvD%SStC(j)%Mesh) ) THEN
+                  IF (y_SrvD%SStC(j)%Mesh(1)%Committed) THEN      ! size 1 only for SStC
+                     CALL Transfer_Point_to_Point( y_SrvD%SStC(j)%Mesh(1), MeshMapData%u_ED_PlatformPtMesh_3, MeshMapData%SrvD_P_P_2_ED_P(j), ErrStat2, ErrMsg2, u_SrvD%SStC(j)%Mesh(1), PlatformMotions )
                         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//':u_ED%PlatformPtMesh' )
                      MeshMapData%u_ED_PlatformPtMesh_2%Force  = MeshMapData%u_ED_PlatformPtMesh_2%Force  + MeshMapData%u_ED_PlatformPtMesh_3%Force
                      MeshMapData%u_ED_PlatformPtMesh_2%Moment = MeshMapData%u_ED_PlatformPtMesh_2%Moment + MeshMapData%u_ED_PlatformPtMesh_3%Moment
@@ -2928,7 +2928,7 @@ CONTAINS
    ! Note that these values get overwritten at the completion of this routine.)
    !..................
       IF ( p_FAST%CompServo == Module_SrvD .and. p_FAST%CompSub == Module_SD ) THEN
-         call Transfer_SD_to_PtfmStC( u_SrvD, y_SD2, MeshMapData, ErrStat2, ErrMsg2 )
+         call Transfer_SD_to_SStC( u_SrvD, y_SD2, MeshMapData, ErrStat2, ErrMsg2 )
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       ENDIF
 
@@ -3033,11 +3033,11 @@ CONTAINS
       ! Get SD loads inputs from ServoDyn Structural control 
       !..................
 
-         IF ( p_FAST%CompServo == Module_SrvD .and. allocated(y_SrvD%PtfmStC) ) THEN
-            do k=1,size(y_SrvD%PtfmStC)
-               IF ( ALLOCATED(y_SrvD%PtfmStC(k)%Mesh) ) THEN
-                  IF (y_SrvD%PtfmStC(k)%Mesh(1)%Committed) THEN      ! size 1 only for PtfmStC
-                     CALL Transfer_Point_to_Point( y_SrvD%PtfmStC(k)%Mesh(1), MeshMapData%u_SD_LMesh_2, MeshMapData%SrvD_P_P_2_SD_P(k), ErrStat2, ErrMsg2, u_SrvD%PtfmStC(k)%Mesh(1), y_SD2%Y2Mesh )
+         IF ( p_FAST%CompServo == Module_SrvD .and. allocated(y_SrvD%SStC) ) THEN
+            do k=1,size(y_SrvD%SStC)
+               IF ( ALLOCATED(y_SrvD%SStC(k)%Mesh) ) THEN
+                  IF (y_SrvD%SStC(k)%Mesh(1)%Committed) THEN      ! size 1 only for SStC
+                     CALL Transfer_Point_to_Point( y_SrvD%SStC(k)%Mesh(1), MeshMapData%u_SD_LMesh_2, MeshMapData%SrvD_P_P_2_SD_P(k), ErrStat2, ErrMsg2, u_SrvD%SStC(k)%Mesh(1), y_SD2%Y2Mesh )
                         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName )
                      MeshMapData%u_SD_LMesh%Force  = MeshMapData%u_SD_LMesh%Force  + MeshMapData%u_SD_LMesh_2%Force
                      MeshMapData%u_SD_LMesh%Moment = MeshMapData%u_SD_LMesh%Moment + MeshMapData%u_SD_LMesh_2%Moment    
@@ -3204,11 +3204,11 @@ CONTAINS
                                                    
 
          ! Map the forces from the platform mounted TMD (from ServoDyn) to the platform reference point
-      IF ( p_FAST%CompServo == Module_SrvD .and. p_FAST%CompSub /= Module_SD .and. allocated(y_SrvD%PtfmStC)) THEN
-         do k=1,size(y_SrvD%PtfmStC)
-            IF ( ALLOCATED(y_SrvD%PtfmStC(k)%Mesh) ) THEN
-               IF (y_SrvD%PtfmStC(k)%Mesh(1)%Committed) THEN      ! size 1 only for PtfmStC
-                  CALL Transfer_Point_to_Point( y_SrvD%PtfmStC(k)%Mesh(1), MeshMapData%u_ED_PlatformPtMesh_2, MeshMapData%SrvD_P_P_2_ED_P(k), ErrStat2, ErrMsg2, u_SrvD%PtfmStC(k)%Mesh(1), PlatformMotions )
+      IF ( p_FAST%CompServo == Module_SrvD .and. p_FAST%CompSub /= Module_SD .and. allocated(y_SrvD%SStC)) THEN
+         do k=1,size(y_SrvD%SStC)
+            IF ( ALLOCATED(y_SrvD%SStC(k)%Mesh) ) THEN
+               IF (y_SrvD%SStC(k)%Mesh(1)%Committed) THEN      ! size 1 only for SStC
+                  CALL Transfer_Point_to_Point( y_SrvD%SStC(k)%Mesh(1), MeshMapData%u_ED_PlatformPtMesh_2, MeshMapData%SrvD_P_P_2_ED_P(k), ErrStat2, ErrMsg2, u_SrvD%SStC(k)%Mesh(1), PlatformMotions )
                      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//':u_ED%PlatformPtMesh' )
                   MeshMapData%u_ED_PlatformPtMesh%Force  = MeshMapData%u_ED_PlatformPtMesh%Force  + MeshMapData%u_ED_PlatformPtMesh_2%Force
                   MeshMapData%u_ED_PlatformPtMesh%Moment = MeshMapData%u_ED_PlatformPtMesh%Moment + MeshMapData%u_ED_PlatformPtMesh_2%Moment
@@ -4091,13 +4091,13 @@ SUBROUTINE ResetRemapFlags(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, MAPp
          enddo
       ENDIF
 
-      IF ( ALLOCATED(SrvD%y%PtfmStC) ) THEN
-         do j=1,size(SrvD%y%PtfmStC)
-            IF ( ALLOCATED(SrvD%y%PtfmStC(j)%Mesh) ) THEN
-               DO K = 1,SIZE(SrvD%y%PtfmStC(j)%Mesh)
-                  IF (SrvD%y%PtfmStC(j)%Mesh(K)%Committed) THEN
-                     SrvD%y%PtfmStC(j)%Mesh(K)%RemapFlag        = .FALSE.
-                     SrvD%Input(1)%PtfmStC(j)%Mesh(K)%RemapFlag = .FALSE.
+      IF ( ALLOCATED(SrvD%y%SStC) ) THEN
+         do j=1,size(SrvD%y%SStC)
+            IF ( ALLOCATED(SrvD%y%SStC(j)%Mesh) ) THEN
+               DO K = 1,SIZE(SrvD%y%SStC(j)%Mesh)
+                  IF (SrvD%y%SStC(j)%Mesh(K)%Committed) THEN
+                     SrvD%y%SStC(j)%Mesh(K)%RemapFlag        = .FALSE.
+                     SrvD%Input(1)%SStC(j)%Mesh(K)%RemapFlag = .FALSE.
                   END IF
                END DO
             END IF
@@ -4353,41 +4353,41 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, M
 !-------------------------
 !  ServoDyn <-> Platform
 !-------------------------
-      IF ( ALLOCATED(SrvD%Input(1)%PtfmStC) ) THEN
+      IF ( ALLOCATED(SrvD%Input(1)%SStC) ) THEN
          IF ( p_FAST%CompSub /= Module_SD ) THEN ! all of these get mapped to ElastoDyn ! (offshore floating with rigid substructure)
-            j=size(SrvD%Input(1)%PtfmStC)
+            j=size(SrvD%Input(1)%SStC)
             ALLOCATE( MeshMapData%SrvD_P_P_2_ED_P(j), MeshMapData%ED_P_2_SrvD_P_P(j), STAT=ErrStat2 )
                IF ( ErrStat2 /= 0 ) THEN
                   CALL SetErrStat( ErrID_Fatal, 'Error allocating MeshMapData%SrvD_P_P_2_ED_P and MeshMapData%ED_P_2_SrvD_P_P.', &
                                   ErrStat, ErrMsg, RoutineName )
                   RETURN
                END IF
-            do j=1,size(SrvD%Input(1)%PtfmStC)
-               IF ( ALLOCATED(SrvD%Input(1)%PtfmStC(j)%Mesh) ) THEN
-                  IF ( SrvD%Input(1)%PtfmStC(j)%Mesh(1)%Committed ) THEN      ! Single point per PtfmStC instance
-                     ! ServoDyn PtfmStC point mesh to/from ElastoDyn point mesh
-                     CALL MeshMapCreate( PlatformMotion, SrvD%Input(1)%PtfmStC(j)%Mesh(1), MeshMapData%ED_P_2_SrvD_P_P(j), ErrStat2, ErrMsg2 )
+            do j=1,size(SrvD%Input(1)%SStC)
+               IF ( ALLOCATED(SrvD%Input(1)%SStC(j)%Mesh) ) THEN
+                  IF ( SrvD%Input(1)%SStC(j)%Mesh(1)%Committed ) THEN      ! Single point per SStC instance
+                     ! ServoDyn SStC point mesh to/from ElastoDyn point mesh
+                     CALL MeshMapCreate( PlatformMotion, SrvD%Input(1)%SStC(j)%Mesh(1), MeshMapData%ED_P_2_SrvD_P_P(j), ErrStat2, ErrMsg2 )
                         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':ED_P_2_SrvD_P_P' )
-                     CALL MeshMapCreate( SrvD%y%PtfmStC(j)%Mesh(1), PlatformLoads, MeshMapData%SrvD_P_P_2_ED_P(j), ErrStat2, ErrMsg2 )
+                     CALL MeshMapCreate( SrvD%y%SStC(j)%Mesh(1), PlatformLoads, MeshMapData%SrvD_P_P_2_ED_P(j), ErrStat2, ErrMsg2 )
                         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':SrvD_P_P_2_ED_P' )       
                   ENDIF
                ENDIF
             enddo
          ELSE  ! SubDyn is used
-            j=size(SrvD%Input(1)%PtfmStC)
+            j=size(SrvD%Input(1)%SStC)
             ALLOCATE( MeshMapData%SrvD_P_P_2_SD_P(j), MeshMapData%SD_P_2_SrvD_P_P(j), STAT=ErrStat2 )
                IF ( ErrStat2 /= 0 ) THEN
                   CALL SetErrStat( ErrID_Fatal, 'Error allocating MeshMapData%SrvD_P_P_2_SD_P and MeshMapData%SD_P_2_SrvD_P_P.', &
                                   ErrStat, ErrMsg, RoutineName )
                   RETURN
                END IF
-            do j=1,size(SrvD%Input(1)%PtfmStC)
-               IF ( ALLOCATED(SrvD%Input(1)%PtfmStC(j)%Mesh) ) THEN
-                  IF ( SrvD%Input(1)%PtfmStC(j)%Mesh(1)%Committed ) THEN      ! Single point per PtfmStC instance
-                     ! ServoDyn PtfmStC point mesh to/from SubDyn point mesh
-                     CALL MeshMapCreate( SrvD%y%PtfmStC(j)%Mesh(1), SD%Input(1)%LMesh, MeshMapData%SrvD_P_P_2_SD_P(j), ErrStat2, ErrMsg2 )
+            do j=1,size(SrvD%Input(1)%SStC)
+               IF ( ALLOCATED(SrvD%Input(1)%SStC(j)%Mesh) ) THEN
+                  IF ( SrvD%Input(1)%SStC(j)%Mesh(1)%Committed ) THEN      ! Single point per SStC instance
+                     ! ServoDyn SStC point mesh to/from SubDyn point mesh
+                     CALL MeshMapCreate( SrvD%y%SStC(j)%Mesh(1), SD%Input(1)%LMesh, MeshMapData%SrvD_P_P_2_SD_P(j), ErrStat2, ErrMsg2 )
                         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':SrvD_P_P_2_SD_P' )       
-                     CALL MeshMapCreate( SD%y%y2Mesh, SrvD%Input(1)%PtfmStC(j)%Mesh(1), MeshMapData%SD_P_2_SrvD_P_P(j), ErrStat2, ErrMsg2 )
+                     CALL MeshMapCreate( SD%y%y2Mesh, SrvD%Input(1)%SStC(j)%Mesh(1), MeshMapData%SD_P_2_SrvD_P_P(j), ErrStat2, ErrMsg2 )
                         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':SD_P_2_SrvD_P_P' )
                   ENDIF
                ENDIF
@@ -4867,7 +4867,7 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, M
       
       
    ELSEIF ( p_FAST%CompSub /= Module_SD ) THEN     ! Platform loads from SrvD Structural control (TMDs) if not SD
-      IF ( ALLOCATED(SrvD%Input(1)%PtfmStC) ) THEN ! Platform TMD loads
+      IF ( ALLOCATED(SrvD%Input(1)%SStC) ) THEN ! Platform TMD loads
          CALL MeshCopy ( ED%Input(1)%PlatformPtMesh, MeshMapData%u_ED_PlatformPtMesh, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':u_ED_PlatformPtMesh' )
       ENDIF
@@ -5150,8 +5150,8 @@ SUBROUTINE SolveOption1(this_time, this_state, calcJacobian, p_FAST, ED, BD, HD,
 
    ! the Structural control (TMD) from ServoDyn requires recalculating SrvD if we are using it.  While it uses accelerations,
    ! the masses involved are small enough compared to the platform that we don't need to account for them in the jacobian
-   IF ( p_FAST%CompServo == Module_SrvD .and. allocated(SrvD%Input(1)%PtfmStc) ) THEN
-      ! need loads from SrvD%y%PtfmStC%Mesh
+   IF ( p_FAST%CompServo == Module_SrvD .and. allocated(SrvD%Input(1)%SStC) ) THEN
+      ! need loads from SrvD%y%SStC%Mesh
       CALL SrvD_CalcOutput( this_time, SrvD%Input(1), SrvD%p, SrvD%x(this_state), SrvD%xd(this_state), SrvD%z(this_state), &
                             SrvD%OtherSt(this_state), SrvD%y, SrvD%m, ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -5250,10 +5250,10 @@ SUBROUTINE SolveOption1(this_time, this_state, calcJacobian, p_FAST, ED, BD, HD,
       ! Map motions for ServodDyn Structural control (TMD) if used.
    IF ( p_FAST%CompServo == Module_SrvD ) THEN
       IF ( p_FAST%CompSub /= Module_SD ) THEN
-         call Transfer_ED_to_PtfmStC( SrvD%Input(1), ED%y, MeshMapData, ErrStat2, ErrMsg2 )
+         call Transfer_ED_to_SStC( SrvD%Input(1), ED%y, MeshMapData, ErrStat2, ErrMsg2 )
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       ELSEIF ( p_FAST%CompSub == Module_SD ) THEN
-         call Transfer_SD_to_PtfmStC( SrvD%Input(1), SD%y, MeshMapData, ErrStat2, ErrMsg2 )
+         call Transfer_SD_to_SStC( SrvD%Input(1), SD%y, MeshMapData, ErrStat2, ErrMsg2 )
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       ENDIF
    END IF
