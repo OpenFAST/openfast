@@ -76,7 +76,6 @@ SUBROUTINE ReadInputFiles( InputFileName, BL_Files, InputFileData, Default_DT, O
     INTEGER(IntKi)                         :: I
     INTEGER(IntKi)                         :: ErrStat2        ! The error status code
     CHARACTER(ErrMsgLen)                   :: ErrMsg2         ! The error message, if an error occurred
-    CHARACTER(1024)                        :: AABlFile(MaxBl) ! File that contains the blade information (specified in the primary input file)
     CHARACTER(*), PARAMETER                :: RoutineName = 'ReadInputFiles'
     ! initialize values:
     ErrStat = ErrID_None
@@ -85,29 +84,23 @@ SUBROUTINE ReadInputFiles( InputFileName, BL_Files, InputFileData, Default_DT, O
 
 
     ! Reads the module input-file data
-    CALL ReadPrimaryFile( InputFileName, InputFileData, AABlFile, Default_DT,  OutFileRoot, UnEcho, ErrStat2, ErrMsg2 )
+    CALL ReadPrimaryFile( InputFileName, InputFileData, Default_DT,  OutFileRoot, UnEcho, ErrStat2, ErrMsg2 )
     if(Failed()) return
 
     ! get the blade input-file data
-    ALLOCATE( InputFileData%BladeProps( NumBlades ), STAT = ErrStat2 )
+    ALLOCATE( InputFileData%BladeProps( size(BL_Files) ), STAT = ErrStat2 )
     IF (ErrStat2 /= 0) THEN
         CALL SetErrStat(ErrID_Fatal,"Error allocating memory for BladeProps.", ErrStat, ErrMsg, RoutineName)
         return
     END IF
 
-    do i = 1,NumBlades
-        CALL ReadBladeInputs ( AABlFile(i), InputFileData%BladeProps(i), UnEcho, ErrStat2, ErrMsg2 )
-        CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName//TRIM(':Blade')//TRIM(Num2LStr(I)))
-        if(Failed()) return
-    end do
-
-    if ((InputFileData%ITURB.eq.2) .or. (InputFileData%X_BLMethod.eq.2)) then
+    if ((InputFileData%ITURB==2) .or. (InputFileData%X_BLMethod==2) .or. (InputFileData%IBLUNT==1)) then
         ! We need to read the BL tables
-        CALL ReadBLTables( InputFileName, BL_Files, InputFileData, InputFileData%BladeProps(1)%NumBlNds,  ErrStat2, ErrMsg2 )
+        CALL ReadBLTables( InputFileName, BL_Files, InputFileData, ErrStat2, ErrMsg2 )
         if (Failed())return
     endif
 
-    IF(   (InputFileData%TICalcMeth.eq.1) ) THEN
+    IF(   (InputFileData%TICalcMeth==1) ) THEN
         CALL REadTICalcTables(InputFileName,InputFileData,  ErrStat2, ErrMsg2); if(Failed()) return
     ENDIF
 
@@ -121,11 +114,10 @@ END SUBROUTINE ReadInputFiles
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine reads in the primary Noise input file and places the values it reads in the InputFileData structure.
 !   It opens and prints to an echo file if requested.
-SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, AABlFile,  Default_DT, OutFileRoot, UnEc, ErrStat, ErrMsg )
+SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, Default_DT, OutFileRoot, UnEc, ErrStat, ErrMsg )
     integer(IntKi),     intent(out)     :: UnEc                                ! I/O unit for echo file. If > 0, file is open for writing.
     integer(IntKi),     intent(out)     :: ErrStat                             ! Error status
     REAL(DbKi),         INTENT(IN)      :: Default_DT                          ! The default DT (from glue code)
-    character(*),       intent(out)     :: AABlFile(MaxBl)                     ! name of the files containing blade inputs
     character(*),       intent(in)      :: InputFile                           ! Name of the file containing the primary input data
     character(*),       intent(out)     :: ErrMsg                              ! Error message
     character(*),       intent(in)      :: OutFileRoot                         ! The rootname of the echo file, possibly opened in this routine
@@ -221,7 +213,7 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, AABlFile,  Default_DT, Out
     CALL ReadVar(UnIn,InputFile,InputFileData%IInflow      ,"InflowMod"    ,"" ,ErrStat2,ErrMsg2,UnEc); call check
     CALL ReadVar(UnIn,InputFile,InputFileData%TICalcMeth   ,"TICalcMeth"   ,"" ,ErrStat2,ErrMsg2,UnEc); call check
     CALL ReadVAr(UnIn,InputFile,InputFileData%TICalcTabFile,"TICalcTabFile","" ,ErrStat2,ErrMsg2,UnEc); call check
-    CALL ReadVar(UnIn,InputFile,InputFileData%z0_AA        ,"SurfRoughness","" ,ErrStat2,ErrMsg2,UnEc); call check
+    CALL ReadVar(UnIn,InputFile,InputFileData%Lturb        ,"Lturb"        ,"" ,ErrStat2,ErrMsg2,UnEc); call check
     CALL ReadVar(UnIn,InputFile,InputFileData%ITURB        ,"TurbMod"      ,"" ,ErrStat2,ErrMsg2,UnEc); call check ! ITURB - TBLTE NOISE
     CALL ReadVar(UnIn,InputFile,InputFileData%X_BLMethod   ,"BLMod"        ,"" ,ErrStat2,ErrMsg2,UnEc); call check
     CALL ReadVar(UnIn,InputFile,InputFileData%ITRIP        ,"TripMod"      ,"" ,ErrStat2,ErrMsg2,UnEc); call check
@@ -230,12 +222,6 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, AABlFile,  Default_DT, Out
     CALL ReadVar(UnIn,InputFile,InputFileData%ROUND        ,"RoundTip"     ,"" ,ErrStat2,ErrMsg2,UnEc); call check
     CALL ReadVar(UnIn,InputFile,InputFileData%ALPRAT       ,"ALPRAT"       ,"" ,ErrStat2,ErrMsg2,UnEc); call check
     CALL ReadVar(UnIn,InputFile,InputFileData%IBLUNT       ,"BluntMod"     ,"" ,ErrStat2,ErrMsg2,UnEc); call check
-    
-    ! AABlFile - Names of files containing distributed aerodynamic properties for each blade (see AA_BladeInputFile type):
-    DO I = 1,MaxBl
-        CALL ReadVar ( UnIn, InputFile, AABlFile(I), 'AABlFile('//TRIM(Num2Lstr(I))//')', 'Name of file containing distributed aerodynamic properties for blade '//TRIM(Num2Lstr(I)), ErrStat2, ErrMsg2, UnEc ); call check
-        IF ( PathIsRelative( AABlFile(I) ) ) AABlFile(I) = TRIM(PriPath)//TRIM(AABlFile(I))
-    END DO
 
     ! Return on error at end of section
     IF ( ErrStat >= AbortErrLev ) THEN
@@ -307,58 +293,6 @@ CONTAINS
    !...............................................................................................................................
 END SUBROUTINE ReadPrimaryFile
 !----------------------------------------------------------------------------------------------------------------------------------
-!> This routine reads a blade input file.
-SUBROUTINE ReadBladeInputs ( AABlFile, BladeKInputFileData, UnEc, ErrStat, ErrMsg )
-    TYPE(AA_BladePropsType),  INTENT(INOUT)  :: BladeKInputFileData                 ! Data for Blade K stored in the module's input file
-    CHARACTER(*),             INTENT(IN)     :: AABlFile                            ! Name of the blade input file data
-    INTEGER(IntKi),           INTENT(IN)     :: UnEc                                ! I/O unit for echo file. If present and > 0, write to UnEc
-    INTEGER(IntKi),           INTENT(OUT)    :: ErrStat                             ! Error status
-    CHARACTER(*),             INTENT(OUT)    :: ErrMsg                              ! Error message
-    ! Local variables:
-    INTEGER(IntKi)               :: I                                               ! A generic DO index.
-    INTEGER( IntKi )             :: UnIn                                            ! Unit number for reading file
-    INTEGER(IntKi)               :: ErrStat2 , IOS                                  ! Temporary Error status
-    CHARACTER(ErrMsgLen)         :: ErrMsg2                                         ! Temporary Err msg
-    CHARACTER(*), PARAMETER      :: RoutineName = 'ReadBladeInputs'
-    ErrStat = ErrID_None
-    ErrMsg  = ""
-    UnIn = -1
-    ! Allocate space for these variables
-    CALL GetNewUnit   (UnIn, ErrStat2, ErrMsg2 ); if(Failed()) return
-    CALL OpenFInpFile (UnIn, AABlFile, ErrStat2, ErrMsg2 ); if(Failed()) return
-    !  -------------- HEADER -------------------------------------------------------
-    ! Skip the header.
-    CALL ReadCom ( UnIn, AABlFile, 'unused blade file header line 1', ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
-    CALL ReadCom ( UnIn, AABlFile, 'unused blade file header line 2', ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
-    !  -------------- Blade properties table ------------------------------------------
-    CALL ReadCom ( UnIn, AABlFile, 'Section header: Blade Properties', ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
-    ! NumBlNds - Number of blade nodes used in the analysis (-):
-    CALL ReadVar( UnIn, AABlFile, BladeKInputFileData%NumBlNds, "NumBlNds", "Number of blade nodes used in the analysis (-)", ErrStat2, ErrMsg2, UnEc); if(Failed()) return
-    CALL ReadCom ( UnIn, AABlFile, 'Table header: names', ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
-    CALL ReadCom ( UnIn, AABlFile, 'Table header: units', ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
-    ! allocate space for blade inputs:
-    CALL AllocAry(BladeKInputFileData%TEAngle   ,BladeKInputFileData%NumBlNds,'TEAngle'   ,ErrStat2,ErrMsg2); if(Failed()) return
-    CALL AllocAry(BladeKInputFileData%TEThick   ,BladeKInputFileData%NumBlNds,'TEThick'   ,ErrStat2,ErrMsg2); if(Failed()) return
-    CALL AllocAry(BladeKInputFileData%StallStart,BladeKInputFileData%NumBlNds,'StallStart',ErrStat2,ErrMsg2); if(Failed()) return
-    DO I=1,BladeKInputFileData%NumBlNds
-        READ( UnIn, *, IOStat=IOS )  BladeKInputFileData%TEAngle(I), BladeKInputFileData%TEThick(I)
-        CALL CheckIOS( IOS, AABlFile, 'Blade properties row '//TRIM(Num2LStr(I)), NumType, ErrStat2, ErrMsg2); if(Failed()) return
-        IF (UnEc > 0) THEN
-            WRITE( UnEc, "(6(F9.4,1x),I9)", IOStat=IOS)  BladeKInputFileData%TEAngle(I), BladeKInputFileData%TEThick(I)
-        END IF
-    END DO
-    !  -------------- END OF FILE --------------------------------------------
-    CALL Cleanup()
-CONTAINS
-    logical function Failed()
-        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-        Failed =  ErrStat >= AbortErrLev
-        if(Failed) call cleanup()
-    end function Failed
-   SUBROUTINE Cleanup()
-      IF (UnIn > 0) CLOSE(UnIn)
-   END SUBROUTINE Cleanup
-END SUBROUTINE ReadBladeInputs
 
 ! ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -388,12 +322,11 @@ end subroutine
 
 
 
-SUBROUTINE ReadBLTables( InputFile,BL_Files,InputFileData, nAirfoils, ErrStat, ErrMsg )
+SUBROUTINE ReadBLTables( InputFile, BL_Files, InputFileData, ErrStat, ErrMsg )
     ! Passed variables
     character(*),       intent(in)      :: InputFile                           ! Name of the file containing the primary input data
     character(*), dimension(:),       intent(in)      :: BL_Files                           ! Name of the file containing the primary input data
-type(AA_InputFile), intent(inout)   :: InputFileData                       ! All the data in the Noise input file
-    integer(IntKi),     intent(in)      :: nAirfoils                           ! Number of Airfoil tables
+type(AA_InputFile), intent(inout)       :: InputFileData                       ! All the data in the Noise input file
     integer(IntKi),     intent(out)     :: ErrStat                             ! Error status
     character(*),       intent(out)     :: ErrMsg                              ! Error message
     ! Local variables:
@@ -406,7 +339,7 @@ type(AA_InputFile), intent(inout)   :: InputFileData                       ! All
     character(1024)               :: FTitle                                    ! "File Title": the 2nd line of the input file, which contains a description of its contents
     character(200)                :: Line                                      ! Temporary storage of a line from the input file (to compare with "default")
     character(*), parameter       :: RoutineName = 'readbltable'
-    integer(IntKi)                :: nRe, nAoA  !  Number of Reynolds number and angle of attack listed
+    integer(IntKi)                :: nRe, nAoA, nAirfoils  !  Number of Reynolds number, angle of attack, and number of airfoils listed
     integer(IntKi)                :: iAF , iRe, iAoA, iDummy, iBuffer ! loop counters
     real(DbKi),dimension(:,:),ALLOCATABLE :: Buffer
     integer                 :: iLine
@@ -415,7 +348,7 @@ type(AA_InputFile), intent(inout)   :: InputFileData                       ! All
     ErrMsg  = ""
 
     CALL GetPath( InputFile, PriPath )     ! Input files will be relative to the path where the primary input file is located.
-
+    nAirfoils = size(BL_Files)
     do iAF=1,nAirfoils
 
         FileName = trim(BL_Files(iAF))
@@ -474,6 +407,17 @@ type(AA_InputFile), intent(inout)   :: InputFileData                       ! All
                     InputFileData%AoAListBL(iAoA)= Buffer(iAoA, 1) ! AoA
                 enddo
         endif
+        
+        if (InputFileData%IBLUNT==1) then
+            call ReadCom(UnIn, FileName, 'Comment' , ErrStat2, ErrMsg2)
+            call ReadCom(UnIn, FileName, 'Comment' , ErrStat2, ErrMsg2)
+            call ReadVar(UnIn, FileName, InputFileData%BladeProps(iAF)%TEAngle, 'TEAngle', 'TE Angle',ErrStat2, ErrMsg2); if(Failed()) return
+            call ReadVar(UnIn, FileName, InputFileData%BladeProps(iAF)%TEThick, 'TEThick', 'TE Thick',ErrStat2, ErrMsg2); if(Failed()) return
+        else
+            InputFileData%BladeProps(iAF)%TEAngle = 0._ReKi
+            InputFileData%BladeProps(iAF)%TEThick = 0._ReKi
+        endif
+        
         if (UnIn > 0) CLOSE(UnIn)
 
     enddo
@@ -520,7 +464,8 @@ SUBROUTINE ReadTICalcTables(InputFile, InputFileData, ErrStat, ErrMsg)
 
     CALL GetNewUnit( UnIn, ErrStat2, ErrMsg2); call check()
     CALL OpenFInpFile ( UnIn, FileName, ErrStat2, ErrMsg2 ); if(Failed()) return
-
+    CALL ReadCom(UnIn, FileName, 'Text Line', ErrStat2, ErrMsg2); call check
+    CALL ReadVar(UnIn, FileName, InputFileData%AvgV, 'AvgV',   'Echo flag', ErrStat2, ErrMsg2); call check
     CALL ReadCom(UnIn, FileName, 'Text Line', ErrStat2, ErrMsg2); call check
     CALL ReadVar(UnIn, FileName, GridY, 'GridY',   'Echo flag', ErrStat2, ErrMsg2); call check
     CALL ReadCom(UnIn, FileName, 'Text Line', ErrStat2, ErrMsg2);call check
