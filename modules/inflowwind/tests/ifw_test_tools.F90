@@ -17,7 +17,7 @@ contains
             '------- InflowWind v3.01.* INPUT FILE -------------------------------------------------------------------------                                                                    ', &
             'Steady 8 m/s winds with no shear for FAST CertTests #20 and #25                                                                                                                    ', &
             '---------------------------------------------------------------------------------------------------------------                                                                    ', &
-            '        true  Echo           - Echo input data to <RootName>.ech (flag)                                                                                                            ', &
+            '       false  Echo           - Echo input data to <RootName>.ech (flag)                                                                                                            ', &
             '          1   WindType       - switch for wind file type (1=steady; 2=uniform; 3=binary TurbSim FF; 4=binary Bladed-style FF; 5=HAWC format; 6=User defined; 7=native Bladed FF)   ', &
             '          0   PropagationDir - Direction of wind propagation (meteoroligical rotation from aligned with X (positive rotates towards -Y) -- degrees)                                ', &
             '          0   VFlowAng       - Upflow angle (degrees) (not used for native Bladed format WindType=7)                                                                               ', &
@@ -84,7 +84,7 @@ contains
             '------- InflowWind v3.01.* INPUT FILE -------------------------------------------------------------------------                                                                    ', &
             'Steady 8 m/s winds with no shear for FAST CertTests #20 and #25                                                                                                                    ', &
             '---------------------------------------------------------------------------------------------------------------                                                                    ', &
-            '        true  Echo           - Echo input data to <RootName>.ech (flag)                                                                                                            ', &
+            '       true   Echo           - Echo input data to <RootName>.ech (flag)                                                                                                            ', &
             '          2   WindType       - switch for wind file type (1=steady; 2=uniform; 3=binary TurbSim FF; 4=binary Bladed-style FF; 5=HAWC format; 6=User defined; 7=native Bladed FF)   ', &
             '          0   PropagationDir - Direction of wind propagation (meteoroligical rotation from aligned with X (positive rotates towards -Y) -- degrees)                                ', &
             '          0   VFlowAng       - Upflow angle (degrees) (not used for native Bladed format WindType=7)                                                                               ', &

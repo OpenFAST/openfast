@@ -46,6 +46,9 @@ set(CTEST_BEAMDYN_EXECUTABLE "${CMAKE_BINARY_DIR}/modules/beamdyn/beamdyn_driver
 # Set the HydroDyn executable configuration option and default
 set(CTEST_HYDRODYN_EXECUTABLE "${CMAKE_BINARY_DIR}/modules/hydrodyn/hydrodyn_driver" CACHE FILEPATH "Specify the HydroDyn driver executable to use in testing.")
 
+# Set the SubDyn executable configuration option and default
+set(CTEST_SUBDYN_EXECUTABLE "${CMAKE_BINARY_DIR}/modules/subdyn/subdyn_driver" CACHE FILEPATH "Specify the SubDyn driver executable to use in testing.")
+
 # Set the python executable configuration option and default
 if(NOT EXISTS ${PYTHON_EXECUTABLE})
   find_program(PYTHON_EXECUTABLE NAMES python3 python py)
@@ -67,7 +70,7 @@ add_subdirectory("${CMAKE_CURRENT_LIST_DIR}/r-test")
 
 # build and seed the test directories with the data they need to run the tests
 file(MAKE_DIRECTORY ${CTEST_BINARY_DIR})
-foreach(regTest glue-codes/openfast modules/aerodyn modules/beamdyn modules/hydrodyn)
+foreach(regTest glue-codes/openfast modules/aerodyn modules/beamdyn modules/hydrodyn modules/subdyn)
   file(MAKE_DIRECTORY ${CTEST_BINARY_DIR}/${regTest})
 endforeach()
 

@@ -1860,7 +1860,7 @@ SUBROUTINE HydroDyn_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherSt
 
          ! Local variables
       INTEGER                                            :: I, iWAMIT, iBody ! Generic loop counters
-      TYPE(HydroDyn_ContinuousStateType)                 :: dxdt            ! Continuous state derivatives at t
+!      TYPE(HydroDyn_ContinuousStateType)                 :: dxdt            ! Continuous state derivatives at t
       TYPE(HydroDyn_DiscreteStateType)                   :: xd_t            ! Discrete states at t (copy)
       TYPE(HydroDyn_ConstraintStateType)                 :: z_Residual      ! Residual of the constraint state functions (Z)
       TYPE(HydroDyn_InputType)                           :: u               ! Instantaneous inputs
@@ -2322,6 +2322,8 @@ SUBROUTINE HydroDyn_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxd
          ! Compute the first time derivatives of the continuous states here:
    if ( .not. m%u_WAMIT(1)%Mesh%Committed ) return  ! Make sure we are using WAMIT / there is a valid mesh 
 
+   call HydroDyn_CopyContState( x, dxdt, MESH_NEWCOPY, ErrStat, ErrMsg)
+      if ( ErrStat >= AbortErrLev ) return
    
    if ( p%NBodyMod == 1 .or. p%NBody == 1 ) then
          ! Copy the inputs from the HD mesh into the WAMIT mesh
