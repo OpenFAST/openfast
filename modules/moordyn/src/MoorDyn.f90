@@ -5961,7 +5961,8 @@ CONTAINS
       Body%M = RotateM6(Body%M0, Body%OrMat)
 	
       !gravity on core body
-	
+      Fgrav(1) = 0.0_DbKi
+      Fgrav(2) = 0.0_DbKi
       Fgrav(3) = Body%bodyV * p%rhow * p%g - Body%bodyM * p%g ! weight+buoyancy vector
 	
       body_rCGrotated = MATMUL(Body%OrMat, Body%rCG) ! rotateVector3(body_rCG, OrMat, body_rCGrotated); ! relative vector to body CG in inertial orientation
