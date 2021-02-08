@@ -55,23 +55,7 @@ MODULE Conv_Radiation
    
 CONTAINS
 
-SUBROUTINE ShiftValuesLeft(XDHistory, NSteps)
-! This routine shifts every entry in XDHistory such that XDHistory(K+1,I) is now stored in XDHistory(K,I)
-!
-      REAL(ReKi),      INTENT(INOUT)  :: XDHistory (:,:)                        ! The time history of the 3 components of the translational velocity        (in m/s)        of the WAMIT reference and the 3 components of the rotational (angular) velocity  (in rad/s)        of the platform relative to the inertial frame
-      INTEGER(IntKi),  INTENT(IN   )  :: NSteps                                 ! Number of elements in the array
-      
-      INTEGER(IntKi)                  :: I
-!      INTEGER(IntKi)                  :: J
-      INTEGER(IntKi)                  :: K
-      
-      DO K = 0,NSteps-2
-         DO I = 1,6                 ! Loop through all DOFs
-               XDHistory(K,I) = XDHistory(K+1,I)
-         END DO
-      END DO
-      
-END SUBROUTINE ShiftValuesLeft
+
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine is called at the start of the simulation to perform initialization steps. 
@@ -119,16 +103,18 @@ SUBROUTINE Conv_Rdtn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, 
       
       TYPE(FFT_DataType)                     :: FFT_Data                             ! the instance of the FFT module we're using
 
+         ! Error handling
+      CHARACTER(1024)                        :: ErrMsg2                              ! Temporary error message for calls
+      INTEGER(IntKi)                         :: ErrStat2                             ! Temporary error status for calls
       
          ! Initialize ErrStat
          
       ErrStat = ErrID_None         
       ErrMsg  = ""      
-!TODO      
-!BJJ: This was uninitialized; not sure how it should be set >>>      
-!PRINT *, 'Greg, please initialize this variable:RdtnFrmA' 
-RdtnFrmAM = .FALSE.      
-!<<<      
+      
+      ! For now, this is the only model we have implemented
+      RdtnFrmAM = .FALSE.      
+      
          ! Initialize the NWTC Subroutine Library
          
       CALL NWTC_Init(  )
@@ -139,7 +125,7 @@ RdtnFrmAM = .FALSE.
          !   RdtnOmegaMax, Abort because RdtnDT must be reduced in order to have
          !   sufficient accuracy in the computation of the radiation impulse response
          !   functions:
-         
+      p%NBody      = InitInp%NBody   
       p%RdtnDT     = InitInp%RdtnDT   
       RdtnOmegaMax = Pi / InitInp%RdtnDT   
       
@@ -151,8 +137,8 @@ RdtnFrmAM = .FALSE.
          RETURN
       END IF
       
-      
-      
+      call AllocAry( u%Velocity, 6*p%NBody, "u%Velocity"    , ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Conv_Rdtn_Init' )
+      call AllocAry( y%F_Rdtn  , 6*p%NBody, "y%F_Rdtn"      , ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Conv_Rdtn_Init' )  
 
       u%Velocity = 0.0 !this is an initial guess;  
       
@@ -190,14 +176,14 @@ RdtnFrmAM = .FALSE.
          RETURN
       END IF
 
-      ALLOCATE ( p%RdtnKrnl (0:p%NStepRdtn-1,6,6) , STAT=ErrStat )
+      ALLOCATE ( p%RdtnKrnl (0:p%NStepRdtn-1,6*p%NBody,6*p%NBody) , STAT=ErrStat )
       IF ( ErrStat /= ErrID_None )  THEN
          ErrMsg = ' Error allocating memory for the RdtnKrnl array.'
          ErrStat = ErrID_Fatal
          RETURN
       END IF
 
-      ALLOCATE ( xd%XDHistory(0:p%NStepRdtn  ,6  ) , STAT=ErrStat )   ! In the numerical convolution we must have NStepRdtn1 elements within the XDHistory array, which is one more than the NStepRdtn elements that are in the RdtnKrnl array
+      ALLOCATE ( xd%XDHistory(0:p%NStepRdtn  ,6*p%NBody  ) , STAT=ErrStat )   ! In the numerical convolution we must have NStepRdtn1 elements within the XDHistory array, which is one more than the NStepRdtn elements that are in the RdtnKrnl array
       IF ( ErrStat /= ErrID_None )  THEN
          ErrMsg = ' Error allocating memory for the XDHistory array.'
          ErrStat = ErrID_Fatal
@@ -206,7 +192,7 @@ RdtnFrmAM = .FALSE.
 
          ! Initialize all elements of the xd%XDHistory array with the intial values of u%Velocity
       DO K = 0,p%NStepRdtn-1
-         DO J = 1,6                 ! Loop through all DOFs
+         DO J = 1,6*p%NBody                 ! Loop through all DOFs
             xd%XDHistory(K,J) = u%Velocity(J)
          END DO
       END DO
@@ -243,13 +229,13 @@ RdtnFrmAM = .FALSE.
          ! Compute the upper-triangular portion (diagonal and above) of the sine
          !   transform of the wave radiation kernel:
 
-            Indx = 0
-            DO J = 1,6        ! Loop through all rows    of RdtnKrnl
-               DO K = J,6     ! Loop through all columns of RdtnKrnl above and including the diagonal
-                  Indx = Indx + 1
+           ! Indx = 0
+            DO J = 1,6*p%NBody        ! Loop through all rows    of RdtnKrnl
+               DO K = 1,6*p%NBody     ! Loop through all columns of RdtnKrnl above and including the diagonal
+                  !Indx = Indx + 1
                   p%RdtnKrnl(I,J,K) = Krnl_Fact*Omega*( InterpStp( Omega, InitInp%HdroFreq(:), &
-                                                                                InitInp%HdroAddMs(:       ,Indx), LastInd, InitInp%NInpFreq ) &
-                                                      -                         InitInp%HdroAddMs(InitInp%NInpFreq,Indx)                      )
+                                                                                InitInp%HdroAddMs(:       ,J,K), LastInd, InitInp%NInpFreq ) &
+                                                      -                         InitInp%HdroAddMs(InitInp%NInpFreq,J,K)                      )
                END DO          ! K - All columns of RdtnKrnl above and including the diagonal
             END DO             ! J - All rows    of RdtnKrnl
 
@@ -269,16 +255,11 @@ RdtnFrmAM = .FALSE.
             RETURN
          END IF
       
-         DO J = 1,6                 ! Loop through all rows    of RdtnKrnl
-            DO K = J,6              ! Loop through all columns of RdtnKrnl above and including the diagonal
+         DO J = 1,6*p%NBody                 ! Loop through all rows    of RdtnKrnl
+            DO K = 1,6*p%NBody              ! Loop through all columns of RdtnKrnl above and including the diagonal
                CALL ApplySINT( p%RdtnKrnl(:,J,K), FFT_Data, ErrStat )
                IF ( ErrStat /= ErrID_None ) RETURN
             END DO                   ! K - All columns of RdtnKrnl above and including the diagonal
-            DO K = J+1,6            ! Loop through all rows    of RdtnKrnl below the diagonal
-               DO I = 0,p%NStepRdtn-1 ! Loop through all frequency components (including zero) of the sine transform
-                  p%RdtnKrnl(I,K,J) = p%RdtnKrnl(I,J,K)
-               END DO                ! I - All frequency components (including zero) of the sine transform
-            END DO                   ! K - All rows    of RdtnKrnl below the diagonal
          END DO                      ! J - All rows    of RdtnKrnl
 
          CALL ExitSINT(FFT_Data, ErrStat)
@@ -320,11 +301,11 @@ RdtnFrmAM = .FALSE.
          ! Compute the upper-triangular portion (diagonal and above) of the cosine
          !   transform of the wave radiation kernel:
 
-            Indx = 0
-            DO J = 1,6        ! Loop through all rows    of RdtnKrnl
-               DO K = J,6     ! Loop through all columns of RdtnKrnl above and including the diagonal
-                  Indx = Indx + 1
-                  p%RdtnKrnl(I,J,K) = Krnl_Fact*InterpStp ( Omega, InitInp%HdroFreq(:), InitInp%HdroDmpng(:,Indx), LastInd, InitInp%NInpFreq )
+            !Indx = 0
+            DO J = 1,6*p%NBody        ! Loop through all rows    of RdtnKrnl
+               DO K = 1,6*p%NBody     ! Loop through all columns of RdtnKrnl above and including the diagonal
+                  !Indx = Indx + 1
+                  p%RdtnKrnl(I,J,K) = Krnl_Fact*InterpStp ( Omega, InitInp%HdroFreq(:), InitInp%HdroDmpng(:,J,K), LastInd, InitInp%NInpFreq )
                END DO          ! K - All columns of RdtnKrnl above and including the diagonal
             END DO             ! J - All rows    of RdtnKrnl
 
@@ -343,8 +324,8 @@ RdtnFrmAM = .FALSE.
             RETURN
          END IF
 
-         DO J = 1,6                          ! Loop through all rows    of RdtnKrnl
-            DO K = J,6                       ! Loop through all columns of RdtnKrnl above and including the diagonal
+         DO J = 1,6*p%NBody                          ! Loop through all rows    of RdtnKrnl
+            DO K = 1,6*p%NBody                       ! Loop through all columns of RdtnKrnl above and including the diagonal
                CALL ApplyCOST( p%RdtnKrnl(:,J,K), FFT_Data, ErrStat )
                IF ( ErrStat /= ErrID_None ) THEN
                   ErrMsg  = 'Error applying Cosine Transform'
@@ -352,11 +333,6 @@ RdtnFrmAM = .FALSE.
                   RETURN
                END IF
             END DO                            ! K - All columns of RdtnKrnl above and including the diagonal
-            DO K = J+1,6                     ! Loop through all rows    of RdtnKrnl below the diagonal
-               DO I = 0,p%NStepRdtn-1  ! Loop through all radiation time steps
-                  p%RdtnKrnl(I,K,J) = p%RdtnKrnl(I,J,K)
-               END DO                         ! I - All radiation time steps
-            END DO                            ! K - All rows    of RdtnKrnl below the diagonal
          END DO                               ! J - All rows    of RdtnKrnl
 
          CALL ExitCOST(FFT_Data, ErrStat)
@@ -388,10 +364,8 @@ RdtnFrmAM = .FALSE.
    !END IF
                 
                                                   
-      IF ( ALLOCATED( RdtnTime     ) ) DEALLOCATE( RdtnTime     )
+   IF ( ALLOCATED( RdtnTime     ) ) DEALLOCATE( RdtnTime     )
 
-   
-      
          ! If you want to choose your own rate instead of using what the glue code suggests, tell the glue code the rate at which
          !   this module must be called here:
          
@@ -494,7 +468,8 @@ SUBROUTINE Conv_Rdtn_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherS
       TYPE(Conv_Rdtn_InputType)                           :: u               !< Instantaneous inputs
       INTEGER(IntKi)                                      :: ErrStat2        !< Error status of the operation (secondary error)
       CHARACTER(ErrMsgLen)                                :: ErrMsg2         !< Error message if ErrStat2 /= ErrID_None
-
+      character(*), parameter                             :: RoutineName = 'Conv_Rdtn_UpdateStates'
+ 
       
          ! Initialize variables
 
@@ -507,8 +482,12 @@ SUBROUTINE Conv_Rdtn_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherS
       
       
          ! Get the inputs at time t, based on the array of values sent by the glue code:
+      call Conv_Rdtn_CopyInput( Inputs(1), u, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
+  
          
-      CALL Conv_Rdtn_Input_ExtrapInterp( Inputs, InputTimes, u, t, ErrStat, ErrMsg )  
+      CALL Conv_Rdtn_Input_ExtrapInterp( Inputs, InputTimes, u, t, ErrStat2, ErrMsg2 )  
+         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
       IF ( ErrStat >= AbortErrLev ) RETURN
        
       
@@ -516,7 +495,8 @@ SUBROUTINE Conv_Rdtn_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherS
          !   Note that xd [discrete state] is changed in Conv_Rdtn_UpdateDiscState() so xd will now contain values at t+Interval
          !   We'll first make a copy that contains xd at time t, which will be used in computing the constraint states
  
-      CALL Conv_Rdtn_UpdateDiscState( t, n, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
+      CALL Conv_Rdtn_UpdateDiscState( t, n, u, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2 )
+         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
      
  
          ! Integrate (update) continuous states (x) here:
@@ -550,7 +530,7 @@ SUBROUTINE Conv_Rdtn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat
       CHARACTER(*),                         INTENT(  OUT) :: ErrMsg      !< Error message if ErrStat /= ErrID_None
       
 !      REAL(ReKi)                           :: F_Rdtn (6)
-      REAL(ReKi)                           :: F_RdtnDT (6)                            ! The portion of the total load contribution from wave radiation damping associated with the convolution integral proportional to ( RdtnDT - RdtnRmndr ) (N, N-m)
+      REAL(ReKi)                           :: F_RdtnDT (6*p%NBody)                            ! The portion of the total load contribution from wave radiation damping associated with the convolution integral proportional to ( RdtnDT - RdtnRmndr ) (N, N-m)
       
       INTEGER                              :: I                                       ! Generic index
       INTEGER                              :: J                                       ! Generic index
@@ -568,12 +548,12 @@ SUBROUTINE Conv_Rdtn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat
       
       MaxInd = MIN(p%NStepRdtn-1,OtherState%IndRdtn)  ! Note: xd%IndRdtn index is from the previous time-step since this state was for the previous time-step
       
-      DO I = 1,6                 ! Loop through all wave radiation damping forces and moments
+      DO I = 1,6*p%NBody                 ! Loop through all wave radiation damping forces and moments
 
          F_RdtnDT   (I) = 0.0
        !  F_RdtnRmndr(I) = 0.0
 
-         DO J = 1,6              ! Loop through all platform DOFs
+         DO J = 1,6*p%NBody              ! Loop through all platform DOFs
             
             DO K = 0, MaxInd ! Loop through all NStepRdtn time steps in the radiation Kernel (less than NStepRdtn time steps are used when ZTime < RdtnTmax)
                F_RdtnDT(I) = F_RdtnDT(I) - p%RdtnKrnl(MaxInd-K,I,J)*xd%XDHistory(K,J)
@@ -655,9 +635,8 @@ SUBROUTINE Conv_Rdtn_UpdateDiscState( Time, n, u, p, x, xd, z, OtherState, m, Er
          
       ErrStat = ErrID_None         
       ErrMsg  = ""               
-      
-      
-    
+
+
          ! Find the index xd%IndRdtn, where RdtnTime(IndRdtn) is the largest value in
          !   RdtnTime(:) that is less than or equal to Time and find the amount of
          !   time remaining from this calculation:
@@ -689,64 +668,21 @@ SUBROUTINE Conv_Rdtn_UpdateDiscState( Time, n, u, p, x, xd, z, OtherState, m, Er
    !BJJ: this needs a better check so that it is ALWAYS done (MATLAB/Simulink could possibly avoid this step by starting at Time>0, OR there may be some numerical issues where this is NOT EXACTLY zero)
          
       IF ( OtherState%IndRdtn < (p%NStepRdtn) )  THEN 
-         DO J = 1,6  ! Loop through all platform DOFs
+         DO J = 1,6*p%NBody  ! Loop through all platform DOFs
             xd%XDHistory(OtherState%IndRdtn,J) = u%Velocity(J)  ! XDHistory was allocated as a zero-based array!
          END DO       ! J - All platform DOFs
       ELSE
-         !CALL ShiftValuesLeft( xd%XDHistory, p%NStepRdtn )  ! This is NOT to be used GJH
+         
          ! Shift the stored history by one index
          DO K = 0,p%NStepRdtn-2
-            DO J = 1,6                 ! Loop through all DOFs
+            DO J = 1,6*p%NBody                 ! Loop through all DOFs
                xd%XDHistory(K,J) = xd%XDHistory(K+1,J)
             END DO
          END DO
-         DO J = 1,6  ! Loop through all platform DOFs
+         DO J = 1,6*p%NBody  ! Loop through all platform DOFs
             xd%XDHistory(p%NStepRdtn-1,J) = u%Velocity(J) ! Set the last array element to the current velocity
          END DO       ! J - All platform DOFs
       END IF
-   
-   !      IF ( Time == 0.0_DbKi )  THEN              ! (1) .TRUE. if we are on the initialization pass where Time = 0.0 (and IndRdtn = 0)
-   !
-   !         DO J = 1,6  ! Loop through all platform DOFs
-   !            xd%XDHistory(xd%IndRdtn,J) = u%Velocity(J)
-   !         END DO       ! J - All platform DOFs
-   !
-   !         xd%LastIndRdtn  =     xd%IndRdtn       ! Save the value of                           IndRdtn for the next call to this routine (in this case IndRdtn = 0)
-   !
-   !      ELSEIF ( xd%IndRdtn > xd%LastIndRdtn )  THEN ! (2) .TRUE. if we have increased in time by at least RdtnDT
-   !
-   !         DO J = 1,6                       ! Loop through all platform DOFs
-   !
-   !            IncrmntUD = ( p%RdtnDT/( Time -     ( xd%LastIndRdtn*p%RdtnDT ) ) ) * &
-   !                        ( u%Velocity(J) - xd%XDHistory(MOD(xd%LastIndRdtn ,p%NStepRdtn1),J) )
-   !
-   !            DO K = xd%LastIndRdtn +1,xd%IndRdtn ! Loop through all radiation time steps where the time history of UD has yet to be stored
-   !               xd%XDHistory(MOD(K,p%NStepRdtn1),J) = xd%XDHistory(MOD(xd%LastIndRdtn ,p%NStepRdtn1),J) &
-   !                                                                              + ( K - xd%LastIndRdtn  )*IncrmntUD
-   !            END DO                         ! K - All radiation time steps where the time history of UD has yet to be stored
-   !
-   !         END DO                            ! J - All platform DOFs
-   !
-   !         xd%LastIndRdtn2 = xd%LastIndRdtn       ! Save the value of                       LastIndRdtn for the next call to this routine
-   !         xd%LastIndRdtn  = xd%IndRdtn           ! Save the value of                           IndRdtn for the next call to this routine
-   !         xd%LastTime     = Time                     ! Save the value of Time associated with LastIndRdtn for the next call to this routine
-   !
-   !!BJJ: this needs a better check in case there may be some numerical issues where this is NOT EXACTLY the same...
-   !      ELSEIF ( Time == xd%LastTime )  THEN     ! (3). .TRUE. if the time has not changed since the last time we have increased in time by at least RdtnDt (i.e., on a call to the corrector)
-   !
-   !         DO J = 1,6                       ! Loop through all platform DOFs
-   !
-   !            IncrmntUD = ( p%RdtnDT/( Time -    ( xd%LastIndRdtn2*p%RdtnDT ) ) ) * &
-   !                        ( u%Velocity(J) - xd%XDHistory(MOD(xd%LastIndRdtn2,p%NStepRdtn1),J) )
-   !
-   !            DO K = xd%LastIndRdtn2+1,xd%IndRdtn ! Loop through all radiation time steps where the time history of UD should be updated
-   !               xd%XDHistory(MOD(K,p%NStepRdtn1),J) = xd%XDHistory(MOD(xd%LastIndRdtn2,p%NStepRdtn1),J) &
-   !                                                                              + ( K - xd%LastIndRdtn2 )*IncrmntUD
-   !            END DO                         ! K - All radiation time steps where the time history of UD should be updated
-   !
-   !         END DO                            ! J - All platform DOFs
-   !
-   !      END IF
 
 END SUBROUTINE Conv_Rdtn_UpdateDiscState
 !----------------------------------------------------------------------------------------------------------------------------------

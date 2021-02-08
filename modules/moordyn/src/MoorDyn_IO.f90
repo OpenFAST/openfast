@@ -1180,7 +1180,7 @@ CONTAINS
                CASE (FZ)
                   y%WriteOutput(I) = m%ConnectList(p%OutParam(I)%ObjID)%Ftot(3)  ! total force in z
                CASE DEFAULT
-                  y%WriteOutput(I) = 0.0_ReKi
+                  y%WriteOutput(I) = 0.0_DbKi
                   ErrStat = ErrID_Warn
                   ErrMsg = ' Unsupported output quantity '//TRIM(Num2Lstr(p%OutParam(I)%QType))//' requested from Connection '//TRIM(Num2Lstr(p%OutParam(I)%ObjID))//'.'
             END SELECT
@@ -1203,13 +1203,13 @@ CONTAINS
                CASE (Ten)
                  y%WriteOutput(I) = TwoNorm(m%LineList(p%OutParam(I)%ObjID)%T(:,p%OutParam(I)%NodeID))  ! this is actually the segment tension ( 1 < NodeID < N )  Should deal with properly!
                CASE DEFAULT
-                 y%WriteOutput(I) = 0.0_ReKi
+                 y%WriteOutput(I) = 0.0_DbKi
                  ErrStat = ErrID_Warn
                  ErrMsg = ' Unsupported output quantity '//TRIM(Num2Lstr(p%OutParam(I)%QType))//' requested from Line '//TRIM(Num2Lstr(p%OutParam(I)%ObjID))//'.'
             END SELECT
 
          ELSE  ! it must be an invalid output, so write zero
-            y%WriteOutput(I) = 0.0_ReKi
+            y%WriteOutput(I) = 0.0_DbKi
 
          END IF
 
@@ -1218,7 +1218,7 @@ CONTAINS
 
       ! Write the output parameters to the file
 
-      Frmt = '(F10.4,'//TRIM(Int2LStr(p%NumOuts))//'(A1,e10.4))'   ! should evenutally use user specified format?
+      Frmt = '(F10.4,'//TRIM(Int2LStr(p%NumOuts))//'(A1,e12.6))'   ! should evenutally use user specified format?
 
       WRITE(p%MDUnOut,Frmt)  Time, ( p%Delim, y%WriteOutput(I), I=1,p%NumOuts )
 
@@ -1237,7 +1237,7 @@ CONTAINS
            LineNumOuts = 3*(m%LineList(I)%N + 1)*SUM(m%LineList(I)%OutFlagList(2:5)) + m%LineList(I)%N*SUM(m%LineList(I)%OutFlagList(6:10))
            
            
-           Frmt = '(F10.4,'//TRIM(Int2LStr(LineNumOuts))//'(A1,e10.4))'   ! should evenutally use user specified format?
+           Frmt = '(F10.4,'//TRIM(Int2LStr(LineNumOuts))//'(A1,e12.6))'   ! should evenutally use user specified format?
 
            L = 1 ! start of index of line output file at first entry
            

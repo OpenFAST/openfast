@@ -93,15 +93,19 @@ MODULE NWTC_LAPACK
       MODULE PROCEDURE LAPACK_spptrf
    END INTERFACE
 
-!> Compute the SVD for a general matrix A = USV^T.
+   !> Compute the SVD for a general matrix A = USV^T.
    INTERFACE LAPACK_gesvd
       MODULE PROCEDURE LAPACK_dgesvd
       MODULE PROCEDURE LAPACK_sgesvd
    END INTERFACE
 
+   !> Unpack  packed (1D) to regular matrix format (2D)
+   INTERFACE LAPACK_TPTTR  
+      MODULE PROCEDURE LAPACK_STPTTR
+      MODULE PROCEDURE LAPACK_DTPTTR
+   END INTERFACE   
    
-!> straight-up lapack routines (from ExtPtfm_MCKF):
-      
+   !> straight-up lapack routines (from ExtPtfm_MCKF):
    INTERFACE LAPACK_COPY
        SUBROUTINE DCOPY(N,DX,INCX,DY,INCY)
            USE Precision, only: R8Ki
@@ -1576,5 +1580,57 @@ MODULE NWTC_LAPACK
 
    RETURN
    END SUBROUTINE LAPACK_SGESVD
-!=======================================================================
+   !=======================================================================
+   !INTERFACE LAPACK_TPTTR:
+   !>  Unpack a by-column-packed array into a 2D matrix format
+   !!  See documentation in  DTPTTR/STPTTR source code.
+   SUBROUTINE LAPACK_DTPTTR( UPLO, N, AP, A, LDA, ErrStat, ErrMsg )
+      CHARACTER(1),   intent(in   ) :: UPLO     !< = 'U': A is an upper triangular matrix; 'L': A is a lower triangular matrix
+      INTEGER,        intent(in   ) :: N        !< The order of matrix A and AP.
+      INTEGER,        intent(in)    :: LDA      !< The leading dimension of the matrix A. LDA ? max(1,N)
+      INTEGER(IntKi), intent(out)   :: ErrStat  !< Error level
+      CHARACTER(*),   intent(out)   :: ErrMsg   !< Message describing error
+      REAL(R8Ki),     intent(in)    :: AP( : )  !< Packed array
+      REAL(R8Ki),     intent(out)   :: A( :,: ) !< Unpacked array : Note AP(1)=A(1,1); AP(2)=A(1,2); AP(3)=A(2,2); AP(4)=A(1,3) etc. by column, upper triang
+      INTEGER :: INFO ! = 0:  successful exit; < 0:  if INFO = -i, the i-th argument had an illegal value 
+      ErrStat = ErrID_None
+      ErrMsg  = ""
+      CALL DTPTTR( UPLO, N, AP, A, LDA, INFO )                
+      IF (INFO /= 0) THEN
+         ErrStat = ErrID_FATAL
+         WRITE( ErrMsg, * ) INFO
+         IF (INFO < 0) THEN
+            ErrMsg  = "LAPACK_DTPTTR: illegal value in argument "//TRIM(ErrMsg)//"."
+         ELSE
+            ErrMsg = 'LAPACK_DTPTTR: Unknown error '//TRIM(ErrMsg)//'.'
+         END IF
+      END IF      
+      RETURN
+   END SUBROUTINE LAPACK_DTPTTR
+   !=======================================================================
+   !>  Unpack a by-column-packed array into a 2D matrix format
+   SUBROUTINE LAPACK_STPTTR( UPLO, N, AP, A, LDA, ErrStat, ErrMsg )
+      CHARACTER(1),   intent(in   ) :: UPLO     !< = 'U': A is an upper triangular matrix; 'L': A is a lower triangular matrix
+      INTEGER,        intent(in   ) :: N        !< The order of matrix A and AP.
+      INTEGER,        intent(in)    :: LDA      !< The leading dimension of the matrix A. LDA ? max(1,N)
+      INTEGER(IntKi), intent(out)   :: ErrStat  !< Error level
+      CHARACTER(*),   intent(out)   :: ErrMsg   !< Message describing error
+      REAL(SiKi),     intent(in)    :: AP( : )  !< Packed array
+      REAL(SiKi),     intent(out)   :: A( :,: ) !< Unpacked array : Note AP(1)=A(1,1); AP(2)=A(1,2); AP(3)=A(2,2); AP(4)=A(1,3) etc. by column, upper triang
+      INTEGER :: INFO ! = 0:  successful exit; < 0:  if INFO = -i, the i-th argument had an illegal value 
+      ErrStat = ErrID_None
+      ErrMsg  = ""
+      CALL STPTTR( UPLO, N, AP, A, LDA, INFO )                
+      IF (INFO /= 0) THEN
+         ErrStat = ErrID_FATAL
+         WRITE( ErrMsg, * ) INFO
+         IF (INFO < 0) THEN
+            ErrMsg  = "LAPACK_STPTTR: illegal value in argument "//TRIM(ErrMsg)//"."
+         ELSE
+            ErrMsg = 'LAPACK_STPTTR: Unknown error '//TRIM(ErrMsg)//'.'
+         END IF
+      END IF      
+      RETURN
+   END SUBROUTINE LAPACK_STPTTR
+   !=======================================================================
 END MODULE NWTC_LAPACK
