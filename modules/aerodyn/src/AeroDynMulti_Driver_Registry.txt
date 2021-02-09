@@ -1,0 +1,75 @@
+###################################################################################################################################
+# Registry for AeroDyn 15 Driver in the FAST Modularization Framework
+# This Registry file is used to create AeroDyn_Driver_Types.
+# It also contains copy, destroy, pack, and unpack routines associated with each defined data types.
+# See the NWTC Programmer's Handbook for further information on the format/contents of this file.
+#
+# Entries are of the form
+# <keyword>	<ModuleName/ModName>	<TypeName>	<FieldType>	<FieldName>	<Dims>	<IO>	<DNAME>	<DESCRIP>	<UNITS>
+#
+# Use ^ as a shortcut for the value in the same column from the previous line.
+###################################################################################################################################
+# ...... Include files (definitions from NWTC Library) ............................................................................
+include	Registry_NWTC_Library.txt
+usefrom	AeroDyn_Registry.txt
+#
+# ..... Data for driver output file .......................................................................................................
+typedef   AeroDynMulti_Driver/ADM_Dvr  DvrM_OutputFile ProgDesc          AD_ver           -      -     -   "AeroDyn version information" -
+typedef   ^                         ^             IntKi                  unOutFile        -      -     -   "unit number for writing output file" "-"
+typedef   ^                         ^             IntKi                  ActualChanLen    -      -     -   "Actual length of channels written to text file (less than or equal to ChanLen)" "-"
+typedef   ^                         ^             character(20)          Fmt_t            -      -     -   "Format specifier for time channel" "-"
+typedef   ^                         ^             character(25)          Fmt_a            -      -     -   "Format specifier for each column (including delimiter)" "-"
+typedef   ^                         ^             character(1)           delim            -      -     -   "column delimiter" "-"
+typedef   ^                         ^             character(20)          outFmt           -      -     -   "Format specifier" "-"
+typedef   ^                         ^             character(1024)        Root             -      -     -   "Output file rootname" "-"
+typedef   ^                         ^             character(1024)        runTitle         -      -     -   "Description string from input file" "-"
+typedef   ^                         ^             character(ChanLen)     WriteOutputHdr  {:}     -     -   "Channel headers" "-"
+typedef   ^                         ^             character(ChanLen)     WriteOutputUnt  {:}     -     -   "Channel units" "-"
+typedef   ^                         ^             logical                AllFiles         -      -     -   "Output file for each case" "-"
+typedef   ^                         ^             logical                SumFile          -      -     -   "Output summary file for all cases with last timestep" "-"
+
+# ..... AeroDyn data .......................................................................................................
+param     ^                         -             INTEGER                numInp           -      2     -   "Determines order of interpolation for input-output extrap (2=linear;3=quadratic)"
+typedef   ^                         AeroDyn_Data  AD_ContinuousStateType x                -      -     -   "Continuous states"
+typedef   ^                         ^             AD_DiscreteStateType   xd               -      -     -   "Discrete states"
+typedef   ^                         ^             AD_ConstraintStateType z                -      -     -   "Constraint states"
+typedef   ^                         ^             AD_OtherStateType      OtherState       -      -     -   "Other states"
+typedef   ^                         ^             AD_MiscVarType         m                -      -     -   "misc/optimization variables"
+typedef   ^                         ^             AD_ParameterType       p                -      -     -   "Parameters"
+typedef   ^                         ^             AD_InputType           u              {numInp} -     -   "Array of system inputs"
+typedef   ^                         ^             AD_OutputType          y                -      -     -   "System outputs"
+typedef   ^                         ^             DbKi                   InputTime      {numInp} -     -   "Array of times associated with u array"
+
+# ..... Rotor data                 .......................................................................................................
+typedef   ^                        RotorData     ReKi                    baseOrigin   3      -     -   "" -
+typedef   ^                         ^            ReKi                    baseOrientationInit  3      -     -   "" -
+typedef   ^                         ^            ReKi                    hubOrigin_b         3      -     -   "" -
+typedef   ^                         ^            ReKi                    hubOrientation_b    3      -     -   "" -
+typedef   ^                         ^            IntKi                   motionType       -      -     -   "" -
+typedef   ^                         ^            ReKi                    speed            -      -     -   "rad/s" -
+typedef   ^                         ^            character(1024)         motionFileName   -      -     -   "" -
+typedef   ^                         ^            logical                 hasTower         -      -     -   "" -
+typedef   ^                         ^            ReKi                    towerBase        3      -     -   "" -
+typedef   ^                         ^            ReKi                    towerTop         3      -     -   "" -
+typedef   ^                         ^            IntKi                   numBlades        -      -     -   "" -
+typedef   ^                         ^            ReKi                    azimuth           -     -     -   "" -
+typedef   ^                         ^            ReKi                    bladeOrigin_r    ::     -     -   "" -
+typedef   ^                         ^            ReKi                    bladeOrientation_r  ::  -     -   "" -
+typedef   ^                         ^            ReKi                    bladeHubRad_bl   :      -     -   "" -
+typedef   ^                         ^            IntKi                   bladeFilenameID  :      -     -   "" -
+typedef   ^                         ^            DbKi                    Rg2b0            {3}{3} -     -   "Rotation matrix global 2 base at t=0" -
+typedef   ^                         ^            DbKi                    Rb2h0            {3}{3} -    -   "Rotation matrix base 2 hub" -
+typedef   ^                         ^            DbKi                    Rh2bl0           ::: -  -   "Rotation matrix blade 2 hub" -
+typedef   ^                         ^            DbKi                    Rg2b             {3}{3} -     -   "Rotation matrix global 2 base at t" -
+typedef   ^                         ^            DbKi                    Rg2h             {3}{3} -     -   "Rotation matrix global 2 hub at t" -
+#
+# ..... Data for driver simulation .......................................................................................................
+typedef   ^                        DvrM_SimData   character(1024)         AD_InputFile    -      -     -   "Name of AeroDyn input file" -
+typedef   ^                         ^            character(1024)         IW_InputFile     -      -     -   "Name of InfloWind input file" -
+typedef   ^                         ^            IntKi                   numTurbines      -      -     -   "number of blades on turbine" "-"
+typedef   ^                         ^            RotorData               rotors           :      -     -   "" "-"
+typedef   ^                         ^            DbKi                    dT               -      -     -   "time increment" "s"
+typedef   ^                         ^            IntKi                   numSteps         -      -     -   "number of steps in this case" "-"
+typedef   ^                         ^            DbKi                    time             {:}    -     -   "time increment" "s"
+typedef   ^                         ^            IntKi                   numBladesTot     -      -     -   "number of blades on turbine" "-"
+typedef   ^                         ^            DvrM_OutputFile         OutFileData      -      -     -   "data for driver output file" "-"

@@ -22,6 +22,7 @@ if (GENERATE_TYPES)
   generate_f90_types(src/DBEMT_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/DBEMT_Types.f90)
   generate_f90_types(src/UnsteadyAero_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/UnsteadyAero_Types.f90)
   generate_f90_types(src/AeroDyn_Driver_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/AeroDyn_Driver_Types.f90 -noextrap)
+  generate_f90_types(src/AeroDynMulti_Driver_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/AeroDynMulti_Driver_Types.f90 -noextrap)
   generate_f90_types(src/FVW_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/FVW_Types.f90)
 endif()
 
@@ -102,6 +103,17 @@ set(AD_DRIVER_SOURCES
 add_executable(aerodyn_driver ${AD_DRIVER_SOURCES})
 target_link_libraries(aerodyn_driver aerodynlib fvwlib uaaerolib afinfolib nwtclibs versioninfolib aeroacoustics ${CMAKE_DL_LIBS})
 
+# AeroDyn MultiRotor driver
+set(ADM_DRIVER_SOURCES
+  src/AeroDynMulti_Driver.f90
+  src/AeroDynMulti_Driver_Subs.f90
+  src/AeroDynMulti_Driver_Types.f90
+)
+
+add_executable(aerodynm_driver ${ADM_DRIVER_SOURCES})
+target_link_libraries(aerodynm_driver aerodynlib fvwlib uaaerolib afinfolib nwtclibs versioninfolib aeroacoustics ${CMAKE_DL_LIBS})
+
+
 # UnsteadyAero driver
 set(UA_DRIVER_SOURCES
   src/UnsteadyAero_Driver.f90
@@ -110,7 +122,7 @@ set(UA_DRIVER_SOURCES
 add_executable(unsteadyaero_driver ${UA_DRIVER_SOURCES})
 target_link_libraries(unsteadyaero_driver aerodynlib fvwlib uaaerolib afinfolib nwtclibs versioninfolib ${CMAKE_DL_LIBS})
 
-install(TARGETS unsteadyaero_driver aerodyn_driver aerodynlib fvwlib uaaerolib afinfolib aeroacoustics
+install(TARGETS unsteadyaero_driver aerodyn_driver aerodynm_driver aerodynlib fvwlib uaaerolib afinfolib aeroacoustics
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
