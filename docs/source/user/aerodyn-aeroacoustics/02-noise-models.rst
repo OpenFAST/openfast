@@ -466,7 +466,7 @@ flatback and truncated airfoils far outboard along the blade may strengthen this
 noise source. When this noise source is activated, the user is asked to provide
 the distribution along the blade span of the blunt thickness of the trailing
 edge, :math:`h`, and the solid angle between the suction and pressure sides of
-the airfoil, :math:`\Psi` (see :numref:`aa-sec-TEgeom`). :math:`h` and
+the airfoil, :math:`\Psi`,  :math:`h` and
 :math:`\Psi` are inputs to the equation:
 
 .. math::
