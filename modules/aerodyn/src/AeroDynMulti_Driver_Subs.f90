@@ -104,14 +104,14 @@ subroutine Init_AeroDyn(DvrData, AD, dt, errStat, errMsg)
       rot => DvrData%rotors(iRot)
 
       rot%Rg2b0 = EulerConstruct( rot%baseOrientationInit ) ! global 2 base at t = 0 (constant)
-      rot%Rb2h0 = EulerConstruct( rot%hubOrientation_b )    ! base 2 hub (constant)
-      InitInData%HubPosition = rot%baseOrigin  + matmul( transpose(rot%Rg2b0), rot%HubOrigin_b)
+      rot%Rb2h0 = EulerConstruct( rot%hubOrientation_t )    ! base 2 hub (constant)
+      InitInData%HubPosition = rot%baseOrigin  + matmul( transpose(rot%Rg2b0), rot%HubOrigin_t)
       InitInData%HubOrientation = matmul(rot%Rb2h0, rot%Rg2b0) ! Global 2 hub = base2hub x global2base
 
       do k=1,InitInData%numBlades
-         rot%Rh2bl0(:,:,k) = EulerConstruct( rot%bladeOrientation_r(:,k) ) ! Rotation matrix hub 2 blade (constant)
+         rot%Rh2bl0(:,:,k) = EulerConstruct( rot%bladeOrientation_h(:,k) ) ! Rotation matrix hub 2 blade (constant)
          InitInData%BladeRootOrientation(:,:,k) = matmul(rot%Rh2bl0(:,:,k),  InitInData%HubOrientation ) ! Global 2 blade =    hub2blade   x global2hub
-         InitInData%BladeRootPosition(:,k)   = InitInData%HubPosition + matmul(transpose(InitInData%HubOrientation), rot%bladeOrigin_r(:,k)) + rot%bladeHubRad_bl(k) * InitInData%BladeRootOrientation(3,:,k)      
+         InitInData%BladeRootPosition(:,k)   = InitInData%HubPosition + matmul(transpose(InitInData%HubOrientation), rot%bladeOrigin_h(:,k)) + rot%bladeHubRad_bl(k) * InitInData%BladeRootOrientation(3,:,k)      
       end do
    enddo
  
@@ -398,15 +398,22 @@ subroutine Dvr_ReadInputFile(fileName, DvrData, errStat, errMsg )
       call ParseCom(FileInfo_In, CurLine, Line, errStat2, errMsg2, unEc); if (Failed()) return
       call ParseAry(FileInfo_In, CurLine, 'baseOrigin', rot%baseOrigin, 3, errStat2, errMsg2, unEc); if(Failed()) return
       call ParseAry(FileInfo_In, CurLine, 'baseOrientationInit', rot%baseOrientationInit, 3, errStat2, errMsg2, unEc); if(Failed()) return
-      call ParseAry(FileInfo_In, CurLine, 'hubOrigin_b', rot%hubOrigin_b, 3, errStat2, errMsg2, unEc); if(Failed()) return
-      call ParseAry(FileInfo_In, CurLine, 'hubOrientation_b', rot%hubOrientation_b, 3, errStat2, errMsg2, unEc); if(Failed()) return
-      rot%hubOrientation_b       = rot%hubOrientation_b*Pi/180_ReKi
+      call ParseAry(FileInfo_In, CurLine, 'hubOrigin_t', rot%hubOrigin_t, 3, errStat2, errMsg2, unEc); if(Failed()) return
+      call ParseAry(FileInfo_In, CurLine, 'hubOrientation_t', rot%hubOrientation_t, 3, errStat2, errMsg2, unEc); if(Failed()) return
+      rot%hubOrientation_t       = rot%hubOrientation_t*Pi/180_ReKi
       rot%baseOrientationInit = rot%baseOrientationInit*Pi/180_ReKi
+      ! Base motion
+      call ParseCom(FileInfo_In, CurLine, Line, errStat2, errMsg2, unEc); if (Failed()) return
+      call ParseVar(FileInfo_In, CurLine, 'baseMotionType' , rot%baseMotiontype, errStat2, errMsg2, unEc); if (Failed()) return
+      call ParseVar(FileInfo_In, CurLine, 'degreeOfFreedom', rot%degreeOfFreedom, errStat2, errMsg2, unEc); if(Failed()) return
+      call ParseVar(FileInfo_In, CurLine, 'amplitude'      , rot%amplitude, errStat2, errMsg2, unEc); if (Failed()) return
+      call ParseVar(FileInfo_In, CurLine, 'frequency'      , rot%frequency, errStat2, errMsg2, unEc); if (Failed()) return
+      call ParseVar(FileInfo_In, CurLine, 'baseMotionFilename', rot%baseMotionFileName, errStat2, errMsg2, unEc); if (Failed()) return
       ! Rotor motion
       call ParseCom(FileInfo_In, CurLine, Line, errStat2, errMsg2, unEc); if (Failed()) return
-      call ParseVar(FileInfo_In, CurLine, 'motionType', rot%motiontype, errStat2, errMsg2, unEc); if (Failed()) return
+      call ParseVar(FileInfo_In, CurLine, 'rotorMotionType', rot%rotorMotiontype, errStat2, errMsg2, unEc); if (Failed()) return
       call ParseVar(FileInfo_In, CurLine, 'rotSpeed', rot%speed, errStat2, errMsg2, unEc); if(Failed()) return
-      call ParseVar(FileInfo_In, CurLine, 'motionFilename', rot%motionFileName, errStat2, errMsg2, unEc); if (Failed()) return
+      call ParseVar(FileInfo_In, CurLine, 'rotorMotionFilename', rot%rotorMotionFileName, errStat2, errMsg2, unEc); if (Failed()) return
       rot%speed = rot%speed * Pi/30 ! speed in rad/s not rpm 
       ! Tower
       call ParseCom(FileInfo_In, CurLine, Line, errStat2, errMsg2, unEc); if (Failed()) return
@@ -416,17 +423,17 @@ subroutine Dvr_ReadInputFile(fileName, DvrData, errStat, errMsg )
       ! Blades
       call ParseCom(FileInfo_In, CurLine, Line, errStat2, errMsg2, unEc); if (Failed()) return
       call ParseVar(FileInfo_In, CurLine, 'numBlades' , rot%numBlades, errStat2, errMsg2, unEc); if (Failed()) return
-      allocate(rot%bladeOrigin_r(3, rot%numBlades))
-      allocate(rot%bladeOrientation_r(3, rot%numBlades))
+      allocate(rot%bladeOrigin_h(3, rot%numBlades))
+      allocate(rot%bladeOrientation_h(3, rot%numBlades))
       allocate(rot%bladeHubRad_bl(rot%numBlades))
       allocate(rot%bladeFilenameID(rot%numBlades))
       allocate(rot%Rh2bl0(3,3,rot%numBlades)) ! hub 2 blade
       do iBld=1,rot%numBlades
-         call ParseAry(FileInfo_In, CurLine, 'bladeOrigin_r' , rot%bladeOrigin_r(:,iBld), 3, errStat2, errMsg2, unEc); if (Failed()) return
+         call ParseAry(FileInfo_In, CurLine, 'bladeOrigin_h' , rot%bladeOrigin_h(:,iBld), 3, errStat2, errMsg2, unEc); if (Failed()) return
       enddo
       do iBld=1,rot%numBlades
-         call ParseAry(FileInfo_In, CurLine, 'bladeOrientation_r' , rot%bladeOrientation_r(:,iBld), 3, errStat2, errMsg2, unEc); if (Failed()) return
-         rot%bladeOrientation_r(:,iBld)= rot%bladeOrientation_r(:,iBld) * Pi/180_ReKi
+         call ParseAry(FileInfo_In, CurLine, 'bladeOrientation_h' , rot%bladeOrientation_h(:,iBld), 3, errStat2, errMsg2, unEc); if (Failed()) return
+         rot%bladeOrientation_h(:,iBld)= rot%bladeOrientation_h(:,iBld) * Pi/180_ReKi
       enddo
       do iBld=1,rot%numBlades
          call ParseVar(FileInfo_In, CurLine, 'bladeHubRad_bl' , rot%bladeHubRad_bl(iBld), errStat2, errMsg2, unEc); if (Failed()) return

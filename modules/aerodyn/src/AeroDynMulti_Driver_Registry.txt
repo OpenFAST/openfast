@@ -43,18 +43,26 @@ typedef   ^                         ^             DbKi                   InputTi
 # ..... Rotor data                 .......................................................................................................
 typedef   ^                        RotorData     ReKi                    baseOrigin   3      -     -   "" -
 typedef   ^                         ^            ReKi                    baseOrientationInit  3      -     -   "" -
-typedef   ^                         ^            ReKi                    hubOrigin_b         3      -     -   "" -
-typedef   ^                         ^            ReKi                    hubOrientation_b    3      -     -   "" -
-typedef   ^                         ^            IntKi                   motionType       -      -     -   "" -
-typedef   ^                         ^            ReKi                    speed            -      -     -   "rad/s" -
-typedef   ^                         ^            character(1024)         motionFileName   -      -     -   "" -
+typedef   ^                         ^            ReKi                    hubOrigin_t         3      -     -   "" -
+typedef   ^                         ^            ReKi                    hubOrientation_t    3      -     -   "" -
+# motion
+typedef   ^                         ^            IntKi                   baseMotionType       -      -     -   "" -
+typedef   ^                         ^            IntKi                   degreeOfFreedom      -      -     -   "" -
+typedef   ^                         ^            ReKi                    amplitude            -      -     -   "" -
+typedef   ^                         ^            ReKi                    frequency            -      -     -   "" -
+typedef   ^                         ^            character(1024)         baseMotionFileName   -      -     -   "" -
+typedef   ^                         ^            IntKi                   rotorMotionType      -      -     -   "" -
+typedef   ^                         ^            ReKi                    speed                -      -     -   "rad/s" -
+typedef   ^                         ^            character(1024)         rotorMotionFileName  -      -     -   "" -
+# tower
 typedef   ^                         ^            logical                 hasTower         -      -     -   "" -
 typedef   ^                         ^            ReKi                    towerBase        3      -     -   "" -
 typedef   ^                         ^            ReKi                    towerTop         3      -     -   "" -
+# blades
 typedef   ^                         ^            IntKi                   numBlades        -      -     -   "" -
 typedef   ^                         ^            ReKi                    azimuth           -     -     -   "" -
-typedef   ^                         ^            ReKi                    bladeOrigin_r    ::     -     -   "" -
-typedef   ^                         ^            ReKi                    bladeOrientation_r  ::  -     -   "" -
+typedef   ^                         ^            ReKi                    bladeOrigin_h    ::     -     -   "" -
+typedef   ^                         ^            ReKi                    bladeOrientation_h  ::  -     -   "" -
 typedef   ^                         ^            ReKi                    bladeHubRad_bl   :      -     -   "" -
 typedef   ^                         ^            IntKi                   bladeFilenameID  :      -     -   "" -
 typedef   ^                         ^            DbKi                    Rg2b0            {3}{3} -     -   "Rotation matrix global 2 base at t=0" -

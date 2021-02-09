@@ -75,18 +75,23 @@ IMPLICIT NONE
   TYPE, PUBLIC :: RotorData
     REAL(ReKi) , DIMENSION(1:3)  :: baseOrigin      !<  [-]
     REAL(ReKi) , DIMENSION(1:3)  :: baseOrientationInit      !<  [-]
-    REAL(ReKi) , DIMENSION(1:3)  :: hubOrigin_b      !<  [-]
-    REAL(ReKi) , DIMENSION(1:3)  :: hubOrientation_b      !<  [-]
-    INTEGER(IntKi)  :: motionType      !<  [-]
+    REAL(ReKi) , DIMENSION(1:3)  :: hubOrigin_t      !<  [-]
+    REAL(ReKi) , DIMENSION(1:3)  :: hubOrientation_t      !<  [-]
+    INTEGER(IntKi)  :: baseMotionType      !<  [-]
+    INTEGER(IntKi)  :: degreeOfFreedom      !<  [-]
+    REAL(ReKi)  :: amplitude      !<  [-]
+    REAL(ReKi)  :: frequency      !<  [-]
+    character(1024)  :: baseMotionFileName      !<  [-]
+    INTEGER(IntKi)  :: rotorMotionType      !<  [-]
     REAL(ReKi)  :: speed      !< rad/s [-]
-    character(1024)  :: motionFileName      !<  [-]
+    character(1024)  :: rotorMotionFileName      !<  [-]
     LOGICAL  :: hasTower      !<  [-]
     REAL(ReKi) , DIMENSION(1:3)  :: towerBase      !<  [-]
     REAL(ReKi) , DIMENSION(1:3)  :: towerTop      !<  [-]
     INTEGER(IntKi)  :: numBlades      !<  [-]
     REAL(ReKi)  :: azimuth      !<  [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: bladeOrigin_r      !<  [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: bladeOrientation_r      !<  [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: bladeOrigin_h      !<  [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: bladeOrientation_h      !<  [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: bladeHubRad_bl      !<  [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: bladeFilenameID      !<  [-]
     REAL(DbKi) , DIMENSION(1:3,1:3)  :: Rg2b0      !< Rotation matrix global 2 base at t=0 [-]
@@ -1400,43 +1405,48 @@ ENDDO
    ErrMsg  = ""
     DstRotorDataData%baseOrigin = SrcRotorDataData%baseOrigin
     DstRotorDataData%baseOrientationInit = SrcRotorDataData%baseOrientationInit
-    DstRotorDataData%hubOrigin_b = SrcRotorDataData%hubOrigin_b
-    DstRotorDataData%hubOrientation_b = SrcRotorDataData%hubOrientation_b
-    DstRotorDataData%motionType = SrcRotorDataData%motionType
+    DstRotorDataData%hubOrigin_t = SrcRotorDataData%hubOrigin_t
+    DstRotorDataData%hubOrientation_t = SrcRotorDataData%hubOrientation_t
+    DstRotorDataData%baseMotionType = SrcRotorDataData%baseMotionType
+    DstRotorDataData%degreeOfFreedom = SrcRotorDataData%degreeOfFreedom
+    DstRotorDataData%amplitude = SrcRotorDataData%amplitude
+    DstRotorDataData%frequency = SrcRotorDataData%frequency
+    DstRotorDataData%baseMotionFileName = SrcRotorDataData%baseMotionFileName
+    DstRotorDataData%rotorMotionType = SrcRotorDataData%rotorMotionType
     DstRotorDataData%speed = SrcRotorDataData%speed
-    DstRotorDataData%motionFileName = SrcRotorDataData%motionFileName
+    DstRotorDataData%rotorMotionFileName = SrcRotorDataData%rotorMotionFileName
     DstRotorDataData%hasTower = SrcRotorDataData%hasTower
     DstRotorDataData%towerBase = SrcRotorDataData%towerBase
     DstRotorDataData%towerTop = SrcRotorDataData%towerTop
     DstRotorDataData%numBlades = SrcRotorDataData%numBlades
     DstRotorDataData%azimuth = SrcRotorDataData%azimuth
-IF (ALLOCATED(SrcRotorDataData%bladeOrigin_r)) THEN
-  i1_l = LBOUND(SrcRotorDataData%bladeOrigin_r,1)
-  i1_u = UBOUND(SrcRotorDataData%bladeOrigin_r,1)
-  i2_l = LBOUND(SrcRotorDataData%bladeOrigin_r,2)
-  i2_u = UBOUND(SrcRotorDataData%bladeOrigin_r,2)
-  IF (.NOT. ALLOCATED(DstRotorDataData%bladeOrigin_r)) THEN 
-    ALLOCATE(DstRotorDataData%bladeOrigin_r(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+IF (ALLOCATED(SrcRotorDataData%bladeOrigin_h)) THEN
+  i1_l = LBOUND(SrcRotorDataData%bladeOrigin_h,1)
+  i1_u = UBOUND(SrcRotorDataData%bladeOrigin_h,1)
+  i2_l = LBOUND(SrcRotorDataData%bladeOrigin_h,2)
+  i2_u = UBOUND(SrcRotorDataData%bladeOrigin_h,2)
+  IF (.NOT. ALLOCATED(DstRotorDataData%bladeOrigin_h)) THEN 
+    ALLOCATE(DstRotorDataData%bladeOrigin_h(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstRotorDataData%bladeOrigin_r.', ErrStat, ErrMsg,RoutineName)
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstRotorDataData%bladeOrigin_h.', ErrStat, ErrMsg,RoutineName)
       RETURN
     END IF
   END IF
-    DstRotorDataData%bladeOrigin_r = SrcRotorDataData%bladeOrigin_r
+    DstRotorDataData%bladeOrigin_h = SrcRotorDataData%bladeOrigin_h
 ENDIF
-IF (ALLOCATED(SrcRotorDataData%bladeOrientation_r)) THEN
-  i1_l = LBOUND(SrcRotorDataData%bladeOrientation_r,1)
-  i1_u = UBOUND(SrcRotorDataData%bladeOrientation_r,1)
-  i2_l = LBOUND(SrcRotorDataData%bladeOrientation_r,2)
-  i2_u = UBOUND(SrcRotorDataData%bladeOrientation_r,2)
-  IF (.NOT. ALLOCATED(DstRotorDataData%bladeOrientation_r)) THEN 
-    ALLOCATE(DstRotorDataData%bladeOrientation_r(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+IF (ALLOCATED(SrcRotorDataData%bladeOrientation_h)) THEN
+  i1_l = LBOUND(SrcRotorDataData%bladeOrientation_h,1)
+  i1_u = UBOUND(SrcRotorDataData%bladeOrientation_h,1)
+  i2_l = LBOUND(SrcRotorDataData%bladeOrientation_h,2)
+  i2_u = UBOUND(SrcRotorDataData%bladeOrientation_h,2)
+  IF (.NOT. ALLOCATED(DstRotorDataData%bladeOrientation_h)) THEN 
+    ALLOCATE(DstRotorDataData%bladeOrientation_h(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstRotorDataData%bladeOrientation_r.', ErrStat, ErrMsg,RoutineName)
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstRotorDataData%bladeOrientation_h.', ErrStat, ErrMsg,RoutineName)
       RETURN
     END IF
   END IF
-    DstRotorDataData%bladeOrientation_r = SrcRotorDataData%bladeOrientation_r
+    DstRotorDataData%bladeOrientation_h = SrcRotorDataData%bladeOrientation_h
 ENDIF
 IF (ALLOCATED(SrcRotorDataData%bladeHubRad_bl)) THEN
   i1_l = LBOUND(SrcRotorDataData%bladeHubRad_bl,1)
@@ -1493,11 +1503,11 @@ ENDIF
 ! 
   ErrStat = ErrID_None
   ErrMsg  = ""
-IF (ALLOCATED(RotorDataData%bladeOrigin_r)) THEN
-  DEALLOCATE(RotorDataData%bladeOrigin_r)
+IF (ALLOCATED(RotorDataData%bladeOrigin_h)) THEN
+  DEALLOCATE(RotorDataData%bladeOrigin_h)
 ENDIF
-IF (ALLOCATED(RotorDataData%bladeOrientation_r)) THEN
-  DEALLOCATE(RotorDataData%bladeOrientation_r)
+IF (ALLOCATED(RotorDataData%bladeOrientation_h)) THEN
+  DEALLOCATE(RotorDataData%bladeOrientation_h)
 ENDIF
 IF (ALLOCATED(RotorDataData%bladeHubRad_bl)) THEN
   DEALLOCATE(RotorDataData%bladeHubRad_bl)
@@ -1547,25 +1557,30 @@ ENDIF
   Int_BufSz  = 0
       Re_BufSz   = Re_BufSz   + SIZE(InData%baseOrigin)  ! baseOrigin
       Re_BufSz   = Re_BufSz   + SIZE(InData%baseOrientationInit)  ! baseOrientationInit
-      Re_BufSz   = Re_BufSz   + SIZE(InData%hubOrigin_b)  ! hubOrigin_b
-      Re_BufSz   = Re_BufSz   + SIZE(InData%hubOrientation_b)  ! hubOrientation_b
-      Int_BufSz  = Int_BufSz  + 1  ! motionType
+      Re_BufSz   = Re_BufSz   + SIZE(InData%hubOrigin_t)  ! hubOrigin_t
+      Re_BufSz   = Re_BufSz   + SIZE(InData%hubOrientation_t)  ! hubOrientation_t
+      Int_BufSz  = Int_BufSz  + 1  ! baseMotionType
+      Int_BufSz  = Int_BufSz  + 1  ! degreeOfFreedom
+      Re_BufSz   = Re_BufSz   + 1  ! amplitude
+      Re_BufSz   = Re_BufSz   + 1  ! frequency
+      Int_BufSz  = Int_BufSz  + 1*LEN(InData%baseMotionFileName)  ! baseMotionFileName
+      Int_BufSz  = Int_BufSz  + 1  ! rotorMotionType
       Re_BufSz   = Re_BufSz   + 1  ! speed
-      Int_BufSz  = Int_BufSz  + 1*LEN(InData%motionFileName)  ! motionFileName
+      Int_BufSz  = Int_BufSz  + 1*LEN(InData%rotorMotionFileName)  ! rotorMotionFileName
       Int_BufSz  = Int_BufSz  + 1  ! hasTower
       Re_BufSz   = Re_BufSz   + SIZE(InData%towerBase)  ! towerBase
       Re_BufSz   = Re_BufSz   + SIZE(InData%towerTop)  ! towerTop
       Int_BufSz  = Int_BufSz  + 1  ! numBlades
       Re_BufSz   = Re_BufSz   + 1  ! azimuth
-  Int_BufSz   = Int_BufSz   + 1     ! bladeOrigin_r allocated yes/no
-  IF ( ALLOCATED(InData%bladeOrigin_r) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*2  ! bladeOrigin_r upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%bladeOrigin_r)  ! bladeOrigin_r
+  Int_BufSz   = Int_BufSz   + 1     ! bladeOrigin_h allocated yes/no
+  IF ( ALLOCATED(InData%bladeOrigin_h) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! bladeOrigin_h upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%bladeOrigin_h)  ! bladeOrigin_h
   END IF
-  Int_BufSz   = Int_BufSz   + 1     ! bladeOrientation_r allocated yes/no
-  IF ( ALLOCATED(InData%bladeOrientation_r) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*2  ! bladeOrientation_r upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%bladeOrientation_r)  ! bladeOrientation_r
+  Int_BufSz   = Int_BufSz   + 1     ! bladeOrientation_h allocated yes/no
+  IF ( ALLOCATED(InData%bladeOrientation_h) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! bladeOrientation_h upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%bladeOrientation_h)  ! bladeOrientation_h
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! bladeHubRad_bl allocated yes/no
   IF ( ALLOCATED(InData%bladeHubRad_bl) ) THEN
@@ -1621,20 +1636,32 @@ ENDIF
       ReKiBuf(Re_Xferred) = InData%baseOrientationInit(i1)
       Re_Xferred = Re_Xferred + 1
     END DO
-    DO i1 = LBOUND(InData%hubOrigin_b,1), UBOUND(InData%hubOrigin_b,1)
-      ReKiBuf(Re_Xferred) = InData%hubOrigin_b(i1)
+    DO i1 = LBOUND(InData%hubOrigin_t,1), UBOUND(InData%hubOrigin_t,1)
+      ReKiBuf(Re_Xferred) = InData%hubOrigin_t(i1)
       Re_Xferred = Re_Xferred + 1
     END DO
-    DO i1 = LBOUND(InData%hubOrientation_b,1), UBOUND(InData%hubOrientation_b,1)
-      ReKiBuf(Re_Xferred) = InData%hubOrientation_b(i1)
+    DO i1 = LBOUND(InData%hubOrientation_t,1), UBOUND(InData%hubOrientation_t,1)
+      ReKiBuf(Re_Xferred) = InData%hubOrientation_t(i1)
       Re_Xferred = Re_Xferred + 1
     END DO
-    IntKiBuf(Int_Xferred) = InData%motionType
+    IntKiBuf(Int_Xferred) = InData%baseMotionType
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%degreeOfFreedom
+    Int_Xferred = Int_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%amplitude
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%frequency
+    Re_Xferred = Re_Xferred + 1
+    DO I = 1, LEN(InData%baseMotionFileName)
+      IntKiBuf(Int_Xferred) = ICHAR(InData%baseMotionFileName(I:I), IntKi)
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
+    IntKiBuf(Int_Xferred) = InData%rotorMotionType
     Int_Xferred = Int_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%speed
     Re_Xferred = Re_Xferred + 1
-    DO I = 1, LEN(InData%motionFileName)
-      IntKiBuf(Int_Xferred) = ICHAR(InData%motionFileName(I:I), IntKi)
+    DO I = 1, LEN(InData%rotorMotionFileName)
+      IntKiBuf(Int_Xferred) = ICHAR(InData%rotorMotionFileName(I:I), IntKi)
       Int_Xferred = Int_Xferred + 1
     END DO ! I
     IntKiBuf(Int_Xferred) = TRANSFER(InData%hasTower, IntKiBuf(1))
@@ -1651,42 +1678,42 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%azimuth
     Re_Xferred = Re_Xferred + 1
-  IF ( .NOT. ALLOCATED(InData%bladeOrigin_r) ) THEN
+  IF ( .NOT. ALLOCATED(InData%bladeOrigin_h) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
   ELSE
     IntKiBuf( Int_Xferred ) = 1
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%bladeOrigin_r,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%bladeOrigin_r,1)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%bladeOrigin_h,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%bladeOrigin_h,1)
     Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%bladeOrigin_r,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%bladeOrigin_r,2)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%bladeOrigin_h,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%bladeOrigin_h,2)
     Int_Xferred = Int_Xferred + 2
 
-      DO i2 = LBOUND(InData%bladeOrigin_r,2), UBOUND(InData%bladeOrigin_r,2)
-        DO i1 = LBOUND(InData%bladeOrigin_r,1), UBOUND(InData%bladeOrigin_r,1)
-          ReKiBuf(Re_Xferred) = InData%bladeOrigin_r(i1,i2)
+      DO i2 = LBOUND(InData%bladeOrigin_h,2), UBOUND(InData%bladeOrigin_h,2)
+        DO i1 = LBOUND(InData%bladeOrigin_h,1), UBOUND(InData%bladeOrigin_h,1)
+          ReKiBuf(Re_Xferred) = InData%bladeOrigin_h(i1,i2)
           Re_Xferred = Re_Xferred + 1
         END DO
       END DO
   END IF
-  IF ( .NOT. ALLOCATED(InData%bladeOrientation_r) ) THEN
+  IF ( .NOT. ALLOCATED(InData%bladeOrientation_h) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
   ELSE
     IntKiBuf( Int_Xferred ) = 1
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%bladeOrientation_r,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%bladeOrientation_r,1)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%bladeOrientation_h,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%bladeOrientation_h,1)
     Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%bladeOrientation_r,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%bladeOrientation_r,2)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%bladeOrientation_h,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%bladeOrientation_h,2)
     Int_Xferred = Int_Xferred + 2
 
-      DO i2 = LBOUND(InData%bladeOrientation_r,2), UBOUND(InData%bladeOrientation_r,2)
-        DO i1 = LBOUND(InData%bladeOrientation_r,1), UBOUND(InData%bladeOrientation_r,1)
-          ReKiBuf(Re_Xferred) = InData%bladeOrientation_r(i1,i2)
+      DO i2 = LBOUND(InData%bladeOrientation_h,2), UBOUND(InData%bladeOrientation_h,2)
+        DO i1 = LBOUND(InData%bladeOrientation_h,1), UBOUND(InData%bladeOrientation_h,1)
+          ReKiBuf(Re_Xferred) = InData%bladeOrientation_h(i1,i2)
           Re_Xferred = Re_Xferred + 1
         END DO
       END DO
@@ -1813,24 +1840,36 @@ ENDIF
       OutData%baseOrientationInit(i1) = ReKiBuf(Re_Xferred)
       Re_Xferred = Re_Xferred + 1
     END DO
-    i1_l = LBOUND(OutData%hubOrigin_b,1)
-    i1_u = UBOUND(OutData%hubOrigin_b,1)
-    DO i1 = LBOUND(OutData%hubOrigin_b,1), UBOUND(OutData%hubOrigin_b,1)
-      OutData%hubOrigin_b(i1) = ReKiBuf(Re_Xferred)
+    i1_l = LBOUND(OutData%hubOrigin_t,1)
+    i1_u = UBOUND(OutData%hubOrigin_t,1)
+    DO i1 = LBOUND(OutData%hubOrigin_t,1), UBOUND(OutData%hubOrigin_t,1)
+      OutData%hubOrigin_t(i1) = ReKiBuf(Re_Xferred)
       Re_Xferred = Re_Xferred + 1
     END DO
-    i1_l = LBOUND(OutData%hubOrientation_b,1)
-    i1_u = UBOUND(OutData%hubOrientation_b,1)
-    DO i1 = LBOUND(OutData%hubOrientation_b,1), UBOUND(OutData%hubOrientation_b,1)
-      OutData%hubOrientation_b(i1) = ReKiBuf(Re_Xferred)
+    i1_l = LBOUND(OutData%hubOrientation_t,1)
+    i1_u = UBOUND(OutData%hubOrientation_t,1)
+    DO i1 = LBOUND(OutData%hubOrientation_t,1), UBOUND(OutData%hubOrientation_t,1)
+      OutData%hubOrientation_t(i1) = ReKiBuf(Re_Xferred)
       Re_Xferred = Re_Xferred + 1
     END DO
-    OutData%motionType = IntKiBuf(Int_Xferred)
+    OutData%baseMotionType = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%degreeOfFreedom = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%amplitude = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%frequency = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    DO I = 1, LEN(OutData%baseMotionFileName)
+      OutData%baseMotionFileName(I:I) = CHAR(IntKiBuf(Int_Xferred))
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
+    OutData%rotorMotionType = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%speed = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
-    DO I = 1, LEN(OutData%motionFileName)
-      OutData%motionFileName(I:I) = CHAR(IntKiBuf(Int_Xferred))
+    DO I = 1, LEN(OutData%rotorMotionFileName)
+      OutData%rotorMotionFileName(I:I) = CHAR(IntKiBuf(Int_Xferred))
       Int_Xferred = Int_Xferred + 1
     END DO ! I
     OutData%hasTower = TRANSFER(IntKiBuf(Int_Xferred), OutData%hasTower)
@@ -1851,7 +1890,7 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     OutData%azimuth = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! bladeOrigin_r not allocated
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! bladeOrigin_h not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
     Int_Xferred = Int_Xferred + 1
@@ -1861,20 +1900,20 @@ ENDIF
     i2_l = IntKiBuf( Int_Xferred    )
     i2_u = IntKiBuf( Int_Xferred + 1)
     Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%bladeOrigin_r)) DEALLOCATE(OutData%bladeOrigin_r)
-    ALLOCATE(OutData%bladeOrigin_r(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ALLOCATED(OutData%bladeOrigin_h)) DEALLOCATE(OutData%bladeOrigin_h)
+    ALLOCATE(OutData%bladeOrigin_h(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%bladeOrigin_r.', ErrStat, ErrMsg,RoutineName)
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%bladeOrigin_h.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-      DO i2 = LBOUND(OutData%bladeOrigin_r,2), UBOUND(OutData%bladeOrigin_r,2)
-        DO i1 = LBOUND(OutData%bladeOrigin_r,1), UBOUND(OutData%bladeOrigin_r,1)
-          OutData%bladeOrigin_r(i1,i2) = ReKiBuf(Re_Xferred)
+      DO i2 = LBOUND(OutData%bladeOrigin_h,2), UBOUND(OutData%bladeOrigin_h,2)
+        DO i1 = LBOUND(OutData%bladeOrigin_h,1), UBOUND(OutData%bladeOrigin_h,1)
+          OutData%bladeOrigin_h(i1,i2) = ReKiBuf(Re_Xferred)
           Re_Xferred = Re_Xferred + 1
         END DO
       END DO
   END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! bladeOrientation_r not allocated
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! bladeOrientation_h not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
     Int_Xferred = Int_Xferred + 1
@@ -1884,15 +1923,15 @@ ENDIF
     i2_l = IntKiBuf( Int_Xferred    )
     i2_u = IntKiBuf( Int_Xferred + 1)
     Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%bladeOrientation_r)) DEALLOCATE(OutData%bladeOrientation_r)
-    ALLOCATE(OutData%bladeOrientation_r(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ALLOCATED(OutData%bladeOrientation_h)) DEALLOCATE(OutData%bladeOrientation_h)
+    ALLOCATE(OutData%bladeOrientation_h(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%bladeOrientation_r.', ErrStat, ErrMsg,RoutineName)
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%bladeOrientation_h.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-      DO i2 = LBOUND(OutData%bladeOrientation_r,2), UBOUND(OutData%bladeOrientation_r,2)
-        DO i1 = LBOUND(OutData%bladeOrientation_r,1), UBOUND(OutData%bladeOrientation_r,1)
-          OutData%bladeOrientation_r(i1,i2) = ReKiBuf(Re_Xferred)
+      DO i2 = LBOUND(OutData%bladeOrientation_h,2), UBOUND(OutData%bladeOrientation_h,2)
+        DO i1 = LBOUND(OutData%bladeOrientation_h,1), UBOUND(OutData%bladeOrientation_h,1)
+          OutData%bladeOrientation_h(i1,i2) = ReKiBuf(Re_Xferred)
           Re_Xferred = Re_Xferred + 1
         END DO
       END DO
