@@ -168,16 +168,18 @@ program UnsteadyAero_Driver
       
    end if
      
-    ! Initialize UnsteadyAero
-   call UA_Init( InitInData, u(1), p, x, xd, OtherState, y, m, dt, InitOutData, errStat, errMsg ) 
-      call checkError()
-
       ! Initialize the Airfoil Info Params
    afNames(1)  = dvrInitInp%AirFoil1 ! All nodes/blades are using the same 2D airfoil
    AFIndx(1,1) = 1
    call Init_AFI( p, NumAFfiles, afNames, dvrInitInp%UseCm, AFI_Params, errStat, errMsg )
       call checkError()
-   
+
+
+    ! Initialize UnsteadyAero (after AFI)
+   call UA_Init( InitInData, u(1), p, x, xd, OtherState, y, m, dt, AFI_Params, AFIndx, InitOutData, errStat, errMsg ) 
+      call checkError()
+
+      
    if (p%NumOuts > 0) then
          ! Initialize the output file
          ! Open the file for output

@@ -1252,11 +1252,8 @@ END IF
    m%AllOuts( QD_Y     ) = x%QDT(  DOF_Y       )
 
    m%AllOuts( QD2_B1E1 ) = m%QD2T( DOF_BE(1,1) )
-   m%AllOuts( QD2_B2E1 ) = m%QD2T( DOF_BE(2,1) )
    m%AllOuts( QD2_B1F1 ) = m%QD2T( DOF_BF(1,1) )
-   m%AllOuts( QD2_B2F1 ) = m%QD2T( DOF_BF(2,1) )
    m%AllOuts( QD2_B1F2 ) = m%QD2T( DOF_BF(1,2) )
-   m%AllOuts( QD2_B2F2 ) = m%QD2T( DOF_BF(2,2) )
    m%AllOuts( QD2_DrTr ) = m%QD2T( DOF_DrTr    )
    m%AllOuts( QD2_GeAz ) = m%QD2T( DOF_GeAz    )
    m%AllOuts( QD2_RFrl ) = m%QD2T( DOF_RFrl    )
@@ -1282,6 +1279,10 @@ IF ( p%NumBl > 1 ) THEN
    m%AllOuts( QD_B2E1  ) = x%QDT(  DOF_BE(2,1) )
    m%AllOuts( QD_B2F1  ) = x%QDT(  DOF_BF(2,1) )
    m%AllOuts( QD_B2F2  ) = x%QDT(  DOF_BF(2,2) )
+
+   m%AllOuts( QD2_B2E1 ) = m%QD2T( DOF_BE(2,1) )
+   m%AllOuts( QD2_B2F1 ) = m%QD2T( DOF_BF(2,1) )
+   m%AllOuts( QD2_B2F2 ) = m%QD2T( DOF_BF(2,2) )
    
    IF ( p%NumBl > 2 ) THEN
       m%AllOuts( Q_B3E1   ) = x%QT(   DOF_BE(3,1) )
@@ -2103,8 +2104,9 @@ SUBROUTINE Init_DOFparameters( InputFileData, p, ErrStat, ErrMsg )
    ErrStat = ErrID_None
    ErrMsg  = ''
 
-
-   IF ( p%NumBl == 2 )  THEN
+   IF ( p%NumBl == 1 )  THEN
+      p%NDOF = 18 
+   ELSEIF ( p%NumBl == 2 )  THEN
       p%NDOF = 22
    ELSE
       p%NDOF = ED_MaxDOFs
@@ -4438,21 +4440,34 @@ end if
 
    END DO
 
-   IF ( p%NumBl < 3_IntKi ) THEN
-      InvalidOutput(PtchPMzc3) = .TRUE.
 
-      InvalidOutput(   Q_B3E1) = .TRUE.
-      InvalidOutput(   Q_B3F1) = .TRUE.
-      InvalidOutput(   Q_B3F2) = .TRUE.
-
-      InvalidOutput(  QD_B3E1) = .TRUE.
-      InvalidOutput(  QD_B3F1) = .TRUE.
-      InvalidOutput(  QD_B3F2) = .TRUE.
-
-      InvalidOutput( QD2_B3E1) = .TRUE.
-      InvalidOutput( QD2_B3F1) = .TRUE.
-      InvalidOutput( QD2_B3F2) = .TRUE.
-   ELSE IF ( p%NumBl > 2_IntKi ) THEN
+   ! Invalid outputs based on number of blades
+   IF ( p%NumBl < 3 ) THEN
+         InvalidOutput(PtchPMzc3) = .TRUE.
+         InvalidOutput(   Q_B3E1) = .TRUE.
+         InvalidOutput(   Q_B3F1) = .TRUE.
+         InvalidOutput(   Q_B3F2) = .TRUE.
+         InvalidOutput(  QD_B3E1) = .TRUE.
+         InvalidOutput(  QD_B3F1) = .TRUE.
+         InvalidOutput(  QD_B3F2) = .TRUE.
+         InvalidOutput( QD2_B3E1) = .TRUE.
+         InvalidOutput( QD2_B3F1) = .TRUE.
+         InvalidOutput( QD2_B3F2) = .TRUE.      
+   ENDIF
+   IF ( p%NumBl < 2 ) THEN
+         InvalidOutput(PtchPMzc2) = .TRUE.
+         InvalidOutput(   Q_B2E1) = .TRUE.
+         InvalidOutput(   Q_B2F1) = .TRUE.
+         InvalidOutput(   Q_B2F2) = .TRUE.
+         InvalidOutput(  QD_B2E1) = .TRUE.
+         InvalidOutput(  QD_B2F1) = .TRUE.
+         InvalidOutput(  QD_B2F2) = .TRUE.
+         InvalidOutput( QD2_B2E1) = .TRUE.
+         InvalidOutput( QD2_B2F1) = .TRUE.
+         InvalidOutput( QD2_B2F2) = .TRUE.      
+   ENDIF
+   ! 1-bladed or 3-bladed, no teeter
+   IF ( p%NumBl /= 2 ) THEN
       InvalidOutput(  TeetPya) = .TRUE.
       InvalidOutput(  TeetVya) = .TRUE.
       InvalidOutput(  TeetAya) = .TRUE.
@@ -8193,11 +8208,13 @@ SUBROUTINE FillAugMat( p, x, CoordSys, u, HSSBrTrq, RtHSdat, AugMat )
       ! Initialize the portions of the mass matrix below the diagonal associated
       !   with the teeter and pure blade DOFs using the partial loads at the teeter pin; only do this if necessary:
 
-      IF ( ( p%NumBl == 2 ) .AND. ( p%DOF_Flag(DOF_Teet) ) )  THEN
-         DO L = 1,p%DOFs%NPSBE(K) ! Loop through all active (enabled) blade DOFs that contribute to the QD2T-related linear accelerations of the blade
-            AugMat(DOF_Teet,p%DOFs%PSBE(K,L)) = -DOT_PRODUCT( RtHSdat%PAngVelEH(DOF_Teet,0,:), &
-                                                              RtHSdat%PMomLPRot(:,p%DOFs%PSBE(K,L)) )  ! [C(q,t)]B
-         ENDDO             ! L - All active (enabled) blade DOFs that contribute to the QD2T-related linear accelerations of the blade
+      IF ( ( p%NumBl == 2 ) ) THEN
+         IF ( p%DOF_Flag(DOF_Teet) ) THEN ! NOTE: two "ifs" since DOF_Teet might be out of bound
+            DO L = 1,p%DOFs%NPSBE(K) ! Loop through all active (enabled) blade DOFs that contribute to the QD2T-related linear accelerations of the blade
+               AugMat(DOF_Teet,p%DOFs%PSBE(K,L)) = -DOT_PRODUCT( RtHSdat%PAngVelEH(DOF_Teet,0,:), &
+                                                                 RtHSdat%PMomLPRot(:,p%DOFs%PSBE(K,L)) )  ! [C(q,t)]B
+            ENDDO             ! L - All active (enabled) blade DOFs that contribute to the QD2T-related linear accelerations of the blade
+         ENDIF
       ENDIF
 
 
@@ -8480,11 +8497,13 @@ SUBROUTINE FillAugMat( p, x, CoordSys, u, HSSBrTrq, RtHSdat, AugMat )
                                                               +  RtHSdat%TFrlMom                                                  ! + {-f(qd,q,t)}SpringTF + {-f(qd,q,t)}DampTF
    ENDIF
 
-   IF ( ( p%NumBl == 2 ) .AND. ( p%DOF_Flag(DOF_Teet) ) )  THEN
-      ! The teeter DOF does not affect any DOF index larger than DOF_Teet.  Therefore, there is no need to perform the loop: DO I = Diag(DOF_Teet),NActvDOF
+   IF ( ( p%NumBl == 2 ) ) THEN 
+      IF ( p%DOF_Flag(DOF_Teet) )  THEN  ! NOTE: two "ifs" since DOF_Teet may be out of bound
+         ! The teeter DOF does not affect any DOF index larger than DOF_Teet.  Therefore, there is no need to perform the loop: DO I = Diag(DOF_Teet),NActvDOF
          AugMat(DOF_Teet,       DOF_Teet) = -DOT_PRODUCT( RtHSdat%PAngVelEH(DOF_Teet,0,:), RtHSdat%PMomLPRot(:,DOF_Teet) )        ! [C(q,t)]H + [C(q,t)]B
          AugMat(DOF_Teet,         p%NAug) =  DOT_PRODUCT( RtHSdat%PAngVelEH(DOF_Teet,0,:), RtHSdat%MomLPRott             ) &      ! {-f(qd,q,t)}H + {-f(qd,q,t)}GravH + {-f(qd,q,t)}B + {-f(qd,q,t)}GravB + {-f(qd,q,t)}AeroB
                                                               +  RtHSdat%TeetMom                                                  ! + {-f(qd,q,t)}SpringTeet + {-f(qd,q,t)}DampTeet
+      ENDIF
    ENDIF
    !..................................................................................................................................
    ! So far, we have only filled in the portions of the mass matrix on and below the diagonal.  Because the mass matrix is symmetric
@@ -10054,15 +10073,15 @@ SUBROUTINE ED_PrintSum( p, OtherState, GenerateAdamsModel, ErrStat, ErrMsg )
    ELSE
       RotorType = 'Upwind,'
    ENDIF
-   IF ( p%NumBl == 2 )  THEN
-      RotorType = TRIM(RotorType)//' two-bladed rotor'
-      IF ( p%DOF_Flag(DOF_Teet) )  THEN
+   RotorType = TRIM(RotorType)//' '//trim(Num2LStr(p%NumBl))//'-bladed rotor'
+   IF ( p%NumBl==2 )  THEN
+      IF ( p%DOF_Flag(DOF_Teet) ) THEN ! NOTE: two "ifs" required since DOF_Teet might be out of bound
          RotorType = TRIM(RotorType)//' with teetering hub.'
       ELSE
          RotorType = TRIM(RotorType)//' with rigid hub.'
       ENDIF
    ELSE
-      RotorType = TRIM(RotorType)//' three-bladed rotor with rigid hub.'
+      RotorType = TRIM(RotorType)//' with rigid hub.'
    ENDIF
 
    WRITE    (UnSu,'(A)')  '            '//TRIM(RotorType)

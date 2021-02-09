@@ -44,7 +44,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: UAMod      !< Model for the dynamic stall equations [1 = Leishman/Beddoes, 2 = Gonzalez, 3 = Minnema] [-]
     REAL(ReKi)  :: a_s      !< speed of sound [m/s]
     LOGICAL  :: Flookup      !< Use table lookup for f' and f''  [-]
-    INTEGER(IntKi)  :: NumOuts      !< The number of outputs for this module as requested in the input file [-]
+    LOGICAL  :: ShedEffect = .True.      !< Include the effect of shed vorticity. If False, the input alpha is assumed to already contain this effect (e.g. vortex methods) [-]
   END TYPE UA_InitInputType
 ! =======================
 ! =========  UA_InitOutputType  =======
@@ -160,6 +160,7 @@ IMPLICIT NONE
 ! =======================
 ! =========  UA_OtherStateType  =======
   TYPE, PUBLIC :: UA_OtherStateType
+    LOGICAL , DIMENSION(:,:), ALLOCATABLE  :: UA_off_forGood      !< logical flag indicating if UA is off for good [-]
     LOGICAL , DIMENSION(:,:), ALLOCATABLE  :: FirstPass      !< logical flag indicating if this is the first time step [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: sigma1      !< multiplier for T_fn [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: sigma1c      !< multiplier for T_fc [-]
@@ -173,11 +174,13 @@ IMPLICIT NONE
   TYPE, PUBLIC :: UA_MiscVarType
     LOGICAL  :: FirstWarn_M      !< flag so Mach number warning doesn't get repeated forever [-]
     LOGICAL  :: FirstWarn_UA      !< flag so UA state warning doesn't get repeated forever [-]
+    LOGICAL  :: FirstWarn_UA_off      !< flag so UA state warning doesn't get repeated forever [-]
     LOGICAL , DIMENSION(:,:), ALLOCATABLE  :: TESF      !< logical flag indicating if trailing edge separation is possible [-]
     LOGICAL , DIMENSION(:,:), ALLOCATABLE  :: LESF      !< logical flag indicating if leading edge separation is possible [-]
     LOGICAL , DIMENSION(:,:), ALLOCATABLE  :: VRTX      !< logical flag indicating if a vortex is being processed [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: T_Sh      !< shedding frequency [-]
     LOGICAL , DIMENSION(:,:), ALLOCATABLE  :: BEDSEP      !< logical flag indicating if this is undergoing separated flow (for compison with AD14) [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: weight      !< value between 0 and 1 indicating if UA is on (1) or off (0) or somewhere in between [-]
   END TYPE UA_MiscVarType
 ! =======================
 ! =========  UA_ParameterType  =======
@@ -189,13 +192,13 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: UAMod      !< Model for the dynamic stall equations [1 = Leishman/Beddoes, 2 = Gonzalez, 3 = Minnema] [-]
     LOGICAL  :: Flookup      !< Use table lookup for f' and f''  [-]
     REAL(ReKi)  :: a_s      !< speed of sound [m/s]
-    INTEGER(IntKi)  :: NumOuts      !< Number of outputs [-]
+    INTEGER(IntKi)  :: NumOuts = 0      !< Number of outputs [-]
     INTEGER(IntKi)  :: OutSwtch      !< Output requested channels to: [1=Unsteady.out 2=GlueCode.out  3=both files] [-]
     CHARACTER(20)  :: OutFmt      !< Output format for numerical results [-]
     CHARACTER(20)  :: OutSFmt      !< Output format for header strings [-]
     CHARACTER(1)  :: Delim      !< Delimiter string for outputs, defaults to tab-delimiters [-]
-    INTEGER(IntKi)  :: UnOutFile      !< File unit for the UnsteadyAero outputs [-]
-    LOGICAL  :: ShedEffect = .True.      !< Include the effect of shed vorticity. If False, the input alpha is assumed to already contain this effect (e.g. vortex methods) [-]
+    INTEGER(IntKi)  :: UnOutFile = 0      !< File unit for the UnsteadyAero outputs [-]
+    LOGICAL  :: ShedEffect      !< Include the effect of shed vorticity. If False, the input alpha is assumed to already contain this effect (e.g. vortex methods) [-]
     INTEGER(IntKi)  :: lin_nx = 0      !< Number of continuous states for linearization [-]
   END TYPE UA_ParameterType
 ! =======================
@@ -257,7 +260,7 @@ ENDIF
     DstInitInputData%UAMod = SrcInitInputData%UAMod
     DstInitInputData%a_s = SrcInitInputData%a_s
     DstInitInputData%Flookup = SrcInitInputData%Flookup
-    DstInitInputData%NumOuts = SrcInitInputData%NumOuts
+    DstInitInputData%ShedEffect = SrcInitInputData%ShedEffect
  END SUBROUTINE UA_CopyInitInput
 
  SUBROUTINE UA_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
@@ -321,7 +324,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! UAMod
       Re_BufSz   = Re_BufSz   + 1  ! a_s
       Int_BufSz  = Int_BufSz  + 1  ! Flookup
-      Int_BufSz  = Int_BufSz  + 1  ! NumOuts
+      Int_BufSz  = Int_BufSz  + 1  ! ShedEffect
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -385,7 +388,7 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%Flookup, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%NumOuts
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%ShedEffect, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE UA_PackInitInput
 
@@ -456,7 +459,7 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%Flookup = TRANSFER(IntKiBuf(Int_Xferred), OutData%Flookup)
     Int_Xferred = Int_Xferred + 1
-    OutData%NumOuts = IntKiBuf(Int_Xferred)
+    OutData%ShedEffect = TRANSFER(IntKiBuf(Int_Xferred), OutData%ShedEffect)
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE UA_UnPackInitInput
 
@@ -3959,6 +3962,20 @@ ENDIF
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
+IF (ALLOCATED(SrcOtherStateData%UA_off_forGood)) THEN
+  i1_l = LBOUND(SrcOtherStateData%UA_off_forGood,1)
+  i1_u = UBOUND(SrcOtherStateData%UA_off_forGood,1)
+  i2_l = LBOUND(SrcOtherStateData%UA_off_forGood,2)
+  i2_u = UBOUND(SrcOtherStateData%UA_off_forGood,2)
+  IF (.NOT. ALLOCATED(DstOtherStateData%UA_off_forGood)) THEN 
+    ALLOCATE(DstOtherStateData%UA_off_forGood(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstOtherStateData%UA_off_forGood.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstOtherStateData%UA_off_forGood = SrcOtherStateData%UA_off_forGood
+ENDIF
 IF (ALLOCATED(SrcOtherStateData%FirstPass)) THEN
   i1_l = LBOUND(SrcOtherStateData%FirstPass,1)
   i1_u = UBOUND(SrcOtherStateData%FirstPass,1)
@@ -4059,6 +4076,9 @@ ENDIF
 ! 
   ErrStat = ErrID_None
   ErrMsg  = ""
+IF (ALLOCATED(OtherStateData%UA_off_forGood)) THEN
+  DEALLOCATE(OtherStateData%UA_off_forGood)
+ENDIF
 IF (ALLOCATED(OtherStateData%FirstPass)) THEN
   DEALLOCATE(OtherStateData%FirstPass)
 ENDIF
@@ -4117,6 +4137,11 @@ ENDDO
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
+  Int_BufSz   = Int_BufSz   + 1     ! UA_off_forGood allocated yes/no
+  IF ( ALLOCATED(InData%UA_off_forGood) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! UA_off_forGood upper/lower bounds for each dimension
+      Int_BufSz  = Int_BufSz  + SIZE(InData%UA_off_forGood)  ! UA_off_forGood
+  END IF
   Int_BufSz   = Int_BufSz   + 1     ! FirstPass allocated yes/no
   IF ( ALLOCATED(InData%FirstPass) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! FirstPass upper/lower bounds for each dimension
@@ -4194,6 +4219,26 @@ ENDDO
   Db_Xferred  = 1
   Int_Xferred = 1
 
+  IF ( .NOT. ALLOCATED(InData%UA_off_forGood) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%UA_off_forGood,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%UA_off_forGood,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%UA_off_forGood,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%UA_off_forGood,2)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i2 = LBOUND(InData%UA_off_forGood,2), UBOUND(InData%UA_off_forGood,2)
+        DO i1 = LBOUND(InData%UA_off_forGood,1), UBOUND(InData%UA_off_forGood,1)
+          IntKiBuf(Int_Xferred) = TRANSFER(InData%UA_off_forGood(i1,i2), IntKiBuf(1))
+          Int_Xferred = Int_Xferred + 1
+        END DO
+      END DO
+  END IF
   IF ( .NOT. ALLOCATED(InData%FirstPass) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -4374,6 +4419,29 @@ ENDDO
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! UA_off_forGood not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%UA_off_forGood)) DEALLOCATE(OutData%UA_off_forGood)
+    ALLOCATE(OutData%UA_off_forGood(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%UA_off_forGood.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i2 = LBOUND(OutData%UA_off_forGood,2), UBOUND(OutData%UA_off_forGood,2)
+        DO i1 = LBOUND(OutData%UA_off_forGood,1), UBOUND(OutData%UA_off_forGood,1)
+          OutData%UA_off_forGood(i1,i2) = TRANSFER(IntKiBuf(Int_Xferred), OutData%UA_off_forGood(i1,i2))
+          Int_Xferred = Int_Xferred + 1
+        END DO
+      END DO
+  END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! FirstPass not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
@@ -4576,6 +4644,7 @@ ENDDO
    ErrMsg  = ""
     DstMiscData%FirstWarn_M = SrcMiscData%FirstWarn_M
     DstMiscData%FirstWarn_UA = SrcMiscData%FirstWarn_UA
+    DstMiscData%FirstWarn_UA_off = SrcMiscData%FirstWarn_UA_off
 IF (ALLOCATED(SrcMiscData%TESF)) THEN
   i1_l = LBOUND(SrcMiscData%TESF,1)
   i1_u = UBOUND(SrcMiscData%TESF,1)
@@ -4646,6 +4715,20 @@ IF (ALLOCATED(SrcMiscData%BEDSEP)) THEN
   END IF
     DstMiscData%BEDSEP = SrcMiscData%BEDSEP
 ENDIF
+IF (ALLOCATED(SrcMiscData%weight)) THEN
+  i1_l = LBOUND(SrcMiscData%weight,1)
+  i1_u = UBOUND(SrcMiscData%weight,1)
+  i2_l = LBOUND(SrcMiscData%weight,2)
+  i2_u = UBOUND(SrcMiscData%weight,2)
+  IF (.NOT. ALLOCATED(DstMiscData%weight)) THEN 
+    ALLOCATE(DstMiscData%weight(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%weight.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstMiscData%weight = SrcMiscData%weight
+ENDIF
  END SUBROUTINE UA_CopyMisc
 
  SUBROUTINE UA_DestroyMisc( MiscData, ErrStat, ErrMsg )
@@ -4671,6 +4754,9 @@ IF (ALLOCATED(MiscData%T_Sh)) THEN
 ENDIF
 IF (ALLOCATED(MiscData%BEDSEP)) THEN
   DEALLOCATE(MiscData%BEDSEP)
+ENDIF
+IF (ALLOCATED(MiscData%weight)) THEN
+  DEALLOCATE(MiscData%weight)
 ENDIF
  END SUBROUTINE UA_DestroyMisc
 
@@ -4711,6 +4797,7 @@ ENDIF
   Int_BufSz  = 0
       Int_BufSz  = Int_BufSz  + 1  ! FirstWarn_M
       Int_BufSz  = Int_BufSz  + 1  ! FirstWarn_UA
+      Int_BufSz  = Int_BufSz  + 1  ! FirstWarn_UA_off
   Int_BufSz   = Int_BufSz   + 1     ! TESF allocated yes/no
   IF ( ALLOCATED(InData%TESF) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! TESF upper/lower bounds for each dimension
@@ -4735,6 +4822,11 @@ ENDIF
   IF ( ALLOCATED(InData%BEDSEP) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! BEDSEP upper/lower bounds for each dimension
       Int_BufSz  = Int_BufSz  + SIZE(InData%BEDSEP)  ! BEDSEP
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! weight allocated yes/no
+  IF ( ALLOCATED(InData%weight) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! weight upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%weight)  ! weight
   END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -4766,6 +4858,8 @@ ENDIF
     IntKiBuf(Int_Xferred) = TRANSFER(InData%FirstWarn_M, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%FirstWarn_UA, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%FirstWarn_UA_off, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
   IF ( .NOT. ALLOCATED(InData%TESF) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -4867,6 +4961,26 @@ ENDIF
         END DO
       END DO
   END IF
+  IF ( .NOT. ALLOCATED(InData%weight) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%weight,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%weight,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%weight,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%weight,2)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i2 = LBOUND(InData%weight,2), UBOUND(InData%weight,2)
+        DO i1 = LBOUND(InData%weight,1), UBOUND(InData%weight,1)
+          ReKiBuf(Re_Xferred) = InData%weight(i1,i2)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
  END SUBROUTINE UA_PackMisc
 
  SUBROUTINE UA_UnPackMisc( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -4900,6 +5014,8 @@ ENDIF
     OutData%FirstWarn_M = TRANSFER(IntKiBuf(Int_Xferred), OutData%FirstWarn_M)
     Int_Xferred = Int_Xferred + 1
     OutData%FirstWarn_UA = TRANSFER(IntKiBuf(Int_Xferred), OutData%FirstWarn_UA)
+    Int_Xferred = Int_Xferred + 1
+    OutData%FirstWarn_UA_off = TRANSFER(IntKiBuf(Int_Xferred), OutData%FirstWarn_UA_off)
     Int_Xferred = Int_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! TESF not allocated
     Int_Xferred = Int_Xferred + 1
@@ -5013,6 +5129,29 @@ ENDIF
         DO i1 = LBOUND(OutData%BEDSEP,1), UBOUND(OutData%BEDSEP,1)
           OutData%BEDSEP(i1,i2) = TRANSFER(IntKiBuf(Int_Xferred), OutData%BEDSEP(i1,i2))
           Int_Xferred = Int_Xferred + 1
+        END DO
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! weight not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%weight)) DEALLOCATE(OutData%weight)
+    ALLOCATE(OutData%weight(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%weight.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i2 = LBOUND(OutData%weight,2), UBOUND(OutData%weight,2)
+        DO i1 = LBOUND(OutData%weight,1), UBOUND(OutData%weight,1)
+          OutData%weight(i1,i2) = ReKiBuf(Re_Xferred)
+          Re_Xferred = Re_Xferred + 1
         END DO
       END DO
   END IF

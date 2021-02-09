@@ -50,9 +50,9 @@ IMPLICIT NONE
   END TYPE MAP_InitInputType_C
   TYPE, PUBLIC :: MAP_InitInputType
     TYPE( MAP_InitInputType_C ) :: C_obj
-    REAL(DbKi)  :: gravity = -999.9      !< gravity constant [[m/s^2]]
-    REAL(DbKi)  :: sea_density = -999.9      !< sea density [[kg/m^3]]
-    REAL(DbKi)  :: depth = -999.9      !< depth of water [[m]]
+    REAL(R8Ki)  :: gravity = -999.9      !< gravity constant [[m/s^2]]
+    REAL(R8Ki)  :: sea_density = -999.9      !< sea density [[kg/m^3]]
+    REAL(R8Ki)  :: depth = -999.9      !< depth of water [[m]]
     CHARACTER(255)  :: file_name      !< MAP input file [-]
     CHARACTER(255)  :: summary_file_name      !< MAP summary file name [-]
     CHARACTER(255)  :: library_input_str      !< cable library string information (from input file) [-]
@@ -91,7 +91,7 @@ IMPLICIT NONE
   END TYPE MAP_ContinuousStateType_C
   TYPE, PUBLIC :: MAP_ContinuousStateType
     TYPE( MAP_ContinuousStateType_C ) :: C_obj
-    REAL(DbKi)  :: dummy      !< Remove this variable if you have continuous states [-]
+    REAL(R8Ki)  :: dummy      !< Remove this variable if you have continuous states [-]
   END TYPE MAP_ContinuousStateType
 ! =======================
 ! =========  MAP_DiscreteStateType_C  =======
@@ -101,7 +101,7 @@ IMPLICIT NONE
   END TYPE MAP_DiscreteStateType_C
   TYPE, PUBLIC :: MAP_DiscreteStateType
     TYPE( MAP_DiscreteStateType_C ) :: C_obj
-    REAL(DbKi)  :: dummy      !< Remove this variable if you have discrete states [-]
+    REAL(R8Ki)  :: dummy      !< Remove this variable if you have discrete states [-]
   END TYPE MAP_DiscreteStateType
 ! =======================
 ! =========  MAP_OtherStateType_C  =======
@@ -194,10 +194,10 @@ IMPLICIT NONE
   END TYPE MAP_ParameterType_C
   TYPE, PUBLIC :: MAP_ParameterType
     TYPE( MAP_ParameterType_C ) :: C_obj
-    REAL(DbKi)  :: g      !< gravitational constant [[kg/m^2]]
-    REAL(DbKi)  :: depth      !< distance to seabed [[m]]
-    REAL(DbKi)  :: rho_sea      !< density of seawater [[m]]
-    REAL(DbKi)  :: dt      !< time step coupling interval [[sec]]
+    REAL(R8Ki)  :: g      !< gravitational constant [[kg/m^2]]
+    REAL(R8Ki)  :: depth      !< distance to seabed [[m]]
+    REAL(R8Ki)  :: rho_sea      !< density of seawater [[m]]
+    REAL(R8Ki)  :: dt      !< time step coupling interval [[sec]]
     CHARACTER(255) , DIMENSION(1:500)  :: InputLines      !< input file line for restart [-]
     CHARACTER(1) , DIMENSION(1:500)  :: InputLineType      !< input file line type for restart [-]
     INTEGER(IntKi)  :: numOuts = 0      !< Number of write outputs [-]
@@ -475,13 +475,13 @@ CONTAINS
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-    OutData%gravity = DbKiBuf(Db_Xferred)
+    OutData%gravity = REAL(DbKiBuf(Db_Xferred), R8Ki)
     Db_Xferred = Db_Xferred + 1
       OutData%C_obj%gravity = OutData%gravity
-    OutData%sea_density = DbKiBuf(Db_Xferred)
+    OutData%sea_density = REAL(DbKiBuf(Db_Xferred), R8Ki)
     Db_Xferred = Db_Xferred + 1
       OutData%C_obj%sea_density = OutData%sea_density
-    OutData%depth = DbKiBuf(Db_Xferred)
+    OutData%depth = REAL(DbKiBuf(Db_Xferred), R8Ki)
     Db_Xferred = Db_Xferred + 1
       OutData%C_obj%depth = OutData%depth
     DO I = 1, LEN(OutData%file_name)
@@ -1224,7 +1224,7 @@ ENDIF
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-    OutData%dummy = DbKiBuf(Db_Xferred)
+    OutData%dummy = REAL(DbKiBuf(Db_Xferred), R8Ki)
     Db_Xferred = Db_Xferred + 1
       OutData%C_obj%dummy = OutData%dummy
  END SUBROUTINE MAP_UnPackContState
@@ -1389,7 +1389,7 @@ ENDIF
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-    OutData%dummy = DbKiBuf(Db_Xferred)
+    OutData%dummy = REAL(DbKiBuf(Db_Xferred), R8Ki)
     Db_Xferred = Db_Xferred + 1
       OutData%C_obj%dummy = OutData%dummy
  END SUBROUTINE MAP_UnPackDiscState
@@ -3699,16 +3699,16 @@ ENDIF
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-    OutData%g = DbKiBuf(Db_Xferred)
+    OutData%g = REAL(DbKiBuf(Db_Xferred), R8Ki)
     Db_Xferred = Db_Xferred + 1
       OutData%C_obj%g = OutData%g
-    OutData%depth = DbKiBuf(Db_Xferred)
+    OutData%depth = REAL(DbKiBuf(Db_Xferred), R8Ki)
     Db_Xferred = Db_Xferred + 1
       OutData%C_obj%depth = OutData%depth
-    OutData%rho_sea = DbKiBuf(Db_Xferred)
+    OutData%rho_sea = REAL(DbKiBuf(Db_Xferred), R8Ki)
     Db_Xferred = Db_Xferred + 1
       OutData%C_obj%rho_sea = OutData%rho_sea
-    OutData%dt = DbKiBuf(Db_Xferred)
+    OutData%dt = REAL(DbKiBuf(Db_Xferred), R8Ki)
     Db_Xferred = Db_Xferred + 1
       OutData%C_obj%dt = OutData%dt
     i1_l = LBOUND(OutData%InputLines,1)

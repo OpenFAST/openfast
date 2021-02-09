@@ -95,6 +95,7 @@ contains
                 !form='UNFORMATTED',access='SEQUENTIAL',action='WRITE',convert='BIG_ENDIAN',recordtype='STREAM',buffered='YES',
                !print*,'Not available for this compiler' !COMPAQ-COMPILER
                !STOP !COMPAQ-COMPILER
+!bjj: CONVERT is non-standard, so maybe this should be part of Sys*.f90? Like OpenUnfInpBEFile()?
                 open(unit = mvtk%vtk_unit,file= trim(adjustl(filename)),form='UNFORMATTED',access = 'stream',& !OTHER-COMPILER
                     action = 'WRITE',convert= 'BIG_ENDIAN',iostat=iostatvar,status='replace') !OTHER-COMPILER
             else
@@ -107,7 +108,7 @@ contains
                     write(mvtk%vtk_unit)'BINARY'//NL
                 else
                     write(mvtk%vtk_unit,'(a)') '# vtk DataFile Version 2.0'
-                    write(mvtk%vtk_unit,'(a)') label
+                    write(mvtk%vtk_unit,'(a)') trim(label)
                     write(mvtk%vtk_unit,'(a)') 'ASCII'
                     write(mvtk%vtk_unit,'(a)') ' '
                 endif
@@ -263,6 +264,32 @@ contains
             endif
         endif
     end subroutine
+
+    subroutine vtk_dataset_structured_points(x0,dx,n,mvtk)
+        real(ReKi),     dimension(3), intent(in) :: x0 !< origin
+        real(ReKi),     dimension(3), intent(in) :: dx !< spacing
+        integer,        dimension(3), intent(in) :: n  !< length
+        type(FVW_VTK_Misc),intent(inout) :: mvtk
+
+        if ( mvtk%bFileOpen ) then
+            mvtk%nPoints=n(1)*n(2)*n(3)
+            if (mvtk%bBinary) then
+                write(mvtk%vtk_unit) 'DATASET STRUCTURED_POINTS'//NL
+                write(mvtk%buffer,'(A,I0,A,I0,A,I0)') 'DIMENSIONS ',n(1),' ',n(2),' ',n(3)
+                write(mvtk%vtk_unit) trim(mvtk%buffer)//NL
+                write(mvtk%buffer,'(A,3F16.8)') 'ORIGIN ', x0
+                write(mvtk%vtk_unit) trim(mvtk%buffer)//NL
+                write(mvtk%buffer,'(A,3F16.8)') 'SPACING ', dx
+                write(mvtk%vtk_unit) trim(mvtk%buffer)//NL
+            else
+                write(mvtk%vtk_unit,'(A)') 'DATASET STRUCTURED_POINTS'
+                write(mvtk%vtk_unit,'(A,I0,A,I0,A,I0)') 'DIMENSIONS ', n(1),' ',n(2),' ',n(3)
+                write(mvtk%vtk_unit,'(A,3F16.8,A)') 'ORIGIN  ',x0
+                write(mvtk%vtk_unit,'(A,3F16.8,A)') 'SPACING ',dx
+            endif
+        endif
+    end subroutine
+
 
     ! ------------------------------------------------------------------------- 
     ! --- STRUCTURED GRID (Points dumped without for loop since memory is in proper order)

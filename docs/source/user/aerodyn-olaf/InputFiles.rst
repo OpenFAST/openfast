@@ -30,7 +30,8 @@ General Options
 convect the Lagrangian markers. There are four options: 1) fourth-order
 Runge-Kutta *[1]*, 2) fourth-order Adams-Bashforth *[2]*, 3) fourth-order
 Adams-Bashforth-Moulton *[3]*, and 4) first-order forward Euler *[5]*. The
-default option is *[5]*. These methods are specified in :numref:`sec:vortconv`.
+default option is *[5]*. Currently only options *[1]* and *[5]* are implemented.
+These methods are specified in :numref:`sec:vortconv`.
 
 **DTfvw** [sec] specifies the time interval at which the module will update the
 wake. The time interval must be a multiple of the time step used by
@@ -111,10 +112,40 @@ for viscous diffusion. There are two options: 1) no diffusion *[0]* and 2) the
 core-spreading method *[1]*. The default option is *[0]*.
 
 **RegDetMethod** [switch] specifies which method is used to determine the
-regularization parameters. There are two options: 1) manual *[0]* and 2)
-optimized *[1]*. The manual option requires the user to specify the parameters
-listed in this subsection. The optimized option determines the parameters for
-the user.  The default option is *[0]*.
+regularization parameters. There are four options: 1) constant *[0]* and 2)
+optimized *[1]*, 3) chord *[2]*, and 4) span *[3]*. 
+The optimized option determines all the parameters in this section for the user.
+The optimized option is still work in progress and not recommended.
+The constant option requires the user to specify all the parameters present in this section.
+The default option is *[0]*.
+When **RegDetMethod==0**, the regularization parameters is set constant:
+
+.. math::
+
+   r_{c,\text{wake}}(r) = \text{WakeRegParam} 
+   ,\quad
+   r_{c,\text{blade}}(r) = \text{BladeRegParam} 
+
+When **RegDetMethod==2**, the regularization parameters is set according to the local chord:
+
+.. math::
+
+   r_{c,\text{wake}}(r) = \text{WakeRegParam} \cdot c(r)
+   ,\quad
+   r_{c,,\text{blade}}(r) = \text{BladeRegParam} \cdot c(r)
+
+When **RegDetMethod==3**, the regularization parameters is set according to the spanwise discretization:
+
+.. math::
+
+   r_{c,\text{wake}}(r) = \text{WakeRegParam} \cdot \Delta  r(r)
+   ,\quad
+   r_{c,,\text{blade}}(r) = \text{BladeRegParam} \cdot \Delta r(r)
+
+where :math:`Delta r` is the length of the spanwise station.
+
+
+
 
 **RegFunction** [switch] specifies the regularization function used to remove
 the singularity of the vortex elements, as specified in
@@ -128,11 +159,11 @@ radius (i.e., the regularization parameter). There are three options: 1)
 constant *[1]*, 2) stretching *[2]*, and 3) age *[3]*. The methods are
 described in :numref:`sec:corerad`. The default option is *[1]*.
 
-**WakeRegParam** [m] specifies the wake regularization parameter, which is the
+**WakeRegParam** [m, or -] specifies the wake regularization parameter, which is the
 regularization value used at the initialization of a vortex element. If the
 regularization method is “constant”, this value is used throughout the wake.
 
-**BladeRegParam** [m] specifies the bound vorticity regularization parameter,
+**BladeRegParam** [m, or -] specifies the bound vorticity regularization parameter,
 which is the regularization value used for the vorticity elements bound to the
 blades.
 
@@ -199,6 +230,29 @@ coordinate system *[2]*. The default option is *[1]*.
 provided value is rounded to the nearest allowable multiple of the time step.
 The default value is :math:`1/dt_\text{fvw}`. Specifying *VTK_fps* = *[all]*,
 is equivalent to using the value :math:`1/dt_\text{aero}`.
+
+
+**nGridOut** [-] specifies the number of grid outputs. The default value is 0.
+The grid outputs are velocity fields that are exported on a regular Cartesian grid. 
+The are defined using a table that follows on the subsequent lines, with two lines of headers. 
+The user needs to specify a **GridName**, used for the VTK output filename, a time interval 
+**DTOut**, and the grid extent in each directions, e.g. **XStart**, **XEnd**, **nX**. 
+With these options, it is possible to export the velocity field at a point (**nX=nY=nZ=1**),
+a line, a plane, or a box. When the variable **DTOut** is set to "all", the AeroDyn time step is used,  when it is set to "default", the OLAF time step is used. 
+An example of input is given below: 
+
+.. code::
+
+    3       nGridOut           Number of grid outputs
+    GridName    DTOut     XStart    XEnd   nX    YStart   YEnd    nY    ZStart   ZEnd   nZ
+    (-)         (s)        (m)      (m)    (-)    (m)     (m)     (-)    (m)     (m)    (-)
+    "box"       all        -200     1000.    5    -150.   150.    20      5.     300.    30
+    "vert"      default    -200     1000.   100     0.     0.     1       5.     300.    30
+    "hori"      2.0        -200     1000.   100   -150.   150.    20     100.    100.    1
+
+In this example, the first grid, named "box", is exported at the AeroDyn time step, and consists 
+of a box of shape 5x20x30 and dimension 1200x300x295.  The two other grids are vertical and horizontal planes.
+
 
 AeroDyn15 Input File
 --------------------
