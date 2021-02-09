@@ -63,6 +63,7 @@ MODULE NWTC_IO
    CHARACTER(99)                 :: ProgVer  = ' '                               !< The version (including date) of the calling program. DO NOT USE THIS IN NEW PROGRAMS
    CHARACTER(1), PARAMETER       :: Tab      = CHAR( 9 )                         !< The tab character.
    CHARACTER(*), PARAMETER       :: CommChars = '!#%'                            !< Comment characters that mark the end of useful input
+   INTEGER(IntKi), PARAMETER     :: NWTC_SizeOfNumWord = 200                     !< maximum length of the words containing numeric input (for ParseVar routines)
 
 
       ! Parameters for writing to echo files (in this module only)
@@ -139,7 +140,7 @@ MODULE NWTC_IO
    END INTERFACE
 
       !> \copydoc nwtc_io::parsechvarwdefault
-   INTERFACE ParseVarWDefault                                                 ! Parses a boolean variable name and value from a string, potentially sets to a default value if "Default" is parsed.
+   INTERFACE ParseVarWDefault                                                 ! Parses a character variable name and value from a string, potentially sets to a default value if "Default" is parsed.
       MODULE PROCEDURE ParseChVarWDefault                                     ! Parses a character string from a string, potentially sets to a default value if "Default" is parsed.
       MODULE PROCEDURE ParseDbVarWDefault                                     ! Parses a double-precision REAL from a string, potentially sets to a default value if "Default" is parsed.
       MODULE PROCEDURE ParseInVarWDefault                                     ! Parses an INTEGER from a string, potentially sets to a default value if "Default" is parsed.
@@ -245,13 +246,7 @@ MODULE NWTC_IO
       MODULE PROCEDURE WrR8AryFileNR
       MODULE PROCEDURE WrR16AryFileNR
    END INTERFACE
-   
-   INTERFACE WrVTK_SP_vectors3D
-      MODULE PROCEDURE WrVTK_SP_R4vectors3D
-      MODULE PROCEDURE WrVTK_SP_R8vectors3D
-      MODULE PROCEDURE WrVTK_SP_R16vectors3D
-   END INTERFACE
-   
+
 CONTAINS
 
 !> This routine adjusts strings created from real numbers (4, 8, or 16-byte)
@@ -1701,28 +1696,40 @@ CONTAINS
       CALL Conv2UC ( ExpUCVarName )
 
 
-         ! See which word is the variable name.  Generate an error if it is neither.
-         ! If it is the first word, check to make sure the second word is not empty.
+         !  Allow for an empty variable name to be passed.  This occurs when we have
+         !  multiple lines of items that may not have variable keys associated.  In
+         !  this case, we will assume the first word has the value and return that.
+         !  Otherwise, we will check which is the variable keyname.
+      IF ( LEN_TRIM(ExpVarName) == 0 ) THEN
+         !  There isn't actually a variable name passed in, but this satisfies the
+         !  logic for retrieving the value in the calling routine
+         NameIndx = 2
 
-      IF ( TRIM( FndUCVarName ) == TRIM( ExpUCVarName ) )  THEN
-         NameIndx = 1
-         IF ( LEN_TRIM( Words(2) ) == 0 )  THEN
-            CALL ExitThisRoutine ( ErrID_Fatal, NewLine//' >> A fatal error occurred when parsing data from "'//TRIM( FileName ) &
-                      //'".'//NewLine//' >> The variable "'//TRIM( Words(1) )//'" was not assigned a value on line #' &
-                      //TRIM( Num2LStr( FileLineNum ) )//'.' )
-            RETURN
-         ENDIF
       ELSE
-         FndUCVarName = Words(2)
-         CALL Conv2UC ( FndUCVarName )
+            ! See which word is the variable name.  Generate an error if it is neither.
+            ! If it is the first word, check to make sure the second word is not empty.
+ 
          IF ( TRIM( FndUCVarName ) == TRIM( ExpUCVarName ) )  THEN
-            NameIndx = 2
+            NameIndx = 1
+            IF ( LEN_TRIM( Words(2) ) == 0 )  THEN
+               CALL ExitThisRoutine ( ErrID_Fatal, NewLine//' >> A fatal error occurred when parsing data from "'//TRIM( FileName ) &
+                         //'".'//NewLine//' >> The variable "'//TRIM( Words(1) )//'" was not assigned a value on line #' &
+                         //TRIM( Num2LStr( FileLineNum ) )//'.' )
+               RETURN
+            ENDIF
          ELSE
-            CALL ExitThisRoutine ( ErrID_Fatal, NewLine//' >> A fatal error occurred when parsing data from "'//TRIM( FileName ) &
-                     //'".'//NewLine//' >> The variable "'//TRIM( ExpVarName )//'" was not found on line #' &
-                     //TRIM( Num2LStr( FileLineNum ) )//'.' )
-            RETURN
+            FndUCVarName = Words(2)
+            CALL Conv2UC ( FndUCVarName )
+            IF ( TRIM( FndUCVarName ) == TRIM( ExpUCVarName ) )  THEN
+               NameIndx = 2
+            ELSE
+               CALL ExitThisRoutine ( ErrID_Fatal, NewLine//' >> A fatal error occurred when parsing data from "'//TRIM( FileName ) &
+                        //'".'//NewLine//' >> The variable "'//TRIM( ExpVarName )//'" was not found on line #' &
+                        //TRIM( Num2LStr( FileLineNum ) )//'.' )
+               RETURN
+            ENDIF
          ENDIF
+
       ENDIF
 
 
@@ -2272,6 +2279,8 @@ END SUBROUTINE CheckR16Var
       compiler_version_str = compiler_version()
 #elif defined(__INTEL_COMPILER)
       compiler_version_str = 'Intel(R) Fortran Compiler '//num2lstr(__INTEL_COMPILER)
+#else
+      compiler_version_str = OS_Desc
 #endif
 
       CALL WrScr(trim(name)//'-'//trim(git_commit))
@@ -3468,7 +3477,7 @@ END SUBROUTINE CheckR16Var
       
       
       CALL GetWords ( FileInfo%Lines(LineNum), Words, 2 )                     ! Read the first two words in Line.
-      IF ( Words(2) == '' )  THEN
+      IF ( Words(2) == '' .and. (LEN_TRIM(ExpVarName) > 0) )  THEN
          CALL SetErrStat ( ErrID_Fatal, 'A fatal error occurred when parsing data from "' &
                    //TRIM( FileInfo%FileList(FileInfo%FileIndx(LineNum)) )//'".'//NewLine//  &
                    ' >> The variable "'//TRIM( ExpVarName )//'" was not assigned valid string value on line #' &
@@ -3633,7 +3642,7 @@ END SUBROUTINE CheckR16Var
       INTEGER(IntKi)                         :: ErrStatLcl                    ! Error status local to this routine.
       INTEGER(IntKi)                         :: NameIndx                      ! The index into the Words array that points to the variable name.
 
-      CHARACTER(200)                         :: Words       (2)               ! The two "words" parsed from the line.
+      CHARACTER(NWTC_SizeOfNumWord)          :: Words       (2)               ! The two "words" parsed from the line.
       CHARACTER(ErrMsgLen)                   :: ErrMsg2
       CHARACTER(*), PARAMETER                :: RoutineName = 'ParseDbVar'
 
@@ -3929,7 +3938,7 @@ END SUBROUTINE CheckR16Var
       INTEGER(IntKi)                         :: ErrStatLcl                    ! Error status local to this routine.
       INTEGER(IntKi)                         :: NameIndx                      ! The index into the Words array that points to the variable name.
 
-      CHARACTER(200)                         :: Words       (2)               ! The two "words" parsed from the line.
+      CHARACTER(NWTC_SizeOfNumWord)          :: Words       (2)               ! The two "words" parsed from the line.
       CHARACTER(ErrMsgLen)                   :: ErrMsg2
       CHARACTER(*), PARAMETER                :: RoutineName = 'ParseInVar'
 
@@ -4114,7 +4123,7 @@ END SUBROUTINE CheckR16Var
       INTEGER(IntKi)                         :: ErrStatLcl                    ! Error status local to this routine.
       INTEGER(IntKi)                         :: NameIndx                      ! The index into the Words array that points to the variable name.
 
-      CHARACTER(200)                         :: Words       (2)               ! The two "words" parsed from the line.
+      CHARACTER(NWTC_SizeOfNumWord)          :: Words       (2)               ! The two "words" parsed from the line.
       CHARACTER(ErrMsgLen)                   :: ErrMsg2
       CHARACTER(*), PARAMETER                :: RoutineName = 'ParseLoVar'
 
@@ -4290,7 +4299,7 @@ END SUBROUTINE CheckR16Var
       INTEGER(IntKi)                         :: ErrStatLcl                    ! Error status local to this routine.
       INTEGER(IntKi)                         :: NameIndx                      ! The index into the Words array that points to the variable name.
 
-      CHARACTER(200)                         :: Words       (2)               ! The two "words" parsed from the line.
+      CHARACTER(NWTC_SizeOfNumWord)          :: Words       (2)               ! The two "words" parsed from the line.
       CHARACTER(ErrMsgLen)                   :: ErrMsg2
       CHARACTER(*), PARAMETER                :: RoutineName = 'ParseSiVar'
 
@@ -4325,7 +4334,7 @@ END SUBROUTINE CheckR16Var
       CALL CheckRealVar( Var, ExpVarName, ErrStat, ErrMsg)
       
       IF ( PRESENT(UnEc) )  THEN
-         IF ( UnEc > 0 )  WRITE (UnEc,'(1X,A15," = ",A20)')  Words
+         IF ( UnEc > 0 )  WRITE (UnEc,'(1X,A15," = ",A20)')  Words !bjj: not sure this is the best way to echo the number being read (in case of truncation, etc)
       END IF
 
       LineNum = LineNum + 1
@@ -5623,7 +5632,7 @@ END SUBROUTINE CheckR16Var
 
    IF ( FileType == FileFmtID_NoCompressWithoutTime ) THEN
       DO IRow=1,FASTdata%NumRecs
-         FASTdata%Data(IRow,2:) = REAL(TmpInArray(IRow,:), ReKi)
+         FASTdata%Data(IRow,2:) = REAL(TmpR8InArray(IRow,:), ReKi)
       END DO ! IRow=1,FASTdata%NumRecs
    ELSE
       DO IRow=1,FASTdata%NumRecs
@@ -6301,7 +6310,6 @@ END SUBROUTINE CheckR16Var
    END IF
    RETURN
    END SUBROUTINE ReadR4AryFromStr
-!=======================================================================
 !=======================================================================
 !> \copydoc nwtc_io::readcary
    SUBROUTINE ReadR8Ary ( UnIn, Fil, Ary, AryLen, AryName, AryDescr, ErrStat, ErrMsg, UnEc )
@@ -8685,7 +8693,7 @@ END SUBROUTINE CheckR16Var
    END SUBROUTINE WrVTK_SP_header
    
    
-   SUBROUTINE WrVTK_SP_R4vectors3D( Un, dataDescr, dims, origin, gridSpacing, gridVals, ErrStat, ErrMsg ) 
+   SUBROUTINE WrVTK_SP_vectors3D( Un, dataDescr, dims, origin, gridSpacing, gridVals, ErrStat, ErrMsg ) 
    
       INTEGER(IntKi)  , INTENT(IN   )        :: Un                   !< unit number of previously opened file (via call to WrVTK_SP_header)
       CHARACTER(*)    , INTENT(IN   )        :: dataDescr            !< Short label describing the vector data
@@ -8718,76 +8726,7 @@ END SUBROUTINE CheckR16Var
       close(Un)
       RETURN
       
-   END SUBROUTINE WrVTK_SP_R4vectors3D
-   
-   SUBROUTINE WrVTK_SP_R8vectors3D( Un, dataDescr, dims, origin, gridSpacing, gridVals, ErrStat, ErrMsg ) 
-   
-      INTEGER(IntKi)  , INTENT(IN   )        :: Un                   !< unit number of previously opened file (via call to WrVTK_SP_header)
-      CHARACTER(*)    , INTENT(IN   )        :: dataDescr            !< Short label describing the vector data
-      INTEGER(IntKi)  , INTENT(IN   )        :: dims(3)              !< dimension of the 3D grid (nX,nY,nZ)
-      REAL(ReKi)      , INTENT(IN   )        :: origin(3)            !< the lower-left corner of the 3D grid (X0,Y0,Z0)
-      REAL(ReKi)      , INTENT(IN   )        :: gridSpacing(3)       !< spacing between grid points in each of the 3 directions (dX,dY,dZ)
-      REAL(R8Ki)      , INTENT(IN   )        :: gridVals(:,:,:,:)      !< 3D array of data, size (nX,nY,nZ)
-      INTEGER(IntKi)  , INTENT(  OUT)        :: ErrStat              !< error level/status of OpenFOutFile operation
-      CHARACTER(*)    , INTENT(  OUT)        :: ErrMsg               !< message when error occurs
- 
-      INTEGER(IntKi)                         :: nPts                 ! Total number of grid points 
+   END SUBROUTINE WrVTK_SP_vectors3D
+
       
-      if ( .not. (Un > 0) ) then
-         ErrStat = ErrID_Fatal
-         ErrMsg  = 'WrVTK_SP_points: Invalid file unit, be sure to call WrVTK_SP_header prior to calling WrVTK_SP_points.'
-         return
-      end if
-   
-      ErrStat = ErrID_None
-      ErrMsg  = ''
-      nPts    = dims(1)*dims(2)*dims(3)
-      
-      ! Note: gridVals must be stored such that the left-most dimension is X and the right-most dimension is Z
-      WRITE(Un,'(A,3(i5,1X))')    'DIMENSIONS ',  dims
-      WRITE(Un,'(A,3(f10.2,1X))') 'ORIGIN '    ,  origin
-      WRITE(Un,'(A,3(f10.2,1X))') 'SPACING '   ,  gridSpacing
-      WRITE(Un,'(A,i15)')         'POINT_DATA ',  nPts
-      WRITE(Un,'(A)')            'VECTORS '//trim(dataDescr)//' float'
-      WRITE(Un,'(3(f10.2,1X))')   gridVals
-      close(Un)
-      RETURN
-      
-   END SUBROUTINE WrVTK_SP_R8vectors3D
-   
-   SUBROUTINE WrVTK_SP_R16vectors3D( Un, dataDescr, dims, origin, gridSpacing, gridVals, ErrStat, ErrMsg ) 
-   
-      INTEGER(IntKi)  , INTENT(IN   )        :: Un                   !< unit number of previously opened file (via call to WrVTK_SP_header)
-      CHARACTER(*)    , INTENT(IN   )        :: dataDescr            !< Short label describing the vector data
-      INTEGER(IntKi)  , INTENT(IN   )        :: dims(3)              !< dimension of the 3D grid (nX,nY,nZ)
-      REAL(ReKi)      , INTENT(IN   )        :: origin(3)            !< the lower-left corner of the 3D grid (X0,Y0,Z0)
-      REAL(ReKi)      , INTENT(IN   )        :: gridSpacing(3)       !< spacing between grid points in each of the 3 directions (dX,dY,dZ)
-      REAL(QuKi)      , INTENT(IN   )        :: gridVals(:,:,:,:)      !< 3D array of data, size (nX,nY,nZ)
-      INTEGER(IntKi)  , INTENT(  OUT)        :: ErrStat              !< error level/status of OpenFOutFile operation
-      CHARACTER(*)    , INTENT(  OUT)        :: ErrMsg               !< message when error occurs
- 
-      INTEGER(IntKi)                         :: nPts                 ! Total number of grid points 
-      
-      if ( .not. (Un > 0) ) then
-         ErrStat = ErrID_Fatal
-         ErrMsg  = 'WrVTK_SP_points: Invalid file unit, be sure to call WrVTK_SP_header prior to calling WrVTK_SP_points.'
-         return
-      end if
-   
-      ErrStat = ErrID_None
-      ErrMsg  = ''
-      nPts    = dims(1)*dims(2)*dims(3)
-      
-      ! Note: gridVals must be stored such that the left-most dimension is X and the right-most dimension is Z
-      WRITE(Un,'(A,3(i5,1X))')    'DIMENSIONS ',  dims
-      WRITE(Un,'(A,3(f10.2,1X))') 'ORIGIN '    ,  origin
-      WRITE(Un,'(A,3(f10.2,1X))') 'SPACING '   ,  gridSpacing
-      WRITE(Un,'(A,i15)')         'POINT_DATA ',  nPts
-      WRITE(Un,'(A)')            'VECTORS '//trim(dataDescr)//' float'
-      WRITE(Un,'(3(f10.2,1X))')   gridVals
-      close(Un)
-      RETURN
-      
-   END SUBROUTINE WrVTK_SP_R16vectors3D
-   
 END MODULE NWTC_IO

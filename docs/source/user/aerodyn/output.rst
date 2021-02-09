@@ -22,6 +22,8 @@ will be truncated if AeroDyn encounters an error while parsing an input
 file. The error usually corresponds to the line after the last
 successfully echoed line.
 
+.. _sec:ad_SumFile:
+
 Summary File
 ------------
 
