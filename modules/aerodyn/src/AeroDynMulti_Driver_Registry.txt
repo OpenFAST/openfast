@@ -12,6 +12,7 @@
 # ...... Include files (definitions from NWTC Library) ............................................................................
 include	Registry_NWTC_Library.txt
 usefrom	AeroDyn_Registry.txt
+usefrom	InflowWind.txt
 #
 # ..... Data for driver output file .......................................................................................................
 typedef   AeroDynMulti_Driver/ADM_Dvr  DvrM_OutputFile ProgDesc          AD_ver           -      -     -   "AeroDyn version information" -
@@ -39,6 +40,16 @@ typedef   ^                         ^             AD_ParameterType       p      
 typedef   ^                         ^             AD_InputType           u              {numInp} -     -   "Array of system inputs"
 typedef   ^                         ^             AD_OutputType          y                -      -     -   "System outputs"
 typedef   ^                         ^             DbKi                   InputTime      {numInp} -     -   "Array of times associated with u array"
+# ..... InflowWind data .......................................................................................................
+typedef   ^                    InflowWind_Data   InflowWind_ContinuousStateType   x        -     -    -    "Continuous states"
+typedef   ^                         ^            InflowWind_DiscreteStateType     xd       -     -    -    "Discrete states"
+typedef   ^                         ^            InflowWind_ConstraintStateType   z        -     -    -    "Constraint states"
+typedef   ^                         ^            InflowWind_OtherStateType        OtherSt  -     -    -    "Other states"
+typedef   ^                         ^            InflowWind_ParameterType         p        -     -    -    "Parameters"
+typedef   ^                         ^            InflowWind_MiscVarType           m        -     -    -    "Misc/optimization variables"
+typedef   ^                         ^            InflowWind_InputType             u        {2}   -    -    "Array of inputs associated with InputTimes"
+typedef   ^                         ^            InflowWind_OutputType            y        -     -    -    "System outputs"
+typedef   ^                         ^            DbKi                             InputTimes {2} -    -    "Array of times associated with Input Array"
 
 # ..... Rotor data                 .......................................................................................................
 typedef   ^                        RotorData     ReKi                    baseOrigin   3      -     -   "" -

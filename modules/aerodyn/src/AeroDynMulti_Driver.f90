@@ -22,11 +22,11 @@ program AeroDynMulti_Driver
    implicit none   
    ! Program variables
    real(DbKi)           :: time             !< Variable for storing time, in seconds
-   real(DbKi)           :: dT_Dvr           !< copy of DT, to make sure AD didn't change it
    type(DvrM_SimData)   :: DvrData              !< The data required for running the AD driver
    type(AeroDyn_Data)   :: AD                   !< AeroDyn data
+   type(InflowWind_Data) :: IW                  !< AeroDyn data
    integer(IntKi)       :: nt                   !< loop counter (for time step)
-   integer(IntKi)       :: j                    !< loop counter (for array of inputs)
+   integer(IntKi)       :: j                    !< 
    integer(IntKi)       :: errStat              !< Status of error message
    character(ErrMsgLen) :: errMsg               !< Error message if ErrStat /= ErrID_None
    logical              :: ADM_Initialized
@@ -42,7 +42,14 @@ program AeroDynMulti_Driver
    call Init_AeroDyn(DvrData, AD, DvrData%dT, errStat, errMsg); call CheckError()
 
    ! --- Initialize Inflow Wind 
-   ! TODO TODO TODO 
+   call Init_InflowWind(DvrData, IW, AD, DvrData%dt, errStat, errMsg); call CheckError()
+
+   ! --- Initial AD inputs
+   AD%InputTime = -999
+   DO j = 1-numInp, 0
+      call Set_AD_Inputs(j,DvrData,AD,IW,errStat,errMsg); call CheckError()
+   END DO              
+
 
    ADM_Initialized = .true.
    call DvrM_InitializeOutputFile(DvrData%OutFileData, errStat, errMsg)
@@ -53,12 +60,15 @@ program AeroDynMulti_Driver
       ! set AD inputs for nt (and keep values at nt-1 as well)
       !...............................
       ! u(1) is at nt+1, u(2) is at nt
-      call Set_AD_Inputs(nt,DvrData,AD,errStat,errMsg); call CheckError()
+      call Set_AD_Inputs(nt,DvrData,AD,IW,errStat,errMsg); call CheckError()
       time = AD%InputTime(2)
-      print*,'nt',nt,'time',time
+      if (mod(nd,10)==0) then
+         print*,'time',time
+      endif
       ! Calculate outputs at nt - 1
       call AD_CalcOutput( time, AD%u(2), AD%p, AD%x, AD%xd, AD%z, AD%OtherState, AD%y, AD%m, errStat, errMsg ); call CheckError()
-      call Dvr_WriteOutputLine(time, DvrData%OutFileData, AD%y%WriteOutput, errStat, errMsg); call CheckError()
+
+      call Dvr_WriteOutputLine(time, DvrData%OutFileData, AD%y%WriteOutput, IW%y%WriteOutput, errStat, errMsg); call CheckError()
       ! Get state variables at next step: INPUT at step nt - 1, OUTPUT at step nt
 
       call AD_UpdateStates( time, nt-1, AD%u, AD%InputTime, AD%p, AD%x, AD%xd, AD%z, AD%OtherState, AD%m, errStat, errMsg )
