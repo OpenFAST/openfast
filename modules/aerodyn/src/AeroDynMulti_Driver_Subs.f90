@@ -113,6 +113,7 @@ subroutine Init_AeroDyn(DvrData, AD, dt, errStat, errMsg)
          rot%Rh2bl0(:,:,k) = EulerConstruct( rot%bladeOrientation_h(:,k) ) ! Rotation matrix hub 2 blade (constant)
          InitInData%BladeRootOrientation(:,:,k) = matmul(rot%Rh2bl0(:,:,k),  InitInData%HubOrientation ) ! Global 2 blade =    hub2blade   x global2hub
          InitInData%BladeRootPosition(:,k)   = InitInData%HubPosition + matmul(transpose(InitInData%HubOrientation), rot%bladeOrigin_h(:,k)) + rot%bladeHubRad_bl(k) * InitInData%BladeRootOrientation(3,:,k)      
+         print*,'k',k,InitInData%BladeRootPosition(:,k)
       end do
    enddo
  

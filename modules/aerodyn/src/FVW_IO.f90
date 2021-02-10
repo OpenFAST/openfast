@@ -291,7 +291,7 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth, bladeFrame, Hub
    character(1024)                       :: FileName
    character(255)                        :: Label
    character(Twidth)                     :: Tstr          ! string for current VTK write-out step (padded with zeros)
-   character(1), dimension(3) :: I2ABC =(/'A','B','C'/)
+   character(1), dimension(26) :: I2ABC =(/'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'/)
    integer(IntKi)       :: nSeg, nSegP, nSegNW
    logical              :: bMirror
    !integer(IntKi)       :: ErrStat2

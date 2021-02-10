@@ -1788,7 +1788,7 @@ CONTAINS
       real(ReKi)           :: rmax, omega
 
          ! blade outputs
-      do k=1,p%numBlades
+      do k=1,min(p%numBlades,3)
          do beta=1,p%NBlOuts
             j=p%BlOutNd(beta)
 
@@ -1858,7 +1858,7 @@ CONTAINS
       omega = Calc_Omega(u)
 
       m%AllOuts( RtSpeed ) = omega*RPS2RPM
-      m%AllOuts( RtArea  ) = pi*rmax**2 
+      m%AllOuts( RtArea  ) = pi*rmax**2     ! TODO vertical axis
 
       tmp = matmul( u%HubMotion%Orientation(:,:,1), m%V_DiskAvg )
       m%AllOuts( RtVAvgxh ) = tmp(1)

@@ -539,6 +539,8 @@ end if
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
    call AllocAry( m%M, p%NumBlNds, p%NumBlades, 'm%M', ErrStat2, ErrMsg2 )
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+   call AllocAry( m%hub_theta_x_root, p%NumBlades, 'm%hub_theta_x_root', ErrStat2, ErrMsg2 )
+      call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
       ! mesh mapping data for integrating load over entire rotor:
    allocate( m%B_L_2_H_P(p%NumBlades), Stat = ErrStat2)
       if (ErrStat2 /= 0) then
@@ -1641,7 +1643,9 @@ subroutine GeomWithoutSweepPitchTwist(p,u,m,thetaBladeNds,ErrStat,ErrMsg)
       call LAPACK_gemm( 'n', 't', 1.0_R8Ki, u%BladeRootMotion(k)%Orientation(:,:,1), u%HubMotion%Orientation(:,:,1), 0.0_R8Ki, orientation, errStat2, errMsg2)
          call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       theta = EulerExtract( orientation ) !hub_theta_root(k)
-      m%AllOuts( BPitch(  k) ) = -theta(3)*R2D ! save this value of pitch for potential output
+      if (k<=3) then
+         m%AllOuts( BPitch(  k) ) = -theta(3)*R2D ! save this value of pitch for potential output
+      endif
       theta(3) = 0.0_ReKi
       m%hub_theta_x_root(k) = theta(1)   ! save this value for FAST.Farm
 
@@ -1958,7 +1962,7 @@ SUBROUTINE ValidateNumBlades( NumBl, ErrStat, ErrMsg )
    character(*),             intent(out)    :: ErrMsg                            !< Error message
    ErrStat  = ErrID_None
    ErrMsg   = ''
-   if (NumBl > MaxBl .or. NumBl < 1) call SetErrStat( ErrID_Fatal, 'Number of blades must be between 1 and '//trim(num2lstr(MaxBl))//'.', ErrStat, ErrMsg, 'ValidateNumBlades' )
+!    if (NumBl > MaxBl .or. NumBl < 1) call SetErrStat( ErrID_Fatal, 'Number of blades must be between 1 and '//trim(num2lstr(MaxBl))//'.', ErrStat, ErrMsg, 'ValidateNumBlades' )
 END SUBROUTINE ValidateNumBlades
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine validates the inputs from the AeroDyn input files.
@@ -2552,13 +2556,7 @@ SUBROUTINE Init_FVWmodule( InputFileData, u_AD, u, p, x, xd, z, OtherState, y, m
       ! Hub
    do IB=1,p%numBlades
       InitInp%zHub(IB) = TwoNorm( u_AD%BladeRootMotion(IB)%Position(:,1) - u_AD%HubMotion%Position(:,1) )
-      if (EqualRealNos(InitInp%zHub(IB),0.0_ReKi) ) &
-         call SetErrStat( ErrID_Fatal, "zHub for blade "//trim(num2lstr(IB))//" is zero.", ErrStat, ErrMsg, RoutineName)
    enddo
-   if (ErrStat >= AbortErrLev) then
-      call CleanUp()
-      RETURN
-   endif
 
       ! Distance along blade curve -- NOTE: this is an approximation.
    do IB=1,p%numBlades

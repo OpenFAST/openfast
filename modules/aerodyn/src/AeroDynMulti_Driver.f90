@@ -62,7 +62,7 @@ program AeroDynMulti_Driver
       ! u(1) is at nt+1, u(2) is at nt
       call Set_AD_Inputs(nt,DvrData,AD,IW,errStat,errMsg); call CheckError()
       time = AD%InputTime(2)
-      if (mod(nd,10)==0) then
+      if (mod(nt,10)==0) then
          print*,'time',time
       endif
       ! Calculate outputs at nt - 1

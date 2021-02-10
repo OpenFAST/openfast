@@ -218,7 +218,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Y      !< tangential force per unit length (tangential to the plane, not chord) of the jth node in the kth blade [N/m]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: M      !< pitching moment per unit length of the jth node in the kth blade [Nm/m]
     REAL(ReKi) , DIMENSION(1:3)  :: V_DiskAvg      !< disk-average relative wind speed [m/s]
-    REAL(ReKi) , DIMENSION(1:3)  :: hub_theta_x_root      !< angles saved for FAST.Farm [rad]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: hub_theta_x_root      !< angles saved for FAST.Farm [rad]
     REAL(ReKi)  :: V_dot_x 
     TYPE(MeshType)  :: HubLoad      !< mesh at hub; used to compute an integral for mapping the output blade loads to a single point (for writing to file only) [-]
     TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: B_L_2_H_P      !< mapping data structure to map each bladeLoad output mesh to the MiscVar%HubLoad mesh [-]
@@ -5434,7 +5434,18 @@ IF (ALLOCATED(SrcMiscData%M)) THEN
     DstMiscData%M = SrcMiscData%M
 ENDIF
     DstMiscData%V_DiskAvg = SrcMiscData%V_DiskAvg
+IF (ALLOCATED(SrcMiscData%hub_theta_x_root)) THEN
+  i1_l = LBOUND(SrcMiscData%hub_theta_x_root,1)
+  i1_u = UBOUND(SrcMiscData%hub_theta_x_root,1)
+  IF (.NOT. ALLOCATED(DstMiscData%hub_theta_x_root)) THEN 
+    ALLOCATE(DstMiscData%hub_theta_x_root(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%hub_theta_x_root.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
     DstMiscData%hub_theta_x_root = SrcMiscData%hub_theta_x_root
+ENDIF
     DstMiscData%V_dot_x = SrcMiscData%V_dot_x
       CALL MeshCopy( SrcMiscData%HubLoad, DstMiscData%HubLoad, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -5556,6 +5567,9 @@ IF (ALLOCATED(MiscData%Y)) THEN
 ENDIF
 IF (ALLOCATED(MiscData%M)) THEN
   DEALLOCATE(MiscData%M)
+ENDIF
+IF (ALLOCATED(MiscData%hub_theta_x_root)) THEN
+  DEALLOCATE(MiscData%hub_theta_x_root)
 ENDIF
   CALL MeshDestroy( MiscData%HubLoad, ErrStat, ErrMsg )
 IF (ALLOCATED(MiscData%B_L_2_H_P)) THEN
@@ -5828,7 +5842,11 @@ ENDIF
       Re_BufSz   = Re_BufSz   + SIZE(InData%M)  ! M
   END IF
       Re_BufSz   = Re_BufSz   + SIZE(InData%V_DiskAvg)  ! V_DiskAvg
+  Int_BufSz   = Int_BufSz   + 1     ! hub_theta_x_root allocated yes/no
+  IF ( ALLOCATED(InData%hub_theta_x_root) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! hub_theta_x_root upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%hub_theta_x_root)  ! hub_theta_x_root
+  END IF
       Re_BufSz   = Re_BufSz   + 1  ! V_dot_x
       Int_BufSz   = Int_BufSz + 3  ! HubLoad: size of buffers for each call to pack subtype
       CALL MeshPack( InData%HubLoad, Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2, .TRUE. ) ! HubLoad 
@@ -6398,10 +6416,21 @@ ENDIF
       ReKiBuf(Re_Xferred) = InData%V_DiskAvg(i1)
       Re_Xferred = Re_Xferred + 1
     END DO
-    DO i1 = LBOUND(InData%hub_theta_x_root,1), UBOUND(InData%hub_theta_x_root,1)
-      ReKiBuf(Re_Xferred) = InData%hub_theta_x_root(i1)
-      Re_Xferred = Re_Xferred + 1
-    END DO
+  IF ( .NOT. ALLOCATED(InData%hub_theta_x_root) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%hub_theta_x_root,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%hub_theta_x_root,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%hub_theta_x_root,1), UBOUND(InData%hub_theta_x_root,1)
+        ReKiBuf(Re_Xferred) = InData%hub_theta_x_root(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
     ReKiBuf(Re_Xferred) = InData%V_dot_x
     Re_Xferred = Re_Xferred + 1
       CALL MeshPack( InData%HubLoad, Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2, OnlySize ) ! HubLoad 
@@ -7199,12 +7228,24 @@ ENDIF
       OutData%V_DiskAvg(i1) = ReKiBuf(Re_Xferred)
       Re_Xferred = Re_Xferred + 1
     END DO
-    i1_l = LBOUND(OutData%hub_theta_x_root,1)
-    i1_u = UBOUND(OutData%hub_theta_x_root,1)
-    DO i1 = LBOUND(OutData%hub_theta_x_root,1), UBOUND(OutData%hub_theta_x_root,1)
-      OutData%hub_theta_x_root(i1) = ReKiBuf(Re_Xferred)
-      Re_Xferred = Re_Xferred + 1
-    END DO
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! hub_theta_x_root not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%hub_theta_x_root)) DEALLOCATE(OutData%hub_theta_x_root)
+    ALLOCATE(OutData%hub_theta_x_root(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%hub_theta_x_root.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%hub_theta_x_root,1), UBOUND(OutData%hub_theta_x_root,1)
+        OutData%hub_theta_x_root(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
     OutData%V_dot_x = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
       Buf_size=IntKiBuf( Int_Xferred )
