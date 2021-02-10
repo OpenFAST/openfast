@@ -401,8 +401,8 @@ In all modes of execution, the regression tests are ultimately driven by a
 series of Python scripts located in the ``openfast/reg_tests`` directory
 with the naming scheme ``execute<Module>RegressionTest.py``.
 The first step to adding a new regression test case is to verify that
-a script exists for the target module. If it does not, an
-`Issue <https://github.com/openfast/openfast/issues>`_ should be opened
+a script exists for the target module. If it does not, an issue
+should be opened in `OpenFAST Issues <https://github.com/openfast/openfast/issues>`_
 to coordinate with the NREL team on creating this script.
 
 The next step is to add the test case in the appropriate location in
@@ -417,7 +417,7 @@ within the input deck for the new test case must work within the r-test
 directory structure.
 
 Once the test directory exists, the test case must be registered with
-the appropriate drivers. For OpenFAST glue-code tests, this happens in
+the appropriate drivers. For OpenFAST glue-code tests, this happens both in
 CMake and a standalone list of test cases. For CMake, edit the file
 ``openfast/reg_tests/CTestList.cmake``. The additional test should be
 added in the section corresponding to the module or driver at the
@@ -438,3 +438,7 @@ At this point, the registration with CTest can be verified:
 
 For module regression tests, the only option for execution is with the
 CMake driver, so follow the instructions above to edit ``CTestList.cmake``.
+
+Finally, the new test cases in the r-test submodule must be added to the
+r-test repository. To do this, open a new issue in `r-test Issues <https://github.com/openfast/r-test/issues>`_
+requesting for support from the NREL team to commit your test.

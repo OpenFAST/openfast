@@ -14,8 +14,8 @@ a single subroutine or code block. These tests need not be physically
 realistic and focus on the mathematics and exersizing of an algorithm.
 The objective of the included tests is to quickly catch bugs or unexpected
 changes in results. Additionally, the tests can help programmers
-determine whether an expected change in results has occured in
-the expected manner.
+design their module and subroutine interfaces in a sustainable and
+maintainable manner.
 
 All of the necessary files corresponding to the regression tests are contained
 in the ``reg_tests`` directory. The unit test framework is housed in
@@ -26,7 +26,7 @@ The OpenFAST GitHub repository uses `GitHub Actions <https://github.com/openfast
 to automatically execute the test suite for new commits and pull
 requests. This cloud computing resource is available to all
 GitHub users and is highly recommended as part of the development
-workflow. After enabled GitHub Actions in a fork of OpenFAST, simply
+workflow. After enabling GitHub Actions in an OpenFAST repository, simply
 pushing new commits will trigger the tests.
 
 Test specific documentation
@@ -37,8 +37,8 @@ Test specific documentation
    unit_test.rst
    regression_test.rst
 
-Configuring the test suite
---------------------------
+Obtaining and configuring the test suite
+----------------------------------------
 Portions of the test suite are linked to the OpenFAST repository through a
 `git submodule`. Specifically, the following two repositories are included:
 
@@ -55,10 +55,10 @@ build process with an additional CMake flag:
 
 .. code-block:: bash
 
-    # BUILD_TESTING                  - Build the testing tree (Default: OFF)
+    # BUILD_TESTING     - Build the testing tree (Default: OFF)
     cmake .. -DBUILD_TESTING:BOOL=ON
 
-Otherwise, the default CMake configuration is suitable for most systems.
+Aside from this flags, the default CMake configuration is suitable for most systems.
 See the :ref:`understanding_cmake` section for more details on configuring
 the CMake targets. While the unit tests must be built with CMake due to its external
 dependencies, the regression test may be executed without CMake, as described in
