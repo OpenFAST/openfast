@@ -39,8 +39,24 @@ SubDyn                                        na   RigidSection        PropSetID
 SubDyn                                        na   RigidSection          (-)       (kg/m)
 HydroDyn                                      52   NBody              1   NBody          - Number of WAMIT bodies to be used (-) [>=1; only used when PotMod=1. If NBodyMod=1, the WAMIT data contains a vector of size 6*NBody x 1 and matrices of size 6*NBody x 6*NBody; if NBodyMod>1, there are NBody sets of WAMIT data each with a vector of size 6 x 1 and matrices of size 6 x 6]
 HydroDyn                                      53   NBodyMod           1   NBodyMod       - Body coupling model {1: include coupling terms between each body and NBody in HydroDyn equals NBODY in WAMIT, 2: neglect coupling terms between each body and NBODY=1 with XBODY=0 in WAMIT, 3: Neglect coupling terms between each body and NBODY=1 with XBODY=/0 in WAMIT} (switch) [only used when PotMod=1]
-
+ServoDyn                                      61   CompNStC                  0   CompNStC    - Compute nacelle structural control damping {number of nacelle TMDs} (integer)
+ServoDyn                                      62   CompNStC           "unused"   NStCfile    - Name of the file for nacelle structural control damping (quoted strings) [unused when CompNStC==0]
+ServoDyn                                      63   CompNStC                  0   CompTStC    - Compute tower structural control damping {number of nacelle TMDs} (integer)
+ServoDyn                                      64   CompNStC           "unused"   TStCfile    - Name of the file for tower structural control damping (quoted strings) [unused when CompTStC==0]
+ServoDyn                                      65   CompNStC                  0   CompBStC    - Compute  blade structural control damping {number of nacelle tmds} (integer)
+ServoDyn                                      66   CompNStC           "unused"   BStCfile    - Name of the file for blade structural control damping (quoted strings) [unused when CompBStC==0]
+ServoDyn                                      67   CompNStC                  0   CompPtfmStC - Compute platform structural control damping {number of nacelle TMDs} (integer)
+ServoDyn                                      68   CompNStC           "unused"   PtfmStCfile - Name of the file for blade structural control damping (quoted strings) [unused when CompPtfmStC==0]
 ============================================= ==== =============== ========================================================================================================================================================================================================
+
+-  ServoDyn
+
+   -  The input file parser is updated to a keyword/value pair based input.
+      Each entry must have a corresponding keyword with the same spelling as
+      expected
+   -  The TMD submodule of ServoDyn is replaced by an updated Structural Control
+      module (StC) with updated capabilities and input file.
+
 
 
 ============================================= ====== =============== ======================================================================================================================================================================================================
@@ -109,11 +125,20 @@ Added in OpenFAST v2.5.0
  Module        Line  Flag Name          Example Value
 ============== ==== ================== =============================================================================================================================================================================
 IfW driver     6    [separator line]   ===================== File Conversion Options =================================
-IfW driver     7    WrHAWC             false    WrHAWC    - Convert all data to HAWC2 format? (flag)
-IfW driver     8    WrBladed           false    WrBladed  - Convert all data to Bladed format? (flag)
-IfW driver     9    WrVTK              false    WrVTK     - Convert all data to VTK format? (flag)
-InflowWind     7    VFlowAng                0   VFlowAng  - Upflow angle (degrees) (not used for native Bladed format WindType=7)
+IfW driver     7    WrHAWC               false    WrHAWC      - Convert all data to HAWC2 format? (flag)
+IfW driver     8    WrBladed             false    WrBladed    - Convert all data to Bladed format? (flag)
+IfW driver     9    WrVTK                false    WrVTK       - Convert all data to VTK format? (flag)
+InflowWind     7    VFlowAng                  0   VFlowAng    - Upflow angle (degrees) (not used for native Bladed format WindType=7)
 ============== ==== ================== =============================================================================================================================================================================
+
+-  InflowWind
+
+   -  The input file parser is updated to a keyword/value pair based input.
+      Each entry must have a corresponding keyword with the same spelling as
+      expected
+   -  Driver code includes ability to convert between wind types
+
+
 
 
 OpenFAST v2.3.0 to OpenFAST v2.4.0
