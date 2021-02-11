@@ -25,9 +25,9 @@ find_package(MPI REQUIRED)
 find_package(LibXml2 REQUIRED)
 find_package(ZLIB REQUIRED)
 find_package(HDF5 REQUIRED COMPONENTS C HL)
-find_package(YAMLCPP REQUIRED)
+find_package(yaml-cpp REQUIRED)
 
-include_directories(${YAML_INCLUDES})
+include_directories(${YAML_CPP_INCLUDE_DIRS})
 include_directories(${HDF5_INCLUDES})
 include_directories(${HDF5_INCLUDE_DIR})
 include_directories(${ZLIB_INCLUDES})
@@ -52,7 +52,7 @@ target_link_libraries(openfastcpplib
 add_executable(openfastcpp src/FAST_Prog.cpp)
 target_link_libraries(openfastcpp openfastcpplib openfastlib
   ${MPI_LIBRARIES}
-  ${YAML_LIBRARIES} 
+  ${YAML_CPP_LIBRARIES}
   ${HDF5_C_LIBRARIES}
   ${HDF5_HL_LIBRARIES}
   ${ZLIB_LIBRARIES}
