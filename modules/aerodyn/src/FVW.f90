@@ -1306,7 +1306,6 @@ contains
 
    !> Write to local VTK at fps requested
    subroutine WriteVTKOutputs()
-      logical :: bGridOutNeeded
       integer(IntKi) :: iW, iGrid
       integer(IntKi) :: nSeg, nSegP
       if (m%VTKStep==-1) then 

@@ -73,6 +73,7 @@ subroutine DvrM_Init(DvrData, AD, IW, errStat,errMsg )
    CHARACTER(200)       :: git_commit    ! String containing the current git commit hash
    CHARACTER(20)        :: FlagArg       ! flag argument from command line
    integer(IntKi)       :: j                                                             !< 
+   type(AD_InitOutputType) :: InitOutData_AD    ! Output data from initialization
    ErrStat = ErrID_None
    ErrMsg  = ""
 
@@ -96,7 +97,7 @@ subroutine DvrM_Init(DvrData, AD, IW, errStat,errMsg )
    call ValidateInputs(DvrData, errStat2, errMsg2) ; if(Failed()) return     
 
    ! --- Initialize aerodyn 
-   call Init_AeroDyn(DvrData, AD, DvrData%dT, errStat2, errMsg2); if(Failed()) return
+   call Init_AeroDyn(DvrData, AD, DvrData%dT, InitOutData_AD, errStat2, errMsg2); if(Failed()) return
 
    ! --- Initialize Inflow Wind 
    call Init_InflowWind(DvrData, IW, AD, DvrData%dt, errStat2, errMsg2); if(Failed()) return
@@ -107,14 +108,25 @@ subroutine DvrM_Init(DvrData, AD, IW, errStat,errMsg )
       call Set_AD_Inputs(j,DvrData,AD,IW,errStat2,errMsg2); if(Failed()) return
    END DO              
 
-   ! --- Initial outputs
+   ! --- Initialize outputs
    call DvrM_InitializeOutputs(DvrData%out, DvrData%numSteps, errStat2, errMsg2); if(Failed()) return
 
+   ! --- Initialize VTK
+   if (DvrData%out%WrVTK>0) then
+      DvrData%out%n_VTKTime = 1
+      call SetVTKParameters(DvrData%out, DvrData, InitOutData_AD, AD, errStat2, errMsg2)
+   endif
+
+   call cleanUp()
 contains
+   subroutine cleanUp()
+      call AD_DestroyInitOutput(InitOutData_AD, errStat2, errMsg2)      
+   end subroutine cleanUp
 
    logical function Failed()
       CALL SetErrStat(errStat2, errMsg2, errStat, errMsg, 'DvrM_Init')
       Failed = errStat >= AbortErrLev
+      if(Failed) call cleanUp()
    end function Failed
 
 end subroutine DvrM_Init 
@@ -146,6 +158,12 @@ subroutine DvrM_TimeStep(nt, DvrData, AD, IW, errStat, errMsg)
    ! Calculate outputs at nt - 1
    call AD_CalcOutput( time, AD%u(2), AD%p, AD%x, AD%xd, AD%z, AD%OtherState, AD%y, AD%m, errStat2, errMsg2 ); if(Failed()) return
    call Dvr_WriteOutputs(nt, time, DvrData%out, AD%y%WriteOutput, IW%y%WriteOutput, errStat2, errMsg2); if(Failed()) return
+
+   ! VTK outputs
+   if (DvrData%out%WrVTK>0) then
+      call WrVTK_Surfaces(time, DvrData, DvrData%out, nt-1, AD)
+   endif
+
    ! Get state variables at next step: INPUT at step nt - 1, OUTPUT at step nt
    call AD_UpdateStates( time, nt-1, AD%u, AD%InputTime, AD%p, AD%x, AD%xd, AD%z, AD%OtherState, AD%m, errStat2, errMsg2); if(Failed()) return
 
@@ -201,10 +219,11 @@ end subroutine DvrM_CleanUp
 
 
 !----------------------------------------------------------------------------------------------------------------------------------
-subroutine Init_AeroDyn(DvrData, AD, dt, errStat, errMsg)
+subroutine Init_AeroDyn(DvrData, AD, dt, InitOutData, errStat, errMsg)
    type(DvrM_SimData), target,   intent(inout) :: DvrData       ! Input data for initialization (intent out for getting AD WriteOutput names/units)
    type(AeroDyn_Data),           intent(inout) :: AD            ! AeroDyn data 
    real(DbKi),                   intent(inout) :: dt            ! interval
+   type(AD_InitOutputType),      intent(  out) :: InitOutData   ! Output data for initialization
    integer(IntKi)              , intent(  out) :: errStat       ! Status of error message
    character(*)                , intent(  out) :: errMsg        ! Error message if ErrStat /= ErrID_None
    ! locals
@@ -214,7 +233,6 @@ subroutine Init_AeroDyn(DvrData, AD, dt, errStat, errMsg)
    integer(IntKi)                              :: errStat2      ! local status of error message
    character(ErrMsgLen)                        :: errMsg2       ! local error message if ErrStat /= ErrID_None
    type(AD_InitInputType)                      :: InitInData     ! Input data for initialization
-   type(AD_InitOutputType)                     :: InitOutData    ! Output data from initialization
    type(WTData), pointer :: wt ! Alias to shorten notation
       
    errStat = ErrID_None
@@ -261,7 +279,6 @@ contains
 
    subroutine cleanup()
       call AD_DestroyInitInput (InitInData,  errStat2, errMsg2)   
-      call AD_DestroyInitOutput(InitOutData, errStat2, errMsg2)      
    end subroutine cleanup
 
    logical function Failed()
@@ -590,7 +607,7 @@ end subroutine AD_InputSolve_IfW
 !> Read the driver input file
 subroutine Dvr_ReadInputFile(fileName, DvrData, errStat, errMsg )
    character(*),                  intent( in    )   :: fileName
-   type(DvrM_SimData), target,     intent(   out )   :: DvrData
+   type(DvrM_SimData), target,    intent(   out )   :: DvrData
    integer,                       intent(   out )   :: errStat              ! returns a non-zero value when an error occurs  
    character(*),                  intent(   out )   :: errMsg               ! Error message if errStat /= ErrID_None
    ! Local variables
@@ -743,9 +760,11 @@ subroutine Dvr_ReadInputFile(fileName, DvrData, errStat, errMsg )
    enddo
    ! 
    call ParseCom(FileInfo_In, CurLine, Line, errStat2, errMsg2, unEc); if(Failed()) return
-   call ParseVar(FileInfo_In, CurLine, 'outFmt'     , DvrData%out%outFmt    , errStat2, errMsg2, unEc); if(Failed()) return
-   call ParseVar(FileInfo_In, CurLine, 'outFileFmt' , DvrData%out%fileFmt, errStat2, errMsg2, unEc); if(Failed()) return
-   call ParseVar(FileInfo_In, CurLine, 'WrVTK'      , DvrData%out%WrVTK     , errStat2, errMsg2, unEc); if(Failed()) return
+   call ParseVar(FileInfo_In, CurLine, 'outFmt'     , DvrData%out%outFmt      , errStat2, errMsg2, unEc); if(Failed()) return
+   call ParseVar(FileInfo_In, CurLine, 'outFileFmt' , DvrData%out%fileFmt     , errStat2, errMsg2, unEc); if(Failed()) return
+   call ParseVar(FileInfo_In, CurLine, 'WrVTK'      , DvrData%out%WrVTK       , errStat2, errMsg2, unEc); if(Failed()) return
+   call ParseVar(FileInfo_In, CurLine, 'VTKHubRad'  , DvrData%out%VTKHubRad   , errStat2, errMsg2, unEc); if(Failed()) return
+   call ParseAry(FileInfo_In, CurLine, 'VTKNacDim'  , DvrData%out%VTKNacDim, 6, errStat2, errMsg2, unEc); if(Failed()) return
    DvrData%out%delim=' ' ! TAB
 
    call cleanup()
@@ -1029,5 +1048,281 @@ subroutine interpTimeValue(array, time, iLast, values)
    endif
 end subroutine interpTimeValue
 
+
+
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine sets up the information needed for plotting VTK surfaces.
+SUBROUTINE SetVTKParameters(p_FAST, DvrData, InitOutData_AD, AD, ErrStat, ErrMsg)
+
+   TYPE(DvrM_Outputs),     INTENT(INOUT) :: p_FAST           !< The parameters of the glue code
+   type(DvrM_SimData), target,    intent(inout) :: DvrData           ! intent(out) only so that we can save FmtWidth in DvrData%out%ActualChanLen
+   TYPE(AD_InitOutputType),      INTENT(INOUT) :: InitOutData_AD   !< The initialization output from AeroDyn
+   TYPE(AeroDyn_Data), target,   INTENT(IN   ) :: AD               !< AeroDyn data
+   INTEGER(IntKi),               INTENT(  OUT) :: ErrStat          !< Error status of the operation
+   CHARACTER(*),                 INTENT(  OUT) :: ErrMsg           !< Error message if ErrStat /= ErrID_None
+   REAL(SiKi)                              :: RefPoint(3), RefLengths(2)               
+   REAL(SiKi)                              :: x, y                
+   REAL(SiKi)                              :: TwrDiam_top, TwrDiam_base, TwrRatio, TwrLength
+   INTEGER(IntKi)                          :: topNode, baseNode, cylNode, tipNode, rootNode
+   INTEGER(IntKi)                          :: NumBl, k, iRot, iBld, nNodes
+   CHARACTER(1024)                         :: vtkroot
+   INTEGER(IntKi)                          :: ErrStat2
+   CHARACTER(ErrMsgLen)                    :: ErrMsg2
+   CHARACTER(*), PARAMETER                 :: RoutineName = 'SetVTKParameters'
+   Real(ReKi) :: BladeLength, MaxBladeLength, GroundRad
+   type(MeshType), pointer :: Mesh
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
+   ! get the name of the output directory for vtk files (in a subdirectory called "vtk" of the output directory), and
+   ! create the VTK directory if it does not exist
+   call GetPath ( p_FAST%Root, p_FAST%VTK_OutFileRoot, vtkroot ) ! the returned p_FAST%VTK_OutFileRoot includes a file separator character at the end
+   p_FAST%VTK_OutFileRoot = trim(p_FAST%VTK_OutFileRoot) // 'vtk'
+   call MKDIR( trim(p_FAST%VTK_OutFileRoot) )
+   p_FAST%VTK_OutFileRoot = trim( p_FAST%VTK_OutFileRoot ) // PathSep // trim(vtkroot)
+   ! calculate the number of digits in 'y_FAST%NOutSteps' (Maximum number of output steps to be written)
+   ! this will be used to pad the write-out step in the VTK filename with zeros in calls to MeshWrVTK()
+   p_FAST%VTK_tWidth = CEILING( log10( real(DvrData%numSteps+1, ReKi) / p_FAST%n_VTKTime ) ) + 1
+   
+   ! determine number of blades
+   NumBl = DvrData%numBladesTot
+   MaxBladeLength=0
+   do iBld=1,NumBl
+      nNodes = AD%u(1)%BladeMotion(iBld)%nnodes
+      BladeLength = TwoNorm(AD%u(1)%BladeMotion(iBld)%Position(:,nNodes)-AD%u(1)%BladeMotion(iBld)%Position(:,1))
+      MaxBladeLength = max(MaxBladeLength, BladeLength)
+   enddo
+   ! initialize the vtk data
+   ! Get radius for ground (blade length + hub radius):
+
+   GroundRad = MaxBladeLength + p_FAST%VTKHubRad
+
+   p_FAST%VTK_Surface%NumSectors = 25   
+
+   ! write the ground or seabed reference polygon:
+   RefPoint = DvrData%WT(1)%originInit
+   RefLengths =GroundRad !array = scalar
+   call WrVTK_Ground ( RefPoint, RefLengths, trim(p_FAST%VTK_OutFileRoot) // '.GroundSurface', ErrStat2, ErrMsg2 )         
+
+   ! Create nacelle box
+   p_FAST%VTK_Surface%NacelleBox(:,1) = (/ p_FAST%VTKNacDim(1)                    , p_FAST%VTKNacDim(2)+p_FAST%VTKNacDim(5), p_FAST%VTKNacDim(3) /)
+   p_FAST%VTK_Surface%NacelleBox(:,2) = (/ p_FAST%VTKNacDim(1)+p_FAST%VTKNacDim(4), p_FAST%VTKNacDim(2)+p_FAST%VTKNacDim(5), p_FAST%VTKNacDim(3) /) 
+   p_FAST%VTK_Surface%NacelleBox(:,3) = (/ p_FAST%VTKNacDim(1)+p_FAST%VTKNacDim(4), p_FAST%VTKNacDim(2)                    , p_FAST%VTKNacDim(3) /)
+   p_FAST%VTK_Surface%NacelleBox(:,4) = (/ p_FAST%VTKNacDim(1)                    , p_FAST%VTKNacDim(2)                    , p_FAST%VTKNacDim(3) /) 
+   p_FAST%VTK_Surface%NacelleBox(:,5) = (/ p_FAST%VTKNacDim(1)                    , p_FAST%VTKNacDim(2)                    , p_FAST%VTKNacDim(3)+p_FAST%VTKNacDim(6) /)
+   p_FAST%VTK_Surface%NacelleBox(:,6) = (/ p_FAST%VTKNacDim(1)+p_FAST%VTKNacDim(4), p_FAST%VTKNacDim(2)                    , p_FAST%VTKNacDim(3)+p_FAST%VTKNacDim(6) /) 
+   p_FAST%VTK_Surface%NacelleBox(:,7) = (/ p_FAST%VTKNacDim(1)+p_FAST%VTKNacDim(4), p_FAST%VTKNacDim(2)+p_FAST%VTKNacDim(5), p_FAST%VTKNacDim(3)+p_FAST%VTKNacDim(6) /)
+   p_FAST%VTK_Surface%NacelleBox(:,8) = (/ p_FAST%VTKNacDim(1)                    , p_FAST%VTKNacDim(2)+p_FAST%VTKNacDim(5), p_FAST%VTKNacDim(3)+p_FAST%VTKNacDim(6) /) 
+!    
+   !.......................
+   ! tapered tower
+   !.......................
+   Mesh=>AD%u(1)%TowerMotion
+   if (Mesh%NNodes>0) then
+      CALL AllocAry(p_FAST%VTK_Surface%TowerRad, Mesh%NNodes,'VTK_Surface%TowerRad',ErrStat2,ErrMsg2)
+      topNode   = Mesh%NNodes - 1
+      baseNode  = Mesh%refNode
+      print*,'>>>', topNode, baseNode, size(Mesh%position,2)
+      TwrLength = TwoNorm( Mesh%position(:,topNode) - Mesh%position(:,baseNode) ) ! this is the assumed length of the tower
+      TwrRatio  = TwrLength / 87.6_SiKi  ! use ratio of the tower length to the length of the 5MW tower
+      TwrDiam_top  = 3.87*TwrRatio
+      TwrDiam_base = 6.0*TwrRatio
+      
+      TwrRatio = 0.5 * (TwrDiam_top - TwrDiam_base) / TwrLength
+      do k=1,Mesh%NNodes
+         TwrLength = TwoNorm( Mesh%position(:,k) - Mesh%position(:,baseNode) ) 
+         p_FAST%VTK_Surface%TowerRad(k) = 0.5*TwrDiam_Base + TwrRatio*TwrLength
+         print*,'>>> Rad',p_FAST%VTK_Surface%TowerRad(k)
+      end do
+   else
+      print*,'>>>> TOWER HAS NO NODES'
+   endif
+
+   !.......................
+   ! blade surfaces
+   !.......................
+   allocate(p_FAST%VTK_Surface%BladeShape(NumBl),stat=ErrStat2)
+   IF (ALLOCATED(InitOutData_AD%BladeShape)) THEN
+      do k=1,NumBl   
+         call move_alloc( InitOutData_AD%BladeShape(k)%AirfoilCoords, p_FAST%VTK_Surface%BladeShape(k)%AirfoilCoords )
+      end do
+   else
+      print*,'>>>> PROFILE COORDINATES MISSING'
+      rootNode = 1
+      DO K=1,NumBl   
+         tipNode  = AD%u(1)%BladeMotion(K)%NNodes
+         cylNode  = min(3,AD%u(1)%BladeMotion(K)%Nnodes)
+
+         call SetVTKDefaultBladeParams(AD%u(1)%BladeMotion(K), p_FAST%VTK_Surface%BladeShape(K), tipNode, rootNode, cylNode, ErrStat2, ErrMsg2)
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         IF (ErrStat >= AbortErrLev) RETURN
+      END DO                           
+   endif
+   
+END SUBROUTINE SetVTKParameters
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine writes a minimal subset of meshes with surfaces to VTK-formatted files. It doesn't bother with 
+!! returning an error code.
+SUBROUTINE WrVTK_Surfaces(t_global, DvrData, p_FAST, VTK_count, AD)
+   use FVW_IO, only: WrVTK_FVW
+
+   REAL(DbKi),               INTENT(IN   ) :: t_global            !< Current global time
+   type(DvrM_SimData), target,    intent(inout) :: DvrData           ! intent(out) only so that we can save FmtWidth in DvrData%out%ActualChanLen
+   TYPE(DvrM_Outputs),       INTENT(IN   ) :: p_FAST              !< Parameters for the glue code
+   INTEGER(IntKi)          , INTENT(IN   ) :: VTK_count
+!    TYPE(FAST_ModuleMapType), INTENT(IN   ) :: MeshMapData         !< Data for mapping between modules
+   TYPE(AeroDyn_Data),       INTENT(IN   ) :: AD                  !< AeroDyn data
+   logical, parameter                      :: OutputFields = .FALSE. ! due to confusion about what fields mean on a surface, we are going to just output the basic meshes if people ask for fields
+   INTEGER(IntKi)                          :: NumBl, k
+   INTEGER(IntKi)                          :: ErrStat2
+   CHARACTER(ErrMsgLen)                    :: ErrMSg2
+   CHARACTER(*), PARAMETER                 :: RoutineName = 'WrVTK_Surfaces'
+
+   NumBl = DvrData%numBladesTot
+
+   ! Ground (written at initialization)
+   
+   ! Nacelle TODO
+   call MeshWrVTK_PointSurface (DvrData%WT(1)%originInit, AD%u(1)%HubMotion, trim(p_FAST%VTK_OutFileRoot)//'.NacelleSurface', &
+                                VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth , verts = p_FAST%VTK_Surface%NacelleBox)
+   
+   ! Hub
+   call MeshWrVTK_PointSurface (DvrData%WT(1)%originInit, AD%u(1)%HubMotion, trim(p_FAST%VTK_OutFileRoot)//'.HubSurface', &
+                                VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth , &
+                                NumSegments=p_FAST%VTK_Surface%NumSectors, radius=p_FAST%VTKHubRad)
+   
+   ! Tower motions
+   call MeshWrVTK_Ln2Surface (DvrData%WT(1)%originInit, AD%u(1)%TowerMotion, trim(p_FAST%VTK_OutFileRoot)//'.TowerSurface', &
+                              VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth, p_FAST%VTK_Surface%NumSectors, p_FAST%VTK_Surface%TowerRad )
+   
+   ! Blades
+   DO K=1,NumBl
+      call MeshWrVTK_Ln2Surface (DvrData%WT(1)%originInit, AD%u(1)%BladeMotion(K), trim(p_FAST%VTK_OutFileRoot)//'.Blade'//trim(num2lstr(k))//'Surface', &
+                                 VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth , verts=p_FAST%VTK_Surface%BladeShape(K)%AirfoilCoords &
+                                 ,Sib=AD%y%BladeLoad(k) )
+   END DO                  
+
+   ! Free wake
+   if (allocated(AD%m%FVW_u)) then
+      if (allocated(AD%m%FVW_u(1)%WingsMesh)) then
+         call WrVTK_FVW(AD%p%FVW, AD%x%FVW, AD%z%FVW, AD%m%FVW, trim(p_FAST%VTK_OutFileRoot)//'.FVW', VTK_count, p_FAST%VTK_tWidth, bladeFrame=.FALSE.)  ! bladeFrame==.FALSE. to output in global coords
+      end if   
+   end if   
+END SUBROUTINE WrVTK_Surfaces 
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine writes the ground or seabed reference surface information in VTK format.
+!! see VTK file information format for XML, here: http://www.vtk.org/wp-content/uploads/2015/04/file-formats.pdf
+SUBROUTINE WrVTK_Ground ( RefPoint, HalfLengths, FileRootName, ErrStat, ErrMsg )
+   REAL(SiKi),      INTENT(IN)           :: RefPoint(3)     !< reference point (plane will be created around it)
+   REAL(SiKi),      INTENT(IN)           :: HalfLengths(2)  !< half of the X-Y lengths of plane surrounding RefPoint
+   CHARACTER(*),    INTENT(IN)           :: FileRootName    !< Name of the file to write the output in (excluding extension)
+   INTEGER(IntKi),  INTENT(OUT)          :: ErrStat         !< Indicates whether an error occurred (see NWTC_Library)
+   CHARACTER(*),    INTENT(OUT)          :: ErrMsg          !< Error message associated with the ErrStat
+   ! local variables
+   INTEGER(IntKi)                        :: Un            ! fortran unit number
+   INTEGER(IntKi)                        :: ix            ! loop counters
+   CHARACTER(1024)                       :: FileName
+   INTEGER(IntKi), parameter             :: NumberOfPoints = 4
+   INTEGER(IntKi), parameter             :: NumberOfLines = 0
+   INTEGER(IntKi), parameter             :: NumberOfPolys = 1
+        
+   INTEGER(IntKi)                        :: ErrStat2 
+   CHARACTER(ErrMsgLen)                  :: ErrMsg2
+   CHARACTER(*),PARAMETER                :: RoutineName = 'WrVTK_Ground'
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   !.................................................................
+   ! write the data that potentially changes each time step:
+   !.................................................................
+   ! PolyData (.vtp) - Serial vtkPolyData (unstructured) file
+   FileName = TRIM(FileRootName)//'.vtp'
+   call WrVTK_header( FileName, NumberOfPoints, NumberOfLines, NumberOfPolys, Un, ErrStat2, ErrMsg2 )    
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      if (ErrStat >= AbortErrLev) return
+! points (nodes, augmented with NumSegments):   
+      WRITE(Un,'(A)')         '      <Points>'
+      WRITE(Un,'(A)')         '        <DataArray type="Float32" NumberOfComponents="3" format="ascii">'
+      WRITE(Un,VTK_AryFmt) RefPoint(1) + HalfLengths(1) , RefPoint(2) + HalfLengths(2), RefPoint(3)
+      WRITE(Un,VTK_AryFmt) RefPoint(1) + HalfLengths(1) , RefPoint(2) - HalfLengths(2), RefPoint(3)
+      WRITE(Un,VTK_AryFmt) RefPoint(1) - HalfLengths(1) , RefPoint(2) - HalfLengths(2), RefPoint(3)
+      WRITE(Un,VTK_AryFmt) RefPoint(1) - HalfLengths(1) , RefPoint(2) + HalfLengths(2), RefPoint(3)
+      WRITE(Un,'(A)')         '        </DataArray>'
+      WRITE(Un,'(A)')         '      </Points>'
+      WRITE(Un,'(A)')         '      <Polys>'      
+      WRITE(Un,'(A)')         '        <DataArray type="Int32" Name="connectivity" format="ascii">'         
+      WRITE(Un,'('//trim(num2lstr(NumberOfPoints))//'(i7))') (ix, ix=0,NumberOfPoints-1)                   
+      WRITE(Un,'(A)')         '        </DataArray>'      
+      
+      WRITE(Un,'(A)')         '        <DataArray type="Int32" Name="offsets" format="ascii">'            
+      WRITE(Un,'(i7)') NumberOfPoints
+      WRITE(Un,'(A)')         '        </DataArray>'
+      WRITE(Un,'(A)')         '      </Polys>'      
+      call WrVTK_footer( Un )       
+END SUBROUTINE WrVTK_Ground
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine comes up with some default airfoils for blade surfaces for a given blade mesh, M.
+SUBROUTINE SetVTKDefaultBladeParams(M, BladeShape, tipNode, rootNode, cylNode, ErrStat, ErrMsg)
+   TYPE(MeshType),               INTENT(IN   ) :: M                !< The Mesh the defaults should be calculated for
+   TYPE(DvrVTK_BLSurfaceType), INTENT(INOUT) :: BladeShape       !< BladeShape to set to default values
+   INTEGER(IntKi),               INTENT(IN   ) :: rootNode         !< Index of root node (innermost node) for this mesh
+   INTEGER(IntKi),               INTENT(IN   ) :: tipNode          !< Index of tip node (outermost node) for this mesh
+   INTEGER(IntKi),               INTENT(IN   ) :: cylNode          !< Index of last node to have a cylinder shape
+   INTEGER(IntKi),               INTENT(  OUT) :: ErrStat          !< Error status of the operation
+   CHARACTER(*),                 INTENT(  OUT) :: ErrMsg           !< Error message if ErrStat /= ErrID_None
+   REAL(SiKi)                                  :: bladeLength, chord, pitchAxis
+   REAL(SiKi)                                  :: bladeLengthFract, bladeLengthFract2, ratio, posLength ! temporary quantities               
+   REAL(SiKi)                                  :: cylinderLength, x, y, angle               
+   INTEGER(IntKi)                              :: i, j
+   INTEGER(IntKi)                              :: ErrStat2
+   CHARACTER(ErrMsgLen)                        :: ErrMsg2
+   CHARACTER(*), PARAMETER                     :: RoutineName = 'SetVTKDefaultBladeParams'
+   integer, parameter :: N = 66
+   ! default airfoil shape coordinates; uses S809 values from http://wind.nrel.gov/airfoils/Shapes/S809_Shape.html:   
+   real, parameter, dimension(N) :: xc=(/ 1.0,0.996203,0.98519,0.967844,0.945073,0.917488,0.885293,0.848455,0.80747,0.763042,0.715952,0.667064,0.617331,0.56783,0.519832,0.474243,0.428461,0.382612,0.33726,0.29297,0.250247,0.209576,0.171409,0.136174,0.104263,0.076035,0.051823,0.03191,0.01659,0.006026,0.000658,0.000204,0.0,0.000213,0.001045,0.001208,0.002398,0.009313,0.02323,0.04232,0.065877,0.093426,0.124111,0.157653,0.193738,0.231914,0.271438,0.311968,0.35337,0.395329,0.438273,0.48192,0.527928,0.576211,0.626092,0.676744,0.727211,0.776432,0.823285,0.86663,0.905365,0.938474,0.965086,0.984478,0.996141,1.0 /)
+   real, parameter, dimension(N) :: yc=(/ 0.0,0.000487,0.002373,0.00596,0.011024,0.017033,0.023458,0.03028,0.037766,0.045974,0.054872,0.064353,0.074214,0.084095,0.093268,0.099392,0.10176,0.10184,0.10007,0.096703,0.091908,0.085851,0.078687,0.07058,0.061697,0.052224,0.042352,0.032299,0.02229,0.012615,0.003723,0.001942,-0.00002,-0.001794,-0.003477,-0.003724,-0.005266,-0.011499,-0.020399,-0.030269,-0.040821,-0.051923,-0.063082,-0.07373,-0.083567,-0.092442,-0.099905,-0.105281,-0.108181,-0.108011,-0.104552,-0.097347,-0.086571,-0.073979,-0.060644,-0.047441,-0.0351,-0.024204,-0.015163,-0.008204,-0.003363,-0.000487,0.000743,0.000775,0.00029,0.0 /)
+   call AllocAry(BladeShape%AirfoilCoords, 2, N, M%NNodes, 'BladeShape%AirfoilCoords', ErrStat2, ErrMsg2)
+      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      IF (ErrStat >= AbortErrLev) RETURN
+   ! Chord length and pitch axis location are given by scaling law
+   bladeLength       = TwoNorm( M%position(:,tipNode) - M%Position(:,rootNode) )
+   cylinderLength    = TwoNorm( M%Position(:,cylNode) - M%Position(:,rootNode) )
+   bladeLengthFract  = 0.22*bladeLength
+   bladeLengthFract2 = bladeLength-bladeLengthFract != 0.78*bladeLength
+   DO i=1,M%Nnodes
+      posLength = TwoNorm( M%Position(:,i) - M%Position(:,rootNode) )
+      IF (posLength .LE. bladeLengthFract) THEN
+         ratio     = posLength/bladeLengthFract
+         chord     =  (0.06 + 0.02*ratio)*bladeLength
+         pitchAxis =   0.25 + 0.125*ratio
+      ELSE
+         chord     = (0.08 - 0.06*(posLength-bladeLengthFract)/bladeLengthFract2)*bladeLength
+         pitchAxis = 0.375
+      END IF
+      IF (posLength .LE. cylinderLength) THEN 
+         ! create a cylinder for this node
+         chord = chord/2.0_SiKi
+         DO j=1,N
+            ! normalized x,y coordinates for airfoil
+            x = yc(j)
+            y = xc(j) - 0.5
+            angle = ATAN2( y, x)
+               ! x,y coordinates for cylinder
+            BladeShape%AirfoilCoords(1,j,i) = chord*COS(angle) ! x (note that "chord" is really representing chord/2 here)
+            BladeShape%AirfoilCoords(2,j,i) = chord*SIN(angle) ! y (note that "chord" is really representing chord/2 here)
+         END DO                                                     
+      ELSE
+         ! create an airfoil for this node
+         DO j=1,N                  
+            ! normalized x,y coordinates for airfoil, assuming an upwind turbine
+            x = yc(j)
+            y = xc(j) - pitchAxis
+               ! x,y coordinates for airfoil
+            BladeShape%AirfoilCoords(1,j,i) =  chord*x
+            BladeShape%AirfoilCoords(2,j,i) =  chord*y                        
+         END DO
+      END IF
+   END DO ! nodes on mesh
+         
+END SUBROUTINE SetVTKDefaultBladeParams
 
 end module AeroDynMulti_Driver_Subs
