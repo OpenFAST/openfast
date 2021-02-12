@@ -94,14 +94,9 @@ contains
       real(ReKi), dimension(n+1) :: Gamma_t
       real(ReKi), dimension(n+1) :: s
       real(ReKi) :: rRoot, rTip, lTip, lRoot
-      integer(IntKi) :: i10, i90
+      integer(IntKi) :: i10, i90, iTipPanel,iRootPanel
 
-      if ((n<=2)) then
-         iTip =n+1
-         iRoot=1
-         EpsTip   = Eps(1,iTip)
-         EpsRoot  = Eps(1,iRoot)
-      else
+      if (n>2) then
          Gamma_max = maxval(Gamma_b,1)
          call CurvilinearDist(n+1, xV, s)
          if (iTip<0) then
@@ -113,20 +108,26 @@ contains
 
             rTip  = sum(Gamma_t(i90:)  * (s(i90:)))/ sum(Gamma_t(i90:))
             rRoot = sum(Gamma_t(1:i10) * s(1:i10)) / sum(Gamma_t(1:i10))
-            iTip  = minloc(abs(rTip - s), 1)
+            iTip  = minloc(abs(rTip - s), 1) ! NOTE:  not accurate since epsilon has one dimension less..
             iRoot = minloc(abs(rRoot - s), 1)
          endif
          rTip  = s(iTip)
          rRoot = s(iRoot)
-
+         iTipPanel  = min(iTip,n)
+         iRootPanel = max(iRoot,1)
          ! Mean regularization at the tip and root
-         EpsTip  = sum(Eps(1,iTip:))  /(n-iTip+1)
-         EpsRoot = sum(Eps(1,1:iRoot))/(iRoot)
+         EpsTip  = sum(Eps(1,iTipPanel:))  /(n-iTipPanel+1)
+         EpsRoot = sum(Eps(1,1:iRootPanel))/(iRootPanel)
          ! Scaling based on the "length" of the vortex, this will need further tuning
          lTip  = (s(n+1)-rTip )/3.14 ! Approximate radius if the tip has done half a turn
          lRoot = (rRoot       )/3.14
          EpsTip  = 1.3*(lTip+EpsTip) ! Tuning factors
          EpsRoot = 1.7*(lRoot+EpsRoot)
+      else
+         iTip =n+1
+         iRoot=1
+         EpsTip   = Eps(1,iTip-1)
+         EpsRoot  = Eps(1,iRoot)
       endif
    endsubroutine PlaceTipRoot
 
