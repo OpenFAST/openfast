@@ -268,6 +268,8 @@ contains
          do iW = 1, p%nWings !Loop over lifting lines
             Gamma_LL(1:p%nSpan,iW) = p%PrescribedCirculation(1:p%nSpan)
          enddo
+         m%Vind_LL=-9999._ReKi !< Safety 
+         m%Vtot_LL=-9999._ReKi !< Safety 
 
       else if (p%CirculationMethod==idCircPolarData) then 
          ! ---  Solve for circulation using polar data

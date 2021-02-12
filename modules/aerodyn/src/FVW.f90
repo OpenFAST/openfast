@@ -452,7 +452,7 @@ SUBROUTINE FVW_SetParametersFromInputFile( InputFileData, p, m, ErrStat, ErrMsg 
 
    if (allocated(p%PrescribedCirculation)) deallocate(p%PrescribedCirculation)
    if (InputFileData%CirculationMethod==idCircPrescribed) then 
-      call AllocAry( p%PrescribedCirculation,  p%nSpan, 'Prescribed Circulation', ErrStat2, ErrMsg2 ); call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_SetParameters' );    p%PrescribedCirculation = -999999_ReKi;
+      call AllocAry(p%PrescribedCirculation,  p%nSpan, 'Prescribed Circulation', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_SetParameters'); p%PrescribedCirculation = -999999_ReKi;
       if (.not. allocated(p%s_CP_LL)) then
          ErrMsg  = 'Spanwise coordinate not allocated.'
          ErrStat = ErrID_Fatal
@@ -548,7 +548,6 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    real(ReKi) :: ShedScale !< Scaling factor for shed vorticity (for sub-cycling), 1 if no subcycling
    logical :: bReevaluation
    logical :: bOverCycling
-
    ErrStat = ErrID_None
    ErrMsg  = ""
 
@@ -589,7 +588,7 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    call Wings_Panelling(uInterp%WingsMesh, p, m, ErrStat2, ErrMsg2); if(Failed()) return
    call Map_LL_NW(p, m, z, x, 1.0_ReKi, ErrStat2, ErrMsg2); if(Failed()) return ! needed at t=0 if wing moved after init
    call Map_NW_FW(p, m, z, x, ErrStat2, ErrMsg2); if(Failed()) return
-   
+
    !  TODO convert quasi steady Gamma to unsteady gamma with UA states
 
    ! Compute UA inputs at t
@@ -619,7 +618,6 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
       else  
          call SetErrStat(ErrID_Fatal,'Invalid time integration method:'//Num2LStr(p%IntMethod),ErrStat,ErrMsg,'FVW_UpdateState') 
       end if
-
       ! We extend the wake length, i.e. we emit a new panel of vorticity at the TE
       ! NOTE: this will be rolled back if UpdateState is called at the same starting time again
       call PrepareNextTimeStep()
@@ -659,6 +657,7 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
          !call Map_NW_FW(p, m, z, m%x2, ErrStat2, ErrMsg2); if(Failed()) return
       endif
    endif
+
    ! --- Integration between t and t+DTaero if DTaero/=DTfvw
    if (bOverCycling) then
       ! Linear interpolation of states between t and dtaero
@@ -710,6 +709,12 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
       m%tSpent = time_diff(5)*3600+time_diff(6)*60 +time_diff(7)+0.001*time_diff(8)
    endif
    call FVW_DestroyConstrState(z_guess, ErrStat2, ErrMsg2); if(Failed()) return
+
+   if (DEV_VERSION) then
+      if(have_nan(p, m, x, u, 'End Update ')) then
+         STOP
+      endif
+   endif
 
 contains
    subroutine PrepareNextTimeStep()

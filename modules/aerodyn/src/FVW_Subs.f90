@@ -117,36 +117,58 @@ subroutine ReadAndInterpGamma(CirculationFileName, s_CP_LL, L, Gamma_CP_LL, ErrS
    integer(IntKi),             intent(  out) :: ErrStat             !< Error status of the operation
    character(*),               intent(  out) :: ErrMsg              !< Error message if ErrStat /= ErrID_None
    ! Local
-   integer(IntKi)      :: nLines
-   integer(IntKi)      :: i
-   integer(IntKi)      :: iStat
-   integer(IntKi)      :: iUnit
-   character(len=1054) :: line
+   integer(IntKi)       :: nLines
+   integer(IntKi)       :: i
+   integer(IntKi)       :: iStat
+   integer(IntKi)       :: iUnit
+   character(len=1054)  :: line
+   integer(IntKi)       :: ErrStat2                                                           ! temporary Error status
+   character(ErrMsgLen) :: ErrMsg2                                                            ! temporary Error message
    real(ReKi), dimension(:), allocatable :: sPrescr, GammaPrescr !< Radius
+   real(ReKi), parameter :: ReNaN = huge(1.0_ReKi)
    ErrStat = ErrID_None
    ErrMsg  = ''
    ! --- 
    call GetNewUnit(iUnit)
-   open(unit = iUnit, file = CirculationFileName)
+   call OpenFInpFile(iUnit, CirculationFileName, errStat2, errMsg2); if(Failed()) return
    nLines=line_count(iUnit)-1
    ! Read Header
-   read(iUnit,*, iostat=istat) line 
+   read(iUnit,*, iostat=errStat2) line ; if(Failed()) return
    ! Read table:  s/L [-], GammaPresc [m^2/s]
-   allocate(sPrescr(1:nLines), GammaPrescr(1:nLines))
+   call AllocAry(sPrescr    , nLines, 'sPrecr'    , errStat2, errMsg2); if(Failed()) return
+   call AllocAry(GammaPrescr, nLines, 'GammaPrecr', errStat2, errMsg2); if(Failed()) return
+   sPrescr     = ReNaN
+   GammaPrescr = ReNaN
    do i=1,nLines
       read(iUnit,*, iostat=istat) sPrescr(i), GammaPrescr(i)
-      sPrescr(i)     =   sPrescr(i) * L
-      GammaPrescr(i) =   GammaPrescr(i) 
+      if (istat/=0) then
+         errStat2=ErrID_Fatal
+         errMsg2='Error occured while reading line '//num2lstr(i+1)//' of circulation file: '//trim(CirculationFileName)
+         if(Failed()) return
+      endif
    enddo
-   close(iUnit)
-   if (istat/=0) then
-      ErrStat=ErrID_Fatal
-      ErrMsg='Error occured while reading Circulation file: '//trim(CirculationFileName)
-      return
+   if (any(GammaPrescr>=ReNaN).or.any(sPrescr>=ReNaN)) then
+      errStat2=ErrID_Fatal
+      errMsg2='Not all values were read properly (check the format) while reading the circulation file: '//trim(CirculationFileName)
+      if(Failed()) return
    endif
+   sPrescr = sPrescr * L
    ! NOTE: TODO TODO TODO THIS ROUTINE PERFORMS NASTY EXTRAPOLATION, SHOULD BE PLATEAUED
-   Gamma_CP_LL =  interpolation_array( sPrescr, GammaPrescr, s_CP_LL, size(s_CP_LL), nLines )
+   Gamma_CP_LL =  interpolation_array(sPrescr, GammaPrescr, s_CP_LL, size(s_CP_LL), nLines)
+
+   call CleanUp()
 contains
+   subroutine CleanUp()
+      if(allocated(sPrescr)) deallocate(sPrescr)
+      if(allocated(GammaPrescr)) deallocate(GammaPrescr)
+      if (iUnit>0) close(iUnit)
+   end subroutine
+
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadAndInterpGamma') 
+      Failed =  ErrStat >= AbortErrLev
+      if (Failed) call CleanUp()
+   end function Failed
 
    !> Counts number of lines in a file
    integer function line_count(iunit)
@@ -367,6 +389,7 @@ subroutine PropagateWake(p, m, z, x, ErrStat, ErrMsg)
 end subroutine PropagateWake
 
 
+!> Print the states, useful for debugging
 subroutine print_x_NW_FW(p, m, x, label)
    type(FVW_ParameterType),         intent(in)  :: p              !< Parameters
    type(FVW_MiscVarType),           intent(in)  :: m              !< Initial misc/optimization variables
@@ -383,6 +406,10 @@ subroutine print_x_NW_FW(p, m, x, label)
       print*,trim(label)//'x', x%r_NW(1, 1, iAge,1), x%r_NW(1, p%nSpan+1, iAge,1)
       print*,trim(label)//'y', x%r_NW(2, 1, iAge,1), x%r_NW(2, p%nSpan+1, iAge,1)
       print*,trim(label)//'z', x%r_NW(3, 1, iAge,1), x%r_NW(3, p%nSpan+1, iAge,1)
+      if (iAge<p%nNWMax+1) then
+         print*,trim(label)//'g', x%Gamma_NW(1, iAge,1), x%Gamma_NW(p%nSpan, iAge,1)
+         print*,trim(label)//'e', x%Eps_NW(1,1, iAge,1), x%Eps_NW(1,p%nSpan, iAge,1)
+      endif
    enddo
    print'(A,I0)','FW <<<<<<<<<<<<<<<<<<<< nFW:',m%nFW
    do iAge=1,p%nFWMax+1
@@ -392,26 +419,54 @@ subroutine print_x_NW_FW(p, m, x, label)
       print*,trim(label)//'x', x%r_FW(1, 1, iAge,1), x%r_FW(1, FWnSpan+1, iAge,1)
       print*,trim(label)//'y', x%r_FW(2, 1, iAge,1), x%r_FW(2, FWnSpan+1, iAge,1)
       print*,trim(label)//'z', x%r_FW(3, 1, iAge,1), x%r_FW(3, FWnSpan+1, iAge,1)
+      if (iAge<p%nFWMax+1) then
+         print*,trim(label)//'g', x%Gamma_FW(1,iAge,1), x%Gamma_FW(FWnSpan, iAge,1)
+         print*,trim(label)//'e', x%Eps_FW(1,1, iAge,1), x%Eps_FW(1,FWnSpan, iAge,1)
+      endif
    enddo
-   !print'(A,I0,A,I0)','dxdt NW .....................iNWStart:',iNWStart,' nNW:',m%nNW
-   !do iAge=1,p%nNWMax+1
-   !   flag='X'
-   !   if ((iAge)<= m%nNW+1) flag='.'
-   !   print'(A,A,I0,A)',flag,'iAge ',iAge,'      Root              Tip'
-   !   print*,trim(label)//'x', m%dxdt_NW(1, 1, iAge,1), m%dxdt_NW(1, p%nSpan+1, iAge,1)
-   !   print*,trim(label)//'y', m%dxdt_NW(2, 1, iAge,1), m%dxdt_NW(2, p%nSpan+1, iAge,1)
-   !   print*,trim(label)//'z', m%dxdt_NW(3, 1, iAge,1), m%dxdt_NW(3, p%nSpan+1, iAge,1)
-   !enddo
-   !print'(A,I0)','dxdt FW <<<<<<<<<<<<<<<<<<<< nFW:',m%nFW
-   !do iAge=1,p%nFWMax+1
-   !   flag='X'
-   !   if ((iAge)<= m%nFW+1) flag='.'
-   !   print'(A,A,I0,A)',flag,'iAge ',iAge,'      Root              Tip'
-   !   print*,trim(label)//'x', m%dxdt_FW(1, 1, iAge,1), m%dxdt_FW(1, FWnSpan+1, iAge,1)
-   !   print*,trim(label)//'y', m%dxdt_FW(2, 1, iAge,1), m%dxdt_FW(2, FWnSpan+1, iAge,1)
-   !   print*,trim(label)//'z', m%dxdt_FW(3, 1, iAge,1), m%dxdt_FW(3, FWnSpan+1, iAge,1)
-   !enddo
 endsubroutine
+
+!> Debug function to figure out if data have nan
+logical function have_nan(p, m, x, u, label)
+   type(FVW_ParameterType),         intent(in) :: p !< Parameters
+   type(FVW_MiscVarType),           intent(in) :: m !< Initial misc/optimization variables
+   type(FVW_ContinuousStateType),   intent(in) :: x !< Continuous states
+   type(FVW_InputType),             intent(in) :: u(:) !< Input states
+   character(len=*),                intent(in) :: label !< label for print
+   have_nan=.False.
+   if (any(isnan(x%r_NW))) then
+      print*,trim(label),'NaN in r_NW'
+      have_nan=.True.
+   endif
+   if (any(isnan(x%r_FW))) then
+      print*,trim(label),'NaN in r_FW'
+      have_nan=.True.
+   endif
+   if (any(isnan(x%Gamma_NW))) then
+      print*,trim(label),'NaN in G_NW'
+      have_nan=.True.
+   endif
+   if (any(isnan(x%Gamma_FW))) then
+      print*,trim(label),'NaN in G_FW'
+      have_nan=.True.
+   endif
+   if (any(isnan(x%Eps_NW))) then
+      print*,trim(label),'NaN in G_FW'
+      have_nan=.True.
+   endif
+   if (any(isnan(x%Eps_FW))) then
+      print*,trim(label),'NaN in G_FW'
+      have_nan=.True.
+   endif
+   if (any(isnan(u(1)%V_wind))) then
+      print*,trim(label),'NaN in Vwind1'
+      have_nan=.True.
+   endif
+   if (any(isnan(u(2)%V_wind))) then
+      print*,trim(label),'NaN in Vwind2'
+      have_nan=.True.
+   endif
+endfunction
 
 
 ! --------------------------------------------------------------------------------
