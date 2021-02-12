@@ -96,11 +96,17 @@ subroutine DvrM_Init(DvrData, AD, IW, errStat,errMsg )
    ! validate the inputs
    call ValidateInputs(DvrData, errStat2, errMsg2) ; if(Failed()) return     
 
+   ! --- Initialize meshes
+   call Init_Meshes(DvrData, errStat2, errMsg2); if(Failed()) return
+
    ! --- Initialize aerodyn 
    call Init_AeroDyn(DvrData, AD, DvrData%dT, InitOutData_AD, errStat2, errMsg2); if(Failed()) return
 
    ! --- Initialize Inflow Wind 
    call Init_InflowWind(DvrData, IW, AD, DvrData%dt, errStat2, errMsg2); if(Failed()) return
+
+   ! --- Initialize meshes
+   call Init_ADMeshMap(DvrData, AD, errStat2, errMsg2); if(Failed()) return
 
    ! --- Initial AD inputs
    AD%InputTime = -999
@@ -114,6 +120,7 @@ subroutine DvrM_Init(DvrData, AD, IW, errStat,errMsg )
    ! --- Initialize VTK
    if (DvrData%out%WrVTK>0) then
       DvrData%out%n_VTKTime = 1
+      DvrData%out%VTKRefPoint = (/0.0_ReKi, 0.0_ReKi, 0.0_ReKi /)
       call SetVTKParameters(DvrData%out, DvrData, InitOutData_AD, AD, errStat2, errMsg2)
    endif
 
@@ -250,16 +257,12 @@ subroutine Init_AeroDyn(DvrData, AD, dt, InitOutData, errStat, errMsg)
    do iWT=1,DvrData%numTurbines
       wt => DvrData%WT(iWT)
 
-      wt%Rg2b0 = EulerConstruct( wt%orientationInit ) ! global 2 base at t = 0 (constant)
-      wt%Rb2h0 = EulerConstruct( wt%hub%orientation_n )    ! base 2 hub (constant)
-      InitInData%HubPosition = wt%originInit + wt%nac%origin_t  + matmul( transpose(wt%Rg2b0), wt%hub%origin_n)
-      InitInData%HubOrientation = matmul(wt%Rb2h0, wt%Rg2b0) ! Global 2 hub = base2hub x global2base
+      InitInData%HubPosition    = wt%hub%ptMesh%Position(:,1)
+      InitInData%HubOrientation = wt%hub%ptMesh%RefOrientation(:,:,1)
 
       do k=1,InitInData%numBlades
-         wt%bld(k)%Rh2bl0(:,:) = EulerConstruct( wt%bld(k)%orientation_h ) ! Rotation matrix hub 2 blade (constant)
-         InitInData%BladeRootOrientation(:,:,k) = matmul(wt%bld(k)%Rh2bl0(:,:),  InitInData%HubOrientation ) ! Global 2 blade =    hub2blade   x global2hub
-         InitInData%BladeRootPosition(:,k)   = InitInData%HubPosition + matmul(transpose(InitInData%HubOrientation), wt%bld(k)%origin_h) + wt%bld(k)%hubRad_bl * InitInData%BladeRootOrientation(3,:,k)      
-         print*,'k',k,InitInData%BladeRootPosition(:,k)
+         InitInData%BladeRootOrientation(:,:,k) = wt%bld(k)%ptMesh%RefOrientation(:,:,1)
+         InitInData%BladeRootPosition(:,k)      = wt%bld(k)%ptMesh%Position(:,1)
       end do
    enddo
  
@@ -273,6 +276,10 @@ subroutine Init_AeroDyn(DvrData, AD, dt, InitOutData, errStat, errMsg)
    call move_alloc(InitOutData%WriteOutputHdr, DvrData%out%WriteOutputHdr)
    call move_alloc(InitOutData%WriteOutputUnt, DvrData%out%WriteOutputUnt)   
    DvrData%out%AD_ver = InitOutData%ver
+
+
+   print*,'TowerMotion',AD%u(1)%TowerMotion%Position(:,:)
+   print*,'TowerMotion',AD%p%NumTwrNds
 
    call cleanup()
 contains
@@ -372,6 +379,183 @@ contains
    end function Failed
 end subroutine Init_InflowWind
 !----------------------------------------------------------------------------------------------------------------------------------
+!>
+subroutine Init_Meshes(DvrData,  errStat, errMsg)
+   type(DvrM_SimData), target,   intent(inout) :: DvrData       ! Input data for initialization (intent out for getting AD WriteOutput names/units)
+   integer(IntKi)              , intent(  out) :: errStat       ! Status of error message
+   character(*)                , intent(  out) :: errMsg        ! Error message if ErrStat /= ErrID_None
+   ! locals
+   real(reKi)            :: pos(3)
+   real(R8Ki)            :: orientation(3,3)
+   real(R8Ki)            :: R_nac2hub(3,3)
+   real(R8Ki)            :: R_nac2gl(3,3)
+   real(R8Ki)            :: R_hub2gl(3,3)
+   real(R8Ki)            :: R_hub2bl(3,3)
+   real(R8Ki)            :: R_gl2wt(3,3)
+   integer(IntKi)        :: iWT, iBld
+   integer(IntKi)        :: errStat2      ! local status of error message
+   character(ErrMsgLen)  :: errMsg2       ! local error message if ErrStat /= ErrID_None
+   type(WTData), pointer :: wt ! Alias to shorten notation
+   errStat = ErrID_None
+   errMsg  = ''
+
+   ! --- Create motion meshes
+   do iWT=1,DvrData%numTurbines
+      wt => DvrData%WT(iWT)
+      ! WT base
+      pos         = wt%originInit
+      !R_gl2wt     = EulerConstruct( wt%orientationInit ) ! global 2 base at t = 0 (constant)
+      !R_gl2wt     = EulerConstruct( wt%orientationInit ) ! global 2 base at t = 0 (constant)
+      ! We initialize to indentity at first
+      CALL Eye(R_gl2wt, errStat2, errMsg2) 
+      orientation = R_gl2wt
+      call CreatePointMesh(wt%ptMesh, pos, orientation, errStat2, errMsg2); if(Failed())return
+
+      ! Tower
+      if (wt%hasTower) then
+         pos         = wt%ptMesh%Position(:,1) + matmul(transpose(R_gl2wt),  wt%twr%origin_t)
+         orientation = R_gl2wt
+         call CreatePointMesh(wt%twr%ptMesh, pos, orientation, errStat2, errMsg2); if(Failed())return
+         if(Failed())return
+      endif
+
+      ! Nacelle
+      pos           = wt%ptMesh%Position(:,1) +  matmul(transpose(R_gl2wt),  wt%nac%origin_t)
+      orientation   = R_gl2wt ! Yaw?
+      call CreatePointMesh(wt%nac%ptMesh, pos, orientation, errStat2, errMsg2); if(Failed())return
+      if(Failed())return
+
+      ! Hub
+      R_nac2gl  = transpose(wt%nac%ptMesh%RefOrientation(:,:,1))
+      R_nac2hub = EulerConstruct( wt%hub%orientation_n ) ! nacelle 2 hub (constant)
+      pos         = wt%nac%ptMesh%Position(:,1) + matmul(R_nac2gl,wt%hub%origin_n)
+      orientation = matmul(R_nac2hub, wt%nac%ptMesh%RefOrientation(:,:,1))   ! Global 2 hub at t=0
+
+      call CreatePointMesh(wt%hub%ptMesh, pos, orientation, errStat2, errMsg2); if(Failed())return
+      if(Failed())return
+
+      ! Blades
+!       wt%Rg2b0 = EulerConstruct( wt%orientationInit ) ! global 2 base at t = 0 (constant)
+!       wt%Rb2h0 = EulerConstruct( wt%hub%orientation_n )    ! base 2 hub (constant)
+!       InitInData%HubPosition = wt%originInit + wt%nac%origin_t  + matmul( transpose(wt%Rg2b0), wt%hub%origin_n)
+!       InitInData%HubOrientation = matmul(wt%Rb2h0, wt%Rg2b0) ! Global 2 hub = base2hub x global2base
+
+      R_hub2gl  = transpose(wt%hub%ptMesh%RefOrientation(:,:,1))
+      do iBld=1,wt%numBlades
+         R_hub2bl = EulerConstruct( wt%bld(iBld)%orientation_h ) ! Rotation matrix hub 2 blade (constant)
+         orientation = matmul(R_hub2bl,  wt%hub%ptMesh%RefOrientation(:,:,1) ) ! Global 2 blade =    hub2blade   x global2hub
+         pos         = wt%hub%ptMesh%Position(:,1) + matmul(R_hub2gl, wt%bld(iBld)%origin_h) +  wt%bld(iBld)%hubRad_bl*orientation(3,:) 
+         call CreatePointMesh(wt%bld(iBld)%ptMesh, pos, orientation, errStat2, errMsg2); if(Failed())return
+      end do
+
+      ! --- Mapping
+      ! Base 2 twr
+      if (wt%hasTower) then
+         call MeshMapCreate(wt%ptMesh, wt%twr%ptMesh, wt%map2twrPt, errStat2, errMsg2); if(Failed())return
+      endif
+      ! Base 2 nac
+      call MeshMapCreate(wt%ptMesh, wt%nac%ptMesh, wt%map2nacPt, errStat2, errMsg2); if(Failed())return
+      ! nac 2 hub
+      call MeshMapCreate(wt%nac%ptMesh, wt%hub%ptMesh, wt%nac%map2hubPt, errStat2, errMsg2); if(Failed())return
+      ! hub 2 bld
+      allocate(wt%hub%map2bldPt(wt%numBlades))
+      do iBld=1,wt%numBlades
+         call MeshMapCreate(wt%hub%ptMesh, wt%bld(iBld)%ptMesh, wt%hub%map2bldPt(iBld), errStat2, errMsg2); if(Failed())return
+      enddo
+
+
+      print*,'Bse: ',wt%ptMesh%Position
+      print*,'Twr: ',wt%twr%ptMesh%Position
+      print*,'Nac: ',wt%nac%ptMesh%Position
+      print*,'Hub: ',wt%hub%ptMesh%Position
+      print*,'Bld: ',wt%bld(1)%ptMesh%Position
+      print*,'Bld: ',wt%bld(2)%ptMesh%Position
+   enddo
+
+   call cleanup()
+contains
+
+
+   subroutine cleanup()
+   end subroutine cleanup
+
+   logical function Failed()
+      call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'Init_Meshes')
+      Failed = ErrStat >= AbortErrLev
+      if (Failed) then
+         call cleanup()
+      endif
+   end function Failed
+end subroutine Init_Meshes
+
+subroutine Init_ADMeshMap(DvrData, AD, errStat, errMsg)
+   type(DvrM_SimData), target,   intent(inout) :: DvrData       ! Input data for initialization (intent out for getting AD WriteOutput names/units)
+   type(AeroDyn_Data),           intent(inout) :: AD            ! AeroDyn data 
+   integer(IntKi)              , intent(  out) :: errStat       ! Status of error message
+   character(*)                , intent(  out) :: errMsg        ! Error message if ErrStat /= ErrID_None
+   ! locals
+   real(reKi)            :: pos(3)
+   real(R8Ki)            :: orientation(3,3)
+   real(R8Ki)            :: R_nac2hub(3,3)
+   real(R8Ki)            :: R_nac2gl(3,3)
+   real(R8Ki)            :: R_gl2wt(3,3)
+   integer(IntKi)        :: iWT
+   integer(IntKi)        :: errStat2      ! local status of error message
+   character(ErrMsgLen)  :: errMsg2       ! local error message if ErrStat /= ErrID_None
+   type(WTData), pointer :: wt ! Alias to shorten notation
+   errStat = ErrID_None
+   errMsg  = ''
+
+   ! --- Create motion meshes
+   do iWT=1,DvrData%numTurbines
+      wt => DvrData%WT(iWT)
+      ! hub 2 hubAD
+      call MeshMapCreate(wt%hub%ptMesh, AD%u(1)%hubMotion, wt%hub%ED_P_2_AD_P_H, errStat2, errMsg2); if(Failed())return
+   enddo
+
+   call cleanup()
+contains
+
+   subroutine cleanup()
+   end subroutine cleanup
+
+   logical function Failed()
+      call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'Init_ADMeshMap')
+      Failed = ErrStat >= AbortErrLev
+      if (Failed) then
+         call cleanup()
+      endif
+   end function Failed
+end subroutine Init_ADMeshMap
+
+
+!----------------------------------------------------------------------------------------------------------------------------------
+!>
+subroutine CreatePointMesh(mesh, posInit, orientInit, errStat, errMsg)
+   type(MeshType), intent(out) :: mesh
+   real(ReKi),                   intent(in   ) :: PosInit(3)                                             !< Xi,Yi,Zi, coordinates of node
+   real(R8Ki),                   intent(in   ) :: orientInit(3,3)                                        !< Orientation (direction cosine matrix) of node; identity by default
+   integer(IntKi)              , intent(out)   :: errStat       ! Status of error message
+   character(*)                , intent(out)   :: errMsg        ! Error message if ErrStat /= ErrID_None
+   integer(IntKi)       :: errStat2      ! local status of error message
+   character(ErrMsgLen) :: errMsg2       ! local error message if ErrStat /= ErrID_None
+   errStat = ErrID_None
+   errMsg  = ''
+
+   call MeshCreate(mesh, COMPONENT_INPUT, 1, errStat2, errMsg2, Orientation=.true., TranslationDisp=.true., TranslationVel=.true., RotationVel=.true., TranslationAcc=.true., RotationAcc=.true.)
+   call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'CreatePointMesh')
+
+   call MeshPositionNode(mesh, 1, posInit, errStat2, errMsg2, orientInit); 
+   call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'CreatePointMesh')
+
+   call MeshConstructElement(mesh, ELEMENT_POINT, errStat2, errMsg2, p1=1); 
+   call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'CreatePointMesh')
+
+   call MeshCommit(mesh, errStat2, errMsg2);
+   call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'CreatePointMesh')
+end subroutine CreatePointMesh
+
+!----------------------------------------------------------------------------------------------------------------------------------
 !> this routine cycles values in the input array AD%InputTime and AD%u.
 subroutine Set_AD_Inputs(nt,DvrData,AD,IW,errStat,errMsg)
    integer(IntKi)              , intent(in   ) :: nt            ! time step number
@@ -395,6 +579,7 @@ subroutine Set_AD_Inputs(nt,DvrData,AD,IW,errStat,errMsg)
    real(R8Ki)              :: position(3)
    real(R8Ki)              :: rotDir(3)
    real(R8Ki)              :: orientation(3,3)
+   real(R8Ki)              :: R_yaw(3,3)
    real(R8Ki)              :: rotateMat(3,3)
    real(ReKi) :: hubMotion(3) ! Azimuth, Speed, Acceleration
    real(ReKi) :: nacMotion(1) ! Yaw
@@ -423,14 +608,35 @@ subroutine Set_AD_Inputs(nt,DvrData,AD,IW,errStat,errMsg)
    do iWT=1,DvrData%numTurbines
       wt => DvrData%WT(iWT)
 
-      ! --- Tower motion
-      do j=1,AD%u(1)%TowerMotion%nnodes
-         AD%u(1)%TowerMotion%Orientation(  :,:,j) = AD%u(1)%TowerMotion%RefOrientation(:,:,j) ! identity
-         AD%u(1)%TowerMotion%TranslationDisp(:,j) = 0.0_ReKi
-         AD%u(1)%TowerMotion%TranslationVel( :,j) = 0.0_ReKi
-      end do !j=nnodes
+      ! --- Base Motion
+      wt%ptMesh%TranslationDisp(1,1) = 30*sin(time*0.5)
+      wt%ptMesh%TranslationVel(1,1) = 0.5*30*cos(time*0.5)
+!       print*,'Trans',100 !010*sin(time*0.01)
+      ! TODO rotation
+      orientation = EulerConstruct( wt%orientationInit ) ! global 2 base at t = 0 (constant)
+      wt%ptMesh%Orientation(:,:,1) = orientation
 
-      ! --- Hub Motion 
+      ! Base to Tower 
+      if (wt%hasTower) then
+         call Transfer_Point_to_Point(wt%ptMesh, wt%twr%ptMesh, wt%map2twrPt, errStat2, errMsg2); if(failed()) return
+      endif
+       
+      ! --- Base Motion
+      ! Base to Nac
+      call Transfer_Point_to_Point(wt%ptMesh, wt%nac%ptMesh, wt%map2nacPt, errStat2, errMsg2); if(failed()) return
+      ! TODO yaw
+      ! Hub motions:
+      !theta(1) = 0.0_ReKi
+      !theta(2) = 0.0_ReKi
+      !theta(3) = Yaw
+      !R_yaw = EulerConstruct(theta)
+      !print*,'Nac Orientation',wt%nac%mesh%reforientation
+      !print*,'Nac Orientation',wt%nac%mesh%orientation
+
+      ! --- Hub Motion
+      ! Nac 2 hub (rigid body)
+      call Transfer_Point_to_Point(wt%nac%ptMesh, wt%hub%ptMesh, wt%nac%map2hubPt, errStat2, errMsg2); if(failed()) return
+      ! Rotation
       if (wt%hub%motionType == idHubMotionConstant) then
          RotSpeed = wt%hub%speed ! TODO TODO Other motion types
          ! save the azimuth at t (not t+dt) for output to file:
@@ -441,74 +647,96 @@ subroutine Set_AD_Inputs(nt,DvrData,AD,IW,errStat,errMsg)
          RotSpeed= hubMotion(2)
          wt%hub%azimuth = MODULO(hubMotion(1)*R2D, 360.0_ReKi )
       endif
-
-      
-      ! Hub motions:
-      theta(1) = 0.0_ReKi
-      theta(2) = 0.0_ReKi
-      theta(3) = 0.0_ReKi 
-      orientation = EulerConstruct(theta) ! TODO TODO TODO base motion
-            
-      AD%u(1)%HubMotion%TranslationDisp(:,1) = matmul( AD%u(1)%HubMotion%Position(:,1), orientation ) - AD%u(1)%HubMotion%Position(:,1) ! = matmul( transpose(orientation) - eye(3), AD%u(1)%HubMotion%Position(:,1) )
-
       ! Rotation always around x
       theta(1) = wt%hub%azimuth*D2R + DvrData%dt * RotSpeed
       theta(2) = 0.0_ReKi
       theta(3) = 0.0_ReKi
-      AD%u(1)%HubMotion%Orientation(  :,:,1) = matmul( AD%u(1)%HubMotion%RefOrientation(:,:,1), orientation )
+
       orientation = EulerConstruct( theta )
-      AD%u(1)%HubMotion%Orientation(  :,:,1) = matmul( orientation, AD%u(1)%HubMotion%Orientation(  :,:,1) ) !matmul(wt%Rb2h0, wt%Rg2b0) ! Global 2 hub = base2hub x global2base
-      AD%u(1)%HubMotion%RotationVel(    :,1) = AD%u(1)%HubMotion%Orientation(1,:,1) * RotSpeed
+      wt%hub%ptMesh%Orientation(:,:,1) = matmul(orientation, wt%hub%ptMesh%Orientation(:,:,1))
+      wt%hub%ptMesh%RotationVel(  :,1) = wt%hub%ptMesh%Orientation(1,:,1) * RotSpeed  ! TODO TODO TODO Add Base rotation vel
 
-!       wt%Rg2b0 = EulerConstruct( wt%baseOrientationInit ) ! global 2 base at t = 0 (constant)
-!       wt%Rb2h0 = EulerConstruct( wt%hubOrientation_b )    ! base 2 hub (constant)
-!       InitInData%HubPosition = wt%baseOrigin  + matmul( transpose(wt%Rg2b0), wt%HubOrigin_b)
-!       InitInData%HubOrientation = matmul(wt%Rb2h0, wt%Rg2b0) ! Global 2 hub = base2hub x global2base
+      ! --- Blade motion
+      ! Hub 2 blade root
+      do iB = 1,wt%numBlades
+         call Transfer_Point_to_Point(wt%hub%ptMesh, wt%bld(iB)%ptMesh, wt%hub%map2bldPt(iB), errStat2, errMsg2); if(failed()) return
+      enddo
+
+
+
+
+      ! --- Tower motion
+      do j=1,AD%u(1)%TowerMotion%nnodes
+         AD%u(1)%TowerMotion%Orientation(  :,:,j) = AD%u(1)%TowerMotion%RefOrientation(:,:,j) ! identity
+         AD%u(1)%TowerMotion%TranslationDisp(:,j) = 0.0_ReKi
+         AD%u(1)%TowerMotion%TranslationVel( :,j) = 0.0_ReKi
+      end do !j=nnodes
+!       ! tower
+!    IF (u_AD%TowerMotion%Committed) THEN
+!       CALL Transfer_Line2_to_Line2( y_ED%TowerLn2Mesh, u_AD%TowerMotion, MeshMapData%ED_L_2_AD_L_T, ErrStat2, ErrMsg2 )
+!          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//':u_AD%TowerMotion' )      
+!    END IF
+
+
+
+
+      ! --- Transfer to AeroDyn
+      ! Hub 2 Hub AD (see ED hubPtMotion, ED_P_2_AD_P_H)
+      call Transfer_Point_to_Point(wt%hub%ptMesh, AD%u(1)%hubMotion, wt%hub%ED_P_2_AD_P_H, errStat2, errMsg2); if(failed()) return
+            
+!       ! blade root   
+
+     ! ( see	ED_P_2_AD_P_R)
+!    DO k=1,size(y_ED%BladeRootMotion)
+!       CALL Transfer_Point_to_Point( y_ED%BladeRootMotion(k), u_AD%BladeRootMotion(k), MeshMapData%ED_P_2_AD_P_R(k), ErrStat2, ErrMsg2 )
+!          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//':u_AD%BladeRootMotion('//trim(num2lstr(k))//')' )      
+!    END DO
+
+
+
+      print*,'HubAD',AD%u(1)%HubMotion%TranslationVel
+
+!       ! Blade motions:
+!       do k=1,wt%numBlades         
+!          AD%u(1)%BladeRootMotion(k)%Orientation(  :,:,1) = matmul(wt%bld(k)%ptMesh%Rh2bl0(:,:), AD%u(1)%HubMotion%Orientation(  :,:,1) ) ! Global 2 blade =    hub2blade   x global2hub
+!       end do !k=numBlades
+!             
+!       ! Blade and blade root motions:
+!       do k=1,wt%numBlades
+!          rotateMat = transpose( AD%u(1)%BladeRootMotion(k)%Orientation(  :,:,1) )
+!          rotateMat = matmul( rotateMat, AD%u(1)%BladeRootMotion(k)%RefOrientation(  :,:,1) )
+!          orientation = transpose(rotateMat)
+!          
+!          rotateMat(1,1) = rotateMat(1,1) - 1.0_ReKi
+!          rotateMat(2,2) = rotateMat(2,2) - 1.0_ReKi
+!          rotateMat(3,3) = rotateMat(3,3) - 1.0_ReKi
+!                   
+!          position = AD%u(1)%BladeRootMotion(k)%Position(:,1) - AD%u(1)%HubMotion%Position(:,1) 
+!          AD%u(1)%BladeRootMotion(k)%TranslationDisp(:,1) = AD%u(1)%HubMotion%TranslationDisp(:,1) + matmul( rotateMat, position )
 ! 
-!       do k=1,InitInData%numBlades
-!          wt%Rh2bl0(:,:,k) = EulerConstruct( wt%bladeOrientation_r(:,k) ) ! Rotation matrix hub 2 blade (constant)
-!          InitInData%BladeRootOrientation(:,:,k) = matmul(wt%Rh2bl0(:,:,k),  InitInData%HubOrientation ) ! Global 2 blade =    hub2blade   x global2hub
-!          InitInData%BladeRootPosition(:,k)   = InitInData%HubPosition + wt%bladeHubRad_bl(k) * InitInData%BladeRootOrientation(3,:,k)      
-!       end do
-                  
-      ! Blade motions:
-      do k=1,wt%numBlades         
-         AD%u(1)%BladeRootMotion(k)%Orientation(  :,:,1) = matmul(wt%bld(k)%Rh2bl0(:,:), AD%u(1)%HubMotion%Orientation(  :,:,1) ) ! Global 2 blade =    hub2blade   x global2hub
-      end do !k=numBlades
-            
-      ! Blade and blade root motions:
-      do k=1,wt%numBlades
-         rotateMat = transpose( AD%u(1)%BladeRootMotion(k)%Orientation(  :,:,1) )
-         rotateMat = matmul( rotateMat, AD%u(1)%BladeRootMotion(k)%RefOrientation(  :,:,1) )
-         orientation = transpose(rotateMat)
-         
-         rotateMat(1,1) = rotateMat(1,1) - 1.0_ReKi
-         rotateMat(2,2) = rotateMat(2,2) - 1.0_ReKi
-         rotateMat(3,3) = rotateMat(3,3) - 1.0_ReKi
-                  
-         position = AD%u(1)%BladeRootMotion(k)%Position(:,1) - AD%u(1)%HubMotion%Position(:,1) 
-         AD%u(1)%BladeRootMotion(k)%TranslationDisp(:,1) = AD%u(1)%HubMotion%TranslationDisp(:,1) + matmul( rotateMat, position )
-
-         position =  AD%u(1)%BladeRootMotion(k)%Position(:,1) + AD%u(1)%BladeRootMotion(k)%TranslationDisp(:,1) &
-                     - AD%u(1)%HubMotion%Position(:,1) - AD%u(1)%HubMotion%TranslationDisp(:,1)
-         AD%u(1)%BladeRootMotion(k)%TranslationVel( :,1) = cross_product( AD%u(1)%HubMotion%RotationVel(:,1), position )
-
-         do j=1,AD%u(1)%BladeMotion(k)%nnodes        
-            position = AD%u(1)%BladeMotion(k)%Position(:,j) - AD%u(1)%HubMotion%Position(:,1) 
-            AD%u(1)%BladeMotion(k)%TranslationDisp(:,j) = AD%u(1)%HubMotion%TranslationDisp(:,1) + matmul( rotateMat, position )
-            
-            AD%u(1)%BladeMotion(k)%Orientation(  :,:,j) = matmul( AD%u(1)%BladeMotion(k)%RefOrientation(:,:,j), orientation )
-            
-            position =  AD%u(1)%BladeMotion(k)%Position(:,j) + AD%u(1)%BladeMotion(k)%TranslationDisp(:,j) &
-                      - AD%u(1)%HubMotion%Position(:,1) - AD%u(1)%HubMotion%TranslationDisp(:,1)
-            AD%u(1)%BladeMotion(k)%TranslationVel( :,j) = cross_product( AD%u(1)%HubMotion%RotationVel(:,1), position )
-            
-            AD%u(1)%BladeMotion(k)%RotationVel(:,j) = AD%u(1)%HubMotion%Orientation(1,:,1) * RotSpeed ! simplification (without pitch rate)
-            AD%u(1)%BladeMotion(k)%TranslationAcc(:,j) = 0.0_ReKi ! simplification
-         end do !j=nnodes
-                                    
-      end do !k=numBlades       
+!          position =  AD%u(1)%BladeRootMotion(k)%Position(:,1) + AD%u(1)%BladeRootMotion(k)%TranslationDisp(:,1) &
+!                      - AD%u(1)%HubMotion%Position(:,1) - AD%u(1)%HubMotion%TranslationDisp(:,1)
+!          AD%u(1)%BladeRootMotion(k)%TranslationVel( :,1) = cross_product( AD%u(1)%HubMotion%RotationVel(:,1), position )
+! 
+!          do j=1,AD%u(1)%BladeMotion(k)%nnodes        
+!             position = AD%u(1)%BladeMotion(k)%Position(:,j) - AD%u(1)%HubMotion%Position(:,1) 
+!             AD%u(1)%BladeMotion(k)%TranslationDisp(:,j) = AD%u(1)%HubMotion%TranslationDisp(:,1) + matmul( rotateMat, position )
+!             
+!             AD%u(1)%BladeMotion(k)%Orientation(  :,:,j) = matmul( AD%u(1)%BladeMotion(k)%RefOrientation(:,:,j), orientation )
+!             
+!             position =  AD%u(1)%BladeMotion(k)%Position(:,j) + AD%u(1)%BladeMotion(k)%TranslationDisp(:,j) &
+!                       - AD%u(1)%HubMotion%Position(:,1) - AD%u(1)%HubMotion%TranslationDisp(:,1)
+!             AD%u(1)%BladeMotion(k)%TranslationVel( :,j) = cross_product( AD%u(1)%HubMotion%RotationVel(:,1), position )
+!             
+!             AD%u(1)%BladeMotion(k)%RotationVel(:,j) = AD%u(1)%HubMotion%Orientation(1,:,1) * RotSpeed ! simplification (without pitch rate)
+!             AD%u(1)%BladeMotion(k)%TranslationAcc(:,j) = 0.0_ReKi ! simplification
+!          end do !j=nnodes
+!                                     
+!       end do !k=numBlades       
    enddo ! iWT, rotors
+
+
+   print*,'HubAD',AD%u(1)%HubMotion%TranslationVel
       
    ! --- Inflow on points
    call Set_IW_Inputs(nt, DvrData, AD, IW, errStat2, errMsg2); if(Failed()) return
@@ -1121,7 +1349,8 @@ SUBROUTINE SetVTKParameters(p_FAST, DvrData, InitOutData_AD, AD, ErrStat, ErrMsg
    if (Mesh%NNodes>0) then
       CALL AllocAry(p_FAST%VTK_Surface%TowerRad, Mesh%NNodes,'VTK_Surface%TowerRad',ErrStat2,ErrMsg2)
       topNode   = Mesh%NNodes - 1
-      baseNode  = Mesh%refNode
+      !baseNode  = Mesh%refNode
+      baseNode  = 1 ! TODO TODO
       print*,'>>>', topNode, baseNode, size(Mesh%position,2)
       TwrLength = TwoNorm( Mesh%position(:,topNode) - Mesh%position(:,baseNode) ) ! this is the assumed length of the tower
       TwrRatio  = TwrLength / 87.6_SiKi  ! use ratio of the tower length to the length of the 5MW tower
@@ -1170,37 +1399,52 @@ SUBROUTINE WrVTK_Surfaces(t_global, DvrData, p_FAST, VTK_count, AD)
    type(DvrM_SimData), target,    intent(inout) :: DvrData           ! intent(out) only so that we can save FmtWidth in DvrData%out%ActualChanLen
    TYPE(DvrM_Outputs),       INTENT(IN   ) :: p_FAST              !< Parameters for the glue code
    INTEGER(IntKi)          , INTENT(IN   ) :: VTK_count
-!    TYPE(FAST_ModuleMapType), INTENT(IN   ) :: MeshMapData         !< Data for mapping between modules
    TYPE(AeroDyn_Data),       INTENT(IN   ) :: AD                  !< AeroDyn data
    logical, parameter                      :: OutputFields = .FALSE. ! due to confusion about what fields mean on a surface, we are going to just output the basic meshes if people ask for fields
    INTEGER(IntKi)                          :: NumBl, k
    INTEGER(IntKi)                          :: ErrStat2
    CHARACTER(ErrMsgLen)                    :: ErrMSg2
    CHARACTER(*), PARAMETER                 :: RoutineName = 'WrVTK_Surfaces'
-
+   integer(IntKi)                              :: iWT
+   type(WTData), pointer :: wt ! Alias to shorten notation
+   character(10) :: sWT
    NumBl = DvrData%numBladesTot
 
    ! Ground (written at initialization)
    
-   ! Nacelle TODO
-   call MeshWrVTK_PointSurface (DvrData%WT(1)%originInit, AD%u(1)%HubMotion, trim(p_FAST%VTK_OutFileRoot)//'.NacelleSurface', &
-                                VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth , verts = p_FAST%VTK_Surface%NacelleBox)
-   
-   ! Hub
-   call MeshWrVTK_PointSurface (DvrData%WT(1)%originInit, AD%u(1)%HubMotion, trim(p_FAST%VTK_OutFileRoot)//'.HubSurface', &
-                                VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth , &
-                                NumSegments=p_FAST%VTK_Surface%NumSectors, radius=p_FAST%VTKHubRad)
-   
-   ! Tower motions
-   call MeshWrVTK_Ln2Surface (DvrData%WT(1)%originInit, AD%u(1)%TowerMotion, trim(p_FAST%VTK_OutFileRoot)//'.TowerSurface', &
-                              VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth, p_FAST%VTK_Surface%NumSectors, p_FAST%VTK_Surface%TowerRad )
-   
-   ! Blades
-   DO K=1,NumBl
-      call MeshWrVTK_Ln2Surface (DvrData%WT(1)%originInit, AD%u(1)%BladeMotion(K), trim(p_FAST%VTK_OutFileRoot)//'.Blade'//trim(num2lstr(k))//'Surface', &
-                                 VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth , verts=p_FAST%VTK_Surface%BladeShape(K)%AirfoilCoords &
-                                 ,Sib=AD%y%BladeLoad(k) )
-   END DO                  
+   do iWT = 1, size(DvrData%WT)
+      sWT = '.WT'//trim(num2lstr(iWT))
+      wt=>DvrData%WT(iWT)
+
+      ! Base 
+      call MeshWrVTK_PointSurface (p_FAST%VTKRefPoint, wt%ptMesh, trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.BaseSurface', &
+                                   VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth , verts = p_FAST%VTK_Surface%NacelleBox)
+      ! Nacelle 
+      call MeshWrVTK_PointSurface (p_FAST%VTKRefPoint, wt%nac%ptMesh, trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.NacelleSurface', &
+                                   VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth , verts = p_FAST%VTK_Surface%NacelleBox)
+      
+      ! Hub
+      call MeshWrVTK_PointSurface (p_FAST%VTKRefPoint, AD%u(1)%HubMotion, trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.HubSurface', &
+                                   VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth , &
+                                   NumSegments=p_FAST%VTK_Surface%NumSectors, radius=p_FAST%VTKHubRad)
+      
+      ! Tower motions
+      call MeshWrVTK_Ln2Surface (p_FAST%VTKRefPoint, AD%u(1)%TowerMotion, trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.TowerSurface', &
+                                 VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth, p_FAST%VTK_Surface%NumSectors, p_FAST%VTK_Surface%TowerRad )
+      
+      ! Blades
+      do K=1,NumBl
+
+         call MeshWrVTK_PointSurface (p_FAST%VTKRefPoint, wt%bld(k)%ptMesh, trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.Blade'//trim(num2lstr(k))//'RootSurface', &
+                                      VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth , &
+                                      NumSegments=p_FAST%VTK_Surface%NumSectors, radius=p_FAST%VTKHubRad)
+
+
+         call MeshWrVTK_Ln2Surface (p_FAST%VTKRefPoint, AD%u(1)%BladeMotion(K), trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.Blade'//trim(num2lstr(k))//'Surface', &
+                                    VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth , verts=p_FAST%VTK_Surface%BladeShape(K)%AirfoilCoords &
+                                    ,Sib=AD%y%BladeLoad(k) )
+      end do                  
+   enddo
 
    ! Free wake
    if (allocated(AD%m%FVW_u)) then

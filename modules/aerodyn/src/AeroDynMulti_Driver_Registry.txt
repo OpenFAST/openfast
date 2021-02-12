@@ -39,10 +39,11 @@ typedef   ^                         ^             character(ChanLen)     WriteOu
 typedef   ^                         ^             character(ChanLen)     WriteOutputUnt  {:}     -     -   "Channel units" "-"
 typedef   ^                         ^             ReKi                   storage          ::     -     -   "nChannel x nTime"
 typedef   ^                         ^             DvrVTK_SurfaceType     VTK_surface      -      -     -   "Data for VTK surface visualization"
-typedef   ^                         ^             INTEGER                VTK_tWidth       -      -     -   "Width of number of files for leading zeros in file name format"	-
-typedef   ^                         ^             INTEGER                n_VTKTime        -      -     -   "Number of time steps between writing VTK files"	-
-typedef   ^                         ^             SiKi                   VTKHubRad        -      -     -    "Hub radius for visualization"    m
-typedef   ^                         ^             SiKi                   VTKNacDim        6      -     -    "Nacelle dimensions for visualization"    m
+typedef   ^                         ^             INTEGER                VTK_tWidth       -      -     -   "Width of number of files for leading zeros in file name format"    -
+typedef   ^                         ^             INTEGER                n_VTKTime        -      -     -   "Number of time steps between writing VTK files"    -
+typedef   ^                         ^             SiKi                   VTKHubRad        -      -     -   "Hub radius for visualization"    m
+typedef   ^                         ^             SiKi                   VTKNacDim        6      -     -   "Nacelle dimensions for visualization"    m
+typedef   ^                         ^             ReKi                   VTKRefPoint      3      -     -   "RefPoint for VTK outputs"
 
 
 # ..... AeroDyn data .......................................................................................................
@@ -77,6 +78,11 @@ typedef   ^                         ^            IntKi                   motionT
 typedef   ^                         ^            IntKi                   iMotion          -      -     -   "Stored index to optimize time interpolation" -
 typedef   ^                         ^            ReKi                    motion           ::     -     -   "" "-"
 typedef   ^                         ^            character(1024)         motionFileName   -      -     -   "" -
+typedef   ^                         ^            MeshType                ptMesh           -      -     -   "Point mesh for origin motion" "-"
+typedef   ^                         ^            MeshType                lnMesh           -      -     -   "Line mesh for blade motion" "-"
+typedef   ^                         ^            MeshType                ED_L_2_AD_L_B    -      -     -   "Mesh mapping from blade line mesh to AD line mesh" "-"
+typedef   ^                         ^            MeshMapType             ED_P_2_AD_P_R    -      -     -   "Mesh mapping from blade to AD hub motion"
+                                                                         
 
 # ... Hub data ..............................................................................................................
 typedef   ^                         HubData      ReKi                    origin_n         3      -     -   "" -
@@ -87,6 +93,9 @@ typedef   ^                         ^            IntKi                   iMotion
 typedef   ^                         ^            ReKi                    speed            -      -     -   "rad/s" -
 typedef   ^                         ^            character(1024)         motionFileName   -      -     -   "" -
 typedef   ^                         ^            ReKi                    motion           ::     -     -   "" "-"
+typedef   ^                         ^            MeshType                ptMesh           -      -     -   "Point mesh for origin motion" "-"
+typedef   ^                         ^            MeshMapType             ED_P_2_AD_P_H    -      -     -   "Mesh mapping from hub to AD hub motion"
+typedef   ^                         ^            MeshMapType             map2BldPt        :      -     -   "Mesh mapping from hub to bld root motion"
 
 # ... Nacelle data ..........................................................................................................
 typedef   ^                         NacData      ReKi                    origin_t         3      -     -   "" -
@@ -95,13 +104,22 @@ typedef   ^                         ^            IntKi                   iMotion
 typedef   ^                         ^            ReKi                    yaw              -      -     -   "rad" -
 typedef   ^                         ^            character(1024)         motionFileName   -      -     -   "" -
 typedef   ^                         ^            ReKi                    motion           ::     -     -   "" "-"
+typedef   ^                         ^            MeshType                ptMesh           -      -     -   "Point mesh for origin motion" "-"
+typedef   ^                         ^            MeshMapType             map2hubPt        -      -     -   "Mesh mapping from Nacelle to hub"
 
 # ... Tower data ............................................................................................................
 typedef   ^                         TwrData      ReKi                    origin_t         3      -     -   "" -
+typedef   ^                         ^            MeshType                ptMesh           -      -     -   "Point mesh for origin motion" "-"
+typedef   ^                         ^            MeshType                lnMesh           -      -     -   "Line mesh for tower motion" "-"
+typedef   ^                         ^            MeshMapType             ED_L_2_AD_L_T    -      -     -   "Mesh mapping from Nacelle to hub"
 
 # ..... Wind Turbine data ...................................................................................................
 typedef   ^                        WTData        ReKi                    originInit       3      -     -   "" -
 typedef   ^                         ^            ReKi                    orientationInit  3      -     -   "" -
+typedef   ^                         ^            MeshType                ptMesh         -      -     -   "Point mesh for origin motion" "-"
+typedef   ^                         ^            MeshMapType             map2twrPt        -      -     -   "Mesh mapping from base to tower"
+typedef   ^                         ^            MeshMapType             map2twrLn        -      -     -   "Mesh mapping from base to tower line"
+typedef   ^                         ^            MeshMapType             map2nacPt        -      -     -   "Mesh mapping from base to nacelle"
 typedef   ^                         ^            BladeData               bld              :      -     -   "" -
 typedef   ^                         ^            HubData                 hub              -      -     -   "" -
 typedef   ^                         ^            NacData                 nac              -      -     -   "" -
