@@ -31,18 +31,22 @@ PUBLIC :: IFW_END_C
 
 CONTAINS
 
-SUBROUTINE IFW_INIT_C(input_file_string,ErrStat,ErrMsg)
+SUBROUTINE IFW_INIT_C(input_file_string,ErrStat_C,ErrMsg_C) BIND (C, NAME='IFW_INIT_C')
 
-! input string as python character array
-    INTEGER,                      , INTENT(  OUT)      :: ErrStat
-    CHARACTER(ErrMsgLen)          , INTENT(  OUT)      :: ErrMsg
+    TYPE(C_PTR)                   , INTENT(IN   )      :: input_file_string_c_ptr(*)
+    CHARACTER(KIND=C_CHAR),POINTER, INTENT(INOUT)      :: input_file_string_c(:)
+    INTEGER(C_INT),               , INTENT(  OUT)      :: ErrStat_C
+    CHARACTER(KIND=C_CHAR)        , INTENT(  OUT)      :: ErrMsg_C
 
     ! Local Variables    
     CHARACTER(1024), DIMENSION(55), INTENT(INOUT)      :: data
     TYPE(FileInfoType)            , INTENT(INOUT)      :: InputFileInfo
 
-! convert python string array to fortran character array
-data = ?
+! Convert python string array to fortran character array
+CALL C_F_POINTER(input_file_string_c_ptr, input_file_string_c, 55)
+DO I = 1:55:1
+    data(I) = input_file_string_c(I)
+END DO
 
 ! Convert Fortran character array to FileInfoType
 CALL InitFileInfo(data, InputFileInfo, ErrStat, ErrMsg)           ! in, out (FileInfoType), out, out
