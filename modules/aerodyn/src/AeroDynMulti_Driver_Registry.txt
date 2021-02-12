@@ -79,9 +79,8 @@ typedef   ^                         ^            IntKi                   iMotion
 typedef   ^                         ^            ReKi                    motion           ::     -     -   "" "-"
 typedef   ^                         ^            character(1024)         motionFileName   -      -     -   "" -
 typedef   ^                         ^            MeshType                ptMesh           -      -     -   "Point mesh for origin motion" "-"
-typedef   ^                         ^            MeshType                lnMesh           -      -     -   "Line mesh for blade motion" "-"
-typedef   ^                         ^            MeshType                ED_L_2_AD_L_B    -      -     -   "Mesh mapping from blade line mesh to AD line mesh" "-"
 typedef   ^                         ^            MeshMapType             ED_P_2_AD_P_R    -      -     -   "Mesh mapping from blade to AD hub motion"
+typedef   ^                         ^            MeshMapType             AD_P_2_AD_L_B    -      -     -   "Mesh mapping from AD blade root to AD line mesh" "-"
                                                                          
 
 # ... Hub data ..............................................................................................................
@@ -110,15 +109,15 @@ typedef   ^                         ^            MeshMapType             map2hub
 # ... Tower data ............................................................................................................
 typedef   ^                         TwrData      ReKi                    origin_t         3      -     -   "" -
 typedef   ^                         ^            MeshType                ptMesh           -      -     -   "Point mesh for origin motion" "-"
-typedef   ^                         ^            MeshType                lnMesh           -      -     -   "Line mesh for tower motion" "-"
-typedef   ^                         ^            MeshMapType             ED_L_2_AD_L_T    -      -     -   "Mesh mapping from Nacelle to hub"
+typedef   ^                         ^            MeshType                ptMeshAD         -      -     -   "Point mesh for origin motion" "-"
+typedef   ^                         ^            MeshMapType             ED_P_2_AD_P_T    -      -     -   "Mesh mapping from tower base to AD tower base"
+typedef   ^                         ^            MeshMapType             AD_P_2_AD_L_T    -      -     -   "Mesh mapping from tower base to AD tower line"
 
 # ..... Wind Turbine data ...................................................................................................
 typedef   ^                        WTData        ReKi                    originInit       3      -     -   "" -
 typedef   ^                         ^            ReKi                    orientationInit  3      -     -   "" -
 typedef   ^                         ^            MeshType                ptMesh         -      -     -   "Point mesh for origin motion" "-"
 typedef   ^                         ^            MeshMapType             map2twrPt        -      -     -   "Mesh mapping from base to tower"
-typedef   ^                         ^            MeshMapType             map2twrLn        -      -     -   "Mesh mapping from base to tower line"
 typedef   ^                         ^            MeshMapType             map2nacPt        -      -     -   "Mesh mapping from base to nacelle"
 typedef   ^                         ^            BladeData               bld              :      -     -   "" -
 typedef   ^                         ^            HubData                 hub              -      -     -   "" -
