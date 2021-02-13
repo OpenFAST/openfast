@@ -34,7 +34,7 @@ set(IFW_SOURCES
   src/IfW_UserWind.f90
   src/IfW_UniformWind.f90
   src/InflowWind_Subs.f90
-  driver/InflowWind_short.f90 
+  src/InflowWind.f90 
   src/Lidar.f90
   src/IfW_FFWind_Base.f90
   src/IfW_FFWind_Base_Types.f90

@@ -103,6 +103,6 @@ print(ifw_input_string)
 print(len(ifw_input_string))
 
 # Call the inflowWind library/module
-# ifw_lib = CDLL('path/filename.so') # won't exist until I compile it!!!
+# ifw_lib = CDLL('path/filename.so') # IFW_C_INTERFACE.dll
 
 # [errStat, errMsg] = ifw_lib.IFW_INIT_C(ifw_input_string)
