@@ -39,7 +39,7 @@ print(test[2])
 print(len(test))
 
 # The REAL thing
-ifw_input_string = np.chararray((55,180))
+ifw_input_string = np.chararray((55,128))
 ifw_input_string = ([
             '------- InflowWind v3.01.* INPUT FILE -------------------------------------------------------------------------                                                                    ', 
             'Steady 15 m/s winds with no shear for IEA 15 MW Offshore Reference Turbine                                                                                                         ', 

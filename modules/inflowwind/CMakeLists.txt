@@ -34,7 +34,7 @@ set(IFW_SOURCES
   src/IfW_UserWind.f90
   src/IfW_UniformWind.f90
   src/InflowWind_Subs.f90
-  src/InflowWind.f90
+  driver/InflowWind_short.f90 
   src/Lidar.f90
   src/IfW_FFWind_Base.f90
   src/IfW_FFWind_Base_Types.f90
@@ -50,6 +50,10 @@ set(IFW_SOURCES
 
 add_library(ifwlib ${IFW_SOURCES})
 target_link_libraries(ifwlib nwtclibs)
+
+add_library(IFW_C_INTERFACE SHARED driver/IFW_C.f90 ${IFW_SOURCES})
+set_target_properties(IFW_C_INTERFACE PROPERTIES PREFIX "" SUFFIX ".dll")
+target_link_libraries(IFW_C_INTERFACE nwtclibs)
 
 set(IFW_DRIVER_SOURCES
   src/InflowWind_Driver_Types.f90
