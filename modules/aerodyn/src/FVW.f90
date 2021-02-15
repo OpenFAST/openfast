@@ -489,11 +489,19 @@ subroutine FVW_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
    character(*),                    intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
    integer(IntKi) :: i
+   real(DbKi) :: t
 
    ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ""
    ! Place any last minute operations or calculations here:
+   if (p%WrVTK==2) then
+      call WrScr('Outputs of VTK before FVW_END')
+      t=-1.0_ReKi
+      m%VTKStep=999999999 ! not pretty, but we know we have twidth=9
+      call WriteVTKOutputs(t, .true., u(1), p, x, z, y, m, ErrStat, ErrMsg)
+   endif
+
    ! Close files here:
    
    ! Destroy the input data:
@@ -1276,7 +1284,6 @@ subroutine FVW_CalcOutput(t, u, p, x, xd, z, OtherState, AFInfo, y, m, ErrStat, 
    type(FVW_ParameterType),         intent(in   )  :: p           !< Parameters
    type(FVW_ContinuousStateType),   intent(in   )  :: x           !< Continuous states at t
    type(FVW_DiscreteStateType),     intent(in   )  :: xd          !< Discrete states at t
-!FIXME:TODO: AD15_CalcOutput has constraint states as intent(in) only. This is forcing me to store z in the AD15 miscvars for now.
    type(FVW_ConstraintStateType),   intent(in   )  :: z           !< Constraint states at t
    type(FVW_OtherStateType),        intent(in   )  :: OtherState  !< Other states at t
    type(AFI_ParameterType),         intent(in   )  :: AFInfo(:)   !< The airfoil parameter data
@@ -1305,64 +1312,78 @@ subroutine FVW_CalcOutput(t, u, p, x, xd, z, OtherState, AFInfo, y, m, ErrStat, 
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    
    ! Export to VTK
-   call WriteVTKOutputs()
-
-contains
-
-   !> Write to local VTK at fps requested
-   subroutine WriteVTKOutputs()
-      integer(IntKi) :: iW, iGrid
-      integer(IntKi) :: nSeg, nSegP
-      if (m%VTKStep==-1) then 
-         m%VTKStep = 0 ! Has never been called, special handling for init
-      else
-         m%VTKStep = m%iStep+1 ! We use glue code step number for outputs
-      endif
-      if (p%WrVTK==1) then
-         if (m%FirstCall) then
-            call MKDIR(p%VTK_OutFileRoot)
-         endif
-         ! For plotting only
-         call PackPanelsToSegments(p, x, 1, (p%ShearModel==idShearMirror), m%nNW, m%nFW, m%Sgmt%Connct, m%Sgmt%Points, m%Sgmt%Gamma, m%Sgmt%Epsilon, nSeg, nSegP)
-         m%Vtot_LL = m%Vind_LL + m%Vwnd_LL - m%Vstr_LL
-         if (DEV_VERSION) then
-            call print_mean_3d(m%Vind_LL,'Mean induced vel. LL')
-            call print_mean_3d(m%Vtot_LL,'Mean relativevel. LL')
-         endif
-         if ( ( t - m%VTKlastTime ) >= p%DTvtk*OneMinusEpsilon )  then
-            m%VTKlastTime = t
-            if ((p%VTKCoord==2).or.(p%VTKCoord==3)) then
-               ! Hub reference coordinates, for export only, ALL VTK Will be exported in this coordinate system!
-               ! Note: hubOrientation and HubPosition are optional, but required for bladeFrame==TRUE
-               call WrVTK_FVW(p, x, z, m, trim(p%VTK_OutFileBase)//'FVW_Hub', m%VTKStep, 9, bladeFrame=.TRUE.,  &
-                        HubOrientation=real(u%HubOrientation,ReKi),HubPosition=real(u%HubPosition,ReKi))
-            endif
-            if ((p%VTKCoord==1).or.(p%VTKCoord==3)) then
-               ! Global coordinate system, ALL VTK will be exported in global
-               call WrVTK_FVW(p, x, z, m, trim(p%VTK_OutFileBase)//'FVW_Glb', m%VTKStep, 9, bladeFrame=.FALSE.)
-            endif
-         endif
-      endif
-      ! --- Write VTK grids
-      if (p%nGridOut>0) then
-         if (m%FirstCall) then
-            call MKDIR(p%VTK_OutFileRoot)
-         endif
-         ! Distribute the Wind we requested to Inflow wind to storage Misc arrays
-         ! TODO ANDY: replace with direct call to inflow wind at Grid points
-         CALL DistributeRequestedWind_Grid(u%V_wind, p, m)
-         do iGrid=1,p%nGridOut
-            if ( ( t - m%GridOutputs(iGrid)%tLastOutput) >= m%GridOutputs(iGrid)%DTout * OneMinusEpsilon )  then
-               ! Compute induced velocity on grid, TODO use the same Tree for all CalcOutput
-               call InducedVelocitiesAll_OnGrid(m%GridOutputs(iGrid), p, x, m, ErrStat2, ErrMsg2);
-               m%GridOutputs(iGrid)%tLastOutput = t
-               call WrVTK_FVW_Grid(p, x, z, m, iGrid, trim(p%VTK_OutFileBase)//'FVW_Grid', m%VTKStep, 9)
-            endif
-         enddo
-      endif
-   end subroutine WriteVTKOutputs
+   if (m%VTKStep==-1) then 
+      m%VTKStep = 0 ! Has never been called, special handling for init
+   else
+      m%VTKStep = m%iStep+1 ! We use glue code step number for outputs
+   endif
+   call WriteVTKOutputs(t, .False., u, p, x, z, y, m, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
 end subroutine FVW_CalcOutput
+
+!> Write to  vtk_fvw folder at fps requested
+subroutine WriteVTKOutputs(t, force, u, p, x, z, y, m, ErrStat, ErrMsg)
+   real(DbKi),                      intent(in   )  :: t       !< Current simulation time in seconds
+   logical,                         intent(in   )  :: force   !< force the writing
+   type(FVW_InputType),             intent(in   )  :: u       !< Inputs at Time t
+   type(FVW_ParameterType),         intent(in   )  :: p       !< Parameters
+   type(FVW_ContinuousStateType),   intent(in   )  :: x       !< Continuous states at t
+   type(FVW_ConstraintStateType),   intent(in   )  :: z       !< Constraint states at t
+   type(FVW_OutputType),            intent(in   )  :: y       !< Outputs computed at t (Input only so that mesh con-
+   type(FVW_MiscVarType),           intent(inout)  :: m       !< Misc/optimization variables
+   integer(IntKi),                  intent(  out)  :: ErrStat !< Error status of the operation
+   character(*),                    intent(  out)  :: ErrMsg  !< Error message if ErrStat /= ErrID_None
+   ! Local variables
+   integer(IntKi)                :: ErrStat2
+   character(ErrMsgLen)          :: ErrMsg2
+   character(*), parameter       :: RoutineName = 'FVW_CalcOutput'
+   integer(IntKi) :: iW, iGrid
+   integer(IntKi) :: nSeg, nSegP
+   if (p%WrVTK>0) then
+      if (m%FirstCall .or. force) then
+         call MKDIR(p%VTK_OutFileRoot)
+      endif
+      ! For plotting only
+      call PackPanelsToSegments(p, x, 1, (p%ShearModel==idShearMirror), m%nNW, m%nFW, m%Sgmt%Connct, m%Sgmt%Points, m%Sgmt%Gamma, m%Sgmt%Epsilon, nSeg, nSegP)
+      m%Vtot_LL = m%Vind_LL + m%Vwnd_LL - m%Vstr_LL
+      if (DEV_VERSION) then
+         call print_mean_3d(m%Vind_LL,'Mean induced vel. LL')
+         call print_mean_3d(m%Vtot_LL,'Mean relativevel. LL')
+      endif
+      if ( force .or. (( t - m%VTKlastTime ) >= p%DTvtk*OneMinusEpsilon ))  then
+         m%VTKlastTime = t
+         if ((p%VTKCoord==2).or.(p%VTKCoord==3)) then
+            ! Hub reference coordinates, for export only, ALL VTK Will be exported in this coordinate system!
+            ! Note: hubOrientation and HubPosition are optional, but required for bladeFrame==TRUE
+            call WrVTK_FVW(p, x, z, m, trim(p%VTK_OutFileBase)//'FVW_Hub', m%VTKStep, 9, bladeFrame=.TRUE.,  &
+                     HubOrientation=real(u%HubOrientation,ReKi),HubPosition=real(u%HubPosition,ReKi))
+         endif
+         if ((p%VTKCoord==1).or.(p%VTKCoord==3)) then
+            ! Global coordinate system, ALL VTK will be exported in global
+            call WrVTK_FVW(p, x, z, m, trim(p%VTK_OutFileBase)//'FVW_Glb', m%VTKStep, 9, bladeFrame=.FALSE.)
+         endif
+      endif
+   endif
+   ! --- Write VTK grids
+   if (p%nGridOut>0) then
+      if (m%FirstCall .or. force) then
+         call MKDIR(p%VTK_OutFileRoot)
+      endif
+      ! Distribute the Wind we requested to Inflow wind to storage Misc arrays
+      ! TODO ANDY: replace with direct call to inflow wind at Grid points
+      CALL DistributeRequestedWind_Grid(u%V_wind, p, m)
+      do iGrid=1,p%nGridOut
+         if (force.or. (( t - m%GridOutputs(iGrid)%tLastOutput) >= m%GridOutputs(iGrid)%DTout * OneMinusEpsilon) )  then
+            ! Compute induced velocity on grid, TODO use the same Tree for all CalcOutput
+            call InducedVelocitiesAll_OnGrid(m%GridOutputs(iGrid), p, x, m, ErrStat2, ErrMsg2);
+            m%GridOutputs(iGrid)%tLastOutput = t
+            call WrVTK_FVW_Grid(p, x, z, m, iGrid, trim(p%VTK_OutFileBase)//'FVW_Grid', m%VTKStep, 9)
+         endif
+      enddo
+   endif
+end subroutine WriteVTKOutputs
+
 !----------------------------------------------------------------------------------------------------------------------------------   
 ! --- UA related, should be merged with AeroDyn 
 !----------------------------------------------------------------------------------------------------------------------------------   
