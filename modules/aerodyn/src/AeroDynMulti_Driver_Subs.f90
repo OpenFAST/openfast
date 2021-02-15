@@ -74,8 +74,8 @@ subroutine DvrM_Init(DvrData, AD, IW, errStat,errMsg )
    CHARACTER(20)        :: FlagArg       ! flag argument from command line
    integer(IntKi)       :: j                                                             !< 
    type(AD_InitOutputType) :: InitOutData_AD    ! Output data from initialization
-   ErrStat = ErrID_None
-   ErrMsg  = ""
+   errStat = ErrID_None
+   errMsg  = ""
 
    ! --- Driver initialization
    DvrData%out%unOutFile   = -1
@@ -151,6 +151,8 @@ subroutine DvrM_TimeStep(nt, DvrData, AD, IW, errStat, errMsg)
    integer(IntKi)                              :: errStat2      ! local status of error message
    character(ErrMsgLen)                        :: errMsg2       ! local error message if ErrStat /= ErrID_None
    real(DbKi) :: time             !< Variable for storing time, in seconds
+   errStat = ErrID_None
+   errMsg  = ''
 
    !...............................
    ! set AD inputs for nt (and keep values at nt-1 as well)
@@ -194,8 +196,8 @@ subroutine DvrM_CleanUp(DvrData, AD, IW, initialized, errStat, errMsg)
    character(ErrMsgLen)    :: errMsg2                 ! temporary Error message if ErrStat /= ErrID_None
    integer(IntKi)          :: errStat2                ! temporary Error status of the operation
    character(*), parameter :: RoutineName = 'DvrM_CleanUp'
-
-
+   errStat = ErrID_None
+   errMsg  = ''
 
    ! Close the output file
    if (DvrData%out%fileFmt==idFmtBoth .or. DvrData%out%fileFmt == idFmtAscii) then
@@ -236,7 +238,6 @@ subroutine Init_AeroDyn(DvrData, AD, dt, InitOutData, errStat, errMsg)
    character(ErrMsgLen)                        :: errMsg2       ! local error message if ErrStat /= ErrID_None
    type(AD_InitInputType)                      :: InitInData     ! Input data for initialization
    type(WTData), pointer :: wt ! Alias to shorten notation
-      
    errStat = ErrID_None
    errMsg  = ''
 
@@ -452,12 +453,15 @@ subroutine Init_Meshes(DvrData,  errStat, errMsg)
       do iBld=1,wt%numBlades
          call MeshMapCreate(wt%hub%ptMesh, wt%bld(iBld)%ptMesh, wt%hub%map2bldPt(iBld), errStat2, errMsg2); if(Failed())return
       enddo
-      !print*,'Bse: ',wt%ptMesh%Position
-      !print*,'Twr: ',wt%twr%ptMesh%Position
-      !print*,'Nac: ',wt%nac%ptMesh%Position
-      !print*,'Hub: ',wt%hub%ptMesh%Position
-      !print*,'Bld: ',wt%bld(1)%ptMesh%Position
-      !print*,'Bld: ',wt%bld(2)%ptMesh%Position
+      ! 
+      print*,'Node Positions, (at t=0, without base motion)'
+      print*,'Bse: ',wt%ptMesh%Position
+      print*,'Twr: ',wt%twr%ptMesh%Position
+      print*,'Nac: ',wt%nac%ptMesh%Position
+      print*,'Hub: ',wt%hub%ptMesh%Position
+      do iBld=1,wt%numBlades
+         print*,'Bld: ',wt%bld(iBld)%ptMesh%Position
+      enddo
    enddo
 
    call cleanup()
@@ -555,6 +559,7 @@ subroutine Init_ADMeshMap(DvrData, uAD, errStat, errMsg)
          endif
       else
          print*,'>>> NO AD Tower'
+         ! TODO create a tower mesh for outputs
       endif
 
    enddo
@@ -730,8 +735,10 @@ subroutine Set_AD_Inputs(nt,DvrData,AD,IW,errStat,errMsg)
 
       ! Tower motion
       if (wt%hasTower) then
-         call Transfer_Point_to_Point(wt%twr%ptMesh, wt%twr%ptMeshAD, wt%twr%ED_P_2_AD_P_T, errStat2, errMsg2); if(Failed()) return
-         call Transfer_Point_to_Line2(wt%twr%ptMeshAD, AD%u(1)%TowerMotion, wt%twr%AD_P_2_AD_L_T, errStat2, errMsg2); if(Failed()) return
+         if (AD%u(1)%TowerMotion%nNodes>0) then
+            call Transfer_Point_to_Point(wt%twr%ptMesh, wt%twr%ptMeshAD, wt%twr%ED_P_2_AD_P_T, errStat2, errMsg2); if(Failed()) return
+            call Transfer_Point_to_Line2(wt%twr%ptMeshAD, AD%u(1)%TowerMotion, wt%twr%AD_P_2_AD_L_T, errStat2, errMsg2); if(Failed()) return
+         endif
       endif
 
       ! Blade and blade root velocities: ! TODO TODO
@@ -894,8 +901,11 @@ subroutine Dvr_ReadInputFile(fileName, DvrData, errStat, errMsg )
    call ParseVar(FileInfo_In, CurLine, "tMax", tMax, errStat2, errMsg2, unEc); if (Failed()) return
    call ParseVar(FileInfo_In, CurLine, "dt", DvrData%dt, errStat2, errMsg2, unEc); if (Failed()) return
    DvrData%numSteps = ceiling(tMax/DvrData%dt)
-   call ParseVar(FileInfo_In, CurLine, "AD_InputFile", DvrData%AD_InputFile, errStat2, errMsg2, unEc); if (Failed()) return
-   call ParseVar(FileInfo_In, CurLine, "IW_InputFile", DvrData%IW_InputFile, errStat2, errMsg2, unEc); if (Failed()) return
+   call ParseVar(FileInfo_In, CurLine, "AeroFile"  , DvrData%AD_InputFile, errStat2, errMsg2, unEc); if (Failed()) return
+   call ParseVar(FileInfo_In, CurLine, "InflowFile", DvrData%IW_InputFile, errStat2, errMsg2, unEc); if (Failed()) return
+   if (PathIsRelative(DvrData%AD_InputFile)) DvrData%AD_InputFile = trim(PriPath)//trim(DvrData%AD_InputFile)
+   if (PathIsRelative(DvrData%IW_InputFile)) DvrData%IW_InputFile = trim(PriPath)//trim(DvrData%IW_InputFile)
+
    call ParseCom(FileInfo_In, CurLine, Line, errStat2, errMsg2, unEc); if (Failed()) return
    call ParseVar(FileInfo_In, CurLine, "numTurbines", DvrData%numTurbines, errStat2, errMsg2, unEc); if (Failed()) return
    allocate(DvrData%WT(DvrData%numTurbines))
@@ -1324,7 +1334,7 @@ SUBROUTINE SetVTKParameters(p_FAST, DvrData, InitOutData_AD, AD, ErrStat, ErrMsg
    p_FAST%VTK_OutFileRoot = trim( p_FAST%VTK_OutFileRoot ) // PathSep // trim(vtkroot)
    ! calculate the number of digits in 'y_FAST%NOutSteps' (Maximum number of output steps to be written)
    ! this will be used to pad the write-out step in the VTK filename with zeros in calls to MeshWrVTK()
-   p_FAST%VTK_tWidth = CEILING( log10( real(DvrData%numSteps+1, ReKi) / p_FAST%n_VTKTime ) ) + 1
+   p_FAST%VTK_tWidth = max(9, CEILING( log10( real(DvrData%numSteps+1, ReKi) / p_FAST%n_VTKTime ) ) + 1) ! NOTE: at least 9, if user changes dt/and tmax 
    
    ! determine number of blades
    NumBl = DvrData%numBladesTot
@@ -1359,24 +1369,28 @@ SUBROUTINE SetVTKParameters(p_FAST, DvrData, InitOutData_AD, AD, ErrStat, ErrMsg
    !.......................
    ! tapered tower
    !.......................
-   Mesh=>AD%u(1)%TowerMotion
-   if (Mesh%NNodes>0) then
-      CALL AllocAry(p_FAST%VTK_Surface%TowerRad, Mesh%NNodes,'VTK_Surface%TowerRad',ErrStat2,ErrMsg2)
-      topNode   = Mesh%NNodes - 1
-      !baseNode  = Mesh%refNode
-      baseNode  = 1 ! TODO TODO
-      TwrLength = TwoNorm( Mesh%position(:,topNode) - Mesh%position(:,baseNode) ) ! this is the assumed length of the tower
-      TwrRatio  = TwrLength / 87.6_SiKi  ! use ratio of the tower length to the length of the 5MW tower
-      TwrDiam_top  = 3.87*TwrRatio
-      TwrDiam_base = 6.0*TwrRatio
-      
-      TwrRatio = 0.5 * (TwrDiam_top - TwrDiam_base) / TwrLength
-      do k=1,Mesh%NNodes
-         TwrLength = TwoNorm( Mesh%position(:,k) - Mesh%position(:,baseNode) ) 
-         p_FAST%VTK_Surface%TowerRad(k) = 0.5*TwrDiam_Base + TwrRatio*TwrLength
-      end do
-   else
-      print*,'>>>> TOWER HAS NO NODES'
+   if (DvrData%WT(1)%hasTower) then
+      Mesh=>AD%u(1)%TowerMotion
+      if (Mesh%NNodes>0) then
+         CALL AllocAry(p_FAST%VTK_Surface%TowerRad, Mesh%NNodes,'VTK_Surface%TowerRad',ErrStat2,ErrMsg2)
+         topNode   = Mesh%NNodes - 1
+         !baseNode  = Mesh%refNode
+         baseNode  = 1 ! TODO TODO
+         TwrLength = TwoNorm( Mesh%position(:,topNode) - Mesh%position(:,baseNode) ) ! this is the assumed length of the tower
+         TwrRatio  = TwrLength / 87.6_SiKi  ! use ratio of the tower length to the length of the 5MW tower
+         TwrDiam_top  = 3.87*TwrRatio
+         TwrDiam_base = 6.0*TwrRatio
+         
+         TwrRatio = 0.5 * (TwrDiam_top - TwrDiam_base) / TwrLength
+         do k=1,Mesh%NNodes
+            TwrLength = TwoNorm( Mesh%position(:,k) - Mesh%position(:,baseNode) ) 
+            p_FAST%VTK_Surface%TowerRad(k) = 0.5*TwrDiam_Base + TwrRatio*TwrLength
+         end do
+      else
+         print*,'>>>> TOWER HAS NO NODES'
+         !CALL AllocAry(p_FAST%VTK_Surface%TowerRad, 2, 'VTK_Surface%TowerRad',ErrStat2,ErrMsg2)
+         ! TODO create a fake tower
+      endif
    endif
 
    !.......................
@@ -1436,29 +1450,37 @@ SUBROUTINE WrVTK_Surfaces(t_global, DvrData, p_FAST, VTK_count, AD)
                                    VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth , verts = p_FAST%VTK_Surface%NacelleBox)
       
       ! Hub
-      call MeshWrVTK_PointSurface (p_FAST%VTKRefPoint, AD%u(1)%HubMotion, trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.HubSurface', &
+      call MeshWrVTK_PointSurface (p_FAST%VTKRefPoint, AD%u(2)%HubMotion, trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.HubSurface', &
                                    VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth , &
                                    NumSegments=p_FAST%VTK_Surface%NumSectors, radius=p_FAST%VTKHubRad)
       
       ! Tower motions
-      call MeshWrVTK_Ln2Surface (p_FAST%VTKRefPoint, AD%u(1)%TowerMotion, trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.TowerSurface', &
-                                 VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth, p_FAST%VTK_Surface%NumSectors, p_FAST%VTK_Surface%TowerRad )
-
-      ! Tower base
-      call MeshWrVTK_PointSurface (p_FAST%VTKRefPoint, wt%twr%ptMesh, trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.TwrBaseSurface', &
-                                   VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth , &
-                                   NumSegments=p_FAST%VTK_Surface%NumSectors, radius=p_FAST%VTKHubRad)
-      call MeshWrVTK_PointSurface (p_FAST%VTKRefPoint, wt%twr%ptMeshAD, trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.TwrBaseSurfaceAD', &
-                                   VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth , &
-                                   NumSegments=p_FAST%VTK_Surface%NumSectors, radius=p_FAST%VTKHubRad)
+      if (AD%u(2)%TowerMotion%nNodes>0) then
+         call MeshWrVTK_Ln2Surface (p_FAST%VTKRefPoint, AD%u(2)%TowerMotion, trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.TowerSurface', &
+                                    VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth, p_FAST%VTK_Surface%NumSectors, p_FAST%VTK_Surface%TowerRad )
+      endif
 
       ! Blades
       do K=1,NumBl
 
-         call MeshWrVTK_Ln2Surface (p_FAST%VTKRefPoint, AD%u(1)%BladeMotion(K), trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.Blade'//trim(num2lstr(k))//'Surface', &
+         call MeshWrVTK_Ln2Surface (p_FAST%VTKRefPoint, AD%u(2)%BladeMotion(K), trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.Blade'//trim(num2lstr(k))//'Surface', &
                                     VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth , verts=p_FAST%VTK_Surface%BladeShape(K)%AirfoilCoords &
                                     ,Sib=AD%y%BladeLoad(k) )
       end do                  
+      
+      if (p_FAST%WrVTK>1) then
+         ! --- Debug outputs
+         ! Tower base
+         call MeshWrVTK_PointSurface (p_FAST%VTKRefPoint, wt%twr%ptMesh, trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.TwrBaseSurface', &
+                                      VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth , &
+                                      NumSegments=p_FAST%VTK_Surface%NumSectors, radius=p_FAST%VTKHubRad)
+
+         if (AD%u(2)%TowerMotion%nNodes>0) then
+            call MeshWrVTK_PointSurface (p_FAST%VTKRefPoint, wt%twr%ptMeshAD, trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.TwrBaseSurfaceAD', &
+                                         VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth , &
+                                         NumSegments=p_FAST%VTK_Surface%NumSectors, radius=p_FAST%VTKHubRad)
+        endif
+     endif
    enddo
 
    ! Free wake
