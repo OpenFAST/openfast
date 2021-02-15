@@ -654,118 +654,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
    
    
    ! ........................
-   ! initialize ServoDyn 
-   ! ........................
-   ALLOCATE( SrvD%Input( p_FAST%InterpOrder+1 ), SrvD%InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat2 )
-      IF (ErrStat2 /= 0) THEN
-         CALL SetErrStat(ErrID_Fatal,"Error allocating SrvD%Input and SrvD%InputTimes.",ErrStat,ErrMsg,RoutineName)
-         CALL Cleanup()
-         RETURN
-      END IF
-      
-   IF ( p_FAST%CompServo == Module_SrvD ) THEN
-      Init%InData_SrvD%InputFile     = p_FAST%ServoFile
-      Init%InData_SrvD%RootName      = TRIM(p_FAST%OutFileRoot)//'.'//TRIM(y_FAST%Module_Abrev(Module_SrvD))
-      Init%InData_SrvD%NumBl         = Init%OutData_ED%NumBl
-      Init%InData_SrvD%Gravity       = (/ 0.0_ReKi, 0.0_ReKi, -Init%OutData_ED%Gravity /)       ! "Gravitational acceleration vector" m/s^2
-      Init%InData_SrvD%NacPosition(1:3)        = ED%Input(1)%NacelleLoads%Position(1:3,1)
-      Init%InData_SrvD%NacOrientation(1:3,1:3) = ED%Input(1)%NacelleLoads%RefOrientation(1:3,1:3,1)  ! R8Ki
-      Init%InData_SrvD%TwrBasePos    = Init%OutData_ED%TwrBasePos
-      Init%InData_SrvD%TwrBaseOrient = Init%OutData_ED%TwrBaseOrient                      ! R8Ki
-      Init%InData_SrvD%PlatformPos(1:3)        = ED%y%PlatformPtMesh%Position(1:3,1)
-      Init%InData_SrvD%PlatformOrient(1:3,1:3) = ED%y%PlatformPtMesh%Orientation(1:3,1:3,1)  ! R8Ki
-      Init%InData_SrvD%TMax          = p_FAST%TMax
-      Init%InData_SrvD%AirDens       = AirDens
-      Init%InData_SrvD%AvgWindSpeed  = Init%OutData_IfW%WindFileInfo%MWS
-      Init%InData_SrvD%Linearize     = p_FAST%Linearize
-      Init%InData_SrvD%TrimCase      = p_FAST%TrimCase
-      Init%InData_SrvD%TrimGain      = p_FAST%TrimGain
-      Init%InData_SrvD%RotSpeedRef   = Init%OutData_ED%RotSpeed
-
-      CALL AllocAry( Init%InData_SrvD%BladeRootPosition,      3, Init%OutData_ED%NumBl, 'Init%InData_SrvD%BladeRootPosition', errStat2, ErrMsg2)
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      CALL AllocAry( Init%InData_SrvD%BladeRootOrientation,3, 3, Init%OutData_ED%NumBl, 'Init%InData_SrvD%BladeRootOrientation', errStat2, ErrMsg2)
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         IF (ErrStat >= AbortErrLev) THEN
-            CALL Cleanup()
-            RETURN
-         END IF
-      do k=1,Init%OutData_ED%NumBl
-         Init%InData_SrvD%BladeRootPosition(:,k)      = ED%y%BladeRootMotion(k)%Position(:,1)
-         Init%InData_SrvD%BladeRootOrientation(:,:,k) = ED%y%BladeRootMotion(k)%RefOrientation(:,:,1)
-      enddo
-
-      
-      IF ( PRESENT(ExternInitData) ) THEN
-         Init%InData_SrvD%NumSC2Ctrl = ExternInitData%NumSC2Ctrl
-         Init%InData_SrvD%NumCtrl2SC = ExternInitData%NumCtrl2SC
-      ELSE
-         Init%InData_SrvD%NumSC2Ctrl = 0
-         Init%InData_SrvD%NumCtrl2SC = 0
-      END IF      
-            
-      CALL AllocAry(Init%InData_SrvD%BlPitchInit, Init%OutData_ED%NumBl, 'BlPitchInit', ErrStat2, ErrMsg2)
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-
-      if (ErrStat >= abortErrLev) then ! make sure allocatable arrays are valid before setting them
-         CALL Cleanup()
-         RETURN
-      end if
-
-      Init%InData_SrvD%BlPitchInit   = Init%OutData_ED%BlPitch
-      CALL SrvD_Init( Init%InData_SrvD, SrvD%Input(1), SrvD%p, SrvD%x(STATE_CURR), SrvD%xd(STATE_CURR), SrvD%z(STATE_CURR), &
-                      SrvD%OtherSt(STATE_CURR), SrvD%y, SrvD%m, p_FAST%dt_module( MODULE_SrvD ), Init%OutData_SrvD, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      p_FAST%ModuleInitialized(Module_SrvD) = .TRUE.
-
-      !IF ( Init%OutData_SrvD%CouplingScheme == ExplicitLoose ) THEN ...  bjj: abort if we're doing anything else!
-
-      CALL SetModuleSubstepTime(Module_SrvD, p_FAST, y_FAST, ErrStat2, ErrMsg2)
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-
-      !! initialize SrvD%y%ElecPwr and SrvD%y%GenTq because they are one timestep different (used as input for the next step)?
-                  
-      allocate( y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1), stat=ErrStat2)
-      if (ErrStat2 /= 0 ) then
-         call SetErrStat(ErrID_Fatal, "Error allocating Lin%Modules(SrvD).", ErrStat, ErrMsg, RoutineName )
-      else
-         if (allocated(Init%OutData_SrvD%LinNames_y)) call move_alloc(Init%OutData_SrvD%LinNames_y,y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%Names_y )
-         if (allocated(Init%OutData_SrvD%LinNames_u)) call move_alloc(Init%OutData_SrvD%LinNames_u,y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%Names_u )
-         if (allocated(Init%OutData_SrvD%RotFrame_y)) call move_alloc(Init%OutData_SrvD%RotFrame_y,y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%RotFrame_y )
-         if (allocated(Init%OutData_SrvD%RotFrame_u)) call move_alloc(Init%OutData_SrvD%RotFrame_u,y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%RotFrame_u )
-         if (allocated(Init%OutData_SrvD%IsLoad_u  )) call move_alloc(Init%OutData_SrvD%IsLoad_u  ,y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%IsLoad_u   )
-
-         if (allocated(Init%OutData_SrvD%WriteOutputHdr)) y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%NumOutputs = size(Init%OutData_SrvD%WriteOutputHdr)
-      end if
-      
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-      
-   ! ........................
-   ! some checks for AeroDyn and ElastoDyn inputs with the high-speed shaft brake hack in ElastoDyn:
-   ! (DO NOT COPY THIS CODE!)
-   ! ........................   
-         ! bjj: this is a hack to get high-speed shaft braking in FAST v8
-      
-      IF ( Init%OutData_SrvD%UseHSSBrake ) THEN
-         IF ( p_FAST%CompAero == Module_AD14 ) THEN
-            IF ( AD14%p%DYNINFL ) THEN
-               CALL SetErrStat(ErrID_Fatal,'AeroDyn v14 "DYNINFL" InfModel is invalid for models with high-speed shaft braking.',ErrStat,ErrMsg,RoutineName)
-            END IF
-         END IF
-         
-
-         IF ( ED%p%method == Method_RK4 ) THEN ! bjj: should be using ElastoDyn's Method_ABM4 Method_AB4 parameters
-            CALL SetErrStat(ErrID_Fatal,'ElastoDyn must use the AB4 or ABM4 integration method to implement high-speed shaft braking.',ErrStat,ErrMsg,RoutineName)
-         ENDIF
-      END IF ! Init%OutData_SrvD%UseHSSBrake
-      
-      
-   END IF
-
-   ! ........................
    ! set some VTK parameters required before HydroDyn init (so we can get wave elevations for visualization)
    ! ........................
    
@@ -1194,6 +1082,119 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       
    END IF   
    
+
+   ! ........................
+   ! initialize ServoDyn 
+   ! ........................
+   ALLOCATE( SrvD%Input( p_FAST%InterpOrder+1 ), SrvD%InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat2 )
+      IF (ErrStat2 /= 0) THEN
+         CALL SetErrStat(ErrID_Fatal,"Error allocating SrvD%Input and SrvD%InputTimes.",ErrStat,ErrMsg,RoutineName)
+         CALL Cleanup()
+         RETURN
+      END IF
+      
+   IF ( p_FAST%CompServo == Module_SrvD ) THEN
+      Init%InData_SrvD%InputFile     = p_FAST%ServoFile
+      Init%InData_SrvD%RootName      = TRIM(p_FAST%OutFileRoot)//'.'//TRIM(y_FAST%Module_Abrev(Module_SrvD))
+      Init%InData_SrvD%NumBl         = Init%OutData_ED%NumBl
+      Init%InData_SrvD%Gravity       = (/ 0.0_ReKi, 0.0_ReKi, -Init%OutData_ED%Gravity /)       ! "Gravitational acceleration vector" m/s^2
+      Init%InData_SrvD%NacPosition(1:3)        = ED%Input(1)%NacelleLoads%Position(1:3,1)
+      Init%InData_SrvD%NacOrientation(1:3,1:3) = ED%Input(1)%NacelleLoads%RefOrientation(1:3,1:3,1)  ! R8Ki
+      Init%InData_SrvD%TwrBasePos    = Init%OutData_ED%TwrBasePos
+      Init%InData_SrvD%TwrBaseOrient = Init%OutData_ED%TwrBaseOrient                      ! R8Ki
+      Init%InData_SrvD%PlatformPos(1:3)        = ED%y%PlatformPtMesh%Position(1:3,1)
+      Init%InData_SrvD%PlatformOrient(1:3,1:3) = ED%y%PlatformPtMesh%Orientation(1:3,1:3,1)  ! R8Ki
+      Init%InData_SrvD%TMax          = p_FAST%TMax
+      Init%InData_SrvD%AirDens       = AirDens
+      Init%InData_SrvD%AvgWindSpeed  = Init%OutData_IfW%WindFileInfo%MWS
+      Init%InData_SrvD%Linearize     = p_FAST%Linearize
+      Init%InData_SrvD%TrimCase      = p_FAST%TrimCase
+      Init%InData_SrvD%TrimGain      = p_FAST%TrimGain
+      Init%InData_SrvD%RotSpeedRef   = Init%OutData_ED%RotSpeed
+
+      CALL AllocAry( Init%InData_SrvD%BladeRootPosition,      3, Init%OutData_ED%NumBl, 'Init%InData_SrvD%BladeRootPosition', errStat2, ErrMsg2)
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      CALL AllocAry( Init%InData_SrvD%BladeRootOrientation,3, 3, Init%OutData_ED%NumBl, 'Init%InData_SrvD%BladeRootOrientation', errStat2, ErrMsg2)
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         IF (ErrStat >= AbortErrLev) THEN
+            CALL Cleanup()
+            RETURN
+         END IF
+      do k=1,Init%OutData_ED%NumBl
+         Init%InData_SrvD%BladeRootPosition(:,k)      = ED%y%BladeRootMotion(k)%Position(:,1)
+         Init%InData_SrvD%BladeRootOrientation(:,:,k) = ED%y%BladeRootMotion(k)%RefOrientation(:,:,1)
+      enddo
+
+      
+      IF ( PRESENT(ExternInitData) ) THEN
+         Init%InData_SrvD%NumSC2Ctrl = ExternInitData%NumSC2Ctrl
+         Init%InData_SrvD%NumCtrl2SC = ExternInitData%NumCtrl2SC
+      ELSE
+         Init%InData_SrvD%NumSC2Ctrl = 0
+         Init%InData_SrvD%NumCtrl2SC = 0
+      END IF      
+            
+      CALL AllocAry(Init%InData_SrvD%BlPitchInit, Init%OutData_ED%NumBl, 'BlPitchInit', ErrStat2, ErrMsg2)
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+      if (ErrStat >= abortErrLev) then ! make sure allocatable arrays are valid before setting them
+         CALL Cleanup()
+         RETURN
+      end if
+
+      Init%InData_SrvD%BlPitchInit   = Init%OutData_ED%BlPitch
+      CALL SrvD_Init( Init%InData_SrvD, SrvD%Input(1), SrvD%p, SrvD%x(STATE_CURR), SrvD%xd(STATE_CURR), SrvD%z(STATE_CURR), &
+                      SrvD%OtherSt(STATE_CURR), SrvD%y, SrvD%m, p_FAST%dt_module( MODULE_SrvD ), Init%OutData_SrvD, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      p_FAST%ModuleInitialized(Module_SrvD) = .TRUE.
+
+      !IF ( Init%OutData_SrvD%CouplingScheme == ExplicitLoose ) THEN ...  bjj: abort if we're doing anything else!
+
+      CALL SetModuleSubstepTime(Module_SrvD, p_FAST, y_FAST, ErrStat2, ErrMsg2)
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+      !! initialize SrvD%y%ElecPwr and SrvD%y%GenTq because they are one timestep different (used as input for the next step)?
+                  
+      allocate( y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1), stat=ErrStat2)
+      if (ErrStat2 /= 0 ) then
+         call SetErrStat(ErrID_Fatal, "Error allocating Lin%Modules(SrvD).", ErrStat, ErrMsg, RoutineName )
+      else
+         if (allocated(Init%OutData_SrvD%LinNames_y)) call move_alloc(Init%OutData_SrvD%LinNames_y,y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%Names_y )
+         if (allocated(Init%OutData_SrvD%LinNames_u)) call move_alloc(Init%OutData_SrvD%LinNames_u,y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%Names_u )
+         if (allocated(Init%OutData_SrvD%RotFrame_y)) call move_alloc(Init%OutData_SrvD%RotFrame_y,y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%RotFrame_y )
+         if (allocated(Init%OutData_SrvD%RotFrame_u)) call move_alloc(Init%OutData_SrvD%RotFrame_u,y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%RotFrame_u )
+         if (allocated(Init%OutData_SrvD%IsLoad_u  )) call move_alloc(Init%OutData_SrvD%IsLoad_u  ,y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%IsLoad_u   )
+
+         if (allocated(Init%OutData_SrvD%WriteOutputHdr)) y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%NumOutputs = size(Init%OutData_SrvD%WriteOutputHdr)
+      end if
+      
+      IF (ErrStat >= AbortErrLev) THEN
+         CALL Cleanup()
+         RETURN
+      END IF
+      
+   ! ........................
+   ! some checks for AeroDyn and ElastoDyn inputs with the high-speed shaft brake hack in ElastoDyn:
+   ! (DO NOT COPY THIS CODE!)
+   ! ........................   
+         ! bjj: this is a hack to get high-speed shaft braking in FAST v8
+      
+      IF ( Init%OutData_SrvD%UseHSSBrake ) THEN
+         IF ( p_FAST%CompAero == Module_AD14 ) THEN
+            IF ( AD14%p%DYNINFL ) THEN
+               CALL SetErrStat(ErrID_Fatal,'AeroDyn v14 "DYNINFL" InfModel is invalid for models with high-speed shaft braking.',ErrStat,ErrMsg,RoutineName)
+            END IF
+         END IF
+         
+
+         IF ( ED%p%method == Method_RK4 ) THEN ! bjj: should be using ElastoDyn's Method_ABM4 Method_AB4 parameters
+            CALL SetErrStat(ErrID_Fatal,'ElastoDyn must use the AB4 or ABM4 integration method to implement high-speed shaft braking.',ErrStat,ErrMsg,RoutineName)
+         ENDIF
+      END IF ! Init%OutData_SrvD%UseHSSBrake
+      
+      
+   END IF
+
 
    ! ........................
    ! Set up output for glue code (must be done after all modules are initialized so we have their WriteOutput information)
