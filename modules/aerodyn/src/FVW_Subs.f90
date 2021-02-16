@@ -281,6 +281,11 @@ subroutine Map_NW_FW(p, m, z, x, ErrStat, ErrMsg)
          ! First circulation of Farwake is taken as the max circulation of last NW column
          FWGamma(:)=0.0_ReKi
          do iW=1,p%nWings
+            if (p%FullCirculationStart>0 .and. m%nFW<3) then
+               ! we might run into the issue that the circulation is 0
+               m%iTip =-1
+               m%iRoot=-1
+            endif
             ! NOTE: on the first pass, m%iTip and m%iRoot are computed, TODO per blade
             call PlaceTipRoot(p%nSpan, x%Gamma_NW(:,m%nNW,iW), x%r_NW(1:3,:,m%nNW,iW), x%Eps_NW(1:3,:,m%nNW,iW),& ! inputs
                m%iRoot, m%iTip, FWGamma(iW), FWEpsTip, FWEpsRoot) ! outputs

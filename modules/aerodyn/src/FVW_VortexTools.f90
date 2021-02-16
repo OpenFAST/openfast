@@ -100,16 +100,23 @@ contains
          Gamma_max = maxval(Gamma_b,1)
          call CurvilinearDist(n+1, xV, s)
          if (iTip<0) then
+
             ! Find position of tip and root
             call GammaTrailed(n, Gamma_b, Gamma_t)
 
-            i10 = minloc(abs(s(:)-0.15*s(n+1)),1)
-            i90 = minloc(abs(s(:)-0.85*s(n+1)),1)
+            ! If circulation is constant then use first and last
+            if(sum(abs(Gamma_t(:)))/(n+1)<1e-6) then
+               iTip =n+1
+               iRoot=1
+            else
+               i10 = minloc(abs(s(:)-0.15*s(n+1)),1)
+               i90 = minloc(abs(s(:)-0.85*s(n+1)),1)
 
-            rTip  = sum(Gamma_t(i90:)  * (s(i90:)))/ sum(Gamma_t(i90:))
-            rRoot = sum(Gamma_t(1:i10) * s(1:i10)) / sum(Gamma_t(1:i10))
-            iTip  = minloc(abs(rTip - s), 1) ! NOTE:  not accurate since epsilon has one dimension less..
-            iRoot = minloc(abs(rRoot - s), 1)
+               rTip  = sum(Gamma_t(i90:)  * (s(i90:)))/ sum(Gamma_t(i90:))
+               rRoot = sum(Gamma_t(1:i10) * s(1:i10)) / sum(Gamma_t(1:i10))
+               iTip  = minloc(abs(rTip - s), 1) ! NOTE:  not accurate since epsilon has one dimension less..
+               iRoot = minloc(abs(rRoot - s), 1)
+            endif
          endif
          rTip  = s(iTip)
          rRoot = s(iRoot)
