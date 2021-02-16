@@ -40,7 +40,9 @@ typedef	^	InitInputType	ReKi	BladeRootPosition	{:}{:}	-	-	"X-Y-Z reference posit
 typedef	^	InitInputType	R8Ki	BladeRootOrientation	{:}{:}{:}	-	-	"DCM reference orientation of blade roots (3x3 x NumBlades)"	-
 typedef	^	InitInputType	LOGICAL	UseInputFile	-	.TRUE.	-	"read input from input file"	-
 typedef	^	InitInputType	FileInfoType	PassedPrimaryInputData	-	-	-	"Primary input file as FileInfoType (set by driver/glue code)"	-
-#ADD in the TMD submodule input file passing here
+#ADD in the TMD submodule input file passing her
+typedef	^	InitInputType	IntKi	NumCableControl	-	-	-	"Number of cable control channels requested"	-
+typedef	^	InitInputType	CHARACTER(64)	CableControlRequestor	{:}	-	-	"Array with text info about which module requested the cable control channel (size of NumCableControl).  This is just for diagnostics."	-
 
 # Define outputs from the initialization routine here:
 typedef	^	InitOutputType	CHARACTER(ChanLen)	WriteOutputHdr	{:}	-	-	"Names of the output-to-file channels"	-

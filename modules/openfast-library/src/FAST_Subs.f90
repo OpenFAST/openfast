@@ -1133,6 +1133,10 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          Init%InData_SrvD%NumSC2Ctrl = 0
          Init%InData_SrvD%NumCtrl2SC = 0
       END IF      
+
+      ! Set cable controls inputs (if requested by other modules)  -- There is probably a nicer way to do this, but this will work for now.
+      call SetSrvDCableControls()
+  
             
       CALL AllocAry(Init%InData_SrvD%BlPitchInit, Init%OutData_ED%NumBl, 'BlPitchInit', ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -1294,6 +1298,98 @@ CONTAINS
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    
    END SUBROUTINE Cleanup
+
+   SUBROUTINE SetSrvDCableControls()
+      ! There is probably a better method for doint this, but this will work for now.  Kind of an ugly bit of hacking.
+      Init%InData_SrvD%NumCableControl = 0
+      if (allocated(Init%OutData_SD%CableCChanRqst)) then
+         Init%InData_SrvD%NumCableControl = max(Init%InData_SrvD%NumCableControl, size(Init%OutData_SD%CableCChanRqst))
+      endif
+      if (allocated(Init%OutData_MD%CableCChanRqst)) then
+         Init%InData_SrvD%NumCableControl = max(Init%InData_SrvD%NumCableControl, size(Init%OutData_MD%CableCChanRqst))
+      endif
+      ! Set an array listing which modules requested which channels.
+      !     They may not all be requested, so check the arrays returned from them during initialization.
+      if (Init%InData_SrvD%NumCableControl > 0) then
+         call AllocAry(Init%InData_SrvD%CableControlRequestor, Init%InData_SrvD%NumCableControl, 'CableControlRequestor', ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         if (ErrStat >= abortErrLev) then ! make sure allocatable arrays are valid before setting them
+            call Cleanup()
+            return
+         endif
+         !  Fill a string array that we pass to SrvD containing info about which module is using which of the
+         !  requested channels.  This is not strictly necessary, but will greatly simplify troubleshooting erros
+         !  with the setup later.
+         Init%InData_SrvD%CableControlRequestor = ''
+         do I=1,Init%InData_SrvD%NumCableControl
+            ! SD -- lots of logic here since we don't know if SD did the requesting of the channels
+            if (allocated(Init%OutData_SD%CableCChanRqst)) then
+               if (I < size(Init%OutData_SD%CableCChanRqst)) then
+                  if (Init%OutData_SD%CableCChanRqst(I)) then
+                     if (len_trim(Init%InData_SrvD%CableControlRequestor(I))>0) Init%InData_SrvD%CableControlRequestor(I) = trim(Init%InData_SrvD%CableControlRequestor(I))//', '
+                     Init%InData_SrvD%CableControlRequestor(I) = trim(Init%InData_SrvD%CableControlRequestor(I))//trim(y_FAST%Module_Ver( Module_SD )%Name)
+                  endif
+               endif
+            endif
+            ! MD -- lots of logic here since we don't know if MD did the requesting of the channels
+            if (allocated(Init%OutData_MD%CableCChanRqst)) then
+               if (I < size(Init%OutData_MD%CableCChanRqst)) then
+                  if (Init%OutData_MD%CableCChanRqst(I)) then
+                     if (len_trim(Init%InData_SrvD%CableControlRequestor(I))>0) Init%InData_SrvD%CableControlRequestor(I) = trim(Init%InData_SrvD%CableControlRequestor(I))//', '
+                     Init%InData_SrvD%CableControlRequestor(I) = trim(Init%InData_SrvD%CableControlRequestor(I))//trim(y_FAST%Module_Ver( Module_MD )%Name)
+                  endif
+               endif
+            endif
+         enddo
+      endif
+
+      !  Now that we actually know which channels are requested, resize the arrays sent into SD and MD.  They can both handle
+      !  larger and sparse arrays. They will simply ignore the channels they aren't looking for.,
+      if (Init%InData_SrvD%NumCableControl > 0) then
+         !  SD has one array (CableDeltaL)
+         if (allocated(SD%Input)) then
+            if (allocated(SD%Input(1)%CableDeltaL)) then
+               if (size(SD%Input(1)%CableDeltaL)<Init%InData_SrvD%NumCableControl) then
+                  deallocate(SD%Input(1)%CableDeltaL)
+                  call AllocAry(SD%Input(1)%CableDeltaL,Init%InData_SrvD%NumCableControl,'SD%Input(1)%CableDeltaL', ErrStat2, ErrMsg2)
+                     call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+                  if (ErrStat >= abortErrLev) then ! make sure allocatable arrays are valid before setting them
+                     call Cleanup()
+                     return
+                  endif
+               endif
+            endif
+         endif
+         ! Resize the MD arrays as needed -- They may have requested different inputs, but we are passing larger arrays if necessary.
+         !  MD has two arrays (DeltaL, DeltaLdot)
+         if (allocated(MD%Input)) then
+            if (allocated(MD%Input(1)%DeltaL)) then
+               if (size(MD%Input(1)%DeltaL)<Init%InData_SrvD%NumCableControl) then
+                  deallocate(MD%Input(1)%DeltaL)
+                  call AllocAry(MD%Input(1)%DeltaL,Init%InData_SrvD%NumCableControl,'MD%Input(1)%DeltaL', ErrStat2, ErrMsg2)
+                     call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+                  if (ErrStat >= abortErrLev) then ! make sure allocatable arrays are valid before setting them
+                     call Cleanup()
+                     return
+                  endif
+               endif
+            endif
+         endif
+         if (allocated(MD%Input)) then
+            if (allocated(MD%Input(1)%DeltaLdot)) then
+               if (size(MD%Input(1)%DeltaLdot)<Init%InData_SrvD%NumCableControl) then
+                  deallocate(MD%Input(1)%DeltaLdot)
+                  call AllocAry(MD%Input(1)%DeltaLdot,Init%InData_SrvD%NumCableControl,'MD%Input(1)%DeltaLdot', ErrStat2, ErrMsg2)
+                     call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+                  if (ErrStat >= abortErrLev) then ! make sure allocatable arrays are valid before setting them
+                     call Cleanup()
+                     return
+                  endif
+               endif
+            endif
+         endif
+      endif
+   END SUBROUTINE SetSrvDCableControls
 
 END SUBROUTINE FAST_InitializeAll
 

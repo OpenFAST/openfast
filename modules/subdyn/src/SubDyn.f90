@@ -237,7 +237,7 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    CALL NodeCon(Init, p, ErrStat2, ErrMsg2); if(Failed()) return
 
    !Store mapping between controllable elements and control channels, and return guess input
-   CALL ControlCableMapping(Init, u, p, ErrStat2, ErrMsg2); if(Failed()) return
+   CALL ControlCableMapping(Init, u, p, InitOut, ErrStat2, ErrMsg2); if(Failed()) return
 
    ! --- Allocate DOF indices to joints and members 
    call DistributeDOF(Init, p ,ErrStat2, ErrMsg2); if(Failed()) return; 

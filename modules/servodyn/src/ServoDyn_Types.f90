@@ -60,6 +60,8 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: BladeRootOrientation      !< DCM reference orientation of blade roots (3x3 x NumBlades) [-]
     LOGICAL  :: UseInputFile = .TRUE.      !< read input from input file [-]
     TYPE(FileInfoType)  :: PassedPrimaryInputData      !< Primary input file as FileInfoType (set by driver/glue code) [-]
+    INTEGER(IntKi)  :: NumCableControl      !< Number of cable control channels requested [-]
+    CHARACTER(64) , DIMENSION(:), ALLOCATABLE  :: CableControlRequestor      !< Array with text info about which module requested the cable control channel (size of NumCableControl).  This is just for diagnostics. [-]
   END TYPE SrvD_InitInputType
 ! =======================
 ! =========  SrvD_InitOutputType  =======
@@ -544,6 +546,19 @@ ENDIF
       CALL NWTC_Library_Copyfileinfotype( SrcInitInputData%PassedPrimaryInputData, DstInitInputData%PassedPrimaryInputData, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
+    DstInitInputData%NumCableControl = SrcInitInputData%NumCableControl
+IF (ALLOCATED(SrcInitInputData%CableControlRequestor)) THEN
+  i1_l = LBOUND(SrcInitInputData%CableControlRequestor,1)
+  i1_u = UBOUND(SrcInitInputData%CableControlRequestor,1)
+  IF (.NOT. ALLOCATED(DstInitInputData%CableControlRequestor)) THEN 
+    ALLOCATE(DstInitInputData%CableControlRequestor(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%CableControlRequestor.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInitInputData%CableControlRequestor = SrcInitInputData%CableControlRequestor
+ENDIF
  END SUBROUTINE SrvD_CopyInitInput
 
  SUBROUTINE SrvD_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
@@ -565,6 +580,9 @@ IF (ALLOCATED(InitInputData%BladeRootOrientation)) THEN
   DEALLOCATE(InitInputData%BladeRootOrientation)
 ENDIF
   CALL NWTC_Library_Destroyfileinfotype( InitInputData%PassedPrimaryInputData, ErrStat, ErrMsg )
+IF (ALLOCATED(InitInputData%CableControlRequestor)) THEN
+  DEALLOCATE(InitInputData%CableControlRequestor)
+ENDIF
  END SUBROUTINE SrvD_DestroyInitInput
 
  SUBROUTINE SrvD_PackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -655,6 +673,12 @@ ENDIF
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
+      Int_BufSz  = Int_BufSz  + 1  ! NumCableControl
+  Int_BufSz   = Int_BufSz   + 1     ! CableControlRequestor allocated yes/no
+  IF ( ALLOCATED(InData%CableControlRequestor) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! CableControlRequestor upper/lower bounds for each dimension
+      Int_BufSz  = Int_BufSz  + SIZE(InData%CableControlRequestor)*LEN(InData%CableControlRequestor)  ! CableControlRequestor
+  END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -834,6 +858,25 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
+    IntKiBuf(Int_Xferred) = InData%NumCableControl
+    Int_Xferred = Int_Xferred + 1
+  IF ( .NOT. ALLOCATED(InData%CableControlRequestor) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%CableControlRequestor,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%CableControlRequestor,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%CableControlRequestor,1), UBOUND(InData%CableControlRequestor,1)
+        DO I = 1, LEN(InData%CableControlRequestor)
+          IntKiBuf(Int_Xferred) = ICHAR(InData%CableControlRequestor(i1)(I:I), IntKi)
+          Int_Xferred = Int_Xferred + 1
+        END DO ! I
+      END DO
+  END IF
  END SUBROUTINE SrvD_PackInitInput
 
  SUBROUTINE SrvD_UnPackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -1058,6 +1101,28 @@ ENDIF
       IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
+    OutData%NumCableControl = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! CableControlRequestor not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%CableControlRequestor)) DEALLOCATE(OutData%CableControlRequestor)
+    ALLOCATE(OutData%CableControlRequestor(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%CableControlRequestor.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%CableControlRequestor,1), UBOUND(OutData%CableControlRequestor,1)
+        DO I = 1, LEN(OutData%CableControlRequestor)
+          OutData%CableControlRequestor(i1)(I:I) = CHAR(IntKiBuf(Int_Xferred))
+          Int_Xferred = Int_Xferred + 1
+        END DO ! I
+      END DO
+  END IF
  END SUBROUTINE SrvD_UnPackInitInput
 
  SUBROUTINE SrvD_CopyInitOutput( SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg )
