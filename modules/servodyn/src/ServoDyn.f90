@@ -139,6 +139,7 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    INTEGER(IntKi)                                 :: i              ! loop counter
    INTEGER(IntKi)                                 :: j              ! loop counter
    INTEGER(IntKi)                                 :: K              ! loop counter
+   INTEGER(IntKi)                                 :: UnSum          ! Summary file unit
    INTEGER(IntKi)                                 :: ErrStat2       ! temporary Error status of the operation
    CHARACTER(ErrMsgLen)                           :: ErrMsg2        ! temporary Error message if ErrStat /= ErrID_None
    
@@ -149,6 +150,7 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
 
    ErrStat = ErrID_None
    ErrMsg  = ""
+   UnSum   = -1_IntKi
 
       
       ! Initialize the NWTC Subroutine Library
@@ -194,11 +196,17 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       call Cleanup()
       return
    end if
-        
+
+      !............................................................................................
+      ! Start a summary file (if requested):
+      !............................................................................................
+   call InitializeSummaryFile( InputFileData, TRIM(InitInp%RootName), UnSum, ErrStat2, ErrMsg2 )
+      if (Failed())  return;
+
       !............................................................................................
       ! Define parameters here:
       !............................................................................................
-   CALL SrvD_SetParameters( InputFileData, p, ErrStat2, ErrMsg2 )
+   CALL SrvD_SetParameters( InputFileData, p, UnSum, ErrStat2, ErrMsg2 )
       if (Failed())  return;
 
       ! Set and verify BlPitchInit, which comes from InitInputData (not the inputfiledata)
@@ -402,16 +410,21 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       !............................................................................................
       ! Setup and initialize the StC submodule (possibly multiple instances at each location)
       !............................................................................................
-   call StC_Nacelle_Setup(InitInp,p,InputFileData,u%NStC,p%NStC,x%NStC,xd%NStC,z%NStC,OtherState%NStC,y%NStC,m%NStC,ErrStat2,ErrMsg2)
+   if (UnSum >0) then
+      write(UnSum, '(A)') ''
+      write(UnSum, '(A)') SectionDivide
+      write(UnSum, '(A)')              ' Structural controls'
+   endif
+   call StC_Nacelle_Setup(InitInp,p,InputFileData,u%NStC,p%NStC,x%NStC,xd%NStC,z%NStC,OtherState%NStC,y%NStC,m%NStC,UnSum,ErrStat2,ErrMsg2)
       if (Failed())  return;
 
-   call StC_Tower_Setup(InitInp,p,InputFileData,u%TStC,p%TStC,x%TStC,xd%TStC,z%TStC,OtherState%TStC,y%TStC,m%TStC,ErrStat2,ErrMsg2)
+   call StC_Tower_Setup(InitInp,p,InputFileData,u%TStC,p%TStC,x%TStC,xd%TStC,z%TStC,OtherState%TStC,y%TStC,m%TStC,UnSum,ErrStat2,ErrMsg2)
       if (Failed())  return;
 
-   call StC_Blade_Setup(InitInp,p,InputFileData,u%BStC,p%BStC,x%BStC,xd%BStC,z%BStC,OtherState%BStC,y%BStC,m%BStC,ErrStat2,ErrMsg2)
+   call StC_Blade_Setup(InitInp,p,InputFileData,u%BStC,p%BStC,x%BStC,xd%BStC,z%BStC,OtherState%BStC,y%BStC,m%BStC,UnSum,ErrStat2,ErrMsg2)
       if (Failed())  return;
 
-   call StC_S_Setup(InitInp,p,InputFileData,u%SStC,p%SStC,x%SStC,xd%SStC,z%SStC,OtherState%SStC,y%SStC,m%SStC,ErrStat2,ErrMsg2)
+   call StC_Substruc_Setup(InitInp,p,InputFileData,u%SStC,p%SStC,x%SStC,xd%SStC,z%SStC,OtherState%SStC,y%SStC,m%SStC,UnSum,ErrStat2,ErrMsg2)
       if (Failed())  return;
 
 
@@ -513,6 +526,12 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    
    
       !............................................................................................
+      ! Close summary file:
+      !............................................................................................
+   call SrvD_CloseSum( UnSum, ErrStat2, ErrMsg2 )
+   call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+      !............................................................................................
       ! Clean up the local variables:
       !............................................................................................
    CALL SrvD_DestroyInputFile( InputFileData, ErrStat2, ErrMsg2 )
@@ -527,6 +546,7 @@ contains
       if (Failed)    call Cleanup()
    end function Failed
    subroutine Cleanup()    ! Ignore any errors here
+      if (UnSum > 0)    close(UnSum)
       CALL SrvD_DestroyInputFile(InputFileData, ErrStat2, ErrMsg2 )
       CALL StC_DestroyInitInput(StC_InitInp, ErrStat2, ErrMsg2 )
       CALL StC_DestroyInitOutput(StC_InitOut, ErrStat2, ErrMsg2 )
@@ -536,7 +556,7 @@ END SUBROUTINE SrvD_Init
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine sets the data structures for the structural control (StC) module -- Nacelle Instances
-subroutine StC_Nacelle_Setup(SrvD_InitInp,SrvD_p,InputFileData,u,p,x,xd,z,OtherState,y,m,ErrStat,ErrMsg)
+subroutine StC_Nacelle_Setup(SrvD_InitInp,SrvD_p,InputFileData,u,p,x,xd,z,OtherState,y,m,UnSum,ErrStat,ErrMsg)
    type(SrvD_InitInputType),                    intent(in   )  :: SrvD_InitInp   !< Input data for initialization routine
    type(SrvD_ParameterType),                    intent(in   )  :: SrvD_p         !< Parameters
    TYPE(SrvD_InputFile),                        intent(in   )  :: InputFileData  ! Data stored in the module's input file
@@ -548,6 +568,7 @@ subroutine StC_Nacelle_Setup(SrvD_InitInp,SrvD_p,InputFileData,u,p,x,xd,z,OtherS
    type(StC_OtherStateType),        allocatable,intent(  out)  :: OtherState(:)  !< Initial other states
    type(StC_OutputType),            allocatable,intent(  out)  :: y(:)           !< Initial system outputs (outputs are not calculated;
    type(StC_MiscVarType),           allocatable,intent(  out)  :: m(:)           !< Misc (optimization) variables
+   integer(IntKi),                              intent(in   )  :: UnSum          !< summary file number (>0 when set)
    integer(IntKi),                              intent(  out)  :: ErrStat        !< Error status of the operation
    character(*),                                intent(  out)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
 
@@ -615,7 +636,7 @@ contains
 end subroutine StC_Nacelle_Setup
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine sets the data structures for the structural control (StC) module -- Tower instances
-subroutine StC_Tower_Setup(SrvD_InitInp,SrvD_p,InputFileData,u,p,x,xd,z,OtherState,y,m,ErrStat,ErrMsg)
+subroutine StC_Tower_Setup(SrvD_InitInp,SrvD_p,InputFileData,u,p,x,xd,z,OtherState,y,m,UnSum,ErrStat,ErrMsg)
    type(SrvD_InitInputType),                    intent(in   )  :: SrvD_InitInp   !< Input data for initialization routine
    type(SrvD_ParameterType),                    intent(in   )  :: SrvD_p         !< Parameters
    TYPE(SrvD_InputFile),                        intent(in   )  :: InputFileData  ! Data stored in the module's input file
@@ -627,6 +648,7 @@ subroutine StC_Tower_Setup(SrvD_InitInp,SrvD_p,InputFileData,u,p,x,xd,z,OtherSta
    type(StC_OtherStateType),        allocatable,intent(  out)  :: OtherState(:)  !< Initial other states
    type(StC_OutputType),            allocatable,intent(  out)  :: y(:)           !< Initial system outputs (outputs are not calculated;
    type(StC_MiscVarType),           allocatable,intent(  out)  :: m(:)           !< Misc (optimization) variables
+   integer(IntKi),                              intent(in   )  :: UnSum          !< summary file number (>0 when set)
    integer(IntKi),                              intent(  out)  :: ErrStat        !< Error status of the operation
    character(*),                                intent(  out)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
 
@@ -694,7 +716,7 @@ contains
 end subroutine StC_Tower_Setup
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine sets the data structures for the structural control (StC) module -- Blade instances
-subroutine StC_Blade_Setup(SrvD_InitInp,SrvD_p,InputFileData,u,p,x,xd,z,OtherState,y,m,ErrStat,ErrMsg)
+subroutine StC_Blade_Setup(SrvD_InitInp,SrvD_p,InputFileData,u,p,x,xd,z,OtherState,y,m,UnSum,ErrStat,ErrMsg)
    type(SrvD_InitInputType),                    intent(in   )  :: SrvD_InitInp   !< Input data for initialization routine
    type(SrvD_ParameterType),                    intent(in   )  :: SrvD_p         !< Parameters
    TYPE(SrvD_InputFile),                        intent(in   )  :: InputFileData  ! Data stored in the module's input file
@@ -706,6 +728,7 @@ subroutine StC_Blade_Setup(SrvD_InitInp,SrvD_p,InputFileData,u,p,x,xd,z,OtherSta
    type(StC_OtherStateType),        allocatable,intent(  out)  :: OtherState(:)  !< Initial other states
    type(StC_OutputType),            allocatable,intent(  out)  :: y(:)           !< Initial system outputs (outputs are not calculated;
    type(StC_MiscVarType),           allocatable,intent(  out)  :: m(:)           !< Misc (optimization) variables
+   integer(IntKi),                              intent(in   )  :: UnSum          !< summary file number (>0 when set)
    integer(IntKi),                              intent(  out)  :: ErrStat        !< Error status of the operation
    character(*),                                intent(  out)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
 
@@ -775,8 +798,8 @@ contains
    end subroutine Cleanup
 end subroutine StC_Blade_Setup
 !----------------------------------------------------------------------------------------------------------------------------------
-!> This routine sets the data structures for the structural control (StC) module -- hydrodynamics platform instances
-subroutine StC_S_Setup(SrvD_InitInp,SrvD_p,InputFileData,u,p,x,xd,z,OtherState,y,m,ErrStat,ErrMsg)
+!> This routine sets the data structures for the structural control (StC) module -- substructure instances
+subroutine StC_Substruc_Setup(SrvD_InitInp,SrvD_p,InputFileData,u,p,x,xd,z,OtherState,y,m,UnSum,ErrStat,ErrMsg)
    type(SrvD_InitInputType),                    intent(in   )  :: SrvD_InitInp   !< Input data for initialization routine
    type(SrvD_ParameterType),                    intent(in   )  :: SrvD_p         !< Parameters
    TYPE(SrvD_InputFile),                        intent(in   )  :: InputFileData  ! Data stored in the module's input file
@@ -788,6 +811,7 @@ subroutine StC_S_Setup(SrvD_InitInp,SrvD_p,InputFileData,u,p,x,xd,z,OtherState,y
    type(StC_OtherStateType),        allocatable,intent(  out)  :: OtherState(:)  !< Initial other states
    type(StC_OutputType),            allocatable,intent(  out)  :: y(:)           !< Initial system outputs (outputs are not calculated;
    type(StC_MiscVarType),           allocatable,intent(  out)  :: m(:)           !< Misc (optimization) variables
+   integer(IntKi),                              intent(in   )  :: UnSum          !< summary file number (>0 when set)
    integer(IntKi),                              intent(  out)  :: ErrStat        !< Error status of the operation
    character(*),                                intent(  out)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
 
@@ -797,7 +821,7 @@ subroutine StC_S_Setup(SrvD_InitInp,SrvD_p,InputFileData,u,p,x,xd,z,OtherState,y
    real(DbKi)                 :: Interval       !< Coupling interval in seconds from StC
    type(StC_InitInputType)    :: StC_InitInp    !< data to initialize StC module
    type(StC_InitOutputType)   :: StC_InitOut    !< data from StC module initialization (not currently used)
-   character(*), parameter    :: RoutineName = 'StC_S_Setup'
+   character(*), parameter    :: RoutineName = 'StC_Substruc_Setup'
 
    ErrStat  = ErrID_None
    ErrMsg   = ""
@@ -852,7 +876,7 @@ contains
       CALL StC_DestroyInitInput(StC_InitInp, ErrStat2, ErrMsg2 )
       CALL StC_DestroyInitOutput(StC_InitOut, ErrStat2, ErrMsg2 )
    end subroutine Cleanup
-end subroutine StC_S_Setup
+end subroutine StC_Substruc_Setup
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine is called at the end of the simulation.
@@ -2246,11 +2270,12 @@ CONTAINS
 END SUBROUTINE ValidatePrimaryData
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine sets the parameters, based on the data stored in InputFileData.
-SUBROUTINE SrvD_SetParameters( InputFileData, p, ErrStat, ErrMsg )
+SUBROUTINE SrvD_SetParameters( InputFileData, p, UnSum, ErrStat, ErrMsg )
 !..................................................................................................................................
 
    TYPE(SrvD_InputFile),     INTENT(INOUT)    :: InputFileData  !< Data stored in the module's input file (intent OUT for MOVE_ALLOC)
    TYPE(SrvD_ParameterType), INTENT(INOUT)    :: p              !< The module's parameter data
+   INTEGER(IntKi),           INTENT(IN   )    :: UnSum          !< summary file number (>0 when set)
    INTEGER(IntKi),           INTENT(OUT)      :: ErrStat        !< The error status code
    CHARACTER(*),             INTENT(OUT)      :: ErrMsg         !< The error message, if an error occurred
 
@@ -2264,16 +2289,13 @@ SUBROUTINE SrvD_SetParameters( InputFileData, p, ErrStat, ErrMsg )
    CHARACTER(ErrMsgLen)                       :: ErrMsg2        ! Temporary message describing error
    CHARACTER(*), PARAMETER                    :: RoutineName = 'SrvD_SetParameters'
 
-
    
       ! Initialize variables
-
    ErrStat = ErrID_None
    ErrMsg  = ''
-
-
    p%DT = InputFileData%DT
-   
+
+  
       !.............................................
       ! Pitch control parameters
       !.............................................
@@ -2290,6 +2312,18 @@ SUBROUTINE SrvD_SetParameters( InputFileData, p, ErrStat, ErrMsg )
    p%BlPitchF  = InputFileData%BlPitchF( 1:min(p%NumBl,size(InputFileData%BlPitchF)))
    p%PitManRat = InputFileData%PitManRat(1:min(p%NumBl,size(InputFileData%PitManRat)))
 
+   if (UnSum >0) then
+      write(UnSum, '(A)')  ' Unless specified, units are consistent with Input units, [SI] system is advised.'
+      write(UnSum, '(A)') SectionDivide
+      write(UnSum, '(A)')                 ' Pitch control mode {0: none, 3: user-defined from routine PitchCntrl, 4: user-defined from Simulink/Labview, 5: user-defined from Bladed-style DLL} (switch)'
+      write(UnSum, '(A43,I2)')            '   PCMode -- Pitch control mode:           ',p%PCMode
+      write(UnSum, '(A43,ES20.12e3)')     '   TPCOn  -- pitch control start time:     ',p%TPCOn
+      write(UnSum, '(A)')                 '   -------------------'
+      write(UnSum, '(A43,3ES12.5e2)')     '   TPitManS  -- pitch override start time: ',p%TPitManS( 1:min(p%NumBl,size(InputFileData%TPitManS)))
+      write(UnSum, '(A43,3ES12.5e2)')     '   BlPitchF  -- pitch override final pos:  ',p%BlPitchF( 1:min(p%NumBl,size(InputFileData%BlPitchF)))
+      write(UnSum, '(A43,3ES12.5e2)')     '   PitManRat -- pitch override rate:       ',p%PitManRat(1:min(p%NumBl,size(InputFileData%PitManRat)))
+      write(UnSum, '(A)')  ''
+   endif
       !.............................................
       ! Set generator and torque control parameters:
       !.............................................
@@ -2305,6 +2339,22 @@ SUBROUTINE SrvD_SetParameters( InputFileData, p, ErrStat, ErrMsg )
    
    p%THSSBrFl  = InputFileData%THSSBrDp + InputFileData%HSSBrDT   ! Time at which shaft brake is fully deployed
    
+   if (UnSum >0) then
+      write(UnSum, '(A)') SectionDivide
+      write(UnSum, '(A)')                 ' Variable-speed control mode {0: none, 1: simple VS, 3: user-defined from routine UserVSCont, 4: user-defined from Simulink/Labview, 5: user-defined from Bladed-style DLL} (switch)'
+      write(UnSum, '(A41,I2)')            '   VSContrl -- speed control mode:       ',p%VSContrl
+      write(UnSum, '(A)')                 '   -------------------'
+      write(UnSum, '(A18,I2)')            '   GenModel:      ',p%GenModel
+      write(UnSum, '(A55,ES12.5e2)')      '     GenEff  --  efficiency (%):                       ',p%GenEff
+      if (p%GenTiStr) then
+      write(UnSum, '(A55,ES12.5e2)')      '     GenTiStr -- Timed generator start (s):            ',p%TimGenOn
+      else
+      write(UnSum, '(A55,ES12.5e2)')      '     SpdGenOn -- Gen speed to turn on the gen (rpm):   ',p%SpdGenOn
+      endif
+      if (p%GenTiStp)   &
+      write(UnSum, '(A55,ES12.5e2)')      '     GenTiStp -- Timed generator stop (s):             ',p%TimGenOf
+   endif
+
    SELECT CASE ( p%VSContrl )      
    CASE ( ControlMode_NONE )  ! None
       
@@ -2316,6 +2366,16 @@ SUBROUTINE SrvD_SetParameters( InputFileData, p, ErrStat, ErrMsg )
          p%SIG_Slop  = InputFileData%SIG_RtTq/( SIG_RtSp - InputFileData%SIG_SySp )                                 ! SIG torque/speed slope
 
          p%SIG_SySp = InputFileData%SIG_SySp
+
+         if (UnSum >0) then
+            write(UnSum, '(A41)')            '   Simple generator model                '
+            write(UnSum, '(A55,ES12.5e2)')   '     SIG_RtSp -- Rated speed             ',SIG_RtSp
+            write(UnSum, '(A55,ES12.5e2)')   '     SIG_POSl -- Pullout slip            ',p%SIG_POSl
+            write(UnSum, '(A55,ES12.5e2)')   '     SIG_POTq -- Pullout torque          ',p%SIG_POTq
+            write(UnSum, '(A55,ES12.5e2)')   '     SIG_Slop -- Torque/speed slope      ',p%SIG_Slop
+            write(UnSum, '(A55,ES12.5e2)')   '     SIG_SySp -- Synchronous gen speed   ',p%SIG_SySp
+         endif
+
       ELSEIF ( p%GenModel == ControlMode_ADVANCED )  THEN   ! Thevenin-equivalent induction generator
 
          ComDenom    = InputFileData%TEC_SRes**2 + ( InputFileData%TEC_SLR + InputFileData%TEC_MR )**2   ! common denominator used in many of the following equations
@@ -2337,6 +2397,25 @@ SUBROUTINE SrvD_SetParameters( InputFileData, p, ErrStat, ErrMsg )
          p%TEC_RRes  = InputFileData%TEC_RRes
          p%TEC_SRes  = InputFileData%TEC_SRes
          p%TEC_VLL   = InputFileData%TEC_VLL
+
+         if (UnSum >0) then
+            write(UnSum, '(A55)')            '   Advanced Thevenin equivalent generator model      '
+            write(UnSum, '(A55,ES12.5e2)')   '     TEC_Re1  -- stator resistance (ohms)            ',p%TEC_Re1
+            write(UnSum, '(A55,ES12.5e2)')   '     TEC_Xe1  -- stator leakage reactance (ohms)     ',p%TEC_Xe1
+            write(UnSum, '(A55,ES12.5e2)')   '     TEC_V1a  -- source voltage                      ',p%TEC_V1a
+            write(UnSum, '(A55,ES12.5e2)')   '     TEC_SySp -- synchronous speed                   ',p%TEC_SySp
+            write(UnSum, '(A55,ES12.5e2)')   '     TEC_K1   -- K1 term                             ',  TEC_K1
+            write(UnSum, '(A55,ES12.5e2)')   '     TEC_K2   -- K2 term                             ',  TEC_K2
+            write(UnSum, '(A55,ES12.5e2)')   '     TEC_A0   -- A0 term                             ',p%TEC_A0
+            write(UnSum, '(A55,ES12.5e2)')   '     TEC_C0   -- C0 term                             ',p%TEC_C0
+            write(UnSum, '(A55,ES12.5e2)')   '     TEC_C1   -- C1 term                             ',p%TEC_C1
+            write(UnSum, '(A55,ES12.5e2)')   '     TEC_C2   -- C2 term                             ',p%TEC_C2
+            write(UnSum, '(A55,ES12.5e2)')   '     TEC_MR   -- Magnetizing reactance (ohms)        ',p%TEC_MR
+            write(UnSum, '(A55,ES12.5e2)')   '     TEC_RLR  -- Rotor leakage reactance (ohms)      ',p%TEC_RLR
+            write(UnSum, '(A55,ES12.5e2)')   '     TEC_RRes -- Rotor resistance (ohms)             ',p%TEC_RRes
+            write(UnSum, '(A55,ES12.5e2)')   '     TEC_SRes -- Stator resistance (ohms)            ',p%TEC_SRes
+            write(UnSum, '(A55,ES12.5e2)')   '     TEC_VLL  -- Line-to-line RMS voltage (volts)    ',p%TEC_VLL
+         endif
 
       ENDIF
          
@@ -2361,8 +2440,19 @@ SUBROUTINE SrvD_SetParameters( InputFileData, p, ErrStat, ErrMsg )
       p%VS_RtGnSp  = InputFileData%VS_RtGnSp
       p%VS_RtTq    = InputFileData%VS_RtTq
       
+      if (UnSum >0) then
+         write(UnSum, '(A55)')            '   Simple variable speed control                     '
+         write(UnSum, '(A55,ES12.5e2)')   '     VS_SySp    -- region 2.5 synchronous gen speed  ',p%VS_SySp
+         write(UnSum, '(A55,ES12.5e2)')   '     VS_Slope   -- Torque/speed slope of region 2.5  ',p%VS_Slope
+         write(UnSum, '(A55,ES12.5e2)')   '     mVS_TrGnSp -- region 2 -> 2.5 trans gen speed   ',p%VS_TrGnSp
+         write(UnSum, '(A55,ES12.5e2)')   '     VS_Rgn2K   -- Gen torque constant region 2      ',p%VS_Rgn2K 
+         write(UnSum, '(A55,ES12.5e2)')   '     VS_RtGnSp  -- Rated gen speed                   ',p%VS_RtGnSp
+         write(UnSum, '(A55,ES12.5e2)')   '     VS_RtTq    -- Rated gen torque                  ',p%VS_RtTq  
+      endif
+
    END SELECT 
-      
+
+
       !.............................................
       ! High-speed shaft brake parameters
       !.............................................   
@@ -2370,6 +2460,18 @@ SUBROUTINE SrvD_SetParameters( InputFileData, p, ErrStat, ErrMsg )
    p%THSSBrDp  = InputFileData%THSSBrDp
    p%HSSBrDT   = InputFileData%HSSBrDT
    p%HSSBrTqF  = InputFileData%HSSBrTqF
+
+   if (UnSum >0) then
+      write(UnSum, '(A)') ''
+      write(UnSum, '(A)') SectionDivide
+      write(UnSum, '(A)')              ' HSS brake model {0: none, 1: simple, 3: user-defined from routine UserHSSBr, 4: user-defined from Simulink/Labview, 5: user-defined from Bladed-style DLL} (switch)'
+      write(UnSum, '(A45,I2)')         '    HSSBrMode -- high speed shaft brake mode ',p%HSSBrMode
+      if (p%HSSBrMode > 0) then 
+      write(UnSum, '(A56,ES12.5e2)')   '    THSSBrDp -- Time to initiate deployment (s)         ',p%THSSBrDp
+      write(UnSum, '(A56,ES12.5e2)')   '    HSSBrDT  -- Time full deployment once initiated (s) ',p%HSSBrDT 
+      write(UnSum, '(A56,ES12.5e2)')   '    HSSBrTqF -- Fully deployed HSS-brake torque (N-m)   ',p%HSSBrTqF
+      endif
+   endif
          
       !.............................................
       ! Nacelle-yaw control parameters
@@ -2383,7 +2485,26 @@ SUBROUTINE SrvD_SetParameters( InputFileData, p, ErrStat, ErrMsg )
    p%TYawManS  = InputFileData%TYawManS   
    p%NacYawF   = InputFileData%NacYawF   
    p%YawManRat = InputFileData%YawManRat              ! we change the sign of this variable later
-      
+
+   if (UnSum >0) then
+      write(UnSum, '(A)') ''
+      write(UnSum, '(A)') SectionDivide
+      write(UnSum, '(A)')              ' Yaw control mode {0: none, 3: user-defined from routine UserYawCont, 4: user-defined from Simulink/Labview, 5: user-defined from Bladed-style DLL} (switch)'
+      write(UnSum, '(A32,I2)')         '    YCMode  -- yaw control mode ',p%YCMode
+      if (p%YCMode > 0) &
+      write(UnSum, '(A55,ES12.5e2)')   '    TYCOn   --  Time to enable active yaw control (s)  ',p%TYCOn
+      write(UnSum, '(A)')              '    -------------------'
+      write(UnSum, '(A)')              '    Yaw spring characteristics'
+      write(UnSum, '(A55,ES12.5e2)')   '      YawNeut --  neutral spring position (degrees)    ',p%YawNeut
+      write(UnSum, '(A55,ES12.5e2)')   '      YawSpr  --  spring constant (N-m/rad)            ',p%YawSpr
+      write(UnSum, '(A55,ES12.5e2)')   '      YawDamp --  damping constant (N-m/(rad/s))       ',p%YawDamp
+      write(UnSum, '(A)')              '    -------------------'
+      write(UnSum, '(A)')              '    Prescribed yaw motion'
+      write(UnSum, '(A55,ES12.5e2)')   '      TYawManS  -- yaw maneuver start time (s)         ',p%TYawManS
+      write(UnSum, '(A55,ES12.5e2)')   '      YawManRat -- yaw maneuver rate (deg/s)           ',p%YawManRat
+      write(UnSum, '(A55,ES12.5e2)')   '      NacYawF   -- Final yaw angle for override (deg)  ',p%NacYawF
+   endif
+
       !.............................................
       ! tip-brake parameters (not used in this version)
       !.............................................
@@ -2398,14 +2519,20 @@ SUBROUTINE SrvD_SetParameters( InputFileData, p, ErrStat, ErrMsg )
    p%TBDrConN = 0.0_ReKi         ! tip-drag constant during normal operation
    p%TBDrConD = 0.0_ReKi         ! tip-drag constant during fully deployed operation
    
+   if (UnSum >0) then
+      write(UnSum, '(A)') ''
+      write(UnSum, '(A)') SectionDivide
+      write(UnSum, '(A)')              ' Tip Brake  (not available)'
+   endif
       
       !.............................................
       ! Tuned-mass damper parameters
+      !     -- summary file info written later
       !.............................................   
-   p%NumBStC     = InputFileData%NumBStC
-   p%NumNStC     = InputFileData%NumNStC
-   p%NumTStC     = InputFileData%NumTStC
-   p%NumSStC  = InputFileData%NumSStC
+   p%NumBStC   = InputFileData%NumBStC
+   p%NumNStC   = InputFileData%NumNStC
+   p%NumTStC   = InputFileData%NumTStC
+   p%NumSStC   = InputFileData%NumSStC
 
       !.............................................
       ! Determine if the BladedDLL should be called
