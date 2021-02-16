@@ -4791,6 +4791,13 @@ SUBROUTINE Init_Jacobian_u( InputFileData, p, u, InitOut, ErrStat, ErrMsg)
       end do
    end do
 
+   do k=1,p%NumBlades
+      do i=1,p%NumBlNds
+            InitOut%LinNames_u(index) = 'User property on blade '//trim(num2lstr(k))//', node '//trim(num2lstr(i))//', -'
+         index = index + 1
+      end do
+   end do
+
    END SUBROUTINE Init_Jacobian_u
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE Init_Jacobian_x( p, InitOut, ErrStat, ErrMsg)
