@@ -1629,17 +1629,28 @@ subroutine GeomWithoutSweepPitchTwist(p,u,m,thetaBladeNds,ErrStat,ErrMsg)
    integer(intKi)                          :: ErrStat2
    character(ErrMsgLen)                    :: ErrMsg2
    character(*), parameter                 :: RoutineName = 'GeomWithoutSweepPitchTwist'
+   logical, parameter :: GenericBlade = .true. ! if true, do not use the WithoutSweepPitchTwist transformation
 
    ErrStat = ErrID_None
    ErrMsg  = ""
 
+
+   if (GenericBlade) then
+      do k=1,p%NumBlades
+         m%hub_theta_x_root(k) = 0.0_ReKi ! ill-defined
+         do j=1,p%NumBlNds
+            thetaBladeNds(j,k) = 0.0_ReKi ! local pitch + twist (aerodyanmic + elastic) angle of the jth node in the kth blade
+            m%Curve(j,k) = 0.0_ReKi ! ill-defined
+            m%WithoutSweepPitchTwist(:,:,j,k) = u%BladeMotion(k)%Orientation(:,:,j)
+         enddo
+      enddo
+   else
       ! theta, "Twist angle (includes all sources of twist)" rad
       ! Vx, "Local axial velocity at node" m/s
       ! Vy, "Local tangential velocity at node" m/s
    do k=1,p%NumBlades
-
          ! construct system equivalent to u%BladeRootMotion(k)%Orientation, but without the blade-pitch angle:
-
+      ! orientation = rotation from hub 2 bl
       call LAPACK_gemm( 'n', 't', 1.0_R8Ki, u%BladeRootMotion(k)%Orientation(:,:,1), u%HubMotion%Orientation(:,:,1), 0.0_R8Ki, orientation, errStat2, errMsg2)
          call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       theta = EulerExtract( orientation ) !hub_theta_root(k)
@@ -1649,8 +1660,8 @@ subroutine GeomWithoutSweepPitchTwist(p,u,m,thetaBladeNds,ErrStat,ErrMsg)
       theta(3) = 0.0_ReKi
       m%hub_theta_x_root(k) = theta(1)   ! save this value for FAST.Farm
 
-      orientation = EulerConstruct( theta )
-      orientation_nopitch = matmul( orientation, u%HubMotion%Orientation(:,:,1) ) ! withoutPitch_theta_Root(k)
+      orientation = EulerConstruct( theta ) ! rotation from hub 2 non-pitched blade
+      orientation_nopitch = matmul( orientation, u%HubMotion%Orientation(:,:,1) ) ! withoutPitch_theta_Root(k) ! rotation from global 2 non-pitched blade
 
       do j=1,p%NumBlNds
 
@@ -1658,6 +1669,7 @@ subroutine GeomWithoutSweepPitchTwist(p,u,m,thetaBladeNds,ErrStat,ErrMsg)
             ! deflection), blade-pitch and twist (aerodynamic + elastic) angles:
 
          ! orientation = matmul( u%BladeMotion(k)%Orientation(:,:,j), transpose(orientation_nopitch) )
+         ! orientation = rotation from non pitched blade 2 balde section
          call LAPACK_gemm( 'n', 't', 1.0_R8Ki, u%BladeMotion(k)%Orientation(:,:,j), orientation_nopitch, 0.0_R8Ki, orientation, errStat2, errMsg2)
             call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          theta = EulerExtract( orientation ) !root(k)WithoutPitch_theta(j)_blade(k)
@@ -1672,6 +1684,7 @@ subroutine GeomWithoutSweepPitchTwist(p,u,m,thetaBladeNds,ErrStat,ErrMsg)
 
       end do !j=nodes
    end do !k=blades
+   endif
 end subroutine GeomWithoutSweepPitchTwist
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine sets m%FVW_u(indx).
