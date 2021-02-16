@@ -2206,8 +2206,9 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InputFile, RootName, NumBlades, interv
          ! Allocate space to hold AFNames
       ALLOCATE( InputFileData%AFNames(InputFileData%NumAFfiles), STAT=ErrStat2)
          IF (ErrStat2 /= 0 ) THEN
-            CALL SetErrStat( ErrID_Fatal, "Error allocating AFNames.", ErrStat, ErrMsg, RoutineName)
-            RETURN
+            ErrStat2=ErrID_Fatal
+            ErrMsg2 = "Error allocating AFNames."
+            if (Failed()) return
          END IF
       ! AFNames - Airfoil file names (NumAFfiles lines) (quoted strings): -- NOTE: this line may not have a keyname with it
    DO I = 1,InputFileData%NumAFfiles         ! ParseChVar allows empty keynames.
