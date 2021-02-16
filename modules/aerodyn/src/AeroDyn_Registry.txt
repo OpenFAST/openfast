@@ -199,6 +199,8 @@ typedef	^	MiscVarType	MeshMapType	B_L_2_H_P	{:}	-	-	"mapping data structure to m
 typedef	^	MiscVarType	ReKi	SigmaCavitCrit	{:}{:}	-	-	 "critical cavitation number-  inception value (above which cavit will occur)"   -
 typedef	^	MiscVarType	ReKi	SigmaCavit	{:}{:}	-	-	  "cavitation number at node "   -
 typedef	^	MiscVarType	Logical	CavitWarnSet {:}{:}	-	-	  "cavitation warning issued "   -
+typedef	^	MiscVarType	MeshType	BladeRootLoad	{:}	-	-	"meshes at blade root; used to compute an integral for mapping the output blade loads to single points (for writing to file only)"	-
+typedef	^	MiscVarType	MeshMapType	B_L_2_R_P	{:}	-	-	"mapping data structure to map each bladeLoad output mesh to corresponding MiscVar%BladeRootLoad mesh"
 
 # ..... Parameters ................................................................................................................
 # Define parameters here:
