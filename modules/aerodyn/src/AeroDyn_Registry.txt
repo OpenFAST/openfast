@@ -252,12 +252,12 @@ typedef	^	ParameterType	ReKi	dx	{:}	-	-	"vector that determines size of perturba
 typedef	^	ParameterType	Integer	Jac_ny	-	-	-	"number of outputs in jacobian matrix"	-
 
 # ..... Inputs ....................................................................................................................
-# Define inputs that are contained on the mesh here:
+# Define inputs that are contained on a mesh here:
 typedef	^	InputType	MeshType	TowerMotion	-	-	-	"motion on the tower"	-
 typedef	^	InputType	MeshType	HubMotion	-	-	-	"motion on the hub"	-
 typedef	^	InputType	MeshType	BladeRootMotion	{:}	-	-	"motion on each blade root"	-
 typedef	^	InputType	MeshType	BladeMotion	{:}	-	-	"motion on each blade"	-
-# Define inputs that are not on this mesh here:
+# Define inputs that are not on a mesh here:
 typedef	^	InputType	ReKi	InflowOnBlade	{:}{:}{:}	-	-	"U,V,W at nodes on each blade (note if we change the requirement that NumNodes is the same for each blade, this will need to change)"	m/s
 typedef	^	InputType	ReKi	InflowOnTower	{:}{:}	-	-	"U,V,W at nodes on the tower"	m/s
 typedef	^	InputType	ReKi	UserProp	{:}{:}	-	-	"Optional user property for interpolating airfoils (per element per blade)" -

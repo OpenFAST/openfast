@@ -110,6 +110,7 @@ subroutine Init_AeroDyn(iCase, DvrData, AD, dt, errStat, errMsg)
       InitInData%NumBlades      = DvrData%numBlades
       InitInData%RootName       = DvrData%outFileData%Root
       InitInData%Gravity        = 9.80665_ReKi
+      InitInData%Linearize      = .false.
                         
    
          ! set initialization data:

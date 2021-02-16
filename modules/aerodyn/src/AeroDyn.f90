@@ -4218,6 +4218,7 @@ SUBROUTINE AD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
       end do
    
       FieldMask(MASKID_TRANSLATIONDISP) = .true.
+      FieldMask(MASKID_Orientation) = .true.
       FieldMask(MASKID_TRANSLATIONVel)  = .true.
       FieldMask(MASKID_RotationVel) = .true.
       FieldMask(MASKID_TRANSLATIONAcc) = .true.
@@ -4309,7 +4310,7 @@ SUBROUTINE AD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
       if (p%BEMT%UA%lin_nx>0) then
          do j=1,p%NumBlades ! size(x%BEMT%UA%element,2)
             do i=1,p%NumBlNds ! size(x%BEMT%UA%element,1)
-               do k=1,size(x%BEMT%UA%element(i,j)%x)
+               do k=1,4 !size(x%BEMT%UA%element(i,j)%x) !linearize only first 4 states (5th is vortex)
                   x_op(index) = x%BEMT%UA%element(i,j)%x(k)
                   index = index + 1
                end do
@@ -4362,7 +4363,7 @@ SUBROUTINE AD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
       if (p%BEMT%UA%lin_nx>0) then
          do j=1,p%NumBlades ! size(dxdt%BEMT%UA%element,2)
             do i=1,p%NumBlNds ! size(dxdt%BEMT%UA%element,1)
-               do k=1,size(dxdt%BEMT%UA%element(i,j)%x)
+               do k=1,4 !size(dxdt%BEMT%UA%element(i,j)%x) don't linearize 5th state
                   dx_op(index) = dxdt%BEMT%UA%element(i,j)%x(k)
                   index = index + 1
                end do
@@ -5048,7 +5049,8 @@ SUBROUTINE Perturb_x( p, n, perturb_sign, x, dx )
       endif
    
    else
-      call GetStateIndices( n - p%BEMT%DBEMT%lin_nx, size(x%BEMT%UA%element,2), size(x%BEMT%UA%element,1), size(x%BEMT%UA%element(1,1)%x), Blade, BladeNode, StateIndex )
+      !call GetStateIndices( n - p%BEMT%DBEMT%lin_nx, size(x%BEMT%UA%element,2), size(x%BEMT%UA%element,1), size(x%BEMT%UA%element(1,1)%x), Blade, BladeNode, StateIndex )
+      call GetStateIndices( n - p%BEMT%DBEMT%lin_nx, size(x%BEMT%UA%element,2), size(x%BEMT%UA%element,1), 4, Blade, BladeNode, StateIndex )
       x%BEMT%UA%element(BladeNode,Blade)%x(StateIndex) = x%BEMT%UA%element(BladeNode,Blade)%x(StateIndex) + dx * perturb_sign
    
    end if
@@ -5153,8 +5155,8 @@ SUBROUTINE Compute_dX(p, x_p, x_m, delta_p, delta_m, dX)
    
       do j=1,size(x_p%BEMT%UA%element,2) ! number of blades
          do i=1,size(x_p%BEMT%UA%element,1) ! number of nodes per blade
-            dX(indx_first:indx_first+3) = x_p%BEMT%UA%element(i,j)%x - x_m%BEMT%UA%element(i,j)%x
-            indx_first = indx_first + size(x_p%BEMT%UA%element(i,j)%x) ! = index_first += 4
+            dX(indx_first:indx_first+3) = x_p%BEMT%UA%element(i,j)%x(1:4) - x_m%BEMT%UA%element(i,j)%x(1:4)
+            indx_first = indx_first + 4 ! = index_first += 4
          end do
       end do
 
