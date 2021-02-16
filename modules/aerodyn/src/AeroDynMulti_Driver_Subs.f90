@@ -1107,12 +1107,16 @@ subroutine Dvr_WriteOutputs(nt, t, out, AD_output, IW_output, errStat, errMsg)
       write( tmpStr, out%Fmt_t ) t  ! '(F15.4)'
       call WrFileNR( out%unOutFile, tmpStr(1:out%ActualChanLen) )
       ! 
-      call WrNumAryFileNR(out%unOutFile, AD_output,  out%Fmt_a, errStat, errMsg)
-      call WrNumAryFileNR(out%unOutFile, IW_output,  out%Fmt_a, errStat, errMsg)
+      out%outLine(1:size(AD_output) )  = AD_output
+      out%outLine(size(AD_output)+1:)  = IW_output
+      call WrNumAryFileNR(out%unOutFile, out%outLine,  out%Fmt_a, errStat, errMsg)
+      !call WrNumAryFileNR(out%unOutFile, AD_output,  out%Fmt_a, errStat, errMsg)
+      !call WrNumAryFileNR(out%unOutFile, IW_output,  out%Fmt_a, errStat, errMsg)
       ! write a new line (advance to the next line)
       write(out%unOutFile,'()')
    endif
    if (out%fileFmt==idFmtBoth .or. out%fileFmt == idFmtBinary) then
+      ! Store for binary
       nAD = size(AD_output)
       nIW = size(IW_output)
       out%storage(1:nAD        ,nt) = AD_output(:)
@@ -1146,6 +1150,8 @@ subroutine DvrM_InitializeOutputs(out, numSteps, errStat, errMsg)
             out%ActualChanLen = max(out%ActualChanLen, LEN_TRIM(out%WriteOutputHdr(i)))
             out%ActualChanLen = max(out%ActualChanLen, LEN_TRIM(out%WriteOutputUnt(i)))
          end do
+         call AllocAry(out%outLine, numOuts-1, 'outLine', errStat, errMsg);
+         out%outLine=0.0_ReKi
 
          ! create format statements for time and the array outputs:
          out%Fmt_t = '(F'//trim(num2lstr(out%ActualChanLen))//'.4)'
@@ -1155,13 +1161,12 @@ subroutine DvrM_InitializeOutputs(out, numSteps, errStat, errMsg)
             out%Fmt_a = trim(out%Fmt_a)//','//trim(num2lstr(numSpaces))//'x'
          end if
 
-
+         ! --- Start writing to ascii input file 
          call GetNewUnit(out%unOutFile, ErrStat, ErrMsg)
          if ( ErrStat >= AbortErrLev ) then
             out%unOutFile = -1
             return
          end if
-
 
          call OpenFOutFile ( out%unOutFile, trim(out%Root)//'.out', ErrStat, ErrMsg )
          if ( ErrStat >= AbortErrLev ) return
@@ -1171,17 +1176,13 @@ subroutine DvrM_InitializeOutputs(out, numSteps, errStat, errMsg)
          write (out%unOutFile,'()' )    !print a blank line
          write (out%unOutFile,'()' )    !print a blank line
 
-         !......................................................
          ! Write the names of the output parameters on one line:
-         !......................................................
          do i=1,numOuts
             call WrFileNR ( out%unOutFile, out%delim//out%WriteOutputHdr(i)(1:out%ActualChanLen) )
          end do ! i
          write (out%unOutFile,'()')
 
-         !......................................................
          ! Write the units of the output parameters on one line:
-         !......................................................
          do i=1,numOuts
             call WrFileNR ( out%unOutFile, out%delim//out%WriteOutputUnt(i)(1:out%ActualChanLen) )
          end do ! i

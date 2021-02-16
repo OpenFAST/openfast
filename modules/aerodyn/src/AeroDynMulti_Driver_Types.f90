@@ -79,6 +79,7 @@ IMPLICIT NONE
     character(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputHdr      !< Channel headers [-]
     character(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !< Channel units [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: storage      !< nChannel x nTime [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: outLine      !< Output line to be written to disk [-]
     TYPE(DvrVTK_SurfaceType)  :: VTK_surface      !< Data for VTK surface visualization [-]
     INTEGER(IntKi)  :: VTK_tWidth      !< Width of number of files for leading zeros in file name format [-]
     INTEGER(IntKi)  :: n_VTKTime      !< Number of time steps between writing VTK files [-]
@@ -826,6 +827,18 @@ IF (ALLOCATED(SrcDvrM_OutputsData%storage)) THEN
   END IF
     DstDvrM_OutputsData%storage = SrcDvrM_OutputsData%storage
 ENDIF
+IF (ALLOCATED(SrcDvrM_OutputsData%outLine)) THEN
+  i1_l = LBOUND(SrcDvrM_OutputsData%outLine,1)
+  i1_u = UBOUND(SrcDvrM_OutputsData%outLine,1)
+  IF (.NOT. ALLOCATED(DstDvrM_OutputsData%outLine)) THEN 
+    ALLOCATE(DstDvrM_OutputsData%outLine(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstDvrM_OutputsData%outLine.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstDvrM_OutputsData%outLine = SrcDvrM_OutputsData%outLine
+ENDIF
       CALL ADM_Dvr_Copydvrvtk_surfacetype( SrcDvrM_OutputsData%VTK_surface, DstDvrM_OutputsData%VTK_surface, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
@@ -854,6 +867,9 @@ IF (ALLOCATED(DvrM_OutputsData%WriteOutputUnt)) THEN
 ENDIF
 IF (ALLOCATED(DvrM_OutputsData%storage)) THEN
   DEALLOCATE(DvrM_OutputsData%storage)
+ENDIF
+IF (ALLOCATED(DvrM_OutputsData%outLine)) THEN
+  DEALLOCATE(DvrM_OutputsData%outLine)
 ENDIF
   CALL ADM_Dvr_Destroydvrvtk_surfacetype( DvrM_OutputsData%VTK_surface, ErrStat, ErrMsg )
  END SUBROUTINE ADM_Dvr_DestroyDvrM_Outputs
@@ -935,6 +951,11 @@ ENDIF
   IF ( ALLOCATED(InData%storage) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! storage upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%storage)  ! storage
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! outLine allocated yes/no
+  IF ( ALLOCATED(InData%outLine) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! outLine upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%outLine)  ! outLine
   END IF
       Int_BufSz   = Int_BufSz + 3  ! VTK_surface: size of buffers for each call to pack subtype
       CALL ADM_Dvr_Packdvrvtk_surfacetype( Re_Buf, Db_Buf, Int_Buf, InData%VTK_surface, ErrStat2, ErrMsg2, .TRUE. ) ! VTK_surface 
@@ -1097,6 +1118,21 @@ ENDIF
           ReKiBuf(Re_Xferred) = InData%storage(i1,i2)
           Re_Xferred = Re_Xferred + 1
         END DO
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%outLine) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%outLine,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%outLine,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%outLine,1), UBOUND(InData%outLine,1)
+        ReKiBuf(Re_Xferred) = InData%outLine(i1)
+        Re_Xferred = Re_Xferred + 1
       END DO
   END IF
       CALL ADM_Dvr_Packdvrvtk_surfacetype( Re_Buf, Db_Buf, Int_Buf, InData%VTK_surface, ErrStat2, ErrMsg2, OnlySize ) ! VTK_surface 
@@ -1304,6 +1340,24 @@ ENDIF
           OutData%storage(i1,i2) = ReKiBuf(Re_Xferred)
           Re_Xferred = Re_Xferred + 1
         END DO
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! outLine not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%outLine)) DEALLOCATE(OutData%outLine)
+    ALLOCATE(OutData%outLine(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%outLine.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%outLine,1), UBOUND(OutData%outLine,1)
+        OutData%outLine(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
       END DO
   END IF
       Buf_size=IntKiBuf( Int_Xferred )

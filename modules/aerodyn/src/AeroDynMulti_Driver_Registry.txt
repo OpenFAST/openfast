@@ -38,6 +38,7 @@ typedef   ^                         ^             character(1024)        VTK_Out
 typedef   ^                         ^             character(ChanLen)     WriteOutputHdr  {:}     -     -   "Channel headers" "-"
 typedef   ^                         ^             character(ChanLen)     WriteOutputUnt  {:}     -     -   "Channel units" "-"
 typedef   ^                         ^             ReKi                   storage          ::     -     -   "nChannel x nTime"
+typedef   ^                         ^             ReKi                   outLine          :      -     -   "Output line to be written to disk"
 typedef   ^                         ^             DvrVTK_SurfaceType     VTK_surface      -      -     -   "Data for VTK surface visualization"
 typedef   ^                         ^             INTEGER                VTK_tWidth       -      -     -   "Width of number of files for leading zeros in file name format"    -
 typedef   ^                         ^             INTEGER                n_VTKTime        -      -     -   "Number of time steps between writing VTK files"    -
