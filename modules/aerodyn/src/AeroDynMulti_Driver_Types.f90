@@ -68,6 +68,7 @@ IMPLICIT NONE
     TYPE(ProgDesc)  :: AD_ver      !< AeroDyn version information [-]
     INTEGER(IntKi)  :: unOutFile      !< unit number for writing output file [-]
     INTEGER(IntKi)  :: ActualChanLen      !< Actual length of channels written to text file (less than or equal to ChanLen) [-]
+    INTEGER(IntKi)  :: nDvrOutputs      !< Number of outputs for the driver (without AD and IW) [-]
     character(20)  :: Fmt_t      !< Format specifier for time channel [-]
     character(25)  :: Fmt_a      !< Format specifier for each column (including delimiter) [-]
     character(1)  :: delim      !< column delimiter [-]
@@ -781,6 +782,7 @@ ENDIF
          IF (ErrStat>=AbortErrLev) RETURN
     DstDvrM_OutputsData%unOutFile = SrcDvrM_OutputsData%unOutFile
     DstDvrM_OutputsData%ActualChanLen = SrcDvrM_OutputsData%ActualChanLen
+    DstDvrM_OutputsData%nDvrOutputs = SrcDvrM_OutputsData%nDvrOutputs
     DstDvrM_OutputsData%Fmt_t = SrcDvrM_OutputsData%Fmt_t
     DstDvrM_OutputsData%Fmt_a = SrcDvrM_OutputsData%Fmt_a
     DstDvrM_OutputsData%delim = SrcDvrM_OutputsData%delim
@@ -929,6 +931,7 @@ ENDIF
       END IF
       Int_BufSz  = Int_BufSz  + 1  ! unOutFile
       Int_BufSz  = Int_BufSz  + 1  ! ActualChanLen
+      Int_BufSz  = Int_BufSz  + 1  ! nDvrOutputs
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%Fmt_t)  ! Fmt_t
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%Fmt_a)  ! Fmt_a
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%delim)  ! delim
@@ -1037,6 +1040,8 @@ ENDIF
     IntKiBuf(Int_Xferred) = InData%unOutFile
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%ActualChanLen
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%nDvrOutputs
     Int_Xferred = Int_Xferred + 1
     DO I = 1, LEN(InData%Fmt_t)
       IntKiBuf(Int_Xferred) = ICHAR(InData%Fmt_t(I:I), IntKi)
@@ -1250,6 +1255,8 @@ ENDIF
     OutData%unOutFile = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%ActualChanLen = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%nDvrOutputs = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     DO I = 1, LEN(OutData%Fmt_t)
       OutData%Fmt_t(I:I) = CHAR(IntKiBuf(Int_Xferred))

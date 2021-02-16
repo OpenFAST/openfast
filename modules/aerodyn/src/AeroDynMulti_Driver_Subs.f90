@@ -56,6 +56,7 @@ module AeroDynMulti_Driver_Subs
    integer(IntKi), parameter :: idFmtBoth   = 3
    integer(IntKi), parameter, dimension(3) :: idFmtVALID  = (/idFmtAscii, idFmtBinary, idFmtBoth/)
 
+
 contains
 
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -72,7 +73,7 @@ subroutine DvrM_Init(DvrData, AD, IW, errStat,errMsg )
    CHARACTER(1000)      :: inputFile     ! String to hold the file name.
    CHARACTER(200)       :: git_commit    ! String containing the current git commit hash
    CHARACTER(20)        :: FlagArg       ! flag argument from command line
-   integer(IntKi)       :: j                                                             !< 
+   integer(IntKi)       :: j, iWT                                                             !< 
    type(AD_InitOutputType) :: InitOutData_AD    ! Output data from initialization
    errStat = ErrID_None
    errMsg  = ""
@@ -98,6 +99,18 @@ subroutine DvrM_Init(DvrData, AD, IW, errStat,errMsg )
 
    ! --- Initialize meshes
    call Init_Meshes(DvrData, errStat2, errMsg2); if(Failed()) return
+
+
+   ! --- Initialize driver-only outputs
+   DvrData%out%nDvrOutputs = DvrData%numTurbines*1
+   allocate(DvrData%out%WriteOutputHdr(1+DvrData%out%nDvrOutputs))
+   allocate(DvrData%out%WriteOutputUnt(1+DvrData%out%nDvrOutputs))
+   DvrData%out%WriteOutputHdr(1) = 'Time'
+   DvrData%out%WriteOutputUnt(1) = '(s)'
+   do iWT = 1, DvrData%numTurbines
+      DvrData%out%WriteOutputHdr(1+iWT*1) = 'Azimuth'
+      DvrData%out%WriteOutputUnt(1+iWT*1) = '(deg)'
+   enddo
 
    ! --- Initialize aerodyn 
    call Init_AeroDyn(DvrData, AD, DvrData%dT, InitOutData_AD, errStat2, errMsg2); if(Failed()) return
@@ -166,7 +179,7 @@ subroutine DvrM_TimeStep(nt, DvrData, AD, IW, errStat, errMsg)
    endif
    ! Calculate outputs at nt - 1
    call AD_CalcOutput( time, AD%u(2), AD%p, AD%x, AD%xd, AD%z, AD%OtherState, AD%y, AD%m, errStat2, errMsg2 ); if(Failed()) return
-   call Dvr_WriteOutputs(nt, time, DvrData%out, AD%y%WriteOutput, IW%y%WriteOutput, errStat2, errMsg2); if(Failed()) return
+   call Dvr_WriteOutputs(nt, time, DvrData, DvrData%out, AD%y%WriteOutput, IW%y%WriteOutput, errStat2, errMsg2); if(Failed()) return
 
    ! VTK outputs
    if (DvrData%out%WrVTK>0) then
@@ -269,8 +282,10 @@ subroutine Init_AeroDyn(DvrData, AD, dt, InitOutData, errStat, errMsg)
    end do
 
    ! move AD initOut data to AD Driver
-   call move_alloc(InitOutData%WriteOutputHdr, DvrData%out%WriteOutputHdr)
-   call move_alloc(InitOutData%WriteOutputUnt, DvrData%out%WriteOutputUnt)   
+   !call move_alloc(InitOutData%WriteOutputHdr, DvrData%out%WriteOutputHdr)
+   !call move_alloc(InitOutData%WriteOutputUnt, DvrData%out%WriteOutputUnt)   
+   call concatOutputs(DvrData, InitOutData%WriteOutputHdr, InitOutData%WriteOutputUnt, errStat2, errMsg2); if(Failed()) return
+
    DvrData%out%AD_ver = InitOutData%ver
 
    call cleanup()
@@ -310,8 +325,10 @@ subroutine Init_InflowWind(DvrData, IW, AD, dt, errStat, errMsg)
    type(InflowWind_InitInputType)  :: InitInData     ! Input data for initialization
    type(InflowWind_InitOutputType) :: InitOutData    ! Output data from initialization
    type(WTData), pointer :: wt ! Alias to shorten notation
-   character(ChanLen), allocatable  ::   WriteOutputHdr(:)
-   character(ChanLen), allocatable  ::   WriteOutputUnt(:)
+   !character(ChanLen), allocatable  ::   WriteOutputHdr(:)
+   !character(ChanLen), allocatable  ::   WriteOutputUnt(:)
+   errStat = ErrID_None
+   errMsg  = ''
 
    InitInData%InputFileName    = DvrData%IW_InputFile
    InitInData%Linearize        = .false.
@@ -339,27 +356,31 @@ subroutine Init_InflowWind(DvrData, IW, AD, dt, errStat, errMsg)
 
    ! --- Concatenate AD outputs to IW outputs
    ! Move Driver outputs data to temp storage
-   call move_alloc( DvrData%out%WriteOutputHdr, WriteOutputHdr)
-   call move_alloc( DvrData%out%WriteOutputUnt, WriteOutputUnt)   
-   nOut_Dvr= 1
-   nOut_AD = size(WriteOutputHdr)
-   nOut_IW = size(InitOutData%WriteOutputHdr)
-   allocate(DvrData%out%WriteOutputHdr(nOut_AD+nOut_IW+nOut_Dvr))
-   allocate(DvrData%out%WriteOutputUnt(nOut_AD+nOut_IW+nOut_Dvr))
-   !
-   DvrData%out%WriteOutputHdr(1) = 'Time'
-   DvrData%out%WriteOutputUnt(1) = '(s)'
-   DvrData%out%WriteOutputHdr(nOut_Dvr        +1:nOut_Dvr+nOut_AD) = WriteOutputHdr
-   DvrData%out%WriteOutputUnt(nOut_Dvr        +1:nOut_Dvr+nOut_AD) = WriteOutputUnt
-   DvrData%out%WriteOutputHdr(nOut_Dvr+nOut_AD+1:nOut_Dvr+nOut_AD+nOut_IW) = InitOutData%WriteOutputHdr
-   DvrData%out%WriteOutputUnt(nOut_Dvr+nOut_AD+1:nOut_Dvr+nOut_AD+nOut_IW) = InitOutData%WriteOutputUnt
+!    call move_alloc( DvrData%out%WriteOutputHdr, WriteOutputHdr)
+!    call move_alloc( DvrData%out%WriteOutputUnt, WriteOutputUnt)   
+!    nOut_Dvr= 1
+!    nOut_AD = size(WriteOutputHdr)
+!    nOut_IW = size(InitOutData%WriteOutputHdr)
+!    allocate(DvrData%out%WriteOutputHdr(nOut_AD+nOut_IW+nOut_Dvr))
+!    allocate(DvrData%out%WriteOutputUnt(nOut_AD+nOut_IW+nOut_Dvr))
+!    !
+!    DvrData%out%WriteOutputHdr(1) = 'Time'
+!    DvrData%out%WriteOutputUnt(1) = '(s)'
+!    DvrData%out%WriteOutputHdr(nOut_Dvr        +1:nOut_Dvr+nOut_AD) = WriteOutputHdr
+!    DvrData%out%WriteOutputUnt(nOut_Dvr        +1:nOut_Dvr+nOut_AD) = WriteOutputUnt
+!    DvrData%out%WriteOutputHdr(nOut_Dvr+nOut_AD+1:nOut_Dvr+nOut_AD+nOut_IW) = InitOutData%WriteOutputHdr
+!    DvrData%out%WriteOutputUnt(nOut_Dvr+nOut_AD+1:nOut_Dvr+nOut_AD+nOut_IW) = InitOutData%WriteOutputUnt
+
+   call concatOutputs(DvrData, InitOutData%WriteOutputHdr, InitOutData%WriteOutputUnt, errStat2, errMsg2); if(Failed()) return
+
+
    call cleanup()
 contains
    subroutine cleanup()
       call InflowWind_DestroyInitInput( InitInData, ErrStat2, ErrMsg2 )   
       call InflowWind_DestroyInitOutput( InitOutData, ErrStat2, ErrMsg2 )      
-      if (allocated(WriteOutputHdr)) deallocate(WriteOutputHdr)
-      if (allocated(WriteOutputUnt)) deallocate(WriteOutputUnt)
+      !if (allocated(WriteOutputHdr)) deallocate(WriteOutputHdr)
+      !if (allocated(WriteOutputUnt)) deallocate(WriteOutputUnt)
    end subroutine cleanup
 
    logical function Failed()
@@ -370,6 +391,40 @@ contains
       endif
    end function Failed
 end subroutine Init_InflowWind
+
+!> Concatenate new output channels info to the extisting ones in the driver
+subroutine concatOutputs(DvrData, WriteOutputHdr, WriteOutputUnt, errStat, errMsg)
+   type(DvrM_SimData), target,   intent(inout) :: DvrData       !< Input data for initialization (intent out for getting AD WriteOutput names/units)
+   character(ChanLen), dimension(:), allocatable, intent(inout) ::  WriteOutputHdr !< Channel headers
+   character(ChanLen), dimension(:), allocatable, intent(inout) ::  WriteOutputUnt !< Channel units
+   integer(IntKi)              , intent(  out) :: errStat       !< Status of error message
+   character(*)                , intent(  out) :: errMsg        !< Error message if ErrStat /= ErrID_None
+   ! Locals
+   character(ChanLen), allocatable :: TmpHdr(:)
+   character(ChanLen), allocatable :: TmpUnt(:)
+   integer :: nOld, nAdd
+   errStat = ErrID_None
+   errMsg  = ''
+
+   if (.not.allocated(DvrData%out%WriteOutputHdr)) then
+      call move_alloc(WriteOutputHdr, DvrData%out%WriteOutputHdr)
+      call move_alloc(WriteOutputUnt, DvrData%out%WriteOutputUnt)   
+   else
+      call move_alloc(DvrData%out%WriteOutputHdr, TmpHdr)
+      call move_alloc(DvrData%out%WriteOutputUnt, TmpUnt)   
+
+      nOld = size(DvrData%out%WriteOutputHdr)
+      nAdd = size(WriteOutputHdr)
+      allocate(DvrData%out%WriteOutputHdr(nOld+nAdd))
+      allocate(DvrData%out%WriteOutputUnt(nOld+nAdd))
+      DvrData%out%WriteOutputHdr(1:nOld) = TmpHdr
+      DvrData%out%WriteOutputUnt(1:nOld) = TmpUnt
+      DvrData%out%WriteOutputHdr(nOld+1:nOld+nAdd) = WriteOutputHdr
+      DvrData%out%WriteOutputUnt(nOld+1:nOld+nAdd) = WriteOutputUnt
+      deallocate(TmpHdr)
+      deallocate(TmpUnt)
+   endif
+end subroutine concatOutputs
 !----------------------------------------------------------------------------------------------------------------------------------
 !>
 subroutine Init_Meshes(DvrData,  errStat, errMsg)
@@ -695,15 +750,16 @@ subroutine Set_AD_Inputs(nt,DvrData,AD,IW,errStat,errMsg)
       call Transfer_Point_to_Point(wt%nac%ptMesh, wt%hub%ptMesh, wt%nac%map2hubPt, errStat2, errMsg2); if(Failed()) return
       ! Rotation
       if (wt%hub%motionType == idHubMotionConstant) then
-         RotSpeed = wt%hub%speed ! TODO TODO Other motion types
          ! save the azimuth at t (not t+dt) for output to file:
-         wt%hub%azimuth = MODULO(REAL(DvrData%dT*(nt-1)*RotSpeed, ReKi) * R2D, 360.0_ReKi )
+         wt%hub%azimuth = MODULO(REAL(DvrData%dT*(nt-1)*wt%hub%speed, ReKi) * R2D, 360.0_ReKi )
       else if (wt%hub%motionType == idHubMotionVariable) then
          call interpTimeValue(wt%hub%motion, time, wt%hub%iMotion, hubMotion)
          !print*,hubMotion
-         RotSpeed= hubMotion(2)
+         wt%hub%speed   = hubMotion(2)
          wt%hub%azimuth = MODULO(hubMotion(1)*R2D, 360.0_ReKi )
       endif
+      RotSpeed = wt%hub%speed
+
       ! Rotation always around x
       theta(1) = wt%hub%azimuth*D2R + DvrData%dt * RotSpeed
       theta(2) = 0.0_ReKi
@@ -1086,41 +1142,46 @@ contains
 
 end subroutine ValidateInputs
 !----------------------------------------------------------------------------------------------------------------------------------
-subroutine Dvr_WriteOutputs(nt, t, out, AD_output, IW_output, errStat, errMsg)
+subroutine Dvr_WriteOutputs(nt, t, DvrData, out, AD_output, IW_output, errStat, errMsg)
    integer(IntKi)         ,  intent(in   )   :: nt                   ! simulation time step
    real(DbKi)             ,  intent(in   )   :: t                    ! simulation time (s)
+   type(DvrM_SimData),       intent(inout)   :: DvrData              ! driver data
    type(DvrM_Outputs)     ,  intent(inout)   :: out
-   real(ReKi)             ,  intent(in   )   :: AD_output(:)            ! array of aerodyn outputs
+   real(ReKi)             ,  intent(in   )   :: AD_output(:)         ! array of aerodyn outputs
    real(ReKi)             ,  intent(in   )   :: IW_output(:)         ! array of inflowwind outputs
    integer(IntKi)         ,  intent(inout)   :: errStat              ! Status of error message
    character(*)           ,  intent(inout)   :: errMsg               ! Error message if ErrStat /= ErrID_None
    ! Local variables.
    character(ChanLen)                    :: tmpStr                                    ! temporary string to print the time output as text
+   integer :: nDV 
    integer :: nAD
    integer :: nIW
+   integer :: iWT
    errStat = ErrID_None
    errMsg  = ''
+
+   ! Packing all outputs excpet time into one array
+   nAD = size(AD_output)
+   nIW = size(IW_output)
+   nDV = DvrData%out%nDvrOutputs
+   do iWT = 1, DvrData%numTurbines
+      out%outLine(1+ (iWT-1)*1) = DvrData%WT(iWT)%hub%azimuth
+   enddo
+   out%outLine(nDV+1:nDV+nAD)  = AD_output
+   out%outLine(nDV+nAD+1:)     = IW_output
 
    if (out%fileFmt==idFmtBoth .or. out%fileFmt == idFmtAscii) then
       ! ASCII
       ! time
       write( tmpStr, out%Fmt_t ) t  ! '(F15.4)'
       call WrFileNR( out%unOutFile, tmpStr(1:out%ActualChanLen) )
-      ! 
-      out%outLine(1:size(AD_output) )  = AD_output
-      out%outLine(size(AD_output)+1:)  = IW_output
       call WrNumAryFileNR(out%unOutFile, out%outLine,  out%Fmt_a, errStat, errMsg)
-      !call WrNumAryFileNR(out%unOutFile, AD_output,  out%Fmt_a, errStat, errMsg)
-      !call WrNumAryFileNR(out%unOutFile, IW_output,  out%Fmt_a, errStat, errMsg)
       ! write a new line (advance to the next line)
       write(out%unOutFile,'()')
    endif
    if (out%fileFmt==idFmtBoth .or. out%fileFmt == idFmtBinary) then
       ! Store for binary
-      nAD = size(AD_output)
-      nIW = size(IW_output)
-      out%storage(1:nAD        ,nt) = AD_output(:)
-      out%storage(nAD+1:nAD+nIW,nt) = IW_output(:)
+      out%storage(1:nDV+nAD+nIW, nt) = out%outLine(1:nDV+nAD+nIW)
    endif
       
 end subroutine Dvr_WriteOutputs
@@ -1137,9 +1198,11 @@ subroutine DvrM_InitializeOutputs(out, numSteps, errStat, errMsg)
       character(ChanLen)                        :: colTxt
       character(ChanLen)                        :: caseTxt
 
-      
-
       numOuts = size(out%WriteOutputHdr)
+
+      call AllocAry(out%outLine, numOuts-1, 'outLine', errStat, errMsg); ! NOTE: time not stored
+      out%outLine=0.0_ReKi
+
       ! --- Ascii
       if (out%fileFmt==idFmtBoth .or. out%fileFmt == idFmtAscii) then
 
@@ -1150,8 +1213,6 @@ subroutine DvrM_InitializeOutputs(out, numSteps, errStat, errMsg)
             out%ActualChanLen = max(out%ActualChanLen, LEN_TRIM(out%WriteOutputHdr(i)))
             out%ActualChanLen = max(out%ActualChanLen, LEN_TRIM(out%WriteOutputUnt(i)))
          end do
-         call AllocAry(out%outLine, numOuts-1, 'outLine', errStat, errMsg);
-         out%outLine=0.0_ReKi
 
          ! create format statements for time and the array outputs:
          out%Fmt_t = '(F'//trim(num2lstr(out%ActualChanLen))//'.4)'

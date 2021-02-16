@@ -27,6 +27,7 @@ typedef    ^    DvrVTK_SurfaceType    DvrVTK_BLSurfaceType    BladeShape    {:} 
 typedef   AeroDynMulti_Driver/ADM_Dvr  DvrM_Outputs ProgDesc          AD_ver           -      -     -   "AeroDyn version information" -
 typedef   ^                         ^             IntKi                  unOutFile        -      -     -   "unit number for writing output file" "-"
 typedef   ^                         ^             IntKi                  ActualChanLen    -      -     -   "Actual length of channels written to text file (less than or equal to ChanLen)" "-"
+typedef   ^                         ^             IntKi                  nDvrOutputs      -      -     -   "Number of outputs for the driver (without AD and IW)" "-"
 typedef   ^                         ^             character(20)          Fmt_t            -      -     -   "Format specifier for time channel" "-"
 typedef   ^                         ^             character(25)          Fmt_a            -      -     -   "Format specifier for each column (including delimiter)" "-"
 typedef   ^                         ^             character(1)           delim            -      -     -   "column delimiter" "-"
