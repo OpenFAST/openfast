@@ -19,10 +19,11 @@
 !**********************************************************************************************************************************
 MODULE InflowWindAPI
 
-USE ISO_C_BINDING
-USE InflowWind
-USE InflowWind_Types               
-USE NWTC_Library
+    USE ISO_C_BINDING
+    USE InflowWind
+    USE InflowWind_Subs
+    USE InflowWind_Types
+    USE NWTC_Library
 
 IMPLICIT NONE
 
@@ -88,10 +89,10 @@ PRINT*, ErrMsg
 ErrMsg_C = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_c )
 
 CALL InflowWind_CopyInput(InputGuess, InputData, MESH_UPDATECOPY, ErrStat, ErrMsg )
-CALL InflowWind_DestroyInput(InputGuess, ErrStat, ErrMsg ) ! don't need this anymore
+CALL InflowWind_DestroyInput(InputGuess, ErrStat, ErrMsg ) 
 
 CALL InflowWind_CopyConstrState(ConstrStateGuess, ConstrStates, MESH_UPDATECOPY, ErrStat, ErrMsg )
-CALL InflowWind_DestroyConstrState(ConstrStateGuess, ErrStat, ErrMsg ) ! don't need this anymore
+CALL InflowWind_DestroyConstrState(ConstrStateGuess, ErrStat, ErrMsg ) 
 
 ! NEED TO COPY WriteOutput CHANNEL INFO
 
@@ -103,13 +104,18 @@ END SUBROUTINE IFW_INIT_C
 !--------------------------------------------- IFW CALCOUTPUT --------------------------------------------------
 !===============================================================================================================
 
-SUBROUTINE IFW_CALCOUTPUT_C(Time_C)
+SUBROUTINE IFW_CALCOUTPUT_C(Time_C,ErrStat_C,ErrMsg_C) BIND (C, NAME='IFW_CALCOUTPUT_C')
 
-! Need to convert C double to DbKi
-REAL(C_DOUBLE)            :: Time_C
+REAL(C_DOUBLE)                , INTENT(IN   )      :: Time_C
+INTEGER(C_INT)                , INTENT(  OUT)      :: ErrStat_C
+CHARACTER(KIND=C_CHAR)        , INTENT(  OUT)      :: ErrMsg_C
+
+! Local variables
 REAL(DbKi)                :: Time
 INTEGER                   :: ErrStat
 CHARACTER(ErrMsgLen)      :: ErrMsg
+
+! Need to convert C double to DbKi
 
 ! Need to add some code to prepare and process inputs
 
@@ -117,6 +123,15 @@ CALL InflowWind_CalcOutput( Time, InputData, p, ContStates, DiscStates, ConstrSt
 
 ! NEED TO COPY WriteOutput CHANNEL INFO
 ! NEED TO COPY SOME INFO OUT OF Y
+
+! Convert the outputs of InflowWind_CalcOutput from Fortran to C
+PRINT*, ErrMsg
+   if (ErrStat /= 0) then
+      ErrStat_C = ErrID_Fatal
+   else
+      ErrStat_C = ErrID_None
+   end if
+ErrMsg_C = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_C )
 
 PRINT*, "DONE WITH IFW_CALCOUPUT_C!"
 
@@ -126,13 +141,26 @@ END SUBROUTINE IFW_CALCOUTPUT_C
 !--------------------------------------------------- IFW END ---------------------------------------------------
 !===============================================================================================================
 
-SUBROUTINE IFW_END_C()
+SUBROUTINE IFW_END_C(ErrStat_C,ErrMsg_C) BIND (C, NAME='IFW_END_C')
 
+INTEGER(C_INT)                , INTENT(  OUT)      :: ErrStat_C
+CHARACTER(KIND=C_CHAR)        , INTENT(  OUT)      :: ErrMsg_C
+
+! Local variables
 INTEGER                          :: ErrStat
 CHARACTER(ErrMsgLen)             :: ErrMsg
 
 ! Need InputData from ?
 CALL InflowWind_End( InputData, p, ContStates, DiscStates, ConstrStateGuess, OtherStates, y, m, ErrStat, ErrMsg )
+
+! Convert the outputs of InflowWind_End from Fortran to C
+PRINT*, ErrMsg
+   if (ErrStat /= 0) then
+      ErrStat_C = ErrID_Fatal
+   else
+      ErrStat_C = ErrID_None
+   end if
+ErrMsg_C = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_C )
 
 PRINT*, "DONE WITH IFW_END_C!"
 
