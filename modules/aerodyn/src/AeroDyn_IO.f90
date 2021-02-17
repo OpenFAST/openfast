@@ -23,7 +23,6 @@ MODULE AeroDyn_IO
    use NWTC_Library
    use AeroDyn_Types
    use BEMTUncoupled, only : SkewMod_Uncoupled, SkewMod_PittPeters, VelocityIsZero
-   use AirFoilInfo,   only : AFI_ComputeAirfoilCoefs
    use FVW_Subs,      only : FVW_AeroOuts
 
    USE AeroDyn_AllBldNdOuts_IO
@@ -1676,7 +1675,7 @@ CONTAINS
    !..........................................................................................
    subroutine Calc_WriteOutput_BEMT
          ! blade outputs
-      do k=1,p%numBlades
+      do k=1,min(p%numBlades,3)
          m%AllOuts( BAzimuth(k) ) = MODULO( m%BEMT_u(indx)%psi(k)*R2D, 360.0_ReKi )
        ! m%AllOuts( BPitch(  k) ) = calculated in SetInputsForBEMT
 
@@ -1955,7 +1954,7 @@ CONTAINS
             m%AllOuts( B1AeroMxh ) = tmp(1)
             m%AllOuts( B1AeroMyh ) = tmp(2)
             m%AllOuts( B1AeroMzh ) = tmp(3)
-            m%AllOuts( B1AeroPwr ) = m%BEMT_u(indx)%omega * m%AllOuts( B1AeroMxh )
+            m%AllOuts( B1AeroPwr ) = omega * m%AllOuts( B1AeroMxh )
          else if (k==2) then
             tmp = matmul( u%HubMotion%Orientation(:,:,1),  m%HubLoad%force(:,1))
             m%AllOuts( B2AeroFxh ) = tmp(1)
@@ -1965,7 +1964,7 @@ CONTAINS
             m%AllOuts( B2AeroMxh ) = tmp(1)
             m%AllOuts( B2AeroMyh ) = tmp(2)
             m%AllOuts( B2AeroMzh ) = tmp(3)
-            m%AllOuts( B2AeroPwr ) = m%BEMT_u(indx)%omega * m%AllOuts( B2AeroMxh )
+            m%AllOuts( B2AeroPwr ) = omega * m%AllOuts( B2AeroMxh )
          else if (k==3) then
             tmp = matmul( u%HubMotion%Orientation(:,:,1),  m%HubLoad%force(:,1))
             m%AllOuts( B3AeroFxh ) = tmp(1)
@@ -1975,7 +1974,7 @@ CONTAINS
             m%AllOuts( B3AeroMxh ) = tmp(1)
             m%AllOuts( B3AeroMyh ) = tmp(2)
             m%AllOuts( B3AeroMzh ) = tmp(3)
-            m%AllOuts( B3AeroPwr ) = m%BEMT_u(indx)%omega * m%AllOuts( B3AeroMxh )
+            m%AllOuts( B3AeroPwr ) = omega * m%AllOuts( B3AeroMxh )
          else if (k==4) then
             tmp = matmul( u%HubMotion%Orientation(:,:,1),  m%HubLoad%force(:,1))
             m%AllOuts( B4AeroFxh ) = tmp(1)
@@ -1985,7 +1984,7 @@ CONTAINS
             m%AllOuts( B4AeroMxh ) = tmp(1)
             m%AllOuts( B4AeroMyh ) = tmp(2)
             m%AllOuts( B4AeroMzh ) = tmp(3)
-            m%AllOuts( B4AeroPwr ) = m%BEMT_u(indx)%omega * m%AllOuts( B4AeroMxh )
+            m%AllOuts( B4AeroPwr ) = omega * m%AllOuts( B4AeroMxh )
          endif
       end do
       tmp = matmul( u%HubMotion%Orientation(:,:,1), force )
