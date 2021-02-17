@@ -45,8 +45,8 @@ TYPE(InflowWind_MiscVarType)            :: m                 !< Misc variables f
 TYPE(InflowWind_InitOutputType)         :: InitOutData       !< Initial output data -- Names, units, and version info.
 
 INTEGER, PARAMETER :: IntfStrLen  = 1025        ! length of strings through the C interface
-INTEGER, PARAMETER :: InputStringLength  = 3  ! Fixed length for all lines of the string-based input file
-INTEGER, PARAMETER :: InputFileLines = 4       ! Number of lines expected in the string-based input file array
+INTEGER, PARAMETER :: InputStringLength  = 179  ! Fixed length for all lines of the string-based input file
+INTEGER, PARAMETER :: InputFileLines = 55       ! Number of lines expected in the string-based input file array
 
 CONTAINS
 
