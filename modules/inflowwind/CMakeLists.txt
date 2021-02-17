@@ -51,9 +51,8 @@ set(IFW_SOURCES
 add_library(ifwlib ${IFW_SOURCES})
 target_link_libraries(ifwlib nwtclibs)
 
-add_library(IFW_C_INTERFACE SHARED driver/IFW_C.f90 ${IFW_SOURCES})
-set_target_properties(IFW_C_INTERFACE PROPERTIES PREFIX "" SUFFIX ".so")
-target_link_libraries(IFW_C_INTERFACE nwtclibs)
+add_library(ifw_c_lib driver/IFW_C.f90)
+target_link_libraries(ifw_c_lib ifwlib)
 
 set(IFW_DRIVER_SOURCES
   src/InflowWind_Driver_Types.f90
