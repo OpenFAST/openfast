@@ -44,8 +44,9 @@ TYPE(InflowWind_OutputType)             :: y                 !< Initial output (
 TYPE(InflowWind_MiscVarType)            :: m                 !< Misc variables for optimization (not copied in glue code)
 TYPE(InflowWind_InitOutputType)         :: InitOutData       !< Initial output data -- Names, units, and version info.
 
-INTEGER, PARAMETER :: InputStringLength  = 179
-INTEGER, PARAMETER :: InputFileLines = 55
+INTEGER, PARAMETER :: IntfStrLen  = 1025        ! length of strings through the C interface
+INTEGER, PARAMETER :: InputStringLength  = 3  ! Fixed length for all lines of the string-based input file
+INTEGER, PARAMETER :: InputFileLines = 4       ! Number of lines expected in the string-based input file array
 
 CONTAINS
 
@@ -56,7 +57,7 @@ SUBROUTINE IFW_INIT_C(InputFileStrings_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='IF
 
     TYPE(c_ptr)                   , INTENT(IN   )      :: InputFileStrings_C
     INTEGER(C_INT)                , INTENT(  OUT)      :: ErrStat_C
-    CHARACTER(KIND=C_CHAR)        , INTENT(  OUT)      :: ErrMsg_C
+    CHARACTER(KIND=C_CHAR)        , INTENT(  OUT)      :: ErrMsg_C(IntfStrLen) 
 
     ! Local Variables
     CHARACTER(InputStringLength), DIMENSION(InputFileLines) :: InputFileStrings
