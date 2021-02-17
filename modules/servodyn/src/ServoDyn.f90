@@ -380,33 +380,8 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       !............................................................................................
 
    Interval = p%DT      
-      
-      !............................................................................................
-      ! After we've set up all the data for everything else, we'll call the routines to initialize the Bladed Interface
-      ! (it requires initial guesses for input/output)
-      !............................................................................................
-      
-   IF ( p%UseBladedInterface ) THEN
 
-      p%AirDens      = InitInp%AirDens
-      p%AvgWindSpeed = InitInp%AvgWindSpeed
-      
-      CALL BladedInterface_Init(u, p, m, y, InputFileData, InitInp, ErrStat2, ErrMsg2 )
-         if (Failed())  return;
-         
-      m%LastTimeCalled   = - m%dll_data%DLL_DT  ! we'll initialize the last time the DLL was called as -1 DLL_DT.
-      m%LastTimeFiltered = - p%DT      ! we'll initialize the last time the DLL was filtered as -1 DT.
-      m%FirstWarn        = .TRUE.
-   ELSE
-      m%dll_data%DLL_DT = p%DT         ! DLL_DT is used to compute the pitch rate and acceleration outputs
-      p%DLL_n  = 1                     ! Without a call to the DLL, update the history every time step
-
-      p%DLL_Trgt%FileName = ""
-      p%DLL_Trgt%ProcName = ""
-      
-   END IF
-         
-  
+ 
       !............................................................................................
       ! Setup and initialize the StC submodule (possibly multiple instances at each location)
       !............................................................................................
@@ -428,6 +403,42 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       if (Failed())  return;
 
 
+      !............................................................................................
+      ! After we've set up all the data for everything else, we'll call the routines to initialize the Bladed Interface
+      ! (it requires initial guesses for input/output)
+      !............................................................................................
+      
+   IF ( p%UseBladedInterface ) THEN
+      if (UnSum >0) then
+         write(UnSum, '(A)') ''
+         write(UnSum, '(A)') SectionDivide
+         write(UnSum, '(A)')              ' Bladed Interface: in use'
+      endif
+
+      p%AirDens      = InitInp%AirDens
+      p%AvgWindSpeed = InitInp%AvgWindSpeed
+      
+      CALL BladedInterface_Init(u, p, m, y, InputFileData, InitInp, UnSum, ErrStat2, ErrMsg2 )
+         if (Failed())  return;
+         
+      m%LastTimeCalled   = - m%dll_data%DLL_DT  ! we'll initialize the last time the DLL was called as -1 DLL_DT.
+      m%LastTimeFiltered = - p%DT      ! we'll initialize the last time the DLL was filtered as -1 DT.
+      m%FirstWarn        = .TRUE.
+   ELSE
+      m%dll_data%DLL_DT = p%DT         ! DLL_DT is used to compute the pitch rate and acceleration outputs
+      p%DLL_n  = 1                     ! Without a call to the DLL, update the history every time step
+
+      p%DLL_Trgt%FileName = ""
+      p%DLL_Trgt%ProcName = ""
+      
+      if (UnSum >0) then
+         write(UnSum, '(A)') ''
+         write(UnSum, '(A)') SectionDivide
+         write(UnSum, '(A)')              ' Bladed Interface: not used'
+      endif
+   END IF
+         
+  
       !............................................................................................
       ! Set Init outputs for linearization (after StrucCtrl, in case we ever add the StrucCtrl to the linearization features):
       !............................................................................................
