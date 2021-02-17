@@ -125,8 +125,8 @@ typedef     ^                   ^               ReKi                            
 typedef     ^                   ^               IntKi                            nNW           -   -  -  "Number of active near wake panels"      -
 typedef     ^                   ^               IntKi                            nFW           -   -  -  "Number of active far  wake panels"      -
 typedef     ^                   ^               IntKi                            iStep         -   -  -  "Current step number used for update state"      -
-typedef     ^                   ^               IntKi                            iTip          -   -  -  "Index where tip vorticity will be placed. TODO, per blade"      -
-typedef     ^                   ^               IntKi                            iRoot         -   -  -  "Index where root vorticity will be placed"      -
+typedef     ^                   ^               IntKi                            iTip          :   -  -  "Index where tip vorticity will be placed. TODO, per blade"      -
+typedef     ^                   ^               IntKi                            iRoot         :   -  -  "Index where root vorticity will be placed"      -
 typedef     ^                   ^               IntKi                            VTKstep       -   -  -  "Current vtk output step number"      -
 typedef     ^                   ^               DbKi                             VTKlastTime   -   -   -  "Time the last VTK file set was written out" s
 typedef     ^                   ^               ReKi                             r_wind        ::   -  -  "List of points where wind is requested for next time step"  -

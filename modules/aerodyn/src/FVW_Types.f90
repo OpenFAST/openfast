@@ -152,8 +152,8 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: nNW      !< Number of active near wake panels [-]
     INTEGER(IntKi)  :: nFW      !< Number of active far  wake panels [-]
     INTEGER(IntKi)  :: iStep      !< Current step number used for update state [-]
-    INTEGER(IntKi)  :: iTip      !< Index where tip vorticity will be placed. TODO, per blade [-]
-    INTEGER(IntKi)  :: iRoot      !< Index where root vorticity will be placed [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iTip      !< Index where tip vorticity will be placed. TODO, per blade [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iRoot      !< Index where root vorticity will be placed [-]
     INTEGER(IntKi)  :: VTKstep      !< Current vtk output step number [-]
     REAL(DbKi)  :: VTKlastTime      !< Time the last VTK file set was written out [s]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: r_wind      !< List of points where wind is requested for next time step [-]
@@ -3013,8 +3013,30 @@ ENDIF
     DstMiscData%nNW = SrcMiscData%nNW
     DstMiscData%nFW = SrcMiscData%nFW
     DstMiscData%iStep = SrcMiscData%iStep
+IF (ALLOCATED(SrcMiscData%iTip)) THEN
+  i1_l = LBOUND(SrcMiscData%iTip,1)
+  i1_u = UBOUND(SrcMiscData%iTip,1)
+  IF (.NOT. ALLOCATED(DstMiscData%iTip)) THEN 
+    ALLOCATE(DstMiscData%iTip(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%iTip.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
     DstMiscData%iTip = SrcMiscData%iTip
+ENDIF
+IF (ALLOCATED(SrcMiscData%iRoot)) THEN
+  i1_l = LBOUND(SrcMiscData%iRoot,1)
+  i1_u = UBOUND(SrcMiscData%iRoot,1)
+  IF (.NOT. ALLOCATED(DstMiscData%iRoot)) THEN 
+    ALLOCATE(DstMiscData%iRoot(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%iRoot.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
     DstMiscData%iRoot = SrcMiscData%iRoot
+ENDIF
     DstMiscData%VTKstep = SrcMiscData%VTKstep
     DstMiscData%VTKlastTime = SrcMiscData%VTKlastTime
 IF (ALLOCATED(SrcMiscData%r_wind)) THEN
@@ -3448,6 +3470,12 @@ ENDIF
 IF (ALLOCATED(MiscData%Vind_FW)) THEN
   DEALLOCATE(MiscData%Vind_FW)
 ENDIF
+IF (ALLOCATED(MiscData%iTip)) THEN
+  DEALLOCATE(MiscData%iTip)
+ENDIF
+IF (ALLOCATED(MiscData%iRoot)) THEN
+  DEALLOCATE(MiscData%iRoot)
+ENDIF
 IF (ALLOCATED(MiscData%r_wind)) THEN
   DEALLOCATE(MiscData%r_wind)
 ENDIF
@@ -3670,8 +3698,16 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! nNW
       Int_BufSz  = Int_BufSz  + 1  ! nFW
       Int_BufSz  = Int_BufSz  + 1  ! iStep
-      Int_BufSz  = Int_BufSz  + 1  ! iTip
-      Int_BufSz  = Int_BufSz  + 1  ! iRoot
+  Int_BufSz   = Int_BufSz   + 1     ! iTip allocated yes/no
+  IF ( ALLOCATED(InData%iTip) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! iTip upper/lower bounds for each dimension
+      Int_BufSz  = Int_BufSz  + SIZE(InData%iTip)  ! iTip
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! iRoot allocated yes/no
+  IF ( ALLOCATED(InData%iRoot) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! iRoot upper/lower bounds for each dimension
+      Int_BufSz  = Int_BufSz  + SIZE(InData%iRoot)  ! iRoot
+  END IF
       Int_BufSz  = Int_BufSz  + 1  ! VTKstep
       Db_BufSz   = Db_BufSz   + 1  ! VTKlastTime
   Int_BufSz   = Int_BufSz   + 1     ! r_wind allocated yes/no
@@ -4475,10 +4511,36 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%iStep
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%iTip
+  IF ( .NOT. ALLOCATED(InData%iTip) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%iRoot
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
     Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%iTip,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%iTip,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%iTip,1), UBOUND(InData%iTip,1)
+        IntKiBuf(Int_Xferred) = InData%iTip(i1)
+        Int_Xferred = Int_Xferred + 1
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%iRoot) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%iRoot,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%iRoot,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%iRoot,1), UBOUND(InData%iRoot,1)
+        IntKiBuf(Int_Xferred) = InData%iRoot(i1)
+        Int_Xferred = Int_Xferred + 1
+      END DO
+  END IF
     IntKiBuf(Int_Xferred) = InData%VTKstep
     Int_Xferred = Int_Xferred + 1
     DbKiBuf(Db_Xferred) = InData%VTKlastTime
@@ -5790,10 +5852,42 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     OutData%iStep = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
-    OutData%iTip = IntKiBuf(Int_Xferred)
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! iTip not allocated
     Int_Xferred = Int_Xferred + 1
-    OutData%iRoot = IntKiBuf(Int_Xferred)
+  ELSE
     Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%iTip)) DEALLOCATE(OutData%iTip)
+    ALLOCATE(OutData%iTip(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%iTip.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%iTip,1), UBOUND(OutData%iTip,1)
+        OutData%iTip(i1) = IntKiBuf(Int_Xferred)
+        Int_Xferred = Int_Xferred + 1
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! iRoot not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%iRoot)) DEALLOCATE(OutData%iRoot)
+    ALLOCATE(OutData%iRoot(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%iRoot.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%iRoot,1), UBOUND(OutData%iRoot,1)
+        OutData%iRoot(i1) = IntKiBuf(Int_Xferred)
+        Int_Xferred = Int_Xferred + 1
+      END DO
+  END IF
     OutData%VTKstep = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%VTKlastTime = DbKiBuf(Db_Xferred)
