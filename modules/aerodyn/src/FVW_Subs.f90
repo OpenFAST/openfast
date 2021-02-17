@@ -283,25 +283,27 @@ subroutine Map_NW_FW(p, m, z, x, ErrStat, ErrMsg)
          do iW=1,p%nWings
             if (p%FullCirculationStart>0 .and. m%nFW<3) then
                ! we might run into the issue that the circulation is 0
-               m%iTip =-1
-               m%iRoot=-1
+               m%iTip(iW) =-1
+               m%iRoot(iW)=-1
             endif
             ! NOTE: on the first pass, m%iTip and m%iRoot are computed, TODO per blade
             call PlaceTipRoot(p%nSpan, x%Gamma_NW(:,m%nNW,iW), x%r_NW(1:3,:,m%nNW,iW), x%Eps_NW(1:3,:,m%nNW,iW),& ! inputs
-               m%iRoot, m%iTip, FWGamma(iW), FWEpsTip, FWEpsRoot) ! outputs
+               m%iRoot(iW), m%iTip(iW), FWGamma(iW), FWEpsTip, FWEpsRoot) ! outputs
             x%Gamma_FW(1:FWnSpan,iAgeFW,iW) = FWGamma(iW)
             x%Eps_FW(3,1:FWnSpan,iAgeFW,iW) = FWEpsTip  ! HACK tip put in third
             x%Eps_FW(2,1:FWnSpan,iAgeFW,iW) = FWEpsRoot ! HACK root put in second
             x%Eps_FW(1,1:FWnSpan,iAgeFW,iW) = FWEpsTip  ! For shed vorticity..
          enddo
-         iTip  = m%iTip 
-         iRoot = m%iRoot
-      else
-         iRoot=1
-         iTip=p%nSpan+1
       endif
       ! Far wake point always mapped to last near wake
       do iW=1,p%nWings
+         if (m%nNW==p%nNWMax) then
+            iTip  = m%iTip(iW)
+            iRoot = m%iRoot(iW)
+         else
+            iRoot = 1
+            iTip  = p%nSpan+1
+         endif
          x%r_FW(1:3,1        ,iAgeFW,iW) =  x%r_NW(1:3,iRoot,p%nNWMax+1,iW) ! Point 1 (root)
          x%r_FW(1:3,FWnSpan+1,iAgeFW,iW) =  x%r_NW(1:3,iTip ,p%nNWMax+1,iW) ! Point FWnSpan (tip)
          !if ((FWnSpan==2)) then
