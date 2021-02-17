@@ -673,7 +673,18 @@ subroutine Init_y(y, u, p, errStat, errMsg)
       y%TowerLoad%nnodes = 0
    end if
 
+      call MeshCopy ( SrcMesh  = u%NacelleMotion  &
+                    , DestMesh = y%NacelleLoad    &
+                    , CtrlCode = MESH_SIBLING     &
+                    , IOS      = COMPONENT_OUTPUT &
+                    , force    = .TRUE.           &
+                    , moment   = .TRUE.           &
+                    , ErrStat  = ErrStat2         &
+                    , ErrMess  = ErrMsg2          )
    
+         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
+         if (ErrStat >= AbortErrLev) RETURN         
+         
    allocate( y%BladeLoad(p%numBlades), stat=ErrStat2 )
    if (errStat2 /= 0) then
       call SetErrStat( ErrID_Fatal, 'Error allocating y%BladeLoad.', ErrStat, ErrMsg, RoutineName )      
@@ -750,6 +761,7 @@ subroutine Init_u( u, p, InputFileData, InitInp, errStat, errMsg )
       
    u%InflowOnBlade = 0.0_ReKi
    u%UserProp      = 0.0_ReKi
+   u%InflowOnNacelle = 0.0_ReKi
    
       ! Meshes for motion inputs (ElastoDyn and/or BeamDyn)
          !................
@@ -946,6 +958,39 @@ subroutine Init_u( u, p, InputFileData, InitInp, errStat, errMsg )
                
    
    end do !k=numBlades
+   
+   
+   
+      !................
+      ! Nacelle
+      !................
+      call MeshCreate ( BlankMesh = u%NacelleMotion &
+                       ,IOS       = COMPONENT_INPUT &
+                       ,Nnodes    = 1               &
+                       ,ErrStat   = ErrStat2        &
+                       ,ErrMess   = ErrMsg2         &
+                       ,Orientation     = .true.    &
+                       ,TranslationDisp = .true.    &
+                       ,TranslationVel  = .true.    &
+                      )
+            call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+
+      if (errStat >= AbortErrLev) return
+            
+         ! set node initial position/orientation
+      position = InitInp%HubPosition
+      position(1:2) = 0
+      call MeshPositionNode(u%NacelleMotion, 1, position, errStat2, errMsg2, orient=InitInp%NacelleOrientation)
+         call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+
+      call MeshConstructElement( u%NacelleMotion, ELEMENT_POINT, errStat2, errMsg2, p1=1 )
+         call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+
+      call MeshCommit(u%NacelleMotion, errStat2, errMsg2 )
+         call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+            
+      if (errStat >= AbortErrLev) return
+
    
    
 end subroutine Init_u
@@ -1315,7 +1360,7 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
    if (CalcWriteOutput) then
       if (p%NumOuts > 0) then
          call Calc_WriteOutput( p, u, m, y, OtherState, xd, indx, ErrStat2, ErrMsg2 )   
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)      
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)      
    
          !...............................................................................................................................   
          ! Place the selected output channels into the WriteOutput(:) array with the proper sign:
@@ -1333,6 +1378,7 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
       call Calc_WriteAllBldNdOutput( p, u, m, y, OtherState, indx, ErrStat2, ErrMsg2 )   ! Call after normal writeoutput.  Will just postpend data on here.
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    end if
+      
    
    
 end subroutine AD_CalcOutput
@@ -4249,6 +4295,20 @@ SUBROUTINE AD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
          end do
       end do
       
+                  ! I'm not including this in the linearization yet
+         !do i=1,u%NacelleMotion%NNodes ! 1 or 0
+         !   do j=1,3
+         !      u_op(index) = u%InflowOnNacelle(j)
+         !      index = index + 1
+         !   end do
+         !end do
+         !
+         !do i=1,u%HubMotion%NNodes ! 1
+         !   do j=1,3
+         !      u_op(index) = u%InflowOnHub(j)
+         !      index = index + 1
+         !   end do
+         !end do
          
    END IF
 
@@ -4261,8 +4321,8 @@ SUBROUTINE AD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
       end if
       
       
-      
-      index = 1               
+
+      index = 1
       call PackLoadMesh(y%TowerLoad, y_op, index)
       do k=1,p%NumBlades
          call PackLoadMesh(y%BladeLoad(k), y_op, index)                  
@@ -4552,7 +4612,7 @@ SUBROUTINE Init_Jacobian_u( InputFileData, p, u, InitOut, ErrStat, ErrMsg)
    nu = u%TowerMotion%NNodes * 9            & ! 3 Translation Displacements + 3 orientations + 3 Translation velocities at each node
       + u%hubMotion%NNodes   * 9            & ! 3 Translation Displacements + 3 orientations + 3 Rotation velocities at each node
       + size( u%InflowOnBlade)              &
-      + size( u%InflowOnTower)              &
+      + size( u%InflowOnTower)              & !note that we are not passing the inflow on nacelle or hub here
       + size( u%UserProp)
 
    do i=1,p%NumBlades

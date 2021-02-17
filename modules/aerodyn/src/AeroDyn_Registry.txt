@@ -48,6 +48,7 @@ typedef	^	InitInputType	ReKi	BladeRootPosition	{:}{:}	-	-	"X-Y-Z reference posit
 typedef	^	InitInputType	R8Ki	BladeRootOrientation	{:}{:}{:}	-	-	"DCM reference orientation of blade roots (3x3 x NumBlades)"	-
 typedef	^	InitInputType	LOGICAL	UsePrimaryInputFile	-	.TRUE.	-	"Read input file instead of passed data"	-
 typedef	^	InitInputType	FileInfoType	PassedPrimaryInputData	-	-	-	"Primary input file as FileInfoType (set by driver/glue code)"	-
+typedef	^	InitInputType	R8Ki	NacelleOrientation	{3}{3}	-	-	"DCM reference orientation of nacelle"	-
 
 
 
@@ -253,6 +254,7 @@ typedef	^	ParameterType	Integer	Jac_ny	-	-	-	"number of outputs in jacobian matr
 
 # ..... Inputs ....................................................................................................................
 # Define inputs that are contained on a mesh here:
+typedef	^	InputType	MeshType	NacelleMotion	-	-	-	"motion on the nacelle"	-
 typedef	^	InputType	MeshType	TowerMotion	-	-	-	"motion on the tower"	-
 typedef	^	InputType	MeshType	HubMotion	-	-	-	"motion on the hub"	-
 typedef	^	InputType	MeshType	BladeRootMotion	{:}	-	-	"motion on each blade root"	-
@@ -260,12 +262,14 @@ typedef	^	InputType	MeshType	BladeMotion	{:}	-	-	"motion on each blade"	-
 # Define inputs that are not on a mesh here:
 typedef	^	InputType	ReKi	InflowOnBlade	{:}{:}{:}	-	-	"U,V,W at nodes on each blade (note if we change the requirement that NumNodes is the same for each blade, this will need to change)"	m/s
 typedef	^	InputType	ReKi	InflowOnTower	{:}{:}	-	-	"U,V,W at nodes on the tower"	m/s
+typedef	^	InputType	ReKi	InflowOnNacelle	{3}	-	-	"U,V,W at nacelle"	m/s
 typedef	^	InputType	ReKi	UserProp	{:}{:}	-	-	"Optional user property for interpolating airfoils (per element per blade)" -
 typedef	^	InputType	ReKi	InflowWakeVel	{:}{:}	-	-	"U,V,W at wake points"	m/s
 
 # ..... Outputs ...................................................................................................................
-# Define outputs that are contained on the mesh here:
+# Define outputs that are contained on a mesh here:
+typedef	^	OutputType	MeshType	NacelleLoad	-	-	-	"loads on the nacelle"	-
 typedef	^	OutputType	MeshType	TowerLoad	-	-	-	"loads on the tower"	-
 typedef	^	OutputType	MeshType	BladeLoad	{:}	-	-	"loads on each blade"	-
-# Define outputs that are not on this mesh here:
+# Define outputs that are not on a mesh here:
 typedef	^	OutputType	ReKi	WriteOutput	{:}	-	-	"Data to be written to an output file: see WriteOutputHdr for names of each variable"	"see WriteOutputUnt"
