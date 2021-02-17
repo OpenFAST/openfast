@@ -44,29 +44,49 @@ TYPE(InflowWind_OutputType)             :: y                 !< Initial output (
 TYPE(InflowWind_MiscVarType)            :: m                 !< Misc variables for optimization (not copied in glue code)
 TYPE(InflowWind_InitOutputType)         :: InitOutData       !< Initial output data -- Names, units, and version info.
 
+INTEGER, PARAMETER :: InputStringLength  = 179
+INTEGER, PARAMETER :: InputFileLines = 55
+
 CONTAINS
 
 !===============================================================================================================
 !--------------------------------------------- IFW INIT --------------------------------------------------------
 !===============================================================================================================
-SUBROUTINE IFW_INIT_C(input_file_string_c_ptr,ErrStat_C,ErrMsg_C) BIND (C, NAME='IFW_INIT_C')
+SUBROUTINE IFW_INIT_C(InputFileStrings_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='IFW_INIT_C')
 
-    TYPE(C_PTR)                   , INTENT(IN   )      :: input_file_string_c_ptr(*)
-!    CHARACTER(KIND=C_CHAR),POINTER, INTENT(INOUT)      :: input_file_string_c(:)
+    TYPE(c_ptr)                   , INTENT(IN   )      :: InputFileStrings_C
     INTEGER(C_INT)                , INTENT(  OUT)      :: ErrStat_C
     CHARACTER(KIND=C_CHAR)        , INTENT(  OUT)      :: ErrMsg_C
 
-    ! Local Variables    
-    CHARACTER(1024), DIMENSION(55)   :: data
+    ! Local Variables
+    CHARACTER(InputStringLength), DIMENSION(InputFileLines) :: InputFileStrings
+    CHARACTER(kind=C_char, len=1), DIMENSION(:), POINTER :: character_pointer
+    CHARACTER, DIMENSION(InputStringLength) :: single_line_character_array
+    CHARACTER(InputStringLength) :: single_line_chars
+
     REAL(DbKi)                       :: TimeInterval
     INTEGER                          :: ErrStat
     CHARACTER(ErrMsgLen)             :: ErrMsg
-    TYPE(InflowWind_InitInputType)   :: InitInp           
+    TYPE(InflowWind_InitInputType)   :: InitInp
+    INTEGER                          :: I, J, K
 
-! Convert Fortran character array to FileInfoType within InflowWind_InitInputType
-CALL InitFileInfo(data, InitInp%PassedFileData, ErrStat, ErrMsg)           ! in, out (FileInfoType), out, out
-PRINT*, ErrStat
-PRINT*, "Done calling InitFileInfo ....."
+
+   ! Convert the string-input from C-style character arrays (char **) to a Fortran-style
+   ! array of characters.
+   ! This expects a fixed number of lines with a fixed length per line.
+   ! TODO: Add error checking.
+   CALL C_F_pointer(InputFileStrings_C, character_pointer, [InputFileLines * InputStringLength])
+   DO i = 0, InputFileLines - 1
+      single_line_character_array = character_pointer(i * InputStringLength + 1 : i * InputStringLength + InputStringLength)
+      DO j = 1, InputStringLength
+         single_line_chars(j:j) = single_line_character_array(j)
+      END DO
+      InputFileStrings(i + 1) = single_line_chars
+   END DO
+
+! Store string-inputs as type FileInfoType within InflowWind_InitInputType
+CALL InitFileInfo(InputFileStrings, InitInp%PassedFileData, ErrStat, ErrMsg)           ! in, out (FileInfoType), out, out
+! CALL Print_FileInfo_Struct( CU, InitInp%PassedFileData )
 
 InitInp%UseInputFile = .false.
 InitInp%InputFileName = "passed_ifw_file" ! dummy
