@@ -16,19 +16,15 @@ from ctypes import (
 import numpy as np
 
 class InflowWindLibAPI(CDLL):
-    def __init__(self, library_path, input_file_name):
+    def __init__(self, library_path):
         super().__init__(library_path)
         self.library_path = library_path
-        self.input_file_name = input_file_name # NRM removed this
-        self.input_file_string = ""            # NRM added this instead
 
         self._initialize_routines()
 
         # Create buffers for class data
-        self.abort_error_level = c_int(99)
-        self.num_outs = c_int(0)
-        self._channel_names = create_string_buffer(20 * 4000)
-        self.output_array = None
+        # TODO: set abort error level in InflowWind Init
+        self.abort_error_level = c_int(4)
 
         self.error_status = c_int(0)
         self.error_message = create_string_buffer(1025)
@@ -37,9 +33,9 @@ class InflowWindLibAPI(CDLL):
 
     def _initialize_routines(self):
         self.IFW_INIT_C.argtypes = [
-            POINTER(c_wchar),                     # input_file_string_c
-            POINTER(c_int),                       # ErrStat_C
-            POINTER(c_char)                       # ErrMsg_C
+            POINTER(c_char_p),
+            POINTER(c_int),
+            POINTER(c_char)
         ]
         self.IFW_INIT_C.restype = c_int
 
@@ -62,30 +58,21 @@ class InflowWindLibAPI(CDLL):
     def fatal_error(self):
         return self.error_status.value >= self.abort_error_level.value
 
-    def ifw_init(self, input_file_string):
-
-        self.input_file_string = input_file_string
-        c_strings = c_wchar_p(self.input_file_string[0])
-       
-        # Debugging only 
-        print('c_strings')           # pointer
-        print(c_strings)
-        print('c_strings.value')     # self.input_file_string[0]
-        print(c_strings.value)
-        print('c_strings.value[0]')  # first character
-        print(c_strings.value[0])
+    def ifw_init(self, input_strings):
+        input_string_array = (c_char_p * len(input_strings))()
+        for i, param in enumerate(input_strings):
+            input_string_array[i] = param.encode('utf-8')
 
         self.IFW_INIT_C(
-            c_strings,                  # pass the pointer; should be a string or string array
+            input_string_array,
             byref(self.error_status),
             self.error_message
         )
         if self.fatal_error:
             print(f"Error {self.error_status.value}: {self.error_message.value}")
             return
-    
-    def ifw_calcOutput(self, time, positions, velocities):
 
+    def ifw_calcOutput(self, time, positions, velocities):
         self.IFW_CALCOUTPUT_C(
             byref(time),
             byref(positions),           # placeholder for now
@@ -98,7 +85,6 @@ class InflowWindLibAPI(CDLL):
             return
 
     def ifw_end(self):
-
         self.IFW_END_C(
             byref(self.error_status),
             self.error_message
