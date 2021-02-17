@@ -480,7 +480,7 @@ contains
             Vrel_norm = TwoNorm(Vrel)
 
             alpha = atan2(dot_product(Vrel,N) , dot_product(Vrel,Tc) ) ! [rad]  
-            Re = p%Chord(icp,iW) * Vrel_norm  / p%KinVisc / 1.0E6
+            Re = p%Chord(icp,iW) * Vrel_norm  / p%KinVisc  ! Reynolds number (not in Million)
 
             !if (p%CircSolvPolar==idPolarAeroDyn) then
                ! compute steady Airfoil Coefs      ! NOTE: UserProp set to 0.0_ReKi (no idea what it does).  Also, note this assumes airfoils at nodes.

@@ -1320,7 +1320,7 @@ subroutine FVW_AeroOuts( M_sg, M_ag, PitchAndTwist, Vstr_g,  Vind_g, Vwnd_g, Kin
    Vtot_a    = matmul(M_ag, Vtot_g)
    alpha     = atan2( Vtot_a(1), Vtot_a(2) )
    Vrel_norm = sqrt(Vtot_a(1)**2 + Vtot_a(2)**2) ! NOTE: z component shoudn't be used
-   Re        = Chord * Vrel_norm / KinVisc / 1.0E6
+   Re        = Chord * Vrel_norm / KinVisc       ! Reynolds number (not in million)
 
    ! Section coordinates: used to define axial induction andflow angle
    Vstr_s = matmul(M_sg, Vstr_g)
@@ -1354,7 +1354,7 @@ subroutine AlphaVrel_Generic(M_ag, Vstr_g,  Vind_g, Vwnd_g, KinVisc, Chord, Vrel
    Vtot_a    = matmul(M_ag, Vtot_g)
    alpha     = atan2( Vtot_a(1), Vtot_a(2) )
    Vrel_norm = sqrt(Vtot_a(1)**2 + Vtot_a(2)**2) ! NOTE: z component shoudn't be used
-   Re        = Chord * Vrel_norm / KinVisc / 1.0E6
+   Re        = Chord * Vrel_norm / KinVisc       ! Reynolds number NOTE: not in million
 end subroutine AlphaVrel_Generic
 
 
