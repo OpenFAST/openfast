@@ -127,6 +127,7 @@ typedef   ^                         ^            NacData                 nac    
 typedef   ^                         ^            TwrData                 twr              -      -     -   "" -
 typedef   ^                         ^            IntKi                   numBlades        -      -     -   "" -
 typedef   ^                         ^            logical                 hasTower         -      -     -   "" -
+typedef   ^                         ^            logical                 isHAWT           -      -     -   "" -
 typedef   ^                         ^            IntKi                   motionType       -      -     -   "" -
 typedef   ^                         ^            ReKi                    motion           ::     -     -   "" "-"
 typedef   ^                         ^            IntKi                   iMotion          -      -     -   "Stored index to optimize time interpolation" -

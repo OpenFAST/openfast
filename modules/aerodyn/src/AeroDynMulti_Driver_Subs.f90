@@ -236,6 +236,7 @@ end subroutine DvrM_CleanUp
 
 
 !----------------------------------------------------------------------------------------------------------------------------------
+!> Initialize aerodyn module based on driver data
 subroutine Init_AeroDyn(DvrData, AD, dt, InitOutData, errStat, errMsg)
    type(DvrM_SimData), target,   intent(inout) :: DvrData       ! Input data for initialization (intent out for getting AD WriteOutput names/units)
    type(AeroDyn_Data),           intent(inout) :: AD            ! AeroDyn data 
@@ -266,6 +267,11 @@ subroutine Init_AeroDyn(DvrData, AD, dt, InitOutData, errStat, errMsg)
    do iWT=1,DvrData%numTurbines
       wt => DvrData%WT(iWT)
 
+      if (wt%isHAWT) then
+         InitInData%AeroProjMod = 0 ! default, with WithoutSweepPitchTwist
+      else
+         InitInData%AeroProjMod = 1
+      endif
       InitInData%HubPosition    = wt%hub%ptMesh%Position(:,1)
       InitInData%HubOrientation = wt%hub%ptMesh%RefOrientation(:,:,1)
 
@@ -975,6 +981,7 @@ subroutine Dvr_ReadInputFile(fileName, DvrData, errStat, errMsg )
       call ParseAry(FileInfo_In, CurLine, 'baseOriginInit'//sWT     , wt%originInit, 3         , errStat2, errMsg2, unEc); if(Failed()) return
       call ParseAry(FileInfo_In, CurLine, 'baseOrientationInit'//sWT, wt%orientationInit, 3    , errStat2, errMsg2, unEc); if(Failed()) return
       call ParseVar(FileInfo_In, CurLine, 'hasTower'//sWT           , wt%hasTower              , errStat2, errMsg2, unEc); if(Failed()) return
+      call ParseVar(FileInfo_In, CurLine, 'isHAWT'//sWT             , wt%isHAWT                , errStat2, errMsg2, unEc); if(Failed()) return
       call ParseAry(FileInfo_In, CurLine, 'twrOrigin_t'//sWT        , wt%twr%origin_t, 3       , errStat2, errMsg2, unEc); if(Failed()) return
       call ParseAry(FileInfo_In, CurLine, 'nacOrigin_t'//sWT        , wt%nac%origin_t, 3       , errStat2, errMsg2, unEc); if(Failed()) return
       call ParseAry(FileInfo_In, CurLine, 'hubOrigin_n'//sWT        , wt%hub%origin_n, 3       , errStat2, errMsg2, unEc); if(Failed()) return

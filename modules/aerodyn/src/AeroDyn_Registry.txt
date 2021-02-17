@@ -38,6 +38,7 @@ param    ^              -  IntKi    TwrShadow_Eames         -  2  -  "Eames towe
 # ..... Initialization data .......................................................................................................
 # Define inputs that the initialization routine may need here:
 typedef	AeroDyn/AD	InitInputType	CHARACTER(1024)	InputFile	-	-	-	"Name of the input file"	-
+typedef	^	InitInputType	IntKi	AeroProjMod   	-	0	-	"Flag to switch between different projection models"	-
 typedef	^	InitInputType	Logical	Linearize	-	.FALSE.	-	"Flag that tells this module if the glue code wants to linearize."	-
 typedef	^	InitInputType	IntKi	NumBlades	-	-	-	"Number of blades on the turbine" -
 typedef	^	InitInputType	ReKi	Gravity	-	-	-	"Gravity force" Nm/s^2
@@ -228,6 +229,7 @@ typedef	^	ParameterType	AFI_ParameterType	AFI	{:}	-	-	"AirfoilInfo parameters"
 typedef	^	ParameterType	BEMT_ParameterType	BEMT	-	-	-	"Parameters for BEMT module"
 typedef	^	ParameterType	FVW_ParameterType	FVW	-	-	-	"Parameters for FVW module"
 typedef	^	ParameterType	AA_ParameterType	AA	-	-	-	"Parameters for AA module"
+typedef	^	ParameterType	IntKi	AeroProjMod  -	0	-	"Flag to switch between different projection models"	-
 # parameters for output
 typedef	^	ParameterType	IntKi	NumOuts	-	-	-	"Number of parameters in the output list (number of outputs requested)"	-
 typedef	^	ParameterType	CHARACTER(1024)	RootName	-	-	-	"RootName for writing output files"	-

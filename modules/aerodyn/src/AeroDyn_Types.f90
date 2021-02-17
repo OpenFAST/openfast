@@ -55,6 +55,7 @@ IMPLICIT NONE
 ! =========  AD_InitInputType  =======
   TYPE, PUBLIC :: AD_InitInputType
     CHARACTER(1024)  :: InputFile      !< Name of the input file [-]
+    INTEGER(IntKi)  :: AeroProjMod = 0      !< Flag to switch between different projection models [-]
     LOGICAL  :: Linearize = .FALSE.      !< Flag that tells this module if the glue code wants to linearize. [-]
     INTEGER(IntKi)  :: NumBlades      !< Number of blades on the turbine [-]
     REAL(ReKi)  :: Gravity      !< Gravity force [Nm/s^2]
@@ -254,6 +255,7 @@ IMPLICIT NONE
     TYPE(BEMT_ParameterType)  :: BEMT      !< Parameters for BEMT module [-]
     TYPE(FVW_ParameterType)  :: FVW      !< Parameters for FVW module [-]
     TYPE(AA_ParameterType)  :: AA      !< Parameters for AA module [-]
+    INTEGER(IntKi)  :: AeroProjMod = 0      !< Flag to switch between different projection models [-]
     INTEGER(IntKi)  :: NumOuts      !< Number of parameters in the output list (number of outputs requested) [-]
     CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
     TYPE(OutParmType) , DIMENSION(:), ALLOCATABLE  :: OutParam      !< Names and units (and other characteristics) of all requested output parameters [-]
@@ -311,6 +313,7 @@ CONTAINS
    ErrStat = ErrID_None
    ErrMsg  = ""
     DstInitInputData%InputFile = SrcInitInputData%InputFile
+    DstInitInputData%AeroProjMod = SrcInitInputData%AeroProjMod
     DstInitInputData%Linearize = SrcInitInputData%Linearize
     DstInitInputData%NumBlades = SrcInitInputData%NumBlades
     DstInitInputData%Gravity = SrcInitInputData%Gravity
@@ -407,6 +410,7 @@ ENDIF
   Db_BufSz  = 0
   Int_BufSz  = 0
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%InputFile)  ! InputFile
+      Int_BufSz  = Int_BufSz  + 1  ! AeroProjMod
       Int_BufSz  = Int_BufSz  + 1  ! Linearize
       Int_BufSz  = Int_BufSz  + 1  ! NumBlades
       Re_BufSz   = Re_BufSz   + 1  ! Gravity
@@ -473,6 +477,8 @@ ENDIF
       IntKiBuf(Int_Xferred) = ICHAR(InData%InputFile(I:I), IntKi)
       Int_Xferred = Int_Xferred + 1
     END DO ! I
+    IntKiBuf(Int_Xferred) = InData%AeroProjMod
+    Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%Linearize, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%NumBlades
@@ -604,6 +610,8 @@ ENDIF
       OutData%InputFile(I:I) = CHAR(IntKiBuf(Int_Xferred))
       Int_Xferred = Int_Xferred + 1
     END DO ! I
+    OutData%AeroProjMod = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
     OutData%Linearize = TRANSFER(IntKiBuf(Int_Xferred), OutData%Linearize)
     Int_Xferred = Int_Xferred + 1
     OutData%NumBlades = IntKiBuf(Int_Xferred)
@@ -7510,6 +7518,7 @@ ENDIF
       CALL AA_CopyParam( SrcParamData%AA, DstParamData%AA, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
+    DstParamData%AeroProjMod = SrcParamData%AeroProjMod
     DstParamData%NumOuts = SrcParamData%NumOuts
     DstParamData%RootName = SrcParamData%RootName
 IF (ALLOCATED(SrcParamData%OutParam)) THEN
@@ -7800,6 +7809,7 @@ ENDIF
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
+      Int_BufSz  = Int_BufSz  + 1  ! AeroProjMod
       Int_BufSz  = Int_BufSz  + 1  ! NumOuts
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%RootName)  ! RootName
   Int_BufSz   = Int_BufSz   + 1     ! OutParam allocated yes/no
@@ -8109,6 +8119,8 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
+    IntKiBuf(Int_Xferred) = InData%AeroProjMod
+    Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%NumOuts
     Int_Xferred = Int_Xferred + 1
     DO I = 1, LEN(InData%RootName)
@@ -8578,6 +8590,8 @@ ENDIF
       IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
+    OutData%AeroProjMod = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
     OutData%NumOuts = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     DO I = 1, LEN(OutData%RootName)

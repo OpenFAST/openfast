@@ -945,6 +945,7 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
    p%TwrAero          = InputFileData%TwrAero
    p%CavitCheck       = InputFileData%CavitCheck
    p%Gravity          = InitInp%Gravity
+   p%AeroProjMod      = InitInp%AeroProjMod
    
 
    
@@ -1629,61 +1630,63 @@ subroutine GeomWithoutSweepPitchTwist(p,u,m,thetaBladeNds,ErrStat,ErrMsg)
    integer(intKi)                          :: ErrStat2
    character(ErrMsgLen)                    :: ErrMsg2
    character(*), parameter                 :: RoutineName = 'GeomWithoutSweepPitchTwist'
-   logical, parameter :: GenericBlade = .true. ! if true, do not use the WithoutSweepPitchTwist transformation
 
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-
-   if (GenericBlade) then
+   if (p%AeroProjMod==0) then
+         ! theta, "Twist angle (includes all sources of twist)" rad
+         ! Vx, "Local axial velocity at node" m/s
+         ! Vy, "Local tangential velocity at node" m/s
       do k=1,p%NumBlades
-         m%hub_theta_x_root(k) = 0.0_ReKi ! ill-defined
+            ! construct system equivalent to u%BladeRootMotion(k)%Orientation, but without the blade-pitch angle:
+         ! orientation = rotation from hub 2 bl
+         call LAPACK_gemm( 'n', 't', 1.0_R8Ki, u%BladeRootMotion(k)%Orientation(:,:,1), u%HubMotion%Orientation(:,:,1), 0.0_R8Ki, orientation, errStat2, errMsg2)
+            call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         theta = EulerExtract( orientation ) !hub_theta_root(k)
+         if (k<=3) then
+            m%AllOuts( BPitch(  k) ) = -theta(3)*R2D ! save this value of pitch for potential output
+         endif
+         theta(3) = 0.0_ReKi
+         m%hub_theta_x_root(k) = theta(1)   ! save this value for FAST.Farm
+
+         orientation = EulerConstruct( theta ) ! rotation from hub 2 non-pitched blade
+         orientation_nopitch = matmul( orientation, u%HubMotion%Orientation(:,:,1) ) ! withoutPitch_theta_Root(k) ! rotation from global 2 non-pitched blade
+
+         do j=1,p%NumBlNds
+
+               ! form coordinate system equivalent to u%BladeMotion(k)%Orientation(:,:,j) but without live sweep (due to in-plane
+               ! deflection), blade-pitch and twist (aerodynamic + elastic) angles:
+
+            ! orientation = matmul( u%BladeMotion(k)%Orientation(:,:,j), transpose(orientation_nopitch) )
+            ! orientation = rotation from non pitched blade 2 balde section
+            call LAPACK_gemm( 'n', 't', 1.0_R8Ki, u%BladeMotion(k)%Orientation(:,:,j), orientation_nopitch, 0.0_R8Ki, orientation, errStat2, errMsg2)
+               call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            theta = EulerExtract( orientation ) !root(k)WithoutPitch_theta(j)_blade(k)
+
+            thetaBladeNds(j,k) = -theta(3) ! local pitch + twist (aerodyanmic + elastic) angle of the jth node in the kth blade
+
+
+            theta(1) = 0.0_ReKi
+            theta(3) = 0.0_ReKi
+            m%Curve(j,k) = theta(2)  ! save value for possible output later
+            m%WithoutSweepPitchTwist(:,:,j,k) = matmul( EulerConstruct( theta ), orientation_nopitch ) ! WithoutSweepPitch+Twist_theta(j)_Blade(k)
+
+         end do !j=nodes
+      end do !k=blades
+   else if (p%AeroProjMod==1) then
+      ! Generic blade, we don't assume where the axes are, and we keep the default orientation
+      do k=1,p%NumBlades
+         m%hub_theta_x_root(k) = 0.0_ReKi ! ill-defined, TODO
          do j=1,p%NumBlNds
             thetaBladeNds(j,k) = 0.0_ReKi ! local pitch + twist (aerodyanmic + elastic) angle of the jth node in the kth blade
-            m%Curve(j,k) = 0.0_ReKi ! ill-defined
+            m%Curve(j,k) = 0.0_ReKi ! ill-defined, TODO
             m%WithoutSweepPitchTwist(:,:,j,k) = u%BladeMotion(k)%Orientation(:,:,j)
          enddo
       enddo
    else
-      ! theta, "Twist angle (includes all sources of twist)" rad
-      ! Vx, "Local axial velocity at node" m/s
-      ! Vy, "Local tangential velocity at node" m/s
-   do k=1,p%NumBlades
-         ! construct system equivalent to u%BladeRootMotion(k)%Orientation, but without the blade-pitch angle:
-      ! orientation = rotation from hub 2 bl
-      call LAPACK_gemm( 'n', 't', 1.0_R8Ki, u%BladeRootMotion(k)%Orientation(:,:,1), u%HubMotion%Orientation(:,:,1), 0.0_R8Ki, orientation, errStat2, errMsg2)
-         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      theta = EulerExtract( orientation ) !hub_theta_root(k)
-      if (k<=3) then
-         m%AllOuts( BPitch(  k) ) = -theta(3)*R2D ! save this value of pitch for potential output
-      endif
-      theta(3) = 0.0_ReKi
-      m%hub_theta_x_root(k) = theta(1)   ! save this value for FAST.Farm
-
-      orientation = EulerConstruct( theta ) ! rotation from hub 2 non-pitched blade
-      orientation_nopitch = matmul( orientation, u%HubMotion%Orientation(:,:,1) ) ! withoutPitch_theta_Root(k) ! rotation from global 2 non-pitched blade
-
-      do j=1,p%NumBlNds
-
-            ! form coordinate system equivalent to u%BladeMotion(k)%Orientation(:,:,j) but without live sweep (due to in-plane
-            ! deflection), blade-pitch and twist (aerodynamic + elastic) angles:
-
-         ! orientation = matmul( u%BladeMotion(k)%Orientation(:,:,j), transpose(orientation_nopitch) )
-         ! orientation = rotation from non pitched blade 2 balde section
-         call LAPACK_gemm( 'n', 't', 1.0_R8Ki, u%BladeMotion(k)%Orientation(:,:,j), orientation_nopitch, 0.0_R8Ki, orientation, errStat2, errMsg2)
-            call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         theta = EulerExtract( orientation ) !root(k)WithoutPitch_theta(j)_blade(k)
-
-         thetaBladeNds(j,k) = -theta(3) ! local pitch + twist (aerodyanmic + elastic) angle of the jth node in the kth blade
-
-
-         theta(1) = 0.0_ReKi
-         theta(3) = 0.0_ReKi
-         m%Curve(j,k) = theta(2)  ! save value for possible output later
-         m%WithoutSweepPitchTwist(:,:,j,k) = matmul( EulerConstruct( theta ), orientation_nopitch ) ! WithoutSweepPitch+Twist_theta(j)_Blade(k)
-
-      end do !j=nodes
-   end do !k=blades
+      ErrStat = ErrID_Fatal
+      ErrMsg ='GeomWithoutSweepPitchTwist: AeroProjMod not supported '//trim(num2lstr(p%AeroProjMod))
    endif
 end subroutine GeomWithoutSweepPitchTwist
 !----------------------------------------------------------------------------------------------------------------------------------

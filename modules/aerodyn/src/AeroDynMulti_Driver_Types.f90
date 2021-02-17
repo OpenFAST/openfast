@@ -180,6 +180,7 @@ IMPLICIT NONE
     TYPE(TwrData)  :: twr      !<  [-]
     INTEGER(IntKi)  :: numBlades      !<  [-]
     LOGICAL  :: hasTower      !<  [-]
+    LOGICAL  :: isHAWT      !<  [-]
     INTEGER(IntKi)  :: motionType      !<  [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: motion      !<  [-]
     INTEGER(IntKi)  :: iMotion      !< Stored index to optimize time interpolation [-]
@@ -5193,6 +5194,7 @@ ENDIF
          IF (ErrStat>=AbortErrLev) RETURN
     DstWTDataData%numBlades = SrcWTDataData%numBlades
     DstWTDataData%hasTower = SrcWTDataData%hasTower
+    DstWTDataData%isHAWT = SrcWTDataData%isHAWT
     DstWTDataData%motionType = SrcWTDataData%motionType
 IF (ALLOCATED(SrcWTDataData%motion)) THEN
   i1_l = LBOUND(SrcWTDataData%motion,1)
@@ -5410,6 +5412,7 @@ ENDIF
       END IF
       Int_BufSz  = Int_BufSz  + 1  ! numBlades
       Int_BufSz  = Int_BufSz  + 1  ! hasTower
+      Int_BufSz  = Int_BufSz  + 1  ! isHAWT
       Int_BufSz  = Int_BufSz  + 1  ! motionType
   Int_BufSz   = Int_BufSz   + 1     ! motion allocated yes/no
   IF ( ALLOCATED(InData%motion) ) THEN
@@ -5672,6 +5675,8 @@ ENDIF
     IntKiBuf(Int_Xferred) = InData%numBlades
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%hasTower, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%isHAWT, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%motionType
     Int_Xferred = Int_Xferred + 1
@@ -6072,6 +6077,8 @@ ENDIF
     OutData%numBlades = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%hasTower = TRANSFER(IntKiBuf(Int_Xferred), OutData%hasTower)
+    Int_Xferred = Int_Xferred + 1
+    OutData%isHAWT = TRANSFER(IntKiBuf(Int_Xferred), OutData%isHAWT)
     Int_Xferred = Int_Xferred + 1
     OutData%motionType = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
