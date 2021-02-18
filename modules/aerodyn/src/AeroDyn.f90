@@ -835,7 +835,7 @@ subroutine Init_u( u, p, InputFileData, InitInp, errStat, errMsg )
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
             
    call MeshCommit(u%HubMotion, errStat2, errMsg2 )
-      call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+      call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName//':HubMotion' )
             
    if (errStat >= AbortErrLev) return
 
@@ -874,7 +874,7 @@ subroutine Init_u( u, p, InputFileData, InitInp, errStat, errMsg )
          call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
             
       call MeshCommit(u%BladeRootMotion(k), errStat2, errMsg2 )
-         call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+         call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName//':BladeRootMotion' )
             
       if (errStat >= AbortErrLev) return
 
@@ -944,7 +944,7 @@ subroutine Init_u( u, p, InputFileData, InitInp, errStat, errMsg )
       end do !j
             
       call MeshCommit(u%BladeMotion(k), errStat2, errMsg2 )
-         call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+         call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName//':BladeMotion'//trim(num2lstr(k)) )
             
       if (errStat >= AbortErrLev) return
 

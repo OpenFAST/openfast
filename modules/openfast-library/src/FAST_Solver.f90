@@ -479,10 +479,10 @@ SUBROUTINE IfW_InputSolve( p_FAST, m_FAST, u_IfW, p_IfW, u_AD14, u_AD, OtherSt_A
          u_IfW%PositionXYZ(:,Node) = u_AD%NacelleMotion%TranslationDisp(:,1) + u_AD%NacelleMotion%Position(:,1)
       end if
       
-      if (u_AD%HubMotion%Committed) then
-         Node = Node + 1
-         u_IfW%PositionXYZ(:,Node) = u_AD%HubMotion%TranslationDisp(:,1) + u_AD%HubMotion%Position(:,1)
-      end if
+!      if (u_AD%HubMotion%Committed) then
+!         Node = Node + 1
+!         u_IfW%PositionXYZ(:,Node) = u_AD%HubMotion%TranslationDisp(:,1) + u_AD%HubMotion%Position(:,1)
+!      end if
       
    END IF
    
