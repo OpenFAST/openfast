@@ -460,7 +460,7 @@ SUBROUTINE BladedInterface_Init(u, p, m, y, InputFileData, InitInp, UnSum, ErrSt
 
    !> Initialize the extended avrSWAP if used
    if (p%UseLegacyInterface .and. p%EXavrSWAP) then
-!      call EXavrSWAP_Init( InitInp, u, p, y, m%dll_data, UnSum, ErrStat2, ErrMsg2)
+      call EXavrSWAP_Init( InitInp, u, p, y, m%dll_data, UnSum, ErrStat2, ErrMsg2)
          CALL CheckError(ErrStat2,ErrMsg2)
          IF ( ErrStat >= AbortErrLev ) RETURN
    endif

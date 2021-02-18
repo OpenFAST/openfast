@@ -461,6 +461,8 @@ IMPLICIT NONE
     TYPE(StC_OutputType) , DIMENSION(:), ALLOCATABLE  :: SStC      !< StC module outputs - substructure [-]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: SuperController      !< A swap array: used to pass output data from the DLL controller to the supercontroller [-]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: Lidar      !< A swap array: used to pass output data from the DLL controller to the Lidar [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: CableDeltaL      !< Cable control -- Length change request (passed to MD or SD) [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: CableDeltaLdot      !< Cable control -- Length change rate request (passed to MD or SD) [-]
   END TYPE SrvD_OutputType
 ! =======================
 CONTAINS
@@ -10937,6 +10939,30 @@ IF (ALLOCATED(SrcOutputData%Lidar)) THEN
   END IF
     DstOutputData%Lidar = SrcOutputData%Lidar
 ENDIF
+IF (ALLOCATED(SrcOutputData%CableDeltaL)) THEN
+  i1_l = LBOUND(SrcOutputData%CableDeltaL,1)
+  i1_u = UBOUND(SrcOutputData%CableDeltaL,1)
+  IF (.NOT. ALLOCATED(DstOutputData%CableDeltaL)) THEN 
+    ALLOCATE(DstOutputData%CableDeltaL(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%CableDeltaL.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstOutputData%CableDeltaL = SrcOutputData%CableDeltaL
+ENDIF
+IF (ALLOCATED(SrcOutputData%CableDeltaLdot)) THEN
+  i1_l = LBOUND(SrcOutputData%CableDeltaLdot,1)
+  i1_u = UBOUND(SrcOutputData%CableDeltaLdot,1)
+  IF (.NOT. ALLOCATED(DstOutputData%CableDeltaLdot)) THEN 
+    ALLOCATE(DstOutputData%CableDeltaLdot(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%CableDeltaLdot.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstOutputData%CableDeltaLdot = SrcOutputData%CableDeltaLdot
+ENDIF
  END SUBROUTINE SrvD_CopyOutput
 
  SUBROUTINE SrvD_DestroyOutput( OutputData, ErrStat, ErrMsg )
@@ -10989,6 +11015,12 @@ IF (ALLOCATED(OutputData%SuperController)) THEN
 ENDIF
 IF (ALLOCATED(OutputData%Lidar)) THEN
   DEALLOCATE(OutputData%Lidar)
+ENDIF
+IF (ALLOCATED(OutputData%CableDeltaL)) THEN
+  DEALLOCATE(OutputData%CableDeltaL)
+ENDIF
+IF (ALLOCATED(OutputData%CableDeltaLdot)) THEN
+  DEALLOCATE(OutputData%CableDeltaLdot)
 ENDIF
  END SUBROUTINE SrvD_DestroyOutput
 
@@ -11153,6 +11185,16 @@ ENDIF
   IF ( ALLOCATED(InData%Lidar) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! Lidar upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%Lidar)  ! Lidar
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! CableDeltaL allocated yes/no
+  IF ( ALLOCATED(InData%CableDeltaL) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! CableDeltaL upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%CableDeltaL)  ! CableDeltaL
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! CableDeltaLdot allocated yes/no
+  IF ( ALLOCATED(InData%CableDeltaLdot) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! CableDeltaLdot upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%CableDeltaLdot)  ! CableDeltaLdot
   END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -11440,6 +11482,36 @@ ENDIF
 
       DO i1 = LBOUND(InData%Lidar,1), UBOUND(InData%Lidar,1)
         ReKiBuf(Re_Xferred) = InData%Lidar(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%CableDeltaL) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%CableDeltaL,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%CableDeltaL,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%CableDeltaL,1), UBOUND(InData%CableDeltaL,1)
+        ReKiBuf(Re_Xferred) = InData%CableDeltaL(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%CableDeltaLdot) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%CableDeltaLdot,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%CableDeltaLdot,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%CableDeltaLdot,1), UBOUND(InData%CableDeltaLdot,1)
+        ReKiBuf(Re_Xferred) = InData%CableDeltaLdot(i1)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
@@ -11809,6 +11881,42 @@ ENDIF
     END IF
       DO i1 = LBOUND(OutData%Lidar,1), UBOUND(OutData%Lidar,1)
         OutData%Lidar(i1) = REAL(ReKiBuf(Re_Xferred), SiKi)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! CableDeltaL not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%CableDeltaL)) DEALLOCATE(OutData%CableDeltaL)
+    ALLOCATE(OutData%CableDeltaL(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%CableDeltaL.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%CableDeltaL,1), UBOUND(OutData%CableDeltaL,1)
+        OutData%CableDeltaL(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! CableDeltaLdot not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%CableDeltaLdot)) DEALLOCATE(OutData%CableDeltaLdot)
+    ALLOCATE(OutData%CableDeltaLdot(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%CableDeltaLdot.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%CableDeltaLdot,1), UBOUND(OutData%CableDeltaLdot,1)
+        OutData%CableDeltaLdot(i1) = ReKiBuf(Re_Xferred)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
@@ -12385,6 +12493,18 @@ IF (ALLOCATED(y_out%Lidar) .AND. ALLOCATED(y1%Lidar)) THEN
     y_out%Lidar(i1) = y1%Lidar(i1) + b * ScaleFactor
   END DO
 END IF ! check if allocated
+IF (ALLOCATED(y_out%CableDeltaL) .AND. ALLOCATED(y1%CableDeltaL)) THEN
+  DO i1 = LBOUND(y_out%CableDeltaL,1),UBOUND(y_out%CableDeltaL,1)
+    b = -(y1%CableDeltaL(i1) - y2%CableDeltaL(i1))
+    y_out%CableDeltaL(i1) = y1%CableDeltaL(i1) + b * ScaleFactor
+  END DO
+END IF ! check if allocated
+IF (ALLOCATED(y_out%CableDeltaLdot) .AND. ALLOCATED(y1%CableDeltaLdot)) THEN
+  DO i1 = LBOUND(y_out%CableDeltaLdot,1),UBOUND(y_out%CableDeltaLdot,1)
+    b = -(y1%CableDeltaLdot(i1) - y2%CableDeltaLdot(i1))
+    y_out%CableDeltaLdot(i1) = y1%CableDeltaLdot(i1) + b * ScaleFactor
+  END DO
+END IF ! check if allocated
  END SUBROUTINE SrvD_Output_ExtrapInterp1
 
 
@@ -12516,6 +12636,20 @@ IF (ALLOCATED(y_out%Lidar) .AND. ALLOCATED(y1%Lidar)) THEN
     b = (t(3)**2*(y1%Lidar(i1) - y2%Lidar(i1)) + t(2)**2*(-y1%Lidar(i1) + y3%Lidar(i1)))* scaleFactor
     c = ( (t(2)-t(3))*y1%Lidar(i1) + t(3)*y2%Lidar(i1) - t(2)*y3%Lidar(i1) ) * scaleFactor
     y_out%Lidar(i1) = y1%Lidar(i1) + b  + c * t_out
+  END DO
+END IF ! check if allocated
+IF (ALLOCATED(y_out%CableDeltaL) .AND. ALLOCATED(y1%CableDeltaL)) THEN
+  DO i1 = LBOUND(y_out%CableDeltaL,1),UBOUND(y_out%CableDeltaL,1)
+    b = (t(3)**2*(y1%CableDeltaL(i1) - y2%CableDeltaL(i1)) + t(2)**2*(-y1%CableDeltaL(i1) + y3%CableDeltaL(i1)))* scaleFactor
+    c = ( (t(2)-t(3))*y1%CableDeltaL(i1) + t(3)*y2%CableDeltaL(i1) - t(2)*y3%CableDeltaL(i1) ) * scaleFactor
+    y_out%CableDeltaL(i1) = y1%CableDeltaL(i1) + b  + c * t_out
+  END DO
+END IF ! check if allocated
+IF (ALLOCATED(y_out%CableDeltaLdot) .AND. ALLOCATED(y1%CableDeltaLdot)) THEN
+  DO i1 = LBOUND(y_out%CableDeltaLdot,1),UBOUND(y_out%CableDeltaLdot,1)
+    b = (t(3)**2*(y1%CableDeltaLdot(i1) - y2%CableDeltaLdot(i1)) + t(2)**2*(-y1%CableDeltaLdot(i1) + y3%CableDeltaLdot(i1)))* scaleFactor
+    c = ( (t(2)-t(3))*y1%CableDeltaLdot(i1) + t(3)*y2%CableDeltaLdot(i1) - t(2)*y3%CableDeltaLdot(i1) ) * scaleFactor
+    y_out%CableDeltaLdot(i1) = y1%CableDeltaLdot(i1) + b  + c * t_out
   END DO
 END IF ! check if allocated
  END SUBROUTINE SrvD_Output_ExtrapInterp2
