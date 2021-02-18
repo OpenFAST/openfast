@@ -20,17 +20,43 @@
 program AeroDynMulti_Driver
    use AeroDynMulti_Driver_Subs, only: dat, DvrM_Init, DvrM_TimeStep, DvrM_CleanUp
    use NWTC_IO
+   use NWTC_Num, only: RunTimes, SimStatus, SimStatus_FirstTime
    implicit none   
    ! Program variables
+   REAL(ReKi)                       :: PrevClockTime ! Clock time at start of simulation in seconds [(s)]
+   REAL(ReKi)                       :: UsrTime1      ! User CPU time for simulation initialization [(s)]
+   REAL(ReKi)                       :: UsrTime2      ! User CPU time for simulation (without intialization) [(s)]
+   INTEGER(IntKi) , DIMENSION(1:8)  :: StrtTime      ! Start time of simulation (including intialization) [-]
+   INTEGER(IntKi) , DIMENSION(1:8)  :: SimStrtTime   ! Start time of simulation (after initialization) [-]
+   REAL(DbKi)                       :: t_global         ! global-loop time marker
+   REAL(DbKi)                       :: t_final         ! global-loop time marker
+   REAL(DbKi)                       :: TiLstPrn      ! The simulation time of the last print (to file) [(s)]
    integer :: nt !< loop counter (for time step)
+   CALL DATE_AND_TIME ( Values=StrtTime )                 ! Let's time the whole simulation
+   CALL CPU_TIME ( UsrTime1 )                             ! Initial time (this zeros the start time when used as a MATLAB function)
+   UsrTime1 = MAX( 0.0_ReKi, UsrTime1 )                   ! CPU_TIME: If a meaningful time cannot be returned, a processor-dependent negative value is returned
 
    call DvrM_Init(dat%DvrData, dat%AD, dat%IW, dat%errStat, dat%errMsg); call CheckError()
    dat%initialized=.true.
 
+   ! Init of time estimator
+   t_global=0.0_DbKi
+   t_final=dat%DvrData%numSteps*dat%DvrData%dt
+   call SimStatus_FirstTime( TiLstPrn, PrevClockTime, SimStrtTime, UsrTime2, t_global, t_final )
+
    do nt = 1, dat%DvrData%numSteps
+
       call DvrM_TimeStep(nt, dat%DvrData, dat%AD, dat%IW, dat%errStat, dat%errMsg); call CheckError()
+
+      ! Time update to screen
+      t_global=nt*dat%DvrData%dt
+      if (mod( nt + 1, 10 )==0) call SimStatus(TiLstPrn, PrevClockTime, t_global, t_final)
+
    end do !nt=1,numSteps
 
+   ! display runtime to screen
+   call RunTimes(StrtTime, UsrTime1, SimStrtTime, UsrTime2, t_global)
+   
    call DvrM_End()
 contains
 !................................   

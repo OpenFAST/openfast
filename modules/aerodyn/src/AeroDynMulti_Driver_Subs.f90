@@ -173,10 +173,6 @@ subroutine DvrM_TimeStep(nt, DvrData, AD, IW, errStat, errMsg)
    ! u(1) is at nt+1, u(2) is at nt
    call Set_AD_Inputs(nt,DvrData,AD,IW,errStat2,errMsg2); if(Failed()) return
    time = AD%InputTime(2)
-
-   if (mod(nt-1,10)==0) then
-      print*,'time',time
-   endif
    ! Calculate outputs at nt - 1
    call AD_CalcOutput( time, AD%u(2), AD%p, AD%x, AD%xd, AD%z, AD%OtherState, AD%y, AD%m, errStat2, errMsg2 ); if(Failed()) return
    call Dvr_WriteOutputs(nt, time, DvrData, DvrData%out, AD%y%WriteOutput, IW%y%WriteOutput, errStat2, errMsg2); if(Failed()) return
