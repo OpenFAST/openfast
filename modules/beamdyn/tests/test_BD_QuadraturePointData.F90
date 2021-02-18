@@ -1,7 +1,6 @@
 module test_BD_QuadraturePointData
 
     ! Tests the following routines:
-    ! BD_InitShpDerJaco
     ! BD_QuadraturePointDataAt0
     ! BD_DisplacementQP
     ! BD_RotationalInterpQP
