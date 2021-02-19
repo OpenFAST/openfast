@@ -1273,6 +1273,17 @@ subroutine ParseInputFileInfo( PriPath, InputFile, OutFileRoot, FileInfo_In, Inp
    enddo
 
 
+   !---------------------- Cable Control -------------------------------------------
+   if ( InputFileData%Echo )   WRITE(UnEcho, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
+   CurLine = CurLine + 1
+      ! CCmode - Cable control mode {
+      !                       0: none
+      !                       4: user-defined from Simulink/Labview
+      !                       5: user-defined from Bladed-style DLL}
+   call ParseVar( FileInfo_In, CurLine, 'CCmode', InputFileData%CCmode, ErrStat2, ErrMsg2, UnEcho )
+      if (Failed())  return;
+
+
    !---------------------- BLADED INTERFACE ----------------------------------------         
    if ( InputFileData%Echo )   WRITE(UnEcho, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
    CurLine = CurLine + 1
@@ -1296,8 +1307,9 @@ subroutine ParseInputFileInfo( PriPath, InputFile, OutFileRoot, FileInfo_In, Inp
       !  BPCutoff  - Cuttoff frequency for low-pass filter on blade pitch from DLL (Hz) [used only with Bladed Interface]
    call ParseVar( FileInfo_In, CurLine, 'BPCutoff', InputFileData%BPCutoff, ErrStat2, ErrMsg2, UnEcho )
       if (Failed())  return;
-      !  EXavrSWAP - Use extended avrSWAP with Records 1000-3500 (flag) [may not be compatible with all controllers]
-   call ParseVar( FileInfo_In, CurLine, 'EXavrSWAP', InputFileData%EXavrSWAP, ErrStat2, ErrMsg2, UnEcho )
+!      !  EXavrSWAP - Use extended avrSWAP with Records 1000-3500 (flag) [may not be compatible with all controllers]
+!   call ParseVar( FileInfo_In, CurLine, 'EXavrSWAP', InputFileData%EXavrSWAP, ErrStat2, ErrMsg2, UnEcho )
+   InputFileData%EXavrSWAP = .TRUE.    ! Hard coding this, but leaving this read in case we want to enable control of this later
       if (Failed())  return;
       !  NacYaw_North  - Reference yaw angle of the nacelle when the upwind end points due North (deg) [used only with Bladed Interface]
    call ParseVar( FileInfo_In, CurLine, 'NacYaw_North', InputFileData%NacYaw_North, ErrStat2, ErrMsg2, UnEcho )

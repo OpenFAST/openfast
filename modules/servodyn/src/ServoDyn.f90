@@ -1318,12 +1318,18 @@ SUBROUTINE SrvD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF (ErrStat >= AbortErrLev) RETURN
    
-      ! Pitch control:
+      ! Airfoil control:
    CALL AirfoilControl_CalcOutput( t, u, p, x, xd, z, OtherState, y%BlAirfoilCom, m, ErrStat, ErrMsg )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF (ErrStat >= AbortErrLev) RETURN
 
-!FIXME: add the hooks here for copying data from the various EXavrSWAP_<mod> sections to the appropriate y so they can be passed out to the correct modules
+
+   if (p%EXavrSWAP) then
+         ! Airfoil control:
+      CALL CableControl_CalcOutput( t, u, p, x, xd, z, OtherState, y%CableDeltaL, y%CableDeltaLdot, m, ErrStat, ErrMsg )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         IF (ErrStat >= AbortErrLev) RETURN
+   endif
 
    !...............................................................................................................................   
    ! Place the selected output channels into the WriteOutput(:) array with the proper sign:
@@ -2004,7 +2010,8 @@ SUBROUTINE ValidatePrimaryData( InitInp, InputFileData, ErrStat, ErrMsg )
    CALL HSSBr_ValidateData()
 !FIXME: add validation for StC inputs
 !   CALL StC_ValidateData()
-   CALL AfC_ValidateData()     ! Airfoil controls
+   CALL AfC_ValidateData()    ! Airfoil controls
+   CALL CC_ValidateData()     ! Cable controls
 
    !  Checks for linearization:
    if ( InitInp%Linearize ) then
@@ -2278,6 +2285,15 @@ CONTAINS
       endif
    END SUBROUTINE AfC_ValidateData
 
+   !-------------------------------------------------------------------------------------------------------------------------------
+   !> This routine performs the checks on inputs for the flap control.
+   SUBROUTINE CC_ValidateData( )
+      IF ( InputFileData%CCMode /= ControlMode_NONE      .and. &
+           InputFileData%CCMode /= ControlMode_EXTERN    .and. InputFileData%CCMode /= ControlMode_DLL )  THEN
+         CALL SetErrStat( ErrID_Fatal, 'CCMode must be 0, 4, or 5.', ErrStat, ErrMsg, RoutineName )
+      ENDIF
+   END SUBROUTINE CC_ValidateData
+
 END SUBROUTINE ValidatePrimaryData
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine sets the parameters, based on the data stored in InputFileData.
@@ -2533,7 +2549,7 @@ SUBROUTINE SrvD_SetParameters( InputFileData, p, UnSum, ErrStat, ErrMsg )
    if (UnSum >0) then
       write(UnSum, '(A)') ''
       write(UnSum, '(A)') SectionDivide
-      write(UnSum, '(A)')              ' Tip Brake  (not available)'
+      write(UnSum, '(A)') ' Tip Brake  (not available)'
    endif
       
       !.............................................
@@ -2584,6 +2600,31 @@ SUBROUTINE SrvD_SetParameters( InputFileData, p, UnSum, ErrStat, ErrMsg )
    p%AfC_Amp      =  InputFileData%AfC_Amp
    p%AfC_phase    =  InputFileData%AfC_phase
 
+   if (UnSum >0) then
+      write(UnSum, '(A)') ''
+      write(UnSum, '(A)') SectionDivide
+      write(UnSum, '(A)')              ' Airfoil control'
+      write(UnSum, '(A37,I2)')         '    AfCMode  -- Airfoil control mode ',p%AfCMode
+      if (p%AfCMode == ControlMode_SIMPLE) then
+      write(UnSum, '(A)')              '    -------------------'
+      write(UnSum, '(A)')              '    Simple cosine signal'
+      write(UnSum, '(A115,ES12.5e2)')  '      AfC_Mean  -- Mean level for cocosine cycling or steady value (-)                                             ',p%AfC_Mean
+      write(UnSum, '(A115,ES12.5e2)')  '      AfC_Amp   -- Amplitude for for cocosine cycling of flap signal (-)                                           ',p%AfC_Amp
+      write(UnSum, '(A115,ES12.5e2)')  '      AfC_Phase -- Phase relative to the blade azimuth (0 is vertical) for for cosine cycling of flap signal (deg) ',p%AfC_Phase
+      endif
+   endif
+
+      !.............................................
+      ! Save values for CCmode - Cable control
+      !.............................................
+   p%CCmode       =  InputFileData%CCmode
+ 
+   if (UnSum >0) then
+      write(UnSum, '(A)') ''
+      write(UnSum, '(A)') SectionDivide
+      write(UnSum, '(A)')              ' Cable control'
+      write(UnSum, '(A34,I2)')         '    CCMode  -- cable control mode ',p%CCMode
+   endif
 
 END SUBROUTINE SrvD_SetParameters
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -3744,10 +3785,10 @@ SUBROUTINE AirfoilControl_CalcOutput( t, u, p, x, xd, z, OtherState, BlAirfoilCo
       !...................................................................
       ! Calculate the airfoil commands:
       !...................................................................
-      SELECT CASE ( p%AfCmode )  ! Which pitch control mode are we using?
-         CASE ( ControlMode_NONE )                    ! Static value
+      SELECT CASE ( p%AfCmode )  ! Which airfoil control mode are we using?
+         CASE ( ControlMode_NONE )                    ! None control 
             BlAirfoilCom(1:p%NumBl) = 0.0_ReKi 
-         CASE ( ControlMode_SIMPLE )                  ! Simple, built-in sine wave control routine.
+         CASE ( ControlMode_SIMPLE )                  ! Simple, built-in cosine wave control routine.
             do i=1,p%NumBl
                Azimuth = u%LSSTipPxa + TwoPi*(i-1)/p%NumBl       ! assuming all blades evenly spaced on rotor
                BlAirfoilCom(i) = p%AfC_Mean + p%AfC_Amp*cos( Azimuth + p%AfC_phase)
@@ -3764,6 +3805,60 @@ SUBROUTINE AirfoilControl_CalcOutput( t, u, p, x, xd, z, OtherState, BlAirfoilCo
             end if
       END SELECT
 END SUBROUTINE AirfoilControl_CalcOutput
+
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Routine for computing the cable control commands 
+!  Commanded Airfoil UserProp for blade (must be same units as given in AD15 airfoil tables)
+!  This is passed to AD15 to be interpolated with the airfoil table userprop column
+!  (might be used for airfoil flap angles for example)
+SUBROUTINE CableControl_CalcOutput( t, u, p, x, xd, z, OtherState, CableDeltaL, CableDeltaLdot, m, ErrStat, ErrMsg )
+   REAL(DbKi),                     INTENT(IN   )  :: t                  !< Current simulation time in seconds
+   TYPE(SrvD_InputType),           INTENT(IN   )  :: u                  !< Inputs at t
+   TYPE(SrvD_ParameterType),       INTENT(IN   )  :: p                  !< Parameters
+   TYPE(SrvD_ContinuousStateType), INTENT(IN   )  :: x                  !< Continuous states at t
+   TYPE(SrvD_DiscreteStateType),   INTENT(IN   )  :: xd                 !< Discrete states at t
+   TYPE(SrvD_ConstraintStateType), INTENT(IN   )  :: z                  !< Constraint states at t
+   TYPE(SrvD_OtherStateType),      INTENT(IN   )  :: OtherState         !< Other states at t
+   REAL(ReKi),    ALLOCATABLE,     INTENT(INOUT)  :: CableDeltaL(:)     !< CableDeltaL command signals
+   REAL(ReKi),    ALLOCATABLE,     INTENT(INOUT)  :: CableDeltaLdot(:)  !< CableDeltaLdot command signals
+   TYPE(SrvD_MiscVarType),         INTENT(INOUT)  :: m                  !< Misc (optimization) variables
+   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat            !< Error status of the operation
+   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg             !< Error message if ErrStat /= ErrID_None
+   REAL(ReKi)                                     :: factor
+
+         ! Initialize ErrStat -- This isn't curently needed, but if a user routine is created, it might be wanted then
+      ErrStat = ErrID_None
+      ErrMsg  = ""
+
+      !...................................................................
+      ! Calculate the cable control channels
+      !...................................................................
+      SELECT CASE ( p%CCmode )  ! Which cable control are we using? 
+         ! Nothing.  Note that these might be allocated if no control signals were requested from any modules
+         CASE ( ControlMode_NONE )
+            if (allocated(CableDeltaL))      CableDeltaL    = 0.0_ReKi
+            if (allocated(CableDeltaLdot))   CableDeltaLdot = 0.0_ReKi
+         ! User-defined from Simulink or LabVIEW.
+         CASE ( ControlMode_EXTERN )
+!FIXME: do we need some sizing checks here!!!!
+            CableDeltaL(   1:p%NumCableControl) = u%ExternalCableDeltaL(   1:p%NumCableControl)
+            CableDeltaLdot(1:p%NumCableControl) = u%ExternalCableDeltaLdot(1:p%NumCableControl)
+         ! User-defined cable control from Bladed-style DLL
+         CASE ( ControlMode_DLL )
+            if (p%DLL_Ramp) then
+               factor = (t - m%LastTimeCalled) / m%dll_data%DLL_DT
+               CableDeltaL(1:p%NumCableControl)    = m%dll_data%PrevCableDeltaL(   1:p%NumCableControl) + &
+                                 factor * ( m%dll_data%CableDeltaL(   1:p%NumCableControl) - m%dll_data%PrevCableDeltaL(   1:p%NumCableControl) )
+               CableDeltaLdot(1:p%NumCableControl) = m%dll_data%PrevCableDeltaLdot(1:p%NumCableControl) + &
+                                 factor * ( m%dll_data%CableDeltaLdot(1:p%NumCableControl) - m%dll_data%PrevCableDeltaLdot(1:p%NumCableControl) )
+            else
+               CableDeltaL(   1:p%NumCableControl) = m%dll_data%CableDeltaL(   1:p%NumCableControl)
+               CableDeltaLdot(1:p%NumCableControl) = m%dll_data%CableDeltaLdot(1:p%NumCableControl)
+            end if
+      END SELECT
+
+END SUBROUTINE CableControl_CalcOutput
+
 
 END MODULE ServoDyn
 !**********************************************************************************************************************************

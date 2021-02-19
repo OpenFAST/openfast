@@ -526,7 +526,7 @@ subroutine WrLegacyChannelInfoToSummaryFile(u,p,dll_data,UnSum,ErrStat,ErrMsg)
       if (Failed())  return
    DataFlow  = ''
 
-      ! Channels with info sent to the DLL (from fill routine)
+      ! Channels with info sent to the DLL (from Fill_avrSWAP routine)
    call WrSumInfoSend(1, 'Status flag set as follows: 0 if this is the first call, 1 for all subsequent time steps, -1 if this is the final call at the end of the simulation (-) ')
    call WrSumInfoSend(2, 'Current time (sec) [t in single precision]')
    call WrSumInfoSend(3, 'Communication interval (sec)')
@@ -595,8 +595,9 @@ subroutine WrLegacyChannelInfoToSummaryFile(u,p,dll_data,UnSum,ErrStat,ErrMsg)
    call WrSumInfoSend(117, 'Controller state [always set to 0]')
    if (dll_data%DLL_NumTrq>0)  call WrSumInfoSend(R-1,                    'Start of generator speed torque lookup table')
    if (dll_data%DLL_NumTrq>0)  call WrSumInfoSend(R-1+dll_data%DLL_NumTrq,'End   of generator speed torque lookup table')
+   call WrSumInfoSend(129, 'Maximum extent of the avrSWAP array: '//trim(Num2LStr(size(dll_data%avrSWAP))) )
 
-      ! Channels with info retrieved from the DLL (from retrieve routine)
+      ! Channels with info retrieved from the DLL (from Retrieve_avrSWAP routine)
    call WrSumInfoRcvd(35, 'Generator contactor (-) [sent to DLL at the next call]')
    call WrSumInfoRcvd(36, 'Shaft brake status (-) [sent to DLL at the next call; anything other than 0 or 1 is an error] ')
    call WrSumInfoRcvd(41, 'demanded yaw actuator torque [this output is ignored since record 29 is set to 0 by ServoDyn indicating yaw rate control]')
@@ -645,7 +646,7 @@ contains
       write(UnSum,'(6x,A8,3x,A3,3x,A11)') 'Record #','   ','Description'
       write(UnSum,'(6x,A8,3x,A3,3x,A11)') '--------','   ','-----------'
       do I=1,size(SumInfo)
-         if (len_trim(SumInfo(I)) > 0 )  write(UnSum,'(4x,I4,6x,A3,2x,A)')  I,DataFlow(I),trim(SumInfo(I))
+         if (len_trim(SumInfo(I)) > 0 )  write(UnSum,'(8x,I4,5x,A4,2x,A)')  I,DataFlow(I),trim(SumInfo(I))
       enddo
    end subroutine WrBladedSumInfoToFile
    subroutine WrSumInfoSend(Record,Desc)
@@ -1035,6 +1036,9 @@ END IF
 
          
 !> * Records 120-129: User-defined variables 1-10; ignored in ServoDyn
+   ! Records 120:122 are outputs [see Retrieve_avrSWAP()]
+   dll_data%avrSWAP(129) = size(dll_data%avrSWAP)           !> * Record 129: Maximum extent of the avrSWAP array
+
 ! Records 130-142 are outputs [see Retrieve_avrSWAP()]   
 ! Records L1 and onward are outputs [see Retrieve_avrSWAP()]
    

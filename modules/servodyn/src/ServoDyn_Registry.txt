@@ -149,6 +149,8 @@ typedef	^	SrvD_InputFile	ReKi	AfC_Mean	-	-	-	"Mean level for cosine cycling or s
 typedef	^	SrvD_InputFile	ReKi	AfC_Amp	-	-	-	"Amplitude for for cosine cycling of flap signal (-) [used only with AfCmode==1]"	-
 typedef	^	SrvD_InputFile	ReKi	AfC_Phase	-	-	-	"Phase relative to the blade azimuth (0 is vertical) for for cosine cycling of flap signal (deg) [used only with AfCmode==1]"	deg
 
+typedef	^	SrvD_InputFile	IntKi	CCmode	-	-	-	"Cable control control mode {0: none, 4: user-defined from Simulink/Labview, 5: user-defined from Bladed-style DLL}" -
+
 typedef	^	SrvD_InputFile	Logical	EXavrSWAP	-	-	-	"Use extendend AVR swap"	-
 
 # ..... Data for using Bladed DLLs .......................................................................................................
@@ -224,10 +226,14 @@ typedef	^	BladedDLLType	ReKi	GenSpd_TLU	{:}	-	-	"Table (array) containing DLL_Nu
 typedef	^	BladedDLLType	ReKi	GenTrq_TLU	{:}	-	-	"Table (array) containing DLL_NumTrq generator torques for the torque-speed table look-up (TLU) -- this should be defined using an array constructor, for example,  if DLL_NumTrq = 3,  GenTrq_TLU(DLL_NumTrq)    = (/ 0.0, 10,  200.0 /)"	Nm
 typedef	^	BladedDLLType	IntKi	Yaw_Cntrl	-	-	-	"Yaw control: 0 = rate;  1 = torque"	-
 
-typedef	^	BladedDLLType	SiKi	EXavrSWAP_Lidar       	{:}	-	-	"The swap array: used to pass data from the DLL controller for Lidar            using extended avrSWAP"	"see EXavrSWAP documentation in BladededInterface"
-typedef	^	BladedDLLType	SiKi	EXavrSWAP_CableTension 	{:}	-	-	"The swap array: used to pass data from the DLL controller for cable tensioning using extended avrSWAP"	"see EXavrSWAP documentation in BladededInterface"
-typedef	^	BladedDLLType	SiKi	EXavrSWAP_StCControls  	{:}	-	-	"The swap array: used to pass data from the DLL controller for StCControls      using extended avrSWAP"	"see EXavrSWAP documentation in BladededInterface"
-typedef	^	BladedDLLType	SiKi	EXavrSWAP_AeroControls	{:}	-	-	"The swap array: used to pass data from the DLL controller for AeroControls     using extended avrSWAP"	"see EXavrSWAP documentation in BladededInterface"
+typedef	^	BladedDLLType	SiKi	PrevCableDeltaL 	{:}	-	-	"Previous value for ramping for cable tensioning DeltaL using extended avrSWAP [see EXavrSWAP documentation in BladededInterface_EX]"   m
+typedef	^	BladedDLLType	SiKi	PrevCableDeltaLdot 	{:}	-	-	"Previous value for ramping for cable tensioning DeltaLdot using extended avrSWAP [see EXavrSWAP documentation in BladededInterface_EX]" m/s
+typedef	^	BladedDLLType	SiKi	CableDeltaL 	{:}	-	-	"The swap array: used to pass data from the DLL controller for cable tensioning DeltaL using extended avrSWAP [see EXavrSWAP documentation in BladededInterface_EX]"   m
+typedef	^	BladedDLLType	SiKi	CableDeltaLdot 	{:}	-	-	"The swap array: used to pass data from the DLL controller for cable tensioning DeltaLdot using extended avrSWAP [see EXavrSWAP documentation in BladededInterface_EX]" m/s
+#Placeholders for future development
+#typedef	^	BladedDLLType	SiKi	EXavrSWAP_Lidar       	{:}	-	-	"The swap array: used to pass data from the DLL controller for Lidar            using extended avrSWAP [see EXavrSWAP documentation in BladededInterface_EX]"  -
+#typedef	^	BladedDLLType	SiKi	EXavrSWAP_StCControls  	{:}	-	-	"The swap array: used to pass data from the DLL controller for StCControls      using extended avrSWAP [see EXavrSWAP documentation in BladededInterface_EX]" -
+#typedef	^	BladedDLLType	SiKi	EXavrSWAP_AeroControls	{:}	-	-	"The swap array: used to pass data from the DLL controller for AeroControls     using extended avrSWAP [see EXavrSWAP documentation in BladededInterface_EX]" -
 
 # ..... States ....................................................................................................................
 # Define continuous (differentiable) states here:
@@ -358,6 +364,7 @@ typedef	^	ParameterType	IntKi	AfCmode	-	-	-	"Airfoil control mode {0: none, 1: s
 typedef	^	ParameterType	ReKi	AfC_Mean	-	-	-	"Mean level for cosine cycling or steady value [used only with AfCmode==1]" -
 typedef	^	ParameterType	ReKi	AfC_Amp	-	-	-	"Amplitude for for cosine cycling of flap signal (-) [used only with AfCmode==1]"	-
 typedef	^	ParameterType	ReKi	AfC_Phase	-	-	-	"Phase relative to the blade azimuth (0 is vertical) for for cosine cycling of flap signal (deg) [used only with AfCmode==1]"	deg
+typedef	^	ParameterType	IntKi	CCmode	-	-	-	"Cable control control mode {0: none, 4: user-defined from Simulink/Labview, 5: user-defined from Bladed-style DLL}" -
 # parameters for output
 typedef	^	ParameterType	IntKi	NumOuts	-	-	-	"Number of parameters in the output list (number of outputs requested)"	-
 typedef	^	ParameterType	IntKi	NumOuts_DLL	-	-	-	"Number of logging channels output from the DLL (set at initialization)"	-
@@ -385,6 +392,7 @@ typedef	^	ParameterType	StC_ParameterType	NStC	{:}	-	-	"StC module parameters - 
 typedef	^	ParameterType	StC_ParameterType	TStC	{:}	-	-	"StC module parameters - tower"	-
 typedef	^	ParameterType	StC_ParameterType	SStC	{:}	-	-	"StC module parameters - substructure"	-
 typedef	^	ParameterType	Logical	EXavrSWAP	-	-	-	"Use extendend avr SWAP"	-
+typedef	^	ParameterType	IntKi	NumCableControl	-	-	-	"Number of cable control channels requested"	-
 
 # ..... Inputs ....................................................................................................................
 # Define inputs that are not on this mesh here:
@@ -401,6 +409,8 @@ typedef	^	InputType	ReKi	ExternalGenTrq	-	-	-	"Electrical generator torque from 
 typedef	^	InputType	ReKi	ExternalElecPwr	-	-	-	"Electrical power from Simulink or LabVIEW"	W
 typedef	^	InputType	ReKi	ExternalHSSBrFrac	-	-	-	"Fraction of full braking torque: 0 (off) <= HSSBrFrac <= 1 (full) from Simulink or LabVIEW"	-
 typedef	^	InputType	ReKi	ExternalBlAirfoilCom	{:}	-	-	"Commanded Airfoil UserProp for blade.  Passed to AD15 for airfoil interpolation (must be same units as given in AD15 airfoil tables)"	-
+typedef	^	InputType	ReKi	ExternalCableDeltaL	{:}	-	-	"Commanded Cable controlo DeltaL"	m
+typedef	^	InputType	ReKi	ExternalCableDeltaLdot	{:}	-	-	"Commanded Cable controlo DeltaLdot"   m/s
 typedef	^	InputType	ReKi	TwrAccel	-	-	-	"Tower acceleration for tower feedback control (user routine only)"	m/s^2
 typedef	^	InputType	ReKi	YawErr	-	-	2pi	"Yaw error"	radians
 typedef	^	InputType	ReKi	WindDir	-	-	2pi	"Wind direction"	radians
@@ -447,6 +457,6 @@ typedef	^	OutputType	StC_OutputType	TStC	{:}	-	-	"StC module outputs - tower"	-
 typedef	^	OutputType	StC_OutputType	SStC	{:}	-	-	"StC module outputs - substructure"	-
 typedef	^	OutputType	SiKi	SuperController	{:}	-	-	"A swap array: used to pass output data from the DLL controller to the supercontroller"	-
 typedef	^	OutputType	SiKi	Lidar	{:}	-	-	"A swap array: used to pass output data from the DLL controller to the Lidar"	-
-typedef	^	OutputType	ReKi	CableDeltaL	{:}	-	-	"Cable control -- Length change request (passed to MD or SD)"	-
-typedef	^	OutputType	ReKi	CableDeltaLdot	{:}	-	-	"Cable control -- Length change rate request (passed to MD or SD)"	-
+typedef	^	OutputType	ReKi	CableDeltaL	{:}	-	-	"Cable control -- Length change request (passed to MD or SD)"	m
+typedef	^	OutputType	ReKi	CableDeltaLdot	{:}	-	-	"Cable control -- Length change rate request (passed to MD or SD)"	m/s
 

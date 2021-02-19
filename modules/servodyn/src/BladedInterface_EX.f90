@@ -63,8 +63,8 @@ CONTAINS
 !> This routine sets the input and output necessary for the extended interface.
 SUBROUTINE EXavrSWAP_Init( InitInp, u, p, y, dll_data, UnSum, ErrStat, ErrMsg)
    type(SrvD_InitInputType),     intent(in   )  :: InitInp        !< Input data for initialization routine
-   type(SrvD_InputType),         intent(in   )  :: u              !< Inputs at t
-   type(SrvD_ParameterType),     intent(in   )  :: p              !< Parameters
+   type(SrvD_InputType),         intent(inout)  :: u              !< Inputs at t (allocate a few vars)
+   type(SrvD_ParameterType),     intent(inout)  :: p              !< Parameters
    type(SrvD_OutputType),        intent(inout)  :: y              !< Initial system outputs (outputs are not calculated)
    type(BladedDLLType),          intent(inout)  :: dll_data       !< data for the Bladed DLL
    integer(IntKi),               intent(in   )  :: UnSum          !< Unit number for summary file (>0 when active)
@@ -128,6 +128,8 @@ contains
 
    subroutine InitCableCtrl()
       integer(IntKi)    :: I,J   ! Generic counters
+
+      ! Error check the Cable Ctrl
       if (.not. allocated(InitInp%CableControlRequestor)) then
          ErrStat2=ErrID_Fatal
          ErrMsg2='Cable control string array indicating which module requested cable controls is missing (CableControlRequestor)'
@@ -143,15 +145,50 @@ contains
          ErrMsg2='Maximum number of cable control channels exceeded:  requested '//trim(Num2LStr(InitInp%NumCableControl))// &
                   ' channel sets ('//trim(Num2LStr(InitInp%NumCableControl*2_IntKi))//' individual channels),'// &
                   ' but only '//trim(Num2LStr(CableCtrl_MaxChan))//' individual channels are available'
+         call WrSCr('Cable channels requested: ')
+         do I=1,size(InitInp%CableControlRequestor)
+            call WrScr('   '//trim(Num2LStr(I))//'  '//trim(InitInp%CableControlRequestor(I)))
+         enddo
+         if (Failed())  return
       endif
-      call AllocAry( y%CableDeltaL, InitInp%NumCableControl, 'CableDeltaL', ErrStat2, ErrMsg2 )
+
+      ! Allocate arrays for cable control
+      p%NumCableControl = InitInp%NumCableControl
+      ! Inputs from Simulink
+!FIXME: Check this all the way through! May need to make these inputs over the whole potential range
+!      call AllocAry( u%ExternalCableDeltaL,    p%NumCableControl, 'ExternalCableDeltaL',    ErrStat2, ErrMsg2 )
+!         if (Failed())  return
+!      call AllocAry( u%ExternalCableDeltaLdot, p%NumCableControl, 'ExternalCableDeltaLdot', ErrStat2, ErrMsg2 )
+!         if (Failed())  return
+      ! Outputs from SrvD -- we allocate this if any cable control signals were requested.
+      call AllocAry( y%CableDeltaL,    p%NumCableControl, 'CableDeltaL',    ErrStat2, ErrMsg2 )
          if (Failed())  return
-      call AllocAry( y%CableDeltaLdot, InitInp%NumCableControl, 'CableDeltaLdot', ErrStat2, ErrMsg2 )
+      call AllocAry( y%CableDeltaLdot, p%NumCableControl, 'CableDeltaLdot', ErrStat2, ErrMsg2 )
          if (Failed())  return
+      ! dll_data for communication to DLL
+      call AllocAry( dll_data%CableDeltaL,    p%NumCableControl, 'CableDeltaL',    ErrStat2, ErrMsg2 )
+         if (Failed())  return
+      call AllocAry( dll_data%CableDeltaLdot, p%NumCableControl, 'CableDeltaLdot', ErrStat2, ErrMsg2 )
+         if (Failed())  return
+      ! previous DLL command for ramping
+      call AllocAry( dll_data%PrevCableDeltaL,    p%NumCableControl, 'PrevCableDeltaL',    ErrStat2, ErrMsg2 )
+         if (Failed())  return
+      call AllocAry( dll_data%PrevCableDeltaLdot, p%NumCableControl, 'PrevCableDeltaLdot', ErrStat2, ErrMsg2 )
+         if (Failed())  return
+      ! Initialize to zeros
+!      u%ExternalCableDeltaL         =  0.0_ReKi
+!      u%ExternalCableDeltaLdot      =  0.0_ReKi
+      y%CableDeltaL                 =  0.0_ReKi
+      y%CableDeltaLdot              =  0.0_ReKi
+      dll_data%CableDeltaL          =  0.0_SiKi
+      dll_data%CableDeltaLdot       =  0.0_SiKi
+      dll_data%PrevCableDeltaL      =  0.0_SiKi
+      dll_data%PrevCableDeltaLdot   =  0.0_SiKi
+
       ! Create info for summary file about channels
       if (UnSum > 0) then
-         do I=1,InitInp%NumCableControl
-            J=CableCtrl_StartIdx + (I*2)-1      ! Index into the full avrSWAP
+         do I=1,p%NumCableControl
+            J=CableCtrl_StartIdx + ((I-1)*2)    ! Index into the full avrSWAP
             call WrSumInfoRcvd(J,  InitInp%CableControlRequestor(I),'Cable control channel group '//trim(Num2LStr(I))//' -- DeltaL')
             call WrSumInfoRcvd(J+1,InitInp%CableControlRequestor(I),'Cable control channel group '//trim(Num2LStr(I))//' -- DeltaLdot')
          enddo
@@ -169,7 +206,7 @@ contains
       write(UnSum,'(6x,A8,3x,A3,3x,A21,3x,A11)') 'Record #','   ','Requested by         ','Description'
       write(UnSum,'(6x,A8,3x,A3,3x,A21,3x,A11)') '--------','   ','---------------------','-----------'
       do I=1,size(SumInfo)
-         if (len_trim(SumInfo(I)) > 0 )  write(UnSum,'(4x,I4,6x,A3,2x,A)')  I,DataFlow(I),trim(Requestor(I)),trim(SumInfo(I))
+         if (len_trim(SumInfo(I)) > 0 )  write(UnSum,'(8x,I4,5x,A3,4x,A21,2x,A)')  I,DataFlow(I),Requestor(I),trim(SumInfo(I))
       enddo
    end subroutine WrBladedSumInfoToFile
    subroutine WrSumInfoSend(Record,Desc)
@@ -235,7 +272,7 @@ SUBROUTINE Retrieve_EXavrSWAP( p, dll_data, ErrStat, ErrMsg )
    character(ErrMsgLen),         intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
       ! local variables:
-   integer(IntKi)                               :: K           ! Loop counter
+   integer(IntKi)                               :: I,J         ! Loop counter
    character(*),  parameter                     :: RoutineName = 'Retrieve_EXavrSWAP'
    
       ! Initialize ErrStat and ErrMsg
@@ -257,8 +294,15 @@ CONTAINS
    !> Controller signals to mooring systems (active mooring)
    !!    avrSWAP(2601:2800)
    subroutine Retrieve_EXavrSWAP_Cable ()
-      ! in case something got set wrong, don't try to read beyond array
-      if (size(dll_data%avrswap) < 2800 ) return
+      if (allocated(dll_data%CableDeltaL) .and. allocated(dll_data%CableDeltaLdot)) then
+         ! in case something got set wrong, don't try to read beyond array
+         if (size(dll_data%avrswap) < CableCtrl_StartIdx+CableCtrl_MaxChan-1 ) return
+         do I=1,p%NumCableControl
+            J=CableCtrl_StartIdx + ((I-1)*2)      ! Index into the full avrSWAP
+            dll_data%CableDeltaL(I)    = dll_data%avrSWAP(J)
+            dll_data%CableDeltaLdot(I) = dll_data%avrSWAP(J+1)
+         enddo
+      endif
    end subroutine Retrieve_EXavrSWAP_Cable
 
    !> Controller signals to substructure controls (actuators in substructure)

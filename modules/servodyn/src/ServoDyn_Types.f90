@@ -165,6 +165,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: AfC_Mean      !< Mean level for cosine cycling or steady value [used only with AfCmode==1] [-]
     REAL(ReKi)  :: AfC_Amp      !< Amplitude for for cosine cycling of flap signal (-) [used only with AfCmode==1] [-]
     REAL(ReKi)  :: AfC_Phase      !< Phase relative to the blade azimuth (0 is vertical) for for cosine cycling of flap signal (deg) [used only with AfCmode==1] [deg]
+    INTEGER(IntKi)  :: CCmode      !< Cable control control mode {0: none, 4: user-defined from Simulink/Labview, 5: user-defined from Bladed-style DLL} [-]
     LOGICAL  :: EXavrSWAP      !< Use extendend AVR swap [-]
   END TYPE SrvD_InputFile
 ! =======================
@@ -239,10 +240,10 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: GenSpd_TLU      !< Table (array) containing DLL_NumTrq generator speeds  for the torque-speed table look-up (TLU) -- this should be defined using an array constructor; for example,  if DLL_NumTrq = 3,  GenSpd_TLU(DLL_NumTrq)    = (/ 0.0, 99.9,  999.9 /) [rad/s]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: GenTrq_TLU      !< Table (array) containing DLL_NumTrq generator torques for the torque-speed table look-up (TLU) -- this should be defined using an array constructor, for example,  if DLL_NumTrq = 3,  GenTrq_TLU(DLL_NumTrq)    = (/ 0.0, 10,  200.0 /) [Nm]
     INTEGER(IntKi)  :: Yaw_Cntrl      !< Yaw control: 0 = rate;  1 = torque [-]
-    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: EXavrSWAP_Lidar      !< The swap array: used to pass data from the DLL controller for Lidar            using extended avrSWAP [see EXavrSWAP documentation in BladededInterface]
-    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: EXavrSWAP_CableTension      !< The swap array: used to pass data from the DLL controller for cable tensioning using extended avrSWAP [see EXavrSWAP documentation in BladededInterface]
-    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: EXavrSWAP_StCControls      !< The swap array: used to pass data from the DLL controller for StCControls      using extended avrSWAP [see EXavrSWAP documentation in BladededInterface]
-    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: EXavrSWAP_AeroControls      !< The swap array: used to pass data from the DLL controller for AeroControls     using extended avrSWAP [see EXavrSWAP documentation in BladededInterface]
+    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: PrevCableDeltaL      !< Previous value for ramping for cable tensioning DeltaL using extended avrSWAP [see EXavrSWAP documentation in BladededInterface_EX] [m]
+    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: PrevCableDeltaLdot      !< Previous value for ramping for cable tensioning DeltaLdot using extended avrSWAP [see EXavrSWAP documentation in BladededInterface_EX] [m/s]
+    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: CableDeltaL      !< The swap array: used to pass data from the DLL controller for cable tensioning DeltaL using extended avrSWAP [see EXavrSWAP documentation in BladededInterface_EX] [m]
+    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: CableDeltaLdot      !< The swap array: used to pass data from the DLL controller for cable tensioning DeltaLdot using extended avrSWAP [see EXavrSWAP documentation in BladededInterface_EX] [m/s]
   END TYPE BladedDLLType
 ! =======================
 ! =========  SrvD_ContinuousStateType  =======
@@ -376,6 +377,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: AfC_Mean      !< Mean level for cosine cycling or steady value [used only with AfCmode==1] [-]
     REAL(ReKi)  :: AfC_Amp      !< Amplitude for for cosine cycling of flap signal (-) [used only with AfCmode==1] [-]
     REAL(ReKi)  :: AfC_Phase      !< Phase relative to the blade azimuth (0 is vertical) for for cosine cycling of flap signal (deg) [used only with AfCmode==1] [deg]
+    INTEGER(IntKi)  :: CCmode      !< Cable control control mode {0: none, 4: user-defined from Simulink/Labview, 5: user-defined from Bladed-style DLL} [-]
     INTEGER(IntKi)  :: NumOuts      !< Number of parameters in the output list (number of outputs requested) [-]
     INTEGER(IntKi)  :: NumOuts_DLL      !< Number of logging channels output from the DLL (set at initialization) [-]
     CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
@@ -399,6 +401,7 @@ IMPLICIT NONE
     TYPE(StC_ParameterType) , DIMENSION(:), ALLOCATABLE  :: TStC      !< StC module parameters - tower [-]
     TYPE(StC_ParameterType) , DIMENSION(:), ALLOCATABLE  :: SStC      !< StC module parameters - substructure [-]
     LOGICAL  :: EXavrSWAP      !< Use extendend avr SWAP [-]
+    INTEGER(IntKi)  :: NumCableControl      !< Number of cable control channels requested [-]
   END TYPE SrvD_ParameterType
 ! =======================
 ! =========  SrvD_InputType  =======
@@ -416,6 +419,8 @@ IMPLICIT NONE
     REAL(ReKi)  :: ExternalElecPwr      !< Electrical power from Simulink or LabVIEW [W]
     REAL(ReKi)  :: ExternalHSSBrFrac      !< Fraction of full braking torque: 0 (off) <= HSSBrFrac <= 1 (full) from Simulink or LabVIEW [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: ExternalBlAirfoilCom      !< Commanded Airfoil UserProp for blade.  Passed to AD15 for airfoil interpolation (must be same units as given in AD15 airfoil tables) [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: ExternalCableDeltaL      !< Commanded Cable controlo DeltaL [m]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: ExternalCableDeltaLdot      !< Commanded Cable controlo DeltaLdot [m/s]
     REAL(ReKi)  :: TwrAccel      !< Tower acceleration for tower feedback control (user routine only) [m/s^2]
     REAL(ReKi)  :: YawErr      !< Yaw error [radians]
     REAL(ReKi)  :: WindDir      !< Wind direction [radians]
@@ -461,8 +466,8 @@ IMPLICIT NONE
     TYPE(StC_OutputType) , DIMENSION(:), ALLOCATABLE  :: SStC      !< StC module outputs - substructure [-]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: SuperController      !< A swap array: used to pass output data from the DLL controller to the supercontroller [-]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: Lidar      !< A swap array: used to pass output data from the DLL controller to the Lidar [-]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: CableDeltaL      !< Cable control -- Length change request (passed to MD or SD) [-]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: CableDeltaLdot      !< Cable control -- Length change rate request (passed to MD or SD) [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: CableDeltaL      !< Cable control -- Length change request (passed to MD or SD) [m]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: CableDeltaLdot      !< Cable control -- Length change rate request (passed to MD or SD) [m/s]
   END TYPE SrvD_OutputType
 ! =======================
 CONTAINS
@@ -1914,6 +1919,7 @@ ENDIF
     DstInputFileData%AfC_Mean = SrcInputFileData%AfC_Mean
     DstInputFileData%AfC_Amp = SrcInputFileData%AfC_Amp
     DstInputFileData%AfC_Phase = SrcInputFileData%AfC_Phase
+    DstInputFileData%CCmode = SrcInputFileData%CCmode
     DstInputFileData%EXavrSWAP = SrcInputFileData%EXavrSWAP
  END SUBROUTINE SrvD_CopyInputFile
 
@@ -2097,6 +2103,7 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! AfC_Mean
       Re_BufSz   = Re_BufSz   + 1  ! AfC_Amp
       Re_BufSz   = Re_BufSz   + 1  ! AfC_Phase
+      Int_BufSz  = Int_BufSz  + 1  ! CCmode
       Int_BufSz  = Int_BufSz  + 1  ! EXavrSWAP
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -2410,6 +2417,8 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%AfC_Phase
     Re_Xferred = Re_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%CCmode
+    Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%EXavrSWAP, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE SrvD_PackInputFile
@@ -2753,6 +2762,8 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%AfC_Phase = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
+    OutData%CCmode = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
     OutData%EXavrSWAP = TRANSFER(IntKiBuf(Int_Xferred), OutData%EXavrSWAP)
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE SrvD_UnPackInputFile
@@ -2922,53 +2933,53 @@ IF (ALLOCATED(SrcBladedDLLTypeData%GenTrq_TLU)) THEN
     DstBladedDLLTypeData%GenTrq_TLU = SrcBladedDLLTypeData%GenTrq_TLU
 ENDIF
     DstBladedDLLTypeData%Yaw_Cntrl = SrcBladedDLLTypeData%Yaw_Cntrl
-IF (ALLOCATED(SrcBladedDLLTypeData%EXavrSWAP_Lidar)) THEN
-  i1_l = LBOUND(SrcBladedDLLTypeData%EXavrSWAP_Lidar,1)
-  i1_u = UBOUND(SrcBladedDLLTypeData%EXavrSWAP_Lidar,1)
-  IF (.NOT. ALLOCATED(DstBladedDLLTypeData%EXavrSWAP_Lidar)) THEN 
-    ALLOCATE(DstBladedDLLTypeData%EXavrSWAP_Lidar(i1_l:i1_u),STAT=ErrStat2)
+IF (ALLOCATED(SrcBladedDLLTypeData%PrevCableDeltaL)) THEN
+  i1_l = LBOUND(SrcBladedDLLTypeData%PrevCableDeltaL,1)
+  i1_u = UBOUND(SrcBladedDLLTypeData%PrevCableDeltaL,1)
+  IF (.NOT. ALLOCATED(DstBladedDLLTypeData%PrevCableDeltaL)) THEN 
+    ALLOCATE(DstBladedDLLTypeData%PrevCableDeltaL(i1_l:i1_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstBladedDLLTypeData%EXavrSWAP_Lidar.', ErrStat, ErrMsg,RoutineName)
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstBladedDLLTypeData%PrevCableDeltaL.', ErrStat, ErrMsg,RoutineName)
       RETURN
     END IF
   END IF
-    DstBladedDLLTypeData%EXavrSWAP_Lidar = SrcBladedDLLTypeData%EXavrSWAP_Lidar
+    DstBladedDLLTypeData%PrevCableDeltaL = SrcBladedDLLTypeData%PrevCableDeltaL
 ENDIF
-IF (ALLOCATED(SrcBladedDLLTypeData%EXavrSWAP_CableTension)) THEN
-  i1_l = LBOUND(SrcBladedDLLTypeData%EXavrSWAP_CableTension,1)
-  i1_u = UBOUND(SrcBladedDLLTypeData%EXavrSWAP_CableTension,1)
-  IF (.NOT. ALLOCATED(DstBladedDLLTypeData%EXavrSWAP_CableTension)) THEN 
-    ALLOCATE(DstBladedDLLTypeData%EXavrSWAP_CableTension(i1_l:i1_u),STAT=ErrStat2)
+IF (ALLOCATED(SrcBladedDLLTypeData%PrevCableDeltaLdot)) THEN
+  i1_l = LBOUND(SrcBladedDLLTypeData%PrevCableDeltaLdot,1)
+  i1_u = UBOUND(SrcBladedDLLTypeData%PrevCableDeltaLdot,1)
+  IF (.NOT. ALLOCATED(DstBladedDLLTypeData%PrevCableDeltaLdot)) THEN 
+    ALLOCATE(DstBladedDLLTypeData%PrevCableDeltaLdot(i1_l:i1_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstBladedDLLTypeData%EXavrSWAP_CableTension.', ErrStat, ErrMsg,RoutineName)
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstBladedDLLTypeData%PrevCableDeltaLdot.', ErrStat, ErrMsg,RoutineName)
       RETURN
     END IF
   END IF
-    DstBladedDLLTypeData%EXavrSWAP_CableTension = SrcBladedDLLTypeData%EXavrSWAP_CableTension
+    DstBladedDLLTypeData%PrevCableDeltaLdot = SrcBladedDLLTypeData%PrevCableDeltaLdot
 ENDIF
-IF (ALLOCATED(SrcBladedDLLTypeData%EXavrSWAP_StCControls)) THEN
-  i1_l = LBOUND(SrcBladedDLLTypeData%EXavrSWAP_StCControls,1)
-  i1_u = UBOUND(SrcBladedDLLTypeData%EXavrSWAP_StCControls,1)
-  IF (.NOT. ALLOCATED(DstBladedDLLTypeData%EXavrSWAP_StCControls)) THEN 
-    ALLOCATE(DstBladedDLLTypeData%EXavrSWAP_StCControls(i1_l:i1_u),STAT=ErrStat2)
+IF (ALLOCATED(SrcBladedDLLTypeData%CableDeltaL)) THEN
+  i1_l = LBOUND(SrcBladedDLLTypeData%CableDeltaL,1)
+  i1_u = UBOUND(SrcBladedDLLTypeData%CableDeltaL,1)
+  IF (.NOT. ALLOCATED(DstBladedDLLTypeData%CableDeltaL)) THEN 
+    ALLOCATE(DstBladedDLLTypeData%CableDeltaL(i1_l:i1_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstBladedDLLTypeData%EXavrSWAP_StCControls.', ErrStat, ErrMsg,RoutineName)
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstBladedDLLTypeData%CableDeltaL.', ErrStat, ErrMsg,RoutineName)
       RETURN
     END IF
   END IF
-    DstBladedDLLTypeData%EXavrSWAP_StCControls = SrcBladedDLLTypeData%EXavrSWAP_StCControls
+    DstBladedDLLTypeData%CableDeltaL = SrcBladedDLLTypeData%CableDeltaL
 ENDIF
-IF (ALLOCATED(SrcBladedDLLTypeData%EXavrSWAP_AeroControls)) THEN
-  i1_l = LBOUND(SrcBladedDLLTypeData%EXavrSWAP_AeroControls,1)
-  i1_u = UBOUND(SrcBladedDLLTypeData%EXavrSWAP_AeroControls,1)
-  IF (.NOT. ALLOCATED(DstBladedDLLTypeData%EXavrSWAP_AeroControls)) THEN 
-    ALLOCATE(DstBladedDLLTypeData%EXavrSWAP_AeroControls(i1_l:i1_u),STAT=ErrStat2)
+IF (ALLOCATED(SrcBladedDLLTypeData%CableDeltaLdot)) THEN
+  i1_l = LBOUND(SrcBladedDLLTypeData%CableDeltaLdot,1)
+  i1_u = UBOUND(SrcBladedDLLTypeData%CableDeltaLdot,1)
+  IF (.NOT. ALLOCATED(DstBladedDLLTypeData%CableDeltaLdot)) THEN 
+    ALLOCATE(DstBladedDLLTypeData%CableDeltaLdot(i1_l:i1_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstBladedDLLTypeData%EXavrSWAP_AeroControls.', ErrStat, ErrMsg,RoutineName)
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstBladedDLLTypeData%CableDeltaLdot.', ErrStat, ErrMsg,RoutineName)
       RETURN
     END IF
   END IF
-    DstBladedDLLTypeData%EXavrSWAP_AeroControls = SrcBladedDLLTypeData%EXavrSWAP_AeroControls
+    DstBladedDLLTypeData%CableDeltaLdot = SrcBladedDLLTypeData%CableDeltaLdot
 ENDIF
  END SUBROUTINE SrvD_CopyBladedDLLType
 
@@ -3005,17 +3016,17 @@ ENDIF
 IF (ALLOCATED(BladedDLLTypeData%GenTrq_TLU)) THEN
   DEALLOCATE(BladedDLLTypeData%GenTrq_TLU)
 ENDIF
-IF (ALLOCATED(BladedDLLTypeData%EXavrSWAP_Lidar)) THEN
-  DEALLOCATE(BladedDLLTypeData%EXavrSWAP_Lidar)
+IF (ALLOCATED(BladedDLLTypeData%PrevCableDeltaL)) THEN
+  DEALLOCATE(BladedDLLTypeData%PrevCableDeltaL)
 ENDIF
-IF (ALLOCATED(BladedDLLTypeData%EXavrSWAP_CableTension)) THEN
-  DEALLOCATE(BladedDLLTypeData%EXavrSWAP_CableTension)
+IF (ALLOCATED(BladedDLLTypeData%PrevCableDeltaLdot)) THEN
+  DEALLOCATE(BladedDLLTypeData%PrevCableDeltaLdot)
 ENDIF
-IF (ALLOCATED(BladedDLLTypeData%EXavrSWAP_StCControls)) THEN
-  DEALLOCATE(BladedDLLTypeData%EXavrSWAP_StCControls)
+IF (ALLOCATED(BladedDLLTypeData%CableDeltaL)) THEN
+  DEALLOCATE(BladedDLLTypeData%CableDeltaL)
 ENDIF
-IF (ALLOCATED(BladedDLLTypeData%EXavrSWAP_AeroControls)) THEN
-  DEALLOCATE(BladedDLLTypeData%EXavrSWAP_AeroControls)
+IF (ALLOCATED(BladedDLLTypeData%CableDeltaLdot)) THEN
+  DEALLOCATE(BladedDLLTypeData%CableDeltaLdot)
 ENDIF
  END SUBROUTINE SrvD_DestroyBladedDLLType
 
@@ -3170,25 +3181,25 @@ ENDIF
       Re_BufSz   = Re_BufSz   + SIZE(InData%GenTrq_TLU)  ! GenTrq_TLU
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! Yaw_Cntrl
-  Int_BufSz   = Int_BufSz   + 1     ! EXavrSWAP_Lidar allocated yes/no
-  IF ( ALLOCATED(InData%EXavrSWAP_Lidar) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! EXavrSWAP_Lidar upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%EXavrSWAP_Lidar)  ! EXavrSWAP_Lidar
+  Int_BufSz   = Int_BufSz   + 1     ! PrevCableDeltaL allocated yes/no
+  IF ( ALLOCATED(InData%PrevCableDeltaL) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! PrevCableDeltaL upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%PrevCableDeltaL)  ! PrevCableDeltaL
   END IF
-  Int_BufSz   = Int_BufSz   + 1     ! EXavrSWAP_CableTension allocated yes/no
-  IF ( ALLOCATED(InData%EXavrSWAP_CableTension) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! EXavrSWAP_CableTension upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%EXavrSWAP_CableTension)  ! EXavrSWAP_CableTension
+  Int_BufSz   = Int_BufSz   + 1     ! PrevCableDeltaLdot allocated yes/no
+  IF ( ALLOCATED(InData%PrevCableDeltaLdot) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! PrevCableDeltaLdot upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%PrevCableDeltaLdot)  ! PrevCableDeltaLdot
   END IF
-  Int_BufSz   = Int_BufSz   + 1     ! EXavrSWAP_StCControls allocated yes/no
-  IF ( ALLOCATED(InData%EXavrSWAP_StCControls) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! EXavrSWAP_StCControls upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%EXavrSWAP_StCControls)  ! EXavrSWAP_StCControls
+  Int_BufSz   = Int_BufSz   + 1     ! CableDeltaL allocated yes/no
+  IF ( ALLOCATED(InData%CableDeltaL) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! CableDeltaL upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%CableDeltaL)  ! CableDeltaL
   END IF
-  Int_BufSz   = Int_BufSz   + 1     ! EXavrSWAP_AeroControls allocated yes/no
-  IF ( ALLOCATED(InData%EXavrSWAP_AeroControls) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! EXavrSWAP_AeroControls upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%EXavrSWAP_AeroControls)  ! EXavrSWAP_AeroControls
+  Int_BufSz   = Int_BufSz   + 1     ! CableDeltaLdot allocated yes/no
+  IF ( ALLOCATED(InData%CableDeltaLdot) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! CableDeltaLdot upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%CableDeltaLdot)  ! CableDeltaLdot
   END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -3490,63 +3501,63 @@ ENDIF
   END IF
     IntKiBuf(Int_Xferred) = InData%Yaw_Cntrl
     Int_Xferred = Int_Xferred + 1
-  IF ( .NOT. ALLOCATED(InData%EXavrSWAP_Lidar) ) THEN
+  IF ( .NOT. ALLOCATED(InData%PrevCableDeltaL) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
   ELSE
     IntKiBuf( Int_Xferred ) = 1
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%EXavrSWAP_Lidar,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%EXavrSWAP_Lidar,1)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%PrevCableDeltaL,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%PrevCableDeltaL,1)
     Int_Xferred = Int_Xferred + 2
 
-      DO i1 = LBOUND(InData%EXavrSWAP_Lidar,1), UBOUND(InData%EXavrSWAP_Lidar,1)
-        ReKiBuf(Re_Xferred) = InData%EXavrSWAP_Lidar(i1)
+      DO i1 = LBOUND(InData%PrevCableDeltaL,1), UBOUND(InData%PrevCableDeltaL,1)
+        ReKiBuf(Re_Xferred) = InData%PrevCableDeltaL(i1)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
-  IF ( .NOT. ALLOCATED(InData%EXavrSWAP_CableTension) ) THEN
+  IF ( .NOT. ALLOCATED(InData%PrevCableDeltaLdot) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
   ELSE
     IntKiBuf( Int_Xferred ) = 1
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%EXavrSWAP_CableTension,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%EXavrSWAP_CableTension,1)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%PrevCableDeltaLdot,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%PrevCableDeltaLdot,1)
     Int_Xferred = Int_Xferred + 2
 
-      DO i1 = LBOUND(InData%EXavrSWAP_CableTension,1), UBOUND(InData%EXavrSWAP_CableTension,1)
-        ReKiBuf(Re_Xferred) = InData%EXavrSWAP_CableTension(i1)
+      DO i1 = LBOUND(InData%PrevCableDeltaLdot,1), UBOUND(InData%PrevCableDeltaLdot,1)
+        ReKiBuf(Re_Xferred) = InData%PrevCableDeltaLdot(i1)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
-  IF ( .NOT. ALLOCATED(InData%EXavrSWAP_StCControls) ) THEN
+  IF ( .NOT. ALLOCATED(InData%CableDeltaL) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
   ELSE
     IntKiBuf( Int_Xferred ) = 1
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%EXavrSWAP_StCControls,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%EXavrSWAP_StCControls,1)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%CableDeltaL,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%CableDeltaL,1)
     Int_Xferred = Int_Xferred + 2
 
-      DO i1 = LBOUND(InData%EXavrSWAP_StCControls,1), UBOUND(InData%EXavrSWAP_StCControls,1)
-        ReKiBuf(Re_Xferred) = InData%EXavrSWAP_StCControls(i1)
+      DO i1 = LBOUND(InData%CableDeltaL,1), UBOUND(InData%CableDeltaL,1)
+        ReKiBuf(Re_Xferred) = InData%CableDeltaL(i1)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
-  IF ( .NOT. ALLOCATED(InData%EXavrSWAP_AeroControls) ) THEN
+  IF ( .NOT. ALLOCATED(InData%CableDeltaLdot) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
   ELSE
     IntKiBuf( Int_Xferred ) = 1
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%EXavrSWAP_AeroControls,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%EXavrSWAP_AeroControls,1)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%CableDeltaLdot,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%CableDeltaLdot,1)
     Int_Xferred = Int_Xferred + 2
 
-      DO i1 = LBOUND(InData%EXavrSWAP_AeroControls,1), UBOUND(InData%EXavrSWAP_AeroControls,1)
-        ReKiBuf(Re_Xferred) = InData%EXavrSWAP_AeroControls(i1)
+      DO i1 = LBOUND(InData%CableDeltaLdot,1), UBOUND(InData%CableDeltaLdot,1)
+        ReKiBuf(Re_Xferred) = InData%CableDeltaLdot(i1)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
@@ -3897,75 +3908,75 @@ ENDIF
   END IF
     OutData%Yaw_Cntrl = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! EXavrSWAP_Lidar not allocated
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! PrevCableDeltaL not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
     Int_Xferred = Int_Xferred + 1
     i1_l = IntKiBuf( Int_Xferred    )
     i1_u = IntKiBuf( Int_Xferred + 1)
     Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%EXavrSWAP_Lidar)) DEALLOCATE(OutData%EXavrSWAP_Lidar)
-    ALLOCATE(OutData%EXavrSWAP_Lidar(i1_l:i1_u),STAT=ErrStat2)
+    IF (ALLOCATED(OutData%PrevCableDeltaL)) DEALLOCATE(OutData%PrevCableDeltaL)
+    ALLOCATE(OutData%PrevCableDeltaL(i1_l:i1_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%EXavrSWAP_Lidar.', ErrStat, ErrMsg,RoutineName)
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%PrevCableDeltaL.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-      DO i1 = LBOUND(OutData%EXavrSWAP_Lidar,1), UBOUND(OutData%EXavrSWAP_Lidar,1)
-        OutData%EXavrSWAP_Lidar(i1) = REAL(ReKiBuf(Re_Xferred), SiKi)
+      DO i1 = LBOUND(OutData%PrevCableDeltaL,1), UBOUND(OutData%PrevCableDeltaL,1)
+        OutData%PrevCableDeltaL(i1) = REAL(ReKiBuf(Re_Xferred), SiKi)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! EXavrSWAP_CableTension not allocated
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! PrevCableDeltaLdot not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
     Int_Xferred = Int_Xferred + 1
     i1_l = IntKiBuf( Int_Xferred    )
     i1_u = IntKiBuf( Int_Xferred + 1)
     Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%EXavrSWAP_CableTension)) DEALLOCATE(OutData%EXavrSWAP_CableTension)
-    ALLOCATE(OutData%EXavrSWAP_CableTension(i1_l:i1_u),STAT=ErrStat2)
+    IF (ALLOCATED(OutData%PrevCableDeltaLdot)) DEALLOCATE(OutData%PrevCableDeltaLdot)
+    ALLOCATE(OutData%PrevCableDeltaLdot(i1_l:i1_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%EXavrSWAP_CableTension.', ErrStat, ErrMsg,RoutineName)
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%PrevCableDeltaLdot.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-      DO i1 = LBOUND(OutData%EXavrSWAP_CableTension,1), UBOUND(OutData%EXavrSWAP_CableTension,1)
-        OutData%EXavrSWAP_CableTension(i1) = REAL(ReKiBuf(Re_Xferred), SiKi)
+      DO i1 = LBOUND(OutData%PrevCableDeltaLdot,1), UBOUND(OutData%PrevCableDeltaLdot,1)
+        OutData%PrevCableDeltaLdot(i1) = REAL(ReKiBuf(Re_Xferred), SiKi)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! EXavrSWAP_StCControls not allocated
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! CableDeltaL not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
     Int_Xferred = Int_Xferred + 1
     i1_l = IntKiBuf( Int_Xferred    )
     i1_u = IntKiBuf( Int_Xferred + 1)
     Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%EXavrSWAP_StCControls)) DEALLOCATE(OutData%EXavrSWAP_StCControls)
-    ALLOCATE(OutData%EXavrSWAP_StCControls(i1_l:i1_u),STAT=ErrStat2)
+    IF (ALLOCATED(OutData%CableDeltaL)) DEALLOCATE(OutData%CableDeltaL)
+    ALLOCATE(OutData%CableDeltaL(i1_l:i1_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%EXavrSWAP_StCControls.', ErrStat, ErrMsg,RoutineName)
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%CableDeltaL.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-      DO i1 = LBOUND(OutData%EXavrSWAP_StCControls,1), UBOUND(OutData%EXavrSWAP_StCControls,1)
-        OutData%EXavrSWAP_StCControls(i1) = REAL(ReKiBuf(Re_Xferred), SiKi)
+      DO i1 = LBOUND(OutData%CableDeltaL,1), UBOUND(OutData%CableDeltaL,1)
+        OutData%CableDeltaL(i1) = REAL(ReKiBuf(Re_Xferred), SiKi)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! EXavrSWAP_AeroControls not allocated
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! CableDeltaLdot not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
     Int_Xferred = Int_Xferred + 1
     i1_l = IntKiBuf( Int_Xferred    )
     i1_u = IntKiBuf( Int_Xferred + 1)
     Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%EXavrSWAP_AeroControls)) DEALLOCATE(OutData%EXavrSWAP_AeroControls)
-    ALLOCATE(OutData%EXavrSWAP_AeroControls(i1_l:i1_u),STAT=ErrStat2)
+    IF (ALLOCATED(OutData%CableDeltaLdot)) DEALLOCATE(OutData%CableDeltaLdot)
+    ALLOCATE(OutData%CableDeltaLdot(i1_l:i1_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%EXavrSWAP_AeroControls.', ErrStat, ErrMsg,RoutineName)
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%CableDeltaLdot.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-      DO i1 = LBOUND(OutData%EXavrSWAP_AeroControls,1), UBOUND(OutData%EXavrSWAP_AeroControls,1)
-        OutData%EXavrSWAP_AeroControls(i1) = REAL(ReKiBuf(Re_Xferred), SiKi)
+      DO i1 = LBOUND(OutData%CableDeltaLdot,1), UBOUND(OutData%CableDeltaLdot,1)
+        OutData%CableDeltaLdot(i1) = REAL(ReKiBuf(Re_Xferred), SiKi)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
@@ -8092,6 +8103,7 @@ ENDIF
     DstParamData%AfC_Mean = SrcParamData%AfC_Mean
     DstParamData%AfC_Amp = SrcParamData%AfC_Amp
     DstParamData%AfC_Phase = SrcParamData%AfC_Phase
+    DstParamData%CCmode = SrcParamData%CCmode
     DstParamData%NumOuts = SrcParamData%NumOuts
     DstParamData%NumOuts_DLL = SrcParamData%NumOuts_DLL
     DstParamData%RootName = SrcParamData%RootName
@@ -8190,6 +8202,7 @@ IF (ALLOCATED(SrcParamData%SStC)) THEN
     ENDDO
 ENDIF
     DstParamData%EXavrSWAP = SrcParamData%EXavrSWAP
+    DstParamData%NumCableControl = SrcParamData%NumCableControl
  END SUBROUTINE SrvD_CopyParam
 
  SUBROUTINE SrvD_DestroyParam( ParamData, ErrStat, ErrMsg )
@@ -8373,6 +8386,7 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! AfC_Mean
       Re_BufSz   = Re_BufSz   + 1  ! AfC_Amp
       Re_BufSz   = Re_BufSz   + 1  ! AfC_Phase
+      Int_BufSz  = Int_BufSz  + 1  ! CCmode
       Int_BufSz  = Int_BufSz  + 1  ! NumOuts
       Int_BufSz  = Int_BufSz  + 1  ! NumOuts_DLL
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%RootName)  ! RootName
@@ -8523,6 +8537,7 @@ ENDIF
     END DO
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! EXavrSWAP
+      Int_BufSz  = Int_BufSz  + 1  ! NumCableControl
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -8753,6 +8768,8 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%AfC_Phase
     Re_Xferred = Re_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%CCmode
+    Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%NumOuts
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%NumOuts_DLL
@@ -9024,6 +9041,8 @@ ENDIF
   END IF
     IntKiBuf(Int_Xferred) = TRANSFER(InData%EXavrSWAP, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%NumCableControl
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE SrvD_PackParam
 
  SUBROUTINE SrvD_UnPackParam( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -9271,6 +9290,8 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%AfC_Phase = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
+    OutData%CCmode = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
     OutData%NumOuts = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%NumOuts_DLL = IntKiBuf(Int_Xferred)
@@ -9629,6 +9650,8 @@ ENDIF
   END IF
     OutData%EXavrSWAP = TRANSFER(IntKiBuf(Int_Xferred), OutData%EXavrSWAP)
     Int_Xferred = Int_Xferred + 1
+    OutData%NumCableControl = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE SrvD_UnPackParam
 
  SUBROUTINE SrvD_CopyInput( SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg )
@@ -9691,6 +9714,30 @@ IF (ALLOCATED(SrcInputData%ExternalBlAirfoilCom)) THEN
     END IF
   END IF
     DstInputData%ExternalBlAirfoilCom = SrcInputData%ExternalBlAirfoilCom
+ENDIF
+IF (ALLOCATED(SrcInputData%ExternalCableDeltaL)) THEN
+  i1_l = LBOUND(SrcInputData%ExternalCableDeltaL,1)
+  i1_u = UBOUND(SrcInputData%ExternalCableDeltaL,1)
+  IF (.NOT. ALLOCATED(DstInputData%ExternalCableDeltaL)) THEN 
+    ALLOCATE(DstInputData%ExternalCableDeltaL(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%ExternalCableDeltaL.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInputData%ExternalCableDeltaL = SrcInputData%ExternalCableDeltaL
+ENDIF
+IF (ALLOCATED(SrcInputData%ExternalCableDeltaLdot)) THEN
+  i1_l = LBOUND(SrcInputData%ExternalCableDeltaLdot,1)
+  i1_u = UBOUND(SrcInputData%ExternalCableDeltaLdot,1)
+  IF (.NOT. ALLOCATED(DstInputData%ExternalCableDeltaLdot)) THEN 
+    ALLOCATE(DstInputData%ExternalCableDeltaLdot(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%ExternalCableDeltaLdot.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInputData%ExternalCableDeltaLdot = SrcInputData%ExternalCableDeltaLdot
 ENDIF
     DstInputData%TwrAccel = SrcInputData%TwrAccel
     DstInputData%YawErr = SrcInputData%YawErr
@@ -9821,6 +9868,12 @@ ENDIF
 IF (ALLOCATED(InputData%ExternalBlAirfoilCom)) THEN
   DEALLOCATE(InputData%ExternalBlAirfoilCom)
 ENDIF
+IF (ALLOCATED(InputData%ExternalCableDeltaL)) THEN
+  DEALLOCATE(InputData%ExternalCableDeltaL)
+ENDIF
+IF (ALLOCATED(InputData%ExternalCableDeltaLdot)) THEN
+  DEALLOCATE(InputData%ExternalCableDeltaLdot)
+ENDIF
 IF (ALLOCATED(InputData%BStC)) THEN
 DO i1 = LBOUND(InputData%BStC,1), UBOUND(InputData%BStC,1)
   CALL StC_DestroyInput( InputData%BStC(i1), ErrStat, ErrMsg )
@@ -9912,6 +9965,16 @@ ENDIF
   IF ( ALLOCATED(InData%ExternalBlAirfoilCom) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! ExternalBlAirfoilCom upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%ExternalBlAirfoilCom)  ! ExternalBlAirfoilCom
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! ExternalCableDeltaL allocated yes/no
+  IF ( ALLOCATED(InData%ExternalCableDeltaL) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! ExternalCableDeltaL upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%ExternalCableDeltaL)  ! ExternalCableDeltaL
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! ExternalCableDeltaLdot allocated yes/no
+  IF ( ALLOCATED(InData%ExternalCableDeltaLdot) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! ExternalCableDeltaLdot upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%ExternalCableDeltaLdot)  ! ExternalCableDeltaLdot
   END IF
       Re_BufSz   = Re_BufSz   + 1  ! TwrAccel
       Re_BufSz   = Re_BufSz   + 1  ! YawErr
@@ -10126,6 +10189,36 @@ ENDIF
 
       DO i1 = LBOUND(InData%ExternalBlAirfoilCom,1), UBOUND(InData%ExternalBlAirfoilCom,1)
         ReKiBuf(Re_Xferred) = InData%ExternalBlAirfoilCom(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%ExternalCableDeltaL) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%ExternalCableDeltaL,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%ExternalCableDeltaL,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%ExternalCableDeltaL,1), UBOUND(InData%ExternalCableDeltaL,1)
+        ReKiBuf(Re_Xferred) = InData%ExternalCableDeltaL(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%ExternalCableDeltaLdot) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%ExternalCableDeltaLdot,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%ExternalCableDeltaLdot,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%ExternalCableDeltaLdot,1), UBOUND(InData%ExternalCableDeltaLdot,1)
+        ReKiBuf(Re_Xferred) = InData%ExternalCableDeltaLdot(i1)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
@@ -10469,6 +10562,42 @@ ENDIF
     END IF
       DO i1 = LBOUND(OutData%ExternalBlAirfoilCom,1), UBOUND(OutData%ExternalBlAirfoilCom,1)
         OutData%ExternalBlAirfoilCom(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! ExternalCableDeltaL not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%ExternalCableDeltaL)) DEALLOCATE(OutData%ExternalCableDeltaL)
+    ALLOCATE(OutData%ExternalCableDeltaL(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%ExternalCableDeltaL.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%ExternalCableDeltaL,1), UBOUND(OutData%ExternalCableDeltaL,1)
+        OutData%ExternalCableDeltaL(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! ExternalCableDeltaLdot not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%ExternalCableDeltaLdot)) DEALLOCATE(OutData%ExternalCableDeltaLdot)
+    ALLOCATE(OutData%ExternalCableDeltaLdot(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%ExternalCableDeltaLdot.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%ExternalCableDeltaLdot,1), UBOUND(OutData%ExternalCableDeltaLdot,1)
+        OutData%ExternalCableDeltaLdot(i1) = ReKiBuf(Re_Xferred)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
@@ -12051,6 +12180,18 @@ IF (ALLOCATED(u_out%ExternalBlAirfoilCom) .AND. ALLOCATED(u1%ExternalBlAirfoilCo
     u_out%ExternalBlAirfoilCom(i1) = u1%ExternalBlAirfoilCom(i1) + b * ScaleFactor
   END DO
 END IF ! check if allocated
+IF (ALLOCATED(u_out%ExternalCableDeltaL) .AND. ALLOCATED(u1%ExternalCableDeltaL)) THEN
+  DO i1 = LBOUND(u_out%ExternalCableDeltaL,1),UBOUND(u_out%ExternalCableDeltaL,1)
+    b = -(u1%ExternalCableDeltaL(i1) - u2%ExternalCableDeltaL(i1))
+    u_out%ExternalCableDeltaL(i1) = u1%ExternalCableDeltaL(i1) + b * ScaleFactor
+  END DO
+END IF ! check if allocated
+IF (ALLOCATED(u_out%ExternalCableDeltaLdot) .AND. ALLOCATED(u1%ExternalCableDeltaLdot)) THEN
+  DO i1 = LBOUND(u_out%ExternalCableDeltaLdot,1),UBOUND(u_out%ExternalCableDeltaLdot,1)
+    b = -(u1%ExternalCableDeltaLdot(i1) - u2%ExternalCableDeltaLdot(i1))
+    u_out%ExternalCableDeltaLdot(i1) = u1%ExternalCableDeltaLdot(i1) + b * ScaleFactor
+  END DO
+END IF ! check if allocated
   b = -(u1%TwrAccel - u2%TwrAccel)
   u_out%TwrAccel = u1%TwrAccel + b * ScaleFactor
   CALL Angles_ExtrapInterp( u1%YawErr, u2%YawErr, tin, u_out%YawErr, tin_out )
@@ -12228,6 +12369,20 @@ IF (ALLOCATED(u_out%ExternalBlAirfoilCom) .AND. ALLOCATED(u1%ExternalBlAirfoilCo
     b = (t(3)**2*(u1%ExternalBlAirfoilCom(i1) - u2%ExternalBlAirfoilCom(i1)) + t(2)**2*(-u1%ExternalBlAirfoilCom(i1) + u3%ExternalBlAirfoilCom(i1)))* scaleFactor
     c = ( (t(2)-t(3))*u1%ExternalBlAirfoilCom(i1) + t(3)*u2%ExternalBlAirfoilCom(i1) - t(2)*u3%ExternalBlAirfoilCom(i1) ) * scaleFactor
     u_out%ExternalBlAirfoilCom(i1) = u1%ExternalBlAirfoilCom(i1) + b  + c * t_out
+  END DO
+END IF ! check if allocated
+IF (ALLOCATED(u_out%ExternalCableDeltaL) .AND. ALLOCATED(u1%ExternalCableDeltaL)) THEN
+  DO i1 = LBOUND(u_out%ExternalCableDeltaL,1),UBOUND(u_out%ExternalCableDeltaL,1)
+    b = (t(3)**2*(u1%ExternalCableDeltaL(i1) - u2%ExternalCableDeltaL(i1)) + t(2)**2*(-u1%ExternalCableDeltaL(i1) + u3%ExternalCableDeltaL(i1)))* scaleFactor
+    c = ( (t(2)-t(3))*u1%ExternalCableDeltaL(i1) + t(3)*u2%ExternalCableDeltaL(i1) - t(2)*u3%ExternalCableDeltaL(i1) ) * scaleFactor
+    u_out%ExternalCableDeltaL(i1) = u1%ExternalCableDeltaL(i1) + b  + c * t_out
+  END DO
+END IF ! check if allocated
+IF (ALLOCATED(u_out%ExternalCableDeltaLdot) .AND. ALLOCATED(u1%ExternalCableDeltaLdot)) THEN
+  DO i1 = LBOUND(u_out%ExternalCableDeltaLdot,1),UBOUND(u_out%ExternalCableDeltaLdot,1)
+    b = (t(3)**2*(u1%ExternalCableDeltaLdot(i1) - u2%ExternalCableDeltaLdot(i1)) + t(2)**2*(-u1%ExternalCableDeltaLdot(i1) + u3%ExternalCableDeltaLdot(i1)))* scaleFactor
+    c = ( (t(2)-t(3))*u1%ExternalCableDeltaLdot(i1) + t(3)*u2%ExternalCableDeltaLdot(i1) - t(2)*u3%ExternalCableDeltaLdot(i1) ) * scaleFactor
+    u_out%ExternalCableDeltaLdot(i1) = u1%ExternalCableDeltaLdot(i1) + b  + c * t_out
   END DO
 END IF ! check if allocated
   b = (t(3)**2*(u1%TwrAccel - u2%TwrAccel) + t(2)**2*(-u1%TwrAccel + u3%TwrAccel))* scaleFactor
