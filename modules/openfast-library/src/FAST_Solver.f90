@@ -1037,6 +1037,9 @@ SUBROUTINE SrvD_InputSolve( p_FAST, m_FAST, u_SrvD, y_ED, y_IfW, y_OpFM, y_BD, y
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    ENDIF
 
+   ! Transfer any cable length info from SD or MD
+   !  --> SrvD, SD, and MD are not setup for this yet.  Add here if feedback is ever required
+
 #ifdef SIMULINK_TIMESHIFT   
       ! we're going to use the extrapolated values instead of the old values (Simulink inputs are from t, not t+dt)
    CALL SrvD_SetExternalInputs( p_FAST, m_FAST, u_SrvD )
@@ -1129,6 +1132,19 @@ SUBROUTINE SrvD_SetExternalInputs( p_FAST, m_FAST, u_SrvD )
       end do
    end if
 
+!FIXME: do I have a problem here?
+!   ! Cable controls
+!   if (ALLOCATED(u_SrvD%ExternalCableDeltaL)) then ! This is only allocated if cable control signals are requested
+!      do i=1,min(SIZE(u_SrvD%ExternalCableDeltaL),SIZE(m_FAST%ExternInput%CableDeltaL))
+!         u_SrvD%ExternalCableDeltaL(i) = m_FAST%ExternInput%CableDeltaL(i)
+!      end do
+!   end if
+!   if (ALLOCATED(u_SrvD%ExternalCableDeltaLdot)) then ! This is only allocated if cable control signals are requested
+!      do i=1,min(SIZE(u_SrvD%ExternalCableDeltaLdot),SIZE(m_FAST%ExternInput%CableDeltaLdot))
+!         u_SrvD%ExternalCableDeltaLdot(i) = m_FAST%ExternInput%CableDeltaLdot(i)
+!      end do
+!   end if
+
 END SUBROUTINE SrvD_SetExternalInputs
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine transfers the SD outputs into inputs required for HD
@@ -1215,6 +1231,33 @@ SUBROUTINE Transfer_PlatformMotion_to_HD( PlatformMotion, u_HD, MeshMapData, Err
    END IF
    
 END SUBROUTINE Transfer_PlatformMotion_to_HD
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine transfers the SrvD outputs into inputs required for SD MDM
+SUBROUTINE Transfer_SrvD_to_SD_MD( p_FAST, y_SrvD, u_SD, u_MD )
+!..................................................................................................................................
+   TYPE(FAST_ParameterType),    INTENT(IN)    :: p_FAST                       !< Glue-code simulation parameters
+   TYPE(SrvD_OutputType),       INTENT(IN   ) :: y_SrvD                       !< SrvD input
+   TYPE(SD_InputType),          INTENT(INOUT) :: u_SD                         !< SubDyn input
+   TYPE(MD_InputType),          INTENT(INOUT) :: u_MD                         !< MoorDyn input
+
+   if (p_FAST%CompServo /= Module_SrvD) return
+
+      ! transfer SrvD outputs to other modules used in option 1:
+   IF ( p_FAST%CompSub == Module_SD ) THEN
+      if (allocated(u_SD%CableDeltaL) .and. allocated(y_SrvD%CableDeltaL)) then
+         u_SD%CableDeltaL  =  y_SrvD%CableDeltaL   ! these should be sized identically during init
+      endif
+   ENDIF
+
+   IF ( p_FAST%CompMooring == Module_MD ) THEN
+      if (allocated(u_MD%DeltaL) .and. allocated(y_SrvD%CableDeltaL)) then
+         u_MD%DeltaL    =  y_SrvD%CableDeltaL      ! these should be sized identically during init
+      endif
+      if (allocated(u_MD%DeltaLdot) .and. allocated(y_SrvD%CableDeltaLdot)) then
+         u_MD%DeltaLdot =  y_SrvD%CableDeltaLdot   ! these should be sized identically during init
+      endif
+   ENDIF
+END SUBROUTINE Transfer_SrvD_to_SD_MD
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine transfers the ED outputs into inputs required for HD, SD, ExtPtfm, BD, MAP, and/or FEAM
 SUBROUTINE Transfer_ED_to_HD_SD_BD_Mooring( p_FAST, y_ED, u_HD, u_SD, u_ExtPtfm, u_MAP, u_FEAM, u_MD, u_Orca, u_BD, u_SrvD, MeshMapData, ErrStat, ErrMsg )
@@ -1386,7 +1429,7 @@ SUBROUTINE IceD_InputSolve( u_IceD, y_SD, MeshMapData, legNum, ErrStat, ErrMsg )
 
 END SUBROUTINE IceD_InputSolve
 !----------------------------------------------------------------------------------------------------------------------------------
-!> This routine sets the inputs required for IceFloe.
+!> This routine sets the inputs required for BeamDyn.
 SUBROUTINE Transfer_ED_to_BD( y_ED, u_BD, MeshMapData, ErrStat, ErrMsg )
 !..................................................................................................................................
 
@@ -4977,6 +5020,10 @@ SUBROUTINE CalcOutputs_And_SolveForInputs( n_t_global, this_time, this_state, ca
       CLOSE( UnMM )      
    end if
 #endif
+
+
+      !> transfer SrvD outputs to other modules used in option 1:
+   call Transfer_SrvD_to_SD_MD( p_FAST, SrvD%y, SD%Input(1), MD%Input(1) )
 
       !> transfer ED outputs to other modules used in option 1:
    CALL Transfer_ED_to_HD_SD_BD_Mooring( p_FAST, ED%y, HD%Input(1), SD%Input(1), ExtPtfm%Input(1), &

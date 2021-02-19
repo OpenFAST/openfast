@@ -1324,7 +1324,7 @@ CONTAINS
          do I=1,Init%InData_SrvD%NumCableControl
             ! SD -- lots of logic here since we don't know if SD did the requesting of the channels
             if (allocated(Init%OutData_SD%CableCChanRqst)) then
-               if (I < size(Init%OutData_SD%CableCChanRqst)) then
+               if (I <= size(Init%OutData_SD%CableCChanRqst)) then
                   if (Init%OutData_SD%CableCChanRqst(I)) then
                      if (len_trim(Init%InData_SrvD%CableControlRequestor(I))>0) Init%InData_SrvD%CableControlRequestor(I) = trim(Init%InData_SrvD%CableControlRequestor(I))//', '
                      Init%InData_SrvD%CableControlRequestor(I) = trim(Init%InData_SrvD%CableControlRequestor(I))//trim(y_FAST%Module_Ver( Module_SD )%Name)
@@ -1333,7 +1333,7 @@ CONTAINS
             endif
             ! MD -- lots of logic here since we don't know if MD did the requesting of the channels
             if (allocated(Init%OutData_MD%CableCChanRqst)) then
-               if (I < size(Init%OutData_MD%CableCChanRqst)) then
+               if (I <= size(Init%OutData_MD%CableCChanRqst)) then
                   if (Init%OutData_MD%CableCChanRqst(I)) then
                      if (len_trim(Init%InData_SrvD%CableControlRequestor(I))>0) Init%InData_SrvD%CableControlRequestor(I) = trim(Init%InData_SrvD%CableControlRequestor(I))//', '
                      Init%InData_SrvD%CableControlRequestor(I) = trim(Init%InData_SrvD%CableControlRequestor(I))//trim(y_FAST%Module_Ver( Module_MD )%Name)
@@ -1357,6 +1357,7 @@ CONTAINS
                      call Cleanup()
                      return
                   endif
+                  SD%Input(1)%CableDeltaL = 0.0_ReKi
                endif
             endif
          endif
@@ -1372,6 +1373,7 @@ CONTAINS
                      call Cleanup()
                      return
                   endif
+                  MD%Input(1)%DeltaL = 0.0_ReKi
                endif
             endif
          endif
@@ -1385,6 +1387,7 @@ CONTAINS
                      call Cleanup()
                      return
                   endif
+                  MD%Input(1)%DeltaLdot = 0.0_ReKi
                endif
             endif
          endif
