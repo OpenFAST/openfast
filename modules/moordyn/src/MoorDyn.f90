@@ -345,9 +345,11 @@ CONTAINS
          call AllocAry( u%DeltaL, N, 'u%DeltaL', ErrStat2, ErrMsg2 )
             call CheckError( ErrStat2, ErrMsg2 )
             if (ErrStat >= AbortErrLev) return
+            u%DeltaL =  0.0_ReKi
          call AllocAry( u%DeltaLdot, N, 'u%DeltaLdot', ErrStat2, ErrMsg2 )
             call CheckError( ErrStat2, ErrMsg2 )
             if (ErrStat >= AbortErrLev) return
+            u%DeltaLdot =  0.0_ReKi
          call AllocAry( InitOut%CableCChanRqst, N, 'CableCChanRqst', ErrStat2, ErrMsg2 )
             call CheckError( ErrStat2, ErrMsg2 )
             if (ErrStat >= AbortErrLev) return
