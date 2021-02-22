@@ -313,6 +313,24 @@ expression *AfC_Mean + p%AfC_Amp*cos( Azimuth + AfC_phase)* where the azimuth
 is the azimuth of that particular blade (azimuth=0 is considered vertical).
 
 
+.. _SrvD-CableControl-inputs:
+
+Cable Control
+~~~~~~~~~~~~~
+
+Control of cable elements specified in either the MoorDyn or SubDyn modules can
+be controlled through ServoDyn by a Bladed-style controller.  The channels
+assimgnets are requested by the modules with the cable elements (MoorDyn and/or
+SubDyn at present), and mapped to the appropriate control channel.  A summary of
+the which module requested the channels is available in the summary file output
+from ServoDyn.  Up to 100 channels may be requested.
+
+**CCmode**        [switch]
+
+   Cable control mode {0: none, 4: user-defined from Simulink/Labview, 5:
+   user-defined from Bladed-style DLL}.
+
+
 .. _SrvD-StC-inputs:
 
 Structural Control
@@ -473,7 +491,10 @@ Output
 
 **SumPrint**      [flag]
 
-   Print summary data to <RootName>.sum *(currently unused)*
+   Print summary data to <RootName>.sum.  This file contains a summary of the
+   inputs, and will give a detailed list of the communication channels with a
+   Bladed-style controller when used.  This information may be helpful in
+   debugging a controller, or verifying how ServoDyn is configured.
 
 **OutFile**       [-]
 
