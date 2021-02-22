@@ -1,10 +1,11 @@
-# This is the Python driver code for InflowWind
-import numpy as np
+# This is the Python driver code for InflowWind - user specific
+import numpy as np   # want to eventually get rid of this one
 import inflowwind_library
 
+# main inflow wind input file
 ifw_input_string_array = [
     '*------ InflowWind v3.01.* INPUT FILE -------------------------------------------------------------------------                                                                   *' + \
-    '*teady 15 m/s winds with no shear for IEA 15 MW Offshore Reference Turbine                                                                                                        *' + \
+    '*Steady 15 m/s winds with no shear for IEA 15 MW Offshore Reference Turbine                                                                                                       *' + \
     '*--------------------------------------------------------------------------------------------------------------                                                                   *' + \
     '       false  Echo           - Echo input data to <RootName>.ech (flag)                                                                                                           *' + \
     '          1   WindType       - switch for wind file type (1=steady; 2=uniform; 3=binary TurbSim FF; 4=binary Bladed-style FF; 5=HAWC format; 6=User defined; 7=native Bladed FF)  *' + \
@@ -19,18 +20,18 @@ ifw_input_string_array = [
     '        150   RefHt          - Reference height for horizontal wind speed      (m)                                                                                                *' + \
     '        0.0   PLexp          - Power law exponent                              (-)                                                                                                *' + \
     '================== Parameters for Uniform wind file   [used only for WindType = 2] ============================                                                                   *' + \
-    '"unused"    FileName_Uni   - Filename of time series data for uniform wind field.      (-)                                                                                        *' + \
+    '"unused"      FileName_Uni   - Filename of time series data for uniform wind field.      (-)                                                                                      *' + \
     '        150   RefHt_Uni      - Reference height for horizontal wind speed                (m)                                                                                      *' + \
     '     125.88   RefLength      - Reference length for linear horizontal and vertical sheer (-)                                                                                      *' + \
     '================== Parameters for Binary TurbSim Full-Field files   [used only for WindType = 3] ==============                                                                   *' + \
-    '"unused"    filename_bts       - name of the full field wind file to use (.bts)                                                                                                   *' + \
+    '"unused"      filename_bts   - name of the full field wind file to use (.bts)                                                                                                     *' + \
     '================== Parameters for Binary Bladed-style Full-Field files   [used only for WindType = 4] =========                                                                   *' + \
     '"unused"      FilenameRoot   - Rootname of the full-field wind file to use (.wnd, .sum)                                                                                           *' + \
     'False         TowerFile      - Have tower file (.twr) (flag)                                                                                                                      *' + \
     '================== Parameters for HAWC-format binary files  [Only used with WindType = 5] =====================                                                                   *' + \
-    '"unused"                      FileName_u     - name of the file containing the u-component fluctuating wind (.bin)                                                                *' + \
-    '"unused"                      FileName_v     - name of the file containing the v-component fluctuating wind (.bin)                                                                *' + \
-    '"unused"                      FileName_w     - name of the file containing the w-component fluctuating wind (.bin)                                                                *' + \
+    '"unused"      FileName_u     - name of the file containing the u-component fluctuating wind (.bin)                                                                                *' + \
+    '"unused"      FileName_v     - name of the file containing the v-component fluctuating wind (.bin)                                                                                *' + \
+    '"unused"      FileName_w     - name of the file containing the w-component fluctuating wind (.bin)                                                                                *' + \
     '         64   nx             - number of grids in the x direction (in the 3 files above) (-)                                                                                      *' + \
     '         32   ny             - number of grids in the y direction (in the 3 files above) (-)                                                                                      *' + \
     '         32   nz             - number of grids in the z direction (in the 3 files above) (-)                                                                                      *' + \
@@ -53,28 +54,77 @@ ifw_input_string_array = [
     '       0.03   Z0             - Surface roughness length (m) (used for LG wind profile type only)                                                                                  *' + \
     '          0   XOffset        - Initial offset in +x direction (shift of wind box)                                                                                                 *' + \
     '====================== OUTPUT ==================================================                                                                                                  *' + \
-    'False         SumPrint     - Print summary data to <RootName>.IfW.sum (flag)                                                                                                      *' + \
-    '              OutList      - The next line(s) contains a list of output parameters.  See OutListParameters.xlsx for a listing of available output channels, (-)                   *' + \
+    'False         SumPrint       - Print summary data to <RootName>.IfW.sum (flag)                                                                                                    *' + \
+    '              OutList        - The next line(s) contains a list of output parameters.  See OutListParameters.xlsx for a listing of available output channels, (-)                 *' + \
     '"Wind1VelX,Wind1VelY,Wind1VelZ"     - Wind velocity at point WindVxiList(1),WindVyiList(1),WindVziList(1).  X, Y, and Z direction components.                                     *' + \
     'END of input file (the word "END" must appear in the first 3 columns of this last OutList line)                                                                                   *' + \
     '---------------------------------------------------------------------------------------                                                                                           *'
 ]
 
-## Raf
-# project_root = '/Users/rmudafor/Development/openfast_forks/nicole'
-# library_path = project_root + '/build/modules/inflowwind/libifw_c_lib.dylib'
-##
+# Only needed for WindType = 2, can leave it empty if not used, but still need as input
+# ifw_uniform_string_array = [""] # if not used
+ifw_uniform_string_array = [ # could be an arbitrary number of lines long
+            '! Wind file for sheared 18 m/s wind with 30 degree direction.    *' + \
+            '! Time Wind Wind  Vert. Horiz. Vert. LinV Gust                   *' + \
+            '!      Speed Dir Speed Shear Shear Shear Speed                   *' + \
+            ' 0.0   12.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0                          *' + \
+            ' 0.1   12.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0                          *' + \
+            ' 999.9 12.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0                          *'
+]
 
-## Nicole
-library_path = "./libifw_c_lib.so"
-##
-
-# positions = np.zeros((50,3))  # [x, y, z] default data type is float
-# positions = ([]) # insert user data here
-# time = 10
+#=============================================================================================================================
+#----------------------------------------------------- FUNCTION CALLS --------------------------------------------------------
+#=============================================================================================================================
 
 # Call the InflowWind API
+## Raf
+# library_path = '/Users/rmudafor/Development/openfast_forks/nicole/build/modules/inflowwind/libifw_c_lib.dylib'
+## Nicole
+library_path = "/home/nmendoza/Projects/CCT2/OpenFAST/build_test/modules/inflowwind/libifw_c_lib.so"
 ifwlib = inflowwind_library.InflowWindLibAPI(library_path)
-ifwlib.ifw_init(ifw_input_string_array)
-#ifwlib.ifw_calcOutput(time, positions, velocities)
-#ifwlib.ifw_end()
+
+# Set inputs
+t_start             = 0      # initial time
+ifwlib.dt           = 0.01   # time interval that it's being called at, not usedby IFW, only here for consistency with other modules
+ifwlib.total_time   = 1      # final or total time
+time                = np.arange(t_start,ifwlib.total_time,ifwlib.dt)
+ifwlib.numTimeSteps = len(time)
+ifwlib.numWindPts   = 5     # total number of wind points requesting velocities for at each time step. must be integer
+
+# Initialize arrays
+positions           = np.zeros((ifwlib.numWindPts,3)) # input positions to request velocities at (N x 3); default data type is float
+velocities          = np.zeros((ifwlib.numWindPts,3)) # output velocities (N x 3)
+
+# Only need to call ifw_init once
+ifwlib.ifw_init(ifw_input_string_array, ifw_uniform_string_array)    
+# Debugging only
+#print(ifwlib.output_channel_names)
+#print(ifwlib.output_channel_units)
+
+# Loop over ifw_calcOutput as many times as needed/desired
+positions = [
+    [0.0, 0.0, 150],
+    [0.0, 0.0, 125],
+    [0.0, 0.0, 175],
+    [0.0, 25., 150],
+    [0.0, -25., 150],
+    [0.0, 25., 175],
+    [0.0, -25., 175],
+    [0.0, 25., 125],
+    [0.0, -25., 125]
+] # user updates each time step
+
+idx = 0
+for t in time:
+    ifwlib.ifw_calcOutput(t, positions, velocities, outputChannelValues)
+    # Store the outputs
+    ifwlib._channel_output_array = outputChannelValues
+    ifwlib._channel_output_values[idx] = ifwlib._channel_output_array
+    idx = idx + 1
+
+# Only need to call ifw_end once
+# ifwlib.ifw_end()
+
+# If IFW fails, need to kill driver program
+#if ifwlib.error_status != 0:
+#    return
