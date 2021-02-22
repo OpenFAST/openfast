@@ -519,7 +519,7 @@ ServoDyn. Enter one or more lines containing quoted strings that in turn
 contain one or more output parameter names. Separate output parameter
 names by any combination of commas, semicolons, spaces, and/or tabs. If
 you prefix a parameter name with a minus sign, “-”, underscore, “_”, or
-the characters “m” or “M”, ServooDyn will multiply the value for that
+the characters “m” or “M”, ServoDyn will multiply the value for that
 channel by –1 before writing the data. The parameters are written in the
 order they are listed in the input file. ServoDyn allows you to use
 multiple lines so that you can break your list into meaningful groups
