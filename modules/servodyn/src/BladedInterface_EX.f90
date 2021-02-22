@@ -52,10 +52,18 @@ MODULE BladedInterface_EX
    !!       |     3001     |     3300     |         300        |  Aero controls (individual flaps, etc)     |  AeroDyn              |
    !!       |              |              |                    |                                            |                       |
    !!
-   integer(IntKi),   parameter   :: EXavrSWAP_Size = 3300      !< size of the avrSWAP array with the extended array sizing (increment this as new blocks ar added)
-   real(ReKi),       parameter   :: EXavrSWAP_Ver  = 1.000     !< Version. increment minor for new signal addition, increment major for new block addition
-   integer(IntKi),   parameter   :: CableCtrl_StartIdx = 2601  !< Starting index for the cable control
-   integer(IntKi),   parameter   :: CableCtrl_MaxChan = 200    !< Maximum channels in cable control group
+   integer(IntKi),   parameter   :: EXavrSWAP_Size       = 3300   !< size of the avrSWAP array with the extended array sizing (increment this as new blocks ar added)
+   real(ReKi),       parameter   :: EXavrSWAP_Ver        = 1.000  !< Version. increment minor for new signal addition, increment major for new block addition
+   integer(IntKi),   parameter   :: ExSensors_StartIdx   = 1001   !< Starting index for the non-lidar measurements group
+   integer(IntKi),   parameter   :: ExSensors_MaxChan    = 1000   !< Maximum channels in non-lidar measurements group
+   integer(IntKi),   parameter   :: LidarMsr_StartIdx    = 2001   !< Starting index for the lidar measurements
+   integer(IntKi),   parameter   :: LidarMsr_MaxChan     = 500    !< Maximum channels in lidar measurements group
+   integer(IntKi),   parameter   :: LidarCtrl_StartIdx   = 2501   !< Starting index for the lidar control
+   integer(IntKi),   parameter   :: LidarCtrl_MaxChan    = 100    !< Maximum channels in lidar control group
+   integer(IntKi),   parameter   :: CableCtrl_StartIdx   = 2601   !< Starting index for the cable control
+   integer(IntKi),   parameter   :: CableCtrl_MaxChan    = 200    !< Maximum channels in cable control group
+   integer(IntKi),   parameter   :: TMDCtrl_StartIdx     = 2801   !< Starting index for the TMD control
+   integer(IntKi),   parameter   :: TMDCtrl_MaxChan      = 200    !< Maximum channels in TMD control group
 
 
 CONTAINS
@@ -84,7 +92,7 @@ SUBROUTINE EXavrSWAP_Init( InitInp, u, p, y, dll_data, UnSum, ErrStat, ErrMsg)
 
 
       ! Make sure we didn't get here by mistake
-   if ( .not. p%EXavrSWAP ) return
+   if ( .not. p%EXavrSWAP .or. .not. allocated(dll_data%avrSWAP) ) return
 
    if (UnSum>0) then
       call AllocAry(SumInfo,size(dll_data%avrSwap),'SumInfo array for bladed interface',ErrStat2,ErrMsg2)
@@ -96,6 +104,19 @@ SUBROUTINE EXavrSWAP_Init( InitInp, u, p, y, dll_data, UnSum, ErrStat, ErrMsg)
       call AllocAry(DataFlow,size(dll_data%avrSwap),'DataFlow array for bladed interface',ErrStat2,ErrMsg2)
          if (Failed())  return
       DataFlow  = ''
+
+      ! Add generic information on blocks of channels
+      call WrSumInfoSend(1000,                                       'Version of extended avrSWAP: '//trim(Num2LStr(EXavrSWAP_Ver)))
+      call WrSumInfoSend(ExSensors_StartIdx,                         'Starting index for the non-lidar measurements channel block')
+      call WrSumInfoSend(ExSensors_StartIdx+ExSensors_MaxChan-1,     'Ending   index for the non-lidar measurements channel block')
+      call WrSumInfoSend(LidarMsr_StartIdx,                          'Starting index for the lidar measurements channel block')
+      call WrSumInfoSend(LidarMsr_StartIdx+LidarMsr_MaxChan-1,       'Ending   index for the lidar measurements channel block')
+      call WrSumInfoRcvd(LidarCtrl_StartIdx,                      '','Starting index for the lidar control channel block')
+      call WrSumInfoRcvd(LidarCtrl_StartIdx+LidarCtrl_MaxChan-1,  '','Ending   index for the lidar control channel block')
+      call WrSumInfoRcvd(CableCtrl_StartIdx,                      '','Starting index for the cable control channel block')
+      call WrSumInfoRcvd(CableCtrl_StartIdx+CableCtrl_MaxChan-1,  '','Ending   index for the cable control channel block')
+      call WrSumInfoRcvd(TMDCtrl_StartIdx,                        '','Starting index for the TMD control channel block')
+      call WrSumInfoRcvd(TMDCtrl_StartIdx+TMDCtrl_MaxChan-1,      '','Ending   index for the TMD control channel block')
    endif
 
 
@@ -213,15 +234,15 @@ contains
       integer(IntKi),   intent(in   )  :: Record
       character(*),     intent(in   )  :: Desc
       DataFlow(Record)  = '-->'
-      SumInfo(Record)   = trim(Desc(1:min(len_trim(Desc),len(SumInfo(1)))))     ! prevent string length overrun
+      SumInfo(Record)   = trim(Desc(1:min(len(Desc),len(SumInfo(1)))))     ! prevent string length overrun
    end subroutine WrSumInfoSend
    subroutine WrSumInfoRcvd(Record,Rqst,Desc)
       integer(IntKi),   intent(in   )  :: Record
       character(*),     intent(in   )  :: Rqst
       character(*),     intent(in   )  :: Desc
       DataFlow(Record)  = '<--'
-      Requestor(Record) = trim(Rqst(1:min(len_trim(Desc),len(Requestor(1)))))   ! prevent string length overrun
-      SumInfo(Record)   = trim(Desc(1:min(len_trim(Desc),len(SumInfo(1)))))     ! prevent string length overrun
+      Requestor(Record) = trim(Rqst(1:min(len(Rqst),len(Requestor(1)))))   ! prevent string length overrun
+      SumInfo(Record)   = trim(Desc(1:min(len(Desc),len(SumInfo(1)))))     ! prevent string length overrun
    end subroutine WrSumInfoRcvd
 END SUBROUTINE
 
