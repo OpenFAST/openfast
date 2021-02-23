@@ -85,24 +85,13 @@ ifwlib = inflowwind_library.InflowWindLibAPI(library_path)
 
 # Set inputs
 t_start             = 0      # initial time
-ifwlib.dt           = 0.01   # time interval that it's being called at, not usedby IFW, only here for consistency with other modules
+ifwlib.dt           = 0.1   # time interval that it's being called at, not usedby IFW, only here for consistency with other modules
 ifwlib.total_time   = 1      # final or total time
 time                = np.arange(t_start,ifwlib.total_time,ifwlib.dt)
 ifwlib.numTimeSteps = len(time)
-ifwlib.numWindPts   = 5     # total number of wind points requesting velocities for at each time step. must be integer
 
 # Initialize arrays
-positions           = np.zeros((ifwlib.numWindPts,3)) # input positions to request velocities at (N x 3); default data type is float
-velocities          = np.zeros((ifwlib.numWindPts,3)) # output velocities (N x 3)
-
-# Only need to call ifw_init once
-ifwlib.ifw_init(ifw_input_string_array, ifw_uniform_string_array)    
-# Debugging only
-#print(ifwlib.output_channel_names)
-#print(ifwlib.output_channel_units)
-
-# Loop over ifw_calcOutput as many times as needed/desired
-positions = [
+positions = np.array([
     [0.0, 0.0, 150],
     [0.0, 0.0, 125],
     [0.0, 0.0, 175],
@@ -112,18 +101,42 @@ positions = [
     [0.0, -25., 175],
     [0.0, 25., 125],
     [0.0, -25., 125]
-] # user updates each time step
+]) # user updates each time step
+ifwlib.numWindPts   = positions.shape[0]     # total number of wind points requesting velocities for at each time step. must be integer
+print('ifwlib.numWindPts = ')
+print(ifwlib.numWindPts)
+print('positions = ')
+print(positions)
+velocities          = np.zeros((ifwlib.numWindPts,3)) # output velocities (N x 3)
+print('velocities = ')
+print(velocities)
 
+
+# Only need to call ifw_init once
+ifwlib.ifw_init(ifw_input_string_array, ifw_uniform_string_array)  
+outputChannelValues = np.zeros(ifwlib._numChannels.value)
+# Debugging only
+#print(repr(ifwlib._channel_names.value))
+#print(repr(ifwlib._channel_units.value))
+
+# Loop over ifw_calcOutput as many times as needed/desired
 idx = 0
 for t in time:
+    print('t = ')
+    print(t)
     ifwlib.ifw_calcOutput(t, positions, velocities, outputChannelValues)
     # Store the outputs
     ifwlib._channel_output_array = outputChannelValues
-    ifwlib._channel_output_values[idx] = ifwlib._channel_output_array
+    ifwlib._channel_output_values[idx,:] = ifwlib._channel_output_array
     idx = idx + 1
+print('ifwlib._channel_output_values = ')
+print(ifwlib._channel_output_values)
 
 # Only need to call ifw_end once
-# ifwlib.ifw_end()
+ifwlib.ifw_end()
+
+print("We have successfully run inflowWind!")
+exit()
 
 # If IFW fails, need to kill driver program
 #if ifwlib.error_status != 0:

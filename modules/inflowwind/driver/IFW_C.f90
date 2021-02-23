@@ -34,6 +34,8 @@ PUBLIC :: IFW_END_C
 ! Accessible to all routines inside module
 TYPE(InflowWind_InputType)              :: InputGuess        !< An initial guess for the input; the input mesh must be defined, returned by Init
 TYPE(InflowWind_InputType)              :: InputData         !< Created by IFW_CALCOUTPUT_C and used by IFW_END_C
+TYPE(InflowWind_InitInputType)          :: InitInp
+TYPE(InflowWind_InitOutputType)         :: InitOutData       !< Initial output data -- Names, units, and version info.
 TYPE(InflowWind_ParameterType)          :: p                 !< Parameters
 TYPE(InflowWind_ContinuousStateType)    :: ContStates        !< Initial continuous states
 TYPE(InflowWind_DiscreteStateType)      :: DiscStates        !< Initial discrete states
@@ -42,7 +44,7 @@ TYPE(InflowWind_ConstraintStateType)    :: ConstrStates      !< Constraint state
 TYPE(InflowWind_OtherStateType)         :: OtherStates       !< Initial other/optimization states
 TYPE(InflowWind_OutputType)             :: y                 !< Initial output (outputs are not calculated; only the output mesh is initialized)
 TYPE(InflowWind_MiscVarType)            :: m                 !< Misc variables for optimization (not copied in glue code)
-TYPE(InflowWind_InitOutputType)         :: InitOutData       !< Initial output data -- Names, units, and version info.
+
 
 INTEGER, PARAMETER :: IntfStrLen        = 1025               !< length of strings through the C interface
 INTEGER, PARAMETER :: InputStringLength = 179                !< Fixed length for all lines of the string-based input file
@@ -53,7 +55,7 @@ CONTAINS
 !===============================================================================================================
 !--------------------------------------------- IFW INIT --------------------------------------------------------
 !===============================================================================================================
-SUBROUTINE IFW_INIT_C(InputFileStrings_C, InputUniformStrings_C, NumWindPts_C, DT_C, OutputChannelNames_C, OutputChannelUnits_C, NumChannels_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='IFW_INIT_C')
+SUBROUTINE IFW_INIT_C(InputFileStrings_C, InputUniformStrings_C, NumWindPts_C, DT_C, NumChannels_C, OutputChannelNames_C, OutputChannelUnits_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='IFW_INIT_C')
 
     TYPE(C_PTR)                                    , INTENT(IN   )   :: InputFileStrings_C
     TYPE(C_PTR)                                    , INTENT(IN   )   :: InputUniformStrings_C
@@ -70,11 +72,12 @@ SUBROUTINE IFW_INIT_C(InputFileStrings_C, InputUniformStrings_C, NumWindPts_C, D
     CHARACTER(kind=C_char, len=1), DIMENSION(:), POINTER             :: character_pointer
     CHARACTER, DIMENSION(InputStringLength)                          :: single_line_character_array
     CHARACTER(InputStringLength)                                     :: single_line_chars
+    CHARACTER(CHANLEN+1), ALLOCATABLE, TARGET                        :: tmp_OutputChannelNames_C(:)
+    CHARACTER(CHANLEN+1), ALLOCATABLE, TARGET                        :: tmp_OutputChannelUnits_C(:)
     REAL(DbKi)                                                       :: TimeInterval
     INTEGER                                                          :: ErrStat
     CHARACTER(ErrMsgLen)                                             :: ErrMsg
     CHARACTER(LEN=CHANLEN+1),ALLOCATABLE                             :: FLAT_STRING
-    TYPE(InflowWind_InitInputType)                                   :: InitInp
     INTEGER                                                          :: I, J, K
 
    ! Convert the string-input from C-style character arrays (char **) to a Fortran-style array of characters.
@@ -98,12 +101,12 @@ SUBROUTINE IFW_INIT_C(InputFileStrings_C, InputUniformStrings_C, NumWindPts_C, D
    IF (ErrStat .NE. 0) PRINT *, "IFW_INIT_C: InitFileInfo failed"
 
    ! Set other inputs for calling InflowWind_Init
-   InitInp%UseInputFile  = .false.
-   InitInp%InputFileName = "passed_ifw_file"         ! dummy
-   InitInp%RootName      = "ifwRoot"                 ! used for making echo files
-   InitInp%NumWindPoints = NumWindPts_C              ! CHECK THIS!
-   InitInp%WindType2Data = .FALSE.
-   TimeInterval          = REAL(DT_C, DbKi)
+   InitInp%UseInputFile          = .false.
+   InitInp%InputFileName         = "passed_ifw_file"         ! dummy
+   InitInp%RootName              = "ifwRoot"                 ! used for making echo files
+   InitInp%NumWindPoints         = NumWindPts_C              ! CHECK THIS!
+   InitInp%WindType2UseInputFile = .TRUE.                    ! CHANGE TO FALSE ONCE GET UNIFORM INPUT FILE STRING WORKING!
+   TimeInterval                  = REAL(DT_C, DbKi)
 
    ! Pass FileInfoType into InflowWind_Init - only need InitInp and TimeInterval as inputs, the rest are set by InflowWind_Init
    CALL InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, ConstrStateGuess, OtherStates, y, m, TimeInterval, InitOutData, ErrStat, ErrMsg )
@@ -123,16 +126,17 @@ SUBROUTINE IFW_INIT_C(InputFileStrings_C, InputUniformStrings_C, NumWindPts_C, D
 !END DO
 !CALL F_C_pointer(InputFileStrings_C, character_pointer, [InputFileLines * InputStringLength])
 
-!ALLOCATE(OutputChannelNames_C(size(InitOutData%WriteOutputHdr)))
-!ALLOCATE(OutputChannelUnits_C(size(InitOutData%WriteOutputUnt)))
-
+   ALLOCATE(tmp_OutputChannelNames_C(size(InitOutData%WriteOutputHdr)))
+   ALLOCATE(tmp_OutputChannelUnits_C(size(InitOutData%WriteOutputUnt)))
    NumChannels_C = size(InitOutData%WriteOutputHdr)
-   DO I = 1,NumChannels_C
-      OutputChannelNames_C(I) = TRANSFER(InitOutData%WriteOutputHdr(I)//C_NULL_CHAR, OutputChannelNames_C(I))
-      OutputChannelUnits_C(I) = TRANSFER(InitOutData%WriteOutputUnt(I)//C_NULL_CHAR, OutputChannelUnits_C(I))
-   END DO
 
-   PRINT*, ErrMsg
+   DO I = 1,NumChannels_C
+      tmp_OutputChannelNames_C(I) = TRANSFER(InitOutData%WriteOutputHdr(I)//C_NULL_CHAR, tmp_OutputChannelNames_C(I))
+      tmp_OutputChannelUnits_C(I) = TRANSFER(InitOutData%WriteOutputUnt(I)//C_NULL_CHAR, tmp_OutputChannelUnits_C(I))
+   END DO
+   OutputChannelNames_C = C_LOC(tmp_OutputChannelNames_C)
+   OutputChannelUnits_C = C_LOC(tmp_OutputChannelUnits_C)
+
    if (ErrStat /= 0) then
       ErrStat_C = ErrID_Fatal
    else
@@ -158,39 +162,41 @@ END SUBROUTINE IFW_INIT_C
 SUBROUTINE IFW_CALCOUTPUT_C(Time_C,Positions_C,Velocities_C,OutputChannelValues_C,ErrStat_C,ErrMsg_C) BIND (C, NAME='IFW_CALCOUTPUT_C')
 
 REAL(C_DOUBLE)                , INTENT(IN   )      :: Time_C
-REAL(C_FLOAT)                 , INTENT(IN   )      :: Positions_C
-REAL(C_FLOAT)                 , INTENT(  OUT)      :: Velocities_C
-REAL(C_FLOAT)                 , INTENT(  OUT)      :: OutputChannelValues_C
+REAL(C_FLOAT)                 , INTENT(IN   )      :: Positions_C(3*InitInp%NumWindPoints)
+REAL(C_FLOAT)                 , INTENT(  OUT)      :: Velocities_C(3*InitInp%NumWindPoints)
+REAL(C_FLOAT)                 , INTENT(  OUT)      :: OutputChannelValues_C(p%NumOuts)
 INTEGER(C_INT)                , INTENT(  OUT)      :: ErrStat_C
 CHARACTER(KIND=C_CHAR)        , INTENT(  OUT)      :: ErrMsg_C
 
 ! Local variables
-REAL(DbKi)                :: Time
-INTEGER                   :: ErrStat
-CHARACTER(ErrMsgLen)      :: ErrMsg
+REAL(DbKi)                                         :: Time
+INTEGER                                            :: ErrStat
+CHARACTER(ErrMsgLen)                               :: ErrMsg
 
 ! Convert the inputs from C to Fortran
-!InputData%PositionsXYZ = REAL(Positions_C,ReKi)
-u%PositionsXYZ = reshape( real(Positions_C,ReKi), (/3, p%NumWindPoints/) )
+Time = REAL(Time_C,DbKi)
+InputData%PositionXYZ = reshape( real(Positions_C,ReKi), (/3, InitInp%NumWindPoints/) )
 
+! Call InflowWind_CalcOutput to get the velocities
 CALL InflowWind_CalcOutput( Time, InputData, p, ContStates, DiscStates, ConstrStates, OtherStates, y, m, ErrStat, ErrMsg )
+IF (ErrStat .NE. 0) PRINT *, "IFW_CALCOUTPUT_C: InflowWind_CalcOutput failed"
+PRINT*, "Done calling InflowWind_CalcOutput ....."
+
+! Get velocities out of y and flattens it (still in same spot in memory)
+Velocities_C = reshape( REAL(y%VelocityUVW, C_FLOAT), (/3*InitInp%NumWindPoints/) ) ! VelocityUVW is 2D array of ReKi (might need reshape or make into pointer); size [3,N]
 
 ! NEED TO COPY WriteOutput CHANNEL INFO
-
-
-! Gather outputs out of y
-!Velocities_C = real(y%VelocityUVW, C_FLOAT) ! VelocityUVW is 2D array of ReKi (might need reshape or make into pointer), size [3,N]
+OutputChannelValues_C = REAL(y%WriteOutput, C_FLOAT)
 
 ! Convert the outputs of InflowWind_CalcOutput from Fortran to C
-PRINT*, ErrMsg
-   if (ErrStat /= 0) then
-      ErrStat_C = ErrID_Fatal
-   else
-      ErrStat_C = ErrID_None
-   end if
+if (ErrStat /= 0) then
+   ErrStat_C = ErrID_Fatal
+else
+   ErrStat_C = ErrID_None
+end if
 ErrMsg_C = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_C )
 
-PRINT*, "DONE WITH IFW_CALCOUPUT_C!"
+PRINT*, "DONE WITH IFW_CALCOUTPUT_C!"
 
 END SUBROUTINE IFW_CALCOUTPUT_C
 
@@ -211,12 +217,11 @@ CHARACTER(ErrMsgLen)             :: ErrMsg
 CALL InflowWind_End( InputData, p, ContStates, DiscStates, ConstrStates, OtherStates, y, m, ErrStat, ErrMsg )
 
 ! Convert the outputs of InflowWind_End from Fortran to C
-PRINT*, ErrMsg
-   if (ErrStat /= 0) then
-      ErrStat_C = ErrID_Fatal
-   else
-      ErrStat_C = ErrID_None
-   end if
+if (ErrStat /= 0) then
+   ErrStat_C = ErrID_Fatal
+else
+   ErrStat_C = ErrID_None
+end if
 ErrMsg_C = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_C )
 
 PRINT*, "DONE WITH IFW_END_C!"

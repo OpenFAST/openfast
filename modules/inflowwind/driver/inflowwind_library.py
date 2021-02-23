@@ -34,7 +34,7 @@ class InflowWindLibAPI(CDLL):
 
         self.dt = c_double(0)
         self.total_time = c_double(0)
-        self.numTimeSteps = c_double(0)
+        self.numTimeSteps = c_int(0)
 
         self.numWindPts = c_int(0)
 
@@ -45,9 +45,9 @@ class InflowWindLibAPI(CDLL):
             POINTER(c_char_p),                    # uniform file string
             POINTER(c_int),                       # numWindPts
             POINTER(c_double),                    # dt
+            POINTER(c_int),                       # number of channels
             POINTER(c_char),                      # output channel names
             POINTER(c_char),                      # output channel units
-            POINTER(c_int),                       # number of channels
             POINTER(c_int),                       # ErrStat_C
             POINTER(c_char)                       # ErrMsg_C
         ]
@@ -55,9 +55,9 @@ class InflowWindLibAPI(CDLL):
 
         self.IFW_CALCOUTPUT_C.argtypes = [
             POINTER(c_double),                    # Time_C
-            POINTER(c_double),                    # Positions - placeholder for now
-            POINTER(c_double),                    # Velocities - placeholder for now
-            POINTER(c_double),                    # Output Channel Values - placeholder for now
+            POINTER(c_float),                    # Positions - placeholder for now
+            POINTER(c_float),                    # Velocities - placeholder for now
+            POINTER(c_float),                    # Output Channel Values - placeholder for now
             POINTER(c_int),                       # ErrStat_C
             POINTER(c_char)                       # ErrMsg_C
         ]
@@ -87,9 +87,9 @@ class InflowWindLibAPI(CDLL):
             uniform_string_array,                  # IN: uniform file string
             byref(c_int(self.numWindPts)),         # IN: number of wind points
             byref(c_double(self.dt)),              # IN: time step (dt)
+            byref(self._numChannels),              # OUT: number of channels
             self._channel_names,                   # OUT: output channel names
             self._channel_units,                   # OUT: output channel units
-            byref(self._numChannels),              # OUT: number of channels
             byref(self.error_status),              # OUT: ErrStat_C
             self.error_message                     # OUT: ErrMsg_C
         )
@@ -99,24 +99,38 @@ class InflowWindLibAPI(CDLL):
         
         # Initialize output channels
         self._channel_output_array = (c_double * self._numChannels.value)(0.0, )
-        self._channel_output_values = np.empty( (self.numTimeSteps.value, self._numChannels.value) )
+        self._channel_output_values = np.empty( (self.numTimeSteps, self._numChannels.value) )
 
     # ifw_calcOutput ------------------------------------------------------------------------------------------------------------
     def ifw_calcOutput(self, time, positions, velocities, outputChannelValues):
 
+        print('Running IFW_CALCOUTPUT_C .....')
+
         positions_flat = [pp for p in positions for pp in p] # need to flatten to pass through to Fortran (to reshape)
+        velocities_flat = [vv for v in velocities for vv in v] # need to flatten to pass through to Fortran (to reshape)
 
         self.IFW_CALCOUTPUT_C(
-            byref(time),                           # IN: time at which to calculate velocities
-            byref(positions_flat),                 # IN: placeholder for now
-            byref(velocities),                     # OUT: placeholder for now
-            byref(outputChannelValues),            # OUT: placeholder for now
+            byref(c_double(time)),                 # IN: time at which to calculate velocities
+            byref(c_float(positions_flat[0])),     # IN: positions - specified by user
+            byref(c_float(velocities_flat[0])),    # OUT: velocities at desired positions
+            byref(c_float(outputChannelValues[0])),# OUT: output channel values as described in input file
             byref(self.error_status),              # ErrStat_C
             self.error_message                     # ErrMsg_C
         )
         if self.fatal_error:
             print(f"Error {self.error_status.value}: {self.error_message.value}")
             return
+        print('ifw_calcOutput: back in python after IFW_CALCOUTPUT_C is done')
+        
+        # Reshape velocities into [N,3]
+        count = 0
+        for j in range(0,self.numWindPts-1):
+            velocities[j,0] = velocities_flat[count]
+            velocities[j,1] = velocities_flat[count+1]
+            velocities[j,2] = velocities_flat[count+2]
+            count = count + 3
+        print('velocities = ')
+        print(velocities)
 
     # ifw_end ------------------------------------------------------------------------------------------------------------
     def ifw_end(self):
