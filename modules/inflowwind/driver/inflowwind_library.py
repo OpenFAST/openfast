@@ -108,29 +108,40 @@ class InflowWindLibAPI(CDLL):
 
         print('Running IFW_CALCOUTPUT_C .....')
 
-        print('positions = ')
-        print(positions)
+        # print('positions = ')
+        # print(positions)
 
         positions_flat = [pp for p in positions for pp in p] # need to flatten to pass through to Fortran (to reshape)
-        velocities_flat = [vv for v in velocities for vv in v] # need to flatten to pass through to Fortran (to reshape)
+        # velocities_flat = [vv for v in velocities for vv in v] # need to flatten to pass through to Fortran (to reshape)
 
-        print('positions_flat = ')
-        print(positions_flat)
-        print(type(positions_flat))
+        # print('positions_flat = ')
+        # print(positions_flat)
+        # print(type(positions_flat))
 
-        positions_flat_c = (c_float * len(positions_flat))(*positions_flat)
+        # positions_flat_c = (c_float * len(positions_flat))(*positions_flat)
         #positions_flat_c = (c_float * len(positions_flat))(0.0, )
-        print(type(positions_flat_c))
-        print(positions_flat_c)
+        # print(type(positions_flat_c))
+        # print(positions_flat_c)
         #for k in range(0,len(positions_flat)-1):
         #    positions_flat_c[k] = c_float(positions_flat[k])
         #print(positions_flat_c)
 
+        # TODO: is there a better way to know how many elements are in these arrays?
+        #       i.e. num points x 3 components?
+        positions_flat_c = (c_float * len(positions_flat))(0.0, )
+        for i, p in enumerate(positions_flat):
+            positions_flat_c[i] = c_float(p)
+
+        velocities_flat = (c_float * len(positions_flat))(0.0, )
+
+        # TODO: how many output channel values are expected
+        outputChannelValues = (c_float * 999)(0.0, )
+
         self.IFW_CALCOUTPUT_C(
             byref(c_double(time)),                 # IN: time at which to calculate velocities
-            byref(positions_flat_c),     # IN: positions - specified by user
-            byref(c_float(velocities_flat[0])),    # OUT: velocities at desired positions
-            byref(c_float(outputChannelValues[0])),# OUT: output channel values as described in input file
+            positions_flat_c,     # IN: positions - specified by user
+            velocities_flat,    # OUT: velocities at desired positions
+            outputChannelValues,# OUT: output channel values as described in input file
             byref(self.error_status),              # ErrStat_C
             self.error_message                     # ErrMsg_C
         )
