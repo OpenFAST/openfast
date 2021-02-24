@@ -135,7 +135,7 @@ class InflowWindLibAPI(CDLL):
         velocities_flat = (c_float * len(positions_flat))(0.0, )
 
         # TODO: how many output channel values are expected
-        outputChannelValues = (c_float * 999)(0.0, )
+        outputChannelValues = (c_float * self._numChannels.value)(0.0, )
 
         self.IFW_CALCOUTPUT_C(
             byref(c_double(time)),                 # IN: time at which to calculate velocities
