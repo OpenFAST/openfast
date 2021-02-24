@@ -19,7 +19,11 @@ if (GENERATE_TYPES)
   generate_f90_types(src/FAST_Farm_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/FAST_Farm_Types.f90 -noextrap)
 endif()
 
-FIND_PACKAGE( OpenMP REQUIRED)
+FIND_PACKAGE( OpenMP )
+if (NOT ${OPENMP_Fortran_FOUND} )
+  message(FATAL_ERROR "CMake could not find the OpenMP Fortran libraries.")
+endif()
+
 if(OPENMP_FOUND)
   set(CMAKE_FORTRAN_FLAGS "${CMAKE_FORTRAN_FLAGS} ${OpenMP_FORTRAN_FLAGS}")
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
