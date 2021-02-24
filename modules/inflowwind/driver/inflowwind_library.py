@@ -72,6 +72,8 @@ class InflowWindLibAPI(CDLL):
     # ifw_init ------------------------------------------------------------------------------------------------------------
     def ifw_init(self, input_strings, uniform_string):
 
+        print('Running IFW_INIT_C .....')
+
         input_string_array = (c_char_p * len(input_strings))()
         for i, param in enumerate(input_strings):
             input_string_array[i] = param.encode('utf-8')
@@ -106,12 +108,27 @@ class InflowWindLibAPI(CDLL):
 
         print('Running IFW_CALCOUTPUT_C .....')
 
+        print('positions = ')
+        print(positions)
+
         positions_flat = [pp for p in positions for pp in p] # need to flatten to pass through to Fortran (to reshape)
         velocities_flat = [vv for v in velocities for vv in v] # need to flatten to pass through to Fortran (to reshape)
 
+        print('positions_flat = ')
+        print(positions_flat)
+        print(type(positions_flat))
+
+        positions_flat_c = (c_float * len(positions_flat))(*positions_flat)
+        #positions_flat_c = (c_float * len(positions_flat))(0.0, )
+        print(type(positions_flat_c))
+        print(positions_flat_c)
+        #for k in range(0,len(positions_flat)-1):
+        #    positions_flat_c[k] = c_float(positions_flat[k])
+        #print(positions_flat_c)
+
         self.IFW_CALCOUTPUT_C(
             byref(c_double(time)),                 # IN: time at which to calculate velocities
-            byref(c_float(positions_flat[0])),     # IN: positions - specified by user
+            byref(positions_flat_c),     # IN: positions - specified by user
             byref(c_float(velocities_flat[0])),    # OUT: velocities at desired positions
             byref(c_float(outputChannelValues[0])),# OUT: output channel values as described in input file
             byref(self.error_status),              # ErrStat_C
@@ -134,6 +151,9 @@ class InflowWindLibAPI(CDLL):
 
     # ifw_end ------------------------------------------------------------------------------------------------------------
     def ifw_end(self):
+
+        print('Running IFW_END_C .....')
+
         self.IFW_END_C(
             byref(self.error_status),
             self.error_message

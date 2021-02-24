@@ -103,14 +103,15 @@ positions = np.array([
     [0.0, -25., 125]
 ]) # user updates each time step
 ifwlib.numWindPts   = positions.shape[0]     # total number of wind points requesting velocities for at each time step. must be integer
+velocities          = np.zeros((ifwlib.numWindPts,3)) # output velocities (N x 3)
+
+# Debugging only
 print('ifwlib.numWindPts = ')
 print(ifwlib.numWindPts)
 print('positions = ')
 print(positions)
-velocities          = np.zeros((ifwlib.numWindPts,3)) # output velocities (N x 3)
 print('velocities = ')
 print(velocities)
-
 
 # Only need to call ifw_init once
 ifwlib.ifw_init(ifw_input_string_array, ifw_uniform_string_array)  

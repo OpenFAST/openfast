@@ -175,6 +175,8 @@ CHARACTER(ErrMsgLen)                               :: ErrMsg
 
 ! Convert the inputs from C to Fortran
 Time = REAL(Time_C,DbKi)
+PRINT *, "Time = ", Time
+PRINT *, Positions_C
 InputData%PositionXYZ = reshape( real(Positions_C,ReKi), (/3, InitInp%NumWindPoints/) )
 
 ! Call InflowWind_CalcOutput to get the velocities
