@@ -22,8 +22,8 @@ MODULE FAST_Data
    INTEGER(IntKi)                        :: NumTurbines 
    INTEGER,        PARAMETER             :: IntfStrLen  = 1025       ! length of strings through the C interface
    INTEGER(IntKi), PARAMETER             :: MAXOUTPUTS = 4000        ! Maximum number of outputs
-   INTEGER(IntKi), PARAMETER             :: MAXInitINPUTS = 10       ! Maximum number of initialization values from Simulink
-   INTEGER(IntKi), PARAMETER             :: NumFixedInputs = 8
+   INTEGER(IntKi), PARAMETER             :: MAXInitINPUTS = 13       ! Maximum number of initialization values from Simulink
+   INTEGER(IntKi), PARAMETER             :: NumFixedInputs = 11
    
    
       ! Global (static) data:
@@ -335,11 +335,12 @@ subroutine FAST_SetExternalInputs(iTurb, NumInputs_c, InputAry, m_FAST)
       m_FAST%ExternInput%YawPosCom   = InputAry(3)
       m_FAST%ExternInput%YawRateCom  = InputAry(4)
       m_FAST%ExternInput%BlPitchCom  = InputAry(5:7)
-      m_FAST%ExternInput%HSSBrFrac   = InputAry(8)         
+      m_FAST%ExternInput%HSSBrFrac   = InputAry(8)
+      m_FAST%ExternInput%BlAirfoilCom   = InputAry(9:11)
             
       IF ( NumInputs_c > NumFixedInputs ) THEN  ! NumFixedInputs is the fixed number of inputs
          IF ( NumInputs_c == NumFixedInputs + 3 ) &
-             m_FAST%ExternInput%LidarFocus = InputAry(9:11)
+             m_FAST%ExternInput%LidarFocus = InputAry(12:14)
       END IF   
       
 end subroutine FAST_SetExternalInputs

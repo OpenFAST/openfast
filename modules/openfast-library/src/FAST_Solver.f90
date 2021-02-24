@@ -1132,6 +1132,12 @@ SUBROUTINE SrvD_SetExternalInputs( p_FAST, m_FAST, u_SrvD )
       end do
    end if
 
+   if (ALLOCATED(u_SrvD%ExternalBlAirfoilCom)) then ! Added Blade Flap use with Simulink
+      do i=1,SIZE(u_SrvD%ExternalBlAirfoilCom)
+         u_SrvD%ExternalBlAirfoilCom(i)   = m_FAST%ExternInput%BlAirfoilCom(i)
+      end do
+   end if
+
 !FIXME: do I have a problem here?
 !   ! Cable controls
 !   if (ALLOCATED(u_SrvD%ExternalCableDeltaL)) then ! This is only allocated if cable control signals are requested

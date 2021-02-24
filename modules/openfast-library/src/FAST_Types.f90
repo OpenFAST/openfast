@@ -685,6 +685,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: YawPosCom      !< yaw position command from Simulink/Labview [-]
     REAL(ReKi)  :: YawRateCom      !< yaw rate command from Simulink/Labview [-]
     REAL(ReKi) , DIMENSION(1:3)  :: BlPitchCom      !< blade pitch commands from Simulink/Labview [rad]
+    REAL(ReKi) , DIMENSION(1:3)  :: BlAirfoilCom      !< blade airfoil commands from Simulink/Labview [-]
     REAL(ReKi)  :: HSSBrFrac      !< Fraction of full braking torque: 0 (off) <= HSSBrFrac <= 1 (full) from Simulink or LabVIEW [-]
     REAL(ReKi) , DIMENSION(1:3)  :: LidarFocus      !< lidar focus (relative to lidar location) [m]
   END TYPE FAST_ExternInputType
@@ -42672,6 +42673,7 @@ ENDIF
     DstExternInputTypeData%YawPosCom = SrcExternInputTypeData%YawPosCom
     DstExternInputTypeData%YawRateCom = SrcExternInputTypeData%YawRateCom
     DstExternInputTypeData%BlPitchCom = SrcExternInputTypeData%BlPitchCom
+    DstExternInputTypeData%BlAirfoilCom = SrcExternInputTypeData%BlAirfoilCom
     DstExternInputTypeData%HSSBrFrac = SrcExternInputTypeData%HSSBrFrac
     DstExternInputTypeData%LidarFocus = SrcExternInputTypeData%LidarFocus
  END SUBROUTINE FAST_CopyExternInputType
@@ -42727,6 +42729,7 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! YawPosCom
       Re_BufSz   = Re_BufSz   + 1  ! YawRateCom
       Re_BufSz   = Re_BufSz   + SIZE(InData%BlPitchCom)  ! BlPitchCom
+      Re_BufSz   = Re_BufSz   + SIZE(InData%BlAirfoilCom)  ! BlAirfoilCom
       Re_BufSz   = Re_BufSz   + 1  ! HSSBrFrac
       Re_BufSz   = Re_BufSz   + SIZE(InData%LidarFocus)  ! LidarFocus
   IF ( Re_BufSz  .GT. 0 ) THEN 
@@ -42766,6 +42769,10 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     DO i1 = LBOUND(InData%BlPitchCom,1), UBOUND(InData%BlPitchCom,1)
       ReKiBuf(Re_Xferred) = InData%BlPitchCom(i1)
+      Re_Xferred = Re_Xferred + 1
+    END DO
+    DO i1 = LBOUND(InData%BlAirfoilCom,1), UBOUND(InData%BlAirfoilCom,1)
+      ReKiBuf(Re_Xferred) = InData%BlAirfoilCom(i1)
       Re_Xferred = Re_Xferred + 1
     END DO
     ReKiBuf(Re_Xferred) = InData%HSSBrFrac
@@ -42815,6 +42822,12 @@ ENDIF
     i1_u = UBOUND(OutData%BlPitchCom,1)
     DO i1 = LBOUND(OutData%BlPitchCom,1), UBOUND(OutData%BlPitchCom,1)
       OutData%BlPitchCom(i1) = ReKiBuf(Re_Xferred)
+      Re_Xferred = Re_Xferred + 1
+    END DO
+    i1_l = LBOUND(OutData%BlAirfoilCom,1)
+    i1_u = UBOUND(OutData%BlAirfoilCom,1)
+    DO i1 = LBOUND(OutData%BlAirfoilCom,1), UBOUND(OutData%BlAirfoilCom,1)
+      OutData%BlAirfoilCom(i1) = ReKiBuf(Re_Xferred)
       Re_Xferred = Re_Xferred + 1
     END DO
     OutData%HSSBrFrac = ReKiBuf(Re_Xferred)

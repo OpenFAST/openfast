@@ -640,6 +640,7 @@ typedef	^	FAST_ExternInputType	ReKi	ElecPwr	-	-	-	"electric power input from Sim
 typedef	^	FAST_ExternInputType	ReKi	YawPosCom	-	-	2pi	"yaw position command from Simulink/Labview"
 typedef	^	FAST_ExternInputType	ReKi	YawRateCom	-	-	-	"yaw rate command from Simulink/Labview"
 typedef	^	FAST_ExternInputType	ReKi	BlPitchCom	3	-	2pi	"blade pitch commands from Simulink/Labview"	"rad"
+typedef	^	FAST_ExternInputType	ReKi	BlAirfoilCom	3	-	-	"blade airfoil commands from Simulink/Labview"	"-"
 typedef	^	FAST_ExternInputType	ReKi	HSSBrFrac	-	-	-	"Fraction of full braking torque: 0 (off) <= HSSBrFrac <= 1 (full) from Simulink or LabVIEW"
 typedef	^	FAST_ExternInputType	ReKi	LidarFocus	3	-	-	"lidar focus (relative to lidar location)"	m
 #typedef	^	FAST_ExternInputType	ReKi	CableDeltaL	100	-	-	"Cable control DeltaL"	m
