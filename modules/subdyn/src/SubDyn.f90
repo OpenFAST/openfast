@@ -257,8 +257,6 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    ! --- Prepare for control cable load, RHS
    if (size(p%CtrlElem2Channel,1)>0) then
       CALL ControlCableForceInit(p, m, ErrStat2, ErrMsg2); if(Failed()) return
-      print*,'Controlable cables are present, this feature is not ready at the glue code level.'
-      STOP
    endif
 
    ! --------------------------------------------------------------------------------
@@ -3012,16 +3010,23 @@ SUBROUTINE GetExtForceOnInternalDOF(u, p, x, m, F_L, ErrStat, ErrMsg, GuyanLoadC
    real(ReKi), dimension(3) ::  duP  ! Displacement of node due to rigid rotation
    real(R8Ki), dimension(3,3) :: Rb2g ! Rotation matrix body 2 global
    real(R8Ki), dimension(3,3) :: Rg2b ! Rotation matrix global 2 body coordinates
-   !
-   real(ReKi), parameter :: myNaN = -9999998.989_ReKi 
 
    if (GuyanLoadCorrection) then
       ! Compute node displacements "DU_full" for lever arm
       call LeverArm(u, p, x, m, m%DU_full, bGuyan=.True., bElastic=.False., U_full=U_full)
    endif
 
+   ! TODO
+   ! Rewrite this function into five steps:
+   !  - Setup loads by simple sum on physial nodes of LMesh, FG and FC_
+   !  - Rotate them if needed
+   !  - Introduce lever arm if needed
+   !  - Spread moment on nodes 
+   !  - Perform reduction using T_red
+   ! This could make things slightly cleaner and avoid the if statement in the do-loop for the moment
+
    ! --- Build vector of external forces (including gravity) (Moment done below)  
-   m%Fext= myNaN
+   m%Fext= 0.0_ReKi
    if (RotateLoads) then ! Forces in body coordinates 
       Rg2b(1:3,1:3) = u%TPMesh%Orientation(:,:,1)  ! global 2 body coordinates
       do iNode = 1,p%nNodes
@@ -3047,25 +3052,28 @@ SUBROUTINE GetExtForceOnInternalDOF(u, p, x, m, F_L, ErrStat, ErrMsg, GuyanLoadC
          IDOF = p%ElemsDOF(1:12, iElem)
          ! T(t) = - EA * DeltaL(t) /(Le + Delta L(t)) ! NOTE DeltaL<0
          CableTension =  -p%ElemProps(iElem)%YoungE*p%ElemProps(iElem)%Area * u%CableDeltaL(iChannel) / (p%ElemProps(iElem)%Length + u%CableDeltaL(iChannel))
-         print*,'TODO, Controllable pretension cable needs thinking for moment'
-         STOP
-         !if (RotateLoads) then ! in body coordinate
-         !   m%Fext(IDOF) = m%Fext(IDOF) + matmul(Rg2b,m%FC_unit( IDOF ) * (CableTension - p%ElemProps(iElem)%T0))
-         !else ! in global
-         !   m%Fext(IDOF) = m%Fext(IDOF) +             m%FC_unit( IDOF ) * (CableTension - p%ElemProps(iElem)%T0)
-         !endif
+         if (RotateLoads) then ! in body coordinate
+            ! We only rotate the loads, moments are rotated below
+            m%Fext(IDOF(1:3))   = m%Fext(IDOF(1:3))   + matmul(Rg2b,m%FC_unit( IDOF(1:3) )   * (CableTension - p%ElemProps(iElem)%T0))
+            m%Fext(IDOF(7:9))   = m%Fext(IDOF(7:9))   + matmul(Rg2b,m%FC_unit( IDOF(7:9) )   * (CableTension - p%ElemProps(iElem)%T0))
+            m%Fext(IDOF(4:6))   = m%Fext(IDOF(4:6))   +             m%FC_unit( IDOF(4:6) )   * (CableTension - p%ElemProps(iElem)%T0)
+            m%Fext(IDOF(10:12)) = m%Fext(IDOF(10:12)) +             m%FC_unit( IDOF(10:12) ) * (CableTension - p%ElemProps(iElem)%T0)
+         else ! in global
+            m%Fext(IDOF) = m%Fext(IDOF) +             m%FC_unit( IDOF ) * (CableTension - p%ElemProps(iElem)%T0)
+         endif
       enddo
    endif
 
    ! --- Build vector of external moment
    do iNode = 1,p%nNodes
       Force(1:3)  = m%Fext(p%NodesDOF(iNode)%List(1:3) ) ! Controllable cable + External Forces on LMesh
+      Moment(1:3) = m%Fext(p%NodesDOF(iNode)%List(4:6) ) ! Controllable cable 
       ! Moment ext + gravity
       if (RotateLoads) then
          ! In body coordinates
-         Moment(1:3) = matmul(Rg2b, u%LMesh%Moment(1:3,iNode) + p%FG(p%NodesDOF(iNode)%List(4:6)))
+         Moment(1:3) = matmul(Rg2b, Moment(1:3)+ u%LMesh%Moment(1:3,iNode) + p%FG(p%NodesDOF(iNode)%List(4:6)))
       else
-         Moment(1:3) =              u%LMesh%Moment(1:3,iNode) + p%FG(p%NodesDOF(iNode)%List(4:6))
+         Moment(1:3) =              Moment(1:3)+ u%LMesh%Moment(1:3,iNode) + p%FG(p%NodesDOF(iNode)%List(4:6))
       endif
 
       ! Extra moment dm = Delta u x (fe + fg)
@@ -3082,14 +3090,6 @@ SUBROUTINE GetExtForceOnInternalDOF(u, p, x, m, F_L, ErrStat, ErrMsg, GuyanLoadC
       m%Fext( p%NodesDOF(iNode)%List(5::3)) = Moment(2)/nMembers
       m%Fext( p%NodesDOF(iNode)%List(6::3)) = Moment(3)/nMembers
    enddo
-
-   ! TODO: remove test below in the future
-   if (DEV_VERSION) then
-      if (any(m%Fext == myNaN)) then
-         print*,'Error in setting up Fext'
-         STOP
-      endif
-   endif
 
    ! --- Reduced vector of external force
    if (p%reduced) then
