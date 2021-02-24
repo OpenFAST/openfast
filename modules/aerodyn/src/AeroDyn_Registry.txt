@@ -197,6 +197,8 @@ typedef	^	MiscVarType	ReKi	hub_theta_x_root	{:}	-	-	"angles saved for FAST.Farm"
 typedef	^	MiscVarType	ReKi	V_dot_x	-	-	-
 typedef	^	MiscVarType	MeshType	HubLoad	-	-	-	"mesh at hub; used to compute an integral for mapping the output blade loads to a single point (for writing to file only)"	-
 typedef	^	MiscVarType	MeshMapType	B_L_2_H_P	{:}	-	-	"mapping data structure to map each bladeLoad output mesh to the MiscVar%HubLoad mesh"
+typedef	^	MiscVarType	MeshType	BladeRootLoad	{:}	-	-	"loads on each blade (for write outputs only)"	-
+typedef	^	MiscVarType	MeshMapType	B_L_2_BR_P	{:}	-	-	"mapping data structure to map each bladeLoad output to the BladeRootLoad"
 typedef	^	MiscVarType	ReKi	SigmaCavitCrit	{:}{:}	-	-	 "critical cavitation number-  inception value (above which cavit will occur)"   -
 typedef	^	MiscVarType	ReKi	SigmaCavit	{:}{:}	-	-	  "cavitation number at node "   -
 typedef	^	MiscVarType	Logical	CavitWarnSet {:}{:}	-	-	  "cavitation warning issued "   -

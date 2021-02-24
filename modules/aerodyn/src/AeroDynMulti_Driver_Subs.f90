@@ -513,7 +513,9 @@ subroutine Init_Meshes(DvrData,  errStat, errMsg)
       ! 
       print*,'Node Positions, (at t=0, without base motion)'
       print*,'Bse: ',wt%ptMesh%Position
-      print*,'Twr: ',wt%twr%ptMesh%Position
+      if (wt%hasTower) then
+         print*,'Twr: ',wt%twr%ptMesh%Position
+      endif
       print*,'Nac: ',wt%nac%ptMesh%Position
       print*,'Hub: ',wt%hub%ptMesh%Position
       do iBld=1,wt%numBlades

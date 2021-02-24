@@ -567,6 +567,38 @@ end if
    
    if (ErrStat >= AbortErrLev) RETURN
 
+   allocate(m%BladeRootLoad(p%NumBlades), Stat = ErrStat2)
+      if (ErrStat2 /= 0) then
+         call SetErrStat( ErrID_Fatal, "Error allocating BladeRootLoad mapping structure.", errStat, errMsg, RoutineName )
+         return
+      end if
+   ! Mesh mapping data for blade root loads
+   allocate(m%B_L_2_BR_P(p%NumBlades), Stat = ErrStat2)
+      if (ErrStat2 /= 0) then
+         call SetErrStat( ErrID_Fatal, "Error allocating B_L_2_BR_P mapping structure.", errStat, errMsg, RoutineName )
+         return
+      end if
+
+   do k=1,p%NumBlades
+      call MeshCopy (  SrcMesh  = u%BladeRootMotion(k)  &
+                     , DestMesh = m%BladeRootLoad(k)    &
+                     , CtrlCode = MESH_SIBLING       &
+                     , IOS      = COMPONENT_OUTPUT   &
+                     , force    = .TRUE.             &
+                     , moment   = .TRUE.             &
+                     , ErrStat  = ErrStat2           &
+                     , ErrMess  = ErrMsg2            )
+      
+         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
+   enddo
+   if (ErrStat >= AbortErrLev) RETURN         
+   
+   do k=1,p%NumBlades
+      CALL MeshMapCreate( y%BladeLoad(k), m%BladeRootLoad(k), m%B_L_2_BR_P(k), ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':B_L_2_BR_P('//TRIM(Num2LStr(K))//')' )
+   end do
+   if (ErrStat >= AbortErrLev) RETURN
+
    ! 
    if (p%NumTwrNds > 0) then
       m%W_Twr = 0.0_ReKi
