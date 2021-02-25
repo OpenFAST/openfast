@@ -55,9 +55,9 @@ class InflowWindLibAPI(CDLL):
 
         self.IFW_CALCOUTPUT_C.argtypes = [
             POINTER(c_double),                    # Time_C
-            POINTER(c_float),                    # Positions - placeholder for now
-            POINTER(c_float),                    # Velocities - placeholder for now
-            POINTER(c_float),                    # Output Channel Values - placeholder for now
+            POINTER(c_float),                     # Positions - placeholder for now
+            POINTER(c_float),                     # Velocities - placeholder for now
+            POINTER(c_float),                     # Output Channel Values - placeholder for now
             POINTER(c_int),                       # ErrStat_C
             POINTER(c_char)                       # ErrMsg_C
         ]
@@ -108,57 +108,38 @@ class InflowWindLibAPI(CDLL):
 
         print('Running IFW_CALCOUTPUT_C .....')
 
-        # print('positions = ')
-        # print(positions)
-
         positions_flat = [pp for p in positions for pp in p] # need to flatten to pass through to Fortran (to reshape)
-        # velocities_flat = [vv for v in velocities for vv in v] # need to flatten to pass through to Fortran (to reshape)
-
-        # print('positions_flat = ')
-        # print(positions_flat)
-        # print(type(positions_flat))
-
-        # positions_flat_c = (c_float * len(positions_flat))(*positions_flat)
-        #positions_flat_c = (c_float * len(positions_flat))(0.0, )
-        # print(type(positions_flat_c))
-        # print(positions_flat_c)
-        #for k in range(0,len(positions_flat)-1):
-        #    positions_flat_c[k] = c_float(positions_flat[k])
-        #print(positions_flat_c)
-
-        # TODO: is there a better way to know how many elements are in these arrays?
-        #       i.e. num points x 3 components?
-        positions_flat_c = (c_float * len(positions_flat))(0.0, )
+        positions_flat_c = (c_float * (3 * self.numWindPts))(0.0, )
         for i, p in enumerate(positions_flat):
             positions_flat_c[i] = c_float(p)
 
-        velocities_flat = (c_float * len(positions_flat))(0.0, )
+        velocities_flat_c = (c_float * (3 * self.numWindPts)(0.0, )
 
-        # TODO: how many output channel values are expected
-        outputChannelValues = (c_float * self._numChannels.value)(0.0, )
+        outputChannelValues_c = (c_float * self._numChannels.value)(0.0, )
 
         self.IFW_CALCOUTPUT_C(
             byref(c_double(time)),                 # IN: time at which to calculate velocities
-            positions_flat_c,     # IN: positions - specified by user
-            velocities_flat,    # OUT: velocities at desired positions
-            outputChannelValues,# OUT: output channel values as described in input file
+            positions_flat_c,                      # IN: positions - specified by user
+            velocities_flat_c,                     # OUT: velocities at desired positions
+            outputChannelValues_c,                 # OUT: output channel values as described in input file
             byref(self.error_status),              # ErrStat_C
             self.error_message                     # ErrMsg_C
         )
         if self.fatal_error:
             print(f"Error {self.error_status.value}: {self.error_message.value}")
             return
-        print('ifw_calcOutput: back in python after IFW_CALCOUTPUT_C is done')
-        
+
+        # Convert output channel values back into python
+        for k in range(0,self._numChannels.value):
+            outputChannelValues[k] = float(outputChannelValues_c[k])
+
         # Reshape velocities into [N,3]
         count = 0
-        for j in range(0,self.numWindPts-1):
-            velocities[j,0] = velocities_flat[count]
-            velocities[j,1] = velocities_flat[count+1]
-            velocities[j,2] = velocities_flat[count+2]
+        for j in range(0,self.numWindPts):
+            velocities[j,0] = velocities_flat_c[count]
+            velocities[j,1] = velocities_flat_c[count+1]
+            velocities[j,2] = velocities_flat_c[count+2]
             count = count + 3
-        print('velocities = ')
-        print(velocities)
 
     # ifw_end ------------------------------------------------------------------------------------------------------------
     def ifw_end(self):

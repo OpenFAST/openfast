@@ -96,15 +96,13 @@ SUBROUTINE IFW_INIT_C(InputFileStrings_C, InputUniformStrings_C, NumWindPts_C, D
 
    ! Store string-inputs as type FileInfoType within InflowWind_InitInputType
    CALL InitFileInfo(InputFileStrings, InitInp%PassedFileData, ErrStat, ErrMsg)           ! in, out (FileInfoType), out, out
-   ! Debugging
-   ! CALL Print_FileInfo_Struct( CU, InitInp%PassedFileData )
    IF (ErrStat .NE. 0) PRINT *, "IFW_INIT_C: InitFileInfo failed"
 
    ! Set other inputs for calling InflowWind_Init
    InitInp%UseInputFile          = .false.
    InitInp%InputFileName         = "passed_ifw_file"         ! dummy
    InitInp%RootName              = "ifwRoot"                 ! used for making echo files
-   InitInp%NumWindPoints         = NumWindPts_C              ! CHECK THIS!
+   InitInp%NumWindPoints         = NumWindPts_C              
    InitInp%WindType2UseInputFile = .TRUE.                    ! CHANGE TO FALSE ONCE GET UNIFORM INPUT FILE STRING WORKING!
    TimeInterval                  = REAL(DT_C, DbKi)
 
@@ -114,18 +112,6 @@ SUBROUTINE IFW_INIT_C(InputFileStrings_C, InputUniformStrings_C, NumWindPts_C, D
    PRINT*, "Done calling InflowWind_Init ....."
 
    ! Convert the outputs of InflowWind_Init from Fortran to C
-
-! @ RAF: need some help here please
-
-!DO i = 0, NumChannels_C - 1
-!   single_line_character_array = character_pointer(i * InputStringLength + 1 : i * InputStringLength + InputStringLength)
-!   DO j = 1, InputStringLength
-!      single_line_chars(j:j) = single_line_character_array(j)
-!   END DO
-!   InputFileStrings(i + 1) = single_line_chars
-!END DO
-!CALL F_C_pointer(InputFileStrings_C, character_pointer, [InputFileLines * InputStringLength])
-
    ALLOCATE(tmp_OutputChannelNames_C(size(InitOutData%WriteOutputHdr)))
    ALLOCATE(tmp_OutputChannelUnits_C(size(InitOutData%WriteOutputUnt)))
    NumChannels_C = size(InitOutData%WriteOutputHdr)
@@ -175,8 +161,6 @@ CHARACTER(ErrMsgLen)                               :: ErrMsg
 
 ! Convert the inputs from C to Fortran
 Time = REAL(Time_C,DbKi)
-PRINT *, "Time = ", Time
-PRINT *, Positions_C
 InputData%PositionXYZ = reshape( real(Positions_C,ReKi), (/3, InitInp%NumWindPoints/) )
 
 ! Call InflowWind_CalcOutput to get the velocities
@@ -184,10 +168,10 @@ CALL InflowWind_CalcOutput( Time, InputData, p, ContStates, DiscStates, ConstrSt
 IF (ErrStat .NE. 0) PRINT *, "IFW_CALCOUTPUT_C: InflowWind_CalcOutput failed"
 PRINT*, "Done calling InflowWind_CalcOutput ....."
 
-! Get velocities out of y and flattens it (still in same spot in memory)
+! Get velocities out of y and flatten them (still in same spot in memory)
 Velocities_C = reshape( REAL(y%VelocityUVW, C_FLOAT), (/3*InitInp%NumWindPoints/) ) ! VelocityUVW is 2D array of ReKi (might need reshape or make into pointer); size [3,N]
 
-! NEED TO COPY WriteOutput CHANNEL INFO
+! Get the output channel info out of y
 OutputChannelValues_C = REAL(y%WriteOutput, C_FLOAT)
 
 ! Convert the outputs of InflowWind_CalcOutput from Fortran to C
@@ -212,10 +196,10 @@ INTEGER(C_INT)                , INTENT(  OUT)      :: ErrStat_C
 CHARACTER(KIND=C_CHAR)        , INTENT(  OUT)      :: ErrMsg_C
 
 ! Local variables
-INTEGER                          :: ErrStat
-CHARACTER(ErrMsgLen)             :: ErrMsg
+INTEGER                                            :: ErrStat
+CHARACTER(ErrMsgLen)                               :: ErrMsg
 
-! Need InputData from ?
+! Call the main subroutine InflowWind_End
 CALL InflowWind_End( InputData, p, ContStates, DiscStates, ConstrStates, OtherStates, y, m, ErrStat, ErrMsg )
 
 ! Convert the outputs of InflowWind_End from Fortran to C

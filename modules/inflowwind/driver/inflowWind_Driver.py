@@ -84,9 +84,9 @@ library_path = "/home/nmendoza/Projects/CCT2/OpenFAST/build_test/modules/infloww
 ifwlib = inflowwind_library.InflowWindLibAPI(library_path)
 
 # Set inputs
-t_start             = 0      # initial time
-ifwlib.dt           = 0.1   # time interval that it's being called at, not usedby IFW, only here for consistency with other modules
-ifwlib.total_time   = 1      # final or total time
+t_start             = 0                  # initial time
+ifwlib.dt           = 0.1                # time interval that it's being called at, not usedby IFW, only here for consistency with other modules
+ifwlib.total_time   = 1 + ifwlib.dt      # final or total time + increment because python doesnt include endpoint!
 time                = np.arange(t_start,ifwlib.total_time,ifwlib.dt)
 ifwlib.numTimeSteps = len(time)
 
@@ -105,14 +105,6 @@ positions = np.array([
 ifwlib.numWindPts   = positions.shape[0]     # total number of wind points requesting velocities for at each time step. must be integer
 velocities          = np.zeros((ifwlib.numWindPts,3)) # output velocities (N x 3)
 
-# Debugging only
-print('ifwlib.numWindPts = ')
-print(ifwlib.numWindPts)
-print('positions = ')
-print(positions)
-print('velocities = ')
-print(velocities)
-
 # Only need to call ifw_init once
 ifwlib.ifw_init(ifw_input_string_array, ifw_uniform_string_array)  
 outputChannelValues = np.zeros(ifwlib._numChannels.value)
@@ -123,8 +115,6 @@ outputChannelValues = np.zeros(ifwlib._numChannels.value)
 # Loop over ifw_calcOutput as many times as needed/desired
 idx = 0
 for t in time:
-    print('t = ')
-    print(t)
     ifwlib.ifw_calcOutput(t, positions, velocities, outputChannelValues)
     # Store the outputs
     ifwlib._channel_output_array = outputChannelValues
