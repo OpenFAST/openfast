@@ -274,6 +274,14 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    CALL AllocAry( u%ExternalBlPitchCom, p%NumBl, 'ExternalBlPitchCom', ErrStat2, ErrMsg2 )
       if (Failed())  return;
         
+      ! Cable control -- only allocate what is needed -- OpenFAST glue code has logic for this 
+   if (p%NumCableControl > 0) then
+      call AllocAry( u%ExternalCableDeltaL,    p%NumCableControl, 'ExternalCableDeltaL',    ErrStat2, ErrMsg2 )
+         if (Failed())  return
+      call AllocAry( u%ExternalCableDeltaLdot, p%NumCableControl, 'ExternalCableDeltaLdot', ErrStat2, ErrMsg2 )
+         if (Failed())  return
+   endif
+
    IF (InitInp%NumSC2Ctrl > 0 .and. p%UseBladedInterface) THEN
       CALL AllocAry( u%SuperController, InitInp%NumSC2Ctrl, 'u%SuperController', ErrStat2, ErrMsg2 )
       if (Failed())  return;
@@ -300,6 +308,10 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    u%ExternalElecPwr = 0.
    u%ExternalHSSBrFrac = 0.
    u%ExternalBlAirfoilCom = 0.
+   if (p%NumCableControl > 0) then
+      u%ExternalCableDeltaL = 0.
+      u%ExternalCableDeltaLdot = 0.
+   endif
 
    u%TwrAccel  = 0.
    u%YawErr    = 0.   
@@ -3851,21 +3863,26 @@ SUBROUTINE CableControl_CalcOutput( t, u, p, x, xd, z, OtherState, CableDeltaL, 
             if (allocated(CableDeltaLdot))   CableDeltaLdot = 0.0_ReKi
          ! User-defined from Simulink or LabVIEW.
          CASE ( ControlMode_EXTERN )
-!FIXME: do we need some sizing checks here!!!!
-            CableDeltaL(   1:p%NumCableControl) = u%ExternalCableDeltaL(   1:p%NumCableControl)
-            CableDeltaLdot(1:p%NumCableControl) = u%ExternalCableDeltaLdot(1:p%NumCableControl)
+            if (allocated(CableDeltaL) .and. allocated(u%ExternalCableDeltaL)) then
+               CableDeltaL(   1:p%NumCableControl) = u%ExternalCableDeltaL(   1:p%NumCableControl)
+            endif
+            if (allocated(CableDeltaLdot) .and. allocated(u%ExternalCableDeltaLdot)) then
+               CableDeltaLdot(1:p%NumCableControl) = u%ExternalCableDeltaLdot(1:p%NumCableControl)
+            endif
          ! User-defined cable control from Bladed-style DLL
          CASE ( ControlMode_DLL )
-            if (p%DLL_Ramp) then
-               factor = (t - m%LastTimeCalled) / m%dll_data%DLL_DT
-               CableDeltaL(1:p%NumCableControl)    = m%dll_data%PrevCableDeltaL(   1:p%NumCableControl) + &
-                                 factor * ( m%dll_data%CableDeltaL(   1:p%NumCableControl) - m%dll_data%PrevCableDeltaL(   1:p%NumCableControl) )
-               CableDeltaLdot(1:p%NumCableControl) = m%dll_data%PrevCableDeltaLdot(1:p%NumCableControl) + &
-                                 factor * ( m%dll_data%CableDeltaLdot(1:p%NumCableControl) - m%dll_data%PrevCableDeltaLdot(1:p%NumCableControl) )
-            else
-               CableDeltaL(   1:p%NumCableControl) = m%dll_data%CableDeltaL(   1:p%NumCableControl)
-               CableDeltaLdot(1:p%NumCableControl) = m%dll_data%CableDeltaLdot(1:p%NumCableControl)
-            end if
+            if (allocated(CableDeltaLdot) .and. allocated(CableDeltaLdot)) then
+               if (p%DLL_Ramp) then
+                  factor = (t - m%LastTimeCalled) / m%dll_data%DLL_DT
+                  CableDeltaL(1:p%NumCableControl)    = m%dll_data%PrevCableDeltaL(   1:p%NumCableControl) + &
+                                    factor * ( m%dll_data%CableDeltaL(   1:p%NumCableControl) - m%dll_data%PrevCableDeltaL(   1:p%NumCableControl) )
+                  CableDeltaLdot(1:p%NumCableControl) = m%dll_data%PrevCableDeltaLdot(1:p%NumCableControl) + &
+                                    factor * ( m%dll_data%CableDeltaLdot(1:p%NumCableControl) - m%dll_data%PrevCableDeltaLdot(1:p%NumCableControl) )
+               else
+                  CableDeltaL(   1:p%NumCableControl) = m%dll_data%CableDeltaL(   1:p%NumCableControl)
+                  CableDeltaLdot(1:p%NumCableControl) = m%dll_data%CableDeltaLdot(1:p%NumCableControl)
+               end if
+            endif
       END SELECT
 
 END SUBROUTINE CableControl_CalcOutput

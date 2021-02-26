@@ -2427,7 +2427,9 @@ subroutine WrSumInfo4Simulink(p,SimulinkCtrlMode,UnSum)
       write(UnSum, '(8x,A5,4x,A3,3x,A)')  '5:7   ','<--','BlPitchCom             '
       write(UnSum, '(8x,A5,4x,A3,3x,A)')  '8     ','<--','HSSBrFrac              '
       write(UnSum, '(8x,A5,4x,A3,3x,A)')  '9:11  ','<--','BlAirfoilCom           '
-      write(UnSum, '(8x,A5,4x,A3,3x,A)')  '12:14 ','<--','Lidar focus (optional) '
+      write(UnSum, '(8x,A5,4x,A3,3x,A)')  '12:31 ','<--','CableDeltaL            '
+      write(UnSum, '(8x,A5,4x,A3,3x,A)')  '32:51 ','<--','CableDektaLdot         '
+      write(UnSum, '(8x,A5,4x,A3,3x,A)')  '52:54 ','<--','Lidar focus (optional) '
    endif
 contains
    subroutine WrCtrlInfo( IsControlled, Desc, DataChans )

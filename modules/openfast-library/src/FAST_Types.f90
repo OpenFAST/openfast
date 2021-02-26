@@ -688,6 +688,8 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(1:3)  :: BlAirfoilCom      !< blade airfoil commands from Simulink/Labview [-]
     REAL(ReKi)  :: HSSBrFrac      !< Fraction of full braking torque: 0 (off) <= HSSBrFrac <= 1 (full) from Simulink or LabVIEW [-]
     REAL(ReKi) , DIMENSION(1:3)  :: LidarFocus      !< lidar focus (relative to lidar location) [m]
+    REAL(ReKi) , DIMENSION(1:20)  :: CableDeltaL      !< Cable control DeltaL [m]
+    REAL(ReKi) , DIMENSION(1:20)  :: CableDeltaLdot      !< Cable control DeltaLdot [m/s]
   END TYPE FAST_ExternInputType
 ! =======================
 ! =========  FAST_InitData  =======
@@ -42676,6 +42678,8 @@ ENDIF
     DstExternInputTypeData%BlAirfoilCom = SrcExternInputTypeData%BlAirfoilCom
     DstExternInputTypeData%HSSBrFrac = SrcExternInputTypeData%HSSBrFrac
     DstExternInputTypeData%LidarFocus = SrcExternInputTypeData%LidarFocus
+    DstExternInputTypeData%CableDeltaL = SrcExternInputTypeData%CableDeltaL
+    DstExternInputTypeData%CableDeltaLdot = SrcExternInputTypeData%CableDeltaLdot
  END SUBROUTINE FAST_CopyExternInputType
 
  SUBROUTINE FAST_DestroyExternInputType( ExternInputTypeData, ErrStat, ErrMsg )
@@ -42732,6 +42736,8 @@ ENDIF
       Re_BufSz   = Re_BufSz   + SIZE(InData%BlAirfoilCom)  ! BlAirfoilCom
       Re_BufSz   = Re_BufSz   + 1  ! HSSBrFrac
       Re_BufSz   = Re_BufSz   + SIZE(InData%LidarFocus)  ! LidarFocus
+      Re_BufSz   = Re_BufSz   + SIZE(InData%CableDeltaL)  ! CableDeltaL
+      Re_BufSz   = Re_BufSz   + SIZE(InData%CableDeltaLdot)  ! CableDeltaLdot
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -42779,6 +42785,14 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     DO i1 = LBOUND(InData%LidarFocus,1), UBOUND(InData%LidarFocus,1)
       ReKiBuf(Re_Xferred) = InData%LidarFocus(i1)
+      Re_Xferred = Re_Xferred + 1
+    END DO
+    DO i1 = LBOUND(InData%CableDeltaL,1), UBOUND(InData%CableDeltaL,1)
+      ReKiBuf(Re_Xferred) = InData%CableDeltaL(i1)
+      Re_Xferred = Re_Xferred + 1
+    END DO
+    DO i1 = LBOUND(InData%CableDeltaLdot,1), UBOUND(InData%CableDeltaLdot,1)
+      ReKiBuf(Re_Xferred) = InData%CableDeltaLdot(i1)
       Re_Xferred = Re_Xferred + 1
     END DO
  END SUBROUTINE FAST_PackExternInputType
@@ -42836,6 +42850,18 @@ ENDIF
     i1_u = UBOUND(OutData%LidarFocus,1)
     DO i1 = LBOUND(OutData%LidarFocus,1), UBOUND(OutData%LidarFocus,1)
       OutData%LidarFocus(i1) = ReKiBuf(Re_Xferred)
+      Re_Xferred = Re_Xferred + 1
+    END DO
+    i1_l = LBOUND(OutData%CableDeltaL,1)
+    i1_u = UBOUND(OutData%CableDeltaL,1)
+    DO i1 = LBOUND(OutData%CableDeltaL,1), UBOUND(OutData%CableDeltaL,1)
+      OutData%CableDeltaL(i1) = ReKiBuf(Re_Xferred)
+      Re_Xferred = Re_Xferred + 1
+    END DO
+    i1_l = LBOUND(OutData%CableDeltaLdot,1)
+    i1_u = UBOUND(OutData%CableDeltaLdot,1)
+    DO i1 = LBOUND(OutData%CableDeltaLdot,1), UBOUND(OutData%CableDeltaLdot,1)
+      OutData%CableDeltaLdot(i1) = ReKiBuf(Re_Xferred)
       Re_Xferred = Re_Xferred + 1
     END DO
  END SUBROUTINE FAST_UnPackExternInputType

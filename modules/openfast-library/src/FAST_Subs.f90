@@ -1283,6 +1283,22 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       do i=1,SIZE(SrvD%Input(1)%ExternalBlAirfoilCom)
          m_FAST%ExternInput%BlAirfoilCom(i) = SrvD%Input(1)%ExternalBlAirfoilCom(i)
       end do
+
+         ! Cable Controls (only 20 channels are passed to simulink, but may be less or more in SrvD)
+      if (allocated(SrvD%Input(1)%ExternalCableDeltaL)) then
+         do i=1,min(SIZE(m_FAST%ExternInput%CableDeltaL),SIZE(SrvD%Input(1)%ExternalCableDeltaL))
+            m_FAST%ExternInput%CableDeltaL(i) = SrvD%Input(1)%ExternalCableDeltaL(i)
+         end do
+      else  ! Initialize to zero for consistency
+         m_FAST%ExternInput%CableDeltaL = 0.0_Reki
+      endif
+      if (allocated(SrvD%Input(1)%ExternalCableDeltaLdot)) then
+         do i=1,min(SIZE(m_FAST%ExternInput%CableDeltaLdot),SIZE(SrvD%Input(1)%ExternalCableDeltaLdot))
+            m_FAST%ExternInput%CableDeltaLdot(i) = SrvD%Input(1)%ExternalCableDeltaLdot(i)
+         end do
+      else  ! Initialize to zero for consistency
+         m_FAST%ExternInput%CableDeltaLdot = 0.0_Reki
+      endif
    end if
    
    m_FAST%ExternInput%LidarFocus = 1.0_ReKi  ! make this non-zero (until we add the initial position in the InflowWind input file)

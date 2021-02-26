@@ -22,8 +22,8 @@ MODULE FAST_Data
    INTEGER(IntKi)                        :: NumTurbines 
    INTEGER,        PARAMETER             :: IntfStrLen  = 1025       ! length of strings through the C interface
    INTEGER(IntKi), PARAMETER             :: MAXOUTPUTS = 4000        ! Maximum number of outputs
-   INTEGER(IntKi), PARAMETER             :: MAXInitINPUTS = 13       ! Maximum number of initialization values from Simulink
-   INTEGER(IntKi), PARAMETER             :: NumFixedInputs = 11
+   INTEGER(IntKi), PARAMETER             :: MAXInitINPUTS = 53       ! Maximum number of initialization values from Simulink
+   INTEGER(IntKi), PARAMETER             :: NumFixedInputs = 51
    
    
       ! Global (static) data:
@@ -334,17 +334,19 @@ subroutine FAST_SetExternalInputs(iTurb, NumInputs_c, InputAry, m_FAST)
       IF ( NumInputs_c < NumFixedInputs ) RETURN ! This is an error
 
    !NOTE: if anything here changes, update ServoDyn_IO.f90::WrSumInfo4Simulink
-      m_FAST%ExternInput%GenTrq      = InputAry(1)
-      m_FAST%ExternInput%ElecPwr     = InputAry(2)
-      m_FAST%ExternInput%YawPosCom   = InputAry(3)
-      m_FAST%ExternInput%YawRateCom  = InputAry(4)
-      m_FAST%ExternInput%BlPitchCom  = InputAry(5:7)
-      m_FAST%ExternInput%HSSBrFrac   = InputAry(8)
-      m_FAST%ExternInput%BlAirfoilCom   = InputAry(9:11)
+      m_FAST%ExternInput%GenTrq           = InputAry(1)
+      m_FAST%ExternInput%ElecPwr          = InputAry(2)
+      m_FAST%ExternInput%YawPosCom        = InputAry(3)
+      m_FAST%ExternInput%YawRateCom       = InputAry(4)
+      m_FAST%ExternInput%BlPitchCom       = InputAry(5:7)
+      m_FAST%ExternInput%HSSBrFrac        = InputAry(8)
+      m_FAST%ExternInput%BlAirfoilCom     = InputAry(9:11)
+      m_FAST%ExternInput%CableDeltaL      = InputAry(12:31)
+      m_FAST%ExternInput%CableDeltaLdot   = InputAry(32:51)
             
       IF ( NumInputs_c > NumFixedInputs ) THEN  ! NumFixedInputs is the fixed number of inputs
          IF ( NumInputs_c == NumFixedInputs + 3 ) &
-             m_FAST%ExternInput%LidarFocus = InputAry(12:14)
+             m_FAST%ExternInput%LidarFocus = InputAry(52:54)
       END IF   
       
 end subroutine FAST_SetExternalInputs

@@ -175,12 +175,6 @@ contains
 
       ! Allocate arrays for cable control
       p%NumCableControl = InitInp%NumCableControl
-      ! Inputs from Simulink
-!FIXME: Check this all the way through! May need to make these inputs over the whole potential range
-!      call AllocAry( u%ExternalCableDeltaL,    p%NumCableControl, 'ExternalCableDeltaL',    ErrStat2, ErrMsg2 )
-!         if (Failed())  return
-!      call AllocAry( u%ExternalCableDeltaLdot, p%NumCableControl, 'ExternalCableDeltaLdot', ErrStat2, ErrMsg2 )
-!         if (Failed())  return
       ! Outputs from SrvD -- we allocate this if any cable control signals were requested.
       call AllocAry( y%CableDeltaL,    p%NumCableControl, 'CableDeltaL',    ErrStat2, ErrMsg2 )
          if (Failed())  return
@@ -197,8 +191,6 @@ contains
       call AllocAry( dll_data%PrevCableDeltaLdot, p%NumCableControl, 'PrevCableDeltaLdot', ErrStat2, ErrMsg2 )
          if (Failed())  return
       ! Initialize to zeros
-!      u%ExternalCableDeltaL         =  0.0_ReKi
-!      u%ExternalCableDeltaLdot      =  0.0_ReKi
       y%CableDeltaL                 =  0.0_ReKi
       y%CableDeltaLdot              =  0.0_ReKi
       dll_data%CableDeltaL          =  0.0_SiKi
@@ -244,7 +236,7 @@ contains
       Requestor(Record) = trim(Rqst(1:min(len(Rqst),len(Requestor(1)))))   ! prevent string length overrun
       SumInfo(Record)   = trim(Desc(1:min(len(Desc),len(SumInfo(1)))))     ! prevent string length overrun
    end subroutine WrSumInfoRcvd
-END SUBROUTINE
+END SUBROUTINE EXavrSWAP_Init
 
 !==================================================================================================================================
 !> This routine fills the extended avrSWAP

@@ -320,15 +320,19 @@ Cable Control
 
 Control of cable elements specified in either the MoorDyn or SubDyn modules can
 be controlled through ServoDyn by a Bladed-style controller.  The channels
-assimgnets are requested by the modules with the cable elements (MoorDyn and/or
+assignmets are requested by the modules with the cable elements (MoorDyn and/or
 SubDyn at present), and mapped to the appropriate control channel.  A summary of
 the which module requested the channels is available in the summary file output
-from ServoDyn.  Up to 100 channels may be requested.
+from ServoDyn.  Up to 100 channels may be requested when linking to a DLL, or 20
+channels when linking to Simulink.
 
 **CCmode**        [switch]
 
    Cable control mode {0: none, 4: user-defined from Simulink/Labview, 5:
    user-defined from Bladed-style DLL}.
+
+   Each channel DeltaL (requested cable length change) and DeltaLdot (cable
+   length change rate) value from the controller/Simulink interface.
 
 
 .. _SrvD-StC-inputs:
