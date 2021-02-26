@@ -133,7 +133,7 @@ subroutine DvrM_Init(DvrData, AD, IW, errStat,errMsg )
    ! --- Initialize VTK
    if (DvrData%out%WrVTK>0) then
       DvrData%out%n_VTKTime = 1
-      DvrData%out%VTKRefPoint = (/0.0_ReKi, 0.0_ReKi, 0.0_ReKi /)
+      DvrData%out%VTKRefPoint = (/0.0_SiKi, 0.0_SiKi, 0.0_SiKi /)
       call SetVTKParameters(DvrData%out, DvrData, InitOutData_AD, AD, errStat2, errMsg2)
    endif
 
@@ -927,6 +927,7 @@ subroutine Dvr_ReadInputFile(fileName, DvrData, errStat, errMsg )
    integer                      :: iWT, iB, bldMotionType
    logical                      :: echo   
    real(DbKi)                   :: tMax
+   real(ReKi)                   :: hubRad_ReKi
    integer(IntKi)               :: errStat2                                 ! Temporary Error status
    character(ErrMsgLen)         :: errMsg2                                  ! Temporary Err msg
    type(FileInfoType) :: FileInfo_In   !< The derived type for holding the file information.
@@ -1076,8 +1077,9 @@ subroutine Dvr_ReadInputFile(fileName, DvrData, errStat, errMsg )
    call ParseVar(FileInfo_In, CurLine, 'outFmt'     , DvrData%out%outFmt      , errStat2, errMsg2, unEc); if(Failed()) return
    call ParseVar(FileInfo_In, CurLine, 'outFileFmt' , DvrData%out%fileFmt     , errStat2, errMsg2, unEc); if(Failed()) return
    call ParseVar(FileInfo_In, CurLine, 'WrVTK'      , DvrData%out%WrVTK       , errStat2, errMsg2, unEc); if(Failed()) return
-   call ParseVar(FileInfo_In, CurLine, 'VTKHubRad'  , DvrData%out%VTKHubRad   , errStat2, errMsg2, unEc); if(Failed()) return
+   call ParseVar(FileInfo_In, CurLine, 'VTKHubRad'  , hubRad_ReKi             , errStat2, errMsg2, unEc); if(Failed()) return
    call ParseAry(FileInfo_In, CurLine, 'VTKNacDim'  , DvrData%out%VTKNacDim, 6, errStat2, errMsg2, unEc); if(Failed()) return
+   DvrData%out%VTKHubRad =  real(hubRad_ReKi,SiKi)
    DvrData%out%delim=' ' ! TAB
 
    call cleanup()

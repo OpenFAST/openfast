@@ -85,8 +85,8 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: VTK_tWidth      !< Width of number of files for leading zeros in file name format [-]
     INTEGER(IntKi)  :: n_VTKTime      !< Number of time steps between writing VTK files [-]
     REAL(SiKi)  :: VTKHubRad      !< Hub radius for visualization [m]
-    REAL(SiKi) , DIMENSION(1:6)  :: VTKNacDim      !< Nacelle dimensions for visualization [m]
-    REAL(ReKi) , DIMENSION(1:3)  :: VTKRefPoint      !< RefPoint for VTK outputs [-]
+    REAL(ReKi) , DIMENSION(1:6)  :: VTKNacDim      !< Nacelle dimensions for visualization [m]
+    REAL(SiKi) , DIMENSION(1:3)  :: VTKRefPoint      !< RefPoint for VTK outputs [-]
   END TYPE DvrM_Outputs
 ! =======================
 ! =========  AeroDyn_Data  =======
@@ -1417,13 +1417,13 @@ ENDIF
     i1_l = LBOUND(OutData%VTKNacDim,1)
     i1_u = UBOUND(OutData%VTKNacDim,1)
     DO i1 = LBOUND(OutData%VTKNacDim,1), UBOUND(OutData%VTKNacDim,1)
-      OutData%VTKNacDim(i1) = REAL(ReKiBuf(Re_Xferred), SiKi)
+      OutData%VTKNacDim(i1) = ReKiBuf(Re_Xferred)
       Re_Xferred = Re_Xferred + 1
     END DO
     i1_l = LBOUND(OutData%VTKRefPoint,1)
     i1_u = UBOUND(OutData%VTKRefPoint,1)
     DO i1 = LBOUND(OutData%VTKRefPoint,1), UBOUND(OutData%VTKRefPoint,1)
-      OutData%VTKRefPoint(i1) = ReKiBuf(Re_Xferred)
+      OutData%VTKRefPoint(i1) = REAL(ReKiBuf(Re_Xferred), SiKi)
       Re_Xferred = Re_Xferred + 1
     END DO
  END SUBROUTINE ADM_Dvr_UnPackDvrM_Outputs
