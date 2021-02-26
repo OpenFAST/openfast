@@ -15,7 +15,7 @@
 !                        NumSC2Ctrl, errStat, errMsg )  bind (C, NAME='sc_init')
 subroutine sc_init ( nTurbines, nInpGlobal, NumCtrl2SC, NumParamGlobal,  NumParamTurbine, &
                          NumStatesGlobal, NumStatesTurbine, NumSC2CtrlGlob, &
-                        NumSC2Ctrl, errStat, errMsg )  bind (C, NAME='SC_Init')
+                        NumSC2Ctrl, errStat, errMsg )  bind (C, NAME='sc_init')
 !subroutine sc_init ( t, nTurbines, nInpGlobal, to_SCglob, NumCtrl2SC, to_SC, &
 !                        nStatesGlobal, StatesGlob, nStatesTurbine, StatesTurbine, NumSC2CtrlGlob, from_SCglob, &
 !                        NumSC2Ctrl, from_SC, errStat, errMsg )  bind (C, NAME='sc_calcOutputs')
@@ -68,7 +68,9 @@ subroutine sc_init ( nTurbines, nInpGlobal, NumCtrl2SC, NumParamGlobal,  NumPara
    
    end subroutine sc_init
 subroutine sc_getInitData(nTurbines, NumParamGlobal, NumParamTurbine, ParamGlobal, ParamTurbine, &
-                           NumSC2CtrlGlob, from_SCglob, NumSC2Ctrl, from_SC, errStat, errMsg )  bind (C, NAME='SC_GetInitData')
+        NumSC2CtrlGlob, from_SCglob, NumSC2Ctrl, from_SC,&
+        & nStatesGlobal, StatesGlob, nStatesTurbine, StatesTurbine,&
+        & errStat, errMsg )  bind (C, NAME='sc_getInitData')
 use, intrinsic :: ISO_C_Binding
 
    implicit                        none
@@ -85,6 +87,10 @@ use, intrinsic :: ISO_C_Binding
    real(C_FLOAT),             intent(inout) :: from_SCglob  (*)  !< global outputs of the super controller (to the turbine controller)
    integer(C_INT),            intent(in   ) :: NumSC2Ctrl        !< number of turbine specific controller inputs [output from supercontroller]
    real(C_FLOAT),             intent(inout) :: from_SC      (*)  !< turbine specific outputs of the super controller (to the turbine controller)
+   integer(C_INT),            intent(in   ) :: nStatesGlobal     !< number of global states
+   real(C_FLOAT),             intent(inout) :: StatesGlob   (*)  !< global states at time increment, n=0 (total of nStatesGlobal of these states)
+   integer(C_INT),            intent(in   ) :: nStatesTurbine    !< number of states per turbine
+   real(C_FLOAT),             intent(inout) :: StatesTurbine(*)  !< turbine-dependent states at time increment, n=0 (total of nTurbines*nStatesTurbine of these states)
 
    integer(C_INT),            intent(inout) :: errStat             !< error status code (uses NWTC_Library error codes)
    character(kind=C_CHAR),    intent(inout) :: errMsg          (*) !< Error Message from DLL to simulation code        
@@ -124,10 +130,10 @@ use, intrinsic :: ISO_C_Binding
      
    end subroutine sc_getInitData
 !=======================================================================
-!SUBROUTINE sc_calcOutputs (  ) BIND (C, NAME='SC_CalcOutputs')                      
+!SUBROUTINE sc_calcOutputs (  ) BIND (C, NAME='sc_calcOutputs')                      
 subroutine sc_calcOutputs ( t, nTurbines, nParamGlobal, paramGlobal, nParamTurbine, paramTurbine, nInpGlobal, to_SCglob, NumCtrl2SC, to_SC, &
                         nStatesGlobal, StatesGlob, nStatesTurbine, StatesTurbine, NumSC2CtrlGlob, from_SCglob, &
-                        NumSC2Ctrl, from_SC, errStat, errMsg )  bind (C, NAME='SC_CalcOutputs')
+                        NumSC2Ctrl, from_SC, errStat, errMsg )  bind (C, NAME='sc_calcOutputs')
          
 
    ! This DLL super controller is used to implement a ...
@@ -198,9 +204,9 @@ subroutine sc_calcOutputs ( t, nTurbines, nParamGlobal, paramGlobal, nParamTurbi
 end subroutine sc_calcOutputs
 
 !=======================================================================
-!SUBROUTINE sc_updateStates (  ) BIND (C, NAME='SC_CalcOutputs')
+!SUBROUTINE sc_updateStates (  ) BIND (C, NAME='sc_updateStates')
 subroutine sc_updateStates ( t, nTurbines, nParamGlobal, paramGlobal, nParamTurbine, paramTurbine, nInpGlobal, to_SCglob, NumCtrl2SC, to_SC, &
-                        nStatesGlobal, StatesGlob, nStatesTurbine, StatesTurbine, errStat, errMsg )  bind (C, NAME='SC_UpdateStates')
+                        nStatesGlobal, StatesGlob, nStatesTurbine, StatesTurbine, errStat, errMsg )  bind (C, NAME='sc_updateStates')
          
 
    ! This DLL super controller is used to implement a ...
@@ -282,7 +288,7 @@ subroutine sc_updateStates ( t, nTurbines, nParamGlobal, paramGlobal, nParamTurb
    return
 end subroutine sc_updateStates
 
-subroutine sc_end ( errStat, errMsg )  bind (C, NAME='SC_End')
+subroutine sc_end ( errStat, errMsg )  bind (C, NAME='sc_end')
          
 
    ! This DLL super controller is used to implement a ...
@@ -299,7 +305,7 @@ subroutine sc_end ( errStat, errMsg )  bind (C, NAME='SC_End')
 
    implicit                        none
 #ifndef IMPLICIT_DLLEXPORT
-!GCC$ ATTRIBUTES DLLEXPORT :: sc_updateStates
+!GCC$ ATTRIBUTES DLLEXPORT :: sc_end
 #endif
 
    integer(C_INT),         intent(inout) :: errStat           !< error status code (uses NWTC_Library error codes)
