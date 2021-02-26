@@ -641,8 +641,8 @@ contains
       write(UnSum,'(A)') ''
       write(UnSum,'(A)') '   Legacy Bladed DLL interface channel usage by SrvD:'
       write(UnSum,'(A)') ''
-      write(UnSum,'(6x,8x,3x,A3,3x,A)') '-->','indicates from DLL to SrvD'
       write(UnSum,'(6x,8x,3x,A3,3x,A)') '-->','indicates from SrvD to DLL'
+      write(UnSum,'(6x,8x,3x,A3,3x,A)') '<--','indicates from DLL to SrvD'
       write(UnSum,'(6x,A8,3x,A3,3x,A11)') 'Record #','   ','Description'
       write(UnSum,'(6x,A8,3x,A3,3x,A11)') '--------','   ','-----------'
       do I=1,size(SumInfo)

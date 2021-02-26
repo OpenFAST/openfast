@@ -313,6 +313,9 @@ subroutine FAST_Update(iTurb, NumInputs_c, NumOutputs_c, InputAry, OutputAry, Er
       
 end subroutine FAST_Update 
 !==================================================================================================================================
+!> NOTE: If this interface is changed, update the table in the ServoDyn_IO.f90::WrSumInfo4Simulink routine
+!!    Ideally we would write this summary info from here, but that isn't currently done.  So as a workaround so the user has some
+!!    vague idea what went wrong with their simulation, we have ServoDyn include the arrangement set here in the SrvD.sum file.
 subroutine FAST_SetExternalInputs(iTurb, NumInputs_c, InputAry, m_FAST)
 
    USE, INTRINSIC :: ISO_C_Binding
@@ -329,7 +332,8 @@ subroutine FAST_SetExternalInputs(iTurb, NumInputs_c, InputAry, m_FAST)
          ! set the inputs from external code here...
          ! transfer inputs from Simulink to FAST
       IF ( NumInputs_c < NumFixedInputs ) RETURN ! This is an error
-      
+
+   !NOTE: if anything here changes, update ServoDyn_IO.f90::WrSumInfo4Simulink
       m_FAST%ExternInput%GenTrq      = InputAry(1)
       m_FAST%ExternInput%ElecPwr     = InputAry(2)
       m_FAST%ExternInput%YawPosCom   = InputAry(3)

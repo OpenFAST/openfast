@@ -438,7 +438,16 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       endif
    END IF
          
-  
+ 
+      !............................................................................................
+      ! If we are using the Simulink interface, add info to summary file.
+      !............................................................................................
+
+   if (UnSum >0 .and. Cmpl4SFun) then
+      call WrSumInfo4Simulink(p,ControlMode_EXTERN,UnSum)
+   END IF
+
+ 
       !............................................................................................
       ! Set Init outputs for linearization (after StrucCtrl, in case we ever add the StrucCtrl to the linearization features):
       !............................................................................................
@@ -2053,6 +2062,8 @@ SUBROUTINE ValidatePrimaryData( InitInp, InputFileData, ErrStat, ErrMsg )
       IF (InputFileData%PCMode    /= ControlMode_EXTERN) CALL SetErrStat( ErrID_Info, 'Pitch angles are not commanded from Simulink model.', ErrStat, ErrMsg, RoutineName )
       IF (InputFileData%VSContrl  /= ControlMode_EXTERN) CALL SetErrStat( ErrID_Info, 'Generator torque and power are not commanded from Simulink model.', ErrStat, ErrMsg, RoutineName )
       IF (InputFileData%HSSBrMode /= ControlMode_EXTERN) CALL SetErrStat( ErrID_Info, 'HSS brake is not commanded from Simulink model.', ErrStat, ErrMsg, RoutineName )
+      IF (InputFileData%AfCmode   /= ControlMode_EXTERN) CALL SetErrStat( ErrID_Info, 'Airfoil control is not commanded from Simulink model.', ErrStat, ErrMsg, RoutineName )
+      IF (InputFileData%CCmode    /= ControlMode_EXTERN) CALL SetErrStat( ErrID_Info, 'Cable control is not commanded from Simulink model.', ErrStat, ErrMsg, RoutineName )
    END IF
    
 

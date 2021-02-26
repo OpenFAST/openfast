@@ -2394,7 +2394,53 @@ subroutine SrvD_CloseSum( UnSum, ErrStat, ErrMsg )
       UnSum=-1
    END IF
 end subroutine SrvD_CloseSum
+!====================================================================================================
+!> Write info about the simulink interface to the summary file if compiled for Simulink
+!!       NOTE: Check the FAST_Library.f90 file for the authority on this!!!!  This file could be out of date!!!!
+subroutine WrSumInfo4Simulink(p,SimulinkCtrlMode,UnSum)
+   type(SrvD_ParameterType),     intent(in   )  :: p                 !< Parameters
+   integer,                      intent(in   )  :: SimulinkCtrlMode  !< ControlMode_EXTERN value (we don't have that in here)
+   integer,                      intent(in   )  :: UnSum             ! the unit number for the SubDyn summary file
 
+   if (UnSum > 0) then
+      write(UnSum, '(A)') ''
+      write(UnSum, '(A)') SectionDivide
+      write(UnSum, '(A)')              ' Simulink Interface used for:'
+      call WrCtrlInfo( p%YCMode     ==SimulinkCtrlMode,'Nacelle yaw control           ','(YawPosCom,YawRateCom)        ')
+      call WrCtrlInfo( p%YCMode     ==SimulinkCtrlMode,'Nacelle yaw control           ','(YawPosCom,YawRateCom)        ')
+      call WrCtrlInfo( p%PCMode     ==SimulinkCtrlMode,'Blade pitch cotrol            ','(BlPitchCom)                  ')
+      call WrCtrlInfo( p%VSContrl   ==SimulinkCtrlMode,'Variable generator speed      ','(GenTrq,ElecPwr)              ')
+      call WrCtrlInfo( p%HSSBrMode  ==SimulinkCtrlMode,'High speed shaft brake        ','(HSSBrFrac)                   ')
+      call WrCtrlInfo( p%AfCmode    ==SimulinkCtrlMode,'Airfoil commands (flaps)      ','(BlAirfoilCom)                ')
+      call WrCtrlInfo( p%CCmode     ==SimulinkCtrlMode,'Cable actuator control        ','(CableDeltaL,CableDeltaLdot)  ')
+      write(UnSum, '(A)') ''
+      write(UnSum, '(A)') '      Simulink inteface to OpenFAST library InputAry:'
+      write(UnSum, '(A)') '           (check FAST_Library.f90 if errors)        '
+      write(UnSum, '(A)') ''
+      write(UnSum, '(6x,8x,3x,A3,3x,A)') '<--','indicates from Simulink to SrvD'
+      write(UnSum, '(6x,A8,3x,A3,3x,A11)') 'Record #','   ','Description'
+      write(UnSum, '(6x,A8,3x,A3,3x,A11)') '--------','   ','-----------'
+      write(UnSum, '(8x,A5,4x,A3,3x,A)')  '1     ','<--','GenTrq                 '
+      write(UnSum, '(8x,A5,4x,A3,3x,A)')  '2     ','<--','ElecPwr                '
+      write(UnSum, '(8x,A5,4x,A3,3x,A)')  '3     ','<--','YawPosCom              '
+      write(UnSum, '(8x,A5,4x,A3,3x,A)')  '4     ','<--','YawRateCom             '
+      write(UnSum, '(8x,A5,4x,A3,3x,A)')  '5:7   ','<--','BlPitchCom             '
+      write(UnSum, '(8x,A5,4x,A3,3x,A)')  '8     ','<--','HSSBrFrac              '
+      write(UnSum, '(8x,A5,4x,A3,3x,A)')  '9:11  ','<--','BlAirfoilCom           '
+      write(UnSum, '(8x,A5,4x,A3,3x,A)')  '12:14 ','<--','Lidar focus (optional) '
+   endif
+contains
+   subroutine WrCtrlInfo( IsControlled, Desc, DataChans )
+      logical,       intent(in   )  :: IsControlled
+      character(30), intent(in   )  :: Desc
+      character(30), intent(in   )  :: DataChans
+      if (IsControlled) then
+         write(UnSum, '(9x,A30,6x,A30)')  Desc,DataChans
+      else
+         write(UnSum, '(9x,A30,6x,A30)')  Desc,'NOT ACTIVE'
+      endif
+   end subroutine WrCtrlInfo
+end subroutine WrSumInfo4Simulink
 
 
 END MODULE ServoDyn_IO
