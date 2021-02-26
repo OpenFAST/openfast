@@ -137,7 +137,7 @@ The file must be closed by an END command.
 .. _aa-sec-BLinputs:
 
 Boundary Layer Inputs and Trailing Edge Geometry
----------------------
+------------------------------------------------
 
 When the flag **BLMod** is set equal to 2, pretabulated properties of the
 boundary layer must be provided and are used by the turbulent boundary

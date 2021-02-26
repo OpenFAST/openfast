@@ -104,7 +104,7 @@ SET Output_Loc=%CURR_LOC%
 %REGISTRY% "%CURR_LOC%\%ModuleName%_Registry.txt" -I "%NWTC_Lib_Loc%" -O "%Output_Loc%"
 GOTO checkError
 
-:TMD
+:StrucCtrl
 :ServoDyn
 SET CURR_LOC=%SrvD_Loc%
 SET Output_Loc=%CURR_LOC%
