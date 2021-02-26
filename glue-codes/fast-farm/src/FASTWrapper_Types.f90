@@ -33,7 +33,7 @@ MODULE FASTWrapper_Types
 !---------------------------------------------------------------------------------------------------------------------------------
 USE ElastoDyn_Types
 USE BeamDyn_Types
-USE TMD_Types
+USE StrucCtrl_Types
 USE ServoDyn_Types
 USE IfW_UniformWind_Types
 USE IfW_FFWind_Base_Types
