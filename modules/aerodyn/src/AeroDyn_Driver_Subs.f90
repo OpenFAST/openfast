@@ -98,25 +98,32 @@ subroutine Init_AeroDyn(iCase, DvrData, AD, dt, errStat, errMsg)
    type(AD_InitInputType)                      :: InitInData     ! Input data for initialization
    type(AD_InitOutputType)                     :: InitOutData    ! Output data from initialization
    real(ReKi)                                  :: RotAzimuth    ! Rotor azimuth -- aligned with blade 1 (deg)
-      
-      
-      
+
    errStat = ErrID_None
    errMsg  = ''
+
+
+   allocate(InitInData%rotors(1), InitOutData%rotors(1), stat=errStat) 
+   if (errStat/=0) then
+      call SetErrStat( ErrID_Fatal, 'Allocating rotors', errStat, errMsg, RoutineName )
+      call Cleanup()
+      return
+   end if
+      
    
    if (iCase.EQ.1) then
    
       InitInData%InputFile      = DvrData%AD_InputFile
-      InitInData%NumBlades      = DvrData%numBlades
       InitInData%RootName       = DvrData%outFileData%Root
+      InitInData%rotors(1)%NumBlades      = DvrData%numBlades
       InitInData%Gravity        = 9.80665_ReKi
       InitInData%Linearize      = .false.
                         
    
          ! set initialization data:
-      call AllocAry( InitInData%BladeRootPosition, 3, InitInData%NumBlades, 'BladeRootPosition', errStat2, ErrMsg2 )
+      call AllocAry( InitInData%rotors(1)%BladeRootPosition, 3, InitInData%rotors(1)%NumBlades, 'BladeRootPosition', errStat2, ErrMsg2 )
          call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-      call AllocAry( InitInData%BladeRootOrientation, 3, 3, InitInData%NumBlades, 'BladeRootOrientation', errStat2, ErrMsg2 )
+      call AllocAry( InitInData%rotors(1)%BladeRootOrientation, 3, 3, InitInData%rotors(1)%NumBlades, 'BladeRootOrientation', errStat2, ErrMsg2 )
          call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
          
       if (ErrStat >= AbortErrLev) then
@@ -124,23 +131,23 @@ subroutine Init_AeroDyn(iCase, DvrData, AD, dt, errStat, errMsg)
          return
       end if
       
-      call eye(InitInData%NacelleOrientation, ErrStat2, ErrMsg2) ! nacelle reference orientation will be identity
+      call eye(InitInData%rotors(1)%NacelleOrientation, ErrStat2, ErrMsg2) ! nacelle reference orientation will be identity
       
-      InitInData%HubPosition = (/ DvrData%Overhang * cos(DvrData%shftTilt), 0.0_ReKi, DvrData%HubHt /)
+      InitInData%rotors(1)%HubPosition = (/ DvrData%Overhang * cos(DvrData%shftTilt), 0.0_ReKi, DvrData%HubHt /)
       theta(1) = 0.0_ReKi
       theta(2) = -DvrData%shftTilt
       theta(3) = 0.0_ReKi
-      InitInData%HubOrientation = EulerConstruct( theta )
+      InitInData%rotors(1)%HubOrientation = EulerConstruct( theta )
      
    
-      do k=1,InitInData%numBlades
+      do k=1,InitInData%rotors(1)%numBlades
                      
-         theta(1) = (k-1)*TwoPi/real(InitInData%numBlades,ReKi)
+         theta(1) = (k-1)*TwoPi/real(InitInData%rotors(1)%numBlades,ReKi)
          theta(2) = DvrData%precone
          theta(3) = 0.0_ReKi
-         InitInData%BladeRootOrientation(:,:,k) = matmul( EulerConstruct( theta ), InitInData%HubOrientation )
+         InitInData%rotors(1)%BladeRootOrientation(:,:,k) = matmul( EulerConstruct( theta ), InitInData%rotors(1)%HubOrientation )
                   
-         InitInData%BladeRootPosition(:,k)   = InitInData%HubPosition + DvrData%hubRad * InitInData%BladeRootOrientation(3,:,k)      
+         InitInData%rotors(1)%BladeRootPosition(:,k)   = InitInData%rotors(1)%HubPosition + DvrData%hubRad * InitInData%rotors(1)%BladeRootOrientation(3,:,k)      
       
       end do
       
@@ -148,10 +155,12 @@ subroutine Init_AeroDyn(iCase, DvrData, AD, dt, errStat, errMsg)
       call AD_Init(InitInData, AD%u(1), AD%p, AD%x, AD%xd, AD%z, AD%OtherState, AD%y, AD%m, dt, InitOutData, ErrStat2, ErrMsg2 )
          call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
 
+
       if (ErrStat >= AbortErrLev) then
          call Cleanup()
          return
       end if   
+
          
       do j = 2, numInp
          call AD_CopyInput (AD%u(1),  AD%u(j),  MESH_NEWCOPY, errStat2, errMsg2)
@@ -159,8 +168,8 @@ subroutine Init_AeroDyn(iCase, DvrData, AD, dt, errStat, errMsg)
       end do
       
          ! move AD initOut data to AD Driver
-      call move_alloc( InitOutData%WriteOutputHdr, DvrData%OutFileData%WriteOutputHdr )
-      call move_alloc( InitOutData%WriteOutputUnt, DvrData%OutFileData%WriteOutputUnt )   
+      call move_alloc( InitOutData%rotors(1)%WriteOutputHdr, DvrData%OutFileData%WriteOutputHdr )
+      call move_alloc( InitOutData%rotors(1)%WriteOutputUnt, DvrData%OutFileData%WriteOutputUnt )   
      
       DvrData%OutFileData%AD_ver = InitOutData%ver
              
@@ -269,10 +278,10 @@ subroutine Set_AD_Inputs(iCase,nt,RotAzimuth,DvrData,AD,errStat,errMsg)
    !................
    
       ! Tower motions:
-      do j=1,AD%u(1)%TowerMotion%nnodes
-         AD%u(1)%TowerMotion%Orientation(  :,:,j) = AD%u(1)%TowerMotion%RefOrientation(:,:,j) ! identity
-         AD%u(1)%TowerMotion%TranslationDisp(:,j) = 0.0_ReKi
-         AD%u(1)%TowerMotion%TranslationVel( :,j) = 0.0_ReKi
+      do j=1,AD%u(1)%rotors(1)%TowerMotion%nnodes
+         AD%u(1)%rotors(1)%TowerMotion%Orientation(  :,:,j) = AD%u(1)%rotors(1)%TowerMotion%RefOrientation(:,:,j) ! identity
+         AD%u(1)%rotors(1)%TowerMotion%TranslationDisp(:,j) = 0.0_ReKi
+         AD%u(1)%rotors(1)%TowerMotion%TranslationVel( :,j) = 0.0_ReKi
       end do !j=nnodes
       
       ! Nacelle motions:
@@ -281,24 +290,24 @@ subroutine Set_AD_Inputs(iCase,nt,RotAzimuth,DvrData,AD,errStat,errMsg)
       theta(3) = DvrData%Cases(iCase)%Yaw(timeIndex)
       orientation = EulerConstruct(theta)
       
-      if (AD%u(1)%NacelleMotion%Nnodes > 0) then
-         AD%u(1)%NacelleMotion%TranslationDisp = 0.0_R8Ki
-         AD%u(1)%NacelleMotion%TranslationVel = 0.0_R8Ki
-         AD%u(1)%NacelleMotion%Orientation(:,:,1) = orientation
+      if (AD%u(1)%rotors(1)%NacelleMotion%Nnodes > 0) then
+         AD%u(1)%rotors(1)%NacelleMotion%TranslationDisp = 0.0_R8Ki
+         AD%u(1)%rotors(1)%NacelleMotion%TranslationVel = 0.0_R8Ki
+         AD%u(1)%rotors(1)%NacelleMotion%Orientation(:,:,1) = orientation
       endif
             
       ! Hub motions:
       ! orientation set in nacelle motion calculation
-      AD%u(1)%HubMotion%TranslationDisp(:,1) = matmul( AD%u(1)%HubMotion%Position(:,1), orientation ) - AD%u(1)%HubMotion%Position(:,1) ! = matmul( transpose(orientation) - eye(3), AD%u(1)%HubMotion%Position(:,1) )
+      AD%u(1)%rotors(1)%HubMotion%TranslationDisp(:,1) = matmul( AD%u(1)%rotors(1)%HubMotion%Position(:,1), orientation ) - AD%u(1)%rotors(1)%HubMotion%Position(:,1) ! = matmul( transpose(orientation) - eye(3), AD%u(1)%HubMotion%Position(:,1) )
 
       theta(1) = RotAzimuth*D2R + DvrData%Cases(iCase)%dt * DvrData%Cases(iCase)%RotSpeed(timeIndex)  ! AD%inputTime(1) * DvrData%Cases(iCase)%RotSpeed
       theta(2) = 0.0_ReKi
       theta(3) = 0.0_ReKi
-      AD%u(1)%HubMotion%Orientation(  :,:,1) = matmul( AD%u(1)%HubMotion%RefOrientation(:,:,1), orientation )
+      AD%u(1)%rotors(1)%HubMotion%Orientation(  :,:,1) = matmul( AD%u(1)%rotors(1)%HubMotion%RefOrientation(:,:,1), orientation )
       orientation = EulerConstruct( theta )
-      AD%u(1)%HubMotion%Orientation(  :,:,1) = matmul( orientation, AD%u(1)%HubMotion%Orientation(  :,:,1) )
+      AD%u(1)%rotors(1)%HubMotion%Orientation(  :,:,1) = matmul( orientation, AD%u(1)%rotors(1)%HubMotion%Orientation(  :,:,1) )
       
-      AD%u(1)%HubMotion%RotationVel(    :,1) = AD%u(1)%HubMotion%Orientation(1,:,1) * DvrData%Cases(iCase)%RotSpeed(timeIndex)
+      AD%u(1)%rotors(1)%HubMotion%RotationVel(    :,1) = AD%u(1)%rotors(1)%HubMotion%Orientation(1,:,1) * DvrData%Cases(iCase)%RotSpeed(timeIndex)
                   
       ! Blade motions:
       do k=1,DvrData%numBlades         
@@ -307,13 +316,13 @@ subroutine Set_AD_Inputs(iCase,nt,RotAzimuth,DvrData,AD,errStat,errMsg)
          theta(3) = -DvrData%Cases(iCase)%pitch(timeIndex)
          orientation = EulerConstruct(theta)
          
-         AD%u(1)%BladeRootMotion(k)%Orientation(  :,:,1) = matmul( orientation, AD%u(1)%HubMotion%Orientation(  :,:,1) )
+         AD%u(1)%rotors(1)%BladeRootMotion(k)%Orientation(  :,:,1) = matmul( orientation, AD%u(1)%rotors(1)%HubMotion%Orientation(  :,:,1) )
       end do !k=numBlades
             
       ! Blade and blade root motions:
       do k=1,DvrData%numBlades
-         rotateMat = transpose( AD%u(1)%BladeRootMotion(k)%Orientation(  :,:,1) )
-         rotateMat = matmul( rotateMat, AD%u(1)%BladeRootMotion(k)%RefOrientation(  :,:,1) )
+         rotateMat = transpose( AD%u(1)%rotors(1)%BladeRootMotion(k)%Orientation(  :,:,1) )
+         rotateMat = matmul( rotateMat, AD%u(1)%rotors(1)%BladeRootMotion(k)%RefOrientation(  :,:,1) )
          orientation = transpose(rotateMat)
          
          rotateMat(1,1) = rotateMat(1,1) - 1.0_ReKi
@@ -321,26 +330,26 @@ subroutine Set_AD_Inputs(iCase,nt,RotAzimuth,DvrData,AD,errStat,errMsg)
          rotateMat(3,3) = rotateMat(3,3) - 1.0_ReKi
                   
 
-         position = AD%u(1)%BladeRootMotion(k)%Position(:,1) - AD%u(1)%HubMotion%Position(:,1) 
-         AD%u(1)%BladeRootMotion(k)%TranslationDisp(:,1) = AD%u(1)%HubMotion%TranslationDisp(:,1) + matmul( rotateMat, position )
+         position = AD%u(1)%rotors(1)%BladeRootMotion(k)%Position(:,1) - AD%u(1)%rotors(1)%HubMotion%Position(:,1) 
+         AD%u(1)%rotors(1)%BladeRootMotion(k)%TranslationDisp(:,1) = AD%u(1)%rotors(1)%HubMotion%TranslationDisp(:,1) + matmul( rotateMat, position )
 
-         position =  AD%u(1)%BladeRootMotion(k)%Position(:,1) + AD%u(1)%BladeRootMotion(k)%TranslationDisp(:,1) &
-                     - AD%u(1)%HubMotion%Position(:,1) - AD%u(1)%HubMotion%TranslationDisp(:,1)
-         AD%u(1)%BladeRootMotion(k)%TranslationVel( :,1) = cross_product( AD%u(1)%HubMotion%RotationVel(:,1), position )
+         position =  AD%u(1)%rotors(1)%BladeRootMotion(k)%Position(:,1) + AD%u(1)%rotors(1)%BladeRootMotion(k)%TranslationDisp(:,1) &
+                     - AD%u(1)%rotors(1)%HubMotion%Position(:,1) - AD%u(1)%rotors(1)%HubMotion%TranslationDisp(:,1)
+         AD%u(1)%rotors(1)%BladeRootMotion(k)%TranslationVel( :,1) = cross_product( AD%u(1)%rotors(1)%HubMotion%RotationVel(:,1), position )
 
-         do j=1,AD%u(1)%BladeMotion(k)%nnodes        
-            position = AD%u(1)%BladeMotion(k)%Position(:,j) - AD%u(1)%HubMotion%Position(:,1) 
-            AD%u(1)%BladeMotion(k)%TranslationDisp(:,j) = AD%u(1)%HubMotion%TranslationDisp(:,1) + matmul( rotateMat, position )
+         do j=1,AD%u(1)%rotors(1)%BladeMotion(k)%nnodes        
+            position = AD%u(1)%rotors(1)%BladeMotion(k)%Position(:,j) - AD%u(1)%rotors(1)%HubMotion%Position(:,1) 
+            AD%u(1)%rotors(1)%BladeMotion(k)%TranslationDisp(:,j) = AD%u(1)%rotors(1)%HubMotion%TranslationDisp(:,1) + matmul( rotateMat, position )
             
-            AD%u(1)%BladeMotion(k)%Orientation(  :,:,j) = matmul( AD%u(1)%BladeMotion(k)%RefOrientation(:,:,j), orientation )
+            AD%u(1)%rotors(1)%BladeMotion(k)%Orientation(  :,:,j) = matmul( AD%u(1)%rotors(1)%BladeMotion(k)%RefOrientation(:,:,j), orientation )
             
             
-            position =  AD%u(1)%BladeMotion(k)%Position(:,j) + AD%u(1)%BladeMotion(k)%TranslationDisp(:,j) &
-                      - AD%u(1)%HubMotion%Position(:,1) - AD%u(1)%HubMotion%TranslationDisp(:,1)
-            AD%u(1)%BladeMotion(k)%TranslationVel( :,j) = cross_product( AD%u(1)%HubMotion%RotationVel(:,1), position )
+            position =  AD%u(1)%rotors(1)%BladeMotion(k)%Position(:,j) + AD%u(1)%rotors(1)%BladeMotion(k)%TranslationDisp(:,j) &
+                      - AD%u(1)%rotors(1)%HubMotion%Position(:,1) - AD%u(1)%rotors(1)%HubMotion%TranslationDisp(:,1)
+            AD%u(1)%rotors(1)%BladeMotion(k)%TranslationVel( :,j) = cross_product( AD%u(1)%rotors(1)%HubMotion%RotationVel(:,1), position )
             
-            AD%u(1)%BladeMotion(k)%RotationVel(:,j) = AD%u(1)%HubMotion%Orientation(1,:,1) * DvrData%Cases(iCase)%RotSpeed(timeIndex) ! simplification (without pitch rate)
-            AD%u(1)%BladeMotion(k)%TranslationAcc(:,j) = 0.0_ReKi ! simplification
+            AD%u(1)%rotors(1)%BladeMotion(k)%RotationVel(:,j) = AD%u(1)%rotors(1)%HubMotion%Orientation(1,:,1) * DvrData%Cases(iCase)%RotSpeed(timeIndex) ! simplification (without pitch rate)
+            AD%u(1)%rotors(1)%BladeMotion(k)%TranslationAcc(:,j) = 0.0_ReKi ! simplification
          end do !j=nnodes
                                     
       end do !k=numBlades       
@@ -348,31 +357,31 @@ subroutine Set_AD_Inputs(iCase,nt,RotAzimuth,DvrData,AD,errStat,errMsg)
       ! Inflow wind velocities:
       ! InflowOnBlade
       do k=1,DvrData%numBlades
-         do j=1,AD%u(1)%BladeMotion(k)%nnodes
-            z = AD%u(1)%BladeMotion(k)%Position(3,j) + AD%u(1)%BladeMotion(k)%TranslationDisp(3,j)
-            AD%u(1)%InflowOnBlade(1,j,k) = GetU(  DvrData%Cases(iCase)%WndSpeed(timeIndex), DvrData%HubHt, DvrData%Cases(iCase)%ShearExp(timeIndex), z )
-            AD%u(1)%InflowOnBlade(2,j,k) = 0.0_ReKi !V
-            AD%u(1)%InflowOnBlade(3,j,k) = 0.0_ReKi !W      
+         do j=1,AD%u(1)%rotors(1)%BladeMotion(k)%nnodes
+            z = AD%u(1)%rotors(1)%BladeMotion(k)%Position(3,j) + AD%u(1)%rotors(1)%BladeMotion(k)%TranslationDisp(3,j)
+            AD%u(1)%rotors(1)%InflowOnBlade(1,j,k) = GetU(  DvrData%Cases(iCase)%WndSpeed(timeIndex), DvrData%HubHt, DvrData%Cases(iCase)%ShearExp(timeIndex), z )
+            AD%u(1)%rotors(1)%InflowOnBlade(2,j,k) = 0.0_ReKi !V
+            AD%u(1)%rotors(1)%InflowOnBlade(3,j,k) = 0.0_ReKi !W      
          end do !j=nnodes
       end do !k=numBlades
       
       !InflowOnTower
-      do j=1,AD%u(1)%TowerMotion%nnodes
-         z = AD%u(1)%TowerMotion%Position(3,j) + AD%u(1)%TowerMotion%TranslationDisp(3,j)
-         AD%u(1)%InflowOnTower(1,j) = GetU(  DvrData%Cases(iCase)%WndSpeed(timeIndex), DvrData%HubHt, DvrData%Cases(iCase)%ShearExp(timeIndex), z )
-         AD%u(1)%InflowOnTower(2,j) = 0.0_ReKi !V
-         AD%u(1)%InflowOnTower(3,j) = 0.0_ReKi !W         
+      do j=1,AD%u(1)%rotors(1)%TowerMotion%nnodes
+         z = AD%u(1)%rotors(1)%TowerMotion%Position(3,j) + AD%u(1)%rotors(1)%TowerMotion%TranslationDisp(3,j)
+         AD%u(1)%rotors(1)%InflowOnTower(1,j) = GetU(  DvrData%Cases(iCase)%WndSpeed(timeIndex), DvrData%HubHt, DvrData%Cases(iCase)%ShearExp(timeIndex), z )
+         AD%u(1)%rotors(1)%InflowOnTower(2,j) = 0.0_ReKi !V
+         AD%u(1)%rotors(1)%InflowOnTower(3,j) = 0.0_ReKi !W         
       end do !j=nnodes
       
       !InflowOnNacelle
-      if (AD%u(1)%NacelleMotion%Committed) then
-         z = AD%u(1)%NacelleMotion%Position(3,1) + AD%u(1)%NacelleMotion%TranslationDisp(3,1)
-         AD%u(1)%InflowOnNacelle(1) = GetU( DvrData%Cases(iCase)%WndSpeed(timeIndex), DvrData%HubHt, DvrData%Cases(iCase)%ShearExp(timeIndex), z )
+      if (AD%u(1)%rotors(1)%NacelleMotion%Committed) then
+         z = AD%u(1)%rotors(1)%NacelleMotion%Position(3,1) + AD%u(1)%rotors(1)%NacelleMotion%TranslationDisp(3,1)
+         AD%u(1)%rotors(1)%InflowOnNacelle(1) = GetU( DvrData%Cases(iCase)%WndSpeed(timeIndex), DvrData%HubHt, DvrData%Cases(iCase)%ShearExp(timeIndex), z )
       else
-         AD%u(1)%InflowOnNacelle(2) = 0.0_ReKi ! U
+         AD%u(1)%rotors(1)%InflowOnNacelle(2) = 0.0_ReKi ! U
       end if
-      AD%u(1)%InflowOnNacelle(2) = 0.0_ReKi !V
-      AD%u(1)%InflowOnNacelle(3) = 0.0_ReKi !W
+      AD%u(1)%rotors(1)%InflowOnNacelle(2) = 0.0_ReKi !V
+      AD%u(1)%rotors(1)%InflowOnNacelle(3) = 0.0_ReKi !W
                      
 end subroutine Set_AD_Inputs
 !----------------------------------------------------------------------------------------------------------------------------------
