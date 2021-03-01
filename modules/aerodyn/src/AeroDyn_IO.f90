@@ -1767,6 +1767,8 @@ CONTAINS
 
       m%AllOuts( RtAeroPwr ) = m%BEMT_u(indx)%omega * m%AllOuts( RtAeroMxh )
 
+
+
       m%AllOuts( RtTSR ) = m%BEMT_u(indx)%TSR
 
       if ( EqualRealNos( m%V_dot_x, 0.0_ReKi ) ) then
@@ -3270,6 +3272,7 @@ SUBROUTINE SetOutParam(OutList, p, p_AD, ErrStat, ErrMsg )
 
 
 !   ..... Developer must add checking for invalid inputs here: .....
+
    !bjj: do we want to avoid outputting this if we haven't used tower aero?
    
    if ( p%TwrPotent == TwrPotent_none .and. p%TwrShadow == TwrShadow_none ) then

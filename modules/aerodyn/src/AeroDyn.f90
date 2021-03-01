@@ -61,6 +61,7 @@ module AeroDyn
                                                !   states(z)
    PUBLIC :: AD_GetOP                          !< Routine to pack the operating point values (for linearization) into arrays
    
+  
 contains    
 !----------------------------------------------------------------------------------------------------------------------------------   
 !> This subroutine sets the initialization output data structure, which contains data to be returned to the calling program (e.g.,
@@ -86,6 +87,7 @@ subroutine AD_SetInitOut(p, p_AD, InputFileData, InitOut, errStat, errMsg)
    integer(IntKi)                               :: NumCoords
 
       ! Initialize variables for this routine
+
    errStat = ErrID_None
    errMsg  = ""
    
@@ -99,12 +101,12 @@ subroutine AD_SetInitOut(p, p_AD, InputFileData, InitOut, errStat, errMsg)
 
    if (ErrStat >= AbortErrLev) return
       
-   
    do i=1,p%NumOuts
       InitOut%WriteOutputHdr(i) = p%OutParam(i)%Name
       InitOut%WriteOutputUnt(i) = p%OutParam(i)%Units
    end do
       
+                
                 
       ! Set the info in WriteOutputHdr and WriteOutputUnt
    CALL AllBldNdOuts_InitOut( InitOut, p, p_AD, InputFileData, ErrStat2, ErrMsg2 )
@@ -190,7 +192,6 @@ subroutine AD_SetInitOut(p, p_AD, InputFileData, InitOut, errStat, errMsg)
    END IF  
    
 end subroutine AD_SetInitOut
-
 !----------------------------------------------------------------------------------------------------------------------------------   
 !> This routine is called at the start of the simulation to perform initialization steps.
 !! The parameters are set here and not changed during the simulation.
@@ -469,8 +470,10 @@ contains
       if (Failed)    call Cleanup()
    end function Failed
    subroutine Cleanup()
+
       CALL AD_DestroyInputFile( InputFileData, ErrStat2, ErrMsg2 )
       IF ( UnEcho > 0 ) CLOSE( UnEcho )
+      
    end subroutine Cleanup
 
 end subroutine AD_Init
@@ -1156,6 +1159,7 @@ subroutine AD_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       ErrMsg  = ""
 
 
+         ! Place any last minute operations or calculations here:
          ! End the FVW submodule
       if (p%WakeMod == WakeMod_FVW ) then
          call FVW_End( m%FVW_u, p%FVW, x%FVW, xd%FVW, z%FVW, OtherState%FVW, m%FVW_y, m%FVW, ErrStat, ErrMsg )
@@ -1329,7 +1333,6 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
       ! NOTE: m%BEMT_u(i) indices are set differently from the way OpenFAST typically sets up the u and uTimes arrays
    integer, parameter                           :: indx = 1  ! m%BEMT_u(1) is at t; m%BEMT_u(2) is t+dt
    integer(intKi)                               :: i
-   integer(intKi)                               :: j
    integer(intKi)                               :: iR ! Loop on rotors
 
    integer(intKi)                               :: ErrStat2
@@ -1455,8 +1458,10 @@ subroutine RotCalcOutput( t, u, p, p_AD, x, xd, z, OtherState, y, m, ErrStat, Er
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)      
    endif
 
-   call ADTwr_CalcOutput(p, u, m, y, ErrStat2, ErrMsg2 )
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)      
+   if ( p%TwrAero ) then
+      call ADTwr_CalcOutput(p, u, m, y, ErrStat2, ErrMsg2 )
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)      
+   endif
    
 end subroutine RotCalcOutput
 
@@ -1515,6 +1520,8 @@ subroutine AD_CalcConstrStateResidual( Time, u, p, p_AD, x, xd, z, OtherState, m
                                                                 !!     the input values described above
    INTEGER(IntKi),               INTENT(  OUT)   :: ErrStat     !< Error status of the operation
    CHARACTER(*),                 INTENT(  OUT)   :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+   
+
    
       ! Local variables   
    integer(intKi)                                :: iR ! rotor index
@@ -2421,7 +2428,6 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
       end if
    end if
    
-   
 END SUBROUTINE ValidateInputData
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine sets up the data structures and initializes AirfoilInfo to get the necessary AFI parameters. It then verifies 
@@ -2647,6 +2653,7 @@ SUBROUTINE Init_BEMTmodule( InputFileData, RotInputFileData, u_AD, u, p, p_AD, x
    InitInp%numReIterations  = 1                              ! This is currently not available in the input file and is only for testing  
    InitInp%maxIndIterations = InputFileData%MaxIter 
    
+   
    call AllocAry(InitInp%chord, InitInp%numBladeNodes,InitInp%numBlades,'chord', ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)   
    call AllocAry(InitInp%AFindx,InitInp%numBladeNodes,InitInp%numBlades,'AFindx',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)   
    call AllocAry(InitInp%zHub,                        InitInp%numBlades,'zHub',  ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -2730,6 +2737,7 @@ contains
       call BEMT_DestroyInitInput( InitInp, ErrStat2, ErrMsg2 )   
       call BEMT_DestroyInitOutput( InitOut, ErrStat2, ErrMsg2 )   
    end subroutine Cleanup
+   
 END SUBROUTINE Init_BEMTmodule
 
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -2745,10 +2753,7 @@ SUBROUTINE Init_FVWmodule( InputFileData, u_AD, u, p, x, xd, z, OtherState, m, E
    type(FVW_DiscreteStateType),     intent(  out) :: xd             !< Initial discrete states
    type(FVW_ConstraintStateType),   intent(  out) :: z              !< Initial guess of the constraint states
    type(FVW_OtherStateType),        intent(  out) :: OtherState     !< Initial other states
-!    type(FVW_OutputType),            intent(  out) :: y              !< Initial system outputs (outputs are not calculated;
-                                                                   !!   only the output mesh is initialized)
-!    type(FVW_MiscVarType),           intent(  out) :: m              !< Initial misc/optimization variables
-   type(AD_MiscVarType),           intent(  out) :: m               !< Initial misc/optimization variables
+   type(AD_MiscVarType),            intent(inout) :: m               !< Initial misc/optimization variables
    integer(IntKi),                  intent(  out) :: errStat        !< Error status of the operation
    character(*),                    intent(  out) :: errMsg         !< Error message if ErrStat /= ErrID_None
 
@@ -2868,6 +2873,7 @@ SUBROUTINE Init_FVWmodule( InputFileData, u_AD, u, p, x, xd, z, OtherState, m, E
       ALLOCATE( InitInp%WingsMesh(p%rotors(iR)%NumBlades), STAT = ErrStat2 ) ! TODO TODO
          IF (ErrStat2 /= 0) THEN
             CALL SetErrStat ( ErrID_Fatal, 'Could not allocate InitInp%WingsMesh (meshes)', ErrStat,ErrMsg,RoutineName )
+            call Cleanup()
             RETURN
          END IF
       DO IB = 1, p%rotors(iR)%NumBlades
@@ -2880,7 +2886,10 @@ SUBROUTINE Init_FVWmodule( InputFileData, u_AD, u, p, x, xd, z, OtherState, m, E
                         ,ErrStat  = ErrStat2          &
                         ,ErrMess  = ErrMsg2          )
          CALL SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName )
-         IF (ErrStat >= AbortErrLev) RETURN
+         IF (ErrStat >= AbortErrLev) then 
+            call Cleanup()
+            RETURN
+         endif
       ENDDO
 
    enddo ! iR, rotors TODO TODO
@@ -2897,6 +2906,8 @@ SUBROUTINE Init_FVWmodule( InputFileData, u_AD, u, p, x, xd, z, OtherState, m, E
 
    if (.not. equalRealNos(Interval, p%DT) ) &
       call SetErrStat( ErrID_Fatal, "DTAero was changed in Init_FVWmodule(); this is not allowed yet.", ErrStat2, ErrMsg2, RoutineName)
+
+   call CleanUp()
 
 contains
    subroutine Cleanup()
@@ -3544,6 +3555,7 @@ SUBROUTINE TwrInfl_NearestPoint(p, u, BladeNodePosition, r_TowerBlade, theta_tow
 
 END SUBROUTINE TwrInfl_NearestPoint
 !----------------------------------------------------------------------------------------------------------------------------------
+
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! ###### The following four routines are Jacobian routines for linearization capabilities #######
 ! If the module does not implement them, set ErrStat = ErrID_Fatal in AD_Init() when InitInp%Linearize is .true.
@@ -4150,7 +4162,6 @@ contains
    end subroutine cleanup
 
 END SUBROUTINE RotJacobianPContState
-
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
 !! with respect to the discrete states (xd). The partial derivatives dY/dxd, dX/dxd, dXd/dxd, and dZ/dxd are returned.
