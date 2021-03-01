@@ -118,11 +118,27 @@ if not os.path.isdir(inputsDirectory):
     rtl.exitWithError("The test data inputs directory, {}, does not exist. Verify your local repository is up to date.".format(inputsDirectory))
 
 # create the local output directory if it does not already exist
+dst = os.path.join(buildDirectory, "5MW_Baseline")
+src = os.path.join(moduleDirectory, "5MW_Baseline")
+if not os.path.isdir(dst):
+    shutil.copytree(src, dst)
+else:
+    names = os.listdir(src)
+    for name in names:
+        if name == "ServoData":
+            continue
+        srcname = os.path.join(src, name)
+        dstname = os.path.join(dst, name)
+        if os.path.isdir(srcname):
+            if not os.path.isdir(dstname):
+                shutil.copytree(srcname, dstname)
+        else:
+            shutil.copy2(srcname, dstname)
+
 if not os.path.isdir(testBuildDirectory):
     shutil.copytree(inputsDirectory, testBuildDirectory, ignore=ignoreBaselineItems)
 
 ### Run openfast on the test case
-noExec = True
 if not noExec:
     caseInputFile = os.path.join(testBuildDirectory, caseName + ".fstf")
     returnCode = openfastDrivers.runOpenfastCase(caseInputFile, executable)
