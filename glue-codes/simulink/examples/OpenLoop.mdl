@@ -7,7 +7,7 @@ Model {
     NumRootInports	    0
     NumRootOutports	    0
     ParameterArgumentNames  ""
-    ComputedModelVersion    "18.0"
+    ComputedModelVersion    "18.1"
     NumModelReferences	    0
     NumTestPointedSignals   0
     NumProvidedFunctions    0
@@ -59,8 +59,8 @@ Model {
 	DockPosition		"Left"
 	Width			[50]
 	Height			[50]
-	Filter			[8]
-	Minimized		"Unset"
+	Filter			[9]
+	Minimized		"Off"
       }
       Object {
 	$PropName		"ExplorerBarInfo"
@@ -70,7 +70,7 @@ Model {
       }
       Array {
 	Type			"Simulink.EditorInfo"
-	Dimension		7
+	Dimension		9
 	Object {
 	  $ObjectID		  5
 	  IsActive		  [1]
@@ -78,56 +78,12 @@ Model {
 	  ViewObjType		  "SimulinkTopLevel"
 	  LoadSaveID		  "0"
 	  Extents		  [1532.0, 948.0]
-	  ZoomFactor		  [2.43]
-	  Offset		  [-96.93547453703701, 51.081131820325496]
-	  SceneRectInView	  [-96.93547453703701, 51.081131820325496, 630.45267489711932, 390.12345679012344]
+	  ZoomFactor		  [2.0]
+	  Offset		  [-154.18033050411486, 29.935041285346472]
+	  SceneRectInView	  [-154.18033050411486, 29.935041285346472, 766.0, 474.0]
 	}
 	Object {
 	  $ObjectID		  6
-	  IsActive		  [0]
-	  IsTabbed		  [0]
-	  ViewObjType		  "SimulinkSubsys"
-	  LoadSaveID		  "32"
-	  Extents		  [1532.0, 948.0]
-	  ZoomFactor		  [1.0]
-	  Offset		  [-685.04296875, -417.0]
-	  SceneRectInView	  [-685.04296875, -417.0, 1532.0, 948.0]
-	}
-	Object {
-	  $ObjectID		  7
-	  IsActive		  [0]
-	  IsTabbed		  [0]
-	  ViewObjType		  "SimulinkSubsys"
-	  LoadSaveID		  "20"
-	  Extents		  [1532.0, 948.0]
-	  ZoomFactor		  [1.0]
-	  Offset		  [-608.5078125, -394.5]
-	  SceneRectInView	  [-608.5078125, -394.5, 1532.0, 948.0]
-	}
-	Object {
-	  $ObjectID		  8
-	  IsActive		  [0]
-	  IsTabbed		  [0]
-	  ViewObjType		  "SimulinkSubsys"
-	  LoadSaveID		  "25"
-	  Extents		  [1532.0, 948.0]
-	  ZoomFactor		  [1.0]
-	  Offset		  [-613.23828125, -392.0]
-	  SceneRectInView	  [-613.23828125, -392.0, 1532.0, 948.0]
-	}
-	Object {
-	  $ObjectID		  9
-	  IsActive		  [0]
-	  IsTabbed		  [0]
-	  ViewObjType		  "SimulinkSubsys"
-	  LoadSaveID		  "2"
-	  Extents		  [1532.0, 948.0]
-	  ZoomFactor		  [2.43]
-	  Offset		  [-114.68420460390945, -62.561728395061721]
-	  SceneRectInView	  [-114.68420460390945, -62.561728395061721, 630.45267489711932, 390.12345679012344]
-	}
-	Object {
-	  $ObjectID		  10
 	  IsActive		  [0]
 	  IsTabbed		  [0]
 	  ViewObjType		  "SimulinkSubsys"
@@ -138,7 +94,73 @@ Model {
 	  SceneRectInView	  [-667.30078125, -417.0, 1532.0, 948.0]
 	}
 	Object {
+	  $ObjectID		  7
+	  IsActive		  [0]
+	  IsTabbed		  [0]
+	  ViewObjType		  "SimulinkSubsys"
+	  LoadSaveID		  "67"
+	  Extents		  [1532.0, 948.0]
+	  ZoomFactor		  [1.0]
+	  Offset		  [-664.390625, -417.0]
+	  SceneRectInView	  [-664.390625, -417.0, 1532.0, 948.0]
+	}
+	Object {
+	  $ObjectID		  8
+	  IsActive		  [0]
+	  IsTabbed		  [0]
+	  ViewObjType		  "SimulinkSubsys"
+	  LoadSaveID		  "64"
+	  Extents		  [1532.0, 948.0]
+	  ZoomFactor		  [1.0]
+	  Offset		  [-664.390625, -417.0]
+	  SceneRectInView	  [-664.390625, -417.0, 1532.0, 948.0]
+	}
+	Object {
+	  $ObjectID		  9
+	  IsActive		  [0]
+	  IsTabbed		  [0]
+	  ViewObjType		  "SimulinkSubsys"
+	  LoadSaveID		  "2"
+	  Extents		  [1532.0, 948.0]
+	  ZoomFactor		  [2.43]
+	  Offset		  [-42.067949459876559, 49.8325744774116]
+	  SceneRectInView	  [-42.067949459876559, 49.8325744774116, 630.45267489711932, 390.12345679012344]
+	}
+	Object {
+	  $ObjectID		  10
+	  IsActive		  [0]
+	  IsTabbed		  [0]
+	  ViewObjType		  "SimulinkSubsys"
+	  LoadSaveID		  "32"
+	  Extents		  [1532.0, 948.0]
+	  ZoomFactor		  [1.0]
+	  Offset		  [-685.04296875, -417.0]
+	  SceneRectInView	  [-685.04296875, -417.0, 1532.0, 948.0]
+	}
+	Object {
 	  $ObjectID		  11
+	  IsActive		  [0]
+	  IsTabbed		  [0]
+	  ViewObjType		  "SimulinkSubsys"
+	  LoadSaveID		  "20"
+	  Extents		  [1532.0, 948.0]
+	  ZoomFactor		  [1.0]
+	  Offset		  [-608.5078125, -394.5]
+	  SceneRectInView	  [-608.5078125, -394.5, 1532.0, 948.0]
+	}
+	Object {
+	  $ObjectID		  12
+	  IsActive		  [0]
+	  IsTabbed		  [0]
+	  ViewObjType		  "SimulinkSubsys"
+	  LoadSaveID		  "25"
+	  Extents		  [1532.0, 948.0]
+	  ZoomFactor		  [1.0]
+	  Offset		  [-613.23828125, -392.0]
+	  SceneRectInView	  [-613.23828125, -392.0, 1532.0, 948.0]
+	}
+	Object {
+	  $ObjectID		  13
 	  IsActive		  [0]
 	  IsTabbed		  [0]
 	  ViewObjType		  "SimulinkSubsys"
@@ -154,7 +176,7 @@ Model {
 	Type			"Simulink.DockComponentInfo"
 	Dimension		2
 	Object {
-	  $ObjectID		  12
+	  $ObjectID		  14
 	  Type			  "GLUE2:PropertyInspector"
 	  ID			  "Property Inspector"
 	  Visible		  [0]
@@ -167,7 +189,7 @@ Model {
 	  Minimized		  "Unset"
 	}
 	Object {
-	  $ObjectID		  13
+	  $ObjectID		  15
 	  Type			  "Simulink:Editor:ReferencedFiles"
 	  ID			  "Referenced Files"
 	  Visible		  [0]
@@ -195,7 +217,7 @@ Model {
       }
       WindowUuid	      "50197adc-b428-4ab1-b54b-7cf3d2b2bff5"
     }
-    BDUuid		    ""
+    BDUuid		    "5050cd19-51a4-48d7-a579-c2deedb80d0b"
   }
   HideAutomaticNames	  on
   SequenceViewerTimePrecision 3
@@ -206,9 +228,9 @@ Model {
   ModifiedByFormat	  "%<Auto>"
   LastModifiedBy	  "aplatt"
   ModifiedDateFormat	  "%<Auto>"
-  LastModifiedDate	  "Thu Feb 25 10:33:51 2021"
-  RTWModifiedTimeStamp	  536149980
-  ModelVersionFormat	  "%<AutoIncrement:18.0>"
+  LastModifiedDate	  "Tue Mar 02 16:31:47 2021"
+  RTWModifiedTimeStamp	  536603500
+  ModelVersionFormat	  "%<AutoIncrement:18.1>"
   SampleTimeColors	  off
   SampleTimeAnnotations	  off
   LibraryLinkDisplay	  "none"
@@ -265,7 +287,7 @@ Model {
   TryForcingSFcnDF	  off
   Object {
     $PropName		    "DataLoggingOverride"
-    $ObjectID		    14
+    $ObjectID		    16
     $ClassName		    "Simulink.SimulationData.ModelLoggingInfo"
     model_		    "OpenLoop"
     Array {
@@ -311,7 +333,7 @@ Model {
     Type		    "Handle"
     Dimension		    1
     Simulink.ConfigSet {
-      $ObjectID		      15
+      $ObjectID		      17
       Version		      "20.1.0"
       DisabledProps	      []
       Description	      ""
@@ -319,7 +341,7 @@ Model {
 	Type			"Handle"
 	Dimension		9
 	Simulink.SolverCC {
-	  $ObjectID		  16
+	  $ObjectID		  18
 	  Version		  "20.1.0"
 	  DisabledProps		  []
 	  Description		  ""
@@ -361,7 +383,7 @@ Model {
 	  ODENIntegrationMethod	  "ode3"
 	}
 	Simulink.DataIOCC {
-	  $ObjectID		  17
+	  $ObjectID		  19
 	  Version		  "20.1.0"
 	  DisabledProps		  []
 	  Description		  ""
@@ -403,7 +425,7 @@ Model {
 	  LoggingIntervals	  "[-inf, inf]"
 	}
 	Simulink.OptimizationCC {
-	  $ObjectID		  18
+	  $ObjectID		  20
 	  Version		  "20.1.0"
 	  Array {
 	    Type		    "Cell"
@@ -477,7 +499,7 @@ Model {
 	  EfficientTunableParamExpr off
 	}
 	Simulink.DebuggingCC {
-	  $ObjectID		  19
+	  $ObjectID		  21
 	  Version		  "20.1.0"
 	  Array {
 	    Type		    "Cell"
@@ -600,7 +622,7 @@ Model {
 	  VariantConditionMismatch "none"
 	}
 	Simulink.HardwareCC {
-	  $ObjectID		  20
+	  $ObjectID		  22
 	  Version		  "20.1.0"
 	  DisabledProps		  []
 	  Description		  ""
@@ -650,7 +672,7 @@ Model {
 	  HardwareBoardFeatureSet "EmbeddedCoderHSP"
 	}
 	Simulink.ModelReferenceCC {
-	  $ObjectID		  21
+	  $ObjectID		  23
 	  Version		  "20.1.0"
 	  DisabledProps		  []
 	  Description		  ""
@@ -670,7 +692,7 @@ Model {
 	  SupportModelReferenceSimTargetCustomCode off
 	}
 	Simulink.SFSimCC {
-	  $ObjectID		  22
+	  $ObjectID		  24
 	  Version		  "20.1.0"
 	  DisabledProps		  []
 	  Description		  ""
@@ -714,7 +736,7 @@ Model {
 	}
 	Simulink.RTWCC {
 	  $BackupClass		  "Simulink.RTWCC"
-	  $ObjectID		  23
+	  $ObjectID		  25
 	  Version		  "20.1.0"
 	  Array {
 	    Type		    "Cell"
@@ -820,7 +842,7 @@ Model {
 	    Type		    "Handle"
 	    Dimension		    2
 	    Simulink.CodeAppCC {
-	      $ObjectID		      24
+	      $ObjectID		      26
 	      Version		      "20.1.0"
 	      Array {
 		Type			"Cell"
@@ -910,7 +932,7 @@ Model {
 	    }
 	    Simulink.GRTTargetCC {
 	      $BackupClass	      "Simulink.TargetCC"
-	      $ObjectID		      25
+	      $ObjectID		      27
 	      Version		      "20.1.0"
 	      Array {
 		Type			"Cell"
@@ -1017,7 +1039,7 @@ Model {
 	  }
 	}
 	SlCovCC.ConfigComp {
-	  $ObjectID		  26
+	  $ObjectID		  28
 	  Version		  "20.1.0"
 	  DisabledProps		  []
 	  Description		  "Simulink Coverage Configuration Component"
@@ -1066,11 +1088,11 @@ Model {
   }
   Simulink.ConfigSet {
     $PropName		    "ActiveConfigurationSet"
-    $ObjectID		    15
+    $ObjectID		    17
   }
   Object {
     $PropName		    "DataTransfer"
-    $ObjectID		    27
+    $ObjectID		    29
     $ClassName		    "Simulink.GlobalDataTransfer"
     DefaultTransitionBetweenSyncTasks "Ensure deterministic transfer (maximum delay)"
     DefaultTransitionBetweenAsyncTasks "Ensure data integrity only"
@@ -1297,9 +1319,9 @@ Model {
     TiledPaperMargins	    [0.500000, 0.500000, 0.500000, 0.500000]
     TiledPageScale	    1
     ShowPageBoundaries	    off
-    ZoomFactor		    "243"
+    ZoomFactor		    "200"
     ReportName		    "simulink-default.rpt"
-    SIDHighWatermark	    "61"
+    SIDHighWatermark	    "69"
     SimulinkSubDomain	    "Simulink"
     Block {
       BlockType		      SubSystem
@@ -1331,7 +1353,7 @@ Model {
 	SimulinkSubDomain	"Simulink"
 	Block {
 	  BlockType		  Constant
-	  Name			  "Blade Pitch Angles"
+	  Name			  "Airfoil command"
 	  SID			  "60"
 	  Position		  [55, 35, 85, 65]
 	  ZOrder		  -1
@@ -1346,7 +1368,111 @@ Model {
 	}
 	Line {
 	  ZOrder		  1
-	  SrcBlock		  "Blade Pitch Angles"
+	  SrcBlock		  "Airfoil command"
+	  SrcPort		  1
+	  DstBlock		  "Out1"
+	  DstPort		  1
+	}
+      }
+    }
+    Block {
+      BlockType		      SubSystem
+      Name		      "Cable deltaL controller"
+      SID		      "64"
+      Ports		      [0, 1]
+      Position		      [30, 384, 130, 426]
+      ZOrder		      3
+      RequestExecContextInheritance off
+      System {
+	Name			"Cable deltaL controller"
+	Location		[0, 23, 1920, 1200]
+	SystemRect		[0.000000, 0.000000, 0.000000, 0.000000]
+	Open			off
+	PortBlocksUseCompactNotation off
+	SetExecutionDomain	off
+	ExecutionDomainType	"Deduce"
+	ModelBrowserVisibility	on
+	ModelBrowserWidth	200
+	ScreenColor		"white"
+	PaperOrientation	"landscape"
+	PaperPositionMode	"auto"
+	PaperType		"usletter"
+	PaperUnits		"inches"
+	TiledPaperMargins	[0.500000, 0.500000, 0.500000, 0.500000]
+	TiledPageScale		1
+	ShowPageBoundaries	off
+	ZoomFactor		"100"
+	SimulinkSubDomain	"Simulink"
+	Block {
+	  BlockType		  Constant
+	  Name			  "Cable deltaL command"
+	  SID			  "65"
+	  Position		  [55, 35, 85, 65]
+	  ZOrder		  -1
+	  Value			  "zeros(1,20)'"
+	}
+	Block {
+	  BlockType		  Outport
+	  Name			  "Out1"
+	  SID			  "66"
+	  Position		  [140, 43, 170, 57]
+	  ZOrder		  -2
+	}
+	Line {
+	  ZOrder		  1
+	  SrcBlock		  "Cable deltaL command"
+	  SrcPort		  1
+	  DstBlock		  "Out1"
+	  DstPort		  1
+	}
+      }
+    }
+    Block {
+      BlockType		      SubSystem
+      Name		      "Cable deltaLdot controller"
+      SID		      "67"
+      Ports		      [0, 1]
+      Position		      [30, 444, 130, 486]
+      ZOrder		      4
+      RequestExecContextInheritance off
+      System {
+	Name			"Cable deltaLdot controller"
+	Location		[0, 23, 1920, 1200]
+	SystemRect		[0.000000, 0.000000, 0.000000, 0.000000]
+	Open			off
+	PortBlocksUseCompactNotation off
+	SetExecutionDomain	off
+	ExecutionDomainType	"Deduce"
+	ModelBrowserVisibility	on
+	ModelBrowserWidth	200
+	ScreenColor		"white"
+	PaperOrientation	"landscape"
+	PaperPositionMode	"auto"
+	PaperType		"usletter"
+	PaperUnits		"inches"
+	TiledPaperMargins	[0.500000, 0.500000, 0.500000, 0.500000]
+	TiledPageScale		1
+	ShowPageBoundaries	off
+	ZoomFactor		"100"
+	SimulinkSubDomain	"Simulink"
+	Block {
+	  BlockType		  Constant
+	  Name			  "Cable deltaLdot command"
+	  SID			  "68"
+	  Position		  [55, 35, 85, 65]
+	  ZOrder		  -1
+	  Value			  "zeros(1,20)'"
+	}
+	Block {
+	  BlockType		  Outport
+	  Name			  "Out1"
+	  SID			  "69"
+	  Position		  [140, 43, 170, 57]
+	  ZOrder		  -2
+	}
+	Line {
+	  ZOrder		  1
+	  SrcBlock		  "Cable deltaLdot command"
 	  SrcPort		  1
 	  DstBlock		  "Out1"
 	  DstPort		  1
@@ -1364,26 +1490,26 @@ Model {
       BlockType		      SubSystem
       Name		      "FAST Nonlinear Wind Turbine"
       SID		      "2"
-      Ports		      [5, 1]
-      Position		      [195, 73, 420, 377]
+      Ports		      [7, 1]
+      Position		      [205, 73, 420, 497]
       ZOrder		      -2
       BackgroundColor	      "darkGreen"
       RequestExecContextInheritance off
       Object {
 	$PropName		"MaskObject"
-	$ObjectID		28
+	$ObjectID		30
 	$ClassName		"Simulink.Mask"
 	Type			"FAST Nonlinear Wind Turbine"
 	Description		"This block contains the FAST S-Function."
 	Initialization		"clear FAST_SFunc\n"
 	Object {
 	  $PropName		  "DialogControls"
-	  $ObjectID		  29
+	  $ObjectID		  31
 	  $ClassName		  "Simulink.dialog.Group"
 	  Prompt		  "%<MaskType>"
 	  Object {
 	    $PropName		    "DialogControls"
-	    $ObjectID		    30
+	    $ObjectID		    32
 	    $ClassName		    "Simulink.dialog.Text"
 	    Prompt		    "%<MaskDescription>"
 	    Name		    "DescTextVar"
@@ -1451,14 +1577,30 @@ Model {
 	  Port			  "5"
 	}
 	Block {
+	  BlockType		  Inport
+	  Name			  "Cable deltaL command (m)"
+	  SID			  "62"
+	  Position		  [80, 318, 110, 332]
+	  ZOrder		  5
+	  Port			  "6"
+	}
+	Block {
+	  BlockType		  Inport
+	  Name			  "Cable deltaLdot command (m/s)"
+	  SID			  "63"
+	  Position		  [80, 373, 110, 387]
+	  ZOrder		  6
+	  Port			  "7"
+	}
+	Block {
 	  BlockType		  Mux
 	  Name			  "Mux1"
 	  SID			  "9"
-	  Ports			  [5, 1]
-	  Position		  [335, 23, 340, 297]
+	  Ports			  [7, 1]
+	  Position		  [335, 23, 340, 407]
 	  ZOrder		  -5
 	  ShowName		  off
-	  Inputs		  "5"
+	  Inputs		  "7"
 	  DisplayOption		  "bar"
 	}
 	Block {
@@ -1521,7 +1663,7 @@ Model {
 	  ZOrder		  3
 	  SrcBlock		  "Mux1"
 	  SrcPort		  1
-	  Points		  [10, 0; 0, -25]
+	  Points		  [10, 0; 0, -80]
 	  DstBlock		  "S-Function"
 	  DstPort		  1
 	}
@@ -1566,6 +1708,20 @@ Model {
 	  SrcPort		  1
 	  DstBlock		  "Mux1"
 	  DstPort		  5
+	}
+	Line {
+	  ZOrder		  12
+	  SrcBlock		  "Cable deltaL command (m)"
+	  SrcPort		  1
+	  DstBlock		  "Mux1"
+	  DstPort		  6
+	}
+	Line {
+	  ZOrder		  13
+	  SrcBlock		  "Cable deltaLdot command (m/s)"
+	  SrcPort		  1
+	  DstBlock		  "Mux1"
+	  DstPort		  7
 	}
       }
     }
@@ -1882,6 +2038,7 @@ Model {
       ZOrder		      2
       SrcBlock		      "FAST Nonlinear Wind Turbine"
       SrcPort		      1
+      Points		      [28, 0; 0, -60]
       DstBlock		      "qdotdot_out"
       DstPort		      1
     }
@@ -1919,6 +2076,20 @@ Model {
       SrcPort		      1
       DstBlock		      "FAST Nonlinear Wind Turbine"
       DstPort		      5
+    }
+    Line {
+      ZOrder		      8
+      SrcBlock		      "Cable deltaL controller"
+      SrcPort		      1
+      DstBlock		      "FAST Nonlinear Wind Turbine"
+      DstPort		      6
+    }
+    Line {
+      ZOrder		      9
+      SrcBlock		      "Cable deltaLdot controller"
+      SrcPort		      1
+      DstBlock		      "FAST Nonlinear Wind Turbine"
+      DstPort		      7
     }
   }
 }
