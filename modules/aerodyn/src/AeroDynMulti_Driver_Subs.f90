@@ -175,7 +175,8 @@ subroutine DvrM_TimeStep(nt, DvrData, AD, IW, errStat, errMsg)
    time = AD%InputTime(2)
    ! Calculate outputs at nt - 1
    call AD_CalcOutput( time, AD%u(2), AD%p, AD%x, AD%xd, AD%z, AD%OtherState, AD%y, AD%m, errStat2, errMsg2 ); if(Failed()) return
-   call Dvr_WriteOutputs(nt, time, DvrData, DvrData%out, AD%y%WriteOutput, IW%y%WriteOutput, errStat2, errMsg2); if(Failed()) return
+   ! TODO rotors outputs
+   call Dvr_WriteOutputs(nt, time, DvrData, DvrData%out, AD%y%rotors(1)%WriteOutput, IW%y%WriteOutput, errStat2, errMsg2); if(Failed()) return
 
    ! VTK outputs
    if (DvrData%out%WrVTK>0) then
@@ -251,29 +252,39 @@ subroutine Init_AeroDyn(DvrData, AD, dt, InitOutData, errStat, errMsg)
    errStat = ErrID_None
    errMsg  = ''
 
-   InitInData%InputFile      = DvrData%AD_InputFile
-   InitInData%NumBlades      = DvrData%numBladesTot
-   InitInData%RootName       = DvrData%out%Root
-   InitInData%Gravity        = 9.80665_ReKi
 
-   ! set initialization data:
-   call AllocAry(InitInData%BladeRootPosition, 3, InitInData%NumBlades, 'BladeRootPosition', errStat2, ErrMsg2 ); if (Failed()) return
-   call AllocAry(InitInData%BladeRootOrientation, 3, 3, InitInData%NumBlades, 'BladeRootOrientation', errStat2, ErrMsg2 ); if (Failed()) return
+   allocate(InitInData%rotors(DvrData%numTurbines), stat=errStat) 
+   if (errStat/=0) then
+      call SetErrStat( ErrID_Fatal, 'Allocating rotors', errStat, errMsg, 'Init_AeroDyn' )
+      call Cleanup()
+      return
+   end if
+
+   InitInData%InputFile = DvrData%AD_InputFile
+   InitInData%RootName  = DvrData%out%Root
+   InitInData%Gravity   = 9.80665_ReKi
+
 
    do iWT=1,DvrData%numTurbines
       wt => DvrData%WT(iWT)
 
-      if (wt%isHAWT) then
-         InitInData%AeroProjMod = 0 ! default, with WithoutSweepPitchTwist
-      else
-         InitInData%AeroProjMod = 1
-      endif
-      InitInData%HubPosition    = wt%hub%ptMesh%Position(:,1)
-      InitInData%HubOrientation = wt%hub%ptMesh%RefOrientation(:,:,1)
+      InitInData%rotors(iWT)%NumBlades = wt%numBlades
 
-      do k=1,InitInData%numBlades
-         InitInData%BladeRootOrientation(:,:,k) = wt%bld(k)%ptMesh%RefOrientation(:,:,1)
-         InitInData%BladeRootPosition(:,k)      = wt%bld(k)%ptMesh%Position(:,1)
+      ! set initialization data:
+      call AllocAry(InitInData%rotors(iWT)%BladeRootPosition, 3, wt%numBlades, 'BladeRootPosition', errStat2, ErrMsg2 ); if (Failed()) return
+      call AllocAry(InitInData%rotors(iWT)%BladeRootOrientation, 3, 3, wt%numBlades, 'BladeRootOrientation', errStat2, ErrMsg2 ); if (Failed()) return
+
+      if (wt%isHAWT) then
+         InitInData%rotors(iWT)%AeroProjMod = 0 ! default, with WithoutSweepPitchTwist
+      else
+         InitInData%rotors(iWT)%AeroProjMod = 1
+      endif
+      InitInData%rotors(iWT)%HubPosition    = wt%hub%ptMesh%Position(:,1)
+      InitInData%rotors(iWT)%HubOrientation = wt%hub%ptMesh%RefOrientation(:,:,1)
+
+      do k=1,wt%numBlades
+         InitInData%rotors(iWT)%BladeRootOrientation(:,:,k) = wt%bld(k)%ptMesh%RefOrientation(:,:,1)
+         InitInData%rotors(iWT)%BladeRootPosition(:,k)      = wt%bld(k)%ptMesh%Position(:,1)
       end do
    enddo
  
@@ -284,9 +295,10 @@ subroutine Init_AeroDyn(DvrData, AD, dt, InitOutData, errStat, errMsg)
    end do
 
    ! move AD initOut data to AD Driver
+   ! TODO TODO Multi rotors
    !call move_alloc(InitOutData%WriteOutputHdr, DvrData%out%WriteOutputHdr)
    !call move_alloc(InitOutData%WriteOutputUnt, DvrData%out%WriteOutputUnt)   
-   call concatOutputs(DvrData, InitOutData%WriteOutputHdr, InitOutData%WriteOutputUnt, errStat2, errMsg2); if(Failed()) return
+   call concatOutputs(DvrData, InitOutData%rotors(1)%WriteOutputHdr, InitOutData%rotors(1)%WriteOutputUnt, errStat2, errMsg2); if(Failed()) return
 
    DvrData%out%AD_ver = InitOutData%ver
 
@@ -337,15 +349,15 @@ subroutine Init_InflowWind(DvrData, IW, AD, dt, errStat, errMsg)
    InitInData%UseInputFile     = .true.
    InitInData%RootName         = DvrData%out%Root
 
-   ! Set the number of points we are expecting to ask for initially
-   InitInData%NumWindPoints = 0      
-   InitInData%NumWindPoints = InitInData%NumWindPoints + AD%u(1)%TowerMotion%NNodes
-   !do iWT=1,DvrData%numTurbines
-   !   wt => DvrData%rotors(iWT)
-   do k=1,DvrData%numBladesTot
-      InitInData%NumWindPoints = InitInData%NumWindPoints + AD%u(1)%BladeMotion(k)%NNodes
-   end do
-   !enddo
+   do iWT=1,DvrData%numTurbines
+      !   wt => DvrData%rotors(iWT)
+      ! Set the number of points we are expecting to ask for initially
+      InitInData%NumWindPoints = 0      
+      InitInData%NumWindPoints = InitInData%NumWindPoints + AD%u(1)%rotors(iWT)%TowerMotion%NNodes
+      do k=1,DvrData%numBladesTot
+         InitInData%NumWindPoints = InitInData%NumWindPoints + AD%u(1)%rotors(iWT)%BladeMotion(k)%NNodes
+      end do
+   enddo
    if (allocated(AD%OtherState%WakeLocationPoints)) then
       InitInData%NumWindPoints = InitInData%NumWindPoints + size(AD%OtherState%WakeLocationPoints,DIM=2)
    end if
@@ -565,28 +577,28 @@ subroutine Init_ADMeshMap(DvrData, uAD, errStat, errMsg)
    do iWT=1,DvrData%numTurbines
       wt => DvrData%WT(iWT)
       ! hub 2 hubAD
-      call MeshMapCreate(wt%hub%ptMesh, uAD%hubMotion, wt%hub%ED_P_2_AD_P_H, errStat2, errMsg2); if(Failed())return
+      call MeshMapCreate(wt%hub%ptMesh, uAD%rotors(iWT)%hubMotion, wt%hub%ED_P_2_AD_P_H, errStat2, errMsg2); if(Failed())return
 
       ! bldroot 2 bldroot AD
       do iB = 1, wt%numBlades
-         call MeshMapCreate(wt%bld(iB)%ptMesh, uAD%BladeRootMotion(iB), wt%bld(iB)%ED_P_2_AD_P_R, errStat2, errMsg2); if(Failed())return
+         call MeshMapCreate(wt%bld(iB)%ptMesh, uAD%rotors(iWT)%BladeRootMotion(iB), wt%bld(iB)%ED_P_2_AD_P_R, errStat2, errMsg2); if(Failed())return
       enddo
 
       ! AD bld root 2 AD blade line
       do iB = 1, wt%numBlades
-         call MeshMapCreate(uAD%BladeRootMotion(iB), uAD%BladeMotion(iB), wt%bld(iB)%AD_P_2_AD_L_B, errStat2, errMsg2); if(Failed())return
+         call MeshMapCreate(uAD%rotors(iWT)%BladeRootMotion(iB), uAD%rotors(iWT)%BladeMotion(iB), wt%bld(iB)%AD_P_2_AD_L_B, errStat2, errMsg2); if(Failed())return
       enddo
 
-      if (uAD%TowerMotion%nNodes>0) then
+      if (uAD%rotors(iWT)%TowerMotion%nNodes>0) then
          if (wt%hasTower) then
-            twrHeightAD=uAD%TowerMotion%Position(3,uAD%TowerMotion%nNodes)-uAD%TowerMotion%Position(3,1)
+            twrHeightAD=uAD%rotors(iWT)%TowerMotion%Position(3,uAD%rotors(iWT)%TowerMotion%nNodes)-uAD%rotors(iWT)%TowerMotion%Position(3,1)
             ! Check tower height
             if (twrHeightAD<0) then
                errStat=ErrID_Fatal
                errMsg='First AeroDyn tower height should be smaller than last AD tower height'
             endif
 
-            twrHeightAD=uAD%TowerMotion%Position(3,uAD%TowerMotion%nNodes) ! NOTE: assuming start a z=0
+            twrHeightAD=uAD%rotors(iWT)%TowerMotion%Position(3,uAD%rotors(iWT)%TowerMotion%nNodes) ! NOTE: assuming start a z=0
 
             twrHeight=TwoNorm(wt%nac%ptMesh%Position(:,1) - wt%twr%ptMesh%Position(:,1)  )
             print*,'Tower Height',twrHeight, twrHeightAD
@@ -599,10 +611,10 @@ subroutine Init_ADMeshMap(DvrData, uAD, errStat, errMsg)
             Pbase = wt%twr%ptMesh%Position(:,1)
             Ptop = wt%nac%ptMesh%Position(:,1)
             DeltaP = Ptop-Pbase
-            do i = 1, uAD%TowerMotion%nNodes
-               zBar = uAD%TowerMotion%Position(3,i)/twrHeight
-               uAD%TowerMotion%Position(:,i)= Pbase+ zBar * DeltaP
-               uAD%TowerMotion%RefOrientation(:,:,i)= wt%twr%ptMesh%RefOrientation(:,:,1)
+            do i = 1, uAD%rotors(iWT)%TowerMotion%nNodes
+               zBar = uAD%rotors(iWT)%TowerMotion%Position(3,i)/twrHeight
+               uAD%rotors(iWT)%TowerMotion%Position(:,i)= Pbase+ zBar * DeltaP
+               uAD%rotors(iWT)%TowerMotion%RefOrientation(:,:,i)= wt%twr%ptMesh%RefOrientation(:,:,1)
             enddo
             ! Create AD tower base point mesh
             pos         = wt%twr%ptMesh%Position(:,1)
@@ -614,7 +626,7 @@ subroutine Init_ADMeshMap(DvrData, uAD, errStat, errMsg)
             call MeshMapCreate(wt%twr%ptMesh, wt%twr%ptMeshAD, wt%twr%ED_P_2_AD_P_T, errStat2, errMsg2); if(Failed()) return
 
             ! AD TowerBase to AD tower line
-            call MeshMapCreate(wt%twr%ptMeshAD, uAD%TowerMotion, wt%twr%AD_P_2_AD_L_T, errStat2, errMsg2); if(Failed()) return
+            call MeshMapCreate(wt%twr%ptMeshAD, uAD%rotors(iWT)%TowerMotion, wt%twr%AD_P_2_AD_L_T, errStat2, errMsg2); if(Failed()) return
          endif
       else
          print*,'>>> NO AD Tower'
@@ -781,40 +793,40 @@ subroutine Set_AD_Inputs(nt,DvrData,AD,IW,errStat,errMsg)
 
       ! --- Transfer to AeroDyn
       ! Hub 2 Hub AD 
-      call Transfer_Point_to_Point(wt%hub%ptMesh, AD%u(1)%hubMotion, wt%hub%ED_P_2_AD_P_H, errStat2, errMsg2); if(Failed()) return
+      call Transfer_Point_to_Point(wt%hub%ptMesh, AD%u(1)%rotors(iWT)%hubMotion, wt%hub%ED_P_2_AD_P_H, errStat2, errMsg2); if(Failed()) return
 
       ! Blade root to blade root AD
       do iB = 1,wt%numBlades
-         call Transfer_Point_to_Point(wt%bld(iB)%ptMesh, AD%u(1)%BladeRootMotion(iB), wt%bld(iB)%ED_P_2_AD_P_R, errStat2, errMsg2); if(Failed()) return
+         call Transfer_Point_to_Point(wt%bld(iB)%ptMesh, AD%u(1)%rotors(iWT)%BladeRootMotion(iB), wt%bld(iB)%ED_P_2_AD_P_R, errStat2, errMsg2); if(Failed()) return
       enddo
             
       ! Blade root AD to blade line AD
       do iB = 1,wt%numBlades
-         call Transfer_Point_to_Line2(AD%u(1)%BladeRootMotion(iB), AD%u(1)%BladeMotion(iB), wt%bld(iB)%AD_P_2_AD_L_B, errStat2, errMsg2); if(Failed()) return
+         call Transfer_Point_to_Line2(AD%u(1)%rotors(iWT)%BladeRootMotion(iB), AD%u(1)%rotors(iWT)%BladeMotion(iB), wt%bld(iB)%AD_P_2_AD_L_B, errStat2, errMsg2); if(Failed()) return
       enddo
 
       ! Tower motion
       if (wt%hasTower) then
-         if (AD%u(1)%TowerMotion%nNodes>0) then
+         if (AD%u(1)%rotors(iWT)%TowerMotion%nNodes>0) then
             call Transfer_Point_to_Point(wt%twr%ptMesh, wt%twr%ptMeshAD, wt%twr%ED_P_2_AD_P_T, errStat2, errMsg2); if(Failed()) return
-            call Transfer_Point_to_Line2(wt%twr%ptMeshAD, AD%u(1)%TowerMotion, wt%twr%AD_P_2_AD_L_T, errStat2, errMsg2); if(Failed()) return
+            call Transfer_Point_to_Line2(wt%twr%ptMeshAD, AD%u(1)%rotors(iWT)%TowerMotion, wt%twr%AD_P_2_AD_L_T, errStat2, errMsg2); if(Failed()) return
          endif
       endif
 
       ! Blade and blade root velocities: ! TODO TODO
       do k=1,wt%numBlades
-         position =  AD%u(1)%BladeRootMotion(k)%Position(:,1) + AD%u(1)%BladeRootMotion(k)%TranslationDisp(:,1) &
-                     - AD%u(1)%HubMotion%Position(:,1) - AD%u(1)%HubMotion%TranslationDisp(:,1)
-         AD%u(1)%BladeRootMotion(k)%TranslationVel( :,1) = cross_product( AD%u(1)%HubMotion%RotationVel(:,1), position )
+         position =  AD%u(1)%rotors(iWT)%BladeRootMotion(k)%Position(:,1) + AD%u(1)%rotors(iWT)%BladeRootMotion(k)%TranslationDisp(:,1) &
+                     - AD%u(1)%rotors(iWT)%HubMotion%Position(:,1) - AD%u(1)%rotors(iWT)%HubMotion%TranslationDisp(:,1)
+         AD%u(1)%rotors(iWT)%BladeRootMotion(k)%TranslationVel( :,1) = cross_product( AD%u(1)%rotors(iWT)%HubMotion%RotationVel(:,1), position )
 
-         do j=1,AD%u(1)%BladeMotion(k)%nnodes        
+         do j=1,AD%u(1)%rotors(iWT)%BladeMotion(k)%nnodes        
             
-            position =  AD%u(1)%BladeMotion(k)%Position(:,j) + AD%u(1)%BladeMotion(k)%TranslationDisp(:,j) &
-                      - AD%u(1)%HubMotion%Position(:,1) - AD%u(1)%HubMotion%TranslationDisp(:,1)
-            AD%u(1)%BladeMotion(k)%TranslationVel( :,j) = cross_product( AD%u(1)%HubMotion%RotationVel(:,1), position )
+            position =  AD%u(1)%rotors(iWT)%BladeMotion(k)%Position(:,j) + AD%u(1)%rotors(iWT)%BladeMotion(k)%TranslationDisp(:,j) &
+                      - AD%u(1)%rotors(iWT)%HubMotion%Position(:,1) - AD%u(1)%rotors(iWT)%HubMotion%TranslationDisp(:,1)
+            AD%u(1)%rotors(iWT)%BladeMotion(k)%TranslationVel( :,j) = cross_product( AD%u(1)%rotors(iWT)%HubMotion%RotationVel(:,1), position )
             
-            AD%u(1)%BladeMotion(k)%RotationVel(:,j) = AD%u(1)%HubMotion%Orientation(1,:,1) * RotSpeed ! simplification (without pitch rate)
-            AD%u(1)%BladeMotion(k)%TranslationAcc(:,j) = 0.0_ReKi ! simplification
+            AD%u(1)%rotors(iWT)%BladeMotion(k)%RotationVel(:,j) = AD%u(1)%rotors(iWT)%HubMotion%Orientation(1,:,1) * RotSpeed ! simplification (without pitch rate)
+            AD%u(1)%rotors(iWT)%BladeMotion(k)%TranslationAcc(:,j) = 0.0_ReKi ! simplification
          end do !j=nnodes
                                     
       end do !k=numBlades       
@@ -841,19 +853,23 @@ subroutine Set_IW_Inputs(nt,DvrData,AD,IW,errStat,errMsg)
    type(InflowWind_Data),        intent(inout) :: IW            ! InflowWind data 
    integer(IntKi)              , intent(  out) :: errStat       ! Status of error message
    character(*)                , intent(  out) :: errMsg        ! Error message if ErrStat /= ErrID_None
-   integer :: k,j,node
+   integer :: k,j,node, iWT
    ErrStat = ErrID_None
    ErrMsg  = ''
    Node=0
-   do K = 1,SIZE(AD%u(1)%BladeMotion)
-      do J = 1,AD%u(1)%BladeMotion(k)%Nnodes
+
+   iWT=1 ! TODO TODO TODO
+
+
+   do K = 1,SIZE(AD%u(1)%rotors(iWT)%BladeMotion)
+      do J = 1,AD%u(1)%rotors(iWT)%BladeMotion(k)%Nnodes
          Node = Node + 1
-         IW%u(1)%PositionXYZ(:,Node) = AD%u(1)%BladeMotion(k)%TranslationDisp(:,j) + AD%u(1)%BladeMotion(k)%Position(:,j)
+         IW%u(1)%PositionXYZ(:,Node) = AD%u(1)%rotors(iWT)%BladeMotion(k)%TranslationDisp(:,j) + AD%u(1)%rotors(iWT)%BladeMotion(k)%Position(:,j)
       end do !J = 1,p%BldNodes ! Loop through the blade nodes / elements
    end do !K = 1,p%NumBl         
-   do J=1,AD%u(1)%TowerMotion%nnodes
+   do J=1,AD%u(1)%rotors(iWT)%TowerMotion%nnodes
       Node = Node + 1
-      IW%u(1)%PositionXYZ(:,Node) = AD%u(1)%TowerMotion%TranslationDisp(:,J) + AD%u(1)%TowerMotion%Position(:,J)
+      IW%u(1)%PositionXYZ(:,Node) = AD%u(1)%rotors(iWT)%TowerMotion%TranslationDisp(:,J) + AD%u(1)%rotors(iWT)%TowerMotion%Position(:,J)
    end do      
    ! vortex points from FVW in AD15
    if (allocated(AD%OtherState%WakeLocationPoints)) then
@@ -882,21 +898,25 @@ subroutine AD_InputSolve_IfW(u_AD, y_IfW, errStat, errMsg)
    INTEGER(IntKi)                               :: NumBl
    INTEGER(IntKi)                               :: NNodes
    INTEGER(IntKi)                               :: node
+   INTEGER(IntKi)                               :: iWT
    errStat = ErrID_None
    errMsg  = ""
    node = 1
-   NumBl  = size(u_AD%InflowOnBlade,3)
-   Nnodes = size(u_AD%InflowOnBlade,2)
+
+   iWT=1 ! TODO TODO TODO
+
+   NumBl  = size(u_AD%rotors(iWT)%InflowOnBlade,3)
+   Nnodes = size(u_AD%rotors(iWT)%InflowOnBlade,2)
    do k=1,NumBl
       do j=1,Nnodes
-         u_AD%InflowOnBlade(:,j,k) = y_IfW%VelocityUVW(:,node)
+         u_AD%rotors(iWT)%InflowOnBlade(:,j,k) = y_IfW%VelocityUVW(:,node)
          node = node + 1
       end do
    end do
-   if ( allocated(u_AD%InflowOnTower) ) then
-      Nnodes = size(u_AD%InflowOnTower,2)
+   if ( allocated(u_AD%rotors(iWT)%InflowOnTower) ) then
+      Nnodes = size(u_AD%rotors(iWT)%InflowOnTower,2)
       do j=1,Nnodes
-         u_AD%InflowOnTower(:,j) = y_IfW%VelocityUVW(:,node)
+         u_AD%rotors(iWT)%InflowOnTower(:,j) = y_IfW%VelocityUVW(:,node)
          node = node + 1
       end do      
    end if
@@ -1387,6 +1407,7 @@ SUBROUTINE SetVTKParameters(p_FAST, DvrData, InitOutData_AD, AD, ErrStat, ErrMsg
    INTEGER(IntKi)                          :: topNode, baseNode, cylNode, tipNode, rootNode
    INTEGER(IntKi)                          :: NumBl, k, iRot, iBld, nNodes
    CHARACTER(1024)                         :: vtkroot
+   INTEGER(IntKi)                          :: iWT
    INTEGER(IntKi)                          :: ErrStat2
    CHARACTER(ErrMsgLen)                    :: ErrMsg2
    CHARACTER(*), PARAMETER                 :: RoutineName = 'SetVTKParameters'
@@ -1404,13 +1425,15 @@ SUBROUTINE SetVTKParameters(p_FAST, DvrData, InitOutData_AD, AD, ErrStat, ErrMsg
    ! calculate the number of digits in 'y_FAST%NOutSteps' (Maximum number of output steps to be written)
    ! this will be used to pad the write-out step in the VTK filename with zeros in calls to MeshWrVTK()
    p_FAST%VTK_tWidth = max(9, CEILING( log10( real(DvrData%numSteps+1, ReKi) / p_FAST%n_VTKTime ) ) + 1) ! NOTE: at least 9, if user changes dt/and tmax 
+
+   iWT=1 !!!! TODO TODO TODO TODO
    
    ! determine number of blades
    NumBl = DvrData%numBladesTot
    MaxBladeLength=0
    do iBld=1,NumBl
-      nNodes = AD%u(1)%BladeMotion(iBld)%nnodes
-      BladeLength = TwoNorm(AD%u(1)%BladeMotion(iBld)%Position(:,nNodes)-AD%u(1)%BladeMotion(iBld)%Position(:,1))
+      nNodes = AD%u(1)%rotors(iWT)%BladeMotion(iBld)%nnodes
+      BladeLength = TwoNorm(AD%u(1)%rotors(iWT)%BladeMotion(iBld)%Position(:,nNodes)-AD%u(1)%rotors(iWT)%BladeMotion(iBld)%Position(:,1))
       MaxBladeLength = max(MaxBladeLength, BladeLength)
    enddo
    ! initialize the vtk data
@@ -1439,7 +1462,7 @@ SUBROUTINE SetVTKParameters(p_FAST, DvrData, InitOutData_AD, AD, ErrStat, ErrMsg
    ! tapered tower
    !.......................
    if (DvrData%WT(1)%hasTower) then
-      Mesh=>AD%u(1)%TowerMotion
+      Mesh=>AD%u(1)%rotors(iWT)%TowerMotion
       if (Mesh%NNodes>0) then
          CALL AllocAry(p_FAST%VTK_Surface%TowerRad, Mesh%NNodes,'VTK_Surface%TowerRad',ErrStat2,ErrMsg2)
          topNode   = Mesh%NNodes - 1
@@ -1466,18 +1489,18 @@ SUBROUTINE SetVTKParameters(p_FAST, DvrData, InitOutData_AD, AD, ErrStat, ErrMsg
    ! blade surfaces
    !.......................
    allocate(p_FAST%VTK_Surface%BladeShape(NumBl),stat=ErrStat2)
-   IF (ALLOCATED(InitOutData_AD%BladeShape)) THEN
+   IF (ALLOCATED(InitOutData_AD%rotors(iWT)%BladeShape)) THEN
       do k=1,NumBl   
-         call move_alloc( InitOutData_AD%BladeShape(k)%AirfoilCoords, p_FAST%VTK_Surface%BladeShape(k)%AirfoilCoords )
+         call move_alloc( InitOutData_AD%rotors(iWT)%BladeShape(k)%AirfoilCoords, p_FAST%VTK_Surface%BladeShape(k)%AirfoilCoords )
       end do
    else
       print*,'>>>> PROFILE COORDINATES MISSING'
       rootNode = 1
       DO K=1,NumBl   
-         tipNode  = AD%u(1)%BladeMotion(K)%NNodes
-         cylNode  = min(3,AD%u(1)%BladeMotion(K)%Nnodes)
+         tipNode  = AD%u(1)%rotors(iWT)%BladeMotion(K)%NNodes
+         cylNode  = min(3,AD%u(1)%rotors(iWT)%BladeMotion(K)%Nnodes)
 
-         call SetVTKDefaultBladeParams(AD%u(1)%BladeMotion(K), p_FAST%VTK_Surface%BladeShape(K), tipNode, rootNode, cylNode, ErrStat2, ErrMsg2)
+         call SetVTKDefaultBladeParams(AD%u(1)%rotors(iWT)%BladeMotion(K), p_FAST%VTK_Surface%BladeShape(K), tipNode, rootNode, cylNode, ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          IF (ErrStat >= AbortErrLev) RETURN
       END DO                           
@@ -1519,22 +1542,22 @@ SUBROUTINE WrVTK_Surfaces(t_global, DvrData, p_FAST, VTK_count, AD)
                                    VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth , verts = p_FAST%VTK_Surface%NacelleBox)
       
       ! Hub
-      call MeshWrVTK_PointSurface (p_FAST%VTKRefPoint, AD%u(2)%HubMotion, trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.HubSurface', &
+      call MeshWrVTK_PointSurface (p_FAST%VTKRefPoint, AD%u(2)%rotors(iWT)%HubMotion, trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.HubSurface', &
                                    VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth , &
                                    NumSegments=p_FAST%VTK_Surface%NumSectors, radius=p_FAST%VTKHubRad)
       
       ! Tower motions
-      if (AD%u(2)%TowerMotion%nNodes>0) then
-         call MeshWrVTK_Ln2Surface (p_FAST%VTKRefPoint, AD%u(2)%TowerMotion, trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.TowerSurface', &
+      if (AD%u(2)%rotors(iWT)%TowerMotion%nNodes>0) then
+         call MeshWrVTK_Ln2Surface (p_FAST%VTKRefPoint, AD%u(2)%rotors(iWT)%TowerMotion, trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.TowerSurface', &
                                     VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth, p_FAST%VTK_Surface%NumSectors, p_FAST%VTK_Surface%TowerRad )
       endif
 
       ! Blades
       do K=1,NumBl
 
-         call MeshWrVTK_Ln2Surface (p_FAST%VTKRefPoint, AD%u(2)%BladeMotion(K), trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.Blade'//trim(num2lstr(k))//'Surface', &
+         call MeshWrVTK_Ln2Surface (p_FAST%VTKRefPoint, AD%u(2)%rotors(iWT)%BladeMotion(K), trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.Blade'//trim(num2lstr(k))//'Surface', &
                                     VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth , verts=p_FAST%VTK_Surface%BladeShape(K)%AirfoilCoords &
-                                    ,Sib=AD%y%BladeLoad(k) )
+                                    ,Sib=AD%y%rotors(iWT)%BladeLoad(k) )
       end do                  
       
       if (p_FAST%WrVTK>1) then
@@ -1544,7 +1567,7 @@ SUBROUTINE WrVTK_Surfaces(t_global, DvrData, p_FAST, VTK_count, AD)
                                       VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth , &
                                       NumSegments=p_FAST%VTK_Surface%NumSectors, radius=p_FAST%VTKHubRad)
 
-         if (AD%u(2)%TowerMotion%nNodes>0) then
+         if (AD%u(2)%rotors(iWT)%TowerMotion%nNodes>0) then
             call MeshWrVTK_PointSurface (p_FAST%VTKRefPoint, wt%twr%ptMeshAD, trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.TwrBaseSurfaceAD', &
                                          VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth , &
                                          NumSegments=p_FAST%VTK_Surface%NumSectors, radius=p_FAST%VTKHubRad)
