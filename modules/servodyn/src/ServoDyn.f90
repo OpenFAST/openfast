@@ -274,14 +274,6 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    CALL AllocAry( u%ExternalBlPitchCom, p%NumBl, 'ExternalBlPitchCom', ErrStat2, ErrMsg2 )
       if (Failed())  return;
         
-      ! Cable control -- only allocate what is needed -- OpenFAST glue code has logic for this 
-   if (p%NumCableControl > 0) then
-      call AllocAry( u%ExternalCableDeltaL,    p%NumCableControl, 'ExternalCableDeltaL',    ErrStat2, ErrMsg2 )
-         if (Failed())  return
-      call AllocAry( u%ExternalCableDeltaLdot, p%NumCableControl, 'ExternalCableDeltaLdot', ErrStat2, ErrMsg2 )
-         if (Failed())  return
-   endif
-
    IF (InitInp%NumSC2Ctrl > 0 .and. p%UseBladedInterface) THEN
       CALL AllocAry( u%SuperController, InitInp%NumSC2Ctrl, 'u%SuperController', ErrStat2, ErrMsg2 )
       if (Failed())  return;
@@ -308,10 +300,6 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    u%ExternalElecPwr = 0.
    u%ExternalHSSBrFrac = 0.
    u%ExternalBlAirfoilCom = 0.
-   if (p%NumCableControl > 0) then
-      u%ExternalCableDeltaL = 0.
-      u%ExternalCableDeltaLdot = 0.
-   endif
 
    u%TwrAccel  = 0.
    u%YawErr    = 0.   
@@ -413,6 +401,31 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
 
    call StC_Substruc_Setup(InitInp,p,InputFileData,u%SStC,p%SStC,x%SStC,xd%SStC,z%SStC,OtherState%SStC,y%SStC,m%SStC,UnSum,ErrStat2,ErrMsg2)
       if (Failed())  return;
+
+
+      !............................................................................................
+      ! Setup and initialize the cable controls -- could be from Simulink or DLL
+      !............................................................................................
+   p%NumCableControl = InitInp%NumCableControl
+      ! Outputs from SrvD -- we allocate this if any cable control signals were requested.
+      !  -- only allocate what is needed -- OpenFAST glue code has logic for this 
+   if (p%NumCableControl > 0) then
+      call AllocAry( y%CableDeltaL,    p%NumCableControl, 'CableDeltaL',    ErrStat2, ErrMsg2 )
+         if (Failed())  return
+      call AllocAry( y%CableDeltaLdot, p%NumCableControl, 'CableDeltaLdot', ErrStat2, ErrMsg2 )
+         if (Failed())  return
+
+      call AllocAry( u%ExternalCableDeltaL,    p%NumCableControl, 'ExternalCableDeltaL',    ErrStat2, ErrMsg2 )
+         if (Failed())  return
+      call AllocAry( u%ExternalCableDeltaLdot, p%NumCableControl, 'ExternalCableDeltaLdot', ErrStat2, ErrMsg2 )
+         if (Failed())  return
+
+      y%CableDeltaL     = 0.0_ReKi
+      y%CableDeltaLdot  = 0.0_ReKi
+      u%ExternalCableDeltaL = 0.0_ReKi
+      u%ExternalCableDeltaLdot = 0.0_ReKi
+   endif
+
 
 
       !............................................................................................
@@ -1344,13 +1357,11 @@ SUBROUTINE SrvD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF (ErrStat >= AbortErrLev) RETURN
 
+      ! Cable control:
+   CALL CableControl_CalcOutput( t, u, p, x, xd, z, OtherState, y%CableDeltaL, y%CableDeltaLdot, m, ErrStat, ErrMsg )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      IF (ErrStat >= AbortErrLev) RETURN
 
-   if (p%EXavrSWAP) then
-         ! Airfoil control:
-      CALL CableControl_CalcOutput( t, u, p, x, xd, z, OtherState, y%CableDeltaL, y%CableDeltaLdot, m, ErrStat, ErrMsg )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         IF (ErrStat >= AbortErrLev) RETURN
-   endif
 
    !...............................................................................................................................   
    ! Place the selected output channels into the WriteOutput(:) array with the proper sign:
@@ -3853,36 +3864,37 @@ SUBROUTINE CableControl_CalcOutput( t, u, p, x, xd, z, OtherState, CableDeltaL, 
       ErrStat = ErrID_None
       ErrMsg  = ""
 
+      if (.not. allocated(CableDeltaL) .or. .not. allocated(CableDeltaLdot))     return
+
+
       !...................................................................
       ! Calculate the cable control channels
       !...................................................................
       SELECT CASE ( p%CCmode )  ! Which cable control are we using? 
          ! Nothing.  Note that these might be allocated if no control signals were requested from any modules
          CASE ( ControlMode_NONE )
-            if (allocated(CableDeltaL))      CableDeltaL    = 0.0_ReKi
-            if (allocated(CableDeltaLdot))   CableDeltaLdot = 0.0_ReKi
+            CableDeltaL    = 0.0_ReKi
+            CableDeltaLdot = 0.0_ReKi
          ! User-defined from Simulink or LabVIEW.
          CASE ( ControlMode_EXTERN )
-            if (allocated(CableDeltaL) .and. allocated(u%ExternalCableDeltaL)) then
+            if (allocated(u%ExternalCableDeltaL)) then
                CableDeltaL(   1:p%NumCableControl) = u%ExternalCableDeltaL(   1:p%NumCableControl)
             endif
-            if (allocated(CableDeltaLdot) .and. allocated(u%ExternalCableDeltaLdot)) then
+            if (allocated(u%ExternalCableDeltaLdot)) then
                CableDeltaLdot(1:p%NumCableControl) = u%ExternalCableDeltaLdot(1:p%NumCableControl)
             endif
          ! User-defined cable control from Bladed-style DLL
          CASE ( ControlMode_DLL )
-            if (allocated(CableDeltaLdot) .and. allocated(CableDeltaLdot)) then
-               if (p%DLL_Ramp) then
-                  factor = (t - m%LastTimeCalled) / m%dll_data%DLL_DT
-                  CableDeltaL(1:p%NumCableControl)    = m%dll_data%PrevCableDeltaL(   1:p%NumCableControl) + &
-                                    factor * ( m%dll_data%CableDeltaL(   1:p%NumCableControl) - m%dll_data%PrevCableDeltaL(   1:p%NumCableControl) )
-                  CableDeltaLdot(1:p%NumCableControl) = m%dll_data%PrevCableDeltaLdot(1:p%NumCableControl) + &
-                                    factor * ( m%dll_data%CableDeltaLdot(1:p%NumCableControl) - m%dll_data%PrevCableDeltaLdot(1:p%NumCableControl) )
-               else
-                  CableDeltaL(   1:p%NumCableControl) = m%dll_data%CableDeltaL(   1:p%NumCableControl)
-                  CableDeltaLdot(1:p%NumCableControl) = m%dll_data%CableDeltaLdot(1:p%NumCableControl)
-               end if
-            endif
+            if (p%DLL_Ramp) then
+               factor = (t - m%LastTimeCalled) / m%dll_data%DLL_DT
+               CableDeltaL(1:p%NumCableControl)    = m%dll_data%PrevCableDeltaL(   1:p%NumCableControl) + &
+                                 factor * ( m%dll_data%CableDeltaL(   1:p%NumCableControl) - m%dll_data%PrevCableDeltaL(   1:p%NumCableControl) )
+               CableDeltaLdot(1:p%NumCableControl) = m%dll_data%PrevCableDeltaLdot(1:p%NumCableControl) + &
+                                 factor * ( m%dll_data%CableDeltaLdot(1:p%NumCableControl) - m%dll_data%PrevCableDeltaLdot(1:p%NumCableControl) )
+            else
+               CableDeltaL(   1:p%NumCableControl) = m%dll_data%CableDeltaL(   1:p%NumCableControl)
+               CableDeltaLdot(1:p%NumCableControl) = m%dll_data%CableDeltaLdot(1:p%NumCableControl)
+            end if
       END SELECT
 
 END SUBROUTINE CableControl_CalcOutput

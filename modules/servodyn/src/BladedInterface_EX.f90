@@ -174,12 +174,6 @@ contains
       endif
 
       ! Allocate arrays for cable control
-      p%NumCableControl = InitInp%NumCableControl
-      ! Outputs from SrvD -- we allocate this if any cable control signals were requested.
-      call AllocAry( y%CableDeltaL,    p%NumCableControl, 'CableDeltaL',    ErrStat2, ErrMsg2 )
-         if (Failed())  return
-      call AllocAry( y%CableDeltaLdot, p%NumCableControl, 'CableDeltaLdot', ErrStat2, ErrMsg2 )
-         if (Failed())  return
       ! dll_data for communication to DLL
       call AllocAry( dll_data%CableDeltaL,    p%NumCableControl, 'CableDeltaL',    ErrStat2, ErrMsg2 )
          if (Failed())  return
