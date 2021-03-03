@@ -97,7 +97,7 @@ SUBROUTINE ED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
 
    TYPE(ED_InputFile)                           :: InputFileData           ! Data stored in the module's input file
    INTEGER(IntKi)                               :: ErrStat2                ! temporary Error status of the operation
-   INTEGER(IntKi)                               :: i                       ! loop counters
+   INTEGER(IntKi)                               :: i, K                    ! loop counters
    LOGICAL, PARAMETER                           :: GetAdamsVals = .FALSE.  ! Determines if we should read Adams values and create (update) an Adams model
    CHARACTER(ErrMsgLen)                         :: ErrMsg2                 ! temporary Error message if ErrStat /= ErrID_None
    REAL(R8Ki)                                   :: TransMat(3,3)            ! Initial rotation matrix at Platform Refz
@@ -250,7 +250,8 @@ SUBROUTINE ED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    InitOut%PlatformPos(3) = InitOut%PlatformPos(3) - TransMat(3,3)*p%PtfmRefzt + p%PtfmRefzt
 
    InitOut%HubHt       = p%HubHt
-   InitOut%TwrBasePos  = y%TowerLn2Mesh%Position(:,p%TwrNodes + 2)
+   InitOut%TwrBasePos    = y%TowerLn2Mesh%Position(:,p%TwrNodes + 2)
+   InitOut%TwrBaseOrient = y%TowerLn2Mesh%Orientation(:,:,p%TwrNodes + 2)
    InitOut%HubRad      = p%HubRad
    InitOut%RotSpeed    = p%RotSpeed
    InitOut%isFixed_GenDOF = .not. InputFileData%GenDOF
@@ -537,6 +538,7 @@ SUBROUTINE ED_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
    REAL(R8Ki)                   :: TmpVec2   (NDims)                               ! A temporary vector.
 
    REAL(ReKi)                   :: LinAccES (NDims,0:p%TipNode,p%NumBl)            ! Total linear acceleration of a point on a   blade (point S) in the inertia frame (body E for earth).
+   REAL(ReKi)                   :: AngAccEK (NDims,0:p%TipNode,p%NumBl)            ! Total rotational acceleration of a point on a blade (point S) in the inertia frame (body E for earth).
    REAL(ReKi)                   :: LinAccET (NDims,0:p%TwrNodes)                   ! Total linear acceleration of a point on the tower (point T) in the inertia frame (body E for earth).
    REAL(ReKi)                   :: AngAccEF (NDims,0:p%TwrNodes)                   ! Total angular acceleration of tower element J (body F) in the inertia frame (body E for earth).
    REAL(ReKi)                   :: FrcS0B   (NDims,p%NumBl)                        ! Total force at the blade root (point S(0)) due to the blade.
@@ -673,9 +675,10 @@ SUBROUTINE ED_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       DO J = 0,p%TipNode ! Loop through the blade nodes / elements
 
          LinAccES(:,J,K) = m%RtHS%LinAccESt(:,K,J)
-
+         AngAccEK(:,J,K) = m%RtHs%AngAccEKt(:,J,K)
          DO I = 1,p%DOFs%NPSE(K)  ! Loop through all active (enabled) DOFs that contribute to the QD2T-related linear accelerations of blade K
             LinAccES(:,J,K) = LinAccES(:,J,K) + m%RtHS%PLinVelES(K,J,p%DOFs%PSE(K,I),0,:)*m%QD2T(p%DOFs%PSE(K,I))
+            AngAccEK(:,J,K) = AngAccEK(:,J,K) + m%RtHS%PAngVelEM(K,J,p%DOFs%PSE(K,I),0,:)*m%QD2T(p%DOFs%PSE(K,I))
          ENDDO             ! I - All active (enabled) DOFs that contribute to the QD2T-related linear accelerations of blade K
 
       ENDDO             ! J - Blade nodes / elements
@@ -1402,6 +1405,11 @@ END IF
             y%BladeLn2Mesh(K)%TranslationAcc(1,NodeNum) =     LinAccES(1,J2,K)
             y%BladeLn2Mesh(K)%TranslationAcc(2,NodeNum) = -1.*LinAccES(3,J2,K)
             y%BladeLn2Mesh(K)%TranslationAcc(3,NodeNum) =     LinAccES(2,J2,K)  
+
+               ! Rotational Acceleration
+            y%BladeLn2Mesh(K)%RotationAcc(1,NodeNum)     =     AngAccEK(1,J2,K)
+            y%BladeLn2Mesh(K)%RotationAcc(2,NodeNum)     = -1.*AngAccEK(3,J2,K)
+            y%BladeLn2Mesh(K)%RotationAcc(3,NodeNum)     =     AngAccEK(2,J2,K) 
                
             
          END DO !J = 1,p%BldNodes ! Loop through the blade nodes / elements
@@ -3138,6 +3146,12 @@ SUBROUTINE Alloc_RtHS( RtHS, p, ErrStat, ErrMsg  )
    IF ( ErrStat /= 0_IntKi )  THEN
       ErrStat = ErrID_Fatal
       ErrMsg = ' Error allocating memory for LinAccESt.'
+      RETURN
+   ENDIF
+   ALLOCATE ( RtHS%AngAccEKt( Dims, 0:p%TipNode, p%NumBl ) , STAT=ErrStat )
+   IF ( ErrStat /= 0_IntKi )  THEN
+      ErrStat = ErrID_Fatal
+      ErrMsg = ' Error allocating memory for AngAccEKt.'
       RETURN
    ENDIF
 
@@ -6931,8 +6945,10 @@ ENDIF
           RtHSdat%AngPosHM(:,K,J              ) =     x%QT (DOF_BF(K,1))*RtHSdat%PAngVelEM(K,J,DOF_BF(K,1),0,:) &
                                                     + x%QT (DOF_BF(K,2))*RtHSdat%PAngVelEM(K,J,DOF_BF(K,2),0,:) &
                                                     + x%QT (DOF_BE(K,1))*RtHSdat%PAngVelEM(K,J,DOF_BE(K,1),0,:)
-
-
+         RtHSdat%AngAccEKt(:,J              ,K) =  RtHSdat%AngAccEHt + x%QDT(DOF_BF(K,1))*RtHSdat%PAngVelEM(K,J,DOF_BF(K,1),1,:) & 
+                                                                     + x%QDT(DOF_BF(K,2))*RtHSdat%PAngVelEM(K,J,DOF_BF(K,2),1,:) & 
+                                                                     + x%QDT(DOF_BE(K,1))*RtHSdat%PAngVelEM(K,J,DOF_BE(K,1),1,:)   
+ 
       ! Define the 1st derivatives of the partial angular velocities of the current node (body M(RNodes(J))) in the inertia frame:
 
    ! NOTE: These are currently unused by the code, therefore, they need not

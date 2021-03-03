@@ -2527,16 +2527,16 @@ SUBROUTINE Linear_SrvD_InputSolve_dy( p_FAST, y_FAST, dUdy  )
       dUdy(y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) + SrvD_Indx_Y_BlPitchCom(i) - 1, ED_Start_Yaw + i - 1) = -1.0_ReKi
    end do
       
-   !IF (u_SrvD%NTMD%Mesh%Committed) THEN
+   !IF (u_SrvD%NStC%Mesh%Committed) THEN
    !   
-   !   CALL Linearize_Point_to_Point( y_ED%NacelleMotion, u_SrvD%NTMD%Mesh, MeshMapData%ED_P_2_SrvD_P_N, ErrStat2, ErrMsg2 )
+   !   CALL Linearize_Point_to_Point( y_ED%NacelleMotion, u_SrvD%NStC%Mesh, MeshMapData%ED_P_2_SrvD_P_N, ErrStat2, ErrMsg2 )
    !      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    !         
    !END IF
    !
-   !IF (u_SrvD%TTMD%Mesh%Committed) THEN
+   !IF (u_SrvD%TSC%Mesh%Committed) THEN
    !   
-   !   CALL Linearize_Line2_to_Point( y_ED%TowerLn2Mesh, u_SrvD%TTMD%Mesh, MeshMapData%ED_L_2_SrvD_P_T, ErrStat2, ErrMsg2 )
+   !   CALL Linearize_Line2_to_Point( y_ED%TowerLn2Mesh, u_SrvD%TStC%Mesh, MeshMapData%ED_L_2_SrvD_P_T, ErrStat2, ErrMsg2 )
    !      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    !         
    !END IF
@@ -2590,13 +2590,13 @@ SUBROUTINE Linear_ED_InputSolve_dy( p_FAST, y_FAST, u_ED, y_ED, y_AD, u_AD, BD, 
          dUdy(ED_Start + i - 1, y_FAST%Lin%Modules(Module_SrvD)%Instance(1)%LinStartIndx(LIN_OUTPUT_COL) + i - 1) = -1.0_ReKi !SrvD_Indx_Y_BlPitchCom
       end do
       
-      !IF (y_SrvD%NTMD%Mesh%Committed) THEN      
-      !   CALL Linearize_Point_to_Point( y_SrvD%NTMD%Mesh, u_ED%NacelleLoads, MeshMapData%SrvD_P_2_ED_P_N, ErrStat2, ErrMsg2, u_SrvD%NTMD%Mesh, y_ED%NacelleMotion )
+      !IF (y_SrvD%NStC%Mesh%Committed) THEN      
+      !   CALL Linearize_Point_to_Point( y_SrvD%NStC%Mesh, u_ED%NacelleLoads, MeshMapData%SrvD_P_2_ED_P_N, ErrStat2, ErrMsg2, u_SrvD%NStC%Mesh, y_ED%NacelleMotion )
       !      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//':u_ED%NacelleLoads' )                  
       !END IF
       !
-      !IF (y_SrvD%TTMD%Mesh%Committed) THEN      
-      !   CALL Linearize_Point_to_Point( y_SrvD%TTMD%Mesh, u_ED%TowerPtLoads, MeshMapData%SrvD_P_2_ED_P_T, ErrStat2, ErrMsg2, u_SrvD%TTMD%Mesh, y_ED%TowerLn2Mesh )
+      !IF (y_SrvD%TStC%Mesh%Committed) THEN      
+      !   CALL Linearize_Point_to_Point( y_SrvD%TStC%Mesh, u_ED%TowerPtLoads, MeshMapData%SrvD_P_2_ED_P_T, ErrStat2, ErrMsg2, u_SrvD%TStC%Mesh, y_ED%TowerLn2Mesh )
       !      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//':u_ED%TowerPtLoads' )                  
       !END IF
             
