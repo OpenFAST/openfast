@@ -81,7 +81,7 @@ IMPLICIT NONE
     character(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !< Channel units [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: storage      !< nChannel x nTime [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: outLine      !< Output line to be written to disk [-]
-    TYPE(DvrVTK_SurfaceType)  :: VTK_surface      !< Data for VTK surface visualization [-]
+    TYPE(DvrVTK_SurfaceType) , DIMENSION(:), ALLOCATABLE  :: VTK_surface      !< Data for VTK surface visualization [-]
     INTEGER(IntKi)  :: VTK_tWidth      !< Width of number of files for leading zeros in file name format [-]
     INTEGER(IntKi)  :: n_VTKTime      !< Number of time steps between writing VTK files [-]
     REAL(SiKi)  :: VTKHubRad      !< Hub radius for visualization [m]
@@ -179,8 +179,9 @@ IMPLICIT NONE
     TYPE(NacData)  :: nac      !<  [-]
     TYPE(TwrData)  :: twr      !<  [-]
     INTEGER(IntKi)  :: numBlades      !<  [-]
+    LOGICAL  :: basicHAWTFormat      !< If true simply input HubRad/Pitch/Overhang/Cone, otherwise all turbine inputs [-]
     LOGICAL  :: hasTower      !<  [-]
-    LOGICAL  :: isHAWT      !<  [-]
+    LOGICAL  :: HAWTprojection      !<  [-]
     INTEGER(IntKi)  :: motionType      !<  [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: motion      !<  [-]
     INTEGER(IntKi)  :: iMotion      !< Stored index to optimize time interpolation [-]
@@ -188,21 +189,20 @@ IMPLICIT NONE
     REAL(ReKi)  :: amplitude      !<  [-]
     REAL(ReKi)  :: frequency      !<  [-]
     character(1024)  :: motionFileName      !<  [-]
-    REAL(DbKi) , DIMENSION(1:3,1:3)  :: Rg2b0      !< Rotation matrix global 2 base at t=0 [-]
-    REAL(DbKi) , DIMENSION(1:3,1:3)  :: Rb2h0      !< Rotation matrix base 2 hub [-]
-    REAL(DbKi) , DIMENSION(1:3,1:3)  :: Rg2b      !< Rotation matrix global 2 base at t [-]
-    REAL(DbKi) , DIMENSION(1:3,1:3)  :: Rg2h      !< Rotation matrix global 2 hub at t [-]
   END TYPE WTData
 ! =======================
 ! =========  DvrM_SimData  =======
   TYPE, PUBLIC :: DvrM_SimData
     character(1024)  :: AD_InputFile      !< Name of AeroDyn input file [-]
     character(1024)  :: IW_InputFile      !< Name of InfloWind input file [-]
+    INTEGER(IntKi)  :: CompInflow      !< 0=Steady Wind, 1=InflowWind [-]
+    REAL(ReKi)  :: HWindSpeed      !< RefHeight Wind speed [-]
+    REAL(ReKi)  :: RefHt      !< RefHeight [-]
+    REAL(ReKi)  :: PLExp      !< PLExp [-]
     INTEGER(IntKi)  :: numTurbines      !< number of blades on turbine [-]
     TYPE(WTData) , DIMENSION(:), ALLOCATABLE  :: WT      !< Wind turbine data [-]
     REAL(DbKi)  :: dT      !< time increment [s]
     INTEGER(IntKi)  :: numSteps      !< number of steps in this case [-]
-    INTEGER(IntKi)  :: numBladesTot      !< number of blades on turbine [-]
     TYPE(DvrM_Outputs)  :: out      !< data for driver output file [-]
   END TYPE DvrM_SimData
 ! =======================
@@ -842,9 +842,22 @@ IF (ALLOCATED(SrcDvrM_OutputsData%outLine)) THEN
   END IF
     DstDvrM_OutputsData%outLine = SrcDvrM_OutputsData%outLine
 ENDIF
-      CALL ADM_Dvr_Copydvrvtk_surfacetype( SrcDvrM_OutputsData%VTK_surface, DstDvrM_OutputsData%VTK_surface, CtrlCode, ErrStat2, ErrMsg2 )
+IF (ALLOCATED(SrcDvrM_OutputsData%VTK_surface)) THEN
+  i1_l = LBOUND(SrcDvrM_OutputsData%VTK_surface,1)
+  i1_u = UBOUND(SrcDvrM_OutputsData%VTK_surface,1)
+  IF (.NOT. ALLOCATED(DstDvrM_OutputsData%VTK_surface)) THEN 
+    ALLOCATE(DstDvrM_OutputsData%VTK_surface(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstDvrM_OutputsData%VTK_surface.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DO i1 = LBOUND(SrcDvrM_OutputsData%VTK_surface,1), UBOUND(SrcDvrM_OutputsData%VTK_surface,1)
+      CALL ADM_Dvr_Copydvrvtk_surfacetype( SrcDvrM_OutputsData%VTK_surface(i1), DstDvrM_OutputsData%VTK_surface(i1), CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
+    ENDDO
+ENDIF
     DstDvrM_OutputsData%VTK_tWidth = SrcDvrM_OutputsData%VTK_tWidth
     DstDvrM_OutputsData%n_VTKTime = SrcDvrM_OutputsData%n_VTKTime
     DstDvrM_OutputsData%VTKHubRad = SrcDvrM_OutputsData%VTKHubRad
@@ -874,7 +887,12 @@ ENDIF
 IF (ALLOCATED(DvrM_OutputsData%outLine)) THEN
   DEALLOCATE(DvrM_OutputsData%outLine)
 ENDIF
-  CALL ADM_Dvr_Destroydvrvtk_surfacetype( DvrM_OutputsData%VTK_surface, ErrStat, ErrMsg )
+IF (ALLOCATED(DvrM_OutputsData%VTK_surface)) THEN
+DO i1 = LBOUND(DvrM_OutputsData%VTK_surface,1), UBOUND(DvrM_OutputsData%VTK_surface,1)
+  CALL ADM_Dvr_Destroydvrvtk_surfacetype( DvrM_OutputsData%VTK_surface(i1), ErrStat, ErrMsg )
+ENDDO
+  DEALLOCATE(DvrM_OutputsData%VTK_surface)
+ENDIF
  END SUBROUTINE ADM_Dvr_DestroyDvrM_Outputs
 
  SUBROUTINE ADM_Dvr_PackDvrM_Outputs( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -961,8 +979,12 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*1  ! outLine upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%outLine)  ! outLine
   END IF
+  Int_BufSz   = Int_BufSz   + 1     ! VTK_surface allocated yes/no
+  IF ( ALLOCATED(InData%VTK_surface) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! VTK_surface upper/lower bounds for each dimension
+    DO i1 = LBOUND(InData%VTK_surface,1), UBOUND(InData%VTK_surface,1)
       Int_BufSz   = Int_BufSz + 3  ! VTK_surface: size of buffers for each call to pack subtype
-      CALL ADM_Dvr_Packdvrvtk_surfacetype( Re_Buf, Db_Buf, Int_Buf, InData%VTK_surface, ErrStat2, ErrMsg2, .TRUE. ) ! VTK_surface 
+      CALL ADM_Dvr_Packdvrvtk_surfacetype( Re_Buf, Db_Buf, Int_Buf, InData%VTK_surface(i1), ErrStat2, ErrMsg2, .TRUE. ) ! VTK_surface 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -978,6 +1000,8 @@ ENDIF
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
+    END DO
+  END IF
       Int_BufSz  = Int_BufSz  + 1  ! VTK_tWidth
       Int_BufSz  = Int_BufSz  + 1  ! n_VTKTime
       Re_BufSz   = Re_BufSz   + 1  ! VTKHubRad
@@ -1141,7 +1165,18 @@ ENDIF
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
-      CALL ADM_Dvr_Packdvrvtk_surfacetype( Re_Buf, Db_Buf, Int_Buf, InData%VTK_surface, ErrStat2, ErrMsg2, OnlySize ) ! VTK_surface 
+  IF ( .NOT. ALLOCATED(InData%VTK_surface) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%VTK_surface,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%VTK_surface,1)
+    Int_Xferred = Int_Xferred + 2
+
+    DO i1 = LBOUND(InData%VTK_surface,1), UBOUND(InData%VTK_surface,1)
+      CALL ADM_Dvr_Packdvrvtk_surfacetype( Re_Buf, Db_Buf, Int_Buf, InData%VTK_surface(i1), ErrStat2, ErrMsg2, OnlySize ) ! VTK_surface 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -1169,6 +1204,8 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
+    END DO
+  END IF
     IntKiBuf(Int_Xferred) = InData%VTK_tWidth
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%n_VTKTime
@@ -1368,6 +1405,20 @@ ENDIF
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! VTK_surface not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%VTK_surface)) DEALLOCATE(OutData%VTK_surface)
+    ALLOCATE(OutData%VTK_surface(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%VTK_surface.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    DO i1 = LBOUND(OutData%VTK_surface,1), UBOUND(OutData%VTK_surface,1)
       Buf_size=IntKiBuf( Int_Xferred )
       Int_Xferred = Int_Xferred + 1
       IF(Buf_size > 0) THEN
@@ -1401,13 +1452,15 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL ADM_Dvr_Unpackdvrvtk_surfacetype( Re_Buf, Db_Buf, Int_Buf, OutData%VTK_surface, ErrStat2, ErrMsg2 ) ! VTK_surface 
+      CALL ADM_Dvr_Unpackdvrvtk_surfacetype( Re_Buf, Db_Buf, Int_Buf, OutData%VTK_surface(i1), ErrStat2, ErrMsg2 ) ! VTK_surface 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
       IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
+    END DO
+  END IF
     OutData%VTK_tWidth = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%n_VTKTime = IntKiBuf(Int_Xferred)
@@ -5193,8 +5246,9 @@ ENDIF
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
     DstWTDataData%numBlades = SrcWTDataData%numBlades
+    DstWTDataData%basicHAWTFormat = SrcWTDataData%basicHAWTFormat
     DstWTDataData%hasTower = SrcWTDataData%hasTower
-    DstWTDataData%isHAWT = SrcWTDataData%isHAWT
+    DstWTDataData%HAWTprojection = SrcWTDataData%HAWTprojection
     DstWTDataData%motionType = SrcWTDataData%motionType
 IF (ALLOCATED(SrcWTDataData%motion)) THEN
   i1_l = LBOUND(SrcWTDataData%motion,1)
@@ -5215,10 +5269,6 @@ ENDIF
     DstWTDataData%amplitude = SrcWTDataData%amplitude
     DstWTDataData%frequency = SrcWTDataData%frequency
     DstWTDataData%motionFileName = SrcWTDataData%motionFileName
-    DstWTDataData%Rg2b0 = SrcWTDataData%Rg2b0
-    DstWTDataData%Rb2h0 = SrcWTDataData%Rb2h0
-    DstWTDataData%Rg2b = SrcWTDataData%Rg2b
-    DstWTDataData%Rg2h = SrcWTDataData%Rg2h
  END SUBROUTINE ADM_Dvr_CopyWTData
 
  SUBROUTINE ADM_Dvr_DestroyWTData( WTDataData, ErrStat, ErrMsg )
@@ -5411,8 +5461,9 @@ ENDIF
          DEALLOCATE(Int_Buf)
       END IF
       Int_BufSz  = Int_BufSz  + 1  ! numBlades
+      Int_BufSz  = Int_BufSz  + 1  ! basicHAWTFormat
       Int_BufSz  = Int_BufSz  + 1  ! hasTower
-      Int_BufSz  = Int_BufSz  + 1  ! isHAWT
+      Int_BufSz  = Int_BufSz  + 1  ! HAWTprojection
       Int_BufSz  = Int_BufSz  + 1  ! motionType
   Int_BufSz   = Int_BufSz   + 1     ! motion allocated yes/no
   IF ( ALLOCATED(InData%motion) ) THEN
@@ -5424,10 +5475,6 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! amplitude
       Re_BufSz   = Re_BufSz   + 1  ! frequency
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%motionFileName)  ! motionFileName
-      Db_BufSz   = Db_BufSz   + SIZE(InData%Rg2b0)  ! Rg2b0
-      Db_BufSz   = Db_BufSz   + SIZE(InData%Rb2h0)  ! Rb2h0
-      Db_BufSz   = Db_BufSz   + SIZE(InData%Rg2b)  ! Rg2b
-      Db_BufSz   = Db_BufSz   + SIZE(InData%Rg2h)  ! Rg2h
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -5674,9 +5721,11 @@ ENDIF
       ENDIF
     IntKiBuf(Int_Xferred) = InData%numBlades
     Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%basicHAWTFormat, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%hasTower, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = TRANSFER(InData%isHAWT, IntKiBuf(1))
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%HAWTprojection, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%motionType
     Int_Xferred = Int_Xferred + 1
@@ -5712,30 +5761,6 @@ ENDIF
       IntKiBuf(Int_Xferred) = ICHAR(InData%motionFileName(I:I), IntKi)
       Int_Xferred = Int_Xferred + 1
     END DO ! I
-    DO i2 = LBOUND(InData%Rg2b0,2), UBOUND(InData%Rg2b0,2)
-      DO i1 = LBOUND(InData%Rg2b0,1), UBOUND(InData%Rg2b0,1)
-        DbKiBuf(Db_Xferred) = InData%Rg2b0(i1,i2)
-        Db_Xferred = Db_Xferred + 1
-      END DO
-    END DO
-    DO i2 = LBOUND(InData%Rb2h0,2), UBOUND(InData%Rb2h0,2)
-      DO i1 = LBOUND(InData%Rb2h0,1), UBOUND(InData%Rb2h0,1)
-        DbKiBuf(Db_Xferred) = InData%Rb2h0(i1,i2)
-        Db_Xferred = Db_Xferred + 1
-      END DO
-    END DO
-    DO i2 = LBOUND(InData%Rg2b,2), UBOUND(InData%Rg2b,2)
-      DO i1 = LBOUND(InData%Rg2b,1), UBOUND(InData%Rg2b,1)
-        DbKiBuf(Db_Xferred) = InData%Rg2b(i1,i2)
-        Db_Xferred = Db_Xferred + 1
-      END DO
-    END DO
-    DO i2 = LBOUND(InData%Rg2h,2), UBOUND(InData%Rg2h,2)
-      DO i1 = LBOUND(InData%Rg2h,1), UBOUND(InData%Rg2h,1)
-        DbKiBuf(Db_Xferred) = InData%Rg2h(i1,i2)
-        Db_Xferred = Db_Xferred + 1
-      END DO
-    END DO
  END SUBROUTINE ADM_Dvr_PackWTData
 
  SUBROUTINE ADM_Dvr_UnPackWTData( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -6076,9 +6101,11 @@ ENDIF
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
     OutData%numBlades = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
+    OutData%basicHAWTFormat = TRANSFER(IntKiBuf(Int_Xferred), OutData%basicHAWTFormat)
+    Int_Xferred = Int_Xferred + 1
     OutData%hasTower = TRANSFER(IntKiBuf(Int_Xferred), OutData%hasTower)
     Int_Xferred = Int_Xferred + 1
-    OutData%isHAWT = TRANSFER(IntKiBuf(Int_Xferred), OutData%isHAWT)
+    OutData%HAWTprojection = TRANSFER(IntKiBuf(Int_Xferred), OutData%HAWTprojection)
     Int_Xferred = Int_Xferred + 1
     OutData%motionType = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
@@ -6117,46 +6144,6 @@ ENDIF
       OutData%motionFileName(I:I) = CHAR(IntKiBuf(Int_Xferred))
       Int_Xferred = Int_Xferred + 1
     END DO ! I
-    i1_l = LBOUND(OutData%Rg2b0,1)
-    i1_u = UBOUND(OutData%Rg2b0,1)
-    i2_l = LBOUND(OutData%Rg2b0,2)
-    i2_u = UBOUND(OutData%Rg2b0,2)
-    DO i2 = LBOUND(OutData%Rg2b0,2), UBOUND(OutData%Rg2b0,2)
-      DO i1 = LBOUND(OutData%Rg2b0,1), UBOUND(OutData%Rg2b0,1)
-        OutData%Rg2b0(i1,i2) = DbKiBuf(Db_Xferred)
-        Db_Xferred = Db_Xferred + 1
-      END DO
-    END DO
-    i1_l = LBOUND(OutData%Rb2h0,1)
-    i1_u = UBOUND(OutData%Rb2h0,1)
-    i2_l = LBOUND(OutData%Rb2h0,2)
-    i2_u = UBOUND(OutData%Rb2h0,2)
-    DO i2 = LBOUND(OutData%Rb2h0,2), UBOUND(OutData%Rb2h0,2)
-      DO i1 = LBOUND(OutData%Rb2h0,1), UBOUND(OutData%Rb2h0,1)
-        OutData%Rb2h0(i1,i2) = DbKiBuf(Db_Xferred)
-        Db_Xferred = Db_Xferred + 1
-      END DO
-    END DO
-    i1_l = LBOUND(OutData%Rg2b,1)
-    i1_u = UBOUND(OutData%Rg2b,1)
-    i2_l = LBOUND(OutData%Rg2b,2)
-    i2_u = UBOUND(OutData%Rg2b,2)
-    DO i2 = LBOUND(OutData%Rg2b,2), UBOUND(OutData%Rg2b,2)
-      DO i1 = LBOUND(OutData%Rg2b,1), UBOUND(OutData%Rg2b,1)
-        OutData%Rg2b(i1,i2) = DbKiBuf(Db_Xferred)
-        Db_Xferred = Db_Xferred + 1
-      END DO
-    END DO
-    i1_l = LBOUND(OutData%Rg2h,1)
-    i1_u = UBOUND(OutData%Rg2h,1)
-    i2_l = LBOUND(OutData%Rg2h,2)
-    i2_u = UBOUND(OutData%Rg2h,2)
-    DO i2 = LBOUND(OutData%Rg2h,2), UBOUND(OutData%Rg2h,2)
-      DO i1 = LBOUND(OutData%Rg2h,1), UBOUND(OutData%Rg2h,1)
-        OutData%Rg2h(i1,i2) = DbKiBuf(Db_Xferred)
-        Db_Xferred = Db_Xferred + 1
-      END DO
-    END DO
  END SUBROUTINE ADM_Dvr_UnPackWTData
 
  SUBROUTINE ADM_Dvr_CopyDvrM_SimData( SrcDvrM_SimDataData, DstDvrM_SimDataData, CtrlCode, ErrStat, ErrMsg )
@@ -6176,6 +6163,10 @@ ENDIF
    ErrMsg  = ""
     DstDvrM_SimDataData%AD_InputFile = SrcDvrM_SimDataData%AD_InputFile
     DstDvrM_SimDataData%IW_InputFile = SrcDvrM_SimDataData%IW_InputFile
+    DstDvrM_SimDataData%CompInflow = SrcDvrM_SimDataData%CompInflow
+    DstDvrM_SimDataData%HWindSpeed = SrcDvrM_SimDataData%HWindSpeed
+    DstDvrM_SimDataData%RefHt = SrcDvrM_SimDataData%RefHt
+    DstDvrM_SimDataData%PLExp = SrcDvrM_SimDataData%PLExp
     DstDvrM_SimDataData%numTurbines = SrcDvrM_SimDataData%numTurbines
 IF (ALLOCATED(SrcDvrM_SimDataData%WT)) THEN
   i1_l = LBOUND(SrcDvrM_SimDataData%WT,1)
@@ -6195,7 +6186,6 @@ IF (ALLOCATED(SrcDvrM_SimDataData%WT)) THEN
 ENDIF
     DstDvrM_SimDataData%dT = SrcDvrM_SimDataData%dT
     DstDvrM_SimDataData%numSteps = SrcDvrM_SimDataData%numSteps
-    DstDvrM_SimDataData%numBladesTot = SrcDvrM_SimDataData%numBladesTot
       CALL ADM_Dvr_Copydvrm_outputs( SrcDvrM_SimDataData%out, DstDvrM_SimDataData%out, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
@@ -6256,6 +6246,10 @@ ENDIF
   Int_BufSz  = 0
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%AD_InputFile)  ! AD_InputFile
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%IW_InputFile)  ! IW_InputFile
+      Int_BufSz  = Int_BufSz  + 1  ! CompInflow
+      Re_BufSz   = Re_BufSz   + 1  ! HWindSpeed
+      Re_BufSz   = Re_BufSz   + 1  ! RefHt
+      Re_BufSz   = Re_BufSz   + 1  ! PLExp
       Int_BufSz  = Int_BufSz  + 1  ! numTurbines
   Int_BufSz   = Int_BufSz   + 1     ! WT allocated yes/no
   IF ( ALLOCATED(InData%WT) ) THEN
@@ -6283,7 +6277,6 @@ ENDIF
   END IF
       Db_BufSz   = Db_BufSz   + 1  ! dT
       Int_BufSz  = Int_BufSz  + 1  ! numSteps
-      Int_BufSz  = Int_BufSz  + 1  ! numBladesTot
       Int_BufSz   = Int_BufSz + 3  ! out: size of buffers for each call to pack subtype
       CALL ADM_Dvr_Packdvrm_outputs( Re_Buf, Db_Buf, Int_Buf, InData%out, ErrStat2, ErrMsg2, .TRUE. ) ! out 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -6336,6 +6329,14 @@ ENDIF
       IntKiBuf(Int_Xferred) = ICHAR(InData%IW_InputFile(I:I), IntKi)
       Int_Xferred = Int_Xferred + 1
     END DO ! I
+    IntKiBuf(Int_Xferred) = InData%CompInflow
+    Int_Xferred = Int_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%HWindSpeed
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%RefHt
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%PLExp
+    Re_Xferred = Re_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%numTurbines
     Int_Xferred = Int_Xferred + 1
   IF ( .NOT. ALLOCATED(InData%WT) ) THEN
@@ -6382,8 +6383,6 @@ ENDIF
     DbKiBuf(Db_Xferred) = InData%dT
     Db_Xferred = Db_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%numSteps
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%numBladesTot
     Int_Xferred = Int_Xferred + 1
       CALL ADM_Dvr_Packdvrm_outputs( Re_Buf, Db_Buf, Int_Buf, InData%out, ErrStat2, ErrMsg2, OnlySize ) ! out 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -6450,6 +6449,14 @@ ENDIF
       OutData%IW_InputFile(I:I) = CHAR(IntKiBuf(Int_Xferred))
       Int_Xferred = Int_Xferred + 1
     END DO ! I
+    OutData%CompInflow = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%HWindSpeed = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%RefHt = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%PLExp = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
     OutData%numTurbines = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WT not allocated
@@ -6511,8 +6518,6 @@ ENDIF
     OutData%dT = DbKiBuf(Db_Xferred)
     Db_Xferred = Db_Xferred + 1
     OutData%numSteps = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
-    OutData%numBladesTot = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
       Buf_size=IntKiBuf( Int_Xferred )
       Int_Xferred = Int_Xferred + 1

@@ -40,7 +40,7 @@ typedef   ^                         ^             character(ChanLen)     WriteOu
 typedef   ^                         ^             character(ChanLen)     WriteOutputUnt  {:}     -     -   "Channel units" "-"
 typedef   ^                         ^             ReKi                   storage          ::     -     -   "nChannel x nTime"
 typedef   ^                         ^             ReKi                   outLine          :      -     -   "Output line to be written to disk"
-typedef   ^                         ^             DvrVTK_SurfaceType     VTK_surface      -      -     -   "Data for VTK surface visualization"
+typedef   ^                         ^             DvrVTK_SurfaceType     VTK_surface      :      -     -   "Data for VTK surface visualization"
 typedef   ^                         ^             INTEGER                VTK_tWidth       -      -     -   "Width of number of files for leading zeros in file name format"    -
 typedef   ^                         ^             INTEGER                n_VTKTime        -      -     -   "Number of time steps between writing VTK files"    -
 typedef   ^                         ^             SiKi                   VTKHubRad        -      -     -   "Hub radius for visualization"    m
@@ -126,8 +126,9 @@ typedef   ^                         ^            HubData                 hub    
 typedef   ^                         ^            NacData                 nac              -      -     -   "" -
 typedef   ^                         ^            TwrData                 twr              -      -     -   "" -
 typedef   ^                         ^            IntKi                   numBlades        -      -     -   "" -
+typedef   ^                         ^            logical                 basicHAWTFormat  -      -     -   "If true simply input HubRad/Pitch/Overhang/Cone, otherwise all turbine inputs" -
 typedef   ^                         ^            logical                 hasTower         -      -     -   "" -
-typedef   ^                         ^            logical                 isHAWT           -      -     -   "" -
+typedef   ^                         ^            logical                 HAWTprojection   -      -     -   "" -
 typedef   ^                         ^            IntKi                   motionType       -      -     -   "" -
 typedef   ^                         ^            ReKi                    motion           ::     -     -   "" "-"
 typedef   ^                         ^            IntKi                   iMotion          -      -     -   "Stored index to optimize time interpolation" -
@@ -135,19 +136,22 @@ typedef   ^                         ^            IntKi                   degreeO
 typedef   ^                         ^            ReKi                    amplitude        -      -     -   "" -
 typedef   ^                         ^            ReKi                    frequency        -      -     -   "" -
 typedef   ^                         ^            character(1024)         motionFileName   -      -     -   "" -
-typedef   ^                         ^            DbKi                    Rg2b0            {3}{3} -     -   "Rotation matrix global 2 base at t=0" -
-typedef   ^                         ^            DbKi                    Rb2h0            {3}{3} -     -   "Rotation matrix base 2 hub" -
-typedef   ^                         ^            DbKi                    Rg2b             {3}{3} -     -   "Rotation matrix global 2 base at t" -
-typedef   ^                         ^            DbKi                    Rg2h             {3}{3} -     -   "Rotation matrix global 2 hub at t" -
+# typedef   ^                         ^            DbKi                    Rg2b0            {3}{3} -     -   "Rotation matrix global 2 base at t=0" -
+# typedef   ^                         ^            DbKi                    Rb2h0            {3}{3} -     -   "Rotation matrix base 2 hub" -
+# typedef   ^                         ^            DbKi                    Rg2b             {3}{3} -     -   "Rotation matrix global 2 base at t" -
+# typedef   ^                         ^            DbKi                    Rg2h             {3}{3} -     -   "Rotation matrix global 2 hub at t" -
 
 # ..... Data for driver simulation .......................................................................................................
 typedef   ^                        DvrM_SimData   character(1024)        AD_InputFile     -      -     -   "Name of AeroDyn input file" -
 typedef   ^                         ^            character(1024)         IW_InputFile     -      -     -   "Name of InfloWind input file" -
+typedef   ^                         ^            IntKi                   CompInflow       -      -     -   "0=Steady Wind, 1=InflowWind" "-"
+typedef   ^                         ^            ReKi                    HWindSpeed       -   -    -    "RefHeight Wind speed"
+typedef   ^                         ^            ReKi                    RefHt            -     -    -    "RefHeight"
+typedef   ^                         ^            ReKi                    PLExp            -     -    -    "PLExp"
 typedef   ^                         ^            IntKi                   numTurbines      -      -     -   "number of blades on turbine" "-"
 typedef   ^                         ^            WTData                  WT               :      -     -   "Wind turbine data" "-"
 typedef   ^                         ^            DbKi                    dT               -      -     -   "time increment" "s"
 typedef   ^                         ^            IntKi                   numSteps         -      -     -   "number of steps in this case" "-"
-typedef   ^                         ^            IntKi                   numBladesTot     -      -     -   "number of blades on turbine" "-"
 typedef   ^                         ^            DvrM_Outputs            out              -      -     -   "data for driver output file" "-"
 
 # ..... Data to wrap the driver ..........................................................................................................
