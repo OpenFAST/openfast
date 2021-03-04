@@ -79,7 +79,6 @@ subroutine DvrM_Init(DvrData, AD, IW, errStat,errMsg )
    errMsg  = ""
 
    ! --- Driver initialization
-   DvrData%out%unOutFile   = -1
    CALL NWTC_Init( ProgNameIN=version%Name )
    InputFile = ""  ! initialize to empty string to make sure it's input from the command line
    CALL CheckArgs( InputFile, Flag=FlagArg )
@@ -97,20 +96,22 @@ subroutine DvrM_Init(DvrData, AD, IW, errStat,errMsg )
    ! validate the inputs
    call ValidateInputs(DvrData, errStat2, errMsg2) ; if(Failed()) return     
 
+
    ! --- Initialize meshes
    call Init_Meshes(DvrData, errStat2, errMsg2); if(Failed()) return
 
 
    ! --- Initialize driver-only outputs
-   DvrData%out%nDvrOutputs = DvrData%numTurbines*1
+   allocate(DvrData%out%unOutFile(DvrData%numTurbines))
+   DvrData%out%unOutFile = -1
+
+   DvrData%out%nDvrOutputs = 1  ! 
    allocate(DvrData%out%WriteOutputHdr(1+DvrData%out%nDvrOutputs))
    allocate(DvrData%out%WriteOutputUnt(1+DvrData%out%nDvrOutputs))
    DvrData%out%WriteOutputHdr(1) = 'Time'
    DvrData%out%WriteOutputUnt(1) = '(s)'
-   do iWT = 1, DvrData%numTurbines
-      DvrData%out%WriteOutputHdr(1+iWT*1) = 'Azimuth'
-      DvrData%out%WriteOutputUnt(1+iWT*1) = '(deg)'
-   enddo
+   DvrData%out%WriteOutputHdr(1+1) = 'Azimuth'
+   DvrData%out%WriteOutputUnt(1+1) = '(deg)'
 
    ! --- Initialize aerodyn 
    call Init_AeroDyn(DvrData, AD, DvrData%dT, InitOutData_AD, errStat2, errMsg2); if(Failed()) return
@@ -135,7 +136,7 @@ subroutine DvrM_Init(DvrData, AD, IW, errStat,errMsg )
    END DO              
 
    ! --- Initialize outputs
-   call DvrM_InitializeOutputs(DvrData%out, DvrData%numSteps, errStat2, errMsg2); if(Failed()) return
+   call DvrM_InitializeOutputs(DvrData%numTurbines, DvrData%out, DvrData%numSteps, errStat2, errMsg2); if(Failed()) return
 
    ! --- Initialize VTK
    if (DvrData%out%WrVTK>0) then
@@ -182,8 +183,9 @@ subroutine DvrM_TimeStep(nt, DvrData, AD, IW, errStat, errMsg)
    time = AD%InputTime(2)
    ! Calculate outputs at nt - 1
    call AD_CalcOutput( time, AD%u(2), AD%p, AD%x, AD%xd, AD%z, AD%OtherState, AD%y, AD%m, errStat2, errMsg2 ); if(Failed()) return
-   ! TODO rotors outputs
-   call Dvr_WriteOutputs(nt, time, DvrData, DvrData%out, AD%y%rotors(1)%WriteOutput, IW%y%WriteOutput, errStat2, errMsg2); if(Failed()) return
+
+   ! Write outputs for all turbines
+   call Dvr_WriteOutputs(nt, time, DvrData, DvrData%out, AD%y, IW%y, errStat2, errMsg2); if(Failed()) return
 
    ! VTK outputs
    if (DvrData%out%WrVTK>0) then
@@ -212,19 +214,30 @@ subroutine DvrM_CleanUp(DvrData, AD, IW, initialized, errStat, errMsg)
    ! local variables
    character(ErrMsgLen)    :: errMsg2                 ! temporary Error message if ErrStat /= ErrID_None
    integer(IntKi)          :: errStat2                ! temporary Error status of the operation
+   integer(IntKi)          :: iWT
    character(*), parameter :: RoutineName = 'DvrM_CleanUp'
+   character(10) :: sWT
    errStat = ErrID_None
    errMsg  = ''
 
    ! Close the output file
    if (DvrData%out%fileFmt==idFmtBoth .or. DvrData%out%fileFmt == idFmtAscii) then
-      if (DvrData%out%unOutFile > 0) close(DvrData%out%unOutFile)
+      do iWT=1,DvrData%numTurbines
+         if (DvrData%out%unOutFile(iWT) > 0) close(DvrData%out%unOutFile(iWT))
+      enddo
    endif
    if (DvrData%out%fileFmt==idFmtBoth .or. DvrData%out%fileFmt == idFmtBinary) then
-      if ( initialized ) then
-         call WrBinFAST(trim(DvrData%out%Root)//'.outb', FileFmtID_ChanLen_In, 'AeroDynMultiDriver', DvrData%out%WriteOutputHdr, DvrData%out%WriteOutputUnt, (/0.0_DbKi, DvrData%dt/), DvrData%out%storage, errStat2, errMsg2)
-         call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
-      endif
+      do iWT=1,DvrData%numTurbines
+         if ( initialized ) then
+            if (DvrData%numTurbines >1) then
+               sWT = '.WT'//trim(num2lstr(iWT))
+            else
+               sWT = ''
+            endif
+            call WrBinFAST(trim(DvrData%out%Root)//trim(sWT)//'.outb', FileFmtID_ChanLen_In, 'AeroDynMultiDriver', DvrData%out%WriteOutputHdr, DvrData%out%WriteOutputUnt, (/0.0_DbKi, DvrData%dt/), DvrData%out%storage(:,:,iWT), errStat2, errMsg2)
+            call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
+         endif
+      enddo
    endif
          
    if ( initialized ) then
@@ -1245,13 +1258,13 @@ contains
 
 end subroutine ValidateInputs
 !----------------------------------------------------------------------------------------------------------------------------------
-subroutine Dvr_WriteOutputs(nt, t, DvrData, out, AD_output, IW_output, errStat, errMsg)
+subroutine Dvr_WriteOutputs(nt, t, DvrData, out, yAD, yIW, errStat, errMsg)
    integer(IntKi)         ,  intent(in   )   :: nt                   ! simulation time step
    real(DbKi)             ,  intent(in   )   :: t                    ! simulation time (s)
    type(DvrM_SimData),       intent(inout)   :: DvrData              ! driver data
-   type(DvrM_Outputs)     ,  intent(inout)   :: out
-   real(ReKi)             ,  intent(in   )   :: AD_output(:)         ! array of aerodyn outputs
-   real(ReKi)             ,  intent(in   )   :: IW_output(:)         ! array of inflowwind outputs
+   type(DvrM_Outputs)     ,  intent(inout)   :: out                  ! driver uotput options
+   type(AD_OutputType)    ,  intent(in   )   :: yAD                  ! aerodyn outputs
+   type(InflowWind_OutputType),intent(in )   :: yIW                  ! inflowwind outputs
    integer(IntKi)         ,  intent(inout)   :: errStat              ! Status of error message
    character(*)           ,  intent(inout)   :: errMsg               ! Error message if ErrStat /= ErrID_None
    ! Local variables.
@@ -1264,42 +1277,45 @@ subroutine Dvr_WriteOutputs(nt, t, DvrData, out, AD_output, IW_output, errStat, 
    errMsg  = ''
 
    ! Packing all outputs excpet time into one array
-   nAD = size(AD_output)
-   nIW = size(IW_output)
-   nDV = DvrData%out%nDvrOutputs
+   nAD = size(yAD%rotors(1)%WriteOutput)
+   nIW = size(yIW%WriteOutput)
+   nDV = out%nDvrOutputs
    do iWT = 1, DvrData%numTurbines
-      out%outLine(1+ (iWT-1)*1) = DvrData%WT(iWT)%hub%azimuth
-   enddo
-   out%outLine(nDV+1:nDV+nAD)  = AD_output
-   out%outLine(nDV+nAD+1:)     = IW_output
+      out%outLine(1)              = DvrData%WT(iWT)%hub%azimuth
+      out%outLine(nDV+1:nDV+nAD)  = yAD%rotors(iWT)%WriteOutput
+      out%outLine(nDV+nAD+1:)     = yIW%WriteOutput
 
-   if (out%fileFmt==idFmtBoth .or. out%fileFmt == idFmtAscii) then
-      ! ASCII
-      ! time
-      write( tmpStr, out%Fmt_t ) t  ! '(F15.4)'
-      call WrFileNR( out%unOutFile, tmpStr(1:out%ActualChanLen) )
-      call WrNumAryFileNR(out%unOutFile, out%outLine,  out%Fmt_a, errStat, errMsg)
-      ! write a new line (advance to the next line)
-      write(out%unOutFile,'()')
-   endif
-   if (out%fileFmt==idFmtBoth .or. out%fileFmt == idFmtBinary) then
-      ! Store for binary
-      out%storage(1:nDV+nAD+nIW, nt) = out%outLine(1:nDV+nAD+nIW)
-   endif
+      if (out%fileFmt==idFmtBoth .or. out%fileFmt == idFmtAscii) then
+         ! ASCII
+         ! time
+         write( tmpStr, out%Fmt_t ) t  ! '(F15.4)'
+         call WrFileNR( out%unOutFile(iWT), tmpStr(1:out%ActualChanLen) )
+         call WrNumAryFileNR(out%unOutFile(iWT), out%outLine,  out%Fmt_a, errStat, errMsg)
+         ! write a new line (advance to the next line)
+         write(out%unOutFile(iWT),'()')
+      endif
+      if (out%fileFmt==idFmtBoth .or. out%fileFmt == idFmtBinary) then
+         ! Store for binary
+         out%storage(1:nDV+nAD+nIW, nt, iWT) = out%outLine(1:nDV+nAD+nIW)
+      endif
+   enddo
       
 end subroutine Dvr_WriteOutputs
 !----------------------------------------------------------------------------------------------------------------------------------
-subroutine DvrM_InitializeOutputs(out, numSteps, errStat, errMsg)
+subroutine DvrM_InitializeOutputs(nWT, out, numSteps, errStat, errMsg)
+      integer(IntKi)         ,  intent(in   )   :: nWT                  ! Number of time steps
       type(DvrM_Outputs),       intent(inout)   :: out 
       integer(IntKi)         ,  intent(in   )   :: numSteps             ! Number of time steps
       integer(IntKi)         ,  intent(  out)   :: errStat              ! Status of error message
       character(*)           ,  intent(  out)   :: errMsg               ! Error message if ErrStat /= ErrID_None
       ! locals
-      integer(IntKi)                            ::  i      
-      integer(IntKi)                            :: numSpaces
-      integer(IntKi)                            :: numOuts
-      character(ChanLen)                        :: colTxt
-      character(ChanLen)                        :: caseTxt
+      integer(IntKi)     :: i
+      integer(IntKi)     :: numSpaces
+      integer(IntKi)     :: numOuts
+      integer(IntKi)     :: iWT
+      character(ChanLen) :: colTxt
+      character(ChanLen) :: caseTxt
+      character(10)      :: sWT
 
       numOuts = size(out%WriteOutputHdr)
 
@@ -1326,36 +1342,42 @@ subroutine DvrM_InitializeOutputs(out, numSteps, errStat, errMsg)
          end if
 
          ! --- Start writing to ascii input file 
-         call GetNewUnit(out%unOutFile, ErrStat, ErrMsg)
-         if ( ErrStat >= AbortErrLev ) then
-            out%unOutFile = -1
-            return
-         end if
+         do iWT=1,nWT
+            if (nWT>1) then
+               sWT = '.WT'//trim(num2lstr(iWT))
+            else
+               sWT = ''
+            endif
+            call GetNewUnit(out%unOutFile(iWT), ErrStat, ErrMsg)
+            if ( ErrStat >= AbortErrLev ) then
+               out%unOutFile(iWT) = -1
+               return
+            end if
+            call OpenFOutFile ( out%unOutFile(iWT), trim(out%Root)//trim(sWT)//'.out', ErrStat, ErrMsg )
+            if ( ErrStat >= AbortErrLev ) return
+            write (out%unOutFile(iWT),'(/,A)')  'Predictions were generated on '//CurDate()//' at '//CurTime()//' using '//trim( version%Name )
+            write (out%unOutFile(iWT),'(1X,A)') trim(GetNVD(out%AD_ver))
+            write (out%unOutFile(iWT),'()' )    !print a blank line
+            write (out%unOutFile(iWT),'()' )    !print a blank line
+            write (out%unOutFile(iWT),'()' )    !print a blank line
 
-         call OpenFOutFile ( out%unOutFile, trim(out%Root)//'.out', ErrStat, ErrMsg )
-         if ( ErrStat >= AbortErrLev ) return
-         write (out%unOutFile,'(/,A)')  'Predictions were generated on '//CurDate()//' at '//CurTime()//' using '//trim( version%Name )
-         write (out%unOutFile,'(1X,A)') trim(GetNVD(out%AD_ver))
-         write (out%unOutFile,'()' )    !print a blank line
-         write (out%unOutFile,'()' )    !print a blank line
-         write (out%unOutFile,'()' )    !print a blank line
+            ! Write the names of the output parameters on one line:
+            do i=1,numOuts
+               call WrFileNR ( out%unOutFile(iWT), out%delim//out%WriteOutputHdr(i)(1:out%ActualChanLen) )
+            end do ! i
+            write (out%unOutFile(iWT),'()')
 
-         ! Write the names of the output parameters on one line:
-         do i=1,numOuts
-            call WrFileNR ( out%unOutFile, out%delim//out%WriteOutputHdr(i)(1:out%ActualChanLen) )
-         end do ! i
-         write (out%unOutFile,'()')
-
-         ! Write the units of the output parameters on one line:
-         do i=1,numOuts
-            call WrFileNR ( out%unOutFile, out%delim//out%WriteOutputUnt(i)(1:out%ActualChanLen) )
-         end do ! i
-         write (out%unOutFile,'()')
+            ! Write the units of the output parameters on one line:
+            do i=1,numOuts
+               call WrFileNR ( out%unOutFile(iWT), out%delim//out%WriteOutputUnt(i)(1:out%ActualChanLen) )
+            end do ! i
+            write (out%unOutFile(iWT),'()')
+         enddo
       endif
 
       ! --- Binary
       if (out%fileFmt==idFmtBoth .or. out%fileFmt == idFmtBinary) then
-         call AllocAry(out%storage, numOuts-1, numSteps, 'storage', errStat, errMsg)
+         call AllocAry(out%storage, numOuts-1, numSteps, nWT, 'storage', errStat, errMsg)
       endif
 
 end subroutine DvrM_InitializeOutputs

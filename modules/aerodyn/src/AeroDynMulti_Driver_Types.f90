@@ -66,7 +66,7 @@ IMPLICIT NONE
 ! =========  DvrM_Outputs  =======
   TYPE, PUBLIC :: DvrM_Outputs
     TYPE(ProgDesc)  :: AD_ver      !< AeroDyn version information [-]
-    INTEGER(IntKi)  :: unOutFile      !< unit number for writing output file [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: unOutFile      !< unit number for writing output file for each rotor [-]
     INTEGER(IntKi)  :: ActualChanLen      !< Actual length of channels written to text file (less than or equal to ChanLen) [-]
     INTEGER(IntKi)  :: nDvrOutputs      !< Number of outputs for the driver (without AD and IW) [-]
     character(20)  :: Fmt_t      !< Format specifier for time channel [-]
@@ -79,7 +79,7 @@ IMPLICIT NONE
     character(1024)  :: VTK_OutFileRoot      !< Output file rootname for vtk [-]
     character(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputHdr      !< Channel headers [-]
     character(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !< Channel units [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: storage      !< nChannel x nTime [-]
+    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: storage      !< nTurbines x nChannel x nTime [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: outLine      !< Output line to be written to disk [-]
     TYPE(DvrVTK_SurfaceType) , DIMENSION(:), ALLOCATABLE  :: VTK_surface      !< Data for VTK surface visualization [-]
     INTEGER(IntKi)  :: VTK_tWidth      !< Width of number of files for leading zeros in file name format [-]
@@ -772,6 +772,7 @@ ENDIF
    INTEGER(IntKi)                 :: i,j,k
    INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
    INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
+   INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'ADM_Dvr_CopyDvrM_Outputs'
@@ -781,7 +782,18 @@ ENDIF
       CALL NWTC_Library_Copyprogdesc( SrcDvrM_OutputsData%AD_ver, DstDvrM_OutputsData%AD_ver, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
+IF (ALLOCATED(SrcDvrM_OutputsData%unOutFile)) THEN
+  i1_l = LBOUND(SrcDvrM_OutputsData%unOutFile,1)
+  i1_u = UBOUND(SrcDvrM_OutputsData%unOutFile,1)
+  IF (.NOT. ALLOCATED(DstDvrM_OutputsData%unOutFile)) THEN 
+    ALLOCATE(DstDvrM_OutputsData%unOutFile(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstDvrM_OutputsData%unOutFile.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
     DstDvrM_OutputsData%unOutFile = SrcDvrM_OutputsData%unOutFile
+ENDIF
     DstDvrM_OutputsData%ActualChanLen = SrcDvrM_OutputsData%ActualChanLen
     DstDvrM_OutputsData%nDvrOutputs = SrcDvrM_OutputsData%nDvrOutputs
     DstDvrM_OutputsData%Fmt_t = SrcDvrM_OutputsData%Fmt_t
@@ -821,8 +833,10 @@ IF (ALLOCATED(SrcDvrM_OutputsData%storage)) THEN
   i1_u = UBOUND(SrcDvrM_OutputsData%storage,1)
   i2_l = LBOUND(SrcDvrM_OutputsData%storage,2)
   i2_u = UBOUND(SrcDvrM_OutputsData%storage,2)
+  i3_l = LBOUND(SrcDvrM_OutputsData%storage,3)
+  i3_u = UBOUND(SrcDvrM_OutputsData%storage,3)
   IF (.NOT. ALLOCATED(DstDvrM_OutputsData%storage)) THEN 
-    ALLOCATE(DstDvrM_OutputsData%storage(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    ALLOCATE(DstDvrM_OutputsData%storage(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
       CALL SetErrStat(ErrID_Fatal, 'Error allocating DstDvrM_OutputsData%storage.', ErrStat, ErrMsg,RoutineName)
       RETURN
@@ -875,6 +889,9 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
   CALL NWTC_Library_Destroyprogdesc( DvrM_OutputsData%AD_ver, ErrStat, ErrMsg )
+IF (ALLOCATED(DvrM_OutputsData%unOutFile)) THEN
+  DEALLOCATE(DvrM_OutputsData%unOutFile)
+ENDIF
 IF (ALLOCATED(DvrM_OutputsData%WriteOutputHdr)) THEN
   DEALLOCATE(DvrM_OutputsData%WriteOutputHdr)
 ENDIF
@@ -948,7 +965,11 @@ ENDIF
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
-      Int_BufSz  = Int_BufSz  + 1  ! unOutFile
+  Int_BufSz   = Int_BufSz   + 1     ! unOutFile allocated yes/no
+  IF ( ALLOCATED(InData%unOutFile) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! unOutFile upper/lower bounds for each dimension
+      Int_BufSz  = Int_BufSz  + SIZE(InData%unOutFile)  ! unOutFile
+  END IF
       Int_BufSz  = Int_BufSz  + 1  ! ActualChanLen
       Int_BufSz  = Int_BufSz  + 1  ! nDvrOutputs
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%Fmt_t)  ! Fmt_t
@@ -971,7 +992,7 @@ ENDIF
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! storage allocated yes/no
   IF ( ALLOCATED(InData%storage) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*2  ! storage upper/lower bounds for each dimension
+    Int_BufSz   = Int_BufSz   + 2*3  ! storage upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%storage)  ! storage
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! outLine allocated yes/no
@@ -1062,8 +1083,21 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
-    IntKiBuf(Int_Xferred) = InData%unOutFile
+  IF ( .NOT. ALLOCATED(InData%unOutFile) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%unOutFile,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%unOutFile,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%unOutFile,1), UBOUND(InData%unOutFile,1)
+        IntKiBuf(Int_Xferred) = InData%unOutFile(i1)
+        Int_Xferred = Int_Xferred + 1
+      END DO
+  END IF
     IntKiBuf(Int_Xferred) = InData%ActualChanLen
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%nDvrOutputs
@@ -1142,11 +1176,16 @@ ENDIF
     IntKiBuf( Int_Xferred    ) = LBOUND(InData%storage,2)
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%storage,2)
     Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%storage,3)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%storage,3)
+    Int_Xferred = Int_Xferred + 2
 
-      DO i2 = LBOUND(InData%storage,2), UBOUND(InData%storage,2)
-        DO i1 = LBOUND(InData%storage,1), UBOUND(InData%storage,1)
-          ReKiBuf(Re_Xferred) = InData%storage(i1,i2)
-          Re_Xferred = Re_Xferred + 1
+      DO i3 = LBOUND(InData%storage,3), UBOUND(InData%storage,3)
+        DO i2 = LBOUND(InData%storage,2), UBOUND(InData%storage,2)
+          DO i1 = LBOUND(InData%storage,1), UBOUND(InData%storage,1)
+            ReKiBuf(Re_Xferred) = InData%storage(i1,i2,i3)
+            Re_Xferred = Re_Xferred + 1
+          END DO
         END DO
       END DO
   END IF
@@ -1237,6 +1276,7 @@ ENDIF
   INTEGER(IntKi)                 :: i
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
+  INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'ADM_Dvr_UnPackDvrM_Outputs'
@@ -1290,8 +1330,24 @@ ENDIF
       IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
-    OutData%unOutFile = IntKiBuf(Int_Xferred)
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! unOutFile not allocated
     Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%unOutFile)) DEALLOCATE(OutData%unOutFile)
+    ALLOCATE(OutData%unOutFile(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%unOutFile.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%unOutFile,1), UBOUND(OutData%unOutFile,1)
+        OutData%unOutFile(i1) = IntKiBuf(Int_Xferred)
+        Int_Xferred = Int_Xferred + 1
+      END DO
+  END IF
     OutData%ActualChanLen = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%nDvrOutputs = IntKiBuf(Int_Xferred)
@@ -1374,16 +1430,21 @@ ENDIF
     i2_l = IntKiBuf( Int_Xferred    )
     i2_u = IntKiBuf( Int_Xferred + 1)
     Int_Xferred = Int_Xferred + 2
+    i3_l = IntKiBuf( Int_Xferred    )
+    i3_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
     IF (ALLOCATED(OutData%storage)) DEALLOCATE(OutData%storage)
-    ALLOCATE(OutData%storage(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    ALLOCATE(OutData%storage(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
        CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%storage.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-      DO i2 = LBOUND(OutData%storage,2), UBOUND(OutData%storage,2)
-        DO i1 = LBOUND(OutData%storage,1), UBOUND(OutData%storage,1)
-          OutData%storage(i1,i2) = ReKiBuf(Re_Xferred)
-          Re_Xferred = Re_Xferred + 1
+      DO i3 = LBOUND(OutData%storage,3), UBOUND(OutData%storage,3)
+        DO i2 = LBOUND(OutData%storage,2), UBOUND(OutData%storage,2)
+          DO i1 = LBOUND(OutData%storage,1), UBOUND(OutData%storage,1)
+            OutData%storage(i1,i2,i3) = ReKiBuf(Re_Xferred)
+            Re_Xferred = Re_Xferred + 1
+          END DO
         END DO
       END DO
   END IF

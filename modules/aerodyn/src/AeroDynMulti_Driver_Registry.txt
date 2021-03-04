@@ -25,7 +25,7 @@ typedef    ^    DvrVTK_SurfaceType    DvrVTK_BLSurfaceType    BladeShape    {:} 
 
 # ..... Data for driver output file .......................................................................................................
 typedef   AeroDynMulti_Driver/ADM_Dvr  DvrM_Outputs ProgDesc          AD_ver           -      -     -   "AeroDyn version information" -
-typedef   ^                         ^             IntKi                  unOutFile        -      -     -   "unit number for writing output file" "-"
+typedef   ^                         ^             IntKi                  unOutFile        :      -     -   "unit number for writing output file for each rotor" "-"
 typedef   ^                         ^             IntKi                  ActualChanLen    -      -     -   "Actual length of channels written to text file (less than or equal to ChanLen)" "-"
 typedef   ^                         ^             IntKi                  nDvrOutputs      -      -     -   "Number of outputs for the driver (without AD and IW)" "-"
 typedef   ^                         ^             character(20)          Fmt_t            -      -     -   "Format specifier for time channel" "-"
@@ -38,7 +38,7 @@ typedef   ^                         ^             character(1024)        Root   
 typedef   ^                         ^             character(1024)        VTK_OutFileRoot  -      -     -   "Output file rootname for vtk" "-"
 typedef   ^                         ^             character(ChanLen)     WriteOutputHdr  {:}     -     -   "Channel headers" "-"
 typedef   ^                         ^             character(ChanLen)     WriteOutputUnt  {:}     -     -   "Channel units" "-"
-typedef   ^                         ^             ReKi                   storage          ::     -     -   "nChannel x nTime"
+typedef   ^                         ^             ReKi                   storage         :::     -     -   "nTurbines x nChannel x nTime"
 typedef   ^                         ^             ReKi                   outLine          :      -     -   "Output line to be written to disk"
 typedef   ^                         ^             DvrVTK_SurfaceType     VTK_surface      :      -     -   "Data for VTK surface visualization"
 typedef   ^                         ^             INTEGER                VTK_tWidth       -      -     -   "Width of number of files for leading zeros in file name format"    -
