@@ -135,10 +135,22 @@ InflowWind     7    VFlowAng                  0   VFlowAng    - Upflow angle (de
 
    -  The input file parser is updated to a keyword/value pair based input.
       Each entry must have a corresponding keyword with the same spelling as
-      expected
+      expected. See :numref:`input_file_overview` for an overview.
    -  Driver code includes ability to convert between wind types
 
 
+Modified in OpenFAST v2.4.0
+---------------------------
+
+============== ==== ================== ======================================================================================================================================================= =====================
+ Module        Line  New Flag Name      Example Value                                                                                                                                           Previous Flag Name
+============== ==== ================== ======================================================================================================================================================= =====================
+InflowWind     17   Filename_Uni        "unused"      Filename_Uni   - Filename of time series data for uniform wind field.      (-)                                                            Filename
+InflowWind     18   RefHt_Uni                    90   RefHt_Uni      - Reference height for horizontal wind speed                (m)                                                            RefHt
+InflowWind     35   RefHt_Hawc                   90   RefHt_Hawc     - reference height; the height (in meters) of the vertical center of the grid (m)                                          RefHt
+InflowWind     47   PLExp_Hawc                  0.2   PLExp_Hawc     - Power law exponent (-) (used for PL wind profile type only)                                                              PLExp
+InflowWind     49   XOffset                       0   XOffset         - Initial offset in +x direction (shift of wind box)                                                                      InitPosition(x)
+============== ==== ================== ======================================================================================================================================================= =====================
 
 
 OpenFAST v2.3.0 to OpenFAST v2.4.0
