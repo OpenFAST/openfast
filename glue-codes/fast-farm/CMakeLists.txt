@@ -31,7 +31,7 @@ if(OPENMP_FOUND)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
 endif()
 
-add_executable(fast-farm
+add_executable(FAST.Farm
   src/FAST_Farm_IO.f90
   src/FAST_Farm_Subs.f90
   src/FASTWrapper.f90
@@ -39,8 +39,8 @@ add_executable(fast-farm
   src/FAST_Farm_Types.f90
   src/FASTWrapper_Types.f90)
   
-target_link_libraries(fast-farm openfast_postlib openfast_prelib nwtclibs scfastlib sctypeslib awaelib wdlib)
-set_property(TARGET fast-farm PROPERTY LINKER_LANGUAGE Fortran)
+target_link_libraries(FAST.Farm openfast_postlib openfast_prelib nwtclibs scfastlib sctypeslib awaelib wdlib)
+set_property(TARGET FAST.Farm PROPERTY LINKER_LANGUAGE Fortran)
 
 string(TOUPPER ${CMAKE_Fortran_COMPILER_ID} _compiler_id)
 string(TOUPPER ${CMAKE_BUILD_TYPE} _build_type)
@@ -52,5 +52,5 @@ if (${_compiler_id} STREQUAL "GNU" AND ${_build_type} STREQUAL "RELEASE")
   set_source_files_properties(src/FASTWrapper_Types.f90 PROPERTIES COMPILE_FLAGS "-fno-var-tracking -fno-var-tracking-assignments")
 endif()
 
-install(TARGETS fast-farm
+install(TARGETS FAST.Farm
   RUNTIME DESTINATION bin)

@@ -38,7 +38,7 @@ option(CTEST_PLOT_ERRORS "Generate plots of regression test errors." OFF)
 set(CTEST_OPENFAST_EXECUTABLE "${CMAKE_BINARY_DIR}/glue-codes/openfast/openfast" CACHE FILEPATH "Specify the OpenFAST executable to use in testing.")
 
 # Set the FASTFarm executable configuration option and default
-set(CTEST_FASTFARM_EXECUTABLE "${CMAKE_BINARY_DIR}/glue-codes/fast-farm/fast-farm" CACHE FILEPATH "Specify the FASTFarm executable to use in testing.")
+set(CTEST_FASTFARM_EXECUTABLE "${CMAKE_BINARY_DIR}/glue-codes/fast-farm/FAST.Farm" CACHE FILEPATH "Specify the FASTFarm executable to use in testing.")
 
 # Set the AeroDyn executable configuration option and default
 set(CTEST_AERODYN_EXECUTABLE "${CMAKE_BINARY_DIR}/modules/aerodyn/aerodyn_driver" CACHE FILEPATH "Specify the AeroDyn driver executable to use in testing.")
