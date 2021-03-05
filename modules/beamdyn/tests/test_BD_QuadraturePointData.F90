@@ -53,11 +53,12 @@ contains
         ! - 5 node, 1 element; deformed
         !
         ! tests the initial values at nodes, and the interpolated values at a single quadrature point
+        ! test results were created with mathematica
         !
         ! DETAILS ABOUT UNDERLYING MODEL
-        ! Reference-line definition, 0 <= t <= 1
+        ! Reference-line definition on 0 <= t <= 1
         ! fx[t_] = t - 2. t^4;
-        ! fy[t_] = -2 t + 3. t^2
+        ! fy[t_] = -2 t + 3. t^2;
         ! fz[t_] = 5. t;
         ! ft[t_] = 90. t^2;
         ! Length of undeformed line: 5.82222272658737
@@ -82,10 +83,10 @@ contains
         ! --------------------------------------------------------------------------
         testname = "5 node, 1 element, 1 qp, curved:"
  
-        ! Let's use Gauss_Legendre Quadrature, which should be exact for intended polynomial test case
-        nodes_per_elem = 5
+        nodes_per_elem = 5 ! fourth-order polynomial representation
         elem_total = 1
-        nqp = 1
+        nqp = 1 ! we are testing at a single, randomly chosen quadrature point
+
         p = simpleparametertype(elem_total,nodes_per_elem,nqp,0,1)
 
         call AllocAry(baseline_uu0  , p%dof_node,   p%nqp,            p%elem_total, 'baseline_uu0'     , ErrStat, ErrMsg)
@@ -130,10 +131,10 @@ contains
         baseline_rrN0(1:3,4,1) = (/ -1.1980591841054526,-0.3478409509012645,0.9658032687192992 /)
         baseline_rrN0(1:3,5,1) = (/ -1.5856082606694464,-0.3853274394272689,1.3714709059387975 /)
 
-        ! We're just looking at one randomly selected point in the domain to test interpolation; can be expanded
+        ! We are just looking at one randomly selected point in the domain to test interpolation; can be expanded
         p%QptN(1) = 0.3
 
-        ! Input baseline/reference quantities; uu0 and E10 are only for at quadrature points, so just 1 here 
+        ! Input baseline/reference quantities; uu0 and E10 are only for at quadrature points, so just 1 point here 
         ! uu0 is reference line evaluated at quadrature point
         ! E10 is tangent evaluated at qudrature point 
         baseline_uu0(1:3,1,1) = (/ 0.29298750000000007,-0.03250000000000007,3.2499999999999996  /)
