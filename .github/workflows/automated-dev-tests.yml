@@ -115,14 +115,14 @@ jobs:
             -DBUILD_TESTING:BOOL=ON \
             -DCTEST_PLOT_ERRORS:BOOL=ON \
             ${GITHUB_WORKSPACE}
-      - name: Build FAST-Farm
+      - name: Build FAST.Farm
         # if: contains(github.event.head_commit.message, 'Action - Test All') || contains(github.event.pull_request.labels.*.name, 'Action - Test All') 
         working-directory: ${{runner.workspace}}/build
         run: |
-          cmake --build . --target fast-farm -- -j ${{env.NUM_PROCS}}
+          cmake --build . --target FAST.Farm -- -j ${{env.NUM_PROCS}}
           cmake --build . --target regression_tests -- -j ${{env.NUM_PROCS}}
 
-      - name: Run FAST-Farm tests
+      - name: Run FAST.Farm tests
         # if: contains(github.event.head_commit.message, 'Action - Test All') || contains(github.event.pull_request.labels.*.name, 'Action - Test All') 
         run: |
           ctest -VV -L fastfarm
