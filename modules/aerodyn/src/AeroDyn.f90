@@ -913,6 +913,8 @@ subroutine Init_u( u, p, p_AD, InputFileData, InitInp, errStat, errMsg )
                         ,ErrStat   = ErrStat2                              &
                         ,ErrMess   = ErrMsg2                               &
                         ,Orientation     = .true.                          &
+                        ,TranslationDisp=.true., TranslationVel=.true.     & 
+                        ,RotationVel=.true., TranslationAcc=.true., RotationAcc=.true. &
                         )
             call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
 

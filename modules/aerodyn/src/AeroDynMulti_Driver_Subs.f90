@@ -310,10 +310,9 @@ subroutine Init_AeroDyn(DvrData, AD, dt, InitOutData, errStat, errMsg)
  
    call AD_Init(InitInData, AD%u(1), AD%p, AD%x, AD%xd, AD%z, AD%OtherState, AD%y, AD%m, dt, InitOutData, ErrStat2, ErrMsg2 ); if (Failed()) return
       
-   ! move AD initOut data to AD Driver
-   ! TODO TODO Multi rotors
-   !call move_alloc(InitOutData%WriteOutputHdr, DvrData%out%WriteOutputHdr)
-   !call move_alloc(InitOutData%WriteOutputUnt, DvrData%out%WriteOutputUnt)   
+   ! Add writeoutput units and headers to driver.
+   ! NOTE: we assume that they are the same output variables for all rotors
+   ! The alternative is that the driver save different units and headers
    call concatOutputs(DvrData, InitOutData%rotors(1)%WriteOutputHdr, InitOutData%rotors(1)%WriteOutputUnt, errStat2, errMsg2); if(Failed()) return
 
    DvrData%out%AD_ver = InitOutData%ver
@@ -808,6 +807,7 @@ subroutine Set_AD_Inputs(nt,DvrData,AD,IW,errStat,errMsg)
          call Transfer_Point_to_Point(wt%hub%ptMesh, wt%bld(iB)%ptMesh, wt%hub%map2bldPt(iB), errStat2, errMsg2); if(Failed()) return
       enddo
 
+
       ! --- Transfer to AeroDyn
       ! Hub 2 Hub AD 
       call Transfer_Point_to_Point(wt%hub%ptMesh, AD%u(1)%rotors(iWT)%hubMotion, wt%hub%ED_P_2_AD_P_H, errStat2, errMsg2); if(Failed()) return
@@ -830,23 +830,6 @@ subroutine Set_AD_Inputs(nt,DvrData,AD,IW,errStat,errMsg)
          endif
       endif
 
-      ! Blade and blade root velocities: ! TODO TODO
-      do k=1,wt%numBlades
-         position =  AD%u(1)%rotors(iWT)%BladeRootMotion(k)%Position(:,1) + AD%u(1)%rotors(iWT)%BladeRootMotion(k)%TranslationDisp(:,1) &
-                     - AD%u(1)%rotors(iWT)%HubMotion%Position(:,1) - AD%u(1)%rotors(iWT)%HubMotion%TranslationDisp(:,1)
-         AD%u(1)%rotors(iWT)%BladeRootMotion(k)%TranslationVel( :,1) = cross_product( AD%u(1)%rotors(iWT)%HubMotion%RotationVel(:,1), position )
-
-         do j=1,AD%u(1)%rotors(iWT)%BladeMotion(k)%nnodes        
-            
-            position =  AD%u(1)%rotors(iWT)%BladeMotion(k)%Position(:,j) + AD%u(1)%rotors(iWT)%BladeMotion(k)%TranslationDisp(:,j) &
-                      - AD%u(1)%rotors(iWT)%HubMotion%Position(:,1) - AD%u(1)%rotors(iWT)%HubMotion%TranslationDisp(:,1)
-            AD%u(1)%rotors(iWT)%BladeMotion(k)%TranslationVel( :,j) = cross_product( AD%u(1)%rotors(iWT)%HubMotion%RotationVel(:,1), position )
-            
-            AD%u(1)%rotors(iWT)%BladeMotion(k)%RotationVel(:,j) = AD%u(1)%rotors(iWT)%HubMotion%Orientation(1,:,1) * RotSpeed ! simplification (without pitch rate)
-            AD%u(1)%rotors(iWT)%BladeMotion(k)%TranslationAcc(:,j) = 0.0_ReKi ! simplification
-         end do !j=nnodes
-                                    
-      end do !k=numBlades       
    enddo ! iWT, rotors
       
    ! --- Inflow on points
