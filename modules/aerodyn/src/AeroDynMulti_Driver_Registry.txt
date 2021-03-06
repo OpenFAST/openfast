@@ -136,10 +136,6 @@ typedef   ^                         ^            IntKi                   degreeO
 typedef   ^                         ^            ReKi                    amplitude        -      -     -   "" -
 typedef   ^                         ^            ReKi                    frequency        -      -     -   "" -
 typedef   ^                         ^            character(1024)         motionFileName   -      -     -   "" -
-# typedef   ^                         ^            DbKi                    Rg2b0            {3}{3} -     -   "Rotation matrix global 2 base at t=0" -
-# typedef   ^                         ^            DbKi                    Rb2h0            {3}{3} -     -   "Rotation matrix base 2 hub" -
-# typedef   ^                         ^            DbKi                    Rg2b             {3}{3} -     -   "Rotation matrix global 2 base at t" -
-# typedef   ^                         ^            DbKi                    Rg2h             {3}{3} -     -   "Rotation matrix global 2 hub at t" -
 
 # ..... Data for driver simulation .......................................................................................................
 typedef   ^                        DvrM_SimData   character(1024)        AD_InputFile     -      -     -   "Name of AeroDyn input file" -
