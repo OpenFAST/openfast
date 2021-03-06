@@ -668,10 +668,9 @@ subroutine Set_Mesh_Motion(nt,DvrData,errStat,errMsg)
    character(ErrMsgLen)    :: errMsg2       ! local error message if ErrStat /= ErrID_None
    real(R8Ki)              :: theta(3)
    real(ReKi) :: hubMotion(3)  ! Azimuth, Speed, Acceleration
-   real(ReKi) :: nacMotion(1)  ! Yaw
+   real(ReKi) :: nacMotion(3)  ! Yaw, yaw speed, yaw acc
    real(ReKi) :: basMotion(18) ! Base motion
-   real(ReKi) :: bldMotion(1)  ! Pitch
-   real(ReKi) :: RotSpeed
+   real(ReKi) :: bldMotion(3)  ! Pitch, Pitch speed, Pitch Acc
    real(R8Ki) :: orientation(3,3)
    real(R8Ki) :: orientation_loc(3,3)
    real(DbKi) :: time
@@ -723,46 +722,71 @@ subroutine Set_Mesh_Motion(nt,DvrData,errStat,errMsg)
       ! --- Nacelle Motion
       ! Base to Nac
       call Transfer_Point_to_Point(wt%ptMesh, wt%nac%ptMesh, wt%map2nacPt, errStat2, errMsg2); if(Failed()) return
-
-      ! TODO yaw
-      ! Hub motions:
-      !theta(1) = 0.0_ReKi
-      !theta(2) = 0.0_ReKi
-      !theta(3) = Yaw
-      !R_yaw = EulerConstruct(theta)
-      !print*,'Nac Orientation',wt%nac%mesh%reforientation
-      !print*,'Nac Orientation',wt%nac%mesh%orientation
-      !wt%nac%ptMesh%Orientation(:,:,1) = matmul(orientation, wt%nac%ptMesh%Orientation(:,:,1))
-      !wt%nac%ptMesh%RotationVel(  :,1) = wt%nac%ptMesh%RotationVel(  :,1) + wt%nac%ptMesh%Orientation(1,:,1) * YawSpeed  ! TODO TODO
+      ! Nacelle yaw motion (along nac z)
+      theta =0.0_ReKi
+      if (wt%nac%motionType==idNacMotionConstant) then
+         wt%nac%yawSpeed = 0.0_ReKi
+         wt%nac%yawAcc   = 0.0_ReKi
+      elseif (wt%nac%motionType==idNacMotionVariable) then
+         call interpTimeValue(wt%nac%motion, time, wt%nac%iMotion, nacMotion)
+         wt%nac%yaw      = nacMotion(1)
+         wt%nac%yawSpeed = nacMotion(2)
+         wt%nac%yawAcc   = nacMotion(3)
+      else
+         print*,'Unknown nac motion type, should never happen'
+         STOP
+      endif
+      theta(3) = wt%nac%yaw
+      orientation_loc = EulerConstruct(theta)
+      wt%nac%ptMesh%Orientation(:,:,1) = matmul(orientation_loc, wt%nac%ptMesh%Orientation(:,:,1))
+      wt%nac%ptMesh%RotationVel(  :,1) = wt%nac%ptMesh%RotationVel(:,1) + wt%nac%ptMesh%Orientation(3,:,1) * wt%nac%yawSpeed
+      wt%nac%ptMesh%RotationAcc(  :,1) = wt%nac%ptMesh%RotationAcc(:,1) + wt%nac%ptMesh%Orientation(3,:,1) * wt%nac%yawAcc
 
       ! --- Hub Motion
       ! Nac 2 hub (rigid body)
       call Transfer_Point_to_Point(wt%nac%ptMesh, wt%hub%ptMesh, wt%nac%map2hubPt, errStat2, errMsg2); if(Failed()) return
-      ! Rotation
+      ! Hub rotation around x
       if (wt%hub%motionType == idHubMotionConstant) then
          ! save the azimuth at t (not t+dt) for output to file:
-         wt%hub%azimuth = MODULO(REAL(DvrData%dT*(nt-1)*wt%hub%speed, ReKi) * R2D, 360.0_ReKi )
+         wt%hub%azimuth = MODULO(REAL(DvrData%dT*(nt-1)*wt%hub%rotSpeed, ReKi) * R2D, 360.0_ReKi )
+         wt%hub%rotAcc  = 0.0_ReKi
       else if (wt%hub%motionType == idHubMotionVariable) then
          call interpTimeValue(wt%hub%motion, time, wt%hub%iMotion, hubMotion)
          !print*,hubMotion
-         wt%hub%speed   = hubMotion(2)
+         wt%hub%rotSpeed  = hubMotion(2)
+         wt%hub%rotAcc    = hubMotion(2)
          wt%hub%azimuth = MODULO(hubMotion(1)*R2D, 360.0_ReKi )
+      else
+         print*,'Unknown hun motion type, should never happen'
+         STOP
       endif
-      RotSpeed = wt%hub%speed
-
-      ! Rotation always around x
-      theta(1) = wt%hub%azimuth*D2R + DvrData%dt * RotSpeed
+      theta(1) = wt%hub%azimuth*D2R + DvrData%dt * wt%hub%rotSpeed
       theta(2) = 0.0_ReKi
       theta(3) = 0.0_ReKi
-
-      orientation = EulerConstruct( theta )
-      wt%hub%ptMesh%Orientation(:,:,1) = matmul(orientation, wt%hub%ptMesh%Orientation(:,:,1))
-      wt%hub%ptMesh%RotationVel(  :,1) = wt%hub%ptMesh%RotationVel(  :,1) + wt%hub%ptMesh%Orientation(1,:,1) * RotSpeed  ! TODO TODO
+      orientation_loc = EulerConstruct( theta )
+      wt%hub%ptMesh%Orientation(:,:,1) = matmul(orientation_loc, wt%hub%ptMesh%Orientation(:,:,1))
+      wt%hub%ptMesh%RotationVel(  :,1) = wt%hub%ptMesh%RotationVel(:,1) + wt%hub%ptMesh%Orientation(1,:,1) * wt%hub%rotSpeed
+      wt%hub%ptMesh%RotationAcc(  :,1) = wt%hub%ptMesh%RotationAcc(:,1) + wt%hub%ptMesh%Orientation(1,:,1) * wt%hub%rotAcc
 
       ! --- Blade motion
       ! Hub 2 blade root
       do iB = 1,wt%numBlades
          call Transfer_Point_to_Point(wt%hub%ptMesh, wt%bld(iB)%ptMesh, wt%hub%map2bldPt(iB), errStat2, errMsg2); if(Failed()) return
+         ! Pitch motion aong z
+         theta =0.0_ReKi
+         if (wt%bld(iB)%motionType==idBldMotionConstant) then
+            theta(3) = - wt%bld(iB)%pitch ! NOTE: sign, wind turbine convention ...
+         elseif (wt%bld(iB)%motionType==idBldMotionVariable) then
+            call interpTimeValue(wt%bld(iB)%motion, time, wt%bld(iB)%iMotion, bldMotion)
+            theta(3) = - bldMotion(1) ! NOTE sign
+            wt%bld(iB)%ptMesh%RotationVel(:,1) = wt%bld(iB)%ptMesh%RotationVel(:,1) + wt%bld(iB)%ptMesh%Orientation(3,:,1)* (-bldMotion(2))
+            wt%bld(iB)%ptMesh%RotationAcc(:,1) = wt%bld(iB)%ptMesh%RotationAcc(:,1) + wt%bld(iB)%ptMesh%Orientation(3,:,1)* (-bldMotion(3))
+         else
+            print*,'Unknown blade motion type, should never happen'
+            STOP
+         endif
+         orientation_loc = EulerConstruct(theta)
+         wt%bld(iB)%ptMesh%Orientation(:,:,1) = matmul(orientation_loc, wt%bld(iB)%ptMesh%Orientation(:,:,1))
       enddo
    enddo ! Loop on wind turbines
 
@@ -1058,7 +1082,7 @@ subroutine Dvr_ReadInputFile(fileName, DvrData, errStat, errMsg )
          wt%nac%motionType    = idNacMotionConstant
          wt%nac%yaw           = nacYaw
          wt%hub%motionType    = idHubMotionConstant
-         wt%hub%speed         = rotSpeed*Pi/30._ReKi
+         wt%hub%rotSpeed      = rotSpeed*Pi/30._ReKi
          wt%bld(:)%motionType = idBldMotionConstant
          wt%bld(:)%pitch      = bldPitch * Pi /180._ReKi
       else
@@ -1114,7 +1138,7 @@ subroutine Dvr_ReadInputFile(fileName, DvrData, errStat, errMsg )
          call ParseVar(FileInfo_In, CurLine, 'nacMotionFilename'//sWT, wt%nac%motionFileName, errStat2, errMsg2, unEc); if(Failed()) return
          wt%nac%yaw = wt%nac%yaw * Pi/180_ReKi ! yaw stored in rad
          if (wt%nac%motionType==idNacMotionVariable) then
-            call ReadDelimFile(wt%nac%motionFilename, 2, wt%nac%motion, errStat2, errMsg2); if(Failed()) return
+            call ReadDelimFile(wt%nac%motionFilename, 4, wt%nac%motion, errStat2, errMsg2); if(Failed()) return
             wt%nac%iMotion=1
             if (wt%nac%motion(size(wt%nac%motion,1),1)<tMax) then
                call WrScr('Warning: maximum time in motion file smaller than simulation time, last values will be repeated. File: '//trim(wt%nac%motionFileName))
@@ -1124,9 +1148,9 @@ subroutine Dvr_ReadInputFile(fileName, DvrData, errStat, errMsg )
          ! Rotor motion
          call ParseCom(FileInfo_In, CurLine, Line, errStat2, errMsg2, unEc); if(Failed()) return
          call ParseVar(FileInfo_In, CurLine, 'rotMotionType'//sWT    , wt%hub%motionType    , errStat2, errMsg2, unEc); if(Failed()) return
-         call ParseVar(FileInfo_In, CurLine, 'rotSpeed'//sWT         , wt%hub%speed         , errStat2, errMsg2, unEc); if(Failed()) return
+         call ParseVar(FileInfo_In, CurLine, 'rotSpeed'//sWT         , wt%hub%rotSpeed      , errStat2, errMsg2, unEc); if(Failed()) return
          call ParseVar(FileInfo_In, CurLine, 'rotMotionFilename'//sWT, wt%hub%motionFileName, errStat2, errMsg2, unEc); if(Failed()) return
-         wt%hub%speed = wt%hub%speed * Pi/30_ReKi ! speed stored in rad/s 
+         wt%hub%rotSpeed = wt%hub%rotSpeed * Pi/30_ReKi ! speed stored in rad/s 
          if (wt%hub%motionType==idHubMotionVariable) then
             call ReadDelimFile(wt%hub%motionFilename, 4, wt%hub%motion, errStat2, errMsg2); if(Failed()) return
             wt%hub%iMotion=1
@@ -1150,7 +1174,7 @@ subroutine Dvr_ReadInputFile(fileName, DvrData, errStat, errMsg )
          enddo
          do iB=1,wt%numBlades
             if (wt%bld(iB)%motionType==idBldMotionVariable) then
-               call ReadDelimFile(wt%bld(iB)%motionFilename, 2, wt%bld(iB)%motion, errStat2, errMsg2); if(Failed()) return
+               call ReadDelimFile(wt%bld(iB)%motionFilename, 4, wt%bld(iB)%motion, errStat2, errMsg2); if(Failed()) return
                wt%bld(iB)%iMotion=1
                if (wt%bld(iB)%motion(size(wt%bld(iB)%motion,1),1)<tMax) then
                   call WrScr('Warning: maximum time in motion file smaller than simulation time, last values will be repeated. File: '//trim(wt%bld(iB)%motionFileName))

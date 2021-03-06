@@ -118,6 +118,8 @@ IMPLICIT NONE
 ! =========  BladeData  =======
   TYPE, PUBLIC :: BladeData
     REAL(ReKi)  :: pitch      !< rad [-]
+    REAL(ReKi)  :: pitchSpeed      !< rad/s [-]
+    REAL(ReKi)  :: pitchAcc      !< rad/s/s [-]
     REAL(ReKi) , DIMENSION(1:3)  :: origin_h      !<  [-]
     REAL(ReKi) , DIMENSION(1:3)  :: orientation_h      !<  [-]
     REAL(ReKi)  :: hubRad_bl      !<  [-]
@@ -135,10 +137,11 @@ IMPLICIT NONE
   TYPE, PUBLIC :: HubData
     REAL(ReKi) , DIMENSION(1:3)  :: origin_n      !<  [-]
     REAL(ReKi) , DIMENSION(1:3)  :: orientation_n      !<  [-]
-    REAL(ReKi)  :: azimuth      !<  [-]
     INTEGER(IntKi)  :: motionType      !<  [-]
     INTEGER(IntKi)  :: iMotion      !< Stored index to optimize time interpolation [-]
-    REAL(ReKi)  :: speed      !< rad/s [-]
+    REAL(ReKi)  :: azimuth      !< rotor position [rad]
+    REAL(ReKi)  :: rotSpeed      !< rotor speed [rad/s]
+    REAL(ReKi)  :: rotAcc      !< rotor acceleration [rad/s/s]
     character(1024)  :: motionFileName      !<  [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: motion      !<  [-]
     TYPE(MeshType)  :: ptMesh      !< Point mesh for origin motion [-]
@@ -151,7 +154,9 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(1:3)  :: origin_t      !<  [-]
     INTEGER(IntKi)  :: motionType      !<  [-]
     INTEGER(IntKi)  :: iMotion      !< Stored index to optimize time interpolation [-]
-    REAL(ReKi)  :: yaw      !< rad [-]
+    REAL(ReKi)  :: yaw      !< rad [rad]
+    REAL(ReKi)  :: yawSpeed      !< yawspeed  [rad/s]
+    REAL(ReKi)  :: yawAcc      !< yawAcceleration [rad/s^2]
     character(1024)  :: motionFileName      !<  [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: motion      !<  [-]
     TYPE(MeshType)  :: ptMesh      !< Point mesh for origin motion [-]
@@ -3275,6 +3280,8 @@ ENDDO
    ErrStat = ErrID_None
    ErrMsg  = ""
     DstBladeDataData%pitch = SrcBladeDataData%pitch
+    DstBladeDataData%pitchSpeed = SrcBladeDataData%pitchSpeed
+    DstBladeDataData%pitchAcc = SrcBladeDataData%pitchAcc
     DstBladeDataData%origin_h = SrcBladeDataData%origin_h
     DstBladeDataData%orientation_h = SrcBladeDataData%orientation_h
     DstBladeDataData%hubRad_bl = SrcBladeDataData%hubRad_bl
@@ -3360,6 +3367,8 @@ ENDIF
   Db_BufSz  = 0
   Int_BufSz  = 0
       Re_BufSz   = Re_BufSz   + 1  ! pitch
+      Re_BufSz   = Re_BufSz   + 1  ! pitchSpeed
+      Re_BufSz   = Re_BufSz   + 1  ! pitchAcc
       Re_BufSz   = Re_BufSz   + SIZE(InData%origin_h)  ! origin_h
       Re_BufSz   = Re_BufSz   + SIZE(InData%orientation_h)  ! orientation_h
       Re_BufSz   = Re_BufSz   + 1  ! hubRad_bl
@@ -3452,6 +3461,10 @@ ENDIF
   Int_Xferred = 1
 
     ReKiBuf(Re_Xferred) = InData%pitch
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%pitchSpeed
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%pitchAcc
     Re_Xferred = Re_Xferred + 1
     DO i1 = LBOUND(InData%origin_h,1), UBOUND(InData%origin_h,1)
       ReKiBuf(Re_Xferred) = InData%origin_h(i1)
@@ -3612,6 +3625,10 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred  = 1
     OutData%pitch = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%pitchSpeed = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%pitchAcc = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     i1_l = LBOUND(OutData%origin_h,1)
     i1_u = UBOUND(OutData%origin_h,1)
@@ -3808,10 +3825,11 @@ ENDIF
    ErrMsg  = ""
     DstHubDataData%origin_n = SrcHubDataData%origin_n
     DstHubDataData%orientation_n = SrcHubDataData%orientation_n
-    DstHubDataData%azimuth = SrcHubDataData%azimuth
     DstHubDataData%motionType = SrcHubDataData%motionType
     DstHubDataData%iMotion = SrcHubDataData%iMotion
-    DstHubDataData%speed = SrcHubDataData%speed
+    DstHubDataData%azimuth = SrcHubDataData%azimuth
+    DstHubDataData%rotSpeed = SrcHubDataData%rotSpeed
+    DstHubDataData%rotAcc = SrcHubDataData%rotAcc
     DstHubDataData%motionFileName = SrcHubDataData%motionFileName
 IF (ALLOCATED(SrcHubDataData%motion)) THEN
   i1_l = LBOUND(SrcHubDataData%motion,1)
@@ -3910,10 +3928,11 @@ ENDIF
   Int_BufSz  = 0
       Re_BufSz   = Re_BufSz   + SIZE(InData%origin_n)  ! origin_n
       Re_BufSz   = Re_BufSz   + SIZE(InData%orientation_n)  ! orientation_n
-      Re_BufSz   = Re_BufSz   + 1  ! azimuth
       Int_BufSz  = Int_BufSz  + 1  ! motionType
       Int_BufSz  = Int_BufSz  + 1  ! iMotion
-      Re_BufSz   = Re_BufSz   + 1  ! speed
+      Re_BufSz   = Re_BufSz   + 1  ! azimuth
+      Re_BufSz   = Re_BufSz   + 1  ! rotSpeed
+      Re_BufSz   = Re_BufSz   + 1  ! rotAcc
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%motionFileName)  ! motionFileName
   Int_BufSz   = Int_BufSz   + 1     ! motion allocated yes/no
   IF ( ALLOCATED(InData%motion) ) THEN
@@ -4013,13 +4032,15 @@ ENDIF
       ReKiBuf(Re_Xferred) = InData%orientation_n(i1)
       Re_Xferred = Re_Xferred + 1
     END DO
-    ReKiBuf(Re_Xferred) = InData%azimuth
-    Re_Xferred = Re_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%motionType
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%iMotion
     Int_Xferred = Int_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%speed
+    ReKiBuf(Re_Xferred) = InData%azimuth
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%rotSpeed
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%rotAcc
     Re_Xferred = Re_Xferred + 1
     DO I = 1, LEN(InData%motionFileName)
       IntKiBuf(Int_Xferred) = ICHAR(InData%motionFileName(I:I), IntKi)
@@ -4184,13 +4205,15 @@ ENDIF
       OutData%orientation_n(i1) = ReKiBuf(Re_Xferred)
       Re_Xferred = Re_Xferred + 1
     END DO
-    OutData%azimuth = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
     OutData%motionType = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%iMotion = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
-    OutData%speed = ReKiBuf(Re_Xferred)
+    OutData%azimuth = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%rotSpeed = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%rotAcc = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     DO I = 1, LEN(OutData%motionFileName)
       OutData%motionFileName(I:I) = CHAR(IntKiBuf(Int_Xferred))
@@ -4377,6 +4400,8 @@ ENDIF
     DstNacDataData%motionType = SrcNacDataData%motionType
     DstNacDataData%iMotion = SrcNacDataData%iMotion
     DstNacDataData%yaw = SrcNacDataData%yaw
+    DstNacDataData%yawSpeed = SrcNacDataData%yawSpeed
+    DstNacDataData%yawAcc = SrcNacDataData%yawAcc
     DstNacDataData%motionFileName = SrcNacDataData%motionFileName
 IF (ALLOCATED(SrcNacDataData%motion)) THEN
   i1_l = LBOUND(SrcNacDataData%motion,1)
@@ -4455,6 +4480,8 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! motionType
       Int_BufSz  = Int_BufSz  + 1  ! iMotion
       Re_BufSz   = Re_BufSz   + 1  ! yaw
+      Re_BufSz   = Re_BufSz   + 1  ! yawSpeed
+      Re_BufSz   = Re_BufSz   + 1  ! yawAcc
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%motionFileName)  ! motionFileName
   Int_BufSz   = Int_BufSz   + 1     ! motion allocated yes/no
   IF ( ALLOCATED(InData%motion) ) THEN
@@ -4532,6 +4559,10 @@ ENDIF
     IntKiBuf(Int_Xferred) = InData%iMotion
     Int_Xferred = Int_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%yaw
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%yawSpeed
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%yawAcc
     Re_Xferred = Re_Xferred + 1
     DO I = 1, LEN(InData%motionFileName)
       IntKiBuf(Int_Xferred) = ICHAR(InData%motionFileName(I:I), IntKi)
@@ -4654,6 +4685,10 @@ ENDIF
     OutData%iMotion = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%yaw = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%yawSpeed = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%yawAcc = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     DO I = 1, LEN(OutData%motionFileName)
       OutData%motionFileName(I:I) = CHAR(IntKiBuf(Int_Xferred))

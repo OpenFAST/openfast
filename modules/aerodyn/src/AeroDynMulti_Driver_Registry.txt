@@ -72,6 +72,8 @@ typedef   ^                         ^            DbKi                           
 
 # ..... Blade data ...........................................................................................................
 typedef   ^                        BladeData     ReKi                    pitch            -      -     -   "rad" -
+typedef   ^                         ^            ReKi                    pitchSpeed       -      -     -   "rad/s" -
+typedef   ^                         ^            ReKi                    pitchAcc         -      -     -   "rad/s/s" -
 typedef   ^                         ^            ReKi                    origin_h         3      -     -   "" -
 typedef   ^                         ^            ReKi                    orientation_h    3      -     -   "" -
 typedef   ^                         ^            ReKi                    hubRad_bl        -      -     -   "" -
@@ -88,10 +90,11 @@ typedef   ^                         ^            MeshMapType             AD_P_2_
 # ... Hub data ..............................................................................................................
 typedef   ^                         HubData      ReKi                    origin_n         3      -     -   "" -
 typedef   ^                         ^            ReKi                    orientation_n    3      -     -   "" -
-typedef   ^                         ^            ReKi                    azimuth          -      -     -   "" -
 typedef   ^                         ^            IntKi                   motionType       -      -     -   "" -
 typedef   ^                         ^            IntKi                   iMotion          -      -     -   "Stored index to optimize time interpolation" -
-typedef   ^                         ^            ReKi                    speed            -      -     -   "rad/s" -
+typedef   ^                         ^            ReKi                    azimuth          -      -     -   "rotor position" "rad"
+typedef   ^                         ^            ReKi                    rotSpeed         -      -     -   "rotor speed" "rad/s" 
+typedef   ^                         ^            ReKi                    rotAcc           -      -     -   "rotor acceleration" "rad/s/s"
 typedef   ^                         ^            character(1024)         motionFileName   -      -     -   "" -
 typedef   ^                         ^            ReKi                    motion           ::     -     -   "" "-"
 typedef   ^                         ^            MeshType                ptMesh           -      -     -   "Point mesh for origin motion" "-"
@@ -102,7 +105,9 @@ typedef   ^                         ^            MeshMapType             map2Bld
 typedef   ^                         NacData      ReKi                    origin_t         3      -     -   "" -
 typedef   ^                         ^            IntKi                   motionType       -      -     -   "" -
 typedef   ^                         ^            IntKi                   iMotion          -      -     -   "Stored index to optimize time interpolation" -
-typedef   ^                         ^            ReKi                    yaw              -      -     -   "rad" -
+typedef   ^                         ^            ReKi                    yaw              -      -     -   "rad" "rad"
+typedef   ^                         ^            ReKi                    yawSpeed         -      -     -   "yawspeed " "rad/s"
+typedef   ^                         ^            ReKi                    yawAcc           -      -     -   "yawAcceleration" "rad/s^2"
 typedef   ^                         ^            character(1024)         motionFileName   -      -     -   "" -
 typedef   ^                         ^            ReKi                    motion           ::     -     -   "" "-"
 typedef   ^                         ^            MeshType                ptMesh           -      -     -   "Point mesh for origin motion" "-"
