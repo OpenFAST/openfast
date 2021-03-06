@@ -669,7 +669,7 @@ subroutine Set_Mesh_Motion(nt,DvrData,errStat,errMsg)
    real(R8Ki)              :: theta(3)
    real(ReKi) :: hubMotion(3)  ! Azimuth, Speed, Acceleration
    real(ReKi) :: nacMotion(1)  ! Yaw
-   real(ReKi) :: basMotion(20) ! 
+   real(ReKi) :: basMotion(18) ! Base motion
    real(ReKi) :: bldMotion(1)  ! Pitch
    real(ReKi) :: RotSpeed
    real(R8Ki) :: orientation(3,3)
@@ -688,8 +688,16 @@ subroutine Set_Mesh_Motion(nt,DvrData,errStat,errMsg)
       ! --- Base Motion
       orientation = EulerConstruct( wt%orientationInit ) ! global 2 base at t = 0 (constant)
       if (wt%motionType == idBaseMotionGeneral) then
-         print*,'>>> general base motion'
-         STOP
+         orientation_loc = EulerConstruct( theta )
+         call interpTimeValue(wt%motion, time, wt%iMotion, basMotion)
+         wt%ptMesh%TranslationDisp(1:3,1) = basMotion(1:3)
+         wt%ptMesh%TranslationVel (1:3,1) = basMotion(7:9)
+         wt%ptMesh%RotationVel    (1:3,1) = basMotion(10:12)
+         wt%ptMesh%TranslationAcc (1:3,1) = basMotion(13:15)
+         wt%ptMesh%RotationAcc    (1:3,1) = basMotion(16:18)
+         theta = basMotion(4:6)
+         orientation_loc = EulerConstruct( theta )
+         orientation = matmul(orientation_loc, orientation)
       elseif (wt%motionType == idBaseMotionSine) then
          if (any(wt%degreeOfFreedom==(/1,2,3/))) then
             wt%ptMesh%TranslationDisp(wt%degreeofFreedom,1) =                      wt%amplitude * sin(time * wt%frequency)
@@ -1092,7 +1100,7 @@ subroutine Dvr_ReadInputFile(fileName, DvrData, errStat, errMsg )
          call ParseVar(FileInfo_In, CurLine, 'baseMotionFilename'//sWT, wt%motionFileName,  errStat2, errMsg2, unEc); if(Failed()) return
          wt%frequency = wt%frequency * 2 *pi ! Hz to rad/s
          if (wt%motionType==idBaseMotionGeneral) then
-            call ReadDelimFile(wt%motionFileName, 20, wt%motion, errStat2, errMsg2); if(Failed()) return
+            call ReadDelimFile(wt%motionFileName, 19, wt%motion, errStat2, errMsg2); if(Failed()) return
             wt%iMotion=1
             if (wt%motion(size(wt%motion,1),1)<tMax) then
                call WrScr('Warning: maximum time in motion file smaller than simulation time, last values will be repeated. File: '//trim(wt%motionFileName))
