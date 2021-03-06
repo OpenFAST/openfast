@@ -116,12 +116,14 @@ contains
                rRoot = sum(Gamma_t(1:i10) * s(1:i10)) / sum(Gamma_t(1:i10))
                iTip  = minloc(abs(rTip - s), 1) ! NOTE:  not accurate since epsilon has one dimension less..
                iRoot = minloc(abs(rRoot - s), 1)
+               iTip  = max(min(iTip,n+1), i90)
+               iRoot = min(max(iRoot,1) , i10)
             endif
          endif
          rTip  = s(iTip)
          rRoot = s(iRoot)
-         iTipPanel  = min(iTip,n)
-         iRootPanel = max(iRoot,1)
+         iTipPanel  = max(min(iTip,n), 1)
+         iRootPanel = min(max(iRoot,1),n)
          ! Mean regularization at the tip and root
          EpsTip  = sum(Eps(1,iTipPanel:))  /(n-iTipPanel+1)
          EpsRoot = sum(Eps(1,1:iRootPanel))/(iRootPanel)
