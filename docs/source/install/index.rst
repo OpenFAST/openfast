@@ -5,27 +5,48 @@ Installing OpenFAST
 Guidelines and procedures for obtaining precompiled binaries or compiling
 OpenFAST from source code are described here. While there
 are multiple ways to achieve the same outcome, the OpenFAST team has developed
-a comprehensive and well thought out system for compiling the source code.
-Thus, the methods described here are the only officially supported and
+a comprehensive and well-thought out system for installation, so the methods
+described here are the only officially supported and
 maintained paths for obtaining an OpenFAST executable.
 
-For Windows users only, precompiled binaries are available as described in the
-:ref:`download_binaries` section. For all platforms, OpenFAST is configured
-to build with with CMake and a system-appropriate build tool. Background
-on CMake is given in :ref:`understanding_cmake`, and procedures for configuring
-and compiling are given in :ref:`cmake_unix` and :ref:`cmake_windows`. Finally,
-an alternative and more appropriate option for compiling on Windows while
-doing active software development is given in :ref:`vs_windows`.
+To install OpenFAST without changing the source code, refer to the
+table in the :ref:`download_binaries` section and read the corresponding
+documentation for specific instructions. For instructions on compiling,
+see :ref:`compile_from_source`.
 
 .. _download_binaries:
 
 Download binaries
 ~~~~~~~~~~~~~~~~~
+For users who intend to run OpenFAST simulations without changing the
+source code, installation with precompiled binaries is recommended.
+The installation procedures are specific for each supported operating
+system, and the table below maps operating systems to the method for
+obtaining binaries.
+
+================== ================= ======================
+ Operating System   Method            Docs Section         
+================== ================= ======================
+Linux               Conda             :ref:`conda_install` 
+macOS               Conda             :ref:`conda_install` 
+macOS               Homebrew          :ref:`brew_install`  
+Windows             GitHub Releases   :ref:`gh_install` 
+================== ================= ======================
+
+.. _conda_install:
+
+Conda Installation
+------------------
 OpenFAST releases are distributed through the `Anaconda <https://anaconda.org/>`_
-package manager via the `conda forge <https://conda-forge.org/>`_ channel for
-macOS and Linux. The OpenFAST glue-code executable as well as the available
-module drivers are included in the installation. The following commands
-describe how to create a new environment and install OpenFAST.
+package manager via the `Conda Forge <https://conda-forge.org/>`_ channel for
+macOS and Linux. The installation includes
+
+- OpenFAST glue-code executable
+- Available module drivers
+- C++ header files
+
+The following commands describe how to create a new environment, install
+OpenFAST, and test the installation.
 
 .. code-block:: bash
 
@@ -36,32 +57,88 @@ describe how to create a new environment and install OpenFAST.
     conda install -c conda-forge openfast
 
     # Test OpenFAST
+    which openfast
     openfast -v
 
-For Windows users, each tagged release is accompanied by precompiled binaries.
-DLL's for MAP and the DISCON controllers are also included.
-The following architecture and precision combinations are currently
-available:
+    # Test the HydroDyn driver
+    which hydrodyn_driver
+    hydrodyn_driver -v
 
-- 32 bit single precision
-- 64 bit single precision
-- 64 bit double precision
+.. _brew_install:
 
-All precompiled binaries can be found in the ``Assets`` dropdown in the
-`GitHub Releases <https://github.com/openfast/openfast/releases>`__.
-To download the latest binaries, click
-`here <https://github.com/OpenFAST/openfast/releases/latest/download/windows_openfast_binaries.zip>`__.
+Homebrew Installation
+---------------------
+For macOS systems, OpenFAST releases are distributed through
+the `Homebrew <https://brew.sh>`_ package manager. The installation includes
+only the OpenFAST glue-code executable.
 
+To install with Homebrew and test the installation, use the following
+commands. 
+
+.. code-block:: bash
+
+    # Update Homebrew
+    brew update
+
+    # Install OpenFAST
+    brew search openfast
+    brew install openfast
+    
+    # Test OpenFAST
+    which openfast
+    openfast -v
+
+.. _gh_install:
+
+GitHub Releases
+---------------
+For Windows systems only, precompiled binaries are made available for each
+release on the OpenFAST GitHub `Releases <https://github.com/openfast/openfast/releases/latest>`_
+page. The binaries are compiled with the Intel Fortran compiler
+version 2020.
 
 .. important::
 
-    The precompiled binaries require either the Intel fortran
-    compiler or the Intel MKL redistributable libraries, which are not by
-    default included with the binaries. To configure the libraries, download the
-    installers from `here <https://software.intel.com/sites/default/files/managed/bb/e0/ww_ifort_redist_msi_2017.8.275.zip>`__
-    and run the MSI file(s) to install the libraries. If you have a
-    Command Prompt open, you will need to close it after installing the libraries
-    in order for the changes to take effect.
+    The precompiled binaries require either the Intel Fortran
+    compiler or the Intel MKL redistributable libraries, which are
+    not by default included with the binaries. To configure the
+    libraries, download the installers from the bottom of
+    `this page <https://software.intel.com/content/www/us/en/develop/articles/redistributable-libraries-for-intel-c-and-fortran-2020-compilers-for-windows.html>`__.
+    If you have a Command Prompt open, you will need to close it after
+    installing the libraries in order for the changes to take effect.
+    Admin priveleges are required to install the Intel libraries.
+
+The OpenFAST executables can be downloaded from the "Assets" dropdown
+in each Release. The two assets named "Source code" are not needed.
+
+.. image:: ../../_static/assets_download.jpg
+   :align: center
+
+The zipped file contains the following items:
+
+================================================== ==============================================
+ File Name                                              Description
+================================================== ==============================================
+openfast_Win32.exe                                  32-bit single precision
+openfast_x64.exe                                    64-bit single precision
+openfast_x64_double.exe                             64-bit double precision
+Map_Win32.dll                                       32-bit MAP++ library
+Map_x64.dll                                         64-bit MAP++ library
+DISCON_DLLS/<64bit or Win32>/DISCON.dll             Controller library for NREL 5MW
+DISCON_DLLS/<64bit or Win32>/DISCON_ITIBarge.dll    Controller library for NREL 5MW - ITI Barge
+DISCON_DLLS/<64bit or Win32>/DISCON_OC3Hywind.dll   Controller library for NREL 5MW - OC3 Hywind
+================================================== ==============================================
+
+After extracting the contents, the OpenFAST executables
+can be tested by opening a command prompt, moving into the directory
+containing the executables, and running a simple test command:
+
+.. code-block::
+
+    cd C:\your\path\Desktop\openfast_binaries\
+    openfast_x64.exe /h
+
+.. _compile_from_source:
 
 Compile from source
 ~~~~~~~~~~~~~~~~~~~
