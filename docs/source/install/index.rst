@@ -9,10 +9,11 @@ a comprehensive and well-thought out system for installation, so the methods
 described here are the only officially supported and
 maintained paths for obtaining an OpenFAST executable.
 
-To install OpenFAST without changing the source code, refer to the
-table in the :ref:`download_binaries` section and read the corresponding
-documentation for specific instructions. For instructions on compiling,
-see :ref:`compile_from_source`.
+Most users of OpenFAST will not require modifying or compiling the source
+code. **For the simplest installation of OpenFAST without changing the source
+code,** refer to the table in the :ref:`download_binaries` section and read
+the corresponding documentation for specific instructions.
+For instructions on compiling, see :ref:`compile_from_source`.
 
 .. _download_binaries:
 
