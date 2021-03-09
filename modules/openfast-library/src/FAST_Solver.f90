@@ -465,14 +465,6 @@ SUBROUTINE IfW_InputSolve( p_FAST, m_FAST, u_IfW, p_IfW, u_AD14, u_AD, OtherSt_A
          Node = Node + 1
          u_IfW%PositionXYZ(:,Node) = u_AD%rotors(1)%TowerMotion%TranslationDisp(:,J) + u_AD%rotors(1)%TowerMotion%Position(:,J)
       END DO      
-                  
-         ! vortex points from FVW in AD15
-      if (allocated(OtherSt_AD%WakeLocationPoints)) then
-         do J=1,size(OtherSt_AD%WakeLocationPoints,DIM=2)
-            Node = Node + 1
-            u_IfW%PositionXYZ(:,Node) = OtherSt_AD%WakeLocationPoints(:,J)
-         enddo
-      end if
       
       if (u_AD%rotors(1)%NacelleMotion%Committed) then
          Node = Node + 1
@@ -483,6 +475,14 @@ SUBROUTINE IfW_InputSolve( p_FAST, m_FAST, u_IfW, p_IfW, u_AD14, u_AD, OtherSt_A
 !         Node = Node + 1
 !         u_IfW%PositionXYZ(:,Node) = u_AD%HubMotion%TranslationDisp(:,1) + u_AD%HubMotion%Position(:,1)
 !      end if
+                  
+      ! vortex points from FVW in AD15 (should be at then end, since not "rotor dependent"
+      if (allocated(OtherSt_AD%WakeLocationPoints)) then
+         do J=1,size(OtherSt_AD%WakeLocationPoints,DIM=2)
+            Node = Node + 1
+            u_IfW%PositionXYZ(:,Node) = OtherSt_AD%WakeLocationPoints(:,J)
+         enddo
+      end if
       
    END IF
    
@@ -567,15 +567,6 @@ SUBROUTINE AD_InputSolve_IfW( p_FAST, u_AD, y_IfW, y_OpFM, ErrStat, ErrMsg )
          end do      
       end if
 
-         ! velocity at vortex wake points velocity array handoff here
-      if ( allocated(u_AD%InflowWakeVel) ) then
-         Nnodes = size(u_AD%InflowWakeVel,DIM=2)
-         do j=1,Nnodes
-            u_AD%InflowWakeVel(:,j) = y_IfW%VelocityUVW(:,node)
-            node = node + 1
-         end do
-      end if
-
       if (u_AD%rotors(1)%NacelleMotion%NNodes > 0) then
          u_AD%rotors(1)%InflowOnNacelle(:) = y_IfW%VelocityUVW(:,node)
          node = node + 1
@@ -589,6 +580,15 @@ SUBROUTINE AD_InputSolve_IfW( p_FAST, u_AD, y_IfW, y_OpFM, ErrStat, ErrMsg )
 !      else
 !         u_AD%InflowOnHub = 0.0_ReKi
 !      end if
+
+      ! vortex points from FVW in AD15 (should be at then end, since not "rotor dependent"
+      if ( allocated(u_AD%InflowWakeVel) ) then
+         Nnodes = size(u_AD%InflowWakeVel,DIM=2)
+         do j=1,Nnodes
+            u_AD%InflowWakeVel(:,j) = y_IfW%VelocityUVW(:,node)
+            node = node + 1
+         end do
+      end if
 
    ELSEIF ( p_FAST%CompInflow == MODULE_OpFM ) THEN
       node = 2 !start of inputs to AD15
