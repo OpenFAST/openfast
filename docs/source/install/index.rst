@@ -244,7 +244,7 @@ via the command line:
 
 An archive of the source code can also be downloaded directly from these links:
 
-- `"master" branch <https://github.com/OpenFAST/openfast/archive/master.zip>`__ - Stable release
+- `"main" branch <https://github.com/OpenFAST/openfast/archive/main.zip>`__ - Stable release
 - `"dev" branch <https://github.com/OpenFAST/openfast/archive/dev.zip>`__ - Latest updates
 
 .. _vs_windows:
