@@ -87,6 +87,7 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, m, Inp, ErrStat, ErrMsg )
    CALL ReadVarWDefault(UnIn,FileName,p%nGridOut      , 'nGridOut'           ,'',     0      ,ErrStat2,ErrMsg2);
    if (ErrStat2/=ErrID_None) then
       call WarnSyntax('Grid output missing')
+      p%nGridOut = 0 ! Important
    else
       allocate(m%GridOutputs(p%nGridOut), stat=ErrStat2);
       CALL ReadCom (UnIn,FileName,  'GridOutHeaders', ErrStat2,ErrMsg2); if(Failed()) return
@@ -328,16 +329,16 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth, bladeFrame, Hub
       write(Label,'(A,A)') 'BldPointCP.Bld', i2ABC(iW)
       Filename = TRIM(FileRootName)//'.'//trim(Label)//'.'//Tstr//'.vtk'
       if ( vtk_new_ascii_file(trim(filename),Label,mvtk) ) then
-         call vtk_dataset_polydata(m%W(iW)%CP_LL(1:3,1:p%nSpan),mvtk,bladeFrame)
+         call vtk_dataset_polydata(m%W(iW)%CP_LL(1:3,1:p%W(iW)%nSpan),mvtk,bladeFrame)
          call vtk_point_data_init(mvtk)
-         call vtk_point_data_scalar(m%W(iW)%Gamma_ll(    1:p%nSpan),'Gamma_ll',mvtk)
-         call vtk_point_data_vector(m%W(iW)%Vind_ll (1:3,1:p%nSpan),'Vind_ll',mvtk)
-         call vtk_point_data_vector(m%W(iW)%Vtot_ll (1:3,1:p%nSpan),'Vtot_ll',mvtk)
-         call vtk_point_data_vector(m%W(iW)%Vstr_ll (1:3,1:p%nSpan),'Vstr_ll',mvtk)
-         call vtk_point_data_vector(m%W(iW)%Vwnd_ll (1:3,1:p%nSpan),'Vwnd_ll',mvtk)
-         call vtk_point_data_vector(m%W(iW)%Tang    (1:3,1:p%nSpan),'Tangent',mvtk)
-         call vtk_point_data_vector(m%W(iW)%Norm    (1:3,1:p%nSpan),'Normal',mvtk)
-         call vtk_point_data_vector(m%W(iW)%Orth    (1:3,1:p%nSpan),'Orth',mvtk)
+         call vtk_point_data_scalar(m%W(iW)%Gamma_ll(    1:p%W(iW)%nSpan),'Gamma_ll',mvtk)
+         call vtk_point_data_vector(m%W(iW)%Vind_ll (1:3,1:p%W(iW)%nSpan),'Vind_ll',mvtk)
+         call vtk_point_data_vector(m%W(iW)%Vtot_ll (1:3,1:p%W(iW)%nSpan),'Vtot_ll',mvtk)
+         call vtk_point_data_vector(m%W(iW)%Vstr_ll (1:3,1:p%W(iW)%nSpan),'Vstr_ll',mvtk)
+         call vtk_point_data_vector(m%W(iW)%Vwnd_ll (1:3,1:p%W(iW)%nSpan),'Vwnd_ll',mvtk)
+         call vtk_point_data_vector(m%W(iW)%Tang    (1:3,1:p%W(iW)%nSpan),'Tangent',mvtk)
+         call vtk_point_data_vector(m%W(iW)%Norm    (1:3,1:p%W(iW)%nSpan),'Normal',mvtk)
+         call vtk_point_data_vector(m%W(iW)%Orth    (1:3,1:p%W(iW)%nSpan),'Orth',mvtk)
          call vtk_close_file(mvtk)
       endif
    enddo

@@ -1089,7 +1089,11 @@ subroutine SetParameters( InitInp, InputFileData, RotData, p, p_AD, ErrStat, Err
    
    ! NOTE: In the following we use InputFileData%BladeProps(1)%NumBlNds as the number of aero nodes on EACH blade, 
    !       but if AD changes this, then it must be handled in the Glue-code linearization code, too (and elsewhere?) !
-   p%NumBlNds         = RotData%BladeProps(1)%NumBlNds
+   if (p%NumBlades>0) then
+      p%NumBlNds         = RotData%BladeProps(1)%NumBlNds
+   else
+      p%NumBlNds         = 0
+   endif
    if (p%TwrPotent == TwrPotent_none .and. p%TwrShadow == TwrShadow_none .and. .not. p%TwrAero) then
       p%NumTwrNds     = 0
    else
@@ -1382,7 +1386,7 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
    if (CalcWriteOutput) then
       do iR = 1,size(p%rotors)
          if (p%rotors(iR)%NumOuts > 0) then
-            call Calc_WriteOutput( p%rotors(iR), p, u%rotors(iR), m%rotors(iR), m, y%rotors(iR), OtherState%rotors(iR), xd%rotors(iR), indx, ErrStat2, ErrMsg2 )   
+            call Calc_WriteOutput( p%rotors(iR), p, u%rotors(iR), m%rotors(iR), m, y%rotors(iR), OtherState%rotors(iR), xd%rotors(iR), indx, iR, ErrStat2, ErrMsg2 )   
                call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)      
       
             !...............................................................................................................................   
@@ -1398,8 +1402,10 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
          y%rotors(iR)%WriteOutput(p%rotors(iR)%NumOuts+1:) = 0.0_ReKi
 
             ! Now we need to populate the blade node outputs here
-         call Calc_WriteAllBldNdOutput( p%rotors(iR), p, u%rotors(iR), m%rotors(iR), m, y%rotors(iR), OtherState%rotors(iR), indx, ErrStat2, ErrMsg2 )   ! Call after normal writeoutput.  Will just postpend data on here.
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (p%rotors(iR)%NumBlades > 0) then
+            call Calc_WriteAllBldNdOutput( p%rotors(iR), p, u%rotors(iR), m%rotors(iR), m, y%rotors(iR), OtherState%rotors(iR), indx, iR, ErrStat2, ErrMsg2 )   ! Call after normal writeoutput.  Will just postpend data on here.
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         endif
       enddo
    end if
       
@@ -1954,11 +1960,6 @@ subroutine SetInputsForFVW(p, u, m, errStat, errMsg)
    integer :: iW
    integer :: nWings
 
-   if( size(p%rotors)>1) then
-      print*,'TODO FVW with multiple rotors'
-      STOP
-   endif
-
    do tIndx=1,size(u)
       do iR =1, size(p%rotors)
          allocate(thetaBladeNds(p%rotors(iR)%NumBlNds, p%rotors(iR)%NumBlades))
@@ -2150,14 +2151,9 @@ subroutine SetOutputsFromFVW(t, u, p, OtherState, x, xd, m, y, ErrStat, ErrMsg)
    force(3)    =  0.0_ReKi
    moment(1:2) =  0.0_ReKi
 
-   if (size(p%rotors)>1) then
-      print *, 'FVW with multiple rotors TODO'
-      STOP
-   endif
-
    do iR=1,size(p%rotors)
       do k=1,p%rotors(iR)%numBlades
-         iW=k ! TODO TODO TODO
+         iW=p%FVW%Bld2Wings(iR,k)
          do j=1,p%rotors(iR)%NumBlNds
             ! --- Computing main aero variables from induction - setting local variables
             Vind = m%FVW_y%W(iW)%Vind(1:3,j)
@@ -2232,8 +2228,6 @@ subroutine SetOutputsFromFVW(t, u, p, OtherState, x, xd, m, y, ErrStat, ErrMsg)
          end do !j=nodes
       end do !k=blades
    end do ! iR rotors
-
-   
 
    if ( m%FVW%UA_Flag ) then
       ! if ( mod(REAL(t,ReKi),.1) < p%dt) then
@@ -2352,7 +2346,9 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
       ! check blade mesh data:
       ! .............................
    do iR = 1,size(NumBl)
-      if ( InputFileData%rotors(iR)%BladeProps(1)%NumBlNds < 2 ) call SetErrStat( ErrID_Fatal, 'There must be at least two nodes per blade.',ErrStat, ErrMsg, RoutineName )
+      if (NumBl(iR)>0) then
+         if ( InputFileData%rotors(iR)%BladeProps(1)%NumBlNds < 2 ) call SetErrStat( ErrID_Fatal, 'There must be at least two nodes per blade.',ErrStat, ErrMsg, RoutineName )
+      endif
       do k=2,NumBl(iR)
          if ( InputFileData%rotors(iR)%BladeProps(k)%NumBlNds /= InputFileData%rotors(iR)%BladeProps(k-1)%NumBlNds ) then
             call SetErrStat( ErrID_Fatal, 'All blade property files must have the same number of blade nodes.', ErrStat, ErrMsg, RoutineName )
@@ -2816,24 +2812,19 @@ SUBROUTINE Init_OLAF( InputFileData, u_AD, u, p, x, xd, z, OtherState, m, ErrSta
    integer(IntKi)                               :: ErrStat2
    character(ErrMsgLen)                         :: ErrMsg2
    character(*), parameter                      :: RoutineName = 'Init_FVWmodule'
-
    ErrStat = ErrID_None
    ErrMsg  = ""
-
-   if (size(p%rotors)>1) then
-      print*,'TODO FVW multi rot'
-      STOP
-   endif
 
    ! Simple inputs
    InitInp%FVWFileName    = InputFileData%FVWFileName
    InitInp%DTaero         = p%DT       ! NOTE: FVW can run a lower timestep internally
 
-   ! Inputs per wings/blades
+   ! Allocate wings
    nWings = sum(p%rotors(:)%numBlades)
    allocate(InitInp%W(nWings)        , STAT = ErrStat2); ErrMsg2='Allocate W'; if(Failed()) return
    allocate(InitInp%WingsMesh(nWings), STAT = ErrStat2); ErrMsg2='Allocate Wings Mesh'; if(Failed()) return
 
+   ! --- Inputs per wings/blades
    iW_incr=0
    do iR=1, size(p%rotors)
 
@@ -2844,7 +2835,7 @@ SUBROUTINE Init_OLAF( InputFileData, u_AD, u, p, x, xd, z, OtherState, m, ErrSta
       ! Blades/Wings
       do iB=1,p%rotors(iR)%numBlades
          iW=iW_incr+iB
-         InitInp%W(iW)%iRotor=iR
+         InitInp%W(iW)%iRotor = iR ! Indicate OLAF which wing belongs to which rotor
 
          call AllocAry(InitInp%W(iW)%Chord, InitInp%numBladeNodes,  'chord', ErrStat2,ErrMsg2); if(Failed()) return
          call AllocAry(InitInp%W(iW)%AFindx,InitInp%numBladeNodes,1,'AFindx',ErrStat2,ErrMsg2); if(Failed()) return
@@ -2865,13 +2856,15 @@ SUBROUTINE Init_OLAF( InputFileData, u_AD, u, p, x, xd, z, OtherState, m, ErrSta
                         ,ErrStat  = ErrStat2          &
                         ,ErrMess  = ErrMsg2          )
          if(Failed()) return
-      enddo
+      enddo ! iB, blades
 
       ! Unsteady Aero Data
       InitInp%UA_Flag    = InputFileData%AFAeroMod == AFAeroMod_BL_unsteady
       InitInp%UAMod      = InputFileData%UAMod
       InitInp%Flookup    = InputFileData%Flookup
       InitInp%a_s        = InputFileData%SpdSound
+
+      iW_incr = iW_incr+p%rotors(iR)%numBlades
    enddo ! iR, rotors 
 
    ! NOTE: not passing p%AFI at present.  We are not storing it in FVW's parameters.

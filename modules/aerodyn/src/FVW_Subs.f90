@@ -218,21 +218,21 @@ subroutine Map_LL_NW(p, m, z, x, ShedScale, ErrStat, ErrMsg )
 
    ! First panel of NW is the last lifting line panel
    do iW = 1,p%nWings
-      do iSpan = 1,p%nSpan+1
+      do iSpan = 1,p%W(iW)%nSpan+1
          x%W(iW)%r_NW(1:3, iSpan, iNWStart-1) = m%W(iW)%r_LL(1:3, iSpan, 1)  ! iAge=1
          x%W(iW)%r_NW(1:3, iSpan, iNWStart  ) = m%W(iW)%r_LL(1:3, iSpan, 2)  ! iAge=2
       enddo
    enddo
    ! First panel of NW is the last lifting line panel
    do iW = 1,p%nWings
-      do iSpan = 1,p%nSpan
+      do iSpan = 1,p%W(iW)%nSpan
          x%W(iW)%Gamma_NW(iSpan, iNWStart-1) = z%W(iW)%Gamma_LL(iSpan)  ! iAge=1
       enddo
    enddo
    ! Circulations are the same on both side of the TE 
    if (p%nNWMax>iNWStart-1) then
       do iW = 1,p%nWings
-         do iSpan = 1,p%nSpan
+         do iSpan = 1,p%W(iW)%nSpan
             x%W(iW)%Gamma_NW(iSpan, iNWStart  ) = z%W(iW)%Gamma_LL(iSpan)  ! iAge=2
          enddo
       enddo
@@ -247,7 +247,7 @@ subroutine Map_LL_NW(p, m, z, x, ShedScale, ErrStat, ErrMsg )
       if ((ShedScale<1.0_ReKi) .and. (m%nNW>=3)) then
          print*,'Scaling'
          do iW = 1,p%nWings
-            do iSpan = 1,p%nSpan
+            do iSpan = 1,p%W(iW)%nSpan
                Gamma_Prev =  x%W(iW)%Gamma_NW(iSpan, iNWStart+1) ! Previous circulation
                Gamma_New  =  x%W(iW)%Gamma_NW(iSpan, iNWStart  )
                x%W(iW)%Gamma_NW(iSpan, iNWStart  )  = Gamma_New*ShedScale + (1.0_ReKi-ShedScale) * Gamma_Prev
@@ -267,8 +267,10 @@ subroutine Map_NW_FW(p, m, z, x, ErrStat, ErrMsg)
    character(*),                    intent(  out)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
    integer(IntKi)            :: iW, iRoot, iTip, iMax
    real(ReKi), dimension(p%nWings) :: FWGamma
-   real(ReKi), dimension(p%nSpan+1) :: Gamma_t
-   real(ReKi), dimension(p%nSpan) :: sCoord
+   real(ReKi), dimension(:),allocatable :: Gamma_t
+   real(ReKi), dimension(:),allocatable :: sCoord
+!    real(ReKi), dimension(p%W(iW)%nSpan+1) :: Gamma_t
+!    real(ReKi), dimension(p%W(iW)%nSpan) :: sCoord
    real(ReKi) :: FWEpsTip, FWEpsRoot
    real(ReKi) :: ltip, rTip, Gamma_max
    integer(IntKi), parameter :: iAgeFW=1   !< we update the first FW panel
@@ -281,18 +283,22 @@ subroutine Map_NW_FW(p, m, z, x, ErrStat, ErrMsg)
          ! First circulation of Farwake is taken as the max circulation of last NW column
          FWGamma(:)=0.0_ReKi
          do iW=1,p%nWings
+            allocate(Gamma_t(p%W(iW)%nSpan+1)) ! TODO TODO TODO, store as misc
+            allocate(sCoord(p%W(iW)%nSpan))
             if (p%FullCirculationStart>0 .and. m%nFW<3) then
                ! we might run into the issue that the circulation is 0
                m%W(iW)%iTip =-1
                m%W(iW)%iRoot=-1
             endif
-            ! NOTE: on the first pass, m%iTip and m%iRoot are computed, TODO per blade
-            call PlaceTipRoot(p%nSpan, x%W(iW)%Gamma_NW(:,m%nNW), x%W(iW)%r_NW(1:3,:,m%nNW), x%W(iW)%Eps_NW(1:3,:,m%nNW),& ! inputs
+            ! NOTE: on the first pass, m%iTip and m%iRoot are computed
+            call PlaceTipRoot(p%W(iW)%nSpan, x%W(iW)%Gamma_NW(:,m%nNW), x%W(iW)%r_NW(1:3,:,m%nNW), x%W(iW)%Eps_NW(1:3,:,m%nNW),& ! inputs
                m%W(iW)%iRoot, m%W(iW)%iTip, FWGamma(iW), FWEpsTip, FWEpsRoot) ! outputs
             x%W(iW)%Gamma_FW(1:FWnSpan,iAgeFW) = FWGamma(iW)
             x%W(iW)%Eps_FW(3,1:FWnSpan,iAgeFW) = FWEpsTip  ! HACK tip put in third
             x%W(iW)%Eps_FW(2,1:FWnSpan,iAgeFW) = FWEpsRoot ! HACK root put in second
             x%W(iW)%Eps_FW(1,1:FWnSpan,iAgeFW) = FWEpsTip  ! For shed vorticity..
+            deallocate(Gamma_t)
+            deallocate(sCoord)
          enddo
       endif
       ! Far wake point always mapped to last near wake
@@ -302,13 +308,13 @@ subroutine Map_NW_FW(p, m, z, x, ErrStat, ErrMsg)
             iRoot = m%W(iW)%iRoot
          else
             iRoot = 1
-            iTip  = p%nSpan+1
+            iTip  = p%W(iW)%nSpan+1
          endif
          x%W(iW)%r_FW(1:3,1        ,iAgeFW) =  x%W(iW)%r_NW(1:3,iRoot,p%nNWMax+1) ! Point 1 (root)
          x%W(iW)%r_FW(1:3,FWnSpan+1,iAgeFW) =  x%W(iW)%r_NW(1:3,iTip ,p%nNWMax+1) ! Point FWnSpan (tip)
          !if ((FWnSpan==2)) then
          !   ! in between point
-         !   x%W(iW)%r_FW(1:3,2,iAgeFW) =  x%W(iW)%r_NW(1:3,int(p%nSpan+1)/4 ,p%nNWMax+1) ! Point (mid)
+         !   x%W(iW)%r_FW(1:3,2,iAgeFW) =  x%W(iW)%r_NW(1:3,int(p%W(iW)%nSpan+1)/4 ,p%nNWMax+1) ! Point (mid)
          !else if ((FWnSpan>2)) then
          !   ErrMsg='Error: FWnSpan>2 not implemented.'
          !   ErrStat=ErrID_Fatal
@@ -355,7 +361,7 @@ subroutine PropagateWake(p, m, z, x, ErrStat, ErrMsg)
    ! --- Propagate near wake
    do iW=1,p%nWings
       do iAge=p%nNWMax+1,iNWStart+1,-1
-         do iSpan=1,p%nSpan+1
+         do iSpan=1,p%W(iW)%nSpan+1
             x%W(iW)%r_NW(1:3,iSpan,iAge) = x%W(iW)%r_NW(1:3,iSpan,iAge-1)
          enddo
       enddo
@@ -364,7 +370,7 @@ subroutine PropagateWake(p, m, z, x, ErrStat, ErrMsg)
    if (p%nNWMax>1) then
       do iW=1,p%nWings
          do iAge=p%nNWMax,iNWStart+1,-1
-            do iSpan=1,p%nSpan
+            do iSpan=1,p%W(iW)%nSpan
                x%W(iW)%Gamma_NW(iSpan,iAge) = x%W(iW)%Gamma_NW(iSpan,iAge-1)
                x%W(iW)%Eps_NW(:,iSpan,iAge) = x%W(iW)%Eps_NW(:,iSpan,iAge-1)
             enddo
@@ -385,7 +391,7 @@ subroutine PropagateWake(p, m, z, x, ErrStat, ErrMsg)
    enddo
    do iW=1,p%nWings
       do iAge=p%nNWMax+1,iNWStart+1,-1 
-         do iSpan=1,p%nSpan+1
+         do iSpan=1,p%W(iW)%nSpan+1
             m%dxdt%W(iW)%r_NW(1:3,iSpan,iAge) = m%dxdt%W(iW)%r_NW(1:3,iSpan,iAge-1)
          enddo
       enddo
@@ -411,12 +417,12 @@ subroutine print_x_NW_FW(p, m, x, label)
       flag='X'
       if ((iAge)<= m%nNW+1) flag='.'
       print'(A,A,I0,A)',flag,'iAge ',iAge,'      Root              Tip'
-      print*,trim(label)//'x', x%W(iW)%r_NW(1, 1, iAge), x%W(iW)%r_NW(1, p%nSpan+1, iAge)
-      print*,trim(label)//'y', x%W(iW)%r_NW(2, 1, iAge), x%W(iW)%r_NW(2, p%nSpan+1, iAge)
-      print*,trim(label)//'z', x%W(iW)%r_NW(3, 1, iAge), x%W(iW)%r_NW(3, p%nSpan+1, iAge)
+      print*,trim(label)//'x', x%W(iW)%r_NW(1, 1, iAge), x%W(iW)%r_NW(1, p%W(iW)%nSpan+1, iAge)
+      print*,trim(label)//'y', x%W(iW)%r_NW(2, 1, iAge), x%W(iW)%r_NW(2, p%W(iW)%nSpan+1, iAge)
+      print*,trim(label)//'z', x%W(iW)%r_NW(3, 1, iAge), x%W(iW)%r_NW(3, p%W(iW)%nSpan+1, iAge)
       if (iAge<p%nNWMax+1) then
-         print*,trim(label)//'g', x%W(iW)%Gamma_NW(1, iAge), x%W(iW)%Gamma_NW(p%nSpan, iAge)
-         print*,trim(label)//'e', x%W(iW)%Eps_NW(1,1, iAge), x%W(iW)%Eps_NW(1,p%nSpan, iAge)
+         print*,trim(label)//'g', x%W(iW)%Gamma_NW(1, iAge), x%W(iW)%Gamma_NW(p%W(iW)%nSpan, iAge)
+         print*,trim(label)//'e', x%W(iW)%Eps_NW(1,1, iAge), x%W(iW)%Eps_NW(1,p%W(iW)%nSpan, iAge)
       endif
    enddo
    print'(A,I0)','FW <<<<<<<<<<<<<<<<<<<< nFW:',m%nFW
@@ -504,7 +510,7 @@ subroutine SetRequestedWindPoints(r_wind, x, p, m)
    !   ! Removing points that don't exist
    !   !call print_x_NW_FW(p,m,x,'wind befr')
    !   if (m%nNW<=p%nNWMax) then
-   !      x%W(iW)%r_NW(1:3, 1:p%nSpan+1, m%nNW+2:p%nNWMax+1, 1:p%nWings) = 0.0_ReKi
+   !      x%W(iW)%r_NW(1:3, 1:p%W(iW)%nSpan+1, m%nNW+2:p%nNWMax+1, 1:p%nWings) = 0.0_ReKi
    !   endif
    !   if ( ((p%nNWMax<=1) .and. (m%nFW==0)) .or. ((m%nFW>0) .and. (m%nFW<=p%nFWMax))) then
    !      x%W(iW)%r_FW(1:3, 1:FWnSpan+1, m%nFW+2:p%nFWMax+1, 1:p%nWings) = 0.0_ReKi
@@ -518,14 +524,14 @@ subroutine SetRequestedWindPoints(r_wind, x, p, m)
    ! --- LL CP
    do iW=1,p%nWings
       iP_start = iP_end+1
-      iP_end   = iP_start-1 + p%nSpan
-      r_wind(1:3,iP_start:iP_end) = m%W(iW)%CP_LL(1:3,1:p%nSpan)
+      iP_end   = iP_start-1 + p%W(iW)%nSpan
+      r_wind(1:3,iP_start:iP_end) = m%W(iW)%CP_LL(1:3,1:p%W(iW)%nSpan)
    enddo
    ! --- NW points
    do iW=1,p%nWings
       iP_start = iP_end+1
-      iP_end   = iP_start-1+(p%nSpan+1)*(p%nNWMax+1)
-      r_wind(1:3,iP_start:iP_end) = reshape( x%W(iW)%r_NW(1:3,1:p%nSpan+1,1:p%nNWMax+1) , (/ 3, (p%nSpan+1)*(p%nNWMax+1)/))
+      iP_end   = iP_start-1+(p%W(iW)%nSpan+1)*(p%nNWMax+1)
+      r_wind(1:3,iP_start:iP_end) = reshape( x%W(iW)%r_NW(1:3,1:p%W(iW)%nSpan+1,1:p%nNWMax+1) , (/ 3, (p%W(iW)%nSpan+1)*(p%nNWMax+1)/))
    enddo
    ! --- FW points
    if (p%nFWMax>0) then
@@ -565,7 +571,7 @@ subroutine SetRequestedWindPoints(r_wind, x, p, m)
    !   endif
    !   ! Removing points that don't exist
    !   if (m%nNW<=p%nNWMax) then
-   !      x%W(iW)%r_NW(1:3, 1:p%nSpan+1, m%nNW+2:p%nNWMax+1, 1:p%nWings) = -999999.0_ReKi
+   !      x%W(iW)%r_NW(1:3, 1:p%W(iW)%nSpan+1, m%nNW+2:p%nNWMax+1, 1:p%nWings) = -999999.0_ReKi
    !   endif
    !   if ( ((p%nNWMax<=1) .and. (m%nFW==0)) .or. ((m%nFW>0) .and. (m%nFW<=p%nFWMax))) then
    !      x%W(iW)%r_FW(1:3, 1:FWnSpan+1, m%nFW+2:p%nFWMax+1, 1:p%nWings) =-999999.0_ReKi
@@ -590,8 +596,8 @@ subroutine DistributeRequestedWind_LL(V_wind, p, m)
    ! --- LL CP
    do iW=1,p%nWings
       iP_start = iP_end+1
-      iP_end   = iP_start-1 + p%nSpan
-      m%W(iW)%Vwnd_LL(1:3,1:p%nSpan) = V_wind(1:3,iP_start:iP_end)
+      iP_end   = iP_start-1 + p%W(iW)%nSpan
+      m%W(iW)%Vwnd_LL(1:3,1:p%W(iW)%nSpan) = V_wind(1:3,iP_start:iP_end)
    enddo
 end subroutine DistributeRequestedWind_LL
 
@@ -609,13 +615,13 @@ subroutine DistributeRequestedWind_NWFW(V_wind, p, m)
    ! --- LL CP
    do iW=1,p%nWings
       iP_start = iP_end+1
-      iP_end   = iP_start-1 + p%nSpan
+      iP_end   = iP_start-1 + p%W(iW)%nSpan
    enddo
    ! --- NW points
    do iW=1,p%nWings
       iP_start = iP_end+1
-      iP_end   = iP_start-1+(p%nSpan+1)*(p%nNWMax+1)
-      m%W(iW)%Vwnd_NW(1:3,1:p%nSpan+1,1:p%nNWMax+1) = reshape( V_wind(1:3,iP_start:iP_end),(/ 3, p%nSpan+1, p%nNWMax+1/))
+      iP_end   = iP_start-1+(p%W(iW)%nSpan+1)*(p%nNWMax+1)
+      m%W(iW)%Vwnd_NW(1:3,1:p%W(iW)%nSpan+1,1:p%nNWMax+1) = reshape( V_wind(1:3,iP_start:iP_end),(/ 3, p%W(iW)%nSpan+1, p%nNWMax+1/))
    enddo
    ! --- FW points
    if (p%nFWMax>0) then
@@ -639,12 +645,12 @@ subroutine DistributeRequestedWind_Grid(V_wind, p, m)
    ! --- LL CP
    do iW=1,p%nWings
       iP_start = iP_end+1
-      iP_end   = iP_start-1 + p%nSpan
+      iP_end   = iP_start-1 + p%W(iW)%nSpan
    enddo
    ! --- NW points
    do iW=1,p%nWings
       iP_start = iP_end+1
-      iP_end   = iP_start-1+(p%nSpan+1)*(p%nNWMax+1)
+      iP_end   = iP_start-1+(p%W(iW)%nSpan+1)*(p%nNWMax+1)
    enddo
    ! --- FW points
    if (p%nFWMax>0) then
@@ -681,6 +687,7 @@ subroutine CountSegments(p, nNW, nFW, iDepthStart, nSeg, nSegP, nSegNW)
    integer(IntKi),          intent(  out) :: nSegP  !< Total number of segments points after packing
    integer(IntKi),          intent(  out) :: nSegNW !< Total number of segments points for the near wake only
    logical        :: LastNWShed
+   integer :: iW
    ! If the FW contains Shed vorticity, we include the last shed vorticity from the NW, otherwise, we don't!
    ! It's important not to include it, otherwise a strong vortex will be present there with no compensating vorticity from the FW
    LastNWShed = (p%FWShedVorticity ) .or. ((.not.p%FWShedVorticity) .and. (nNW<p%nNWMax))
@@ -688,21 +695,25 @@ subroutine CountSegments(p, nNW, nFW, iDepthStart, nSeg, nSegP, nSegNW)
    nSegP=0; nSeg=0; nSegNW=0
    ! NW segments
    if ((nNW-iDepthStart)>=0) then
-      nSegP  =      p%nWings * (  (p%nSpan+1)*(nNW-iDepthStart+2)            )
-      nSegNW =      p%nWings * (2*(p%nSpan+1)*(nNW-iDepthStart+2)-(p%nSpan+1)-(nNW-iDepthStart+1+1))  
-      if (.not.LastNWShed) then
-         nSegNW =   nSegNW - p%nWings * (p%nSpan) ! Removing last set of shed segments
-      endif
+      do iW=1,p%nWings
+         nSegP  = nSegP +         (  (p%W(iW)%nSpan+1)*(nNW-iDepthStart+2)            )
+         nSegNW = nSegNW +        (2*(p%W(iW)%nSpan+1)*(nNW-iDepthStart+2)-(p%W(iW)%nSpan+1)-(nNW-iDepthStart+1+1))  
+         if (.not.LastNWShed) then
+            nSegNW =   nSegNW -            (p%W(iW)%nSpan) ! Removing last set of shed segments
+         endif
+      enddo
    endif
    nSeg=nSegNW
    ! FW segments
    if (nFW>0) then
-      nSegP  = nSegP + p%nWings * (  (FWnSpan+1)*(nFW+1) )
-      if (p%FWShedVorticity) then
-         nSeg = nSeg + p%nWings * (2*(FWnSpan+1)*(nFW+1)-(FWnSpan+1)-(nFW+1))  
-      else
-         nSeg = nSeg + p%nWings * (  (FWnSpan+1)*(nFW)                    )   ! No Shed vorticity
-      endif
+      do iW=1,p%nWings
+         nSegP  = nSegP +            (  (FWnSpan+1)*(nFW+1) )
+         if (p%FWShedVorticity) then
+            nSeg = nSeg +            (2*(FWnSpan+1)*(nFW+1)-(FWnSpan+1)-(nFW+1))  
+         else
+            nSeg = nSeg +            (  (FWnSpan+1)*(nFW)                    )   ! No Shed vorticity
+         endif
+      enddo
    endif
 end subroutine CountSegments
 
@@ -711,8 +722,12 @@ pure integer(IntKi) function CountCPs(p, nNW, nFWEff) result(nCPs)
    type(FVW_ParameterType), intent(in   ) :: p       !< Parameters
    integer(IntKi),          intent(in   ) :: nNW     !< Number of NW panels
    integer(IntKi),          intent(in   ) :: nFWEff  !< Number of effective (ie. convecting) FW panels
-   nCPs =  p%nWings * (  (p%nSpan+1)*(nNW+1) )
-   if (nFWEff>0)  nCPs = nCPs + p%nWings * ((FWnSpan+1)*(nFWEff+1) )
+   integer :: iW
+   nCPs=0
+   do iW=1,p%nWings
+      nCPs = nCPs + (p%W(iW)%nSpan+1)*(nNW+1) 
+      if (nFWEff>0)  nCPs = nCPs + (FWnSpan+1)*(nFWEff+1)
+   enddo
 end function CountCPs
 
 
@@ -822,16 +837,16 @@ subroutine FVW_InitRegularization(x, p, m, ErrStat, ErrMsg)
    ErrMsg  = ""
    do iW=1,size(p%W)
       ! --- Compute min max and mean spanwise section lengths
-      ds_min  = minval(p%W(iW)%s_LL(2:p%nSpan+1)-p%W(iW)%s_LL(1:p%nSpan))
-      ds_max  = maxval(p%W(iW)%s_LL(2:p%nSpan+1)-p%W(iW)%s_LL(1:p%nSpan))
-      ds_mean = sum(p%W(iW)%s_LL(2:p%nSpan+1)-p%W(iW)%s_LL(1:p%nSpan))/(p%nSpan+1)
+      ds_min  = minval(p%W(iW)%s_LL(2:p%W(iW)%nSpan+1)-p%W(iW)%s_LL(1:p%W(iW)%nSpan))
+      ds_max  = maxval(p%W(iW)%s_LL(2:p%W(iW)%nSpan+1)-p%W(iW)%s_LL(1:p%W(iW)%nSpan))
+      ds_mean = sum(p%W(iW)%s_LL(2:p%W(iW)%nSpan+1)-p%W(iW)%s_LL(1:p%W(iW)%nSpan))/(p%W(iW)%nSpan+1)
       c_min  = minval(p%W(iW)%chord_LL(:))
       c_max  = maxval(p%W(iW)%chord_LL(:))
-      c_mean = sum   (p%W(iW)%chord_LL(:))/(p%nSpan+1)
+      c_mean = sum   (p%W(iW)%chord_LL(:))/(p%W(iW)%nSpan+1)
       d_min  = minval(m%W(iW)%diag_LL(:))
       d_max  = maxval(m%W(iW)%diag_LL(:))
-      d_mean = sum   (m%W(iW)%diag_LL(:))/(p%nSpan+1)
-      Span    = p%W(iW)%s_LL(p%nSpan+1)-p%W(iW)%s_LL(1)
+      d_mean = sum   (m%W(iW)%diag_LL(:))/(p%W(iW)%nSpan+1)
+      Span    = p%W(iW)%s_LL(p%W(iW)%nSpan+1)-p%W(iW)%s_LL(1)
       RegParam = ds_mean*2
 
       ! Default init of reg param
@@ -888,7 +903,7 @@ subroutine FVW_InitRegularization(x, p, m, ErrStat, ErrMsg)
 
       else if (p%RegDeterMethod==idRegDeterChord) then
          ! Using chord to scale the reg param
-         do iSpan=1,p%nSpan
+         do iSpan=1,p%W(iW)%nSpan
             x%W(iW)%Eps_NW(1:3, iSpan, 1) = p%WingRegParam * p%W(iW)%chord_CP_LL(iSpan)
             if (p%nNWMax>1) then
                x%W(iW)%Eps_NW(1:3, iSpan, 2) = p%WakeRegParam * p%W(iW)%chord_CP_LL(iSpan)
@@ -897,7 +912,7 @@ subroutine FVW_InitRegularization(x, p, m, ErrStat, ErrMsg)
 
       else if (p%RegDeterMethod==idRegDeterSpan) then
          ! Using dr to scale the reg param
-         do iSpan=1,p%nSpan
+         do iSpan=1,p%W(iW)%nSpan
             ds = p%W(iW)%s_LL(iSpan+1)-p%W(iW)%s_LL(iSpan)
             x%W(iW)%Eps_NW(1:3, iSpan, 1) = p%WingRegParam * ds
             if (p%nNWMax>1) then
@@ -1228,7 +1243,10 @@ subroutine LiftingLineInducedVelocities(p, x, iDepthStart, m, ErrStat, ErrMsg)
          print'(A,I0,A,I0,A,I0,A)','Induction -  nSeg:',nSeg,' - nSegP:',nSegP, ' - nCPs:',nCPs, ' -> No induction'
       endif
    else
-      nCPs=p%nWings * p%nSpan
+      nCPs=0
+      do iW=1,p%nWings
+         nCPs = nCPs + p%W(iW)%nSpan
+      enddo
       allocate(CPs (1:3,1:nCPs)) ! NOTE: here we do allocate CPs and Uind insteadof using Misc 
       allocate(Uind(1:3,1:nCPs)) !       The size is reasonably small, and m%Uind then stay filled with "rollup velocities" (for export)
       Uind=0.0_ReKi !< important due to side effects of ui_seg
@@ -1294,7 +1312,7 @@ subroutine FakeGroundEffect(p, x, m, ErrStat, ErrMsg)
    nBelow=0
    do iW = 1,p%nWings
       do iAge = 1,m%nNW+1
-         do iSpan = 1,p%nSpan+1
+         do iSpan = 1,p%W(iW)%nSpan+1
             if (x%W(iW)%r_NW(3, iSpan, iAge) < GROUND) then
                x%W(iW)%r_NW(3, iSpan, iAge) = ABOVE_GROUND ! could use m%dxdt
                nBelow=nBelow+1

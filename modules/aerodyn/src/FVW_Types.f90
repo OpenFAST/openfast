@@ -72,6 +72,8 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: chord_CP_LL      !< chord on LL cp  [m]
     INTEGER(IntKi)  :: iRotor      !< Index of rotor the wing belong to [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: AFindx      !< Index to the airfoils from AD15 [BladeNode,BladeIndex=1] [-]
+    INTEGER(IntKi)  :: nSpan      !< TODO, should be defined per wing. Number of spanwise element [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: PrescribedCirculation      !< Prescribed circulation on all lifting lines [m/s]
   END TYPE Wng_ParameterType
 ! =======================
 ! =========  FVW_ParameterType  =======
@@ -80,7 +82,6 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: nWings      !< Number of Wings [-]
     TYPE(Wng_ParameterType) , DIMENSION(:), ALLOCATABLE  :: W      !< Wings parameters [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: Bld2Wings      !< Index mapping from blades to wings [-]
-    INTEGER(IntKi)  :: nSpan      !< TODO, should be defined per wing. Number of spanwise element [-]
     INTEGER(IntKi)  :: nNWMax      !< Maximum number of nw panels, per wing [-]
     INTEGER(IntKi)  :: nFWMax      !< Maximum number of fw panels, per wing [-]
     INTEGER(IntKi)  :: nFWFree      !< Number of fw panels that are free, per wing [-]
@@ -89,7 +90,6 @@ IMPLICIT NONE
     REAL(ReKi)  :: FreeWakeStart      !< Time when wake starts convecting (rolling up) [s]
     REAL(ReKi)  :: FullCirculationStart      !< Time when the circulation is full [s]
     INTEGER(IntKi)  :: CirculationMethod      !< Method to determine the circulation [-]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: PrescribedCirculation      !< Prescribed circulation on all lifting lines [m/s]
     INTEGER(IntKi)  :: CircSolvMaxIter      !< Maximum number of iterations for circulation solving [-]
     REAL(ReKi)  :: CircSolvConvCrit      !< Convergence criterion for circulation solving [-]
     REAL(ReKi)  :: CircSolvRelaxation      !< Relaxation factor for circulation solving [-]
@@ -1084,6 +1084,19 @@ IF (ALLOCATED(SrcWng_ParameterTypeData%AFindx)) THEN
   END IF
     DstWng_ParameterTypeData%AFindx = SrcWng_ParameterTypeData%AFindx
 ENDIF
+    DstWng_ParameterTypeData%nSpan = SrcWng_ParameterTypeData%nSpan
+IF (ALLOCATED(SrcWng_ParameterTypeData%PrescribedCirculation)) THEN
+  i1_l = LBOUND(SrcWng_ParameterTypeData%PrescribedCirculation,1)
+  i1_u = UBOUND(SrcWng_ParameterTypeData%PrescribedCirculation,1)
+  IF (.NOT. ALLOCATED(DstWng_ParameterTypeData%PrescribedCirculation)) THEN 
+    ALLOCATE(DstWng_ParameterTypeData%PrescribedCirculation(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstWng_ParameterTypeData%PrescribedCirculation.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstWng_ParameterTypeData%PrescribedCirculation = SrcWng_ParameterTypeData%PrescribedCirculation
+ENDIF
  END SUBROUTINE FVW_CopyWng_ParameterType
 
  SUBROUTINE FVW_DestroyWng_ParameterType( Wng_ParameterTypeData, ErrStat, ErrMsg )
@@ -1112,6 +1125,9 @@ IF (ALLOCATED(Wng_ParameterTypeData%chord_CP_LL)) THEN
 ENDIF
 IF (ALLOCATED(Wng_ParameterTypeData%AFindx)) THEN
   DEALLOCATE(Wng_ParameterTypeData%AFindx)
+ENDIF
+IF (ALLOCATED(Wng_ParameterTypeData%PrescribedCirculation)) THEN
+  DEALLOCATE(Wng_ParameterTypeData%PrescribedCirculation)
 ENDIF
  END SUBROUTINE FVW_DestroyWng_ParameterType
 
@@ -1180,6 +1196,12 @@ ENDIF
   IF ( ALLOCATED(InData%AFindx) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! AFindx upper/lower bounds for each dimension
       Int_BufSz  = Int_BufSz  + SIZE(InData%AFindx)  ! AFindx
+  END IF
+      Int_BufSz  = Int_BufSz  + 1  ! nSpan
+  Int_BufSz   = Int_BufSz   + 1     ! PrescribedCirculation allocated yes/no
+  IF ( ALLOCATED(InData%PrescribedCirculation) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! PrescribedCirculation upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%PrescribedCirculation)  ! PrescribedCirculation
   END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -1303,6 +1325,23 @@ ENDIF
           IntKiBuf(Int_Xferred) = InData%AFindx(i1,i2)
           Int_Xferred = Int_Xferred + 1
         END DO
+      END DO
+  END IF
+    IntKiBuf(Int_Xferred) = InData%nSpan
+    Int_Xferred = Int_Xferred + 1
+  IF ( .NOT. ALLOCATED(InData%PrescribedCirculation) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%PrescribedCirculation,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%PrescribedCirculation,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%PrescribedCirculation,1), UBOUND(InData%PrescribedCirculation,1)
+        ReKiBuf(Re_Xferred) = InData%PrescribedCirculation(i1)
+        Re_Xferred = Re_Xferred + 1
       END DO
   END IF
  END SUBROUTINE FVW_PackWng_ParameterType
@@ -1450,6 +1489,26 @@ ENDIF
         END DO
       END DO
   END IF
+    OutData%nSpan = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! PrescribedCirculation not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%PrescribedCirculation)) DEALLOCATE(OutData%PrescribedCirculation)
+    ALLOCATE(OutData%PrescribedCirculation(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%PrescribedCirculation.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%PrescribedCirculation,1), UBOUND(OutData%PrescribedCirculation,1)
+        OutData%PrescribedCirculation(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
  END SUBROUTINE FVW_UnPackWng_ParameterType
 
  SUBROUTINE FVW_CopyParam( SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg )
@@ -1500,7 +1559,6 @@ IF (ALLOCATED(SrcParamData%Bld2Wings)) THEN
   END IF
     DstParamData%Bld2Wings = SrcParamData%Bld2Wings
 ENDIF
-    DstParamData%nSpan = SrcParamData%nSpan
     DstParamData%nNWMax = SrcParamData%nNWMax
     DstParamData%nFWMax = SrcParamData%nFWMax
     DstParamData%nFWFree = SrcParamData%nFWFree
@@ -1509,18 +1567,6 @@ ENDIF
     DstParamData%FreeWakeStart = SrcParamData%FreeWakeStart
     DstParamData%FullCirculationStart = SrcParamData%FullCirculationStart
     DstParamData%CirculationMethod = SrcParamData%CirculationMethod
-IF (ALLOCATED(SrcParamData%PrescribedCirculation)) THEN
-  i1_l = LBOUND(SrcParamData%PrescribedCirculation,1)
-  i1_u = UBOUND(SrcParamData%PrescribedCirculation,1)
-  IF (.NOT. ALLOCATED(DstParamData%PrescribedCirculation)) THEN 
-    ALLOCATE(DstParamData%PrescribedCirculation(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%PrescribedCirculation.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstParamData%PrescribedCirculation = SrcParamData%PrescribedCirculation
-ENDIF
     DstParamData%CircSolvMaxIter = SrcParamData%CircSolvMaxIter
     DstParamData%CircSolvConvCrit = SrcParamData%CircSolvConvCrit
     DstParamData%CircSolvRelaxation = SrcParamData%CircSolvRelaxation
@@ -1567,9 +1613,6 @@ ENDDO
 ENDIF
 IF (ALLOCATED(ParamData%Bld2Wings)) THEN
   DEALLOCATE(ParamData%Bld2Wings)
-ENDIF
-IF (ALLOCATED(ParamData%PrescribedCirculation)) THEN
-  DEALLOCATE(ParamData%PrescribedCirculation)
 ENDIF
  END SUBROUTINE FVW_DestroyParam
 
@@ -1639,7 +1682,6 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*2  ! Bld2Wings upper/lower bounds for each dimension
       Int_BufSz  = Int_BufSz  + SIZE(InData%Bld2Wings)  ! Bld2Wings
   END IF
-      Int_BufSz  = Int_BufSz  + 1  ! nSpan
       Int_BufSz  = Int_BufSz  + 1  ! nNWMax
       Int_BufSz  = Int_BufSz  + 1  ! nFWMax
       Int_BufSz  = Int_BufSz  + 1  ! nFWFree
@@ -1648,11 +1690,6 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! FreeWakeStart
       Re_BufSz   = Re_BufSz   + 1  ! FullCirculationStart
       Int_BufSz  = Int_BufSz  + 1  ! CirculationMethod
-  Int_BufSz   = Int_BufSz   + 1     ! PrescribedCirculation allocated yes/no
-  IF ( ALLOCATED(InData%PrescribedCirculation) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! PrescribedCirculation upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%PrescribedCirculation)  ! PrescribedCirculation
-  END IF
       Int_BufSz  = Int_BufSz  + 1  ! CircSolvMaxIter
       Re_BufSz   = Re_BufSz   + 1  ! CircSolvConvCrit
       Re_BufSz   = Re_BufSz   + 1  ! CircSolvRelaxation
@@ -1772,8 +1809,6 @@ ENDIF
         END DO
       END DO
   END IF
-    IntKiBuf(Int_Xferred) = InData%nSpan
-    Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%nNWMax
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%nFWMax
@@ -1790,21 +1825,6 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%CirculationMethod
     Int_Xferred = Int_Xferred + 1
-  IF ( .NOT. ALLOCATED(InData%PrescribedCirculation) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%PrescribedCirculation,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%PrescribedCirculation,1)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i1 = LBOUND(InData%PrescribedCirculation,1), UBOUND(InData%PrescribedCirculation,1)
-        ReKiBuf(Re_Xferred) = InData%PrescribedCirculation(i1)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
     IntKiBuf(Int_Xferred) = InData%CircSolvMaxIter
     Int_Xferred = Int_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%CircSolvConvCrit
@@ -1978,8 +1998,6 @@ ENDIF
         END DO
       END DO
   END IF
-    OutData%nSpan = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
     OutData%nNWMax = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%nFWMax = IntKiBuf(Int_Xferred)
@@ -1996,24 +2014,6 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%CirculationMethod = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! PrescribedCirculation not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%PrescribedCirculation)) DEALLOCATE(OutData%PrescribedCirculation)
-    ALLOCATE(OutData%PrescribedCirculation(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%PrescribedCirculation.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i1 = LBOUND(OutData%PrescribedCirculation,1), UBOUND(OutData%PrescribedCirculation,1)
-        OutData%PrescribedCirculation(i1) = ReKiBuf(Re_Xferred)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
     OutData%CircSolvMaxIter = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%CircSolvConvCrit = ReKiBuf(Re_Xferred)

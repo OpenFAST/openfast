@@ -1612,7 +1612,7 @@ END FUNCTION Calc_Chi0
 
 
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE Calc_WriteOutput( p, p_AD, u, m, m_AD, y, OtherState, xd, indx, ErrStat, ErrMsg )
+SUBROUTINE Calc_WriteOutput( p, p_AD, u, m, m_AD, y, OtherState, xd, indx, iRot, ErrStat, ErrMsg )
    
    TYPE(RotParameterType),    INTENT(IN   )  :: p                                 ! The module parameters
    TYPE(AD_ParameterType),    INTENT(IN   )  :: p_AD                              ! The module parameters
@@ -1623,6 +1623,7 @@ SUBROUTINE Calc_WriteOutput( p, p_AD, u, m, m_AD, y, OtherState, xd, indx, ErrSt
    TYPE(RotOtherStateType),   INTENT(IN   )  :: OtherState                        ! other states at t (for DBEMT and UA)
    TYPE(RotDiscreteStateType),INTENT(IN   )  :: xd                                ! Discrete states
    integer,                   intent(in   )  :: indx                              ! index into m%BEMT_u(indx) array; 1=t and 2=t+dt (but not checked here)
+   integer,                   intent(in   )  :: iRot                              ! Rotor index, needed for FVW
    INTEGER(IntKi),            INTENT(  OUT)  :: ErrStat                           ! The error status code
    CHARACTER(*),              INTENT(  OUT)  :: ErrMsg                            ! The error message, if an error occurred
 
@@ -1886,11 +1887,13 @@ CONTAINS
    !!                                          m%DisturbedInflow (done in SetInputs)
    !!       Make sure these are set!
    subroutine Calc_WriteOutput_FVW
-
-      real(ReKi)           :: rmax, omega
+      integer    :: iW
+      real(ReKi) :: rmax, omega
 
          ! blade outputs
       do k=1,min(p%numBlades,3)
+         iW=p_AD%FVW%Bld2Wings(iRot, k)
+
          do beta=1,p%NBlOuts
             j=p%BlOutNd(beta)
 
@@ -1910,39 +1913,39 @@ CONTAINS
             m%AllOuts( BNSTVy( beta,k) ) = tmp(2)
             m%AllOuts( BNSTVz( beta,k) ) = tmp(3)
 
-            m%AllOuts( BNVrel( beta,k) ) = m_AD%FVW%W(k)%BN_Vrel(j)
-            m%AllOuts( BNDynP( beta,k) ) = 0.5 * p%airDens * m_AD%FVW%W(k)%BN_Vrel(j)**2
-            m%AllOuts( BNRe(   beta,k) ) = m_AD%FVW%W(k)%BN_Re(j)
-            m%AllOuts( BNM(    beta,k) ) = m_AD%FVW%W(k)%BN_Vrel(j) / p%SpdSound
+            m%AllOuts( BNVrel( beta,k) ) = m_AD%FVW%W(iW)%BN_Vrel(j)
+            m%AllOuts( BNDynP( beta,k) ) = 0.5 * p%airDens * m_AD%FVW%W(iW)%BN_Vrel(j)**2
+            m%AllOuts( BNRe(   beta,k) ) = m_AD%FVW%W(iW)%BN_Re(j)
+            m%AllOuts( BNM(    beta,k) ) = m_AD%FVW%W(iW)%BN_Vrel(j) / p%SpdSound
 
-            m%AllOuts( BNVIndx(beta,k) ) = -m_AD%FVW%W(k)%BN_UrelWind_s(1,j) * m_AD%FVW%W(k)%BN_AxInd(j)
-            m%AllOuts( BNVIndy(beta,k) ) =  m_AD%FVW%W(k)%BN_UrelWind_s(2,j) * m_AD%FVW%W(k)%BN_TanInd(j)
+            m%AllOuts( BNVIndx(beta,k) ) = -m_AD%FVW%W(iW)%BN_UrelWind_s(1,j) * m_AD%FVW%W(iW)%BN_AxInd(j)
+            m%AllOuts( BNVIndy(beta,k) ) =  m_AD%FVW%W(iW)%BN_UrelWind_s(2,j) * m_AD%FVW%W(iW)%BN_TanInd(j)
 
-            m%AllOuts( BNAxInd(beta,k) ) = m_AD%FVW%W(k)%BN_AxInd(j)
-            m%AllOuts( BNTnInd(beta,k) ) = m_AD%FVW%W(k)%BN_TanInd(j)
+            m%AllOuts( BNAxInd(beta,k) ) = m_AD%FVW%W(iW)%BN_AxInd(j)
+            m%AllOuts( BNTnInd(beta,k) ) = m_AD%FVW%W(iW)%BN_TanInd(j)
 
-            m%AllOuts( BNAlpha(beta,k) ) = m_AD%FVW%W(k)%BN_alpha(j)*R2D
-            m%AllOuts( BNTheta(beta,k) ) = m_AD%FVW%W(k)%PitchAndTwist(j)*R2D
-            m%AllOuts( BNPhi(  beta,k) ) = m_AD%FVW%W(k)%BN_phi(j)*R2D
+            m%AllOuts( BNAlpha(beta,k) ) = m_AD%FVW%W(iW)%BN_alpha(j)*R2D
+            m%AllOuts( BNTheta(beta,k) ) = m_AD%FVW%W(iW)%PitchAndTwist(j)*R2D
+            m%AllOuts( BNPhi(  beta,k) ) = m_AD%FVW%W(iW)%BN_phi(j)*R2D
 !             m%AllOuts( BNCurve(beta,k) ) = m%Curve(j,k)*R2D ! TODO
 
 !             m%AllOuts( BNCpmin(   beta,k) ) = m%BEMT_y%Cpmin(jk) ! TODO
             m%AllOuts( BNSigCr(   beta,k) ) = m%SigmaCavitCrit(j,k)
             m%AllOuts( BNSgCav(   beta,k) ) = m%SigmaCavit(j,k)
 
-            m%AllOuts( BNCl(   beta,k) ) = m_AD%FVW%W(k)%BN_Cl(j)
-            m%AllOuts( BNCd(   beta,k) ) = m_AD%FVW%W(k)%BN_Cd(j)
-            m%AllOuts( BNCm(   beta,k) ) = m_AD%FVW%W(k)%BN_Cm(j)
-            m%AllOuts( BNCx(   beta,k) ) = m_AD%FVW%W(k)%BN_Cx(j)
-            m%AllOuts( BNCy(   beta,k) ) = m_AD%FVW%W(k)%BN_Cy(j)
+            m%AllOuts( BNCl(   beta,k) ) = m_AD%FVW%W(iW)%BN_Cl(j)
+            m%AllOuts( BNCd(   beta,k) ) = m_AD%FVW%W(iW)%BN_Cd(j)
+            m%AllOuts( BNCm(   beta,k) ) = m_AD%FVW%W(iW)%BN_Cm(j)
+            m%AllOuts( BNCx(   beta,k) ) = m_AD%FVW%W(iW)%BN_Cx(j)
+            m%AllOuts( BNCy(   beta,k) ) = m_AD%FVW%W(iW)%BN_Cy(j)
 
-            ct=cos(m_AD%FVW%W(k)%PitchAndTwist(j))    ! cos(theta)
-            st=sin(m_AD%FVW%W(k)%PitchAndTwist(j))    ! sin(theta)
-            m%AllOuts( BNCn(   beta,k) ) = m_AD%FVW%W(k)%BN_Cx(j)*ct + m_AD%FVW%W(k)%BN_Cy(j)*st
-            m%AllOuts( BNCt(   beta,k) ) =-m_AD%FVW%W(k)%BN_Cx(j)*st + m_AD%FVW%W(k)%BN_Cy(j)*ct
+            ct=cos(m_AD%FVW%W(iW)%PitchAndTwist(j))    ! cos(theta)
+            st=sin(m_AD%FVW%W(iW)%PitchAndTwist(j))    ! sin(theta)
+            m%AllOuts( BNCn(   beta,k) ) = m_AD%FVW%W(iW)%BN_Cx(j)*ct + m_AD%FVW%W(iW)%BN_Cy(j)*st
+            m%AllOuts( BNCt(   beta,k) ) =-m_AD%FVW%W(iW)%BN_Cx(j)*st + m_AD%FVW%W(iW)%BN_Cy(j)*ct
 
-            cp=cos(m_AD%FVW%W(k)%BN_phi(j))
-            sp=sin(m_AD%FVW%W(k)%BN_phi(j))
+            cp=cos(m_AD%FVW%W(iW)%BN_phi(j))
+            sp=sin(m_AD%FVW%W(iW)%BN_phi(j))
             m%AllOuts( BNFl(   beta,k) ) =  m%X(j,k)*cp - m%Y(j,k)*sp
             m%AllOuts( BNFd(   beta,k) ) =  m%X(j,k)*sp + m%Y(j,k)*cp
             m%AllOuts( BNMm(   beta,k) ) =  m%M(j,k)
@@ -1951,7 +1954,7 @@ CONTAINS
             m%AllOuts( BNFn(   beta,k) ) =  m%X(j,k)*ct - m%Y(j,k)*st
             m%AllOuts( BNFt(   beta,k) ) = -m%X(j,k)*st - m%Y(j,k)*ct
 
-            m%AllOuts( BNGam(  beta,k) ) = 0.5_ReKi * p_AD%FVW%W(k)%Chord(j) * m_AD%FVW%W(k)%BN_Vrel(j) * m_AD%FVW%W(k)%BN_Cl(j) ! "Gam" [m^2/s]
+            m%AllOuts( BNGam(  beta,k) ) = 0.5_ReKi * p_AD%FVW%W(iW)%Chord(j) * m_AD%FVW%W(iW)%BN_Vrel(j) * m_AD%FVW%W(iW)%BN_Cl(j) ! "Gam" [m^2/s]
          end do ! nodes
       end do ! blades
 

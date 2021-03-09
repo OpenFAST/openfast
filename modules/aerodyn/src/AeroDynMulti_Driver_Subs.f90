@@ -878,7 +878,6 @@ subroutine Set_IW_Inputs(nt,DvrData,AD,IW,errStat,errMsg)
 
    do iWT=1,DvrData%numTurbines
       ! 'TODO verify order of points'
-
       do K = 1,SIZE(AD%u(1)%rotors(iWT)%BladeMotion)
          do J = 1,AD%u(1)%rotors(iWT)%BladeMotion(k)%Nnodes
             Node = Node + 1
@@ -889,18 +888,18 @@ subroutine Set_IW_Inputs(nt,DvrData,AD,IW,errStat,errMsg)
          Node = Node + 1
          IW%u(1)%PositionXYZ(:,Node) = AD%u(1)%rotors(iWT)%TowerMotion%TranslationDisp(:,J) + AD%u(1)%rotors(iWT)%TowerMotion%Position(:,J)
       end do      
-      ! vortex points from FVW in AD15
-      if (allocated(AD%OtherState%WakeLocationPoints)) then
-         do J=1,size(AD%OtherState%WakeLocationPoints,DIM=2)
-            Node = Node + 1
-            IW%u(1)%PositionXYZ(:,Node) = AD%OtherState%WakeLocationPoints(:,J)
-            ! rewrite the history of this so that extrapolation doesn't make a mess of things
-   !          do k=2,size(IW%u)
-   !             if (allocated(IW%u(k)%PositionXYZ))   IW%u(k)%PositionXYZ(:,Node) = IW%u(1)%PositionXYZ(:,Node)
-   !          end do
-         enddo
-      end if
-   enddo
+   enddo ! iWT
+   ! vortex points from FVW in AD15
+   if (allocated(AD%OtherState%WakeLocationPoints)) then
+      do J=1,size(AD%OtherState%WakeLocationPoints,DIM=2)
+         Node = Node + 1
+         IW%u(1)%PositionXYZ(:,Node) = AD%OtherState%WakeLocationPoints(:,J)
+         ! rewrite the history of this so that extrapolation doesn't make a mess of things
+!          do k=2,size(IW%u)
+!             if (allocated(IW%u(k)%PositionXYZ))   IW%u(k)%PositionXYZ(:,Node) = IW%u(1)%PositionXYZ(:,Node)
+!          end do
+      enddo !j, wake points
+   end if
 end subroutine Set_IW_Inputs
 
 !> This routine sets the AeroDyn wind inflow inputs.
@@ -939,16 +938,16 @@ subroutine AD_InputSolve_IfW(u_AD, y_IfW, errStat, errMsg)
             node = node + 1
          end do      
       end if
-      ! velocity at vortex wake points velocity array handoff here
-      if ( allocated(u_AD%InflowWakeVel) ) then
-         Nnodes = size(u_AD%InflowWakeVel,DIM=2)
-         do j=1,Nnodes
-            u_AD%InflowWakeVel(:,j) = y_IfW%VelocityUVW(:,node)
-            node = node + 1
-         end do
-      end if
+   enddo ! rotors
 
-   enddo
+   ! velocity at vortex wake points velocity array handoff here
+   if ( allocated(u_AD%InflowWakeVel) ) then
+      Nnodes = size(u_AD%InflowWakeVel,DIM=2)
+      do j=1,Nnodes
+         u_AD%InflowWakeVel(:,j) = y_IfW%VelocityUVW(:,node)
+         node = node + 1
+      end do !j, wake points
+   end if
 end subroutine AD_InputSolve_IfW
 
 
@@ -1625,7 +1624,8 @@ SUBROUTINE SetVTKParameters(p_FAST, DvrData, InitOutData_AD, AD, ErrStat, ErrMsg
    ! write the ground or seabed reference polygon:
    RefPoint(1) = sum(DvrData%WT(:)%originInit(1)) / DvrData%numTurbines
    RefPoint(2) = sum(DvrData%WT(:)%originInit(2)) / DvrData%numTurbines
-   RefPoint(3) = sum(DvrData%WT(:)%originInit(3)) / DvrData%numTurbines
+   !RefPoint(3) = sum(DvrData%WT(:)%originInit(3)) / DvrData%numTurbines
+   RefPoint(3) = 0.0_ReKi
    RefLengths  = GroundRad  + sqrt((WorldBoxMax(1)-WorldBoxMin(1))**2 + (WorldBoxMax(2)-WorldBoxMin(2))**2)
    call WrVTK_Ground (RefPoint, RefLengths, trim(p_FAST%VTK_OutFileRoot) // '.GroundSurface', ErrStat2, ErrMsg2 )         
       
