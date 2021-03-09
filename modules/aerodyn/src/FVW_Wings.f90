@@ -100,15 +100,15 @@ contains
             ErrMsg ='TODO different discretization InputMesh / vortex code'; ErrStat=ErrID_Fatal; return
          endif
          do iSpan = 1, p%nSpan+1
-            p%s_LL    (iSpan, iW) = s_in(iSpan)
-            p%chord_LL(iSpan, iW) = p%chord(iSpan,iW)
+            p%W(iW)%s_LL    (iSpan) = s_in(iSpan)
+            p%W(iW)%chord_LL(iSpan) = p%W(iW)%chord(iSpan)
          enddo
          ! --- Control points spanwise location
          ! NOTE: we use the cos approximation of VanGarrel. For equispacing, it returns mid point
          !       otherwise, points are slightly closer to panels that are shorter
-         !call Meshing('middle'           , p%s_LL(:,iW), p%nSpan, p%s_CP_LL(:,iW))
-         call Meshing('fullcosineapprox' , p%s_LL(:,iW), p%nSpan, p%s_CP_LL(:,iW))
-         call InterpArray(p%s_LL(:,iW), p%chord_LL(:,iW), p%s_CP_LL(:,iW), p%chord_CP_LL(:,iW))
+         !call Meshing('middle'           , p%W(iW)%s_LL(:), p%nSpan, p%s_CP_LL(:))
+         call Meshing('fullcosineapprox' , p%W(iW)%s_LL(:), p%nSpan, p%W(iW)%s_CP_LL(:))
+         call InterpArray(p%W(iW)%s_LL(:), p%W(iW)%chord_LL(:), p%W(iW)%s_CP_LL(:), p%W(iW)%chord_CP_LL(:))
 
          deallocate(s_in)
       enddo
@@ -147,11 +147,11 @@ contains
          do iSpan = 1,p%nSpan+1
             P_ref = Meshes(iW)%Position(1:3, iSpan )+Meshes(iW)%TranslationDisp(1:3, iSpan)
             DP_LE(1:3) =  0.0
-            DP_LE(1)   = -p%chord_LL(iSpan,iW)/4.
+            DP_LE(1)   = -p%W(iW)%chord_LL(iSpan)/4.
             DP_TE(1:3) =  0.0
-            DP_TE(1)   = +3.*p%chord_LL(iSpan,iW)/4. 
-            m%LE(1:3, iSpan, iW) = P_ref + DP_LE(1)*Meshes(iW)%Orientation(2,1:3,iSpan)
-            m%TE(1:3, iSpan, iW) = P_ref + DP_TE(1)*Meshes(iW)%Orientation(2,1:3,iSpan)
+            DP_TE(1)   = +3.*p%W(iW)%chord_LL(iSpan)/4. 
+            m%W(iW)%LE(1:3, iSpan) = P_ref + DP_LE(1)*Meshes(iW)%Orientation(2,1:3,iSpan)
+            m%W(iW)%TE(1:3, iSpan) = P_ref + DP_TE(1)*Meshes(iW)%Orientation(2,1:3,iSpan)
          enddo         
       enddo
       ! --- Generic code below to compute normal/tangential vectors of a lifting line panel
@@ -165,10 +165,10 @@ contains
       !
       do iW = 1,p%nWings
          do iSpan = 1,p%nSpan
-            P1                    = m%LE(:,iSpan  , iw)
-            P4                    = m%LE(:,iSpan+1, iw)
-            P3                    = m%TE(:,iSpan+1, iw)
-            P2                    = m%TE(:,iSpan  , iw)
+            P1                    = m%W(iW)%LE(:,iSpan  )
+            P4                    = m%W(iW)%LE(:,iSpan+1)
+            P3                    = m%W(iW)%TE(:,iSpan+1)
+            P2                    = m%W(iW)%TE(:,iSpan  )
             P8                    = (P1+P4)/2
             P6                    = (P2+P3)/2
             P5                    = (P1+P2)/2
@@ -181,16 +181,15 @@ contains
 
             ! NOTE: The denominator below has seg-faulted with Intel Fortran in Release mode, possibly due to nuances in copmiler optimizations.
             !       This code was previously after the m%Norm calculations, but moving it up "fixes" the bug.
-            m%Tang(1:3,iSpan,iW)  = (DP1)/TwoNorm(DP1)                       ! tangential unit vector, along chord
-
-            m%Norm(1:3,iSpan,iW)  = cross_product(DP1,DP2)
-            m%Norm(1:3,iSpan,iW)  = m%Norm(1:3,iSpan,iW)/TwoNorm(m%Norm(1:3,iSpan,iW))
+            m%W(iW)%Tang(1:3,iSpan)  = (DP1)/TwoNorm(DP1)                       ! tangential unit vector, along chord
+            m%W(iW)%Norm(1:3,iSpan)  = cross_product(DP1,DP2)
+            m%W(iW)%Norm(1:3,iSpan)  = m%W(iW)%Norm(1:3,iSpan)/TwoNorm(m%W(iW)%Norm(1:3,iSpan))
             ! m%Tscoord(1:3,iSpan) = (DP3)/norm2(DP3)                      ! tangential unit vector, along span, follows ref line
-            m%dl  (1:3,iSpan,iW)  = DP2
-            m%Orth(1:3,iSpan,iW)  = cross_product(m%Norm(1:3,iSpan,iW),m%Tang(1:3,iSpan,iW)) ! orthogonal vector to N and T
-            m%Area(iSpan, iW) = TwoNorm(cross_product(DP1,DP3))
+            m%W(iW)%dl  (1:3,iSpan)  = DP2
+            m%W(iW)%Orth(1:3,iSpan)  = cross_product(m%W(iW)%Norm(1:3,iSpan),m%W(iW)%Tang(1:3,iSpan)) ! orthogonal vector to N and T
+            m%W(iW)%Area(iSpan) = TwoNorm(cross_product(DP1,DP3))
             DP3 = P1-P3
-            m%diag_LL(iSpan, iW) = TwoNorm(DP3)
+            m%W(iW)%diag_LL(iSpan) = TwoNorm(DP3)
          end do
       enddo
       ! --- Lifting Line/ Bound Circulation panel
@@ -198,8 +197,8 @@ contains
       ! More panelling options may be considered in the future
       do iW = 1,p%nWings
          do iSpan = 1,p%nSpan+1
-            m%r_LL(1:3,iSpan,1,iW)= m%TE(1:3,iSpan,iW)*0.25_ReKi+m%LE(1:3,iSpan,iW)*0.75_ReKi  ! 1/4 chord
-            m%r_LL(1:3,iSpan,2,iW)= m%TE(1:3,iSpan,iW)                                         ! TE
+            m%W(iW)%r_LL(1:3,iSpan,1)= m%W(iW)%TE(1:3,iSpan)*0.25_ReKi+m%W(iW)%LE(1:3,iSpan)*0.75_ReKi  ! 1/4 chord
+            m%W(iW)%r_LL(1:3,iSpan,2)= m%W(iW)%TE(1:3,iSpan)                                         ! TE
          enddo
       enddo
 
@@ -207,26 +206,28 @@ contains
       ! For now: placed exactly on the LL panel
       ! NOTE: separated from other loops just in case a special discretization is used
       do iW = 1,p%nWings
-         call InterpArray(p%s_LL(:,iW), m%r_LL(1,:,1,iW), p%s_CP_LL(:,iW), m%CP_LL(1,:,iW))
-         call InterpArray(p%s_LL(:,iW), m%r_LL(2,:,1,iW), p%s_CP_LL(:,iW), m%CP_LL(2,:,iW))
-         call InterpArray(p%s_LL(:,iW), m%r_LL(3,:,1,iW), p%s_CP_LL(:,iW), m%CP_LL(3,:,iW))
+         call InterpArray(p%W(iW)%s_LL(:), m%W(iW)%r_LL(1,:,1), p%W(iW)%s_CP_LL(:), m%W(iW)%CP_LL(1,:))
+         call InterpArray(p%W(iW)%s_LL(:), m%W(iW)%r_LL(2,:,1), p%W(iW)%s_CP_LL(:), m%W(iW)%CP_LL(2,:))
+         call InterpArray(p%W(iW)%s_LL(:), m%W(iW)%r_LL(3,:,1), p%W(iW)%s_CP_LL(:), m%W(iW)%CP_LL(3,:))
       enddo
 
       ! --- Structural velocity on LL
       ! TODO: difference meshes in/LL
       do iW = 1,p%nWings
-         call InterpArray(p%s_LL(:,iW), Meshes(iW)%TranslationVel(1,:) ,p%s_CP_LL(:,iW), m%Vstr_LL(1,:,iW))
-         call InterpArray(p%s_LL(:,iW), Meshes(iW)%TranslationVel(2,:) ,p%s_CP_LL(:,iW), m%Vstr_LL(2,:,iW))
-         call InterpArray(p%s_LL(:,iW), Meshes(iW)%TranslationVel(3,:) ,p%s_CP_LL(:,iW), m%Vstr_LL(3,:,iW))
+         call InterpArray(p%W(iW)%s_LL(:), Meshes(iW)%TranslationVel(1,:) ,p%W(iW)%s_CP_LL(:), m%W(iW)%Vstr_LL(1,:))
+         call InterpArray(p%W(iW)%s_LL(:), Meshes(iW)%TranslationVel(2,:) ,p%W(iW)%s_CP_LL(:), m%W(iW)%Vstr_LL(2,:))
+         call InterpArray(p%W(iW)%s_LL(:), Meshes(iW)%TranslationVel(3,:) ,p%W(iW)%s_CP_LL(:), m%W(iW)%Vstr_LL(3,:))
       enddo
    end subroutine Wings_Panelling
 
    !----------------------------------------------------------------------------------------------------------------------------------
    !>
-   subroutine Wings_ComputeCirculation(t, Gamma_LL, Gamma_LL_prev, u, p, x, m, AFInfo, ErrStat, ErrMsg, iLabel)
+   subroutine Wings_ComputeCirculation(t, z, z_prev, u, p, x, m, AFInfo, ErrStat, ErrMsg, iLabel)
       real(DbKi),                      intent(in   )  :: t           !< Current simulation time in seconds
-      real(ReKi), dimension(:,:),      intent(inout)  :: Gamma_LL       !< Circulation on all the lifting lines
-      real(ReKi), dimension(:,:),      intent(in   )  :: Gamma_LL_prev  !< Previous/Guessed circulation
+      type(FVW_ConstraintStateType),   intent(inout)  :: z            !< z%W%Gamma_LL
+      type(FVW_ConstraintStateType),   intent(in   )  :: z_prev       !< z_prev%W%Gamma_LL
+      !real(ReKi), dimension(:,:),      intent(inout)  :: Gamma_LL       !< Circulation on all the lifting lines
+      !real(ReKi), dimension(:,:),      intent(in   )  :: Gamma_LL_prev  !< Previous/Guessed circulation
       type(FVW_InputType),             intent(in   )  :: u              !< Parameters
       type(FVW_ParameterType),         intent(in   )  :: p              !< Parameters
       type(FVW_ContinuousStateType),   intent(in   )  :: x              !< Parameters
@@ -266,14 +267,14 @@ contains
 
       if (p%CirculationMethod==idCircPrescribed) then 
          do iW = 1, p%nWings !Loop over lifting lines
-            Gamma_LL(1:p%nSpan,iW) = p%PrescribedCirculation(1:p%nSpan)
+            z%W(iW)%Gamma_LL(1:p%nSpan) = p%PrescribedCirculation(1:p%nSpan)
+            m%W(iW)%Vind_LL=-9999._ReKi !< Safety 
+            m%W(iW)%Vtot_LL=-9999._ReKi !< Safety 
          enddo
-         m%Vind_LL=-9999._ReKi !< Safety 
-         m%Vtot_LL=-9999._ReKi !< Safety 
 
       else if (p%CirculationMethod==idCircPolarData) then 
          ! ---  Solve for circulation using polar data
-         CALL Wings_ComputeCirculationPolarData(Gamma_LL, Gamma_LL_prev, p, x, m, AFInfo, GammaScale, ErrStat, ErrMsg, iLabel)
+         CALL Wings_ComputeCirculationPolarData(z, z_prev, p, x, m, AFInfo, GammaScale, ErrStat, ErrMsg, iLabel)
 
       else if (p%CirculationMethod==idCircNoFlowThrough) then 
          ! ---  Solve for circulation using the no-flow through condition
@@ -283,16 +284,19 @@ contains
       endif
 
       ! Scale circulation (for initial transient)
-      Gamma_LL = Gamma_LL * GammaScale
-
+      do iW = 1, p%nWings !Loop over lifting lines
+         z%W(iW)%Gamma_LL(1:p%nSpan) = z%W(iW)%Gamma_LL(1:p%nSpan) * GammaScale
+      enddo
 
    endsubroutine Wings_ComputeCirculation
 
    !----------------------------------------------------------------------------------------------------------------------------------
    !>
-   subroutine Wings_ComputeCirculationPolarData(Gamma_LL, Gamma_LL_prev, p, x, m, AFInfo, GammaScale, ErrStat, ErrMsg, iLabel)
-      real(ReKi), dimension(:,:),      intent(inout)  :: Gamma_LL       !< Circulation on all the lifting lines
-      real(ReKi), dimension(:,:),      intent(in   )  :: Gamma_LL_prev  !< Previous/Guessed circulation
+   subroutine Wings_ComputeCirculationPolarData(z, z_prev, p, x, m, AFInfo, GammaScale, ErrStat, ErrMsg, iLabel)
+      !real(ReKi), dimension(:,:),      intent(inout)  :: Gamma_LL       !< Circulation on all the lifting lines
+      !real(ReKi), dimension(:,:),      intent(in   )  :: Gamma_LL_prev  !< Previous/Guessed circulation
+      type(FVW_ConstraintStateType),   intent(inout)  :: z            !< z%W%Gamma_LL
+      type(FVW_ConstraintStateType),   intent(in   )  :: z_prev       !< z_prev%W%Gamma_LL
       type(FVW_ParameterType),         intent(in   )  :: p              !< Parameters
       type(FVW_ContinuousStateType),   intent(in   )  :: x              !< Parameters
       type(FVW_MiscVarType),           intent(inout)  :: m              !< Initial misc/optimization variables
@@ -303,6 +307,7 @@ contains
       integer(IntKi), intent(in) :: iLabel
       ! Local
       real(ReKi), dimension(:,:), allocatable :: DGamma        !< 
+      real(ReKi), dimension(:,:), allocatable :: Gamma_LL      !< 
       real(ReKi), dimension(:,:), allocatable :: GammaLastIter !< 
       logical                                 :: bConverged    !< 
       integer(IntKi)                          :: iIter         !< iteration step number
@@ -322,26 +327,41 @@ contains
 
       !print*,'Parameters for circulation solv: ',p%CircSolvConvCrit ,p%CircSolvRelaxation ,p%CircSolvMaxIter   
 
-      allocate(DGamma       (1:p%nSpan,1:p%nWings))
+      allocate(DGamma       (1:p%nSpan,1:p%nWings)) ! TODO replace by flat vector
       allocate(GammaLastIter(1:p%nSpan,1:p%nWings))
+      allocate(Gamma_LL (1:p%nSpan,1:p%nWings)) ! TODO TODO TODO TEMP
+
+
+      do iW=1,p%nWings
+         Gamma_LL(:,iW) = z%W(iW)%Gamma_LL(:) ! TODO TODO TODO
+      enddo
 
       ! --- Last iteration circulation
       if (m%FirstCall) then
          ! We find a guess by looking simply at the Wind and Elasticity velocity
-         m%Vtot_ll = m%Vwnd_LL - m%Vstr_ll
+         do iW=1,p%nWings
+            m%W(iW)%Vtot_ll = m%W(iW)%Vwnd_LL - m%W(iW)%Vstr_ll
+         enddo
+         ! Input: Vtot_LL, output: GammaLastIter
          call CirculationFromPolarData(GammaLastIter, p, m, AFInfo,ErrStat2,ErrMsg2);  if(Failed()) return;
       else
          ! NOTE: we need to inverse the scaling to speed up the convergence
          if (.not. EqualRealNos(GammaScale, 0.0_ReKi)) then
-            GammaLastIter(1:p%nSpan,1:p%nWings) = Gamma_LL_prev(1:p%nSpan,1:p%nWings) / GammaScale 
+            do iW=1,p%nWings
+               GammaLastIter(1:p%nSpan,iW) = z_prev%W(iW)%Gamma_LL(1:p%nSpan) / GammaScale  ! TODO TODO
+            enddo
          else
-            GammaLastIter(1:p%nSpan,1:p%nWings) = Gamma_LL_prev(1:p%nSpan,1:p%nWings)
+            do iW=1,p%nWings
+               GammaLastIter(1:p%nSpan,iW) = z_prev%W(iW)%Gamma_LL(1:p%nSpan) ! TODO TODO
+            enddo
          endif
       endif
 
-      if (any(x%r_NW(1,:,1:m%nNW+1,:)<-999)) then
-         ErrMsg='Wings_ComputeCirculationPolarData: Problem in input NW points'; ErrStat=ErrID_Fatal; return
-      endif
+      do iW=1,p%nWings
+         if (any(x%W(iW)%r_NW(1,:,1:m%nNW+1)<-999)) then
+            ErrMsg='Wings_ComputeCirculationPolarData: Problem in input NW points'; ErrStat=ErrID_Fatal; return
+         endif
+      enddo
 
 
       ! --- Setting up Vcst: part of the velocity that is constant withing the iteration loop
@@ -349,17 +369,19 @@ contains
       call AllocAry(Vvar,  3, p%nSpan, p%nWings, 'Vvar',  ErrStat2, ErrMsg2);  if(Failed()) return;
       call AllocAry(Vcst,  3, p%nSpan, p%nWings, 'Vcst',  ErrStat2, ErrMsg2);  if(Failed()) return;
 
-      ! Set m%Vind_LL Induced velocity from Known wake only (after iNWStart+1)
-      call LiftingLineInducedVelocities(m%CP_LL, p, x, iNWStart+1, m, m%Vind_LL, ErrStat2, ErrMsg2);  if(Failed()) return;
+      ! Set m%W(iW)%Vind_LL Induced velocity from Known wake only (after iNWStart+1)
+      ! Input: m%W%CP_LL, output: m%W%Vind_LL
+      call LiftingLineInducedVelocities(p, x, iNWStart+1, m, ErrStat2, ErrMsg2);  if(Failed()) return;
 
-      Vcst = m%Vind_LL + m%Vwnd_LL - m%Vstr_ll
-
-      if (any(m%Vind_LL(1:3,:,:)<-99)) then
-         ErrMsg='Wings_ComputeCirculationPolarData: Problem in induced velocity on LL points'; ErrStat=ErrID_Fatal; return
-      endif
-      if (any(m%Vwnd_LL(1:3,:,:)<-99)) then
-         ErrMsg='Wings_ComputeCirculationPolarData: Problem in wind velocity on LL points'; ErrStat=ErrID_Fatal; return
-      endif
+      do iW=1,p%nWings
+         Vcst(:,:,iW) = m%W(iW)%Vind_LL + m%W(iW)%Vwnd_LL - m%W(iW)%Vstr_ll ! TODO TODO
+         if (any(m%W(iW)%Vind_LL(1:3,:)<-99)) then
+            ErrMsg='Wings_ComputeCirculationPolarData: Problem in induced velocity on LL points'; ErrStat=ErrID_Fatal; return
+         endif
+         if (any(m%W(iW)%Vwnd_LL(1:3,:)<-99)) then
+            ErrMsg='Wings_ComputeCirculationPolarData: Problem in wind velocity on LL points'; ErrStat=ErrID_Fatal; return
+         endif
+      enddo
 
       ! --- Convergence loop until near wake gives induction coherent with circulation
       bConverged=.false.
@@ -372,20 +394,23 @@ contains
           do iW=1,p%nWings
              do iSpan=1,p%nSpan
                 do iDepth=1,iNWStart ! Two first panels
-                   P1=x%r_NW(1:3,iSpan  ,iDepth  ,iW)
-                   P2=x%r_NW(1:3,iSpan+1,iDepth  ,iW)
-                   P3=x%r_NW(1:3,iSpan+1,iDepth+1,iW)
-                   P4=x%r_NW(1:3,iSpan  ,iDepth+1,iW)
-                   Gamm=GammaLastIter(iSpan, iW)
+                   P1=x%W(iW)%r_NW(1:3,iSpan  ,iDepth  )
+                   P2=x%W(iW)%r_NW(1:3,iSpan+1,iDepth  )
+                   P3=x%W(iW)%r_NW(1:3,iSpan+1,iDepth+1)
+                   P4=x%W(iW)%r_NW(1:3,iSpan  ,iDepth+1)
+                   Gamm=GammaLastIter(iSpan,iW) ! TODO TODO TODO
                    do iWCP=1,p%nWings
-                      call ui_quad_n1(m%CP_LL(1:3,1:p%nSpan,iWCP), nCPs, P1, P2, P3, P4, Gamm, p%RegFunction, x%Eps_NW(1,iSpan,iDepth,iW), Vvar(1:3,1:p%nSpan,iWCP))
+                      call ui_quad_n1(m%W(iWCP)%CP_LL(1:3,1:p%nSpan), nCPs, P1, P2, P3, P4, Gamm, p%RegFunction, x%W(iW)%Eps_NW(1,iSpan,iDepth), Vvar(1:3,1:p%nSpan,iWCP))
                    enddo
                 enddo
              enddo
           enddo
           ! Total velocity on the lifting line
-          m%Vtot_ll = Vcst + Vvar
+          do iW=1,p%nWings
+             m%W(iW)%Vtot_ll = Vcst(:,:,iW) + Vvar(:,:,iW) ! <<<<<<<<<<<<<< TODO TODO
+          enddo
           ! --- Computing circulation based on Vtot_LL
+          ! Input: Vtot_LL, Output: Gamma_LL
           call CirculationFromPolarData(Gamma_LL, p, m, AFInfo,ErrStat2,ErrMsg2);  if(Failed()) return;
 
           ! --------------------------------------------- 
@@ -409,21 +434,28 @@ contains
          endif
          ! We return Gamma_LL
       endif
+
+      do iW=1,p%nWings
+         z%W(iW)%Gamma_LL(:) = Gamma_LL(:,iW) ! TODO TODO TODO
+      enddo
+
       ! KEEP ME: --- ADP: removed m%iStep in favor of m%VTKstep
       !iW=1
-      !call Output_Gamma(m%CP_ll(1:3,:,iW), Gamma_LL(:,iW), iW, m%iStep, iLabel, iIter)
+      !call Output_Gamma(m%CP_ll(1:3,:), Gamma_LL(:), iW, m%iStep, iLabel, iIter)
       !call print_mean_3d( m%Vwnd_LL(:,:,:), 'Mean wind    vel. LL (cst)')
       !call print_mean_3d( m%Vstr_LL(:,:,:), 'Mean struct  vel. LL (cst)')
-      !call print_mean_3d( m%Vind_LL(:,:,:), 'Mean induced vel. LL (cst)')
+      !call print_mean_3d( m%W(iW)%Vind_LL(:,:,:), 'Mean induced vel. LL (cst)')
       !call print_mean_3d( Vvar(:,:,:)     , 'Mean induced vel. LL (var)')
-      !call print_mean_3d( Vvar+m%Vind_LL(:,:,:), 'Mean induced vel. LL (tot)')
+      !call print_mean_3d( Vvar+m%W(iW)%Vind_LL(:,:,:), 'Mean induced vel. LL (tot)')
       !call print_mean_3d( m%Vtot_LL(:,:,:), 'Mean relativevel. LL (tot)')
-      !print*,'m%Vind_LL',m%Vind_LL(1,:,:)
+      !print*,'m%W(iW)%Vind_LL',m%Vind_LL(1,:,:)
       !print*,'m%Vwnd_LL',m%Vwnd_LL(1,:,:)
       !print*,'m%Vcst_LL',Vcst(1,:,:)
       !print*,'Gamm: ',Gamma_LL(1, 1), Gamma_LL(p%nSpan,1)
-      m%Vind_LL=-9999._ReKi !< Safety (the induction above was not the true one)
-      m%Vtot_LL=-9999._ReKi !< Safety 
+      do iW=1,size(p%W)
+         m%W(iW)%Vind_LL=-9999._ReKi !< Safety (the induction above was not the true one)
+         m%W(iW)%Vtot_LL=-9999._ReKi !< Safety 
+      enddo
       call CleanUp()
    contains
 
@@ -435,6 +467,7 @@ contains
       subroutine CleanUp()
          if(allocated(DGamma       ))       deallocate(DGamma       )
          if(allocated(GammaLastIter))       deallocate(GammaLastIter)
+         if(allocated(Gamma_LL     ))       deallocate(Gamma_LL     )
          if(allocated(Vcst))                deallocate(Vcst)
          if(allocated(Vvar))                deallocate(Vvar)
       end subroutine
@@ -444,7 +477,7 @@ contains
    !>  Compute circulation based on polar data
    !! Uses m%Vtot_ll to compute Gamma_ll
    subroutine CirculationFromPolarData(Gamma_LL, p, m, AFInfo, ErrStat, ErrMsg)
-      real(ReKi), dimension(:,:),      intent(inout)  :: Gamma_LL       !< Circulation on all the lifting lines
+      real(ReKi), dimension(:,:),      intent(inout)  :: Gamma_LL       !< Circulation on all the lifting lines ! TODO TODO TODO SHOULD BE OUT
       type(FVW_ParameterType),         intent(in   )  :: p              !< Parameters
       type(FVW_MiscVarType),           intent(inout)  :: m              !< Initial misc/optimization variables
       type(AFI_ParameterType),         intent(in   )  :: AFInfo(:)      !< The airfoil parameter data
@@ -468,34 +501,34 @@ contains
       do iW=1,p%nWings 
          do icp=1,p%nSpan
             ! Aliases to shorten notations
-            N    = m%Norm(1:3, icp, iW) 
-            Tc   = m%Tang(1:3, icp, iW)
-            Vrel = m%Vtot_LL(1:3,icp,iW)
+            N    = m%W(iW)%Norm(1:3, icp) 
+            Tc   = m%W(iW)%Tang(1:3, icp)
+            Vrel = m%W(iW)%Vtot_LL(1:3,icp)
             ! "Orth": cross sectional plane of the lifting line 
             Vrel_orth(1:3)  = dot_product(Vrel,N)*N + dot_product(Vrel,Tc)*Tc
             Vrel_orth_norm  = TwoNorm(Vrel_orth(1:3))
-            Vjouk(1:3)      = cross_product(Vrel,m%dl(1:3,icp,iW))
+            Vjouk(1:3)      = cross_product(Vrel,m%W(iW)%dl(1:3,icp))
             Vjouk_orth(1:3) = dot_product(Vjouk,N)*N + dot_product(Vjouk,Tc)*Tc
             Vjouk_orth_norm = TwoNorm(Vjouk_orth)
             Vrel_norm = TwoNorm(Vrel)
 
             alpha = atan2(dot_product(Vrel,N) , dot_product(Vrel,Tc) ) ! [rad]  
-            Re = p%Chord(icp,iW) * Vrel_norm  / p%KinVisc  ! Reynolds number (not in Million)
+            Re = p%W(iW)%Chord(icp) * Vrel_norm  / p%KinVisc  ! Reynolds number (not in Million)
 
             !if (p%CircSolvPolar==idPolarAeroDyn) then
                ! compute steady Airfoil Coefs      ! NOTE: UserProp set to 0.0_ReKi (no idea what it does).  Also, note this assumes airfoils at nodes.
 !TODO: AFindx is on the nodes, not control points.
-            call AFI_ComputeAirfoilCoefs( alpha, Re, 0.0_ReKi,  AFInfo(p%AFindx(icp,iW)), AFI_interp, ErrStat2, ErrMsg2 ); if(Failed()) return;
+            call AFI_ComputeAirfoilCoefs( alpha, Re, 0.0_ReKi,  AFInfo(p%W(iW)%AFindx(icp,1)), AFI_interp, ErrStat2, ErrMsg2 ); if(Failed()) return;
             Cl = AFI_interp%Cl
             Cd = AFI_interp%Cd
             Cm = AFI_interp%Cm
             ! Simple method:
             !    Gamma_LL=(0.5 * Cl * Vrel_orth_norm*chord)
             ! VanGarrel's method:
-            Gamma_LL(icp,iW) =(0.5_ReKi * Cl * Vrel_orth_norm**2*m%Area(icp,iW)/(Vjouk_orth_norm))
+            Gamma_LL(icp,iW) =(0.5_ReKi * Cl * Vrel_orth_norm**2*m%W(iW)%Area(icp)/(Vjouk_orth_norm)) ! TODO
             ! Convenient storage
-            m%alpha_LL(icp, iW) = alpha ! [rad]
-            m%Vreln_LL(icp, iW) = Vrel_norm
+            m%W(iW)%alpha_LL(icp) = alpha ! [rad]
+            m%W(iW)%Vreln_LL(icp) = Vrel_norm
          enddo
       enddo
    contains

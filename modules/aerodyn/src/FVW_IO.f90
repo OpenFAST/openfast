@@ -328,25 +328,26 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth, bladeFrame, Hub
       write(Label,'(A,A)') 'BldPointCP.Bld', i2ABC(iW)
       Filename = TRIM(FileRootName)//'.'//trim(Label)//'.'//Tstr//'.vtk'
       if ( vtk_new_ascii_file(trim(filename),Label,mvtk) ) then
-         call vtk_dataset_polydata(m%CP_LL(1:3,1:p%nSpan,iW),mvtk,bladeFrame)
+         call vtk_dataset_polydata(m%W(iW)%CP_LL(1:3,1:p%nSpan),mvtk,bladeFrame)
          call vtk_point_data_init(mvtk)
-         call vtk_point_data_scalar(m%Gamma_ll(    1:p%nSpan,iW),'Gamma_ll',mvtk)
-         call vtk_point_data_vector(m%Vind_ll (1:3,1:p%nSpan,iW),'Vind_ll',mvtk)
-         call vtk_point_data_vector(m%Vtot_ll (1:3,1:p%nSpan,iW),'Vtot_ll',mvtk)
-         call vtk_point_data_vector(m%Vstr_ll (1:3,1:p%nSpan,iW),'Vstr_ll',mvtk)
-         call vtk_point_data_vector(m%Vwnd_ll (1:3,1:p%nSpan,iW),'Vwnd_ll',mvtk)
-         call vtk_point_data_vector(m%Tang    (1:3,1:p%nSpan,iW),'Tangent',mvtk)
-         call vtk_point_data_vector(m%Norm    (1:3,1:p%nSpan,iW),'Normal',mvtk)
-         call vtk_point_data_vector(m%Orth    (1:3,1:p%nSpan,iW),'Orth',mvtk)
+         call vtk_point_data_scalar(m%W(iW)%Gamma_ll(    1:p%nSpan),'Gamma_ll',mvtk)
+         call vtk_point_data_vector(m%W(iW)%Vind_ll (1:3,1:p%nSpan),'Vind_ll',mvtk)
+         call vtk_point_data_vector(m%W(iW)%Vtot_ll (1:3,1:p%nSpan),'Vtot_ll',mvtk)
+         call vtk_point_data_vector(m%W(iW)%Vstr_ll (1:3,1:p%nSpan),'Vstr_ll',mvtk)
+         call vtk_point_data_vector(m%W(iW)%Vwnd_ll (1:3,1:p%nSpan),'Vwnd_ll',mvtk)
+         call vtk_point_data_vector(m%W(iW)%Tang    (1:3,1:p%nSpan),'Tangent',mvtk)
+         call vtk_point_data_vector(m%W(iW)%Norm    (1:3,1:p%nSpan),'Normal',mvtk)
+         call vtk_point_data_vector(m%W(iW)%Orth    (1:3,1:p%nSpan),'Orth',mvtk)
          call vtk_close_file(mvtk)
       endif
    enddo
    ! --- Lifting line panels
-   do iW=1,p%VTKBlades
-      write(Label,'(A,A)') 'LL.Bld', i2ABC(iW)
-      Filename = TRIM(FileRootName)//'.'//trim(Label)//'.'//Tstr//'.vtk'
-      call WrVTK_Lattice(FileName, mvtk, m%r_LL(1:3,:,:,iW), m%Gamma_LL(:,iW:iW), bladeFrame=bladeFrame)
-   enddo
+   ! TODO
+   ! do iW=1,p%VTKBlades
+   !    write(Label,'(A,A)') 'LL.Bld', i2ABC(iW)
+   !    Filename = TRIM(FileRootName)//'.'//trim(Label)//'.'//Tstr//'.vtk'
+   !    call WrVTK_Lattice(FileName, mvtk, m%W(iW)%r_LL(1:3,:,:), m%W(iW)%Gamma_LL(:), bladeFrame=bladeFrame)
+   ! enddo
    ! --------------------------------------------------------------------------------}
    ! --- Near wake 
    ! --------------------------------------------------------------------------------{
@@ -355,11 +356,12 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth, bladeFrame, Hub
       write(Label,'(A,A)') 'NW.Bld', i2ABC(iW)
       Filename = TRIM(FileRootName)//'.'//trim(Label)//'.'//Tstr//'.vtk'
       if (m%FirstCall) then ! Small Hack - At t=0, NW not set, but first NW panel is the LL panel
-         allocate(dxdt_0(3, size(m%dxdt%r_NW,2) , m%nNW+1)); dxdt_0=0.0_ReKi
-         call WrVTK_Lattice(FileName, mvtk, m%r_LL(1:3,:,1:2,iW), m%Gamma_LL(:,iW:iW),dxdt_0, bladeFrame=bladeFrame)
-         deallocate(dxdt_0)
+        ! TODO TODO
+        ! allocate(dxdt_0(3, size(m%dxdt%W(iW)%r_NW,2) , m%nNW+1)); dxdt_0=0.0_ReKi
+        ! call WrVTK_Lattice(FileName, mvtk, m%W(iW)%r_LL(1:3,:,1:2), m%W(iW)%Gamma_LL(:),dxdt_0, bladeFrame=bladeFrame)
+        ! deallocate(dxdt_0)
       else
-         call WrVTK_Lattice(FileName, mvtk, x%r_NW(1:3,:,1:m%nNW+1,iW), x%Gamma_NW(:,1:m%nNW,iW), m%dxdt%r_NW(:,:,1:m%nNW+1,iW), bladeFrame=bladeFrame)
+         call WrVTK_Lattice(FileName, mvtk, x%W(iW)%r_NW(1:3,:,1:m%nNW+1), x%W(iW)%Gamma_NW(:,1:m%nNW), m%dxdt%W(iW)%r_NW(:,:,1:m%nNW+1), bladeFrame=bladeFrame)
       endif
    enddo
    ! --------------------------------------------------------------------------------}
@@ -369,7 +371,7 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth, bladeFrame, Hub
    do iW=1,p%VTKBlades
       write(Label,'(A,A)') 'FW.Bld', i2ABC(iW)
       Filename = TRIM(FileRootName)//'.'//trim(Label)//'.'//Tstr//'.vtk'
-      call WrVTK_Lattice(FileName, mvtk, x%r_FW(1:3,1:FWnSpan+1,1:m%nFW+1,iW), x%Gamma_FW(1:FWnSpan,1:m%nFW,iW),m%dxdt%r_FW(:,:,1:m%nFW+1,iW), bladeFrame=bladeFrame)
+      call WrVTK_Lattice(FileName, mvtk, x%W(iW)%r_FW(1:3,1:FWnSpan+1,1:m%nFW+1), x%W(iW)%Gamma_FW(1:FWnSpan,1:m%nFW),m%dxdt%W(iW)%r_FW(:,:,1:m%nFW+1), bladeFrame=bladeFrame)
    enddo
    ! --------------------------------------------------------------------------------}
    ! --- All Segments
@@ -388,7 +390,7 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth, bladeFrame, Hub
    Filename = TRIM(FileRootName)//'.AllSeg.'//Tstr//'.vtk'
    CALL WrVTK_Segments(Filename, mvtk, m%Sgmt%Points(:,1:nSegP), m%Sgmt%Connct(:,1:nSeg), m%Sgmt%Gamma(1:nSeg), m%Sgmt%Epsilon(1:nSeg), bladeFrame) 
 
-   if(.false.) print*,z%Gamma_LL(1,1) ! unused var for now
+   if(.false.) print*,z%W(1)%Gamma_LL(1) ! unused var for now
 end subroutine WrVTK_FVW
 
 !> Export Grid velocity field to VTK
@@ -432,7 +434,7 @@ subroutine WrVTK_FVW_Grid(p, x, z, m, iGrid, FileRootName, VTKcount, Twidth, Hub
       call vtk_close_file(mvtk)
    endif
 
-   if(.false.) print*,z%Gamma_LL(1,1) ! unused var for now
+   if(.false.) print*,z%W(1)%Gamma_LL(1) ! unused var for now
 end subroutine WrVTK_FVW_Grid
 
 
@@ -516,11 +518,11 @@ subroutine LatticeToPanlConnectivity(LatticePoints, Connectivity, Points)
       k=k+1
    enddo; enddo
 
-!     do iWing=1,p%NumBlades
+!     do iW=1,p%NumBlades
 !         if ( vtk_new_ascii_file(trim(filename),Label,mvtk) ) then
 !             ! Buffer for points
 !             k=1; do iNW=1,nNW; do iSpan=1,nSpan
-!                 Buffer(1:3,k) = Misc%NWake%r_nearj(1:3,iSpan,iNW,iWing)
+!                 Buffer(1:3,k) = Misc%NWake%r_nearj(1:3,iSpan,iNW)
 !                 k=k+1
 !             enddo; enddo
 !             call vtk_dataset_polydata(Buffer,mvtk)
@@ -531,9 +533,9 @@ subroutine LatticeToPanlConnectivity(LatticePoints, Connectivity, Points)
 !                 if (iSpan<p%NumBlNds_start) then
 !                     Buffer1d(k)=0
 !                 else if (iSpan==p%NumBlNds_start) then
-!                     Buffer1d(k)=-Misc%NWake%Gamma_nearjm1(iNW,iSpan,iWing)
+!                     Buffer1d(k)=-Misc%NWake%W(iW)%Gamma_nearjm1(iNW,iSpan)
 !                 else
-!                     Buffer1d(k)=-Misc%NWake%Gamma_nearjm1(iNW,iSpan,iWing)+Buffer1d(k-1)
+!                     Buffer1d(k)=-Misc%NWake%W(iW)%Gamma_nearjm1(iNW,iSpan)+Buffer1d(k-1)
 !                 endif
 !                 k=k+1
 !             enddo; enddo

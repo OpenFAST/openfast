@@ -70,10 +70,14 @@ contains
    end subroutine CheckError
 !................................   
    subroutine DvrM_End()
+      integer(IntKi)       :: errStat2      ! local status of error message
+      character(ErrMsgLen) :: errMsg2       ! local error message if ErrStat /= ErrID_None
 
-      call DvrM_CleanUp(dat%DvrData, dat%AD, dat%IW, dat%initialized, dat%errStat, dat%errMsg)
+      call DvrM_CleanUp(dat%DvrData, dat%AD, dat%IW, dat%initialized, errStat2, errMsg2)
+      CALL SetErrStat(errStat2, errMsg2, dat%errStat, dat%errMsg, 'DvrM_End')
 
       if (dat%errStat >= AbortErrLev) then      
+         call WrScr('')
          CALL ProgAbort( 'AeroDyn Driver encountered simulation error level: '&
              //TRIM(GetErrStr(dat%errStat)), TrapErrors=.FALSE., TimeWait=3._ReKi )  ! wait 3 seconds (in case they double-clicked and got an error)
       else
