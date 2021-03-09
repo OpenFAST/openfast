@@ -1318,6 +1318,13 @@ MODULE AeroDyn_IO
    INTEGER,  PARAMETER          :: BAzimuth(3) = (/B1Azimuth,B2Azimuth,B3Azimuth/)                                                     ! azimuth angle 
    INTEGER,  PARAMETER          :: BPitch(3)   = (/B1Pitch,  B2Pitch,  B3Pitch/)                                                       ! pitch 
    
+!   INTEGER,  PARAMETER          :: BAeroFx(3)  = (/B1AeroFx,  B2AeroFx,  B3AeroFx/)                                                   ! x-component of total blade root aero force
+!   INTEGER,  PARAMETER          :: BAeroFy(3)  = (/B1AeroFy,  B2AeroFy,  B3AeroFy/)                                                   ! y-component of total blade root aero force 
+!   INTEGER,  PARAMETER          :: BAeroFz(3)  = (/B1AeroFz,  B2AeroFz,  B3AeroFz/)                                                   ! z-component of total blade root aero force 
+!   INTEGER,  PARAMETER          :: BAeroMx(3)  = (/B1AeroMx,  B2AeroMx,  B3AeroMx/)                                                   ! x-component of total blade root aero moment
+!   INTEGER,  PARAMETER          :: BAeroMy(3)  = (/B1AeroMy,  B2AeroMy,  B3AeroMy/)                                                   ! y-component of total blade root aero moment
+!   INTEGER,  PARAMETER          :: BAeroMz(3)  = (/B1AeroMz,  B2AeroMz,  B3AeroMz/)                                                   ! z-component of total blade root aero moment 
+   
    INTEGER,  PARAMETER          :: BNVUndx(9, 3) = RESHAPE( (/ &      ! undisturbed wind velocity (x component)
                                      B1N1VUndx,B1N2VUndx,B1N3VUndx,B1N4VUndx,B1N5VUndx,B1N6VUndx,B1N7VUndx,B1N8VUndx,B1N9VUndx, &
                                      B2N1VUndx,B2N2VUndx,B2N3VUndx,B2N4VUndx,B2N5VUndx,B2N6VUndx,B2N7VUndx,B2N8VUndx,B2N9VUndx, &
@@ -1773,6 +1780,21 @@ CONTAINS
          m%AllOuts( RtAeroCq ) = m%AllOuts( RtAeroMxh ) / (denom * rmax)
          m%AllOuts( RtAeroCt ) = m%AllOuts( RtAeroFxh ) /  denom
       end if
+   
+      ! Integrate force/moments over blades by performing mesh transfer to blade root points:
+!      do k=1,min(p%NumBlades,MaxBl)
+!         call Transfer_Line2_to_Point( y%BladeLoad(k), m%BladeRootLoad(k), m%B_L_2_R_P(k), ErrStat2, ErrMsg2, u%BladeMotion(k), u%BladeRootMotion(k) )
+!         ! Transform force vector to blade root coordinate system
+!         tmp = matmul( u%BladeRootMotion(k)%Orientation(:,:,1), m%BladeRootLoad(k)%force( :,1) )
+!         m%AllOuts( BAeroFx(k) ) = tmp(1)
+!         m%AllOuts( BAeroFy(k) ) = tmp(2)
+!         m%AllOuts( BAeroFz(k) ) = tmp(3)
+!         ! Transform moment vector to blade root coordinate system
+!         tmp = matmul( u%BladeRootMotion(k)%Orientation(:,:,1), m%BladeRootLoad(k)%moment( :,1) )
+!         m%AllOuts( BAeroMx(k) ) = tmp(1)
+!         m%AllOuts( BAeroMy(k) ) = tmp(2)
+!         m%AllOuts( BAeroMz(k) ) = tmp(3)
+!      end do  ! k=blades
 
       m%AllOuts( DBEMTau1 ) = OtherState%BEMT%DBEMT%tau1
       
@@ -1915,7 +1937,7 @@ SUBROUTINE ReadInputFiles( InputFileName, InputFileData, Default_DT, OutFileRoot
    CHARACTER(*),            INTENT(IN)    :: InputFileName   ! Name of the input file
    CHARACTER(*),            INTENT(IN)    :: OutFileRoot     ! The rootname of all the output files written by this routine.
 
-   TYPE(AD_InputFile),      INTENT(INOUT)   :: InputFileData   ! Data stored in the module's input file
+   TYPE(AD_InputFile),      INTENT(INOUT) :: InputFileData   ! Data stored in the module's input file
    INTEGER(IntKi),          INTENT(OUT)   :: UnEcho          ! Unit number for the echo file
 
    INTEGER(IntKi),          INTENT(IN)    :: NumBlades       ! Number of blades for this model
@@ -2184,8 +2206,9 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InputFile, RootName, NumBlades, interv
          ! Allocate space to hold AFNames
       ALLOCATE( InputFileData%AFNames(InputFileData%NumAFfiles), STAT=ErrStat2)
          IF (ErrStat2 /= 0 ) THEN
-            CALL SetErrStat( ErrID_Fatal, "Error allocating AFNames.", ErrStat, ErrMsg, RoutineName)
-            RETURN
+            ErrStat2=ErrID_Fatal
+            ErrMsg2 = "Error allocating AFNames."
+            if (Failed()) return
          END IF
       ! AFNames - Airfoil file names (NumAFfiles lines) (quoted strings): -- NOTE: this line may not have a keyname with it
    DO I = 1,InputFileData%NumAFfiles         ! ParseChVar allows empty keynames.
@@ -3303,6 +3326,12 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
       InvalidOutput( BNSgCav(:,i) ) = .true.
       InvalidOutput( BNSigCr(:,i) ) = .true.
       InvalidOutput( BNCpMin(:,i) ) = .true.
+!      InvalidOutput( BAeroFx(  i) ) = .true.
+!      InvalidOutput( BAeroFy(  i) ) = .true.
+!      InvalidOutput( BAeroFz(  i) ) = .true.
+!      InvalidOutput( BAeroMx(  i) ) = .true.
+!      InvalidOutput( BAeroMy(  i) ) = .true.
+!      InvalidOutput( BAeroMz(  i) ) = .true.
                
    END DO
       
