@@ -107,7 +107,7 @@ version 2020.
     `this page <https://software.intel.com/content/www/us/en/develop/articles/redistributable-libraries-for-intel-c-and-fortran-2020-compilers-for-windows.html>`__.
     If you have a Command Prompt open, you will need to close it after
     installing the libraries in order for the changes to take effect.
-    Admin priveleges are required to install the Intel libraries.
+    Admin privileges are required to install the Intel libraries.
 
 The OpenFAST executables can be downloaded from the "Assets" dropdown
 in each Release. The two assets named "Source code" are not needed.
@@ -147,7 +147,7 @@ To compile from source code, the NREL OpenFAST team has developed an
 approach that uses CMake to generate build files for all platforms. Currently,
 CMake support for Visual Studio while doing active development
 is not well supported, so OpenFAST maintains a Visual Studio Solution
-giving Windows developers abother option for writing code, compiling
+giving Windows developers another option for writing code, compiling
 and debugging in a streamlined manner. See :ref:`vs_windows`
 for more information. If Visual Studio is not a requirement in Windows
 development, CMake is adequate. Background on CMake is given in
@@ -253,8 +253,8 @@ An archive of the source code can also be downloaded directly from these links:
 Visual Studio Solution for Windows
 ----------------------------------
 A complete Visual Studio solution is maintained for working with the OpenFAST
-on Windows systems. The procedure for configuring the system and proceding
-with the build process are documentated in the following section:
+on Windows systems. The procedure for configuring the system and proceeding
+with the build process are documented in the following section:
 
 .. toctree::
    :maxdepth: 1
@@ -292,7 +292,7 @@ changes to the settings will be updated and stored there.
 
 CMake can be executed in a few ways:
 
-- Command line interace: ``cmake``
+- Command line interface: ``cmake``
 - Command line curses interface: ``ccmake``
 - Official CMake GUI
 
@@ -354,7 +354,7 @@ The CMake options specific to OpenFAST and their default settings are:
     CMAKE_INSTALL_PREFIX           - Install path prefix, prepended onto install directories.
     DOUBLE_PRECISION               - Treat REAL as double precision (Default: ON)
     FPE_TRAP_ENABLED               - Enable Floating Point Exception (FPE) trap in compiler options (Default: OFF)
-    GENERATE_TYPES                 - Use the openfast-regsitry to autogenerate types modules
+    GENERATE_TYPES                 - Use the openfast-registry to autogenerate types modules
     ORCA_DLL_LOAD                  - Enable OrcaFlex library load (Default: OFF)
     USE_DLL_INTERFACE              - Enable runtime loading of dynamic libraries (Default: ON)
     OPENMP                         - Enable OpenMP parallelization in FVW (Default: OFF)
@@ -401,7 +401,7 @@ Use ``Debug`` during active development to add debug symbols for use with a
 debugger. This build type also adds flags for generating runtime checks that
 would otherwise result in undefined behavior. ``MinSizeRel`` adds basic
 optimizations and targets a minimal size for the generated executable. The next
-level, ``RelWithDebInfo``, enables vectorization and other more agressive
+level, ``RelWithDebInfo``, enables vectorization and other more aggressive
 optimizations. It also adds debugging symbols and results in a larger
 executable size. Finally, use ``Release`` for best performance at the cost
 of increased compile time.
