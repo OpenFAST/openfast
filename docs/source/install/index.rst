@@ -142,28 +142,78 @@ containing the executables, and running a simple test command:
 
 Compile from source
 ~~~~~~~~~~~~~~~~~~~
-For compiling from source code, the NREL OpenFAST team has developed an
+To compile from source code, the NREL OpenFAST team has developed an
 approach that uses CMake to generate build files for all platforms. Currently,
 CMake support for Visual Studio while doing active development
-is not well supported, so OpenFAST maintains a Visual Studio solution
-giving Windows developers a better option for developing code, compiling
+is not well supported, so OpenFAST maintains a Visual Studio Solution
+giving Windows developers abother option for writing code, compiling
 and debugging in a streamlined manner. See :ref:`vs_windows`
-for more information.
+for more information. If Visual Studio is not a requirement in Windows
+development, CMake is adequate. Background on CMake is given in
+:ref:`understanding_cmake`, and procedures for configuring and
+compiling are given in :ref:`cmake_unix` and :ref:`cmake_windows`.
 
 Dependencies
 ------------
 Compiling OpenFAST from source requires additional libraries and tools that
-are not distributed with the OpenFAST repository. In many cases, these tools
-can be installed with a system's package manager (e.g. ``homebrew`` for macOS,
-``yum`` for CentOS/Red Hat, or ``apt`` for Debian-based systems like Ubuntu).
-If binaries are downloaded or compiled manually, be sure they are
-installed in a standard location for your system so that the other components
-of the OpenFAST build system can find the dependencies.
+are not distributed with the OpenFAST repository. Each of the following
+components are required for the minimum OpenFAST compilation.
+
+- C++, C, and Fortran compiler
+- BLAS and LAPACK math library
+- Build system
+
+In many cases, these tools can be installed with a system's package
+manager (e.g. ``homebrew`` for macOS, ``yum`` for CentOS/Red Hat, or
+``apt`` for Debian-based systems like Ubuntu). For Ubuntu and macOS,
+the following commands install all required dependencies.
+
+============== ================================
+ System         Dependency Installation Command
+============== ================================
+ Ubuntu 20.04   ``apt install git cmake libblas-dev liblapack-dev gfortran-10 g++``
+ macOS 10.15    ``brew install git cmake make openblas gcc``
+============== ================================
+
+If dependencies are downloaded from vendors directly, they must be
+installed in a standard location for your system so that the OpenFAST
+build systems can find them.
+
+Compilers
++++++++++
+Compiling OpenFAST requires a C, C++, and Fortran compiler. Though many
+options exist, the most common and best supported compilers are listed
+below.
+
+============================================== ==================== ================= =======
+ Vendor / Compiler                              Applicable systems   Minimum version   Link
+============================================== ==================== ================= =======
+ GNU Compiler Collection (gfortran, gcc, g++)   macOS, Linux         4.6.0             https://gcc.gnu.org
+ Intel Compilers (ifort, icc)                   All                  2013              https://software.intel.com/content/www/us/en/develop/tools/oneapi/hpc-toolkit.html
+============================================== ==================== ================= =======
+
+Other compiler packages may work and can be well suited to a particular
+hardware, but their mileage may vary with OpenFAST. For instance, MinGW,
+CygWin, and LLVM are options for obtaining compilers on various systems.
+It is highly recommended to use the latest version of one of the above.
+
+Math libraries
+++++++++++++++
+Math libraries with the BLAS and LAPACK interfaces are also required. All major
+options can be obtained as free downloads. The most common options are listed
+in the table below.
+
+============ ============= ============== ======
+Library       Distributor   Open Source?   Link
+============ ============= ============== ======
+BLAS/LAPACK   NetLib        Yes            http://www.netlib.org/blas/, http://www.netlib.org/lapack/
+BLAS/LAPACK   OpenBLAS      Yes            https://www.openblas.net
+MKL           Intel         No             https://software.intel.com/content/www/us/en/develop/tools/oneapi/components/onemkl.html
+============ ============= ============== ======
 
 Build tools
 +++++++++++
-
-An environment-specific build system is required and will consist of a
+An environment-specific build system is required and may consist of a
 combination of the packages listed in the table below.
 
 ============================================== ==================== ================= =======
@@ -172,43 +222,16 @@ combination of the packages listed in the table below.
  CMake                                          All                  3.0               https://cmake.org
  GNU Make                                       macOS, Linux         1.8               https://www.gnu.org/software/make/
  Visual Studio                                  Windows              2015              https://visualstudio.microsoft.com>
- GNU Compiler Collection (gfortran, gcc, g++)   macOS, Linux         4.6.0             https://gcc.gnu.org
- Intel Parallel Studio (ifort, icc)             All                  2013              https://software.intel.com/en-us/parallel-studio-xe/
 ============================================== ==================== ================= =======
 
-Math libraries
-++++++++++++++
+For Windows, CMake may be used to generate a Visual Studio Solution that
+can then be used to compile OpenFAST. OpenFAST also contains a standalone
+Visual Studio project, see :ref:`vs_windows`.
 
-Math libraries with the BLAS and LAPACK interfaces are also required. These can
-be obtained as free, open source libraries or paid, closed source versions.
-Some packages contain separate libraries for each interface while others have
-the interfaces bundles into a single binary. The most common options are listed
-in the table below.
-
-============ ============ =========== ============== ======
-Library       Maintainer   Paid/Free   Open Source?   Link
-============ ============ =========== ============== ======
-BLAS          NetLib       Free        Yes            http://www.netlib.org/blas/
-LAPACK        NetLib       Free        Yes            http://www.netlib.org/lapack/
-BLAS/LAPACK   OpenBLAS     Free        Yes            https://www.openblas.net
-MKL           Intel        Paid        No             https://software.intel.com/en-us/mkl
-============ ============ =========== ============== ======
-
-Dependencies for the test suite
-+++++++++++++++++++++++++++++++
-
-The following packages are required to run the test suite:
-
-- `Python 3 <https://www.python.org/downloads/>`__
-- `MatPlotLib <https://matplotlib.org>`__ - used for generating error plots
-
-Dependencies for the C++ API
-++++++++++++++++++++++++++++
-
-When using the C++ API, the following packages are required:
-
-- `HDF5 <https://support.hdfgroup.org/HDF5/>`_ (provided by ``HDF5_ROOT``)
-- `yaml-cpp <https://github.com/jbeder/yaml-cpp>`_ (provided by ``YAML_ROOT``)
+For macOS and Linux, the recommended tools are CMake and GNU Make. CMake is
+used to generate Makefiles that are inputs to the GNU Make program. Other
+build tools exist for both Linux and macOS (Xcode, Ninja), but these
+are not well supported by the OpenFAST system.
 
 Get the code
 ------------
