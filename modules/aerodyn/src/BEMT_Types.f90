@@ -92,7 +92,6 @@ IMPLICIT NONE
   TYPE, PUBLIC :: BEMT_OtherStateType
     TYPE(UA_OtherStateType)  :: UA      !< other states for UnsteadyAero [-]
     TYPE(DBEMT_OtherStateType)  :: DBEMT      !< other states for DBEMT [-]
-    LOGICAL , DIMENSION(:,:), ALLOCATABLE  :: UA_Flag      !< logical flag indicating whether to use UnsteadyAero [-]
     LOGICAL , DIMENSION(:,:), ALLOCATABLE  :: ValidPhi      !< set to indicate when there is no valid Phi for this node at this time (temporarially turn off induction when this is false) [-]
     LOGICAL  :: nodesInitialized      !< the node states have been initialized properly [-]
   END TYPE BEMT_OtherStateType
@@ -1727,20 +1726,6 @@ ENDIF
       CALL DBEMT_CopyOtherState( SrcOtherStateData%DBEMT, DstOtherStateData%DBEMT, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
-IF (ALLOCATED(SrcOtherStateData%UA_Flag)) THEN
-  i1_l = LBOUND(SrcOtherStateData%UA_Flag,1)
-  i1_u = UBOUND(SrcOtherStateData%UA_Flag,1)
-  i2_l = LBOUND(SrcOtherStateData%UA_Flag,2)
-  i2_u = UBOUND(SrcOtherStateData%UA_Flag,2)
-  IF (.NOT. ALLOCATED(DstOtherStateData%UA_Flag)) THEN 
-    ALLOCATE(DstOtherStateData%UA_Flag(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstOtherStateData%UA_Flag.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstOtherStateData%UA_Flag = SrcOtherStateData%UA_Flag
-ENDIF
 IF (ALLOCATED(SrcOtherStateData%ValidPhi)) THEN
   i1_l = LBOUND(SrcOtherStateData%ValidPhi,1)
   i1_u = UBOUND(SrcOtherStateData%ValidPhi,1)
@@ -1769,9 +1754,6 @@ ENDIF
   ErrMsg  = ""
   CALL UA_DestroyOtherState( OtherStateData%UA, ErrStat, ErrMsg )
   CALL DBEMT_DestroyOtherState( OtherStateData%DBEMT, ErrStat, ErrMsg )
-IF (ALLOCATED(OtherStateData%UA_Flag)) THEN
-  DEALLOCATE(OtherStateData%UA_Flag)
-ENDIF
 IF (ALLOCATED(OtherStateData%ValidPhi)) THEN
   DEALLOCATE(OtherStateData%ValidPhi)
 ENDIF
@@ -1847,11 +1829,6 @@ ENDIF
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
-  Int_BufSz   = Int_BufSz   + 1     ! UA_Flag allocated yes/no
-  IF ( ALLOCATED(InData%UA_Flag) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*2  ! UA_Flag upper/lower bounds for each dimension
-      Int_BufSz  = Int_BufSz  + SIZE(InData%UA_Flag)  ! UA_Flag
-  END IF
   Int_BufSz   = Int_BufSz   + 1     ! ValidPhi allocated yes/no
   IF ( ALLOCATED(InData%ValidPhi) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! ValidPhi upper/lower bounds for each dimension
@@ -1941,26 +1918,6 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
-  IF ( .NOT. ALLOCATED(InData%UA_Flag) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%UA_Flag,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%UA_Flag,1)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%UA_Flag,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%UA_Flag,2)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i2 = LBOUND(InData%UA_Flag,2), UBOUND(InData%UA_Flag,2)
-        DO i1 = LBOUND(InData%UA_Flag,1), UBOUND(InData%UA_Flag,1)
-          IntKiBuf(Int_Xferred) = TRANSFER(InData%UA_Flag(i1,i2), IntKiBuf(1))
-          Int_Xferred = Int_Xferred + 1
-        END DO
-      END DO
-  END IF
   IF ( .NOT. ALLOCATED(InData%ValidPhi) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -2093,29 +2050,6 @@ ENDIF
       IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! UA_Flag not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i2_l = IntKiBuf( Int_Xferred    )
-    i2_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%UA_Flag)) DEALLOCATE(OutData%UA_Flag)
-    ALLOCATE(OutData%UA_Flag(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%UA_Flag.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i2 = LBOUND(OutData%UA_Flag,2), UBOUND(OutData%UA_Flag,2)
-        DO i1 = LBOUND(OutData%UA_Flag,1), UBOUND(OutData%UA_Flag,1)
-          OutData%UA_Flag(i1,i2) = TRANSFER(IntKiBuf(Int_Xferred), OutData%UA_Flag(i1,i2))
-          Int_Xferred = Int_Xferred + 1
-        END DO
-      END DO
-  END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! ValidPhi not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
