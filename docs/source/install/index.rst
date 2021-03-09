@@ -23,24 +23,28 @@ For users who intend to run OpenFAST simulations without changing the
 source code, installation with precompiled binaries is recommended.
 The installation procedures are specific for each supported operating
 system, and the table below maps operating systems to the method for
-obtaining binaries.
+obtaining binaries. "Release" versions are well tested and stable versions
+of OpenFAST. A new release corresponds to a merge from the ``dev``
+branch of the repository to the ``main`` branch along with a version tag.
+"Prerelease" versions contain the latest commits to the ``dev`` branch
+and may contain unstable code but will always have the latest features.
 
-================== ================= ======================
- Operating System   Method            Docs Section         
-================== ================= ======================
-Linux               Conda             :ref:`conda_install` 
-macOS               Conda             :ref:`conda_install` 
-macOS               Homebrew          :ref:`brew_install`  
-Windows             GitHub Releases   :ref:`gh_install` 
-================== ================= ======================
+================== ================= ===================== ======================
+ Operating System   Method            OpenFAST Version      Docs Section
+================== ================= ===================== ======================
+Linux               Conda             Release, Prerelease   :ref:`conda_install`
+macOS               Conda             Release, Prerelease   :ref:`conda_install`
+macOS               Homebrew          Release               :ref:`brew_install` 
+Windows             GitHub Releases   Release               :ref:`gh_install`
+================== ================= ===================== ======================
 
 .. _conda_install:
 
 Conda Installation
 ------------------
 OpenFAST releases are distributed through the `Anaconda <https://anaconda.org/>`_
-package manager via the `Conda Forge <https://conda-forge.org/>`_ channel for
-macOS and Linux. The installation includes
+package manager via the `OpenFAST Conda Forge <https://anaconda.org/conda-forge/openfast/>`_
+channel for macOS and Linux. The installation includes
 
 - OpenFAST glue-code executable
 - Available module drivers
@@ -64,6 +68,17 @@ OpenFAST, and test the installation.
     # Test the HydroDyn driver
     which hydrodyn_driver
     hydrodyn_driver -v
+
+Prereleases can be installed via conda by specifying the ``dev`` label,
+as shown below.
+
+.. code-block:: bash
+
+    conda install -c conda-forge/label/dev openfast
+
+These are always the latest commits to the ``dev`` branch
+of the repository and contain the latest changes to OpenFAST, but these
+builds are not as well tested as the full release versions.
 
 .. _brew_install:
 
