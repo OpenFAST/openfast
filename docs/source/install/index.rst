@@ -576,6 +576,29 @@ the structure of the file system or if the CMake configuration is changed. It
 is recommended that this method **not** be used for debugging or active
 development on Windows. Instead, see :ref:`vs_windows`.
 
+C++ API
+~~~~~~~
+When compiling the C++ API, the following additional dependencies are required:
+
+- `HDF5 <https://support.hdfgroup.org/HDF5/>`_
+- `yaml-cpp <https://github.com/jbeder/yaml-cpp>`_
+- `libxml++ <http://libxmlplusplus.sourceforge.net/docs/manual/html/>`_
+
+The C++ API is compiled only with CMake and it is possible to hint to CMake
+where to find some dependencies. The following commands configure CMake and
+compile the C++ interface.
+
+.. code-block:: bash
+
+    # Enable compiling the C++ API
+    cmake .. -DBUILD_OPENFAST_CPP_API:BOOL=ON -DBUILD_SHARED_LIBS:BOOL=ON
+
+    # If CMake doesn't find HDF5, provide a hint
+    cmake .. -DHDF5_ROOT:STRING=/usr/lib/
+
+    # Compile the C++ API
+    make openfastcpplib
+
 .. _installation_appendix:
 
 Appendix
