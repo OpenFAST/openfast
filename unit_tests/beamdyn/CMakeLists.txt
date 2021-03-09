@@ -47,6 +47,7 @@ set(testlist
     test_BD_diffmtc
     test_BD_InitShpDerJaco
     test_BD_MemberEta
+    test_BD_QuadraturePointData
     test_BD_TrapezoidalPointWeight
     test_InitializeNodalLocations
 )
