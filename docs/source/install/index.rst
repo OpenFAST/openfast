@@ -169,6 +169,14 @@ development, CMake is adequate. Background on CMake is given in
 :ref:`understanding_cmake`, and procedures for configuring and
 compiling are given in :ref:`cmake_unix` and :ref:`cmake_windows`.
 
+Generally, the steps required to compile are:
+
+1. Install Dependencies (Section :numref:`dependencies`)
+2. Configure the build system (Visual Studio - :numref:`vs_windows`, CMake - :numref:`understanding_cmake`)
+3. Compile and test binaries (Visual Studio - :numref:`vs_windows`,  CMake - :numref:`cmake_unix` and :numref:`cmake_windows` )
+
+.. _dependencies:
+
 Dependencies
 ------------
 Compiling OpenFAST from source requires additional libraries and tools that
@@ -498,15 +506,18 @@ not to the libraries themselves.
 
 CMake with Make for Linux/macOS
 -------------------------------
-After reading :ref:`understanding_cmake`, proceed with
-configuring OpenFAST. The CMake project is well developed for Linux and
-macOS systems, so the default settings should work as given. These settings
-should only be changed when a custom build is required.
+After installing all dependencies and reading :ref:`understanding_cmake`,
+proceed with configuring OpenFAST. The CMake project is well developed for
+Linux and macOS systems, so the default settings should work as given.
+These settings should only be changed when a custom build is required.
 
 The procedure for configuring CMake and compiling with GNU Make on Linux
 and macOS systems is given below.
 
 .. code-block:: bash
+
+    # For macOS using Homebrew, this installs all dependencies
+    brew install 
 
     # Clone the repository from GitHub using git
     git clone https://github.com/OpenFAST/OpenFAST.git
@@ -526,7 +537,15 @@ and macOS systems is given below.
     make help
 
     # Choose a particular target or give no target to compile everything
+    make hydrodyn_driver
+    # or
+    make openfast
+    # or
     make
+
+    # Test the compiled binary, for example
+    ./glue-codes/openfast/openfast -v
+    ./modules/hydrodyn/hydrodyn_driver -v
 
 .. tip::
 
@@ -543,15 +562,15 @@ again.
 
 CMake with Visual Studio for Windows
 ------------------------------------
-After reading :ref:`understanding_cmake`, proceed with
-configuring OpenFAST. The result of this configuration process will be
-a Visual Studio solution which will be fully functional for compiling
-any of the targets within OpenFAST. However, this method lacks support
-for continued active development. Specifically, any settings that are
-configured in the Visual Studio solution directly will be lost any time
-CMake is executed. Therefore, this method should only be used to compile
-binaries, and the procure described in :ref:`vs_windows` should be used
-for active OpenFAST development on Windows.
+After installing all dependencies and reading :ref:`understanding_cmake`,
+proceed with configuring OpenFAST. The result of this configuration
+process will be a Visual Studio solution which will be fully functional
+for compiling any of the targets within OpenFAST. However, this method
+lacks support for continued active development. Specifically, any settings
+that are configured in the Visual Studio solution directly will be lost
+any time CMake is executed. Therefore, this method should only be used to
+compile binaries, and the procure described in :ref:`vs_windows` should
+be used for active OpenFAST development on Windows.
 
 The procedure for configuring CMake and compiling with Visual Studio
 on Windows systems is given below.
