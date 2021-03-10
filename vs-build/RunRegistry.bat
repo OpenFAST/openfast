@@ -187,60 +187,16 @@ SET Output_Loc=%CURR_LOC%
 GOTO checkError
 
 :HydroDyn
-SET CURR_LOC=%HD_Loc%
-SET Output_Loc=%CURR_LOC%
-%REGISTRY% "%CURR_LOC%\%ModuleName%.txt" -I "%NWTC_Lib_Loc%"  -I "%CURR_LOC%" -O "%Output_Loc%"
-GOTO checkError
-
 :Current
-SET CURR_LOC=%HD_Loc%
-SET Output_Loc=%CURR_LOC%
-%REGISTRY% "%CURR_LOC%\%ModuleName%.txt" -I "%NWTC_Lib_Loc%"  -I "%CURR_LOC%" -O "%Output_Loc%"
-GOTO checkError
-
 :Waves
-SET CURR_LOC=%HD_Loc%
-SET Output_Loc=%CURR_LOC%
-%REGISTRY% "%CURR_LOC%\%ModuleName%.txt" -I "%NWTC_Lib_Loc%"  -I "%CURR_LOC%" -O "%Output_Loc%"
-GOTO checkError
-
 :Waves2
-SET CURR_LOC=%HD_Loc%
-SET Output_Loc=%CURR_LOC%
-%REGISTRY% "%CURR_LOC%\%ModuleName%.txt" -I "%NWTC_Lib_Loc%"  -I "%CURR_LOC%" -O "%Output_Loc%"
-GOTO checkError
-
 :SS_Excitation
-SET CURR_LOC=%HD_Loc%
-SET Output_Loc=%CURR_LOC%
-%REGISTRY% "%CURR_LOC%\%ModuleName%.txt" -I "%NWTC_Lib_Loc%"  -I "%CURR_LOC%" -O "%Output_Loc%"
-GOTO checkError
-
 :SS_Radiation
-SET CURR_LOC=%HD_Loc%
-SET Output_Loc=%CURR_LOC%
-%REGISTRY% "%CURR_LOC%\%ModuleName%.txt" -I "%NWTC_Lib_Loc%"  -I "%CURR_LOC%" -O "%Output_Loc%"
-GOTO checkError
-
 :Conv_Radiation
-SET CURR_LOC=%HD_Loc%
-SET Output_Loc=%CURR_LOC%
-%REGISTRY% "%CURR_LOC%\%ModuleName%.txt" -I "%NWTC_Lib_Loc%"  -I "%CURR_LOC%" -O "%Output_Loc%"
-GOTO checkError
-
 :WAMIT
-SET CURR_LOC=%HD_Loc%
-SET Output_Loc=%CURR_LOC%
-%REGISTRY% "%CURR_LOC%\%ModuleName%.txt" -I "%NWTC_Lib_Loc%"  -I "%CURR_LOC%" -O "%Output_Loc%"
-GOTO checkError
-
 :WAMIT2
-SET CURR_LOC=%HD_Loc%
-SET Output_Loc=%CURR_LOC%
-%REGISTRY% "%CURR_LOC%\%ModuleName%.txt" -I "%NWTC_Lib_Loc%"  -I "%CURR_LOC%" -O "%Output_Loc%"
-GOTO checkError
-
 :Morison
+
 SET CURR_LOC=%HD_Loc%
 SET Output_Loc=%CURR_LOC%
 %REGISTRY% "%CURR_LOC%\%ModuleName%.txt" -I "%NWTC_Lib_Loc%"  -I "%CURR_LOC%" -O "%Output_Loc%"

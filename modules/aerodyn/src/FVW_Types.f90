@@ -185,7 +185,6 @@ IMPLICIT NONE
   TYPE, PUBLIC :: FVW_OtherStateType
     INTEGER(IntKi)  :: NULL      !< Number of active near wake panels [-]
     TYPE(UA_OtherStateType)  :: UA      !< other states for UnsteadyAero [-]
-    LOGICAL , DIMENSION(:,:), ALLOCATABLE  :: UA_Flag      !< logical flag indicating whether to use UnsteadyAero [-]
   END TYPE FVW_OtherStateType
 ! =======================
 ! =========  FVW_InitInputType  =======
@@ -6453,8 +6452,6 @@ ENDIF
    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
 ! Local 
    INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'FVW_CopyOtherState'
@@ -6465,20 +6462,6 @@ ENDIF
       CALL UA_CopyOtherState( SrcOtherStateData%UA, DstOtherStateData%UA, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
-IF (ALLOCATED(SrcOtherStateData%UA_Flag)) THEN
-  i1_l = LBOUND(SrcOtherStateData%UA_Flag,1)
-  i1_u = UBOUND(SrcOtherStateData%UA_Flag,1)
-  i2_l = LBOUND(SrcOtherStateData%UA_Flag,2)
-  i2_u = UBOUND(SrcOtherStateData%UA_Flag,2)
-  IF (.NOT. ALLOCATED(DstOtherStateData%UA_Flag)) THEN 
-    ALLOCATE(DstOtherStateData%UA_Flag(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstOtherStateData%UA_Flag.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstOtherStateData%UA_Flag = SrcOtherStateData%UA_Flag
-ENDIF
  END SUBROUTINE FVW_CopyOtherState
 
  SUBROUTINE FVW_DestroyOtherState( OtherStateData, ErrStat, ErrMsg )
@@ -6491,9 +6474,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
   CALL UA_DestroyOtherState( OtherStateData%UA, ErrStat, ErrMsg )
-IF (ALLOCATED(OtherStateData%UA_Flag)) THEN
-  DEALLOCATE(OtherStateData%UA_Flag)
-ENDIF
  END SUBROUTINE FVW_DestroyOtherState
 
  SUBROUTINE FVW_PackOtherState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -6550,11 +6530,6 @@ ENDIF
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
-  Int_BufSz   = Int_BufSz   + 1     ! UA_Flag allocated yes/no
-  IF ( ALLOCATED(InData%UA_Flag) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*2  ! UA_Flag upper/lower bounds for each dimension
-      Int_BufSz  = Int_BufSz  + SIZE(InData%UA_Flag)  ! UA_Flag
-  END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -6612,26 +6587,6 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
-  IF ( .NOT. ALLOCATED(InData%UA_Flag) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%UA_Flag,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%UA_Flag,1)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%UA_Flag,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%UA_Flag,2)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i2 = LBOUND(InData%UA_Flag,2), UBOUND(InData%UA_Flag,2)
-        DO i1 = LBOUND(InData%UA_Flag,1), UBOUND(InData%UA_Flag,1)
-          IntKiBuf(Int_Xferred) = TRANSFER(InData%UA_Flag(i1,i2), IntKiBuf(1))
-          Int_Xferred = Int_Xferred + 1
-        END DO
-      END DO
-  END IF
  END SUBROUTINE FVW_PackOtherState
 
  SUBROUTINE FVW_UnPackOtherState( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -6647,8 +6602,6 @@ ENDIF
   INTEGER(IntKi)                 :: Db_Xferred
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
-  INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-  INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'FVW_UnPackOtherState'
@@ -6704,29 +6657,6 @@ ENDIF
       IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! UA_Flag not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i2_l = IntKiBuf( Int_Xferred    )
-    i2_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%UA_Flag)) DEALLOCATE(OutData%UA_Flag)
-    ALLOCATE(OutData%UA_Flag(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%UA_Flag.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i2 = LBOUND(OutData%UA_Flag,2), UBOUND(OutData%UA_Flag,2)
-        DO i1 = LBOUND(OutData%UA_Flag,1), UBOUND(OutData%UA_Flag,1)
-          OutData%UA_Flag(i1,i2) = TRANSFER(IntKiBuf(Int_Xferred), OutData%UA_Flag(i1,i2))
-          Int_Xferred = Int_Xferred + 1
-        END DO
-      END DO
-  END IF
  END SUBROUTINE FVW_UnPackOtherState
 
  SUBROUTINE FVW_CopyInitInput( SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg )

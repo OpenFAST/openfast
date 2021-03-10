@@ -3426,7 +3426,7 @@ INTEGER(IntKi)               :: IT, IVec, IY, IZ, II
 
    DO IVec=1,3
 
-      WRITE(p%US,"(/,3X'Height   Standard deviation at grid points for the ',A,' component:')")  Comp(IVec)
+      WRITE(p%US,"(/,3X,'Height   Standard deviation at grid points for the ',A,' component:')")  Comp(IVec)
 
       DO IZ=p%grid%NumGrid_Z,1,-1
 

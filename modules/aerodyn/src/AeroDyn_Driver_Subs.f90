@@ -110,6 +110,7 @@ subroutine Init_AeroDyn(iCase, DvrData, AD, dt, errStat, errMsg)
       InitInData%NumBlades      = DvrData%numBlades
       InitInData%RootName       = DvrData%outFileData%Root
       InitInData%Gravity        = 9.80665_ReKi
+      InitInData%Linearize      = .false.
                         
    
          ! set initialization data:
@@ -122,6 +123,8 @@ subroutine Init_AeroDyn(iCase, DvrData, AD, dt, errStat, errMsg)
          call Cleanup()
          return
       end if
+      
+      call eye(InitInData%NacelleOrientation, ErrStat2, ErrMsg2) ! nacelle reference orientation will be identity
       
       InitInData%HubPosition = (/ DvrData%Overhang * cos(DvrData%shftTilt), 0.0_ReKi, DvrData%HubHt /)
       theta(1) = 0.0_ReKi
@@ -272,12 +275,20 @@ subroutine Set_AD_Inputs(iCase,nt,RotAzimuth,DvrData,AD,errStat,errMsg)
          AD%u(1)%TowerMotion%TranslationVel( :,j) = 0.0_ReKi
       end do !j=nnodes
       
-      ! Hub motions:
+      ! Nacelle motions:
       theta(1) = 0.0_ReKi
       theta(2) = 0.0_ReKi
       theta(3) = DvrData%Cases(iCase)%Yaw(timeIndex)
       orientation = EulerConstruct(theta)
+      
+      if (AD%u(1)%NacelleMotion%Nnodes > 0) then
+         AD%u(1)%NacelleMotion%TranslationDisp = 0.0_R8Ki
+         AD%u(1)%NacelleMotion%TranslationVel = 0.0_R8Ki
+         AD%u(1)%NacelleMotion%Orientation(:,:,1) = orientation
+      endif
             
+      ! Hub motions:
+      ! orientation set in nacelle motion calculation
       AD%u(1)%HubMotion%TranslationDisp(:,1) = matmul( AD%u(1)%HubMotion%Position(:,1), orientation ) - AD%u(1)%HubMotion%Position(:,1) ! = matmul( transpose(orientation) - eye(3), AD%u(1)%HubMotion%Position(:,1) )
 
       theta(1) = RotAzimuth*D2R + DvrData%Cases(iCase)%dt * DvrData%Cases(iCase)%RotSpeed(timeIndex)  ! AD%inputTime(1) * DvrData%Cases(iCase)%RotSpeed
@@ -352,6 +363,16 @@ subroutine Set_AD_Inputs(iCase,nt,RotAzimuth,DvrData,AD,errStat,errMsg)
          AD%u(1)%InflowOnTower(2,j) = 0.0_ReKi !V
          AD%u(1)%InflowOnTower(3,j) = 0.0_ReKi !W         
       end do !j=nnodes
+      
+      !InflowOnNacelle
+      if (AD%u(1)%NacelleMotion%Committed) then
+         z = AD%u(1)%NacelleMotion%Position(3,1) + AD%u(1)%NacelleMotion%TranslationDisp(3,1)
+         AD%u(1)%InflowOnNacelle(1) = GetU( DvrData%Cases(iCase)%WndSpeed(timeIndex), DvrData%HubHt, DvrData%Cases(iCase)%ShearExp(timeIndex), z )
+      else
+         AD%u(1)%InflowOnNacelle(2) = 0.0_ReKi ! U
+      end if
+      AD%u(1)%InflowOnNacelle(2) = 0.0_ReKi !V
+      AD%u(1)%InflowOnNacelle(3) = 0.0_ReKi !W
                      
 end subroutine Set_AD_Inputs
 !----------------------------------------------------------------------------------------------------------------------------------
