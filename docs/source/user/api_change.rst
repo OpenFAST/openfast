@@ -17,6 +17,14 @@ Many changes were applied to SubDyn input file format. You may consult the follo
 :download:`(SubDyn's Input File) <./subdyn/examples/OC4_Jacket_SD_Input.dat>`: 
 and the online SubDyn documentation.
 
+-  ServoDyn
+
+   -  The input file parser is updated to a keyword/value pair based input.
+      Each entry must have a corresponding keyword with the same spelling as
+      expected
+   -  The TMD submodule of ServoDyn is replaced by an updated Structural Control
+      module (StC) with updated capabilities and input file.
+
 ============================================= ==== =============== ========================================================================================================================================================================================================
 OpenFAST v2.5.0 to OpenFAST dev 
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -48,16 +56,6 @@ ServoDyn                                      66   TStCfiles          "unused"  
 ServoDyn                                      67   NumSStC            0             NumSStC      - Number of substructure structural controllers (integer)
 ServoDyn                                      68   SStCfiles          "unused"      SStCfiles    - Name of the files for substructure structural controllers (quoted strings) [unused when NumSStC==0]
 ============================================= ==== =============== ========================================================================================================================================================================================================
-
--  ServoDyn
-
-   -  The input file parser is updated to a keyword/value pair based input.
-      Each entry must have a corresponding keyword with the same spelling as
-      expected
-   -  The TMD submodule of ServoDyn is replaced by an updated Structural Control
-      module (StC) with updated capabilities and input file.
-
-
 
 ============================================= ====== =============== ======================================================================================================================================================================================================
 Modified in OpenFAST dev
@@ -119,6 +117,13 @@ HydroDyn                                      74   PtfmYF            True       
 OpenFAST v2.4.0 to OpenFAST v2.5.0
 ----------------------------------
 
+-  InflowWind
+
+   -  The input file parser is updated to a keyword/value pair based input.
+      Each entry must have a corresponding keyword with the same spelling as
+      expected. See :numref:`input_file_overview` for an overview.
+   -  Driver code includes ability to convert between wind types
+
 ============== ==== ================== =============================================================================================================================================================================
 Added in OpenFAST v2.5.0
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -131,16 +136,10 @@ IfW driver     9    WrVTK                false    WrVTK       - Convert all data
 InflowWind     7    VFlowAng                  0   VFlowAng    - Upflow angle (degrees) (not used for native Bladed format WindType=7)
 ============== ==== ================== =============================================================================================================================================================================
 
--  InflowWind
-
-   -  The input file parser is updated to a keyword/value pair based input.
-      Each entry must have a corresponding keyword with the same spelling as
-      expected. See :numref:`input_file_overview` for an overview.
-   -  Driver code includes ability to convert between wind types
-
-
 OpenFAST v2.3.0 to OpenFAST v2.4.0
 ----------------------------------
+
+Additional nodal output channels added for :ref:`AeroDyn15<AD-Nodal-Outputs>`, :ref:`BeamDyn<BD-Nodal-Outputs>`, and :ref:`ElastoDyn<ED-Nodal-Outputs>`.
 
 ============== ==== ================== =============================================================================================================================================================================
 Added in OpenFAST v2.4.0
@@ -162,10 +161,9 @@ AeroDyn        36   OLAFInputFileName  "Elliptic_OLAF.dat"     OLAFInputFileName
 AirFoilTables  4\*  BL_file            "unused"                BL_file           - The file name including the boundary layer characteristics of the profile. Ignored if the aeroacoustic module is not called.
 ============== ==== ================== =============================================================================================================================================================================
 
-Modified in OpenFAST v2.4.0
----------------------------
-
 ============== ==== ================== ======================================================================================================================================================= =========================
+Modified in OpenFAST v2.4.0
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  Module        Line  New Flag Name      Example Value                                                                                                                                           Previous Flag Name/Value
 ============== ==== ================== ======================================================================================================================================================= =========================
 AirFoilTables  40\* filtCutOff         "DEFAULT"  filtCutOff   - Reduced frequency cut-off for low-pass filtering the AoA input to UA, as well as the 1st and 2nd deriv (-) [default = 0.5]     [default = 20]
@@ -178,8 +176,6 @@ InflowWind     49   XOffset                    0  XOffset      - Initial offset 
 
 \*non-comment line count, excluding lines contained if NumCoords is not 0.
 
-Additional nodal output channels added for :ref:`AeroDyn15<AD-Nodal-Outputs>`,
-:ref:`BeamDyn<BD-Nodal-Outputs>`, and :ref:`ElastoDyn<ED-Nodal-Outputs>`.
 
 
 
