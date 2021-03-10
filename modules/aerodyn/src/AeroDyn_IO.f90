@@ -1278,33 +1278,33 @@ MODULE AeroDyn_IO
    INTEGER(IntKi), PARAMETER      :: RtAeroCq  = 1210
    INTEGER(IntKi), PARAMETER      :: RtAeroCt  = 1211
    INTEGER(IntKi), PARAMETER      :: DBEMTau1  = 1212
-   INTEGER(IntKi), PARAMETER      :: B1AeroFxh = 1213
-   INTEGER(IntKi), PARAMETER      :: B1AeroFyh = 1214
-   INTEGER(IntKi), PARAMETER      :: B1AeroFzh = 1215
-   INTEGER(IntKi), PARAMETER      :: B1AeroMxh = 1216
-   INTEGER(IntKi), PARAMETER      :: B1AeroMyh = 1217
-   INTEGER(IntKi), PARAMETER      :: B1AeroMzh = 1218
+   INTEGER(IntKi), PARAMETER      :: B1AeroFx  = 1213
+   INTEGER(IntKi), PARAMETER      :: B1AeroFy  = 1214
+   INTEGER(IntKi), PARAMETER      :: B1AeroFz  = 1215
+   INTEGER(IntKi), PARAMETER      :: B1AeroMx  = 1216
+   INTEGER(IntKi), PARAMETER      :: B1AeroMy  = 1217
+   INTEGER(IntKi), PARAMETER      :: B1AeroMz  = 1218
    INTEGER(IntKi), PARAMETER      :: B1AeroPwr = 1219
-   INTEGER(IntKi), PARAMETER      :: B2AeroFxh = 1220
-   INTEGER(IntKi), PARAMETER      :: B2AeroFyh = 1221
-   INTEGER(IntKi), PARAMETER      :: B2AeroFzh = 1222
-   INTEGER(IntKi), PARAMETER      :: B2AeroMxh = 1223
-   INTEGER(IntKi), PARAMETER      :: B2AeroMyh = 1224
-   INTEGER(IntKi), PARAMETER      :: B2AeroMzh = 1225
+   INTEGER(IntKi), PARAMETER      :: B2AeroFx  = 1220
+   INTEGER(IntKi), PARAMETER      :: B2AeroFy  = 1221
+   INTEGER(IntKi), PARAMETER      :: B2AeroFz  = 1222
+   INTEGER(IntKi), PARAMETER      :: B2AeroMx  = 1223
+   INTEGER(IntKi), PARAMETER      :: B2AeroMy  = 1224
+   INTEGER(IntKi), PARAMETER      :: B2AeroMz  = 1225
    INTEGER(IntKi), PARAMETER      :: B2AeroPwr = 1226
-   INTEGER(IntKi), PARAMETER      :: B3AeroFxh = 1227
-   INTEGER(IntKi), PARAMETER      :: B3AeroFyh = 1228
-   INTEGER(IntKi), PARAMETER      :: B3AeroFzh = 1229
-   INTEGER(IntKi), PARAMETER      :: B3AeroMxh = 1230
-   INTEGER(IntKi), PARAMETER      :: B3AeroMyh = 1231
-   INTEGER(IntKi), PARAMETER      :: B3AeroMzh = 1232
+   INTEGER(IntKi), PARAMETER      :: B3AeroFx  = 1227
+   INTEGER(IntKi), PARAMETER      :: B3AeroFy  = 1228
+   INTEGER(IntKi), PARAMETER      :: B3AeroFz  = 1229
+   INTEGER(IntKi), PARAMETER      :: B3AeroMx  = 1230
+   INTEGER(IntKi), PARAMETER      :: B3AeroMy  = 1231
+   INTEGER(IntKi), PARAMETER      :: B3AeroMz  = 1232
    INTEGER(IntKi), PARAMETER      :: B3AeroPwr = 1233
-   INTEGER(IntKi), PARAMETER      :: B4AeroFxh = 1234
-   INTEGER(IntKi), PARAMETER      :: B4AeroFyh = 1235
-   INTEGER(IntKi), PARAMETER      :: B4AeroFzh = 1236
-   INTEGER(IntKi), PARAMETER      :: B4AeroMxh = 1237
-   INTEGER(IntKi), PARAMETER      :: B4AeroMyh = 1238
-   INTEGER(IntKi), PARAMETER      :: B4AeroMzh = 1239
+   INTEGER(IntKi), PARAMETER      :: B4AeroFx  = 1234
+   INTEGER(IntKi), PARAMETER      :: B4AeroFy  = 1235
+   INTEGER(IntKi), PARAMETER      :: B4AeroFz  = 1236
+   INTEGER(IntKi), PARAMETER      :: B4AeroMx  = 1237
+   INTEGER(IntKi), PARAMETER      :: B4AeroMy  = 1238
+   INTEGER(IntKi), PARAMETER      :: B4AeroMz  = 1239
    INTEGER(IntKi), PARAMETER      :: B4AeroPwr = 1240
 
      ! The maximum number of output channels which can be output by the code.
@@ -1344,12 +1344,13 @@ MODULE AeroDyn_IO
    INTEGER,  PARAMETER          :: BAzimuth(3) = (/B1Azimuth,B2Azimuth,B3Azimuth/)                                                     ! azimuth angle 
    INTEGER,  PARAMETER          :: BPitch(3)   = (/B1Pitch,  B2Pitch,  B3Pitch/)                                                       ! pitch 
    
-!   INTEGER,  PARAMETER          :: BAeroFx(3)  = (/B1AeroFx,  B2AeroFx,  B3AeroFx/)                                                   ! x-component of total blade root aero force
-!   INTEGER,  PARAMETER          :: BAeroFy(3)  = (/B1AeroFy,  B2AeroFy,  B3AeroFy/)                                                   ! y-component of total blade root aero force 
-!   INTEGER,  PARAMETER          :: BAeroFz(3)  = (/B1AeroFz,  B2AeroFz,  B3AeroFz/)                                                   ! z-component of total blade root aero force 
-!   INTEGER,  PARAMETER          :: BAeroMx(3)  = (/B1AeroMx,  B2AeroMx,  B3AeroMx/)                                                   ! x-component of total blade root aero moment
-!   INTEGER,  PARAMETER          :: BAeroMy(3)  = (/B1AeroMy,  B2AeroMy,  B3AeroMy/)                                                   ! y-component of total blade root aero moment
-!   INTEGER,  PARAMETER          :: BAeroMz(3)  = (/B1AeroMz,  B2AeroMz,  B3AeroMz/)                                                   ! z-component of total blade root aero moment 
+  INTEGER,  PARAMETER          :: BAeroFx(4)  = (/B1AeroFx,  B2AeroFx,  B3AeroFx, B4AeroFx/)                                                   ! x-component of total blade root aero force
+  INTEGER,  PARAMETER          :: BAeroFy(4)  = (/B1AeroFy,  B2AeroFy,  B3AeroFy, B4AeroFy/)                                                   ! y-component of total blade root aero force 
+  INTEGER,  PARAMETER          :: BAeroFz(4)  = (/B1AeroFz,  B2AeroFz,  B3AeroFz, B4AeroFz/)                                                   ! z-component of total blade root aero force 
+  INTEGER,  PARAMETER          :: BAeroMx(4)  = (/B1AeroMx,  B2AeroMx,  B3AeroMx, B4AeroMx/)                                                   ! x-component of total blade root aero moment
+  INTEGER,  PARAMETER          :: BAeroMy(4)  = (/B1AeroMy,  B2AeroMy,  B3AeroMy, B4AeroMy/)                                                   ! y-component of total blade root aero moment
+  INTEGER,  PARAMETER          :: BAeroMz(4)  = (/B1AeroMz,  B2AeroMz,  B3AeroMz, B4AeroMz/)                                                   ! z-component of total blade root aero moment 
+  INTEGER,  PARAMETER          :: BAeroPwr(4) = (/B1AeroMz,  B2AeroMz,  B3AeroMz, B4AeroMz/)                                                   ! z-component of total blade root aero moment 
    
    INTEGER,  PARAMETER          :: BNVUndx(9, 3) = RESHAPE( (/ &      ! undisturbed wind velocity (x component)
                                      B1N1VUndx,B1N2VUndx,B1N3VUndx,B1N4VUndx,B1N5VUndx,B1N6VUndx,B1N7VUndx,B1N8VUndx,B1N9VUndx, &
@@ -1688,7 +1689,7 @@ CONTAINS
       omega = m%BEMT_u(indx)%omega
 
          ! blade outputs
-      do k=1,min(p%numBlades,3)
+      do k=1,min(p%numBlades,3)   ! limit this
          m%AllOuts( BAzimuth(k) ) = MODULO( m%BEMT_u(indx)%psi(k)*R2D, 360.0_ReKi )
        ! m%AllOuts( BPitch(  k) ) = calculated in SetInputsForBEMT
 
@@ -1785,51 +1786,10 @@ CONTAINS
          force  = force  + m%HubLoad%force( :,1)
          moment = moment + m%HubLoad%moment(:,1)
 
-         ! Temporary hack
-         if (k==1) then
-            call Transfer_Line2_to_Point( y%BladeLoad(k), m%BladeRootLoad(k), m%B_L_2_R_P(k), ErrStat2, ErrMsg2, u%BladeMotion(k), u%HubMotion )
-            m%AllOuts( B1AeroFxh ) = m%BladeRootLoad(k)%force(1,1)
-            m%AllOuts( B1AeroFyh ) = m%BladeRootLoad(k)%force(2,1)
-            m%AllOuts( B1AeroFzh ) = m%BladeRootLoad(k)%force(3,1)
-            m%AllOuts( B1AeroMxh ) = m%BladeRootLoad(k)%moment(1,1)
-            m%AllOuts( B1AeroMyh ) = m%BladeRootLoad(k)%moment(2,1)
-            m%AllOuts( B1AeroMzh ) = m%BladeRootLoad(k)%moment(3,1)
-            ! Power wrt hub
+         if (k<4) then
+            ! Power contribution of blade wrt hub
             tmp = matmul( u%HubMotion%Orientation(:,:,1), m%HubLoad%moment(:,1) )
-            m%AllOuts( B1AeroPwr ) = omega * tmp(1) 
-         else if (k==2) then
-            call Transfer_Line2_to_Point( y%BladeLoad(k), m%BladeRootLoad(k), m%B_L_2_R_P(k), ErrStat2, ErrMsg2, u%BladeMotion(k), u%HubMotion )
-            m%AllOuts( B2AeroFxh ) = m%BladeRootLoad(k)%force(1,1)
-            m%AllOuts( B2AeroFyh ) = m%BladeRootLoad(k)%force(2,1)
-            m%AllOuts( B2AeroFzh ) = m%BladeRootLoad(k)%force(3,1)
-            m%AllOuts( B2AeroMxh ) = m%BladeRootLoad(k)%moment(1,1)
-            m%AllOuts( B2AeroMyh ) = m%BladeRootLoad(k)%moment(2,1)
-            m%AllOuts( B2AeroMzh ) = m%BladeRootLoad(k)%moment(3,1)
-            ! Power wrt hub
-            tmp = matmul( u%HubMotion%Orientation(:,:,1), m%HubLoad%moment(:,1) )
-            m%AllOuts( B2AeroPwr ) = omega * tmp(1) 
-         else if (k==3) then
-            call Transfer_Line2_to_Point( y%BladeLoad(k), m%BladeRootLoad(k), m%B_L_2_R_P(k), ErrStat2, ErrMsg2, u%BladeMotion(k), u%HubMotion )
-            m%AllOuts( B3AeroFxh ) = m%BladeRootLoad(k)%force(1,1)
-            m%AllOuts( B3AeroFyh ) = m%BladeRootLoad(k)%force(2,1)
-            m%AllOuts( B3AeroFzh ) = m%BladeRootLoad(k)%force(3,1)
-            m%AllOuts( B3AeroMxh ) = m%BladeRootLoad(k)%moment(1,1)
-            m%AllOuts( B3AeroMyh ) = m%BladeRootLoad(k)%moment(2,1)
-            m%AllOuts( B3AeroMzh ) = m%BladeRootLoad(k)%moment(3,1)
-            ! Power wrt hub
-            tmp = matmul( u%HubMotion%Orientation(:,:,1), m%HubLoad%moment(:,1) )
-            m%AllOuts( B3AeroPwr ) = omega * tmp(1) 
-         else if (k==4) then
-            call Transfer_Line2_to_Point( y%BladeLoad(k), m%BladeRootLoad(k), m%B_L_2_R_P(k), ErrStat2, ErrMsg2, u%BladeMotion(k), u%HubMotion )
-            m%AllOuts( B4AeroFxh ) = m%BladeRootLoad(k)%force(1,1)
-            m%AllOuts( B4AeroFyh ) = m%BladeRootLoad(k)%force(2,1)
-            m%AllOuts( B4AeroFzh ) = m%BladeRootLoad(k)%force(3,1)
-            m%AllOuts( B4AeroMxh ) = m%BladeRootLoad(k)%moment(1,1)
-            m%AllOuts( B4AeroMyh ) = m%BladeRootLoad(k)%moment(2,1)
-            m%AllOuts( B4AeroMzh ) = m%BladeRootLoad(k)%moment(3,1)
-            ! Power wrt hub
-            tmp = matmul( u%HubMotion%Orientation(:,:,1), m%HubLoad%moment(:,1) )
-            m%AllOuts( B4AeroPwr ) = omega * tmp(1) 
+            m%AllOuts( BAeroPwr(k) ) = omega * tmp(1) 
          endif
       end do
       tmp = matmul( u%HubMotion%Orientation(:,:,1), force )
@@ -1863,19 +1823,19 @@ CONTAINS
       end if
    
       ! Integrate force/moments over blades by performing mesh transfer to blade root points:
-!      do k=1,min(p%NumBlades,MaxBl)
-!         call Transfer_Line2_to_Point( y%BladeLoad(k), m%BladeRootLoad(k), m%B_L_2_R_P(k), ErrStat2, ErrMsg2, u%BladeMotion(k), u%BladeRootMotion(k) )
-!         ! Transform force vector to blade root coordinate system
-!         tmp = matmul( u%BladeRootMotion(k)%Orientation(:,:,1), m%BladeRootLoad(k)%force( :,1) )
-!         m%AllOuts( BAeroFx(k) ) = tmp(1)
-!         m%AllOuts( BAeroFy(k) ) = tmp(2)
-!         m%AllOuts( BAeroFz(k) ) = tmp(3)
-!         ! Transform moment vector to blade root coordinate system
-!         tmp = matmul( u%BladeRootMotion(k)%Orientation(:,:,1), m%BladeRootLoad(k)%moment( :,1) )
-!         m%AllOuts( BAeroMx(k) ) = tmp(1)
-!         m%AllOuts( BAeroMy(k) ) = tmp(2)
-!         m%AllOuts( BAeroMz(k) ) = tmp(3)
-!      end do  ! k=blades
+      do k=1,min(p%NumBlades,4)
+         call Transfer_Line2_to_Point( y%BladeLoad(k), m%BladeRootLoad(k), m%B_L_2_R_P(k), ErrStat2, ErrMsg2, u%BladeMotion(k), u%BladeRootMotion(k) )
+         ! Transform force vector to blade root coordinate system
+         tmp = matmul( u%BladeRootMotion(k)%Orientation(:,:,1), m%BladeRootLoad(k)%force( :,1) )
+         m%AllOuts( BAeroFx(k) ) = tmp(1)
+         m%AllOuts( BAeroFy(k) ) = tmp(2)
+         m%AllOuts( BAeroFz(k) ) = tmp(3)
+         ! Transform moment vector to blade root coordinate system
+         tmp = matmul( u%BladeRootMotion(k)%Orientation(:,:,1), m%BladeRootLoad(k)%moment( :,1) )
+         m%AllOuts( BAeroMx(k) ) = tmp(1)
+         m%AllOuts( BAeroMy(k) ) = tmp(2)
+         m%AllOuts( BAeroMz(k) ) = tmp(3)
+     end do  ! k=blades
 
       m%AllOuts( DBEMTau1 ) = OtherState%BEMT%DBEMT%tau1
       
@@ -1889,6 +1849,10 @@ CONTAINS
    subroutine Calc_WriteOutput_FVW
       integer    :: iW
       real(ReKi) :: rmax, omega
+
+      ! Compute max radius and rotor speed
+      rmax  = Calc_MaxRadius(p, u)
+      omega = Calc_Omega(u)
 
          ! blade outputs
       do k=1,min(p%numBlades,3)
@@ -1958,9 +1922,6 @@ CONTAINS
          end do ! nodes
       end do ! blades
 
-      ! Compute max radius and rotor speed
-      rmax  = Calc_MaxRadius(p, u)
-      omega = Calc_Omega(u)
 
       m%AllOuts( RtSpeed ) = omega*RPS2RPM
       m%AllOuts( RtArea  ) = pi*rmax**2     ! TODO vertical axis
@@ -1980,51 +1941,10 @@ CONTAINS
          force  = force  + m%HubLoad%force( :,1)
          moment = moment + m%HubLoad%moment(:,1)
 
-         ! Temporary hack
-         if (k==1) then
-            call Transfer_Line2_to_Point( y%BladeLoad(k), m%BladeRootLoad(k), m%B_L_2_R_P(k), ErrStat2, ErrMsg2, u%BladeMotion(k), u%HubMotion )
-            m%AllOuts( B1AeroFxh ) = m%BladeRootLoad(k)%force(1,1)
-            m%AllOuts( B1AeroFyh ) = m%BladeRootLoad(k)%force(2,1)
-            m%AllOuts( B1AeroFzh ) = m%BladeRootLoad(k)%force(3,1)
-            m%AllOuts( B1AeroMxh ) = m%BladeRootLoad(k)%moment(1,1)
-            m%AllOuts( B1AeroMyh ) = m%BladeRootLoad(k)%moment(2,1)
-            m%AllOuts( B1AeroMzh ) = m%BladeRootLoad(k)%moment(3,1)
-            ! Power wrt hub
+         if (k<4) then
+            ! Power contribution of blade wrt hub
             tmp = matmul( u%HubMotion%Orientation(:,:,1), m%HubLoad%moment(:,1) )
-            m%AllOuts( B1AeroPwr ) = omega * tmp(1) 
-         else if (k==2) then
-            call Transfer_Line2_to_Point( y%BladeLoad(k), m%BladeRootLoad(k), m%B_L_2_R_P(k), ErrStat2, ErrMsg2, u%BladeMotion(k), u%HubMotion )
-            m%AllOuts( B2AeroFxh ) = m%BladeRootLoad(k)%force(1,1)
-            m%AllOuts( B2AeroFyh ) = m%BladeRootLoad(k)%force(2,1)
-            m%AllOuts( B2AeroFzh ) = m%BladeRootLoad(k)%force(3,1)
-            m%AllOuts( B2AeroMxh ) = m%BladeRootLoad(k)%moment(1,1)
-            m%AllOuts( B2AeroMyh ) = m%BladeRootLoad(k)%moment(2,1)
-            m%AllOuts( B2AeroMzh ) = m%BladeRootLoad(k)%moment(3,1)
-            ! Power wrt hub
-            tmp = matmul( u%HubMotion%Orientation(:,:,1), m%HubLoad%moment(:,1) )
-            m%AllOuts( B2AeroPwr ) = omega * tmp(1) 
-         else if (k==3) then
-            call Transfer_Line2_to_Point( y%BladeLoad(k), m%BladeRootLoad(k), m%B_L_2_R_P(k), ErrStat2, ErrMsg2, u%BladeMotion(k), u%HubMotion )
-            m%AllOuts( B3AeroFxh ) = m%BladeRootLoad(k)%force(1,1)
-            m%AllOuts( B3AeroFyh ) = m%BladeRootLoad(k)%force(2,1)
-            m%AllOuts( B3AeroFzh ) = m%BladeRootLoad(k)%force(3,1)
-            m%AllOuts( B3AeroMxh ) = m%BladeRootLoad(k)%moment(1,1)
-            m%AllOuts( B3AeroMyh ) = m%BladeRootLoad(k)%moment(2,1)
-            m%AllOuts( B3AeroMzh ) = m%BladeRootLoad(k)%moment(3,1)
-            ! Power wrt hub
-            tmp = matmul( u%HubMotion%Orientation(:,:,1), m%HubLoad%moment(:,1) )
-            m%AllOuts( B3AeroPwr ) = omega * tmp(1) 
-         else if (k==4) then
-            call Transfer_Line2_to_Point( y%BladeLoad(k), m%BladeRootLoad(k), m%B_L_2_R_P(k), ErrStat2, ErrMsg2, u%BladeMotion(k), u%HubMotion )
-            m%AllOuts( B4AeroFxh ) = m%BladeRootLoad(k)%force(1,1)
-            m%AllOuts( B4AeroFyh ) = m%BladeRootLoad(k)%force(2,1)
-            m%AllOuts( B4AeroFzh ) = m%BladeRootLoad(k)%force(3,1)
-            m%AllOuts( B4AeroMxh ) = m%BladeRootLoad(k)%moment(1,1)
-            m%AllOuts( B4AeroMyh ) = m%BladeRootLoad(k)%moment(2,1)
-            m%AllOuts( B4AeroMzh ) = m%BladeRootLoad(k)%moment(3,1)
-            ! Power wrt hub
-            tmp = matmul( u%HubMotion%Orientation(:,:,1), m%HubLoad%moment(:,1) )
-            m%AllOuts( B4AeroPwr ) = omega * tmp(1) 
+            m%AllOuts( BAeroPwr(k) ) = omega * tmp(1) 
          endif
       end do
       tmp = matmul( u%HubMotion%Orientation(:,:,1), force )
@@ -2051,6 +1971,21 @@ CONTAINS
         m%AllOuts( RtAeroCq ) = m%AllOuts( RtAeroMxh ) / (denom * rmax)
         m%AllOuts( RtAeroCt ) = m%AllOuts( RtAeroFxh ) /  denom
       end if
+
+      ! Integrate force/moments over blades by performing mesh transfer to blade root points:
+      do k=1,min(p%NumBlades,4)
+         call Transfer_Line2_to_Point( y%BladeLoad(k), m%BladeRootLoad(k), m%B_L_2_R_P(k), ErrStat2, ErrMsg2, u%BladeMotion(k), u%BladeRootMotion(k) )
+         ! Transform force vector to blade root coordinate system
+         tmp = matmul( u%BladeRootMotion(k)%Orientation(:,:,1), m%BladeRootLoad(k)%force( :,1) )
+         m%AllOuts( BAeroFx(k) ) = tmp(1)
+         m%AllOuts( BAeroFy(k) ) = tmp(2)
+         m%AllOuts( BAeroFz(k) ) = tmp(3)
+         ! Transform moment vector to blade root coordinate system
+         tmp = matmul( u%BladeRootMotion(k)%Orientation(:,:,1), m%BladeRootLoad(k)%moment( :,1) )
+         m%AllOuts( BAeroMx(k) ) = tmp(1)
+         m%AllOuts( BAeroMy(k) ) = tmp(2)
+         m%AllOuts( BAeroMz(k) ) = tmp(3)
+     end do  ! k=blades
 
    end subroutine Calc_WriteOutput_FVW
 
@@ -3083,10 +3018,10 @@ SUBROUTINE SetOutParam(OutList, p, p_AD, ErrStat, ErrMsg )
                                "TWN8RE   ","TWN8STVX ","TWN8STVY ","TWN8STVZ ","TWN8VREL ","TWN8VUNDX","TWN8VUNDY","TWN8VUNDZ", &
                                "TWN9DYNP ","TWN9FDX  ","TWN9FDY  ","TWN9M    ","TWN9RE   ","TWN9STVX ","TWN9STVY ","TWN9STVZ ", &
                                "TWN9VREL ","TWN9VUNDX","TWN9VUNDY","TWN9VUNDZ", &
-                               "Z1AEROFXH","Z1AEROFYH","Z1AEROFZH","Z1AEROMXH","Z1AEROMYH","Z1AEROMZH","Z1AEROPWR", &
-                               "Z2AEROFXH","Z2AEROFYH","Z2AEROFZH","Z2AEROMXH","Z2AEROMYH","Z2AEROMZH","Z2AEROPWR", &
-                               "Z3AEROFXH","Z3AEROFYH","Z3AEROFZH","Z3AEROMXH","Z3AEROMYH","Z3AEROMZH","Z3AEROPWR", &
-                               "Z4AEROFXH","Z4AEROFYH","Z4AEROFZH","Z4AEROMXH","Z4AEROMYH","Z4AEROMZH","Z4AEROPWR"  &
+                               "Z1AEROFXB","Z1AEROFYB","Z1AEROFZB","Z1AEROMXB","Z1AEROMYB","Z1AEROMZB","Z1AEROPWR", &
+                               "Z2AEROFXB","Z2AEROFYB","Z2AEROFZB","Z2AEROMXB","Z2AEROMYB","Z2AEROMZB","Z2AEROPWR", &
+                               "Z3AEROFXB","Z3AEROFYB","Z3AEROFZB","Z3AEROMXB","Z3AEROMYB","Z3AEROMZB","Z3AEROPWR", &
+                               "Z4AEROFXB","Z4AEROFYB","Z4AEROFZB","Z4AEROMXB","Z4AEROMYB","Z4AEROMZB","Z4AEROPWR"  &
                                /)
    INTEGER(IntKi), PARAMETER :: ParamIndxAry(1240) =  (/ &                            ! This lists the index into AllOuts(:) of the allowed parameters ValidParamAry(:)
                                 B1Azimuth , B1N1Alpha , B1N1AxInd ,    B1N1Cd ,    B1N1Cl , B1N1Clrnc ,    B1N1Cm ,    B1N1Cn , &
@@ -3241,10 +3176,10 @@ SUBROUTINE SetOutParam(OutList, p, p_AD, ErrStat, ErrMsg )
                                    TwN8Re ,  TwN8STVx ,  TwN8STVy ,  TwN8STVz ,  TwN8Vrel , TwN8VUndx , TwN8VUndy , TwN8VUndz , &
                                  TwN9DynP ,   TwN9Fdx ,   TwN9Fdy ,     TwN9M ,    TwN9Re ,  TwN9STVx ,  TwN9STVy ,  TwN9STVz , &
                                  TwN9Vrel , TwN9VUndx , TwN9VUndy , TwN9VUndz, &
-                                 B1AeroFxh, B1AeroFyh, B1AeroFzh, B1AeroMxh, B1AeroMyh, B1AeroMzh, B1AeroPwr, &
-                                 B2AeroFxh, B2AeroFyh, B2AeroFzh, B2AeroMxh, B2AeroMyh, B2AeroMzh, B2AeroPwr, &
-                                 B3AeroFxh, B3AeroFyh, B3AeroFzh, B3AeroMxh, B3AeroMyh, B3AeroMzh, B3AeroPwr, &
-                                 B4AeroFxh, B4AeroFyh, B4AeroFzh, B4AeroMxh, B4AeroMyh, B4AeroMzh, B4AeroPwr  &
+                                 B1AeroFx, B1AeroFy, B1AeroFz, B1AeroMx, B1AeroMy, B1AeroMz, B1AeroPwr, &
+                                 B2AeroFx, B2AeroFy, B2AeroFz, B2AeroMx, B2AeroMy, B2AeroMz, B2AeroPwr, &
+                                 B3AeroFx, B3AeroFy, B3AeroFz, B3AeroMx, B3AeroMy, B3AeroMz, B3AeroPwr, &
+                                 B4AeroFx, B4AeroFy, B4AeroFz, B4AeroMx, B4AeroMy, B4AeroMz, B4AeroPwr  &
                                  /)
                               
 
