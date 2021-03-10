@@ -68,7 +68,7 @@ void fast::OpenFAST::init() {
                     &cDriver_Input_from_FAST[iTurb],
                     &cDriver_Output_to_FAST[iTurb],
                     &sc.ip_from_FAST[iTurb],
-                    &sc.opto_FAST[iTurb],
+                    &sc.op_to_FAST[iTurb],
                     &ErrStat,
                     ErrMsg
                 );
