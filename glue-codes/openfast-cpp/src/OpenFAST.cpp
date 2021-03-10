@@ -67,8 +67,8 @@ void fast::OpenFAST::init() {
                     &ntStart,
                     &cDriver_Input_from_FAST[iTurb],
                     &cDriver_Output_to_FAST[iTurb],
-                    &cDriverSC_Input_from_FAST[iTurb],
-                    &cDriverSC_Output_to_FAST[iTurb],
+                    &sc.ip_from_FAST[iTurb],
+                    &sc.opto_FAST[iTurb],
                     &ErrStat,
                     ErrMsg
                 );
@@ -83,17 +83,17 @@ void fast::OpenFAST::init() {
             if (nTurbinesProc > 0) velNodeDataFile = openVelocityDataFile(false);
 
             if(scStatus) {
-                sc->readRestartFile(nt_global);
+                sc.readRestartFile(nt_global);
             }
 
             break ;
      
-     if(scStatus) {
-         sc.init(scio, nTurbinesProc, turbineMapProcToGlob, fastMPIComm);
-        sc.calcOutputs_n(0.0);
-     }
-
         case fast::init:
+
+            if (scStatus) {
+                sc.init(scio, nTurbinesProc, turbineMapProcToGlob, fastMPIComm);
+                sc.calcOutputs_n(0.0);
+            }
 
             // this calls the Init() routines of each module
 
@@ -350,7 +350,7 @@ void fast::OpenFAST::step() {
             }
         }
     }
-          sc.writeRestartFile(nt_global);
+
 }
 
 void fast::OpenFAST::stepNoWrite() {
