@@ -114,7 +114,7 @@ subroutine DvrM_Init(DvrData, AD, IW, errStat,errMsg )
    call Init_AeroDyn(DvrData, AD, DvrData%dT, InitOutData_AD, errStat2, errMsg2); if(Failed()) return
 
    ! --- Initialize Inflow Wind 
-   call Init_InflowWind(DvrData, IW, AD, DvrData%dt, errStat2, errMsg2); if(Failed()) return
+   call Init_InflowWind(DvrData, IW, AD%u(1), AD%OtherState, DvrData%dt, errStat2, errMsg2); if(Failed()) return
 
    ! --- Initialize meshes
    call Init_ADMeshMap(DvrData, AD%u(1), errStat2, errMsg2); if(Failed()) return
@@ -333,11 +333,12 @@ end subroutine Init_AeroDyn
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !>
-subroutine Init_InflowWind(DvrData, IW, AD, dt, errStat, errMsg)
+subroutine Init_InflowWind(DvrData, IW, u_AD, o_AD, dt, errStat, errMsg)
    use InflowWind, only: InflowWind_Init
    type(DvrM_SimData), target,   intent(inout) :: DvrData       ! Input data for initialization (intent out for getting AD WriteOutput names/units)
    type(InflowWind_Data),        intent(inout) :: IW            ! AeroDyn data 
-   type(AeroDyn_Data),           intent(inout) :: AD            ! AeroDyn data 
+   type(AD_InputType),           intent(in   ) :: u_AD          ! AeroDyn data 
+   type(AD_OtherStateType),      intent(in   ) :: o_AD          ! AeroDyn data 
    real(DbKi),                   intent(inout) :: dt            ! interval
    integer(IntKi)              , intent(  out) :: errStat       ! Status of error message
    character(*)                , intent(  out) :: errMsg        ! Error message if ErrStat /= ErrID_None
@@ -355,27 +356,49 @@ subroutine Init_InflowWind(DvrData, IW, AD, dt, errStat, errMsg)
    errStat = ErrID_None
    errMsg  = ''
 
-   InitInData%InputFileName    = DvrData%IW_InputFile
-   InitInData%Linearize        = .false.
-   InitInData%UseInputFile     = .true.
-   InitInData%RootName         = DvrData%out%Root
-
+   ! --- Count number of points (see FAST_Subs, before InflowWind_Init)
    InitInData%NumWindPoints = 0      
    do iWT=1,DvrData%numTurbines
       wt => DvrData%wt(iWT)
-      ! Set the number of points we are expecting to ask for initially
-      InitInData%NumWindPoints = InitInData%NumWindPoints + AD%u(1)%rotors(iWT)%TowerMotion%NNodes
+      ! Blade
       do k=1,wt%numBlades
-         InitInData%NumWindPoints = InitInData%NumWindPoints + AD%u(1)%rotors(iWT)%BladeMotion(k)%NNodes
+         InitInData%NumWindPoints = InitInData%NumWindPoints + u_AD%rotors(iWT)%BladeMotion(k)%NNodes
       end do
+      ! Tower
+      InitInData%NumWindPoints = InitInData%NumWindPoints + u_AD%rotors(iWT)%TowerMotion%NNodes
+      ! Nacelle
+      if (u_AD%rotors(1)%NacelleMotion%Committed) then
+         InitInData%NumWindPoints = InitInData%NumWindPoints + u_AD%rotors(iWT)%NacelleMotion%NNodes ! 1 point
+      endif
+      ! Hub Motion
+      !InitInData%NumWindPoints = InitInData%NumWindPoints + u_AD%rotors(iWT)%HubPtMotion%NNodes ! 1 point
    enddo
-   if (allocated(AD%OtherState%WakeLocationPoints)) then
-      InitInData%NumWindPoints = InitInData%NumWindPoints + size(AD%OtherState%WakeLocationPoints,DIM=2)
+   if (allocated(o_AD%WakeLocationPoints)) then
+      InitInData%NumWindPoints = InitInData%NumWindPoints + size(o_AD%WakeLocationPoints,DIM=2)
    end if
-   CALL InflowWind_Init( InitInData, IW%u(1), IW%p, &
-                  IW%x, IW%xd, IW%z, IW%OtherSt, &
-                  IW%y, IW%m, dt,  InitOutData, errStat2, errMsg2 )
-   if(Failed()) return
+
+   ! --- Init InflowWind
+   if (DvrData%CompInflow==0) then
+      ! Fake "InflowWind" init
+      allocate(InitOutData%WriteOutputHdr(0))
+      allocate(InitOutData%WriteOutputUnt(0))
+      allocate(IW%y%WriteOutput(0))
+      call AllocAry(IW%u(1)%PositionXYZ, 3, InitInData%NumWindPoints, 'PositionXYZ', errStat2, errMsg2); if (Failed()) return
+      call AllocAry(IW%y%VelocityUVW   , 3, InitInData%NumWindPoints, 'VelocityUVW', errStat2, errMsg2); if (Failed()) return
+      IW%u(1)%PositionXYZ = -99999.9_ReKi
+      IW%y%VelocityUVW    = -99999.9_ReKi
+   else
+      ! Module init
+      InitInData%InputFileName    = DvrData%IW_InputFile
+      InitInData%Linearize        = .false.
+      InitInData%UseInputFile     = .true.
+      InitInData%RootName         = DvrData%out%Root
+      CALL InflowWind_Init( InitInData, IW%u(1), IW%p, &
+                     IW%x, IW%xd, IW%z, IW%OtherSt, &
+                     IW%y, IW%m, dt,  InitOutData, errStat2, errMsg2 )
+      if(Failed()) return
+
+   endif
 
    call InflowWind_CopyInput (IW%u(1),  IW%u(2),  MESH_NEWCOPY, errStat2, errMsg2); if(Failed()) return
 
@@ -816,6 +839,7 @@ subroutine Set_AD_Inputs(nt,DvrData,AD,IW,errStat,errMsg)
    integer(IntKi)          :: errStat2      ! local status of error message
    character(ErrMsgLen)    :: errMsg2       ! local error message if ErrStat /= ErrID_None
    type(WTData), pointer :: wt ! Alias to shorten notation
+   real(ReKi) :: z
    errStat = ErrID_None
    errMsg  = ""
 
@@ -852,8 +876,17 @@ subroutine Set_AD_Inputs(nt,DvrData,AD,IW,errStat,errMsg)
    enddo ! iWT, rotors
       
    ! --- Inflow on points
-   call Set_IW_Inputs(nt, DvrData, AD, IW, errStat2, errMsg2); if(Failed()) return
-   call InflowWind_CalcOutput(AD%inputTime(1), IW%u(1), IW%p, IW%x, IW%xd, IW%z, IW%OtherSt, IW%y, IW%m, errStat2, errMsg2); if (Failed()) return
+   call Set_IW_Inputs(nt, DvrData, AD%u(1), AD%OtherState, IW%u(1), errStat2, errMsg2); if(Failed()) return
+   if (DvrData%CompInflow==1) then
+      call InflowWind_CalcOutput(AD%inputTime(1), IW%u(1), IW%p, IW%x, IW%xd, IW%z, IW%OtherSt, IW%y, IW%m, errStat2, errMsg2); if (Failed()) return
+   else
+      do j=1,size(IW%u(1)%PositionXYZ,2)
+         z = IW%u(1)%PositionXYZ(3,j)
+         IW%y%VelocityUVW(1,j) = DvrData%HWindSpeed*(z/DvrData%RefHt)**DvrData%PLExp
+         IW%y%VelocityUVW(2,j) = 0.0_ReKi !V
+         IW%y%VelocityUVW(3,j) = 0.0_ReKi !W      
+      end do 
+   endif
    call AD_InputSolve_IfW(AD%u(1), IW%y, errStat2, errMsg2); if(Failed()) return
 
 contains
@@ -865,11 +898,12 @@ end subroutine Set_AD_Inputs
 
 !> Set inputs for inflow wind
 !! Similar to FAST_Solver, IfW_InputSolve
-subroutine Set_IW_Inputs(nt,DvrData,AD,IW,errStat,errMsg)
+subroutine Set_IW_Inputs(nt,DvrData,u_AD,o_AD,u_IfW,errStat,errMsg)
    integer(IntKi)              , intent(in   ) :: nt            ! time step number
    type(DvrM_SimData), target,   intent(in   ) :: DvrData       ! Driver data 
-   type(AeroDyn_Data),           intent(in   ) :: AD            ! AeroDyn data 
-   type(InflowWind_Data),        intent(inout) :: IW            ! InflowWind data 
+   type(AD_InputType),           intent(in   ) :: u_AD          ! AeroDyn data 
+   type(AD_OtherStateType),      intent(in   ) :: o_AD          ! AeroDyn data 
+   type(InflowWind_InputType),   intent(inout) :: u_IfW         ! InflowWind data 
    integer(IntKi)              , intent(  out) :: errStat       ! Status of error message
    character(*)                , intent(  out) :: errMsg        ! Error message if ErrStat /= ErrID_None
    integer :: k,j,node, iWT
@@ -877,24 +911,33 @@ subroutine Set_IW_Inputs(nt,DvrData,AD,IW,errStat,errMsg)
    ErrMsg  = ''
    Node=0
 
+   ! Order important!
    do iWT=1,DvrData%numTurbines
-      ! 'TODO verify order of points'
-      do K = 1,SIZE(AD%u(1)%rotors(iWT)%BladeMotion)
-         do J = 1,AD%u(1)%rotors(iWT)%BladeMotion(k)%Nnodes
+      ! Blade
+      do K = 1,SIZE(u_AD%rotors(iWT)%BladeMotion)
+         do J = 1,u_AD%rotors(iWT)%BladeMotion(k)%Nnodes
             Node = Node + 1
-            IW%u(1)%PositionXYZ(:,Node) = AD%u(1)%rotors(iWT)%BladeMotion(k)%TranslationDisp(:,j) + AD%u(1)%rotors(iWT)%BladeMotion(k)%Position(:,j)
+            u_IfW%PositionXYZ(:,Node) = u_AD%rotors(iWT)%BladeMotion(k)%TranslationDisp(:,j) + u_AD%rotors(iWT)%BladeMotion(k)%Position(:,j)
          end do !J = 1,p%BldNodes ! Loop through the blade nodes / elements
       end do !K = 1,p%NumBl         
-      do J=1,AD%u(1)%rotors(iWT)%TowerMotion%nnodes
+      ! Tower
+      do J=1,u_AD%rotors(iWT)%TowerMotion%nnodes
          Node = Node + 1
-         IW%u(1)%PositionXYZ(:,Node) = AD%u(1)%rotors(iWT)%TowerMotion%TranslationDisp(:,J) + AD%u(1)%rotors(iWT)%TowerMotion%Position(:,J)
+         u_IfW%PositionXYZ(:,Node) = u_AD%rotors(iWT)%TowerMotion%TranslationDisp(:,J) + u_AD%rotors(iWT)%TowerMotion%Position(:,J)
       end do      
+      ! Nacelle
+      if (u_AD%rotors(iWT)%NacelleMotion%Committed) then
+         Node = Node + 1
+         u_IfW%PositionXYZ(:,Node) = u_AD%rotors(iWT)%NacelleMotion%TranslationDisp(:,1) + u_AD%rotors(iWT)%NacelleMotion%Position(:,1)
+      end if
+      ! Hub
+
    enddo ! iWT
    ! vortex points from FVW in AD15
-   if (allocated(AD%OtherState%WakeLocationPoints)) then
-      do J=1,size(AD%OtherState%WakeLocationPoints,DIM=2)
+   if (allocated(o_AD%WakeLocationPoints)) then
+      do J=1,size(o_AD%WakeLocationPoints,DIM=2)
          Node = Node + 1
-         IW%u(1)%PositionXYZ(:,Node) = AD%OtherState%WakeLocationPoints(:,J)
+         u_IfW%PositionXYZ(:,Node) = o_AD%WakeLocationPoints(:,J)
          ! rewrite the history of this so that extrapolation doesn't make a mess of things
 !          do k=2,size(IW%u)
 !             if (allocated(IW%u(k)%PositionXYZ))   IW%u(k)%PositionXYZ(:,Node) = IW%u(1)%PositionXYZ(:,Node)
@@ -922,16 +965,18 @@ subroutine AD_InputSolve_IfW(u_AD, y_IfW, errStat, errMsg)
    errMsg  = ""
    node = 1
 
+   ! Order important!
    do iWT=1,size(u_AD%rotors)
-
       NumBl  = size(u_AD%rotors(iWT)%InflowOnBlade,3)
       Nnodes = size(u_AD%rotors(iWT)%InflowOnBlade,2)
+      ! Blades
       do k=1,NumBl
          do j=1,Nnodes
             u_AD%rotors(iWT)%InflowOnBlade(:,j,k) = y_IfW%VelocityUVW(:,node)
             node = node + 1
          end do
       end do
+      ! Tower
       if ( allocated(u_AD%rotors(iWT)%InflowOnTower) ) then
          Nnodes = size(u_AD%rotors(iWT)%InflowOnTower,2)
          do j=1,Nnodes
@@ -939,9 +984,22 @@ subroutine AD_InputSolve_IfW(u_AD, y_IfW, errStat, errMsg)
             node = node + 1
          end do      
       end if
+      ! Nacelle
+      if (u_AD%rotors(iWT)%NacelleMotion%NNodes > 0) then
+         u_AD%rotors(iWT)%InflowOnNacelle(:) = y_IfW%VelocityUVW(:,node)
+         node = node + 1
+      else
+         u_AD%rotors(iWT)%InflowOnNacelle = 0.0_ReKi
+      end if
+      ! Hub 
+!      if (u_AD%HubMotion%NNodes > 0) then
+!         u_AD%InflowOnHub(:) = y_IfW%VelocityUVW(:,node)
+!         node = node + 1
+!      else
+!         u_AD%InflowOnHub = 0.0_ReKi
+!      end if
    enddo ! rotors
-
-   ! velocity at vortex wake points velocity array handoff here
+   ! OLAF points
    if ( allocated(u_AD%InflowWakeVel) ) then
       Nnodes = size(u_AD%InflowWakeVel,DIM=2)
       do j=1,Nnodes
@@ -1010,9 +1068,9 @@ subroutine Dvr_ReadInputFile(fileName, DvrData, errStat, errMsg )
 
    ! --- Inflow data
    call ParseCom(FileInfo_In, CurLine, Line, errStat2, errMsg2, unEc); if (Failed()) return
-   call ParseVar(FileInfo_In, CurLine, "CompInflow", DvrData%CompInflow  , errStat2, errMsg2, unEc); if (Failed()) return
+   call ParseVar(FileInfo_In, CurLine, "compInflow", DvrData%compInflow  , errStat2, errMsg2, unEc); if (Failed()) return
    call ParseVar(FileInfo_In, CurLine, "InflowFile", DvrData%IW_InputFile, errStat2, errMsg2, unEc); if (Failed()) return
-   if (DvrData%CompInflow==0) then
+   if (DvrData%compInflow==0) then
       call ParseVar(FileInfo_In, CurLine, "HWindSpeed", DvrData%HWindSpeed  , errStat2, errMsg2, unEc); if (Failed()) return
       call ParseVar(FileInfo_In, CurLine, "RefHt"     , DvrData%RefHt       , errStat2, errMsg2, unEc); if (Failed()) return
       call ParseVar(FileInfo_In, CurLine, "PLExp"     , DvrData%PLExp       , errStat2, errMsg2, unEc); if (Failed()) return
@@ -1241,6 +1299,7 @@ subroutine ValidateInputs(DvrData, errStat, errMsg)
    !if ( DvrData%numBlades < 1 ) call SetErrStat( ErrID_Fatal, "There must be at least 1 blade (numBlades).", ErrStat, ErrMsg, RoutineName)
       ! Combined-Case Analysis:
    if (DvrData%DT < epsilon(0.0_ReKi) ) call SetErrStat(ErrID_Fatal,'dT must be larger than 0.',ErrStat, ErrMsg,RoutineName)
+   if (Check(.not.(ANY((/0,1/) == DvrData%compInflow) ), 'CompInflow needs to be 0 or 1')) return
 
    do iWT=1,DvrData%numTurbines
       wt => DvrData%WT(iWT)
