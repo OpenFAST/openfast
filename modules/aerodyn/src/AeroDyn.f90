@@ -3208,7 +3208,9 @@ SUBROUTINE TwrInflArray( p, u, m, Positions, Inflow, ErrStat, ErrMsg )
                end if
          end select
                      
-         v(1) = (u_TwrPotent + u_TwrShadow)*W_tower
+         ! We limit the deficit to avoid having too much flow reversal and accumulation of vorticity behind the tower
+         ! Limit to -0.5 the wind speed at the tower
+         v(1) =max(u_TwrPotent + u_TwrShadow,-0.5)*W_tower
          v(2) = v_TwrPotent*W_tower
          v(3) = 0.0_ReKi
          
