@@ -59,6 +59,7 @@ IMPLICIT NONE
   TYPE, PUBLIC :: DvrVTK_SurfaceType
     INTEGER(IntKi)  :: NumSectors      !< number of sectors in which to split circles (higher number gives smoother surface) [-]
     REAL(SiKi) , DIMENSION(1:3,1:8)  :: NacelleBox      !< X-Y-Z locations of 8 points that define the nacelle box, relative to the nacelle position [m]
+    REAL(SiKi) , DIMENSION(1:3,1:8)  :: BaseBox      !< X-Y-Z locations of 8 points that define the base box [m]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: TowerRad      !< radius of each ED tower node [m]
     TYPE(DvrVTK_BLSurfaceType) , DIMENSION(:), ALLOCATABLE  :: BladeShape      !< AirfoilCoords for each blade [m]
   END TYPE DvrVTK_SurfaceType
@@ -442,6 +443,7 @@ ENDIF
    ErrMsg  = ""
     DstDvrVTK_SurfaceTypeData%NumSectors = SrcDvrVTK_SurfaceTypeData%NumSectors
     DstDvrVTK_SurfaceTypeData%NacelleBox = SrcDvrVTK_SurfaceTypeData%NacelleBox
+    DstDvrVTK_SurfaceTypeData%BaseBox = SrcDvrVTK_SurfaceTypeData%BaseBox
 IF (ALLOCATED(SrcDvrVTK_SurfaceTypeData%TowerRad)) THEN
   i1_l = LBOUND(SrcDvrVTK_SurfaceTypeData%TowerRad,1)
   i1_u = UBOUND(SrcDvrVTK_SurfaceTypeData%TowerRad,1)
@@ -529,6 +531,7 @@ ENDIF
   Int_BufSz  = 0
       Int_BufSz  = Int_BufSz  + 1  ! NumSectors
       Re_BufSz   = Re_BufSz   + SIZE(InData%NacelleBox)  ! NacelleBox
+      Re_BufSz   = Re_BufSz   + SIZE(InData%BaseBox)  ! BaseBox
   Int_BufSz   = Int_BufSz   + 1     ! TowerRad allocated yes/no
   IF ( ALLOCATED(InData%TowerRad) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! TowerRad upper/lower bounds for each dimension
@@ -590,6 +593,12 @@ ENDIF
     DO i2 = LBOUND(InData%NacelleBox,2), UBOUND(InData%NacelleBox,2)
       DO i1 = LBOUND(InData%NacelleBox,1), UBOUND(InData%NacelleBox,1)
         ReKiBuf(Re_Xferred) = InData%NacelleBox(i1,i2)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+    END DO
+    DO i2 = LBOUND(InData%BaseBox,2), UBOUND(InData%BaseBox,2)
+      DO i1 = LBOUND(InData%BaseBox,1), UBOUND(InData%BaseBox,1)
+        ReKiBuf(Re_Xferred) = InData%BaseBox(i1,i2)
         Re_Xferred = Re_Xferred + 1
       END DO
     END DO
@@ -688,6 +697,16 @@ ENDIF
     DO i2 = LBOUND(OutData%NacelleBox,2), UBOUND(OutData%NacelleBox,2)
       DO i1 = LBOUND(OutData%NacelleBox,1), UBOUND(OutData%NacelleBox,1)
         OutData%NacelleBox(i1,i2) = REAL(ReKiBuf(Re_Xferred), SiKi)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+    END DO
+    i1_l = LBOUND(OutData%BaseBox,1)
+    i1_u = UBOUND(OutData%BaseBox,1)
+    i2_l = LBOUND(OutData%BaseBox,2)
+    i2_u = UBOUND(OutData%BaseBox,2)
+    DO i2 = LBOUND(OutData%BaseBox,2), UBOUND(OutData%BaseBox,2)
+      DO i1 = LBOUND(OutData%BaseBox,1), UBOUND(OutData%BaseBox,1)
+        OutData%BaseBox(i1,i2) = REAL(ReKiBuf(Re_Xferred), SiKi)
         Re_Xferred = Re_Xferred + 1
       END DO
     END DO

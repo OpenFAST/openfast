@@ -585,7 +585,8 @@ subroutine Init_ADMeshMap(DvrData, uAD, errStat, errMsg)
             print*,'Tower Height',twrHeight, twrHeightAD
             if (abs(twrHeightAD-twrHeight)> twrHeight*0.1) then
                errStat=ErrID_Fatal
-               errMsg='More than 10% difference between AeroDyn tower length ('//trim(num2lstr(twrHeightAD))//'m), and the distance from tower base to nacelle ('//trim(num2lstr(twrHeight))//'m)'
+               errMsg='More than 10% difference between AeroDyn tower length ('//trim(num2lstr(twrHeightAD))//&
+                  'm), and the distance from tower base to nacelle ('//trim(num2lstr(twrHeight))//'m) for turbine '//trim(num2lstr(iWT))
             endif
 
             ! Adjust tower position (AeroDyn return values assuming (0,0,0) for tower base
@@ -1131,55 +1132,67 @@ subroutine Dvr_ReadInputFile(fileName, DvrData, errStat, errMsg )
          endif
 
          ! Nacelle motion
-         call ParseCom(FileInfo_In, CurLine, Line, errStat2, errMsg2, unEc); if(Failed()) return
-         call ParseVar(FileInfo_In, CurLine, 'nacMotionType'//sWT    , wt%nac%motionType    , errStat2, errMsg2, unEc); if(Failed()) return
-         call ParseVar(FileInfo_In, CurLine, 'nacYaw'//sWT           , wt%nac%yaw           , errStat2, errMsg2, unEc); if(Failed()) return
-         call ParseVar(FileInfo_In, CurLine, 'nacMotionFilename'//sWT, wt%nac%motionFileName, errStat2, errMsg2, unEc); if(Failed()) return
-         wt%nac%yaw = wt%nac%yaw * Pi/180_ReKi ! yaw stored in rad
-         if (wt%nac%motionType==idNacMotionVariable) then
-            call ReadDelimFile(wt%nac%motionFilename, 4, wt%nac%motion, errStat2, errMsg2); if(Failed()) return
-            wt%nac%iMotion=1
-            if (wt%nac%motion(size(wt%nac%motion,1),1)<tMax) then
-               call WrScr('Warning: maximum time in motion file smaller than simulation time, last values will be repeated. File: '//trim(wt%nac%motionFileName))
-            endif
-         endif
-
-         ! Rotor motion
-         call ParseCom(FileInfo_In, CurLine, Line, errStat2, errMsg2, unEc); if(Failed()) return
-         call ParseVar(FileInfo_In, CurLine, 'rotMotionType'//sWT    , wt%hub%motionType    , errStat2, errMsg2, unEc); if(Failed()) return
-         call ParseVar(FileInfo_In, CurLine, 'rotSpeed'//sWT         , wt%hub%rotSpeed      , errStat2, errMsg2, unEc); if(Failed()) return
-         call ParseVar(FileInfo_In, CurLine, 'rotMotionFilename'//sWT, wt%hub%motionFileName, errStat2, errMsg2, unEc); if(Failed()) return
-         wt%hub%rotSpeed = wt%hub%rotSpeed * Pi/30_ReKi ! speed stored in rad/s 
-         if (wt%hub%motionType==idHubMotionVariable) then
-            call ReadDelimFile(wt%hub%motionFilename, 4, wt%hub%motion, errStat2, errMsg2); if(Failed()) return
-            wt%hub%iMotion=1
-            if (wt%hub%motion(size(wt%hub%motion,1),1)<tMax) then
-               call WrScr('Warning: maximum time in motion file smaller than simulation time, last values will be repeated. File: '//trim(wt%hub%motionFileName))
-            endif
-         endif
-
-         ! Blade motion
-         call ParseCom(FileInfo_In, CurLine, Line, errStat2, errMsg2, unEc); if(Failed()) return
-         call ParseVar(FileInfo_In, CurLine, 'bldMotionType'//sWT, bldMotionType, errStat2, errMsg2, unEc); if(Failed()) return
-         wt%bld(:)%motionType=bldMotionType
-         do iB=1,wt%numBlades
-            sBld = '('//trim(num2lstr(iWT))//'_'//trim(num2lstr(iB))//')'
-            call ParseVar(FileInfo_In, CurLine, 'bldPitch'//sBld , wt%bld(iB)%pitch, errStat2, errMsg2, unEc); if(Failed()) return
-            wt%bld(iB)%pitch = wt%bld(iB)%pitch*Pi/180_ReKi ! to rad
-         enddo
-         do iB=1,wt%numBlades
-            sBld = '('//trim(num2lstr(iWT))//'_'//trim(num2lstr(iB))//')'
-            call ParseVar(FileInfo_In, CurLine, 'bldMotionFileName'//sBld , wt%bld(iB)%motionFileName, errStat2, errMsg2, unEc); if(Failed()) return
-         enddo
-         do iB=1,wt%numBlades
-            if (wt%bld(iB)%motionType==idBldMotionVariable) then
-               call ReadDelimFile(wt%bld(iB)%motionFilename, 4, wt%bld(iB)%motion, errStat2, errMsg2); if(Failed()) return
-               wt%bld(iB)%iMotion=1
-               if (wt%bld(iB)%motion(size(wt%bld(iB)%motion,1),1)<tMax) then
-                  call WrScr('Warning: maximum time in motion file smaller than simulation time, last values will be repeated. File: '//trim(wt%bld(iB)%motionFileName))
+         if (wt%numBlades>0) then
+            call ParseCom(FileInfo_In, CurLine, Line, errStat2, errMsg2, unEc); if(Failed()) return
+            call ParseVar(FileInfo_In, CurLine, 'nacMotionType'//sWT    , wt%nac%motionType    , errStat2, errMsg2, unEc); if(Failed()) return
+            call ParseVar(FileInfo_In, CurLine, 'nacYaw'//sWT           , wt%nac%yaw           , errStat2, errMsg2, unEc); if(Failed()) return
+            call ParseVar(FileInfo_In, CurLine, 'nacMotionFilename'//sWT, wt%nac%motionFileName, errStat2, errMsg2, unEc); if(Failed()) return
+            wt%nac%yaw = wt%nac%yaw * Pi/180_ReKi ! yaw stored in rad
+            if (wt%nac%motionType==idNacMotionVariable) then
+               call ReadDelimFile(wt%nac%motionFilename, 4, wt%nac%motion, errStat2, errMsg2); if(Failed()) return
+               wt%nac%iMotion=1
+               if (wt%nac%motion(size(wt%nac%motion,1),1)<tMax) then
+                  call WrScr('Warning: maximum time in motion file smaller than simulation time, last values will be repeated. File: '//trim(wt%nac%motionFileName))
                endif
             endif
-         enddo
+
+            ! Rotor motion
+            call ParseCom(FileInfo_In, CurLine, Line, errStat2, errMsg2, unEc); if(Failed()) return
+            call ParseVar(FileInfo_In, CurLine, 'rotMotionType'//sWT    , wt%hub%motionType    , errStat2, errMsg2, unEc); if(Failed()) return
+            call ParseVar(FileInfo_In, CurLine, 'rotSpeed'//sWT         , wt%hub%rotSpeed      , errStat2, errMsg2, unEc); if(Failed()) return
+            call ParseVar(FileInfo_In, CurLine, 'rotMotionFilename'//sWT, wt%hub%motionFileName, errStat2, errMsg2, unEc); if(Failed()) return
+            wt%hub%rotSpeed = wt%hub%rotSpeed * Pi/30_ReKi ! speed stored in rad/s 
+            if (wt%hub%motionType==idHubMotionVariable) then
+               call ReadDelimFile(wt%hub%motionFilename, 4, wt%hub%motion, errStat2, errMsg2); if(Failed()) return
+               wt%hub%iMotion=1
+               if (wt%hub%motion(size(wt%hub%motion,1),1)<tMax) then
+                  call WrScr('Warning: maximum time in motion file smaller than simulation time, last values will be repeated. File: '//trim(wt%hub%motionFileName))
+               endif
+            endif
+
+            ! Blade motion
+            call ParseCom(FileInfo_In, CurLine, Line, errStat2, errMsg2, unEc); if(Failed()) return
+            call ParseVar(FileInfo_In, CurLine, 'bldMotionType'//sWT, bldMotionType, errStat2, errMsg2, unEc); if(Failed()) return
+            wt%bld(:)%motionType=bldMotionType
+            do iB=1,wt%numBlades
+               sBld = '('//trim(num2lstr(iWT))//'_'//trim(num2lstr(iB))//')'
+               call ParseVar(FileInfo_In, CurLine, 'bldPitch'//sBld , wt%bld(iB)%pitch, errStat2, errMsg2, unEc); if(Failed()) return
+               wt%bld(iB)%pitch = wt%bld(iB)%pitch*Pi/180_ReKi ! to rad
+            enddo
+            do iB=1,wt%numBlades
+               sBld = '('//trim(num2lstr(iWT))//'_'//trim(num2lstr(iB))//')'
+               call ParseVar(FileInfo_In, CurLine, 'bldMotionFileName'//sBld , wt%bld(iB)%motionFileName, errStat2, errMsg2, unEc); if(Failed()) return
+            enddo
+            do iB=1,wt%numBlades
+               if (wt%bld(iB)%motionType==idBldMotionVariable) then
+                  call ReadDelimFile(wt%bld(iB)%motionFilename, 4, wt%bld(iB)%motion, errStat2, errMsg2); if(Failed()) return
+                  wt%bld(iB)%iMotion=1
+                  if (wt%bld(iB)%motion(size(wt%bld(iB)%motion,1),1)<tMax) then
+                     call WrScr('Warning: maximum time in motion file smaller than simulation time, last values will be repeated. File: '//trim(wt%bld(iB)%motionFileName))
+                  endif
+               endif
+            enddo
+         else
+            wt%degreeofFreedom   = 0                   
+            wt%amplitude         = 0.0_ReKi            
+            wt%frequency         = 0.0_ReKi            
+            wt%nac%motionType    = idNacMotionConstant
+            wt%nac%yaw           = 0
+            wt%hub%motionType    = idHubMotionConstant
+            wt%hub%rotSpeed      = 0
+            wt%bld(:)%motionType = idBldMotionConstant
+            wt%bld(:)%pitch      = 0
+         endif ! numBlade>0
       endif ! BASIC/ADVANCED rotor definition
    enddo
    ! 
@@ -1287,22 +1300,24 @@ subroutine Dvr_WriteOutputs(nt, t, DvrData, out, yAD, yIW, errStat, errMsg)
    nIW = size(yIW%WriteOutput)
    nDV = out%nDvrOutputs
    do iWT = 1, DvrData%numTurbines
-      out%outLine(1)              = DvrData%WT(iWT)%hub%azimuth
-      out%outLine(nDV+1:nDV+nAD)  = yAD%rotors(iWT)%WriteOutput
-      out%outLine(nDV+nAD+1:)     = yIW%WriteOutput
+      if (DvrData%wt(iWT)%numBlades >0 ) then ! TODO, export for tower only
+         out%outLine(1)              = DvrData%WT(iWT)%hub%azimuth
+         out%outLine(nDV+1:nDV+nAD)  = yAD%rotors(iWT)%WriteOutput
+         out%outLine(nDV+nAD+1:)     = yIW%WriteOutput
 
-      if (out%fileFmt==idFmtBoth .or. out%fileFmt == idFmtAscii) then
-         ! ASCII
-         ! time
-         write( tmpStr, out%Fmt_t ) t  ! '(F15.4)'
-         call WrFileNR( out%unOutFile(iWT), tmpStr(1:out%ActualChanLen) )
-         call WrNumAryFileNR(out%unOutFile(iWT), out%outLine,  out%Fmt_a, errStat, errMsg)
-         ! write a new line (advance to the next line)
-         write(out%unOutFile(iWT),'()')
-      endif
-      if (out%fileFmt==idFmtBoth .or. out%fileFmt == idFmtBinary) then
-         ! Store for binary
-         out%storage(1:nDV+nAD+nIW, nt, iWT) = out%outLine(1:nDV+nAD+nIW)
+         if (out%fileFmt==idFmtBoth .or. out%fileFmt == idFmtAscii) then
+            ! ASCII
+            ! time
+            write( tmpStr, out%Fmt_t ) t  ! '(F15.4)'
+            call WrFileNR( out%unOutFile(iWT), tmpStr(1:out%ActualChanLen) )
+            call WrNumAryFileNR(out%unOutFile(iWT), out%outLine,  out%Fmt_a, errStat, errMsg)
+            ! write a new line (advance to the next line)
+            write(out%unOutFile(iWT),'()')
+         endif
+         if (out%fileFmt==idFmtBoth .or. out%fileFmt == idFmtBinary) then
+            ! Store for binary
+            out%storage(1:nDV+nAD+nIW, nt, iWT) = out%outLine(1:nDV+nAD+nIW)
+         endif
       endif
    enddo
       
@@ -1515,8 +1530,9 @@ SUBROUTINE SetVTKParameters(p_FAST, DvrData, InitOutData_AD, AD, ErrStat, ErrMsg
    INTEGER(IntKi)                          :: ErrStat2
    CHARACTER(ErrMsgLen)                    :: ErrMsg2
    CHARACTER(*), PARAMETER                 :: RoutineName = 'SetVTKParameters'
-   real(ReKi) :: BladeLength, MaxBladeLength, GroundRad
+   real(ReKi) :: BladeLength, MaxBladeLength, MaxTwrLength, GroundRad
    real(ReKi) :: WorldBoxMax(3), WorldBoxMin(3) ! Extent of the turbines
+   real(ReKi) :: BaseBoxDim
    type(MeshType), pointer :: Mesh
    type(WTData), pointer :: wt ! Alias to shorten notation
    ErrStat = ErrID_None
@@ -1532,25 +1548,31 @@ SUBROUTINE SetVTKParameters(p_FAST, DvrData, InitOutData_AD, AD, ErrStat, ErrMsg
    ! this will be used to pad the write-out step in the VTK filename with zeros in calls to MeshWrVTK()
    p_FAST%VTK_tWidth = max(9, CEILING( log10( real(DvrData%numSteps+1, ReKi) / p_FAST%n_VTKTime ) ) + 1) ! NOTE: at least 9, if user changes dt/and tmax 
    
-   WorldBoxMax(2) =-HUGE(1.0_ReKi)
-   WorldBoxMin(2) = HUGE(1.0_ReKi)
 
 
    allocate(p_FAST%VTK_Surface(DvrData%numTurbines))
 
+   ! --- Find dimensions for all objects to determine "Ground" and typical dimensions
+   WorldBoxMax(2) =-HUGE(1.0_ReKi)
+   WorldBoxMin(2) = HUGE(1.0_ReKi)
+   MaxBladeLength=0
+   MaxTwrLength=0
    do iWT=1,DvrData%numTurbines
       wt => DvrData%wt(iWT)
-
-      MaxBladeLength=0
       do iBld=1, wt%numBlades
          nNodes = AD%u(1)%rotors(iWT)%BladeMotion(iBld)%nnodes
          BladeLength = TwoNorm(AD%u(1)%rotors(iWT)%BladeMotion(iBld)%Position(:,nNodes)-AD%u(1)%rotors(iWT)%BladeMotion(iBld)%Position(:,1))
          MaxBladeLength = max(MaxBladeLength, BladeLength)
       enddo
-      ! initialize the vtk data
-      ! Get radius for ground (blade length + hub radius):
+      if (wt%hasTower) then
+         Mesh=>AD%u(1)%rotors(iWT)%TowerMotion
+         if (Mesh%NNodes>0) then
+            TwrLength = TwoNorm( Mesh%position(:,1) - Mesh%position(:,Mesh%NNodes) ) 
+            MaxTwrLength = max(MaxTwrLength, TwrLength)
+         endif
+      endif
 
-      p_FAST%VTK_Surface(iWT)%NumSectors = 25   
+      ! initialize the vtk data
       RefPoint = wt%originInit
 
       ! Determine extent of the objects
@@ -1560,6 +1582,29 @@ SUBROUTINE SetVTKParameters(p_FAST, DvrData, InitOutData_AD, AD, ErrStat, ErrMsg
       WorldBoxMin(1) = min(WorldBoxMin(1), RefPoint(1))
       WorldBoxMin(2) = min(WorldBoxMin(2), RefPoint(2))
       WorldBoxMin(3) = min(WorldBoxMin(3), RefPoint(3)) ! NOTE: not used
+   enddo ! Loop on turbine 
+
+   ! Get radius for ground (blade length + hub radius):
+   GroundRad = MaxBladeLength + MaxTwrLength+ p_FAST%VTKHubRad
+   ! write the ground or seabed reference polygon:
+   RefPoint(1) = sum(DvrData%WT(:)%originInit(1)) / DvrData%numTurbines
+   RefPoint(2) = sum(DvrData%WT(:)%originInit(2)) / DvrData%numTurbines
+   !RefPoint(3) = sum(DvrData%WT(:)%originInit(3)) / DvrData%numTurbines
+   RefPoint(3) = 0.0_ReKi
+   print*,'HubRad        ',p_FAST%VTKHubRad
+   print*,'MaxBladeLength',MaxBladeLength
+   print*,'MaxTowerLength',MaxTwrLength
+   print*,'GroundRad     ',GroundRad
+   print*,'WorldBox      ',WorldBoxMax
+   print*,'WorldBox      ',WorldBoxMin
+
+   RefLengths  = GroundRad  + sqrt((WorldBoxMax(1)-WorldBoxMin(1))**2 + (WorldBoxMax(2)-WorldBoxMin(2))**2)
+   print*,'RefLengths      ',RefLengths
+   call WrVTK_Ground (RefPoint, RefLengths, trim(p_FAST%VTK_OutFileRoot) // '.GroundSurface', ErrStat2, ErrMsg2 )         
+
+   do iWT=1,DvrData%numTurbines
+      wt => DvrData%wt(iWT)
+      p_FAST%VTK_Surface(iWT)%NumSectors = 25   
 
       ! Create nacelle box
       p_FAST%VTK_Surface(iWT)%NacelleBox(:,1) = (/ p_FAST%VTKNacDim(1)                    , p_FAST%VTKNacDim(2)+p_FAST%VTKNacDim(5), p_FAST%VTKNacDim(3) /)
@@ -1570,10 +1615,12 @@ SUBROUTINE SetVTKParameters(p_FAST, DvrData, InitOutData_AD, AD, ErrStat, ErrMsg
       p_FAST%VTK_Surface(iWT)%NacelleBox(:,6) = (/ p_FAST%VTKNacDim(1)+p_FAST%VTKNacDim(4), p_FAST%VTKNacDim(2)                    , p_FAST%VTKNacDim(3)+p_FAST%VTKNacDim(6) /) 
       p_FAST%VTK_Surface(iWT)%NacelleBox(:,7) = (/ p_FAST%VTKNacDim(1)+p_FAST%VTKNacDim(4), p_FAST%VTKNacDim(2)+p_FAST%VTKNacDim(5), p_FAST%VTKNacDim(3)+p_FAST%VTKNacDim(6) /)
       p_FAST%VTK_Surface(iWT)%NacelleBox(:,8) = (/ p_FAST%VTKNacDim(1)                    , p_FAST%VTKNacDim(2)+p_FAST%VTKNacDim(5), p_FAST%VTKNacDim(3)+p_FAST%VTKNacDim(6) /) 
-   !    
+
+
       !.......................
       ! tapered tower
       !.......................
+      BaseBoxDim = minval(p_FAST%VTKNacDim(4:6))/2
       if (wt%hasTower) then
          Mesh=>AD%u(1)%rotors(iWT)%TowerMotion
          if (Mesh%NNodes>0) then
@@ -1591,12 +1638,24 @@ SUBROUTINE SetVTKParameters(p_FAST, DvrData, InitOutData_AD, AD, ErrStat, ErrMsg
                TwrLength = TwoNorm( Mesh%position(:,k) - Mesh%position(:,baseNode) ) 
                p_FAST%VTK_Surface(iWT)%TowerRad(k) = 0.5*TwrDiam_Base + TwrRatio*TwrLength
             end do
+            BaseBoxDim = TwrDiam_Base/2
          else
             print*,'>>>> TOWER HAS NO NODES'
             !CALL AllocAry(p_FAST%VTK_Surface(iWT)%TowerRad, 2, 'VTK_Surface(iWT)%TowerRad',ErrStat2,ErrMsg2)
             ! TODO create a fake tower
          endif
       endif
+
+      ! Create base box
+      p_FAST%VTK_Surface(iWT)%BaseBox(:,1) = (/ -BaseBoxDim             , -BaseBoxDim+2*BaseBoxDim, -BaseBoxDim /)
+      p_FAST%VTK_Surface(iWT)%BaseBox(:,2) = (/ -BaseBoxDim+2*BaseBoxDim, -BaseBoxDim+2*BaseBoxDim, -BaseBoxDim /) 
+      p_FAST%VTK_Surface(iWT)%BaseBox(:,3) = (/ -BaseBoxDim+2*BaseBoxDim, -BaseBoxDim             , -BaseBoxDim /)
+      p_FAST%VTK_Surface(iWT)%BaseBox(:,4) = (/ -BaseBoxDim             , -BaseBoxDim             , -BaseBoxDim /) 
+      p_FAST%VTK_Surface(iWT)%BaseBox(:,5) = (/ -BaseBoxDim             , -BaseBoxDim             , -BaseBoxDim+2*BaseBoxDim /)
+      p_FAST%VTK_Surface(iWT)%BaseBox(:,6) = (/ -BaseBoxDim+2*BaseBoxDim, -BaseBoxDim             , -BaseBoxDim+2*BaseBoxDim /) 
+      p_FAST%VTK_Surface(iWT)%BaseBox(:,7) = (/ -BaseBoxDim+2*BaseBoxDim, -BaseBoxDim+2*BaseBoxDim, -BaseBoxDim+2*BaseBoxDim /)
+      p_FAST%VTK_Surface(iWT)%BaseBox(:,8) = (/ -BaseBoxDim             , -BaseBoxDim+2*BaseBoxDim, -BaseBoxDim+2*BaseBoxDim /) 
+
 
       !.......................
       ! blade surfaces
@@ -1620,14 +1679,6 @@ SUBROUTINE SetVTKParameters(p_FAST, DvrData, InitOutData_AD, AD, ErrStat, ErrMsg
       endif
    enddo
 
-   GroundRad = MaxBladeLength + p_FAST%VTKHubRad
-   ! write the ground or seabed reference polygon:
-   RefPoint(1) = sum(DvrData%WT(:)%originInit(1)) / DvrData%numTurbines
-   RefPoint(2) = sum(DvrData%WT(:)%originInit(2)) / DvrData%numTurbines
-   !RefPoint(3) = sum(DvrData%WT(:)%originInit(3)) / DvrData%numTurbines
-   RefPoint(3) = 0.0_ReKi
-   RefLengths  = GroundRad  + sqrt((WorldBoxMax(1)-WorldBoxMin(1))**2 + (WorldBoxMax(2)-WorldBoxMin(2))**2)
-   call WrVTK_Ground (RefPoint, RefLengths, trim(p_FAST%VTK_OutFileRoot) // '.GroundSurface', ErrStat2, ErrMsg2 )         
       
 END SUBROUTINE SetVTKParameters
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -1658,21 +1709,25 @@ SUBROUTINE WrVTK_Surfaces(t_global, DvrData, p_FAST, VTK_count, AD)
 
       ! Base 
       call MeshWrVTK_PointSurface (p_FAST%VTKRefPoint, wt%ptMesh, trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.BaseSurface', &
-                                   VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth , verts = p_FAST%VTK_Surface(iWT)%NacelleBox)
-      ! Nacelle 
-      call MeshWrVTK_PointSurface (p_FAST%VTKRefPoint, wt%nac%ptMesh, trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.NacelleSurface', &
-                                   VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth , verts = p_FAST%VTK_Surface(iWT)%NacelleBox)
-      
-      ! Hub
-      call MeshWrVTK_PointSurface (p_FAST%VTKRefPoint, AD%u(2)%rotors(iWT)%HubMotion, trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.HubSurface', &
-                                   VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth , &
-                                   NumSegments=p_FAST%VTK_Surface(iWT)%NumSectors, radius=p_FAST%VTKHubRad)
-      
+                                   VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth , verts = p_FAST%VTK_Surface(iWT)%BaseBox)
+
       ! Tower motions
       if (AD%u(2)%rotors(iWT)%TowerMotion%nNodes>0) then
          call MeshWrVTK_Ln2Surface (p_FAST%VTKRefPoint, AD%u(2)%rotors(iWT)%TowerMotion, trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.TowerSurface', &
                                     VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth, p_FAST%VTK_Surface(iWT)%NumSectors, p_FAST%VTK_Surface(iWT)%TowerRad )
       endif
+    
+      if (wt%numBlades>0) then
+         ! Nacelle 
+         call MeshWrVTK_PointSurface (p_FAST%VTKRefPoint, wt%nac%ptMesh, trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.NacelleSurface', &
+                                      VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth , verts = p_FAST%VTK_Surface(iWT)%NacelleBox)
+         
+         ! Hub
+         call MeshWrVTK_PointSurface (p_FAST%VTKRefPoint, AD%u(2)%rotors(iWT)%HubMotion, trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.HubSurface', &
+                                      VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth , &
+                                      NumSegments=p_FAST%VTK_Surface(iWT)%NumSectors, radius=p_FAST%VTKHubRad)
+      endif
+      
 
       ! Blades
       do K=1,wt%numBlades

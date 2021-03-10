@@ -20,6 +20,7 @@ typedef   AeroDynMulti_Driver/ADM_Dvr   DvrVTK_BLSurfaceType SiKi    AirfoilCoor
 # ...... Data for VTK surface visualization ............................................................................
 typedef    ^    DvrVTK_SurfaceType    IntKi    NumSectors    -    -    -    "number of sectors in which to split circles (higher number gives smoother surface)"    -
 typedef    ^    DvrVTK_SurfaceType    SiKi    NacelleBox    {3}{8}    -    -    "X-Y-Z locations of 8 points that define the nacelle box, relative to the nacelle position"    m
+typedef    ^    DvrVTK_SurfaceType    SiKi    BaseBox       {3}{8}    -    -    "X-Y-Z locations of 8 points that define the base box"    m
 typedef    ^    DvrVTK_SurfaceType    SiKi    TowerRad    {:}    -    -    "radius of each ED tower node"    m
 typedef    ^    DvrVTK_SurfaceType    DvrVTK_BLSurfaceType    BladeShape    {:}    -    -    "AirfoilCoords for each blade"    m
 
