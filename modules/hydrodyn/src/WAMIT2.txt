@@ -20,6 +20,12 @@ param       WAMIT2/WAMIT2     unused            INTEGER              MaxWAMIT2Ou
 typedef     WAMIT2/WAMIT2     InitInputType     LOGICAL              HasWAMIT          -        -        -        ".TRUE. if using WAMIT model, .FALSE. otherwise"      -
 typedef     ^                 ^                 CHARACTER(1024)      WAMITFile         -        -        -        "Root of the filename for WAMIT2 outputs"             -
 typedef     ^                 ^                 INTEGER              UnSum             -        -        -        "The unit number for the HydroDyn summary file" -
+typedef     ^                 ^                 INTEGER              NBody             -        -        -        "[>=1; only used when PotMod=1. If NBodyMod=1, the WAMIT data contains a vector of size 6*NBody x 1 and matrices of size 6*NBody x 6*NBody; if NBodyMod>1, there are NBody sets of WAMIT data each with a vector of size 6 x 1 and matrices of size 6 x 6]" -
+typedef     ^                 ^                 INTEGER              NBodyMod          -        -        -        "Body coupling model {1: include coupling terms between each body and NBody in HydroDyn equals NBODY in WAMIT, 2: neglect coupling terms between each body and NBODY=1 with XBODY=0 in WAMIT, 3: Neglect coupling terms between each body and NBODY=1 with XBODY=/0 in WAMIT} (switch) [only used when PotMod=1]" -
+typedef     ^                 ^                 ReKi                 PtfmRefxt         {:}      -        -        "The xt offset of the body reference point(s) from (0,0,0)  [1 to NBody; only used when PotMod=1; must be 0.0 if NBodyMod=2 ]"  (m)
+typedef     ^                 ^                 ReKi                 PtfmRefyt         {:}      -        -        "The yt offset of the body reference point(s) from (0,0,0)  [1 to NBody; only used when PotMod=1; must be 0.0 if NBodyMod=2 ]"  (m)
+typedef     ^                 ^                 ReKi                 PtfmRefzt         {:}      -        -        "The zt offset of the body reference point(s) from (0,0,0)  [1 to NBody; only used when PotMod=1; must be 0.0 if NBodyMod=2 ]"  (m)
+typedef     ^                 ^                 R8Ki                 PtfmRefztRot      {:}      -        -        "The rotation about zt of the body reference frame(s) from xt/yt" radians
 
 typedef     ^                 ^                 ReKi                 WAMITULEN         -        -        -        "WAMIT unit length scale"    -
 typedef     ^                 ^                 ReKi                 RhoXg             -        -        -        "Density * Gravity -- from the Waves module."    -
@@ -27,6 +33,8 @@ typedef     ^                 ^                 INTEGER              NStepWave  
 typedef     ^                 ^                 INTEGER              NStepWave2        -        -        -        "NStepWave / 2"                                       -
 typedef     ^                 ^                 ReKi                 WaveDOmega        -        -        -        "Frequency step for incident wave calculations"       (rad/s)
 typedef     ^                 ^                 ReKi                 WtrDens           -        -        -        "Water density"   (kg/m^3)
+typedef     ^                 ^                 ReKi                 Gravity           -        -        -        "Supplied by Driver:  Gravitational acceleration"  (m/s^2)
+typedef     ^                 ^                 SiKi                 WtrDpth           -        -        -        "Water depth (positive-valued)"    (m)
 
 typedef     ^                 ^                 SiKi                 WaveElevC0        {:}{:}   -        -        "Discrete Fourier transform of the instantaneous elevation of incident waves at the platform reference point.  First column is real part, second column is imaginary part"   (meters)
 typedef     ^                 ^                 SiKi                 WaveDir           -        -        -        "Mean incident wave propagation heading direction"    (degrees)
@@ -36,19 +44,7 @@ typedef     ^                 ^                 SiKi                 WaveDirMin 
 typedef     ^                 ^                 SiKi                 WaveDirMax        -        -        -        "Maximum wave direction from Waves module"    -
 typedef     ^                 ^                 SiKi                 WaveTime          {:}      -        -        "Simulation times at which the instantaneous second order loads associated with the incident waves are determined"   sec
 
-typedef     ^                 ^                 CHARACTER(ChanLen)   OutList           {27}     -        -        "This should really be dimensioned with MaxOutPts"    -
-typedef     ^                 ^                 LOGICAL              OutAll            -        -        -        ""                                                    -
-typedef     ^                 ^                 INTEGER              NumOuts           -        -        -        ""                                                    -
-typedef     ^                 ^                 INTEGER              NumOutAll         -        -        -        ""    -
 typedef     ^                 ^                 INTEGER              WaveMod           -        -        -        "The wave model to use.  This is for error checking -- ideally this would be done in the main calling routine, not here." -
-
-typedef     ^                 ^                 LOGICAL              PtfmSgF2          -        -        -        "Supplied by Driver:  Platform horizontal surge translation force (flag)"      -
-typedef     ^                 ^                 LOGICAL              PtfmSwF2          -        -        -        "Supplied by Driver:  Platform horizontal sway  translation force (flag)"      -
-typedef     ^                 ^                 LOGICAL              PtfmHvF2          -        -        -        "Supplied by Driver:  Platform vertical   heave translation force (flag)"      -
-typedef     ^                 ^                 LOGICAL              PtfmRF2           -        -        -        "Supplied by Driver:  Platform roll  tilt rotation force (flag)"               -
-typedef     ^                 ^                 LOGICAL              PtfmPF2           -        -        -        "Supplied by Driver:  Platform pitch tilt rotation force (flag)"               -
-typedef     ^                 ^                 LOGICAL              PtfmYF2           -        -        -        "Supplied by Driver:  Platform yaw        rotation force (flag)"               -
-
 
 #[note: only one of MnDriff / NewmanApp / DiffQTF can be non-zero
 typedef     ^                 ^                 INTEGER              MnDrift           -        -        -        "Calculate the mean drift force {0: no mean drift; [7,8,9,10,11, or 12]: WAMIT file to use}"    -
@@ -69,9 +65,7 @@ typedef     ^                 ^                 ReKi                 WvHiCOffS  
 
 # Define outputs from the initialization routine here:
 #
-#typedef    ^                 InitOutputType    MeshType             OutputMesh        -        -        -        ""    -
-typedef     ^                 InitOutputType    CHARACTER(ChanLen)   WriteOutputHdr    {:}      -        -        ""    -
-typedef     ^                 ^                 CHARACTER(ChanLen)   WriteOutputUnt    {:}      -        -        ""    -
+typedef     ^                 InitOutputType    ReKi                NULLVAL            -        -        -        ""  -
 
 
 # ..... States ....................................................................................................................
@@ -94,7 +88,7 @@ typedef   ^                OtherStateType      IntKi                 DummyOtherS
 # ..... Misc/Optimization variables.................................................................................................
 # Define any data that are used only for efficiency purposes (these variables are not associated with time):
 #   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
-typedef     ^                 MiscVarType       INTEGER              LastIndWave       -        -        -        "Index for last interpolation step of 2nd order forces"   -
+typedef     ^                 MiscVarType       INTEGER              LastIndWave       :        -        -        "Index for last interpolation step of 2nd order forces"   -
 typedef     ^                 ^                 ReKi                 F_Waves2          {6}      -        -        "2nd order force from this timestep"   -
 
 
@@ -106,6 +100,8 @@ typedef     ^                 ^                 ReKi                 F_Waves2   
 typedef     ^                 ParameterType     SiKi                 WaveTime          {:}      -        -        "Simulation times at which the instantaneous second order loads associated with the incident waves are determined"   sec
 typedef     ^                 ^                 IntKi                NStepWave         -        -        -        "Number of wave time steps"                           -
 typedef     ^                 ^                 DbKi                 DT                -        -        -        ""                                                    -
+typedef     ^                 ^                 INTEGER              NBody             -        -        -        "[>=1; only used when PotMod=1. If NBodyMod=1, the WAMIT data contains a vector of size 6*NBody x 1 and matrices of size 6*NBody x 6*NBody; if NBodyMod>1, there are NBody sets of WAMIT data each with a vector of size 6 x 1 and matrices of size 6 x 6]" -
+typedef     ^                 ^                 INTEGER              NBodyMod          -        -        -        "Body coupling model {1: include coupling terms between each body and NBody in HydroDyn equals NBODY in WAMIT, 2: neglect coupling terms between each body and NBODY=1 with XBODY=0 in WAMIT, 3: Neglect coupling terms between each body and NBODY=1 with XBODY=/0 in WAMIT} (switch) [only used when PotMod=1]" -
 
 #The 2nd order force time series
 typedef     ^                 ^                 SiKi                 WaveExctn2        {:}{:}   -        -        "Time series of the resulting 2nd order force (first index is timestep, second index is load component)"    (N)
@@ -142,4 +138,3 @@ typedef     ^                 InputType         MeshType             Mesh       
 # ..... Outputs ...................................................................................................................
 # Define outputs that are contained on the mesh here:
 typedef     ^                 OutputType        MeshType             Mesh              -        -        -        "Loads at the platform reference point in the inertial frame" -
-typedef     ^                 ^                 ReKi                 WriteOutput       {:}      -        -        ""  -

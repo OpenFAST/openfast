@@ -30,7 +30,7 @@ subroutine test_BD_CrvMatrixH()
     tolerance = 1e-14
     
     ! set the rotation axis for all tests
-    n = (/ 1, 0, 0 /) ! x axis
+    n = (/ 1., 0., 0. /) ! x axis
     
     
     ! --------------------------------------------------------------------------
@@ -66,7 +66,7 @@ subroutine test_BD_CrvMatrixH()
     angle = 0.1*Pi_D
     
     ! Wiener-Milenkovic parameters are calculated; note tangent is asymptotic at +/- pi/2
-    wmparams = 4*tan(angle/4)*n
+    wmparams = 4.*tan(angle/4.)*n
         
     baselineH = H(wmparams)
     
@@ -81,10 +81,10 @@ subroutine test_BD_CrvMatrixH()
             
             c0 = 2.0 - dot_product(c,c) / 8.0
             
-            H(1,:) = (/ c0 + c(1)*c(1)/4, c(1)*c(2)/4 - c(3), c(1)*c(3)/4 + c(2) /)
-            H(2,:) = (/ c(1)*c(2)/4 + c(3), c0 + c(2)*c(2)/4, c(2)*c(3)/4 - c(1) /)
-            H(3,:) = (/ c(1)*c(3)/4 - c(2), c(2)*c(3)/4 + c(1), c0 + c(3)*c(3)/4 /)
-            H = 2*H/(4-c0)**2
+            H(1,:) = (/ c0 + c(1)*c(1)/4., c(1)*c(2)/4. - c(3), c(1)*c(3)/4. + c(2) /)
+            H(2,:) = (/ c(1)*c(2)/4. + c(3), c0 + c(2)*c(2)/4., c(2)*c(3)/4. - c(1) /)
+            H(3,:) = (/ c(1)*c(3)/4. - c(2), c(2)*c(3)/4. + c(1), c0 + c(3)*c(3)/4. /)
+            H = 2.*H/(4.-c0)**2
             
         end function
 end subroutine

@@ -70,6 +70,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: k1_hat      !< Constant in the expression of Cc due to leading edge vortex effects.  [ignored if UAMod<>1] [-]
     REAL(ReKi)  :: x_cp_bar      !< Constant in the expression of \hat(x)_cp^v [ignored if UAMod<>1, default = 0.2] [-]
     REAL(ReKi)  :: UACutout      !< Angle of attack above which unsteady aerodynamics are disabled [input in degrees; stored as radians]
+    REAL(ReKi)  :: UACutout_blend      !< Angle of attack above which unsteady aerodynamics begins to be disabled [stored as radians]
     REAL(ReKi)  :: filtCutOff      !< Reduced frequency cutoff used to calculate the dynamic low pass filter cut-off frequency for the pitching rate and accelerations [default = 0.5] [-]
   END TYPE AFI_UA_BL_Type
 ! =======================
@@ -119,6 +120,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NumTabs      !< The number of airfoil tables in the airfoil file [-]
     TYPE(AFI_Table_Type) , DIMENSION(:), ALLOCATABLE  :: Table      !< The tables of airfoil data for given Re and control setting [-]
     CHARACTER(1024)  :: BL_file      !< The name of the file with the boundary layer data [-]
+    CHARACTER(1024)  :: FileName      !< The name of the file that stored this information. [-]
   END TYPE AFI_ParameterType
 ! =======================
 ! =========  AFI_InputType  =======
@@ -190,6 +192,7 @@ CONTAINS
     DstUA_BL_TypeData%k1_hat = SrcUA_BL_TypeData%k1_hat
     DstUA_BL_TypeData%x_cp_bar = SrcUA_BL_TypeData%x_cp_bar
     DstUA_BL_TypeData%UACutout = SrcUA_BL_TypeData%UACutout
+    DstUA_BL_TypeData%UACutout_blend = SrcUA_BL_TypeData%UACutout_blend
     DstUA_BL_TypeData%filtCutOff = SrcUA_BL_TypeData%filtCutOff
  END SUBROUTINE AFI_CopyUA_BL_Type
 
@@ -271,6 +274,7 @@ CONTAINS
       Re_BufSz   = Re_BufSz   + 1  ! k1_hat
       Re_BufSz   = Re_BufSz   + 1  ! x_cp_bar
       Re_BufSz   = Re_BufSz   + 1  ! UACutout
+      Re_BufSz   = Re_BufSz   + 1  ! UACutout_blend
       Re_BufSz   = Re_BufSz   + 1  ! filtCutOff
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -362,6 +366,8 @@ CONTAINS
     ReKiBuf(Re_Xferred) = InData%x_cp_bar
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%UACutout
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%UACutout_blend
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%filtCutOff
     Re_Xferred = Re_Xferred + 1
@@ -459,6 +465,8 @@ CONTAINS
     OutData%x_cp_bar = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%UACutout = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%UACutout_blend = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%filtCutOff = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
@@ -1356,6 +1364,7 @@ IF (ALLOCATED(SrcParamData%Table)) THEN
     ENDDO
 ENDIF
     DstParamData%BL_file = SrcParamData%BL_file
+    DstParamData%FileName = SrcParamData%FileName
  END SUBROUTINE AFI_CopyParam
 
  SUBROUTINE AFI_DestroyParam( ParamData, ErrStat, ErrMsg )
@@ -1469,6 +1478,7 @@ ENDIF
     END DO
   END IF
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%BL_file)  ! BL_file
+      Int_BufSz  = Int_BufSz  + 1*LEN(InData%FileName)  ! FileName
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -1604,6 +1614,10 @@ ENDIF
   END IF
     DO I = 1, LEN(InData%BL_file)
       IntKiBuf(Int_Xferred) = ICHAR(InData%BL_file(I:I), IntKi)
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
+    DO I = 1, LEN(InData%FileName)
+      IntKiBuf(Int_Xferred) = ICHAR(InData%FileName(I:I), IntKi)
       Int_Xferred = Int_Xferred + 1
     END DO ! I
  END SUBROUTINE AFI_PackParam
@@ -1767,6 +1781,10 @@ ENDIF
   END IF
     DO I = 1, LEN(OutData%BL_file)
       OutData%BL_file(I:I) = CHAR(IntKiBuf(Int_Xferred))
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
+    DO I = 1, LEN(OutData%FileName)
+      OutData%FileName(I:I) = CHAR(IntKiBuf(Int_Xferred))
       Int_Xferred = Int_Xferred + 1
     END DO ! I
  END SUBROUTINE AFI_UnPackParam
@@ -2419,6 +2437,8 @@ ENDIF
   u_out%x_cp_bar = u1%x_cp_bar + b * ScaleFactor
   b = -(u1%UACutout - u2%UACutout)
   u_out%UACutout = u1%UACutout + b * ScaleFactor
+  b = -(u1%UACutout_blend - u2%UACutout_blend)
+  u_out%UACutout_blend = u1%UACutout_blend + b * ScaleFactor
   b = -(u1%filtCutOff - u2%filtCutOff)
   u_out%filtCutOff = u1%filtCutOff + b * ScaleFactor
  END SUBROUTINE AFI_UA_BL_Type_ExtrapInterp1
@@ -2566,6 +2586,9 @@ ENDIF
   b = (t(3)**2*(u1%UACutout - u2%UACutout) + t(2)**2*(-u1%UACutout + u3%UACutout))* scaleFactor
   c = ( (t(2)-t(3))*u1%UACutout + t(3)*u2%UACutout - t(2)*u3%UACutout ) * scaleFactor
   u_out%UACutout = u1%UACutout + b  + c * t_out
+  b = (t(3)**2*(u1%UACutout_blend - u2%UACutout_blend) + t(2)**2*(-u1%UACutout_blend + u3%UACutout_blend))* scaleFactor
+  c = ( (t(2)-t(3))*u1%UACutout_blend + t(3)*u2%UACutout_blend - t(2)*u3%UACutout_blend ) * scaleFactor
+  u_out%UACutout_blend = u1%UACutout_blend + b  + c * t_out
   b = (t(3)**2*(u1%filtCutOff - u2%filtCutOff) + t(2)**2*(-u1%filtCutOff + u3%filtCutOff))* scaleFactor
   c = ( (t(2)-t(3))*u1%filtCutOff + t(3)*u2%filtCutOff - t(2)*u3%filtCutOff ) * scaleFactor
   u_out%filtCutOff = u1%filtCutOff + b  + c * t_out

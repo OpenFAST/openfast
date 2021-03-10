@@ -245,7 +245,10 @@ texinfo_documents = [
 ]
 
 def setup(app):
-    app.add_css_file('css/math_eq.css')
+    try:
+        app.add_css_file('css/math_eq.css')
+    except:
+        pass
     app.add_object_type(
         "confval",
         "confval",
