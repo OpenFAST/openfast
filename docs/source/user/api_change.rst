@@ -139,20 +139,6 @@ InflowWind     7    VFlowAng                  0   VFlowAng    - Upflow angle (de
    -  Driver code includes ability to convert between wind types
 
 
-Modified in OpenFAST v2.4.0
----------------------------
-
-============== ==== ================== ======================================================================================================================================================= =====================
- Module        Line  New Flag Name      Example Value                                                                                                                                           Previous Flag Name
-============== ==== ================== ======================================================================================================================================================= =====================
-InflowWind     17   Filename_Uni        "unused"      Filename_Uni   - Filename of time series data for uniform wind field.      (-)                                                            Filename
-InflowWind     18   RefHt_Uni                    90   RefHt_Uni      - Reference height for horizontal wind speed                (m)                                                            RefHt
-InflowWind     35   RefHt_Hawc                   90   RefHt_Hawc     - reference height; the height (in meters) of the vertical center of the grid (m)                                          RefHt
-InflowWind     47   PLExp_Hawc                  0.2   PLExp_Hawc     - Power law exponent (-) (used for PL wind profile type only)                                                              PLExp
-InflowWind     49   XOffset                       0   XOffset         - Initial offset in +x direction (shift of wind box)                                                                      InitPosition(x)
-============== ==== ================== ======================================================================================================================================================= =====================
-
-
 OpenFAST v2.3.0 to OpenFAST v2.4.0
 ----------------------------------
 
@@ -179,11 +165,16 @@ AirFoilTables  4\*  BL_file            "unused"                BL_file          
 Modified in OpenFAST v2.4.0
 ---------------------------
 
-============== ==== ================== =============================================================================================================================================================================
- Module        Line  Flag Name          Example Value
-============== ==== ================== =============================================================================================================================================================================
-AirFoilTables  40\* filtCutOff         "DEFAULT"               filtCutOff        - Reduced frequency cut-off for low-pass filtering the AoA input to UA, as well as the 1st and 2nd derivatives (-) [default = 0.5] 
-============== ==== ================== =============================================================================================================================================================================
+============== ==== ================== ======================================================================================================================================================= =========================
+ Module        Line  New Flag Name      Example Value                                                                                                                                           Previous Flag Name/Value
+============== ==== ================== ======================================================================================================================================================= =========================
+AirFoilTables  40\* filtCutOff         "DEFAULT"  filtCutOff   - Reduced frequency cut-off for low-pass filtering the AoA input to UA, as well as the 1st and 2nd deriv (-) [default = 0.5]     [default = 20]
+InflowWind     17   Filename_Uni        "unused"  Filename_Uni - Filename of time series data for uniform wind field.      (-)                                                                  Filename
+InflowWind     18   RefHt_Uni                 90  RefHt_Uni    - Reference height for horizontal wind speed                (m)                                                                  RefHt
+InflowWind     35   RefHt_Hawc                90  RefHt_Hawc   - reference height; the height (in meters) of the vertical center of the grid (m)                                                RefHt
+InflowWind     47   PLExp_Hawc               0.2  PLExp_Hawc   - Power law exponent (-) (used for PL wind profile type only)                                                                    PLExp
+InflowWind     49   XOffset                    0  XOffset      - Initial offset in +x direction (shift of wind box)                                                                             InitPosition(x)
+============== ==== ================== ======================================================================================================================================================= =========================
 
 \*non-comment line count, excluding lines contained if NumCoords is not 0.
 

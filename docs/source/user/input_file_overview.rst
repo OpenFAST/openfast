@@ -68,6 +68,26 @@ parser will return an error with information about which line it was reading
 from.
 
 
+Modules using Key + Value Format
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The following modules use the *key + value* format input files (all other
+modules use the *value column* format):
+
+============== ==========================================================
+ Module         Input file           
+============== ==========================================================
+AeroDyn         Main AD15 input file 
+AeroDyn         Airfoil files
+InflowWind      Main IfW input file
+InflowWind      Uniform wind input file
+InflowWind      Bladed wind summary file
+ServoDyn        Main ServoDyn input file
+ServoDyn        Structural control submodule input file
+ServoDyn        Structural control sumbodule prescribed force input file
+SubDyn          SubDyn SSI matrix input files
+============== ==========================================================
+
 Reasons for change
 ~~~~~~~~~~~~~~~~~~
 
