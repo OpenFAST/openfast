@@ -165,7 +165,9 @@ of_regression("EllipticalWing_OLAF"                    "openfast;aerodyn15;olaf"
 of_regression("StC_test_OC4Semi"                       "openfast;servodyn;hydrodyn;moordyn;offshore")
 
 # OpenFAST C++ API test
-of_regression_cpp("5MW_Land_DLL_WTurb_cpp" "openfast;cpp")
+if(BUILD_OPENFAST_CPP_API)
+  of_regression_cpp("5MW_Land_DLL_WTurb_cpp" "openfast;cpp")
+endif()
 
 # AeroAcoustic regression test
 of_regression_aeroacoustic("IEA_LB_RWT-AeroAcoustics"  "openfast;aerodyn15;aeroacoustics")
