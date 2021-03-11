@@ -8468,7 +8468,8 @@ END SUBROUTINE CheckR16Var
       CHARACTER(*)    , INTENT(  OUT)        :: ErrMsg               !< message when error occurs
    
       INTEGER(IntKi)              :: ErrStat2              ! local error level/status of OpenFOutFile operation
-      CHARACTER(ErrMsgLen)        :: ErrMsg2               ! local message when error occurs   
+      CHARACTER(ErrMsgLen)        :: ErrMsg2               ! local message when error occurs
+      CHARACTER(1024)             :: Dummy1, Dummy2
       CHARACTER(1024)             :: Line                  ! one line of the file
       CHARACTER(1024)             :: formatLbl
       CHARACTER(*), PARAMETER     :: RoutineName = 'ReadVTK_SP_info'
@@ -8601,9 +8602,11 @@ END SUBROUTINE CheckR16Var
          CALL SetErrStat( ErrID_Fatal, 'Invalid vtk structured_points file: did not find VECTORS or FIELD label', ErrStat, ErrMsg, RoutineName )
       ELSE
          IF ( INDEX(Line, "FIELD" ) == 1 ) THEN ! Must be FIELD
-            READ(Line,*) nArr
-            IF ( nArr /= 1_IntKi ) THEN
-               CALL SetErrStat( ErrID_Fatal, 'Invalid vtk structured_points file: FIELD label must have only 1 array', ErrStat, ErrMsg, RoutineName )
+            READ(Line,*,IOSTAT=ErrStat2) Dummy1, Dummy2, nArr
+            if (ErrStat2 /= 0) then
+                CALL SetErrStat( ErrID_Fatal, 'Error reading "nArr".', ErrStat, ErrMsg, RoutineName )
+            ELSE IF ( nArr /= 1_IntKi ) THEN
+                CALL SetErrStat( ErrID_Fatal, 'Invalid vtk structured_points file: FIELD label must have only 1 array', ErrStat, ErrMsg, RoutineName )
             END IF
             
             Line = ""
@@ -8616,8 +8619,10 @@ END SUBROUTINE CheckR16Var
             IF ( sz == 0 ) THEN
                CALL SetErrStat( ErrID_Fatal, 'Invalid FIELD datatype.  Must be set to float.', ErrStat, ErrMsg, RoutineName )
             ELSE        
-               READ(Line,*) nums
-               IF ( nums(1) /= 3_IntKi ) THEN                         ! Abort if we don't have 3-element vectors
+               READ(Line,*,IOSTAT=ErrStat2) Dummy1, nums
+               if (ErrStat2 /= 0) then
+                  CALL SetErrStat( ErrID_Fatal, 'Error reading "nums".', ErrStat, ErrMsg, RoutineName )
+               ELSEIF ( nums(1) /= 3_IntKi ) THEN                         ! Abort if we don't have 3-element vectors
                   CALL SetErrStat( ErrID_Fatal, 'Invalid FIELD datatype.  FIELD array must have 3 elements.', ErrStat, ErrMsg, RoutineName )
                ELSEIF ( nums(2) /= ( dims(1)*dims(2)*dims(3) ) ) THEN ! Abort if DIMENSIONS AND FIELD data don't agree
                   CALL SetErrStat( ErrID_Fatal, 'Invalid vtk structured_points file: FIELD array does not match DIMENSIONS', ErrStat, ErrMsg, RoutineName )
