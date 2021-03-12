@@ -210,6 +210,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: amplitude      !<  [-]
     REAL(ReKi)  :: frequency      !<  [-]
     character(1024)  :: motionFileName      !<  [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: WriteOutput      !< WriteOutputs of the driver only [-]
   END TYPE WTData
 ! =======================
 ! =========  DvrM_SimData  =======
@@ -228,6 +229,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: numSteps      !< number of steps in this case [-]
     INTEGER(IntKi)  :: numCases      !< number of steps in this case [-]
     TYPE(DvrM_Case) , DIMENSION(:), ALLOCATABLE  :: Cases      !< table of cases to run when AnalysisType=2 [-]
+    INTEGER(IntKi)  :: iCase      !< Current Case being run [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: timeSeries      !< Times series inputs when AnalysisType=1, 6 columns, Time, WndSpeed, ShearExp, RotSpd, Pitch, Yaw [-]
     INTEGER(IntKi)  :: iTimeSeries      !< Stored index to optimize time interpolation [-]
     character(1024)  :: root      !< Output file rootname [-]
@@ -5597,6 +5599,18 @@ ENDIF
     DstWTDataData%amplitude = SrcWTDataData%amplitude
     DstWTDataData%frequency = SrcWTDataData%frequency
     DstWTDataData%motionFileName = SrcWTDataData%motionFileName
+IF (ALLOCATED(SrcWTDataData%WriteOutput)) THEN
+  i1_l = LBOUND(SrcWTDataData%WriteOutput,1)
+  i1_u = UBOUND(SrcWTDataData%WriteOutput,1)
+  IF (.NOT. ALLOCATED(DstWTDataData%WriteOutput)) THEN 
+    ALLOCATE(DstWTDataData%WriteOutput(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstWTDataData%WriteOutput.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstWTDataData%WriteOutput = SrcWTDataData%WriteOutput
+ENDIF
  END SUBROUTINE ADM_Dvr_CopyWTData
 
  SUBROUTINE ADM_Dvr_DestroyWTData( WTDataData, ErrStat, ErrMsg )
@@ -5622,6 +5636,9 @@ ENDIF
   CALL ADM_Dvr_Destroytwrdata( WTDataData%twr, ErrStat, ErrMsg )
 IF (ALLOCATED(WTDataData%motion)) THEN
   DEALLOCATE(WTDataData%motion)
+ENDIF
+IF (ALLOCATED(WTDataData%WriteOutput)) THEN
+  DEALLOCATE(WTDataData%WriteOutput)
 ENDIF
  END SUBROUTINE ADM_Dvr_DestroyWTData
 
@@ -5803,6 +5820,11 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! amplitude
       Re_BufSz   = Re_BufSz   + 1  ! frequency
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%motionFileName)  ! motionFileName
+  Int_BufSz   = Int_BufSz   + 1     ! WriteOutput allocated yes/no
+  IF ( ALLOCATED(InData%WriteOutput) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! WriteOutput upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%WriteOutput)  ! WriteOutput
+  END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -6089,6 +6111,21 @@ ENDIF
       IntKiBuf(Int_Xferred) = ICHAR(InData%motionFileName(I:I), IntKi)
       Int_Xferred = Int_Xferred + 1
     END DO ! I
+  IF ( .NOT. ALLOCATED(InData%WriteOutput) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WriteOutput,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WriteOutput,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%WriteOutput,1), UBOUND(InData%WriteOutput,1)
+        ReKiBuf(Re_Xferred) = InData%WriteOutput(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
  END SUBROUTINE ADM_Dvr_PackWTData
 
  SUBROUTINE ADM_Dvr_UnPackWTData( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -6472,6 +6509,24 @@ ENDIF
       OutData%motionFileName(I:I) = CHAR(IntKiBuf(Int_Xferred))
       Int_Xferred = Int_Xferred + 1
     END DO ! I
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WriteOutput not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%WriteOutput)) DEALLOCATE(OutData%WriteOutput)
+    ALLOCATE(OutData%WriteOutput(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%WriteOutput.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%WriteOutput,1), UBOUND(OutData%WriteOutput,1)
+        OutData%WriteOutput(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
  END SUBROUTINE ADM_Dvr_UnPackWTData
 
  SUBROUTINE ADM_Dvr_CopyDvrM_SimData( SrcDvrM_SimDataData, DstDvrM_SimDataData, CtrlCode, ErrStat, ErrMsg )
@@ -6534,6 +6589,7 @@ IF (ALLOCATED(SrcDvrM_SimDataData%Cases)) THEN
          IF (ErrStat>=AbortErrLev) RETURN
     ENDDO
 ENDIF
+    DstDvrM_SimDataData%iCase = SrcDvrM_SimDataData%iCase
 IF (ALLOCATED(SrcDvrM_SimDataData%timeSeries)) THEN
   i1_l = LBOUND(SrcDvrM_SimDataData%timeSeries,1)
   i1_u = UBOUND(SrcDvrM_SimDataData%timeSeries,1)
@@ -6676,6 +6732,7 @@ ENDIF
       END IF
     END DO
   END IF
+      Int_BufSz  = Int_BufSz  + 1  ! iCase
   Int_BufSz   = Int_BufSz   + 1     ! timeSeries allocated yes/no
   IF ( ALLOCATED(InData%timeSeries) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! timeSeries upper/lower bounds for each dimension
@@ -6837,6 +6894,8 @@ ENDIF
       ENDIF
     END DO
   END IF
+    IntKiBuf(Int_Xferred) = InData%iCase
+    Int_Xferred = Int_Xferred + 1
   IF ( .NOT. ALLOCATED(InData%timeSeries) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -7061,6 +7120,8 @@ ENDIF
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
     END DO
   END IF
+    OutData%iCase = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! timeSeries not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE

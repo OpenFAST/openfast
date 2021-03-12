@@ -151,6 +151,7 @@ typedef   ^                         ^            IntKi                   degreeO
 typedef   ^                         ^            ReKi                    amplitude        -      -     -   "" -
 typedef   ^                         ^            ReKi                    frequency        -      -     -   "" -
 typedef   ^                         ^            character(1024)         motionFileName   -      -     -   "" -
+typedef   ^                         ^            ReKi                    WriteOutput      :      -     -   "WriteOutputs of the driver only"
 
 # ..... Data for driver simulation .......................................................................................................
 typedef   ^                        DvrM_SimData  character(1024)         AD_InputFile     -      -     -   "Name of AeroDyn input file" -
@@ -167,6 +168,7 @@ typedef   ^                         ^            DbKi                    tMax   
 typedef   ^                         ^            IntKi                   numSteps         -      -     -   "number of steps in this case" "-"
 typedef   ^                         ^            IntKi                   numCases         -      -     -   "number of steps in this case" "-"
 typedef   ^                         ^            DvrM_Case               Cases           {:}     -     -   "table of cases to run when AnalysisType=2" "-"
+typedef   ^                         ^            IntKi                   iCase            -      -     -   "Current Case being run" -
 typedef   ^                         ^            ReKi                    timeSeries       ::     -     -   "Times series inputs when AnalysisType=1, 6 columns, Time, WndSpeed, ShearExp, RotSpd, Pitch, Yaw" "-"
 typedef   ^                         ^            IntKi                   iTimeSeries      -      -     -   "Stored index to optimize time interpolation" -
 typedef   ^                         ^            character(1024)         root             -      -     -   "Output file rootname" "-"
